@@ -5,7 +5,7 @@
 In addition to the examples already covered in this text, the \holn{}
 distribution comes with a variety of instructive examples in the
 \verb|examples| directory.  There the following examples (among
-others) are to be found:
+others) are to be found, using only the classic \HOL{} logic:
 
 \begin{description}
 
@@ -79,6 +79,86 @@ is a revision of the proofs underlying the paper
        This directory develops some of the mathematics underlying
        the RSA cryptography scheme. The theories have been
        produced by Laurent Thery of INRIA Sophia-Antipolis.
+
+\end{description}
+
+In addition to the examples above, the examples covered in this
+tutorial concerning the \HOLW{} logic are also present, 
+as well as further developments, including the following: 
+
+\begin{description}
+
+\item [\tt appetizersScript.sml]
+
+  This file gives a series of examples that in a light and easy way 
+  briefly demonstrate the essential new features of the \HOLW{} logic.
+
+\item [\tt functorScript.sml]
+
+  This example shows how a simple version of category theory can
+  be nicely realized as a shallow embedding within the new logic.
+  Both functors and natural transformations are defined, and
+  examples of each are demonstrated. This is similar to a development
+  for HOL2P originally written by Norbert V\"{o}lker.
+
+\item [\tt aopScript.sml]
+
+  Building on the functor theory above, this shows several examples
+  taken from {\it The Algebra of Programming}, by Richard Bird and Oege de Moor.
+  These include homomorphisms, initial algebras, catamorphisms, and
+  the banana split theorem.  This development was originally written
+  by Norbert V\"{o}lker for HOL2P.
+
+\item [\tt monadScript.sml]
+
+  Also building on the functor theory above, this defines the concept
+  of a monad in three different ways, and proves the three are equivalent.
+  Multiple examples of monads are presented, and also how one can convert
+  a monad from one of the styles of definition to another style.
+
+\item [\tt type\_specScript.sml]
+
+  This file contains examples of creating new types using the new definitional
+  principle for type specification which has been added to the \HOLW{} theorem
+  prover. In particular, this is used to create a new type by specifying it as
+  the initial algebra of a signature. The example used is taken from a 1993
+  paper by Tom Melham, ``The HOL Logic Extended with Quantification over Type
+  Variables.''
+
+\item [\tt packageScript.sml]
+
+  This example shows more completely how packages and existential types
+  may be created and used to hide the information about data types.
+  Many of the examples are taken from and related to chapter 24 of the book
+  "Types and Programmng Languages" by Benjamin C. Pierce, MIT Press, 2002.
+  There is also an extended example on process scheduling queues.
+
+\item [\tt burali\_fortiScript.sml]
+
+  This file contains a development of the Burali-Forti paradox in the
+  \HOLW{} logic, which attempts to prove false by a clever manipulation
+  of the type system. This is the same as Girard's Paradox, which showed 
+  that the na\"{i}ve combination of higher order logic and an advanced type 
+  system was inconsistent. The development in this file demonstrates how 
+  the \HOLW{} logic, which is both a higher order logic and an advanced 
+  type system, prevents the inconsistency that the paradox attempts 
+  to expose.  This is not a proof of the logic's consistency, but it is 
+  a strong demonstration of its resilience in the face of a sophisticated 
+  and subtle attack. This work is described further in an upcoming paper, 
+  ``The HOL-Omega Logic and Girard's Paradox.''
+
+\item[\tt interim]
+
+This directory contains an extensive, worked example of a generalized
+version of category theory, created by Jeremy Dawson of the Australian National
+University. This generalizes the notions of functor and natural transformation
+from those in \texttt{functorScript.sml}, to allow for a much richer realization
+of category theory. For example, multiple categories, each with their own composition
+and identity operations, may have functors defined between them.
+The development of category theory is continued through the definition of adjoints,
+and introduces an innovative extension of monads.
+This example extensively exercises the kind structure of \HOLW, to manage
+the types relating different categories and the operations among them.
 
 \end{description}
 

@@ -1,0 +1,1908 @@
+
+\chapter{Example: The Category of Types}\label{chap:simple-cat}
+
+This chapter exhibits the new features of \HOLW{} in an example
+of real use.  It reveals some of the potential and power provided,
+and what new logical developments are possible beyond those of \HOL{}.
+%
+This chapter studies a simplified version of category theory,
+modeled as a shallow embedding in the \HOLW{} logic, as a worked example.
+%There are three intentions:
+%There are three intended accomplishments:
+%The intention is to accomplish three things:
+The goals of this chapter are:
+
+\begin{myenumerate}
+\item To demonstrate the flexibility and consistency
+      of the new logic's type system because of the kind system,
+\item To show type abbreviations and term definitions involving the new forms, and
+\item To show proofs of propositions involving the new forms,
+      using both new tactics and variations of old ones.
+\end{myenumerate}
+
+Category theory is a fascinating and deep mathematical theory that has great
+generality and applicability to many fields of mathematics.
+It is very simple in its foundations, and yet has surprisingly
+profound results that are widely adaptable in different contexts.
+
+% Good books on category theory include the following:
+% \begin{itemize}
+% \item Crole, Roy L.: {\it Categories for Types,\/}
+%       Cambridge University Press, 1993
+% \item Fiadeiro, Jos\'{e} Luiz:
+%       {\it Categories for Software Engineering,\/}
+%       Springer-Verlag, 2005
+% \item Jacobs, B.:
+%       {\it Categorical Logic and Type Theory,\/}
+%       Elsevier Science B.V., 1999
+% \item Lambek, J. and Scott, P.J.:
+%       {\it Introduction to higher order categorical logic,\/}
+%       Cambridge University Press, 1986
+% \item Lawvere, F. William and Schanuel, Stephen H.:
+%       {\it Conceptual Mathematics: A first introduction to categories,\/}
+%       Cambridge University Press, 1997
+% \item Mac Lane, Sanders:
+%       {\it Categories for the Working Mathematician, Second Edition,\/}
+%       Springer-Verlag, 1978
+% \item Pierce, Benjamin C.:
+%       {\it Basic Category Theory for Computer Scientists,\/}
+%       MIT Press, 1991
+% \item Walters, R. F. C.:
+%       {\it Categories and Computer Science,\/}
+%       Cambridge University Press, 1991
+% \end{itemize}
+% For beginners, the book by Pierce is particularly helpful.
+
+For beginners in category theory, a good book is
+{\it Basic Category Theory for Computer Scientists,} by Benjamin C. Pierce,
+MIT Press, 1991.
+
+\section{Categories}
+
+A category consists of {\it objects\/} and {\it arrows,} where each arrow
+points from a {\it source\/} object to a {\it target\/} object.
+We can represent that an arrow $f$ points from object $a$ to object $b$ by
+the notation $f : a \rightarrow b$.
+Sometimes we will write the name of the arrow above it, as in
+$a \stackrel{f}{\rightarrow} b$.
+The category must contain, for each object $a$, a corresponding
+{\it identity arrow\/} $id_a : a \rightarrow a$, pointing from the object
+to itself.
+Also, for each pair of arrows $f~:~a \rightarrow b$ and $g~:~b \rightarrow c$,
+where the target of the first arrow is the source of the second,
+there must exist an arrow which is the {\it composition\/} of $f$ and $g$,
+written $g \circ f$.
+In addition, the composition operation must satisfy the following two laws:
+\begin{enumerate}
+%\item $f \circ id_a = f$ for all $f : a \rightarrow b$,
+%\item $id_b \circ f = f$ for all $f : a \rightarrow b$,
+\item
+{\bf (identity)}
+$f \circ id_a = f$ and $id_b \circ f = f$ for all $f : a \rightarrow b$,
+\item
+{\bf (associativity)}
+$h \circ (g \circ f) = (h \circ g) \circ f$ for all
+   $f : a \rightarrow b$, $g : b \rightarrow c$, and $h : c \rightarrow d$.
+\end{enumerate}
+
+In this chapter, we shall examine one particular category, which we call {\bf Type}.
+In {\bf Type}, the objects are the types of the \HOLW{} logic that have
+kind {\bf ty}{:}0, and the arrows are the term functions in the logic
+between such types.
+Then the identity arrow for a type $\alpha$ is the identity function
+\texttt{I~:~$\alpha$~->~$\alpha$}, defined as
+\texttt{I~=}~\verb|\|\texttt{x:$\alpha$.x}.
+The composition of two arrows is simply functional composition.
+%of the two functions.
+For functions \texttt{f~:~$\alpha$~->~$\beta$} and
+\texttt{g~:~$\beta$~->~$\gamma$}, their composition is
+defined in \HOLW{} as \texttt{g~o~f~=~}\verb|\|\texttt{x.~g~(f~x)},
+where \texttt{o} is an infix binary operator.
+With these definitions, it is easy to see that the above laws hold.
+
+In any category, when two arrows are composed, one must check
+that the target of one arrow is the source of the other.
+In the category {\bf Type}, this customary check is performed fully automatically
+%when one tries to form the composition expression
+as part of the type-checking of the logic.
+Thus this check is discharged immediately,
+simply due to the fact that the \HOLW{} logic is strongly typed. This is very
+convenient, as the user never needs to worry about performing this check
+themselves; it is all handled silently by the type-checker.
+
+\section{Functors}
+
+Along with natural transformations,
+functors are one of the major ideas of category theory.
+A functor is a pair of two maps, one from objects to objects,
+and one from arrows to arrows, that satisfy certain properties.
+
+For our purposes we focus on just functors from the category {\bf Type} to itself.
+These functors have a map from types to types, and a map from functions to
+functions. The first map we express as a type operator in the \HOLW{} logic,
+of kind {\bf ty}{:}0~$\Rightarrow$~{\bf ty}{:}0. 
+The second map we express as a higher-order function in the logic
+which takes a function as an argument and returns a function as its result.
+If the object map is a type operator
+$'\!F$~:~{\bf ty}{:}0~$\Rightarrow$~{\bf ty}{:}0,
+then the arrow map is a term function of the type $'\!F$~{\sf functor},
+where {\sf functor} is the type abbreviation
+$$\mbox{\textsf{functor}} =
+\lambda '\!F .\
+\forall \alpha \ \beta.\ (\alpha \rightarrow \beta)
+\rightarrow (\alpha\ '\!F \rightarrow \beta\ '\!F).$$
+A type abbreviation does not actually introduce a new type constant into the
+logic, but it provides a name that can be expanded by the type parser,
+to allow inputs that are more pleasant and readable. The same type abbreviation
+is also used when printing types, shrinking the output to make the printed
+versions of types more readable as well. Such a type abbreviation is
+introduced by the \ML{} function \texttt{type\_abbrev}.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- val _ = new_theory "functor";
+<<HOL message: Created theory "functor">>
+- set_trace "Unicode" 0;
+> val it = () : unit
+
+- type_abbrev ("functor",
+                ``: \'F. !'a 'b. ('a -> 'b) -> ('a 'F -> 'b 'F)``);
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+We can see how types are condensed by using this type abbreviation.
+\begin{session}
+\begin{verbatim}
+- ``:!'a 'b. ('a -> 'b) -> ('a list -> 'b list)``;
+> val it = ``:list functor`` : hol_type
+- ``:!'a 'b. ('a -> 'b) -> (('a -> 'a) -> ('b -> 'b))``;
+> val it = ``:(\'b. 'b -> 'b) functor`` : hol_type
+\end{verbatim}
+\end{session}
+
+The type abbreviations that are presently defined may be displayed by
+printing the current type grammar.  After the grammar rules is a list of
+the current type abbreviations.
+
+\begin{session}
+\begin{verbatim}
+- type_grammar();
+> val it =
+    Rules:
+      (20)   TY  ::=  "!" <..binders..> "." TY | "?" <..binders..> "." TY |
+                      "\" <..binders..> "." TY
+      (50)   TY  ::=  TY o TY [comp] | TY -> TY [fun] (R-associative)
+      (60)   TY  ::=  TY + TY [sum] (R-associative)
+      (70)   TY  ::=  TY # TY [prod] (R-associative)
+      (80)   TY  ::=  TY TY (type application)
+      (90)   TY  ::=  TY : KIND | TY :<= RANK (kind or rank cast of type)
+      (100)  TY  ::=  functor | TY list | TY set | TY recspace |
+                             num | (TY, TY)prod | TY option | unit | one |
+                             (TY, TY)sum | label | ('k => TY)itself |
+                             ('k => TY)kind_itself | comp | W | C | B | A |
+                             S | K | I | (TY, TY)fun | ind | bool
+    
+             TY  ::=  TY[TY] (array type)
+    Type abbreviations:
+      A = \'f :'k => 'l. 'f     (not printed)
+      B = \'f :'l => 'm 'g :'k => 'l 'a :'k. 'a 'g 'f     (not printed)
+      C = \'f :'l => 'k => 'm 'a :'k 'b :'l. ('b, 'a) 'f     (not printed)
+      I = \'a :'k. 'a
+      K = \'a :'k 'b :'l. 'a     (not printed)
+      S =
+        \'a :'k => 'l => 'm 'b :'k => 'l 'c :'k. ('c, 'c 'b) 'a
+        (not printed)
+      W = \'f :'k => 'k => 'l 'a :'k. ('a, 'a) 'f     (not printed)
+      comp = \'g :'l => 'm 'f :'k => 'l 'a :'k. 'a 'f 'g
+      functor = \'F :ty => ty. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F
+      'a set = 'a -> bool     (not printed)
+      unit = one : grammar
+\end{verbatim}
+\end{session}
+
+The list of type abbreviations includes the {\sf functor} abbreviation that
+was just defined, but also a number of other useful abbreviations,
+including type operator versions of the combinators
+{\sf A}, {\sf B}, {\sf C}, {\sf I}, {\sf K}, {\sf S}, and {\sf W}
+(not to be confused with the {\it term\/} versions of these
+combinators).
+Of particular value are the abbreviations for the identity type operator
+{\tt I~=~}\verb|\|{\tt ('a:'k).'a}
+and the constant type operator {\tt K~=~}\verb|\|{\tt ('a:'k)('b:'l).'a}.
+Also, for composing two type operators,
+there is an infix type abbreviation {\tt o},
+which is defined as a postfix binary type operator {\tt comp},
+but whenever possible prints as the infix {\tt o}.
+
+\begin{session}
+\begin{verbatim}
+- ``:comp``;
+> val it = ``:\'g :ty => ty 'f :ty => ty 'a. 'a 'f 'g`` : hol_type
+- ``:('a,'b)comp``;
+> val it = ``:('a :ty => ty) o ('b :ty => ty)`` : hol_type
+\end{verbatim}
+\end{session}
+
+Given the type abbreviation {\sf functor}, we can now define the
+{\it functor\/} predicate in the logic, which decides if a given function
+$F$ is in fact a functor by testing whether it satisfies two conditions.
+A functor maps identity arrows to identity arrows,
+and it maps the composition of two arrows to the composition of the maps of each arrow
+individually.
+$$
+ \begin{array}[t]{@{\hspace{8mm}}l@{\hspace{5mm}}l}
+   \multicolumn{2}{l}
+     {\mbox{\it functor}\ (F : {'\!F}\ \textsf{functor}) =} \\
+   (\forall{:}\alpha.\ F\, (\mbox{\tt I}:\alpha \rightarrow \alpha) = \mbox{\tt I}) \ \ \wedge
+       & \mbox{\it Identity} \\
+   (\forall{:}\alpha\ \beta\ \gamma.\
+%    \begin{array}[t]{l}
+      \forall(f : \alpha \rightarrow \beta) (g : \beta \rightarrow \gamma).\
+      F\, (g \circ f) = F\, g \circ F\, f \, )
+%    \end{array}
+       & \mbox{\it Composition}
+ \end{array}
+$$
+
+\begin{session}
+\begin{verbatim}
+- val functor_def = new_definition("functor_def", Term
+   `functor (F': 'F functor) =
+      (* Identity *)
+          (!:'a. F' (I:'a->'a) = I) /\
+      (* Composition *)
+          (!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+                 F' (g o f) = F' g o F' f)
+     `);
+> val functor_def =
+    |- !F'.
+         functor F' <=>
+         (!:'a. F' I = I) /\ !:'a 'b 'c. !f g. F' (g o f) = F' g o F' f
+     : thm
+\end{verbatim}
+\end{session}
+
+By the way, in this definition we use the variable name {\tt F'} for the functor
+because the name {\tt F} is already reserved for the truth value false.
+
+By default, the types involved in the definition are not printed, including
+the type arguments in type application terms. Turning on the printing of types
+shows the full structure of the definition, including type arguments which were not
+originally present in the user's input but inferred and inserted during type-checking.
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- functor_def;
+> val it =
+    |- !(F' :('F :ty => ty) functor).
+         functor F' <=>
+         (!:'a. F' [:'a, 'a:] (I :'a -> 'a) = (I :'a 'F -> 'a 'F)) /\
+         !:'a 'b 'c.
+           !(f :'a -> 'b) (g :'b -> 'c).
+             F' [:'a, 'c:] (g o f) = F' [:'b, 'c:] g o F' [:'a, 'b:] f
+     : thm
+\end{verbatim}
+\end{session}
+
+The last line of the definition shows three different type instantiations
+of the variable {\tt F'}, all within the same expression. This would have been
+impossible in \HOL{}, as there a variable can only have one type within a single
+expression. The use of universal types in the type of {\tt F'} permit one
+%in this way
+to ``manually'' specify the particular type instantiation needed for each
+occurrence of {\tt F'}. This is in contrast to the ``automatic'' instantiations
+of term constants for different types within the same expression that have
+long been a standard part of higher order logic.  Despite having these two
+different means for forming type instances of terms within the same logic,
+everything works cleanly, without confusion.
+
+In the following,
+these type application arguments will normally be omitted for clarity.
+
+
+\subsection{Examples of functors}
+
+%Here we examine a variety of functors.
+
+\subsubsection{Identity functor}
+
+The identity function in \HOL{} is the constant {\tt I}, defined as
+{\tt I~=~}\verb|\|{\tt x:'a.x}.
+When wrapped by two type abstractions as
+\verb|\|{\tt {:}'a~'b.~I: ('a -> 'b) -> ('a -> 'b)},
+it becomes a functor of type {\sf I~functor}.
+This is the identity functor, which maps each object to itself, and
+each arrow to itself. We can prove that this is a functor,
+using the simplification set for combinators to
+help simplify expressions with {\tt I} and {\tt o}.
+
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+
+- open combinTheory combinSimps;
+> . . .
+
+- val combin_ss = bool_ss ++ COMBIN_ss;
+> val combin_ss = . . .
+
+- val identity_functor = store_thm
+  ("identity_functor",
+   ``functor ((\:'a 'b. I) : I functor)``,
+   SIMP_TAC combin_ss [functor_def]
+  );
+> val identity_functor = |- functor (\:'a 'b. I) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Constant functor}
+
+One of the combinators in \HOL{} is the constant {\tt K},
+defined as {\tt K~=~}\verb|\|{\tt (x:'a)(y:'b).x}. Similarly,
+the type abbreviation {\sf K} is
+%one of the type combinators in \HOLW{} is the type abbreviation {\sf K},
+defined as \verb|\|{\tt ('a:'k)('b:'l).'a}.
+Then 
+\verb|\|{\tt {:}'b~'c.~K~I}
+{\tt : ('b -> 'c) -> ('a -> 'a)}
+is a functor of type {\sf ({\tt 'a}~K)~functor}.
+This constant functor maps every object to a particular object {\tt 'a},
+and every arrow to the identity arrow on {\tt 'a}.
+
+\begin{session}
+\begin{verbatim}
+- val constant_functor = store_thm
+  ("constant_functor",
+   ``!:'a. functor ((\:'b 'c. K I) : ('a K) functor)``,
+   SIMP_TAC combin_ss [functor_def]
+  );
+> val constant_functor =
+    |- !:'a. functor (\:'b 'c. K I) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{List map functor}
+
+In \HOL{}, the map function on lists is defined as
+\begin{session}
+\begin{verbatim}
+- listTheory.MAP;
+> val it =
+    |- (!f. MAP f [] = []) /\ !f h t. MAP f (h::t) = f h::MAP f t
+     : thm
+- type_of ``MAP``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it =
+    ``:('a -> 'b) -> 'a list -> 'b list``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+\noindent
+When wrapped with two type abstractions as
+%\verb|\|{\tt 'a~'b.~MAP: ('a~-> 'b)~-> ('a list~-> 'b list)},
+\verb|\|{\tt {:}'a~'b.~MAP},
+it becomes a functor of type {\sf list~functor}.
+This functor maps each object {\tt 'a} to {\tt 'a~list}, and
+each arow {\tt f~:~'a~->~'b} to the arrow {\tt MAP~f~:~'a~list~->~'b~list}.
+To prove this is a functor, we bring in two preproven theorems about {\tt MAP}
+from other parts of \HOLW{}.
+%
+\begin{session}
+\begin{verbatim}
+- load "quotientLib";
+> val it = () : unit
+- val MAP_I = quotient_listTheory.LIST_MAP_I;
+> val MAP_I = |- MAP I = I : thm
+- val MAP_o = rich_listTheory.MAP_o;
+> val MAP_o =
+    |- !f g. MAP (f o g) = MAP f o MAP g
+     : thm
+
+- val map_functor = store_thm
+  ("map_functor",
+   ``functor ((\:'a 'b. MAP) : list functor)``,
+   SIMP_TAC bool_ss [functor_def,MAP_I,MAP_o]
+  );
+> val map_functor = |- functor (\:'a 'b. MAP) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Diagonal functor}
+
+In \HOL{}, two types {\tt 'a} and {\tt 'b} may be combined into a
+{\it pair type\/} using the infix binary type operator {\tt \#}, as
+{\tt 'a \# 'b}.
+Values of this type are written as {\tt (x:'a, y:'b)}.
+Then two functions {\tt f~{:}'a~->~'c} and {\tt g~{:}'b~->~'d} may
+be combined using the infix binary operator {\tt \#\#} as
+{\tt (f \#\# g)~{:}~'a \# 'b -> 'c \# 'd}.
+The operator {\tt \#\#} is defined as
+\begin{session}
+\begin{verbatim}
+- pairTheory.PAIR_MAP_THM;
+> val it =
+    |- !f g x y. (f ## g) (x,y) = (f x,g y)
+     : thm
+\end{verbatim}
+\end{session}
+
+The diagonal functor maps objects {\tt 'a} to pair types {\tt 'a \# 'a},
+and arrows {\tt f {:}'a~->~'b} to arrows {\tt (f \#\# f) {:}'a~\#~'a -> 'b~\#~'b}.
+%
+\begin{session}
+\begin{verbatim}
+- load "quotient_pairTheory";
+> val it = () : unit
+- val PAIR_I = quotient_pairTheory.PAIR_MAP_I;
+> val PAIR_I = |- I ## I = I : thm
+- val PAIR_o = quotient_pairTheory.PAIR_MAP_o;
+> val PAIR_o =
+    |- !f1 g1 f2 g2. g1 o f1 ## g2 o f2 = (g1 ## g2) o (f1 ## f2)
+     : thm
+
+- val diagonal_functor = store_thm
+  ("diagonal_functor",
+   ``functor ((\:'b 'c. \f. f ## f) : (\'a. 'a # 'a) functor)``,
+   SIMP_TAC bool_ss [functor_def,PAIR_I,PAIR_o]
+  );
+> val diagonal_functor =
+    |- functor (\:'b 'c. (\f. f ## f))
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Power set functor}
+
+The \HOLW{} type function 
+$\lambda\alpha.~\alpha \rightarrow \mbox{\tt bool}$
+takes a type {\tt 'a} to the type {\tt 'a -> bool},
+the type of predicates on the type {\tt 'a}.
+% which is the type which contains all subsets of {\tt 'a}.
+Since a predicate is the same as a subset of the values of the type,
+this type is the same as the type of sets of elements from the type {\tt 'a}.
+Each of these sets is a subset of the complete set
+of values of the type {\tt 'a}, so this type function 
+$\lambda\alpha.~\alpha \rightarrow \mbox{\tt bool}$
+is actually the power set operation on types.
+
+In \HOL{}, the image function on sets is defined as
+\begin{session}
+\begin{verbatim}
+- pred_setTheory.IMAGE_DEF;
+> val it =
+    |- !(f :'a -> 'b) (s :'a -> bool). IMAGE f s = {f x | x IN s}
+     : thm
+- type_of ``IMAGE``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it =
+    ``:('a -> 'b) -> ('a -> bool) -> 'b -> bool``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+\noindent
+When wrapped with two type abstractions as
+\verb|\|{\tt {:}'a~'b.~IMAGE},
+it becomes a functor of type {\sf ($\lambda\alpha.~\alpha \rightarrow \mbox{\tt bool}$)~functor}.
+This functor maps each object {\tt 'a} to {\tt 'a~->~bool}, and
+each arrow {\tt f~:~'a~->~'b} to the arrow {\tt IMAGE~f~:~('a~->~bool)~->~('b~->~bool)}.
+
+To prove this is a functor, we first prove some theorems about {\tt IMAGE}
+applied to identity arrows and composition,
+making use of preproven theorems in the theory {\tt pred\_set}.
+%
+\begin{session}
+\begin{verbatim}
+- val I_EQ = store_thm
+  ("I_EQ",
+   ``I = \x:'a. x``,
+   SIMP_TAC combin_ss [FUN_EQ_THM]
+  );
+> val I_EQ = |- I = (\x. x) : thm
+
+- pred_setTheory.IMAGE_ID;
+> val it =
+    |- !s. IMAGE (\x. x) s = s
+     : thm
+- val IMAGE_I = store_thm
+  ("IMAGE_I",
+   ``IMAGE (I:'a -> 'a) = I``,
+   SIMP_TAC combin_ss [FUN_EQ_THM,I_EQ,pred_setTheory.IMAGE_ID]
+  );
+> val IMAGE_I = |- IMAGE I = I : thm
+
+- pred_setTheory.IMAGE_COMPOSE;
+> val it =
+    |- !f g s. IMAGE (f o g) s = IMAGE f (IMAGE g s)
+     : thm
+- val IMAGE_o = store_thm
+  ("IMAGE_o",
+   ``!(f :'a -> 'b) (g :'b -> 'c).
+        IMAGE (g o f) = IMAGE g o IMAGE f``,
+   SIMP_TAC combin_ss [FUN_EQ_THM,pred_setTheory.IMAGE_COMPOSE]
+  );
+> val IMAGE_o =
+    |- !f g. IMAGE (g o f) = IMAGE g o IMAGE f
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+Now we can prove that \verb|\|{\tt {:}'a~'b.IMAGE} is a functor
+of type {\tt (}\verb|\|{\tt 'a.'a~->~bool)functor}.
+%
+\begin{session}
+\begin{verbatim}
+- val powerset_functor = store_thm
+  ("powerset_functor",
+   ``functor ((\:'a 'b. IMAGE) : (\'a. 'a -> bool) functor)``,
+   SIMP_TAC bool_ss [functor_def,IMAGE_I,IMAGE_o]
+  );
+> val powerset_functor =
+    |- functor (\:'a 'b. IMAGE) :
+  thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{List of lists map functor}
+
+We earlier saw how the \texttt{MAP} function is made into a functor.
+Similarly, we can compose the \texttt{MAP} function with itself, to create a function
+that maps a function across a list of lists.  The term \texttt{MAP~o~MAP} has type
+\texttt{('a -> 'b) -> 'a~list~list -> 'b~list~list}, so
+the term
+\verb|\|\texttt{:'a~'b.~MAP o MAP} has type
+\texttt{!'a~'b.~('a -> 'b) -> 'a~list~list -> 'b~list~list}, which is the same
+as the type \texttt{(list~o~list)~functor}. Notice how neatly the composition
+of the \texttt{MAP} function with itself matches the composition of the type operator
+\texttt{list} with itself in the type of the functor \verb|\|\texttt{:'a~'b.~MAP~o~MAP}.
+In fact, this is an example of a more general principle, which we shall explore next.
+
+\subsection{Composition of functors}
+
+Inspired by the above, we can prove that for any two functors \texttt{F'} and \texttt{G},
+the functional composition of the arrow maps of the two functors may itself be made into
+a functor.
+%
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- val functor_o = store_thm
+  ("functor_o",
+   ``!(F': 'F functor) (G: 'G functor).
+      functor F' /\ functor G ==>
+      functor (\:'a 'b. G o F')``,
+   SIMP_TAC combin_ss [functor_def]
+  );
+> val functor_o =
+    |- !(F' :('F :ty => ty) functor) (G :('G :ty => ty) functor).
+         functor F' /\ functor G ==>
+         (functor
+            (\:'a 'b.
+               ((G [:'a 'F, 'b 'F:] o F' [:'a, 'b:])
+                  :('a -> 'b) -> 'a 'F 'G -> 'b 'F 'G)) :bool)
+     : thm
+\end{verbatim}
+\end{session}
+Note that here the two functors have type arguments applied to each, helpfully
+inserted by the parser, so as to transform the functors from values of 
+universal type to values of functional type. Then they can be composed using 
+the normal functional composition operator \texttt{o}, with the result then 
+being wrapped up inside the type abstractions \verb|\|\texttt{:'a~'b}
+to make a functor.  This approach is entirely valid, and yet there is 
+a simpler approach, where we define the composition of two functors directly.
+
+Given two functors $F$ and $G$, the composition of the two functors is
+defined as a new functor, whose map on objects is the composition of the object maps
+of the two functors, and whose map on arrows is the composition of the two arrow maps
+of the two functors.  This can be easily defined in \HOLW as follows.
+%
+\begin{session}
+\begin{verbatim}
+- val oo_def = Define
+    `$oo (G: 'G functor) (F': 'F functor) = \:'a 'b. G o F' [:'a,'b:]`;
+Definition has been stored under "oo_def"
+> val oo_def =
+    |- !(G :('G :ty => ty) functor) (F' :('F :ty => ty) functor).
+         oo G F' = (\:'a 'b. G [:'a 'F, 'b 'F:] o F' [:'a, 'b:])
+     : thm
+\end{verbatim}
+\end{session}
+
+%We have turned on the printing of types to show the full set of type arguments
+%which are being applied to the functors \texttt{F'} and \texttt{G} which have
+%universal types.
+Again, the parser has helpfully inserted the needed type arguments.
+We can improve the presentation of this functor composition
+operation by making \texttt{oo} an infix operator, and by overloading the infix
+\texttt{o} operator to refer to \texttt{oo}:
+%
+\begin{session}
+\begin{verbatim}
+- add_infix("oo", 800, HOLgrammars.RIGHT);
+> val it = () : unit
+- overload_on ("o", ``$oo : 'G functor -> 'F functor -> ('G o 'F) functor``);
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+Now the definition of function composition will display using the
+infix \texttt{o} operator.
+%
+\begin{session}
+\begin{verbatim}
+- oo_def;
+> val it =
+    |- !(G :('G :ty => ty) functor) (F' :('F :ty => ty) functor).
+         ((G o F') :('G o 'F) functor) =
+         (\:'a 'b.
+            ((G [:'a 'F, 'b 'F:] o F' [:'a, 'b:])
+               :('a -> 'b) -> 'a 'F 'G -> 'b 'F 'G))
+     : thm
+\end{verbatim}
+\end{session}
+
+This shows that the value returned by \texttt{G o F'} has a functor type.
+Nevertheless, to prove that this value truly is a functor, we must prove that it
+satisfies the conditions of the \texttt{functor} predicate.
+%
+\begin{session}
+\begin{verbatim}
+- val functor_oo = store_thm
+  ("functor_oo",
+   ``!(F': 'F functor) (G: 'G functor).
+      functor F' /\ functor G ==>
+      functor (G o F')``,
+   SIMP_TAC combin_ss [functor_def,oo_def]
+  );
+> val functor_oo =
+    |- !(F' :('F :ty => ty) functor) (G :('G :ty => ty) functor).
+         functor F' /\ functor G ==>
+         (functor ((G o F') :('G o 'F) functor) :bool)
+     : thm
+\end{verbatim}
+\end{session}
+
+We can immediately derive that
+\texttt{(}\verb|\|\texttt{:'a~'b.~MAP)~o (}\verb|\|\texttt{:'a~'b.~MAP)} is
+a functor, as a simple corollary of this theorem.
+
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+
+- val map_oo_map_functor = save_thm
+  ("map_oo_map_functor",
+   MATCH_MP functor_oo (CONJ map_functor map_functor)
+  );
+> val map_oo_map_functor =
+    |- functor ((\:'a 'b. MAP) o (\:'a 'b. MAP))
+     : thm
+\end{verbatim}
+\end{session}
+
+Similarly, we can show that \verb|\|\texttt{:'a~'b.~MAP~o~MAP} is a functor.
+\begin{session}
+\begin{verbatim}
+- val functor_o = store_thm
+  ("functor_o",
+   ``!(F': 'F functor) (G: 'G functor).
+      functor F' /\ functor G ==>
+      functor (\:'a 'b. G o F')``,
+   SIMP_TAC combin_ss [functor_def]
+  );
+> val functor_o =
+    |- !F' G. functor F' /\ functor G ==> functor (\:'a 'b. G o F')
+     : thm
+
+- val map_o_map_functor = save_thm
+  ("map_o_map_functor",
+   (TY_BETA_RULE o MATCH_MP functor_o) (CONJ map_functor map_functor)
+  );
+> val map_o_map_functor =
+    |- functor (\:'a 'b. MAP o MAP)
+     : thm
+\end{verbatim}
+\end{session}
+
+The use of \texttt{TY\_BETA\_RULE} above simplifies the theorem. This can be seen
+if we turn on the display of types.
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- map_o_map_functor;
+> val it =
+    |- (functor
+          (\:'a 'b.
+             (((MAP :('a list -> 'b list) -> 'a list list -> 'b list list) o
+               (MAP :('a -> 'b) -> 'a list -> 'b list))
+                :('a -> 'b) -> 'a list list -> 'b list list)) :bool)
+     : thm
+\end{verbatim}
+\end{session}
+whereas if we omit the use of \texttt{TY\_BETA\_RULE}, we obtain
+\begin{session}
+\begin{verbatim}
+- MATCH_MP functor_o (CONJ map_functor map_functor);
+> val it =
+    |- (functor
+          (\:'a 'b.
+             (((\:'a 'b. (MAP :('a -> 'b) -> 'a list -> 'b list))
+                 [:'a list, 'b list:] o
+               (\:'a 'b. (MAP :('a -> 'b) -> 'a list -> 'b list))
+                 [:'a, 'b:])
+                :('a -> 'b) -> 'a list list -> 'b list list)) :bool)
+     : thm
+\end{verbatim}
+\end{session}
+Logically the two are equivalent, but the second version has unreduced type
+beta-redexes, whereas the first version is reduced, and so simpler and easier to read.
+In essence, this shows how defining an operator like \texttt{oo} to directly compose
+two functors is really simpler than just relying on functional composition to
+accomplish the task.
+
+
+\section{Natural Transformations}
+
+Alongside functors,
+natural transformations are the other major idea of category theory.
+A natural transformation is essentially a mapping from one functor to another,
+that preserves the structure of the image of the first functor into the 
+structure of the image of the second functor.  A natural transformation 
+$\eta : F~\dot{\rightarrow}~G$ from the functor $F$\texttt{:'F}~{\sf functor} 
+to the functor $G$\texttt{:'G}~{\sf functor} 
+is actually a function from objects to arrows; 
+it maps an object $\alpha$ to an arrow 
+\texttt{$\eta[\alpha]$~:~$\alpha$~'F $\rightarrow$ $\alpha$~'G}.
+In addition, the function $\eta$ must preserve the structure of the
+image of $F$ into the image of $G$; this means that it must make
+the following diagram commute for all possible arrows $h : \alpha \rightarrow \beta$:
+%
+\begin{center}
+\setlength{\unitlength}{1.00mm}
+\begin{picture}(32,34)
+\thicklines
+
+% corners
+\put( 0,30){\makebox(0,0){$\alpha$~\texttt{'F}}}
+\put(30,30){\makebox(0,0){$\alpha$~\texttt{'G}}}
+\put( 0, 0){\makebox(0,0){$\beta $~\texttt{'F}}}
+\put(30, 0){\makebox(0,0){$\beta $~\texttt{'G}}}
+
+% arrows
+\put( 6,30){\vector(1, 0){18}}
+\put(30,26){\vector(0,-1){22}}
+\put( 6, 0){\vector(1, 0){18}}
+\put( 0,26){\vector(0,-1){22}}
+
+% labels on arrows
+\put(15,31){\makebox(0,0)[b]{$\eta[\alpha]$}}
+\put(15, 1){\makebox(0,0)[b]{$\eta[\beta ]$}}
+\put(-1,15){\makebox(0,0)[rb]{$F(h)$}}
+\put(31,15){\makebox(0,0)[lb]{$G(h)$}}
+
+\end{picture}
+\end{center}
+
+The first step is to define a type abbreviation for the type of natural 
+transformations, based on the type operators associated with the two functors
+on which it is based.
+\begin{session}
+\begin{verbatim}
+- val _ = type_abbrev ("nattransf", Type `: \'F 'G. !'a. 'a 'F -> 'a 'G`);
+
+- ``: !'a. 'a list -> 'a set``;
+> val it =
+    ``:(list, \'a. 'a -> bool) nattransf``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+Now we can define a natural transformation as such a function $\phi$, along with
+two associated functors $F$ and $G$, which makes the above diagram commute.
+This is the same as saying that the arrow $\phi[\alpha]$ composed with $G~h$ is the same as
+the arrow $F~h$ composed with $\phi[\beta]$, for all arrows $h : \alpha \rightarrow \beta$.
+\begin{session}
+\begin{verbatim}
+- val nattransf_def = new_definition("nattransf_def", Term
+   `nattransf (phi : ('F,'G) nattransf)
+              ( F' : 'F functor )
+              ( G  : 'G functor ) =
+         !:'a 'b. !(h:'a -> 'b).
+                G h o phi = phi o F' h`);
+> val nattransf_def =
+    |- !(phi :('F :ty => ty, 'G :ty => ty) nattransf) (F' :'F functor)
+          (G :'G functor).
+         nattransf phi F' G <=>
+         !:'a 'b.
+           !(h :'a -> 'b).
+             ((G [:'a, 'b:] h o phi [:'a:]) :'a 'F -> 'b 'G) =
+             ((phi [:'b:] o F' [:'a, 'b:] h) :'a 'F -> 'b 'G)
+     : thm
+\end{verbatim}
+\end{session}
+Here we can see how the parser has inserted type arguments to \texttt{phi},
+\texttt{F'}, and \texttt{G}, where the specific types in the type arguments
+are determined through type inference. In particular, \texttt{phi} is given
+different type arguments for its two instances in the body, and so this definition
+could not have been expressed within classic \HOL{}, in which a variable
+can only have one single type.
+
+\subsection{Examples of Natural Transformations}
+
+\subsubsection{Identity natural transformation}
+
+One simple example of a natural transformation is the identity natural 
+transformation. This natural transformation maps each functor to itself.
+Therefore, there is an instance of the identity natural transformation for 
+each different functor $F$\texttt{:'F}~{\sf functor}. As a function, this 
+natural transformation maps each object \texttt{'a} to the 
+identity arrow on \texttt{'a~'F}, that is, \texttt{I:'a~'F -> 'a~'F}.
+\begin{session}
+\begin{verbatim}
+- val identity_nattransf = store_thm
+  ("identity_nattransf",
+   ``!:'F. !F' : 'F functor.
+        nattransf (\:'a. I) F' F'``,
+   SIMP_TAC combin_ss [nattransf_def]
+  );
+> val identity_nattransf =
+    |- !:'F :ty => ty.
+         !(F' :'F functor). nattransf (\:'a. (I :'a 'F -> 'a 'F)) F' F'
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Reverse natural transformation}
+
+Another simple natural transformation is
+% the function 
+\texttt{REVERSE},
+which reverses the elements of a list:
+
+\begin{session}
+\begin{verbatim}
+- listTheory.REVERSE_DEF;
+> val it =
+    |- (REVERSE ([] :'a list) = ([] :'a list)) /\
+       !(h :'a) (t :'a list). REVERSE (h::t) = ((REVERSE t ++ [h]) :'a list)
+     : thm
+
+- val nattransf_REVERSE = store_thm
+  ("nattransf_REVERSE",
+   ``nattransf (\:'a. REVERSE)
+               (\:'a 'b. MAP)
+               (\:'a 'b. MAP)``,
+   SIMP_TAC bool_ss [nattransf_def]
+   THEN REPEAT STRIP_TAC
+   THEN REWRITE_TAC[FUN_EQ_THM]
+   THEN Induct
+   THEN FULL_SIMP_TAC list_ss []
+  );
+> val nattransf_REVERSE =
+    |- nattransf (\:'a. (REVERSE :'a list -> 'a list))
+         (\:'a 'b. (MAP :('a -> 'b) -> 'a list -> 'b list))
+         (\:'a 'b. (MAP :('a -> 'b) -> 'a list -> 'b list))
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Initial prefixes natural transformation}
+
+A more interesting natural transformation is the function \texttt{INITS},
+which takes a list \texttt{l} and returns a list of all prefixes of \texttt{l}.
+This natural transformation is from the functor $\lambda\alpha\ \beta.\ \texttt{MAP}$
+to the functor $\lambda\alpha\ \beta.(\texttt{MAP~o~MAP})$.
+\texttt{INITS} is defined recursively as follows.
+
+\begin{session}
+\begin{verbatim}
+- val INITS_def = Define
+  `(INITS [] = [[]]) /\
+   (INITS ((x:'a)::xs) = [] :: MAP (CONS x) (INITS xs))`;
+Definition has been stored under "INITS_def"
+> val INITS_def =
+    |- (INITS ([] :'a list) = [([] :'a list)]) /\
+       !(x :'a) (xs :'a list).
+         INITS (x::xs) = ([] :'a list)::MAP (CONS x) (INITS xs)
+     : thm
+\end{verbatim}
+\end{session}
+
+To prove that  \texttt{INITS} is a natural transformation,
+we need to first prove a couple of lemmas. The first lemma
+shows how \texttt{MAP} and \texttt{CONS} commute.  The second
+lemma describes how \texttt{MAP} and \texttt{INITS} commute. Finally,
+the second lemma implies that INITS is a natural transformation. Each
+of these proofs are by induction on lists, and then uses the simplifier
+with the lists simplification set 
+to finish off the different cases of the induction.
+
+\begin{session}
+\begin{verbatim}
+- val MAP_o_CONS = store_thm
+  ("MAP_o_CONS",
+   ``!(f:'a -> 'b) x. MAP f o CONS x = CONS (f x) o MAP f``,
+   REPEAT GEN_TAC
+   THEN REWRITE_TAC[FUN_EQ_THM]
+   THEN Induct
+   THEN ASM_SIMP_TAC list_ss []
+  );
+> val MAP_o_CONS =
+    |- !(f :'a -> 'b) (x :'a).
+         ((MAP f o CONS x) :'a list -> 'b list) =
+         ((CONS (f x) o MAP f) :'a list -> 'b list)
+     : thm
+
+- val MAP_INITS = store_thm
+  ("MAP_INITS",
+   ``!l f:'a -> 'b. (MAP o MAP) f (INITS l) = INITS (MAP f l)``,
+   Induct
+   THEN FULL_SIMP_TAC list_ss [INITS_def,rich_listTheory.MAP_MAP_o,MAP_o_CONS]
+   THEN ASM_REWRITE_TAC [GSYM rich_listTheory.MAP_MAP_o]
+  );
+> val MAP_INITS =
+    |- !(l :'a list) (f :'a -> 'b).
+         (((MAP :('a list -> 'b list) -> 'a list list -> 'b list list) o
+           (MAP :('a -> 'b) -> 'a list -> 'b list)) f (INITS l) :
+            'b list list) =
+         INITS (MAP f l) :
+  thm
+
+- val nattransf_INITS = store_thm
+  ("nattransf_INITS",
+   ``nattransf (\:'a. INITS)
+               (\:'a 'b. MAP)
+               (\:'a 'b. MAP o MAP)``,
+   SIMP_TAC bool_ss [nattransf_def]
+   THEN REPEAT STRIP_TAC
+   THEN REWRITE_TAC[FUN_EQ_THM]
+   THEN Induct
+   THEN FULL_SIMP_TAC list_ss [MAP_INITS]
+  );
+> val nattransf_INITS =
+    |- (nattransf (\:'a. (INITS :'a list -> 'a list list))
+          (\:'a 'b. (MAP :('a -> 'b) -> 'a list -> 'b list))
+          (\:'a 'b.
+             (((MAP :('a list -> 'b list) -> 'a list list -> 'b list list) o
+               (MAP :('a -> 'b) -> 'a list -> 'b list))
+                :('a -> 'b) -> 'a list list -> 'b list list)) :bool)
+     : thm
+\end{verbatim}
+\end{session}
+
+
+\subsection{Vertical composition of natural transformations}
+
+% \subsubsection{Vertical composition}
+
+Two natural transformations may be composed together in either of two
+ways, vertically or horizontally.  We shall examine
+horizontal composition in a moment, but for now, here is the definition
+of vertical composition of natural transformations.
+\begin{session}
+\begin{verbatim}
+- val ooo_def = Define `$ooo (phi2: ('G,'H)nattransf)
+                             (phi1: ('F,'G)nattransf) =
+                      \:'a. phi2 o (phi1[:'a:])`;
+Definition has been stored under "ooo_def"
+> val ooo_def =
+    |- !(phi2 :('G :ty => ty, 'H :ty => ty) nattransf)
+          (phi1 :('F :ty => ty, 'G) nattransf).
+         ooo phi2 phi1 =
+         (\:'a. ((phi2 [:'a:] o phi1 [:'a:]) :'a 'F -> 'a 'H))
+     : thm
+\end{verbatim}
+\end{session}
+
+We can improve the presentation of this composition operation by making it an
+infix operator and by overloading the \texttt{o} symbol to refer to this operation.
+\begin{session}
+\begin{verbatim}
+- val _ = add_infix("ooo", 800, HOLgrammars.RIGHT);
+- val _ = overload_on ("o", Term `$ooo : ('G,'H)nattransf ->
+                                         ('F,'G)nattransf ->
+                                         ('F,'H)nattransf`);
+- ooo_def;
+> val it =
+    |- !(phi2 :('G :ty => ty, 'H :ty => ty) nattransf)
+          (phi1 :('F :ty => ty, 'G) nattransf).
+         ((phi2 o phi1) :('F, 'H) nattransf) =
+         (\:'a. ((phi2 [:'a:] o phi1 [:'a:]) :'a 'F -> 'a 'H))
+     : thm
+\end{verbatim}
+\end{session}
+
+Now that we can prove that the vertical composition of two natural transformations,
+as defined above, in fact yields a natural transformation.
+\begin{session}
+\begin{verbatim}
+- val nattransf_comp = store_thm
+  ("nattransf_comp",
+   ``nattransf (     phi1     : ('F,'G)nattransf) F' G /\
+     nattransf (     phi2     : ('G,'H)nattransf) G  H ==>
+     nattransf ((phi2 o phi1) : ('F,'H)nattransf) F' H``,
+   SIMP_TAC bool_ss [nattransf_def,ooo_def]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_REWRITE_TAC[o_ASSOC]
+   THEN ASM_REWRITE_TAC[GSYM o_ASSOC]
+  );
+> val nattransf_comp =
+    |- nattransf (phi1 :('F :ty => ty, 'G :ty => ty) nattransf)
+         (F' :'F functor) (G :'G functor) /\
+       nattransf (phi2 :('G, 'H :ty => ty) nattransf) G (H :'H functor) ==>
+       nattransf ((phi2 o phi1) :('F, 'H) nattransf) F' H
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Horizontal composition of natural transformations}
+
+We can also define the horizontal composition of two natural transformations.
+\begin{session}
+\begin{verbatim}
+- val hcomp_def = Define `hcomp (phi2: ('F2,'G2)nattransf)
+                                (F2:'F2 functor)
+                                (phi1: ('F1,'G1)nattransf) =
+                           \:'a. phi2 o F2 (phi1[:'a:])`;
+Definition has been stored under "hcomp_def"
+> val hcomp_def =
+    |- !(phi2 :('F2 :ty => ty, 'G2 :ty => ty) nattransf) (F2 :'F2 functor)
+          (phi1 :('F1 :ty => ty, 'G1 :ty => ty) nattransf).
+         hcomp phi2 F2 phi1 =
+         (\:'a.
+            ((phi2 [:'a 'G1:] o F2 [:'a 'F1, 'a 'G1:] (phi1 [:'a:]))
+               :'a 'F1 'F2 -> 'a 'G1 'G2))
+     : thm
+\end{verbatim}
+\end{session}
+Unfortunately, the definition requires that we use one of the functors associated
+with the second natural transformation, so this operation cannot have the nice binary
+style of the vertical composition operator. We need to include the \texttt{F2} functor
+argument in the definition of \texttt{hcomp}, and this makes it a 3-ary operation, not binary.
+
+Having defined the horizontal composition of two natural transformations,
+we can prove that the composition is also a natural transformation itself.
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+
+- val nattransf_hcomp = store_thm
+  ("nattransf_hcomp",
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
+     functor F2 ==>
+     nattransf (hcomp phi2 F2 phi1)
+               (F2 o F1)
+               (G2 o G1)``,
+   SIMP_TAC bool_ss [nattransf_def,functor_def,hcomp_def,oo_def]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+> val nattransf_hcomp =
+    |- nattransf phi1 F1 G1 /\ nattransf phi2 F2 G2 /\ functor F2 ==>
+       nattransf (hcomp phi2 F2 phi1) (F2 o F1) (G2 o G1)
+     : thm
+\end{verbatim}
+\end{session}
+
+Alternatively, we could have just as easily defined horizontal composition using
+the \texttt{G2} functor instead of \texttt{F2}.
+\begin{session}
+\begin{verbatim}
+- val hcomp'_def = Define `hcomp' (phi2: ('F2,'G2)nattransf)
+                                  (G2:'G2 functor)
+                                  (phi1: ('F1,'G1)nattransf) =
+                             \:'a. G2 phi1 o (phi2[:'a 'F1:])`;
+Definition has been stored under "hcomp'_def"
+> val hcomp'_def =
+    |- !phi2 G2 phi1. hcomp' phi2 G2 phi1 = (\:'a. G2 phi1 o phi2)
+     : thm
+\end{verbatim}
+\end{session}
+
+Using this different definition of the horizontal composition of two natural 
+transformations, we can again prove that the composition is also a natural 
+transformation.
+\begin{session}
+\begin{verbatim}
+- val nattransf_hcomp' = store_thm
+  ("nattransf_hcomp'",
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2 /\
+     functor F2 ==>
+     nattransf (hcomp' phi2 G2 phi1)
+               (F2 o F1)
+               (G2 o G1)``,
+   SIMP_TAC bool_ss [nattransf_def,functor_def,hcomp'_def,oo_def]
+   THEN REPEAT STRIP_TAC
+   THEN ASM_SIMP_TAC bool_ss [o_THM,o_ASSOC]
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM o_ASSOC,GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+> val nattransf_hcomp' =
+    |- nattransf phi1 F1 G1 /\ nattransf phi2 F2 G2 /\ functor F2 ==>
+       nattransf (hcomp' phi2 G2 phi1) (F2 o F1) (G2 o G1)
+     : thm
+\end{verbatim}
+\end{session}
+
+In fact, the two definitions of horizontal composition are equivalent, 
+given that \texttt{phi2} is a natural transformation.
+% as proven in the next theorem.
+\begin{session}
+\begin{verbatim}
+- val nattransf_hcomp_hcomp' = store_thm
+  ("nattransf_hcomp_hcomp'",
+   ``!(phi1 : ('F1,'G1) nattransf) (phi2 : ('F2,'G2) nattransf) F2 G2.
+      nattransf phi2 F2 G2 ==>
+      (hcomp phi2 F2 phi1 = hcomp' phi2 G2 phi1)``,
+   SIMP_TAC bool_ss [nattransf_def,hcomp_def,hcomp'_def]
+  );
+> val nattransf_hcomp_hcomp' =
+    |- !phi1 phi2 F2 G2.
+         nattransf phi2 F2 G2 ==> (hcomp phi2 F2 phi1 = hcomp' phi2 G2 phi1)
+     : thm
+\end{verbatim}
+\end{session}
+
+This is a result of the fact that two natural transformations commute,
+in the following fashion.
+\begin{session}
+\begin{verbatim}
+- val nattransf_commute = store_thm
+  ("nattransf_commute",
+   ``nattransf (phi1 : ('F1,'G1) nattransf) F1 G1 /\
+     nattransf (phi2 : ('F2,'G2) nattransf) F2 G2  ==>
+     (phi2 o F2 (phi1[:'a:]) = G2 phi1 o phi2)``,
+   SIMP_TAC bool_ss [nattransf_def]
+  );
+> val nattransf_commute =
+    |- nattransf phi1 F1 G1 /\ nattransf phi2 F2 G2 ==>
+       (phi2 o F2 phi1 = G2 phi1 o phi2)
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Composition of natural transformations with functors}
+
+In addition to composing natural transformations with themselves, we can
+compose them with functors. There are two ways that a functor may be combined
+with a natural transformation, where either the functor is applied first
+and then the natural transformation, or the reverse. We define operations
+for both of these, positioning the functor on the right for the version where
+the functor is applied first, and on the left for the version where
+the functor is applied last.
+
+To begin, here is the composition of a natural transformation with a functor,
+where the functor is applied first.
+%
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- val oof_def = Define `$oof (phi: ('F,'G) nattransf) (H': 'H functor) =
+                        \:'a. phi [:'a 'H:]`;
+Definition has been stored under "oof_def"
+> val oof_def =
+    |- !(phi :('F :ty => ty, 'G :ty => ty) nattransf)
+          (H' :('H :ty => ty) functor). oof phi H' = (\:'a. phi [:'a 'H:])
+     : thm
+\end{verbatim}
+\end{session}
+
+As before, we can improve the presentation by making this an infix operator
+and overloading the \texttt{o} symbol.
+\begin{session}
+\begin{verbatim}
+- val _ = add_infix("oof", 750, HOLgrammars.LEFT);
+- val _ = overload_on ("o", Term `$oof : ('F,'G) nattransf ->
+                                         'H functor ->
+                                         ('F o 'H,'G o 'H) nattransf`);
+
+- (dest_const o fst o strip_comb) ``(phi:('F,'G)nattransf) o (H:'H functor)``;
+> val it =
+    ("oof",
+     ``:('F :ty => ty, 'G :ty => ty) nattransf ->
+        ('H :ty => ty) functor -> (!'a. 'a 'H 'F -> 'a 'H 'G)``)
+     : string * hol_type
+\end{verbatim}
+\end{session}
+
+Now we can prove that this composition of a natural transformation with
+a functor is itself a natural transformation.
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+
+- val nattransf_functor_comp = store_thm
+  ("nattransf_functor_comp",
+   ``nattransf (phi : ('F,'G)nattransf) F' G /\
+     functor (H : 'H functor) ==>
+     nattransf (phi o H)     (* phi oof H *)
+               ( F' o H)     (*  F' oo  H *)
+               ( G  o H)``,  (*  G  oo  H *)
+   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,oof_def]
+  );
+> val nattransf_functor_comp =
+    |- nattransf phi F' G /\ functor H ==>
+       nattransf (phi o H) (F' o H) (G o H)
+     : thm
+\end{verbatim}
+\end{session}
+
+Here is the other composition of a functor with a natural transformation, where
+the functor is applied last, as previously mentioned.
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- val foo_def = Define `$foo (H: 'H functor) (phi: ('F,'G)nattransf) =
+                        \:'a. H (phi[:'a:])`;
+Definition has been stored under "foo_def"
+> val foo_def =
+    |- !(H :('H :ty => ty) functor)
+          (phi :('F :ty => ty, 'G :ty => ty) nattransf).
+         foo H phi = (\:'a. H [:'a 'F, 'a 'G:] (phi [:'a:]))
+     : thm
+\end{verbatim}
+\end{session}
+
+Again, we can improve the presentation by declaring the operation as a binary
+infix, and overloading the \texttt{o} operator. Note that the \HOLW{} system
+can distinguish between compositions of natural transformations with themselves
+or with functors on the left or on the right, simply by looking at the types
+of the arguments to \texttt{o}.
+\begin{session}
+\begin{verbatim}
+- val _ = add_infix("foo", 750, HOLgrammars.LEFT);
+- val _ = overload_on ("o", Term `$foo : 'H functor ->
+                                         ('F,'G) nattransf ->
+                                         ('H o 'F,'H o 'G) nattransf`);
+- (dest_const o fst o strip_comb) ``(H:'H functor) o (phi:('F,'G)nattransf)``;
+> val it =
+    ("foo",
+     ``:('H :ty => ty) functor ->
+        ('F :ty => ty, 'G :ty => ty) nattransf ->
+        (!'a. 'a 'F 'H -> 'a 'G 'H)``)
+     : string * hol_type
+\end{verbatim}
+\end{session}
+
+In this case also, the composition of a functor with a natural transformation,
+where the functor is applied last, is itself a natural transformation.
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+
+- val functor_nattransf_comp = store_thm
+  ("functor_nattransf_comp",
+   ``nattransf (phi : ('F,'G)nattransf) F' G  /\
+     functor (H : 'H functor) ==>
+     nattransf (H o phi)      (* H foo phi *)
+               (H o F')       (* H oo F'   *)
+               (H o G)``,     (* H oo G    *)
+   SIMP_TAC combin_ss [nattransf_def,functor_def,oo_def,foo_def]
+   THEN REPEAT STRIP_TAC
+   THEN POP_ASSUM (fn th => REWRITE_TAC[GSYM th])
+   THEN ASM_REWRITE_TAC[]
+  );
+> val functor_nattransf_comp =
+    |- nattransf phi F' G /\ functor H ==>
+       nattransf (H o phi) (H o F') (H o G)
+     : thm
+\end{verbatim}
+\end{session}
+
+The above examples of manipulating functors and natural transformations
+are intended to show how easily and fluidly the \HOLW{} system supports
+such reasoning about this simple version of category theory. Generally
+the concepts are not hard to express, taking only brief phrases in the logic.
+Once the right definitions are made, the different concepts combine
+very neatly and smoothly, just as one would hope for a subject as beautiful
+as category theory.
+
+
+\section{Algebras and Initial Algebras}
+
+Algebras, also called {\it F}-algebras, are an important part of category theory. 
+They have a direct application as abstract data types in computer programming, 
+and thus have a beneficial effect on program clarity, modularity, and maintenance.
+Despite this utility, algebras arise as a beautifully elegant use of the idea of functors.
+
+From this section on, the development of this chapter is taken almost directly from
+the book {\it Algebra of Programming}\/ by Richard Bird and Oege de Moor, Prentice Hall,
+1997. Some of the descriptions of the ideas presented are very similar to the text
+of Bird and de Moor, and they should be given full credit for these.
+
+Given a functor $F$ of type $'F$~{\sf functor}, an {\it algebra}\/ is defined
+as an arrow of type $\alpha~'F \rightarrow \alpha$, where the object $\alpha$
+is called the {\it carrier}\/ of the algebra.
+
+This definition is very abstract, so it may help to have an example. Consider
+the natural numbers, along with the zero value and the successor function.
+In the \HOL{} logic these are represented as the type \texttt{num} and the constants
+\texttt{0:num} and \texttt{SUC:num~->~num}.
+These two constants allow one to construct any value of the natural numbers.
+
+This can be thought of as an algebra with one type and two constants, generated
+by a functor $F$ where the map of $F$ on objects is $\alpha~'F = \texttt{unit~+~}\alpha$
+and the map of $F$ on arrows is $F'~h = \texttt{I~++~}h$. Here the infix binary operator
+\texttt{++} is defined by the two cases
+$(f~\texttt{++}~g) (\texttt{INL}~a) = \texttt{INL} (f~a)$ and
+$(f~\texttt{++}~g) (\texttt{INR}~b) = \texttt{INR} (g~b)$.
+
+Clearly $F$ is a functor, as it maps the identity arrow $\texttt{I} = \lambda x{:}\alpha.~x$
+to the identity arrow $F'~\texttt{I} = \lambda x{:}(\texttt{unit~+~}\alpha).~x$, and
+it maps the composition $g \circ f$ to 
+$F'(g \circ f) = \texttt{I~++~}(g \circ f) = 
+(\texttt{I} \circ \texttt{I})\texttt{~++~}(g \circ f) = 
+(\texttt{I~++~}g) \circ (\texttt{I~++~}f) = F'~g \circ F'~f$.
+
+Then the natural numbers could be described as an $F$-algebra by taking the carrier 
+\texttt{num} and the arrow \texttt{nat\_alg} of type 
+$\texttt{unit~+~num} \rightarrow \texttt{num}$, defined as
+\setlength{\arraycolsep}{1.0mm}
+$$
+\begin{array}[t]{llrll}
+\texttt{Nat\_alg} = &
+\lambda m. & \mbox{\bf case}\ m\ \mbox{\bf of} & \texttt{INL~()} & \Rightarrow \texttt{0} \\
+&          &                            {\mid} & \texttt{INR~}n  & \Rightarrow \texttt{SUC}~n
+           \ .
+\end{array}
+$$
+
+How does \texttt{Nat\_alg} describe the natural numbers? This function
+encodes all of the information about both of the constants that construct natural
+numbers, \texttt{0:num} and \texttt{SUC:num~->~num}. Depending on the input to
+\texttt{nat\_alg}, we can select either of these two functions. So this combines
+all of the constructors for natural numbers in one function.
+
+The notion of an algebra can be realized in \HOLW{} as a type abbreviation.
+\begin{session}
+\begin{verbatim}
+- val _ = type_abbrev ("algebra", Type `: \'F 'a. 'a 'F -> 'a`);
+- ``:(\'a. unit + 'a) algebra``;
+> val it =
+    ``:\'a. unit + 'a -> 'a``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+We define the functor $F$ above for natural numbers in \HOLW{} as \texttt{Nat\_fun}.
+\begin{session}
+\begin{verbatim}
+- val Nat_fun = new_definition("Nat_fun", Term
+     `Nat_fun = (\:'a 'b. \h. I ++ h) : (\'a. unit + 'a) functor`);
+> val Nat_fun =
+    |- Nat_fun = (\:'a 'b. (\h. I ++ h))
+     : thm
+\end{verbatim}
+\end{session}
+
+We can show that \texttt{Nat\_fun} is a functor, and so suitable to form an algebra.
+\begin{session}
+\begin{verbatim}
+- val SUM_MAP_I = sumTheory.SUM_MAP_I;
+> val SUM_MAP_I = |- I ++ I = I : thm
+- val SUM_MAP_o = functorTheory.SUM_o;
+> val SUM_MAP_o =
+    |- !f1 g1 f2 g2. g1 o f1 ++ g2 o f2 = (g1 ++ g2) o (f1 ++ f2)
+     : thm
+
+- val Nat_functor = store_thm
+  ("Nat_functor",
+   ``functor Nat_fun``,
+   SIMP_TAC combin_ss [functor_def,Nat_fun,SUM_MAP_I,GSYM SUM_MAP_o]
+  );
+> val Nat_functor = |- functor Nat_fun : thm
+\end{verbatim}
+\end{session}
+
+%Now we can use the functor \texttt{Nat\_fun} to specify the above algebra of
+%natural numbers.
+We can specify the natural numbers as the algebra described above.
+\begin{session}
+\begin{verbatim}
+- val Nat_alg = new_definition("Nat_alg",
+    ``Nat_alg =
+      (\m. case m of INL () => 0
+                   | INR n => SUC n)
+       : (\'a. unit + 'a, num) algebra``);
+> val Nat_alg =
+    |- Nat_alg = (\m. case m of INL () => 0 | INR n => SUC n)
+     : thm
+\end{verbatim}
+\end{session}
+
+But the same functor $F$ could in principle specify any $F$-algebra with 
+one type, call it $\alpha$, and two constants $Z$ and $S$ with the types $Z : \alpha$ and
+$S : \alpha \rightarrow \alpha$. For example this functor would also generate an algebra
+with the type \texttt{bool} and $Z = \texttt{F}$ and $S = \lambda t.\texttt{T}$,
+% \texttt{\$}$\verb|\|\texttt{/},
+with the type \texttt{num} with $Z~=~\texttt{0}$ and $S~=~\lambda n.((n + 1)~\texttt{MOD~7})$,
+or with the type \texttt{unit list} and $Z = \texttt{[]}$ and
+$S = \texttt{CONS()}$.
+\begin{session}
+\begin{verbatim}
+- val Bool_alg = new_definition("Bool_alg",
+    ``Bool_alg =
+      (\b. case b of INL () => F
+                   | INR b' => T)
+       : (\'a. unit + 'a, bool) algebra``);
+> val Bool_alg =
+    |- Bool_alg = (\b. case b of INL () => F | INR b' => T)
+     : thm
+\end{verbatim}
+\end{session}
+
+% Likewise a functor $G$ could be defined as mapping an object $\alpha$ to 
+% $\alpha~\texttt{\#}~\alpha$, and an arrow $f : \alpha \rightarrow \beta$ to 
+% $f~\texttt{\#\#}~f$. This functor describes the natural numbers with the addition operator, 
+% but it also describes any set with a binary operation defined on it.
+So a single functor can give rise to many algebras with the same functor.
+
+Given two algebras $f : \alpha~'F \rightarrow \alpha$ and $g : \beta~'F \rightarrow \beta$
+based on the same functor $F'~:~'F~\mbox{\sf functor}$,
+an {\it $F$-homomorphism}\/ is a mapping $h : \alpha \rightarrow \beta$ such that
+$h \circ f = g \circ F'~h$.
+\begin{session}
+\begin{verbatim}
+- val homo_def = new_definition("homo_def", Term
+   `homo (F': 'F functor) f g (h:'a -> 'b) = (h o f = g o F' h)`);
+> val homo_def =
+    |- !F' f g h. homo F' f g h <=> (h o f = g o F' h)
+     : thm
+\end{verbatim}
+\end{session}
+
+There is an $F$-homomorphism from \texttt{Nat\_alg} to \texttt{Bool\_alg}.
+%(actually, exactly one), but
+%there are no $F$-homomorphisms from \texttt{Bool\_alg} to \texttt{Nat\_alg}.
+\begin{session}
+\begin{verbatim}
+- val Nat_Bool_homo = store_thm
+  ("Nat_Bool_homo",
+   ``homo (\:'a 'b. \h. I ++ h) Nat_alg Bool_alg
+          (\n. n <> 0)``,
+   RW_TAC bool_ss [homo_def,Nat_alg,Bool_alg]
+   THEN CONV_TAC FUN_EQ_CONV
+   THEN BETA_TY_TAC
+   THEN Cases
+   THEN RW_TAC std_ss [oneTheory.one_case_rw]
+  );
+> val Nat_Bool_homo =
+    |- homo (\:'a 'b. (\h. I ++ h)) Nat_alg Bool_alg (\n. n <> 0)
+     : thm
+\end{verbatim}
+\end{session}
+
+However, there are no $F$-homomorphisms from \texttt{Bool\_alg} to \texttt{Nat\_alg}.
+\begin{session}
+\begin{verbatim}
+- val no_Bool_Nat_homo = store_thm
+  ("no_Bool_Nat_homo",
+   ``!phi. ~(homo (\:'a 'b. \h. I ++ h) Bool_alg Nat_alg phi)``,
+   RW_TAC bool_ss [homo_def,Nat_alg,Bool_alg]
+   THEN DISCH_THEN (MP_TAC o CONV_RULE FUN_EQ_CONV)
+   THEN DISCH_THEN (MP_TAC o SPEC ``INR T : unit + bool``)
+   THEN RW_TAC arith_ss []
+  );
+> val no_Bool_Nat_homo =
+    |- !phi. ~homo (\:'a 'b. (\h. I ++ h)) Bool_alg Nat_alg phi
+     : thm
+\end{verbatim}
+\end{session}
+
+
+The identity arrow is an $F$-homomorphism for any algebra to itself.
+\begin{session}
+\begin{verbatim}
+- val identity_homo = store_thm
+  ("identity_homo",
+   ``!(F':'F functor) f.
+       functor F' ==>
+       homo F' f f (I:'a -> 'a)``,
+   SIMP_TAC combin_ss [homo_def,functor_def]
+  );
+> val identity_homo =
+    |- !F' f. functor F' ==> homo F' f f I
+     : thm
+\end{verbatim}
+\end{session}
+
+The composition of two $F$-homomorphisms is also an $F$-homomorphism.
+\begin{session}
+\begin{verbatim}
+- val homo_comp = store_thm
+  ("homo_comp",
+   ``!(F':'F functor) f1 f3 (h1:'a -> 'b) (h2:'b -> 'c).
+       (?f2. homo F' f1 f2 h1 /\ homo F' f2 f3 h2) /\
+       functor F' ==>
+       homo F' f1 f3 (h2 o h1)``,
+   RW_TAC bool_ss [homo_def,functor_def]
+   THEN ASM_REWRITE_TAC[GSYM o_ASSOC]
+   THEN ASM_REWRITE_TAC[o_ASSOC]
+  );
+> val homo_comp =
+    |- !F' f1 f3 h1 h2.
+         (?f2. homo F' f1 f2 h1 /\ homo F' f2 f3 h2) /\ functor F' ==>
+         homo F' f1 f3 (h2 o h1)
+     : thm
+\end{verbatim}
+\end{session}
+
+
+With all of these possible algebras generated by one functor, the question naturally
+arises, are any of these particularly superior to the others? It turns out there are some
+which stand out as more completely representing the functor.
+% these are called {\it initial algebras}.
+
+Since there is an identity $F$-homomorphism from each algebra to itself, and
+since each composition of two $F$-homomorphisms is another $F$-homomorphism, 
+the set of all algebras of a given functor $F$ form a category {\bf Alg}$(F)$, 
+where the objects are $F$-algebras and the arrows are $F$-homomorphisms. Then an algebra $f$ 
+is an {\it initial algebra}\/ if it is an initial object in that category. That means that 
+for every algebra $g$ of that functor, there is exactly one
+$F$-homomorphism from the initial algebra $f$ to the other algebra $g$.
+\begin{session}
+\begin{verbatim}
+- val ialg_def = new_definition("ialg_def", Term
+   `ialg (  F'  : 'F functor)
+         (alpha : ('F,'t)algebra) =
+      !:'a. !(f : ('F,'a)algebra). ?!h. homo F' alpha f h`);
+> val ialg_def =
+    |- !F' alpha. ialg F' alpha <=> !:'a. !f. ?!h. homo F' alpha f h
+     : thm
+\end{verbatim}
+\end{session}
+
+The idea of an initial algebra is surprisingly powerful for such a terse definition.
+If $\alpha$ is an initial algebra, then this implies 
+a recursion principle for proofs by recursion, and also
+%for proving
+%properties about elements of the initial algebra by recursion. It also implies 
+a function definition principle, so that new recursive functions may be defined
+according to the constructors of the type. The definition of \texttt{ialg} above is a very 
+condensed representation of all this information, which would have been impossible 
+without the ability in \HOLW{}
+to quantify over type variables, as in \texttt{!:'a.} $\ldots$ above.
+
+The algebra \texttt{Nat\_alg} is an example of such an initial algebra, which we
+prove next.
+%- val Nat_ialg = store_thm
+%  ("Nat_ialg",
+%   ``ialg (\:'a 'b. \h. I ++ h) Nat_alg``,
+%   RW_TAC bool_ss [ialg_def,homo_def,Nat_alg,EXISTS_UNIQUE_DEF]
+%   THENL
+%     [ EXISTS_TAC ``SIMP_REC (f(INL())) (\x:'a. f(INR x))``
+%       THEN CONV_TAC FUN_EQ_CONV
+%       THEN BETA_TY_TAC
+%       THEN Cases
+%       THEN RW_TAC std_ss [oneTheory.one_case_rw,oneTheory.one,
+%                           prim_recTheory.SIMP_REC_THM],
+%
+%       RULE_ASSUM_TAC (BETA_TY_RULE o CONV_RULE FUN_EQ_CONV)
+%       THEN CONV_TAC FUN_EQ_CONV
+%       THEN Induct
+%       THENL
+%         [ EVERY_ASSUM (MP_TAC o SPEC ``INL () : unit + num``)
+%           THEN SIMP_TAC std_ss [oneTheory.one_case_rw],
+%
+%           POP_ASSUM MP_TAC
+%           THEN EVERY_ASSUM (MP_TAC o SPEC ``INR n : unit + num``)
+%           THEN SIMP_TAC std_ss [oneTheory.one_case_rw]
+%         ]
+%     ]
+%  );
+%> val Nat_ialg =
+%    |- ialg (\:'a 'b. (\h. I ++ h)) Nat_alg
+%     : thm
+\begin{session}
+\begin{verbatim}
+- val SIMP_REC_THM = prim_recTheory.SIMP_REC_THM;
+> val SIMP_REC_THM =
+    |- !x f.
+         (SIMP_REC x f 0 = x) /\
+         !m. SIMP_REC x f (SUC m) = f (SIMP_REC x f m)
+     : thm
+
+- val SIMP_REC_cata_lemma = store_thm
+  ("SIMP_REC_cata_lemma",
+  ``((h: num -> 'a) o Nat_alg = f o Nat_fun h)
+    = (h = SIMP_REC (f(INL ())) (f o INR))``,
+   SIMP_TAC std_ss [Nat_alg,Nat_fun,o_DEF,FUN_EQ_THM,
+                    sumTheory.FORALL_SUM,oneTheory.one_case_rw]
+   THEN EQ_TAC THEN STRIP_TAC
+   THENL [ Induct, ALL_TAC ]
+   THEN ASM_SIMP_TAC std_ss [SIMP_REC_THM,oneTheory.one]
+  );
+> val SIMP_REC_cata_lemma =
+    |- (h o Nat_alg = f o Nat_fun h) <=>
+       (h = SIMP_REC (f (INL ())) (f o INR))
+     : thm
+
+- val Nat_ialg = store_thm
+  ("Nat_ialg",
+  ``ialg Nat_fun Nat_alg``,
+   SIMP_TAC bool_ss [ialg_def,homo_def,SIMP_REC_cata_lemma]
+  );
+> val Nat_ialg = |- ialg Nat_fun Nat_alg : thm
+\end{verbatim}
+\end{session}
+This is a deeper proof that the ones we have encountered previously, but its structure
+is typical for such proofs of initial algebras. 
+Proving that there is exactly one homomorphism implies that we have to prove 1)
+that there exists such a homomorphism, and 2) the homomorphism is unique.
+To prove the existence, we need to exhibit a witness function, which in general may 
+have to be recursive. Since the witness function needs to depend on 
+the target algebra~\texttt{f}, we must use a recursive combinator to create a recursive
+function on the fly, depending on \texttt{f}. In this case the predefined \HOL{} constant 
+\texttt{SIMP\_REC}
+suffices for our needs, taking two arguments, the value of the recursive function
+at zero, and a function to produce the $n+1$-th value given the $n$-th value of the
+recursive function. Note that both of these arguments for \texttt{SIMP\_REC} 
+make use of \texttt{f}.
+The proof divides into the two cases of whether the homomorphism property holds
+for the zero constructor or for the successor constructor, and each is solved by
+simplification.
+
+For 2), the uniqueness of the homomorphism is expressed as for any two versions of the
+homomorphism, they must be equal, which by extensionality means that the two
+homomorphisms give the same answer for every argument. In general this requires an proof by
+induction on the arguments. In this case we appeal to the induction principle on natural 
+numbers, and then specialize each of the hypotheses for the two versions of the homomorphism 
+with either the value for the zero case or for the successor case, depending on whether
+we are proving the base case or the step case of the induction. As before, the proof
+is finished by simplification.
+
+\section{Catamorphisms}
+
+The existence of an initial $F$-algebra is a very powerful idea, implying for example
+that there is a recursion principle for proving properties. In addition, it implies
+that there is one and only one function that exists as a homomorphism from
+this initial algebra to any other algebra $f$ of the same functor $F$. This unique
+function is called the {\it catamorphism}\/ of $f$, which Bird and de Moor denote as
+$(\!|f|\!)$.
+\begin{session}
+\begin{verbatim}
+- val cata_def = new_definition("cata_def", Term
+   `cata (  F'  : 'F functor)
+         (alpha : ('F,'t)algebra) (* initial object in category of algebras *)
+         (  f   : ('F,'a)algebra) =
+         @h. homo F' alpha f h`);
+> val cata_def =
+    |- !F' alpha f. cata F' alpha f = @h. homo F' alpha f h
+     : thm
+\end{verbatim}
+\end{session}
+
+This definition of catamorphisms takes three arguments, a functor and two algebras of that
+functor. The first algebra is intended to be an initial algebra; if it is not, then the
+result will not have the desired properties. The definition uses the \HOLW{} choice
+operator \texttt{@} to choose some function \texttt{h} which is a homomorphism from
+the first algebra to the second. If several such homomorphisms exist, then this will
+select one of them (consistently). If no such homomorphisms exist, then this will just
+pick one function of the underlying type, $\texttt{'t} \rightarrow \texttt{'a}$,
+and we will know nothing more about that function.
+But if in fact the first algebra \texttt{alpha} is an initial algebra, then exactly
+one such homomorphism will always exist, it will be chosen by the \texttt{@} operator,
+and the function returned by \texttt{cata} will in fact be the one and only homomorphism from
+\texttt{alpha} to \texttt{f}.
+
+For example, the catamorphism from an initial algebra to itself is the identity function.
+\begin{session}
+\begin{verbatim}
+- val identity_cata = store_thm
+  ("identity_cata",
+  ``functor (F' : 'F functor) /\ ialg F' (alpha : ('F,'t)algebra) ==>
+    (cata F' alpha alpha = I)``,
+   RW_TAC bool_ss [functor_def,cata_def,ialg_def,EXISTS_UNIQUE_THM]
+   THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``alpha: ('F,'t)algebra``
+                                    o TY_SPEC ``:'t``)
+   THEN SELECT_ELIM_TAC
+   THEN CONJ_TAC
+   THENL [ EXISTS_TAC ``h:'t -> 't``
+           THEN FIRST_ASSUM ACCEPT_TAC,
+
+           RW_TAC combin_ss [homo_def]
+         ]
+  );
+> val identity_cata =
+    |- functor F' /\ ialg F' alpha ==> (cata F' alpha alpha = I)
+     : thm
+\end{verbatim}
+\end{session}
+
+\newpage
+If \texttt{alpha} is an initial algebra, then any catamorphism based on an
+initial algebra \texttt{alpha} is in fact a homomorphism.
+\begin{session}
+\begin{verbatim}
+- val homo_cata = store_thm
+  ("homo_cata",
+  ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) ==>
+    !:'a. !f: ('F,'a)algebra.
+        homo F' alpha (f: ('F,'a)algebra) (cata F' alpha f)``,
+   RW_TAC bool_ss [homo_def,cata_def,ialg_def,EXISTS_UNIQUE_THM]
+   THEN REPEAT STRIP_TAC
+   THEN POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL o TY_SPEC_ALL)
+   THEN SELECT_ELIM_TAC
+   THEN PROVE_TAC[]
+  );
+Meson search level: ..
+> val homo_cata =
+    |- ialg F' alpha ==> !:'a. !f. homo F' alpha f (cata F' alpha f)
+     : thm
+\end{verbatim}
+\end{session}
+
+Alternatively, one can say that if $h$ is the catamorphism of $f$, then $h$
+has the homomorphism property.
+\begin{session}
+\begin{verbatim}
+- val cata_property = store_thm
+  ("cata_property",
+  ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) ==>
+    !:'a. !(f : ('F,'a)algebra) h.
+        ((h = cata F' alpha f) = (h o alpha = f o F' h))``,
+   REPEAT STRIP_TAC
+   THEN FIRST_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL o TY_SPEC_ALL
+                      o REWRITE_RULE[ialg_def,EXISTS_UNIQUE_THM])
+   THEN REWRITE_TAC [GSYM homo_def]
+   THEN EQ_TAC
+   THEN RW_TAC bool_ss [homo_cata]
+  );
+> val cata_property =
+    |- ialg F' alpha ==>
+       !:'a. !f h. (h = cata F' alpha f) <=> (h o alpha = f o F' h)
+     : thm
+\end{verbatim}
+\end{session}
+
+\pagebreak
+Another way of saying this is that if $h$ is a homomorphism from an initial algebra 
+$\alpha$ to another algebra $f$, then $h$ is the catamorphism of $f$.
+\begin{session}
+\begin{verbatim}
+- val eq_cata = store_thm
+  ("eq_cata",
+  ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) /\
+    homo F' alpha (f: ('F,'a)algebra) h ==>
+    (cata F' alpha f = h)``,
+   RW_TAC bool_ss [homo_def,cata_def,ialg_def,EXISTS_UNIQUE_THM]
+   THEN FIRST_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL o TY_SPEC ``:'a``)
+   THEN SELECT_ELIM_TAC
+   THEN CONJ_TAC
+   THENL [ EXISTS_TAC ``h': 't -> 'a``
+           THEN FIRST_ASSUM ACCEPT_TAC,
+
+           ASM_SIMP_TAC bool_ss []
+         ]
+  );
+> val eq_cata =
+    |- ialg F' alpha /\ homo F' alpha f h ==> (cata F' alpha f = h)
+     : thm
+\end{verbatim}
+\end{session}
+
+Interestingly, if $\alpha$ is an initial algebra, and $f$ and $g$ are algebras of the same
+functor as $\alpha$ with $h$ being a homomorphism from $f$ to $g$, then the composition
+of the catamorphism of $f$ with $h$ is the same arrow as the catamorphism of $g$.
+\begin{session}
+\begin{verbatim}
+- val cata_fusion = store_thm
+  ("cata_fusion",
+  ``ialg (F' : 'F functor) (alpha : ('F,'t)algebra) /\
+    homo F' f g (h: 't -> 'a) /\ functor F' ==>
+    (h o cata F' alpha f = cata F' alpha g)``,
+   STRIP_TAC
+   THEN CONV_TAC SYM_CONV
+   THEN MATCH_MP_TAC eq_cata
+   THEN ASM_REWRITE_TAC[]
+   THEN MATCH_MP_TAC homo_comp
+   THEN ASM_REWRITE_TAC[]
+   THEN EXISTS_TAC ``f: ('F,'t)algebra``
+   THEN ASM_SIMP_TAC bool_ss [homo_cata]
+  );
+> val cata_fusion =
+    |- ialg F' alpha /\ homo F' f g h /\ functor F' ==>
+       (h o cata F' alpha f = cata F' alpha g)
+     : thm
+\end{verbatim}
+\end{session}
+
+\newpage
+For now, we will stop here for this 
+chapter of the tutorial.
+This development is continued further
+in the file {\tt aopScript.sml}
+in the directory {\tt examples/HolOmega}.
+It 
+%includes examples of initial algebras, and 
+culminates with the banana split theorem:
+%
+\begin{session}
+\begin{verbatim}
+SPLIT_def:
+  |- SPLIT (f:'a -> 'b) (g:'a -> 'c) = \p. (f p, g p)
+
+banana_split:
+  |- ialg (phi:'t functor) (alpha : ('t,'a) algebra) /\ functor phi ==>
+     (SPLIT (cata phi alpha (f : ('t,'b) algebra))
+            (cata phi alpha (g : ('t,'c) algebra))
+           = cata phi alpha (SPLIT (f o phi FST) (g o phi SND)))
+\end{verbatim}
+\end{session}
+
+\noindent
+The banana split theorem can be used to automatically synthesize a more
+efficient algorithm by combining two existing algorithms.
+
+The interested reader is invited to trace through the development on his own.
+
+
+% \subsubsection{Limitations of this approach}
+% 
+% In what we have seen, all the functor definitions work cleanly and simply.
+% However, there are some limitations to this approach.  In general, a functor
+% may map from any category {\bf C} to any other category {\bf D}.  Since we
+% are only talking about a single category here, {\bf Type}, we cannot
+% express all functors.  In particular, we cannot address
+% functors which map from a category {\bf C} to its opposite category
+% $\mbox{\bf C}^{op}$, where the objects of $\mbox{\bf C}^{op}$ are the
+% same as {\bf C}, and the arrows of $\mbox{\bf C}^{op}$ are the same as
+% {\bf C} except that
+% the sources and targets are swapped.
+% %the arrows are reversed, with the sources and targets being swapped.
+% An example of such a functor would be the inverse image power set functor
+% \verb|\|{\tt {:}'a~'b.~}\verb|\|{\tt (f{:}'a~->~'b)~s.~\{ x | f~x IN s \}}.
+% This has type
+% %
+% \begin{session}
+% \begin{verbatim}
+% - type_of ``\:'a 'b. \(f:'a -> 'b) s. { x | f x IN s }``;
+% > val it =
+%     ``:!'a 'b. ('a -> 'b) -> ('b -> bool) -> 'a -> bool``
+%      : hol_type
+% \end{verbatim}
+% \end{session}
+% 
+% \noindent
+% This type is not of a form that can match {\sf $'\!F$~functor} for some
+% {\sf $'\!F$}.
+% Hence this functor does not pass type-checking in this current approach.
+% 
+% We address this and other issues in a more general version of category theory
+% presented in a later chapter.
+
+
+
+
+
+
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

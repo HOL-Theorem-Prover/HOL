@@ -1,0 +1,1798 @@
+
+\chapter{Example: Abstract Data Types}\label{chap:adt}
+
+%This chapter is the first that endeavors to show the purpose of \HOLW{},
+%This chapter is the first to exhibit the new features of \HOLW{} in real use.
+%Beginning here, the reader will see 
+%what \HOLW{} is good for, and what new accomplishments are possible
+%compared to \HOL{}.
+%
+This chapter consists of the specification of an abstract data type
+in the \HOLW{} logic, as a worked example.
+%There are three intentions:
+%There are three intended accomplishments:
+%The intention is to accomplish three things:
+The goals of this chapter are:
+
+\begin{myenumerate}
+\item To present how new term and type constants are introduced into the logic,
+\item To show how abstract data types can be created and used to hide
+      information,
+\item To show how an abstract algebra can be realized in the \HOLW{} logic.
+%\item To practically demonstrate the usefulness of the new ideas of \HOLW{}.
+\end{myenumerate}
+
+The notion of abstract data types comes from the field of software
+engineering, when one is concerned with creating a model of a system
+that expresses just what is necessary, nothing more.
+This brevity is intended to focus on just the essential aspects
+of the system, without the encumberance of unnecessary detail.  This is
+appropriate when laying down requirements for what a system should do,
+or when drawing up an initial design of a system.
+It is important to not over-specify
+the system, in order to allow the eventual implementors of the design
+to experiment with different algorithms or data structures in order to find
+the choices that work best.  Those choices should be left until later, when the
+implementor has had the time to consider alternative possibilities. The
+initial design should decide
+%just the essential functionality of the system,
+only {\it what\/} it should do, not {\it how\/} it should do it.
+The specific {\it how\/} should be hidden from the rest of the system
+that uses this part, as an irrelevant detail,
+%not essential to be considered,
+simplifying that portion's construction.
+%If the specific {\it how\/} is hidden and invisible, then it is impossible
+%for the rest of the system to depend on the eventual implementation choices.
+
+Such information hiding is useful for both data structure design and
+for algorithm design.  In this chapter, we shall address just
+%the first of these needs,
+information hiding of data structures.
+% In other words,
+We would like to specify the essential contents of some data structure
+while leaving all inessential details unspecified.
+
+Then the construction of other parts of the system can begin, using the
+partially specified data structure, while simultaneously deeper work can
+commence on selecting the exact best implementation of the data structure.
+This implementation can even be changed completely while the rest of the
+system is half-done, without causing any ripple effects on the rest of the
+project, so long as both sides conform to the original partial specification
+of the data structure.  This kind of modularity is absolutely essential for
+good software engineering and the practical maintenance of large systems.
+
+Abstract data types are crucially important in the modeling of abstract algebras.
+Here we consider an algebra to be a collection of types and contants, where
+some of the types are only named and given kinds, but not defined.  Likewise,
+the constants may also have types but lack definitions. Instead, along with the
+signature of the algebra is attached a collection of properties (boolean
+expressions) that relate the different constants in the algebra, and which serve
+as the axioms of that algebra.
+
+Abstract algebras are very useful in the modeling of hardware and software
+designs, where many of the details may be yet undefined, where we desire for the
+moment to leave certain aspects unspecified and abstract.  As an example of an
+abstract algebra, consider the following signature:
+
+\begin{center}
+\begin{tabular}{|llcl|} \hline
+{\bf type} & vect & : & {\bf ty} \\
+{\bf op} & VT & : & vect \\
+{\bf op} & VF & : & vect \\
+{\bf op} & VCONCAT & : & vect $\rightarrow$ vect $\rightarrow$ vect \\
+{\bf axiom} & \multicolumn{3}{l|}
+  {VCONCAT $x$ (VCONCAT $y$ $z$) = VCONCAT (VCONCAT $x$ $y$) $z$} \\ \hline
+\end{tabular}
+\end{center}\label{initial-algebra}
+
+The above mentions one type, vect, two constant vectors, VT and VF, and
+one operator for combining them, VCONCAT, with the proviso that VCONCAT is
+associative.  This specification has many models, for example it has as a model,
+non-empty bit strings.  But of all these models, there are some which are
+``best'' in the sense that they are {\it initial}. Initiality is a concept
+from category theory, defined as follows.
+
+In the category of algebras, the arrows are homomorphisms from one algebra to
+another.  Another algebra of the same signature might look like
+
+\begin{center}
+\begin{tabular}{|llcl|} \hline
+{\bf type} & vect' & : & {\bf ty} \\
+{\bf op} & VT' & : & vect' \\
+{\bf op} & VF' & : & vect' \\
+{\bf op} & VCONCAT' & : & vect' $\rightarrow$ vect' $\rightarrow$ vect' \\
+{\bf axiom} & \multicolumn{3}{l|}
+  {VCONCAT' $x$ (VCONCAT' $y$ $z$) = VCONCAT' (VCONCAT' $x$ $y$) $z$} \\ \hline
+\end{tabular}
+\end{center}\label{other-algebra}
+
+\noindent
+In the category of algebras of this signature,
+the arrow from the first
+%non-empty bit vectors
+algebra to this other algebra is a homomorphism,
+that is, a function $\phi$ from vect to vect' such that
+
+\begin{center}
+\begin{tabular}{|rcl|} \hline
+$\phi$ VT & = & VT' \\
+$\phi$ VF & = & VF' \\
+$\phi$ (VCONCAT $x$ y) & = & VCONCAT' ($\phi$ $x$) ($\phi$ y) \\ \hline
+\end{tabular}
+\end{center}\label{other-algebra}
+
+In category theory, an object 0 is called {\it initial\/} if for every object
+{\it A} in the category, there exists exactly one arrow from 0 to {\it A}.
+
+It is a standard result of universal algebra\footnote{George Gratzer.
+{\it Universal Algebra}.  Van Nostrand, 1968.} that for each signature there is
+a uniquely determined algebra which is initial, and which is therefore called the
+{\it initial algebra}.  The initial algebra is in some sense the ``best''
+interpretation of the signature, as it incorporates the most information and
+detail; all other algebras of that signature are in that sense inferior.
+
+This means that it is would be highly valuable to be able to define a new type
+and its constants by describing it as the initial algebra of its signature.
+And that is what we will do in this chapter. But before we begin, we will first
+lay the necessary groundwork by discussing
+%discuss
+the different foundational principles for introducing new type and term
+constants into the \HOLW{} logic.
+
+
+\section{New term and type constants}
+
+One of the key features of the \HOLW{} logic is that it is extensible, that is,
+that new constants can be created and added to the logic by the user. Both term
+constants and type constants may be added.  This is very important, as it is
+the primary way that users create models of existing real-world applications
+within the logic: one creates new types to represent the special kinds of data
+being manipulated by the application, and then one creates new term constants,
+based on those new types, to represent the particular operations and activities
+performed by the application.
+
+\HOLW{} contains some very powerful, highly automated tools for easily defining
+new types and new term constants, and these are the tools that are most often
+used to build a model inside \HOLW. Despite their complexity and power, all of
+these tools are eventually based on a small number of basic definitional
+principles in the core of the logic. These principles give the primitive,
+essential tools for extending the logic by adding new type and term names.
+The high-level tools just provide ways to leverage these fundamental principles
+in a more automated and user-friendly way; they do not add any real new power.
+
+In the following, we will discuss these fundamental principles.
+The first three of these are taken almost unchanged from \HOL{}; the fourth
+is unique to \HOLW{}, and is the key new feature supporting abstract data types
+and abstract algebras.
+
+\subsection{New term constant definition}
+
+New term constants may be introduced by the {\it new term constant definition\/}
+principle, implemented as the \ML{} function \texttt{new\_definition}:
+\[\texttt{new\_definition~:~(string * term)~->~thm}\]
+%
+Evaluating
+\texttt{new\_definition("\mbox{\it name}",~``$c\ x_1 \ldots x_n$\ =\ $t$``)}
+\begin{itemize}
+\item where $c$ is the name of the constant to be created,
+\item $x_1 \ldots x_n$ are zero or more distinct variables,
+as formal arguments to $c$,
+\item $t$ is a term that may contain the $x_1 \ldots x_n$, but has no other
+free term variables, and
+\item all the free type and kind variables of $x_1 \ldots x_n$ and $t$ are also
+free type or kind variables of the type of $c$,
+\end{itemize}
+defines $c$ in the logic as a new constant with the value
+$\lambda x_1 \ldots x_n.\ t$.
+It also creates and returns the theorem
+\verb+|- +\texttt{$c\ x_1 \ldots x_n$\ =\ $t$}, and in addition saves this
+theorem as a definition in the current theory under the name {\it name}.
+
+Note that \texttt{new\_definition} cannot be used to create a recursive
+function; $t$ cannot refer to the new $c$ being created.
+
+If the above side conditions are met,
+this is always a valid operation to do, as the new name $c$ is really just
+an abbreviation for a term that could already have been constructed in the 
+logic.  In principle all instances of such new term constants could be
+replaced by the terms that they abbreviate, so it is impossible to introduce
+unsoundness by this definitional principle.
+
+\subsection{New term constant specification}
+
+New term constants may also be introduced by the {\it new term constant specification\/}
+principle, implemented as the \ML{} function \texttt{new\_specification}:
+\[\texttt{new\_specification~:~string * string list * thm~->~thm}\]
+%
+Evaluating
+\texttt{new\_specification("\mbox{\it name}",~["$c_1$",\ldots,"$c_n$"],~|-~?$x_1 \ldots x_n${.}$t$)}
+\begin{itemize}
+\item $c_1 \ldots c_n$ are the names of the $n$ constants to be created, all distinct,
+\item $x_1 \ldots x_n$ are $n$ distinct variables,
+\item $t$ is a term that may contain the $x_1 \ldots x_n$, but has no other
+free term variables, and
+\item all the free type and kind variables of $x_1 \ldots x_n$ and $t$ are also
+free type or kind variables of the type of each $c_i$ for $1 \le i \le n$,
+\end{itemize}
+defines each $c_i$ in the logic as a new constant, for $1 \le i \le n$,
+with some fixed values such that
+\[\mbox{\texttt{|- }}t [ c_1,\ldots,c_n / x_1,\ldots,x_n ].\]
+It also returns the above theorem, and in addition saves it
+as a definition in the current theory under the name {\it name}.
+
+Note that \texttt{new\_specification} cannot be used to create recursive
+functions; $t$ cannot refer to the new $c_i$ being created.
+
+Since the theorem \texttt{|-~?$x_1 \ldots x_n${.}$t$} is true, there exist
+values for the constants $c_1,\ldots,c_n$ such that the definition theorem 
+above is true.  However, this is all that is known about the new constants;
+in general we do not know their exact values, just that they together satisfy
+the property $t [ c_1,\ldots,c_n / x_1,\ldots,x_n ]$.  That is why this
+is called a {\it specification\/} rather than a definition. Even if specific
+witnesses were used to prove \texttt{|-~?$x_1 \ldots x_n${.}$t$} originally,
+the values of the new constants need not be the same as those witnesses.
+This means that the values of the constants might not be defined entirely,
+but only in part, and this partiality is quite useful in not over-specifying
+a design.
+
+\subsection{New type constant definition}
+
+New type constants, including new type operator constants,
+may be introduced by the {\it new type constant definition\/}
+principle.
+%implemented as the \ML{} function
+%\texttt{new\_type\_definition}:
+%\[\texttt{new\_type\_definition~:~(string * thm)~->~thm}\]
+%
+The idea is that a new type may be defined as being isomorphic to a
+non-empty subset of a pre-existing type.  Say that $\sigma$ is the existing
+type, and that $P$ is the non-empty subset of $\sigma$.  Then the new type
+$\tau$ can be described as 
+%
+\begin{center}
+\setlength{\unitlength}{1.00mm}
+\begin{picture}(120,32)
+\thicklines
+
+% old type on left
+\put(20,15){\oval(40,30)}
+\put(20,15){\oval(15,15)}
+\put(20,15){\makebox(0,0){$P$}}
+\put(20, 3){\makebox(0,0){existing type $\sigma$}}
+
+% new type on right
+\put(105,15){\oval(15,15)}
+\put(105,15){\makebox(0,0){$\tau$}}
+\put(105, 3){\makebox(0,0){new type}}
+
+% arrow of bijection
+\put(27.5,16){\vector(1,0){70}}
+\put(65,19){\makebox(0,0){bijection {\it abs}}}
+\put(97.5,14){\vector(-1,0){70}}
+\put(65,11){\makebox(0,0){bijection {\it rep}}}
+
+\end{picture}
+\end{center}
+Here {\it abs\/} and {\it rep\/} are functions which are bijections
+(one-to-one and onto)
+between the subset $P$ of the existing type $\sigma$ and the newly created
+type $\tau$.
+In \HOL{},
+this is the {\it only\/} primitive means provided to create new types.
+
+%
+The new type constant definition principle is implemented as 
+the \ML{} function
+%\texttt{new\_type\_definition}:
+\[\texttt{new\_type\_definition~:~(string * thm)~->~thm}\]
+If $P$ is a term of type \texttt{$\sigma$ -> bool}
+for some type $\sigma$,
+containing $n$ distinct
+type variables (of any kinds), then evaluating
+\texttt{new\_type\_definition("\mbox{\it name}",~|- ?$x{:}\sigma.\ P\ x$)}
+results in {\it name\/} being declared as a new $n$-ary type constant
+in the current theory.
+Note that $\sigma$ must
+%be a type of
+have
+%Note that the type $\sigma$ must have
+kind \texttt{ty:$r$} for some rank $r$.
+The $n$ type arguments to {\it name\/} occur in the order given by an
+alphabetic ordering of the names of the corresponding type variables.
+If the type variables have kinds $k_1, \ldots, k_n$, respectively,
+then the kind of the new type constant {\it name\/} will be
+\texttt{$k_1$ => $\ldots$ => $k_n$ => ty:$r$}.
+The theorem returned by \texttt{new\_type\_definition} will be of the form
+\texttt{|- ?rep:('a,...,'n){\it name} -> $\sigma$.\ TYPE\_DEFINITION P rep},
+and this theorem will also be stored in the current theory
+under the automatically-generated name {\it name}\texttt{\_TY\_DEF}.
+\texttt{TYPE\_DEFINITION} is a constant defined by:
+\begin{verbatim}
+    |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
+          (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
+          (!x. P x = (?x'. x = rep x'))
+\end{verbatim}
+%
+Thus \texttt{|-~?rep.~TYPE\_DEFINITION~P~rep} asserts that there is a
+bijection between the newly defined type \texttt{('a,...,'n){\it name}}
+and the set of values of type $\sigma$ that satisfy $P$.
+
+The use of \texttt{new\_type\_definition} and the definition of new term
+constants involving this type are more fully explained in \DESCRIPTION.
+
+\subsection{New type constant specification}
+
+In \HOLW{}, new type constants may also be introduced by the
+{\it new type constant specification\/} principle,
+where apart from any particular existing types, new types may be
+introduced according to a general property that describes them.
+This definitional principle is not present in \HOL{}, and
+it is the sole new definitional principle in \HOLW.
+This feature is the fundamental basis of abstract data types.
+As in the corresponding definitional principle for specifying term constants,
+a theorem must be provided that states that some types exist that
+satisfy the general property.
+This definitional principle is implemented as the \ML{} function
+\texttt{new\_type\_specification}:
+\[\texttt{new\_type\_specification~:~string * string list * thm~->~thm}\]
+%
+Evaluating
+\texttt{new\_specification("\mbox{\it name}",~["$t_1$",\ldots,"$t_n$"],~|-~?:$\alpha_1 \ldots \alpha_n${.}$q$)},
+where
+\begin{itemize}
+\item $t_1 \ldots t_n$ are the names of the $n$ type constants to be created,
+all distinct,
+\item $\alpha_1 \ldots \alpha_n$ are $n$ distinct type variables,
+\item $q$ is a term of type \texttt{bool} that contains no free term variables,
+\item $q$ may contain the $\alpha_1 \ldots \alpha_n$,
+but has no other free type variables, and
+\item all the free kind variables of $\alpha_1 \ldots \alpha_n$ and $q$
+are also free kind variables of the type of each $t_i$ for $1 \le i \le n$,
+\end{itemize}
+defines each $t_i$ in the logic as a new type constant with the same kind as
+$\alpha_i$, for $1 \le i \le n$, with some fixed type values such that
+\[\mbox{\texttt{|- }}q [ t_1,\ldots,t_n / \alpha_1,\ldots,\alpha_n ].\]
+It also returns the above theorem, and in addition saves it
+as a definition in the current theory under the automatically-generated
+name {\it name}{\tt \_TY\_SPEC}.
+
+We will see this definitional principle demonstrated in
+%the examples of
+this chapter.
+
+
+\section{Bit Vectors}
+
+The following example is taken from Tom Melham's prescient 1994 paper,
+``The HOL Logic Extended with Quantification over Type Variables.''
+
+Consider the type of non-empty bit vectors.  We can characterize these
+algebraically as an \HOLW{} type \texttt{vect}, with two constants \texttt{t}
+and \texttt{f} and an associative binary operator \texttt{c} which concatenates
+two bit vectors together.
+
+In addition, we wish for the type of bit vectors to be ``initial,'' in
+the sense that an initial algebra is initial in category theory.
+That is, we want the type we come up with to be the ``most general'' or
+``best possible'' type that satisfies what we ask, and nothing we didn't ask.
+Being initial means that for any other type that also exhibits the same
+structure of having two constants and an associative binary operator, there
+must be one and only one homomorphism from the bit vector type to the other
+type.
+
+Such a homomorphism is a function $\phi$ that maintains the computational
+structure of the bit vector type with its operators
+after mapping them into the other type.
+For example, $\phi$ must map \texttt{c} to some binary operation
+\texttt{c'} on the other type that is associative, and also maintains the
+pattern of computation of \texttt{c} when mapped from the bit vector type
+to the other type:
+%, as follows:
+%if \texttt{c} is mapped by $\phi$ to the binary operator \texttt{c'}
+%in the new type, then
+%\texttt{c} and \texttt{c'} must obey
+\[
+\forall (x : \mbox{\tt vect}) (y : \mbox{\tt vect}) .\ 
+\phi\ ( \mbox{\tt c}\ x\ y) = 
+\mbox{\tt c'}\ (\phi\ x)\ (\phi\ y).
+\]
+This means that we get the same answer if we first combine $x$ and $y$ using
+\texttt{c} and then map the result using $\phi$, or instead we first map
+$x$ to $\phi\ x$ and $y$ to $\phi\ y$, and then combine those values using
+\texttt{c'}; and this should work for any possible values of $x$ and $y$.
+
+To create this new type of bit vectors, our strategy will be to first prove the
+existance of a type with the properties mentioned above, and then use the
+new type constant specification principle described earlier
+to actually introduce the type as a new type constant in the logic.
+So we need to prove the following theorem in \HOLW{}:
+\[
+\begin{array}[t]{l@{\hspace{5mm}}l@{\hspace{20mm}}r}
+\multicolumn{3}{l}{
+\mbox{\tt vect\_exists:}} \\
+& \vdash
+ \exists{:}\alpha. &
+\mbox{\scriptsize \textsc{1}} \\
+ & \hspace{7mm}
+   \exists(\mbox{\tt t}:\alpha)\ (\mbox{\tt f}:\alpha)\ 
+          (\mbox{\tt c}:\alpha \rightarrow \alpha \rightarrow \alpha). &
+\mbox{\scriptsize \textsc{2}} \\
+ & \hspace{10mm}
+   (\forall x\ y\ z.\ \mbox{\tt c}\ x\ (\mbox{\tt c}\ y\ z) =
+                      \mbox{\tt c}\ (\mbox{\tt c}\ x\ y)\ z) \ \wedge &
+\mbox{\scriptsize \textsc{3}} \\
+ & \hspace{10mm}
+   (\forall{:} \beta. &
+\mbox{\scriptsize \textsc{4}} \\
+ & \hspace{15mm}
+    \forall (\mbox{\tt t'}:\beta)\ (\mbox{\tt f'}:\beta)\ 
+            (\mbox{\tt c'}:\beta \rightarrow \beta \rightarrow \beta). &
+\mbox{\scriptsize \textsc{5}} \\
+ & \hspace{20mm}
+   (\forall x\ y\ z.\ \mbox{\tt c'}\ x\ (\mbox{\tt c'}\ y\ z) =
+                      \mbox{\tt c'}\ (\mbox{\tt c'}\ x\ y)\ z) \ \Rightarrow &
+\mbox{\scriptsize \textsc{6}} \\
+ & \hspace{20mm}
+   (\exists ! \phi : \alpha \rightarrow \beta. &
+\mbox{\scriptsize \textsc{7}} \\
+ & \hspace{26mm}
+   (\phi\ \mbox{\tt t} = \mbox{\tt t'}) \ \wedge \ 
+   (\phi\ \mbox{\tt f} = \mbox{\tt f'}) \ \wedge &
+\mbox{\scriptsize \textsc{8}} \\
+ & \hspace{26mm}
+   (\forall (x:\alpha) (y:\alpha).\ \phi\ (\mbox{\tt c}\ x\ y) =
+                                    \mbox{\tt c'}\ (\phi\ x)\ (\phi\ y)))) &
+\mbox{\scriptsize \textsc{9}} 
+\end{array}
+\]
+
+In this theorem, $\alpha$ is a type variable which stands for what will be the
+new bit vector type, and $\beta$ is a type variable which stands for
+all ``other'' types that also exhibit the same algebraic signature, as described above.
+
+The theorem states that there exists a type $\alpha$ (see line 1) and also 
+values \texttt{t}, \texttt{f}, and \texttt{c} (see line 2) such that
+\texttt{c} is associative (line 3),
+and for all possible other types $\beta$ (line 4)
+and all possible values \texttt{t'}, \texttt{f'}, and \texttt{c'} (line 5)
+such that \texttt{c'} is associative (line 6),
+there must be one and only one homomorphism $\phi$
+of type $\alpha \rightarrow \beta$ (line 7)
+for which \texttt{t} maps to \texttt{t'},
+\texttt{f} maps to \texttt{f'} (line 8),
+and \texttt{c'} maintains the pattern of computation of \texttt{c} (line 9).
+
+It is important to realize that the universal quantification of the type $\beta$
+on line 4 is necessary. If this were left out, then $\beta$ would be a free type
+variable of the theorem,
+and this
+%which
+would violate a condition required
+%to use
+%for
+%definitional principle
+by the
+%for
+%the
+new type constant specification
+principle.
+
+If this requirement were not present, the principle would become unsound.
+%For example, as Tom Melham points out in his paper, consider a theorem of
+%the form $\vdash \exists x{:}\sigma.P$ where the type variable $\alpha$ appears
+%free in $P$ but not in $\sigma$. This theorem implicitly considers the
+%type variable $\alpha$ to be universally quantified, so that its meaning is
+%that for any type $\tau$ which could be substituted for $\alpha$, there
+%exists a value $x$ of type $\sigma$ for which $P[\tau / \alpha]$ is true.
+%But since $\alpha$ does not appear free in $\sigma$, the choice of $x$
+%cannot possibly depend on $\alpha$, and so given different values of $\tau$,
+%the choice of $x$ must be fixed.
+%
+For example, consider a theorem of the form $\vdash \exists{:}\alpha.P$
+where a type variable $\beta$ different from $\alpha$ appears free in $P$.
+This theorem implicitly considers the type variable $\beta$ to be universally
+quantified, so that is meaning is that for any type $\sigma$ which could be
+substituted for $\beta$, there exists a type $\alpha$ for which 
+$P[\sigma / \beta]$ is true. But there is no way for $\alpha$ to depend on
+$\beta$, as these are two different type variables.
+
+Take for example the theorem $\vdash \exists{:}\alpha.\ 
+%\exists c:bool.\ c = 
+(\forall (x{:}\alpha) (y{:}\alpha).\ x = y) =
+(\forall (x{:}\beta) (y{:}\beta).\ x = y)$, which can be proven in \HOLW{}
+by taking
+%$\beta$ as the witness for $\alpha$. 
+$\alpha = \beta$.
+If we could use new type constant specification with this theorem, then we
+could create a new type, say \texttt{atype}, with the specification theorem
+$\vdash~(\forall (x{:}\mbox{\tt atype}) (y{:}\mbox{\tt atype}).\ x = y) =
+(\forall (x{:}\beta) (y{:}\beta).\ x = y)$.
+We can then substitute in this theorem for $\beta$
+either the type \texttt{unit} or the type \texttt{bool}, and obtain
+\[
+\begin{array}{ll}
+\vdash~(\forall (x{:}\mbox{\tt atype}) (y{:}\mbox{\tt atype}).\ x = y) =
+(\forall (x{:}\mbox{\tt unit}) (y{:}\mbox{\tt unit}).\ x = y) & \mbox{and} \\
+\vdash~(\forall (x{:}\mbox{\tt atype}) (y{:}\mbox{\tt atype}).\ x = y) =
+(\forall (x{:}\mbox{\tt bool}) (y{:}\mbox{\tt bool}).\ x = y), &
+\end{array}
+\]
+from which follows
+$\vdash~(\forall (x{:}\mbox{\tt unit}) (y{:}\mbox{\tt unit}).\ x = y) =
+(\forall (x{:}\mbox{\tt bool}) (y{:}\mbox{\tt bool}).\ x = y)$.
+But the type \texttt{unit} has exactly one element, whereas the type
+\texttt{bool} has two, so this simplifies to $\vdash~\mbox{\tt T} = \mbox{\tt F}$,
+a false theorem.
+
+So to use the theorem \texttt{vect\_exists},
+the type variable $\beta$ must be universally quantified.
+
+If we can prove the theorem \texttt{vect\_exists}, we can then use the type
+and term constant specification principles to establish the new type \texttt{vect}
+and associated constants \texttt{VT}, \texttt{VF}, and \texttt{VCONCAT} such that
+%
+\[
+\begin{array}[t]{l@{\hspace{5mm}}l@{\hspace{15mm}}r}
+\multicolumn{3}{l}{
+\mbox{\tt vect\_consts\_spec:}} \\
+ & \hspace{6mm}
+   \vdash
+   (\forall x\ y\ z.\ \mbox{\tt VCONCAT}\ x\ (\mbox{\tt VCONCAT}\ y\ z) =
+                      \mbox{\tt VCONCAT}\ (\mbox{\tt VCONCAT}\ x\ y)\ z) \ \wedge &
+\mbox{\scriptsize \textsc{1}} \\
+ & \hspace{10mm}
+   (\forall{:} \beta. &
+\mbox{\scriptsize \textsc{2}} \\
+ & \hspace{15mm}
+    \forall (\mbox{\tt t'}:\beta)\ (\mbox{\tt f'}:\beta)\ 
+            (\mbox{\tt c'}:\beta \rightarrow \beta \rightarrow \beta). &
+\mbox{\scriptsize \textsc{3}} \\
+ & \hspace{20mm}
+   (\forall x\ y\ z.\ \mbox{\tt c'}\ x\ (\mbox{\tt c'}\ y\ z) =
+                      \mbox{\tt c'}\ (\mbox{\tt c'}\ x\ y)\ z) \ \Rightarrow &
+\mbox{\scriptsize \textsc{4}} \\
+ & \hspace{20mm}
+   (\exists ! \phi : \alpha \rightarrow \beta. &
+\mbox{\scriptsize \textsc{5}} \\
+ & \hspace{26mm}
+   (\phi\ \mbox{\tt VT} = \mbox{\tt t'}) \ \wedge \ 
+   (\phi\ \mbox{\tt VF} = \mbox{\tt f'}) \ \wedge &
+\mbox{\scriptsize \textsc{6}} \\
+ & \hspace{26mm}
+   (\forall (x:\alpha) (y:\alpha).\ \phi\ (\mbox{\tt VCONCAT}\ x\ y) =
+                                    \mbox{\tt c'}\ (\phi\ x)\ (\phi\ y)))) &
+\mbox{\scriptsize \textsc{7}} 
+\end{array}
+\]
+
+To prove the theorem \texttt{vect\_exists}, we could first prove an
+instance of it for some particular type substituted for $\alpha$ as a witness
+throughout the body of the theorem (lines 2-9),
+and then use the forward inference rule \texttt{TY\_EXISTS} to derive
+\texttt{vect\_exists}.
+
+In fact, we can go further, and first prove an instance for particular values
+substituted for \texttt{t}, \texttt{f}, and \texttt{c}.  This means that we would
+have to establish some new type, say ``\texttt{bits}'', and then create
+term constants \texttt{t0:bits}, \texttt{f0:bits}, and \texttt{c0:bits $\rightarrow$
+bits $\rightarrow$ bits} in the logic, for which we can prove the following theorem:
+%
+%At this point, it may look like we are going backwards. Since we are trying
+%to portray the new bit vector type as being abstract, why are we creating a
+%particular witness type?  Such a type may have some observable properties
+%which we do not want to assign to our new bit vector type.
+%
+%It turns out that this fear is unfounded.  If we can come up with any
+%particular type that allows us to prove the instantiated version of
+%\texttt{vect\_exists}, then all that particular type information is thrown away 
+%once we derive \texttt{vect\_exists} itself, and we cannot observe any other
+%properties than what we have explicitly stated in that theorem.
+%
+%So our current goal is, given some existing type \texttt{bits},
+%to prove a theorem such as:
+\[
+\begin{array}[t]{l@{\hspace{2mm}}l@{\hspace{20mm}}r}
+\multicolumn{3}{l}{
+\mbox{\tt bits\_is\_initial:}} \\
+ & \hspace{10mm}
+   (\forall x\ y\ z.\ \mbox{\tt c0}\ x\ (\mbox{\tt c0}\ y\ z) =
+                      \mbox{\tt c0}\ (\mbox{\tt c0}\ x\ y)\ z) \ \wedge &
+\mbox{\scriptsize \textsc{1}} \\
+ & \hspace{10mm}
+   (\forall{:} \beta. &
+\mbox{\scriptsize \textsc{2}} \\
+ & \hspace{15mm}
+    \forall (\mbox{\tt t'}:\beta)\ (\mbox{\tt f'}:\beta)\ 
+            (\mbox{\tt c'}:\beta \rightarrow \beta \rightarrow \beta). &
+\mbox{\scriptsize \textsc{3}} \\
+ & \hspace{20mm}
+   (\forall x\ y\ z.\ \mbox{\tt c'}\ x\ (\mbox{\tt c'}\ y\ z) =
+                      \mbox{\tt c'}\ (\mbox{\tt c'}\ x\ y)\ z) \ \Rightarrow &
+\mbox{\scriptsize \textsc{4}} \\
+ & \hspace{20mm}
+   (\exists ! \phi : \mbox{\tt bits} \rightarrow \beta. &
+\mbox{\scriptsize \textsc{5}} \\
+ & \hspace{26mm}
+   (\phi\ \mbox{\tt t0} = \mbox{\tt t'}) \ \wedge \ 
+   (\phi\ \mbox{\tt f0} = \mbox{\tt f'}) \ \wedge &
+\mbox{\scriptsize \textsc{6}} \\
+ & \hspace{26mm}
+   (\forall (x:\mbox{\tt bits}) (y:\mbox{\tt bits}).\ \phi\ (\mbox{\tt c0}\ x\ y) =
+                                    \mbox{\tt c'}\ (\phi\ x)\ (\phi\ y)))) &
+\mbox{\scriptsize \textsc{7}} 
+\end{array}
+\]
+
+So we need to establish some type \texttt{bits} such that the theorem
+\texttt{bits\_is\_initial} is true.  We can almost use lists of booleans
+(\texttt{bool list}) as this type;
+we could set \texttt{t0}~=~\texttt{[T]}, \texttt{f0}~=~\texttt{[F]},
+and \texttt{c0}~=~\texttt{APPEND}.
+There's just one problem; we are trying to represent the type of
+{\it non-empty\/} bit vectors, and \texttt{bool list} includes the empty list
+\texttt{[]}.
+
+The answer is to create \texttt{bits} as a new type isomorphic to a
+{\it subset\/} of \texttt{bool list}, that omits the element \texttt{[]}.
+This can be done in \HOLW{} using the new type constant definition principle
+described earlier.
+
+\subsection{Defining a new type}
+
+The first step in forming a subset type
+%of \texttt{bool list}
+is to determine the subset predicate; in this example, for a list of booleans
+$l$, we choose the predicate
+$\lambda l:\mbox{\tt bool list}.\ l \neq \mbox{\tt []}$.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- set_trace "Unicode" 0;
+> val it = () : unit
+- new_theory "bit_vector";
+<<HOL message: Created theory "bit_vector">>
+> val it = () : unit
+
+- val P = ``\l:bool list. ~(l = [])``;
+> val P =
+    ``\l. l <> []`` :
+  term
+\end{verbatim}
+\end{session}
+
+We then need to prove that the predicate is inhabited, that there is at least one element
+that satisfies the predicate.
+%
+\begin{session}
+\begin{verbatim}
+- val NOT_CONS_NIL = listTheory.NOT_CONS_NIL;
+> val NOT_CONS_NIL =
+    |- !a1 a0. a0::a1 <> []
+     : thm
+
+- val bits_inhab = TAC_PROOF(([],
+   ``?l. ^P l``),
+   EXISTS_TAC ``[T]``
+   THEN BETA_TAC
+   THEN REWRITE_TAC[NOT_CONS_NIL]
+  );
+> val bits_inhab =
+    |- ?l. (\l. l <> []) l
+     : thm
+\end{verbatim}
+\end{session}
+
+Using this theorem we can create the new type \texttt{bits} as that subset of
+\texttt{bool list}.
+\begin{session}
+\begin{verbatim}
+- val bits_def = new_type_definition ("bits", bits_inhab);
+> val bits_def =
+    |- ?rep. TYPE_DEFINITION (\l. l <> []) rep
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Abstraction and representation bijections}
+
+The theorem we get from the call to \texttt{new\_type\_definition} is not very
+useful as is. The first step is to define two new functions in the logic that
+map between the new type and the subset of the original type. The new type is
+considered the ``abstract'' type, and the prior type is considered the
+``representation'' type. Therefore the two functions to be defined are
+\texttt{bits\_ABS {:} bool list -> bits} and
+\texttt{bits\_REP {:} bits -> bool list}. These functions are bijections between
+the old and new types.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_bijs = define_new_type_bijections
+                  {name="bits_bijs",
+                   ABS ="bits_ABS",
+                   REP ="bits_REP",
+                   tyax=bits_def};
+> val bits_bijs =
+    |- (!a. bits_ABS (bits_REP a) = a) /\
+       !r. (\l. l <> []) r <=> (bits_REP (bits_ABS r) = r)
+     : thm
+\end{verbatim}
+\end{session}
+
+To further assist the user, \HOL{} provides four \ML{} functions that take a bijections
+theorem such as \texttt{bits\_bijs}, and automatically prove the one-to-one and onto properties
+of both the abstraction and the representation bijections.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_REP_one_one = BETA_RULE (prove_rep_fn_one_one bits_bijs);
+> val bits_REP_one_one =
+    |- !a a'. (bits_REP a = bits_REP a') <=> (a = a')
+     : thm
+
+- val bits_REP_onto    = BETA_RULE (prove_rep_fn_onto    bits_bijs);
+> val bits_REP_onto =
+    |- !r. r <> [] <=> ?a. r = bits_REP a
+     : thm
+
+- val bits_ABS_one_one = BETA_RULE (prove_abs_fn_one_one bits_bijs);
+> val bits_ABS_one_one =
+    |- !r r'.
+         r <> [] ==> r' <> [] ==> ((bits_ABS r = bits_ABS r') <=> (r = r'))
+     : thm
+
+- val bits_ABS_onto    = BETA_RULE (prove_abs_fn_onto    bits_bijs);
+> val bits_ABS_onto =
+    |- !a. ?r. (a = bits_ABS r) /\ r <> []
+     : thm
+\end{verbatim}
+\end{session}
+
+The bijection theorem itself can be broken into two useful theorems.
+%
+\begin{session}
+\begin{verbatim}
+- val (bits_ABS_REP,bits_EQ_REP_ABS) = CONJ_PAIR (BETA_RULE bits_bijs);
+> val bits_ABS_REP =
+    |- !a. bits_ABS (bits_REP a) = a
+     : thm
+  val bits_EQ_REP_ABS =
+    |- !r. r <> [] <=> (bits_REP (bits_ABS r) = r)
+     : thm
+\end{verbatim}
+\end{session}
+
+The last theorem is actually more useful as an implication, instead of an equality,
+especially when using the automatic simplification tactics,
+so we prove that version.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_REP_ABS = store_thm(
+   "bits_REP_ABS",
+   ``!r. ~(r = []) ==> (bits_REP (bits_ABS r) = r)``,
+   REWRITE_TAC [bits_EQ_REP_ABS]
+  );
+> val bits_REP_ABS =
+    |- !r. r <> [] ==> (bits_REP (bits_ABS r) = r)
+     : thm
+\end{verbatim}
+\end{session}
+
+Finally, considering the
+one-to-one and onto
+properties of
+%the representation function
+\texttt{bits\_REP}, every representing value that \texttt{bits\_REP} maps onto will
+satisfy the original subset predicate.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_REP_NOT_NULL = store_thm(
+   "bits_REP_NOT_NULL",
+   ``!a. ~(bits_REP a = [])``,
+   SIMP_TAC list_ss [bits_REP_onto,bits_REP_one_one]
+  );
+> val bits_REP_NOT_NULL =
+    |- !a. bits_REP a <> [] : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Defining new term constants of the new type}
+
+Now we are ready to create the constants we need in the type \texttt{bits}.
+Each definition is based on a value or function on \texttt{bool} lists, and makes use of the
+\texttt{bits\_ABS} and \texttt{bits\_REP} bijections to move arguments and function results
+back and forth between the two types.
+%
+\begin{session}
+\begin{verbatim}
+- val t0_def = Define `t0 = bits_ABS [T]`;
+Definition has been stored under "t0_def"
+> val t0_def = |- t0 = bits_ABS [T] : thm
+
+- val f0_def = Define `f0 = bits_ABS [F]`;
+Definition has been stored under "f0_def"
+> val f0_def = |- f0 = bits_ABS [F] : thm
+
+- val c0_def = Define `c0 x y = bits_ABS (bits_REP x ++ bits_REP y)`;
+Definition has been stored under "c0_def"
+> val c0_def =
+    |- !x y. c0 x y = bits_ABS (bits_REP x ++ bits_REP y)
+     : thm
+\end{verbatim}
+\end{session}
+
+Based on these definitions, we can now prove properties about these operators.
+The associativity of \texttt{c0} follows easily
+from the associativity of the append operation on lists.
+%
+\begin{session}
+\begin{verbatim}
+- val c0_assoc = store_thm(
+   "c0_assoc",
+   ``!x y z:bits. c0 x (c0 y z) = c0 (c0 x y) z``,
+   SIMP_TAC list_ss [c0_def,bits_REP_ABS,bits_REP_NOT_NULL]
+  );
+> val c0_assoc =
+    |- !x y z. c0 x (c0 y z) = c0 (c0 x y) z
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Induction on the new type}
+
+That was fairly easy, but
+to prove more difficult theorems about the type \texttt{bits} we
+will need
+to fashion more sophisticated proof machinery,
+%Two examples of such machinery are a cases theorem and an induction principle.
+%One example of such machinery is
+such as 
+an induction principle.
+%The cases theorem states that for any value in
+%the type \texttt{bits}, it must have been formed either as \texttt{t0} or \texttt{f0} or
+%as a result of a call to \texttt{c0}.
+The induction principle
+states that for any property \texttt{P:bits -> bool},
+the property will hold of all values in the type \texttt{bits} if the property
+is true of both \texttt{t0} and \texttt{f0}, and when the property is true of any
+two elements of \texttt{bits}, then it must be true of their concatenation using
+\texttt{c0}.
+
+First we prove a helpful lemma.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_CONS_EQ_REP_ABS_APPEND = store_thm(
+   "bits_CONS_EQ_REP_ABS_APPEND",
+   ``!x y ys. x :: y :: ys =
+              bits_REP (bits_ABS [x]) ++ bits_REP (bits_ABS (y::ys))``,
+   SIMP_TAC list_ss [bits_REP_ABS]
+  );
+> val bits_CONS_EQ_REP_ABS_APPEND =
+    |- !x y ys.
+         x::y::ys = bits_REP (bits_ABS [x]) ++ bits_REP (bits_ABS (y::ys))
+     : thm
+\end{verbatim}
+\end{session}
+
+% \newpage
+% Now we can state and prove the cases theorem for \texttt{bits}.
+% %
+% \begin{session}
+% \begin{verbatim}
+% - val bits_cases = store_thm(
+%    "bits_cases",
+%    ``!b:bits. (b = t0) \/ (b = f0) \/ (?x y. b = c0 x y)``,
+%    ONCE_REWRITE_TAC [GSYM bits_ABS_REP]
+%    THEN REWRITE_TAC [t0_def,f0_def,c0_def]
+%    THEN SIMP_TAC list_ss [bits_REP_ABS,bits_ABS_one_one,bits_REP_NOT_NULL]
+%    THEN GEN_TAC
+%    THEN MP_TAC (SPEC ``b:bits`` bits_REP_NOT_NULL)
+%    THEN SPEC_TAC (``bits_REP b``,``l:bool list``)
+%    THEN Cases (* two subgoals *)
+%    THEN REWRITE_TAC[NOT_CONS_NIL] (* eliminates one subgoal *)
+%    THEN Cases_on `t` (* two subgoals *)
+%    THENL
+%      [ Cases_on `h` (* two subgoals *)
+%        THEN REWRITE_TAC [],
+% 
+%        SIMP_TAC list_ss []
+%        THEN EXISTS_TAC ``bits_ABS [h]``
+%        THEN EXISTS_TAC ``bits_ABS (h'::t')``
+%        THEN MATCH_ACCEPT_TAC bits_CONS_EQ_REP_ABS_APPEND
+%      ]
+%   );
+% > val bits_cases =
+%     |- !b. (b = t0) \/ (b = f0) \/ ?x y. b = c0 x y
+%      : thm
+% \end{verbatim}
+% \end{session}
+
+%\newpage
+Now we can state and prove an induction principle for \texttt{bits}.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_induct = store_thm(
+   "bits_induct",
+   ``!P:bits -> bool.
+       (P t0) /\
+       (P f0) /\
+       (!x y. P x /\ P y ==> P (c0 x y)) ==>
+       (!b. P b)``,
+   REWRITE_TAC [t0_def,f0_def,c0_def]
+   THEN GEN_TAC THEN STRIP_TAC
+   THEN ONCE_REWRITE_TAC [GSYM bits_ABS_REP]
+   THEN GEN_TAC
+   THEN MP_TAC (SPEC ``b:bits`` bits_REP_NOT_NULL)
+   THEN SPEC_TAC (``bits_REP b``,``l:bool list``)
+   THEN measureInduct_on `LENGTH l`
+   THEN Cases_on `l` (* two subgoals *)
+   THEN REWRITE_TAC[NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN Cases_on `t` (* two subgoals *)
+   THENL
+     [ Cases_on `h` (* two subgoals *)
+       THEN ASM_REWRITE_TAC [],
+
+       REWRITE_TAC [bits_CONS_EQ_REP_ABS_APPEND]
+       THEN ASM_SIMP_TAC list_ss []
+     ]
+  );
+> val bits_induct =
+    |- !P. P t0 /\ P f0 /\ (!x y. P x /\ P y ==> P (c0 x y)) ==> !b. P b
+     : thm
+\end{verbatim}
+\end{session}
+%We can use this induction principle to prove properties for all elements of
+%the \texttt{bits} type.
+
+\subsection{Combinator for recursive functions}
+
+The next step is to define a combinator to simplify fashioning recursive
+functions on \texttt{bits}.
+This is similar to the way that the combinator \texttt{FOLDR} can be used to
+fashion recursive functions on lists without actually making any new recursive
+definitions.
+The new combinator will be named
+``\texttt{bits\_fold},'' with type
+\texttt{'b -> 'b -> ('b -> 'b -> 'b) -> bits -> 'b}.
+The first three arguments will specify how the resulting function behaves
+in the three cases where the fourth argument (of type \texttt{bits})
+is of the form
+\texttt{t0}, \texttt{f0}, or \texttt{c0 a b} for some \texttt{a} and \texttt{b}.
+If \texttt{bits\_fold}~$x\ y\ op$
+is called on the argument \texttt{t0}, it should return $x$;
+if it is called on the argument \texttt{f0}, it should return $y$;
+and if it is called on the argument \texttt{c0}~$a$~$b$,
+it should return
+$op (\mbox{\texttt{bits\_fold}}\ x\ y\ op\ a)
+    (\mbox{\texttt{bits\_fold}}\ x\ y\ op\ b)$.
+%$op (f\ a) (f\ b)$, where the $f$ that are used are recursive
+%calls of \texttt{bits\_fold}~$x$~$y$~{\it op}.
+
+We define this function \texttt{bits\_fold}
+%in three stages,
+using two auxilliary functions,
+\texttt{bit\_fold1} on booleans and \texttt{bits\_fold1} on lists of booleans:
+%
+\begin{center}
+{\tt
+\begin{tabular}{lccccl}
+     bit\_fold1  & (x:'b) & (y:'b) &    & : & bool -> 'b \\
+     bits\_fold1 & (x:'b) & (y:'b) & op & : & bool list -> 'b \\
+     bits\_fold  & (x:'b) & (y:'b) & op & : & bits -> 'b
+\end{tabular}
+}
+\end{center}
+
+%
+\begin{session}
+\begin{verbatim}
+- val bit_fold1_def = Define
+  `(bit_fold1 x y T = x:'b) /\
+   (bit_fold1 x y F = y)`;
+Definition has been stored under "bit_fold1_def"
+> val bit_fold1_def =
+    |- (!x y. bit_fold1 x y T = x) /\ !x y. bit_fold1 x y F = y
+     : thm
+
+- val bits_fold1_def = Define
+   `bits_fold1 (x:'b) (y:'b) (op:'b -> 'b -> 'b) (z :: zs) =
+      if zs = []
+        then bit_fold1 x y z
+        else op (bit_fold1 x y z) (bits_fold1 x y op zs)`;
+Definition has been stored under "bits_fold1_def"
+> val bits_fold1_def =
+    |- !x y op z zs.
+         bits_fold1 x y op (z::zs) =
+         if zs = [] then
+           bit_fold1 x y z
+         else
+           op (bit_fold1 x y z) (bits_fold1 x y op zs)
+     : thm
+
+- val bits_fold_def = Define
+   `bits_fold (x:'b) y op z = bits_fold1 x y op (bits_REP z)`;
+Definition has been stored under "bits_fold_def"
+> val bits_fold_def =
+    |- !x y op z. bits_fold x y op z = bits_fold1 x y op (bits_REP z)
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+Notice that the function \texttt{bits\_fold1} is actually undefined
+on empty boolean lists.
+
+Now we need to prove that \texttt{bits\_fold} as defined
+%actually
+yields the proper answers for each of the three cases of its \texttt{bits}
+argument. The first two cases, on \texttt{t0} and \texttt{f0}, are easy.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_fold_scalars = store_thm(
+   "bits_fold_scalars",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (bits_fold x y op t0 = x) /\
+       (bits_fold x y op f0 = y)``,
+   SIMP_TAC list_ss
+     [bits_fold_def,t0_def,f0_def,bits_REP_ABS,bits_fold1_def,bit_fold1_def]
+  );
+> val bits_fold_scalars =
+    |- !x y op. (bits_fold x y op t0 = x) /\ (bits_fold x y op f0 = y)
+     : thm
+\end{verbatim}
+\end{session}
+
+The third case for \texttt{bits\_fold}, on \texttt{c0 a b}, is just the
+statement that \texttt{bits\_fold}~$x\ y\ op$ is a homomorphism.
+Since \texttt{bits\_fold} is defined in terms of \texttt{bits\_fold1},
+we will first prove that \texttt{bits\_fold1}~$x\ y\ op$ is a homomorphism.
+
+For clarity, let's abbreviate \texttt{bits\_fold1}~$x\ y\ op$ by $f$.
+Then $f$ \texttt{{:}~bool~list~->~'b} is a homomorphism if and only if
+$f(a\ \mbox{\tt ++}\ b) = op (f\ a) (f\ b)$ for all $a$, $b$ that are non-empty
+lists of booleans. This equation
+could be expressed in category theory notation as the following
+commuting diagram:
+
+%                          f x f
+%         list x list  ------------>   'b x 'b
+%              |                          |
+%           ++ |                          | op
+%              |                          |
+%              V                          V
+%            list      ------------>     'b
+%                            f
+%
+\begin{center}
+\setlength{\unitlength}{1.00mm}
+\begin{picture}(80,32)
+\thicklines
+
+% all four corners
+% \put(20,15){\oval(40,30)}
+% \put(20,15){\oval(15,15)}
+\put(10,30){\makebox(0,0){\texttt{list \# list}}}
+\put(10, 5){\makebox(0,0){\texttt{list}}}
+\put(65,30){\makebox(0,0){\texttt{'b \# 'b}}}
+\put(65, 5){\makebox(0,0){\texttt{'b}}}
+
+% arrows of four sides
+\put(25,30){\vector(1,0){30}}
+\put(40,34){\makebox(0,0){\texttt{$f$ \#\# $f$}}}
+\put(25, 5){\vector(1,0){30}}
+\put(40, 2){\makebox(0,0){$f$}}
+\put(10,25){\vector(0,-1){15}}
+\put( 5,18){\makebox(0,0){\texttt{++}}}
+\put(65,25){\vector(0,-1){15}}
+\put(70,18){\makebox(0,0){$op$}}
+
+\end{picture}
+\end{center}
+
+First, because we want to quantify over just those boolean lists that
+are non-empty, we wish to use the restricted quantifier library,
+\texttt{res\_quanLib}. This allows us to say
+``\texttt{!(a:bool list) (b:bool list)~::~(}
+\verb|\|\texttt{v.}\verb|~|\texttt{(v = []))}. $\ldots$''
+The idea is that the universally quantified variables, \texttt{a}
+and \texttt{b}, range not over all values of their type, but only over
+the restricted subset that satisfies
+the predicate given after the double colon (\texttt{::}).
+%
+\begin{session}
+\begin{verbatim}
+- load "res_quanLib";
+> val it = () : unit
+- open res_quanLib;
+> ...
+\end{verbatim}
+\end{session}
+
+Then the proof that \texttt{bits\_fold1} is a homomorphism
+uses a simple induction on the boolean list \texttt{a}, with
+case splits for the cases
+%to distinguish the different cases mentioned
+in the definition of \texttt{bits\_fold1}.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_fold1_is_homo = store_thm(
+   "bits_fold1_is_homo",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+       !(a:bool list) (b:bool list) :: (\v.~(v = [])).
+           bits_fold1 x y op (a ++ b) =
+           op (bits_fold1 x y op a) (bits_fold1 x y op b)``,
+   REPEAT GEN_TAC
+   THEN DISCH_TAC
+   THEN SIMP_TAC (bool_ss ++ resq_SS) [pred_setTheory.IN_ABS]
+   THEN Induct (* two subgoals *)
+   THEN REWRITE_TAC [NOT_CONS_NIL] (* eliminates one subgoal *)
+   THEN REWRITE_TAC [listTheory.APPEND,bits_fold1_def]
+   THEN Cases_on `a` (* two subgoals *)
+   THEN ASM_SIMP_TAC list_ss []
+  );
+> val bits_fold1_is_homo =
+    |- !x y op.
+         (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+         !a b::(\v. v <> []).
+           bits_fold1 x y op (a ++ b) =
+           op (bits_fold1 x y op a) (bits_fold1 x y op b)
+     : thm
+\end{verbatim}
+\end{session}
+
+Given that \texttt{bits\_fold1} is a homomorphism, it is easy to prove that
+\texttt{bits\_fold} is a homomorphism as well.
+
+For clarity, let's abbreviate \texttt{bits\_fold}~$x\ y\ op$ by $f$.
+Then $f$ \texttt{{:}~bits~->~'b} is a homomorphism if and only if
+$f(\mbox{\tt c0}\ a\ b) = op (f\ a) (f\ b)$ for all $a$, $b$ in \texttt{bits}.
+This equation
+could be expressed in category theory notation as the following
+commuting diagram:
+
+%                          f x f
+%         bits x bits  ------------>   'b x 'b
+%              |                          |
+%           c0 |                          | op
+%              |                          |
+%              V                          V
+%            bits      ------------>     'b
+%                            f
+
+\begin{center}
+\setlength{\unitlength}{1.00mm}
+\begin{picture}(80,35)
+\thicklines
+
+% all four corners
+% \put(20,15){\oval(40,30)}
+% \put(20,15){\oval(15,15)}
+\put(10,30){\makebox(0,0){\texttt{bits \# bits}}}
+\put(10, 5){\makebox(0,0){\texttt{bits}}}
+\put(65,30){\makebox(0,0){\texttt{'b \# 'b}}}
+\put(65, 5){\makebox(0,0){\texttt{'b}}}
+
+% arrows of four sides
+\put(25,30){\vector(1,0){30}}
+\put(40,34){\makebox(0,0){\texttt{$f$ \#\# $f$}}}
+\put(25, 5){\vector(1,0){30}}
+\put(40, 2){\makebox(0,0){$f$}}
+\put(10,25){\vector(0,-1){15}}
+\put( 5,18){\makebox(0,0){\texttt{c0}}}
+\put(65,25){\vector(0,-1){15}}
+\put(70,18){\makebox(0,0){$op$}}
+
+\end{picture}
+\end{center}
+
+The proof is accomplished just by simplification, using the theorem
+\texttt{bits\_fold1\_is\_homo}.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_fold_is_homo = store_thm(
+   "bits_fold_is_homo",
+   ``!(x :'b) (y:'b) (op:'b -> 'b -> 'b).
+       (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+       !a b.
+           bits_fold x y op (c0 a b) =
+           op (bits_fold x y op a) (bits_fold x y op b)``,
+   SIMP_TAC (list_ss ++ resq_SS)
+        [bits_fold_def,c0_def,bits_REP_ABS,bits_REP_NOT_NULL,
+         pred_setTheory.IN_ABS,bits_fold1_is_homo]
+  );
+> val bits_fold_is_homo =
+    |- !x y op.
+         (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+         !a b.
+           bits_fold x y op (c0 a b) =
+           op (bits_fold x y op a) (bits_fold x y op b)
+     : thm
+\end{verbatim}
+\end{session}
+
+This completes the proof that the recursive function formed by
+%the combinator
+\texttt{bits\_fold}~$x\ y\ op$ has the correct behavior on each of the three
+cases of how a value of the type \texttt{bits} was formed, whether by
+\texttt{t0}, \texttt{f0}, or by \texttt{c0}~$a\ b$.
+%We can use this
+%combinator to fashion recursive functions that have this form and behavior.
+
+\subsection{Proof of initiality}
+
+Now we can prove that \texttt{bits} with \texttt{t0}, \texttt{f0},
+\texttt{c0} is initial; that is, there is exactly one homomorphism
+from \texttt{bits} to any other type \texttt{'b} with $t'$\texttt{:'b},
+$f'$\texttt{:'b}, and $c'$\texttt{:'b~->~'b~->~'b}, where $c'$ is associative.
+\[
+\begin{array}[t]{l@{\hspace{5mm}}l@{\hspace{20mm}}r}
+\multicolumn{3}{l}{
+\mbox{\tt bits\_is\_initial:}} \\
+& \vdash
+   \forall{:} \beta.\ 
+    \forall (\mbox{\tt t'}:\beta)\ (\mbox{\tt f'}:\beta)\ 
+            (\mbox{\tt c'}:\beta \rightarrow \beta \rightarrow \beta). &
+\mbox{\scriptsize \textsc{1}} \\
+ & \hspace{20mm}
+   (\forall x\ y\ z.\ \mbox{\tt c'}\ x\ (\mbox{\tt c'}\ y\ z) =
+                      \mbox{\tt c'}\ (\mbox{\tt c'}\ x\ y)\ z) \ \Rightarrow &
+\mbox{\scriptsize \textsc{2}} \\
+ & \hspace{20mm}
+   (\exists ! \phi : \mbox{\tt bits} \rightarrow \beta. &
+\mbox{\scriptsize \textsc{3}} \\
+ & \hspace{26mm}
+   (\phi\ \mbox{\tt t0} = \mbox{\tt t'}) \ \wedge \ 
+   (\phi\ \mbox{\tt f0} = \mbox{\tt f'}) \ \wedge &
+\mbox{\scriptsize \textsc{4}} \\
+ & \hspace{26mm}
+   (\forall (x:\alpha) (y:\alpha).\ \phi\ (\mbox{\tt c0}\ x\ y) =
+                                    \mbox{\tt c'}\ (\phi\ x)\ (\phi\ y))) & \mbox{\scriptsize \textsc{5}} 
+\end{array}
+\]
+
+This proof is interesting, and we will trace it in some detail here. We begin
+by establishing the goal to be proved.
+%
+\begin{session}
+\begin{verbatim}
+- g `!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
+              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+              ?!(fn:bits -> 'b).
+                        (fn  t0           = x) /\
+                        (fn  f0           = y) /\
+                  (!a b. fn (c0 a b) = op (fn a) (fn b))`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete goalstack:
+         Initial goal:
+    
+         !:'b.
+           !x y op.
+             (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+             ?!fn.
+               (fn t0 = x) /\ (fn f0 = y) /\
+               !a b. fn (c0 a b) = op (fn a) (fn b)
+    
+    
+     : proofs
+\end{verbatim}
+\end{session}
+
+First we remove the universal quantifications and move the antecedent of the
+implication to the assumption list.
+%First we strip off the universal quantifications and the implication's antecedent.
+%
+\begin{session}
+\begin{verbatim}
+- e (REPEAT STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    
+    ?!fn. (fn t0 = x) /\ (fn f0 = y) /\ !a b. fn (c0 a b) = op (fn a) (fn b)
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+Next we transform the unique existence quantification into a conjunction of
+two clauses, one of which states the existence, and the other the uniqueness.
+%
+\begin{session}
+\begin{verbatim}
+- e (SIMP_TAC bool_ss [EXISTS_UNIQUE_DEF]);
+OK..
+1 subgoal:
+> val it =
+    
+    (?fn.
+       (fn t0 = x) /\ (fn f0 = y) /\
+       !a b. fn (c0 a b) = op (fn a) (fn b)) /\
+    !x' y'.
+      ((x' t0 = x) /\ (x' f0 = y) /\
+       !a b. x' (c0 a b) = op (x' a) (x' b)) /\ (y' t0 = x) /\
+      (y' f0 = y) /\ (!a b. y' (c0 a b) = op (y' a) (y' b)) ==>
+      (x' = y')
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+Now we split this conjunction into two subgoals, and
+ deferring uniqueness until later,
+we begin to work on
+the first subgoal, the existence property.
+%
+\begin{session}
+\begin{verbatim}
+- e (CONJ_TAC);
+OK..
+2 subgoals:
+> val it =
+    
+    !x' y'.
+      ((x' t0 = x) /\ (x' f0 = y) /\
+       !a b. x' (c0 a b) = op (x' a) (x' b)) /\ (y' t0 = x) /\
+      (y' f0 = y) /\ (!a b. y' (c0 a b) = op (y' a) (y' b)) ==>
+      (x' = y')
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+    
+    
+    ?fn. (fn t0 = x) /\ (fn f0 = y) /\ !a b. fn (c0 a b) = op (fn a) (fn b)
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+Now is when we make use of our \texttt{bits\_fold} combinator to supply
+the right function on \texttt{bits}, given the values \texttt{x:'b},
+\texttt{y:'b}, and \texttt{op:'b~->~'b~->~'b}.
+%
+\begin{session}
+\begin{verbatim}
+- e (EXISTS_TAC ``bits_fold (x:'b) y op``);
+OK..
+1 subgoal:
+> val it =
+    
+    (bits_fold x y op t0 = x) /\ (bits_fold x y op f0 = y) /\
+    !a b.
+      bits_fold x y op (c0 a b) =
+      op (bits_fold x y op a) (bits_fold x y op b)
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+The clauses on \texttt{t0} and \texttt{f0} are easily
+%simplified away
+solved
+using the theorem \texttt{bits\_fold\_scalars}.
+%
+\begin{session}
+\begin{verbatim}
+- e (REWRITE_TAC[bits_fold_scalars]);
+OK..
+1 subgoal:
+> val it =
+    
+    !a b.
+      bits_fold x y op (c0 a b) =
+      op (bits_fold x y op a) (bits_fold x y op b)
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+The rest of the goal is almost exactly an instance of
+\texttt{bits\_fold\_is\_homo}.
+%
+\begin{session}
+\begin{verbatim}
+- e (POP_ASSUM MP_TAC THEN REWRITE_TAC[bits_fold_is_homo]);
+OK..
+
+Goal proved.
+ [.]
+|- !a b.
+     bits_fold x y op (c0 a b) =
+     op (bits_fold x y op a) (bits_fold x y op b)
+
+Goal proved.
+ [.]
+|- (bits_fold x y op t0 = x) /\ (bits_fold x y op f0 = y) /\
+   !a b.
+     bits_fold x y op (c0 a b) =
+     op (bits_fold x y op a) (bits_fold x y op b)
+
+Goal proved.
+ [.]
+|- ?fn.
+     (fn t0 = x) /\ (fn f0 = y) /\ !a b. fn (c0 a b) = op (fn a) (fn b)
+\end{verbatim}
+\end{session}
+
+This completes the proof of the existence half of this theorem, and the
+\HOLW{} goalstack returns us to the pending uniqueness goal.
+\begin{session}
+\begin{verbatim}
+Remaining subgoals:
+> val it =
+    
+    !x' y'.
+      ((x' t0 = x) /\ (x' f0 = y) /\
+       !a b. x' (c0 a b) = op (x' a) (x' b)) /\ (y' t0 = x) /\
+      (y' f0 = y) /\ (!a b. y' (c0 a b) = op (y' a) (y' b)) ==>
+      (x' = y')
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+We can clean this up by renaming the two universally quantified functions
+\texttt{x'} and \texttt{y'} as the more descriptive
+\texttt{f} and \texttt{g}, respectively, when we remove the quantifications.
+%
+\begin{session}
+\begin{verbatim}
+- e (Q.X_GEN_TAC `f` THEN Q.X_GEN_TAC `g`);
+OK..
+1 subgoal:
+> val it =
+    
+    ((f t0 = x) /\ (f f0 = y) /\ !a b. f (c0 a b) = op (f a) (f b)) /\
+    (g t0 = x) /\ (g f0 = y) /\ (!a b. g (c0 a b) = op (g a) (g b)) ==>
+    (f = g)
+    ------------------------------------
+      !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+     : proof
+\end{verbatim}
+\end{session}
+
+The next step is to move the antecedent to the hypotheses, breaking up the
+conjunction into its clauses.
+%
+\begin{session}
+\begin{verbatim}
+- e (STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    
+    f = g
+    ------------------------------------
+      0.  !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+      1.  f t0 = x
+      2.  f f0 = y
+      3.  !a b. f (c0 a b) = op (f a) (f b)
+      4.  g t0 = x
+      5.  g f0 = y
+      6.  !a b. g (c0 a b) = op (g a) (g b)
+     : proof
+\end{verbatim}
+\end{session}
+
+To prove two functions are equal, we use the principle of extensionality
+of functions in the logic.
+%
+\begin{session}
+\begin{verbatim}
+- e (CONV_TAC FUN_EQ_CONV);
+OK..
+1 subgoal:
+> val it =
+    
+    !b. f b = g b
+    ------------------------------------
+      0.  !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+      1.  f t0 = x
+      2.  f f0 = y
+      3.  !a b. f (c0 a b) = op (f a) (f b)
+      4.  g t0 = x
+      5.  g f0 = y
+      6.  !a b. g (c0 a b) = op (g a) (g b)
+     : proof
+\end{verbatim}
+\end{session}
+
+This goal is a property of all values \texttt{b} of type \texttt{bits}.
+We can prove this using our previously proven induction principle,
+\texttt{bits\_induct}. We will use higher order matching to have the
+expression \texttt{P b} in the consequent of the induction principle
+be matched to the full body of the current goal.
+%
+\begin{session}
+\begin{verbatim}
+- bits_induct;
+> val it =
+    |- !P. P t0 /\ P f0 /\ (!x y. P x /\ P y ==> P (c0 x y)) ==> !b. P b
+     : thm
+
+- e (HO_MATCH_MP_TAC bits_induct);
+OK..
+1 subgoal:
+> val it =
+    
+    (f t0 = g t0) /\ (f f0 = g f0) /\
+    !b b'. (f b = g b) /\ (f b' = g b') ==> (f (c0 b b') = g (c0 b b'))
+    ------------------------------------
+      0.  !b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3
+      1.  f t0 = x
+      2.  f f0 = y
+      3.  !a b. f (c0 a b) = op (f a) (f b)
+      4.  g t0 = x
+      5.  g f0 = y
+      6.  !a b. g (c0 a b) = op (g a) (g b)
+     : proof
+\end{verbatim}
+\end{session}
+
+That was exactly the induction we needed. Now the rest of this goal can be
+easily solved by a single, simple step, moving all the antecedents to the
+assumptions, and then rewriting the goal with all the assumptions.
+%
+\begin{session}
+\begin{verbatim}
+- e (REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
+OK..
+
+Goal proved.
+ [......]
+|- (f t0 = g t0) /\ (f f0 = g f0) /\
+   !b b'. (f b = g b) /\ (f b' = g b') ==> (f (c0 b b') = g (c0 b b'))
+
+Goal proved.
+ [......] |- !b. f b = g b
+
+Goal proved.
+ [......] |- f = g
+
+Goal proved.
+|- ((f t0 = x) /\ (f f0 = y) /\ !a b. f (c0 a b) = op (f a) (f b)) /\
+   (g t0 = x) /\ (g f0 = y) /\ (!a b. g (c0 a b) = op (g a) (g b)) ==>
+   (f = g)
+
+Goal proved.
+|- !x' y'.
+     ((x' t0 = x) /\ (x' f0 = y) /\
+      !a b. x' (c0 a b) = op (x' a) (x' b)) /\ (y' t0 = x) /\
+     (y' f0 = y) /\ (!a b. y' (c0 a b) = op (y' a) (y' b)) ==>
+     (x' = y')
+
+Goal proved.
+ [.]
+|- (?fn.
+      (fn t0 = x) /\ (fn f0 = y) /\
+      !a b. fn (c0 a b) = op (fn a) (fn b)) /\
+   !x' y'.
+     ((x' t0 = x) /\ (x' f0 = y) /\
+      !a b. x' (c0 a b) = op (x' a) (x' b)) /\ (y' t0 = x) /\
+     (y' f0 = y) /\ (!a b. y' (c0 a b) = op (y' a) (y' b)) ==>
+     (x' = y')
+
+Goal proved.
+ [.]
+|- ?!fn.
+     (fn t0 = x) /\ (fn f0 = y) /\ !a b. fn (c0 a b) = op (fn a) (fn b)
+> val it =
+    Initial goal proved.
+    |- !:'b.
+         !x y op.
+           (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+           ?!fn.
+             (fn t0 = x) /\ (fn f0 = y) /\
+             !a b. fn (c0 a b) = op (fn a) (fn b)
+     : proof
+\end{verbatim}
+\end{session}
+
+We can package up this proof into a single tactic in the following proof script.
+%
+\begin{session}
+\begin{verbatim}
+- val bits_is_initial = store_thm(
+   "bits_is_initial",
+   ``!:'b. !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
+              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+              ?!(fn:bits -> 'b).
+                        (fn  t0           = x) /\
+                        (fn  f0           = y) /\
+                  (!a b. fn (c0 a b) = op (fn a) (fn b))``,
+   REPEAT STRIP_TAC
+   THEN SIMP_TAC bool_ss [EXISTS_UNIQUE_DEF]
+   THEN CONJ_TAC
+   THENL
+     [ EXISTS_TAC ``bits_fold (x:'b) y op``
+       THEN REWRITE_TAC[bits_fold_scalars]
+       THEN POP_ASSUM MP_TAC
+       THEN REWRITE_TAC[bits_fold_is_homo],
+
+       Q.X_GEN_TAC `f`
+       THEN Q.X_GEN_TAC `g`
+       THEN STRIP_TAC
+       THEN CONV_TAC FUN_EQ_CONV
+       THEN HO_MATCH_MP_TAC bits_induct (* induct on b *)
+       THEN REPEAT STRIP_TAC (* 3 subgoals *)
+       THEN ASM_REWRITE_TAC []
+     ]
+  );
+> val bits_is_initial =
+    |- !:'b.
+         !x y op.
+           (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+           ?!fn.
+             (fn t0 = x) /\ (fn f0 = y) /\
+             !a b. fn (c0 a b) = op (fn a) (fn b)
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Existence and creation of bit vector type}
+
+Now that we've proven \texttt{bits\_is\_initial}, it follows immediately that
+there exists some type \texttt{'a} with \texttt{t:'a}, \texttt{f:'a},
+and \texttt{c:'a~->~'a~->~'a}, with \texttt{c} associative, where the
+type and operators are initial.
+%
+\begin{session}
+\begin{verbatim}
+- val vect_exists = store_thm(
+   "vect_exists",
+   ``?:'a.
+       ?(t:'a) (f:'a) (c:'a -> 'a -> 'a).
+         (!a1 a2 a3. c a1 (c a2 a3) = c (c a1 a2) a3) /\
+         (!:'b.
+            !(x:'b) (y:'b) (op:'b -> 'b -> 'b).
+              (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+              ?!fn:'a -> 'b.         (fn t         = x) /\
+                                     (fn f         = y) /\
+                             (!a1 a2. fn (c a1 a2) = op (fn a1) (fn a2)))``,
+   TY_EXISTS_TAC ``:bits``
+   THEN EXISTS_TAC ``t0``
+   THEN EXISTS_TAC ``f0``
+   THEN EXISTS_TAC ``c0``
+   THEN REWRITE_TAC [c0_assoc,bits_is_initial]
+  );
+> val vect_exists =
+    |- ?:'a.
+         ?t f c.
+           (!a1 a2 a3. c a1 (c a2 a3) = c (c a1 a2) a3) /\
+           !:'b.
+             !x y op.
+               (!b1 b2 b3. op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+               ?!fn.
+                 (fn t = x) /\ (fn f = y) /\
+                 !a1 a2. fn (c a1 a2) = op (fn a1) (fn a2)
+     : thm
+\end{verbatim}
+\end{session}
+
+This achieves our goal of proving \texttt{vect\_exists}.
+Now we can use this theorem with the type specification principle, as previously
+described, to actually introduce a new type name into the \HOLW{} logic,
+about which the only things known
+are associativity and initiality.
+% is the property in \texttt{vect\_exists}.
+We turn on the display of types to highlight the presence of the new type.
+%
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- val vect_TY_SPEC = new_type_specification("vect",["vect"],vect_exists);
+> val vect_TY_SPEC =
+    |- ?(t :vect) (f :vect) (c :vect -> vect -> vect).
+         (!(a1 :vect) (a2 :vect) (a3 :vect).
+            c a1 (c a2 a3) = c (c a1 a2) a3) /\
+         !:'b.
+           !(x :'b) (y :'b) (op :'b -> 'b -> 'b).
+             (!(b1 :'b) (b2 :'b) (b3 :'b).
+                op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+             ?!(fn :vect -> 'b).
+               (fn t = x) /\ (fn f = y) /\
+               !(a1 :vect) (a2 :vect). fn (c a1 a2) = op (fn a1) (fn a2)
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Creation of bit vector constants}
+
+Now that we have the theorem \texttt{vect\_TY\_SPEC} which states the existence
+of values \texttt{t}, \texttt{f}, and \texttt{c}, we can use the
+definitional principle for term constant specification to introduce actual
+term constants of the new type into the logic.
+%
+\begin{session}
+\begin{verbatim}
+- val vect_consts_spec =
+    new_specification ("vect_consts_spec",
+                       [ "VT", "VF", "VCONCAT" ],
+                       vect_TY_SPEC);
+> val vect_consts_spec =
+    |- (!(a1 :vect) (a2 :vect) (a3 :vect).
+          VCONCAT a1 (VCONCAT a2 a3) = VCONCAT (VCONCAT a1 a2) a3) /\
+       !:'b.
+         !(x :'b) (y :'b) (op :'b -> 'b -> 'b).
+           (!(b1 :'b) (b2 :'b) (b3 :'b).
+              op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+           ?!(fn :vect -> 'b).
+             (fn VT = x) /\ (fn VF = y) /\
+             !(a1 :vect) (a2 :vect). fn (VCONCAT a1 a2) = op (fn a1) (fn a2)
+     : thm
+
+- type_of ``VT``;
+> val it = ``:vect`` : hol_type
+- type_of ``VF``;
+> val it = ``:vect`` : hol_type
+- type_of ``VCONCAT``;
+> val it =
+    ``:vect -> vect -> vect``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+For convenience, we can split the term constants property into its conjuncts.
+%
+\begin{session}
+\begin{verbatim}
+- val (VCONCAT_ASSOC, vect_is_initial) = CONJ_PAIR vect_consts_spec;
+> val VCONCAT_ASSOC =
+    |- !(a1 :vect) (a2 :vect) (a3 :vect).
+         VCONCAT a1 (VCONCAT a2 a3) = VCONCAT (VCONCAT a1 a2) a3
+     : thm
+  val vect_is_initial =
+    |- !:'b.
+         !(x :'b) (y :'b) (op :'b -> 'b -> 'b).
+           (!(b1 :'b) (b2 :'b) (b3 :'b).
+              op b1 (op b2 b3) = op (op b1 b2) b3) ==>
+           ?!(fn :vect -> 'b).
+             (fn VT = x) /\ (fn VF = y) /\
+             !(a1 :vect) (a2 :vect). fn (VCONCAT a1 a2) = op (fn a1) (fn a2)
+     : thm
+\end{verbatim}
+\end{session}
+
+\subsection{Bit vectors as an abstract data type}
+
+The key thing here is that these two properties, \texttt{VCONCAT\_ASSOC}
+and \texttt{vect\_is\_initial}, are literally all that is known about values
+of type \texttt{vect}. For the type \texttt{bits} that we created earlier,
+if we wanted to, we could reach back
+into the representation type of \texttt{bits} to derive new properties
+about \texttt{bits} itself.
+In contrast to this,
+no such underlying structure is available for \texttt{vect}.
+In particular, there is no theorem relating values of \texttt{vect} and
+\texttt{bits}, as there were relating values of \texttt{bits} and
+\texttt{bool list}.
+While the \texttt{bits} type was necessary to demonstrate the existence of
+\texttt{vect}, that does not mean that \texttt{vect} has all the properties
+of \texttt{bits}, but only those properties we designed \texttt{vect} to have.
+In this case, since initiality is such a powerful property, many of the
+properties of \texttt{bits} could now be derived for \texttt{vect},
+but this approach allows us to limit the provable properties of
+the specified type to the particular subset we choose.
+We have truly achieved here an abstract data type, having
+just the properties we wished, and nothing more.
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

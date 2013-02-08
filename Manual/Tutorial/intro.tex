@@ -1,33 +1,69 @@
-\chapter{Getting and Installing HOL}
+\chapter{Getting and Installing HOL-Omega}
 \label{install}
 
-This chapter describes how to get the \HOL{} system and how to install
+This chapter describes how to get the \HOLW{} system and how to install
 it.  It is generally assumed that some sort of Unix system is being
 used, but the instructions that follow should apply {\it mutatis
   mutandis\/} to other platforms.  Unix is not a pre-requisite for
-using the system. \HOL{} may be run on PCs running Windows operating
+using the system. \HOLW{} may be run on PCs running Windows operating
 systems from Windows~NT onwards (i.e., Windows~2000, XP and Vista are
-also supported), as well as Macintoshes running MacOS~X.
+also supported), as well as Macintoshes running Mac~OS~X.
 
-\section{Getting HOL}
+\section{Getting HOL-Omega}
 
-The \HOL{} system can be downloaded from
-\url{http://hol.sourceforge.net}.  The naming scheme for \holn{}
+% The \HOLW{} system can be downloaded from
+% % \url{http://hol.sourceforge.net}.
+% \url{https://github.com/mn200/HOL} as part of the \HOL\ system. 
+% % \HOLW\ is an extension of \HOL{-4}, and is backwards compatible with it.
+\HOLW{} is part of the \HOL\ system.
+% The \HOL\ system has several branches; branch {\tt HOL-Omega} is where
+% development of the HOL-Omega theorem prover occurs.
+The \HOL\ system has several branches; branch {\tt HOL-Omega} contains
+the source of the HOL-Omega theorem prover.
+The naming scheme for \holnw{}
 releases is $\langle${\it name}$\rangle$-$\langle${\it
   number}$\rangle$; the release described here is \holnversion.
+
+\HOL\ development uses the Git version control system.
+Git is freely available from \texttt{http://git-scm.com/},
+and is well described in the book {\it ProGit\/} by Scott Chacon.
+
+A fresh copy of the current developer version of \HOLW\ may be checked out
+into a fresh subdirectory called {\tt hol-omega} by the following Git command:
+\begin{center}
+\texttt{git clone -b HOL-Omega git://github.com/mn200/HOL.git hol-omega}
+\end{center}
+
+As a developer, to check out a fresh copy of \HOLW\ that one could
+edit and write back to the github repository, one would set up a SSH key
+with github and then do
+\begin{center}
+\texttt{git clone -b HOL-Omega git@github.com:mn200/HOL.git hol-omega}
+\end{center}
+
+\noindent
+%To set up a SSH key with github, see
+To set up a SSH key, see
+%\begin{center}
+\texttt{https://help.github.com/articles/generating-ssh-keys}.
+%\end{center}
+
+To become an \HOL\ developer and have write access to the github
+repository, please contact one of the administrators listed at
+\texttt{http://sourceforge.net/projects/hol/}.
 
 \section{The {\tt hol-info} mailing list}
 
 The \texttt{hol-info} mailing list serves as a forum for discussing
-\HOL{} and disseminating news about it.  If you wish to be on this
-list (which is recommended for all users of \HOL), visit
+\HOLW{} and disseminating news about it.  If you wish to be on this
+list (which is recommended for all users of \HOLW), visit
 \url{http://lists.sourceforge.net/lists/listinfo/hol-info}.  This
 web-page can also be used to unsubscribe from the mailing list.
 
-\section{Installing HOL}
+\section{Installing HOL-Omega}
 
-It is assumed that the \HOL{} sources have been obtained and the
-\texttt{tar} file unpacked into a directory \ml{hol}.\footnote{You may
+It is assumed that the \HOLW{} sources have been obtained and the
+\texttt{tar} file unpacked into a directory \ml{hol-omega}.\footnote{You may
   choose another name if you want; it is not important.} The contents
 of this directory are likely to change over time, but it should
 contain the following:
@@ -35,25 +71,28 @@ contain the following:
 \begin{center}
 \begin{tabular}{|l|l|l|} \hline
 \multicolumn{3}{|c|}{ } \\
-\multicolumn{3}{|c|}{\bf Principal Files on the HOL Distribution Directory} \\
+\multicolumn{3}{|c|}{\bf Principal Files on the HOL-Omega Distribution Directory} \\
 \multicolumn{3}{|c|}{ } \\
 {\it File name} & {\it Description} & {\it File type}  \\ \hline
-{\tt README} & Description of directory {\tt hol} & Text\\
+{\tt README} & Description of directory {\tt hol-omega} & Text\\
 {\tt COPYRIGHT}& A copyright notice & Text\\
 {\tt INSTALL} & Installation instructions & Text\\
 {\tt tools} & Source code for building the system & Directory\\
-{\tt bin} & Directory for HOL executables & Directory\\
+{\tt bin} & Directory for HOL-Omega executables & Directory\\
 {\tt sigobj} & Directory for \ML{} object files & Directory\\
-{\tt src} & \ML{} sources of \HOL & Directory\\
-{\tt help} & Help files for \HOL{} system & Directory\\
+{\tt src} & \ML{} sources of \HOLW & Directory\\
+{\tt help} & Help files for \HOLW{} system & Directory\\
 {\tt examples} & Example source files & Directory\\
 \hline
 \end{tabular}
 \end{center}
 
 The session in the box below shows a typical distribution directory.
-The \HOL{} distribution has been placed on a PC running Linux in the
-directory {\small\tt /home/mn200/hol/}.
+The \HOLW{} distribution has been placed
+in the directory {\small\tt /Users/palantir/hol-omega/}
+on a Macintosh running OS X
+% in the home directory of
+for a user {\small\tt palantir}.
 
 All sessions in this documentation will be displayed in boxes with a
 number in the top right hand corner.  This number indicates whether
@@ -62,9 +101,9 @@ the continuation of a session started in an earlier box.
 Consecutively numbered boxes are assumed to be part of a single
 continuous session.  The Unix prompt for the sessions is
 \texttt{\small \dol}, so lines beginning with this prompt were typed
-by the user.  After entering the \HOL{} system (see below), the user
+by the user.  After entering the \HOLW{} system (see below), the user
 is prompted with {\small\verb|-|} for an expression or command of the
-\HOL{} meta-language \ML; lines beginning with this are thus \ML\
+\HOLW{} meta-language \ML; lines beginning with this are thus \ML\
 expressions or declarations.  Lines not beginning with \texttt{\small
   \$} or {\small\verb|-|} are system output.  Occasionally, system
 output will be replaced with a line containing {\small\verb|...|} when
@@ -73,21 +112,25 @@ Chapter~\ref{ML}.
 
 \setcounter{sessioncount}{0}
 \begin{session}
+% COPYRIGHT  bin/  examples/  INSTALL  src/
+% README     doc/  help/      sigobj/  tools/
 \begin{verbatim}
 $ pwd
-/home/mn200/hol
+/Users/palantir/hol-omega
 $ ls -F
-COPYRIGHT  bin/  examples/  INSTALL  src/
-README     doc/  help/      sigobj/  tools/
+COPYRIGHT   bin/          examples/   sigobj/       tools-poly/
+INSTALL	    cleanall*     help/       src/
+Manual/	    developers/   icon.gif*   std.prelude 
+README      doc/          merging     tools/
 \end{verbatim}
 \end{session}
 
-Now you will need to rebuild \HOL{} from the sources.\footnote{It is
+Now you will need to rebuild \HOLW{} from the sources.\footnote{It is
   possible that pre-built systems may soon be available from the
   web-page mentioned above.}
 
 Before beginning you must have a current version of Moscow~ML or
-Poly/ML\footnote{Poly/ML cannot be used with HOL on Windows.}.  In the
+Poly/ML\footnote{Poly/ML cannot be used with HOL-Omega on Windows.}.  In the
 case of Moscow~ML, you must have version 2.01.  Moscow~ML is available
 on the web from \url{http://www.dina.kvl.dk/~sestoft/mosml.html}.
 Poly/ML is available from \url{http://polyml.org}. When you have your
@@ -102,12 +145,12 @@ Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
 - [opening file "tools/smart-configure-mosml.sml"]
 
-HOL smart configuration.
+HOL-Omega smart configuration.
 
 Determining configuration parameters: OS mosmldir holdir
-OS:                 linux
-mosmldir:           /home/mn200/mosml/bin
-holdir:             /home/mn200/hol
+OS:                 macosx
+mosmldir:           /Users/palantir/mosml/bin
+holdir:             /Users/palantir/hol-omega
 dynlib_available:   true
 
 Configuration will begin with above values.  If they are wrong
@@ -123,13 +166,13 @@ instead.
 
 Assuming you don't interrupt the configuration process, this will
 build the \texttt{Holmake} and \texttt{build} programs, and move them
-into the \texttt{hol/bin} directory.  If something goes wrong at this
+into the \texttt{hol-omega/bin} directory.  If something goes wrong at this
 stage, consult Section~\ref{sec:editting-configure} below.
 
 The next step is to run the \texttt{build} program.  This should
 result in a great deal of output as all of the system code is compiled
-and the theories built.  Eventually, a \HOL{} system\footnote{Four
-  \HOL{} executables are produced: \textsf{hol}, \textsf{hol.noquote},
+and the theories built.  Eventually, a \HOLW{} system\footnote{Four
+  \HOLW{} executables are produced: \textsf{hol}, \textsf{hol.noquote},
   \textsf{hol.bare} and \textsf{hol.bare.noquote}.  The first of these
   will be used for most examples in the \TUTORIAL{}.} is produced in
 the \texttt{bin/} directory.
@@ -139,7 +182,7 @@ the \texttt{bin/} directory.
 \dol bin/build
   ...
   ...
-Uploading files to /home/mn200/hol/sigobj
+Uploading files to /Users/palantir/hol-omega/sigobj
 
 Hol built successfully.
 \dol
@@ -153,7 +196,7 @@ Hol built successfully.
 If \texttt{smart-configure} is unable to guess correct values for the
 various parameters (\texttt{holdir}, \texttt{OS} \etc) then you can
 create a file called to provide correct values.  With Moscow~ML, this
-should be \texttt{config-override} in the root directory of the HOL
+should be \texttt{config-override} in the root directory of the HOL-Omega
 distribution.  With Poly/ML, this should be \texttt{poly-includes.ML}
 in the \texttt{tools-poly} directory. In this file, specify the
 correct value for the appropriate parameter by providing an ML binding
@@ -214,13 +257,16 @@ something like:
 \begin{alltt}
 \dol more configure.sml
   ...
-val mosmldir = "/home/mn200/mosml";
-val holdir   = "/home/mn200/hol";
-val OS       = "linux"       (* Operating system; choices are:
-                                "linux", "solaris", "unix", "winNT" *)
+val mosmldir:string = "/home/palantir/mosml";
+val holdir :string  = "/home/palantir/hol-omega";
+val OS :string      = "linux";
+                           (* Operating system; choices are:
+                                "linux", "solaris", "unix", "macosx",
+                                "winNT"   *)
 
-val CC       = "gcc";     (* C compiler (for building quote filter)        *)
-val GNUMAKE  = "gnumake"; (* for robdd library                             *)
+val CC:string       = "gcc";      (* C compiler                       *)
+val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
+val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
   ...
 \dol
 \end{alltt}
@@ -236,26 +282,33 @@ val GNUMAKE  = "gnumake"; (* for robdd library                             *)
 \dol mosml < tools/configure.sml
 Moscow ML version 2.01 (January 2004)
 Enter `quit();' to quit.
-- > val mosmldir = "/home/mn200/mosml" : string
-  val holdir = "/home/mn200/hol" : string
+- > val mosmldir = "/home/palantir/mosml" : string
+  val holdir = "/home/palantir/hol-omega" : string
   val OS = "linux" : string
 - > val CC = "gcc" : string
   ...
 Beginning configuration.
-- Making bin/Holmake.
+Removing old quotation filter from bin/
+Making tools/mllex/mllex.exe
+Making bin/Holmake.
   ...
 Making bin/build.
-- Making hol98-mode.el (for Emacs)
-- Setting up the standard prelude.
-- Setting up src/0/Globals.sml.
-- Generating bin/hol.
-- Generating bin/hol.noquote.
-- Attempting to compile quote filter ... successful.
-- Setting up the muddy library Makefile.
-- Setting up the help Makefile.
--
+Making hol-mode.el (for Emacs/XEmacs)
+Generating bin/hol.
+Generating bin/hol.noquote.
+  ...
+Number of states = 170
+Number of distinct rows = 90
+Approx. memory size of trans. table = 23040 bytes
+Analysing filter.sml
+Compiling filter.sml
+Compiling quote-filter.sml
+  ...
+Analysing selftest.sml
+Quote-filter built
+Setting up the muddy library Makefile.
+
 Finished configuration!
--
 \dol
 \end{alltt}
 \end{session}

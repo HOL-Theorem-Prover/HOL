@@ -1,46 +1,62 @@
 \chapter*{Preface}\markboth{Preface}{Preface}
 \label{intro}
 
-This volume contains a tutorial on the \HOL{} system.  It is one of four
-documents making up the documentation for \HOL:
+This volume contains a tutorial on the \HOLW{} system.  It is one of four
+documents making up the documentation for \HOLW:
 
 \begin{myenumerate}
 \item \LOGIC: a formal description of the higher order logic
-  implemented by the \HOL{} system.
-\item \TUTORIAL: a tutorial introduction to \HOL, with case studies.
-\item \DESCRIPTION: a detailed user's guide for the \HOL{} system;
-\item \REFERENCE: the reference manual for \HOL.
+  implemented by the \HOLW{} system.
+\item \TUTORIAL: a tutorial introduction to \HOLW, with case studies.
+\item \DESCRIPTION: a detailed user's guide for the \HOLW{} system;
+\item \REFERENCE: the reference manual for \HOLW.
 \end{myenumerate}
 
 \noindent These four documents will be referred to by the short names (in
 small slanted capitals) given above.
 
 This document, \TUTORIAL, is intended to be the first item read by new
-users of \HOL.  It provides a self-study introduction to the structure
+users of \HOLW.  It provides a self-study introduction to the structure
 and use of the system.  The tutorial is intended to give a `hands-on'
-feel for the way \HOL{} is used, but it does not systematically
+feel for the way \HOLW{} is used, but it does not systematically
 explain all the underlying principles (\DESCRIPTION{} and \LOGIC{}
 explain these).  After working through \TUTORIAL\ the reader should be
-capable of using \HOL\ for simple tasks, and should also be in a
+capable of using \HOLW\ for simple tasks, and should also be in a
 position to consult the other documents.
 
 \section*{Getting started}
 
-Chapter~\ref{install} explains how to get and install \HOL.  Once this
-is done, the potential \HOL{} user should become familiar with the
+Experienced \HOL{} users who are eager to get started with \HOLW{}
+will want to read chapters 1, 4, 5, and
+\ref{chap:adt} through \ref{chap:package}.
+Others who are not familiar with \HOL{} should read chapters 1 through 5
+and then select chapters with examples that match their interests.
+Chapter~\ref{install} explains how to get and install \HOLW.  Once this
+is done, the potential \HOLW{} user should become familiar with the
 following subjects:
 %
 \begin{enumerate}
 \item The programming meta-language \ML, and how to interact with it.
-\item The formal logic supported by the \HOL{} system (higher order
-  logic) and its manipulation via \ML.
+\item The formal logic supported by the \HOLW{} system
+  and its manipulation via \ML.
 \item Forward proof and derived rules of inference.
 \item Goal directed proof, tactics, and tacticals.
 \end{enumerate}
 %
-Chapters 2 and 3 introduce these topics.
-Chapter~\ref{chap:euclid} then develops an extended example --- Euclid's
-proof of the infinitude of primes---to illustrate how \HOL{} is used
+Chapters 2 and 3 introduce these topics. Then the new, additional
+concepts and features of the \HOLW{} logic (higher order logic 
+extended with System {\it F}, kinds, and ranks)
+are first casually demonstrated, as an appetizer, and then
+discussed in more detail, in chapters \ref{chap:appetizers} and \ref{chap:HOLWlogic}. 
+After this, a series of examples are presented using the \HOLW{} system.
+Chapters \ref{chap:euclid}~through~\ref{chap:proof-tools} use only the
+classical higher order logic subset of \HOLW, and are
+the same as for the existing \HOL{} theorem prover.
+The new, extended features of \HOLW{} are demonstrated in
+examples in chapters \ref{chap:adt} through \ref{chap:simple-cat}.
+
+Chapter~\ref{chap:euclid} develops an extended example --- Euclid's
+proof of the infinitude of primes---to illustrate how \HOLW{} is used
 to prove theorems.
 
 %Chapter~\ref{proof} then describes forward and goal
@@ -49,20 +65,42 @@ to prove theorems.
 Chapter~\ref{parity} features another worked example: the specification
 and verification of a simple sequential parity checker.  The intention
 is to accomplish two things: (i) to present another complete piece of
-work with \HOL; and (ii) to give an idea of what it is like to use the
-\HOL{} system for a tricky proof.  Chapter~\ref{chap:combin} is a more
+work with \HOLW; and (ii) to give an idea of what it is like to use the
+\HOLW{} system for a tricky proof.  Chapter~\ref{chap:combin} is a more
 extensive example: the proof of confluence for combinatory
 logic.  Again, the aim is to present a complete piece of non-trivial
 work.
 
 Chapter~\ref{chap:proof-tools} gives an example of implementing a
 proof tool of one's own.  This demonstrates the programmability of
-\HOL: the way in which technology for solving specific problems can be
+\HOLW: the way in which technology for solving specific problems can be
 implemented on top of the underlying kernel.  With high-powered tools
 to draw on, it is possible to write prototypes very quickly.
 
+Chapter~\ref{chap:adt} shows how one can construct an abstract data
+type in the \HOLW{} logic, where a new type representing an abstract
+algebra can be created where the only thing known about it is its
+defining property.  This property might not completely specify its
+behavior in all circumstances, which allows for under-specification
+of the new type. This is a means for information
+hiding and proper modularization of large proofs.
+
+Chapter~\ref{chap:simple-cat} exercises the kind system of the
+new logic, exploiting the ability to have type variables which
+represent type operators, as well as the ability to quantify
+type variables over expressions, to explore some of the concepts
+of category theory, defining functors and natural transformations
+as a shallow embedding in the \HOLW{} logic, and showing how they 
+may be combined in a fluid way.
+
+Chapter~\ref{chap:package} gives a thorough discussion and
+exercise of existential types and packages. It shows how these can
+be used to support in a practical and principled way good
+software engineering practices such as modularity and information
+hiding.
+
 Chapter~\ref{chap:more-examples} briefly discusses some of the
-examples distributed with \holn{} in the \ml{examples} directory.
+examples distributed with \holnw{} in the \ml{examples} directory.
 
 %\item Chapter~\ref{tool} shows how a special purpose proof tool (a
 %  conjunction normaliser) can be implemented and optimised. It
@@ -74,14 +112,14 @@ examples distributed with \holn{} in the \ml{examples} directory.
 %  probably more widely known than any specific piece of hardware or
 %  software. The small amount of algebra and mathematical notation
 %  needed to state and prove the Binomial Theorem is presented; the
-%  notation is expressed in \HOL{}, and the structure of the proof is
+%  notation is expressed in \HOLW{}, and the structure of the proof is
 %  outlined.
 
 %\end{itemize}
 
 \vspace{1cm}
 
-\noindent \TUTORIAL{} has been kept short so that new users of \HOL{} can get
+\noindent \TUTORIAL{} has been kept short so that new users of \HOLW{} can get
 going as fast as possible. Sometimes details have been simplified. It
 is recommended that as soon as a topic in \TUTORIAL\ has been
 digested, the relevant parts of \DESCRIPTION\ and \REFERENCE\ be

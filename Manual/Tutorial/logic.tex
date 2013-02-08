@@ -11,11 +11,46 @@ predicate calculus with three main extensions:
 (terms of type \ml{bool} fulfill that role).
 \end{itemize}
 
+The \HOLW{} system is an extension of the \HOL{} system.  It is backwards
+compatible, so that virtually anything that can be done in \HOL{}
+can also be done in exactly the same way in \HOLW.  No logical power is lost.
+Rather, \HOLW{} goes beyond the logic of \HOL{} with two conceptual
+extensions:
+
+\begin{itemize}
+\item Types can be abstracted by type variables
+(similar to how terms are abstracted by term variables in the lambda calculus).
+%(similar to the lambda calculus, but at the type level,
+% rather than the term level).
+ \begin{itemize}
+ \item Type operators are curried,
+       so that they may take one argument at a time.
+ \item Every type has a {\it kind}; kinds manage type applications
+       just as types manage term applications.
+ \item Type variables can represent type operators.
+ \end{itemize}
+\item Terms can be abstracted by type variables
+(similar to System {\it F}).
+ \begin{itemize}
+ \item The type of such an abstraction is a {\it universal\/} type.
+ \item Such an abstraction may be applied
+       as a function to a type argument.
+ \item Such applications are managed
+       by classifying all types by {\it ranks}.
+ \end{itemize}
+\end{itemize}
+
+Since \HOLW{} is backwards compatible, it makes sense to learn \HOLW{} in
+two stages; first to study just the classical higher order logic of \HOL,
+and then add to that the extensions provided by \HOLW.  This chapter will
+concentrate on the \HOL{} subset,
+and the next chapter will discuss the full \HOLW{} logic.
+
 In this chapter, we will give a brief overview of the notation used to
 write expressions of the \HOL\ logic in ML, and also discuss standard
 \HOL\ proof techniques. It is assumed the reader is familiar with
 predicate logic.  The syntax and semantics of the particular logical
-system supported by \HOL{} is described in detail in \DESCRIPTION.
+system supported by \HOLW{} is described in detail in \DESCRIPTION.
 
 
 The table below summarizes a useful subset of the notation used in
@@ -151,7 +186,7 @@ type {\small\verb|bool|} are constructed.  These are used later.
 \end{session}
 
 The constructors {\small\verb|mk_conj|} and {\small\verb|mk_imp|} construct
-conjunctions and implications respectively. A large collection of
+conjunctions and implications respectively. A large collection of 
 term constructors and destructors is available for the core theories
 in \HOL.
 
@@ -228,7 +263,7 @@ types by using the notation \ml{``$term$:$type$``}, as illustrated below.
 
 \paragraph{Function application types}
 
-An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function
+An application $(t_1\ t_2)$ is well-typed if $t_1$ is a function 
 with type $\tau_1 \to \tau_2$ and $t_2$ has type $\tau_1$. Contrarily,
 an application $(t_1\ t_2)$ is badly typed if $t_1$ is not a function:
 
@@ -262,7 +297,7 @@ to
 
 unification failure message: unify failed
 ! Uncaught exception:
-! HOL_ERR
+! HOL_ERR 
 \end{verbatim}\end{session}
 
 The dollar symbol in front of {\small\verb|~|} indicates that the
@@ -564,14 +599,14 @@ logic type checker with enough information.
 - val Th5 = ASSUME ``t1``;
 <<HOL message: inventing new type variable names: 'a.>>
 ! Uncaught exception:
-! HOL_ERR
+! HOL_ERR 
 - val Th5 = ASSUME ``t1`` handle e => Raise e;
 <<HOL message: inventing new type variable names: 'a.>>
 
 Exception raised at Thm.ASSUME:
 not a proposition
 ! Uncaught exception:
-! HOL_ERR
+! HOL_ERR 
 
 - val Th5 = ASSUME ``t1:bool``;
 > val Th5 =  [.] |- t1 : thm
@@ -1032,7 +1067,7 @@ The fact that the assumptions of the top-level goal
 are propagated unchanged to the two subgoals is indicated by the absence
 of assumptions in the notation.
 
-Another example is \ml{numLib.INDUCT_TAC},\footnote{Later, we will write \ml{INDUCT_TAC} on its own, without first prefixing it with \ml{numLib}.  To allow this we must issue the command \ml{open~numLib}.} the tactic for
+Another example is {\small\verb|numLib.INDUCT_TAC|}, the tactic for
 doing mathematical induction on the natural numbers:
 
 \begin{center}

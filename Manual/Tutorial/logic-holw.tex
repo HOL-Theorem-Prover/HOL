@@ -1,0 +1,3462 @@
+\chapter{The HOL-Omega Logic}\label{chap:HOLWlogic}
+
+An earlier chapter covered the classic \HOL{} logic.
+%Whereas a prior chapter covered the \HOL{} logic,
+This chapter will discuss the \HOLW{} logic, 
+and focus on its
+extensions and new features not present in classic \HOL.
+%As described before, \HOLW{} goes beyond \HOL{} with
+In essence, these center on
+two main ideas, and what flows as a consequence from each:
+
+\begin{itemize}
+\item Types can be abstracted by type variables
+(similar to how terms are abstracted by term variables in the lambda calculus).
+%(similar to the lambda calculus, but at the type level,
+% rather than the term level).
+ \begin{itemize}
+ \item Type operators are curried,
+       so that they may take one argument at a time.
+ \item Every type has a {\it kind}; kinds determine which
+       type applications are sensible.
+%       just as types determine which term applications are sensible.
+ \item Type variables can represent type operators.
+ \end{itemize}
+\item Terms can be abstracted by type variables
+(similar to System {\it F}).
+ \begin{itemize}
+ \item The type of such an abstraction is a {\it universal\/} type.
+ \item Such an abstraction may be applied
+       as a function to a type argument.
+ \item Such applications are managed
+       by classifying all types into {\it ranks}.
+ \end{itemize}
+\end{itemize}
+
+In this chapter, we will give the new notation used to write expressions
+of the \HOLW{} logic, how to construct these expressions by \ML{} functions,
+and also discuss new \HOLW\ proof techniques.
+%It is assumed the reader is familiar with the \HOL\ logic, as previously described.
+Only the most essential new elements are given here, being a tutorial.
+The full logic
+%The full syntax and semantics of the logic
+%logical system supported by \HOLW{}
+is described in detail in \DESCRIPTION.
+
+
+\section{New notation}
+
+The table below summarizes a useful subset of the new notation used in
+\HOLW.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|} \hline
+\multicolumn{4}{|c|}{ } \\
+\multicolumn{4}{|c|}{\bf New terms of the HOL-Omega Logic} \\
+\multicolumn{4}{|c|}{ } \\
+{\it Variety of term} & {\it \HOLW{} notation} &
+{\it Standard notation} &
+{\it Description} \\ \hline
+ & & & \\
+$\forall$-type quantification & {\small\verb|!:|}$\alpha${\small\verb|.|}$t$ &
+$\uquant{\alpha}t$ & {\it for\ all\ }$\alpha: t$ \\ \hline
+$\exists$-type quantification & {\small\verb|?:|}$\alpha${\small\verb|.|}$t$ &
+$\equant{\alpha}t$ & {\it for\ some\ }$\alpha: t$ \\ \hline
+$\lambda$-type abstraction & {\small\verb|\:|}$\alpha${\small\verb|.|}$t$ &
+$\lquant{\alpha}t$ & {\it given $\alpha$, yield $t$}\\ \hline
+Type application & $t$\ {\small\verb|[:|}$\sigma${\small\verb|:]|} &
+$t[\sigma]$ & {\it apply $t$ to type $\sigma$}\\ \hline
+\end{tabular}
+\end{center}\label{notation-table}
+
+The forms {\small\verb|!:|}$\alpha${\small\verb|.|}$t$
+and {\small\verb|?:|}$\alpha${\small\verb|.|}$t$
+are straightforward analogs of the universal and existential
+quantifiers for terms {\small\verb|!|}$x${\small\verb|.|}$t$
+and {\small\verb|?|}$x${\small\verb|.|}$t$,
+except that instead of a term variable $x$ being quantified over
+all values of the type of $x$, a type variable $\alpha$ is being
+quantified over all types of the {\it kind\/} of $\alpha$. Kinds
+will be described later in this chapter.
+For both quantifiers, the body $t$ must have boolean type, and the
+meaning of the quantification is that the body is always or sometimes
+true as $\alpha$ ranges over its domain.
+Similarly, {\small\verb|\:|}$\alpha${\small\verb|.|}$t$ is an analog of
+term abstractions {\small\verb|\|}$x${\small\verb|.|}$t$.
+Here the meaning of the abstraction is a function from the domain of
+$\alpha$ to the meaning of $t$, with free occurrences of $\alpha$ in $t$
+substituted by the function's argument.
+In each of these three forms,
+the type variable $\alpha$ may occur free in the body $t$,
+and such occurrences are considered bound by the type quantification or
+type abstraction.
+The form $t$\ {\small\verb|[:|}$\sigma${\small\verb|:]|}
+is an analog of the normal application of a term function to a term argument,
+except that here the argument is a type, not a term.
+
+The sequences {\small\verb|!:|}, {\small\verb|?:|}, {\small\verb|\:|},
+{\small\verb|[:|}, and {\small\verb|:]|} are each considered one symbol.
+The presence of the colon ({\small\verb|:|}) in these is meant as a reminder
+that a type is involved, rather than a term.
+
+Each of these forms can also handle multiple types, not just one:
+\begin{center}
+\begin{tabular}{|l|l|l|l|} \hline
+\multicolumn{4}{|c|}{ } \\
+\multicolumn{4}{|c|}{\bf New terms of the HOL-Omega Logic} \\
+\multicolumn{4}{|c|}{ } \\
+{\it Variety of term} & {\it \HOL{${}_\omega$} notation} &
+{\it Stand. notation} &
+{\it Description} \\ \hline
+ & & & \\
+$\forall$-type quantification & {\small\verb|!:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+$\uquant{\alpha_1\ldots\alpha_n}t$ & {\it for\ all\ }$\alpha_1,\ldots,\alpha_n: t$ \\ \hline
+$\exists$-type quantification & {\small\verb|?:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+$\equant{\alpha_1\ldots\alpha_n}t$ & {\it for\ some\ }$\alpha_1,\ldots,\alpha_n: t$ \\ \hline
+$\lambda$-type abstraction & {\small\verb|\:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+$\lquant{\alpha_1\ldots\alpha_n}t$ & {\it given $\alpha_1,\ldots,\alpha_n$, yield $t$}\\ \hline
+Type application & $t$\ {\small\verb|[:|}$\sigma_1,\ldots,\sigma_n${\small\verb|:]|} &
+$t[\sigma_1,\ldots,\sigma_n]$ & {\it apply $t$ to types $\sigma_1,\ldots,\sigma_n$}\\ \hline
+\end{tabular}
+\end{center}\label{multiple-notation-table}
+
+As for \HOL, terms of the \HOLW{} logic are represented in \ML{} by the
+{\it abstract type\/} {\small\verb|term|}. They are normally input between
+double back-quote marks.  For example, the expression
+{\small\verb|``!:'a. P [:'a:] ==> Q [:'a:]``|} evaluates in \ML{}
+to a term representing
+$\uquant{\mbox{\small\texttt{'a}}}
+{\mbox{\small\texttt{P}}[\mbox{\small\texttt{'a}}] \Rightarrow
+ \mbox{\small\texttt{Q}}[\mbox{\small\texttt{'a}}]}$.
+The new terms can be manipulated by various built-in \ML{} functions,
+similar to the ones seen previously. For
+example, the \ML{} function \ml{dest\_tyforall} with \ML{} type
+{\small\verb|term -> hol_type * term|} splits a universal type quantification
+into a pair of a type and a term, where the type is the bound type variable
+and the term is the body of the quantification.
+Similarly, the \ML\
+function \ml{dest\_tycomb} of type {\small\verb|term -> term * hol_type|}
+splits a type application into its term operator and its type operand.
+\footnote
+{All of the examples below assume that the user is running
+\texttt{hol}, the executable for which is in the \texttt{bin/}
+directory.}
+
+When \ML\ values of type {\small\verb|term|} are submitted to the \ML\ 
+interpreter, they are displayed back to the user, along with their \ML\ type.
+The text that is displayed for a term is
+% computed by a program called the {\it prettyprinter}.  The prettyprinter is
+affected by several global
+% variables that the user can set.
+settings.
+Among these are whether types within the term should be displayed,
+such as the types of variables,
+and whether the Unicode character set should be used to display some term
+operators and type variables using special symbols and Greek letters.
+For
+%the greatest
+clarity, in these examples
+of interactions with \HOLW,
+we will assume that the use of Unicode characters has been turned
+% off.  This can be accomplished
+off
+by \texttt{set\_trace~"Unicode"~0}, as in the first session below.
+But in normal use, most users will probably wish to keep the 
+default setting, in order to enjoy the more attractive display.
+
+\setcounter{sessioncount}{0}
+
+By default, most types are not displayed
+when terms are printed.
+%by the prettyprinter.
+In addition to the types of variables,
+this also includes the type arguments in type applications,
+such as \texttt{[:'a:]} in the term \texttt{P [:'a:]}, which appears as just
+\texttt{P}.
+% such as $\sigma$ in $t[\sigma]$.
+
+\begin{session}
+\begin{verbatim}
+> set_trace "Unicode" 0;
+val it = () : unit
+> ``!:'a. P [:'a:]``;
+val it = ``!:'a. P`` : term
+> dest_tyforall it;
+val it = (``:'a``, ``P``) : hol_type * term
+> dest_tycomb(#2 it);
+val it = (``P``, ``:'a``) : term * hol_type
+\end{verbatim}
+\end{session}
+
+Alternatively, we can set \texttt{show\_types} to \texttt{true}
+in order
+to see
+all type applications.
+%the type application \verb|P [:'a:]|.
+
+\begin{session}
+\begin{verbatim}
+> show_types := true;
+val it = () : unit
+> ``!:'a. P [:'a:]``;
+val it =
+   ``!:'a. (P :!'a. bool) [:'a:]``
+   : term
+> dest_tyforall it;
+val it =
+   (``:'a``,
+    ``(P :!'a. bool) [:'a:]``)
+   : hol_type * term
+> dest_tycomb(#2 it);
+val it =
+   (``(P :!'a. bool)``,
+    ``:'a``) : term * hol_type
+\end{verbatim}
+\end{session}
+
+We collectively call such type quantifications and type abstractions,
+whether single or multiple, {\it type binders}.
+
+{\bf Note:}
+There is an important restriction on forming such type binders.
+Given a form which binds a type variable $\alpha$,
+such as {\small\verb|!:|}$\alpha${\small\verb|.|}$t$,
+the body $t$ cannot contain any free term variables $x$
+whose type contains (freely) the type variable $\alpha$.
+If it did, then the variable $x$ would also be a free variable of
+{\small\verb|!:|}$\alpha${\small\verb|.|}$t$ (since a term variable $x$
+is never bound by a type binder like {\small\verb|!:|}$\alpha$). 
+But then since $x$ is visible
+outside the type binder, so is $x$'s type, $\alpha$, which is the very
+type variable bound by the type binder.  But $\alpha$ has no meaning
+outside its type binder, so this makes no sense.
+%
+Here is an example of violating this restriction.
+% For example, the following shows a violation of this restriction.
+
+\begin{session}
+\begin{verbatim}
+> ``!:'a. (x:'a) = x``;
+
+Type variable scoping failure: the abstraction by the type variable
+
+:'a
+
+on line 2, characters 4-5
+
+of the term
+
+(x :'a) = x
+
+roughly on line 2, characters 8-17
+
+contains the free term variable
+
+(x :'a)
+
+at line 2, character 9
+
+whose type contains freely the type variable being abstracted,
+
+:'a
+
+on line 2, characters 4-5
+\end{verbatim}
+\end{session}
+
+This restriction is only sensible, since if one could look at a free variable
+such as \texttt{x:'a} from outside the type binder, then one could also see
+the type variable \texttt{'a} (since it is a part of \texttt{x}),
+but \texttt{'a} is supposed to be hidden within the type binder
+\verb|!:'a. (x:'a) = x|.
+
+\paragraph{Syntax of \HOLW\ types}
+
+The types of the \HOLW{} logic form an \ML{} type called
+{\small\verb|hol_type|}.  Every term in the logic has a well-defined type,
+but unlike \HOL{}, not every type has some term of which it is the type.
+In other words, there are some types which are not the type of any term.
+Expressions having the form
+{\small\verb|``: |}$\cdots${\small\verb| ``|} evaluate to logical
+types.  The built-in function {\small\verb|type_of|} has \ML{} type
+{\small\verb|term->hol_type|} and returns the logical type of a term.
+
+To try to minimise confusion between the logical types of \HOLW{} terms and
+the \ML{} types of \ML{} expressions, the former is referred to as {\it object
+language types\/} and the latter as {\it meta-language types\/}.  For example,
+{\small\verb|``!:'a.T``|} is an \ML{} expression that has meta-language type
+{\small\verb|term|} and evaluates to a term with object language type
+{\small\verb|``:bool``|}.
+%
+\begin{session}
+\begin{verbatim}
+> ``!:'a.T``;
+val it = ``!:'a. T`` : term
+
+> type_of it;
+val it = ``:bool`` : hol_type
+\end{verbatim}
+\end{session}
+
+%
+\paragraph{Term constructors}
+\HOLW{} terms can be input, as above, by using explicit {\it
+quotation\/}, or they can be constructed by calling \ML{} constructor
+functions.
+
+Each of the new forms can be constructed, broken apart, or tested
+by \ML{} functions:
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|} \hline
+\multicolumn{4}{|c|}{ } \\
+\multicolumn{4}{|c|}{\bf \ML{} constructors, destructors, and tests} \\
+\multicolumn{4}{|c|}{ } \\
+{\it \HOL{${}_\omega$} notation} &
+{\it Constructor} &
+{\it Destructor} &
+{\it Test} \\ \hline
+ & & & \\
+{\small\verb|!:|}$\alpha${\small\verb|.|}$t$ &
+\texttt{mk\_tyforall} & \texttt{dest\_tyforall} &
+\texttt{is\_tyforall} \\ \hline
+{\small\verb|?:|}$\alpha${\small\verb|.|}$t$ &
+\texttt{mk\_tyexists} & \texttt{dest\_tyexists} &
+\texttt{is\_tyexists} \\ \hline
+{\small\verb|\:|}$\alpha${\small\verb|.|}$t$ &
+\texttt{mk\_tyabs} & \texttt{dest\_tyabs} &
+\texttt{is\_tyabs} \\ \hline
+$t$\ {\small\verb|[:|}$\sigma${\small\verb|:]|} &
+\texttt{mk\_tycomb} & \texttt{dest\_tycomb} &
+\texttt{is\_tycomb} \\ \hline
+\end{tabular}
+\end{center}\label{construct-destruct-table}
+
+There are similar \ML{} functions for the forms with multiple types:
+
+\begin{center}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf \ML{} constructors and destructors for multiple types} \\
+\multicolumn{3}{|c|}{ } \\
+{\it \HOL{${}_\omega$} notation} &
+{\it Constructor} &
+{\it Destructor} \\ \hline
+ & & \\
+{\small\verb|!:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+\texttt{list\_mk\_tyforall} & \texttt{strip\_tyforall} \\ \hline
+{\small\verb|?:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+\texttt{list\_mk\_tyexists} & \texttt{strip\_tyexists} \\ \hline
+{\small\verb|\:|}$\alpha_1\ldots\alpha_n${\small\verb|.|}$t$ &
+\texttt{list\_mk\_tyabs} & \texttt{strip\_tyabs} \\ \hline
+$t$\ {\small\verb|[:|}$\sigma_1,\ldots,\sigma_n${\small\verb|:]|} &
+\texttt{list\_mk\_tycomb} & \texttt{strip\_tycomb} \\ \hline
+\end{tabular}
+\end{center}\label{multiple-construct-destruct-table}
+
+Here are some examples of their use:
+
+\begin{session}
+\begin{verbatim}
+> val x = mk_tyforall(``:'a``, ``T``);
+val x = ``!:'a. T`` : term
+
+> val x2 = mk_tyforall(``:'b``, x);
+val x2 = ``!:'b 'a. T`` : term
+
+> is_tyforall x2;
+val it = true : bool
+
+> dest_tyforall x2;
+val it = (``:'b``, ``!:'a. T``) : hol_type * term
+> strip_tyforall x2;
+val it = ([``:'b``, ``:'a``], ``T``)
+   : hol_type list * term
+
+> list_mk_tyforall([``:'c``,``:'b``,``:'a``], ``T``);
+val it = ``!:'c 'b 'a. T`` : term
+> strip_tyforall it;
+val it = ([``:'c``, ``:'b``, ``:'a``], ``T``)
+   : hol_type list * term
+\end{verbatim}
+\end{session}
+
+\paragraph{Varieties of terms}
+
+The four different varieties of terms of \HOL{} are still present in \HOLW:
+variables, constants, function applications (\ml{``$t_1$\ $t_2$``}),
+and lambda abstractions ({\small\verb|``\|}$x$\ml{.}$t$\ml{``}).
+In addition, \HOLW{} adds two new fundamental varieties:
+type applications (\ml{``$t$\ [:$\sigma$:]``}) and
+type abstractions ({\small\verb|``\:|}$\alpha$\ml{.}$t$\ml{``}).
+More complex terms, including the type quantifications
+{\small\verb|``!:|}$\alpha$\ml{.}$t$\ml{``} and
+{\small\verb|``?:|}$\alpha$\ml{.}$t$\ml{``},
+are just compositions of terms from this simple set.
+
+It is foundational that every term has a type. The question then follows,
+what are the types of these two new varieties of terms?
+In particular, what is the type of a type abstraction term
+{\small\verb|``\:|}$\alpha$\ml{.}$t$\ml{``}?
+This turns out to be
+%The type of a type abstraction term is
+%To answer this we need to consider
+a potent and valuable
+new variety of types, not present in \HOL{} but introduced in \HOLW,
+called {\it universal types}.
+
+\paragraph{Universal types}
+
+A universal type is written as \texttt{!$\alpha$.$\sigma$},
+where $\alpha$ is a type variable and $\sigma$ is a type expression.
+With Unicode it appears as \texttt{$\forall\alpha$.$\sigma$}.
+The meaning of such a universal type is an infinite collection of all the possible
+types that $\sigma$ can represent, for all the possible values of $\alpha$,
+where the collection is indexed by the values of $\alpha$.
+
+Do not confuse this universal type with
+the universal term expression \texttt{!:$\alpha$.$t$}.
+
+The type variable $\alpha$ usually will appear free in $\sigma$,
+but it does not have to.  $\alpha$ is considered bound by the \texttt{!}
+quantifier over the body $\sigma$, so $\alpha$ will never be a free type
+variable of \texttt{!$\alpha$.$\sigma$}.
+The \ML{} function \texttt{type\_vars} returns a list of the free type
+variables in a type.
+Universal types may be constructed using the parser, or
+they may be constructed and taken apart by \ML{} functions
+\texttt{mk\_univ\_type} and \texttt{dest\_univ\_type}.
+%
+\begin{session}
+\begin{verbatim}
+> val ty1 = mk_univ_type(``:'a``, ``:'a -> 'a``);
+val ty1 = ``:!'a. 'a -> 'a``
+   : hol_type
+
+> type_vars ty1;
+val it = [] : hol_type list
+
+> dest_univ_type ty1;
+val it = (``:'a``, ``:'a -> 'a``)
+   : hol_type * hol_type
+
+> val ty2 = ``:!'a. 'a -> 'b``;
+val ty2 = ``:!'a. 'a -> 'b``
+   : hol_type
+
+> type_vars ty2;
+val it = [``:'b``] : hol_type list
+\end{verbatim}
+\end{session}
+
+\paragraph{Types of terms}
+We can now state the types of the two new varieties of terms,
+type applications and type abstractions.
+
+Type abstraction terms have types which are universal types.
+In particular, if the term $t$ has type $\sigma$, then the term
+{\small\verb|\:|}$\alpha$\ml{.}$t$\ml{} has type
+\texttt{!$\alpha$.$\sigma$}.
+
+Type application terms have types determined in the following way.  For a
+type application term \ml{$t$[:$\tau$:]} to be well-typed, it is required
+that the term $t$ have a universal type, say \texttt{!$\alpha$.$\sigma$}.
+Then the type of \ml{$t$[:$\tau$:]} is $\sigma[\tau / \alpha]$,
+where the type expression $\tau$ is substituted for all free occurences
+of $\alpha$ in $\sigma$.
+%
+\begin{session}
+\begin{verbatim}
+> type_of ``\:'a. 3:num``;
+val it = ``:!'a. num`` : hol_type
+
+> type_of ``(f : !'a. 'a -> 'a) [: num :]``; 
+val it = ``:num -> num`` : hol_type
+
+> ``(f : 'a -> 'a) [: num :]``;
+
+Type inference failure: unable to form the application of the term
+
+(f :'a -> 'a)
+
+at line 17, character 3
+
+to the type
+
+:num :ty
+
+on line 17, characters 20-22
+
+since the term does not have a universal type.
+
+unification failure message: unify failed
+\end{verbatim}
+\end{session}
+
+\paragraph{Ranks of types}
+To ensure the soundness of the \HOLW{} logic,
+in addition to being well-typed, a term must also be {\it well-ranked}.
+In \HOLW, every type has a rank.
+The rank of a type is a natural number $0, 1, 2, ...$; it can never be negative.
+This is essentially a measure of how deeply universal (or existential) types 
+are nested within the type.
+All the types in the classic \HOL{} logic have no universal types and
+are of rank 0.  Forming a universal type out of a bound type variable
+of rank 0 and a body of rank 0 or 1 will yield a type of rank 1.
+Higher rank types can be constructed as well.
+All the types that can be constructed in \HOLW{} can be
+classified into one of these ranks.
+%
+The rank of a type may be obtained by the \ML{} function
+\texttt{rank\_of\_type} of type \texttt{hol\_type -> int}.
+
+The purpose of ranks is to restrict what types can properly be
+the argument in a type application term.
+%Since such a term has a type
+%itself which is a universal type, if one could apply such a term
+%Such a term has a type itself, which is a universal type.
+If one could apply a type abstraction term
+to its {\it own\/} type as an argument, this would introduce a circularity that could
+imperil the soundness of the logic.
+%
+To prevent this, for every type application term
+\ml{$t$[:$\tau$:]}, where $t$ has type \texttt{!$\alpha$.$\sigma$},
+it is required that the rank of $\tau$ be less than or equal to
+the rank of $\alpha$.  If it is greater than the rank of $\alpha$,
+this will be
+caught and
+reported as an error.
+
+By default, all type variables are given rank 0.  The user can specify
+a particular rank for a type variable by annotating it with
+a {\it rank constraint on types},
+as in \texttt{('a :<= 1)}.
+
+%Here are two examples of violations of the rank restriction on
+%type applications.
+The rank restriction on type applications is checked when terms
+are constructed by the \ML{} function \texttt{mk\_tycomb}.
+%
+\begin{session}
+\begin{verbatim}
+> mk_tycomb(``f : !'a:<=0. 'a -> 'a``, ``:!'a:<=0. 'a -> 'a``)
+# handle e => Raise e;
+
+Exception raised at Term.mk_tycomb:
+type application argument has rank exceeding that expected
+Exception-
+   HOL_ERR
+  {message = "type application argument has rank exceeding that expected",
+  origin_function = "mk_tycomb", origin_structure = "Term"} raised
+\end{verbatim}
+\end{session}
+
+The rank restriction on type applications is also checked when terms
+are parsed.
+%
+\begin{session}
+\begin{verbatim}
+> ``(\:'a:<=0. \x:'a. x) [: !'a:<=0. 'a -> 'a :]``;
+
+Rank inference failure: unable to infer a rank for the application of the term
+
+\:'a. (\(x :'a). x)
+
+roughly on line 4, characters 20-21
+
+which expects a type of rank 0
+
+to the type
+
+:!'a. 'a -> 'a
+
+roughly on line 4, characters 38-42
+
+which has rank 1
+
+rank unification failure message: unify failed
+Exception-
+   HOL_ERR
+  {message = "roughly on line 4, characters 38-42:\nfailed", origin_function =
+  "typecheck", origin_structure = "Preterm"} raised
+\end{verbatim}
+\end{session}
+
+\paragraph{Kinds of types}
+
+Just as every term has a type, in \HOLW{} every type has a {\it kind}.
+Kinds can be thought of as collections of type values, just as types
+can be thought of as collections of term values.  Also, just as types
+are used to determine when an argument to a term function is properly
+well-typed, kinds are used to determine when a  type argument to a type
+function is properly {\it well-kinded}.  As in \HOLW{} terms and
+types are represented in \ML{} as members of the \ML{} types \texttt{term}
+and \texttt{hol\_type},
+so kinds are represented as members of the \ML{} type \texttt{kind}.
+
+The most
+common and
+basic kind is \texttt{ty}.  This is the kind of every type in the
+logic of classic \HOL.
+%We can use
+%see this by using
+The \ML{} function \texttt{kind\_of~:~hol\_type -> kind}
+shows the kind of a type:
+%shows these kinds:
+%shows the kinds of normal \HOL{} types:
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:bool``;
+val it = ``::ty`` : kind
+
+> kind_of ``:num``;
+val it = ``::ty`` : kind
+
+> kind_of ``:num -> num``;
+val it = ``::ty`` : kind
+
+> kind_of ``:num list -> (num list # bool)``;
+val it = ``::ty`` : kind
+
+> load "realLib";
+val it = () : unit
+> kind_of ``:real``;
+val it = ``::ty`` : kind
+\end{verbatim}
+\end{session}
+
+The kinds above are printed like types, except that the contents of the
+quotation start with a double colon (\texttt{{:}{:}}),
+instead of a single colon.
+%This is how
+%Similarly,
+In this fashion,
+the parser can be used to create kinds, just as it can
+%be used to
+create types and terms in the \HOLW{} logic.
+
+%Despite it's simplicity,
+There are multiple instances of the \texttt{ty} kind, one for each rank.
+% This means that the \texttt{ty} kind has a rank as an attribute. 
+% The rank of the \texttt{ty} kind is an attribute of \texttt{ty}, just as 
+Just as each instance of
+the term \texttt{NIL} has its type as an attribute,
+so each instance of \texttt{ty} has its rank as an attribute.
+% e.g.\ \texttt{num list} or \texttt{(num -> num) option list}.
+The default rank is 0, or
+a kind's rank can be specified using a {\it rank constraint},
+like \texttt{ty:3}.
+The rank of a kind is obtained by the \ML{} function
+\texttt{rank\_of~:~kind -> int}.
+
+\begin{session}
+\begin{verbatim}
+> ``::ty``;
+val it = ``::ty`` : kind
+> rank_of it;
+val it = 0 : rank
+
+> ``::ty : 3``;
+val it = ``::ty:3`` : kind
+> rank_of it;
+val it = 3 : rank
+\end{verbatim}
+\end{session}
+
+In the previous example of type application terms,
+that generated a rank error during parsing,
+if we omit the rank constraints, then the
+rank inference will
+attempt to satisfy
+the rank restriction
+on type applicatons
+by inferring that
+the type abstraction's bound type variable must have rank 1
+to accomodate the rank 1 type argument, and succeed.
+%
+\begin{session}
+\begin{verbatim}
+> show_types := true;
+val it = () : unit
+> ``(\:'a. \x:'a. x) [: !'a. 'a -> 'a :]``;
+val it =
+   ``(\:'a :(ty:1). (\(x :'a). x)) [:!'a. 'a -> 'a:]``
+   : term
+\end{verbatim}
+\end{session}
+
+Here the printer shows the type abstraction term's bound type variable \texttt{'a}
+with an annotation, \texttt{'a~{:}(ty{:}1)}.  This is a {\it kind constraint},
+saying that the kind of \texttt{'a} is \texttt{ty{:}1}, where the kind
+itself is annotated to have rank 1 by a rank constraint on kinds,
+\texttt{ty{:}1}.  This means that the type variable \texttt{'a} also has
+rank 1.
+
+So types may have constraints which are kinds, and kinds may have constraints
+which are ranks.  In addition, we have seen how types may have contraints
+which are ranks.
+%but this is only advisable when the type is known to not have an arrow kind.
+%Otherwise there may be confusion as to whether the domain or range is intended.
+
+\paragraph{Arrow kinds}
+
+So far all the types we have seen have had the kind \texttt{ty}.
+The question is, are their any types with different kinds?
+There are, as we shall see with the \texttt{list} type.
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:num list``;
+val it = ``::ty`` : kind
+
+> kind_of ``:'a list``;
+val it = ``::ty`` : kind
+
+> kind_of ``:list``;
+val it = ``::ty => ty`` : kind
+\end{verbatim}
+\end{session}
+
+This may look unexpected and strange to an experienced \HOL{} user, 
+since in \HOL{} one
+can never have the \texttt{list} type name sitting alone like this.  The
+\texttt{list} type is a type operator, and it expects exactly one argument.
+In \HOL{} this argument must always be supplied immediately to create a type,
+but in \HOLW{} we consider \texttt{list} to be a type in its own right. It is
+distinguished from the classic \HOL{} types that are not type operators by
+its kind, which is here reported to be \texttt{ty => ty}.
+
+The kind \texttt{ty => ty} is an example of an {\it arrow kind}, written 
+as a binary infix between two kinds which are the arguments to the arrow.
+These arguments may be any kinds, so they may themselves be arrow kinds.
+The arrow operator \texttt{=>} is right associative, so the default
+parenthesization is to the right.
+%
+\begin{session}
+\begin{verbatim}
+> ``::(ty => ty) => ty``;
+val it = ``::(ty => ty) => ty`` : kind
+> ``::(ty => ty) => (ty => ty)``;
+val it = ``::(ty => ty) => ty => ty`` : kind
+\end{verbatim}
+\end{session}
+
+Now we can explore what are the kinds of some other type operators of \HOL{}:
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:option``;
+val it = ``::ty => ty`` : kind
+> kind_of ``:fun``; 
+val it = ``::ty => ty => ty`` : kind
+> kind_of ``:prod``;
+val it = ``::ty => ty => ty`` : kind
+> kind_of ``:sum``;
+val it = ``::ty => ty => ty`` : kind
+\end{verbatim}
+\end{session}
+
+Given an arrow kind $k_1$ \texttt{=>} $k_2$, $k_1$ is called the domain
+and $k_2$ is called the range.
+
+Kinds are used to manage which type operators can be properly applied to
+which type arguments, just as types are used to manage which term functions
+can be properly applied to which term arguments.  To be {\it well-kinded},
+a type operator can only be applied to a type argument whose kind matches
+the type operator's domain.  If this is violated, an exception is raised.
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:list``;
+val it = ``::ty => ty`` : kind
+> kind_of ``:num``;
+val it = ``::ty`` : kind
+> kind_of ``:num list``;
+val it = ``::ty`` : kind
+> kind_of ``:option list`` handle e => Raise e;
+
+Kind inference failure: unable to infer a kind for the application of
+
+:list : ty => ty
+
+on line 38, characters 18-21
+
+to
+
+:option : ty => ty
+
+on line 38, characters 11-16
+
+kind unification failure message: unify failed
+
+Exception raised at Pretype.kindcheck:
+on line 38, characters 18-21:
+failed
+Exception-
+   HOL_ERR
+  {message = "on line 38, characters 18-21:\nfailed", origin_function =
+  "kindcheck", origin_structure = "Pretype"} raised
+\end{verbatim}
+\end{session}
+
+\paragraph{Type operators with multiple arguments}
+
+Type operators may have any number of arguments, zero or more, but for a
+particular type operator, the number of arguments it may take is fixed.  In
+\HOL{} this  number is called the {\it arity\/} of the type operator, but in
+the \HOLW{} logic this information is represented within the type operator's
+kind.
+%
+%> kind_of ``:bool``;
+%val it = ``::ty`` : kind
+%> kind_of ``:list``;
+%val it = ``::ty => ty`` : kind
+\begin{session}
+\begin{verbatim}
+> kind_of ``:fun``;
+val it = ``::ty => ty => ty`` : kind
+> kind_of ``:prod``;
+val it = ``::ty => ty => ty`` : kind
+> kind_of ``:sum``;
+val it = ``::ty => ty => ty`` : kind
+\end{verbatim}
+\end{session}
+
+If desired, the \HOL{} arity of a type can be obtained by applying 
+\texttt{arity\_of} to the type's kind. However, not all kinds
+fit this pattern, and cannot be considered as a simple arity.
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:fun``;
+val it = ``::ty => ty => ty`` : kind
+> arity_of it;
+val it = 2 : int
+
+> ``::(ty => ty) => ty``;
+val it = ``::(ty => ty) => ty`` : kind
+> arity_of it handle e => Raise e;
+
+Exception raised at Kind.arity_of:
+not an arity kind
+Exception-
+   HOL_ERR
+  {message = "not an arity kind", origin_function = "arity_of",
+  origin_structure = "Kind"} raised
+\end{verbatim}
+\end{session}
+
+So the type operators \texttt{fun}, \texttt{prod}, and \texttt{sum},
+which each take two type arguments, all have kind \texttt{ty => ty => ty}.
+The notation for this kind is meant to imply that the type operators
+\texttt{fun}, \texttt{prod}, and \texttt{sum}
+are {\it curried}, that is, that they may take their arguments one at a time.
+This is an extension beyond what is possible in \HOL, where all
+%of the
+type arguments must be included immediately. But in \HOLW{}, it is
+perfectly reasonable to defer such applications. 
+The result of a partial application of arguments to
+a type operator is generally another type operator that can be further
+applied to more arguments, until the full number of arguments
+expected have been supplied.
+%
+\begin{session}
+\begin{verbatim}
+> ``:num fun``;
+val it = ``:num fun`` : hol_type
+> kind_of ``:num fun``;
+val it = ``::ty => ty`` : kind
+> ``:bool (num fun)``;
+val it = ``:num -> bool`` : hol_type
+> kind_of ``:bool (num fun)``;
+val it = ``::ty`` : kind
+\end{verbatim}
+\end{session}
+
+Notice in \texttt{``:bool (num fun)``} that it was necessary to use
+parentheses.  For backwards compatibility with \HOL, by default
+the application of type operators to arguments associates to the left.
+If the parentheses had been omitted as in \texttt{``:bool num fun``},
+the type parser would have tried to first apply \texttt{num} as an operator
+to \texttt{bool}, and then to apply \texttt{fun} to the result.  Since
+\texttt{num} is not an operator, this would have generated an error.
+
+Maintaining the backwards compatibility with \HOL{} guarantees that
+classic type expressions such as the following will parse correctly.
+%
+\begin{session}
+\begin{verbatim}
+> ``:(num # num) list option``;
+val it =
+   ``:(num # num) list option``
+   : hol_type
+\end{verbatim}
+\end{session}
+
+One can also use the traditional ``tuple'' notation for types
+to apply several arguments to a type operator.
+The arguments are listed
+left to right
+in the tuple before the type operator,
+so that the first argument to the type operator will
+be the left-most type in the tuple, with the rest of the arguments succeeding
+it to the right, as is normal in \HOL.
+%
+\begin{session}
+\begin{verbatim}
+> ``:(num,bool)fun``;
+val it = ``:num -> bool`` : hol_type
+\end{verbatim}
+\end{session}
+
+\paragraph{Type applications}
+
+The application of a type operator to a type argument is actually a new
+variety of type in \HOL{}, called a {\it type application}.  These type
+applications may be constructed using the parser as above, or constructed and
+destructed by the \ML{} functions \texttt{mk\_app\_type} and
+\texttt{dest\_app\_type}.
+Remember that when parsed or printed, type operator application is {\it postfix}, not prefix as in the term language.
+%
+\begin{session}
+\begin{verbatim}
+> mk_app_type(``:list``, ``:num``);
+val it = ``:num list`` : hol_type
+> mk_app_type(``:option``, it);
+val it = ``:num list option`` : hol_type
+> dest_app_type it;
+val it = (``:option``, ``:num list``)
+   : hol_type * hol_type
+\end{verbatim}
+\end{session}
+
+All types in the classic \HOL{} logic that have more than one argument
+are represented in \HOLW{} as a series of type applications.  Such multiple
+type applications may be constructed or taken apart in one step by
+%the \ML{} functions
+\texttt{list\_mk\_app\_type} and \texttt{strip\_app\_type}.
+%
+\begin{session}
+\begin{verbatim}
+> list_mk_app_type(``:fun``, [``:'a``,``:bool``]);
+val it = ``:'a -> bool`` : hol_type
+> strip_app_type it;
+val it = (``:fun``, [``:'a``, ``:bool``])
+   : hol_type * hol_type list
+\end{verbatim}
+\end{session}
+
+\paragraph{Type constants}
+
+Simple type names like \texttt{``:bool``}, \texttt{``:list``}, and
+\texttt{``:fun``} are called {\it type constants}.
+Each type constant contains its name and its kind.
+\HOLW{} includes all of the type names of \HOL{} as type constants.
+But the kind of a type constant in \HOLW{} may be any kind of \HOLW;
+it need not be an arity kind as for those in \HOL.
+Instances of these type constants
+may be constructed or deconstructed by the \ML{} functions
+\texttt{mk\_con\_type},
+\texttt{mk\_thy\_con\_type},
+\texttt{dest\_con\_type},
+and \texttt{dest\_thy\_con\_type}.
+For example, the function \texttt{mk\_con\_type} has \ML{} type
+\texttt{string * kind -> hol\_type}.
+
+{\bf Note:}
+The classic \HOL{} functions \texttt{mk\_type},
+\texttt{mk\_thy\_type},
+\texttt{dest\_type},
+and \texttt{dest\_thy\_type}
+are supported in \HOLW{} for backwards compatibility.
+They will work just as before if given inputs in the classical
+\HOL{} subset of \HOLW.  However, these functions are deprecated, and should
+not be relied on to work as expected on the new types introduced in \HOLW.
+Their role is now replaced by the \ML{} functions to
+construct type constants and type applications.
+%
+\begin{session}
+\begin{verbatim}
+> val ty1 = mk_type("fun",[``:'a``,``:bool``]);
+val ty1 = ``:'a -> bool`` : hol_type
+> dest_type ty1;
+val it = ("fun", [``:'a``, ``:bool``])
+   : string * hol_type list
+
+> strip_app_type ty1;
+val it = (``:fun``, [``:'a``, ``:bool``])
+   : hol_type * hol_type list
+> dest_con_type (fst it);
+val it = ("fun", ``::ty => ty => ty``) : string * kind
+\end{verbatim}
+\end{session}
+
+\paragraph{Type variables}
+
+Type variables in \HOLW{} include all the type variables in \HOL.
+In addition, \HOLW{} supports type variables with any kind of \HOLW{},
+whereas the \HOL{}
+type variables can only have kind \texttt{ty}.
+A type variable with kind \texttt{ty => ty} holds values which
+are type operators like \texttt{list} or \texttt{option}.
+Thus, such a type variable with an arrow kind is called a {\it type operator
+variable}.
+As before, the names of type variables must begin with an apostrophe
+(\texttt{'}).  Type variables may be
+constructed and deconstructed by the \ML{} functions
+\texttt{mk\_var\_type} of type \texttt{string * kind -> hol\_type} and
+\texttt{dest\_var\_type} of type \texttt{hol\_type -> string * kind}.
+
+For backwards compatibility the \HOL{} functions
+\texttt{mk\_vartype~{:}~string -> hol\_type}
+and
+\texttt{dest\_vartype~{:}~hol\_type -> string}
+are supported,
+but they are deprecated.
+
+{\bf Please take care} to not confuse the
+similar names, \texttt{mk\_var\_type} and \texttt{mk\_vartype}.
+%
+\begin{session}
+\begin{verbatim}
+> val ty1 = mk_var_type("'a", ``::ty``);
+val ty1 = ``:'a`` : hol_type
+> dest_var_type ty1;
+val it = ("'a", ``::ty``) : Type.tyvar
+> dest_vartype ty1;
+val it = "'a" : string
+
+> val ty2 = mk_var_type("'b", ``::(ty => ty) => ty``);
+val ty2 = ``:'b :(ty => ty) => ty`` : hol_type
+> mk_app_type(ty2, ``:list``);
+val it = ``:list ('b :(ty => ty) => ty)`` : hol_type
+> dest_var_type ty2;
+val it = ("'b", ``::(ty => ty) => ty``) : Type.tyvar
+> dest_vartype ty2 handle e => Raise e;
+
+Exception raised at Type.dest_vartype:
+type operator kind - use dest_var_type
+Exception-
+   HOL_ERR
+  {message = "type operator kind - use dest_var_type", origin_function =
+  "dest_vartype", origin_structure = "Type"} raised
+\end{verbatim}
+\end{session}
+
+
+\paragraph{Type abstractions}
+
+Just as in \HOL{}'s term language we can form abstractions,
+% {\small\verb|``\:|}$\alpha$\ml{.}$t$\ml{``} has type
+% $\forall$-type quantification & {\small\verb|!:|}$\alpha${\small\verb|.|}$t$ &
+{\small\verb|\|}\texttt{x.x+1},
+so in \HOLW{}'s type language we can form type abstractions,
+such as {\small\verb|\|}\texttt{'a.'a->bool}.
+This can also be written as $\lambda$\texttt{'a.'a->bool}.
+These represent functions from types to types, like type operators.
+Similarly to universal types, type abstractions
+{\small\verb|\|}$\alpha$\texttt{.}$\sigma$ bind the type variable
+$\alpha$ over the body of the type abstraction $\sigma$, so the 
+free type variables of {\small\verb|\|}$\alpha$\texttt{.}$\sigma$
+are the free type variables of $\sigma$ except for $\alpha$.
+The kind of a type abstraction {\small\verb|\|}$\alpha$\texttt{.}$\sigma$
+is an arrow kind of the form $k_1$ \texttt{=>} $k_2$,
+where $k_1$ is the kind of $\alpha$ and $k_2$ is the kind of $\sigma$.
+%
+\begin{session}
+\begin{verbatim}
+> ``:\'a.'a -> bool``;
+val it = ``:\'a. 'a -> bool``
+   : hol_type
+> type_vars ``:\'a.'a -> bool``;
+val it = [] : hol_type list
+> type_vars ``:\'a.'a -> 'b``;
+val it = [``:'b``] : hol_type list
+> kind_of ``:\'a.'a -> bool``;
+val it = ``::ty => ty`` : kind
+> kind_of ``:\'a. num 'a``;
+val it = ``::(ty => ty) => ty`` : kind
+\end{verbatim}
+\end{session}
+
+
+\paragraph{Beta- and eta-reduction of types}
+
+Type abstractions can be applied to type arguments the same way that
+type operator constants are applied to type arguments.
+The new feature is that we now see beta-redexes,
+e.g.\ \texttt{(num (}{\small\verb|\|}\texttt{'a.'a~->~bool))},
+completely within the type language.
+(Remember that in \HOLW's type language, function application is {\it postfix},
+not prefix as in the term language.)
+%rather than the term language as for term abstractions.
+The \ML{} function \texttt{beta\_conv\_ty} will reduce a type that is such
+a beta-redex.
+This is done by substituting the type argument for the bound
+type variable within the type abstraction's body,
+and replacing the beta redex by the substituted body.
+Going further, the function \texttt{deep\_beta\_ty} will reduce
+all beta-redexes that are within a type, repeatedly until none are left.
+
+The semantics of \HOLW{} is that a type which is
+a beta redex has the same meaning as the result of reducing the beta redex.
+Thus \texttt{(num (}{\small\verb|\|}\texttt{'a.'a~->~bool))} is identified
+with \texttt{num -> bool}, and so the result can always be used in place of
+the beta redex.
+%Performing a beta reduction may
+%possibly decrease the rank of the type, and this is legitimate,
+%not causing any problems.
+
+In a parallel fashion, types are also identified up to eta-reduction, so that
+{\small\verb|\|}\texttt{'a.'a~list} is identified with \texttt{list}.
+The \ML{} function \texttt{eta\_conv\_ty} will reduce a type that is such
+an eta-redex, and
+the function \texttt{deep\_eta\_ty} will reduce
+all eta-redexes that are within a type, repeatedly until none are left.
+Usually, one will want to use the function \texttt{deep\_beta\_eta\_ty} to
+reduce all beta- or eta-redexes within a type, completely.
+
+In fact, the deep beta- and eta-reduction of types is performed automatically
+by the parser, so if one types in a type expression which has a beta redex in
+it, it will disappear before the time the type expression is printed.
+If there is a need for an un-beta-reduced type, one can create types with
+beta redexes in them by hand using \texttt{mk\_app\_type}.
+
+The main thing to remember about type beta- and eta-reduction is, it should
+never be necessary for the user to worry about this.  \HOLW{} will always
+treat the types correctly, whether or not they have been reduced, for all
+normal tasks like rewriting.
+% and simplification. 
+While the result of
+such reduction is of course visually different from the starting type, both the
+original and the result types are equivalent according to the \HOLW{} logic.
+%
+\begin{session}
+\begin{verbatim}
+> ``:num (\'a.'a -> bool)``;
+val it = ``:num -> bool`` : hol_type
+
+> val ty1 = mk_app_type(``:\'a.'a -> bool``, ``:num``);
+val ty1 =
+   ``:num (\'a. 'a -> bool)``
+   : hol_type
+> beta_conv_ty ty1;
+val it = ``:num -> bool`` : hol_type
+
+> val ty2 = mk_app_type(``:list``,mk_app_type(``:option``,ty1));
+val ty2 =
+   ``:num (\'a. 'a -> bool) option list``
+   : hol_type
+> beta_conv_ty ty2 handle e => Raise e;
+
+Exception raised at Type.beta_conv_ty:
+not a type beta redex
+Exception-
+   HOL_ERR
+  {message = "not a type beta redex", origin_function = "beta_conv_ty",
+  origin_structure = "Type"} raised
+> deep_beta_ty ty2;
+val it =
+   ``:(num -> bool) option list``
+   : hol_type
+\end{verbatim}
+\end{session}
+
+\paragraph{Existential types}
+
+There is one final variety of types, called {\it existential types}.
+Analogous to universal types, they are written as
+\texttt{?$\alpha$.$\sigma$} or as
+\texttt{$\exists\alpha$.$\sigma$}, where $\alpha$ is a type variable
+and $\sigma$ is a type expression. Like both universal types and
+type abstractions, the type variable $\alpha$ is bound over the body
+$\sigma$.  The free type variables of the existential type are the
+free type variables of the body except for the bound type variable.
+
+We mention existential types here for completeness, but the full meaning
+and usefulness of existential types is deferred until 
+%packages are discussed in 
+chapter \ref{chap:package} on packages.
+%, as existential types is a key feature enabling packages.
+This advanced topic is best understood in a concentrated and focused manner.
+
+\paragraph{Varieties of types}
+
+Whereas in \HOL{} there are two varieties of types, namely type variables
+and type combinations with zero or more arguments,
+in \HOLW{} these are replaced by six varieties: type constants,
+type variables, type applications, type abstractions, universal types, and
+existential types.  What variety a type may be can be detected by the
+\ML{} functions listed in the following table.
+
+\begin{center}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf \ML{} test functions to identify type varieties} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Variety of type} &
+{\it \HOL{${}_\omega$} notation} &
+{\it Test function} \\ \hline
+Type constant & $\tau$ & \texttt{is\_con\_type} \\ \hline
+Type variable & $\alpha$ & \texttt{is\_var\_type} \\ \hline
+Type application &
+$\sigma_{\mbox{\scriptsize \it arg}}\ \sigma_{\mbox{\scriptsize \it opr}}$ &
+\texttt{is\_app\_type} \\ \hline
+Type abstraction & {\small\verb|\|}$\alpha${\small\verb|.|}$\sigma$ &
+\texttt{is\_abs\_type} \\ \hline
+Universal type & {\small\verb|!|}$\alpha${\small\verb|.|}$\sigma$ &
+\texttt{is\_univ\_type} \\ \hline
+Existential type & {\small\verb|?|}$\alpha${\small\verb|.|}$\sigma$ &
+\texttt{is\_exist\_type} \\ \hline
+\end{tabular}
+\end{center}\label{type-tests-table}
+
+
+\paragraph{Type comparison}
+
+Because of the introduction of bound type variables in type abstractions,
+universal types, and existential types, the comparison of two types for 
+equality cannot be handled
+by \ML{} equality as is done in the \HOL{} system.  For example, the types
+{\small\verb|\|}\texttt{'a.'a~->~'a} and {\small\verb|\|}\texttt{'b.'b~->~'b}
+are not the same by \ML{} equality, but they are the same type in the \HOLW{}
+logic.
+
+This comparison is properly tested by the \ML{} function
+\texttt{eq\_ty~{:}~hol\_type -> hol\_type -> bool}, and the use of
+\ML{} equality for this test is deprecated in most cases.
+The exception is in those situations when one knows that at least one
+of the two types is a type variable;
+then \ML{} equality will suffice to test for equality of types, because the
+kinds that are now part of the type variables may themselves be properly
+tested for equivalence by simple \ML{} equality.
+%
+\begin{session}
+\begin{verbatim}
+> ``:\'a.'a -> 'a`` = ``:\'b.'b -> 'b``;
+val it = false : bool
+> eq_ty ``:\'a.'a -> 'a`` ``:\'b.'b -> 'b``;
+val it = true : bool
+> ``:'a : 'k => ty:1`` = ``:'b : 'k => ty:1``;
+val it = false : bool
+> ``:'a : 'k => ty:1`` = ``:'a : 'k => ty``;
+val it = false : bool
+\end{verbatim}
+\end{session}
+
+
+
+\paragraph{Kind comparison}
+
+When comparing two kinds to see if they are equivalent, the structure
+of kinds is simple enough that \ML{} equality suffices.
+
+However, when checking the application of a type operator to a type argument,
+or when checking if a type application term's bound type variable to its
+actual type argument, strict \ML{} equality between kinds is not appropriate,
+because we wish to allow some flexibility with regards to ranks.
+If the type argument is of the same or a lower rank than expected,
+that is acceptable; the ranks do not have to be precisely equal.
+
+%When applying a type operator to a type argument, to ensure that the
+%application is proper, the domain of the kind of the type operator is
+%compared to the kind of the type argument.
+%The check that is done to see if a type argument's kind matches the 
+%kind expected from the type operator allows for some flexibility with
+%regards to ranks.
+This check is performed by the infix \ML{} operator \texttt{:>=:}.
+This relation between kinds is defined recursively 
+according to the following rules:
+%\newcommand{\myequiv}{\ =\ }
+%\begin{center}
+%\begin{tabular}[t]{lrclcl}
+%{\it Base kinds} &
+%\texttt{ty} {:} $r_1$ & \texttt{:>=:} &
+%\texttt{ty} {:} $r_2$ & {\myequiv} & $r_1 \ge r_2$ \\
+%{\it Arrow kinds} &
+%$k_1$ \texttt{=>} $l_1$ & \texttt{:>=:} &
+%$k_2$ \texttt{=>} $l_2$ & {\myequiv} &
+%$k_1 = k_2 \ \wedge \ l_1\ \texttt{:>=:}\ l_2$ \\
+%{\it Variable kinds} &
+%$\kappa_1$ {:} $r_1$ & \texttt{:>=:} &
+%$\kappa_2$ {:} $r_2$ & {\myequiv} & $\kappa_1 = \kappa_2 \ \wedge \ r_1 = r_2$ \\
+%& \multicolumn{3}{r}{\it any other combination} & {\myequiv} & \texttt{false}.
+%\end{tabular}
+%\end{center}
+%
+\def\kindge{\hbox{${:}\!\!\ge\!\!{:}$}}
+$$
+\begin{array}{c@{\hspace{6mm}}c@{\hspace{6mm}}c}
+\Rule{ r_1 \ge r_2}
+     {\mbox{\tt ty} : r_1 \ \ \mbox{\tt :>=:} \ \ \mbox{\tt ty} : r_2}
+&
+\Rule{\kappa_1 = \kappa_2,\ \ r_1 = r_2}
+     {\kappa_1 : r_1 \ \ \mbox{\tt :>=:} \ \ \kappa_2 : r_2}
+&
+\Rule{k_{1} = k_{2}, \ \ k_{1}' \ \mbox{\tt :>=:} \ k_{2}'}
+     {k_{1}\ \mbox{\tt =>}\ k_{1}' \ \ \mbox{\tt :>=:} \ \ 
+      k_{2}\ \mbox{\tt =>}\ k_{2}'}
+\end{array}
+$$
+%
+So a type operator $\sigma$ of kind $k_1$ \texttt{=>} $k_2$ can be applied
+as a function to a type argument $\tau$ of kind $k_\tau$ only if
+$k_1$ \texttt{:>=:} $k_\tau$.
+For example, \texttt{list} cannot be applied to \texttt{option}
+because \texttt{list} expects a type of kind \texttt{ty}, and
+\texttt{option} has kind \texttt{ty~=>~ty}.
+%
+\begin{session}
+\begin{verbatim}
+> kind_of ``:option``;
+val it = ``::ty => ty`` : kind
+> kind_of ``:list``;
+val it = ``::ty => ty`` : kind
+> fst(kind_dom_rng(kind_of ``:list``));
+val it = ``::ty`` : kind
+> fst(kind_dom_rng(kind_of ``:list``)) :>=: kind_of ``:option``;
+val it = false : bool
+\end{verbatim}
+\end{session}
+%> fst(kind_dom_rng(kind_of ``:list``)) :>=: kind_of ``:num``;
+%val it = true : bool
+
+A type operator can be applied to a type argument of a lower rank,
+but not to one of a higher rank.
+
+%
+\begin{session}
+\begin{verbatim}
+> ``::ty:1`` :>=: ``::ty:0``;
+val it = true : bool
+> ``::ty:0`` :>=: ``::ty:1``;
+val it = false : bool
+\end{verbatim}
+\end{session}
+
+If the domain of the kind of the type operator is itself an arrow kind, then
+it's domain has to be exactly equal to the domain of the kind of
+the type argument.  The ranges can differ in rank, but not the domains.
+%
+\begin{session}
+\begin{verbatim}
+> ``::ty:1 => ty:0`` :>=: ``::ty:0 => ty:0``;
+val it = false : bool
+> ``::ty:0 => ty:1`` :>=: ``::ty:0 => ty:0``;
+val it = true : bool
+\end{verbatim}
+\end{session}
+
+\paragraph{Rank comparison}
+
+Rank comparisons are performed simply as \ML{} comparisons between integers,
+whether equality, greater than, etc.  Ranks are simply integers, except that
+they may never be negative.
+
+\paragraph{Kind variables}
+
+In type abstraction terms like
+{\small\verb|\:|}$\alpha${\small\verb|. !x:|}$\alpha${\small\verb|. x=x|},
+the kind of the bound type variable $\alpha$ is often \texttt{ty}, but in fact
+%%it is not restricted to only being \texttt{ty},  but can
+%the bound type variable of a type abstraction
+can have any kind
+in the \HOLW{} logic,
+since type abstractions are a fundamental form of the logic.
+As another example, in the term
+{\small\verb|\:|}$\alpha${\small\verb|. !x:list|}~$\alpha${\small\verb|. x=x|},
+the bound type variable $\alpha$ has the kind \texttt{(ty => ty) => ty}.
+
+Similarly, we would like to form type quantification terms like
+{\small\verb|!:|}$\alpha${\small\verb|. !x:list|}~$\alpha${\small\verb|. x=x|}.
+But type quantification terms are not fundamental forms of the \HOLW{} logic.
+Instead, they are applications of a term constant, either {\small\verb|!:|}
+or {\small\verb|?:|}, to a type abstraction term.
+{\small\verb|!:|} and {\small\verb|?:|} are new term constants
+defined in theory \texttt{bool}.
+
+But just what is the type of {\small\verb|!:|}?
+In the expression
+{\small\verb|!:|}$\alpha${\small\verb|. !x:|}$\alpha${\small\verb|. x=x|},
+the type of {\small\verb|!:|} must be \texttt{(!'a:ty.~bool)~->~bool}.
+But in the expression
+{\small\verb|!:|}$\alpha${\small\verb|. !x:list|}~$\alpha${\small\verb|. x=x|},
+the type of {\small\verb|!:|} must be
+\texttt{(!'a:(ty~=>~ty)~=>~ty.~bool)~->~bool}.
+These two types are clearly not the same.
+How can one term constant have both these types?
+%
+\begin{session}
+\begin{verbatim}
+> dest_comb ``!:'a. !x:'a. x=x``;
+val it =
+   (``$!:``, ``\:'a. !x. x = x``)
+   : term * term
+> type_of (fst it);
+val it = ``:(!'a. bool) -> bool``
+   : hol_type
+> dest_comb ``!:'a. !x:list 'a. x=x``;
+val it =
+   (``$!:``,
+    ``\:'a :(ty => ty) => ty. !x. x = x``)
+   : term * term
+> type_of (fst it);
+val it =
+   ``:(!('a :(ty => ty) => ty). bool) -> bool``
+   : hol_type
+\end{verbatim}
+\end{session}
+
+\noindent
+The answer is that the primitive type of {\small\verb|$!:|} is
+\texttt{(!'a:'k.~bool)~->~bool}, which contains a {\it kind variable\/}
+\texttt{'k}.  This kind variable has a rank, and may be instantiated with
+any kind of that rank or less,
+to form a {\it kind instance\/} of a type or term.  Thus both of the
+type quantifications above are legal, with the kind variable providing
+the necessary flexibility.
+%
+%> dest_thy_const ``$!:``;
+%val it =
+%   {Ty = ``:(!'a. bool) -> bool``,
+%    Thy = "bool", Name = "!:"} : {Ty: hol_type, Thy: string, Name: string}
+\begin{session}
+\begin{verbatim}
+> prim_mk_const{Thy = "bool", Name = "!:"};
+val it =
+   ``($!: :(!('a :'k). bool) -> bool)``
+   : term
+> inst_kind [``::'k`` |-> ``::(ty => ty) => ty``] it;
+val it =
+   ``($!: :(!('a :(ty => ty) => ty). bool) -> bool)``
+   : term
+\end{verbatim}
+\end{session}
+
+Kind variables are the third variety of kinds, along with the base kind
+\texttt{ty} and arrow kinds.  The names of kind variables are like the 
+names of type variables, in that they must start with an apostrophe
+(\texttt{'}).  Kind variables also have a rank as an attribute, 
+which limits what kinds may be substituted for the kind variable.
+
+The rank of a base kind or of a kind variable is taken directly
+from the kind.  The rank of an arrow kind is the maximum of the ranks of
+the arrow kind's domain and range.
+
+Despite the names of kind variables and type variables looking the same,
+there is no confusion between them in the \HOLW{} logic.
+%They come from different namespaces, so
+One could use the same name for both a type variable
+and a kind variable within the same expression without problems.
+
+\paragraph{Varieties of kinds}
+
+In \HOLW{} there are three varieties of kinds: the ``type'' kind \texttt{ty},
+kind variables, and arrow kinds.
+What variety a kind may be can be detected by the
+\ML{} functions listed in the following table.
+%They may also be constructed, deconstructed, etc., by related
+%\ML{} functions in the normal fashion.
+
+\begin{center}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf \ML{} test functions to identify kind varieties} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Variety of kind} &
+{\it \HOL{${}_\omega$} notation} &
+{\it Test function} \\ \hline
+Type kind & \texttt{ty} & \texttt{is\_type\_kind} \\ \hline
+Kind variable & \texttt{'k, 'l, ...} & \texttt{is\_var\_kind} \\ \hline
+Arrow kind & $k_{1}$ \texttt{=>} $k_{2}$ &
+\texttt{is\_arrow\_kind} \\ \hline
+\end{tabular}
+\end{center}\label{kind-tests-table}
+
+
+\paragraph{Universe polymorphism}
+
+So we have seen how a type operator can be applied to type arguments
+of lower rank, but not of higher rank.
+This restriction is necessary for the simplicity of the semantics, but in
+practice it could have turned out to be quite restrictive indeed.  For example,
+the \texttt{list} type operator has kind \texttt{ty => ty}, taking an
+argument which is a type of rank 0 to a result type of rank 0.  This is fine
+for types of rank 0, like \texttt{bool} or \texttt{num}, but what if we
+wish to form lists where the type of the argument
+%has rank 1, like
+is
+\texttt{!'a.bool}
+of rank $1$?
+Without any further flexibility, one would need to define
+a second version of \texttt{list}, say \texttt{list1\ {:}\ ty:1 => ty:1},
+and then for lists of elements of rank 2 one would need
+\texttt{list2}, and so on, an infinity of versions
+of the \texttt{list} type operator,
+%as \texttt{list1}, \texttt{list2}, \texttt{list3}, etc.,
+each with their own distinct versions of \texttt{NIL} and \texttt{CONS}
+for each rank $0, 1, 2, \cdots$.
+We would also have to prove again each of the list theorems, duplicating the
+entire list library afresh for each new rank.  
+This would be extremely cumbersome,
+but after finishing all this work, we would have gained 
+no real new understanding or insight about our applications.
+
+To overcome this practical problem, \HOLW{} contains
+a very powerful feature, that a type constant
+which is originally defined as
+%a type constant of
+one rank
+can have instances of higher rank.
+Thus the type constant \texttt{list} of kind \texttt{ty => ty}
+can be ``promoted'' to kind \texttt{ty:1 => ty:1}, or to \texttt{ty:2 => ty:2},
+or to \texttt{ty:3 => ty:3}, etc., raising all of the ranks in the kind
+uniformly.
+This feature is called {\it universe polymorphism\/} or {\it rank polymorphism}.
+
+This rank promotion is done automatically in the parser when there is a need
+to satisfy a rank restriction.
+The rank of the type constant is increased to whatever rank
+is necessary to be able to accept its argument, if possible.
+Such promotions are inferred automatically by the parser's rank inference algorithm.
+%
+\begin{session}
+\begin{verbatim}
+> ``:(!'a. bool) list``;
+val it = ``:(!'a. bool) list`` : hol_type
+> fst(dest_app_type it);
+val it = ``:list`` : hol_type
+> kind_of it;
+val it = ``::ty:1 => ty:1`` : kind
+> rank_of it;
+val it = 1 : rank
+\end{verbatim}
+\end{session}
+
+These are considered different instances of the original type constant,
+differing only in rank, and are thus called {\it rank instances}.
+
+If we constrain the \texttt{list} type operator to be of rank 0,
+%we defeat the automatic promotion,
+%the automatic promotion is defeated,
+%defeating the automatic promotion,
+we prevent any promotion,
+and the result is that the \texttt{list}
+operator has insufficient rank for this argument:
+%
+\begin{session}
+\begin{verbatim}
+> ``:(!'a. bool) (list:<=0)``;
+
+Rank inference failure: unable to infer a rank for the application of
+
+:list : ty => ty
+
+on line 51, characters 20-23
+
+which expects a type of rank 0
+
+to
+
+:!'a. bool
+
+roughly on line 51, characters 9-12
+
+which has rank 1
+
+rank unification failure message: unify failed
+Exception-
+   HOL_ERR
+  {message = "on line 51, characters 20-23:\nfailed", origin_function =
+  "kindcheck", origin_structure = "Pretype"} raised
+\end{verbatim}
+\end{session}
+
+Just as type constants can be promoted to higher ranks than their
+original definitions, so can term constants.
+%Similarly, term constants can also be promoted to higher ranks than their
+%original definition,
+The parser will perform this promotion automatically when
+rank inference determines there is a need.  Just as for types,
+these are considered different rank instances of the original term constants.
+
+
+
+\paragraph{Substitutions}
+
+One of the most important operations on the syntax of the \HOLW{} logic is
+the substitution of expressions for variables.  Only free variables are
+affected by a substitution; all bound variables are unchanged.
+Just as for term substitutions, if a type substitution might cause the
+capture of a type variable, the corresponding bound type variable
+is automatically renamed.
+Because of the addition of kinds and ranks to the existing sorts of
+terms and types, there are four varieties of substitutions in \HOLW:
+\begin{itemize}
+\item term expressions for (free) term variables,
+\item type expressions for (free) type variables,
+\item kind expressions for kind variables, and
+\item a rank expression for the unique rank variable.
+\end{itemize}
+
+A rank substitution is represented by a simple nonnegative integer, say $n$.
+It stands for the substitution of the unique rank variable $r_0$ by the 
+rank expression $r_0 + n$, thus raising by $n$ all of the ranks in the object
+of the substitution.
+
+The other varieties of substitutions are represented by \ML{} lists of
+\texttt{\{redex,residue\}} pairs.  Such pairs are easily created by the 
+infix \texttt{|->} operator, which constructs a record with the two
+fields \texttt{redex} and \texttt{residue}.  As a list, the substitution
+may contain 0, 1, or more such pairs, all of the same sort.
+%
+\begin{session}
+\begin{verbatim}
+- [``x:num`` |-> ``y + 7``];
+> val it = [{redex = ``x``, residue = ``y + 7``}] :
+  {redex : term, residue : term} list
+- [``:'a`` |-> ``:num -> bool``, ``:'b:ty => ty`` |-> ``:list``];
+> val it =
+    [{redex = ``:'a``, residue = ``:num -> bool``},
+     {redex = ``:'b :ty => ty``, residue = ``:list``}] :
+  {redex : hol_type, residue : hol_type} list
+- [``::'k`` |-> ``::'l => ty``];
+> val it = [{redex = ``::'k``, residue = ``::'l => ty``}] :
+  {redex : kind, residue : kind} list
+\end{verbatim}
+\end{session}
+
+\paragraph{Proper substitutions}
+
+In \HOL, a substitution of term expressions for term variables requires that
+for each \texttt{\{redex,residue\}} pair, the redex and the residue
+have exactly the same type.  In \HOLW, there are similar restrictions for
+term, type, and kind substitutions for them to be called {\it proper}.
+Proper substitutions have the welcome property that when they are applied
+to valid terms, types, or kinds, that the result is still a valid term,
+type, or kind, respectively. By ``valid'' here we mean that it is well-typed,
+well-kinded, and well-ranked.  Proper substitutions maintain these
+well-formedness conditions, and that makes the semantics of substitution
+simple and its implementation efficient.
+
+Substitutions of kind expressions for kind variables are proper only if
+for each redex and residue, the rank of the redex $\ge$ the rank of the residue.
+
+%Improper substitutions are in general disallowed, although in some cases
+%they may be used as a simple way to induce first a rank substitution,
+%and then a kind substitution on the rank-substituted kind variable.
+%%
+%For example, the \ML{} function \texttt{Kind.align\_inst\_kind} applies the
+%substitution [\texttt{'k |-> ty => ty:1}] to the kind
+%\texttt{'k => 'l} by first promoting it to
+%\texttt{'k:1 => 'l:1}, and then applying the proper kind substitution
+%[\texttt{ 'k:1 |-> ty => ty:1}],
+%yielding \texttt{(ty => ty:1) => 'l:1}.
+
+Substitutions of type expressions for type variables are proper only if
+for each redex and residue, the kind of the redex \texttt{:>=:}
+the kind of the residue, where the \ML{} operator \texttt{:>=:} was described
+earlier in the section on kind comparisons.
+So a lower-rank type expression may be substituted for a higher-rank type
+variable, as long as the kinds otherwise are the same.
+%
+%\begin{session}
+%\begin{verbatim}
+%- infix :>=: ;
+%> infix 0 :>=:
+%- ``::'k => ty:1`` :>=: ``::'k => ty``;
+%> val it = true : bool
+%- ``::'k => ty`` :>=: ``::'k => ty:1``;
+%> val it = false : bool
+%\end{verbatim}
+%\end{session}
+
+This flexibility with regards to ranks is also extended to proper term
+substitutions, where the types of each redex and residue are compared using
+the \ML{} operator \texttt{ge\_ty}, which also includes the
+%flexibility of
+alpha, beta, and eta conversions of the types involved.
+%
+\begin{session}
+\begin{verbatim}
+- ge_ty ``:!'a:ty:1. 'a -> 'b:ty:2`` ``:!'c:ty:1. 'c -> 'b:ty:1``;
+> val it = true : bool
+- ge_ty ``:!'a:ty:1. 'a -> 'b:ty:1`` ``:!'c:ty:1. 'c -> 'b:ty:2``;
+> val it = false : bool
+\end{verbatim}
+\end{session}
+
+\noindent
+The relation \texttt{ge\_ty} is defined by the following rules, where for
+clarity we use $\ge$ between types as an infix version of \texttt{ge\_ty}:
+$$
+\begin{array}[b]{c@{\hspace{4mm}}c@{\hspace{4mm}}c}
+\Rule{\alpha = \alpha',\ k = k'}
+     {\alpha : k \ \ge\  \alpha' : k'}
+&
+%\Rule{\sigma_\textit{opr} \ge \sigma_\textit{opr}',\ 
+%      \sigma_\textit{arg} \ge \sigma_\textit{arg}'}
+%     {\sigma_\textit{arg} \ \sigma_\textit{opr}\ \ge\ 
+%      \sigma_\textit{arg}'\ \sigma_\textit{opr}'}
+\Rule{\sigma_{opr} \ge \sigma_{opr}',\ 
+      \sigma_{arg} \ge \sigma_{arg}'}
+     {\sigma_{arg} \ \sigma_{opr}\ \ge\ 
+      \sigma_{arg}'\ \sigma_{opr}'}
+&
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+     {\forall\alpha{:}k.\ \sigma\ \ge\ \forall\alpha'{:}k'.\ \sigma'}
+\\
+& & \\
+\Rule{\tau = \tau',\ k\ \mbox{\tt :>=:}\ k'}
+     {\tau : k\ \ge\ \tau' : k'}
+&
+\hspace{3mm}
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+     {\lambda\alpha{:}k.\ \sigma\ \ge\ \lambda\alpha'{:}k'.\ \sigma'}
+&
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+     {\exists\alpha{:}k.\ \sigma\ \ge\ \exists\alpha'{:}k'.\ \sigma'}
+\\
+& & \\
+\multicolumn{3}{c}{
+\Rule {\begin{array}{c}
+       (\sigma_1,\ldots,\sigma_n)\tau\ \mathrm{is\ a\ \mbox{head-humble}\ type},\ 
+       n \ge 0, \\
+       \mathrm{name\ of}\ \tau = \mathrm{name\ of}\ \tau', \ 
+       \forall i\in \{1,\ldots,n\}.\ \sigma_i \ge \sigma_i'
+       \end{array}}
+      {(\sigma_1,\ldots,\sigma_n)\tau \ \ge\ 
+       (\sigma_1',\ldots,\sigma_n')\tau'}
+}\hspace{7mm}
+\end{array}
+$$
+
+The last rule above refers to {\it head-humble\/} types, which 
+are described next.
+
+\paragraph{Humble types}
+
+Consider the type {\tt bool}. It contains exactly two values, 
+{\tt T} and {\tt F}. It is a type of rank 0. If it is promoted to
+rank 1, it still contains the same two values. If it is promoted
+further, it still contains the same two values. Thus,  when it 
+is promoted its meaning and behavior do not change. Essentially all
+these types are the same type. We would like the \HOLW{} logic
+to recognize this, and consider all these the same type, for simplicity
+and easy of use.
+
+By contrast, consider the type {\tt !'a:ty:0.'a~->~'a}. It contains all
+functions that take first a type of kind {\tt ty:0}
+and then a value of that type and return that same value.
+This is a type of rank 1. If it is promoted one rank, it becomes
+{\tt !'a:ty:1.'a~->~'a}, which is a type of rank 2.
+It contains all functions that take first a type of kind {\tt ty:1}
+and then a value of that type and return that same value.
+The important fact is that this is not the same set of functions as
+those contained by {\tt !'a:ty:0.'a~->~'a}. It is much larger.
+We cannot consider these two types the same.
+
+How do we distinguish those types that are unchanging
+under promotion from those that are not? By introducing the 
+notion of {\it humble types}.
+
+To support humble types, every type constant has a flag associated
+with it in the environment, indicating if the constant is humble or not.
+%Except for {\tt itself}, all of the normal \HOL{} type constants are humble.
+
+Then a {\it head-humble type\/} is one whose kind is a type kind of
+some rank ({\tt ty:}$r$),
+and which is of the form
+$(\sigma_1,\ldots,\sigma_n)\tau$ for $n \ge 0$, where $\tau$ is a type
+constant whose humble flag in the environment is true.
+That is, the type must simply be a series of zero or more 
+type applications headed by a type constant, which is very 
+like the traditional types of \HOL. Note that a type constant
+alone is only a head-humble type if it has a kind {\tt ty:}$r$.
+
+Given this, we define a {\it humble type\/} as a head-humble type
+where all of the type arguments $\sigma_i$ are humble types,
+for $1 \le i \le n$.
+
+For this subset of all \HOLW{} types, we can know that their
+meaning and behavior will not change when they are promoted.
+Therefore the \HOLW{} logic identifies these promoted types 
+as the same type, and this is reflected in the definition 
+of {\tt ge\_ty}.
+
+\paragraph{Applying substitutions}
+
+%Substitutions may be applied to any term, type, kind, or rank
+%which is a larger sort than the substitution.
+%Thus term substitutions may be applied only to terms,
+%type substitutions may be applied to terms or types, kind substitutions
+%may be applied to terms, types, or kinds, and rank substitutions may be
+%applied to terms, types, kinds, or ranks.
+
+The \ML{} operators that apply substitutions are defined in the core
+structures of the \HOLW{} system,
+%namely
+\texttt{Term}, \texttt{Type}, \texttt{Kind}, and \texttt{Rank}.
+%This is important because some of these
+%have the same name, namely \texttt{inst\_kind} and \texttt{inst\_rank},
+%and may need to be prefixed with the structure name as a qualifier.
+%The most common operations need no qualifiers, e.g.\ those on terms.
+Most of these operations can be used directly,
+% e.g.\ those on terms,
+%but \texttt{inst\_kind} and \texttt{inst\_rank}
+%may need to be qualified.
+%% with the structure name.
+but those on types or kinds may need to be
+qualified with the structure name, e.g.
+{\tt Type.inst\_rank} or {\tt Kind.pure\_inst\_kind}.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|} \hline
+\multicolumn{5}{|c|}{ } \\
+\multicolumn{5}{|c|}{\bf \ML{} operators to apply substitutions} \\
+\multicolumn{5}{|c|}{ } \\
+&
+{\it on Terms} &
+{\it on Types} &
+{\it on Kinds} &
+{\it on Ranks} \\ \hline
+ & & & & \\
+{\it Structure of opr.'s}
+ & \texttt{Term.}
+ & \texttt{Type.}
+ & \texttt{Kind.}
+ & \texttt{Rank.} \\ \hline
+{\it Term substitution} &
+\texttt{subst} & --- & --- &
+--- \\ \hline
+{\it Type substitution} &
+\parbox[t]{2cm}{
+\texttt{pure\_inst} \\
+\texttt{inst}
+%(@)
+\vspace{1.5mm}} &
+\parbox[t]{3cm}{
+\texttt{pure\_type\_subst} \\
+\texttt{type\_subst}
+%(@)
+} &
+--- & --- \\ \hline
+{\it Kind substitution} &
+%\texttt{inst\_kind} & 
+\parbox[t]{3cm}{
+\texttt{pure\_inst\_kind} \\
+\texttt{inst\_kind}
+%(@)
+} &
+\parbox[t]{3cm}{
+\texttt{pure\_inst\_kind} \\
+\texttt{inst\_kind}
+%(@)
+} &
+\parbox[t]{3cm}{
+\texttt{pure\_inst\_kind} \\
+\texttt{inst\_kind}
+% (@)
+\vspace{1.5mm}} &
+--- \\ \hline
+{\it Rank substitution} &
+\texttt{inst\_rank} & \texttt{inst\_rank} & \texttt{inst\_rank} &
+\texttt{promote} \\ \hline
+\end{tabular}
+\end{center}\label{substitution-operators}
+
+In the above table, the dash (---) indicates no such substitution is
+possible.  In table entries where there are two operator names, the one with
+``\texttt{pure\_}'' in the name indicates the normal substitution, and
+the other
+% name (with the @ sign)
+indicates an ``aligning'' substitution operation.
+
+The aligning substitution operations perform the same as the pure ones
+if given a proper substitution as their argument.  But they will often
+accept an improper substitution, which the pure version could not,
+and interpret it as a combination of substitutions, where
+%the redexes and residues of
+the given substitution is
+analyzed
+%against each other
+to determine what ``lower'' sorts of auxiliary
+substitutions are needed to repair the given substitution, and make it proper.
+
+For example, the type substitution $\theta$ = \verb+[``:'a`` |-> ``:!'b.bool``]+
+is not proper; the rank of the residue \verb+!'b.bool+ is 1,
+which is greater than the rank of the redex \verb|'a|, 0.
+Given $\theta$,
+%this type substitution,
+the operator \texttt{pure\_inst} will fail, raising an exception.
+%
+\begin{session}
+\begin{verbatim}
+> val theta = [``:'a`` |-> ``:!'b.bool``];
+val theta = [{redex = ``:'a``, residue = ``:!'b. bool``}]
+            : {redex: hol_type, residue: hol_type} list
+> pure_inst theta ``[]:('a -> 'c) list`` handle e => Raise e;
+
+Exception raised at Term.pure_inst:
+kind of redex does not contain kind of residue
+\end{verbatim}
+\end{session}
+%- pure_inst [``:'a`` |-> ``:!'b.bool``] ``[]:'a list`` handle e => Raise e;
+%
+%Exception raised at Term.pure_inst:
+%kind of redex does not contain kind of residue
+%! Uncaught exception: 
+%! HOL_ERR
+
+However, if this substitution is given to \texttt{inst}, 
+it will create the auxiliary rank substitution 1, and repair the given
+$\theta$ to $\theta'$ = \verb+[``:'a:ty:1`` |-> ``:!'b.bool``]+.
+Then \texttt{inst} will first apply the rank substitution 1,
+followed by $\theta'$.  Any free occurrence of \verb|'a| in the object term
+will first be lifted to \verb|'a:ty:1|, and then successfully replaced by
+\verb+!'b.bool+.  Of course any other types in the object term
+will also be lifted by one rank.
+%
+\begin{session}
+\begin{verbatim}
+> inst theta ``[]:('a -> 'c) list``;
+val it = ``([] :((!'b. bool) -> ('c :(ty:1))) list)`` : term
+\end{verbatim}
+\end{session}
+%> show_types := true;
+%val it = () : unit
+%> inst [``:'a`` |-> ``:!'b.bool``] ``[]:('a -> 'c) list``;
+%val it = ``([] :((!'b. bool) -> ('c :(ty:1))) list)`` : term
+
+
+\paragraph{Type checking}
+
+The type checking performed by the \HOLW{} system is considerably
+expanded from that of \HOL.  In addition to type checking to ensure
+that the expression is well-typed, the parser now performs kind checking
+and rank checking to ensure that the expression is well-kinded and well-ranked.
+Nevertheless, backwards compatibility has been maintained, so that 
+virtually all expressions that parse correctly in \HOL{} will also
+parse correctly and to the same results in \HOLW.
+
+However, if the new types and terms of \HOLW{} are used, there are
+a few issues for the user to be aware of.  First, because of the
+increased strength and complexity of the type language, type checking
+is now potentially incomplete.  This means that type checking may fail
+to discover all the types of an expression's subterms and report an error,
+even if a suitable set of types might exist that would be consistent and
+correct.  This is an inherent feature of the logic, and cannot be eliminated
+in general.
+
+Consider the term \texttt{``M (M 3) = T``}. This term is typeable in the logic.
+But
+%since all type coercions and type arguments are left out, then
+the parser may
+not realize that the variable \texttt{M} should have a universal type,
+but instead conclude this is a typing error, and throw an exception.
+%
+Even if a type argument is provided to \texttt{M}, indicating
+%a term of
+it has a
+universal type, the parser may still fail to correctly type the term.
+%
+%\begin{session}
+%\begin{verbatim}
+%> ``M [:bool:] (M 3 = 1)``;
+%
+%Type inference failure: unable to infer a type for the application of
+%
+%(M :!'a. num -> 'a) [:bool:]
+%
+%on line 9, characters 2-11
+%
+%which has type
+%
+%:num -> bool
+%
+%to
+%
+%(M :!'a. num -> 'a) [:num:] (3 :num) = (1 :num)
+%
+%on line 9, characters 14-20
+%
+%which has type
+%
+%:bool :ty
+%
+%unification failure message: unify failed
+%\end{verbatim}
+%\end{session}
+%
+\begin{session}
+\begin{verbatim}
+> ``M [:bool:] (M 3) = T``;
+
+Type inference failure: unable to infer a type for the application of
+
+(M :!'a. 'a -> 'a) [:bool:]
+
+in compiler-generated text
+
+which has type
+
+:bool -> bool
+
+to
+
+(3 :num)
+
+at line 33, character 16
+
+unification failure message: unify failed
+! Uncaught exception: 
+! HOL_ERR
+> ``(M:!'a. 'a -> bool) [:bool:] (M 3) = T``;
+val it =
+    ``(M :!'a. 'a -> bool) [:bool:] (M [:num:] (3 :num)) = T``
+     : term
+\end{verbatim}
+\end{session}
+
+The inherent incompleteness of type inference means that no type inference
+algorithm can correctly solve all cases.  While the existing type inference
+algorithm implemented in \HOLW{} will work in many normal cases, neither it
+nor any possible improvement will solve all type inference situations properly.
+%This incompleteness is inherent in the expressiveness of the logic itself.
+
+However, there is a simple discipline that if the user will follow it,
+then the type checking should become complete.  The discipline is
+as follows.  For every term variable that appears in the expression to be
+parsed, if the term variable's intended type includes universal or
+existential types, then the user should annotate that term variable
+at one of its occurrences in the expression
+with a type constraint giving its type explicitly.
+If this discipline is followed, then if a solution exists,
+the type checking should complete correctly.
+%
+\begin{session}
+\begin{verbatim}
+> ``(M:!'a.'a->bool) (M 3) = T``;
+val it =
+   ``(M :!'a. 'a -> bool) [:bool:] (M [:num:] (3 :num)) <=> T``
+   : term
+\end{verbatim}
+\end{session}
+
+If the type annotations are of a size that is burdensome, then the
+type abbreviation facility of \HOLW{} can ease the task.
+Type abbreviations are not actual new types in the logic, but they are
+abbreviations that are parsed and printed as if they were types.
+%
+\begin{session}
+\begin{verbatim}
+> type_abbrev ("iset", ``:!'a. 'a -> bool``);
+val it = () : unit
+
+> ``(M:iset) (M 3) = T``;
+val it =
+   ``(M :iset) [:bool:] (M [:num:] (3 :num)) <=> T``
+   : term
+\end{verbatim}
+\end{session}
+
+
+Here is another example where a variable needs to be used with different
+types in the same expression.
+\texttt{M} seems to need to have the three different types
+\texttt{'a -> 'c}, \texttt{'b -> 'c}, and \texttt{'a -> 'b},
+but a variable can only have one type within the same expression.
+
+\begin{session}
+\begin{verbatim}
+> ``!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c). M (g o f) = M g o M f``;
+<<HOL message: inventing new type variable names: 'b>>
+
+Type inference failure: unable to infer a type for the application of
+
+(M :('a -> 'c) -> 'b)
+
+at line 58, character 54
+
+to
+
+(g :'b -> 'c)
+
+at line 58, character 56
+
+unification failure message: unify failed
+\end{verbatim}
+\end{session}
+
+Providing the universal type of \texttt{M} explicitly by a type coercion
+helps the type inference infer all types correctly.
+%
+\begin{session}
+\begin{verbatim}
+> ``!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+#     (M:!'a 'b. ('a->'b) -> 'a 'F -> 'b 'F) (g o f) = M g o M f``;
+val it =
+   ``!:'a 'b 'c.
+    !(f :'a -> 'b) (g :'b -> 'c).
+      (M :!'d 'e. ('d -> 'e) -> 'd ('F :ty => ty) -> 'e 'F) [:'a, 'c:]
+        (g o f) =
+      M [:'b, 'c:] g o M [:'a, 'b:] f``
+   : term
+\end{verbatim}
+\end{session}
+
+Again, the use of type abbreviations can clarify the development.
+%
+\begin{session}
+\begin{verbatim}
+> type_abbrev ("functor", ``:\'F. !'a 'b. ('a -> 'b) -> 'a 'F -> 'b 'F``);
+val it = () : unit
+> ``!:'a 'b 'c. !(f:'a -> 'b) (g:'b -> 'c).
+#     (M:'F functor) (g o f) = M g o M f``;
+val it =
+   ``!:'a 'b 'c.
+    !(f :'a -> 'b) (g :'b -> 'c).
+      (M :('F :ty => ty) functor) [:'a, 'c:] (g o f) =
+      M [:'b, 'c:] g o M [:'a, 'b:] f``
+   : term
+\end{verbatim}
+\end{session}
+
+% To assist the user, if during parsing a variable is discovered which must
+% have a universal type, but is not annotated with a type constraint,
+% a warning is printed.
+
+The kind system is simple enough that kind inference is complete and should
+always find the right kinds if possible.
+%they exist.
+However, the rank system is more complex, as it involves natural numbers.
+The algorithm for rank inference in \HOLW{} is incomplete,
+%However, the rank system, as it
+%involves natural numbers, is also known to be incomplete, and
+so while it usually works successfully for most 
+%normal 
+expressions,
+it 
+%can occur
+is possible that rank inference for some expressions may fail
+even when a proper assignment of ranks does exist.
+%
+\begin{session}
+\begin{verbatim}
+> ``:(!'b. 'b 'a) 'a``;
+
+Rank inference failure: unable to infer a rank for the application of
+
+:'a :ty => ty
+
+on line 67, characters 16-17
+
+which expects a type of rank 0
+
+to
+
+:!'b. 'b ('a :ty => ty)
+
+roughly on line 67, characters 12-10
+
+which has rank 1
+
+rank unification failure message: unify failed
+\end{verbatim}
+\end{session}
+
+In such cases, the user will need to annotate some of his type variables or
+kinds with kind or rank constraints, respectively,
+to supply the information needed by the parser.
+%
+\begin{session}
+\begin{verbatim}
+> ``:(!'b:ty:0. 'b 'a) ('a : ty:1 => ty:0)``;
+val it =
+   ``:(!'b. 'b ('a :(ty:1 => ty))) 'a``
+   : hol_type
+\end{verbatim}
+\end{session}
+
+
+
+%Is it is necessary to understand
+%how the type checker infers types for the two new basic term categories.
+
+
+
+\section{Proof in HOL-Omega}
+
+% \newcommand\tacticline{\hline \hline}
+% \newenvironment{proofenumerate}{\begin{enumerate}}{\end{enumerate}}
+% proofenumerate is distinguished from a normal enumeration so that
+% h e v e a can spot these special cases and treat them better.
+
+\setcounter{sessioncount}{0}
+
+The next sections discuss the new proof facilities in \HOLW{}.
+Since \HOLW{} is backwards compatible with \HOL, every valid proof
+in \HOL{} will also be a valid proof in \HOLW, and every tool that
+\HOL{} provides for constructing proofs also works the same, given
+the same inputs, in \HOLW.  However, because of the increased expressiveness
+of the \HOLW{} logic, many existing proof tools are extended in their 
+function, and many new proof tools are added.  This section will focus
+on these additions and extensions, expecting that the reader is already
+familiar with \HOL{}.  Many of the new facilities
+are analogs of \HOL{} tools; for example, where a \HOL{} tool dealt with
+quantification of term variables, there is a corresponding \HOLW{} tool
+that deals with quantification of type variables.
+%
+We present the tools of \HOLW{} in stages: first the fundamental 
+axioms and rules of inference, then some basic derived rules of inference, 
+followed by more complex forward reasoning rules, then new tactics for backwards
+reasoning, and finally we describe broadly the extensions of the major
+library packages.
+% for rewriting and simplification.
+
+% \section{Forward Proof}
+
+To begin with,
+where \HOL{} has five axioms and eight primitive rules of inference,
+the \HOLW{} logic adds three new axioms, giving eight in all,
+and four new primitive inference rules,
+giving twelve in all.
+We'll get to the axioms in a moment, but let us first examine the new
+primitive rules of inference.
+%We will first describe the new primitive rules of inference, and then
+%the new axioms.
+
+\subsection{Primitive rules of inference}
+
+There are four new primitive rules of inference:
+%in \HOLW{}:
+
+\begin{itemize}
+\item \texttt{TY\_ABS}
+\item \texttt{TY\_BETA\_CONV}
+\item \texttt{INST\_RANK}
+\item \texttt{INST\_KIND}
+\end{itemize}
+
+% The rule of inference \texttt{INST\_TYPE} has been replaced by (or renamed to)
+% the rule \texttt{INST\_TYPE}. The \HOLW{} \texttt{INST\_TYPE} is no
+% longer primitive, but can be expressed in terms of \texttt{PURE\_INST\_TYPE},
+% \texttt{PURE\_INST\_KIND}, and \texttt{INST\_RANK}.
+% In \HOLW,
+% \texttt{INST\_TYPE} is still backwards compatible with \HOL,
+% but it has been extended in its function
+% %with regards to the new types
+% %to automatically align the kinds and ranks in its argument and
+% to, when needed, automatically peform rank and kind substitutions implicit in
+% a given type substitution.
+
+\vspace{1em}
+\noindent
+{\bf {TY\_ABS}:}
+%
+The \texttt{TY\_ABS} rule of
+inference is {\it type abstraction congruence}.
+In natural deduction notation this is:
+
+\[ \frac{\Gamma\turn t_1 = t_2}
+        {\Gamma\turn (\lambda\alpha{.}~t_1) = (\lambda\alpha{.}~t_2)}\]
+
+\begin{itemize}
+\item where the type variable $\alpha$ is not free in $\Gamma$, and
+\item $\alpha$ is not free in any free term variable of $t_1$ or $t_2$.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_ABS|},
+which is an analog of the \HOL{} rule {\small\verb|ABS|}.
+{\small\verb|TY_ABS|} takes as arguments a type variable
+{\small\verb|``:|}$\alpha${\small\verb|``|} and a theorem
+{\small\verb%|- %}$t_1${\small\verb% = %}$t_2$ and returns the theorem
+{\small\verb%|- (\:%}$\alpha${\small\verb%.%}~$t_1
+${\small\verb%) = (\:%}$\alpha${\small\verb%.%}~$t_2${\small\verb%)%}.
+As expected, the type variable {\small\verb|``:|}$\alpha${\small\verb|``|}
+will not be free in the resulting theorem.
+%
+\begin{session}
+\begin{verbatim}
+> val th1 = combinTheory.K_DEF;
+val th1 =
+   |- (K :'a -> 'b -> 'a) = (\(x :'a) (y :'b). x)
+   : thm
+> val th2 = TY_ABS ``:'b`` th1;
+val th2 =
+   |- (\:'b. (K :'a -> 'b -> 'a)) = (\:'b. (\(x :'a) (y :'b). x))
+   : thm
+> val th3 = TY_ABS ``:'a`` th2;
+val th3 =
+   |- (\:'a 'b. (K :'a -> 'b -> 'a)) = (\:'a 'b. (\(x :'a) (y :'b). x))
+   : thm
+> type_vars_in_term (concl th3);
+val it = [] : hol_type list
+\end{verbatim}
+\end{session}
+
+
+\vspace{1em}
+\noindent
+{\bf {TY\_BETA\_CONV}:}
+%
+The \texttt{TY\_BETA\_CONV} rule of
+inference is {\it type beta conversion}.
+In natural deduction notation this is:
+
+\[ \frac{}{\Gamma\turn (\lquant{\alpha}{t}) [\sigma] = t[\sigma/\alpha] }\]
+
+\begin{itemize}
+\item $t[\sigma/\alpha]$ denotes the result of substituting the type $\sigma$
+for free occurrences of the type variable $\alpha$ in $t$,
+where {\tt kind\_of} $\alpha$ {\small\verb%:>=:%} {\tt kind\_of} $\sigma$,
+with the restriction that no free type variables in $\sigma$
+become bound after substitution.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_BETA_CONV|},
+which is an analog of the \HOL{} rule {\small\verb|BETA_CONV|}.
+{\small\verb|TY_BETA_CONV|} takes as an argument a term of the form
+{\small\verb%(\:%$\alpha$\small\verb%.%}~$t${\small\verb%)[:%}$\sigma${\small\verb%:]%}
+and returns the theorem
+{\small\verb%|- (\:%$\alpha$\small\verb%.%}~$t${\small\verb%)[:%}$\sigma
+${\small\verb%:] = %}$t[\sigma/\alpha]$.
+%
+\begin{session}
+\begin{verbatim}
+> TY_BETA_CONV ``(\:'a. K:'a -> 'b -> 'a) [:'c -> 'd:]``;
+val it =
+   |- (\:'a. (K :'a -> 'b -> 'a)) [:'c -> 'd:] =
+   (K :('c -> 'd) -> 'b -> 'c -> 'd)
+   : thm
+> TY_BETA_CONV ``(\:'a 'b. (\(x :'a) (y :'b). x)) [:'b -> 'c:]``;
+val it =
+   |- (\:'a 'd. (\(x :'a) (y :'d). x)) [:'b -> 'c:] =
+   (\:'d. (\(x :'b -> 'c) (y :'d). x))
+   : thm
+\end{verbatim}
+\end{session}
+
+
+\vspace{1em}
+\noindent
+{\bf {INST\_RANK}:}
+%
+The \texttt{INST\_RANK} rule of
+inference is {\it universe polymorphism\/}
+(or {\it rank polymorphism})
+at the level of theorems.
+In natural deduction notation this is:
+
+\[ \frac{\Gamma\turn t}{\Gamma[r_0 + r/r_0]\turn t[r_0 + r/r_0] }\]
+
+\begin{itemize}
+\item
+Here $r_0$ is the one and only rank variable,
+and $r$ is a nonnegative integer; and
+
+\item
+$t[r_0 + r/r_0]$ denotes the result of substituting the rank $r_0 + r$
+for all occurrences of the rank variable $r_0$ in $t$, and
+$\Gamma[r_0 + r/r_0]$ denotes the result of substituting the rank $r_0 + r$
+for all occurrences of the rank variable $r_0$ in $\Gamma$.
+This has the effect of increasing the ranks of all types and
+kinds by $r$. Note that $r$ may legitimately be 0, which does not change
+the ranks at all.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|INST_RANK|},
+which has no analog in \HOL{}.
+{\small\verb|INST_RANK|} takes as arguments an integer $r$, which
+must be equal to or greater than zero, and a theorem $\Gamma\turn t$,
+and returns the theorem
+$\Gamma[r_0 + r/r_0]$ {\small\verb%|-%} $t[r_0 + r/r_0]$.
+This is a reflection of the fact that any mathematical development that was
+performed at some rank level, could have been performed just as well at the
+next rank one level up.  Here $r_0$, the unique rank variable, is present
+but hidden and not printed in all \HOLW{} ranks.  
+Thus the kind printed as \texttt{ty:1} 
+is actually the kind \texttt{ty} at rank $r_0 + 1$.  
+If this kind is instantiated
+with $[ r_0 \mapsto r_0 + 2 ]$, then the rank $r_0 + 1$ is transformed to
+$(r_0 + 2) + 1 = r_0 + (2 + 1) = r_0 + 3$, and the effect is to raise the kind
+\texttt{ty:1} to \texttt{ty:3}.  When this rank instantiation occurs,
+it must be done consistently throughout all of a theorem, including its
+hypotheses.
+%
+\begin{session}
+\begin{verbatim}
+> set_trace "assumptions" 1;
+val it = () : unit
+> ASSUME ``xs = MAP (f:'a -> 'b) ys``;
+val it =
+    [(xs :'b list) = MAP (f :'a -> 'b) (ys :'a list)]
+|- (xs :'b list) = MAP (f :'a -> 'b) (ys :'a list)
+   : thm
+> INST_RANK 3 it;
+val it =
+    [(xs :('b :(ty:3)) list) = MAP (f :('a :(ty:3)) -> 'b) (ys :'a list)]
+|- (xs :('b :(ty:3)) list) = MAP (f :('a :(ty:3)) -> 'b) (ys :'a list)
+   : thm
+> set_trace "assumptions" 0;
+val it = () : unit
+\end{verbatim}
+\end{session}
+
+
+\vspace{1em}
+\noindent
+{\bf {INST\_KIND}:}
+%
+The \texttt{INST\_KIND} rule of
+inference is {\it kind polymorphism\/}
+at the level of theorems.
+In natural deduction notation this is:
+
+\[ \frac{\Gamma\turn t}{\Gamma[\theta]\turn t[\theta] }\]
+
+\begin{itemize}
+\item where $\theta$ is
+a proper kind substitution, that is,
+a kind substitution
+of the form
+$[\kappa_1\mapsto{k_1},\ 
+\kappa_2\mapsto{k_2},\ 
+\ldots,\ \kappa_n\mapsto{k_n}]$ ($0 \le n$),
+where the $\kappa_i$ are kind variables and the $k_i$ are kinds,
+and where for each $i \in \{1, \ldots, n\}$,
+\texttt{rank\_of}~$\kappa_i$ $\ge$
+%{\small\verb|>=|} 
+\texttt{rank\_of}~$k_i$;
+%This says that $\theta$ is a {\it proper\/} kind substitution.
+and
+\item where $t[\theta]$ denotes the result of substituting the kind $k_i$
+for all occurrences of the kind variable $\kappa_i$ in $t$, and
+$\Gamma[\theta]$ denotes the result of substituting the kind $k_i$
+for all occurrences of the kind variable $\kappa_i$ in $\Gamma$,
+for all $i \in \{1,\ldots,n\}$.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|INST_KIND|},
+which has no analog in \HOL{}.
+{\small\verb|INST_KIND|} takes as arguments a kind substitution $\theta$
+and a theorem $\Gamma\turn t$,
+and returns the theorem
+$\Gamma[\theta]$ {\small\verb%|-%} $t[\theta]$.
+When this kind instantiation occurs, it must be done consistently throughout
+all of a theorem, including its hypotheses.
+
+Similarly, the existing primitive inference rules {\small\verb|INST_TYPE|}
+and {\small\verb|INST|} from \HOL{} are modified to expect proper substitutions
+as arguments,
+using {\tt :>=:} and {\tt ge\_ty} to check.
+
+\subsection{New axioms}
+
+\HOLW{} contains all of the axioms of \HOL, and adds three more.  
+Two of these new axioms, {\tt UNPACK\_PACK\_AX} and 
+{\tt PACK\_ONTO\_AX}, have to do with packages, 
+so we will delay their discussion until
+chapter~\ref{chap:package}, 
+to deal with that subject completely at one time.
+
+The remaining new axiom is the Law of Type Eta Conversion, which is bound
+to the \ML{} name {\small\verb|TY_ETA_AX|}.
+It is an analog of the \HOL{} Law of Eta Conversion, {\small\verb|ETA_AX|}.
+
+\begin{session}
+\begin{verbatim}
+> show_types := true;
+val it = () : unit
+> ETA_AX;
+val it =
+   |- !(t :'a -> 'b). (\(x :'a). t x) = t
+   : thm
+- TY_ETA_AX;
+val it =
+   |- !(t :!'a :'k. 'a ('b :('k => ty:1))). (\:'a :'k. t [:'a:]) = t
+   : thm
+\end{verbatim}
+\end{session}
+
+Here the universally quantified variable {\small\verb|t|} has type
+{\small\verb|!'a :'k. 'a ('b :('k => ty:1))|}, a universal type binding
+the type variable {\small\verb|'a:'k|} over the body
+{\small\verb|'a ('b :('k => ty:1))|}.
+The symbol `{\small\verb|\:|}' is the abstraction notation `$\lambda$' for
+types over terms.  The notation `{\small\verb|'a:'k|}' means that the kind of
+the type variable {\small\verb|'a|} is the kind variable {\small\verb|'k|},
+whose rank is the default rank, 0.  The type variable {\small\verb|'b|} is a
+type operator, of kind {\small\verb|'k => ty:1|}, meaning it expects a type
+argument of kind {\small\verb|'k|}, and yields a type of kind
+{\small\verb|ty:1|} which has rank 1.  Note that {\small\verb|TY_ETA_AX|}
+has one free type variable, {\small\verb|'b|}, and one free kind variable,
+{\small\verb|'k|}.
+
+The presence of the free kind variable {\small\verb|'k|} and free type operator
+variable {\small\verb|'b|} give this axiom the flexibility to apply to any
+possible instance of type eta redexes.  To see how this works, consider the
+following example:
+%
+\begin{session}
+\begin{verbatim}
+> val tm = ``\:'c. (m : !'d. 'd -> 'd list) [:'c:]``;
+val tm =
+   ``\:'c. (m :!'d. 'd -> 'd list) [:'c:]``
+   : term
+> val th = REWRITE_CONV [TY_ETA_AX] tm;
+val th =
+   |- (\:'c. (m :!'d. 'd -> 'd list) [:'c:]) = m
+   : thm
+\end{verbatim}
+\end{session}
+
+In this apparently simple example of rewriting and type eta reduction,
+there is a lot of detailed machinery going on quietly behind the scenes
+to accomplish this result.  We will show an example of how this works here;
+the casual reader can skip this example if desired.
+
+To successfully rewrite the term \texttt{tm1} by the theorem
+{\small\verb|TY_ETA_AX|} involves first matching the left-hand-side of
+{\small\verb|TY_ETA_AX|} to the term \texttt{tm1}.  The matching is done by
+the \HOLW{} function \texttt{om\_match\_term}, which is an expanded version
+of the \HOL{} function \texttt{match\_term}.  It takes two terms as inputs,
+a pattern term and a target term, compares them, and returns a tuple of four
+substitutions to be applied together to the pattern term
+to make it the same as the target term.
+
+\begin{session}
+\begin{verbatim}
+> val ptm = lhs(snd(dest_forall(concl TY_ETA_AX)));
+val ptm =
+   ``\:'a :'k. (t :!'a :'k. 'a ('b :('k => ty:1))) [:'a:]``
+   : term
+
+> set_trace "print_tyabbrevs" 0;
+val it = () : unit
+> val (tmS,tyS,kdS,rkS) = om_match_term ptm tm;
+val kdS = [{redex = ``::'k``, residue = ``::ty``}] : (kind, kind) Term.subst
+val rkS = 0 : rank
+val tmS =
+   [{redex = ``(t :!'a. 'a (\'d. 'd -> 'd list))``,
+     residue = ``(m :!'d. 'd -> 'd list)``}]
+   : (term, term) Term.subst
+val tyS =
+   [{redex = ``:'b :(ty => ty:1)``,
+     residue = ``:\'d. 'd -> 'd list``}]
+   : (hol_type, hol_type) Term.subst
+\end{verbatim}
+\end{session}
+
+These four substitutions are of different sorts;
+the first one in the tuple is on terms, the second on types, the third on
+kinds, and the last on ranks.  Each substitution is guarranteed to be proper.
+(The rank substitution is represented simply
+by a integer, being how many ranks to promote the pattern term.)
+These substitutions are intended to be applied in a strict order, where the
+rank substitution is applied first, followed by the substitutions for kinds,
+types, and terms, in exactly that order.
+
+In the example above, the rank substitution is 0, so the ranks do not change.
+%
+\begin{session}
+\begin{verbatim}
+> rkS;
+val it = 0 : rank
+> val tm1 = inst_rank rkS ptm;
+val tm1 =
+   ``\:'a :'k. (t :!'a :'k. 'a ('b :('k => ty:1))) [:'a:]``
+   : term
+\end{verbatim}
+\end{session}
+
+Next, {\small\verb|'k|} is substituted by {\small\verb|ty|}.
+%
+\begin{session}
+\begin{verbatim}
+> kdS;
+val it = [{redex = ``::'k``, residue = ``::ty``}] : (kind, kind) Term.subst
+> val tm2 = inst_kind kdS tm1;
+val tm2 =
+   ``\:'a. (t :!'a. 'a ('b :(ty => ty:1))) [:'a:]``
+   : term
+\end{verbatim}
+\end{session}
+
+Then {\small\verb|'b|} of kind {\small\verb|ty => ty:1|}
+is instantiated to {\small\verb|\'d:ty. 'd -> 'd list|} of kind
+{\small\verb|ty => ty|}.
+This is proper because even though these two kinds are not equal,
+they satisfy the relationship
+{\small\verb|``::ty => ty:1`` :>=: ``::ty => ty``|}.
+%
+\begin{session}
+\begin{verbatim}
+> tyS;
+val it =
+   [{redex = ``:'b :(ty => ty:1)``,
+     residue = ``:\'d. 'd -> 'd list``}]
+   : (hol_type, hol_type) Term.subst
+> val tm3 = inst tyS tm2;
+val tm3 =
+   ``\:'a. (t :!'a. 'a (\'d. 'd -> 'd list)) [:'a:]``
+   : term
+\end{verbatim}
+\end{session}
+
+
+Finally the term variable {\small\verb|t|}, which now has type
+{\small\verb|!'a. 'a (\'d. 'd -> 'd list)|}, is substituted by the
+term {\small\verb|m : !'d. 'd -> 'd list|}, which has the same type as
+{\small\verb|t|} because types are identified up to alpha-beta-eta conversion
+in the type language.
+%
+\begin{session}
+\begin{verbatim}
+> tmS;
+val it =
+   [{redex = ``(t :!'a. 'a (\'d. 'd -> 'd list))``,
+     residue = ``(m :!'d. 'd -> 'd list)``}]
+   : (term, term) Term.subst
+> val tm4 = subst tmS tm3;
+val tm4 =
+   ``\:'a. (m :!'d. 'd -> 'd list) [:'a:]``
+   : term
+\end{verbatim}
+\end{session}
+
+
+\subsection{Basic derived rules of inference}
+
+Derived rules of inference are \ML{} functions that are not primitive
+rules of inference, but are defined using the primitive rules of inference
+or other derived rules.  Because of the \LCF{} architecture of \HOLW,
+all such derived rules are guaranteed to be sound
+if all of the primitive rules of inference and axioms are sound.
+
+%Despite the theoretical completeness of the primitive rules of inference,
+There is a family of rules that express the natural deduction rules
+for the new constructs of \HOLW{} at a basic level.  Some have already been
+given (\texttt{TY\_ABS} and \texttt{TY\_BETA\_CONV}).
+%but others will be given here. 
+This section discusses 6 new basic rules of inference
+and one new instantiation rule.  These are so foundational that even though
+they are theoretically derivable, for efficiency's sake they are implemented
+directly in the \HOLW{} kernel.
+
+\begin{itemize}
+%\item \texttt{ALIGN\_INST\_KIND}
+%\item \texttt{ALIGN\_INST\_TYPE}
+\item \texttt{TY\_COMB}
+%\item \texttt{TY\_SPEC}
+%\item \texttt{TY\_GEN}
+\item \texttt{TY\_SPEC} and 
+      \texttt{TY\_GEN}
+%\item \texttt{TY\_EXISTS}
+%\item \texttt{TY\_CHOOSE}
+\item \texttt{TY\_EXISTS} and 
+      \texttt{TY\_CHOOSE}
+\item \texttt{TY\_EXT}
+\item \texttt{INST\_ALL}
+\end{itemize}
+
+%\vspace{1em}
+\vspace{2mm}
+\noindent
+{\bf {TY\_COMB}:}
+%
+The \texttt{TY\_COMB} rule of
+inference is {\it congruence of term-type combinations}.
+In natural deduction notation this is:
+
+\[ \frac{\Gamma\turn f = g}{\Gamma\turn f[\sigma] = g[\sigma]}\]
+
+\begin{itemize}
+\item where $t[\sigma]$ denotes the application of the term $t$
+(which must have a universal type, say $\forall\alpha.\tau$)
+to the type argument $\sigma$,
+where $\sigma$ and $\alpha$ must have the same kind.
+\end{itemize}
+
+\noindent
+\texttt{TY\_COMB : thm -> hol\_type -> thm}
+
+\vspace{1em}
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_COMB|},
+which takes as arguments a theorem
+{\small\verb%|- f = g%} and a type $\sigma$, and returns the theorem
+{\small\verb%|- f [:%}$\sigma${\small\verb%:] = g [:%}$\sigma${\small\verb%:]%}.
+%
+This is an analog of \HOL{}'s term combination rule
+\texttt{AP\_THM}, and similar to \texttt{MK\_COMB}, considering
+that the equality of the type arguments to \texttt{f} and \texttt{g}
+is immediately decidable.\footnote
+{In a more complex type system, such as with
+dependent types, an analog to \texttt{MK\_COMB} would need an input theorem
+like \texttt{|- }$\sigma = \tau$,
+and would produce the result
+\texttt{|-} $f$ \texttt{[:}$\sigma$\texttt{:]} = $g$ \texttt{[:}$\tau$\texttt{:]}.
+}
+
+\begin{session}
+\begin{verbatim}
+> val th1 = REWRITE_CONV[TY_ETA_AX] ``\:'a. (\:'b. []:'b list) [:'a:]``;
+val th1 =
+    [] |- (\:'a. (\:'b. ([] :'b list)) [:'a:]) = (\:'b. ([] :'b list))
+   : thm
+> TY_COMB th1 ``:'c # 'd list``;
+val it =
+    []
+|- (\:'a. (\:'b. ([] :'b list)) [:'a:]) [:'c # 'd list:] =
+   (\:'b. ([] :'b list)) [:'c # 'd list:]
+   : thm
+\end{verbatim}
+\end{session}
+
+
+\vspace{1em}
+\noindent
+{\bf {TY\_SPEC}:}
+%
+The \texttt{TY\_SPEC} rule of
+inference is {\it type specialization\/} (or $\forall$-type-elimination).
+In natural deduction notation this is:
+
+\[ \frac{\Gamma\turn \uquant{\alpha}t}{\Gamma\turn t[\sigma/\alpha]}\]
+
+\begin{itemize}
+\item $t[\sigma/\alpha]$ denotes the result of substituting the type $\sigma$
+for free occurrences of the type variable $\alpha$ in $t$,
+where $\sigma$ and $\alpha$ must have the same kind, and
+with the restriction that no free type variables in $\sigma$
+become bound after substitution.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_SPEC|},
+%\footnote{{\tt TY\_SPEC} is not a
+%primitive rule of inference in the \HOLW{} logic, but is a derived rule.
+%Derived rules
+%are described in Section~\ref{forward}.}
+which takes as arguments a type
+%{\small\verb|``:|}$\sigma${\small\verb|``|}
+$\sigma$
+and a theorem
+{\small\verb%|- !:%}$\alpha${\small\verb|.|}$t$, and returns the theorem
+{\small\verb%|- %}$t[\sigma/\alpha]$, the result of substituting $\sigma$ for $\alpha$
+in $t$.
+%
+This is an analog of \HOL{}'s universal term specialization rule
+\texttt{SPEC}.
+
+\vspace{1em}
+\noindent
+{\bf {TY\_GEN}:}
+%
+Another rule of inference is {\it type generalization\/} (or
+$\forall$-type-introduction).  In standard natural deduction notation this is:
+
+\[ \frac{\Gamma\turn t}{\Gamma\turn \uquant{\alpha}t}\]
+
+\begin{itemize}
+\item
+This rule has the necessary restriction that $\alpha$ must not be free
+in the hypotheses $\Gamma$.
+\end{itemize}
+
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_GEN|},
+%\footnote{{\tt TY\_GEN} is not a
+%primitive rule of inference in the \HOLW{} logic, but is a derived rule.
+%Derived rules
+%are described in Section~\ref{forward}.}
+which takes as arguments a type variable
+{\small\verb|``:|}$\alpha${\small\verb|``|} and a theorem
+{\small\verb%|- %}$t$ and returns the theorem
+{\small\verb%|- !:%}$\alpha${\small\verb|.|}$t$.
+There is no compulsion that $\alpha$ should be free in $t$.
+%
+This is an analog of \HOL{}'s universal term generalization rule
+\texttt{GEN}.
+%
+\begin{session}
+\begin{verbatim}
+> val th1 = CONJUNCT1 listTheory.MAP;
+val th1 =
+    [] |- !(f :'a -> 'b). MAP f ([] :'a list) = ([] :'b list)
+   : thm
+> val th2 = TY_GEN ``:'b`` th1;
+val th2 =
+    [] |- !:'b. !(f :'a -> 'b). MAP f ([] :'a list) = ([] :'b list)
+   : thm
+> val th3 = TY_GEN ``:'a`` th2;
+val th3 =
+    [] |- !:'a 'b. !(f :'a -> 'b). MAP f ([] :'a list) = ([] :'b list)
+   : thm
+> val th4 = TY_SPEC ``:num`` th3;
+val th4 =
+    [] |- !:'b. !(f :num -> 'b). MAP f ([] :num list) = ([] :'b list)
+   : thm
+> val th5 = TY_SPEC ``:bool`` th4;
+val th5 =
+    [] |- !(f :num -> bool). MAP f ([] :num list) = ([] :bool list)
+   : thm
+\end{verbatim}
+\end{session}
+
+
+\vspace{1em}
+\noindent
+{\bf {TY\_EXISTS}:}
+%
+\HOLW{} also supports existential quantification of types over terms,
+including a rule of 
+inference for {\it existential type generalization\/} (or
+$\exists$-type-introduction).  In standard natural deduction notation this is:
+%
+\[ \frac{\Gamma\turn p[\sigma/\alpha]}{\Gamma\turn \equant{\alpha}p}\]
+%
+\begin{itemize}
+\item
+where $\alpha$ must not be free
+in the hypotheses $\Gamma$, and
+\item
+$p[\sigma/\alpha]$ must be the same as the conclusion of the original theorem.
+\end{itemize}
+
+\noindent
+\texttt{TY\_EXISTS : term * hol\_type -> thm -> thm}
+
+\vspace{1em}
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_EXISTS|},
+which takes as arguments a pair of
+a term and a type, and then a theorem,
+where the term
+is a type-existentially quantified pattern indicating
+the desired form of the result
+{\small\verb|``?:|}$\alpha.\ p${\small\verb|``|},
+the type
+{\small\verb|``:|}$\sigma${\small\verb|``|}
+is the witness for the existential quantifier,
+and the input theorem has the form
+{\small\verb%|- %}$p[\sigma/\alpha]$.
+{\small\verb|TY_EXISTS|} returns the result theorem
+{\small\verb%|- ?:%}$\alpha${\small\verb|.|}$p$.
+%
+This is an analog of \HOL{}'s existential term generalization rule
+\texttt{EXISTS}.
+%
+\begin{session}
+\begin{verbatim}
+> CONJUNCT1 BOOL_EQ_DISTINCT;
+val it =  [] |- T <=/=> F : thm
+> EXISTS (``?y. T <=/=> y``, ``F``) it;
+val it =  [] |- ?(y :bool). T <=/=> y : thm
+> EXISTS (``?x y. x <=/=> y``, ``T``) it;
+val it =
+    [] |- ?(x :bool) (y :bool). x <=/=> y
+   : thm
+> TY_EXISTS (``?:'a. ?(x:'a) (y:'a). x <> y``, ``:bool``) it;
+val it =
+    [] |- ?:'a. ?(x :'a) (y :'a). x <> y
+   : thm
+\end{verbatim}
+\end{session}
+
+\vspace{1em}
+\noindent
+{\bf {TY\_CHOOSE}:}
+
+As a converse to the last rule,
+another rule of 
+inference is {\it existential type specialization\/} (or
+$\exists$-type-elimination).  In standard natural deduction notation this is:
+%
+\[ \frac{\Gamma_1\turn \exists\alpha.s , \hspace{4mm}
+         \Gamma_2 \cup \{s[\beta/\alpha]\}\turn t}
+        {\Gamma_1 \cup \Gamma_2\turn t}\]
+
+\begin{itemize}
+\item
+where the existentially specialized type variable $\beta$ must not be free
+in $\Gamma_1$, $\Gamma_2$, or $t$.
+\end{itemize}
+
+\noindent
+\texttt{TY\_CHOOSE : hol\_type * thm -> thm -> thm}
+
+\vspace{1em}
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_CHOOSE|},
+which takes as arguments a pair of
+a type variable and a type-existential theorem, and then a second theorem,
+where
+the first theorem has the form
+{\small\verb%|- %}$\exists\alpha.s$, and
+the type variable $\beta$ is fresh, not appearing free in the theorems
+except for the single hypothesis $s[\beta/\alpha]$ in the
+second theorem.
+{\small\verb|TY_CHOOSE|} returns a theorem with the conclusion of
+the second theorem, and whose hypotheses are those of the two theorems
+except for $s[\beta/\alpha]$, which is eliminated.
+%
+This is an analog of \HOL{}'s existential term specialization rule
+\texttt{CHOOSE}.
+
+\vspace{1em}
+\noindent
+{\bf {TY\_EXT}:}
+%
+Another rule of 
+inference is {\it type extensionality}.
+In standard natural deduction notation this is:
+
+\[ \frac{\Gamma\turn \forall\alpha.\ t_1[\alpha] = t_2[\alpha]}
+        {\Gamma\turn t_1 = t_2}\]
+
+\begin{itemize}
+\item where $t[\alpha]$ denotes the application of the term $t$
+(which must have a universal type, say $\forall\beta.\tau$)
+to the type variable argument $\alpha$,
+where $\alpha$ and $\beta$ must have the same kind.
+\end{itemize}
+
+\noindent
+\texttt{TY\_EXT : thm -> thm}
+
+\vspace{1em}
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|TY_EXT|},
+which takes as argument a theorem of the form
+{\small\verb%|- %}$\forall\alpha${\small\verb%. t1 [:%}$\alpha${\small\verb%:] = t2 [:%}$\alpha${\small\verb%:]%}.
+{\small\verb|TY_EXT|} returns a theorem of the form
+{\small\verb%|- t1 = t2%}.
+%
+This is an analog of \HOL{}'s extensionality rule
+\texttt{EXT}.
+
+\begin{session}
+\begin{verbatim}
+> ASSUME ``!:'a. (\:'b.?x:'b.T) [:'a:] = (\:'b.T) [:'a:]``;
+val it =
+    [.] |- !:'a. (\:'b. ?(x :'b). T) [:'a:] <=> (\:'b. T) [:'a:]
+   : thm
+> TY_EXT it;
+val it =
+    [.] |- (\:'b. ?(x :'b). T) = (\:'b. T)
+   : thm
+\end{verbatim}
+\end{session}
+
+%\vspace{1em}
+%\noindent
+%{\bf {BETA\_TY\_CONV}:}
+%%
+%Another rule of 
+%inference is {\it beta conversion of types\/} (as distinguished
+%from the beta conversion of terms).
+%In standard natural deduction notation this is:
+%%
+%\[ \frac{}
+%        {\turn t = t_\beta}\]
+%
+%\begin{itemize}
+%\item where $t_\beta$ denotes
+%the same term as $t$, but where all types within $t$ have been
+%reduced by beta reduction as far as possible.
+%\end{itemize}
+%
+%\vspace{1em}
+%\noindent This rule is represented in \ML\
+%by a function
+%{\small\verb|BETA_TY_CONV|},
+%which takes as argument a term,
+%and returns a theorem of an equality between the original term and a 
+%version of that term where all types have been beta reduced.
+%%Since types are identified up to beta reduction
+%%(actually to alpha, beta, and eta reduction),
+%This does not change the semantics of the terms or types
+%at all.  It only simplifies how they are printed.
+
+\vspace{1em}
+\noindent
+{\bf {INST\_ALL}:}
+%
+This rule combines rank, kind, type, and term substitution efficiently.
+%For efficiency's sake,
+%there is a rule which combines rank, kind, type, and term substitution.
+%In standard natural deduction notation this is:
+%
+%\[ \frac{\Gamma\turn t}
+%        {\Gamma[\theta_r][\theta_k][\theta_\sigma][\theta_t]
+%        \turn t[\theta_r][\theta_k][\theta_\sigma][\theta_t]}\]
+%
+%\begin{itemize}
+%\item where $t[\theta_r][\theta_k][\theta_\sigma][\theta_t]$ denotes
+%the application of the substitutions $\theta_r,\theta_k,\theta_\sigma,\theta_t$
+%to the term $t$, with the rank substitution $\theta_r$ applied first,
+%followed by $\theta_k$, $\theta_\sigma$, and $\theta_t$,
+%substituting kinds, types, and terms, in that order.
+%\end{itemize}
+
+\pagebreak[0]
+
+\vspace{1em}
+\noindent
+\texttt{INST\_ALL : \\
+\mbox{\hspace{1cm}}
+(term,term)subst * (hol\_type,hol\_type)subst * (kind,kind)subst * int \\
+\mbox{\hspace{1cm}}
+-> thm -> thm}
+
+\vspace{1em}
+\noindent This rule is represented in \ML\
+by a function
+{\small\verb|INST_ALL|},
+which takes as arguments a tuple of substitutions for terms, types, kinds,
+and ranks, and a theorem,
+and returns a theorem where the substitutions have been uniformly performed
+on the theorem's hypotheses and conclusion, in the order of ranks first, then
+kinds, then types, and finally terms. \\
+{\small\verb|INST_ALL|}
+\texttt{(}$\theta_t,\theta_\sigma,\theta_k,\theta_r$\texttt{)}{\small\verb| th|}
+is identical in effect to
+\begin{center}
+{\small\verb%INST%} $\theta_t$
+{\small\verb%(INST_TYPE%} $\theta_\sigma$
+{\small\verb%(INST_KIND%} $\theta_k$
+{\small\verb%(INST_RANK%} $\theta_r$ {\small\verb%th)))%}.
+\vspace{2mm}
+\end{center}
+
+{\small\verb|INST_ALL|} may be more efficient than the above, as it
+minimizes the number of passes over the structure of the terms and types
+in {\small\verb|th|} when performing the substitutions.
+
+\begin{session}
+\begin{verbatim}
+> val tmS = [``t:!'a. 'a -> 'a list`` |-> ``m:!'a. 'a -> 'a list``];
+val tmS =
+   [{redex = ``(t :!'a. 'a -> 'a list)``,
+     residue = ``(m :!'a. 'a -> 'a list)``}]
+   : {redex: term, residue: term} list
+> val tyS = [``:'b: ty => ty:1`` |-> ``:\'a. 'a -> 'a list``];
+val tyS =
+   [{redex = ``:'b :(ty => ty:1)``,
+     residue = ``:\'a. 'a -> 'a list``}]
+   : {redex: hol_type, residue: hol_type} list
+> val kdS = [``::'k`` |-> ``::ty``];
+val kdS = [{redex = ``::'k``, residue = ``::ty``}]
+   : {redex: kind, residue: kind} list
+> val rkS = 0;
+val rkS = 0 : int
+> TY_ETA_AX;
+val it =
+   |- !(t :!'a :'k. 'a ('b :('k => ty:1))). (\:'a :'k. t [:'a:]) = t
+   : thm
+> INST_ALL (tmS,tyS,kdS,rkS) (SPEC_ALL TY_ETA_AX);
+val it =
+   |- (\:'a. (m :!'a. 'a -> 'a list) [:'a:]) = m
+   : thm
+> INST tmS(INST_TYPE tyS(INST_KIND kdS(INST_RANK rkS(SPEC_ALL TY_ETA_AX))));
+val it =
+   |- (\:'a. (m :!'a. 'a -> 'a list) [:'a:]) = m
+   : thm
+\end{verbatim}
+%> CONV_RULE BETA_TY_CONV it;
+%val it =
+%   |- (\:'a. (m :!'a. 'a -> 'a list) [:'a:]) = m
+%   : thm
+\end{session}
+
+%\newpage
+\section{Backwards Proof}
+
+As in \HOL{}, proof may be accomplished by first positing a goal to be proved,
+and then working backwards, applying tactics to reduce that goal to simpler
+subgoals. Then the same is done to each subgoal in turn, each generating zero
+or more new subgoals of its own. Hopefully, eventually each subgoal
+has been reduced to zero subgoals and is then solved,
+whereupon the subgoal package wraps the whole process up and creates an actual,
+accredited \HOLW{} theorem of the original goal.
+
+We will discuss first some of the new, basic tactics that have been added
+in \HOLW, and then a number of existing tactics that have been suitably
+extended.
+This is only indicates some of the \HOLW{} additions;
+many more features have been added than can be covered in this tutorial.
+% for the larger logic.
+
+\subsection{New Basic Tactics}
+
+Here are some of the new tactics in \HOLW{}:
+
+\begin{itemize}
+\item \texttt{TY\_GEN\_TAC}
+%\item \texttt{TY\_SPEC\_TAC}
+\item \texttt{TY\_EXISTS\_TAC}
+%\item \texttt{TY\_CHOOSE\_TAC}
+%\item \texttt{TY\_BETA\_TAC}
+%\item \texttt{BETA\_TY\_TAC}
+%\item \texttt{BETA\_ETA\_TY\_TAC}
+\end{itemize}
+
+\subsubsection{\texttt{TY\_GEN\_TAC : tactic}}
+
+\begin{itemize}
+\item {\bf Summary:} Strips off one type-universal quantifier.
+%
+\begin{center}
+\begin{tabular}{c}
+{\small\verb|!:|}$\alpha${\small\verb|.|}$t[\alpha]$
+\\ \tacticline
+$t[\alpha' / \alpha]$
+\\
+\end{tabular}
+\end{center}
+Where $\alpha'$ is a variant of $\alpha$ not free in the goal or the
+assumptions.
+Here $t[\alpha]$ simply means that the type variable $\alpha$ may appear
+free in the term $t$, and $t[\alpha' / \alpha]$ means $t$ with $\alpha'$
+substituted for all the free occurrences of $\alpha$.
+
+\item {\bf Uses:} Solving type-universally quantified goals.
+\texttt{REPEAT TY\_GEN\_TAC} strips off all type-universal quantifiers.
+\texttt{STRIP\_TAC} (see below) applies \texttt{TY\_GEN\_TAC} to 
+type-universally quantified goals.
+
+\end{itemize}
+%
+\begin{session}
+\begin{verbatim}
+> g `!:'a. !x:'a. x = x`;
+val it =
+   Proof manager status: 1 proof.
+1. Incomplete goalstack:
+     Initial goal:
+
+     !:'a. !(x :'a). x = x
+
+
+   : proofs
+> e(TY_GEN_TAC);
+OK..
+1 subgoal:
+val it = 
+!(x :'a). x = x
+
+   : proof
+\end{verbatim}
+\end{session}
+
+\subsubsection{\texttt{TY\_EXISTS\_TAC : hol\_type -> tactic}}
+
+\begin{itemize}
+\item {\bf Summary:} Supplies a witness for a type-existential quantifier.
+%
+\begin{center}
+\begin{tabular}{c}
+{\small\verb|?:|}$\alpha${\small\verb|.|}$t[\alpha]$
+\\ \tacticline
+$t[\sigma / \alpha]$
+\\
+\end{tabular}
+\end{center}
+Where $\sigma$ is the first argument of \texttt{TY\_EXISTS\_TAC}. The type
+$\sigma$ is provided as the explicit witness to satisfy the type-existential
+quantification.
+%Here $t[\alpha]$ simply means that the type variable $\alpha$ may appear
+%free in the term $t$, and $t[\sigma / \alpha]$ means $t$ with $\sigma$
+%substituted for all the free occurrences of $\alpha$.
+
+\item {\bf Uses:} Solving type-existentially quantified goals.
+
+\end{itemize}
+%
+\begin{session}
+\begin{verbatim}
+> g `(!:'a. t[:'a:]) ==> (?:'a. t[:'a:])`;
+val it =
+   Proof manager status: 1 proof.
+1. Incomplete goalstack:
+     Initial goal:
+
+     (!:'a. (t :!'a. bool) [:'a:]) ==> ?:'a. t [:'a:]
+
+
+   : proofs
+> e(DISCH_TAC);
+OK..
+1 subgoal:
+val it =
+   
+?:'a. (t :!'a. bool) [:'a:]
+------------------------------------
+  !:'a. (t :!'a. bool) [:'a:]
+
+   : proof
+> e(TY_EXISTS_TAC ``:'a``);
+OK..
+1 subgoal:
+val it =
+   
+(t :!'a. bool) [:'a:]
+------------------------------------
+  !:'a. (t :!'a. bool) [:'a:]
+
+   : proof
+> e(ASM_REWRITE_TAC[]);
+OK..
+
+Goal proved.
+ [.] |- (t :!'a. bool) [:'a:]
+
+Goal proved.
+ [.] |- ?:'a. (t :!'a. bool) [:'a:]
+val it =
+   Initial goal proved.
+|- (!:'a. (t :!'a. bool) [:'a:]) ==> ?:'a. t [:'a:]
+   : proof
+\end{verbatim}
+\end{session}
+
+
+\subsection{Extended Tactics}
+
+Many of the existing tactics of \HOL{} have been extended
+to work with the new forms of \HOLW.
+In large part, this is due to the matching of terms and types being
+extended in the same way that has been seen previously, e.g., for rewriting.
+Thus the tactics \texttt{MATCH\_ACCEPT\_TAC} and \texttt{MATCH\_MP\_TAC}
+have the same behaviors as before, but also will successfully match their
+pattern terms against kind and rank instances.
+
+In some cases a tactic's functionality has been extended beyond matching
+in ways that are natural for the new forms.
+
+% The reader is assummed to be familiar
+% with these from \HOL, so only the new functionality of these is described.
+
+\begin{itemize}
+\item \texttt{STRIP\_TAC}
+%\item \texttt{MATCH\_ACCEPT\_TAC}
+%\item \texttt{HO\_MATCH\_ACCEPT\_TAC}
+%\item \texttt{MATCH\_MP\_TAC}
+%\item \texttt{HO\_MATCH\_MP\_TAC}
+\item \texttt{SIMP\_TAC} and other simplifier tactics
+\end{itemize}
+
+\subsubsection{\texttt{STRIP\_TAC : tactic}}
+
+In \HOL, \texttt{STRIP\_TAC} combines the effects of
+\texttt{GEN\_TAC}, \texttt{CONJ\_TAC}, and \texttt{DISCH\_TAC},
+choosing which depending on what the current goal is.
+In addition, if a new assumption is added that is a conjunction,
+it is broken into two new assumptions, and
+if a new assumption is added that has an existential quantifier,
+that quantifier is stripped off and the bound variable renamed if necessary
+to be fresh.
+
+In \HOLW{}, \texttt{STRIP\_TAC} adds the effect of \texttt{TY\_GEN\_TAC},
+and also, if a new assumption is added that has a type-existential quantifier,
+the quantifier is stripped off
+and the bound type variable renamed if necessary to be fresh.
+
+% \subsubsection{\texttt{MATCH\_ACCEPT\_TAC : thm -> tactic}}
+% 
+% \begin{itemize}
+% \item {\bf Summary:} Solves the current goal by supplying a theorem
+% that matches it.
+% %
+% \begin{center}
+% \begin{tabular}{c}
+% $t'$
+% \\ \tacticline
+% \\
+% \end{tabular}
+% \end{center}
+% Where the theorem provided as the first argument of \texttt{MATCH\_ACCEPT\_TAC}
+% may be universally quantified by both term and type variables,
+% and its body $t$ matches the current goal $t'$ for some instance.
+% 
+% In \HOLW, this matching can take into
+% account the full expressivity of the larger logic, including for example,
+% that type variables are matched by higher order matching.
+% \end{itemize}
+% 
+% \subsubsection{\texttt{MATCH\_MP\_TAC : thm -> tactic}}
+% 
+% \begin{itemize}
+% \item {\bf Summary:} reasons backwards from the current goal using an
+% implication, possibly quantified.
+% %
+% \begin{center}
+% \begin{tabular}{c}
+% $q'$
+% \\ \tacticline
+% $p'$
+% \\
+% \end{tabular}
+% \end{center}
+% Where the theorem provided as the first argument of \texttt{MATCH\_ACCEPT\_TAC}
+% may be universally quantified by both term and type variables,
+% and its body is an implication of the form $p$ \texttt{==>} $q$.
+% 
+% $q$ is matched against the current goal $q'$, and then the goal
+% is replaced by the correspondingly instantiated version of $p$, $p'$,
+% as the new subgoal.
+% As before, this matching can take into account the full expressivity
+% of the \HOLW{} logic.
+% 
+% \end{itemize}
+
+
+\subsubsection{\texttt{SIMP\_TAC} and other simplifier tactics}
+
+The simplifier is too complex to be treated in any complete way in this
+tutorial, but it is appropriate to mention here that just as in \HOL{}
+the core set of simplifications (\texttt{bool\_ss})
+performs beta reductions of
+terms, the core set of simplifications in \HOLW{} adds type-beta
+reductions of terms, essentially building in the effects of
+\texttt{TY\_BETA\_CONV}.
+%and \texttt{TY\_ABS\_CONV}.
+In addition, just as in \HOL{} the core set of simplifications contains
+simple reductions concerning universal and existential quantification,
+like \verb+(!x:'a. t) = t+, the core set in in \HOLW{} adds the corresponding
+simple reductions concerning type-universal and type-existential quantification,
+such as \verb+(!:'a:'k. t) = t+.
+Also, just as the \HOL{} simplification set \texttt{ETA\_ss} performs eta
+reductions of terms, so in \HOLW{} it also performs type eta reductions,
+essentially building in the effect of \texttt{TY\_ETA\_CONV}.
+As covered in chapter~\ref{chap:package} on packages, 
+the axiom {\tt UNPACK\_PACK\_AX} is also added to the 
+core simplification set,
+so that package reduction is automatically included as well.
+
+Since these extensions are built-in as part of the core simplification set or
+\texttt{ETA\_ss}, it is not necessary to create or mention any new
+simplification sets in order to access this additional simplifier functionality
+for proofs in \HOLW.
+
+
+\subsection{Other Rules, Tactics, and Automation}
+
+There are many more new inference rules, conversions, and tactics that
+have been added to \HOLW{} beyond what has been presented here.
+For more on these, the reader is directed to \DESCRIPTION.
+As has been said, all the tools of \HOL{} work just as before in \HOLW{}
+given the same inputs.  In addition,
+in general the tools of \HOL{} have been revised for \HOLW{} to be
+sensitive to and properly handle the new forms of the extended logic.
+In particular, this includes matching tactics like
+\texttt{MATCH\_ACCEPT\_TAC} and \texttt{MATCH\_MP\_TAC},
+all the rewriting tactics, the resolution tactics
+\texttt{RES\_TAC} and \texttt{IMP\_RES\_TAC},
+the simplifier, and the datatype definition tools. 
+There are some exceptions, e.g.\ the quotient library,
+as work continues on revising the extensive \HOL{} library code.
+But for the most part, the existing facilities of \HOL{} can be used without
+worry and they will generally just do the right thing.  Examples of their use
+will be seen in the chapters that follow.
+
+%The first-order provers like \texttt{PROVE\_TAC} still
+%require a simple first-order goal, without any of the new forms,
+%to be solvable.
+
+%
+\section{Backwards Compatibility}
+%
+
+Significantly,
+despite all of this
+expansion of the logic, all of the tools perform exactly as before if given
+inputs in the original \HOL{} logic.
+In particular, existing projects built using \HOL{} should just build
+correctly in \HOLW, with only very slight and rare exceptions.
+
+Of those rare exceptions, the most frequently encountered is a problem
+with parsing terms of the logic that have type annotations as part of a list
+of bound variable names.  While in \HOL{} it is fine to say
+\begin{session}
+\begin{verbatim}
+> ``\x:bool (lst:'a list). T``;
+val it = ``\x lst. T`` : term
+\end{verbatim}
+\end{session}
+%
+in \HOLW{} this causes a parsing error:
+\begin{session}
+\begin{verbatim}
+> ``\x:bool (lst:'a list). T``;
+Exception-
+   HOL_ERR
+  {message =
+  "on line 9, characters 11-13:\nType parsing failure with remaining input:
+     lst:'a list). T",
+  origin_function = "parse_type", origin_structure = "Parse"} raised
+\end{verbatim}
+\end{session}
+
+The reason for the parsing errors is that since the type language in \HOLW{}
+is more expressive, the type parser tries to interpret the term variable
+\texttt{(lst:'a list)} as if it were a type operator
+to apply to \texttt{bool},
+%of kind \texttt{ty => ty},
+which of course it is not.
+
+Alternatively, whereas in \HOLW{} it is fine to say
+\begin{session}
+\begin{verbatim}
+> ``\x:bool (list). T``;
+val it = ``\x. T`` : term
+\end{verbatim}
+\end{session}
+%
+but in \HOL{} the name \texttt{list} is differently interpreted as a
+term variable name:
+\begin{session}
+\begin{verbatim}
+> ``\x:bool (list). T``;
+<<HOL message: inventing new type variable names: 'a>>
+val it = ``\x list. T`` : term
+\end{verbatim}
+\end{session}
+
+The real problem in both cases here is that the \HOLW{} type parser tries to
+reach farther than the \HOL{} type parser in order to gather in the entire type,
+before looking for the next term variable in the list. The way to fix these
+sort of problems is simply to enclose the term variable with its type
+annotation within parentheses, as
+\begin{session}
+\begin{verbatim}
+> ``\(x:bool) (lst:'a list). T``;
+val it = ``\x lst. T`` : term
+\end{verbatim}
+\end{session}
+
+This is by far the most common issue in re-running \HOL{} scripts in
+\HOLW{}, and even this issue has been extremely rare in practice, since
+most people already use parentheses around their variables
+with type annotations
+in such variable lists.
+%as in the example above.
+The scarcity of such issues demonstrates the degree of
+backwards compatibility achieved.

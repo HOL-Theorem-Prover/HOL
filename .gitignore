@@ -111,6 +111,7 @@ src/TeX/holindex-demo.ps
 Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex
+Manual/Tutorial/*.tex0
 Manual/Tutorialw/
 
 examples/HolOmega/tests/

@@ -42,8 +42,10 @@
 %   \pagenumbering{roman}                  % roman page numbers for prelims
 %   \setcounter{page}{1}                   % start at page 1
 
-   \include{title}                        % tutorial title page
-   \include{preface}                      % preface to entire tutorial
+%%   \include{title}                        % tutorial title page
+   \include{teaser-title}                  % tutorial teaser title page
+%%   \include{preface}                      % preface to entire tutorial
+   \include{prologue}                      % prologue to teaser
    \input{../LaTeX/ack}                 % global acknowledgements
    \tableofcontents
 
@@ -52,23 +54,23 @@
 %   \setcounter{page}{1}                  % start at page 1
 
    \include{intro}                       % intro: getting and installing hol
-   \include{ml}                          % intro to ml
-   \include{logic}                       % the HOL logic and intro to HOL proof
+%%   \include{ml}                          % intro to ml
+%%   \include{logic}                       % the HOL logic and intro to HOL proof
    \include{appetizers}                  % motivation for the HOL-Omega logic
-   \include{logic-holw}                  % the HOL-Omega logic and proof system
+%%   \include{logic-holw}                  % the HOL-Omega logic and proof system
 %  \include{proof}
-   \include{euclid}                      % Euclid example
-   \include{parity}                      % parity example
+%%   \include{euclid}                      % Euclid example
+%%   \include{parity}                      % parity example
 %   \include{tool}                        % conjunction canonicalization tool
 %   \include{binomial}                    % Andy Gordon's Binomial Thm in HOL
-   \include{combin}                      % Combinatory logic
+%%   \include{combin}                      % Combinatory logic
 %   \include{conv}                        % Conversions
-   \include{proof-tools}                 % Write your own DPLL Sat prover
-   \include{adt}                         % abstract data types example
-   \include{simple-cat}                  % simple category theory example
-   \include{package}                     % existential types and packages example
-   \include{more-examples}               % description of what's in examples/
-   \include{references}                  % references
+%%   \include{proof-tools}                 % Write your own DPLL Sat prover
+%%   \include{adt}                         % abstract data types example
+%%   \include{simple-cat}                  % simple category theory example
+%%   \include{more-examples}               % description of what's in examples/
+   \include{teaser-epilogue}               % description of what's in examples/HolOmega
+%%   \include{references}                  % references
 
 \end{document}
 

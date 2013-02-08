@@ -1,0 +1,1080 @@
+\chapter{HOL-Omega Appetizers}\label{chap:appetizers}
+
+% Whereas the previous chapter covered the classical \HOL{} logic,
+This chapter will introduce the \HOLW{} logic, with the idea of
+motivating it by a series of examples.  These examples are
+only discussed superficially, to showcase the new ideas,
+and not all details are pursued.
+A more complete description of the \HOLW{} extensions is provided in
+the next chapter in the tutorial.
+But these are presented as appetizers,
+to lightly show how the new features might be used to good effect.
+% Some of these were inspired by the examples collected by Gabriel Scherer\footnote{
+% {\tt http://blog.huoc.org/higher-rank-polymorphism.html}}.
+
+
+\section{Collections}
+
+To begin, \HOL{} is blessed with a number of different types in the logic that
+represent different varieties of collections, like lists, sets, and bags. These
+are polymorphic types, written e.g. $\alpha$ {\tt list}, where $\alpha$ is the
+type of the elements of the list. All these collections are similar, in that they
+all have an empty collection, they all have a way to insert a new element into
+a collection, they all have a way to measure the size of a collection, etc.
+
+Suppose one wanted to represent the notion of a collection as an abstraction
+of the normal notions of a set or a list.  In \HOL{} there is no natural way to
+do this, but in \HOLW{} one could use a type operator variable to stand for the
+various collection types, and then create a record of some of
+the normal functions used on collections, as follows.
+
+\begin{session}
+\begin{verbatim}
+- new_theory "appetizers";
+<<HOL message: Created theory "appetizers">>
+> val it = () : unit
+> set_trace "Unicode" 0;
+val it = () : unit
+
+- Hol_datatype `collection_ops =
+     <| empty  : 'x 'col;
+        insert : 'x -> 'x 'col -> 'x 'col;
+        length : 'x 'col -> num |>`;
+<<HOL message: Defined type: "collection_ops">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+Here we have used the type variable \texttt{'col} as a variable
+to stand for the type operator we are talking about, whether \texttt{list},
+\texttt{option}, or some other type.
+In \HOL, type variables can only stand for entire types, like \texttt{num list},
+but not type operators like just \texttt{list}.
+But here, \texttt{'col} is being used as a function on types,
+that takes a type \texttt{'x}, the type of the elements of the collection,
+and returns a type \texttt{'x 'col}, the type of collections of such elements.
+%While not present in \HOL{}, such type operator variables are made available in \HOLW{}.
+Such type operator variables are one of the new features of \HOLW{}.
+
+Both \texttt{'col} and \texttt{'x} are free type variables in this definition, so
+the type being defined takes two arguments, e.g., \texttt{('col, 'x)collection\_ops}.
+The order of the two arguments is by alphabetical order.
+
+Now we can describe lists as collections:
+\begin{session}
+\begin{verbatim}
+- val list_ops = Define
+     `list_ops = <|empty := []:'a list; insert := CONS; length := LENGTH|>`;
+Definition has been stored under "list_ops_def"
+> val list_ops =
+    |- list_ops = <|empty := []; insert := CONS; length := LENGTH|> : thm
+
+- type_of ``list_ops``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    ``:(list, 'a) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+The type of this collection is \texttt{(list, 'a) collection\_ops}.
+The first argument is the type \texttt{list}, here being used without any type argument
+of its own.  This is meaningful in \HOLW{}, although it may look weird to \HOL{} users
+who are used to always seeing \texttt{list} with an argument, like \texttt{num list} or
+\texttt{'a list}.  But here \texttt{list} is itself an argument, albeit a type operator
+alone, replacing \texttt{'col} in the definition of \texttt{collection\_ops} above.
+
+Here are sets described as collections:
+\begin{session}
+\begin{verbatim}
+- val set_ops = Define
+     `set_ops = <|empty := {}:'a set; insert := $INSERT; length := CARD|>`;
+Definition has been stored under "set_ops_def"
+> val set_ops = |- set_ops = <|empty := {}; insert := $INSERT; length := CARD|>
+     : thm
+
+- type_of ``set_ops``;
+<<HOL message: inventing new type variable names: 'b>>
+> val it =
+    ``:(\'a. 'a -> bool, 'b) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+Note that the first argument to this set collection type is
+\verb|\|\texttt{'a.~'a~->~bool}. This is an {\it abstraction type}, similar to
+the normal lambda abstraction in terms, but this abstraction is within the type
+language of \HOLW.  The scope of the lambda binding of \texttt{'a} in the type
+above is up to but not including the comma, which ends the first type argument.
+
+% The second argument to this type is \texttt{'a}, which is distinct from the
+% \texttt{'a} being used in the first argument.  The second argument is a free type
+% variable, whereas the \texttt{'a} that appears twice within the first argument is
+% a bound type variable.  These two variables are completely different variables and
+% should not be confused with each other, just as the variables \texttt{x}
+% which appear in \verb|\|\texttt{x.x+1} and in \texttt{2*x} are different
+% variables.
+
+But, you may ask, why does this type abstraction \verb|\|\texttt{'a.~'a~->~bool}
+appear in this collection type?  The reason is that the type of sets in \HOL,
+\texttt{'a set}, is actually a type abbreviation, not a real type. It is a feature
+of the parser and prettyprinter, not the actual logic as such.  The abbreviation
+\texttt{'a set} stands for the real type \texttt{'a -> bool}. The \HOLW{} system
+figures out the appropriate type to substitute for the type argument \texttt{'col}
+to create the type \texttt{'a -> bool},
+% and that type is \verb|\|\texttt{'a.~'a~->~bool}.
+and the substitution is [\texttt{'col} $\mapsto$ \verb|\|\texttt{'a.~'a~->~bool}].
+The type resulting from the substitution
+is \texttt{'a~(}\verb|\|\texttt{'a.~'a~->~bool)} (in postfix notation),
+which is equivalent to \texttt{'a~->~bool} through type beta-reduction.
+
+\HOL{} contains not only lists and sets, but also bags, which are sometimes
+called multisets. Bags are like sets which can include multiple copies of
+its elements, whereas sets can only contain a single copy of each.
+Here are bags described as collections:
+\begin{session}
+\begin{verbatim}
+- load "bagLib";
+...
+- val bag_ops = Define
+     `bag_ops = <| empty := {||}:'a bag; insert := BAG_INSERT;
+                   length := BAG_CARD|>`;
+Definition has been stored under "bag_ops_def"
+> val bag_ops =
+    |- bag_ops = <|empty := {||}; insert := BAG_INSERT; length := BAG_CARD|> :
+  thm
+
+- type_of ``bag_ops``;
+<<HOL message: inventing new type variable names: 'b>>
+> val it =
+    ``:(\'a. 'a -> num, 'b) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+Similar to sets, \texttt{'a bag} is a type abbreviation for \texttt{'a -> num}.
+In this case, \HOLW{} figures out that the correct type to substitute for
+\texttt{'col} is \verb|\|\texttt{'a.~'a~->~num}.
+
+So we can represent lists, sets, and bags as collections using this
+record type with fields for these three common operations.
+
+\subsection{Object-oriented collections}
+
+In fact we can go further, and try to model collections in an object-oriented way,
+% as in an object-oriented programming language,
+combining together the data values stored in the collection with the operations
+used to manipulate them.
+
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection =
+     <| this : 'x 'col;
+        ops  : ('col,'x) collection_ops |>`;
+\end{verbatim}
+\end{session}
+
+Now we can define an operation to insert an element into a collection,
+% or to measure the size of a collection,
+without having to know what particular kind of collection it is.
+\begin{session}
+\begin{verbatim}
+- val insert_def =
+  Define `insert x (c:('col,'x)collection) =
+             <| this := c.ops.insert x c.this;
+                ops  := c.ops |>`;
+Definition has been stored under "insert_def"
+> val insert_def =
+    |- !x c. insert x c = <|this := c.ops.insert x c.this; ops := c.ops|>
+     : thm
+\end{verbatim}
+\end{session}
+
+Similarly, we can define an operation to measure the size of a collection.
+\begin{session}
+\begin{verbatim}
+- val length_def =
+  Define `length (c:('col,'x)collection) = c.ops.length c.this`;
+Definition has been stored under "length_def"
+> val length_def =
+    |- !c. length c = c.ops.length c.this
+     : thm
+\end{verbatim}
+\end{session}
+So we can use the same functions, \texttt{insert} and \texttt{length},
+to manipulate any lists, sets, or bags, with the appropriate results for each
+type of collection.
+
+\subsection{Fold operation}
+
+But what if we
+want to add a ``fold'' operator, like the \texttt{FOLDR} function on lists:
+
+\begin{session}
+\begin{verbatim}
+- type_of ``FOLDR``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it =
+    ``:('a -> 'b -> 'b) -> 'b -> 'a list -> 'b``
+     : hol_type
+
+- listTheory.FOLDR;
+> val it =
+    |- (!f e. FOLDR f e [] = e) /\
+       !f e x l. FOLDR f e (x::l) = f x (FOLDR f e l)
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+We might add a new field \texttt{fold} to our new record of collection operations
+as follows.
+
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection_ops =
+     <| empty  : 'x 'col;
+        insert : 'x -> 'x 'col -> 'x 'col;
+        length : 'x 'col -> num;
+        fold   : ('x -> 'y -> 'y) -> 'y -> 'x 'col -> 'y |>`;
+<<HOL message: Defined type: "collection_ops">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+Then we can construct a record of this type using \texttt{FOLDR}.
+\begin{session}
+\begin{verbatim}
+- val list_ops = Define
+     `list_ops = <| empty := []:'a list; insert := CONS; length := LENGTH;
+                    fold := FOLDR|>`;
+<<HOL message: inventing new type variable names: 'b>>
+Definition has been stored under "list_ops_def"
+> val list_ops =
+    |- list_ops =
+       <|empty := []; insert := CONS; length := LENGTH; fold := FOLDR|> : thm
+
+- type_of ``list_ops``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it =
+    ``:(list, 'a, 'b) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+Wait, this is not what we wanted. There is a third type argument in
+\texttt{collection\_ops} now, \texttt{'b}.
+This new type argument appears there because there are now
+three free type variables in the definition of \texttt{collection\_ops},
+\texttt{'col}, \texttt{'x}, and \texttt{'y}.
+The third argument
+% \texttt{'b}
+% takes the place of the free \texttt{'y} in the definition of \texttt{collection\_ops}.
+% This
+\texttt{'y}
+is the type of the value computed and returned
+by \texttt{fold}.
+
+But having the \texttt{'y} type variable free in this way {\it fails to be fully general},
+as any particular instance of \texttt{fold} can produce only one type of result.
+No matter its arguments, no different type of result can be produced.
+
+To see this problem more clearly, suppose we follow this development further,
+using this definition of \texttt{collection\_ops}, and upon it defining the collection
+type and the fold operation on collections.
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection =
+     <| this : 'x 'col;
+        ops  : ('col,'x,'y) collection_ops |>`;
+<<HOL message: Defined type: "collection">>
+> val it = () : unit
+
+- val fold_def = Define `fold f e c = c.ops.fold f e c.this`;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+Definition has been stored under "fold_def"
+> val fold_def =
+    |- !f e c. fold f e c = c.ops.fold f e c.this
+     : thm
+\end{verbatim}
+\end{session}
+
+Now let's make an example collection.
+\begin{session}
+\begin{verbatim}
+- val ex1 = ``<| this := [1;8;27]; ops := list_ops |>``;
+<<HOL message: inventing new type variable names: 'a>>
+> val ex1 = ``<|this := [1; 8; 27]; ops := list_ops|>`` : term
+\end{verbatim}
+\end{session}
+
+\newpage
+But when we try to do a fold on this example, we see a type error.
+\begin{session}
+\begin{verbatim}
+- ``fold (\x y. x+y) 0 ^ex1``;
+
+Type inference failure: unable to infer a type for the application of
+
+(fold (\(x :num) (y :num). x + y) (0 :num) :
+   (list, num, num) collection -> num)
+
+on line 16, characters 2-19
+
+which has type
+
+:(list, num, num) collection -> num
+
+to
+
+<|this := [(1 :num); (8 :num); (27 :num)];
+  ops := (list_ops :(list, num, 'a) collection_ops)|>
+
+between beginning of frag 1 and end of frag 1
+
+which has type
+
+:(list, num, 'a) collection
+
+unification failure message: unify failed
+! Uncaught exception: 
+! HOL_ERR
+\end{verbatim}
+\end{session}
+
+This example failed type-checking because the type of the result that the collection
+was able to provide (\texttt{'a})
+was not the same as the type of the value that the actual fold
+function, \verb|\|\texttt{x~y.x+y}, was trying to return (\texttt{num}).
+
+We could try to patch this up by manually instantiating this example.
+% but then it fails on other folds that return a different type:
+\begin{session}
+\begin{verbatim}
+- val ex1a = inst [``:'a`` |-> ``:num``] ex1;
+> val ex1a = ``<|this := [1; 8; 27]; ops := list_ops|>`` : term
+- ``fold (\x y. x+y) 0 ^ex1a``;
+> val it =
+    ``fold (\x y. x + y) 0 <|this := [1; 8; 27]; ops := list_ops|>``
+     : term
+\end{verbatim}
+\end{session}
+
+This does work and the term passes type-checking. But what if we try another example
+that returns a result of a different type?
+\begin{session}
+\begin{verbatim}
+- ``fold (\x y. EVEN x /\ y) T ^ex1a``;
+
+Type inference failure: unable to infer a type for the application of
+
+(fold (\(x :num) (y :bool). EVEN x /\ y) T :
+   (list, num, bool) collection -> bool)
+
+on line 21, characters 2-27
+
+which has type
+
+:(list, num, bool) collection -> bool
+
+to
+
+<|this := [(1 :num); (8 :num); (27 :num)];
+  ops := (list_ops :(list, num, num) collection_ops)|>
+
+between beginning of frag 1 and end of frag 1
+
+which has type
+
+:(list, num, num) collection
+
+unification failure message: unify failed
+! Uncaught exception: 
+! HOL_ERR
+\end{verbatim}
+\end{session}
+
+The type of the result that the collection was able to provide (\texttt{num})
+was not the same as the type of the value that the fold
+function was trying to return (\texttt{bool}).
+
+
+The point here is that the above version of fold is simply not general enough for
+normal use.
+What we really want is the following version.
+
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection_ops =
+     <| empty  : 'x 'col;
+        insert : 'x -> 'x 'col -> 'x 'col;
+        length : 'x 'col -> num;
+        fold   : !'y. ('x -> 'y -> 'y) -> 'y -> 'x 'col -> 'y |>`;
+<<HOL message: Defined type: "collection_ops">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+In this new defintion of \texttt{collection\_ops}, the type of the \texttt{fold} field
+begins with ``\texttt{!'y.}''. This indicates a {\it universal type};
+the idea comes from a logic called System F. The \texttt{!'y.}~universally quantifies
+\texttt{'y} over the body \texttt{\small ('x -> 'y -> 'y) -> 'y -> 'x 'col -> 'y}.
+The quantification binds the occurrences
+of \texttt{'y} within the universal type, so that \texttt{'y} does not become a free
+type variable outside the binding, and thus not a free type variable of the
+\texttt{collection\_ops} type.  Then this version of the \texttt{collection\_ops}
+type is created with just its normal two arguments \texttt{'col} and
+\texttt{'x}, not \texttt{'y}.
+
+To create an example of this new type of fold operation, we need to provide a term
+whose type is the above universal type.
+Such a term is \verb|\|\texttt{:'b.~FOLDR}.
+\begin{session}
+\begin{verbatim}
+- val list_ops = Define
+   `list_ops = <|empty := []:'a list; insert := CONS; length := LENGTH;
+                 fold := \:'b. FOLDR|>`;
+Definition has been stored under "list_ops_def"
+> val list_ops =
+    |- list_ops =
+       <|empty := []; insert := CONS; length := LENGTH;
+         fold := (\:'b. FOLDR)|> : thm
+
+- type_of ``list_ops``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    ``:(list, 'a) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+The term \verb|\|\texttt{:'b.~FOLDR} is a {\it type abstraction term}. It abstracts
+a term, here \texttt{FOLDR}, not by a term variable, but by a type variable \texttt{'b}.
+This is a new variety of term not present in \HOL{},
+but added in \HOLW{}.
+The type of such a term is
+a universal type.  Where the type of \texttt{FOLDR} is
+\texttt{('a~->~'b~->~'b) -> 'b -> 'a 'col -> 'b},
+the type of \verb|\|\texttt{:'b.~FOLDR} is instead
+\texttt{!'b.~('a~->~'b~->~'b) -> 'b -> 'a 'col -> 'b}.
+
+The use of a  universal type and a type abstraction term here provides the generality we
+were looking for, so that \texttt{fold} can be used to return results of any desired type.
+
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection =
+     <| this : 'x 'col;
+        ops  : ('col,'x) collection_ops |>`;
+<<HOL message: Defined type: "collection">>
+> val it = () : unit
+
+- val fold_def =
+  Define `fold f (e:'b) (c:('col,'a)collection) = c.ops.fold f e c.this`;
+Definition has been stored under "fold_def"
+> val fold_def =
+    |- !f e c. fold f e c = c.ops.fold f e c.this
+     : thm
+\end{verbatim}
+\end{session}
+
+If we turn on the printing of the types of terms, we can see in more detail
+the types involved in the \texttt{fold} operation.
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+- fold_def;
+> val it =
+    |- !(f :'a -> 'b -> 'b) (e :'b) (c :('col :ty => ty, 'a) collection).
+         fold f e c = c.ops.fold [:'b:] f e c.this
+     : thm
+\end{verbatim}
+\end{session}
+
+%After the selection of the \texttt{fold} operation within the operations record within
+%\texttt{c},
+Now in the definition of \texttt{fold},
+we see \texttt{[:'b:]}.  This indicates an application of
+the term \texttt{c.ops.fold} to the type \texttt{'b} as a type argument.
+It is like an application of a term to a term argument, except the argument is a type,
+not a term.  In such a {\it type application term}, the operator has to have a
+universal type; in this case, the type of \texttt{c.ops.fold} is
+\texttt{!'b.~('a~->~'b~->~'b) -> 'b -> 'a 'col -> 'b}. The result of the type
+application is to substitute the type argument for the bound type variable throughout
+the term.  In this case, the result has type
+\texttt{('a~->~'b~->~'b) -> 'b -> 'a 'col -> 'b}.
+It is therefore ready to take as its next arguments the terms \texttt{f}, \texttt{e},
+and \texttt{c.this}.
+
+The type arguments to terms are important for the logic, but in practice they tend to
+make terms harder to read, so by default their printing is turned off.
+Also, in many cases the user need not mention them when writing terms;
+the parser's type inference will try to deduce where they are needed,
+and then exactly which type argument should be inserted there.
+That is how the \texttt{[:'b:]} type argument was inserted into the definition of
+\texttt{fold} above.
+
+This version of the fold operation can be used easily to construct folds
+returning different types, without any manual instantiations.
+\begin{session}
+\begin{verbatim}
+- show_types := false;
+> val it = () : unit
+- val ex1 = ``<| this := [2;3;5;7]; ops := list_ops |>``;
+> val ex1 = ``<|this := [2; 3; 5; 7]; ops := list_ops|>`` : term
+
+- ``fold (\x y. x+y) 0 ^ex1``;
+> val it =
+    ``fold (\x y. x + y) 0 <|this := [2; 3; 5; 7]; ops := list_ops|>``
+     : term
+
+- ``fold (\x y. EVEN x /\ y) T ^ex1``;
+> val it =
+    ``fold (\x y. EVEN x /\ y) T <|this := [2; 3; 5; 7]; ops := list_ops|>``
+     : term
+\end{verbatim}
+\end{session}
+
+\subsection{Map operation}
+
+This seems to be working well.  Let's try another extension, adding a ``map''
+operation to the group of operations on collections.  The basic idea of a map
+operation is to apply a function to every element of a collection, and from all
+of the results form a new collection.  For lists, \HOL{} contains the \texttt{MAP}
+function predefined, and there are similar functions for sets and bags.
+\begin{session}
+\begin{verbatim}
+- type_of ``MAP``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it =
+    ``:('a -> 'b) -> 'a list -> 'b list``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+\begin{session}
+\begin{verbatim}
+- listTheory.MAP;
+> val it =
+    |- (!f. MAP f [] = []) /\ !f h t. MAP f (h::t) = f h::MAP f t
+     : thm
+\end{verbatim}
+\end{session}
+
+Suppose we try to extend the set of operations with an entry for \texttt{map},
+using a universally quantified type in the same style as we did for \texttt{fold}.
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection_ops =
+     <| length : 'x 'col -> num;
+        empty  : 'x 'col;
+        insert : 'x -> 'x 'col -> 'x 'col;
+        fold   : !'y. ('x -> 'y -> 'y) -> 'y -> 'x 'col -> 'y;
+        map    : !'y. ('x -> 'y) -> 'x 'col -> 'y 'col |>`;
+<<HOL message: Defined type: "collection_ops">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+To fashion an example of this \texttt{map} operation, we need to provide a term
+whose type is the universal type \texttt{\small !'y.~('x -> 'y) -> 'x 'col -> 'y 'col},
+such as \verb|\|\texttt{:'b.~MAP}.
+\begin{session}
+\begin{verbatim}
+- val list_ops = Define
+   `list_ops = <|empty := []:'a list; insert := CONS; length := LENGTH;
+                 fold := \:'b. FOLDR; map := \:'b. MAP |>`;
+Definition has been stored under "list_ops_def"
+> val list_ops =
+    |- list_ops =
+       <|empty := []; insert := CONS; length := LENGTH;
+         fold := (\:'b. FOLDR); map := (\:'b. MAP)|>
+     : thm
+
+- type_of ``list_ops``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    ``:(list, 'a) collection_ops``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+Next we can recreate the type of collections, using this expanded record of operations.
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection =
+     <| this : 'x 'col;
+        ops  : ('col,'x) collection_ops |>`;
+<<HOL message: Defined type: "collection">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+Now we define the ``map'' operation that takes a function
+and a collection and creates a new collection from the results.
+\begin{session}
+\begin{verbatim}
+- val map_def =
+  Define `map (f:'a -> 'b) c =
+            <| this := c.ops.map f c.this;
+               ops  := c.ops |> `;
+\end{verbatim}
+\end{session}
+
+Unfortunately, this definition runs into difficulties with the typing.
+\begin{session}
+\begin{verbatim}
+Exception raised at Preterm.typecheck:
+on line 113, characters 15-30:
+
+Type inference failure: unable to infer a type for the application of
+
+ _ record fupdatethis
+  (K
+     ((c :('col :ty => ty, 'a) collection).ops.map [:'b:] (f :'a -> 'b)
+        c.this) :'b 'col -> 'b 'col)
+
+between line 112, character 12 and line 113, character 30
+
+which has type
+
+:('col :ty => ty, 'b) collection -> ('col, 'b) collection
+
+to
+
+<|ops := (c :('col :ty => ty, 'a) collection).ops|>
+
+on line 113, characters 15-30
+
+which has type
+
+:('col :ty => ty, 'a) collection
+
+unification failure message: unify failed
+
+! Uncaught exception:
+! HOL_ERR
+\end{verbatim}
+\end{session}
+The details of the above error message are not important.
+The real problem here is that the type of the new collection created is
+\texttt{('col,'b)collection}, while the type of the original collection is
+\texttt{('col,'a)collection}. The new collection being formed has its
+\texttt{this} field given a value of the new collection type,
+but the \texttt{ops} field is given a record of operations on the old collection type,
+not the new one.
+
+This problem can be resolved by using one more universal type for the \texttt{ops}
+field itself.
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `collection =
+     <| this : 'x 'col;
+        ops  : !'x. ('col,'x) collection_ops |>`;
+<<HOL message: Defined type: "collection">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+Now the \texttt{map} function can be defined as we desire, with no type problems.
+\begin{session}
+\begin{verbatim}
+- val map_def =
+  Define `map (f:'a -> 'b) c =
+            <| this := c.ops.map f c.this;
+               ops  := c.ops |> `;
+Definition has been stored under "map_def"
+> val map_def =
+    |- !f c. map f c = <|this := c.ops.map f c.this; ops := c.ops|>
+     : thm
+\end{verbatim}
+\end{session}
+
+To check on the types involved, let's turn on the display of types.
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- map_def;
+> val it =
+    |- !(f :'a -> 'b) (c :('col :ty => ty, 'a) collection).
+         map f c =
+         <|this := (c.ops [:'a:]).map [:'b:] f c.this; ops := c.ops|>
+     : thm
+\end{verbatim}
+\end{session}
+Here we can see not only the type argument \texttt{[:'b:]} inserted for \texttt{map},
+as was done before for \texttt{fold}, but also the operations record itself
+\texttt{c.ops} is given the type argument \texttt{[:'a:]}.  The parser's type inference
+was able to deduce the necessary type arguments from the actual user input and
+insert them in the appropriate places.
+
+As a final example in this section, let's consider an operation that takes two collections,
+which may use different underlying data structures, and combines their elements into a 
+single collection.  We can do this without expanding the definition of
+\texttt{collection\_ops}, but just using the operations that are already present.
+\begin{session}
+\begin{verbatim}
+- val union_def =
+  Define `union (c1: ('col1,'a)collection) (c2: ('col2,'a)collection) =
+            <| this := fold c2.ops.insert c2.this c1 : 'a 'col2;
+               ops  := c2.ops |>`;
+Definition has been stored under "union_def"
+> val union_def =
+    |- !(c1 :('col1 :ty => ty, 'a) collection)
+          (c2 :('col2 :ty => ty, 'a) collection).
+         union c1 c2 =
+         <|this := fold (c2.ops [:'a:]).insert c2.this c1; ops := c2.ops|>
+     : thm
+
+- type_of ``union``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it =
+    ``:('a :ty => ty, 'b) collection ->
+       ('c :ty => ty, 'b) collection -> ('c, 'b) collection``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+
+
+So the use of universal types
+% for the \texttt{fold} and \texttt{map} fields,
+% as well as for the \texttt{ops} field itself,
+provides the needed
+type polymorphism, which could not have been accomplished using simply the traditional
+higher order logic type system.
+
+
+Much of the advantage of \HOLW{} comes because of the new universal types.
+% which may be written as $\forall \alpha.\sigma$, where $\sigma$ is a type expression
+% that usually includes the type variable $\alpha$.
+The free type variables in classic \HOL{} types could be thought of as being
+implicitly univerally quantified, as they can be substituted by any other type
+to form a type instance. But in \HOLW{}, the $\forall$ quantification can be
+found {\it within} a type, as in
+$(\forall\alpha.\alpha \rightarrow \alpha) \rightarrow \mbox{\tt bool}$.
+This use of the $\forall$ in the left hand side of a function type $(\rightarrow)$
+is key to much of the new functionality of \HOLW.
+
+
+\subsection{Abstract collections}
+
+We have seen how one could create a very nice version of collections, modeled in an
+object-oriented way, so that the operations that obtain the size of a collection,
+fold over a collection, etc., are invoked the same whether the actual internal data
+structure is a list, set, or bag.
+But what that internal data structure is, is still apparent from the type of the
+collection.
+\begin{session}
+\begin{verbatim}
+- val ex1 = ``<| this := [2;3;5;7]; ops := list_ops |>``;
+> val ex1 = ``<|this := [2; 3; 5; 7]; ops := list_ops|>`` : term
+- type_of ex1;
+> val it =
+    ``:(list, num) collection``
+     : hol_type
+
+- val ex2 = ``<| this := {2;3;5;7}; ops := set_ops |>``;
+> val ex2 = ``<|this := {2; 3; 5; 7}; ops := set_ops|>`` : term
+- type_of ex2;
+> val it =
+    ``:(\'b. 'b -> bool, num) collection``
+     : hol_type
+\end{verbatim}
+\end{session}
+The internal data structure is visible as \texttt{list} in example \texttt{ex1}
+and as \verb|\|\texttt{'b.~'b~->~bool} in example \texttt{ex2}.
+
+That internal data structure can be represented by a \HOLW{} type operator variable,
+and that is how a general routine could be written to handle arguments built
+using any collection structure, as was done above.
+
+But suppose one wanted to completely hide the actual data structure used, abstracting
+that information away from the external use of the collection, considering it a detail
+of the implementation.
+This could be very useful in modularizing a proof, where certain parts of the proof
+know about the particular implementation data structure, but above a certain layer
+that information is hidden, and the rest of the proof cannot know or rely on that
+choice, but instead must work the same irrespective of what data structure is used.
+This makes it possible, at a later time, to change the implementation data structure
+to another structure, perhaps better suited to the task at hand, and to have that change
+not affect any of the proof work done above the layer where that choice was abstracted,
+like the edge of a module where internal implementation details cannot leak across
+the module boundary.  This kind of information hiding is very helpful in creating large
+software systems that are still maintainable and modifiable, and the same ideas apply
+for large proofs as well.
+
+To accomplish this information hiding, \HOLW{} provides a new variety of type called
+an {\it existential type}.
+\begin{session}
+\begin{verbatim}
+- ``:?'col. ('col, 'a) collection``;
+> val it =
+    ``:?'col :ty => ty. ('col, 'a) collection``
+     : hol_type
+- type_vars it;
+> val it = [``:'a``] : hol_type list
+\end{verbatim}
+\end{session}
+Existential types are written in the type language, similar to universal types, but
+using an existential type operator. 
+In the example above, the existential notation binds the type variable
+\texttt{'col} across the body of the type,
+\texttt{('col,'a)collection},
+so that the free type variables of the type contain just the type variable \texttt{'a},
+not \texttt{'col}.
+
+Terms of existential type are called {\it packages}.  They can be constructed as a
+special form using the \texttt{pack} keyword, as follows.
+\begin{session}
+\begin{verbatim}
+- val list_pack = ``pack (:list, <|this := [2;3;2]; ops := list_ops|>)``;
+> val list_pack =
+    ``pack (:list,<|this := [2; 3; 2]; ops := list_ops|>)``
+     : term
+- type_of list_pack;
+> val it =
+    ``:?'x :ty => ty. ('x, num) collection``
+     : hol_type
+\end{verbatim}
+\end{session}
+The keyword \texttt{pack} is followed by a pair where the first element is a type,
+preceeded by a colon, and the second element is a term.  The term, which normally
+involves the type mentioned, is packaged up so that the type mentioned is hidden,
+being replaced by a type variable, which becomes the bound type variable of the
+existential type of the resulting package.
+
+In the case above, the fact that \texttt{list\_pack} actually contains a list has been removed
+from the package's type, where \texttt{list} has been replaced by the type variable
+\texttt{'x}.
+% of kind {\bf ty} $\Rightarrow$ {\bf ty}.
+
+There is the possibility of ambiguity in the types when creating such a package.
+Given a pair of a type and a term as above, there many be multiple ways that a resulting
+existential type may be formed.
+In such cases, the ambiguity can be resolved by using a type annotation on the package.
+For example, in the session below two different packages are created from exactly the same
+ingredients, except that one of them has a type annotation.  Note that the resulting
+packages have different existential types; they are therefore different packages.
+\begin{session}
+\begin{verbatim}
+- val list_pack2 =
+    ``pack (:list, <| this := [[2];[3;5];[7]]; ops := list_ops |> )``;
+> val list_pack2 =
+    ``pack (:list,<|this := [[2]; [3; 5]; [7]]; ops := list_ops|>)``
+     : term
+- type_of list_pack2;
+> val it =
+    ``:?'x :ty => ty. ('x, num 'x) collection``
+     : hol_type
+
+- val list_pack3 =
+    ``pack (:list, <| this := [[2];[3;5];[7]]; ops := list_ops |> )
+        : ?'x. ('x,num list) collection``;
+> val list_pack3 =
+    ``pack (:list,<|this := [[2]; [3; 5]; [7]]; ops := list_ops|>)``
+     : term
+- type_of list_pack3;
+> val it =
+    ``:?'x :ty => ty. ('x, num list) collection``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+% We can construct packages of any kind of collection, that is, based on any data type,
+% and the neat thing is, if the collections all contain elements of the same type, then
+% the collection packages themselves all have the same type.
+We can construct packages of any kind of collection,
+and if the collections contain elements of the same type, then
+the packages themselves have the same type.
+\begin{session}
+\begin{verbatim}
+- val set_pack =
+    ``pack (:\'a.'a set, <| this := {2;3;2}; ops := set_ops |> )``;
+> val set_pack =
+    ``pack (:\'a. 'a -> bool,<|this := {2; 3; 2}; ops := set_ops|>)``
+     : term
+- type_of set_pack;
+> val it =
+    ``:?'x :ty => ty. ('x, num) collection``
+     : hol_type
+
+- val bag_pack =
+    ``pack (:\'a.'a bag, <| this := {|2;3;2|}; ops := bag_ops |> )``;
+> val bag_pack =
+    ``pack (:\'a. 'a -> num,<|this := {|2; 3; 2|}; ops := bag_ops|>)``
+     : term
+- type_of bag_pack;
+> val it =
+    ``:?'x :ty => ty. ('x, num) collection``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+Since all these packages have the same type, it is easy to write routines to take them
+as arguments. The new feature needed is an extension of the \texttt{let~...~in} form
+to deconstruct a package into a pair of a type variable and a term,
+where the type variable represents the actual type that was hidden, and
+where the term represents the body of the package, but where the hidden type
+is again represented by the type variable.
+%which was the first element of the pair.
+\begin{session}
+\begin{verbatim}
+- val lengthp_def =
+  Define `lengthp (p: ?'col. ('col,'a)collection) =
+            let (:'col, c) = p in
+              c.ops.length c.this `;
+Definition has been stored under "lengthp_def"
+> val lengthp_def =
+    |- !p. lengthp p = (let (:'col :ty => ty,c) = p in c.ops.length c.this)
+     : thm
+\end{verbatim}
+\end{session}
+
+% In this example, the package \texttt{p} is unpacked into the type variable \texttt{'col}
+% and the term variable \texttt{c}, where the type variable \texttt{'col} appears in the
+% type of \texttt{c~{:}('col,'a)collection}, as well as in the body
+% of the \texttt{let}, which is \texttt{c.ops.length c.this}.
+% It is required that the type \texttt{'col} not escape from its binder's scope,
+% so the type of the result of evaluating the body must not involve \texttt{'col}.
+% Within the body of the \texttt{let} we can use \texttt{'col} any way we wish, but
+% it has no meaning outside its scope, and any escape is prevented by the strong typing
+% of the \HOLW{} logic.
+
+In the \texttt{let} form above,
+% \texttt{let~({:}'col,~c)~=~p~in~...},
+the package \texttt{p} (of type
+\texttt{?'col.('col,'a)collection})
+is unpacked into the pair of the type variable \texttt{'col}
+and the term variable \texttt{c}, where \texttt{c} has the type
+\texttt{('col,'a)collection}.
+The scopes of both \texttt{'col} and \texttt{c} include the body of the \texttt{let...in} form.
+But the scope of \texttt{'col} also includes the term variable \texttt{c},
+so that the \texttt{'col} that appears in the type of \texttt{c},
+\texttt{('col,'a)collection}, is that \texttt{'col} that was just bound.
+Both \texttt{'col} and \texttt{c}
+have no meaning outside the \texttt{let}, so in particular it is meaningless
+to have the body of the \texttt{let} return a value of a type involving
+\texttt{'col}. Such an escape of \texttt{'col} from its scope is prevented
+by the strong typing of the \HOLW{} logic.
+
+Suppose we try to violate this rule, by defining an operation that returns
+the internal data structure of a collection.
+%\end{verbatim}
+%\end{session}
+%
+Such a definition produces the following error message:
+%\begin{session}
+%\begin{verbatim}
+\begin{session}
+\begin{verbatim}
+- val this_def =
+  Define `this (p: ?'col. ('col,'a)collection) =
+            let (:'col, c) = p in
+              c.this `;
+Exception raised at Preterm.typecheck:
+roughly on line 85, characters 14-19:
+
+Type inference failure: unable to infer a type for the application of
+
+(UNPACK :(!('x :ty => ty). ('x, 'a) collection -> 'a ('col :ty => ty))
+         -> (?('x :ty => ty). ('x, 'a) collection) -> 'a 'col)
+
+roughly on line 84, characters 16-29
+
+to
+
+\:'col :ty => ty. (\(c :('col, 'a) collection). c.this)
+
+roughly on line 85, characters 14-19
+
+which has type
+
+:!'col :ty => ty. ('col, 'a) collection -> 'a 'col
+
+unification failure message: unify failed
+
+! Uncaught exception:
+! HOL_ERR
+\end{verbatim}
+\end{session}
+
+But as long as we don't violate the rules, we are fine, and can define operations to
+return packages newly constructed out of parts of other packages.
+Here is an example of an operation that takes a package as an argument, inserts an element,
+and then returns the result as a new package.
+\begin{session}
+\begin{verbatim}
+- val insertp_def =
+  Define `insertp (e:'a) (p: ?'col. ('col,'a)collection) =
+            let (:'col, c) = p in
+              pack (:'col,
+                    <| this := c.ops.insert e c.this : 'a 'col;
+                       ops  := c.ops |>) `;
+Definition has been stored under "insertp_def"
+> val insertp_def =
+    |- !e p.
+         insertp e p =
+         (let (:'col :ty => ty,c) = p
+          in
+            pack
+              (:'col :ty => ty,
+                <|this := c.ops.insert e c.this; ops := c.ops|>))
+     : thm
+\end{verbatim}
+\end{session}
+
+We can define operations to do folds and maps on collections using the operators
+\texttt{fold} and \texttt{map} defined before, but where the new operations now work on
+packages, where the data structure is hidden internally.
+\begin{session}
+\begin{verbatim}
+- val foldp_def =
+  Define `foldp (f:'a -> 'b -> 'b) (e:'b) (p: ?'col. ('col,'a)collection) =
+            let (:'col, c) = p in
+              fold f e c `;
+Definition has been stored under "foldp_def"
+> val foldp_def =
+    |- !f e p. foldp f e p = (let (:'col :ty => ty,c) = p in fold f e c)
+     : thm
+
+- val mapp_def =
+  Define `mapp (f:'a -> 'b) (p: ?'col. ('col,'a)collection) =
+            let (:'col, c) = p in
+              pack (:'col, map f c) `;
+Definition has been stored under "mapp_def"
+> val mapp_def =
+    |- !f p.
+         mapp f p =
+         (let (:'col :ty => ty,c) = p in pack (:'col :ty => ty,map f c))
+     : thm
+\end{verbatim}
+\end{session}
+
+In fact, we can actually build a single operation that takes any two collection pacakges
+and combines their elements, even if they happen to have different underlying data structures,
+like lists and bags.  The result here is calculated to have the same underlying data structure
+as the second argument.
+\begin{session}
+\begin{verbatim}
+- val unionp_def =
+  Define `unionp (p1: ?'col. ('col,'a)collection)
+                 (p2: ?'col. ('col,'a)collection) =
+            let (:'col1, c1) = p1 in
+            let (:'col2, c2) = p2 in
+                pack (:'col2, union c1 c2) `;
+Definition has been stored under "unionp_def"
+> val unionp_def =
+    |- !p1 p2.
+         unionp p1 p2 =
+         (let (:'col1 :ty => ty,c1) = p1 in
+          let (:'col2 :ty => ty,c2) = p2
+          in
+            pack (:'col2 :ty => ty,union c1 c2))
+     : thm
+\end{verbatim}
+\end{session}
+
+Using packages in this way makes it easier to modularize a large proof, by providing a
+way to hide the information about which particular types are being used at a lower level
+in the overall proof.  This information hiding has major advantages for proof maintenance
+and modification over time.

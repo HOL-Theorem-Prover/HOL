@@ -1,0 +1,1899 @@
+
+\chapter{Example: Packages}\label{chap:package}
+
+This chapter explains existential types and 
+packages, which are used for information hiding and modularity in proofs. 
+These are very well described in chapter 24 of {\it Types and Programming Languages\/} 
+by Benjamin C.~Pierce (MIT Press, 2002), 
+and this chapter will draw significantly from Professor Pierce's work.
+Packages are a new variety of term, and
+just like the new type abstraction terms, require a new
+variety of type to serve as their types. In particular, 
+where a type abstraction term has a universal type, 
+a package term has a new type called an {\it existential type}.
+
+Packages are somewhat similar to objects in 
+object-oriented languages like Java, in the sense that the 
+internal details of how the object's data is represented are
+to some degree hidden from the users of the object.
+This is very useful in practice, since it allows the actual
+representation of the data within the object to be changed at
+some later time, perhaps 
+%to a more efficient representation,
+for efficiency concerns,
+while not disturbing the 
+object's appearance to 
+external code that uses the object
+as a black box.
+Packages do not include all of the features or
+flexibility of Java objects, omitting for example inheritance
+of methods and dynamic dispatch. 
+But they are a first step toward organizing
+the data structures of a system in an object-oriented way.
+
+There is also some overlap in purpose between packages
+and the abstract data types described in chapter \ref{chap:adt};
+both shield and abstract away some of the details of internal
+data structures, for the purposes of information hiding and modularity.
+The main difference between these two approaches
+is that abstract data types are actual new
+full-weight types introduced into the \HOLW{} logic 
+whose properties are truly only partially determined, 
+whereas packages are more
+light-weight data structures that may be constructed or deconstructed
+on the fly as first-class values, and whose internal details are fixed
+and real but intentionally obscured, just as an object's signature only reveals
+the general patterns of access to the object's internal data,
+not the precise shape of how it is actually laid out.
+Thus abstract data types are truly abstract; the internal
+representation is not simply unknown at present but in fact
+is completely unknowable. By contrast, the internal representation
+of a package is secret but determined and fixed. 
+The particular representation might possibly disclose itself 
+through occasions of the use of the package to compute values.
+
+%Packages are terms, whose types are 
+%a new variety of type called 
+As mentioned earlier, the types of package terms are
+existential types. These types are distinct from any other types
+that we have described before; for example, there is no overlap between
+universal and existential types.
+Superficially, these two types look almost identical, except that where 
+the universal types use a universal quantification symbol,  
+existential types use an existential quantification symbol.
+However, despite these superficial parallels, universal and
+existential types are not really duals in the close sense that 
+normal universal
+and existential quantification are duals of each other.
+In particular, the ways that packages are first created and then
+taken apart and used are more heavy-weight than the ways that
+type abstraction terms are created and then used. Not only is
+the syntax more cumbersome, the ideas behind existential types
+are also somewhat more difficult to grasp at first glance than 
+those behind universal types. 
+Therefore we take some more time in this chapter to 
+%explain them.
+%, and 
+ease their introduction.
+
+%There are three intentions:
+%There are three intended accomplishments:
+%The intention is to accomplish three things:
+The goals of this chapter are:
+
+\begin{myenumerate}
+\item To present how existential types are created and what they mean,
+\item To show how packages, terms of existential type, can be created and used,
+\item To show how packages can be applied in an object-oriented way.
+%\item To practically demonstrate the usefulness of the new ideas of \HOLW{}.
+\end{myenumerate}
+
+To some extent packages and existential types have already been demonstrated
+in the Appetizers chapter \ref{chap:appetizers}. In this chapter we will examine
+them more closely, 
+and illustrate some of their interesting aspects.
+
+\section{Existential Types}
+
+An existential type is written as $\mbox{\tt ?}\alpha.\sigma$ or
+$\exists\alpha.\sigma$, where the type
+variable $\alpha$ may appear freely within the type $\sigma$. 
+Such occurrences of $\alpha$ are
+considered bound by the existential quantification. 
+Therefore, although other type variables
+that are free within $\sigma$ are also free type variables of
+$\exists\alpha.\sigma$, the type variable $\alpha$ is never a free type
+variable of $\exists\alpha.\sigma$.
+
+Notably, $\alpha$ may be of any kind or rank, but $\sigma$ must have a
+base kind, just as for universal types.
+The kind of $\exists\alpha.\sigma$ itself will be a base kind, where its
+rank is determined the same as for universal types:
+if $\alpha$ has rank $r_\alpha$ and $\sigma$ has rank $r_\sigma$, then
+the rank of $\exists\alpha.\sigma$ will be the maximum of $r_\alpha + 1$
+and $r_\sigma$.
+
+To get an intuition as to the meaning of universal and existential types,
+a universal type $\forall\alpha.\sigma$
+may be thought of as 
+%an infinite collection
+%of values which are indexed by types of the kind of $\alpha$; 
+%for {\it all\/} index types $\sigma_\alpha$, the collection
+%contains all values of type $\sigma[\sigma_\alpha / \alpha]$. 
+%Alternatively, the universal
+%type may be thought of as 
+%containing 
+%the set of 
+%all
+%having values which are 
+a type whose values are
+functions that map any type $\sigma_\alpha$ 
+%of the same kind as $\alpha$ 
+%(or where 
+such that
+the kind of $\alpha$ is \texttt{:>=:} the kind of $\sigma_\alpha$
+to a term value of the type $\sigma[\sigma_\alpha / \alpha]$.
+These are special functions in that 
+1) they map from types to term values, not from a value to a value, and
+2) the type of the resulting value
+depends on the actual type $\sigma_\alpha$ that is input.
+Because of this, these functions are called {\it dependent functions}.
+%These functions can be understood as {\it dependent functions},
+%since the type of their results, $\sigma[\sigma_\alpha / \alpha]$,
+%depends on the actual value of their input, $\sigma_\alpha$.
+
+In comparison to this, the meaning of an existential type 
+$\exists\alpha.\sigma$
+may be thought of as 
+%the type containing all values
+%of type $\sigma[\sigma_\alpha / \alpha]$ for {\it some\/} type
+%$\sigma_\alpha$ 
+%of the same kind as $\alpha$.
+%Alternatively, the existential type may be thought of as
+%the collection of all 
+%having values which are
+a type whose values are
+pairs of a type and a term, 
+%$(\sigma_\alpha,\ t : \sigma[\sigma_\alpha / \alpha])$
+e.g.~$(\sigma_\alpha, t)$,
+where $\sigma_\alpha$ is a type
+%with the same kind as $\alpha$ 
+%(or where 
+such that
+the kind of $\alpha$ is \texttt{:>=:} the kind of $\sigma_\alpha$,
+and 
+%where 
+$t$ is a term with the type $\sigma[\sigma_\alpha / \alpha]$.
+%for some possible type $\sigma_\alpha$ 
+%of the same kind as $\alpha$.
+These are special pairs in that 
+1) they join a type and a term in a pair, not two terms, and
+2) the type of the second element of the pair $t$
+depends on the actual type $\sigma_\alpha$ that is the first element
+of the pair.
+Because of this, these pairs are called {\it dependent pairs}.
+%These pairs can be understood as {\it dependent pairs},
+%since the type of the term $t$ which is the second element of the pair
+%depends on the actual type $\sigma_\alpha$ which is the first element of the pair.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- set_trace "Unicode" 0;
+> val it = () : unit
+- new_theory "package";
+<<HOL message: Created theory "package">>
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+Syntactically, existential types look very much like universal types, 
+except that the {\tt !}~symbol is replaced by 
+{\tt ?}~(or $\forall$ by $\exists$).
+Just as for universal types, in $\exists\alpha.\sigma$ the
+bound variable $\alpha$ has scope over the body, $\sigma$.
+The free type variables of an existential type are the free type
+variables of the body, minus the bound type variable.
+\begin{session}
+\begin{verbatim}
+- val ety1 = ``:?'a. 'a -> 'a``;
+> val ety1 = ``:?'a. 'a -> 'a`` :
+  hol_type
+  
+- val ety1_vars = type_vars ety1;
+> val ety1_vars = [] : hol_type list
+
+- val ety2 = ``:?'a. 'a -> 'b``;
+> val ety2 = ``:?'a. 'a -> 'b`` :
+  hol_type
+  
+- val ety2_vars = type_vars ety2;
+> val ety2_vars = [``:'b``] : hol_type list
+\end{verbatim}
+\end{session}
+
+\ML{} functions {\tt is\_exist\_type}, {\tt mk\_exist\_type}, {\tt dest\_exist\_type},
+etc.~are provided to test, create, or take apart 
+%existential 
+these types.
+\begin{session}
+\begin{verbatim}
+- is_exist_type ety2;
+> val it = true : bool
+
+- val ety2' = mk_exist_type(gamma, gamma --> beta);
+> val ety2' = ``:?'c. 'c -> 'b`` :
+  hol_type
+  
+- val check = eq_ty ety2 ety2';
+> val check = true : bool
+
+- val (bvar,body) = dest_exist_type ety2;
+> val bvar = ``:'a`` : hol_type
+  val body = ``:'a -> 'b`` : hol_type
+\end{verbatim}
+\end{session}
+
+Similarly, {\tt list\_mk\_exist\_type} and {\tt strip\_exist\_type} create or take
+apart multiple instances of existential types.
+\begin{session}
+\begin{verbatim}
+- val ety3 = list_mk_exist_type ([alpha,gamma], alpha --> beta --> gamma);
+> val ety3 =
+    ``:?'a 'c. 'a -> 'b -> 'c``
+     : hol_type
+     
+- val (ety3_bvars,ety3_body) = strip_exist_type ety3;
+> val ety3_bvars =
+    [``:'a``, ``:'c``] :
+  hol_type list
+  val ety3_body =
+    ``:'a -> 'b -> 'c``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+
+\section{Packages}
+
+Terms with existential types are called {\it packages}. 
+With respect to such terms, there are two key issues: 
+how are they created, and how are they used.
+Therefore there is a need for a new form to create such pairs, 
+and another new form to take them apart.
+Remember that intuitively 
+a value of an existential type 
+(i.e., a package)
+is
+%we are dealing with
+a special 
+kind of 
+pair of a type and a term,
+%Since intuitively we are dealing a special kind of pairs of a type and a term, 
+where the type of the term depends upon the type which is the first element of the pair.
+
+In \HOLW{}, a package is constructed using the syntax $$\mathbf{pack}({:}\sigma, t)\ ,$$ 
+where {\bf pack} is a reserved keyword, $\sigma$ is a type, and $t$ is a term. 
+%Here $\sigma$ may appear freely within the term $t$.
+Note the presence of a colon ($:$) before the type $\sigma$ 
+to indicate the presence of a type, rather than a term.
+
+In general, this may not be enough information to 
+determine 
+%the type of 
+the package uniquely. In such cases, it suffices to
+add a type annotation to the package syntax, as for example 
+$$\mathbf{pack}({:}\sigma, t) : \exists\alpha.\sigma'\ ,$$
+where the type annotation is an existential type $\exists\alpha.\sigma'$
+such that the type of the body $t$ is $\sigma'[\sigma / \alpha]$.
+This annotated version will always determine the package uniquely,
+so it is advisable to generally include the type annotation if there is any
+uncertainty.
+%Note that the type $\sigma$ and the type variable $\alpha$ must
+%have the same kind.
+
+The following examples are taken from Pierce's book, pages 364-365.
+The first two show how the same package text, made from the same
+type and term, can have two different existential types,
+depending on whether or not a type annotation is provided.
+\begin{session}
+\begin{verbatim}
+- val pkg1 = ``pack (:num, (5, \x:num. SUC x))``;
+> val pkg1 = ``pack (:num,(5,(\x. SUC x)))`` :
+  term
+- val pkg1_ty = type_of pkg1;
+> val pkg1_ty =
+    ``:?'x. 'x # ('x -> 'x)``
+     : hol_type
+     
+- val pkg2 = ``pack (:num, (5, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
+> val pkg2 = ``pack (:num,(5,(\x. SUC x)))`` :
+  term
+- val pkg2_ty = type_of pkg2;
+> val pkg2_ty =
+    ``:?'x :(ty:1). 'x # ('x -> num)``
+     : hol_type
+\end{verbatim}
+\end{session}
+
+The type of a package $\mathbf{pack}({:}\sigma, t)$
+is always an existential type $\exists\alpha.\sigma'$
+%where we require 
+such
+that the type of the body $t$ is $\sigma'[\sigma / \alpha]$.
+Remember the kind of $\alpha$ must be \texttt{:>=:} the kind~of~$\sigma$.
+In the above two cases, the 
+%$\sigma'$s 
+two existential types
+are either 
+{\tt $\exists$'x.'x~\#~('x~->~'x)} or
+{\tt $\exists$'x.'x~\#~('x~->~num)}, but in both cases the type of the 
+body is $\sigma'[\sigma / \alpha]$ which is {\tt num~\#~(num~->~num)}.
+This shows that in general it is a good idea to provide the type annotation,
+even though it might not be always necessary.
+%Also, every term of existential type is a package constructed
+%from some type $\sigma$ and body $t$.
+
+Also, it is entirely possible to make different packages which
+have the exact same type. In fact, this is part of the point of 
+having packages, because we wish to hide certain information,
+in particular the exact representation type which is the
+first element of the pair that is the package value.
+Here are two different packages with the same type.
+\begin{session}
+\begin{verbatim}
+- val pkg3 = ``pack (:num, 0) : ?'x. 'x``;
+> val pkg3 =
+    ``pack (:num,(0 :num))`` :
+  term
+- val pkg3_ty = type_of pkg3;
+> val pkg3_ty = ``:?'x. 'x`` :
+  hol_type
+
+- val pkg4 = ``pack (:bool, T) : ?'x. 'x``;
+> val pkg4 = ``pack (:bool,T)`` : term
+- val pkg4_ty = type_of pkg4;
+> val pkg4_ty = ``:?'x. 'x`` :
+  hol_type
+
+- val check = eq_ty pkg3_ty pkg4_ty;
+> val check = true : bool
+\end{verbatim}
+\end{session}
+
+Here is another example of two packages which are different
+internally, but have the same existential type.
+We will see an actual use for these packages in what follows.
+\begin{session}
+\begin{verbatim}
+- val pkg5 =
+    ``pack (:num, (0, \x:num. SUC x)) : ?'x. 'x # ('x -> num)``;
+> val pkg5 =
+    ``pack (:num,((0 :num),(\(x :num). SUC x)))``
+     : term
+- val pkg5_ty = type_of pkg5;
+> val pkg5_ty =
+    ``:?'x. 'x # ('x -> num)``
+     : hol_type
+
+- val pkg6 =
+    ``pack (:bool, (T, \x:bool. 0)) : ?'x. 'x # ('x -> num)``;
+> val pkg6 =
+    ``pack (:bool,(T,(\(x :bool). (0 :num))))``
+     : term
+- val pkg6_ty = type_of pkg6;
+> val pkg6_ty =
+    ``:?'x. 'x # ('x -> num)``
+     : hol_type
+
+- val check = eq_ty pkg5_ty pkg6_ty;
+> val check = true : bool
+\end{verbatim}
+\end{session}
+This has shown how we construct packages. Now we will see how we take them apart.
+
+In \HOLW{}, packages are taken apart (deconstructed) 
+%(that is, taken apart and used) 
+via the special syntax
+$$\mathbf{let}\ ({:}\alpha,x) = p\ \mathbf{in}\ s\ .$$
+Here $\alpha$ is a type variable, $x$ is a term variable whose type may mention
+$\alpha$, $p$ is a term yielding a package, 
+and $s$, the body of the {\bf let}, is a term.
+The idea here is that the package $p$ is opened up, and
+the pair that is inside the package is bound to 
+the pair of $\alpha$ and $x$, 
+and then $\alpha$ and $x$ are usable within the body $s$.
+Both $\alpha$ and $x$ are bound by this syntax.
+The scope of $\alpha$ is $x$ and $s$, while the scope of $x$ is $s$.
+We require that the 
+types of the free variables of $s$ do not mention the type variable $\alpha$,
+and likewise that the type of $s$ itself does not mention the type variable $\alpha$.
+This is only sensible, as the scope of $\alpha$ is only the variable $x$
+and the body $s$, and
+%the type variable 
+$\alpha$ has no meaning outside that scope.
+
+This syntax for deconstructing a package is distinguished from the normal
+{\bf let} 
+syntax for 
+%deconstructing a pair, 
+pairs,
+$\mathbf{let}\ (x,y) = e\ \mathbf{in}\ e'$,
+by the presence of the colon just after the left parenthesis.
+
+Here is an example of deconstructing \texttt{pkg5} from above.
+\begin{session}
+\begin{verbatim}
+- val unpkg5 = ``let (:'x, t:'x # ('x -> num)) = ^pkg5
+                 in (SND t) (FST t)``;
+> val unpkg5 =
+    ``let (:'x,(t :'x # ('x -> num))) =
+            (pack (:num,((0 :num),(\(x :num). SUC x))))
+      in
+        SND t (FST t)``
+     : term
+\end{verbatim}
+\end{session}
+
+So now that we can write down how to take a package apart, what does it mean?
+The effect of deconstructing a package is given by the following \HOLW{} theorem:
+$$ \vdash (\mathbf{let}\ ({:}\alpha,x) = 
+                         \mathbf{pack}({:}\sigma, t) % : \exists\alpha.\sigma'
+           \ \mathbf{in}\ s)\ =\ 
+          (\lambda{:}\alpha. \lambda x. s)\ [{:}\sigma{:}]\ t
+$$
+The body of the {\bf let}, $s$, is made into a function that expects first a
+type argument $\sigma$, which is  bound to the formal type parameter $\alpha$,
+and secondly a term argument $t$, which is  bound to the formal term
+parameter $x$. Then the body $s$ is executed in this context.
+This is called {\it package reduction}, by analogy with beta reduction:
+$(\lambda x.s)\ t = s[t / x]$.
+
+To show the meaning of such uses of packages, we define a
+simple evaluation tool using the \ML{} functions \texttt{SIMP\_CONV}
+and \texttt{srw\_ss}
+from the simplification library.
+\begin{session}
+\begin{verbatim}
+- fun eval ths tm = QCONV (SIMP_CONV (srw_ss()) ths) tm;
+> val eval = fn : thm list -> term -> thm
+
+- val unpkg5_res = eval [] unpkg5;
+<<HOL message: Initialising SRW simpset ... done>>
+> val unpkg5_res =
+    |- (let (:'x,(t :'x # ('x -> num))) =
+              (pack (:num,((0 :num),(\(x :num). SUC x))))
+        in
+          SND t (FST t)) =
+       (1 :
+       num) : thm
+\end{verbatim}
+\end{session}
+The simplifier knows how to reduce such deconstructions of packages, and 
+how to evaluate the \texttt{SUC} function as well, even though that
+was hidden within \texttt{pkg5}.
+
+Here is another example, using the same {\bf let} but with \texttt{pkg6} from above.
+\begin{session}
+\begin{verbatim}
+- val unpkg6 = ``let (:'x, t:'x # ('x -> num)) = ^pkg6
+                 in (SND t) (FST t)``;
+> val unpkg6 =
+    ``let (:'x,(t :'x # ('x -> num))) =
+            (pack (:bool,(T,(\(x :bool). (0 :num)))))
+      in
+        SND t (FST t)``
+     : term
+
+- val unpkg6_res = eval [] unpkg6;
+> val unpkg6_res =
+    |- (let (:'x,(t :'x # ('x -> num))) =
+              (pack (:bool,(T,(\(x :bool). (0 :num)))))
+        in
+          SND t (FST t)) =
+       (0 :
+       num) : thm
+\end{verbatim}
+\end{session}
+Note that the resulting value is different (although the type is the same),
+because although the body of the {\bf let} is the same,
+the package that is being unpacked is different.
+
+%The following shows how the same package can be deconstructed in different
+%ways, yet return the same answer.
+%\begin{session}
+%\begin{verbatim}
+%- val unpkg5a = ``let (:'x, t:'x # ('x -> num)) = ^pkg5 in (\y:'x. (SND t) y) (FST t)``;
+%> val unpkg5a =
+%    ``let (:'x,(t :'x # ('x -> num))) =
+%            (pack (:num,((0 :num),(\(x :num). SUC x))))
+%      in
+%        (\(y :'x). SND t y) (FST t)``
+%     : term
+%
+%- val unpkg5a_res = eval [] unpkg5a;
+%> val unpkg5a_res =
+%    |- (let (:'x,(t :'x # ('x -> num))) =
+%              (pack (:num,((0 :num),(\(x :num). SUC x))))
+%        in
+%          (\(y :'x). SND t y) (FST t)) =
+%       (1 :
+%       num) : thm
+%\end{verbatim}
+%\end{session}
+
+\section{Underlying Implementation of Packages}
+
+One can use the {\bf pack} and {\bf let} syntax as described above
+to construct and deconstruct packages. In the following, we describe the
+implementation of this syntax, which can be skipped by the casual reader without loss.
+But for those who are interested, the syntax as given so far for both these new forms
+to construct and deconstruct packages
+is actually syntactic sugar. Underneath, the actual syntax rests on two new 
+fundamental term constants in the \HOLW{} logic, {\tt PACK} and {\tt UNPACK}.
+These are part of the theory {\tt bool}, with the following primal types:
+$$
+\begin{array}{rcl}
+\mathtt{PACK} & : & \ \,\forall \psi{:}\kappa.\ 
+                    \psi\ (\alpha : \kappa \Rightarrow \mathbf{ty}{:}1)
+                    \ \mbox{\tt ->}\ 
+                    (\exists \phi{:}\kappa.\ \phi\ \alpha) \\
+\mathtt{UNPACK} & : & (\forall \psi{:}\kappa.\ 
+                    \psi\ (\alpha : \kappa \Rightarrow \mathbf{ty}{:}1)
+                    \ \mbox{\tt ->}\ 
+                    (\beta {:}\mathbf{ty}{:}1))
+                    \ \mbox{\tt ->}\ 
+                    (\exists \phi{:}\kappa.\ \phi\ \alpha)
+                    \ \mbox{\tt ->}\ 
+                    \beta
+\end{array}
+$$
+Note that the kind variable $\kappa$ and the type variables $\alpha$ and
+$\beta$ are free in the above types, which provide all the needed flexibility
+for instances of the constants {\tt PACK} and {\tt UNPACK}
+to use packages in every appropriate situation.
+In particular we use the 
+%higher (arrow) kinded 
+free type variable $\alpha$
+in combination with its argument, the type variable $\phi$,
+to represent any possible type expression with free type variable $\phi$,
+and thus any possible existential type $\exists \phi{:}\kappa.\ \phi\ \alpha$.
+
+The 
+surface syntax
+%syntactic sugar
+for packages given previously is actually translated 
+by the parser into
+uses of {\tt PACK} and {\tt UNPACK}, as follows.
+$$
+\begin{array}{lcl}
+\mathbf{pack}({:}\sigma, t) % : \exists\alpha.\sigma'
+& \ \mapsto \ & \mathtt{PACK}\ [{:}\sigma{:}]\ t \\
+\mathbf{let}\ ({:}\alpha,x) = p\ \mathbf{in}\ s
+& \mapsto & \mathtt{UNPACK}\ (\lambda{:}\alpha. \lambda x. s)\ p
+\end{array}
+$$
+\subsection{Package Axioms}
+
+Using {\tt PACK} and {\tt UNPACK}, the reduction of packages is 
+fundamentally expressed
+by the new \HOLW{} axiom {\tt UNPACK\_PACK\_AX}:
+%$$ \vdash \mathtt{UNPACK}\ f\ (\mathtt{PACK}\ [{:}\sigma{:}]\ t) \ =\ 
+%          f\ [{:}\sigma{:}]\ t
+%$$
+\\
+
+\begin{tabular}{p{4.8in}p{1.0in}}
+\makebox[4.8in][c]{
+\begin{tabular}{c}
+$\begin{array}{rl}
+\vdash & 
+\forall{:} (\alpha : \kappa \Rightarrow \mathbf{ty}{:}1) \ 
+           (\beta  : \mathbf{ty}{:}1) \ 
+           (\phi : \kappa). \\
+& \ \ \ \forall (f : \forall\psi{:}\kappa.\ \psi\ \alpha
+              \ \mbox{\tt ->} \ \beta) \ 
+         (t : \phi\ \alpha). \\
+& \ \ \ \ \ \ {\tt UNPACK} \ 
+f \ (\mathtt{PACK}\ [{:} \, \phi \, {:}] \ t)
+    = f\ [{:} \, \phi \, {:}]\ t
+\end{array}$ \\
+\end{tabular}} &
+\makebox[1.0in][r]{({\tt UNPACK\_PACK\_AX})} \\
+\end{tabular}
+\\
+
+\noindent
+This axiom is included in the basic simplification set {\tt bool\_ss},
+so almost every invocation of the simplifier will attempt this reduction
+of packages by higher-order rewriting with {\tt UNPACK\_PACK\_AX},
+along with {\tt TY\_BETA\_CONV} and {\tt BETA\_CONV}
+to resolve $(\lambda{:}\alpha. \lambda x. s)\ [{:}\sigma{:}]\ t$.
+
+\HOLW{} also includes the new axiom {\tt PACK\_ONTO\_AX}:
+\\
+
+\begin{tabular}{p{4.8in}p{1.0in}}
+\makebox[4.8in][c]{
+\begin{tabular}{rl}
+$\vdash$ & 
+$\forall{:} (\alpha : \kappa \Rightarrow \mathbf{ty}{:}1).\ 
+    \forall (p : \exists\psi{:}\kappa.\ \psi\ \alpha).$ \\
+& \ \ \ \ \ \ $\exists{:} (\phi : \kappa).\ 
+               \exists (t : \phi\ \alpha).$ \\
+& \ \ \ \ \ \ \ \ \ $p = \mathtt{PACK}\ [{:} \, \phi \, {:}] \ t$ \\
+\end{tabular}} &
+\makebox[1.0in][r]{({\tt PACK\_ONTO\_AX})} \\
+\end{tabular}
+\\
+
+\noindent
+{\tt PACK\_ONTO\_AX} expresses the idea that every package was
+created using {\tt PACK} from some type and term. Thus {\tt PACK}
+is the sole constructor of values of existential type.
+
+\newpage
+\section{Example: Counters}
+
+To see how packages can be used to simulate the idea of an object,
+we consider a counter, as an object for which there are three methods;
+a {\tt new} method to create a counter with an initialized count, 
+a {\tt get} method to obtain the counter's current value, and
+an {\tt inc} method to increment the counter's value.
+
+The first step is to create a record type to hold these three methods.
+The methods will need to be parameterized on the actual type 
+of the counter's contents,
+since that data structure is what the object is hiding.
+Eventually we will form a package with an existential type,
+where the actual representation of the counter's data
+will be hidden.
+
+When designing the record type, we need to consider 
+that we are working in a logic that does not have all 
+of the features of a sophisticated programming language.
+Accordingly, the {\tt get} method needs to take that internal
+data structure as input in order to compute the count that is output.
+In Java, an object can update its private data fields, but in a
+functional logic like \HOLW{}, any change must be represented by
+making a new copy of the original object, with updated contents.
+Also, whereas in Java a new object can be constructed by a
+routine that establishes its initial value, here we need
+to use the {\tt new} method to obtain that initial value,
+since it must be of the unknown 
+and parameterized 
+type.
+%In addition, in this functional logic, the {\tt inc} method will 
+%actually create a new copy of the counter object, rather than
+%updating the existing counter in place.
+
+The new record type
+can be introduced to the \HOLW{} logic by the following.
+% command.
+\begin{session}
+\begin{verbatim}
+- val _ = Hol_datatype
+       `counter_recd1 =
+                     <| new : 'a;
+                        get : 'a -> num;
+                        inc : 'a -> 'a
+                      |>`;
+<<HOL message: Defined type: "counter_recd1">>
+- val counter_kind = kind_of ``:counter_recd1``;
+> val counter_kind = ``::ty => ty`` : kind
+\end{verbatim}
+\end{session}
+This introduces a new type constant in the \HOLW{} logic
+named {\tt counter\_recd1}, along with term constants for
+constructing, accessing, and updating 
+the fields of values of this record type.
+The type constant created
+%, {\tt counter\_recd1}, 
+has the arrow kind {\bf ty} {\tt =>} {\bf ty}, so {\tt counter\_recd1}
+is a type operator that expects a type argument of kind {\bf ty}.
+
+The aim now is to create packages as values of this abstract data type,
+as values of type $\exists\psi.\ \psi\ \mathtt{counter\_recd1}$.
+One way is to simply use a natural number as the hidden data
+structure, so that the increment function is just the successor function {\tt SUC}.
+\begin{session}
+\begin{verbatim}
+- val counterADT =
+       ``pack ( :num,
+                <| new := 1;
+                   get := \i:num. i;
+                   inc := \i:num. SUC i
+                |> ) : ?'a. 'a counter_recd1``;
+> val counterADT =
+    ``pack
+        (:num,
+          <|new := (1 :num); get := (\(i :num). i);
+            inc := (\(i :num). SUC i)|>)``
+     : term
+- val counterADT_type = type_of counterADT;
+> val counterADT_type =
+    ``:?'x. 'x counter_recd1``
+     : hol_type
+\end{verbatim}
+\end{session}
+This yields a value with the desired existential type.
+
+Next we wish to test this package by using it. The following
+code creates a new counter, increments it, and then returns its value.
+\begin{session}
+\begin{verbatim}
+- val counter_ex1 =
+  ``let (:'Counter,counter) = ^counterADT in
+    counter.get (counter.inc counter.new)``;
+> val counter_ex1 =
+    ``let (:'Counter,(counter :'Counter counter_recd1)) =
+            (pack
+               (:num,
+                 <|new := (1 :num); get := (\(i :num). i);
+                   inc := (\(i :num). SUC i)|>))
+      in
+        counter.get (counter.inc counter.new)``
+     : term
+\end{verbatim}
+\end{session}
+
+We can test to see how this works by using the {\tt eval} tool we
+defined earlier. This provides a theorem where this program is
+simplified by evaluation.
+\begin{session}
+\begin{verbatim}
+- val ex1_res = eval[] counter_ex1;
+> val ex1_res =
+    |- (let (:'Counter,(counter :'Counter counter_recd1)) =
+              (pack
+                 (:num,
+                   <|new := (1 :num); get := (\(i :num). i);
+                     inc := (\(i :num). SUC i)|>))
+        in
+          counter.get (counter.inc counter.new)) =
+       (2 :
+       num) : thm
+\end{verbatim}
+\end{session}
+
+Here is another example, where we define a routine to increment
+the counter three times, and then return the result.
+\begin{session}
+\begin{verbatim}
+- val counter_ex2 =
+  ``let (:'Counter,counter) = ^counterADT in
+    let add3 = \c:'Counter. counter.inc (counter.inc (counter.inc c)) in
+    counter.get (add3 counter.new)``;
+> val counter_ex2 =
+    ``let (:'Counter,(counter :'Counter counter_recd1)) =
+            (pack
+               (:num,
+                 <|new := (1 :num); get := (\(i :num). i);
+                   inc := (\(i :num). SUC i)|>))
+      in
+        let (add3 :'Counter -> 'Counter) (c :'Counter) =
+              counter.inc (counter.inc (counter.inc c))
+        in
+          counter.get (add3 counter.new)``
+     : term
+\end{verbatim}
+\end{session}
+
+We can use the {\tt eval} tool as before to evaluate this expression.
+%It is necessary 
+We need
+to supply {\tt LET\_DEF}, 
+the definition of the constant {\tt LET} which is used to create
+the syntactic sugar {\bf let..in} form, 
+so that it can be reduced as well. 
+(For some reason this is not included in
+the automatic set of simplifications.)
+\begin{session}
+\begin{verbatim}
+- LET_DEF;
+> val it =
+    |- (LET :('a -> 'b) -> 'a -> 'b) = (\(f :'a -> 'b) (x :'a). f x)
+     : thm
+     
+- val ex2_res = eval[LET_DEF] counter_ex2;
+> val ex2_res =
+    |- (let (:'Counter,(counter :'Counter counter_recd1)) =
+              (pack
+                 (:num,
+                   <|new := (1 :num); get := (\(i :num). i);
+                     inc := (\(i :num). SUC i)|>))
+        in
+          let (add3 :'Counter -> 'Counter) (c :'Counter) =
+                counter.inc (counter.inc (counter.inc c))
+          in
+            counter.get (add3 counter.new)) =
+       (4 :
+       num) : thm
+\end{verbatim}
+\end{session}
+
+
+\section{Example: Scheduling Queues}
+
+To demonstrate the usefulness of packages, we now will develop a theory
+of scheduling queues for an operating system.
+
+Consider an operating system in which there are multiple processes,
+some of which are from time to time suspended in an inactive state,
+while others are running on the available processors.
+
+The processes which are suspended are remembered in some kind of
+a data structure. When a new process is created, or when 
+a currently running process becomes suspended,
+it is added to this data structure. When a process finishes its task
+and ends, its processor is then assigned to work on one of the
+other processes in the data structure.
+
+Exactly which process is chosen is a matter of policy. One simple
+choice is that it should be the oldest process residing in the data
+structure. This leads to a last-in-first-out policy, which is 
+accomplished by using a queue for the data structure.
+
+However, this is not the only legitimate choice. There may be
+processes with higher priority, or there may be some more subtle
+measure of utility which ranks different processes more suitable
+to be assigned to the new processor.
+
+One could even use a first-in-first-out policy, which would be 
+accomplished by using a stack for the data structure. While this 
+would not possess certain desirable properties like fairness, 
+that each suspended process will eventually run, it might be 
+suitable for certain restricted applications.
+
+Even for a given policy, there may be several possible implementations
+which may vary in their pragmatics. We may begin, say, with a
+very simple and clean implementation of queues, and later move
+to a more complex representation for faster performance.
+
+What is interesting here is that these different policy choices can
+be modularized by simply making them part of the data structure.
+Each such policy choice 
+would be implemented by a different data structure.
+As long as each data structure obeys certain general properties,
+we can swap any of a variety of data structures for the one used in
+the implementation of the scheduling algorithm. We can even delay
+the choice of which policy to use until late in the overall development,
+or even switch the policy on the fly during runtime, simply by changing
+the data structure, as long as each of the family of data structures used 
+all obey the same general properties.
+
+The rest of the software development can then rely on the data structure
+to obey these general properties, but cannot rely on any
+other special properties of any individual data structure or the
+policy it represents. This enforces a modularity that is a vital
+feature of good system design, where design choices are isolated
+and hidden from the rest of the system, so that later changes have
+a minimum ripple effect.
+
+Packages are critical to performing this necessary information hiding.
+This example demonstrates how packages can be used to accomplish
+the hiding of the actual data structure used. This supports 
+proper modularization,
+so that the software that uses the scheduling data structure is
+isolated from the details of its implementation.
+
+%\subsection{Scheduling operations}
+
+To begin, we will consider data structures that collect a number
+of elements. The types of these data structures will be modeled 
+as a type operator $\beta$ of kind $\mathbf{ty} \Rightarrow \mathbf{ty}$
+that maps an element of type $\alpha$ into a data structure of
+type $\alpha\ \beta$.
+
+The data structures themselves may have many different definitions,
+but here we want to concentrate on their fundamental operations and
+general properties. As a beginning, we want the scheduling
+data structures to support the following operations:
+%
+\begin{center}
+\begin{tabular}{|lcl|}
+\hline
+emptyq & : & $\forall\beta.\ \beta\ \alpha$ \\
+insert & : & $\forall\beta.\ \beta \rightarrow \beta\ \alpha \rightarrow \beta\ \alpha$ \\
+remove & : & $\forall\beta.\ \beta\ \alpha \rightarrow \beta\ \mbox{\tt \#}\ \beta\ \alpha$ \\
+count  & : & $\forall\beta.\ \beta \rightarrow \beta\ \alpha \rightarrow \mathtt{num}$ \\
+\hline
+\end{tabular}
+\end{center}
+%
+Note that each operation is polymorphic in the element type $\beta$.
+
+The meaning of the emptyq operation is to be the empty version of the queue.
+Likewise, the insert operation takes an element and a queue, and inserts
+the element into the queue, returning the new, increased queue.
+The remove operation takes a queue, selects some element of it,
+removing that element from the queue, and returns a pair of the 
+selected element and the new, diminished queue.
+The count operation takes an element and a queue, and returns
+the number of times (possibly zero) that that element appears
+in the queue.
+
+These operations can be assembled into a record of related operations
+that are meant to work together, as follows.
+\begin{session}
+\begin{verbatim}
+- val _ = Hol_datatype
+         `sched_q_opers = <| emptyq : !'b. 'b 'a;
+                             insert : !'b. 'b -> 'b 'a -> 'b 'a;
+                             remove : !'b. 'b 'a -> 'b # 'b 'a;
+                             count  : !'b. 'b -> 'b 'a -> num  |>`;
+<<HOL message: Defined type: "sched_q_opers">>
+\end{verbatim}
+\end{session}
+This datatype definition in the \HOLW{} logic not only creates the 
+%new
+type {\tt sched\_q\_opers}, but also introduces term constants so that
+we can index the fields of any record of this type using the familiar
+notation {\tt rcd.emptyq}, {\tt rcd.insert}, etc.
+
+Next we specify the properties that we wish to be true of these operations
+to constitute a valid and proper scheduling queue. These should be broad
+enough to encompass all the possible implementations we might wish to use,
+but narrow enough to be a base on which to build the rest of the program
+that uses this data structure.
+
+The properties we will choose for this example are the following.
+\begin{enumerate}
+\item The count of any item in the empty queue is zero.
+\item For the queue resulting from the insertion of an element $y$ 
+into a queue $q$, the count of any element $x$ should be the
+count of $x$ in the original queue $q$ plus one if $x = y$,
+but otherwise simply the count of $x$ in $q$.
+\item If a queue $q$ has at least one element (that is, $q$ is not
+empty), then the result of removing an element from $q$ is a pair
+$(y,\ q')$ which has the following property.
+The count of any element $x$ in the original queue $q$ is equal 
+to the count of $x$ in the result of inserting $y$ into $q'$.
+\end{enumerate}
+
+These properties can be represented in the following definition.
+\begin{session}
+\begin{verbatim}
+- val is_scheduling_q_def = Define
+     `is_scheduling_q (ops:'a sched_q_opers) =
+        (!:'b. !(x:'b). ops.count x (ops.emptyq[:'b:]) = 0) /\
+        (!:'b. !(q:'b 'a) (x:'b) (y:'b).
+                  ops.count x (ops.insert y q) =
+                    if x = y then ops.count x q + 1
+                             else ops.count x q) /\
+        (!:'b. !q:'b 'a.
+                if (!x:'b. ops.count x q = 0) then T else
+                  let (y, q') = ops.remove q in
+                  !x:'b. ops.count x q = ops.count x (ops.insert y q'))`;
+Definition has been stored under "is_scheduling_q_def"
+\end{verbatim}
+\end{session}
+The system will respond with the theorem of the definition, which we omit here.
+
+This covers the properties of a scheduling data structure. We will represent
+the data structure in an object-oriented way, by forming a record that contains
+both the current value of the data structure, and also all of the operations
+that can be performed on it. First, we create the type of this record.
+\begin{session}
+\begin{verbatim}
+- val _ = Hol_datatype
+         `sched_q = <| this : 'b 'a;
+                       ops  : 'a sched_q_opers  |>`;
+<<HOL message: Defined type: "sched_q">>
+\end{verbatim}
+\end{session}
+
+For our first scheduling queue implementation, we choose to use
+a simple list, where new elements are added to the list at the front,
+and when an element is removed it is taken from the back of the list.
+For simplicity, instead of a complex type representing processes,
+we choose to use just a simple natural number.
+We intend to build a record of scheduling operations as follows.
+
+\begin{verbatim}
+val reference_q_def = Define
+   `reference_q =
+      <| this := [] : num list;
+         ops  := <| emptyq := \:'b. [] : 'b list;
+                    insert := \:'b. \(x:'b) xs. CONS x xs;
+                    remove := \:'b. \xs:'b list. (LAST xs, FRONT xs);
+                    count  := \:'b. \(x:'b) xs. COUNT x xs
+                  |>
+       |>`;
+\end{verbatim}
+Fortunately, we have predefined operations in the {\tt list}
+library for most of this. Both {\tt []} and {\tt CONS} are commonly used,
+and {\tt FRONT} and {\tt LAST} are predefined in the {\tt list} library.
+{\tt LAST} returns the last element of a list, while 
+{\tt FRONT} returns all of the list except for the last element.
+Both of these are undefined if they are applied to an empty list.
+%
+What is not available in the \HOL{} libraries is the {\tt COUNT} function,
+but this is easy enough to create.
+\begin{session}
+\begin{verbatim}
+- open listTheory;
+. . .
+- val COUNT_DEF = Define
+    `(COUNT (x:'a) [] = 0) /\
+     (COUNT x (y::ys) = if x = y then COUNT x ys + 1
+                                 else COUNT x ys)`;
+Definition has been stored under "COUNT_def"
+> val COUNT_DEF =
+    |- (!(x :'a). COUNT x ([] :'a list) = (0 :num)) /\
+       !(x :'a) (y :'a) (ys :'a list).
+         COUNT x (y::ys) =
+         if x = y then COUNT x ys + (1 :num) else COUNT x ys
+     : thm
+\end{verbatim}
+\end{session}
+
+Then the following properties of {\tt COUNT} are proven by straightforward means.
+\begin{session}
+\begin{verbatim}
+> val ALL_COUNT_ZERO =
+    |- !(xs :'a list).
+         (!(x :'a). COUNT x xs = (0 :num)) <=> (xs = ([] :'a list))
+     : thm
+
+> val ALL_COUNT_ZERO_2 =
+    |- !(xs :'a list) (ys :'a list).
+         (!(x :'a). (COUNT x xs = (0 :num)) /\ (COUNT x ys = (0 :num))) <=>
+         (xs = ([] :'a list)) /\ (ys = ([] :'a list))
+     : thm
+
+> val COUNT_FRONT =
+    |- !(xs :'a list) (x :'a).
+         xs <> ([] :'a list) ==>
+         x <> LAST xs ==>
+         (COUNT x (FRONT xs) = COUNT x xs)
+     : thm
+
+> val COUNT_LAST =
+    |- !(xs :'a list).
+         xs <> ([] :'a list) ==>
+         (COUNT (LAST xs) xs = COUNT (LAST xs) (FRONT xs) + (1 :num))
+     : thm
+     
+> val COUNT_APPEND =
+    |- !(xs :'a list) (ys :'a list) (x :'a).
+         COUNT x ((xs ++ ys) :'a list) = COUNT x xs + COUNT x ys
+     : thm
+\end{verbatim}
+\end{session}
+
+\begin{session}
+\begin{verbatim}
+> val COUNT_REVERSE =
+    |- !(xs :'a list) (x :'a). COUNT x (REVERSE xs) = COUNT x xs
+     : thm
+\end{verbatim}
+\end{session}
+The tactics to prove each are provided in the {\tt packageScript.sml} file in
+the directory {\tt examples/HolOmega}, but not covered further here.
+
+The definition of {\tt COUNT} now allows us to create our reference
+implementation of scheduling queues, as a very simple and clean implementation
+which is not necessarily efficient, but for which the necessary properties 
+should be easy to prove.
+\begin{session}
+\begin{verbatim}
+- val reference_q_def = Define
+     `reference_q =
+        <| this := [] : num list;
+           ops  := <| emptyq := \:'b. [] : 'b list;
+                      insert := \:'b. \(x:'b) xs. CONS x xs;
+                      remove := \:'b. \xs:'b list. (LAST xs, FRONT xs);
+                      count  := \:'b. \(x:'b) xs. COUNT x xs
+                    |>
+         |>`;
+Definition has been stored under "reference_q_def"
+> val reference_q_def =
+    |- (reference_q :(list, num) sched_q) =
+       <|this := ([] :num list);
+         ops :=
+           <|emptyq := (\:'b. ([] :'b list));
+             insert := (\:'b. (\(x :'b) (xs :'b list). x::xs));
+             remove := (\:'b. (\(xs :'b list). (LAST xs,FRONT xs)));
+             count := (\:'b. (\(x :'b) (xs :'b list). COUNT x xs))|> |>
+     : thm
+\end{verbatim}
+\end{session}
+
+Now we can prove that the operations of this reference scheduling
+queue satisfies the properties required to be a scheduling queue.
+\begin{session}
+\begin{verbatim}
+- val reference_q_is_scheduling_q = store_thm(
+   "reference_q_is_scheduling_q",
+   ``is_scheduling_q reference_q.ops``,
+   SRW_TAC [ARITH_ss] [reference_q_def,is_scheduling_q_def,COUNT_DEF]
+   THEN REWRITE_TAC [ALL_COUNT_ZERO]
+   THEN STRIP_ASSUME_TAC (ISPEC ``q:'b list`` list_CASES)
+   THEN ASM_REWRITE_TAC [NOT_CONS_NIL]
+   THEN GEN_TAC
+   THEN SIMP_TAC list_ss [GSYM COUNT_LAST]
+   THEN COND_CASES_TAC
+   THEN SRW_TAC [] [COUNT_FRONT]
+  );
+> val reference_q_is_scheduling_q =
+    |- is_scheduling_q (reference_q :(list, num) sched_q).ops
+     : thm
+\end{verbatim}
+\end{session}
+
+Our intention here is to eventually show that this is one possible
+implementation of scheduling queues, but in the process to hide the
+actual data structure being used. In this case the data structure is
+lists, but we don't wish this to be visible. What we would like is
+to use existential types to hide this, through the use of packages,
+like the following. 
+\begin{session}
+\begin{verbatim}
+- val sched_queue_ty = ``:?'a:ty => ty. ('a,num)sched_q``;
+> val sched_queue_ty =
+    ``:?'a :ty => ty. ('a, num) sched_q``
+     : hol_type
+
+- val sched_queue_ty' = ty_antiq sched_queue_ty;
+> val sched_queue_ty' =
+    ``(ty_antiq( `:?'a :ty => ty. ('a, num) sched_q `))``
+     : term
+\end{verbatim}
+\end{session}
+Here we create the desired type ({\tt sched\_queue\_ty})
+as an existential type, wrapping around the type
+{\tt ('a,num)sched\_q}, but hiding the actual type operator {\tt 'a}
+by the existential type quantification. 
+(The type antiquotation is required to use the type inside terms
+that are being parsed.)
+
+Then a term of this existential type can be created using packages,
+taking our reference queue implementation and abstracting away
+from the actual {\tt list} datatype.
+\begin{session}
+\begin{verbatim}
+- val reference_q_pkg = ``pack(:list, reference_q) : ^sched_queue_ty'``;
+> val reference_q_pkg =
+    ``pack (:list,(reference_q :(list, num) sched_q))``
+     : term
+\end{verbatim}
+\end{session}
+We now create another possible implementation of priority queues. This
+one will use a pair of lists, where new additions
+to the queue are added to the first list at its front, and removals
+from the queue are taken from the second list at its front.
+In the case when the second list is empty, the first list is
+reversed and then replaces the second list.
+%, and then the head is taken.
+%Our intention is to create a definition like the following.
+\begin{verbatim}
+val efficient_q_def = Define
+   `efficient_q =
+      <| this := ([] : num list, [] : num list);
+         ops  := <| emptyq := \:'b. ([] : 'b list, [] : 'b list);
+                    insert := \:'b. \x (xs,ys). (CONS x xs, ys);
+                    remove := \:'b. \(xs,ys). REMOVE xs ys;
+                    count  := \:'b. \x (xs,ys). COUNT x xs + COUNT x ys
+                  |>
+       |>`;
+\end{verbatim}
+\noindent
+The operation of removing an element from this data structure is
+clearly more complex than before, and we express this using a subsidiary
+operator {\tt REMOVE} that we intend to define. But {\tt REMOVE}
+is nontrivial to define, as seen if we try the normal {\tt Define}
+tool.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_def = Define
+    `(REMOVE (xs:'a list) ([]:'a list) = REMOVE [] (REVERSE xs)) /\
+     (REMOVE xs (y::ys) = (y, (xs,ys)))`;
+Initial goal:
+
+
+?(R :'a list # 'a list -> 'a list # 'a list -> bool).
+  WF R /\
+  !(xs :'a list). R (([] :'a list),REVERSE xs) (xs,([] :'a list))
+
+
+Exception raised at TotalDefn.Define:
+between line 141, character 3 and line 142, character 36:
+at TotalDefn.defnDefine:
+
+Unable to prove termination!
+
+Try using "TotalDefn.tDefine <name> <quotation> <tac>".
+The termination goal has been set up using Defn.tgoal <defn>.
+! Uncaught exception: 
+! HOL_ERR
+\end{verbatim}
+\end{session}
+\noindent
+The normal {\tt Define} machinery is not able to automatically prove 
+the termination of this definition, so the system does not accept this
+as a valid definition.
+
+Instead, the definition package is directing us to Konrad Slind's excellent
+total recursive function definition package, which we will now use.
+%The reader is encouraged to read the corresponding sections in the
+We begin by reforming our definition using
+the {\tt Hol\_defn} tool as described in the \DESCRIPTION{} manual.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_defn = Hol_defn "REMOVE"
+  `(REMOVE [] [] = (ARB, ([],[]))) /\
+   (REMOVE (xs:'a list) ([]:'a list) = REMOVE [] (REVERSE xs)) /\
+   (REMOVE xs (y::ys) = (y, (xs,ys)))`;
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+> val REMOVE_defn =
+    HOL function definition (recursive)
+    
+    Equation(s) :
+     [..]
+    |- REMOVE ([] :'a list) ([] :'a list) =
+       ((ARB :'a),([] :'a list),([] :'a list))
+     [..]
+    |- REMOVE ((v2 :'a)::(v3 :'a list)) ([] :'a list) =
+       REMOVE ([] :'a list) (REVERSE (v2::v3))
+     [..]
+    |- REMOVE ([] :'a list) ((y :'a)::(ys :'a list)) = (y,([] :'a list),ys)
+     [..]
+    |- REMOVE ((v4 :'a)::(v5 :'a list)) ((y :'a)::(ys :'a list)) =
+       (y,v4::v5,ys)
+\end{verbatim}
+\end{session}
+   
+\begin{session}
+\begin{verbatim}
+    Induction :
+     [..]
+    |- !(P :'a list -> 'a list -> bool).
+         P ([] :'a list) ([] :'a list) /\
+         (!(v2 :'a) (v3 :'a list).
+            P ([] :'a list) (REVERSE (v2::v3)) ==>
+            P (v2::v3) ([] :'a list)) /\
+         (!(y :'a) (ys :'a list). P ([] :'a list) (y::ys)) /\
+         (!(v4 :'a) (v5 :'a list) (y :'a) (ys :'a list).
+            P (v4::v5) (y::ys)) ==>
+         !(v :'a list) (v1 :'a list). P v v1
+    
+    Termination conditions :
+      0. !(v3 :'a list) (v2 :'a).
+           (R :'a list # 'a list -> 'a list # 'a list -> bool)
+             (([] :'a list),REVERSE (v2::v3)) (v2::v3,([] :'a list))
+      1. WF (R :'a list # 'a list -> 'a list # 'a list -> bool)
+     : defn
+\end{verbatim}
+\end{session}
+This has created an \ML{} data structure (here stored in {\tt REMOVE\_defn})
+which contains the elements of a provisional recursive function definition.
+In particular, it contains both the equations which are the 
+reflections of our original specification, as well as an induction
+principle which can be used to induct over this particular pattern
+of recursion.
+
+But none of this is available for us to use until we prove the
+termination of the definition. This we will have to do by hand.
+Fortunately, Slind's package provides a number of useful tools
+to aid our task.
+
+First, we set up the termination property as a goal to be proved.
+\begin{session}
+\begin{verbatim}
+- Defn.tgoal REMOVE_defn;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete goalstack:
+         Initial goal:
+    
+         ?(R :'a list # 'a list -> 'a list # 'a list -> bool).
+           WF R /\
+           !(v3 :'a list) (v2 :'a).
+             R (([] :'a list),REVERSE (v2::v3)) (v2::v3,([] :'a list))
+    
+    
+     : proofs
+\end{verbatim}
+\end{session}
+We need to supply a well-founded relation as a witness for {\tt R},
+that strictly decreases for each call. A natural choice is
+{\tt measure(\verb|\|(xs,ys).~LENGTH~xs)}. This uses the
+constant {\tt measure} which transforms a function of type
+{\tt 'a~->~num} into a relation on {\tt 'a}.
+\begin{session}
+\begin{verbatim}
+- e (WF_REL_TAC `measure (\(xs,ys). LENGTH xs)`);
+OK..
+1 subgoal:
+> val it =
+    
+    !(v3 :'a list) (v2 :'a). LENGTH ([] :'a list) < LENGTH (v2::v3)
+    
+     : proof
+\end{verbatim}
+\end{session}
+This is easily solved by simplification.
+\begin{session}
+\begin{verbatim}
+- e (SIMP_TAC list_ss []);
+OK..
+
+Goal proved.
+|- !(v3 :'a list) (v2 :'a). LENGTH ([] :'a list) < LENGTH (v2::v3)
+
+> val it =
+    Initial goal proved.
+    |- ((REMOVE ([] :'a list) ([] :'a list) =
+         ((ARB :'a),([] :'a list),([] :'a list))) /\
+        (REMOVE ((v2 :'a)::(v3 :'a list)) ([] :'a list) =
+         REMOVE ([] :'a list) (REVERSE (v2::v3))) /\
+        (REMOVE ([] :'a list) ((y :'a)::(ys :'a list)) =
+         (y,([] :'a list),ys)) /\
+        (REMOVE ((v4 :'a)::(v5 :'a list)) (y::ys) = (y,v4::v5,ys))) /\
+       !(P :'a list -> 'a list -> bool).
+         P ([] :'a list) ([] :'a list) /\
+         (!(v2 :'a) (v3 :'a list).
+            P ([] :'a list) (REVERSE (v2::v3)) ==>
+            P (v2::v3) ([] :'a list)) /\
+         (!(y :'a) (ys :'a list). P ([] :'a list) (y::ys)) /\
+         (!(v4 :'a) (v5 :'a list) (y :'a) (ys :'a list).
+            P (v4::v5) (y::ys)) ==>
+         !(v :'a list) (v1 :'a list). P v v1
+     : proof
+\end{verbatim}
+\end{session}
+
+Now that we know the tactics to use, we can convert 
+{\tt REMOVE\_defn} into a real definition 
+by a single call to {\tt Defn.tprove}.
+\begin{session}
+\begin{verbatim}
+- val (REMOVE_def,REMOVE_ind) =
+  Defn.tprove (REMOVE_defn,
+    WF_REL_TAC `measure (\(xs,ys). LENGTH xs)`
+    THEN SIMP_TAC list_ss []
+  );
+
+> val REMOVE_def =
+    |- (REMOVE ([] :'a list) ([] :'a list) =
+        ((ARB :'a),([] :'a list),([] :'a list))) /\
+       (REMOVE ((v2 :'a)::(v3 :'a list)) ([] :'a list) =
+        REMOVE ([] :'a list) (REVERSE (v2::v3))) /\
+       (REMOVE ([] :'a list) ((y :'a)::(ys :'a list)) =
+        (y,([] :'a list),ys)) /\
+       (REMOVE ((v4 :'a)::(v5 :'a list)) (y::ys) = (y,v4::v5,ys))
+     : thm
+  val REMOVE_ind =
+    |- !(P :'a list -> 'a list -> bool).
+         P ([] :'a list) ([] :'a list) /\
+         (!(v2 :'a) (v3 :'a list).
+            P ([] :'a list) (REVERSE (v2::v3)) ==>
+            P (v2::v3) ([] :'a list)) /\
+         (!(y :'a) (ys :'a list). P ([] :'a list) (y::ys)) /\
+         (!(v4 :'a) (v5 :'a list) (y :'a) (ys :'a list).
+            P (v4::v5) (y::ys)) ==>
+         !(v :'a list) (v1 :'a list). P v v1
+     : thm
+\end{verbatim}
+\end{session}
+
+Even better, we can wrap both the definition and
+its proof of termination all up in one piece
+by a single call to {\tt tDefine}.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_def =
+  tDefine "REMOVE"
+   `(REMOVE [] [] = (ARB, ([],[]))) /\
+    (REMOVE (xs:'a list) ([]:'a list) = REMOVE [] (REVERSE xs)) /\
+    (REMOVE xs (y::ys) = (y, (xs,ys)))`
+  (WF_REL_TAC `measure (\(xs,ys). LENGTH xs)`
+   THEN SIMP_TAC list_ss []);
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+Equations stored under "REMOVE_def".
+Induction stored under "REMOVE_ind".
+> val REMOVE_def =
+    |- (REMOVE ([] :'a list) ([] :'a list) =
+        ((ARB :'a),([] :'a list),([] :'a list))) /\
+       (REMOVE ((v2 :'a)::(v3 :'a list)) ([] :'a list) =
+        REMOVE ([] :'a list) (REVERSE (v2::v3))) /\
+       (REMOVE ([] :'a list) ((y :'a)::(ys :'a list)) =
+        (y,([] :'a list),ys)) /\
+       (REMOVE ((v4 :'a)::(v5 :'a list)) (y::ys) = (y,v4::v5,ys))
+     : thm
+\end{verbatim}
+\end{session}
+
+The induction theorem is not returned directly, but we can obtain
+it from the current theory using the \ML{} {\tt theorem} command.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_ind = theorem "REMOVE_ind";
+> val REMOVE_ind =
+    |- !(P :'a list -> 'a list -> bool).
+         P ([] :'a list) ([] :'a list) /\
+         (!(v2 :'a) (v3 :'a list).
+            P ([] :'a list) (REVERSE (v2::v3)) ==>
+            P (v2::v3) ([] :'a list)) /\
+         (!(y :'a) (ys :'a list). P ([] :'a list) (y::ys)) /\
+         (!(v4 :'a) (v5 :'a list) (y :'a) (ys :'a list).
+            P (v4::v5) (y::ys)) ==>
+         !(v :'a list) (v1 :'a list). P v v1
+     : thm
+\end{verbatim}
+\end{session}
+
+Now we prove a number of elementary facts about {\tt REMOVE}.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_CONS = store_thm(
+   "REMOVE_CONS",
+   ``!xs ys (y:'a). REMOVE xs (y::ys) = (y,(xs,ys))``,
+   Cases
+   THEN REWRITE_TAC [REMOVE_def]
+  );
+> val REMOVE_CONS =
+    |- !(xs :'a list) (ys :'a list) (y :'a). REMOVE xs (y::ys) = (y,xs,ys)
+     : thm
+
+- val REVERSE_CONS_NOT_NIL = store_thm(
+   "REVERSE_CONS_NOT_NIL",
+   ``!xs (x:'a). ~(REVERSE (x::xs) = [])``,
+   SIMP_TAC list_ss []
+  );
+> val REVERSE_CONS_NOT_NIL =
+    |- !(xs :'a list) (x :'a). REVERSE (x::xs) <> ([] :'a list)
+     : thm
+\end{verbatim}
+\end{session}
+
+The interaction of {\tt REMOVE} with {\tt COUNT} is more
+interesting, and we prove the following lemma for use later.
+It begins with a use of the {\tt REMOVE} induction principle
+to follow the same recursion structure that {\tt REMOVE} itself does.
+\begin{session}
+\begin{verbatim}
+- val REMOVE_COUNT = store_thm(
+   "REMOVE_COUNT",
+   ``!xs ys (u:'a) us vs.
+        (REMOVE xs ys = (u,(us,vs))) ==>
+        ~((xs = []) /\ (ys = [])) ==>
+          !z. COUNT z xs + COUNT z ys =
+              if z = u then COUNT z us + COUNT z vs + 1
+                       else COUNT z us + COUNT z vs``,
+   HO_MATCH_MP_TAC REMOVE_ind
+   THEN REPEAT CONJ_TAC
+   THEN REPEAT GEN_TAC
+   THEN SIMP_TAC list_ss [REMOVE_def,COUNT_DEF,COUNT_APPEND,COUNT_REVERSE]
+   THEN CONV_TAC (RATOR_CONV (ONCE_DEPTH_CONV SYM_CONV))
+   THEN STRIP_TAC
+   THEN GEN_TAC
+   THEN COND_CASES_TAC
+   THEN ASM_SIMP_TAC arith_ss [COUNT_DEF]
+  );
+> val REMOVE_COUNT =
+    |- !(xs :'a list) (ys :'a list) (u :'a) (us :'a list) (vs :'a list).
+         (REMOVE xs ys = (u,us,vs)) ==>
+         ~((xs = ([] :'a list)) /\ (ys = ([] :'a list))) ==>
+         !(z :'a).
+           COUNT z xs + COUNT z ys =
+           if z = u then
+             COUNT z us + COUNT z vs + (1 :num)
+           else
+             COUNT z us + COUNT z vs
+     : thm
+\end{verbatim}
+\end{session}
+
+Now we are ready to create our new scheduling queue implementation.
+We will call this the ``efficient'' implementation, because it is
+faster than the reference implementation, and would be a better
+candidate for eventual deployment.
+\begin{session}
+\begin{verbatim}
+- val efficient_q_def = Define
+     `efficient_q =
+        <| this := ([] : num list, [] : num list);
+           ops  := <| emptyq := \:'b. ([] : 'b list, [] : 'b list);
+                      insert := \:'b. \x (xs,ys). (CONS x xs, ys);
+                      remove := \:'b. \(xs,ys). REMOVE xs ys;
+                      count  := \:'b. \x (xs,ys). COUNT x xs + COUNT x ys
+                    |>
+         |>`;
+\end{verbatim}
+\end{session}
+
+\begin{session}
+\begin{verbatim}
+Definition has been stored under "efficient_q_def"
+> val efficient_q_def =
+    |- (efficient_q :('b list prod o list, num) sched_q) =
+       <|this := (([] :num list),([] :num list));
+         ops :=
+           <|emptyq := (\:'b. (([] :'b list),([] :'b list)));
+             insert :=
+               (\:'b. (\(x :'b) ((xs :'b list),(ys :'b list)). (x::xs,ys)));
+             remove :=
+               (\:'b. (\((xs :'b list),(ys :'b list)). REMOVE xs ys));
+             count :=
+               (\:'b.
+                  (\(x :'b) ((xs :'b list),(ys :'b list)).
+                     COUNT x xs + COUNT x ys))|> |>
+     : thm
+\end{verbatim}
+\end{session}
+
+The efficient implementation can be proven to satisfy the conditions 
+to be a scheduling queue.
+
+Before we start, we need to import the pair library, to be able to 
+easily simplify expressions involving pairs, such as the pair of lists
+involved in this implementation.
+\begin{session}
+\begin{verbatim}
+- local open pairLib in end;
+\end{verbatim}
+\end{session}
+
+Here is the proof that the efficient queue is a scheduling queue.
+It uses the lemmas we have proven before, 
+and a good deal of simplification.
+\begin{session}
+\begin{verbatim}
+- val efficient_q_is_scheduling_q = store_thm(
+   "efficient_q_is_scheduling_q",
+   ``is_scheduling_q efficient_q.ops``,
+   SRW_TAC [ARITH_ss] [efficient_q_def,is_scheduling_q_def,COUNT_DEF]
+   THEN REPEAT (POP_ASSUM MP_TAC)
+   THEN PairCases_on `q`
+   THEN SRW_TAC [ARITH_ss] [COUNT_DEF]
+   THEN REWRITE_TAC [ALL_COUNT_ZERO_2]
+   THEN POP_ASSUM MP_TAC
+   THEN Cases_on `q0`
+   THEN Cases_on `q1`
+   THEN PairCases_on `q'`
+   THEN DISCH_TAC
+   THEN IMP_RES_THEN MP_TAC REMOVE_COUNT
+   THEN SRW_TAC [] [COUNT_DEF]
+   THEN COND_CASES_TAC
+   THEN ASM_SIMP_TAC arith_ss []
+  );
+> val efficient_q_is_scheduling_q =
+    |- is_scheduling_q (efficient_q :('b list prod o list, num) sched_q).ops
+     : thm
+\end{verbatim}
+\end{session}
+
+Similar to before, we can form a package from this scheduling queue,
+hiding the actual data structure.
+\begin{session}
+\begin{verbatim}
+- val efficient_q_pkg = ``pack(:\'a. 'a list # 'a list, efficient_q)
+                          : ^sched_queue_ty'``;
+> val efficient_q_pkg =
+    ``pack
+        (:'a list prod o list,
+          (efficient_q :('b list prod o list, num) sched_q))``
+     : term
+\end{verbatim}
+\end{session}
+
+We can even check to see if the two package terms for the two
+different implementations have the same type.
+\begin{session}
+\begin{verbatim}
+- val check = eq_ty (type_of reference_q_pkg) (type_of efficient_q_pkg);
+> val check = true : bool
+\end{verbatim}
+\end{session}
+
+So we have now shown two different implementations of priority queues,
+that both satisfy the required properties, as specified in 
+{\tt is\_scheduling\_q}. Both of these implementations, despite
+their differences, are actually functionally equivalent;
+they both implement queues.
+
+But this is not actually necessary to satisfy the properties of
+{\tt is\_scheduling\_q}. We could implement a variety of other
+kinds of data structures that do not operate as pure queues, and
+as long as they satisfy {\tt is\_scheduling\_q}, they will be
+acceptable. As an example, let's take an extreme variant.
+Instead of a first-in-first-out queue, we can implement a
+last-in-first-out stack. This will not have one very desirable
+property that queues do, of fairness, which guarantees that
+each element entered into the queue is eventually removed.
+But since that is not mentioned in {\tt is\_scheduling\_q},
+a stack is nevertheless an acceptable option.
+%
+\begin{session}
+\begin{verbatim}
+- val stack_q_def = Define
+     `stack_q =
+        <| this := [] : num list;
+           ops  := <| emptyq := \:'b. [] : 'b list;
+                      insert := \:'b. \x xs. CONS x xs;
+                      remove := \:'b. \xs. (HD xs,TL xs);
+                      count  := \:'b. \x xs. COUNT x xs
+                    |>
+         |>`;
+Definition has been stored under "stack_q_def"
+
+> val stack_q_def =
+    |- (stack_q :(list, num) sched_q) =
+       <|this := ([] :num list);
+         ops :=
+           <|emptyq := (\:'b. ([] :'b list));
+             insert := (\:'b. (\(x :'b) (xs :'b list). x::xs));
+             remove := (\:'b. (\(xs :'b list). (HD xs,TL xs)));
+             count := (\:'b. (\(x :'b) (xs :'b list). COUNT x xs))|> |>
+     : thm
+\end{verbatim}
+\end{session}
+\noindent
+This is a simple implementation, so it is not hard to prove
+that it is a scheduling queue.
+\begin{session}
+\begin{verbatim}
+- val stack_q_is_scheduling_q = store_thm(
+   "stack_q_is_scheduling_q",
+   ``is_scheduling_q stack_q.ops``,
+   SRW_TAC [] [stack_q_def,is_scheduling_q_def,COUNT_DEF]
+   THEN Cases_on `q`
+   THEN SRW_TAC [] [COUNT_DEF]
+  );
+> val stack_q_is_scheduling_q =
+    |- is_scheduling_q (stack_q :(list, num) sched_q).ops
+     : thm
+\end{verbatim}
+\end{session}
+
+As for the other implementations, the scheduling stack can be
+wrapped up in a package, hiding its implementation type ({\tt list}).
+\begin{session}
+\begin{verbatim}
+- val stack_q_pkg = ``pack(:list, stack_q) : ^sched_queue_ty'``;
+> val stack_q_pkg =
+    ``pack (:list,(stack_q :(list, num) sched_q))``
+     : term
+\end{verbatim}
+\end{session}
+
+The purpose of the scheduling stack is not to suggest this as a
+suitable data structure to actually schedule processes, but just to
+show how different implementations may have significantly different
+functional behavior. Whatever the properties we specify, those
+are what any suitable candidate implementation must meet.
+Furthermore, those are also the properties, and only the 
+properties, which the rest of the program can expect any
+scheduling queue to meet. Thus this choice of the properties
+of the data structure helps to form a boundary, isolating
+information between parts of the program, which contributes
+to good system design and modularity.
+
+The advantage of wrapping these implementations up as packages
+is that we hide their implementation types, so that we can write
+common, general routines that make use of any of them, 
+interchangably.
+
+\newpage
+
+%\noindent
+The following function counts how many elements in a scheduling package
+are equal to a given element.
+\begin{session}
+\begin{verbatim}
+- val countp_def = Define
+   `countp i (p:^sched_queue_ty') =
+      let (:'a,q) = p in
+      q.ops.count i q.this`;
+Definition has been stored under "countp_def"
+> val countp_def =
+    |- !(i :num) (p :?'a :ty => ty. ('a, num) sched_q).
+         countp i p =
+         (let (:'a :ty => ty,(q :('a, num) sched_q)) = p
+          in
+            q.ops.count [:num:] i q.this)
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+Here is a function to take a package and create an empty version 
+of that same kind of package.
+\begin{session}
+\begin{verbatim}
+- val emptyp_def = Define
+   `emptyp (p:^sched_queue_ty') =
+      let (:'a,q) = p in
+        pack(:'a, <| this := q.ops.emptyq [:num:];
+                     ops  := q.ops |> )`;
+Definition has been stored under "emptyp_def"
+> val emptyp_def =
+    |- !(p :?'a :ty => ty. ('a, num) sched_q).
+         emptyp p =
+         (let (:'a :ty => ty,(q :('a, num) sched_q)) = p
+          in
+            pack
+              (:'a :ty => ty,
+                <|this := q.ops.emptyq [:num:]; ops := q.ops|>))
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+Here is a function to insert an element into a scheduling package.
+\begin{session}
+\begin{verbatim}
+- val insertp_def = Define
+   `insertp i (p:^sched_queue_ty') =
+      let (:'a,q) = p in
+        pack(:'a, <| this := q.ops.insert i q.this;
+                     ops  := q.ops |> )`;
+Definition has been stored under "insertp_def"
+> val insertp_def =
+    |- !(i :num) (p :?'a :ty => ty. ('a, num) sched_q).
+         insertp i p =
+         (let (:'a :ty => ty,(q :('a, num) sched_q)) = p
+          in
+            pack
+              (:'a :ty => ty,
+                <|this := q.ops.insert [:num:] i q.this; ops := q.ops|>))
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+This function removes an element of the scheduling package and returns it,
+paired with the diminished scheduling package.
+\begin{session}
+\begin{verbatim}
+- val removep_def = Define
+   `removep (p:^sched_queue_ty') =
+      let (:'a,q) = p in
+      let (x,this') = q.ops.remove q.this in
+        (x, pack(:'a, <| this := this';
+                         ops  := q.ops |>))`;
+Definition has been stored under "removep_def"
+> val removep_def =
+    |- !(p :?'a :ty => ty. ('a, num) sched_q).
+         removep p =
+         (let (:'a :ty => ty,(q :('a, num) sched_q)) = p
+          in
+            let ((x :num),(this' :num 'a)) = q.ops.remove [:num:] q.this
+            in
+              (x,(pack (:'a :ty => ty,<|this := this'; ops := q.ops|>))))
+     : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+Similarly, we can lift the definition of the properties
+of a scheduling queue to packages.
+\begin{session}
+\begin{verbatim}
+- val is_scheduling_p_def = Define   `is_scheduling_p (p : ?'b. ('b,'a)sched_q) =      let (:'a,q) = p in      is_scheduling_q q.ops`;Definition has been stored under "is_scheduling_p_def"> val is_scheduling_p_def =    |- !(p :?'b :ty => ty. ('b, 'a) sched_q).         is_scheduling_p p <=>         (let (:'b :ty => ty,(q :('b, 'a) sched_q)) = p          in            is_scheduling_q q.ops) : thm\end{verbatim}
+\end{session}
+
+The type checking of packages ensures that the representation
+type of the package is not disclosed outside of the
+{\bf let} \ldots {\bf in} form. If we try to do this,
+say by returning the internal data structure that holds
+the elements of the queue,
+\begin{session}
+\begin{verbatim}
+- val thisp_def = Define   `thisp (p:^sched_queue_ty') =      let (:'a,q) = p in        q.this`;\end{verbatim}
+\end{session}
+
+\noindent
+we would see an error message like the following.
+\begin{session}
+\begin{verbatim}Exception raised at Preterm.typecheck:roughly on line 326, characters 8-13:Type inference failure: unable to infer a type for the application of(UNPACK :(!('x :ty => ty). ('x, num) sched_q -> num ('a :ty => ty)) ->         (?('y :ty => ty). ('y, num) sched_q) -> num 'a)roughly on line 325, characters 10-20to\:'a :ty => ty. (\(q :('a, num) sched_q). q.this)roughly on line 326, characters 8-13which has type:!'a :ty => ty. ('a, num) sched_q -> num 'aunification failure message: unify failed! Uncaught exception: ! HOL_ERR\end{verbatim}
+\end{session}
+
+Now we can take each of our implementations, define their
+packaged versions, and show that the packaged version satisfies
+the predicate {\tt is\_scheduling\_p}.
+
+Here we define the packaged version of the reference scheduling
+queue.
+\begin{session}
+\begin{verbatim}
+- val reference_p_def = Define     `reference_p = pack(:list, reference_q) : ^sched_queue_ty'`;Definition has been stored under "reference_p_def"> val reference_p_def =    |- (reference_p :?'a :ty => ty. ('a, num) sched_q) =       (pack (:list,(reference_q :(list, num) sched_q)))     : thm
+- val reference_p_is_scheduling_p = store_thm(     "reference_p_is_scheduling_p",     ``is_scheduling_p reference_p``,     SIMP_TAC bool_ss [is_scheduling_p_def,reference_p_def,
+                       reference_q_is_scheduling_q]  );> val reference_p_is_scheduling_p =    |- is_scheduling_p (reference_p :?'a :ty => ty. ('a, num) sched_q)     : thm\end{verbatim}
+\end{session}
+
+This defines the packaged version of the efficient scheduling
+queue.
+\begin{session}
+\begin{verbatim}
+- val efficient_p_def = Define     `efficient_p = pack(:\'a. 'a list # 'a list, efficient_q)
+                     : ^sched_queue_ty'`;Definition has been stored under "efficient_p_def"> val efficient_p_def =    |- (efficient_p :?'a :ty => ty. ('a, num) sched_q) =       (pack          (:'a list prod o list,            (efficient_q :('b list prod o list, num) sched_q)))     : thm
+                     - val efficient_p_is_scheduling_p = store_thm(     "efficient_p_is_scheduling_p",     ``is_scheduling_p efficient_p``,     SIMP_TAC bool_ss [is_scheduling_p_def,efficient_p_def,
+                       efficient_q_is_scheduling_q]  );> val efficient_p_is_scheduling_p =    |- is_scheduling_p (efficient_p :?'a :ty => ty. ('a, num) sched_q)     : thm\end{verbatim}
+\end{session}
+
+And finally, this defines the packaged version of the stack
+scheduling queue.
+\begin{session}
+\begin{verbatim}
+- val stack_p_def = Define     `stack_p = pack(:list, stack_q) : ^sched_queue_ty'`;Definition has been stored under "stack_p_def"> val stack_p_def =    |- (stack_p :?'a :ty => ty. ('a, num) sched_q) =       (pack (:list,(stack_q :(list, num) sched_q)))     : thm
+- val stack_p_is_scheduling_p = store_thm(     "stack_p_is_scheduling_p",     ``is_scheduling_p stack_p``,     SIMP_TAC bool_ss [is_scheduling_p_def,stack_p_def,
+                       stack_q_is_scheduling_q]  );> val stack_p_is_scheduling_p =    |- is_scheduling_p (stack_p :?'a :ty => ty. ('a, num) sched_q)     : thm\end{verbatim}
+\end{session}
+
+Programmers on a project using these scheduling queues will need
+to be able to access the desired properties of the queue, even if 
+they do not know exactly what the implementation is. 
+Furthermore, since they will not have access to the internal
+record structure of the implementation, we should express these 
+properties in terms of the functions they do have access to,
+that is, the functions defined above that work on packages, 
+namely {\tt countp}, {\tt emptyp}, {\tt insertp}, and {\tt removep}.
+
+To make the properties of a scheduling package
+easily available, we will first prove that any package satisfying
+{\tt is\_scheduling\_p} will be guaranteed of fulfilling the following
+properties.
+\begin{session}
+\begin{verbatim}
+- val scheduling_p_props = store_thm(   "scheduling_p_props",   ``!(p: ^sched_queue_ty').        is_scheduling_p p ==>        (!x. countp x (emptyp p) = 0) /\        (!x y. countp x (insertp y p) =               if x = y then countp x p + 1                        else countp x p) /\        (~(!x. countp x p = 0) ==>               let (y,p') = removep p               in !x. countp x p = countp x (insertp y p'))``,   GEN_TAC   THEN REWRITE_TAC [is_scheduling_p_def]   THEN STRIP_ASSUME_TAC (ISPEC ``p:^sched_queue_ty'`` PACK_ONTO_AX)   THEN ASM_REWRITE_TAC []   THEN SIMP_TAC bool_ss []   THEN REWRITE_TAC [is_scheduling_q_def]   THEN REPEAT STRIP_TAC   THENL     [ SRW_TAC [] [countp_def,emptyp_def],       SRW_TAC [] [countp_def,insertp_def],       POP_ASSUM MP_TAC       THEN SRW_TAC [] [countp_def,removep_def,insertp_def]       THEN FIRST_ASSUM (MP_TAC o Q.SPEC `t.this` o TY_SPEC ``:num``)       THEN COND_CASES_TAC       THENL         [ POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``x:num``),           SRW_TAC [] [LET_DEF]         ]     ]  );> val scheduling_p_props =    |- !(p :?'a :ty => ty. ('a, num) sched_q).         is_scheduling_p p ==>         (!(x :num). countp x (emptyp p) = (0 :num)) /\         (!(x :num) (y :num).            countp x (insertp y p) =            if x = y then countp x p + (1 :num) else countp x p) /\         (~(!(x :num). countp x p = (0 :num)) ==>          (let ((y :num),(p' :?'a :ty => ty. ('a, num) sched_q)) = removep p           in             !(x :num). countp x p = countp x (insertp y p')))     : thm\end{verbatim}
+\end{session}
+
+For convenience, we can break this up into three theorems for each of the
+properties, named by the operation they concentrate on.
+\begin{session}
+\begin{verbatim}
+- val emptyp_prop = store_thm(   "emptyp_prop",   ``!(p: ^sched_queue_ty').        is_scheduling_p p ==>        !x. countp x (emptyp p) = 0``,   SIMP_TAC bool_ss [scheduling_p_props]  );> val emptyp_prop =    |- !(p :?'a :ty => ty. ('a, num) sched_q).         is_scheduling_p p ==> !(x :num). countp x (emptyp p) = (0 :num)     : thm
+- val insertp_prop = store_thm(   "insertp_prop",   ``!(p: ^sched_queue_ty').        is_scheduling_p p ==>        !x y. countp x (insertp y p) =               if x = y then countp x p + 1                        else countp x p``,   SIMP_TAC bool_ss [scheduling_p_props]  );> val insertp_prop =    |- !(p :?'a :ty => ty. ('a, num) sched_q).         is_scheduling_p p ==>         !(x :num) (y :num).           countp x (insertp y p) =           if x = y then countp x p + (1 :num) else countp x p     : thm
+- val removep_prop = store_thm(   "removep_prop",   ``!(p: ^sched_queue_ty').        is_scheduling_p p ==>        ~(!x. countp x p = 0) ==>               let (y,p') = removep p               in !x. countp x p = countp x (insertp y p')``,   SIMP_TAC bool_ss [scheduling_p_props]  );> val removep_prop =    |- !(p :?'a :ty => ty. ('a, num) sched_q).         is_scheduling_p p ==>         ~(!(x :num). countp x p = (0 :num)) ==>         (let ((y :num),(p' :?'a :ty => ty. ('a, num) sched_q)) = removep p          in            !(x :num). countp x p = countp x (insertp y p'))     : thm\end{verbatim}
+\end{session}
+These properties hold about any scheduling queue package
+%that we can define 
+that satisfies {\tt is\_scheduling\_p}.
+In particular, the properties hold for the example implementations
+defined earlier.
+
+\begin{session}
+\begin{verbatim}
+- val _ = set_trace "types" 0;- val reference_p_props = save_thm(   "reference_p_props",   MATCH_MP scheduling_p_props reference_p_is_scheduling_p);> val reference_p_props =    |- (!x. countp x (emptyp reference_p) = 0) /\       (!x y.          countp x (insertp y reference_p) =          if x = y then            countp x reference_p + 1          else            countp x reference_p) /\       (~(!x. countp x reference_p = 0) ==>        (let (y,p') = removep reference_p         in           !x. countp x reference_p = countp x (insertp y p')))     : thm- val efficient_p_props = save_thm(   "efficient_p_props",   MATCH_MP scheduling_p_props efficient_p_is_scheduling_p);> val efficient_p_props =    |- (!x. countp x (emptyp efficient_p) = 0) /\       (!x y.          countp x (insertp y efficient_p) =          if x = y then            countp x efficient_p + 1          else            countp x efficient_p) /\       (~(!x. countp x efficient_p = 0) ==>        (let (y,p') = removep efficient_p         in           !x. countp x efficient_p = countp x (insertp y p')))     : thm- val stack_p_props = save_thm(   "stack_p_props",   MATCH_MP scheduling_p_props stack_p_is_scheduling_p);> val stack_p_props =    |- (!x. countp x (emptyp stack_p) = 0) /\       (!x y.          countp x (insertp y stack_p) =          if x = y then countp x stack_p + 1 else countp x stack_p) /\       (~(!x. countp x stack_p = 0) ==>        (let (y,p') = removep stack_p         in           !x. countp x stack_p = countp x (insertp y p')))     : thm\end{verbatim}
+\end{session}
+
+This concludes the exercise on scheduling queues. The purpose of this
+exercise was to show how a modular boundary can be established
+between the implementation of a data structure and the rest of the
+program that uses that data structure. The specific properties
+are freely chosen by the system design team, and form a good
+documentation of the interface at this modular boundary.
+
+In this fashion, packages and existential types promote good
+programming practices, and this also contributes to a cleaner
+overall system, more resilient under future changes, and a
+considerable lessening of the proof effort required to
+revalidate the system when such changes occur.
+
+
+
+
+
+
+%The meaning of a package {\bf pack}$({:}\sigma, t)$ is a special kind
+%of pair, consisting of the type $\sigma$ and the term $t$.
+%The meaning of the existential type $\exists\alpha.\sigma'$ 
+%is a set of such pairs,
+%such that for each such pair ($\sigma_i$, $t_i$) we have that
+%the type of $t_i$ is $\sigma'[\sigma_i / \alpha]$.
+%
+%Existential types like $\exists\alpha.\sigma'$ bind the type variable
+%$\alpha$ over the body of the type, $\sigma'$. 
+%Existential types are identified up to 
+%alpha-equivalence, so that $\exists\alpha.\sigma'$ and 
+%$\exists\beta.(\sigma'[\beta / \alpha])$ are the same type.
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
