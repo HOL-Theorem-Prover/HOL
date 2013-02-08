@@ -721,11 +721,11 @@ val WRITE8_def = Define `
   WRITE8 (a:word32) (w:word8) m = (a =+ w:word8) m`;
 
 val _ = wordsLib.guess_lengths();
-val READ32_def = Define `
+val READ32_def = zDefine `
   READ32 a (m:word32 -> word8) =
     (m (a + 3w) @@ m (a + 2w) @@ m (a + 1w) @@ m (a)):word32`;
 
-val WRITE32_def = Define `
+val WRITE32_def = zDefine `
   WRITE32 (a:word32) (w:word32) m =
     ((a + 0w =+ (w2w w):word8)
     ((a + 1w =+ (w2w (w >>> 8)):word8)
