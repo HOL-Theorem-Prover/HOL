@@ -383,8 +383,10 @@ fun mk_case0 ty_info ty_match FV range_ty =
            (pat_rect1,tree')
        end
      else
-     if all (is_constructor_var_pat ty_info) col0 (* col0 is constrs *) then
-       let val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
+       case List.find (not o is_constructor_var_pat ty_info) col0 of
+         NONE => let
+
+           val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
            val nrows = flatten (map (expand constructors pty) rows)
            val subproblems = divide(constructors, pty, range_ty, nrows)
@@ -401,11 +403,12 @@ fun mk_case0 ty_info ty_match FV range_ty =
                                           Ty = list_mk_fun(types, range_ty)}
            val tree = list_mk_comb(case_const', u::case_functions)
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
-       in
-          (pat_rect1,tree)
-       end
-     else
-        mk_case_fail "Some patterns are not constructors or variables"
+         in
+           (pat_rect1,tree)
+         end
+       | SOME t => mk_case_fail ("Pattern "^
+                                 trace ("Unicode", 0) Parse.term_to_string t^
+                                 " is not a constructor or variable")
      end
      end
  in mk
