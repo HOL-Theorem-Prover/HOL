@@ -11,6 +11,12 @@ sig
         | OMITTED of term * int
 
    val allow_new_clauses : bool ref
+
+   val choose_pat_col_fun : (Term.term list list -> int) ref
+   val skip_irrelevant_pat_rows : bool ref
+
+   val choose_pat_col___first_non_var : (Term.term list list -> int)
+   val choose_pat_col___first_col : (Term.term list list -> int)
    val pat_of : pattern -> term
    val givens : pattern list -> term list
 

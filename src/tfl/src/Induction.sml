@@ -194,10 +194,27 @@ fun mk_case ty_info FV thy =
  end;
 *)
 
+(*
+val org_in = {path=[z], rows=rows}
+
+val in_1 = hd news
+val in_2 = {path=rstp, rows=zip pat_rectangle' rights'}
+val in_3 = hd news
+
+mk in_2
+v
+val {path=u::rstp, rows as (p::_, _)::_} = in_3
+
+val {path=u::rstp, rows as (p::_, _)::_} = {path=rstp, rows=zip pat_rectangle' rights'}
+val mk = mk_case ty_info FV thy
+mk in_1
+val in
+*)
 
 fun mk_case ty_info FV thy =
  let open boolSyntax
- val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
+ val gv = (wfrecUtils.vary FV)
+ val divide:divide_ty = ipartition gv
  fun fail s = raise ERR "mk_case" s
  fun mk{rows=[],...} = fail"no rows"
    | mk{path=[], rows = [([], (thm, bindings))]} = IT_EXISTS bindings thm
@@ -256,7 +273,8 @@ fun mk_case ty_info FV thy =
          in
            DISJ_CASESL thm' same_concls
          end
-     else (* column 0 matches against constructors *)
+     else
+     (* column 0 matches against constructors (and perhaps variables) *)
      let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
      in
      case ty_info (Thy,ty_name)
@@ -264,6 +282,35 @@ fun mk_case ty_info FV thy =
          (* tyinfo rqt: `constructors' must line up exactly with constrs
             in disjuncts of `nchotomy'. *)
        | SOME{constructors,nchotomy} =>
+(*
+  val SOME{constructors,nchotomy} = ty_info (Thy,ty_name)
+*)
+         if exists is_var col0 (* column 0 is contains variables (and constructors) *)
+         then let
+           val pty = type_of p 
+           fun expand_constr c = let
+             val (L, B) = strip_fun_type (type_of c)
+             val ty_subst = match_type 0 B (type_of p) 
+             val L' = map (type_subst ty_subst) L
+             val c' = inst ty_subst c
+             val args = map gv L'
+             val exp_c = list_mk_comb (c', args)
+           in exp_c end
+           val exp_cs = map expand_constr constructors
+           val rows' = flatten (map (fn ([], _) => fail "unequal row length" | (p :: ps, rhs) => 
+                    if is_var p then map (fn p => (p::ps, rhs)) exp_cs else [(p::ps, rhs)]) rows)
+           val recursive_thm = mk {path = u::rstp, rows = rows'}
+           fun build_disj (ps, (thm, theta)) = let
+              val theta' = (map2 (fn x => fn y => (y |-> x)) ps (u::rstp)) @ theta
+              val tm = subst theta' (concl thm)
+              val vars = (map #residue theta) @ (flatten (map free_vars_lr ps))
+              val tm' = list_mk_exists (vars, tm)
+              in tm' end
+           val wanted_concl = list_mk_disj (map build_disj rows)
+           val imp_thm = metisLib.METIS_PROVE [nchotomy] (mk_imp (concl recursive_thm, wanted_concl))
+           val res = MP imp_thm recursive_thm
+         in res end           
+         else
          let val thm'         = ISPEC u nchotomy
              val disjuncts    = strip_disj (concl thm')
              val subproblems  = divide(constructors, rows)
@@ -502,6 +549,11 @@ fun match_clauses pats case_thm =
 (* recursion induction (Rinduct) by proving the antecedent of Sinduct from   *)
 (* the antecedent of Rinduct.                                                *)
 (*---------------------------------------------------------------------------*)
+
+(*
+val (thy, {fconst, R, SV, pat_TCs_list}) = (facts,
+                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs})
+*)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let fun f() =

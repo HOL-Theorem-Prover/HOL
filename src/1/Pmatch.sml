@@ -312,6 +312,56 @@ fun under_literal_bool_case conv tm =
     incomplete set of patterns is given.
  ----------------------------------------------------------------------------*)
 
+val skip_irrelevant_pat_rows = ref true
+val choose_pat_col_fun = ref (fn (_:Term.term list list) => 0)
+
+fun choose_pat_col___first_col _ = 0
+
+fun choose_pat_col___first_non_var [] = 0 
+  | choose_pat_col___first_non_var (l::_) = Lib.index (fn p => not (is_var p)) l handle HOL_ERR _ => 0
+
+val _ = choose_pat_col_fun := choose_pat_col___first_non_var
+
+fun bring_to_front_list n l = let
+   val (l0, l1) = Lib.split_after n l
+   val (x, l1') = (hd l1, tl l1)
+  in x :: (l0 @ l1') end
+
+fun undo_bring_to_front n l = let
+   val (x, l') = (hd l, tl l)
+   val (l0, l1) = Lib.split_after n l'
+ in (l0 @ x::l1) end
+
+
+(*
+val (ty_info, ty_match, FV, range_ty) =
+ (match_info thy, match_type thy, FV, range_ty) 
+
+val {path = rstp0 as (_::_), rows = rows0 as ((_, _::_), _)::_} = inp1
+
+val inp1 = {path=[a], rows=rows}
+val inp2 = hd news
+val inp3 = hd news
+val inp4 = hd news
+
+vc
+
+(el 1 news)
+
+
+mk {path=[a], rows=rows}
+mk
+
+val mk = mk_case0 ty_info ty_match FV range_ty
+
+undo_resort_list 2 [1,2,3]
+resort_list 2 [1,2,3]
+
+mk inp1
+mk inp2
+*)
+
+
 fun mk_case0 ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
@@ -344,8 +394,17 @@ fun mk_case0 ty_info ty_match FV range_ty =
    | mk{path as u::rstp, rows as ((prefix, []), rhs)::rst} =
         mk{path = path,
            rows = ((prefix, [fresh_var(type_of u)]), rhs)::rst}
-   | mk{path = u::rstp, rows as ((_, p::_), _)::_} =
-     let val (pat_rectangle,rights) = unzip rows
+   | mk{path = rstp0, rows = rows0 as ((_, pL as (_ :: _)), _)::_} =
+     if (!skip_irrelevant_pat_rows andalso length rows0 > 1 andalso all is_var pL) 
+     then mk {path = rstp0, rows = [hd rows0]}
+     else
+     let val col_index = !choose_pat_col_fun (map (fn ((_, pL), _) => pL) rows0)
+         val u_rstp = bring_to_front_list col_index rstp0 
+         val (u, rstp) = (hd u_rstp, tl u_rstp)
+         val rows = map (fn ((prefix, pL), rhs) => ((prefix, bring_to_front_list col_index pL), rhs)) rows0
+         val ((_, pL), _) = hd rows 
+         val p = hd pL 
+         val (pat_rectangle,rights) = unzip rows
          val col0 = map(Lib.trye hd o #2) pat_rectangle
      in
      if all is_var col0
@@ -379,8 +438,9 @@ fun mk_case0 ty_info ty_match FV range_ty =
                                  switch_tm (case_functions@[u])
            val tree' = under_literal_bool_case beta_conv tree
            val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
+           val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
        in
-           (pat_rect1,tree')
+           (pat_rect1',tree')
        end
      else
        case List.find (not o is_constructor_var_pat ty_info) col0 of
@@ -403,8 +463,9 @@ fun mk_case0 ty_info ty_match FV range_ty =
                                           Ty = list_mk_fun(types, range_ty)}
            val tree = list_mk_comb(case_const', u::case_functions)
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
-         in
-           (pat_rect1,tree)
+           val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
+       in
+          (pat_rect1',tree)
          end
        | SOME t => mk_case_fail ("Pattern "^
                                  trace ("Unicode", 0) Parse.term_to_string t^

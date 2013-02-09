@@ -2635,16 +2635,15 @@ val sup_add_mono = store_thm
 	    ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
 	    ++ METIS_TAC [IN_UNIV,IN_IMAGE])
   ++ Cases_on `sup (IMAGE f UNIV) = PosInf`
-  >> (`sup (IMAGE (\n. sup (IMAGE f UNIV) + g n) UNIV) = PosInf`
+  >> (`sup (IMAGE (\n. sup (IMAGE f UNIV) + g n) UNIV) = PosInf` 
         by (RW_TAC std_ss [extreal_add_def,sup_eq,le_infty]
-          ++ POP_ASSUM (MP_TAC o Q.SPEC `PosInf + g (CHOICE (UNIV:num->bool))`)
+          ++ POP_ASSUM (MP_TAC o Q.SPEC `PosInf`)
 	  ++ RW_TAC std_ss []
-	  ++ `PosInf + g (CHOICE univ(:num)) <= y'`
+	  ++ `PosInf <= y'` 
                by (POP_ASSUM MATCH_MP_TAC
 		   ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
-		   ++ RW_TAC std_ss [IN_UNIV,IN_IMAGE]
-		   ++ METIS_TAC [])
-          ++ METIS_TAC [extreal_add_def,extreal_cases,le_infty])
+		   ++ RW_TAC std_ss [IN_UNIV,IN_IMAGE])
+          ++ METIS_TAC [le_infty])
       ++ METIS_TAC [le_infty])
   ++ RW_TAC std_ss [add_comm]
   ++ Suff `sup (IMAGE g UNIV) <=
