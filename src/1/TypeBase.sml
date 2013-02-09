@@ -126,7 +126,7 @@ val _ =
           | NONE => NONE
       open GrammarSpecials
   in
-    set_case_specials (#functional o Pmatch.mk_functional lookup,
+    set_case_specials ((fn t => #functional (Pmatch.mk_functional (!Pmatch.default_pheu) lookup t)),
                        (fn s =>
                              case lookup s of
                                NONE => []
@@ -148,11 +148,11 @@ fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
 fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 
-fun mk_pattern_fn css =
+fun mk_pattern_fn heu css =
    let
       val pmthry = TypeBasePure.toPmatchThry (theTypeBase ())
    in
-      Pmatch.mk_pattern_fn pmthry css
+      Pmatch.mk_pattern_fn heu pmthry css
    end
 
 (*---------------------------------------------------------------------------*)

@@ -312,15 +312,7 @@ fun under_literal_bool_case conv tm =
     incomplete set of patterns is given.
  ----------------------------------------------------------------------------*)
 
-val skip_irrelevant_pat_rows = ref true
-val choose_pat_col_fun = ref (fn (_:Term.term list list) => 0)
-
-fun choose_pat_col___first_col _ = 0
-
-fun choose_pat_col___first_non_var [] = 0 
-  | choose_pat_col___first_non_var (l::_) = Lib.index (fn p => not (is_var p)) l handle HOL_ERR _ => 0
-
-val _ = choose_pat_col_fun := choose_pat_col___first_non_var
+type pmatch_heuristic = {skip_rows : bool, col_fun : thry -> term list list -> int}
 
 fun bring_to_front_list n l = let
    val (l0, l1) = Lib.split_after n l
@@ -332,37 +324,7 @@ fun undo_bring_to_front n l = let
    val (l0, l1) = Lib.split_after n l'
  in (l0 @ x::l1) end
 
-
-(*
-val (ty_info, ty_match, FV, range_ty) =
- (match_info thy, match_type thy, FV, range_ty) 
-
-val {path = rstp0 as (_::_), rows = rows0 as ((_, _::_), _)::_} = inp1
-
-val inp1 = {path=[a], rows=rows}
-val inp2 = hd news
-val inp3 = hd news
-val inp4 = hd news
-
-vc
-
-(el 1 news)
-
-
-mk {path=[a], rows=rows}
-mk
-
-val mk = mk_case0 ty_info ty_match FV range_ty
-
-undo_resort_list 2 [1,2,3]
-resort_list 2 [1,2,3]
-
-mk inp1
-mk inp2
-*)
-
-
-fun mk_case0 ty_info ty_match FV range_ty =
+fun mk_case0 heu ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
  val fresh_var = vary FV
@@ -395,10 +357,10 @@ fun mk_case0 ty_info ty_match FV range_ty =
         mk{path = path,
            rows = ((prefix, [fresh_var(type_of u)]), rhs)::rst}
    | mk{path = rstp0, rows = rows0 as ((_, pL as (_ :: _)), _)::_} =
-     if (!skip_irrelevant_pat_rows andalso length rows0 > 1 andalso all is_var pL) 
+     if ((#skip_rows heu) andalso length rows0 > 1 andalso all is_var pL) 
      then mk {path = rstp0, rows = [hd rows0]}
      else
-     let val col_index = !choose_pat_col_fun (map (fn ((_, pL), _) => pL) rows0)
+     let val col_index = (#col_fun heu) ty_info (map (fn ((_, pL), _) => pL) rows0)
          val u_rstp = bring_to_front_list col_index rstp0 
          val (u, rstp) = (hd u_rstp, tl u_rstp)
          val rows = map (fn ((prefix, pL), rhs) => ((prefix, bring_to_front_list col_index pL), rhs)) rows0
@@ -475,6 +437,57 @@ fun mk_case0 ty_info ty_match FV range_ty =
  in mk
  end;
 
+
+(*----------------------------------------------------------------------------
+      Various heuristics for pattern compilation
+ ----------------------------------------------------------------------------*)
+
+(* the old heuristic used by HOL 4 *)
+val pheu_classic : pmatch_heuristic = { skip_rows = false, col_fun = (fn _ => fn _ => 0) }
+
+(* A heuristic based on ranking functions, which is used t *)
+fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true, col_fun = (fn ty_info => fn rowL => let 
+   val colL = let
+     (* assumption: rowL noteq [], and all rows have same length *)
+     fun aux a rowL = if (length (hd rowL) = 0) then List.rev a else
+             aux ((List.map hd rowL) :: a) (List.map tl rowL)
+   in
+     aux [] rowL
+   end
+
+   val ncolL = Lib.enumerate 0 colL
+   fun step rank ncolL = let
+     val ranked_cols = List.map (fn (i, pL) => ((i, pL), rank ty_info pL)) ncolL
+     val max = List.foldl (fn ((_, r), m) => if r > m then r else m) (snd (hd ranked_cols)) (tl ranked_cols)
+     val ranked_cols' = List.filter (fn (_, r) => r = max) ranked_cols
+     val ncolL' = List.map fst ranked_cols'
+   in 
+     ncolL'
+   end
+   fun steps [] ncolL = ncolL
+     | steps _ [] = []
+     | steps _ [e] = [e]
+     | steps (rf :: rankL) ncolL = steps rankL (step rf ncolL)
+   val ncolL' = steps rankL ncolL
+in
+   case ncolL' of
+      [] => 0 (* something went wrong, should not happen *)
+    | ((i, _) :: _) => i
+end)} : pmatch_heuristic
+
+
+fun prheu_first_row _ [] = 0
+  | prheu_first_row _ (p :: _) = if (is_var p) then 0 else 1
+
+val prheu_constr_prefix =
+  let fun aux n [] = n
+        | aux n (p :: pL) = if (is_var p) then n else aux (n+1)  pL
+  in (fn _ => aux 0) end
+
+val pheu_first_row = pheu_rank [prheu_first_row]
+val pheu_constr_prefix = pheu_rank [prheu_constr_prefix]
+
+val default_pheu = ref pheu_constr_prefix
 
 (*---------------------------------------------------------------------------
      Repeated variable occurrences in a pattern are not allowed.
@@ -722,7 +735,7 @@ local fun paired1{lhs,rhs} = (lhs,rhs)
       fun err s = raise ERR "mk_functional" s
       fun msg s = HOL_MESG ("mk_functional: "^s)
 in
-fun mk_functional thy eqs =
+fun mk_functional heu thy eqs =
  let val clauses = strip_conj eqs
      val (L,R) = unzip (map (dest_eq o snd o strip_forall) clauses)
      val (funcs,pats) = unzip(map dest_comb L)
@@ -735,7 +748,7 @@ fun mk_functional thy eqs =
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)
-     val (patts, case_tm) = mk_case0 (match_info thy) (match_type thy)
+     val (patts, case_tm) = mk_case0 heu (match_info thy) (match_type thy)
                                      FV range_ty {path=[a], rows=rows}
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
@@ -787,7 +800,7 @@ end;
    as an abstraction containing a case expression on the function's argument.
  ---------------------------------------------------------------------------*)
 
-fun mk_pattern_fn thy (pes: (term * term) list) =
+fun mk_pattern_fn heu thy (pes: (term * term) list) =
   let fun err s = raise ERR "mk_pattern_fn" s
       val (p0,e0) = Lib.trye hd pes
           handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"
@@ -799,7 +812,7 @@ fun mk_pattern_fn thy (pes: (term * term) list) =
               else err "expressions have varying types"
       val fvar = genvar (pty --> ety)
       val eqs = list_mk_conj (map (fn (p,e) => mk_eq(mk_comb(fvar,p), e)) pes)
-      val {functional,pats} = mk_functional thy eqs
+      val {functional,pats} = mk_functional heu thy eqs
       val f = snd (dest_abs functional)
    in
      f

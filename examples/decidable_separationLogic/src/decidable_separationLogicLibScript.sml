@@ -81,8 +81,7 @@ val SAFE_DEL_EL_THM = store_thm ("SAFE_DEL_EL_THM",
    (!x l. (SAFE_DEL_EL 0 (x::l) = [x])) /\
    (!n x l. (SAFE_DEL_EL (SUC n) (x::l) = SAFE_DEL_EL n l))``,
 
-SIMP_TAC std_ss [SAFE_DEL_EL_def] THEN
-Cases_on `n` THEN SIMP_TAC std_ss [SAFE_DEL_EL_def]);
+REWRITE_TAC [SAFE_DEL_EL_def]);
 
 
 
@@ -107,8 +106,7 @@ val DELETE_ELEMENT_THM = store_thm ("DELETE_ELEMENT_THM",
      (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
      (!n x l. (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l))``,
 
-   SIMP_TAC std_ss [DELETE_ELEMENT_def] THEN
-   Cases_on `n` THEN SIMP_TAC std_ss [DELETE_ELEMENT_def])
+   REWRITE_TAC [DELETE_ELEMENT_def])
 
 
 val MEM_DELETE_ELEMENT = store_thm ("MEM_DELETE_ELEMENT",
@@ -550,13 +548,7 @@ val SAFE_MAP_THM = store_thm ("SAFE_MAP_THM",
 (SAFE_MAP x (T::f) g (e::l) = (g e)::(SAFE_MAP x f g l)) /\
 (SAFE_MAP x (F::f) g (e::l) = e::(SAFE_MAP x f g l))``,
 
-Cases_on `x` THEN Cases_on `l` THEN Cases_on `f` THEN
-SIMP_TAC list_ss [SAFE_MAP_def] THENL [
-   Cases_on `h` THEN SIMP_TAC list_ss [SAFE_MAP_def],
-   Cases_on `h'` THEN SIMP_TAC list_ss [SAFE_MAP_def],
-   Cases_on `h` THEN SIMP_TAC list_ss [SAFE_MAP_def],
-   Cases_on `h'` THEN SIMP_TAC list_ss [SAFE_MAP_def]
-])
+Cases_on `l` THEN SIMP_TAC list_ss [SAFE_MAP_def])
 
 
 val LIST_PF_SEM___PF_TURN_EQ = store_thm ("LIST_PF_SEM___PF_TURN_EQ",
@@ -601,11 +593,7 @@ val SAFE_BUTFIRSTN_THM = store_thm ("SAFE_BUTFIRSTN_THM",
    (SAFE_BUTFIRSTN n [] = []) /\
    (SAFE_BUTFIRSTN (SUC n) (e::l) = SAFE_BUTFIRSTN n l)``,
 
-   SIMP_TAC std_ss [SAFE_BUTFIRSTN_def] THEN
-   STRIP_TAC THENL [
-      Cases_on `l` THEN SIMP_TAC std_ss [SAFE_BUTFIRSTN_def],
-      Cases_on `n` THEN SIMP_TAC std_ss [SAFE_BUTFIRSTN_def]
-   ])
+   Cases_on `n` THEN SIMP_TAC std_ss [SAFE_BUTFIRSTN_def])
 
 
 val SAFE_BUTFIRSTN___REWRITE = save_thm ("SAFE_BUTFIRSTN___REWRITE",
@@ -618,23 +606,14 @@ val POS_FILTER_def = Define `
    (POS_FILTER (T::f) p (e::l) = let (l' = POS_FILTER f p l) in if p e then l' else (e::l')) /\
    (POS_FILTER (F::f) p (e::l) = e::(POS_FILTER f p l))`
 
+
 val POS_FILTER_THM = store_thm ("POS_FILTER_THM",
 `` (POS_FILTER [] p l = l) /\
    (POS_FILTER f p [] = []) /\
    (POS_FILTER (T::f) p (e::l) = let (l' = POS_FILTER f p l) in if p e then l' else (e::l')) /\
    (POS_FILTER (F::f) p (e::l) = e::(POS_FILTER f p l))``,
 
-
-REWRITE_TAC [POS_FILTER_def] THEN
-Cases_on `l` THENL [
-   REWRITE_TAC [POS_FILTER_def] THEN
-   Cases_on `f` THEN REWRITE_TAC [POS_FILTER_def] THEN
-   Cases_on `h` THEN REWRITE_TAC [POS_FILTER_def],
-
-   REWRITE_TAC[POS_FILTER_def] THEN
-   Cases_on `f` THEN REWRITE_TAC [POS_FILTER_def] THEN
-   Cases_on `h` THEN REWRITE_TAC [POS_FILTER_def]
-])
+Cases_on `f` THEN REWRITE_TAC [POS_FILTER_def])
 
 
 val MEM_POS_FILTER = store_thm ("MEM_POS_FILTER",
@@ -681,18 +660,10 @@ val SAFE_FILTER_THM = store_thm ("SAFE_FILTER_THM",
    (SAFE_FILTER x (T::f) (e::l) = e::SAFE_FILTER x f l) /\
    (SAFE_FILTER x (F::f) (e::l) = SAFE_FILTER x f l)``,
 
-   Cases_on `x` THEN (
-      SIMP_TAC std_ss [SAFE_FILTER_def] THEN
-      REPEAT STRIP_TAC THENL [
-         Cases_on `l` THEN SIMP_TAC std_ss [SAFE_FILTER_def],
-         Cases_on `l` THEN SIMP_TAC std_ss [SAFE_FILTER_def],
-
-         Cases_on `f` THENL [
-            SIMP_TAC std_ss [SAFE_FILTER_def],
-            Cases_on `h` THEN SIMP_TAC std_ss [SAFE_FILTER_def]
-         ]
-      ]
-   ))
+   Cases_on `x` THEN
+   SIMP_TAC std_ss [SAFE_FILTER_def] THEN
+   Cases_on `f` THEN
+   SIMP_TAC std_ss [SAFE_FILTER_def])
 
 val SAFE_FILTER_APPEND = store_thm ("SAFE_FILTER_APPEND",
    ``!x f l1 l2. SAFE_FILTER x f (l1 ++ l2) =
@@ -1084,7 +1055,7 @@ SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `MEM dse_nil c1` by METIS_TAC [EL_IS_EL] THEN
 ASM_SIMP_TAC std_ss [LIST_DS_ENTAILS_def] THEN
-METIS_TAC[HEAP_DISTINCT___dse_nil, DS_EXPRESSION_EQUAL_def])
+METIS_TAC[HEAP_DISTINCT___dse_nil, DS_EXPRESSION_EQUAL_def]);
 
 
 
@@ -1096,7 +1067,7 @@ val INFERENCE_INCONSISTENT___precondition_distinct = store_thm ("INFERENCE_INCON
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [LIST_DS_ENTAILS_def] THEN
-METIS_TAC[HEAP_DISTINCT___NOT_ALL_DISTINCT])
+METIS_TAC[HEAP_DISTINCT___NOT_ALL_DISTINCT]);
 
 
 
@@ -1151,7 +1122,7 @@ val HYPOTHESIS_RULE_COND_THM = store_thm ("HYPOTHESIS_RULE_COND_THM",
    (HYPOTHESIS_RULE_COND cL pfL1 pfL2 n pf (hyp_in_self b m)  =
       ((m < n) /\ (SAFE_DEL_EL m pfL2 = [if b then PF_TURN_EQ pf else pf])))``,
 
-Cases_on `pf` THEN Cases_on `b` THEN SIMP_TAC std_ss [HYPOTHESIS_RULE_COND_def])
+Cases_on `pf` THEN Cases_on `b` THEN SIMP_TAC std_ss [HYPOTHESIS_RULE_COND_def]);
 
 
 val HYPOTHESIS_RULE_COND___SEM = store_thm ("HYPOTHESIS_RULE_COND___SEM",
@@ -1220,14 +1191,7 @@ val HYPOTHESIS_RULE_MAP_THM = store_thm ("HYPOTHESIS_RULE_MAP_THM",
          h::(HYPOTHESIS_RULE_MAP cL pfL1 pfL2 (SUC n) f l)
    )``,
 
-
-SIMP_TAC std_ss [HYPOTHESIS_RULE_MAP_def] THEN
-CONJ_TAC THENL [
-   Cases_on `f` THEN
-   SIMP_TAC std_ss [HYPOTHESIS_RULE_MAP_def],
-
-   Cases_on `l` THEN SIMP_TAC list_ss [HYPOTHESIS_RULE_MAP_def]
-]);
+Cases_on `l` THEN SIMP_TAC list_ss [HYPOTHESIS_RULE_MAP_def]);
 
 
 val HYPOTHESIS_RULE_MAP___SEM1 = prove (

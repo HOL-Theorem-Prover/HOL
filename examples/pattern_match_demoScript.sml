@@ -5,27 +5,91 @@
 
 val _ = new_theory "pattern_match_demo";
 
+open Pmatch
 
-fun Define_org q =
-let
-  val _ = Pmatch.choose_pat_col_fun := Pmatch.choose_pat_col___first_col 
-  val _ = Pmatch.skip_irrelevant_pat_rows := false
-in Define q
-end
+fun Define_heu heu = with_flag (default_pheu, heu) Define
 
-fun Define_new q =
-let
-  val _ = Pmatch.choose_pat_col_fun := Pmatch.choose_pat_col___first_non_var 
-  val _ = Pmatch.skip_irrelevant_pat_rows := true
-in Define q
-end
+val Define_classic = Define_heu pheu_classic
+val Define_f = Define_heu pheu_first_row
+val Define_q = Define_heu pheu_constr_prefix
 
-fun Define_new_skip q =
-let
-  val _ = Pmatch.choose_pat_col_fun := Pmatch.choose_pat_col___first_col
-  val _ = Pmatch.skip_irrelevant_pat_rows := true
-in Define q
-end
+
+(* simple example from decideable_separation_logic *)
+
+val DELETE_ELEMENT_def = Define_q
+  `(DELETE_ELEMENT n [] = []) /\
+   (DELETE_ELEMENT 0 (x::l) = l) /\
+   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`
+
+(* old (classic result)
+
+ |- (DELETE_ELEMENT 0 [] = []) /\
+    (!v2. DELETE_ELEMENT (SUC v2) [] = []) /\
+    (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
+    (!x n l. DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
+
+with Define_f and Define_q
+
+ |- (DELETE_ELEMENT n [] = []) /\
+    (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
+    (!x n l. DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
+
+*)
+
+
+(* Slightly more complex example form decidebale separation logic *)
+val SWAP_ELEMENTS_def = Define_f `
+   (SWAP_ELEMENTS 0 0 l = l) /\
+   (SWAP_ELEMENTS (SUC n) 0 l = l) /\
+   (SWAP_ELEMENTS x y [] = []) /\
+   (SWAP_ELEMENTS x y [e] = [e]) /\
+   (SWAP_ELEMENTS 0 (SUC n) (e1::e2::l) = ARB (* Something clever *) ) /\
+   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`
+
+(* old (classic result)
+
+ |- (                SWAP_ELEMENTS 0        0         []              = []) /\
+    (!v10.           SWAP_ELEMENTS 0        0         [v10]           = [v10]) /\
+    (!v15 v14 v10.   SWAP_ELEMENTS 0        0         (v10::v14::v15) = v10::v14::v15) /\
+    (!n.             SWAP_ELEMENTS (SUC n)  0         []              = []) /\
+    (!v27 n.         SWAP_ELEMENTS (SUC n)  0         [v27]           = [v27]) /\
+    (!v32 v31 v27 n. SWAP_ELEMENTS (SUC n)  0         (v27::v31::v32) = v27::v31::v32) /\
+    (!v7.            SWAP_ELEMENTS 0        (SUC v7)  []              = []) /\
+    (!v24 v2.        SWAP_ELEMENTS (SUC v2) (SUC v24) []              = []) /\
+    (!v8 e.          SWAP_ELEMENTS 0        (SUC v8)  [e]             = [e]) /\
+    (!v3 v25 e.      SWAP_ELEMENTS (SUC v3) (SUC v25) [e]             = [e]) /\
+    (!n l e2 e1.     SWAP_ELEMENTS 0        (SUC n)   (e1::e2::l)     = ARB) /\
+    (!v38 v37 n m e. SWAP_ELEMENTS (SUC m)  (SUC n)   (e::v37::v38)   = e::SWAP_ELEMENTS m n (v37::v38):
+   thm
+
+with Define_f 
+
+ |- (!l.             SWAP_ELEMENTS 0        0         l               = l) /\
+    (!n l.           SWAP_ELEMENTS (SUC n)  0         l               = l) /\
+    (!v7.            SWAP_ELEMENTS 0        (SUC v7)  []              = []) /\
+    (!v2 v16.        SWAP_ELEMENTS (SUC v2) (SUC v16) []              = []) /\
+    (!v8 e.          SWAP_ELEMENTS 0        (SUC v8)  [e]             = [e]) /\
+    (!v3 v17 e.      SWAP_ELEMENTS (SUC v3) (SUC v17) [e]             = [e]) /\
+    (!n l e2 e1.     SWAP_ELEMENTS 0        (SUC n)   (e1::e2::l)     = ARB) /\
+    (!v22 v21 n m e. SWAP_ELEMENTS (SUC m)  (SUC n)   (e::v21::v22)   = e::SWAP_ELEMENTS m n (v21::v22):
+   thm
+
+with Define_q
+
+ |- (!l.             SWAP_ELEMENTS 0        0         l               = l) /\
+    (!n l.           SWAP_ELEMENTS (SUC n)  0         l               = l) /\
+    (!x v4.          SWAP_ELEMENTS x        (SUC v4)  []              = []) /\
+    (!x v5 e.        SWAP_ELEMENTS x        (SUC v5)  [e]             = [e]) /\
+    (!n l e2 e1.     SWAP_ELEMENTS 0        (SUC n)   (e1::e2::l)     = ARB) /\
+    (!v13 v12 n m e. SWAP_ELEMENTS (SUC m)  (SUC n)   (e::v12::v13)   = e::SWAP_ELEMENTS m n (v12::v13):
+   thm
+
+
+ |- (DELETE_ELEMENT n [] = []) /\
+    (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
+    (!x n l. DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
+
+*)
 
 
 val test_org_def = Define_org `
