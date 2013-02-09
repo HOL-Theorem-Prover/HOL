@@ -1689,7 +1689,12 @@ alpha, beta, and eta conversions of the types involved.
 
 \noindent
 The relation \texttt{ge\_ty} is defined by the following rules, where for
-clarity we use $\ge$ between types as an infix version of \texttt{ge\_ty}:
+clarity we use $\ge$ between types as an infix version of \texttt{ge\_ty}.
+%and where $\sigma'[\alpha,\alpha' / \alpha',\alpha]$ is $\sigma'$
+%with all free occurences of $\alpha$ and $\alpha'$ swapped:
+Here
+$[\alpha,\alpha' / \alpha',\alpha]$ swaps
+free occurrences of $\alpha$ and $\alpha'$.
 $$
 \begin{array}[b]{c@{\hspace{4mm}}c@{\hspace{4mm}}c}
 \Rule{\alpha = \alpha',\ k = k'}
@@ -1704,7 +1709,7 @@ $$
      {\sigma_{arg} \ \sigma_{opr}\ \ge\ 
       \sigma_{arg}'\ \sigma_{opr}'}
 &
-\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha,\alpha' / \alpha',\alpha]}
      {\forall\alpha{:}k.\ \sigma\ \ge\ \forall\alpha'{:}k'.\ \sigma'}
 \\
 & & \\
@@ -1712,10 +1717,10 @@ $$
      {\tau : k\ \ge\ \tau' : k'}
 &
 \hspace{3mm}
-\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha,\alpha' / \alpha',\alpha]}
      {\lambda\alpha{:}k.\ \sigma\ \ge\ \lambda\alpha'{:}k'.\ \sigma'}
 &
-\Rule{k = k',\ \sigma \ge \sigma'[\alpha / \alpha']}
+\Rule{k = k',\ \sigma \ge \sigma'[\alpha,\alpha' / \alpha',\alpha]}
      {\exists\alpha{:}k.\ \sigma\ \ge\ \exists\alpha'{:}k'.\ \sigma'}
 \\
 & & \\
