@@ -126,7 +126,7 @@ val _ =
           | NONE => NONE
       open GrammarSpecials
   in
-    set_case_specials ((fn t => #functional (Pmatch.mk_functional (!Pmatch.default_pheu) lookup t)),
+    set_case_specials ((fn t => #functional (Pmatch.mk_functional (!Pmatch.pmatch_heuristic) lookup t)),
                        (fn s =>
                              case lookup s of
                                NONE => []

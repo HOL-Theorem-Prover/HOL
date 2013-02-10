@@ -91,7 +91,7 @@ in
                  orelse raise ERR "Define_string2enum" "not an enum type"
          val css = List.map (fn c => (e2s c, c)) l
          val cs = Lib.with_flag (Feedback.emit_MESG, false)
-                                TypeBase.mk_pattern_fn (!Pmatch.default_pheu) css
+                                TypeBase.mk_pattern_fn (!Pmatch.pmatch_heuristic) css
          val (v, b) = Term.dest_abs cs
          val name = "string2" ^ fst (Type.dest_type ty)
          val f = Term.mk_var (name, stringSyntax.string_ty --> ty)

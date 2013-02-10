@@ -312,7 +312,7 @@ fun under_literal_bool_case conv tm =
     incomplete set of patterns is given.
  ----------------------------------------------------------------------------*)
 
-type pmatch_heuristic = {skip_rows : bool, col_fun : thry -> term list list -> int}
+type pmatch_heuristic = {skip_rows : bool, collapse_cases : bool, col_fun : thry -> term list list -> int}
 
 fun bring_to_front_list n l = let
    val (l0, l1) = Lib.split_after n l
@@ -324,7 +324,7 @@ fun undo_bring_to_front n l = let
    val (l0, l1) = Lib.split_after n l'
  in (l0 @ x::l1) end
 
-fun mk_case0 heu ty_info ty_match FV range_ty =
+fun mk_case0 (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
  val fresh_var = vary FV
@@ -374,7 +374,9 @@ fun mk_case0 heu ty_info ty_match FV range_ty =
               val pat_rectangle' = map v_to_prefix pat_rectangle
               val (pref_patl,tm) = mk{path = rstp,
                                       rows = zip pat_rectangle' rights'}
-          in (map v_to_pats pref_patl, tm)
+              val pat_rect1 = map v_to_pats pref_patl
+              val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
+          in (pat_rect1', tm)
           end
      else
      let val pty = type_of p
@@ -419,11 +421,20 @@ fun mk_case0 heu ty_info ty_match FV range_ty =
                           (zip new_formals groups)
            val rec_calls = map mk news
            val (pat_rect,dtrees) = unzip rec_calls
-           val case_functions = map list_mk_abs(zip new_formals dtrees)
-           val types = map type_of (u::case_functions)
-           val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
-                                          Ty = list_mk_fun(types, range_ty)}
-           val tree = list_mk_comb(case_const', u::case_functions)
+           val tree = 
+             if ((#collapse_cases heu) andalso 
+                 (List.all (aconv (hd dtrees)) (tl dtrees)) andalso
+                 (List.all (fn (vL, tree) => 
+                    (List.all (fn v => not (free_in v tree)) vL)) (zip new_formals dtrees))) then 
+               (* If all cases lead to the same result, no split is necessary *)
+               (hd dtrees)
+             else let
+               val case_functions = map list_mk_abs(zip new_formals dtrees)
+               val types = map type_of (u::case_functions)
+               val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
+                                              Ty = list_mk_fun(types, range_ty)}
+               val tree = list_mk_comb(case_const', u::case_functions)
+             in tree end
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
            val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
        in
@@ -443,10 +454,12 @@ fun mk_case0 heu ty_info ty_match FV range_ty =
  ----------------------------------------------------------------------------*)
 
 (* the old heuristic used by HOL 4 *)
-val pheu_classic : pmatch_heuristic = { skip_rows = false, col_fun = (fn _ => fn _ => 0) }
+val pheu_classic : pmatch_heuristic = { skip_rows = false, collapse_cases = false, col_fun = (fn _ => fn _ => 0) }
 
 (* A heuristic based on ranking functions, which is used t *)
-fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true, col_fun = (fn ty_info => fn rowL => let 
+fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true, 
+   collapse_cases = true,
+   col_fun = (fn ty_info => fn rowL => let 
    val colL = let
      (* assumption: rowL noteq [], and all rows have same length *)
      fun aux a rowL = if (length (hd rowL) = 0) then List.rev a else
@@ -484,10 +497,54 @@ val prheu_constr_prefix =
         | aux n (p :: pL) = if (is_var p) then n else aux (n+1)  pL
   in (fn _ => aux 0) end
 
+fun prheu_first_row_constr tybase [] = 0
+  | prheu_first_row_constr tybase (p :: _) = if (is_var p) then 0 else 
+    let val (_,ty) = strip_fun (type_of p) in
+     case tybase (type_names ty) of NONE => 1 | SOME tyinfo => 
+     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end;  
+
+fun prheu_get_constr_set tybase pL =   
+  case pL of [] => NONE | p :: pL' =>
+  let val (_,ty) = strip_fun (type_of p) in
+  case tybase (type_names ty) of NONE => NONE | SOME tyinfo => 
+  let
+     val constrL = constructors_of tyinfo;
+     val cL = List.map (fn p => fst (strip_comb p)) pL;
+     val cL' = List.filter (fn c => op_mem same_const c constrL) cL;
+     val cL'' = Lib.mk_set cL';     
+  in 
+    SOME (cL'', constrL)
+  end
+  end handle HOL_ERR _ => NONE
+
+fun prheu_get_nonvar_set pL = 
+  let
+     val cL = List.map (fn p => fst (strip_comb p)) pL;
+     val cL' = List.filter (fn c => not (is_var c)) cL;
+     val cL'' = Lib.mk_set cL';     
+  in 
+    cL''
+  end
+
+fun prheu_small_branching_factor ty_info pL =   
+  case prheu_get_constr_set ty_info pL of
+      SOME (cL, full_constrL) =>
+        (~(length cL + (if length cL = length full_constrL then 0 else 1)))
+    | NONE => (~(length (prheu_get_nonvar_set pL) + 2))
+
+fun prheu_arity ty_info pL = 
+  case prheu_get_constr_set ty_info pL of
+     SOME (cL, full_constrL) =>
+       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL 
+   | NONE => 0
+
+
 val pheu_first_row = pheu_rank [prheu_first_row]
 val pheu_constr_prefix = pheu_rank [prheu_constr_prefix]
+val pheu_qba = pheu_rank [prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
+val pheu_cqba = pheu_rank [prheu_first_row_constr, prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
 
-val default_pheu = ref pheu_constr_prefix
+val pmatch_heuristic = ref pheu_qba
 
 (*---------------------------------------------------------------------------
      Repeated variable occurrences in a pattern are not allowed.
@@ -729,7 +786,6 @@ fun rename_case thy sub cs =
    in cs'
    end
 
-
 local fun paired1{lhs,rhs} = (lhs,rhs)
       and paired2{Rator,Rand} = (Rator,Rand)
       fun err s = raise ERR "mk_functional" s
@@ -743,7 +799,7 @@ fun mk_functional heu thy eqs =
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map no_repeat_vars pats
-     val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
+     val rows = zip (map (fn x => ([]:term list,[x])) pats) (map GIVEN (enumerate R))
      val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs

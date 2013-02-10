@@ -6,6 +6,7 @@ sig
   type thry = {Thy : string, Tyop : string} ->
               {case_const : term, constructors : term list} option
   type pmatch_heuristic = {skip_rows : bool, (* skip splitting for redundant rows? *)
+                           collapse_cases : bool, (* collapse cases that lead to the same result ? *)
                           (* given a list of rows of patterns, which column to split on? *) 
                            col_fun : thry -> term list list -> int }
 
@@ -30,11 +31,16 @@ sig
    val pheu_classic : pmatch_heuristic (* HOL 4's old heuristic *)
    val pheu_first_row : pmatch_heuristic
    val pheu_constr_prefix : pmatch_heuristic
+   val pheu_qba : pmatch_heuristic 
+   val pheu_cqba : pmatch_heuristic (* The default one *)
 
    val pheu_rank : (thry -> term list -> int) list -> pmatch_heuristic
    val prheu_first_row : thry -> term list -> int
+   val prheu_first_row_constr : thry -> term list -> int
    val prheu_constr_prefix : thry -> term list -> int
+   val prheu_small_branching_factor : thry -> term list -> int
+   val prheu_arity : thry -> term list -> int
 
-   val default_pheu : pmatch_heuristic ref (* The one used by default *)
+   val pmatch_heuristic : pmatch_heuristic ref (* The one used by default *)
 
 end
