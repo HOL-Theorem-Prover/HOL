@@ -7,9 +7,9 @@ val _ = new_theory "pattern_match_demo";
 
 open Pmatch
 
-fun Define_heu heu = with_flag (pmatch_heuristic, heu) Define
+fun Define_heu heu = with_flag (Pmatch.pmatch_heuristic, heu) Define
 
-val Define_classic = Define_heu pheu_classic
+val Define_classic = Define_heu Pmatch.pheu_classic
 val Define_f = Define_heu pheu_first_row
 val Define_q = Define_heu pheu_constr_prefix
 val Define_qba = Define_heu pheu_qba

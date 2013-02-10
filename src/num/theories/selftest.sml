@@ -36,7 +36,7 @@ val _ = let
 in
   List.app tpp [
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
-    "case e1 of 0 => F | SUC n => case e2 of 0 => T | SUC m => T",
+    "case e1 of 0 => 1 | SUC n => case e2 of 0 => 2 | SUC m => 3",
     "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y"
   ]
 end

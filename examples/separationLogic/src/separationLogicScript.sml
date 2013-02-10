@@ -431,7 +431,6 @@ val BIN_OPTION_MAP_def = Define `
 
 
 val BIN_OPTION_MAP_THM = store_thm ("BIN_OPTION_MAP_THM",
-
 ``  (BIN_OPTION_MAP f c (SOME x1) (SOME x2) =
       if (~(c x1 x2)) then NONE else
       SOME (f x1 x2)) /\
@@ -455,12 +454,8 @@ val BIN_OPTION_MAP_THM = store_thm ("BIN_OPTION_MAP_THM",
   (IS_SOME (BIN_OPTION_MAP f c s1 s2) =
    ((IS_SOME s1) /\ (IS_SOME s2) /\ c (THE s1) (THE s2)))``,
 
+SIMP_TAC std_ss [BIN_OPTION_MAP_def] THEN
 REPEAT STRIP_TAC THENL [
-   SIMP_TAC std_ss [BIN_OPTION_MAP_def],
-
-   Cases_on `x` THEN
-   SIMP_TAC std_ss [BIN_OPTION_MAP_def],
-
    Cases_on `x` THEN
    SIMP_TAC std_ss [BIN_OPTION_MAP_def],
 
@@ -546,7 +541,6 @@ REPEAT STRIP_TAC THENL [
       Cases_on `y` THEN
       Cases_on `z` THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def] THENL [
-         METIS_TAC[BIN_OPTION_MAP_def],
          METIS_TAC[BIN_OPTION_MAP_def],
 
          Cases_on `c x x''` THEN Cases_on `c x' x` THEN
