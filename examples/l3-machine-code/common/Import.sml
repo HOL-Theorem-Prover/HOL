@@ -245,7 +245,7 @@ fun CS (x, cs) =
    Term.beta_conv (Term.mk_comb
      (Lib.with_flag (Feedback.emit_MESG, false)
         (Lib.with_flag (Globals.priming, SOME "_")
-           TypeBase.mk_pattern_fn) cs, x))
+           TypeBase.mk_pattern_fn (!Pmatch.pmatch_heuristic)) cs, x))
    before resetAnon ()
 
 (* Let-expression *)
