@@ -767,5 +767,154 @@ val CARD_BIGUNION = store_thm(
        [SURJ_DEF, FORALL_PROD, pairTheory.EXISTS_PROD] >>
   fs[SURJ_DEF] >> metis_tac[]);
 
+(* set exponentiation *)
+val set_exp_def = Define`
+  set_exp A B = { f | (∀b. b ∈ B ⇒ ∃a. a ∈ A ∧ (f b = SOME a)) ∧
+                      ∀b. b ∉ B ⇒ (f b = NONE) }
+`;
+val _ = overload_on ("**", ``set_exp``)
+
+val csimp = asm_simp_tac (srw_ss() ++ boolSimps.CONJ_ss)
+val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
+
+val BIJ_functions_agree = store_thm(
+  "BIJ_functions_agree",
+  ``∀f g s t. BIJ f s t ∧ (∀x. x ∈ s ⇒ (f x = g x)) ⇒ BIJ g s t``,
+  simp[BIJ_DEF, SURJ_DEF, INJ_DEF] >> rw[] >>
+  full_simp_tac (srw_ss() ++ boolSimps.CONJ_ss) []);
+
+val CARD_CARDEQ_I = store_thm(
+  "CARD_CARDEQ_I",
+  ``FINITE s1 ∧ FINITE s2 ∧ (CARD s1 = CARD s2) ⇒ s1 ≈ s2``,
+  Cases_on `FINITE s1` >> simp[] >> qid_spec_tac `s2` >> pop_assum mp_tac >>
+  qid_spec_tac `s1` >> ho_match_mp_tac FINITE_INDUCT >> simp[] >> conj_tac
+  >- metis_tac [CARD_EQ_0, cardeq_REFL, CARDEQ_0] >>
+  qx_gen_tac `s1` >> strip_tac >> qx_gen_tac `a` >> strip_tac >>
+  qx_gen_tac `s2` >>
+  `(s2 = {}) ∨ ∃b s. (s2 = b INSERT s) ∧ b ∉ s` by metis_tac [SET_CASES] >>
+  csimp[] >> strip_tac >> `s1 =~ s` by metis_tac[] >>
+  `∃f. BIJ f s1 s` by metis_tac [cardeq_def] >>
+  simp[cardeq_def] >> qexists_tac `λx. if x = a then b else f x` >>
+  simp[BIJ_INSERT] >>
+  `(b INSERT s) DELETE b = s` by (simp[EXTENSION] >> metis_tac[]) >>
+  match_mp_tac BIJ_functions_agree >> qexists_tac `f` >> rw[]);
+
+val CARDEQ_CARD_EQN = store_thm(
+  "CARDEQ_CARD_EQN",
+  ``FINITE s1 ∧ FINITE s2 ⇒ (s1 =~ s2 ⇔ (CARD s1 = CARD s2))``,
+  metis_tac [CARD_CARDEQ_I, CARDEQ_CARD]);
+
+val EMPTY_set_exp = store_thm(
+  "EMPTY_set_exp",
+  ``(A ** {} = { K NONE }) ∧ (B ≠ {} ⇒ ({} ** B = {}))``,
+  simp[set_exp_def] >> conj_tac >- simp[EXTENSION, FUN_EQ_THM] >>
+  strip_tac >> qsuff_tac `(∀b. b ∉ B) = F`
+  >- (disch_then SUBST_ALL_TAC >> simp[]) >>
+  fs[EXTENSION] >> metis_tac[]);
+
+val EMPTY_set_exp_CARD = store_thm(
+  "EMPTY_set_exp_CARD",
+  ``A ** {} =~ count 1``,
+  simp[EMPTY_set_exp, CARDEQ_CARD_EQN]);
+
+val SING_set_exp = store_thm(
+  "SING_set_exp",
+  ``({x} ** B = { (λb. if b ∈ B then SOME x else NONE) }) ∧
+    (A ** {x} = { (λb. if b = x then SOME a else NONE) | a ∈ A })``,
+  rw[set_exp_def, EXTENSION] >> rw[FUN_EQ_THM, EQ_IMP_THM] >> rw[] >>
+  metis_tac[]);
+
+val SING_set_exp_CARD = store_thm(
+  "SING_set_exp_CARD",
+  ``{x} ** B =~ count 1 ∧ A ** {x} =~ A``,
+  simp[SING_set_exp, CARDEQ_CARD_EQN] >> simp[Once cardeq_SYM] >>
+  simp[cardeq_def] >> qexists_tac `λa b. if b = x then SOME a else NONE` >>
+  qmatch_abbrev_tac `BIJ f A s` >>
+  qsuff_tac `s = IMAGE f A`
+  >- (rw[] >> match_mp_tac (GEN_ALL INJ_BIJ_SUBSET) >>
+      map_every qexists_tac [`IMAGE f A`, `A`] >> rw[INJ_DEF, Abbr`f`]
+      >- metis_tac[]
+      >> (fs[FUN_EQ_THM] >> first_x_assum (qspec_then `x` mp_tac) >> simp[]))>>
+  rw[Abbr`s`, Abbr`f`, EXTENSION]);
+
+val POW_TWO_set_exp = store_thm(
+  "POW_TWO_set_exp",
+  ``POW A =~ count 2 ** A``,
+  simp[POW_DEF, set_exp_def, BIJ_IFF_INV, cardeq_def] >>
+  qexists_tac `λs a. if a ∈ A then if a ∈ s then SOME 1 else SOME 0
+                     else NONE` >> simp[] >> conj_tac
+  >- (qx_gen_tac `s` >> strip_tac >> qx_gen_tac `b` >> strip_tac >>
+      Cases_on `b ∈ s` >> simp[]) >>
+  qexists_tac `λf. { a | a ∈ A ∧ (f a = SOME 1) }` >> simp[] >> rpt conj_tac
+  >- simp[SUBSET_DEF]
+  >- (qx_gen_tac `s` >> csimp[] >> simp[EXTENSION, SUBSET_DEF] >>
+      rw[] >> rw[]) >>
+  qx_gen_tac `f` >> simp[FUN_EQ_THM] >> strip_tac >> qx_gen_tac `a` >>
+  Cases_on `a ∈ A` >> simp[] >>
+  `∃n. n < 2 ∧ (f a = SOME n)` by metis_tac[] >>
+  rw[] >> decide_tac)
+
+val set_exp_count = store_thm(
+  "set_exp_count",
+  ``A ** count n =~ { l | (LENGTH l = n) ∧ ∀e. MEM e l ⇒ e ∈ A }``,
+  simp[cardeq_def, BIJ_IFF_INV] >>
+  qexists_tac `λf. GENLIST (THE o f) n` >> simp[listTheory.MEM_GENLIST] >>
+  conj_tac
+  >- (qx_gen_tac `f` >> dsimp[set_exp_def] >> rpt strip_tac >> res_tac >>
+      simp[]) >>
+  qexists_tac `λl m. if m < n then SOME (EL m l) else NONE` >> rpt conj_tac
+  >- (simp[] >> qx_gen_tac `l` >> strip_tac >>
+      simp[set_exp_def] >> metis_tac [listTheory.MEM_EL])
+  >- (qx_gen_tac `f` >> rw[set_exp_def] >> simp[FUN_EQ_THM] >>
+      qx_gen_tac `m` >> rw[] >> res_tac >> simp[]) >>
+  simp[combinTheory.o_ABS_R] >> qx_gen_tac `l` >> strip_tac >>
+  match_mp_tac listTheory.LIST_EQ >> simp[])
+
+val set_exp_card_cong = store_thm(
+  "set_exp_card_cong",
+  ``(a1:'a1 set) =~ (a2:'a2 set) ⇒
+    (b1:'b1 set) =~ (b2:'b2 set) ⇒ (a1 ** b1 =~ a2 ** b2)``,
+  disch_then (Q.X_CHOOSE_THEN `rf` assume_tac o
+              SIMP_RULE bool_ss [cardeq_def]) >>
+  disch_then (Q.X_CHOOSE_THEN `df` assume_tac o
+              SIMP_RULE bool_ss [cardeq_def] o
+              SIMP_RULE bool_ss [Once cardeq_SYM]) >>
+  simp[cardeq_def] >>
+  qexists_tac `λf1 b. if b ∈ b2 then
+                        case f1 (df b) of NONE => NONE | SOME a => SOME (rf a)
+                      else NONE` >>
+  fs[BIJ_DEF, SURJ_DEF, INJ_DEF] >>
+  simp[set_exp_def, FUN_EQ_THM] >>
+  `∀x y. x ∈ b2 ∧ y ∈ b2 ⇒ ((df x = df y) ⇔ (x = y))` by metis_tac[] >>
+  rpt conj_tac
+  >- (qx_gen_tac `f` >> strip_tac >>
+      qx_gen_tac `b` >> strip_tac >>
+      `df b ∈ b1` by res_tac >>
+      `∃a. a ∈ a1 ∧ (f (df b) = SOME a)` by metis_tac[] >> simp[])
+  >- (map_every qx_gen_tac [`f1`, `f2`] >> strip_tac >> strip_tac >>
+      qx_gen_tac `b` >> REVERSE (Cases_on `b ∈ b1`) >- (res_tac >> simp[]) >>
+      `∃b0. b0 ∈ b2 ∧ (df b0 = b)` by metis_tac[] >>
+      first_x_assum (qspec_then `b0` mp_tac) >> simp[] >> res_tac >> simp[])
+  >- (qx_gen_tac `f` >> strip_tac >>
+      qx_gen_tac `b` >> strip_tac >>
+      `df b ∈ b1` by res_tac >>
+      `∃a. a ∈ a1 ∧ (f (df b) = SOME a)` by metis_tac[] >> simp[]) >>
+  qx_gen_tac `f` >> strip_tac >>
+  qexists_tac `λb. if b ∈ b1 then
+                     case f (@b0. b0 ∈ b2 ∧ (df b0 = b)) of
+                       NONE => NONE
+                     | SOME a => SOME (@a0. a0 ∈ a1 ∧ (rf a0 = a))
+                   else NONE` >>
+  simp[] >> conj_tac
+  >- (qx_gen_tac `b:'b1` >> strip_tac >>
+      `∃b0. b0 ∈ b2 ∧ (df b0 = b)` by metis_tac[] >>
+      rw[] >> csimp[] >> csimp[] >>
+      `∃a. a ∈ a2 ∧ (f b0 = SOME a)` by metis_tac [] >> simp[] >>
+      SELECT_ELIM_TAC >> simp[]) >>
+  qx_gen_tac `b:'b2` >> Cases_on `b ∈ b2` >> simp[] >>
+  csimp[] >> csimp[] >>
+  `(f b = NONE) ∨ ∃a. f b = SOME a` by (Cases_on `f b` >> simp[]) >> simp[] >>
+  SELECT_ELIM_TAC >> simp[] >>
+  metis_tac [optionTheory.SOME_11]);
 
 val _ = export_theory()
