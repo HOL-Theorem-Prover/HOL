@@ -345,7 +345,7 @@ val _ = overload_on(">=", ``GE_xnum_xnum``);
 val GT_LS =
  store_thm
   ("GT_LS",
-   ``!x:xnum n:num. x > n = n < x``,
+   ``!x:xnum n:num. (x > n) = (n < x)``,
    Cases_on `x`
     THEN RW_TAC arith_ss [GT_xnum_num_def,LS_num_xnum_def]);
 
@@ -417,12 +417,12 @@ val LENGTH_RESTN =
     THEN Cases
     THEN RW_TAC list_ss
           [LENGTH_def,RESTN_def,IS_FINITE_REST,SUB,
-           IS_FINITE_def,REST_def,LENGTH_RESTN,LS]
+           IS_FINITE_def,REST_def,LENGTH_RESTN,LS,EL]
     THEN `Path$LENGTH(FINITE(TL l)) = XNUM(list$LENGTH(TL l))` by RW_TAC std_ss [LENGTH_def]
     THEN Cases_on `l`
     THEN FULL_SIMP_TAC list_ss [DECIDE ``~(SUC n < 0)``]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `FINITE t` (el 3 thl)))
-    THEN FULL_SIMP_TAC std_ss [IS_FINITE_def,LENGTH_def,LS,SUB]);
+    THEN FULL_SIMP_TAC std_ss [IS_FINITE_def,LENGTH_def,LS,SUB,EL]);
 
 val LENGTH_RESTN_COR =
  store_thm
@@ -892,7 +892,7 @@ val EL_SEL_LEMMA =
       i <= j /\ m <= j-i ==> (EL m (SEL p (i,j)) = ELEM p (i+m))``,
    Induct
     THEN RW_TAC list_ss
-          [SEL_REC_def,ELEM_def,RESTN_def,
+          [SEL_REC_def,ELEM_def,RESTN_def,EL,
            HD_SEL,TL_SEL,RESTN_def,DECIDE``i + SUC m = SUC(i+m)``]);
 
 val EL_SEL =
@@ -907,9 +907,9 @@ val EL_SEL0 =
   ("EL_SEL0",
    ``!j i p. j <= i ==> (EL j (SEL p (0,i)) = ELEM p j)``,
    Induct
-    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,HD_SEL0]
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,HD_SEL0,EL]
     THEN Induct_on `i`
-    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,TL_SEL0]);
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,TL_SEL0,EL]);
 
 val SEL_REC_REST =
  store_thm
