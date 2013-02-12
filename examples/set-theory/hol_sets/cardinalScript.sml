@@ -917,4 +917,127 @@ val set_exp_card_cong = store_thm(
   SELECT_ELIM_TAC >> simp[] >>
   metis_tac [optionTheory.SOME_11]);
 
+val exp_INSERT_cardeq = store_thm(
+  "exp_INSERT_cardeq",
+  ``e ∉ s ⇒ (A ** (e INSERT s) ≈ A × A ** s)``,
+  simp[set_exp_def, cardeq_def] >> strip_tac >> simp[BIJ_IFF_INV] >>
+  qexists_tac `λf. (THE (f e), (λa. if a = e then NONE else f a))` >> conj_tac
+  >- (qx_gen_tac `f` >> strip_tac >> simp[] >> conj_tac
+      >- (`∃a. a ∈ A ∧ (f e = SOME a)` by metis_tac[] >> simp[]) >>
+      metis_tac[]) >>
+  qexists_tac `λ(a1,f) a2. if a2 = e then SOME a1 else f a2` >>
+  simp[pairTheory.FORALL_PROD] >> rpt conj_tac
+  >- (map_every qx_gen_tac [`a`, `f`] >> strip_tac >> qx_gen_tac `b` >> rw[])
+  >- (qx_gen_tac `f` >> strip_tac >> simp[FUN_EQ_THM] >> qx_gen_tac `a` >>
+      rw[] >> `∃a'. f a = SOME a'` by metis_tac[] >> simp[]) >>
+  rw[FUN_EQ_THM] >> rw[]);
+
+val exp_count_cardeq = store_thm(
+  "exp_count_cardeq",
+  ``INFINITE A ∧ 0 < n ⇒ A ** count n ≈ A``,
+  strip_tac >> Induct_on `n` >> simp[] >>
+  `(n = 0) ∨ ∃m. n = SUC m` by (Cases_on `n` >> simp[])
+  >- simp[count_EQN, SING_set_exp_CARD] >>
+  simp_tac (srw_ss()) [COUNT_SUC] >>
+  `A ** (n INSERT count n) ≈ A × A ** count n`
+    by simp[exp_INSERT_cardeq] >>
+  `A ** count n ≈ A` by simp[] >>
+  `A × A ** count n ≈ A × A` by metis_tac[CARDEQ_CROSS, cardeq_REFL] >>
+  `A × A ≈ A` by simp[SET_SQUARED_CARDEQ_SET] >>
+  metis_tac [cardeq_TRANS]);
+
+val INFINITE_Unum = store_thm(
+  "INFINITE_Unum",
+  ``INFINITE A ⇔ univ(:num) ≼ A``,
+  simp[infinite_num_inj, cardleq_def]);
+
+val cardleq_SURJ = store_thm(
+  "cardleq_SURJ",
+  ``A ≼ B ⇔ (∃f. SURJ f B A) ∨ (A = ∅)``,
+  simp[cardleq_def, EQ_IMP_THM] >>
+  metis_tac [SURJ_INJ_INV, inj_surj, INJ_EMPTY]);
+
+val INFINITE_cardleq_INSERT = store_thm(
+  "INFINITE_cardleq_INSERT",
+  ``INFINITE A ⇒ (x INSERT s ≼ A ⇔ s ≼ A)``,
+  simp[cardleq_def, INJ_INSERT, EQ_IMP_THM] >> strip_tac >> conj_tac
+  >- metis_tac[] >>
+  disch_then (Q.X_CHOOSE_THEN `f` strip_assume_tac) >>
+  Cases_on `x ∈ s` >- (qexists_tac `f` >> fs[INJ_DEF]) >>
+  Q.UNDISCH_THEN `INFINITE A` mp_tac >>
+  simp[INFINITE_Unum, cardleq_def] >>
+  disch_then (Q.X_CHOOSE_THEN `g` assume_tac) >>
+  qexists_tac `λy. if y = x then g 0
+                   else case some n. f y = g n of
+                          NONE => f y
+                        | SOME m => g (m + 1)` >>
+  rpt conj_tac
+  >- (simp[INJ_DEF] >> conj_tac
+      >- (qx_gen_tac `y` >> strip_tac >> rw[] >- fs[] >>
+          Cases_on `some n. f y = g n` >> fs[INJ_DEF]) >>
+      map_every qx_gen_tac [`i`, `j`] >> strip_tac >> Cases_on `i = x` >>
+      Cases_on `j = x` >> simp[]
+      >- (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> fs[INJ_DEF])
+      >- (DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >> fs[INJ_DEF]) >>
+      ntac 2 (DEEP_INTRO_TAC optionTheory.some_intro) >> simp[] >>
+      fs[INJ_DEF] >> qx_gen_tac `m` >> strip_tac >>
+      qx_gen_tac `n` >> rpt strip_tac >>
+      metis_tac [DECIDE ``(n + 1 = m + 1) ⇔ (m = n)``])
+  >- fs[INJ_DEF] >>
+  qx_gen_tac `y` >> simp[] >> Cases_on `x = y` >> simp[] >>
+  Cases_on `y ∈ s` >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[] >> fs[INJ_DEF] >> metis_tac [DECIDE ``0 ≠ n + 1``])
+
+val finite_subsets_bijection = store_thm(
+  "finite_subsets_bijection",
+  ``INFINITE A ⇒ A ≈ { s | FINITE s ∧ s ⊆ A }``,
+  strip_tac >> match_mp_tac cardleq_ANTISYM >> conj_tac
+  >- (simp[cardleq_def] >> qexists_tac `λa. {a}` >>
+      simp[INJ_DEF]) >>
+  `{s | FINITE s ∧ s ⊆ A} =
+   {} INSERT
+   BIGUNION (IMAGE (λn. { s | s ≠ ∅ ∧ s ⊆ A ∧ FINITE s ∧ CARD s ≤ n })
+                   univ(:num))`
+      by (simp[Once EXTENSION] >> qx_gen_tac `s` >> simp[EQ_IMP_THM] >> conj_tac
+          >- (strip_tac >> dsimp[] >> Cases_on `s = {}` >> simp[] >>
+              qexists_tac `CARD s` >> simp[]) >>
+          dsimp[]) >>
+  pop_assum SUBST_ALL_TAC >>
+  simp[INFINITE_cardleq_INSERT] >>
+  match_mp_tac CARD_BIGUNION >> simp[] >> conj_tac
+  >- simp[IMAGE_cardleq_rwt, SYM INFINITE_Unum] >>
+  dsimp[] >> qx_gen_tac `n` >>
+  Cases_on `n = 0`
+  >- (csimp[CARD_EQ_0] >> csimp[] >> simp[cardleq_def, INJ_DEF] >>
+      `∃x. x ∈ A` by metis_tac [INFINITE_INHAB] >>
+      qexists_tac `K x` >> simp[]) >>
+  `0 < n` by decide_tac >>
+  `A ≈ A ** count n` by simp[exp_count_cardeq, cardeq_SYM] >>
+  qsuff_tac `{ s | s ≠ ∅ ∧ s ⊆ A ∧ FINITE s ∧ CARD s ≤ n } ≼ A ** count n`
+  >- metis_tac [CARDEQ_CARDLEQ, cardeq_SYM, cardeq_REFL] >>
+  qsuff_tac `{ s | s ≠ ∅ ∧ s ⊆ A ∧ FINITE s ∧ CARD s ≤ n } ≼
+             { l | (LENGTH l = n) ∧ ∀e. MEM e l ⇒ e ∈ A }`
+  >- metis_tac [CARDEQ_CARDLEQ, cardeq_SYM, cardeq_REFL, set_exp_count] >>
+  simp[cardleq_SURJ] >> disj1_tac >>
+  qexists_tac `LIST_TO_SET` >> simp[SURJ_DEF] >> conj_tac
+  >- (rw[SUBSET_DEF] >> rw[listTheory.CARD_LIST_TO_SET] >> strip_tac >> fs[]) >>
+  qx_gen_tac `s` >> Cases_on `FINITE s` >> simp[] >>
+  Q.UNDISCH_THEN `0 < n` mp_tac >>
+  qid_spec_tac `n` >>
+  pop_assum mp_tac >> qid_spec_tac `s` >>
+  rpt (pop_assum (K ALL_TAC)) >>
+  ho_match_mp_tac FINITE_INDUCT >> simp[] >> qx_gen_tac `s` >> strip_tac >>
+  qx_gen_tac `e` >> strip_tac >> qx_gen_tac `n` >> strip_tac >>
+  strip_tac >>
+  `CARD s ≤ n` by decide_tac >>
+  Cases_on `s = ∅`
+  >- (qexists_tac `GENLIST (K e) n` >> dsimp[listTheory.MEM_GENLIST] >>
+      dsimp[EXTENSION, listTheory.MEM_GENLIST] >> metis_tac []) >>
+  `n ≠ 1` by (strip_tac >> rw[] >> `CARD s = 0` by decide_tac >>
+              metis_tac[CARD_EQ_0]) >>
+  `0 < n - 1 ∧ CARD s ≤ n - 1` by decide_tac >>
+  `∃l. (LENGTH l = n - 1) ∧ (∀e. MEM e l ⇒ e ∈ A) ∧ (set l = s)`
+    by metis_tac[] >>
+  qexists_tac `e::l` >> dsimp[] >> decide_tac)
+
 val _ = export_theory()
