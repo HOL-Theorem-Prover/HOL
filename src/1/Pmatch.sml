@@ -324,7 +324,7 @@ fun undo_bring_to_front n l = let
    val (l0, l1) = Lib.split_after n l'
  in (l0 @ x::l1) end
 
-fun mk_case0 (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
+fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
  val fresh_var = vary FV
@@ -448,6 +448,65 @@ fun mk_case0 (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
  in mk
  end;
 
+fun average_tree_depth t =  
+let
+  val (_, ts) = strip_comb t
+  val ts' = tl ts
+  val _ = if is_var (hd ts) andalso not (null ts') then () else fail()
+  val ts'' = map (snd o strip_abs) ts'
+  val ds = List.foldl (fn (t, s) => s + average_tree_depth t) 0.0 ts''
+  val ds' = (ds / (real (length ts''))) + 1.0
+in
+  ds'
+end handle Empty => 0.0
+         | HOL_ERR _ => 0.0
+
+fun lex_order (ord1 : 'a cmp) (ord2 : 'a cmp) xy =
+  case ord1 xy of
+     LESS => LESS
+   | GREATER => GREATER
+   | EQUAL => (ord2 xy handle Unordered => EQUAL)
+  handle Unordered => (ord2 xy handle Unordered => EQUAL)
+
+type pmatch_heuristic_res_compare = ((term list * ((term * int -> pattern) * int) * term list) list * term) Lib.cmp
+
+val pmatch_heuristic_cases_base_cmp : pmatch_heuristic_res_compare =
+  fn ((patts1, case_tm1), (patts2, case_tm2)) => Int.compare (length patts1, length patts2)
+
+fun pmatch_heuristic_size_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) = 
+  Int.compare (term_size case_tm1, term_size case_tm2)
+
+fun pmatch_heuristic_tree_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) = 
+  Real.compare (average_tree_depth case_tm1, average_tree_depth case_tm2)
+
+fun pmatch_heuristic_cases_cmp xy = lex_order pmatch_heuristic_cases_base_cmp 
+  (lex_order pmatch_heuristic_size_base_cmp pmatch_heuristic_tree_base_cmp) xy
+
+fun pmatch_heuristic_size_cmp xy = lex_order pmatch_heuristic_size_base_cmp 
+  (lex_order pmatch_heuristic_tree_base_cmp pmatch_heuristic_cases_base_cmp) xy
+
+val pmatch_heuristic = ref ((fn _ => ((fn _ => LESS), (fn _ => NONE))):(unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)))
+
+fun mk_case0 ty_info ty_match FV range_ty rows =
+let
+  fun run_heu heu = mk_case0_heu heu ty_info 
+    ty_match FV range_ty rows;
+
+  val (min_fun, heu_fun) = (!pmatch_heuristic) ()
+
+  fun res_min NONE res = res
+    | res_min (SOME res1) res2 =
+        (case min_fun (res1, res2) of GREATER => res2 | _ => res1)
+
+  fun aux min = case (heu_fun ()) of
+     NONE => (case min of NONE => (print "SHOULD NOT HAPPEN! EMPTY PMATCH-HEURISTIC!"; fail()) | SOME min' => min')
+   | SOME heu => let 
+       val res = run_heu heu
+       val min' = res_min min res
+     in aux (SOME min') end
+in
+  aux NONE
+end
 
 (*----------------------------------------------------------------------------
       Various heuristics for pattern compilation
@@ -492,16 +551,16 @@ end)} : pmatch_heuristic
 fun prheu_first_row _ [] = 0
   | prheu_first_row _ (p :: _) = if (is_var p) then 0 else 1
 
-val prheu_constr_prefix =
-  let fun aux n [] = n
-        | aux n (p :: pL) = if (is_var p) then n else aux (n+1)  pL
-  in (fn _ => aux 0) end
-
 fun prheu_first_row_constr tybase [] = 0
   | prheu_first_row_constr tybase (p :: _) = if (is_var p) then 0 else 
     let val (_,ty) = strip_fun (type_of p) in
      case tybase (type_names ty) of NONE => 1 | SOME tyinfo => 
-     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end;  
+     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end handle HOL_ERR _ => 0;  
+
+val prheu_constr_prefix : (thry -> term list -> int) =
+  let fun aux n [] = n
+        | aux n (p :: pL) = if (is_var p) then n else aux (n+1)  pL
+  in (fn _ => aux 0) end
 
 fun prheu_get_constr_set tybase pL =   
   case pL of [] => NONE | p :: pL' =>
@@ -544,7 +603,30 @@ val pheu_constr_prefix = pheu_rank [prheu_constr_prefix]
 val pheu_qba = pheu_rank [prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
 val pheu_cqba = pheu_rank [prheu_first_row_constr, prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
 
-val pmatch_heuristic = ref pheu_qba
+fun pmatch_heuristic_fun min_fun l () : (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) = let
+  val hL_ref = ref l 
+  fun aux () = case (!hL_ref) of 
+     [] => NONE 
+   | h::hL => (hL_ref := hL; SOME h)
+in (min_fun, aux) end
+
+val pmatch_heuristic_size_list = pmatch_heuristic_fun pmatch_heuristic_size_cmp
+val pmatch_heuristic_cases_list = pmatch_heuristic_fun pmatch_heuristic_cases_cmp
+
+val default_heuristic_fun = (pmatch_heuristic_cases_list [pheu_qba, pheu_classic, pheu_cqba, pheu_first_row]);
+val classic_heuristic_fun = (pmatch_heuristic_cases_list [pheu_classic]);
+
+val _ = pmatch_heuristic := default_heuristic_fun
+
+fun set_heuristic heu = (pmatch_heuristic := pmatch_heuristic_cases_list [heu])
+fun set_heuristic_list_size heuL = (pmatch_heuristic := pmatch_heuristic_size_list heuL)
+fun set_heuristic_list_cases heuL = (pmatch_heuristic := pmatch_heuristic_cases_list heuL)
+
+fun set_default_heuristic () = (pmatch_heuristic := default_heuristic_fun)
+fun set_classic_heuristic () = (pmatch_heuristic := classic_heuristic_fun)
+
+fun with_classic_heuristic f = with_flag (pmatch_heuristic, classic_heuristic_fun) f
+
 
 (*---------------------------------------------------------------------------
      Repeated variable occurrences in a pattern are not allowed.
@@ -786,12 +868,13 @@ fun rename_case thy sub cs =
    in cs'
    end
 
+
 local fun paired1{lhs,rhs} = (lhs,rhs)
       and paired2{Rator,Rand} = (Rator,Rand)
       fun err s = raise ERR "mk_functional" s
       fun msg s = HOL_MESG ("mk_functional: "^s)
 in
-fun mk_functional heu thy eqs =
+fun mk_functional thy eqs =
  let val clauses = strip_conj eqs
      val (L,R) = unzip (map (dest_eq o snd o strip_forall) clauses)
      val (funcs,pats) = unzip(map dest_comb L)
@@ -804,7 +887,7 @@ fun mk_functional heu thy eqs =
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)
-     val (patts, case_tm) = mk_case0 heu (match_info thy) (match_type thy)
+     val (patts, case_tm) = mk_case0 (match_info thy) (match_type thy)
                                      FV range_ty {path=[a], rows=rows}
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
@@ -856,7 +939,7 @@ end;
    as an abstraction containing a case expression on the function's argument.
  ---------------------------------------------------------------------------*)
 
-fun mk_pattern_fn heu thy (pes: (term * term) list) =
+fun mk_pattern_fn thy (pes: (term * term) list) =
   let fun err s = raise ERR "mk_pattern_fn" s
       val (p0,e0) = Lib.trye hd pes
           handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"
@@ -868,7 +951,7 @@ fun mk_pattern_fn heu thy (pes: (term * term) list) =
               else err "expressions have varying types"
       val fvar = genvar (pty --> ety)
       val eqs = list_mk_conj (map (fn (p,e) => mk_eq(mk_comb(fvar,p), e)) pes)
-      val {functional,pats} = mk_functional heu thy eqs
+      val {functional,pats} = mk_functional thy eqs
       val f = snd (dest_abs functional)
    in
      f

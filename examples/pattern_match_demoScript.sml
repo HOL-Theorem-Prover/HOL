@@ -7,9 +7,9 @@ val _ = new_theory "pattern_match_demo";
 
 open Pmatch
 
-fun Define_heu heu = with_flag (Pmatch.pmatch_heuristic, heu) Define
+fun Define_heu heu = with_flag (Pmatch.pmatch_heuristic, Pmatch.pmatch_heuristic_cases_list [heu]) Define
 
-val Define_classic = Define_heu Pmatch.pheu_classic
+val Define_classic = Define_heu pheu_classic
 val Define_f = Define_heu pheu_first_row
 val Define_q = Define_heu pheu_constr_prefix
 val Define_qba = Define_heu pheu_qba
@@ -17,7 +17,7 @@ val Define_cqba = Define_heu pheu_cqba
 
 (* simple example from decideable_separation_logic *)
 
-val DELETE_ELEMENT_def = Define_qba
+val DELETE_ELEMENT_def = Define
   `(DELETE_ELEMENT n [] = []) /\
    (DELETE_ELEMENT 0 (x::l) = l) /\
    (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`
@@ -29,7 +29,7 @@ val DELETE_ELEMENT_def = Define_qba
     (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
     (!x n l. DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
 
-with Define_f and Define_q
+with Define, Define_q, Define_f
 
  |- (DELETE_ELEMENT n [] = []) /\
     (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
@@ -39,14 +39,14 @@ with Define_f and Define_q
 
 
 (* Slightly more complex example form decidebale separation logic *)
-val SWAP_ELEMENTS_def = Define_qba `
-   (SWAP_ELEMENTS 0 0 l = l) /\
-   (SWAP_ELEMENTS (SUC n) 0 l = l) /\
-   (SWAP_ELEMENTS x y [] = []) /\
-   (SWAP_ELEMENTS x y [e] = [e]) /\
+val SWAP_ELEMENTS_def = Define `
+   (SWAP_ELEMENTS _ 0 l = l) /\
+   (SWAP_ELEMENTS _ _ [] = []) /\
+   (SWAP_ELEMENTS _ _ [e] = [e]) /\
    (SWAP_ELEMENTS 0 (SUC n) (e1::e2::l) = ARB (* Something clever *) ) /\
    (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`
 
+term_size (concl SWAP_ELEMENTS_def)
 (* old (classic result)
 
  |- (                SWAP_ELEMENTS 0        0         []              = []) /\
@@ -93,14 +93,14 @@ with Define_q
 *)
 
 
-val test_list_def = Define_qba `
+val test_list_def = Define `
  test_list l = (case l of
        [_;     _; T; _;  _;    _] => 1
      | [_;     _; _;    _; F; _] => 2
      | [F; _; _;    _;     _; _] => 3
    )`;
 
-val test_pair_def = Define_cqba `
+val test_pair_def = Define `
  (test_pair p = (case p of
        (_, _,      T, _,  _,   _) => 1
      | (_, _:bool, _, _:bool, F, _) => 2
@@ -114,10 +114,8 @@ val test_pair_org_def = Define_classic `
      | (F, _, _,   _, _, _:bool) => 3
    ))`;
 
-(* In this example, f or cqba is better than qba,
-   still qba is the default heuristic. *)
-val test_pair_f_def = Define_f `
- (test_pair_f p = (case p of
+val test_pair_qba_def = Define_qba `
+ (test_pair_qba p = (case p of
        (_, _,      T, _,  _,   _) => 1
      | (_, _:bool, _, _:bool, F, _) => 2
      | (F, _, _,   _, _, _:bool) => 3
@@ -129,7 +127,7 @@ fun get_def thm = (rhs (snd (dest_forall (concl thm))))
 fun def_size thm = term_size (get_def thm)
 
 
-val x = def_size test_pair_f_def   (* 37 *)
+val x = def_size test_pair_qba_def   (* 37 *)
 val x = def_size test_pair_def     (* 37 *)
 val x = def_size test_pair_org_def (* 89 *)
 
@@ -182,9 +180,9 @@ end
 
 fun run_it input t = (time (map (fn l => EVAL (mk_comb (t, l)))) input; ())
 
-val _ = run_it inputp_6 ``test_pair_org``;  (*  5.9 s *)
-val _ = run_it inputp_6 ``test_pair_f``;    (*  4.7 s *)
-val _ = run_it inputp_6 ``test_pair``;      (*  5.4 s *)
+val _ = run_it inputp_6 ``test_pair``;      (*  3.8 s *)
+val _ = run_it inputp_6 ``test_pair_org``;  (*  4.6 s *)
+val _ = run_it inputp_6 ``test_pair_qba``;  (*  4.3 s *)
 
 
 val _ = export_theory();

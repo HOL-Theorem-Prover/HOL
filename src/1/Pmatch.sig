@@ -18,8 +18,8 @@ sig
    val pat_of : pattern -> term
    val givens : pattern list -> term list
 
-   val mk_functional : pmatch_heuristic -> thry -> term -> {functional:term, pats: pattern list}
-   val mk_pattern_fn : pmatch_heuristic -> thry -> (term * term) list -> term
+   val mk_functional : thry -> term -> {functional:term, pats: pattern list}
+   val mk_pattern_fn : thry -> (term * term) list -> term
 
    (* case expression manipulation functions *)
    val mk_case : thry -> term * (term * term) list -> term
@@ -31,16 +31,32 @@ sig
    val pheu_classic : pmatch_heuristic (* HOL 4's old heuristic *)
    val pheu_first_row : pmatch_heuristic
    val pheu_constr_prefix : pmatch_heuristic
-   val pheu_qba : pmatch_heuristic 
-   val pheu_cqba : pmatch_heuristic (* The default one *)
+   val pheu_qba : pmatch_heuristic  (* the recommended one *)
+   val pheu_cqba : pmatch_heuristic  
 
    val pheu_rank : (thry -> term list -> int) list -> pmatch_heuristic
    val prheu_first_row : thry -> term list -> int
-   val prheu_first_row_constr : thry -> term list -> int
    val prheu_constr_prefix : thry -> term list -> int
    val prheu_small_branching_factor : thry -> term list -> int
    val prheu_arity : thry -> term list -> int
 
-   val pmatch_heuristic : pmatch_heuristic ref (* The one used by default *)
+   (* Stateful function that can provide one after another a list of
+      heuristics, which are all tried. The best result is then used. *)
+   type pmatch_heuristic_res_compare = ((term list * ((term * int -> pattern) * int) * term list) list * term) Lib.cmp
+   val pmatch_heuristic : (unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) ref 
 
+   (* construct the stateful function to try all the given heuristics *)
+   val pmatch_heuristic_size_list : pmatch_heuristic list -> unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
+   val pmatch_heuristic_cases_list : pmatch_heuristic list -> unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
+
+   val default_heuristic_fun : unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
+   val classic_heuristic_fun : unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
+
+   val set_heuristic : pmatch_heuristic -> unit
+   val set_heuristic_list_size : pmatch_heuristic list -> unit
+   val set_heuristic_list_cases : pmatch_heuristic list -> unit
+   val set_default_heuristic : unit -> unit
+   val set_classic_heuristic : unit -> unit
+
+   val with_classic_heuristic : ('a -> 'b) -> ('a -> 'b)
 end
