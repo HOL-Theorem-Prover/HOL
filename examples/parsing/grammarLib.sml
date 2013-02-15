@@ -11,7 +11,7 @@ fun (m1 <- m2) = m1 >- (fn v => m2 >> return v)
 
 type 'a tt = (term frag list, 'a, string) t
 
-datatype stringt = S of string | TM of term
+  datatype stringt = S of string | TMnm of string | TM of term
 datatype sym = NT of string | TOK of stringt
 type t = (string * sym list list) list
 
@@ -112,7 +112,8 @@ fun sepby m sep =
 val clause =
     mrpt ((ident >- (return o NT)) ++
           (slit >- (return o TOK o S)) ++
-          ((token "<" >> aq "" <- token ">") >- (return o TOK o TM))
+          ((token "<" >> ident <- token ">") >- (return o TOK o TMnm)) ++
+          (aq "" >- (return o TOK o TM))
          )
 
 val rulebody =
@@ -128,5 +129,48 @@ fun grammar fs =
     case grammar0 fs of
         (_, Error s) => raise Fail s
       | (_, Some v) => v
+
+fun allnts f (g: t) : string HOLset.set = let
+  fun clausents acc [] = acc
+    | clausents acc (TOK _ :: rest) = clausents acc rest
+    | clausents acc (NT s :: rest) = clausents (HOLset.add(acc,f s)) rest
+  fun bodynts acc [] = acc
+    | bodynts acc (h::t) = bodynts (clausents acc h) t
+  fun rulents acc (nt,b) = bodynts (HOLset.add(acc,f nt)) b
+  fun recurse acc [] = acc
+    | recurse acc (h::t) = recurse (rulents acc h) t
+in
+  recurse (HOLset.empty String.compare) g
+end
+
+fun mk_grammar_def0 {tokmap,nt_tyname,mkntname} (g:t) = let
+  val nt_names = allnts mkntname g
+  val constructors =
+      ParseDatatype.Constructors
+        (HOLset.foldl (fn (nm,l) => (nm,[]) :: l) [] nt_names)
+  val _ = Datatype.astHol_datatype [(nt_tyname,constructors)]
+in
+  T
+end
+
+fun mk_grammar_def r q = mk_grammar_def0 r (grammar q)
+
+(*
+val _ = Hol_datatype`tok = LparT | RparT | StarT | PlusT | Number of num`
+val Number = ``Number``
+val tmap =
+  List.foldl (fn ((nm,t),m) => Binarymap.insert(m,nm,t))
+             (Binarymap.mkDict String.compare)
+             [("+", ``PlusT``), ("*", ``StarT``), ("(", ``LparT``),
+              (")", ``RparT``)];
+mk_grammar_def {tokmap = (fn s => valOf (Binarymap.peek(tmap,s))),
+                nt_tyname = "nt",
+                mkntname = (fn s => "n" ^ s)}
+               `E ::= E "*" F | F;
+                F ::= F "+" T | T;
+                T ::= <Number> | "(" E ")";`;
+
+
+*)
 
 end
