@@ -1116,6 +1116,11 @@ val WORD_MSB_1COMP = store_thm("WORD_MSB_1COMP",
   `!w. word_msb ~w = ~word_msb w`,
   SRW_TAC [fcpLib.FCP_ss] [DIMINDEX_GT_0,word_msb_def,word_1comp_def]);
 
+val w2n_minus1 = Q.store_thm("w2n_minus1",
+   `w2n (-1w:'a word) = dimword(:'a) - 1`,
+   simp [WORD_NEG_1, word_T_def, w2n_n2w, UINT_MAX_def]
+   )
+
 val WORD_ss =
   rewrites [word_1comp_def,word_and_def,word_or_def,word_xor_def,
     word_nand_def,word_nor_def,word_xnor_def,word_0,word_T];
