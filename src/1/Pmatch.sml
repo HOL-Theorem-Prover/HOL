@@ -469,6 +469,7 @@ fun lex_order (ord1 : 'a cmp) (ord2 : 'a cmp) xy =
   handle Unordered => (ord2 xy handle Unordered => EQUAL)
 
 type pmatch_heuristic_res_compare = ((term list * ((term * int -> pattern) * int) * term list) list * term) Lib.cmp
+type pmatch_heuristic_fun = unit -> pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)
 
 val pmatch_heuristic_cases_base_cmp : pmatch_heuristic_res_compare =
   fn ((patts1, case_tm1), (patts2, case_tm2)) => Int.compare (length patts1, length patts2)
@@ -514,6 +515,47 @@ end
 
 (* the old heuristic used by HOL 4 *)
 val pheu_classic : pmatch_heuristic = { skip_rows = false, collapse_cases = false, col_fun = (fn _ => fn _ => 0) }
+
+val pheu_first_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn _ => 0) }
+val pheu_last_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn rowL => 
+case rowL of [] => 0 | (r::_) => length r - 1) }
+
+fun exhaustive_heuristic_fun cmp =
+let
+  val heuristicL_ref = ref ([]:pmatch_heuristic list)
+  fun add_heu heu = (heuristicL_ref := heu :: (!heuristicL_ref))
+
+  fun heu (prefix : int list) : pmatch_heuristic =
+  let
+    val current_prefix = ref prefix 
+    val remaining_prefix = ref prefix 
+    fun colfun thry (row::rowL) = 
+      case (!remaining_prefix) of 
+          (i :: is) => (remaining_prefix := is; i)
+        | [] => let
+                  val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [i+1]))) (tl row) 
+                  val _ = current_prefix := (!current_prefix) @ [0]
+                in
+                  0
+                end 
+  in 
+    { skip_rows = true, collapse_cases = true, col_fun = colfun }
+  end
+
+  fun next_heu () =
+    case (!heuristicL_ref) of
+       [] => NONE
+     | (h :: hs) => (heuristicL_ref := hs; SOME h)
+
+  fun init () =
+  let
+    val _ = heuristicL_ref := [heu []]
+  in
+    (cmp, next_heu)
+  end
+in
+  init
+end
 
 (* A heuristic based on ranking functions, which is used t *)
 fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true, 
@@ -603,27 +645,28 @@ val pheu_constr_prefix = pheu_rank [prheu_constr_prefix]
 val pheu_qba = pheu_rank [prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
 val pheu_cqba = pheu_rank [prheu_first_row_constr, prheu_constr_prefix, prheu_small_branching_factor, prheu_arity]
 
-fun pmatch_heuristic_fun min_fun l () : (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) = let
+fun pmatch_heuristic_list min_fun l () : (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) = let
   val hL_ref = ref l 
   fun aux () = case (!hL_ref) of 
      [] => NONE 
    | h::hL => (hL_ref := hL; SOME h)
 in (min_fun, aux) end
 
-val pmatch_heuristic_size_list = pmatch_heuristic_fun pmatch_heuristic_size_cmp
-val pmatch_heuristic_cases_list = pmatch_heuristic_fun pmatch_heuristic_cases_cmp
-
-val default_heuristic_fun = (pmatch_heuristic_cases_list [pheu_qba, pheu_classic, pheu_cqba, pheu_first_row]);
-val classic_heuristic_fun = (pmatch_heuristic_cases_list [pheu_classic]);
+val default_heuristic_list = [pheu_qba, pheu_cqba, pheu_first_row, pheu_last_col, pheu_first_col]
+val default_heuristic_fun = (pmatch_heuristic_list pmatch_heuristic_cases_cmp default_heuristic_list);
+val classic_heuristic_fun = (pmatch_heuristic_list pmatch_heuristic_cases_cmp [pheu_classic]);
 
 val _ = pmatch_heuristic := default_heuristic_fun
 
-fun set_heuristic heu = (pmatch_heuristic := pmatch_heuristic_cases_list [heu])
-fun set_heuristic_list_size heuL = (pmatch_heuristic := pmatch_heuristic_size_list heuL)
-fun set_heuristic_list_cases heuL = (pmatch_heuristic := pmatch_heuristic_cases_list heuL)
+fun set_heuristic_fun heu_fun = (pmatch_heuristic := heu_fun)
+fun set_heuristic_list_size heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_size_cmp heuL)
+fun set_heuristic_list_cases heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_cases_cmp heuL)
+fun set_heuristic heu = set_heuristic_list_cases [heu]
 
-fun set_default_heuristic () = (pmatch_heuristic := default_heuristic_fun)
-fun set_classic_heuristic () = (pmatch_heuristic := classic_heuristic_fun)
+fun set_default_heuristic () = set_heuristic_fun default_heuristic_fun
+fun set_default_heuristic_size () = set_heuristic_list_size default_heuristic_list
+fun set_default_heuristic_cases () = set_heuristic_list_cases default_heuristic_list
+fun set_classic_heuristic () = set_heuristic_fun classic_heuristic_fun
 
 fun with_classic_heuristic f = with_flag (pmatch_heuristic, classic_heuristic_fun) f
 
