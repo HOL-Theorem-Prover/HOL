@@ -184,6 +184,8 @@ struct
   fun amquiet () = !qd
 end;
 
+val _ = Meta.fakeload "PP";
+
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
 val _ = set_trace "pp_annotations" 1
