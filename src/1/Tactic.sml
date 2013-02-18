@@ -999,4 +999,29 @@ fun DEEP_INTRO_TAC th = DEEP_INTROk_TAC th ALL_TAC
 
 val SELECT_ELIM_TAC = DEEP_INTRO_TAC SELECT_ELIM_THM
 
+
+(*----------------------------------------------------------------------*
+ *  HINT_EXISTS_TAC                                                     *
+ *    instantiates an existential by using hints from the assumptions.  *
+ *----------------------------------------------------------------------*)
+
+fun HINT_EXISTS_TAC g =
+  let
+    val (hs,c) = g
+    val (v,c') = dest_exists c
+    val (vs,c') = strip_exists c'
+    fun hyp_match c h =
+      if exists (C mem vs) (free_vars c) then fail () else match_term c h
+    val (subs,_) = tryfind (C tryfind hs o hyp_match) (strip_conj c')
+    val witness =
+      case subs of
+         [] => v
+        |[{redex = u, residue = t}] =>
+            if u = v then t else failwith "HINT_EXISTS_TAC not applicable"
+        |_ => failwith "HINT_EXISTS_TAC not applicable"
+  in
+    EXISTS_TAC witness g
+  end;
+
+
 end (* Tactic *)
