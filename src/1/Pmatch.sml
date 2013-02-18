@@ -668,7 +668,9 @@ fun set_default_heuristic_size () = set_heuristic_list_size default_heuristic_li
 fun set_default_heuristic_cases () = set_heuristic_list_cases default_heuristic_list
 fun set_classic_heuristic () = set_heuristic_fun classic_heuristic_fun
 
-fun with_classic_heuristic f = with_flag (pmatch_heuristic, classic_heuristic_fun) f
+fun with_heuristic heu f = with_flag (pmatch_heuristic, 
+   pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f
+fun with_classic_heuristic f = with_heuristic pheu_classic f
 
 
 (*---------------------------------------------------------------------------

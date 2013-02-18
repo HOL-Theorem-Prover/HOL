@@ -78,6 +78,9 @@ fun convert_case tm =
         (split_on, splits)
       end
 
+val prettyprint_cases = ref true;
+val _ = register_btrace ("pp_cases", prettyprint_cases)
+
 (* ----------------------------------------------------------------------
     A flag controlling whether to print escaped syntax with a dollar
     or enclosing parentheses.  Thus whether the term mk_comb(+, 3) comes
@@ -1795,7 +1798,7 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* case expressions *)
           (fn () =>
-              if is_const f then
+              if (is_const f andalso (!prettyprint_cases)) then
                 case grammar_name G f of
                   SOME "case" =>
                   (let

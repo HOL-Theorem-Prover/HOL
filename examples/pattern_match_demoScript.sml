@@ -7,13 +7,17 @@ val _ = new_theory "pattern_match_demo";
 
 open Pmatch
 
-fun Define_heu heu = with_flag (Pmatch.pmatch_heuristic, Pmatch.pmatch_heuristic_cases_list [heu]) Define
+fun Define_heu heu = with_heuristic heu Define
 
 val Define_classic = Define_heu pheu_classic
 val Define_f = Define_heu pheu_first_row
 val Define_q = Define_heu pheu_constr_prefix
 val Define_qba = Define_heu pheu_qba
 val Define_cqba = Define_heu pheu_cqba
+
+(* Turn of case-pretty printing in order to see the results properly *)
+val _ = set_trace "pp_cases" 0
+
 
 (* simple example from decideable_separation_logic *)
 
@@ -100,12 +104,20 @@ val test_list_def = Define `
      | [F; _; _;    _;     _; _] => 3
    )`;
 
+val test_list_org_def = Define_classic `
+ test_list_org l = (case l of
+       [_;     _; T; _;  _;    _] => 1
+     | [_;     _; _;    _; F; _] => 2
+     | [F; _; _;    _;     _; _] => 3
+   )`;
+
 val test_pair_def = Define `
  (test_pair p = (case p of
        (_, _,      T, _,  _,   _) => 1
      | (_, _:bool, _, _:bool, F, _) => 2
      | (F, _, _,   _, _, _:bool) => 3
    ))`;
+
 
 val test_pair_org_def = Define_classic `
  (test_pair_org p = (case p of
@@ -114,13 +126,13 @@ val test_pair_org_def = Define_classic `
      | (F, _, _,   _, _, _:bool) => 3
    ))`;
 
+
 val test_pair_qba_def = Define_qba `
  (test_pair_qba p = (case p of
        (_, _,      T, _,  _,   _) => 1
      | (_, _:bool, _, _:bool, F, _) => 2
      | (F, _, _,   _, _, _:bool) => 3
    ))`;
-
 
 
 fun get_def thm = (rhs (snd (dest_forall (concl thm))))

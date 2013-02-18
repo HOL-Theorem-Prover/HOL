@@ -70,4 +70,5 @@ sig
    val set_classic_heuristic : unit -> unit
 
    val with_classic_heuristic : ('a -> 'b) -> ('a -> 'b)
+   val with_heuristic : pmatch_heuristic -> ('a -> 'b) -> ('a -> 'b)
 end
