@@ -931,6 +931,11 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-trace "PPBackEnd use styles"))
 
+(defun hol-toggle-pp-cases ()
+  "Toggles the \"pp_cases\" trace."
+  (interactive)
+  (hol-toggle-trace "pp_cases"))
+
 (defun hol-toggle-pp-annotations ()
   "Toggles whether HOL produces annotations while pretty-printing."
   (interactive)
@@ -1618,6 +1623,7 @@ module if not already loaded.)"
 (define-key holpp-map "b"    'hol-toggle-emacs-tooltips)
 (define-key holpp-map "t"    'hol-toggle-pp-annotations)
 (define-key holpp-map "s"    'hol-toggle-pp-styles)
+(define-key holpp-map "c"    'hol-toggle-pp-cases)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1782,6 +1788,9 @@ module if not already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
+
+(define-key global-map [menu-bar hol-menu hol-printing ppcases]
+  '("Toggle pretty-printing of cases" . hol-toggle-pp-cases))
 
 (define-key global-map [menu-bar hol-menu hol-printing sep2]
    '(menu-item "--"))
