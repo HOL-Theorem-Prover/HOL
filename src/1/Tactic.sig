@@ -73,4 +73,5 @@ sig
   val DEEP_INTRO_TAC        : thm -> tactic
 
   val SELECT_ELIM_TAC       : tactic
+  val HINT_EXISTS_TAC       : tactic
 end;
