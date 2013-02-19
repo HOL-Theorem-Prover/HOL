@@ -529,11 +529,11 @@ let
   let
     val current_prefix = ref prefix 
     val remaining_prefix = ref prefix 
-    fun colfun thry (row::rowL) = 
+    fun colfun thry rowL = 
       case (!remaining_prefix) of 
           (i :: is) => (remaining_prefix := is; i)
         | [] => let
-                  val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [i+1]))) (tl row) 
+                  val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [i+1]))) (tl (hd rowL)) 
                   val _ = current_prefix := (!current_prefix) @ [0]
                 in
                   0
