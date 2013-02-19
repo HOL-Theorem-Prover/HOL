@@ -275,7 +275,7 @@ in
              | _ => raise ERR "define_component" "too many arguments"
          val l = List.map define_component (ListPair.zip (components, tms))
          val (cs, defs) = ListPair.unzip l
-         val proj_r = TypeBase.mk_pattern_fn (!Pmatch.pmatch_heuristic) cs
+         val proj_r = TypeBase.mk_pattern_fn cs
          val proj_s = sthy ^ "_proj"
          val proj_f = Term.mk_var (proj_s, state_ty --> cty --> dty)
          val proj_l = Term.mk_comb (proj_f, mk_state_var state_ty)
