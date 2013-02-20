@@ -148,9 +148,13 @@ fun isqrt n =
       then n
    else let
            fun iter a =
-              if a * a <= n andalso n < (a + one) * (a + one)
-                 then a
-              else iter (div2 ((a * a + n) div a))
+              let
+                 val a2 = a * a
+              in
+                 if a2 <= n andalso n <= a2 + times2 a
+                    then a
+                 else iter (div2 ((a2 + n) div a))
+              end
         in
            iter one
         end
