@@ -99,7 +99,7 @@ val LESS_MULT_MONO2 = Q.store_thm("LESS_MULT_MONO2",
   REPEAT STRIP_TAC \\ IMP_RES_TAC LESS_ADD_1 \\ SRW_TAC [ARITH_ss] []);
 
 val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
-  (REWRITE_RULE [GSYM LOG2_def] o INST [`a` |-> `2`]) LOG_UNIQUE);
+  (REWRITE_RULE [GSYM LOG2_def] o Q.SPEC `2`) LOG_UNIQUE);
 
 val LOG2_TWOEXP = Q.store_thm("LOG2_TWOEXP",
   `!n. LOG2 (2 ** n) = n`,
