@@ -405,10 +405,10 @@ val MAT_INT_IF_OPT_def = Define `
 
 val INT_IF_OPT_def = INT_IF_OPT_def |> REWRITE_RULE [GSYM MAT_INT_IF_OPT_def]
 
-
 val decide_guard_IMP = prove(
   ``!b x res. (decide_guard x b = SOME res) ==> ~(x = IntUnkown)``,
-  Induct \\ FULL_SIMP_TAC std_ss [decide_guard_def]);
+  Induct \\ FULL_SIMP_TAC std_ss [decide_guard_def] \\
+  Cases \\ FULL_SIMP_TAC std_ss [decide_guard_def]);
 
 val IMP_int_negate = prove(
   ``!x. ~(x = IntUnkown) ==> ~(int_negate x = IntUnkown)``,
