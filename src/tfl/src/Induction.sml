@@ -307,7 +307,8 @@ fun mk_case ty_info FV thy =
               val tm' = list_mk_exists (vars, tm)
               in tm' end
            val wanted_concl = list_mk_disj (map build_disj rows)
-           val imp_thm = metisLib.METIS_PROVE [nchotomy] (mk_imp (concl recursive_thm, wanted_concl))
+           val imp_thm = Tactical.prove (mk_imp (concl recursive_thm, wanted_concl),
+             Tactical.REPEAT Tactic.STRIP_TAC THEN BasicProvers.PROVE_TAC [])
            val res = MP imp_thm recursive_thm
          in res end           
          else
