@@ -141,4 +141,18 @@ in
       else gcd' i j
 end
 
+(* Basic Integer square root *)
+
+fun isqrt n =
+   if n < two
+      then n
+   else let
+           fun iter a =
+              if a * a <= n andalso n < (a + one) * (a + one)
+                 then a
+              else iter (div2 ((a * a + n) div a))
+        in
+           iter one
+        end
+
 end
