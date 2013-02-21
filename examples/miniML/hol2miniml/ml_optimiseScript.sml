@@ -425,8 +425,6 @@ val int_cmp_sem_negate = prove(
   Cases \\ FULL_SIMP_TAC std_ss [int_cmp_sem_def,int_negate_def]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [] \\ intLib.COOPER_TAC);
 
-val isRval_def = Define `(isRval (Rval _) = T) /\ (isRval _ = F)`;
-
 val lookup_ZIP_APPEND = prove(
   ``!xs ys s x.
       (LENGTH xs = LENGTH ys) /\ ~(MEM s xs) ==>
