@@ -48,6 +48,9 @@ fun create_heap (objs, outputheap, base) = let
   val ofile = OS.FileSys.tmpName()
   val ostrm = openOut ofile
   fun p s = output(ostrm, s ^ "\n")
+  fun system_ps s =
+      if OS.Process.isSuccess (Systeml.system_ps s) then ()
+      else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
 in
   p ("val heapname = \""^outputheap^"\";");
   p "local";
