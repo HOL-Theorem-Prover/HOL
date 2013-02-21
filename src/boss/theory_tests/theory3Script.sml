@@ -34,7 +34,8 @@ val works_ptree_Type_def = Define`
     | _ => NONE
 `
 
-val fails_ptree_Type_def = Define`
+
+val fails_ptree_Type_def = Pmatch.with_classic_heuristic Define `
   fails_ptree_Type ptree =
     case ptree of
       Lf _ => NONE

@@ -419,7 +419,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
              val TCs     = map #1 TCs_locals
              val ylist   = map (#2 o dest_relation o #2 o
                                 wfrecUtils.strip_imp o #2 o strip_forall) TCs
-             val TClist  = map (fn(TC,lvs) => (SPEC_ALL(ASSUME TC),lvs))
+             val TClist  = map (fn(TC,lvs) => (SPECL (fst (strip_forall TC)) (ASSUME TC),lvs))
                                 TCs_locals
              val th2list = map (C SPEC th1) ylist
              val nlist   = map nested TCs
@@ -550,11 +550,6 @@ fun match_clauses pats case_thm =
 (* recursion induction (Rinduct) by proving the antecedent of Sinduct from   *)
 (* the antecedent of Rinduct.                                                *)
 (*---------------------------------------------------------------------------*)
-
-(*
-val (thy, {fconst, R, SV, pat_TCs_list}) = (facts,
-                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs})
-*)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let fun f() =
