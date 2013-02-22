@@ -1621,6 +1621,67 @@ in
   List.exists TypeBase.is_constructor possible_ops
 end
 
+fun unify_error pv1 pv2 = let
+  open Preterm
+  val (nm,ty1,l1) = dest_ptvar pv1
+  val (_,ty2,l2) = dest_ptvar pv2
+in
+  "Couldn't unify types of head symbol " ^
+  Lib.quote nm ^ "at positions " ^ locn.toShortString l1 ^ " and " ^
+  locn.toShortString l2 ^ " with types " ^
+  type_to_string (Pretype.toType ty1) ^ " and " ^
+  type_to_string (Pretype.toType ty2)
+end
+
+fun ptdefn_freevars pt = let
+  open Preterm
+  val (uvars, body) = strip_pforall pt
+  val (l,r) = pdest_eq body
+  val (f0, args) = strip_pcomb l
+  val f = head_var f0
+  val lfs = op_U eq (map ptfvs args)
+  val rfs = ptfvs r
+  infix \\
+  fun s1 \\ s2 = op_set_diff eq s1 s2
+in
+  op_union eq (rfs \\ lfs \\ uvars) [f]
+end
+
+fun defn_absyn_to_term a = let
+  val alist = Absyn.strip_conj a
+  val pts = map absyn_to_preterm alist
+  val _ = List.app
+            (Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string)))
+            pts
+  fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
+      let
+      in
+        case Binarymap.peek(env,Name) of
+            NONE => Binarymap.insert(env,Name,pv)
+          | SOME pv' =>
+            let
+              val pty' = Preterm.ptype_of pv'
+              val _ =
+                  Pretype.unify Ty pty'
+                  handle HOL_ERR _ =>
+                         raise mk_HOL_ERR "Defn" "defn_absyn_to_term"
+                               (unify_error pv pv')
+            in
+              env
+            end
+      end
+    | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
+  val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
+  val _ = List.foldl foldthis (Binarymap.mkDict String.compare) all_frees
+  open Preterm
+in
+  plist_mk_rbinop (Antiq {Tm=boolSyntax.conjunction,Locn=locn.Loc_None}) pts
+                  |> overloading_resolution
+                  |> Preterm.to_term
+                  |> Preterm.remove_case_magic
+                  |> !Preterm.post_process_term
+end
+
 fun parse_absyn absyn0 = let
   val (absyn,fn_names) = elim_wildcards absyn0
   val oinfo = term_grammar.overload_info (term_grammar())
@@ -1629,8 +1690,7 @@ fun parse_absyn absyn0 = let
   val to_restore =
       map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
   fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
-  val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
-            handle e => (restore(); raise e)
+  val tm  = defn_absyn_to_term absyn handle e => (restore(); raise e)
 in
   restore();
   (tm, fn_names)
