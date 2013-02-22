@@ -55,6 +55,7 @@ in
   p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
+  p "val _ = print \"\\n\";";
   p ("val _ = List.map hload [" ^
      String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
