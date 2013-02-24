@@ -1656,19 +1656,21 @@ fun defn_absyn_to_term a = let
   fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
       let
       in
-        case Binarymap.peek(env,Name) of
-            NONE => Binarymap.insert(env,Name,pv)
-          | SOME pv' =>
-            let
-              val pty' = Preterm.ptype_of pv'
-              val _ =
-                  Pretype.unify Ty pty'
-                  handle HOL_ERR _ =>
-                         raise mk_HOL_ERR "Defn" "defn_absyn_to_term"
-                               (unify_error pv pv')
-            in
-              env
-            end
+         if String.sub(Name,0) = #"_" then env
+         else
+           case Binarymap.peek(env,Name) of
+               NONE => Binarymap.insert(env,Name,pv)
+             | SOME pv' =>
+               let
+                 val pty' = Preterm.ptype_of pv'
+                 val _ =
+                     Pretype.unify Ty pty'
+                     handle HOL_ERR _ =>
+                            raise mk_HOL_ERR "Defn" "defn_absyn_to_term"
+                                  (unify_error pv pv')
+               in
+                 env
+               end
       end
     | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
   val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
@@ -1691,7 +1693,7 @@ fun parse_absyn absyn0 = let
       map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
   fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
   val tm  = defn_absyn_to_term absyn handle e => (restore(); raise e)
-(* Old parsing of abstract syntax: 
+(* Old parsing of abstract syntax:
   val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
             handle e => (restore(); raise e)
 *)
