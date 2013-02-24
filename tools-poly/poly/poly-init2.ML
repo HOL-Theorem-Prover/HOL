@@ -80,7 +80,7 @@ val loadPath : string list ref = ref [];
 val loadedMods = ref (Binaryset.empty String.compare);
 val _ =
     loadedMods := Binaryset.addList (!loadedMods,
-              ["Real", "Int", "List", "Binaryset", "Binarymap"])
+              ["Real", "Int", "List", "Binaryset", "Binarymap","Listsort"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
