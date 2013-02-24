@@ -13,4 +13,5 @@ val def4 = Hol_defn "baz2" `baz2 x <=> x /\ F`
 val def5 = Hol_defn "baz3" `baz3 (x:bool) <=> x /\ F`
 val _ = Defn.parse_absyn(Absyn`!y. baz4 x y = x /\ y`)
 
-
+val def6 = Hol_defn "f1" `(f1 x y = case (x, y) of (T, _) => T | (_,_) => F)`
+val def7 = Hol_defn "f2" `(f2 x y = case (x, y) of (T, _) => T | _ => F)`

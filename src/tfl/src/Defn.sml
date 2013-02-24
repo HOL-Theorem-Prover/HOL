@@ -1691,6 +1691,10 @@ fun parse_absyn absyn0 = let
       map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
   fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
   val tm  = defn_absyn_to_term absyn handle e => (restore(); raise e)
+(* Old parsing of abstract syntax: 
+  val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
+            handle e => (restore(); raise e)
+*)
 in
   restore();
   (tm, fn_names)
