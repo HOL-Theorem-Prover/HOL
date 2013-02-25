@@ -44,6 +44,12 @@ For example, the following now works as a definition (termination still has to b
 
 <p>Thanks to Scott Owens for the <a href="http://github.com/mn200/HOL/issues/112">feature suggestion</a>.
 </li>
+
+<li><p>The compilation of pattern-matching in function definitions now attempts to be cleverer about organising its nested case-splits.
+This should result in less complicated definitions (and accompanying induction principles).
+
+<p>Thanks to Thomas Türk for the implementation of this feature.
+
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -56,6 +62,18 @@ Thanks to Hamed Nemati for the bug report.
 <h2 id="new-theories">New theories:</h2>
 
 <h2 id="new-tools">New tools:</h2>
+
+<ul>
+<li><p>There is a new tactic <code>HINT_EXISTS_TAC</code> designed to instantiate existential goals.
+If the goal is of the form
+<pre>
+   ∃x. P(x) ∧ Q(x) ∧ R(x)
+</pre>
+<p>and there is an assumption of the form <code>Q(t)</code> (say), then <code>HINT_EXISTS_TAC</code> applied to this goal will instantiate the existential with the term <code>t</code>.
+
+<p>Thanks to Vincent Aravantinos for the implementation of this tactic.
+
+</ul>
 
 <h2 id="new-examples">New examples:</h2>
 
