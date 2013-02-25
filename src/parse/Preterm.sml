@@ -161,7 +161,17 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
 fun ptfvs pt =
     case pt of
         Var _ => [pt]
-      | Comb{Rator,Rand,...} => op_union eq (ptfvs Rator) (ptfvs Rand)
+      | Comb{Rator,Rand=r,...} =>
+        let
+        in
+          case Rator of
+              Comb{Rator=Const{Name,...}, Rand = l, ...} =>
+              if Name = GrammarSpecials.case_arrow_special then
+                op_set_diff eq (ptfvs r) (ptfvs l)
+              else
+                op_union eq (ptfvs Rator) (ptfvs r)
+            | _ => op_union eq (ptfvs Rator) (ptfvs r)
+        end
       | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [Bvar]
       | Constrained{Ptm,...} => ptfvs Ptm
       | _ => []
