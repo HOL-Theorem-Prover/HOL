@@ -31,6 +31,21 @@
 
 <h2 id="new-features">New features:</h2>
 
+<ul>
+<li><p>The <code>Define</code> function for making function definitions now treats each clause (each conjunct) of the definition as independent when assessing the types of the new functions’ parameters.
+For example, the following now works as a definition (termination still has to be proved manually):
+<pre>
+   (f x = x + 1 + g (x > 4)) ∧
+   (g x = if x then f 0 else 1)
+</pre>
+<p> In earlier releases, the parser would have rejected this because the two <code>x</code> parameters would have been required to have the same types (in the clause for <code>f</code>, the author wants <code>x</code> to have type <code>:num</code>, and in the clause for <code>g</code>, type <code>:bool</code>).
+
+<p>This feature is most useful when dealing with algebraic types with numerous constructors, where it can be a pain to keep the names of parameters under constructors apart.
+
+<p>Thanks to Scott Owens for the <a href="http://github.com/mn200/HOL/issues/112">feature suggestion</a>.
+</li>
+</ul>
+
 <h2 id="bugs-fixed">Bugs fixed:</h2>
 
 <ul>
