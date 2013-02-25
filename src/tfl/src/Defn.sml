@@ -1627,7 +1627,7 @@ fun unify_error pv1 pv2 = let
   val (_,ty2,l2) = dest_ptvar pv2
 in
   "Couldn't unify types of head symbol " ^
-  Lib.quote nm ^ "at positions " ^ locn.toShortString l1 ^ " and " ^
+  Lib.quote nm ^ " at positions " ^ locn.toShortString l1 ^ " and " ^
   locn.toShortString l2 ^ " with types " ^
   type_to_string (Pretype.toType ty1) ^ " and " ^
   type_to_string (Pretype.toType ty2)
