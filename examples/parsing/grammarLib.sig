@@ -2,9 +2,10 @@ signature grammarLib =
 sig
 
   include Abbrev
-  datatype stringt = S of string | TMnm of string | TM of term
+  datatype stringt = S of string | TMnm of string
   datatype sym = NT of string | TOK of stringt
-  type t = (string * sym list list) list
+  datatype clause = Syms of sym list | TmAQ of term
+  type t = (string * clause list) list
 
   val grammar : term frag list -> t
 
