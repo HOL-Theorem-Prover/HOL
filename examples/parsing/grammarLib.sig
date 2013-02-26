@@ -8,9 +8,9 @@ sig
 
   val grammar : term frag list -> t
 
-  val mk_grammar_def : {tokmap : string -> term,
-                        nt_tyname : string,
+  val mk_grammar_def : {tokmap : string -> term, tokty : hol_type,
+                        nt_tyname : string, start : string, gname : string,
                         mkntname : string -> string} ->
-                       term quotation -> term
+                       term quotation -> thm
 
 end

@@ -4,10 +4,13 @@ struct
 open Abbrev
 open errormonad
 
+local open grammarTheory in end
+
 infix >-* >>-* <-
 fun (m >-* cf) = m >- (fn v1 => cf v1 >- (fn v2 => return (v1,v2)))
 fun (m1 >>-* m2) = m1 >-* (fn _ => m2)
 fun (m1 <- m2) = m1 >- (fn v => m2 >> return v)
+fun get s = (s, Some s)
 
 type 'a tt = (term frag list, 'a, string) t
 
@@ -109,6 +112,8 @@ val slit = lex slit0
 fun sepby m sep =
     (m >>-* mrpt (sep >> m)) >- (return o op::)
 
+(* clause = a sequence of tokens and non-terminals
+            (one alternative of a set of productions) *)
 val clause =
     mrpt ((ident >- (return o NT)) ++
           (slit >- (return o TOK o S)) ++
@@ -116,6 +121,8 @@ val clause =
           (aq "" >- (return o TOK o TM))
          )
 
+(* rulebody = a set of clauses, together specifying all possible
+              expansions for a non-terminal. *)
 val rulebody =
     sepby clause (token "|") <- token ";"
 
@@ -143,17 +150,100 @@ in
   recurse (HOLset.empty String.compare) g
 end
 
-fun mk_grammar_def0 {tokmap,nt_tyname,mkntname} (g:t) = let
+type ginfo = {tokmap : string -> term, start : string,
+              nt_tyname : string, tokty : hol_type,
+              mkntname : string -> string, gname : string}
+
+fun mk_symty (tokty, nty) =
+    mk_thy_type {Thy = "grammar", Tyop = "symbol",
+                 Args = [tokty, nty]}
+fun mk_infty ty = sumSyntax.mk_sum(ty, numSyntax.num)
+
+val TOK_t =
+    mk_thy_const{Thy = "grammar", Name = "TOK",
+                 Ty = alpha --> mk_symty(alpha,beta)}
+val NT_t =
+    mk_thy_const{Thy = "grammar", Name = "NT",
+                 Ty = mk_infty alpha --> mk_symty(beta,alpha)}
+
+fun injinf tm = sumSyntax.mk_inl(tm, numSyntax.num)
+
+fun appletter ty =
+    case total dest_thy_type ty of
+        SOME {Tyop,...} => str (String.sub(Tyop,0))
+      | NONE => str (String.sub(dest_vartype ty,1))
+
+fun mkNT0 nty mkntname s = injinf (mk_const(mkntname s, nty))
+fun mkNT nty ({tokty,mkntname,...}:ginfo) s =
+    mk_comb(inst [alpha |-> nty, beta |-> tokty] NT_t, mkNT0 nty mkntname s)
+
+
+fun sym_to_term nty (gi as {tokmap,tokty,mkntname,...}:ginfo) sym used = let
+  val TOK_t' = inst [alpha |-> tokty, beta |-> nty] TOK_t
+  fun mktok t = mk_comb(TOK_t', t)
+  fun termsym_to_term t = let
+    val (_, ty) = dest_const t handle HOL_ERR _ =>
+                  raise mk_HOL_ERR "grammarLib" "mk_grammar_def"
+                        ("Term " ^ Lib.quote (term_to_string t) ^
+                         " is not a constant")
+    val (args, r) = strip_fun ty
+    fun var aty used = let
+      val t = variant used (mk_var(appletter aty, aty))
+    in
+      (t::used, Some t)
+    end
+    val (used, vs) =
+        case mmap var args used of
+            (_, Error _) => raise Fail "Impossible"
+          | (used, Some vs) => (used, vs)
+  in
+    (used, Some (mktok (list_mk_comb(t, vs))))
+  end
+in
+  case sym of
+      TOK (S s) => (used,  Some (mktok (tokmap s)))
+    | TOK (TMnm n) => termsym_to_term (Parse.Term [QUOTE n])
+    | TOK (TM t) => termsym_to_term t
+    | NT n => (used, Some (mkNT nty gi n))
+end
+
+fun clause_to_termSet ntnm nty (gi as {tokty,...}:ginfo) c = let
+  val nt_t = mkNT0 nty (#mkntname gi) ntnm
+  val (used, ts) =
+      case mmap (sym_to_term nty gi) c [] of
+          (used, Some ts) => (used, ts)
+       |  _ => raise Fail "Can't happen"
+  open pred_setSyntax pairSyntax listSyntax
+  val symty = mk_symty(tokty,nty)
+  val body = mk_pair(nt_t, mk_list(ts, symty))
+in
+  case used of
+      [] => mk_insert(body, inst [alpha |-> type_of body] empty_tm)
+    | _ => mk_icomb(gspec_tm, mk_pabs(list_mk_pair used, mk_pair(body, T)))
+end
+
+fun mk_grammar_def0 (gi:ginfo) (g:t) = let
+  val {tokmap,nt_tyname,mkntname,tokty,start,gname,...} = gi
   val nt_names = allnts mkntname g
   val constructors =
       ParseDatatype.Constructors
         (HOLset.foldl (fn (nm,l) => (nm,[]) :: l) [] nt_names)
   val _ = Datatype.astHol_datatype [(nt_tyname,constructors)]
+  val nty = mk_thy_type { Thy = current_theory(),
+                          Tyop = nt_tyname, Args = []}
+  val U = list_mk_lbinop (curry pred_setSyntax.mk_union) o List.concat
+  val gty = mk_thy_type {Thy = "grammar", Tyop = "grammar", Args = [tokty,nty]}
+  val rules =
+      U (map (fn (ntnm,cs) => map (clause_to_termSet ntnm nty gi) cs) g)
+  val grammar_t =
+      TypeBase.mk_record (gty, [("start", mkNT0 nty mkntname start),
+                                ("rules", rules)])
 in
-  T
+  new_definition (gname ^ "_def", mk_eq(mk_var(gname, gty), grammar_t))
 end
 
 fun mk_grammar_def r q = mk_grammar_def0 r (grammar q)
+
 
 (*
 val _ = Hol_datatype`tok = LparT | RparT | StarT | PlusT | Number of num`
@@ -164,12 +254,11 @@ val tmap =
              [("+", ``PlusT``), ("*", ``StarT``), ("(", ``LparT``),
               (")", ``RparT``)];
 mk_grammar_def {tokmap = (fn s => valOf (Binarymap.peek(tmap,s))),
-                nt_tyname = "nt",
-                mkntname = (fn s => "n" ^ s)}
+                nt_tyname = "nt", tokty = ``:tok``, gname = "expr",
+                mkntname = (fn s => "n" ^ s), start = "E"}
                `E ::= E "*" F | F;
                 F ::= F "+" T | T;
                 T ::= <Number> | "(" E ")";`;
-
 
 *)
 
