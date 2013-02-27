@@ -1,6 +1,7 @@
 structure grammarLib :> grammarLib =
 struct
 
+open HolKernel Parse boolSyntax
 open Abbrev
 open errormonad
 
