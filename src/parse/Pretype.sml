@@ -2439,9 +2439,14 @@ fun ho_gen_unify
       val unify1_le = gen_unify kind_unify kind_unify_le conty_kind_unify rank_unify bind "<=" tyvars
       val unify' = if cmp = "<=" then unify1_le else unify1
       val _ = begin_homs()
-  in (unify' n c1 c2 t1 t2 >>
-      do_ho_matches unify1 unify1_le) e
-     before end_homs()
+  in
+    let val res =
+            (unify' n c1 c2 t1 t2 >>
+             do_ho_matches unify1 unify1_le) e
+    in
+      end_homs();
+      res
+    end
   end
   handle e as HOL_ERR _ => (end_homs(); raise e);
 
