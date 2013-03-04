@@ -3192,12 +3192,19 @@ val w2w_LSL = store_thm("w2w_LSL",
          [DIMINDEX_GT_0, NOT_LESS, NOT_LESS_EQUAL]);
 
 val n2w_DIV = Q.store_thm("n2w_DIV",
-  `!a n.
-     n < dimindex(:'a) /\ a < dimword (:'a) ==>
-     (n2w (a DIV (2 ** n)) :'a word = n2w a >>> n)`,
-  RW_TAC std_ss [WORD_DIV_LSR, word_div_def, w2n_n2w, n2w_11]
-  \\ `2 ** n < dimword (:'a)` by METIS_TAC [TWOEXP_MONO, dimword_def]
-  \\ ASM_SIMP_TAC arith_ss [DIV_MOD_MOD_DIV, ZERO_LT_TWOEXP, ZERO_LT_dimword]);
+  `!a n. a < dimword (:'a) ==> (n2w (a DIV (2 ** n)) :'a word = n2w a >>> n)`,
+  REPEAT strip_tac
+  \\ Cases_on `n < dimindex(:'a)`
+  >- (RW_TAC std_ss [WORD_DIV_LSR, word_div_def, w2n_n2w, n2w_11]
+      \\ `2 ** n < dimword (:'a)` by METIS_TAC [TWOEXP_MONO, dimword_def]
+      \\ ASM_SIMP_TAC arith_ss
+           [DIV_MOD_MOD_DIV, ZERO_LT_TWOEXP, ZERO_LT_dimword])
+  \\ `a DIV 2 ** n = 0`
+  by metis_tac [arithmeticTheory.LESS_DIV_EQ_ZERO, arithmeticTheory.NOT_LESS,
+                dimword_def, bitTheory.TWOEXP_MONO2,
+                arithmeticTheory.LESS_LESS_EQ_TRANS]
+  \\ fs [LSR_LIMIT, arithmeticTheory.NOT_LESS]
+  );
 
 val WORD_BITS_LSL = store_thm("WORD_BITS_LSL",
   `!h l n w:'a word. h < dimindex(:'a) ==>
