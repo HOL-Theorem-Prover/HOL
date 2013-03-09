@@ -1712,7 +1712,7 @@ val rel_to_reln_11 = Q.store_thm ("rel_to_reln_11",
 SRW_TAC [] [in_rel_to_reln, EXTENSION, FORALL_PROD] THEN
 SRW_TAC [] [FUN_EQ_THM]);
 
-val reln_rel_conv_props = 
+val reln_rel_conv_props =
 LIST_CONJ [in_rel_to_reln, reln_to_rel_app, rel_to_reln_inv, reln_to_rel_inv,
 reln_to_rel_11, rel_to_reln_11]
 
@@ -1797,20 +1797,20 @@ SRW_TAC [] [RSUBSET, RRUNIV_def, domain_def, range_def, reln_to_rel_app, SUBSET_
 PROVE_TAC[])
 
 val aux2 = prove(``(domain r SUBSET s /\ range r SUBSET s) ==>
-   (transitive (RREFL_EXP (reln_to_rel r) s) = 
+   (transitive (RREFL_EXP (reln_to_rel r) s) =
     transitive (reln_to_rel r))``,
 SRW_TAC [] [relationTheory.transitive_def, RREFL_EXP_def, RUNION, reln_to_rel_app, SUBSET_DEF, in_range, in_domain,
   GSYM LEFT_FORALL_IMP_THM] THEN
 PROVE_TAC[])
 
 val aux3 = prove(``(domain r SUBSET s /\ range r SUBSET s) ==>
-   (antisymmetric (RREFL_EXP (reln_to_rel r) s) = 
+   (antisymmetric (RREFL_EXP (reln_to_rel r) s) =
     antisymmetric (reln_to_rel r))``,
 SRW_TAC [] [relationTheory.antisymmetric_def, RREFL_EXP_def, RUNION, reln_to_rel_app, SUBSET_DEF, in_range, in_domain,
   GSYM LEFT_FORALL_IMP_THM] THEN
 PROVE_TAC[])
 
-in 
+in
 
 val partial_order_reln_to_rel_conv = Q.store_thm ("partial_order_reln_to_rel_conv",
 `partial_order r s = ((reln_to_rel r) RSUBSET RRUNIV s) /\
@@ -1828,14 +1828,14 @@ end
 val linear_order_reln_to_rel_conv_UNIV = Q.store_thm ("linear_order_reln_to_rel_conv_UNIV",
 `linear_order r UNIV = WeakLinearOrder (reln_to_rel r)`,
 SRW_TAC [] [linear_order_def, WeakLinearOrder_dichotomy, reflexive_reln_to_rel_conv_UNIV,
-  transitive_reln_to_rel_conv, antisym_reln_to_rel_conv, WeakOrder, 
+  transitive_reln_to_rel_conv, antisym_reln_to_rel_conv, WeakOrder,
   relationTheory.reflexive_def, reln_to_rel_app] THEN
 PROVE_TAC[]);
 
 val strict_linear_order_reln_to_rel_conv_UNIV = Q.store_thm ("strict_linear_order_reln_to_rel_conv_UNIV",
 `strict_linear_order r UNIV = StrongLinearOrder (reln_to_rel r)`,
 SRW_TAC [] [strict_linear_order_def, StrongLinearOrder, reflexive_reln_to_rel_conv_UNIV,
-  transitive_reln_to_rel_conv, antisym_reln_to_rel_conv, StrongOrder, 
+  transitive_reln_to_rel_conv, antisym_reln_to_rel_conv, StrongOrder,
   relationTheory.irreflexive_def, reln_to_rel_app, trichotomous] THEN
 PROVE_TAC[]);
 
@@ -1866,7 +1866,7 @@ val acyclic_WF = Q.store_thm ("acyclic_WF",
 REPEAT STRIP_TAC THEN
 `(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by ALL_TAC THEN1 (
   FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range, GSYM LEFT_FORALL_IMP_THM,
-    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN 
+    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN
   PROVE_TAC[]
 ) THEN
 FULL_SIMP_TAC std_ss [acyclic_reln_to_rel_conv] THEN
@@ -1879,7 +1879,7 @@ val acyclic_WF = Q.store_thm ("acyclic_WF",
 REPEAT STRIP_TAC THEN
 `(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by ALL_TAC THEN1 (
   FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range, GSYM LEFT_FORALL_IMP_THM,
-    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN 
+    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN
   PROVE_TAC[]
 ) THEN
 FULL_SIMP_TAC std_ss [acyclic_reln_to_rel_conv] THEN
