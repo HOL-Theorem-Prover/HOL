@@ -116,7 +116,6 @@ val better_peg_execs =
                   ([`e` |-> `any f`, `i` |-> `x::xs`], []),
                   ([`e` |-> `seq e1 e2 sf`], []),
                   ([`e` |-> `choice e1 e2 cf`], []),
-                  ([`e` |-> `nt n nfn`], [Once COND_RAND]),
                   ([`e` |-> `not e v`], []),
                   ([`e` |-> `rpt e lf`], [])]
 
@@ -131,7 +130,11 @@ val better_apply =
          ([`k` |-> `poplist f k`], []),
          ([`k` |-> `listsym e f k`], [])]
 
+val peg_nt_thm = save_thm(
+  "peg_nt_thm",
+  peg_exec_thm ([`e` |-> `nt n nfn`], [Once COND_RAND]))
 val peg_exec_thm = save_thm("peg_exec_thm", LIST_CONJ better_peg_execs);
+
 val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
 
 val _ = computeLib.add_persistent_funs ["peg_exec_thm", "applykont_thm"]
@@ -153,7 +156,8 @@ val exec_correct0 = prove(
                      (listsym e f k)
                      (poplist f k) =
           applykont G k j (SOME (f (REVERSE vs ++ vlist)) :: stk))``,
-  ho_match_mp_tac peg_eval_strongind' >> simp[peg_exec_thm, applykont_thm] >>
+  ho_match_mp_tac peg_eval_strongind' >>
+  simp[peg_exec_thm, peg_nt_thm, applykont_thm] >>
   rpt conj_tac
   >- ((* rpt - no elements succeed *)
       map_every qx_gen_tac [`e`, `f`, `i`, `j`, `vlist`] >> strip_tac >>
