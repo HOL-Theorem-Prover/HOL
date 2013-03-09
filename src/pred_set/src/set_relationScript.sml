@@ -1865,25 +1865,12 @@ val acyclic_WF = Q.store_thm ("acyclic_WF",
  WF (reln_to_rel r)`,
 REPEAT STRIP_TAC THEN
 `(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by ALL_TAC THEN1 (
-  FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range, GSYM LEFT_FORALL_IMP_THM,
-    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range,
+                        GSYM LEFT_FORALL_IMP_THM, FUN_EQ_THM,
+                        REL_RESTRICT_DEF, reln_to_rel_app] THEN
   PROVE_TAC[]
 ) THEN
 FULL_SIMP_TAC std_ss [acyclic_reln_to_rel_conv] THEN
 PROVE_TAC[FINITE_WF_noloops]);
-
-
-val acyclic_WF = Q.store_thm ("acyclic_WF",
-`FINITE s /\ acyclic r /\ domain r SUBSET s /\ range r SUBSET s ==>
- WF (reln_to_rel r)`,
-REPEAT STRIP_TAC THEN
-`(REL_RESTRICT (reln_to_rel r) s) = (reln_to_rel r)` by ALL_TAC THEN1 (
-  FULL_SIMP_TAC std_ss [SUBSET_DEF, in_domain, in_range, GSYM LEFT_FORALL_IMP_THM,
-    FUN_EQ_THM, REL_RESTRICT_DEF, reln_to_rel_app] THEN
-  PROVE_TAC[]
-) THEN
-FULL_SIMP_TAC std_ss [acyclic_reln_to_rel_conv] THEN
-PROVE_TAC[FINITE_WF_noloops]);
-
 
 val _ = export_theory ();
