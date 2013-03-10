@@ -119,6 +119,8 @@ fun testG s =
 
 val mk = map str o explode
 
+fun I x = x
+
 val results = [
   eval testG (nt("E",I)) (mk "1+2*3") [] done failed,
   eval testG (nt("E",I)) (mk "(1+2)*3") [] done failed,
