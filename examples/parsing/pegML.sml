@@ -14,6 +14,8 @@ struct
    two continuations.)
 *)
 
+fun I x = x
+
 datatype ('tok,'value) pegsym =
   empty of 'value
 | any of 'tok -> 'value
@@ -118,8 +120,6 @@ fun testG s =
                       I)
 
 val mk = map str o explode
-
-fun I x = x
 
 val results = [
   eval testG (nt("E",I)) (mk "1+2*3") [] done failed,
