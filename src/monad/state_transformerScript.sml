@@ -46,8 +46,8 @@ val mapM_def = TotalDefn.Define`
 open simpLib BasicProvers boolSimps metisLib
 
 val mwhile_exists = prove(
-  ``!g b. ?f. !s.
-      f s = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ()) s``,
+  ``!g b. ?f.
+      f = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ())``,
   MAP_EVERY Q.X_GEN_TAC [`g`, `b`] THEN
   Q.EXISTS_TAC
     `\s0. if ?n. ~FST (g (FUNPOW (SND o b o SND o g) n s0)) then
@@ -55,7 +55,7 @@ val mwhile_exists = prove(
             in
               ((), SND (g (FUNPOW (SND o b o SND o g) n s0)))
           else ARB` THEN
-  SIMP_TAC (srw_ss()) [] THEN Q.X_GEN_TAC `s` THEN
+  SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `s` THEN
   COND_CASES_TAC THENL [
     POP_ASSUM (Q.X_CHOOSE_THEN `n0` ASSUME_TAC) THEN
     SIMP_TAC (srw_ss()) [SimpLHS, LET_THM] THEN
@@ -84,21 +84,22 @@ val mwhile_exists = prove(
     THEN1 (Q.EXISTS_TAC `m` THEN
            FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW]) THEN
     ASM_SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW] THEN
-    `(LEAST n. ~FST (g (FUNPOW (SND o b o SND o g) n s2))) = m`
-      by (numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 SRW_TAC [][] THEN
-          Q.X_GEN_TAC `p` THEN SRW_TAC [][] THEN
-          Q_TAC SUFF_TAC `~(m < p) /\ ~(p < m)` THEN1 numLib.ARITH_TAC THEN
-          REPEAT STRIP_TAC THENL [
-            `FST (g (FUNPOW (SND o b o SND o g) m s2))` by METIS_TAC[] THEN
-            `FST (g (FUNPOW (SND o b o SND o g) (SUC m) s))`
-               by (SIMP_TAC (srw_ss())[arithmeticTheory.FUNPOW] THEN
-                   SRW_TAC [][]),
-            `SUC p < SUC m` by SRW_TAC [numSimps.ARITH_ss][] THEN
-            RES_THEN MP_TAC THEN
-            SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW] THEN
-            SRW_TAC [][]
-          ]) THEN
-    SRW_TAC [][],
+    Q_TAC SUFF_TAC
+       `(LEAST n. ~FST (g (FUNPOW (SND o b o SND o g) n s2))) = m`
+       THEN1 SRW_TAC [][] THEN
+    numLib.LEAST_ELIM_TAC THEN CONJ_TAC THEN1 SRW_TAC [][] THEN
+    Q.X_GEN_TAC `p` THEN SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `~(m < p) /\ ~(p < m)` THEN1 numLib.ARITH_TAC THEN
+    REPEAT STRIP_TAC THENL [
+      `FST (g (FUNPOW (SND o b o SND o g) m s2))` by METIS_TAC[] THEN
+      `FST (g (FUNPOW (SND o b o SND o g) (SUC m) s))`
+         by (SIMP_TAC (srw_ss())[arithmeticTheory.FUNPOW] THEN
+             SRW_TAC [][]),
+      `SUC p < SUC m` by SRW_TAC [numSimps.ARITH_ss][] THEN
+      RES_THEN MP_TAC THEN
+      SIMP_TAC (srw_ss()) [arithmeticTheory.FUNPOW] THEN
+      SRW_TAC [][]
+    ],
     FULL_SIMP_TAC (srw_ss()) [BIND_DEF] THEN
     Q.ISPEC_THEN `g s` (Q.X_CHOOSE_THEN `gv1`
                                        (Q.X_CHOOSE_THEN `s1` ASSUME_TAC))
@@ -116,8 +117,7 @@ val mwhile_exists = prove(
 
 val MWHILE_DEF = new_specification(
   "MWHILE_DEF", ["MWHILE"],
-  mwhile_exists |> SIMP_RULE bool_ss [SKOLEM_THM]
-                |> SIMP_RULE (bool_ss ++ ETA_ss) [Once (GSYM FUN_EQ_THM)])
+  mwhile_exists |> SIMP_RULE bool_ss [SKOLEM_THM]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
