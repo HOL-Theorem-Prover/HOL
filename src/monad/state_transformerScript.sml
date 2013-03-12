@@ -46,7 +46,8 @@ val mapM_def = TotalDefn.Define`
 open simpLib BasicProvers boolSimps metisLib
 
 val mwhile_exists = prove(
-  ``!g b. ?f. !s. f s = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ()) s``,
+  ``!g b. ?f. !s.
+      f s = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ()) s``,
   MAP_EVERY Q.X_GEN_TAC [`g`, `b`] THEN
   Q.EXISTS_TAC
     `\s0. if ?n. ~FST (g (FUNPOW (SND o b o SND o g) n s0)) then
