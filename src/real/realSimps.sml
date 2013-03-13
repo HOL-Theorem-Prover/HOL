@@ -204,6 +204,17 @@ val min_ratrs =
     transform [(x, posneg), (y, nb12), (u, posneg0)]
               (SPECL [u, mk_div(x,y)] min_def)
 
+local
+   val flr = REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO]
+                (Thm.CONJUNCT2 realTheory.NUM_FLOOR_EQNS)
+   fun iflr x =
+      REWRITE_RULE [num_eq_0] (Q.INST [`n` |-> `NUMERAL n`, `m` |-> x] flr)
+in
+   val flr = Drule.LIST_CONJ
+               [Thm.CONJUNCT1 realTheory.NUM_FLOOR_EQNS,
+                iflr `NUMERAL (BIT1 m)`, iflr `NUMERAL (BIT2 m)`]
+end
+
 val abs1 = SPEC (mk_div(x,y)) realTheory.abs
 val abs1 = transform [(x,posneg), (y, nb12)] abs1
 val abs2 = SPEC x realTheory.abs
@@ -215,7 +226,7 @@ fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
                            m |-> mk_comb(numSyntax.numeral_tm, m)] th
 
 
-val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO,
+val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, flr, REAL_DIV_LZERO,
                REAL_NEGNEG] @
               transform [(x,posneg0)] (SPEC_ALL REAL_ADD_LID) @
               transform [(x,posneg)] (SPEC_ALL REAL_ADD_RID) @
@@ -269,12 +280,32 @@ val eq_ratrs = transform [(x, posneg), (y, nb12), (z, posneg0)] eq_ratr
 val real_gts = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_gt)
 val real_ges = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_ge)
 
+val real_gt_rats =
+    transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
+              (SPECL [mk_div(x,y), mk_div(u,v)] real_gt)
+val real_gt_ratls =
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
+              (SPECL [mk_div(x,y), u] real_gt)
+val real_gt_ratrs =
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
+              (SPECL [u, mk_div(x,y)] real_gt)
+
+val real_ge_rats =
+    transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)]
+              (SPECL [mk_div(x,y), mk_div(u,v)] real_ge)
+val real_ge_ratls =
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
+              (SPECL [mk_div(x,y), u] real_ge)
+val real_ge_ratrs =
+    transform [(x, posneg), (y, nb12), (u, posneg0)]
+              (SPECL [u, mk_div(x,y)] real_ge)
+
 val rel_rwts = [eq_ints, le_int, lt_int] @
                eq_rats @ eq_ratls @ eq_ratrs @
                lt_rats @ lt_ratls @ lt_ratrs @
                le_rats @ le_ratrs @ le_ratls @
-               real_gts @ real_ges
-
+               real_gts @ real_gt_rats @ real_gt_ratls @ real_gt_ratrs @
+               real_ges @ real_ge_rats @ real_ge_ratls @ real_ge_ratrs
 
 val rwts = pow_rat :: (op_rwts @ rel_rwts)
 

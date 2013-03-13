@@ -13,7 +13,7 @@ structure realLib :> realLib =
 struct
   type conv = Abbrev.conv
 
-  local open transcTheory polyTheory in end;
+  local open transcTheory in end;
 
   open RealArith realSimps Diff isqrtLib;
 
