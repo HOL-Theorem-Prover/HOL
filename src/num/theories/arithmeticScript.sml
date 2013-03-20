@@ -344,16 +344,6 @@ val LESS_LESS_SUC = store_thm ("LESS_LESS_SUC",
     THEN IMP_RES_TAC LESS_REFL
     THEN ASM_REWRITE_TAC[]);
 
-(* Doesn't belong here. kls. *)
-val FUN_EQ_LEMMA = store_thm ("FUN_EQ_LEMMA",
-   --`!f:'a->bool. !x1 x2. f x1 /\ ~f x2 ==> ~(x1 = x2)`--,
-   REPEAT STRIP_TAC
-    THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS[ASSUME (--`(x1:'a)=x2`--)]
-                         (ASSUME(--`(f:'a->bool)x1`--))))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
-
 val transitive_measure = Q.store_thm(
   "transitive_measure",
   `!f. transitive (measure f)`,
