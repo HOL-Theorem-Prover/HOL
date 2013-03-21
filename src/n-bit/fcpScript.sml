@@ -596,16 +596,16 @@ val finite_bit0 = Q.store_thm("finite_bit0",
 val () = Hol_datatype `bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`
 
 val IS_BIT1A_def = qDefine`
-  (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\
-  (IS_BIT1A (BIT1C) = F)`
+   (IS_BIT1A (BIT1A x) = T) /\ (IS_BIT1A (BIT1B x) = F) /\
+   (IS_BIT1A (BIT1C) = F)`
 
 val IS_BIT1B_def = qDefine`
-  (IS_BIT1B (BIT1A x) = F) /\ (IS_BIT1B (BIT1B x) = T) /\
-  (IS_BIT1B (BIT1C) = F)`
+   (IS_BIT1B (BIT1A x) = F) /\ (IS_BIT1B (BIT1B x) = T) /\
+   (IS_BIT1B (BIT1C) = F)`
 
 val IS_BIT1C_def = qDefine`
-  (IS_BIT1C (BIT1A x) = F) /\ (IS_BIT1C (BIT1B x) = F) /\
-  (IS_BIT1C (BIT1C) = T)`
+   (IS_BIT1C (BIT1A x) = F) /\ (IS_BIT1C (BIT1B x) = F) /\
+   (IS_BIT1C (BIT1C) = T)`
 
 val IS_BIT1A_OR_IS_BIT1B_OR_IS_BIT1C = Q.prove(
    `!x. IS_BIT1A x \/ IS_BIT1B x \/ IS_BIT1C x`,
@@ -769,8 +769,8 @@ val FCP_ss = rewrites [FCP_BETA, FCP_ETA, CART_EQ]
 val () = set_fixity ":+" (Infixl 325)
 
 val FCP_UPDATE_def =
-   Lib.with_flag (computeLib.auto_import_definitions, false) xDefine
-      "FCP_UPDATE"
+   Lib.with_flag (computeLib.auto_import_definitions, false)
+      (xDefine "FCP_UPDATE")
       `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m ' c):'a ** 'b`
 
 val FCP_UPDATE_COMMUTES = Q.store_thm ("FCP_UPDATE_COMMUTES",
@@ -820,10 +820,10 @@ val FCP_CONS_def = Define`
 val FCP_MAP_def = Define`
    FCP_MAP f (v:'a ** 'c) = (FCP i. f (v ' i)):'b ** 'c`
 
-val FCP_EXISTS_def = Define`
+val FCP_EXISTS_def = zDefine`
    FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v ' i)`
 
-val FCP_EVERY_def = Define`
+val FCP_EVERY_def = zDefine`
    FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v ' i)`
 
 val FCP_CONCAT_def = Define`
@@ -919,6 +919,8 @@ val fcp_subst_comp = Q.store_thm("fcp_subst_comp",
   `!a b f. (x :+ y) ($FCP f):'a ** 'b =
          ($FCP (\c. if x = c then y else f c)):'a ** 'b`,
   srw_tac [FCP_ss] [FCP_UPDATE_def])
+
+val () = computeLib.add_persistent_funs ["FCP_EXISTS", "FCP_EVERY"]
 
 (* ------------------------------------------------------------------------- *)
 
