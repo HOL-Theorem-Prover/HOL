@@ -70,7 +70,7 @@ val better_standard_reduction = store_thm(
     SRW_TAC [][]
   ]);
 
-val _ = add_infix ("is_head_redex", 750, NONASSOC)
+val _ = add_infix ("is_head_redex", 760, NONASSOC)
 
 val (is_head_redex_rules, is_head_redex_ind, is_head_redex_cases) =
     IndDefLib.Hol_reln`
@@ -170,7 +170,7 @@ val is_head_redex_vsubst_invariant = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN
   SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]);
 
-val _ = add_infix("is_internal_redex", 750, NONASSOC)
+val _ = add_infix("is_internal_redex", 760, NONASSOC)
 (* definition 11.4.2 (i) *)
 val is_internal_redex_def = Define`
   p is_internal_redex t = ~(p is_head_redex t) /\ p IN redex_posns t
@@ -183,7 +183,7 @@ val NIL_never_internal_redex = Store_Thm(
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][is_internal_redex_def, is_head_redex_thm, redex_posns_thm]);
 
-val _ = add_infix("i_reduces", 750, NONASSOC)
+val _ = add_infix("i_reduces", 760, NONASSOC)
 (* definition 11.4.2 (ii) *)
 val i_reduces_def = Define`
   M i_reduces N = ?s. okpath (labelled_redn beta) s /\ (first s = M) /\
@@ -193,7 +193,7 @@ val i_reduces_def = Define`
 `;
 
 (* single step version of the same *)
-val _ = add_infix("i_reduce1", 750, NONASSOC)
+val _ = add_infix("i_reduce1", 760, NONASSOC)
 val i_reduce1_def = Define`
   M i_reduce1 N = ?r. labelled_redn beta M r N /\ r is_internal_redex M
 `;
@@ -231,7 +231,7 @@ val i_reduces_RTC_i_reduce1 = store_thm(
   ]);
 
 
-val _ = add_infix("i1_reduces", 750, NONASSOC)
+val _ = add_infix("i1_reduces", 760, NONASSOC)
 (* definition 11.4.3 (iii) *)
 val i1_reduces_def = Define`
   M i1_reduces N = ?s. okpath (labelled_redn beta) s /\ (first s = M) /\
@@ -629,7 +629,7 @@ val is_head_reduction_thm = store_thm(
 val _ = export_rewrites ["is_head_reduction_thm"]
 
 
-val _ = add_infix ("head_reduces", 750, NONASSOC)
+val _ = add_infix ("head_reduces", 760, NONASSOC)
 val head_reduces_def = Define`
   M head_reduces N = ?s. finite s /\ (first s = M) /\ (last s = N) /\
                          is_head_reduction s
