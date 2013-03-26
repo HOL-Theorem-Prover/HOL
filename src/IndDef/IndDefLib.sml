@@ -34,7 +34,7 @@ fun term_of_absyn absyn = let
     then
       raise ERRloc "term_of_absyn" (locn_of_absyn a)
                    ("Abstract syntax looks to be trying to redefine "^nm^". "^
-                     "This is probably an error.\nIf you must, define with \
+                     "\nThis is probably an error.\nIf you must, define with \
                      \another name and use overload_on")
     else nm
   end
