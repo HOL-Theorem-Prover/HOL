@@ -1632,11 +1632,8 @@ val FOLDL2_FOLDL = store_thm(
 Induct THEN1 SRW_TAC[][LENGTH_NIL_SYM,ZIP,FOLDL] THEN
 GEN_TAC THEN Cases THEN SRW_TAC[][ZIP,FOLDL])
 
-val EVERY2_def = Define`
-  (EVERY2 P (a::as) (b::bs) = P a b /\ EVERY2 P as bs) /\
-  (EVERY2 P as bs = (as = []) /\ (bs = []))`
-val _ = export_rewrites["EVERY2_def"]
-val _ = delete_const "EVERY2_tupled"
+val _ = overload_on ("EVERY2", ``LIST_REL``)
+val _ = overload_on ("LIST_REL", ``LIST_REL``)
 
 val EVERY2_cong = store_thm(
 "EVERY2_cong",
@@ -1644,8 +1641,8 @@ val EVERY2_cong = store_thm(
   (l1 = l1') /\ (l2 = l2') /\
   (!x y. MEM x l1' /\ MEM y l2' ==> (P x y = P' x y)) ==>
   (EVERY2 P l1 l2 = EVERY2 P' l1' l2')``,
-Induct THEN SIMP_TAC (srw_ss()) [EVERY2_def] THEN
-GEN_TAC THEN Cases THEN SRW_TAC[][EVERY2_def] THEN
+Induct THEN SIMP_TAC (srw_ss()) [] THEN
+GEN_TAC THEN Cases THEN SRW_TAC[][] THEN
 METIS_TAC[])
 
 val MAP_EQ_EVERY2 = store_thm(
@@ -1669,19 +1666,7 @@ val EVERY2_LENGTH = store_thm(
 ``!P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)``,
 PROVE_TAC[EVERY2_EVERY])
 
-val EVERY2_mono = store_thm(
-"EVERY2_mono",
-``(!x y. P x y ==> Q x y)
-  ==> EVERY2 P l1 l2 ==> EVERY2 Q l1 l2``,
-STRIP_TAC THEN
-MAP_EVERY Q.ID_SPEC_TAC [`l2`,`l1`] THEN
-Induct THEN
-SRW_TAC [][EVERY2_def] THEN
-IMP_RES_TAC EVERY2_LENGTH THEN
-Cases_on `l2` THEN
-FULL_SIMP_TAC (srw_ss()) [EVERY2_def])
-val _ = IndDefLib.export_mono "EVERY2_mono"
-
+val EVERY2_mono = save_thm("EVERY2_mono", LIST_REL_mono)
 
 (* ----------------------------------------------------------------------
     ALL_DISTINCT
