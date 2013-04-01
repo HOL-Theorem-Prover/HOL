@@ -227,7 +227,7 @@ local
   [pairTheory.UNCURRY_DEF, combinTheory.K_THM,
    numLib.SUC_RULE sum_numTheory.SUM_def,
    listTheory.GENLIST_AUX_compute, listTheory.GENLIST_GENLIST_AUX,
-   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SBIT_def,
+   iBITWISE, NUMERAL_BITWISE, BITV_def, SBIT_def,
    NUM_RULE [BIT_ZERO] `n:num` SIGN_EXTEND_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
    NUMERAL_SFUNPOW_iDIV2, NUMERAL_SFUNPOW_iDUB, NUMERAL_SFUNPOW_FDUB,
@@ -358,7 +358,7 @@ local
 
   val l2 =
      ["SBIT", "BIT", "BITS", "BITV",
-      "SLICE", "TIMES_2EXP", "DIVMOD_2EXP", "LSB", "LOG2", "LOG", "BITWISE",
+      "SLICE", "TIMES_2EXP", "DIVMOD_2EXP", "LOG2", "LOG", "BITWISE",
       "BIT_REVERSE", "SIGN_EXTEND", "BOOLIFY",
       "num_from_bin_list", "num_from_oct_list", "num_from_dec_list",
       "num_from_hex_list", "num_to_bin_list", "num_to_oct_list",
@@ -436,8 +436,7 @@ local
     word_0_n2w, word_1_n2w,
     word_len_def, word_reverse_0, word_reverse_word_T, word_log2_1, word_div_1,
     word_join_0, word_concat_0_0, word_concat_word_T, word_join_word_T,
-    WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2,
-    (REWRITE_RULE [LSB_ODD] o GSYM) LSB_def, BIT_ZERO, BITS_ZERO2]
+    WORD_BITS_ZERO2, WORD_EXTRACT_ZERO2, WORD_SLICE_ZERO2, BIT_ZERO, BITS_ZERO2]
 
   val alpha_rws2 =
    [WORD_ADD_0, WORD_SUB_RZERO, WORD_MULT_CLAUSES, WORD_XOR_CLAUSES,

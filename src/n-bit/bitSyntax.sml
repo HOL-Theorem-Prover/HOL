@@ -29,7 +29,6 @@ val antriop_syntax_fns =
 val quadop_syntax_fns =
    HolKernel.syntax_fns "bit" 4 HolKernel.dest_quadop HolKernel.mk_quadop
 
-val (lsb_tm,mk_lsb,dest_lsb,is_lsb)         = monop_syntax_fns "LSB"
 val (log2_tm,mk_log2,dest_log2,is_log2)     = monop_syntax_fns "LOG2"
 
 val (hex_tm,mk_hex,dest_hex,is_hex)         = anmonop_syntax_fns "HEX"

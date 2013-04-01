@@ -187,7 +187,9 @@ val _ = overload_on ("|++", Term`$ADD_LIST`);
 
 val lem = prove(
   `!n a b. n < BRANCHING_BIT a b ==> (BIT n a = BIT n b)`,
-  Induct \\ SRW_TAC [] [Once BRANCHING_BIT_def, GSYM BIT_DIV2, DIV2_def]
+  Induct
+    \\ SRW_TAC [] [Once BRANCHING_BIT_def, bitTheory.BIT0_ODD, GSYM BIT_DIV2,
+                   DIV2_def]
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ `ODD a = EVEN b` by METIS_TAC [EVEN_ODD]
     \\ FULL_SIMP_TAC arith_ss [Once BRANCHING_BIT_def]);
@@ -252,11 +254,12 @@ val BRANCHING_BIT = store_thm("BRANCHING_BIT",
       PAT_ASSUM `0 = x` (fn th => let val sth = SYM th in
                            SUBST1_TAC sth THEN ASSUME_TAC sth end)
         \\ Cases_on `ODD a = EVEN b`
-        \\ FULL_SIMP_TAC arith_ss
-             [EVEN_ODD, Once BRANCHING_BIT_def, GSYM LSB_def, LSB_ODD]
+        \\ FULL_SIMP_TAC arith_ss [EVEN_ODD, Once BRANCHING_BIT_def,
+                                   bitTheory.BIT0_ODD]
         \\ METIS_TAC [],
       ONCE_REWRITE_TAC [BRANCHING_BIT_def]
-        \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def] >> METIS_TAC [EVEN_ODD]
+        \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def, bitTheory.BIT0_ODD]
+        >> METIS_TAC [EVEN_ODD]
         \\ PAT_ASSUM `!a b. P` (SPECL_THEN [`a DIV 2`,`b DIV 2`] ASSUME_TAC)
         \\ IMP_RES_TAC lem
         \\ FULL_SIMP_TAC std_ss [lem]

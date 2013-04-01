@@ -313,7 +313,7 @@ val BITWISE_MUL_lem = Q.prove(
     Cases_on `w` \\ Cases_on `m`
     \\ SRW_TAC [fcpLib.FCP_ss]
          [COUNT_LIST_compute, word_bits_n2w, word_mul_n2w,
-          word_index, BITS_THM, bitTheory.ODD_MOD2_LEM]
+          word_index, BITS_THM, bitTheory.BIT0_ODD, bitTheory.ODD_MOD2_LEM]
     \\ Cases_on `n' MOD 2 = 1`
     \\ FULL_SIMP_TAC std_ss [bitTheory.NOT_MOD2_LEM2, bitTheory.BIT_ZERO],
     `0 < n` by DECIDE_TAC

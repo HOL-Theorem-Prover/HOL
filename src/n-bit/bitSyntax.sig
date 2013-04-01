@@ -3,7 +3,6 @@ sig
 
   include Abbrev
 
-  val lsb_tm         : term
   val log2_tm        : term
   val hex_tm         : term
   val unhex_tm       : term
@@ -41,7 +40,6 @@ sig
   val num_to_dec_list_tm     : term
   val num_to_hex_list_tm     : term
 
-  val mk_lsb         : term -> term
   val mk_log2        : term -> term
   val mk_hex         : term -> term
   val mk_unhex       : term -> term
@@ -79,7 +77,6 @@ sig
   val mk_num_to_dec_list     : term -> term
   val mk_num_to_hex_list     : term -> term
 
-  val dest_lsb         : term -> term
   val dest_log2        : term -> term
   val dest_hex         : term -> term
   val dest_unhex       : term -> term
@@ -117,7 +114,6 @@ sig
   val dest_num_to_dec_list     : term -> term
   val dest_num_to_hex_list     : term -> term
 
-  val is_lsb         : term -> bool
   val is_log2        : term -> bool
   val is_hex         : term -> bool
   val is_unhex       : term -> bool

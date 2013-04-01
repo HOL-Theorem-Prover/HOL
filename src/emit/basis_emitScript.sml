@@ -974,7 +974,7 @@ val BITWISE_compute = Q.prove(
           (if opr (ODD a) (ODD b) then 1 else 0)`,
   Cases THEN1 REWRITE_TAC [CONJUNCT1 BITWISE_def]
     THEN REWRITE_TAC
-         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, LSB_ODD, SBIT_def]);
+         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, BIT0_ODD, SBIT_def]);
 
 val BIT_MODF_compute = Q.prove(
   `!n f x b e y.
@@ -1083,7 +1083,7 @@ val defs =
         BIT_MODF_compute, BIT_MODIFY_EVAL,
         BIT_REV_compute, BIT_REVERSE_EVAL,
         LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def, MOD_2EXP_EQ_compute,
-        BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def, BOOLIFY_compute]
+        BITV_def, BIT_def, SLICE_def, SIGN_EXTEND_def, BOOLIFY_compute]
 
 val _ = eSML "bit"
   (MLSIG  "type num = numML.num" ::

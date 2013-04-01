@@ -938,8 +938,8 @@ val word_msb = store_thm("word_msb",
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [FUN_EQ_THM, word_msb_def, word_bit_def]);
 
 val word_lsb_n2w = store_thm("word_lsb_n2w",
-  `!n. word_lsb ((n2w n):'a word)  = ODD n`,
-  SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0,LSB_ODD, GSYM LSB_def]);
+  `!n. word_lsb ((n2w n):'a word) = ODD n`,
+  SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0,BIT0_ODD]);
 
 val word_msb_n2w = store_thm("word_msb_n2w",
   `!n. word_msb ((n2w n):'a word)  = BIT ^HB n`,
@@ -1956,7 +1956,7 @@ val BIT_SET_lem_ = prove(
 val BIT_SET_lem = prove(
   `!k i n. BIT i n = i + k IN BIT_SET k n`,
   Induct_on `i` \\ ONCE_REWRITE_TAC [BIT_SET_def]
-    \\ SRW_TAC [] [BIT_ZERO, GSYM LSB_def, LSB_ODD, BIT_SET_lem_]
+    \\ SRW_TAC [] [BIT_ZERO, BIT0_ODD, BIT_SET_lem_]
     \\ REWRITE_TAC [DECIDE ``SUC a + b = a + SUC b``]
     \\ PAT_ASSUM `!k n. BIT i n = i + k IN BIT_SET k n`
          (fn th => REWRITE_TAC [GSYM th, BIT_DIV2]));
@@ -2226,7 +2226,7 @@ val BOOLIFY = Q.prove(
          [BOOLIFY_def, DIV2_def, rich_listTheory.GENLIST,
           rich_listTheory.APPEND_SNOC1]
     \\ POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm])
-    \\ SRW_TAC [ARITH_ss] [GSYM LSB_def, LSB_ODD, BIT_OF_BITS_THM,
+    \\ SRW_TAC [ARITH_ss] [BIT0_ODD, BIT_OF_BITS_THM,
           rich_listTheory.GENLIST_FUN_EQ, BIT_DIV2,
           DECIDE ``x < n ==> (n - x = SUC (n - 1 - x))``]);
 
@@ -2264,7 +2264,7 @@ val WORD_REDUCE_LIFT = Q.prove(
   STRIP_TAC \\ Cases
     \\ SRW_TAC [fcpLib.FCP_ss]
          [DECIDE ``i < 1 = (i = 0)``, n2w_def, BIT_ZERO, fcpTheory.index_one,
-          GSYM LSB_def, LSB_ODD]);
+          BIT0_ODD]);
 
 val TL_GENLIST_K = Q.prove(
   `!c n. TL (GENLIST (K c) (SUC n)) = GENLIST (K c) n`,
@@ -3050,7 +3050,7 @@ val word_rrx_n2w = store_thm("word_rrx_n2w",
   `!c a. word_rrx(c, (n2w a):'a word) =
        (ODD a, (n2w (BITS ^HB 1 a + SBIT c ^HB)):'a word)`,
   SHIFT_WORD_TAC
-    \\ RW_TAC arith_ss [GSYM LSB_def,LSB_ODD,SBIT_def,BIT_OF_BITS_THM]
+    \\ RW_TAC arith_ss [BIT0_ODD,SBIT_def,BIT_OF_BITS_THM]
     \\ STRIP_ASSUME_TAC EXISTS_HB \\ FULL_SIMP_TAC arith_ss []
     << [
       METIS_TAC [BITSLT_THM,SUC_SUB1,BITS_SUM1,BIT_def,BIT_B],
@@ -4527,7 +4527,7 @@ val word_join_word_T = store_thm("word_join_word_T",
 val word_concat_word_T = save_thm("word_concat_word_T",
   (REWRITE_RULE [word_join_word_T] o SPECL [`- 1w`,`- 1w`]) word_concat_def);
 
-val BIT0_CONV = SIMP_CONV std_ss [GSYM LSB_def, LSB_ODD];
+val BIT0_CONV = SIMP_CONV std_ss [BIT0_ODD];
 
 val extract_00 = prove(
   `(!a:'a word. (0 -- 0) a = if word_lsb a then 1w else 0w) /\
