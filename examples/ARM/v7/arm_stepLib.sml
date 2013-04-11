@@ -986,13 +986,19 @@ end;
 
 val SORT_PSR_UPDATES_CONV =
   updateLib.OVERRIDE_UPDATES_CONV ``:(num # PSRName) -> ARMpsr``
-    [GSYM arm_coretypesTheory.PSRName2num_11,
-     arm_coretypesTheory.PSRName2num_thm];
+    (PURE_REWRITE_CONV
+       [GSYM arm_coretypesTheory.PSRName2num_11,
+        arm_coretypesTheory.PSRName2num_thm,
+        pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND]
+     THENC numLib.REDUCE_CONV);
 
 val SORT_REG_UPDATES_CONV =
   updateLib.OVERRIDE_UPDATES_CONV ``:(num # RName) -> word32``
-    [GSYM arm_coretypesTheory.RName2num_11,
-     arm_coretypesTheory.RName2num_thm];
+    (PURE_REWRITE_CONV
+       [GSYM arm_coretypesTheory.RName2num_11,
+        arm_coretypesTheory.RName2num_thm,
+        pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND]
+     THENC numLib.REDUCE_CONV);
 
 val SORT_REG_UPDATES_RULE =
   Conv.CONV_RULE (Conv.RAND_CONV (Conv.RHS_CONV
