@@ -192,7 +192,7 @@ fun is_update_expr tm = is_o_expr tm orelse is_c_expr tm
    UNCHANGED_CONV cnv
 
    Raise Conv.UNCHANGED if conversion "cnv" produces result |- t = t' where
-   t and t' alpha-equivalent, or if an exception is raised.
+   t and t' are alpha-equivalent, or if an exception is raised.
    ----------------------------------------------------------------------- *)
 
 fun UNCHANGED_CONV (conv: conv) tm =
@@ -278,28 +278,30 @@ end
          (1w =+ "a") o (3w =+ "b") o (2w =+ "c")
    ----------------------------------------------------------------------- *)
 
-fun OVERRIDE_UPDATES_CONV ty cnv =
-   let
-      val ocnv = OVERRIDE_CONV cnv
-      val ok1 = Lib.can (Type.match_type ty)
-      val ok2 = Lib.can (Type.match_type (ty --> ty))
-   in
-      fn tm =>
-         let
-            val tm_ty = Term.type_of tm
-            val c_form = ok1 tm_ty andalso is_c_expr tm
-            val _ = c_form orelse ok2 tm_ty andalso is_o_expr tm
-                    orelse raise ERR "OVERRIDE_UPDATES_CONV"
-                                     "Not expected type/form"
-         in
-            UNCHANGED_CONV
-              (LIST_UPDATE_INTRO_CONV
-               THENC PURE_ONCE_REWRITE_CONV [updateTheory.LIST_UPDATE_OVERRIDE]
-               THENC (if c_form then Conv.RATOR_CONV else Lib.I)
-                        (Conv.RAND_CONV ocnv)
-               THENC LIST_UPDATE_ELIM_CONV) tm
-         end
-   end
+local
+   val cnv1 = Conv.REWR_CONV updateTheory.LIST_UPDATE_OVERRIDE
+in
+   fun OVERRIDE_UPDATES_CONV ty cnv =
+      let
+         val ocnv = cnv1 THENC Conv.RAND_CONV (OVERRIDE_CONV cnv)
+         val ok1 = Lib.can (Type.match_type ty)
+         val ok2 = Lib.can (Type.match_type (ty --> ty))
+      in
+         fn tm =>
+            let
+               val tm_ty = Term.type_of tm
+               val c_form = ok1 tm_ty andalso is_c_expr tm
+               val _ = c_form orelse ok2 tm_ty andalso is_o_expr tm
+                       orelse raise ERR "OVERRIDE_UPDATES_CONV"
+                                        "Not expected type/form"
+            in
+               UNCHANGED_CONV
+                 (LIST_UPDATE_INTRO_CONV
+                  THENC (if c_form then Conv.RATOR_CONV else Lib.I) ocnv
+                  THENC LIST_UPDATE_ELIM_CONV) tm
+            end
+      end
+end
 
 (* -----------------------------------------------------------------------
    SORT_UPDATES_CONV ord cmp cnv
@@ -326,9 +328,6 @@ fun OVERRIDE_UPDATES_CONV ty cnv =
 
 fun SORT_UPDATES_CONV ord cmp cnv =
    let
-      val thm = Drule.ISPEC ord updateTheory.LIST_UPDATE_SORT_OVERRIDE
-      val cnv1 = Conv.REWR_CONV thm
-      val cnv2 = OVERRIDE_CONV cnv
       val () = computeLib.add_thms
                 [pairTheory.CURRY_DEF, pairTheory.UNCURRY_DEF,
                  pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND,
@@ -336,6 +335,10 @@ fun SORT_UPDATES_CONV ord cmp cnv =
                  REWRITE_RULE [sortingTheory.PARTITION_DEF]
                    sortingTheory.QSORT_DEF] cmp
       val SORT_CONV = computeLib.CBV_CONV cmp
+      val thm = Drule.ISPEC ord updateTheory.LIST_UPDATE_SORT_OVERRIDE
+      val cnv1 = Conv.REWR_CONV thm
+      val cnv2 = OVERRIDE_CONV cnv
+      val cnv3 = cnv1 THENC Conv.RAND_CONV (Conv.RAND_CONV cnv2 THENC SORT_CONV)
       val (ty1, ty2) =
          ord |> Term.type_of |> Type.dom_rng |> fst |> pairSyntax.dest_prod
       val ty3 = ty1 --> ty2
@@ -351,11 +354,7 @@ fun SORT_UPDATES_CONV ord cmp cnv =
         in
            UNCHANGED_CONV
              (LIST_UPDATE_INTRO_CONV
-              THENC (if c_form then Conv.RATOR_CONV else Lib.I)
-                       (cnv1
-                        THENC Conv.RAND_CONV
-                                (Conv.RAND_CONV cnv2
-                                 THENC SORT_CONV))
+              THENC (if c_form then Conv.RATOR_CONV else Lib.I) cnv3
               THENC LIST_UPDATE_ELIM_CONV) tm
         end
    end
@@ -441,8 +440,7 @@ fun SORT_WORD_UPDATES_CONV ty =
             (Thm.INST_TYPE [Type.alpha |-> ty] wordsTheory.word_lo_n2w)
       val cmp = reduceLib.num_compset()
       val () = computeLib.add_thms
-                 [word_lo,
-                  numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_EQ,
+                 [numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_EQ, word_lo,
                   numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_MAX] cmp
       val wty = wordsSyntax.mk_word_type ty
       val fty = pairSyntax.mk_prod (wty, Type.alpha) --> wty
