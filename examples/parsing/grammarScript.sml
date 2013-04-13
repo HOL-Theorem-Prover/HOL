@@ -47,7 +47,9 @@ val ptree_head_def = Define`
 `;
 val _ = export_rewrites ["ptree_head_def"]
 
-val valid_ptree_def = tDefine "valid_ptree" `
+val noneval = Lib.with_flag (computeLib.auto_import_definitions,false)
+fun tzDefine nm q tac = noneval (tDefine nm q) tac
+val valid_ptree_def = tzDefine "valid_ptree" `
   (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd nt children) ⇔
     (nt,MAP ptree_head children) ∈ G.rules ∧
