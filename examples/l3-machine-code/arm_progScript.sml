@@ -9,7 +9,8 @@ val () = new_theory "arm_prog"
 (* ------------------------------------------------------------------------ *)
 
 val _ =
-   stateLib.sep_definitions "arm" [["CPSR"]] arm_stepTheory.NextStateARM_def
+   stateLib.sep_definitions "arm" [["CPSR"], ["FP", "FPSCR"]]
+      arm_stepTheory.NextStateARM_def
 
 val arm_instr_def = Define`
    arm_instr (a, i: word32) =

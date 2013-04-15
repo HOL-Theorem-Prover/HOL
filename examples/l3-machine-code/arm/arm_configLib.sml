@@ -60,6 +60,10 @@ val thumb_options =
    [["thumb","thumb2","16-bit","16"],
     ["arm","32-bit","32"]]
 
+val vfp_options = lower
+   [["fp", "vfp", "VFPv3"],
+    ["nofp", "novfp"]]
+
 fun find_pos P =
    let
       fun tail n [] = n
@@ -99,6 +103,7 @@ val default_options =
     mode      = hd all_modes,
     bigendian = false,
     thumb     = false,
+    vfp       = false,
     itblock   = wordsSyntax.mk_wordii (0, 8)}
 
 fun process_options s =
@@ -108,6 +113,8 @@ fun process_options s =
       val (bigendian, l) =
          process_opt endian_options "Endian"
             (#bigendian default_options) l (fn i => i <> 0)
+      val (vfp, l) =
+         process_opt vfp_options "VFP" (#vfp default_options) l (Lib.equal 0)
       val (arch, l) =
          process_opt arch_options "Arch"
             (#arch default_options) l
@@ -139,6 +146,7 @@ fun process_options s =
                mode = mode,
                bigendian = bigendian,
                thumb = thumb,
+               vfp = vfp,
                itblock = itblock}
       else raise ERR "process_options"
                  ("Unrecognized option" ^
@@ -156,6 +164,7 @@ fun mk_config_terms s =
       (if #thumb c then [``^st.CPSR.IT = ^(#itblock c)``] else []) @
       [``^st.Architecture = ^(#arch c)``,
        ``^st.CPSR.M = ^(#mode c)``,
+       prop #vfp ``^st.Extensions Extension_VFP``,
        prop #bigendian ``^st.CPSR.E``,
        prop #thumb ``^st.CPSR.T``]
    end

@@ -30,9 +30,12 @@ local
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
    val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
 in
-   val nibble = wordsSyntax.mk_int_word_type 4
+   val word2 = wordsSyntax.mk_int_word_type 2
+   val word4 = wordsSyntax.mk_int_word_type 4
+   val word5 = wordsSyntax.mk_int_word_type 5
    val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
+   val dword = wordsSyntax.mk_int_word_type 64
    val mk_arm_CurrentCondition = arm_1 "arm_CurrentCondition"
    val mk_arm_Encoding = arm_1 "arm_Encoding"
    val mk_arm_undefined = arm_1 "arm_undefined"
@@ -45,6 +48,9 @@ in
    val mk_arm_CPSR_E = arm_1 "arm_CPSR_E"
    val (_, mk_arm_MEM, dest_arm_MEM, is_arm_MEM) = arm_2 "arm_MEM"
    val (_, mk_arm_REG, dest_arm_REG, is_arm_REG) = arm_2 "arm_REG"
+   val (_, mk_arm_FP_REG, dest_arm_FP_REG, is_arm_FP_REG) = arm_2 "arm_FP_REG"
+   val (_, mk_arm_Extensions, dest_arm_Extensions, is_arm_Extensions) =
+      arm_2 "arm_Extensions"
    fun mk_arm_PC v = mk_arm_REG (pc, v)
 end
 
@@ -65,6 +71,7 @@ val arm_select_state_pool_thm =
 val state_id =
    utilsLib.mk_state_id_thm armTheory.arm_state_component_equality
       [["REG", "undefined"],
+       ["FP", "REG", "undefined"],
        ["CPSR", "CurrentCondition", "Encoding", "REG", "undefined"],
        ["MEM", "REG", "undefined"]
       ]
@@ -104,7 +111,11 @@ val arm_frame =
        (`arm_c_REG`, `\s:arm_state a w. s with REG := (a =+ w) r`,
         `\s:arm_state. s with REG := r`),
        (`arm_c_MEM`, `\s:arm_state a w. s with MEM := (a =+ w) r`,
-        `\s:arm_state. s with MEM := r`)]
+        `\s:arm_state. s with MEM := r`),
+       (`arm_c_FP_REG`,
+        `\s:arm_state a w. s with FP := fp with REG := (a =+ w) fp.REG`,
+        `\s. s with FP := fp`)
+      ]
 
 (* -- *)
 
@@ -182,24 +193,24 @@ fun reg_index tm =
     | {Thy = "arm", Name = "RName_PC", ...} => 15
     | _ => raise ERR "reg_index" ""
 
-fun other_index tm =
-   case fst (Term.dest_const (boolSyntax.rator tm)) of
-      "cond" => 0
-    | "arm_exception" => 1
-    | "arm_undefined" => 2
-    | "arm_CurrentCondition" => 3
-    | "arm_Encoding" => 4
-    | "arm_CPSR_J" => 5
-    | "arm_CPSR_E" => 6
-    | "arm_CPSR_T" => 7
-    | "arm_CPSR_M" => 8
-    | "arm_CPSR_N" => 9
-    | "arm_CPSR_Z" => 10
-    | "arm_CPSR_C" => 11
-    | "arm_CPSR_V" => 12
-    | _ => ~1
-
 local
+   fun other_index tm =
+      case fst (Term.dest_const (boolSyntax.rator tm)) of
+         "cond" => 0
+       | "arm_exception" => 1
+       | "arm_undefined" => 2
+       | "arm_CurrentCondition" => 3
+       | "arm_Encoding" => 4
+       | "arm_CPSR_J" => 5
+       | "arm_CPSR_E" => 6
+       | "arm_CPSR_T" => 7
+       | "arm_CPSR_M" => 8
+       | "arm_CPSR_N" => 9
+       | "arm_CPSR_Z" => 10
+       | "arm_CPSR_C" => 11
+       | "arm_CPSR_V" => 12
+       | _ => ~1
+   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    fun write_err s = raise ERR "arm_write_footprint" s
    fun strip_assign (a, b) =
       let
@@ -244,15 +255,24 @@ local
                      SOME i => mlibUseful.INL i
                    | NONE => mlibUseful.INR tm)
    val register = reg o fst o dest_arm_REG
+   fun fp_reg tm =
+      case Lib.total int_of_v2w tm of
+         SOME i => mlibUseful.INL i
+       | NONE => mlibUseful.INR tm
+   val fp_register = fp_reg o fst o dest_arm_FP_REG
    val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
                  fst o dest_arm_MEM
    fun psort p =
       let
          val (m, rst) = List.partition is_arm_MEM p
          val (r, rst) = List.partition is_arm_REG rst
+         val (c, rst) = List.partition is_arm_FP_REG rst
+         val (e, rst) = List.partition is_arm_Extensions rst
       in
          mlibUseful.sort_map other_index Int.compare rst @
+         mlibUseful.sort_map (fst o dest_arm_Extensions) Term.compare e @
          mlibUseful.sort_map register reg_compare r @
+         mlibUseful.sort_map fp_register reg_compare c @
          mlibUseful.sort_map address (mlibUseful.lex_list_order word_compare) m
       end
    fun fillIn f ty =
@@ -267,10 +287,13 @@ local
       end
    val flag = augment1 Term.rator Type.bool
    val s = Term.mk_var ("s", ``:arm_state``)
+   val FP_REG_tm = ``^s.FP.REG``
    val REG_tm = ``^s.REG``
    val MEM_tm = ``^s.MEM``
+   val c_FP_REG = fst o dest_arm_FP_REG
    val c_REG = fst o dest_arm_REG
    val c_MEM = fst o dest_arm_MEM
+   fun d_FP_REG tm = mk_arm_FP_REG (c_FP_REG tm, stateLib.vvar dword)
    fun d_REG tm = mk_arm_REG (c_REG tm, stateLib.vvar word)
    fun d_MEM tm = mk_arm_MEM (c_MEM tm, stateLib.vvar byte)
    fun cpsr_footprint (p, q, tm) =
@@ -311,13 +334,25 @@ in
               in
                  arm_write_footprint (l2 @ p, l @ q, rst)
               end
+        | ("arm$arm_state_FP_fupd", [r, rst]) =>
+             (case Lib.total
+                     (boolSyntax.dest_strip_comb o combinSyntax.dest_K_1) r of
+                 SOME ("arm$FP_REG_fupd", [r, _]) =>
+                    let
+                       val l =
+                          List.map mk_arm_FP_REG (strip_assign (r, FP_REG_tm))
+                       val l2 = List.map d_FP_REG (not_in_asserts p c_FP_REG l)
+                    in
+                       arm_write_footprint (l2 @ p, l @ q, rst)
+                    end
+               | _ => write_err "VFP registers")
         | ("arm$arm_state_Encoding_fupd", [e, rst]) =>
               arm_write_footprint
                  (augment1 Term.rator ``:Encoding`` mk_arm_Encoding
                            (p, q, e, rst))
         | ("arm$arm_state_CurrentCondition_fupd", [c, rst]) =>
               arm_write_footprint
-                 (augment1 Term.rator nibble mk_arm_CurrentCondition
+                 (augment1 Term.rator word4 mk_arm_CurrentCondition
                            (p, q, c, rst))
         | ("arm$arm_state_undefined_fupd", [u, rst]) =>
               arm_write_footprint (flag mk_arm_undefined (p, q, u, rst))
@@ -352,42 +387,47 @@ local
          (SIMP_CONV (srw_ss()) [arm_stepTheory.R_usr_def])
          (List.map mk_R_usr registers)
 in
-   val REG_CONV = Conv.QCONV (REWRITE_CONV [R_usr, arm_stepTheory.v2w_ground4])
+   val REG_CONV =
+      Conv.QCONV
+        (REWRITE_CONV
+           [R_usr, arm_stepTheory.v2w_ground4, arm_stepTheory.v2w_ground5])
    val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 end
 
 local
+   fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
    val regs = List.mapPartial (Lib.total dest_arm_REG)
-   val cond =
-      boolSyntax.list_mk_conj o List.mapPartial (Lib.total progSyntax.dest_cond)
+   val fp_regs = List.mapPartial (Lib.total dest_arm_FP_REG)
    val pc_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
-  fun bits4 i =
-     List.map bitstringSyntax.mk_b
-        (utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist i))
-   fun dest_reg lit r =
+   fun instantiate (a, b) =
+      if Term.is_var a then SOME (a |-> b)
+      else if a = b then NONE
+           else raise ERR "instantiate" "bad constant match"
+   fun bits n i =
+      List.map bitstringSyntax.mk_b
+         (utilsLib.padLeft false n (bitstringSyntax.int_to_bitlist i))
+   fun dest_reg n r =
       let
-         val t = Term.rand r
+         val t = if n = 4 then Term.rand r else r
          val l = case Lib.total bitstringSyntax.dest_v2w t of
                     SOME (l, _) => fst (listSyntax.dest_list l)
-                  | NONE => bits4 (wordsSyntax.uint_of_word t)
+                  | NONE => bits n (wordsSyntax.uint_of_word t)
       in
-         List.length l = 4 andalso (lit orelse List.all Term.is_var l) orelse
-         raise ERR "" ""
+         List.length l = n orelse raise ERR "dest_reg" "assertion failed"
          ; l
       end
-      handle HOL_ERR _ => raise ERR "dest_reg" ""
-   fun match_register (tm1, v1, _) (tm2, v2, _) =
+      handle HOL_ERR {message = s, ...} => raise ERR "dest_reg" s
+   fun match_register n (tm1, v1, _) (tm2, v2, _) =
       let
          val l = case Lib.total reg_index tm1 of
-                    SOME i => bits4 i
-                  | NONE => dest_reg true tm1
+                    SOME i => bits n i
+                  | NONE => dest_reg n tm1
       in
          ((v2 |-> v1) ::
-          List.map (op |->) (ListPair.zip (dest_reg false tm2, l)),
+          List.mapPartial instantiate (ListPair.zip (dest_reg n tm2, l)),
           [tm2])
       end
-   fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
-   fun groupings ok rs =
+   fun groupings n ok rs =
      rs |> utilsLib.partitions
         |> List.map
               (List.mapPartial
@@ -417,29 +457,42 @@ local
                                    (hd l, tl l)
                            fun mtch x =
                               let
-                                 val s = match_register h x
+                                 val s = match_register n h x
                               in
                                  Lib.assert ok (fst s); s
                               end
                         in
                            concat_unzip (List.map mtch t)
                         end) p))
-   fun assign_ok c s = utilsLib.rhsc (REG_CONV (Term.subst s c)) <> boolSyntax.F
+   (* check that the pre-condition predictate (from "cond P" terms) is not
+      violated *)
+   fun assign_ok p =
+      let
+         val l = List.mapPartial (Lib.total progSyntax.dest_cond) p
+         val c = boolSyntax.list_mk_conj l
+      in
+         fn s => utilsLib.rhsc (REG_CONV (Term.subst s c)) <> boolSyntax.F
+      end
    val r15 = wordsSyntax.mk_wordii (15, 4)
    fun assume_not_pc r =
       Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (r, r15)))
    fun star_subst s = List.map (utilsLib.rhsc o REG_CONV o Term.subst s)
+   fun mk_assign f (p, q) =
+      List.map
+         (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
+         (ListPair.zip (f p, f q))
 in
    fun combinations (thm, t) =
       let
          val (m, p, c, q) = progSyntax.dest_spec t
          val pl = progSyntax.strip_star p
          val ql = progSyntax.strip_star q
-         val rs =
-            List.map (fn ((r1, a), (r2, b)) =>
-                         (Lib.assert (op =) (r1, r2); (r1, a, b)))
-            (ListPair.zip (regs pl, regs ql))
-         val groups = groupings (assign_ok (cond pl)) rs
+         val ds = mk_assign fp_regs (pl, ql)
+         val (n, dst, rs) =
+            if List.length ds < 2
+               then (4, dest_arm_REG, mk_assign regs (pl, ql))
+            else (5, dest_arm_FP_REG, ds)
+         val groups = groupings n (assign_ok pl) rs
       in
          List.map
             (fn (s, d) =>
@@ -447,7 +500,7 @@ in
                    val do_reg =
                       star_subst s o
                       List.filter
-                         (fn tm => case Lib.total dest_arm_REG tm of
+                         (fn tm => case Lib.total dst tm of
                                       SOME (a, _) => not (Lib.mem a d)
                                     | NONE => true)
                    val pl' = do_reg pl
@@ -479,12 +532,17 @@ local
          fn tm =>
             case boolSyntax.dest_strip_comb tm of
                ("arm_prog$arm_undefined", [v]) => g (v, "und", Type.bool)
-             | ("arm_prog$arm_CurrentCondition", [v]) => g (v, "cond", nibble)
+             | ("arm_prog$arm_CurrentCondition", [v]) => g (v, "cond", word4)
              | ("arm_prog$arm_Encoding", [v]) => g (v, "enc", ``:Encoding``)
              | ("arm_prog$arm_CPSR_N", [v]) => g (v, "n", Type.bool)
              | ("arm_prog$arm_CPSR_Z", [v]) => g (v, "z", Type.bool)
              | ("arm_prog$arm_CPSR_C", [v]) => g (v, "c", Type.bool)
              | ("arm_prog$arm_CPSR_V", [v]) => g (v, "v", Type.bool)
+             | ("arm_prog$arm_FP_FPSCR_RMode", [v]) => g (v, "rmode", word2)
+             | ("arm_prog$arm_FP_REG", [x, v]) =>
+                 (case Lib.total (Int.toString o wordsSyntax.uint_of_word) x of
+                     SOME s => g (v, "d" ^ s, dword)
+                   | NONE => NONE)
              | ("arm_prog$arm_REG", [x, v]) =>
                   let
                      val n = reg_index x
@@ -509,17 +567,25 @@ in
 end
 
 local
-   val Extend_rwt =
-     List.map (REWRITE_CONV [armTheory.Extend_def])
-           [``Extend (T, w:'a word): 'b word``,
-            ``Extend (F, w:'a word): 'b word``]
+   fun spec_rewrites thm tms = List.map (REWRITE_CONV [thm]) tms
+   val spec_rwts =
+      spec_rewrites armTheory.Extend_def
+         [``Extend (T, w:'a word): 'b word``,
+          ``Extend (F, w:'a word): 'b word``] @
+      spec_rewrites arm_stepTheory.UpdateSingleOfDouble_def
+         [``UpdateSingleOfDouble T v w``,
+          ``UpdateSingleOfDouble F v w``] @
+      spec_rewrites arm_stepTheory.SingleOfDouble_def
+         [``SingleOfDouble T w``,
+          ``SingleOfDouble F w``]
    fun check_unique_reg_CONV tm =
       let
          val (_, p, _, _) = progSyntax.dest_spec tm
          val p = progSyntax.strip_star p
-         val p = List.mapPartial (Lib.total (fst o dest_arm_REG)) p
+         val rp = List.mapPartial (Lib.total (fst o dest_arm_REG)) p
+         val dp = List.mapPartial (Lib.total (fst o dest_arm_FP_REG)) p
       in
-         if Lib.mk_set p = p
+         if Lib.mk_set rp = rp andalso Lib.mk_set dp = dp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
@@ -553,7 +619,7 @@ local
       THENC PRE_COND_CONV
       THENC PRE_CONV WGROUND_RW_CONV
       THENC OPC_CONV bitstringLib.v2w_n2w_CONV
-      THENC POST_CONV (WGROUND_RW_CONV THENC PURE_REWRITE_CONV Extend_rwt)
+      THENC POST_CONV (WGROUND_RW_CONV THENC PURE_REWRITE_CONV spec_rwts)
 in
    fun simp_triple_rule thm =
       rename_vars (Conv.CONV_RULE cnv thm)
@@ -581,7 +647,7 @@ end
 local
    val component_11 =
       (case Drule.CONJUNCTS arm_progTheory.arm_component_11 of
-          [r, m, _] => [r, m]
+          [r, m, _, fp] => [r, m, fp]
         | _ => raise ERR "component_11" "")
    val sym_R_x_pc =
       REWRITE_RULE [utilsLib.qm [] ``(a = RName_PC) = (RName_PC = a)``]
@@ -590,7 +656,7 @@ local
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
       \\ ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
    val arm_rwts =
-      List.drop (utilsLib.datatype_rewrites "arm" ["arm_state", "PSR"], 1)
+      List.drop (utilsLib.datatype_rewrites "arm" ["arm_state", "PSR", "FP"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
    val spec =
       stateLib.spec
@@ -600,15 +666,17 @@ local
            (arm_select_state_pool_thm :: arm_select_state_thms)
            [arm_frame, state_id]
            component_11
-           [word, ``:RName``]
+           [word, word5, ``:RName``]
            EXTRA_TAC STATE_TAC
    fun is_stm_wb s =
       let
-         val s' = utilsLib.lowercase s
+         val s' =
+            utilsLib.lowercase (fst (utilsLib.splitAtChar (Lib.equal #";") s))
       in
-         String.isPrefix "stm" s' andalso
-         List.exists (fn p => String.isPrefix p (String.extract (s', 3, NONE)))
-            ["ia (wb)", "ib (wb)", "da (wb)", "db (wb)"]
+         String.isPrefix "stm" s' andalso String.isSuffix "(wb)" s' andalso
+         List.exists
+            (fn p => String.isPrefix p (String.extract (s', 3, NONE)))
+            ["ia", "ib", "da", "db"]
       end
    val v3 = Term.mk_var ("x3", Type.bool)
    val v4 = Term.mk_var ("x4", Type.bool)
@@ -618,12 +686,13 @@ local
    val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
    fun arm_spec_opt opt =
       let
-         val step = hd o arm_stepLib.arm_step opt
+         val step = arm_stepLib.arm_step opt
       in
          fn s =>
            (if is_stm_wb s
                then let
-                       val thm = step s
+                       val l = step s
+                       val thm = hd l
                        val base = s |> utilsLib.splitAtChar (Char.isDigit)
                                     |> snd
                                     |> String.tokens (Lib.equal #",")
@@ -649,15 +718,22 @@ local
                        val spec1 = spec (thm1, arm_mk_pre_post thm1)
                        val () = print "."
                        val spec2 = spec (thm2, arm_mk_pre_post thm2)
+                       val specs =
+                          List.map
+                             (fn t =>
+                                (print "."
+                                 ; spec (t, arm_mk_pre_post t))) (tl l)
                     in
-                       [spec1, spec2]
+                       [spec1, spec2] @ specs
                     end
             else let
-                    val thm = step s
-                    val t = arm_mk_pre_post thm
+                    val thms = step s
+                    val ts = List.map arm_mk_pre_post thms
+                    val thms_ts =
+                       List.concat
+                          (List.map combinations (ListPair.zip (thms, ts)))
                  in
-                    List.map (fn x => (print "."; spec x))
-                             (combinations (thm, t))
+                    List.map (fn x => (print "."; spec x)) thms_ts
                  end)
            before print "\n"
       end
@@ -718,16 +794,20 @@ in
             in
                case find_spec opc of
                   SOME thms =>
-                    (Lib.tryfind (spec_spec opc) thms
-                     handle HOL_ERR {origin_function = "tryfind", ...} =>
-                       loop looped i "failed to find suitable spec" s)
+                    let
+                       val l = List.mapPartial (Lib.total (spec_spec opc)) thms
+                    in
+                       if List.null l
+                          then loop looped i "failed to find suitable spec" s
+                       else l
+                    end
                 | NONE => loop looped i "failed to add suitable spec" s
             end)
     and loop looped i e s =
-         if looped
-            then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
-         else (List.app addInstructionClass (arm_stepLib.arm_instruction i);
-               arm_spec_hex true s)
+       if looped
+          then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
+       else (List.app addInstructionClass (arm_stepLib.arm_instruction i);
+             arm_spec_hex true s)
     val arm_spec_hex = arm_spec_hex false
 end
 
@@ -742,10 +822,10 @@ fun opc_class s =
       (listSyntax.mk_list (i, Type.bool), arm_stepLib.arm_instruction i)
    end
 
-val step = hd o arm_stepLib.arm_step ""
+val step = hd o arm_stepLib.arm_step "vfp"
 
-val s = "STRNE (imm,post)"
-val s = "E58F1000"
+val s = "VADD (double)"
+val s = "ed817a00"
 val s = List.nth (hex_list, 0)
 val (opc, l) = opc_class s
 val thm = step s
@@ -753,16 +833,60 @@ val t = arm_mk_pre_post thm
 val thms = List.map spec (combinations (thm, t))
 spec (thm, t)
 
-arm_spec_hex "05097018"
-val l = (combinations (thm, t))
- spec (thm, t)
- spec (List.nth (l, 2))
-
- val (thm, t) = List.nth (l, 2)
-
 val thm = saveSpecs "specs"
 
+  arm_config "vfp"
+
 val arm_spec_hex = Count.apply arm_spec_hex
+
+  arm_spec "VADD (single)";
+  arm_spec "VSUB (single)";
+  arm_spec "VMUL (single)";
+  arm_spec "VMLA (single)";
+  arm_spec "VMLS (single)";
+  arm_spec "VNMUL (single)";
+  arm_spec "VNMLA (single)";
+  arm_spec "VNMLS (single)";
+  arm_spec "VLDR (single,+imm)";
+  arm_spec "VLDR (single,-imm)";
+  arm_spec "VLDR (single,+imm,pc)";
+  arm_spec "VLDR (single,-imm,pc)";
+  arm_spec "VSTR (single,+imm)";
+  arm_spec "VSTR (single,-imm)";
+  arm_spec "VSTR (single,+imm,pc)";
+  arm_spec "VSTR (single,-imm,pc)"
+
+  arm_spec "VADD (double)";
+  arm_spec "VSUB (double)";
+  arm_spec "VMUL (double)";
+  arm_spec "VMLA (double)";
+  arm_spec "VMLS (double)";
+  arm_spec "VNMUL (double)";
+  arm_spec "VNMLA (double)";
+  arm_spec "VNMLS (double)";
+  arm_spec "VLDR (double,+imm)";
+  arm_spec "VLDR (double,-imm)";
+  arm_spec "VLDR (double,+imm,pc)";
+  arm_spec "VLDR (double,-imm,pc)";
+  arm_spec "VSTR (double,+imm)";
+  arm_spec "VSTR (double,-imm)";
+  arm_spec "VSTR (double,+imm,pc)";
+  arm_spec "VSTR (double,-imm,pc)"
+
+  arm_spec_hex "ed907a00"; (* vldr *)
+  arm_spec_hex "edd16a00"; (* vldr *)
+  arm_spec_hex "ee676a26"; (* vmul *)
+  arm_spec_hex "edd15a00"; (* vldr *)
+  arm_spec_hex "ed936a00"; (* vldr *)
+  arm_spec_hex "ed925a00"; (* vldr *)
+  arm_spec_hex "edd17a01"; (* vldr *)
+  arm_spec_hex "ed817a00"; (* vstr *)
+  arm_spec_hex "ee775a65"; (* vsub *)
+  arm_spec_hex "ee477a05"; (* vmla *)
+  arm_spec_hex "ee456a86"; (* vmla *)
+  arm_spec_hex "edc17a01"; (* vstr *)
+  arm_spec_hex "ee767aa7"; (* vadd *)
+  arm_spec_hex "edc37a00"; (* vstr *)
 
   arm_spec_hex "F1010200"; (* SETEND *)
   arm_spec_hex "EA000001"; (* B + *)
@@ -839,7 +963,7 @@ val arm_spec_hex = Count.apply arm_spec_hex
   arm_spec_hex "E5221080"; (* STR pre wb *)
   arm_spec_hex "E5861080"; (* STR pre *)
   arm_spec_hex "E7811001"; (* STR pre *)
-  arm_spec_hex "E58F1000"; (* STR pc base *)
+  arm_spec_hex "E58F1000"; (* STR pc base  ** NOT WORKING *)
   arm_spec_hex "E78F1001"; (* STR pre pc base *)
   arm_spec_hex "E7821063"; (* STR pre reg rrx *)
   arm_spec_hex "E4821004"; (* STR post imm *)
@@ -915,14 +1039,23 @@ val () =
          (List.take (hex_list, 10))
 
 val tm = rst
-val ("arm$arm_state_CPSR_fupd", [c, rst]) = boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_MEM_fupd", [m, rst]) = boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_REG_fupd", [r, rst]) = boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_CurrentCondition_fupd", [c, rst]) = boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_Encoding_fupd", [e, rst]) = boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_undefined_fupd", [u, rst]) = boolSyntax.dest_strip_comb tm
-
-val step = hd o arm_stepLib.arm_step ""
+val SOME ("arm$FP_REG_fupd", [r, _]) =
+   Lib.total
+      (boolSyntax.dest_strip_comb o combinSyntax.dest_K_1) r
+val ("arm$arm_state_FP_fupd", [r, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_CPSR_fupd", [c, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_MEM_fupd", [m, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_REG_fupd", [r, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_CurrentCondition_fupd", [c, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_Encoding_fupd", [e, rst]) =
+   boolSyntax.dest_strip_comb tm
+val ("arm$arm_state_undefined_fupd", [u, rst]) =
+   boolSyntax.dest_strip_comb tm
 
 val next_def = arm_stepTheory.NextStateARM_def
 val instr_def = arm_instr_def
@@ -937,7 +1070,7 @@ val read_thms = [arm_stepTheory.get_bytes]
 val write_thms = []: thm list
 val select_state_thms = (arm_select_state_pool_thm :: arm_select_state_thms)
 val frame_thms = [arm_frame, state_id]
-val map_tys = [word, ``:RName``]
+val map_tys = [word, word5, ``:RName``]
 val mk_pre_post = arm_mk_pre_post
 val write = arm_write_footprint
 

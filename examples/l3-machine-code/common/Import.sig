@@ -26,6 +26,14 @@ sig
      | Some
      | Tail
      | ValOf
+     | fpAdd32
+     | fpAdd64
+     | fpMul32
+     | fpMul64
+     | fpNeg32
+     | fpNeg64
+     | fpSub32
+     | fpSub64
 
    datatype binop =
        Add
@@ -66,13 +74,15 @@ sig
    val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit
    val Def : string * Term.term * Term.term -> Theory.thm
+   val tDef : string * Term.term * Term.term * Term.term -> Theory.thm
    val Def0 : string * Term.term -> Theory.thm
 
-   val uTy : ParseDatatype.pretype
+   val bTy : ParseDatatype.pretype
    val iTy : ParseDatatype.pretype
    val nTy : ParseDatatype.pretype
-   val bTy : ParseDatatype.pretype
+   val rTy : ParseDatatype.pretype
    val sTy : ParseDatatype.pretype
+   val uTy : ParseDatatype.pretype
    val vTy : ParseDatatype.pretype
 
    val CTy : string -> ParseDatatype.pretype
@@ -112,11 +122,11 @@ sig
    val Const : string * ParseDatatype.pretype -> Term.term
    val AVar : ParseDatatype.pretype -> Term.term
    val Var : string * ParseDatatype.pretype -> Term.term
-   val uVar : string -> Term.term
    val bVar : string -> Term.term
-   val nVar : string -> Term.term
    val iVar : string -> Term.term
+   val nVar : string -> Term.term
    val sVar : string -> Term.term
+   val uVar : string -> Term.term
    val vVar : string -> Term.term
    val Close : Term.term * Term.term -> Term.term
    val Apply : Term.term * Term.term -> Term.term

@@ -2,7 +2,7 @@ structure Import :> Import =
 struct
 
 open HolKernel boolLib bossLib
-open state_transformerTheory bitstringLib stringLib
+open state_transformerTheory bitstringLib stringLib machine_ieeeSyntax
 open intSyntax integer_wordSyntax bitstringSyntax state_transformerSyntax
 
 val ERR = mk_HOL_ERR "Import"
@@ -81,6 +81,7 @@ in
    val iTy = mkTy (SOME "integer", "int")
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
+   val rTy = mkTy (SOME "binary_ieee", "rounding")
    val sTy = mkListTy charTy
    val vTy = mkListTy bTy
    fun CTy n = mkTy (NONE, n)
@@ -128,13 +129,14 @@ val myDatatype =
    let
       val w = String.size "Defined type: \""
    in
-      Lib.with_flag
+      (Lib.with_flag
          (Feedback.MESG_to_string,
           fn s => (log_type
                      (String.extract (s, w, SOME (String.size s - w - 1)))
-                   ; s ^ "\n"))
-         (Feedback.trace ("Theory.save_thm_reporting", 0)
-         Datatype.astHol_datatype)
+                   ; s ^ "\n")) o
+       Feedback.trace ("Theory.save_thm_reporting", 0) o
+       Lib.with_flag (Datatype.big_record_size, 25))
+       Datatype.astHol_datatype
    end
 
 (* Record type *)
@@ -187,14 +189,21 @@ fun Call (f, ty, tm) =
       val typ = Type.--> (Term.type_of tm, Ty ty)
       val vc = mk_local_const (f, typ)
                handle HOL_ERR {origin_function = "mk_thy_const", ...} =>
-                 Term.mk_var (f, typ)
+                 Term.mk_var (f, typ) (* for recursion *)
    in
       Term.mk_comb (vc, tm)
    end
 
 (* Constants *)
 
-fun Const (c, ty) = mk_local_const (c, Ty ty)
+fun Const (c, ty) =
+   let
+      val typ = Ty ty
+   in
+      mk_local_const (c, typ)
+      handle HOL_ERR {origin_function = "mk_thy_const", ...} =>
+        Term.mk_var (c, typ) (* for recursion *)
+   end
 
 (* Variables *)
 
@@ -443,6 +452,14 @@ datatype monop =
    | Some
    | Tail
    | ValOf
+   | fpAdd32
+   | fpAdd64
+   | fpMul32
+   | fpMul64
+   | fpNeg32
+   | fpNeg64
+   | fpSub32
+   | fpSub64
 
 datatype binop =
      Add
@@ -565,6 +582,13 @@ local
    fun ialpha tm =
       Term.inst [Type.alpha |-> wordsSyntax.dest_word_type (fstTy tm)]
 
+   fun mk_from_bool (x as (tm, a, b)) =
+      if tm = boolSyntax.T
+         then a
+      else if tm = boolSyntax.F
+         then b
+      else boolSyntax.mk_cond x
+
    val mk_word_min  = s ialpha wordsSyntax.word_min_tm
    val mk_word_max  = s ialpha wordsSyntax.word_max_tm
    val mk_word_smin = s ialpha wordsSyntax.word_smin_tm
@@ -579,6 +603,33 @@ local
 
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
+
+   fun mk_fp_triop f =
+      let
+         val ftm = case f of
+                      fpAdd32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
+                    | fpAdd64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
+                    | fpMul32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
+                    | fpMul64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
+                    | fpSub32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
+                    | fpSub64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
+                    | _ => raise ERR "mk_fp_triop" ""
+         val ty = ftm |> Term.type_of
+                      |> Type.dom_rng |> snd
+                      |> Type.dom_rng |> fst
+         val a = Term.mk_var ("a", binary_ieeeSyntax.rounding_ty)
+         val b = Term.mk_var ("b", ty)
+         val c = Term.mk_var ("c", ty)
+         val l = [a, b, c]
+         val p = pairSyntax.list_mk_pair l
+         val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
+      in
+         fn tm =>
+            (ptm, tm) |> Term.mk_comb
+                      |> PairRules.PBETA_CONV
+                      |> Thm.concl
+                      |> boolSyntax.rhs
+      end
 
    fun pickCast ty2 tm =
       let
@@ -660,18 +711,18 @@ local
                  else Term.mk_comb (string2enum ty2, tm)
          else if ty1 = Type.bool
             then if wordsSyntax.is_word_type ty2
-                    then boolSyntax.mk_cond (tm, mk_word1 ty2, mk_word0 ty2)
+                    then mk_from_bool (tm, mk_word1 ty2, mk_word0 ty2)
                  else if ty2 = bitstringSyntax.bitstring_ty
-                    then boolSyntax.mk_cond (tm,
+                    then mk_from_bool (tm,
                            bitstringSyntax.bitstring_of_binstring "1",
                            bitstringSyntax.bitstring_of_binstring "0")
                  else if ty2 = numSyntax.num
-                    then boolSyntax.mk_cond (tm, one_tm, numSyntax.zero_tm)
+                    then mk_from_bool (tm, one_tm, numSyntax.zero_tm)
                  else if ty2 = intSyntax.int_ty
-                    then boolSyntax.mk_cond (tm,
+                    then mk_from_bool (tm,
                            intSyntax.one_tm, intSyntax.zero_tm)
                  else if ty2 = stringSyntax.string_ty
-                    then boolSyntax.mk_cond (tm,
+                    then mk_from_bool (tm,
                            stringSyntax.fromMLstring "true",
                            stringSyntax.fromMLstring "false")
                  else if ty2 = Type.bool
@@ -757,7 +808,11 @@ in
        | SE ty =>
            (fn tm =>
               wordsSyntax.mk_sw2sw (tm, wordsSyntax.dest_word_type (Ty ty)))
-       | Cast ty => pickCast (Ty ty)) x
+       | Cast ty => pickCast (Ty ty)
+       | fpNeg32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
+       | fpNeg64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | _ => mk_fp_triop m
+      ) x
 end
 
 local
@@ -840,11 +895,19 @@ end
 
 (* Definitions *)
 
+fun MEASURE_TAC tm =
+   TotalDefn.WF_REL_TAC `^(boolSyntax.mk_icomb (numSyntax.measure_tm, tm))`
+
 fun new_def s x = Definition.new_definition (s ^ "_def", boolSyntax.mk_eq x)
 
 fun z_def def =
    Feedback.trace ("Define.storage_message", 0)
    bossLib.zDefine [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)]
+
+fun t_def s def m =
+   Feedback.trace ("Define.storage_message", 0)
+   (bossLib.tDefine s [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
+     (MEASURE_TAC m THEN SRW_TAC [listSimps.LIST_ss, numSimps.ARITH_ss] [])
 
 val mesg =
    Lib.with_flag
@@ -868,6 +931,22 @@ fun Def (s, a, b) =
       val () = resetAnon ()
    in
       (if isrec then z_def else new_def s) def before mesg s
+   end
+
+fun tDef (s, a, b, m) =
+   let
+      val ty = Type.--> (Term.type_of a, Term.type_of b)
+      val c = Term.mk_var (s, ty)
+      val def = if Term.is_abs b
+                   then let
+                           val (vs, b1) = Term.strip_abs b
+                        in
+                           (Term.list_mk_comb (c, a :: vs), b1)
+                        end
+                else (Term.mk_comb (c, a), b)
+      val () = resetAnon ()
+   in
+      t_def s def m before mesg s
    end
 
 fun Def0 (s, b) = new_def s (Term.mk_var (s, Term.type_of b), b) before mesg s

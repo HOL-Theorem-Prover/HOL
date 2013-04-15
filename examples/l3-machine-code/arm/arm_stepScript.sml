@@ -116,6 +116,30 @@ val STM_UPTO_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
+val DecodeRoundingMode_def = Define`
+   DecodeRoundingMode (m: word2) =
+     if m = 0w
+        then roundTiesToEven
+     else if m = 1w
+        then roundTowardPositive
+     else if m = 2w
+        then roundTowardNegative
+     else roundTowardZero`;
+
+(* For floating-point single precision access *)
+
+val SingleOfDouble_def = Define`
+   SingleOfDouble b (w:word64) = if b then (63 >< 32) w else (31 >< 0) w`
+
+val UpdateSingleOfDouble_def = Define`
+   UpdateSingleOfDouble b (v:word32) (w:word64) =
+      if b then
+         bit_field_insert 63 32 v w
+      else
+         bit_field_insert 31 0 v w`;
+
+(* ------------------------------------------------------------------------ *)
+
 val R_usr_def = Define`
    R_usr (n: word4) =
      case n of
@@ -211,6 +235,14 @@ val ITAdvance_0 = ustore_thm("ITAdvance_0",
    `(s.CPSR.IT = 0w) ==> (s with CPSR := s.CPSR with IT := 0w = s)`,
    lrw [armTheory.arm_state_component_equality,
         armTheory.PSR_component_equality]
+   )
+
+(* ------------------------------------------------------------------------ *)
+
+val RoudingMode = Q.store_thm("RoundingMode",
+   `!s. FST (RoundingMode s) = DecodeRoundingMode s.FP.FPSCR.RMode`,
+   rw [DecodeRoundingMode_def, RoundingMode_def]
+   \\ blastLib.FULL_BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -980,11 +1012,19 @@ val v2w_13_15_rwts = Q.store_thm("v2w_13_15_rwts",
     ((v2w [b2; b1; b0; F] = 15w: word4) = F)`,
     blastLib.BBLAST_TAC)
 
-val v2w_ground4 = Theory.save_thm("v2w_ground4",
-   List.tabulate
-      (16, fn i => bitstringLib.v2w_n2w_CONV
-                      (bitstringSyntax.padded_fixedwidth_of_int (i, 4)))
-   |> Drule.LIST_CONJ)
+fun enumerate_v2w n =
+   let
+      open Arbnum
+      val m = toInt (pow (two, fromInt n))
+   in
+      List.tabulate
+         (m, fn i => bitstringLib.v2w_n2w_CONV
+                         (bitstringSyntax.padded_fixedwidth_of_int (i, n)))
+      |> Drule.LIST_CONJ
+   end
+
+val v2w_ground4 = Theory.save_thm("v2w_ground4", enumerate_v2w 4)
+val v2w_ground5 = Theory.save_thm("v2w_ground5", enumerate_v2w 5)
 
 val bool_not_pc = Q.store_thm("bool_not_pc",
    `~(b3 /\ b2 /\ b1 /\ b0) = (v2w [b3; b2; b1; b0] <> 15w: word4)`,
@@ -1001,9 +1041,18 @@ val Decode_simps = Q.prove(
     (word_msb (v2w [b3; b2; b1; b0] : word4) = b3) /\
     ((v2w [b3] : word1) @@ v2w [b2; b1; b0] : word3 =
      v2w [b3; b2; b1; b0] : word4) /\
+    ((v2w [b4] : word1) @@ v2w [b3; b2; b1; b0] : word4 =
+     v2w [b4; b3; b2; b1; b0] : word5) /\
+    (v2w [b4; b3; b2; b1] : word4 @@ (v2w [b0] : word1) =
+     v2w [b4; b3; b2; b1; b0] : word5) /\
     ((v2w [b3; b2; b1; b0] : word4) <+ 8w = ~b3) /\
-    ((v2w [b] : word1) @@ (0w : word1) = v2w [b; F] : word2)`,
-   lrw [] \\ blastLib.BBLAST_TAC)
+    ((v2w [b] : word1) @@ (0w : word1) = v2w [b; F] : word2) /\
+    (w2w ((v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@
+           (0w: word2)) : word10) =
+     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word32)`,
+   lrw []
+   \\ blastLib.BBLAST_TAC
+   )
 
 val Decode_simps = Theory.save_thm ("Decode_simps",
    (Decode_simps ::
@@ -1013,6 +1062,10 @@ val Decode_simps = Theory.save_thm ("Decode_simps",
                   in
                      blastLib.BBLAST_CONV ``v2w [a; b; c] = ^w``
                   end)) |> Drule.LIST_CONJ)
+
+val fpreg_div2 = Q.store_thm("fpreg_div2",
+   `v2w [b4; b3; b2; b1; b0] // 2w = v2w [F; b4; b3; b2; b1] : word5`,
+   blastLib.BBLAST_TAC)
 
 val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
    `!imm2 w C s.

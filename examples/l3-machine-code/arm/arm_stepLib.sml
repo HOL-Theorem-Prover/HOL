@@ -12,10 +12,15 @@ open state_transformerSyntax blastLib
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars armTheory.arm_grammars
+   val (tyg, (tmg, _)) =
+      (I ## term_grammar.mfupdate_overload_info
+               (Overload.remove_overloaded_form "add"))
+      armTheory.arm_grammars
+   val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
 
 open Parse
+val _ = hide "add"
 
 infix \\
 val op \\ = op THEN
@@ -88,7 +93,7 @@ fun datatype_thms thms =
    thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
    utilsLib.datatype_rewrites "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
-      "PSR"]
+      "PSR", "VFPNegMul"]
 
 val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
 val DATATYPE_RULE = Conv.CONV_RULE DATATYPE_CONV
@@ -98,7 +103,8 @@ val COND_UPDATE_CONV =
    REWRITE_CONV (unit_state_cond ::
                  utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
                  utilsLib.mk_cond_update_thms
-                    (List.map arm_configLib.mk_arm_type ["arm_state", "PSR"]))
+                    (List.map arm_configLib.mk_arm_type
+                        ["arm_state", "FP", "PSR"]))
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
@@ -1545,15 +1551,16 @@ local
              (Thm.BETA_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV
-                      ([Take_rwt, ArchVersion_rwts, FST_Skip,
-                        (* DecodeImmShift_rwt, *)
-                        HaveDSPSupport_rwt,
-                        HaveThumb2_def,
-                        armTheory.boolify28_v2w, Decode_simps,
-                        utilsLib.SET_CONV ``a IN {ARMv6T2; ARMv7_A; ARMv7_R}``,
-                        utilsLib.SET_CONV ``a IN {ARMv6K; ARMv7_A; ARMv7_R}``,
-                        utilsLib.SET_CONV ``(n:word4) IN {13w; 15w}``] @
-                       iConditionPassed_rwts)
+                     ([Take_rwt, ArchVersion_rwts, FST_Skip,
+                       (* DecodeImmShift_rwt, *)
+                       HaveDSPSupport_rwt,
+                       HaveThumb2_def,
+                       armTheory.boolify28_v2w, Decode_simps,
+                       Q.ISPEC `x: Extensions set` pred_setTheory.SPECIFICATION,
+                       utilsLib.SET_CONV ``a IN {ARMv6T2; ARMv7_A; ARMv7_R}``,
+                       utilsLib.SET_CONV ``a IN {ARMv6K; ARMv7_A; ARMv7_R}``,
+                       utilsLib.SET_CONV ``(n:word4) IN {13w; 15w}``] @
+                      iConditionPassed_rwts)
               THENC ONCE_REWRITE_CONV [DecodeImmShift_rwt]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
               THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
@@ -1574,6 +1581,20 @@ local
       utilsLib.qm []
          ``!z b x y. (z = if b then x:'a else y) ==> (~b ==> (z = y))``
 in
+   val DecodeVFP =
+      DecodeVFP_def
+      |> Thm.SPEC (bitstringSyntax.mk_vec 32 0)
+      |> Conv.RIGHT_CONV_RULE
+             (Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
+              THENC REWRITE_CONV
+                      [armTheory.boolify28_v2w, boolTheory.literal_case_THM]
+              THENC Conv.ONCE_DEPTH_CONV Thm.BETA_CONV
+              THENC Conv.DEPTH_CONV PairedLambda.let_CONV
+              THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
+              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
+              THENC Conv.DEPTH_CONV bitstringLib.v2w_eq_CONV
+              THENC REWRITE_CONV [armTheory.boolify4_v2w, Decode_simps])
+
    val DecodeARM_15 = DecodeARM |> inst_cond (K boolSyntax.T) |> REG_RULE
 
    val DecodeARM_14 =
@@ -1604,7 +1625,7 @@ in
          val s = state_with_enc ``Encoding_ARM`` :: fst (Term.match_term v pat)
       in
          thm |> Thm.INST s
-             |> REWRITE_RULE [dual_rwt]
+             |> REWRITE_RULE [dual_rwt, DecodeVFP]
              |> Conv.RIGHT_CONV_RULE EVAL_DATATYPE_CONV
              |> SIMP_RULE bool_ss [ConditionPassed_enc]
       end
@@ -1726,7 +1747,9 @@ val arm_patterns = List.map (I ## epattern)
    ("StoreHalf (imm,pre)",                  "FFFT_T_F____________TFTT"),
    ("StoreDual (reg)",                      "FFF__F_F_______F____TTTT"),
    ("StoreDual (imm)",                      "FFF__T_F_______F____TTTT"),
-   ("StoreMultiple",                        "TFF__F_F________________")
+   ("StoreMultiple",                        "TFF__F_F________________"),
+   ("VFPLoadStore",                         "TTFT__F_________TFT_____"),
+   ("VFPData",                              "TTTFF___________TFT____F")
   ]
 
 val arm_patterns15 = List.map (I ## epattern)
@@ -2192,7 +2215,48 @@ local
      ("STMIB (wb)", ("StoreMultiple", [xT 0, xT 1, xT 2])),
      ("SWP" , ("Swap", [xF 0])),
      ("SWPB", ("Swap", [xT 0])),
-     ("SETEND" , ("Setend", [xF 0]))]
+     ("SETEND", ("Setend", [xF 0])),
+     ("VADD (single)", ("VFPData", [xT 1, xT 2, xF 11, xF 13])),
+     ("VADD (double)", ("VFPData", [xT 1, xT 2, xT 11, xF 13])),
+     ("VSUB (single)", ("VFPData", [xT 1, xT 2, xF 11, xT 13])),
+     ("VSUB (double)", ("VFPData", [xT 1, xT 2, xT 11, xT 13])),
+     ("VMUL (single)", ("VFPData", [xT 1, xF 2, xF 11, xF 13])),
+     ("VMUL (double)", ("VFPData", [xT 1, xF 2, xT 11, xF 13])),
+     ("VMLA (single)", ("VFPData", [xF 1, xF 2, xF 11, xF 13])),
+     ("VMLA (double)", ("VFPData", [xF 1, xF 2, xT 11, xF 13])),
+     ("VMLS (single)", ("VFPData", [xF 1, xF 2, xF 11, xT 13])),
+     ("VMLS (double)", ("VFPData", [xF 1, xF 2, xT 11, xT 13])),
+     ("VNMUL (single)", ("VFPData", [xT 1, xF 2, xF 11, xT 13])),
+     ("VNMUL (double)", ("VFPData", [xT 1, xF 2, xT 11, xT 13])),
+     ("VNMLA (single)", ("VFPData", [xF 1, xT 2, xF 11, xT 13])),
+     ("VNMLA (double)", ("VFPData", [xF 1, xT 2, xT 11, xT 13])),
+     ("VNMLS (single)", ("VFPData", [xF 1, xT 2, xF 11, xF 13])),
+     ("VNMLS (double)", ("VFPData", [xF 1, xT 2, xT 11, xF 13])),
+     ("VLDR (single,+imm)", ("VFPLoadStore", [xT 0, xT 2, xF 11])),
+     ("VLDR (single,-imm)", ("VFPLoadStore", [xF 0, xT 2, xF 11])),
+     ("VLDR (double,+imm)", ("VFPLoadStore", [xT 0, xT 2, xT 11])),
+     ("VLDR (double,-imm)", ("VFPLoadStore", [xF 0, xT 2, xT 11])),
+     ("VLDR (single,+imm,pc)",
+        ("VFPLoadStore", [xT 0, xT 2, xT 3, xT 4, xT 5, xT 6, xF 11])),
+     ("VLDR (single,-imm,pc)",
+        ("VFPLoadStore", [xF 0, xT 2, xT 3, xT 4, xT 5, xT 6, xF 11])),
+     ("VLDR (double,+imm,pc)",
+        ("VFPLoadStore", [xT 0, xT 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
+     ("VLDR (double,-imm,pc)",
+        ("VFPLoadStore", [xF 0, xT 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
+     ("VSTR (single,+imm)", ("VFPLoadStore", [xT 0, xF 2, xF 11])),
+     ("VSTR (single,-imm)", ("VFPLoadStore", [xF 0, xF 2, xF 11])),
+     ("VSTR (double,+imm)", ("VFPLoadStore", [xT 0, xF 2, xT 11])),
+     ("VSTR (double,-imm)", ("VFPLoadStore", [xF 0, xF 2, xT 11])),
+     ("VSTR (single,+imm,pc)",
+        ("VFPLoadStore", [xT 0, xF 2, xT 3, xT 4, xT 5, xT 6, xF 11])),
+     ("VSTR (single,-imm,pc)",
+        ("VFPLoadStore", [xF 0, xF 2, xT 3, xT 4, xT 5, xT 6, xF 11])),
+     ("VSTR (double,+imm,pc)",
+        ("VFPLoadStore", [xT 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
+     ("VSTR (double,-imm,pc)",
+        ("VFPLoadStore", [xF 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11]))
+     ]
    fun list_instructions () = List.map fst (Redblackmap.listItems ast)
    fun printn s = TextIO.print (s ^ "\n")
    fun lsub s i = Char.toUpper (String.sub (s, i))
@@ -2366,7 +2430,7 @@ local
             (REG_CONV THENC Conv.DEPTH_CONV bitstringLib.v2n_CONV))
    val rwconv = REWRITE_CONV []
 in
-   fun decode_arm tms =
+   fun arm_decode tms =
       let
          val x = (DATATYPE_CONV, fix_datatypes tms)
          fun gen_rws m r = rewrites @ utilsLib.specialized m x r
@@ -2381,7 +2445,7 @@ in
             handle HOL_ERR {message = "not found", ...} => raise Conv.UNCHANGED
                  | HOL_ERR {message = m,
                             origin_function = "singleton_of_list", ...} =>
-                               raise ERR "decode_arm"
+                               raise ERR "arm_decode"
                                          "more than one matching decode pattern"
          val FALL_CONV =
             REWRITE_CONV
@@ -2405,7 +2469,7 @@ in
                          (Conv.REWR_CONV rwt THENC rwconv) tm
                       end)
                 handle Conv.UNCHANGED =>
-                           (WARN "decode_arm" "fallback (slow) decode"
+                           (WARN "arm_decode" "fallback (slow) decode"
                             ; FALL_CONV tm))
                |> utilsLib.split_conditions
                |> utilsLib.pick x
@@ -2417,9 +2481,9 @@ end
 local
    fun uncond c = Lib.mem (Char.toUpper c) [#"E", #"F"]
 in
-   fun decode_arm_hex tms =
+   fun arm_decode_hex opt =
       let
-         val dec = decode_arm tms
+         val dec = arm_decode (arm_configLib.mk_config_terms opt)
       in
          fn s =>
             let
@@ -3321,6 +3385,103 @@ val Swap_rwts =
 
 (* ---------------------------- *)
 
+(* Floating-point *)
+
+val rule = utilsLib.INST_REWRITE_RULE
+              [arm_stepTheory.Align4_base_pc_plus,
+               arm_stepTheory.Align4_base_pc_minus] o
+           SIMP_RULE std_ss [] o
+           REWRITE_RULE
+             [GSYM arm_stepTheory.UpdateSingleOfDouble_def,
+              GSYM arm_stepTheory.SingleOfDouble_def] o
+           SIMP_RULE (pure_ss++wordsLib.SIZES_ss)
+              [wordsTheory.WORD_EXTRACT_COMP_THM] o
+           COND_UPDATE_RULE
+
+fun fpMemEV f c tm =
+   List.map (fn (r1, r2) =>
+      EV [dfn'vldr_def, dfn'vstr_def, r1, r2, IncPC_rwt, PC_rwt, fpreg_div2,
+          write'S_def, write'D_def, S_def, D_def, BigEndian_def] c
+        [[`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.F],
+         [`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.T],
+         [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.F],
+         [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.T]]
+        tm
+       |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                      (DATATYPE_CONV
+                       THENC REWRITE_CONV
+                               [arm_stepTheory.Aligned_Align_plus_minus,
+                                arm_stepTheory.Aligned_plus]) o rule))
+     (utilsLib.zipLists Lib.pair_of_list [f, R_rwts])
+  |> List.concat
+
+fun fpEV c tm =
+   EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
+       dfn'vmla_vmls_def, IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
+       FPAdd64_def, FPAdd32_def, FPSub64_def, FPSub32_def, fpreg_div2,
+       FPMul64_def, FPMul32_def, arm_stepTheory.RoundingMode] [] c tm
+   |> List.map rule
+
+val mk_fpreg = bitstringSyntax.mk_vec 5
+val () = setEvConv (Conv.DEPTH_CONV bitstringLib.word_bit_CONV)
+
+val vadd_rwt =
+   fpEV (TF `dp`)
+      ``dfn'vadd (dp, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vsub_rwt =
+   fpEV (TF `dp`)
+      ``dfn'vsub (dp, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vmul_rwt =
+   fpEV (TF `dp`)
+       ``dfn'vmul (dp, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vmla_mls_rwt =
+   fpEV [[`dp` |-> boolSyntax.F, `add` |-> boolSyntax.F],
+         [`dp` |-> boolSyntax.F, `add` |-> boolSyntax.T],
+         [`dp` |-> boolSyntax.T, `add` |-> boolSyntax.F],
+         [`dp` |-> boolSyntax.T, `add` |-> boolSyntax.T]]
+       ``dfn'vmla_vmls (dp, add, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vneg_mul_rwt =
+   fpEV [[`dp` |-> boolSyntax.T, `typ` |-> ``VFPNegMul_VNMLA``],
+         [`dp` |-> boolSyntax.F, `typ` |-> ``VFPNegMul_VNMLA``],
+         [`dp` |-> boolSyntax.T, `typ` |-> ``VFPNegMul_VNMLS``],
+         [`dp` |-> boolSyntax.F, `typ` |-> ``VFPNegMul_VNMLS``],
+         [`dp` |-> boolSyntax.T, `typ` |-> ``VFPNegMul_VNMUL``],
+         [`dp` |-> boolSyntax.F, `typ` |-> ``VFPNegMul_VNMUL``]]
+      ``dfn'vneg_mul (dp, typ, ^(mk_fpreg 0), ^(mk_fpreg 5), ^(mk_fpreg 10))``
+   |> addThms
+
+val vldr_pc_rwt =
+   fpMemEV MemA_4_rwt []
+      ``dfn'vldr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
+   |> addThms
+
+val vldr_npc_rwt =
+   fpMemEV MemA_4_rwt [[``n <> 15w: word4``]]
+      ``dfn'vldr (single_reg, add, ^(mk_fpreg 0), n, imm32)``
+   |> addThms
+
+val vstr_pc_rwt =
+   fpMemEV write'MemA_4_rwt []
+      ``dfn'vstr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
+   |> addThms
+
+val vstr_npc_rwt =
+   fpMemEV write'MemA_4_rwt [[``n <> 15w: word4``]]
+      ``dfn'vstr (single_reg, add, ^(mk_fpreg 0), n, imm32)``
+   |> addThms
+
+val () = resetEvConv ()
+
+(* ---------------------------- *)
+
 (* WORK IN PROGRESS (PSR updates, e.g. RFE, MRS, MSR)
 
 val usr_mode = ASSUME (hd (hd (cpsr'modes)))
@@ -3531,7 +3692,7 @@ in
       let
          val tms = default_tms @ tms
          val ftch = fetch tms
-         val dec = decode_arm tms
+         val dec = arm_decode tms
          val run = eval enc tms
       in
          fn (x, v) =>
@@ -3601,6 +3762,8 @@ in
             end
       end
 end
+
+val () = Parse.reveal "add"
 
 (* ---------------------------- *)
 
