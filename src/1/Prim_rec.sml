@@ -469,9 +469,20 @@ fun define_case_constant ax =
   map mk_defn usethese
 end
 
+fun rank_of_thm th =
+ let val (asl,w) = dest_thm th
+     fun max_list [] = 0
+       | max_list [n] = n
+       | max_list (n::ns) = Int.max(n,max_list ns)
+ in
+   max_list (map Term.rank_of_term (w::asl))
+ end;
+
 fun define_case_constant_rk (ax,ax_rk) =
- let val oktypes = doms_of_tyaxiom ax
-     val conjs = strip_conj (#2 (strip_exists (#2 (strip_forall (concl ax)))))
+ let val rk = rank_of_thm ax
+     val ax' = ax_rk rk
+     val oktypes = doms_of_tyaxiom ax'
+     val conjs = strip_conj (#2 (strip_exists (#2 (strip_forall (concl ax')))))
      val newfns = map (rator o lhs o #2 o strip_forall) conjs
      val newtypes = map type_of newfns
      val usethese = op_mk_set eq_ty
@@ -479,7 +490,7 @@ fun define_case_constant_rk (ax,ax_rk) =
      fun mk_defn ty =
       let val (dty,rty) = dom_rng ty
           val name = (#1 o dest_con_type o fst o strip_app_type) dty
-          val cs = type_constructors_with_args ax name
+          val cs = type_constructors_with_args ax' name
           val eqns = generate_case_constant_eqns ty cs
       in new_recursive_definition_rk
              {name=name^"_case_def", rec_axiom=ax, rec_axiom_rk=ax_rk, def=eqns}
