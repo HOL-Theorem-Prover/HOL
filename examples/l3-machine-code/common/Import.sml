@@ -878,8 +878,8 @@ in
       | Quot => pick (SOME wordsSyntax.mk_word_sdiv, NONE, NONE,
                       SOME intSyntax.mk_quot)
       | Rem  => pick (SOME wordsSyntax.mk_word_srem, NONE, NONE,
-                       SOME intSyntax.mk_rem)
-      | Rep  => pick (SOME wordsSyntax.mk_word_replicate,
+                      SOME intSyntax.mk_rem)
+      | Rep  => pick (SOME (wordsSyntax.mk_word_replicate o Lib.swap),
                       SOME bitstringSyntax.mk_replicate, NONE, NONE)
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
       | Lsl  => pick (SOME (pickShift (wordsSyntax.mk_word_lsl_bv,
