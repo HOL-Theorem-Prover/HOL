@@ -605,7 +605,7 @@ val defs =
             FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
             CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
-            EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
+            EL_compute, LENGTH_THM, LEN_DEF, REV_DEF, SUM,
             list_size_def, PAD_LEFT, PAD_RIGHT] @
   [DEFN_NOSIG MEM, DEFN ALL_DISTINCT]
 
