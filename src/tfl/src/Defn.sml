@@ -1094,9 +1094,10 @@ fun non_wfrec_defn (facts,bind,eqns) =
         case TypeBasePure.prim_get facts (cthy,cty)
         of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
          | SOME tyinfo =>
-           let val def = Prim_rec.new_recursive_definition
+           let val def = Prim_rec.new_recursive_definition_rk
                           {name=bind,def = eqns,
-                           rec_axiom = TypeBasePure.axiom_of tyinfo}
+                           rec_axiom = TypeBasePure.axiom_of tyinfo,
+                           rec_axiom_rk = TypeBasePure.axiom_rk_of tyinfo}
                val ind = TypeBasePure.induction_of tyinfo
            in PRIMREC{eqs = def, ind = ind, bind=bind}
            end
