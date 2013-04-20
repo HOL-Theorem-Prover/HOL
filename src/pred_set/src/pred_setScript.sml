@@ -246,6 +246,8 @@ val _ = export_rewrites ["EMPTY_applied"]
 val UNIV_DEF = new_definition
     ("UNIV_DEF",(--`UNIV = (\x:'a.T)`--));
 
+val _ = ot0 "UNIV" "universe"
+
 val IN_UNIV =
     store_thm
     ("IN_UNIV",
@@ -505,6 +507,7 @@ val INTER_DEF = new_infixl_definition
 val _ = unicode_version{ u = UChar.inter, tmnm = "INTER"};
 val _ = TeX_notation {hol = "INTER", TeX = ("\\HOLTokenInter{}", 1)}
 val _ = TeX_notation {hol = UChar.inter, TeX = ("\\HOLTokenInter{}", 1)}
+val _ = ot0 "INTER" "intersect"
 
 val IN_INTER = store_thm
      ("IN_INTER",
@@ -665,7 +668,7 @@ val DISJOINT_SUBSET = Q.store_thm
 val DIFF_DEF = new_infixl_definition
     ("DIFF_DEF",
      (--`DIFF s t = {x:'a | x IN s /\ ~ (x IN t)}`--),500);
-val _ = ot0 "DIFF" "-"
+val _ = ot0 "DIFF" "difference"
 
 val IN_DIFF = store_thm
     ("IN_DIFF",
@@ -1346,6 +1349,8 @@ val SING_IFF_EMPTY_REST =
 val IMAGE_DEF =
     new_definition
     ("IMAGE_DEF", (--`IMAGE (f:'a->'b) s = {f x | x IN s}`--));
+
+val _ = ot0 "IMAGE" "image"
 
 val IN_IMAGE =
     store_thm

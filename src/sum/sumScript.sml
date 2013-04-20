@@ -437,6 +437,16 @@ val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
                                         "sum_distinct", "sum_distinct1",
                                         "OUTL", "OUTR", "ISL", "ISR"]
 
+local open OpenTheoryMap
+val ns = ["Data","Sum"]
+fun add x y = OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)} in
+val _ = OpenTheory_tyop_name{tyop={Thy="sum",Tyop="sum"},name=(ns,"+")}
+val _ = add "INR" "right"
+val _ = add "INL" "left"
+val _ = add "OUTR" "destRight"
+val _ = add "OUTL" "destLeft"
+end
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME(fn ppstrm =>

@@ -79,6 +79,9 @@ val _ = OpenTheory_const_name{const={Thy="list",Name="EXISTS"},name=(ns,"any")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="EVERY"},name=(ns,"all")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="FILTER"},name=(ns,"filter")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="MAP"},name=(ns,"map")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="HD"},name=(ns,"head")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="TL"},name=(ns,"tail")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="FLAT"},name=(ns,"concat")}
 end
 
 (*---------------------------------------------------------------------------*)
