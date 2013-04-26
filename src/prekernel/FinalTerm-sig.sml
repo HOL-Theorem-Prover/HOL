@@ -12,6 +12,8 @@ sig
   val FVL           : term list -> term set -> term set
   val free_in       : term -> term -> bool
   val all_vars      : term -> term list
+  val all_atoms     : term -> term set
+  val all_atomsl    : term list -> term set -> term set
   val free_varsl    : term list -> term list
   val all_varsl     : term list -> term list
   val type_vars_in_term : term -> hol_type list
