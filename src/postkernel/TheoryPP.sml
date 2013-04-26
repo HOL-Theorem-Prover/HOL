@@ -446,7 +446,4 @@ in
       flush
    end
 
-val pp_struct = fn ir => fn pps =>
-                   PolyML.exception_trace (fn () => pp_struct ir pps)
-
 end;  (* TheoryPP *)
