@@ -21,33 +21,12 @@ val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
 val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
-fun thm_atoms acc th k = let
-  open Term
-  fun term_atoms acc t k =
-      if is_var t then k (HOLset.add(acc, t))
-      else if is_const t then k (HOLset.add(acc, t))
-      else if is_comb t then let
-          val (f,x) = dest_comb t
-        in
-          term_atoms acc f (fn a' => term_atoms a' x k)
-        end
-      else let
-          val (v, body) = dest_abs t
-        in
-          term_atoms (HOLset.add(acc, v)) body k
-        end
-  fun terml_atoms tlist k acc =
-      case tlist of
-        [] => k acc
-      | (t::ts) => term_atoms acc t (terml_atoms ts k)
-in
-  terml_atoms (Thm.concl th :: Thm.hyp th) k acc
-end
+fun thm_atoms acc th = Term.all_atomsl (Thm.concl th :: Thm.hyp th) acc
 
 fun thml_atoms thlist acc =
     case thlist of
       [] => acc
-    | (th::ths) => thm_atoms acc th (thml_atoms ths)
+    | (th::ths) => thml_atoms ths (thm_atoms acc th)
 
 fun Thry s = s^"Theory";
 fun ThrySig s = Thry s
@@ -466,5 +445,8 @@ in
          add_string"end" >> add_newline) >>
       flush
    end
+
+val pp_struct = fn ir => fn pps =>
+                   PolyML.exception_trace (fn () => pp_struct ir pps)
 
 end;  (* TheoryPP *)
