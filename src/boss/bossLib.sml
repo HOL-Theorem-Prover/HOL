@@ -129,6 +129,7 @@ val measureInduct_on  = numLib.measureInduct_on;
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
+val op suffices_by    = BasicProvers.suffices_by
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 

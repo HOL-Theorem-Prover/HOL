@@ -45,7 +45,7 @@ Use of {by} can be more convenient than {IMP_RES_TAC} and {RES_TAC}
 when they would generate many useless assumptions.
 
 \SEEALSO
-Tactical.SUBGOAL_THEN, Tactic.IMP_RES_TAC, Tactic.RES_TAC, 
+bossLib.suffices_by, Tactical.SUBGOAL_THEN, Tactic.IMP_RES_TAC, Tactic.RES_TAC,
 Tactic.STRIP_ASSUME_TAC.
 
 \ENDDOC

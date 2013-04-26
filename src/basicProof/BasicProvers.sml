@@ -349,6 +349,8 @@ in
   SUBGOAL_THEN tm finisher THEN1 tac
 end (asl, w)
 
+fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 tac
+
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
   (fn (g as (asl:term list, w:term)) => let
