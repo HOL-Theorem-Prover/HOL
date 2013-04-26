@@ -27,5 +27,5 @@ Code should not depend on how elements are arranged in the
 result of {all_vars}.
 
 \SEEALSO
-Term.free_vars, Term.all_varsl.
+Term.all_atoms, Term.all_varsl, Term.free_vars.
 \ENDDOC
