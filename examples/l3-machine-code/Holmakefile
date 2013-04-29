@@ -11,6 +11,6 @@ BARE_THYS = common/utilsLib arm/arm_stepLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b arm/arm-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
