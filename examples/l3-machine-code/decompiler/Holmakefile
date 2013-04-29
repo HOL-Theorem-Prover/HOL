@@ -9,6 +9,6 @@ BARE_THYS = ../common/utilsLib ../arm/arm_stepLib ../arm_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../models-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
