@@ -1,4 +1,4 @@
-Getting and Building the HOL system
+Getting and building the HOL system
 -----------------------------------
 
 Get the HOL sources from SourceForge at http://hol.sourceforge.net
@@ -21,7 +21,7 @@ do this,
    2.  Run the executable and follow the on-screen instructions.
 
 The instructions that follow are how to build from sources, on any of
-the supported operating systems
+the supported operating systems.
 
 
 Building the HOL system
@@ -52,20 +52,18 @@ A. [Moscow ML:] First, install Moscow ML. This is usually
      set for you by the latest self-installing executable available
      from the Moscow ML home-page.
 
-   [Poly/ML:] Install the latest Poly/ML.  Note that you will not be
-   able to use the HolBddLib example with this implementation.
+   [Poly/ML:] Install the latest version of Poly/ML.  Note that you
+   will not be able to use the HolBddLib example with this
+   implementation.
 
-       http://www.polyml.org/
-
-   You must ensure that your dynamic library loading (typically done
-   by setting the LD_LIBRARY_PATH environment variable) picks up
-   libpolyml.so and libpolymain.so. If these files are in /usr/lib,
+   You must ensure that your dynamic library loading picks up
+   libpolyml.so and libpolymain.so.  If these files are in /usr/lib,
    you will not have to change anything, but other locations may
-   require further system configuration. A sample LD_LIBRARY_PATH
-   initialisation command (in a file such as .bashrc) might be
+   require further system configuration (typically done by setting the
+   LD_LIBRARY_PATH environment variable).  A sample LD_LIBRARY_PATH
+   initialisation command (in a file such as ~/.bashrc) might be
 
        declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib
-
 
 B. Unpack HOL with the commands
 
@@ -76,7 +74,6 @@ B. Unpack HOL with the commands
    <hol-dir> in the following.  When fully built, <hol-dir> takes
    approximately 35M of disk space, so be sure you have enough before
    starting.
-
 
 C. In the HOL directory (<hol-dir>), type
 
@@ -143,15 +140,15 @@ D. Now perform the following shell command:
 E. If bin/build completes (it takes a while!), successfully, you are
    done. From <hol-dir> you can now access
 
-       bin/hol              * The standard HOL interactive system;
+       bin/hol              * The standard HOL interactive system
        bin/hol.noquote      * The interactive system with quote
-                              preprocessing turned off;
-       bin/hol.bare         * A "stripped down" version of hol;
+                              preprocessing turned off
+       bin/hol.bare         * A "stripped down" version of hol
        bin/hol.bare.noquote * A "stripped down" version of hol.noquote,
-                              with quote preprocessing turned off;
-       bin/Holmake          * A batch compiler for HOL directories;
-       src/                 * System sources;
-       examples/            * Examples of the use of the system.
+                              with quote preprocessing turned off
+       bin/Holmake          * A batch compiler for HOL directories
+       src/                 * System sources
+       examples/            * Examples of the use of the system
 
    On Windows the hol scripts additionally include a .bat extension,
    and Holmake has a .exe extension.
@@ -162,9 +159,10 @@ External tools
 
 The HOL installation currently includes a C library (in HolBddLib),
 the C sources for the SMV model-checker (in temporalLib), and for a
-SAT solver (minisat) in HolSat. Building these under Unix requires a C
-compiler to have been specified in tools/configure.sml.  Under Windows,
-precompiled binaries are available for the library and for minisat.
+SAT solver (minisat) in HolSat.  Building these under Unix requires a
+C compiler to have been specified in tools/configure.sml.  Under
+Windows, precompiled binaries are available for the C library and for
+minisat.
 
 Loading the BDD libraries muddyLib or HolBddLib will fail unless
 MoscowML has been built with dynamic linking enabled.
