@@ -2,6 +2,12 @@ structure Opentheory :> Opentheory = struct
 
 open boolSyntax HolKernel Parse OpenTheoryMap OpenTheoryCommon
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars stringTheory.string_grammars
+end
+
 local open Thm Drule in
   fun DEDUCT_ANTISYM th1 th2 =
     IMP_ANTISYM_RULE
