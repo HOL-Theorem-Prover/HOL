@@ -263,7 +263,7 @@ val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
 val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"in")}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"member")}
 
 val RES_FORALL_DEF =
  Definition.new_definition
