@@ -22,7 +22,8 @@ val _ = Hol_datatype`
 
 val poplist_aux_def = Define`
   poplist_aux acc (SOME h::t) = poplist_aux (h::acc) t ∧
-  poplist_aux acc (NONE::t) = (acc,t)
+  poplist_aux acc (NONE::t) = (acc,t) ∧
+  poplist_aux acc [] = (acc,[]) (* should never happen *)
 `;
 
 val poplistval_def = Define`
