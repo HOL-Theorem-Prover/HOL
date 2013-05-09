@@ -32,16 +32,24 @@ val FOR_def = TotalDefn.tDefine "FOR"
   (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
 
 val READ_def = TotalDefn.Define`
-  (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
+   (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
 
 val WRITE_def = TotalDefn.Define`
-  (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
+   (WRITE : ('state -> 'state) -> (unit, 'state) M) f = \s. ((), f s)`;
+
+val NARROW_def = TotalDefn.Define`
+   (NARROW : 'b -> ('a, 'b # 'state) M -> ('a, 'state) M) v f =
+   \s. let (r, s1) = f (v, s) in (r, SND s1)`
+
+val WIDEN_def = TotalDefn.Define`
+   (WIDEN : ('a, 'state) M -> ('a, 'b # 'state) M) f =
+   \(s1, s2). let (r, s3) = f s2 in (r, (s1, s3))`
 
 val sequence_def = TotalDefn.Define`
-  sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
+   sequence = FOLDR (\m ms. BIND m (\x. BIND ms (\xs. UNIT (x::xs)))) (UNIT [])`
 
 val mapM_def = TotalDefn.Define`
-  mapM f = sequence o MAP f`
+   mapM f = sequence o MAP f`
 
 open simpLib BasicProvers boolSimps metisLib
 
