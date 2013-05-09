@@ -118,14 +118,30 @@ val mk_arm_state_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
+val registers_def = Define`
+   registers r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
+             r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
+             r26 r27 r28 r29 r30 r31 (r32:word32) =
+   \name.
+      RName_CASE
+         name r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
+              r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
+              r26 r27 r28 r29 r30 r31 r32`
+
+val psrs_def = Define`
+   psrs r0 r1 r2 r3 r4 r5 (r6:ARMpsr) =
+   \name. PSRName_CASE name r0 r1 r2 r3 r4 r5 r6`
+
+(* ------------------------------------------------------------------------ *)
+
 local
   val tm1 = ``((n:num,r:RName) =+ d:word32)``
 
   val tm2 =
     ``proc n
-        (RName_case r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
-                    r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
-                    r26 r27 r28 r29 r30 r31 (r32:word32))``
+        (registers r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13
+                   r14 r15 r16 r17 r18 r19 r20 r21 r22 r23 r24 r25
+                   r26 r27 r28 r29 r30 r31 r32)``
 
   fun reg n = mk_var ("r" ^ Int.toString n, ``:word32``)
 
@@ -145,16 +161,16 @@ local
             ``RName_LRabt``, ``RName_LRund``, ``RName_LRmon``, ``RName_PC``]))
 
   val register_update = Tactical.prove(thm,
-    SRW_TAC [] [combinTheory.UPDATE_def, FUN_EQ_THM, proc_def]
+    SRW_TAC [] [combinTheory.UPDATE_def, FUN_EQ_THM, registers_def, proc_def]
       \\ Cases_on `x` \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (srw_ss()) []
       \\ Cases_on `r` \\ FULL_SIMP_TAC (srw_ss()) [])
 in
   val register_update = save_thm("register_update", GEN_ALL register_update)
-end;
+end
 
 local
   val tm1 = ``((n:num,p:PSRName) =+ d:ARMpsr)``
-  val tm2 = ``proc n (PSRName_case r0 r1 r2 r3 r4 r5 (r6:ARMpsr))``;
+  val tm2 = ``proc n (psrs r0 r1 r2 r3 r4 r5 r6)``;
 
   fun psr n = mk_var ("r" ^ Int.toString n, ``:ARMpsr``)
 
@@ -167,19 +183,18 @@ local
             ``SPSR_mon``, ``SPSR_abt``, ``SPSR_und``]))
 
   val psr_update = Tactical.prove(thm,
-    SRW_TAC [] [combinTheory.UPDATE_def, FUN_EQ_THM, proc_def]
+    SRW_TAC [] [combinTheory.UPDATE_def, FUN_EQ_THM, psrs_def, proc_def]
       \\ Cases_on `x` \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (srw_ss()) []
       \\ Cases_on `r` \\ FULL_SIMP_TAC (srw_ss()) [])
 in
   val psr_update = save_thm("psr_update", GEN_ALL psr_update)
-end;
+end
 
-val proc = Q.store_thm("proc", `proc n f (n,x) = f x`, SRW_TAC [] [proc_def]);
+val proc = Q.store_thm("proc", `proc n f (n,x) = f x`, SRW_TAC [] [proc_def])
 
 val _ = computeLib.add_persistent_funs
-  ["combin.o_THM", "proc",
-   "register_update", "psr_update"];
+  ["combin.o_THM", "proc", "register_update", "psr_update"]
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = export_theory ();
+val _ = export_theory ()
