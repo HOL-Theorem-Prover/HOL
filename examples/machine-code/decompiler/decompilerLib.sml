@@ -3,8 +3,6 @@ struct
 
 open HolKernel boolLib bossLib Parse;
 
-open prog_ppcLib prog_x86Lib prog_armLib;
-
 open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
 open set_sepTheory progTheory helperLib addressTheory;
 
@@ -150,7 +148,12 @@ fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
 
 fun append_lists [] = [] | append_lists (x::xs) = x @ append_lists xs
 
-val curr_tools = ref arm_tools;
+val (no_tools:decompiler_tools) = let
+  val no_jump = fn x => fail()
+  val no_spec = fn x => fail()
+  in (no_spec, no_jump, TRUTH, T) end
+
+val curr_tools = ref no_tools;
 
 fun set_tools tools = (curr_tools := tools);
 fun get_tools () = !curr_tools
@@ -180,7 +183,7 @@ val GUARD_THM = prove(``!m n x. GUARD n x = GUARD m x``, REWRITE_TAC [GUARD_def]
 
 (* formatting *)
 
-val stack_terms = [``xSTACK ebp``,``aSTACK r11``];
+val stack_terms = ([]):term list;
 
 fun DISCH_ALL_AS_SINGLE_IMP th = let
   val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
@@ -191,7 +194,10 @@ fun replace_abbrev_vars tm = let
                     Substring.full o fst o dest_var) v, type_of v) handle HOL_ERR e => v |-> v
   in subst (map f (free_vars tm)) tm end
 
-fun name_for_abbrev tm =
+fun name_for_abbrev p tm = let
+  val x = get_sep_domain tm
+  in first (fn t => rator t = x) p |> rand |> dest_var |> fst end
+  handle HOL_ERR _ =>
   "v" ^ (int_to_string (Arbnum.toInt(numSyntax.dest_numeral(cdr (car tm))))) handle HOL_ERR e =>
   if (fst (dest_const (car tm)) = "tT") handle HOL_ERR e => false then "k" else
   if is_const (cdr (car tm)) andalso is_const(car (car tm)) handle HOL_ERR e => false then
@@ -219,19 +225,21 @@ fun abbreviate (var_name,tm) th = raw_abbreviate (var_name,cdr tm,tm) th
 
 fun ABBREV_POSTS dont_abbrev_list prefix th = let
   fun dont_abbrev tm = mem tm (dont_abbrev_list @ stack_terms)
-  fun next_abbrev [] = fail()
-    | next_abbrev (tm::xs) =
-    if (is_var (cdr tm) andalso (name_for_abbrev tm = fst (dest_var (cdr tm))))
-       handle HOL_ERR e => false then next_abbrev xs else
-    if (prefix ^ (name_for_abbrev tm) = fst (dest_var (cdr tm)))
-       handle HOL_ERR e => false then next_abbrev xs else
-    if can dest_sep_hide tm then next_abbrev xs else
-    if dont_abbrev (car tm) then next_abbrev xs else
-      (prefix ^ name_for_abbrev tm,tm)
+  fun next_abbrev p [] = fail()
+    | next_abbrev p (tm::xs) =
+    if (is_var (cdr tm) andalso (name_for_abbrev p tm = fst (dest_var (cdr tm))))
+       handle HOL_ERR e => false then next_abbrev p xs else
+    if (prefix ^ (name_for_abbrev p tm) = fst (dest_var (cdr tm)))
+       handle HOL_ERR e => false then next_abbrev p xs else
+    if can dest_sep_hide tm then next_abbrev p xs else
+    if dont_abbrev (car tm) then next_abbrev p xs else
+      (prefix ^ name_for_abbrev p tm,tm)
   val (th,b) = let
     val (_,p,_,q) = dest_spec (concl th)
+    val p = list_dest dest_star p
+            |> filter (fn tm => (is_var o rand) tm handle HOL_ERR _ => false)
     val xs = list_dest dest_star q
-    val th = abbreviate (next_abbrev xs) th
+    val th = abbreviate (next_abbrev p xs) th
     in (th,true) end handle HOL_ERR e => (th,false) handle Empty => (th,false)
   in if b then ABBREV_POSTS dont_abbrev_list prefix th else th end;
 
@@ -355,11 +363,9 @@ fun derive_individual_specs tools (code:string list) = let
     else let
       val (instruction, renamer, exec_flag) = parse_renamer instruction
       val _ = echo 1 ("  "^instruction^":")
-      val _ = prog_x86Lib.set_x86_exec_flag exec_flag
       val i = int_to_string n
       val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@") o renamer
       val (x,y) = pair_apply g (f instruction)
-      val _ = prog_x86Lib.set_x86_exec_flag false
       val _ = echo 1 ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving theorems for individual instructions.\n"
@@ -383,7 +389,8 @@ fun inst_pc_var tools thms = let
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f y th1,x1,x2),NONE)
     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
         (y,(f y th1,x1,x2),SOME (f y th2,y1,y2))
-  val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
+  val i = [mk_var("pc",``:word32``) |-> mk_var("p",``:word32``),
+           mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
            mk_var("rip",``:word64``) |-> mk_var("p",``:word64``)]
   val (_,_,_,pc) = tools
   val ty = (hd o snd o dest_type o type_of) pc
@@ -1747,10 +1754,6 @@ fun decompile tools name qcode = decompile_io tools name NONE qcode;
 fun decompile_io_strings tools name fio strs = decompile_io tools name fio (strings_to_qcode strs);
 fun decompile_strings tools name strs = decompile tools name (strings_to_qcode strs);
 
-val decompile_arm = decompile arm_tools
-val decompile_ppc = decompile ppc_tools
-val decompile_x86 = decompile x86_tools
-
 fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term quotation) = let
   val _ = set_tools tools
   val (thms,loops) = stage_12 name tools qcode
@@ -1762,9 +1765,5 @@ fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term 
   in (result,CONJ def pre) end;
 
 fun basic_decompile_strings tools name fio strs = basic_decompile tools name fio (strings_to_qcode strs);
-
-val basic_decompile_arm = basic_decompile arm_tools
-val basic_decompile_ppc = basic_decompile ppc_tools
-val basic_decompile_x86 = basic_decompile x86_tools
 
 end;

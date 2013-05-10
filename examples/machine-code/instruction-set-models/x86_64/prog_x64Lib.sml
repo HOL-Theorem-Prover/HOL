@@ -34,7 +34,8 @@ fun name_for_resource counter tm = let
             ("zR12","r12"), ("zR13","r13"), ("zR14","r14"),
             ("zR15","r15")]))
        in reg_name end
-     else if type_of tm = ``:Zeflags`` then (to_lower_drop_two o fst o dest_const) tm else
+     else if type_of tm = ``:Zeflags``
+          then "z_" ^ (to_lower_drop_two o fst o dest_const) tm else
      (counter := 1 + !counter; ("x" ^ int_to_string (!counter))) end;
 
 val word2bytes_lemma = CONJ (EVAL ``word2bytes 2 (w:'a word)``)

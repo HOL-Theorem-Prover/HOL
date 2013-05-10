@@ -10,6 +10,12 @@ open set_sepTheory;
 open divideTheory;
 open lisp_parseTheory;
 
+open decompilerLib prog_armLib prog_ppcLib prog_x86Lib;
+
+val decompile_arm = decompile prog_armLib.arm_tools;
+val decompile_ppc = decompile prog_ppcLib.ppc_tools;
+val decompile_x86 = decompile prog_x86Lib.x86_tools;
+
 
 infix \\
 val op \\ = op THEN;
@@ -25,7 +31,7 @@ val _ = codegen_x86Lib.set_x86_regs
 
 (* teach the compiler to compile ``let r4 = r4 * 10w in`` *)
 
-val (x86_10_th,x86_10_def) = decompilerLib.decompile_x86 "x86_10" `
+val (x86_10_th,x86_10_def) = decompile_x86 "x86_10" `
   01C9
   8D0C89`;
 

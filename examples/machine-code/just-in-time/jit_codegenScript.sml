@@ -1,5 +1,9 @@
 
 open HolKernel boolLib bossLib Parse;
+open decompilerLib prog_x86Lib;
+
+val decompile_x86 = decompile x86_tools
+
 open pred_setTheory arithmeticTheory pairTheory listTheory wordsTheory;
 open addressTheory set_sepTheory progTheory prog_x86Theory;
 open wordsLib x86_encodeLib helperLib;
@@ -18,15 +22,17 @@ val _ = new_theory "jit_codegen";
 
 (* compiler setup code *)
 
+val _ = set_x86_exec_flag false;
+
 (* make function "f" have exec permissions *)
-val _ = decompilerLib.add_executable_data_name "f"
+val _ = add_executable_data_name "f"
 
 (* assign meanings to r1, r2, r3, r4 etc *)
 val _ = codegen_x86Lib.set_x86_regs
   [(1,"eax"),(6,"ebx"),(5,"ecx"),(2,"edx"),(3,"edi"),(4,"esi"),(7,"ebp")]
 
 val dec_byte = let
-  val (th1,th2) = decompilerLib.decompile_x86 "dec_byte"
+  val (th1,th2) = decompile_x86 "dec_byte"
     [QUOTE (x86_encodeLib.x86_encode "DEC BYTE [eax]" ^ "/f")]
   in SIMP_RULE std_ss [th2,LET_DEF] th1 end
 

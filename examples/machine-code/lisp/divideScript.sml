@@ -3,7 +3,7 @@ open HolKernel boolLib bossLib Parse;
 open tailrecTheory tailrecLib compilerLib codegen_x86Lib;
 open wordsTheory addressTheory wordsLib arithmeticTheory;
 
-open decompilerLib set_sepTheory;
+open decompilerLib set_sepTheory prog_x86Lib;
 
 val _ = new_theory "divide";
 
@@ -228,8 +228,8 @@ val arm_div_mod_thm = let
   val th = REWRITE_RULE [lemma] th
   in th end
 
-val (th,x86_div_mod_def) = decompile_x86 "x86_div_mod" `31D2
-                                                        F7F1`;
+val (th,x86_div_mod_def) = decompile x86_tools "x86_div_mod" `31D2
+                                                              F7F1`;
 val x86_div_mod_thm = let
   val lemma = prove(
   ``((let (eax,ecx,edx) = x86_div_mod (eax,ecx) in pp eax ecx edx) =

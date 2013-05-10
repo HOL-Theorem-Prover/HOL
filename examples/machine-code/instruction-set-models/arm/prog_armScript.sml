@@ -1,7 +1,7 @@
 
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
-open listTheory pairTheory combinTheory addressTheory bit_listTheory;
+open listTheory pairTheory combinTheory addressTheory;
 open finite_mapTheory;
 
 open set_sepTheory progTheory;

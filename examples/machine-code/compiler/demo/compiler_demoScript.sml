@@ -1,10 +1,11 @@
 
 open HolKernel boolLib bossLib Parse;
-(* open compilerLib codegen_x86Lib; *)
+
+open codegen_x86Lib;
+
+open compilerLib codegen_x86Lib;
 
 val _ = new_theory "compiler_demo";
-
-(*
 
 (* basic loop: mod 10 *)
 
@@ -117,25 +118,6 @@ val (thms,arm_str_rev_def,arm_str_rev_pre_def) = compile_all ``
       let r7 = r7 + 1w in
       let r3 = r3 - 1w in
         arm_string_rev(r3,r6,r7,df,f)``
-
-(*
-
-val (th1,th2,th3) = compile
-
-
-val _ = arm_use_stack true;
-val target = "arm"
-val tm = ``
-  stack_loop (r1:word32,s4:word32,r5:word32) =
-    let r3 = s4 in
-    let s3 = r1 in
-      if r3 = 30w then (r1,r3,s3) else
-        let r1 = r1 + r5 in
-          stck_loop (r1,s4,r5)``;
-
-*)
-
-*)
 
 val _ = export_theory();
 

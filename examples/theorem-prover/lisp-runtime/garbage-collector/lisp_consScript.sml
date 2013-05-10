@@ -6,7 +6,7 @@ open combinTheory finite_mapTheory addressTheory helperLib;
 open set_sepTheory bitTheory fcpTheory;
 
 open stop_and_copyTheory;
-open codegenLib decompilerLib prog_x64Lib prog_x64Theory;
+open x64_codegenLib decompilerLib prog_x64Lib prog_x64Theory;
 
 infix \\
 val op \\ = op THEN;
@@ -25,7 +25,7 @@ fun SUBGOAL q = REVERSE (q by ALL_TAC)
 val (thm,mc_move_def) = decompile_io_strings x64_tools "mc_move"
   (SOME (``(r6:word64,r8:word64,r10:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r8:word64,r10:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      test r8d,1
      jne L2
      mov r9,[4*r8+r6]
@@ -44,7 +44,7 @@ L2:  `)
 val (thm,mc_move2_def) = decompile_io_strings x64_tools "mc_move2"
   (SOME (``(r6:word64,r13:word64,r10:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r13:word64,r10:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      test r13d,1
      jne L2
      mov r9,[4*r13+r6]
@@ -63,7 +63,7 @@ L2:  `)
 val (thm,mc_gc_step_def) = decompile_io_strings x64_tools "mc_gc_step"
   (SOME (``(r6:word64,r10:word64,r11:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r10:word64,r11:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      mov r8d,[4*r11+r15]
      mov r13d,[4*r11+r15+4]
      insert mc_move
@@ -76,7 +76,7 @@ val (thm,mc_gc_step_def) = decompile_io_strings x64_tools "mc_gc_step"
 val (thm,mc_gc_loop_def) = decompile_io_strings x64_tools "mc_gc_loop"
   (SOME (``(r6:word64,r10:word64,r11:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r10:word64,r11:word64,r12:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      jmp L2
 L1:  insert mc_gc_step
 L2:  cmp r11,r12
@@ -85,7 +85,7 @@ L2:  cmp r11,r12
 val (thm,mc_move_list_def) = decompile_io_strings x64_tools "mc_move_list"
   (SOME (``(r6:word64,r10:word64,r12:word64,r14:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r8:word64,r10:word64,r12:word64,r14:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      jmp L2
 L1:  insert mc_move
      mov [r14],r8d
@@ -97,7 +97,7 @@ L2:  mov r8d,[r14]
 val (thm,mc_gc_def) = decompile_io_strings x64_tools "mc_gc"
   (SOME (``(r6:word64,r14:word64,r15:word64,df:word64 set,f:word64->word32)``,
          ``(r6:word64,r11:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      xor r10,r10
      xor r11,r11
      xor r12,r12
@@ -110,7 +110,7 @@ val (thm,mc_gc_def) = decompile_io_strings x64_tools "mc_gc"
 val (thm,mc_full_gc_def) = decompile_io_strings x64_tools "mc_full_gc"
   (SOME (``(r3:word64,r6:word64,r7:word64,r8:word64,r9:word64,r10:word64,r11:word64,r12:word64,r13:word64,r14:word64,df:word64 set,f:word64->word32)``,
          ``(r3:word64,r6:word64,r7:word64,r8:word64,r9:word64,r10:word64,r11:word64,r12:word64,r13:word64,r14:word64,r15:word64,df:word64 set,f:word64->word32)``))
-  (assemble "x64" `
+  (assemble `
      lea r14,[r7+4*r3-24]
      mov r15,[r7-232]
      mov [r14],r8d

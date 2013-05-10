@@ -5,6 +5,7 @@ open HolKernel boolLib bossLib Parse decompilerLib;
 open x64_codegen_inputLib helperLib;
 
 open x64_codegen_x64Lib;
+open prog_x64Lib;
 
 val assembler_tools = (x64_encode_instruction, x64_encode_branch, x64_branch_to_string)
 val conditional_tools = (x64_cond_code, x64_conditionalise, x64_remove_annotations)
@@ -146,86 +147,6 @@ fun assemble code = let
   val _ = print "\n\n"
   in result end
 
-(*
-
-val _ = assemble "arm" `
-      b G
-  L:  mul r2,r1,r2
-      beq G
-      subs r1,r1,#1
-      bne L
-  G:  add r1,r2,r1`;
-
-val _ = assemble "ppc" `
-        b G
-L:      add 2,1,2
-        beq G
-        addi 1,1,-1
-        bne L
-G:      add 1,2,1`;
-
-val _ = assemble "x86" `
-        jmp G
-L:      add eax,ebx
-        je G
-        inc ebx
-        jne L
-G:      xor eax, 5`;
-
-val _ = assemble "x86"
-val target = "x86"
-val code = `
-        je G
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-        xor eax, 5000
-G:      xor eax, 5000`;
-
-*)
-
 
 (* methods for loading in theorems for use in compilation *)
 
@@ -256,10 +177,7 @@ fun get_model_name th = let
 
 fun get_tools th = let
   val s = get_model_name th
-  in if s = "PPC_MODEL" then prog_ppcLib.ppc_tools else
-     if s = "X86_MODEL" then prog_x86Lib.x86_tools else
-     if s = "X64_MODEL" then prog_x64Lib.x64_tools else
-     if s = "ARM_MODEL" then prog_armLib.arm_tools else fail() end
+  in if s = "X64_MODEL" then prog_x64Lib.x64_tools else fail() end
 
 fun add_assignment (tm1,tm2,th,len) = let
   val (_,_,_,pc) = get_tools th

@@ -1,4 +1,9 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86 $(HOLDIR)/examples/machine-code/instruction-set-models/ppc $(HOLDIR)/examples/ARM/v7
+INCLUDES = $(HOLDIR)/examples/machine-code/decompiler \
+           $(HOLDIR)/examples/machine-code/compiler \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/tools/mlyacc/mlyacclib \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/x86
 OPTIONS=QUIT_ON_FAILURE
 
 ifdef POLY
@@ -7,7 +12,8 @@ EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../decompiler/decompilerLib \
             ../compiler/compilerLib \
-            ../hoare-triple/prog_x86Theory
+            ../instruction-set-models/x86/prog_x86Lib \
+            ../instruction-set-models/x86/prog_x86Theory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)

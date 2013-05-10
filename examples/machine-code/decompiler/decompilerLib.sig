@@ -9,16 +9,8 @@ sig
     val decompile_io : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
     val decompile_io_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
 
-    val decompile_arm  : string -> term quotation -> thm * thm
-    val decompile_ppc  : string -> term quotation -> thm * thm
-    val decompile_x86  : string -> term quotation -> thm * thm
-
     val basic_decompile : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
     val basic_decompile_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
-
-    val basic_decompile_arm : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_ppc : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_x86 : string -> (term * term) option -> term quotation -> thm * thm
 
     (* some internals exposed *)
 

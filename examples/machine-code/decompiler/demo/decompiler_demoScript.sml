@@ -4,6 +4,10 @@ open wordsTheory;
 open decompilerLib;
 open tailrecLib listTheory pred_setTheory arithmeticTheory;
 
+val decompile_arm = decompile prog_armLib.arm_tools;
+val decompile_ppc = decompile prog_ppcLib.ppc_tools;
+val decompile_x86 = decompile prog_x86Lib.x86_tools;
+
 val _ = new_theory "decompiler_demo";
 
 

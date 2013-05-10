@@ -1142,8 +1142,8 @@ val x64_single_mul_add_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [single_mul_add_def,LET_DEF,single_mul_def,bool2num_thm,
        mw_add_def,single_add_def,b2n_def,b2w_def,word_add_n2w,word_mul_n2w]
   \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]
-  \\ `10 < 18446744073709551616` by DECIDE_TAC
-  \\ Q.ABBREV_TAC `k = 18446744073709551616` \\ POP_ASSUM (K ALL_TAC)
+  \\ `10 < 18446744073709551616:num` by DECIDE_TAC
+  \\ Q.ABBREV_TAC `k = 18446744073709551616:num` \\ POP_ASSUM (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [ADD_ASSOC]
   \\ `n'' * n''' DIV k + b2n (k <= n + (n'' * n''') MOD k) =
       (n + n'' * n''') DIV k` by ALL_TAC \\ FULL_SIMP_TAC std_ss []
@@ -1335,7 +1335,7 @@ val x64_mul_zero_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [rich_listTheory.REPLICATE,LET_DEF]
   \\ NTAC 3 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,ADD1,GSYM word_sub_def,WORD_ADD_SUB]
-  \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k``)
+  \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k:num``)
   \\ FULL_SIMP_TAC (srw_ss()) [w2n_n2w]
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,
        APPEND,LUPDATE_LENGTH,MAP_APPEND,MAP] \\ DECIDE_TAC);
@@ -1458,7 +1458,7 @@ val x64_simple_div_thm = prove(
          Once x64_simple_div_def,REVERSE,mw_simple_div_def]
   \\ FULL_SIMP_TAC (srw_ss()) [n2w_11,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,GSYM word_sub_def,WORD_ADD_SUB]
-  \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k``)
+  \\ IMP_RES_TAC (DECIDE ``n+1<k ==> n<k:num``)
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND,LUPDATE_LENGTH]
   \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_LENGTH_APPEND,NULL,HD]
