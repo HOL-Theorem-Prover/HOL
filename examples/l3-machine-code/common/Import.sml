@@ -263,20 +263,6 @@ fun Let (v,e,b) =
    boolSyntax.mk_let (Close (v, b), e)
    handle HOL_ERR {origin_function = "mk_pabs", ...} => CS (e, [(v, b)])
 
-(* Set Comprehension *)
-
-val Set = pred_setSyntax.mk_set_spec
-
-fun Spec p =
-   let
-      val (bty, aty) = Type.dom_rng (Term.type_of p)
-      val aty = fst (pairSyntax.dest_prod aty)
-      val gs = Term.inst [Type.alpha |-> aty, Type.beta |-> bty]
-                  pred_setSyntax.gspec_tm
-   in
-      Term.mk_comb (gs, p)
-   end
-
 (* Set of list *)
 
 val SL =
@@ -352,12 +338,17 @@ fun Dest (f, ty, tm) = Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
 
 (* Record update *)
 
+fun smart_dest_pair tm =
+   case Lib.total pairSyntax.dest_pair tm of
+      SOME p => p
+    | NONE => (pairSyntax.mk_fst tm, pairSyntax.mk_snd tm)
+
 fun Rupd (f, tm) =
    let
       val (rty, fty) = pairSyntax.dest_prod (Term.type_of tm)
       val typ = Type.--> (Type.--> (fty, fty), Type.--> (rty, rty))
       val fupd = mk_local_const (typeName rty ^ "_" ^ f ^ "_fupd", typ)
-      val (x, d) = pairSyntax.dest_pair tm
+      val (x, d) = smart_dest_pair tm
    in
       Term.list_mk_comb (fupd, [combinSyntax.mk_K_1 (d, Term.type_of d), x])
    end
@@ -380,10 +371,6 @@ fun BL (i, tm) =
 fun ITE (i, t, e) = boolSyntax.mk_cond (i, t, e)
 
 fun ITB (l, e) = List.foldr (fn ((b, t), e) => ITE (b, t, e)) e l
-
-(* For-loop *)
-
-val For = HolKernel.mk_monop state_transformerSyntax.for_tm
 
 (* Sub-word extract *)
 
@@ -422,6 +409,36 @@ fun CC [] = raise ERR "CC" "empty"
 (* Equality *)
 
 fun EQ (x, y) = boolSyntax.mk_eq (x, y)
+
+(* Monad operations *)
+
+(* Return/Unit *)
+
+val MU = state_transformerSyntax.mk_unit o (I ## Ty)
+
+(* Bind *)
+
+val MB = state_transformerSyntax.mk_bind
+
+(* Read *)
+
+val MR = state_transformerSyntax.mk_read
+
+(* Write *)
+
+val MW = state_transformerSyntax.mk_write
+
+(* Narrow *)
+
+val MN = state_transformerSyntax.mk_narrow
+
+(* Widen *)
+
+val MD = state_transformerSyntax.mk_widen o (I ## Ty)
+
+(* For-loop *)
+
+val For = HolKernel.mk_monop state_transformerSyntax.for_tm
 
 (* ------------------------------------------------------------------------ *)
 

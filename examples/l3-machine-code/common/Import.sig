@@ -134,8 +134,6 @@ sig
    val Fupd : Term.term * Term.term * Term.term -> Term.term
    val CS : Term.term * (Term.term * Term.term) list -> Term.term
    val Let : Term.term * Term.term * Term.term -> Term.term
-   val Set : Term.term * Term.term -> Term.term
-   val Spec : Term.term -> Term.term
    val LL : Term.term list -> Term.term
    val LLC : Term.term list * Term.term -> Term.term
    val SL : Term.term list -> Term.term
@@ -145,12 +143,18 @@ sig
    val BL : int * Term.term -> Term.term
    val ITE : Term.term * Term.term * Term.term -> Term.term
    val ITB : (Term.term * Term.term) list * Term.term -> Term.term
-   val For : Term.term -> Term.term
    val EX : Term.term * Term.term * Term.term * ParseDatatype.pretype ->
             Term.term
    val BFI : Term.term * Term.term * Term.term * Term.term -> Term.term
    val CC : Term.term list -> Term.term
    val EQ : Term.term * Term.term -> Term.term
+   val MU : Term.term * ParseDatatype.pretype -> Term.term
+   val MB : Term.term * Term.term -> Term.term
+   val MR : Term.term -> Term.term
+   val MW : Term.term -> Term.term
+   val MN : Term.term * Term.term -> Term.term
+   val MD : Term.term * ParseDatatype.pretype -> Term.term
+   val For : Term.term -> Term.term
    val Mop : monop * Term.term -> Term.term
    val Bop : binop * Term.term * Term.term -> Term.term
 

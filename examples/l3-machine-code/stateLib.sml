@@ -439,7 +439,10 @@ local
                      (build_assert (f o snd) g ((d, (boolSyntax.T, pat)), x)) l
              | NONE => read_extra x r)
 
-   fun map_rws rws = List.map (utilsLib.rhsc o Conv.QCONV (REWRITE_CONV rws))
+   fun map_rws rws =
+      List.concat o
+        (List.map (boolSyntax.strip_conj o utilsLib.rhsc o
+                   Conv.QCONV (REWRITE_CONV rws)))
 
    val tidyup = map_rws [optionTheory.SOME_11]
 
@@ -518,6 +521,126 @@ in
 end
 
 (* ------------------------------------------------------------------------
+   write_footprint syntax1 syntax2 l1 l2 l3 P (p, q, tm)
+
+   Extend p (pre) and q (post) proposition lists with entries for
+   component updates.
+
+   l1 is a list of updates for map components
+   l2 is a list of updates for regular components
+   l3 is a list of updates for regular components (known to be read)
+   l4 is a list of user defined updates for sub components
+
+   P is a predicate this is used to test whether all updates have been
+   considered
+   ------------------------------------------------------------------------ *)
+
+local
+   fun strip_assign (a, b) =
+      let
+         val (x, y) = combinSyntax.strip_update (combinSyntax.dest_K_1 a)
+      in
+         if b <> y
+            then (Parse.print_term b
+                  ; print "\n\n"
+                  ; Parse.print_term y
+                  ; raise ERR "write_footprint" "strip_assign")
+         else ()
+         ; x
+      end
+   fun not_in_asserts p (dst: term -> term) =
+      List.filter
+         (fn x =>
+            let
+               val d = dst x
+            in
+               not (Lib.exists (fn y => case Lib.total dst y of
+                                           SOME c => c = d
+                                         | NONE => false) p)
+            end)
+   fun prefix tm = case boolSyntax.strip_comb tm of
+                      (a, [_]) => a
+                    | (a, [b, _]) => Term.mk_comb (a, b)
+                    | _ => raise ERR "prefix" ""
+   fun fillIn f ty =
+      fn []: term list => []
+       | _ => [f (vvar ty)]: term list
+   datatype footprint =
+       MapComponent of
+          term * (term * term -> term) * (term -> term) * (term -> term)
+     | Component of term list * term list * term -> term list * term list
+   fun mk_map_footprint syntax2 (c:string, t) =
+      let
+         val (tm, mk, dst:term -> term * term, _:term -> bool) = syntax2 c
+         val ty = utilsLib.dom (utilsLib.rng (Term.type_of tm))
+         val c = fst o dst
+         fun d tm = mk (c tm, vvar ty)
+      in
+         MapComponent (t, mk, c, d)
+      end
+   fun mk_footprint1 syntax1 (c:string) =
+      let
+         val (tm, mk) = syntax1 c
+         val ty = utilsLib.dom (Term.type_of tm)
+      in
+         Component
+            (fn (p, q, v) =>
+               let
+                   val x = mk v
+                   val l = fillIn mk ty (not_in_asserts p Term.rator [x])
+               in
+                  (l @ p, x :: q)
+               end)
+      end
+   fun mk_footprint1b syntax1 (c:string) =
+      let
+         val (_, mk) = syntax1 c
+      in
+         Component (fn (p, q, v) => (p, mk v :: q))
+      end
+in
+   fun sort_finish psort (p, q) =
+      let
+         val q = psort (q @ not_in_asserts q prefix p)
+      in
+         (psort p, q)
+      end
+   fun write_footprint syntax1 syntax2 l1 l2 l3 l4 P =
+      let
+         val mk_map_f = mk_map_footprint syntax2
+         val l1 = List.map (fn (s, c, tm) => (s, mk_map_f (c, tm))) l1
+         val l2 = List.map (I ## mk_footprint1 syntax1) l2
+         val l3 = List.map (I ## mk_footprint1b syntax1) l3
+         val l4 = List.map (I ## Component) l4
+         val m = Redblackmap.fromList String.compare (l1 @ l2 @ l3 @ l4)
+         fun default (s, l, p, q) =
+            if P (s, l) then (p, q) else raise ERR "write_footprint" s
+         fun loop (p, q, tm) =
+            (case boolSyntax.dest_strip_comb tm of
+                (f_upd, l as [v, rst]) =>
+                  (case Redblackmap.peek (m, f_upd) of
+                      SOME (Component f) =>
+                         let
+                            val (p', q') = f (p, q, combinSyntax.dest_K_1 v)
+                         in
+                            loop (p', q', rst)
+                         end
+                    | SOME (MapComponent (t, mk, c, d)) =>
+                         let
+                            val l = List.map mk (strip_assign (v, t))
+                            val l2 = List.map d (not_in_asserts p c l)
+                         in
+                            loop (l2 @ p, l @ q, rst)
+                         end
+                    | NONE => default (f_upd, l, p, q))
+              | (s, l) => default (s, l, p, q) : (term list * term list))
+            handle HOL_ERR {message = "not a const", ...} => (p, q)
+      in
+         loop
+      end
+end
+
+(* ------------------------------------------------------------------------
    mk_pre_post
 
    Generate pre-codition, code-pool and post-condition for step-theorem
@@ -530,7 +653,8 @@ local
    fun mk_state p = boolSyntax.mk_icomb (state_tm, p)
    fun mk_part_spec m = boolSyntax.mk_icomb (progSyntax.spec_tm, m)
 in
-   fun mk_pre_post next_def instr_def proj_def comp_defs cpool extras write =
+   fun mk_pre_post
+         next_def instr_def proj_def comp_defs cpool extras write_fn psort =
       let
          val read = read_footprint proj_def comp_defs cpool extras
          val state_tm = mk_state (utilsLib.get_function proj_def)
@@ -541,6 +665,8 @@ in
          val model_tm =
             pairSyntax.list_mk_pair [state_tm, rel_tm, instr_tm, eq_tm]
          val mk_spec = HolKernel.list_mk_icomb (mk_part_spec model_tm)
+         val write = (progSyntax.list_mk_star ## progSyntax.list_mk_star) o
+                     sort_finish psort o write_fn
       in
          fn thm: thm =>
             let

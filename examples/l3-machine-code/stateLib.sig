@@ -10,7 +10,9 @@ sig
    val mk_code_pool: term * term * term -> term
    val mk_pre_post:
       thm -> thm -> thm -> thm list -> (thm -> term * term * term) ->
-      footprint_extra list -> (term list * term list * term -> term * term) ->
+      footprint_extra list ->
+      (term list * term list * term -> term list * term list) ->
+      (term list -> term list) ->
       thm -> term
    val pool_select_state_thm: thm -> thm list -> thm -> thm
    val read_footprint:
@@ -25,4 +27,14 @@ sig
       thm -> (Q.tmquote * Q.tmquote * Q.tmquote) list -> thm
    val vvar: hol_type -> term
    val varReset: unit -> unit
+   val write_footprint:
+     (string -> term * (term -> term)) ->
+     (string -> term * (term * term -> term) * (term -> term * term) *
+      (term -> bool)) ->
+     (string * string * term) list ->
+     (string * string) list ->
+     (string * string) list ->
+     (string * (term list * term list * term -> term list * term list)) list ->
+     (string * term list -> bool) ->
+     term list * term list * term -> term list * term list
 end

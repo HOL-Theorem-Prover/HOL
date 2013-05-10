@@ -22,24 +22,22 @@ val ERR = Feedback.mk_HOL_ERR "x64_progLib"
 val x64_proj_def = x64_progTheory.x64_proj_def
 val x64_comp_defs = x64_progTheory.component_defs
 
-local
-   val x64_1 =
-      HolKernel.syntax_fns "x64_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-   val x64_2 =
-      HolKernel.syntax_fns "x64_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
-in
-   val byte = wordsSyntax.mk_int_word_type 8
-   val word = wordsSyntax.mk_int_word_type 16
-   val dword = wordsSyntax.mk_int_word_type 32
-   val qword = wordsSyntax.mk_int_word_type 64
-   val (_, mk_x64_RIP, dest_x64_RIP, _) = x64_1 "x64_RIP"
-   val (_, mk_x64_EFLAGS, dest_x64_EFLAGS, _) = x64_2 "x64_EFLAGS"
-   val (_, mk_x64_MEM, dest_x64_MEM, _) = x64_2 "x64_MEM"
-   val (_, mk_x64_REG, dest_x64_REG, _) = x64_2 "x64_REG"
-   val (_, mk_x64_mem16, dest_x64_mem16, _) = x64_2 "x64_mem16"
-   val (_, mk_x64_mem32, dest_x64_mem32, _) = x64_2 "x64_mem32"
-   val (_, mk_x64_mem64, dest_x64_mem64, _) = x64_2 "x64_mem64"
-end
+val x64_1 =
+   (fn (tm, mk, _, _) => (tm, mk)) o
+   HolKernel.syntax_fns "x64_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
+val x64_2 =
+   HolKernel.syntax_fns "x64_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+val byte = wordsSyntax.mk_int_word_type 8
+val word = wordsSyntax.mk_int_word_type 16
+val dword = wordsSyntax.mk_int_word_type 32
+val qword = wordsSyntax.mk_int_word_type 64
+val (_, mk_x64_RIP) = x64_1 "x64_RIP"
+val (_, mk_x64_EFLAGS, dest_x64_EFLAGS, _) = x64_2 "x64_EFLAGS"
+val (_, mk_x64_MEM, dest_x64_MEM, _) = x64_2 "x64_MEM"
+val (_, mk_x64_REG, dest_x64_REG, _) = x64_2 "x64_REG"
+val (_, mk_x64_mem16, dest_x64_mem16, _) = x64_2 "x64_mem16"
+val (_, mk_x64_mem32, dest_x64_mem32, _) = x64_2 "x64_mem32"
+val (_, mk_x64_mem64, dest_x64_mem64, _) = x64_2 "x64_mem64"
 
 (* -- *)
 
@@ -77,18 +75,18 @@ val state_id =
       ]
 
 val x64_frame =
-   update_frame_state_thm x64_proj_def
+   stateLib.update_frame_state_thm x64_proj_def
       [(`K x64_c_RIP`,
-        `\s a w. s with RIP := w`,
+        `\s:x64_state a w. s with RIP := w`,
         `I : x64_state -> x64_state`),
-       (`x64_c_REG`, `\s a w. s with REG := (a =+ w) r`,
-        `\s. s with REG := r`),
-       (`x64_c_MEM`, `\s a w. s with MEM := (a =+ w) r`,
-        `\s. s with MEM := r`),
-       (`x64_c_ICACHE`, `\s a w. s with ICACHE := (a =+ w) r`,
-        `\s. s with ICACHE := r`),
-       (`x64_c_EFLAGS`, `\s a w. s with EFLAGS := (a =+ w) r`,
-        `\s. s with EFLAGS := r`)]
+       (`x64_c_REG`, `\s:x64_state a w. s with REG := (a =+ w) r`,
+        `\s:x64_state. s with REG := r`),
+       (`x64_c_MEM`, `\s:x64_state a w. s with MEM := (a =+ w) r`,
+        `\s:x64_state. s with MEM := r`),
+       (`x64_c_ICACHE`, `\s:x64_state a w. s with ICACHE := (a =+ w) r`,
+        `\s:x64_state. s with ICACHE := r`),
+       (`x64_c_EFLAGS`, `\s:x64_state a w. s with EFLAGS := (a =+ w) r`,
+        `\s:x64_state. s with EFLAGS := r`)]
 
 (* -- *)
 
@@ -132,53 +130,30 @@ end
 (* -- *)
 
 local
-   fun write_err s = raise ERR "x64_write_footprint" s
-   fun write_assert s a b = General.ignore (a = b orelse write_err s)
-   val strip = combinSyntax.strip_update o combinSyntax.dest_K_1
-   fun strip_assign (a, b) =
-      let
-         val (x, y) = strip a
-      in
-         write_assert "strip_assign" b y; x
-      end
-   fun not_in_asserts p =
-      fn (dst: term -> term) =>
-         List.filter
-            (fn x => not (Option.isSome
-                            (List.find (fn y => case Lib.total dst y of
-                                           SOME c => c = dst x
-                                         | NONE => false) p)))
    fun prefix tm = case boolSyntax.strip_comb tm of
                       (a, [_]) => a
                     | (a, [b, _]) => Term.mk_comb (a, b)
                     | _ => raise ERR "prefix" ""
-   val psort = mlibUseful.sort_map prefix Term.compare
-   val s = Term.mk_var ("s", ``:x64_state``)
-   val EFLAGS_tm = ``^s.EFLAGS``
-   val REG_tm = ``^s.REG``
-   val MEM_tm = ``^s.MEM``
-   val c_EFLAGS = fst o dest_x64_EFLAGS
-   fun d_EFLAGS tm = mk_x64_EFLAGS (c_EFLAGS tm, stateLib.vvar ``:bool option``)
-   val c_REG = fst o dest_x64_REG
-   fun d_REG tm = mk_x64_REG (c_REG tm, stateLib.vvar qword)
-   val c_MEM = fst o dest_x64_MEM
-   fun d_MEM tm = mk_x64_MEM (c_MEM tm, stateLib.vvar qword)
-   val c_mem16 = fst o dest_x64_mem16
-   fun d_mem16 tm = mk_x64_mem16 (c_mem16 tm, stateLib.vvar word)
-   val c_mem32 = fst o dest_x64_mem32
-   fun d_mem32 tm = mk_x64_mem32 (c_mem32 tm, stateLib.vvar dword)
-   val c_mem64 = fst o dest_x64_mem64
-   fun d_mem64 tm = mk_x64_mem64 (c_mem64 tm, stateLib.vvar qword)
 in
-   fun x64_write_footprint (p, q, tm) =
-      let
-         val not_in_p = not_in_asserts p
-      in
-         case boolSyntax.dest_strip_comb tm of
-            ("x64$x64_state_MEM_fupd", [m, rst]) =>
+   val psort = mlibUseful.sort_map prefix Term.compare
+end
+
+local
+   val st = Term.mk_var ("s", ``:x64_state``)
+   val MEM_tm = ``^st.MEM``
+   fun err () = raise ERR "x64_write_footprint" "mem"
+in
+   val x64_write_footprint =
+      stateLib.write_footprint x64_1 x64_2
+         [("x64$x64_state_REG_fupd", "x64_REG", ``^st.REG``),
+          ("x64$x64_state_EFLAGS_fupd", "x64_EFLAGS", ``^st.EFLAGS``)]
+         []
+         [("x64$x64_state_RIP_fupd", "x64_RIP")]
+         [("x64$x64_state_MEM_fupd",
+             fn (p, q, m) =>
                 let
                    val l =
-                      case strip m of
+                      case combinSyntax.strip_update m of
                          ([], t) =>
                             (case boolSyntax.dest_strip_comb t of
                                 ("x64_step$write_mem16", [_, a, d]) =>
@@ -187,69 +162,14 @@ in
                                       [mk_x64_mem32 (a, d)]
                               | ("x64_step$write_mem64", [_, a, d]) =>
                                       [mk_x64_mem64 (a, d)]
-                              |  _ => write_err "mem"
+                              |  _ => err ()
                             )
-                       | (l, t) =>
-                           (write_assert "mem" t MEM_tm; List.map mk_x64_MEM l)
+                       | (l, t) => (t = MEM_tm orelse err ()
+                                    ; List.map mk_x64_MEM l)
                 in
-                   x64_write_footprint (p, l @ q, rst)
-                end
-          | ("x64$x64_state_EFLAGS_fupd", [e, rst]) =>
-                let
-                   val l = List.map mk_x64_EFLAGS (strip_assign (e, EFLAGS_tm))
-                   val l2 = List.map d_EFLAGS (not_in_p c_EFLAGS l)
-                in
-                   x64_write_footprint (l2 @ p, l @ q, rst)
-                end
-          | ("x64$x64_state_REG_fupd", [r, rst]) =>
-                let
-                   val reg_assert = write_assert "reg" REG_tm
-                   val (l2, l) =
-                      case strip r of
-                         ([], t) =>
-                          (let
-                              val (b, t, e) = boolSyntax.dest_cond t
-                              val () = reg_assert e
-                              val ((a, d), f) = combinSyntax.dest_update_comb t
-                              val () = reg_assert f
-                              fun is_a c = Lib.total c_REG c = SOME a
-                              val (new, pa) =
-                                 case List.find is_a p of
-                                    SOME pa => (false, pa)
-                                  | NONE =>
-                                     (true,
-                                      mk_x64_REG (a, stateLib.vvar qword))
-                              val v = snd (dest_x64_REG pa)
-                           in
-                             (if new then [pa] else [],
-                              [mk_x64_REG (a, boolSyntax.mk_cond (b, d, v))])
-                           end
-                           handle HOL_ERR _ => write_err "reg")
-                       | (l, t) =>
-                           let
-                              val () = reg_assert t
-                              val l = List.map mk_x64_REG l
-                           in
-                              (List.map d_REG (not_in_p c_REG l), l)
-                           end
-                in
-                   x64_write_footprint (l2 @ p, l @ q, rst)
-                end
-          | ("x64$x64_state_RIP_fupd", [r, rst]) =>
-                let
-                   val rip = mk_x64_RIP (combinSyntax.dest_K_1 r)
-                in
-                   x64_write_footprint (p, rip :: q, rst)
-                end
-          | (s, _) => write_err s
-      end
-      handle HOL_ERR {message = "not a const", ...} =>
-         let
-            val q = psort (q @ not_in_asserts q prefix p)
-            val p = psort p
-         in
-            (progSyntax.list_mk_star p, progSyntax.list_mk_star q)
-         end
+                   (p, l @ q)
+                end)]
+         (K false)
 end
 
 val x64_extras =
@@ -260,7 +180,8 @@ val x64_extras =
 
 val x64_mk_pre_post =
    stateLib.mk_pre_post x64_stepTheory.NextStateX64_def x64_instr_def
-     x64_proj_def x64_comp_defs mk_x64_code_pool x64_extras x64_write_footprint
+     x64_proj_def x64_comp_defs mk_x64_code_pool x64_extras
+     x64_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 

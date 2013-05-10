@@ -59,10 +59,6 @@ fun partitions [] = []
 
 (* ------------------------------------------------------------------------- *)
 
-val save_as = Lib.curry Theory.save_thm
-fun usave_as s = save_as s o Drule.UNDISCH
-fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
-
 fun padLeft c n l = List.tabulate (n - List.length l, fn _ => c) @ l
 (* fun padRight c n l = l @ List.tabulate (n - List.length l, fn _ => c) *)
 
@@ -153,6 +149,31 @@ in
 end
 
 (* ---------------------------- *)
+
+(* Variant of UNDISCH
+   [..] |- a1 /\ ... /\ aN ==> t    |->
+   [.., a1, .., aN] |- t
+*)
+
+local
+   fun AND_INTRO_CONV n tm =
+      if n = 0 then ALL_CONV tm
+      else (Conv.REWR_CONV satTheory.AND_IMP
+            THENC Conv.RAND_CONV (AND_INTRO_CONV (n - 1))) tm
+in
+   fun STRIP_UNDISCH th =
+      let
+         val ps =
+            boolSyntax.strip_conj (fst (boolSyntax.dest_imp (Thm.concl th)))
+         val th' = Conv.CONV_RULE (AND_INTRO_CONV (List.length ps - 1)) th
+      in
+         Drule.LIST_MP (List.map Thm.ASSUME ps) th'
+      end
+end
+
+val save_as = Lib.curry Theory.save_thm
+fun usave_as s = save_as s o STRIP_UNDISCH
+fun ustore_thm (s, t, tac) = usave_as s (Q.prove (t, tac))
 
 (* Variant of UNDISCH
    [..] |- T ==> t    |->   [..] |- t
@@ -261,7 +282,7 @@ val EXTRACT_CONV = SIMP_CONV (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
 val SET_CONV = SIMP_CONV (bool_ss++pred_setLib.PRED_SET_ss) []
 fun SRW_RULE thms = Conv.CONV_RULE (SRW_CONV thms)
 val SET_RULE = Conv.CONV_RULE SET_CONV
-val o_RULE   = REWRITE_RULE [combinTheory.o_THM]
+val o_RULE = REWRITE_RULE [combinTheory.o_THM]
 
 fun qm l = Feedback.trace ("metis", 0) (metisLib.METIS_PROVE l)
 fun qm_tac l = Feedback.trace ("metis", 0) (metisLib.METIS_TAC l)
@@ -283,21 +304,52 @@ end
 
 fun map_conv (cnv: conv) = Drule.LIST_CONJ o List.map cnv
 
-val mk_cond_rand_thms =
-   map_conv
-      (fn tm => Drule.GEN_ALL (o_RULE (Drule.ISPEC tm boolTheory.COND_RAND)))
+local
+   val thm2l =
+      qm [] ``!f:'a -> 'b -> 'c.
+                f (if b then x else y) z = (if b then f x z else f y z)``
+   val thm2r =
+      qm [] ``!f:'a -> 'b -> 'c.
+                f z (if b then x else y) = (if b then f z x else f z y)``
+   fun is_binop tm =
+      case boolSyntax.strip_fun (Term.type_of tm) of
+         ([ty1, ty2], ty3) =>
+            ty1 = ty2 andalso (ty3 = Type.bool orelse ty3 = ty1)
+       | _ => false
+   fun spec_thm tm =
+      let
+         val rule = Drule.GEN_ALL o o_RULE o Drule.ISPEC tm
+      in
+         if is_binop tm
+            then Thm.CONJ (rule thm2l) (rule thm2r)
+         else rule boolTheory.COND_RAND
+      end
+in
+   val mk_cond_rand_thms = map_conv spec_thm
+end
 
 local
-   val COND_UPDATE = Q.prove(
+   val COND_UPDATE0 = Q.prove(
+      `!b s1 s2. (if b then ((), s1) else ((), s2)) =
+                 ((), if b then s1 else s2)`,
+      RW_TAC std_ss [])
+   val COND_UPDATE1 = Q.prove(
       `!f b v1 v2 s1 s2.
          (if b then f (K v1) s1 else f (K v2) s2) =
          f (K (if b then v1 else v2)) (if b then s1 else s2)`,
       Cases_on `b` THEN REWRITE_TAC [])
    val COND_UPDATE2 = Q.prove(
-      `!b a x y f.
+      `(!b a x y f.
          (if b then (a =+ x) f else (a =+ y) f) =
-         (a =+ if b then x else y) f`,
-      Cases THEN REWRITE_TAC [])
+         (a =+ if b then x else y) f) /\
+       (!b a x y f.
+         (if b then f else (a =+ y) f) = (a =+ if b then f a else y) f) /\
+       (!b a x y f.
+         (if b then (a =+ x) f else f) = (a =+ if b then x else f a) f)`,
+      REPEAT CONJ_TAC
+      THEN Cases
+      THEN REWRITE_TAC [combinTheory.APPLY_UPDATE_ID])
+   val COND_UPDATE3 = qm [] ``!b. (if b then T else F) = b``
    fun cond_update_thms ty =
       let
          val {Thy, Tyop, ...} = Type.dest_thy_type ty
@@ -306,7 +358,7 @@ local
          List.map
            (fn (t1, t2) =>
               let
-                 val thm = Drule.ISPEC (boolSyntax.rator t2) COND_UPDATE
+                 val thm = Drule.ISPEC (boolSyntax.rator t2) COND_UPDATE1
                  val thm0 = Drule.SPEC_ALL thm
                  val v = hd (Term.free_vars t2)
                  val (v1, v2, s1, s2) =
@@ -331,7 +383,7 @@ local
       end
 in
    fun mk_cond_update_thms l =
-      [boolTheory.COND_ID, COND_UPDATE2] @
+      [boolTheory.COND_ID, COND_UPDATE0, COND_UPDATE2, COND_UPDATE3] @
       List.concat (List.map cond_update_thms l)
 end
 
@@ -449,6 +501,51 @@ in
                 | ([], thm :: _) => INST_REWRITE_CONV1 thm tm)
       end
    fun INST_REWRITE_RULE thm = Conv.CONV_RULE (INST_REWRITE_CONV thm)
+end
+
+(* ---------------------------- *)
+
+(*
+  Given two theorems of the form:
+
+    [..., tm, ...] |- a
+    [..., ~tm, ...] |- a
+
+  produce theorem of the form
+
+    [...] |- a
+*)
+local
+   val rule =
+      Conv.CONV_RULE
+         (Conv.CHANGED_CONV
+             (REWRITE_CONV [DECIDE ``(b ==> a) /\ (~b ==> a) = a``,
+                            DECIDE ``(~b ==> a) /\ (b ==> a) = a``]))
+   fun SMART_DISCH tm thm =
+      let
+         val l = Thm.hyp thm
+         val thm' = Thm.DISCH tm thm
+         val l' = Thm.hyp thm'
+      in
+         if List.length l' < List.length l
+            then thm'
+         else let
+                 val thm' = Thm.DISCH (boolSyntax.mk_neg tm) thm
+                 val l' = Thm.hyp thm'
+              in
+                 if List.length l' < List.length l
+                    then thm'
+                 else raise ERR "SMART_DISCH" "Term not in hypotheses"
+              end
+      end
+in
+   fun MERGE_CASES tm thm1 thm2 =
+      let
+         val thm3 = SMART_DISCH tm thm1
+         val thm4 = SMART_DISCH tm thm2
+      in
+         rule (Thm.CONJ thm3 thm4)
+      end
 end
 
 (* ---------------------------- *)
@@ -777,7 +874,9 @@ fun theory_compset x =
 (* ---------------------------- *)
 
 local
-   val dom = fst o Type.dom_rng o Term.type_of
+   val dr = Type.dom_rng o Term.type_of
+   val dom = fst o dr
+   val rng = snd o dr
    fun is_def thy tm =
       let
          val name = fst (Term.dest_const tm)
@@ -812,17 +911,17 @@ local
       case Lib.total Term.rand tm of
         SOME y => leaf y
       | NONE => tm
-   fun run_thm0 thy ast =
+   fun run_thm0 pv thy ast =
       let
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
          val f = Term.prim_mk_const
                    {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const (leaf ast))}
       in
-         if Term.type_of f = oneSyntax.one_ty
-            then Q.prove (`!s. Run ^ast s = (^f, s)`, tac)
-         else Q.prove (`!s. Run ^ast s = ^f s`, tac)
+         pv (if Term.type_of f = oneSyntax.one_ty
+                then `!s. Run ^ast s = (^f, s)`
+             else `!s. Run ^ast s = ^f s`) : thm
       end
-   fun run_thm thy ast =
+   fun run_thm pv thy ast =
       let
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
          val x = hd (Term.free_vars ast)
@@ -830,15 +929,19 @@ local
          val f = Term.prim_mk_const
                    {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const tm)}
       in
-         Q.prove (`!s. Run ^ast s = ^f ^x s`, tac)
+         pv (if rng f = oneSyntax.one_ty
+                then `!s. Run ^ast s = (^f ^x, s)`
+             else `!s. Run ^ast s = ^f ^x s`) : thm
       end
    fun run_rwts thy =
       let
          val ty = Type.mk_thy_type {Thy = thy, Args = [], Tyop = "instruction"}
          val (arg0, args) =
             List.partition (List.null o Term.free_vars) (buildAst thy ty)
+         val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
+         fun pv q = Q.prove(q, tac)
       in
-         List.map (run_thm0 thy) arg0 @ List.map (run_thm thy) args
+         List.map (run_thm0 pv thy) arg0 @ List.map (run_thm pv thy) args
       end
    fun run_tm thy = Term.prim_mk_const {Thy = thy, Name = "Run"}
 in
@@ -887,14 +990,14 @@ in
                val stm = Term.mk_comb (tm, st)
                val sbst = context_subst stm s
                fun cnvs rwt =
-                  case sbst of
-                     [] => [cnv rwt stm]
-                   | l => List.map (fn sub => cnv rwt (match_subst sub stm)) l
+                  if List.null sbst
+                     then [cnv rwt stm]
+                  else List.map (fn sub => cnv rwt (match_subst sub stm)) sbst
                val ctxts = List.map (List.map SAFE_ASSUME) ctms
             in
-               case ctxts of
-                  [] => cnvs []
-                | _ => List.map (fn r => cnvs r) ctxts |> List.concat
+               if List.null ctxts
+                  then cnvs []
+               else List.concat (List.map cnvs ctxts)
             end
       end
 end

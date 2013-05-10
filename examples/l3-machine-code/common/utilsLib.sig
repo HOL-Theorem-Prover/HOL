@@ -20,6 +20,7 @@ sig
    val LIST_DISCH: term list -> rule
    val MATCH_HYP_CONV_RULE: conv -> term -> rule
    val MATCH_HYP_RULE: rule -> term -> rule
+   val MERGE_CASES: term -> thm -> thm -> thm
    val NCONV: int -> conv -> conv
    val PRED_HYP_CONV_RULE: conv -> (term -> bool) -> rule
    val PRED_HYP_RULE: rule -> (term -> bool) -> rule

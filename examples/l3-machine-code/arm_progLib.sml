@@ -23,29 +23,19 @@ val arm_proj_def = arm_progTheory.arm_proj_def
 val arm_comp_defs = arm_progTheory.component_defs
 
 local
+   val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
+in
    val arm_1 =
-      (fn (_, mk, _, _) => mk) o
+      (fn (tm, mk, _, _) => (tm, mk)) o
       HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
    val arm_2 =
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
-   val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
-in
    val word2 = wordsSyntax.mk_int_word_type 2
    val word4 = wordsSyntax.mk_int_word_type 4
    val word5 = wordsSyntax.mk_int_word_type 5
    val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
-   val mk_arm_CurrentCondition = arm_1 "arm_CurrentCondition"
-   val mk_arm_Encoding = arm_1 "arm_Encoding"
-   val mk_arm_undefined = arm_1 "arm_undefined"
-   val mk_arm_CPSR_N = arm_1 "arm_CPSR_N"
-   val mk_arm_CPSR_Z = arm_1 "arm_CPSR_Z"
-   val mk_arm_CPSR_C = arm_1 "arm_CPSR_C"
-   val mk_arm_CPSR_V = arm_1 "arm_CPSR_V"
-   val mk_arm_CPSR_J = arm_1 "arm_CPSR_J"
-   val mk_arm_CPSR_T = arm_1 "arm_CPSR_T"
-   val mk_arm_CPSR_E = arm_1 "arm_CPSR_E"
    val (_, mk_arm_MEM, dest_arm_MEM, is_arm_MEM) = arm_2 "arm_MEM"
    val (_, mk_arm_REG, dest_arm_REG, is_arm_REG) = arm_2 "arm_REG"
    val (_, mk_arm_FP_REG, dest_arm_FP_REG, is_arm_FP_REG) = arm_2 "arm_FP_REG"
@@ -79,42 +69,42 @@ val state_id =
 val arm_frame =
    update_frame_state_thm arm_proj_def
       [(`K arm_c_CurrentCondition`,
-        `\s a w. s with CurrentCondition := w`,
+        `\s:arm_state a w. s with CurrentCondition := w`,
         `I: arm_state -> arm_state`),
        (`K arm_c_Encoding`,
-        `\s a w. s with Encoding := w`,
+        `\s:arm_state a w. s with Encoding := w`,
         `I: arm_state -> arm_state`),
        (`K arm_c_undefined`,
-        `\s a w. s with undefined := w`,
+        `\s:arm_state a w. s with undefined := w`,
         `I: arm_state -> arm_state`),
        (`K arm_c_CPSR_N`,
-        `\s a w. s with CPSR := cpsr with N := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with N := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_Z`,
-        `\s a w. s with CPSR := cpsr with Z := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with Z := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_C`,
-        `\s a w. s with CPSR := cpsr with C := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with C := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_V`,
-        `\s a w. s with CPSR := cpsr with V := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with V := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_J`,
-        `\s a w. s with CPSR := cpsr with J := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with J := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_T`,
-        `\s a w. s with CPSR := cpsr with T := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with T := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_E`,
-        `\s a w. s with CPSR := cpsr with E := w`,
-        `\s. s with CPSR := cpsr`),
+        `\s:arm_state a w. s with CPSR := cpsr with E := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`arm_c_REG`, `\s:arm_state a w. s with REG := (a =+ w) r`,
         `\s:arm_state. s with REG := r`),
        (`arm_c_MEM`, `\s:arm_state a w. s with MEM := (a =+ w) r`,
         `\s:arm_state. s with MEM := r`),
        (`arm_c_FP_REG`,
         `\s:arm_state a w. s with FP := fp with REG := (a =+ w) fp.REG`,
-        `\s. s with FP := fp`)
+        `\s:arm_state. s with FP := fp`)
       ]
 
 (* -- *)
@@ -136,7 +126,7 @@ local
 in
    fun mk_arm_code_pool thm =
       let
-         val r15 = stateLib.gvar "pc" (wordsSyntax.mk_int_word_type 32)
+         val r15 = stateLib.gvar "pc" word
          val r15_a = mk_arm_PC r15
          val (a, tm) = Thm.dest_thm thm
          val r15_subst = Term.subst [``s.REG RName_PC`` |-> r15]
@@ -211,29 +201,6 @@ local
        | "arm_CPSR_V" => 12
        | _ => ~1
    val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
-   fun write_err s = raise ERR "arm_write_footprint" s
-   fun strip_assign (a, b) =
-      let
-         val (x, y) = combinSyntax.strip_update (combinSyntax.dest_K_1 a)
-      in
-         b = y orelse write_err "strip_assign"; x
-      end
-   fun not_in_asserts p =
-      fn (dst: term -> term) =>
-         List.filter
-            (fn x =>
-               let
-                  val d = dst x
-               in
-                  not (Lib.exists
-                          (fn y => case Lib.total dst y of
-                                      SOME c => c = d
-                                    | NONE => false) p)
-               end)
-   fun prefix tm = case boolSyntax.strip_comb tm of
-                      (a, [_]) => a
-                    | (a, [b, _]) => Term.mk_comb (a, b)
-                    | _ => raise ERR "prefix" ""
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    val total_dest_reg = Lib.total (wordsSyntax.uint_of_word o Term.rand)
    fun word_compare (w1, w2) =
@@ -262,6 +229,7 @@ local
    val fp_register = fp_reg o fst o dest_arm_FP_REG
    val address = HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_add) o
                  fst o dest_arm_MEM
+in
    fun psort p =
       let
          val (m, rst) = List.partition is_arm_MEM p
@@ -275,106 +243,41 @@ local
          mlibUseful.sort_map fp_register reg_compare c @
          mlibUseful.sort_map address (mlibUseful.lex_list_order word_compare) m
       end
-   fun fillIn f ty =
-      fn []: term list => []
-       | _ => [f (stateLib.vvar ty)]: term list
-   fun augment1 dst ty mk (p, q, tm, rst) =
-      let
-         val x = mk (combinSyntax.dest_K_1 tm)
-         val l = fillIn mk ty (not_in_asserts p dst [x])
-      in
-         (l @ p, x :: q, rst)
-      end
-   val flag = augment1 Term.rator Type.bool
-   val s = Term.mk_var ("s", ``:arm_state``)
-   val FP_REG_tm = ``^s.FP.REG``
-   val REG_tm = ``^s.REG``
-   val MEM_tm = ``^s.MEM``
-   val c_FP_REG = fst o dest_arm_FP_REG
-   val c_REG = fst o dest_arm_REG
-   val c_MEM = fst o dest_arm_MEM
-   fun d_FP_REG tm = mk_arm_FP_REG (c_FP_REG tm, stateLib.vvar dword)
-   fun d_REG tm = mk_arm_REG (c_REG tm, stateLib.vvar word)
-   fun d_MEM tm = mk_arm_MEM (c_MEM tm, stateLib.vvar byte)
-   fun cpsr_footprint (p, q, tm) =
-      (case boolSyntax.dest_strip_comb tm of
-          ("arm$PSR_N_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_N (p, q, b, rst))
-        | ("arm$PSR_Z_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_Z (p, q, b, rst))
-        | ("arm$PSR_C_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_C (p, q, b, rst))
-        | ("arm$PSR_V_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_V (p, q, b, rst))
-        | ("arm$PSR_J_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_J (p, q, b, rst))
-        | ("arm$PSR_T_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_T (p, q, b, rst))
-        | ("arm$PSR_E_fupd", [b, rst]) =>
-              cpsr_footprint (flag mk_arm_CPSR_E (p, q, b, rst))
-        | ("arm$arm_state_CPSR", [cpsr_s]) =>
-              (cpsr_s = s orelse raise ERR "cpsr_footprint" "mismatch"
-               ; (p, q))
-        | (s, _) => raise ERR "cpsr_footprint" s)
-      handle HOL_ERR {message = "not a const", ...} => (p, q)
+end
+
+local
+   val st = Term.mk_var ("s", ``:arm_state``)
+   val cpsr_footprint =
+      stateLib.write_footprint arm_1 arm_2 []
+        [("arm$PSR_N_fupd", "arm_CPSR_N"),
+         ("arm$PSR_Z_fupd", "arm_CPSR_Z"),
+         ("arm$PSR_C_fupd", "arm_CPSR_C"),
+         ("arm$PSR_V_fupd", "arm_CPSR_V"),
+         ("arm$PSR_Q_fupd", "arm_CPSR_Q"),
+         ("arm$PSR_J_fupd", "arm_CPSR_J"),
+         ("arm$PSR_T_fupd", "arm_CPSR_T"),
+         ("arm$PSR_E_fupd", "arm_CPSR_E")] [] []
+        (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
+   val fp_footprint =
+      stateLib.write_footprint arm_1 arm_2
+        [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] [] []
+        (fn (s, l) => s = "arm$arm_state_FP" andalso l = [st])
 in
-   fun arm_write_footprint (p, q, tm) =
-      (case boolSyntax.dest_strip_comb tm of
-          ("arm$arm_state_MEM_fupd", [m, rst]) =>
-              let
-                 val l = List.map mk_arm_MEM (strip_assign (m, MEM_tm))
-                 val l2 = List.map d_MEM (not_in_asserts p c_MEM l)
-              in
-                 arm_write_footprint (l2 @ p, l @ q, rst)
-              end
-        | ("arm$arm_state_REG_fupd", [r, rst]) =>
-              let
-                 val l = List.map mk_arm_REG (strip_assign (r, REG_tm))
-                 val l2 = List.map d_REG (not_in_asserts p c_REG l)
-              in
-                 arm_write_footprint (l2 @ p, l @ q, rst)
-              end
-        | ("arm$arm_state_FP_fupd", [r, rst]) =>
-             (case Lib.total
-                     (boolSyntax.dest_strip_comb o combinSyntax.dest_K_1) r of
-                 SOME ("arm$FP_REG_fupd", [r, _]) =>
-                    let
-                       val l =
-                          List.map mk_arm_FP_REG (strip_assign (r, FP_REG_tm))
-                       val l2 = List.map d_FP_REG (not_in_asserts p c_FP_REG l)
-                    in
-                       arm_write_footprint (l2 @ p, l @ q, rst)
-                    end
-               | _ => write_err "VFP registers")
-        | ("arm$arm_state_Encoding_fupd", [e, rst]) =>
-              arm_write_footprint
-                 (augment1 Term.rator ``:Encoding`` mk_arm_Encoding
-                           (p, q, e, rst))
-        | ("arm$arm_state_CurrentCondition_fupd", [c, rst]) =>
-              arm_write_footprint
-                 (augment1 Term.rator word4 mk_arm_CurrentCondition
-                           (p, q, c, rst))
-        | ("arm$arm_state_undefined_fupd", [u, rst]) =>
-              arm_write_footprint (flag mk_arm_undefined (p, q, u, rst))
-        | ("arm$arm_state_CPSR_fupd", [c, rst]) =>
-              let
-                 val (p', q') = cpsr_footprint (p, q, combinSyntax.dest_K_1 c)
-              in
-                 arm_write_footprint (p', q', rst)
-              end
-        | (s, _) => write_err s)
-      handle HOL_ERR {message = "not a const", ...} =>
-         let
-            val q = psort (q @ not_in_asserts q prefix p)
-            val p = psort p
-         in
-            (progSyntax.list_mk_star p, progSyntax.list_mk_star q)
-         end
+   val arm_write_footprint =
+      stateLib.write_footprint arm_1 arm_2
+        [("arm$arm_state_MEM_fupd", "arm_MEM", ``^st.MEM``),
+         ("arm$arm_state_REG_fupd", "arm_REG", ``^st.REG``)]
+        [("arm$arm_state_Encoding_fupd", "arm_Encoding"),
+         ("arm$arm_state_CurrentCondition_fupd", "arm_CurrentCondition"),
+         ("arm$arm_state_undefined_fupd", "arm_undefined")] []
+        [("arm$arm_state_FP_fupd", fp_footprint),
+         ("arm$arm_state_CPSR_fupd", cpsr_footprint)]
+        (K false)
 end
 
 val arm_mk_pre_post =
    stateLib.mk_pre_post arm_stepTheory.NextStateARM_def arm_instr_def
-     arm_proj_def arm_comp_defs mk_arm_code_pool [] arm_write_footprint
+     arm_proj_def arm_comp_defs mk_arm_code_pool [] arm_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 

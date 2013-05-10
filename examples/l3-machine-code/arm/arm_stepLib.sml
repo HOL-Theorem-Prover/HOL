@@ -100,11 +100,10 @@ val DATATYPE_RULE = Conv.CONV_RULE DATATYPE_CONV
 val FULL_DATATYPE_RULE = utilsLib.FULL_CONV_RULE DATATYPE_CONV
 
 val COND_UPDATE_CONV =
-   REWRITE_CONV (unit_state_cond ::
-                 utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
-                 utilsLib.mk_cond_update_thms
-                    (List.map arm_configLib.mk_arm_type
-                        ["arm_state", "FP", "PSR"]))
+   REWRITE_CONV
+     (utilsLib.qm [] ``!b. (if b then T else F) = b`` ::
+      utilsLib.mk_cond_update_thms
+         (List.map arm_configLib.mk_arm_type ["arm_state", "FP", "PSR"]))
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
@@ -1393,7 +1392,7 @@ local
       let
          val (l, ty) = listSyntax.dest_list v
          val () = ignore (ty = Type.bool andalso List.length l <= 32 orelse
-                          raise ERR "bytes4" "bad opcode")
+                          raise ERR "fetch" "bad opcode")
          val (b1, b2, b3, b4) = bytes4 (utilsLib.padLeft boolSyntax.F 32 l)
       in
          if e then build_byte 24 b4 @ build_byte 16 b3 @
