@@ -1,4 +1,5 @@
-INCLUDES = common arm x64
+INCLUDES = common arm x64 \
+           $(HOLDIR)/examples/machine-code/hoare-triple
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
