@@ -494,33 +494,40 @@ val x64_spec_aux_byte = cache (x64_prove_specs zMEM_BYTE_MEMORY false);
 val x64_spec_aux_memory64 = cache (x64_prove_specs zMEM_MEMORY64 false);
 val x64_spec_aux_memory64_no_status = cache (x64_prove_specs zMEM_MEMORY64 true);
 
+fun apply_to_thm f ((th1,i1,j1),NONE) = ((f th1,i1,j1),NONE)
+  | apply_to_thm f ((th1,i1,j1),SOME (th2,i2,j2)) = ((f th1,i1,j1),SOME (f th2,i2,j2))
+
 fun x64_spec s = let
+  val (s,rename,_) = parse_renamer s
   val ((th,i,j),other) = x64_spec_aux_auto s
   val b = if !x64_exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
-  in ((th,i,j),other) end
+  in apply_to_thm rename ((th,i,j),other) end
 
 fun x64_spec_byte_memory s = let
+  val (s,rename,_) = parse_renamer s
   val ((th,i,j),other) = x64_spec_aux_byte s
   val b = if !x64_exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
-  in ((th,i,j),other) end
+  in apply_to_thm rename ((th,i,j),other) end
 
 fun x64_spec_memory64 s = let
+  val (s,rename,_) = parse_renamer s
   val ((th,i,j),other) = x64_spec_aux_memory64 s
   val b = if !x64_exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
-  in ((th,i,j),other) end
+  in apply_to_thm rename ((th,i,j),other) end
 
 fun x64_spec_memory64_no_status s = let
+  val (s,rename,_) = parse_renamer s
   val ((th,i,j),other) = x64_spec_aux_memory64_no_status s
   val b = if !x64_exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM zBYTE_MEMORY_def,GSYM zBYTE_MEMORY_Z_def] th
-  in ((th,i,j),other) end
+  in apply_to_thm rename ((th,i,j),other) end
 
 val x64_tools = (x64_spec, x64_jump, x64_status, x64_pc);
 val x64_tools_no_status = (x64_spec, x64_jump, TRUTH, x64_pc);

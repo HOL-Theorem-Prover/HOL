@@ -22,7 +22,7 @@ val _ = new_theory "jit_codegen";
 
 (* compiler setup code *)
 
-val _ = set_x86_exec_flag false;
+(* val _ = set_x86_exec_flag false; *)
 
 (* make function "f" have exec permissions *)
 val _ = add_executable_data_name "f"

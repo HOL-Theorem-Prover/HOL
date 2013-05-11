@@ -526,6 +526,7 @@ fun remove_aligned_bx th = let
   in th end handle HOL_ERR _ => th;
 
 fun arm_prove_specs m_pred s = let
+  val (s,rename,_) = parse_renamer s
   val _ = set_arm_memory_pred m_pred
   val thms = [arm_step "v6" s]
   val thms = (thms @ [arm_step "v6,fail" s]) handle HOL_ERR _ => thms
@@ -555,7 +556,7 @@ fun arm_prove_specs m_pred s = let
   in if length result < 2 then let
     val (th1,i1,j1) = hd result
     val th1 = REWRITE_RULE [markerTheory.Abbrev_def,SEP_CLAUSES] th1
-    in ((th1,i1,j1), NONE) end
+    in ((rename th1,i1,j1), NONE) end
   else let
     val (th1,i1,j1) = hd result
     val (th2,i2,j2) = hd (tl result)
@@ -563,7 +564,7 @@ fun arm_prove_specs m_pred s = let
     val th1 = RW [cond_STAR_cond] th1
     val th1 = RW [precond_INTRO] th1
     val th1 = SIMP_RULE (std_ss++sep_cond_ss) [] th1
-    in ((th1,i1,j1), SOME (th2,i2,j2)) end end
+    in ((rename th1,i1,j1), SOME (rename th2,i2,j2)) end end
 
 fun arm_jump tm1 tm2 jump_length forward = let
   fun arm_mk_jump cond jump_length = let

@@ -119,4 +119,8 @@ sig
 
     val auto_prove             : string -> term * tactic -> thm
 
+    val add_executable_data_name    : string -> unit
+    val remove_executable_data_name : string -> unit
+    val parse_renamer               : string -> string * (thm -> thm) * bool
+
 end

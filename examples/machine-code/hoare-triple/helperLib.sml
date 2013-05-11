@@ -1115,4 +1115,26 @@ fun SEP_IMP_TAC (hs,goal) = let
   val th4 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [rw_th])) th3
   in MATCH_MP_TAC th4 (hs,goal) end;
 
+
+local
+  val executable_data_names = ref ([]:string list);
+in
+  fun add_executable_data_name n =
+    (executable_data_names := n :: !executable_data_names);
+  fun remove_executable_data_name n =
+    (executable_data_names := filter (fn m => not (n = m)) (!executable_data_names));
+  fun parse_renamer instruction = let
+    val xs = Substring.tokens (fn x => x = #"/") (Substring.full instruction)
+    in if length xs < 2 then (instruction,fn x => x,false)
+       else (Substring.string (hd xs),fn th => let
+      val vs = free_vars (concl th)
+      val vs = filter (fn v => mem (fst (dest_var v)) ["f","df"]) vs
+      val w = Substring.string (hd (tl xs))
+      fun make_new_name v =
+        ((implode o rev o tl o rev o explode o fst o dest_var) v) ^ w
+      val s = map (fn v => v |-> mk_var(make_new_name v,type_of v)) vs
+      in INST s th end,
+    mem (Substring.string (hd (tl xs))) (!executable_data_names)) end;
+end;
+
 end;

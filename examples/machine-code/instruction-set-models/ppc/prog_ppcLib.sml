@@ -194,11 +194,13 @@ fun ppc_prove_one_spec th c = let
   in RW [STAR_ASSOC,markerTheory.Abbrev_def] result end;
 
 fun ppc_prove_specs s = let
+  val (s,rename,_) = parse_renamer s
   val th = ppc_step s
   val th = pre_process_thm th
   val c = mk_comb(``n2w:num->word32``,(numSyntax.mk_numeral o Arbnum.fromHexString) s)
   fun replace_conv th tm = if (fst o dest_eq o concl) th = tm then th else ALL_CONV tm
-  in if (is_cond o snd o dest_imp o concl) th then let
+  val result =
+     if (is_cond o snd o dest_imp o concl) th then let
        val (x,y,z) = dest_cond (find_term is_cond (concl th))
        fun prove_branch cth th = let
          val tm1 = (fst o dest_imp o concl o ISPECL [x,y,z]) cth
@@ -210,7 +212,11 @@ fun ppc_prove_specs s = let
          val th1 = RW [RW [GSYM precond_def] (GSYM progTheory.SPEC_MOVE_COND)] th1
          in post_process_thm th1 end
        in (prove_branch CONTAINER_IF_T th, SOME (prove_branch CONTAINER_IF_F th)) end
-     else (post_process_thm (ppc_prove_one_spec th c),NONE) end
+     else (post_process_thm (ppc_prove_one_spec th c),NONE)
+  val result =
+    case result of ((th1,i1,j1),NONE) => ((rename th1,i1,j1),NONE)
+    | ((th1,i1,j1),SOME (th2,i2,j2)) => ((rename th1,i1,j1),SOME (rename th2,i2,j2))
+  in result end
 
 fun ppc_jump (tm1:term) (tm2:term) (jump_length:int) (forward:bool) = ("",0)
 

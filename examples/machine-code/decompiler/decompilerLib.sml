@@ -24,7 +24,6 @@ val decompiler_memory = ref ([]:(string * (thm * int * int option)) list)
 val decompiler_finalise = ref (I:(thm * thm -> thm * thm))
 val code_abbreviations = ref ([]:thm list);
 val abbreviate_code = ref false;
-val executable_data_names = ref ([]:string list);
 val user_defined_modifier = ref (fn (name:string) => fn (th:thm) => th);
 val decompile_as_single_function = ref false;
 
@@ -37,8 +36,6 @@ fun get_decompiled name =
   snd (hd (filter (fn (x,y) => x = name) (!decompiler_memory))) handle _ => fail();
 
 fun add_code_abbrev thms = (code_abbreviations := thms @ !code_abbreviations);
-fun add_executable_data_name n = (executable_data_names := n :: !executable_data_names);
-fun remove_executable_data_name n = (executable_data_names := filter (fn m => not (n = m)) (!executable_data_names));
 fun set_abbreviate_code b = (abbreviate_code := b);
 fun get_abbreviate_code () = !abbreviate_code;
 
@@ -308,16 +305,6 @@ fun pair_jump_apply (f:int->int) ((th1,x1:int,x2:int option),NONE) = ((th1,x1,ju
   | pair_jump_apply f ((th1:thm,x1,x2),SOME (th2:thm,y1:int,y2:int option)) =
       ((th1,x1,jump_apply f x2),SOME (th2,y1,jump_apply f y2));
 
-fun parse_renamer instruction = let
-  val xs = Substring.tokens (fn x => x = #"/") (Substring.full instruction)
-  in if length xs < 2 then (instruction,fn x => x,false) else (Substring.string (hd xs),fn th => let
-    val vs = free_vars (concl th)
-    val vs = filter (fn v => mem (fst (dest_var v)) ["f","df"]) vs
-    val w = Substring.string (hd (tl xs))
-    fun make_new_name v = ((implode o rev o tl o rev o explode o fst o dest_var) v) ^ w
-    val s = map (fn v => v |-> mk_var(make_new_name v,type_of v)) vs
-    in INST s th end, mem (Substring.string (hd (tl xs))) (!executable_data_names)) end;
-
 fun introduce_guards thms = let
   val pattern = (fst o dest_eq o concl o SPEC_ALL) cond_def
 (*
@@ -361,10 +348,9 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = echo 1 "  (insert command)\n"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
-      val (instruction, renamer, exec_flag) = parse_renamer instruction
       val _ = echo 1 ("  "^instruction^":")
       val i = int_to_string n
-      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@") o renamer
+      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@")
       val (x,y) = pair_apply g (f instruction)
       val _ = echo 1 ".\n"
       in (n+1,(ys @ [(n,x,y)])) end

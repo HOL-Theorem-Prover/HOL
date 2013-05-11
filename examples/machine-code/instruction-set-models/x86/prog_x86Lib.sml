@@ -288,11 +288,13 @@ fun x86_jump (tm1:term) (tm2:term) (jump_length:int) (forward:bool) = ("",0)
 
 val x86_spec_aux = cache x86_prove_specs;
 fun x86_spec s = let
+  val (s,rename,exec_flag) = parse_renamer s
   val ((th,i,j),other) = x86_spec_aux s
-  val b = if !x86_exec_flag then T else F
+  val b = if exec_flag then T else F
   val th = INST [``ex:bool``|->b] th
   val th = RW [GSYM xBYTE_MEMORY_def,GSYM xBYTE_MEMORY_X_def] th
-  in ((th,i,j),other) end
+  val other = case other of NONE => NONE | SOME (th,i,j) => SOME (rename th,i,j)
+  in ((rename th,i,j),other) end
 
 val x86_tools = (x86_spec, x86_jump, x86_status, x86_pc)
 val x86_tools_no_status = (x86_spec, x86_jump, TRUTH, x86_pc);

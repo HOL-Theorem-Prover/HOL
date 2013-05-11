@@ -26,9 +26,6 @@ sig
     val UNABBREV_CODE_RULE  : thm -> thm
     val UNABBREV_ALL        : thm -> thm
 
-    val add_executable_data_name     : string -> unit
-    val remove_executable_data_name  : string -> unit
-
     val add_modifier          : string -> (thm -> thm) -> unit
     val remove_all_modifiers  : unit -> unit
 
