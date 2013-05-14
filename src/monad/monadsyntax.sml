@@ -137,7 +137,8 @@ fun dest_bind G t = let
                  NONE => if is_var f then #1 (dest_var f)
                          else raise UserPP_Failed
                | SOME s => s
-  val _ = prname = monad_unitbind orelse prname = monad_bind orelse
+  val _ = prname = monad_unitbind orelse
+          (prname = monad_bind andalso pairSyntax.is_pabs y) orelse
           raise UserPP_Failed
 in
   SOME (prname, x, y)
