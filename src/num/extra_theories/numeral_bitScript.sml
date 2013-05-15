@@ -19,10 +19,6 @@ val op >| = op THENL;
 
 (* ------------------------------------------------------------------------- *)
 
-(*
-   Add mod_2exp and div_2exp to bitSyntax
-*)
-
 val BIT1n =
    METIS_PROVE [ONE, ADD_ASSOC, BIT1, TIMES2] ``!n. BIT1 n = 2 * n + 1``
 
