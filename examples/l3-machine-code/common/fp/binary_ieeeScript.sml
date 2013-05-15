@@ -1746,7 +1746,7 @@ val w2n_add1 = Q.prove(
    `!a. a <> -1w ==> (w2n a + 1 = w2n (a + 1w))`,
    Cases
    \\ lrw [wordsTheory.word_eq_n2w, wordsTheory.word_add_n2w,
-           bitTheory.MOD_2EXP_MAX_def, arithmeticTheory.MOD_2EXP_def,
+           bitTheory.MOD_2EXP_MAX_def, bitTheory.MOD_2EXP_def,
            GSYM wordsTheory.dimword_def]
    )
 

@@ -489,7 +489,7 @@ val n2w_v2n = Q.store_thm("n2w_v2n",
   \\ rw []
   >| [
     `i < LENGTH (bitify [] v)` by metis_tac [length_bitify_null]
-    \\ rw [bitTheory.BIT_num_from_bin_list, every_bit_bitify, el_bitify],
+    \\ rw [numposrepTheory.BIT_num_from_bin_list, every_bit_bitify, el_bitify],
     match_mp_tac bitTheory.NOT_BIT_GT_TWOEXP
     \\ qspecl_then [`bitify [] v`, `2`] assume_tac l2n_lt
     \\ fs [arithmeticTheory.NOT_LESS, num_from_bin_list_def]

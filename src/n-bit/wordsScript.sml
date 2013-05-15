@@ -6,11 +6,6 @@
 (* DATE          : 2005                                                      *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["pred_setTheory", "bitTheory", "numeral_bitTheory",
-            "sum_numTheory", "fcpLib"];
-*)
-
 open HolKernel Parse boolLib bossLib Q lcsymtacs;
 open arithmeticTheory pred_setTheory;
 open bitTheory sum_numTheory fcpTheory;

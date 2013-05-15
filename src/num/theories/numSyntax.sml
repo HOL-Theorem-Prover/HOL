@@ -28,7 +28,6 @@ struct
   val div_tm       = prim_mk_const {Name="DIV",     Thy="arithmetic"}
   val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
   val div2_tm      = prim_mk_const {Name="DIV2",    Thy="arithmetic"}
-  val mod_2exp_tm  = prim_mk_const {Name="MOD_2EXP",Thy="arithmetic"}
   val greater_tm   = prim_mk_const {Name=">",       Thy="arithmetic"}
   val geq_tm       = prim_mk_const {Name=">=",      Thy="arithmetic"}
   val leq_tm       = prim_mk_const {Name="<=",      Thy="arithmetic"}
@@ -60,7 +59,6 @@ struct
   val mk_div      = mk_binop div_tm
   val mk_mod      = mk_binop mod_tm
   val mk_div2     = mk_monop div2_tm
-  val mk_mod_2exp = mk_binop mod_2exp_tm
   val mk_less     = mk_binop less_tm
   val mk_greater  = mk_binop greater_tm
   val mk_geq      = mk_binop geq_tm
@@ -106,7 +104,6 @@ struct
   val dest_div      = dest_binop div_tm      (ERR "dest_div" "")
   val dest_mod      = dest_binop mod_tm      (ERR "dest_mod" "")
   val dest_div2     = dest_monop div2_tm     (ERR "dest_div2" "")
-  val dest_mod_2exp = dest_binop mod_2exp_tm (ERR "dest_mod_2exp" "")
   val dest_less     = dest_binop less_tm     (ERR "dest_less" "")
   val dest_greater  = dest_binop greater_tm  (ERR "dest_greater" "")
   val dest_geq      = dest_binop geq_tm      (ERR "dest_geq" "")
@@ -179,7 +176,6 @@ struct
   val is_div      = can dest_div
   val is_mod      = can dest_mod
   val is_div2     = can dest_div2
-  val is_mod_2exp = can dest_mod_2exp
   val is_less     = can dest_less
   val is_greater  = can dest_greater
   val is_geq      = can dest_geq

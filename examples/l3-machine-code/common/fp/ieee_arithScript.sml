@@ -203,7 +203,7 @@ val not_max_suc_lt_dimword = Q.store_thm("not_max_suc_lt_dimword",
    `!a:'a word. a <> -1w ==> w2n a + 1 < 2 ** dimindex(:'a)`,
    Cases
    \\ lrw [wordsTheory.word_eq_n2w, bitTheory.MOD_2EXP_MAX_def,
-           arithmeticTheory.MOD_2EXP_def, GSYM wordsTheory.dimword_def]
+           bitTheory.MOD_2EXP_def, GSYM wordsTheory.dimword_def]
    )
 
 (* |- !a. a <> 0w ==> 2 <= 2 pow w2n a *)

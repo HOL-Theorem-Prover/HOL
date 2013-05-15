@@ -35,8 +35,8 @@ val numeral_redns =
   :: [numeral_distrib, numeral_eq, numeral_suc, numeral_pre, NORM_0,
       numeral_iisuc, numeral_add, internal_mult_characterisation, iDUB_removal,
       numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
-      numeral_exp, numeral_evenodd, iSQR, numeral_fact,numeral_funpow,
-      numeral_MAX, numeral_MIN, numeral_div2, MOD_2EXP, numeral_imod_2exp,
+      numeral_exp, numeral_evenodd, iSQR, numeral_fact, numeral_funpow,
+      numeral_MAX, numeral_MIN, numeral_div2,
       TWO_EXP_THM, numeral_texp_help, exactlog_def, onecount_def, DIV2_BIT1,
       enumeral_mult];
 

@@ -372,8 +372,8 @@ local
       THEN Rewrite.PURE_REWRITE_TAC [pairTheory.CLOSED_PAIR_EQ]
       THEN Tactical.REPEAT Tactic.CONJ_TAC
       THEN Rewrite.PURE_REWRITE_TAC
-             [arithmeticTheory.MOD_2EXP_def, bitTheory.ODD_MOD2_LEM,
-              numeralTheory.DIV_2EXP]
+             [bitTheory.MOD_2EXP_def, bitTheory.ODD_MOD2_LEM,
+              numeral_bitTheory.DIV_2EXP]
       THEN computeLib.EVAL_TAC
 
    fun boolify_v2w_tac thm =

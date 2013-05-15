@@ -692,7 +692,7 @@ local
                  else if ty2 = intSyntax.int_ty
                     then intSyntax.mk_injected tm
                  else if ty2 = stringSyntax.string_ty
-                    then bitSyntax.mk_num_to_dec_string tm
+                    then ASCIInumbersSyntax.mk_num_to_dec_string tm
                  else if ty2 = Type.bool
                     then boolSyntax.mk_neg (boolSyntax.mk_eq
                            (tm, numSyntax.zero_tm))
@@ -718,7 +718,7 @@ local
                  else if ty2 = bitstringSyntax.bitstring_ty
                     then bitstringSyntax.mk_s2v tm
                  else if ty2 = numSyntax.num
-                    then bitSyntax.mk_num_from_dec_string tm
+                    then ASCIInumbersSyntax.mk_num_from_dec_string tm
                  else if ty2 = intSyntax.int_ty
                     then integer_wordSyntax.mk_fromString tm
                  else if ty2 = stringSyntax.string_ty
@@ -912,8 +912,13 @@ end
 
 (* Definitions *)
 
-fun MEASURE_TAC tm =
-   TotalDefn.WF_REL_TAC `^(boolSyntax.mk_icomb (numSyntax.measure_tm, tm))`
+local
+   val tac = SRW_TAC [listSimps.LIST_ss, numSimps.ARITH_ss] []
+in
+   fun MEASURE_TAC tm =
+      TotalDefn.WF_REL_TAC `^(boolSyntax.mk_icomb (numSyntax.measure_tm, tm))`
+      THEN tac
+end
 
 fun new_def s x = Definition.new_definition (s ^ "_def", boolSyntax.mk_eq x)
 
@@ -924,7 +929,7 @@ fun z_def def =
 fun t_def s def m =
    Feedback.trace ("Define.storage_message", 0)
    (bossLib.tDefine s [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
-     (MEASURE_TAC m THEN SRW_TAC [listSimps.LIST_ss, numSimps.ARITH_ss] [])
+     (MEASURE_TAC m)
 
 val mesg =
    Lib.with_flag

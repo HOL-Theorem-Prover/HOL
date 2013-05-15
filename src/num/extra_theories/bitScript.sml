@@ -5,25 +5,33 @@
 (* DATE          : 2000-2005                                                 *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib lcsymtacs
-open arithmeticTheory listTheory rich_listTheory stringTheory logrootTheory
-open numposrepTheory ASCIInumbersTheory
+open HolKernel Parse boolLib
+open BasicProvers metisLib simpLib numSimps numLib
+open arithmeticTheory logrootTheory
 
 val _ = new_theory "bit";
 
 (* ------------------------------------------------------------------------- *)
 
-infix \\
+infix \\ >- >|
 val op \\ = op THEN;
+val op >- = op THEN1;
+val op >| = op THENL;
 
 val LEFT_REWRITE_TAC =
   GEN_REWRITE_TAC (RATOR_CONV o DEPTH_CONV) empty_rewrites
 
 val POP_LAST_TAC = POP_ASSUM (K ALL_TAC)
 
+val Define = TotalDefn.Define
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = computeLib.auto_import_definitions := false
+
+val MOD_2EXP_def = Define `MOD_2EXP x n = n MOD 2 ** x`
+
+val DIV_2EXP_def = Define `DIV_2EXP x n = n DIV 2 ** x`
 
 val TIMES_2EXP_def  = Define `TIMES_2EXP x n = n * 2 ** x`
 
@@ -66,12 +74,6 @@ val MOD_2EXP_EQ_def = Define`
 
 val MOD_2EXP_MAX_def = Define`
    MOD_2EXP_MAX n a = (MOD_2EXP n a = (2 ** n - 1))`
-
-val _ = computeLib.auto_import_definitions := true
-
-val BOOLIFY_def = Define`
-   (BOOLIFY 0 m a = a) /\
-   (BOOLIFY (SUC n) m a = BOOLIFY n (DIV2 m) (ODD m::a))`
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1375,7 +1377,7 @@ val SUB1_EXP_MOD2 = Q.prove(
    `!n. ~(n = 0) ==> ((2 ** n - 1) MOD 2 = 1)`,
    Induct
    \\ SRW_TAC [] [EXP, DECIDE ``2 * a - 1 = a + (a - 1)``]
-   \\ Cases_on `n` >- EVAL_TAC
+   \\ Cases_on `n` >- computeLib.EVAL_TAC
    \\ `2 ** SUC n' + (2 ** SUC n' - 1) = 2 ** n' * 2 + (2 ** SUC n' - 1)`
    by SIMP_TAC arith_ss [EXP]
    \\ ASM_SIMP_TAC std_ss [MOD_TIMES]
@@ -1473,75 +1475,6 @@ val LEAST_THM = Q.store_thm("LEAST_THM",
    >- ASM_REWRITE_TAC []
    \\ `$LEAST P < n` by DECIDE_TAC
    \\ PROVE_TAC [])
-
-(* ------------------------------------------------------------------------- *)
-
-val BIT_num_from_bin_list = Q.store_thm("BIT_num_from_bin_list",
-   `!x l. EVERY ($> 2) l /\ x < LENGTH l ==>
-          (BIT x (num_from_bin_list l) = (EL x l = 1))`,
-   SRW_TAC [ARITH_ss]
-     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM])
-
-val BIT_num_from_bin_string = Q.store_thm("BIT_num_from_bin_string",
-   `!x s. EVERY ($> 2 o UNHEX) s /\ x < STRLEN s ==>
-          (BIT x (num_from_bin_string s) =
-           (UNHEX (SUB (s, PRE (STRLEN s - x))) = 1))`,
-   SRW_TAC [ARITH_ss] [num_from_bin_string_def, s2n_def]
-   \\ `x < LENGTH (MAP UNHEX (REVERSE s)) /\ x < LENGTH (REVERSE s)`
-   by SRW_TAC [] [LENGTH_MAP, LENGTH_REVERSE]
-   \\ `EVERY ($> 2) (MAP UNHEX (REVERSE s))`
-   by SRW_TAC [] [EVERY_MAP, ALL_EL_REVERSE,
-                  simpLib.SIMP_PROVE std_ss [FUN_EQ_THM]
-                     ``(\x. 2 > UNHEX x) = ($> 2 o UNHEX)``]
-   \\ SRW_TAC [ARITH_ss]
-        [l2n_DIGIT, EL_MAP, EL_REVERSE, SUC_SUB, BIT_def, BITS_THM, SUB_def])
-
-val EL_num_to_bin_list = Q.store_thm("EL_num_to_bin_list",
-   `!x n.
-     x < LENGTH (num_to_bin_list n) ==> (EL x (num_to_bin_list n) = BITV n x)`,
-   SRW_TAC [ARITH_ss]
-     [num_to_bin_list_def, EL_n2l, SUC_SUB, BITV_def, BIT_def, BITS_THM])
-
-val SUB_num_to_bin_string = Q.store_thm("SUB_num_to_bin_string",
-   `!x n. x < STRLEN (num_to_bin_string n) ==>
-          (SUB (num_to_bin_string n, x) =
-           HEX (BITV n (PRE (STRLEN (num_to_bin_string n) - x))))`,
-   SRW_TAC [ARITH_ss]
-       [num_to_bin_string_def, n2s_def, SUB_def, BITV_def, BIT_def, BITS_THM,
-        LENGTH_REVERSE, LENGTH_MAP, SUC_SUB]
-   \\ `PRE (LENGTH (n2l 2 n) - x) < LENGTH (n2l 2 n)`
-   by (SIMP_TAC arith_ss [PRE_SUB1] \\ SIMP_TAC arith_ss [LENGTH_n2l])
-   \\ SRW_TAC [ARITH_ss] [EL_REVERSE, EL_MAP, EL_n2l, SUC_SUB])
-
-(* ------------------------------------------------------------------------- *)
-
-val tac =
-   SRW_TAC [ARITH_ss]
-    [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s,
-     num_from_bin_list_def, num_from_oct_list_def, num_from_dec_list_def,
-     num_from_hex_list_def, num_to_bin_list_def, num_to_oct_list_def,
-     num_to_dec_list_def, num_to_hex_list_def, num_from_bin_string_def,
-     num_from_oct_string_def, num_from_dec_string_def, num_from_hex_string_def,
-     num_to_bin_string_def, num_to_oct_string_def, num_to_dec_string_def,
-     num_to_hex_string_def]
-
-val num_bin_list = Q.store_thm("num_bin_list",
-  `num_from_bin_list o num_to_bin_list = I`, tac)
-val num_oct_list = Q.store_thm("num_oct_list",
-  `num_from_oct_list o num_to_oct_list = I`, tac)
-val num_dec_list = Q.store_thm("num_dec_list",
-  `num_from_dec_list o num_to_dec_list = I`, tac)
-val num_hex_list = Q.store_thm("num_hex_list",
-  `num_from_hex_list o num_to_hex_list = I`, tac)
-
-val num_bin_string = Q.store_thm("num_bin_string",
-  `num_from_bin_string o num_to_bin_string = I`, tac)
-val num_oct_string = Q.store_thm("num_oct_string",
-  `num_from_oct_string o num_to_oct_string = I`, tac)
-val num_dec_string = Q.store_thm("num_dec_string",
-  `num_from_dec_string o num_to_dec_string = I`, tac)
-val num_hex_string = Q.store_thm("num_hex_string",
-  `num_from_hex_string o num_to_hex_string = I`, tac)
 
 (* ------------------------------------------------------------------------- *)
 

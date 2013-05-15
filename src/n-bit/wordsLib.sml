@@ -1,13 +1,11 @@
 structure wordsLib :> wordsLib =
 struct
 
-(* interactive use:
-  app load ["fcpLib", "numeral_bitTheory", "wordsSyntax", "stringSyntax"];
-*)
-
-open HolKernel Parse boolLib bossLib computeLib;
-open bitTheory numeral_bitTheory wordsTheory wordsSyntax
-open numposrepTheory ASCIInumbersTheory
+open HolKernel Parse boolLib bossLib computeLib
+open wordsTheory wordsSyntax
+open bitTheory numeral_bitTheory bitLib
+open numposrepTheory numposrepLib
+open ASCIInumbersTheory ASCIInumbersLib
 
 structure Parse = struct
   open Parse
@@ -175,21 +173,6 @@ local
         (STRIP_QUANT_CONV
            (RHS_CONV (RATOR_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))))
 
-  fun l2n_pow2 i =
-     let
-        val t = numSyntax.mk_numeral (Arbnum.log2 (Arbnum.fromInt i))
-        val (l, r) = CONJ_PAIR l2n_pow2_compute
-     in
-        SIMP_RULE std_ss [] (CONJ (Thm.SPEC t l) (Thm.SPEC t r))
-     end
-
-  fun n2l_pow2 i =
-     let
-        val t = numSyntax.mk_numeral (Arbnum.log2 (Arbnum.fromInt i))
-     in
-        SIMP_RULE std_ss [] (Thm.SPEC t n2l_pow2_compute)
-     end
-
   val w2n_n2w_compute = Q.prove(
      `!n. w2n ((n2w n) : 'a word) =
           if n < dimword(:'a) then n else n MOD dimword(:'a)`,
@@ -224,70 +207,49 @@ local
                                   (Q.SPECL [`^Na`, `T`, `^n2w n`] th))
 
   val thms =
-  [pairTheory.UNCURRY_DEF, combinTheory.K_THM,
-   numLib.SUC_RULE sum_numTheory.SUM_def,
-   listTheory.GENLIST_AUX_compute, listTheory.GENLIST_GENLIST_AUX,
-   iBITWISE, NUMERAL_BITWISE, BITV_def, SBIT_def,
-   NUM_RULE [BIT_ZERO] `n:num` SIGN_EXTEND_def,
-   DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_iDIV2,
-   NUMERAL_SFUNPOW_iDIV2, NUMERAL_SFUNPOW_iDUB, NUMERAL_SFUNPOW_FDUB,
-   FDUB_iDIV2, FDUB_iDUB, FDUB_FDUB,
-   NUMERAL_BIT_MODIFY, NUMERAL_BIT_MODF,
-   NUMERAL_BIT_REVERSE, NUMERAL_BIT_REV,
-   NUM_RULE [NUMERAL_DIV_2EXP, numeralTheory.MOD_2EXP] `n:num` BITS_def,
-   NUM_RULE [NUMERAL_DIV_2EXP, numeralTheory.MOD_2EXP] `n:num` SLICE_def,
-   (SIMP_RULE std_ss [GSYM ODD_MOD2_LEM, arithmeticTheory.MOD_2EXP_def,
-      BITS_def, SUC_SUB] o NUM_RULE [BITS_ZERO2] `n:num`) BIT_def,
-   numLib.SUC_RULE MOD_2EXP_EQ, numLib.SUC_RULE BOOLIFY_def, bit_update_compute,
-   numeral_log2, numeral_ilog2, LOG_compute, LOWEST_SET_BIT_compute,
-   n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
-   word_len_def, word_L_def, word_H_def, word_T_def,
-   word_abs_def, word_min_def, word_max_def, word_smin_def, word_smax_def,
-   bit_count_upto_def, bit_count_def,
-   saturate_w2w_n2w, saturate_n2w_def,
-   saturate_add_def, saturate_sub_def, saturate_mul_def,
-   word_join_def, Q.SPECL [`^n2w n`, `n2w m:'b word`] word_concat_def,
-   Q.SPEC `^Na` word_replicate_concat_word_list, concat_word_list_def,
-   word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
-   Q.SPEC `^Na` word_log2_n2w,
-   word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
-   word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
-   MOD_WL word_add_n2w, MOD_WL word_mul_n2w, word_rol_bv_def,
-   word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def, word_ror_bv_def,
-   word_asr_compute, word_lsr_compute, Q.SPEC `^Na` word_lsl_compute,
-   SHIFT_ZERO, Q.SPEC `^Na` word_ror_n2w,
-   Q.SPECL [`w:'a word`, `^Na`] word_rol_def, word_rrx_n2w,
-   word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
-   NUM_RULE [DIMINDEX_GT_0] `i:num` word_index_n2w,
-   NUM_RULE [DIMINDEX_GT_0] `n:num` fcpTheory.index_comp,
-   NUM_RULE [DIMINDEX_GT_0] `b:num` fcpTheory.FCP_APPLY_UPDATE_THM,
-   word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
-   word_reduce_n2w, Q.SPEC `^n2w n` reduce_and, Q.SPEC `^n2w n` reduce_or,
-   reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
-   word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
-   word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
-   l2n_def, n2l_def, s2n_def, n2s_def, l2w_def, w2l_def, s2w_def, w2s_def,
-   HEX_def, UNHEX_def,
-   num_from_bin_list_def, num_from_oct_list_def, num_from_dec_list_def,
-   num_from_hex_list_def, num_to_bin_list_def, num_to_oct_list_def,
-   num_to_dec_list_def, num_to_hex_list_def, num_from_bin_string_def,
-   num_from_oct_string_def, num_from_dec_string_def, num_from_hex_string_def,
-   num_to_bin_string_def, num_to_oct_string_def, num_to_dec_string_def,
-   num_to_hex_string_def,
-   word_from_bin_list_def, word_from_oct_list_def, word_from_dec_list_def,
-   word_from_hex_list_def, word_to_bin_list_def, word_to_oct_list_def,
-   word_to_dec_list_def, word_to_hex_list_def, word_from_bin_string_def,
-   word_from_oct_string_def, word_from_dec_string_def, word_from_hex_string_def,
-   word_to_bin_string_def, word_to_oct_string_def, word_to_dec_string_def,
-   word_to_hex_string_def]
-  @ map l2n_pow2 [2, 8, 16, 256] @ map n2l_pow2 [2, 8, 16, 256]
+     [numLib.SUC_RULE sum_numTheory.SUM_def, bit_update_compute,
+      n2w_w2n, w2n_n2w_compute, MOD_WL1 w2w_n2w, Q.SPEC `^n2w n` sw2sw_def,
+      word_len_def, word_L_def, word_H_def, word_T_def,
+      word_abs_def, word_min_def, word_max_def, word_smin_def, word_smax_def,
+      bit_count_upto_def, bit_count_def,
+      saturate_w2w_n2w, saturate_n2w_def,
+      saturate_add_def, saturate_sub_def, saturate_mul_def,
+      word_join_def, Q.SPECL [`^n2w n`, `n2w m:'b word`] word_concat_def,
+      Q.SPEC `^Na` word_replicate_concat_word_list, concat_word_list_def,
+      word_reverse_n2w, word_modify_n2w, bit_field_insert_def,
+      Q.SPEC `^Na` word_log2_n2w,
+      word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
+      word_2comp_compute, word_nor_n2w, word_xnor_n2w, word_nand_n2w,
+      word_sub_def, word_div_def, word_sdiv_def, word_mod_def,
+      MOD_WL word_add_n2w, MOD_WL word_mul_n2w, word_rol_bv_def,
+      word_lsl_bv_def, word_lsr_bv_def, word_asr_bv_def, word_ror_bv_def,
+      word_asr_compute, word_lsr_compute, Q.SPEC `^Na` word_lsl_compute,
+      SHIFT_ZERO, Q.SPEC `^Na` word_ror_n2w,
+      Q.SPECL [`w:'a word`, `^Na`] word_rol_def, word_rrx_n2w,
+      word_lsb_n2w, word_msb_n2w, word_bit_n2w, fcp_n2w, fcpTheory.L2V_def,
+      NUM_RULE [DIMINDEX_GT_0] `i:num` word_index_n2w,
+      NUM_RULE [DIMINDEX_GT_0] `n:num` fcpTheory.index_comp,
+      NUM_RULE [DIMINDEX_GT_0] `b:num` fcpTheory.FCP_APPLY_UPDATE_THM,
+      word_bits_n2w, word_signed_bits_n2w, word_slice_n2w, word_extract_n2w,
+      word_reduce_n2w, Q.SPEC `^n2w n` reduce_and, Q.SPEC `^n2w n` reduce_or,
+      reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
+      word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
+      word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
+      l2w_def, w2l_def, s2w_def, w2s_def,
+      word_from_bin_list_def, word_from_oct_list_def,
+      word_from_dec_list_def, word_from_hex_list_def,
+      word_to_bin_list_def, word_to_oct_list_def,
+      word_to_dec_list_def, word_to_hex_list_def,
+      word_from_bin_string_def, word_from_oct_string_def,
+      word_from_dec_string_def, word_from_hex_string_def,
+      word_to_bin_string_def, word_to_oct_string_def,
+      word_to_dec_string_def, word_to_hex_string_def]
 
   fun mrw th = map (REWRITE_RULE [th])
 in
   val thms =
       (mrw TIMES_2EXP1 o mrw (GSYM bitTheory.TIMES_2EXP_def) o
-       mrw (GSYM arithmeticTheory.MOD_2EXP_def)) thms
+       mrw (GSYM bitTheory.MOD_2EXP_def)) thms
 end
 
 fun add_word_convs cmp =
@@ -308,6 +270,9 @@ fun words_compset () =
       val compset = reduceLib.num_compset ()
    in
      listSimps.list_rws compset
+     ; bitLib.add_bit_compset compset
+     ; numposrepLib.add_numposrep_compset compset
+     ; ASCIInumbersLib.add_ASCIInumbers_compset compset
      ; computeLib.add_thms thms compset
      ; add_word_convs compset
      ; compset
@@ -332,7 +297,10 @@ local
      (Lib.swap ## Lib.swap)
 
   fun name_thy_set l =
-     Redblackset.addList (Redblackset.empty name_thy_compare, l)
+     (List.app
+        (fn (thy, c) =>
+           General.ignore (Term.prim_mk_const {Thy = thy, Name = c})) l
+      ; Redblackset.addList (Redblackset.empty name_thy_compare, l))
 
   val l1 =
      ["l2w", "w2l", "s2w", "w2s", "add_with_carry",
@@ -357,26 +325,35 @@ local
       "word_div", "word_sdiv", "word_mod", "word_smod", "word_srem"]
 
   val l2 =
-     ["SBIT", "BIT", "BITS", "BITV",
-      "SLICE", "TIMES_2EXP", "DIVMOD_2EXP", "LOG2", "LOG", "BITWISE",
-      "BIT_REVERSE", "SIGN_EXTEND", "BOOLIFY",
+     ["SBIT", "BIT", "BITS", "BITV", "SLICE",
+      "TIMES_2EXP", "DIV_2EXP", "DIVMOD_2EXP", "MOD_2EXP",
+      "LOG2", "BITWISE", "BIT_REVERSE", "SIGN_EXTEND"]
+
+  val l3 =
+     ["l2n", "n2l", "BOOLIFY",
       "num_from_bin_list", "num_from_oct_list", "num_from_dec_list",
       "num_from_hex_list", "num_to_bin_list", "num_to_oct_list",
-      "num_to_dec_list", "num_to_hex_list", "num_from_bin_string",
-      "num_from_oct_string", "num_from_dec_string", "num_from_hex_string",
+      "num_to_dec_list", "num_to_hex_list"]
+
+  val l4 =
+     ["s2n", "n2s", "HEX", "UNHEX",
+      "num_from_bin_string", "num_from_oct_string", "num_from_dec_string",
+      "num_from_hex_string",
       "num_to_bin_string", "num_to_oct_string", "num_to_dec_string",
       "num_to_hex_string"]
 
-  val l3 = ["fcp_index", ":+"]
+  val l5 = ["fcp_index", ":+"]
 
-  val s = name_thy_set
-           (("min", "=")::
-            ("arithmetic", "DIV_2EXP")::
-            map (pair "ASCIInumbers") ["s2n", "n2s", "HEX", "UNHEX"] @
-            map (pair "numposrep") ["l2n", "n2l"] @
-            map (pair "words") l1 @
-            map (pair "bit") l2 @
-            map (pair "fcp") l3)
+  val s = [("min", ["="]),
+           ("logroot", ["LOG"]),
+           ("words", l1),
+           ("bit", l2),
+           ("numposrep", l3),
+           ("ASCIInumbers", l4),
+           ("fcp", l5)]
+          |> List.map (fn (thy, l) => List.map (Lib.pair thy) l)
+          |> List.concat
+          |> name_thy_set
 
   val s2 =
      Redblackset.addList
@@ -414,7 +391,8 @@ local
                 orelse List.exists (Term.same_const t)
                           [boolSyntax.T, boolSyntax.F,
                            boolSyntax.conjunction, boolSyntax.disjunction,
-                           bitSyntax.hex_tm, bitSyntax.unhex_tm]
+                           ASCIInumbersSyntax.hex_tm,
+                           ASCIInumbersSyntax.unhex_tm]
                 orelse is_ground_list t
 
   fun is_ground_fn s =

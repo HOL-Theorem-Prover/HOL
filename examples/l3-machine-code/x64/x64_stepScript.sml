@@ -239,7 +239,7 @@ val OpSize_rwt = Q.store_thm("OpSize_rwt",
    rw [OpSize_def])
 
 val MOD256 =
-   arithmeticTheory.MOD_2EXP_def
+   bitTheory.MOD_2EXP_def
    |> Q.SPEC `8`
    |> numLib.REDUCE_RULE
    |> GSYM

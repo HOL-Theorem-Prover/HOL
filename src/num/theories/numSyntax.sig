@@ -18,7 +18,6 @@ sig
   val div_tm        : term
   val mod_tm        : term
   val div2_tm       : term
-  val mod_2exp_tm   : term
   val less_tm       : term
   val greater_tm    : term
   val geq_tm        : term
@@ -44,7 +43,6 @@ sig
   val mk_div        : term * term -> term
   val mk_mod        : term * term -> term
   val mk_div2       : term -> term
-  val mk_mod_2exp   : term * term -> term
   val mk_less       : term * term -> term
   val mk_greater    : term * term -> term
   val mk_geq        : term * term -> term
@@ -71,7 +69,6 @@ sig
   val dest_div      : term -> term * term
   val dest_mod      : term -> term * term
   val dest_div2     : term -> term
-  val dest_mod_2exp : term -> term * term
   val dest_less     : term -> term * term
   val dest_greater  : term -> term * term
   val dest_geq      : term -> term * term
@@ -98,7 +95,6 @@ sig
   val is_div        : term -> bool
   val is_mod        : term -> bool
   val is_div2       : term -> bool
-  val is_mod_2exp   : term -> bool
   val is_less       : term -> bool
   val is_greater    : term -> bool
   val is_geq        : term -> bool

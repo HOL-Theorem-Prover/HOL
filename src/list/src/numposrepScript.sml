@@ -1,10 +1,21 @@
 open HolKernel boolLib Parse BasicProvers
 
 open simpLib numLib TotalDefn metisLib
-open listTheory rich_listTheory logrootTheory arithmeticTheory
+open listTheory rich_listTheory logrootTheory arithmeticTheory bitTheory
 
 val ARITH_ss = numSimps.ARITH_ss
+
+infix \\ << >>
+
+val op \\ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+
 val _ = new_theory "numposrep"
+
+(* ------------------------------------------------------------------------- *)
+
+val () = computeLib.auto_import_definitions := false
 
 val l2n_def = Define`
   (l2n b [] = 0) /\
@@ -23,11 +34,11 @@ val num_to_oct_list_def = Define `num_to_oct_list = n2l 8`;
 val num_to_dec_list_def = Define `num_to_dec_list = n2l 10`;
 val num_to_hex_list_def = Define `num_to_hex_list = n2l 16`;
 
-infix \\ << >>
+val BOOLIFY_def = Define`
+   (BOOLIFY 0 m a = a) /\
+   (BOOLIFY (SUC n) m a = BOOLIFY n (DIV2 m) (ODD m::a))`
 
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
+(* ------------------------------------------------------------------------- *)
 
 val LENGTH_n2l = Q.store_thm("LENGTH_n2l",
   `!b n. 1 < b ==> (LENGTH (n2l b n) = if n = 0 then 1 else SUC (LOG b n))`,
@@ -164,5 +175,94 @@ val n2l_BOUND = Q.store_thm("n2l_BOUND",
     \\ SRW_TAC [ARITH_ss] [Once n2l_def, GREATER_DEF]
     \\ `LOG b (n DIV b) < LOG b n` by SRW_TAC [ARITH_ss] [LOG_DIV_LESS]
     \\ SRW_TAC [ARITH_ss] []);
+
+(* ------------------------------------------------------------------------- *)
+
+val l2n_pow2_compute = Q.store_thm("l2n_pow2_compute",
+   `(!p. l2n (2 ** p) [] = 0) /\
+    (!p h t. l2n (2 ** p) (h::t) =
+             MOD_2EXP p h + TIMES_2EXP p (l2n (2 ** p) t))`,
+   SRW_TAC [ARITH_ss] [l2n_def, TIMES_2EXP_def, MOD_2EXP_def])
+
+val lem = (GEN_ALL o REWRITE_RULE [EXP] o Q.SPECL [`n`,`0`] o
+           REWRITE_RULE [DECIDE ``1 < 2``] o Q.SPEC `2`) EXP_BASE_LT_MONO
+
+val n2l_pow2_compute = Q.store_thm("n2l_pow2_compute",
+   `!p n. 0 < p ==>
+         (n2l (2 ** p) n =
+          let (q,r) = DIVMOD_2EXP p n in
+            if q = 0 then [r] else r::n2l (2 ** p) q)`,
+   SRW_TAC [] [Once n2l_def, DIVMOD_2EXP_def,
+               DECIDE ``x < 2 = (x = 0) \/ (x = 1)``]
+   \\ SRW_TAC [ARITH_ss] [LESS_DIV_EQ_ZERO]
+   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT])
+
+val l2n2_def = new_definition ("l2n2", ``l2n2 = l2n 2``)
+
+val l2n2_empty = Q.prove(
+   `l2n2 [] = ZERO`,
+   REWRITE_TAC [l2n2_def, l2n_def, arithmeticTheory.ALT_ZERO]
+   )
+
+val l2n_2 =
+   SIMP_RULE arith_ss [bitTheory.MOD_2EXP_def, bitTheory.TIMES_2EXP_def]
+      (Q.SPEC `1` (Thm.CONJUNCT2 l2n_pow2_compute))
+
+val l2n2_cons0 = Q.prove(
+   `!t. l2n2 (0::t) = numeral$iDUB (l2n2 t)`,
+   SIMP_TAC arith_ss [l2n2_def, l2n_2]
+   \\ METIS_TAC [arithmeticTheory.MULT_COMM, arithmeticTheory.TIMES2,
+                 numeralTheory.iDUB]
+   )
+
+val l2n2_cons1 = Q.prove(
+   `!t. l2n2 (1::t) = arithmetic$BIT1 (l2n2 t)`,
+   SIMP_TAC arith_ss [l2n2_def, l2n_2]
+   \\ METIS_TAC [numLib.DECIDE ``2 * a + 1 = a + (a + SUC 0)``,
+                 arithmeticTheory.BIT1]
+   )
+
+val l2n2 = Q.prove(
+   `(!t. l2n 2 (0::t) = NUMERAL (l2n2 (0::t))) /\
+    (!t. l2n 2 (1::t) = NUMERAL (l2n2 (1::t)))`,
+   REWRITE_TAC [l2n2_def, arithmeticTheory.NUMERAL_DEF]
+   )
+
+val l2n_2_thms = save_thm("l2n_2_thms",
+   LIST_CONJ (CONJUNCTS l2n2 @ [l2n2_empty, l2n2_cons0, l2n2_cons1]))
+
+val () = Parse.remove_ovl_mapping "l2n2" {Thy = "numposrep", Name = "l2n2"}
+
+(* ------------------------------------------------------------------------- *)
+
+val BIT_num_from_bin_list = Q.store_thm("BIT_num_from_bin_list",
+   `!x l. EVERY ($> 2) l /\ x < LENGTH l ==>
+          (BIT x (num_from_bin_list l) = (EL x l = 1))`,
+   SRW_TAC [ARITH_ss]
+     [num_from_bin_list_def, l2n_DIGIT, SUC_SUB, BIT_def, BITS_THM])
+
+val EL_num_to_bin_list = Q.store_thm("EL_num_to_bin_list",
+   `!x n.
+     x < LENGTH (num_to_bin_list n) ==> (EL x (num_to_bin_list n) = BITV n x)`,
+   SRW_TAC [ARITH_ss]
+     [num_to_bin_list_def, EL_n2l, SUC_SUB, BITV_def, BIT_def, BITS_THM])
+
+val tac =
+   SRW_TAC [ARITH_ss]
+    [FUN_EQ_THM, l2n_n2l,
+     num_from_bin_list_def, num_from_oct_list_def, num_from_dec_list_def,
+     num_from_hex_list_def, num_to_bin_list_def, num_to_oct_list_def,
+     num_to_dec_list_def, num_to_hex_list_def]
+
+val num_bin_list = Q.store_thm("num_bin_list",
+  `num_from_bin_list o num_to_bin_list = I`, tac)
+val num_oct_list = Q.store_thm("num_oct_list",
+  `num_from_oct_list o num_to_oct_list = I`, tac)
+val num_dec_list = Q.store_thm("num_dec_list",
+  `num_from_dec_list o num_to_dec_list = I`, tac)
+val num_hex_list = Q.store_thm("num_hex_list",
+  `num_from_hex_list o num_to_hex_list = I`, tac)
+
+(* ------------------------------------------------------------------------- *)
 
 val _ = export_theory()

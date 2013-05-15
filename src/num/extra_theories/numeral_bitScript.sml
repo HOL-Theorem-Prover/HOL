@@ -6,13 +6,112 @@
 (* DATE          : 2001-2005                                                 *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib lcsymtacs
-open arithmeticTheory numeralTheory bitTheory numposrepTheory
+open HolKernel Parse boolLib
+open BasicProvers metisLib simpLib numSimps numLib
+open arithmeticTheory numeralTheory bitTheory
 
 val _ = new_theory "numeral_bit";
 
-infix \\
+infix \\ >- >|
 val op \\ = op THEN;
+val op >- = op THEN1;
+val op >| = op THENL;
+
+(* ------------------------------------------------------------------------- *)
+
+(*
+   Add mod_2exp and div_2exp to bitSyntax
+*)
+
+val BIT1n =
+   METIS_PROVE [ONE, ADD_ASSOC, BIT1, TIMES2] ``!n. BIT1 n = 2 * n + 1``
+
+val BIT2n =
+   METIS_PROVE [ADD_ASSOC,ADD1,ADD,BIT2,TIMES2] ``!n. BIT2 n = 2 * (SUC n)``
+
+val ONE_LT_TWO = METIS_PROVE [ONE, TWO, prim_recTheory.LESS_SUC_REFL] ``1 < 2``
+
+val ONE_LT_TWOEXP =
+   METIS_PROVE [EXP_BASE_LT_MONO, EXP, ONE_LT_TWO, prim_recTheory.LESS_0]
+     ``!n. 1 < 2 ** SUC n``
+
+val ZERO_LT_TWO = METIS_PROVE [TWO, prim_recTheory.LESS_0] ``0 < 2``
+
+val ZERO_LT_TWOEXP =
+   (GEN_ALL o REWRITE_RULE [GSYM TWO] o Q.SPECL [`n`,`1`]) ZERO_LESS_EXP
+
+val DOUBLE_LT_COR =
+   METIS_PROVE [DOUBLE_LT, LT_MULT_LCANCEL, ZERO_LT_TWO]
+     ``!a b. a < b ==> 2 * a + 1 < 2 * b``
+
+val NUMERAL_MOD_2EXP = Q.prove(
+  `(!n. MOD_2EXP 0 n = ZERO) /\
+   (!x n. MOD_2EXP x ZERO = ZERO) /\
+   (!x n. MOD_2EXP (SUC x) (BIT1 n) = BIT1 (MOD_2EXP x n)) /\
+   (!x n. MOD_2EXP (SUC x) (BIT2 n) = numeral$iDUB (MOD_2EXP x (SUC n)))`,
+  RW_TAC bool_ss [MOD_2EXP_def, iDUB, GSYM DIV2_def, EXP, MOD_1, GSYM TIMES2,
+                  REWRITE_RULE [SYM ALT_ZERO, NUMERAL_DEF, ADD1] numeral_div2]
+  THENL [
+     REWRITE_TAC [ALT_ZERO],
+     METIS_TAC [ALT_ZERO, ZERO_MOD, ZERO_LT_TWOEXP],
+     STRIP_ASSUME_TAC (Q.SPEC `x` num_CASES)
+     THENL [
+        ASM_REWRITE_TAC [EXP, MULT_RIGHT_1, MOD_1]
+        \\ SUBST1_TAC (Q.SPEC `n` BIT1n)
+        \\ SIMP_TAC bool_ss
+             [ONE_LT_TWO, MOD_MULT, Q.SPEC `0` BIT1n,
+              ONCE_REWRITE_RULE [GSYM MULT_COMM] MOD_MULT, MULT_0, ADD],
+        POP_ASSUM SUBST1_TAC
+        \\ SUBST1_TAC (Q.SPEC `n` BIT1n)
+        \\ SIMP_TAC bool_ss [Once (GSYM MOD_PLUS), ZERO_LT_TWOEXP, GSYM EXP]
+        \\ SIMP_TAC bool_ss
+             [Once EXP, GSYM MOD_COMMON_FACTOR, ZERO_LT_TWOEXP, ZERO_LT_TWO]
+        \\ SIMP_TAC bool_ss [LESS_MOD, ONE_LT_TWOEXP]
+        \\ METIS_TAC
+             [BIT1n, DOUBLE_LT_COR, LESS_MOD, EXP, DIVISION, ZERO_LT_TWOEXP]
+     ],
+     Q.SPEC_THEN `n` SUBST1_TAC BIT2n
+     \\ METIS_TAC
+          [MOD_COMMON_FACTOR, TWO, prim_recTheory.LESS_0, ZERO_LT_TWOEXP]
+  ])
+
+val iMOD_2EXP = new_definition("iMOD_2EXP", ``iMOD_2EXP = MOD_2EXP``)
+
+val BIT1n = REWRITE_RULE [GSYM ADD1] BIT1n
+
+val numeral_imod_2exp = Q.store_thm("numeral_imod_2exp",
+  `(!n. iMOD_2EXP 0 n = ZERO) /\
+   (!x n. iMOD_2EXP x ZERO = ZERO) /\
+   (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT1 n) =
+          BIT1 (iMOD_2EXP (NUMERAL (BIT1 x) - 1) n)) /\
+   (!x n. iMOD_2EXP (NUMERAL (BIT2 x)) (BIT1 n) =
+          BIT1 (iMOD_2EXP (NUMERAL (BIT1 x)) n)) /\
+   (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT2 n) =
+          numeral$iDUB (iMOD_2EXP (NUMERAL (BIT1 x) - 1) (SUC n))) /\
+    !x n. iMOD_2EXP (NUMERAL (BIT2 x)) (BIT2 n) =
+          numeral$iDUB (iMOD_2EXP (NUMERAL (BIT1 x)) (SUC n))`,
+  RW_TAC bool_ss [iMOD_2EXP, NUMERAL_MOD_2EXP]
+  \\ SUBST1_TAC (Q.SPEC `BIT1 x` NUMERAL_DEF)
+  \\ SUBST1_TAC (Q.SPEC `BIT2 x` NUMERAL_DEF)
+  \\ SUBST1_TAC (Q.SPEC `x` BIT1n)
+  \\ SUBST1_TAC (Q.SPEC `x` ((GSYM o hd o tl o CONJUNCTS) numeral_suc))
+  \\ SIMP_TAC bool_ss [NUMERAL_MOD_2EXP, SUC_SUB1, GSYM BIT1n])
+
+val MOD_2EXP = save_thm("MOD_2EXP",
+  CONJ (REWRITE_RULE [ALT_ZERO] (hd (tl (CONJUNCTS NUMERAL_MOD_2EXP))))
+       (METIS_PROVE [NUMERAL_DEF, iMOD_2EXP]
+         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``))
+
+val DIV_2EXP = Q.store_thm("DIV_2EXP",
+  `!n x. DIV_2EXP n x = FUNPOW DIV2 n x`,
+  Induct
+  \\ ASM_SIMP_TAC bool_ss
+        [DIV_2EXP_def, CONJUNCT1 FUNPOW, FUNPOW_SUC, CONJUNCT1 EXP, DIV_1]
+  \\ POP_ASSUM
+        (fn th =>
+            SIMP_TAC bool_ss
+               [GSYM th, EXP_1, ADD1, EXP_ADD, DIV2_def, DIV_2EXP_def,
+                DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP]))
 
 (* ------------------------------------------------------------------------- *)
 
@@ -20,13 +119,13 @@ val numeral_mod2 = Q.store_thm("numeral_mod2",
    `(0 MOD 2 = 0) /\
     (!n. NUMERAL (BIT1 n) MOD 2 = 1) /\
     (!n. NUMERAL (BIT2 n) MOD 2 = 0)`,
-   rw []
+   SRW_TAC [] []
    >| [`NUMERAL (BIT1 n) = 2 * n + 1`
        by metisLib.METIS_TAC [NUMERAL_DEF, ONE, ADD_ASSOC, BIT1, TIMES2],
        `NUMERAL (BIT2 n) = 2 * (SUC n)`
        by metisLib.METIS_TAC [NUMERAL_DEF, ADD_ASSOC, ADD1, ADD, BIT2, TIMES2]]
-   \\ pop_assum SUBST1_TAC
-   \\ srw_tac [numSimps.MOD_ss] [])
+   \\ POP_ASSUM SUBST1_TAC
+   \\ SRW_TAC [numSimps.MOD_ss] [])
 
 val iDUB_NUMERAL = Q.store_thm("iDUB_NUMERAL",
    `numeral$iDUB (NUMERAL i) = NUMERAL (numeral$iDUB i)`,
@@ -460,25 +559,8 @@ val LOWEST_SET_BIT_compute = save_thm("LOWEST_SET_BIT_compute",
 
 (* ------------------------------------------------------------------------- *)
 
-val l2n_pow2_compute = Q.store_thm("l2n_pow2_compute",
-   `(!p. l2n (2 ** p) [] = 0) /\
-    (!p h t. l2n (2 ** p) (h::t) =
-             MOD_2EXP p h + TIMES_2EXP p (l2n (2 ** p) t))`,
-   SRW_TAC [ARITH_ss] [l2n_def, TIMES_2EXP_def, MOD_2EXP_def])
-
-val lem = (GEN_ALL o REWRITE_RULE [EXP] o Q.SPECL [`n`,`0`] o
-           REWRITE_RULE [DECIDE ``1 < 2``] o Q.SPEC `2`) EXP_BASE_LT_MONO
-
-val n2l_pow2_compute = Q.store_thm("n2l_pow2_compute",
-   `!p n. 0 < p ==>
-         (n2l (2 ** p) n =
-          let (q,r) = DIVMOD_2EXP p n in
-            if q = 0 then [r] else r::n2l (2 ** p) q)`,
-   SRW_TAC [] [Once n2l_def, DIVMOD_2EXP_def,
-               DECIDE ``x < 2 = (x = 0) \/ (x = 1)``]
-   \\ SRW_TAC [ARITH_ss] [LESS_DIV_EQ_ZERO]
-   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT])
-
-(* ------------------------------------------------------------------------- *)
+val () =
+   List.app (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral_bit"})
+            ["iBITWISE", "iSUC", "iDIV2", "iLOG2", "iMOD_2EXP"]
 
 val _ = export_theory()

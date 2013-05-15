@@ -74,7 +74,7 @@ fun test_counter (c:conv) tm = let
                        if Lib.can Drule.EQF_ELIM thm then
                          NONE
                        else
-                         SOME "invalid counterexample"
+                         SOME "bad counterexample"
                    | HOL_ERR {origin_function,...} =>
                          SOME ("unexpected exception from " ^ origin_function)
 in
