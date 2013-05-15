@@ -26,6 +26,12 @@ fun intro_arm_OK th = let
   val th = th |> HIDE_PRE_POST_RULE ``arm_CurrentCondition``
               |> HIDE_PRE_POST_RULE ``arm_Encoding``
               |> HIDE_PRE_POST_RULE ``arm_undefined``
+  val pat = ``word_bit 0 (r14:word32)``
+  val th = if not (can (find_term (can (match_term pat))) (concl th)) then th else
+    let val tm = find_term (can (match_term pat)) (concl th)
+        in REWRITE_RULE [ASSUME (mk_neg tm)] th
+               |> DISCH (mk_neg tm)
+               |> REWRITE_RULE [GSYM SPEC_MOVE_COND] end
   val xs = arm_OK_def |> concl |> rand |> list_dest dest_star |> map get_sep_domain
   val move = foldr (fn (x,c) => MOVE_OUT_CONV x THENC c) ALL_CONV xs
              THENC REWRITE_CONV [GSYM STAR_ASSOC,
@@ -103,6 +109,12 @@ fun format_thm th = let
                   in SOME (0 - n) end handle HOL_ERR _ =>
               if pc = pc_var then SOME 0 else NONE)
   in (th,4,next) end
+
+fun l3_arm_triples hex = let
+  val xs = arm_progLib.arm_spec_hex hex
+  fun f th = th |> PURE_REWRITE_RULE [GSYM L3_ARM_MODEL_def]
+                |> intro_arm_PC |> introduce_arm_MEMORY
+  in map f xs end;
 
 fun l3_arm_spec hex = let
   val xs = arm_progLib.arm_spec_hex hex
