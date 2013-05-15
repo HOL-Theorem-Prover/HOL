@@ -2669,6 +2669,69 @@ val LUPDATE_SNOC = store_thm("LUPDATE_SNOC",
 val LUPDATE_compute = save_thm("LUPDATE_compute",
    numLib.SUC_RULE LUPDATE_def)
 
+val EVERYi_def = Define`
+  (EVERYi P [] = T) /\
+  (EVERYi P (h::t) = P 0 h /\ EVERYi (P o SUC) t)
+`
+
+val splitAtPki_def = Define`
+  (splitAtPki P k [] = k [] []) /\
+  (splitAtPki P k (h::t) =
+     if P 0 h then k [] (h::t)
+     else splitAtPki (P o SUC) (\p s. k (h::p) s) t)
+`
+
+val splitAtPki_APPEND = store_thm(
+  "splitAtPki_APPEND",
+  ``!l1 l2 P k.
+      EVERYi (\i. $~ o P i) l1 /\ (0 < LENGTH l2 ==> P (LENGTH l1) (HD l2)) ==>
+      (splitAtPki P k (l1 ++ l2) = k l1 l2)``,
+  Induct THEN SRW_TAC[][EVERYi_def, splitAtPki_def] THEN1
+    (Cases_on `l2` THEN FULL_SIMP_TAC (srw_ss())[splitAtPki_def]) THEN
+  FULL_SIMP_TAC (srw_ss()) [combinTheory.o_DEF]);
+
+val splitAtPki_EQN = store_thm(
+  "splitAtPki_EQN",
+  ``splitAtPki P k l =
+      case OLEAST i. i < LENGTH l /\ P i (EL i l) of
+          NONE => k l []
+        | SOME i => k (TAKE i l) (DROP i l)``,
+  MAP_EVERY Q.ID_SPEC_TAC [`P`, `k`, `l`] THEN Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [splitAtPki_def] THEN POP_ASSUM (K ALL_TAC) THEN
+  MAP_EVERY Q.X_GEN_TAC [`h`, `k`, `P`] THEN Cases_on `P 0 h` THEN1
+    (ASM_SIMP_TAC (srw_ss()) [] THEN
+     `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME 0`
+        suffices_by SRW_TAC [][] THEN
+     DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN SRW_TAC [][] THEN1
+       (Q.EXISTS_TAC `0` THEN SRW_TAC [][]) THEN
+     `~(0 < n)` suffices_by numLib.ARITH_TAC THEN STRIP_TAC THEN RES_TAC THEN
+     FULL_SIMP_TAC (srw_ss()) []) THEN
+  SRW_TAC [][] THEN
+  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+  CONJ_TAC THENL [
+    STRIP_TAC THEN
+    `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = NONE`
+      suffices_by SRW_TAC [][] THEN
+    DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN CONJ_TAC
+      THEN1 SRW_TAC [][] THEN
+    Cases THEN SRW_TAC [][],
+
+    Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
+    `(OLEAST i. i < SUC (LENGTH l) /\ P i (EL i (h::l))) = SOME (SUC i)`
+      suffices_by SRW_TAC [][] THEN
+    DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN CONJ_TAC THEN1
+      (DISCH_THEN (Q.SPEC_THEN `SUC i` MP_TAC) THEN SRW_TAC [][]) THEN
+    Q.X_GEN_TAC `j` THEN SRW_TAC [][] THEN
+    `~(j < SUC i) /\ ~(SUC i < j)` suffices_by numLib.ARITH_TAC THEN
+    REPEAT STRIP_TAC THENL [
+      Cases_on `j` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
+      FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
+      POP_ASSUM
+        (fn si_lt_j => FIRST_X_ASSUM (MP_TAC o C MATCH_MP si_lt_j)) THEN
+      SRW_TAC [][]
+    ]
+  ]);
+
 (* --------------------------------------------------------------------- *)
 
 val LAST_compute = Q.store_thm("LAST_compute",
