@@ -18,7 +18,7 @@
 structure Streams :> Streams =
 struct
   open Arbint
-  val << = String.<
+  val op << = String.<
 
 
 open Lib;

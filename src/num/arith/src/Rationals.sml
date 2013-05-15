@@ -19,7 +19,7 @@
 structure Rationals :> Rationals =
 struct
  open Arbint
-  val << = String.<
+  val op << = String.<
 
 
 open Int_extra;

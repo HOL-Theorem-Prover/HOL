@@ -21,7 +21,7 @@ struct
        Arith_cons Term_coeffs RJBConv Theorems Thm_convs reduceLib;
 
 
-  val << = String.<
+  val op << = String.<
   infix << ## THENC;
   infixr -->
 

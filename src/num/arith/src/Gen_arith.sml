@@ -19,7 +19,7 @@ val REWRITE_CONV = Rewrite.REWRITE_CONV;
 
 fun failwith function = raise (mk_HOL_ERR "Gen_arith" function "");
 
-val << = String.<;
+val op << = String.<;
 
 
 (*---------------------------------------------------------------------------*)

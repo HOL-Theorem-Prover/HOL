@@ -18,7 +18,7 @@
 structure Theorems :> Theorems =
 struct
   open Arbint
-  val << = String.<
+  val op << = String.<
 
 
 open HolKernel boolLib

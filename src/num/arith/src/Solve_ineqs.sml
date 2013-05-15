@@ -21,7 +21,7 @@ struct
        Int_extra Arith_cons Term_coeffs RJBConv Theorems Thm_convs
        Norm_arith Norm_ineqs reduceLib;
 
-val << = String.<
+val op << = String.<
 infix << THENC ##;
 
 val num_CONV = Num_conv.num_CONV;
