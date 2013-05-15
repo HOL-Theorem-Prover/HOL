@@ -2,7 +2,7 @@ structure stringLib :> stringLib =
 struct
 
 open HolKernel boolLib numSyntax reduceLib
-open ASCIInumbersLib stringTheory stringSyntax;
+open stringTheory stringSyntax;
 
 val ERR = mk_HOL_ERR "stringLib";
 

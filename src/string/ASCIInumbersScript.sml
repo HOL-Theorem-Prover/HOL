@@ -6,7 +6,7 @@ open HolKernel Parse boolLib bossLib
 open metisLib simpLib listSimps
 
 open arithmeticTheory listTheory combinTheory pairTheory
-     numTheory stringTheory rich_listTheory listSimps numposrepTheory
+     numTheory stringTheory stringLib rich_listTheory listSimps numposrepTheory
      logrootTheory bitTheory
 
 infix \\ << >>
