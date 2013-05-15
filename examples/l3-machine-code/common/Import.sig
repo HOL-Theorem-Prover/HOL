@@ -70,6 +70,7 @@ sig
 
    val start : string -> unit
    val finish : int -> unit
+   val open_monad_syntax : unit -> unit
 
    val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit

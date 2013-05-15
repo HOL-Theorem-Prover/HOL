@@ -23,6 +23,11 @@ in
       (type_names := []
        ; const_names := []
        ; Theory.new_theory thy)
+   fun open_monad_syntax () =
+      Theory.adjoin_to_theory
+        {sig_ps = NONE,
+         struct_ps =
+            SOME (fn ppstrm => PP.add_string ppstrm "open monadsyntax")}
    fun finish i =
       (Theory.adjoin_to_theory {
          sig_ps =
