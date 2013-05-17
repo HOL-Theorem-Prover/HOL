@@ -202,21 +202,31 @@ val RESTR_EVAL_RULE = Conv.CONV_RULE o RESTR_EVAL_CONV;
       Support for persistence of the_compset
  ---------------------------------------------------------------------------*)
 
-fun write_datatype_info tyinfo =
- let open TypeBasePure Drule
-     val size_opt =
-       case size_of0 tyinfo
-        of SOME (_, ORIG def) => SOME def
-         | otherwise => NONE
-     val boolify_opt =
-	       case encode_of0 tyinfo
-        of SOME (_, ORIG def) => SOME def
-         | otherwise => NONE
-     val compset_addns = [size_opt, boolify_opt]
-     val simpls = #rewrs (simpls_of tyinfo)
- in
-    add_funs (mapfilter Option.valOf compset_addns @ simpls)
- end
+local
+   val get_f =
+      fst o boolSyntax.strip_comb o boolSyntax.lhs o
+      snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o
+      Thm.concl
+in
+   fun write_datatype_info tyinfo =
+    let open TypeBasePure Drule
+        val size_opt =
+          case size_of0 tyinfo
+           of SOME (_, ORIG def) => [def]
+            | otherwise => []
+        val boolify_opt =
+          case encode_of0 tyinfo
+           of SOME (_, ORIG def) => [def]
+            | otherwise => []
+        val case_const = Lib.total case_const_of tyinfo
+        val simpls = #rewrs (simpls_of tyinfo)
+        val (case_thm, simpls) =
+           List.partition (fn thm => Lib.total get_f thm = case_const) simpls
+        val case_thm = List.map lazyfy_thm case_thm
+    in
+       add_funs (size_opt @ boolify_opt @ case_thm @ simpls)
+    end
+end
 
 (*---------------------------------------------------------------------------*)
 (* Usage note: call this before export_theory().                             *)
