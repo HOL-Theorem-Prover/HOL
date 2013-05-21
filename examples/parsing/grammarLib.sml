@@ -237,9 +237,8 @@ in
         end
 end
 
-fun clause_to_termSet ntnm nty (gi as {tokty,...}:ginfo) c = let
+fun clause_to_termSet nty (gi as {tokty,...}:ginfo) c = let
   val symty = mk_symty(tokty,nty)
-  val nt_t = mkNT0 nty (#mkntname gi) ntnm
   open pred_setSyntax pairSyntax listSyntax
 in
   case c of
@@ -249,7 +248,7 @@ in
             case mmap (sym_to_term nty gi) slist [] of
                 (used, Some ts) => (used, ts)
              |  _ => raise Fail "Can't happen"
-        val body = mk_pair(nt_t, mk_list(ts, symty))
+        val body = mk_list(ts, symty)
       in
         case used of
             [] => mk_insert(body, inst [alpha |-> type_of body] empty_tm)
@@ -260,9 +259,7 @@ in
         val TOK_t' = inst [alpha |-> tokty, beta |-> nty] TOK_t
         val symlist_ty = mk_list_type symty
       in
-        image (fn t => mk_pair(nt_t, mk_list([mk_comb(TOK_t', t)], symty)))
-              (mk_prod(mk_infty nty, symlist_ty))
-              t
+        image (fn t => mk_list([mk_comb(TOK_t', t)], symty)) symlist_ty t
       end
 end
 
@@ -276,9 +273,20 @@ fun mk_grammar_def0 (gi:ginfo) (g:t) = let
   val nty = mk_thy_type { Thy = current_theory(),
                           Tyop = nt_tyname, Args = []}
   val U = list_mk_lbinop (curry pred_setSyntax.mk_union) o List.concat
+  val symty = mk_symty(tokty,nty)
   val gty = mk_thy_type {Thy = "grammar", Tyop = "grammar", Args = [tokty,nty]}
-  val rules =
-      U (map (fn (ntnm,cs) => map (clause_to_termSet ntnm nty gi) cs) g)
+  fun foldthis ((ntnm, cs), rules_fm) = let
+    val nt_t = mkNT0 nty (#mkntname gi) ntnm
+    val rhs_sets = map (clause_to_termSet nty gi) cs
+    val rhs_set = list_mk_lbinop (curry pred_setSyntax.mk_union) rhs_sets
+  in
+    finite_mapSyntax.mk_fupdate(rules_fm, pairSyntax.mk_pair(nt_t, rhs_set))
+  end
+
+  val rules = List.foldl foldthis
+                         (finite_mapSyntax.mk_fempty
+                            (mk_infty nty, listSyntax.mk_list_type symty --> bool))
+                         g
   val grammar_t =
       TypeBase.mk_record (gty, [("start", mkNT0 nty mkntname start),
                                 ("rules", rules)])

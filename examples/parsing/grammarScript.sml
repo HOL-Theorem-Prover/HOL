@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib
 
 open boolSimps lcsymtacs
 
-open listTheory pred_setTheory
+open listTheory pred_setTheory finite_mapTheory
 
 val _ = new_theory "grammar"
 
@@ -19,7 +19,7 @@ val _ = export_rewrites ["isTOK_def"]
 val _ = Hol_datatype`
   grammar = <|
    start : 'b inf;
-   rules : ('b inf # ('a,'b)symbol list) set
+   rules : 'b inf |-> ('a,'b)symbol list set
 |> `;
 
 val _ = Hol_datatype`
@@ -52,7 +52,7 @@ fun tzDefine nm q tac = noneval (tDefine nm q) tac
 val valid_ptree_def = tzDefine "valid_ptree" `
   (valid_ptree G (Lf _) ⇔ T) ∧
   (valid_ptree G (Nd nt children) ⇔
-    (nt,MAP ptree_head children) ∈ G.rules ∧
+    nt ∈ FDOM G.rules ∧ MAP ptree_head children ∈ G.rules ' nt ∧
     ∀pt. pt ∈ set children ⇒ valid_ptree G pt)`
   (WF_REL_TAC `measure (ptree_size o SND)` THEN
    Induct_on `children` THEN SRW_TAC [][] THEN1 DECIDE_TAC THEN
@@ -84,7 +84,7 @@ val language_def = Define`
 val derive_def = Define`
   derive G sf1 sf2 ⇔
     ∃p sym rhs s. sf1 = p ++ [NT sym] ++ s ∧ sf2 = p ++ rhs ++ s ∧
-                  (sym,rhs) ∈ G.rules
+                  sym ∈ FDOM G.rules ∧ rhs ∈ G.rules ' sym
 `;
 
 val RTC1 = relationTheory.RTC_RULES |> Q.SPEC `R` |> CONJUNCT2
@@ -112,7 +112,7 @@ val derive_paste_horizontally = store_thm(
 
 val derive_1NT = store_thm(
   "derive_1NT",
-  ``derive G [NT s] l ⇔ (s,l) ∈ G.rules``,
+  ``derive G [NT s] l ⇔ s ∈ FDOM G.rules ∧ l ∈ G.rules ' s``,
   rw[derive_def, APPEND_EQ_CONS]);
 val _ = export_rewrites ["derive_1NT"]
 
@@ -149,7 +149,7 @@ val valid_ptree_derive = store_thm(
   ``∀pt. valid_ptree G pt ⇒ derives G [ptree_head pt] (ptree_fringe pt)``,
   ho_match_mp_tac ptree_ind >> rw[] >> fs[] >>
   match_mp_tac RTC1 >> qexists_tac `MAP ptree_head l` >> rw[] >>
-  qpat_assum `(X,Y) ∈ SS` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
+  qpat_assum `SS ∈ G.rules ' s` (K ALL_TAC) >> Induct_on `l` >> rw[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM] >>
   metis_tac [derives_paste_horizontally, APPEND]);
 
@@ -303,8 +303,8 @@ val derive_fringe = store_thm(
   qpat_assum `derive G XX YY` mp_tac >>
   simp[derive_def] >>
   disch_then (qxchl [`pfx`, `nt`, `rhs`, `sfx`] strip_assume_tac) >>
-  qspecl_then [`Nd s l`, `pfx`, `NT nt`, `sfx`] mp_tac
-    fringe_element >> simp[] >>
+  qspecl_then [`Nd s l`, `pfx`, `NT nt`, `sfx`] mp_tac fringe_element >>
+  simp[] >>
   disch_then (qxchl [`ip`, `is`, `ts1`, `xpt`, `ts2`] strip_assume_tac) >>
   rw[] >>
   fs[rich_listTheory.FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
