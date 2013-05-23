@@ -426,6 +426,25 @@ With prefix argument, drop the goal afterwards."
        hol-echo-commands-p t))
   (if arg (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p nil)))
 
+(defun hol-start-termination-proof (arg)
+  "Send definition around point to HOL process as Defn.tgoal.
+If prefix ARG is true, or if in transient mark mode, region is active and
+the region contains no backquotes, then send region instead."
+  (interactive "P")
+  (let ((txt (condition-case nil
+                 (with-hol-locpragma (region-beginning)
+                    (buffer-substring (region-beginning) (region-end)))
+               (error nil))))
+    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+            arg)
+      (hol-send-string-as-termination-proof txt)
+    (hol-send-string-as-termination-proof (hol-term-at-point)))))
+
+(defun hol-send-string-as-termination-proof (str)
+  (send-raw-string-to-hol
+   (concat
+    "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `" str "`)") nil t))
+
 (defun remove-sml-comments (end)
   (let (done (start (point)))
     (while (and (not done) (re-search-forward "(\\*\\|\\*)" end t))
@@ -1593,6 +1612,7 @@ module if not already loaded.)"
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
+(define-key hol-map "T"    'hol-start-termination-proof)
 (define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
