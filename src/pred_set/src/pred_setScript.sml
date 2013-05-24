@@ -515,6 +515,7 @@ val IN_INTER = store_thm
       PURE_ONCE_REWRITE_TAC [INTER_DEF] THEN
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
+val _ = export_rewrites ["IN_INTER"]
 
 val INTER_ASSOC = store_thm
     ("INTER_ASSOC",
@@ -693,6 +694,7 @@ val EMPTY_DIFF =
      (--`!s:'a set. EMPTY DIFF s = EMPTY`--),
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]);
+val _ = export_rewrites ["EMPTY_DIFF"]
 
 val DIFF_UNIV =
     store_thm
@@ -2268,6 +2270,17 @@ val CARD_UNION =
        IMP_RES_TAC CARD_DEF THEN RES_TAC THEN
        ASM_REWRITE_TAC [ADD_CLAUSES, INV_SUC_EQ, IN_UNION]]]);
 
+val CARD_UNION_EQN = store_thm(
+  "CARD_UNION_EQN",
+  ``!s:'a set t.
+      FINITE s /\ FINITE t ==>
+      (CARD (s UNION t) = CARD s + CARD t - CARD (s INTER t))``,
+  REPEAT STRIP_TAC THEN
+  `CARD (s INTER t) <= CARD s`
+    by SRW_TAC [][CARD_INTER_LESS_EQ] THEN
+  `CARD (s INTER t) <= CARD s + CARD t` by SRW_TAC [ARITH_ss][] THEN
+  SRW_TAC [][GSYM ADD_EQ_SUB, CARD_UNION]);
+
 val lemma =
     TAC_PROOF
     (([], (--`!n m. (n <= SUC m) = (n <= m \/ (n = SUC m))`--)),
@@ -2396,6 +2409,17 @@ val CARD_DIFF =
        IMP_RES_TAC DELETE_NON_ELEMENT THEN
        PURE_ONCE_REWRITE_TAC [INTER_COMM] THEN
        RES_TAC THEN ASM_REWRITE_TAC [DIFF_INSERT]]]);
+
+(* Improved version of the above - DIFF's second argument can be infinite *)
+val CARD_DIFF_EQN = store_thm(
+  "CARD_DIFF_EQN",
+  ``!s. FINITE s ==> (CARD (s DIFF t) = CARD s - CARD (s INTER t))``,
+  Induct_on `FINITE` THEN SRW_TAC [][] THEN
+  Cases_on `e IN t` THEN
+  SRW_TAC [][INSERT_INTER, INSERT_DIFF, INTER_FINITE] THEN
+  `CARD (s INTER t) <= CARD s`
+    by METIS_TAC [CARD_INTER_LESS_EQ] THEN
+  SRW_TAC [numSimps.ARITH_ss][]);
 
 (* ---------------------------------------------------------------------*)
 (* A theorem from homeier@aero.uniblab (Peter Homeier)	        	*)
@@ -3511,13 +3535,13 @@ val COMPL_EMPTY = store_thm
 val COMPL_INTER = store_thm(
   "COMPL_INTER",
   ``(x INTER COMPL x = {}) /\ (COMPL x INTER x = {})``,
-  SRW_TAC [][EXTENSION, IN_COMPL, IN_INTER]);
+  SRW_TAC [][EXTENSION, IN_COMPL]);
 val _ = export_rewrites ["COMPL_INTER"]
 
 val COMPL_UNION = Q.store_thm(
 "COMPL_UNION",
 `COMPL (s UNION t) = COMPL s INTER COMPL t`,
-SRW_TAC [][EXTENSION,COMPL_DEF,IN_INTER]);
+SRW_TAC [][EXTENSION,COMPL_DEF]);
 
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
@@ -3807,7 +3831,7 @@ val SUM_IMAGE_UNION = store_thm(
     ASM_SIMP_TAC bool_ss [FINITE_DELETE, SUM_IMAGE_DELETE, INTER_FINITE,
                           IN_INTER] THEN
     `s INTER (t DELETE e) = s INTER t DELETE e` by
-       (SRW_TAC [][EXTENSION, IN_INTER, IN_DELETE] THEN PROVE_TAC []) THEN
+       (SRW_TAC [][EXTENSION, IN_DELETE] THEN PROVE_TAC []) THEN
     ASM_SIMP_TAC bool_ss [SUM_IMAGE_DELETE, INTER_FINITE, IN_INTER] THEN
     `f e <= SUM_IMAGE f t` by PROVE_TAC [SUM_IMAGE_IN_LE] THEN
     `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
@@ -4432,7 +4456,7 @@ val GSPEC_F_COND = store_thm(
 val GSPEC_AND = store_thm(
   "GSPEC_AND",
   ``!P Q. {x | P x /\ Q x} = {x | P x} INTER {x | Q x}``,
-  SRW_TAC [][EXTENSION, IN_INTER] THEN sspec_tac THEN REWRITE_TAC []);
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
 
 val GSPEC_OR = store_thm(
   "GSPEC_OR",
@@ -4491,7 +4515,7 @@ val partition_elements_disjoint = store_thm(
                (Q.X_CHOOSE_THEN `b` MP_TAC) MP_TAC)) THEN
   MAP_EVERY Q.ID_SPEC_TAC [`t1`, `t2`] THEN SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][DISJOINT_DEF] THEN
-  SIMP_TAC (srw_ss()) [EXTENSION, IN_INTER] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION] THEN
   Q.X_GEN_TAC `c` THEN Cases_on `c IN s` THEN SRW_TAC [][] THEN
   Cases_on `R a c` THEN SRW_TAC [][] THEN
   STRIP_TAC THEN
@@ -5105,7 +5129,7 @@ val _ = export_rewrites
      (* "DELETE" theorems *)
      "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
      (* "DIFF" theorems *)
-     "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
+     "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV",
      "DIFF_SUBSET",
      (* "DISJOINT" theorems *)
      "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
@@ -5116,7 +5140,7 @@ val _ = export_rewrites
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
      (* "INTER" theorems *)
-     "IN_INTER", "INTER_FINITE", "INTER_IDEMPOT",
+     "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
      (* "PSUBSET" *)
      "PSUBSET_IRREFL",
