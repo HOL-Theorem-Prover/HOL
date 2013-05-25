@@ -80,17 +80,17 @@ fun stringOpt pos s =
                         (warn(pos, "Negative/zero conj specs illegal"); NONE)
                       else SOME (Conj i)
         end
-      else if String.isPrefix "m" s then let
-        in
-          SOME (Mathmode (String.extract(s,1,NONE)))
-        end
       else let
           open Substring
           val ss = full s
           val (pfx,sfx) = position "/" ss
           fun rmws ss = ss |> dropl Char.isSpace |> dropr Char.isSpace |> string
         in
-          if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
+          if size sfx < 2 then
+            if String.isPrefix "m" s then
+              SOME (Mathmode (String.extract(s,1,NONE)))
+            else
+              (warn (pos, s ^ " is not a valid option"); NONE)
           else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
         end
     end
