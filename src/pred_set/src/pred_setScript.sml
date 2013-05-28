@@ -76,6 +76,12 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
+val IN_ABS = store_thm (
+  "IN_ABS",
+  ``!x P. (x IN \x. P x) = P x``,
+  SIMP_TAC bool_ss [IN_DEF]);
+val _ = export_rewrites ["IN_ABS"]
+
 (* ---------------------------------------------------------------------*)
 (* Axiom of extension: (s = t) iff !x. x IN s = x IN t			*)
 (* ---------------------------------------------------------------------*)
@@ -3133,11 +3139,13 @@ val IN_BIGUNION = store_thm
  ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
   SIMP_TAC bool_ss [GSPECIFICATION, BIGUNION, pairTheory.PAIR_EQ] THEN
   MESON_TAC []);
+val _ = export_rewrites ["IN_BIGUNION"]
 
 val BIGUNION_EMPTY = Q.store_thm
 ("BIGUNION_EMPTY",
  `BIGUNION EMPTY = EMPTY`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]);
+val _ = export_rewrites ["BIGUNION_EMPTY"]
 
 val BIGUNION_EQ_EMPTY = Q.store_thm
 ("BIGUNION_EQ_EMPTY",
@@ -3176,6 +3184,7 @@ val BIGUNION_INSERT = Q.store_thm
  `!s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
   MESON_TAC []);
+val _ = export_rewrites ["BIGUNION_INSERT"]
 
 val BIGUNION_SUBSET = Q.store_thm
 ("BIGUNION_SUBSET",
@@ -3208,14 +3217,13 @@ val FINITE_BIGUNION_EQ = Q.store_thm
      by (REWRITE_TAC [EXTENSION] THEN
          ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                       [IN_BIGUNION, IN_IMAGE, IN_DELETE] THEN
-         GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-           `x IN BIGUNION Q`
-              by (SRW_TAC [][IN_BIGUNION] THEN METIS_TAC []) THEN
-           POP_ASSUM MP_TAC THEN SRW_TAC [][],
+         Q.X_GEN_TAC `x` THEN EQ_TAC THEN STRIP_TAC THENL [
+           `x IN BIGUNION Q` by (SRW_TAC [][] THEN METIS_TAC []) THEN
+           POP_ASSUM MP_TAC THEN ASM_SIMP_TAC bool_ss [IN_INSERT],
            `x IN (e INSERT P)` by SRW_TAC [][] THEN
            `~(x = e)` by PROVE_TAC [] THEN
-           `x IN BIGUNION Q` by SRW_TAC [][] THEN
-           POP_ASSUM MP_TAC THEN SRW_TAC [][IN_BIGUNION]
+           `x IN BIGUNION Q` by ASM_SIMP_TAC bool_ss [IN_INSERT] THEN
+           POP_ASSUM MP_TAC THEN SRW_TAC [][]
          ]) THEN
   `FINITE (IMAGE (\s. s DELETE e) Q) /\
    !s. s IN IMAGE (\s. s DELETE e) Q ==> FINITE s` by PROVE_TAC [] THEN
@@ -3244,6 +3252,26 @@ val SUBSET_BIGUNION_I = store_thm(
   ``x IN P ==> x SUBSET BIGUNION P``,
   SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
 
+val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
+  "CARD_BIGUNION_SAME_SIZED_SETS",
+  ``!n s.
+      FINITE s /\ (!e. e IN s ==> FINITE e /\ (CARD e = n)) /\
+      (!e1 e2. e1 IN s /\ e2 IN s /\ e1 <> e2 ==> DISJOINT e1 e2) ==>
+      (CARD (BIGUNION s) = CARD s * n)``,
+  GEN_TAC THEN
+  SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, GSYM AND_IMP_INTRO] THEN
+  Induct_on `FINITE` THEN SRW_TAC [][] THEN
+  SRW_TAC [][CARD_UNION_EQN] THEN
+  `e INTER BIGUNION s = {}`
+    suffices_by SRW_TAC [ARITH_ss][MULT_CLAUSES] THEN
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION] THEN
+  Q.X_GEN_TAC `x` THEN Cases_on `x IN e` THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  Q.X_GEN_TAC `e1` THEN Cases_on `e1 IN s` THEN SRW_TAC [][] THEN
+  STRIP_TAC THEN
+  `~DISJOINT e e1`
+    by (SRW_TAC [][DISJOINT_DEF, EXTENSION] THEN METIS_TAC[]) THEN
+  METIS_TAC[]);
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
@@ -5034,11 +5062,6 @@ SIMP_TAC bool_ss [IN_BIGUNION, IN_IMAGE,
 METIS_TAC[]);
 
 
-val IN_ABS = store_thm ("IN_ABS",
-``!x P. (x IN \x. P x) = P x``,
-SIMP_TAC bool_ss [IN_DEF]);
-
-
 val SUBSET_DIFF = store_thm("SUBSET_DIFF",
 ``!s1 s2 s3.
 (s1 SUBSET (s2 DIFF s3)) =
@@ -5118,8 +5141,8 @@ METIS_TAC[SUBSET_FINITE]);
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
-     "IN_BIGINTER", "IN_BIGUNION", "DISJOINT_BIGUNION", "BIGUNION_EMPTY",
-     "BIGUNION_INSERT", "BIGUNION_UNION", "BIGINTER_UNION",
+     "IN_BIGINTER", "DISJOINT_BIGUNION",
+     "BIGUNION_UNION", "BIGINTER_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0",
