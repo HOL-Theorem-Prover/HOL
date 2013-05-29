@@ -260,10 +260,13 @@ local
   val _ = set_trace "EmitTeX: print datatype names as types" 1
   exception BadSpec
   fun getThm spec = let
-    val [theory,theorem] = String.tokens (isChar #".") spec
+    val (theory,theorem) =
+        case String.tokens (isChar #".") spec of
+            [thy,th] => (thy,th)
+          | _ => raise BadSpec
   in
     DB.fetch theory theorem
-  end handle Bind => raise BadSpec
+  end
   fun block_list pps begb pfun newl endb = let
     fun pr [] = ()
       | pr [i] = ( begb pps; pfun pps i; endb pps)
