@@ -1047,9 +1047,10 @@ If this has been made the default, it may be useful to occasionally turn the mer
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
 \index{tokens!suppressing parsing behaviour of}
 The default behaviour is to use parentheses, so that
-\begin{verbatim}
-   \HOLtm{$/\ p}
-\end{verbatim}
+% encode all the special characters below so that emacs font-locking has a reasonable chance of working
+\begin{alltt}
+   \holtm\lb\dol/\bs p\rb
+\end{alltt}
 would get printed as $(\land)\;\,p$.
 Note that this doesn't reflect the default behaviour in the interactive loop, which is to use dollar-signs (as in the input above); see Section~\ref{sec:parser:architecture}.
 However, with the \texttt{nodollarparens} option specified, nothing at all is printed to indicate that the special syntax has been ``escaped''.
