@@ -1132,6 +1132,24 @@ The default width is $63$, which seems to work well with 11pt fonts.
 This default can also be changed at the time the \munge{} command is
 run (see Section~\ref{sec:running-munger} below).
 
+\item[\texttt{-}$\mathit{name}$]
+%
+(Only for use with \holthm{} and \holtm.)
+This option causes the printing of the term or theorem to be done with respect to a grammar that has all overloading for $\mathit{name}$ removed.
+For example, the command \texttt{\holtm[-+]\lb{}x + y\rb} will print as
+\[
+\texttt{arithmetic\dol+}\;x\;y
+\]
+because the underlying constant will no longer map to the string \texttt{"+"} and, in the absence of any other mappings for it, will be printed as a fully qualified name.
+
+\index{integers, the HOL theory of@integers, the \HOL{} theory of}
+If the theory of integers is loaded, then the command \texttt{\holtm[-+]\lb{}x + y:int\rb} will print as \[
+\texttt{int\_add}\;x\;y
+\]
+because the mapping from the integer addition constant to \texttt{"+"} is removed, but the mapping to \texttt{"int\_add"} remains, allowing that form to be what is printed.
+
+The \texttt{-} option can be useful when complicated notation involving overloads is first introduced in a document.
+
 \item[\texttt{\indentoption}] Indents the argument.
 %
   This option only makes sense when used with the \texttt{alltt} option (the additional spaces will have no effect when inside an \texttt{\bs{}mbox}).
