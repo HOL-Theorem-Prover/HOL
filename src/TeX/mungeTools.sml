@@ -14,6 +14,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Rule | StackedRule
              | NoDollarParens
              | Merge | NoMerge
+             | Unoverload of string
 
 val numErrors = ref 0
 type posn = int * int
@@ -89,6 +90,11 @@ fun stringOpt pos s =
           if size sfx < 2 then
             if String.isPrefix "m" s then
               SOME (Mathmode (String.extract(s,1,NONE)))
+            else if String.isPrefix "-" s then
+              if String.size s >= 2 then
+                SOME (Unoverload (String.extract(s,1,NONE)))
+              else
+                (warn (pos, s ^ " is not a valid option"); NONE)
             else
               (warn (pos, s ^ " is not a valid option"); NONE)
           else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
@@ -149,6 +155,7 @@ structure OptSet : sig
   val addList : elem list -> set -> set
   val has : elem -> set -> bool
   val listItems : set -> elem list
+  val fold : (elem * 'a -> 'a) -> 'a -> set -> 'a
 end where type elem = opt = struct
   type elem = opt
   type set = elem list
@@ -157,6 +164,7 @@ end where type elem = opt = struct
   fun addList s1 s2 = s1 @ s2
   fun has e s = Lib.mem e s
   fun listItems l = l
+  val fold = List.foldl
 end
 
 type optionset = OptSet.set
@@ -175,6 +183,9 @@ fun optset_indent s =
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
+
+val optset_unoverloads =
+    OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -310,6 +321,16 @@ in
       addz "}"
     end
 
+    fun clear_overloads slist f = let
+      val tyg = type_grammar()
+      val oldg = term_grammar()
+      val _ = List.app temp_clear_overloads_on slist
+      val _ = List.map hide slist
+      val newg = term_grammar()
+    in
+      (fn x => (temp_set_grammars(tyg,newg); f x; temp_set_grammars(tyg,oldg)))
+    end
+
     fun optprintermod f pps =
         f pps |> (if OptSet.has ShowTypes opts then
                     trace ("types", 1)
@@ -324,6 +345,9 @@ in
               |> (if OptSet.has Merge opts then
                     trace ("pp_avoids_symbol_merges", 1)
                   else (fn f => f))
+              |> (case optset_unoverloads opts of
+                      [] => (fn f => f)
+                    | slist => clear_overloads slist)
 
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
