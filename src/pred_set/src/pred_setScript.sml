@@ -1484,6 +1484,13 @@ val INJ_DEF =
           (!x. x IN s ==> (f x) IN t) /\
           (!x y. (x IN s /\ y IN s) ==> (f x = f y) ==> (x = y))`--));
 
+val INJ_IFF = store_thm(
+  "INJ_IFF",
+  ``INJ (f:'a -> 'b) s t <=>
+      (!x. x IN s ==> f x IN t) /\
+      (!x y. x IN s /\ y IN s ==> ((f x = f y) <=> (x = y)))``,
+  METIS_TAC[INJ_DEF]);
+
 val INJ_ID =
     store_thm
     ("INJ_ID",
@@ -1588,6 +1595,16 @@ val SURJ_IMAGE = store_thm(
   ``SURJ f s (IMAGE f s)``,
   REWRITE_TAC[IMAGE_SURJ]);
 val _ = export_rewrites ["SURJ_IMAGE"]
+
+val SURJ_INJ_INV = store_thm(
+  "SURJ_INJ_INV",
+  ``SURJ f s t ==> ?g. INJ g t s /\ !y. y IN t ==> (f (g y) = y)``,
+  SIMP_TAC (srw_ss())[SURJ_DEF, INJ_DEF] THEN
+  DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC
+                (ASSUME_TAC o
+                 SIMP_RULE (srw_ss() ++ DNF_ss)
+                           [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM])) THEN
+  METIS_TAC[]);
 
 (* ===================================================================== *)
 (* Bijective functions on a set.					 *)
@@ -4813,6 +4830,11 @@ RWTAC [] THENL
 
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
+
+val countable_image_nats = store_thm( "countable_image_nats",
+  ``countable (IMAGE f univ(:num))``, SIMP_TAC
+  (srw_ss())[countable_def] THEN METIS_TAC[SURJ_IMAGE, SURJ_INJ_INV]);
+  val _ = export_rewrites ["countable_image_nats"]
 
 val countable_surj = Q.store_thm ("countable_surj",
 `!s. countable s = (s = {}) \/ ?f. SURJ f (UNIV:num set) s`,
