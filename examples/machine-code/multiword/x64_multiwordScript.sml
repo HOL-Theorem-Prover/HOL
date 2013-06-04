@@ -1471,6 +1471,207 @@ val x64_simple_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [REVERSE,SNOC_APPEND,GSYM APPEND_ASSOC,APPEND]
   \\ DECIDE_TAC);
 
+(* mw_div -- calc_d *)
+
+val (res,x64_calc_d_def,x64_calc_d_pre_def) = x64_compile `
+  x64_calc_d (r1:word64,r2:word64) =
+    let r0 = r1 + r1 in
+    let r0 = r0 >>> 1 in
+      if r0 <> r1 then r2 else
+        let r1 = r1 + r1 in
+        let r2 = r2 + r2 in
+          x64_calc_d (r1,r2)`
+
+val x64_calc_d_thm = prove(
+  ``!v1 d.
+      (\(v1,d).
+        (v1 <> 0w) ==>
+        x64_calc_d_pre (v1,d) /\
+        (x64_calc_d (v1,d) = calc_d (v1,d))) (v1,d)``,
+  MATCH_MP_TAC (calc_d_ind |> INST_TYPE [alpha|->``:64``])
+  \\ FULL_SIMP_TAC std_ss [] \\ NTAC 4 STRIP_TAC
+  \\ ONCE_REWRITE_TAC [x64_calc_d_pre_def,x64_calc_d_def,calc_d_def]
+  \\ FULL_SIMP_TAC std_ss [LET_DEF]
+  \\ Tactical.REVERSE (Cases_on `v1 = (v1 + v1) >>> 1`)
+  \\ `(v1 = (v1 + v1) >>> 1) <=> ~word_msb v1` by
+        (NTAC 2 (POP_ASSUM MP_TAC) \\ blastLib.BBLAST_TAC)
+  \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
+  \\ FULL_SIMP_TAC std_ss [GSYM addressTheory.WORD_TIMES2,
+       AC WORD_MULT_ASSOC WORD_MULT_COMM]
+  \\ FIRST_X_ASSUM MATCH_MP_TAC
+  \\ REPEAT (POP_ASSUM MP_TAC) \\ blastLib.BBLAST_TAC)
+  |> SIMP_RULE std_ss [];
+
+(* mw_div -- mw_div_test *)
+
+val single_mul_add_thm  = prove(
+  ``single_mul_add p q k s =
+      (let (r0,r1,r2,r3) = x64_single_mul_add (p,k,q,s) in
+         (r0,r2))``,
+  SIMP_TAC std_ss [x64_single_mul_add_thm]
+  \\ Q.SPEC_TAC (`single_mul_add p q k s`,`w`)
+  \\ FULL_SIMP_TAC std_ss [FORALL_PROD,LET_DEF]);
+
+val (res,x64_mul_by_single2_def,x64_mul_by_single2_pre_def) = x64_compile `
+  x64_mul_by_single2 (r6:word64,r7:word64,r8:word64) =
+    let r0 = r6 in
+    let r1 = 0w in
+    let r2 = r7 in
+    let r3 = 0w in
+    let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
+    let r12 = r0 in
+    let r0 = r6 in
+    let r1 = r2 in
+    let r2 = r8 in
+    let r3 = 0w in
+    let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
+    let r3 = r2 in
+    let r2 = r0 in
+    let r1 = r12 in
+      (r1,r2,r3,r6,r7,r8)`
+
+val x64_mul_by_single2_thm = prove(
+  ``!r6 r7 r8.
+      ?r1 r2 r3.
+        x64_mul_by_single2_pre (r6,r7,r8) /\
+        (x64_mul_by_single2 (r6,r7,r8) = (r1,r2,r3,r6,r7,r8)) /\
+        (mw_mul_by_single r6 [r7; r8] = [r1; r2; r3])``,
+  SIMP_TAC std_ss [mw_mul_by_single_def,LENGTH,mw_mul_pass_def,single_mul_add_thm,
+    n2mw_def,HD,TL,x64_mul_by_single2_def,EVAL ``(n2mw 2 0):word64 list``,LET_DEF]
+  \\ CONV_TAC (DEPTH_CONV (PairRules.PBETA_CONV))
+  \\ SIMP_TAC std_ss [x64_mul_by_single2_pre_def,LET_DEF,x64_single_mul_add_def]
+  \\ CONV_TAC (DEPTH_CONV (PairRules.PBETA_CONV))
+  \\ SIMP_TAC std_ss [x64_mul_by_single2_pre_def,LET_DEF,x64_single_mul_add_def]
+  \\ EVAL_TAC);
+
+val (res,x64_cmp3_def,x64_cmp3_pre_def) = x64_compile `
+  x64_cmp3 (r1:word64,r2,r3,r9:word64,r10:word64,r11:word64) =
+    let r0 = 1w:word64 in
+      if r3 <> r11 then
+        if r11 <+ r3 then (r0,r1,r2,r3,r9,r10,r11) else
+          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
+      if r2 <> r10 then
+        if r10 <+ r2 then (r0,r1,r2,r3,r9,r10,r11) else
+          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
+      if r1 <> r9 then
+        if r9 <+ r1 then (r0,r1,r2,r3,r9,r10,r11) else
+          let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11) else
+      let r0 = 0w in (r0,r1,r2,r3,r9,r10,r11)`
+
+val x64_cmp3_thm = prove(
+  ``x64_cmp3 (r1,r2,r3,r9,r10,r11) =
+      (if mw_cmp [r9;r10;r11] [r1;r2;r3] = SOME T then 1w else 0w,
+       r1,r2,r3,r9,r10,r11)``,
+  NTAC 5 (ONCE_REWRITE_TAC [mw_cmp_def])
+  \\ SIMP_TAC (srw_ss()) [x64_cmp3_def,LET_DEF]
+  \\ Tactical.REVERSE (Cases_on `r3 = r11`)
+  \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []
+  \\ Tactical.REVERSE (Cases_on `r2 = r10`)
+  \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []
+  \\ Tactical.REVERSE (Cases_on `r1 = r9`)
+  \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []);
+
+val (res,x64_cmp_mul2_def,x64_cmp_mul2_pre_def) = x64_compile `
+  x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) =
+    let (r1,r2,r3,r6,r7,r8) = x64_mul_by_single2 (r6,r7,r8) in
+    let (r0,r1,r2,r3,r9,r10,r11) = x64_cmp3 (r1,r2,r3,r9,r10,r11) in
+      (r0,r6,r7,r8,r9,r10,r11)`
+
+val x64_cmp_mul2_thm = prove(
+  ``x64_cmp_mul2_pre (r6,r7,r8,r9,r10,r11) /\
+    (x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) =
+      ((if mw_cmp [r9;r10;r11] (mw_mul_by_single r6 [r7; r8]) = SOME T
+            then 1w else 0w),r6,r7,r8,r9,r10,r11))``,
+  SIMP_TAC std_ss [x64_cmp_mul2_pre_def,x64_cmp_mul2_def]
+  \\ STRIP_ASSUME_TAC (x64_mul_by_single2_thm |> SPEC_ALL)
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,x64_cmp3_thm]);
+
+val (res,x64_sub1_def,x64_sub1_pre_def) = x64_compile `
+  x64_sub1 (r6:word64) =
+    if r6 = 0w then r6 else let r6 = r6 - 1w in r6`
+
+val x64_sub1_thm = prove(
+  ``!r6. x64_sub1_pre r6 /\ (x64_sub1 r6 = n2w (w2n r6 - 1))``,
+  Cases \\ ASM_SIMP_TAC (srw_ss()) [x64_sub1_pre_def,x64_sub1_def]
+  \\ Cases_on `n = 0` \\ FULL_SIMP_TAC std_ss [LET_DEF,GSYM word_sub_def]
+  \\ `~(n < 1)` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [addressTheory.word_arith_lemma2]);
+
+val (res,x64_cmp2_def,x64_cmp2_pre_def) = x64_compile `
+  x64_cmp2 (r0:word64,r2,r10:word64,r11:word64) =
+    let r1 = 1w:word64 in
+      if r2 <> r11 then
+        if r11 <+ r2 then (r0,r1,r2,r10,r11) else
+          let r1 = 0w in (r0,r1,r2,r10,r11) else
+      if r0 <> r10 then
+        if r10 <+ r0 then (r0,r1,r2,r10,r11) else
+          let r1 = 0w in (r0,r1,r2,r10,r11) else
+      let r1 = 0w in (r0,r1,r2,r10,r11)`
+
+val x64_cmp2_thm = prove(
+  ``x64_cmp2 (r0,r2,r10,r11) =
+      (r0,if mw_cmp [r10;r11] [r0;r2] = SOME T then 1w else 0w,
+       r2,r10,r11)``,
+  NTAC 5 (ONCE_REWRITE_TAC [mw_cmp_def])
+  \\ SIMP_TAC (srw_ss()) [x64_cmp2_def,LET_DEF]
+  \\ Tactical.REVERSE (Cases_on `r2 = r11`)
+  \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []
+  \\ Tactical.REVERSE (Cases_on `r0 = r10`)
+  \\ FULL_SIMP_TAC std_ss [] THEN1 SRW_TAC [] []);
+
+val (res,x64_div_test_def,x64_div_test_pre_def) = x64_compile `
+  x64_div_test (r6,r7,r8,r9,r10,r11) =
+    let (r0,r6,r7,r8,r9,r10,r11) = x64_cmp_mul2 (r6,r7,r8,r9,r10,r11) in
+      if r0 <> 0w then
+        let r6 = x64_sub1 r6 in
+        let r0 = r6 in
+        let r1 = 0w in
+        let r2 = r8 in
+        let r3 = r1 in
+        let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
+        let r2 = r2 + 1w in
+        let (r0,r1,r2,r10,r11) = x64_cmp2 (r0,r2,r10,r11) in
+          if r1 <> 0w then
+            x64_div_test (r6,r7,r8,r9,r10,r11)
+          else (r6,r7,r8,r9,r10,r11)
+      else
+        (r6,r7,r8,r9,r10,r11)`
+
+val single_mul_thm = prove(
+  ``single_mul_add x y 0w 0w = single_mul x y 0w``,
+  SIMP_TAC (srw_ss()) [single_mul_add_def,single_mul_def,LET_DEF,
+    mw_add_def,single_add_def,b2n_def,b2w_def,GSYM NOT_LESS,w2n_lt]);
+
+val mw_add_0_1 = prove(
+  ``(FST (mw_add [r0;r2] [0w;1w] F) = [r0;r2+1w])``,
+  SIMP_TAC (srw_ss()) [mw_add_def,HD,TL,single_add_def,b2w_def,
+    LET_DEF,EVAL ``b2n F``,GSYM NOT_LESS,w2n_lt]);
+
+val x64_div_test_thm = prove(
+  ``!q u1 u2 u3 v1 v2.
+      x64_div_test_pre (q,v2,v1,u3,u2,u1) /\
+      (x64_div_test (q,v2,v1,u3,u2,u1) =
+         (mw_div_test q u1 u2 u3 v1 v2,v2,v1,u3,u2,u1))``,
+  HO_MATCH_MP_TAC mw_div_test_ind \\ NTAC 7 STRIP_TAC
+  \\ ONCE_REWRITE_TAC [x64_div_test_def,x64_div_test_pre_def,mw_div_test_def]
+  \\ SIMP_TAC std_ss [x64_cmp_mul2_thm]
+  \\ Cases_on `mw_cmp [u3; u2; u1] (mw_mul_by_single q [v2; v1]) = SOME T`
+  \\ ASM_SIMP_TAC std_ss [LET_DEF,EVAL ``0w = 1w:word64``,x64_sub1_thm]
+  \\ FULL_SIMP_TAC std_ss [x64_single_mul_add_thm,GSYM single_mul_thm]
+  \\ Cases_on `single_mul_add (n2w (w2n q − 1)) v1 0x0w 0x0w`
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,x64_cmp2_thm]
+  \\ Q.MATCH_ASSUM_RENAME_TAC `single_mul_add (n2w (w2n q − 1)) v1 0x0w 0x0w = (q1,q2)` []
+  \\ FULL_SIMP_TAC std_ss [mw_add_0_1]
+  \\ Cases_on `mw_cmp [u2; u1] [q1; q2 + 0x1w] = SOME T`
+  \\ FULL_SIMP_TAC std_ss [EVAL ``0w = 1w:word64``]);
+
+(*
+
+mw_div_def
+mw_div_loop_def
+mw_mul_by_single_def
+mw_div_test_def
+
+*)
 
 val _ = export_theory();
-
