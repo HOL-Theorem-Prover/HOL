@@ -172,6 +172,9 @@ fu! HOLSelect(l,r)
   call search(a:r,"ce")
 endf
 
+if !(exists("maplocalleader"))
+  let maplocalleader = "\\"
+endif
 vn <silent> <LocalLeader>l :call YankThenHOLCall(function("HOLLoadSendQuiet"),[])<CR>
 vn <silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
 vn <silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
@@ -179,13 +182,13 @@ vn <silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR
 vn <silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
 vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
-nm <silent> <LocalLeader>l Vhl
-nm <silent> <LocalLeader>L VhL
-nm <silent> <LocalLeader>s Vhs
-nm <silent> <LocalLeader>u Vhu
-nm <silent> <LocalLeader>g Vhg
-nm <silent> <LocalLeader>e Vhe
-nm <silent> <LocalLeader>S VhS
+nm <silent><expr> <LocalLeader>l "V".maplocalleader."l"
+nm <silent><expr> <LocalLeader>L "V".maplocalleader."L"
+nm <silent><expr> <LocalLeader>s "V".maplocalleader."s"
+nm <silent><expr> <LocalLeader>u "V".maplocalleader."u"
+nm <silent><expr> <LocalLeader>g "V".maplocalleader."g"
+nm <silent><expr> <LocalLeader>e "V".maplocalleader."e"
+nm <silent><expr> <LocalLeader>S "V".maplocalleader."S"
 nn <silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
 nn <silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
 nn <silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
