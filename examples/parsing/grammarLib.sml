@@ -85,9 +85,12 @@ in
   recurse []
 end
 
+fun ident_constituent c =
+    Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
+
 fun ident0 s =
   (getP Char.isAlpha >-
-   (fn c => mrpt (getP Char.isAlphaNum) >-
+   (fn c => mrpt (getP ident_constituent) >-
    (fn cs => return (String.implode (c::cs))))) s
 
 fun ident s = lex ident0 s
@@ -316,8 +319,8 @@ val tmap =
 mk_grammar_def {tokmap = (fn s => valOf (Binarymap.peek(tmap,s))),
                 nt_tyname = "nt", tokty = ``:tok``, gname = "exprG",
                 mkntname = (fn s => "n" ^ s), start = "E"}
-               `E ::= E "*" F | F;
-                F ::= F "+" T | T;
+               `E ::= E "*" F' | F';
+                F' ::= F' "+" T | T;
                 T ::= <Number> | "(" E ")" | ^(``{ Ident s | s <> "" ∧ isAlpha (HD s)}``);`;
 
 *)
