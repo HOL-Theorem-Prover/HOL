@@ -1502,7 +1502,7 @@ val x64_calc_d_thm = prove(
   \\ REPEAT (POP_ASSUM MP_TAC) \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [];
 
-(* mw_div -- mw_div_test *)
+(* mw_div -- mw_div_guess *)
 
 val single_mul_add_thm  = prove(
   ``single_mul_add p q k s =
@@ -1660,17 +1660,123 @@ val x64_div_test_thm = prove(
   \\ FULL_SIMP_TAC std_ss [x64_single_mul_add_thm,GSYM single_mul_thm]
   \\ Cases_on `single_mul_add (n2w (w2n q − 1)) v1 0x0w 0x0w`
   \\ FULL_SIMP_TAC std_ss [LET_DEF,x64_cmp2_thm]
-  \\ Q.MATCH_ASSUM_RENAME_TAC `single_mul_add (n2w (w2n q − 1)) v1 0x0w 0x0w = (q1,q2)` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC
+       `single_mul_add (n2w (w2n q − 1)) v1 0x0w 0x0w = (q1,q2)` []
   \\ FULL_SIMP_TAC std_ss [mw_add_0_1]
   \\ Cases_on `mw_cmp [u2; u1] [q1; q2 + 0x1w] = SOME T`
   \\ FULL_SIMP_TAC std_ss [EVAL ``0w = 1w:word64``]);
 
+val (x64_div_r1_res,x64_div_r1_def) = x64_decompile "x64_div_r1" `
+      cmp r2 r1
+      jb L
+      xor r0,r0
+      not r0
+      jmp EXIT
+L:    div r1
+EXIT: `;
+
+val _ = add_compiled [x64_div_r1_res]
+
+val x64_div_r1_thm = prove(
+  ``x64_div_r1 (r0,r1,r2) =
+      if r2 <+ r1 then
+        (FST (single_div r2 r0 r1),r1,SND (single_div r2 r0 r1))
+      else (~0w,r1,r2)``,
+  SIMP_TAC (srw_ss()) [x64_div_r1_def,single_div_def,LET_DEF]);
+
+val (res,x64_div_guess_def,x64_div_guess_pre_def) = x64_compile `
+  x64_div_guess (r6,r7,r8,r9,r10,r11) =
+    let r0 = r10 in
+    let r1 = r8 in
+    let r2 = r11 in
+    let (r0,r1,r2) = x64_div_r1 (r0,r1,r2) in
+    let r6 = r0 in
+    let (r6,r7,r8,r9,r10,r11) = x64_div_test (r6,r7,r8,r9,r10,r11) in
+      (r6,r7,r8,r9,r10,r11)`
+
+val x64_div_guess_thm = prove(
+  ``!q u1 u2 u3 v1 v2.
+      (x64_div_guess_pre (q,v2,v1,u3,u2,u1) <=>
+         (u1 <+ v1 ==> v1 <> 0w))  /\
+      (x64_div_guess (q,v2,v1,u3,u2,u1) =
+         (mw_div_guess (u1::u2::u3::us) (v1::v2::vs),v2,v1,u3,u2,u1))``,
+  SIMP_TAC (srw_ss()) [x64_div_guess_def,x64_div_guess_pre_def,
+    x64_div_test_thm, mw_div_guess_def,HD,TL,x64_div_r1_thm,LET_DEF]
+  \\ SIMP_TAC std_ss [x64_div_r1_def,LET_DEF,WORD_LO]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `w2n u1 < w2n v1` \\ FULL_SIMP_TAC std_ss [EVAL ``-1w:word64``]
+  \\ Cases_on `v1 = 0w` \\ FULL_SIMP_TAC std_ss []
+  \\ Cases_on `v1` \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ `0 < n` by DECIDE_TAC
+  \\ FULL_SIMP_TAC std_ss [DIV_LT_X]
+  \\ Cases_on `u1` \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ Cases_on `u2` \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ DECIDE_TAC);
+
+(* mw_div -- mw_div_adjust *)
+
 (*
 
+ r1 -- k1
+ r6 -- x1, i.e. d
+ r7 -- x2
+ r8 -- accumulated result
+ r9 -- length of ys
+ r10 -- points into zs
+ r11 -- points into ys
+ r12 -- k2
+
+*)
+
+val (res,x64_adj_cmp_def,x64_adj_cmp_pre_def) = x64_compile `
+  x64_adj_cmp (r0:word64,r3:word64,r8:word64) =
+    if r0 = r3 then (r0,r3,r8) else
+      let r8 = 0w in
+        if r0 <+ r3 then (r0,r3,r8)
+        else let r8 = 1w in (r0,r3,r8)`
+
+val (res,x64_adjust_def,x64_adjust_aux_pre_def) = x64_compile `
+  x64_adjust_aux (r1,r6,r7,r8,r9,r10:word64,r11:word64,r12,ys:word64 list,zs) =
+    if r9 = r11 then
+      let r0 = r1 in
+      let r3 = EL (w2n r10) zs in
+      let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8) in
+      let r10 = r10 - r9 in
+        (r7,r8,r9,r10,r11,ys,zs)
+    else
+      let r0 = r6 in (* x1 *)
+      let r2 = EL (w2n r11) ys in
+      let r3 = 0w in
+      let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
+      let r1 = r12 in
+      let r12 = r2 in
+      let r0 = r7 in
+      let (r0,r1,r2,r3) = x64_single_mul_add (r0,r1,r2,r3) in
+      let r3 = EL (w2n r10) zs in
+      let (r0,r3,r8) = x64_adj_cmp (r0,r3,r8) in
+      let r10 = r11 + 1w in
+      let r10 = r10 + 1w in
+        x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs)`
+
+val (res,x64_div_adjust_def,x64_div_adjust_pre_def) = x64_compile `
+  x64_div_adjust (r6,r7,r9,r10,r11,ys,zs) =
+    let r1 = 0w in
+    let r8 = 0w in
+    let r12 = 0w in
+    let (r7,r8,r9,r10,r11,ys,zs) =
+      x64_adjust_aux (r1,r6,r7,r8,r9,r10,r11,r12,ys,zs) in
+      if (r7 = 0w) then (r7,r9,r10,r11,ys,zs) else
+      if (r8 = 0w) then (r7,r9,r10,r11,ys,zs) else
+        let r7 = r7 - 1w in (r7,r9,r10,r11,ys,zs)`
+
+
+
+(*
+
+mw_div_adjust_def
 mw_div_def
-mw_div_loop_def
-mw_mul_by_single_def
-mw_div_test_def
+mw_div_aux_def
+mw_mul_by_single2_def
 
 *)
 
