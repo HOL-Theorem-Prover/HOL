@@ -1025,7 +1025,7 @@ val mw_cmp_CONS = prove(
       (LENGTH xs = LENGTH ys) ==>
       (mw_cmp (x::xs) (y::ys) =
         case mw_cmp xs ys of NONE => mw_cmp [x] [y] | t => t)``,
-  HO_MATCH_MP_TAC mw_cmp_ind \\ REPEAT STRIP_TAC
+  HO_MATCH_MP_TAC (fetch "-" "mw_cmp_ind") \\ REPEAT STRIP_TAC
   \\ `(xs = []) \/ ?x1 l1. xs = SNOC x1 l1` by METIS_TAC [SNOC_CASES]
   \\ `(ys = []) \/ ?x2 l2. ys = SNOC x2 l2` by METIS_TAC [SNOC_CASES]
   \\ FULL_SIMP_TAC (srw_ss()) [EVAL ``mw_cmp [] []``]
