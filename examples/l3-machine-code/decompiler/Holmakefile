@@ -1,4 +1,4 @@
-INCLUDES = ../common ../arm ../x64 \
+INCLUDES = .. ../common ../arm ../x64 \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/decompiler
 OPTIONS = QUIT_ON_FAILURE
