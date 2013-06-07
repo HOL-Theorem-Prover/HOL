@@ -317,22 +317,21 @@ val derive_fringe = store_thm(
   qexists_tac `Nd s (ts1 ++ [pt'] ++ ts2)` >>
   simp[rich_listTheory.FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
 
-val lemma = prove(
-  ``∀pt ts.
-      valid_ptree G pt ∧ ptree_head pt = NT G.start ∧
-      derives G (ptree_fringe pt) (MAP TOK ts) ⇒
+val ptrees_derive_extensible = store_thm(
+  "ptrees_derive_extensible",
+  ``∀pt sf.
+      valid_ptree G pt ∧ derives G (ptree_fringe pt) sf ⇒
       ∃pt'.
-         valid_ptree G pt' ∧ ptree_head pt' = NT G.start ∧
-         ptree_fringe pt' = MAP TOK ts``,
+         valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
+         ptree_fringe pt' = sf``,
   qsuff_tac
     `∀sf1 sf2.
        derives G sf1 sf2 ⇒
-       ∀pt ts.
-          (sf2 = MAP TOK ts) ∧ valid_ptree G pt ∧
-          ptree_head pt = NT G.start ∧ ptree_fringe pt = sf1 ⇒
+       ∀pt.
+          valid_ptree G pt ∧ ptree_fringe pt = sf1 ⇒
           ∃pt'.
-             valid_ptree G pt' ∧ ptree_head pt' = NT G.start ∧
-             ptree_fringe pt' = MAP TOK ts`
+             valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
+             ptree_fringe pt' = sf2`
     >- metis_tac[] >>
   ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> rw[] >>
   metis_tac [derive_fringe])
@@ -343,7 +342,8 @@ val derives_language = store_thm(
   rw[language_def, EXTENSION, complete_ptree_def] >> eq_tac
   >- metis_tac[valid_ptree_derive] >>
   strip_tac >>
-  qspecl_then [`Lf (NT G.start)`, `x`] mp_tac lemma >> simp[] >>
+  qspecl_then [`Lf (NT G.start)`, `MAP TOK x`] mp_tac
+    ptrees_derive_extensible >> simp[] >>
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
   simp[] >> asm_simp_tac (srw_ss() ++ DNF_ss) [MEM_MAP]);
 
