@@ -1109,21 +1109,6 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol "Sanity.sanity_check()"
                           hol-echo-commands-p t))
 
-(defun hol-begin-theory ()
-  "Inserts standard template for a HOL theory"
-  (interactive)
-  (let* ((fname (file-name-nondirectory (buffer-file-name)))
-         (sz (length fname))
-         (thyname (if (and (> sz 10)
-                           (equal (substring fname -10) "Script.sml"))
-                      (substring fname 0 (- sz 10))
-                    "<insert theory name here>")))
-    (insert "open HolKernel Parse boolLib bossLib\n\n"
-            "(* open ancestor theories here *)\n\n"
-            "val _ = new_theory \"" thyname "\"\n\n"
-            "(* theory goes here! *)\n\n"
-            "val _ = export_theory()\n")))
-
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
@@ -1173,11 +1158,12 @@ module if not already loaded.)"
 (let* (
    (pos (string-match "[^/]*Script\.sml" arg)))
    (cond (pos (substring arg pos -10))
-         (t "..."))))
+         (t "<insert theory name here>"))))
 
 (defun hol-template-new-script-file ()
+  "Inserts standard template for a HOL theory"
    (interactive)
-   (insert "\n\nopen HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
+   (insert "open HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
    (insert (hol-extract-script-name buffer-file-name))
    (insert "\";\n\n\n\n\nval _ = export_theory();\n\n"))
 
