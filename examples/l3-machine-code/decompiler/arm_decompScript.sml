@@ -21,8 +21,7 @@ val arm_OK_def = Define `
   arm_OK =
     arm_Extensions Extension_VFP T *
     arm_Architecture ARMv7_A *
-    arm_exception NoException * ~arm_undefined *
-    ~arm_CurrentCondition * ~arm_Encoding * arm_CPSR_J F *
+    arm_exception NoException * arm_CPSR_J F *
     arm_CPSR_E F * arm_CPSR_T F * arm_CPSR_M 16w`;
 
 val arm_PC_def = Define `

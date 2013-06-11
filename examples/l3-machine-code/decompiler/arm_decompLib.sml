@@ -23,9 +23,6 @@ fun intro_arm_OK th = let
   val th = if can (find_term (can (match_term ``arm_Architecture ARMv7_A``)))
                   (concl th)
            then th else SPEC_FRAME_RULE th ``arm_Architecture ARMv7_A``
-  val th = th |> HIDE_PRE_POST_RULE ``arm_CurrentCondition``
-              |> HIDE_PRE_POST_RULE ``arm_Encoding``
-              |> HIDE_PRE_POST_RULE ``arm_undefined``
   val pat = ``word_bit 0 (r14:word32)``
   val th = if not (can (find_term (can (match_term pat))) (concl th)) then th else
     let val tm = find_term (can (match_term pat)) (concl th)
