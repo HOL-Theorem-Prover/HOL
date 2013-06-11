@@ -344,7 +344,6 @@ val mw2n_EQ_IMP_EQ = prove(
   \\ STRIP_ASSUME_TAC (Q.SPEC `ys` EXISTS_n2mw)
   \\ FULL_SIMP_TAC std_ss [mw2n_n2mw]);
 
-
 (* trailing and zerofix *)
 
 val mw_trailing_def = tDefine "mw_trailing" `
@@ -401,6 +400,18 @@ val mw_trailing_LENGTH_ZERO = prove(
   ``!xs. (LENGTH (mw_trailing xs) = 0) = (mw2n xs = 0)``,
   FULL_SIMP_TAC std_ss [LENGTH_NIL,mw_trailing_NIL]);
 
+val mw_trailing_EQ_mw =
+  Q.SPEC `mw_trailing xs` mw_ok_IMP_EXISTS_mw |> RW [mw_ok_mw_trailing] |> GEN_ALL;
+
+val mw_mw2n = prove(
+  ``!xs. (mw_trailing xs = mw (mw2n xs))``,
+  REPEAT STRIP_TAC \\ `?n. mw_trailing xs = mw n` by METIS_TAC [mw_trailing_EQ_mw]
+  \\ ONCE_REWRITE_TAC [GSYM mw2n_mw_trailing]
+  \\ FULL_SIMP_TAC std_ss [mw2n_mw]);
+
+val mw_ok_mw_mw2n = prove(
+  ``!xs. mw_ok xs ==> (xs = mw (mw2n xs))``,
+  METIS_TAC [mw_mw2n,mw_ok_mw_trailing,mw_ok_mw_trailing_ID]);
 
 (* add/sub *)
 
@@ -1078,6 +1089,17 @@ val mw_mul_by_single_def = Define `
   mw_mul_by_single (x:'a word) (ys:'a word list) =
     mw_mul_pass x ys (n2mw (LENGTH ys) 0) 0w`;
 
+val LENGTH_mw_mul_pass = store_thm("LENGTH_mw_mul_pass",
+  ``!ys zs (x:'a word) k.
+      (LENGTH (mw_mul_pass x ys zs k) = LENGTH ys + 1)``,
+  Induct \\ Cases_on `zs`
+  \\ FULL_SIMP_TAC (srw_ss()) [mw_mul_pass_def,single_mul_add_def,LET_DEF,
+       single_mul_def,mw_add_def,single_add_def] \\ DECIDE_TAC);
+
+val LENGTH_mw_mul_by_single = store_thm("LENGTH_mw_mul_by_single",
+  ``(LENGTH (mw_mul_by_single x ys) = LENGTH ys + 1)``,
+  SIMP_TAC std_ss [LENGTH_mw_mul_pass,mw_mul_by_single_def]);
+
 val PULL_CONJ = METIS_PROVE [] ``!a b c.( a ==> b /\ c) ==>(a ==> b) /\ (a ==> c)``
 
 (*   Two theorems and corresponding tactics for handling equations
@@ -1379,37 +1401,6 @@ val mw_div_loop_def = tDefine "mw_div_loop"
 
 val mw_div_loop_ind = fetch "-" "mw_div_loop_ind"
 
-(*
-
-val mw_div_def = Define
-
-(* Division of xs = x_{1}...x_{m+n} by ys = y_{1}...y_{n} *)
-
-` mw_div (xs:'a word list) (ys:'a word list) =
-
-  let txs = mw_trailing xs in
-  let tys = mw_trailing ys in
-
-  if LENGTH txs < LENGTH tys
-  then ([]:'a word list,txs)
-
-  else if LENGTH tys = 1
-       then let rslt = mw_div_by_single (REVERSE txs) (LAST tys) in
-            (REVERSE (FRONT rslt), [LAST rslt])
-       else let d = calc_d ((LAST tys,1w)) in
-            let dxs = mw_mul_by_single d txs in
-            let dys = FRONT (mw_mul_by_single d tys) in
-
-(*  ensure: x_{m}...x_{m+n} DIV y_{1}...y_{n} < b  *)
-
-            if (mw_cmp (LASTN (LENGTH dys) dxs) dys = SOME T) /\ (LENGTH dys < LENGTH dxs)
-            then let rslt = mw_div_loop (REVERSE dxs) (REVERSE dys) in
-            (DROP (LENGTH dys) (REVERSE rslt), REVERSE (FRONT (mw_div_by_single (LASTN (LENGTH dys) rslt) d)))
-            else let rslt = mw_div_loop (REVERSE (SNOC 0w dxs)) (REVERSE dys) in
-            (DROP (LENGTH dys) (REVERSE rslt), REVERSE (FRONT (mw_div_by_single (LASTN (LENGTH dys) rslt) d))) `
-
-*)
-
 (* calc_d Lemmas  *)
 
 val d_word_msb = store_thm( "d_word_msb",
@@ -1596,6 +1587,23 @@ val d_clauses = store_thm( "d_clauses",
          REWRITE_TAC[dimwords_SUC,DECIDE ``z*v*l + z*l = z*(v+1)*l``,DECIDE ``x * dimword(:'a) = dimword(:'a) * x``] >>
          MATCH_MP_TAC LESS_MONO_MULT >> METIS_TAC[Abbr`Z`,ADD1,d_lemma5,FST,MULT_COMM]) >>
   Cases_on `v1 = 0w` THEN1 fs[] >> METIS_TAC[d_lemma2_bis,FST,NOT_0w_bis])
+
+val LAST_FRONT_mw_mul_by_single_NOT_ZERO = store_thm(
+   "LAST_FRONT_mw_mul_by_single_NOT_ZERO",
+  ``mw_ok ys /\ ys <> [] /\ 2 < dimword (:'a)  ==>
+    LAST (FRONT (mw_mul_by_single (calc_d (LAST ys,0x1w:'a word)) ys)) <> 0x0w``,
+  STRIP_TAC
+  \\ MP_TAC (d_clauses |> Q.SPECL [`TL (REVERSE ys)`,`HD (REVERSE ys)`])
+  \\ `~(NULL (REVERSE ys))` by FULL_SIMP_TAC std_ss [NULL_EQ,REVERSE_EQ_NIL]
+  \\ FULL_SIMP_TAC std_ss [CONS,NULL_DEF,REVERSE_REVERSE]
+  \\ FULL_SIMP_TAC std_ss [HD_REVERSE]
+  \\ Cases_on `LAST (FRONT (mw_mul_by_single (calc_d (LAST ys,0x1w)) ys))`
+  \\ FULL_SIMP_TAC std_ss [w2n_n2w,DIV_LE_X,n2w_11,ZERO_LT_dimword,mw_ok_def]
+  \\ Cases_on `LAST ys`
+  \\ FULL_SIMP_TAC std_ss [w2n_n2w,DIV_LE_X,n2w_11,ZERO_LT_dimword,mw_ok_def]
+  \\ Cases_on `n'` \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss []
+  \\ DECIDE_TAC);
 
 (* Single Division: x1x2 / y *)
 
@@ -2650,10 +2658,10 @@ val mw_div_def = Define `
   mw_div xs ys =
     let xs = mw_trailing xs in
     let ys = mw_trailing ys in
-      if LENGTH xs < LENGTH ys then ([],T) else
+      if LENGTH xs < LENGTH ys then ([],xs,T) else
       if LENGTH ys = 1 then
         let (qs,r,c) = mw_simple_div 0w (REVERSE xs) (HD ys) in
-          (REVERSE qs,c)
+          (REVERSE qs,[r],c)
       else
         let d = calc_d (LAST ys,0x1w) in
         let xs = mw_mul_by_single d xs ++ [0w] in
@@ -2661,24 +2669,30 @@ val mw_div_def = Define `
         let xs2 = LASTN (LENGTH ys) xs in
         let ys = FRONT (mw_mul_by_single d ys) in
         let (qs,rs) = mw_div_aux xs1 xs2 ys in
-          (REVERSE qs,T)`
+        let (rs,r,c) = mw_simple_div 0w (REVERSE rs) d in
+          (REVERSE qs,REVERSE rs,c)`
+
+val mwi_div_def = Define `
+  mwi_div (s,xs) (t,ys) =
+    let (res,mod,c) = mw_div xs ys in
+    let res = mw_trailing res in
+    let mod = mw_trailing mod in
+    let res = if s = t then res else
+              if mod = [] then res else mw_addv res [] T in
+    let sign = (if res = [] then F else ~(s = t)) in
+      (c,sign,res)`;
 
 val MULT_DIV_MULT_EQ_MULT = prove(
   ``!n k m. 0 < n /\ 0 < k ==> ((m * n) DIV (k * n) = m DIV k)``,
   ONCE_REWRITE_TAC [MULT_COMM]
   \\ SIMP_TAC std_ss [GSYM DIV_DIV_DIV_MULT,RW1 [MULT_COMM] MULT_DIV]);
 
-val LENGTH_mw_mul_pass = store_thm("LENGTH_mw_mul_pass",
-  ``!ys zs (x:'a word) k.
-      (LENGTH (mw_mul_pass x ys zs k) = LENGTH ys + 1)``,
-  Induct \\ Cases_on `zs`
-  \\ FULL_SIMP_TAC (srw_ss()) [mw_mul_pass_def,single_mul_add_def,LET_DEF,
-       single_mul_def,mw_add_def,single_add_def] \\ DECIDE_TAC);
-
 val mw_div_thm = store_thm("mw_div_thm",
-  ``(mw_div xs ys = (qs,c)) /\ mw2n ys <> 0 ==>
-    (mw2n qs = mw2n xs DIV mw2n ys) /\ c``,
-  ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  ``!xs ys mod res c.
+      (mw_div xs ys = (res,mod,c)) /\ mw2n ys <> 0 ==>
+      (mw2n res = mw2n xs DIV mw2n ys) /\
+      (mw2n mod = mw2n xs MOD mw2n ys) /\ c``,
+  NTAC 5 STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [LET_DEF,mw_div_def]
   \\ Cases_on `LENGTH (mw_trailing xs) < LENGTH (mw_trailing ys)`
   \\ FULL_SIMP_TAC std_ss [mw2n_mw_trailing] THEN1
@@ -2688,13 +2702,16 @@ val mw_div_thm = store_thm("mw_div_thm",
   \\ Cases_on `LENGTH (mw_trailing ys) = 1` \\ ASM_SIMP_TAC std_ss [] THEN1
    (Cases_on `mw_trailing ys` \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL]
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [HD] \\ STRIP_TAC
-    \\ `?qs r b. mw_simple_div 0w (REVERSE (mw_trailing xs)) h = (qs,r,b)` by METIS_TAC [PAIR]
+    \\ `?qs r b. mw_simple_div 0w (REVERSE (mw_trailing xs)) h = (qs,r,b)` by
+         METIS_TAC [PAIR]
     \\ FULL_SIMP_TAC std_ss [mw2n_def]
     \\ `mw2n ys = mw2n (mw_trailing ys)` by FULL_SIMP_TAC std_ss [mw2n_mw_trailing]
     \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [mw2n_def] \\ NTAC 2 STRIP_TAC
     \\ `0w <+ h` by ALL_TAC THEN1
       (Cases_on `h` \\ FULL_SIMP_TAC (srw_ss()) [word_lo_n2w] \\ DECIDE_TAC)
-    \\ IMP_RES_TAC mw_simple_div_thm \\ FULL_SIMP_TAC (srw_ss()) [mw2n_mw_trailing])
+    \\ FULL_SIMP_TAC std_ss []
+    \\ IMP_RES_TAC mw_simple_div_thm \\ FULL_SIMP_TAC (srw_ss()) [mw2n_mw_trailing]
+    \\ Cases_on `r` \\ FULL_SIMP_TAC std_ss [w2n_n2w,mw2n_def])
   \\ Q.ABBREV_TAC `d = (calc_d (LAST (mw_trailing ys),0x1w))`
   \\ Q.ABBREV_TAC `xs1 = (mw_mul_by_single d (mw_trailing xs) ++ [0x0w])`
   \\ Q.ABBREV_TAC `ys1 = (FRONT (mw_mul_by_single d (mw_trailing ys)))`
@@ -2723,7 +2740,8 @@ val mw_div_thm = store_thm("mw_div_thm",
   \\ FULL_SIMP_TAC std_ss []
   \\ `LENGTH (mw_trailing ys) <> 0` by ALL_TAC THEN1
         (FULL_SIMP_TAC std_ss [LENGTH_NIL,mw_trailing_NIL])
-  \\ `LENGTH (mw_trailing ys) <= LENGTH xs1` by (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
+  \\ `LENGTH (mw_trailing ys) <= LENGTH xs1` by
+        (FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
   \\ IMP_RES_TAC APPEND_BUTLASTN_LASTN \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM (K ALL_TAC)
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
@@ -2770,7 +2788,10 @@ val mw_div_thm = store_thm("mw_div_thm",
      (`LENGTH (REVERSE
         (TAKE (LENGTH (mw_trailing ys))
           (REVERSE (mw_mul_by_single d (mw_trailing xs))))) =
-       LENGTH (mw_trailing ys)` by cheat
+       LENGTH (mw_trailing ys)` by ALL_TAC THEN1
+        (FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ MATCH_MP_TAC LENGTH_TAKE
+         \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,LENGTH_mw_mul_by_single]
+         \\ DECIDE_TAC)
       \\ METIS_TAC [mw2n_lt])
     \\ ONCE_REWRITE_TAC [GSYM mw2n_mw_trailing]
     \\ `mw_ok (mw_trailing ys)` by FULL_SIMP_TAC std_ss [mw_ok_mw_trailing]
@@ -2791,11 +2812,78 @@ val mw_div_thm = store_thm("mw_div_thm",
   \\ SIMP_TAC std_ss [rich_listTheory.BUTLASTN_LENGTH_APPEND]
   \\ SIMP_TAC std_ss [rich_listTheory.LASTN_LENGTH_APPEND]
   \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE] \\ STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC MULT_DIV_MULT_EQ_MULT
-  \\ Q.UNABBREV_TAC `d`
-  \\ `?n. w2n (calc_d (LAST (mw_trailing ys),0x1w)) = 2 ** n` by
-        METIS_TAC [d_lemma4 |> SIMP_RULE std_ss []]
-  \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  \\ Q.PAT_ASSUM `xxx = (res,mod,c)` (ASSUME_TAC o GSYM)
+  \\ `?n. w2n d = 2 ** n` by METIS_TAC [d_lemma4 |> SIMP_RULE std_ss []]
+  \\ `?q2 r2 c2. mw_simple_div 0x0w (REVERSE rs1) d = (q2,r2,c2)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss []
+  \\ `0 < mw2n ys` by DECIDE_TAC
+  \\ `0x0w <+ d` by ALL_TAC THEN1
+   (Cases_on `d` \\ FULL_SIMP_TAC std_ss [w2n_n2w,WORD_LO,ZERO_LT_dimword])
+  \\ MP_TAC (mw_simple_div_thm |> Q.SPECL [`REVERSE rs1`,`d`])
+  \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE] \\ STRIP_TAC \\ STRIP_TAC
+  THEN1 (MATCH_MP_TAC MULT_DIV_MULT_EQ_MULT \\ FULL_SIMP_TAC std_ss [])
+  \\ FULL_SIMP_TAC std_ss [w2n_n2w,WORD_LO,
+       GSYM (RW1 [MULT_COMM] DIV_MOD_MOD_DIV),MULT_DIV]);
+
+val ABS_NEG = prove(
+  ``ABS (-(& n)) = & n``,
+  intLib.COOPER_TAC);
+
+val NEG_DIV_LEMMA = prove(
+  ``m <> 0 ==>
+    ((- & n) / & m = - (& (n DIV m + if n MOD m = 0 then 0 else 1)):int)``,
+  STRIP_TAC \\ `& m <> 0i` by intLib.COOPER_TAC
+  \\ ASM_SIMP_TAC (srw_ss()) []
+  \\ `0i < &m /\ (0 <= -&n = (n = 0))` by intLib.COOPER_TAC
+  \\ ASM_SIMP_TAC std_ss [int_div,EVAL ``-0i``,NUM_OF_INT]
+  \\ Cases_on `n = 0` \\ FULL_SIMP_TAC std_ss [] THEN1
+   (`0 < m` by DECIDE_TAC
+    \\ FULL_SIMP_TAC std_ss [ZERO_DIV] \\ EVAL_TAC)
+  \\ FULL_SIMP_TAC std_ss [INT_MOD_CALCULATE,NUM_OF_INT]
+  \\ Cases_on `n MOD m = 0` \\ FULL_SIMP_TAC std_ss []
+  \\ Q.ABBREV_TAC `k = n DIV m` \\ intLib.COOPER_TAC);
+
+val NEG_DIV = prove(
+  ``m <> 0 ==>
+    (& n / & m         = (& (n DIV m)):int) /\
+    ((- & n) / & m     = - (& (n DIV m + if n MOD m = 0 then 0 else 1)):int) /\
+    (& n     / (- & m) = - (& (n DIV m + if n MOD m = 0 then 0 else 1)):int) /\
+    ((- & n) / (- & m) = (& (n DIV m):int))``,
+  STRIP_TAC \\ `& m <> 0i` by intLib.COOPER_TAC
+  \\ ASM_SIMP_TAC (srw_ss()) [NEG_DIV_LEMMA]);
+
+val mw_addv_lemma = prove(
+  ``mw_addv (mw n) [] T = mw (n + 1)``,
+  `mw_ok (mw_addv (mw n) [] T)` by ALL_TAC THEN1
+    (MATCH_MP_TAC mw_ok_addv
+     \\ FULL_SIMP_TAC std_ss [mw_ok_mw,EVAL ``mw_ok []``])
+  \\ IMP_RES_TAC mw_ok_mw_mw2n
+  \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [th])
+  \\ FULL_SIMP_TAC std_ss [mw2n_mw,mw_addv_thm,LENGTH]
+  \\ AP_TERM_TAC \\ EVAL_TAC);
+
+val mw_EQ_NIL = prove(
+  ``(mw n = []) <=> (n = 0)``,
+  Cases_on `n` THEN1 EVAL_TAC \\ ONCE_REWRITE_TAC [mw_def]
+  \\ SIMP_TAC std_ss [ADD1,NOT_CONS_NIL]);
+
+val mwi_div_thm = store_thm("mwi_div_thm",
+  ``!i j. j <> 0 ==>
+      (mwi_div (i2mw i) ((i2mw j):bool # 'a word list) = (T,i2mw (i / j)))``,
+  NTAC 3 STRIP_TAC \\ SIMP_TAC std_ss [i2mw_def,mwi_div_def,mw_NIL,Num_ABS_EQ_0]
+  \\ `(?r1 r2 r3. mw_div (mw (Num (ABS i))) (mw (Num (ABS j))) =
+                 (r1:'a word list,r2,r3))`
+         by METIS_TAC [PAIR] \\ FULL_SIMP_TAC std_ss [LET_DEF]
+  \\ `mw2n (mw (Num (ABS j))) <> 0` by ALL_TAC
+  THEN1 (FULL_SIMP_TAC std_ss [mw2n_mw] \\ intLib.COOPER_TAC)
+  \\ MP_TAC (mw_div_thm |> Q.SPECL [`mw (Num (ABS i))`,`mw (Num (ABS j))`])
+  \\ ASM_REWRITE_TAC [] \\ SIMP_TAC std_ss [] \\ STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [mw2n_mw,mw_mw2n,mw_addv_lemma,mw_EQ_NIL]
+  \\ STRIP_ASSUME_TAC (Q.SPEC `i` INT_NUM_CASES)
+  \\ STRIP_ASSUME_TAC (Q.SPEC `j` INT_NUM_CASES)
+  \\ FULL_SIMP_TAC (srw_ss()) [integerTheory.INT_ABS_NUM,ABS_NEG,NEG_DIV]
+  \\ Cases_on `n MOD n' = 0` \\ FULL_SIMP_TAC std_ss [mw2n_mw]
+  \\ `0 < n` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss [mw2n_mw,mw_EQ_NIL]);
 
 
 (* converting into decimal form *)
@@ -2954,6 +3042,48 @@ val LENGTH_mw_mul = store_thm("LENGTH_mw_mul",
   \\ Cases_on `mw_mul_pass h ys zs 0x0w`
   \\ FULL_SIMP_TAC std_ss [LENGTH,TL,ADD1] \\ DECIDE_TAC);
 
+val LENGTH_mw_simple_div = store_thm("LENGTH_mw_simple_div",
+  ``!xs x ys qs r c.
+      (mw_simple_div x xs ys = (qs,r,c)) ==> (LENGTH xs = LENGTH qs)``,
+  Induct \\ SIMP_TAC std_ss [mw_simple_div_def,LET_DEF]
+  \\ REPEAT STRIP_TAC \\ Cases_on `single_div x h ys`
+  \\ FULL_SIMP_TAC std_ss []
+  \\ `?qs1 r1 c1. mw_simple_div r' xs ys = (qs1,r1,c1)` by METIS_TAC [PAIR]
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_ASSUM `q::qs1 = qs` (ASSUME_TAC o GSYM)
+  \\ FULL_SIMP_TAC std_ss [LENGTH]);
+
+val LESS_EQ_LENGTH_ALT = store_thm("LESS_EQ_LENGTH_ALT",
+  ``!xs n. n <= LENGTH xs ==> ?ys1 ys2. (xs = ys1 ++ ys2) /\ (LENGTH ys2 = n)``,
+  HO_MATCH_MP_TAC SNOC_INDUCT \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL,APPEND_NIL,LENGTH_SNOC]
+  \\ Cases_on `n` \\ FULL_SIMP_TAC std_ss [LENGTH_NIL,APPEND_NIL]
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC]
+  \\ Q.LIST_EXISTS_TAC [`ys1`,`SNOC x ys2`]
+  \\ FULL_SIMP_TAC std_ss [LENGTH_SNOC,SNOC_APPEND]);
+
+val LENGTH_mw_div_aux = store_thm("LENGTH_mw_div_aux",
+  ``!ts1 ts2 ys qs rs.
+      (mw_div_aux ts1 ts2 ys = (qs,rs)) /\ (LENGTH ts2 = LENGTH ys) ==>
+      (LENGTH rs = LENGTH ys) /\ (LENGTH qs = LENGTH ts1)``,
+  HO_MATCH_MP_TAC SNOC_INDUCT \\ STRIP_TAC
+  THEN1 (SIMP_TAC std_ss [Once mw_div_aux_def])
+  \\ NTAC 7 STRIP_TAC
+  \\ SIMP_TAC std_ss [Once mw_div_aux_def,NOT_SNOC_NIL,LAST_SNOC,FRONT_SNOC]
+  \\ FULL_SIMP_TAC std_ss [LET_DEF]
+  \\ Q.ABBREV_TAC `q = (mw_div_adjust
+                     (mw_div_guess (REVERSE (x::ts2)) (REVERSE ys))
+                     (x::ts2) ys)`
+  \\ Cases_on `mw_sub (x::ts2) (mw_mul_by_single q ys) T`
+  \\ FULL_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC LENGTH_mw_sub
+  \\ `(q' = []) \/ ?y ys2. q' = SNOC y ys2` by METIS_TAC [SNOC_CASES]
+  \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,LENGTH_SNOC,FRONT_SNOC]
+  \\ Cases_on `mw_div_aux ts1 ys2 ys` \\ FULL_SIMP_TAC std_ss []
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ FULL_SIMP_TAC std_ss [LENGTH]
+  \\ METIS_TAC []);
+
 
 (* combined mul_by_single *)
 
@@ -2992,5 +3122,82 @@ val mw_mul_by_single2_thm = prove(
   |> SIMP_RULE std_ss [GSYM mw_mul_by_single_def,LET_DEF];
 
 val _ = save_thm("mw_mul_by_single2_thm",mw_mul_by_single2_thm);
+
+(* calc only top three results of mw_mul_pass *)
+
+val mw_mul_pass_top_def = Define `
+  (mw_mul_pass_top x [] (k,k1,k2) = (k,k1,k2)) /\
+  (mw_mul_pass_top x (y::ys) (k,k1,k2) =
+     let (y1,k) = single_mul_add x y k 0w in
+       mw_mul_pass_top x ys (k,y1,k1))`;
+
+val n2mw_LENGTH_0 = store_thm("n2mw_LENGTH_0",
+  ``!ys. (n2mw (LENGTH ys) 0) = MAP (K 0w) ys``,
+  Induct \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [MATCH_MP ZERO_DIV ZERO_LT_dimword]);
+
+val mw_mul_pass_top_lemma = prove(
+  ``!ys k1 k2 k3 x.
+      ((let (x1,x2,x3) = mw_mul_pass_top x ys (k1,k2,k3) in [x1;x2;x3]) =
+       TAKE 3 (REVERSE (mw_mul_pass x ys (MAP (K 0w) ys) k1) ++ [k2;k3]))``,
+  Induct THEN1 (EVAL_TAC \\ SIMP_TAC std_ss [])
+  \\ ONCE_REWRITE_TAC [mw_mul_pass_def,mw_mul_pass_top_def]
+  \\ FULL_SIMP_TAC std_ss [HD,MAP,TL] \\ REPEAT STRIP_TAC
+  \\ Cases_on `single_mul_add x h k1 0x0w`
+  \\ FULL_SIMP_TAC std_ss [LET_DEF,REVERSE_DEF,GSYM APPEND_ASSOC,APPEND]
+  \\ Cases_on `REVERSE (mw_mul_pass x ys (MAP (K 0x0w) ys) r)` THEN1
+   (FULL_SIMP_TAC std_ss [REVERSE_EQ_NIL]
+    \\ FULL_SIMP_TAC std_ss [GSYM LENGTH_NIL,LENGTH_mw_mul_pass])
+  \\ Cases_on `t` \\ EVAL_TAC \\ Cases_on `t'` \\ EVAL_TAC)
+  |> Q.SPECL [`ys`,`0w`] |> GEN_ALL
+  |> SIMP_RULE std_ss [GSYM n2mw_LENGTH_0,GSYM mw_mul_by_single_def];
+
+val mw_mul_pass_top_thm = store_thm("mw_mul_pass_top_thm",
+  ``1 < LENGTH ys ==>
+    (mw_mul_pass_top x ys (0w,0w,0w) =
+      (LAST (mw_mul_by_single x ys),
+       LAST (BUTLAST (mw_mul_by_single x ys)),
+       LAST (BUTLAST (BUTLAST (mw_mul_by_single x ys)))))``,
+  STRIP_TAC
+  \\ ASSUME_TAC (mw_mul_pass_top_lemma |> Q.SPECL [`ys`,`0w`,`0w`,`x`])
+  \\ Cases_on `mw_mul_pass_top x ys (0x0w,0x0w,0x0w)`
+  \\ Cases_on `r` \\ FULL_SIMP_TAC std_ss [LET_DEF]
+  \\ `2 < LENGTH (mw_mul_by_single x ys)` by
+       (FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single] \\ DECIDE_TAC)
+  \\ `(mw_mul_by_single x ys = []) \/
+      ?y ys2. mw_mul_by_single x ys = SNOC y ys2` by METIS_TAC [SNOC_CASES]
+  \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_SNOC,ADD1]
+  \\ `(ys2 = []) \/ ?y3 ys3. ys2 = SNOC y3 ys3` by METIS_TAC [SNOC_CASES]
+  \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_SNOC,ADD1]
+  \\ `(ys3 = []) \/ ?y4 ys4. ys3 = SNOC y4 ys4` by METIS_TAC [SNOC_CASES]
+  \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_SNOC,ADD1]
+  \\ FULL_SIMP_TAC bool_ss [REVERSE_SNOC,TAKE,LAST_SNOC,FRONT_SNOC,
+        DECIDE ``3 = SUC (SUC (SUC 0))``,APPEND,CONS_11]);
+
+(* extra lemmas about mw_addv special case *)
+
+val single_add_lemma = prove(
+  ``!h. single_add h 0x0w F = (h,F)``,
+  Cases \\ FULL_SIMP_TAC std_ss [single_add_def,word_add_n2w,b2w_def,
+     b2n_def,w2n_n2w,ZERO_LT_dimword,GSYM NOT_LESS]);
+
+val mw_addv_NIL_F = prove(
+  ``!xs. mw_addv xs [] F = xs``,
+  Induct THEN1 EVAL_TAC
+  \\ ASM_SIMP_TAC std_ss [mw_addv_def,LET_DEF,single_add_lemma,CONS_11]);
+
+val mw_addv_CONS_NIL_T = prove(
+  ``mw_addv (x::xs) [] T =
+      if x = ~0w:word64 then 0w::mw_addv xs [] T else (x+1w)::xs``,
+  Cases_on `x = ~0x0w`
+  \\ ASM_SIMP_TAC std_ss [mw_addv_def,LET_DEF,
+       EVAL ``single_add (~0x0w) (0x0w:word64) T``]
+  \\ `single_add x 0x0w T = (x+1w,F)` by ALL_TAC THEN1
+   (Cases_on `x` \\ FULL_SIMP_TAC std_ss [single_add_def,word_add_n2w,b2w_def,
+      b2n_def,w2n_n2w,ZERO_LT_dimword,GSYM NOT_LESS,n2w_11,EVAL ``~0w:word64``,
+      EVAL ``dimword (:64)``] \\ DECIDE_TAC)
+  \\ ASM_SIMP_TAC std_ss [mw_addv_NIL_F]);
+
+val mw_addv_NIL = save_thm("mw_addv_NIL",LIST_CONJ
+  [EVAL ``mw_addv [] [] T``,mw_addv_NIL_F,GEN_ALL mw_addv_CONS_NIL_T]);
 
 val _ = export_theory();

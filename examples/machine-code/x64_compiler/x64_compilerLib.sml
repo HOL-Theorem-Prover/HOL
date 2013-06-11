@@ -96,6 +96,11 @@ fun x64_basic_compile tm = let
     REPEAT STRIP_TAC
     THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th2]))
     THEN COMPILER_TAC)
+    handle HOL_ERR e => let
+      val _ = (show_types := true)
+      val _ = print ("\n\nval tm = ``"^ term_to_string tm ^"``;\n\n")
+      val _ = (show_types := false)
+      in raise HOL_ERR e end;
   val _ = add_compiler_assignment out_tm2 (fst (dest_eq tm)) name len model_name
   val _ = print "done.\n"
   in (th1,th3,pre) end;

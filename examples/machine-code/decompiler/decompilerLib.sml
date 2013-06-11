@@ -880,7 +880,13 @@ fun MERGE guard th1 th2 = let
   val th = MATCH_MP th (g (mk_neg guard) th2)
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
   val th = remove_primes th
-  in th end;
+  in th end handle HOL_ERR e => let
+    val th1 = DISCH_ALL th1
+    val th2 = DISCH_ALL th2
+    val _ = print ("\n\nval guard = ``"^ term_to_string guard ^"``;\n\n")
+    val _ = print ("\n\nval th1 = mk_thm([],``"^ term_to_string (concl th1) ^"``);\n\n")
+    val _ = print ("\n\nval th2 = mk_thm([],``"^ term_to_string (concl th2) ^"``);\n\n")
+    in raise HOL_ERR e end;
 
 fun merge_spectree_thm (LEAF (th,i)) = let
       val th = SIMP_RULE (bool_ss++sep_cond_ss) [SEP_EXISTS_COND] th
