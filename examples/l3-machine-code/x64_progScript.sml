@@ -8,7 +8,7 @@ val () = new_theory "x64_prog"
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = stateLib.sep_definitions "x64" [] x64_stepTheory.NextStateX64_def
+val _ = stateLib.sep_definitions "x64" [] [] x64_stepTheory.NextStateX64_def
 
 val x64_mem_def = Define`
    x64_mem a (i: word8 list) =

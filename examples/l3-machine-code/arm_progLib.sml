@@ -12,9 +12,6 @@ end
 
 open Parse
 
-infix \\
-val op \\ = op THEN;
-
 val ERR = Feedback.mk_HOL_ERR "arm_progLib"
 
 (* ------------------------------------------------------------------------ *)
@@ -47,7 +44,7 @@ end
 (* -- *)
 
 val arm_select_state_thms =
-   List.map (fn t => star_select_state_thm arm_proj_def [] ([], t))
+   List.map (fn t => stateLib.star_select_state_thm arm_proj_def [] ([], t))
             arm_comp_defs
 
 val arm_select_state_pool_thm =
@@ -67,17 +64,8 @@ val state_id =
       ]
 
 val arm_frame =
-   update_frame_state_thm arm_proj_def
-      [(`K arm_c_CurrentCondition`,
-        `\s:arm_state a w. s with CurrentCondition := w`,
-        `I: arm_state -> arm_state`),
-       (`K arm_c_Encoding`,
-        `\s:arm_state a w. s with Encoding := w`,
-        `I: arm_state -> arm_state`),
-       (`K arm_c_undefined`,
-        `\s:arm_state a w. s with undefined := w`,
-        `I: arm_state -> arm_state`),
-       (`K arm_c_CPSR_N`,
+   stateLib.update_frame_state_thm arm_proj_def
+      [(`K arm_c_CPSR_N`,
         `\s:arm_state a w. s with CPSR := cpsr with N := w`,
         `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_Z`,
@@ -106,6 +94,12 @@ val arm_frame =
         `\s:arm_state a w. s with FP := fp with REG := (a =+ w) fp.REG`,
         `\s:arm_state. s with FP := fp`)
       ]
+
+val arm_frame_hidden =
+   stateLib.update_hidden_frame_state_thm arm_proj_def
+      [``s with Encoding := x``,
+       ``s with CurrentCondition := x``,
+       ``s with undefined := x``]
 
 (* -- *)
 
@@ -188,9 +182,6 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "arm_exception" => 1
-       | "arm_undefined" => 2
-       | "arm_CurrentCondition" => 3
-       | "arm_Encoding" => 4
        | "arm_CPSR_J" => 5
        | "arm_CPSR_E" => 6
        | "arm_CPSR_T" => 7
@@ -267,11 +258,12 @@ in
       stateLib.write_footprint arm_1 arm_2
         [("arm$arm_state_MEM_fupd", "arm_MEM", ``^st.MEM``),
          ("arm$arm_state_REG_fupd", "arm_REG", ``^st.REG``)]
-        [("arm$arm_state_Encoding_fupd", "arm_Encoding"),
-         ("arm$arm_state_CurrentCondition_fupd", "arm_CurrentCondition"),
-         ("arm$arm_state_undefined_fupd", "arm_undefined")] []
+        [] []
         [("arm$arm_state_FP_fupd", fp_footprint),
-         ("arm$arm_state_CPSR_fupd", cpsr_footprint)]
+         ("arm$arm_state_CPSR_fupd", cpsr_footprint),
+         ("arm$arm_state_Encoding_fupd", fn (p, q, _) => (p, q)),
+         ("arm$arm_state_undefined_fupd", fn (p, q, _) => (p, q)),
+         ("arm$arm_state_CurrentCondition_fupd", fn (p, q, _) => (p, q))]
         (K false)
 end
 
@@ -434,10 +426,7 @@ local
       in
          fn tm =>
             case boolSyntax.dest_strip_comb tm of
-               ("arm_prog$arm_undefined", [v]) => g (v, "und", Type.bool)
-             | ("arm_prog$arm_CurrentCondition", [v]) => g (v, "cond", word4)
-             | ("arm_prog$arm_Encoding", [v]) => g (v, "enc", ``:Encoding``)
-             | ("arm_prog$arm_CPSR_N", [v]) => g (v, "n", Type.bool)
+               ("arm_prog$arm_CPSR_N", [v]) => g (v, "n", Type.bool)
              | ("arm_prog$arm_CPSR_Z", [v]) => g (v, "z", Type.bool)
              | ("arm_prog$arm_CPSR_C", [v]) => g (v, "c", Type.bool)
              | ("arm_prog$arm_CPSR_V", [v]) => g (v, "v", Type.bool)
@@ -557,7 +546,7 @@ local
          arm_stepTheory.R_x_pc
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
-      \\ ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
+      THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
    val arm_rwts =
       List.drop (utilsLib.datatype_rewrites "arm" ["arm_state", "PSR", "FP"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
@@ -567,7 +556,7 @@ local
            [arm_stepTheory.get_bytes]
            []
            (arm_select_state_pool_thm :: arm_select_state_thms)
-           [arm_frame, state_id]
+           [arm_frame, arm_frame_hidden, state_id]
            component_11
            [word, word5, ``:RName``]
            EXTRA_TAC STATE_TAC
@@ -972,7 +961,7 @@ val imp_spec = ARM_IMP_SPEC
 val read_thms = [arm_stepTheory.get_bytes]
 val write_thms = []: thm list
 val select_state_thms = (arm_select_state_pool_thm :: arm_select_state_thms)
-val frame_thms = [arm_frame, state_id]
+val frame_thms = [arm_frame, arm_frame_hidden, state_id]
 val map_tys = [word, word5, ``:RName``]
 val mk_pre_post = arm_mk_pre_post
 val write = arm_write_footprint

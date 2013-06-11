@@ -17,12 +17,12 @@ fun mk_state_pred x =
    pred_setSyntax.mk_set [pred_setSyntax.mk_set [pairSyntax.mk_pair x]]
 
 (* ------------------------------------------------------------------------
-   update_frame_state_thm: Generate theorems of the form
+   update_frame_state_thm: Generate theorem with conjuncts of the form
 
    !a w s x.
       f a IN x ==> (FRAME_STATE m x (u s a w) = FRAME_STATE m x (r s))
 
-   where "u" is a state update function.
+   where "m" is a projection map and "u" is a state update function.
    ------------------------------------------------------------------------ *)
 
 local
@@ -45,6 +45,37 @@ in
       Drule.LIST_CONJ o
       List.map (Feedback.trace ("notify type variable guesses", 0)
                   (frame_state_thm proj_def))
+end
+
+(* ------------------------------------------------------------------------
+   update_hidden_frame_state_thm: Generate theorem with conjuncts of the form
+
+   !x y s. (FRAME_STATE m x (s with ? := x) = FRAME_STATE m x s)
+
+   where "m" is a projection map.
+   ------------------------------------------------------------------------ *)
+
+local
+   val tac =
+      NTAC 2 STRIP_TAC
+      THEN REWRITE_TAC [stateTheory.FRAME_STATE_def, stateTheory.STATE_def,
+                        stateTheory.SELECT_STATE_def, set_sepTheory.fun2set_def]
+      THEN SRW_TAC [] [pred_setTheory.EXTENSION, pred_setTheory.GSPECIFICATION]
+      THEN EQ_TAC
+      THEN STRIP_TAC
+      THEN Q.EXISTS_TAC `a`
+      THEN Cases_on `a`
+   fun prove_hidden thm u =
+      let
+         val p = utilsLib.get_function thm
+         val t = tac THEN FULL_SIMP_TAC (srw_ss()) [thm]
+      in
+         Drule.GEN_ALL
+           (Q.prove (`!y s. FRAME_STATE ^p y ^u = FRAME_STATE ^p y s`, t))
+      end
+in
+   fun update_hidden_frame_state_thm proj_def =
+      utilsLib.map_conv (prove_hidden proj_def)
 end
 
 (* ------------------------------------------------------------------------
@@ -144,36 +175,37 @@ local
          SOME (d, r) => ((n, [ParseDatatype.dAQ d]), r)
        | NONE => ((n, []), ty)
 
-   fun build_names (sthy, expnd, sty) =
+   fun build_names (sthy, expnd, hide, state_ty) =
       let
-         val s = mk_state_var sty
-         fun loop (x as ((path, ty), tm), es) =
+         val s = mk_state_var state_ty
+         fun loop (x as ((path, ty), tm), es, hs) =
             case Lib.total TypeBase.fields_of ty of
                NONE => [x]
              | SOME [] => [x]
              | SOME l =>
                let
                   val l = ListPair.zip (l, utilsLib.accessor_fns ty)
+                  fun process n =
+                     List.map List.tl o
+                     List.filter (Lib.equal (SOME n) o Lib.total List.hd)
                   val (nd, dn) =
                      List.foldl
                         (fn ((x as ((n, t), f)), (nd, dn)) =>
                            let
-                              val es' =
-                                 es
-                                 |> List.filter
-                                      (Lib.equal (SOME n) o
-                                       Lib.total List.hd)
-                                 |> List.map List.tl
+                              val hs' = process n hs
+                              val es' = process n es
+                              val ahide = Lib.mem [] hs'
                               val y = ((n :: path, t), Term.mk_comb (f, tm))
                            in
                               if List.null es'
-                                 then (nd, y :: dn)
-                              else ((y, es') :: nd, dn)
+                                 then (nd, if ahide then dn else y :: dn)
+                              else ((y, es', hs') :: nd, dn)
                            end) ([], []) l
                in
                   dn @ List.concat (List.map loop nd)
                end
-         val (l1, tms) = ListPair.unzip (loop ((([], sty), s), expnd))
+         val (l1, tms) =
+            ListPair.unzip (loop ((([], state_ty), s), expnd, hide))
          val (components, data) =
             ListPair.unzip
               (List.map (component o (make_component_name sthy ## Lib.I)) l1)
@@ -230,11 +262,11 @@ local
          Definition.new_definition (def_suffix s, boolSyntax.mk_eq (l, r))
       end
 in
-   fun sep_definitions sthy expnd thm =
+   fun sep_definitions sthy expnd hide thm =
       let
          val next_tm = utilsLib.get_function thm
          val state_ty = utilsLib.dom (Term.type_of next_tm)
-         val (components, data, tms) = build_names (sthy, expnd, state_ty)
+         val (components, data, tms) = build_names (sthy, expnd, hide, state_ty)
          fun dc ty = sthy ^ "_d_" ^ data_constructor ty
          val data_cons = List.map (fn d => (dc d, [ParseDatatype.dAQ d])) data
          val s_c = sthy ^ "_component"
@@ -303,6 +335,24 @@ in
          proj_def :: defs
       end
 end
+
+(*
+
+open arm_stepTheory
+
+val sthy = "arm"
+val expnd = [["CPSR"], ["FP", "FPSCR"]]
+val hide = [["undefined"], ["CurrentCondition"]]
+val thm = arm_stepTheory.NextStateARM_def
+
+val (x as ((path, ty), tm), es) = ((([], state_ty), s), expnd)
+val SOME l = Lib.total TypeBase.fields_of ty
+val (x as ((n, t), f)) = hd l
+
+val hs = [["Architecture"]]
+
+*)
+
 
 (* ------------------------------------------------------------------------
    mk_code_pool: make term ``CODE_POOL f {(v, opc)}``
@@ -521,7 +571,7 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   write_footprint syntax1 syntax2 l1 l2 l3 P (p, q, tm)
+   write_footprint syntax1 syntax2 l1 l2 l3 l4 P (p, q, tm)
 
    Extend p (pre) and q (post) proposition lists with entries for
    component updates.
