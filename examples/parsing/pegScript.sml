@@ -204,7 +204,7 @@ val lemma4_1a0 = prove(
   imp_res_tac peg_eval_list_suffix' >- rw[] >>
   asm_simp_tac (srw_ss() ++ ARITH_ss) [])
 
-val lemma4_1a = lemma4_1a0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO]
+val lemma4_1a = save_thm("lemma4_1a",lemma4_1a0 |> SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO])
 
 val (wfpeg_rules, wfpeg_ind, wfpeg_cases) = Hol_reln`
   (∀n f. n ∈ FDOM G.rules ∧ wfpeg G (G.rules ' n) ⇒ wfpeg G (nt n f)) ∧
