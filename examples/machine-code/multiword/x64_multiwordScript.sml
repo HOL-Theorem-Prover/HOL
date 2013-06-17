@@ -377,7 +377,7 @@ val (res,x64_compare_def,x64_compare_pre_def) = x64_compile `
 val x64_header_def = Define `
   x64_header (s,xs:word64 list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:word64`;
 
-val (res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
+val (x64_icompare_res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
   x64_icompare (r10:word64,r11,xs:word64 list,ys:word64 list) =
     if r10 && 1w = 0w then
       if ~(r11 && 1w = 0w) then let r10 = 2w in (r10,xs,ys) else
@@ -708,7 +708,7 @@ val (res,x64_sub_loop_def) = x64_decompile_no_status "x64_sub_loop" `
       lea r10,[r10+1]
   L4: loop L3`
 
-val (x64_trailing_res,x64_trailing_def) = x64_decompile "x64_trailing" `
+val (x64_fix_res,x64_fix_def) = x64_decompile "x64_fix" `
   L1: test r10,r10
       je L2
       dec r10
@@ -718,12 +718,12 @@ val (x64_trailing_res,x64_trailing_def) = x64_decompile "x64_trailing" `
       inc r10
   L2: `
 
-val _ = add_compiled [x64_trailing_res];
+val _ = add_compiled [x64_fix_res];
 
 val (x64_sub_res,x64_sub_def) = x64_decompile "x64_sub" `
       sub r2,r1
       insert x64_sub_loop
-      insert x64_trailing`
+      insert x64_fix`
 
 val _ = add_compiled [x64_sub_res]
 
@@ -731,16 +731,16 @@ val REPLICATE_SNOC = prove(
   ``!n x. REPLICATE (SUC n) x = SNOC x (REPLICATE n x)``,
   Induct \\ FULL_SIMP_TAC (srw_ss()) [REPLICATE]);
 
-val x64_trailing_thm = prove(
+val x64_fix_thm = prove(
   ``!zs zs1 r8.
       LENGTH zs < dimword(:64) ==>
       ?r8'.
-        x64_trailing_pre (r8,n2w (LENGTH zs),zs++zs1) /\
-        (x64_trailing (r8,n2w (LENGTH zs),zs++zs1) =
-         (r8',n2w (LENGTH (mw_trailing zs)),
-          mw_trailing zs ++ REPLICATE (LENGTH zs - LENGTH (mw_trailing zs)) 0w ++ zs1))``,
+        x64_fix_pre (r8,n2w (LENGTH zs),zs++zs1) /\
+        (x64_fix (r8,n2w (LENGTH zs),zs++zs1) =
+         (r8',n2w (LENGTH (mw_fix zs)),
+          mw_fix zs ++ REPLICATE (LENGTH zs - LENGTH (mw_fix zs)) 0w ++ zs1))``,
   HO_MATCH_MP_TAC SNOC_INDUCT \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL]
-  \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [x64_trailing_def,mw_trailing_def]
+  \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [x64_fix_def,mw_fix_def]
   \\ FULL_SIMP_TAC (srw_ss()) [rich_listTheory.REPLICATE,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,ADD1,GSYM word_sub_def,WORD_ADD_SUB]
   \\ IMP_RES_TAC (DECIDE ``n + 1 < k ==> n < k:num``)
@@ -750,12 +750,12 @@ val x64_trailing_thm = prove(
   \\ REV (Cases_on `x = 0w`) \\ FULL_SIMP_TAC std_ss [] THEN1
    (FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,REPLICATE,APPEND,
       GSYM APPEND_ASSOC,word_add_n2w] \\ DECIDE_TAC)
-  \\ SEP_I_TAC "x64_trailing" \\ FULL_SIMP_TAC std_ss []
+  \\ SEP_I_TAC "x64_fix" \\ FULL_SIMP_TAC std_ss []
   \\ STRIP_TAC THEN1 DECIDE_TAC \\ AP_TERM_TAC
-  \\ `LENGTH (mw_trailing zs) <= LENGTH zs` by
-      FULL_SIMP_TAC std_ss [LENGTH_mw_trailing]
-  \\ `LENGTH zs + 1 - LENGTH (mw_trailing zs) =
-        SUC (LENGTH zs - LENGTH (mw_trailing zs))` by DECIDE_TAC
+  \\ `LENGTH (mw_fix zs) <= LENGTH zs` by
+      FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
+  \\ `LENGTH zs + 1 - LENGTH (mw_fix zs) =
+        SUC (LENGTH zs - LENGTH (mw_fix zs))` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [REPLICATE_SNOC]
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND])
 
@@ -933,7 +933,7 @@ val x64_sub_thm = prove(
   \\ `LENGTH (qs1 ++ qs2) < dimword (:64)` by
         (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC x64_trailing_thm \\ SEP_I_TAC "x64_trailing"
+  \\ IMP_RES_TAC x64_fix_thm \\ SEP_I_TAC "x64_fix"
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,AC ADD_COMM ADD_ASSOC]);
 
@@ -972,7 +972,7 @@ val (res,x64_iadd3_def,x64_iadd3_pre_def) = x64_compile `
         let (xa,xs,ya,ys) = (ya,ys,xa,xs) in
           (xs,ys,xa,ya)`
 
-val (res,x64_iadd_def,x64_iadd_pre_def) = x64_compile `
+val (x64_iadd_res,x64_iadd_def,x64_iadd_pre_def) = x64_compile `
   x64_iadd (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list,xa,ya) =
     let r10 = r1 && 1w in
     let r11 = r2 && 1w in
@@ -1208,7 +1208,7 @@ val (res,x64_mul_zero_def,x64_mul_zero_pre_def) = x64_compile `
       let zs = LUPDATE r0 (w2n r10) zs in
         x64_mul_zero (r0,r10,zs)`;
 
-val (res,x64_imul_def,x64_imul_pre_def) = x64_compile `
+val (x64_imul_res,x64_imul_def,x64_imul_pre_def) = x64_compile `
   x64_imul (r1:word64,r2:word64,xs:word64 list,ys:word64 list,zs:word64 list) =
     let r10 = 0w in
       if r1 = 0w then (r10,xs,ys,zs) else
@@ -1225,7 +1225,7 @@ val (res,x64_imul_def,x64_imul_pre_def) = x64_compile `
             let r12 = r10 in
             let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
             let r8 = 0w in
-            let (r8,r10,zs) = x64_trailing (r8,r10,zs) in
+            let (r8,r10,zs) = x64_fix (r8,r10,zs) in
             let r10 = r10 << 1 in
               (r10,xs,ys,zs)
           else
@@ -1235,7 +1235,7 @@ val (res,x64_imul_def,x64_imul_pre_def) = x64_compile `
             let r12 = r10 in
             let (r10,xs,ys,zs) = x64_mul (r7,r9,r10,r12,xs,ys,zs) in
             let r8 = 0w in
-            let (r8,r10,zs) = x64_trailing (r8,r10,zs) in
+            let (r8,r10,zs) = x64_fix (r8,r10,zs) in
             let r10 = r10 << 1 in
             let r10 = r10 + 1w in
               (r10,xs,ys,zs)`;
@@ -1362,11 +1362,11 @@ val x64_imul_thm = prove(
     ?zs1.
       x64_imul_pre (x64_header (s,xs),x64_header (t,ys),xs,ys,zs) /\
       (x64_imul (x64_header (s,xs),x64_header (t,ys),xs,ys,zs) =
-        (x64_header (mwi_mul_simple (s,xs) (t,ys)),xs,ys,
-         SND (mwi_mul_simple (s,xs) (t,ys))++zs1)) /\
-      (LENGTH (SND (mwi_mul_simple (s,xs) (t,ys))++zs1) = LENGTH zs) ``,
+        (x64_header (mwi_mul (s,xs) (t,ys)),xs,ys,
+         SND (mwi_mul (s,xs) (t,ys))++zs1)) /\
+      (LENGTH (SND (mwi_mul (s,xs) (t,ys))++zs1) = LENGTH zs) ``,
   FULL_SIMP_TAC std_ss [x64_imul_def,x64_imul_pre_def,LET_DEF]
-  \\ FULL_SIMP_TAC std_ss [x64_header_EQ,mwi_mul_simple_def,x64_length]
+  \\ FULL_SIMP_TAC std_ss [x64_header_EQ,mwi_mul_def,x64_length]
   \\ Cases_on `xs = []` \\ FULL_SIMP_TAC std_ss [APPEND]
   THEN1 (REPEAT STRIP_TAC \\ EVAL_TAC)
   \\ Cases_on `ys = []` \\ FULL_SIMP_TAC std_ss [APPEND]
@@ -1389,7 +1389,7 @@ val x64_imul_thm = prove(
   \\ `LENGTH qs1 < dimword (:64)` by (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ `LENGTH (mw_mul xs ys (MAP (\x. 0x0w) ys)) < dimword (:64)` by ALL_TAC
   THEN1 (FULL_SIMP_TAC (srw_ss()) [LENGTH_mw_mul,LENGTH_MAP] \\ DECIDE_TAC)
-  \\ ASSUME_TAC x64_trailing_thm \\ SEP_I_TAC "x64_trailing" \\ POP_ASSUM MP_TAC
+  \\ ASSUME_TAC x64_fix_thm \\ SEP_I_TAC "x64_fix" \\ POP_ASSUM MP_TAC
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 (FULL_SIMP_TAC (srw_ss()) [LENGTH_APPEND] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
@@ -1398,7 +1398,7 @@ val x64_imul_thm = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_REPLICATE,WORD_MUL_LSL,word_mul_n2w]
   \\ FULL_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC]
   \\ Q.ABBREV_TAC `ts = mw_mul xs ys (MAP (\x. 0x0w) ys)`
-  \\ `LENGTH (mw_trailing ts) <= LENGTH ts` by FULL_SIMP_TAC std_ss [LENGTH_mw_trailing]
+  \\ `LENGTH (mw_fix ts) <= LENGTH ts` by FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
   \\ DECIDE_TAC);
 
 
@@ -1523,6 +1523,8 @@ val x64_simple_div1_thm = prove(
 
 (* mw_div -- calc_d *)
 
+
+
 val (res,x64_calc_d_def,x64_calc_d_pre_def) = x64_compile `
   x64_calc_d (r1:word64,r2:word64) =
     let r0 = r1 + r1 in
@@ -1601,7 +1603,7 @@ val x64_mul_by_single2_thm = prove(
         (x64_mul_by_single2 (r6,r7,r8) = (r1,r2,r3,r6,r7,r8)) /\
         (mw_mul_by_single r6 [r7; r8] = [r1; r2; r3])``,
   SIMP_TAC std_ss [mw_mul_by_single_def,LENGTH,mw_mul_pass_def,x64_single_mul_thm,
-    n2mw_def,HD,TL,x64_mul_by_single2_def,EVAL ``(n2mw 2 0):word64 list``,LET_DEF]
+    k2mw_def,HD,TL,x64_mul_by_single2_def,EVAL ``(k2mw 2 0):word64 list``,LET_DEF]
   \\ CONV_TAC (DEPTH_CONV (PairRules.PBETA_CONV))
   \\ SIMP_TAC std_ss [x64_mul_by_single2_pre_def,LET_DEF,x64_single_mul_add_def]
   \\ CONV_TAC (DEPTH_CONV (PairRules.PBETA_CONV))
@@ -2345,7 +2347,7 @@ val x64_mul_by_single_thm = prove(
   \\ FULL_SIMP_TAC std_ss [SNOC_APPEND,GSYM APPEND_ASSOC,APPEND,
        LENGTH_APPEND,LENGTH,AC ADD_COMM ADD_ASSOC] \\ DECIDE_TAC)
   |> Q.SPECL [`xs`,`[]`,`x`,`zs`,`0w`,`[]`]
-  |> SIMP_RULE std_ss [APPEND,LENGTH,GSYM n2mw_LENGTH_0,GSYM mw_mul_by_single_def]
+  |> SIMP_RULE std_ss [APPEND,LENGTH,GSYM k2mw_LENGTH_0,GSYM mw_mul_by_single_def]
   |> GEN_ALL;
 
 (* mw_div -- mul_by_single, top two from ys *)
@@ -2504,7 +2506,7 @@ val (res,x64_div_def,x64_div_pre_def) = x64_compile `
       let r9 = r11 in
       let r10 = r9 in
       let r7 = r8 in
-      let (r8,r10,zs) = x64_trailing (r8,r10,zs) in
+      let (r8,r10,zs) = x64_fix (r8,r10,zs) in
       let r6 = r10 in
       let r10 = r9 in
       let r8 = r7 in
@@ -2519,18 +2521,18 @@ val x64_div_thm = prove(
     ?zs2.
       x64_div_pre (n2w (LENGTH xs),n2w (LENGTH ys),xs,ys,zs,ss) /\
       (x64_div (n2w (LENGTH xs),n2w (LENGTH ys),xs,ys,zs,ss) =
-         (n2w (LENGTH res),n2w (LENGTH (mw_trailing mod)),xs,ys,res ++ zs2,ss)) /\
+         (n2w (LENGTH res),n2w (LENGTH (mw_fix mod)),xs,ys,res ++ zs2,ss)) /\
       (LENGTH zs = LENGTH (res ++ zs2)) /\ LENGTH zs2 <> 0 /\
-      LENGTH (mw_trailing mod) < dimword (:64)``,
+      LENGTH (mw_fix mod) < dimword (:64)``,
   SIMP_TAC std_ss [mw_div_def,LET_DEF] \\ STRIP_TAC
   \\ `LENGTH xs < dimword (:64) /\ LENGTH ys < dimword (:64)` by DECIDE_TAC
-  \\ IMP_RES_TAC mw_ok_mw_trailing_ID \\ FULL_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC mw_ok_mw_fix_ID \\ FULL_SIMP_TAC std_ss []
   \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ Cases_on `LENGTH xs < LENGTH ys` \\ FULL_SIMP_TAC std_ss [] THEN1
    (Q.EXISTS_TAC `zs`
     \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND,APPEND]
     \\ ASM_SIMP_TAC std_ss [x64_div_def,x64_div_pre_def,LET_DEF,WORD_LO,
-         w2n_n2w, mw_ok_mw_trailing_ID,n2w_11,ZERO_LT_dimword,LENGTH_NIL]
+         w2n_n2w, mw_ok_mw_fix_ID,n2w_11,ZERO_LT_dimword,LENGTH_NIL]
     \\ SRW_TAC [] [] \\ EVAL_TAC
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL])
   \\ Cases_on `LENGTH ys = 1` \\ FULL_SIMP_TAC std_ss [] THEN1
@@ -2635,19 +2637,19 @@ val x64_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ IMP_RES_TAC LENGTH_mw_simple_div
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE]
-  \\ (x64_trailing_thm |> Q.SPECL [`REVERSE x1`,`REVERSE qs1 ++ zs2`,
+  \\ (x64_fix_thm |> Q.SPECL [`REVERSE x1`,`REVERSE qs1 ++ zs2`,
         `n2w (LENGTH (ts1:word64 list))`] |> MP_TAC)
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 (FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [APPEND_ASSOC] \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE]
-  \\ Q.ABBREV_TAC `tt = mw_trailing (REVERSE x1) ++
-       REPLICATE (LENGTH x1 − LENGTH (mw_trailing (REVERSE x1))) 0x0w`
+  \\ Q.ABBREV_TAC `tt = mw_fix (REVERSE x1) ++
+       REPLICATE (LENGTH x1 − LENGTH (mw_fix (REVERSE x1))) 0x0w`
   \\ `LENGTH tt = LENGTH rs1` by ALL_TAC THEN1
    (Q.UNABBREV_TAC `tt`
     \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE]
-    \\ `LENGTH (mw_trailing (REVERSE x1)) <= LENGTH (REVERSE x1)` by
-          FULL_SIMP_TAC std_ss [LENGTH_mw_trailing]
+    \\ `LENGTH (mw_fix (REVERSE x1)) <= LENGTH (REVERSE x1)` by
+          FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
     \\ `LENGTH (REVERSE x1) = LENGTH x1` by SRW_TAC [] []
     \\ DECIDE_TAC)
   \\ MP_TAC (x64_copy_down_thm |> Q.SPECL [`tt`,`REVERSE qs1`,`zs2`])
@@ -2656,9 +2658,9 @@ val x64_div_thm = prove(
     \\ SIMP_TAC std_ss [GSYM LENGTH_NIL] \\ DECIDE_TAC)
   \\ STRIP_TAC \\ NTAC 3 (POP_ASSUM MP_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,APPEND_11]
-  \\ `LENGTH (mw_trailing (REVERSE x1)) < dimword (:64)` by ALL_TAC THEN1
-      (`LENGTH (mw_trailing (REVERSE x1)) <= LENGTH (REVERSE x1)` by
-          FULL_SIMP_TAC std_ss [LENGTH_mw_trailing]
+  \\ `LENGTH (mw_fix (REVERSE x1)) < dimword (:64)` by ALL_TAC THEN1
+      (`LENGTH (mw_fix (REVERSE x1)) <= LENGTH (REVERSE x1)` by
+          FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
        \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [n2w_11,LENGTH_NIL]
   \\ NTAC 3 STRIP_TAC \\ DECIDE_TAC);
@@ -2733,7 +2735,7 @@ val x64_add1_thm = prove(
 
 (* mwi_div -- integer division *)
 
-val (res,x64_idiv_def,x64_idiv_pre_def) = x64_compile `
+val (x64_idiv_res,x64_idiv_def,x64_idiv_pre_def) = x64_compile `
   x64_idiv (r10,r11,xs,ys,zs,ss) =
     let r0 = r10 >>> 1 in
     let r1 = r11 >>> 1 in
@@ -2743,7 +2745,7 @@ val (res,x64_idiv_def,x64_idiv_pre_def) = x64_compile `
     let (r0,r6,xs,ys,zs,ss) = x64_div (r0,r1,xs,ys,zs,ss) in
     let r10 = r0 in
     let r8 = r10 in
-    let (r8,r10,zs) = x64_trailing (r8,r10,zs) in
+    let (r8,r10,zs) = x64_fix (r8,r10,zs) in
     let r11 = r10 in
     let (r2,ss) = (HD ss, TL ss) in
     let r3 = r2 in
@@ -2772,14 +2774,14 @@ val x64_idiv_thm = prove(
          SND (SND (mwi_div (s,xs) (t,ys)))++zs1,ss)) /\
       (LENGTH (SND (SND (mwi_div (s,xs) (t,ys)))++zs1) = LENGTH zs) ``,
   FULL_SIMP_TAC std_ss [x64_idiv_def,x64_idiv_pre_def,LET_DEF]
-  \\ FULL_SIMP_TAC std_ss [x64_header_EQ,mwi_mul_simple_def,x64_length]
+  \\ FULL_SIMP_TAC std_ss [x64_header_EQ,mwi_mul_def,x64_length]
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [x64_header_XOR]
   \\ `LENGTH xs < dimword (:63) /\ LENGTH ys < dimword (:63)` by DECIDE_TAC
   \\ `LENGTH zs < dimword (:64)` by (FULL_SIMP_TAC (srw_ss()) [] \\ DECIDE_TAC)
   \\ IMP_RES_TAC x64_length \\ FULL_SIMP_TAC std_ss []
   \\ `mw2n ys <> 0` by ALL_TAC THEN1
-   (SIMP_TAC std_ss [GSYM mw_trailing_NIL]
-    \\ FULL_SIMP_TAC std_ss [mw_ok_mw_trailing_ID])
+   (SIMP_TAC std_ss [GSYM mw_fix_NIL]
+    \\ FULL_SIMP_TAC std_ss [mw_ok_mw_fix_ID])
   \\ `?res mod c. (mw_div xs ys = (res,mod,c))` by METIS_TAC [PAIR]
   \\ `c` by METIS_TAC [mw_div_thm]
   \\ FULL_SIMP_TAC std_ss []
@@ -2792,29 +2794,29 @@ val x64_idiv_thm = prove(
   \\ NTAC 2 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND]
   \\ `LENGTH res < dimword (:64)` by DECIDE_TAC
-  \\ MP_TAC (x64_trailing_thm |> Q.SPECL
+  \\ MP_TAC (x64_fix_thm |> Q.SPECL
        [`res`,`zs2`,`n2w (LENGTH (res:word64 list))`])
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [HD,TL]
   \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ FULL_SIMP_TAC std_ss [x64_add1_call_def,LET_DEF,mwi_div_def,b2w_EQ_0w]
-  \\ `LENGTH (mw_trailing res) <= LENGTH res` by
-        FULL_SIMP_TAC std_ss [LENGTH_mw_trailing]
-  \\ `LENGTH (mw_trailing res) < dimword (:64)` by DECIDE_TAC
+  \\ `LENGTH (mw_fix res) <= LENGTH res` by
+        FULL_SIMP_TAC std_ss [LENGTH_mw_fix]
+  \\ `LENGTH (mw_fix res) < dimword (:64)` by DECIDE_TAC
   \\ Cases_on `s = t` \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword] THEN1
    (SIMP_TAC (srw_ss()) [word_lsl_n2w,b2w_def,b2n_def,x64_header_def]
-    \\ Cases_on `LENGTH (mw_trailing res) = 0` \\ FULL_SIMP_TAC std_ss []
+    \\ Cases_on `LENGTH (mw_fix res) = 0` \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,
          LENGTH_APPEND,LENGTH_REPLICATE] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [LENGTH_NIL]
-  \\ Cases_on `mw_trailing mod = []`
+  \\ Cases_on `mw_fix mod = []`
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword,LENGTH_NIL] THEN1
-   (Cases_on `mw_trailing res = []` \\ FULL_SIMP_TAC std_ss []
+   (Cases_on `mw_fix res = []` \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,
          LENGTH_APPEND,LENGTH_REPLICATE]
     \\ SIMP_TAC (srw_ss()) [word_lsl_n2w,b2w_def,b2n_def,x64_header_def]
     \\ DECIDE_TAC)
   \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC]
-  \\ Q.ABBREV_TAC `ts1 = REPLICATE (LENGTH res − LENGTH (mw_trailing res)) 0x0w
+  \\ Q.ABBREV_TAC `ts1 = REPLICATE (LENGTH res − LENGTH (mw_fix res)) 0x0w
                          ++ zs2`
   \\ ASSUME_TAC (x64_add1_thm |> GEN_ALL)
   \\ SEP_I_TAC "x64_add1" \\ POP_ASSUM MP_TAC
@@ -2825,7 +2827,7 @@ val x64_idiv_thm = prove(
      \\ DECIDE_TAC)
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword,LENGTH_NIL]
-  \\ Cases_on `mw_addv (mw_trailing res) [] T = []`
+  \\ Cases_on `mw_addv (mw_fix res) [] T = []`
   \\ FULL_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword,LENGTH_NIL,
        x64_header_def,LENGTH,APPEND,word_add_n2w,LENGTH_APPEND]
   THEN1 (Q.UNABBREV_TAC `ts1`
