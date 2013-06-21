@@ -588,33 +588,45 @@ end
 
 (* case split theorem. For example: split_conditions applied to
 
-     |- q = if b then x else y
+     |- q = ((if b then x else y), c)
 
    gives theorems
 
-     [[~b] |- q = y, [b] |- q = x]
+     [[~b] |- q = (y, c), [b] |- q = (x, c)]
 *)
 
 local
-   val split_x = Q.prove(
-      `b ==> ((if b then x else y) = x: 'a)`, RW_TAC bool_ss [])
-      |> Drule.UNDISCH
-   val split_y = Q.prove(
-      `~b ==> ((if b then x else y) = y: 'a)`, RW_TAC bool_ss [])
-      |> Drule.UNDISCH
-   val split_z = Q.prove(
-      `b ==> ((if ~b then x else y) = y: 'a)`, RW_TAC bool_ss [])
-      |> Drule.UNDISCH
+   fun p q = Drule.UNDISCH (Q.prove(q, RW_TAC bool_ss []))
+   val split_xt = p `b ==> ((if b then x else y) = x: 'a)`
+   val split_yt = p `~b ==> ((if b then x else y) = y: 'a)`
+   val split_zt = p `b ==> ((if ~b then x else y) = y: 'a)`
+   val split_xl = p `b ==> (((if b then x else y), c) = (x, c): 'a # 'b)`
+   val split_yl = p `~b ==> (((if b then x else y), c) = (y, c): 'a # 'b)`
+   val split_zl = p `b ==> (((if ~b then x else y), c) = (y, c): 'a # 'b)`
+   val split_xr = p `b ==> ((c, (if b then x else y)) = (c, x): 'b # 'a)`
+   val split_yr = p `~b ==> ((c, (if b then x else y)) = (c, y): 'b # 'a)`
+   val split_zr = p `b ==> ((c, (if ~b then x else y)) = (c, y): 'b # 'a)`
    val vb = Term.mk_var ("b", Type.bool)
-   fun REWR_RULE thm = Conv.CONV_RULE (Conv.RHS_CONV (Conv.REWR_CONV thm))
-   fun cond_true b = Thm.INST [vb |-> b] split_x
-   fun cond_false b = Thm.INST [vb |-> b] split_y
+   fun REWR_RULE thm = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV thm)
+   fun cond_true b = Thm.INST [vb |-> b] split_xt
+   fun cond_false b = Thm.INST [vb |-> b] split_yt
+   fun split_cond tm =
+      case Lib.total pairSyntax.dest_pair tm of
+         SOME (a, b) =>
+          (case Lib.total boolSyntax.dest_cond a of
+              SOME bxy => SOME (split_xl, split_yl, split_zl, bxy)
+            | NONE => (case Lib.total boolSyntax.dest_cond b of
+                          SOME bxy => SOME (split_xr, split_yr, split_zr, bxy)
+                        | NONE => NONE))
+       | NONE => Lib.total
+                     (fn t => (split_xt, split_yt, split_zt,
+                               boolSyntax.dest_cond t)) tm
 in
    val split_conditions =
       let
          fun loop a t =
-            case Lib.total boolSyntax.dest_cond (rhsc t) of
-               SOME (b, x, y) =>
+            case split_cond (rhsc t) of
+               SOME (splitx, splity, splitz, (b, x, y)) =>
                   let
                      val ty = Term.type_of x
                      val vx = Term.mk_var ("x", ty)
@@ -624,10 +636,10 @@ in
                                   [Type.alpha |-> ty])
                      val (split_yz, nb) =
                         case Lib.total boolSyntax.dest_neg b of
-                           SOME nb => (split_z, nb)
-                         | NONE => (split_y, b)
+                           SOME nb => (splitz, nb)
+                         | NONE => (splity, b)
                   in
-                     loop (loop a (REWR_RULE (s b split_x) t))
+                     loop (loop a (REWR_RULE (s b splitx) t))
                                   (REWR_RULE (s nb split_yz) t)
                   end
              | NONE => t :: a
@@ -638,60 +650,6 @@ in
      | paths (h :: t) =
          [[cond_false h]] @ (List.map (fn p => cond_true h :: p) (paths t))
 end
-
-(* ---------------------------- *)
-
-val can_match = Lib.can o Lib.C Term.match_term
-
-fun avoid_exception tm =
-   let
-      val ty = Term.type_of tm
-      val ety = dom ty
-      val sty = dom (rng ty)
-      val et = Term.mk_comb (tm, Term.mk_var ("e", ety))
-      val et = Term.mk_comb (et, Term.mk_var ("s", sty))
-      val l = [pairSyntax.mk_fst et, pairSyntax.mk_snd et, et]
-      fun is_raise tm = List.exists (can_match tm) l
-      fun check thm =
-         (not (Lib.can (HolKernel.find_term is_raise) (rhsc thm))
-          orelse (Parse.print_thm thm
-                  ; print "\n"
-                  ; raise ERR "avoid_exception" "failed to avoid")
-          ; thm)
-      fun avoids thm =
-         let
-            fun iter a tm =
-               case Lib.total boolSyntax.dest_cond tm of
-                  SOME (b, t, e) =>
-                   Lib.union
-                     (iter (b :: a) t)
-                     (iter (boolSyntax.mk_neg b :: a) e)
-                | NONE =>
-                   if is_raise tm
-                      then [a]
-                   else (case Lib.total Term.dest_comb tm of
-                            SOME (l, r) => Lib.union (iter a l) (iter a r)
-                          | NONE => [])
-         in
-            thm
-            |> Thm.concl
-            |> iter []
-            |> Lib.mk_set
-            |> List.filter (not o List.null)
-            |> List.map List.rev
-         end
-   in
-      fn thm =>
-         case avoids thm of
-            [] => [check thm]
-          | [ps] =>
-              List.map
-                (fn p => HYP_CANON_RULE (check (PURE_REWRITE_RULE p thm)))
-                (paths ps)
-          | _ => (Parse.print_thm thm
-                  ; print "\n"
-                  ; raise ERR "avoid_exception" "too many raise points")
-   end
 
 (* ---------------------------- *)
 

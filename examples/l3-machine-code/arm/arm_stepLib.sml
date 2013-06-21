@@ -2416,18 +2416,19 @@ local
        blastLib.BBLAST_PROVE
          ``((v2w [T;T;b;T] = 13w: word4) \/ (v2w [T;T;b;T] = 15w: word4)) = T``]
    val COND_RULE =
-      Conv.CONV_RULE (REG_CONV THENC REWRITE_CONV iConditionPassed_rwts) o
+      Conv.RIGHT_CONV_RULE (REG_CONV THENC REWRITE_CONV iConditionPassed_rwts) o
       utilsLib.ALL_HYP_CONV_RULE REG_CONV
-   val avoid = utilsLib.avoid_exception (mk_arm_const "raise'exception")
+   val raise_tm = mk_arm_const "raise'exception"
+   val avoid =
+      List.filter
+         (not o Lib.can (HolKernel.find_term (Term.same_const raise_tm) o rhsc))
    val FINISH_RULE =
-      List.concat o
       List.map
-        (avoid o
-         utilsLib.MATCH_HYP_CONV_RULE (Conv.REWR_CONV bool_not_pc)
+        (utilsLib.MATCH_HYP_CONV_RULE (Conv.REWR_CONV bool_not_pc)
             ``~(b3 /\ b2 /\ b1 /\ b0)`` o
          Conv.RIGHT_CONV_RULE
             (REG_CONV THENC Conv.DEPTH_CONV bitstringLib.v2n_CONV))
-   val rwconv = REWRITE_CONV []
+   val rwconv = REWRITE_CONV rewrites
 in
    fun arm_decode tms =
       let
@@ -2459,10 +2460,10 @@ in
                ((case c of
                     Cond14 => rw14 tm
                   | Cond15 => rw15 tm
-                  | Cond s =>
+                  | Cond cnd =>
                       let
                          val rwt = tm |> find_rw_other
-                                      |> Thm.INST s
+                                      |> Thm.INST cnd
                                       |> COND_RULE
                       in
                          (Conv.REWR_CONV rwt THENC rwconv) tm
@@ -2471,6 +2472,7 @@ in
                            (WARN "arm_decode" "fallback (slow) decode"
                             ; FALL_CONV tm))
                |> utilsLib.split_conditions
+               |> avoid
                |> utilsLib.pick x
                |> FINISH_RULE
             end

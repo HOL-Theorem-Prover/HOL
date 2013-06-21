@@ -458,10 +458,11 @@ val BitCount = Q.store_thm("BitCount",
        [FOR_FOLDL
         |> Q.ISPECL [`0n`, `dimindex(:'a) - 1`,
                      `\i state: num # arm_state.
-                           if i <= dimindex(:'a) - 1 /\ w ' i then
-                             ((), (FST state + 1, SND state))
-                           else
-                             ((), state)`],
+                         ((),
+                          if i <= dimindex(:'a) - 1 /\ w ' i then
+                             (FST state + 1, SND state)
+                          else
+                             state)`],
         sum_numTheory.SUM_FOLDL, FOLDL_AUG]
    \\ MATCH_MP_TAC listTheory.FOLDL_CONG
    \\ lrw [rich_listTheory.MEM_COUNT_LIST,

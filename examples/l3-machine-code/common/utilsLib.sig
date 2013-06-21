@@ -42,7 +42,6 @@ sig
       (thm -> term) -> thm * thm LVTermNet.lvtermnet -> thm LVTermNet.lvtermnet
    val add_to_the_compset: (thm list * inventory) -> unit
    val augment: term frag list * term list -> cover -> cover
-   val avoid_exception: term -> thm -> thm list
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
    val datatype_rewrites: string -> string list -> thm list
