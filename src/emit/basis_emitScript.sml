@@ -704,8 +704,9 @@ Cases_on `n` THEN
 FULL_SIMP_TAC (srw_ss()) [LUPDATE_def])
 
 val defs =
-  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,
-            FIRSTN_compute,IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
+  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,FIRSTN_compute,
+            BUTLASTN_compute,LASTN_compute,
+            IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
             LUPDATE_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
             PREFIX_DEF,REPLICATE_compute,
             SCANL,SCANR,SEG_compute,SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF];
