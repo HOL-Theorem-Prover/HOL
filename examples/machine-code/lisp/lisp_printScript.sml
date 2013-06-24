@@ -1779,8 +1779,8 @@ val arm_print_sexp_lemma = store_thm("arm_print_sexp_lemma",
 
 (*
 
-set_trace "goalstack print goal at top" 1
-set_trace "goalstack print goal at top" 0
+set_trace "Goalstack.print_goal_at_top" 1
+set_trace "Goalstack.print_goal_at_top" 0
 
 *)
 

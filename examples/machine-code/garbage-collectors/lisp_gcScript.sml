@@ -1747,7 +1747,7 @@ val ch_arm_IMP_ch_arm2 = prove(
   SIMP_TAC std_ss [ch_arm_def,ch_arm2_def,ch_inv_def] \\ METIS_TAC []);
 
 (*
-set_trace "goalstack print goal at top" 0
+set_trace "Goalstack.print_goal_at_top" 0
 *)
 
 

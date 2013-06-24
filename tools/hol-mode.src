@@ -961,24 +961,24 @@ argument N, sets the trace to that value in particular."
   (hol-toggle-trace "PPBackEnd use annotations"))
 
 (defun hol-toggle-goalstack-fvs ()
-  "Toggles the trace \"goalstack fvs\"."
+  "Toggles the trace \"Goalstack.print_goal_fvs\"."
   (interactive)
-  (hol-toggle-trace "goalstack fvs"))
+  (hol-toggle-trace "Goalstack.print_goal_fvs"))
 
 (defun hol-toggle-goalstack-print-goal-at-top ()
-  "Toggles the trace \"goalstack print goal at top\"."
+  "Toggles the trace \"Goalstack.print_goal_at_top\"."
   (interactive)
-  (hol-toggle-trace "goalstack print goal at top"))
+  (hol-toggle-trace "Goalstack.print_goal_at_top"))
 
 (defun hol-toggle-goalstack-num-assums (arg)
   "Toggles the number of assumptions shown in a goal."
   (interactive "nMax. number of visible assumptions: ")
-  (hol-toggle-trace "goalstack number of assums" arg))
+  (hol-toggle-trace "Goalstack.howmany_printed_assums" arg))
 
 (defun hol-toggle-goalstack-num-subgoals (arg)
   "Toggles the number of shown subgoals."
   (interactive "nMax. number of shown subgoals: ")
-  (hol-toggle-trace "Subgoal number" arg))
+  (hol-toggle-trace "Goalstack.howmany_printed_subgoals" arg))
 
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
