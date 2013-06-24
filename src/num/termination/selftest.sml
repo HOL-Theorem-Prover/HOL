@@ -32,3 +32,6 @@ val desired_ind =
 
 val _ = if aconv desired_ind (concl (theorem "fact_ind")) then print "OK\n"
         else die "FAILED!\n"
+
+val fs_def = DefineSchema`(fs 0 y = z + y) /\ (fs x y = x)`;
+val gs_def = DefineSchema`(gs 0 y = x + y) /\ (gs x y = x)`;

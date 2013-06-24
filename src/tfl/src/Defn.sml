@@ -1051,14 +1051,14 @@ fun pairf (stem,eqs0) =
      val rng_ty    = type_of rhs
      val tuple_dom = list_mk_prod_type argtys
      val stem'     = mk_var (stem'name, tuple_dom --> rng_ty)
-     val defvars   = rev (Lib.with_flag (Globals.priming, SOME"")
-                               (variants [f])
-                               (map (curry mk_var "x") argtys))
      fun untuple_args (rules,induction) =
       let val eq1 = concl(hd rules)
           val (lhs,rhs) = dest_eq(snd(strip_forall eq1))
           val (tuplec,args) = strip_comb lhs
           val (SV,p) = front_last args
+          val defvars   = rev (Lib.with_flag (Globals.priming, SOME"")
+                                             (variants (f::SV))
+                                             (map (curry mk_var "x") argtys))
           val tuplecSV = list_mk_comb(tuplec,SV)
           val def_args = SV@defvars
           val fvar = mk_var(atom_name f,
