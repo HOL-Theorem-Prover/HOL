@@ -21,16 +21,4 @@ val test_def = Define`
   (test m _ = SUC m)
 `;
 
-val _ = overload_on ("+", ``(/\)``);
-
-val ib_def = Define`ib x <=> (x MOD 2 = 0)`;
-val _ = add_numeral_form(#"b", SOME "ib")
-
-(* something odd happening here:
-val otest_def = Define`
-  (otest 0 y = x + y) /\
-  (otest (x:num) y = x)
-`;
-*)
-
 val _ = export_theory()
