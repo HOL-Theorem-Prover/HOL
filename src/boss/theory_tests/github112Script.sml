@@ -4,8 +4,8 @@ val _ = new_theory "github112"
 
 val f1_def = Define `(f1 x y = case (x, y) of (0, _) => SOME 1 | (_,_) => NONE)`
 val f2_def = Define `(f2 x y = case (x, y) of (0, _) => SOME 1 | _ => NONE)`
-val f3_def = Define `f3 x = (case [] of _ => 1) + (case 2 of _ => 2)`     
-val f4_def = Define `f4 x = (case x of [] => 0 | [_] => 1 | _ => 2)`     
+val f3_def = Define `f3 x = (case [] of _ => 1) + (case 2 of _ => 2)`
+val f4_def = Define `f4 x = (case x of [] => 0 | [_] => 1 | _ => 2)`
 
 val fg_def = tDefine "fg" `
   (f x = x + 1 + g (x > 4)) /\
