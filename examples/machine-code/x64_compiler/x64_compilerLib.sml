@@ -27,7 +27,7 @@ fun AUTO_ALPHA_CONV () = let
   in doit end
 
 val COMPILER_TAC_LEMMA = prove(
-  ``!a b:bool. (a /\ a /\ b = a /\ b) /\ (a \/ a \/ b = a \/ b)``,
+  ``!a b:bool. (a /\ a /\ b <=> a /\ b) /\ (a \/ a \/ b <=> a \/ b)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss []);
 
 val COMPILER_TAC =

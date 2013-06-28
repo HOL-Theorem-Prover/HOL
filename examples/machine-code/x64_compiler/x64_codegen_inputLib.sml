@@ -89,7 +89,7 @@ fun basic_term2guard tm = (* expects input to use "~", "<+", "<" and "=" only *)
     val (d1,d2) = (snd o hd o filter (fn x => fst x = (fst o dest_const o car o car) tm)) cmps
     val x1 = (cdr o car) tm
     val x2 = cdr tm
-    in if can (match_term ``x && y = 0w:word64``) tm then
+    in if can (match_term ``(x && y) = 0w:word64``) tm then
          GUARD_TEST ((dest_reg o cdr o car o cdr o car) tm, (dest_x o cdr o cdr o car) tm)
        else if can dest_n2w x1 then
          GUARD_NOT (GUARD_COMPARE (dest_reg x2, d2, dest_x x1))

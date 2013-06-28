@@ -212,22 +212,23 @@ val res = map x64_pop [x0,x1,x2,x3,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15];
 
 (* pops *)
 
+val imm32_lemma = prove(
+  ``(k:num) < 2 ** 28 ==>
+    (SIGN_EXTEND 32 64 (w2n ((n2w:num->word32) (8 * k))) = 8 * k)``,
+  FULL_SIMP_TAC (srw_ss()) [w2n_n2w,bitTheory.SIGN_EXTEND_def,LET_DEF]
+  \\ REPEAT STRIP_TAC \\ `(8 * k) < 4294967296` by DECIDE_TAC
+  \\ FULL_SIMP_TAC std_ss [bitTheory.BIT_def,bitTheory.BITS_THM]
+  \\ `8 * k < 2147483648` by DECIDE_TAC
+  \\ FULL_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]);
+
 val x64_pops = save_thm("x64_pops",let
   val ((pops,_,_),_) = x64_spec "4881C4"
   val pops = RW [GSYM IMM32_def] pops
   val th = Q.INST [`imm32`|->`n2w (8*k)`]  pops
-  val lemma = prove(
-    ``k < 2 ** 28 ==>
-      (SIGN_EXTEND 32 64 (w2n ((n2w:num->word32) (8 * k))) = 8 * k)``,
-    FULL_SIMP_TAC (srw_ss()) [w2n_n2w,bitTheory.SIGN_EXTEND_def,LET_DEF]
-    \\ REPEAT STRIP_TAC \\ `(8 * k) < 4294967296` by DECIDE_TAC
-    \\ FULL_SIMP_TAC std_ss [bitTheory.BIT_def,bitTheory.BITS_THM]
-    \\ `8 * k < 2147483648` by DECIDE_TAC
-    \\ FULL_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]);
-  val th = DISCH ``k < 2 ** 28`` th
-  val th = SIMP_RULE bool_ss [lemma] th
+  val th = DISCH ``(k:num) < 2 ** 28`` th
+  val th = SIMP_RULE bool_ss [imm32_lemma] th
   val lemma2 = prove(
-    ``k < 2 ** 28 ==> (8 * k) < 18446744073709551616``,
+    ``k < 2 ** 28 ==> (8 * k) < 18446744073709551616n``,
     FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
   val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,
                                     RW1 [MULT_COMM] MOD_EQ_0] th
@@ -252,6 +253,124 @@ val x64_pops = save_thm("x64_pops",let
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `rsp` \\ FULL_SIMP_TAC std_ss [])
   val th = MP th lemma
+  in th end);
+
+(* load from stack *)
+
+val x64_el_r0_imm = save_thm("x64_el_r0_imm",let
+  val ((th,_,_),_) = x64_spec "488B8424"
+  val th = RW [GSYM IMM32_def] th
+  val th = Q.INST [`imm32`|->`n2w (8*k)`] th
+  val th = DISCH ``(k:num) < 2 ** 28`` th
+  val th = SIMP_RULE bool_ss [imm32_lemma] th
+  val lemma2 = prove(
+    ``k < 2 ** 28 ==> (8 * k) < 18446744073709551616n``,
+    FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  val th = RW1 [WORD_ADD_COMM] th |> RW [WORD_ADD_SUB]
+  val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,w2n_n2w,
+                             RW1 [MULT_COMM] MOD_EQ_0,EVAL ``dimword (:64)``] th
+  val th = SIMP_RULE std_ss [GSYM SPEC_MOVE_COND] th
+  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x8w) *
+      zR 0x0w (EL k x1) * zSTACK x1)``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma |> Q.GEN `r4`
+  val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip *
+      zR 0x0w r0 * zSTACK x1 * cond (k < LENGTH x1 /\ k < 268435456))``
+  val lemma = prove(goal,
+    SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
+      SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  in th end);
+
+val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
+  val ((th,_,_),_) = x64_spec (x64_encode "mov [rsp+r8], r0")
+  val th = th |> RW [WORD_ADD_SUB]
+  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x4w) * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK (LUPDATE r0 (w2n r8 DIV 8) x1))``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma |> Q.GEN `r4`
+  val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK x1 * cond (w2n r8 DIV 8 < LENGTH x1 /\
+                                     (w2n r8 MOD 8 = 0)))``
+  val lemma = prove(goal,
+    SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
+      SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  in th end);
+
+(* store into stack *)
+
+val x64_lupdate_r0_imm = save_thm("x64_lupdate_r0_imm",let
+  val ((th,_,_),_) = x64_spec "48898424"
+  val th = RW [GSYM IMM32_def] th
+  val th = Q.INST [`imm32`|->`n2w (8*k)`] th
+  val th = DISCH ``(k:num) < 2 ** 28`` th
+  val th = SIMP_RULE bool_ss [imm32_lemma] th
+  val lemma2 = prove(
+    ``k < 2 ** 28 ==> (8 * k) < 18446744073709551616n``,
+    FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  val th = RW1 [WORD_ADD_COMM] th |> RW [WORD_ADD_SUB]
+  val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,w2n_n2w,
+                             RW1 [MULT_COMM] MOD_EQ_0,EVAL ``dimword (:64)``] th
+  val th = SIMP_RULE std_ss [GSYM SPEC_MOVE_COND] th
+  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x8w) *
+      zR 0x0w r0 * zSTACK (LUPDATE r0 k x1))``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma |> Q.GEN `r4`
+  val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip *
+      zR 0x0w r0 * zSTACK x1 * cond (k < LENGTH x1 /\ k < 268435456))``
+  val lemma = prove(goal,
+    SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
+      SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  in th end);
+
+val x64_lupdate_r0_r8 = save_thm("x64_lupdate_r0_r8",let
+  val ((th,_,_),_) = x64_spec (x64_encode "mov r0, [rsp+r8]")
+  val th = th |> RW [WORD_ADD_SUB]
+  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x4w) * zR 0x8w r8 *
+      zR 0x0w (EL (w2n r8 DIV 8) x1) * zSTACK x1)``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma |> Q.GEN `r4`
+  val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK x1 * cond (w2n r8 DIV 8 < LENGTH x1 /\
+                                     (w2n r8 MOD 8 = 0)))``
+  val lemma = prove(goal,
+    SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
+      SEP_IMP_def,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
+    \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
+  val th = MP th lemma
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   in th end);
 
 (* call *)
@@ -402,4 +521,3 @@ val _ = save_thm("x64_putchar_r1_thm",
   SPEC_COMPOSE_RULE [fetch "-" "x64_call_r1",x64_putchar_thm] |> RW [STAR_ASSOC]);
 
 val _ = export_theory();
-

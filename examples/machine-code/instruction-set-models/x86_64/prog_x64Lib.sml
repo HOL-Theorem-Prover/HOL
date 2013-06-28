@@ -10,7 +10,6 @@ open prog_x64Theory wordsTheory x64_encodeLib;
 infix \\
 val op \\ = op THEN;
 
-
 val x64_status = zS_HIDE;
 val x64_pc = ``zPC``;
 val x64_exec_flag = ref true;

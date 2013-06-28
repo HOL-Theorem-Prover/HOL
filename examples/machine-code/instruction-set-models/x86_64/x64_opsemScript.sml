@@ -66,7 +66,7 @@ val ea_Zimm_rm_def = Define `
 val read_stack_def = Define `
   read_stack ii a = seqT (parT (read_stack_seq ii) (read_reg ii RSP))
                          (\(stack,rsp).
-                            let k = w2n (a - rsp) DIV 8 in
+                            let k = w2n (a - rsp) in
                             let n = k DIV 8 in
                               seqT (assertT (n < LENGTH stack /\ (k MOD 8 = 0)))
                                 (\w. constT (EL n stack)))`;
@@ -74,7 +74,7 @@ val read_stack_def = Define `
 val write_stack_def = Define `
   write_stack ii a x = seqT (parT (read_stack_seq ii) (read_reg ii RSP))
                             (\(stack,rsp).
-                               let k = w2n (a - rsp) DIV 8 in
+                               let k = w2n (a - rsp) in
                                let n = k DIV 8 in
                                  seqT (assertT (n < LENGTH stack /\ (k MOD 8 = 0)))
                                    (\w. write_stack_seq ii (LUPDATE x n stack)))`;
