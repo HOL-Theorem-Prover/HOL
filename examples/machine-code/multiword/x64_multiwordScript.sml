@@ -3368,7 +3368,7 @@ val (x64_iop_res,x64_iop_def,x64_iop_pre_def) = x64_compile `
       let r10 = 0w in
         (r10,xs,ys,zs,xa,ya,ss)`
 
-val _ save_thm("x64_iop_res",x64_iop_res);
+val _ = save_thm("x64_iop_res",x64_iop_res);
 
 val x64_header_XOR_1 = prove(
   ``x64_header (s,xs) ?? 1w = x64_header (~s,xs)``,
