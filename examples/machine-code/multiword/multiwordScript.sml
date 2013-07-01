@@ -3007,40 +3007,11 @@ val mwi_divmod_thm = store_thm("mwi_divmod_thm",
         n2mw_EQ_NIL,EVAL ``n2mw 0``]);
 
 
-(* top-level entry point *)
-
-val _ = Hol_datatype `mw_op = Add | Sub | Mul | Div | Mod | Lt | Eq`;
-
-val int_op_def = Define `
-  (int_op Add i j = i + j) /\
-  (int_op Sub i j = i - j) /\
-  (int_op Mul i j = i * j) /\
-  (int_op Div i j = i / j) /\
-  (int_op Mod i j = i % j) /\
-  (int_op Lt i j = if i < j then 1 else 0) /\
-  (int_op Eq i j = if i = j then 1 else 0:int)`;
-
-val mwi_op_def = Define `
-  (mwi_op Add s_xs t_ys = mwi_add s_xs t_ys) /\
-  (mwi_op Sub s_xs t_ys = mwi_sub s_xs t_ys) /\
-  (mwi_op Mul s_xs t_ys = mwi_mul s_xs t_ys) /\
-  (mwi_op Div s_xs t_ys = mwi_div s_xs t_ys) /\
-  (mwi_op Mod s_xs t_ys = mwi_mod s_xs t_ys) /\
-  (mwi_op Lt s_xs t_ys = i2mw (if mwi_lt s_xs t_ys then 1 else 0)) /\
-  (mwi_op Eq s_xs t_ys = i2mw (if mwi_eq s_xs t_ys then 1 else 0))`;
-
-val mwi_op_thm = store_thm("mwi_op_thm",
-  ``!op i j.
-      ((op = Div) \/ (op = Mod) ==> j <> 0) ==>
-      (mwi_op op (i2mw i) (i2mw j) = i2mw (int_op op i j))``,
-  Cases \\ FULL_SIMP_TAC (srw_ss()) [int_op_def,mwi_op_def,
-    mwi_add_thm,mwi_sub_thm,mwi_mul_thm,mwi_divmod_thm,mwi_lt_def,
-    mwi_eq_def,mwi_compare_thm,mwi_div_def,mwi_mod_def] \\ REPEAT STRIP_TAC
-  \\ Cases_on `i < j` \\ FULL_SIMP_TAC std_ss []
-  \\ `i <> j` by intLib.COOPER_TAC \\ FULL_SIMP_TAC std_ss []);
-
-
 (* converting into decimal form *)
+
+val int_to_str_def = Define `
+  int_to_str i =
+    (if i < 0 then "~" else "") ++ num_to_dec_string (Num (ABS i))`;
 
 val num_to_dec_string_unroll = prove(
   ``!n. num_to_dec_string n =
@@ -3077,6 +3048,12 @@ val mw_to_dec_def = tDefine "mw_to_dec" `
   \\ Q.PAT_ASSUM `10 < dimword (:'a)` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [DIV_EQ_X,NOT_LESS]
   \\ DECIDE_TAC);
+
+val mwi_to_dec_def = Define `
+  mwi_to_dec (s,xs) =
+    let sign = (if s then [126w] else []) in
+    let (rest,c) = mw_to_dec xs in
+      (sign ++ rest,c)`
 
 val mw_to_dec_thm = store_thm("mw_to_dec_thm",
   ``!(xs:'a word list).
@@ -3124,6 +3101,61 @@ val mw_to_dec_thm = store_thm("mw_to_dec_thm",
   \\ `48 + k MOD 10 < 256` by DECIDE_TAC
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC]);
+
+val mwi_to_dec_thm = store_thm("mwi_to_dec_thm",
+  ``10 < dimword (:'a) /\ ((xs = []) ==> ~s) /\ mw_ok xs ==>
+    (mwi_to_dec (s,xs:'a word list) =
+        (MAP (n2w o ORD) (int_to_str (mw2i (s,xs))),T))``,
+  SIMP_TAC std_ss [mwi_to_dec_def,int_to_str_def,i2mw_def,LET_DEF] \\ STRIP_TAC
+  \\ `mw2i (s,xs) < 0 <=> s` by ALL_TAC THEN1
+   (Cases_on `xs = []` \\ FULL_SIMP_TAC std_ss [] THEN1 EVAL_TAC
+    \\ Cases_on `s` \\ SIMP_TAC std_ss [mw2i_def]
+    \\ `mw2n xs <> 0` by
+      (ASM_SIMP_TAC std_ss [GSYM mw_fix_NIL,mw_ok_mw_fix_ID])
+    \\ intLib.COOPER_TAC)
+  \\ FULL_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC mw_to_dec_thm
+  \\ FULL_SIMP_TAC std_ss []
+  \\ `Num (ABS (mw2i (s,xs))) = mw2n xs` by ALL_TAC THEN1
+   (Cases_on `s` \\ SIMP_TAC std_ss [mw2i_def] \\ intLib.COOPER_TAC)
+  \\ Cases_on `s` \\ FULL_SIMP_TAC std_ss [MAP,MAP_APPEND,APPEND,mw2n_n2mw,CONS_11]
+  \\ EVAL_TAC);
+
+
+(* top-level entry point *)
+
+val _ = Hol_datatype `mw_op = Add | Sub | Mul | Div | Mod | Lt | Eq | Dec`;
+
+val int_op_def = Define `
+  (int_op Add i j = i + j) /\
+  (int_op Sub i j = i - j) /\
+  (int_op Mul i j = i * j) /\
+  (int_op Div i j = i / j) /\
+  (int_op Mod i j = i % j) /\
+  (int_op Lt i j = if i < j then 1 else 0) /\
+  (int_op Eq i j = if i = j then 1 else 0:int) /\
+  (int_op Dec i j = 0)`; (* decimal representation returned separately *)
+
+val mwi_op_def = Define `
+  (mwi_op Add s_xs t_ys = mwi_add s_xs t_ys) /\
+  (mwi_op Sub s_xs t_ys = mwi_sub s_xs t_ys) /\
+  (mwi_op Mul s_xs t_ys = mwi_mul s_xs t_ys) /\
+  (mwi_op Div s_xs t_ys = mwi_div s_xs t_ys) /\
+  (mwi_op Mod s_xs t_ys = mwi_mod s_xs t_ys) /\
+  (mwi_op Lt s_xs t_ys = i2mw (if mwi_lt s_xs t_ys then 1 else 0)) /\
+  (mwi_op Eq s_xs t_ys = i2mw (if mwi_eq s_xs t_ys then 1 else 0)) /\
+  (mwi_op Dec s_xs t_ys = (F,[]))`;
+
+val mwi_op_thm = store_thm("mwi_op_thm",
+  ``!op i j.
+      ((op = Div) \/ (op = Mod) ==> j <> 0) ==>
+      (mwi_op op (i2mw i) (i2mw j) = i2mw (int_op op i j))``,
+  Cases \\ FULL_SIMP_TAC (srw_ss()) [int_op_def,mwi_op_def,
+    mwi_add_thm,mwi_sub_thm,mwi_mul_thm,mwi_divmod_thm,mwi_lt_def,
+    mwi_eq_def,mwi_compare_thm,mwi_div_def,mwi_mod_def] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [EVAL ``i2mw 0``]
+  \\ Cases_on `i < j` \\ FULL_SIMP_TAC std_ss []
+  \\ `i <> j` by intLib.COOPER_TAC \\ FULL_SIMP_TAC std_ss []);
 
 
 (* extra *)
