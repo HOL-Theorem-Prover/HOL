@@ -184,7 +184,7 @@ struct
   fun amquiet () = !qd
 end;
 
-val _ = Meta.fakeload "PP";
+val _ = app Meta.fakeload ["PP", "PolyML"];
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 
