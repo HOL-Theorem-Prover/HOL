@@ -322,8 +322,7 @@ or \">-\"."
                               ") before "
                               "Feedback.set_trace " ste " old end"))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string
-        (format "%s (%s) handle e => Raise e" e-string region-string))
+       (tactic-string (format "%s (%s)" e-string region-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
