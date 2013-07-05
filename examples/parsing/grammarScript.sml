@@ -340,6 +340,12 @@ val ptrees_derive_extensible = store_thm(
   ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> rw[] >>
   metis_tac [derive_fringe])
 
+val singleton_derives_ptree = store_thm(
+  "singleton_derives_ptree",
+  ``derives G [h] sf ⇒
+    ∃pt. valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf``,
+  strip_tac >> qspec_then `Lf h` mp_tac ptrees_derive_extensible >> simp[]);
+
 val derives_language = store_thm(
   "derives_language",
   ``language G = { ts | derives G [NT G.start] (MAP TOK ts) }``,
@@ -374,27 +380,30 @@ val derives_leading_nonNT = store_thm(
   metis_tac [APPEND, derives_paste_horizontally,
              relationTheory.RTC_REFL]);
 
+val RTC_R_I = relationTheory.RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
 val derives_split_horizontally = store_thm(
   "derives_split_horizontally",
-  ``∀X Y Z. derives G (X ++ Y) Z ⇒
-            ∃Z1 Z2. derives G X Z1 ∧ derives G Y Z2 ∧ (Z = Z1 ++ Z2)``,
-  `∀X0 Z. derives G X0 Z ⇒
-          ∀X Y. X0 = X ++ Y ⇒
-                ∃Z1 Z2. derives G X Z1 ∧ derives G Y Z2 ∧ (Z = Z1 ++ Z2)`
-    suffices_by metis_tac[] >>
+  ``∀p s sf. derives G (p ++ s) sf ⇔
+             ∃sf1 sf2. sf = sf1 ++ sf2 ∧ derives G p sf1 ∧ derives G s sf2``,
+  rpt gen_tac >> REVERSE eq_tac >- metis_tac [derives_paste_horizontally] >>
+  `∃sf0. p ++ s = sf0` by simp[] >> simp[] >>
+  pop_assum
+    (fn th => disch_then
+                (fn th2 => mp_tac th >> map_every qid_spec_tac [`s`, `p`] >>
+                           mp_tac th2)) >>
+  map_every qid_spec_tac [`sf`, `sf0`] >>
   ho_match_mp_tac relationTheory.RTC_INDUCT >> simp[] >> conj_tac
-  >- metis_tac [relationTheory.RTC_REFL] >>
-  rpt strip_tac >> fs[derive_def] >> rveq >>
-  asm_match `X ++ Y = p ++ [NT sym] ++ s` >>
-  `(∃l. X = p ++ [NT sym] ++ l ∧ s = l ++ Y) ∨
-   (∃l. Y = l ++ [NT sym] ++ s ∧ p = X ++ l)`
-     by (first_x_assum (mp_tac o
-                        SIMP_RULE (srw_ss()) [APPEND_EQ_APPEND] o
-                        assert (is_eq o concl)) >> rw[] >>
-         fs[APPEND_EQ_CONS]) >>
-  rw[] >>
-  PROVE_TAC[relationTheory.RTC_REFL, relationTheory.RTC_CASES1,
-            APPEND_ASSOC, derive_def])
-
+  >- metis_tac[relationTheory.RTC_REFL] >>
+  map_every qx_gen_tac [`sf0`, `sf'`, `sf`] >> simp[derive_def] >>
+  disch_then (CONJUNCTS_THEN2
+               (qxchl [`pfx`, `N`, `r`, `sfx`] strip_assume_tac)
+               strip_assume_tac) >> rw[] >>
+  qpat_assum `X = Y` mp_tac >> simp[listTheory.APPEND_EQ_APPEND_MID] >>
+  disch_then (DISJ_CASES_THEN (qxchl [`l`] strip_assume_tac)) >> rw[] >|[
+    first_x_assum (qspecl_then [`pfx ++ r ++ l`, `s`] mp_tac),
+    first_x_assum (qspecl_then [`p`, `l ++ r ++ sfx`] mp_tac)
+  ] >> simp[] >> disch_then (qxchl [`sf1`, `sf2`] strip_assume_tac) >> rw[] >>
+  map_every qexists_tac [`sf1`, `sf2`] >> simp[] >> match_mp_tac RTC_R_I >>
+  metis_tac[derive_def]);
 
 val _ = export_theory()
