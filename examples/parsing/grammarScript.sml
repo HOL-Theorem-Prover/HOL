@@ -4,6 +4,10 @@ open boolSimps lcsymtacs
 
 open listTheory pred_setTheory finite_mapTheory
 
+val FLAT_APPEND = rich_listTheory.FLAT_APPEND
+val rveq = rpt BasicProvers.VAR_EQ_TAC
+fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q []
+
 val _ = new_theory "grammar"
 
 val _ = ParseExtras.tight_equality()
@@ -307,7 +311,7 @@ val derive_fringe = store_thm(
   simp[] >>
   disch_then (qxchl [`ip`, `is`, `ts1`, `xpt`, `ts2`] strip_assume_tac) >>
   rw[] >>
-  fs[rich_listTheory.FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
+  fs[FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM] >>
   `derive G (ip ++ [NT nt] ++ is) (ip ++ rhs ++ is)`
      by metis_tac [derive_def] >>
   pop_assum
@@ -315,7 +319,7 @@ val derive_fringe = store_thm(
                 (fn impth => mp_tac (MATCH_MP impth th))) >>
   disch_then (qxch `pt'` strip_assume_tac) >>
   qexists_tac `Nd s (ts1 ++ [pt'] ++ ts2)` >>
-  simp[rich_listTheory.FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
+  simp[FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
 
 val ptrees_derive_extensible = store_thm(
   "ptrees_derive_extensible",
@@ -346,5 +350,51 @@ val derives_language = store_thm(
     ptrees_derive_extensible >> simp[] >>
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
   simp[] >> asm_simp_tac (srw_ss() ++ DNF_ss) [MEM_MAP]);
+
+val derives_leading_nonNT_E = store_thm(
+  "derives_leading_nonNT_E",
+  ``N ∉ FDOM G.rules ∧ derives G (NT N :: rest) Y ⇒
+    ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'``,
+  `∀X Y. derives G X Y ⇒
+         ∀N rest. N ∉ FDOM G.rules ∧ X = NT N :: rest ⇒
+                  ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'`
+    suffices_by metis_tac[] >>
+  ho_match_mp_tac relationTheory.RTC_INDUCT >> simp[] >> rw[] >>
+  fs[derive_def, Once APPEND_EQ_CONS] >>
+  fs[APPEND_EQ_CONS] >> rw[] >> fs[] >>
+  match_mp_tac RTC1 >> metis_tac [derive_def]);
+
+val derives_leading_nonNT = store_thm(
+  "derives_leading_nonNT",
+  ``N ∉ FDOM G.rules ⇒
+    (derives G (NT N :: rest) Y ⇔
+     ∃rest'. Y = NT N :: rest' ∧ derives G rest rest')``,
+  strip_tac >> eq_tac >- metis_tac [derives_leading_nonNT_E] >>
+  rw[] >>
+  metis_tac [APPEND, derives_paste_horizontally,
+             relationTheory.RTC_REFL]);
+
+val derives_split_horizontally = store_thm(
+  "derives_split_horizontally",
+  ``∀X Y Z. derives G (X ++ Y) Z ⇒
+            ∃Z1 Z2. derives G X Z1 ∧ derives G Y Z2 ∧ (Z = Z1 ++ Z2)``,
+  `∀X0 Z. derives G X0 Z ⇒
+          ∀X Y. X0 = X ++ Y ⇒
+                ∃Z1 Z2. derives G X Z1 ∧ derives G Y Z2 ∧ (Z = Z1 ++ Z2)`
+    suffices_by metis_tac[] >>
+  ho_match_mp_tac relationTheory.RTC_INDUCT >> simp[] >> conj_tac
+  >- metis_tac [relationTheory.RTC_REFL] >>
+  rpt strip_tac >> fs[derive_def] >> rveq >>
+  asm_match `X ++ Y = p ++ [NT sym] ++ s` >>
+  `(∃l. X = p ++ [NT sym] ++ l ∧ s = l ++ Y) ∨
+   (∃l. Y = l ++ [NT sym] ++ s ∧ p = X ++ l)`
+     by (first_x_assum (mp_tac o
+                        SIMP_RULE (srw_ss()) [APPEND_EQ_APPEND] o
+                        assert (is_eq o concl)) >> rw[] >>
+         fs[APPEND_EQ_CONS]) >>
+  rw[] >>
+  PROVE_TAC[relationTheory.RTC_REFL, relationTheory.RTC_CASES1,
+            APPEND_ASSOC, derive_def])
+
 
 val _ = export_theory()
