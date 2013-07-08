@@ -2,6 +2,6 @@
 Holmake cleanAll
 cd common; Holmake cleanAll
 cd fp; Holmake cleanAll
-cd ../../base-heap; Holmake cleanAll
+cd ../../base; Holmake cleanAll
 cd ../arm; ./clean
 cd ../x64; ./clean
