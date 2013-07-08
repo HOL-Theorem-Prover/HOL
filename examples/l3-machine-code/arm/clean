@@ -1,0 +1,5 @@
+#!/bin/bash
+Holmake cleanAll
+cd model; Holmake cleanAll
+cd ../step; Holmake cleanAll
+cd ../prog; Holmake cleanAll
