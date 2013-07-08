@@ -10,6 +10,7 @@ infix \\
 val op \\ = op THEN;
 
 val _ = arm_progLib.arm_config "vfp";
+val _ = arm_progLib.set_newline "";
 
 (* automation *)
 

@@ -1,14 +1,14 @@
-INCLUDES = model
+INCLUDES = prog
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
-HOLHEAP = x64-heap
+HOLHEAP = x64-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = model/x64Lib
+BARE_THYS = prog/x64_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b prog/x64-step-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

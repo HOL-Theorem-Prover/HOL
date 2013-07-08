@@ -1,4 +1,4 @@
-INCLUDES = .. ../common ../arm ../x64 \
+INCLUDES = .. ../common ../arm \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/decompiler
 OPTIONS = QUIT_ON_FAILURE
@@ -7,10 +7,10 @@ ifdef POLY
 HOLHEAP = local-hol-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../common/utilsLib ../arm/arm_stepLib ../arm_progLib
+BARE_THYS = ../arm/prog/arm_progLib $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../models-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../arm/arm-prog-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

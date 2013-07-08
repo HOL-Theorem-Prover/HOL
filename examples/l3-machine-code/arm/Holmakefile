@@ -1,14 +1,14 @@
-INCLUDES = model
+INCLUDES = prog
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
-HOLHEAP = arm-heap
+HOLHEAP = arm-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = model/armLib
+BARE_THYS = prog/arm_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b prog/arm-step-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
