@@ -6,6 +6,11 @@ open HolKernel boolLib bossLib Parse;
 open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
 open set_sepTheory progTheory helperLib addressTheory;
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars addressTheory.address_grammars
+end
 
 (* ------------------------------------------------------------------------------ *)
 (* Decompilation stages:                                                          *)

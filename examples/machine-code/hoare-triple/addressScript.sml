@@ -1,6 +1,6 @@
 
 open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory;
+open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
 
 val _ = new_theory "address";
 

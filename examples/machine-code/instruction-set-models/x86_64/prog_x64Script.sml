@@ -8,7 +8,6 @@ open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
 
 val _ = new_theory "prog_x64";
 
-
 infix \\
 val op \\ = op THEN;
 

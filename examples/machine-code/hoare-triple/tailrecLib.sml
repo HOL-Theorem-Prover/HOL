@@ -4,6 +4,12 @@ struct
 open HolKernel boolLib bossLib Parse;
 open tailrecTheory helperLib sumSyntax pairSyntax;
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars tailrecTheory.tailrec_grammars
+end
+
 val tailrec_definitions = ref ([]:thm list);
 
 (* tactic, move to helperLib? *)

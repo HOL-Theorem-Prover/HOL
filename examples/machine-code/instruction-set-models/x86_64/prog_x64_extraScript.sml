@@ -137,7 +137,10 @@ val SNOC_IMM32 = let
 (* simple stack assertion *)
 
 val zSTACK_def = Define `
-  zSTACK xs = SEP_EXISTS rsp. zR 4w rsp * zSS xs * cond (rsp && 7w = 0w)`;
+  zSTACK (base,stack) =
+    SEP_EXISTS rsp.
+      zR 4w rsp * zSS stack *
+      cond ((rsp && 7w = 0w) /\ (base = rsp + n2w (8 * LENGTH stack)))`;
 
 (* push *)
 
@@ -156,22 +159,28 @@ val x13 = ("r13",``13w:word4``,``r13:word64``)
 val x14 = ("r14",``14w:word4``,``r14:word64``)
 val x15 = ("r15",``15w:word4``,``r15:word64``)
 
+val blast_lemma = prove(
+  ``(r4 && 0x7w = 0x0w) ==> (r4 - 0x8w && 0x7w = 0x0w:word64) /\
+                            (r4 + 0x8w && 0x7w = 0x0w:word64) /\
+                            (r4 + 0x8w * w && 0x7w = 0x0w)``,
+  blastLib.BBLAST_TAC);
+
 fun x64_push (s,r,v) = save_thm("x64_push_" ^ s,let
   val ((th,_,_),_) = x64_spec (x64_encode ("push " ^ s))
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (x1:word64 list)))``
   val th = Q.INST [`x1`|->`ss`] th
   val (th,goal) = SPEC_WEAKEN_RULE th
-      ``zPC (rip+2w) * zR ^r ^v * zSTACK (^v::ss)``
+      ``zPC (rip+2w) * zR ^r ^v * zSTACK (base,^v::ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4-8w`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ blastLib.BBLAST_TAC)
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma])
   val th = MP th lemma
   val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
-      ``zPC rip * zR ^r ^v * zSTACK ss``
+      ``zPC rip * zR ^r ^v * zSTACK (base,ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
@@ -186,20 +195,21 @@ val res = map x64_push [x0,x1,x2,x3,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15];
 
 fun x64_pop (s,r,v) = save_thm("x64_pop_" ^ s,let
   val ((th,_,_),_) = x64_spec (x64_encode ("pop " ^ s))
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\ x1 <> [] /\
+                 (base = r4 + n2w (8 * LENGTH (x1:word64 list)))``
   val th = Q.INST [`x1`|->`ss`] th
   val (th,goal) = SPEC_WEAKEN_RULE th
-      ``zPC (rip+2w) * zR ^r (HD ss) * zSTACK (TL ss)``
+      ``zPC (rip+2w) * zR ^r (HD ss) * zSTACK (base,TL ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4+8w`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ blastLib.BBLAST_TAC)
+    \\ Cases_on `ss`
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma,TL])
   val th = MP th lemma
   val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
-      ``zPC rip * zR ^r ^v * zSTACK ss * cond (ss <> [])``
+      ``zPC rip * zR ^r ^v * zSTACK (base,ss) * cond (ss <> [])``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
@@ -233,20 +243,24 @@ val x64_pops = save_thm("x64_pops",let
   val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,
                                     RW1 [MULT_COMM] MOD_EQ_0] th
   val th = Q.INST [`x1`|->`ss`] (RW [GSYM SPEC_MOVE_COND] th)
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 k <= LENGTH (ss:word64 list) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
   val (th,goal) = SPEC_WEAKEN_RULE th
-      ``zPC (rip+7w) * zSTACK (DROP k ss)``
+      ``zPC (rip+7w) * zSTACK (base,DROP k ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4+n2w (8*k)`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ FULL_SIMP_TAC std_ss [GSYM word_mul_n2w]
-    \\ blastLib.BBLAST_TAC)
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma,TL]
+    \\ FULL_SIMP_TAC std_ss [LENGTH_DROP,GSYM word_mul_n2w,blast_lemma]
+    \\ FULL_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC] \\ AP_TERM_TAC
+    \\ SIMP_TAC std_ss [GSYM WORD_LEFT_ADD_DISTRIB] \\ AP_TERM_TAC
+    \\ SIMP_TAC std_ss [word_add_n2w] \\ AP_TERM_TAC \\ DECIDE_TAC)
   val th = MP th lemma
   val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
-      ``zPC rip * zSTACK ss * cond (k <= LENGTH ss /\ k < 268435456)``
+      ``zPC rip * zSTACK (base,ss) * cond (k <= LENGTH ss /\ k < 268435456)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
@@ -260,6 +274,7 @@ val x64_pops = save_thm("x64_pops",let
 val x64_el_r0_imm = save_thm("x64_el_r0_imm",let
   val ((th,_,_),_) = x64_spec "488B8424"
   val th = RW [GSYM IMM32_def] th
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   val th = Q.INST [`imm32`|->`n2w (8*k)`] th
   val th = DISCH ``(k:num) < 2 ** 28`` th
   val th = SIMP_RULE bool_ss [imm32_lemma] th
@@ -270,55 +285,58 @@ val x64_el_r0_imm = save_thm("x64_el_r0_imm",let
   val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,w2n_n2w,
                              RW1 [MULT_COMM] MOD_EQ_0,EVAL ``dimword (:64)``] th
   val th = SIMP_RULE std_ss [GSYM SPEC_MOVE_COND] th
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
-  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x8w) *
-      zR 0x0w (EL k x1) * zSTACK x1)``
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (p + 0x8w) *
+      zR 0x0w (EL k ss) * zSTACK (base,ss))``
   val lemma = prove(goal,
     SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma |> Q.GEN `r4`
   val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
-  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip *
-      zR 0x0w r0 * zSTACK x1 * cond (k < LENGTH x1 /\ k < 268435456))``
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC p *
+      zR 0x0w r0 * zSTACK (base,ss) * cond (k < LENGTH ss /\ k < 268435456))``
   val lemma = prove(goal,
     SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
       SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma
-  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   in th end);
 
 val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
   val ((th,_,_),_) = x64_spec (x64_encode "mov [rsp+r8], r0")
   val th = th |> RW [WORD_ADD_SUB]
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
-  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x4w) * zR 0x8w r8 *
-      zR 0x0w r0 * zSTACK (LUPDATE r0 (w2n r8 DIV 8) x1))``
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (p + 0x4w) * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK (base,LUPDATE r0 (w2n r8 DIV 8) ss))``
   val lemma = prove(goal,
     SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma |> Q.GEN `r4`
   val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
-  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip * zR 0x8w r8 *
-      zR 0x0w r0 * zSTACK x1 * cond (w2n r8 DIV 8 < LENGTH x1 /\
-                                     (w2n r8 MOD 8 = 0)))``
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC p * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK (base,ss) * cond (w2n r8 DIV 8 < LENGTH ss /\
+                                           (w2n r8 MOD 8 = 0)))``
   val lemma = prove(goal,
     SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
       SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma
-  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   in th end);
+
 
 (* store into stack *)
 
 val x64_lupdate_r0_imm = save_thm("x64_lupdate_r0_imm",let
   val ((th,_,_),_) = x64_spec "48898424"
   val th = RW [GSYM IMM32_def] th
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   val th = Q.INST [`imm32`|->`n2w (8*k)`] th
   val th = DISCH ``(k:num) < 2 ** 28`` th
   val th = SIMP_RULE bool_ss [imm32_lemma] th
@@ -329,40 +347,42 @@ val x64_lupdate_r0_imm = save_thm("x64_lupdate_r0_imm",let
   val th = SIMP_RULE std_ss [lemma2,RW1 [MULT_COMM] MULT_DIV,w2n_n2w,
                              RW1 [MULT_COMM] MOD_EQ_0,EVAL ``dimword (:64)``] th
   val th = SIMP_RULE std_ss [GSYM SPEC_MOVE_COND] th
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
-  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x8w) *
-      zR 0x0w r0 * zSTACK (LUPDATE r0 k x1))``
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (p + 0x8w) *
+      zR 0x0w r0 * zSTACK (base,LUPDATE r0 k ss))``
   val lemma = prove(goal,
     SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma |> Q.GEN `r4`
   val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
-  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip *
-      zR 0x0w r0 * zSTACK x1 * cond (k < LENGTH x1 /\ k < 268435456))``
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC p *
+      zR 0x0w r0 * zSTACK (base,ss) * cond (k < LENGTH ss /\ k < 268435456))``
   val lemma = prove(goal,
     SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
       SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma
-  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   in th end);
 
 val x64_lupdate_r0_r8 = save_thm("x64_lupdate_r0_r8",let
   val ((th,_,_),_) = x64_spec (x64_encode "mov r0, [rsp+r8]")
   val th = th |> RW [WORD_ADD_SUB]
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
-  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (rip + 0x4w) * zR 0x8w r8 *
-      zR 0x0w (EL (w2n r8 DIV 8) x1) * zSTACK x1)``
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
+  val (th,goal) = SPEC_WEAKEN_RULE th ``(zPC (p + 0x4w) * zR 0x8w r8 *
+      zR 0x0w (EL (w2n r8 DIV 8) ss) * zSTACK (base,ss))``
   val lemma = prove(goal,
     SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma |> Q.GEN `r4`
   val th = SIMP_RULE std_ss [SPEC_PRE_EXISTS] th
-  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC rip * zR 0x8w r8 *
-      zR 0x0w r0 * zSTACK x1 * cond (w2n r8 DIV 8 < LENGTH x1 /\
+  val (th,goal) = SPEC_STRENGTHEN_RULE th ``(zPC p * zR 0x8w r8 *
+      zR 0x0w r0 * zSTACK (base,ss) * cond (w2n r8 DIV 8 < LENGTH ss /\
                                      (w2n r8 MOD 8 = 0)))``
   val lemma = prove(goal,
     SIMP_TAC (std_ss++sep_cond_ss) [zSTACK_def,SEP_CLAUSES,cond_STAR,
@@ -370,7 +390,6 @@ val x64_lupdate_r0_r8 = save_thm("x64_lupdate_r0_r8",let
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `rsp`
     \\ FULL_SIMP_TAC (srw_ss()++star_ss) []);
   val th = MP th lemma
-  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
   in th end);
 
 (* call *)
@@ -378,23 +397,23 @@ val x64_lupdate_r0_r8 = save_thm("x64_lupdate_r0_r8",let
 val x64_call_imm = save_thm("x64_call_imm",let
   val ((th,_,_),_) = x64_spec "48E8"
   val th = RW [GSYM IMM32_def,GSYM word_add_n2w,WORD_ADD_ASSOC] th
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
   val ll = sw2sw_def |> INST_TYPE [``:'a``|->``:32``,``:'b``|->``:64``]
                      |> SIMP_RULE (srw_ss()) []
   val th = th |> RW [GSYM ll]
-  val th = Q.INST [`x1`|->`ss`] th
   val (th,goal) = SPEC_WEAKEN_RULE th
-      ``zPC (rip + 0x6w + sw2sw (imm32:word32)) * zSTACK (rip+6w::ss)``
+      ``zPC (p + 0x6w + sw2sw (imm32:word32)) * zSTACK (base,p+6w::ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4-8w`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ blastLib.BBLAST_TAC)
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma,TL])
   val th = MP th lemma
   val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
-      ``zPC rip * zSTACK ss``
+      ``zPC p * zSTACK (base,ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
@@ -405,20 +424,20 @@ val x64_call_imm = save_thm("x64_call_imm",let
 
 fun x64_call (s,r,v) = save_thm("x64_call_" ^ s,let
   val ((th,_,_),_) = x64_spec (x64_encode ("call " ^ s))
-  val th = SPEC_BOOL_FRAME_RULE th ``r4 && 7w = 0w:word64``
-  val th = Q.INST [`x1`|->`ss`] th
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
   val (th,goal) = SPEC_WEAKEN_RULE th
-      ``zPC ^v * zR ^r ^v * zSTACK (rip+3w::ss)``
+      ``zPC ^v * zR ^r ^v * zSTACK (base,p+3w::ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4-8w`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ blastLib.BBLAST_TAC)
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma,TL])
   val th = MP th lemma
   val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
   val (th,goal) = SPEC_STRENGTHEN_RULE th
-      ``zPC rip * zR ^r ^v * zSTACK ss``
+      ``zPC p * zR ^r ^v * zSTACK (base,ss)``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
@@ -432,28 +451,28 @@ val res = map x64_call [x0,x1,x2,x3,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15];
 (* ret *)
 
 val x64_ret = save_thm("x64_ret",let
-  val ((ret,_,_),_) = x64_spec (x64_encode "ret")
-  val ret = SPEC_BOOL_FRAME_RULE ret ``r4 && 7w = 0w:word64``
-  val ret = Q.INST [`x1`|->`ss`] ret
-  val (ret,goal) = SPEC_WEAKEN_RULE ret
-      ``zPC (HD ss) * zSTACK (DROP 0 (TL ss))``
+  val ((th,_,_),_) = x64_spec (x64_encode "ret")
+  val th = Q.INST [`x1`|->`ss`,`rip`|->`p`] th
+  val th = SPEC_BOOL_FRAME_RULE th ``(r4 && 7w = 0w:word64) /\ ss <> [] /\
+                 (base = r4 + n2w (8 * LENGTH (ss:word64 list)))``
+  val (th,goal) = SPEC_WEAKEN_RULE th
+      ``zPC (HD ss) * zSTACK (base,DROP 0 (TL ss))``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
-    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4+8w`
-    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
-    \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
-    \\ blastLib.BBLAST_TAC)
-  val ret = MP ret lemma
-  val ret = ret |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
-  val (ret,goal) = SPEC_STRENGTHEN_RULE ret
-      ``zPC rip * zSTACK ss * cond (ss <> [])``
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r4+8w` \\ Cases_on `ss`
+    \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC,LENGTH,MULT_CLAUSES,
+         GSYM word_add_n2w,WORD_SUB_ADD,WORD_ADD_ASSOC,blast_lemma,TL,LENGTH_DROP])
+  val th = MP th lemma
+  val th = th |> Q.GEN `r4` |> SIMP_RULE std_ss [SPEC_PRE_EXISTS]
+  val (th,goal) = SPEC_STRENGTHEN_RULE th
+      ``zPC p * zSTACK (base,ss) * cond (ss <> [])``
   val lemma = prove(goal,
     FULL_SIMP_TAC std_ss [zSTACK_def,SEP_CLAUSES,SEP_IMP_def,SEP_EXISTS_THM]
     \\ FULL_SIMP_TAC std_ss [cond_STAR,STAR_ASSOC]
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `rsp` \\ FULL_SIMP_TAC std_ss [])
-  val ret = MP ret lemma
-  in ret end);
+  val th = MP th lemma
+  in th end);
 
 
 (* I/O interface to C: getchar, putchar *)
@@ -477,17 +496,17 @@ val callee_saved_tm =
 val io_getchar_tm =
   ``SPEC X64_MODEL
        (zPC pi * ~zR1 RAX * ~zR1 RDI * ^caller_saver_tm * ^callee_saved_tm *
-        ^IO (pi,input,po,output) * ~zS * zSTACK (x::stack)) {}
+        ^IO (pi,input,po,output) * ~zS * zSTACK (base,x::stack)) {}
        (zPC x * zR1 RAX (w2w (HD (SNOC (-1w) input))) * ~zR1 RDI *
         ^caller_saver_tm * ^callee_saved_tm *
-        ^IO (pi,DROP 1 input,po,output) * ~zS * zSTACK stack)``;
+        ^IO (pi,DROP 1 input,po,output) * ~zS * zSTACK (base,stack))``;
 
 val io_putchar_tm =
   ``SPEC X64_MODEL
        (zPC po * ~zR1 RAX * zR1 RDI (w2w c) * ^caller_saver_tm * ^callee_saved_tm *
-        ^IO (pi,input,po,output) * ~zS * zSTACK (x::stack)) {}
+        ^IO (pi,input,po,output) * ~zS * zSTACK (base,x::stack)) {}
        (zPC x * ~zR1 RAX * ~zR1 RDI * ^caller_saver_tm * ^callee_saved_tm *
-        ^IO (pi,input,po,output ++ [c]) * ~zS * zSTACK stack)``;
+        ^IO (pi,input,po,output ++ [c]) * ~zS * zSTACK (base,stack))``;
 
 fun genall tm v = foldr mk_forall tm (filter (fn x => not (x = v)) (free_vars tm));
 

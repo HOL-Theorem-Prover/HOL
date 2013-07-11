@@ -5,6 +5,12 @@ open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory set_sepTheory progTheory wordsTheory;
 open pairSyntax;
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars progTheory.prog_grammars
+end
+
 type decompiler_tools =
   (* ( derive spec, generate branch, status thm, program counter term ) *)
   (string -> (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
@@ -115,8 +121,10 @@ fun mk_sep_exists (v,tm) = let
   val tm2 = mk_abs(v,tm)
   in mk_comb(inst (match_type t_ty (type_of tm2)) t, tm2) end;
 
+fun mk_emp ty = mk_thy_const {Ty = ty, Thy = "set_sep", Name = "emp"}
+
 fun list_mk_star xs ty =
-  list_mk (fn (x,y) => mk_star (y,x)) (rev xs) (mk_const("emp",ty))
+  list_mk (fn (x,y) => mk_star (y,x)) (rev xs) (mk_emp ty)
 
 fun dest_star tm = let
   val (x,z) = dest_comb tm
