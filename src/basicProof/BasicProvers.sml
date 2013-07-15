@@ -423,7 +423,10 @@ fun case_rwlist () =
  itlist (fn tyi => fn rws => case_rws tyi @ rws)
         (TypeBase.elts()) [];
 
-fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
+(* Add the rewrites into a simpset to avoid re-processing them when 
+ * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
+ * has an order of magniture speedup on developments with large datatypes *)
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
 
 fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
 end;
