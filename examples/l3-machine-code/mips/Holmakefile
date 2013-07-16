@@ -1,0 +1,14 @@
+INCLUDES = prog
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = mips-prog-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = prog/mips_progLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b prog/mips-step-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif
