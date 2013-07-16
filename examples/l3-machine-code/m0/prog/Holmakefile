@@ -1,0 +1,14 @@
+INCLUDES = ../step ../../common
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = m0-step-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../step/m0_stepLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../step/m0-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif
