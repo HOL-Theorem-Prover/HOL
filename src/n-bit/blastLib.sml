@@ -66,26 +66,29 @@ local
   val encountered_types = ref (Redblackset.empty Type.compare)
 
   fun new_word_types tm =
-      let
+     let
         val tms = HolKernel.find_terms (fn t =>
                   case Lib.total wordsSyntax.dim_of t
                   of SOME ty =>
+                      fcpSyntax.is_numeric_type ty andalso
                       not (Redblackset.member (!encountered_types, ty)) andalso
                       (encountered_types :=
                          Redblackset.add (!encountered_types, ty); true)
                    | NONE => false) tm
-      in
+     in
         List.map wordsSyntax.dim_of tms
-      end
+     end
 
   val cmp = reduceLib.num_compset ()
   val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
   val cnv = computeLib.CBV_CONV cmp
 
   fun add_index_thms tm =
-        let val new_tys = new_word_types tm in
+     let
+        val new_tys = new_word_types tm
+     in
           List.app (fn ty => computeLib.add_thms (mk_index_thms ty) cmp) new_tys
-        end
+     end
 in
   fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
 
