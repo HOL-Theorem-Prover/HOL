@@ -619,6 +619,10 @@ also be used by simply writing their names directly (i.e., without the
 enclosing \varref{\dots}), as long as these references occur first on
 a command-line.
 
+Under Poly/ML, commands involving the variable \texttt{MOSMLC} are interpreted ``appropriately''.
+If the behaviour is not as desired, we recommend using \texttt{ifdef~POLY}~(see below) to write rules that pertain only to HOL under Poly/ML.
+We strongly discourage the use of \texttt{MOSMLYAC} and \texttt{MOSMLLEX}, even when running HOL under Moscow~ML.
+
 If a reference is made to an otherwise undefined string, then it is
 treated as a reference to an environment variable.  If there is no
 such variable in the environment, then the variable is silently given
