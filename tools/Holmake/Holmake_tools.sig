@@ -44,7 +44,8 @@ sig
        visited: string Binaryset.set,
        includes : string list,
        dir : {abspath: string, relpath: string option},
-       local_build : unit -> bool} ->
+       local_build : unit -> bool,
+       cleantgt : string option} ->
       string Binaryset.set option
 
 end

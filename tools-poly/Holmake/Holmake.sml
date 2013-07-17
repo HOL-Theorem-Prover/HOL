@@ -269,7 +269,7 @@ fun parse_command_line list = let
   val (rem, dontmakes) = find_pairs "-d" rem
   val (rem, debug) = find_toggle "--d" rem
   val (rem, help) = find_alternative_tags  ["--help", "-h"] rem
-  val (rem, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem
+  val (rem, rebuild_deps) = find_toggle "--rebuild_deps" rem
   val (rem, cmdl_HOLDIRs) = find_pairs "--holdir" rem
   val (rem, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem
   val (rem, allfast) = find_toggle "--fast" rem
@@ -278,6 +278,7 @@ fun parse_command_line list = let
   val (rem, ot) = find_toggle "--ot" rem
   val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
   val (rem, no_prereqs) = find_toggle "--no_prereqs" rem
+  val (rem, recursive) = find_toggle "-r" rem
   val (rem, user_hmakefile) =
     find_one_pairtag "--holmakefile" NONE SOME rem
   val (rem, no_overlay) = find_toggle "--no_overlay" rem
@@ -297,7 +298,9 @@ in
    always_rebuild_deps=rebuild_deps,
    additional_includes=includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
-   quit_on_failure = qofp, no_prereqs = no_prereqs,
+   quit_on_failure = qofp,
+   no_prereqs = no_prereqs,
+   cline_recursive = recursive,
    opentheory = ot, no_hmakefile = no_hmakefile,
    allfast = allfast, fastfiles = fastfiles,
    user_hmakefile = user_hmakefile,
@@ -347,7 +350,7 @@ val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      no_lastmakercheck, user_overlay, keep_going_flag, quiet_flag,
-     do_logging_flag} =
+     do_logging_flag, cline_recursive} =
   parse_command_line (CommandLine.arguments())
 
 val (outputfunctions as {warn,info,tgtfatal,diag}) =
@@ -542,7 +545,12 @@ val EXE_POLY =
     else POLY
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
-val no_prereqs = no_prereqs orelse hmake_noprereqs
+
+val _ = if cline_recursive andalso no_prereqs then
+          warn("-r forces recursion, taking precedence over --no_prereqs")
+        else ()
+val no_prereqs = (no_prereqs orelse hmake_noprereqs) andalso not cline_recursive
+
 val _ =
   if quit_on_failure andalso allfast then
     warn "quit on (tactic) failure ignored for fast built theories"
@@ -1326,14 +1334,14 @@ in
   if keep_going_flag then keep_going tgts else stop_on_failure tgts
 end
 
-fun hm_recur k =
+fun hm_recur ctgt k =
     maybe_recurse
         {warn = warn, no_prereqs = no_prereqs, hm = Holmake,
          visited = visiteddirs,
          includes =
          cline_additional_includes @ envlist "PRE_INCLUDES" @ hmake_includes,
          dir = {abspath = dir, relpath = dirnm},
-         local_build = k}
+         local_build = k, cleantgt = ctgt}
 
 in
   case targets of
@@ -1350,16 +1358,21 @@ in
           end
         else ()
     in
-      hm_recur (fn () => finish_logging (strategy  targets))
+      hm_recur NONE (fn () => finish_logging (strategy  targets))
     end
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
                       x in_target ".PHONY"
     in
-      if List.all isPhony xs then
+      if List.all isPhony xs andalso not cline_recursive then
         if finish_logging (strategy xs) then SOME visiteddirs else NONE
       else
-        hm_recur (fn () => finish_logging (strategy xs))
+        let
+          val ctgt =
+              List.find (fn s => member s ["clean", "cleanDeps", "cleanAll"]) xs
+        in
+          hm_recur ctgt (fn () => finish_logging (strategy xs))
+        end
     end
 end
 
@@ -1375,6 +1388,7 @@ in
      "    -I <file>            : include directory (can be repeated)\n",
      "    -d <file>            : ignore file (can be repeated)\n",
      "    -f <theory>          : toggles fast build (can be repeated)\n",
+     "    -r                   : force recursion (even for cleans)\n",
      "    --d                  : print debugging information\n",
      "    --fast               : files default to fast build; -f toggles\n",
      "    --help | -h          : show this message\n",
@@ -1383,7 +1397,7 @@ in
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
      "    --logging            : do per-theory time logging\n",
-     "    --polymllibdir directory : use specified directory for Poly/ML's libraries\n",
+     "    --polymllibdir <dir> : use specified directory for Poly/ML's libraries\n",
      "    --poly file          : use specified file as the Poly/ML executable\n",
      "    --poly_not_hol       : Treat the Poly/ML executable as plain, not as a hol-augmented executable\n",
      "    --no_holmakefile     : don't use any Holmakefile\n",
@@ -1394,7 +1408,7 @@ in
      "    --ot                 : log an OpenTheory article for each theory\n",
      "    --qof                : quit on tactic failure\n",
      "    --quiet              : be quieter in operation\n",
-     "    --rebuild_deps | -r  : always rebuild dependency info files \n"]
+     "    --rebuild_deps       : always rebuild dependency info files \n"]
   else let
       open OS.Process
       val result =

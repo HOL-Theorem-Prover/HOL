@@ -224,9 +224,11 @@ end handle OS.SysErr (mesg, _) => let
          | DirNotFound => true
 
 
-fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k} =
+fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k,
+                   cleantgt} =
 let
   val {abspath=dir,relpath} = dir
+  val tgts = case cleantgt of SOME s => [s] | NONE => []
   fun recurse visited (newdir,nm) =
       if Binaryset.member(visited, newdir) then SOME visited
       else let
@@ -239,7 +241,7 @@ let
           val nm = case newrelpath of NONE => newdir | SOME d => d
           val _ = warn ("Recursively calling Holmake in "^nm)
         in
-          hm {relpath=newrelpath,abspath=newdir} visited [] []
+          hm {relpath=newrelpath,abspath=newdir} visited [] tgts
           before
           (warn ("Finished recursive invocation in "^nm);
            FileSys.chDir dir)

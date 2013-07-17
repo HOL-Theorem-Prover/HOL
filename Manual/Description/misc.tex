@@ -249,6 +249,7 @@ Alternatively, and probably with the help of one of the editor modes,\footnote{T
 \holmake{} only works properly on the current directory.
 \holmake{} will rebuild files in the current directory if something it depends on from another directory is fresher than it is, but it will not do any analysis on files in other directories.
 
+\index{Holmake@\holmake!recursive invocation}%
 However, one can indicate that there is a dependency on other directories by using the \texttt{-I} flag, or the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
 Such a specification will cause \holmake{} to look in the specified directories for other theory files that the current directory may depend on.
 Moreover, by default \holmake{} will recursively call itself on all those ``include'' directories before doing anything in the current directory.
@@ -294,6 +295,9 @@ with the following command-line options:
   \texttt{fast\_proof} oracle tag.  This tag will appear on all
   theorems proved in this way and all subsequent theorems that depend
   on such theorems.  \holmake's default is not to build in fast mode.
+\item[\texttt{-r}]%
+\index{Holmake@\holmake!recursive invocation}%
+Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
 \item[\texttt{--fast}] Makes \holmake's default be to build in fast
   mode (see above).
 \item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
@@ -327,8 +331,9 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
-\item[\texttt{--no\_prereqs}] Do not recursively attempt to build
-  ``include'' directories before working in the current directory.
+\item[\texttt{--no\_prereqs}]%
+\index{Holmake@\holmake!recursive invocation}%
+Do not recursively attempt to build ``include'' directories before working in the current directory.
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning
@@ -346,7 +351,7 @@ with the following command-line options:
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Note that other programs called by \holmake{} will not
   be affected.
-\item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to always
+\item[{\tt --rebuild\_deps}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
   not it thinks it needs to.  This option is implemented by having
   \holmake{} wipe all of its dependency cache (as per the
@@ -536,16 +541,14 @@ whose value are commas instead), but can otherwise be arbitrary text.
 \paragraph{Special and pre-defined variables}
 
 \index{Holmake@\holmake!variables in makefiles}
-If defined, the \texttt{INCLUDES} variable is used to add directories
-to the list of directories consulted when files are compiled and
-linked.  The effect is as if the directories specified had all been
-included on the command-line with \texttt{-I} options.  The
-\texttt{PRE\_INCLUDES} variable works similarly, but the directories
-specified here are placed before the \mbox{\texttt{-I <holdir>}}
-option that is used in invocations of compiler.  This
-option gives the user a way of over-riding code in the core
-distribution as the compiler will find their code
-before the distribution's.
+If defined, the \texttt{INCLUDES} variable is used to add directories to the list of directories consulted when files are compiled and linked.
+The effect is as if the directories specified had all been included on the command-line with \texttt{-I} options.
+The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before the \mbox{\texttt{-I <sigobj>}} option that is used in invocations of compiler.
+This option gives the user a way of over-riding code in the core distribution as the compiler will find their code before the distribution's.
+
+\index{Holmake@\holmake!recursive invocation}
+By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.
+If the \texttt{-r} (``force recursion'') command-line flag is used, these directories are also ``clean''-ed when a cleaning target is given to \holmake{}.
 
 The \texttt{OPTIONS} variable is used for the specification of just
 four possible options (others are ignored): \texttt{NO\_SIGOBJ},
