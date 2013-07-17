@@ -631,7 +631,9 @@ let val out = TextIO.openOut result
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (EXE_POLY ^ "<<'__end-of-file__'");
+  p (EXE_POLY ^ " " ^
+     String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
+     " <<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
   p "val _ = PolyML.Compiler.prompt2:=\"\";";
   p "val _ = PolyML.print_depth 0;";
