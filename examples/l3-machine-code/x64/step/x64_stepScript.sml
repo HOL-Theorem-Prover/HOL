@@ -363,8 +363,32 @@ val bitfield_inserts = Q.store_thm("bitfield_inserts",
 
 (* ------------------------------------------------------------------------ *)
 
+val extension_thms = Q.store_thm("extension_thms",
+   `(!w: word8. (7 >< 0) (w2w w : word64) = w) /\
+    (!w: word16. (15 >< 0) (w2w w : word64) = w) /\
+    (!w: word32. (31 >< 0) (w2w w : word64) = w) /\
+    (!w: word8.
+       65535w && bit_field_insert 15 0 (sw2sw w : word16) (w2w w : word64) =
+       65535w && w2w (sw2sw w : word16) : word64) /\
+    (!w: word8.
+      (31 >< 0) (bit_field_insert 31 0 (sw2sw w : word32) (w2w w : word64)) =
+      w2w (sw2sw w : word32) : word64) /\
+    (!w: word16.
+      (31 >< 0) (bit_field_insert 31 0 (sw2sw w : word32) (w2w w : word64)) =
+      w2w (sw2sw w : word32) : word64) /\
+    (!w: word64.
+      (31 >< 0) (bit_field_insert 31 0 (sw2sw (w2w w: word16) : word32)
+                (w && 0xFFFFw)) =
+      w2w (sw2sw (w2w w : word16) : word32) : word64)`,
+   blastLib.BBLAST_TAC
+)
+
 val word_thms = Q.store_thm("word_thms",
-   `(!a b: word64.
+   `(!a: word64.
+       (31 >< 0) (a && 0xFFFFFFFFw) = w2w a : word32) /\
+    (!a: word64.
+       (15 >< 0) (a && 0xFFFFw) = w2w a : word16) /\
+    (!a b: word64.
        (31 >< 0) (a && 0xFFFFFFFFw ?? b && 0xFFFFFFFFw) =
        (a ?? b) && 0xFFFFFFFFw) /\
     (!a b: word64.

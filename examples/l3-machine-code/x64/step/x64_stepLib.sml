@@ -22,6 +22,12 @@ val () = show_assums := true
 
 (* ========================================================================= *)
 
+(*
+val print_thms =
+   List.app
+     (fn th => (Lib.with_flag (show_assums, false) print_thm th; print "\n\n"))
+*)
+
 val st = ``s: x64_state``
 val regs = TypeBase.constructors_of ``:Zreg``
 fun mapl x = utilsLib.augment x [[]]
@@ -30,7 +36,10 @@ local
    val state_fns = utilsLib.accessor_fns ``: x64_state``
    val other_fns =
       [pairSyntax.fst_tm, pairSyntax.snd_tm,
-       ``(h >< l) : 'a word -> 'b word``] @ utilsLib.update_fns ``: x64_state``
+       wordsSyntax.w2w_tm, wordsSyntax.sw2sw_tm,
+       ``(h >< l) : 'a word -> 'b word``,
+       ``bit_field_insert h l : 'a word -> 'b word -> 'b word``] @
+      utilsLib.update_fns ``: x64_state``
    val exc = ``SND (raise'exception e s : 'a # x64_state)``
 in
    val cond_rand_thms = utilsLib.mk_cond_rand_thms (other_fns @ state_fns)
@@ -362,6 +371,16 @@ val read_cond_rwts =
       ``read_cond c``
    |> addThms
 
+val SignExtension_rwt =
+   EV [SignExtension_def] []
+      [[`s1` |-> ``Z8 (b)``, `s2` |-> ``Z16``],
+       [`s1` |-> ``Z8 (b)``, `s2` |-> ``Z32``],
+       [`s1` |-> ``Z8 (b)``, `s2` |-> ``Z64``],
+       [`s1` |-> ``Z16``, `s2` |-> ``Z32``],
+       [`s1` |-> ``Z16``, `s2` |-> ``Z64``],
+       [`s1` |-> ``Z32``, `s2` |-> ``Z64``]]
+      ``SignExtension (w, s1, s2)``
+
 (* ------------------------------------------------------------------------ *)
 
 val rm =
@@ -373,8 +392,18 @@ val rm =
     [`rm` |-> ``Zm (SOME (scale, ix), ZripBase, d)``],
     [`rm` |-> ``Zm (SOME (scale, ix), ZregBase r, d)``]]: utilsLib.cover
 
+val r_rm =
+   [[`ds` |-> ``Zr_rm (r1, Zr r2)``],
+    [`ds` |-> ``Zr_rm (r, Zm (NONE, ZnoBase, d))``],
+    [`ds` |-> ``Zr_rm (r, Zm (NONE, ZripBase, d))``],
+    [`ds` |-> ``Zr_rm (r1, Zm (NONE, ZregBase r2, d))``],
+    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZnoBase, d))``],
+    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZripBase, d))``],
+    [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
+    : utilsLib.cover
+
 val src_dst = utilsLib.augment (`size`, sizes)
-   [[`ds` |-> ``Zrm_i (Zr r, i)``],
+  ([[`ds` |-> ``Zrm_i (Zr r, i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZnoBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZripBase, d), i)``],
     [`ds` |-> ``Zrm_i (Zm (NONE, ZregBase r, d), i)``],
@@ -387,24 +416,21 @@ val src_dst = utilsLib.augment (`size`, sizes)
     [`ds` |-> ``Zrm_r (Zm (NONE, ZregBase r1, d), r2)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZnoBase, d), r)``],
     [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZripBase, d), r)``],
-    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``],
-    [`ds` |-> ``Zr_rm (r1, Zr r2)``],
-    [`ds` |-> ``Zr_rm (r, Zm (NONE, ZnoBase, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (NONE, ZripBase, d))``],
-    [`ds` |-> ``Zr_rm (r1, Zm (NONE, ZregBase r2, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZnoBase, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZripBase, d))``],
-    [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
+    [`ds` |-> ``Zrm_r (Zm (SOME (scale, ix), ZregBase r1, d), r2)``]] @ r_rm)
     : utilsLib.cover
 
-val lea = utilsLib.augment (`size`, sizes)
-   [[`ds` |-> ``Zr_rm (r, Zm (NONE, ZnoBase, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (NONE, ZripBase, d))``],
-    [`ds` |-> ``Zr_rm (r1, Zm (NONE, ZregBase r2, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZnoBase, d))``],
-    [`ds` |-> ``Zr_rm (r, Zm (SOME (scale, ix), ZripBase, d))``],
-    [`ds` |-> ``Zr_rm (r1, Zm (SOME (scale, ix), ZregBase r2, d))``]]
-    : utilsLib.cover
+val lea = utilsLib.augment (`size`, sizes) (tl r_rm) : utilsLib.cover
+
+val extends =
+ (* 8 -> 16, 32, 64 *)
+ utilsLib.augment (`size2`, tl sizes)
+    (utilsLib.augment (`size`, [hd sizes]) r_rm) @
+ (* 16 -> 32, 64 *)
+ utilsLib.augment (`size2`, List.drop (sizes, 2))
+    (utilsLib.augment (`size`, [List.nth(sizes, 1)]) r_rm) @
+ (* 32 -> 64 *)
+ utilsLib.augment (`size2`, List.drop (sizes, 3))
+    (utilsLib.augment (`size`, [List.nth(sizes, 2)]) r_rm)
 
 val rm_cases = utilsLib.augment (`size`, sizes) rm
 
@@ -491,11 +517,19 @@ val Zmov_rwts =
    |> addThms
 
 val Zmovzx_rwts =
-   EV ([dfn'Zmovzx_def] @ ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt)
-       [] (utilsLib.augment (`size2`, sizes) src_dst)
+   EV ([dfn'Zmovzx_def, cond_rand_thms, word_thms] @
+      ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt)
+       [] extends
       ``dfn'Zmovzx (size, ds, size2)``
    |> data_hyp_rule
-   (* |> is_some_hyp_rule *)
+   |> addThms
+
+val Zmovsx_rwts =
+   EV ([dfn'Zmovsx_def, cond_rand_thms, extension_thms, word_thms] @
+       SignExtension_rwt @ ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt)
+      [] extends
+      ``dfn'Zmovsx (size, ds, size2)``
+   |> data_hyp_rule
    |> addThms
 
 val Zmul_rwts =
@@ -626,12 +660,10 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val qword = wordsSyntax.mk_int_word_type 64
-   val v = Term.mk_var ("v", qword)
-   val sv = optionSyntax.mk_some v
-   val wv = Term.mk_var ("wv", qword)
    fun is_some_wv tm =
-      ((tm |> boolSyntax.dest_eq |> snd |> optionSyntax.dest_some) = wv)
+      ((tm |> boolSyntax.dest_eq |> snd
+           |> optionSyntax.dest_some
+           |> Term.dest_var |> fst) = "wv")
       handle HOL_ERR _ => false
 in
    fun FIX_SAME_ADDRESS_RULE thm =
@@ -640,9 +672,12 @@ in
        | ([t], rst) =>
            let
               val (l, r) = boolSyntax.dest_eq t
-              val t = boolSyntax.mk_eq (l, sv)
+              val wv = optionSyntax.dest_some r
+              val v = Term.mk_var ("v", Term.type_of wv)
+              val sv = optionSyntax.mk_some v
+              val tv = boolSyntax.mk_eq (l, sv)
            in
-              if List.exists (Lib.equal t) rst
+              if List.exists (Lib.equal tv) rst
                  then Thm.INST [wv |-> v] thm
               else thm
            end
@@ -734,6 +769,13 @@ Count.apply x64_step "418803";
 Count.apply x64_step "90";
 Count.apply x64_step "487207";
 Count.apply x64_decode "485A"
+
+Count.apply x64_decode "8345F801"
+Count.apply x64_step "8345F801"
+
+Count.apply x64_step "4863D0"
+Count.apply x64_step "0FBEC0";
+Count.apply x64_step "0FB6C0";
 
 val l = List.map (Count.apply x64_step) hex_list
 val l = Count.apply (List.map x64_step) hex_list

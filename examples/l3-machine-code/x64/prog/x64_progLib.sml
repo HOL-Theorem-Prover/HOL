@@ -212,8 +212,9 @@ in
          (fn s =>
              let
                 val thm = x64_stepLib.x64_step s
+                val t = x64_mk_pre_post thm
              in
-                spec (thm, x64_mk_pre_post thm)
+                spec (thm, t)
              end)
 end
 
@@ -235,10 +236,11 @@ val read_thms =
     x64_stepTheory.read_mem64]
 val write_thms =
    [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
-   x64_stepTheory.write_mem64_def]
+    x64_stepTheory.write_mem64_def]
 val select_state_thms = x64_select_state_thms @ x64_select_state_pool_thms
-val frame_thms = [x64_frame, x64_stepTheory.x64_ID]
+val frame_thms = [x64_frame, state_id]
 val map_tys = [qword, ``:Zreg``, ``:Zeflags``]
+val EXTRA_TAC = NO_TAC
 val step = x64_stepLib.x64_step
 val mk_pre_post = x64_mk_pre_post
 
