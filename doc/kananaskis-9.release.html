@@ -136,6 +136,8 @@ For example, what was the trace <code>"goalstack print goal at top"</code> is no
 This change collects all the goalstack-related traces together when the traces are listed (<i>e.g.</i>, with the <code>traces()</code> command).
 There is also a new trace, <code>"Goalstack.show_stack_subgoal_count"</code>, which, if true (the default), includes the number of sub-goals currently under consideration when a goalstack is printed.</li>
 
+<li><p>The <code>-r</code> command-line option to <code>Holmake</code> now forces recursive behaviour (even with cleaning targets, which is a new feature), rather than being a shorter form of the <code>--rebuild_deps</code> flag.
+
 </ul>
 <hr>
 
