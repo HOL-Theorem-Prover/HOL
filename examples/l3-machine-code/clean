@@ -1,7 +1,0 @@
-#!/bin/bash
-Holmake cleanAll
-cd common; Holmake cleanAll
-cd fp; Holmake cleanAll
-cd ../../base; Holmake cleanAll
-cd ../arm; ./clean
-cd ../x64; ./clean
