@@ -820,6 +820,11 @@ fun prepare_sep_disj_posts th1 th2 = let
        in (th1,th2) end
      else (th1,th2) end;
 
+val merge_mem = ref (T,TRUTH,TRUTH);
+(*
+val (guard,th1,th2) = (!merge_mem);
+*)
+
 fun MERGE guard th1 th2 = let
   (* fill in preconditions *)
   val th1 = remove_primes th1
@@ -853,8 +858,8 @@ fun MERGE guard th1 th2 = let
   val ys2 = map dest_sep_hide (filter (can dest_sep_hide) xs2)
   val zs1 = (filter (not o can dest_sep_hide) xs1)
   val zs2 = (filter (not o can dest_sep_hide) xs2)
-  val qs1 = filter (fn x => mem (car x) ys1) zs2
-  val qs2 = filter (fn x => mem (car x) ys2) zs1
+  val qs1 = filter (fn x => mem (car x) ys1 handle HOL_ERR _ => false) zs2
+  val qs2 = filter (fn x => mem (car x) ys2 handle HOL_ERR _ => false) zs1
   val th1 = foldr (uncurry UNHIDE_PRE_RULE) th1 qs1
   val th2 = foldr (uncurry UNHIDE_PRE_RULE) th2 qs2
   (* hide relevant postconditions *)
@@ -866,8 +871,9 @@ fun MERGE guard th1 th2 = let
   val xs2 = filter (fn x => not (p = get_sep_domain x)) (list_dest dest_star (fst_sep_disj q2))
   val ys1 = map dest_sep_hide (filter (can dest_sep_hide) xs1)
   val ys2 = map dest_sep_hide (filter (can dest_sep_hide) xs2)
-  val zs1 = map car (filter (not o can dest_sep_hide) xs1)
-  val zs2 = map car (filter (not o can dest_sep_hide) xs2)
+  fun safe_car tm = car tm handle HOL_ERR _ => tm
+  val zs1 = map safe_car (filter (not o can dest_sep_hide) xs1)
+  val zs2 = map safe_car (filter (not o can dest_sep_hide) xs2)
   val qs1 = filter (fn x => mem x ys1) zs2
   val qs2 = filter (fn x => mem x ys2) zs1
   val th1 = foldr (uncurry HIDE_POST_RULE) th1 qs2
@@ -886,6 +892,7 @@ fun MERGE guard th1 th2 = let
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
   val th = remove_primes th
   in th end handle HOL_ERR e => let
+    val _ = (merge_mem := (guard,th1,th2))
     val th1 = DISCH_ALL th1
     val th2 = DISCH_ALL th2
     val _ = print ("\n\nval guard = ``"^ term_to_string guard ^"``;\n\n")
