@@ -1,0 +1,16 @@
+INCLUDES = ../prog ../step ../../common \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = x64-step-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../prog/x64_progLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../prog/x64-step-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif
