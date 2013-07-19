@@ -436,7 +436,7 @@ val rm_cases = utilsLib.augment (`size`, sizes) rm
 
 (* ------------------------------------------------------------------------ *)
 
-(* TODO: CMPXCHG, DIV, LOOP, XADD *)
+(* TODO: CMPXCHG, DIV, XADD *)
 
 val data_hyp_rule =
    List.map (utilsLib.ALL_HYP_CONV_RULE
@@ -498,6 +498,21 @@ val Zlea_rwts =
    EV ([dfn'Zlea_def, get_ea_address_def] @
        ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt @ write'EA_rwt) [] lea
       ``dfn'Zlea (size, ds)``
+   |> addThms
+
+val Zleave_rwts =
+   EV ([dfn'Zleave_def, x64_pop_def, x64_pop_aux_def, mem64_rwt,
+        combinTheory.UPDATE_EQ] @ ea_Zrm_rwt @ write'EA_rwt)
+      [] []
+      ``dfn'Zleave``
+   |> addThms
+
+val Zloop_rwts =
+   EV ([dfn'Zloop_def] @ read_cond_rwts) []
+      (mapl (`c`, [``Z_NE``, ``Z_E``, ``Z_ALWAYS``]))
+      ``dfn'Zloop (c, imm)``
+   |> data_hyp_rule
+   |> cond_update_rule
    |> addThms
 
 val Zmonop_rwts =
