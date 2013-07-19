@@ -440,6 +440,10 @@ in
       case Lib.total Term.dest_var tm of
          SOME (s, _) => String.sub (s, 0) = #"%"
        | NONE => false
+   fun is_nvvar tm =
+      case Lib.total Term.dest_var tm of
+         SOME (s, _) => String.sub (s, 0) <> #"%"
+       | NONE => false
    fun build_assert (f: term * term -> term) g =
       fn ((d, (c, pat)), (a, tm)) =>
          let
@@ -497,9 +501,9 @@ local
    val tidyup = map_rws [optionTheory.SOME_11]
 
    fun is_ok_rhs tm =
-      Term.is_var tm orelse
+      is_nvvar tm orelse
       (case Lib.total optionSyntax.dest_some tm of
-          SOME v => Term.is_var v
+          SOME v => is_nvvar v
         | NONE => List.null (Term.free_vars tm))
 
    fun mk_rewrite1 (l, r) =
@@ -770,13 +774,16 @@ local
    val cond_STAR1 = CONJUNCT1 (Drule.SPEC_ALL set_sepTheory.cond_STAR)
    val STAR_ASSOC_CONV =
       Conv.REDEPTH_CONV (Conv.REWR_CONV (GSYM set_sepTheory.STAR_ASSOC))
+   val cond_STAR1_I =
+      utilsLib.qm [cond_STAR1, combinTheory.I_THM]
+         ``(cond c * p) (s:'a set) = I c /\ p s``
 in
    fun spec imp_spec read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =
       let
          open lcsymtacs
          val MP_SPEC_TAC = MATCH_MP_TAC imp_spec
-         val sthms = cond_STAR1 :: select_state_thms
+         val sthms = cond_STAR1_I :: select_state_thms
          val pthms = [boolTheory.DE_MORGAN_THM, pred_setTheory.NOT_IN_EMPTY,
                       pred_setTheory.IN_DIFF, pred_setTheory.IN_INSERT]
          val UPD_TAC = UPDATE_TAC map_tys
@@ -796,8 +803,8 @@ in
                 ASM_SIMP_TAC pure_ss frame_thms
                 \\ (
                     REFL_TAC
-                    ORELSE RW_TAC pure_ss frame_thms
-                           \\ REFL_TAC
+                    ORELSE (RW_TAC pure_ss frame_thms
+                            \\ REFL_TAC)
                    )
                )
             \\ CONV_TAC (Conv.RATOR_CONV STAR_ASSOC_CONV)
@@ -827,14 +834,17 @@ in
                    )
             \\ POP_ASSUM SUBST1_TAC
             \\ REFL_TAC
+         val NEXT_TAC =
+            RULE_ASSUM_TAC (PURE_REWRITE_RULE [combinTheory.I_THM])
+            \\ ASM_REWRITE_TAC read_thms
+            \\ EXTRA_TAC
          fun tac (v, dthm) =
             PRE_TAC
             \\ Tactic.EXISTS_TAC v
             \\ CONJ_TAC
             >- (
                 MATCH_MP_TAC dthm
-                \\ ASM_REWRITE_TAC read_thms
-                \\ EXTRA_TAC
+                \\ NEXT_TAC
                )
             \\ POST_TAC
       in
