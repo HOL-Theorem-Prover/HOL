@@ -355,15 +355,15 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
         mk{path = path,
            rows = ((prefix, [fresh_var(type_of u)]), rhs)::rst}
    | mk{path = rstp0, rows = rows0 as ((_, pL as (_ :: _)), _)::_} =
-     if ((#skip_rows heu) andalso length rows0 > 1 andalso all is_var pL) 
+     if ((#skip_rows heu) andalso length rows0 > 1 andalso all is_var pL)
      then mk {path = rstp0, rows = [hd rows0]}
      else
      let val col_index = (#col_fun heu) ty_info (map (fn ((_, pL), _) => pL) rows0)
-         val u_rstp = bring_to_front_list col_index rstp0 
+         val u_rstp = bring_to_front_list col_index rstp0
          val (u, rstp) = (hd u_rstp, tl u_rstp)
          val rows = map (fn ((prefix, pL), rhs) => ((prefix, bring_to_front_list col_index pL), rhs)) rows0
-         val ((_, pL), _) = hd rows 
-         val p = hd pL 
+         val ((_, pL), _) = hd rows
+         val p = hd pL
          val (pat_rectangle,rights) = unzip rows
          val col0 = map(Lib.trye hd o #2) pat_rectangle
      in
@@ -424,11 +424,11 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
                           (zip new_formals groups)
            val rec_calls = map mk news
            val (pat_rect,dtrees) = unzip rec_calls
-           val tree = 
-             if ((#collapse_cases heu) andalso 
+           val tree =
+             if ((#collapse_cases heu) andalso
                  (List.all (aconv (hd dtrees)) (tl dtrees)) andalso
-                 (List.all (fn (vL, tree) => 
-                    (List.all (fn v => not (free_in v tree)) vL)) (zip new_formals dtrees))) then 
+                 (List.all (fn (vL, tree) =>
+                    (List.all (fn v => not (free_in v tree)) vL)) (zip new_formals dtrees))) then
                (* If all cases lead to the same result, no split is necessary *)
                (hd dtrees)
              else let
@@ -453,7 +453,7 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
 
 fun mk_case0 ty_info ty_match FV range_ty rows =
 let
-  fun run_heu heu = mk_case0_heu heu ty_info 
+  fun run_heu heu = mk_case0_heu heu ty_info
     ty_match FV range_ty rows;
 
   val (min_fun0, heu_fun) = (!pmatch_heuristic) ()
@@ -466,7 +466,7 @@ let
 
   fun aux min = case (heu_fun ()) of
      NONE => (case min of NONE => (print "SHOULD NOT HAPPEN! EMPTY PMATCH-HEURISTIC!"; fail()) | SOME min' => min')
-   | SOME heu => let 
+   | SOME heu => let
        val res = run_heu heu
        val min' = res_min min res
      in aux (SOME min') end
