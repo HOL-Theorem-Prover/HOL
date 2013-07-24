@@ -3,7 +3,7 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "m0_decomp";
 
-open helperLib set_sepTheory addressTheory progTheory;
+open helperLib set_sepTheory addressTheory progTheory wordsTheory;
 open pred_setTheory combinTheory m0_progTheory listTheory;
 
 infix \\
