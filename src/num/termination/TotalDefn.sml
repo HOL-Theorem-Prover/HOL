@@ -511,52 +511,58 @@ local open Defn
   val () = Feedback.register_btrace("auto Defn.tgoal", auto_tgoal)
 
   fun should_try_to_prove_termination defn rhs_frees =
-     let val tcs = tcs_of defn
-     in not(null tcs) andalso
-        null(intersect (free_varsl tcs) rhs_frees)
+     let
+        val tcs = tcs_of defn
+     in
+        not(null tcs) andalso null (intersect (free_varsl tcs) rhs_frees)
      end
   fun fvs_on_rhs V =
-     let val Vstr = String.concat (Lib.commafy
-                       (map (Lib.quote o #1 o dest_var) V))
-     in if !allow_schema_definition
-        then HOL_MESG (String.concat
-            ["Definition is schematic in the following variables:\n    ",
-             Vstr])
+     let
+        val Vstr =
+           String.concat (Lib.commafy (map (Lib.quote o #1 o dest_var) V))
+     in
+        if !allow_schema_definition
+           then HOL_MESG (String.concat
+                  ["Definition is schematic in the following variables:\n    ",
+                   Vstr])
         else raise ERR "defnDefine"
          ("  The following variables are free in the \n right hand side of\
           \ the proposed definition: " ^ Vstr)
      end
-  fun termination_proof_failed () =
-     raise ERR "defnDefine" (String.concat
-         ["\nUnable to prove termination!\n\n",
-          "Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n",
-          if !auto_tgoal then
-             "The termination goal has been set up using Defn.tgoal <defn>."
-          else ""])
+  val msg1 = "\nUnable to prove termination!\n\n\
+              \Try using \"TotalDefn.tDefine <name> <quotation> <tac>\".\n"
+  val msg2 = "\nThe termination goal has been set up using Defn.tgoal <defn>.\n"
+  fun termination_proof_failed defn =
+     let
+        val s =
+           if !auto_tgoal
+              then (Defn.tgoal defn
+                    ; Portable.pprint
+                         proofManagerLib.pp_proof (proofManagerLib.p())
+                    ; if !Globals.interactive then msg2 else "")
+           else ""
+     in
+        raise ERR "defnDefine" (msg1 ^ s)
+     end
 in
-fun defnDefine term_tac defn =
- let val V = params_of defn
-     val _ = if not(null V) then fvs_on_rhs V else ()  (* can fail *)
-     val tprover = proveTotal term_tac
-     fun try_proof defn Rcand = tprover (set_reln defn Rcand)
-     val (defn',opt) =
-       if should_try_to_prove_termination defn V
-         then ((if reln_is_not_set defn
-                 then Lib.tryfind (try_proof defn) (guessR defn)
-                 else tprover defn)
-              handle HOL_ERR _ =>
-                (if !auto_tgoal then
-                   (Defn.tgoal defn;
-                    Portable.pprint proofManagerLib.pp_proof
-                       (proofManagerLib.p()))
-                 else ();
-                 termination_proof_failed ()))
-         else (defn,NONE)
- in
-    save_defn defn'
-  ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
- end
-end;
+  fun defnDefine term_tac defn =
+    let
+       val V = params_of defn
+       val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
+       val tprover = proveTotal term_tac
+       fun try_proof defn Rcand = tprover (set_reln defn Rcand)
+       val (defn',opt) =
+          if should_try_to_prove_termination defn V
+            then ((if reln_is_not_set defn
+                      then Lib.tryfind (try_proof defn) (guessR defn)
+                   else tprover defn)
+                  handle HOL_ERR _ => termination_proof_failed defn)
+            else (defn,NONE)
+    in
+       save_defn defn'
+       ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
+    end
+end
 
 val primDefine = defnDefine PROVE_TERM_TAC;
 
