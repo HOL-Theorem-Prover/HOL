@@ -281,7 +281,7 @@ val mw2i_i2mw = store_thm("mw2i_i2mw",
   REPEAT STRIP_TAC \\ Cases_on `i < 0` \\ ASM_SIMP_TAC std_ss [mw2i_def,i2mw_def]
   \\ ASM_SIMP_TAC std_ss [INT_ABS,mw2n_n2mw] \\ intLib.COOPER_TAC);
 
-val n2mw_11 = prove(
+val n2mw_11 = store_thm("n2mw_11",
   ``!m n. (n2mw m = n2mw n) = (m = n)``,
   HO_MATCH_MP_TAC n2mw_ind
   \\ REPEAT STRIP_TAC \\ Cases_on `m = 0` \\ Cases_on `n = 0`
