@@ -378,7 +378,12 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
           end
      else
      let val pty = type_of p
-         val thy_tyop = type_names pty
+         val thy_tyop =
+             type_names pty
+             handle HOL_ERR _ =>
+                    raise ERR "mk_case0_heu"
+                          ("Term "^Parse.term_to_string p^
+                           " is a bad pattern (of var type?)")
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
        let val other_var = fresh_var pty
