@@ -1,8 +1,18 @@
-structure x64_decompLib = struct
+structure x64_decompLib :> x64_decompLib =
+struct
 
 open HolKernel Parse boolLib bossLib;
 open helperLib set_sepTheory addressTheory progTheory wordsTheory wordsLib;
 open pred_setTheory combinTheory x64_progTheory x64_prog_extraTheory listTheory;
+
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) =
+      parse_from_grammars x64_prog_extraTheory.x64_prog_extra_grammars
+end
+
+open Parse
 
 local
   val pat = ``x64_REG r v``

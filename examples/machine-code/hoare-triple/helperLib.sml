@@ -809,7 +809,7 @@ val ALIGNED_TAC = let
     ONCE_REWRITE_CONV [ALIGNED_MOD_4] THENC
     SIMP_CONV std_ss [WORD_ADD_0,WORD_SUB_RZERO]
   val ALIGNED_convdata = {name = "ALIGNED_CONV",
-    trace = 2, key = SOME ([],``ALIGNED a``),
+    trace = 2, key = SOME ([],``address$ALIGNED a``),
     conv = K (K ALIGNED_CONV)}:simpfrag.convdata
   val ALIGNED_ss = simpLib.conv_ss ALIGNED_convdata
   in FULL_SIMP_TAC std_ss [ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
