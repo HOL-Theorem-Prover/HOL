@@ -36,4 +36,32 @@ val (decomp_cert,decomp_def) = x64_decompLib.x64_decompile "decomp" `
 
 val _ = save_thm("decomp_cert",decomp_cert);
 
+val (decomp1_cert,decomp1_def) = x64_decompLib.x64_decompile "decomp1" `
+  (*  0: *) 55              (* push   %rbp *)
+  (*  1: *) 4889e5          (* mov    %rsp,%rbp *)
+  (*  4: *) 4883ec20        (* sub    $0x20,%rsp *)
+  (*  8: *) 48897de8        (* mov    %rdi,-0x18(%rbp) *)
+  (*  c: *) 488b45e8        (* mov    -0x18(%rbp),%rax *)
+  (* 10: *) 488945f8        (* mov    %rax,-0x8(%rbp) *)
+  (* 14: *) eb1e            (* jmp    34 <transform+0x34> *)
+  (* 16: *) 488b45f8        (* mov    -0x8(%rbp),%rax *)
+  (* 1a: *) 0fb600          (* movzbl (%rax),%eax *)
+  (* 1d: *) 0fbec0          (* movsbl %al,%eax *)
+  (* 20: *) 89c7            (* mov    %eax,%edi *)
+            488bc0          (* mov    %rax,%rax *)
+            eb00            (* jmp    27 <transform+0x27> *)
+  (* 22:    e800000000         callq  27 <transform+0x27> *)
+  (* 27: *) 89c2            (* mov    %eax,%edx *)
+  (* 29: *) 488b45f8        (* mov    -0x8(%rbp),%rax *)
+  (* 2d: *) 8810            (* mov    %dl,(%rax) *)
+  (* 2f: *) 488345f801      (* addq   $0x1,-0x8(%rbp) *)
+  (* 34: *) 488b45f8        (* mov    -0x8(%rbp),%rax *)
+  (* 38: *) 0fb600          (* movzbl (%rax),%eax *)
+  (* 3b: *) 84c0            (* test   %al,%al *)
+  (* 3d: *) 75d7            (* jne    16 <transform+0x16> *)
+  (* 3f: *) 488b45e8        (* mov    -0x18(%rbp),%rax *)
+  (* 43: *) c9              (* leaveq  *) `
+
+val _ = save_thm("decomp1_cert",decomp1_cert);
+
 val _ = export_theory();
