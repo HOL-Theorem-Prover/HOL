@@ -134,39 +134,59 @@ val () = utilsLib.resetStepConv ()
 
 val r0 = ``v2w [F; F; F; F; F] : word5``
 
+fun comb (0, _    ) = [[]]
+  | comb (_, []   ) = []
+  | comb (m, x::xs) = map (fn y => x :: y) (comb (m-1, xs)) @ comb (m, xs)
+
+fun all_comb l =
+   List.concat (List.tabulate (List.length l + 1, fn i => comb (i, l)))
+
 val oEV =
    EVR (rule o COND_UPDATE_RULE)
       [dfn'ADDI_def, dfn'DADDI_def,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
-      [[``rt <> 0w: word5``, ``~NotWordValue (^st.gpr (rs))``]]
-      [[], [`rt` |-> r0]]
+      [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
+        ``~NotWordValue (^st.gpr (rs))``]]
+      (all_comb [`rt` |-> r0, `rs` |-> r0])
 
 val iEV =
    EV [dfn'ADDIU_def, dfn'DADDIU_def, dfn'SLTI_def, dfn'SLTIU_def,
        dfn'ANDI_def, dfn'ORI_def, dfn'XORI_def, dfn'LUI_def,
        extra_cond_rand_thms]
-      [[``rt <> 0w: word5``, ``~NotWordValue (^st.gpr (rs))``]]
+      [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
+        ``~NotWordValue (^st.gpr (rs))``]]
+      (all_comb [`rt` |-> r0, `rs` |-> r0])
+
+val lEV =
+   EV [dfn'LUI_def, extra_cond_rand_thms]
+      [[``rt <> 0w: word5``]]
       [[], [`rt` |-> r0]]
 
 val pEV =
    EVR (rule o COND_UPDATE_RULE)
       [dfn'ADD_def, dfn'SUB_def, dfn'DADD_def, dfn'DSUB_def,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
-      [[``rd <> 0w: word5``, ``~NotWordValue (^st.gpr (rs))``,
-        ``~NotWordValue (^st.gpr (rt))``]]
-      [[], [`rd` |-> r0]]
+      [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
+        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+      (all_comb [`rt` |-> r0, `rs` |-> r0, `rd` |-> r0])
 
 val rEV =
    EV [dfn'ADDU_def, dfn'DADDU_def, dfn'SUBU_def, dfn'DSUBU_def, dfn'SLT_def,
        dfn'SLTU_def, dfn'AND_def, dfn'OR_def, dfn'XOR_def, dfn'NOR_def,
-       dfn'SLL_def, dfn'SRL_def, dfn'SRA_def, dfn'DSLL_def, dfn'DSRL_def,
-       dfn'DSRA_def, dfn'DSLL32_def, dfn'DSRL32_def, dfn'DSRA32_def,
        dfn'SLLV_def, dfn'SRLV_def, dfn'SRAV_def, dfn'DSLLV_def, dfn'DSRLV_def,
        dfn'DSRAV_def, dfn'MTHI_def, dfn'MTLO_def, dfn'JALR_def,
        extra_cond_rand_thms]
-      [[``rd <> 0w: word5``, ``~NotWordValue (^st.gpr (rs))``,
+      [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
+        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+      (all_comb [`rt` |-> r0, `rs` |-> r0, `rd` |-> r0])
+
+val sEV =
+   EV [dfn'SLL_def, dfn'SRL_def, dfn'SRA_def, dfn'DSLL_def, dfn'DSRL_def,
+       dfn'DSRA_def, dfn'DSLL32_def, dfn'DSRL32_def, dfn'DSRA32_def,
+       extra_cond_rand_thms]
+      [[``rd <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rt))``]]
-      [[], [`rd` |-> r0]]
+      (all_comb [`rt` |-> r0, `rd` |-> r0])
 
 val hEV =
    EVC [dfn'MFHI_def, dfn'MFLO_def, dfn'MTHI_def, dfn'MTLO_def, dfn'JALR_def,
@@ -178,15 +198,16 @@ val hEV =
 val mEV =
    EV [dfn'MULT_def, dfn'MULTU_def, dfn'DMULT_def, dfn'DMULTU_def,
        extra_cond_rand_thms]
-      [[``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
-      []
+      [[``rs <> 0w: word5``, ``rt <> 0w: word5``,
+        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+      (all_comb [`rt` |-> r0, `rs` |-> r0])
 
 val dEV =
    EV [dfn'DIV_def, dfn'DIVU_def, dfn'DDIV_def, dfn'DDIVU_def,
        extra_cond_rand_thms]
-      [[``rt <> 0w: word5``, ``^st.gpr (rt) <> 0w``,
+      [[``rt <> 0w: word5``, ``^st.gpr (rt) <> 0w``, ``rs <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
-      []
+      [[], [`rs` |-> r0]]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -206,7 +227,8 @@ val SLTIU = iEV ``dfn'SLTIU (rs, rt, immediate)``
 val ANDI = iEV ``dfn'ANDI (rs, rt, immediate)``
 val ORI = iEV ``dfn'ORI (rs, rt, immediate)``
 val XORI = iEV ``dfn'XORI (rs, rt, immediate)``
-val LUI = iEV ``dfn'LUI (rt, immediate)``
+
+val LUI = lEV ``dfn'LUI (rt, immediate)``
 
 val ADD = pEV ``dfn'ADD (rs, rt, rd)``
 val SUB = pEV ``dfn'SUB (rs, rt, rd)``
@@ -223,21 +245,22 @@ val AND = rEV ``dfn'AND (rs, rt, rd)``
 val OR = rEV ``dfn'OR (rs, rt, rd)``
 val XOR = rEV ``dfn'XOR (rs, rt, rd)``
 val NOR = rEV ``dfn'NOR (rs, rt, rd)``
-val SLL = rEV ``dfn'SLL (rt, rd, sa)``
-val SRL = rEV ``dfn'SRL (rt, rd, sa)``
-val SRA = rEV ``dfn'SRA (rt, rd, sa)``
-val DSLL = rEV ``dfn'DSLL (rt, rd, sa)``
-val DSRL = rEV ``dfn'DSRL (rt, rd, sa)``
-val DSRA = rEV ``dfn'DSRA (rt, rd, sa)``
-val DSLL32 = rEV ``dfn'DSLL32 (rt, rd, sa)``
-val DSRL32 = rEV ``dfn'DSRL32 (rt, rd, sa)``
-val DSRA32 = rEV ``dfn'DSRA32 (rt, rd, sa)``
 val SLLV = rEV ``dfn'SLLV (rs, rt, rd)``
 val SRLV = rEV ``dfn'SRLV (rs, rt, rd)``
 val SRAV = rEV ``dfn'SRAV (rs, rt, rd)``
 val DSLLV = rEV ``dfn'DSLLV (rs, rt, rd)``
 val DSRLV = rEV ``dfn'DSRLV (rs, rt, rd)``
 val DSRAV = rEV ``dfn'DSRAV (rs, rt, rd)``
+
+val SLL = sEV ``dfn'SLL (rt, rd, sa)``
+val SRL = sEV ``dfn'SRL (rt, rd, sa)``
+val SRA = sEV ``dfn'SRA (rt, rd, sa)``
+val DSLL = sEV ``dfn'DSLL (rt, rd, sa)``
+val DSRL = sEV ``dfn'DSRL (rt, rd, sa)``
+val DSRA = sEV ``dfn'DSRA (rt, rd, sa)``
+val DSLL32 = sEV ``dfn'DSLL32 (rt, rd, sa)``
+val DSRL32 = sEV ``dfn'DSRL32 (rt, rd, sa)``
+val DSRA32 = sEV ``dfn'DSRA32 (rt, rd, sa)``
 
 val MFHI = hEV ``dfn'MFHI (rd)``
 val MFLO = hEV ``dfn'MFLO (rd)``
@@ -548,24 +571,33 @@ val mips_ipatterns = List.map (I ## pattern)
     ("ANDI",   "FFTTFF__________________________"),
     ("ORI",    "FFTTFT__________________________"),
     ("XORI",   "FFTTTF__________________________"),
-    ("LUI",    "FFTTTT__________________________"),
     ("DADDI",  "FTTFFF__________________________"),
-    ("DADDIU", "FTTFFT__________________________")
+    ("DADDIU", "FTTFFT__________________________"),
+    ("MULT",   "FFFFFF____________________FTTFFF"),
+    ("MULTU",  "FFFFFF____________________FTTFFT"),
+    ("DMULT",  "FFFFFF____________________FTTTFF"),
+    ("DMULTU", "FFFFFF____________________FTTTFT")
    ]
 
-val mips_rpatterns = List.map (I ## pattern)
+val mips_tpatterns = List.map (I ## pattern)
    [
-    ("SLL",    "FFFFFF____________________FFFFFF"),
-    ("SRL",    "FFFFFF____________________FFFFTF"),
-    ("SRA",    "FFFFFF____________________FFFFTT"),
-    ("SLLV",   "FFFFFF____________________FFFTFF"),
-    ("SRLV",   "FFFFFF____________________FFFTTF"),
-    ("SRAV",   "FFFFFF____________________FFFTTT"),
+    ("LUI",    "FFTTTT__________________________")
+   ]
+
+val mips_dpatterns = List.map (I ## pattern)
+   [
     ("JALR",   "FFFFFF____________________FFTFFT"),
     ("MFHI",   "FFFFFF____________________FTFFFF"),
     ("MTHI",   "FFFFFF____________________FTFFFT"),
     ("MFLO",   "FFFFFF____________________FTFFTF"),
-    ("MTLO",   "FFFFFF____________________FTFFTT"),
+    ("MTLO",   "FFFFFF____________________FTFFTT")
+   ]
+
+val mips_rpatterns = List.map (I ## pattern)
+   [
+    ("SLLV",   "FFFFFF____________________FFFTFF"),
+    ("SRLV",   "FFFFFF____________________FFFTTF"),
+    ("SRAV",   "FFFFFF____________________FFFTTT"),
     ("DSLLV",  "FFFFFF____________________FTFTFF"),
     ("DSRLV",  "FFFFFF____________________FTFTTF"),
     ("DSRAV",  "FFFFFF____________________FTFTTT"),
@@ -582,7 +614,14 @@ val mips_rpatterns = List.map (I ## pattern)
     ("DADD",   "FFFFFF____________________TFTTFF"),
     ("DADDU",  "FFFFFF____________________TFTTFT"),
     ("DSUB",   "FFFFFF____________________TFTTTF"),
-    ("DSUBU",  "FFFFFF____________________TFTTTT"),
+    ("DSUBU",  "FFFFFF____________________TFTTTT")
+   ]
+
+val mips_jpatterns = List.map (I ## pattern)
+   [
+    ("SLL",    "FFFFFF____________________FFFFFF"),
+    ("SRL",    "FFFFFF____________________FFFFTF"),
+    ("SRA",    "FFFFFF____________________FFFFTT"),
     ("DSLL",   "FFFFFF____________________TTTFFF"),
     ("DSRL",   "FFFFFF____________________TTTFTF"),
     ("DSRA",   "FFFFFF____________________TTTFTT"),
@@ -591,17 +630,17 @@ val mips_rpatterns = List.map (I ## pattern)
     ("DSRA32", "FFFFFF____________________TTTTTT")
    ]
 
+val mips_spatterns = List.map (I ## pattern)
+   [
+    ("DIV",     "FFFFFF____________________FTTFTF"),
+    ("DIVU",    "FFFFFF____________________FTTFTT"),
+    ("DDIV",    "FFFFFF____________________FTTTTF"),
+    ("DDIVU",   "FFFFFF____________________FTTTTT")
+   ]
+
 val mips_patterns = List.map (I ## pattern)
    [
     ("JR",      "FFFFFF____________________FFTFFF"),
-    ("MULT",    "FFFFFF____________________FTTFFF"),
-    ("MULTU",   "FFFFFF____________________FTTFFT"),
-    ("DIV",     "FFFFFF____________________FTTFTF"),
-    ("DIVU",    "FFFFFF____________________FTTFTT"),
-    ("DMULT",   "FFFFFF____________________FTTTFF"),
-    ("DMULTU",  "FFFFFF____________________FTTTFT"),
-    ("DDIV",    "FFFFFF____________________FTTTTF"),
-    ("DDIVU",   "FFFFFF____________________FTTTTT"),
     ("BLTZ",    "FFFFFT_____FFFFF________________"),
     ("BGEZ",    "FFFFFT_____FFFFT________________"),
     ("BLTZL",   "FFFFFT_____FFFTF________________"),
@@ -637,13 +676,8 @@ val mips_patterns = List.map (I ## pattern)
    ]
 
 local
-   fun x i = Term.mk_var ("x" ^ Int.toString i, Type.bool)
-   fun xF i = x i |-> boolSyntax.F
-   fun reg0 b = Term.subst (List.tabulate (5, fn i => xF (i + b)))
-   val patterns = mips_ipatterns @ mips_rpatterns @ mips_patterns
-   fun postfix0 s = s ^ "_0"
-   val mips_ipatterns0 = List.map (postfix0 ## reg0 5) mips_ipatterns
-   val mips_rpatterns0 = List.map (postfix0 ## reg0 10) mips_rpatterns
+   val patterns = mips_ipatterns @ mips_tpatterns @ mips_rpatterns @
+                  mips_spatterns @ mips_patterns
    fun padded_opcode v = listSyntax.mk_list (pad_opcode v, Type.bool)
    val get_opc = boolSyntax.rand o boolSyntax.rand o utilsLib.lhsc
    fun mk_net l =
@@ -672,8 +706,28 @@ local
                   (find_opc pv)
             end
       end
-   val mips_find_opc_ = find_opcode (mk_net patterns)
-   val mips_find_opc0 = find_opcode (mk_net (mips_ipatterns0 @ mips_rpatterns0))
+   fun x i = Term.mk_var ("x" ^ Int.toString i, Type.bool)
+   fun xF i = x i |-> boolSyntax.F
+   fun reg0 b = Term.subst (List.tabulate (5, fn i => xF (i + b)))
+   fun fnd l = find_opcode (mk_net l)
+   fun fnd2 l tm = Option.map (fn (s, t, _, _) => (s, t)) (fnd l tm)
+   fun sb l =
+      all_comb
+         (List.map (fn (x, i) => (fn (s, t) => (s ^ "_" ^ x, reg0 i t))) l)
+   val fnd_sb = fnd2 ## sb
+   val fp = fnd_sb (mips_patterns, [])
+   val fs = fnd_sb (mips_spatterns, [("s0", 0)])
+   val ft = fnd_sb (mips_tpatterns, [("t0", 5)])
+   val fd = fnd_sb (mips_dpatterns, [("d0", 10)])
+   val fi = fnd_sb (mips_ipatterns, [("s0", 0), ("t0", 5)])
+   val fj = fnd_sb (mips_jpatterns, [("t0", 5), ("d0", 10)])
+   val fr = fnd_sb (mips_rpatterns, [("s0", 0), ("t0", 5), ("d0", 10)])
+   fun try_patterns [] tm = []
+     | try_patterns ((f, l) :: r) tm =
+         (case f tm of
+             SOME x => List.map (List.foldl (fn (f, a) => f a) x) l
+           | NONE => try_patterns r tm)
+   val mips_find_opc_ = fnd patterns
 in
    val hex_to_padded_opcode =
       padded_opcode o bitstringSyntax.bitstring_of_hexstring
@@ -681,9 +735,7 @@ in
       case mips_find_opc_ v of
          SOME (_, _, thm, s) => if List.null s then thm else Thm.INST s thm
        | NONE => raise ERR "decode" (utilsLib.long_term_to_string v)
-   fun mips_find_opc tm =
-      (case mips_find_opc_ tm of SOME x => [x] | NONE => []) @
-      (case mips_find_opc0 tm of SOME x => [x] | NONE => [])
+   val mips_find_opc = try_patterns [fi, fr, fp, fj, ft, fd, fs]
    val mips_dict = Redblackmap.fromList String.compare patterns
    (* fun mk_mips_pattern s = Redblackmap.peek (dict, utilsLib.uppercase s) *)
 end

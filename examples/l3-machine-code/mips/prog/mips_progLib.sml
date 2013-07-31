@@ -496,7 +496,6 @@ in
                fun loop e =
                   let
                      val l = mips_stepLib.mips_find_opc opc
-                             |> List.map (fn (s, t, _, _) => (s, t))
                   in
                      if List.exists addInstruction l
                         then mips_spec_hex () s
