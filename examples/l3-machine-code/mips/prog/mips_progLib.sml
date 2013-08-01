@@ -108,6 +108,12 @@ val mips_frame =
        (`K mips_c_CP0_EPC`,
         `\s:mips_state a w. s with CP0 := cp0 with EPC := w`,
         `\s:mips_state. s with CP0 := cp0`),
+       (`K mips_c_CP0_Debug`,
+        `\s:mips_state a w. s with CP0 := cp0 with Debug := w`,
+        `\s:mips_state. s with CP0 := cp0`),
+       (`K mips_c_CP0_ErrCtl`,
+        `\s:mips_state a w. s with CP0 := cp0 with ErrCtl := w`,
+        `\s:mips_state. s with CP0 := cp0`),
        (`K mips_c_CP0_Status_EXL`,
         `\s:mips_state a w.
             s with CP0 := cp0 with Status := status with EXL := w`,
@@ -150,12 +156,14 @@ local
        | "mips_CP0_Count" => 6
        | "mips_CP0_Cause" => 7
        | "mips_CP0_EPC" => 8
-       | "mips_BranchStatus" => 9
-       | "mips_LLbit" => 10
-       | "mips_HLStatus" => 11
-       | "mips_HI" => 12
-       | "mips_LO" => 13
-       | "mips_PC" => 14
+       | "mips_CP0_Debug" => 9
+       | "mips_CP0_ErrCtl" => 10
+       | "mips_BranchStatus" => 11
+       | "mips_LLbit" => 12
+       | "mips_HLStatus" => 13
+       | "mips_HI" => 14
+       | "mips_LO" => 15
+       | "mips_PC" => 16
        | _ => ~1
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
@@ -189,7 +197,9 @@ local
    val cp0_write_footprint =
       stateLib.write_footprint mips_1 mips_2 []
          [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
-          ("mips$CP0_EPC_fupd", "mips_CP0_EPC")]
+          ("mips$CP0_EPC_fupd", "mips_CP0_EPC"),
+          ("mips$CP0_Debug_fupd", "mips_CP0_Debug"),
+          ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
          [("mips$CP0_Count_fupd", "mips_CP0_Count")]
          [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
          (fn (s, l) => s = "mips$mips_state_CP0" andalso l = [st])
@@ -519,13 +529,14 @@ end
 (* Testing...
 
 val imp_spec = MIPS_IMP_SPEC
-val read_thms = [get_bytes]
+val read_thms = [mips_stepTheory.get_bytes]
 val write_thms = []: thm list
 val select_state_thms = (mips_select_state_pool_thm :: mips_select_state_thms)
 val frame_thms = [mips_frame, state_id, CP0_id]
 val map_tys = [dword, word5]
 val mk_pre_post = mips_mk_pre_post
 val write = mips_write_footprint
+val EXTRA_TAC = ALL_TAC
 
 local
    val gen = Random.newgenseed 1.0
@@ -546,45 +557,18 @@ val be = false
 val tst = mips_spec
 val tst = Count.apply mips_spec_hex o random_hex
 val tst = mips_spec_hex o random_hex
+val dec = Conv.CONV_RULE (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV) o
+          mips_stepLib.mips_decode_hex
 
-val l = List.map (I ## tst) (Redblackmap.listItems mips_stepLib.mips_dict)
+val d = List.filter (fn (s, _) => not (Lib.mem s ["MFC0", "MTC0"]))
+           (Redblackmap.listItems mips_stepLib.mips_dict)
 
-val p = List.map fst (List.filter (not o Option.isSome o snd) l)
-
-val s = Redblackmap.find (mips_stepLib.mips_dict, "ADD")
-
-tst (Redblackmap.find (mips_stepLib.mips_dict, "ADDIU"))
-
-tst s
+val l = List.map (I ## tst) d
 
 mips_stepLib.mips_find_opc (mips_stepLib.hex_to_padded_opcode "9FA0AED9")
 
-val x = List.nth (thms_ts, 1)
-spec x
+dec "9FA0AED9"
 
-length thms_ts
-
-spec (List.nth (thms_ts, 4))
-
-val combinations = Lib.list_of_singleton
-val be = false
-val tm = Redblackmap.find (mips_stepLib.mips_dict, "SD")
-val tm = Redblackmap.find (mips_stepLib.mips_dict, "ADD")
-val tm = Redblackmap.find (mips_stepLib.mips_dict, "BGEZAL")
-val s = random_hex (Redblackmap.find (mips_stepLib.mips_dict, "BGEZAL"))
-
-mips_spec tm
-
-
-mips_stepLib.mips_find_opc ``[F]``
-val s = "00CDAB00"
-val s = "FFFF0000"
-
-val SOME thms = find_spec opc
-
- spec_spec opc (hd thms)
-
- mips_spec_hex s
 *)
 
 (* ------------------------------------------------------------------------ *)

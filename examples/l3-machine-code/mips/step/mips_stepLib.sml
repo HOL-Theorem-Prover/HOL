@@ -20,9 +20,6 @@ end
 
 open Parse
 
-infix \\
-val op \\ = op THEN
-
 val ERR = Feedback.mk_HOL_ERR "mips_evalLib"
 
 val () = show_assums := true
@@ -77,7 +74,7 @@ fun mips_thms thms =
    thms @
    [cond_rand_thms, cond_thms, snd_exception_thms,
     NotWordValue0, NotWordValueCond,
-    GPR_def, write'GPR_def, boolTheory.COND_ID,
+    GPR_def, write'GPR_def, CPR_def, write'CPR_def, boolTheory.COND_ID,
     wordsLib.WORD_DECIDE ``~(a > a:'a word)``,
     wordsLib.WORD_DECIDE ``a >= a:'a word``,
     wordsTheory.WORD_EXTRACT_ZERO2, wordsTheory.WORD_ADD_0,
@@ -132,7 +129,9 @@ val rule =
 
 val () = utilsLib.resetStepConv ()
 
-val r0 = ``v2w [F; F; F; F; F] : word5``
+fun reg i = bitstringSyntax.padded_fixedwidth_of_int (i, 5)
+
+val r0 = reg 0
 
 fun comb (0, _    ) = [[]]
   | comb (_, []   ) = []
@@ -441,6 +440,20 @@ val SD =
 
 (* ------------------------------------------------------------------------- *)
 
+(* Coprocessor instructions *)
+
+val cps = mapl (`rd`, List.map reg [23, 26]) : utilsLib.cover
+
+val MTC0 =
+   EV [dfn'MTC0_def, extra_cond_rand_thms] [] cps
+      ``dfn'MTC0 (rt, rd, v2w [F; F; F])``
+
+val MFC0 =
+   EV [dfn'MFC0_def, cast_thms] [[``rt <> 0w: word5``]] cps
+      ``dfn'MFC0 (rt, rd, v2w [F; F; F])``
+
+(* ------------------------------------------------------------------------- *)
+
 (* Fetch *)
 
 val Fetch = evr select_rule (Fetch_def :: mem_thms) memcntxts [] ``Fetch``
@@ -638,6 +651,12 @@ val mips_spatterns = List.map (I ## pattern)
     ("DDIVU",   "FFFFFF____________________FTTTTT")
    ]
 
+val mips_cpatterns = List.map (I ## pattern)
+   [
+    ("MFC0",    "FTFFFFFFFFF__________FFFFFFFF___"),
+    ("MTC0",    "FTFFFFFFTFF__________FFFFFFFF___")
+   ]
+
 val mips_patterns = List.map (I ## pattern)
    [
     ("JR",      "FFFFFF____________________FFTFFF"),
@@ -651,7 +670,6 @@ val mips_patterns = List.map (I ## pattern)
     ("BGEZALL", "FFFFFT_____TFFTT________________"),
     ("J",       "FFFFTF__________________________"),
     ("JAL",     "FFFFTT__________________________"),
- (* ("MFC0",    "FTFFFFFFFFF__________FFFFFFFF___"), *)
     ("BEQ",     "FFFTFF__________________________"),
     ("BNE",     "FFFTFT__________________________"),
     ("BLEZ",    "FFFTTF__________________________"),
@@ -676,8 +694,10 @@ val mips_patterns = List.map (I ## pattern)
    ]
 
 local
-   val patterns = mips_ipatterns @ mips_tpatterns @ mips_rpatterns @
-                  mips_spatterns @ mips_patterns
+   val patterns =
+      List.concat [mips_ipatterns, mips_jpatterns, mips_dpatterns,
+                   mips_tpatterns, mips_rpatterns, mips_spatterns,
+                   mips_cpatterns, mips_patterns]
    fun padded_opcode v = listSyntax.mk_list (pad_opcode v, Type.bool)
    val get_opc = boolSyntax.rand o boolSyntax.rand o utilsLib.lhsc
    fun mk_net l =
@@ -707,26 +727,43 @@ local
             end
       end
    fun x i = Term.mk_var ("x" ^ Int.toString i, Type.bool)
-   fun xF i = x i |-> boolSyntax.F
-   fun reg0 b = Term.subst (List.tabulate (5, fn i => xF (i + b)))
+   fun assign_bits (p, i, n) =
+      let
+         val l = (i, n) |> bitstringSyntax.padded_fixedwidth_of_int
+                        |> bitstringSyntax.dest_v2w |> fst
+                        |> listSyntax.dest_list |> fst
+      in
+         Term.subst (Lib.mapi (fn i => fn b => x (i + p) |-> b) l)
+      end
+   val r0  = assign_bits (0, 0, 5)
+   val r5  = assign_bits (5, 0, 5)
+   val r10 = assign_bits (10, 0, 5)
+   val sel = assign_bits (10, 0, 3)
+   val dbg = assign_bits (5, 23, 5) o sel
+   val err = assign_bits (5, 26, 5) o sel
    fun fnd l = find_opcode (mk_net l)
    fun fnd2 l tm = Option.map (fn (s, t, _, _) => (s, t)) (fnd l tm)
    fun sb l =
       all_comb
-         (List.map (fn (x, i) => (fn (s, t) => (s ^ "_" ^ x, reg0 i t))) l)
+         (List.map
+            (fn (x, f:term -> term) => (fn (s, t) => (s ^ "_" ^ x, f t))) l)
    val fnd_sb = fnd2 ## sb
    val fp = fnd_sb (mips_patterns, [])
-   val fs = fnd_sb (mips_spatterns, [("s0", 0)])
-   val ft = fnd_sb (mips_tpatterns, [("t0", 5)])
-   val fd = fnd_sb (mips_dpatterns, [("d0", 10)])
-   val fi = fnd_sb (mips_ipatterns, [("s0", 0), ("t0", 5)])
-   val fj = fnd_sb (mips_jpatterns, [("t0", 5), ("d0", 10)])
-   val fr = fnd_sb (mips_rpatterns, [("s0", 0), ("t0", 5), ("d0", 10)])
+   val fs = fnd_sb (mips_spatterns, [("s0", r0)])
+   val ft = fnd_sb (mips_tpatterns, [("t0", r5)])
+   val fd = fnd_sb (mips_dpatterns, [("d0", r10)])
+   val fi = fnd_sb (mips_ipatterns, [("s0", r0), ("t0", r5)])
+   val fj = fnd_sb (mips_jpatterns, [("t0", r5), ("d0", r10)])
+   val fr = fnd_sb (mips_rpatterns, [("s0", r0), ("t0", r5), ("d0", r10)])
+   val fc = (fnd2 mips_cpatterns,
+               [[fn (s, t) => (s ^ "_debug", dbg t)],
+                [fn (s, t) => (s ^ "_errctl", err t)]])
    fun try_patterns [] tm = []
      | try_patterns ((f, l) :: r) tm =
          (case f tm of
              SOME x => List.map (List.foldl (fn (f, a) => f a) x) l
            | NONE => try_patterns r tm)
+   val find_opc = try_patterns [fi, fr, fp, fj, ft, fd, fs, fc]
    val mips_find_opc_ = fnd patterns
 in
    val hex_to_padded_opcode =
@@ -735,7 +772,13 @@ in
       case mips_find_opc_ v of
          SOME (_, _, thm, s) => if List.null s then thm else Thm.INST s thm
        | NONE => raise ERR "decode" (utilsLib.long_term_to_string v)
-   val mips_find_opc = try_patterns [fi, fr, fp, fj, ft, fd, fs]
+   val mips_decode_hex = mips_decode o hex_to_padded_opcode
+   fun mips_find_opc opc =
+      let
+         val l = find_opc opc
+      in
+         List.filter (fn (_, p) => Lib.can (Term.match_term p) opc) l
+      end
    val mips_dict = Redblackmap.fromList String.compare patterns
    (* fun mk_mips_pattern s = Redblackmap.peek (dict, utilsLib.uppercase s) *)
 end
@@ -848,14 +891,6 @@ in
 end
 
 fun mips_eval_hex be = mips_eval be o bitstringSyntax.bitstring_of_hexstring
-
-(*
-
-val be = false
-
-val v = Redblackmap.find (mips_dict, "ADDIU")
-
-*)
 
 (* ========================================================================= *)
 

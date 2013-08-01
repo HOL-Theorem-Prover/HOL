@@ -123,6 +123,11 @@ val get_bytes = Q.store_thm("get_bytes",
    blastLib.BBLAST_TAC
    )
 
+val cast_thms = Q.store_thm("cast_thms",
+   `!w: word32. sw2sw ((31 >< 0) (w2w w : word64) : word32) = sw2sw w : word64`,
+   blastLib.BBLAST_TAC
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val tac =
