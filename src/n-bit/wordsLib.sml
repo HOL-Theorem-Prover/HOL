@@ -1402,31 +1402,82 @@ val WORD_SUB_ss =
 
 (* ------------------------------------------------------------------------- *)
 
-fun EXTEND_EXTRACT_CONV tm =
-   let
-      val (h, l, w, ty) = wordsSyntax.dest_word_extract tm
-      val B = fcpLib.index_to_num ty
-      val C =
-         Arbnum.- (Arbnum.plus1 (numLib.dest_numeral h), numLib.dest_numeral l)
-   in
-      if Arbnum.< (C, B)
-         then let
-                 val c_ty = fcpLib.index_type C
-                 val c_tm =
-                    boolSyntax.mk_eq
-                       (fcpSyntax.mk_dimindex c_ty,
-                        numSyntax.mk_minus (numSyntax.mk_plus (h, ``1n``), l))
-                 val c_thm =
-                    (Conv.LHS_CONV SIZES_CONV THENC numLib.REDUCE_CONV) c_tm
-                 val c_thm = Drule.EQT_ELIM c_thm
-              in
-                 Drule.MATCH_MP
-                    (Thm.INST_TYPE [Type.beta |-> ty, Type.gamma |-> c_ty]
-                       (Drule.ISPECL [h, l, w] EXTEND_EXTRACT))
-                    c_thm
-              end
-      else raise ERR "EXTEND_EXTRACT_CONV" ""
-   end
+(*
+
+Examples of EXTEND_EXTRACT_CONV:
+
+   EXTEND_EXTRACT_CONV ``(16 >< 11) (w: word32) : word64``
+   |- (16 >< 11) (w: word32) = w2w ((16 >< 11) w :word6) :word64
+
+   EXTEND_EXTRACT_CONV ``(30 >< 1) (w: word32) : word32``
+   |- (31 >< 0) (w: word32) : word32 = w2w ((30 >< 1) w : word30)
+
+   EXTEND_EXTRACT_CONV ``(31 >< 0) (w: word32) : word64``
+   |- (31 >< 0) (w: word32) : word64 = w2w w
+
+   EXTEND_EXTRACT_CONV ``(31 >< 0) (w: word32) : word32``
+   |- (31 >< 0) (w: word32) : word32 = w
+
+*)
+
+local
+   val err = ERR "EXTRACT_ID_CONV" "not a suitable extract"
+   val thm = wordsTheory.WORD_w2w_EXTRACT
+             |> Thm.INST_TYPE [Type.beta |-> Type.alpha]
+             |> REWRITE_RULE [wordsTheory.w2w_id]
+             |> GSYM
+   fun EXTRACT_ID_CONV tm =
+      let
+         val (h, l, w, ty) = Lib.with_exn wordsSyntax.dest_word_extract tm err
+         val n = fcpLib.index_to_num ty
+         val p = fcpLib.index_to_num (wordsSyntax.dim_of w)
+      in
+         if p = n andalso numSyntax.dest_numeral l = Arbnum.zero andalso
+            Arbnum.plus1 (numSyntax.dest_numeral h) = n
+            then thm
+                 |> Drule.ISPEC w
+                 |> Conv.CONV_RULE
+                       (Conv.LAND_CONV
+                           (Conv.RATOR_CONV
+                              (Conv.LAND_CONV
+                                 (Conv.LAND_CONV SIZES_CONV
+                                  THENC numLib.REDUCE_CONV))))
+         else raise err
+      end
+   val w2w_ID_CONV = Conv.TRY_CONV (Conv.REWR_CONV wordsTheory.w2w_id)
+in
+   fun EXTEND_EXTRACT_CONV tm =
+      let
+         val (h, l, w, ty) = wordsSyntax.dest_word_extract tm
+         val B = fcpLib.index_to_num ty
+         val C =
+            Arbnum.-
+              (Arbnum.plus1 (numLib.dest_numeral h), numLib.dest_numeral l)
+      in
+         if Arbnum.<= (C, B)
+            then let
+                    val c_ty = fcpLib.index_type C
+                    val c_tm =
+                       boolSyntax.mk_eq
+                         (fcpSyntax.mk_dimindex c_ty,
+                          numSyntax.mk_minus (numSyntax.mk_plus (h, ``1n``), l))
+                    val c_thm =
+                       (Conv.LHS_CONV SIZES_CONV THENC numLib.REDUCE_CONV) c_tm
+                    val c_thm = Drule.EQT_ELIM c_thm
+                 in
+                    Drule.MATCH_MP
+                       (Thm.INST_TYPE [Type.beta |-> ty, Type.gamma |-> c_ty]
+                          (Drule.ISPECL [h, l, w] wordsTheory.EXTEND_EXTRACT))
+                       c_thm
+                    |> Conv.CONV_RULE
+                         (Conv.RAND_CONV
+                            (Conv.TRY_CONV
+                                (Conv.RAND_CONV EXTRACT_ID_CONV
+                                 THENC w2w_ID_CONV)))
+                 end
+         else raise ERR "EXTEND_EXTRACT_CONV" ""
+      end
+end
 
 val LET_RULE = SIMP_RULE (bool_ss++boolSimps.LET_ss) []
 val OR_AND_COMM_RULE = ONCE_REWRITE_RULE [WORD_ADD_COMM, WORD_OR_COMM]
