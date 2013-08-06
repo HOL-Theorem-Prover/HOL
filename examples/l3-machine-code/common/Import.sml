@@ -80,14 +80,14 @@ local
    fun mkTy (t, n) = ParseDatatype.dTyop {Thy = t, Tyop = n, Args = []}
    fun mkListTy a =
       ParseDatatype.dTyop {Thy = SOME "list", Tyop = "list", Args = [a]}
-   val charTy = mkTy (SOME "string", "char")
 in
    val uTy = mkTy (SOME "one", "one")
    val iTy = mkTy (SOME "integer", "int")
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
    val rTy = mkTy (SOME "binary_ieee", "rounding")
-   val sTy = mkListTy charTy
+   val cTy = mkTy (SOME "string", "char")
+   val sTy = mkListTy cTy
    val vTy = mkListTy bTy
    fun CTy n = mkTy (NONE, n)
 end
@@ -166,6 +166,8 @@ val LF = boolSyntax.F
 fun LI i = intSyntax.term_of_int (Arbint.fromInt i)
 (* Natural *)
 fun LN n = numSyntax.term_of_int n
+(* Char *)
+fun LSC c = stringSyntax.fromMLchar c
 (* String *)
 fun LS s = stringSyntax.fromMLstring s
 (* Bitstring *)
@@ -401,10 +403,7 @@ fun CC [] = raise ERR "CC" "empty"
   | CC l =
    let
       val (f, lst) = Lib.front_last l
-      val ty = Term.type_of lst
-      val mk = if ty = stringSyntax.string_ty
-                  then stringSyntax.mk_strcat
-               else if ty = bitstringSyntax.bitstring_ty
+      val mk = if listSyntax.is_list_type (Term.type_of lst)
                   then listSyntax.mk_append
                else wordsSyntax.mk_word_concat
    in

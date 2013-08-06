@@ -82,6 +82,7 @@ sig
    val iTy : ParseDatatype.pretype
    val nTy : ParseDatatype.pretype
    val rTy : ParseDatatype.pretype
+   val cTy : ParseDatatype.pretype
    val sTy : ParseDatatype.pretype
    val uTy : ParseDatatype.pretype
    val vTy : ParseDatatype.pretype
@@ -109,6 +110,7 @@ sig
    val LF : Term.term
    val LI : int -> Term.term
    val LN : int -> Term.term
+   val LSC : char -> Term.term
    val LS : string -> Term.term
    val LV : string -> Term.term
    val LW : int * int -> Term.term
