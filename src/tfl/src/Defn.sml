@@ -558,17 +558,15 @@ val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
 (* and wordsLib.                                                             *)
 (*---------------------------------------------------------------------------*)
 
-fun elim_triv_literal_case th =
- let val const_eq_conv = !const_eq_ref
-     val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-               RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
-               PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
-(*     val cnv1 = REWRITE_CONV [pairTheory.pair_case_thm] THENC LIST_BETA_CONV
-     val rule = CONV_RULE (RAND_CONV (REPEATC cnv THENC cnv1))
-*)
-     val rule = CONV_RULE (RAND_CONV (REPEATC cnv))
- in rule th
- end;
+fun elim_triv_literal_CONV tm =
+   let
+      val const_eq_conv = !const_eq_ref
+      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
+                RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
+                PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
+   in
+       cnv tm
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the recursion theorem and extract termination conditions,     *)
@@ -576,8 +574,9 @@ fun elim_triv_literal_case th =
 (*---------------------------------------------------------------------------*)
 
 fun wfrec_eqns facts tup_eqs =
- let val {functional,pats} =
-         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
+  let
+     val {functional,pats} =
+        mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body
@@ -599,17 +598,18 @@ fun wfrec_eqns facts tup_eqs =
                                 (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
-                   (LIST_BETA_CONV THENC REPEATC (RWcnv THENC LIST_BETA_CONV))
+                   (LIST_BETA_CONV
+                    THENC REPEATC ((RWcnv THENC LIST_BETA_CONV) ORELSEC
+                                   elim_triv_literal_CONV))
      val corollaries' = map rule corollaries
-     val corollaries'' = map elim_triv_literal_case corollaries'
- in
-    {proto_def=proto_def,
-     SV=Listsort.sort Term.compare SV,
-     WFR=WFR,
-     pats=pats,
-     extracta = map (extract [R1] congs f (proto_def,WFR))
-                    (zip given_pats corollaries'')}
- end;
+  in
+     {proto_def=proto_def,
+      SV=Listsort.sort Term.compare SV,
+      WFR=WFR,
+      pats=pats,
+      extracta = map (extract [R1] congs f (proto_def,WFR))
+                     (zip given_pats corollaries')}
+  end
 
 (*---------------------------------------------------------------------------
  * Pair patterns with termination conditions. The full list of patterns for

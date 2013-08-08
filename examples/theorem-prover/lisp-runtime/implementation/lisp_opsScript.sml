@@ -1955,7 +1955,7 @@ val X64_LISP_INIT = save_thm("X64_LISP_INIT",let
 
 (* Produce "syntax error" *)
 
-val remove_parse_stack_def = Define `
+val remove_parse_stack_def = PmatchHeuristics.with_classic_heuristic Define `
   (remove_parse_stack (Sym "NIL"::xs) = xs) /\
   (remove_parse_stack (Sym "CONS"::[]) = []) /\
   (remove_parse_stack (Sym "CONS"::x::xs) = remove_parse_stack xs) /\

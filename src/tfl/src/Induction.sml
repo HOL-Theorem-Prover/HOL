@@ -184,6 +184,9 @@ in
   if col_i_ok then i else mk_case_choose_column (i+1) rows
 end handle HOL_ERR _ => 0
 
+val quiet_metis = Feedback.trace ("metis", 0) (metisLib.METIS_PROVE [])
+val quiet_meson = Feedback.trace ("meson", 0) (BasicProvers.PROVE [])
+
 fun mk_case ty_info FV thy =
  let open boolSyntax
  val gv = (wfrecUtils.vary FV)
@@ -224,7 +227,7 @@ fun mk_case ty_info FV thy =
                     end
                else tm
            val disjuncts = map exquant eqs
-           val thm' = metisLib.METIS_PROVE [] (list_mk_disj disjuncts)
+           val thm' = quiet_metis (list_mk_disj disjuncts)
            val subproblems = lpartition(lits,rows)
            val groups = map snd subproblems
            val geqs = zip groups eqs
@@ -306,7 +309,7 @@ fun complete_cases thy =
 
          fun mk_pat_pred p = list_mk_exists (free_vars_lr p, mk_eq(a, p))
          val cases_tm = list_mk_disj (map mk_pat_pred pats)
-         val imp_thm = BasicProvers.PROVE [] (mk_imp (concl cases_thm0, cases_tm))
+         val imp_thm = quiet_meson (mk_imp (concl cases_thm0, cases_tm))
          val cases_thm = MP imp_thm cases_thm0
      in
        GEN a (RIGHT_ASSOC (CHOOSE(z, ex_th0) cases_thm))

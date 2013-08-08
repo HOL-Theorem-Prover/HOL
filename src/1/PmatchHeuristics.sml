@@ -5,7 +5,7 @@ open HolKernel boolSyntax;
 
 
 (*----------------------------------------------------------------------------
-      Boilerplate stuff                          
+      Boilerplate stuff
  ----------------------------------------------------------------------------*)
 
 type thry   = {Tyop : string, Thy : string} ->
@@ -32,13 +32,13 @@ val pheu_classic : pmatch_heuristic = { skip_rows = false, collapse_cases = fals
 val pheu_first_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn _ => 0) }
 
 (* one that uses always the last column, but quits early and collapses *)
-val pheu_last_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn rowL => 
+val pheu_last_col : pmatch_heuristic = { skip_rows = true, collapse_cases = true, col_fun = (fn _ => fn rowL =>
 case rowL of [] => 0 | (r::_) => length r - 1) }
 
 (* A heuristic based on ranking functions *)
-fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true, 
+fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true,
    collapse_cases = true,
-   col_fun = (fn ty_info => fn rowL => let 
+   col_fun = (fn ty_info => fn rowL => let
    val colL = let
      (* assumption: rowL noteq [], and all rows have same length *)
      fun aux a rowL = if (length (hd rowL) = 0) then List.rev a else
@@ -53,7 +53,7 @@ fun pheu_rank (rankL : (thry -> term list -> int) list) = { skip_rows = true,
      val max = List.foldl (fn ((_, r), m) => if r > m then r else m) (snd (hd ranked_cols)) (tl ranked_cols)
      val ranked_cols' = List.filter (fn (_, r) => r = max) ranked_cols
      val ncolL' = List.map fst ranked_cols'
-   in 
+   in
      ncolL'
    end
    fun steps [] ncolL = ncolL
@@ -72,49 +72,49 @@ fun prheu_first_row _ [] = 0
   | prheu_first_row _ (p :: _) = if (is_var p) then 0 else 1
 
 fun prheu_first_row_constr tybase [] = 0
-  | prheu_first_row_constr tybase (p :: _) = if (is_var p) then 0 else 
+  | prheu_first_row_constr tybase (p :: _) = if (is_var p) then 0 else
     let val (_,ty) = strip_fun (type_of p) in
-     case tybase (type_names ty) of NONE => 1 | SOME tyinfo => 
-     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end handle HOL_ERR _ => 0;  
+     case tybase (type_names ty) of NONE => 1 | SOME tyinfo =>
+     (if (length (constructors_of tyinfo) = 1) then 0 else 1) end handle HOL_ERR _ => 0;
 
 val prheu_constr_prefix : (thry -> term list -> int) =
   let fun aux n [] = n
         | aux n (p :: pL) = if (is_var p) then n else aux (n+1)  pL
   in (fn _ => aux 0) end
 
-fun prheu_get_constr_set tybase pL =   
+fun prheu_get_constr_set tybase pL =
   case pL of [] => NONE | p :: pL' =>
   let val (_,ty) = strip_fun (type_of p) in
-  case tybase (type_names ty) of NONE => NONE | SOME tyinfo => 
+  case tybase (type_names ty) of NONE => NONE | SOME tyinfo =>
   let
      val constrL = constructors_of tyinfo;
      val cL = List.map (fn p => fst (strip_comb p)) pL;
      val cL' = List.filter (fn c => op_mem same_const c constrL) cL;
-     val cL'' = Lib.mk_set cL';     
-  in 
+     val cL'' = Lib.mk_set cL';
+  in
     SOME (cL'', constrL)
   end
   end handle HOL_ERR _ => NONE
 
-fun prheu_get_nonvar_set pL = 
+fun prheu_get_nonvar_set pL =
   let
      val cL = List.map (fn p => fst (strip_comb p)) pL;
      val cL' = List.filter (fn c => not (is_var c)) cL;
-     val cL'' = Lib.mk_set cL';     
-  in 
+     val cL'' = Lib.mk_set cL';
+  in
     cL''
   end
 
-fun prheu_small_branching_factor ty_info pL =   
+fun prheu_small_branching_factor ty_info pL =
   case prheu_get_constr_set ty_info pL of
       SOME (cL, full_constrL) =>
         (~(length cL + (if length cL = length full_constrL then 0 else 1)))
     | NONE => (~(length (prheu_get_nonvar_set pL) + 2))
 
-fun prheu_arity ty_info pL = 
+fun prheu_arity ty_info pL =
   case prheu_get_constr_set ty_info pL of
      SOME (cL, full_constrL) =>
-       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL 
+       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL
    | NONE => 0
 
 
@@ -138,10 +138,10 @@ type pmatch_heuristic_fun = unit -> pmatch_heuristic_res_compare * (unit -> pmat
 
 
 (*----------------------
-  comparing the results                      
+  comparing the results
  -----------------------*)
 
-fun average_tree_depth t =  
+fun average_tree_depth t =
 let
   val (_, ts) = strip_comb t
   val ts' = tl ts
@@ -164,16 +164,16 @@ fun lex_order (ord1 : 'a cmp) (ord2 : 'a cmp) xy =
 val pmatch_heuristic_cases_base_cmp : pmatch_heuristic_res_compare =
   fn ((patts1, case_tm1), (patts2, case_tm2)) => Int.compare (length patts1, length patts2)
 
-fun pmatch_heuristic_size_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) = 
+fun pmatch_heuristic_size_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) =
   Int.compare (term_size case_tm1, term_size case_tm2)
 
-fun pmatch_heuristic_tree_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) = 
+fun pmatch_heuristic_tree_base_cmp ((patts1, case_tm1), (patts2, case_tm2)) =
   Real.compare (average_tree_depth case_tm1, average_tree_depth case_tm2)
 
-fun pmatch_heuristic_cases_cmp xy = lex_order pmatch_heuristic_cases_base_cmp 
+fun pmatch_heuristic_cases_cmp xy = lex_order pmatch_heuristic_cases_base_cmp
   (lex_order pmatch_heuristic_size_base_cmp pmatch_heuristic_tree_base_cmp) xy
 
-fun pmatch_heuristic_size_cmp xy = lex_order pmatch_heuristic_size_base_cmp 
+fun pmatch_heuristic_size_cmp xy = lex_order pmatch_heuristic_size_base_cmp
   (lex_order pmatch_heuristic_tree_base_cmp pmatch_heuristic_cases_base_cmp) xy
 
 
@@ -183,9 +183,9 @@ fun pmatch_heuristic_size_cmp xy = lex_order pmatch_heuristic_size_base_cmp
  --------------------------*)
 
 fun pmatch_heuristic_list min_fun l () : (pmatch_heuristic_res_compare * (unit -> pmatch_heuristic option)) = let
-  val hL_ref = ref l 
-  fun aux () = case (!hL_ref) of 
-     [] => NONE 
+  val hL_ref = ref l
+  fun aux () = case (!hL_ref) of
+     [] => NONE
    | h::hL => (hL_ref := hL; SOME h)
 in (min_fun, aux) end
 
@@ -203,18 +203,18 @@ let
 
   fun heu (prefix : int list) : pmatch_heuristic =
   let
-    val current_prefix = ref prefix 
-    val remaining_prefix = ref prefix 
-    fun colfun thry rowL = 
-      case (!remaining_prefix) of 
+    val current_prefix = ref prefix
+    val remaining_prefix = ref prefix
+    fun colfun thry rowL =
+      case (!remaining_prefix) of
           (i :: is) => (remaining_prefix := is; i)
         | [] => let
-                  val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [i+1]))) (tl (hd rowL)) 
+                  val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [i+1]))) (tl (hd rowL))
                   val _ = current_prefix := (!current_prefix) @ [0]
                 in
                   0
-                end 
-  in 
+                end
+  in
     { skip_rows = true, collapse_cases = true, col_fun = colfun }
   end
 
@@ -250,7 +250,7 @@ fun set_default_heuristic_size () = set_heuristic_list_size default_heuristic_li
 fun set_default_heuristic_cases () = set_heuristic_list_cases default_heuristic_list
 fun set_classic_heuristic () = set_heuristic_fun classic_heuristic_fun
 
-fun with_heuristic heu f = with_flag (pmatch_heuristic, 
+fun with_heuristic heu f = with_flag (pmatch_heuristic,
    pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f
 fun with_classic_heuristic f = with_heuristic pheu_classic f
 
