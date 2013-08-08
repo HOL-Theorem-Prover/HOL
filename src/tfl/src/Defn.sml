@@ -1173,7 +1173,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
                    R = R, SV=SV, stem=stem}
         end
  end
- handle e => raise wrap_exn "Defn" "stdrec_defn" e;
+ handle e => raise wrap_exn "Defn" "stdrec_defn" e
 
 (*---------------------------------------------------------------------------
     A general, basic, interface to function definitions. First try to
@@ -1222,7 +1222,13 @@ fun prim_mk_defn stem eqns =
     end
     | (_::_::_) => mutrec_defn (facts,stem,eqns)  (* mutrec defns being made *)
  end
- handle e => raise wrap_exn "Defn" "prim_mk_defn" e;
+ handle e as HOL_ERR {origin_structure = "Defn", message = message, ...} =>
+       if not (String.isPrefix "at Induction.mk_induction" message) orelse
+          PmatchHeuristics.is_classic ()
+          then raise wrap_exn "Defn" "prim_mk_defn" e
+       else (Feedback.HOL_MESG "Trying classic cases heuristic..."
+             ; PmatchHeuristics.with_classic_heuristic (prim_mk_defn stem) eqns)
+      | e => raise wrap_exn "Defn" "prim_mk_defn" e
 
 (*---------------------------------------------------------------------------*)
 (* Version of mk_defn that restores the term signature and grammar if it     *)
@@ -1231,7 +1237,7 @@ fun prim_mk_defn stem eqns =
 
 fun mk_defn stem eqns =
   Parse.try_grammar_extension
-    (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns);
+    (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns)
 
 fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs

@@ -239,19 +239,33 @@ end
  ----------------------------------------------------------------------------*)
 
 val pmatch_heuristic = ref default_heuristic_fun
+val classic = ref false
+fun is_classic () = !classic
 
 fun set_heuristic_fun heu_fun = (pmatch_heuristic := heu_fun)
 fun set_heuristic_list_size heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_size_cmp heuL)
 fun set_heuristic_list_cases heuL = set_heuristic_fun (pmatch_heuristic_list pmatch_heuristic_cases_cmp heuL)
 fun set_heuristic heu = set_heuristic_list_cases [heu]
 
-fun set_default_heuristic () = set_heuristic_fun default_heuristic_fun
-fun set_default_heuristic_size () = set_heuristic_list_size default_heuristic_list
-fun set_default_heuristic_cases () = set_heuristic_list_cases default_heuristic_list
-fun set_classic_heuristic () = set_heuristic_fun classic_heuristic_fun
+fun set_default_heuristic () =
+   (classic := false; set_heuristic_fun default_heuristic_fun)
 
-fun with_heuristic heu f = with_flag (pmatch_heuristic,
-   pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f
-fun with_classic_heuristic f = with_heuristic pheu_classic f
+fun set_default_heuristic_size () =
+   (classic := false; set_heuristic_list_size default_heuristic_list)
+
+fun set_default_heuristic_cases () =
+   (classic := false; set_heuristic_list_cases default_heuristic_list)
+
+fun set_classic_heuristic () =
+   (classic := true; set_heuristic_fun classic_heuristic_fun)
+
+fun with_heuristic heu f =
+   with_flag (classic, false)
+      (with_flag (pmatch_heuristic,
+                  pmatch_heuristic_list pmatch_heuristic_cases_cmp [heu]) f)
+
+fun with_classic_heuristic f =
+   with_flag (classic, true)
+      (with_flag (pmatch_heuristic, classic_heuristic_fun) f)
 
 end;

@@ -81,4 +81,5 @@ sig
 
    val with_classic_heuristic : ('a -> 'b) -> ('a -> 'b)
    val with_heuristic : pmatch_heuristic -> ('a -> 'b) -> ('a -> 'b)
+   val is_classic : unit -> bool
 end
