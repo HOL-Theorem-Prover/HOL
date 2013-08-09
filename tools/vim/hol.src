@@ -105,7 +105,7 @@ let s:delim          = '\_[[:space:]()]'
 
 fu! HOLExpand()
   silent keepjumps normal pgg0
-  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\ze'.s:delim.'\)','cWe')
+  while search('\%^\_s*\%(\%('.s:stripBoth.'\|'.s:stripStart.'\)\|\%('.s:stripBothWords.'\)\)\ze'.s:delim,'cWe')
     silent keepjumps normal vgg0"_d
   endw
   while search('\%(\%('.s:stripBoth.'\|'.s:stripEnd.'\)\|'.s:delim.'\zs\%('.s:stripBothWords.'\)\)\_s*\%$','cW')
