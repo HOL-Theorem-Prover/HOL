@@ -1145,6 +1145,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
   val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
   val _         = assert_exn (equal bv) v TYDEF_FORM_ERR
+  val Pty       = type_of P
   val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
   val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
   val checked   = check_null_hyp thm TYDEF_ERR
