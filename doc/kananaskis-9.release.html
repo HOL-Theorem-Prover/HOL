@@ -73,6 +73,10 @@ If the goal is of the form
 
 <p>Thanks to Vincent Aravantinos for the implementation of this tactic.
 
+<li><p>A new tactic, <code>suffices_by</code>, an infix, taking two arguments, a quotation and a tactic.
+When <code>`some term` suffices_by tac</code> is executed, the system attempts to prove that <code>some term</code> implies the current goal by applying <code>tac</code>.
+The sub-goal(s) resulting from the application of <code>tac</code> will be presented to the user, along with <code>some term</code>.
+</p>
 </ul>
 
 <h2 id="new-examples">New examples:</h2>
