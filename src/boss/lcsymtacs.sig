@@ -30,6 +30,8 @@ sig
   val pop_assum : thm_tactic -> tactic
   val first_assum : thm_tactic -> tactic
   val first_x_assum : thm_tactic -> tactic
+  val last_assum : thm_tactic -> tactic
+  val last_x_assum : thm_tactic -> tactic
   val disch_then : thm_tactic -> tactic
 
   val qx_gen_tac : term quotation -> tactic

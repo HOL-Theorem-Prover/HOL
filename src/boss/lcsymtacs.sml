@@ -30,6 +30,8 @@ struct
   val pop_assum : thm_tactic -> tactic = Tactical.POP_ASSUM
   val first_assum : thm_tactic -> tactic = Tactical.FIRST_ASSUM
   val first_x_assum : thm_tactic -> tactic = Tactical.FIRST_X_ASSUM
+  val last_assum : thm_tactic -> tactic = Tactical.LAST_ASSUM
+  val last_x_assum : thm_tactic -> tactic = Tactical.LAST_X_ASSUM
   val disch_then = Thm_cont.DISCH_THEN
 
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
