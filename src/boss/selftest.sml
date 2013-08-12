@@ -22,3 +22,18 @@ val _ = app (test_CONV (EVAL,"EVAL")) [
       (``INL (x:'a) = INR (y:'b)``, ``F``),
       (``INL (x:'a) = INL x'``, ``x:'a = x'``)
 ];
+
+val tydef_th = prove(
+  ``?p. FST p /\ SND p``,
+  EXISTS_TAC ``(T,T)`` THEN REWRITE_TAC []);
+
+val _ = tprint "new_type_definition error message"
+val failing_tydef =
+    new_type_definition("mytydef", tydef_th)
+    handle HOL_ERR {origin_function, message, origin_structure} =>
+           if origin_function <> "new_type_definition" orelse
+              origin_structure <> "Theory.Definition" orelse
+              message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
+           then
+             die "FAILED"
+           else (print "OK\n"; TRUTH)

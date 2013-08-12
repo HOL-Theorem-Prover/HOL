@@ -1152,8 +1152,9 @@ fun check_tyvars body_tyvars ty f =
            :: commafy (map (Lib.quote o Type.dest_vartype) extras)));
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
-  val (_,Body)  = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
-  val P         = with_exn rator Body TYDEF_FORM_ERR
+  val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
+  val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
+  val _         = assert_exn (equal bv) v TYDEF_FORM_ERR
   val Pty       = type_of P
   val (dom,rng) = with_exn Type.dom_rng Pty TYDEF_FORM_ERR
   val tyvars    = Listsort.sort Type.compare (type_vars_in_term P)
