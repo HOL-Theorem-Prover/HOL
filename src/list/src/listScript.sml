@@ -1433,6 +1433,15 @@ val REVERSE_REVERSE = store_thm(
   ASM_REWRITE_TAC [REVERSE_DEF, REVERSE_APPEND, APPEND]);
 val _ = export_rewrites ["REVERSE_REVERSE"]
 
+val REVERSE_11 = store_thm(
+  "REVERSE_11",
+ ``!l1 l2:'a list. (REVERSE l1 = REVERSE l2) <=> (l1 = l2)``,
+ REPEAT GEN_TAC THEN EQ_TAC THEN1
+   (DISCH_THEN (MP_TAC o AP_TERM ``REVERSE : 'a list -> 'a list``) THEN
+    REWRITE_TAC [REVERSE_REVERSE]) THEN
+ STRIP_TAC THEN ASM_REWRITE_TAC []);
+val _ = export_rewrites ["REVERSE_11"]
+
 val MEM_REVERSE = store_thm(
   "MEM_REVERSE",
   ``!l x. MEM x (REVERSE l) = MEM x l``,
@@ -2652,6 +2661,7 @@ val EL_LUPDATE = store_thm("EL_LUPDATE",
 val LENGTH_LUPDATE = store_thm("LENGTH_LUPDATE",
   ``!(x:'a) n ys. LENGTH (LUPDATE x n ys) = LENGTH ys``,
   SIMP_TAC bool_ss [LUPDATE_SEM]);
+val _ = export_rewrites ["LENGTH_LUPDATE"]
 
 val LUPDATE_LENGTH = store_thm("LUPDATE_LENGTH",
   ``!xs x (y:'a) ys. LUPDATE x (LENGTH xs) (xs ++ y::ys) = xs ++ x::ys``,
@@ -2665,6 +2675,29 @@ val LUPDATE_SNOC = store_thm("LUPDATE_SNOC",
   Induct THEN Cases_on `k` THEN Cases_on `n = LENGTH ys`
   THEN FULL_SIMP_TAC bool_ss [SNOC,LUPDATE_def,LENGTH,NOT_SUC,
          PRE,INV_SUC_EQ]);
+
+val MEM_LUPDATE_E = store_thm("MEM_LUPDATE_E",
+  ``!l x y i. MEM x (LUPDATE y i l) ==> (x = y) \/ MEM x l``,
+  Induct THEN SRW_TAC[][LUPDATE_def] THEN
+  Cases_on`i`THEN FULL_SIMP_TAC(srw_ss())[LUPDATE_def] THEN
+  PROVE_TAC[])
+
+val MEM_LUPDATE = store_thm(
+  "MEM_LUPDATE",
+  ``!l x y i. MEM x (LUPDATE y i l) <=>
+                i < LENGTH l /\ (x = y) \/
+                ?j. j < LENGTH l /\ i <> j /\ (EL j l = x)``,
+  Induct THEN SRW_TAC [][LUPDATE_def] THEN
+  Cases_on `i` THEN SRW_TAC [][LUPDATE_def] THENL [
+    SRW_TAC [][Once arithmeticTheory.EXISTS_NUM] THEN
+    METIS_TAC [MEM_EL],
+    EQ_TAC THEN SRW_TAC [][] THENL [
+      DISJ2_TAC THEN Q.EXISTS_TAC `0` THEN SRW_TAC [][],
+      DISJ2_TAC THEN Q.EXISTS_TAC `SUC j` THEN SRW_TAC [][],
+      Cases_on `j` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+      METIS_TAC[]
+    ]
+  ]);
 
 val LUPDATE_compute = save_thm("LUPDATE_compute",
    numLib.SUC_RULE LUPDATE_def)
