@@ -110,31 +110,12 @@ in
       utilsLib.CHANGE_CBV_CONV
          (x64Lib.x64_compset
             [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
-             immediate_rwt, prefix_rwt, OpSize_rwt, x64_decode_rwt,
+             immediate8, immediate16, immediate32, immediate64,
+             immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
              RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T])
 end
 
 (* ------------------------------------------------------------------------ *)
-
-(*
-val ADDRESS_CONV =
-   Conv.REWR_CONV (GSYM wordsTheory.WORD_ADD_ASSOC)
-   THENC Conv.RAND_CONV
-           (Conv.REWR_CONV wordsTheory.word_add_n2w
-            THENC numLib.REDUCE_CONV)
-
-local
-   val lcancel =
-      Thm.CONJ wordsTheory.WORD_EQ_ADD_LCANCEL
-        (wordsTheory.WORD_EQ_ADD_LCANCEL
-         |> Q.SPECL [`v`, `0w`]
-         |> REWRITE_RULE [wordsTheory.WORD_ADD_0]
-         |> Drule.GEN_ALL)
-in
-   val ADDR_CONV =
-      DATATYPE_CONV THENC REWRITE_CONV [lcancel] THENC utilsLib.SRW_CONV []
-end
-*)
 
 val mem8_rwt =
    EV [mem8_def] [[``^st.MEM a = SOME v``]] []
@@ -597,15 +578,46 @@ val Zxchg_rwts =
 
 local
    fun decode_err s = ERR "x64_decode" s
+   val i8 = fcpSyntax.mk_int_numeric_type 8
+   val w8 = wordsSyntax.mk_int_word_type 8
+   val imm8_tm = combinSyntax.mk_I (Term.mk_var ("imm", w8))
+   fun mk_extract imm n =
+      let
+         val h = numSyntax.term_of_int (n - 1)
+         val l = numSyntax.term_of_int (n - 8)
+      in
+         wordsSyntax.mk_word_extract(h, l, imm, i8)
+      end
+   fun mk_extracts n =
+      let
+         val mk =
+            mk_extract (Term.mk_var ("imm", wordsSyntax.mk_int_word_type n))
+         fun iter a n = if n < 8 then a else iter (mk n :: a) (n - 8)
+      in
+         iter [] n
+      end
    fun mk_byte w = wordsSyntax.mk_wordi (w, 8)
    fun toByte (x, y) = mk_byte (Arbnum.fromHexString (String.implode [x, y]))
-   val get_bytes =
+   fun get_bytes s =
       let
          fun iter a [] = List.rev a
-           | iter a (x::y::t) = iter (toByte (x, y) :: a) t
+           | iter a (l as (x::y::t)) =
+                if List.all (Lib.equal #"_") l
+                   then let
+                           val n = List.length l * 4
+                        in
+                           List.rev a @
+                             (if n = 8
+                                 then [imm8_tm]
+                              else if Lib.mem n [16, 32, 64]
+                                 then mk_extracts n
+                              else raise ERR "x64_decode"
+                                    ("bad immediate length: " ^ Int.toString n))
+                        end
+                else iter (toByte (x, y) :: a) t
            | iter a [_] = raise decode_err "not even"
       in
-         iter [] o String.explode
+         iter [] (String.explode s)
       end
    val x64_fetch =
       (x64_CONV THENC REWRITE_CONV [wordsTheory.WORD_ADD_0])``x64_fetch s``
@@ -784,6 +796,15 @@ Count.apply x64_step "418803";
 Count.apply x64_step "90";
 Count.apply x64_step "487207";
 Count.apply x64_decode "485A"
+
+Count.apply x64_step "48BA________________"
+Count.apply x64_decode "48BA________________"
+
+Count.apply x64_step "41B8________"
+Count.apply x64_decode "41B8________"
+
+Count.apply x64_decode "8345F8__"
+Count.apply x64_step "8345F8__"
 
 Count.apply x64_decode "8345F801"
 Count.apply x64_step "8345F801"

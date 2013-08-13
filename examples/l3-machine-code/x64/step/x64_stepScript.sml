@@ -253,68 +253,88 @@ val n2w_w2n_lem = Q.prove(
    lrw [wordsTheory.w2w_def])
 
 val immediate8_rwt = to_n2w [`n2w n`] (Q.prove(
-   `!b1 l. immediate8 (b1 :: l) =
-          (if b1 <+ 128w then
-              n2w (w2n b1)
-           else
-              n2w (2 ** 64 - 2 ** 8 + w2n b1), l)`,
+   `!b1 l.
+       immediate8 (b1 :: l) =
+       (if b1 <+ 128w then
+           n2w (w2n b1)
+        else
+           n2w (2 ** 64 - 2 ** 8 + w2n b1), l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem]
    \\ rw [immediate8_def]
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate8_rwt";
 
+val immediate8 = Q.store_thm("immediate8",
+   `!imm:word8 l. immediate8 (I imm :: l) = (sw2sw imm, l)`,
+   srw_tac [] [immediate8_def]
+   )
+
 val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
    `!b2 b1 l.
-          immediate16 (b2 :: b1 :: l) =
-          (if b1 <+ 128w then
-              n2w (w2n b1 * 2 ** 8 + w2n b2)
-           else
-              n2w (2 ** 64 - 2 ** 16 + w2n b1 * 2 ** 8 + w2n b2), l)`,
+       immediate16 (b2 :: b1 :: l) =
+       (if b1 <+ 128w then
+           n2w (w2n b1 * 2 ** 8 + w2n b2)
+        else
+           n2w (2 ** 64 - 2 ** 16 + w2n b1 * 2 ** 8 + w2n b2), l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
          GSYM wordsTheory.word_mul_n2w]
    \\ rw [immediate16_def]
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate16_rwt";
 
+val immediate16 = Q.store_thm("immediate16",
+   `!imm:word16 l.
+       immediate16 ((7 >< 0) imm :: (15 >< 8) imm :: l) = (sw2sw imm, l)`,
+   srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate16_def]
+   )
+
 val immediate32_rwt = to_n2w [`n2w n4`, `n2w n3`, `n2w n2`, `n2w n1`] (Q.prove(
    `!b4 b3 b2 b1 l.
-          immediate32 (b4 :: b3 :: b2 :: b1 :: l) =
-          (if b1 <+ 128w then
-              n2w (w2n b1 * 2 ** 24 + w2n b2 * 2 ** 16 +
-                   w2n b3 * 2 ** 8 + w2n b4)
-           else
-              n2w (2 ** 64 - 2 ** 32 +
-                   w2n b1 * 2 ** 24 + w2n b2 * 2 ** 16 +
-                   w2n b3 * 2 ** 8 + w2n b4), l)`,
+       immediate32 (b4 :: b3 :: b2 :: b1 :: l) =
+       (if b1 <+ 128w then
+           n2w (w2n b1 * 2 ** 24 + w2n b2 * 2 ** 16 +
+                w2n b3 * 2 ** 8 + w2n b4)
+        else
+           n2w (2 ** 64 - 2 ** 32 +
+                w2n b1 * 2 ** 24 + w2n b2 * 2 ** 16 +
+                w2n b3 * 2 ** 8 + w2n b4), l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
          GSYM wordsTheory.word_mul_n2w]
    \\ rw [immediate32_def]
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate32_rwt";
 
+val immediate32 = Q.store_thm("immediate32",
+   `!imm:word32 l.
+       immediate32
+          ((7 >< 0) imm :: (15 >< 8) imm ::
+           (23 >< 16) imm :: (31 >< 24) imm :: l) = (sw2sw imm, l)`,
+   srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate32_def]
+   )
+
 val immediate64_rwt =
    to_n2w [`n2w n8`, `n2w n7`, `n2w n6`, `n2w n5`,
            `n2w n4`, `n2w n3`, `n2w n2`, `n2w n1`] (Q.prove(
    `!b8 b7 b6 b5 b4 b3 b2 b1 l.
-          immediate64 (b8 :: b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: l) =
-          (n2w (w2n b1 * 2 ** 56 + w2n b2 * 2 ** 48 +
-                w2n b3 * 2 ** 40 + w2n b4 * 2 ** 32 +
-                w2n b5 * 2 ** 24 + w2n b6 * 2 ** 16 +
-                w2n b7 * 2 ** 8 + w2n b8), l)`,
+       immediate64 (b8 :: b7 :: b6 :: b5 :: b4 :: b3 :: b2 :: b1 :: l) =
+       (n2w (w2n b1 * 2 ** 56 + w2n b2 * 2 ** 48 +
+             w2n b3 * 2 ** 40 + w2n b4 * 2 ** 32 +
+             w2n b5 * 2 ** 24 + w2n b6 * 2 ** 16 +
+             w2n b7 * 2 ** 8 + w2n b8), l)`,
    rw [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
        GSYM wordsTheory.word_mul_n2w, immediate64_def]
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate64_rwt";
 
-fun imm l = utilsLib.SRW_RULE [immediate8_rwt, immediate16_rwt, immediate32_rwt]
-               (Q.SPECL l immediate_def)
-
-val immediate_rwt =
-  LIST_CONJ (List.map imm [[`Z8 have_rex`, `n2w n::t`],
-                           [`Z16`, `n2w n2::n2w n1::t`],
-                           [`Z32`, `n2w n4::n2w n3::n2w n2::n2w n1::t`],
-                           [`Z64`, `n2w n4::n2w n3::n2w n2::n2w n1::t`]])
-  |> utilsLib.save_as "immediate_rwt";
+val immediate64 = Q.store_thm("immediate64",
+   `!imm:word64 l.
+       immediate64
+          ((7 >< 0) imm :: (15 >< 8) imm ::
+           (23 >< 16) imm :: (31 >< 24) imm ::
+           (39 >< 32) imm :: (47 >< 40) imm ::
+           (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, l)`,
+   srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate64_def]
+   )
 
 (* ------------------------------------------------------------------------ *)
 

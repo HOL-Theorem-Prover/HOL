@@ -12,9 +12,6 @@ end
 
 open Parse
 
-infix \\
-val op \\ = op THEN;
-
 val ERR = Feedback.mk_HOL_ERR "x64_progLib"
 
 (* ------------------------------------------------------------------------ *)
@@ -91,19 +88,29 @@ val x64_frame =
 (* -- *)
 
 local
+   fun is_imm_var tm =
+      case Lib.total Term.dest_var tm of
+         SOME ("imm", _) => true
+       | _ => false
+   fun is_opc_byte tm =
+      case Lib.total wordsSyntax.dest_word_extract tm of
+         SOME (_, _, i, _) => is_imm_var i
+       | NONE => (case Lib.total combinSyntax.dest_I tm of
+                     SOME i => is_imm_var i
+                   | NONE => wordsSyntax.is_n2w tm)
    fun is_mem_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            is_code_access ("x64$x64_state_MEM", v) l andalso
+            stateLib.is_code_access ("x64$x64_state_MEM", v) l andalso
             (case Lib.total optionSyntax.dest_some r of
-                SOME w => wordsSyntax.is_word_literal w
+                SOME w => is_opc_byte w
               | NONE => false)
        | NONE => false
    fun is_icache_access v tm =
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
-            is_code_access ("x64$x64_state_ICACHE", v) l andalso
-            is_code_access ("x64$x64_state_MEM", v) r
+            stateLib.is_code_access ("x64$x64_state_ICACHE", v) l andalso
+            stateLib.is_code_access ("x64$x64_state_MEM", v) r
        | NONE => false
 in
    fun mk_x64_code_pool thm =
@@ -198,7 +205,7 @@ local
       stateLib.spec
            x64_progTheory.X64_IMP_SPEC
            [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
-            x64_stepTheory.read_mem64]
+            x64_stepTheory.read_mem64, combinTheory.I_THM]
            [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
             x64_stepTheory.write_mem64_def]
            (x64_select_state_thms @ x64_select_state_pool_thms)
@@ -233,7 +240,7 @@ val q = [] : term list
 val imp_spec = X64_IMP_SPEC
 val read_thms =
    [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
-    x64_stepTheory.read_mem64]
+    x64_stepTheory.read_mem64, combinTheory.I_THM]
 val write_thms =
    [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
     x64_stepTheory.write_mem64_def]
@@ -256,6 +263,10 @@ val thm = Count.apply x64_spec "4983C030"
 val thm = Count.apply x64_spec "C700544F4D50"
 val thm = Count.apply x64_spec "4C8BBF10FFFFFF"
 val thm = Count.apply x64_spec "8B4C8604"
+
+val thm = Count.apply x64_spec "8345F8__"
+val thm = Count.apply x64_spec "41B8________"
+val thm = Count.apply x64_spec "48BA________________"
 
 val pos = ref 1;
 
