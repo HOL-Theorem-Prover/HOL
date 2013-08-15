@@ -454,6 +454,13 @@ datatype monop =
    | Cast of ParseDatatype.pretype
    | Fst
    | Head
+   | IsAlpha
+   | IsAlphaNum
+   | IsDigit
+   | IsHexDigit
+   | IsLower
+   | IsSpace
+   | IsUpper
    | IsSome
    | K1 of ParseDatatype.pretype
    | Length
@@ -472,6 +479,8 @@ datatype monop =
    | SofL
    | Some
    | Tail
+   | ToLower
+   | ToUpper
    | ValOf
    | fpAdd32
    | fpAdd64
@@ -509,7 +518,10 @@ datatype binop =
    | Rep
    | Rol
    | Ror
+   | Splitl
+   | Splitr
    | Sub
+   | Tok
    | Uge
    | Ugt
    | Ule
@@ -573,6 +585,12 @@ local
    fun mk_w tm ty = wordsSyntax.mk_n2w (tm, wordsSyntax.dest_word_type ty)
    val mk_word0 = mk_w numSyntax.zero_tm
    val mk_word1 = mk_w one_tm
+
+   val mk_map = Lib.curry boolSyntax.mk_icomb listSyntax.map_tm
+   val lower_tm = mk_map stringSyntax.tolower_tm
+   val upper_tm = mk_map stringSyntax.toupper_tm
+   fun mk_lower tm = Term.mk_comb (lower_tm, tm)
+   fun mk_upper tm = Term.mk_comb (upper_tm, tm)
 
    fun enum2num ty =
       Lib.with_exn mk_local_const
@@ -800,31 +818,40 @@ local
 in
    fun Mop (m : monop, x) =
       (case m of
-         BNot   => wordsSyntax.mk_word_1comp
-       | Fst    => pairSyntax.mk_fst
-       | Head   => listSyntax.mk_hd
+         BNot => wordsSyntax.mk_word_1comp
+       | Fst => pairSyntax.mk_fst
+       | Head => listSyntax.mk_hd
+       | IsAlpha => stringSyntax.mk_isalpha
+       | IsAlphaNum => stringSyntax.mk_isalphanum
+       | IsDigit => stringSyntax.mk_isdigit
+       | IsHexDigit => stringSyntax.mk_ishexdigit
+       | IsLower => stringSyntax.mk_islower
+       | IsSpace => stringSyntax.mk_isspace
+       | IsUpper => stringSyntax.mk_isupper
        | IsSome => optionSyntax.mk_is_some
        | Length => listSyntax.mk_length
-       | Msb    => wordsSyntax.mk_word_msb
-       | Not    => boolSyntax.mk_neg
-       | Rev    => wordsSyntax.mk_word_reverse
-       | Smax   => mk_word_smax
-       | Smin   => mk_word_smin
-       | Snd    => pairSyntax.mk_snd
-       | SofL   => listSyntax.mk_list_to_set
-       | Some   => optionSyntax.mk_some
-       | Tail   => listSyntax.mk_tl
-       | ValOf  => optionSyntax.mk_the
-       | Min  => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
-       | Max  => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
-       | Abs  => pick (SOME wordsSyntax.mk_word_abs, NONE, NONE,
-                       SOME intSyntax.mk_absval)
-       | Neg  => pick (SOME wordsSyntax.mk_word_2comp, NONE, NONE,
-                       SOME intSyntax.mk_negated)
+       | Msb => wordsSyntax.mk_word_msb
+       | Not => boolSyntax.mk_neg
+       | Rev => wordsSyntax.mk_word_reverse
+       | Smax => mk_word_smax
+       | Smin => mk_word_smin
+       | Snd => pairSyntax.mk_snd
+       | SofL => listSyntax.mk_list_to_set
+       | Some => optionSyntax.mk_some
+       | Tail => listSyntax.mk_tl
+       | ToLower => mk_lower
+       | ToUpper => mk_upper
+       | ValOf => optionSyntax.mk_the
+       | Min => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
+       | Max => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
+       | Abs => pick (SOME wordsSyntax.mk_word_abs, NONE, NONE,
+                      SOME intSyntax.mk_absval)
+       | Neg => pick (SOME wordsSyntax.mk_word_2comp, NONE, NONE,
+                      SOME intSyntax.mk_negated)
        | Size => pick (SOME wordsSyntax.mk_word_len,
                        SOME listSyntax.mk_length, NONE, NONE)
-       | Log  => pick (SOME wordsSyntax.mk_word_log2, NONE,
-                       SOME bitSyntax.mk_log2, NONE)
+       | Log => pick (SOME wordsSyntax.mk_word_log2, NONE,
+                      SOME bitSyntax.mk_log2, NONE)
        | K1 ty => (fn tm => combinSyntax.mk_K_1 (tm, Ty ty))
        | SE ty =>
            (fn tm =>
@@ -875,6 +902,9 @@ in
       | Ugt    => wordsSyntax.mk_word_hi
       | Ule    => wordsSyntax.mk_word_ls
       | Ult    => wordsSyntax.mk_word_lo
+      | Splitl => rich_listSyntax.mk_splitl
+      | Splitr => rich_listSyntax.mk_splitr
+      | Tok    => stringSyntax.mk_tokens
       | Lt   => pick (SOME wordsSyntax.mk_word_lt, NONE,
                       SOME numSyntax.mk_less, SOME intSyntax.mk_less)
       | Gt   => pick (SOME wordsSyntax.mk_word_gt, NONE,

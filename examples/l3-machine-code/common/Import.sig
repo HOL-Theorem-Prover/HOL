@@ -7,6 +7,13 @@ sig
      | Cast of ParseDatatype.pretype
      | Fst
      | Head
+     | IsAlpha
+     | IsAlphaNum
+     | IsDigit
+     | IsHexDigit
+     | IsLower
+     | IsSpace
+     | IsUpper
      | IsSome
      | K1 of ParseDatatype.pretype
      | Length
@@ -24,6 +31,8 @@ sig
      | Snd
      | SofL
      | Some
+     | ToLower
+     | ToUpper
      | Tail
      | ValOf
      | fpAdd32
@@ -62,7 +71,10 @@ sig
      | Rep
      | Rol
      | Ror
+     | Splitl
+     | Splitr
      | Sub
+     | Tok
      | Uge
      | Ugt
      | Ule
