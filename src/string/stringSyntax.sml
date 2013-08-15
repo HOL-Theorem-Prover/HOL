@@ -55,6 +55,8 @@ val (string_lt_tm,mk_string_lt,dest_string_lt,is_string_lt) = binop "string_lt"
 val (string_gt_tm,mk_string_gt,dest_string_gt,is_string_gt) = binop "string_gt"
 val (string_le_tm,mk_string_le,dest_string_le,is_string_le) = binop "string_le"
 val (string_ge_tm,mk_string_ge,dest_string_ge,is_string_ge) = binop "string_ge"
+val (fields_tm,mk_fields,dest_fields,is_fields) = binop "FIELDS"
+val (tokens_tm,mk_tokens,dest_tokens,is_tokens) = binop "TOKENS"
 val (translate_tm,mk_translate,dest_translate,is_translate) = binop "TRANSLATE"
 
 val fromMLchar =

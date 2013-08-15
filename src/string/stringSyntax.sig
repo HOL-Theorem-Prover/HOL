@@ -13,6 +13,7 @@ sig
   val emptystring_tm : term
   val explode_tm : term
   val extract_tm : term
+  val fields_tm : term
   val implode_tm : term
   val isalpha_tm : term
   val isalphanum_tm : term
@@ -40,6 +41,7 @@ sig
   val strlen_tm : term
   val sub_tm : term
   val substring_tm : term
+  val tokens_tm : term
   val tolower_tm : term
   val toupper_tm : term
   val translate_tm : term
@@ -52,6 +54,7 @@ sig
   val mk_dest_string : term -> term
   val mk_explode : term -> term
   val mk_extract : term -> term
+  val mk_fields : term * term -> term
   val mk_implode : term -> term
   val mk_isalpha : term -> term
   val mk_isalphanum : term -> term
@@ -78,6 +81,7 @@ sig
   val mk_strlen : term -> term
   val mk_sub : term -> term
   val mk_substring : term -> term
+  val mk_tokens : term * term -> term
   val mk_tolower : term -> term
   val mk_toupper : term -> term
   val mk_translate : term * term -> term
@@ -90,6 +94,7 @@ sig
   val dest_dest_string : term -> term
   val dest_explode : term -> term
   val dest_extract : term -> term
+  val dest_fields : term -> term * term
   val dest_implode : term -> term
   val dest_isalpha : term -> term
   val dest_isalphanum : term -> term
@@ -117,6 +122,7 @@ sig
   val dest_strlen : term -> term
   val dest_sub : term -> term
   val dest_substring : term -> term
+  val dest_tokens : term -> term * term
   val dest_tolower : term -> term
   val dest_toupper : term -> term
   val dest_translate : term -> term * term
@@ -128,6 +134,7 @@ sig
   val is_chr : term -> bool
   val is_dest_string : term -> bool
   val is_emptystring : term -> bool
+  val is_fields : term -> bool
   val is_explode : term -> bool
   val is_extract : term -> bool
   val is_implode : term -> bool
@@ -156,6 +163,7 @@ sig
   val is_strlen : term -> bool
   val is_sub : term -> bool
   val is_substring : term -> bool
+  val is_tokens : term -> bool
   val is_tolower : term -> bool
   val is_toupper : term -> bool
   val is_translate : term -> bool

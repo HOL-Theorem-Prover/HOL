@@ -97,6 +97,12 @@ val SPLITP_AUX_def = TotalDefn.Define`
    (SPLITP_AUX acc P (h::t) =
       if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)`;
 
+val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
+
+val SPLITR_def = TotalDefn.Define`
+   SPLITR P l =
+   let (a, b) = SPLITP ((~) o P) (REVERSE l) in (REVERSE b, REVERSE a)`;
+
 val PREFIX_DEF = DEF `PREFIX P l = FST (SPLITP ($~ o P) l)`;
 
 val SUFFIX_DEF = DEF`
