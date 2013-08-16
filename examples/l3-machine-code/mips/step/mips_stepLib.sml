@@ -173,7 +173,7 @@ val rEV =
    EV [dfn'ADDU_def, dfn'DADDU_def, dfn'SUBU_def, dfn'DSUBU_def, dfn'SLT_def,
        dfn'SLTU_def, dfn'AND_def, dfn'OR_def, dfn'XOR_def, dfn'NOR_def,
        dfn'SLLV_def, dfn'SRLV_def, dfn'SRAV_def, dfn'DSLLV_def, dfn'DSRLV_def,
-       dfn'DSRAV_def, dfn'MTHI_def, dfn'MTLO_def, dfn'JALR_def,
+       dfn'DSRAV_def, dfn'MTHI_def, dfn'MTLO_def,
        extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
@@ -523,7 +523,8 @@ local
    val boolify_conv =
       Conv.RAND_CONV
          (Conv.CHANGED_CONV
-            (REWRITE_CONV [mipsTheory.boolify5_v2w, mipsTheory.boolify6_v2w]))
+            (REWRITE_CONV [mipsTheory.boolify5_v2w, mipsTheory.boolify6_v2w,
+                           mipsTheory.boolify26_v2w]))
       THENC PairedLambda.let_CONV
    val Decode =
       Decode_def
@@ -531,7 +532,7 @@ local
       |> Conv.RIGHT_CONV_RULE
              (
               REWRITE_CONV [mipsTheory.boolify32_v2w]
-              THENC PairedLambda.let_CONV
+              THENC Conv.DEPTH_CONV PairedLambda.let_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC Conv.DEPTH_CONV boolify_conv
              )
@@ -586,69 +587,65 @@ val mips_ipatterns = List.map (I ## pattern)
     ("XORI",   "FFTTTF__________________________"),
     ("DADDI",  "FTTFFF__________________________"),
     ("DADDIU", "FTTFFT__________________________"),
-    ("MULT",   "FFFFFF____________________FTTFFF"),
-    ("MULTU",  "FFFFFF____________________FTTFFT"),
-    ("DMULT",  "FFFFFF____________________FTTTFF"),
-    ("DMULTU", "FFFFFF____________________FTTTFT")
-   ]
-
-val mips_tpatterns = List.map (I ## pattern)
-   [
-    ("LUI",    "FFTTTT__________________________")
+    ("MULT",   "FFFFFF__________FFFFFFFFFFFTTFFF"),
+    ("MULTU",  "FFFFFF__________FFFFFFFFFFFTTFFT"),
+    ("DMULT",  "FFFFFF__________FFFFFFFFFFFTTTFF"),
+    ("DMULTU", "FFFFFF__________FFFFFFFFFFFTTTFT")
    ]
 
 val mips_dpatterns = List.map (I ## pattern)
    [
-    ("JALR",   "FFFFFF____________________FFTFFT"),
-    ("MFHI",   "FFFFFF____________________FTFFFF"),
-    ("MTHI",   "FFFFFF____________________FTFFFT"),
-    ("MFLO",   "FFFFFF____________________FTFFTF"),
-    ("MTLO",   "FFFFFF____________________FTFFTT")
+    ("JALR",   "FFFFFF_____FFFFF__________FFTFFT")
    ]
 
 val mips_rpatterns = List.map (I ## pattern)
    [
-    ("SLLV",   "FFFFFF____________________FFFTFF"),
-    ("SRLV",   "FFFFFF____________________FFFTTF"),
-    ("SRAV",   "FFFFFF____________________FFFTTT"),
-    ("DSLLV",  "FFFFFF____________________FTFTFF"),
-    ("DSRLV",  "FFFFFF____________________FTFTTF"),
-    ("DSRAV",  "FFFFFF____________________FTFTTT"),
-    ("ADD",    "FFFFFF____________________TFFFFF"),
-    ("ADDU",   "FFFFFF____________________TFFFFT"),
-    ("SUB",    "FFFFFF____________________TFFFTF"),
-    ("SUBU",   "FFFFFF____________________TFFFTT"),
-    ("AND",    "FFFFFF____________________TFFTFF"),
-    ("OR",     "FFFFFF____________________TFFTFT"),
-    ("XOR",    "FFFFFF____________________TFFTTF"),
-    ("NOR",    "FFFFFF____________________TFFTTT"),
-    ("SLT",    "FFFFFF____________________TFTFTF"),
-    ("SLTU",   "FFFFFF____________________TFTFTT"),
-    ("DADD",   "FFFFFF____________________TFTTFF"),
-    ("DADDU",  "FFFFFF____________________TFTTFT"),
-    ("DSUB",   "FFFFFF____________________TFTTTF"),
-    ("DSUBU",  "FFFFFF____________________TFTTTT")
+    ("SLLV",   "FFFFFF_______________FFFFFFFFTFF"),
+    ("SRLV",   "FFFFFF_______________FFFFFFFFTTF"),
+    ("SRAV",   "FFFFFF_______________FFFFFFFFTTT"),
+    ("DSLLV",  "FFFFFF_______________FFFFFFTFTFF"),
+    ("DSRLV",  "FFFFFF_______________FFFFFFTFTTF"),
+    ("DSRAV",  "FFFFFF_______________FFFFFFTFTTT"),
+    ("ADD",    "FFFFFF_______________FFFFFTFFFFF"),
+    ("ADDU",   "FFFFFF_______________FFFFFTFFFFT"),
+    ("SUB",    "FFFFFF_______________FFFFFTFFFTF"),
+    ("SUBU",   "FFFFFF_______________FFFFFTFFFTT"),
+    ("AND",    "FFFFFF_______________FFFFFTFFTFF"),
+    ("OR",     "FFFFFF_______________FFFFFTFFTFT"),
+    ("XOR",    "FFFFFF_______________FFFFFTFFTTF"),
+    ("NOR",    "FFFFFF_______________FFFFFTFFTTT"),
+    ("SLT",    "FFFFFF_______________FFFFFTFTFTF"),
+    ("SLTU",   "FFFFFF_______________FFFFFTFTFTT"),
+    ("DADD",   "FFFFFF_______________FFFFFTFTTFF"),
+    ("DADDU",  "FFFFFF_______________FFFFFTFTTFT"),
+    ("DSUB",   "FFFFFF_______________FFFFFTFTTTF"),
+    ("DSUBU",  "FFFFFF_______________FFFFFTFTTTT")
    ]
 
 val mips_jpatterns = List.map (I ## pattern)
    [
-    ("SLL",    "FFFFFF____________________FFFFFF"),
-    ("SRL",    "FFFFFF____________________FFFFTF"),
-    ("SRA",    "FFFFFF____________________FFFFTT"),
-    ("DSLL",   "FFFFFF____________________TTTFFF"),
-    ("DSRL",   "FFFFFF____________________TTTFTF"),
-    ("DSRA",   "FFFFFF____________________TTTFTT"),
-    ("DSLL32", "FFFFFF____________________TTTTFF"),
-    ("DSRL32", "FFFFFF____________________TTTTTF"),
-    ("DSRA32", "FFFFFF____________________TTTTTT")
+    ("SLL",    "FFFFFFFFFFF_______________FFFFFF"),
+    ("SRL",    "FFFFFFFFFFF_______________FFFFTF"),
+    ("SRA",    "FFFFFFFFFFF_______________FFFFTT"),
+    ("DSLL",   "FFFFFFFFFFF_______________TTTFFF"),
+    ("DSRL",   "FFFFFFFFFFF_______________TTTFTF"),
+    ("DSRA",   "FFFFFFFFFFF_______________TTTFTT"),
+    ("DSLL32", "FFFFFFFFFFF_______________TTTTFF"),
+    ("DSRL32", "FFFFFFFFFFF_______________TTTTTF"),
+    ("DSRA32", "FFFFFFFFFFF_______________TTTTTT")
    ]
 
-val mips_spatterns = List.map (I ## pattern)
+val mips_patterns0 = List.map (I ## pattern)
    [
-    ("DIV",     "FFFFFF____________________FTTFTF"),
-    ("DIVU",    "FFFFFF____________________FTTFTT"),
-    ("DDIV",    "FFFFFF____________________FTTTTF"),
-    ("DDIVU",   "FFFFFF____________________FTTTTT")
+    ("LUI",    "FFTTTTFFFFF_____________________"),
+    ("DIV",    "FFFFFF__________FFFFFFFFFFFTTFTF"),
+    ("DIVU",   "FFFFFF__________FFFFFFFFFFFTTFTT"),
+    ("DDIV",   "FFFFFF__________FFFFFFFFFFFTTTTF"),
+    ("DDIVU",  "FFFFFF__________FFFFFFFFFFFTTTTT"),
+    ("MTHI",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFFT"),
+    ("MTLO",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFTT"),
+    ("MFHI",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFFF"),
+    ("MFLO",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF")
    ]
 
 val mips_cpatterns = List.map (I ## pattern)
@@ -659,7 +656,7 @@ val mips_cpatterns = List.map (I ## pattern)
 
 val mips_patterns = List.map (I ## pattern)
    [
-    ("JR",      "FFFFFF____________________FFTFFF"),
+    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
     ("BLTZ",    "FFFFFT_____FFFFF________________"),
     ("BGEZ",    "FFFFFT_____FFFFT________________"),
     ("BLTZL",   "FFFFFT_____FFFTF________________"),
@@ -672,12 +669,12 @@ val mips_patterns = List.map (I ## pattern)
     ("JAL",     "FFFFTT__________________________"),
     ("BEQ",     "FFFTFF__________________________"),
     ("BNE",     "FFFTFT__________________________"),
-    ("BLEZ",    "FFFTTF__________________________"),
-    ("BGTZ",    "FFFTTT__________________________"),
+    ("BLEZ",    "FFFTTF_____FFFFF________________"),
+    ("BGTZ",    "FFFTTT_____FFFFF________________"),
     ("BEQL",    "FTFTFF__________________________"),
     ("BNEL",    "FTFTFT__________________________"),
-    ("BLEZL",   "FTFTTF__________________________"),
-    ("BGTZL",   "FTFTTT__________________________"),
+    ("BLEZL",   "FTFTTF_____FFFFF________________"),
+    ("BGTZL",   "FTFTTT_____FFFFF________________"),
     ("LB",      "TFFFFF__________________________"),
     ("LH",      "TFFFFT__________________________"),
     ("LW",      "TFFFTT__________________________"),
@@ -696,8 +693,8 @@ val mips_patterns = List.map (I ## pattern)
 local
    val patterns =
       List.concat [mips_ipatterns, mips_jpatterns, mips_dpatterns,
-                   mips_tpatterns, mips_rpatterns, mips_spatterns,
-                   mips_cpatterns, mips_patterns]
+                   mips_rpatterns, mips_patterns0, mips_cpatterns,
+                   mips_patterns]
    fun padded_opcode v = listSyntax.mk_list (pad_opcode v, Type.bool)
    val get_opc = boolSyntax.rand o boolSyntax.rand o utilsLib.lhsc
    fun mk_net l =
@@ -749,11 +746,10 @@ local
             (fn (x, f:term -> term) => (fn (s, t) => (s ^ "_" ^ x, f t))) l)
    val fnd_sb = fnd2 ## sb
    val fp = fnd_sb (mips_patterns, [])
-   val fs = fnd_sb (mips_spatterns, [("s0", r0)])
-   val ft = fnd_sb (mips_tpatterns, [("t0", r5)])
+   val f0 = fnd_sb (mips_patterns0, [("0", r0)])
    val fd = fnd_sb (mips_dpatterns, [("d0", r10)])
    val fi = fnd_sb (mips_ipatterns, [("s0", r0), ("t0", r5)])
-   val fj = fnd_sb (mips_jpatterns, [("t0", r5), ("d0", r10)])
+   val fj = fnd_sb (mips_jpatterns, [("t0", r0), ("d0", r5)])
    val fr = fnd_sb (mips_rpatterns, [("s0", r0), ("t0", r5), ("d0", r10)])
    val fc = (fnd2 mips_cpatterns,
                [[fn (s, t) => (s ^ "_debug", dbg t)],
@@ -763,7 +759,7 @@ local
          (case f tm of
              SOME x => List.map (List.foldl (fn (f, a) => f a) x) l
            | NONE => try_patterns r tm)
-   val find_opc = try_patterns [fi, fr, fp, fj, ft, fd, fs, fc]
+   val find_opc = try_patterns [fi, fr, fp, fj, fd, f0, fc]
    val mips_find_opc_ = fnd patterns
 in
    val hex_to_padded_opcode =
@@ -782,6 +778,11 @@ in
    val mips_dict = Redblackmap.fromList String.compare patterns
    (* fun mk_mips_pattern s = Redblackmap.peek (dict, utilsLib.uppercase s) *)
 end
+
+(*
+  List.map (mips_decode o snd) (Redblackmap.listItems mips_dict)
+*)
+
 
 (* ------------------------------------------------------------------------- *)
 
