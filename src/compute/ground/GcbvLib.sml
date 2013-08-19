@@ -14,9 +14,28 @@ fun add_rwt net th = Net.insert(lhs(concl th),th) net
 
 val add_rwts = foldl (uncurry (C add_rwt))
 
-fun RANDS_CONV conv tm = (TRY_CONV(RAND_CONV conv THENC (RATOR_CONV (RANDS_CONV conv)))) tm
-rand``f x y``
+(* apply conv to the first operator where it succeeds:
+     conv (f x) = |- f x = t and
+     conv (f x y z) and conv (f x y) both fail
+     ==> 
+     FIRST_RATOR_CONV conv (f x y z) = |- f x y z = t y z
+   fails if tm is not of the form f x1 ... xn, with n >= 1
+*)
+fun FIRST_RATOR_CONV conv tm = (RATOR_CONV conv ORELSEC FIRST_RATOR_CONV (RATOR_CONV conv)) tm
 
+(* apply conv to the operands of tm:
+     !i. conv xi = |- xi = yi 
+     ==>
+     conv (f x1 ... xn) = |- f x1 ... xn = f y1 ... yn
+*)
+fun RANDS_CONV conv tm = (TRY_CONV(RAND_CONV conv THENC (RATOR_CONV (RANDS_CONV conv)))) tm
+
+(* add th to the gcbv theorem net.
+   assumes th is a conjunction of equations (possibly each universally quantified).
+   for a conjunct, f x y = z, adds both f x y = z and f (VALUE x) (VALUE y) = z.
+   (in fact perhaps only the latter will actually get used.)
+   VALUE tags are only applied to combinations (variables, constants, and abstractions are implicitly values).
+*)
 fun add_thm net th = let
   val ths = CONJUNCTS th
   val ths = map SPEC_ALL ths
@@ -34,8 +53,6 @@ local
   fun TRY_RIGHT_BETA th = RIGHT_BETA th handle HOL_ERR _ => th
 
   fun beta_reduce1 th = TRY_RIGHT_BETA o C AP_TERM th
-
-  fun FIRST_RATOR_CONV conv tm = (RATOR_CONV conv ORELSEC FIRST_RATOR_CONV (RATOR_CONV conv)) tm
 
   fun beta_reduce [] = REFL
     | beta_reduce [th] = beta_reduce1 th
