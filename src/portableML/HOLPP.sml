@@ -157,7 +157,7 @@ datatype pp_token
 (* The initial values in the token buffer *)
 val initial_token_value = S{String = "", Length = 0}
 
-datatype ppstream =
+datatype ppstream0 =
   PPS of
      {consumer : string -> unit,
       linewidth : int,
@@ -172,7 +172,7 @@ datatype ppstream =
       left_sum : int ref,      (* size of strings and spaces inserted *)
       right_sum : int ref}     (* size of strings and spaces printed *)
 
-fun lineWidth (PPS {linewidth, ...}) = linewidth
+fun lineWidth0 (PPS {linewidth, ...}) = linewidth
 
 type ppconsumer = {consumer : string -> unit,
 		   linewidth : int,
@@ -195,28 +195,8 @@ in
   doit
 end
 
-fun mk_ppstream {consumer,linewidth,flush} =
-    if (linewidth<5)
-    then raise Fail "PP-error: linewidth too_small"
-    else let val buf_size = 3*linewidth
-          in
-             PPS{consumer = safe_consumer consumer,
-		 linewidth = linewidth,
-		 flush = flush,
-		 the_token_buffer = array(buf_size, initial_token_value),
-		 the_delim_stack = new_delim_stack buf_size,
-		 the_indent_stack = mk_indent_stack (),
-		 ++ = fn i => i := ((!i + 1) mod buf_size),
-		 space_left = ref linewidth,
-		 left_index = ref 0, right_index = ref 0,
-		 left_sum = ref 0, right_sum = ref 0}
-	 end
 
 
-
-fun dest_ppstream(pps : ppstream) =
-  let val PPS{consumer,linewidth,flush, ...} = pps
-  in {consumer=consumer,linewidth=linewidth,flush=flush} end
 
 local
   val space = " "
@@ -324,7 +304,7 @@ fun print_token(PPS{consumer,space_left,...}, S{String,Length}) =
 		   indent (consumer,Number_of_blanks)))
 
 
-fun clear_ppstream(pps : ppstream) =
+fun clear_ppstream0(pps : ppstream0) =
     let val PPS{the_token_buffer, the_delim_stack,
                 the_indent_stack,left_sum, right_sum,
                 left_index, right_index,space_left,linewidth,...}
@@ -428,7 +408,7 @@ fun advance_left (ppstrm as PPS{consumer,left_index,left_sum,
     end
 
 
-fun begin_block (ppstrm : ppstream) style offset =
+fun begin_block0 (ppstrm : ppstream0) style offset =
   let val PPS{the_token_buffer, the_delim_stack,left_index,
               left_sum, right_index, right_sum,...}
             = ppstrm
@@ -452,7 +432,7 @@ fun begin_block (ppstrm : ppstream) style offset =
 	       push_delim_stack (!right_index, the_delim_stack)))
   end
 
-fun end_block(ppstrm : ppstream) =
+fun end_block0(ppstrm : ppstream0) =
   let val PPS{the_token_buffer,the_delim_stack,right_index,...}
             = ppstrm
   in
@@ -500,7 +480,7 @@ local
       end
 in
 
-  fun add_break (ppstrm : ppstream) (n, break_offset) =
+  fun add_break0 (ppstrm : ppstream0) (n, break_offset) =
     let val PPS{the_token_buffer,the_delim_stack,left_index,
                 right_index,left_sum,right_sum, ++, ...}
               = ppstrm
@@ -518,7 +498,7 @@ in
        push_delim_stack (!right_index,the_delim_stack))
     end
 
-  fun flush_ppstream0(ppstrm : ppstream) =
+  fun flush_ppstream0(ppstrm : ppstream0) =
     let val PPS{the_delim_stack,the_token_buffer, flush, left_index,...}
               = ppstrm
     in
@@ -532,11 +512,11 @@ in
 end (* local *)
 
 
-fun flush_ppstream ppstrm =
+fun flush_ppstream' ppstrm =
     (flush_ppstream0 ppstrm;
-     clear_ppstream ppstrm)
+     clear_ppstream0 ppstrm)
 
-fun add_stringsz (pps : ppstream) (s,slen) =
+fun add_stringsz0 (pps : ppstream0) (s,slen) =
     let val PPS{the_token_buffer,the_delim_stack,consumer,
                 right_index,right_sum,left_sum,
                 left_index,space_left,++,...}
@@ -583,16 +563,53 @@ fun add_stringsz (pps : ppstream) (s,slen) =
    end
 
 
-fun add_string pps s = let
-  val slen = UTF8.size s
-in
-  add_stringsz pps (s,slen)
-end
+type ppstream_interface =
+{ add_stringsz : (string * int) -> unit,
+  add_break : int * int -> unit,
+  begin_block : break_style -> int -> unit,
+  clear_ppstream : unit -> unit,
+  end_block : unit -> unit,
+  flush : unit -> unit,
+  linewidth : int}
 
-(* Derived form. The +2 is for peace of mind *)
-fun add_newline (pps : ppstream) =
-  let val PPS{linewidth, ...} = pps
-  in add_break pps (linewidth+2,0) end
+
+datatype ppstream = OLD of ppstream0
+       | NEW of ppstream_interface
+
+val pps_from_iface = NEW
+
+fun add_break (OLD pps) nm = add_break0 pps nm
+  | add_break (NEW {add_break = bk,...}) nm = bk nm
+
+fun begin_block (OLD pps) bs i = begin_block0 pps bs i
+  | begin_block (NEW{begin_block = bb, ...}) bs i = bb bs i
+
+fun end_block (OLD pps) = end_block0 pps
+  | end_block (NEW {end_block = eb, ...}) = eb()
+
+fun clear_ppstream (OLD pps) = clear_ppstream0 pps
+  | clear_ppstream (NEW {clear_ppstream = cp,...}) = cp()
+
+fun flush_ppstream (OLD pps) = flush_ppstream' pps
+  | flush_ppstream (NEW {flush,...}) = flush()
+
+fun mk_ppstream {consumer,linewidth,flush} =
+    if (linewidth<5) then raise Fail "PP-error: linewidth too_small"
+    else let
+      val buf_size = 3*linewidth
+    in
+      OLD (PPS{consumer = safe_consumer consumer,
+	       linewidth = linewidth,
+	       flush = flush,
+	       the_token_buffer = array(buf_size, initial_token_value),
+	       the_delim_stack = new_delim_stack buf_size,
+	       the_indent_stack = mk_indent_stack (),
+	       ++ = fn i => i := ((!i + 1) mod buf_size),
+	       space_left = ref linewidth,
+	       left_index = ref 0, right_index = ref 0,
+	       left_sum = ref 0, right_sum = ref 0})
+    end
+
 
 (* Derived form. Builds a ppstream, sends pretty printing commands called in
    f to the ppstream, then flushes ppstream.
@@ -603,11 +620,13 @@ fun with_pp ppconsumer ppfn = let
   val ppstrm = mk_ppstream ppconsumer
 in
   ppfn ppstrm;
-  flush_ppstream0 ppstrm
+  flush_ppstream ppstrm
 end handle e as Fail msg =>
            if !catch_withpp_err then
              TextIO.print (">>>> Pretty-printer failure: " ^ msg ^ "\n")
            else raise e
+
+
 
 fun pp_to_string linewidth ppfn ob =
     let val l = ref ([]:string list)
@@ -616,4 +635,23 @@ fun pp_to_string linewidth ppfn ob =
 		(fn ppstrm =>  ppfn ppstrm ob);
 	String.concat(List.rev(!l))
     end
+
+fun lineWidth (OLD pps) = lineWidth0 pps
+  | lineWidth (NEW {linewidth, ...}) = linewidth
+
+fun add_stringsz (OLD pps) ssz = add_stringsz0 pps ssz
+  | add_stringsz (NEW {add_stringsz = add,...}) ssz = add ssz
+
+fun add_string pps s = let
+  val slen = UTF8.size s
+in
+  add_stringsz pps (s,slen)
+end
+
+(* Derived form. The +2 is for peace of mind *)
+fun add_newline (pps : ppstream) =
+  let val lw = lineWidth pps in add_break pps (lw+2,0) end
+
+
+
 end; (* struct *)
