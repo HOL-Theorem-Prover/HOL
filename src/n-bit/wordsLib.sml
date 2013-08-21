@@ -94,22 +94,29 @@ local
            "Term not dimword, dimindex, INT_MIN, INT_MAX, UINT_MAX or FINITE"
     val compset = computeLib.new_compset machine_sizes
     val cnv = Conv.CHANGED_CONV (computeLib.CBV_CONV compset)
-    val ok = Lib.C Lib.mem ["dimword", "dimindex", "INT_MIN", "FINITE",
-                            "INT_MAX", "UINT_MAX"]
-    val name = fst o dest_const o rator
+    val is_numeric =
+       Lib.can (fcpSyntax.dest_numeric_type o boolSyntax.dest_itself)
+    val is_univ_numeric =
+       Lib.can (fcpSyntax.dest_numeric_type o fst o Type.dom_rng o
+                pred_setSyntax.dest_univ)
+    val ok = Lib.C Lib.mem ["words$dimword", "fcp$dimindex",
+                            "words$INT_MIN", "words$INT_MAX", "words$UINT_MAX"]
+    fun suitable t =
+       case Lib.total boolSyntax.dest_strip_comb t of
+          SOME ("pred_set$FINITE", [a]) => is_univ_numeric a
+        | SOME (s, [a]) => ok s andalso is_numeric a
+        | _ => false
 in
    fun SIZES_CONV t =
-      let
-         val _ = ok (Lib.with_exn name t err) orelse raise err
-      in
-         cnv t
-         handle HOL_ERR _ =>
-            let
-               val x = PRIM_SIZES_CONV t
-            in
-               computeLib.add_thms [x] compset; x
-            end
-      end
+      if suitable t
+         then cnv t
+              handle HOL_ERR _ =>
+               let
+                  val x = PRIM_SIZES_CONV t
+               in
+                  computeLib.add_thms [x] compset; x
+               end
+      else raise err
 end
 
 val SIZES_ss =

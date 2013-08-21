@@ -52,43 +52,40 @@ local
                      |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
                      |> Q.GEN `i`
 
-  fun mk_index_thms ty =
-    let
-      val n = fcpSyntax.dest_int_numeric_type ty
-      val indx_thm = Thm.INST_TYPE [Type.beta |-> ty] fcp_beta_thm
-    in
-      List.tabulate(n, fn i =>
-        let val j = numSyntax.term_of_int i in
-          Thm.MP (Thm.SPEC j indx_thm) (mk_size_thm (j,ty))
-        end)
-    end
-
   val encountered_types = ref (Redblackset.empty Type.compare)
 
-  fun new_word_types tm =
+  fun mk_index_thms ty =
+    (if Redblackset.member (!encountered_types, ty)
+        then []
+     else case Lib.total fcpSyntax.dest_int_numeric_type ty of
+             SOME n =>
+               let
+                  val indx_thm = Thm.INST_TYPE [Type.beta |-> ty] fcp_beta_thm
+               in
+                  List.tabulate
+                    (n, fn i =>
+                           let
+                              val j = numSyntax.term_of_int i
+                           in
+                              Thm.MP (Thm.SPEC j indx_thm) (mk_size_thm (j, ty))
+                           end)
+                  before encountered_types :=
+                            Redblackset.add (!encountered_types, ty)
+               end
+           | NONE => [])
+
+  fun new_index_thms tm =
      let
-        val tms = HolKernel.find_terms (fn t =>
-                  case Lib.total wordsSyntax.dim_of t
-                  of SOME ty =>
-                      fcpSyntax.is_numeric_type ty andalso
-                      not (Redblackset.member (!encountered_types, ty)) andalso
-                      (encountered_types :=
-                         Redblackset.add (!encountered_types, ty); true)
-                   | NONE => false) tm
+        val tms = HolKernel.find_terms (Lib.can wordsSyntax.dim_of) tm
      in
-        List.map wordsSyntax.dim_of tms
+        List.concat (List.map (mk_index_thms o wordsSyntax.dim_of) tms)
      end
 
   val cmp = reduceLib.num_compset ()
   val _ = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
   val cnv = computeLib.CBV_CONV cmp
 
-  fun add_index_thms tm =
-     let
-        val new_tys = new_word_types tm
-     in
-          List.app (fn ty => computeLib.add_thms (mk_index_thms ty) cmp) new_tys
-     end
+  fun add_index_thms tm = computeLib.add_thms (new_index_thms tm) cmp
 in
   fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
 
