@@ -772,9 +772,9 @@ val word_join_v2w = Q.store_thm("word_join_v2w",
   `!v1 v2. FINITE univ(:'a) /\ FINITE univ(:'b) ==>
            (word_join (v2w v1 : 'a word) (v2w v2 : 'b word) =
             v2w (v1 ++ fixwidth (dimindex(:'b)) v2))`,
-  wrw [wordsTheory.word_join_index]
+  wrw [wordsTheory.word_join_index, fcpTheory.index_sum]
   \\ wrw [wordsTheory.word_bit, bit_v2w, testbit, length_fixwidth,
-          rich_listTheory.EL_APPEND2]
+          rich_listTheory.EL_APPEND2, fcpTheory.index_sum]
   \\ lrw [el_fixwidth, DECIDE ``0 < d ==> (d <= v + d - (i + 1) = i < v)``]
   \\ Cases_on `LENGTH v1 = 0` \\ lrw [rich_listTheory.EL_APPEND1]);
 
@@ -784,7 +784,7 @@ val word_concat_v2w = Q.store_thm("word_concat_v2w",
             v2w (fixwidth (MIN (dimindex(:'c)) (dimindex(:'a) + dimindex(:'b)))
                           (v1 ++ fixwidth (dimindex(:'b)) v2)))`,
   lrw [wordsTheory.word_concat_def, word_join_v2w, w2w_v2w,
-       arithmeticTheory.MIN_DEF]);
+       arithmeticTheory.MIN_DEF, fcpTheory.index_sum]);
 
 val word_join_v2w_rwt = Q.store_thm("word_join_v2w_rwt",
   `!v1 v2. word_join (v2w v1 : 'a word) (v2w v2 : 'b word) =
