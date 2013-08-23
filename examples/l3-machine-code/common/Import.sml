@@ -452,6 +452,14 @@ datatype monop =
      Abs
    | BNot
    | Cast of ParseDatatype.pretype
+   | FPAbs of int
+   | FPAdd of int
+   | FPEqual of int
+   | FPIsNaN of int
+   | FPLess of int
+   | FPMul of int
+   | FPNeg of int
+   | FPSub of int
    | Fst
    | Head
    | IsAlpha
@@ -459,9 +467,9 @@ datatype monop =
    | IsDigit
    | IsHexDigit
    | IsLower
+   | IsSome
    | IsSpace
    | IsUpper
-   | IsSome
    | K1 of ParseDatatype.pretype
    | Length
    | Log
@@ -482,14 +490,6 @@ datatype monop =
    | ToLower
    | ToUpper
    | ValOf
-   | fpAdd32
-   | fpAdd64
-   | fpMul32
-   | fpMul64
-   | fpNeg32
-   | fpNeg64
-   | fpSub32
-   | fpSub64
 
 datatype binop =
      Add
@@ -643,15 +643,37 @@ local
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
 
+   fun mk_fp_binop f =
+      let
+         val ftm = case f of
+                      FPEqual 32 => machine_ieeeSyntax.fp32Syntax.fp_equal_tm
+                    | FPEqual 64 => machine_ieeeSyntax.fp64Syntax.fp_equal_tm
+                    | FPLess 32 => machine_ieeeSyntax.fp32Syntax.fp_lessThan_tm
+                    | FPLess 64 => machine_ieeeSyntax.fp64Syntax.fp_lessThan_tm
+                    | _ => raise ERR "mk_fp_binop" ""
+         val ty = ftm |> Term.type_of |> Type.dom_rng |> fst
+         val b = Term.mk_var ("b", ty)
+         val c = Term.mk_var ("c", ty)
+         val l = [b, c]
+         val p = pairSyntax.list_mk_pair l
+         val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
+      in
+         fn tm =>
+            (ptm, tm) |> Term.mk_comb
+                      |> PairRules.PBETA_CONV
+                      |> Thm.concl
+                      |> boolSyntax.rhs
+      end
+
    fun mk_fp_triop f =
       let
          val ftm = case f of
-                      fpAdd32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
-                    | fpAdd64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
-                    | fpMul32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
-                    | fpMul64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
-                    | fpSub32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
-                    | fpSub64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
+                      FPAdd 32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
+                    | FPAdd 64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
+                    | FPMul 32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
+                    | FPMul 64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
+                    | FPSub 32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
+                    | FPSub 64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
                     | _ => raise ERR "mk_fp_triop" ""
          val ty = ftm |> Term.type_of
                       |> Type.dom_rng |> snd
@@ -857,8 +879,17 @@ in
            (fn tm =>
               wordsSyntax.mk_sw2sw (tm, wordsSyntax.dest_word_type (Ty ty)))
        | Cast ty => pickCast (Ty ty)
-       | fpNeg32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
-       | fpNeg64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
+       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
+       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
+       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
+       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
+       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPEqual _ => mk_fp_binop m
+       | FPLess _ => mk_fp_binop m
        | _ => mk_fp_triop m
       ) x
 end

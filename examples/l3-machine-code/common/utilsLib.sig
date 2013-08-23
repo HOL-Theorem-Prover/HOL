@@ -7,6 +7,7 @@ sig
 
    val ALL_HYP_CONV_RULE: conv -> rule
    val ALL_HYP_RULE: rule -> rule
+   val BIT_FIELD_INSERT_CONV : string -> string -> conv
    val CHANGE_CBV_CONV: computeLib.compset -> conv
    val ELIM_UNDISCH: rule
    val EXTRACT_CONV: conv
@@ -24,6 +25,8 @@ sig
    val NCONV: int -> conv -> conv
    val PRED_HYP_CONV_RULE: conv -> (term -> bool) -> rule
    val PRED_HYP_RULE: rule -> (term -> bool) -> rule
+   val REC_REG_BIT_FIELD_INSERT_TAC:
+      string -> string -> term quotation -> tactic
    val Run_CONV: string * term -> conv
    val SET_CONV: conv
    val SET_RULE: rule
@@ -59,6 +62,7 @@ sig
    val match_subst: {redex: term, residue: term} list -> term -> term
    val mk_cond_rand_thms: term list -> thm
    val mk_cond_update_thms: hol_type list -> thm list
+   val mk_reg_thm: string -> string -> thm
    val mk_run: string * term -> term -> term
    val mk_rw_net: (thm -> term) -> thm list -> thm LVTermNet.lvtermnet
    val mk_state_id_thm: thm -> string list list -> thm

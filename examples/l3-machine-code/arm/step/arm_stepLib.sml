@@ -333,7 +333,8 @@ local
        ``LoadWritePC imm32``
        |> hd
        |> utilsLib.ALL_HYP_CONV_RULE (SIMP_CONV bool_ss [])
-       |> utilsLib.MATCH_HYP_CONV_RULE (PURE_REWRITE_CONV [rwt]) ``a \/ b``
+       |> utilsLib.MATCH_HYP_CONV_RULE (PURE_REWRITE_CONV [rwt])
+             ``a \/ b : bool``
 in
    val LoadWritePC_rwt = [LoadWritePC_rwt1, LoadWritePC_rwt2, LoadWritePC_rwt3]
 end
@@ -979,7 +980,7 @@ in
                utilsLib.MATCH_HYP_CONV_RULE
                   (utilsLib.INST_REWRITE_CONV
                       [Drule.UNDISCH (DECIDE ``b ==> (a \/ b \/ c = T)``)])
-                  ``a \/ b \/ c`` o
+                  ``a \/ b \/ c : bool`` o
                utilsLib.ALL_HYP_CONV_RULE
                   (DATATYPE_CONV
                    THENC REWRITE_CONV [boolTheory.COND_ID, Aligned_plus]) o
@@ -1416,8 +1417,8 @@ local
        | _ => raise ERR "fetch_thm" "expecting 1 or 2 theorems"
 
    val rule =
-      utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV []) ``a /\ b`` o
-      utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV []) ``a \/ b``
+      utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV []) ``a /\ b : bool`` o
+      utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV []) ``a \/ b : bool``
 
    fun check (l, s) thm =
       if utilsLib.vacuous thm
@@ -1481,7 +1482,7 @@ val DECODE_UNPREDICTABLE_rwt =
 
 val Take_rwt =
   EV [Take_def] [] []
-    ``Take (cond, def)`` |> hd
+    ``Take (c, def)`` |> hd
 
 val ConditionPassed_rwt =
    EV [ConditionPassed_def, CurrentCond_def] [] []
@@ -1583,16 +1584,20 @@ in
    val DecodeVFP =
       DecodeVFP_def
       |> Thm.SPEC (bitstringSyntax.mk_vec 32 0)
+      |> Lib.C Thm.AP_THM st
       |> Conv.RIGHT_CONV_RULE
-             (Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
+             (Thm.BETA_CONV
+              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV
                       [armTheory.boolify28_v2w, boolTheory.literal_case_THM]
               THENC Conv.ONCE_DEPTH_CONV Thm.BETA_CONV
-              THENC Conv.DEPTH_CONV PairedLambda.let_CONV
+              THENC Conv.DEPTH_CONV PairedLambda.GEN_LET_CONV
+              THENC REWRITE_CONV [cond_rand_thms]
               THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.v2w_eq_CONV
-              THENC REWRITE_CONV [armTheory.boolify4_v2w, Decode_simps])
+              THENC Conv.DEPTH_CONV selective_v2w_eq_CONV
+              THENC REWRITE_CONV
+                      [armTheory.boolify4_v2w, Decode_simps, VFPExpandImm])
 
    val DecodeARM_15 = DecodeARM |> inst_cond (K boolSyntax.T) |> REG_RULE
 
@@ -1608,6 +1613,7 @@ in
 end
 
 local
+   val rand_uncurry = utilsLib.mk_cond_rand_thms [``UNCURRY f : 'a # 'b -> 'c``]
    val ConditionPassed_enc = Q.prove(
       `!s c.
          FST (ConditionPassed ()
@@ -1626,7 +1632,8 @@ in
          thm |> Thm.INST s
              |> REWRITE_RULE [dual_rwt, DecodeVFP]
              |> Conv.RIGHT_CONV_RULE EVAL_DATATYPE_CONV
-             |> SIMP_RULE bool_ss [ConditionPassed_enc]
+             |> SIMP_RULE bool_ss
+                  [pairTheory.UNCURRY_DEF, rand_uncurry, ConditionPassed_enc]
       end
 end
 
@@ -1748,7 +1755,9 @@ val arm_patterns = List.map (I ## epattern)
    ("StoreDual (imm)",                      "FFF__T_F_______F____TTTT"),
    ("StoreMultiple",                        "TFF__F_F________________"),
    ("VFPLoadStore",                         "TTFT__F_________TFT_____"),
-   ("VFPData",                              "TTTFF___________TFT____F")
+   ("VFPData",                              "TTTFF___________TFT____F"),
+   ("VFPOther",                             "TTTFT_TT________TFT____F"),
+   ("VFPMrs",                               "TTTFTTTTFFFT____TFTF___T")
   ]
 
 val arm_patterns15 = List.map (I ## epattern)
@@ -2254,7 +2263,23 @@ local
      ("VSTR (double,+imm,pc)",
         ("VFPLoadStore", [xT 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
      ("VSTR (double,-imm,pc)",
-        ("VFPLoadStore", [xF 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11]))
+        ("VFPLoadStore", [xF 0, xF 2, xT 3, xT 4, xT 5, xT 6, xT 11])),
+     ("VMOV (single,reg)",
+        ("VFPOther", [xF 1, xF 2, xF 3, xF 4, xF 9, xF 10, xT 11])),
+     ("VMOV (double,reg)",
+        ("VFPOther", [xF 1, xF 2, xF 3, xF 4, xT 9, xF 10, xT 11])),
+     ("VMOV (single,imm)", ("VFPOther", [xF 9, xF 11])),
+     ("VMOV (double,imm)", ("VFPOther", [xT 9, xF 11])),
+     ("VCMP (single,zero)",
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 11])),
+     ("VCMP (double,zero)",
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 11])),
+     ("VCMP (single)",
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 11])),
+     ("VCMP (double)",
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 11])),
+     ("VMRS (nzcv)", ("VFPMrs", [xT 0, xT 1, xT 2, xT 3])),
+     ("VMRS", ("VFPMrs", []))
      ]
    fun list_instructions () = List.map fst (Redblackmap.listItems ast)
    fun printn s = TextIO.print (s ^ "\n")
@@ -2524,7 +2549,7 @@ val BranchTarget_rwts =
      |> List.map
            (utilsLib.MATCH_HYP_RULE
                (utilsLib.INST_REWRITE_RULE [AlignedPC_plus] o
-                ASM_REWRITE_RULE []) ``a \/ b`` o
+                ASM_REWRITE_RULE []) ``a \/ b : bool`` o
             utilsLib.INST_REWRITE_RULE
                [AlignedPC_plus_thumb, AlignedPC_plus_arm] o
             ASM_REWRITE_RULE [] o
@@ -2611,7 +2636,7 @@ fun BranchLinkExchangeImmediate_rwt (c, t, rwt) =
               THENC wordsLib.WORD_EVAL_CONV))
      |> List.map
           (utilsLib.MATCH_HYP_CONV_RULE
-              (REWRITE_CONV [Aligned_Align_plus_minus]) ``a \/ b`` o
+              (REWRITE_CONV [Aligned_Align_plus_minus]) ``a \/ b : bool`` o
            FULL_DATATYPE_RULE o
            Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [rwt]))
 
@@ -2785,7 +2810,7 @@ val Move_rwt =
       |> List.concat
       |> List.map (utilsLib.MATCH_HYP_CONV_RULE
                       (REWRITE_CONV [wordsTheory.WORD_OR_CLAUSES])
-                      ``a \/ b \/ c``)
+                      ``a \/ b \/ c : bool``)
       |> addThms
 
 val () = setEvConv (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV
@@ -3012,7 +3037,7 @@ val rule_sp =
    utilsLib.MATCH_HYP_RULE
      (PURE_ASM_REWRITE_RULE [boolTheory.OR_CLAUSES] o
       Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]))
-     ``a \/ b \/ c``
+     ``a \/ b \/ c : bool``
 
 fun rule_pc w =
    rule_sp o
@@ -3215,7 +3240,7 @@ val rule_npc =
    Shift_C_DecodeImmShift_rule o
    rule_sp o
    utilsLib.MATCH_HYP_CONV_RULE
-     (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c``
+     (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c : bool``
 
 fun rule_npc2 r =
    FULL_DATATYPE_RULE o
@@ -3225,7 +3250,7 @@ fun rule_npc2 r =
        THENC REWRITE_CONV [Aligned_plus]) o
    rule_sp o
    utilsLib.MATCH_HYP_CONV_RULE
-      (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c`` o
+      (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c : bool`` o
    FULL_DATATYPE_RULE o
    Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [r]))
 
@@ -3418,13 +3443,54 @@ fun fpMemEV f c tm =
 
 fun fpEV c tm =
    EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
-       dfn'vmla_vmls_def, IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
+       dfn'vmla_vmls_def, dfn'vmov_imm_def, dfn'vmov_def, dfn'vcmp_def,
+       dfn'vmrs_def, IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
        FPAdd64_def, FPAdd32_def, FPSub64_def, FPSub32_def, fpreg_div2,
-       FPMul64_def, FPMul32_def, arm_stepTheory.RoundingMode] [] c tm
+       FPMul64_def, FPMul32_def, FPZero64_def, FPZero32_def,
+       write'reg'FPSCR_def, fpscr_nzcv,
+       arm_stepTheory.RoundingMode, arm_stepTheory.get_vfp_imm32,
+       wordsTheory.word_concat_0_0] [] c tm
    |> List.map rule
 
 val mk_fpreg = bitstringSyntax.mk_vec 5
 val () = setEvConv (Conv.DEPTH_CONV bitstringLib.word_bit_CONV)
+
+val vmov_rwt =
+   fpEV (TF `single`)
+      ``dfn'vmov (single, ^(mk_fpreg 0), ^(mk_fpreg 5))``
+   |> addThms
+
+val vmov_imm_rwt =
+   fpEV [[`single` |-> boolSyntax.F],
+         [`single` |-> boolSyntax.T,
+          `imm64` |-> bitstringSyntax.mk_v2w
+                        (bitstringSyntax.mk_bstring 32 5, ``:64``)]]
+      ``dfn'vmov_imm (single, ^(mk_fpreg 0), imm64)``
+   |> addThms
+
+val vcmp_rwt =
+   fpEV [[`dp` |-> boolSyntax.F, `m_w_z` |-> ``NONE:word5 option``],
+         [`dp` |-> boolSyntax.T, `m_w_z` |-> ``NONE:word5 option``],
+         [`dp` |-> boolSyntax.F, `m_w_z` |-> ``SOME (^(mk_fpreg 5))``],
+         [`dp` |-> boolSyntax.T, `m_w_z` |-> ``SOME (^(mk_fpreg 5))``]]
+      ``dfn'vcmp (dp, ^(mk_fpreg 0), m_w_z)``
+   |> addThms
+
+val vmrs_rwt =
+   List.map (fn (r, w) =>
+      EV [dfn'vmrs_def, r, w, reg_fpscr] [[``t <> 15w: word4``]] []
+         ``dfn'vmrs t``)
+      (ListPair.zip (R_rwts, write'R_rwts))
+      |> List.concat
+      |> List.map (utilsLib.MATCH_HYP_CONV_RULE
+                      (REWRITE_CONV [ASSUME ``t <> 13w: word4``])
+                      ``a \/ b \/ c : bool``)
+      |> addThms
+
+val vmrs15_rwt =
+   EV [dfn'vmrs_def] [] []
+      ``dfn'vmrs 15w``
+      |> addThms
 
 val vadd_rwt =
    fpEV (TF `dp`)
@@ -3490,32 +3556,8 @@ val COND_B_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
 val COND_T_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
 val COND_E_CONV = Conv.RAND_CONV
 
-fun EXTRACT_BIT_CONV tm =
-   if fcpSyntax.is_fcp_index tm
-      then blastLib.BBLAST_CONV tm
-   else Conv.NO_CONV tm
-
-val PSR_CONV =
-   REWRITE_CONV
-     ([boolTheory.COND_ID,
-       utilsLib.mk_cond_rand_thms
-          (``bit_field_insert a b (w: 'a word) : 'b word -> 'b word`` ::
-           a_of "PSR" @ a_of "arm_state" @ u_of "PSR" @ u_of "arm_state")] @
-        utilsLib.datatype_rewrites "arm" ["PSR", "arm_state"])
-   THENC Conv.DEPTH_CONV EXTRACT_BIT_CONV
-   THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true)
-
-val PSR_TAC =
-   Cases
-   \\ STRIP_TAC
-   \\ REWRITE_TAC [reg'PSR_def]
-   \\ CONV_TAC PSR_CONV
-   \\ BETA_TAC
-   \\ rewrite_tac
-        [rec'PSR_def, PSR_component_equality, wordsTheory.bit_field_insert_def]
-   \\ CONV_TAC PSR_CONV
-   \\ REPEAT CONJ_TAC
-   \\ blastLib.BBLAST_TAC
+val PSR_CONV = BIT_FIELD_INSERT_CONV "arm" "PSR"
+val PSR_TAC = REC_REG_BIT_FIELD_INSERT_TAC "arm" "PSR"
 
 val PSR_FIELDS = Q.prove(
    `(!p v.
@@ -3531,7 +3573,7 @@ val PSR_FIELDS = Q.prove(
     (!p v.
        rec'PSR (bit_field_insert 15 10 (v: word6) (reg'PSR p)) =
        p with <|IT := bit_field_insert 7 2 v p.IT|>)`,
-   REPEAT CONJ_TAC \\ PSR_TAC)
+   REPEAT CONJ_TAC \\ PSR_TAC `p`)
 
 val PSR_FLAGS = Q.prove(
    `(!b p v.
@@ -3540,7 +3582,7 @@ val PSR_FLAGS = Q.prove(
     (!b p v.
        rec'PSR (bit_field_insert 5 5 (if b then 1w:word1 else 0w) (reg'PSR p)) =
        p with <|T := b|>)`,
-   REPEAT CONJ_TAC \\ Cases \\ PSR_TAC)
+   REPEAT CONJ_TAC \\ Cases \\ PSR_TAC `p`)
 
 val IT_extract =
    utilsLib.map_conv utilsLib.EXTRACT_CONV

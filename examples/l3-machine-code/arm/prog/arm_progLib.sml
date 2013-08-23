@@ -60,8 +60,13 @@ val state_id =
       [["REG", "undefined"],
        ["FP", "REG", "undefined"],
        ["CPSR", "CurrentCondition", "Encoding", "REG", "undefined"],
+       ["CPSR", "CurrentCondition", "Encoding", "undefined"],
        ["MEM", "REG", "undefined"]
       ]
+
+val fp_id =
+   utilsLib.mk_state_id_thm armTheory.FP_component_equality
+      [["FPSCR"]]
 
 val arm_frame =
    stateLib.update_frame_state_thm arm_proj_def
@@ -86,6 +91,18 @@ val arm_frame =
        (`K arm_c_CPSR_E`,
         `\s:arm_state a w. s with CPSR := cpsr with E := w`,
         `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_FP_FPSCR_N`,
+        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with N := w`,
+        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
+       (`K arm_c_FP_FPSCR_Z`,
+        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with Z := w`,
+        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
+       (`K arm_c_FP_FPSCR_C`,
+        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with C := w`,
+        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
+       (`K arm_c_FP_FPSCR_V`,
+        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with V := w`,
+        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
        (`arm_c_REG`, `\s:arm_state a w. s with REG := (a =+ w) r`,
         `\s:arm_state. s with REG := r`),
        (`arm_c_MEM`, `\s:arm_state a w. s with MEM := (a =+ w) r`,
@@ -190,6 +207,10 @@ local
        | "arm_CPSR_Z" => 10
        | "arm_CPSR_C" => 11
        | "arm_CPSR_V" => 12
+       | "arm_FP_FPSCR_N" => 13
+       | "arm_FP_FPSCR_Z" => 14
+       | "arm_FP_FPSCR_C" => 15
+       | "arm_FP_FPSCR_V" => 16
        | _ => ~1
    val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -249,9 +270,17 @@ local
          ("arm$PSR_T_fupd", "arm_CPSR_T"),
          ("arm$PSR_E_fupd", "arm_CPSR_E")] [] []
         (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
+   val fpscr_footprint =
+      stateLib.write_footprint arm_1 arm_2 []
+        [("arm$FPSCR_N_fupd", "arm_FP_FPSCR_N"),
+         ("arm$FPSCR_Z_fupd", "arm_FP_FPSCR_Z"),
+         ("arm$FPSCR_C_fupd", "arm_FP_FPSCR_C"),
+         ("arm$FPSCR_V_fupd", "arm_FP_FPSCR_V")] [] []
+        (fn _ => true)
    val fp_footprint =
       stateLib.write_footprint arm_1 arm_2
-        [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] [] []
+        [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] []
+        [("arm$FP_FPSCR_fupd", fpscr_footprint)]
         (fn (s, l) => s = "arm$arm_state_FP" andalso l = [st])
 in
    val arm_write_footprint =
@@ -293,7 +322,6 @@ local
    fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
    val regs = List.mapPartial (Lib.total dest_arm_REG)
    val fp_regs = List.mapPartial (Lib.total dest_arm_FP_REG)
-   val pc_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
    fun instantiate (a, b) =
       if Term.is_var a then SOME (a |-> b)
       else if a = b then NONE
@@ -322,6 +350,8 @@ local
           List.mapPartial instantiate (ListPair.zip (dest_reg n tm2, l)),
           [tm2])
       end
+   fun exists_free l =
+      List.exists (fn (t, _, _) => not (List.null (Term.free_vars t))) l
    fun groupings n ok rs =
      rs |> utilsLib.partitions
         |> List.map
@@ -332,6 +362,7 @@ local
                            List.partition (fn (_, a, b) => a = b) l
                      in
                         if 1 < List.length l andalso List.length changed < 2
+                           andalso exists_free l
                            then SOME (changed @ unchanged)
                         else NONE
                      end))
@@ -548,7 +579,8 @@ local
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
    val arm_rwts =
-      List.drop (utilsLib.datatype_rewrites "arm" ["arm_state", "PSR", "FP"], 1)
+      List.drop (utilsLib.datatype_rewrites "arm"
+                   ["arm_state", "PSR", "FP", "FPSCR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
    val spec =
       stateLib.spec
@@ -556,7 +588,7 @@ local
            [arm_stepTheory.get_bytes]
            []
            (arm_select_state_pool_thm :: arm_select_state_thms)
-           [arm_frame, arm_frame_hidden, state_id]
+           [arm_frame, arm_frame_hidden, state_id, fp_id]
            component_11
            [word, word5, ``:RName``]
            EXTRA_TAC STATE_TAC
@@ -729,9 +761,25 @@ spec (thm, t)
 
 val thm = saveSpecs "specs"
 
-  arm_config "vfp"
+val () = arm_config "vfp"
+val () = arm_config ""
 
+val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
+
+arm_spec_hex "eeb65a00"
+set_trace "stateLib.spec" 1
+
+  arm_spec "VMOV (single,reg)";
+  arm_spec "VMOV (double,reg)";
+  arm_spec "VMOV (single,imm)";
+  arm_spec "VMOV (double,imm)";
+  arm_spec "VMRS (nzcv)";
+  arm_spec "VMRS";
+  arm_spec "VCMP (single,zero)";
+  arm_spec "VCMP (double,zero)";
+  arm_spec "VCMP (single)";
+  arm_spec "VCMP (double)";
 
   arm_spec "VADD (single)";
   arm_spec "VSUB (single)";
@@ -914,7 +962,6 @@ val arm_spec_hex = Count.apply arm_spec_hex
   arm_spec_hex "C1A00000"; (* MOVGT *)
   arm_spec_hex "D1A00000"; (* MOVLE *)
 
-val () = arm_config ""
 
 List.length hex_list
 val () = Count.apply (List.app (General.ignore o arm_spec_hex)) hex_list
@@ -930,44 +977,6 @@ val () =
          end))
          hex_list
 
-         (List.take (hex_list, 10))
-
-val tm = rst
-val SOME ("arm$FP_REG_fupd", [r, _]) =
-   Lib.total
-      (boolSyntax.dest_strip_comb o combinSyntax.dest_K_1) r
-val ("arm$arm_state_FP_fupd", [r, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_CPSR_fupd", [c, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_MEM_fupd", [m, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_REG_fupd", [r, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_CurrentCondition_fupd", [c, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_Encoding_fupd", [e, rst]) =
-   boolSyntax.dest_strip_comb tm
-val ("arm$arm_state_undefined_fupd", [u, rst]) =
-   boolSyntax.dest_strip_comb tm
-
-val next_def = arm_stepTheory.NextStateARM_def
-val instr_def = arm_instr_def
-val proj_def = arm_proj_def
-val comp_defs = arm_comp_defs
-val cpool = mk_arm_code_pool
-val extras = [] : stateLib.footprint_extra list
-val q = [] : term list
-
-val imp_spec = ARM_IMP_SPEC
-val read_thms = [arm_stepTheory.get_bytes]
-val write_thms = []: thm list
-val select_state_thms = (arm_select_state_pool_thm :: arm_select_state_thms)
-val frame_thms = [arm_frame, arm_frame_hidden, state_id]
-val map_tys = [word, word5, ``:RName``]
-val mk_pre_post = arm_mk_pre_post
-val write = arm_write_footprint
-
 fun exclude s = List.exists (fn e => String.isPrefix e s) ["LDM", "STM"]
 
 val l = List.filter (not o exclude) (arm_stepLib.list_instructions ())
@@ -982,34 +991,39 @@ val l = Lib.mk_set arm_tests
 length arm_tests
 length l
 
-val stp = arm_stepLib.arm_step_hex ""
-val dec = arm_stepLib.decode_arm_hex (arm_configLib.mk_config_terms "")
-List.length (!fails)
-val fs = List.map (fn s => (s, Lib.total dec s)) (!fails)
-
-val s = "e8bd85f8"
-val s = fst (List.nth (fs, 10))
-
-dec s
-stp s
-arm_spec_hex s
-
 val fails = ref ([]:string list)
 val pos = ref 0;
 
-val () = List.app (fn s => (arm_spec_hex s
-                            handle HOL_ERR _ => (fails := s::(!fails); TRUTH)
-                            ; Portable.inc pos))
-                  (List.drop (l, !pos))
+val () =
+   (Count.apply
+      (List.app (fn s => (arm_spec_hex s
+                          handle HOL_ERR _ => (fails := s::(!fails); [TRUTH])
+                          ; Portable.inc pos)))
+      (List.drop (l, !pos))
+    ; print "Done\n")
 
 fails
 pos
-List.length l
+List.length (!fails)
+
+val stp = arm_stepLib.arm_step_hex ""
+val dec = arm_stepLib.arm_decode_hex ""
+val fs = List.map (fn s => (s, Lib.total dec s)) (!fails)
+
 val s = List.nth (l, !pos)
 val thm = step (List.nth (l, !pos))
 val thm = Count.apply arm_spec (List.nth (l, !pos))
 
-val ce = Count.apply e
+(* --- *)
+
+val imp_spec = ARM_IMP_SPEC
+val read_thms = [arm_stepTheory.get_bytes]
+val write_thms = []: thm list
+val select_state_thms = (arm_select_state_pool_thm :: arm_select_state_thms)
+val frame_thms = [arm_frame, arm_frame_hidden, state_id, fp_id]
+val map_tys = [word, word5, ``:RName``]
+val mk_pre_post = arm_mk_pre_post
+val write = arm_write_footprint
 
 *)
 

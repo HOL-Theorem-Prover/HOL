@@ -1002,6 +1002,45 @@ val get_bytes = Q.store_thm("get_bytes",
 
 (* ------------------------------------------------------------------------ *)
 
+val get_vfp_imm32 = Q.store_thm("get_vfp_imm32",
+   `(31 >< 0)
+       (v2w [b31; b30; b29; b28; b27; b26; b25; b24;
+             b23; b22; b21; b20; b19; b18; b17; b16;
+             b15; b14; b13; b12; b11; b10; b9;  b8;
+             b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word64) =
+     v2w [b31; b30; b29; b28; b27; b26; b25; b24;
+          b23; b22; b21; b20; b19; b18; b17; b16;
+          b15; b14; b13; b12; b11; b10; b9;  b8;
+          b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word32`,
+   blastLib.BBLAST_TAC
+   )
+
+val VFPExpandImm = Q.store_thm("VFPExpandImm",
+   `VFPExpandImm
+       ((v2w [b7; b6; b5; b4]:word4) @@ (v2w [b3; b2; b1; b0]:word4),b) =
+    if b then
+       v2w [b7; ~b6; b6; b6; b6; b6; b6; b5; b4; b3; b2; b1; b0;
+            F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F]
+    else
+       v2w [b7; ~b6; b6; b6; b6; b6; b6; b6; b6; b6; b5; b4; b3; b2; b1; b0;
+            F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F;
+            F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F; F;
+            F; F; F; F]`,
+    lrw [VFPExpandImm_def]
+    \\ blastLib.BBLAST_TAC
+    )
+
+val fpscr_nzcv = Q.store_thm("fpscr_nzcv",
+   `!x:word4 fpscr.
+      rec'FPSCR (bit_field_insert 31 28 x (reg'FPSCR fpscr)) =
+      fpscr with <| N := x ' 3; Z := x ' 2; C := x ' 1; V := x ' 0 |>`,
+   utilsLib.REC_REG_BIT_FIELD_INSERT_TAC "arm" "FPSCR" `fpscr`
+   )
+
+val reg_fpscr = Theory.save_thm("reg_fpscr", utilsLib.mk_reg_thm "arm" "FPSCR")
+
+(* ------------------------------------------------------------------------ *)
+
 val v2w_13_15_rwts = Q.store_thm("v2w_13_15_rwts",
    `((v2w [F; b2; b1; b0] = 13w: word4) = F) /\
     ((v2w [b2; F; b1; b0] = 13w: word4) = F) /\

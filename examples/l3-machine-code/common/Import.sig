@@ -5,6 +5,14 @@ sig
        Abs
      | BNot
      | Cast of ParseDatatype.pretype
+     | FPAbs of int
+     | FPAdd of int
+     | FPEqual of int
+     | FPIsNaN of int
+     | FPLess of int
+     | FPMul of int
+     | FPNeg of int
+     | FPSub of int
      | Fst
      | Head
      | IsAlpha
@@ -12,9 +20,9 @@ sig
      | IsDigit
      | IsHexDigit
      | IsLower
+     | IsSome
      | IsSpace
      | IsUpper
-     | IsSome
      | K1 of ParseDatatype.pretype
      | Length
      | Log
@@ -31,18 +39,10 @@ sig
      | Snd
      | SofL
      | Some
+     | Tail
      | ToLower
      | ToUpper
-     | Tail
      | ValOf
-     | fpAdd32
-     | fpAdd64
-     | fpMul32
-     | fpMul64
-     | fpNeg32
-     | fpNeg64
-     | fpSub32
-     | fpSub64
 
    datatype binop =
        Add

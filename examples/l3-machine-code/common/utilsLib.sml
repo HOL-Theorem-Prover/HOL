@@ -831,6 +831,110 @@ fun theory_compset x =
 
 (* ---------------------------- *)
 
+(* Help prove theorems of the form:
+
+|- rec'r (bit_field_insert h l w (reg'r q)) = q with <| ? := ?; ... |>
+
+Where "r" is some register (record) component in the theory "thy".
+
+*)
+
+local
+   fun EXTRACT_BIT_CONV tm =
+      if fcpSyntax.is_fcp_index tm
+         then blastLib.BBLAST_CONV tm
+      else Conv.NO_CONV tm
+   val bit_field_insert_tm =
+      ``bit_field_insert a b (w: 'a word) : 'b word -> 'b word``
+in
+   fun BIT_FIELD_INSERT_CONV thy r =
+      let
+         val s = thy ^ "_state"
+         val ty1 = Type.mk_thy_type {Thy = thy, Tyop = r, Args = []}
+         val ty2 = Type.mk_thy_type {Thy = thy, Tyop = s, Args = []}
+         val a = accessor_fns ty1 @ accessor_fns ty2
+         val u = update_fns ty1 @ update_fns ty2
+      in
+         REWRITE_CONV
+           ([boolTheory.COND_ID,
+             mk_cond_rand_thms (bit_field_insert_tm :: a @ u)] @
+             datatype_rewrites thy [r, s])
+         THENC Conv.DEPTH_CONV EXTRACT_BIT_CONV
+         THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true)
+      end
+   fun REC_REG_BIT_FIELD_INSERT_TAC thy r =
+      let
+         val cnv = BIT_FIELD_INSERT_CONV thy r
+         val f = DB.fetch thy
+         val reg' = f ("reg'" ^ r ^ "_def")
+         val rec' = f ("rec'" ^ r ^ "_def")
+         val eq = f (r ^ "_component_equality")
+      in
+         fn q =>
+            Cases_on q
+            THEN TRY STRIP_TAC
+            THEN REWRITE_TAC [reg']
+            THEN CONV_TAC cnv
+            THEN BETA_TAC
+            THEN REWRITE_TAC [rec', eq, wordsTheory.bit_field_insert_def]
+            THEN CONV_TAC cnv
+            THEN REPEAT CONJ_TAC
+            THEN blastLib.BBLAST_TAC
+      end
+end
+
+(* Make a theorem of the form
+
+|- !x. reg'r x = v2w [x.?; ...]
+
+*)
+
+local
+   fun mk_component_subst v =
+      fn h =>
+         let
+            val (x, y) = boolSyntax.dest_eq h
+         in
+            x |-> Term.mk_comb (Term.rator y, v)
+         end
+   fun eval_idx c i = 
+      rhsc (numLib.REDUCE_CONV (Term.mk_comb (c, numSyntax.term_of_int i)))
+in
+   fun mk_reg_thm thy r =
+      let
+         val ftch = DB.fetch thy
+         val reg' = ftch ("reg'" ^ r ^ "_def")
+         val a = ftch (r ^ "_accessors")
+         val ((_, v), (vs, m)) =
+            reg'
+            |> Drule.SPEC_ALL
+            |> rhsc
+            |> Term.dest_comb
+            |> (Term.dest_comb ## boolSyntax.strip_abs)
+         val ty = Term.type_of v
+         val f = case TypeBase.constructors_of ty of
+                    [f] => f
+                  | _ => raise ERR "" ""
+         val mk_s = mk_component_subst v o Thm.concl o SYM o Drule.SPECL vs
+         val s = List.map mk_s (Drule.CONJUNCTS a)
+         val (ix, cnds) = m |> wordsSyntax.dest_word_modify |> fst
+                            |> Term.rand
+                            |> pairSyntax.dest_pabs
+         val cnds = Term.mk_abs (fst (pairSyntax.dest_pair ix), cnds)
+         val ty = wordsSyntax.dim_of m         val l = 
+            List.tabulate (fcpSyntax.dest_int_numeric_type ty, eval_idx cnds)
+         val tm = (Term.subst s o bitstringSyntax.mk_v2w)
+                     (listSyntax.mk_list (List.rev l, Type.bool), ty)
+      in
+         Tactical.prove
+            (boolSyntax.mk_eq (Term.mk_comb (get_function reg', v), tm),
+             REC_REG_BIT_FIELD_INSERT_TAC thy r `^v`)
+         |> Drule.GEN_ALL
+      end
+end
+
+(* ---------------------------- *)
+
 local
    val dr = Type.dom_rng o Term.type_of
    val dom = fst o dr
