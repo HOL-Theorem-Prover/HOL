@@ -28,16 +28,14 @@ in
    val arm_2 =
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
    val word2 = wordsSyntax.mk_int_word_type 2
-   val word4 = wordsSyntax.mk_int_word_type 4
    val word5 = wordsSyntax.mk_int_word_type 5
    val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
-   val (_, mk_arm_MEM, dest_arm_MEM, is_arm_MEM) = arm_2 "arm_MEM"
+   val (_, _, dest_arm_MEM, is_arm_MEM) = arm_2 "arm_MEM"
    val (_, mk_arm_REG, dest_arm_REG, is_arm_REG) = arm_2 "arm_REG"
-   val (_, mk_arm_FP_REG, dest_arm_FP_REG, is_arm_FP_REG) = arm_2 "arm_FP_REG"
-   val (_, mk_arm_Extensions, dest_arm_Extensions, is_arm_Extensions) =
-      arm_2 "arm_Extensions"
+   val (_, _, dest_arm_FP_REG, is_arm_FP_REG) = arm_2 "arm_FP_REG"
+   val (_, _, dest_arm_Extensions, is_arm_Extensions) = arm_2 "arm_Extensions"
    fun mk_arm_PC v = mk_arm_REG (pc, v)
 end
 
@@ -461,6 +459,10 @@ local
              | ("arm_prog$arm_CPSR_Z", [v]) => g (v, "z", Type.bool)
              | ("arm_prog$arm_CPSR_C", [v]) => g (v, "c", Type.bool)
              | ("arm_prog$arm_CPSR_V", [v]) => g (v, "v", Type.bool)
+             | ("arm_prog$arm_FP_FPSCR_N", [v]) => g (v, "fp_n", Type.bool)
+             | ("arm_prog$arm_FP_FPSCR_Z", [v]) => g (v, "fp_z", Type.bool)
+             | ("arm_prog$arm_FP_FPSCR_C", [v]) => g (v, "fp_c", Type.bool)
+             | ("arm_prog$arm_FP_FPSCR_V", [v]) => g (v, "fp_v", Type.bool)
              | ("arm_prog$arm_FP_FPSCR_RMode", [v]) => g (v, "rmode", word2)
              | ("arm_prog$arm_FP_REG", [x, v]) =>
                  (case Lib.total (Int.toString o wordsSyntax.uint_of_word) x of
@@ -683,6 +685,8 @@ local
       in
          simp_triple_rule (Thm.INST a thm)
       end
+   val mk_thm_set =
+      Lib.op_mk_set (fn t1 => fn t2 => Term.aconv (Thm.concl t1) (Thm.concl t2))
 in
    fun set_newline s = newline := s
    fun arm_config opt =
@@ -725,7 +729,7 @@ in
                     in
                        if List.null l
                           then loop looped i "failed to find suitable spec" s
-                       else l
+                       else mk_thm_set l
                     end
                 | NONE => loop looped i "failed to add suitable spec" s
             end)
