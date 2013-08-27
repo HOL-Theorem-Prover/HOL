@@ -57,8 +57,12 @@ This should result in less complicated definitions (and accompanying induction p
 <ul>
 <li><p> Type abbreviations involving array types (of the form <code>ty1[ty2]</code>) weren’t being pretty-printed.
 Thanks to Hamed Nemati for the bug report.
+(<a href="http://github.com/mn200/HOL/issues/106">GitHub issue</a>)
 
-<li><p> It was possible to prove a theorem which caused an unexportable theory.  Thanks to Joseph Chan for the bug report.
+<li><p>
+It was possible to prove a theorem which caused an unexportable theory.
+Thanks to Joseph Chan for the bug report.
+(<a href="http://github.com/mn200/HOL/issues/115">GitHub issue</a>)
 </ul>
 
 <h2 id="new-theories">New theories:</h2>
@@ -73,11 +77,12 @@ If the goal is of the form
 </pre>
 <p>and there is an assumption of the form <code>Q(t)</code> (say), then <code>HINT_EXISTS_TAC</code> applied to this goal will instantiate the existential with the term <code>t</code>.
 
-<p>Thanks to Vincent Aravantinos for the implementation of this tactic.
+<p>Thanks to Vincent Aravantinos for the <a href="http://github.com/mn200/HOL/commit/e5e35f623cbdb19e1331b119fc5dd3d11f019016">implementation</a> of this tactic.
 
 <li><p>A new tactic, <code>suffices_by</code>, an infix, taking two arguments, a quotation and a tactic.
 When <code>`some term` suffices_by tac</code> is executed, the system attempts to prove that <code>some term</code> implies the current goal by applying <code>tac</code>.
 The sub-goal(s) resulting from the application of <code>tac</code> will be presented to the user, along with <code>some term</code>.
+(<a href="http://github.com/mn200/HOL/issues/116">GitHub issue</a>)
 </p>
 </ul>
 
@@ -100,6 +105,7 @@ Similarly, exporting code with <code>EmitML</code> will continue to work.
 
 <p>Thus, SML code that takes <code>MEM</code>-terms apart using functions like <code>rand</code> and <code>rator</code> will likely need to be adjusted.
 If the SML code uses <code>listSyntax.{dest,mk,is}_mem</code>, it will be fine.
+(<a href="http://github.com/mn200/HOL/issues/52">GitHub issue</a>)
 
 <li><p>The case-constants generated for algebraic data types now have different types.
 The value that is “switched on” is now the first argument of the constant rather than the last.
@@ -140,6 +146,8 @@ For example, <code>numSyntax.mk_num_case</code> still has the type
 </pre>
 <p> and the returned term-triple still corresponds to the 0-case, the successor-case and the number-argument (in that order), as before.
 This is despite the fact that the underlying term has those sub-terms in a different order (the number-argument comes first).
+(<a href="http://github.com/mn200/HOL/issues/97">GitHub issue</a>)
+
 
 <li><p>
 The various printing traces in the <code>Goalstack</code> module have been renamed to all be of the form <code>"Goalstack.&lt;some_name&gt;"</code>.
