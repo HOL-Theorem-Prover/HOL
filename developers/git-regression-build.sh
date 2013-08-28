@@ -151,5 +151,5 @@ maybeBuild ()
  fi &&
  echo "-- Configuration Description Ends --" &&
  echo &&
- maybeBuild) |
+ maybeBuild "$@") |
  $gbs "$from" "$holid"
