@@ -3444,7 +3444,7 @@ fun fpMemEV f c tm =
 fun fpEV c tm =
    EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
        dfn'vmla_vmls_def, dfn'vmov_imm_def, dfn'vmov_def, dfn'vcmp_def,
-       dfn'vmrs_def, IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
+       IncPC_rwt, S_def, D_def, write'S_def, write'D_def,
        FPAdd64_def, FPAdd32_def, FPSub64_def, FPSub32_def, fpreg_div2,
        FPMul64_def, FPMul32_def, FPZero64_def, FPZero32_def,
        write'reg'FPSCR_def, fpscr_nzcv,
@@ -3478,7 +3478,7 @@ val vcmp_rwt =
 
 val vmrs_rwt =
    List.map (fn (r, w) =>
-      EV [dfn'vmrs_def, r, w, reg_fpscr] [[``t <> 15w: word4``]] []
+      EV [dfn'vmrs_def, IncPC_rwt, r, w, reg_fpscr] [[``t <> 15w: word4``]] []
          ``dfn'vmrs t``)
       (ListPair.zip (R_rwts, write'R_rwts))
       |> List.concat
@@ -3488,7 +3488,7 @@ val vmrs_rwt =
       |> addThms
 
 val vmrs15_rwt =
-   EV [dfn'vmrs_def] [] []
+   EV [dfn'vmrs_def, IncPC_rwt] [] []
       ``dfn'vmrs 15w``
       |> addThms
 
