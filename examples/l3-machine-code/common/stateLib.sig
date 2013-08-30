@@ -30,7 +30,7 @@ sig
    val vvar: hol_type -> term
    val varReset: unit -> unit
    val write_footprint:
-     (string -> term * (term -> term)) ->
+     (string -> term * (term -> term) * (term -> term) * (term -> bool)) ->
      (string -> term * (term * term -> term) * (term -> term * term) *
       (term -> bool)) ->
      (string * string * term) list ->

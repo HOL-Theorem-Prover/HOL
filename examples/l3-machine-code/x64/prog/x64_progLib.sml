@@ -20,7 +20,6 @@ val x64_proj_def = x64_progTheory.x64_proj_def
 val x64_comp_defs = x64_progTheory.component_defs
 
 val x64_1 =
-   (fn (tm, mk, _, _) => (tm, mk)) o
    HolKernel.syntax_fns "x64_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
 val x64_2 =
    HolKernel.syntax_fns "x64_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
@@ -28,7 +27,7 @@ val byte = wordsSyntax.mk_int_word_type 8
 val word = wordsSyntax.mk_int_word_type 16
 val dword = wordsSyntax.mk_int_word_type 32
 val qword = wordsSyntax.mk_int_word_type 64
-val (_, mk_x64_RIP) = x64_1 "x64_RIP"
+val (_, mk_x64_RIP, _, _) = x64_1 "x64_RIP"
 val (_, mk_x64_EFLAGS, dest_x64_EFLAGS, _) = x64_2 "x64_EFLAGS"
 val (_, mk_x64_MEM, dest_x64_MEM, _) = x64_2 "x64_MEM"
 val (_, mk_x64_REG, dest_x64_REG, _) = x64_2 "x64_REG"

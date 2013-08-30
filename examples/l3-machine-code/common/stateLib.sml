@@ -634,7 +634,7 @@ local
       end
    fun mk_footprint1 syntax1 (c:string) =
       let
-         val (tm, mk) = syntax1 c
+         val (tm, mk, _:term -> term, _:term -> bool) = syntax1 c
          val ty = utilsLib.dom (Term.type_of tm)
       in
          Component
@@ -648,7 +648,7 @@ local
       end
    fun mk_footprint1b syntax1 (c:string) =
       let
-         val (_, mk) = syntax1 c
+         val (_, mk, _, _) = syntax1 c
       in
          Component (fn (p, q, v) => (p, mk v :: q))
       end
@@ -749,6 +749,10 @@ val () = set_trace "Goalstack.print_goal_at_top" 1
 *)
 
 local
+   val spec_debug = ref false
+   val () = Feedback.register_btrace ("stateLib.spec", spec_debug)
+   val PRINT_TAC =
+      RULE_ASSUM_TAC (CONV_RULE PRINT_CONV) THEN CONV_TAC PRINT_CONV
    val WEAK_STRIP_TAC = DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
    val AND_IMP_INTRO_RULE =
       Conv.CONV_RULE (Conv.DEPTH_CONV Conv.AND_IMP_INTRO_CONV)
@@ -804,7 +808,7 @@ in
                 \\ (
                     REFL_TAC
                     ORELSE (RW_TAC pure_ss frame_thms
-                            \\ REFL_TAC)
+                            \\ (REFL_TAC ORELSE PRINT_TAC))
                    )
                )
             \\ CONV_TAC (Conv.RATOR_CONV STAR_ASSOC_CONV)
@@ -833,11 +837,12 @@ in
                       end
                    )
             \\ POP_ASSUM SUBST1_TAC
-            \\ REFL_TAC
+            \\ (REFL_TAC ORELSE ALL_TAC)
          val NEXT_TAC =
             RULE_ASSUM_TAC (PURE_REWRITE_RULE [combinTheory.I_THM])
             \\ ASM_REWRITE_TAC read_thms
             \\ EXTRA_TAC
+            \\ PRINT_TAC
          fun tac (v, dthm) =
             PRE_TAC
             \\ Tactic.EXISTS_TAC v
@@ -858,6 +863,10 @@ in
                *)
                prove (t, tac (v, dthm))
             end
+            handle e as HOL_ERR _ =>
+                   (if !spec_debug
+                       then (proofManagerLib.set_goal ([], t); thm)
+                    else raise e)
       end
 end
 

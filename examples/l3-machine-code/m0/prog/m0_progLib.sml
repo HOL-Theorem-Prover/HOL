@@ -23,7 +23,6 @@ local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
 in
    val m0_1 =
-      (fn (tm, mk, _, _) => (tm, mk)) o
       HolKernel.syntax_fns "m0_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
    val m0_2 =
       HolKernel.syntax_fns "m0_prog" 3 HolKernel.dest_binop HolKernel.mk_binop

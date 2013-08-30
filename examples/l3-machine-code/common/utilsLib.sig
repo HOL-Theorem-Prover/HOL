@@ -47,6 +47,7 @@ sig
    val augment: term frag list * term list -> cover -> cover
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
+   val classes: ('a * 'a -> bool) -> 'a list -> 'a list list
    val datatype_rewrites: string -> string list -> thm list
    val dom: hol_type -> hol_type
    val eval: term -> term

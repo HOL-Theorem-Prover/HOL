@@ -140,6 +140,12 @@ val UpdateSingleOfDouble_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
+val reverse_endian_def = Define`
+   reverse_endian (w: word32) =
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
+
+(* ------------------------------------------------------------------------ *)
+
 val R_usr_def = Define`
    R_usr (n: word4) =
      case n of
@@ -911,6 +917,16 @@ val extract64 = Q.prove(
    extract_bytes_tac [`w1`, `w2`, `w3`, `w4`,`w5`, `w6`, `w7`, `w8`])
    |> SIMP_RULE (bool_ss++boolSimps.LET_ss) []
    |> save_as "extract64"
+
+val concat_bytes = Q.store_thm("concat_bytes",
+   `(!w: word32.
+       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
+    (!w: word32.
+       (7 >< 0) (reverse_endian w) @@ (15 >< 8) (reverse_endian w) @@
+       (23 >< 16) (reverse_endian w) @@ (31 >< 24) (reverse_endian w) = w)`,
+   rw [reverse_endian_def]
+   \\ blastLib.BBLAST_TAC
+   )
 
 (* ------------------------------------------------------------------------ *)
 

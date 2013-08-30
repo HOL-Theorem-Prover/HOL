@@ -23,7 +23,6 @@ local
    val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
 in
    val arm_1 =
-      (fn (tm, mk, _, _) => (tm, mk)) o
       HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
    val arm_2 =
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
@@ -32,6 +31,8 @@ in
    val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
+   val (_, _, dest_arm_instr, _) = arm_1 "arm_instr"
+   val (_, _, dest_arm_CPSR_E, _) = arm_1 "arm_CPSR_E"
    val (_, _, dest_arm_MEM, is_arm_MEM) = arm_2 "arm_MEM"
    val (_, mk_arm_REG, dest_arm_REG, is_arm_REG) = arm_2 "arm_REG"
    val (_, _, dest_arm_FP_REG, is_arm_FP_REG) = arm_2 "arm_FP_REG"
@@ -148,6 +149,159 @@ in
          (r15_a,
           boolSyntax.rand (stateLib.mk_code_pool (arm_instr_tm, r15, opc)),
           list_mk_imp (a, r15_subst tm))
+      end
+end
+
+local
+   val pc_tm = Term.mk_var ("pc", word)
+
+   val list_mk_add_or_sub =
+      List.foldl
+         (fn ((b, t1), t2) =>
+            if b then wordsSyntax.mk_word_add (t2, t1)
+            else wordsSyntax.mk_word_sub (t2, t1)) pc_tm
+
+   val strip_add_or_sub =
+      let
+         fun iter a t =
+            case Lib.total wordsSyntax.dest_word_add t of
+               SOME (l, r) => iter ((true, r) :: a) l
+             | NONE => (case Lib.total wordsSyntax.dest_word_sub t of
+                           SOME (l, r) => iter ((false, r) :: a) l
+                         | NONE => if t = pc_tm then a else [])
+      in
+         iter []
+      end
+
+   fun is_byte_offset tm =
+      case Lib.total wordsSyntax.uint_of_word tm of
+         SOME i => 1 <= i andalso i <= 3
+       | NONE => false
+
+   val zero_offset = wordsSyntax.mk_wordii (0, 32)
+
+   fun dest_pc_relative tm =
+      case Lib.total ((strip_add_or_sub ## Lib.I) o dest_arm_MEM) tm of
+         SOME (l as _ :: _, d) =>
+            let
+               val (b, tm) = List.last l
+            in
+               SOME (if b andalso is_byte_offset tm
+                        then (tm, d, list_mk_add_or_sub (Lib.butlast l))
+                     else (zero_offset, d, list_mk_add_or_sub l))
+            end
+       | _ => NONE
+
+   val part_pc_relative =
+      utilsLib.classes (fn ((_, _, a), (_, _, b)) => a = b) o
+      (List.foldl (fn (tm, a) => case dest_pc_relative tm of
+                                    SOME x => x :: a
+                                  | NONE => a) [])
+
+   fun get i =
+      let
+         val tm = wordsSyntax.mk_wordii (i, 32)
+      in
+         fn l =>
+            case List.find (fn (j, _, _: term) => j = tm) l of
+               SOME (_, d, _) => d
+             | NONE => raise ERR "extend_arm_code_pool"
+                                 ("missing byte: " ^ Int.toString i)
+      end
+
+   val CONCAT_BYTE_RULE = PURE_REWRITE_RULE [arm_stepTheory.concat_bytes]
+
+   fun mk_w i = Term.mk_var ("w" ^ Int.toString i, word)
+   val i8 = fcpSyntax.mk_int_numeric_type 8
+
+   fun mk_byte (h, l) =
+      let
+         val hi = numSyntax.term_of_int h
+         val li = numSyntax.term_of_int l
+      in
+         fn w => wordsSyntax.mk_word_extract (hi, li, w, i8)
+      end
+
+   val b0 = mk_byte (31, 24)
+   val b1 = mk_byte (23, 16)
+   val b2 = mk_byte (15, 8)
+   val b3 = mk_byte (7, 0)
+
+   val reverse_endian_tm =
+      Term.prim_mk_const {Thy = "arm_step", Name = "reverse_endian"}
+   fun mk_reverse_endian e tm =
+      if e then Term.mk_comb (reverse_endian_tm, tm) else tm
+   fun is_big_end tm =
+      case Lib.total dest_arm_CPSR_E tm of
+         SOME t => t = boolSyntax.T
+       | NONE => false
+
+   fun gen_words e =
+      (List.rev ## List.concat) o ListPair.unzip o
+      Lib.mapi
+         (fn i => fn l =>
+             let
+                val a = case hd l of (_, _:term, a) => a
+                val w = mk_reverse_endian e (mk_w i)
+                val x = List.tabulate (4, fn j => get (3 - j) l)
+             in
+                ((a, w),
+                 [List.nth (x, 3) |-> b3 w,
+                  List.nth (x, 2) |-> b2 w,
+                  List.nth (x, 1) |-> b1 w,
+                  List.nth (x, 0) |-> b0 w])
+             end)
+
+   fun move_to_code ((a, w), thm) =
+      REWRITE_RULE
+        [stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
+         set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
+         Drule.SPECL [a, w] arm_progTheory.MOVE_TO_ARM_CODE_POOL,
+         arm_progTheory.disjoint_arm_instr_thms] thm
+
+   val err = ERR "DISJOINT_CONV" ""
+   val cnv =
+      LAND_CONV wordsLib.WORD_EVAL_CONV
+      THENC REWRITE_CONV [arm_progTheory.sub_intro]
+   fun split_arm_instr tm =
+      Lib.with_exn (pairSyntax.dest_pair o dest_arm_instr) tm err
+in
+   fun DISJOINT_CONV tm =
+      let
+         val (l, r) = Lib.with_exn pred_setSyntax.dest_disjoint tm err
+         val (a, x) = split_arm_instr l
+         val y = snd (split_arm_instr r)
+         val a = case strip_add_or_sub a of
+                    [(false, w)] => wordsSyntax.mk_word_2comp w
+                  | [(false, w), (true, x)] =>
+                      wordsSyntax.mk_word_add (wordsSyntax.mk_word_2comp w, x)
+                  | _ => raise err
+         val thm =
+            Conv.CONV_RULE cnv
+               (Drule.SPECL [a, pc_tm, x, y] arm_progTheory.DISJOINT_arm_instr)
+      in
+         if Thm.concl thm = tm
+            then Drule.EQT_INTRO thm
+         else raise err
+      end
+   fun extend_arm_code_pool thm =
+      let
+         val (spc, p, c, q) = progSyntax.dest_spec (Thm.concl thm)
+         val lp = progSyntax.strip_star p
+         val p_pc = part_pc_relative lp
+      in
+         if not (List.null p_pc) andalso
+            List.all (Lib.equal 4 o List.length) p_pc andalso
+            List.all (op =)
+              (ListPair.zip (p_pc, part_pc_relative (progSyntax.strip_star q)))
+            then let (* it's a well-formed load *)
+                    val e = List.exists is_big_end lp
+                    val (c_w, s) = gen_words e p_pc
+                    val thm' = CONCAT_BYTE_RULE (Thm.INST s thm)
+                 in
+                    List.foldl move_to_code thm' c_w
+                 end
+         else thm
       end
 end
 
@@ -517,10 +671,9 @@ local
    val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
    fun DEPTH_COND_CONV cnv =
       Conv.ONCE_DEPTH_CONV
-        (fn tm =>
-            if progSyntax.is_cond tm
-               then Conv.RAND_CONV cnv tm
-            else raise ERR "COND_CONV" "")
+         (fn tm => if progSyntax.is_cond tm
+                      then Conv.RAND_CONV cnv tm
+                   else raise ERR "COND_CONV" "")
    val POST_CONV = Conv.RAND_CONV
    val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
@@ -535,16 +688,15 @@ local
    val PRE_COND_CONV =
       PRE_CONV
          (DEPTH_COND_CONV
-             (WGROUND_RW_CONV
+             (DEPTH_CONV DISJOINT_CONV
               THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
               THENC NOT_F_CONV))
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
+      THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC PRE_CONV WGROUND_RW_CONV
-      THENC OPC_CONV bitstringLib.v2w_n2w_CONV
-      THENC POST_CONV (WGROUND_RW_CONV THENC PURE_REWRITE_CONV spec_rwts)
+      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts)
 in
    fun simp_triple_rule thm =
       rename_vars (Conv.CONV_RULE cnv thm)
@@ -585,6 +737,7 @@ local
                    ["arm_state", "PSR", "FP", "FPSCR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
    val spec =
+      extend_arm_code_pool o
       stateLib.spec
            arm_progTheory.ARM_IMP_SPEC
            [arm_stepTheory.get_bytes]
@@ -669,7 +822,7 @@ local
       let
          val (_, _, c, _) = progSyntax.dest_spec (Thm.concl thm)
       in
-         c |> pred_setSyntax.strip_set |> hd
+         c |> pred_setSyntax.strip_set |> List.last
            |> pairSyntax.dest_pair |> snd
            |> bitstringSyntax.dest_v2w |> fst
       end
@@ -687,10 +840,27 @@ local
       end
    val mk_thm_set =
       Lib.op_mk_set (fn t1 => fn t2 => Term.aconv (Thm.concl t1) (Thm.concl t2))
+   val reverse_endian =
+      fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
+          c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
+         [d1, d2, d3, d4, d5, d6, d7, d8, c1, c2, c3, c4, c5, c6, c7, c8,
+          b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
+       | _ => raise ERR "reverse_endian" ""
+   val rev_endian = ref (Lib.I : term list -> term list)
+   val is_be_tm = Term.aconv ``s.CPSR.E``
+   fun set_endian opt =
+      let
+         val l = arm_configLib.mk_config_terms opt
+      in
+         if List.exists is_be_tm l
+            then rev_endian := reverse_endian
+         else rev_endian := Lib.I
+      end
 in
    fun set_newline s = newline := s
    fun arm_config opt =
       (the_spec := arm_spec_opt opt
+       ; set_endian opt
        ; spec_label_set := Redblackset.empty String.compare
        ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
    fun arm_spec s = (!the_spec) s
@@ -720,7 +890,7 @@ in
         (fn s =>
             let
                val i = arm_stepLib.hex_to_bits_32 s
-               val opc = listSyntax.mk_list (i, Type.bool)
+               val opc = listSyntax.mk_list (!rev_endian i, Type.bool)
             in
                case find_spec opc of
                   SOME thms =>
@@ -766,6 +936,7 @@ spec (thm, t)
 val thm = saveSpecs "specs"
 
 val () = arm_config "vfp"
+val () = arm_config "vfp,be"
 val () = arm_config ""
 
 val arm_spec = Count.apply arm_spec
@@ -773,6 +944,31 @@ val arm_spec_hex = Count.apply arm_spec_hex
 
 arm_spec_hex "eeb65a00"
 set_trace "stateLib.spec" 1
+
+  Count.apply arm_spec_hex "1ddf7a04"
+
+val thm = hd (arm_spec_hex "E51F000C")
+
+  Count.apply arm_spec_hex "E79F2003"  (* ldr r2, [pc, r3] *)
+  Count.apply arm_spec_hex "E18F20D4"  (* ldrd r2, r3, [pc, r4] *)
+  Count.apply arm_spec_hex "E51F2018"  (* ldr r2, [pc, #-24] *)
+  Count.apply arm_spec_hex "E14F21D8"  (* ldrd r2, r3, [pc, #-24] *)
+
+  arm_spec_hex "E59F100C"
+  Count.apply arm_spec_hex "E1CF00DC"
+
+  arm_spec "VLDR (single,+imm,pc)"
+  arm_spec "VLDR (double,+imm,pc)"
+  arm_spec "VLDR (single,-imm,pc)"
+  arm_spec "VLDR (double,-imm,pc)"
+  arm_spec "LDR (+lit)"
+  arm_spec "LDR (-lit)"
+  arm_spec "LDR (+reg,pre,pc)"
+  arm_spec "LDR (-reg,pre,pc)"
+  arm_spec "LDRD (+lit)"
+  arm_spec "LDRD (-lit)"
+  arm_spec "LDRD (+reg,pre,pc)"
+  arm_spec "LDRD (-reg,pre,pc)"
 
   arm_spec "VMOV (single,reg)";
   arm_spec "VMOV (double,reg)";

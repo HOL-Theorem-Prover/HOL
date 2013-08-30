@@ -20,7 +20,6 @@ val mips_proj_def = mips_progTheory.mips_proj_def
 val mips_comp_defs = mips_progTheory.component_defs
 
 val mips_1 =
-   (fn (tm, mk, _, _) => (tm, mk)) o
    HolKernel.syntax_fns "mips_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
 val mips_2 =
    HolKernel.syntax_fns "mips_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
@@ -28,7 +27,7 @@ val byte = wordsSyntax.mk_int_word_type 8
 val word5 = wordsSyntax.mk_int_word_type 5
 val word = wordsSyntax.mk_int_word_type 32
 val dword = wordsSyntax.mk_int_word_type 64
-val (_, mk_mips_PC) = mips_1 "mips_PC"
+val (_, mk_mips_PC, _, _) = mips_1 "mips_PC"
 val (_, mk_mips_MEM, dest_mips_MEM, is_mips_MEM) = mips_2 "mips_MEM"
 val (_, mk_mips_gpr, dest_mips_gpr, is_mips_gpr) = mips_2 "mips_gpr"
 

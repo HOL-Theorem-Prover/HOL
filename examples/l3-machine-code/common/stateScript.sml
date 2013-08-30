@@ -273,6 +273,23 @@ val UPDATE_FRAME_STATE = Q.store_thm ("UPDATE_FRAME_STATE",
    \\ metis_tac []
    )
 
+(* ........................................................................ *)
+
+val UNION_STAR = Q.store_thm("UNION_STAR",
+   `!a b c. DISJOINT a b ==> ({a UNION b} * c = {a} * {b} * c)`,
+   simp [set_sepTheory.STAR_def, set_sepTheory.SPLIT_def]
+   )
+
+val BIGUNION_IMAGE_1 = Q.store_thm("BIGUNION_IMAGE_1",
+   `!f x. BIGUNION (IMAGE f {x}) = f x`,
+   simp []
+   )
+
+val BIGUNION_IMAGE_2 = Q.store_thm("BIGUNION_IMAGE_2",
+   `!f x y. BIGUNION (IMAGE f {x; y}) = f x UNION f y`,
+   simp []
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val () = export_theory ()

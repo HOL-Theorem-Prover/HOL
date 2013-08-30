@@ -57,6 +57,25 @@ fun partitions [] = []
           List.map (fn l => [h] :: l) ps
       end
 
+fun classes eq =
+   let
+      fun add x =
+         let
+            fun iter a =
+               fn [] => [x] :: a
+                | h :: t => if eq (x, hd h)
+                               then a @ ((x :: h) :: t)
+                            else iter (h :: a) t
+         in
+            iter []
+         end
+      fun iter a =
+         fn [] => a
+          | h :: t => iter (add h a) t
+   in
+      iter []
+   end
+
 (* ------------------------------------------------------------------------- *)
 
 fun padLeft c n l = List.tabulate (n - List.length l, fn _ => c) @ l
