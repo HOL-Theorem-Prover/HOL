@@ -37,14 +37,22 @@ fun intro_arm_OK th = let
              THENC REWRITE_CONV [STAR_ASSOC]
   in CONV_RULE (PRE_CONV move THENC POST_CONV move) th end
 
+val arm_PC_INTRO3 =
+  arm_PC_INTRO2 |> Q.INST [`p1`|->`emp`,`p2`|->`emp`]
+                |> RW [SEP_CLAUSES]
+
+fun TRY_MATCH_MP [] lemma = fail()
+  | TRY_MATCH_MP (x::xs) lemma =
+      MATCH_MP x lemma handle HOL_ERR _ => TRY_MATCH_MP xs lemma
+
 fun intro_arm_PC th =
   th |> intro_arm_OK
      |> CONV_RULE (PRE_CONV (MOVE_OUT_CONV ``arm_REG RName_PC``))
      |> CONV_RULE (POST_CONV (MOVE_OUT_CONV ``arm_REG RName_PC``))
      |> DISCH ``Aligned (pc:word32,4)`` |> SIMP_RULE bool_ss []
      |> ONCE_REWRITE_RULE [GSYM SPEC_MOVE_COND]
-     |> PURE_REWRITE_RULE [arm_PC_INTRO1]
-     |> MATCH_MP arm_PC_INTRO2
+     |> PURE_REWRITE_RULE [arm_PC_INTRO1,SEP_CLAUSES]
+     |> TRY_MATCH_MP [arm_PC_INTRO2,arm_PC_INTRO3]
      |> CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV bool_ss
           [Aligned_EQ_ALIGNED,ALIGNED_CLAUSES]))
      |> PURE_REWRITE_RULE [GSYM SPEC_MOVE_COND,SEP_CLAUSES]
@@ -90,9 +98,26 @@ fun introduce_arm_MEMORY th = if
     val th = Q.INST [`df`|->`dm`,`f`|->`m`] th
     in th end end
 
+val arm_CPSR_T_F = prove(
+  ``( n ==> (arm_CPSR_N T = arm_CPSR_N n)) /\
+    (~n ==> (arm_CPSR_N F = arm_CPSR_N n)) /\
+    ( z ==> (arm_CPSR_Z T = arm_CPSR_Z z)) /\
+    (~z ==> (arm_CPSR_Z F = arm_CPSR_Z z)) /\
+    ( c ==> (arm_CPSR_C T = arm_CPSR_C c)) /\
+    (~c ==> (arm_CPSR_C F = arm_CPSR_C c)) /\
+    ( v ==> (arm_CPSR_V T = arm_CPSR_V v)) /\
+    (~v ==> (arm_CPSR_V F = arm_CPSR_V v))``,
+  SIMP_TAC std_ss []) |> CONJUNCTS |> map UNDISCH;
+
 fun format_thm th = let
   val th = th |> PURE_REWRITE_RULE [GSYM L3_ARM_MODEL_def]
               |> intro_arm_PC |> introduce_arm_MEMORY
+              |> PURE_REWRITE_RULE arm_CPSR_T_F
+              |> DISCH_ALL |> PURE_REWRITE_RULE [GSYM SPEC_MOVE_COND]
+(*
+              |> SIMP_RULE (std_ss ++ sep_cond_ss) [word_arith_lemma1,
+                   word_arith_lemma3,word_arith_lemma4]
+*)
   val pc_var = th |> concl |> rator
                   |> find_term (can (match_term ``arm_PC pc``)) |> rand
   val pc = th |> concl |> rand
@@ -108,16 +133,40 @@ fun format_thm th = let
               if pc = pc_var then SOME 0 else NONE)
   in (th,4,next) end
 
+fun fix_precond [(th1,x1,y1),(th2,x2,y2)] = let
+  val th = PURE_REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO] th2
+  val c = th |> concl |> dest_imp |> fst
+  val not_c = mk_neg c
+  val th1 = PURE_REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO] th1
+  val ss = SIMP_CONV std_ss [ASSUME not_c]
+  val th1 = CONV_RULE ((RATOR_CONV o RAND_CONV) ss) th1
+            |> RW [] |> RW [GSYM SPEC_MOVE_COND]
+  val th1 = th1 |> DISCH not_c
+  val ss = SIMP_CONV std_ss []
+  val th1 = CONV_RULE ((RATOR_CONV o RAND_CONV) ss) th1
+            |> RW [] |> RW [GSYM (SPEC_MOVE_COND |> RW [GSYM precond_def])]
+  val th2 = RW [GSYM precond_def] th2
+  in [(th1,x1,y1),(th2,x2,y2)] end
+  | fix_precond res = res
+
 fun l3_arm_triples hex = let
   val xs = arm_progLib.arm_spec_hex hex
   fun f th = th |> PURE_REWRITE_RULE [GSYM L3_ARM_MODEL_def]
                 |> intro_arm_PC |> introduce_arm_MEMORY
   in map f xs end;
 
+val hex = arm_progLib.arm_spec_hex "eef1fa10"
+
 fun l3_arm_spec hex = let
-  val xs = arm_progLib.arm_spec_hex hex
+  val hs = String.tokens (fn c => c = #" ") hex
+  val xs = arm_progLib.arm_spec_hex (hd hs)
+  val n = Arbnum.fromHexString (last hs) |> numSyntax.mk_numeral
+  val w0 = wordsSyntax.mk_n2w(n,``:32``)
+  val w0_var = mk_var("w0",``:word32``)
+  val xs = map (INST [w0_var|->w0]) xs
   val _ = mem (length xs) [1,2] orelse failwith "unexpected result from arm_spec_hex"
   val ys = map format_thm xs
+  val ys = fix_precond ys
   in if length ys = 1 then (hd ys, NONE) else (hd ys, SOME (el 2 ys)) end
 
 val arm_pc = ``arm_PC``
@@ -125,10 +174,11 @@ val arm_pc = ``arm_PC``
 val (arm_jump:(term -> term -> int -> bool -> string * int)) =
   fn x => fail()
 
-val l3_arm_tools = (l3_arm_spec, arm_jump, TRUTH, arm_pc):decompiler_tools;
+val l3_arm_tools = (l3_arm_spec, arm_jump, aS_HIDE, arm_pc):decompiler_tools;
 
 fun l3_arm_decompile name qcode = let
-  val (result,func) = decompile l3_arm_tools name qcode
+  val tools = l3_arm_tools
+  val (result,func) = decompile tools name qcode
   val result = UNABBREV_CODE_RULE result
   in (result,func) end;
 

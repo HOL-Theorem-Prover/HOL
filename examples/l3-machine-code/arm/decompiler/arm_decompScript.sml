@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 val _ = new_theory "arm_decomp";
 
 open helperLib set_sepTheory addressTheory progTheory;
-open pred_setTheory combinTheory;
+open pred_setTheory combinTheory pairTheory;
 
 infix \\
 val op \\ = op THEN;
@@ -32,7 +32,15 @@ val arm_MEMORY_SET_def = Define `
 
 val arm_MEMORY_def = Define `arm_MEMORY df f = SEP_EQ (arm_MEMORY_SET df f)`;
 
+val aS_def = Define `
+  aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v`;
+
 (* theorems *)
+
+val aS_HIDE = store_thm("aS_HIDE",
+  ``~aS = ~arm_CPSR_N * ~arm_CPSR_Z * ~arm_CPSR_C * ~arm_CPSR_V``,
+  SIMP_TAC std_ss [SEP_HIDE_def,aS_def,SEP_CLAUSES,FUN_EQ_THM]
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]);
 
 val arm_PC_INTRO1 = store_thm("arm_PC_INTRO1",
   ``p * arm_OK * arm_REG RName_PC pc * cond (Aligned (pc,4)) =
