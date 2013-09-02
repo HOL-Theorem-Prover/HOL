@@ -1,6 +1,10 @@
 \DOC
 
-\TYPE {EXT_DEPTH_CONSEQ_CONV : conseq_conv_congruence list -> int option -> bool -> directed_conseq_conv list -> directed_conseq_conv}
+\BLTYPE
+EXT_DEPTH_CONSEQ_CONV : conseq_conv_congruence list -> int option ->
+                        bool -> directed_conseq_conv list ->
+                        directed_conseq_conv
+\ELTYPE
 
 
 \SYNOPSIS
