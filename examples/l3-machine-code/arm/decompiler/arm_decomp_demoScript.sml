@@ -3,6 +3,9 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "arm_decomp_demo";
 
+
+(* the first PID exmaple *)
+
 val (PID_C_cert,PID_C_def) = arm_decompLib.l3_arm_decompile "PID_C" `
             (* ------ PID example ------- *)
   ed907a00  (*  vldr      s14, [r0]       *)
@@ -135,9 +138,10 @@ val PID_ADA_EQUIV_PID_C = store_thm("PID_ADA_EQUIV_PID_C",
       (d7_a,rmode_a) = (d7_c,rmode_c)``,
   SIMP_TAC std_ss [PID_ADA_lemma,PID_C_lemma,LET_DEF]);
 
-(*
 
-val (PID_C2_cert, PID_C2_def) = l3_arm_decompile "PID_C2" `
+(* the second PID example *)
+
+val (PID_C2_cert, PID_C2_def) = rel_decompilerLib.fast_decompile "PID_C2" `
                          (* ----------------------------------- *)
     e59f322c  00012f94   (* ldr        r3, [pc, #556]  ; 824c   *)
     e59f222c  00012f80   (* ldr        r2, [pc, #556]  ; 8250   *)
@@ -171,8 +175,7 @@ val (PID_C2_cert, PID_C2_def) = l3_arm_decompile "PID_C2" `
     ea00005a             (* b  81fc <main+0x1e4>                *)
     eeb65a00             (* vmov.f32   s10, #96        ; 0x60   *)
     eef47ac5             (* vcmpe.f32  s15, s10                 *)
-   (* eef1fa10             (* vmrs       APSR_nzcv, fpscr         *) *)
-    e1d300fc             (* ldrsh      r0, [r3, #12]            *)
+    eef1fa10             (* vmrs       APSR_nzcv, fpscr         *)
     e1d300fc             (* ldrsh      r0, [r3, #12]            *)
     83a01000             (* movhi      r1, #0                   *)
     93a01001             (* movls      r1, #1                   *)
@@ -280,6 +283,7 @@ val (PID_C2_cert, PID_C2_def) = l3_arm_decompile "PID_C2" `
     edc37a00             (* vstr       s15, [r3]                *)
     e8bd0010             (* pop        {r4}                     *)`;
 
-*)
+val _ = save_thm("PID_C2_def",PID_C2_def);
+val _ = save_thm("PID_C2_cert",PID_C2_cert);
 
 val _ = export_theory();

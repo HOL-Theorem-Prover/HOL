@@ -109,15 +109,21 @@ val arm_CPSR_T_F = prove(
     (~v ==> (arm_CPSR_V F = arm_CPSR_V v))``,
   SIMP_TAC std_ss []) |> CONJUNCTS |> map UNDISCH;
 
+val arm_PC_SIMP = let
+  val simp = SIMP_CONV std_ss [word_arith_lemma1,
+               word_arith_lemma3,word_arith_lemma4]
+  in addressTheory.ALIGNED_ADD_EQ :: addressTheory.ALIGNED :: SEP_CLAUSES ::
+     map simp [``arm_PC (pc + n2w m + n2w n)``,
+               ``arm_PC (pc + n2w m - n2w n)``,
+               ``ALIGNED (pc + n2w m + n2w n)``,
+               ``ALIGNED (pc + n2w m - n2w n)``] |> LIST_CONJ end
+
 fun format_thm th = let
   val th = th |> PURE_REWRITE_RULE [GSYM L3_ARM_MODEL_def]
               |> intro_arm_PC |> introduce_arm_MEMORY
               |> PURE_REWRITE_RULE arm_CPSR_T_F
               |> DISCH_ALL |> PURE_REWRITE_RULE [GSYM SPEC_MOVE_COND]
-(*
-              |> SIMP_RULE (std_ss ++ sep_cond_ss) [word_arith_lemma1,
-                   word_arith_lemma3,word_arith_lemma4]
-*)
+              |> SIMP_RULE (std_ss ++ sep_cond_ss) [arm_PC_SIMP]
   val pc_var = th |> concl |> rator
                   |> find_term (can (match_term ``arm_PC pc``)) |> rand
   val pc = th |> concl |> rand
@@ -134,7 +140,8 @@ fun format_thm th = let
   in (th,4,next) end
 
 fun fix_precond [(th1,x1,y1),(th2,x2,y2)] = let
-  val th = PURE_REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO] th2
+  val th = th2 |> SIMP_RULE (pure_ss++sep_cond_ss) []
+               |> PURE_REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO]
   val c = th |> concl |> dest_imp |> fst
   val not_c = mk_neg c
   val th1 = PURE_REWRITE_RULE [SPEC_MOVE_COND,AND_IMP_INTRO] th1
@@ -154,8 +161,6 @@ fun l3_arm_triples hex = let
   fun f th = th |> PURE_REWRITE_RULE [GSYM L3_ARM_MODEL_def]
                 |> intro_arm_PC |> introduce_arm_MEMORY
   in map f xs end;
-
-val hex = arm_progLib.arm_spec_hex "eef1fa10"
 
 fun l3_arm_spec hex = let
   val hs = String.tokens (fn c => c = #" ") hex
