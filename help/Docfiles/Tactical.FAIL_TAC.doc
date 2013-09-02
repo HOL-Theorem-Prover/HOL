@@ -1,6 +1,6 @@
 \DOC FAIL_TAC
 
-\TYPE {FAIL_TAC : (string -> tactic)}
+\TYPE {FAIL_TAC : string -> tactic}
 
 \SYNOPSIS
 Tactic which always fails, with the supplied string.
@@ -22,15 +22,15 @@ a goal, then the tactic {t1 THEN t2} never results in the application
 of {t2} to anything, because {t1} produces no subgoals. In attempting
 to solve the following goal:
 {
-   ?- x => T | T
+   ?- if x then T else T
 }
 the tactic
 {
-   REWRITE_TAC[] THEN FAIL_TAC `Simple rewriting failed to solve goal`
+   REWRITE_TAC[] THEN FAIL_TAC "Simple rewriting failed to solve goal"
 }
 will fail with the message provided, whereas:
 {
-   CONV_TAC COND_CONV THEN FAIL_TAC `Using COND_CONV failed to solve goal`
+   CONV_TAC COND_CONV THEN FAIL_TAC "Using COND_CONV failed to solve goal"
 }
 will silently solve the goal because {COND_CONV} reduces it to
 just {?- T}.
