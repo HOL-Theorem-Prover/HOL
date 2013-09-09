@@ -1,6 +1,6 @@
 signature m0_progLib =
 sig
-   val addInstructionClass: string -> unit
+   val addInstructionClass: string -> bool
 
    val m0_config: bool * bool -> unit
    val m0_spec: string -> Thm.thm list

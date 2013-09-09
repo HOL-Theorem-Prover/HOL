@@ -198,6 +198,10 @@ val LoadWritePC_rwt =
    EV [LoadWritePC_def, BXWritePC_rwt] [] []
     ``LoadWritePC imm32`` |> hd
 
+val ALUWritePC_rwt =
+   EV [ALUWritePC_def, BranchWritePC_rwt] [] []
+      ``ALUWritePC d`` |> hd
+
 (* ---------------------------- *)
 
 (* read mem *)
@@ -1268,15 +1272,17 @@ val thumb_patterns = List.map (I ## pattern)
    ("BICS",            "FTFFFFTTTF______"),
    ("MVNS",            "FTFFFFTTTT______"),
    ("ADD",             "FTFFFTFF________"),
+   ("ADD (pc)",        "FTFFFTFFT____TTT"),
    ("CMP",             "FTFFFTFT________"),
    ("MOV",             "FTFFFTTF________"),
+   ("MOV (pc)",        "FTFFFTTFT____TTT"),
    ("BX",              "FTFFFTTTF_______"),
    ("BLX",             "FTFFFTTTT_______"),
    ("LDR (lit)",       "FTFFT___________"),
    ("STR",             "FTFTFFF_________"),
    ("STRH",            "FTFTFFT_________"),
    ("STRB",            "FTFTFTF_________"),
-   ("LDRB",            "FTFTFTT_________"),
+   ("LDRSB",           "FTFTFTT_________"),
    ("LDR",             "FTFTTFF_________"),
    ("LDRH",            "FTFTTFT_________"),
    ("LDRB",            "FTFTTTF_________"),
@@ -1289,7 +1295,7 @@ val thumb_patterns = List.map (I ## pattern)
    ("LDRH (imm)",      "TFFFT___________"),
    ("STR (sp)",        "TFFTF___________"),
    ("LDR (sp)",        "TFFTT___________"),
-   ("ADD (pc)",        "TFTFF___________"),
+   ("ADD (reg,pc)",    "TFTFF___________"),
    ("ADD (sp)",        "TFTFT___________"),
    ("ADD (sp,sp)",     "TFTTFFFFF_______"),
    ("SUB (sp,sp)",     "TFTTFFFFT_______"),
@@ -1303,6 +1309,7 @@ val thumb_patterns = List.map (I ## pattern)
    ("REVSH",           "TFTTTFTFTT______"),
    ("POP",             "TFTTTTFF________"),
    ("POP (pc)",        "TFTTTTFT________"),
+   ("NOP",             "TFTTTTTTFFFFFFFF"),
    ("STM",             "TTFFF___________"),
    ("LDM",             "TTFFT___________"),
    ("BEQ",             "TTFTFFFF________"),
@@ -1475,6 +1482,8 @@ in
          case List.filter (Lib.can mtch) (list_mnemonics()) of
             [] => raise ERR "thumb_instruction" "no match found"
           | [s] => f s
+          | ["ADD", s as "ADD (pc)"] => s
+          | ["MOV", s as "MOV (pc)"] => s
           | _ => raise ERR "thumb_instruction" "more than one match!"
       end
 end
@@ -1743,6 +1752,13 @@ val MoveRegister_rwt =
       ``dfn'ShiftImmediate (F, F, d, m, SRType_LSL, 0)``
       |> addThms
 
+val MoveRegister_pc_rwt =
+   EV [dfn'ShiftImmediate_def, R_name_rwt, ALUWritePC_rwt,
+       doRegister_def, DataProcessingPC_def, DataProcessingALU_def,
+       Shift_C_LSL_rwt, SND_Shift_C_rwt] [] []
+      ``dfn'ShiftImmediate (F, F, 15w, m, SRType_LSL, 0)``
+      |> addThms
+
 val MoveNegRegister_rwt =
    EV [dfn'ShiftImmediate_def, R_name_rwt, mvn, psr_id,
        doRegister_def, ArithmeticOpcode_def,
@@ -1755,6 +1771,14 @@ val Register_rwt =
         Shift_C_LSL_rwt, psr_id] @ al())
       [[``d <> 15w:word4``]] (mapl (`op`, arithlogic))
          ``dfn'Register (op, setflags, d, n, m, SRType_LSL, 0)``
+      |> addThms
+
+val Register_add_pc_rwt =
+   EV [dfn'Register_def, R_name_rwt, doRegister_def, ALUWritePC_rwt, PC_rwt,
+       DataProcessingPC_def, DataProcessingALU_def, Shift_C_LSL_rwt,
+       AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY]
+      [] []
+      ``dfn'Register (4w, F, 15w, 15w, m, SRType_LSL, 0)``
       |> addThms
 
 val TestCompareRegister_rwt =

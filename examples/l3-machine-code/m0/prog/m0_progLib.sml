@@ -549,6 +549,7 @@ local
            |> bitstringSyntax.dest_v2w |> fst
            |> mk_thumb2_pair
       end
+   val spec_label_set = ref (Redblackset.empty String.compare)
    val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
    val add1 = utilsLib.add_to_rw_net get_opcode
    val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
@@ -567,7 +568,13 @@ in
        ; bigend := fst opt
        ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
    fun m0_spec s = (!the_spec) s
-   fun addInstructionClass s = (print s ; add_specs (m0_spec s))
+   fun addInstructionClass s =
+      if Redblackset.member (!spec_label_set, s)
+         then false
+      else (print s
+            ; add_specs (m0_spec s)
+            ; spec_label_set := Redblackset.add (!spec_label_set, s)
+            ; true)
    fun m0_spec_hex looped =
       (* utilsLib.cache 1000 String.compare *)
         (fn s =>
@@ -586,10 +593,10 @@ in
                 | NONE => loop looped opc "failed to add suitable spec" s
             end)
     and loop looped opc e s =
-       if looped
+       if looped orelse
+          not (addInstructionClass (m0_stepLib.thumb_instruction opc))
           then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
-       else (addInstructionClass (m0_stepLib.thumb_instruction opc)
-             ; m0_spec_hex true s)
+       else m0_spec_hex true s
     val m0_spec_hex = m0_spec_hex false
 end
 
@@ -640,7 +647,9 @@ m0_spec_hex "C205"
 val s = m0_stepLib.thumb_instruction (m0_stepLib.hex_to_bits ("C205"))
 step s
 
-m0_config (true, true) (* not working -- need to swap in get_opcode *)
+m0_config (false, false)
+m0_config (true, true)
+
 m0_spec "B.W"
 
 m0_spec "BL"
