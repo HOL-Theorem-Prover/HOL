@@ -1159,8 +1159,7 @@ METIS_TAC [lemma5, NOT_IN_EMPTY] THENL
      SRW_TAC [] [minimal_elements_def] THEN
      FULL_SIMP_TAC (srw_ss()) [] THEN1
      METIS_TAC [CHOICE_DEF, IN_DIFF] THEN1
-     METIS_TAC [CHOICE_DEF, IN_DIFF] THEN1
-     METIS_TAC [] THEN
+     METIS_TAC [CHOICE_DEF, IN_DIFF] THEN
      `(CHOICE (upper_bounds C r DIFF C),x'') IN r`
          by METIS_TAC [lemma6, IN_DIFF] THEN
      METIS_TAC [antisym_def]]);

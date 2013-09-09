@@ -52,8 +52,7 @@ val gcdset_greatest = store_thm(
   `?x. x IN s /\ x <> 0`
     by (FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC []) THEN
   `L <= MIN_SET (s DELETE 0)`
-    by (DEEP_INTRO_TAC MIN_SET_ELIM THEN SRW_TAC [][EXTENSION]
-          THEN1 METIS_TAC [] THEN
+    by (DEEP_INTRO_TAC MIN_SET_ELIM THEN SRW_TAC [][EXTENSION] THEN
         METIS_TAC [DIVIDES_LE, DECIDE ``x <> 0 <=> 0 < x``]) THEN
   `L <= m` by METIS_TAC[] THEN
   Q_TAC SUFF_TAC `0 < m /\ 0 < g` THEN1
@@ -86,4 +85,3 @@ val _ = export_rewrites ["gcdset_INSERT"]
 
 
 val _ = export_theory()
-
