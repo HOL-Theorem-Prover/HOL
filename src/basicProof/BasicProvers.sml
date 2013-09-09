@@ -423,7 +423,7 @@ fun case_rwlist () =
  itlist (fn tyi => fn rws => case_rws tyi @ rws)
         (TypeBase.elts()) [];
 
-(* Add the rewrites into a simpset to avoid re-processing them when 
+(* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
  * has an order of magnitude speedup on developments with large datatypes *)
 fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
@@ -844,7 +844,8 @@ val bool_ss = boolSimps.bool_ss;
        just when a datatype is declared.
  ---------------------------------------------------------------------------*)
 
-val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
+val (srw_ss : simpset ref) =
+    ref (bool_ss ++ combinSimps.COMBIN_ss ++ SatisfySimps.SATISFY_ss);
 
 val srw_ss_initialised = ref false;
 
