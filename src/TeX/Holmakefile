@@ -26,7 +26,7 @@ $(EXE): $($(ML_SYSNAME)_MKMUNGE_DEP)
 
 mkmunge.o: poly-mkmkmunge.ML mkmkcline.sml $(dprot $(HOLDIR)/bin/hol.builder) \
            EmitTeX.uo
-	$(HOLDIR)/bin/hol < $<
+	$(HOLDIR)/bin/hol.builder0 -q < $<
 
 munger.lex.sml: munger.lex
 	$(MLLEX) $<

@@ -47,31 +47,40 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
 
 local
-fun assoc item =
-  let fun assc ((key,ob)::rst) = if item=key then ob else assc rst
-        | assc [] = raise Match
-  in assc
-  end
-val machine_env = Posix.ProcEnv.uname()
-val sysname = assoc "sysname" machine_env
-in
-val machine_flags =
-    if sysname = "Darwin" (* Mac OS X *) then
+   fun assoc item =
       let
-        open PolyML
-        val vnum_s = hd (String.fields Char.isSpace Compiler.compilerVersion)
-        val (major,minor) =
-            case String.fields (fn c => c = #".") vnum_s of
-              mj::mn::_ => (valOf (Int.fromString mj), valOf (Int.fromString mn))
-            | _ => die "Can't pull apart Compiler.compilerVersion"
-        val number = major * 100 + 10 * minor
+         fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+           | assc [] = raise Match
       in
-        (if number >= 550 then ["-Wl,-no_pie"]
-         else ["-segprot", "POLY", "rwx", "rwx"]) @
-        (if PolyML.architecture() = "I386" then ["-arch", "i386"]
-         else [])
+         assc
       end
-    else []
+   val machine_env = Posix.ProcEnv.uname ()
+   val sysname = assoc "sysname" machine_env
+   val intOf = Option.valOf o Int.fromString
+in
+   val machine_flags =
+       if sysname = "Darwin" (* Mac OS X *) then
+         let
+           open PolyML
+           val vnum_s = hd (String.fields Char.isSpace Compiler.compilerVersion)
+           val (major,minor,point) =
+              case String.fields (fn c => c = #".") vnum_s of
+                 [mj] => (intOf mj, 0, 0)
+               | [mj, mn] => (intOf mj, intOf mn, 0)
+               | [mj, mn, pt] => (intOf mj, intOf mn, intOf pt)
+               | _ => die "Can't pull apart Compiler.compilerVersion"
+           val number = major * 100 + 10 * minor + point
+         in
+           (if number >= 551
+               then ["-lpolymain", "-lpolyml", "-lpthread", "-lgmp", "-lm",
+                     "-ldl", "-lstdc++", "-Wl,-no_compact_unwind,-no_pie"]
+            else if number >= 550
+               then ["-Wl,-no_pie"]
+            else ["-segprot", "POLY", "rwx", "rwx"]) @
+           (if PolyML.architecture() = "I386" then ["-arch", "i386"]
+            else [])
+         end
+       else []
 end;
 
 fun compile systeml exe obj =
@@ -493,19 +502,22 @@ val _ =
       Generate shell scripts for running HOL.
  ---------------------------------------------------------------------------*)
 
-val _ = let
-  val _ = echo "Generating bin/hol."
-  val target      = fullPath [holdir, "bin", "hol.bare"]
-  val target_boss = fullPath [holdir, "bin", "hol"]
-  val hol0_heap   = fullPath[HOLDIR,"bin", "hol.builder0"]
-  val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ")"
- in
-   (* "unquote" scripts use the unquote executable to provide nice
-      handling of double-backquote characters *)
-   emit_hol_unquote_script target hol0_heap ["prelude.ML"];
-   emit_hol_unquote_script target_boss hol_heapcalc ["prelude.ML", "prelude2.ML"];
-   emit_hol_script (target ^ ".noquote") hol0_heap ["prelude.ML"];
-   emit_hol_script (target_boss ^ ".noquote") hol_heapcalc ["prelude.ML", "prelude2.ML"]
- end;
+val _ =
+   let
+      val _ = echo "Generating bin/hol."
+      val target      = fullPath [holdir, "bin", "hol.bare"]
+      val target_boss = fullPath [holdir, "bin", "hol"]
+      val hol0_heap   = fullPath[HOLDIR,"bin", "hol.builder0"] ^ " -i"
+      val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ") -i"
+      val prelude = ["prelude.ML"]
+      val prelude2 = prelude @ ["prelude2.ML"]
+   in
+      (* "unquote" scripts use the unquote executable to provide nice
+         handling of double-backquote characters *)
+      emit_hol_unquote_script target hol0_heap prelude;
+      emit_hol_unquote_script target_boss hol_heapcalc prelude2;
+      emit_hol_script (target ^ ".noquote") hol0_heap prelude;
+      emit_hol_script (target_boss ^ ".noquote") hol_heapcalc prelude2
+   end
 
-val _ = print "\nFinished configuration!\n";
+val _ = print "\nFinished configuration!\n"

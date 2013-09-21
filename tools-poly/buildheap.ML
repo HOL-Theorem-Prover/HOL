@@ -59,10 +59,11 @@ in
   p ("val _ = List.map hload [" ^
      String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
-  p "fun main() = (List.app use (CommandLine.arguments()); PolyML.rootFunction());";
+  p "fun safe_use s = if String.sub (s, 0) = #\"-\" then () else use s";
+  p "fun main() = (List.app safe_use (CommandLine.arguments()); PolyML.rootFunction());";
   p "val _ = PolyML.shareCommonData main;";
   p "in";
-  p ("val _ = PolyML.export(\""^ outputheap ^"\", main); end;");
+  p ("val _ = PolyML.export(\""^ outputheap ^"\", main) end");
   closeOut ostrm;
   system_ps (base ^ " < " ^ ofile);
   system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^

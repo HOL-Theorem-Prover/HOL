@@ -48,7 +48,6 @@ fun main() = let
       QFS {output_stream=outstream, comdepth=ref 0, pardepth=ref 0,
            antiquote=ref false, row=ref 0, rowstart=ref 0};
 
-
   fun loop() = let
     val lexer = filter.makeLexer (read_from_stream instream) state
   in
@@ -68,4 +67,4 @@ in
 end;
 
 val _ = PolyML.shareCommonData main;
-val _ = PolyML.export("unquote", main);
+val _ = PolyML.export("unquote", main)
