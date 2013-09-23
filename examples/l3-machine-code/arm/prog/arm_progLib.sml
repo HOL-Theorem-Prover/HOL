@@ -308,43 +308,10 @@ end
 (* -- *)
 
 fun reg_index tm =
-   case Term.dest_thy_const tm of
-      {Thy = "arm", Name = "RName_0usr", ...} => 0
-    | {Thy = "arm", Name = "RName_1usr", ...} => 1
-    | {Thy = "arm", Name = "RName_2usr", ...} => 2
-    | {Thy = "arm", Name = "RName_3usr", ...} => 3
-    | {Thy = "arm", Name = "RName_4usr", ...} => 4
-    | {Thy = "arm", Name = "RName_5usr", ...} => 5
-    | {Thy = "arm", Name = "RName_6usr", ...} => 6
-    | {Thy = "arm", Name = "RName_7usr", ...} => 7
-    | {Thy = "arm", Name = "RName_8usr", ...} => 8
-    | {Thy = "arm", Name = "RName_8fiq", ...} => 8
-    | {Thy = "arm", Name = "RName_9usr", ...} => 9
-    | {Thy = "arm", Name = "RName_9fiq", ...} => 9
-    | {Thy = "arm", Name = "RName_10usr", ...} => 10
-    | {Thy = "arm", Name = "RName_10fiq", ...} => 10
-    | {Thy = "arm", Name = "RName_11usr", ...} => 11
-    | {Thy = "arm", Name = "RName_11fiq", ...} => 11
-    | {Thy = "arm", Name = "RName_12usr", ...} => 12
-    | {Thy = "arm", Name = "RName_12fiq", ...} => 12
-    | {Thy = "arm", Name = "RName_SPusr", ...} => 13
-    | {Thy = "arm", Name = "RName_SPfiq", ...} => 13
-    | {Thy = "arm", Name = "RName_SPirq", ...} => 13
-    | {Thy = "arm", Name = "RName_SPsvc", ...} => 13
-    | {Thy = "arm", Name = "RName_SPabt", ...} => 13
-    | {Thy = "arm", Name = "RName_SPund", ...} => 13
-    | {Thy = "arm", Name = "RName_SPmon", ...} => 13
-    | {Thy = "arm", Name = "RName_SPhyp", ...} => 13
-    | {Thy = "arm", Name = "RName_LRusr", ...} => 14
-    | {Thy = "arm", Name = "RName_LRfiq", ...} => 14
-    | {Thy = "arm", Name = "RName_LRirq", ...} => 14
-    | {Thy = "arm", Name = "RName_LRsvc", ...} => 14
-    | {Thy = "arm", Name = "RName_LRabt", ...} => 14
-    | {Thy = "arm", Name = "RName_LRund", ...} => 14
-    | {Thy = "arm", Name = "RName_LRmon", ...} => 14
-    | {Thy = "arm", Name = "RName_LRhyp", ...} => 14
-    | {Thy = "arm", Name = "RName_PC", ...} => 15
-    | _ => raise ERR "reg_index" ""
+   case Lib.total Term.dest_thy_const tm of
+      SOME {Thy = "arm", Name = "RName_PC", ...} => 15
+    | _ => Lib.with_exn (wordsSyntax.uint_of_word o Term.rand) tm
+                        (ERR "reg_index" "")
 
 local
    fun other_index tm =
@@ -366,7 +333,6 @@ local
        | _ => ~1
    val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
-   val total_dest_reg = Lib.total (wordsSyntax.uint_of_word o Term.rand)
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
          (SOME x1, SOME x2) => Arbnum.compare (x1, x2)
@@ -382,9 +348,7 @@ local
    fun reg tm =
       case Lib.total reg_index tm of
          SOME i => mlibUseful.INL i
-       | NONE => (case total_dest_reg tm of
-                     SOME i => mlibUseful.INL i
-                   | NONE => mlibUseful.INR tm)
+       | NONE => mlibUseful.INR tm
    val register = reg o fst o dest_arm_REG
    fun fp_reg tm =
       case Lib.total int_of_v2w tm of
@@ -454,21 +418,13 @@ val arm_mk_pre_post =
 
 (* ------------------------------------------------------------------------ *)
 
-local
-   val registers = List.tabulate (16, fn i => wordsSyntax.mk_wordii (i, 4))
-   val R_usr_tm = Term.prim_mk_const {Thy = "arm_step", Name = "R_usr"}
-   val mk_R_usr = Lib.curry Term.mk_comb R_usr_tm
-   val R_usr =
-      utilsLib.map_conv
-         (SIMP_CONV (srw_ss()) [arm_stepTheory.R_usr_def])
-         (List.map mk_R_usr registers)
-in
-   val REG_CONV =
-      Conv.QCONV
-        (REWRITE_CONV
-           [R_usr, arm_stepTheory.v2w_ground4, arm_stepTheory.v2w_ground5])
-   val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
-end
+val REG_CONV =
+   Conv.QCONV
+     (REWRITE_CONV
+        [EVAL ``R_mode mode 15w``,
+         arm_stepTheory.v2w_ground4, arm_stepTheory.v2w_ground5])
+
+val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 
 local
    fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
@@ -613,6 +569,7 @@ local
              | ("arm_prog$arm_CPSR_Z", [v]) => g (v, "z", Type.bool)
              | ("arm_prog$arm_CPSR_C", [v]) => g (v, "c", Type.bool)
              | ("arm_prog$arm_CPSR_V", [v]) => g (v, "v", Type.bool)
+             | ("arm_prog$arm_CPSR_M", [v]) => g (v, "mode", word5)
              | ("arm_prog$arm_FP_FPSCR_N", [v]) => g (v, "fp_n", Type.bool)
              | ("arm_prog$arm_FP_FPSCR_Z", [v]) => g (v, "fp_z", Type.bool)
              | ("arm_prog$arm_FP_FPSCR_C", [v]) => g (v, "fp_c", Type.bool)
@@ -880,7 +837,7 @@ in
          ; add_specs (tl l)
       end
    fun addInstructionClass s =
-      (print s
+      (print (" " ^ s)
        ; if Redblackset.member (!spec_label_set, s)
             then print (!newline)
          else (add_specs (arm_spec s)

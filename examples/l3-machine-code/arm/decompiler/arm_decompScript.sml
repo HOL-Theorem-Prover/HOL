@@ -18,14 +18,15 @@ val L3_ARM_MODEL_def = Define `
      ($= :arm_state -> arm_state -> bool))`;
 
 val arm_OK_def = Define `
-  arm_OK =
+  arm_OK mode =
     arm_Extensions Extension_VFP T *
+    arm_Extensions Extension_Security F *
     arm_Architecture ARMv7_A *
     arm_exception NoException * arm_CPSR_J F *
-    arm_CPSR_E F * arm_CPSR_T F * arm_CPSR_M 16w`;
+    arm_CPSR_E F * arm_CPSR_T F * arm_CPSR_M mode * cond (GoodMode mode)`;
 
 val arm_PC_def = Define `
-  arm_PC pc = arm_OK * arm_REG RName_PC pc * cond (Aligned (pc,4))`;
+  arm_PC pc = arm_REG RName_PC pc * cond (Aligned (pc,4))`;
 
 val arm_MEMORY_SET_def = Define `
   arm_MEMORY_SET df f = { (arm_c_MEM a,arm_d_word8 (f a)) | a | a IN df }`;
@@ -43,12 +44,12 @@ val aS_HIDE = store_thm("aS_HIDE",
   \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]);
 
 val arm_PC_INTRO1 = store_thm("arm_PC_INTRO1",
-  ``p * arm_OK * arm_REG RName_PC pc * cond (Aligned (pc,4)) =
+  ``p * arm_REG RName_PC pc * cond (Aligned (pc,4)) =
     p * arm_PC pc``,
   SIMP_TAC std_ss [STAR_ASSOC,arm_PC_def]);
 
 val arm_PC_INTRO2 = store_thm("arm_PC_INTRO2",
-  ``SPEC m (p1 * arm_PC pc) code (p2 * arm_OK * arm_REG RName_PC pc') ==>
+  ``SPEC m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
     (Aligned (pc,4) ==> Aligned (pc',4)) ==>
     SPEC m (p1 * arm_PC pc) code (p2 * arm_PC pc')``,
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC std_ss [arm_PC_def,SPEC_MOVE_COND,

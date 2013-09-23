@@ -92,11 +92,8 @@ fun introduce_pMEMORY th = let
   val tm1 = find_term (can (match_terml [] vs tm1)) p
   val tm2 = mk_comb(mk_comb(``pM1``,mk_comb(tm,``2w:word32``)),``yyy : word8 option``)
   val tm2 = find_term (can (match_terml [] vs tm2)) p
-  val c = MOVE_OUT_CONV (fst (dest_comb tm3)) THENC
-          MOVE_OUT_CONV (fst (dest_comb tm2)) THENC
-          MOVE_OUT_CONV (fst (dest_comb tm1)) THENC
-          MOVE_OUT_CONV (fst (dest_comb tm0)) THENC
-          STAR_REVERSE_CONV
+  val c =
+     LIST_MOVE_OUT_CONV true (List.map (fst o dest_comb) [tm3, tm2, tm1, tm0])
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
   val f = snd o dest_comb o snd o dest_comb
   fun g th tm tm' = if is_var tm then INST [ tm |-> tm' ] th else th
@@ -123,7 +120,7 @@ fun introduce_pMEMORY th = let
 fun introduce_pBYTE_MEMORY th = let
   val (_,p,c,q) = dest_spec(concl th)
   val tm0 = find_term (can (match_term ``pM1 x y``)) p
-  val c = MOVE_OUT_CONV (car tm0) THENC STAR_REVERSE_CONV
+  val c = LIST_MOVE_OUT_CONV true [car tm0]
   val th = CONV_RULE (POST_CONV c THENC PRE_CONV c) th
   val f = cdr o cdr
   val h = REWRITE_RULE [GSYM STAR_ASSOC,bit_listTheory.bytes2word_thm]

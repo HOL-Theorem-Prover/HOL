@@ -1,18 +1,14 @@
-
-open HolKernel Parse boolLib bossLib; val _ = new_theory "arm_rel";
-
-open armTheory armLib arm_stepTheory pred_setTheory pairTheory optionTheory;
-open arithmeticTheory wordsTheory wordsLib addressTheory combinTheory pairSyntax;
-open sumTheory whileTheory;
+open HolKernel Parse boolLib bossLib
+open armTheory armLib arm_stepTheory pred_setTheory pairTheory optionTheory
+open arithmeticTheory wordsTheory wordsLib addressTheory combinTheory pairSyntax
+open sumTheory whileTheory
 
 open arm_decompTheory progTheory;
 
+val _ = new_theory "arm_rel";
+
 infix \\
 val op \\ = op THEN;
-
-val RW = REWRITE_RULE
-val RW1 = ONCE_REWRITE_RULE
-
 
 (* we define a total-correctness machine-code Hoare triple *)
 
@@ -131,6 +127,7 @@ val TRIPLE_FRAME_BOOL = store_thm("TRIPLE_FRAME_BOOL",
 
 val _ = Hol_datatype `
   arm_assertion = ARM_ASSERTION of
+                    (* mode *) word5 =>
                     (* pc *) word32 =>
                     (* r0 *) word32 =>
                     (* r1 *) word32 =>
@@ -161,7 +158,7 @@ val _ = Hol_datatype `
                     (* memory *) (word32 -> word8)`;
 
 val arm_assert_tm =
-  ``ARM_ASSERTION r15 r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
+  ``ARM_ASSERTION mode r15 r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
                   n z c v fps rmode fp_n fp_z fp_c fp_v dm m``
 
 val arm_FP_REGS_def = Define `
@@ -201,22 +198,23 @@ val arm_FP_REGS_def = Define `
 
 val ARM_ASSERT_def = Define `
   ARM_ASSERT ^arm_assert_tm =
+    arm_OK mode *
     arm_PC r15 *
-    arm_REG RName_0usr r0 *
-    arm_REG RName_1usr r1 *
-    arm_REG RName_2usr r2 *
-    arm_REG RName_3usr r3 *
-    arm_REG RName_4usr r4 *
-    arm_REG RName_5usr r5 *
-    arm_REG RName_6usr r6 *
-    arm_REG RName_7usr r7 *
-    arm_REG RName_8usr r8 *
-    arm_REG RName_9usr r9 *
-    arm_REG RName_10usr r10 *
-    arm_REG RName_11usr r11 *
-    arm_REG RName_12usr r12 *
-    arm_REG RName_SPusr r13 *
-    arm_REG RName_LRusr r14 *
+    arm_REG (R_mode mode 0w) r0 *
+    arm_REG (R_mode mode 1w) r1 *
+    arm_REG (R_mode mode 2w) r2 *
+    arm_REG (R_mode mode 3w) r3 *
+    arm_REG (R_mode mode 4w) r4 *
+    arm_REG (R_mode mode 5w) r5 *
+    arm_REG (R_mode mode 6w) r6 *
+    arm_REG (R_mode mode 7w) r7 *
+    arm_REG (R_mode mode 8w) r8 *
+    arm_REG (R_mode mode 9w) r9 *
+    arm_REG (R_mode mode 10w) r10 *
+    arm_REG (R_mode mode 11w) r11 *
+    arm_REG (R_mode mode 12w) r12 *
+    arm_REG (R_mode mode 13w) r13 *
+    arm_REG (R_mode mode 14w) r14 *
     arm_CPSR_N n *
     arm_CPSR_Z z *
     arm_CPSR_C c *
@@ -237,4 +235,4 @@ val INTRO_TRIPLE_L3_ARM = store_thm("INTRO_TRIPLE_L3_ARM",
     !c. TRIPLE L3_ARM (c, pre) code (c /\ side, post)``,
   SIMP_TAC std_ss [L3_ARM_def,TRIPLE_def]);
 
-val _ = export_theory();
+val _ = export_theory()

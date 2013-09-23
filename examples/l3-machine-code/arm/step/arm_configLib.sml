@@ -26,8 +26,6 @@ val st = Term.mk_var ("s", Type.mk_type ("arm_state", []))
 fun mk_arm_const n = Term.prim_mk_const {Thy = "arm", Name = n}
 fun mk_arm_type n = Type.mk_thy_type {Thy = "arm", Tyop = n, Args = []}
 
-val all_modes = utilsLib.list_mk_wordii 5 [16, 17, 18, 19, 23, 27, 31]
-
 (* ----------------------------------------------------------------------- *)
 
 val lower = List.map (List.map utilsLib.lowercase)
@@ -46,15 +44,6 @@ val arch_options = lower
     ["v6T2", "ARMv6T2"],
     ["v7", "v7_A", "v7-A", "ARMv7", "ARMv7_A", "ARMv7-A"],
     ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]]
-
-val mode_options = lower
-   [["Usr", "User"],
-    ["Fiq"],
-    ["Irq"],
-    ["Svc", "Supervisor"],
-    ["Abt", "Abort"],
-    ["Und", "Undefined"],
-    ["Sys", "System"]]
 
 val thumb_options =
    [["thumb","thumb2","16-bit","16"],
@@ -100,7 +89,6 @@ fun process_opt opt =
 
 val default_options =
    {arch      = mk_arm_const "ARMv7_A",
-    mode      = hd all_modes,
     bigendian = false,
     thumb     = false,
     vfp       = false,
@@ -126,9 +114,6 @@ fun process_options s =
                     | 4 => "ARMv6"   | 5 => "ARMv6K"  | 6 => "ARMv6T2"
                     | 7 => "ARMv7_A" | 8 => "ARMv7_R"
                     | _ => raise ERR "process_options" "Bad Arch option."))
-      val (mode, l) =
-         process_opt mode_options "Mode"
-            (#mode default_options) l (fn i => List.nth (all_modes, i))
       val (thumb, l) =
          process_opt thumb_options "Thumb"
             (#thumb default_options) l (fn i => i = 0)
@@ -143,7 +128,6 @@ fun process_options s =
    in
       if List.null l
          then {arch = arch,
-               mode = mode,
                bigendian = bigendian,
                thumb = thumb,
                vfp = vfp,
@@ -163,7 +147,6 @@ fun mk_config_terms s =
    in
       (if #thumb c then [``^st.CPSR.IT = ^(#itblock c)``] else []) @
       [``^st.Architecture = ^(#arch c)``,
-       ``^st.CPSR.M = ^(#mode c)``,
        prop #vfp ``^st.Extensions Extension_VFP``,
        prop #bigendian ``^st.CPSR.E``,
        prop #thumb ``^st.CPSR.T``]

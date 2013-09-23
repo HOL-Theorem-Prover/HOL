@@ -22,13 +22,13 @@ fun EXPAND_BASIC_LET_CONV tm = let
   val (lhs,rhs) = hd xs
   val ys = dest_tuple lhs
   val zs = dest_tuple rhs
-  val _ = if length zs = length ys then () else hd []
+  val _ = if length zs = length ys then () else fail()
   fun every p [] = true
-    | every p (x::xs) = if p x then every p xs else hd []
+    | every p (x::xs) = if p x then every p xs else fail()
   val _ = every (fn x => every is_var (list_dest dest_conj x)) zs
   in (((RATOR_CONV o RATOR_CONV) (REWRITE_CONV [LET_DEF]))
       THENC DEPTH_CONV PairRules.PBETA_CONV) tm end
-  handle e => NO_CONV tm;
+  handle HOL_ERR _ => NO_CONV tm;
 
 fun STRIP_FORALL_TAC (hs,tm) =
   if is_forall tm then STRIP_TAC (hs,tm) else NO_TAC (hs,tm)
@@ -51,7 +51,7 @@ fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
      else if is_let tm then let
        val (v,c) = (hd o fst o dest_anylet) tm
        val c = if not (type_of c = ``:bool``) then c else
-         (find_term (can (match_term ``GUARD x b``)) c handle e => c)
+         (find_term (can (match_term ``GUARD x b``)) c handle HOL_ERR _ => c)
        val cs = dest_tuple c
        in (GENSPEC_TAC cs THEN EXPAND_BASIC_LET_TAC) (hs,goal) end
      else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end

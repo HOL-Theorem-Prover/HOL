@@ -15,8 +15,8 @@ sig
     | FUN_VAL of term;
 
     val \\                     : tactic * tactic -> tactic
-    val RW                     : thm list -> thm -> thm
-    val RW1                    : thm list -> thm -> thm
+    val RW                     : thm list -> rule
+    val RW1                    : thm list -> rule
 
     val echo                   : int -> string -> unit
     val set_echo               : int -> unit
@@ -59,12 +59,14 @@ sig
     val pbeta_ss               : simpLib.ssfrag
 
     val MOVE_STAR_CONV         : term -> conv
-    val MOVE_STAR_REWRITE_CONV : thm list -> term -> conv
     val MOVE_OUT_CONV          : term -> conv
+    val GEN_MOVE_OUT_CONV      : (term list -> term list) -> conv
+    val LIST_MOVE_OUT_CONV     : bool -> term list -> conv
     val STAR_REVERSE_CONV      : conv
     val FIX_WORD32_ARITH_CONV  : conv
     val POST_CONV              : conv -> conv
     val PRE_CONV               : conv -> conv
+    val PRE_POST_CONV          : conv -> conv
     val FORCE_PBETA_CONV       : conv
     val EVAL_ANY_MATCH_CONV    : term list -> conv
     val SEP_EXISTS_AC_CONV     : conv
@@ -74,32 +76,37 @@ sig
 
     val MATCH_INST             : thm -> term -> thm
 
-    val SUBST_INST             : {redex: term, residue: term} list -> thm -> thm
-    val UNHIDE_PRE_RULE        : term -> thm -> thm
-    val HIDE_PRE_RULE          : term -> thm -> thm
-    val HIDE_POST_RULE         : term -> thm -> thm
-    val HIDE_STATUS_RULE       : bool -> thm -> thm -> thm
-    val HIDE_PRE_STATUS_RULE   : thm -> thm -> thm
-    val INST_SPEC              : thm -> thm -> thm
-    val EXISTS_PRE             : term frag list -> thm -> thm
+    val SUBST_INST             : {redex: term, residue: term} list -> rule
+    val UNHIDE_PRE_RULE        : term -> rule
+    val HIDE_PRE_RULE          : term -> rule
+    val HIDE_POST_RULE         : term -> rule
+    val HIDE_STATUS_RULE       : bool -> thm -> rule
+    val HIDE_PRE_STATUS_RULE   : thm -> rule
+    val INST_SPEC              : thm -> rule
+    val EXISTS_PRE             : term frag list -> rule
     val SEP_EXISTS_ELIM_RULE   : thm -> thm
-    val SEP_EXISTS_POST_RULE   : term -> thm -> thm
-    val SEP_EXISTS_PRE_RULE    : term -> thm -> thm
-    val SEP_REWRITE_RULE       : thm list -> thm -> thm
-    val BASIC_SEP_REWRITE_RULE : thm -> thm -> thm
-    val EXISTS_SEP_REWRITE_RULE : thm -> thm -> thm
-    val LIST_HIDE_POST_RULE    : term list -> thm -> thm
+    val SEP_EXISTS_POST_RULE   : term -> rule
+    val SEP_EXISTS_PRE_RULE    : term -> rule
+    val SEP_REWRITE_RULE       : thm list -> rule
+    val BASIC_SEP_REWRITE_RULE : thm -> rule
+    val EXISTS_SEP_REWRITE_RULE : thm -> rule
+    val LIST_HIDE_POST_RULE    : term list -> rule
+    val STAR_AC_CONV           : conv
+    val PRE_POST_RULE          : conv -> rule
+    val MOVE_COND_RULE         : term -> rule
 
-    val HIDE_SEP_IMP_POST_RULE      : term -> thm -> thm
-    val LIST_HIDE_SEP_IMP_POST_RULE : term list -> thm -> thm
+    val HIDE_SEP_IMP_POST_RULE      : term -> rule
+    val LIST_HIDE_SEP_IMP_POST_RULE : term list -> rule
     val SEP_EXISTS_SEP_IMP          : term -> term -> thm
 
     val SPEC_STRENGTHEN_RULE   : thm -> term -> thm * term
     val SPEC_WEAKEN_RULE       : thm -> term -> thm * term
     val SPEC_BOOL_FRAME_RULE   : thm -> term -> thm
     val SPEC_FRAME_RULE        : thm -> term -> thm
+    val SPECC_FRAME_RULE       : term -> rule
+    val SPECL_FRAME_RULE       : term list -> rule
     val SPEC_COMPOSE_RULE      : thm list -> thm
-    val SPEC_SORT_CODE_RULE    : thm -> thm
+    val SPEC_SORT_CODE_RULE    : rule
 
     val SPEC_PROVE_TAC         : thm list -> tactic
 

@@ -117,11 +117,7 @@ fun introduce_BYTE_MEMORY th = if
   val xs = (rev o list_dest dest_star) p
   val tm = ``x64_MEM a x``
   val xs = filter (can (match_term tm)) xs
-  fun PRE_POST_CONV c = PRE_CONV c THENC POST_CONV c
-  fun LIST_MOVE_OUT_CONV [] = ALL_CONV
-    | LIST_MOVE_OUT_CONV (c::cs) =
-        MOVE_OUT_CONV (rator c) THENC LIST_MOVE_OUT_CONV cs
-  val th = CONV_RULE (PRE_POST_CONV (LIST_MOVE_OUT_CONV xs)) th
+  val th = PRE_POST_RULE (LIST_MOVE_OUT_CONV false (List.map rator xs)) th
   fun foo tm = cdr (cdr tm) |->
                mk_comb(mk_var("b",``:word64->word8``),(cdr o car) tm)
   val th = INST (map foo xs) th

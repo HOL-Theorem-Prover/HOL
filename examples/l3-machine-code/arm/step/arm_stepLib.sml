@@ -15,7 +15,7 @@ struct
    val (tyg, (tmg, _)) =
       (I ## term_grammar.mfupdate_overload_info
                (Overload.remove_overloaded_form "add"))
-      armTheory.arm_grammars
+      arm_stepTheory.arm_step_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
 
@@ -46,17 +46,6 @@ val registers   = utilsLib.tab_fixedwidth 15 4
 val opcodes     = utilsLib.list_mk_wordii 4 (List.tabulate (16, Lib.I))
 val arithlogic  = utilsLib.list_mk_wordii 4 [0,1,2,3,4,5,6,7,12,14]
 val testcompare = utilsLib.list_mk_wordii 4 (List.tabulate (4, fn i => i + 8))
-
-(* Options for supporting multiple modes:
-
-  val modes = all_modes
-  val modes = [hd arm_configLib.all_modes, last arm_configLib.all_modes]
-*)
-
-(* Only support USR mode *)
-val modes = [hd arm_configLib.all_modes]
-
-val cpsr'modes = List.map (fn m => [``^st.CPSR.M = ^m``]) modes
 
 local
    val c_of = TypeBase.constructors_of o arm_configLib.mk_arm_type
@@ -164,10 +153,6 @@ val SelectInstrSet_rwt =
       [] (mapl (`iset`, isets))
      ``SelectInstrSet iset``
 
-val BadMode_rwt =
-   EV [BadMode_def] [] (mapl (`m`, all_modes))
-     ``BadMode m``
-
 (* register access *)
 
 val () = resetEvConv ()
@@ -178,84 +163,75 @@ val PC_rwt =
 
 local
    val RBankSelect_rwt =
-     EV (RBankSelect_def :: BadMode_rwt) [] (mapl (`mode`, modes))
-       ``RBankSelect (mode,usr,fiq,irq,svc,abt,und,mon,hyp)``
+     EV [RBankSelect_def, BadMode] [] []
+       ``RBankSelect (mode,usr,fiq,irq,svc,abt,und,mon,hyp)`` |> hd
 
    val RfiqBankSelect_rwt =
-     EV (RfiqBankSelect_def :: RBankSelect_rwt) [] (mapl (`mode`, modes))
-       ``RfiqBankSelect (mode,usr,fiq)``
+     EV [RfiqBankSelect_def, RBankSelect_rwt] [] []
+       ``RfiqBankSelect (mode,usr,fiq)`` |> hd
 
    val LookUpRName_rwt =
-     EV ([LookUpRName_def, mustbe15] @ RfiqBankSelect_rwt @ RBankSelect_rwt) []
-       (mapl (`mode`, modes))
-       ``LookUpRName (n,mode)``
+     EV [LookUpRName_def, mustbe15, RfiqBankSelect_rwt, RBankSelect_rwt] [] []
+       ``LookUpRName (n,mode)`` |> hd
 
-   val thms =
-      [merge_cond, cond_rand_thms, isnot15, IsSecure_def, CurrentInstrSet_rwt,
-       HaveSecurityExt_def, Rmode_def, write'Rmode_def] @ LookUpRName_rwt
-
-   val Rmode_fiq_rwt =
-     EV thms [[``Extension_Security NOTIN ^st.Extensions``]] []
-        ``Rmode (n, 17w)`` |> hd
+   val thms = [merge_cond, cond_rand_thms, isnot15, IsSecure_def,
+               CurrentInstrSet_rwt, NotMon, HaveSecurityExt_def, Rmode_def,
+               write'Rmode_def, LookUpRName_rwt, GSYM Aligned]
 
    val Rmode_rwt =
-     EV thms []
-        (mapl (`m`, List.filter (not o Lib.equal ``17w:word5``) modes))
-        ``Rmode (n, m)``
-
-   val write'Rmode_fiq_rwt =
-     EV thms [[``Extension_Security NOTIN ^st.Extensions``]] []
-        ``write'Rmode (v, n, 17w)`` |> hd
+      EV thms [[``Extension_Security NOTIN ^st.Extensions``]] []
+        ``Rmode (n, m)`` |> hd
 
    val write'Rmode_rwt =
-     EV thms []
-        (mapl (`m`, List.filter (not o Lib.equal ``17w:word5``) modes))
+      EV thms
+         [[``Extension_Security NOTIN ^st.Extensions``, ``n <> 15w: word4``,
+           ``~(((n = 13w: word4) /\ ~Aligned (v: word32, 4)) /\ ^st.CPSR.T)``]]
+         []
         ``write'Rmode (v, n, m)``
+        |> hd
+        |> utilsLib.ALL_HYP_CONV_RULE
+              (REWRITE_CONV [boolTheory.DE_MORGAN_THM,
+                             GSYM boolTheory.DISJ_ASSOC])
 
-   val get_f = Term.rator o utilsLib.lhsc o Drule.SPEC_ALL
-
-   fun R_rwt (m, thm) =
-      Q.prove(
-         `(^st.CPSR.M = ^m) ==> ~^st.CPSR.J ==>
-            (R n ^st =
-              (if n = 15w then
-                  ^st.REG RName_PC + if ^st.CPSR.T then 4w else 8w
-               else ^st.REG (^(get_f thm) n), ^st))`,
-         lrw ([thm, R_def, Rmode_fiq_rwt, CurrentInstrSet_rwt] @ Rmode_rwt)
-         \\ fs [] \\ blastLib.FULL_BBLAST_TAC)
-         |> Drule.UNDISCH
-         |> Drule.UNDISCH
-
-   fun write'R_rwt (m, thm) =
-      Q.prove(
-         `(^st.CPSR.M = ^m) ==> ~^st.CPSR.J ==> n <> 15w ==>
-          ((n <> 13w) \/ Aligned (v, 4) \/ ~^st.CPSR.T) ==>
-            (write'R (v, n) ^st =
-              ((), ^st with REG := (^(get_f thm) n =+ v) ^st.REG))`,
-         lrw ([thm, write'R_def, write'Rmode_fiq_rwt, CurrentInstrSet_rwt,
-               Aligned] @ write'Rmode_rwt)
-         \\ fs [] \\ blastLib.FULL_BBLAST_TAC)
-         |> Drule.UNDISCH
-         |> Drule.UNDISCH
-         |> Drule.UNDISCH
-         |> Drule.UNDISCH
-
-   (*
-   val R_xs = [R_usr_def, R_fiq_def, R_irq_def, R_svc_def, R_abt_def, R_und_def,
-               R_usr_def]
-   *)
-   val R_xs = [R_usr_def, R_usr_def]
-
-   val l = ListPair.zip (modes, R_xs)
+   val in_ext = GSYM (Q.ISPEC `^st.Extensions` pred_setTheory.SPECIFICATION)
 in
+   val R_rwt = Q.prove(
+      `GoodMode (^st.CPSR.M) ==>
+       ~^st.Extensions Extension_Security ==>
+       ~^st.CPSR.J ==>
+       (R n ^st = (if n = 15w then
+                     ^st.REG RName_PC + if ^st.CPSR.T then 4w else 8w
+                   else ^st.REG (R_mode (^st.CPSR.M) n), ^st))`,
+      lrw [R_def, R_mode_def, CurrentInstrSet_rwt, in_ext, DISCH_ALL Rmode_rwt]
+      \\ rfs [GoodMode_def]
+      \\ blastLib.FULL_BBLAST_TAC
+      )
+      |> funpow 3 Drule.UNDISCH
+
+   val write'R_rwt = Q.prove(
+      `GoodMode (^st.CPSR.M) ==>
+       ~^st.Extensions Extension_Security==>
+       ~^st.CPSR.J ==>
+       n <> 15w ==>
+       ((n <> 13w) \/ Aligned (v, 4) \/ ~^st.CPSR.T) ==>
+       (write'R (v, n) ^st =
+        ((), ^st with REG := (R_mode (^st.CPSR.M) n =+ v) ^st.REG))`,
+      rewrite_tac [in_ext]
+      \\ ntac 4 strip_tac
+      \\ DISCH_THEN
+           (fn th => IMP_RES_TAC (MATCH_MP (DISCH_ALL write'Rmode_rwt) th))
+      \\ simp [write'R_def]
+      \\ pop_assum (K all_tac)
+      \\ lrw [R_mode_def, CurrentInstrSet_rwt]
+      \\ fs [GoodMode_def]
+      \\ blastLib.FULL_BBLAST_TAC
+      )
+      |> funpow 5 Drule.UNDISCH
+
    val R15_rwt = Q.prove(
       `~^st.CPSR.J ==>
        (R 15w ^st = (^st.REG RName_PC + if ^st.CPSR.T then 4w else 8w, ^st))`,
       lrw [R_def, CurrentInstrSet_rwt] \\ fs []) |> Drule.UNDISCH
-   val R_x_tms = List.map get_f R_xs
-   val R_rwts = List.map R_rwt l
-   val write'R_rwts = List.map write'R_rwt l
-   val reg_rwts = ListPair.zip (R_rwts, write'R_rwts)
 end
 
 (* ---------------------------- *)
@@ -458,43 +434,35 @@ val MemU_unpriv_8_rwt =
     ``MemU_unpriv (v, 8) : arm_state -> word64 # arm_state``
 
 val MemA_1_rwt =
-   EV ([MemA_def, MemA_with_priv_1_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemA_def, MemA_with_priv_1_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemA (v, 1) : arm_state -> word8 # arm_state``
 
 val MemU_1_rwt =
-   EV ([MemU_def, MemU_with_priv_1_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemU_def, MemU_with_priv_1_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemU (v, 1) : arm_state -> word8 # arm_state``
 
 val MemA_2_rwt =
-   EV ([MemA_def, MemA_with_priv_2_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemA_def, MemA_with_priv_2_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemA (v, 2) : arm_state -> word16 # arm_state``
 
 val MemU_2_rwt =
-   EV ([MemU_def, MemU_with_priv_2_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemU_def, MemU_with_priv_2_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemU (v, 2) : arm_state -> word16 # arm_state``
 
 val MemA_4_rwt =
-   EV ([MemA_def, MemA_with_priv_4_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemA_def, MemA_with_priv_4_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemA (v, 4) : arm_state -> word32 # arm_state``
 
 val MemU_4_rwt =
-   EV ([MemU_def, MemU_with_priv_4_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemU_def, MemU_with_priv_4_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemU (v, 4) : arm_state -> word32 # arm_state``
 
 val MemA_8_rwt =
-   EV ([MemA_def, MemA_with_priv_8_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemA_def, MemA_with_priv_8_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemA (v, 8) : arm_state -> word64 # arm_state``
 
 val MemU_8_rwt =
-   EV ([MemU_def, MemU_with_priv_8_rwt, CurrentModeIsNotUser_def] @ BadMode_rwt)
-      cpsr'modes []
+   EV [MemU_def, MemU_with_priv_8_rwt, CurrentModeIsNotUser_def, BadMode] [] []
     ``MemU (v, 8) : arm_state -> word64 # arm_state``
 
 (* ---------------------------- *)
@@ -574,33 +542,33 @@ val write'MemU_unpriv_4_rwt =
     ``write'MemU_unpriv (w: word32, v, 4)``
 
 val write'MemA_1_rwt =
-   EV ([write'MemA_def, write'MemA_with_priv_1_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemA_def, write'MemA_with_priv_1_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemA (w: word8, v, 1)``
 
 val write'MemU_1_rwt =
-   EV ([write'MemU_def, write'MemU_with_priv_1_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemU_def, write'MemU_with_priv_1_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemU (w: word8, v, 1)``
 
 val write'MemA_2_rwt =
-   EV ([write'MemA_def, write'MemA_with_priv_2_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemA_def, write'MemA_with_priv_2_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemA (w: word16, v, 2)``
 
 val write'MemU_2_rwt =
-   EV ([write'MemU_def, write'MemU_with_priv_2_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemU_def, write'MemU_with_priv_2_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemU (w: word16, v, 2)``
 
 val write'MemA_4_rwt =
-   EV ([write'MemA_def, write'MemA_with_priv_4_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemA_def, write'MemA_with_priv_4_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemA (w: word32, v, 4)``
 
 val write'MemU_4_rwt =
-   EV ([write'MemU_def, write'MemU_with_priv_4_rwt, CurrentModeIsNotUser_def] @
-       BadMode_rwt) cpsr'modes []
+   EV [write'MemU_def, write'MemU_with_priv_4_rwt, CurrentModeIsNotUser_def,
+       BadMode] [] []
     ``write'MemU (w: word32, v, 4)``
 
 ;
@@ -626,18 +594,17 @@ val SND_Shift_C_rwt = Q.prove(
 fun regEV npcs thms ctxt s tm =
    let
       val npc_thms = npc_thm npcs
-      val thms = [ArchVersion_rwts, IncPC_rwt, cond_rand_thms] @ npc_thms @ thms
+      val thms =
+         [ArchVersion_rwts, IncPC_rwt, cond_rand_thms, R_rwt, write'R_rwt] @
+         npc_thms @ thms
+      val rule =
+         REWRITE_RULE npc_thms o FULL_DATATYPE_RULE o
+         Conv.CONV_RULE
+            (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt]))
    in
-      List.map (fn (r, w) =>
-         let
-            val rule =
-               REWRITE_RULE npc_thms o FULL_DATATYPE_RULE o
-               Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w]))
-         in
-            EV (r :: thms) ctxt s tm |> List.map rule
-         end) reg_rwts
-       |> List.concat
-       |> addThms
+      EV thms ctxt s tm
+      |> List.map rule
+      |> addThms
    end
 
 fun memEV rl mem thms ctxt s tm =
@@ -647,16 +614,14 @@ fun memEV rl mem thms ctxt s tm =
                   armTheory.offset2_case_def,
                   pairTheory.pair_case_thm,
                   Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-                  Aligned_plus, Shift_def] @ thms
+                  Aligned_plus, Shift_def, R_rwt] @ thms
    in
-      List.map
-         (fn (r1, w, r2) => EV ([r2, r1] @ thms) ctxt s tm |> List.map (rl w))
-         (utilsLib.zipLists Lib.triple_of_list [R_rwts, write'R_rwts, mem])
-       |> List.concat
-       |> addThms
+      List.map (fn r => EV ([r] @ thms) ctxt s tm |> List.map rl) mem
+      |> List.concat
+      |> addThms
    end
 
-fun storeEV rl align mem thms ctxt s tm =
+fun storeEV rl mem thms ctxt s tm =
    let
       val thms = [NullCheckIfThumbEE_rwt,
                   Q.INST [`d` |-> `n`] arm_stepTheory.R_x_not_pc,
@@ -665,19 +630,14 @@ fun storeEV rl align mem thms ctxt s tm =
                   boolTheory.COND_ID, merge_cond, cond_rand_thms,
                   armTheory.offset1_case_def,
                   armTheory.offset2_case_def,
-                  pairTheory.pair_case_thm] @ thms
+                  pairTheory.pair_case_thm,
+                  R_rwt, write'R_rwt] @ thms
       val conv = REWRITE_CONV [boolTheory.COND_ID] THENC DATATYPE_CONV
-      fun rule r = rl r o utilsLib.ALL_HYP_CONV_RULE conv
+      val rule = rl o utilsLib.ALL_HYP_CONV_RULE conv
    in
-      List.map
-         (fn ((r, w1, w2), t) =>
-            EV ([r, w2, w1] @ thms) (List.map (fn c => align t @ c) ctxt) s tm
-            |> List.map (rule r))
-         (ListPair.zip
-            (utilsLib.zipLists Lib.triple_of_list [R_rwts, write'R_rwts, mem],
-             R_x_tms))
-       |> List.concat
-       |> addThms
+      List.map (fn w => EV ([w] @ thms) ctxt s tm |> List.map rule) mem
+      |> List.concat
+      |> addThms
    end
 
 (* ---------------------------- *)
@@ -741,17 +701,18 @@ local
    val LDM_thm = unfold_for_loop dfn'LoadMultiple_def
 
    val cond_write'R_13_rwt = Q.prove(
-      `~^st.CPSR.J ==> (^st.CPSR.M = 16w) ==>
+      `~^st.CPSR.J ==> GoodMode (^st.CPSR.M) ==>
+       ~^st.Extensions Extension_Security ==>
        (p ==> (Aligned (w, 4) \/ ~^st.CPSR.T)) ==>
        ((if p then
             ((), a, SND (write'R (w, 13w) s))
          else
             ((), s2)) =
         (if p then
-            ((), a, s with REG := (R_usr 13w =+ w) ^st.REG)
+            ((), a, s with REG := (R_mode ^st.CPSR.M 13w =+ w) ^st.REG)
          else
             ((), s2)))`,
-      lrw [] \\ lrw [Drule.DISCH_ALL (hd write'R_rwts)])
+      lrw [] \\ lrw [DISCH_ALL write'R_rwt])
       |> Drule.UNDISCH_ALL
 
    val rearrange = Q.prove(
@@ -766,7 +727,7 @@ local
          val (b, _, _) = boolSyntax.dest_cond (abs_body (rator b))
          val n = fst (wordsSyntax.dest_word_bit b)
          val _ = numLib.int_of_term n = i orelse raise ERR "FOR_BETA_CONV" ""
-         val thm = if i = 13 then cond_write'R_13_rwt else hd write'R_rwts
+         val thm = if i = 13 then cond_write'R_13_rwt else write'R_rwt
       in
          (Conv.RAND_CONV
             (PairedLambda.GEN_BETA_CONV
@@ -780,7 +741,7 @@ local
       LDM_thm
       |> Q.INST [`increment` |-> a, `index` |-> i]
       |> Conv.RIGHT_CONV_RULE
-           (REWRITE_CONV [hd R_rwts,
+           (REWRITE_CONV [R_rwt,
                           ASSUME ``~word_bit 15 (registers: word16)``,
                           ASSUME ``n <> 15w: word4``]
             THENC Conv.EVERY_CONV
@@ -797,7 +758,7 @@ local
       LDM_thm
       |> Q.INST [`increment` |-> a, `index` |-> i]
       |> Conv.RIGHT_CONV_RULE
-           (REWRITE_CONV [hd R_rwts,
+           (REWRITE_CONV [R_rwt,
                           ASSUME ``word_bit 15 (registers: word16)``,
                           ASSUME ``n <> 15w: word4``]
             THENC Conv.EVERY_CONV
@@ -833,7 +794,7 @@ local
 in
    fun ldmEV wb =
       EV [LDMDA, LDMDB, LDMIA, LDMIB, LDM_UPTO_def, IncPC_rwt, LDM_UPTO_PC,
-          hd write'R_rwts]
+          write'R_rwt]
          (if wb
              then [[``~word_bit (w2n (n:word4)) (registers:word16)``]]
           else [])
@@ -850,7 +811,7 @@ in
    fun ldm_pcEV wb =
       List.map (fn wpc =>
          EV [LDMDA_PC, LDMDB_PC, LDMIA_PC, LDMIB_PC, LDM_UPTO_def, wpc,
-             LDM_UPTO_PC, hd write'R_rwts]
+             LDM_UPTO_PC, write'R_rwt]
             (if wb
                 then [[``~word_bit (w2n (n:word4)) (registers:word16)``]]
              else [])
@@ -865,7 +826,9 @@ in
                  utilsLib.ALL_HYP_CONV_RULE
                    (DATATYPE_CONV
                     THENC REWRITE_CONV
-                            [ASSUME ``Aligned (s.REG (arm_step$R_usr n),4)``,
+                            [ASSUME
+                               ``Aligned
+                                   (^st.REG (arm_step$R_mode ^st.CPSR.M n),4)``,
                              Aligned_plus, LDM_UPTO_components])))
            LoadWritePC_rwt
         |> List.concat
@@ -916,7 +879,7 @@ local
             (PairedLambda.GEN_BETA_CONV
              THENC Conv.REWR_CONV STM_lem
              THENC utilsLib.INST_REWRITE_CONV [cond_lsb]
-             THENC utilsLib.INST_REWRITE_CONV [hd write'MemA_4_rwt, hd R_rwts]
+             THENC utilsLib.INST_REWRITE_CONV [hd write'MemA_4_rwt, R_rwt]
              THENC utilsLib.WGROUND_CONV)
           THENC REWRITE_CONV [cond_rand_thms, STM_UPTO_components,
                               STM_UPTO_0, STM_UPTO_SUC]) tm
@@ -926,7 +889,7 @@ in
       STM_thm
       |> Q.INST [`increment` |-> a, `index` |-> i]
       |> Conv.RIGHT_CONV_RULE
-           (REWRITE_CONV [hd R_rwts, ASSUME ``n <> 15w: word4``]
+           (REWRITE_CONV [R_rwt, ASSUME ``n <> 15w: word4``]
             THENC Conv.EVERY_CONV
                      (List.tabulate
                          (15, fn i => Conv.ONCE_DEPTH_CONV (FOR_BETA_CONV i))))
@@ -934,7 +897,7 @@ in
             (numLib.REDUCE_CONV
              THENC REWRITE_CONV
                      [Aligned_plus, Aligned_concat4, STM_UPTO_components]
-             THENC utilsLib.INST_REWRITE_CONV [hd R_rwts]
+             THENC utilsLib.INST_REWRITE_CONV [R_rwt]
              THENC DATATYPE_CONV)
       |> utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [STM_UPTO_components])
 end
@@ -953,7 +916,7 @@ local
 
    val cond_pc = Q.prove(
       `n <> 15w ==>
-       ((if p then ((R_usr n =+ a) ^st.REG) else ^st.REG) RName_PC =
+       ((if p then ((R_mode ^st.CPSR.M n =+ a) ^st.REG) else ^st.REG) RName_PC =
        ^st.REG RName_PC)`,
       rw [combinTheory.UPDATE_def, Drule.DISCH_ALL R_x_not_pc])
       |> Drule.UNDISCH
@@ -969,7 +932,7 @@ in
    val StoreMultiple_rwt =
       EV [STMDA, STMDB, STMIA, STMIB, STM_UPTO_def, IncPC_rwt,
           STM_UPTO_components, PCStoreValue_def, PC_def, add4, rearrange,
-          hd R_rwts, hd write'R_rwts, hd write'MemA_4_rwt, cond_pc] []
+          R_rwt, write'R_rwt, hd write'MemA_4_rwt, cond_pc] []
          [[`inc` |-> ``F``, `index` |-> ``F``],
           [`inc` |-> ``F``, `index` |-> ``T``],
           [`inc` |-> ``T``, `index` |-> ``F``],
@@ -1058,7 +1021,7 @@ local
    val STM1 = REWRITE_RULE [wordsTheory.word_mul_n2w] STM1_def
    val LDM1_tm = Term.prim_mk_const {Thy = "arm_step", Name = "LDM1"}
    val STM1_tm = Term.prim_mk_const {Thy = "arm_step", Name = "STM1"}
-   val f_tm = Term.mk_var ("f", Term.type_of ``arm_step$R_usr``)
+   val f_tm = Term.mk_var ("f", ``:word4 -> RName``)
    val b_tm = Term.mk_var ("b", wordsSyntax.mk_int_word_type 32)
    val r_tm = Term.mk_var ("r", ``:RName -> word32``)
    val m_tm = Term.mk_var ("r", ``:word32 -> word8``)
@@ -2559,12 +2522,10 @@ val BranchTarget_rwts =
 (* ---------------------------- *)
 
 val BranchExchange_rwt =
-   List.map (fn r =>
-      EV ([r, dfn'BranchExchange_def, BXWritePC_rwt, CurrentInstrSet_rwt] @
-          SelectInstrSet_rwt)
-        [[``m <> 15w: word4``]] []
-        ``dfn'BranchExchange m``) R_rwts
-     |> List.concat
+   EV ([dfn'BranchExchange_def, R_rwt, BXWritePC_rwt, CurrentInstrSet_rwt] @
+       SelectInstrSet_rwt)
+      [[``m <> 15w: word4``]] []
+      ``dfn'BranchExchange m``
      |> List.map COND_UPDATE_RULE
      |> addThms
 
@@ -2604,13 +2565,11 @@ val R_x_14_not_pc =
    |> utilsLib.ALL_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV
 
 val BranchLinkExchangeRegister_rwt =
-   List.map (fn (r, w) =>
-      EV ([r, w, PC_rwt, dfn'BranchLinkExchangeRegister_def, BXWritePC_rwt,
-           CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc, not_cond] @
-          SelectInstrSet_rwt)
-         [[``m <> 15w: word4``]] []
-        ``dfn'BranchLinkExchangeRegister m``) reg_rwts
-     |> List.concat
+   EV ([dfn'BranchLinkExchangeRegister_def, R_rwt, write'R_rwt, PC_rwt,
+        BXWritePC_rwt, CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc,
+        not_cond] @ SelectInstrSet_rwt)
+      [[``m <> 15w: word4``]] []
+      ``dfn'BranchLinkExchangeRegister m``
      |> List.map
           (COND_UPDATE_RULE o
            utilsLib.ALL_HYP_CONV_RULE
@@ -2623,12 +2582,10 @@ val BranchLinkExchangeRegister_rwt =
 (* ---------------------------- *)
 
 fun BranchLinkExchangeImmediate_rwt (c, t, rwt) =
-   List.map (fn w =>
-     EV ([w, PC_rwt, CurrentInstrSet_rwt,
-          dfn'BranchLinkExchangeImmediate_def, write'LR_def, R_x_14_not_pc] @
-          SelectInstrSet_rwt) [[c]] []
-     ``dfn'BranchLinkExchangeImmediate (^t, imm32)``) write'R_rwts
-     |> List.concat
+   EV ([dfn'BranchLinkExchangeImmediate_def, write'R_rwt, PC_rwt,
+        CurrentInstrSet_rwt, write'LR_def, R_x_14_not_pc] @
+        SelectInstrSet_rwt) [[c]] []
+     ``dfn'BranchLinkExchangeImmediate (^t, imm32)``
      |> List.map
           (utilsLib.ALL_HYP_CONV_RULE
              (DATATYPE_CONV
@@ -2751,21 +2708,20 @@ val DataProcessingPC_nsetflags_rwt =
 
 local
    val DataProcessing_rwts =
-      List.map (fn opc =>
-         List.map (fn (r, w) =>
-               let
-                  val i = wordsSyntax.uint_of_word opc
-                  val wr = if i < 8 orelse 11 < i then [w] else []
-               in
-                  EV ([r, arm_stepTheory.R_x_not_pc,
-                      utilsLib.SET_RULE DataProcessing_def,
-                      DataProcessingALU_def,
-                      AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
-                      ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms,
-                      unit_state_cond] @ wr) [] [[`opc` |-> opc]]
-                     ``DataProcessing (opc, setflags, d, n, imm32, c)``
-               end) reg_rwts
-            |> List.concat
+      List.map
+         (fn opc =>
+            let
+               val i = wordsSyntax.uint_of_word opc
+               val wr = if i < 8 orelse 11 < i then [write'R_rwt] else []
+            in
+               EV ([R_rwt, arm_stepTheory.R_x_not_pc,
+                   utilsLib.SET_RULE DataProcessing_def,
+                   DataProcessingALU_def,
+                   AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
+                   ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms,
+                   unit_state_cond] @ wr) [] [[`opc` |-> opc]]
+                  ``DataProcessing (opc, setflags, d, n, imm32, c)``
+            end
             |> List.map
                  (utilsLib.ALL_HYP_CONV_RULE
                      (REWRITE_CONV [boolTheory.COND_ID]) o
@@ -2774,20 +2730,9 @@ in
    fun dp n = List.nth (DataProcessing_rwts, n)
 end
 
-local
-   val tentuple_of_list =
-      fn [a1, a2, a3, a4, a5, a6, a7, a8, a9, a10] =>
-         (a1, a2, a3, a4, a5, a6, a7, a8, a9, a10)
-       | _ => raise ERR "tentuple_of_list" ""
-in
-   fun mv () = ListPair.zip (dp 13, dp 15)
-   fun al () =
-      utilsLib.zipLists tentuple_of_list
-        (List.tabulate (8, fn i => dp i) @ [dp 12, dp 14])
-   fun tc () =
-      utilsLib.zipLists Lib.quadruple_of_list
-        (List.tabulate (4, fn i => dp (8 + i)))
-end
+val mov_mvn = dp 13 @ dp 15
+val al = List.concat (List.tabulate (8, fn i => dp i) @ [dp 12, dp 14])
+val tc = List.concat (List.tabulate (4, fn i => dp (8 + i)))
 
 (* ---------------------------- *)
 
@@ -2801,57 +2746,45 @@ val AddSub_rwt =
 *)
 
 val Move_rwt =
-   List.map (fn (mov, mvn) =>
-      EV [dfn'Move_def, mov, mvn, ExpandImm_C_rwt,
-          bitstringTheory.word_concat_v2w_rwt, wordsTheory.WORD_OR_CLAUSES]
-         [[``d <> 15w: word4``]] (TF `negate`)
-         ``dfn'Move (setflags, negate, d, ^(bitstringSyntax.mk_vec 12 0))``)
-         (mv ())
-      |> List.concat
-      |> List.map (utilsLib.MATCH_HYP_CONV_RULE
-                      (REWRITE_CONV [wordsTheory.WORD_OR_CLAUSES])
-                      ``a \/ b \/ c : bool``)
-      |> addThms
+   EV ([dfn'Move_def, ExpandImm_C_rwt, bitstringTheory.word_concat_v2w_rwt,
+        wordsTheory.WORD_OR_CLAUSES] @ mov_mvn)
+      [[``d <> 15w: word4``]] (TF `negate`)
+      ``dfn'Move (setflags, negate, d, ^(bitstringSyntax.mk_vec 12 0))``
+   |> List.map (utilsLib.MATCH_HYP_CONV_RULE
+                   (REWRITE_CONV [wordsTheory.WORD_OR_CLAUSES])
+                   ``a \/ b \/ c : bool``)
+   |> addThms
 
 val () = setEvConv (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV
                     THENC utilsLib.WGROUND_CONV)
 
 val TestCompareImmediate_rwt =
-   List.map (fn (tst, teq, cmp, cmn) =>
-      EV [dfn'TestCompareImmediate_def, bitstringTheory.word_concat_v2w_rwt,
-          ExpandImm_C_rwt, tst, teq, cmp, cmn] []
-         (mapl (`op`, utilsLib.tab_fixedwidth 4 2))
-         ``dfn'TestCompareImmediate (op, n, ^(bitstringSyntax.mk_vec 12 0))``)
-         (tc ())
-      |> List.concat
-      |> addThms
+   EV ([dfn'TestCompareImmediate_def, bitstringTheory.word_concat_v2w_rwt,
+        ExpandImm_C_rwt] @ tc) []
+      (mapl (`op`, utilsLib.tab_fixedwidth 4 2))
+      ``dfn'TestCompareImmediate (op, n, ^(bitstringSyntax.mk_vec 12 0))``
+   |> addThms
 
 val ArithLogicImmediate_rwt =
-   List.map (fn (aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic) =>
-      EV [dfn'ArithLogicImmediate_def, bitstringTheory.word_concat_v2w_rwt,
-          ExpandImm_C_rwt, aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic]
-         [[``d <> 15w: word4``]] (mapl (`op`, arithlogic))
-         ``dfn'ArithLogicImmediate
-              (op, s, d, n, ^(bitstringSyntax.mk_vec 12 0))``) (al ())
-      |> List.concat
-      |> addThms
+   EV ([dfn'ArithLogicImmediate_def, bitstringTheory.word_concat_v2w_rwt,
+       ExpandImm_C_rwt] @ al)
+      [[``d <> 15w: word4``]] (mapl (`op`, arithlogic))
+      ``dfn'ArithLogicImmediate
+           (op, s, d, n, ^(bitstringSyntax.mk_vec 12 0))``
+   |> addThms
 
 (* ---------------------------- *)
 
 val () = setEvConv utilsLib.WGROUND_CONV
 
 val ShiftImmediate_rwt =
-   List.map (fn (r, (mov, mvn)) =>
-      EV [dfn'ShiftImmediate_def, r, mov, mvn,
-          doRegister_def, ArithmeticOpcode_def, Shift_C_DecodeImmShift_rwt,
-          wordsTheory.WORD_OR_CLAUSES]
-         [[``d <> 15w: word4``]] (TF `negate`)
-         ``dfn'ShiftImmediate
-             (negate, setflags, d, m,
-              FST (DecodeImmShift (v2w [a; b], imm5)),
-              SND (DecodeImmShift (v2w [a; b], imm5)))``)
-       (ListPair.zip (R_rwts, mv ()))
-      |> List.concat
+   EV ([dfn'ShiftImmediate_def, R_rwt, doRegister_def, ArithmeticOpcode_def,
+        Shift_C_DecodeImmShift_rwt, wordsTheory.WORD_OR_CLAUSES] @ mov_mvn)
+      [[``d <> 15w: word4``]] (TF `negate`)
+      ``dfn'ShiftImmediate
+          (negate, setflags, d, m,
+           FST (DecodeImmShift (v2w [a; b], imm5)),
+           SND (DecodeImmShift (v2w [a; b], imm5)))``
       |> List.map (utilsLib.ALL_HYP_CONV_RULE
                      (REWRITE_CONV [wordsTheory.WORD_OR_CLAUSES]) o
                    REWRITE_RULE [])
@@ -2861,90 +2794,72 @@ val () = setEvConv (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV
                     THENC utilsLib.WGROUND_CONV)
 
 val TestCompareRegister_rwt =
-   List.map (fn (r, (tst, teq, cmp, cmn)) =>
-      EV [dfn'TestCompareRegister_def, r, bitstringTheory.word_concat_v2w_rwt,
-          doRegister_def, ArithmeticOpcode_def, Shift_C_DecodeImmShift_rwt,
-          tst, teq, cmp, cmn] []
-         (mapl (`op`, utilsLib.tab_fixedwidth 4 2))
-         ``dfn'TestCompareRegister
-             (op, n, m,
-              FST (DecodeImmShift (v2w [a; b], imm5)),
-              SND (DecodeImmShift (v2w [a; b], imm5)))``)
-       (ListPair.zip (R_rwts, tc ()))
-      |> List.concat
-      |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
-                   REWRITE_RULE [])
-      |> addThms
+   EV ([dfn'TestCompareRegister_def, R_rwt, bitstringTheory.word_concat_v2w_rwt,
+        doRegister_def, ArithmeticOpcode_def, Shift_C_DecodeImmShift_rwt] @ tc)
+      []
+      (mapl (`op`, utilsLib.tab_fixedwidth 4 2))
+      ``dfn'TestCompareRegister
+          (op, n, m,
+           FST (DecodeImmShift (v2w [a; b], imm5)),
+           SND (DecodeImmShift (v2w [a; b], imm5)))``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
+                REWRITE_RULE [])
+   |> addThms
 
 val () = setEvConv utilsLib.WGROUND_CONV
 
 val Register_rwt =
-   List.map (fn (r, (aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic)) =>
-      EV [dfn'Register_def, r,
-          doRegister_def, ArithmeticOpcode_def, Shift_C_DecodeImmShift_rwt,
-          aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic]
-         [[``d <> 15w: word4``]] (mapl (`op`, arithlogic))
-         ``dfn'Register
-             (op, setflags, d, n, m,
-              FST (DecodeImmShift (v2w [a; b], imm5)),
-              SND (DecodeImmShift (v2w [a; b], imm5)))``)
-       (ListPair.zip (R_rwts, al ()))
-      |> List.concat
-      |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
-                   REWRITE_RULE [])
-      |> addThms
+   EV ([dfn'Register_def, R_rwt, doRegister_def, ArithmeticOpcode_def,
+        Shift_C_DecodeImmShift_rwt] @ al)
+      [[``d <> 15w: word4``]] (mapl (`op`, arithlogic))
+      ``dfn'Register
+          (op, setflags, d, n, m,
+           FST (DecodeImmShift (v2w [a; b], imm5)),
+           SND (DecodeImmShift (v2w [a; b], imm5)))``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
+                REWRITE_RULE [])
+   |> addThms
 
 (* ---------------------------- *)
 
 val () = setEvConv utilsLib.WGROUND_CONV
 
 val ShiftRegister_rwt =
-   List.map (fn (r, (mov, mvn)) =>
-      EV [dfn'ShiftRegister_def, r, mov, mvn,
-          doRegisterShiftedRegister_def, ArithmeticOpcode_def,
-          Shift_C_DecodeRegShift_rwt, wordsTheory.WORD_OR_CLAUSES]
-         [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``]]
-         (TF `negate`)
-         ``dfn'ShiftRegister
-             (negate, setflags, d, n, DecodeRegShift (v2w [a; b]), m)``)
-       (ListPair.zip (R_rwts, mv ()))
-      |> List.concat
-      |> List.map
-           (utilsLib.ALL_HYP_CONV_RULE
-              (REWRITE_CONV [Shift_C_DecodeRegShift_rwt,
-                             wordsTheory.WORD_OR_CLAUSES]))
-      |> addThms
+   EV ([dfn'ShiftRegister_def, R_rwt, doRegisterShiftedRegister_def,
+        ArithmeticOpcode_def, Shift_C_DecodeRegShift_rwt,
+        wordsTheory.WORD_OR_CLAUSES] @ mov_mvn)
+      [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``]]
+      (TF `negate`)
+      ``dfn'ShiftRegister
+          (negate, setflags, d, n, DecodeRegShift (v2w [a; b]), m)``
+   |> List.map
+        (utilsLib.ALL_HYP_CONV_RULE
+           (REWRITE_CONV [Shift_C_DecodeRegShift_rwt,
+                          wordsTheory.WORD_OR_CLAUSES]))
+   |> addThms
 
 val TestCompareRegisterShiftedRegister_rwt =
-   List.map (fn (r, (tst, teq, cmp, cmn)) =>
-      EV [dfn'RegisterShiftedRegister_def, r, doRegisterShiftedRegister_def,
-          ArithmeticOpcode_def, Shift_C_DecodeRegShift_rwt,
-          tst, teq, cmp, cmn]
-         [[``n <> 15w: word4``, ``m <> 15w: word4``, ``r <> 15w: word4``]]
-         (mapl (`op`, testcompare))
-         ``dfn'RegisterShiftedRegister
-             (op, T, d, n, m, DecodeRegShift (v2w [a; b]), r)``)
-       (ListPair.zip (R_rwts, tc ()))
-      |> List.concat
-      |> List.map (utilsLib.ALL_HYP_CONV_RULE
-                     (REWRITE_CONV [Shift_C_DecodeRegShift_rwt]))
-      |> addThms
+   EV ([dfn'RegisterShiftedRegister_def, R_rwt, doRegisterShiftedRegister_def,
+        ArithmeticOpcode_def, Shift_C_DecodeRegShift_rwt] @ tc)
+      [[``n <> 15w: word4``, ``m <> 15w: word4``, ``r <> 15w: word4``]]
+      (mapl (`op`, testcompare))
+      ``dfn'RegisterShiftedRegister
+          (op, T, d, n, m, DecodeRegShift (v2w [a; b]), r)``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                  (REWRITE_CONV [Shift_C_DecodeRegShift_rwt]))
+   |> addThms
 
 val RegisterShiftedRegister_rwt =
-   List.map (fn (r, (aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic)) =>
-      EV [dfn'RegisterShiftedRegister_def, r, doRegisterShiftedRegister_def,
-          ArithmeticOpcode_def, Shift_C_DecodeRegShift_rwt,
-          aand, eor, sub, rsb, add, adc, sbc, rsc, orr, bic]
-         [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``,
-           ``r <> 15w: word4``]]
-         (mapl (`op`, arithlogic))
-         ``dfn'RegisterShiftedRegister
-             (op, setflags, d, n, m, DecodeRegShift (v2w [a; b]), r)``)
-       (ListPair.zip (R_rwts, al ()))
-      |> List.concat
-      |> List.map (utilsLib.ALL_HYP_CONV_RULE
-                      (REWRITE_CONV [Shift_C_DecodeRegShift_rwt]))
-      |> addThms
+   EV ([dfn'RegisterShiftedRegister_def, R_rwt, doRegisterShiftedRegister_def,
+        ArithmeticOpcode_def, Shift_C_DecodeRegShift_rwt] @ al)
+      [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``,
+        ``r <> 15w: word4``]]
+      (mapl (`op`, arithlogic))
+      ``dfn'RegisterShiftedRegister
+          (op, setflags, d, n, m, DecodeRegShift (v2w [a; b]), r)``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                   (REWRITE_CONV [Shift_C_DecodeRegShift_rwt]))
+   |> addThms
 
 (* ---------------------------- *)
 
@@ -3039,19 +2954,19 @@ val rule_sp =
       Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]))
      ``a \/ b \/ c : bool``
 
-fun rule_pc w =
+val rule_pc =
    rule_sp o
    FULL_DATATYPE_RULE o
    utilsLib.ALL_HYP_CONV_RULE
-      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
-   Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [w]) o
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
+   Conv.CONV_RULE (utilsLib.INST_REWRITE_CONV [write'R_rwt]) o
    ASM_REWRITE_RULE []
 
-fun rule_npc b w =
+fun rule_npc b =
    (if b then rule_sp else Lib.I) o
    REWRITE_RULE (npc_thm [`t`, `n`]) o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    ASM_REWRITE_RULE []
 
 val align_base_pc_rule =
@@ -3061,11 +2976,11 @@ val align_base_pc_rule =
           Aligned4_base_pc_plus, Aligned4_base_pc_minus])
       ``Aligned (w: word32, n)``
 
-fun rule_base_pc w =
+val rule_base_pc =
    align_base_pc_rule o
    REWRITE_RULE (npc_thm [`t`]) o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    DATATYPE_RULE o
    ASM_REWRITE_RULE []
 
@@ -3074,50 +2989,50 @@ val rule_literal_pc =
       ``Aligned (w: word32, 4)`` o
    ASM_REWRITE_RULE []
 
-fun rule_literal w =
+val rule_literal =
    utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_Align_plus_minus])
       ``Aligned (w: word32, n)`` o
    utilsLib.INST_REWRITE_RULE [Align4_base_pc_plus, Align4_base_pc_minus] o
    REWRITE_RULE (npc_thm [`t`]) o
    DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    ASM_REWRITE_RULE []
 
-fun rule_npc2 w =
+val rule_npc2 =
    rule_sp o
    utilsLib.ALL_HYP_CONV_RULE
-      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
        THENC REWRITE_CONV [Aligned_plus]) o
    REWRITE_RULE (npc_thm [`t`, `t2`, `n`]) o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    ASM_REWRITE_RULE []
 
-fun rule_base_pc2 w =
+val rule_base_pc2 =
    utilsLib.ALL_HYP_CONV_RULE
-      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
        THENC REWRITE_CONV [Aligned_plus]
        THENC utilsLib.INST_REWRITE_CONV
                 [Aligned4_base_pc_plus, Aligned4_base_pc_minus]) o
    REWRITE_RULE (npc_thm [`t`, `t2`]) o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    DATATYPE_RULE o
    ASM_REWRITE_RULE []
 
-fun rule_literal2 w =
+val rule_literal2 =
    utilsLib.MATCH_HYP_CONV_RULE (REWRITE_CONV [Aligned_Align_plus_minus])
       ``Aligned (w: word32, n)`` o
    utilsLib.INST_REWRITE_RULE [Align4_base_pc_plus, Align4_base_pc_minus] o
    utilsLib.ALL_HYP_CONV_RULE
-      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])
        THENC DATATYPE_CONV
        THENC REWRITE_CONV [Aligned_plus]) o
    REWRITE_RULE (npc_thm [`t`, `t2`]) o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [w])) o
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [write'R_rwt])) o
    ASM_REWRITE_RULE []
 
 (* ---------------------------- *)
@@ -3144,7 +3059,7 @@ val LoadWord_rwt =
      ``dfn'LoadWord (a, idx, wb, t, n, m)``
 
 val LoadWord_base_pc_rwt =
-   memEV rule_base_pc MemU_4_rwt [dfn'LoadWord_def]
+   memEV rule_base_pc MemU_4_rwt [dfn'LoadWord_def, ROR_rwt]
      [[``t <> 15w: word4``, ``r <> 15w: word4``]] bpc_addr1
      ``dfn'LoadWord (a, idx, wb, t, 15w, m)``
 
@@ -3242,74 +3157,71 @@ val rule_npc =
    utilsLib.MATCH_HYP_CONV_RULE
      (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c : bool``
 
-fun rule_npc2 r =
+val rule_npc2 =
    FULL_DATATYPE_RULE o
    utilsLib.ALL_HYP_CONV_RULE
-      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [r])
+      (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [R_rwt])
        THENC DATATYPE_CONV
        THENC REWRITE_CONV [Aligned_plus]) o
    rule_sp o
    utilsLib.MATCH_HYP_CONV_RULE
       (utilsLib.INST_REWRITE_CONV [Aligned_plus_minus]) ``a \/ b \/ c : bool`` o
    FULL_DATATYPE_RULE o
-   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [r]))
+   Conv.CONV_RULE (Conv.DEPTH_CONV (utilsLib.INST_REWRITE_CONV [R_rwt]))
 
 (* ---------------------------- *)
 
 val () = resetEvConv ()
 
 val StoreWord_rwt =
-   storeEV (K rule_npc)
-     (fn t =>
-        [``Aligned (^st.REG (^t n), 4)``,
-         ``Aligned (^st.REG (^t n) +
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-         ``Aligned (^st.REG (^t n) -
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-         ``Aligned (^st.REG (^t n) + imm32, 4)``,
-         ``Aligned (^st.REG (^t n) - imm32, 4)``])
+   storeEV rule_npc
      write'MemU_4_rwt [dfn'StoreWord_def]
-     [[``n <> 15w: word4``, ``r <> 15w: word4``]] addr1
+     [[``Aligned (^st.REG (R_mode ^st.CPSR.M n), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) +
+              FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 ^st.CPSR.C) s)), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) -
+              FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 ^st.CPSR.C) s)), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) + imm32, 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) - imm32, 4)``,
+       ``n <> 15w: word4``, ``r <> 15w: word4``]] addr1
      ``dfn'StoreWord (a, idx, wb, t, n, m)``
 
 val StoreWord_base_pc_rwt =
-   storeEV
-     (K (align_base_pc_rule o Shift_C_DecodeImmShift_rule))
-     (fn t =>
-         [``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) +
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-          ``Aligned
-              (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) + imm32, 4)``,
-          ``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) -
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-          ``Aligned
-             (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) - imm32, 4)``])
+   storeEV (align_base_pc_rule o Shift_C_DecodeImmShift_rule)
      write'MemU_4_rwt [dfn'StoreWord_def]
-     [[``r <> 15w: word4``]] bpc_addr1
+     [[``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) +
+              FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 ^st.CPSR.C) s)), 4)``,
+       ``Aligned
+              (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) + imm32, 4)``,
+       ``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) -
+              FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                                 ^st.CPSR.C) s)), 4)``,
+       ``Aligned
+             (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) - imm32, 4)``,
+       ``r <> 15w: word4``]] bpc_addr1
      ``dfn'StoreWord (a, idx, wb, t, 15w, m)``
 
 (* ---------------------------- *)
 
 val StoreByte_rwt =
-   storeEV (K Lib.I) (K []) write'MemU_1_rwt
+   storeEV Lib.I write'MemU_1_rwt
      [dfn'StoreByte_def, Shift_C_DecodeImmShift_rwt]
      [[``n <> 15w: word4``, ``r <> 15w: word4``]] addr1
      ``dfn'StoreByte (a, idx, wb, t, n, m)``
 
 val StoreByte_base_pc_rwt =
-   storeEV (K Lib.I) (K []) write'MemU_1_rwt
+   storeEV Lib.I write'MemU_1_rwt
      [dfn'StoreByte_def, Shift_C_DecodeImmShift_rwt]
      [[``r <> 15w: word4``]] bpc_addr1
      ``dfn'StoreByte (a, idx, wb, t, 15w, m)``
@@ -3323,90 +3235,83 @@ val extract_rwt =
    ] |> Drule.LIST_CONJ
 
 val StoreHalf_rwt =
-   storeEV (K Shift_C_DecodeImmShift_rule)
-     (fn t =>
-        [``Aligned (^st.REG (^t n),2)``,
-         ``Aligned (^st.REG (^t n) + ^st.REG (^t r) << imm2, 2)``,
-         ``Aligned (^st.REG (^t n) - ^st.REG (^t r) << imm2, 2)``,
-         ``Aligned (^st.REG (^t n) + imm32, 2)``,
-         ``Aligned (^st.REG (^t n) - imm32, 2)``])
+   storeEV Shift_C_DecodeImmShift_rule
      write'MemU_2_rwt [dfn'StoreHalf_def, extract_rwt]
-     [[``n <> 15w: word4``, ``r <> 15w: word4``]] addr3
+     [[``Aligned (^st.REG (R_mode ^st.CPSR.M n),2)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) +
+                  ^st.REG (R_mode ^st.CPSR.M r) << imm2, 2)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) -
+                  ^st.REG (R_mode ^st.CPSR.M r) << imm2, 2)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) + imm32, 2)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) - imm32, 2)``,
+       ``n <> 15w: word4``, ``r <> 15w: word4``]] addr3
      ``dfn'StoreHalf (a, idx, wb, t, n, m)``
 
 val StoreHalf_base_pc_rwt =
-   storeEV (K align_base_pc_rule)
-     (fn t =>
-         [``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) +
-                     ^st.REG (^t r) << imm2, 2)``,
-          ``Aligned
-              (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) + imm32, 2)``,
-          ``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) -
-                     ^st.REG (^t r) << imm2, 2)``,
-          ``Aligned
-             (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) - imm32, 2)``])
+   storeEV align_base_pc_rule
      write'MemU_2_rwt [dfn'StoreHalf_def, extract_rwt]
-     [[``r <> 15w: word4``]] bpc_addr3
+     [[``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) +
+                  ^st.REG (R_mode ^st.CPSR.M r) << imm2, 2)``,
+       ``Aligned
+           (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) + imm32, 2)``,
+       ``Aligned (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) -
+                  ^st.REG (R_mode ^st.CPSR.M r) << imm2, 2)``,
+       ``Aligned
+          (^st.REG RName_PC + (if ^st.CPSR.T then 4w else 8w) - imm32, 2)``,
+       ``r <> 15w: word4``]] bpc_addr3
      ``dfn'StoreHalf (a, idx, wb, t, 15w, m)``
 
 (* ---------------------------- *)
 
 val StoreDual_rwt =
    storeEV rule_npc2
-     (fn t =>
-        [``Aligned (^st.REG (^t n), 4)``,
-         ``Aligned (^st.REG (^t n) +
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-         ``Aligned (^st.REG (^t n) -
-              FST (FST (Shift_C (^st.REG (^t r),
-                                 FST (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 SND (DecodeImmShift (v2w [b1; b0],imm5)),
-                                 ^st.CPSR.C) s)), 4)``,
-         ``Aligned (^st.REG (^t n) + imm32, 4)``,
-         ``Aligned (^st.REG (^t n) - imm32, 4)``])
      write'MemA_4_rwt [dfn'StoreDual_def, Aligned_plus]
-     [[``t <> 15w: word4``, ``t2 <> 15w: word4``,
+     [[``Aligned (^st.REG (R_mode ^st.CPSR.M n), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) +
+            FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                               FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                               SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                               ^st.CPSR.C) s)), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) -
+            FST (FST (Shift_C (^st.REG (R_mode ^st.CPSR.M r),
+                               FST (DecodeImmShift (v2w [b1; b0],imm5)),
+                               SND (DecodeImmShift (v2w [b1; b0],imm5)),
+                               ^st.CPSR.C) s)), 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) + imm32, 4)``,
+       ``Aligned (^st.REG (R_mode ^st.CPSR.M n) - imm32, 4)``,
+       ``t <> 15w: word4``, ``t2 <> 15w: word4``,
        ``n <> 15w: word4``, ``r <> 15w: word4``]] addr2
      ``dfn'StoreDual (a, idx, wb, t, t2, n, m)``
 
 (* ---------------------------- *)
 
+val align4_rwt =
+   arm_stepTheory.Aligned
+   |> Drule.CONJUNCTS
+   |> tl |> tl |> hd
+   |> Drule.SPEC_ALL
+   |> Thm.EQ_IMP_RULE |> fst
+   |> Drule.UNDISCH
+
 val Swap_rwts =
-   List.map
-      (fn (r1, w1, r2, w2, r3, w3) =>
-         EV [r1, r2, r3, w3, w2, w1,
-             Q.INST [`d` |-> `t`] arm_stepTheory.R_x_not_pc,
-             dfn'Swap_def, IncPC_rwt, ROR_rwt,
-             EVAL ``(a: word32) #>> (8 * w2n (0w: word2))``,
-             arm_stepTheory.Aligned
-             |> Drule.CONJUNCTS
-             |> tl |> tl |> hd
-             |> Drule.SPEC_ALL
-             |> Thm.EQ_IMP_RULE |> fst
-             |> Drule.UNDISCH]
-            [[``^st.Encoding = Encoding_ARM``, ``~^st.CPSR.T``,
-              ``t <> 15w: word4``, ``t2 <> 15w: word4``, ``n <> 15w: word4``]]
-            (TF `b`)
-            ``dfn'Swap (b, t, t2, n)``
-          |> List.map
-                (utilsLib.ALL_HYP_RULE
-                   (PURE_ASM_REWRITE_RULE
-                      [boolTheory.COND_CLAUSES, boolTheory.NOT_CLAUSES,
-                       boolTheory.OR_CLAUSES]) o
-                 utilsLib.ALL_HYP_CONV_RULE
-                   (DATATYPE_CONV
-                    THENC REWRITE_CONV [boolTheory.COND_ID]
-                    THENC utilsLib.INST_REWRITE_CONV [r2, r3]
-                    THENC DATATYPE_CONV)))
-      (utilsLib.zipLists
-          (fn [r1, w1, r2, w2, r3, w3] => (r1, w1, r2, w2, r3, w3)
-            | _ => raise ERR "Swap_rwts" "match")
-          [R_rwts, write'R_rwts, MemA_1_rwt, write'MemA_1_rwt,
-           MemA_4_rwt, write'MemA_4_rwt])
-    |> List.concat
+   EV ([R_rwt, write'R_rwt, Q.INST [`d` |-> `t`] arm_stepTheory.R_x_not_pc,
+       dfn'Swap_def, IncPC_rwt, ROR_rwt, align4_rwt,
+       EVAL ``(a: word32) #>> (8 * w2n (0w: word2))``] @
+       MemA_1_rwt @ write'MemA_1_rwt @ MemA_4_rwt @ write'MemA_4_rwt)
+      [[``^st.Encoding = Encoding_ARM``, ``~^st.CPSR.T``,
+        ``t <> 15w: word4``, ``t2 <> 15w: word4``, ``n <> 15w: word4``]]
+      (TF `b`)
+      ``dfn'Swap (b, t, t2, n)``
+    |> List.map
+          (utilsLib.ALL_HYP_RULE
+             (PURE_ASM_REWRITE_RULE
+                [boolTheory.COND_CLAUSES, boolTheory.NOT_CLAUSES,
+                 boolTheory.OR_CLAUSES]) o
+           utilsLib.ALL_HYP_CONV_RULE
+             (DATATYPE_CONV
+              THENC REWRITE_CONV [boolTheory.COND_ID]
+              THENC utilsLib.INST_REWRITE_CONV (MemA_1_rwt @ MemA_4_rwt)
+              THENC DATATYPE_CONV))
     |> addThms
 
 (* ---------------------------- *)
@@ -3424,22 +3329,20 @@ val rule = utilsLib.INST_REWRITE_RULE
               [wordsTheory.WORD_EXTRACT_COMP_THM] o
            COND_UPDATE_RULE
 
-fun fpMemEV f c tm =
-   List.map (fn (r1, r2) =>
-      EV [dfn'vldr_def, dfn'vstr_def, r1, r2, IncPC_rwt, PC_rwt, fpreg_div2,
-          write'S_def, write'D_def, S_def, D_def, BigEndian_def] c
-        [[`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.F],
-         [`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.T],
-         [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.F],
-         [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.T]]
-        tm
-       |> List.map (utilsLib.ALL_HYP_CONV_RULE
-                      (DATATYPE_CONV
-                       THENC REWRITE_CONV
-                               [arm_stepTheory.Aligned_Align_plus_minus,
-                                arm_stepTheory.Aligned_plus]) o rule))
-     (utilsLib.zipLists Lib.pair_of_list [f, R_rwts])
-  |> List.concat
+fun fpMemEV c tm =
+   EV ([dfn'vldr_def, dfn'vstr_def, R_rwt, IncPC_rwt, PC_rwt, fpreg_div2,
+        write'S_def, write'D_def, S_def, D_def, BigEndian_def] @
+        MemA_4_rwt @ write'MemA_4_rwt) c
+     [[`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.F],
+      [`single_reg` |-> boolSyntax.F, `add` |-> boolSyntax.T],
+      [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.F],
+      [`single_reg` |-> boolSyntax.T, `add` |-> boolSyntax.T]]
+     tm
+    |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                   (DATATYPE_CONV
+                    THENC REWRITE_CONV
+                            [arm_stepTheory.Aligned_Align_plus_minus,
+                             arm_stepTheory.Aligned_plus]) o rule)
 
 fun fpEV c tm =
    EV [dfn'vadd_def, dfn'vsub_def, dfn'vmul_def, dfn'vneg_mul_def,
@@ -3477,15 +3380,13 @@ val vcmp_rwt =
    |> addThms
 
 val vmrs_rwt =
-   List.map (fn (r, w) =>
-      EV [dfn'vmrs_def, IncPC_rwt, r, w, reg_fpscr] [[``t <> 15w: word4``]] []
-         ``dfn'vmrs t``)
-      (ListPair.zip (R_rwts, write'R_rwts))
-      |> List.concat
-      |> List.map (utilsLib.MATCH_HYP_CONV_RULE
-                      (REWRITE_CONV [ASSUME ``t <> 13w: word4``])
-                      ``a \/ b \/ c : bool``)
-      |> addThms
+   EV [dfn'vmrs_def, IncPC_rwt, R_rwt, write'R_rwt, reg_fpscr]
+      [[``t <> 15w: word4``]] []
+      ``dfn'vmrs t``
+   |> List.map (utilsLib.MATCH_HYP_CONV_RULE
+                   (REWRITE_CONV [ASSUME ``t <> 13w: word4``])
+                   ``a \/ b \/ c : bool``)
+   |> addThms
 
 val vmrs15_rwt =
    EV [dfn'vmrs_def, IncPC_rwt] [] []
@@ -3526,22 +3427,20 @@ val vneg_mul_rwt =
    |> addThms
 
 val vldr_pc_rwt =
-   fpMemEV MemA_4_rwt []
-      ``dfn'vldr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
+   fpMemEV [] ``dfn'vldr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
    |> addThms
 
 val vldr_npc_rwt =
-   fpMemEV MemA_4_rwt [[``n <> 15w: word4``]]
+   fpMemEV [[``n <> 15w: word4``]]
       ``dfn'vldr (single_reg, add, ^(mk_fpreg 0), n, imm32)``
    |> addThms
 
 val vstr_pc_rwt =
-   fpMemEV write'MemA_4_rwt []
-      ``dfn'vstr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
+   fpMemEV [] ``dfn'vstr (single_reg, add, ^(mk_fpreg 0), 15w, imm32)``
    |> addThms
 
 val vstr_npc_rwt =
-   fpMemEV write'MemA_4_rwt [[``n <> 15w: word4``]]
+   fpMemEV [[``n <> 15w: word4``]]
       ``dfn'vstr (single_reg, add, ^(mk_fpreg 0), n, imm32)``
    |> addThms
 
