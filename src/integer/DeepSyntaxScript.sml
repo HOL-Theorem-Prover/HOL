@@ -51,9 +51,8 @@ val neginf_ok = store_thm(
   Induct THEN SRW_TAC [][eval_form_def, neginf_def] THENL [
     Q.EXISTS_TAC `int_min y y'` THEN PROVE_TAC [INT_MIN_LT],
     Q.EXISTS_TAC `int_min y y'` THEN PROVE_TAC [INT_MIN_LT],
-    PROVE_TAC [],
     PROVE_TAC [INT_LT_GT],
-    PROVE_TAC [INT_LT_REFL]
+    PROVE_TAC [INT_LT_ANTISYM]
   ]);
 
 val posinf_ok = store_thm(
@@ -63,8 +62,7 @@ val posinf_ok = store_thm(
     Q.EXISTS_TAC `int_max y y'` THEN PROVE_TAC [INT_MAX_LT],
     Q.EXISTS_TAC `int_max y y'` THEN PROVE_TAC [INT_MAX_LT],
     PROVE_TAC [INT_LT_GT],
-    PROVE_TAC [],
-    PROVE_TAC [INT_LT_REFL]
+    PROVE_TAC [INT_LT_GT]
   ]);
 
 val alldivide_def = Define

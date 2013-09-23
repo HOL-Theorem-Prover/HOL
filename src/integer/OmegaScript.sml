@@ -227,7 +227,7 @@ val smaller_satisfies_uppers = store_thm(
   "smaller_satisfies_uppers",
   ``!uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers``,
   Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def] THEN
-  REVERSE (REPEAT STRIP_TAC) THEN1 PROVE_TAC [] THEN
+  REPEAT STRIP_TAC THEN
   `(p_1 = 0) \/ 0 < p_1` by SRW_TAC [ARITH_ss][] THEN1
      (POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss())[]) THEN
   PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]);
@@ -1078,4 +1078,3 @@ val calculational_nightmare = store_thm(
   PROVE_TAC []);
 
 val _ = export_theory();
-
