@@ -4658,13 +4658,7 @@ val bit_count_upto_is_zero = Q.store_thm("bit_count_upto_is_zero",
    simp [bit_count_upto_def]
    \\ Induct
    \\ rw [sum_numTheory.SUM_def]
-   >- metis_tac [prim_recTheory.LESS_SUC_REFL]
-   \\ eq_tac
-   \\ lrw []
-   \\ Cases_on `i < n`
-   >- simp []
-   \\ `i = n` by decide_tac
-   \\ simp []);
+   \\ metis_tac [DECIDE ``i < SUC n <=> (i = n) \/ i < n``]);
 
 val bit_count_is_zero = Q.store_thm("bit_count_is_zero",
   `!w. (bit_count w = 0) = (w = 0w)`,
