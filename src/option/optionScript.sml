@@ -391,7 +391,33 @@ val OPTION_MAP2_cong = store_thm("OPTION_MAP2_cong",
 val _ = DefnBase.export_cong "OPTION_MAP2_cong";
 
 (* ----------------------------------------------------------------------
-    OPTION_BIND - monadic bind operation for options
+    The Option Monad
+
+    A monad with a zero (NONE)
+
+     * OPTION_BIND        - monadic bind operation for options
+                            nice syntax is
+                              do
+                                v <- opn1;
+                                opn2
+                              od
+                            where opn2 may refer to v
+     * OPTION_IGNORE_BIND - bind that ignores the passed parameter, with
+                            nice syntax looking like
+                              do
+                                opn1 ;
+                                opn2
+                              od
+     * OPTION_GUARD       - checks a predicate and either gives a
+                            successful unit value, or failure (NONE)
+                            nice syntax would be
+                                do
+                                  assert(some condition);
+                                  ...
+                                od
+     * OPTION_CHOICE      - tries one operation, and if it fails, tries
+                            the second.  Nice syntax would be opn1 ++ opn2
+
    ---------------------------------------------------------------------- *)
 
 val OPTION_BIND_def = Prim_rec.new_recursive_definition
@@ -421,11 +447,37 @@ val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
 
-val OPTION_GUARD_def = new_definition(
-  "OPTION_GUARD_def",
-  ``OPTION_GUARD b = if b then SOME () else NONE``);
+val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
+  name = "OPTION_GUARD_def",
+  rec_axiom = boolTheory.boolAxiom,
+  def = ``(OPTION_GUARD T = SOME ()) /\
+          (OPTION_GUARD F = NONE)``};
+val _ = export_rewrites ["OPTION_GUARD_def"]
 (* suggest overloading this to assert when used with other monad syntax. *)
 
+val OPTION_GUARD_COND = store_thm(
+  "OPTION_GUARD_COND",
+  ``OPTION_GUARD b = if b then SOME () else NONE``,
+  ASM_CASES_TAC ``b:bool`` THEN ASM_REWRITE_TAC [OPTION_GUARD_def])
+
+val OPTION_GUARD_EQ_THM = store_thm(
+  "OPTION_GUARD_EQ_THM",
+  ``((OPTION_GUARD b = SOME ()) <=> b) /\
+    ((OPTION_GUARD b = NONE) <=> ~b)``,
+  Cases_on `b` THEN SRW_TAC[][]);
+val _ = export_rewrites ["OPTION_GUARD_EQ_THM"]
+
+val OPTION_CHOICE_def = Prim_rec.new_recursive_definition
+  {name = "OPTION_CHOICE_def",
+   rec_axiom = option_Axiom,
+   def = ``(OPTION_CHOICE NONE m2 = m2) /\
+           (OPTION_CHOICE (SOME x) m2 = SOME x)``}
+val _ = export_rewrites ["OPTION_CHOICE_def"]
+
+val OPTION_CHOICE_EQ_NONE = store_thm(
+  "OPTION_CHOICE_EQ_NONE",
+  ``(OPTION_CHOICE (m1:'a option) m2 = NONE) <=> (m1 = NONE) /\ (m2 = NONE)``,
+  OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC[][]);
 
 (* ----------------------------------------------------------------------
     OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
