@@ -737,13 +737,13 @@ val Align_branch_immediate = Q.store_thm("Align_branch_immediate",
                     x22; x23]: word24 @@ (0w: word2)): 26 word): word32,4) =
     if x0 then
        a -
-       (v2w [F; F; F; F; F; F; F; ~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9;
-             ~x10; ~x11; ~x12; ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20;
-             ~x21; ~x22; ~x23; T; T] + 1w)
+       (v2w [~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9; ~x10; ~x11; ~x12;
+             ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20; ~x21; ~x22; ~x23;
+             T; T] + 1w)
     else
        a +
-       v2w [F; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11;
-            x12; x13; x14; x15; x16; x17; x18; x19; x20; x21; x22; x23; F; F]`,
+       v2w [x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14; x15;
+            x16; x17; x18; x19; x20; x21; x22; x23; F; F]`,
    lrw [Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -775,13 +775,13 @@ val Align_branch_exchange_immediate =
                (v2w [x24; F]: word2)): 26 word): word32,2) =
     if x0 then
        a -
-       (v2w [F; F; F; F; F; F; F; ~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9;
-             ~x10; ~x11; ~x12; ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20;
-             ~x21; ~x22; ~x23; ~x24; T] + 1w)
+       (v2w [~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9; ~x10; ~x11; ~x12;
+             ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20; ~x21; ~x22; ~x23;
+             ~x24; T] + 1w)
     else
        a +
-       v2w [F; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14;
-            x15; x16; x17; x18; x19; x20; x21; x22; x23; x24; F]`,
+       v2w [x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14; x15;
+            x16; x17; x18; x19; x20; x21; x22; x23; x24; F]`,
    lrw [Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -1084,7 +1084,11 @@ val Decode_simps = Q.prove(
     ((v2w [b] : word1) @@ (0w : word1) = v2w [b; F] : word2) /\
     (w2w ((v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@
            (0w: word2)) : word10) =
-     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word32)`,
+     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word32) /\
+     ((7 >< 4) (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
+      v2w [b7; b6; b5; b4] : word4) /\
+     ((3 >< 0) (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
+      v2w [b3; b2; b1; b0] : word4)`,
    lrw []
    \\ blastLib.BBLAST_TAC
    )

@@ -12,7 +12,7 @@ open state_transformerSyntax blastLib
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars m0Theory.m0_grammars
+   val (Type, Term) = parse_from_grammars m0_stepTheory.m0_step_grammars
 end
 open Parse
 
@@ -1113,12 +1113,12 @@ val DECODE_UNPREDICTABLE_rwt =
 
 val ConditionPassed_rwt =
    EV [ConditionPassed_def] [] []
-      ``ConditionPassed cond`` |> hd
+      ``ConditionPassed c`` |> hd
 
 local
    fun ConditionPassed cond =
       ConditionPassed_rwt
-      |> Thm.INST [``cond:word4`` |-> ``^cond``]
+      |> Thm.INST [``c:word4`` |-> ``^cond``]
       |> Conv.RIGHT_CONV_RULE
            (DATATYPE_CONV
             THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
@@ -1977,8 +1977,8 @@ local
    val get_state = snd o get_pair
    val state_exception_tm = mk_arm_const "m0_state_exception"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
-   val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateARM_thumb
-   val MP_Next2 = Drule.MATCH_MP m0_stepTheory.NextStateARM_thumb2
+   val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb
+   val MP_Next2 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb2
    val Run_CONV = utilsLib.Run_CONV ("m0", st) o get_val
    fun is_ineq tm =
       boolSyntax.is_eq (boolSyntax.dest_neg tm) handle HOL_ERR _ => false

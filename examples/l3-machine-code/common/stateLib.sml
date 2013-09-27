@@ -353,6 +353,93 @@ val hs = [["Architecture"]]
 
 *)
 
+(* ------------------------------------------------------------------------
+   define_map_component (name, f, p, def)
+
+   Given a definition of the form
+
+    |- !c d. model_X c d = {{(model_c_X, model_d_Y)}}
+
+   this function generates a map version, as defined by
+
+    !df f. name df f = {BIGUNION {BIGUNION (model_X c (f c)) | c IN df /\ p c}}
+
+   and it also proves the theorem
+
+    |- c IN df /\ p c ==>
+       (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
+
+   When argument "p" is NONE the term "p c" does not occur.
+   ------------------------------------------------------------------------ *)
+
+local
+   val MAPPED_COMPONENT_INSERT_K_T =
+      stateTheory.MAPPED_COMPONENT_INSERT
+      |> Q.SPEC `K T`
+      |> REWRITE_RULE [combinTheory.K_THM]
+in
+   fun define_map_component (s, f, p, def) =
+      let
+         val (c, d, e) =
+            case boolSyntax.strip_forall (Thm.concl def) of
+               ([c, d], e) => (c, d, boolSyntax.dest_eq e)
+             | _ => raise ERR "" "bad definition"
+         val component =
+            e |> snd
+              |> pred_setSyntax.strip_set |> hd
+              |> pred_setSyntax.strip_set |> hd
+              |> pairSyntax.dest_pair |> fst
+              |> Term.rator
+         val c_ty = Term.type_of c
+         val d_ty = Term.type_of d
+         val c_set_ty = pred_setSyntax.mk_set_type c_ty
+         val comp_11 =
+            let
+               val a = Term.mk_var ("a", c_ty)
+               val b = Term.mk_var ("b", c_ty)
+            in
+               simpLib.SIMP_PROVE (srw_ss()) []
+                 (boolSyntax.list_mk_forall
+                    ([a, b],
+                     boolSyntax.mk_eq
+                       (boolSyntax.mk_eq
+                          (Term.mk_comb (component, a),
+                           Term.mk_comb (component, b)),
+                        boolSyntax.mk_eq (a, b))))
+            end
+         val df = Term.mk_var ("d" ^ f, c_set_ty)
+         val f = Term.mk_var (f, c_ty --> d_ty)
+         val e = fst e
+         val sep_ty = Term.type_of e
+         val c_in_df = pred_setSyntax.mk_in (c, df)
+         val (c_tm, insert_thm) =
+            case p of
+               SOME tm => (boolSyntax.mk_conj (c_in_df, Term.mk_comb (tm, c)),
+                           stateTheory.MAPPED_COMPONENT_INSERT)
+             | NONE => (c_in_df, MAPPED_COMPONENT_INSERT_K_T)
+         val t = e |> Term.subst [d |-> Term.mk_comb (f, c)]
+                   |> pred_setSyntax.mk_bigunion
+         val t = pred_setSyntax.mk_set
+                   [pred_setSyntax.mk_bigunion
+                      (boolSyntax.mk_icomb
+                        (pred_setSyntax.gspec_tm,
+                         Term.mk_abs (c, pairSyntax.mk_pair (t, c_tm))))]
+         val v_ty = c_set_ty --> (c_ty --> d_ty) --> sep_ty
+         val v = Term.mk_var (s, v_ty)
+         val mdef =
+           Definition.new_definition
+              (s, boolSyntax.mk_eq (Term.list_mk_comb (v, [df, f]), t))
+         val thm =
+            Theory.save_thm
+               (s ^ "_INSERT",
+                MATCH_MP insert_thm (Drule.LIST_CONJ [comp_11, def, mdef])
+                |> Conv.BETA_RULE
+                |> Drule.SPECL [f, df])
+      in
+         (mdef, thm)
+      end
+      handle HOL_ERR {message, ...} => raise ERR "define_map_component" message
+end
 
 (* ------------------------------------------------------------------------
    mk_code_pool: make term ``CODE_POOL f {(v, opc)}``
@@ -436,13 +523,14 @@ in
       end
    val vvar = gvar "%v"
    fun varReset () = vnum := Redblackmap.mkDict String.compare
+   fun is_gen s = String.sub (s, 0) = #"%"
    fun is_vvar tm =
       case Lib.total Term.dest_var tm of
-         SOME (s, _) => String.sub (s, 0) = #"%"
+         SOME (s, _) => is_gen s
        | NONE => false
    fun is_nvvar tm =
       case Lib.total Term.dest_var tm of
-         SOME (s, _) => String.sub (s, 0) <> #"%"
+         SOME (s, _) => not (is_gen s)
        | NONE => false
    fun build_assert (f: term * term -> term) g =
       fn ((d, (c, pat)), (a, tm)) =>
@@ -701,23 +789,33 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val next_rel_tm = Term.prim_mk_const {Thy = "state", Name = "NEXT_REL"}
-   val state_tm = Term.prim_mk_const {Thy = "state", Name = "STATE"}
-   fun mk_next_rel l = boolSyntax.list_mk_icomb (next_rel_tm, l)
-   fun mk_state p = boolSyntax.mk_icomb (state_tm, p)
    fun mk_part_spec m = boolSyntax.mk_icomb (progSyntax.spec_tm, m)
-in
-   fun mk_pre_post
-         next_def instr_def proj_def comp_defs cpool extras write_fn psort =
+   fun get_def tm =
       let
+         val {Name, Thy, ...} = Term.dest_thy_const (Term.rand tm)
+      in
+         DB.fetch Thy (Name ^ "_def")
+      end
+   (*
+   fun snoc_cond c =
+      fn [] => c
+       | p as h :: _ =>
+           let
+              val c_tm = progSyntax.mk_cond c
+              val sbst = Type.match_type (Term.type_of c_tm) (Term.type_of h)
+              val c_tm = Term.inst sbst c_tm
+           in
+              progSyntax.list_mk_star (p @ [c_tm])
+           end
+   *)
+in
+   fun mk_pre_post model_def comp_defs cpool extras write_fn psort =
+      let
+         val (model_tm, tm) = boolSyntax.dest_eq (Thm.concl model_def)
+         val proj_def = case pairSyntax.strip_pair tm of
+                           [a, _, _, _] => get_def a
+                         | _ => raise ERR "mk_pre_post" "bad model definition"
          val read = read_footprint proj_def comp_defs cpool extras
-         val state_tm = mk_state (utilsLib.get_function proj_def)
-         val sty = utilsLib.dom (Term.type_of state_tm)
-         val eq_tm = Term.inst [Type.alpha |-> sty] boolSyntax.equality
-         val rel_tm = mk_next_rel [eq_tm, utilsLib.get_function next_def]
-         val instr_tm = utilsLib.get_function instr_def
-         val model_tm =
-            pairSyntax.list_mk_pair [state_tm, rel_tm, instr_tm, eq_tm]
          val mk_spec = HolKernel.list_mk_icomb (mk_part_spec model_tm)
          val write = (progSyntax.list_mk_star ## progSyntax.list_mk_star) o
                      sort_finish psort o write_fn
@@ -728,7 +826,8 @@ in
                val (p, q) = write (p, []: term list, tm)
                val p = if c = boolSyntax.T
                           then p
-                       else progSyntax.mk_star (progSyntax.mk_cond c, p)
+                       else (* snoc_cond (c, progSyntax.strip_star p) *)
+                            progSyntax.mk_star (progSyntax.mk_cond c, p)
             in
                mk_spec [p, pool, q]
             end
@@ -736,10 +835,256 @@ in
 end
 
 (* ------------------------------------------------------------------------
+   rename_vars (rename1, rename2, bump)
+
+   Rename generated variables "%v" is a SPEC theorem.
+   ------------------------------------------------------------------------ *)
+
+fun rename_vars (rename1, rename2, bump) =
+   let
+      fun rename f tm =
+         case boolSyntax.dest_strip_comb tm of
+            (c, [v]) =>
+               (case Lib.total (fst o Term.dest_var) v of
+                  SOME q =>
+                     if is_gen q
+                        then case rename1 c of
+                                SOME s => SOME (v |-> f (s, Term.type_of v))
+                              | NONE => NONE
+                     else NONE
+                 | NONE => NONE)
+          | (c, [x, v]) =>
+               (case Lib.total (fst o Term.dest_var) v of
+                   SOME q =>
+                     if is_gen q
+                        then case rename2 c of
+                                SOME g =>
+                                   (case Lib.total g x of
+                                       SOME s =>
+                                         SOME (v |-> f (s, Term.type_of v))
+                                     | NONE => NONE)
+                              | NONE => NONE
+                     else NONE
+                 | NONE => NONE)
+          | _ => NONE
+   in
+      fn thm =>
+         let
+            val p = progSyntax.dest_pre (Thm.concl thm)
+            val () = varReset()
+            val () =
+               List.app (fn s => General.ignore (gvar s Type.alpha))
+                 bump
+            val avoid =
+               utilsLib.avoid_name_clashes p o Lib.uncurry gvar
+            val p = progSyntax.strip_star p
+         in
+            Thm.INST (List.mapPartial (rename avoid) p) thm
+         end
+         handle e as HOL_ERR _ => Raise e
+   end
+
+(* ------------------------------------------------------------------------
+   introduce_triple_definition (duplicate, thm_def) thm
+
+   Given a thm_def of the form
+
+    |- !x. f x = p1 * ... * pn * cond c1 * ... cond cm
+
+   (where the conds need not be at the end) and a theorem "thm" of the form
+
+    |- SPEC (cond r * p) c q
+
+   the function introduce_triple_definition gives a theorem of form
+
+    |- SPEC (cond r' * p' * f x1) c (q' * f x2)
+
+   The condition "r'" is related to "r" but will no longer incorporate
+   conditions found in "c1" to "cm". Similarly "p'" and "q'" will no
+   longer contain components "p1" to "pn".
+
+   The "duplicate" flag controls whether or not conditions in "r" are
+   added to the postcondition in order to introduce "f".
+   ------------------------------------------------------------------------ *)
+
+local
+   val get_conds = List.filter progSyntax.is_cond o progSyntax.strip_star
+   val err = ERR "introduce_triple"
+   fun move_match (pat, t) =
+      helperLib.MOVE_COND_RULE
+        (case Lib.mk_set (find_terms (Lib.can (Term.match_term pat)) t) of
+            [] => raise (err "missing condition")
+          | [m] => m
+          | l => Lib.with_exn (Lib.first (Lib.equal pat)) l
+                   (err "ambiguous condition"))
+in
+   fun introduce_triple_definition (duplicate, thm_def) =
+      let
+         val ts = thm_def
+                  |> Thm.concl
+                  |> boolSyntax.strip_forall |> snd
+                  |> boolSyntax.dest_eq |> snd
+                  |> progSyntax.strip_star
+         val (cs, ps) = List.partition progSyntax.is_cond ts
+         val cs = List.map progSyntax.dest_cond cs
+         val rule =
+            helperLib.PRE_POST_RULE (helperLib.STAR_REWRITE_CONV (GSYM thm_def))
+         val d_rule = if duplicate
+                         then MATCH_MP progTheory.SPEC_DUPLICATE_COND
+                      else Lib.I
+      in
+         fn thm =>
+            let
+               val p = progSyntax.dest_pre (Thm.concl thm)
+               val move_cs =
+                  List.map
+                     (fn t => List.map (fn c => d_rule o move_match (c, t)) cs)
+                     (get_conds p)
+            in
+               thm |> helperLib.SPECL_FRAME_RULE ps
+                   |> Lib.C (List.foldl (fn (f, t) => f t))
+                            (List.concat move_cs)
+                   |> rule
+            end
+      end
+end
+
+(* ------------------------------------------------------------------------
+   introduce_map_definition (insert_thm, dom_eq_conv) thm
+
+   Given an insert_thm of the form
+
+     |- c IN df ==> (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
+
+   (which may be generated by define_map_component) and a theorem "thm" of the
+   form
+
+     |- SPEC (cond r * p) c q
+
+   where "p" and "q" contain instances of "model_X c d", a theorem new is
+   generated of the form
+
+     |- SPEC (p' * name df f * cond (r /\ z)) x (q' * name df f')
+
+   where "p'" and "q'" are modified versions of "p" and "q" that no longer
+   contain any instances of "model_X c d".
+
+   The predicate "z" will specify which values are contained in "df",
+   which represents the domain of the newly intoruced map "f".
+
+   The conversion "dom_eq_conv" can be used to simplify "z" by deciding
+   equality over elements of the domain of "f".
+   ------------------------------------------------------------------------ *)
+
+local
+   fun strip2 f = case boolSyntax.strip_comb f of
+                     (f, [a, b]) => (f, (a, b))
+                   | _ => raise ERR "strip2" ""
+   val tidy_up_rule =
+      SIMP_RULE (bool_ss++helperLib.sep_cond_ss) [] o
+      PURE_REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] o
+      Drule.DISCH_ALL o
+      PURE_REWRITE_RULE [updateTheory.APPLY_UPDATE_ID]
+in
+   fun introduce_map_definition (insert_thm, dom_eq_conv) =
+      let
+         val insert_thm = Drule.SPEC_ALL insert_thm
+         val ((f_tm, (c, d)), (m_tm, (df, f))) =
+            insert_thm
+            |> Thm.concl
+            |> boolSyntax.dest_imp |> snd
+            |> boolSyntax.dest_eq |> fst
+            |> progSyntax.dest_star
+            |> (strip2 ## strip2)
+         val is_f = Lib.equal f_tm o fst o boolSyntax.strip_comb
+         val get_f =
+            List.filter is_f o progSyntax.strip_star o progSyntax.dest_pre o
+            Thm.concl
+         val c_ty = Term.type_of c
+         val d_ty = Term.type_of d
+         val c_set_ty = pred_setSyntax.mk_set_type c_ty
+         val df = fst (pred_setSyntax.dest_delete df)
+         val df_intro = List.foldl (pred_setSyntax.mk_delete o Lib.swap) df
+         fun mk_frame cs = Term.mk_comb (Term.mk_comb (m_tm, df_intro cs), f)
+         val insert_conv =
+            utilsLib.INST_REWRITE_CONV [Drule.UNDISCH_ALL insert_thm]
+      in
+         fn th =>
+            let
+               val xs = get_f th
+            in
+               if List.null xs
+                  then th
+               else let
+                       val xs =
+                          List.map
+                             (fn t =>
+                                let
+                                   val (g, d) = Term.dest_comb t
+                                   val c = Term.rand g
+                                in
+                                   (Term.mk_comb (g, Term.genvar d_ty),
+                                    (Term.rand g, d |-> Term.mk_comb (f, c)))
+                                end) xs
+                       val (xs, cs_ds) = ListPair.unzip xs
+                       val (cs, ds) = ListPair.unzip cs_ds
+                       val frame = mk_frame cs
+                       val rwt =
+                          List.foldr progSyntax.mk_star frame xs
+                          |> insert_conv
+                          |> utilsLib.ALL_HYP_CONV_RULE
+                                (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]
+                                 THENC dom_eq_conv)
+                    in
+                       th |> helperLib.SPECC_FRAME_RULE frame
+                          |> helperLib.PRE_POST_RULE
+                               (helperLib.STAR_REWRITE_CONV rwt)
+                          |> Thm.INST ds
+                          |> tidy_up_rule
+                    end
+            end
+      end
+      handle HOL_ERR _ => raise ERR "introduce_map_definition" ""
+end
+
+(* ------------------------------------------------------------------------
+   get_pc_inc is_pc
+   ------------------------------------------------------------------------ *)
+
+fun get_pc_inc is_pc =
+   let
+      val get_pc = Term.rand o Lib.first is_pc o progSyntax.strip_star
+   in
+      fn th =>
+         let
+            val (p, q) = progSyntax.dest_pre_post (Thm.concl th)
+            val pc_var = get_pc p
+            val pc = get_pc q
+         in
+            case Lib.total wordsSyntax.dest_word_add pc of
+               SOME (x, n) =>
+                  if x = pc_var
+                     then Lib.total wordsSyntax.uint_of_word n
+                  else NONE
+             | NONE =>
+                 (case Lib.total wordsSyntax.dest_word_sub pc of
+                     SOME (x, n) =>
+                        if x = pc_var
+                           then Lib.total (Int.~ o wordsSyntax.uint_of_word) n
+                        else NONE
+                   | NONE => if pc = pc_var then SOME 0 else NONE)
+         end
+   end
+
+(* ------------------------------------------------------------------------
    spec
 
-   Generate a tool for mapping strings to Hoare tripes, using an instruction
-   evaluator.
+   Generate a tool for proving theorems of the form
+
+     |- SPEC p c q
+
+   The goal is expected to be generated by mk_pre_post based on a
+   step-theorem, which is in turn used to prove the goal.
    ------------------------------------------------------------------------ *)
 
 (*

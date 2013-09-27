@@ -1,9 +1,6 @@
 open HolKernel boolLib bossLib
 open stateLib x64_stepTheory
 
-infix \\
-val op \\ = op THEN;
-
 val () = new_theory "x64_prog"
 
 (* ------------------------------------------------------------------------ *)
@@ -30,11 +27,18 @@ val x64_mem32_def = Define`
 
 val x64_mem64_def = Define`
    x64_mem64 a (v: word64) =
-   { x64_mem a [( 7 >< 0) v; (15 >< 8) v; (23 >< 16) v; (31 >< 24) v;
+   { x64_mem a [( 7 ><  0) v; (15 ><  8) v; (23 >< 16) v; (31 >< 24) v;
                 (39 >< 32) v; (47 >< 40) v; (55 >< 48) v; (63 >< 56) v] }`
 
+val X64_MODEL_def = Define`
+  X64_MODEL = (STATE x64_proj, NEXT_REL (=) NextStateX64, x64_instr,
+               ($= :x64_state -> x64_state -> bool))`
+
 val X64_IMP_SPEC = Theory.save_thm ("X64_IMP_SPEC",
-   Q.ISPECL [`x64_proj`, `NextStateX64`, `x64_instr`] stateTheory.IMP_SPEC)
+   stateTheory.IMP_SPEC
+   |> Q.ISPECL [`x64_proj`, `NextStateX64`, `x64_instr`]
+   |> REWRITE_RULE [GSYM X64_MODEL_def]
+   )
 
 (* ------------------------------------------------------------------------ *)
 

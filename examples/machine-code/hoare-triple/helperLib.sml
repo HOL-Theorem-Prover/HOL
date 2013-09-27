@@ -301,6 +301,14 @@ local
       in
          (t :: a, s)
       end
+   fun plkm (target, (a, l)) =
+      let
+         val (t, s) = Lib.pluck (Lib.equal target) l
+                      handle HOL_ERR _ =>
+                         Lib.pluck (Lib.can (match_term target)) l
+      in
+         (t :: a, s)
+      end
 in
    val MOVE_STAR_CONV = Lib.C star
    fun GEN_MOVE_OUT_CONV f tm =
@@ -317,6 +325,45 @@ in
             in
                if rvs then ts @ List.rev l else l @ List.rev ts
             end)
+   fun EVERY_MATCH_MOVE_OUT_CONV target =
+      GEN_MOVE_OUT_CONV
+         (fn xs =>
+            let
+               val (ts, l) =
+                  List.partition (Lib.can (Term.match_term target)) xs
+            in
+               l @ [progSyntax.list_mk_star ts]
+            end)
+   fun MATCH_MOVE_OUT_CONV targets =
+      GEN_MOVE_OUT_CONV
+         (fn xs =>
+            let
+               val (ts, l) = List.foldl plkm ([], xs) targets
+            in
+               l @ List.rev ts
+            end)
+end
+
+local
+   fun ONCE_DEPTH_RW thm = Conv.ONCE_DEPTH_CONV (Conv.REWR_CONV thm)
+   val SYM_STAR_ASSOC = GSYM set_sepTheory.STAR_ASSOC
+   val SYM_STAR_CONV = PURE_REWRITE_CONV [SYM_STAR_ASSOC]
+   val SYM_STAR1_CONV = ONCE_DEPTH_RW SYM_STAR_ASSOC
+   fun NCONV n conv = Lib.funpow n (Lib.curry (op THENC) conv) Conv.ALL_CONV
+in
+   fun STAR_REWRITE_CONV rwt =
+      let
+         val rwt = Drule.SPEC_ALL rwt
+         val l = rwt |> Thm.concl
+                     |> boolSyntax.lhs
+                     |> progSyntax.strip_star
+         val assoc_rwt = Conv.CONV_RULE (Conv.LHS_CONV SYM_STAR_CONV) rwt
+      in
+         Conv.TRY_CONV
+           (MATCH_MOVE_OUT_CONV l
+            THENC NCONV (List.length l - 1) SYM_STAR1_CONV
+            THENC Conv.CHANGED_CONV (ONCE_DEPTH_RW assoc_rwt))
+      end
 end
 
 val PRE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV
@@ -350,6 +397,13 @@ in
           | _ => thm
       end
 end
+
+val MERGE_CONDS_CONV =
+   EVERY_MATCH_MOVE_OUT_CONV ``cond b : 'a set set``
+   THENC Conv.RAND_CONV
+           (PURE_REWRITE_CONV [GSYM set_sepTheory.cond_CONJ, GSYM CONJ_ASSOC])
+
+val MERGE_CONDS_RULE = Conv.CONV_RULE (PRE_CONV MERGE_CONDS_CONV)
 
 local
    val thm1 = SPEC_ALL word32_add_n2w
@@ -720,9 +774,11 @@ val SPEC_FRAME_RULE = Lib.C SPECC_FRAME_RULE
 
 fun SPECL_FRAME_RULE l th =
    let
-      val (_, p, _, _) = progSyntax.dest_spec (Thm.concl th)
+      val p = progSyntax.dest_pre (Thm.concl th)
       val xs = progSyntax.strip_star p
-      val lx = List.filter (not o Lib.C Lib.mem xs) l
+      val lx =
+         List.filter
+            (fn t => not (Lib.exists (Lib.can (Term.match_term t)) xs)) l
    in
       List.foldl (Lib.uncurry SPECC_FRAME_RULE) th lx
    end

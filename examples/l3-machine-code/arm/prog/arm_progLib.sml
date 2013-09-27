@@ -286,7 +286,7 @@ in
       end
    fun extend_arm_code_pool thm =
       let
-         val (spc, p, c, q) = progSyntax.dest_spec (Thm.concl thm)
+         val (p, q) = progSyntax.dest_pre_post (Thm.concl thm)
          val lp = progSyntax.strip_star p
          val p_pc = part_pc_relative lp
       in
@@ -413,8 +413,9 @@ in
 end
 
 val arm_mk_pre_post =
-   stateLib.mk_pre_post arm_stepTheory.NextStateARM_def arm_instr_def
-     arm_proj_def arm_comp_defs mk_arm_code_pool [] arm_write_footprint psort
+   stateLib.mk_pre_post
+      arm_progTheory.ARM_MODEL_def arm_comp_defs mk_arm_code_pool []
+      arm_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 
@@ -461,7 +462,13 @@ local
    fun exists_free l =
       List.exists (fn (t, _, _) => not (List.null (Term.free_vars t))) l
    fun groupings n ok rs =
-     rs |> utilsLib.partitions
+      let
+         val plk =
+            List.null o
+            (if n = 4 then Term.free_vars o Term.rand else Term.free_vars)
+      in
+        rs
+        |> utilsLib.partitions
         |> List.map
               (List.mapPartial
                   (fn l =>
@@ -481,10 +488,7 @@ local
                   (List.map
                      (fn l =>
                         let
-                           val (h, t) =
-                              Lib.pluck
-                                 (fn (tm, _, _) =>
-                                    List.null (Term.free_vars tm)) l
+                           val (h, t) = Lib.pluck (fn (tm, _, _) => plk tm) l
                               handle
                                  HOL_ERR
                                    {message = "predicate not satisfied", ...} =>
@@ -498,6 +502,7 @@ local
                         in
                            concat_unzip (List.map mtch t)
                         end) p))
+      end
    (* check that the pre-condition predictate (from "cond P" terms) is not
       violated *)
    fun assign_ok p =
@@ -554,55 +559,82 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   fun rename f =
-      let
-         fun g (v, s, t) =
-            case Lib.total (fst o Term.dest_var) v of
-               SOME q => if String.sub (q, 0) = #"%"
-                            then SOME (v |-> (f (s, t): term))
-                         else NONE
-             | NONE => NONE
-      in
-         fn tm =>
-            case boolSyntax.dest_strip_comb tm of
-               ("arm_prog$arm_CPSR_N", [v]) => g (v, "n", Type.bool)
-             | ("arm_prog$arm_CPSR_Z", [v]) => g (v, "z", Type.bool)
-             | ("arm_prog$arm_CPSR_C", [v]) => g (v, "c", Type.bool)
-             | ("arm_prog$arm_CPSR_V", [v]) => g (v, "v", Type.bool)
-             | ("arm_prog$arm_CPSR_M", [v]) => g (v, "mode", word5)
-             | ("arm_prog$arm_FP_FPSCR_N", [v]) => g (v, "fp_n", Type.bool)
-             | ("arm_prog$arm_FP_FPSCR_Z", [v]) => g (v, "fp_z", Type.bool)
-             | ("arm_prog$arm_FP_FPSCR_C", [v]) => g (v, "fp_c", Type.bool)
-             | ("arm_prog$arm_FP_FPSCR_V", [v]) => g (v, "fp_v", Type.bool)
-             | ("arm_prog$arm_FP_FPSCR_RMode", [v]) => g (v, "rmode", word2)
-             | ("arm_prog$arm_FP_REG", [x, v]) =>
-                 (case Lib.total (Int.toString o wordsSyntax.uint_of_word) x of
-                     SOME s => g (v, "d" ^ s, dword)
-                   | NONE => NONE)
-             | ("arm_prog$arm_REG", [x, v]) =>
-                  let
-                     val n = reg_index x
-                  in
-                     if n = 15 then NONE else g (v, "r" ^ Int.toString n, word)
-                  end
-             | ("arm_prog$arm_MEM", [_, v]) => SOME (v |-> f ("b", byte))
-             | _ => NONE
-      end
+   val arm_rename1 =
+      Lib.total
+        (fn "arm_prog$arm_CPSR_N" => "n"
+          | "arm_prog$arm_CPSR_Z" => "z"
+          | "arm_prog$arm_CPSR_C" => "c"
+          | "arm_prog$arm_CPSR_V" => "v"
+          | "arm_prog$arm_CPSR_M" => "mode"
+          | "arm_prog$arm_FP_FPSCR_N" => "fp_n"
+          | "arm_prog$arm_FP_FPSCR_Z" => "fp_z"
+          | "arm_prog$arm_FP_FPSCR_C" => "fp_c"
+          | "arm_prog$arm_FP_FPSCR_V" => "fp_v"
+          | "arm_prog$arm_FP_FPSCR_RMode" => "rmode"
+          | _ => fail())
+   val arm_rename2 =
+      Lib.total
+        (fn "arm_prog$arm_FP_REG" =>
+              Lib.curry (op ^) "d" o Int.toString o wordsSyntax.uint_of_word
+          | "arm_prog$arm_REG" =>
+              Lib.curry (op ^) "r" o Int.toString o reg_index
+          | "arm_prog$arm_MEM" => K "b"
+          | _ => fail())
 in
-   fun rename_vars thm =
-      let
-         val (_, p, _, _) = progSyntax.dest_spec (Thm.concl thm)
-         val () = stateLib.varReset()
-         val _ = stateLib.gvar "b" Type.bool
-         val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry stateLib.gvar
-         val p = progSyntax.strip_star p
-      in
-         Thm.INST (List.mapPartial (rename avoid) p) thm
-      end
-      handle e as HOL_ERR _ => Raise e
+   val arm_rename = stateLib.rename_vars (arm_rename1, arm_rename2, ["b"])
 end
 
 local
+   val arm_CPSR_T_F = List.map UNDISCH (CONJUNCTS arm_progTheory.arm_CPSR_T_F)
+   val MOVE_COND_CONV = Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
+   val MOVE_COND_RULE = Conv.CONV_RULE MOVE_COND_CONV
+   val SPEC_IMP_RULE =
+      Conv.CONV_RULE
+        (Conv.REWR_CONV (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
+         ORELSEC MOVE_COND_CONV)
+   fun TRY_DISCH_RULE thm =
+      case List.length (Thm.hyp thm) of
+         0 => thm
+       | 1 => MOVE_COND_RULE (Drule.DISCH_ALL thm)
+       | _ => thm |> Drule.DISCH_ALL
+                  |> PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+                  |> MOVE_COND_RULE
+   val flag_introduction =
+      helperLib.MERGE_CONDS_RULE o TRY_DISCH_RULE o
+      PURE_REWRITE_RULE arm_CPSR_T_F
+   val eq_conv =
+      SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
+   val memory_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_MEMORY_INSERT, eq_conv)
+   val arm_PC_INTRO0 =
+      arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                   |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   fun MP_arm_PC_INTRO th =
+      MATCH_MP arm_PC_INTRO th
+      handle HOL_ERR _ => MATCH_MP arm_PC_INTRO0 th
+   val cnv = REWRITE_CONV [arm_stepTheory.Aligned_numeric, Aligned_Branch]
+   val arm_PC_bump_intro =
+      SPEC_IMP_RULE o
+      Conv.CONV_RULE (Conv.LAND_CONV cnv) o
+      MP_arm_PC_INTRO o
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``arm_REG RName_PC``))
+in
+   val arm_rule =
+      flag_introduction o
+      memory_introduction o
+      arm_PC_bump_intro o
+      stateLib.introduce_triple_definition (false, arm_PC_def) o
+      stateLib.introduce_triple_definition (true, arm_CONFIG_def) o
+      extend_arm_code_pool o
+      arm_rename
+end
+
+local
+   val cond_ELIM =
+      simpLib.SIMP_PROVE bool_ss [set_sepTheory.SEP_CLAUSES]
+        ``!p:'a set set. p * cond T = p``
    fun spec_rewrites thm tms = List.map (REWRITE_CONV [thm]) tms
    val spec_rwts =
       spec_rewrites armTheory.Extend_def
@@ -616,8 +648,7 @@ local
           ``SingleOfDouble F w``]
    fun check_unique_reg_CONV tm =
       let
-         val (_, p, _, _) = progSyntax.dest_spec tm
-         val p = progSyntax.strip_star p
+         val p = progSyntax.strip_star (progSyntax.dest_pre tm)
          val rp = List.mapPartial (Lib.total (fst o dest_arm_REG)) p
          val dp = List.mapPartial (Lib.total (fst o dest_arm_FP_REG)) p
       in
@@ -626,6 +657,20 @@ local
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
    val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
+   val PC_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun is_pc_reducible tm =
+      case Lib.total wordsSyntax.dest_word_add tm of
+         SOME (v, _) => not (Term.is_var v)
+       | _ => not (boolSyntax.is_cond tm)
+   val DEPTH_PC_CONV =
+      Conv.ONCE_DEPTH_CONV
+         (fn tm =>
+            case boolSyntax.dest_strip_comb tm of
+              ("arm_prog$arm_PC", [t]) =>
+                   if is_pc_reducible t
+                      then Conv.RAND_CONV PC_CONV tm
+                   else raise ERR "PC_CONV" ""
+             | _ => raise ERR "PC_CONV" "")
    fun DEPTH_COND_CONV cnv =
       Conv.ONCE_DEPTH_CONV
          (fn tm => if progSyntax.is_cond tm
@@ -647,16 +692,17 @@ local
          (DEPTH_COND_CONV
              (DEPTH_CONV DISJOINT_CONV
               THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
-              THENC NOT_F_CONV))
+              THENC NOT_F_CONV)
+          THENC PURE_ONCE_REWRITE_CONV [cond_ELIM])
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
       THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts)
+      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts THENC DEPTH_PC_CONV)
 in
    fun simp_triple_rule thm =
-      rename_vars (Conv.CONV_RULE cnv thm)
+      arm_rename (Conv.CONV_RULE cnv thm)
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
 end
 
@@ -694,7 +740,7 @@ local
                    ["arm_state", "PSR", "FP", "FPSCR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
    val spec =
-      extend_arm_code_pool o
+      arm_rule o
       stateLib.spec
            arm_progTheory.ARM_IMP_SPEC
            [arm_stepTheory.get_bytes]

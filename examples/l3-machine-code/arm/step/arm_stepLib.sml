@@ -1492,6 +1492,11 @@ val DecodeImmShift_rwt =
    |> Thm.SYM
    |> Drule.GEN_ALL
 
+val DecodeHint_rwt =
+   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Take_rwt] [] []
+     ``DecodeHint (c, ^(bitstringSyntax.mk_vec 8 0))``
+     |> hd
+
 local
    fun hasValueIn s =
       fn tm => let val i = wordsSyntax.uint_of_word tm in Lib.mem i s end
@@ -1517,7 +1522,7 @@ local
                      ([Take_rwt, ArchVersion_rwts, FST_Skip,
                        (* DecodeImmShift_rwt, *)
                        HaveDSPSupport_rwt,
-                       HaveThumb2_def,
+                       HaveThumb2_def, DecodeHint_rwt,
                        armTheory.boolify28_v2w, Decode_simps,
                        Q.ISPEC `x: Extensions set` pred_setTheory.SPECIFICATION,
                        utilsLib.SET_CONV ``a IN {ARMv6T2; ARMv7_A; ARMv7_R}``,
@@ -1720,7 +1725,8 @@ val arm_patterns = List.map (I ## epattern)
    ("VFPLoadStore",                         "TTFT__F_________TFT_____"),
    ("VFPData",                              "TTTFF___________TFT____F"),
    ("VFPOther",                             "TTTFT_TT________TFT____F"),
-   ("VFPMrs",                               "TTTFTTTTFFFT____TFTF___T")
+   ("VFPMrs",                               "TTTFTTTTFFFT____TFTF___T"),
+   ("Hint",                                 "FFTTFFTFFFFFTTTTFFFF____")
   ]
 
 val arm_patterns15 = List.map (I ## epattern)
@@ -2242,7 +2248,8 @@ local
      ("VCMP (double)",
         ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 11])),
      ("VMRS (nzcv)", ("VFPMrs", [xT 0, xT 1, xT 2, xT 3])),
-     ("VMRS", ("VFPMrs", []))
+     ("VMRS", ("VFPMrs", [])),
+     ("NOP", ("Hint", List.tabulate (8, xF)))
      ]
    fun list_instructions () = List.map fst (Redblackmap.listItems ast)
    fun printn s = TextIO.print (s ^ "\n")

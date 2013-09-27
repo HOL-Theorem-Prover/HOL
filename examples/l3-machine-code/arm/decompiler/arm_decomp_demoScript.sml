@@ -1,10 +1,8 @@
-
 open HolKernel Parse boolLib bossLib;
 
 open rel_decompilerLib arm_relLib
 
 val _ = new_theory "arm_decomp_demo";
-
 
 (* the first PID exmaple *)
 

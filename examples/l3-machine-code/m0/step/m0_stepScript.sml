@@ -20,31 +20,31 @@ val op \\ = op THEN;
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateARM_def = Define`
-   NextStateARM s0 =
+val NextStateM0_def = Define`
+   NextStateM0 s0 =
      let s1 = SND (Next s0) in
         if s1.exception = NoException then SOME s1 else NONE`
 
-val NextStateARM_thumb = ustore_thm("NextStateARM_thumb",
+val NextStateM0_thumb = ustore_thm("NextStateM0_thumb",
   `(s.exception = NoException) ==>
    (Fetch s = (Thumb v, s)) /\
    (DecodeThumb v (s with pcinc := 2w) = (ast, s with pcinc := 2w)) /\
    (!s. Run ast s = f x s) /\
    (f x (s with pcinc := 2w) = ((), s1)) /\
    (s1.exception = s.exception) ==>
-   (NextStateARM s = SOME s1)`,
-   lrw [NextStateARM_def, Next_def, Decode_def]
+   (NextStateM0 s = SOME s1)`,
+   lrw [NextStateM0_def, Next_def, Decode_def]
    )
 
-val NextStateARM_thumb2 = ustore_thm("NextStateARM_thumb2",
+val NextStateM0_thumb2 = ustore_thm("NextStateM0_thumb2",
   `(s.exception = NoException) ==>
    (Fetch s = (Thumb2 v, s)) /\
    (DecodeThumb2 v (s with pcinc := 4w) = (ast, s with pcinc := 4w)) /\
    (!s. Run ast s = f x s) /\
    (f x (s with pcinc := 4w) = ((), s1)) /\
    (s1.exception = s.exception) ==>
-   (NextStateARM s = SOME s1)`,
-   lrw [NextStateARM_def, Next_def, Decode_def]
+   (NextStateM0 s = SOME s1)`,
+   lrw [NextStateM0_def, Next_def, Decode_def]
    )
 
 (* ------------------------------------------------------------------------ *)

@@ -185,9 +185,8 @@ val x64_extras =
    : footprint_extra list
 
 val x64_mk_pre_post =
-   stateLib.mk_pre_post x64_stepTheory.NextStateX64_def x64_instr_def
-     x64_proj_def x64_comp_defs mk_x64_code_pool x64_extras
-     x64_write_footprint psort
+   stateLib.mk_pre_post x64_progTheory.X64_MODEL_def x64_comp_defs
+     mk_x64_code_pool x64_extras x64_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 

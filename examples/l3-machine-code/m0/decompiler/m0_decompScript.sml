@@ -44,10 +44,6 @@ val SEP_EQ_STAR = prove(
   \\ SIMP_TAC std_ss [SEP_EQ_def,Once FUN_EQ_THM,STAR_def,SPLIT_def]
   \\ METIS_TAC []);
 
-val STAR_cond_EQ = prove(
-  ``(b1 = b2) /\ (b1 ==> (p = q)) ==> (p * cond b1 = q * cond b2)``,
-  SIMP_TAC std_ss [cond_STAR,FUN_EQ_THM] \\ METIS_TAC []);
-
 val m0_MEMORY_INSERT = store_thm("m0_MEMORY_INSERT",
   ``a IN dm ==>
     (m0_MEM a w * m0_MEMORY (dm DELETE a) m =

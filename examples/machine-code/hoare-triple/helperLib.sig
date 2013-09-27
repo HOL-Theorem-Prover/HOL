@@ -58,42 +58,47 @@ sig
     val w2w_ss                 : simpLib.ssfrag
     val pbeta_ss               : simpLib.ssfrag
 
-    val MOVE_STAR_CONV         : term -> conv
-    val MOVE_OUT_CONV          : term -> conv
+    val EVAL_ANY_MATCH_CONV    : term list -> conv
+    val EVERY_MATCH_MOVE_OUT_CONV : term -> conv
+    val FIX_WORD32_ARITH_CONV  : conv
+    val FORCE_PBETA_CONV       : conv
     val GEN_MOVE_OUT_CONV      : (term list -> term list) -> conv
     val LIST_MOVE_OUT_CONV     : bool -> term list -> conv
-    val STAR_REVERSE_CONV      : conv
-    val FIX_WORD32_ARITH_CONV  : conv
+    val MATCH_MOVE_OUT_CONV    : term list -> conv
+    val MERGE_CONDS_CONV       : conv
+    val MOVE_OUT_CONV          : term -> conv
+    val MOVE_STAR_CONV         : term -> conv
     val POST_CONV              : conv -> conv
     val PRE_CONV               : conv -> conv
     val PRE_POST_CONV          : conv -> conv
-    val FORCE_PBETA_CONV       : conv
-    val EVAL_ANY_MATCH_CONV    : term list -> conv
     val SEP_EXISTS_AC_CONV     : conv
+    val STAR_AC_CONV           : conv
+    val STAR_REVERSE_CONV      : conv
+    val STAR_REWRITE_CONV      : thm -> conv
 
     val tm2ftree               : term -> ftree_type
     val ftree2tm               : ftree_type -> term
 
     val MATCH_INST             : thm -> term -> thm
 
-    val SUBST_INST             : {redex: term, residue: term} list -> rule
-    val UNHIDE_PRE_RULE        : term -> rule
-    val HIDE_PRE_RULE          : term -> rule
-    val HIDE_POST_RULE         : term -> rule
-    val HIDE_STATUS_RULE       : bool -> thm -> rule
-    val HIDE_PRE_STATUS_RULE   : thm -> rule
-    val INST_SPEC              : thm -> rule
+    val BASIC_SEP_REWRITE_RULE : thm -> rule
     val EXISTS_PRE             : term frag list -> rule
-    val SEP_EXISTS_ELIM_RULE   : thm -> thm
+    val EXISTS_SEP_REWRITE_RULE : thm -> rule
+    val HIDE_POST_RULE         : term -> rule
+    val HIDE_PRE_RULE          : term -> rule
+    val HIDE_PRE_STATUS_RULE   : thm -> rule
+    val HIDE_STATUS_RULE       : bool -> thm -> rule
+    val INST_SPEC              : thm -> rule
+    val LIST_HIDE_POST_RULE    : term list -> rule
+    val MERGE_CONDS_RULE       : rule
+    val MOVE_COND_RULE         : term -> rule
+    val PRE_POST_RULE          : conv -> rule
+    val SEP_EXISTS_ELIM_RULE   : rule
     val SEP_EXISTS_POST_RULE   : term -> rule
     val SEP_EXISTS_PRE_RULE    : term -> rule
     val SEP_REWRITE_RULE       : thm list -> rule
-    val BASIC_SEP_REWRITE_RULE : thm -> rule
-    val EXISTS_SEP_REWRITE_RULE : thm -> rule
-    val LIST_HIDE_POST_RULE    : term list -> rule
-    val STAR_AC_CONV           : conv
-    val PRE_POST_RULE          : conv -> rule
-    val MOVE_COND_RULE         : term -> rule
+    val SUBST_INST             : {redex: term, residue: term} list -> rule
+    val UNHIDE_PRE_RULE        : term -> rule
 
     val HIDE_SEP_IMP_POST_RULE      : term -> rule
     val LIST_HIDE_SEP_IMP_POST_RULE : term list -> rule

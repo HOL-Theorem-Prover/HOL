@@ -228,10 +228,10 @@ val ARM_ASSERT_def = Define `
     arm_MEMORY dm m`;
 
 val L3_ARM_def = Define `
-  L3_ARM = (ARM_ASSERT, L3_ARM_MODEL)`;
+  L3_ARM = (ARM_ASSERT, ARM_MODEL)`;
 
 val INTRO_TRIPLE_L3_ARM = store_thm("INTRO_TRIPLE_L3_ARM",
-  ``(side ==> SPEC L3_ARM_MODEL (ARM_ASSERT pre) code (ARM_ASSERT post)) ==>
+  ``(side ==> SPEC ARM_MODEL (ARM_ASSERT pre) code (ARM_ASSERT post)) ==>
     !c. TRIPLE L3_ARM (c, pre) code (c /\ side, post)``,
   SIMP_TAC std_ss [L3_ARM_def,TRIPLE_def]);
 

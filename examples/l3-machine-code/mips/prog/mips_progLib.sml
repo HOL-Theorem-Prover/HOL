@@ -219,8 +219,8 @@ in
 end
 
 val mips_mk_pre_post =
-   stateLib.mk_pre_post mips_stepTheory.NextStateMIPS_def mips_instr_def
-     mips_proj_def mips_comp_defs mk_mips_code_pool []
+   stateLib.mk_pre_post
+     mips_progTheory.MIPS_MODEL_def mips_comp_defs mk_mips_code_pool []
      mips_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)

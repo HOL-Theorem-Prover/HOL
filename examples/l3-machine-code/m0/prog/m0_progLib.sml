@@ -217,8 +217,9 @@ in
 end
 
 val m0_mk_pre_post =
-   stateLib.mk_pre_post m0_stepTheory.NextStateARM_def m0_instr_def
-     m0_proj_def m0_comp_defs mk_m0_code_pool [] m0_write_footprint psort
+   stateLib.mk_pre_post
+      m0_progTheory.M0_MODEL_def m0_comp_defs mk_m0_code_pool []
+      m0_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 
@@ -363,45 +364,22 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val aircr_ty = Type.mk_thy_type {Thy = "m0", Args = [], Tyop = "AIRCR"}
-   fun rename f =
-      let
-         fun g (v, s, t) =
-            case Lib.total (fst o Term.dest_var) v of
-               SOME q => if String.sub (q, 0) = #"%"
-                            then SOME (v |-> (f (s, t): term))
-                         else NONE
-             | NONE => NONE
-      in
-         fn tm =>
-            case boolSyntax.dest_strip_comb tm of
-               ("m0_prog$m0_PSR_N", [v]) => g (v, "n", Type.bool)
-             | ("m0_prog$m0_PSR_Z", [v]) => g (v, "z", Type.bool)
-             | ("m0_prog$m0_PSR_C", [v]) => g (v, "c", Type.bool)
-             | ("m0_prog$m0_PSR_V", [v]) => g (v, "v", Type.bool)
-             | ("m0_prog$m0_AIRCR", [v]) => g (v, "aircr", aircr_ty)
-             | ("m0_prog$m0_count", [v]) => g (v, "count", numSyntax.num)
-             | ("m0_prog$m0_REG", [x, v]) =>
-                  let
-                     val n = reg_index x
-                  in
-                     if n = 15 then NONE else g (v, "r" ^ Int.toString n, word)
-                  end
-             | ("m0_prog$m0_MEM", [_, v]) => SOME (v |-> f ("b", byte))
-             | _ => NONE
-      end
+   val m0_rename1 =
+      Lib.total
+        (fn "m0_prog$m0_PSR_N" => "n"
+          | "m0_prog$m0_PSR_Z" => "z"
+          | "m0_prog$m0_PSR_C" => "c"
+          | "m0_prog$m0_PSR_V" => "v"
+          | "m0_prog$m0_AIRCR" => "aircr"
+          | "m0_prog$m0_count" => "count"
+          | _ => fail())
+   val m0_rename2 =
+      Lib.total
+        (fn "m0_prog$m0_REG" => Lib.curry (op ^) "r" o Int.toString o reg_index
+          | "m0_prog$m0_MEM" => K "b"
+          | _ => fail())
 in
-   fun rename_vars thm =
-      let
-         val (_, p, _, _) = progSyntax.dest_spec (Thm.concl thm)
-         val () = stateLib.varReset()
-         val _ = stateLib.gvar "b" Type.bool
-         val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry stateLib.gvar
-         val p = progSyntax.strip_star p
-      in
-         Thm.INST (List.mapPartial (rename avoid) p) thm
-      end
-      handle e as HOL_ERR _ => Raise e
+   val m0_rename = stateLib.rename_vars (m0_rename1, m0_rename2, ["b"])
 end
 
 local
@@ -448,7 +426,7 @@ local
       THENC POST_CONV WGROUND_RW_CONV
 in
    fun simp_triple_rule thm =
-      rename_vars (Conv.CONV_RULE cnv thm)
+      m0_rename (Conv.CONV_RULE cnv thm)
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
 end
 
