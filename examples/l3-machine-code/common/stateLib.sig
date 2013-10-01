@@ -3,7 +3,7 @@ sig
    include Abbrev
 
    type footprint_extra = (term * term) * (term -> term) * (term -> term)
-   val define_map_component: string * string * term option * thm -> thm * thm
+   val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
    val get_pc_inc: (term -> bool) -> thm -> int option
    val gvar: string -> hol_type -> term

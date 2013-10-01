@@ -8,8 +8,23 @@ open arm_decompTheory decompilerLib;
 
 val ERR = Feedback.mk_HOL_ERR "arm_decompLib"
 
-val () = arm_progLib.arm_config "vfp"
-val () = arm_progLib.set_newline ""
+local
+   datatype configuration = Uninitialised | Original | Fast
+   val config = ref Uninitialised
+in
+   fun config_for_original () =
+      case !config of
+         Original => ()
+       | _ => (arm_progLib.arm_config "vfp, no-fpr-map"
+               ; arm_progLib.set_newline ""
+               ; config := Original)
+   fun config_for_fast () =
+      case !config of
+         Fast => ()
+       | _ => (arm_progLib.arm_config "vfp, fpr-map"
+               ; arm_progLib.set_newline ""
+               ; config := Fast)
+end
 
 (* automation *)
 
@@ -71,6 +86,7 @@ val l3_arm_tools =
 
 fun l3_arm_decompile name qcode =
    let
+      val () = config_for_original ()
       val (result, func) = decompile l3_arm_tools name qcode
       val result = UNABBREV_CODE_RULE result
    in

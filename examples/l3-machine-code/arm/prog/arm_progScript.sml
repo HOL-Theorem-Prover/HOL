@@ -36,22 +36,26 @@ val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
 
 (* Aliases *)
 
+val arm_FP_REG_def = DB.definition "arm_FP_REG_def"
 val arm_REG_def = DB.definition "arm_REG_def"
 val arm_MEM_def = DB.definition "arm_MEM_def"
 
-val (arm_REGISTERS, arm_REGISTERS_INSERT) =
-   stateLib.define_map_component ("arm_REGISTERS", "reg", NONE, arm_REG_def)
+val (arm_FP_REGISTERS_def, arm_FP_REGISTERS_INSERT) =
+   stateLib.define_map_component ("arm_FP_REGISTERS", "fpr", arm_FP_REG_def)
 
-val (arm_MEMORY, arm_MEMORY_INSERT) =
-   stateLib.define_map_component ("arm_MEMORY", "mem", NONE, arm_MEM_def)
+val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
+   stateLib.define_map_component ("arm_REGISTERS", "reg", arm_REG_def)
+
+val (arm_MEMORY_def, arm_MEMORY_INSERT) =
+   stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
 val arm_CONFIG_def = Define`
-   arm_CONFIG (vfp, arch, bigend, mode) =
+   arm_CONFIG (vfp, arch, bigend, thumb, mode) =
       arm_Extensions Extension_VFP vfp *
       arm_Extensions Extension_Security F *
       arm_Architecture arch *
       arm_exception NoException * arm_CPSR_J F *
-      arm_CPSR_E bigend * arm_CPSR_T F *
+      arm_CPSR_E bigend * arm_CPSR_T thumb *
       arm_CPSR_M mode * cond (GoodMode mode)`;
 
 val arm_PC_def = Define`

@@ -92,7 +92,7 @@ in
     val th = CONV_RULE (PRE_POST_CONV (LIST_MOVE_OUT_CONV xs)) th
     val th = REWRITE_RULE [ASSUME assum1,ASSUME assum2] th
     val th = th |> DISCH assum2 |> DISCH assum1
-    val th = PURE_REWRITE_RULE [AND_IMP_INTRO,GSYM L3_M0_MODEL_def] th
+    val th = PURE_REWRITE_RULE [AND_IMP_INTRO] th
     val th = MATCH_MP m0_PC_INTRO (Q.GEN `aircr` th)
     val th = ss th
     in th end

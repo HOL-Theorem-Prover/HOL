@@ -191,6 +191,60 @@ val x64_mk_pre_post =
 (* ------------------------------------------------------------------------ *)
 
 local
+   val lowercase_const = utilsLib.lowercase o fst o Term.dest_const
+   val x64_rename2 =
+      fn "x64_prog$x64_REG" => SOME lowercase_const
+       | "x64_prog$x64_EFLAGS" => SOME lowercase_const
+       | _ => NONE
+   val x64_rename = stateLib.rename_vars (K NONE, x64_rename2, [])
+   val byte_mem_intro =
+      stateLib.introduce_map_definition
+          (x64_progTheory.x64_BYTE_MEMORY_INSERT, Conv.ALL_CONV)
+   val mem_intro =
+      Conv.BETA_RULE o
+      stateLib.introduce_map_definition
+          (x64_progTheory.x64_MEMORY_INSERT, Conv.ALL_CONV)
+   fun is_pc_reducible tm =
+      case Lib.total wordsSyntax.dest_word_add tm of
+         SOME (v, _) => not (Term.is_var v)
+       | _ => not (boolSyntax.is_cond tm)
+   val PC_CONV =
+      Conv.ONCE_DEPTH_CONV
+         (fn tm =>
+            case boolSyntax.dest_strip_comb tm of
+              ("x64_prog$x64_PC", [t]) =>
+                   if is_pc_reducible t
+                      then Conv.RAND_CONV wordsLib.WORD_ARITH_CONV tm
+                   else raise ERR "PC_CONV" ""
+             | _ => raise ERR "PC_CONV" "")
+   val match_mem32 = fst o match_term ``pp * x64_prog$x64_mem32 a w``
+   val w = ``w:word32``
+   val w2w_w = ``(w2w: word64 -> word32) w``
+   fun try_to_remove_mem32 th =
+      let
+         val i = match_mem32 (progSyntax.dest_pre (concl th))
+         val th = INST [subst i w |-> w2w_w] th
+      in
+         MATCH_MP x64_mem32_READ_EXTEND th
+         handle HOL_ERR _ => MATCH_MP x64_mem32_WRITE_EXTEND th
+      end
+      handle HOL_ERR _ => th
+in
+   val x64_rule =
+      x64_rename o
+      byte_mem_intro o
+      mem_intro o
+      try_to_remove_mem32 o
+      helperLib.PRE_POST_RULE
+        (wordsLib.WORD_SUB_CONV
+         THENC helperLib.EVERY_MATCH_MOVE_OUT_CONV ``x64_prog$x64_mem32 a b``) o
+      Conv.CONV_RULE (helperLib.POST_CONV PC_CONV) o
+      stateLib.introduce_triple_definition (false, x64_PC_def)
+end
+
+(* ------------------------------------------------------------------------ *)
+
+local
    val component_11 =
       case Drule.CONJUNCTS x64_progTheory.x64_component_11 of
         [r, m, _, e] => [r, m, e]
@@ -200,6 +254,7 @@ local
       List.drop (utilsLib.datatype_rewrites "x64" ["x64_state"], 1)
    val STATE_TAC = ASM_REWRITE_TAC x64_rwts
    val spec =
+      x64_rule o
       stateLib.spec
            x64_progTheory.X64_IMP_SPEC
            [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
@@ -213,7 +268,7 @@ local
            NO_TAC STATE_TAC
 in
    val x64_spec =
-      utilsLib.cache 2000 String.compare
+      (* utilsLib.cache 2000 String.compare *)
          (fn s =>
              let
                 val thm = x64_stepLib.x64_step s

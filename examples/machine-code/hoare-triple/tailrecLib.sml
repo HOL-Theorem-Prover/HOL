@@ -51,7 +51,8 @@ fun AUTO_DECONSTRUCT_TAC finder (hs,goal) = let
      else if is_let tm then let
        val (v,c) = (hd o fst o dest_anylet) tm
        val c = if not (type_of c = ``:bool``) then c else
-         (find_term (can (match_term ``GUARD x b``)) c handle HOL_ERR _ => c)
+         (find_term (can (match_term ``address$GUARD x b``)) c
+          handle HOL_ERR _ => c)
        val cs = dest_tuple c
        in (GENSPEC_TAC cs THEN EXPAND_BASIC_LET_TAC) (hs,goal) end
      else (REWRITE_TAC [] THEN NO_TAC) (hs,goal) end

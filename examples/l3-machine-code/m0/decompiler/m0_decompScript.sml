@@ -11,12 +11,6 @@ val op \\ = op THEN;
 
 (* definitions *)
 
-val L3_M0_MODEL_def = Define `
-  L3_M0_MODEL =
-     (STATE m0_proj,
-      NEXT_REL ($= :m0_state -> m0_state -> bool) NextStateARM,
-      m0_instr,($= :m0_state -> m0_state -> bool))`;
-
 val m0_PC_def = Define `
   m0_PC pc =
     SEP_EXISTS aircr.

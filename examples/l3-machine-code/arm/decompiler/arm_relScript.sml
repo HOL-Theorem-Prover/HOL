@@ -148,7 +148,8 @@ val _ = Hol_datatype `
                     (* z *) bool =>
                     (* c *) bool =>
                     (* v *) bool =>
-                    (* fps *) (word5 -> word64) =>
+                    (* domain of fps *) word5 set =>
+                    (* fp registers *) (word5 -> word64) =>
                     (* rmode *) word2 =>
                     (* fp_n *) bool =>
                     (* fp_z *) bool =>
@@ -156,45 +157,9 @@ val _ = Hol_datatype `
                     (* fp_v *) bool =>
                     (* domain of memory *) word32 set =>
                     (* memory *) (word32 -> word8)`;
-
 val arm_assert_tm =
   ``ARM_ASSERTION mode r15 r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
-                  n z c v fps rmode fp_n fp_z fp_c fp_v dm m``
-
-val arm_FP_REGS_def = Define `
-  arm_FP_REGS (fps:word5 -> word64) =
-    arm_FP_REG 0w (fps 0w) *
-    arm_FP_REG 1w (fps 1w) *
-    arm_FP_REG 2w (fps 2w) *
-    arm_FP_REG 3w (fps 3w) *
-    arm_FP_REG 4w (fps 4w) *
-    arm_FP_REG 5w (fps 5w) *
-    arm_FP_REG 6w (fps 6w) *
-    arm_FP_REG 7w (fps 7w) *
-    arm_FP_REG 8w (fps 8w) *
-    arm_FP_REG 9w (fps 9w) *
-    arm_FP_REG 10w (fps 10w) *
-    arm_FP_REG 11w (fps 11w) *
-    arm_FP_REG 12w (fps 12w) *
-    arm_FP_REG 13w (fps 13w) *
-    arm_FP_REG 14w (fps 14w) *
-    arm_FP_REG 15w (fps 15w) *
-    arm_FP_REG 16w (fps 16w) *
-    arm_FP_REG 17w (fps 17w) *
-    arm_FP_REG 18w (fps 18w) *
-    arm_FP_REG 19w (fps 19w) *
-    arm_FP_REG 20w (fps 20w) *
-    arm_FP_REG 21w (fps 21w) *
-    arm_FP_REG 22w (fps 22w) *
-    arm_FP_REG 23w (fps 23w) *
-    arm_FP_REG 24w (fps 24w) *
-    arm_FP_REG 25w (fps 25w) *
-    arm_FP_REG 26w (fps 26w) *
-    arm_FP_REG 27w (fps 27w) *
-    arm_FP_REG 28w (fps 28w) *
-    arm_FP_REG 29w (fps 29w) *
-    arm_FP_REG 30w (fps 30w) *
-    arm_FP_REG 31w (fps 31w)`;
+                  n z c v dfps fps rmode fp_n fp_z fp_c fp_v dm m``
 
 val ARM_ASSERT_def = Define `
   ARM_ASSERT ^arm_assert_tm =
@@ -219,7 +184,7 @@ val ARM_ASSERT_def = Define `
     arm_CPSR_Z z *
     arm_CPSR_C c *
     arm_CPSR_V v *
-    arm_FP_REGS fps *
+    arm_FP_REGISTERS dfps fps *
     arm_FP_FPSCR_RMode rmode *
     arm_FP_FPSCR_N fp_n *
     arm_FP_FPSCR_Z fp_z *

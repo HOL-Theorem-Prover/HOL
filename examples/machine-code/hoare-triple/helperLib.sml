@@ -340,29 +340,23 @@ in
             let
                val (ts, l) = List.foldl plkm ([], xs) targets
             in
-               l @ List.rev ts
+               l @ [progSyntax.list_mk_star (List.rev ts)]
             end)
 end
 
 local
-   fun ONCE_DEPTH_RW thm = Conv.ONCE_DEPTH_CONV (Conv.REWR_CONV thm)
-   val SYM_STAR_ASSOC = GSYM set_sepTheory.STAR_ASSOC
-   val SYM_STAR_CONV = PURE_REWRITE_CONV [SYM_STAR_ASSOC]
-   val SYM_STAR1_CONV = ONCE_DEPTH_RW SYM_STAR_ASSOC
-   fun NCONV n conv = Lib.funpow n (Lib.curry (op THENC) conv) Conv.ALL_CONV
+   val star_rule =
+      Conv.CONV_RULE
+         (Conv.LHS_CONV (PURE_REWRITE_CONV [set_sepTheory.STAR_ASSOC]))
 in
    fun STAR_REWRITE_CONV rwt =
       let
-         val rwt = Drule.SPEC_ALL rwt
-         val l = rwt |> Thm.concl
-                     |> boolSyntax.lhs
-                     |> progSyntax.strip_star
-         val assoc_rwt = Conv.CONV_RULE (Conv.LHS_CONV SYM_STAR_CONV) rwt
+         val rwt = star_rule (Drule.SPEC_ALL rwt)
+         val l = progSyntax.strip_star (boolSyntax.lhs (Thm.concl rwt))
       in
          Conv.TRY_CONV
            (MATCH_MOVE_OUT_CONV l
-            THENC NCONV (List.length l - 1) SYM_STAR1_CONV
-            THENC Conv.CHANGED_CONV (ONCE_DEPTH_RW assoc_rwt))
+            THENC Conv.CHANGED_CONV (PURE_ONCE_REWRITE_CONV [rwt]))
       end
 end
 

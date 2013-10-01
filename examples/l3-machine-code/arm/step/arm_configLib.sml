@@ -53,6 +53,18 @@ val vfp_options = lower
    [["fp", "vfp", "VFPv3"],
     ["nofp", "novfp"]]
 
+val fpr_map_options = lower
+   [["map-fpr", "fpr-map"],
+    ["no-fpr-map", "no-map-fpr"]]
+
+val gpr_map_options = lower
+   [["map-gpr", "gpr-map"],
+    ["no-gpr-map", "no-map-gpr"]]
+
+val mem_map_options = lower
+   [["map-mem", "mem-map"],
+    ["no-mem-map", "no-map-mem"]]
+
 fun find_pos P =
    let
       fun tail n [] = n
@@ -92,6 +104,9 @@ val default_options =
     bigendian = false,
     thumb     = false,
     vfp       = false,
+    gpr_map   = false,
+    fpr_map   = false,
+    mem_map   = true,
     itblock   = wordsSyntax.mk_wordii (0, 8)}
 
 fun process_options s =
@@ -101,6 +116,15 @@ fun process_options s =
       val (bigendian, l) =
          process_opt endian_options "Endian"
             (#bigendian default_options) l (fn i => i <> 0)
+      val (fpr_map, l) =
+         process_opt fpr_map_options "Introduce FPR map"
+            (#fpr_map default_options) l (Lib.equal 0)
+      val (gpr_map, l) =
+         process_opt gpr_map_options "Introduce GPR map"
+            (#gpr_map default_options) l (Lib.equal 0)
+      val (mem_map, l) =
+         process_opt mem_map_options "Introduce MEM map"
+            (#mem_map default_options) l (Lib.equal 0)
       val (vfp, l) =
          process_opt vfp_options "VFP" (#vfp default_options) l (Lib.equal 0)
       val (arch, l) =
@@ -131,6 +155,9 @@ fun process_options s =
                bigendian = bigendian,
                thumb = thumb,
                vfp = vfp,
+               gpr_map = gpr_map,
+               fpr_map = fpr_map,
+               mem_map = mem_map,
                itblock = itblock}
       else raise ERR "process_options"
                  ("Unrecognized option" ^
@@ -150,6 +177,13 @@ fun mk_config_terms s =
        prop #vfp ``^st.Extensions Extension_VFP``,
        prop #bigendian ``^st.CPSR.E``,
        prop #thumb ``^st.CPSR.T``]
+   end
+
+fun map_options s =
+   let
+      val {gpr_map, fpr_map, mem_map, ...} = process_options s
+   in
+      (gpr_map, fpr_map, mem_map)
    end
 
 (* ----------------------------------------------------------------------- *)

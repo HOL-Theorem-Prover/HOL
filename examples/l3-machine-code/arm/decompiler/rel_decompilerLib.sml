@@ -3,9 +3,9 @@ struct
 
 local
 
-open HolKernel Parse boolLib bossLib Lib;
-open armTheory armLib arm_stepTheory pred_setTheory pairTheory optionTheory;
-open arithmeticTheory wordsTheory wordsLib addressTheory combinTheory pairSyntax;
+open HolKernel Parse boolLib bossLib Lib
+open armTheory armLib arm_stepTheory pred_setTheory pairTheory optionTheory
+open arithmeticTheory wordsTheory wordsLib addressTheory combinTheory pairSyntax
 open sumTheory whileTheory;
 
 open arm_relTheory arm_relLib;
@@ -28,11 +28,8 @@ fun add_decomp name th len = (decomp_mem := ((name,th,len)::(!decomp_mem)));
 
 (* PHASE 1 -- evaluate model *)
 
-fun strip_string s = let
-  fun strip_space [] = []
-    | strip_space (x::xs) =
-        if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
-  in (implode o rev o strip_space o rev o strip_space o explode) s end;
+val strip_string = Substring.string o Substring.dropr Char.isSpace o
+                   Substring.dropl Char.isSpace o Substring.full
 
 fun quote_to_strings (q: term quotation) = let (* turns a quote `...` into a list of strings *)
   fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = fail()
@@ -53,77 +50,120 @@ fun quote_to_strings (q: term quotation) = let (* turns a quote `...` into a lis
   val qs = filter (fn z => not (z = "")) (map strip_string zs)
   in qs end;
 
-fun derive_specs code = let
-  fun option_add k NONE = NONE
-    | option_add k (SOME n) = SOME (k+n)
-  val p = mk_var("r15",``:word32``)
-  fun set_pc n (th,l,j) = let
-    val p' = ``^p + n2w ^(numSyntax.term_of_int n)``
-    val th = INST [p|->p'] th
-             |> SIMP_RULE std_ss [word_arith_lemma1,word_arith_lemma2]
-             |> SIMP_RULE std_ss [word_arith_lemma3,word_arith_lemma4]
-    in (th,l,option_add n j) end
-  fun option_apply f NONE = NONE
-    | option_apply f (SOME x) = SOME (f x)
-  fun foo hex n =
-    if String.isPrefix "insert:" hex then let
-      val name = String.substring(hex,size("insert:"),size(hex)-size("insert:"))
-                 |> strip_string
-      val (_,th,len) = first (fn (n,_,_) => n = name) (!decomp_mem)
-      in (n+len,set_pc n (th |> UNDISCH_ALL,len,SOME len),NONE) end
-    else let
-      val ((x,l,j),y) = l3_triple hex
-      in (n+l, set_pc n (x,l,j), option_apply (set_pc n) y) end
-  val l = length code
-  fun derive n [] aux l = rev aux
-    | derive n (x::xs) aux l = let
-        val _ = helperLib.echo 1 (" " ^ (int_to_string l))
-        val (n',x,y) = foo x n
-        in derive n' xs ((n,x,y)::aux) (l-1) end
-  in derive 0 code [] l end
+local
+   (* vt100 escape string *)
+   val ESC = String.str (Char.chr 0x1B)
+   val inPlaceEcho =
+      if !Globals.interactive
+         then fn s => helperLib.echo 1 ("\n " ^ s)
+      else fn s => helperLib.echo 1 (ESC ^ "[1K" ^ "\n" ^ ESC ^ "[A " ^ s)
+   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   val AT_PC_CONV = RAND_CONV o RAND_CONV o funpow 28 RATOR_CONV o RAND_CONV
+   val PC_RULE = Conv.CONV_RULE (AT_PC_CONV ARITH_SUB_CONV)
+   val p = mk_var("r15",``:word32``)
+   fun add_to_pc n = wordsSyntax.mk_word_add (p, wordsSyntax.mk_wordii (n, 32))
+   fun set_pc n (th, l, j) =
+      (PC_RULE (INST [p |-> add_to_pc n] th), l, Option.map (fn i => n + i) j)
+   fun derive1 hex n =
+      if String.isPrefix "insert:" hex
+         then let
+                 val name =
+                    strip_string (String.extract (hex, size("insert:"), NONE))
+                 val (_, th, l) = first (fn (n, _, _) => n = name) (!decomp_mem)
+              in
+                 (n + l, set_pc n (th |> UNDISCH_ALL, l, SOME l), NONE)
+              end
+      else let
+              val (x as (_, l, _), y) = arm_relLib.l3_triple hex
+           in
+              (n + l, set_pc n x, Option.map (set_pc n) y)
+           end
+   fun derive n [] aux l = rev aux
+     | derive n (x::xs) aux l =
+         let
+            val () = inPlaceEcho (Int.toString l)
+            val (n', x, y) = derive1 x n
+         in
+            derive n' xs ((n,x,y)::aux) (l - 1)
+         end
+in
+   fun derive_specs code =
+      let
+         val l = length code
+      in
+         print "\nDeriving instruction specs...\n\n"
+         ; derive 0 code [] l before
+           inPlaceEcho ("Finished " ^ Int.toString l ^ " instruction(s).\n")
+      end
+end
 
 fun model tm = tm |> rator |> rator |> rator |> rand
 
-fun abbreviate_code name thms = let
-  fun extract_code (_,(th,_,_),_) = th |> concl |> rator |> rand
-  val cs = map extract_code thms
-  val ty = (hd o snd o dest_type o type_of o hd) cs
-  val tm = foldr pred_setSyntax.mk_union (pred_setSyntax.mk_empty ty) cs
-  val cth = QCONV (PURE_REWRITE_CONV [INSERT_UNION_EQ,UNION_EMPTY]) tm
-  val c = (rand o concl) cth
-  val (_,(th,_,_),_) = hd thms
-  val m = model (th |> concl)
-  val model_name = (helperLib.to_lower o fst o dest_const) m
-  val x = list_mk_pair (free_vars c)
-  val def_name = name ^ "_" ^ model_name
-  val v = mk_var(def_name,type_of(mk_pabs(x,c)))
-  val code_def = new_definition(def_name ^ "_def",mk_eq(mk_comb(v,x),c))
-  val _ = add_code_abbrev code_def
-  fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f th1,x1,x2),NONE)
-    | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
-        (y,(f th1,x1,x2),SOME (f th2,y1,y2))
-  val code_thm = CONV_RULE (RAND_CONV (fn _ => GSYM cth)) (SPEC_ALL code_def)
-  fun foo th = let
-    val th1 = MATCH_MP TRIPLE_EXTEND th
-    val th1 = SPEC ((fst o dest_eq o concl o SPEC_ALL) code_def) th1
-    val goal = (fst o dest_imp o concl) th1
-    val lemma = helperLib.auto_prove "abbreviate_code" (goal,
-        REPEAT (REWRITE_TAC [code_thm,SUBSET_DEF,IN_UNION] THEN REPEAT STRIP_TAC
-                THEN ASM_REWRITE_TAC [] THEN (fn _ => fail()))
-        THEN REWRITE_TAC [EMPTY_SUBSET]
-        THEN REWRITE_TAC [SUBSET_DEF,IN_INSERT,IN_UNION,NOT_IN_EMPTY,code_def]
-        THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [])
-    val th1 = MP th1 lemma
-    in th1 end
-  val thms = map (triple_apply foo) thms
-  in thms end
+local
+   fun extract_code (_,(th,_,_),_) = th |> concl |> rator |> rand
+   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) =
+          (y,(f th1,x1,x2),NONE)
+     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
+          (y,(f th1,x1,x2),SOME (f th2,y1,y2))
+   val SING_SUBSET = Q.prove(
+      `!s x:'a. {x} SUBSET s = x IN s`,
+      SIMP_TAC (srw_ss()) [])
+   val SPLIT_SUBSET = Q.prove(
+      `!s x:'a y. {x; y} SUBSET s = {x} SUBSET s /\ {y} SUBSET s`,
+      SIMP_TAC (srw_ss()) [])
+   val rule = PURE_REWRITE_RULE [boolTheory.REFL_CLAUSE, boolTheory.OR_CLAUSES]
+   val in_conv =
+      PURE_REWRITE_CONV [pred_setTheory.IN_INSERT, pred_setTheory.NOT_IN_EMPTY]
+in
+   fun abbreviate_code name thms =
+      let
+         val code = List.concat
+                      (List.map (pred_setSyntax.strip_set o extract_code) thms)
+         val cs = pred_setSyntax.mk_set code
+         val (_,(th,_,_),_) = hd thms
+         val model_name =
+            (helperLib.to_lower o fst o dest_const o model o concl) th
+         val def_name = name ^ "_" ^ model_name
+         val x = list_mk_pair (free_vars cs)
+         val v = mk_var (def_name, type_of (mk_pabs (x, cs)))
+         val code_def =
+            new_definition (def_name ^ "_def", mk_eq (mk_comb (v, x), cs))
+         val () = add_code_abbrev code_def
+         val tm = (fst o dest_eq o concl o SPEC_ALL) code_def
+         val thm =
+            SING_SUBSET
+            |> Drule.ISPEC tm
+            |> Drule.SPEC_ALL
+            |> Conv.CONV_RULE
+                (Conv.RHS_CONV
+                  (Conv.RAND_CONV (K (Drule.SPEC_ALL code_def)) THENC in_conv))
+         val x = mk_var ("x", Term.type_of (hd code))
+         fun in_cs t = EQT_ELIM (rule (Thm.INST [x |-> t] thm))
+         val cnv = PURE_REWRITE_CONV (SPLIT_SUBSET :: List.map in_cs code)
+         val rl = Conv.CONV_RULE (Conv.LAND_CONV cnv THENC REWRITE_CONV []) o
+                  Thm.SPEC tm o
+                  MATCH_MP TRIPLE_EXTEND
+      in
+         List.map (triple_apply rl) thms
+      end
+end
 
-fun stage_1 name qcode = let
-  val code = quote_to_strings qcode
-  val thms = derive_specs code
+fun stage_1 name qcode =
+   let
+      val () = arm_decompLib.config_for_fast ()
+      val code = quote_to_strings qcode
+      val thms = derive_specs code
+   in
+      abbreviate_code name thms
+   end
 
-  val thms = abbreviate_code name thms
-  in thms end;
+(* testing
+val name = "test"
+val qcode = `e59f322c  00012f94
+             e59f222c  00012f80
+             edd37a00`
+val (_, (th, _, _), _) = hd thms
+*)
 
 
 (* PHASE 2 -- compute CFG *)
@@ -134,9 +174,7 @@ fun extract_graph thms = let
   val jumps = foldl (fn (x,y) => extract_jumps x @ y) [] thms
   in jumps end;
 
-fun all_distinct [] = []
-  | all_distinct (x::xs) =
-      if mem x xs then all_distinct xs else x :: all_distinct xs
+val all_distinct = Lib.mk_set
 
 fun drop_until P [] = []
   | drop_until P (x::xs) = if P x then x::xs else drop_until P xs

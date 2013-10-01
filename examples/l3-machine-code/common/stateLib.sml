@@ -354,7 +354,7 @@ val hs = [["Architecture"]]
 *)
 
 (* ------------------------------------------------------------------------
-   define_map_component (name, f, p, def)
+   define_map_component (name, f, def)
 
    Given a definition of the form
 
@@ -362,84 +362,40 @@ val hs = [["Architecture"]]
 
    this function generates a map version, as defined by
 
-    !df f. name df f = {BIGUNION {BIGUNION (model_X c (f c)) | c IN df /\ p c}}
+    !df f. name df f = {BIGUNION {BIGUNION (model_X c (f c)) | c IN df}}
 
-   and it also proves the theorem
+   and it also derives the theorem
 
-    |- c IN df /\ p c ==>
-       (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
+    |- c IN df ==> (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
 
-   When argument "p" is NONE the term "p c" does not occur.
    ------------------------------------------------------------------------ *)
 
-local
-   val MAPPED_COMPONENT_INSERT_K_T =
-      stateTheory.MAPPED_COMPONENT_INSERT
-      |> Q.SPEC `K T`
-      |> REWRITE_RULE [combinTheory.K_THM]
-in
-   fun define_map_component (s, f, p, def) =
-      let
-         val (c, d, e) =
-            case boolSyntax.strip_forall (Thm.concl def) of
-               ([c, d], e) => (c, d, boolSyntax.dest_eq e)
-             | _ => raise ERR "" "bad definition"
-         val component =
-            e |> snd
-              |> pred_setSyntax.strip_set |> hd
-              |> pred_setSyntax.strip_set |> hd
-              |> pairSyntax.dest_pair |> fst
-              |> Term.rator
-         val c_ty = Term.type_of c
-         val d_ty = Term.type_of d
-         val c_set_ty = pred_setSyntax.mk_set_type c_ty
-         val comp_11 =
-            let
-               val a = Term.mk_var ("a", c_ty)
-               val b = Term.mk_var ("b", c_ty)
-            in
-               simpLib.SIMP_PROVE (srw_ss()) []
-                 (boolSyntax.list_mk_forall
-                    ([a, b],
-                     boolSyntax.mk_eq
-                       (boolSyntax.mk_eq
-                          (Term.mk_comb (component, a),
-                           Term.mk_comb (component, b)),
-                        boolSyntax.mk_eq (a, b))))
-            end
-         val df = Term.mk_var ("d" ^ f, c_set_ty)
-         val f = Term.mk_var (f, c_ty --> d_ty)
-         val e = fst e
-         val sep_ty = Term.type_of e
-         val c_in_df = pred_setSyntax.mk_in (c, df)
-         val (c_tm, insert_thm) =
-            case p of
-               SOME tm => (boolSyntax.mk_conj (c_in_df, Term.mk_comb (tm, c)),
-                           stateTheory.MAPPED_COMPONENT_INSERT)
-             | NONE => (c_in_df, MAPPED_COMPONENT_INSERT_K_T)
-         val t = e |> Term.subst [d |-> Term.mk_comb (f, c)]
-                   |> pred_setSyntax.mk_bigunion
-         val t = pred_setSyntax.mk_set
-                   [pred_setSyntax.mk_bigunion
-                      (boolSyntax.mk_icomb
-                        (pred_setSyntax.gspec_tm,
-                         Term.mk_abs (c, pairSyntax.mk_pair (t, c_tm))))]
-         val v_ty = c_set_ty --> (c_ty --> d_ty) --> sep_ty
-         val v = Term.mk_var (s, v_ty)
-         val mdef =
-           Definition.new_definition
-              (s, boolSyntax.mk_eq (Term.list_mk_comb (v, [df, f]), t))
-         val thm =
-            Theory.save_thm
-               (s ^ "_INSERT",
-                MATCH_MP insert_thm (Drule.LIST_CONJ [comp_11, def, mdef])
-                |> Conv.BETA_RULE
-                |> Drule.SPECL [f, df])
-      in
-         (mdef, thm)
-      end
-      handle HOL_ERR {message, ...} => raise ERR "define_map_component" message
-end
+fun define_map_component (s, f, def) =
+   let
+      val thm = Drule.MATCH_MP stateTheory.MAPPED_COMPONENT_INSERT_OPT def
+                handle HOL_ERR _ =>
+                   Drule.MATCH_MP stateTheory.MAPPED_COMPONENT_INSERT1 def
+      val map_c = fst (boolSyntax.dest_forall (Thm.concl thm))
+      val map_c = Term.mk_var (s, Term.type_of map_c)
+      val (tm_11, def_tm) = thm |> Thm.SPEC map_c
+                                |> Thm.concl
+                                |> boolSyntax.dest_imp |> fst
+                                |> boolSyntax.dest_conj
+      val comp_11 = simpLib.SIMP_PROVE (srw_ss()) [] tm_11
+      val (v_df, def_tm) = boolSyntax.dest_forall def_tm
+      val (v_f, def_tm) = boolSyntax.dest_forall def_tm
+      val v_df' = Term.mk_var ("d" ^ f, Term.type_of v_df)
+      val v_f' = Term.mk_var (f, Term.type_of v_f)
+      val def_tm = Term.subst [v_df |-> v_df', v_f |-> v_f'] def_tm
+      val mdef = Definition.new_definition (s ^ "_def", def_tm)
+      val thm = Theory.save_thm
+                  (s ^ "_INSERT",
+                   Drule.SPECL [v_f', v_df']
+                      (MATCH_MP thm (Thm.CONJ comp_11 mdef)))
+   in
+      (mdef, thm)
+   end
+   handle HOL_ERR {message, ...} => raise ERR "define_map_component" message
 
 (* ------------------------------------------------------------------------
    mk_code_pool: make term ``CODE_POOL f {(v, opc)}``
@@ -511,6 +467,7 @@ fun dest_code_access tm =
 local
    val vnum =
       ref (Redblackmap.mkDict String.compare : (string, int) Redblackmap.dict)
+   fun is_gen s = String.sub (s, 0) = #"%"
 in
    fun gvar s ty =
       let
@@ -523,7 +480,6 @@ in
       end
    val vvar = gvar "%v"
    fun varReset () = vnum := Redblackmap.mkDict String.compare
-   fun is_gen s = String.sub (s, 0) = #"%"
    fun is_vvar tm =
       case Lib.total Term.dest_var tm of
          SOME (s, _) => is_gen s
@@ -845,38 +801,28 @@ fun rename_vars (rename1, rename2, bump) =
       fun rename f tm =
          case boolSyntax.dest_strip_comb tm of
             (c, [v]) =>
-               (case Lib.total (fst o Term.dest_var) v of
-                  SOME q =>
-                     if is_gen q
-                        then case rename1 c of
-                                SOME s => SOME (v |-> f (s, Term.type_of v))
-                              | NONE => NONE
-                     else NONE
-                 | NONE => NONE)
+               if is_vvar v
+                  then case rename1 c of
+                          SOME s => SOME (v |-> f (s, Term.type_of v))
+                        | NONE => NONE
+               else NONE
           | (c, [x, v]) =>
-               (case Lib.total (fst o Term.dest_var) v of
-                   SOME q =>
-                     if is_gen q
-                        then case rename2 c of
-                                SOME g =>
-                                   (case Lib.total g x of
-                                       SOME s =>
-                                         SOME (v |-> f (s, Term.type_of v))
-                                     | NONE => NONE)
-                              | NONE => NONE
-                     else NONE
-                 | NONE => NONE)
+               if is_vvar v
+                  then case rename2 c of
+                          SOME g =>
+                             (case Lib.total g x of
+                                 SOME s => SOME (v |-> f (s, Term.type_of v))
+                               | NONE => NONE)
+                        | NONE => NONE
+               else NONE
           | _ => NONE
    in
       fn thm =>
          let
             val p = progSyntax.dest_pre (Thm.concl thm)
             val () = varReset()
-            val () =
-               List.app (fn s => General.ignore (gvar s Type.alpha))
-                 bump
-            val avoid =
-               utilsLib.avoid_name_clashes p o Lib.uncurry gvar
+            val () = List.app (fn s => General.ignore (gvar s Type.alpha)) bump
+            val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry gvar
             val p = progSyntax.strip_star p
          in
             Thm.INST (List.mapPartial (rename avoid) p) thm
@@ -981,10 +927,11 @@ local
                      (f, [a, b]) => (f, (a, b))
                    | _ => raise ERR "strip2" ""
    val tidy_up_rule =
-      SIMP_RULE (bool_ss++helperLib.sep_cond_ss) [] o
+      helperLib.MERGE_CONDS_RULE o
       PURE_REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] o
-      Drule.DISCH_ALL o
-      PURE_REWRITE_RULE [updateTheory.APPLY_UPDATE_ID]
+      Drule.DISCH_ALL
+   val is_ineq = Lib.can (boolSyntax.dest_eq o boolSyntax.dest_neg)
+   val apply_id_rule = PURE_REWRITE_RULE [updateTheory.APPLY_UPDATE_ID]
 in
    fun introduce_map_definition (insert_thm, dom_eq_conv) =
       let
@@ -1007,7 +954,18 @@ in
          val df_intro = List.foldl (pred_setSyntax.mk_delete o Lib.swap) df
          fun mk_frame cs = Term.mk_comb (Term.mk_comb (m_tm, df_intro cs), f)
          val insert_conv =
+            utilsLib.ALL_HYP_CONV_RULE
+               (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]
+                THENC dom_eq_conv) o
             utilsLib.INST_REWRITE_CONV [Drule.UNDISCH_ALL insert_thm]
+         val (mk_dvar, mk_subst) =
+            case Lib.total optionSyntax.dest_option d_ty of
+               SOME ty =>
+                 (fn () => optionSyntax.mk_some (Term.genvar ty),
+                  fn (d, c) => optionSyntax.dest_some d |-> Term.mk_comb (f, c))
+             | NONE =>
+                 (fn () => Term.genvar d_ty,
+                  fn (d, c) => d |-> Term.mk_comb (f, c))
       in
          fn th =>
             let
@@ -1023,23 +981,32 @@ in
                                    val (g, d) = Term.dest_comb t
                                    val c = Term.rand g
                                 in
-                                   (Term.mk_comb (g, Term.genvar d_ty),
-                                    (Term.rand g, d |-> Term.mk_comb (f, c)))
+                                   (Term.mk_comb (g, mk_dvar ()),
+                                    (Term.rand g, mk_subst (d, c)))
                                 end) xs
                        val (xs, cs_ds) = ListPair.unzip xs
                        val (cs, ds) = ListPair.unzip cs_ds
                        val frame = mk_frame cs
                        val rwt =
-                          List.foldr progSyntax.mk_star frame xs
-                          |> insert_conv
-                          |> utilsLib.ALL_HYP_CONV_RULE
-                                (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]
-                                 THENC dom_eq_conv)
+                          insert_conv (List.foldr progSyntax.mk_star frame xs)
+                       val ineqs =
+                          rwt |> Thm.hyp |> hd
+                              |> boolSyntax.strip_conj
+                              |> List.filter is_ineq
+                              |> List.map ASSUME
+                       val rule =
+                          if List.null ineqs
+                             then apply_id_rule
+                          else SIMP_RULE bool_ss
+                                 ([updateTheory.APPLY_UPDATE_ID,
+                                   combinTheory.UPDATE_APPLY,
+                                   combinTheory.UPDATE_APPLY_IMP_ID] @ ineqs)
                     in
                        th |> helperLib.SPECC_FRAME_RULE frame
                           |> helperLib.PRE_POST_RULE
                                (helperLib.STAR_REWRITE_CONV rwt)
                           |> Thm.INST ds
+                          |> rule
                           |> tidy_up_rule
                     end
             end

@@ -607,6 +607,12 @@ local
    val memory_introduction =
       stateLib.introduce_map_definition
          (arm_progTheory.arm_MEMORY_INSERT, eq_conv)
+   val fp_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_FP_REGISTERS_INSERT, Conv.ALL_CONV)
+   val gp_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_REGISTERS_INSERT, Conv.ALL_CONV)
    val arm_PC_INTRO0 =
       arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                    |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
@@ -620,15 +626,23 @@ local
       MP_arm_PC_INTRO o
       Conv.CONV_RULE
          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``arm_REG RName_PC``))
-in
-   val arm_rule =
+   val always_intro =
       flag_introduction o
-      memory_introduction o
       arm_PC_bump_intro o
       stateLib.introduce_triple_definition (false, arm_PC_def) o
       stateLib.introduce_triple_definition (true, arm_CONFIG_def) o
       extend_arm_code_pool o
       arm_rename
+in
+   fun arm_rule opt =
+      let
+         val (gp_intro, fp_intro, mem_intro) = arm_configLib.map_options opt
+      in
+         (if gp_intro then gp_introduction else Lib.I) o
+         (if fp_intro then fp_introduction else Lib.I) o
+         (if mem_intro then memory_introduction else Lib.I) o
+         always_intro
+      end
 end
 
 local
@@ -657,18 +671,18 @@ local
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
    val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
-   val PC_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
    fun is_pc_reducible tm =
       case Lib.total wordsSyntax.dest_word_add tm of
          SOME (v, _) => not (Term.is_var v)
        | _ => not (boolSyntax.is_cond tm)
-   val DEPTH_PC_CONV =
+   val PC_CONV =
       Conv.ONCE_DEPTH_CONV
          (fn tm =>
             case boolSyntax.dest_strip_comb tm of
               ("arm_prog$arm_PC", [t]) =>
                    if is_pc_reducible t
-                      then Conv.RAND_CONV PC_CONV tm
+                      then Conv.RAND_CONV ARITH_SUB_CONV tm
                    else raise ERR "PC_CONV" ""
              | _ => raise ERR "PC_CONV" "")
    fun DEPTH_COND_CONV cnv =
@@ -699,7 +713,7 @@ local
       THENC check_unique_reg_CONV
       THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts THENC DEPTH_PC_CONV)
+      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts THENC PC_CONV)
 in
    fun simp_triple_rule thm =
       arm_rename (Conv.CONV_RULE cnv thm)
@@ -739,8 +753,7 @@ local
       List.drop (utilsLib.datatype_rewrites "arm"
                    ["arm_state", "PSR", "FP", "FPSCR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
-   val spec =
-      arm_rule o
+   val basic_spec =
       stateLib.spec
            arm_progTheory.ARM_IMP_SPEC
            [arm_stepTheory.get_bytes]
@@ -766,10 +779,18 @@ local
    val v6 = Term.mk_var ("x6", Type.bool)
    val vn = listSyntax.mk_list ([v3, v4, v5, v6], Type.bool)
    val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
+   val last_opt = ref ""
    val newline = ref "\n"
+   val the_step = ref (arm_stepLib.arm_step (!last_opt))
+   fun same_config opt =
+      arm_configLib.mk_config_terms (!last_opt) =
+      arm_configLib.mk_config_terms opt
    fun arm_spec_opt opt =
       let
-         val step = arm_stepLib.arm_step opt
+         val () = if same_config opt then ()
+                  else (last_opt := opt; the_step := arm_stepLib.arm_step opt)
+         val step = !the_step
+         val spec = arm_rule opt o basic_spec
       in
          fn s =>
            (if is_stm_wb s
@@ -939,6 +960,7 @@ spec (thm, t)
 val thm = saveSpecs "specs"
 
 val () = arm_config "vfp"
+val () = arm_config "vfp,gpr-map,fpr-map"
 val () = arm_config "vfp,be"
 val () = arm_config ""
 
