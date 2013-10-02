@@ -370,7 +370,8 @@ local
           | "m0_prog$m0_PSR_Z" => "z"
           | "m0_prog$m0_PSR_C" => "c"
           | "m0_prog$m0_PSR_V" => "v"
-          | "m0_prog$m0_AIRCR" => "aircr"
+          | "m0_prog$m0_AIRCR_ENDIANNESS" => "endianness"
+          | "m0_prog$m0_CurrentMode" => "mode"
           | "m0_prog$m0_count" => "count"
           | _ => fail())
    val m0_rename2 =
@@ -383,24 +384,70 @@ in
 end
 
 local
+   val m0_PSR_T_F = List.map UNDISCH (CONJUNCTS m0_progTheory.m0_PSR_T_F)
+   val MOVE_COND_CONV = Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
+   val MOVE_COND_RULE = Conv.CONV_RULE MOVE_COND_CONV
+   val SPEC_IMP_RULE =
+      Conv.CONV_RULE
+        (Conv.REWR_CONV (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
+         ORELSEC MOVE_COND_CONV)
+   fun TRY_DISCH_RULE thm =
+      case List.length (Thm.hyp thm) of
+         0 => thm
+       | 1 => MOVE_COND_RULE (Drule.DISCH_ALL thm)
+       | _ => thm |> Drule.DISCH_ALL
+                  |> PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+                  |> MOVE_COND_RULE
+   val flag_introduction =
+      helperLib.MERGE_CONDS_RULE o TRY_DISCH_RULE o PURE_REWRITE_RULE m0_PSR_T_F
+   val eq_conv =
+      SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
+   val memory_introduction =
+      stateLib.introduce_map_definition
+         (m0_progTheory.m0_MEMORY_INSERT, eq_conv)
+   val m0_PC_INTRO0 =
+      m0_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                  |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   fun MP_m0_PC_INTRO th =
+      MATCH_MP m0_PC_INTRO th
+      handle HOL_ERR _ => MATCH_MP m0_PC_INTRO0 th
+   val cnv = REWRITE_CONV [m0_stepTheory.Aligned_numeric, Aligned_Branch]
+   val m0_PC_bump_intro =
+      SPEC_IMP_RULE o
+      Conv.CONV_RULE (Conv.LAND_CONV cnv) o
+      MP_m0_PC_INTRO o
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``m0_REG RName_PC``))
+in
+   val gp_introduction =
+      stateLib.introduce_map_definition
+         (m0_progTheory.m0_REGISTERS_INSERT, Conv.ALL_CONV)
+   val m0_rule =
+      memory_introduction o
+      flag_introduction o
+      m0_PC_bump_intro o
+      stateLib.introduce_triple_definition (false, m0_PC_def) o
+      stateLib.introduce_triple_definition (true, m0_CONFIG_def) o
+      (* extend_m0_code_pool o *)
+      m0_rename
+end
+
+local
    fun check_unique_reg_CONV tm =
       let
-         val (_, p, _, _) = progSyntax.dest_spec tm
-         val p = progSyntax.strip_star p
+         val p = progSyntax.strip_star (progSyntax.dest_pre tm)
          val rp = List.mapPartial (Lib.total (fst o dest_m0_REG)) p
       in
          if Lib.mk_set rp = rp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
-   val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
    fun DEPTH_COND_CONV cnv =
       Conv.ONCE_DEPTH_CONV
         (fn tm =>
             if progSyntax.is_cond tm
                then Conv.RAND_CONV cnv tm
             else raise ERR "COND_CONV" "")
-   val POST_CONV = Conv.RAND_CONV
    val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
@@ -412,7 +459,7 @@ local
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
-      PRE_CONV
+      helperLib.PRE_CONV
          (DEPTH_COND_CONV
              (WGROUND_RW_CONV
               THENC REWRITE_CONV [m0_stepTheory.Aligned_numeric]
@@ -421,14 +468,18 @@ local
       REG_CONV
       THENC check_unique_reg_CONV
       THENC PRE_COND_CONV
-      THENC PRE_CONV WGROUND_RW_CONV
+      THENC helperLib.PRE_CONV WGROUND_RW_CONV
       THENC OPC_CONV (Conv.RAND_CONV bitstringLib.v2w_n2w_CONV)
-      THENC POST_CONV WGROUND_RW_CONV
+      THENC helperLib.POST_CONV
+               (WGROUND_RW_CONV THENC stateLib.PC_CONV "m0_prog$m0_PC")
 in
    fun simp_triple_rule thm =
       m0_rename (Conv.CONV_RULE cnv thm)
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
 end
+
+val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
+               progSyntax.dest_code o Thm.concl
 
 local
    val component_11 =
@@ -445,6 +496,7 @@ local
       List.drop (utilsLib.datatype_rewrites "m0" ["m0_state", "PSR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC m0_rwts
    val spec =
+      m0_rule o
       stateLib.spec
            m0_progTheory.M0_IMP_SPEC
            [m0_stepTheory.get_bytes]
@@ -517,16 +569,8 @@ local
             then r l
          else tm
       end
-   fun get_opcode thm =
-      let
-         val (_, _, c, _) = progSyntax.dest_spec (Thm.concl thm)
-      in
-         c |> pred_setSyntax.strip_set |> hd
-           |> pairSyntax.dest_pair |> snd
-           |> boolSyntax.rand
-           |> bitstringSyntax.dest_v2w |> fst
-           |> mk_thumb2_pair
-      end
+   val get_opcode = mk_thumb2_pair o fst o bitstringSyntax.dest_v2w o
+                    boolSyntax.rand o get_code
    val spec_label_set = ref (Redblackset.empty String.compare)
    val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
    val add1 = utilsLib.add_to_rw_net get_opcode

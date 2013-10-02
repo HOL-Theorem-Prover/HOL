@@ -34,30 +34,6 @@ local
    val sbst =
       [``vfp:bool`` |-> boolSyntax.T, ``arch:Architecture`` |-> ``ARMv7_A``]
    fun arm_OK_intro w0 = ok_rule o Thm.INST ((w0_var |-> w0) :: sbst)
-   val pecond_rule =
-      Conv.CONV_RULE
-         (Conv.TRY_CONV
-            (PRE_CONV
-               (Conv.RAND_CONV
-                  (Conv.RATOR_CONV (Conv.REWR_CONV (GSYM precond_def))))))
-   fun mk_rw_neg tm =
-      utilsLib.rhsc
-        (Conv.QCONV (REWRITE_CONV [boolTheory.DE_MORGAN_THM])
-           (boolSyntax.mk_neg tm))
-   val fix_precond =
-      fn [th1, th2] =>
-            let
-               val c = th2 |> Thm.concl
-                           |> progSyntax.dest_pre
-                           |> progSyntax.strip_star
-                           |> Lib.first progSyntax.is_cond
-                           |> Term.rand
-            in
-               [pecond_rule (MOVE_COND_RULE (mk_rw_neg c) th1),
-                pecond_rule (MOVE_COND_RULE c th2)]
-            end
-        | thms as [_] => thms
-        | _ => raise ERR "l3_arm_spec" "unexpected result from arm_spec_hex"
    fun format_thm th =
       (th, 4,
        stateLib.get_pc_inc
@@ -66,7 +42,7 @@ in
    fun l3_arm_triples hex =
       let
          val hs = String.tokens (fn c => c = #" ") hex
-         val xs = fix_precond (arm_progLib.arm_spec_hex (hd hs))
+         val xs = stateLib.fix_precond (arm_progLib.arm_spec_hex (hd hs))
          val w0 = wordsSyntax.mk_wordi (Arbnum.fromHexString (last hs), 32)
      in
         List.map (arm_OK_intro w0) xs
@@ -78,11 +54,8 @@ in
        | _ => raise ERR "l3_arm_spec" ""
 end
 
-val arm_pc = ``arm_PC``
-val (arm_jump: (term -> term -> int -> bool -> string * int)) = fn _ => fail()
-
-val l3_arm_tools =
-   (l3_arm_spec, arm_jump, arm_progTheory.aS_HIDE, arm_pc): decompiler_tools
+val (l3_arm_tools: decompiler_tools) =
+   (l3_arm_spec, fn _ => fail(), arm_progTheory.aS_HIDE, ``arm_PC``)
 
 fun l3_arm_decompile name qcode =
    let

@@ -12,6 +12,7 @@ sig
    val list_mk_star: Term.term list -> Term.term
    val strip_star: Term.term -> Term.term list
 
+   val dest_code: Term.term -> Term.term
    val dest_cond: Term.term -> Term.term
    val dest_post: Term.term -> Term.term
    val dest_pre: Term.term -> Term.term

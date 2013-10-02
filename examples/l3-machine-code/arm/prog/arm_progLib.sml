@@ -670,27 +670,11 @@ local
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
-   val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
-   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
-   fun is_pc_reducible tm =
-      case Lib.total wordsSyntax.dest_word_add tm of
-         SOME (v, _) => not (Term.is_var v)
-       | _ => not (boolSyntax.is_cond tm)
-   val PC_CONV =
-      Conv.ONCE_DEPTH_CONV
-         (fn tm =>
-            case boolSyntax.dest_strip_comb tm of
-              ("arm_prog$arm_PC", [t]) =>
-                   if is_pc_reducible t
-                      then Conv.RAND_CONV ARITH_SUB_CONV tm
-                   else raise ERR "PC_CONV" ""
-             | _ => raise ERR "PC_CONV" "")
    fun DEPTH_COND_CONV cnv =
       Conv.ONCE_DEPTH_CONV
          (fn tm => if progSyntax.is_cond tm
                       then Conv.RAND_CONV cnv tm
-                   else raise ERR "COND_CONV" "")
-   val POST_CONV = Conv.RAND_CONV
+                   else raise ERR "DEPTH_COND_CONV" "")
    val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
@@ -702,7 +686,7 @@ local
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
-      PRE_CONV
+      helperLib.PRE_CONV
          (DEPTH_COND_CONV
              (DEPTH_CONV DISJOINT_CONV
               THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
@@ -713,7 +697,9 @@ local
       THENC check_unique_reg_CONV
       THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC POST_CONV (PURE_REWRITE_CONV spec_rwts THENC PC_CONV)
+      THENC helperLib.POST_CONV
+              (PURE_REWRITE_CONV spec_rwts
+               THENC stateLib.PC_CONV "arm_prog$arm_PC")
 in
    fun simp_triple_rule thm =
       arm_rename (Conv.CONV_RULE cnv thm)
@@ -842,14 +828,12 @@ local
            before print (!newline)
       end
    val the_spec = ref (arm_spec_opt "")
-   fun get_opcode thm =
-      let
-         val (_, _, c, _) = progSyntax.dest_spec (Thm.concl thm)
-      in
-         c |> pred_setSyntax.strip_set |> List.last
-           |> pairSyntax.dest_pair |> snd
-           |> bitstringSyntax.dest_v2w |> fst
-      end
+   val get_opcode =
+      fst o bitstringSyntax.dest_v2w o
+      snd o pairSyntax.dest_pair o
+      List.last o pred_setSyntax.strip_set o
+      progSyntax.dest_code o
+      Thm.concl
    val spec_label_set = ref (Redblackset.empty String.compare)
    val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
    val add1 = utilsLib.add_to_rw_net get_opcode

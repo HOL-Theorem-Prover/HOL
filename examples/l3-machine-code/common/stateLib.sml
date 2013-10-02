@@ -1015,6 +1015,55 @@ in
 end
 
 (* ------------------------------------------------------------------------
+   fix_precond
+
+   Given a list of theorems of the form
+
+     [
+       |- SPEC m (p1 * cond (... /\ c /\ ...)) code q1,
+       |- SPEC m (p2 * cond ~c) code q2
+     ]
+
+   (where the "cond" terms are not necessarily outermost) return theorems
+
+     [
+       |- SPEC m (p1 * cond (...) * precond c) code q1,
+       |- SPEC m (p2 * precond ~c) code q2
+     ]
+
+   Is an identity function for single element lists and raises and error
+   for all other lists.
+   ------------------------------------------------------------------------ *)
+
+local
+   val pecond_rule =
+      Conv.CONV_RULE
+         (Conv.TRY_CONV
+            (helperLib.PRE_CONV
+               (Conv.RAND_CONV
+                  (Conv.RATOR_CONV
+                     (Conv.REWR_CONV (GSYM set_sepTheory.precond_def))))))
+   fun mk_rw_neg tm =
+      utilsLib.rhsc
+        (Conv.QCONV (REWRITE_CONV [boolTheory.DE_MORGAN_THM])
+           (boolSyntax.mk_neg tm))
+   val get_cond =
+      Term.rand o Lib.first progSyntax.is_cond o progSyntax.strip_star o
+      progSyntax.dest_pre o Thm.concl
+in
+   val fix_precond =
+      fn [th1, th2] =>
+            let
+               val c = get_cond th2
+            in
+               [pecond_rule (helperLib.MOVE_COND_RULE (mk_rw_neg c) th1),
+                pecond_rule (helperLib.MOVE_COND_RULE c th2)]
+            end
+        | thms as [_] => thms
+        | _ => raise ERR "fix_precond" ""
+end
+
+(* ------------------------------------------------------------------------
    get_pc_inc is_pc
    ------------------------------------------------------------------------ *)
 
@@ -1042,6 +1091,28 @@ fun get_pc_inc is_pc =
                    | NONE => if pc = pc_var then SOME 0 else NONE)
          end
    end
+
+(* ------------------------------------------------------------------------
+   PC_CONV
+   ------------------------------------------------------------------------ *)
+
+local
+   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun is_reducible tm =
+      case Lib.total wordsSyntax.dest_word_add tm of
+         SOME (v, _) => not (Term.is_var v)
+       | _ => not (boolSyntax.is_cond tm)
+in
+   fun PC_CONV s =
+      Conv.ONCE_DEPTH_CONV
+         (fn tm =>
+            case boolSyntax.dest_strip_comb tm of
+              (c, [t]) =>
+                 if c = s andalso is_reducible t
+                    then Conv.RAND_CONV ARITH_SUB_CONV tm
+                 else raise ERR "PC_CONV" ""
+             | _ => raise ERR "PC_CONV" "")
+end
 
 (* ------------------------------------------------------------------------
    spec

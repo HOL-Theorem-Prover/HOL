@@ -5,6 +5,7 @@ sig
    type footprint_extra = (term * term) * (term -> term) * (term -> term)
    val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
+   val fix_precond: thm list -> thm list
    val get_pc_inc: (term -> bool) -> thm -> int option
    val gvar: string -> hol_type -> term
    val introduce_triple_definition: bool * thm -> rule
@@ -45,4 +46,5 @@ sig
      (string * (term list * term list * term -> term list * term list)) list ->
      (string * term list -> bool) ->
      term list * term list * term -> term list * term list
+   val PC_CONV: string -> conv
 end

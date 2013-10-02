@@ -292,7 +292,10 @@ local
       in
          Drule.EQT_ELIM (cnv r)
          handle HOL_ERR _ =>
-            (print "\n STAR EQ failed\n\n"; Parse.print_term r; REFL tm1)
+            (print "\n STAR EQ failed\n\n"
+             ; Parse.print_term r
+             ; print "\n\n"
+             ; REFL tm1)
       end
    fun plk t = Lib.pluck (Lib.equal t o get_sep_domain)
    fun plkf (target, (a, l)) =

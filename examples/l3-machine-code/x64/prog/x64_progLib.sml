@@ -204,19 +204,6 @@ local
       Conv.BETA_RULE o
       stateLib.introduce_map_definition
           (x64_progTheory.x64_MEMORY_INSERT, Conv.ALL_CONV)
-   fun is_pc_reducible tm =
-      case Lib.total wordsSyntax.dest_word_add tm of
-         SOME (v, _) => not (Term.is_var v)
-       | _ => not (boolSyntax.is_cond tm)
-   val PC_CONV =
-      Conv.ONCE_DEPTH_CONV
-         (fn tm =>
-            case boolSyntax.dest_strip_comb tm of
-              ("x64_prog$x64_PC", [t]) =>
-                   if is_pc_reducible t
-                      then Conv.RAND_CONV wordsLib.WORD_ARITH_CONV tm
-                   else raise ERR "PC_CONV" ""
-             | _ => raise ERR "PC_CONV" "")
    val match_mem32 = fst o match_term ``pp * x64_prog$x64_mem32 a w``
    val w = ``w:word32``
    val w2w_w = ``(w2w: word64 -> word32) w``
@@ -238,7 +225,8 @@ in
       helperLib.PRE_POST_RULE
         (wordsLib.WORD_SUB_CONV
          THENC helperLib.EVERY_MATCH_MOVE_OUT_CONV ``x64_prog$x64_mem32 a b``) o
-      Conv.CONV_RULE (helperLib.POST_CONV PC_CONV) o
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (stateLib.PC_CONV "x64_prog$x64_PC")) o
       stateLib.introduce_triple_definition (false, x64_PC_def)
 end
 
