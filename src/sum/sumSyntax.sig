@@ -23,8 +23,22 @@ sig
   val mk_outr     : term -> term
   val mk_sum_case : term * term * term -> term
 
-  datatype ('a,'b)sum = INL of 'a
-                      | INR of 'b
+  val dest_inl  : term -> term * hol_type
+  val dest_inr  : term -> term * hol_type
+  val dest_isl  : term -> term
+  val dest_isr  : term -> term
+  val dest_outl : term -> term
+  val dest_outr : term -> term
+
+  val is_inl  : term -> bool
+  val is_inr  : term -> bool
+  val is_isl  : term -> bool
+  val is_isr  : term -> bool
+  val is_outl : term -> bool
+  val is_outr : term -> bool
+
+  datatype ('a, 'b) sum = INL of 'a | INR of 'b
+
   val lift_sum    : hol_type -> ('a -> term )
                              -> ('b -> term)
                              -> ('a,'b)sum
