@@ -19,11 +19,12 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+type instruction = (thm * int * int option) * (thm * int * int option) option
+
+(* (derive spec, generate branch, status thm, program counter term) *)
 type decompiler_tools =
-  (* ( derive spec, generate branch, status thm, program counter term ) *)
-  (string ->
-   (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
-  (term -> term -> int -> bool -> string * int) * Thm.thm * Abbrev.term
+  (string -> instruction) * (term -> term -> int -> bool -> string * int) *
+  Thm.thm * Term.term
 
 (* mechanism for printing *)
 

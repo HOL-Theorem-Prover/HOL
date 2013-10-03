@@ -15,13 +15,13 @@ in
    fun config_for_original () =
       case !config of
          Original => ()
-       | _ => (arm_progLib.arm_config "vfp, no-fpr-map"
+       | _ => (arm_progLib.arm_config "vfp, no-fpr-map, no-gpr-map, mem-map"
                ; arm_progLib.set_newline ""
                ; config := Original)
    fun config_for_fast () =
       case !config of
          Fast => ()
-       | _ => (arm_progLib.arm_config "vfp, fpr-map"
+       | _ => (arm_progLib.arm_config "vfp, fpr-map, no-gpr-map, mem-map"
                ; arm_progLib.set_newline ""
                ; config := Fast)
 end

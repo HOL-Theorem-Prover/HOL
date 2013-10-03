@@ -604,15 +604,6 @@ local
       PURE_REWRITE_RULE arm_CPSR_T_F
    val eq_conv =
       SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
-   val memory_introduction =
-      stateLib.introduce_map_definition
-         (arm_progTheory.arm_MEMORY_INSERT, eq_conv)
-   val fp_introduction =
-      stateLib.introduce_map_definition
-         (arm_progTheory.arm_FP_REGISTERS_INSERT, Conv.ALL_CONV)
-   val gp_introduction =
-      stateLib.introduce_map_definition
-         (arm_progTheory.arm_REGISTERS_INSERT, Conv.ALL_CONV)
    val arm_PC_INTRO0 =
       arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                    |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
@@ -626,23 +617,23 @@ local
       MP_arm_PC_INTRO o
       Conv.CONV_RULE
          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``arm_REG RName_PC``))
-   val always_intro =
+in
+   val memory_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_MEMORY_INSERT, eq_conv)
+   val fp_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_FP_REGISTERS_INSERT, Conv.ALL_CONV)
+   val gp_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_REGISTERS_INSERT, Conv.ALL_CONV)
+   val arm_intro =
       flag_introduction o
       arm_PC_bump_intro o
       stateLib.introduce_triple_definition (false, arm_PC_def) o
       stateLib.introduce_triple_definition (true, arm_CONFIG_def) o
       extend_arm_code_pool o
       arm_rename
-in
-   fun arm_rule opt =
-      let
-         val (gp_intro, fp_intro, mem_intro) = arm_configLib.map_options opt
-      in
-         (if gp_intro then gp_introduction else Lib.I) o
-         (if fp_intro then fp_introduction else Lib.I) o
-         (if mem_intro then memory_introduction else Lib.I) o
-         always_intro
-      end
 end
 
 local
@@ -759,24 +750,77 @@ local
             (fn p => String.isPrefix p (String.extract (s', 3, NONE)))
             ["ia", "ib", "da", "db"]
       end
+   val get_opcode =
+      fst o bitstringSyntax.dest_v2w o
+      snd o pairSyntax.dest_pair o
+      List.last o pred_setSyntax.strip_set o
+      progSyntax.dest_code o
+      Thm.concl
    val v3 = Term.mk_var ("x3", Type.bool)
    val v4 = Term.mk_var ("x4", Type.bool)
    val v5 = Term.mk_var ("x5", Type.bool)
    val v6 = Term.mk_var ("x6", Type.bool)
    val vn = listSyntax.mk_list ([v3, v4, v5, v6], Type.bool)
    val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
-   val last_opt = ref ""
+   val reverse_endian =
+      fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
+          c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
+         [d1, d2, d3, d4, d5, d6, d7, d8, c1, c2, c3, c4, c5, c6, c7, c8,
+          b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
+       | _ => raise ERR "reverse_endian" ""
+   val rev_endian = ref (Lib.I : term list -> term list)
+   val last_opt = ref "vfp"
    val newline = ref "\n"
    val the_step = ref (arm_stepLib.arm_step (!last_opt))
+   val spec_label_set = ref (Redblackset.empty String.compare)
+   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
+   val add1 = utilsLib.add_to_rw_net get_opcode
+   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
+   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
+   val is_be_tm = Term.aconv ``s.CPSR.E``
+   fun set_endian opt =
+      let
+         val l = arm_configLib.mk_config_terms opt
+      in
+         if List.exists is_be_tm l
+            then rev_endian := reverse_endian
+         else rev_endian := Lib.I
+      end
    fun same_config opt =
       arm_configLib.mk_config_terms (!last_opt) =
       arm_configLib.mk_config_terms opt
+   fun update_specs rule (old, new) =
+      case (old, new) of
+         (false, true) => SOME rule
+       | (true, false) => NONE
+       | _ => SOME Lib.I
+   fun arm_rule opt =
+      let
+         val (gp, fp, mem) = arm_configLib.map_options (!last_opt)
+         val (gp', fp', mem') = arm_configLib.map_options opt
+         val () =
+            case (update_specs gp_introduction (gp, gp'),
+                  update_specs fp_introduction (fp, fp'),
+                  update_specs memory_introduction (mem, mem')) of
+               (SOME gp_rule, SOME fp_rule, SOME mem_rule) =>
+                  (spec_rwts := LVTermNet.transform
+                                  (gp_rule o fp_rule o mem_rule) (!spec_rwts))
+             | _ => (print "\nResetting specs.\n\n"
+                     ; spec_label_set := Redblackset.empty String.compare
+                     ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
+      in
+         (if gp' then gp_introduction else Lib.I) o
+         (if fp' then fp_introduction else Lib.I) o
+         (if mem' then memory_introduction else Lib.I) o
+         arm_intro
+      end
    fun arm_spec_opt opt =
       let
-         val () = if same_config opt then ()
-                  else (last_opt := opt; the_step := arm_stepLib.arm_step opt)
-         val step = !the_step
          val spec = arm_rule opt o basic_spec
+         val () = if same_config opt then ()
+                  else (set_endian opt; the_step := arm_stepLib.arm_step opt)
+         val () = last_opt := opt
+         val step = !the_step
       in
          fn s =>
            (if is_stm_wb s
@@ -827,18 +871,7 @@ local
                  end)
            before print (!newline)
       end
-   val the_spec = ref (arm_spec_opt "")
-   val get_opcode =
-      fst o bitstringSyntax.dest_v2w o
-      snd o pairSyntax.dest_pair o
-      List.last o pred_setSyntax.strip_set o
-      progSyntax.dest_code o
-      Thm.concl
-   val spec_label_set = ref (Redblackset.empty String.compare)
-   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
-   val add1 = utilsLib.add_to_rw_net get_opcode
-   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
-   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
+   val the_spec = ref (arm_spec_opt "vfp")
    fun spec_spec opc thm =
       let
          val thm_opc = get_opcode thm
@@ -848,29 +881,9 @@ local
       end
    val mk_thm_set =
       Lib.op_mk_set (fn t1 => fn t2 => Term.aconv (Thm.concl t1) (Thm.concl t2))
-   val reverse_endian =
-      fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
-          c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
-         [d1, d2, d3, d4, d5, d6, d7, d8, c1, c2, c3, c4, c5, c6, c7, c8,
-          b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
-       | _ => raise ERR "reverse_endian" ""
-   val rev_endian = ref (Lib.I : term list -> term list)
-   val is_be_tm = Term.aconv ``s.CPSR.E``
-   fun set_endian opt =
-      let
-         val l = arm_configLib.mk_config_terms opt
-      in
-         if List.exists is_be_tm l
-            then rev_endian := reverse_endian
-         else rev_endian := Lib.I
-      end
 in
    fun set_newline s = newline := s
-   fun arm_config opt =
-      (the_spec := arm_spec_opt opt
-       ; set_endian opt
-       ; spec_label_set := Redblackset.empty String.compare
-       ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
+   fun arm_config opt = the_spec := arm_spec_opt opt
    fun arm_spec s = (!the_spec) s
    fun saveSpecs name =
       Theory.save_thm (name,

@@ -60,7 +60,7 @@ local
    val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
    val AT_PC_CONV = RAND_CONV o RAND_CONV o funpow 28 RATOR_CONV o RAND_CONV
    val PC_RULE = Conv.CONV_RULE (AT_PC_CONV ARITH_SUB_CONV)
-   val p = mk_var("r15",``:word32``)
+   val p = mk_var ("r15", ``:word32``)
    fun add_to_pc n = wordsSyntax.mk_word_add (p, wordsSyntax.mk_wordii (n, 32))
    fun set_pc n (th, l, j) =
       (PC_RULE (INST [p |-> add_to_pc n] th), l, Option.map (fn i => n + i) j)
@@ -68,23 +68,23 @@ local
       if String.isPrefix "insert:" hex
          then let
                  val name =
-                    strip_string (String.extract (hex, size("insert:"), NONE))
+                    strip_string (String.extract (hex, size ("insert:"), NONE))
                  val (_, th, l) = first (fn (n, _, _) => n = name) (!decomp_mem)
               in
-                 (n + l, set_pc n (th |> UNDISCH_ALL, l, SOME l), NONE)
+                 (n + l, (set_pc n (UNDISCH_ALL th, l, SOME l), NONE))
               end
       else let
               val (x as (_, l, _), y) = arm_relLib.l3_triple hex
            in
-              (n + l, set_pc n x, Option.map (set_pc n) y)
+              (n + l, (set_pc n x, Option.map (set_pc n) y))
            end
    fun derive n [] aux l = rev aux
      | derive n (x::xs) aux l =
          let
             val () = inPlaceEcho (Int.toString l)
-            val (n', x, y) = derive1 x n
+            val (n', (x, y)) = derive1 x n
          in
-            derive n' xs ((n,x,y)::aux) (l - 1)
+            derive n' xs ((n, (x, y)) :: aux) (l - 1)
          end
 in
    fun derive_specs code =
@@ -93,18 +93,18 @@ in
       in
          print "\nDeriving instruction specs...\n\n"
          ; derive 0 code [] l before
-           inPlaceEcho ("Finished " ^ Int.toString l ^ " instruction(s).\n")
+           inPlaceEcho ("Finished " ^ Int.toString l ^ " instruction(s).\n\n")
       end
 end
 
-fun model tm = tm |> rator |> rator |> rator |> rand
+val model = rand o rator o rator o rator
 
 local
-   fun extract_code (_,(th,_,_),_) = th |> concl |> rator |> rand
-   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) =
-          (y,(f th1,x1,x2),NONE)
-     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
-          (y,(f th1,x1,x2),SOME (f th2,y1,y2))
+   fun extract_code (_, ((th, _, _), _)) = th |> concl |> rator |> rand
+   fun triple_apply f (y, ((th1, x1, x2), NONE) : helperLib.instruction) =
+          (y, ((f th1, x1, x2), NONE))
+     | triple_apply f (y, ((th1, x1, x2), SOME (th2, y1, y2))) =
+          (y, ((f th1, x1, x2), SOME (f th2, y1, y2)))
    val SING_SUBSET = Q.prove(
       `!s x:'a. {x} SUBSET s = x IN s`,
       SIMP_TAC (srw_ss()) [])
@@ -120,7 +120,7 @@ in
          val code = List.concat
                       (List.map (pred_setSyntax.strip_set o extract_code) thms)
          val cs = pred_setSyntax.mk_set code
-         val (_,(th,_,_),_) = hd thms
+         val (_: int, ((th, _, _), _)) = hd thms
          val model_name =
             (helperLib.to_lower o fst o dest_const o model o concl) th
          val def_name = name ^ "_" ^ model_name
@@ -168,21 +168,20 @@ val (_, (th, _, _), _) = hd thms
 
 (* PHASE 2 -- compute CFG *)
 
-fun extract_graph thms = let
-  fun extract_jumps (i,(_,_,j),NONE) = [(i,j)]
-    | extract_jumps (i,(_,_,j),SOME (_,_,k)) = [(i,j),(i,k)]
-  val jumps = foldl (fn (x,y) => extract_jumps x @ y) [] thms
-  in jumps end;
+val extract_graph =
+   List.concat o
+   List.map (fn (i: int, (((_, _, j), NONE): helperLib.instruction)) => [(i, j)]
+              | (i, ((_, _, j), SOME (_, _, k))) => [(i, j), (i, k)])
+
+val jumps2edges =
+    List.concat o
+    List.map (fn (i, NONE) => []: (int * int) list
+               | (i, SOME j) => [(i, j)])
 
 val all_distinct = Lib.mk_set
 
 fun drop_until P [] = []
   | drop_until P (x::xs) = if P x then x::xs else drop_until P xs
-
-fun jumps2edges jumps = let
-  fun h (i,NONE) = []
-    | h (i,SOME j) = [(i,j)]
-  in foldl (fn (x,y) => h x @ y) [] jumps end;
 
 fun subset [] ys = true
   | subset (x::xs) ys = mem x ys andalso subset xs ys
@@ -299,28 +298,41 @@ fun is_rec (Repeat _) = true
   | is_rec (Merge (_,t1,t2)) = is_rec t1 orelse is_rec t2
   | is_rec (ConsMerge (_,_,_,t)) = is_rec t
 
-fun build_compose_tree (b,e) thms = let
-  fun find_next i = first (fn (n,_,_) => n = i) thms
-  fun sub init NONE = failwith("cannot handle bad exists")
-    | sub init (SOME i) =
-      if mem i e then End i else
-      if not init andalso mem i b then Repeat i else
-        case find_next i of
-          (_,(th1,l1,x1),NONE) => Cons (th1,sub false x1)
-        | (_,(th1,l1,x1),SOME (th2,l2,x2)) =>
-          if x1 = x2 then let
-            val t1 = sub false x1
-            val tm = find_term (can (match_term ``Abbrev b``)) (hd (hyp th1)) handle Empty =>
-                     find_term (can (match_term ``Abbrev b``)) (concl th1)
-            in ConsMerge (rand tm,th1,th2,t1) end
-          else let
-            val t1 = Cons (th1,sub false x1)
-            val t2 = Cons (th2,sub false x2)
-            val tm = find_term (can (match_term ``Abbrev b``)) (hd (hyp th1)) handle Empty =>
-                     find_term (can (match_term ``Abbrev b``)) (concl th1)
-            in Merge (rand tm,t1,t2) end
-  val t = sub true (SOME (hd b))
-  in t end;
+local
+   val find_Abbrev = find_term (can (match_term ``Abbrev b``))
+in
+   fun build_compose_tree (b,e) thms =
+      let
+         fun find_next i = first (fn (n, _:helperLib.instruction) => n = i) thms
+         fun sub init NONE = failwith("cannot handle bad exists")
+           | sub init (SOME i) =
+             if mem i e
+                then End i
+             else if not init andalso mem i b
+                then Repeat i
+             else case find_next i of
+                    (_, ((th1, l1, x1), NONE)) => Cons (th1, sub false x1)
+                  | (_, ((th1, l1, x1), SOME (th2, l2, x2))) =>
+                    if x1 = x2
+                       then let
+                               val t1 = sub false x1
+                               val tm = find_Abbrev (hd (hyp th1))
+                                        handle Empty => find_Abbrev (concl th1)
+                            in
+                               ConsMerge (rand tm, th1, th2, t1)
+                            end
+                    else let
+                            val t1 = Cons (th1,sub false x1)
+                            val t2 = Cons (th2,sub false x2)
+                            val tm = find_Abbrev (hd (hyp th1))
+                                     handle Empty => find_Abbrev (concl th1)
+                         in
+                            Merge (rand tm, t1, t2)
+                         end
+      in
+         sub true (SOME (hd b))
+      end
+end
 
 val l1 = ref TRUTH;
 val l2 = ref TRUTH;
@@ -376,7 +388,7 @@ fun round name (b,e) thms = let
   val _ = print "Building composition tree, "
   val t = build_compose_tree (b,e) thms
   val loop = is_rec t
-  val (_,(th,_,_),_) = first (fn (n,_,_) => (n = 0)) thms
+  val (_, ((th, _, _), _)) = first (fn (n, _) => (n = 0)) thms
   val m = model (concl th)
   val code = (concl th) |> rator |> rand
   val p = mk_var("r15",``:word32``)
@@ -439,20 +451,29 @@ fun round name (b,e) thms = let
 
 in
 
-fun fast_decompile name qcode = let
-  val (thms,loops) = time (stage_12 name) qcode
-  fun rounds loops thms defs = let
-    val (b,e) = hd loops
-    val loops = tl loops
-    val n = length loops
-    val part_name = (if n = 0 then name
-                     else name ^ "_part" ^ (int_to_string n))
-    val (def,result) = round part_name (b,e) thms
-    val thms = (hd b,(UNDISCH_ALL result,0,SOME (hd e)),NONE)::thms
-    in if n = 0 then (result,rev (def::defs)) else rounds loops thms (def::defs) end
-  val (res,defs) = time (rounds loops thms) []
-  val _ = add_decomp name res (loops |> last |> snd |> hd)
-  in (res,LIST_CONJ defs) end
+fun fast_decompile name qcode =
+   let
+      val (thms, loops) = time (stage_12 name) qcode
+      fun rounds loops thms defs =
+         let
+            val (b, e) = hd loops
+            val loops = tl loops
+            val n = length loops
+            val part_name = if n = 0 then name
+                            else name ^ "_part" ^ (int_to_string n)
+            val (def, result) = round part_name (b, e) thms
+            val thms =
+               (hd b, ((UNDISCH_ALL result, 0, SOME (hd e)), NONE)) :: thms
+         in
+            if n = 0
+               then (result, rev (def :: defs))
+            else rounds loops thms (def :: defs)
+         end
+      val (res, defs) = time (rounds loops thms) []
+      val _ = add_decomp name res (loops |> last |> snd |> hd)
+   in
+      (res, LIST_CONJ defs)
+   end
 
 end
 

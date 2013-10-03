@@ -1,8 +1,10 @@
-structure m0_decompLib =
+structure m0_decompLib :> m0_decompLib =
 struct
 
 open HolKernel Parse boolLib bossLib
 open decompilerLib m0_progLib m0_progTheory m0_decompTheory
+
+val () = m0_progLib.set_newline ""
 
 local
    fun get_length th =
@@ -31,6 +33,34 @@ val (m0_tools: decompiler_tools) =
 val m0_decompile = decompilerLib.decompile m0_tools
 
 (* Testing...
+
+open m0_decompLib
+
+(* Test program.
+    THUMB
+    movs r1, #0              ; accumulator
+    mov  r3, r0              ; first address
+    adds r3, #40             ; last address (10 loads)
+l1: ldr  r2, [r0, #4]        ; load data
+    adds r0, #4              ; increment address
+    add  r1, r2              ; add to accumulator
+    cmp  r0, r3              ; test if done
+    blt  l1                  ; loop if not done
+*)
+
+val (test_cert, test_def) = m0_decompile "test" `
+   2100
+   0003
+   3328
+   6842
+   3004
+   4411
+   4298
+   DBFA`
+
+val () = computeLib.add_funs [test_def]
+
+EVAL ``test (12w, 0, dmem, \a. if a && 3w = 0w then 4w else 0w)``
 
 map m0_triples
   ["b510", "680b", "2b00", "d003", "681a", "6804", "42a2", "db02",
