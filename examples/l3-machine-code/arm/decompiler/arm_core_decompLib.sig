@@ -1,4 +1,4 @@
-signature arm_relLib =
+signature arm_core_decompLib =
 sig
 
     val l3_triple: string -> (Thm.thm * int * int option) *
