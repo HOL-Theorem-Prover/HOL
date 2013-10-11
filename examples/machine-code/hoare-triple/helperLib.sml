@@ -921,6 +921,9 @@ local
           word_arith_lemma4, SEP_CLAUSES, pred_setTheory.UNION_IDEMPOT,
           SEP_DISJ_ASSOC]
    val rule3 = PURE_REWRITE_RULE [GSYM AND_IMP_INTRO, AND_CLAUSES2]
+   val SPEC_FRAME_COMPOSE_DISJ_ALT =
+      SPEC_FRAME_COMPOSE_DISJ
+      |> Q.SPECL [`x`,`p`,`emp`] |> RW [SEP_CLAUSES]
 in
    fun find_composition1 th1 th2 =
       let
@@ -938,9 +941,13 @@ in
          val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
                   handle HOL_ERR _ => (* found a SEP_DISJ *)
                   let
-                     val th = MATCH_MP SPEC_FRAME_COMPOSE_DISJ
-                                (DISCH_ALL_AS_SINGLE_IMP th2)
-                     val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
+                     val th = MATCH_MP (MATCH_MP SPEC_FRAME_COMPOSE_DISJ
+                                (DISCH_ALL_AS_SINGLE_IMP th2))
+                                (DISCH_ALL_AS_SINGLE_IMP th1)
+                              handle HOL_ERR _ =>
+                              MATCH_MP (MATCH_MP SPEC_FRAME_COMPOSE_DISJ_ALT
+                                (DISCH_ALL_AS_SINGLE_IMP th2))
+                                (DISCH_ALL_AS_SINGLE_IMP th1)
                   in
                      DISCH_ALL (rule1 (UNDISCH_ALL th))
                   end
