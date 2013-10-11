@@ -5,6 +5,8 @@ val _ = new_theory "temporal";
 
 open progTheory pairTheory set_sepTheory arithmeticTheory;
 
+infix \\ val op \\ = op THEN;
+
 (* --- definitions --- *)
 
 val TEMPORAL_def = Define `
