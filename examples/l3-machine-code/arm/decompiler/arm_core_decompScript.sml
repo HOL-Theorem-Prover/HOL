@@ -1,17 +1,15 @@
 open HolKernel Parse boolLib bossLib
-
 open tripleTheory arm_decompTheory
 
 val () = new_theory "arm_core_decomp"
 
-(* definition of ARM_ASSERT and ARM_TOTAL_NEXT *)
+(* definition of ARM_ASSERT and L3_ARM *)
 
 val _ = Parse.hide "mem"
 
-val _ = Hol_datatype `
+val () = Hol_datatype`
    arm_assertion = ARM_ASSERTION of
                     (* mode *) word5 =>
-                    (* pc *) word32 =>
                     (* r0 *) word32 =>
                     (* r1 *) word32 =>
                     (* r2 *) word32 =>
@@ -39,16 +37,14 @@ val _ = Hol_datatype `
                     (* fp_c *) bool =>
                     (* fp_v *) bool =>
                     (* domain of memory *) word32 set =>
-                    (* memory *) (word32 -> word8)`;
+                    (* memory *) (word32 -> word8) =>
+                    (* pc *) word32`;
 
-val arm_assert_tm =
-  ``ARM_ASSERTION mode r15 r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
-                  n z c v dfpr fpr rmode fp_n fp_z fp_c fp_v dmem mem``
-
-val ARM_ASSERT_def = Define `
-   ARM_ASSERT ^arm_assert_tm =
+val ARM_ASSERT_def = Define`
+   ARM_ASSERT
+      (ARM_ASSERTION mode r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14
+                     n z c v dfpr fpr rmode fp_n fp_z fp_c fp_v dmem mem r15) =
      arm_OK mode *
-     arm_PC r15 *
      arm_REG (R_mode mode 0w) r0 *
      arm_REG (R_mode mode 1w) r1 *
      arm_REG (R_mode mode 2w) r2 *
@@ -74,15 +70,9 @@ val ARM_ASSERT_def = Define `
      arm_FP_FPSCR_Z fp_z *
      arm_FP_FPSCR_C fp_c *
      arm_FP_FPSCR_V fp_v *
-     arm_MEMORY dmem mem`;
+     arm_MEMORY dmem mem *
+     arm_PC r15`;
 
-val L3_ARM_def = Define`
-   L3_ARM = (ARM_ASSERT, ARM_MODEL)`;
-
-val INTRO_TRIPLE_L3_ARM = Q.store_thm("INTRO_TRIPLE_L3_ARM",
-   `(side ==> SPEC ARM_MODEL (ARM_ASSERT pre) code (ARM_ASSERT post)) ==>
-    !c. TRIPLE L3_ARM (c, pre) code (c /\ side, post)`,
-   SIMP_TAC std_ss [L3_ARM_def, TRIPLE_def]
-   )
+val L3_ARM_def = Define `L3_ARM = (ARM_ASSERT, ARM_MODEL)`
 
 val () = export_theory()

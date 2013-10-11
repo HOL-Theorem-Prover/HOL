@@ -23,8 +23,8 @@ val SHORT_TERM_TAILREC_def = Define`
    SHORT_TERM_TAILREC (f:'a -> 'a + (bool # 'b)) =
     TERM_TAILREC (OUTL o f) (ISL o f) (OUTR o f)`
 
-val my_sum_case_def = Define`
-   my_sum_case f1 f2 x = case x of INL y => f1 y | INR y => f2 y`
+val case_sum_def = Define`
+   case_sum f1 f2 x = case x of INL y => f1 y | INR y => f2 y`
 
 (* theorems about this Hoare triple *)
 
@@ -146,18 +146,18 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    \\ fs []
    )
 
-val my_sum_case_thm = Q.prove(
-   `!x. my_sum_case pre post x = if ISL x then pre (OUTL x) else post (OUTR x)`,
-   Cases \\ SRW_TAC [] [my_sum_case_def])
+val case_sum_thm = Q.prove(
+   `!x. case_sum pre post x = if ISL x then pre (OUTL x) else post (OUTR x)`,
+   Cases \\ SRW_TAC [] [case_sum_def])
 
 val SHORT_TERM_TAILREC = Q.store_thm("SHORT_TERM_TAILREC",
-   `(!x. TRIPLE i (pre x) c (my_sum_case pre post (f x))) ==>
+   `(!x. TRIPLE i (pre x) c (case_sum pre post (f x))) ==>
     (!c x state. ~(FST (post (F,x)))) ==>
     (!x. TRIPLE i (pre x) c (post (SHORT_TERM_TAILREC f x)))`,
    simp [SHORT_TERM_TAILREC_def, LET_DEF]
    \\ REPEAT strip_tac
    \\ match_mp_tac (REWRITE_RULE [AND_IMP_INTRO] TRIPLE_TERM_TAILREC)
-   \\ fs [my_sum_case_thm]
+   \\ fs [case_sum_thm]
    )
 
 val TRIPLE_FRAME_BOOL = Q.store_thm("TRIPLE_FRAME_BOOL",
@@ -167,6 +167,12 @@ val TRIPLE_FRAME_BOOL = Q.store_thm("TRIPLE_FRAME_BOOL",
    \\ REPEAT strip_tac
    \\ Cases_on `c`
    \\ fs []
+   )
+
+val INTRO_TRIPLE = Q.store_thm("INTRO_TRIPLE",
+   `!M. (side ==> SPEC (SND M) (FST M pre) code (FST M post)) ==>
+        !c. TRIPLE M (c, pre) code (c /\ side, post)`,
+   Cases \\ SIMP_TAC std_ss [TRIPLE_def]
    )
 
 val _ = export_theory()

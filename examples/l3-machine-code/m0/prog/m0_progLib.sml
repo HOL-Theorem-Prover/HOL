@@ -478,8 +478,31 @@ in
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
 end
 
-val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
-               progSyntax.dest_code o Thm.concl
+local
+   fun mk_bool_list l = listSyntax.mk_list (l, Type.bool)
+   fun reverse_end b l =
+      mk_bool_list (if b then List.drop (l, 8) @ List.take (l, 8) else l)
+in
+   fun mk_thumb2_pair bigend tm =
+      let
+         val l = fst (listSyntax.dest_list (fst (bitstringSyntax.dest_v2w tm)))
+         val r = reverse_end bigend
+      in
+         if 16 < List.length l
+            then let
+                    val l1 = List.take (l, 16)
+                    val l2 = List.drop (l, 16)
+                 in
+                    pairSyntax.mk_pair (r l1, r l2)
+                 end
+         else if bigend
+            then r l
+         else tm
+      end
+   val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
+                  progSyntax.dest_code o Thm.concl
+   fun get_opcode bigend = mk_thumb2_pair bigend o boolSyntax.rand o get_code
+end
 
 local
    val component_11 =
@@ -550,35 +573,15 @@ local
       end
    val bigend = ref false
    val the_spec = ref (m0_spec_opt (!bigend, false))
-   fun mk_bool_list l = listSyntax.mk_list (l, Type.bool)
-   fun reverse_end b l =
-      mk_bool_list (if b then List.drop (l, 8) @ List.take (l, 8) else l)
-   fun mk_thumb2_pair tm =
-      let
-         val l = fst (listSyntax.dest_list tm)
-         val r = reverse_end (!bigend)
-      in
-         if 16 < List.length l
-            then let
-                    val l1 = List.take (l, 16)
-                    val l2 = List.drop (l, 16)
-                 in
-                    pairSyntax.mk_pair (r l1, r l2)
-                 end
-         else if !bigend
-            then r l
-         else tm
-      end
-   val get_opcode = mk_thumb2_pair o fst o bitstringSyntax.dest_v2w o
-                    boolSyntax.rand o get_code
    val spec_label_set = ref (Redblackset.empty String.compare)
-   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
-   val add1 = utilsLib.add_to_rw_net get_opcode
+   fun get_opc thm = get_opcode (!bigend) thm
+   val spec_rwts = ref (utilsLib.mk_rw_net get_opc [])
+   val add1 = utilsLib.add_to_rw_net get_opc
    val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
    fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
    fun spec_spec opc thm =
       let
-         val thm_opc = get_opcode thm
+         val thm_opc = get_opc thm
          val a = fst (Term.match_term thm_opc opc)
       in
          simp_triple_rule (Thm.INST a thm)
@@ -588,7 +591,7 @@ in
    fun m0_config opt =
       (the_spec := m0_spec_opt opt
        ; bigend := fst opt
-       ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
+       ; spec_rwts := utilsLib.mk_rw_net get_opc [])
    fun m0_spec s = (!the_spec) s
    fun addInstructionClass s =
       if Redblackset.member (!spec_label_set, s)

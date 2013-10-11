@@ -26,6 +26,10 @@ sig
 
     val cache                  : (string -> 'a) -> string -> 'a
     val to_lower               : string -> string
+    val remove_whitespace      : string -> string
+    val quote_to_strings       : 'a frag list -> string list
+
+    val instruction_apply      : (thm -> thm) -> instruction -> instruction
 
     val all_distinct           : ''a list -> ''a list
     val replace_terml          : (term -> term) -> term -> term

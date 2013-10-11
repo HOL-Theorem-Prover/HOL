@@ -57,10 +57,22 @@ end
 val (l3_arm_tools: decompiler_tools) =
    (l3_arm_spec, fn _ => fail(), arm_progTheory.aS_HIDE, ``arm_PC``)
 
+val (l3_arm_tools_no_status: decompiler_tools) =
+   (l3_arm_spec, fn _ => fail(), TRUTH, ``arm_PC``)
+
 fun l3_arm_decompile name qcode =
    let
       val () = config_for_original ()
       val (result, func) = decompile l3_arm_tools name qcode
+      val result = UNABBREV_CODE_RULE result
+   in
+      (result,func)
+   end
+
+fun l3_arm_decompile_no_status name qcode =
+   let
+      val () = config_for_original ()
+      val (result, func) = decompile l3_arm_tools_no_status name qcode
       val result = UNABBREV_CODE_RULE result
    in
       (result,func)

@@ -966,6 +966,11 @@ in
              | NONE =>
                  (fn () => Term.genvar d_ty,
                   fn (d, c) => d |-> Term.mk_comb (f, c))
+         val update_ss =
+            bool_ss ++
+            simpLib.rewrites
+               [updateTheory.APPLY_UPDATE_ID, combinTheory.UPDATE_APPLY,
+                combinTheory.UPDATE_APPLY_IMP_ID]
       in
          fn th =>
             let
@@ -997,10 +1002,7 @@ in
                        val rule =
                           if List.null ineqs
                              then apply_id_rule
-                          else SIMP_RULE bool_ss
-                                 ([updateTheory.APPLY_UPDATE_ID,
-                                   combinTheory.UPDATE_APPLY,
-                                   combinTheory.UPDATE_APPLY_IMP_ID] @ ineqs)
+                          else SIMP_RULE (update_ss++simpLib.rewrites ineqs) []
                     in
                        th |> helperLib.SPECC_FRAME_RULE frame
                           |> helperLib.PRE_POST_RULE
@@ -1187,7 +1189,7 @@ in
             PURE_ASM_REWRITE_TAC write_thms
             \\ Tactical.REVERSE CONJ_TAC
             >- (
-                ASM_SIMP_TAC pure_ss frame_thms
+                ASM_SIMP_TAC (pure_ss++simpLib.rewrites frame_thms) []
                 \\ (
                     REFL_TAC
                     ORELSE (RW_TAC pure_ss frame_thms

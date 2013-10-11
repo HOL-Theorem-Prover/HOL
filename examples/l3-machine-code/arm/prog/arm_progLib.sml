@@ -459,16 +459,27 @@ local
           List.mapPartial instantiate (ListPair.zip (dest_reg n tm2, l)),
           [tm2])
       end
-   fun exists_free l =
-      List.exists (fn (t, _, _) => not (List.null (Term.free_vars t))) l
    fun groupings n ok rs =
       let
-         val plk =
-            List.null o
-            (if n = 4 then Term.free_vars o Term.rand else Term.free_vars)
+         fun frees t =
+            if n = 4
+               then Term.free_vars (Term.rand t handle HOL_ERR _ => t)
+            else Term.free_vars t
+         val no_free = List.null o frees
+         fun exists_free l = List.exists (fn (t, _, _) => not (no_free t)) l
+         val (cs, vs) = List.partition (fn (t, _, _) => no_free t) rs
+         fun add_c l =
+            List.map
+              (fn x =>
+                 [x] @ List.map (fn c => List.map (fn y => c :: y) x) cs) l
+            |> List.concat
       in
-        rs
+        if List.null vs
+           then [([], [])]
+        else
+        vs
         |> utilsLib.partitions
+        |> add_c
         |> List.map
               (List.mapPartial
                   (fn l =>
@@ -488,7 +499,8 @@ local
                   (List.map
                      (fn l =>
                         let
-                           val (h, t) = Lib.pluck (fn (tm, _, _) => plk tm) l
+                           val (h, t) =
+                              Lib.pluck (fn (tm, _, _) => no_free tm) l
                               handle
                                  HOL_ERR
                                    {message = "predicate not satisfied", ...} =>
@@ -698,21 +710,31 @@ in
 end
 
 local
-   val a_tm = Term.mk_var ("a", ``:string set``)
-   val k_thm =
-      Drule.EQT_ELIM (Drule.ISPECL [boolSyntax.T, a_tm] combinTheory.K_THM)
+   val v3 = Term.mk_var ("x3", Type.bool)
+   val v4 = Term.mk_var ("x4", Type.bool)
+   val v5 = Term.mk_var ("x5", Type.bool)
+   val v6 = Term.mk_var ("x6", Type.bool)
+   val vn = listSyntax.mk_list ([v3, v4, v5, v6], Type.bool)
+   val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
 in
-   fun mk_strings_thm l =
+   val get_stm_base =
+      Arbnum.toInt o fst o
+      mlibUseful.min Arbnum.compare o
+      List.map Arbnum.fromString o
+      String.tokens (Lib.equal #",") o snd o
+      utilsLib.splitAtChar (Char.isDigit)
+   fun stm_wb_thms base thm =
       let
-         val tm = pred_setSyntax.mk_set (List.map stringSyntax.fromMLstring l)
+        val (x3, x4, x5, x6) =
+           utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist base)
+           |> List.map bitstringSyntax.mk_b
+           |> Lib.quadruple_of_list
       in
-         Thm.INST [a_tm |-> tm] k_thm
+         [REG_RULE (Thm.INST [v3 |-> x3, v4 |-> x4, v5 |-> x5, v6 |-> x6] thm),
+          Drule.ADD_ASSUM
+            (boolSyntax.mk_neg
+                (boolSyntax.mk_eq (vn, wordsSyntax.mk_wordii (base, 4)))) thm]
       end
-   fun dest_strings_thm thm =
-      thm |> Thm.concl
-          |> combinSyntax.dest_K |> snd
-          |> pred_setSyntax.strip_set
-          |> List.map stringSyntax.fromHOLstring
 end
 
 local
@@ -756,12 +778,6 @@ local
       List.last o pred_setSyntax.strip_set o
       progSyntax.dest_code o
       Thm.concl
-   val v3 = Term.mk_var ("x3", Type.bool)
-   val v4 = Term.mk_var ("x4", Type.bool)
-   val v5 = Term.mk_var ("x5", Type.bool)
-   val v6 = Term.mk_var ("x6", Type.bool)
-   val vn = listSyntax.mk_list ([v3, v4, v5, v6], Type.bool)
-   val vn = bitstringSyntax.mk_v2w (vn, fcpSyntax.mk_int_numeric_type 4)
    val reverse_endian =
       fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
           c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
@@ -826,39 +842,10 @@ local
            (if is_stm_wb s
                then let
                        val l = step s
-                       val thm = hd l
-                       val base = s |> utilsLib.splitAtChar (Char.isDigit)
-                                    |> snd
-                                    |> String.tokens (Lib.equal #",")
-                                    |> List.map Arbnum.fromString
-                                    |> mlibUseful.min Arbnum.compare
-                                    |> fst
-                                    |> Arbnum.toInt
-                       val (x3, x4, x5, x6) =
-                          utilsLib.padLeft false 4
-                             (bitstringSyntax.int_to_bitlist base)
-                          |> List.map bitstringSyntax.mk_b
-                          |> Lib.quadruple_of_list
-                       val thm1 =
-                          REG_RULE
-                            (Thm.INST [v3 |-> x3, v4 |-> x4,
-                                       v5 |-> x5, v6 |-> x6] thm)
-                       val thm2 =
-                          Drule.ADD_ASSUM
-                            (boolSyntax.mk_neg
-                               (boolSyntax.mk_eq
-                                  (vn, wordsSyntax.mk_wordii (base, 4)))) thm
-                       val () = print "."
-                       val spec1 = spec (thm1, arm_mk_pre_post thm1)
-                       val () = print "."
-                       val spec2 = spec (thm2, arm_mk_pre_post thm2)
-                       val specs =
-                          List.map
-                             (fn t =>
-                                (print "."
-                                 ; spec (t, arm_mk_pre_post t))) (tl l)
+                       val l = stm_wb_thms (get_stm_base s) (hd l) @ tl l
                     in
-                       [spec1, spec2] @ specs
+                       List.map
+                          (fn t => (print "."; spec (t, arm_mk_pre_post t))) l
                     end
             else let
                     val thms = step s
@@ -885,21 +872,6 @@ in
    fun set_newline s = newline := s
    fun arm_config opt = the_spec := arm_spec_opt opt
    fun arm_spec s = (!the_spec) s
-   fun saveSpecs name =
-      Theory.save_thm (name,
-         Drule.LIST_CONJ
-            (mk_strings_thm (Redblackset.listItems (!spec_label_set)) ::
-             List.map snd (LVTermNet.listItems (!spec_rwts))))
-      handle HOL_ERR {message = "empty set", ...} =>
-         raise ERR "saveSpecs" "there are no spec theorems to save"
-   fun loadSpecs thm =
-      let
-         val l = Drule.CONJUNCTS thm
-      in
-         spec_label_set :=
-            Redblackset.fromList String.compare (dest_strings_thm (hd l))
-         ; add_specs (tl l)
-      end
    fun addInstructionClass s =
       (print (" " ^ s)
        ; if Redblackset.member (!spec_label_set, s)

@@ -26,6 +26,47 @@ type decompiler_tools =
   (string -> instruction) * (term -> term -> int -> bool -> string * int) *
   Thm.thm * Term.term
 
+fun instruction_apply f =
+   fn ((th1, x1, x2), NONE): instruction => ((f th1, x1, x2), NONE)
+    | ((th1, x1, x2), SOME (th2, y1, y2)) =>
+         ((f th1, x1, x2), SOME (f th2, y1, y2)): instruction
+
+(* Remove whitespace before and after a string *)
+val remove_whitespace =
+   Substring.string o Substring.dropr Char.isSpace o
+   Substring.dropl Char.isSpace o Substring.full
+
+(* Turns a quote `...` into a list of strings *)
+local
+   fun strip_comments (d, a) s =
+      if Substring.size s = 0
+         then a
+      else let
+              val (l, r) =
+                 Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
+              val a' = if 0 < d then a else a @ [l]
+           in
+              if Substring.isPrefix "(*" r
+                 then strip_comments (d + 1, a') (Substring.triml 2 r)
+              else if Substring.isPrefix "*)" r
+                 then strip_comments (d - 1, a') (Substring.triml 2 r)
+              else if Substring.size r = 0
+                 then a'
+              else let
+                      val (r1, r2) = Substring.splitAt (r, 1)
+                   in
+                      strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
+                   end
+           end
+   val lines =
+      List.mapPartial
+         (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
+      String.tokens (fn c => c = #"\n" orelse c = #"|") o
+      Substring.concat o strip_comments (0, []) o Substring.full
+in
+   val quote_to_strings = fn [QUOTE s] => lines s | _ => raise General.Bind
+end
+
 (* mechanism for printing *)
 
 val echo_level = ref (1:int);  (* 0 - nothing, 1 - brief, 2 - descriptive, 3+ - verbose *)
