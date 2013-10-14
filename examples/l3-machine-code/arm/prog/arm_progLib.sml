@@ -785,14 +785,6 @@ local
           b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
        | _ => raise ERR "reverse_endian" ""
    val rev_endian = ref (Lib.I : term list -> term list)
-   val last_opt = ref "vfp"
-   val newline = ref "\n"
-   val the_step = ref (arm_stepLib.arm_step (!last_opt))
-   val spec_label_set = ref (Redblackset.empty String.compare)
-   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
-   val add1 = utilsLib.add_to_rw_net get_opcode
-   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
-   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
    val is_be_tm = Term.aconv ``s.CPSR.E``
    fun set_endian opt =
       let
@@ -802,6 +794,30 @@ local
             then rev_endian := reverse_endian
          else rev_endian := Lib.I
       end
+   val last_opt = ref "vfp"
+   val newline = ref "\n"
+   val the_step = ref (arm_stepLib.arm_step (!last_opt))
+   val spec_label_set = ref (Redblackset.empty String.compare)
+   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
+   val add1 = utilsLib.add_to_rw_net get_opcode
+   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
+   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
+   val spec_rwts =
+      ref (LVTermNet.empty:
+              (thm * term, thm) mlibUseful.sum LVTermNet.lvtermnet)
+   val add1 =
+      fn x as mlibUseful.INL (_, tm) =>
+            spec_rwts :=
+            LVTermNet.insert (!spec_rwts, ([], get_opcode (ASSUME tm)), x)
+       | x as mlibUseful.INR thm =>
+            spec_rwts :=
+            LVTermNet.insert (!spec_rwts, ([], get_opcode thm), x)
+   val add1_pending = add1 o mlibUseful.INL
+   val add1_spec = add1 o mlibUseful.INR
+   val proj_inr = fn mlibUseful.INR t => t | _ => raise ERR "proj_inr" ""
+   fun update_spec f =
+      fn mlibUseful.INR t => mlibUseful.INR (f t)
+       | x => x
    fun same_config opt =
       arm_configLib.mk_config_terms (!last_opt) =
       arm_configLib.mk_config_terms opt
@@ -820,19 +836,42 @@ local
                   update_specs memory_introduction (mem, mem')) of
                (SOME gp_rule, SOME fp_rule, SOME mem_rule) =>
                   (spec_rwts := LVTermNet.transform
-                                  (gp_rule o fp_rule o mem_rule) (!spec_rwts))
+                                  (update_spec (gp_rule o fp_rule o mem_rule))
+                                  (!spec_rwts))
              | _ => (print "\nResetting specs.\n\n"
                      ; spec_label_set := Redblackset.empty String.compare
-                     ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
+                     ; spec_rwts := LVTermNet.empty)
       in
          (if gp' then gp_introduction else Lib.I) o
          (if fp' then fp_introduction else Lib.I) o
          (if mem' then memory_introduction else Lib.I) o
          arm_intro
       end
+   val prove_spec = ref (arm_rule (!last_opt) o basic_spec)
+   fun apply_arm_rule (mlibUseful.INL thm_tm) =
+          (print "+"; (!prove_spec) thm_tm)
+     | apply_arm_rule (mlibUseful.INR thm) = thm
+   fun sub1 k = spec_rwts := fst (LVTermNet.delete (!spec_rwts, k))
+   fun find_spec opc =
+      case LVTermNet.match (!spec_rwts, opc) of
+         [] => NONE
+       | l => let
+                 val (keys, l2) = ListPair.unzip l
+              in
+                 SOME (List.map proj_inr l2)
+                 handle HOL_ERR {origin_function = "proj_inr", ...} =>
+                    let
+                       val l3 = List.map apply_arm_rule l2
+                       val () = (print (!newline)
+                                 ; List.app sub1 (Lib.mk_set keys)
+                                 ; List.app add1_spec l3)
+                    in
+                      SOME l3
+                    end
+              end
    fun arm_spec_opt opt =
       let
-         val spec = arm_rule opt o basic_spec
+         val () = prove_spec := (arm_rule opt o basic_spec)
          val () = if same_config opt then ()
                   else (set_endian opt; the_step := arm_stepLib.arm_step opt)
          val () = last_opt := opt
@@ -843,9 +882,10 @@ local
                then let
                        val l = step s
                        val l = stm_wb_thms (get_stm_base s) (hd l) @ tl l
+                       val thms_ts = List.map (fn t => (t, arm_mk_pre_post t)) l
                     in
-                       List.map
-                          (fn t => (print "."; spec (t, arm_mk_pre_post t))) l
+                       List.app (fn x => (print "."; add1_pending x)) thms_ts
+                       ; thms_ts
                     end
             else let
                     val thms = step s
@@ -854,9 +894,9 @@ local
                        List.concat
                           (List.map combinations (ListPair.zip (thms, ts)))
                  in
-                    List.map (fn x => (print "."; spec x)) thms_ts
+                    List.app (fn x => (print "."; add1_pending x)) thms_ts
+                    ; thms_ts
                  end)
-           before print (!newline)
       end
    val the_spec = ref (arm_spec_opt "vfp")
    fun spec_spec opc thm =
@@ -871,31 +911,29 @@ local
 in
    fun set_newline s = newline := s
    fun arm_config opt = the_spec := arm_spec_opt opt
-   fun arm_spec s = (!the_spec) s
+   fun arm_spec s = List.map (!prove_spec) ((!the_spec) s)
    fun addInstructionClass s =
       (print (" " ^ s)
        ; if Redblackset.member (!spec_label_set, s)
             then print (!newline)
-         else (add_specs (arm_spec s)
+         else ((!the_spec) s
                ; spec_label_set := Redblackset.add (!spec_label_set, s)))
-   fun arm_spec_hex looped =
-      (* utilsLib.cache 1000 String.compare *)
-        (fn s =>
-            let
-               val i = arm_stepLib.hex_to_bits_32 s
-               val opc = listSyntax.mk_list (!rev_endian i, Type.bool)
-            in
-               case find_spec opc of
-                  SOME thms =>
-                    let
-                       val l = List.mapPartial (Lib.total (spec_spec opc)) thms
-                    in
-                       if List.null l
-                          then loop looped i "failed to find suitable spec" s
-                       else mk_thm_set l
-                    end
-                | NONE => loop looped i "failed to add suitable spec" s
-            end)
+   fun arm_spec_hex looped s =
+      let
+         val i = arm_stepLib.hex_to_bits_32 s
+         val opc = listSyntax.mk_list (!rev_endian i, Type.bool)
+      in
+         case find_spec opc of
+            SOME thms =>
+              let
+                 val l = List.mapPartial (Lib.total (spec_spec opc)) thms
+              in
+                 if List.null l
+                    then loop looped i "failed to find suitable spec" s
+                 else mk_thm_set l
+              end
+          | NONE => loop looped i "failed to add suitable spec" s
+      end
     and loop looped i e s =
        if looped
           then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
@@ -1136,6 +1174,7 @@ val thm = hd (arm_spec_hex "E51F000C")
   arm_spec_hex "E981000E"; (* STMIB;3,2,1 *)
   arm_spec_hex "E801000E"; (* STMDA;3,2,1 *)
   arm_spec_hex "E901000E"; (* STMDB;3,2,1 *)
+  arm_spec_hex "e88c03ff"; (* STMIA;9,8,7,6,5,4,3,2,1,0 *)
 
   arm_spec_hex "E8B1001C"; (* LDMIA (wb);4,3,2 *)
   arm_spec_hex "E8A1001C"; (* STMIA (wb);4,3,2 *)
@@ -1155,7 +1194,6 @@ val thm = hd (arm_spec_hex "E51F000C")
   arm_spec_hex "B1A00000"; (* MOVLT *)
   arm_spec_hex "C1A00000"; (* MOVGT *)
   arm_spec_hex "D1A00000"; (* MOVLE *)
-
 
 List.length hex_list
 val () = Count.apply (List.app (General.ignore o arm_spec_hex)) hex_list

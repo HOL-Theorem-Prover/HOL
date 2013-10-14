@@ -15,7 +15,9 @@ val r15 = Term.mk_var ("r15", ``:word32``)
 
 val rule = tripleLib.spec_to_triple_rule (r15, ARM_ASSERT_def, L3_ARM_def)
 
-val l3_triple = helperLib.instruction_apply rule o spec
+val l3_triple =
+   (* utilsLib.cache 10000 String.compare *)
+      (helperLib.instruction_apply rule o spec)
 
 val vars = Term.mk_var ("cond", Type.bool) ::
            fst (boolSyntax.strip_forall (Thm.concl ARM_ASSERT_def))
