@@ -235,8 +235,11 @@ local
          (SIMP_CONV (srw_ss()) [m0_stepTheory.R_name_def])
          (List.map mk_R_main registers @
           [``^R_name_tm F ^sp``, ``^R_name_tm T ^sp``])
+   val rwts = utilsLib.datatype_rewrites "m0" ["RName"]
+   val rwts = List.take (List.drop (rwts, 10), 2)
 in
-   val REG_CONV = Conv.QCONV (REWRITE_CONV [R_main, m0_stepTheory.v2w_ground4])
+   val REG_CONV =
+      Conv.QCONV (REWRITE_CONV (rwts @ [R_main, m0_stepTheory.v2w_ground4]))
    val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 end
 
@@ -485,7 +488,8 @@ local
 in
    fun mk_thumb2_pair bigend tm =
       let
-         val l = fst (listSyntax.dest_list (fst (bitstringSyntax.dest_v2w tm)))
+         val t = fst (bitstringSyntax.dest_v2w tm)
+         val l = fst (listSyntax.dest_list t)
          val r = reverse_end bigend
       in
          if 16 < List.length l
@@ -497,7 +501,7 @@ in
                  end
          else if bigend
             then r l
-         else tm
+         else t
       end
    val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
                   progSyntax.dest_code o Thm.concl
@@ -596,27 +600,25 @@ in
    fun addInstructionClass s =
       if Redblackset.member (!spec_label_set, s)
          then false
-      else (print s
+      else (print (" " ^ s)
             ; add_specs (m0_spec s)
             ; spec_label_set := Redblackset.add (!spec_label_set, s)
             ; true)
-   fun m0_spec_hex looped =
-      (* utilsLib.cache 1000 String.compare *)
-        (fn s =>
-            let
-               val opc = m0_stepLib.hex_to_bits s
-            in
-               case find_spec opc of
-                  SOME thms =>
-                    let
-                       val l = List.mapPartial (Lib.total (spec_spec opc)) thms
-                    in
-                       if List.null l
-                          then loop looped opc "failed to find suitable spec" s
-                       else l
-                    end
-                | NONE => loop looped opc "failed to add suitable spec" s
-            end)
+   fun m0_spec_hex looped s =
+      let
+         val opc = m0_stepLib.hex_to_bits s
+      in
+         case find_spec opc of
+            SOME thms =>
+              let
+                 val l = List.mapPartial (Lib.total (spec_spec opc)) thms
+              in
+                 if List.null l
+                    then loop looped opc "failed to find suitable spec" s
+                 else l
+              end
+          | NONE => loop looped opc "failed to add suitable spec" s
+      end
     and loop looped opc e s =
        if looped orelse
           not (addInstructionClass (m0_stepLib.thumb_instruction opc))

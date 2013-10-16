@@ -6,7 +6,8 @@ sig
    val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
    val fix_precond: thm list -> thm list
-   val get_pc_inc: (term -> bool) -> thm -> int option
+   val get_delta: term -> term -> int option
+   val get_pc_delta: (term -> bool) -> thm -> int option
    val gvar: string -> hol_type -> term
    val introduce_triple_definition: bool * thm -> rule
    val introduce_map_definition: thm * conv -> rule

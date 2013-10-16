@@ -20,6 +20,19 @@ fun dest_code tm = let val (_, _, c, _) = dest_triple tm in c end
 fun dest_post tm = let val (_, _, _, q) = dest_triple tm in q end
 fun dest_pre_post tm = let val (_, p, _, q) = dest_triple tm in (p, q) end
 
+fun get_component P thm =
+   case Thm.hyp thm of
+      [h] => let
+                val (l, r) = boolSyntax.dest_eq h
+                val l = pairSyntax.strip_pair l
+                val r = pairSyntax.strip_pair r
+             in
+                case Lib.total (Lib.index P) r of
+                   SOME n => List.nth (l, n)
+                 | NONE => raise ERR "get_component" "not found"
+             end
+    | _ => raise ERR "get_component" "not single hyp"
+
 (* ----------------------------------------------------------------------- *)
 
 end

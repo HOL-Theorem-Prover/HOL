@@ -10,7 +10,7 @@ local
    fun get_length th =
       if sumSyntax.is_inl (m0_progLib.get_code th) then 2 else 4
    val find_exit =
-      stateLib.get_pc_inc
+      stateLib.get_pc_delta
           (Lib.equal "m0_prog$m0_PC" o fst o boolSyntax.dest_strip_comb)
    fun format_thm th = (th, get_length th, find_exit th)
    val count_INTRO_rule =

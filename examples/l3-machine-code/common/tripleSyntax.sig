@@ -18,4 +18,5 @@ sig
    val is_case_sum: Term.term -> bool
    val is_triple: Term.term -> bool
 
+   val get_component: (Term.term -> bool) -> Thm.thm -> Term.term
 end

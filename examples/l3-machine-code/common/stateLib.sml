@@ -1045,10 +1045,7 @@ local
                (Conv.RAND_CONV
                   (Conv.RATOR_CONV
                      (Conv.REWR_CONV (GSYM set_sepTheory.precond_def))))))
-   fun mk_rw_neg tm =
-      utilsLib.rhsc
-        (Conv.QCONV (REWRITE_CONV [boolTheory.DE_MORGAN_THM])
-           (boolSyntax.mk_neg tm))
+   fun rule c th = pecond_rule (helperLib.MOVE_COND_RULE c th)
    val get_cond =
       Term.rand o Lib.first progSyntax.is_cond o progSyntax.strip_star o
       progSyntax.dest_pre o Thm.concl
@@ -1058,39 +1055,40 @@ in
             let
                val c = get_cond th2
             in
-               [pecond_rule (helperLib.MOVE_COND_RULE (mk_rw_neg c) th1),
-                pecond_rule (helperLib.MOVE_COND_RULE c th2)]
+               [rule (utilsLib.mk_negation c) th1, rule c th2]
             end
         | thms as [_] => thms
         | _ => raise ERR "fix_precond" ""
 end
 
 (* ------------------------------------------------------------------------
-   get_pc_inc is_pc
+   get_delta pc_var pc
+   get_pc_delta is_pc
    ------------------------------------------------------------------------ *)
 
-fun get_pc_inc is_pc =
+fun get_delta pc_var pc =
+   case Lib.total wordsSyntax.dest_word_add pc of
+      SOME (x, n) =>
+         if x = pc_var
+            then Lib.total wordsSyntax.uint_of_word n
+         else NONE
+    | NONE =>
+        (case Lib.total wordsSyntax.dest_word_sub pc of
+            SOME (x, n) =>
+               if x = pc_var
+                  then Lib.total (Int.~ o wordsSyntax.uint_of_word) n
+               else NONE
+          | NONE => if pc = pc_var then SOME 0 else NONE)
+
+fun get_pc_delta is_pc =
    let
       val get_pc = Term.rand o Lib.first is_pc o progSyntax.strip_star
    in
       fn th =>
          let
             val (p, q) = progSyntax.dest_pre_post (Thm.concl th)
-            val pc_var = get_pc p
-            val pc = get_pc q
          in
-            case Lib.total wordsSyntax.dest_word_add pc of
-               SOME (x, n) =>
-                  if x = pc_var
-                     then Lib.total wordsSyntax.uint_of_word n
-                  else NONE
-             | NONE =>
-                 (case Lib.total wordsSyntax.dest_word_sub pc of
-                     SOME (x, n) =>
-                        if x = pc_var
-                           then Lib.total (Int.~ o wordsSyntax.uint_of_word) n
-                        else NONE
-                   | NONE => if pc = pc_var then SOME 0 else NONE)
+            get_delta (get_pc p) (get_pc q)
          end
    end
 

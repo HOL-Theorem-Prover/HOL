@@ -127,6 +127,12 @@ val eval = rhsc o bossLib.EVAL
 val dom = fst o Type.dom_rng
 val rng = snd o Type.dom_rng
 
+local
+   val cnv = Conv.QCONV (REWRITE_CONV [boolTheory.DE_MORGAN_THM])
+in
+   fun mk_negation tm = rhsc (cnv (boolSyntax.mk_neg tm))
+end
+
 val get_function =
    fst o boolSyntax.strip_comb o boolSyntax.lhs o
    snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o Thm.concl

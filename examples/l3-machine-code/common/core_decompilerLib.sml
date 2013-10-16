@@ -2,8 +2,7 @@ structure core_decompilerLib :> core_decompilerLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open helperLib tripleTheory
-open tripleSyntax
+open helperLib tripleTheory tripleSyntax
 
 val ERR = Feedback.mk_HOL_ERR "core_decompilerLib"
 
@@ -446,7 +445,14 @@ fun is_rec (Repeat _) = true
   | is_rec (ConsMerge (_, _, _, t)) = is_rec t
 
 local
-   val find_Abbrev = find_term (can (match_term ``Abbrev b``))
+   val (_, _, _, is_abbrev) =
+      HolKernel.syntax_fns "marker" 1 HolKernel.dest_monop HolKernel.mk_monop
+         "Abbrev"
+   fun get_Abbrev th =
+      case Thm.hyp th of
+         [h] => Lib.with_exn (Term.rand o HolKernel.find_term is_abbrev) h
+                   (ERR "get_Abbrev" "Abbrev not found")
+       | _ => raise ERR "get_Abbrev" "not a single hyp"
 in
    fun build_compose_tree (b, e) thms =
       let
@@ -462,20 +468,12 @@ in
                      (_, ((th1, l1, x1), NONE)) => Cons (th1, sub false x1)
                    | (_, ((th1, l1, x1), SOME (th2, l2, x2))) =>
                      if x1 = x2
-                        then let
-                                val t1 = sub false x1
-                                val tm = find_Abbrev (hd (hyp th1))
-                                         handle Empty => find_Abbrev (concl th1)
-                             in
-                                ConsMerge (rand tm, th1, th2, t1)
-                             end
+                        then ConsMerge (get_Abbrev th1, th1, th2, sub false x1)
                      else let
                              val t1 = Cons (th1, sub false x1)
                              val t2 = Cons (th2, sub false x2)
-                             val tm = find_Abbrev (hd (hyp th1))
-                                      handle Empty => find_Abbrev (concl th1)
                           in
-                             Merge (rand tm, t1, t2)
+                             Merge (get_Abbrev th1, t1, t2)
                           end
       in
          sub true (SOME (hd b))

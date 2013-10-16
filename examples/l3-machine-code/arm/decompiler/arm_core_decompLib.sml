@@ -22,12 +22,15 @@ val l3_triple =
 val vars = Term.mk_var ("cond", Type.bool) ::
            fst (boolSyntax.strip_forall (Thm.concl ARM_ASSERT_def))
 
-val () = core_decompilerLib.configure
-           { pc_tm = r15,
-             init_fn = arm_decompLib.config_for_fast,
-             pc_conv = RAND_CONV,
-             triple_fn = l3_triple,
-             component_vars = vars }
+fun config_for_arm () =
+   core_decompilerLib.configure
+     { pc_tm = r15,
+       init_fn = arm_decompLib.config_for_fast,
+       pc_conv = RAND_CONV,
+       triple_fn = l3_triple,
+       component_vars = vars }
+
+val () = config_for_arm ()
 
 (* ------------------------------------------------------------------------ *)
 

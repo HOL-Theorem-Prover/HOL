@@ -14,7 +14,7 @@ val TRIPLE_def = Define`
      FST post ==> FST pre /\
      SPEC model (assert (SND pre)) code (assert (SND post))`
 
-val TERM_TAILREC_def = Define`
+val TERM_TAILREC_def = zDefine`
    TERM_TAILREC f g (d:'a -> bool # 'b) x =
     let (cond,y) = d (WHILE g f x) in
       (cond /\ (?n. ~g (FUNPOW f n x)),y)`
@@ -78,6 +78,8 @@ val TERM_TAILREC_THM = Q.store_thm("TERM_TAILREC_THM",
    \\ qexists_tac `SUC n`
    \\ fs [FUNPOW]
    )
+
+val () = computeLib.add_persistent_funs ["TERM_TAILREC_THM"]
 
 val TRIPLE_TERM_TAILREC = Q.prove(
    `(!x. ~FST (post (F,x))) ==>

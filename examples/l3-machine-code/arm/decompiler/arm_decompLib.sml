@@ -36,7 +36,7 @@ local
    fun arm_OK_intro w0 = ok_rule o Thm.INST ((w0_var |-> w0) :: sbst)
    fun format_thm th =
       (th, 4,
-       stateLib.get_pc_inc
+       stateLib.get_pc_delta
           (Lib.equal "arm_prog$arm_PC" o fst o boolSyntax.dest_strip_comb) th)
 in
    fun l3_arm_triples hex =
