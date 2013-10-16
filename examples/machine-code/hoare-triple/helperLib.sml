@@ -965,6 +965,8 @@ local
    val SPEC_FRAME_COMPOSE_DISJ_ALT =
       SPEC_FRAME_COMPOSE_DISJ
       |> Q.SPECL [`x`,`p`,`emp`] |> RW [SEP_CLAUSES]
+   fun get_post tm = tm |> rand
+   val is_sep_disj = can dest_sep_disj
 in
    fun find_composition1 th1 th2 =
       let
@@ -972,11 +974,12 @@ in
          val (xs1,xs2,ys1,ys2) = match_and_partition q p
          val tm1 = mk_star (list_mk_star xs1 ty, list_mk_star xs2 ty)
          val tm2 = mk_star (list_mk_star ys1 ty, list_mk_star ys2 ty)
-         val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
-                   handle HOL_ERR _ => (* found a SEP_DISJ *)
-                   CONV_RULE
-                      (POST_CONV
-                         ((RATOR_CONV o RAND_CONV) (MOVE_STAR_CONV tm1))) th1
+         val th1 = if not (is_sep_disj (get_post (concl th1))) then
+                     CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
+                   else
+                     CONV_RULE
+                        (POST_CONV
+                           ((RATOR_CONV o RAND_CONV) (MOVE_STAR_CONV tm1))) th1
          val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2
          val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)
          val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
