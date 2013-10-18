@@ -3,13 +3,63 @@ struct
 
 open HolKernel boolLib bossLib
 open lcsymtacs updateLib utilsLib
-open stateTheory
-open progSyntax
+open stateTheory temporal_stateTheory
+open helperLib progSyntax temporalSyntax
 
 infix \\
 val op \\ = op THEN;
 
 val ERR = Feedback.mk_HOL_ERR "stateLib"
+
+(* ------------------------------------------------------------------------ *)
+
+(* Versions of operations in helperLib that are generalise to cover
+   TEMPORAL_NEXT as well as SPEC *)
+
+fun SPECC_FRAME_RULE frame th =
+   Thm.SPEC frame
+      (Drule.MATCH_MP progTheory.SPEC_FRAME th
+       handle HOL_ERR _ =>
+          Drule.MATCH_MP temporal_stateTheory.TEMPORAL_NEXT_FRAME th)
+
+fun SPECL_FRAME_RULE l th =
+   let
+      val p = temporal_stateSyntax.dest_pre' (Thm.concl th)
+      val xs = progSyntax.strip_star p
+      val lx =
+         List.filter
+            (fn t => not (Lib.exists (Lib.can (Term.match_term t)) xs)) l
+   in
+      List.foldl (Lib.uncurry SPECC_FRAME_RULE) th lx
+   end
+
+val MOVE_COND_CONV =
+   Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
+   ORELSEC Conv.REWR_CONV (GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND)
+
+local
+   val cond_T = Q.prove (
+      `!p. (cond T * p = p) /\ (p * cond T = p)`,
+      REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
+   val rule1 =
+      helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
+      Conv.CONV_RULE MOVE_COND_CONV
+   fun COND_RW_CONV atm =
+      let
+         val cnv = Conv.RAND_CONV (PURE_REWRITE_CONV [ASSUME atm])
+      in
+         fn tm => if progSyntax.is_cond tm then cnv tm else NO_CONV tm
+      end
+in
+   fun MOVE_COND_RULE tm thm =
+      let
+         val thm1 = Conv.CONV_RULE (Conv.DEPTH_CONV (COND_RW_CONV tm)) thm
+      in
+         case Thm.hyp thm1 of
+            [t] => if t = tm then rule1 (Thm.DISCH t thm1) else thm
+          | _ => thm
+      end
+end
 
 (* Some syntax functions *)
 
@@ -745,25 +795,19 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   fun mk_part_spec m = boolSyntax.mk_icomb (progSyntax.spec_tm, m)
+   val temporal = ref false
+in
+   fun set_temporal b = temporal := b
+   fun generate_temporal () = !temporal
+end
+
+local
    fun get_def tm =
       let
          val {Name, Thy, ...} = Term.dest_thy_const (Term.rand tm)
       in
          DB.fetch Thy (Name ^ "_def")
       end
-   (*
-   fun snoc_cond c =
-      fn [] => c
-       | p as h :: _ =>
-           let
-              val c_tm = progSyntax.mk_cond c
-              val sbst = Type.match_type (Term.type_of c_tm) (Term.type_of h)
-              val c_tm = Term.inst sbst c_tm
-           in
-              progSyntax.list_mk_star (p @ [c_tm])
-           end
-   *)
 in
    fun mk_pre_post model_def comp_defs cpool extras write_fn psort =
       let
@@ -772,7 +816,8 @@ in
                            [a, _, _, _] => get_def a
                          | _ => raise ERR "mk_pre_post" "bad model definition"
          val read = read_footprint proj_def comp_defs cpool extras
-         val mk_spec = HolKernel.list_mk_icomb (mk_part_spec model_tm)
+         val mk_spec_or_temporal_next =
+            temporal_stateSyntax.mk_spec_or_temporal_next model_tm
          val write = (progSyntax.list_mk_star ## progSyntax.list_mk_star) o
                      sort_finish psort o write_fn
       in
@@ -782,10 +827,9 @@ in
                val (p, q) = write (p, []: term list, tm)
                val p = if c = boolSyntax.T
                           then p
-                       else (* snoc_cond (c, progSyntax.strip_star p) *)
-                            progSyntax.mk_star (progSyntax.mk_cond c, p)
+                       else progSyntax.mk_star (progSyntax.mk_cond c, p)
             in
-               mk_spec [p, pool, q]
+               mk_spec_or_temporal_next (generate_temporal()) (p, pool, q)
             end
       end
 end
@@ -819,7 +863,7 @@ fun rename_vars (rename1, rename2, bump) =
    in
       fn thm =>
          let
-            val p = progSyntax.dest_pre (Thm.concl thm)
+            val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
             val () = varReset()
             val () = List.app (fn s => General.ignore (gvar s Type.alpha)) bump
             val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry gvar
@@ -857,7 +901,7 @@ local
    val get_conds = List.filter progSyntax.is_cond o progSyntax.strip_star
    val err = ERR "introduce_triple"
    fun move_match (pat, t) =
-      helperLib.MOVE_COND_RULE
+      MOVE_COND_RULE
         (case Lib.mk_set (find_terms (Lib.can (Term.match_term pat)) t) of
             [] => raise (err "missing condition")
           | [m] => m
@@ -875,19 +919,23 @@ in
          val cs = List.map progSyntax.dest_cond cs
          val rule =
             helperLib.PRE_POST_RULE (helperLib.STAR_REWRITE_CONV (GSYM thm_def))
-         val d_rule = if duplicate
-                         then MATCH_MP progTheory.SPEC_DUPLICATE_COND
-                      else Lib.I
+         fun d_rule th =
+            if duplicate
+               then MATCH_MP progTheory.SPEC_DUPLICATE_COND th
+                    handle HOL_ERR _ =>
+                      MATCH_MP
+                        temporal_stateTheory.TEMPORAL_NEXT_DUPLICATE_COND th
+            else th
       in
          fn thm =>
             let
-               val p = progSyntax.dest_pre (Thm.concl thm)
+               val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
                val move_cs =
                   List.map
                      (fn t => List.map (fn c => d_rule o move_match (c, t)) cs)
                      (get_conds p)
             in
-               thm |> helperLib.SPECL_FRAME_RULE ps
+               thm |> SPECL_FRAME_RULE ps
                    |> Lib.C (List.foldl (fn (f, t) => f t))
                             (List.concat move_cs)
                    |> rule
@@ -928,7 +976,8 @@ local
                    | _ => raise ERR "strip2" ""
    val tidy_up_rule =
       helperLib.MERGE_CONDS_RULE o
-      PURE_REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND] o
+      PURE_REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND,
+                         GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND] o
       Drule.DISCH_ALL
    val is_ineq = Lib.can (boolSyntax.dest_eq o boolSyntax.dest_neg)
    val apply_id_rule = PURE_REWRITE_RULE [updateTheory.APPLY_UPDATE_ID]
@@ -945,8 +994,8 @@ in
             |> (strip2 ## strip2)
          val is_f = Lib.equal f_tm o fst o boolSyntax.strip_comb
          val get_f =
-            List.filter is_f o progSyntax.strip_star o progSyntax.dest_pre o
-            Thm.concl
+            List.filter is_f o progSyntax.strip_star o
+            temporal_stateSyntax.dest_pre' o Thm.concl
          val c_ty = Term.type_of c
          val d_ty = Term.type_of d
          val c_set_ty = pred_setSyntax.mk_set_type c_ty
@@ -1004,7 +1053,7 @@ in
                              then apply_id_rule
                           else SIMP_RULE (update_ss++simpLib.rewrites ineqs) []
                     in
-                       th |> helperLib.SPECC_FRAME_RULE frame
+                       th |> SPECC_FRAME_RULE frame
                           |> helperLib.PRE_POST_RULE
                                (helperLib.STAR_REWRITE_CONV rwt)
                           |> Thm.INST ds
@@ -1045,10 +1094,10 @@ local
                (Conv.RAND_CONV
                   (Conv.RATOR_CONV
                      (Conv.REWR_CONV (GSYM set_sepTheory.precond_def))))))
-   fun rule c th = pecond_rule (helperLib.MOVE_COND_RULE c th)
+   fun rule c th = pecond_rule (MOVE_COND_RULE c th)
    val get_cond =
       Term.rand o Lib.first progSyntax.is_cond o progSyntax.strip_star o
-      progSyntax.dest_pre o Thm.concl
+      temporal_stateSyntax.dest_pre' o Thm.concl
 in
    val fix_precond =
       fn [th1, th2] =>
@@ -1165,18 +1214,16 @@ local
       utilsLib.qm [cond_STAR1, combinTheory.I_THM]
          ``(cond c * p) (s:'a set) = I c /\ p s``
 in
-   fun spec imp_spec read_thms write_thms select_state_thms frame_thms
+   fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =
       let
          open lcsymtacs
-         val MP_SPEC_TAC = MATCH_MP_TAC imp_spec
          val sthms = cond_STAR1_I :: select_state_thms
          val pthms = [boolTheory.DE_MORGAN_THM, pred_setTheory.NOT_IN_EMPTY,
                       pred_setTheory.IN_DIFF, pred_setTheory.IN_INSERT]
          val UPD_TAC = UPDATE_TAC map_tys
          val PRE_TAC =
-            MP_SPEC_TAC
-            \\ GEN_TAC
+            GEN_TAC
             \\ GEN_TAC
             \\ CONV_TAC
                   (Conv.LAND_CONV
@@ -1227,7 +1274,8 @@ in
             \\ EXTRA_TAC
             \\ PRINT_TAC
          fun tac (v, dthm) =
-            PRE_TAC
+            MATCH_MP_TAC (if generate_temporal () then imp_temp else imp_spec)
+            \\ PRE_TAC
             \\ Tactic.EXISTS_TAC v
             \\ CONJ_TAC
             >- (

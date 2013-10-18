@@ -332,10 +332,11 @@ local
       List.map
          (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
+   val mk = temporal_stateSyntax.mk_spec_or_temporal_next ``M0_MODEL``
 in
    fun combinations (thm, t) =
       let
-         val (m, p, c, q) = progSyntax.dest_spec t
+         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
          val pl = progSyntax.strip_star p
          val ql = progSyntax.strip_star q
          val rs = mk_assign regs (pl, ql)
@@ -358,8 +359,8 @@ in
                    val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
                 in
                    (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    progSyntax.mk_spec
-                       (m, p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
+                    mk (stateLib.generate_temporal())
+                       (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
                 end) groups
       end
 end
@@ -388,8 +389,7 @@ end
 
 local
    val m0_PSR_T_F = List.map UNDISCH (CONJUNCTS m0_progTheory.m0_PSR_T_F)
-   val MOVE_COND_CONV = Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
-   val MOVE_COND_RULE = Conv.CONV_RULE MOVE_COND_CONV
+   val MOVE_COND_RULE = Conv.CONV_RULE stateLib.MOVE_COND_CONV
    val SPEC_IMP_RULE =
       Conv.CONV_RULE
         (Conv.REWR_CONV (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
@@ -411,10 +411,17 @@ local
    val m0_PC_INTRO0 =
       m0_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                   |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   val m0_TEMPORAL_PC_INTRO0 =
+      m0_TEMPORAL_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                           |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
    fun MP_m0_PC_INTRO th =
-      MATCH_MP m0_PC_INTRO th
-      handle HOL_ERR _ => MATCH_MP m0_PC_INTRO0 th
-   val cnv = REWRITE_CONV [m0_stepTheory.Aligned_numeric, Aligned_Branch]
+      Lib.tryfind (fn thm => MATCH_MP thm th)
+         [m0_PC_INTRO, m0_TEMPORAL_PC_INTRO,
+          m0_PC_INTRO0, m0_TEMPORAL_PC_INTRO0]
+   val cnv =
+      REWRITE_CONV [m0_stepTheory.Aligned_numeric,
+                    m0_stepTheory.Aligned_Branch,
+                    m0_stepTheory.Aligned_LoadStore]
    val m0_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -438,7 +445,7 @@ end
 local
    fun check_unique_reg_CONV tm =
       let
-         val p = progSyntax.strip_star (progSyntax.dest_pre tm)
+         val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_m0_REG)) p
       in
          if Lib.mk_set rp = rp
@@ -504,7 +511,7 @@ in
          else t
       end
    val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
-                  progSyntax.dest_code o Thm.concl
+                  temporal_stateSyntax.dest_code' o Thm.concl
    fun get_opcode bigend = mk_thumb2_pair bigend o boolSyntax.rand o get_code
 end
 
@@ -526,6 +533,7 @@ local
       m0_rule o
       stateLib.spec
            m0_progTheory.M0_IMP_SPEC
+           m0_progTheory.M0_IMP_TEMPORAL_NEXT
            [m0_stepTheory.get_bytes]
            []
            (m0_select_state_pool_thm :: m0_select_state_thms)
@@ -595,7 +603,8 @@ in
    fun m0_config opt =
       (the_spec := m0_spec_opt opt
        ; bigend := fst opt
-       ; spec_rwts := utilsLib.mk_rw_net get_opc [])
+       ; spec_rwts := LVTermNet.empty
+       ; spec_label_set := Redblackset.empty String.compare)
    fun m0_spec s = (!the_spec) s
    fun addInstructionClass s =
       if Redblackset.member (!spec_label_set, s)
@@ -630,6 +639,10 @@ end
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
+
+val () = m0_config (false, false)
+val () = stateLib.set_temporal true
+val () = stateLib.set_temporal false
 
 local
    val gen = Random.newgenseed 1.0

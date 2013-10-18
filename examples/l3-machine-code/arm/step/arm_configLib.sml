@@ -65,6 +65,10 @@ val mem_map_options = lower
    [["map-mem", "mem-map"],
     ["no-mem-map", "no-map-mem"]]
 
+val temporal_options = lower
+   [["temporal"],
+    ["not-temporal"]]
+
 fun find_pos P =
    let
       fun tail n [] = n
@@ -107,6 +111,7 @@ val default_options =
     gpr_map   = false,
     fpr_map   = false,
     mem_map   = true,
+    temporal  = false,
     itblock   = wordsSyntax.mk_wordii (0, 8)}
 
 fun process_options s =
@@ -125,6 +130,9 @@ fun process_options s =
       val (mem_map, l) =
          process_opt mem_map_options "Introduce MEM map"
             (#mem_map default_options) l (Lib.equal 0)
+      val (temporal, l) =
+         process_opt temporal_options "Temoporal triple"
+            (#temporal default_options) l (Lib.equal 0)
       val (vfp, l) =
          process_opt vfp_options "VFP" (#vfp default_options) l (Lib.equal 0)
       val (arch, l) =
@@ -158,6 +166,7 @@ fun process_options s =
                gpr_map = gpr_map,
                fpr_map = fpr_map,
                mem_map = mem_map,
+               temporal = temporal,
                itblock = itblock}
       else raise ERR "process_options"
                  ("Unrecognized option" ^
@@ -179,11 +188,11 @@ fun mk_config_terms s =
        prop #thumb ``^st.CPSR.T``]
    end
 
-fun map_options s =
+fun spec_options s =
    let
-      val {gpr_map, fpr_map, mem_map, ...} = process_options s
+      val {gpr_map, fpr_map, mem_map, temporal, ...} = process_options s
    in
-      (gpr_map, fpr_map, mem_map)
+      (gpr_map, fpr_map, mem_map, temporal)
    end
 
 (* ----------------------------------------------------------------------- *)

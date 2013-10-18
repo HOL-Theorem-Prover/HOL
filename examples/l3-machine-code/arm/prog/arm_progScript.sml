@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib
 open lcsymtacs blastLib stateLib
-open set_sepTheory progTheory arm_stepTheory
+open set_sepTheory progTheory temporal_stateTheory arm_stepTheory
 
 infix \\
 val op \\ = op THEN;
@@ -28,6 +28,12 @@ val ARM_MODEL_def = Define`
 
 val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
    stateTheory.IMP_SPEC
+   |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`]
+   |> REWRITE_RULE [GSYM ARM_MODEL_def]
+   )
+
+val ARM_IMP_TEMPORAL = Theory.save_thm ("ARM_IMP_TEMPORAL",
+   temporal_stateTheory.IMP_TEMPORAL
    |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`]
    |> REWRITE_RULE [GSYM ARM_MODEL_def]
    )
@@ -95,6 +101,15 @@ val arm_PC_INTRO = Q.store_thm("arm_PC_INTRO",
    \\ FULL_SIMP_TAC std_ss [arm_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
    )
 
+val arm_TEMPORAL_PC_INTRO = Q.store_thm("arm_TEMPORAL_PC_INTRO",
+   `TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
+    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC std_ss
+         [arm_PC_def, TEMPORAL_NEXT_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
+   )
+
 fun mk_addr (b, s) =
    List.tabulate
       (25, fn i => if i < 2 then b
@@ -149,6 +164,41 @@ val arm_instr_star_not_disjoint = Q.prove(
    \\ Cases_on `(arm_c_MEM (a + 3w),arm_d_word8 ((31 >< 24) w)) IN p` \\ simp []
    \\ fs [pred_setTheory.INSERT_INTER]
    )
+
+val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
+  ("MOVE_TO_TEMPORAL_ARM_CODE_POOL",
+   `!a w c p q.
+       TEMPORAL_NEXT ARM_MODEL
+        (p *
+         arm_MEM a ((7 >< 0) w) *
+         arm_MEM (a + 1w) ((15 >< 8) w) *
+         arm_MEM (a + 2w) ((23 >< 16) w) *
+         arm_MEM (a + 3w) ((31 >< 24) w))
+        c
+        (q *
+         arm_MEM a ((7 >< 0) w) *
+         arm_MEM (a + 1w) ((15 >< 8) w) *
+         arm_MEM (a + 2w) ((23 >< 16) w) *
+         arm_MEM (a + 3w) ((31 >< 24) w)) =
+       TEMPORAL_NEXT ARM_MODEL
+        (cond (DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))) * p)
+        ((a, w) INSERT c)
+        q`,
+    REPEAT strip_tac
+    \\ once_rewrite_tac [GSYM temporal_stateTheory.TEMPORAL_NEXT_CODE]
+    \\ rewrite_tac [ARM_MODEL_def, stateTheory.CODE_POOL,
+                    pred_setTheory.IMAGE_INSERT,
+                    pred_setTheory.IMAGE_EMPTY,
+                    pred_setTheory.BIGUNION_INSERT,
+                    pred_setTheory.BIGUNION_EMPTY]
+    \\ Cases_on `DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))`
+    \\ rw [stateTheory.UNION_STAR, arm_instr_star, set_sepTheory.SEP_CLAUSES,
+           TEMPORAL_NEXT_FALSE_PRE,
+           AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
+    \\ imp_res_tac arm_instr_star_not_disjoint
+    \\ fs [set_sepTheory.SEP_CLAUSES, TEMPORAL_NEXT_FALSE_PRE,
+           AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
+    )
 
 val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
    `!a w c p q.

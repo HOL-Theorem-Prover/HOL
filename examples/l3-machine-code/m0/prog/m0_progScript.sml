@@ -32,6 +32,12 @@ val M0_IMP_SPEC = Theory.save_thm ("M0_IMP_SPEC",
    |> REWRITE_RULE [GSYM M0_MODEL_def]
    )
 
+val M0_IMP_TEMPORAL_NEXT = Theory.save_thm ("M0_IMP_TEMPORAL_NEXT",
+   temporal_stateTheory.IMP_TEMPORAL
+   |> Q.ISPECL [`m0_proj`, `NextStateM0`, `m0_instr`]
+   |> REWRITE_RULE [GSYM M0_MODEL_def]
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val m0_REG_def = DB.definition "m0_REG_def"
@@ -83,12 +89,14 @@ val m0_PC_INTRO = Q.store_thm("m0_PC_INTRO",
    \\ FULL_SIMP_TAC std_ss [m0_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
    )
 
-val tm = Term.subst [``b0:bool`` |-> boolSyntax.F] (bitstringSyntax.mk_vec 32 0)
-
-val Aligned_Branch = Q.store_thm("Aligned_Branch",
-   `(Aligned (pc:word32, 2) ==> Aligned (pc + 4w + ^tm, 2)) = T`,
-   rw [Aligned]
-   \\ blastLib.FULL_BBLAST_TAC
+val m0_TEMPORAL_PC_INTRO = Q.store_thm("m0_TEMPORAL_PC_INTRO",
+   `TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
+    (Aligned (pc,2) ==> Aligned (pc',2)) ==>
+    TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_PC pc')`,
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC std_ss
+        [m0_PC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
+         STAR_ASSOC, SEP_CLAUSES]
    )
 
 (* ------------------------------------------------------------------------ *)

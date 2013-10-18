@@ -421,10 +421,7 @@ local
       let
          val cnv = Conv.RAND_CONV (PURE_REWRITE_CONV [ASSUME atm])
       in
-         fn tm =>
-            if progSyntax.is_cond tm
-               then cnv tm
-            else NO_CONV tm
+         fn tm => if progSyntax.is_cond tm then cnv tm else NO_CONV tm
       end
 in
    fun MOVE_COND_RULE tm thm =

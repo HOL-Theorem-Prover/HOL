@@ -486,6 +486,20 @@ val Aligned_BranchLinkEx = utilsLib.ustore_thm("Aligned_BranchLinkEx",
    \\ blastLib.BBLAST_TAC
    )
 
+val tm = Term.subst [``b0:bool`` |-> boolSyntax.F] (bitstringSyntax.mk_vec 32 0)
+
+val Aligned_Branch = Q.store_thm("Aligned_Branch",
+   `(Aligned (pc:word32, 2) ==> Aligned (pc + 4w + ^tm, 2)) = T`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
+   `Aligned (w: 31 word @@ (0w: word1), 2)`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val BIT_lem = Q.prove(

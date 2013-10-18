@@ -6,6 +6,7 @@ sig
    val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
    val fix_precond: thm list -> thm list
+   val generate_temporal: unit -> bool
    val get_delta: term -> term -> int option
    val get_pc_delta: (term -> bool) -> thm -> int option
    val gvar: string -> hol_type -> term
@@ -28,8 +29,9 @@ sig
       string list -> thm -> thm
    val sep_definitions:
       string -> string list list -> string list list -> thm -> thm list
+   val set_temporal: bool -> unit
    val spec:
-      thm -> thm list -> thm list -> thm list -> thm list -> thm list ->
+      thm -> thm -> thm list -> thm list -> thm list -> thm list -> thm list ->
       hol_type list -> tactic -> tactic -> thm * term -> thm
    val star_select_state_thm: thm -> thm list -> term list * thm -> thm
    val update_frame_state_thm:
@@ -47,5 +49,6 @@ sig
      (string * (term list * term list * term -> term list * term list)) list ->
      (string * term list -> bool) ->
      term list * term list * term -> term list * term list
+   val MOVE_COND_CONV: conv
    val PC_CONV: string -> conv
 end

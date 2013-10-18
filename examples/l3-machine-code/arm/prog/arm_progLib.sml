@@ -2,7 +2,7 @@ structure arm_progLib :> arm_progLib =
 struct
 
 open HolKernel boolLib bossLib
-open stateLib arm_progTheory
+open stateLib tripleSyntax arm_progTheory
 
 structure Parse =
 struct
@@ -256,6 +256,7 @@ local
       REWRITE_RULE
         [stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
          set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
+         Drule.SPECL [a, w] arm_progTheory.MOVE_TO_TEMPORAL_ARM_CODE_POOL,
          Drule.SPECL [a, w] arm_progTheory.MOVE_TO_ARM_CODE_POOL,
          arm_progTheory.disjoint_arm_instr_thms] thm
 
@@ -286,7 +287,7 @@ in
       end
    fun extend_arm_code_pool thm =
       let
-         val (p, q) = progSyntax.dest_pre_post (Thm.concl thm)
+         val (p, q) = temporal_stateSyntax.dest_pre_post' (Thm.concl thm)
          val lp = progSyntax.strip_star p
          val p_pc = part_pc_relative lp
       in
@@ -532,10 +533,13 @@ local
       List.map
          (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
+   val mk_arm_model =
+      temporal_stateSyntax.mk_spec_or_temporal_next ``ARM_MODEL``
 in
    fun combinations (thm, t) =
       let
-         val (m, p, c, q) = progSyntax.dest_spec t
+         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
+         val mk = mk_arm_model (stateLib.generate_temporal())
          val pl = progSyntax.strip_star p
          val ql = progSyntax.strip_star q
          val ds = mk_assign fp_regs (pl, ql)
@@ -562,8 +566,7 @@ in
                    val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
                 in
                    (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    progSyntax.mk_spec
-                       (m, p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
+                    mk (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
                 end) groups
       end
 end
@@ -598,8 +601,7 @@ end
 
 local
    val arm_CPSR_T_F = List.map UNDISCH (CONJUNCTS arm_progTheory.arm_CPSR_T_F)
-   val MOVE_COND_CONV = Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
-   val MOVE_COND_RULE = Conv.CONV_RULE MOVE_COND_CONV
+   val MOVE_COND_RULE = Conv.CONV_RULE stateLib.MOVE_COND_CONV
    val SPEC_IMP_RULE =
       Conv.CONV_RULE
         (Conv.REWR_CONV (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
@@ -619,9 +621,13 @@ local
    val arm_PC_INTRO0 =
       arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                    |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   val arm_TEMPORAL_PC_INTRO0 =
+      arm_TEMPORAL_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                            |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
    fun MP_arm_PC_INTRO th =
-      MATCH_MP arm_PC_INTRO th
-      handle HOL_ERR _ => MATCH_MP arm_PC_INTRO0 th
+      Lib.tryfind (fn thm => MATCH_MP thm th)
+         [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
+          arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
    val cnv = REWRITE_CONV [arm_stepTheory.Aligned_numeric, Aligned_Branch]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
@@ -665,7 +671,7 @@ local
           ``SingleOfDouble F w``]
    fun check_unique_reg_CONV tm =
       let
-         val p = progSyntax.strip_star (progSyntax.dest_pre tm)
+         val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_arm_REG)) p
          val dp = List.mapPartial (Lib.total (fst o dest_arm_FP_REG)) p
       in
@@ -738,6 +744,8 @@ in
 end
 
 local
+   val mk_thm_set =
+      Lib.op_mk_set (fn t1 => fn t2 => Term.aconv (Thm.concl t1) (Thm.concl t2))
    val component_11 =
       (case Drule.CONJUNCTS arm_progTheory.arm_component_11 of
           [r, m, _, fp] => [r, m, fp]
@@ -754,7 +762,7 @@ local
    val STATE_TAC = ASM_REWRITE_TAC arm_rwts
    val basic_spec =
       stateLib.spec
-           arm_progTheory.ARM_IMP_SPEC
+           arm_progTheory.ARM_IMP_SPEC arm_progTheory.ARM_IMP_TEMPORAL
            [arm_stepTheory.get_bytes]
            []
            (arm_select_state_pool_thm :: arm_select_state_thms)
@@ -776,7 +784,7 @@ local
       fst o bitstringSyntax.dest_v2w o
       snd o pairSyntax.dest_pair o
       List.last o pred_setSyntax.strip_set o
-      progSyntax.dest_code o
+      temporal_stateSyntax.dest_code' o
       Thm.concl
    val reverse_endian =
       fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
@@ -799,6 +807,7 @@ local
    val the_step = ref (arm_stepLib.arm_step (!last_opt))
    val spec_label_set = ref (Redblackset.empty String.compare)
    val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
+   val prove_spec = ref (fst: thm * term -> thm)
    val add1 = utilsLib.add_to_rw_net get_opcode
    val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
    fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
@@ -818,36 +827,42 @@ local
    fun update_spec f =
       fn mlibUseful.INR t => mlibUseful.INR (f t)
        | x => x
-   fun same_config opt =
-      arm_configLib.mk_config_terms (!last_opt) =
-      arm_configLib.mk_config_terms opt
    fun update_specs rule (old, new) =
       case (old, new) of
          (false, true) => SOME rule
        | (true, false) => NONE
        | _ => SOME Lib.I
-   fun arm_rule opt =
+   fun reset_specs () =
+     (print "\nResetting specs.\n\n"
+      ; spec_label_set := Redblackset.empty String.compare
+      ; spec_rwts := LVTermNet.empty)
+   fun config_for_opt opt =
       let
-         val (gp, fp, mem) = arm_configLib.map_options (!last_opt)
-         val (gp', fp', mem') = arm_configLib.map_options opt
-         val () =
-            case (update_specs gp_introduction (gp, gp'),
-                  update_specs fp_introduction (fp, fp'),
-                  update_specs memory_introduction (mem, mem')) of
-               (SOME gp_rule, SOME fp_rule, SOME mem_rule) =>
-                  (spec_rwts := LVTermNet.transform
-                                  (update_spec (gp_rule o fp_rule o mem_rule))
-                                  (!spec_rwts))
-             | _ => (print "\nResetting specs.\n\n"
-                     ; spec_label_set := Redblackset.empty String.compare
-                     ; spec_rwts := LVTermNet.empty)
+         val (gp, fp, mem, temporal) = arm_configLib.spec_options (!last_opt)
+         val (gp', fp', mem', temporal') = arm_configLib.spec_options opt
       in
-         (if gp' then gp_introduction else Lib.I) o
-         (if fp' then fp_introduction else Lib.I) o
-         (if mem' then memory_introduction else Lib.I) o
-         arm_intro
+         if arm_configLib.mk_config_terms (!last_opt) =
+            arm_configLib.mk_config_terms opt andalso temporal = temporal'
+            then case (update_specs gp_introduction (gp, gp'),
+                       update_specs fp_introduction (fp, fp'),
+                       update_specs memory_introduction (mem, mem')) of
+                    (SOME gp_rule, SOME fp_rule, SOME mem_rule) =>
+                       (spec_rwts :=
+                        LVTermNet.transform
+                            (update_spec (gp_rule o fp_rule o mem_rule))
+                            (!spec_rwts))
+                  | _ => reset_specs ()
+         else ( reset_specs ()
+              ; set_endian opt
+              ; the_step := arm_stepLib.arm_step opt )
+         ; prove_spec :=
+            ((if gp' then gp_introduction else Lib.I) o
+             (if fp' then fp_introduction else Lib.I) o
+             (if mem' then memory_introduction else Lib.I) o
+             arm_intro o basic_spec)
+         ; stateLib.set_temporal temporal'
+         ; last_opt := opt
       end
-   val prove_spec = ref (arm_rule (!last_opt) o basic_spec)
    fun apply_arm_rule (mlibUseful.INL thm_tm) =
           (print "+"; (!prove_spec) thm_tm)
      | apply_arm_rule (mlibUseful.INR thm) = thm
@@ -866,15 +881,12 @@ local
                                  ; List.app sub1 (Lib.mk_set keys)
                                  ; List.app add1_spec l3)
                     in
-                      SOME l3
+                       SOME l3
                     end
               end
    fun arm_spec_opt opt =
       let
-         val () = prove_spec := (arm_rule opt o basic_spec)
-         val () = if same_config opt then ()
-                  else (set_endian opt; the_step := arm_stepLib.arm_step opt)
-         val () = last_opt := opt
+         val () = config_for_opt opt
          val step = !the_step
       in
          fn s =>
@@ -898,7 +910,7 @@ local
                     ; thms_ts
                  end)
       end
-   val the_spec = ref (arm_spec_opt "vfp")
+   val the_spec = ref (arm_spec_opt (!last_opt))
    fun spec_spec opc thm =
       let
          val thm_opc = get_opcode thm
@@ -906,12 +918,11 @@ local
       in
          simp_triple_rule (Thm.INST a thm)
       end
-   val mk_thm_set =
-      Lib.op_mk_set (fn t1 => fn t2 => Term.aconv (Thm.concl t1) (Thm.concl t2))
 in
    fun set_newline s = newline := s
    fun arm_config opt = the_spec := arm_spec_opt opt
-   fun arm_spec s = List.map (!prove_spec) ((!the_spec) s)
+   fun arm_spec s =
+      List.map (fn t => (print "+"; (!prove_spec) t)) ((!the_spec) s)
    fun addInstructionClass s =
       (print (" " ^ s)
        ; if Redblackset.member (!spec_label_set, s)
@@ -970,6 +981,7 @@ val () = arm_config "vfp"
 val () = arm_config "vfp,gpr-map,fpr-map"
 val () = arm_config "vfp,be"
 val () = arm_config ""
+val () = arm_config "vfp, temporal"
 
 val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
@@ -1256,6 +1268,12 @@ val frame_thms = [arm_frame, arm_frame_hidden, state_id, fp_id]
 val map_tys = [word, word5, ``:RName``]
 val mk_pre_post = arm_mk_pre_post
 val write = arm_write_footprint
+
+val model_def = arm_progTheory.ARM_MODEL_def
+val comp_defs = arm_comp_defs
+val cpool = mk_arm_code_pool
+val extras = []: footprint_extra list
+val write_fn = arm_write_footprint
 
 *)
 

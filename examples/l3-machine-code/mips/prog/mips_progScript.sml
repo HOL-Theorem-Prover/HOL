@@ -26,6 +26,12 @@ val MIPS_IMP_SPEC = Theory.save_thm ("MIPS_IMP_SPEC",
    |> REWRITE_RULE [GSYM MIPS_MODEL_def]
    )
 
+val MIPS_IMP_TEMPORAL = Theory.save_thm ("MIPS_IMP_TEMPORAL",
+   temporal_stateTheory.IMP_TEMPORAL
+   |> Q.ISPECL [`mips_proj`, `NextStateMIPS`, `mips_instr`]
+   |> REWRITE_RULE [GSYM MIPS_MODEL_def]
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val () = export_theory()
