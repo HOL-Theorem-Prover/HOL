@@ -209,11 +209,12 @@ local
    val w2w_w = ``(w2w: word64 -> word32) w``
    fun try_to_remove_mem32 th =
       let
-         val i = match_mem32 (progSyntax.dest_pre (concl th))
+         val i = match_mem32 (temporal_stateSyntax.dest_pre' (Thm.concl th))
          val th = INST [subst i w |-> w2w_w] th
       in
-         MATCH_MP x64_mem32_READ_EXTEND th
-         handle HOL_ERR _ => MATCH_MP x64_mem32_WRITE_EXTEND th
+         Lib.tryfind (fn thm => MATCH_MP thm th)
+            [x64_mem32_READ_EXTEND, x64_mem32_WRITE_EXTEND,
+             x64_mem32_TEMPORAL_READ_EXTEND, x64_mem32_TEMPORAL_WRITE_EXTEND]
       end
       handle HOL_ERR _ => th
 in
@@ -245,6 +246,7 @@ local
       x64_rule o
       stateLib.spec
            x64_progTheory.X64_IMP_SPEC
+           x64_progTheory.X64_IMP_TEMPORAL
            [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
             x64_stepTheory.read_mem64, combinTheory.I_THM]
            [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
@@ -292,6 +294,8 @@ val EXTRA_TAC = NO_TAC
 val step = x64_stepLib.x64_step
 val mk_pre_post = x64_mk_pre_post
 
+val () = stateLib.set_temporal false
+val () = stateLib.set_temporal true
 
 val thm = Count.apply x64_spec "48C3"
 val thm = Count.apply x64_spec "440F42C1"
