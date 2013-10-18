@@ -24,7 +24,9 @@ fun lookup ty s nm =
 
 fun read ty s =
   SOME (List.mapPartial
-            (fn n => Option.map (fn r => (n,r)) (lookup ty s n))
+            (fn n => if n = "" then NONE
+                     else
+                       Option.map (fn r => (n,r)) (lookup ty s n))
             (String.fields Char.isSpace s))
   handle HOL_ERR _ => NONE
 
