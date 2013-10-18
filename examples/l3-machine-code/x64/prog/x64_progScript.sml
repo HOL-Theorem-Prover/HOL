@@ -142,49 +142,36 @@ val lemma2 = blastLib.BBLAST_PROVE
      ((63 >< 32) w):word32) /\
      (w2w (((((63 >< 32) w):word32) @@ v):word64) = v)``
 
-val x64_mem32_READ_EXTEND = Q.store_thm("x64_mem32_READ_EXTEND",
-   `SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
-    SPEC m (p * x64_mem64 a w) c (q * x64_mem64 a w)`,
+val tac =
    REPEAT STRIP_TAC
    \\ ONCE_REWRITE_TAC [GSYM lemma]
    \\ SIMP_TAC std_ss [GSYM x64_mem64_APPEND, STAR_ASSOC]
-   \\ SIMP_TAC std_ss [lemma]
-   \\ METIS_TAC [SPEC_FRAME]
-   )
+   \\ SIMP_TAC std_ss [lemma, lemma2]
+   \\ METIS_TAC [SPEC_FRAME, temporal_stateTheory.TEMPORAL_NEXT_FRAME]
+
+val x64_mem32_READ_EXTEND = Q.store_thm("x64_mem32_READ_EXTEND",
+   `SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
+    SPEC m (p * x64_mem64 a w) c (q * x64_mem64 a w)`,
+   tac)
 
 val x64_mem32_WRITE_EXTEND = Q.store_thm("x64_mem32_WRITE_EXTEND",
    `SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
     SPEC m (p * x64_mem64 a w) c
            (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))`,
-   REPEAT STRIP_TAC
-   \\ ONCE_REWRITE_TAC [GSYM lemma]
-   \\ SIMP_TAC std_ss [GSYM x64_mem64_APPEND, STAR_ASSOC]
-   \\ SIMP_TAC std_ss [lemma, lemma2]
-   \\ METIS_TAC [SPEC_FRAME]
-   )
+   tac)
 
 val x64_mem32_TEMPORAL_READ_EXTEND = Q.store_thm
   ("x64_mem32_TEMPORAL_READ_EXTEND",
    `TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
     TEMPORAL_NEXT m (p * x64_mem64 a w) c (q * x64_mem64 a w)`,
-   REPEAT STRIP_TAC
-   \\ ONCE_REWRITE_TAC [GSYM lemma]
-   \\ SIMP_TAC std_ss [GSYM x64_mem64_APPEND, STAR_ASSOC]
-   \\ SIMP_TAC std_ss [lemma]
-   \\ METIS_TAC [temporal_stateTheory.TEMPORAL_NEXT_FRAME]
-   )
+   tac)
 
 val x64_mem32_TEMPORAL_WRITE_EXTEND = Q.store_thm
   ("x64_mem32_TEMPORAL_WRITE_EXTEND",
    `TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
     TEMPORAL_NEXT m (p * x64_mem64 a w) c
                     (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))`,
-   REPEAT STRIP_TAC
-   \\ ONCE_REWRITE_TAC [GSYM lemma]
-   \\ SIMP_TAC std_ss [GSYM x64_mem64_APPEND, STAR_ASSOC]
-   \\ SIMP_TAC std_ss [lemma, lemma2]
-   \\ METIS_TAC [temporal_stateTheory.TEMPORAL_NEXT_FRAME]
-   )
+   tac)
 
 (* ------------------------------------------------------------------------ *)
 
