@@ -684,8 +684,6 @@ local
          (fn tm => if progSyntax.is_cond tm
                       then Conv.RAND_CONV cnv tm
                    else raise ERR "DEPTH_COND_CONV" "")
-   val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
-   val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
    fun NOT_F_CONV tm =
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm

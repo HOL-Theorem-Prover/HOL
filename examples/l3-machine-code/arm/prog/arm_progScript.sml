@@ -193,10 +193,11 @@ val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
                     pred_setTheory.BIGUNION_EMPTY]
     \\ Cases_on `DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))`
     \\ rw [stateTheory.UNION_STAR, arm_instr_star, set_sepTheory.SEP_CLAUSES,
-           TEMPORAL_NEXT_FALSE_PRE,
+           temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
     \\ imp_res_tac arm_instr_star_not_disjoint
-    \\ fs [set_sepTheory.SEP_CLAUSES, TEMPORAL_NEXT_FALSE_PRE,
+    \\ fs [set_sepTheory.SEP_CLAUSES,
+           temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
     )
 

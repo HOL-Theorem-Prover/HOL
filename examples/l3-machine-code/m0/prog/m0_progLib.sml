@@ -21,6 +21,8 @@ val m0_comp_defs = m0_progTheory.component_defs
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
+   val m0_0 =
+      HolKernel.syntax_fns "m0_prog" 1 HolKernel.dest_monop HolKernel.mk_monop
 in
    val m0_1 =
       HolKernel.syntax_fns "m0_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
@@ -29,6 +31,8 @@ in
    val byte = wordsSyntax.mk_int_word_type 8
    val half = wordsSyntax.mk_int_word_type 16
    val word = wordsSyntax.mk_int_word_type 32
+   val (_, _, dest_m0_AIRCR_ENDIANNESS, _) = m0_1 "m0_AIRCR_ENDIANNESS"
+   val (_, mk_data_to_thumb2, _, _) = m0_0 "data_to_thumb2"
    val (_, mk_m0_MEM, dest_m0_MEM, is_m0_MEM) = m0_2 "m0_MEM"
    val (_, mk_m0_REG, dest_m0_REG, is_m0_REG) = m0_2 "m0_REG"
    fun mk_m0_PC v = mk_m0_REG (pc, v)
@@ -122,6 +126,122 @@ in
          (r15_a,
           boolSyntax.rand (stateLib.mk_code_pool (m0_instr_tm, r15, opc)),
           list_mk_imp (a, r15_subst tm))
+      end
+end
+
+local
+   val pc_tm = Term.mk_var ("pc", word)
+
+   val list_mk_add_or_sub =
+      List.foldl
+         (fn ((b, t1), t2) =>
+            if b then wordsSyntax.mk_word_add (t2, t1)
+            else wordsSyntax.mk_word_sub (t2, t1)) pc_tm
+
+   val strip_add_or_sub =
+      let
+         fun iter a t =
+            case Lib.total wordsSyntax.dest_word_add t of
+               SOME (l, r) => iter ((true, r) :: a) l
+             | NONE => (case Lib.total wordsSyntax.dest_word_sub t of
+                           SOME (l, r) => iter ((false, r) :: a) l
+                         | NONE => if t = pc_tm then a else [])
+      in
+         iter []
+      end
+
+   fun is_byte_offset tm =
+      case Lib.total wordsSyntax.uint_of_word tm of
+         SOME i => 1 <= i andalso i <= 3
+       | NONE => false
+
+   val zero_offset = wordsSyntax.mk_wordii (0, 32)
+
+   fun dest_pc_relative tm =
+      case Lib.total ((strip_add_or_sub ## Lib.I) o dest_m0_MEM) tm of
+         SOME (l as _ :: _, d) =>
+            let
+               val (b, tm) = List.last l
+            in
+               SOME (if b andalso is_byte_offset tm
+                        then (tm, d, list_mk_add_or_sub (Lib.butlast l))
+                     else (zero_offset, d, list_mk_add_or_sub l))
+            end
+       | _ => NONE
+
+   val part_pc_relative =
+      utilsLib.classes (fn ((_, _, a), (_, _, b)) => a = b) o
+      (List.foldl (fn (tm, a) => case dest_pc_relative tm of
+                                    SOME x => x :: a
+                                  | NONE => a) [])
+
+   fun get i =
+      let
+         val tm = wordsSyntax.mk_wordii (i, 32)
+      in
+         fn l =>
+            case List.find (fn (j, _, _: term) => j = tm) l of
+               SOME (_, d, _) => d
+             | NONE => raise ERR "extend_m0_code_pool"
+                                 ("missing byte: " ^ Int.toString i)
+      end
+
+   val w = Term.mk_var ("w", word)
+   val i8 = fcpSyntax.mk_int_numeric_type 8
+
+   fun mk_byte (h, l) =
+      let
+         val hi = numSyntax.term_of_int h
+         val li = numSyntax.term_of_int l
+      in
+         fn w => wordsSyntax.mk_word_extract (hi, li, w, i8)
+      end
+
+   val b0 = mk_byte (31, 24)
+   val b1 = mk_byte (23, 16)
+   val b2 = mk_byte (15, 8)
+   val b3 = mk_byte (7, 0)
+
+   fun is_big_end tm =
+      case Lib.total dest_m0_AIRCR_ENDIANNESS tm of
+         SOME t => t = boolSyntax.T
+       | NONE => false
+
+   fun move_to_code ((a, w), thm) =
+      REWRITE_RULE
+        [stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
+         set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
+         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_TEMPORAL_M0_CODE_POOL,
+         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_M0_CODE_POOL,
+         disjoint_m0_instr_thms, m0_stepTheory.concat_bytes] thm
+
+   val (_, mk_reverse_endian, _, _) =
+      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
+        "reverse_endian"
+in
+   fun extend_m0_code_pool thm =
+      let
+         val (p, q) = temporal_stateSyntax.dest_pre_post' (Thm.concl thm)
+         val lp = progSyntax.strip_star p
+         (*
+         val p_pc as [l as [(_, _, a), _, _, _]] = part_pc_relative lp
+         *)
+      in
+         case part_pc_relative lp of
+            p_pc as [l as [(_, _, a), _, _, _]] =>
+               if List.all (op =)
+                   (ListPair.zip
+                      (p_pc, part_pc_relative (progSyntax.strip_star q)))
+                  then let (* it's a well-formed load *)
+                          val e = List.exists is_big_end lp
+                          val we = if e then mk_reverse_endian w else w
+                          val s = [get 0 l |-> b3 we, get 1 l |-> b2 we,
+                                   get 2 l |-> b1 we, get 3 l |-> b0 we]
+                       in
+                          move_to_code ((a, we), Thm.INST s thm)
+                       end
+               else thm
+          | _ => thm
       end
 end
 
@@ -438,7 +558,7 @@ in
       m0_PC_bump_intro o
       stateLib.introduce_triple_definition (false, m0_PC_def) o
       stateLib.introduce_triple_definition (true, m0_CONFIG_def) o
-      (* extend_m0_code_pool o *)
+      extend_m0_code_pool o
       m0_rename
 end
 
@@ -471,17 +591,14 @@ local
    val PRE_COND_CONV =
       helperLib.PRE_CONV
          (DEPTH_COND_CONV
-             (WGROUND_RW_CONV
-              THENC REWRITE_CONV [m0_stepTheory.Aligned_numeric]
+             (REWRITE_CONV [m0_stepTheory.Aligned_numeric]
               THENC NOT_F_CONV))
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
+      THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC helperLib.PRE_CONV WGROUND_RW_CONV
-      THENC OPC_CONV (Conv.RAND_CONV bitstringLib.v2w_n2w_CONV)
-      THENC helperLib.POST_CONV
-               (WGROUND_RW_CONV THENC stateLib.PC_CONV "m0_prog$m0_PC")
+      THENC helperLib.POST_CONV (stateLib.PC_CONV "m0_prog$m0_PC")
 in
    fun simp_triple_rule thm =
       m0_rename (Conv.CONV_RULE cnv thm)
@@ -510,7 +627,8 @@ in
             then r l
          else t
       end
-   val get_code = snd o pairSyntax.dest_pair o hd o pred_setSyntax.strip_set o
+   val get_code = snd o pairSyntax.dest_pair o List.last o
+                  pred_setSyntax.strip_set o
                   temporal_stateSyntax.dest_code' o Thm.concl
    fun get_opcode bigend = mk_thumb2_pair bigend o boolSyntax.rand o get_code
 end

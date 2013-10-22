@@ -1865,9 +1865,14 @@ fun memEV ctxt tm =
        PC_rwt, IncPC_rwt, write'R_name_rwt, R_name_rwt,
        m0_stepTheory.R_x_not_pc, m0Theory.offset_case_def,
        pairTheory.pair_case_thm, Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt]
+       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt,
+       Align4_base_pc_plus]
       [[``t <> 13w:word4``]] ctxt tm
-    |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []))
+    |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                   (REWRITE_CONV []
+                    THENC utilsLib.INST_REWRITE_CONV
+                             [Aligned4_base_pc_plus]
+                    THENC REWRITE_CONV [Aligned_base_pc_lit]))
     |> addThms
 
 (* ---------------------------- *)
@@ -1879,7 +1884,8 @@ val LoadWord_rwt =
 
 val LoadLiteral_rwt =
    memEV []
-     ``dfn'LoadLiteral (t, imm32)``
+     ``dfn'LoadLiteral
+         (t, w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10))``
 
 (* ---------------------------- *)
 
@@ -1983,7 +1989,7 @@ local
    fun is_ineq tm =
       boolSyntax.is_eq (boolSyntax.dest_neg tm) handle HOL_ERR _ => false
 in
-   fun eval_thumb (be,sel) =
+   fun eval_thumb (be, sel) =
       let
          val tms = endian be @ spsel sel
          val ftch = fetch be

@@ -114,6 +114,10 @@ val R_x_pc = Q.store_thm("R_x_pc",
    \\ asm_simp_tac (srw_ss()) [R_name_def, DISCH_ALL R_x_not_pc]
    )
 
+val reverse_endian_def = Define`
+   reverse_endian (w: word32) =
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
+
 (* ------------------------------------------------------------------------ *)
 
 val notoverflow = METIS_PROVE [integer_wordTheory.overflow]
@@ -500,6 +504,27 @@ val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
    \\ blastLib.FULL_BBLAST_TAC
    )
 
+val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Aligned (pc + (x + 4w), 4) = Aligned (x, 4))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Align (pc + 4w, 4) + x = pc + (x + 4w))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_base_pc_lit = Q.store_thm("Aligned_base_pc_lit",
+   `Aligned
+       (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
+   simp [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val BIT_lem = Q.prove(
@@ -720,6 +745,16 @@ val get_bytes = Q.store_thm("get_bytes",
              b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word16) =
      v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)`,
    blastLib.BBLAST_TAC
+   )
+
+val concat_bytes = Q.store_thm("concat_bytes",
+   `(!w: word32.
+       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
+    (!w: word32.
+       (7 >< 0) (reverse_endian w) @@ (15 >< 8) (reverse_endian w) @@
+       (23 >< 16) (reverse_endian w) @@ (31 >< 24) (reverse_endian w) = w)`,
+   rw [reverse_endian_def]
+   \\ blastLib.BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)
