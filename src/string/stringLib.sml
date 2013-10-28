@@ -10,53 +10,79 @@ val ERR = mk_HOL_ERR "stringLib";
      Conversions.
  ---------------------------------------------------------------------------*)
 
-local
-   val bound = numSyntax.term_of_int 256
-   fun cond m = EQT_ELIM (numLib.REDUCE_CONV (numSyntax.mk_less (m, bound)))
-   fun lemma m = EQ_MP (Thm.SPEC m stringTheory.ORD_CHR) (cond m)
-in
-   val ORD_CHR_CONV = lemma o stringSyntax.dest_chr o stringSyntax.dest_ord
-end
+val ORD_CHR_CONV =
+   let
+      val bound = numSyntax.term_of_int 256
+      fun lt_thm m =
+         Drule.EQT_ELIM (reduceLib.LT_CONV (numSyntax.mk_less (m, bound)))
+      fun lemma m = Thm.EQ_MP (Thm.SPEC m stringTheory.ORD_CHR) (lt_thm m)
+   in
+      lemma o stringSyntax.dest_chr o stringSyntax.dest_ord
+   end
 
 fun refl_clause ty = Thm.INST_TYPE [Type.alpha |-> ty] boolTheory.REFL_CLAUSE
 
 val char_EQ_CONV =
    let
-      open computeLib
-      val compset = reduceLib.num_compset ()
-      val _ = add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV) compset
-      val _ = add_thms [stringTheory.CHAR_EQ_THM] compset
-      val conv = CBV_CONV compset
-      val REFL_CLAUSE_char = refl_clause stringSyntax.char_ty
+      val conv = Conv.REWR_CONV stringTheory.CHAR_EQ_THM
+                 THENC Conv.BINOP_CONV ORD_CHR_CONV
+                 THENC reduceLib.NEQ_CONV
+      val refl_clause_char = refl_clause stringSyntax.char_ty
       val is_char_lit = Lib.can stringSyntax.fromHOLchar
+      val err = ERR "char_EQ_CONV" "not a ground char equality"
    in
       fn tm =>
-         case Lib.total dest_eq tm of
-            NONE => raise ERR "char_EQ_CONV" "not a char equality"
-          | SOME (c1, c2) =>
-               if is_char_lit c1 andalso is_char_lit c2
-                  then if c1 = c2 then SPEC c1 REFL_CLAUSE_char else conv tm
-               else raise ERR "char_EQ_CONV" "not a char equality"
+         let
+            val (c1, c2) = Lib.with_exn boolSyntax.dest_eq tm err
+            val _ = is_char_lit c1 andalso is_char_lit c2 orelse raise err
+         in
+            if c1 = c2 then Thm.SPEC c1 refl_clause_char else conv tm
+         end
    end
 
-val string_EQ_CONV =
-   let
-      open computeLib
-      val compset = listSimps.list_compset ()
-      val _ = add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV) compset
-      val _ = add_thms [stringTheory.CHAR_EQ_THM] compset
-      val conv = CBV_CONV compset
-      val REFL_CLAUSE_string = refl_clause stringSyntax.string_ty
-   in
-      fn tm =>
-         case total dest_eq tm of
-            NONE => raise ERR "string_EQ_CONV" "not a string equality"
-          | SOME (s1, s2) =>
-                if stringSyntax.is_string_literal s1
-                   andalso stringSyntax.is_string_literal s2
-                   then if s1 = s2 then SPEC s1 REFL_CLAUSE_string else conv tm
-                else raise ERR "string_EQ_CONV" "not a string equality"
-   end
+local
+   val inst_to_string = Thm.INST_TYPE [Type.alpha |-> stringSyntax.char_ty]
+   val cons_11_s = inst_to_string listTheory.CONS_11
+   val not_cons_nil_s = inst_to_string listTheory.NOT_CONS_NIL
+   val not_nil_cons_s = inst_to_string listTheory.NOT_NIL_CONS
+   val refl_clause_string = refl_clause stringSyntax.string_ty
+   val total_dest_cons = Lib.total listSyntax.dest_cons
+   fun eqf_spec (a, b) = Drule.EQF_INTRO o Drule.SPECL [a, b]
+   val err = ERR "string_EQ_CONV" "not a ground string equality"
+   val bool_conv = REWRITE_CONV []
+   fun string_EQ_CONV' tm =
+      let
+         val (c1, c2) = Lib.with_exn boolSyntax.dest_eq tm err
+      in
+         if c1 = c2
+            then Thm.SPEC c1 refl_clause_string
+         else case (total_dest_cons c1, total_dest_cons c2) of
+                 (SOME (a, b), NONE) => eqf_spec (b, a) not_cons_nil_s
+               | (NONE, SOME (a, b)) => eqf_spec (b, a) not_nil_cons_s
+               | (SOME (a, b), SOME (c, d)) =>
+                   let
+                      val c_th = char_EQ_CONV (boolSyntax.mk_eq (a, c))
+                      val th = Drule.SPECL [a, b, c, d] cons_11_s
+                   in
+                      if boolSyntax.rhs (Thm.concl c_th) = boolSyntax.T
+                         then Conv.RIGHT_CONV_RULE
+                                 (Conv.FORK_CONV (Lib.K c_th, string_EQ_CONV')
+                                  THENC bool_conv) th
+                      else Conv.RIGHT_CONV_RULE
+                              (Conv.LAND_CONV (Lib.K c_th) THENC bool_conv) th
+                   end
+               | _ => raise err
+      end
+in
+   fun string_EQ_CONV tm =
+      let
+         val (l, r) = Lib.with_exn boolSyntax.dest_eq tm err
+         val _ = stringSyntax.is_string_literal l andalso
+                 stringSyntax.is_string_literal r orelse raise err
+      in
+         string_EQ_CONV' tm
+      end
+end
 
 val () = computeLib.add_funs [stringTheory.IMPLODE_EXPLODE_I]
 val () = computeLib.add_convs [(stringSyntax.ord_tm, 1, ORD_CHR_CONV)]
