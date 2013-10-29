@@ -1385,11 +1385,14 @@ fun SEP_R_TAC (hs,goal) = let
   fun app [] = [] | app (x::xs) = x @ app xs
   val xs = app (map (fn x => (map (fn y => (dest_pair(cdr y),dest_pair(cdr (cdr x)))) o
                               filter is_one_pair o list_dest dest_star o car) x) xs)
-  fun get_tac ((a,x),(f,df)) = let
-    val goal = mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
-    in [ANTIQUOTE goal] by ALL_TAC THEN1 SEP_READ_TAC
-       THEN NTAC 2 (POP_ASSUM (fn th => FULL_SIMP_TAC pure_ss [th])) end
-  in EVERY (map get_tac xs) (hs,goal) end;
+  fun get_goal ((a,x),(f,df)) =
+    mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
+  val all_goals = list_mk_conj (map get_goal xs)
+  val n = list_dest dest_conj all_goals |> length
+  val tac = [ANTIQUOTE all_goals] by (SEP_READ_TAC THEN NO_TAC)
+            THEN FULL_SIMP_TAC pure_ss []
+            THEN NTAC n (POP_ASSUM (K ALL_TAC))
+  in tac (hs,goal) end;
 
 fun INST_MATCH name th [] = fail()
   | INST_MATCH name th (tm::tms) = let
