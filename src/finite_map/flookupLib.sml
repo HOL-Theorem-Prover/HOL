@@ -1,7 +1,7 @@
 structure flookupLib :> flookupLib =
 struct
 
-open finite_mapSyntax
+open HolKernel boolLib bossLib finite_mapSyntax
 
 fun memoize size cmp f =
    let
