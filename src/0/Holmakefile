@@ -28,14 +28,14 @@ Type.ui: Type.sig $(FTYPE_UID) KernelTypes.ui
 	$(HOLMOSMLC) -c $(FTYPE_UI) $<
 
 Net.uo: Net.sml Term.uo Raw-sig.uo
-	HOLMOSMLC -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
+	$(HOLMOSMLC) -c -toplevel Raw-sig.ui Type.ui Term.ui Net.sml
 
 Thm.ui: Thm.sig KernelTypes.ui $(FTHM_UID)
 	$(HOLMOSMLC) -c $(FTHM_UI) $<
 
 CoreKernel-sig.uo: CoreKernel-sig.sml Net-sig.uo Thm.uo \
                    $(FTAG_UID) $(FTERM_UID) $(FTHM_UID) $(TAG_UID)
-	HOLMOSMLC -c -toplevel $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FTHM_UI) \
+	$(HOLMOSMLC) -c -toplevel $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FTHM_UI) \
                                Net-sig.ui CoreKernel-sig.sml
 
 Net-sig.uo: Net-sig.sml
@@ -43,6 +43,5 @@ Net-sig.uo: Net-sig.sml
 
 Overlay.uo: Overlay.sml CoreKernel-sig.uo Type.uo Term.uo $(FTAG_UID) Thm.uo \
             Net.uo
-	HOLMOSMLC -c -toplevel CoreKernel-sig.ui Type.ui Term.ui \
+	$(HOLMOSMLC) -c -toplevel CoreKernel-sig.ui Type.ui Term.ui \
 	                       Thm.ui $(FTAG_UI) Net.ui  Overlay.sml
-
