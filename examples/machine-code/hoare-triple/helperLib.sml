@@ -1388,10 +1388,11 @@ fun SEP_R_TAC (hs,goal) = let
   fun get_goal ((a,x),(f,df)) =
     mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
   val all_goals = list_mk_conj (map get_goal xs)
-  val n = list_dest dest_conj all_goals |> length
+  val goals = list_dest dest_conj all_goals
   val tac = [ANTIQUOTE all_goals] by (SEP_READ_TAC THEN NO_TAC)
             THEN FULL_SIMP_TAC pure_ss []
-            THEN NTAC n (POP_ASSUM (K ALL_TAC))
+            THEN REPEAT (POP_ASSUM
+              (fn th => if mem (concl th) goals then ALL_TAC else NO_TAC))
   in tac (hs,goal) end;
 
 fun INST_MATCH name th [] = fail()
