@@ -1,3 +1,0 @@
-selftest.exe: selftest.uo armLib.uo
-	$(HOLMOSMLC) -o $@ $<
-OPTIONS=QUIT_ON_FAILURE
