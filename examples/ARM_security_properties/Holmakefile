@@ -1,1 +1,1 @@
-INCLUDES = $(HOLDIR)/examples/ARM/v7/
+INCLUDES = $(HOLDIR)/examples/ARM_security_properties/model/
