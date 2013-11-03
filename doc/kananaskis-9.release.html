@@ -69,6 +69,12 @@ The error messages printed by, and the documentation for, <code>new_type_definit
 Thanks to Rob Arthan for the bug report.
 (<a href="http://github.com/mn200/HOL/issues/128">GitHub issue</a>)
 
+<li><p>
+<code>Holmake</code>’s parsing of nested conditional directives (<code>ifdef</code>, <code>ifeq</code>, <code>ifndef</code> <i>etc.</i>) was incorrect.
+
+<li><p>
+Evaluation and simplification were not correctly handling (real valued) terms such as <code>``0 * 1/2``</code> and <code>``1/2 * 0``</code>.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>

@@ -1,4 +1,4 @@
-INCLUDES = ../step ../../common
+INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple ../step ../../common
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY

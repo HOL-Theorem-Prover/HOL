@@ -14,6 +14,7 @@ sig
   val log2_tm        : term
   val mod_2exp_eq_tm : term
   val mod_2exp_tm    : term
+  val mod_2exp_max_tm: term
   val sbit_tm        : term
   val sign_extend_tm : term
   val slice_tm       : term
@@ -30,6 +31,7 @@ sig
   val mk_log2        : term -> term
   val mk_mod_2exp    : term * term -> term
   val mk_mod_2exp_eq : term * term * term -> term
+  val mk_mod_2exp_max: term * term -> term
   val mk_sbit        : term * term -> term
   val mk_sign_extend : term * term * term -> term
   val mk_slice       : term * term * term -> term
@@ -46,6 +48,7 @@ sig
   val dest_log2        : term -> term
   val dest_mod_2exp    : term -> term * term
   val dest_mod_2exp_eq : term -> term * term * term
+  val dest_mod_2exp_max: term -> term * term
   val dest_sbit        : term -> term * term
   val dest_sign_extend : term -> term * term * term
   val dest_slice       : term -> term * term * term
@@ -62,6 +65,7 @@ sig
   val is_log2        : term -> bool
   val is_mod_2exp    : term -> bool
   val is_mod_2exp_eq : term -> bool
+  val is_mod_2exp_max: term -> bool
   val is_sbit        : term -> bool
   val is_sign_extend : term -> bool
   val is_slice       : term -> bool

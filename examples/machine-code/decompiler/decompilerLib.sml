@@ -121,32 +121,7 @@ fun list_union [] xs = xs
   | list_union (y::ys) xs =
       if mem y xs then list_union ys xs else list_union ys (y::xs);
 
-fun strip_string s = let
-  fun strip_space [] = []
-    | strip_space (x::xs) =
-        if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
-  in (implode o rev o strip_space o rev o strip_space o explode) s end;
-
 fun strings_to_qcode strs = [(QUOTE o concat o map (fn x => x ^ "\n")) strs]
-
-fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
-  fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = fail()
-  val xs = explode (get_QUOTE (hd q))
-  fun strip_comments l [] = []
-    | strip_comments l [x] = if 0 < l then [] else [x]
-    | strip_comments l (x::y::xs) =
-        if x = #"(" andalso y = #"*" then strip_comments (l+1) xs else
-        if x = #"*" andalso y = #")" then strip_comments (l-1) xs else
-        if 0 < l    then strip_comments l (y::xs) else x :: strip_comments l (y::xs)
-  fun lines [] [] = []
-    | lines xs [] = [implode (rev xs)]
-    | lines xs (y::ys) =
-        if mem y [#"\n",#"|"]
-        then implode (rev xs) :: lines [] ys
-        else lines (y::xs) ys
-  val zs = lines [] (strip_comments 0 xs)
-  val qs = filter (fn z => not (z = "")) (map strip_string zs)
-  in qs end;
 
 fun append_lists [] = [] | append_lists (x::xs) = x @ append_lists xs
 
@@ -448,7 +423,7 @@ fun abbreviate_code name thms = let
   in thms end
 
 fun stage_1 name tools qcode = let
-  val code = filter (fn x => not (x = "")) (quote_to_strings qcode)
+  val code = filter (fn x => not (x = "")) (helperLib.quote_to_strings qcode)
   val thms = derive_individual_specs tools code
   val thms = inst_pc_var tools thms
   val thms = abbreviate_code name thms

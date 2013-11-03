@@ -21,6 +21,8 @@ val m0_comp_defs = m0_progTheory.component_defs
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
+   val m0_0 =
+      HolKernel.syntax_fns "m0_prog" 1 HolKernel.dest_monop HolKernel.mk_monop
 in
    val m0_1 =
       HolKernel.syntax_fns "m0_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
@@ -29,6 +31,8 @@ in
    val byte = wordsSyntax.mk_int_word_type 8
    val half = wordsSyntax.mk_int_word_type 16
    val word = wordsSyntax.mk_int_word_type 32
+   val (_, _, dest_m0_AIRCR_ENDIANNESS, _) = m0_1 "m0_AIRCR_ENDIANNESS"
+   val (_, mk_data_to_thumb2, _, _) = m0_0 "data_to_thumb2"
    val (_, mk_m0_MEM, dest_m0_MEM, is_m0_MEM) = m0_2 "m0_MEM"
    val (_, mk_m0_REG, dest_m0_REG, is_m0_REG) = m0_2 "m0_REG"
    fun mk_m0_PC v = mk_m0_REG (pc, v)
@@ -125,6 +129,122 @@ in
       end
 end
 
+local
+   val pc_tm = Term.mk_var ("pc", word)
+
+   val list_mk_add_or_sub =
+      List.foldl
+         (fn ((b, t1), t2) =>
+            if b then wordsSyntax.mk_word_add (t2, t1)
+            else wordsSyntax.mk_word_sub (t2, t1)) pc_tm
+
+   val strip_add_or_sub =
+      let
+         fun iter a t =
+            case Lib.total wordsSyntax.dest_word_add t of
+               SOME (l, r) => iter ((true, r) :: a) l
+             | NONE => (case Lib.total wordsSyntax.dest_word_sub t of
+                           SOME (l, r) => iter ((false, r) :: a) l
+                         | NONE => if t = pc_tm then a else [])
+      in
+         iter []
+      end
+
+   fun is_byte_offset tm =
+      case Lib.total wordsSyntax.uint_of_word tm of
+         SOME i => 1 <= i andalso i <= 3
+       | NONE => false
+
+   val zero_offset = wordsSyntax.mk_wordii (0, 32)
+
+   fun dest_pc_relative tm =
+      case Lib.total ((strip_add_or_sub ## Lib.I) o dest_m0_MEM) tm of
+         SOME (l as _ :: _, d) =>
+            let
+               val (b, tm) = List.last l
+            in
+               SOME (if b andalso is_byte_offset tm
+                        then (tm, d, list_mk_add_or_sub (Lib.butlast l))
+                     else (zero_offset, d, list_mk_add_or_sub l))
+            end
+       | _ => NONE
+
+   val part_pc_relative =
+      utilsLib.classes (fn ((_, _, a), (_, _, b)) => a = b) o
+      (List.foldl (fn (tm, a) => case dest_pc_relative tm of
+                                    SOME x => x :: a
+                                  | NONE => a) [])
+
+   fun get i =
+      let
+         val tm = wordsSyntax.mk_wordii (i, 32)
+      in
+         fn l =>
+            case List.find (fn (j, _, _: term) => j = tm) l of
+               SOME (_, d, _) => d
+             | NONE => raise ERR "extend_m0_code_pool"
+                                 ("missing byte: " ^ Int.toString i)
+      end
+
+   val w = Term.mk_var ("w", word)
+   val i8 = fcpSyntax.mk_int_numeric_type 8
+
+   fun mk_byte (h, l) =
+      let
+         val hi = numSyntax.term_of_int h
+         val li = numSyntax.term_of_int l
+      in
+         fn w => wordsSyntax.mk_word_extract (hi, li, w, i8)
+      end
+
+   val b0 = mk_byte (31, 24)
+   val b1 = mk_byte (23, 16)
+   val b2 = mk_byte (15, 8)
+   val b3 = mk_byte (7, 0)
+
+   fun is_big_end tm =
+      case Lib.total dest_m0_AIRCR_ENDIANNESS tm of
+         SOME t => t = boolSyntax.T
+       | NONE => false
+
+   fun move_to_code ((a, w), thm) =
+      REWRITE_RULE
+        [stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
+         set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
+         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_TEMPORAL_M0_CODE_POOL,
+         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_M0_CODE_POOL,
+         disjoint_m0_instr_thms, m0_stepTheory.concat_bytes] thm
+
+   val (_, mk_reverse_endian, _, _) =
+      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
+        "reverse_endian"
+in
+   fun extend_m0_code_pool thm =
+      let
+         val (p, q) = temporal_stateSyntax.dest_pre_post' (Thm.concl thm)
+         val lp = progSyntax.strip_star p
+         (*
+         val p_pc as [l as [(_, _, a), _, _, _]] = part_pc_relative lp
+         *)
+      in
+         case part_pc_relative lp of
+            p_pc as [l as [(_, _, a), _, _, _]] =>
+               if List.all (op =)
+                   (ListPair.zip
+                      (p_pc, part_pc_relative (progSyntax.strip_star q)))
+                  then let (* it's a well-formed load *)
+                          val e = List.exists is_big_end lp
+                          val we = if e then mk_reverse_endian w else w
+                          val s = [get 0 l |-> b3 we, get 1 l |-> b2 we,
+                                   get 2 l |-> b1 we, get 3 l |-> b0 we]
+                       in
+                          move_to_code ((a, we), Thm.INST s thm)
+                       end
+               else thm
+          | _ => thm
+      end
+end
+
 (* -- *)
 
 fun reg_index tm =
@@ -217,8 +337,9 @@ in
 end
 
 val m0_mk_pre_post =
-   stateLib.mk_pre_post m0_stepTheory.NextStateARM_def m0_instr_def
-     m0_proj_def m0_comp_defs mk_m0_code_pool [] m0_write_footprint psort
+   stateLib.mk_pre_post
+      m0_progTheory.M0_MODEL_def m0_comp_defs mk_m0_code_pool []
+      m0_write_footprint psort
 
 (* ------------------------------------------------------------------------ *)
 
@@ -234,8 +355,11 @@ local
          (SIMP_CONV (srw_ss()) [m0_stepTheory.R_name_def])
          (List.map mk_R_main registers @
           [``^R_name_tm F ^sp``, ``^R_name_tm T ^sp``])
+   val rwts = utilsLib.datatype_rewrites "m0" ["RName"]
+   val rwts = List.take (List.drop (rwts, 10), 2)
 in
-   val REG_CONV = Conv.QCONV (REWRITE_CONV [R_main, m0_stepTheory.v2w_ground4])
+   val REG_CONV =
+      Conv.QCONV (REWRITE_CONV (rwts @ [R_main, m0_stepTheory.v2w_ground4]))
    val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 end
 
@@ -328,10 +452,11 @@ local
       List.map
          (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
+   val mk = temporal_stateSyntax.mk_spec_or_temporal_next ``M0_MODEL``
 in
    fun combinations (thm, t) =
       let
-         val (m, p, c, q) = progSyntax.dest_spec t
+         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
          val pl = progSyntax.strip_star p
          val ql = progSyntax.strip_star q
          val rs = mk_assign regs (pl, ql)
@@ -354,8 +479,8 @@ in
                    val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
                 in
                    (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    progSyntax.mk_spec
-                       (m, p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
+                    mk (stateLib.generate_temporal())
+                       (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
                 end) groups
       end
 end
@@ -363,66 +488,96 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val aircr_ty = Type.mk_thy_type {Thy = "m0", Args = [], Tyop = "AIRCR"}
-   fun rename f =
-      let
-         fun g (v, s, t) =
-            case Lib.total (fst o Term.dest_var) v of
-               SOME q => if String.sub (q, 0) = #"%"
-                            then SOME (v |-> (f (s, t): term))
-                         else NONE
-             | NONE => NONE
-      in
-         fn tm =>
-            case boolSyntax.dest_strip_comb tm of
-               ("m0_prog$m0_PSR_N", [v]) => g (v, "n", Type.bool)
-             | ("m0_prog$m0_PSR_Z", [v]) => g (v, "z", Type.bool)
-             | ("m0_prog$m0_PSR_C", [v]) => g (v, "c", Type.bool)
-             | ("m0_prog$m0_PSR_V", [v]) => g (v, "v", Type.bool)
-             | ("m0_prog$m0_AIRCR", [v]) => g (v, "aircr", aircr_ty)
-             | ("m0_prog$m0_count", [v]) => g (v, "count", numSyntax.num)
-             | ("m0_prog$m0_REG", [x, v]) =>
-                  let
-                     val n = reg_index x
-                  in
-                     if n = 15 then NONE else g (v, "r" ^ Int.toString n, word)
-                  end
-             | ("m0_prog$m0_MEM", [_, v]) => SOME (v |-> f ("b", byte))
-             | _ => NONE
-      end
+   val m0_rename1 =
+      Lib.total
+        (fn "m0_prog$m0_PSR_N" => "n"
+          | "m0_prog$m0_PSR_Z" => "z"
+          | "m0_prog$m0_PSR_C" => "c"
+          | "m0_prog$m0_PSR_V" => "v"
+          | "m0_prog$m0_AIRCR_ENDIANNESS" => "endianness"
+          | "m0_prog$m0_CurrentMode" => "mode"
+          | "m0_prog$m0_count" => "count"
+          | _ => fail())
+   val m0_rename2 =
+      Lib.total
+        (fn "m0_prog$m0_REG" => Lib.curry (op ^) "r" o Int.toString o reg_index
+          | "m0_prog$m0_MEM" => K "b"
+          | _ => fail())
 in
-   fun rename_vars thm =
-      let
-         val (_, p, _, _) = progSyntax.dest_spec (Thm.concl thm)
-         val () = stateLib.varReset()
-         val _ = stateLib.gvar "b" Type.bool
-         val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry stateLib.gvar
-         val p = progSyntax.strip_star p
-      in
-         Thm.INST (List.mapPartial (rename avoid) p) thm
-      end
-      handle e as HOL_ERR _ => Raise e
+   val m0_rename = stateLib.rename_vars (m0_rename1, m0_rename2, ["b"])
+end
+
+local
+   val m0_PSR_T_F = List.map UNDISCH (CONJUNCTS m0_progTheory.m0_PSR_T_F)
+   val MOVE_COND_RULE = Conv.CONV_RULE stateLib.MOVE_COND_CONV
+   val SPEC_IMP_RULE =
+      Conv.CONV_RULE
+        (Conv.REWR_CONV (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
+         ORELSEC MOVE_COND_CONV)
+   fun TRY_DISCH_RULE thm =
+      case List.length (Thm.hyp thm) of
+         0 => thm
+       | 1 => MOVE_COND_RULE (Drule.DISCH_ALL thm)
+       | _ => thm |> Drule.DISCH_ALL
+                  |> PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+                  |> MOVE_COND_RULE
+   val flag_introduction =
+      helperLib.MERGE_CONDS_RULE o TRY_DISCH_RULE o PURE_REWRITE_RULE m0_PSR_T_F
+   val eq_conv =
+      SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
+   val memory_introduction =
+      stateLib.introduce_map_definition
+         (m0_progTheory.m0_MEMORY_INSERT, eq_conv)
+   val m0_PC_INTRO0 =
+      m0_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                  |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   val m0_TEMPORAL_PC_INTRO0 =
+      m0_TEMPORAL_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
+                           |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
+   fun MP_m0_PC_INTRO th =
+      Lib.tryfind (fn thm => MATCH_MP thm th)
+         [m0_PC_INTRO, m0_TEMPORAL_PC_INTRO,
+          m0_PC_INTRO0, m0_TEMPORAL_PC_INTRO0]
+   val cnv =
+      REWRITE_CONV [m0_stepTheory.Aligned_numeric,
+                    m0_stepTheory.Aligned_Branch,
+                    m0_stepTheory.Aligned_LoadStore]
+   val m0_PC_bump_intro =
+      SPEC_IMP_RULE o
+      Conv.CONV_RULE (Conv.LAND_CONV cnv) o
+      MP_m0_PC_INTRO o
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``m0_REG RName_PC``))
+in
+   val gp_introduction =
+      stateLib.introduce_map_definition
+         (m0_progTheory.m0_REGISTERS_INSERT, Conv.ALL_CONV)
+   val m0_rule =
+      memory_introduction o
+      flag_introduction o
+      m0_PC_bump_intro o
+      stateLib.introduce_triple_definition (false, m0_PC_def) o
+      stateLib.introduce_triple_definition (true, m0_CONFIG_def) o
+      extend_m0_code_pool o
+      m0_rename
 end
 
 local
    fun check_unique_reg_CONV tm =
       let
-         val (_, p, _, _) = progSyntax.dest_spec tm
-         val p = progSyntax.strip_star p
+         val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_m0_REG)) p
       in
          if Lib.mk_set rp = rp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
-   val PRE_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
    fun DEPTH_COND_CONV cnv =
       Conv.ONCE_DEPTH_CONV
         (fn tm =>
             if progSyntax.is_cond tm
                then Conv.RAND_CONV cnv tm
             else raise ERR "COND_CONV" "")
-   val POST_CONV = Conv.RAND_CONV
    val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
@@ -434,22 +589,48 @@ local
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
-      PRE_CONV
+      helperLib.PRE_CONV
          (DEPTH_COND_CONV
-             (WGROUND_RW_CONV
-              THENC REWRITE_CONV [m0_stepTheory.Aligned_numeric]
+             (REWRITE_CONV [m0_stepTheory.Aligned_numeric]
               THENC NOT_F_CONV))
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
+      THENC WGROUND_RW_CONV
       THENC PRE_COND_CONV
-      THENC PRE_CONV WGROUND_RW_CONV
-      THENC OPC_CONV (Conv.RAND_CONV bitstringLib.v2w_n2w_CONV)
-      THENC POST_CONV WGROUND_RW_CONV
+      THENC helperLib.POST_CONV (stateLib.PC_CONV "m0_prog$m0_PC")
 in
    fun simp_triple_rule thm =
-      rename_vars (Conv.CONV_RULE cnv thm)
+      m0_rename (Conv.CONV_RULE cnv thm)
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
+end
+
+local
+   fun mk_bool_list l = listSyntax.mk_list (l, Type.bool)
+   fun reverse_end b l =
+      mk_bool_list (if b then List.drop (l, 8) @ List.take (l, 8) else l)
+in
+   fun mk_thumb2_pair bigend tm =
+      let
+         val t = fst (bitstringSyntax.dest_v2w tm)
+         val l = fst (listSyntax.dest_list t)
+         val r = reverse_end bigend
+      in
+         if 16 < List.length l
+            then let
+                    val l1 = List.take (l, 16)
+                    val l2 = List.drop (l, 16)
+                 in
+                    pairSyntax.mk_pair (r l1, r l2)
+                 end
+         else if bigend
+            then r l
+         else t
+      end
+   val get_code = snd o pairSyntax.dest_pair o List.last o
+                  pred_setSyntax.strip_set o
+                  temporal_stateSyntax.dest_code' o Thm.concl
+   fun get_opcode bigend = mk_thumb2_pair bigend o boolSyntax.rand o get_code
 end
 
 local
@@ -467,8 +648,10 @@ local
       List.drop (utilsLib.datatype_rewrites "m0" ["m0_state", "PSR"], 1)
    val STATE_TAC = ASM_REWRITE_TAC m0_rwts
    val spec =
+      m0_rule o
       stateLib.spec
            m0_progTheory.M0_IMP_SPEC
+           m0_progTheory.M0_IMP_TEMPORAL_NEXT
            [m0_stepTheory.get_bytes]
            []
            (m0_select_state_pool_thm :: m0_select_state_thms)
@@ -520,42 +703,15 @@ local
       end
    val bigend = ref false
    val the_spec = ref (m0_spec_opt (!bigend, false))
-   fun mk_bool_list l = listSyntax.mk_list (l, Type.bool)
-   fun reverse_end b l =
-      mk_bool_list (if b then List.drop (l, 8) @ List.take (l, 8) else l)
-   fun mk_thumb2_pair tm =
-      let
-         val l = fst (listSyntax.dest_list tm)
-         val r = reverse_end (!bigend)
-      in
-         if 16 < List.length l
-            then let
-                    val l1 = List.take (l, 16)
-                    val l2 = List.drop (l, 16)
-                 in
-                    pairSyntax.mk_pair (r l1, r l2)
-                 end
-         else if !bigend
-            then r l
-         else tm
-      end
-   fun get_opcode thm =
-      let
-         val (_, _, c, _) = progSyntax.dest_spec (Thm.concl thm)
-      in
-         c |> pred_setSyntax.strip_set |> hd
-           |> pairSyntax.dest_pair |> snd
-           |> boolSyntax.rand
-           |> bitstringSyntax.dest_v2w |> fst
-           |> mk_thumb2_pair
-      end
-   val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
-   val add1 = utilsLib.add_to_rw_net get_opcode
+   val spec_label_set = ref (Redblackset.empty String.compare)
+   fun get_opc thm = get_opcode (!bigend) thm
+   val spec_rwts = ref (utilsLib.mk_rw_net get_opc [])
+   val add1 = utilsLib.add_to_rw_net get_opc
    val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
    fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
    fun spec_spec opc thm =
       let
-         val thm_opc = get_opcode thm
+         val thm_opc = get_opc thm
          val a = fst (Term.match_term thm_opc opc)
       in
          simp_triple_rule (Thm.INST a thm)
@@ -565,37 +721,46 @@ in
    fun m0_config opt =
       (the_spec := m0_spec_opt opt
        ; bigend := fst opt
-       ; spec_rwts := utilsLib.mk_rw_net get_opcode [])
+       ; spec_rwts := LVTermNet.empty
+       ; spec_label_set := Redblackset.empty String.compare)
    fun m0_spec s = (!the_spec) s
-   fun addInstructionClass s = (print s ; add_specs (m0_spec s))
-   fun m0_spec_hex looped =
-      (* utilsLib.cache 1000 String.compare *)
-        (fn s =>
-            let
-               val opc = m0_stepLib.hex_to_bits s
-            in
-               case find_spec opc of
-                  SOME thms =>
-                    let
-                       val l = List.mapPartial (Lib.total (spec_spec opc)) thms
-                    in
-                       if List.null l
-                          then loop looped opc "failed to find suitable spec" s
-                       else l
-                    end
-                | NONE => loop looped opc "failed to add suitable spec" s
-            end)
+   fun addInstructionClass s =
+      if Redblackset.member (!spec_label_set, s)
+         then false
+      else (print (" " ^ s)
+            ; add_specs (m0_spec s)
+            ; spec_label_set := Redblackset.add (!spec_label_set, s)
+            ; true)
+   fun m0_spec_hex looped s =
+      let
+         val opc = m0_stepLib.hex_to_bits s
+      in
+         case find_spec opc of
+            SOME thms =>
+              let
+                 val l = List.mapPartial (Lib.total (spec_spec opc)) thms
+              in
+                 if List.null l
+                    then loop looped opc "failed to find suitable spec" s
+                 else l
+              end
+          | NONE => loop looped opc "failed to add suitable spec" s
+      end
     and loop looped opc e s =
-       if looped
+       if looped orelse
+          not (addInstructionClass (m0_stepLib.thumb_instruction opc))
           then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
-       else (addInstructionClass (m0_stepLib.thumb_instruction opc)
-             ; m0_spec_hex true s)
+       else m0_spec_hex true s
     val m0_spec_hex = m0_spec_hex false
 end
 
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
+
+val () = m0_config (false, false)
+val () = stateLib.set_temporal true
+val () = stateLib.set_temporal false
 
 local
    val gen = Random.newgenseed 1.0
@@ -640,7 +805,9 @@ m0_spec_hex "C205"
 val s = m0_stepLib.thumb_instruction (m0_stepLib.hex_to_bits ("C205"))
 step s
 
-m0_config (true, true) (* not working -- need to swap in get_opcode *)
+m0_config (false, false)
+m0_config (true, true)
+
 m0_spec "B.W"
 
 m0_spec "BL"

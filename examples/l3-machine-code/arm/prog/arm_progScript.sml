@@ -1,5 +1,6 @@
 open HolKernel boolLib bossLib
-open lcsymtacs blastLib stateLib arm_stepTheory
+open lcsymtacs blastLib stateLib
+open set_sepTheory progTheory temporal_stateTheory arm_stepTheory
 
 infix \\
 val op \\ = op THEN;
@@ -14,8 +15,6 @@ val _ =
       [["undefined"], ["CurrentCondition"], ["Encoding"]]
       arm_stepTheory.NextStateARM_def
 
-val arm_MEM_def = DB.definition "arm_MEM_def"
-
 val arm_instr_def = Define`
    arm_instr (a, i: word32) =
    { (arm_c_MEM a, arm_d_word8 ((7 >< 0) i));
@@ -23,11 +22,116 @@ val arm_instr_def = Define`
      (arm_c_MEM (a + 2w), arm_d_word8 ((23 >< 16) i));
      (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }`;
 
+val ARM_MODEL_def = Define`
+   ARM_MODEL = (STATE arm_proj, NEXT_REL (=) NextStateARM, arm_instr,
+                ($= :arm_state -> arm_state -> bool))`;
+
 val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
-   Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`] stateTheory.IMP_SPEC
+   stateTheory.IMP_SPEC
+   |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`]
+   |> REWRITE_RULE [GSYM ARM_MODEL_def]
+   )
+
+val ARM_IMP_TEMPORAL = Theory.save_thm ("ARM_IMP_TEMPORAL",
+   temporal_stateTheory.IMP_TEMPORAL
+   |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`]
+   |> REWRITE_RULE [GSYM ARM_MODEL_def]
    )
 
 (* ------------------------------------------------------------------------ *)
+
+(* Aliases *)
+
+val arm_FP_REG_def = DB.definition "arm_FP_REG_def"
+val arm_REG_def = DB.definition "arm_REG_def"
+val arm_MEM_def = DB.definition "arm_MEM_def"
+
+val (arm_FP_REGISTERS_def, arm_FP_REGISTERS_INSERT) =
+   stateLib.define_map_component ("arm_FP_REGISTERS", "fpr", arm_FP_REG_def)
+
+val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
+   stateLib.define_map_component ("arm_REGISTERS", "reg", arm_REG_def)
+
+val (arm_MEMORY_def, arm_MEMORY_INSERT) =
+   stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
+
+val arm_CONFIG_def = Define`
+   arm_CONFIG (vfp, arch, bigend, thumb, mode) =
+      arm_Extensions Extension_VFP vfp *
+      arm_Extensions Extension_Security F *
+      arm_Architecture arch *
+      arm_exception NoException * arm_CPSR_J F *
+      arm_CPSR_E bigend * arm_CPSR_T thumb *
+      arm_CPSR_M mode * cond (GoodMode mode)`;
+
+val arm_PC_def = Define`
+   arm_PC pc = arm_REG RName_PC pc * cond (Aligned (pc,4))`;
+
+val aS_def = Define `
+   aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v`;
+
+(* ------------------------------------------------------------------------ *)
+
+val aS_HIDE = Q.store_thm("aS_HIDE",
+   `~aS = ~arm_CPSR_N * ~arm_CPSR_Z * ~arm_CPSR_C * ~arm_CPSR_V`,
+   SIMP_TAC std_ss [SEP_HIDE_def, aS_def, SEP_CLAUSES, FUN_EQ_THM]
+   \\ SIMP_TAC std_ss [SEP_EXISTS]
+   \\ METIS_TAC [aS_def, pairTheory.PAIR]
+   )
+
+val arm_CPSR_T_F = Q.store_thm("arm_CPSR_T_F",
+   `( n ==> (arm_CPSR_N T = arm_CPSR_N n)) /\
+    (~n ==> (arm_CPSR_N F = arm_CPSR_N n)) /\
+    ( z ==> (arm_CPSR_Z T = arm_CPSR_Z z)) /\
+    (~z ==> (arm_CPSR_Z F = arm_CPSR_Z z)) /\
+    ( c ==> (arm_CPSR_C T = arm_CPSR_C c)) /\
+    (~c ==> (arm_CPSR_C F = arm_CPSR_C c)) /\
+    ( v ==> (arm_CPSR_V T = arm_CPSR_V v)) /\
+    (~v ==> (arm_CPSR_V F = arm_CPSR_V v))`,
+    simp []
+    )
+
+(* ------------------------------------------------------------------------ *)
+
+val arm_PC_INTRO = Q.store_thm("arm_PC_INTRO",
+   `SPEC m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
+    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    SPEC m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC std_ss [arm_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
+   )
+
+val arm_TEMPORAL_PC_INTRO = Q.store_thm("arm_TEMPORAL_PC_INTRO",
+   `TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_REG RName_PC pc') ==>
+    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    TEMPORAL_NEXT m (p1 * arm_PC pc) code (p2 * arm_PC pc')`,
+   REPEAT STRIP_TAC
+   \\ FULL_SIMP_TAC std_ss
+         [arm_PC_def, TEMPORAL_NEXT_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
+   )
+
+fun mk_addr (b, s) =
+   List.tabulate
+      (25, fn i => if i < 2 then b
+                   else Term.mk_var (s ^ Int.toString i, Type.bool))
+   |> (fn l => bitstringSyntax.mk_v2w
+                  (listSyntax.mk_list (List.rev l, Type.bool), ``:32``))
+
+val x = mk_addr (boolSyntax.T, "x")
+val y = mk_addr (boolSyntax.F, "y")
+
+val Aligned_Branch = Q.store_thm("Aligned_Branch",
+   `(Aligned (pc:word32, 4) ==>
+     Aligned ((if b then pc - (^x + 1w) else pc + ^y), 4)) = T`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+(* ------------------------------------------------------------------------ *)
+
+(*
+  Theorems for moving literal loads (e.g. ldr r1, [pc, #4]) into the code pool
+*)
 
 val arm_instr_star = Q.prove(
    `!a w.
@@ -61,9 +165,10 @@ val arm_instr_star_not_disjoint = Q.prove(
    \\ fs [pred_setTheory.INSERT_INTER]
    )
 
-val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
+val MOVE_TO_TEMPORAL_ARM_CODE_POOL = Q.store_thm
+  ("MOVE_TO_TEMPORAL_ARM_CODE_POOL",
    `!a w c p q.
-       SPEC (STATE arm_proj, NEXT_REL $= NextStateARM, arm_instr, $=)
+       TEMPORAL_NEXT ARM_MODEL
         (p *
          arm_MEM a ((7 >< 0) w) *
          arm_MEM (a + 1w) ((15 >< 8) w) *
@@ -75,14 +180,51 @@ val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
          arm_MEM (a + 1w) ((15 >< 8) w) *
          arm_MEM (a + 2w) ((23 >< 16) w) *
          arm_MEM (a + 3w) ((31 >< 24) w)) =
-       SPEC (STATE arm_proj, NEXT_REL $= NextStateARM, arm_instr, $=)
+       TEMPORAL_NEXT ARM_MODEL
+        (cond (DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))) * p)
+        ((a, w) INSERT c)
+        q`,
+    REPEAT strip_tac
+    \\ once_rewrite_tac [GSYM temporal_stateTheory.TEMPORAL_NEXT_CODE]
+    \\ rewrite_tac [ARM_MODEL_def, stateTheory.CODE_POOL,
+                    pred_setTheory.IMAGE_INSERT,
+                    pred_setTheory.IMAGE_EMPTY,
+                    pred_setTheory.BIGUNION_INSERT,
+                    pred_setTheory.BIGUNION_EMPTY]
+    \\ Cases_on `DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))`
+    \\ rw [stateTheory.UNION_STAR, arm_instr_star, set_sepTheory.SEP_CLAUSES,
+           temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
+           AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
+    \\ imp_res_tac arm_instr_star_not_disjoint
+    \\ fs [set_sepTheory.SEP_CLAUSES,
+           temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
+           AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
+    )
+
+val MOVE_TO_ARM_CODE_POOL = Q.store_thm("MOVE_TO_ARM_CODE_POOL",
+   `!a w c p q.
+       SPEC ARM_MODEL
+        (p *
+         arm_MEM a ((7 >< 0) w) *
+         arm_MEM (a + 1w) ((15 >< 8) w) *
+         arm_MEM (a + 2w) ((23 >< 16) w) *
+         arm_MEM (a + 3w) ((31 >< 24) w))
+        c
+        (q *
+         arm_MEM a ((7 >< 0) w) *
+         arm_MEM (a + 1w) ((15 >< 8) w) *
+         arm_MEM (a + 2w) ((23 >< 16) w) *
+         arm_MEM (a + 3w) ((31 >< 24) w)) =
+       SPEC ARM_MODEL
         (cond (DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))) * p)
         ((a, w) INSERT c)
         q`,
     REPEAT strip_tac
     \\ once_rewrite_tac [GSYM progTheory.SPEC_CODE]
-    \\ rewrite_tac [stateTheory.CODE_POOL, pred_setTheory.IMAGE_INSERT,
-                    pred_setTheory.IMAGE_EMPTY, pred_setTheory.BIGUNION_INSERT,
+    \\ rewrite_tac [ARM_MODEL_def, stateTheory.CODE_POOL,
+                    pred_setTheory.IMAGE_INSERT,
+                    pred_setTheory.IMAGE_EMPTY,
+                    pred_setTheory.BIGUNION_INSERT,
                     pred_setTheory.BIGUNION_EMPTY]
     \\ Cases_on `DISJOINT (arm_instr (a, w)) (BIGUNION (IMAGE arm_instr c))`
     \\ rw [stateTheory.UNION_STAR, arm_instr_star, set_sepTheory.SEP_CLAUSES,

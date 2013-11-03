@@ -21,6 +21,11 @@ val (spec_tm, mk_spec, dest_spec, is_spec) =
    HolKernel.syntax_fns "prog" 4 HolKernel.dest_quadop HolKernel.mk_quadop
       "SPEC"
 
+fun dest_pre tm = let val (_, p, _, _) = dest_spec tm in p end
+fun dest_code tm = let val (_, _, c, _) = dest_spec tm in c end
+fun dest_post tm = let val (_, _, _, q) = dest_spec tm in q end
+fun dest_pre_post tm = let val (_, p, _, q) = dest_spec tm in (p, q) end
+
 (* ----------------------------------------------------------------------- *)
 
 end

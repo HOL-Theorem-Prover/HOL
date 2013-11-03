@@ -26,8 +26,6 @@ val st = Term.mk_var ("s", Type.mk_type ("arm_state", []))
 fun mk_arm_const n = Term.prim_mk_const {Thy = "arm", Name = n}
 fun mk_arm_type n = Type.mk_thy_type {Thy = "arm", Tyop = n, Args = []}
 
-val all_modes = utilsLib.list_mk_wordii 5 [16, 17, 18, 19, 23, 27, 31]
-
 (* ----------------------------------------------------------------------- *)
 
 val lower = List.map (List.map utilsLib.lowercase)
@@ -47,15 +45,6 @@ val arch_options = lower
     ["v7", "v7_A", "v7-A", "ARMv7", "ARMv7_A", "ARMv7-A"],
     ["v7_R", "v7-R", "ARMv7_R", "ARMv7-R"]]
 
-val mode_options = lower
-   [["Usr", "User"],
-    ["Fiq"],
-    ["Irq"],
-    ["Svc", "Supervisor"],
-    ["Abt", "Abort"],
-    ["Und", "Undefined"],
-    ["Sys", "System"]]
-
 val thumb_options =
    [["thumb","thumb2","16-bit","16"],
     ["arm","32-bit","32"]]
@@ -63,6 +52,22 @@ val thumb_options =
 val vfp_options = lower
    [["fp", "vfp", "VFPv3"],
     ["nofp", "novfp"]]
+
+val fpr_map_options = lower
+   [["map-fpr", "fpr-map"],
+    ["no-fpr-map", "no-map-fpr"]]
+
+val gpr_map_options = lower
+   [["map-gpr", "gpr-map"],
+    ["no-gpr-map", "no-map-gpr"]]
+
+val mem_map_options = lower
+   [["map-mem", "mem-map"],
+    ["no-mem-map", "no-map-mem"]]
+
+val temporal_options = lower
+   [["temporal"],
+    ["not-temporal"]]
 
 fun find_pos P =
    let
@@ -100,10 +105,13 @@ fun process_opt opt =
 
 val default_options =
    {arch      = mk_arm_const "ARMv7_A",
-    mode      = hd all_modes,
     bigendian = false,
     thumb     = false,
     vfp       = false,
+    gpr_map   = false,
+    fpr_map   = false,
+    mem_map   = true,
+    temporal  = false,
     itblock   = wordsSyntax.mk_wordii (0, 8)}
 
 fun process_options s =
@@ -113,6 +121,18 @@ fun process_options s =
       val (bigendian, l) =
          process_opt endian_options "Endian"
             (#bigendian default_options) l (fn i => i <> 0)
+      val (fpr_map, l) =
+         process_opt fpr_map_options "Introduce FPR map"
+            (#fpr_map default_options) l (Lib.equal 0)
+      val (gpr_map, l) =
+         process_opt gpr_map_options "Introduce GPR map"
+            (#gpr_map default_options) l (Lib.equal 0)
+      val (mem_map, l) =
+         process_opt mem_map_options "Introduce MEM map"
+            (#mem_map default_options) l (Lib.equal 0)
+      val (temporal, l) =
+         process_opt temporal_options "Temoporal triple"
+            (#temporal default_options) l (Lib.equal 0)
       val (vfp, l) =
          process_opt vfp_options "VFP" (#vfp default_options) l (Lib.equal 0)
       val (arch, l) =
@@ -126,9 +146,6 @@ fun process_options s =
                     | 4 => "ARMv6"   | 5 => "ARMv6K"  | 6 => "ARMv6T2"
                     | 7 => "ARMv7_A" | 8 => "ARMv7_R"
                     | _ => raise ERR "process_options" "Bad Arch option."))
-      val (mode, l) =
-         process_opt mode_options "Mode"
-            (#mode default_options) l (fn i => List.nth (all_modes, i))
       val (thumb, l) =
          process_opt thumb_options "Thumb"
             (#thumb default_options) l (fn i => i = 0)
@@ -143,10 +160,13 @@ fun process_options s =
    in
       if List.null l
          then {arch = arch,
-               mode = mode,
                bigendian = bigendian,
                thumb = thumb,
                vfp = vfp,
+               gpr_map = gpr_map,
+               fpr_map = fpr_map,
+               mem_map = mem_map,
+               temporal = temporal,
                itblock = itblock}
       else raise ERR "process_options"
                  ("Unrecognized option" ^
@@ -163,10 +183,16 @@ fun mk_config_terms s =
    in
       (if #thumb c then [``^st.CPSR.IT = ^(#itblock c)``] else []) @
       [``^st.Architecture = ^(#arch c)``,
-       ``^st.CPSR.M = ^(#mode c)``,
        prop #vfp ``^st.Extensions Extension_VFP``,
        prop #bigendian ``^st.CPSR.E``,
        prop #thumb ``^st.CPSR.T``]
+   end
+
+fun spec_options s =
+   let
+      val {gpr_map, fpr_map, mem_map, temporal, ...} = process_options s
+   in
+      (gpr_map, fpr_map, mem_map, temporal)
    end
 
 (* ----------------------------------------------------------------------- *)

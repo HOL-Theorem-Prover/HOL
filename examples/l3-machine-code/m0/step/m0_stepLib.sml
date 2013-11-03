@@ -12,7 +12,7 @@ open state_transformerSyntax blastLib
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars m0Theory.m0_grammars
+   val (Type, Term) = parse_from_grammars m0_stepTheory.m0_step_grammars
 end
 open Parse
 
@@ -197,6 +197,10 @@ val BLXWritePC_rwt =
 val LoadWritePC_rwt =
    EV [LoadWritePC_def, BXWritePC_rwt] [] []
     ``LoadWritePC imm32`` |> hd
+
+val ALUWritePC_rwt =
+   EV [ALUWritePC_def, BranchWritePC_rwt] [] []
+      ``ALUWritePC d`` |> hd
 
 (* ---------------------------- *)
 
@@ -1109,12 +1113,12 @@ val DECODE_UNPREDICTABLE_rwt =
 
 val ConditionPassed_rwt =
    EV [ConditionPassed_def] [] []
-      ``ConditionPassed cond`` |> hd
+      ``ConditionPassed c`` |> hd
 
 local
    fun ConditionPassed cond =
       ConditionPassed_rwt
-      |> Thm.INST [``cond:word4`` |-> ``^cond``]
+      |> Thm.INST [``c:word4`` |-> ``^cond``]
       |> Conv.RIGHT_CONV_RULE
            (DATATYPE_CONV
             THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
@@ -1261,22 +1265,24 @@ val thumb_patterns = List.map (I ## pattern)
    ("RORS",            "FTFFFFFTTT______"),
    ("TST",             "FTFFFFTFFF______"),
    ("RSBS",            "FTFFFFTFFT______"),
-   ("CMPS",            "FTFFFFTFTF______"),
-   ("CMNS",            "FTFFFFTFTT______"),
+   ("CMP",             "FTFFFFTFTF______"),
+   ("CMN",             "FTFFFFTFTT______"),
    ("ORRS",            "FTFFFFTTFF______"),
    ("MULS",            "FTFFFFTTFT______"),
    ("BICS",            "FTFFFFTTTF______"),
    ("MVNS",            "FTFFFFTTTT______"),
    ("ADD",             "FTFFFTFF________"),
-   ("CMP",             "FTFFFTFT________"),
+   ("ADD (pc)",        "FTFFFTFFT____TTT"),
+   ("CMP (high)",      "FTFFFTFT________"),
    ("MOV",             "FTFFFTTF________"),
+   ("MOV (pc)",        "FTFFFTTFT____TTT"),
    ("BX",              "FTFFFTTTF_______"),
    ("BLX",             "FTFFFTTTT_______"),
    ("LDR (lit)",       "FTFFT___________"),
    ("STR",             "FTFTFFF_________"),
    ("STRH",            "FTFTFFT_________"),
    ("STRB",            "FTFTFTF_________"),
-   ("LDRB",            "FTFTFTT_________"),
+   ("LDRSB",           "FTFTFTT_________"),
    ("LDR",             "FTFTTFF_________"),
    ("LDRH",            "FTFTTFT_________"),
    ("LDRB",            "FTFTTTF_________"),
@@ -1289,7 +1295,7 @@ val thumb_patterns = List.map (I ## pattern)
    ("LDRH (imm)",      "TFFFT___________"),
    ("STR (sp)",        "TFFTF___________"),
    ("LDR (sp)",        "TFFTT___________"),
-   ("ADD (pc)",        "TFTFF___________"),
+   ("ADD (reg,pc)",    "TFTFF___________"),
    ("ADD (sp)",        "TFTFT___________"),
    ("ADD (sp,sp)",     "TFTTFFFFF_______"),
    ("SUB (sp,sp)",     "TFTTFFFFT_______"),
@@ -1303,6 +1309,7 @@ val thumb_patterns = List.map (I ## pattern)
    ("REVSH",           "TFTTTFTFTT______"),
    ("POP",             "TFTTTTFF________"),
    ("POP (pc)",        "TFTTTTFT________"),
+   ("NOP",             "TFTTTTTTFFFFFFFF"),
    ("STM",             "TTFFF___________"),
    ("LDM",             "TTFFT___________"),
    ("BEQ",             "TTFTFFFF________"),
@@ -1475,6 +1482,8 @@ in
          case List.filter (Lib.can mtch) (list_mnemonics()) of
             [] => raise ERR "thumb_instruction" "no match found"
           | [s] => f s
+          | ["ADD", s as "ADD (pc)"] => s
+          | ["MOV", s as "MOV (pc)"] => s
           | _ => raise ERR "thumb_instruction" "more than one match!"
       end
 end
@@ -1743,6 +1752,13 @@ val MoveRegister_rwt =
       ``dfn'ShiftImmediate (F, F, d, m, SRType_LSL, 0)``
       |> addThms
 
+val MoveRegister_pc_rwt =
+   EV [dfn'ShiftImmediate_def, R_name_rwt, ALUWritePC_rwt,
+       doRegister_def, DataProcessingPC_def, DataProcessingALU_def,
+       Shift_C_LSL_rwt, SND_Shift_C_rwt] [] []
+      ``dfn'ShiftImmediate (F, F, 15w, m, SRType_LSL, 0)``
+      |> addThms
+
 val MoveNegRegister_rwt =
    EV [dfn'ShiftImmediate_def, R_name_rwt, mvn, psr_id,
        doRegister_def, ArithmeticOpcode_def,
@@ -1755,6 +1771,14 @@ val Register_rwt =
         Shift_C_LSL_rwt, psr_id] @ al())
       [[``d <> 15w:word4``]] (mapl (`op`, arithlogic))
          ``dfn'Register (op, setflags, d, n, m, SRType_LSL, 0)``
+      |> addThms
+
+val Register_add_pc_rwt =
+   EV [dfn'Register_def, R_name_rwt, doRegister_def, ALUWritePC_rwt, PC_rwt,
+       DataProcessingPC_def, DataProcessingALU_def, Shift_C_LSL_rwt,
+       AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY]
+      [] []
+      ``dfn'Register (4w, F, 15w, 15w, m, SRType_LSL, 0)``
       |> addThms
 
 val TestCompareRegister_rwt =
@@ -1841,9 +1865,14 @@ fun memEV ctxt tm =
        PC_rwt, IncPC_rwt, write'R_name_rwt, R_name_rwt,
        m0_stepTheory.R_x_not_pc, m0Theory.offset_case_def,
        pairTheory.pair_case_thm, Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt]
+       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt,
+       Align4_base_pc_plus]
       [[``t <> 13w:word4``]] ctxt tm
-    |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []))
+    |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                   (REWRITE_CONV []
+                    THENC utilsLib.INST_REWRITE_CONV
+                             [Aligned4_base_pc_plus]
+                    THENC REWRITE_CONV [Aligned_base_pc_lit]))
     |> addThms
 
 (* ---------------------------- *)
@@ -1855,7 +1884,8 @@ val LoadWord_rwt =
 
 val LoadLiteral_rwt =
    memEV []
-     ``dfn'LoadLiteral (t, imm32)``
+     ``dfn'LoadLiteral
+         (t, w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10))``
 
 (* ---------------------------- *)
 
@@ -1953,13 +1983,13 @@ local
    val get_state = snd o get_pair
    val state_exception_tm = mk_arm_const "m0_state_exception"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
-   val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateARM_thumb
-   val MP_Next2 = Drule.MATCH_MP m0_stepTheory.NextStateARM_thumb2
+   val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb
+   val MP_Next2 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb2
    val Run_CONV = utilsLib.Run_CONV ("m0", st) o get_val
    fun is_ineq tm =
       boolSyntax.is_eq (boolSyntax.dest_neg tm) handle HOL_ERR _ => false
 in
-   fun eval_thumb (be,sel) =
+   fun eval_thumb (be, sel) =
       let
          val tms = endian be @ spsel sel
          val ftch = fetch be

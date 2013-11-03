@@ -63,6 +63,7 @@ sig
    val match_subst: {redex: term, residue: term} list -> term -> term
    val mk_cond_rand_thms: term list -> thm
    val mk_cond_update_thms: hol_type list -> thm list
+   val mk_negation: term -> term
    val mk_reg_thm: string -> string -> thm
    val mk_run: string * term -> term -> term
    val mk_rw_net: (thm -> term) -> thm list -> thm LVTermNet.lvtermnet

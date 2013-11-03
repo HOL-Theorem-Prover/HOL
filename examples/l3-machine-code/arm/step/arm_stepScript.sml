@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib
 
 open lcsymtacs utilsLib
 open wordsLib blastLib
-open state_transformerTheory armTheory
+open state_transformerTheory updateTheory armTheory
 
 val _ = new_theory "arm_step"
 
@@ -146,94 +146,73 @@ val reverse_endian_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
-val R_usr_def = Define`
-   R_usr (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8usr
-     | 9w  => RName_9usr  | 10w => RName_10usr | 11w => RName_11usr
-     | 12w => RName_12usr | 13w => RName_SPusr | 14w => RName_LRusr
-     | _   => RName_PC`
+val GoodMode_def = Define`
+   GoodMode (m: word5) = m IN {16w;17w;18w;19w;23w;27w;31w}`
 
-val R_fiq_def = Define`
-   R_fiq (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8fiq
-     | 9w  => RName_9fiq  | 10w => RName_10fiq | 11w => RName_11fiq
-     | 12w => RName_12fiq | 13w => RName_SPfiq | 14w => RName_LRfiq
-     | _   => RName_PC`
-
-val R_irq_def = Define`
-   R_irq (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8usr
-     | 9w  => RName_9usr  | 10w => RName_10usr | 11w => RName_11usr
-     | 12w => RName_12usr | 13w => RName_SPirq | 14w => RName_LRirq
-     | _   => RName_PC`
-
-val R_svc_def = Define`
-   R_svc (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8usr
-     | 9w  => RName_9usr  | 10w => RName_10usr | 11w => RName_11usr
-     | 12w => RName_12usr | 13w => RName_SPsvc | 14w => RName_LRsvc
-     | _   => RName_PC`
-
-val R_abt_def = Define`
-   R_abt (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8usr
-     | 9w  => RName_9usr  | 10w => RName_10usr | 11w => RName_11usr
-     | 12w => RName_12usr | 13w => RName_SPabt | 14w => RName_LRabt
-     | _   => RName_PC`
-
-val R_und_def = Define`
-   R_und (n: word4) =
-     case n of
-       0w  => RName_0usr  | 1w =>  RName_1usr  | 2w =>  RName_2usr
-     | 3w  => RName_3usr  | 4w =>  RName_4usr  | 5w =>  RName_5usr
-     | 6w  => RName_6usr  | 7w =>  RName_7usr  | 8w =>  RName_8usr
-     | 9w  => RName_9usr  | 10w => RName_10usr | 11w => RName_11usr
-     | 12w => RName_12usr | 13w => RName_SPund | 14w => RName_LRund
+val R_mode_def = Define`
+   R_mode (m: word5) (n: word4) =
+     case m, n of
+       _,   0w  => RName_0usr
+     | _,   1w  => RName_1usr
+     | _,   2w  => RName_2usr
+     | _,   3w  => RName_3usr
+     | _,   4w  => RName_4usr
+     | _,   5w  => RName_5usr
+     | _,   6w  => RName_6usr
+     | _,   7w  => RName_7usr
+     | 17w, 8w  => RName_8fiq
+     | _,   8w  => RName_8usr
+     | 17w, 9w  => RName_9fiq
+     | _,   9w  => RName_9usr
+     | 17w, 10w => RName_10fiq
+     | _,   10w => RName_10usr
+     | 17w, 11w => RName_11fiq
+     | _,   11w => RName_11usr
+     | 17w, 12w => RName_12fiq
+     | _,   12w => RName_12usr
+     | 17w, 13w => RName_SPfiq
+     | 18w, 13w => RName_SPirq
+     | 19w, 13w => RName_SPsvc
+     | 22w, 13w => RName_SPmon
+     | 23w, 13w => RName_SPabt
+     | 26w, 13w => RName_SPhyp
+     | 27w, 13w => RName_SPund
+     | _,   13w => RName_SPusr
+     | 17w, 14w => RName_LRfiq
+     | 18w, 14w => RName_LRirq
+     | 19w, 14w => RName_LRsvc
+     | 22w, 14w => RName_LRmon
+     | 23w, 14w => RName_LRabt
+     | 27w, 14w => RName_LRund
+     | _,   14w => RName_LRusr
      | _   => RName_PC`
 
 (* ------------------------------------------------------------------------ *)
 
 val R_x_not_pc = Q.prove(
-   `!d. d <> 15w ==>
-      (R_usr d <> RName_PC) /\
-      (R_fiq d <> RName_PC) /\
-      (R_irq d <> RName_PC) /\
-      (R_svc d <> RName_PC) /\
-      (R_abt d <> RName_PC) /\
-      (R_und d <> RName_PC)`,
-   wordsLib.Cases_word_value
-   \\ simp [R_usr_def, R_fiq_def, R_irq_def, R_svc_def, R_abt_def, R_und_def])
+   `!d mode. d <> 15w ==> (R_mode mode d <> RName_PC)`,
+   wordsLib.Cases_word_value \\ simp [R_mode_def] \\ rw [])
    |> Drule.SPEC_ALL
    |> usave_as "R_x_not_pc"
 
 val R_x_pc = Q.store_thm("R_x_pc",
-  `(!x. (R_usr x = RName_PC) = (x = 15w)) /\
-   (!x. (R_fiq x = RName_PC) = (x = 15w)) /\
-   (!x. (R_irq x = RName_PC) = (x = 15w)) /\
-   (!x. (R_svc x = RName_PC) = (x = 15w)) /\
-   (!x. (R_abt x = RName_PC) = (x = 15w)) /\
-   (!x. (R_und x = RName_PC) = (x = 15w))`,
+   `!mode x. (R_mode mode x = RName_PC) = (x = 15w)`,
    REPEAT strip_tac
    \\ Cases_on `x = 15w`
-   \\ asm_simp_tac (srw_ss())
-        [R_usr_def, R_fiq_def, R_irq_def, R_svc_def, R_abt_def, R_und_def,
-         DISCH_ALL R_x_not_pc]
+   \\ asm_simp_tac (srw_ss()) [R_mode_def, DISCH_ALL R_x_not_pc]
    )
+
+val BadMode = Q.prove(
+   `!mode s. GoodMode mode ==> (BadMode mode s = (F, s))`,
+   rw [BadMode_def, GoodMode_def])
+   |> Drule.SPEC_ALL
+   |> usave_as "BadMode"
+
+val NotMon = Q.prove(
+   `!mode. GoodMode mode ==> mode <> 22w`,
+   rw [GoodMode_def] \\ rw [])
+   |> Drule.SPEC_ALL
+   |> usave_as "NotMon"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -758,13 +737,13 @@ val Align_branch_immediate = Q.store_thm("Align_branch_immediate",
                     x22; x23]: word24 @@ (0w: word2)): 26 word): word32,4) =
     if x0 then
        a -
-       (v2w [F; F; F; F; F; F; F; ~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9;
-             ~x10; ~x11; ~x12; ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20;
-             ~x21; ~x22; ~x23; T; T] + 1w)
+       (v2w [~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9; ~x10; ~x11; ~x12;
+             ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20; ~x21; ~x22; ~x23;
+             T; T] + 1w)
     else
        a +
-       v2w [F; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11;
-            x12; x13; x14; x15; x16; x17; x18; x19; x20; x21; x22; x23; F; F]`,
+       v2w [x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14; x15;
+            x16; x17; x18; x19; x20; x21; x22; x23; F; F]`,
    lrw [Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -796,13 +775,13 @@ val Align_branch_exchange_immediate =
                (v2w [x24; F]: word2)): 26 word): word32,2) =
     if x0 then
        a -
-       (v2w [F; F; F; F; F; F; F; ~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9;
-             ~x10; ~x11; ~x12; ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20;
-             ~x21; ~x22; ~x23; ~x24; T] + 1w)
+       (v2w [~x1; ~x2; ~x3; ~x4; ~x5; ~x6; ~x7; ~x8; ~x9; ~x10; ~x11; ~x12;
+             ~x13; ~x14; ~x15; ~x16; ~x17; ~x18; ~x19; ~x20; ~x21; ~x22; ~x23;
+             ~x24; T] + 1w)
     else
        a +
-       v2w [F; x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14;
-            x15; x16; x17; x18; x19; x20; x21; x22; x23; x24; F]`,
+       v2w [x1; x2; x3; x4; x5; x6; x7; x8; x9; x10; x11; x12; x13; x14; x15;
+            x16; x17; x18; x19; x20; x21; x22; x23; x24; F]`,
    lrw [Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -1105,7 +1084,11 @@ val Decode_simps = Q.prove(
     ((v2w [b] : word1) @@ (0w : word1) = v2w [b; F] : word2) /\
     (w2w ((v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8 @@
            (0w: word2)) : word10) =
-     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word32)`,
+     v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word32) /\
+     ((7 >< 4) (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
+      v2w [b7; b6; b5; b4] : word4) /\
+     ((3 >< 0) (v2w [b7; b6; b5; b4; b3; b2; b1; b0] : word8) =
+      v2w [b3; b2; b1; b0] : word4)`,
    lrw []
    \\ blastLib.BBLAST_TAC
    )
@@ -1308,21 +1291,22 @@ in
       Drule.LIST_CONJ
          (List.map (GEN_ALL o SIMP_CONV (srw_ss()) [LDM_UPTO_def])
             [``FST ^t``, ``(SND ^t).MEM``, ``(SND ^t).CPSR``,
-             ``(SND ^t).Architecture``])
+             ``(SND ^t).Architecture``, ``(SND ^t).Extensions``])
       |> save_as "LDM_UPTO_components"
 end
 
 local
    val LDM1_PC = Q.prove(
-      `!n b registers s r.
-          n < 15 ==> (LDM1 R_usr b registers s r n RName_PC = r RName_PC)`,
+      `!n b registers s r m.
+          n < 15 ==>
+          (LDM1 (R_mode m) b registers s r n RName_PC = r RName_PC)`,
       REPEAT strip_tac
       \\ RULE_ASSUM_TAC (Conv.CONV_RULE wordsLib.LESS_CONV)
-      \\ fs [R_usr_def, LDM1_def, combinTheory.UPDATE_def]
+      \\ fs [R_mode_def, LDM1_def, combinTheory.UPDATE_def]
       \\ lrw [])
 in
    val LDM_UPTO_PC = Q.store_thm("LDM_UPTO_PC",
-      `!b r s. FOLDL (LDM1 R_usr b r s) s.REG (COUNT_LIST 15) RName_PC =
+      `!b r s m. FOLDL (LDM1 (R_mode m) b r s) s.REG (COUNT_LIST 15) RName_PC =
                  s.REG RName_PC`,
       rw [EVAL ``COUNT_LIST 15``, LDM1_PC])
 end
@@ -1380,13 +1364,16 @@ val LDM_UPTO_SUC =
 
 (* ------------------------------------------------------------------------ *)
 
-val STM_UPTO_components =
-   Drule.LIST_CONJ
-      (List.map (GEN_ALL o SIMP_CONV (srw_ss()) [STM_UPTO_def] o Parse.Term)
-         [`FST (STM_UPTO f i r (b, s))`,
-          `(SND (STM_UPTO f i r (b, s))).REG`,
-          `(SND (STM_UPTO f i r (b, s))).CPSR`])
-   |> save_as "STM_UPTO_components"
+local
+   val t = ``STM_UPTO f i r (b, s)``
+in
+   val STM_UPTO_components =
+      Drule.LIST_CONJ
+         (List.map (GEN_ALL o SIMP_CONV (srw_ss()) [STM_UPTO_def])
+            [``FST ^t``, ``(SND ^t).REG``, ``(SND ^t).CPSR``,
+             ``(SND ^t).Extensions``])
+      |> save_as "STM_UPTO_components"
+end
 
 val STM_UPTO_RUN = Q.store_thm("STM_UPTO_RUN",
    `!l f b r s c w u mem.

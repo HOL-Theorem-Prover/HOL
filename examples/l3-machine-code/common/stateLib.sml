@@ -3,13 +3,63 @@ struct
 
 open HolKernel boolLib bossLib
 open lcsymtacs updateLib utilsLib
-open stateTheory
-open progSyntax
+open stateTheory temporal_stateTheory
+open helperLib progSyntax temporalSyntax
 
 infix \\
 val op \\ = op THEN;
 
 val ERR = Feedback.mk_HOL_ERR "stateLib"
+
+(* ------------------------------------------------------------------------ *)
+
+(* Versions of operations in helperLib that are generalise to cover
+   TEMPORAL_NEXT as well as SPEC *)
+
+fun SPECC_FRAME_RULE frame th =
+   Thm.SPEC frame
+      (Drule.MATCH_MP progTheory.SPEC_FRAME th
+       handle HOL_ERR _ =>
+          Drule.MATCH_MP temporal_stateTheory.TEMPORAL_NEXT_FRAME th)
+
+fun SPECL_FRAME_RULE l th =
+   let
+      val p = temporal_stateSyntax.dest_pre' (Thm.concl th)
+      val xs = progSyntax.strip_star p
+      val lx =
+         List.filter
+            (fn t => not (Lib.exists (Lib.can (Term.match_term t)) xs)) l
+   in
+      List.foldl (Lib.uncurry SPECC_FRAME_RULE) th lx
+   end
+
+val MOVE_COND_CONV =
+   Conv.REWR_CONV (GSYM progTheory.SPEC_MOVE_COND)
+   ORELSEC Conv.REWR_CONV (GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND)
+
+local
+   val cond_T = Q.prove (
+      `!p. (cond T * p = p) /\ (p * cond T = p)`,
+      REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
+   val rule1 =
+      helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
+      Conv.CONV_RULE MOVE_COND_CONV
+   fun COND_RW_CONV atm =
+      let
+         val cnv = Conv.RAND_CONV (PURE_REWRITE_CONV [ASSUME atm])
+      in
+         fn tm => if progSyntax.is_cond tm then cnv tm else NO_CONV tm
+      end
+in
+   fun MOVE_COND_RULE tm thm =
+      let
+         val thm1 = Conv.CONV_RULE (Conv.DEPTH_CONV (COND_RW_CONV tm)) thm
+      in
+         case Thm.hyp thm1 of
+            [t] => if t = tm then rule1 (Thm.DISCH t thm1) else thm
+          | _ => thm
+      end
+end
 
 (* Some syntax functions *)
 
@@ -353,6 +403,49 @@ val hs = [["Architecture"]]
 
 *)
 
+(* ------------------------------------------------------------------------
+   define_map_component (name, f, def)
+
+   Given a definition of the form
+
+    |- !c d. model_X c d = {{(model_c_X, model_d_Y)}}
+
+   this function generates a map version, as defined by
+
+    !df f. name df f = {BIGUNION {BIGUNION (model_X c (f c)) | c IN df}}
+
+   and it also derives the theorem
+
+    |- c IN df ==> (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
+
+   ------------------------------------------------------------------------ *)
+
+fun define_map_component (s, f, def) =
+   let
+      val thm = Drule.MATCH_MP stateTheory.MAPPED_COMPONENT_INSERT_OPT def
+                handle HOL_ERR _ =>
+                   Drule.MATCH_MP stateTheory.MAPPED_COMPONENT_INSERT1 def
+      val map_c = fst (boolSyntax.dest_forall (Thm.concl thm))
+      val map_c = Term.mk_var (s, Term.type_of map_c)
+      val (tm_11, def_tm) = thm |> Thm.SPEC map_c
+                                |> Thm.concl
+                                |> boolSyntax.dest_imp |> fst
+                                |> boolSyntax.dest_conj
+      val comp_11 = simpLib.SIMP_PROVE (srw_ss()) [] tm_11
+      val (v_df, def_tm) = boolSyntax.dest_forall def_tm
+      val (v_f, def_tm) = boolSyntax.dest_forall def_tm
+      val v_df' = Term.mk_var ("d" ^ f, Term.type_of v_df)
+      val v_f' = Term.mk_var (f, Term.type_of v_f)
+      val def_tm = Term.subst [v_df |-> v_df', v_f |-> v_f'] def_tm
+      val mdef = Definition.new_definition (s ^ "_def", def_tm)
+      val thm = Theory.save_thm
+                  (s ^ "_INSERT",
+                   Drule.SPECL [v_f', v_df']
+                      (MATCH_MP thm (Thm.CONJ comp_11 mdef)))
+   in
+      (mdef, thm)
+   end
+   handle HOL_ERR {message, ...} => raise ERR "define_map_component" message
 
 (* ------------------------------------------------------------------------
    mk_code_pool: make term ``CODE_POOL f {(v, opc)}``
@@ -424,6 +517,7 @@ fun dest_code_access tm =
 local
    val vnum =
       ref (Redblackmap.mkDict String.compare : (string, int) Redblackmap.dict)
+   fun is_gen s = String.sub (s, 0) = #"%"
 in
    fun gvar s ty =
       let
@@ -438,11 +532,11 @@ in
    fun varReset () = vnum := Redblackmap.mkDict String.compare
    fun is_vvar tm =
       case Lib.total Term.dest_var tm of
-         SOME (s, _) => String.sub (s, 0) = #"%"
+         SOME (s, _) => is_gen s
        | NONE => false
    fun is_nvvar tm =
       case Lib.total Term.dest_var tm of
-         SOME (s, _) => String.sub (s, 0) <> #"%"
+         SOME (s, _) => not (is_gen s)
        | NONE => false
    fun build_assert (f: term * term -> term) g =
       fn ((d, (c, pat)), (a, tm)) =>
@@ -701,24 +795,29 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val next_rel_tm = Term.prim_mk_const {Thy = "state", Name = "NEXT_REL"}
-   val state_tm = Term.prim_mk_const {Thy = "state", Name = "STATE"}
-   fun mk_next_rel l = boolSyntax.list_mk_icomb (next_rel_tm, l)
-   fun mk_state p = boolSyntax.mk_icomb (state_tm, p)
-   fun mk_part_spec m = boolSyntax.mk_icomb (progSyntax.spec_tm, m)
+   val temporal = ref false
 in
-   fun mk_pre_post
-         next_def instr_def proj_def comp_defs cpool extras write_fn psort =
+   fun set_temporal b = temporal := b
+   fun generate_temporal () = !temporal
+end
+
+local
+   fun get_def tm =
       let
+         val {Name, Thy, ...} = Term.dest_thy_const (Term.rand tm)
+      in
+         DB.fetch Thy (Name ^ "_def")
+      end
+in
+   fun mk_pre_post model_def comp_defs cpool extras write_fn psort =
+      let
+         val (model_tm, tm) = boolSyntax.dest_eq (Thm.concl model_def)
+         val proj_def = case pairSyntax.strip_pair tm of
+                           [a, _, _, _] => get_def a
+                         | _ => raise ERR "mk_pre_post" "bad model definition"
          val read = read_footprint proj_def comp_defs cpool extras
-         val state_tm = mk_state (utilsLib.get_function proj_def)
-         val sty = utilsLib.dom (Term.type_of state_tm)
-         val eq_tm = Term.inst [Type.alpha |-> sty] boolSyntax.equality
-         val rel_tm = mk_next_rel [eq_tm, utilsLib.get_function next_def]
-         val instr_tm = utilsLib.get_function instr_def
-         val model_tm =
-            pairSyntax.list_mk_pair [state_tm, rel_tm, instr_tm, eq_tm]
-         val mk_spec = HolKernel.list_mk_icomb (mk_part_spec model_tm)
+         val mk_spec_or_temporal_next =
+            temporal_stateSyntax.mk_spec_or_temporal_next model_tm
          val write = (progSyntax.list_mk_star ## progSyntax.list_mk_star) o
                      sort_finish psort o write_fn
       in
@@ -730,16 +829,349 @@ in
                           then p
                        else progSyntax.mk_star (progSyntax.mk_cond c, p)
             in
-               mk_spec [p, pool, q]
+               mk_spec_or_temporal_next (generate_temporal()) (p, pool, q)
             end
       end
 end
 
 (* ------------------------------------------------------------------------
+   rename_vars (rename1, rename2, bump)
+
+   Rename generated variables "%v" is a SPEC theorem.
+   ------------------------------------------------------------------------ *)
+
+fun rename_vars (rename1, rename2, bump) =
+   let
+      fun rename f tm =
+         case boolSyntax.dest_strip_comb tm of
+            (c, [v]) =>
+               if is_vvar v
+                  then case rename1 c of
+                          SOME s => SOME (v |-> f (s, Term.type_of v))
+                        | NONE => NONE
+               else NONE
+          | (c, [x, v]) =>
+               if is_vvar v
+                  then case rename2 c of
+                          SOME g =>
+                             (case Lib.total g x of
+                                 SOME s => SOME (v |-> f (s, Term.type_of v))
+                               | NONE => NONE)
+                        | NONE => NONE
+               else NONE
+          | _ => NONE
+   in
+      fn thm =>
+         let
+            val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
+            val () = varReset()
+            val () = List.app (fn s => General.ignore (gvar s Type.alpha)) bump
+            val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry gvar
+            val p = progSyntax.strip_star p
+         in
+            Thm.INST (List.mapPartial (rename avoid) p) thm
+         end
+         handle e as HOL_ERR _ => Raise e
+   end
+
+(* ------------------------------------------------------------------------
+   introduce_triple_definition (duplicate, thm_def) thm
+
+   Given a thm_def of the form
+
+    |- !x. f x = p1 * ... * pn * cond c1 * ... cond cm
+
+   (where the conds need not be at the end) and a theorem "thm" of the form
+
+    |- SPEC (cond r * p) c q
+
+   the function introduce_triple_definition gives a theorem of form
+
+    |- SPEC (cond r' * p' * f x1) c (q' * f x2)
+
+   The condition "r'" is related to "r" but will no longer incorporate
+   conditions found in "c1" to "cm". Similarly "p'" and "q'" will no
+   longer contain components "p1" to "pn".
+
+   The "duplicate" flag controls whether or not conditions in "r" are
+   added to the postcondition in order to introduce "f".
+   ------------------------------------------------------------------------ *)
+
+local
+   val get_conds = List.filter progSyntax.is_cond o progSyntax.strip_star
+   val err = ERR "introduce_triple"
+   fun move_match (pat, t) =
+      MOVE_COND_RULE
+        (case Lib.mk_set (find_terms (Lib.can (Term.match_term pat)) t) of
+            [] => raise (err "missing condition")
+          | [m] => m
+          | l => Lib.with_exn (Lib.first (Lib.equal pat)) l
+                   (err "ambiguous condition"))
+in
+   fun introduce_triple_definition (duplicate, thm_def) =
+      let
+         val ts = thm_def
+                  |> Thm.concl
+                  |> boolSyntax.strip_forall |> snd
+                  |> boolSyntax.dest_eq |> snd
+                  |> progSyntax.strip_star
+         val (cs, ps) = List.partition progSyntax.is_cond ts
+         val cs = List.map progSyntax.dest_cond cs
+         val rule =
+            helperLib.PRE_POST_RULE (helperLib.STAR_REWRITE_CONV (GSYM thm_def))
+         fun d_rule th =
+            if duplicate
+               then MATCH_MP progTheory.SPEC_DUPLICATE_COND th
+                    handle HOL_ERR _ =>
+                      MATCH_MP
+                        temporal_stateTheory.TEMPORAL_NEXT_DUPLICATE_COND th
+            else th
+      in
+         fn thm =>
+            let
+               val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
+               val move_cs =
+                  List.map
+                     (fn t => List.map (fn c => d_rule o move_match (c, t)) cs)
+                     (get_conds p)
+            in
+               thm |> SPECL_FRAME_RULE ps
+                   |> Lib.C (List.foldl (fn (f, t) => f t))
+                            (List.concat move_cs)
+                   |> rule
+            end
+      end
+end
+
+(* ------------------------------------------------------------------------
+   introduce_map_definition (insert_thm, dom_eq_conv) thm
+
+   Given an insert_thm of the form
+
+     |- c IN df ==> (model_X c d * name (df DELETE c) f = name df ((c =+ d) f))
+
+   (which may be generated by define_map_component) and a theorem "thm" of the
+   form
+
+     |- SPEC (cond r * p) c q
+
+   where "p" and "q" contain instances of "model_X c d", a theorem new is
+   generated of the form
+
+     |- SPEC (p' * name df f * cond (r /\ z)) x (q' * name df f')
+
+   where "p'" and "q'" are modified versions of "p" and "q" that no longer
+   contain any instances of "model_X c d".
+
+   The predicate "z" will specify which values are contained in "df",
+   which represents the domain of the newly intoruced map "f".
+
+   The conversion "dom_eq_conv" can be used to simplify "z" by deciding
+   equality over elements of the domain of "f".
+   ------------------------------------------------------------------------ *)
+
+local
+   fun strip2 f = case boolSyntax.strip_comb f of
+                     (f, [a, b]) => (f, (a, b))
+                   | _ => raise ERR "strip2" ""
+   val tidy_up_rule =
+      helperLib.MERGE_CONDS_RULE o
+      PURE_REWRITE_RULE [GSYM progTheory.SPEC_MOVE_COND,
+                         GSYM temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND] o
+      Drule.DISCH_ALL
+   val is_ineq = Lib.can (boolSyntax.dest_eq o boolSyntax.dest_neg)
+   val apply_id_rule = PURE_REWRITE_RULE [updateTheory.APPLY_UPDATE_ID]
+in
+   fun introduce_map_definition (insert_thm, dom_eq_conv) =
+      let
+         val insert_thm = Drule.SPEC_ALL insert_thm
+         val ((f_tm, (c, d)), (m_tm, (df, f))) =
+            insert_thm
+            |> Thm.concl
+            |> boolSyntax.dest_imp |> snd
+            |> boolSyntax.dest_eq |> fst
+            |> progSyntax.dest_star
+            |> (strip2 ## strip2)
+         val is_f = Lib.equal f_tm o fst o boolSyntax.strip_comb
+         val get_f =
+            List.filter is_f o progSyntax.strip_star o
+            temporal_stateSyntax.dest_pre' o Thm.concl
+         val c_ty = Term.type_of c
+         val d_ty = Term.type_of d
+         val c_set_ty = pred_setSyntax.mk_set_type c_ty
+         val df = fst (pred_setSyntax.dest_delete df)
+         val df_intro = List.foldl (pred_setSyntax.mk_delete o Lib.swap) df
+         fun mk_frame cs = Term.mk_comb (Term.mk_comb (m_tm, df_intro cs), f)
+         val insert_conv =
+            utilsLib.ALL_HYP_CONV_RULE
+               (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]
+                THENC dom_eq_conv) o
+            utilsLib.INST_REWRITE_CONV [Drule.UNDISCH_ALL insert_thm]
+         val (mk_dvar, mk_subst) =
+            case Lib.total optionSyntax.dest_option d_ty of
+               SOME ty =>
+                 (fn () => optionSyntax.mk_some (Term.genvar ty),
+                  fn (d, c) => optionSyntax.dest_some d |-> Term.mk_comb (f, c))
+             | NONE =>
+                 (fn () => Term.genvar d_ty,
+                  fn (d, c) => d |-> Term.mk_comb (f, c))
+         val update_ss =
+            bool_ss ++
+            simpLib.rewrites
+               [updateTheory.APPLY_UPDATE_ID, combinTheory.UPDATE_APPLY,
+                combinTheory.UPDATE_APPLY_IMP_ID]
+      in
+         fn th =>
+            let
+               val xs = get_f th
+            in
+               if List.null xs
+                  then th
+               else let
+                       val xs =
+                          List.map
+                             (fn t =>
+                                let
+                                   val (g, d) = Term.dest_comb t
+                                   val c = Term.rand g
+                                in
+                                   (Term.mk_comb (g, mk_dvar ()),
+                                    (Term.rand g, mk_subst (d, c)))
+                                end) xs
+                       val (xs, cs_ds) = ListPair.unzip xs
+                       val (cs, ds) = ListPair.unzip cs_ds
+                       val frame = mk_frame cs
+                       val rwt =
+                          insert_conv (List.foldr progSyntax.mk_star frame xs)
+                       val ineqs =
+                          rwt |> Thm.hyp |> hd
+                              |> boolSyntax.strip_conj
+                              |> List.filter is_ineq
+                              |> List.map ASSUME
+                       val rule =
+                          if List.null ineqs
+                             then apply_id_rule
+                          else SIMP_RULE (update_ss++simpLib.rewrites ineqs) []
+                    in
+                       th |> SPECC_FRAME_RULE frame
+                          |> helperLib.PRE_POST_RULE
+                               (helperLib.STAR_REWRITE_CONV rwt)
+                          |> Thm.INST ds
+                          |> rule
+                          |> tidy_up_rule
+                    end
+            end
+      end
+      handle HOL_ERR _ => raise ERR "introduce_map_definition" ""
+end
+
+(* ------------------------------------------------------------------------
+   fix_precond
+
+   Given a list of theorems of the form
+
+     [
+       |- SPEC m (p1 * cond (... /\ c /\ ...)) code q1,
+       |- SPEC m (p2 * cond ~c) code q2
+     ]
+
+   (where the "cond" terms are not necessarily outermost) return theorems
+
+     [
+       |- SPEC m (p1 * cond (...) * precond c) code q1,
+       |- SPEC m (p2 * precond ~c) code q2
+     ]
+
+   Is an identity function for single element lists and raises and error
+   for all other lists.
+   ------------------------------------------------------------------------ *)
+
+local
+   val pecond_rule =
+      Conv.CONV_RULE
+         (Conv.TRY_CONV
+            (helperLib.PRE_CONV
+               (Conv.RAND_CONV
+                  (Conv.RATOR_CONV
+                     (Conv.REWR_CONV (GSYM set_sepTheory.precond_def))))))
+   fun rule c th = pecond_rule (MOVE_COND_RULE c th)
+   val get_cond =
+      Term.rand o Lib.first progSyntax.is_cond o progSyntax.strip_star o
+      temporal_stateSyntax.dest_pre' o Thm.concl
+in
+   val fix_precond =
+      fn [th1, th2] =>
+            let
+               val c = get_cond th2
+            in
+               [rule (utilsLib.mk_negation c) th1, rule c th2]
+            end
+        | thms as [_] => thms
+        | _ => raise ERR "fix_precond" ""
+end
+
+(* ------------------------------------------------------------------------
+   get_delta pc_var pc
+   get_pc_delta is_pc
+   ------------------------------------------------------------------------ *)
+
+fun get_delta pc_var pc =
+   case Lib.total wordsSyntax.dest_word_add pc of
+      SOME (x, n) =>
+         if x = pc_var
+            then Lib.total wordsSyntax.uint_of_word n
+         else NONE
+    | NONE =>
+        (case Lib.total wordsSyntax.dest_word_sub pc of
+            SOME (x, n) =>
+               if x = pc_var
+                  then Lib.total (Int.~ o wordsSyntax.uint_of_word) n
+               else NONE
+          | NONE => if pc = pc_var then SOME 0 else NONE)
+
+fun get_pc_delta is_pc =
+   let
+      val get_pc = Term.rand o Lib.first is_pc o progSyntax.strip_star
+   in
+      fn th =>
+         let
+            val (p, q) = progSyntax.dest_pre_post (Thm.concl th)
+         in
+            get_delta (get_pc p) (get_pc q)
+         end
+   end
+
+(* ------------------------------------------------------------------------
+   PC_CONV
+   ------------------------------------------------------------------------ *)
+
+local
+   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun is_reducible tm =
+      case Lib.total wordsSyntax.dest_word_add tm of
+         SOME (v, _) => not (Term.is_var v)
+       | _ => not (boolSyntax.is_cond tm)
+in
+   fun PC_CONV s =
+      Conv.ONCE_DEPTH_CONV
+         (fn tm =>
+            case boolSyntax.dest_strip_comb tm of
+              (c, [t]) =>
+                 if c = s andalso is_reducible t
+                    then Conv.RAND_CONV ARITH_SUB_CONV tm
+                 else raise ERR "PC_CONV" ""
+             | _ => raise ERR "PC_CONV" "")
+end
+
+(* ------------------------------------------------------------------------
    spec
 
-   Generate a tool for mapping strings to Hoare tripes, using an instruction
-   evaluator.
+   Generate a tool for proving theorems of the form
+
+     |- SPEC p c q
+
+   The goal is expected to be generated by mk_pre_post based on a
+   step-theorem, which is in turn used to prove the goal.
    ------------------------------------------------------------------------ *)
 
 (*
@@ -782,18 +1214,16 @@ local
       utilsLib.qm [cond_STAR1, combinTheory.I_THM]
          ``(cond c * p) (s:'a set) = I c /\ p s``
 in
-   fun spec imp_spec read_thms write_thms select_state_thms frame_thms
+   fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =
       let
          open lcsymtacs
-         val MP_SPEC_TAC = MATCH_MP_TAC imp_spec
          val sthms = cond_STAR1_I :: select_state_thms
          val pthms = [boolTheory.DE_MORGAN_THM, pred_setTheory.NOT_IN_EMPTY,
                       pred_setTheory.IN_DIFF, pred_setTheory.IN_INSERT]
          val UPD_TAC = UPDATE_TAC map_tys
          val PRE_TAC =
-            MP_SPEC_TAC
-            \\ GEN_TAC
+            GEN_TAC
             \\ GEN_TAC
             \\ CONV_TAC
                   (Conv.LAND_CONV
@@ -804,7 +1234,7 @@ in
             PURE_ASM_REWRITE_TAC write_thms
             \\ Tactical.REVERSE CONJ_TAC
             >- (
-                ASM_SIMP_TAC pure_ss frame_thms
+                ASM_SIMP_TAC (pure_ss++simpLib.rewrites frame_thms) []
                 \\ (
                     REFL_TAC
                     ORELSE (RW_TAC pure_ss frame_thms
@@ -844,7 +1274,8 @@ in
             \\ EXTRA_TAC
             \\ PRINT_TAC
          fun tac (v, dthm) =
-            PRE_TAC
+            MATCH_MP_TAC (if generate_temporal () then imp_temp else imp_spec)
+            \\ PRE_TAC
             \\ Tactic.EXISTS_TAC v
             \\ CONJ_TAC
             >- (

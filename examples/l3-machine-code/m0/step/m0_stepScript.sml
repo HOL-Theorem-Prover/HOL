@@ -20,31 +20,31 @@ val op \\ = op THEN;
 
 (* ------------------------------------------------------------------------ *)
 
-val NextStateARM_def = Define`
-   NextStateARM s0 =
+val NextStateM0_def = Define`
+   NextStateM0 s0 =
      let s1 = SND (Next s0) in
         if s1.exception = NoException then SOME s1 else NONE`
 
-val NextStateARM_thumb = ustore_thm("NextStateARM_thumb",
+val NextStateM0_thumb = ustore_thm("NextStateM0_thumb",
   `(s.exception = NoException) ==>
    (Fetch s = (Thumb v, s)) /\
    (DecodeThumb v (s with pcinc := 2w) = (ast, s with pcinc := 2w)) /\
    (!s. Run ast s = f x s) /\
    (f x (s with pcinc := 2w) = ((), s1)) /\
    (s1.exception = s.exception) ==>
-   (NextStateARM s = SOME s1)`,
-   lrw [NextStateARM_def, Next_def, Decode_def]
+   (NextStateM0 s = SOME s1)`,
+   lrw [NextStateM0_def, Next_def, Decode_def]
    )
 
-val NextStateARM_thumb2 = ustore_thm("NextStateARM_thumb2",
+val NextStateM0_thumb2 = ustore_thm("NextStateM0_thumb2",
   `(s.exception = NoException) ==>
    (Fetch s = (Thumb2 v, s)) /\
    (DecodeThumb2 v (s with pcinc := 4w) = (ast, s with pcinc := 4w)) /\
    (!s. Run ast s = f x s) /\
    (f x (s with pcinc := 4w) = ((), s1)) /\
    (s1.exception = s.exception) ==>
-   (NextStateARM s = SOME s1)`,
-   lrw [NextStateARM_def, Next_def, Decode_def]
+   (NextStateM0 s = SOME s1)`,
+   lrw [NextStateM0_def, Next_def, Decode_def]
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -113,6 +113,10 @@ val R_x_pc = Q.store_thm("R_x_pc",
    \\ Cases_on `x = 15w`
    \\ asm_simp_tac (srw_ss()) [R_name_def, DISCH_ALL R_x_not_pc]
    )
+
+val reverse_endian_def = Define`
+   reverse_endian (w: word32) =
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
 
 (* ------------------------------------------------------------------------ *)
 
@@ -383,22 +387,6 @@ val Aligned = Q.store_thm ("Aligned",
    lrw [Aligned_def, Align] \\ blastLib.BBLAST_TAC
    )
 
-val AlignAlign = Q.store_thm ("AlignAlign",
-   `(!v : word32. Align (Align (v,2),2) = Align (v,2)) /\
-    (!v : word32. Align (Align (v,4),4) = Align (v,4))`,
-   srw_tac [wordsLib.WORD_EXTRACT_ss] [Align]
-   )
-
-val AlignedAlign_2 = ustore_thm("AlignedAlign_2",
-   `Aligned (v:word32, 2) ==> ((if b then Align (v, 2) else v) = v)`,
-   lrw [Aligned_def, AlignAlign]
-   )
-
-val AlignedAlign_4 = ustore_thm("AlignedAlign_4",
-   `Aligned (v:word32, 4) ==> ((if b then Align (v, 4) else v) = v)`,
-   lrw [Aligned_def, AlignAlign]
-   )
-
 val Aligned_plus = Q.store_thm("Aligned_plus",
    `(!w: word32. Aligned (w + 2w, 2) = Aligned (w, 2)) /\
     (!w: word32. Aligned (w + 4w, 2) = Aligned (w, 2)) /\
@@ -408,126 +396,11 @@ val Aligned_plus = Q.store_thm("Aligned_plus",
    rw [Aligned] \\ blastLib.BBLAST_TAC
    )
 
-val AlignedPC_plus = ustore_thm("AlignedPC_plus",
-   `Aligned (pc: word32, 4) ==>
-    (Aligned (pc + 8w + imm, 4) = Aligned (imm, 4))`,
-   simp [Aligned] \\ blastLib.BBLAST_TAC
-   )
-
-val AlignedPC_plus_thumb = ustore_thm("AlignedPC_plus_thumb",
-   `Aligned (w: word32, 2) ==>
-    (((31 >< 1) (w + 4w + v): 31 word) @@ (0w: word1) = w + Align (v, 2) + 4w)`,
-   simp [Aligned, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val AlignedPC_plus_xthumb = ustore_thm("AlignedPC_plus_xthumb",
-   `Aligned (w: word32, 2) ==>
-    (((31 >< 1) (w + 4w): 31 word) @@ (1w: word1) = w + 5w)`,
-   simp [Aligned] \\ blastLib.BBLAST_TAC
-   )
-
-val AlignedPC_plus_arm = ustore_thm("AlignedPC_plus_arm",
-   `Aligned (w: word32, 4) ==>
-    (((31 >< 2) (w + 8w + v): 30 word) @@ (0w: word2) = w + Align (v, 4) + 8w)`,
-   simp [Aligned, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val AlignedPC_plus_xarm = ustore_thm("AlignedPC_plus_xarm",
-   `Aligned (w: word32, 4) ==>
-    (((31 >< 1) (w + 8w + v): 31 word) @@ (0w: word1) = w + Align (v, 2) + 8w)`,
-   simp [Aligned, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val AlignedPC_plus_align_arm = ustore_thm("AlignedPC_plus_align_arm",
-   `Aligned (w: word32, 4) ==>
-    (((31 >< 2) (Align (w + 8w: word32, 4) + v): 30 word) @@ (0w: word2) =
-     w + Align (v, 4) + 8w)`,
-   simp [Aligned, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_plus_minus = ustore_thm("Aligned_plus_minus",
-   `Aligned (x: word32, 4) ==>
-    (Aligned (if a then x + y else x - y, 4) = Aligned (y, 4))`,
-   lrw [Aligned] \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Aligned (pc + (if t then 4w else 8w) + x, 4) =
-     if t then Aligned (pc + x, 4) else Aligned (x, 4))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned4_base_pc_minus = ustore_thm("Aligned4_base_pc_minus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Aligned (pc + (if t then 4w else 8w) - x, 4) =
-     if t then Aligned (pc - x, 4) else Aligned (x, 4))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned2_base_pc_plus = ustore_thm("Aligned2_base_pc_plus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Aligned (pc + (if t then 4w else 8w) + x, 2) = Aligned (x, 2))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned2_base_pc_minus = ustore_thm("Aligned2_base_pc_minus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Aligned (pc + (if t then 4w else 8w) - x, 2) = Aligned (x, 2))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Align (pc + if t then 4w else 8w, 4) + x =
-     if t then Align (pc, 4) + (x + 4w) else pc + (x + 8w))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Align4_base_pc_minus = ustore_thm("Align4_base_pc_minus",
-   `Aligned (pc: word32, if t then 2 else 4) ==>
-    (Align (pc + if t then 4w else 8w, 4) - x =
-     if t then Align (pc, 4) - (x - 4w) else pc - (x - 8w))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned_Align_plus_minus = Q.store_thm("Aligned_Align_plus_minus",
-   `(!w x: word32. Aligned (Align (w, 4) + x, 4) = Aligned (x, 4)) /\
-    (!w x: word32. Aligned (Align (w, 4) - x, 4) = Aligned (x, 4)) /\
-    (!w x: word32. Aligned (Align (w, 4) + x, 2) = Aligned (x, 2)) /\
-    (!w x: word32. Aligned (Align (w, 4) - x, 2) = Aligned (x, 2))`,
-   lrw [Aligned, Align] \\ blastLib.BBLAST_TAC
-   )
-
 val Aligned_concat4 = Q.store_thm("Aligned_concat4",
    `!p a: word8 b: word8 c: word8 d: word8.
       Aligned (if p then a @@ b @@ c @@ d else d @@ c @@ b @@ a, 4) =
       Aligned (if p then d else a, 4)`,
    lrw [Aligned] \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned2_bit0 = utilsLib.ustore_thm ("Aligned2_bit0",
-   `Aligned (pc: word32, 2) ==> ~word_bit 0 (pc + 4w)`,
-   simp [Aligned]
-   \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned4_bit0 = utilsLib.ustore_thm ("Aligned4_bit0",
-   `Aligned (pc: word32, 4) ==> ~word_bit 0 (pc + 8w)`,
-   simp [Aligned]
-   \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned4_bit1 = utilsLib.ustore_thm ("Aligned4_bit1",
-   `Aligned (pc: word32, 4) ==> ~word_bit 1 (pc + 8w)`,
-   simp [Aligned]
-   \\ blastLib.BBLAST_TAC
    )
 
 val Aligned_SP = utilsLib.ustore_thm("Aligned_SP",
@@ -615,6 +488,41 @@ val Aligned_BranchLinkEx = utilsLib.ustore_thm("Aligned_BranchLinkEx",
     (((31 >< 1) (w + 4w - 2w) : 31 word @@ (1w: word1)) = (w + 2w) !! 1w)`,
    simp [Aligned]
    \\ blastLib.BBLAST_TAC
+   )
+
+val tm = Term.subst [``b0:bool`` |-> boolSyntax.F] (bitstringSyntax.mk_vec 32 0)
+
+val Aligned_Branch = Q.store_thm("Aligned_Branch",
+   `(Aligned (pc:word32, 2) ==> Aligned (pc + 4w + ^tm, 2)) = T`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
+   `Aligned (w: 31 word @@ (0w: word1), 2)`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Aligned (pc + (x + 4w), 4) = Aligned (x, 4))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Align (pc + 4w, 4) + x = pc + (x + 4w))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_base_pc_lit = Q.store_thm("Aligned_base_pc_lit",
+   `Aligned
+       (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
+   simp [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -837,6 +745,16 @@ val get_bytes = Q.store_thm("get_bytes",
              b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word16) =
      v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)`,
    blastLib.BBLAST_TAC
+   )
+
+val concat_bytes = Q.store_thm("concat_bytes",
+   `(!w: word32.
+       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
+    (!w: word32.
+       (7 >< 0) (reverse_endian w) @@ (15 >< 8) (reverse_endian w) @@
+       (23 >< 16) (reverse_endian w) @@ (31 >< 24) (reverse_endian w) = w)`,
+   rw [reverse_endian_def]
+   \\ blastLib.BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)

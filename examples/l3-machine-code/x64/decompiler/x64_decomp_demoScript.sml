@@ -1,5 +1,5 @@
-
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib bossLib
+open x64_decompLib
 
 val _ = new_theory "x64_decomp_demo";
 
