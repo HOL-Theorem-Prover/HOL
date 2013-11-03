@@ -2765,6 +2765,31 @@ val splitAtPki_EQN = store_thm(
     ]
   ]);
 
+val TAKE_LENGTH_TOO_LONG = store_thm(
+  "TAKE_LENGTH_TOO_LONG",
+  ``!l n. LENGTH l <= n ==> (TAKE n l = l)``,
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][]);
+
+val DROP_LENGTH_TOO_LONG = store_thm(
+  "DROP_LENGTH_TOO_LONG",
+  ``!l n. LENGTH l <= n ==> (DROP n l = [])``,
+  Induct THEN SRW_TAC [numSimps.ARITH_ss][]);
+
+val TAKE_splitAtPki = store_thm(
+  "TAKE_splitAtPki",
+  ``TAKE n l = splitAtPki (K o (=) n) K l``,
+  SRW_TAC [][splitAtPki_EQN] THEN
+  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  SRW_TAC[numSimps.ARITH_ss][TAKE_LENGTH_TOO_LONG])
+
+val DROP_splitAtPki = store_thm(
+  "DROP_splitAtPki",
+  ``DROP n l = splitAtPki (K o (=) n) (K I) l``,
+  SRW_TAC [][splitAtPki_EQN] THEN
+  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
+  SRW_TAC[numSimps.ARITH_ss][DROP_LENGTH_TOO_LONG]);
+
+
 (* --------------------------------------------------------------------- *)
 
 val LAST_compute = Q.store_thm("LAST_compute",
