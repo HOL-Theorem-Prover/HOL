@@ -43,13 +43,17 @@ let val {add_string,add_break,begin_block,end_block, add_newline,
   fun pr_thm (heading, ths) =
     vblock(heading,
       (fn (s,th) => (begin_block CONSISTENT 0;
-                     add_string s; add_break(2,0);
+                     add_string s; add_newline();
+                     add_string "  ";
                      pp_thm th; end_block())),
-      ths)
+      Listsort.sort (inv_img_cmp #1 String.compare) ths)
+  val longest_const_size =
+      List.foldl (fn ((s,_),i) => Int.max(size s, i)) 0
+                 consts
 in
     begin_block CONSISTENT 0;
     add_string ("Theory: "^name); nl2();
-    vblock ("Parents", add_string, parents); nl2();
+    vblock ("Parents", add_string, Listsort.sort String.compare parents); nl2();
     vblock ("Type constants",
      (fn (name,arity) =>
          (add_string name; add_string (" "^Lib.int_to_string arity))),
@@ -59,8 +63,9 @@ in
     vblock ("Term constants",
       (fn (name,htype)
         => (begin_block CONSISTENT 0;
-            add_string (name^" ");
-            add_break(3,0);
+            add_string name;
+            add_string (CharVector.tabulate(longest_const_size + 3 - size name,
+                                            K #" "));
             pp_type htype;
             end_block())),
       consts)
