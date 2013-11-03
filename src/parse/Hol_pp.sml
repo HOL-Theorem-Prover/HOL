@@ -31,17 +31,20 @@ let val {add_string,add_break,begin_block,end_block, add_newline,
   fun vblock(header, ob_pr, obs) =
     if null obs then ()
     else
-    ( begin_block CONSISTENT 4;
-     add_string (header^":");
-     add_newline();
-     Portable.pr_list ob_pr
-     (fn () => ()) add_newline obs;
-     end_block())
+      (begin_block CONSISTENT 4;
+       add_string (header^":");
+       add_newline();
+       Portable.pr_list
+         ob_pr
+         (fn () => ())
+         add_newline
+         obs;
+       end_block())
   fun pr_thm (heading, ths) =
     vblock(heading,
       (fn (s,th) => (begin_block CONSISTENT 0;
                      add_string s; add_break(2,0);
-                      pp_thm th; end_block())),
+                     pp_thm th; end_block())),
       ths)
 in
     begin_block CONSISTENT 0;
