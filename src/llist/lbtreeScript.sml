@@ -620,7 +620,7 @@ val min_tac =
     Q.X_GEN_TAC `t2d` THEN NTAC 2 STRIP_TAC THEN
     LEAST_ELIM_TAC THEN
     ONCE_REWRITE_TAC [depth_cases] THEN
-    SRW_TAC [][EXISTS_OR_THM] THEN1 METIS_TAC [] THENL[
+    SRW_TAC [][EXISTS_OR_THM] THENL[
       `m = t1d`
          by (SPOSE_NOT_THEN ASSUME_TAC THEN
              `m < t1d \/ t1d < m` by DECIDE_TAC THENL [
@@ -734,7 +734,7 @@ val mmindex_EXISTS = store_thm(
   MAP_EVERY Q.EXISTS_TAC [`LEAST x. Inds(x)`, `min_d`] THEN
   LEAST_ELIM_TAC THEN CONJ_TAC THENL [
     SRW_TAC [][Abbr`Inds`, Abbr`min_d`] THEN
-    LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
+    LEAST_ELIM_TAC THEN SRW_TAC [][] THEN
     Q.UNABBREV_TAC `P` THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [],
@@ -744,14 +744,14 @@ val mmindex_EXISTS = store_thm(
     Cases_on `f (EL i l)` THEN SRW_TAC [][] THENL [
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
-      SRW_TAC [][] THEN1 METIS_TAC [] THEN
+      SRW_TAC [][] THEN
       METIS_TAC [DECIDE ``x <= y = ~(y < x)``],
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
       CONJ_TAC THEN1 METIS_TAC [] THEN
       Q.X_GEN_TAC `m` THEN STRIP_TAC THEN
       `(LEAST x. P x) = m`
-         by (LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
+         by (LEAST_ELIM_TAC THEN SRW_TAC [][] THEN
              METIS_TAC [DECIDE ``(x = y) = ~(x < y) /\ ~(y < x)``]) THEN
       POP_ASSUM SUBST_ALL_TAC THEN
       `m <= x` by METIS_TAC [DECIDE ``~(x < y) = y <= x``] THEN

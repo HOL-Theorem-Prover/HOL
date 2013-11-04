@@ -1105,10 +1105,8 @@ val exists_LDROP = store_thm(
     Q_TAC SUFF_TAC
        `!ll. exists P ll ==> ?n a t. (LDROP n ll = SOME (a:::t)) /\ P a`
        THEN1 METIS_TAC [] THEN
-    HO_MATCH_MP_TAC exists_strong_ind THEN SRW_TAC [][] THENL [
-      Q.EXISTS_TAC `0` THEN SRW_TAC [][],
-      Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][]
-    ],
+    HO_MATCH_MP_TAC exists_strong_ind THEN SRW_TAC [][] THEN
+    Q.EXISTS_TAC `SUC n` THEN SRW_TAC [][],
     Q_TAC SUFF_TAC
        `!n ll a t. (LDROP n ll = SOME (a:::t)) /\ P a ==> exists P ll`
        THEN1 METIS_TAC [] THEN
@@ -1174,27 +1172,20 @@ val every_strong_coind = save_thm(
 val least_lemma = prove(
   ``(?n. P n) ==> ((LEAST) P = if P 0 then 0 else SUC ((LEAST) (P o SUC)))``,
   SRW_TAC [][] THENL [
-    Q_TAC SUFF_TAC `(\n. n = 0) ($LEAST P)` THEN1 SRW_TAC [][] THEN
-    MATCH_MP_TAC whileTheory.LEAST_ELIM THEN SRW_TAC [][] THENL [
-      PROVE_TAC [],
-      SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-      `0 < n'` by DECIDE_TAC THEN METIS_TAC []
-    ],
-    Q_TAC SUFF_TAC `(\n. n = SUC ($LEAST (P o SUC))) ((LEAST) P)` THEN1
-          SRW_TAC [][] THEN
-    MATCH_MP_TAC whileTheory.LEAST_ELIM THEN CONJ_TAC THENL [
-      PROVE_TAC [],
-      Q.X_GEN_TAC `p` THEN SRW_TAC [][] THEN
-      Q_TAC SUFF_TAC `(\k. p = SUC k) ($LEAST (P o SUC))` THEN1
-            SRW_TAC [][] THEN
-      MATCH_MP_TAC whileTheory.LEAST_ELIM THEN CONJ_TAC THENL [
-        SRW_TAC [][] THEN Cases_on `n` THEN PROVE_TAC [],
-        SRW_TAC [][] THEN
-        `~(SUC n' < p)` by PROVE_TAC [] THEN
-        `(p = SUC n') \/ (p < SUC n')` by DECIDE_TAC THEN
-        `?p0. p = SUC p0` by METIS_TAC [arithmeticTheory.num_CASES] THEN
-        FULL_SIMP_TAC (srw_ss()) []
-      ]
+    DEEP_INTRO_TAC whileTheory.LEAST_ELIM THEN SRW_TAC[][] THEN
+    SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+    `0 < n` by DECIDE_TAC THEN METIS_TAC [],
+
+    DEEP_INTRO_TAC whileTheory.LEAST_ELIM THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+    Q.X_GEN_TAC `p` THEN SRW_TAC [][] THEN
+    DEEP_INTRO_TAC whileTheory.LEAST_ELIM THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+    CONJ_TAC THENL [
+      Cases_on `n` THEN PROVE_TAC [],
+      Q.X_GEN_TAC `q` THEN SRW_TAC [][] THEN
+      `~(SUC q < p)` by PROVE_TAC [] THEN
+      `(p = SUC q) \/ (p < SUC q)` by DECIDE_TAC THEN
+      `?p0. p = SUC p0` by METIS_TAC [arithmeticTheory.num_CASES] THEN
+      FULL_SIMP_TAC (srw_ss()) []
     ]
   ]);
 
