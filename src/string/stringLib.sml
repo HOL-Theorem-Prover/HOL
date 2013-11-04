@@ -88,7 +88,7 @@ val () = computeLib.add_funs [stringTheory.IMPLODE_EXPLODE_I]
 val () = computeLib.add_convs [(stringSyntax.ord_tm, 1, ORD_CHR_CONV)]
 
 val () = Defn.const_eq_ref :=
-           (!Defn.const_eq_ref ORELSEC char_EQ_CONV ORELSEC string_EQ_CONV)
+           (!Defn.const_eq_ref ORELSEC string_EQ_CONV ORELSEC char_EQ_CONV)
 
 (*---------------------------------------------------------------------------
       Examples.
