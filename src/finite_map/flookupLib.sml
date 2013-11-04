@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib bossLib finite_mapSyntax
 
+(* ------------------------------------------------------------------------- *)
+
 fun memoize size cmp f =
    let
       val d = ref (Redblackmap.mkDict cmp)
@@ -57,33 +59,21 @@ fun eq_conv ty =
                             else eq_conv (Term.type_of l) tm
                        | NONE => ALL_CONV tm))
 
-
-(* --------------------------------------------------------------------------
-    FLOOKUP_DEFN_CONV thm
-
-    Given a definition of the form
-
-    |- fmap = base_fmap |+ (i_1, d_1) ... |+ (i_n, d_n)
-
-    where each i_j is ground, FLOOKUP_DEFN_CONV returns a conversion that
-    succeeds on terms of the form
-
-     ``FLOOKUP fmap x``
-
-    where x is ground. If x = i_j for some j then the result will be
-
-    |- FLOOKUP fmap i_j = SOME d_j
-
-    Otherwise, if x is not equal to any i_j then the result will be
-
-    |- FLOOKUP fmap x = FLOOKUP base_fmap x
-
-    The complexity of building the conversion is quadratic, so this routine
-    does not scale well to very large finite map definitions.
-   -------------------------------------------------------------------------- *)
-
 local
    val not_F_imp = DECIDE ``(~F ==> a) = a``
+in
+   fun neqs_rule ty =
+      let
+         val neqs_rule =
+            Conv.CONV_RULE (Conv.LAND_CONV (Conv.RAND_CONV (eq_conv ty))
+                            THENC Conv.REWR_CONV not_F_imp)
+      in
+         fn thm =>
+            List.foldl (neqs_rule o Lib.uncurry Thm.DISCH) thm (Thm.hyp thm)
+      end
+end
+
+local
    val flookup_id = Q.prove(
       `FLOOKUP (fm |+ (a:'a, b)) a = SOME b`,
       REWRITE_TAC [finite_mapTheory.FLOOKUP_UPDATE]
@@ -93,73 +83,206 @@ local
       SIMP_TAC std_ss [finite_mapTheory.FLOOKUP_UPDATE]
       )
       |> UNDISCH_ALL
-   val err = ERR "FLOOKUP_DEFN_CONV" ""
-in
-   fun FLOOKUP_DEFN_CONV thm =
+   val updates = List.rev o List.map (fst o pairSyntax.dest_pair) o snd o
+                 finite_mapSyntax.strip_fupdate
+   val err = ERR "extend_flookup_thms" "not an extension"
+   fun get_delta tm1 tm2 =
       let
-         val (d, t) = boolSyntax.dest_eq (Thm.concl thm)
-         val (dty, rty) = finite_mapSyntax.dest_fmap_ty (Term.type_of d)
-         val tms = List.rev (List.map (fst o pairSyntax.dest_pair)
-                               (snd (finite_mapSyntax.strip_fupdate t)))
+         val u1 = updates tm1
+         val u2 = updates tm2
+         val l1 = List.length u1
+         val l2 = List.length u2
+         val d = l2 - l1
+      in
+         if 0 <= d
+            then ( List.drop (u2, d) = u1 orelse raise err
+                 ; (List.take (u2, d), u1) )
+         else raise err
+      end
+   fun get_b rest =
+      let
+         val t = boolSyntax.lhs (Thm.concl rest)
+      in
+         case Lib.total finite_mapSyntax.dest_flookup t of
+            SOME (fmap, _) => fmap
+          | NONE => t
+      end
+   fun is_refl th =
+      case Lib.total boolSyntax.dest_eq (Thm.concl th) of
+         SOME (l, r) => l = r
+       | NONE => false
+in
+   fun extend_flookup_thms (dict, rest) tm =
+      let
+         val base = get_b rest
+         val (dty, rty) = finite_mapSyntax.dest_fmap_ty (Term.type_of base)
+         val (tms, old_tms) = get_delta base tm
          val inst_ty = Thm.INST_TYPE [alpha |-> dty, beta |-> rty]
          val flookup_id = inst_ty flookup_id
          val flookup_rest = inst_ty flookup_rest
          val id_rule = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV flookup_id)
-         val neqs_rule = Conv.CONV_RULE
-                             (Conv.LAND_CONV (Conv.RAND_CONV (eq_conv dty))
-                              THENC Conv.REWR_CONV not_F_imp)
-         fun rule thm =
-            List.foldl (neqs_rule o Lib.uncurry Thm.DISCH) thm (Thm.hyp thm)
-         val rest_rule = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV flookup_rest)
+         val rule = neqs_rule dty
          val a = Term.mk_var ("a", dty)
          val x = Term.mk_var ("x", dty)
-         val th = Conv.RATOR_CONV (Conv.RAND_CONV (Conv.REWR_CONV thm))
-                    (finite_mapSyntax.mk_flookup (d, x))
-         val (dict, rest) =
+         val th = Thm.REFL (finite_mapSyntax.mk_flookup (tm, x))
+         val (dict', rest') =
             List.foldl
-               (fn (t, (dict, th)) =>
-                  let
-                     val rwt =
-                        Lib.total (rule o id_rule o Thm.INST [x |-> t]) th
-                  in
-                    (case rwt of
-                        SOME r => Redblackmap.insert (dict, t, r)
-                      | NONE => dict,
-                     Conv.RIGHT_CONV_RULE
-                        (Conv.REWR_CONV (Thm.INST [a |-> t] flookup_rest)) th)
-                  end)
+               (fn (t, (d, th)) =>
+                 (case Lib.total (rule o id_rule o Thm.INST [x |-> t]) th of
+                     SOME r => Redblackmap.insert (d, t, r)
+                   | NONE => d,
+                  Conv.RIGHT_CONV_RULE
+                     (Conv.REWR_CONV (Thm.INST [a |-> t] flookup_rest)) th))
                (Redblackmap.mkDict Term.compare, th) tms
+         val dict'' =
+            List.foldl
+               (fn (t, d) =>
+                  case Redblackmap.peek (dict, t) of
+                     SOME r => Redblackmap.insert
+                                 (d, t,
+                                  (rule o
+                                   Conv.RIGHT_CONV_RULE (Conv.REWR_CONV r))
+                                      (Thm.INST [x |-> t] rest'))
+                   | NONE => raise err) dict' old_tms
+         val rest'' = if is_refl rest
+                         then rest'
+                      else Conv.RIGHT_CONV_RULE (Conv.REWR_CONV rest) rest'
       in
-         fn tm =>
+         (dict'', rest'')
+      end
+end
+
+val const_name = ref "gen_fmap_"
+val new_const_size = ref 100
+
+(* --------------------------------------------------------------------------
+    FLOOKUP_DEFN_CONV
+
+    Conversion for term of the form ``FLOOKUP fmap i``.
+
+    Will abbreviate "fmap" when it contains lots of updates. Otherwise it
+    will employ a database to lookup values.
+
+    To activate in the context of EVAL do:
+
+    val () =
+      ( computeLib.del_consts [finite_mapSyntax.flookup_t]
+      ; computeLib.add_convs
+           [(finite_mapSyntax.flookup_t, 2, FLOOKUP_DEFN_CONV)] )
+
+   -------------------------------------------------------------------------- *)
+
+local
+   val completed_fmap_convs =
+      ref (Redblackmap.mkDict Term.compare: (term, conv) Redblackmap.dict)
+   val head_fmaps =
+      ref (Redblackmap.mkDict Term.compare:
+             (term, (term, thm) Redblackmap.dict * thm) Redblackmap.dict)
+   fun introduce_fmap_consts _ = ALL_CONV
+   val const_number = ref 0
+   val flookup_fallback_conv =
+      Conv.REWR_CONV finite_mapTheory.FLOOKUP_UPDATE
+      ORELSEC Conv.REWR_CONV finite_mapTheory.FLOOKUP_EMPTY
+   val err = ERR "FLOOKUP_DEFN_CONV" ""
+   fun DICT_REST_CONV (dr as (dict, rest)) tm =
+      let
+         val i = snd (finite_mapSyntax.dest_flookup tm)
+      in
+         case Redblackmap.peek (dict, i) of
+            SOME thm => Conv.REWR_CONV thm tm
+          | NONE => let
+                       val x = Term.rand (boolSyntax.rhs (Thm.concl rest))
+                    in
+                       neqs_rule (Term.type_of x) (Thm.INST [x |-> i] rest)
+                    end
+      end
+   fun introduce_fmap_consts (x as (base, _)) =
+      let
+         val ty = Term.type_of base
+         fun new_var () =
+            Term.mk_var (!const_name ^ Int.toString (!const_number), ty) before
+            Portable.inc const_number
+         fun iter a (c, l) =
             let
-               val (fm, i) = Lib.with_exn finite_mapSyntax.dest_flookup tm err
+               val r = List.take (l, !new_const_size)
+               val v = new_var()
+               val s = fst (Term.dest_var v)
+               val t = finite_mapSyntax.list_mk_fupdate (c, r)
+               val def = Definition.new_definition (s, boolSyntax.mk_eq (v, t))
+               val () = print ("Defined " ^ quote s ^ "\n")
+               val sym_def = SYM def
+               val (c', tm) = boolSyntax.dest_eq (Thm.concl def)
+               val (dict, rest) =
+                  extend_flookup_thms
+                    (Redblackmap.mkDict Term.compare, Thm.REFL c) tm
+               val cnv = Conv.REWR_CONV sym_def
+               val rule =
+                  Conv.CONV_RULE
+                     (Conv.LAND_CONV (Conv.RATOR_CONV (Conv.RAND_CONV cnv)))
+               val dict = Redblackmap.transform rule dict
+               val rest = rule rest
+               val () =
+                  completed_fmap_convs :=
+                  Redblackmap.insert
+                    (!completed_fmap_convs, c', DICT_REST_CONV (dict, rest))
             in
-               if fm = d
-                  then case Redblackmap.peek (dict, i) of
-                          SOME th => th
-                        | NONE =>
-                            Lib.with_exn (rule o Thm.INST [x |-> i]) rest err
-               else raise err
+               iter (sym_def :: a) (c', List.drop (l, !new_const_size))
             end
+            handle General.Subscript => a
+         val defs = iter [] x
+         val () = computeLib.add_funs defs
+      in
+         PURE_REWRITE_CONV defs
+      end
+in
+   fun FLOOKUP_DEFN_CONV tm =
+      let
+         val fm = Lib.with_exn (fst o finite_mapSyntax.dest_flookup) tm err
+         val (base, ups) = finite_mapSyntax.strip_fupdate fm
+         val n = List.length ups
+      in
+         if not (List.null (Term.free_vars tm))
+            then flookup_fallback_conv tm
+         else if List.null ups
+            then case Redblackmap.peek (!completed_fmap_convs, base) of
+                    SOME cnv => cnv tm
+                  | NONE => flookup_fallback_conv tm
+         else if n < !new_const_size
+            then let
+                    val dr =
+                       case Redblackmap.peek (!head_fmaps, base) of
+                          SOME dr => dr
+                        | NONE =>
+                            (Redblackmap.mkDict Term.compare, Thm.REFL base)
+                 in
+                    case Lib.total (extend_flookup_thms dr) fm of
+                       SOME dr' =>
+                          ( head_fmaps :=
+                               Redblackmap.insert (!head_fmaps, base, dr')
+                          ; DICT_REST_CONV dr' tm
+                          )
+                     | NONE => flookup_fallback_conv tm
+                 end
+         else let
+                 val cnv = introduce_fmap_consts (base, ups)
+              in
+                 Conv.RATOR_CONV (Conv.RAND_CONV cnv) tm
+              end
       end
 end
 
 end
 
 (* ----------------------------------------------------------------------- *)
-(* Testing
+
+(* Testing...
 
 open flookupLib wordsLib
+open flookupLib
 
-val () = Hol_datatype `enum = One | Two | Three | Four | Five`
-
-val () = Hol_datatype`
-     data = Num of num
-          | String of string
-          | Word of word32
-          | Enum of enum
-          | Other1
-          | Other2`
+val () =
+   ( computeLib.del_consts [finite_mapSyntax.flookup_t]
+   ; computeLib.add_convs [(finite_mapSyntax.flookup_t, 2, FLOOKUP_DEFN_CONV)] )
 
 val fempty_tm =
    Term.inst [alpha |-> numSyntax.num, beta |-> numSyntax.num]
@@ -173,6 +296,28 @@ fun mk_fmap t b n =
                        in
                           pairSyntax.mk_pair (j, j)
                        end))
+
+Count.apply EVAL ``FLOOKUP (FEMPTY |+ (a, 1)) a``
+
+Count.apply EVAL ``FLOOKUP ^(mk_fmap fempty_tm 0 1000) 999``
+
+Count.apply EVAL ``FLOOKUP gen_fmap_0 44``
+Count.apply EVAL ``FLOOKUP (gen_fmap_0 |+ (1000, 1000)) 44``
+Count.apply EVAL ``FLOOKUP (gen_fmap_0 |+ (44, 45)) 44``
+Count.apply EVAL ``FLOOKUP gen_fmap_1 99``
+Count.apply EVAL ``FLOOKUP gen_fmap_9 99``
+Count.apply EVAL ``FLOOKUP gen_fmap_9 901``
+Count.apply EVAL ``FLOOKUP gen_fmap_9 801``
+
+val () = Hol_datatype `enum = One | Two | Three | Four | Five`
+
+val () = Hol_datatype`
+     data = Num of num
+          | String of string
+          | Word of word32
+          | Enum of enum
+          | Other1
+          | Other2`
 
 val dict2_def = Define `dict2 = ^(mk_fmap fempty_tm 0 1000)`
 val dict3_def = Define `dict3 = ^(mk_fmap ``dict2`` 1000 400)`
