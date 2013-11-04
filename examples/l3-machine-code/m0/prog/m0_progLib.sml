@@ -2,7 +2,7 @@ structure m0_progLib :> m0_progLib =
 struct
 
 open HolKernel boolLib bossLib
-open stateLib m0_progTheory
+open stateLib spec_databaseLib m0_progTheory
 
 structure Parse =
 struct
@@ -21,6 +21,8 @@ val m0_comp_defs = m0_progTheory.component_defs
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
+   val step_1 =
+      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
    val m0_0 =
       HolKernel.syntax_fns "m0_prog" 1 HolKernel.dest_monop HolKernel.mk_monop
 in
@@ -32,9 +34,11 @@ in
    val half = wordsSyntax.mk_int_word_type 16
    val word = wordsSyntax.mk_int_word_type 32
    val (_, _, dest_m0_AIRCR_ENDIANNESS, _) = m0_1 "m0_AIRCR_ENDIANNESS"
+   val (_, _, dest_m0_CONFIG, _) = m0_1 "m0_CONFIG"
    val (_, mk_data_to_thumb2, _, _) = m0_0 "data_to_thumb2"
    val (_, mk_m0_MEM, dest_m0_MEM, is_m0_MEM) = m0_2 "m0_MEM"
    val (_, mk_m0_REG, dest_m0_REG, is_m0_REG) = m0_2 "m0_REG"
+   val (_, mk_rev_e, _, _) = step_1 "reverse_endian"
    fun mk_m0_PC v = mk_m0_REG (pc, v)
 end
 
@@ -131,117 +135,41 @@ end
 
 local
    val pc_tm = Term.mk_var ("pc", word)
-
-   val list_mk_add_or_sub =
-      List.foldl
-         (fn ((b, t1), t2) =>
-            if b then wordsSyntax.mk_word_add (t2, t1)
-            else wordsSyntax.mk_word_sub (t2, t1)) pc_tm
-
-   val strip_add_or_sub =
-      let
-         fun iter a t =
-            case Lib.total wordsSyntax.dest_word_add t of
-               SOME (l, r) => iter ((true, r) :: a) l
-             | NONE => (case Lib.total wordsSyntax.dest_word_sub t of
-                           SOME (l, r) => iter ((false, r) :: a) l
-                         | NONE => if t = pc_tm then a else [])
-      in
-         iter []
-      end
-
-   fun is_byte_offset tm =
-      case Lib.total wordsSyntax.uint_of_word tm of
-         SOME i => 1 <= i andalso i <= 3
+   fun is_pc_relative tm =
+      case Lib.total dest_m0_MEM tm of
+         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
        | NONE => false
-
-   val zero_offset = wordsSyntax.mk_wordii (0, 32)
-
-   fun dest_pc_relative tm =
-      case Lib.total ((strip_add_or_sub ## Lib.I) o dest_m0_MEM) tm of
-         SOME (l as _ :: _, d) =>
-            let
-               val (b, tm) = List.last l
-            in
-               SOME (if b andalso is_byte_offset tm
-                        then (tm, d, list_mk_add_or_sub (Lib.butlast l))
-                     else (zero_offset, d, list_mk_add_or_sub l))
-            end
-       | _ => NONE
-
-   val part_pc_relative =
-      utilsLib.classes (fn ((_, _, a), (_, _, b)) => a = b) o
-      (List.foldl (fn (tm, a) => case dest_pc_relative tm of
-                                    SOME x => x :: a
-                                  | NONE => a) [])
-
-   fun get i =
-      let
-         val tm = wordsSyntax.mk_wordii (i, 32)
-      in
-         fn l =>
-            case List.find (fn (j, _, _: term) => j = tm) l of
-               SOME (_, d, _) => d
-             | NONE => raise ERR "extend_m0_code_pool"
-                                 ("missing byte: " ^ Int.toString i)
-      end
-
-   val w = Term.mk_var ("w", word)
-   val i8 = fcpSyntax.mk_int_numeric_type 8
-
-   fun mk_byte (h, l) =
-      let
-         val hi = numSyntax.term_of_int h
-         val li = numSyntax.term_of_int l
-      in
-         fn w => wordsSyntax.mk_word_extract (hi, li, w, i8)
-      end
-
-   val b0 = mk_byte (31, 24)
-   val b1 = mk_byte (23, 16)
-   val b2 = mk_byte (15, 8)
-   val b3 = mk_byte (7, 0)
-
    fun is_big_end tm =
       case Lib.total dest_m0_AIRCR_ENDIANNESS tm of
          SOME t => t = boolSyntax.T
        | NONE => false
-
-   fun move_to_code ((a, w), thm) =
+   val byte_chunks = stateLib.group_into_chunks (dest_m0_MEM, 4, mk_rev_e)
+   fun rwt (w, a) =
+      [Drule.SPECL [a, w] m0_progTheory.MOVE_TO_TEMPORAL_M0_CODE_POOL,
+       Drule.SPECL [a, w] m0_progTheory.MOVE_TO_M0_CODE_POOL]
+   fun move_to_code wa =
       REWRITE_RULE
-        [stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
+       ([stateTheory.BIGUNION_IMAGE_1, stateTheory.BIGUNION_IMAGE_2,
          set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
-         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_TEMPORAL_M0_CODE_POOL,
-         Drule.SPECL [a, w] m0_progTheory.MOVE_TO_M0_CODE_POOL,
-         disjoint_m0_instr_thms, m0_stepTheory.concat_bytes] thm
-
-   val (_, mk_reverse_endian, _, _) =
-      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
-        "reverse_endian"
+         m0_progTheory.disjoint_m0_instr_thms, m0_stepTheory.concat_bytes] @
+        List.concat (List.map rwt wa))
 in
    fun extend_m0_code_pool thm =
       let
          val (p, q) = temporal_stateSyntax.dest_pre_post' (Thm.concl thm)
          val lp = progSyntax.strip_star p
-         (*
-         val p_pc as [l as [(_, _, a), _, _, _]] = part_pc_relative lp
-         *)
       in
-         case part_pc_relative lp of
-            p_pc as [l as [(_, _, a), _, _, _]] =>
-               if List.all (op =)
-                   (ListPair.zip
-                      (p_pc, part_pc_relative (progSyntax.strip_star q)))
-                  then let (* it's a well-formed load *)
-                          val e = List.exists is_big_end lp
-                          val we = if e then mk_reverse_endian w else w
-                          val s = [get 0 l |-> b3 we, get 1 l |-> b2 we,
-                                   get 2 l |-> b1 we, get 3 l |-> b0 we]
-                       in
-                          move_to_code ((a, we), Thm.INST s thm)
-                       end
-               else thm
-          | _ => thm
+         if Lib.exists is_pc_relative lp
+            then let
+                    val e = List.exists is_big_end lp
+                    val (s, (s2, wa)) = byte_chunks (e, lp)
+                    val s = List.concat s
+                 in
+                    if List.null s
+                       then thm
+                    else move_to_code wa (Thm.INST s2 (Thm.INST s thm))
+                 end
+         else thm
       end
 end
 
@@ -355,8 +283,7 @@ local
          (SIMP_CONV (srw_ss()) [m0_stepTheory.R_name_def])
          (List.map mk_R_main registers @
           [``^R_name_tm F ^sp``, ``^R_name_tm T ^sp``])
-   val rwts = utilsLib.datatype_rewrites "m0" ["RName"]
-   val rwts = List.take (List.drop (rwts, 10), 2)
+   val rwts = List.take (utilsLib.datatype_rewrites false "m0" ["RName"], 2)
 in
    val REG_CONV =
       Conv.QCONV (REWRITE_CONV (rwts @ [R_main, m0_stepTheory.v2w_ground4]))
@@ -523,11 +450,8 @@ local
                   |> MOVE_COND_RULE
    val flag_introduction =
       helperLib.MERGE_CONDS_RULE o TRY_DISCH_RULE o PURE_REWRITE_RULE m0_PSR_T_F
-   val eq_conv =
+   val addr_eq_conv =
       SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
-   val memory_introduction =
-      stateLib.introduce_map_definition
-         (m0_progTheory.m0_MEMORY_INSERT, eq_conv)
    val m0_PC_INTRO0 =
       m0_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                   |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
@@ -548,12 +472,23 @@ local
       MP_m0_PC_INTRO o
       Conv.CONV_RULE
          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``m0_REG RName_PC``))
+   fun is_big_end tm =
+      case Lib.total (pairSyntax.dest_pair o dest_m0_CONFIG) tm of
+         SOME (t, _) => t = boolSyntax.T
+       | _ => false
 in
-   val gp_introduction =
+   val m0_sep_array_intro =
+      stateLib.sep_array_intro mk_rev_e is_big_end m0_progTheory.m0_WORD_def
+         [m0_stepTheory.concat_bytes, m0_stepTheory.reverse_endian_bytes,
+          m0_stepTheory.reverse_endian_id,
+          GSYM m0_stepTheory.reverse_endian_def]
+   val memory_introduction =
       stateLib.introduce_map_definition
-         (m0_progTheory.m0_REGISTERS_INSERT, Conv.ALL_CONV)
-   val m0_rule =
-      memory_introduction o
+         (m0_progTheory.m0_MEMORY_INSERT, addr_eq_conv)
+   val register_introduction =
+      stateLib.introduce_map_definition
+         (m0_progTheory.m0_REGISTERS_INSERT, REG_CONV)
+   val m0_introduction =
       flag_introduction o
       m0_PC_bump_intro o
       stateLib.introduce_triple_definition (false, m0_PC_def) o
@@ -633,6 +568,74 @@ in
    fun get_opcode bigend = mk_thumb2_pair bigend o boolSyntax.rand o get_code
 end
 
+datatype memory = Flat | Array | Map
+type opt = {gpr_map: bool, mem: memory, temporal: bool}
+
+local
+   val gpr_map_options =
+      [["map-gpr", "gpr-map", "reg-map", "map-reg"],
+       ["no-gpr-map", "no-map-gpr"]]
+   val mem_options =
+      [["map-mem", "mem-map", "mapped"],
+       ["array-mem", "mem-array", "array"],
+       ["flat-map", "mem-flat", "flat"]]
+   val temporal_options =
+      [["temporal"],
+       ["not-temporal"]]
+   fun isDelim c = Char.isPunct c andalso c <> #"-" orelse Char.isSpace c
+   val memopt =
+      fn 0 => Map
+       | 1 => Array
+       | 2 => Flat
+       | _ => raise ERR "process_rule_options" ""
+in
+   fun basic_opt () =
+      {gpr_map = false, mem = Flat,
+       temporal = stateLib.generate_temporal()}: opt
+   val default_opt = {gpr_map = false, mem = Map, temporal = false}: opt
+   fun proj_opt ({gpr_map, mem, ...}: opt) = (gpr_map, mem)
+   fun closeness (target: opt) (opt: opt)  =
+      (case (#gpr_map opt, #gpr_map target) of
+          (false, true) => 0
+        | (true, false) => ~100
+        | (_, _) => 1) +
+      (case (#mem opt, #mem target) of
+          (Flat, _) => 0
+        | (_, Flat) => ~100
+        | (m1, m2) => if m1 = m2 then 1 else ~10)
+   fun convert_opt_rule (opt: opt) (target: opt) =
+      (if #gpr_map target andalso not (#gpr_map opt)
+          then register_introduction
+       else Lib.I) o
+      (if #mem target = #mem opt
+         then Lib.I
+       else case #mem target of
+               Flat => Lib.I
+             | Array => m0_sep_array_intro
+             | Map => memory_introduction)
+   fun process_rule_options s =
+      let
+         val l = String.tokens isDelim s
+         val l = List.map utilsLib.lowercase l
+         val (gpr_map, l) =
+            utilsLib.process_opt gpr_map_options "Introduce GPR map"
+               (#gpr_map default_opt) l (Lib.equal 0)
+         val (mem, l) =
+            utilsLib.process_opt mem_options "MEM type"
+               (#mem default_opt) l memopt
+         val (temporal, l) =
+            utilsLib.process_opt temporal_options "Temoporal triple"
+               (#temporal default_opt) l (Lib.equal 0)
+      in
+         if List.null l
+            then {gpr_map = gpr_map, mem = mem, temporal = temporal}: opt
+         else raise ERR "process_options"
+                    ("Unrecognized option" ^
+                     (if List.length l > 1 then "s" else "") ^
+                     ": " ^ String.concat (commafy l))
+      end
+end
+
 local
    val component_11 =
       (case Drule.CONJUNCTS m0_progTheory.m0_component_11 of
@@ -644,11 +647,9 @@ local
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, m0_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
-   val m0_rwts =
-      List.drop (utilsLib.datatype_rewrites "m0" ["m0_state", "PSR"], 1)
+   val m0_rwts = tl (utilsLib.datatype_rewrites true "m0" ["m0_state", "PSR"])
    val STATE_TAC = ASM_REWRITE_TAC m0_rwts
    val spec =
-      m0_rule o
       stateLib.spec
            m0_progTheory.M0_IMP_SPEC
            m0_progTheory.M0_IMP_TEMPORAL_NEXT
@@ -681,34 +682,51 @@ local
               end
               handle General.Size => raise ERR "stm_base" "base too large"
       else NONE
-   fun m0_spec_opt opt =
+   val bigend = ref false
+   fun get_opc thm = get_opcode (!bigend) thm
+   val (reset_db, set_current_opt, get_current_opt, add1_pending, find_spec,
+        list_db) =
+      spec_databaseLib.mk_spec_database basic_opt default_opt proj_opt
+         closeness convert_opt_rule get_opc (m0_introduction o spec)
+   val the_step = ref (m0_stepLib.thumb_step (!bigend, false))
+   val spec_label_set = ref (Redblackset.empty String.compare)
+   fun reset_specs () =
+      (reset_db (); spec_label_set := Redblackset.empty String.compare)
+   fun configure be options =
       let
-         val step = m0_stepLib.thumb_step opt
+         val opt = process_rule_options options
+      in
+         if !bigend = be andalso #temporal (get_current_opt ()) = #temporal opt
+            then ()
+         else ( reset_specs ()
+              ; bigend := be
+              ; the_step := m0_stepLib.thumb_step (be, false)
+              )
+         ; stateLib.set_temporal (#temporal opt)
+         ; set_current_opt opt
+      end
+   fun m0_spec_opt be opt =
+      let
+         val () = configure be opt
+         val step = !the_step
       in
          fn s =>
-           let
-              val thms = step s
-              val thms = case (thms, stm_base s) of
-                            ([thm], SOME m) =>
-                              [REG_RULE (Thm.INST m thm), thm]
-                          | _ => thms
-              val ts = List.map m0_mk_pre_post thms
-              val thms_ts =
-                 List.concat
-                    (List.map combinations (ListPair.zip (thms, ts)))
-           in
-              List.map (fn x => (print "."; spec x)) thms_ts
-           end
-           before print (!newline)
+            let
+               val thms = step s
+               val thms = case (thms, stm_base s) of
+                             ([thm], SOME m) =>
+                               [REG_RULE (Thm.INST m thm), thm]
+                           | _ => thms
+               val ts = List.map m0_mk_pre_post thms
+               val thms_ts =
+                  List.concat
+                     (List.map combinations (ListPair.zip (thms, ts)))
+            in
+               List.map (fn x => (print "."; add1_pending x)) thms_ts
+               ; thms_ts
+            end
       end
-   val bigend = ref false
-   val the_spec = ref (m0_spec_opt (!bigend, false))
-   val spec_label_set = ref (Redblackset.empty String.compare)
-   fun get_opc thm = get_opcode (!bigend) thm
-   val spec_rwts = ref (utilsLib.mk_rw_net get_opc [])
-   val add1 = utilsLib.add_to_rw_net get_opc
-   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
-   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
+   val the_spec = ref (m0_spec_opt (!bigend) "")
    fun spec_spec opc thm =
       let
          val thm_opc = get_opc thm
@@ -717,18 +735,15 @@ local
          simp_triple_rule (Thm.INST a thm)
       end
 in
+   val list_db = list_db
    fun set_newline s = newline := s
-   fun m0_config opt =
-      (the_spec := m0_spec_opt opt
-       ; bigend := fst opt
-       ; spec_rwts := LVTermNet.empty
-       ; spec_label_set := Redblackset.empty String.compare)
-   fun m0_spec s = (!the_spec) s
+   fun m0_config be opt = the_spec := m0_spec_opt be opt
+   fun m0_spec s = List.map spec ((!the_spec) s)
    fun addInstructionClass s =
       if Redblackset.member (!spec_label_set, s)
          then false
       else (print (" " ^ s)
-            ; add_specs (m0_spec s)
+            ; (!the_spec) s
             ; spec_label_set := Redblackset.add (!spec_label_set, s)
             ; true)
    fun m0_spec_hex looped s =
@@ -736,13 +751,13 @@ in
          val opc = m0_stepLib.hex_to_bits s
       in
          case find_spec opc of
-            SOME thms =>
+            SOME (new, thms) =>
               let
                  val l = List.mapPartial (Lib.total (spec_spec opc)) thms
               in
                  if List.null l
                     then loop looped opc "failed to find suitable spec" s
-                 else l
+                 else (if new then print (!newline) else (); l)
               end
           | NONE => loop looped opc "failed to add suitable spec" s
       end
@@ -758,9 +773,37 @@ end
 
 (* Testing...
 
-val () = m0_config (false, false)
-val () = stateLib.set_temporal true
-val () = stateLib.set_temporal false
+m0_config false "flat"
+m0_config false "array"
+m0_config false "mapped"
+m0_config false "reg-map,flat"
+m0_config false "reg-map,array"
+m0_config false "reg-map,mapped"
+
+m0_config true "flat"
+m0_config true "array"
+m0_config true "mapped"
+m0_config true "reg-map,flat"
+m0_config true "reg-map,array"
+m0_config true "reg-map,mapped"
+
+m0_config false "temporal,flat"
+m0_config false "temporal,array"
+m0_config false "temporal,mapped"
+m0_config false "temporal,reg-map,flat"
+m0_config false "temporal,reg-map,array"
+m0_config false "temporal,reg-map,mapped"
+
+m0_config true "temporal,flat"
+m0_config true "temporal,array"
+m0_config true "temporal,mapped"
+m0_config true "temporal,reg-map,flat"
+m0_config true "temporal,reg-map,array"
+m0_config true "temporal,reg-map,mapped"
+
+m0_spec_hex "B406"
+
+list_db ()
 
 local
    val gen = Random.newgenseed 1.0

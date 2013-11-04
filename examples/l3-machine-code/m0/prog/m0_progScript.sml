@@ -49,6 +49,13 @@ val (m0_REGISTERS_def, m0_REGISTERS_INSERT) =
 val (m0_MEMORY_def, m0_MEMORY_INSERT) =
    stateLib.define_map_component ("m0_MEMORY", "mem", m0_MEM_def)
 
+val m0_WORD_def = Define`
+   m0_WORD a (i: word32) =
+   m0_MEM a ((7 >< 0) i) *
+   m0_MEM (a + 1w) ((15 >< 8) i) *
+   m0_MEM (a + 2w) ((23 >< 16) i) *
+   m0_MEM (a + 3w) ((31 >< 24) i)`;
+
 val m0_CONFIG_def = Define`
    m0_CONFIG (bigend, spsel) =
       m0_exception NoException * m0_AIRCR_ENDIANNESS bigend *

@@ -80,7 +80,7 @@ end
 
 fun datatype_thms thms =
    thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
-   utilsLib.datatype_rewrites "arm"
+   utilsLib.datatype_rewrites true "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
       "PSR", "VFPNegMul"]
 
@@ -97,9 +97,8 @@ val COND_UPDATE_CONV =
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
 val STATE_CONV =
-   REWRITE_CONV (utilsLib.datatype_rewrites "arm" ["arm_state"] @
-                 [combinTheory.K_THM, combinTheory.o_THM,
-                  boolTheory.COND_ID, cond_rand_thms])
+   REWRITE_CONV (utilsLib.datatype_rewrites true "arm" ["arm_state"] @
+                 [boolTheory.COND_ID, cond_rand_thms])
 
 local
    val cmp = computeLib.bool_compset ()

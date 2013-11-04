@@ -25,7 +25,8 @@ val vars = Term.mk_var ("cond", Type.bool) ::
 fun config_for_arm () =
    core_decompilerLib.configure
      { pc_tm = r15,
-       init_fn = arm_decompLib.config_for_fast,
+       init_fn = fn () => arm_progLib.arm_config "vfp"
+                            "fpr-map, no-gpr-map, mapped",
        pc_conv = RAND_CONV,
        triple_fn = l3_triple,
        component_vars = vars }

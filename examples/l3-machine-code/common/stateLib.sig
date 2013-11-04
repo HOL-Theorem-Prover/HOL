@@ -9,6 +9,10 @@ sig
    val generate_temporal: unit -> bool
    val get_delta: term -> term -> int option
    val get_pc_delta: (term -> bool) -> thm -> int option
+   val group_into_chunks:
+      (term -> term * term) * int * (term -> term) -> bool * term list ->
+         {redex: term, residue: term} list list *
+         ({redex: term, residue: term} list * (term * term) list)
    val gvar: string -> hol_type -> term
    val introduce_triple_definition: bool * thm -> rule
    val introduce_map_definition: thm * conv -> rule
@@ -27,6 +31,8 @@ sig
    val rename_vars:
       (string -> string option) * (string -> (term -> string) option) *
       string list -> thm -> thm
+   val sep_array_intro:
+      (term -> term) -> (term -> bool) -> thm -> thm list -> rule
    val sep_definitions:
       string -> string list list -> string list list -> thm -> thm list
    val set_temporal: bool -> unit

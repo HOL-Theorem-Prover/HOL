@@ -55,6 +55,13 @@ val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
 val (arm_MEMORY_def, arm_MEMORY_INSERT) =
    stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
+val arm_WORD_def = Define`
+   arm_WORD a (i: word32) =
+   arm_MEM a ((7 >< 0) i) *
+   arm_MEM (a + 1w) ((15 >< 8) i) *
+   arm_MEM (a + 2w) ((23 >< 16) i) *
+   arm_MEM (a + 3w) ((31 >< 24) i)`;
+
 val arm_CONFIG_def = Define`
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
       arm_Extensions Extension_VFP vfp *

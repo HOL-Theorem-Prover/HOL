@@ -748,13 +748,23 @@ val get_bytes = Q.store_thm("get_bytes",
    )
 
 val concat_bytes = Q.store_thm("concat_bytes",
-   `(!w: word32.
-       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
-    (!w: word32.
-       (7 >< 0) (reverse_endian w) @@ (15 >< 8) (reverse_endian w) @@
-       (23 >< 16) (reverse_endian w) @@ (31 >< 24) (reverse_endian w) = w)`,
+   `!w: word32. (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w`,
+   blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_bytes = Q.store_thm("reverse_endian_bytes",
+   `!w: word32.
+       ((7 >< 0) (reverse_endian w) = (31 >< 24) w) /\
+       ((15 >< 8) (reverse_endian w) = (23 >< 16) w) /\
+       ((23 >< 16) (reverse_endian w) = (15 >< 8) w) /\
+       ((31 >< 24) (reverse_endian w) = (7 >< 0) w)`,
    rw [reverse_endian_def]
    \\ blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_id = Q.store_thm("reverse_endian_id",
+   `!w. reverse_endian (reverse_endian w) = w`,
+   rw [reverse_endian_def, reverse_endian_bytes, concat_bytes]
    )
 
 (* ------------------------------------------------------------------------ *)

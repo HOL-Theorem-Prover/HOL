@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib
 open lcsymtacs updateLib utilsLib
 open stateTheory temporal_stateTheory
-open helperLib progSyntax temporalSyntax
+open helperLib progSyntax temporalSyntax temporal_stateSyntax
 
 infix \\
 val op \\ = op THEN;
@@ -1161,6 +1161,203 @@ in
                     then Conv.RAND_CONV ARITH_SUB_CONV tm
                  else raise ERR "PC_CONV" ""
              | _ => raise ERR "PC_CONV" "")
+end
+
+(* ------------------------------------------------------------------------
+   group_into_chunks (dst, n, mk, is_big_end) l
+
+   Helper function for collecting together multiple map accesses. Assumes
+   that the list "l" is suitably ordered.
+
+   dst - identifies the access, e.g. arm_MEM
+   n - number of accesses to be grouped togther, e.g. 4 bytes
+   mk - used when reversing endianness
+   is_big_end - identify big-endian mode
+   ------------------------------------------------------------------------ *)
+
+local
+   fun err i = ERR "group_into_chunks" ("missing chunk: " ^ Int.toString i)
+   fun get i l =
+      if i = 0
+         then snd (hd l) : term
+      else case Lib.total (wordsSyntax.dest_word_add ## I) (List.nth (l, i)) of
+              SOME ((a, b), d) =>
+                 ( wordsSyntax.uint_of_word b = i orelse raise (err i)
+                 ; d)
+            | NONE => raise (err i)
+   fun mk_chunk (w, ty) =
+      fn (h, l) =>
+         let
+            val hi = numSyntax.term_of_int h
+            val li = numSyntax.term_of_int l
+         in
+            wordsSyntax.mk_word_extract (hi, li, w, ty)
+         end
+   fun prim_mk_word_var (i, ty) = Term.mk_var ("w" ^ Int.toString i, ty)
+   fun mk_word_var (d, i, ty) =
+      case Lib.total wordsSyntax.dest_word_extract d of
+         SOME (_, _, v, _) => v
+       | NONE => prim_mk_word_var (i, ty)
+   fun process n j =
+      fn [] => raise ERR "group_into_n_chunks" "empty"
+       | l as ((a, d) :: _) =>
+            let
+               val dty = wordsSyntax.dest_word_type (Term.type_of d)
+               val dsz = fcpSyntax.dest_int_numeric_type dty
+               val ty = wordsSyntax.mk_int_word_type (dsz * n)
+               val w = mk_word_var (d, j, ty)
+               val mk = mk_chunk (w, dty)
+               fun mk_i i = let val l = i * dsz in mk (l + dsz - 1, l) end
+            in
+               (List.rev (List.tabulate (n, fn i => get i l |-> mk_i i)),
+                (w, a))
+            end
+   fun convert_to_be (mk_rev, e) l =
+      if e
+         then List.foldr (fn ((w, a), (s, wa)) =>
+                            let
+                               val rev_w = mk_rev w
+                            in
+                               ((w |-> rev_w) :: s, (rev_w, a) :: wa)
+                            end) ([], []) l
+      else ([], l)
+   fun group_into_n n =
+      let
+         fun iter a l =
+            if List.null l
+               then List.rev a
+            else iter (List.take (l, n) :: a) (List.drop (l, n))
+                 handle General.Subscript => raise ERR "group_into_n" "too few"
+      in
+         iter []
+      end
+in
+   fun group_into_chunks (dst, n, mk) =
+      let
+         val g = ListPair.unzip o Lib.mapi (process n) o group_into_n n o
+                 List.mapPartial (Lib.total dst)
+      in
+         fn (e, l: term list) => (Lib.I ## convert_to_be (mk, e)) (g l)
+      end
+end
+
+(* ------------------------------------------------------------------------
+   sep_array_intro chunks m_def c_rwt r_rwts
+
+   Introduce a SEP_ARRAY.
+
+   chunks - instance of group_into_chunks
+   m_def - definition theorem for memory access, e.g. arm_WORD
+   c_rwt - concatenation rewrite
+   r_rwts - reverse endianness rewrites
+   ------------------------------------------------------------------------ *)
+
+local
+   val (sep_array_tm, mk_sep_array, dest_sep_array, _) =
+      HolKernel.syntax_fns "set_sep" 5 HolKernel.dest_quadop HolKernel.mk_quadop
+         "SEP_ARRAY"
+   val list_mk_concat =
+      HolKernel.list_mk_rbinop (Lib.curry wordsSyntax.mk_word_concat)
+   val list_mk_add =
+      HolKernel.list_mk_lbinop (Lib.curry wordsSyntax.mk_word_add)
+   val emp_right = set_sepTheory.SEP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> last
+   fun mk_array prj (s1: (term, term) subst list) s2 =
+      let
+         val f = if List.null s2
+                    then list_mk_concat
+                 else Term.subst s2 o list_mk_concat o List.rev
+      in
+         List.map (fn l => f (List.map prj l)) s1
+      end
+   val mk_array1 = mk_array (#residue)
+   val mk_array2 = mk_array (#redex)
+   fun array_iter_rwts base wa delta =
+      Lib.mapi (fn i => fn (_, a) =>
+                  let
+                     val t = list_mk_add (base :: List.tabulate (i, K delta))
+                  in
+                     if t = a then boolTheory.TRUTH
+                     else wordsLib.WORD_ARITH_PROVE (boolSyntax.mk_eq (t, a))
+                  end) wa
+   val cnv1 = REWRITE_CONV [emp_right, set_sepTheory.SEP_ARRAY_def]
+   fun frame_rule thm =
+      Drule.SPEC_ALL
+         (MATCH_MP (if generate_temporal ()
+                       then temporal_stateTheory.SEP_ARRAY_TEMPORAL_FRAME
+                    else stateTheory.SEP_ARRAY_FRAME) thm)
+   fun length_list rwt =
+      let
+         val (_, _, _, l) = dest_sep_array (utilsLib.rhsc rwt)
+      in
+         listSyntax.mk_length l
+      end
+   val length_eq =
+      Drule.EQT_ELIM o
+      (Conv.BINOP_CONV listLib.LENGTH_CONV THENC reduceLib.NEQ_CONV) o
+      boolSyntax.mk_eq
+in
+   fun sep_array_intro mk_rev is_big_end m_def rwts =
+      let
+         val (l, r) = boolSyntax.dest_eq (Thm.concl (Drule.SPEC_ALL m_def))
+         val m_tm = fst (boolSyntax.strip_comb l)
+         val (c_tm, n) = case progSyntax.strip_star r of
+                            [] => raise ERR "sep_array_intro" ""
+                          | l as (h :: t) =>
+                               (fst (boolSyntax.strip_comb h), List.length l)
+         val dst = HolKernel.dest_binop c_tm (ERR "dest" "from sep_array_intro")
+         val chunks = group_into_chunks (dst, n, mk_rev)
+         val cnv2 = PURE_REWRITE_CONV rwts
+         fun cnv3 rwt = cnv2 THENC helperLib.STAR_REWRITE_CONV rwt
+         val rule =
+            Conv.CONV_RULE (Conv.RAND_CONV (PURE_REWRITE_CONV rwts)) o GSYM
+         val m_rwts = m_def :: rwts
+      in
+         fn thm =>
+            let
+               val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
+               val lp = progSyntax.strip_star p
+               val e = List.exists is_big_end lp
+               val (s1, (s2, wa)) = chunks (e, lp)
+            in
+               if List.null wa
+                  then thm
+               else let
+                       val (w, base) = hd wa
+                       val chunk = #redex (hd (hd s1))
+                       val sz = wordsSyntax.size_of base
+                       val delta =
+                          wordsSyntax.mk_word
+                            (Arbnum.div (sz, wordsSyntax.size_of chunk), sz)
+                       val iter_rwts = array_iter_rwts base wa delta
+                       val rule2 =
+                          rule o (cnv1 THENC REWRITE_CONV (m_rwts @ iter_rwts))
+                       val l1_tm =
+                          listSyntax.mk_list (mk_array1 s1 s2, Term.type_of w)
+                       val sep_array1 = mk_sep_array (m_tm, delta, base, l1_tm)
+                       val rwt1 = rule2 (Term.subst s2 sep_array1)
+                       val thm' = Thm.INST s2 (Thm.INST (List.concat s1) thm)
+                       val lq =
+                          progSyntax.strip_star
+                             (temporal_stateSyntax.dest_post' (Thm.concl thm'))
+                       val (s3, (s4, _)) = chunks (e, lq)
+                       val array =
+                          (if s4 = s2 then mk_array2 else mk_array1) s3 s2
+                       val l2_tm = listSyntax.mk_list (array, Term.type_of w)
+                       val sep_array2 = mk_sep_array (m_tm, delta, base, l2_tm)
+                       val rwt2 = rule2 sep_array2
+                       val length_l2_l1 =
+                          length_eq (length_list rwt2, length_list rwt1)
+                    in
+                       frame_rule
+                          (Thm.CONJ length_l2_l1
+                             (Conv.CONV_RULE
+                                (helperLib.PRE_CONV (cnv3 rwt1)
+                                 THENC helperLib.POST_CONV (cnv3 rwt2)) thm'))
+                    end
+            end
+            handle HOL_ERR {origin_function = "group_into_n",
+                            message = "too few", ...} => thm
+      end
 end
 
 (* ------------------------------------------------------------------------
