@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib Parse;
-open MMU_SetupTheory MMUTheory arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory;
+open MMU_SetupTheory MMUTheory arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory arm_stepTheory;
 open tacticsLib;
 
 val _ =  new_theory("inference_rules");
@@ -149,24 +149,24 @@ val priv_mode_similar_def =
 val get_spsr_by_mode_def = 
     Define `get_spsr_by_mode (mode:bool[5]) = 
 	case (mode) of
-	         17w -> SPSR_fiq
-	     || 18w -> SPSR_irq
-	     || 19w -> SPSR_svc
-	     || 22w -> SPSR_mon
-	     || 23w -> SPSR_abt
-	     || 27w -> SPSR_und
-	     ||  _  -> CPSR`;
+	       17w => SPSR_fiq
+	     | 18w => SPSR_irq
+	     | 19w => SPSR_svc
+	     | 22w => SPSR_mon
+	     | 23w => SPSR_abt
+	     | 27w => SPSR_und
+	     |	_  => CPSR`;
 
 val get_lr_by_mode_def = 
     Define `get_lr_by_mode (mode:bool[5]) = 
 	case (mode) of
-                17w -> RName_LRfiq
-	     || 18w -> RName_LRirq
-	     || 19w -> RName_LRsvc
-	     || 22w -> RName_LRmon
-	     || 23w -> RName_LRabt
-	     || 27w -> RName_LRund
-	     ||  _  -> RName_LRusr `;
+               17w => RName_LRfiq
+	     | 18w => RName_LRirq
+	     | 19w => RName_LRsvc
+	     | 22w => RName_LRmon
+	     | 23w => RName_LRabt
+	     | 27w => RName_LRund
+	     |	_  => RName_LRusr `;
 
 val priv_mode_similar_def = 
     Define `priv_mode_similar (g:bool[32]) state1 state2 =
@@ -196,7 +196,7 @@ val untouched_trans = store_thm (
 val untouched_memory_eq_lem = store_thm(
     "untouched_memory_eq_lem",
     ``!s1 s2 g . (untouched g s1 s2 ) ==>
-                (!add. (add <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==> (s1.memory add = s2.memory add))``,
+                (!addr. (addr <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==> (s1.memory addr = s2.memory addr))``,
     REPEAT STRIP_TAC
        THEN Cases_on `(g<>guest1) /\ (g<>guest2)`
        THENL [ALL_TAC, IMP_RES_TAC address_trans (*ADR*)]
@@ -209,27 +209,27 @@ val untouched_permissions_lem = store_thm(
     ``!s1 s2 g priv .
          (mmu_requirements s1 g) ==>
          (untouched g s1 s2 )
-     ==> (!add isw c1 c3.
-          (permitted_byte add isw c1 s1.coprocessors.state.cp15.C2 c3 priv s1.memory
-         = permitted_byte add isw c1 s1.coprocessors.state.cp15.C2 c3 priv s2.memory))``,
+     ==> (!addr isw c1 c3.
+          (permitted_byte addr isw c1 s1.coprocessors.state.cp15.C2 c3 priv s1.memory
+         = permitted_byte addr isw c1 s1.coprocessors.state.cp15.C2 c3 priv s2.memory))``,
     REPEAT STRIP_TAC
        THEN IMP_RES_TAC untouched_memory_eq_lem
        THEN FULL_SIMP_TAC (srw_ss()) [permitted_byte_def]
        THEN UNDISCH_TAC ``mmu_requirements s1 g``
        THEN PURE_ONCE_REWRITE_TAC [mmu_requirements_def]
        THEN STRIP_TAC
-       THEN Cases_on `permitted_byte add F s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 F s1.memory`
+       THEN Cases_on `permitted_byte addr F s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 F s1.memory`
        THEN Cases_on `r`
-       THEN PAT_ASSUM (``!A1 A2 A3 A4 A5. (B ==> C)``) (fn th => (MP_TAC (SPECL [``add:word32``, ``F``,``q:bool``, ``q':bool``, ``r':string``] th)))
+       THEN PAT_ASSUM (``!A1 A2 A3 A4 A5. (B ==> C)``) (fn th => (MP_TAC (SPECL [``addr:word32``, ``F``,``q:bool``, ``q':bool``, ``r':string``] th)))
        THEN RW_TAC (srw_ss()) [read_mem32_def]
        THEN `content_of_sd = content_of_sd'` by
             (UNABBREV_ALL_TAC
                 THEN FULL_SIMP_TAC (srw_ss()) [LET_DEF, read_mem32_def]
-                THEN IMP_RES_TAC (blastLib.BBLAST_PROVE ``!(add:word32). ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) >=+ (*UNSIGNED*) 0w) ==> ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) <+ (*UNSIGNED*) (guest1_min_adr:word32) (*ADR*))  ==> ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 16383w <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==>
-     (((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(add >>> (*UNSIGNED*) 20)      <+ (*UNSIGNED*) guest1_min_adr (*ADR*))  /\
-     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(add >>> (*UNSIGNED*) 20) + 1w <+ (*UNSIGNED*) guest1_min_adr (*ADR*))  /\
-     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(add >>> (*UNSIGNED*) 20) + 2w <+ (*UNSIGNED*)guest1_min_adr (*ADR*))  /\
-     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(add >>> (*UNSIGNED*) 20) + 3w <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) )``)
+                THEN IMP_RES_TAC (blastLib.BBLAST_PROVE ``!(addr:word32). ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) >=+ (*UNSIGNED*) 0w) ==> ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) <+ (*UNSIGNED*) (guest1_min_adr:word32) (*ADR*))  ==> ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 16383w <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) ==>
+     (((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(addr >>> (*UNSIGNED*) 20)      <+ (*UNSIGNED*) guest1_min_adr (*ADR*))  /\
+     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(addr >>> (*UNSIGNED*) 20) + 1w <+ (*UNSIGNED*) guest1_min_adr (*ADR*))  /\
+     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(addr >>> (*UNSIGNED*) 20) + 2w <+ (*UNSIGNED*)guest1_min_adr (*ADR*))  /\
+     ((0xFFFFC000w && s2.coprocessors.state.cp15.C2) + 4w *(addr >>> (*UNSIGNED*) 20) + 3w <+ (*UNSIGNED*) guest1_min_adr (*ADR*)) )``)
                 THEN METIS_TAC [])
        THEN UNABBREV_ALL_TAC
        THEN METIS_TAC []);
@@ -240,9 +240,9 @@ val untouched_permissions_lem2 = store_thm(
     ``!s1 s2 g priv .
          (mmu_requirements s1 g) ==>
          (untouched g s1 s2 )
-     ==> (!add isw.
-          (permitted_byte add isw s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 priv s1.memory
-         = permitted_byte add isw s2.coprocessors.state.cp15.C1 s2.coprocessors.state.cp15.C2 s2.coprocessors.state.cp15.C3 priv s2.memory))``,
+     ==> (!addr isw.
+          (permitted_byte addr isw s1.coprocessors.state.cp15.C1 s1.coprocessors.state.cp15.C2 s1.coprocessors.state.cp15.C3 priv s1.memory
+         = permitted_byte addr isw s2.coprocessors.state.cp15.C1 s2.coprocessors.state.cp15.C2 s2.coprocessors.state.cp15.C3 priv s2.memory))``,
    REPEAT STRIP_TAC
        THEN IMP_RES_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``] untouched_permissions_lem)
        THEN FULL_SIMP_TAC (srw_ss()) [untouched_def]
@@ -327,12 +327,12 @@ val equal_user_register_def = Define `equal_user_register s t  =
 
 
 val similar_def = Define `similar  gst s1 s2 =
-(! add.
- (((add <=+ (*UNSIGNED*)  guest1_max_adr) /\ (add >=+ (*UNSIGNED*) guest1_min_adr) /\ (gst = guest1)) ==>
-        ((s1.memory add) = (s2.memory add)))
+(! addr.
+ (((addr <=+ (*UNSIGNED*)  guest1_max_adr) /\ (addr >=+ (*UNSIGNED*) guest1_min_adr) /\ (gst = guest1)) ==>
+        ((s1.memory addr) = (s2.memory addr)))
    /\
- (((add <=+ (*UNSIGNED*) guest2_max_adr) /\ (add >=+ (*UNSIGNED*) guest2_min_adr) /\ (gst = guest2)) ==>
-        ((s1.memory add) = (s2.memory add))))                       /\
+ (((addr <=+ (*UNSIGNED*) guest2_max_adr) /\ (addr >=+ (*UNSIGNED*) guest2_min_adr) /\ (gst = guest2)) ==>
+        ((s1.memory addr) = (s2.memory addr))))                       /\
 ((s1.psrs (0,CPSR)= s2.psrs (0,CPSR)))           /\
 (equal_user_register s1 s2)                                        /\
 (s1.coprocessors.state = s2.coprocessors.state)  /\
@@ -676,8 +676,8 @@ RW_TAC (srw_ss()) [] );
 
 val parT_alternative_thm = store_thm(
     "parT_alternative_thm",
-    ``!(f1:'a M) (f2:'b M) s. ((f1 ||| f2) s ) = (case f1 s of ValueState x t ->
-      if access_violation t then ValueState (ARB:'a#'b) t else (f2 >>= (\y. constT (x,y))) t || Error e -> Error e)``,
+    ``!(f1:'a M) (f2:'b M) s. ((f1 ||| f2) s ) = (case f1 s of ValueState x t =>
+      if access_violation t then ValueState (ARB:'a#'b) t else (f2 >>= (\y. constT (x,y))) t | Error e => Error e)``,
     RW_TAC (srw_ss()) [arm_seq_monadTheory.parT_def, arm_seq_monadTheory.constT_def, arm_seq_monadTheory.seqT_def]);
 
 val parT_latter_part_hlem = store_thm (
@@ -977,7 +977,7 @@ val forT_untouching_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss [constT_def]
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!h l. X => Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN PAT_ASSUM ``!(h:num) (l:num). (X:bool) ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
                 THEN REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
                 THEN FULL_SIMP_TAC (srw_ss()) [keep_mode_relation_def]
                 THEN REPEAT STRIP_TAC
@@ -1039,7 +1039,7 @@ val forT_similar_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss []
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!h l. X => Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN PAT_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
                 THEN REPEAT (PAT_ASSUM ``!(a:num). Z (x)`` (fn th => ASSUME_TAC (SPEC ``l:num`` th)))
                 THEN REPEAT STRIP_TAC
                 THEN UNDISCH_ALL_TAC
@@ -1096,7 +1096,7 @@ val forT_mode_thm = store_thm(
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC arith_ss [constT_def]
                 THEN `v = h - (l+1)` by FULL_SIMP_TAC arith_ss []
-                THEN PAT_ASSUM ``!h l. X => Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
+                THEN PAT_ASSUM ``!h l. X ==> Y`` (fn th => IMP_RES_TAC (SPECL [``h:num``, ``(l+1):num``] th))
                 THEN REPEAT (PAT_ASSUM (``!(l:num). X``) (fn th => (ASSUME_TAC (SPEC ``l:num`` th))))
                 THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) [seqT_def, keep_mode_relation_def]

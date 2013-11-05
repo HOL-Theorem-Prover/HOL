@@ -436,7 +436,7 @@ val read_write_cpsr_abt_irq_thm =
                        (cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)))
 	     (assert_mode u) (assert_mode u) ^uf1 ^uy1``,
@@ -446,7 +446,7 @@ val read_write_cpsr_abt_irq_thm =
 				s1.psrs (0,CPSR) with
 		     <|IT := 0w; J := F; E := sctlr.EE;
 		     A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
            (s2.psrs (0,CPSR)).A); I := T; T := sctlr.TE|>))``
 		  val trm2 = ``  (s2 with
                    psrs updated_by
@@ -454,7 +454,7 @@ val read_write_cpsr_abt_irq_thm =
 			    s2.psrs (0,CPSR) with
 		       <|IT := 0w; J := F; E := sctlr.EE;
                           A :=
-                         ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                         ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                           (s2.psrs (0,CPSR)).A); I := T; T := sctlr.TE|>))`` 
 	      in
 		  prove_write_read_bisimilarity trm1 trm2
@@ -1298,7 +1298,7 @@ val get_take_abt_irq_simp_pars =
 	      (cpsr with
 	       <|I := T;
 		 A :=
-		   ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+		   ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
 		    cpsr.A); IT := 0w; J := F; T := sctlr.TE;
 		 E := sctlr.EE|>))
      ||| branch_to <|proc := 0|> (ExcVectorBase + ^x)) >>=
@@ -1358,6 +1358,7 @@ val get_take_undef_svc_simp_pars =
 	 ||| branch_to <|proc := 0|>
 	       (get_base_vector_table s2 + ^x)) >>=
       (λ(u1,u2,u3,u4). constT ()))``);
+
 
 val take_data_abort_exception_nav_thm = 
     store_thm ("take_data_abort_exception_nav_thm",

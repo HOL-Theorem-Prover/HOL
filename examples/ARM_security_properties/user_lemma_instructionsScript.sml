@@ -157,10 +157,10 @@ val store_multiple_part = ``(λ(base,cpsr).
                      length = n2w (4 * bit_count registers) and
                      lowest = lowest_set_bit registers
                  in
-                 let base_address = if add then base else base − length
+                 let base_address = if addr then base else base − length
                  in
                  let start_address =
-                       if indx ⇔ add then
+                       if indx ⇔ addr then
                          base_address + 4w
                        else
                          base_address
@@ -186,7 +186,7 @@ val store_multiple_part = ``(λ(base,cpsr).
                              write_memA <|proc:=0|> (address 15,4)
                                (bytes (pc,4)))) ||| increment_pc <|proc:=0|> enc
                          ||| condT wback
-                               (if add then
+                               (if addr then
                                   write_reg <|proc:=0|> n (base + length)
                                 else
                                   write_reg <|proc:=0|> n (base − length))) >>=
@@ -202,10 +202,10 @@ val store_multiple_part_simp = store_thm(
                      length = n2w (4 * bit_count registers) and
                      lowest = lowest_set_bit registers
                  in
-                 let base_address = if add then base else base − length
+                 let base_address = if addr then base else base − length
                  in
                  let start_address =
-                       if indx ⇔ add then
+                       if indx ⇔ addr then
                          base_address + 4w
                        else
                          base_address
@@ -231,7 +231,7 @@ val store_multiple_part_simp = store_thm(
                              write_memA <|proc:=0|> (address 15,4)
                                (bytes (pc,4)))) ||| increment_pc <|proc:=0|> enc
                          ||| condT wback
-                               (if add then
+                               (if addr then
                                   write_reg <|proc:=0|> n (base + length)
                                 else
                                   write_reg <|proc:=0|> n (base − length))) >>=
@@ -244,10 +244,10 @@ val store_multiple_part_simp = store_thm(
                      length = n2w (4 * bit_count registers) and
                      lowest = lowest_set_bit registers
                  in
-                 let base_address = if add then base else base − length
+                 let base_address = if addr then base else base − length
                  in
                  let start_address =
-                       if indx ⇔ add then
+                       if indx ⇔ addr then
                          base_address + 4w
                        else
                          base_address
@@ -273,7 +273,7 @@ val store_multiple_part_simp = store_thm(
                              write_memA <|proc:=0|> (address 15,4)
                                (bytes (pc,4)))) ||| increment_pc <|proc:=0|> enc
                          ||| condT wback
-                               (if add then
+                               (if addr then
                                   write_reg <|proc:=0|> n (base + length)
                                 else
                                   write_reg <|proc:=0|> n (base − length))) >>=
@@ -846,14 +846,14 @@ val condition_passed_similar_lem = store_thm(
 val arm_instr_core_def = Define `arm_instr_core ii (pass:bool) (enc:Encoding) (cond:word4) (inst:ARMinstruction) =
    if pass then
            case inst of
-              Unpredictable -> errorT "decode: unpredictable"
-           || Undefined -> take_undef_instr_exception ii
-           || Branch b -> branch_instruction ii (enc,b)
-           || DataProcessing d -> data_processing_instruction ii (enc,d)
-           || StatusAccess s -> status_access_instruction ii (enc,s)
-           || LoadStore l -> load_store_instruction ii (enc,l)
-           || Miscellaneous m -> miscellaneous_instruction ii (enc,m)
-           || Coprocessor c -> coprocessor_instruction ii (enc,cond,c)
+              Unpredictable => errorT "decode: unpredictable"
+           | Undefined => take_undef_instr_exception ii
+           | Branch b => branch_instruction ii (enc,b)
+           | DataProcessing d => data_processing_instruction ii (enc,d)
+           | StatusAccess s => status_access_instruction ii (enc,s)
+           | LoadStore l => load_store_instruction ii (enc,l)
+           | Miscellaneous m => miscellaneous_instruction ii (enc,m)
+           | Coprocessor c => coprocessor_instruction ii (enc,cond,c)
          else
            increment_pc ii enc`;
 
@@ -901,27 +901,27 @@ val arm_instr_alternative_def = store_thm(
      (λu.
         condT
           (case inst of
-              Unpredictable -> T
-           || Undefined -> T
-           || Branch v6 -> T
-           || DataProcessing v7 -> T
-           || StatusAccess v8 -> T
-           || LoadStore v9 -> T
-           || Miscellaneous (Hint v33) -> T
-           || Miscellaneous (Breakpoint v34) -> T
-           || Miscellaneous (Data_Memory_Barrier v35) -> T
-           || Miscellaneous (Data_Synchronization_Barrier v36) -> T
-           || Miscellaneous (Instruction_Synchronization_Barrier v37) ->
-                T
-           || Miscellaneous (Swap v38 v39 v40 v41) -> T
-           || Miscellaneous (Preload_Data v42 v43 v44 v45) -> T
-           || Miscellaneous (Preload_Instruction v46 v47 v48) -> T
-           || Miscellaneous (Supervisor_Call v49) -> T
-           || Miscellaneous (Secure_Monitor_Call v50) -> T
-           || Miscellaneous (Enterx_Leavex v51) -> T
-           || Miscellaneous Clear_Exclusive -> T
-           || Miscellaneous (If_Then v52 v53) -> F
-           || Coprocessor v11 -> T) (IT_advance ii))``,
+             Unpredictable => T
+           | Undefined => T
+           | Branch v6 => T
+           | DataProcessing v7 => T
+           | StatusAccess v8 => T
+           | LoadStore v9 => T
+           | Miscellaneous (Hint v33) => T
+           | Miscellaneous (Breakpoint v34) => T
+           | Miscellaneous (Data_Memory_Barrier v35) => T
+           | Miscellaneous (Data_Synchronization_Barrier v36) => T
+           | Miscellaneous (Instruction_Synchronization_Barrier v37) =>
+               T
+           | Miscellaneous (Swap v38 v39 v40 v41) => T
+           | Miscellaneous (Preload_Data v42 v43 v44 v45) => T
+           | Miscellaneous (Preload_Instruction v46 v47 v48) => T
+           | Miscellaneous (Supervisor_Call v49) => T
+           | Miscellaneous (Secure_Monitor_Call v50) => T
+           | Miscellaneous (Enterx_Leavex v51) => T
+           | Miscellaneous Clear_Exclusive => T
+           | Miscellaneous (If_Then v52 v53) => F
+           | Coprocessor v11 => T) (IT_advance ii))``,
      RW_TAC (srw_ss()) [arm_instr_core_def, arm_instr_def]);
 
 
