@@ -7,12 +7,12 @@ sig
     val mode_changing_comp_list_rec 
 	: Term.term list -> Term.term -> bool
     val generate_uncurry_abs 
-	: Definition.term -> Definition.term list * Definition.term
+	: Theory.term -> Theory.term list * Theory.term
     val decompose_term 
 	: boolSyntax.term -> boolSyntax.term * boolSyntax.term * boolSyntax.term
     val get_monad_type  : Type.hol_type -> Type.hol_type
     val generate_uncurry_abs_from_abs 
-	: Definition.term -> Definition.term list * Definition.term
+	: Theory.term -> Theory.term list * Theory.term
     val get_type_inst  : Type.hol_type * bool -> Type.hol_type
     val get_uncurried_theorem  : Thm.thm -> int -> Thm.thm
     val generalize_theorem  : Abbrev.thm -> Abbrev.term -> Thm.thm

@@ -9,10 +9,10 @@ sig
     val mk_spec_list3  : Parse.term -> Parse.term list
     val mk_spec_list4  : Parse.term -> Parse.term list
     val generate_uncurry_abs 
-	: Definition.term -> Definition.term list * Definition.term
+	: Theory.term -> Theory.term list * Theory.term
     val get_monad_type  : Type.hol_type -> Type.hol_type
     val generate_uncurry_abs_from_abs 
-	: Definition.term -> Definition.term list * Definition.term
+	: Theory.term -> Theory.term list * Theory.term
     val get_action_from_goal  : 'a * boolSyntax.term -> boolSyntax.term
     val find_theorem  : string -> Thm.thm
     val get_uncurried_theorem  : Thm.thm -> int -> Thm.thm

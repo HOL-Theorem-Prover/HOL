@@ -52,7 +52,7 @@ open armLib;
 *)
 
 open HolKernel boolLib bossLib Parse;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armLib;
+open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
 open parmonadsyntax;
 
 val _ =  new_theory("MMU");
@@ -109,21 +109,21 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
                         if (sd_supports_MMU content_of_sd si)
                             then 
                             (case (bit2_c3, bit1_c3) of
-                                (T,T)  -> (T, T, "uncontrolled manager domain")
-                             || (F,F)  -> (T, F, "no access domain")
-                             || (T,F)  -> (F, UNKNOWN , "unpredictable domain status")
-                             || (F,T)  -> (case AP of
-                                             0b00w -> (T, F, "no access according to PTE")
-                                           ||0b01w -> (if priv
+                                (T,T)  => (T, T, "uncontrolled manager domain")
+                             | (F,F)  => (T, F, "no access domain")
+                             | (T,F)  => (F, UNKNOWN , "unpredictable domain status")
+                             | (F,T)  => (case AP of
+                                             0b00w => (T, F, "no access according to PTE")
+                                           |0b01w => (if priv
                                                          then (T, T , "permitted by PTE")
                                                          else (T, F, "no access according to PTE")
                                                       )
-                                           ||0b10w -> (if priv
+                                           |0b10w => (if priv
                                                          then (T, T , "permitted by PTE")
                                                          else (T, ~is_write, "read-only access according to PTE")
                                                       )
-                                           ||0b11w -> (T, T , "permitted by PTE")
-                                           || _    -> (F, UNKNOWN, "AP wrongly determined")
+                                           |0b11w => (T, T , "permitted by PTE")
+                                           | _    => (F, UNKNOWN, "AP wrongly determined")
                                           )	    
                             )
                             else 
@@ -151,19 +151,19 @@ val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word3
 			let bit2_c3 = BIT (2*w2n(domain)+1) (w2n(c3)) in
 			let AP = (content_of_sd && 0x00000C00w) >>> 10 in
                              case (bit2_c3, bit1_c3) of
-                                (T,T)  -> T
-                             || (F,F)  -> F
-                             || (F,T)  -> (case AP of
-                                             0b00w -> F
-                                           ||0b01w -> (if priv
-                                                         then T
-                                                         else F
-                                                      )
-                                           ||0b10w -> (if priv
-                                                         then T
-                                                         else (~is_write)
-                                                      )
-                                           ||0b11w -> T
+                                (T,T) => T
+			     | (F,F)  => F
+			     | (F,T)  => (case AP of
+                                             0b00w => F
+                                           |0b01w => (if priv
+							then T
+							else F
+						     )
+					   |0b10w => (if priv
+							then T
+							else (~is_write)
+						     )
+					   |0b11w => T
                                           )	    
                         `;
 
@@ -189,11 +189,11 @@ val permitted_byte_simp = store_thm (
 
 val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory = 
                          case accesses of
-			 x::tl -> 
+			 x::tl => 
 			 ( let (adr, is_write) = 
 			       ( case x of 
-			          MEM_READ address -> (address, F)
-	                       || MEM_WRITE address _ -> (address, T)
+			          MEM_READ address => (address, F)
+	                       | MEM_WRITE address _ => (address, T)
 			       ) in
                             
 			    let (und, per, msg) = (permitted_byte adr is_write c1 c2 c3 priv memory) in
@@ -215,7 +215,7 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
                                )
                             )
 		          )
-		          ||  _ -> (T, F, UNKNOWN)`;  
+		          |   _ => (T, F, UNKNOWN)`;  
 
 
 
@@ -226,15 +226,15 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
 (*   always understand the MMU setup               *)
 val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv memory = 
                        case accesses of
-			 x::tl -> 
+			 x::tl => 
 			 ( let (adr, is_write) = 
 			       ( case x of 
-			          MEM_READ address -> (address, F)
-	                       || MEM_WRITE address _ -> (address, T)
+			          MEM_READ address => (address, F)
+	                       | MEM_WRITE address _ => (address, T)
 			       ) in
 			    (~permitted_byte_pure adr is_write c1 c2 c3 priv memory) \/  (check_accesses_pure tl c1 c2 c3 priv memory)                       
 		          )
-                          || _ -> F`;  
+                          | _ => F`;  
 
 
 
@@ -389,30 +389,6 @@ val empty_accesses_lem = store_thm(
 
 val _ = temp_overload_on ("unit4", ``\( u1:unit,u2:unit,u3:unit,u4:unit). constT ()``);
 
-val take_data_abort_exception_def = Define`
-  take_data_abort_exception ii =
-    (read_reg ii 15w ||| exc_vector_base ii ||| have_security_ext ii |||
-     read_cpsr ii ||| read_scr ii ||| read_sctlr ii) >>=
-    (\(pc,ExcVectorBase,have_security,cpsr,scr,sctlr).
-       (condT (cpsr.M = 0b10110w)
-          (write_scr ii (scr with NS := F)) |||
-        write_cpsr ii (cpsr with M := 0b10111w)) >>=
-       (\(u1:unit,u2:unit).
-         (write_spsr ii cpsr |||
-          write_reg ii 14w (if cpsr.T then pc else pc - 4w) |||
-          (read_cpsr ii >>=
-           (\cpsr.
-              write_cpsr ii (cpsr with
-                <| I := T;
-                   A := ((~have_security \/ ~scr.NS \/ scr.AW) \/ cpsr.A);
-                   IT := 0b00000000w;
-                   J := F; T := sctlr.TE;
-                   E := sctlr.EE |>))) |||
-          branch_to ii (ExcVectorBase + 16w)) >>= unit4))`;
-
-
-
-
 (* mmu_arm_next *)
 
 val _ = numLib.prefer_num();
@@ -429,8 +405,8 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
     if irpt = NoInterrupt then
     (
        case (waiting_for_interrupt  <|proc:=0|> (state with accesses := [])) of
-               Error e -> Error e
-            || ValueState wfi wfi_state ->
+               Error e => Error e
+            |  ValueState wfi wfi_state =>
                (
                   if (wfi) then ValueState () wfi_state
                   else
@@ -438,15 +414,15 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
                      case (fetch_instruction <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d))) 
                                                          (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))
 							 (wfi_state with accesses := [])) of
-                             Error e -> Error e
-                          || ValueState (opc,instr) fetched_state ->
+                             Error e => Error e
+                          |  ValueState (opc,instr) fetched_state =>
                              (
                                 if access_violation fetched_state then 
                                    take_prefetch_abort_exception <| proc := 0 |> (fetched_state with accesses := [])
                                 else
                                    case arm_instr <|proc:=0|> instr (fetched_state with accesses := []) of
-                                        Error e -> Error e
-                                     || ValueState x end_state ->
+                                        Error e => Error e
+                                     |  ValueState x end_state =>
                                         (
                                             if access_violation end_state then 
                                                take_data_abort_exception <| proc := 0 |> (end_state with accesses := [])

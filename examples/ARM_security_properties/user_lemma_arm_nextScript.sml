@@ -9,7 +9,7 @@ open user_lemma_basicsTheory user_lemma_primitive_operationsTheory;
 open user_lemma_instructionsTheory;
 open wordsTheory wordsLib;
 
-val _ =  new_theory("user_lemma_arm_next");
+val _ =  new_theory("user_lemma_arm_next"); 
 
 val _ = temp_overload_on ("return", ``constT``);
 
@@ -77,8 +77,7 @@ val read_memA4_av_lem = store_thm(
        THEN UNDISCH_TAC `` read_memA <|proc := 0|> (pc,4) s = ValueState x t``
        THEN EVAL_TAC
        THEN (REPEAT (CHANGED_TAC ((TRY (UNDISCH_MATCH_TAC ``X = ValueState x t``)) THEN RW_TAC (srw_ss()) [])))
-       THENL (List.tabulate(14, (fn n => if ((n = 2) orelse (n =3)) 
-                         then MP_TAC (blastLib.BBLAST_PROVE ``(((1 -- 0) (pc:word32)) = 0w) \/ (((1 -- 0) (pc:word32)) = 1w) \/ (((1 -- 0) (pc:word32)) = 2w) \/ (((1 -- 0) (pc:word32)) = 3w)``)
+       THEN FIRST [MP_TAC (blastLib.BBLAST_PROVE ``(((1 -- 0) (pc:word32)) = 0w) \/ (((1 -- 0) (pc:word32)) = 1w) \/ (((1 -- 0) (pc:word32)) = 2w) \/ (((1 -- 0) (pc:word32)) = 3w)``)
                                 THEN RW_TAC (srw_ss()) []
                                 THEN CCONTR_TAC 
                                 THEN FULL_SIMP_TAC (srw_ss()) []
@@ -90,8 +89,9 @@ val read_memA4_av_lem = store_thm(
                                 THEN UNDISCH_ALL_TAC 
                                 THEN RW_TAC (srw_ss()) []
                                 THEN FULL_SIMP_TAC (srw_ss()) [aligned_def, align_def]
-                         else FULL_SIMP_TAC (srw_ss()) [aligned_def]
-                                THEN METIS_TAC [malicious_read, access_violation_req, mmu_requirement_accesses_update_lem]))));
+                                THEN NO_TAC,
+		    FULL_SIMP_TAC (srw_ss()) [aligned_def]
+                                THEN METIS_TAC [malicious_read, access_violation_req, mmu_requirement_accesses_update_lem]]);
 
 
 val read_memA2_av_lem = store_thm(
@@ -113,21 +113,21 @@ val read_memA2_av_lem = store_thm(
        THEN UNDISCH_TAC `` read_memA <|proc := 0|> (pc,2) s = ValueState x t``
        THEN EVAL_TAC
        THEN (REPEAT (CHANGED_TAC ((TRY (UNDISCH_MATCH_TAC ``X = ValueState x t``)) THEN RW_TAC (srw_ss()) [])))
-       THENL (List.tabulate(10, (fn n => if ((n = 2) orelse (n =3)) 
-                         then MP_TAC (blastLib.BBLAST_PROVE ``(((0 -- 0) (pc:word32)) = 0w) \/ (((0 -- 0) (pc:word32)) = 1w)``)
-                                THEN RW_TAC (srw_ss()) []
-                                THEN CCONTR_TAC 
-                                THEN FULL_SIMP_TAC (srw_ss()) []
-                                THEN ASSUME_TAC (SPEC ``pc:word32`` (CONJUNCT1 (align_lem)))
-                                THEN UNDISCH_ALL_TAC 
-                                THEN RW_TAC (srw_ss()) [] 
-                                THEN CCONTR_TAC 
-                                THEN FULL_SIMP_TAC (srw_ss()) []
-                                THEN UNDISCH_ALL_TAC 
-                                THEN RW_TAC (srw_ss()) []
-                                THEN FULL_SIMP_TAC (srw_ss()) [aligned_def, align_def]
-                         else FULL_SIMP_TAC (srw_ss()) [aligned_def]
-                                THEN METIS_TAC [malicious_read, access_violation_req, mmu_requirement_accesses_update_lem]))));
+       THEN FIRST [ MP_TAC (blastLib.BBLAST_PROVE ``(((0 -- 0) (pc:word32)) = 0w) \/ (((0 -- 0) (pc:word32)) = 1w)``)
+                       THEN RW_TAC (srw_ss()) []
+		       THEN CCONTR_TAC 
+		       THEN FULL_SIMP_TAC (srw_ss()) []
+		       THEN ASSUME_TAC (SPEC ``pc:word32`` (CONJUNCT1 (align_lem)))
+		       THEN UNDISCH_ALL_TAC 
+		       THEN RW_TAC (srw_ss()) [] 
+		       THEN CCONTR_TAC 
+		       THEN FULL_SIMP_TAC (srw_ss()) []
+		       THEN UNDISCH_ALL_TAC 
+		       THEN RW_TAC (srw_ss()) []
+		       THEN FULL_SIMP_TAC (srw_ss()) [aligned_def, align_def]
+		       THEN NO_TAC,
+                    FULL_SIMP_TAC (srw_ss()) [aligned_def]
+                       THEN METIS_TAC [malicious_read, access_violation_req, mmu_requirement_accesses_update_lem]]);
 
 
 val fetch_arm_av_lem = store_thm(
@@ -538,7 +538,7 @@ val pmc_34_lem = store_thm(
        THEN IMP_RES_TAC mmu_requirements_simp 
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def, aligned_word_readable_def]
-       THEN PAT_ASSUM ``!add iw. X`` (fn th => ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFEw``, ``F``] th)
+       THEN PAT_ASSUM ``!addr iw. X`` (fn th => ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFEw``, ``F``] th)
                                           THEN ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFCw``, ``F``] th))
        THEN UNDISCH_ALL_TAC 
        THEN RW_TAC (srw_ss()) [negated_inequalities]

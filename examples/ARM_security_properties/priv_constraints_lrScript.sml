@@ -373,7 +373,7 @@ val irq_write_cpsr_LR_ut_thm =
                        (cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
@@ -392,10 +392,10 @@ val fiq_write_cpsr_LR_ut_thm =
                        (cpsr with
                         <|I := T;
                           F :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.F);
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
@@ -416,7 +416,7 @@ val ab_write_cpsr_LR_ut_thm =
                        (cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
@@ -498,6 +498,7 @@ val take_undef_writing_part_LR_thm =
 						(pc:word32) − 2w else pc − 4w)`` vt
 	      end
 	     );
+
 
 val take_data_abort_writing_part_LR_thm =
     save_thm ("take_data_abort_writing_part_LR_thm",

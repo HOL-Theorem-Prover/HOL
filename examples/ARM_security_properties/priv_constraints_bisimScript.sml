@@ -426,7 +426,7 @@ val irq_write_cpsr_spsr_ut_thm =
                        (cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) 18w``,
 EVAL_TAC
@@ -446,7 +446,7 @@ val ab_write_cpsr_spsr_ut_thm =
                        (cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) 23w``,
 EVAL_TAC
@@ -466,10 +466,10 @@ val fiq_write_cpsr_spsr_ut_thm =
                        (cpsr with
                         <|I := T;
                           F :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.F);
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) 17w``,
 
@@ -747,6 +747,7 @@ val take_undef_instr_exception_spsr_thm =
 					  ltype 
     end);
 
+
 val take_data_abort_exception_spsr_thm = 
     store_thm ("take_data_abort_exception_spsr_thm",
       `` satisfy_SPSR_constraints 
@@ -771,6 +772,7 @@ val take_data_abort_exception_spsr_thm =
 					  wp_thm const_comp_rp_thm sl_elm2 spec_lists 
 					  ltype 
     end);
+
 
 val take_prefetch_abort_exception_spsr_thm = 
     store_thm ("take_prefetch_abort_exception_spsr_thm",

@@ -50,14 +50,11 @@ val _ = Hol_datatype `CP15scr =
 val _ = Hol_datatype `CP15nsacr =
   <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>`;
 
-val _ = Hol_datatype `CP15vbar =
-  <| secure : word32; non_secure : word32 |>`;
-
 val _ = Hol_datatype `CP15reg =
    <| SCTLR : CP15sctlr;
       SCR   : CP15scr;
       NSACR : CP15nsacr;
-      VBAR  : CP15vbar;
+      VBAR  : word32;
       MVBAR : word32;
       C1    : word32;
       C2    : word32;
@@ -165,12 +162,6 @@ val lowest_set_bit_def = Define`
     else
       LEAST i. w ' i`;
 
-val bit_count_upto_def = Define`
-  bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`;
-
-val bit_count_def = Define`
-  bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`;
-
 val _ = wordsLib.guess_lengths();
 
 val zero_extend32_def = Define`
@@ -270,7 +261,7 @@ val ITAdvance_def = zDefine`
     if (2 >< 0) IT = 0b000w:word3 then
       0b00000000w
     else
-      ((7 '' 5) IT !! w2w (((4 >< 0) IT) : word5 << 1))`;
+      ((7 '' 5) IT || w2w (((4 >< 0) IT) : word5 << 1))`;
 
 val ITAdvance_n2w = save_thm("ITAdvance_n2w",
    ITAdvance_def
@@ -490,39 +481,39 @@ val encode_psr_bits = Q.store_thm("encode_psr_bits",
 (* ------------------------------------------------------------------------ *)
 
 val _ = computeLib.add_persistent_funs
-  [("pairTheory.UNCURRY",         pairTheory.UNCURRY),
-   ("pairTheory.LEX_DEF",         pairTheory.LEX_DEF),
-   ("pred_setTheory.IN_CROSS",    pred_setTheory.IN_CROSS),
-   ("pred_setTheory.IN_DELETE",   pred_setTheory.IN_DELETE),
-   ("wordsTheory.BIT_UPDATE",     wordsTheory.BIT_UPDATE),
-   ("NOT_IN_EMPTY_SPECIFICATION", NOT_IN_EMPTY_SPECIFICATION),
-   ("NUMERIC_LSL_C",              NUMERIC_LSL_C),
-   ("NUMERIC_LSR_C",              NUMERIC_LSR_C),
-   ("NUMERIC_ASR_C",              NUMERIC_ASR_C),
-   ("NUMERIC_ROR_C",              NUMERIC_ROR_C),
-   ("align_n2w",                  align_n2w),
-   ("aligned_n2w",                aligned_n2w),
-   ("align_id_248",               align_id_248),
-   ("lowest_set_bit_compute",     lowest_set_bit_compute),
-   ("ITAdvance_n2w",              ITAdvance_n2w),
-   ("RName_EQ_RName",             theorem "RName_EQ_RName"),
-   ("RName2num_thm",              theorem "RName2num_thm"),
-   ("num2RName_thm",              theorem "num2RName_thm"),
-   ("PSRName_EQ_PSRName",         theorem "PSRName_EQ_PSRName"),
-   ("PSRName2num_thm",            theorem "PSRName2num_thm"),
-   ("num2PSRName_thm",            theorem "num2PSRName_thm"),
-   ("ARMarch_EQ_ARMarch",         theorem "ARMarch_EQ_ARMarch"),
-   ("ARMarch2num_thm",            theorem "ARMarch2num_thm"),
-   ("num2ARMarch_thm",            theorem "num2ARMarch_thm"),
-   ("SRType_EQ_SRType",           theorem "SRType_EQ_SRType"),
-   ("SRType2num_thm",             theorem "SRType2num_thm"),
-   ("num2SRType_thm",             theorem "num2SRType_thm"),
-   ("InstrSet_EQ_InstrSet",       theorem "InstrSet_EQ_InstrSet"),
-   ("InstrSet2num_thm",           theorem "InstrSet2num_thm"),
-   ("num2InstrSet_thm",           theorem "num2InstrSet_thm"),
-   ("Encoding_EQ_Encoding",       theorem "Encoding_EQ_Encoding"),
-   ("Encoding2num_thm",           theorem "Encoding2num_thm"),
-   ("num2Encoding_thm",           theorem "num2Encoding_thm")];
+  ["pair.UNCURRY",
+   "pair.LEX_DEF",
+   "pred_set.IN_CROSS",
+   "pred_set.IN_DELETE",
+   "words.BIT_UPDATE",
+   "NOT_IN_EMPTY_SPECIFICATION",
+   "NUMERIC_LSL_C",
+   "NUMERIC_LSR_C",
+   "NUMERIC_ASR_C",
+   "NUMERIC_ROR_C",
+   "align_n2w",
+   "aligned_n2w",
+   "align_id_248",
+   "lowest_set_bit_compute",
+   "ITAdvance_n2w",
+   "RName_EQ_RName",
+   "RName2num_thm",
+   "num2RName_thm",
+   "PSRName_EQ_PSRName",
+   "PSRName2num_thm",
+   "num2PSRName_thm",
+   "ARMarch_EQ_ARMarch",
+   "ARMarch2num_thm",
+   "num2ARMarch_thm",
+   "SRType_EQ_SRType",
+   "SRType2num_thm",
+   "num2SRType_thm",
+   "InstrSet_EQ_InstrSet",
+   "InstrSet2num_thm",
+   "num2InstrSet_thm",
+   "Encoding_EQ_Encoding",
+   "Encoding2num_thm",
+   "num2Encoding_thm"];
 
 (* ------------------------------------------------------------------------ *)
 
