@@ -183,6 +183,8 @@ local
    val flookup_fallback_conv =
       Conv.REWR_CONV finite_mapTheory.FLOOKUP_UPDATE
       ORELSEC Conv.REWR_CONV finite_mapTheory.FLOOKUP_EMPTY
+   val rwts = ref ([] : thm list)
+   val rwt_cnv = ref ALL_CONV
    val err = ERR "FLOOKUP_DEFN_CONV" ""
    fun DICT_REST_CONV (dr as (dict, rest)) tm =
       let
@@ -230,9 +232,8 @@ local
             end
             handle General.Subscript => a
          val defs = iter [] x
-         val () = computeLib.add_funs defs
       in
-         PURE_REWRITE_CONV defs
+         rwts := defs @ (!rwts); rwt_cnv := PURE_REWRITE_CONV (!rwts)
       end
 in
    fun FLOOKUP_DEFN_CONV tm =
@@ -263,11 +264,10 @@ in
                           )
                      | NONE => flookup_fallback_conv tm
                  end
-         else let
-                 val cnv = introduce_fmap_consts (base, ups)
-              in
-                 Conv.RATOR_CONV (Conv.RAND_CONV cnv) tm
-              end
+         else Conv.RATOR_CONV (Conv.RAND_CONV (!rwt_cnv)) tm
+              handle Conv.UNCHANGED =>
+                 ( introduce_fmap_consts (base, ups)
+                 ; FLOOKUP_DEFN_CONV ) tm
       end
 end
 
