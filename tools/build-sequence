@@ -182,6 +182,7 @@ src/temporal/src
 !!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller
+!!examples/ARM_security_properties
 
 # Crypto examples
 !!examples/Crypto/AES
