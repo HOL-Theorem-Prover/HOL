@@ -13,7 +13,7 @@ open switching_lemma_helperTheory user_lemma_basicsTheory;
 (***************************************************)
 
 
-exception not_matched_pattern; 
+exception not_matched_pattern;
 
 val _ = temp_overload_on("priv_mode_constraints", ``priv_mode_constraints_v1``);
 val priv_mode_constraints_def = priv_mode_constraints_v1_def;
@@ -23,7 +23,7 @@ fun add_to_simplist thm = simp_thms_list := (thm::(!simp_thms_list));
 
 
 fun update_mode_changing_comp_list opr = mode_changing_comp_list := (opr::(! mode_changing_comp_list));
- 
+
 
 fun save_comb_thm (name, th, listelement) =
             let val () = update_mode_changing_comp_list listelement
@@ -39,7 +39,7 @@ fun get_trans_thm uf =
        trans_strict_unt_thm
     else
        trans_empty_unt_thm;
-         
+
 
 fun get_reflex_thm uf =
     if (uf = ``priv_mode_constraints``) then
@@ -75,25 +75,25 @@ fun get_sim_def uy =
 
 
 fun prove_it a src_inv trg_inv uf uy =
-     let val () = global_mode := ``16w:bool[5]`` 
+     let val () = global_mode := ``16w:bool[5]``
      in
        prove  a src_inv trg_inv  ([uf, uy, ``27w:word5``, ``_thm``])  ([(get_trans_thm uf), (get_reflex_thm uf), (get_unt_def uf), (get_sim_def uy), errorT_thm, (get_sim_reflex_thm uy)])
      end;
 
 
 fun obtain_proofs () =
-  case top_goals() of 
-     x::rl => 
+  case top_goals() of
+     x::rl =>
           let val (_, to_show) = x
           in
             case (dest_term to_show) of
                 COMB (rcstu, simp)
                 => case dest_term rcstu of
                      COMB (rcst, unt)
-                     => case dest_term rcst of 
+                     => case dest_term rcst of
                             COMB (rcs, i2)
-                            => case (dest_term rcs) of 
-                                   COMB (rc, i1) => 
+                            => case (dest_term rcs) of
+                                   COMB (rc, i1) =>
                                         case (dest_term rc) of
                                              COMB (rel, comp)  =>  let val (thm, _ ) = prove_it comp i1 i2 unt simp in
                                                                    thm
@@ -118,7 +118,7 @@ fun GO_ON_TAC () =
 fun go_on cnt = case cnt of
                         0 => e(GO_ON_TAC())
                        |1 => e(GO_ON_TAC())
-                       |_ => let val _= e(GO_ON_TAC()) in go_on (cnt-1) end; 
+                       |_ => let val _= e(GO_ON_TAC()) in go_on (cnt-1) end;
 
 fun go_on_p cnt = go_on cnt;
 
@@ -183,10 +183,10 @@ fun MODE_MIX_TAC newtrg (assumptions, gl) =
                 COMB (rcstu, sim)
                 => case dest_term rcstu of
                      COMB (rcst, unt)
-                     => case dest_term rcst of 
+                     => case dest_term rcst of
                             COMB (rcs, i2)
-                            => case (dest_term rcs) of 
-                                   COMB (rc, i1) => 
+                            => case (dest_term rcs) of
+                                   COMB (rc, i1) =>
                                         case (dest_term rc) of
                                              COMB (rel, comp)  => if ((i2 = ``mode_mix:(arm_state->bool)``) andalso ((unt = ``priv_mode_constraints_v2a``) andalso (sim=``priv_mode_similar``)))
                                                                   then ((SUBGOAL_THEN (mk_comb(mk_comb((mk_comb(rcs, newtrg)), (if (newtrg = ``comb_mode 16w 19w``) then ``priv_mode_constraints_v2a`` else ``priv_mode_constraints_v1``)), sim)) (fn thm => RW_TAC (srw_ss()) [thm, mode_mix_upgrade])) (assumptions, gl))
@@ -203,10 +203,10 @@ fun LITTLE_MODE_MIX_TAC newtrg (assumptions, gl) =
                 COMB (rcstu, sim)
                 => case dest_term rcstu of
                      COMB (rcst, unt)
-                     => case dest_term rcst of 
+                     => case dest_term rcst of
                             COMB (rcs, i2)
-                            => case (dest_term rcs) of 
-                                   COMB (rc, i1) => 
+                            => case (dest_term rcs) of
+                                   COMB (rc, i1) =>
                                         case (dest_term rc) of
                                              COMB (rel, comp)  => if (i2 = ``little_mode_mix:(arm_state->bool)``)
                                                                   then ((SUBGOAL_THEN (mk_comb(mk_comb((mk_comb(rcs, newtrg)),unt), sim)) (fn thm => RW_TAC (srw_ss()) [thm, little_mode_mix_upgrade])) (assumptions, gl))
@@ -214,7 +214,7 @@ fun LITTLE_MODE_MIX_TAC newtrg (assumptions, gl) =
                                              | _ => (ALL_TAC (assumptions, gl))
                                | _ => (ALL_TAC (assumptions, gl))
                         | _ => (ALL_TAC (assumptions, gl))
-                   | _ => (ALL_TAC (assumptions, gl)) 
+                   | _ => (ALL_TAC (assumptions, gl))
               | _ => (ALL_TAC (assumptions, gl));
 
 
@@ -222,4 +222,3 @@ fun LITTLE_MODE_MIX_TAC newtrg (assumptions, gl) =
 
 
 end
-
