@@ -15,7 +15,7 @@ open switching_lemma_helperTheory user_lemma_basicsTheory;
 
 exception not_matched_pattern; 
 
-val _ = overload_on("priv_mode_constraints", ``priv_mode_constraints_v1``);
+val _ = temp_overload_on("priv_mode_constraints", ``priv_mode_constraints_v1``);
 val priv_mode_constraints_def = priv_mode_constraints_v1_def;
 
 
