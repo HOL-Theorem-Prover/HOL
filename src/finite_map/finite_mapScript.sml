@@ -1630,6 +1630,15 @@ FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` MP_TAC) THEN
 SRW_TAC[][])
 end
 
+val FOLDL_FUPDATE_LIST = store_thm("FOLDL_FUPDATE_LIST",
+  ``!f1 f2 ls a. FOLDL (\fm k. fm |+ (f1 k, f2 k)) a ls =
+    a |++ MAP (\k. (f1 k, f2 k)) ls``,
+  SRW_TAC[][FUPDATE_LIST,rich_listTheory.FOLDL_MAP])
+
+val FUPDATE_LIST_SNOC = store_thm("FUPDATE_LIST_SNOC",
+  ``!xs x fm. fm |++ SNOC x xs = (fm |++ xs) |+ x``,
+  Induct THEN SRW_TAC[][FUPDATE_LIST_THM])
+
 (* ----------------------------------------------------------------------
     More theorems
    ---------------------------------------------------------------------- *)
