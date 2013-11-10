@@ -300,6 +300,14 @@ val IF_EQUALS_OPTION = store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites ["IF_EQUALS_OPTION"]
 
+val IF_NONE_EQUALS_OPTION = store_thm(
+  "IF_NONE_EQUALS_OPTION",
+  ``(((if P then X else NONE) = NONE) <=> (P ==> IS_NONE X)) /\
+    (((if P then NONE else X) = NONE) <=> (IS_SOME X ==> P)) /\
+    (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
+    (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))``,
+  OPTION_CASES_TAC(--`X:'a option`--) THEN SRW_TAC [](option_rws));
+val _ = export_rewrites ["IF_NONE_EQUALS_OPTION"]
 
 (* ----------------------------------------------------------------------
     OPTION_MAP theorems
