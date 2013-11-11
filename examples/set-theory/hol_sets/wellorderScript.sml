@@ -668,9 +668,12 @@ val wo2wo_EQ_NONE_woseg = store_thm(
   "wo2wo_EQ_NONE_woseg",
   ``(wo2wo w1 w2 x = NONE) ==> (elsOf w2 = woseg w1 w2 x)``,
   rw[Once wo2wo_thm, LET_THM] >>
-  `?y. y IN elsOf w2 /\ y NOTIN woseg w1 w2 x`
-     by metis_tac [IMAGE_wo2wo_SUBSET, SUBSET_DEF, EXTENSION] >>
-  strip_tac >> imp_res_tac wleast_EQ_NONE >> metis_tac [SUBSET_DEF]);
+  spose_not_then strip_assume_tac >>
+  last_x_assum mp_tac >> simp[] >>
+  spose_not_then strip_assume_tac >>
+  fs[optionTheory.NOT_IS_SOME_EQ_NONE] >>
+  imp_res_tac wleast_EQ_NONE >>
+  metis_tac[IMAGE_wo2wo_SUBSET,SUBSET_DEF,EXTENSION]);
 
 val orderlt_trichotomy = store_thm(
   "orderlt_trichotomy",
