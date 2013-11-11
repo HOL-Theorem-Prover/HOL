@@ -1008,7 +1008,7 @@ val x64_2set_ICACHE_EMPTY = prove(
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
   \\ SIMP_TAC std_ss [IN_x64_2set,ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_STACK_def,
          ZREAD_RIP_def,X64_GET_MEMORY_def,X64_ACCURATE_def,X64_ICACHE_EMPTY_def]
-  \\ METIS_TAC []);
+  \\ SRW_TAC [][]);
 
 val IMP_X64_SPEC_LEMMA3 = prove(
   ``!p q.
