@@ -804,7 +804,7 @@ local
                         ("bad domain: " ^ typeName ty1 ^ " -> " ^ typeName ty2)
       end
 
-      fun pick (a, b, c, d) tm =
+      fun pick (a, b, c) tm =
          let
             val ty = Term.type_of tm
          in
@@ -813,10 +813,8 @@ local
                   then a
                else if Option.isSome b andalso ty = bitstringSyntax.bitstring_ty
                   then b
-               else if Option.isSome c andalso ty = numSyntax.num
+               else if Option.isSome c andalso ty = intSyntax.int_ty
                   then c
-               else if Option.isSome d andalso ty = intSyntax.int_ty
-                  then d
                else raise ERR "Mop" "pick") tm
          end
 
@@ -861,13 +859,12 @@ in
        | ValOf => optionSyntax.mk_the
        | Min => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
        | Max => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
-       | Abs => pick (SOME wordsSyntax.mk_word_abs, NONE, NONE,
+       | Abs => pick (SOME wordsSyntax.mk_word_abs, NONE,
                       SOME intSyntax.mk_absval)
-       | Neg => pick (SOME wordsSyntax.mk_word_2comp, NONE, NONE,
+       | Neg => pick (SOME wordsSyntax.mk_word_2comp, NONE,
                       SOME intSyntax.mk_negated)
-       | Size => pick (SOME wordsSyntax.mk_word_len,
-                       SOME listSyntax.mk_length, NONE, NONE)
-       | Log => pick (SOME wordsSyntax.mk_word_log2, NONE,
+       | Size => wordsSyntax.mk_word_len
+       | Log => pick (SOME wordsSyntax.mk_word_log2,
                       SOME bitSyntax.mk_log2, NONE)
        | K1 ty => (fn tm => combinSyntax.mk_K_1 (tm, Ty ty))
        | SE ty =>
