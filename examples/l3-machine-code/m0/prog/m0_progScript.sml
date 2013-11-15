@@ -56,6 +56,13 @@ val m0_WORD_def = Define`
    m0_MEM (a + 2w) ((23 >< 16) i) *
    m0_MEM (a + 3w) ((31 >< 24) i)`;
 
+val m0_BE_WORD_def = Define`
+   m0_BE_WORD a (i: word32) =
+   m0_MEM a ((31 >< 24) i) *
+   m0_MEM (a + 1w) ((23 >< 16) i) *
+   m0_MEM (a + 2w) ((15 >< 8) i) *
+   m0_MEM (a + 3w) ((7 >< 0) i)`;
+
 val m0_CONFIG_def = Define`
    m0_CONFIG (bigend, spsel) =
       m0_exception NoException * m0_AIRCR_ENDIANNESS bigend *

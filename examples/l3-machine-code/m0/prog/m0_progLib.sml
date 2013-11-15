@@ -143,7 +143,7 @@ local
       case Lib.total dest_m0_AIRCR_ENDIANNESS tm of
          SOME t => t = boolSyntax.T
        | NONE => false
-   val byte_chunks = stateLib.group_into_chunks (dest_m0_MEM, 4, mk_rev_e)
+   val byte_chunks = stateLib.group_into_chunks (dest_m0_MEM, 4, false)
    fun rwt (w, a) =
       [Drule.SPECL [a, w] m0_progTheory.MOVE_TO_TEMPORAL_M0_CODE_POOL,
        Drule.SPECL [a, w] m0_progTheory.MOVE_TO_M0_CODE_POOL]
@@ -153,6 +153,11 @@ local
          set_sepTheory.STAR_ASSOC, set_sepTheory.SEP_CLAUSES,
          m0_progTheory.disjoint_m0_instr_thms, m0_stepTheory.concat_bytes] @
         List.concat (List.map rwt wa))
+   val rev_end_rule =
+      PURE_REWRITE_RULE
+        [m0_stepTheory.concat_bytes, m0_stepTheory.reverse_endian_bytes]
+   fun rev_intro x =
+      rev_end_rule o Thm.INST (List.map (fn (w, _: term) => w |-> mk_rev_e w) x)
 in
    fun extend_m0_code_pool thm =
       let
@@ -161,13 +166,17 @@ in
       in
          if Lib.exists is_pc_relative lp
             then let
-                    val e = List.exists is_big_end lp
-                    val (s, (s2, wa)) = byte_chunks (e, lp)
-                    val s = List.concat s
+                    val be = List.exists is_big_end lp
+                    val (s, wa) = byte_chunks lp
                  in
                     if List.null s
                        then thm
-                    else move_to_code wa (Thm.INST s2 (Thm.INST s thm))
+                    else let
+                            val thm' =
+                               move_to_code wa (Thm.INST (List.concat s) thm)
+                         in
+                            if be then rev_intro wa thm' else thm'
+                         end
                  end
          else thm
       end
@@ -476,18 +485,26 @@ local
       case Lib.total (pairSyntax.dest_pair o dest_m0_CONFIG) tm of
          SOME (t, _) => t = boolSyntax.T
        | _ => false
+   val le_sep_array_introduction =
+      stateLib.sep_array_intro
+         false m0_progTheory.m0_WORD_def [m0_stepTheory.concat_bytes]
+   val be_sep_array_introduction =
+      stateLib.sep_array_intro
+         true m0_progTheory.m0_BE_WORD_def [m0_stepTheory.concat_bytes]
+   val concat_bytes_rule =
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (PURE_REWRITE_CONV [m0_stepTheory.concat_bytes]))
 in
-   val m0_sep_array_intro =
-      stateLib.sep_array_intro mk_rev_e is_big_end m0_progTheory.m0_WORD_def
-         [m0_stepTheory.concat_bytes, m0_stepTheory.reverse_endian_bytes,
-          m0_stepTheory.reverse_endian_id,
-          GSYM m0_stepTheory.reverse_endian_def]
    val memory_introduction =
       stateLib.introduce_map_definition
          (m0_progTheory.m0_MEMORY_INSERT, addr_eq_conv)
    val register_introduction =
+      concat_bytes_rule o
       stateLib.introduce_map_definition
          (m0_progTheory.m0_REGISTERS_INSERT, REG_CONV)
+   val sep_array_introduction =
+      stateLib.pick_endian_rule
+        (is_big_end, be_sep_array_introduction, le_sep_array_introduction)
    val m0_introduction =
       flag_introduction o
       m0_PC_bump_intro o
@@ -611,7 +628,7 @@ in
          then Lib.I
        else case #mem target of
                Flat => Lib.I
-             | Array => m0_sep_array_intro
+             | Array => sep_array_introduction
              | Map => memory_introduction)
    fun process_rule_options s =
       let
@@ -801,7 +818,8 @@ m0_config true "temporal,reg-map,flat"
 m0_config true "temporal,reg-map,array"
 m0_config true "temporal,reg-map,mapped"
 
-m0_spec_hex "B406"
+m0_spec_hex "4906" (* ldr r1, [pc, #24] *)
+m0_spec_hex "B406" (* push {r1, r2} *)
 
 list_db ()
 

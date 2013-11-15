@@ -50,16 +50,22 @@ val l3_arm_tools_array = arm_tools_opt "array" arm_progTheory.aS_HIDE
 val l3_arm_tools_array_no_status = arm_tools_opt "array" TRUTH
 val l3_arm_tools_mapped = arm_tools_opt "mapped" arm_progTheory.aS_HIDE
 val l3_arm_tools_mapped_no_status = arm_tools_opt "mapped" TRUTH
+val l3_arm_tools_mapped32 = arm_tools_opt "mapped32" arm_progTheory.aS_HIDE
+val l3_arm_tools_mapped32_no_status = arm_tools_opt "mapped32" TRUTH
 
-fun arm_decompile f =
+fun arm_decompile opt f =
    fn name => fn qcode =>
-      ( set_opt "mapped"
+      ( set_opt opt
       ; arm_progLib.set_newline ""
       ; (UNABBREV_CODE_RULE ## I) (decompile f name qcode)
       )
 
-val l3_arm_decompile = arm_decompile l3_arm_tools
-val l3_arm_decompile_no_status = arm_decompile l3_arm_tools_no_status
+val l3_arm_decompile = arm_decompile "mapped" l3_arm_tools
+val l3_arm_decompile_no_status = arm_decompile  "mapped" l3_arm_tools_no_status
+
+val l3_arm_decompile32 = arm_decompile "mapped32" l3_arm_tools
+val l3_arm_decompile32_no_status =
+   arm_decompile  "mapped32" l3_arm_tools_no_status
 
 (* testing
 

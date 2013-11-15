@@ -181,7 +181,12 @@ local
       THENC REWRITE_CONV [arm_progTheory.sub_intro]
    fun split_arm_instr tm =
       Lib.with_exn (pairSyntax.dest_pair o dest_arm_instr) tm err
-   val byte_chunks = stateLib.group_into_chunks (dest_arm_MEM, 4, mk_rev_e)
+   val byte_chunks = stateLib.group_into_chunks (dest_arm_MEM, 4, false)
+   val rev_end_rule =
+      PURE_REWRITE_RULE
+        [arm_stepTheory.concat_bytes, arm_stepTheory.reverse_endian_bytes]
+   fun rev_intro x =
+      rev_end_rule o Thm.INST (List.map (fn (w, _: term) => w |-> mk_rev_e w) x)
 in
    fun DISJOINT_CONV tm =
       let
@@ -208,13 +213,17 @@ in
       in
          if Lib.exists is_pc_relative lp
             then let
-                    val e = Lib.exists is_big_end lp
-                    val (s, (s2, wa)) = byte_chunks (e, lp)
-                    val s = List.concat s
+                    val be = Lib.exists is_big_end lp
+                    val (s, wa) = byte_chunks lp
                  in
                     if List.null s
                        then thm
-                    else move_to_code wa (Thm.INST s2 (Thm.INST s thm))
+                    else let
+                            val thm' =
+                               move_to_code wa (Thm.INST (List.concat s) thm)
+                         in
+                            if be then rev_intro wa thm' else thm'
+                         end
                  end
          else thm
       end
@@ -554,21 +563,42 @@ local
       case Lib.total (pairSyntax.strip_pair o dest_arm_CONFIG) tm of
          SOME [_, _, t, _, _] => t = boolSyntax.T
        | _ => false
+   val le_word_memory_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_WORD_MEMORY_INSERT, addr_eq_conv) o
+      stateLib.chunks_intro false arm_progTheory.arm_WORD_def
+   val be_word_memory_introduction =
+      stateLib.introduce_map_definition
+         (arm_progTheory.arm_BE_WORD_MEMORY_INSERT, addr_eq_conv) o
+      stateLib.chunks_intro true arm_progTheory.arm_BE_WORD_def
+   val le_sep_array_introduction =
+      stateLib.sep_array_intro
+         false arm_progTheory.arm_WORD_def [arm_stepTheory.concat_bytes]
+   val be_sep_array_introduction =
+      stateLib.sep_array_intro
+         true arm_progTheory.arm_BE_WORD_def [arm_stepTheory.concat_bytes]
+   val concat_bytes_rule =
+      Conv.CONV_RULE
+         (helperLib.POST_CONV (PURE_REWRITE_CONV [arm_stepTheory.concat_bytes]))
 in
-   val arm_sep_array_intro =
-      stateLib.sep_array_intro mk_rev_e is_big_end arm_progTheory.arm_WORD_def
-         [arm_stepTheory.concat_bytes, arm_stepTheory.reverse_endian_bytes,
-          arm_stepTheory.reverse_endian_id,
-          GSYM arm_stepTheory.reverse_endian_def]
    val memory_introduction =
       stateLib.introduce_map_definition
          (arm_progTheory.arm_MEMORY_INSERT, addr_eq_conv)
    val fp_introduction =
+      concat_bytes_rule o
       stateLib.introduce_map_definition
          (arm_progTheory.arm_FP_REGISTERS_INSERT, Conv.ALL_CONV)
    val gp_introduction =
+      concat_bytes_rule o
       stateLib.introduce_map_definition
          (arm_progTheory.arm_REGISTERS_INSERT, reg_eq_conv)
+   val sep_array_introduction =
+      stateLib.pick_endian_rule
+        (is_big_end, be_sep_array_introduction, le_sep_array_introduction)
+   val word_memory_introduction =
+      concat_bytes_rule o
+      stateLib.pick_endian_rule
+        (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
    val arm_intro =
       flag_introduction o
       arm_PC_bump_intro o
@@ -582,13 +612,13 @@ end
 
 val dst = dest_arm_MEM
 val n = 4
-val mk = mk_rev_e
+val be = false
 
-val mk_rev = mk_rev_e
-val is_big_end = is_big_end2
 val m_def = arm_progTheory.arm_WORD_def
-val rwts = [arm_stepTheory.concat_bytes, arm_stepTheory.reverse_endian_bytes,
-            GSYM arm_stepTheory.reverse_endian_def]
+val rwts = [arm_stepTheory.concat_bytes]
+
+val be = true
+val m_def = arm_progTheory.arm_BE_WORD_def
 
 *)
 
@@ -681,7 +711,7 @@ in
       end
 end
 
-datatype memory = Flat | Array | Map
+datatype memory = Flat | Array | Map | Map32
 type opt = {gpr_map: bool, fpr_map: bool, mem: memory, temporal: bool}
 
 local
@@ -693,6 +723,7 @@ local
        ["no-fpr-map", "no-map-fpr"]]
    val mem_options =
       [["map-mem", "mem-map", "mapped"],
+       ["map-mem32", "mem-map32", "mapped32"],
        ["array-mem", "mem-array", "array"],
        ["flat-map", "mem-flat", "flat"]]
    val temporal_options =
@@ -701,8 +732,9 @@ local
    fun isDelim c = Char.isPunct c andalso c <> #"-" orelse Char.isSpace c
    val memopt =
       fn 0 => Map
-       | 1 => Array
-       | 2 => Flat
+       | 1 => Map32
+       | 2 => Array
+       | 3 => Flat
        | _ => raise ERR "process_rule_options" ""
 in
    fun basic_opt () =
@@ -735,8 +767,10 @@ in
          then Lib.I
        else case #mem target of
                Flat => Lib.I
-             | Array => arm_sep_array_intro
-             | Map => memory_introduction)
+             | Array => sep_array_introduction
+             | Map => memory_introduction
+             | Map32 => word_memory_introduction
+             )
    fun process_rule_options s =
       let
          val l = String.tokens isDelim s
@@ -934,37 +968,54 @@ fun opc_class s =
       (listSyntax.mk_list (i, Type.bool), arm_stepLib.arm_instruction i)
    end
 
-val () = arm_config "vfp" "fpr-map,flat"
-val () = arm_config "vfp" "fpr-map,array"
-val () = arm_config "vfp" "fpr-map,mapped"
-
 val () = arm_config "vfp" "flat"
 val () = arm_config "vfp" "array"
 val () = arm_config "vfp" "mapped"
+val () = arm_config "vfp" "mapped32"
+
+val () = arm_config "vfp" "map-fpr,flat"
+val () = arm_config "vfp" "map-fpr,array"
+val () = arm_config "vfp" "map-fpr,mapped"
+val () = arm_config "vfp" "map-fpr,mapped32"
+
 val () = arm_config "vfp" "map-reg,flat"
 val () = arm_config "vfp" "map-reg,array"
 val () = arm_config "vfp" "map-reg,mapped"
+val () = arm_config "vfp" "map-reg,mapped32"
 
 val () = arm_config "vfp,be" "flat"
 val () = arm_config "vfp,be" "array"
 val () = arm_config "vfp,be" "mapped"
+val () = arm_config "vfp,be" "mapped32"
+
 val () = arm_config "vfp,be" "map-reg,flat"
 val () = arm_config "vfp,be" "map-reg,array"
 val () = arm_config "vfp,be" "map-reg,mapped"
+val () = arm_config "vfp,be" "map-reg,mapped32"
 
 val () = arm_config "vfp" "flat,temporal"
 val () = arm_config "vfp" "array,temporal"
 val () = arm_config "vfp" "mapped,temporal"
+val () = arm_config "vfp" "mapped32,temporal"
+
 val () = arm_config "vfp" "map-reg,flat,temporal"
 val () = arm_config "vfp" "map-reg,array,temporal"
 val () = arm_config "vfp" "map-reg,mapped,temporal"
+val () = arm_config "vfp" "map-reg,mapped32,temporal"
 
 val () = arm_config "vfp,be" "flat,temporal"
 val () = arm_config "vfp,be" "array,temporal"
 val () = arm_config "vfp,be" "mapped,temporal"
+val () = arm_config "vfp,be" "mapped32,temporal"
+
 val () = arm_config "vfp,be" "map-reg,flat,temporal"
 val () = arm_config "vfp,be" "map-reg,array,temporal"
 val () = arm_config "vfp,be" "map-reg,mapped,temporal"
+val () = arm_config "vfp,be" "map-reg,mapped32,temporal"
+
+val thm = arm_intro (last (arm_spec "STMIA;3,2,1"))
+  arm_spec_hex "E881000E"; (* STMIA;3,2,1 *)
+  arm_spec_hex "E891000E"; (* LDMIA;3,2,1 *)
 
 val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
