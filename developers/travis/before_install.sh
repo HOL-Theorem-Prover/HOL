@@ -8,6 +8,6 @@ wget -q -O polyml5.5.1.tar.gz "http://downloads.sourceforge.net/project/polyml/p
 
 tar xvzf polyml5.5.1.tar.gz
 cd polyml.5.5.1
-./configure --prefix=$HOME
+./configure --prefix=$HOME --enable-shared
 make
 make install
