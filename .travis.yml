@@ -1,5 +1,5 @@
 language: c
 compiler:
   - gcc
-before_script: developers/travis/before_script.sh
+before_script: developers/travis/before_install.sh
 script: $HOME/bin/poly < tools/smart-configure.sml && bin/build
