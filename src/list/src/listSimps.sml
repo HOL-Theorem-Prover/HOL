@@ -348,10 +348,11 @@ val _ = BasicProvers.augment_srw_ss [LIST_EQ_ss]
  ---------------------------------------------------------------------------*)
 
 val list_rws = computeLib.add_thms
-    [ APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,
+    [ APPEND, APPEND_NIL, FLAT, HD, TL, MAP, MAP2,
       NULL_DEF, CONS_11, NOT_CONS_NIL, NOT_NIL_CONS, MEM, EXISTS_DEF, EVERY_DEF,
       ZIP, UNZIP, TAKE_compute, DROP_compute, PAD_LEFT, PAD_RIGHT, isPREFIX,
-      REVERSE_REV, REV_DEF, FILTER, FOLDL, FOLDR,
+      REVERSE_REV, REV_DEF, LENGTH_LEN, LEN_DEF, SUM_SUM_ACC, SUM_ACC_DEF,
+      FILTER, FOLDL, FOLDR,
       EL_restricted, EL_simp_restricted, SNOC,
       computeLib.lazyfy_thm list_case_compute,
       list_size_def, ALL_DISTINCT, FRONT_DEF, LAST_compute,
