@@ -3298,7 +3298,9 @@ val mw_mul_pass_top_def = Define `
 
 val k2mw_LENGTH_0 = store_thm("k2mw_LENGTH_0",
   ``!ys. (k2mw (LENGTH ys) 0) = MAP (K 0w) ys``,
-  Induct \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss [MATCH_MP ZERO_DIV ZERO_LT_dimword]);
+  Induct \\ EVAL_TAC \\
+  SIMP_TAC std_ss [LEN_LENGTH_LEM,GSYM ADD1,k2mw_def] \\
+  FULL_SIMP_TAC std_ss [MATCH_MP ZERO_DIV ZERO_LT_dimword]);
 
 val mw_mul_pass_top_lemma = prove(
   ``!ys k1 k2 k3 x.
