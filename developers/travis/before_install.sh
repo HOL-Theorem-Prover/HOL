@@ -16,7 +16,7 @@ then
   make install
 else
   echo "*** Installing PolyML in root land directory"
-  ./configure --enable-shared
+  ./configure --prefix=/usr/ --enable-shared
   make
   sudo make install
 fi
