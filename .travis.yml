@@ -2,8 +2,11 @@ language: c
 compiler:
   - gcc
 before_script: developers/travis/before_install.sh
-script: $HOME/bin/poly < tools/smart-configure.sml && bin/build $SELFTEST
+script: poly < tools/smart-configure.sml && bin/build $SELFTEST
 env:
-  - LD_LIBRARY_PATH=$HOME/lib SELFTEST=-selftest
-  - LD_LIBRARY_PATH=$HOME/lib SELFTEST=
-  - LD_LIBRARY_PATH= SELFTEST=
+  global:
+    - PATH=$PATH:$HOME/bin
+  matrix:
+    - LD_LIBRARY_PATH=$HOME/lib SELFTEST=-selftest
+    - LD_LIBRARY_PATH=$HOME/lib SELFTEST=
+    - LD_LIBRARY_PATH= SELFTEST=
