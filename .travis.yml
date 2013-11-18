@@ -5,8 +5,8 @@ before_script: developers/travis/before_install.sh
 script: poly < tools/smart-configure.sml && bin/build $SELFTEST
 env:
   global:
-    - PATH=$PATH:$HOME/bin
+    - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - LD_LIBRARY_PATH=$HOME/lib SELFTEST=-selftest
-    - LD_LIBRARY_PATH=$HOME/lib SELFTEST=
-    - LD_LIBRARY_PATH= SELFTEST=
+    - ROOTPOLY= SELFTEST=-selftest
+    - ROOTPOLY= SELFTEST=
+    - ROOTPOLY=1 SELFTEST=
