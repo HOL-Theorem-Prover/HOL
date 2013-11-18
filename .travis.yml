@@ -2,6 +2,6 @@ language: c
 compiler:
   - gcc
 before_script: developers/travis/before_install.sh
-script: $HOME/bin/poly < tools/smart-configure.sml && bin/build
+script: $HOME/bin/poly < tools/smart-configure.sml && bin/build -selftest 1
 env:
   - LD_LIBRARY_PATH=$HOME/lib
