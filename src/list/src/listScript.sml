@@ -2503,6 +2503,8 @@ val _ = export_rewrites ["INFINITE_LIST_UNIV"]
 
 val _ = Defn.def_suffix := "_DEF";
 
+(* EVAL performance of LEN seems to be worse than of LENGTH *)
+
 val LEN_DEF = Define
   `(LEN [] n = n) /\
    (LEN (h::t) n = LEN t (n+1))`;
@@ -2844,7 +2846,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
    S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, LENGTH_LEN, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
+   S "             FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
    S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
    S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
