@@ -174,26 +174,24 @@ val path_bisimulation = store_thm(
       RES_TAC THEN SRW_TAC [][],
       ONCE_REWRITE_TAC [LLIST_BISIMULATION] THEN
       Q.EXISTS_TAC `\x y. ?x' y'. R (toPath (x', x)) (toPath (y', y))` THEN
-      SRW_TAC [][] THENL [
-        PROVE_TAC [],
-        `(ll3 = LNIL) /\ (ll4 = LNIL) \/
-         ?r q1' q2'. (ll3 = LCONS (r, first q1') (SND (fromPath q1'))) /\
-                     (ll4 = LCONS (r, first q2') (SND (fromPath q2'))) /\
-                     (x' = y') /\ R q1' q2'`
-                                by (RES_TAC THEN SRW_TAC [][] THEN
-                                    PROVE_TAC [])
-        THENL [
-          SRW_TAC [][],
-          SRW_TAC [][LHD_THM, LTL_THM] THENL [
-            `?q11 q12 q21 q22. (q1' = toPath (q11, q12)) /\
-                               (q2' = toPath (q21, q22))` by
-                PROVE_TAC [toPath_onto, pairTheory.ABS_PAIR_THM] THEN
-            NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
-            RES_TAC THEN SRW_TAC [][first_def],
-            MAP_EVERY Q.EXISTS_TAC [`FST (fromPath q1')`,
-                                    `FST (fromPath q2')`] THEN
-            SRW_TAC [][]
-          ]
+      SRW_TAC [][] THEN
+      `(ll3 = LNIL) /\ (ll4 = LNIL) \/
+       ?r q1' q2'. (ll3 = LCONS (r, first q1') (SND (fromPath q1'))) /\
+                   (ll4 = LCONS (r, first q2') (SND (fromPath q2'))) /\
+                   (x' = y') /\ R q1' q2'`
+                              by (RES_TAC THEN SRW_TAC [][] THEN
+                                  PROVE_TAC [])
+      THENL [
+        SRW_TAC [][],
+        SRW_TAC [][LHD_THM, LTL_THM] THENL [
+          `?q11 q12 q21 q22. (q1' = toPath (q11, q12)) /\
+                             (q2' = toPath (q21, q22))` by
+              PROVE_TAC [toPath_onto, pairTheory.ABS_PAIR_THM] THEN
+          NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
+          RES_TAC THEN SRW_TAC [][first_def],
+          MAP_EVERY Q.EXISTS_TAC [`FST (fromPath q1')`,
+                                  `FST (fromPath q2')`] THEN
+          SRW_TAC [][]
         ]
       ]
     ]
@@ -582,11 +580,9 @@ val exists_thm = store_thm(
   ``!P. (!x. exists P (stopped_at x) = P x) /\
         (!x r p. exists P (pcons x r p) = P x \/ exists P p)``,
   SRW_TAC [][exists_def, firstP_at_thm, EQ_IMP_THM, EXISTS_OR_THM] THEN
-  SRW_TAC [][] THENL [
-    PROVE_TAC [],
-    Cases_on `P x` THEN SRW_TAC [][] THEN
-    Q.EXISTS_TAC `SUC i` THEN SRW_TAC [ARITH_ss][]
-  ]);
+  SRW_TAC [][] THEN
+  Cases_on `P x` THEN SRW_TAC [][] THEN
+  Q.EXISTS_TAC `SUC i` THEN SRW_TAC [ARITH_ss][]);
 
 val every_thm = store_thm(
   "every_thm",
@@ -1502,8 +1498,7 @@ val trace_machine_thm = Q.store_thm
       Q.EXISTS_TAC `\(s,tr). (!n l. (LTAKE n (LAPPEND (fromList s) tr) = SOME l)
                                     ==>
                                     P l)` THEN
-      SRW_TAC [] [] THEN1
-      METIS_TAC [] THENL
+      SRW_TAC [] [] THENL
       [Cases_on `s'` THEN
            SRW_TAC [] [] THEN
            Cases_on `s` THEN
@@ -1811,4 +1806,3 @@ SRW_TAC [] [] THENL
 
 
 val _ = export_theory();
-
