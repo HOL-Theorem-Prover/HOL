@@ -80,40 +80,26 @@ fun prove_it a src_inv trg_inv uf uy =
        prove  a src_inv trg_inv  ([uf, uy, ``27w:word5``, ``_thm``])  ([(get_trans_thm uf), (get_reflex_thm uf), (get_unt_def uf), (get_sim_def uy), errorT_thm, (get_sim_reflex_thm uy)])
      end;
 
-
-fun obtain_proofs () =
-  case top_goals() of
-     x::rl =>
-          let val (_, to_show) = x
-          in
-            case (dest_term to_show) of
-                COMB (rcstu, simp)
-                => case dest_term rcstu of
-                     COMB (rcst, unt)
-                     => case dest_term rcst of
-                            COMB (rcs, i2)
-                            => case (dest_term rcs) of
-                                   COMB (rc, i1) =>
-                                        case (dest_term rc) of
-                                             COMB (rel, comp)  =>  let val (thm, _ ) = prove_it comp i1 i2 unt simp in
-                                                                   thm
-                                                                   end
-                                             | _ => (trivial_true)
-                               | _ => (trivial_true)
-                        | _ => (trivial_true)
-                   | _ => (trivial_true)
-              | _ => (trivial_true)
-          end
-     | _ => (trivial_true);
-
-
+fun obtain_proofs() =
+     case top_goals() of
+       [] => trivial_true
+     | (_, to_show)::_ =>
+       let
+         val (rcstu, simp) = dest_comb to_show
+         val (rcst, unt) = dest_comb rcstu
+         val (rcs, i2) = dest_comb rcst
+         val (rc, i1) = dest_comb rcs
+         val (rel, comp) = dest_comb rc
+         val (thm, _) = prove_it comp i1 i2 unt simp
+       in
+         thm
+       end handle HOL_ERR _ => trivial_true
 
 fun GO_ON_TAC () =
     let val thm = obtain_proofs ()
     in
         ASSUME_TAC thm THEN FULL_SIMP_TAC (srw_ss()) []
     end;
-
 
 fun go_on cnt = case cnt of
                         0 => e(GO_ON_TAC())
