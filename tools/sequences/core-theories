@@ -1,0 +1,45 @@
+src/compute/src
+src/HolSat/sat_solvers/minisat
+src/HolSat/sat_solvers/zc2hs
+src/HolSat
+src/taut
+src/marker
+src/q
+src/combin
+src/lite
+src/refute
+src/simp/src
+src/metis
+src/meson/src
+src/IndDef
+src/basicProof
+src/relation
+src/one
+src/pair/src
+src/sum
+src/tfl/src
+src/option
+src/num/theories
+src/num/reduce/src
+src/num/arith/src
+src/num
+src/num/termination
+
+# A Poly/ML heap, numheap, is deposited in src/num/termination to
+# speed up the last few theories (sets, extra numbers, and lists) before
+# bossLib
+src/num/extra_theories
+src/pred_set/src
+src/datatype/equiv
+src/datatype/record
+src/datatype
+!src/datatype/theory_tests
+src/list/src
+src/monad
+src/quantHeuristics
+src/unwind
+src/HolSat/vector_def_CNF
+src/boss
+# Up to this point is needed for hol (which loads bossLib).
+# (Maybe unwind could be omitted).
+[poly]bin/hol
