@@ -794,7 +794,7 @@ val x86_2set_ICACHE_EMPTY = prove(
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
   \\ SIMP_TAC std_ss [IN_x86_2set,XREAD_REG_def,XREAD_EFLAG_def,
          XREAD_EIP_def,X86_GET_MEMORY_def,X86_ACCURATE_def,X86_ICACHE_EMPTY_def]
-  \\ METIS_TAC []);
+  \\ SRW_TAC [][]);
 
 val IMP_X86_SPEC_LEMMA3 = prove(
   ``!p q.

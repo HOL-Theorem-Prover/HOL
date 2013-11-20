@@ -111,7 +111,7 @@ val write_cpsr_cfc_thm =
 				(cpsr with
                         <|I := T;
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)) sctlr) 
 /\
@@ -120,10 +120,10 @@ val write_cpsr_cfc_thm =
                        (cpsr with
                         <|I := T;
                           F :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.F);
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)) sctlr) 
 	     ``,
@@ -311,7 +311,7 @@ val data_abt_read_write_cpsr_cfc_thm =
 				(cpsr with
 			        <|I := T;
 			          A :=
-			            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+			            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
 			             cpsr.A); IT := 0w; J := F; T := sctlr.TE;
 			          E := sctlr.EE|>)))``
 	      in
@@ -329,7 +329,7 @@ val prefetch_abt_read_write_cpsr_cfc_thm =
 				(cpsr with
 			        <|I := T;
 			          A :=
-			            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+			            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
 			             cpsr.A); IT := 0w; J := F; T := sctlr.TE;
 			          E := sctlr.EE|>)))``
 	      in
@@ -348,7 +348,7 @@ val irq_read_write_cpsr_cfc_thm =
 				(cpsr with
 			        <|I := T;
 			          A :=
-			            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+			            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
 			             cpsr.A); IT := 0w; J := F; T := sctlr.TE;
 			          E := sctlr.EE|>)))``
 	      in
@@ -366,10 +366,10 @@ val fiq_read_write_cpsr_cfc_thm =
                        (cpsr with
                         <|I := T;
                           F :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.F);
                           A :=
-                            ((¬have_security ∨ ¬scr.NS ∨ scr.AW) ∨
+                            ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)))``
 	      in

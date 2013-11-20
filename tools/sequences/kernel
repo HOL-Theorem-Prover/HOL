@@ -1,0 +1,14 @@
+tools/mlyacc/mlyacclib
+[mosml]src/portableML/mosml
+[poly]src/portableML/poly
+src/portableML
+src/prekernel
+**KERNEL**
+src/postkernel
+# these three directories are required to even run hol.bare.unquote
+src/parse
+src/bool
+src/1
+!src/1/theory_tests
+src/proofman
+[poly]bin/hol.bare

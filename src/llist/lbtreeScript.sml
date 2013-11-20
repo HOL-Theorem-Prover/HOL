@@ -467,13 +467,7 @@ val bf_flatten_def = new_specification(
           SRW_TAC [][drop_while_def]
         ]))
 
-(* would like to actually delete_const this, but the theory file gets a
-   reference to the definition because it's added to computeLib's compset.
-   Instead we do the permanent version of hide, which ensures that people
-   importing this theory won't have drop_while contaminating their
-   constant name-space.  It will still be reachable as lbtree$drop_while of
-   course.  *)
-val _ = remove_ovl_mapping "drop_while" {Name = "drop_while", Thy = "lbtree"}
+val _ = delete_const "drop_while"
 
 (* simple properties of bf_flatten *)
 val bf_flatten_eq_lnil = store_thm(

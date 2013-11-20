@@ -89,9 +89,8 @@ val _ = Hol_datatype `arm_state =
      accesses       : memory_access list;
      information    : ARMinfo;
      coprocessors   : Coprocessors;
-     monitors       : ExclusiveMonitors; (* synchronization & semaphores *)
-     status	    : bool
- |>`;
+     monitors       : ExclusiveMonitors (* synchronization & semaphores *)
+  |>`;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -105,13 +104,11 @@ val constT_def = Define`
 val errorT_def = Define`
   (errorT : string -> 'a M) e = K (Error e)`;
 
-
-
 new_constant("access_violation", ``:arm_state -> bool``);
 val seqT_def = Define`  (* new seqT *)
   (seqT: 'a M -> ('a -> 'b M) -> 'b M) s f =
-   \y. case s y of Error e -> Error e
-                || ValueState z t -> 
+   \y. case s y of Error e => Error e
+                | ValueState z t => 
                      (
                        if (access_violation t)
                           then (ValueState ARB t)
@@ -259,13 +256,13 @@ val read_spsr_def = Define`
            errorT "read_spsr: unpredictable"
          else
            case cpsr.M
-           of 0b10001w -> read__psr ii SPSR_fiq  (* FIQ mode *)
-           || 0b10010w -> read__psr ii SPSR_irq  (* IRQ mode *)
-           || 0b10011w -> read__psr ii SPSR_svc  (* Supervisor mode *)
-           || 0b10110w -> read__psr ii SPSR_mon  (* Monitor mode *)
-           || 0b10111w -> read__psr ii SPSR_abt  (* Abort mode *)
-           || 0b11011w -> read__psr ii SPSR_und  (* Undefined mode *)
-           || _ -> errorT "read_spsr: unpredictable"))`;
+           of 0b10001w => read__psr ii SPSR_fiq  (* FIQ mode *)
+            | 0b10010w => read__psr ii SPSR_irq  (* IRQ mode *)
+            | 0b10011w => read__psr ii SPSR_svc  (* Supervisor mode *)
+            | 0b10110w => read__psr ii SPSR_mon  (* Monitor mode *)
+            | 0b10111w => read__psr ii SPSR_abt  (* Abort mode *)
+            | 0b11011w => read__psr ii SPSR_und  (* Undefined mode *)
+            | _ => errorT "read_spsr: unpredictable"))`;
 
 val write_spsr_def = Define`
   write_spsr (ii:iiid) value =
@@ -277,13 +274,13 @@ val write_spsr_def = Define`
            errorT "write_spsr: unpredictable"
          else
            case cpsr.M
-           of 0b10001w -> write__psr ii SPSR_fiq value (* FIQ mode *)
-           || 0b10010w -> write__psr ii SPSR_irq value (* IRQ mode *)
-           || 0b10011w -> write__psr ii SPSR_svc value (* Supervisor mode *)
-           || 0b10110w -> write__psr ii SPSR_mon value (* Monitor mode *)
-           || 0b10111w -> write__psr ii SPSR_abt value (* Abort mode *)
-           || 0b11011w -> write__psr ii SPSR_und value (* Undefined mode *)
-           || _ -> errorT "write_spsr: unpredictable"))`;
+           of 0b10001w => write__psr ii SPSR_fiq value (* FIQ mode *)
+            | 0b10010w => write__psr ii SPSR_irq value (* IRQ mode *)
+            | 0b10011w => write__psr ii SPSR_svc value (* Supervisor mode *)
+            | 0b10110w => write__psr ii SPSR_mon value (* Monitor mode *)
+            | 0b10111w => write__psr ii SPSR_abt value (* Abort mode *)
+            | 0b11011w => write__psr ii SPSR_und value (* Undefined mode *)
+            | _ => errorT "write_spsr: unpredictable"))`;
 
 val current_mode_is_priviledged_def = Define`
   current_mode_is_priviledged (ii:iiid) =
@@ -316,13 +313,7 @@ val is_secure_def = Define`
          constT (~have_security_ext \/ ~scr.NS \/ (cpsr.M = 0b10110w)))`;
 
 val read_vbar_def = Define`
-  read_vbar ii =
-    seqT (is_secure ii)
-    (\is_secure.
-       if is_secure then
-         readT (\s. s.coprocessors.state.cp15.VBAR.secure)
-       else
-         readT (\s. s.coprocessors.state.cp15.VBAR.non_secure))`;
+  read_vbar ii = readT (\s. s.coprocessors.state.cp15.VBAR)`;
 
 val read_mvbar_def = Define`
   read_mvbar (ii:iiid) = readT (\s. s.coprocessors.state.cp15.MVBAR)`;
@@ -333,26 +324,26 @@ val current_instr_set_def = Define`
     (\isetstate.
       constT
        (case isetstate
-        of 0b00w -> InstrSet_ARM
-        || 0b01w -> InstrSet_Thumb
-        || 0b10w -> InstrSet_Jazelle
-        || 0b11w -> InstrSet_ThumbEE))`;
+        of 0b00w => InstrSet_ARM
+         | 0b01w => InstrSet_Thumb
+         | 0b10w => InstrSet_Jazelle
+         | 0b11w => InstrSet_ThumbEE))`;
 
 val select_instr_set_def = Define`
   select_instr_set ii (iset:InstrSet) =
     case iset
-    of InstrSet_ARM ->
+    of InstrSet_ARM =>
          seqT (current_instr_set ii)
            (\current_instr_set.
               if current_instr_set = InstrSet_ThumbEE then
                 errorT "select_instr_set: unpredictable"
               else
                 write_isetstate ii 0b00w)
-    || InstrSet_Thumb ->
+     | InstrSet_Thumb =>
          write_isetstate ii 0b01w
-    || InstrSet_Jazelle ->
+     | InstrSet_Jazelle =>
          write_isetstate ii 0b10w
-    || InstrSet_ThumbEE ->
+     | InstrSet_ThumbEE =>
          write_isetstate ii 0b11w`;
 
 val RBankSelect_def = Define`
@@ -364,14 +355,14 @@ val RBankSelect_def = Define`
        else
          constT
            ((case mode
-             of 0b10000w -> usr  (* User mode *)
-             || 0b10001w -> fiq  (* FIQ mode *)
-             || 0b10010w -> irq  (* IRQ mode *)
-             || 0b10011w -> svc  (* Supervisor mode *)
-             || 0b10110w -> mon  (* Monitor mode *)
-             || 0b10111w -> abt  (* Abort mode *)
-             || 0b11011w -> und  (* Undefined mode *)
-             || 0b11111w -> usr  (* System mode uses User mode registers *))))`;
+             of 0b10000w => usr  (* User mode *)
+              | 0b10001w => fiq  (* FIQ mode *)
+              | 0b10010w => irq  (* IRQ mode *)
+              | 0b10011w => svc  (* Supervisor mode *)
+              | 0b10110w => mon  (* Monitor mode *)
+              | 0b10111w => abt  (* Abort mode *)
+              | 0b11011w => und  (* Undefined mode *)
+              | 0b11111w => usr  (* System mode uses User mode registers *))))`;
 
 val RfiqBankSelect_def = Define`
   RfiqBankSelect ii (mode, usr, fiq) =
@@ -380,26 +371,26 @@ val RfiqBankSelect_def = Define`
 val LookUpRName_def = Define`
   LookUpRName (ii:iiid) (n:word4, mode) =
      case n
-     of 0w  -> constT RName_0usr
-     || 1w  -> constT RName_1usr
-     || 2w  -> constT RName_2usr
-     || 3w  -> constT RName_3usr
-     || 4w  -> constT RName_4usr
-     || 5w  -> constT RName_5usr
-     || 6w  -> constT RName_6usr
-     || 7w  -> constT RName_7usr
-     || 8w  -> RfiqBankSelect ii (mode, RName_8usr, RName_8fiq)
-     || 9w  -> RfiqBankSelect ii (mode, RName_9usr, RName_9fiq)
-     || 10w -> RfiqBankSelect ii (mode, RName_10usr, RName_10fiq)
-     || 11w -> RfiqBankSelect ii (mode, RName_11usr, RName_11fiq)
-     || 12w -> RfiqBankSelect ii (mode, RName_12usr, RName_12fiq)
-     || 13w -> RBankSelect ii
+     of 0w  => constT RName_0usr
+      | 1w  => constT RName_1usr
+      | 2w  => constT RName_2usr
+      | 3w  => constT RName_3usr
+      | 4w  => constT RName_4usr
+      | 5w  => constT RName_5usr
+      | 6w  => constT RName_6usr
+      | 7w  => constT RName_7usr
+      | 8w  => RfiqBankSelect ii (mode, RName_8usr, RName_8fiq)
+      | 9w  => RfiqBankSelect ii (mode, RName_9usr, RName_9fiq)
+      | 10w => RfiqBankSelect ii (mode, RName_10usr, RName_10fiq)
+      | 11w => RfiqBankSelect ii (mode, RName_11usr, RName_11fiq)
+      | 12w => RfiqBankSelect ii (mode, RName_12usr, RName_12fiq)
+      | 13w => RBankSelect ii
                  (mode, RName_SPusr, RName_SPfiq, RName_SPirq,
                   RName_SPsvc, RName_SPabt, RName_SPund, RName_SPmon)
-     || 14w -> RBankSelect ii
+      | 14w => RBankSelect ii
                  (mode, RName_LRusr, RName_LRfiq, RName_LRirq,
                   RName_LRsvc, RName_LRabt, RName_LRund, RName_LRmon)
-     || _ -> errorT "LookUpRName: n = 15w"`;
+      | _ => errorT "LookUpRName: n = 15w"`;
 
 val read_reg_mode_def = Define`
   read_reg_mode ii (n, mode) =
@@ -870,9 +861,8 @@ val coproc_get_two_words_def = Define`
          constT data)`;
 
 val _ = computeLib.add_persistent_funs
-  [("have_security_ext", have_security_ext),
-   ("have_thumbEE", have_thumbEE),
-   ("have_jazelle", have_jazelle)];
+  ["have_security_ext",
+   "have_thumbEE",
+   "have_jazelle"];
 
 val _ = export_theory ();
-

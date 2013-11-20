@@ -86,10 +86,10 @@ val fetch_instruction_def = Define`
     actual_instr_set ii >>=
     (\iset.
        case iset
-       of InstrSet_ARM     -> fetch_arm ii read_word
-       || InstrSet_Thumb   -> fetch_thumb ii F read_halfword
-       || InstrSet_ThumbEE -> fetch_thumb ii T read_halfword
-       || InstrSet_Jazelle ->
+       of InstrSet_ARM     => fetch_arm ii read_word
+        | InstrSet_Thumb   => fetch_thumb ii F read_halfword
+        | InstrSet_ThumbEE => fetch_thumb ii T read_halfword
+        | InstrSet_Jazelle =>
             errorT ("fetch_instruction: Jazelle not supported"))`;
 
 val arm_next_def = Define`

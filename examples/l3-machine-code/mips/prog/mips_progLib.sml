@@ -411,7 +411,7 @@ local
       (case Drule.CONJUNCTS mips_progTheory.mips_component_11 of
           [r, m] => [r, m]
         | _ => raise ERR "component_11" "")
-   val mips_rwts = List.drop (utilsLib.datatype_rewrites "mips"
+   val mips_rwts = List.drop (utilsLib.datatype_rewrites true "mips"
                                 ["mips_state", "CP0", "StatusRegister"], 1)
    val STATE_TAC = ASM_REWRITE_TAC mips_rwts
 in

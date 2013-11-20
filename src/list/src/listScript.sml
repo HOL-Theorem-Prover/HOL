@@ -2503,6 +2503,8 @@ val _ = export_rewrites ["INFINITE_LIST_UNIV"]
 
 val _ = Defn.def_suffix := "_DEF";
 
+(* EVAL performance of LEN seems to be worse than of LENGTH *)
+
 val LEN_DEF = Define
   `(LEN [] n = n) /\
    (LEN (h::t) n = LEN t (n+1))`;
@@ -2532,6 +2534,20 @@ val REVERSE_REV = Q.store_thm
 ("REVERSE_REV",
  `!L. REVERSE L = REV L []`,
  PROVE_TAC [REV_REVERSE_LEM,APPEND_NIL]);
+
+val SUM_ACC_DEF = Define
+  `(SUM_ACC [] acc = acc) /\
+   (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))`
+
+val SUM_ACC_SUM_LEM = store_thm
+("SUM_ACC_SUM_LEM",
+ ``!L n. SUM_ACC L n = SUM L + n``,
+ Induct THEN RW_TAC arith_ss [SUM_ACC_DEF,SUM]);
+
+val SUM_SUM_ACC = store_thm
+("SUM_SUM_ACC",
+  ``!L. SUM L = SUM_ACC L 0``,
+  PROVE_TAC [SUM_ACC_SUM_LEM,arithmeticTheory.ADD_0])
 
 (* ----------------------------------------------------------------------
     List "splitting" results
@@ -2830,7 +2846,7 @@ val _ = adjoin_to_theory
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
    S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, ALL_DISTINCT, GENLIST_AUX,";
+   S "             FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
    S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
    S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
    S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";

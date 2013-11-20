@@ -66,7 +66,7 @@ let is = (if (s1.psrs (0,CPSR)).J then
  else
      (s1.registers (0,RName_PC) + 4w))`;
 
-
+(*
 val get_base_vector_table_def =
     Define `get_base_vector_table y =
     if (y.coprocessors.state.cp15.SCTLR.V) 
@@ -88,6 +88,30 @@ val get_base_vector_table_def =
 		 y.coprocessors.state.cp15.VBAR.secure
 	     else
 		 y.coprocessors.state.cp15.VBAR.non_secure)
+	else
+	    0w:word32`;
+*)
+val get_base_vector_table_def =
+    Define `get_base_vector_table y =
+    if (y.coprocessors.state.cp15.SCTLR.V) 
+    then
+	0xFFFF0000w
+    else
+	if
+	    (((ARMarch2num y.information.arch = 5) 
+		  ∨
+		  (ARMarch2num y.information.arch = 7)) 
+		 ∧
+		 Extension_Security ∈ y.information.extensions)
+	then
+	    (if
+	 (¬y.coprocessors.state.cp15.SCR.NS 
+		      ∨
+         ((y.psrs (0,CPSR)).M = 22w))
+	     then
+		 y.coprocessors.state.cp15.VBAR
+	     else
+		 y.coprocessors.state.cp15.VBAR)
 	else
 	    0w:word32`;
 

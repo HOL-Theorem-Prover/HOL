@@ -55,6 +55,28 @@ val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
 val (arm_MEMORY_def, arm_MEMORY_INSERT) =
    stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
+val arm_WORD_def = Define`
+   arm_WORD a (i: word32) =
+   arm_MEM a ((7 >< 0) i) *
+   arm_MEM (a + 1w) ((15 >< 8) i) *
+   arm_MEM (a + 2w) ((23 >< 16) i) *
+   arm_MEM (a + 3w) ((31 >< 24) i)`;
+
+val arm_BE_WORD_def = Define`
+   arm_BE_WORD a (i: word32) =
+   arm_MEM a ((31 >< 24) i) *
+   arm_MEM (a + 1w) ((23 >< 16) i) *
+   arm_MEM (a + 2w) ((15 >< 8) i) *
+   arm_MEM (a + 3w) ((7 >< 0) i)`;
+
+val arm_WORD_MEMORY_def = Define`
+  arm_WORD_MEMORY dmem mem =
+  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ Aligned (a, 4)}}`
+
+val arm_BE_WORD_MEMORY_def = Define`
+  arm_BE_WORD_MEMORY dmem mem =
+  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ Aligned (a, 4)}}`
+
 val arm_CONFIG_def = Define`
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
       arm_Extensions Extension_VFP vfp *
@@ -125,6 +147,77 @@ val Aligned_Branch = Q.store_thm("Aligned_Branch",
      Aligned ((if b then pc - (^x + 1w) else pc + ^y), 4)) = T`,
    rw [Aligned]
    \\ blastLib.FULL_BBLAST_TAC
+   )
+
+(* ------------------------------------------------------------------------ *)
+
+val lem = Q.prove(
+  `!x. ((\s. x = s) = {x})`,
+  rewrite_tac [GSYM stateTheory.SEP_EQ_SINGLETON, set_sepTheory.SEP_EQ_def]
+  \\ simp [FUN_EQ_THM]
+  \\ REPEAT strip_tac
+  \\ eq_tac
+  \\ simp []
+  )
+
+val lem1 = Q.prove(
+   `!i. i < 4 ==> n2w i <+ (4w: word32)`,
+   simp [wordsTheory.word_lo_n2w])
+
+val lem2 = Q.prove(
+   `Aligned (a: word32, 4) /\ Aligned (b, 4) /\ x <+ 4w /\ y <+ 4w ==>
+    ((a + x = b + y) = (a = b) /\ (x = y))`,
+   simp [arm_stepTheory.Aligned]
+   \\ blastLib.BBLAST_TAC
+   )
+
+fun thm v x y =
+   stateTheory.MAPPED_COMPONENT_INSERT
+   |> Q.ISPECL
+        [`\a:word32. Aligned (a, 4)`, `4`, `\a i. arm_c_MEM (a + n2w i)`,
+         `\v:word32 i.  arm_d_word8 (EL i ^v)`, x, y]
+   |> Conv.CONV_RULE
+        (Conv.LAND_CONV
+            (SIMP_CONV (srw_ss())
+               [arm_MEM_def, arm_WORD_def, arm_BE_WORD_def,
+                pred_setTheory.INSERT_UNION_EQ, lem,
+                set_sepTheory.STAR_def, set_sepTheory.SPLIT_def,
+                blastLib.BBLAST_PROVE
+                   ``a <> a + 1w:word32 /\ a <> a + 2w /\ a <> a + 3w``])
+         THENC REWRITE_CONV [])
+
+val v4 = ``[( 7 ><  0) v; (15 ><  8) v;
+            (23 >< 16) v; (31 >< 24) (v:word32)]:word8 list``
+
+val be_v4 = ``[(31 >< 24) v; (23 >< 16) v;
+               (15 ><  8) v; ( 7 ><  0) (v:word32)]:word8 list``
+
+
+(* Need ``(\a. ..) c`` below for automation to work *)
+val arm_WORD_MEMORY_INSERT = Q.store_thm("arm_WORD_MEMORY_INSERT",
+   `!f df c d.
+     c IN df /\ (\a. Aligned (a, 4)) c ==>
+     (arm_WORD c d * arm_WORD_MEMORY (df DELETE c) f =
+      arm_WORD_MEMORY df ((c =+ d) f))`,
+   match_mp_tac (thm v4 `arm_WORD` `arm_WORD_MEMORY`)
+   \\ rw [arm_WORD_MEMORY_def]
+   \\ `(i = j) = (n2w i = n2w j: word32)` by simp []
+   \\ asm_rewrite_tac []
+   \\ match_mp_tac lem2
+   \\ simp [lem1]
+   )
+
+val arm_BE_WORD_MEMORY_INSERT = Q.store_thm("arm_BE_WORD_MEMORY_INSERT",
+   `!f df c d.
+     c IN df /\ (\a. Aligned (a, 4)) c ==>
+     (arm_BE_WORD c d * arm_BE_WORD_MEMORY (df DELETE c) f =
+      arm_BE_WORD_MEMORY df ((c =+ d) f))`,
+   match_mp_tac (thm be_v4 `arm_BE_WORD` `arm_BE_WORD_MEMORY`)
+   \\ rw [arm_BE_WORD_MEMORY_def]
+   \\ `(i = j) = (n2w i = n2w j: word32)` by simp []
+   \\ asm_rewrite_tac []
+   \\ match_mp_tac lem2
+   \\ simp [lem1]
    )
 
 (* ------------------------------------------------------------------------ *)

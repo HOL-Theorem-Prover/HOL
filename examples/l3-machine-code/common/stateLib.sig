@@ -3,12 +3,16 @@ sig
    include Abbrev
 
    type footprint_extra = (term * term) * (term -> term) * (term -> term)
+   val chunks_intro: bool -> thm -> rule
    val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
    val fix_precond: thm list -> thm list
    val generate_temporal: unit -> bool
    val get_delta: term -> term -> int option
    val get_pc_delta: (term -> bool) -> thm -> int option
+   val group_into_chunks:
+      (term -> term * term) * int * bool -> term list ->
+      {redex: term, residue: term} list list * (term * term) list
    val gvar: string -> hol_type -> term
    val introduce_triple_definition: bool * thm -> rule
    val introduce_map_definition: thm * conv -> rule
@@ -20,6 +24,7 @@ sig
       (term list * term list * term -> term list * term list) ->
       (term list -> term list) ->
       thm -> term
+   val pick_endian_rule: (term -> bool) * rule * rule -> rule
    val pool_select_state_thm: thm -> thm list -> thm -> thm
    val read_footprint:
       thm -> thm list -> (thm -> term * term * term) -> footprint_extra list ->
@@ -27,6 +32,7 @@ sig
    val rename_vars:
       (string -> string option) * (string -> (term -> string) option) *
       string list -> thm -> thm
+   val sep_array_intro: bool -> thm -> thm list -> rule
    val sep_definitions:
       string -> string list list -> string list list -> thm -> thm list
    val set_temporal: bool -> unit

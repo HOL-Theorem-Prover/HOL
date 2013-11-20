@@ -185,7 +185,7 @@ val R_mode_def = Define`
      | 23w, 14w => RName_LRabt
      | 27w, 14w => RName_LRund
      | _,   14w => RName_LRusr
-     | _   => RName_PC`
+     | _        => RName_PC`
 
 (* ------------------------------------------------------------------------ *)
 
@@ -213,6 +213,15 @@ val NotMon = Q.prove(
    rw [GoodMode_def] \\ rw [])
    |> Drule.SPEC_ALL
    |> usave_as "NotMon"
+
+val R_mode_11 = Q.store_thm("R_mode_11",
+   `!r1 r2 m. (R_mode m r1 = R_mode m r2) = (r1 = r2)`,
+   wordsLib.Cases_word_value
+   \\ simp [R_mode_def]
+   \\ wordsLib.Cases_word_value
+   \\ simp [R_mode_def]
+   \\ rw []
+   )
 
 (* ------------------------------------------------------------------------ *)
 
@@ -898,13 +907,23 @@ val extract64 = Q.prove(
    |> save_as "extract64"
 
 val concat_bytes = Q.store_thm("concat_bytes",
-   `(!w: word32.
-       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
-    (!w: word32.
-       (7 >< 0) (reverse_endian w) @@ (15 >< 8) (reverse_endian w) @@
-       (23 >< 16) (reverse_endian w) @@ (31 >< 24) (reverse_endian w) = w)`,
+   `!w: word32. (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w`,
+   blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_bytes = Q.store_thm("reverse_endian_bytes",
+   `!w: word32.
+       ((7 >< 0) (reverse_endian w) = (31 >< 24) w) /\
+       ((15 >< 8) (reverse_endian w) = (23 >< 16) w) /\
+       ((23 >< 16) (reverse_endian w) = (15 >< 8) w) /\
+       ((31 >< 24) (reverse_endian w) = (7 >< 0) w)`,
    rw [reverse_endian_def]
    \\ blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_id = Q.store_thm("reverse_endian_id",
+   `!w. reverse_endian (reverse_endian w) = w`,
+   rw [reverse_endian_def, reverse_endian_bytes, concat_bytes]
    )
 
 (* ------------------------------------------------------------------------ *)

@@ -571,7 +571,7 @@ val PUSH_assert_lemma = prove(
   ``(assert k >> (DTF p q >> t) = DTF (assert k >> p >> t) (assert k >> q >> t))``,
   SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
   THEN SIMP_TAC std_ss [assert_def,option_then_def,LET_DEF,DTF_def]
-  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC std_ss []);
+  THEN SRW_TAC [] [] THEN FULL_SIMP_TAC std_ss [] THEN REV_FULL_SIMP_TAC std_ss []);
 
 val DTF_THEN = prove(
   ``DTF p q >> t = DTF (p >> t) (q >> t)``,
@@ -585,7 +585,8 @@ val PUSH_assert = prove(
     (assert k >> DTF p q = DTF (assert k >> p) (assert k >> q))``,
   SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,option_orelse_def,LET_DEF,GSYM DTF_THM]
   THEN REPEAT STRIP_TAC THEN Cases_on `x` THEN Cases_on `r` THEN REPEAT (Cases_on `h`)
-  THEN SIMP_TAC std_ss [assert_def,DF_def,DT_def] THEN METIS_TAC []);
+  THEN SIMP_TAC std_ss [assert_def,DF_def,DT_def] THEN
+  BasicProvers.EVERY_CASE_TAC THEN REV_FULL_SIMP_TAC std_ss []);
 
 val car = fst o dest_comb;
 val cdr = snd o dest_comb;

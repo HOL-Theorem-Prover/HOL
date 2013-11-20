@@ -87,7 +87,7 @@ fun mips_thms thms =
     wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_NEG_0, wordsTheory.WORD_NOT_0,
     wordsTheory.sw2sw_0, wordsTheory.w2w_0, wordsTheory.word_0_n2w,
     wordsTheory.word_bit_0, sw16_to_sw64] @
-   utilsLib.datatype_rewrites "mips"
+   utilsLib.datatype_rewrites true "mips"
       ["mips_state", "CP0", "StatusRegister", "ExceptionType"]
 
 val COND_UPDATE_CONV =
@@ -840,9 +840,9 @@ local
    val snd_conv = Conv.REWR_CONV pairTheory.SND
    val STATE_CONV =
       Conv.QCONV
-        (REWRITE_CONV (utilsLib.datatype_rewrites "mips" ["mips_state", "CP0"] @
-                       [combinTheory.K_THM, combinTheory.o_THM,
-                        boolTheory.COND_ID, cond_rand_thms]))
+        (REWRITE_CONV
+            (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
+             [boolTheory.COND_ID, cond_rand_thms]))
    val BranchNone_RULE =
       utilsLib.FULL_CONV_RULE STATE_CONV o
       Thm.INST [st |-> ``^st with BranchStatus := NONE``]

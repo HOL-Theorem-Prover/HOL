@@ -69,13 +69,13 @@ val untouched_spsr_flags_abs_def =
 	   !s a c s'. (f a s = ValueState c s') ==>
 		let spsr = 
 	       case mode of 
-	    	    17w -> SPSR_fiq
-	       || 18w -> SPSR_irq 
-	       || 19w -> SPSR_svc 
-	       || 22w -> SPSR_mon 
-	       || 23w -> SPSR_abt 
-	       || 27w -> SPSR_und
-               || _   -> CPSR 
+	    	 17w => SPSR_fiq
+	       | 18w => SPSR_irq 
+	       | 19w => SPSR_svc 
+	       | 22w => SPSR_mon 
+	       | 23w => SPSR_abt 
+	       | 27w => SPSR_und
+	       | _   => CPSR 
 	    	 in (*(spsr<>CPSR) ==>*)
 		    (
            ((*! spsr.  (spsr<>CPSR) ==>*)
@@ -90,13 +90,13 @@ val untouched_spsr_flags_def =
 	   !s c s'. (f s = ValueState c s') ==>
 	   let spsr = 
 	       case mode of 
-	    	    17w -> SPSR_fiq
-	       || 18w -> SPSR_irq 
-	       || 19w -> SPSR_svc 
-	       || 22w -> SPSR_mon 
-	       || 23w -> SPSR_abt 
-	       || 27w -> SPSR_und 
-	       || _   -> CPSR 
+	         17w => SPSR_fiq
+	       | 18w => SPSR_irq 
+	       | 19w => SPSR_svc 
+	       | 22w => SPSR_mon 
+	       | 23w => SPSR_abt 
+	       | 27w => SPSR_und 
+	       | _   => CPSR 
 	    	 in (*(spsr<>CPSR) ==>*)
 		    ((*! spsr. (spsr<>CPSR) ==>*)
 		           (((s'.psrs(0,spsr)).I = (s.psrs(0,spsr)).I) /\
@@ -113,13 +113,13 @@ val priv_spsr_flags_constraints_def =
 		((s'.psrs(0,CPSR)).M = mode) ==>
 	 (  let spsr = 
 		case mode of 
-	    	    17w -> SPSR_fiq
-	       || 18w -> SPSR_irq 
-	       || 19w -> SPSR_svc 
-	       || 22w -> SPSR_mon 
-	       || 23w -> SPSR_abt 
-	       || 27w -> SPSR_und 
-	       || _   -> CPSR 
+	    	 17w => SPSR_fiq
+	       | 18w => SPSR_irq 
+	       | 19w => SPSR_svc 
+	       | 22w => SPSR_mon 
+	       | 23w => SPSR_abt 
+	       | 27w => SPSR_und 
+	       | _   => CPSR 
 	    	 in (*(spsr<>CPSR) ==>*)
 			      ( ((s'.psrs(0,spsr)).I = cpsr.I) /\
 			   ((s'.psrs(0,spsr)).F = cpsr.F)/\
@@ -135,15 +135,15 @@ val priv_spsr_flags_constraints_abs_def =
 			      ((s'.psrs(0,CPSR)).M = mode) ==>
 	 (  let spsr = 
 		case mode of 
-	    	    17w -> SPSR_fiq
-	       || 18w -> SPSR_irq 
-	       || 19w -> SPSR_svc 
-	       || 22w -> SPSR_mon 
-	       || 23w -> SPSR_abt 
-	       || 27w -> SPSR_und 
-	       || _   -> CPSR 
-	    
-	    			in 
+	         17w => SPSR_fiq
+	       | 18w => SPSR_irq 
+	       | 19w => SPSR_svc 
+	       | 22w => SPSR_mon 
+	       | 23w => SPSR_abt 
+	       | 27w => SPSR_und 
+	       | _   => CPSR 
+	    	     
+	    	      		in 
                  
 		(*  (spsr<>CPSR) ==>*)
 			       (((s'.psrs(0,spsr)).I = cpsr.I) /\
@@ -385,8 +385,8 @@ val write_spsr_sfc_thm =
 									      (* THEN Q.UNABBREV_TAC `spsr`  *)
 									      THEN UNDISCH_ALL_TAC
 									      THEN EVAL_TAC,
-								(* Q.UNABBREV_TAC `spsr`  *)
-								(* THEN *) UNDISCH_ALL_TAC
+								TRY (Q.UNABBREV_TAC `spsr`)  
+								    THEN  UNDISCH_ALL_TAC
 									       THEN EVAL_TAC
 									       THEN RW_TAC (srw_ss()) [] THEN
 									       FULL_SIMP_TAC (srw_ss()) []

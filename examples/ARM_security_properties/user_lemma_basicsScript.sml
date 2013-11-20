@@ -341,7 +341,7 @@ val global_aligned_word_readable_lem = store_thm(
     "global_aligned_word_readable_lem",
     ``mmu_requirements s1 g  ==>
       mmu_requirements s2 g  ==>
-      (aligned_word_readable s1 is_thumb add =  aligned_word_readable s2 is_thumb add)``,
+      (aligned_word_readable s1 is_thumb addr =  aligned_word_readable s2 is_thumb addr)``,
      RW_TAC (srw_ss()) [aligned_word_readable_def]
        THEN (NTAC 2 RES_TAC)
        THEN IMP_RES_TAC mmu_requirements_simp
@@ -430,20 +430,20 @@ THEN FULL_SIMP_TAC (srw_ss()) []]);
 
 val equal_mem_lem = store_thm(
     "equal_mem_lem",
-    `` !s1 s2 g (add:bool[32]) is_write.
+    `` !s1 s2 g (addr:bool[32]) is_write.
        (similar g s1 s2)       ==>
        (mmu_requirements s1 g) ==>
        (mmu_requirements s2 g) 
     ==>
-       ((s1.memory add) = (s2.memory add))
+       ((s1.memory addr) = (s2.memory addr))
      \/
        (
-        ~ permitted_byte_pure add is_write s1.coprocessors.state.cp15.C1
+        ~ permitted_byte_pure addr is_write s1.coprocessors.state.cp15.C1
                                            s1.coprocessors.state.cp15.C2
                                            s1.coprocessors.state.cp15.C3
                                            F s1.memory
         /\
-        ~ permitted_byte_pure add is_write s2.coprocessors.state.cp15.C1
+        ~ permitted_byte_pure addr is_write s2.coprocessors.state.cp15.C1
                                            s2.coprocessors.state.cp15.C2
                                            s2.coprocessors.state.cp15.C3
                                            F s2.memory
@@ -451,8 +451,8 @@ val equal_mem_lem = store_thm(
    REPEAT STRIP_TAC
        THEN `mmu_requirements_pure s1 g` by FULL_SIMP_TAC (srw_ss()) [mmu_requirements_simp]
        THEN `mmu_requirements_pure s2 g` by FULL_SIMP_TAC (srw_ss()) [mmu_requirements_simp]
-       THEN MP_TAC (SPEC ``add:bool[32]`` negated_and_or)
-       THEN MP_TAC (SPEC ``add:word32`` address_border)
+       THEN MP_TAC (SPEC ``addr:bool[32]`` negated_and_or)
+       THEN MP_TAC (SPEC ``addr:word32`` address_border)
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def, similar_def]
        THEN METIS_TAC []);
 
@@ -460,15 +460,15 @@ val equal_mem_lem = store_thm(
 
 val stay_similar_lem = store_thm(
     "stay_similar_lem",
-    ``!s1 s2 g add x. 
+    ``!s1 s2 g addr x. 
       (mmu_requirements s1 g) ==>
       (mmu_requirements s2 g) ==> 
       (similar g s1 s2) 
-     ==> ((similar g (s1 with accesses updated_by CONS (MEM_READ add)) (s2 with accesses updated_by CONS (MEM_READ add)))
-     /\  (similar g (s1 with accesses updated_by CONS (MEM_WRITE add x)) (s2 with accesses updated_by CONS (MEM_WRITE add x))))``,
+     ==> ((similar g (s1 with accesses updated_by CONS (MEM_READ addr)) (s2 with accesses updated_by CONS (MEM_READ addr)))
+     /\  (similar g (s1 with accesses updated_by CONS (MEM_WRITE addr x)) (s2 with accesses updated_by CONS (MEM_WRITE addr x))))``,
      NTAC 8 STRIP_TAC
         THEN FULL_SIMP_TAC (srw_ss()) [similar_def, LET_DEF, read__reg_def, readT_def]
-        THEN MP_TAC (SPECL [``add:word32``, ``x:word8``]  mmu_requirement_accesses_update_lem)
+        THEN MP_TAC (SPECL [``addr:word32``, ``x:word8``]  mmu_requirement_accesses_update_lem)
         THEN STRIP_TAC
         THEN RES_TAC
         THEN MP_TAC access_violation_req
@@ -487,18 +487,18 @@ val stay_similar_lem = store_thm(
 
 val keep_mode_on_accesses_update_lem = store_thm(
     "keep_mode_on_accesses_update_lem",
-    ``!m s add x. 
+    ``!m s addr x. 
       (ARM_MODE s = m) 
      ==> 
-        (ARM_MODE (s with accesses updated_by CONS (MEM_READ add)) = m) /\
-        (ARM_MODE (s with accesses updated_by CONS (MEM_WRITE add x)) = m)``,
+        (ARM_MODE (s with accesses updated_by CONS (MEM_READ addr)) = m) /\
+        (ARM_MODE (s with accesses updated_by CONS (MEM_WRITE addr x)) = m)``,
      NTAC 4  STRIP_TAC THEN EVAL_TAC);
 
 
 
 val read_mem1_mode_thm = store_thm(
     "read_mem1_mode_thm",
-    ``!add. keep_mode_relation (read_mem1 <|proc:=0|> add) (assert_mode 16w) (assert_mode 16w)``,
+    ``!addr. keep_mode_relation (read_mem1 <|proc:=0|> addr) (assert_mode 16w) (assert_mode 16w)``,
     RW_TAC (srw_ss()) [keep_mode_relation_def, writeT_def, readT_def,  seqT_def, read_mem1_def, assert_mode_def]
        THEN UNDISCH_ALL_TAC
        THEN IF_CASES_TAC
@@ -509,30 +509,30 @@ val read_mem1_mode_thm = store_thm(
 
 val read_mem1_similar_thm = store_thm (
     "read_mem1_similar_thm",
-    ``!add. keep_similar_relation (read_mem1 <|proc:=0|> add) (assert_mode 16w) empty_sim``,
+    ``!addr. keep_similar_relation (read_mem1 <|proc:=0|> addr) (assert_mode 16w) empty_sim``,
     PURE_ONCE_REWRITE_TAC [keep_similar_relation_def] 
        THEN NTAC 8 STRIP_TAC
-       THEN Cases_on `read_mem1 <|proc:=0|> add s1`
-       THEN Cases_on `read_mem1 <|proc:=0|> add s2`
+       THEN Cases_on `read_mem1 <|proc:=0|> addr s1`
+       THEN Cases_on `read_mem1 <|proc:=0|> addr s2`
        THEN FULL_SIMP_TAC (srw_ss()) [empty_sim_def]
        THENL [FULL_SIMP_TAC (srw_ss()) [read_mem1_def, writeT_def, readT_def,  seqT_def]
-                 THEN (`b = (s1 with accesses updated_by CONS (MEM_READ add))` by 
-                            (Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ add))`
+                 THEN (`b = (s1 with accesses updated_by CONS (MEM_READ addr))` by 
+                            (Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))`
                                THEN FULL_SIMP_TAC (srw_ss()) []))
-                 THEN (`b' = (s2 with accesses updated_by CONS (MEM_READ add))` by 
-                            (Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ add))`
+                 THEN (`b' = (s2 with accesses updated_by CONS (MEM_READ addr))` by 
+                            (Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))`
                                THEN FULL_SIMP_TAC (srw_ss()) []))
-                 THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``, ``add:word32``, ``F``] equal_mem_lem)
+                 THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``g:word32``, ``addr:word32``, ``F``] equal_mem_lem)
                  THEN RES_TAC
                  THENL [`similar g b b'  = similar g s1 s2` by METIS_TAC [stay_similar_lem]
-                           THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ add))` 
-                           THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ add))` 
+                           THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))` 
+                           THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
                            THEN FULL_SIMP_TAC (srw_ss()) []
                            THEN RES_TAC 
                            THEN FULL_SIMP_TAC (srw_ss()) [similar_def,arm_stepTheory.ARM_MODE_def, arm_stepTheory.ARM_READ_CPSR_def]
                            THEN METIS_TAC [],
-                        ASSUME_TAC (SPECL [``add:word32``, ``x:word8``, ``s1:arm_state``, ``g:word32``] mmu_requirement_accesses_update_lem)
-                           THEN ASSUME_TAC (SPECL [``add:word32``, ``x:word8``, ``s2:arm_state``, ``g:word32``] mmu_requirement_accesses_update_lem)
+                        ASSUME_TAC (SPECL [``addr:word32``, ``x:word8``, ``s1:arm_state``, ``g:word32``] mmu_requirement_accesses_update_lem)
+                           THEN ASSUME_TAC (SPECL [``addr:word32``, ``x:word8``, ``s2:arm_state``, ``g:word32``] mmu_requirement_accesses_update_lem)
                            THEN ASSUME_TAC access_violation_req
                            THEN RES_TAC
                            THEN FULL_SIMP_TAC (srw_ss()) []
@@ -542,28 +542,28 @@ val read_mem1_similar_thm = store_thm (
                            THEN FULL_SIMP_TAC (srw_ss()) []
                            THEN METIS_TAC [stay_similar_lem, keep_mode_on_accesses_update_lem]],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ add))` 
+                 THEN Cases_on `access_violation (s2 with accesses updated_by CONS (MEM_READ addr))` 
                  THEN FULL_SIMP_TAC (srw_ss()) [],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ add))` 
+                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
                  THEN FULL_SIMP_TAC (srw_ss()) [],
               FULL_SIMP_TAC (srw_ss()) [read_mem1_def, similar_def, seqT_def, writeT_def, readT_def]
-                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ add))` 
+                 THEN Cases_on `access_violation (s1 with accesses updated_by CONS (MEM_READ addr))` 
                  THEN FULL_SIMP_TAC (srw_ss()) []]);
 
 
 val read_mem1_ut_thm = store_thm (
     "read_mem1_ut_thm",
-    ``!add. keep_untouched_relation (read_mem1 <|proc:=0|> add) (assert_mode 16w) strict_unt``,
+    ``!addr. keep_untouched_relation (read_mem1 <|proc:=0|> addr) (assert_mode 16w) strict_unt``,
     RW_TAC (srw_ss()) [keep_untouched_relation_def, read_mem1_def, seqT_def, writeT_def, readT_def, strict_unt_def]
-       THEN Cases_on `access_violation (s with accesses updated_by CONS (MEM_READ add))`
+       THEN Cases_on `access_violation (s with accesses updated_by CONS (MEM_READ addr))`
        THEN FULL_SIMP_TAC (srw_ss()) [untouched_def, LET_DEF, assert_mode_def]
        THEN RW_TAC (srw_ss()) [keep_mode_on_accesses_update_lem]);
 
 
 val read_mem1_strict_thm = store_thm(
     "read_mem1_strict_thm",
-    ``!add. preserve_relation_mmu (read_mem1 <|proc:=0|> add) (assert_mode 16w) (assert_mode 16w) strict_unt empty_sim``,
+    ``!addr. preserve_relation_mmu (read_mem1 <|proc:=0|> addr) (assert_mode 16w) (assert_mode 16w) strict_unt empty_sim``,
     METIS_TAC [read_mem1_ut_thm, read_mem1_similar_thm, read_mem1_mode_thm, three_parts_thm]);
 
 val read_mem1_thm = save_thm("read_mem1_thm", MATCH_MP extras_lem4 (SPEC_ALL read_mem1_strict_thm));
@@ -571,7 +571,7 @@ val read_mem1_thm = save_thm("read_mem1_thm", MATCH_MP extras_lem4 (SPEC_ALL rea
 
 val write_mem1_mode_thm = store_thm(
     "write_mem1_mode_thm",
-    ``!add data. keep_mode_relation (write_mem1 <|proc:=0|> add data) (assert_mode 16w) (assert_mode 16w)``,
+    ``!addr data. keep_mode_relation (write_mem1 <|proc:=0|> addr data) (assert_mode 16w) (assert_mode 16w)``,
     RW_TAC (srw_ss()) [keep_mode_relation_def, writeT_def, readT_def,  seqT_def, write_mem1_def, assert_mode_def]
        THEN UNDISCH_ALL_TAC
        THEN IF_CASES_TAC
@@ -582,24 +582,24 @@ val write_mem1_mode_thm = store_thm(
 
 val write_mem1_ut_thm = store_thm (
     "write_mem1_ut_thm",
-    ``!add data. keep_untouched_relation (write_mem1 <|proc:=0|> add data) (assert_mode 16w) empty_unt``,
+    ``!addr data. keep_untouched_relation (write_mem1 <|proc:=0|> addr data) (assert_mode 16w) empty_unt``,
     RW_TAC (srw_ss()) [keep_untouched_relation_def, empty_unt_def]
        THEN FULL_SIMP_TAC (srw_ss()) [write_mem1_def, seqT_def, writeT_def, readT_def]
        THEN IMP_RES_TAC mmu_requirements_simp
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def]
-       THEN PAT_ASSUM ``!(add:word32) (is_write:bool). X`` (fn th => ASSUME_TAC (SPECL [``add:word32``, ``T:bool``] th))
-       THEN ASSUME_TAC (SPEC ``add:word32`` address_complete)
+       THEN PAT_ASSUM ``!(addr:word32) (is_write:bool). X`` (fn th => ASSUME_TAC (SPECL [``addr:word32``, ``T:bool``] th))
+       THEN ASSUME_TAC (SPEC ``addr:word32`` address_complete)
        THEN Cases_on `g=guest1`
        THEN Cases_on `g=guest2`
        THEN ASSUME_TAC you_and_me_thm
        THEN FULL_SIMP_TAC (srw_ss()) [] 
        THEN FIRST_PROVE
-            [ASSUME_TAC (SPECL [``s:arm_state``, ``s with accesses updated_by CONS (MEM_WRITE add data)``] trivially_untouched_mmu_setup_lem)
+            [ASSUME_TAC (SPECL [``s:arm_state``, ``s with accesses updated_by CONS (MEM_WRITE addr data)``] trivially_untouched_mmu_setup_lem)
                 THEN FULL_SIMP_TAC (srw_ss()) []
                 THEN ASSUME_TAC access_violation_req
                 THEN RES_TAC
                 THEN FULL_SIMP_TAC (srw_ss()) []
-                THEN ASSUME_TAC  (SPECL [``s:arm_state``, ``s with accesses updated_by CONS (MEM_WRITE add data)``, ``add:word32``, ``data:word8``] malicious_write)
+                THEN ASSUME_TAC  (SPECL [``s:arm_state``, ``s with accesses updated_by CONS (MEM_WRITE addr data)``, ``addr:word32``, ``data:word8``] malicious_write)
                 THEN FULL_SIMP_TAC (srw_ss()) [untouched_def, LET_DEF]
                 THEN RW_TAC (srw_ss()) [],
              UNDISCH_ALL_TAC
@@ -613,43 +613,43 @@ val write_mem1_ut_thm = store_thm (
 
 val write_mem1_similar_thm = store_thm (
     "write_mem1_similar_thm",
-    ``!add data. keep_similar_relation (write_mem1 <|proc:=0|> add data) (assert_mode 16w) empty_sim``,
+    ``!addr data. keep_similar_relation (write_mem1 <|proc:=0|> addr data) (assert_mode 16w) empty_sim``,
     REPEAT STRIP_TAC
-       THEN ASSUME_TAC (SPECL [``add:word32``, ``data:word8``] write_mem1_ut_thm)
+       THEN ASSUME_TAC (SPECL [``addr:word32``, ``data:word8``] write_mem1_ut_thm)
        THEN FULL_SIMP_TAC (srw_ss()) [keep_similar_relation_def, assert_mode_def, keep_untouched_relation_def, empty_sim_def]
        THEN REPEAT STRIP_TAC
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss())  [write_mem1_def, seqT_def, readT_def]
        THEN (REPEAT CASE_TAC) THEN FULL_SIMP_TAC (srw_ss()) [writeT_def] THEN IMP_RES_TAC stay_similar_lem
-       THEN PAT_ASSUM ``!(x:word8) (add:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``add:word32``] th)))
+       THEN PAT_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th)))
        THEN RW_TAC (srw_ss()) []
        THEN THROW_AWAY_TAC ``similar g a b ==> X``
        THEN FULL_SIMP_TAC (srw_ss()) [similar_def, equal_user_register_def]
        THEN (REPEAT STRIP_TAC)
        THEN RES_TAC
-       THEN UNDISCH_MATCH_TAC ``!(add:word32). X``
+       THEN UNDISCH_MATCH_TAC ``!(addr:word32). X``
        THEN EVAL_TAC
        THEN (PROTECTED_RW_TAC ``(g:word32) = X`` ORELSE RW_TAC (srw_ss()) [])
        THEN IMP_RES_TAC untouched_mmu_setup_lem
        THEN IMP_RES_TAC mmu_requirement_accesses_update_lem
-       THEN REPEAT (PAT_ASSUM ``!(x:word8) (add:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``add:word32``] th))))
-       THEN ASSUME_TAC (SPECL [``(s1:arm_state) with accesses updated_by CONS (MEM_WRITE (add:word32) (data:word8))``,
-                   ``s1 with  <|memory updated_by (add =+ data); accesses updated_by CONS (MEM_WRITE add data)|>``,
+       THEN REPEAT (PAT_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th))))
+       THEN ASSUME_TAC (SPECL [``(s1:arm_state) with accesses updated_by CONS (MEM_WRITE (addr:word32) (data:word8))``,
+                   ``s1 with  <|memory updated_by (addr =+ data); accesses updated_by CONS (MEM_WRITE addr data)|>``,
                    ``g:word32``] same_setup_same_av_lem)
-       THEN ASSUME_TAC (SPECL [``(s2:arm_state) with accesses updated_by CONS (MEM_WRITE (add:word32) (data:word8))``,
-                   ``s2 with  <|memory updated_by (add =+ data); accesses updated_by CONS (MEM_WRITE add data)|>``,
+       THEN ASSUME_TAC (SPECL [``(s2:arm_state) with accesses updated_by CONS (MEM_WRITE (addr:word32) (data:word8))``,
+                   ``s2 with  <|memory updated_by (addr =+ data); accesses updated_by CONS (MEM_WRITE addr data)|>``,
                    ``g:word32``] same_setup_same_av_lem)
        THEN FULL_SIMP_TAC (srw_ss()) [ARM_MODE_def, ARM_READ_CPSR_def]);
 
 
 val write_mem1_empty_thm = store_thm(
     "write_mem1_empty_thm",
-    ``!add data. preserve_relation_mmu (write_mem1 <|proc:=0|> add data) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim``,
+    ``!addr data. preserve_relation_mmu (write_mem1 <|proc:=0|> addr data) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim``,
     METIS_TAC [write_mem1_ut_thm, write_mem1_similar_thm, write_mem1_mode_thm, three_parts_thm]);
 
 val write_mem1_thm = store_thm(
     "write_mem1_thm",
-    ``!add data. preserve_relation_mmu (write_mem1 <|proc:=0|> add data) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar``,
+    ``!addr data. preserve_relation_mmu (write_mem1 <|proc:=0|> addr data) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar``,
     METIS_TAC [write_mem1_empty_thm, empty_extras_lem]);
 
 
@@ -715,14 +715,14 @@ val write_mem_thm = save_thm("write_mem_thm", (MATCH_MP extras_lem2 (EQ_MP (SPEC
 
 val branch_to_empty_thm = store_thm(
     "branch_to_empty_thm",
-    ``!u. preserve_relation_mmu (branch_to <|proc:=0|> add) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
+    ``!u. preserve_relation_mmu (branch_to <|proc:=0|> addr) (assert_mode u) (assert_mode u) empty_unt empty_sim``,
     RW_TAC (srw_ss()) [branch_to_def, write__reg_def, writeT_def, preserve_relation_mmu_def, untouched_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def, similar_def, equal_user_register_def, empty_unt_def, empty_sim_def]
      THEN (TRY ((`reg <> RName_PC` by (Q.UNABBREV_TAC `user_regs` THEN FULL_SIMP_TAC (srw_ss()) []))))
      THEN (TRY (UNDISCH_TAC ``(reg:RName) <> RName_PC``))
      THEN EVAL_TAC
      THEN RW_TAC (srw_ss()) []
-     THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with registers updated_by ((0,RName_PC) =+ add)``, ``g:word32``] trivially_untouched_av_lem)
-     THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with registers updated_by ((0,RName_PC) =+ add)``, ``g:word32``] trivially_untouched_av_lem)
+     THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with registers updated_by ((0,RName_PC) =+ addr)``, ``g:word32``] trivially_untouched_av_lem)
+     THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with registers updated_by ((0,RName_PC) =+ addr)``, ``g:word32``] trivially_untouched_av_lem)
      THEN FULL_SIMP_TAC (srw_ss()) []
      THEN RES_TAC
      THEN FULL_SIMP_TAC (srw_ss()) []);

@@ -1,0 +1,13 @@
+language: c
+compiler:
+  - gcc
+before_script: developers/travis/before_install.sh
+script: poly < tools/smart-configure.sml && bin/build $BUILDOPTS -nograph
+env:
+  global:
+    - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
+  matrix:
+    - ROOTPOLY= BUILDOPTS=
+    - ROOTPOLY=1 BUILDOPTS=
+    - ROOTPOLY= BUILDOPTS="-seq developers/travis/selftestseq -selftest"
+    - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/selftestseq -selftest"

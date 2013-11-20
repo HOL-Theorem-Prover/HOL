@@ -1,0 +1,12 @@
+#include sequences/kernel
+#include sequences/core-theories
+
+src/string
+src/sort
+src/finite_map
+src/res_quan/src
+src/quotient/src
+src/n-bit
+!examples/ind_def
+!examples/lambda/basics
+!examples/parsing

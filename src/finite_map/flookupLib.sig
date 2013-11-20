@@ -1,4 +1,4 @@
 signature flookupLib =
 sig
-   val FLOOKUP_DEFN_CONV: Thm.thm -> Conv.conv
+   val FLOOKUP_DEFN_CONV: Conv.conv
 end

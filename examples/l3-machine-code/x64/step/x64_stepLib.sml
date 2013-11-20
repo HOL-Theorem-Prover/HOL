@@ -55,7 +55,7 @@ end
 local
    fun datatype_thms thms =
       thms @ [cond_rand_thms, snd_exception_thms] @
-      utilsLib.datatype_rewrites "x64"
+      utilsLib.datatype_rewrites true "x64"
         ["x64_state", "Zreg", "Zeflags", "Zsize", "Zbase", "Zrm", "Zdest_src",
          "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zcond", "Zea", "Zinst"]
 in
@@ -714,8 +714,7 @@ end
 local
    val TIDY_UP_CONV =
       REWRITE_CONV
-         (List.take
-            (List.drop (utilsLib.datatype_rewrites "x64" ["Zreg"], 10), 2))
+         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
       THENC utilsLib.WGROUND_CONV
    val rwts = [pairTheory.FST, pairTheory.SND, word_thms]
    val get_strm1 = Term.rand o Term.rand o Term.rand o utilsLib.rhsc
@@ -744,9 +743,8 @@ local
    val MP_Next  = Drule.MATCH_MP x64_stepTheory.NextStateX64
    val MP_Next0 = Drule.MATCH_MP x64_stepTheory.NextStateX64_0
    val STATE_CONV =
-      REWRITE_CONV (utilsLib.datatype_rewrites "x64" ["x64_state"] @
-         [combinTheory.K_THM, combinTheory.o_THM,
-          boolTheory.COND_ID, cond_rand_thms])
+      REWRITE_CONV (utilsLib.datatype_rewrites true "x64" ["x64_state"] @
+                    [boolTheory.COND_ID, cond_rand_thms])
    fun unchanged s = raise ERR "x64_step" ("Failed to evaluate: " ^ s)
    val cache =
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)

@@ -357,6 +357,33 @@ val MAPPED_COMPONENT_INSERT_OPT = Q.store_thm("MAPPED_COMPONENT_INSERT_OPT",
    \\ metis_tac []
    )
 
+(* ........................................................................ *)
+
+val SEP_ARRAY_FRAME = Q.store_thm("SEP_ARRAY_FRAME",
+   `!x (prefix: 'a word list) (postfix: 'a word list) p c q m i a l1 l2.
+       (LENGTH l2 = LENGTH l1) /\
+       SPEC x (p * SEP_ARRAY m i a l1) c (q * SEP_ARRAY m i a l2) ==>
+       SPEC x (p * SEP_ARRAY m i (a - n2w (LENGTH prefix) * i)
+                             (prefix ++ l1 ++ postfix)) c
+              (q * SEP_ARRAY m i (a - n2w (LENGTH prefix) * i)
+                             (prefix ++ l2 ++ postfix))`,
+   REPEAT strip_tac
+   \\ rewrite_tac [set_sepTheory.SEP_ARRAY_APPEND]
+   \\ pop_assum
+        (assume_tac o
+         helperLib.SPECC_FRAME_RULE
+            ``SEP_ARRAY (m: 'e word -> 'a word -> ('c -> bool) -> bool) i
+                        (a - n2w (LENGTH prefix) * i) (prefix: 'a word list)``)
+   \\ pop_assum
+        (assume_tac o
+         helperLib.SPECC_FRAME_RULE
+            ``SEP_ARRAY (m: 'e word -> 'a word -> ('c -> bool) -> bool) i
+                        (a - n2w (LENGTH (prefix: 'a word list)) * i +
+                         n2w (LENGTH (prefix ++ l1)) * i)
+                        (postfix: 'a word list)``)
+   \\ full_simp_tac (srw_ss()++helperLib.star_ss) []
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val () = export_theory ()

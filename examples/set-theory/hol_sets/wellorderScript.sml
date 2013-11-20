@@ -588,22 +588,16 @@ val wo2wo_EQ_NONE = store_thm(
   "wo2wo_EQ_NONE",
   ``!x. (wo2wo w1 w2 x = NONE) ==>
         !y. (x,y) WIN w1 ==> (wo2wo w1 w2 y = NONE)``,
-  ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >| [
-    qsuff_tac
-        `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 y) DELETE NONE) = elsOf w2` >-
-        rw[] >>
-    match_mp_tac SUBSET_ANTISYM >> rw[IMAGE_wo2wo_SUBSET] >>
-    match_mp_tac SUBSET_TRANS >>
-    qexists_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)` >>
-    conj_tac >- rw[] >>
-    simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >>
-    qsuff_tac `!a. a IN iseg w1 x ==> a IN iseg w1 y` >- metis_tac[] >>
-    rw[iseg_def] >> metis_tac [WIN_TRANS],
-    imp_res_tac wleast_EQ_NONE >>
-    qsuff_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE) SUBSET
-               elsOf w2` >- metis_tac [SUBSET_ANTISYM] >>
-    rw[IMAGE_wo2wo_SUBSET]
-  ]);
+  ONCE_REWRITE_TAC [wo2wo_thm] >> rw[LET_THM] >>
+  match_mp_tac SUBSET_ANTISYM >> rw[IMAGE_wo2wo_SUBSET] >>
+  match_mp_tac SUBSET_TRANS >>
+  qexists_tac `IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)` >>
+  conj_tac >- (
+    Cases_on`wleast w2 (IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE))` >>
+    imp_res_tac wleast_EQ_NONE >> fs[] ) >>
+  simp_tac (srw_ss() ++ DNF_ss) [SUBSET_DEF] >>
+  qsuff_tac `!a. a IN iseg w1 x ==> a IN iseg w1 y` >- metis_tac[] >>
+  rw[iseg_def] >> metis_tac [WIN_TRANS])
 
 val wo2wo_EQ_SOME_downwards = store_thm(
   "wo2wo_EQ_SOME_downwards",
@@ -674,9 +668,12 @@ val wo2wo_EQ_NONE_woseg = store_thm(
   "wo2wo_EQ_NONE_woseg",
   ``(wo2wo w1 w2 x = NONE) ==> (elsOf w2 = woseg w1 w2 x)``,
   rw[Once wo2wo_thm, LET_THM] >>
-  `?y. y IN elsOf w2 /\ y NOTIN woseg w1 w2 x`
-     by metis_tac [IMAGE_wo2wo_SUBSET, SUBSET_DEF, EXTENSION] >>
-  strip_tac >> imp_res_tac wleast_EQ_NONE >> metis_tac [SUBSET_DEF]);
+  spose_not_then strip_assume_tac >>
+  last_x_assum mp_tac >> simp[] >>
+  spose_not_then strip_assume_tac >>
+  fs[optionTheory.NOT_IS_SOME_EQ_NONE] >>
+  imp_res_tac wleast_EQ_NONE >>
+  metis_tac[IMAGE_wo2wo_SUBSET,SUBSET_DEF,EXTENSION]);
 
 val orderlt_trichotomy = store_thm(
   "orderlt_trichotomy",

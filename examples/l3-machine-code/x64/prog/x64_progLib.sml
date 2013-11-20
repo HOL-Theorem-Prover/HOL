@@ -240,7 +240,7 @@ local
       | _ => raise ERR "component_11" ""
    val x64_rwts =
       Thm.INST_TYPE [Type.alpha |-> ``:Zreg``] boolTheory.COND_RATOR ::
-      List.drop (utilsLib.datatype_rewrites "x64" ["x64_state"], 1)
+      List.drop (utilsLib.datatype_rewrites true "x64" ["x64_state"], 1)
    val STATE_TAC = ASM_REWRITE_TAC x64_rwts
    val spec =
       x64_rule o

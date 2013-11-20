@@ -11,16 +11,18 @@ val _ = hide "cond"
 (* ------------------------------------------------------------------------ *)
 
 local
-   val registers_intro =
-       stateLib.introduce_map_definition
-          (m0_progTheory.m0_REGISTERS_INSERT, ALL_CONV)
    val count_INTRO_rule =
       stateLib.introduce_triple_definition
          (false, m0_decompTheory.m0_COUNT_def) o
       Thm.INST [``endianness:bool`` |-> boolSyntax.F,
                 ``spsel:bool`` |-> boolSyntax.F]
 in
-   val spec = List.map (registers_intro o count_INTRO_rule) o m0_progLib.m0_spec
+   val spec =
+      List.map (count_INTRO_rule o
+                m0_progLib.memory_introduction o
+                m0_progLib.register_introduction o
+                m0_progLib.m0_introduction) o
+      m0_progLib.m0_spec
 end
 
 (* ------------------------------------------------------------------------ *)
@@ -87,7 +89,7 @@ in
    fun addInstructionClass s =
       if Redblackset.member (!spec_label_set, s)
          then false
-      else (print s
+      else (print (" " ^ s)
             ; add_triples (spec s)
             ; spec_label_set := Redblackset.add (!spec_label_set, s)
             ; true)
