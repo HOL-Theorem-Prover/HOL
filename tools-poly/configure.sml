@@ -72,7 +72,7 @@ in
            val number = major * 100 + 10 * minor + point
          in
            (if number >= 551
-               then ["-lpthread", "-lgmp", "-lm", "-ldl", "-lstdc++",
+               then ["-lpthread", "-lm", "-ldl", "-lstdc++",
                      "-Wl,-no_pie"]
             else if number >= 550
                then ["-Wl,-no_pie"]
