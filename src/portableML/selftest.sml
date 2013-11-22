@@ -12,10 +12,17 @@ fun assert (s, b) =
 open Redblackset
 val es = empty Int.compare
 
+fun m10cmp (i1,i2) = Int.compare(i1 mod 10, i2 mod 10)
+val em10 = empty m10cmp
+val em3 = Binaryset.add(em10, 3)
+val em13 = Binaryset.add(em3, 13)
+
 val _ = List.app assert [
     ("Redblackset.isSubset({},{})", fn () => isSubset(es,es)),
     ("Redblackset.isSubset({}, {1})",
      (fn () => isSubset(es,addList(es,[1]))))
+    ("Redblackset.add replaces EQUAL elements",
+     (fn () => Redblackset.listItems em13 = [13]))
     ]
 
 val _ = OS.Process.exit OS.Process.success
