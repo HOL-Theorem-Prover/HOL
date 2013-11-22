@@ -11,5 +11,4 @@ src/bag
 !examples/ind_def
 !examples/lambda/basics
 !examples/parsing
-!examples/misc
 !examples/unification/triangular/first-order
