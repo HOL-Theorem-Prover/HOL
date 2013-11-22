@@ -7,6 +7,9 @@ src/finite_map
 src/res_quan/src
 src/quotient/src
 src/n-bit
+src/bag
 !examples/ind_def
 !examples/lambda/basics
 !examples/parsing
+!examples/misc
+!examples/unification/triangular/first-order
