@@ -544,6 +544,7 @@ that the buffer has already had HOL terms, comments and strings removed."
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
+          (modify-syntax-entry ?_ "w")
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq hol-buffer-ready hol-ok) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
