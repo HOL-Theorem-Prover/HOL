@@ -105,6 +105,14 @@ The sub-goal(s) resulting from the application of <code>tac</code> will be prese
 <ul>
 <li> <p> Theories in <code>examples/parsing</code> to do with context-free languages, their properties and Parsing Expression Grammars.  The material not to do with PEGs is derived from Aditi Barthwal’s PhD thesis, with more still to be updated and brought across.
 
+<li> <p>
+Theories in <code>examples/ARM_security_properties</code> provide proofs of several security lemmas for the ARM Instruction Set Architecture.
+To obtain guarantees that arbitrary (and unknown) user processes are able to run isolated from privileged software and other user processes, instruction level noninterference and integrity properties are provided, along with proofs that transitions to privileged modes can only occur in a controlled manner.
+A proof tool is included, which assists the verification of relational state predicates semi-automatically.
+
+<p> The work has been done as part of the PROSPER project by members from KTH Royal Institute of Technology and SICS Swedish ICT.
+Some of the obtained theorems are tied to that project (but can be adopted for others), while some guarantees are generally applicable.
+
 </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
