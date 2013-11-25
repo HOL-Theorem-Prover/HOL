@@ -776,9 +776,8 @@ Poly/ML 5.4.1 Release
 \end{alltt}
 \end{samepage}
 
-Finally, note that heaps are required to be built first in a directory, and that heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
-This has the unfortunate consequence that one cannot package up a heap embodying the standard theories for the real numbers in \texttt{src/real}, but that such a heap has to built in some other directory.
-This is counter-intuitive.
+Finally, note that when using the \texttt{HOLHEAP} variable, heaps are required to be built before everything else in a directory, and that such heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
+Thus, if one wanted to package up a heap embodying the standard theories for the real numbers, and to do it in \texttt{src/real} (which feels natural), this heap could be built using the method described here, but could only be referred to as a \texttt{HOLHEAP} in the directories that used it, \emph{not} in \texttt{src/real}'s \texttt{Holmakefile}.
 
 \index{heaps (in Poly/ML)|)}
 \section{Timing and Counting Theorems}
