@@ -77,6 +77,10 @@ Thanks to Rob Arthan for the bug report.
 <li><p>
 Evaluation and simplification were not correctly handling (real valued) terms such as <code>``0 * 1/2``</code> and <code>``1/2 * 0``</code>.
 
+<li><p>
+Parsing code for tracking the way overloaded constants should be printed stored information in a data structure that grew unreasonably when theories were loaded.
+Thanks to Scott Owens for the bug report.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>
