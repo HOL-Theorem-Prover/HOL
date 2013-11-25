@@ -32,6 +32,10 @@ type printmap_data = term * string * int
   (* the term is the lambda abstraction provided by the user, the
      string is the name that it is to be used in the printing process, and
      the int is the 'timestamp' *)
+fun pmdata_compare ((t1,s1,_), (t2,s2,_)) =
+    case Term.compare(t1,t2) of
+        EQUAL => String.compare(s1,s2)
+      | r => r
 val pos_tstamp : bool -> int = let
   val neg = ref 0
   val cnt = ref 1
@@ -41,11 +45,26 @@ in
 end
 fun tstamp () = pos_tstamp true
 
-type overload_info = ((string,overloaded_op_info) Binarymap.dict *
-                      printmap_data LVTermNet.lvtermnet)
+structure PMDataSet = struct
+  type value = printmap_data
+  type set = value HOLset.set
+  val empty = HOLset.empty pmdata_compare
+  val insert = HOLset.add
+  val fold = HOLset.foldl
+  val listItems = HOLset.listItems
+  fun filter P s =
+      fold (fn (v,a) => if P v then insert(a,v) else a)
+           empty
+           s
+  val numItems = HOLset.numItems
+end
+
+structure PrintMap = LVTermNetFunctor(PMDataSet)
+
+type overload_info =
+     ((string,overloaded_op_info) Binarymap.dict * PrintMap.lvtermnet)
 
 fun raw_print_map ((x,y):overload_info) = y
-structure PrintMap = LVTermNet
 
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     pair_compare (String.compare, String.compare) ((thy1, n1), (thy2, n2))
@@ -497,15 +516,15 @@ end handle Binarymap.NotFound => opdict
 fun gen_remove_mapping str t ((opc, cop) : overload_info) = let
   val cop' = let
     val ds = PrintMap.peek (cop, ([], t))
-    val ds' = List.filter (fn (_, s, _) => s <> str) ds
+    val ds' = PMDataSet.filter (fn (_, s, _) => s <> str) ds
   in
-    if length ds' = length ds then cop
+    if PMDataSet.numItems ds' = PMDataSet.numItems ds then cop
     else let
         val (pm',_) = PrintMap.delete(cop, ([], t))
       in
-        List.foldl (fn (d,acc) => PrintMap.insert(acc,([],t),d))
-                   pm'
-                   ds'
+        PMDataSet.fold (fn (d,acc) => PrintMap.insert(acc,([],t),d))
+                       pm'
+                       ds'
       end
   end
 in
