@@ -11,3 +11,5 @@ env:
     - ROOTPOLY=1 BUILDOPTS=
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/selftestseq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/selftestseq -selftest"
+    - ROOTPOLY= BUILDOPTS="-seq developers/travis/more_examples_seq -selftest"
+    - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/more_examples_seq -selftest"
