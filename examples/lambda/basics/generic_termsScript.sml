@@ -605,7 +605,6 @@ val GFV_apart = prove(
   >- metis_tac []
   >- metis_tac []
   >- (Cases_on `y = v` >> srw_tac [][] >> metis_tac [])
-  >- metis_tac []
   >- metis_tac [])
 
 (* tempting to delete GFV and just use supp gtpm.... *)
