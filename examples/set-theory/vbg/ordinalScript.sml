@@ -30,9 +30,7 @@ val iseg_SUBSET = store_thm(
   ``∀x y. x ∈ A ∧ y ∈ A ∧ poc A R ∧ R x y ⇒ iseg A R x ⊆ iseg A R y``,
   rpt strip_tac >>
   `∀x y z. x ∈ A ∧ y ∈ A ∧ z ∈ A ∧ R x y ∧ R y z ⇒ R x z` by fs[poc_def] >>
-  rw[iseg_def, SUBSET_def, SPEC0] >- metis_tac [] >>
-  `R u y` by metis_tac [] >>
-  strip_tac >> srw_tac [][] >>
+  simp[iseg_def, SUBSET_def, SPEC0] >>
   `∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y)` by fs[poc_def] >>
   metis_tac[]);
 
@@ -266,6 +264,3 @@ val orderiso_ordinals = store_thm(
 
 
 val _ = export_theory()
-
-
-
