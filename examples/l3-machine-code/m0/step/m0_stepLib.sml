@@ -1049,7 +1049,8 @@ local
          [thm1, thm2] => (thm1, thm2)
        | _ => raise ERR "fetch_thm" "expecting 1 or 2 theorems"
 
-   val rule = MATCH_HYP_RW [] ``a /\ b`` o MATCH_HYP_RW [] ``a \/ b``
+   val rule =
+      MATCH_HYP_RW [] ``a /\ b: bool`` o MATCH_HYP_RW [] ``a \/ b: bool``
 
    fun check (l, s) thm =
       if utilsLib.vacuous thm
@@ -1152,16 +1153,13 @@ in
       |> Lib.C Thm.AP_THM st
       |> Conv.RIGHT_CONV_RULE
              (Thm.BETA_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV [m0Theory.boolify16_v2w, Decode_simps]
               THENC ONCE_REWRITE_CONV [DecodeImmShift_rwt]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC Conv.DEPTH_CONV selective_v2w_eq_CONV
               THENC SIMP_CONV bool_ss
-                      ([Decode_simps, BitCount, bit_count_lt_1] @
-                        DECODE_UNPREDICTABLE_rwt)
+                      ([pairTheory.FST, Decode_simps, BitCount,
+                        bit_count_lt_1] @ DECODE_UNPREDICTABLE_rwt)
               THENC Conv.DEPTH_CONV utilsLib.WGROUND_CONV
               THENC REWRITE_CONV [DecodeRegShift_rwt]
               THENC Conv.DEPTH_CONV PairedLambda.PAIRED_BETA_CONV)
@@ -1176,7 +1174,6 @@ val DecodeThumb2 =
    |> Conv.RIGHT_CONV_RULE
           (Thm.BETA_CONV
            THENC PURE_REWRITE_CONV [pairTheory.FST, pairTheory.SND]
-           THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
            THENC REWRITE_CONV [m0Theory.boolify16_v2w, Decode_simps]
            THENC Conv.DEPTH_CONV PairedLambda.let_CONV
            THENC Conv.DEPTH_CONV bitstringLib.v2w_eq_CONV
