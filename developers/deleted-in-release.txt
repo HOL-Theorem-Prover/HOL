@@ -9,10 +9,6 @@ examples/dev/sw
 examples/diningcryptos
 examples/elliptic
 examples/fsub
-examples/miniML/.gitignore
-examples/miniML/compiler
-examples/miniML/computability
-examples/miniML/metatheory
 examples/muddy/muddyC/buddy/doc/bddnotes.ps
 examples/muddy/muddyC/buddy/doc/buddy.ps
 examples/opsemTools
