@@ -92,7 +92,7 @@ fun compile systeml exe obj =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 8
+val version_number = 9
 val release_string = "Kananaskis"
 
 (*
