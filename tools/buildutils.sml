@@ -631,7 +631,7 @@ in
   | "minisat" => let
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-					 "minisat.exe"])
+					 "DELTHISminisat.exe"])
                               (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
 	 | other => if not (Gnumake dir) then
 			print(String.concat
