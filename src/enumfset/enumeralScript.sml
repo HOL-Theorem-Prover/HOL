@@ -10,7 +10,7 @@ open HolKernel boolLib Parse;
 
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory res_quanTheory res_quanLib;
-open totoTheory bossLib listTheory intLib totoTacs;
+open totoTheory bossLib listTheory totoTacs;
 
 val _ = new_theory "enumeral";
 
@@ -20,7 +20,6 @@ val _ = new_theory "enumeral";
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
-val _ = intLib.deprecate_int (); (* because intLib gets loaded now (9/13) *)
 
 val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
 
