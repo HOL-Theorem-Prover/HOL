@@ -74,6 +74,22 @@ val num_to_oct_string_def = Define `num_to_oct_string = n2s 8 HEX`;
 val num_to_dec_string_def = Define `num_to_dec_string = n2s 10 HEX`;
 val num_to_hex_string_def = Define `num_to_hex_string = n2s 16 HEX`;
 
+val fromBinString_def = Define`
+   fromBinString s =
+      if s <> "" /\ EVERY (\c. (c = #"0") \/ (c = #"1")) s then
+         SOME (num_from_bin_string s)
+      else NONE`
+
+val fromDecString_def = Define`
+   fromDecString s =
+      if s <> "" /\ EVERY isDigit s then SOME (num_from_dec_string s) else NONE`
+
+val fromHexString_def = Define`
+   fromHexString s =
+      if s <> "" /\ EVERY isHexDigit s then
+         SOME (num_from_hex_string s)
+      else NONE`
+
 (* ------------------------------------------------------------------------- *)
 
 val s2n_compute = Q.store_thm("s2n_compute",
