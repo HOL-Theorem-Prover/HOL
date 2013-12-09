@@ -30,9 +30,12 @@ struct
   val pop_assum : thm_tactic -> tactic = Tactical.POP_ASSUM
   val first_assum : thm_tactic -> tactic = Tactical.FIRST_ASSUM
   val first_x_assum : thm_tactic -> tactic = Tactical.FIRST_X_ASSUM
+  val last_assum : thm_tactic -> tactic = Tactical.LAST_ASSUM
+  val last_x_assum : thm_tactic -> tactic = Tactical.LAST_X_ASSUM
   val disch_then = Thm_cont.DISCH_THEN
 
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
@@ -63,6 +66,9 @@ struct
   val imp_res_tac : thm_tactic = Tactic.IMP_RES_TAC
 
   val map_every : ('a -> tactic) -> 'a list -> tactic = Tactical.MAP_EVERY
+  val qx_genl_tac = map_every qx_gen_tac
+  fun qx_choosel_then [] ttac = ttac
+    | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
   val decide_tac : tactic = numLib.DECIDE_TAC
   val metis_tac : thm list -> tactic = metisLib.METIS_TAC

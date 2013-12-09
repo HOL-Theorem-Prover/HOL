@@ -49,7 +49,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 8
+val version_number = 9
 val release_string = "Kananaskis"
 
 
@@ -179,12 +179,15 @@ in
                         ("val HAVE_BASIS2002 = "^Bool.toString have_basis2002^
                          "\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
+   "val CC ="       --> ("val CC = "^quote CC^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"mosml\"\n",
-   "val release ="  --> ("val release = "^quote release_string^"\n")];
+   "val release ="  --> ("val release = "^quote release_string^"\n"),
+   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+  ];
   use destfile
 end;
 

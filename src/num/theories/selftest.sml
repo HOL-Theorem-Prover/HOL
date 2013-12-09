@@ -28,13 +28,25 @@ in
   if res <> "" then print "OK\n" else fail()
 end
 
-
-fun colourpp_test (testname, s, expected) = let
-  val _ = tprint testname
-  val res = PP.pp_to_string 70 pp_term (Term [QUOTE s])
+val _ = let
+  val tpp = let open testutils
+            in
+              unicode_off (raw_backend testutils.tpp)
+            end
 in
-  if res = expected then print "OK\n" else fail()
+  List.app tpp [
+    "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
+    "case e1 of 0 => 1 | SUC n => case e2 of 0 => 2 | SUC m => 3",
+    "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y"
+  ]
 end
+
+
+
+fun colourpp_test (testname, s, expected) =
+    testutils.tpp_expected {testf = (fn _ => testname),
+                            input = s,
+                            output = expected}
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal
 
@@ -68,4 +80,3 @@ val colourtests =
     ]
 
 val _ = app colourpp_test colourtests
-

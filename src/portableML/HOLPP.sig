@@ -11,11 +11,20 @@ datatype break_style =
     CONSISTENT
   | INCONSISTENT
 
+type ppstream_interface =
+     { add_stringsz : (string * int) -> unit,
+       add_break : int * int -> unit,
+       begin_block : break_style -> int -> unit,
+       clear_ppstream : unit -> unit,
+       end_block : unit -> unit,
+       flush : unit -> unit,
+       linewidth : int}
+
 datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a
 type 'a quotation = 'a frag list
 
 val mk_ppstream    : ppconsumer -> ppstream
-val dest_ppstream  : ppstream -> ppconsumer
+val pps_from_iface : ppstream_interface -> ppstream
 val add_break      : ppstream -> int * int -> unit
 val add_newline    : ppstream -> unit
 val add_string     : ppstream -> string -> unit

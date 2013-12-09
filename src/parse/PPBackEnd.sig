@@ -66,10 +66,11 @@ sig
   val lookup_UserStyle   : string -> string -> pp_style list
   val register_UserStyle : string option -> string -> pp_style list -> unit
 
-  val raw_terminal   : t
-  val vt100_terminal : t
-  val emacs_terminal : t
-  val html_terminal  : t
+  val raw_terminal          : t
+  val debug_blocks_terminal : t
+  val vt100_terminal        : t
+  val emacs_terminal        : t
+  val html_terminal         : t
   val html_escape    : string -> string
 
 

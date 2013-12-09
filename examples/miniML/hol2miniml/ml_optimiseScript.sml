@@ -405,10 +405,10 @@ val MAT_INT_IF_OPT_def = Define `
 
 val INT_IF_OPT_def = INT_IF_OPT_def |> REWRITE_RULE [GSYM MAT_INT_IF_OPT_def]
 
-
 val decide_guard_IMP = prove(
   ``!b x res. (decide_guard x b = SOME res) ==> ~(x = IntUnkown)``,
-  Induct \\ FULL_SIMP_TAC std_ss [decide_guard_def]);
+  Induct \\ FULL_SIMP_TAC std_ss [decide_guard_def] \\
+  Cases \\ FULL_SIMP_TAC std_ss [decide_guard_def]);
 
 val IMP_int_negate = prove(
   ``!x. ~(x = IntUnkown) ==> ~(int_negate x = IntUnkown)``,
@@ -424,8 +424,6 @@ val int_cmp_sem_negate = prove(
   ``!x env. int_cmp_sem env T (int_negate x) ==> int_cmp_sem env F x``,
   Cases \\ FULL_SIMP_TAC std_ss [int_cmp_sem_def,int_negate_def]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC (srw_ss()) [] \\ intLib.COOPER_TAC);
-
-val isRval_def = Define `(isRval (Rval _) = T) /\ (isRval _ = F)`;
 
 val lookup_ZIP_APPEND = prove(
   ``!xs ys s x.

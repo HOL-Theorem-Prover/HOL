@@ -91,10 +91,17 @@ fun encode_of ty       = valOf2 ty "encode_of"
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-val [bool_info] = TypeBasePure.gen_datatype_info
-                         {ax=boolTheory.boolAxiom,
-                          ind=boolTheory.bool_INDUCT,
-                          case_defs = [boolTheory.bool_case_thm]};
+val bool_info =
+    TypeBasePure.mk_datatype_info
+      {ax=ORIG boolTheory.boolAxiom,
+       induction = ORIG boolTheory.bool_INDUCT,
+       case_def = boolTheory.bool_case_thm,
+       case_cong = boolTheory.COND_CONG,
+       distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
+       nchotomy = boolTheory.BOOL_CASES_AX,
+       fields = [], accessors = [], updates = [], one_one = NONE,
+       recognizers=[], destructors = [],
+       size = NONE, encode = NONE, lift = NONE}
 
 val _ = write [bool_info];
 
@@ -119,7 +126,7 @@ val _ =
           | NONE => NONE
       open GrammarSpecials
   in
-    set_case_specials (#functional o Pmatch.mk_functional lookup,
+    set_case_specials ((fn t => #functional (Pmatch.mk_functional lookup t)),
                        (fn s =>
                              case lookup s of
                                NONE => []
@@ -140,6 +147,13 @@ fun mk_case x   = TypeBasePure.mk_case (theTypeBase()) x
 fun dest_case x = TypeBasePure.dest_case (theTypeBase()) x
 fun is_case x   = TypeBasePure.is_case (theTypeBase()) x;
 fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
+
+fun mk_pattern_fn css =
+   let
+      val pmthry = TypeBasePure.toPmatchThry (theTypeBase ())
+   in
+      Pmatch.mk_pattern_fn pmthry css
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Syntax operations on records                                              *)

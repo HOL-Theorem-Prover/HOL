@@ -22,7 +22,7 @@ val ucinf_uncountable = store_thm(
 val Unum_cardlt_ucinf = store_thm(
   "Unum_cardlt_ucinf",
   ``𝕌(:num) ≺ 𝕌(:'a ucinf)``,
-  simp[cardlt_iso_REFL] >> conj_tac
+  simp[cardlt_lenoteq] >> conj_tac
   >- (simp[cardleq_def] >> qexists_tac `INL` >> simp[INJ_INL]) >>
   strip_tac >> imp_res_tac countable_cardeq >>
   fs[ucinf_uncountable, num_countable])
@@ -32,15 +32,14 @@ val Unum_cardle_ucinf = store_thm(
   ``𝕌(:num) ≼ 𝕌(:'a ucinf)``,
   simp[cardleq_lteq, Unum_cardlt_ucinf]);
 
-val sup_exists_lemma = prove(
+val ucord_sup_exists_lemma = store_thm(
+  "ucord_sup_exists_lemma",
   ``{ a:'a ucord | countableOrd a } ≼ univ(:'a ucinf)``,
-  spose_not_then assume_tac >> fs[cardlt_iso_REFL] >>
+  spose_not_then assume_tac >> fs[cardlt_lenoteq] >>
   `∃f. INJ f 𝕌(:'a ucinf) {a:'a ucord | countableOrd a}`
      by metis_tac[cardleq_def] >>
   `(∀u. countableOrd (f u)) ∧ (∀u v. f u = f v ⇒ u = v)`
       by fs[INJ_DEF] >>
-  `¬SURJ f 𝕌(:'a ucinf) { a | countableOrd a}`
-    by metis_tac [cardeq_def, BIJ_DEF] >>
   qabbrev_tac `fU = IMAGE f 𝕌(:'a ucinf)` >>
   `fU ≼ 𝕌(:'a ucinf)` by simp[Abbr`fU`, IMAGE_cardleq] >>
   first_assum (ASSUME_TAC o MATCH_MP (GEN_ALL sup_thm)) >>
@@ -89,7 +88,7 @@ val _ = overload_on ("ω₁", ``omega1``)
 val x_lt_omega1_countable = store_thm(
   "x_lt_omega1_countable",
   ``x < ω₁ ⇔ countableOrd x``,
-  simp[omega1_def, sup_thm, sup_exists_lemma, EQ_IMP_THM] >>
+  simp[omega1_def, sup_thm, ucord_sup_exists_lemma, EQ_IMP_THM] >>
   rpt strip_tac >- metis_tac[countableOrds_dclosed] >>
   qexists_tac `x⁺` >> simp[preds_ordSUC]);
 

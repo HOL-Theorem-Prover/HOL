@@ -22,7 +22,7 @@ where {tm'} is the result of applying the function {f} iteratively to
 the successive elements of the list and the result of the previous
 application starting from the tail end of the list. During each
 iteration, an expression {f xi ei} is evaluated. The user supplied
-conversion {conv} is used to derive a theorem 
+conversion {conv} is used to derive a theorem
 {
    |- f xi ei = e(i+1)
 }
@@ -33,11 +33,10 @@ which is used in the next iteration.
 
 \EXAMPLE
 To sum the elements of a list, one can use
-{FOLDR_CONV} with {ADD_CONV} from the library {num_lib}.
+{FOLDR_CONV} with {REDUCE_CONV} from the library {numLib}.
 {
-   - load_library_in_place num_lib;
-   - FOLDR_CONV Num_lib.ADD_CONV (--`FOLDR $+ 0 [0;1;2;3]`--);
-   |- FOLDR $+ 0[0;1;2;3] = 6
+   - FOLDR_CONV numLib.REDUCE_CONV ``FOLDR $+ 0 [0;1;2;3]``;
+   val it = |- FOLDR $+ 0[0;1;2;3] = 6 : thm
 }
 In general, if the function {f} is an explicit lambda abstraction
 {(\x x'. t[x,x'])}, the conversion should be in the form

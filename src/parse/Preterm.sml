@@ -41,6 +41,42 @@ datatype preterm = Var   of {Name:string,  Ty:pretype, Locn:locn.locn}
                  with the built-in equality, but should use eq defined below.
                  To check this has been done everywhere, uncomment this constructor. *)
 
+fun pdest_eq pt =
+    case pt of
+        Comb{Rator = Comb{Rator = Const {Name = "=", Thy = "min", ...},
+                          Rand = l, ...},
+             Rand = r, ...} => (l,r)
+      | Constrained{Ptm,...} => pdest_eq Ptm
+      | _ => raise mk_HOL_ERR "Preterm" "pdest_eq" "Preterm is not an equality"
+
+val lhs = #1 o pdest_eq
+
+fun strip_pforall pt = let
+  fun recurse acc pt =
+    case pt of
+        Comb{Rator = Const{Name = "!", Thy = "bool", ...},
+             Rand = Abs{Bvar,Body,...}, ...} => recurse (Bvar::acc) Body
+      | Constrained{Ptm,...} => recurse acc Ptm
+      | _ => (List.rev acc, pt)
+in
+  recurse [] pt
+end
+
+fun head_var pt = let
+  fun err s = mk_HOL_ERR "Preterm" "head_var" s
+in
+  case pt of
+      Var _ => pt
+    | Const _ => raise err "Head is a constant"
+    | Overloaded _ => raise err "Head is an Overloaded"
+    | Comb{Rator,...} => head_var Rator
+    | Abs _ => raise err "Head is an abstraction"
+    | Constrained{Ptm,...} => head_var Ptm
+    | Antiq{Tm,...} => raise err "Head is an antiquote"
+    | Pattern _ => raise err "Head is a Pattern"
+end
+
+
 val op--> = Pretype.mk_fun_ty
 fun ptype_of (Var{Ty, ...}) = Ty
   | ptype_of (Const{Ty, ...}) = Ty
@@ -50,6 +86,24 @@ fun ptype_of (Var{Ty, ...}) = Ty
   | ptype_of (Antiq{Tm,...}) = Pretype.fromType (Term.type_of Tm)
   | ptype_of (Overloaded {Ty,...}) = Ty
   | ptype_of (Pattern{Ptm,...}) = ptype_of Ptm
+
+fun dest_ptvar pt =
+    case pt of
+        Var{Name,Locn,Ty} => (Name,Ty,Locn)
+      | _ => raise mk_HOL_ERR "Preterm" "dest_ptvar" "Preterm is not a variable"
+
+fun plist_mk_rbinop opn pts =
+    case pts of
+        [] => raise mk_HOL_ERR "Preterm" "list_mk_rbinop" "Empty list"
+      | _ =>
+        let
+          val pts' = List.rev pts
+          fun foldthis (pt, acc) = Comb{Rator = Comb{Rator = opn, Rand = pt,
+                                                     Locn = locn.Loc_None},
+                                        Rand = acc, Locn = locn.Loc_None}
+        in
+          List.foldl foldthis (hd pts') (tl pts')
+        end
 
 val bogus = locn.Loc_None
 fun term_to_preterm avds t = let
@@ -93,7 +147,6 @@ fun locn (Var{Locn,...})         = Locn
      Location-ignoring equality for preterms.
  ---------------------------------------------------------------------------*)
 
-(* this function is never used *)
 fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...})                   = Name=Name' andalso Ty=Ty'
   | eq (Const{Name=Name,Thy=Thy,Ty=Ty,...})        (Const{Name=Name',Thy=Thy',Ty=Ty',...})        = Name=Name' andalso Thy=Thy' andalso Ty=Ty'
   | eq (Overloaded{Name=Name,Ty=Ty,Info=Info,...}) (Overloaded{Name=Name',Ty=Ty',Info=Info',...}) = Name=Name' andalso Ty=Ty' andalso Info=Info'
@@ -104,6 +157,24 @@ fun eq (Var{Name=Name,Ty=Ty,...})                  (Var{Name=Name',Ty=Ty',...}) 
   | eq (Pattern{Ptm,...})                           (Pattern{Ptm=Ptm',...})
                   = eq Ptm Ptm'
   | eq  _                                           _                                             = false
+
+fun ptfvs pt =
+    case pt of
+        Var _ => [pt]
+      | Comb{Rator,Rand=r,...} =>
+        let
+        in
+          case Rator of
+              Comb{Rator=Const{Name,...}, Rand = l, ...} =>
+              if Name = GrammarSpecials.case_arrow_special then
+                op_set_diff eq (ptfvs r) (ptfvs l)
+              else
+                op_union eq (ptfvs Rator) (ptfvs r)
+            | _ => op_union eq (ptfvs Rator) (ptfvs r)
+        end
+      | Abs{Bvar,Body,...} => op_set_diff eq (ptfvs Body) [Bvar]
+      | Constrained{Ptm,...} => ptfvs Ptm
+      | _ => []
 
 fun strip_pcomb pt = let
   fun recurse acc t =
@@ -806,4 +877,3 @@ end handle phase1_exn(l,s,ty) =>
 
 
 end; (* Preterm *)
-

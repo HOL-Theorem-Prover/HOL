@@ -6,13 +6,8 @@
 (* DATE          : 2005                                                      *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["pred_setTheory", "bitTheory", "numeral_bitTheory",
-            "sum_numTheory", "fcpLib"];
-*)
-
-open HolKernel Parse boolLib bossLib;
-open Q arithmeticTheory pred_setTheory;
+open HolKernel Parse boolLib bossLib Q lcsymtacs;
+open arithmeticTheory pred_setTheory;
 open bitTheory sum_numTheory fcpTheory;
 open numposrepTheory ASCIInumbersTheory
 
@@ -938,8 +933,8 @@ val word_msb = store_thm("word_msb",
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [FUN_EQ_THM, word_msb_def, word_bit_def]);
 
 val word_lsb_n2w = store_thm("word_lsb_n2w",
-  `!n. word_lsb ((n2w n):'a word)  = ODD n`,
-  SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0,LSB_ODD, GSYM LSB_def]);
+  `!n. word_lsb ((n2w n):'a word) = ODD n`,
+  SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0,BIT0_ODD]);
 
 val word_msb_n2w = store_thm("word_msb_n2w",
   `!n. word_msb ((n2w n):'a word)  = BIT ^HB n`,
@@ -1061,6 +1056,10 @@ val word_0 = store_thm("word_0",
   `!i. i < ^WL ==> ~((0w:'a word) ' i)`,
   SIMP_TAC fcp_ss [n2w_def,BIT_ZERO]);
 
+val word_eq_0 = Q.store_thm("word_eq_0",
+   `!w: 'a word. (w = 0w) = (!i. i < dimindex(:'a) ==> ~w ' i)`,
+   SRW_TAC [fcpLib.FCP_ss] [word_0])
+
 val word_T = store_thm("word_T",
   `!i. i < ^WL ==> (Tw:'a word) ' i`,
   SIMP_TAC fcp_ss [word_T_def,n2w_def,ONE_COMP_0_THM,DIMINDEX_GT_0,
@@ -1111,6 +1110,11 @@ val WORD_NEG_1_T = Theory.save_thm("WORD_NEG_1_T",
 val WORD_MSB_1COMP = store_thm("WORD_MSB_1COMP",
   `!w. word_msb ~w = ~word_msb w`,
   SRW_TAC [fcpLib.FCP_ss] [DIMINDEX_GT_0,word_msb_def,word_1comp_def]);
+
+val w2n_minus1 = Q.store_thm("w2n_minus1",
+   `w2n (-1w:'a word) = dimword(:'a) - 1`,
+   simp [WORD_NEG_1, word_T_def, w2n_n2w, UINT_MAX_def]
+   )
 
 val WORD_ss =
   rewrites [word_1comp_def,word_and_def,word_or_def,word_xor_def,
@@ -1947,7 +1951,7 @@ val BIT_SET_lem_ = prove(
 val BIT_SET_lem = prove(
   `!k i n. BIT i n = i + k IN BIT_SET k n`,
   Induct_on `i` \\ ONCE_REWRITE_TAC [BIT_SET_def]
-    \\ SRW_TAC [] [BIT_ZERO, GSYM LSB_def, LSB_ODD, BIT_SET_lem_]
+    \\ SRW_TAC [] [BIT_ZERO, BIT0_ODD, BIT_SET_lem_]
     \\ REWRITE_TAC [DECIDE ``SUC a + b = a + SUC b``]
     \\ PAT_ASSUM `!k n. BIT i n = i + k IN BIT_SET k n`
          (fn th => REWRITE_TAC [GSYM th, BIT_DIV2]));
@@ -2217,7 +2221,7 @@ val BOOLIFY = Q.prove(
          [BOOLIFY_def, DIV2_def, rich_listTheory.GENLIST,
           rich_listTheory.APPEND_SNOC1]
     \\ POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm])
-    \\ SRW_TAC [ARITH_ss] [GSYM LSB_def, LSB_ODD, BIT_OF_BITS_THM,
+    \\ SRW_TAC [ARITH_ss] [BIT0_ODD, BIT_OF_BITS_THM,
           rich_listTheory.GENLIST_FUN_EQ, BIT_DIV2,
           DECIDE ``x < n ==> (n - x = SUC (n - 1 - x))``]);
 
@@ -2255,7 +2259,7 @@ val WORD_REDUCE_LIFT = Q.prove(
   STRIP_TAC \\ Cases
     \\ SRW_TAC [fcpLib.FCP_ss]
          [DECIDE ``i < 1 = (i = 0)``, n2w_def, BIT_ZERO, fcpTheory.index_one,
-          GSYM LSB_def, LSB_ODD]);
+          BIT0_ODD]);
 
 val TL_GENLIST_K = Q.prove(
   `!c n. TL (GENLIST (K c) (SUC n)) = GENLIST (K c) n`,
@@ -3041,7 +3045,7 @@ val word_rrx_n2w = store_thm("word_rrx_n2w",
   `!c a. word_rrx(c, (n2w a):'a word) =
        (ODD a, (n2w (BITS ^HB 1 a + SBIT c ^HB)):'a word)`,
   SHIFT_WORD_TAC
-    \\ RW_TAC arith_ss [GSYM LSB_def,LSB_ODD,SBIT_def,BIT_OF_BITS_THM]
+    \\ RW_TAC arith_ss [BIT0_ODD,SBIT_def,BIT_OF_BITS_THM]
     \\ STRIP_ASSUME_TAC EXISTS_HB \\ FULL_SIMP_TAC arith_ss []
     << [
       METIS_TAC [BITSLT_THM,SUC_SUB1,BITS_SUM1,BIT_def,BIT_B],
@@ -3183,12 +3187,19 @@ val w2w_LSL = store_thm("w2w_LSL",
          [DIMINDEX_GT_0, NOT_LESS, NOT_LESS_EQUAL]);
 
 val n2w_DIV = Q.store_thm("n2w_DIV",
-  `!a n.
-     n < dimindex(:'a) /\ a < dimword (:'a) ==>
-     (n2w (a DIV (2 ** n)) :'a word = n2w a >>> n)`,
-  RW_TAC std_ss [WORD_DIV_LSR, word_div_def, w2n_n2w, n2w_11]
-  \\ `2 ** n < dimword (:'a)` by METIS_TAC [TWOEXP_MONO, dimword_def]
-  \\ ASM_SIMP_TAC arith_ss [DIV_MOD_MOD_DIV, ZERO_LT_TWOEXP, ZERO_LT_dimword]);
+  `!a n. a < dimword (:'a) ==> (n2w (a DIV (2 ** n)) :'a word = n2w a >>> n)`,
+  REPEAT strip_tac
+  \\ Cases_on `n < dimindex(:'a)`
+  >- (RW_TAC std_ss [WORD_DIV_LSR, word_div_def, w2n_n2w, n2w_11]
+      \\ `2 ** n < dimword (:'a)` by METIS_TAC [TWOEXP_MONO, dimword_def]
+      \\ ASM_SIMP_TAC arith_ss
+           [DIV_MOD_MOD_DIV, ZERO_LT_TWOEXP, ZERO_LT_dimword])
+  \\ `a DIV 2 ** n = 0`
+  by metis_tac [arithmeticTheory.LESS_DIV_EQ_ZERO, arithmeticTheory.NOT_LESS,
+                dimword_def, bitTheory.TWOEXP_MONO2,
+                arithmeticTheory.LESS_LESS_EQ_TRANS]
+  \\ fs [LSR_LIMIT, arithmeticTheory.NOT_LESS]
+  );
 
 val WORD_BITS_LSL = store_thm("WORD_BITS_LSL",
   `!h l n w:'a word. h < dimindex(:'a) ==>
@@ -3257,6 +3268,22 @@ val EXTRACT_JOIN_ADD_LSL = store_thm("EXTRACT_JOIN_ADD_LSL",
     \\ ABBREV_TAC `m' = m + 1`
     \\ ABBREV_TAC `s' = m' - l`
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN_ADD]);
+
+val word_extract_mask = Q.prove(
+   `!h l a.
+        (h >< l) a =
+        if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w`,
+   rw_tac (arith_ss++fcpLib.FCP_ss)
+      [SHIFT_1_SUB_1, word_and_def, word_extract_def, word_lsr_def,
+       word_bits_def, w2w, word_0,
+       DECIDE ``l <= h ==> (i + l <= h = i < h + 1 - l)``]
+   \\ Cases_on `i + l < dimindex (:'a)`
+   \\ lrw []
+   \\ decide_tac
+   )
+
+val word_extract_mask = Theory.save_thm("word_extract_mask",
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask)
 
 val word_shift_bv = Q.store_thm("word_shift_bv",
   `(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
@@ -4495,7 +4522,7 @@ val word_join_word_T = store_thm("word_join_word_T",
 val word_concat_word_T = save_thm("word_concat_word_T",
   (REWRITE_RULE [word_join_word_T] o SPECL [`- 1w`,`- 1w`]) word_concat_def);
 
-val BIT0_CONV = SIMP_CONV std_ss [GSYM LSB_def, LSB_ODD];
+val BIT0_CONV = SIMP_CONV std_ss [BIT0_ODD];
 
 val extract_00 = prove(
   `(!a:'a word. (0 -- 0) a = if word_lsb a then 1w else 0w) /\
@@ -4625,6 +4652,23 @@ val bit_count_upto_SUC = Q.store_thm("bit_count_upto_SUC",
    `!w n. bit_count_upto (SUC n) w =
           (if w ' n then 1 else 0) + bit_count_upto n w`,
    SRW_TAC [ARITH_ss] [bit_count_upto_def, sum_numTheory.SUM_def]);
+
+val bit_count_upto_is_zero = Q.store_thm("bit_count_upto_is_zero",
+   `!n w. (bit_count_upto n w = 0) = (!i. i < n ==> ~w ' i)`,
+   simp [bit_count_upto_def]
+   \\ Induct
+   \\ rw [sum_numTheory.SUM_def]
+   >- metis_tac [prim_recTheory.LESS_SUC_REFL]
+   \\ eq_tac
+   \\ lrw []
+   \\ Cases_on `i < n`
+   >- simp []
+   \\ `i = n` by decide_tac
+   \\ simp []);
+
+val bit_count_is_zero = Q.store_thm("bit_count_is_zero",
+  `!w. (bit_count w = 0) = (w = 0w)`,
+  simp [bit_count_def, bit_count_upto_is_zero, word_eq_0]);
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems sets of words                                                    *)

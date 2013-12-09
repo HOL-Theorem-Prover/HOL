@@ -570,8 +570,7 @@ in
       REPEAT Tactic.GEN_TAC THEN
       (if simp_let then Library.LET_SIMP_TAC else ALL_TAC) THEN
       SIMP_TAC pureSimps.pure_ss
-        [boolTheory.bool_case_DEF, integerTheory.INT_MIN,
-          integerTheory.INT_MAX, INT_ABS] THEN
+        [integerTheory.INT_MIN, integerTheory.INT_MAX, INT_ABS] THEN
       Library.WORD_SIMP_TAC THEN
       Library.SET_SIMP_TAC THEN
       Tactic.BETA_TAC

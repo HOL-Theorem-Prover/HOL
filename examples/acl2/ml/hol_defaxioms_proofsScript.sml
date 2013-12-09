@@ -31,7 +31,7 @@ open stringLib complex_rationalTheory gcdTheory
      sexp sexpTheory hol_defaxiomsTheory
      acl2_packageTheory translateTheory extendTranslateTheory;
 Globals.checking_const_names := false;
-set_trace "Subgoal number" 100;
+set_trace "Goalstack.howmany_printed_subgoals" 100;
 quietdec := false;
 *)
 
@@ -4192,5 +4192,3 @@ val bad_atom_less_equal_total_defaxiom =
            EVAL ``"COMMON-LISP" = ""``]);
 
 val _ = export_theory();
-
-

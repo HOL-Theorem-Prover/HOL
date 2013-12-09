@@ -19,7 +19,7 @@
 structure Exists_arith :> Exists_arith =
 struct
   open Arbint
-  val << = String.<
+  val op << = String.<
 
 
 open HolKernel boolLib Rsyntax reduceLib Arith_cons;

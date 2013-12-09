@@ -16,7 +16,7 @@ show_assums := true;
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
    listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
    containerTheory boolSimps ConseqConv markerTheory
-open quantHeuristicsLib 
+open quantHeuristicsLib
 
 (*
 open Sanity
@@ -412,7 +412,11 @@ REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV,
    asl_emp_def, IN_ABS]);
 
-
+val asl_emp_NOT_EMPTY = store_thm ("asl_emp_NOT_EMPTY",
+``IS_SEPARATION_COMBINATOR f ==> ~(asl_emp f = {})``,
+SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM, asl_emp_def, IN_ABS,
+  EXTENSION, NOT_IN_EMPTY] THEN
+METIS_TAC[]);
 
 (******************************************************************************)
 (* BIN_OPTION_MAP                                                             *)
@@ -427,7 +431,6 @@ val BIN_OPTION_MAP_def = Define `
 
 
 val BIN_OPTION_MAP_THM = store_thm ("BIN_OPTION_MAP_THM",
-
 ``  (BIN_OPTION_MAP f c (SOME x1) (SOME x2) =
       if (~(c x1 x2)) then NONE else
       SOME (f x1 x2)) /\
@@ -451,12 +454,8 @@ val BIN_OPTION_MAP_THM = store_thm ("BIN_OPTION_MAP_THM",
   (IS_SOME (BIN_OPTION_MAP f c s1 s2) =
    ((IS_SOME s1) /\ (IS_SOME s2) /\ c (THE s1) (THE s2)))``,
 
+SIMP_TAC std_ss [BIN_OPTION_MAP_def] THEN
 REPEAT STRIP_TAC THENL [
-   SIMP_TAC std_ss [BIN_OPTION_MAP_def],
-
-   Cases_on `x` THEN
-   SIMP_TAC std_ss [BIN_OPTION_MAP_def],
-
    Cases_on `x` THEN
    SIMP_TAC std_ss [BIN_OPTION_MAP_def],
 
@@ -542,7 +541,6 @@ REPEAT STRIP_TAC THENL [
       Cases_on `y` THEN
       Cases_on `z` THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def] THENL [
-         METIS_TAC[BIN_OPTION_MAP_def],
          METIS_TAC[BIN_OPTION_MAP_def],
 
          Cases_on `c x x''` THEN Cases_on `c x' x` THEN
@@ -1768,7 +1766,7 @@ REPEAT (Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION X Y` MP_T
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM] THEN
 SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE,
    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def,
-   PAIR_FORALL_THM, COND_RAND, COND_RATOR, LET_THM] THEN
+   pairTheory.FORALL_PROD, COND_RAND, COND_RATOR, LET_THM] THEN
 REPEAT STRIP_TAC THEN
 `?y1 y2. uf (x1, x2) = (y1, y2)` by PROVE_TAC[pairTheory.PAIR] THEN
 Q.PAT_ASSUM `!x1 x2. P x1 x2` (MP_TAC o (Q.SPECL [`x1`, `x2`])) THEN
@@ -1810,7 +1808,7 @@ Cases_on `s1` THEN
 Cases_on `s2` THEN
 SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
        PRODUCT_SEPARATION_COMBINATOR_REWRITE,
-       PAIR_EXISTS_THM,
+       pairTheory.EXISTS_PROD,
        LEFT_EXISTS_AND_THM, RIGHT_EXISTS_AND_THM]);
 
 
@@ -1870,7 +1868,7 @@ SIMP_TAC std_ss [asl_inl_def, asl_inr_def, EXTENSION, IN_ABS,
    asl_emp_def, IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 STRIP_TAC THEN
 SIMP_TAC std_ss [GSYM EXTENSION] THEN
-ASM_SIMP_TAC std_ss [PAIR_FORALL_THM] THEN
+ASM_SIMP_TAC std_ss [pairTheory.FORALL_PROD] THEN
 METIS_TAC[EXTENSION]);
 
 
@@ -1882,7 +1880,7 @@ asl_emp (PRODUCT_SEPARATION_COMBINATOR f1 f2) =
 
 SIMP_TAC std_ss [asl_emp_def,
    PRODUCT_SEPARATION_COMBINATOR_REWRITE,
-   IN_ABS, PAIR_EXISTS_THM, FUN_EQ_THM] THEN
+   IN_ABS, pairTheory.EXISTS_PROD, FUN_EQ_THM] THEN
 METIS_TAC[]);
 
 
@@ -1915,8 +1913,8 @@ UNIV (asl_inr f1 f2 UNIV) = UNIV) /\
 
 SIMP_TAC std_ss [asl_star_def, IN_UNIV, asl_inl_def, asl_inr_def,
    IN_ABS, asl_emp_def] THEN
-SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_ABS, PAIR_EXISTS_THM,
-   PAIR_FORALL_THM] THEN
+SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_ABS, pairTheory.EXISTS_PROD,
+   pairTheory.FORALL_PROD] THEN
 SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
@@ -1942,8 +1940,8 @@ asl_star (PRODUCT_SEPARATION_COMBINATOR f1 f2) P1 P2 =
                       (f2 (SOME y1) (SOME y2) = SOME y) /\
                       (P1 (x1,y1) /\ P2 (x2,y2))``,
 
-SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_DEF, PAIR_FORALL_THM] THEN
-SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE, PAIR_EXISTS_THM] THEN
+SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_DEF, pairTheory.FORALL_PROD] THEN
+SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE, pairTheory.EXISTS_PROD] THEN
 METIS_TAC[]);
 
 
@@ -1961,7 +1959,7 @@ asl_inr f1 f2 (asl_star f2 X Y)))``,
 
 SIMP_TAC std_ss [EXTENSION, asl_star_def, IN_ABS] THEN
 SIMP_TAC std_ss [asl_inl_def, asl_inr_def, IN_ABS] THEN
-SIMP_TAC std_ss [PAIR_EXISTS_THM, PAIR_FORALL_THM,
+SIMP_TAC std_ss [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD,
    PRODUCT_SEPARATION_COMBINATOR_REWRITE, asl_emp_def, IN_ABS] THEN
 SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 REPEAT STRIP_TAC THEN
@@ -5909,7 +5907,7 @@ val ASL_PROTO_TRACES_EVAL_PROC_IN_THM = store_thm ("ASL_PROTO_TRACES_EVAL_PROC_I
 
 
 SIMP_TAC std_ss [ASL_PROTO_TRACES_EVAL_PROC_THM, IN_SING,
-   GSPECIFICATION, PAIR_EXISTS_THM, IN_UNION,
+   GSPECIFICATION, pairTheory.EXISTS_PROD, IN_UNION,
    IN_BIGUNION, IN_IMAGE, IN_INTER, NOT_IN_EMPTY] THEN
 REPEAT STRIP_TAC THENL [
    METIS_TAC[],
@@ -6102,7 +6100,6 @@ SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_def, IN_BIGUNION, IN_IMAGE,
 REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [NOT_IN_EMPTY],
 
-
    SIMP_TAC std_ss [asl_prog_prim_command_def, IN_SING,
       ASL_PROTO_TRACES_EVAL_PROC_IN_THM],
 
@@ -6126,32 +6123,29 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [asl_prog_kleene_star_def, IN_ABS,
       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
       asl_prog_repeat_num_def, LIST_SET_STAR_def] THEN
-   HO_MATCH_MP_TAC (prove (``(!n. ((?x. P x n) = (?t'. Q t' n))) ==>
-((?x n. P x n) = (?t' n. Q t' n))``, METIS_TAC[])) THEN
+   HO_MATCH_MP_TAC (prove (``(!n. ((?x. P x n) = (?t'. Q t' n))) ==> ((?x n. P x n) = (?t' n. Q t' n))``, METIS_TAC[])) THEN
    Q.SPEC_TAC (`t`, `t`) THEN
    Induct_on `n'` THENL [
-      SIMP_TAC list_ss [asl_prog_repeat_num_def, LIST_NUM_SET_STAR_def,
-      IN_SING, asl_prog_skip_def, asl_prog_prim_command_def,
-    ASL_PROTO_TRACES_EVAL_PROC_IN_THM, asl_aa_skip_def],
+     SIMP_TAC list_ss [asl_prog_repeat_num_def, LIST_NUM_SET_STAR_def,
+       IN_SING, asl_prog_skip_def, asl_prog_prim_command_def,
+       ASL_PROTO_TRACES_EVAL_PROC_IN_THM, asl_aa_skip_def],
 
-      SIMP_TAC list_ss [asl_prog_repeat_num_def, LIST_NUM_SET_STAR_def,
-    IN_ABS, GSPECIFICATION, GSYM LEFT_EXISTS_AND_THM,
-    GSYM RIGHT_EXISTS_AND_THM, PAIR_EXISTS_THM, IN_BIGUNION,
-    IN_IMAGE] THEN
-      SIMP_TAC std_ss [ASL_PROTO_TRACES_EVAL_PROC_IN_THM, GSYM LEFT_EXISTS_AND_THM,
-    GSYM RIGHT_EXISTS_AND_THM] THEN
-      GEN_TAC THEN
-      HO_MATCH_MP_TAC (prove (``
-    (!t1 pt1. ((?pt2 t2. P pt1 pt2 t1 t2) = (?x2. Q t1 x2 pt1))) ==>
-    ((?pt1 pt2 t1 t2. P pt1 pt2 t1 t2) = (?x1 x2 x. Q x1 x2 x))``, METIS_TAC[])) THEN
-      REPEAT GEN_TAC THEN
-      Cases_on `x IN p` THEN ASM_REWRITE_TAC[] THEN
-      Cases_on `x1 IN ASL_PROTO_TRACES_EVAL_PROC n penv x` THEN ASM_REWRITE_TAC[] THEN
-      Tactical.REVERSE (Cases_on `?t2. t = x1 ++ t2`) THEN1 (
-    FULL_SIMP_TAC std_ss [] THEN
-    METIS_TAC[APPEND_ASSOC]
-      ) THEN
-      FULL_SIMP_TAC std_ss [APPEND_11, GSYM APPEND_ASSOC]
+     SIMP_TAC list_ss [asl_prog_repeat_num_def, LIST_NUM_SET_STAR_def,
+        IN_ABS, GSPECIFICATION, GSYM LEFT_EXISTS_AND_THM,
+        GSYM RIGHT_EXISTS_AND_THM, pairTheory.EXISTS_PROD, IN_BIGUNION, IN_IMAGE] THEN
+     SIMP_TAC std_ss [ASL_PROTO_TRACES_EVAL_PROC_IN_THM, GSYM LEFT_EXISTS_AND_THM,
+        GSYM RIGHT_EXISTS_AND_THM] THEN
+     GEN_TAC THEN
+     HO_MATCH_MP_TAC (prove (``
+       (!t1 pt1. ((?pt2 t2. P pt1 pt2 t1 t2) = (?x2. Q t1 x2 pt1))) ==>
+       ((?pt1 pt2 t1 t2. P pt1 pt2 t1 t2) = (?x1 x2 x. Q x1 x2 x))``, METIS_TAC[])) THEN
+     SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
+     REPEAT STRIP_TAC THEN
+     Tactical.REVERSE (Cases_on `?t2. t = p_1 ++ t2`) THEN1 (
+       FULL_SIMP_TAC std_ss [] THEN
+       METIS_TAC[APPEND_ASSOC]
+     ) THEN
+     FULL_SIMP_TAC std_ss [APPEND_11, GSYM APPEND_ASSOC]
    ],
 
 
@@ -6286,7 +6280,7 @@ REPEAT CONJ_TAC THENL [
 
       SIMP_TAC list_ss [asl_prog_repeat_num_def, LIST_NUM_SET_STAR_def,
          IN_ABS, GSPECIFICATION, GSYM LEFT_EXISTS_AND_THM,
-         GSYM RIGHT_EXISTS_AND_THM, PAIR_EXISTS_THM,
+         GSYM RIGHT_EXISTS_AND_THM, pairTheory.EXISTS_PROD,
          ASL_PROTO_TRACES_EVAL_IN_THM,
          IN_IMAGE] THEN
       METIS_TAC[APPEND_ASSOC]
@@ -9372,8 +9366,8 @@ val asl_cond_star___COND_PROP___STRONG_EXISTS___BOTH = store_thm (
    COND_PROP___STRONG_EXISTS (\x. asl_cond_star f (qP (FST x)) (qQ (SND x)))``,
 
 SIMP_TAC std_ss [asl_cond_star_def, COND_PROP___STRONG_EXISTS_def,
-   FORALL_AND_THM, IN_ABS, PAIR_EXISTS_THM,
-   asl_exists_def, asl_star_def, PAIR_FORALL_THM] THEN
+   FORALL_AND_THM, IN_ABS, pairTheory.EXISTS_PROD,
+   asl_exists_def, asl_star_def, pairTheory.FORALL_PROD] THEN
 METIS_TAC[]);
 
 
@@ -9489,7 +9483,7 @@ ASL_PROGRAM_HOARE_TRIPLE xenv penv
 SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
    IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_EXISTS_AND_THM,
-   PAIR_FORALL_THM, SUBSET_DEF, PAIR_EXISTS_THM] THEN
+   pairTheory.FORALL_PROD, SUBSET_DEF, pairTheory.EXISTS_PROD] THEN
 METIS_TAC[]);
 
 
@@ -12157,7 +12151,7 @@ store_thm ("asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ALTERNATIVE_DEF",
 SIMP_TAC std_ss [asl_prog_IS_RESOURCE_FREE_def,
    asl_prog_IS_PROCCALL_FREE_def,
    asl_prog_IS_RESOURCE_AND_PROCCALL_FREE_def,
-   PAIR_FORALL_THM] THEN
+   pairTheory.FORALL_PROD] THEN
 METIS_TAC[]);
 
 

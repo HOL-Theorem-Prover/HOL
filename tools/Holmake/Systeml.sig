@@ -29,6 +29,7 @@ sig
   val GNUMAKE : string
   val DYNLIB : bool
   val ML_SYSNAME : string
+  val DOT_PATH : string
 
   val isUnix : bool
 

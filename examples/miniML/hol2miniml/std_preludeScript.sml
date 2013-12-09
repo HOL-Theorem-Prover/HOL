@@ -98,8 +98,18 @@ val res = translate EXISTS_DEF;
 val res = translate GENLIST;
 val res = translate PAD_RIGHT;
 val res = translate PAD_LEFT;
-val res = translate MEM;
-val res = translate ALL_DISTINCT;
+
+val MEMBER_def = Define `
+  (MEMBER x [] = F) /\
+  (MEMBER x (y::ys) = (x = y) \/ MEMBER x ys)`;
+
+val res = translate MEMBER_def;
+
+val MEMBER_thm = prove(
+  ``!xs (x:'a). IS_EL x xs = MEMBER x xs``,
+  Induct THEN FULL_SIMP_TAC std_ss [MEM,MEMBER_def]);
+
+val res = translate (ALL_DISTINCT |> REWRITE_RULE [MEMBER_thm]);
 val res = translate isPREFIX;
 val res = translate FRONT_DEF;
 val res = translate ZIP;
@@ -420,4 +430,3 @@ val LEAST_side_thm = prove(
   |> update_precondition;
 
 val _ = export_theory();
-

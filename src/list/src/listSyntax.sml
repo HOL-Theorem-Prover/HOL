@@ -38,7 +38,6 @@ val flat_tm      = prim_mk_const {Name = "FLAT",    Thy = "list"}
 val length_tm    = prim_mk_const {Name = "LENGTH",  Thy = "list"}
 val map_tm       = prim_mk_const {Name = "MAP",     Thy = "list"}
 val map2_tm      = prim_mk_const {Name = "MAP2",    Thy = "list"}
-val mem_tm       = prim_mk_const {Name = "MEM",     Thy = "list"}
 val filter_tm    = prim_mk_const {Name = "FILTER",  Thy = "list"}
 val foldr_tm     = prim_mk_const {Name = "FOLDR",   Thy = "list"}
 val foldl_tm     = prim_mk_const {Name = "FOLDL",   Thy = "list"}
@@ -49,7 +48,7 @@ val zip_tm       = prim_mk_const {Name = "ZIP",     Thy = "list"}
 val unzip_tm     = prim_mk_const {Name = "UNZIP",   Thy = "list"}
 val sum_tm       = prim_mk_const {Name = "SUM",     Thy = "list"}
 val reverse_tm   = prim_mk_const {Name = "REVERSE", Thy = "list"}
-val list_case_tm = prim_mk_const {Name = "list_case", Thy = "list"}
+val list_case_tm = prim_mk_const {Name = "list_CASE", Thy = "list"}
 val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
@@ -84,7 +83,6 @@ fun mk_map2(f,l1,l2) =
                     beta  |-> eltype l2,
                     gamma |-> snd(strip_fun(type_of f))] map2_tm, [f,l1,l2])
 
-fun mk_mem(x,l)     = list_mk_comb(inst[alpha |-> type_of x] mem_tm, [x,l])
 fun mk_filter(P,l)  = list_mk_comb(inst[alpha |-> eltype l] filter_tm,[P,l])
 fun mk_foldr(f,b,l) = list_mk_comb(inst[alpha |-> eltype l,
                                         beta  |-> type_of b] foldr_tm,[f,b,l])
@@ -107,6 +105,7 @@ fun mk_last l = mk_comb(inst[alpha |-> eltype l] last_tm,l);
 fun mk_front l = mk_comb(inst[alpha |-> eltype l] front_tm,l);
 fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
 fun mk_list_to_set l = mk_comb(inst[alpha |-> eltype l] list_to_set_tm,l);
+fun mk_mem(x,l)     = pred_setSyntax.mk_in(x,mk_list_to_set l)
 
 fun mk_genlist (f,n) =
   list_mk_comb (inst [alpha |-> (f |> Term.type_of
@@ -118,7 +117,7 @@ fun mk_list_case (n,c,l) =
  case total dest_list_type (type_of l)
   of SOME ty =>
        list_mk_comb
-          (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [n,c,l])
+          (inst [alpha |-> ty, beta |-> type_of n]list_case_tm, [l,n,c])
    | NONE => raise ERR "mk_list_case" "";
 
 
@@ -144,7 +143,6 @@ val dest_flat     = dest_monop flat_tm     (ERR "dest_flat"     "not FLAT")
 val dest_length   = dest_monop length_tm   (ERR "dest_length"   "not LENGTH")
 val dest_map      = dest_binop map_tm      (ERR "dest_map"      "not MAP")
 val dest_map2     = dest_triop map2_tm     (ERR "dest_map2"     "not MAP2")
-val dest_mem      = dest_binop mem_tm      (ERR "dest_mem"      "not MEM")
 val dest_filter   = dest_binop filter_tm   (ERR "dest_filter"   "not FILTER")
 val dest_foldr    = dest_triop foldr_tm    (ERR "dest_foldr"    "not FOLDR")
 val dest_foldl    = dest_triop foldl_tm    (ERR "dest_foldl"    "not FOLDL")
@@ -164,8 +162,19 @@ val dest_list_to_set = dest_monop list_to_set_tm
                           (ERR "dest_list_to_set" "not LIST_TO_SET")
 val dest_genlist  = dest_binop genlist_tm  (ERR "dest_genlist"  "not GENLIST")
 
-val dest_list_case = dest_triop list_case_tm
-                          (ERR "dest_list_case" "not list_case");
+fun dest_list_case t = let
+  val (l,n,c) = dest_triop list_case_tm
+                           (ERR "dest_list_case" "not list_case") t
+in
+  (n,c,l)
+end
+
+fun dest_mem t = let
+  val (x,setl) = pred_setSyntax.dest_in t
+in
+  (x, dest_list_to_set setl)
+end handle HOL_ERR {message,...} => raise ERR "dest_mem" message
+
 
 (*---------------------------------------------------------------------------
          Queries

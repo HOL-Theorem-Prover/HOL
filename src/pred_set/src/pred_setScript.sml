@@ -22,6 +22,30 @@ val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
 
+fun store_thm(r as(n,t,tac)) = let
+  val th = Tactical.store_thm r
+in
+  if String.isPrefix "IN_" n then let
+      val stem = String.extract(n,3,NONE)
+    in
+      if isSome (CharVector.find (equal #"_") stem) then th
+      else
+        case Lib.total (#1 o strip_comb o lhs o #2 o strip_forall o concl) th of
+          NONE => th
+        | SOME t =>
+            if same_const t IN_tm then let
+                val applied_thm = SIMP_RULE bool_ss [SimpLHS, IN_DEF] th
+                val applied_name = stem ^ "_applied"
+              in
+                save_thm(applied_name, applied_thm)
+              ; export_rewrites [applied_name]
+              ; th
+              end
+            else th
+    end
+  else th
+end
+
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory.						*)
@@ -51,6 +75,12 @@ val SPECIFICATION = store_thm(
   "SPECIFICATION",
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
+
+val IN_ABS = store_thm (
+  "IN_ABS",
+  ``!x P. (x IN \x. P x) = P x``,
+  SIMP_TAC bool_ss [IN_DEF]);
+val _ = export_rewrites ["IN_ABS"]
 
 (* ---------------------------------------------------------------------*)
 (* Axiom of extension: (s = t) iff !x. x IN s = x IN t			*)
@@ -209,12 +239,20 @@ val MEMBER_NOT_EMPTY =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REWRITE_TAC [NOT_CLAUSES]);
 
+val EMPTY_applied = store_thm(
+  "EMPTY_applied",
+  ``EMPTY x <=> F``,
+  REWRITE_TAC [EMPTY_DEF])
+val _ = export_rewrites ["EMPTY_applied"]
+
 (* ===================================================================== *)
 (* The set of everything						 *)
 (* ===================================================================== *)
 
 val UNIV_DEF = new_definition
     ("UNIV_DEF",(--`UNIV = (\x:'a.T)`--));
+
+val _ = ot0 "UNIV" "universe"
 
 val IN_UNIV =
     store_thm
@@ -475,6 +513,7 @@ val INTER_DEF = new_infixl_definition
 val _ = unicode_version{ u = UChar.inter, tmnm = "INTER"};
 val _ = TeX_notation {hol = "INTER", TeX = ("\\HOLTokenInter{}", 1)}
 val _ = TeX_notation {hol = UChar.inter, TeX = ("\\HOLTokenInter{}", 1)}
+val _ = ot0 "INTER" "intersect"
 
 val IN_INTER = store_thm
      ("IN_INTER",
@@ -482,6 +521,7 @@ val IN_INTER = store_thm
       PURE_ONCE_REWRITE_TAC [INTER_DEF] THEN
       CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
       REPEAT GEN_TAC THEN REFL_TAC);
+val _ = export_rewrites ["IN_INTER"]
 
 val INTER_ASSOC = store_thm
     ("INTER_ASSOC",
@@ -635,7 +675,7 @@ val DISJOINT_SUBSET = Q.store_thm
 val DIFF_DEF = new_infixl_definition
     ("DIFF_DEF",
      (--`DIFF s t = {x:'a | x IN s /\ ~ (x IN t)}`--),500);
-val _ = ot0 "DIFF" "-"
+val _ = ot0 "DIFF" "difference"
 
 val IN_DIFF = store_thm
     ("IN_DIFF",
@@ -660,6 +700,7 @@ val EMPTY_DIFF =
      (--`!s:'a set. EMPTY DIFF s = EMPTY`--),
      GEN_TAC THEN
      REWRITE_TAC [NOT_IN_EMPTY,IN_DIFF,EXTENSION]);
+val _ = export_rewrites ["EMPTY_DIFF"]
 
 val DIFF_UNIV =
     store_thm
@@ -1317,6 +1358,8 @@ val IMAGE_DEF =
     new_definition
     ("IMAGE_DEF", (--`IMAGE (f:'a->'b) s = {f x | x IN s}`--));
 
+val _ = ot0 "IMAGE" "image"
+
 val IN_IMAGE =
     store_thm
     ("IN_IMAGE",
@@ -1441,6 +1484,13 @@ val INJ_DEF =
           (!x. x IN s ==> (f x) IN t) /\
           (!x y. (x IN s /\ y IN s) ==> (f x = f y) ==> (x = y))`--));
 
+val INJ_IFF = store_thm(
+  "INJ_IFF",
+  ``INJ (f:'a -> 'b) s t <=>
+      (!x. x IN s ==> f x IN t) /\
+      (!x y. x IN s /\ y IN s ==> ((f x = f y) <=> (x = y)))``,
+  METIS_TAC[INJ_DEF]);
+
 val INJ_ID =
     store_thm
     ("INJ_ID",
@@ -1545,6 +1595,16 @@ val SURJ_IMAGE = store_thm(
   ``SURJ f s (IMAGE f s)``,
   REWRITE_TAC[IMAGE_SURJ]);
 val _ = export_rewrites ["SURJ_IMAGE"]
+
+val SURJ_INJ_INV = store_thm(
+  "SURJ_INJ_INV",
+  ``SURJ f s t ==> ?g. INJ g t s /\ !y. y IN t ==> (f (g y) = y)``,
+  SIMP_TAC (srw_ss())[SURJ_DEF, INJ_DEF] THEN
+  DISCH_THEN (CONJUNCTS_THEN2 ASSUME_TAC
+                (ASSUME_TAC o
+                 SIMP_RULE (srw_ss() ++ DNF_ss)
+                           [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM])) THEN
+  METIS_TAC[]);
 
 (* ===================================================================== *)
 (* Bijective functions on a set.					 *)
@@ -2233,6 +2293,17 @@ val CARD_UNION =
        IMP_RES_TAC CARD_DEF THEN RES_TAC THEN
        ASM_REWRITE_TAC [ADD_CLAUSES, INV_SUC_EQ, IN_UNION]]]);
 
+val CARD_UNION_EQN = store_thm(
+  "CARD_UNION_EQN",
+  ``!s:'a set t.
+      FINITE s /\ FINITE t ==>
+      (CARD (s UNION t) = CARD s + CARD t - CARD (s INTER t))``,
+  REPEAT STRIP_TAC THEN
+  `CARD (s INTER t) <= CARD s`
+    by SRW_TAC [][CARD_INTER_LESS_EQ] THEN
+  `CARD (s INTER t) <= CARD s + CARD t` by SRW_TAC [ARITH_ss][] THEN
+  SRW_TAC [][GSYM ADD_EQ_SUB, CARD_UNION]);
+
 val lemma =
     TAC_PROOF
     (([], (--`!n m. (n <= SUC m) = (n <= m \/ (n = SUC m))`--)),
@@ -2361,6 +2432,17 @@ val CARD_DIFF =
        IMP_RES_TAC DELETE_NON_ELEMENT THEN
        PURE_ONCE_REWRITE_TAC [INTER_COMM] THEN
        RES_TAC THEN ASM_REWRITE_TAC [DIFF_INSERT]]]);
+
+(* Improved version of the above - DIFF's second argument can be infinite *)
+val CARD_DIFF_EQN = store_thm(
+  "CARD_DIFF_EQN",
+  ``!s. FINITE s ==> (CARD (s DIFF t) = CARD s - CARD (s INTER t))``,
+  Induct_on `FINITE` THEN SRW_TAC [][] THEN
+  Cases_on `e IN t` THEN
+  SRW_TAC [][INSERT_INTER, INSERT_DIFF, INTER_FINITE] THEN
+  `CARD (s INTER t) <= CARD s`
+    by METIS_TAC [CARD_INTER_LESS_EQ] THEN
+  SRW_TAC [numSimps.ARITH_ss][]);
 
 (* ---------------------------------------------------------------------*)
 (* A theorem from homeier@aero.uniblab (Peter Homeier)	        	*)
@@ -3069,16 +3151,18 @@ val BIGUNION = Q.new_definition
  ("BIGUNION",
   `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
 
-val IN_BIGUNION = Q.store_thm
+val IN_BIGUNION = store_thm
 ("IN_BIGUNION",
- `!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos`,
+ ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
   SIMP_TAC bool_ss [GSPECIFICATION, BIGUNION, pairTheory.PAIR_EQ] THEN
   MESON_TAC []);
+val _ = export_rewrites ["IN_BIGUNION"]
 
 val BIGUNION_EMPTY = Q.store_thm
 ("BIGUNION_EMPTY",
  `BIGUNION EMPTY = EMPTY`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]);
+val _ = export_rewrites ["BIGUNION_EMPTY"]
 
 val BIGUNION_EQ_EMPTY = Q.store_thm
 ("BIGUNION_EQ_EMPTY",
@@ -3117,6 +3201,7 @@ val BIGUNION_INSERT = Q.store_thm
  `!s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
   MESON_TAC []);
+val _ = export_rewrites ["BIGUNION_INSERT"]
 
 val BIGUNION_SUBSET = Q.store_thm
 ("BIGUNION_SUBSET",
@@ -3149,14 +3234,13 @@ val FINITE_BIGUNION_EQ = Q.store_thm
      by (REWRITE_TAC [EXTENSION] THEN
          ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                       [IN_BIGUNION, IN_IMAGE, IN_DELETE] THEN
-         GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-           `x IN BIGUNION Q`
-              by (SRW_TAC [][IN_BIGUNION] THEN METIS_TAC []) THEN
-           POP_ASSUM MP_TAC THEN SRW_TAC [][],
+         Q.X_GEN_TAC `x` THEN EQ_TAC THEN STRIP_TAC THENL [
+           `x IN BIGUNION Q` by (SRW_TAC [][] THEN METIS_TAC []) THEN
+           POP_ASSUM MP_TAC THEN ASM_SIMP_TAC bool_ss [IN_INSERT],
            `x IN (e INSERT P)` by SRW_TAC [][] THEN
            `~(x = e)` by PROVE_TAC [] THEN
-           `x IN BIGUNION Q` by SRW_TAC [][] THEN
-           POP_ASSUM MP_TAC THEN SRW_TAC [][IN_BIGUNION]
+           `x IN BIGUNION Q` by ASM_SIMP_TAC bool_ss [IN_INSERT] THEN
+           POP_ASSUM MP_TAC THEN SRW_TAC [][]
          ]) THEN
   `FINITE (IMAGE (\s. s DELETE e) Q) /\
    !s. s IN IMAGE (\s. s DELETE e) Q ==> FINITE s` by PROVE_TAC [] THEN
@@ -3185,6 +3269,26 @@ val SUBSET_BIGUNION_I = store_thm(
   ``x IN P ==> x SUBSET BIGUNION P``,
   SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
 
+val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
+  "CARD_BIGUNION_SAME_SIZED_SETS",
+  ``!n s.
+      FINITE s /\ (!e. e IN s ==> FINITE e /\ (CARD e = n)) /\
+      (!e1 e2. e1 IN s /\ e2 IN s /\ e1 <> e2 ==> DISJOINT e1 e2) ==>
+      (CARD (BIGUNION s) = CARD s * n)``,
+  GEN_TAC THEN
+  SIMP_TAC bool_ss [RIGHT_FORALL_IMP_THM, GSYM AND_IMP_INTRO] THEN
+  Induct_on `FINITE` THEN SRW_TAC [][] THEN
+  SRW_TAC [][CARD_UNION_EQN] THEN
+  `e INTER BIGUNION s = {}`
+    suffices_by SRW_TAC [ARITH_ss][MULT_CLAUSES] THEN
+  ASM_SIMP_TAC (srw_ss()) [EXTENSION] THEN
+  Q.X_GEN_TAC `x` THEN Cases_on `x IN e` THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  Q.X_GEN_TAC `e1` THEN Cases_on `e1 IN s` THEN SRW_TAC [][] THEN
+  STRIP_TAC THEN
+  `~DISJOINT e e1`
+    by (SRW_TAC [][DISJOINT_DEF, EXTENSION] THEN METIS_TAC[]) THEN
+  METIS_TAC[]);
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
@@ -3194,9 +3298,9 @@ val BIGINTER = Q.new_definition
 ("BIGINTER",
  `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
 
-val IN_BIGINTER = Q.store_thm
+val IN_BIGINTER = store_thm
 ("IN_BIGINTER",
- `x IN BIGINTER B = !P. P IN B ==> x IN P`,
+ ``x IN BIGINTER B = !P. P IN B ==> x IN P``,
   SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]);
 
 val BIGINTER_INSERT = Q.store_thm
@@ -3476,13 +3580,13 @@ val COMPL_EMPTY = store_thm
 val COMPL_INTER = store_thm(
   "COMPL_INTER",
   ``(x INTER COMPL x = {}) /\ (COMPL x INTER x = {})``,
-  SRW_TAC [][EXTENSION, IN_COMPL, IN_INTER]);
+  SRW_TAC [][EXTENSION, IN_COMPL]);
 val _ = export_rewrites ["COMPL_INTER"]
 
 val COMPL_UNION = Q.store_thm(
 "COMPL_UNION",
 `COMPL (s UNION t) = COMPL s INTER COMPL t`,
-SRW_TAC [][EXTENSION,COMPL_DEF,IN_INTER]);
+SRW_TAC [][EXTENSION,COMPL_DEF]);
 
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
@@ -3772,7 +3876,7 @@ val SUM_IMAGE_UNION = store_thm(
     ASM_SIMP_TAC bool_ss [FINITE_DELETE, SUM_IMAGE_DELETE, INTER_FINITE,
                           IN_INTER] THEN
     `s INTER (t DELETE e) = s INTER t DELETE e` by
-       (SRW_TAC [][EXTENSION, IN_INTER, IN_DELETE] THEN PROVE_TAC []) THEN
+       (SRW_TAC [][EXTENSION, IN_DELETE] THEN PROVE_TAC []) THEN
     ASM_SIMP_TAC bool_ss [SUM_IMAGE_DELETE, INTER_FINITE, IN_INTER] THEN
     `f e <= SUM_IMAGE f t` by PROVE_TAC [SUM_IMAGE_IN_LE] THEN
     `s INTER t SUBSET t` by PROVE_TAC [INTER_SUBSET] THEN
@@ -4397,7 +4501,7 @@ val GSPEC_F_COND = store_thm(
 val GSPEC_AND = store_thm(
   "GSPEC_AND",
   ``!P Q. {x | P x /\ Q x} = {x | P x} INTER {x | Q x}``,
-  SRW_TAC [][EXTENSION, IN_INTER] THEN sspec_tac THEN REWRITE_TAC []);
+  SRW_TAC [][EXTENSION] THEN sspec_tac THEN REWRITE_TAC []);
 
 val GSPEC_OR = store_thm(
   "GSPEC_OR",
@@ -4456,7 +4560,7 @@ val partition_elements_disjoint = store_thm(
                (Q.X_CHOOSE_THEN `b` MP_TAC) MP_TAC)) THEN
   MAP_EVERY Q.ID_SPEC_TAC [`t1`, `t2`] THEN SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][DISJOINT_DEF] THEN
-  SIMP_TAC (srw_ss()) [EXTENSION, IN_INTER] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION] THEN
   Q.X_GEN_TAC `c` THEN Cases_on `c IN s` THEN SRW_TAC [][] THEN
   Cases_on `R a c` THEN SRW_TAC [][] THEN
   STRIP_TAC THEN
@@ -4727,6 +4831,11 @@ RWTAC [] THENL
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
 
+val countable_image_nats = store_thm( "countable_image_nats",
+  ``countable (IMAGE f univ(:num))``, SIMP_TAC
+  (srw_ss())[countable_def] THEN METIS_TAC[SURJ_IMAGE, SURJ_INJ_INV]);
+  val _ = export_rewrites ["countable_image_nats"]
+
 val countable_surj = Q.store_thm ("countable_surj",
 `!s. countable s = (s = {}) \/ ?f. SURJ f (UNIV:num set) s`,
 RWTAC [countable_def] THEN
@@ -4975,11 +5084,6 @@ SIMP_TAC bool_ss [IN_BIGUNION, IN_IMAGE,
 METIS_TAC[]);
 
 
-val IN_ABS = store_thm ("IN_ABS",
-``!x P. (x IN \x. P x) = P x``,
-SIMP_TAC bool_ss [IN_DEF]);
-
-
 val SUBSET_DIFF = store_thm("SUBSET_DIFF",
 ``!s1 s2 s3.
 (s1 SUBSET (s2 DIFF s3)) =
@@ -5059,8 +5163,8 @@ METIS_TAC[SUBSET_FINITE]);
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
-     "IN_BIGINTER", "IN_BIGUNION", "DISJOINT_BIGUNION", "BIGUNION_EMPTY",
-     "BIGUNION_INSERT", "BIGUNION_UNION", "BIGINTER_UNION",
+     "IN_BIGINTER", "DISJOINT_BIGUNION",
+     "BIGUNION_UNION", "BIGINTER_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0",
@@ -5070,7 +5174,7 @@ val _ = export_rewrites
      (* "DELETE" theorems *)
      "DELETE_DELETE", "DELETE_EQ_SING", "DELETE_SUBSET",
      (* "DIFF" theorems *)
-     "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV", "EMPTY_DIFF",
+     "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV",
      "DIFF_SUBSET",
      (* "DISJOINT" theorems *)
      "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
@@ -5081,7 +5185,7 @@ val _ = export_rewrites
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
      (* "INTER" theorems *)
-     "IN_INTER", "INTER_FINITE", "INTER_IDEMPOT",
+     "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
      (* "PSUBSET" *)
      "PSUBSET_IRREFL",

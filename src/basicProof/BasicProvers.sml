@@ -349,6 +349,8 @@ in
   SUBGOAL_THEN tm finisher THEN1 tac
 end (asl, w)
 
+fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 tac
+
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
   (fn (g as (asl:term list, w:term)) => let
@@ -387,17 +389,12 @@ fun first_subterm f tm = f (case_find_subterm (can f) tm);
 
 fun scrutinized_and_free_in tm =
  let fun free_case t =
-        let val (_, a) = dest_comb t
-        in if TypeBase.is_case t andalso free_in a tm
-              then a else raise ERR "free_case" ""
-        end
-
-     fun free_cond t =
-        let val (a, _, _) = dest_cond t
-        in if free_in a tm then a else raise ERR "free_cond" ""
+        let val (_, examined, _) = TypeBase.dest_case t
+        in if free_in examined tm
+              then examined else raise ERR "free_case" ""
         end
  in
-    fn t => free_case t handle HOL_ERR _ => free_cond t
+    free_case
  end;
 
 fun PURE_TOP_CASE_TAC (g as (_, tm)) =
@@ -426,7 +423,10 @@ fun case_rwlist () =
  itlist (fn tyi => fn rws => case_rws tyi @ rws)
         (TypeBase.elts()) [];
 
-fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV boolSimps.bool_ss rws
+(* Add the rewrites into a simpset to avoid re-processing them when 
+ * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
+ * has an order of magnitude speedup on developments with large datatypes *)
+fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
 
 fun CASE_SIMP_CONV tm = PURE_CASE_SIMP_CONV (case_rwlist()) tm
 end;

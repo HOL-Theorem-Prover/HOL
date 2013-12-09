@@ -1,0 +1,9 @@
+INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler \
+           $(HOLDIR)/examples/machine-code/decompiler/demo \
+           $(HOLDIR)/examples/machine-code/compiler \
+           $(HOLDIR)/examples/machine-code/compiler/demo \
+           $(HOLDIR)/examples/machine-code/multiword \
+           $(HOLDIR)/examples/machine-code/just-in-time \
+           $(HOLDIR)/examples/machine-code/lisp
+OPTIONS=QUIT_ON_FAILURE

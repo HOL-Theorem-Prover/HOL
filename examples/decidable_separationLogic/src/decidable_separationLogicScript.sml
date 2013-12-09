@@ -5043,7 +5043,7 @@ Induct_on `sf` THENL [
 
 
    SIMP_TAC std_ss [SF_SEM_def, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_VALUE_def, NOT_IS_DSV_NIL_THM,
-      SF_EXPRESSION_SET_def, IN_INSERT, NOT_IN_EMPTY, IN_LIST_TO_SET] THEN
+      SF_EXPRESSION_SET_def, IN_INSERT, NOT_IN_EMPTY] THEN
    REPEAT STRIP_TAC THEN
    DISJ1_TAC THEN
    Q.EXISTS_TAC `d` THEN
@@ -7062,7 +7062,7 @@ Cases_on `n` THENL [
          ASM_SIMP_TAC list_ss [FDOM_FUPDATE, IN_INSERT, DOMSUB_FUPDATE, DOMSUB_FEMPTY,
             DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_DIFF, FDOM_FEMPTY,
             DS_EXPRESSION_EVAL_VALUE_def, FRANGE_FUPDATE, FRANGE_FEMPTY, DRESTRICT_FEMPTY,
-            IN_LIST_TO_SET, FUN_FMAP_DEF, FINITE_LIST_TO_SET],
+            FUN_FMAP_DEF, FINITE_LIST_TO_SET],
 
 
 
@@ -7973,14 +7973,14 @@ Cases_on `sf''` THENL [
             FULL_SIMP_TAC std_ss [] THEN
 
             Q.PAT_ASSUM `f IN FDOM (hl ' c)` MP_TAC THEN
-            ASM_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+            ASM_SIMP_TAC std_ss [] THEN
             STRIP_TAC THEN
             `HEAP_READ_ENTRY s hl (dse_const (dsv_const c)) f =
               SOME (DS_EXPRESSION_EVAL s e3)` by METIS_TAC[] THEN
             POP_ASSUM MP_TAC THEN
             SIMP_TAC std_ss [HEAP_READ_ENTRY_THM, DS_EXPRESSION_EVAL_def, GET_DSV_VALUE_def,
                IS_DSV_NIL_def] THEN
-            ASM_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+            ASM_SIMP_TAC std_ss [] THEN
             `e3 IN X` by ALL_TAC THEN1 (
                Q.UNABBREV_TAC `X` THEN
                SIMP_TAC list_ss [IN_INSERT]
@@ -8097,8 +8097,7 @@ Cases_on `sf''` THENL [
             ) THEN
             Q.PAT_ASSUM `!x. P x = x IN (FDOM hl)` (fn thm => REWRITE_TAC [GSYM thm]) THEN
             Q.EXISTS_TAC `EL n2 l` THEN
-            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, GET_DSV_VALUE_def, IN_SING, IS_DSV_NIL_def,
-               IN_LIST_TO_SET] THEN
+            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, GET_DSV_VALUE_def, IN_SING, IS_DSV_NIL_def] THEN
             `?x. (h2 ' v ' (EL n2 l) = dsv_const x)` by METIS_TAC[] THEN
             ASM_SIMP_TAC std_ss [GET_DSV_VALUE_def]
          ]
@@ -8113,7 +8112,7 @@ Cases_on `sf''` THENL [
          ASM_SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, DRESTRICT_DEF,
             IN_SING, GET_DSV_VALUE_def, IN_UNION, IN_INTER, DISJ_IMP_THM, EXTENSION,
             prove (``!x. x IN (\x. P x) = P x``, SIMP_TAC std_ss [IN_DEF]),
-            GSYM RIGHT_EXISTS_AND_THM, IN_LIST_TO_SET] THEN
+            GSYM RIGHT_EXISTS_AND_THM] THEN
          MATCH_MP_TAC (prove (``(a /\ (a ==> b)) ==> (a /\ b)``, METIS_TAC[])) THEN
          CONJ_TAC THENL [
             GEN_TAC THEN
@@ -8147,19 +8146,19 @@ Cases_on `sf''` THENL [
             STRIP_TAC THEN
             GEN_TAC THEN
             Cases_on `x = w` THENL [
-               ASM_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+               ASM_SIMP_TAC std_ss [] THEN
                `hl1 ' w = hl ' w` by ALL_TAC THEN1 (
                   FULL_SIMP_TAC std_ss [SUBMAP_DEF, IN_SING]
                ) THEN
-               ASM_SIMP_TAC std_ss [IN_LIST_TO_SET],
+               ASM_SIMP_TAC std_ss [],
 
-               ASM_SIMP_TAC std_ss [IN_LIST_TO_SET] THEN
+               ASM_SIMP_TAC std_ss [] THEN
                STRIP_TAC THEN
                `h' ' x = hl ' x` by ALL_TAC THEN1 (
                   FULL_SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_SING] THEN
                   METIS_TAC[GET_DSV_VALUE_def]
                ) THEN
-               ASM_SIMP_TAC std_ss [IN_LIST_TO_SET]
+               ASM_SIMP_TAC std_ss []
             ]
          ],
 
@@ -8181,13 +8180,11 @@ Cases_on `sf''` THENL [
          Q.EXISTS_TAC `MAP (\f. DRESTRICT hl {GET_DSV_VALUE (THE (HEAP_READ_ENTRY s h2 e2 f))}) l` THEN
          ASM_SIMP_TAC list_ss [] THEN
          REPEAT CONJ_TAC THENL [
-            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_THM, IS_DSV_NIL_def, GET_DSV_VALUE_def, IN_SING,
-               IN_LIST_TO_SET],
+            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_THM, IS_DSV_NIL_def, GET_DSV_VALUE_def, IN_SING],
 
             SIMP_TAC list_ss [EL_ALL_DISJOINT_EQ, EL_MAP, DRESTRICT_DEF,
                DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY, IN_SING] THEN
-            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, IS_DSV_NIL_def, IN_SING, GET_DSV_VALUE_def,
-               IN_LIST_TO_SET] THEN
+            ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, IS_DSV_NIL_def, IN_SING, GET_DSV_VALUE_def] THEN
             REPEAT GEN_TAC THEN STRIP_TAC THEN
             `(MEM (EL n1 l) fL) /\ (MEM (EL n2 l) fL)` by METIS_TAC[MEM_EL] THEN
             `?x1. (x1 IN FDOM hl) /\ (h2 ' v ' (EL n1 l) = dsv_const x1)` by METIS_TAC[] THEN
@@ -8229,7 +8226,7 @@ Cases_on `sf''` THENL [
                METIS_TAC[]
             ) THEN
             ASM_SIMP_TAC std_ss [DOMSUB_FUNION, HEAP_READ_ENTRY_def, IS_DSV_NIL_def, GET_DSV_VALUE_def,
-               IN_SING, IN_LIST_TO_SET, FUNION_FEMPTY_1] THEN
+               IN_SING, FUNION_FEMPTY_1] THEN
 
             Q.PAT_ASSUM `!x. MEM x l ==> MEM x fL` MP_TAC THEN
             REPEAT (POP_ASSUM (K ALL_TAC)) THEN
@@ -8260,7 +8257,7 @@ Cases_on `sf''` THENL [
             `MEM (EL n l) l /\ MEM (EL n l) fL` by METIS_TAC[MEM_EL] THEN
             `?x. x IN (FDOM hl) /\ (h2 ' v ' (EL n l) = dsv_const x)` by METIS_TAC[] THEN
             ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, GET_DSV_VALUE_def, IN_SING,
-               IN_LIST_TO_SET, IS_DSV_NIL_def, DS_EXPRESSION_EVAL_def,
+               IS_DSV_NIL_def, DS_EXPRESSION_EVAL_def,
                DRESTRICT_DEF, IN_INTER] THEN
             `~(dsv_const x = DS_EXPRESSION_EVAL s e3)` by ALL_TAC THEN1 (
                `e3 IN X` by ALL_TAC THEN1 (
@@ -8293,7 +8290,7 @@ Cases_on `sf''` THENL [
                POP_ASSUM MP_TAC THEN
                SIMP_TAC std_ss [HEAP_READ_ENTRY_THM] THEN
                ASM_SIMP_TAC std_ss [HEAP_READ_ENTRY_def, DS_EXPRESSION_EVAL_def, GET_DSV_VALUE_def,
-                  DRESTRICT_DEF, IN_LIST_TO_SET, IN_INTER, IN_SING]
+                  DRESTRICT_DEF, IN_INTER, IN_SING]
             ]
          ]
       ]
@@ -8350,8 +8347,7 @@ Cases_on `sf''` THENL [
                SOME (DS_EXPRESSION_EVAL s e3)` by METIS_TAC[] THEN
             POP_ASSUM MP_TAC THEN
             SIMP_TAC std_ss [HEAP_READ_ENTRY_THM] THEN
-            ASM_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, IS_DSV_NIL_def, GET_DSV_VALUE_def,
-               IN_LIST_TO_SET] THEN
+            ASM_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, IS_DSV_NIL_def, GET_DSV_VALUE_def] THEN
             `e3 IN X` by ALL_TAC THEN1 (
                Q.UNABBREV_TAC `X` THEN
                ASM_SIMP_TAC std_ss [IN_UNION, IN_INSERT]

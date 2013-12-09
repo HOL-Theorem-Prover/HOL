@@ -178,7 +178,7 @@ RWstore_thm("dest_nConst_thm", `dest_nConst (nConst a) = a`,
 SRW_TAC [][dest_nConst_def]);
 
 val nterm_case_def = Define`
-  nterm_case Nf Sf Tf Pf Cf t =
+  nterm_CASE t Nf Sf Tf Pf Cf =
   if is_Nom t then Nf (dest_Nom t) else
   if is_Sus t then UNCURRY Sf (dest_Sus t) else
   if is_Tie t then UNCURRY Tf (dest_Tie t) else
@@ -193,7 +193,7 @@ val nterm_case_cong = Q.store_thm(
    (∀a t.  (t' = Tie a t) ⇒  (Tf a t = Tf' a t)) ∧
    (∀t1 t2.  (t' = nPair t1 t2) ⇒ (Pf t1 t2 = Pf' t1 t2)) ∧
    (∀c.  (t' = nConst c) ⇒ (Cf c = Cf' c)) ⇒
-   (nterm_case Nf Sf Tf Pf Cf t = nterm_case Nf' Sf' Tf' Pf' Cf' t')`,
+   (nterm_CASE t Nf Sf Tf Pf Cf = nterm_CASE t' Nf' Sf' Tf' Pf' Cf')`,
 REPEAT GEN_TAC THEN
 Q.SPEC_THEN `t'` STRUCT_CASES_TAC nterm_nchotomy THEN
 SIMP_TAC (srw_ss())
@@ -205,15 +205,15 @@ METIS_TAC [permeq_refl]);
 
 val nterm_case_rewrites = RWstore_thm(
 "nterm_case_rewrites",
-`(nterm_case Nf Sf Tf Pf Cf (Nom a) = Nf a) ∧
- (nterm_case Nf Sf Tf Pf Cf (Tie a t) = Tf a t) ∧
- (nterm_case Nf Sf Tf Pf Cf (nPair t1 t2) = Pf t1 t2) ∧
- (nterm_case Nf Sf Tf Pf Cf (nConst c) = Cf c)`,
+`(nterm_CASE (Nom a) Nf Sf Tf Pf Cf = Nf a) ∧
+ (nterm_CASE (Tie a t) Nf Sf Tf Pf Cf = Tf a t) ∧
+ (nterm_CASE (nPair t1 t2) Nf Sf Tf Pf Cf = Pf t1 t2) ∧
+ (nterm_CASE (nConst c) Nf Sf Tf Pf Cf = Cf c)`,
 SIMP_TAC (srw_ss()) [nterm_case_def]);
 
 val Sus_case1 = Q.store_thm(
 "Sus_case1",
-`nterm_case Nf Sf Tf Pf Cf (Sus p v) = Sf (@p'. p' == p) v`,
+`nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf (@p'. p' == p) v`,
 SRW_TAC [] [nterm_case_def]);
 
 (* Unfortunately this theorem is wasted when using Define, since only
@@ -221,7 +221,7 @@ SRW_TAC [] [nterm_case_def]);
 val Sus_case2 = Q.store_thm(
 "Sus_case2",
 `(∀p1 p2. (p1 == p2) ⇒ (Sf p1 v = Sf p2 v)) ⇒
- (nterm_case Nf Sf Tf Pf Cf (Sus p v) = Sf p v)`,
+ (nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf p v)`,
 SRW_TAC [] [nterm_case_def] THEN
 FIRST_X_ASSUM MATCH_MP_TAC THEN
 SELECT_ELIM_TAC THEN SRW_TAC [][]);

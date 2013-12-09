@@ -78,8 +78,9 @@ fun myuse f =
 val loadPath : string list ref = ref [];
 
 val loadedMods = ref (Binaryset.empty String.compare);
-val _ = loadedMods := Binaryset.addList (!loadedMods,
-                                         ["Real", "Int", "List", "Binaryset"])
+val _ =
+    loadedMods := Binaryset.addList (!loadedMods,
+              ["Real", "Int", "List", "Binaryset", "Binarymap","Listsort"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
@@ -133,6 +134,8 @@ in
     val load = load;
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
+    fun fakeload s =
+        loadedMods := Binaryset.add(!loadedMods,s)
   end;
 
 open Meta;

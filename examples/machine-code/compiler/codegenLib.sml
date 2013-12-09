@@ -7,6 +7,7 @@ open codegen_inputLib helperLib;
 (* -- target-specific part begins -- *)
 
 open codegen_x64Lib codegen_x86Lib codegen_armLib codegen_ppcLib;
+open prog_x64Lib prog_x86Lib prog_armLib prog_ppcLib;
 
 fun assembler_tools target =
   if target = "arm" then (arm_encode_instruction, arm_encode_branch, arm_branch_to_string) else

@@ -1,0 +1,2 @@
+INCLUDES = fp $(HOLDIR)/examples/machine-code/hoare-triple
+OPTIONS = QUIT_ON_FAILURE

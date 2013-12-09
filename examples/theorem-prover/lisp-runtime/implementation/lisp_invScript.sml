@@ -509,6 +509,9 @@ val _ = save_thm("lisp_inv_zero",lisp_inv_zero);
 
 val RANGE_TAC = FULL_SIMP_TAC std_ss [RANGE_def,IN_DEF] \\ DECIDE_TAC
 
+val ADDR_SET = SIMP_RULE std_ss [EXTENSION,GSPECIFICATION] ADDR_SET_def |>
+               SIMP_RULE std_ss [IN_DEF, SimpLHS];
+
 val lisp_inv_car = prove(
   ``isDot x0 ==> ^LISP ==>
     (let (x0,w0) = (CAR x0,f (bp + 4w * w2w w0)) in ^LISP) /\
@@ -543,9 +546,7 @@ val lisp_inv_car = prove(
   \\ REPEAT STRIP_TAC THEN1
    (Q.PAT_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
     \\ SIMP_TAC std_ss [D1_def,IN_DEF] \\ Q.EXISTS_TAC `k`
-    \\ ASM_SIMP_TAC (srw_ss()) [
-         SIMP_RULE std_ss [EXTENSION,GSPECIFICATION] ADDR_SET_def |>
-         SIMP_RULE std_ss [IN_DEF]])
+    \\ ASM_SIMP_TAC (srw_ss()) [ADDR_SET])
   \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   |> SIMP_RULE std_ss [LET_DEF];
@@ -584,9 +585,7 @@ val lisp_inv_cdr = prove(
   \\ REPEAT STRIP_TAC THEN1
    (Q.PAT_ASSUM `!x. x IN D1 m ==> x IN D0 m` MATCH_MP_TAC
     \\ SIMP_TAC std_ss [D1_def,IN_DEF] \\ Q.EXISTS_TAC `k`
-    \\ ASM_SIMP_TAC (srw_ss()) [
-         SIMP_RULE std_ss [EXTENSION,GSPECIFICATION] ADDR_SET_def |>
-         SIMP_RULE std_ss [IN_DEF]])
+    \\ ASM_SIMP_TAC (srw_ss()) [ADDR_SET])
   \\ Q.PAT_ASSUM `!x. bb \/ bbb ==> bbbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC (srw_ss()) [])
   |> SIMP_RULE std_ss [LET_DEF];
@@ -597,8 +596,7 @@ val _ = save_thm("lisp_inv_cdr",lisp_inv_cdr);
 
 (* cons *)
 
-val ADDR_SET = SIMP_RULE std_ss [EXTENSION,GSPECIFICATION] ADDR_SET_def |>
-               SIMP_RULE std_ss [IN_DEF];
+
 
 val lisp_x_UPDATE = prove(
   ``!m s i x.
@@ -611,6 +609,11 @@ val lisp_x_UPDATE = prove(
 val lisp_inv_cons_blast = blastLib.BBLAST_PROVE
   ``(bp && 3w = 0w:word64) ==>
     (bp + 4w * wi && 3w = 0w) /\  (bp + 4w * wi + 4w && 3w = 0w)``;
+
+val IN_D0 = SIMP_CONV bool_ss [IN_DEF, D0_def] ``x IN D0 m``
+val IN_D1 = (REWRITE_CONV [IN_DEF] THENC SIMP_CONV bool_ss [D1_def])
+                ``x IN D1 m``
+
 
 val lisp_inv_cons = prove(
   ``~(wi = we) ==> ^LISP ==>
@@ -645,18 +648,18 @@ val lisp_inv_cons = prove(
     \\ `D1 ((i =+ H_BLOCK ([s0; s1],0,())) m) =
         ADDR_SET [s0;s1] UNION D1 m` by ALL_TAC THEN1
       (SIMP_TAC std_ss [EXTENSION,IN_UNION,ADDR_SET_def,GSPECIFICATION]
-       \\ SIMP_TAC std_ss [IN_DEF,D0_def,APPLY_UPDATE_THM,D1_def] \\ STRIP_TAC
+       \\ SIMP_TAC std_ss [IN_D1,IN_D0,APPLY_UPDATE_THM] \\ STRIP_TAC
        \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1
         (Cases_on `i = k` \\ FULL_SIMP_TAC (srw_ss()) [] THEN1
           (Q.PAT_ASSUM `[s0; s1] = x'` (ASSUME_TAC o GSYM)
-           \\ FULL_SIMP_TAC std_ss [ADDR_SET,MEM])
+           \\ FULL_SIMP_TAC std_ss [ADDR_SET_def,MEM,GSPECIFICATION])
          \\ METIS_TAC [])
-       THEN1 METIS_TAC [ADDR_SET]
+       THEN1 (SIMP_TAC bool_ss [IN_DEF] \\ METIS_TAC [ADDR_SET])
        \\ Q.EXISTS_TAC `k` \\ Cases_on `i = k` \\ ASM_SIMP_TAC (srw_ss()) []
        \\ `m k = H_EMP` by METIS_TAC [LESS_EQ_REFL]
        \\ FULL_SIMP_TAC (srw_ss()) [])
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_UNION,IN_INSERT]
-    \\ FULL_SIMP_TAC (srw_ss()) [ADDR_SET,IN_DEF,MEM_APPEND,MEM]
+    \\ FULL_SIMP_TAC (srw_ss()) [ADDR_SET_def]
     \\ METIS_TAC [])
   \\ STRIP_TAC THEN1
    (FULL_SIMP_TAC (srw_ss()) [EVERY_DEF,CONS_11,lisp_x_def,APPLY_UPDATE_THM]

@@ -145,6 +145,7 @@ fun pair_qp pL = combine_qps
 val pair_default_qp = pair_qp [split_pair___PABS___pred,
         split_pair___FST_SND___pred false]
 
+val pair_ty_filter = type_match_filter [``:('a # 'b)``]
 
 (*
 val PAIR_QUANT_INSTANTIATE_CONV = QUANT_INSTANTIATE_CONV [pair_default_qp]
@@ -198,6 +199,8 @@ val option_qp = combine_qps [
    final_rewrite_qp [optionTheory.option_CLAUSES]
   ]
 
+val option_ty_filter = type_match_filter [``:'a option``]
+
 
 (*******************************************************************
  * Sum types
@@ -205,12 +208,13 @@ val option_qp = combine_qps [
 
 val sum_qp = combine_qps [
   get_qp___for_types [``:('a + 'b)``],
-
-  rewrite_qp [ISL_exists, ISR_exists, ISL_ISR_NEG],
+  cases_qp [sumTheory.ISL_OR_ISR],
+  rewrite_qp [ISL_exists, ISR_exists, sumTheory.NOT_ISR_ISL, sumTheory.NOT_ISL_ISR, INL_NEQ_ELIM, INR_NEQ_ELIM],
 
   final_rewrite_qp [sumTheory.OUTR, sumTheory.OUTL, sumTheory.ISL, sumTheory.ISR, sumTheory.INR_INL_11]
 ]
 
+val sum_ty_filter = type_match_filter [``:('a + 'b)``]
 
 (*******************************************************************
  * Nums
@@ -228,6 +232,7 @@ val num_qp = combine_qps [
    final_rewrite_qp [numTheory.NOT_SUC, GSYM numTheory.NOT_SUC]
 ]
 
+val num_ty_filter = type_filter [``:num``]
 
 
 (*******************************************************************
@@ -235,7 +240,7 @@ val num_qp = combine_qps [
  *******************************************************************)
 
 
-val list_qp = combine_qps [
+val list_no_len_qp = combine_qps [
    distinct_qp [rich_listTheory.NOT_CONS_NIL],
 
    cases_qp [listTheory.list_CASES],
@@ -243,17 +248,21 @@ val list_qp = combine_qps [
    rewrite_qp  [listTheory.CONS_11,
                 listTheory.NULL_EQ,
                 listTheory.APPEND_11,
-                listTheory.APPEND_eq_NIL,
-                LIST_LENGTH_COMPARE_SUC,
-                LIST_LENGTH_1],
+                listTheory.APPEND_eq_NIL],
 
    final_rewrite_qp [listTheory.NULL_DEF,
                      listTheory.TL, listTheory.HD,
-                     rich_listTheory.NOT_CONS_NIL, 
+                     rich_listTheory.NOT_CONS_NIL,
                      GSYM rich_listTheory.NOT_CONS_NIL]
 ]
 
-val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_20]) list_qp;
+val list_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
+                     LIST_LENGTH_1]) list_no_len_qp;
+
+val list_len_qp = combine_qp (rewrite_qp  [LIST_LENGTH_COMPARE_SUC,
+                     LIST_LENGTH_20]) list_no_len_qp;
+
+val list_ty_filter = type_match_filter [``:'a list``]
 
 
 (*******************************************************************
@@ -346,6 +355,7 @@ val record_default_qp = record_qp false (K (K true))
 
 (*******************************************************************
  * Heuristic for implications that considers just the right hand side
+ * and conjunctions that just assume everything
  *******************************************************************)
 
 (*
@@ -353,12 +363,14 @@ val record_default_qp = record_qp false (K (K true))
   val t = ``Q x ==> (x = 2) /\ P x``
   val sys = debug_sys
 *)
-fun QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU sys v t =
+fun QUANT_INSTANTIATE_HEURISTIC___DEST_HEU dest sys v t =
 let
-   val (t1, t2) = dest_imp_only t;
+   val tL = dest t;
 
    (* get guesses form right hand side *)
-   val gc = sys v t2
+   val gcL = map (fn t => SOME (sys v t) handle HOL_ERR _ => NONE
+                                              | QUANT_INSTANTIATE_HEURISTIC___no_guess_exp => NONE) tL
+   val gc = guess_collection_flatten gcL
    val (rw_thms, gL) = guess_collection2list gc
 
    (* just assume without justification that these are valid guesses for the full implication,
@@ -369,12 +381,14 @@ let
       val g' = mk_guess_opt ty_opt v t i fvL
    in g' end
    val gL' = map guess_lift gL
-
 in
    guess_list2collection (rw_thms, gL')
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp
 
-val implication_concl_qp = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___IMP_CONCL_HEU]
+fun dest_lift_qp dest = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___DEST_HEU dest]
+
+val implication_concl_qp = dest_lift_qp (fn t => [snd (dest_imp_only t)])
+val conj_lift_qp = dest_lift_qp (fn t => (let val (t1,t2) = dest_conj t in [t1, t2] end))
 
 
 (*******************************************************************
@@ -382,5 +396,6 @@ val implication_concl_qp = heuristics_qp [QUANT_INSTANTIATE_HEURISTIC___IMP_CONC
  *******************************************************************)
 
 val std_qp = combine_qps [num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
+
 
 end

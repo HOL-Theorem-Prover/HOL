@@ -982,12 +982,30 @@ val finite_expectation1 = store_thm
    ++ (MATCH_MP_TAC o REWRITE_RULE [finite_space_integral_def]) finite_space_integral_reduce
    ++ RW_TAC std_ss [num_not_infty]);
 
+val finite_expectation2 = store_thm
+  ("finite_expectation2",
+   ``!p X. FINITE (IMAGE X (p_space p)) /\ real_random_variable X p ==>
+		(expectation p X =
+		 SIGMA (\r. r * Normal (prob p (PREIMAGE X {r} INTER p_space p)))
+		       (IMAGE X (p_space p)))``,
+   RW_TAC std_ss [expectation_def, p_space_def, prob_def, prob_space_def,
+   	  	  real_random_variable_def, events_def]
+   ++ (MATCH_MP_TAC o REWRITE_RULE [finite_space_integral_def]) finite_support_integral_reduce
+   ++ RW_TAC std_ss [num_not_infty]);
+
 val finite_expectation = store_thm
   ("finite_expectation",
    ``!p X. FINITE (p_space p) /\ real_random_variable X p ==>
 	(expectation p X = SIGMA (\r. r * Normal (distribution p X {r})) (IMAGE X (p_space p)))``,
    RW_TAC std_ss [distribution_def]
    ++ METIS_TAC [finite_expectation1]);
+
+val finite_support_expectation = store_thm
+  ("finite_support_expectation",
+   ``!p X. FINITE (IMAGE X (p_space p)) /\ real_random_variable X p ==>
+	(expectation p X = SIGMA (\r. r * Normal (distribution p X {r})) (IMAGE X (p_space p)))``,
+   RW_TAC std_ss [distribution_def]
+   ++ METIS_TAC [finite_expectation2]);
 
 (* ************************************************************************* *)
 

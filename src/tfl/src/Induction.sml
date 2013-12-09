@@ -139,70 +139,68 @@ type divide_ty
        group       : (term list * (thm * (term, term) subst)) list,
        new_formals : term list} list;
 
-(* Original
-fun mk_case ty_info FV thy =
- let
- val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
- fun fail s = raise ERR"mk_case" s
- fun mk{rows=[],...} = fail"no rows"
-   | mk{path=[], rows = [([], (thm, bindings))]} = IT_EXISTS bindings thm
-   | mk{path=u::rstp, rows as (p::_, _)::_} =
-     let val (pat_rectangle,rights) = unzip rows
-         val col0 = map (Lib.trye hd) pat_rectangle
-         val pat_rectangle' = map (Lib.trye tl) pat_rectangle
-     in
-     if all is_var col0 (* column 0 is all variables *)
-     then let val rights' = map (fn ((thm,theta),v) => (thm,theta@[u|->v]))
-                                (zip rights col0)
-          in mk{path=rstp, rows=zip pat_rectangle' rights'}
-          end
-(*     else
-     if exists Literal.is_pure_literal col0
-       (* column 0 matches against literals *)
-     then
-*)
-     else (* column 0 matches against constructors *)
-     let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
-     in
-     case ty_info (Thy,ty_name)
-      of NONE => fail("Not a known datatype: "^ty_name)
-         (* tyinfo rqt: `constructors' must line up exactly with constrs
-            in disjuncts of `nchotomy'. *)
-       | SOME{constructors,nchotomy} =>
-         let val thm'         = ISPEC u nchotomy
-             val disjuncts    = strip_disj (concl thm')
-             val subproblems  = divide(constructors, rows)
-             val groups       = map #group subproblems
-             and new_formals  = map #new_formals subproblems
-             val existentials = map2 alpha_ex_unroll new_formals disjuncts
-             val constraints  = map #1 existentials
-             val vexl         = map #2 existentials
-             fun expnd tm (pats,(th,b)) = (pats,(SUBS[ASSUME tm]th, b))
-             val news = map (fn (nf,rows,c) => {path = nf@rstp,
-                                                rows = map (expnd c) rows})
-                            (zip3 new_formals groups constraints)
-             val recursive_thms = map mk news
-             val build_exists = itlist(CHOOSE o (I##ASSUME))
-             val thms' = map2 build_exists vexl recursive_thms
-             val same_concls = EVEN_ORS thms'
-         in
-           DISJ_CASESL thm' same_concls
-         end
-     end end
-   | mk _ = fail"blunder"
- in mk
- end;
+fun bring_to_front_list n l = let
+   val (l0, l1) = Lib.split_after n l
+   val (x, l1') = (hd l1, tl l1)
+  in x :: (l0 @ l1') end
+
+fun undo_bring_to_front n l = let
+   val (x, l') = (hd l, tl l)
+   val (l0, l1) = Lib.split_after n l'
+ in (l0 @ x::l1) end
+
+(*
+val org_in = {path=[z], rows=rows}
+
+val in_1 = hd news
+val in_2 = {path=rstp, rows=zip pat_rectangle' rights'}
+val in_3 = hd news
+
+mk in_2
+v
+val {path=u::rstp, rows as (p::_, _)::_} = in_3
+
+val {path=u::rstp, rows as (p::_, _)::_} = {path=rstp, rows=zip pat_rectangle' rights'}
+val mk = mk_case ty_info FV thy
+mk in_1
+val in
+
+hm = mk_case ty_info FV thy {path=[z], rows=rows} 
+
+val arg0 = {path=[z], rows=rows} 
+val {path=rstp0, rows = rows0} = el 1 news
 *)
 
+
+fun mk_case_choose_column i rows = 
+let
+  val col_i = map (fn (l, _) => el (i+1) l) rows
+
+  val col_i_ok = 
+    (all is_var col_i) orelse
+    (all (fn p => Literal.is_literal p orelse is_var p) col_i) orelse
+    (all (fn p => not (Literal.is_pure_literal p) andalso not (is_var p)) col_i)
+in
+  if col_i_ok then i else mk_case_choose_column (i+1) rows
+end handle HOL_ERR _ => 0
+
+val quiet_metis = Feedback.trace ("metis", 0) (metisLib.METIS_PROVE [])
+val quiet_meson = Feedback.trace ("meson", 0) (BasicProvers.PROVE [])
 
 fun mk_case ty_info FV thy =
  let open boolSyntax
- val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
+ val gv = (wfrecUtils.vary FV)
+ val divide:divide_ty = ipartition gv
  fun fail s = raise ERR "mk_case" s
  fun mk{rows=[],...} = fail"no rows"
    | mk{path=[], rows = [([], (thm, bindings))]} = IT_EXISTS bindings thm
-   | mk{path=u::rstp, rows as (p::_, _)::_} =
-     let val (pat_rectangle,rights) = unzip rows
+   | mk{path=rstp0, rows= rows0 as ((_::_, _)::_)} =
+     let val col_index = mk_case_choose_column 0 rows0
+         val rows = map (fn (pL, rhs) => (bring_to_front_list col_index pL, rhs)) rows0
+         val (pat_rectangle,rights) = unzip rows
+         val u_rstp = bring_to_front_list col_index rstp0 
+         val (u, rstp) = (hd u_rstp, tl u_rstp)
+         val p = hd (fst (hd rows)) 
          val col0 = map (Lib.trye hd) pat_rectangle
          val pat_rectangle' = map (Lib.trye tl) pat_rectangle
      in
@@ -229,7 +227,7 @@ fun mk_case ty_info FV thy =
                     end
                else tm
            val disjuncts = map exquant eqs
-           val thm' = metisLib.METIS_PROVE [] (list_mk_disj disjuncts)
+           val thm' = quiet_metis (list_mk_disj disjuncts)
            val subproblems = lpartition(lits,rows)
            val groups = map snd subproblems
            val geqs = zip groups eqs
@@ -256,7 +254,8 @@ fun mk_case ty_info FV thy =
          in
            DISJ_CASESL thm' same_concls
          end
-     else (* column 0 matches against constructors *)
+     else
+     (* column 0 matches against constructors (and perhaps variables) *)
      let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
      in
      case ty_info (Thy,ty_name)
@@ -264,6 +263,9 @@ fun mk_case ty_info FV thy =
          (* tyinfo rqt: `constructors' must line up exactly with constrs
             in disjuncts of `nchotomy'. *)
        | SOME{constructors,nchotomy} =>
+(*
+  val SOME{constructors,nchotomy} = ty_info (Thy,ty_name)
+*)
          let val thm'         = ISPEC u nchotomy
              val disjuncts    = strip_disj (concl thm')
              val subproblems  = divide(constructors, rows)
@@ -302,7 +304,13 @@ fun complete_cases thy =
          val ex_th0 = EXISTS (mk_exists(z,a_eq_z),a) (REFL a)
          val th0    = ASSUME a_eq_z
          val rows:row list = map (fn x => ([x], (th0,[]))) pats
-         val cases_thm = mk_case ty_info FV thy {path=[z], rows=rows}
+
+         val cases_thm0 = mk_case ty_info FV thy {path=[z], rows=rows} 
+
+         fun mk_pat_pred p = list_mk_exists (free_vars_lr p, mk_eq(a, p))
+         val cases_tm = list_mk_disj (map mk_pat_pred pats)
+         val imp_thm = quiet_meson (mk_imp (concl cases_thm0, cases_tm))
+         val cases_thm = MP imp_thm cases_thm0
      in
        GEN a (RIGHT_ASSOC (CHOOSE(z, ex_th0) cases_thm))
      end
@@ -371,7 +379,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
              val TCs     = map #1 TCs_locals
              val ylist   = map (#2 o dest_relation o #2 o
                                 wfrecUtils.strip_imp o #2 o strip_forall) TCs
-             val TClist  = map (fn(TC,lvs) => (SPEC_ALL(ASSUME TC),lvs))
+             val TClist  = map (fn(TC,lvs) => (SPECL (fst (strip_forall TC)) (ASSUME TC),lvs))
                                 TCs_locals
              val th2list = map (C SPEC th1) ylist
              val nlist   = map nested TCs
@@ -502,6 +510,11 @@ fun match_clauses pats case_thm =
 (* recursion induction (Rinduct) by proving the antecedent of Sinduct from   *)
 (* the antecedent of Rinduct.                                                *)
 (*---------------------------------------------------------------------------*)
+
+(*
+val {fconst, R, SV, pat_TCs_list} = {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
+val thy = facts
+ *)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let fun f() =

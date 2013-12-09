@@ -37,8 +37,9 @@ of values of type {ty} that satisfy {P}.
 
 \FAILURE
 Executing {new_type_definition(tyop,th)} fails if {th} is not an
-assumption-free theorem of the form {|- ?x. t x}. Failure also occurs
-if the type of {t} is not of the form {ty->bool}.
+assumption-free theorem of the form {|- ?x. t x}, if the type of {t}
+is not of the form {ty->bool}, or if there are free variables in the
+term {t}.
 
 \EXAMPLE
 In this example, a type containing three elements is defined. The predicate

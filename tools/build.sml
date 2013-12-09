@@ -30,7 +30,12 @@ val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
 
 open Systeml;
 
-val Holmake = buildutils.Holmake (fn () => []) (fn _ => "") do_selftests
+val Holmake = let
+  fun sysl p args = Systeml.systeml (p::args)
+  val isSuccess = OS.Process.isSuccess
+in
+  buildutils.Holmake sysl isSuccess (fn () => []) (fn _ => "") do_selftests
+end
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions

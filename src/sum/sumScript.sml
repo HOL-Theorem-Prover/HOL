@@ -134,8 +134,9 @@ val REP_INR = TAC_PROOF(([],
    REFL_TAC);
 
 (* Prove that INL is one-to-one						*)
-val INL_11 = TAC_PROOF(([],
-   --`(INL x = ((INL y):('a,'b)sum)) = (x = y)`--),
+val INL_11 = store_thm(
+  "INL_11",
+  ``(INL x = ((INL y):('a,'b)sum)) = (x = y)``,
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INL] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
@@ -143,8 +144,9 @@ val INL_11 = TAC_PROOF(([],
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 (* Prove that INR is one-to-one						*)
-val INR_11 = TAC_PROOF(([],
-   --`(INR x = (INR y:('a,'b)sum)) = (x = y)`--),
+val INR_11 = store_thm(
+  "INR_11",
+  ``(INR x = (INR y:('a,'b)sum)) = (x = y)``,
    EQ_TAC THENL
    [PURE_REWRITE_TAC [R_11,REP_INR] THEN
    CONV_TAC (REDEPTH_CONV (FUN_EQ_CONV ORELSEC BETA_CONV)) THEN
@@ -376,11 +378,7 @@ val INR = store_thm("INR",
     ASM_REWRITE_TAC [ISR,OUTR]);
 val _ = export_rewrites ["INR"]
 
-val sum_case_def = Prim_rec.new_recursive_definition{
-  def = Term`(sum_case f g (INL x) = f x) /\
-             (sum_case f g (INR y) = g y)`,
-  name = "sum_case_def",
-  rec_axiom = sum_Axiom};
+val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
 val _ = export_rewrites ["sum_case_def"]
 
 val sum_case_cong = save_thm("sum_case_cong",
@@ -409,7 +407,7 @@ val SUM_MAP = store_thm (
 val SUM_MAP_CASE = store_thm (
   "SUM_MAP_CASE",
   ``!f g (z:'a + 'b).
-         (f ++ g) z = sum_case (INL o f) (INR o g) z :'c + 'd``,
+         (f ++ g) z = sum_CASE z (INL o f) (INR o g) :'c + 'd``,
   SIMP_TAC (srw_ss()) [FORALL_SUM]);
 
 val SUM_MAP_I = store_thm (
@@ -424,6 +422,30 @@ val cond_sum_expand = store_thm("cond_sum_expand",
   (!x y z. ((if P then INL x else INR y) = INR z) = (~P /\ (z = y)))``,
 Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM])
 val _ = export_rewrites["cond_sum_expand"]
+
+val NOT_ISL_ISR = store_thm("NOT_ISL_ISR",
+  ``!x. ~ISL x = ISR x``,
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+val _ = export_rewrites["NOT_ISL_ISR"]
+
+val NOT_ISR_ISL = store_thm("NOT_ISR_ISL",
+  ``!x. ~ISR x = ISL x``,
+  GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][])
+val _ = export_rewrites["NOT_ISR_ISL"]
+
+val _ = computeLib.add_persistent_funs ["sum_case_def", "INL_11", "INR_11",
+                                        "sum_distinct", "sum_distinct1",
+                                        "OUTL", "OUTR", "ISL", "ISR"]
+
+local open OpenTheoryMap
+val ns = ["Data","Sum"]
+fun add x y = OpenTheory_const_name{const={Thy="sum",Name=x},name=(ns,y)} in
+val _ = OpenTheory_tyop_name{tyop={Thy="sum",Tyop="sum"},name=(ns,"+")}
+val _ = add "INR" "right"
+val _ = add "INL" "left"
+val _ = add "OUTR" "destRight"
+val _ = add "OUTL" "destLeft"
+end
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -447,13 +469,7 @@ val _ = adjoin_to_theory
       S "      destructors=[OUTL,OUTR],";                   NL();
       S "      lift=SOME(mk_var(\"sumSyntax.lift_sum\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> ('a,'b)sum -> 'term`)),";
       S "      one_one=SOME INR_INL_11,";                   NL();
-      S "      distinct=SOME sum_distinct}];";              NL();
-      NL();
-      S "val _ = let open computeLib";                      NL();
-      S "        in add_thms (map lazyfy_thm";              NL();
-      S "               [ISL,ISR,OUTL,OUTR,INR_INL_11,";    NL();
-      S "                sum_distinct,sum_distinct1,sum_case_def])";    NL();
-      S "        end;"
+      S "      distinct=SOME sum_distinct}];";              NL()
    end)};
 
 val _ = TypeBase.write

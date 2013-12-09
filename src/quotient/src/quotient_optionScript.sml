@@ -62,13 +62,25 @@ val OPTION_MAP_I = store_thm
    );
 
 (* Here is the definition of OPTION_REL: *)
+val _ = overload_on ("OPTION_REL", ``OPTREL``)
+val _ = overload_on ("OPTREL", ``OPTREL``)
 
-val OPTION_REL_def =
-    Define
-      `(OPTION_REL R (NONE)        (NONE)        = T) /\
-       (OPTION_REL R (SOME (x:'a)) (NONE)        = F) /\
-       (OPTION_REL R (NONE)        (SOME (y:'a)) = F) /\
-       (OPTION_REL R (SOME (x:'a)) (SOME (y:'a)) = R x y)`;
+val OPTION_REL_def = store_thm(
+  "OPTION_REL_def",
+  ``(OPTION_REL R (NONE)        (NONE)        = T) /\
+    (OPTION_REL R (SOME (x:'a)) (NONE)        = F) /\
+    (OPTION_REL R (NONE)        (SOME (y:'a)) = F) /\
+    (OPTION_REL R (SOME (x:'a)) (SOME (y:'a)) = R x y)``,
+  REWRITE_TAC [optionTheory.OPTREL_def, option_CLAUSES]
+  THEN EQ_TAC
+  THEN REPEAT STRIP_TAC
+  THENL
+    [
+      ASM_REWRITE_TAC [],
+      MAP_EVERY EXISTS_TAC [``x:'a``, ``y:'a``]
+      THEN ASM_REWRITE_TAC []
+    ]
+  );
 
 val OPTION_REL_EQ = store_thm
    ("OPTION_REL_EQ",

@@ -3,12 +3,9 @@
 (* DESCRIPTION  : Support for maps 'a word |-> 'b and string |-> 'a          *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["patriciaTheory", "stringTheory", "wordsLib"];
-*)
-
-open HolKernel Parse boolLib bossLib Q arithmeticTheory listTheory
-     rich_listTheory pred_setTheory bitTheory wordsTheory patriciaTheory
+open HolKernel Parse boolLib bossLib
+open Q arithmeticTheory listTheory rich_listTheory pred_setTheory
+     bitTheory wordsTheory wordsLib patriciaTheory
      numposrepTheory ASCIInumbersTheory
 
 val _ = new_theory "patricia_casts";
@@ -316,20 +313,21 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
   `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
        n IN IMAGE string_to_num UNIV`,
   SRW_TAC [] [IN_IMAGE] \\ EQ_TAC \\ SRW_TAC [] []
-    << [EXISTS_TAC `""` \\ EVAL_TAC,
-        METIS_TAC [string_to_num_num_to_string],
-        `(x = "") \/ ?c s. x = STRING c s`
-            by METIS_TAC [TypeBase.nchotomy_of ``:string``]
-          \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
-          >> EVAL_TAC \\ DISJ2_TAC
-          \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) =
-              LENGTH s + 1`
-          by SRW_TAC [] []
-          \\ `l2n 256 (MAP ORD (REVERSE s) ++ [ORD c]) <
-              256 ** (LENGTH s + 1)`
-          by METIS_TAC [l2n_LENGTH, DECIDE ``1 < 256``]
-          \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
-               SPECL [`256`, `a ++ b`] l2n_APPEND]]);
+    << [
+       EXISTS_TAC `""` \\ EVAL_TAC,
+       METIS_TAC [string_to_num_num_to_string],
+       `(x = "") \/ ?c s. x = STRING c s`
+       by METIS_TAC [TypeBase.nchotomy_of ``:string``]
+       \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
+       >> EVAL_TAC
+       \\ DISJ2_TAC
+       \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) = LENGTH s + 1`
+       by SRW_TAC [] []
+       \\ `l2n 256 (MAP ORD (REVERSE s) ++ [ORD c]) < 256 ** (LENGTH s + 1)`
+       by METIS_TAC [l2n_LENGTH, DECIDE ``1 < 256``]
+       \\ SRW_TAC [ARITH_ss] [s2n_def, LOG_ADD_COMM, DIV_MULT_1,
+                              SPECL [`256`, `a ++ b`] l2n_APPEND]
+    ]);
 
 val string_to_num_num_to_string = save_thm("string_to_num_num_to_string",
   REWRITE_RULE [IMAGE_string_to_num] string_to_num_num_to_string);

@@ -249,6 +249,7 @@ Alternatively, and probably with the help of one of the editor modes,\footnote{T
 \holmake{} only works properly on the current directory.
 \holmake{} will rebuild files in the current directory if something it depends on from another directory is fresher than it is, but it will not do any analysis on files in other directories.
 
+\index{Holmake@\holmake!recursive invocation}%
 However, one can indicate that there is a dependency on other directories by using the \texttt{-I} flag, or the \texttt{INCLUDES} variable in a \texttt{Holmakefile}.
 Such a specification will cause \holmake{} to look in the specified directories for other theory files that the current directory may depend on.
 Moreover, by default \holmake{} will recursively call itself on all those ``include'' directories before doing anything in the current directory.
@@ -294,6 +295,9 @@ with the following command-line options:
   \texttt{fast\_proof} oracle tag.  This tag will appear on all
   theorems proved in this way and all subsequent theorems that depend
   on such theorems.  \holmake's default is not to build in fast mode.
+\item[\texttt{-r}]%
+\index{Holmake@\holmake!recursive invocation}%
+Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
 \item[\texttt{--fast}] Makes \holmake's default be to build in fast
   mode (see above).
 \item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
@@ -327,8 +331,9 @@ with the following command-line options:
   this option makes the compilation not use the overlay file.  This
   option is also used in building the kernel before the overlay itself
   has been compiled.
-\item[\texttt{--no\_prereqs}] Do not recursively attempt to build
-  ``include'' directories before working in the current directory.
+\item[\texttt{--no\_prereqs}]%
+\index{Holmake@\holmake!recursive invocation}%
+Do not recursively attempt to build ``include'' directories before working in the current directory.
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning
@@ -346,7 +351,7 @@ with the following command-line options:
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Note that other programs called by \holmake{} will not
   be affected.
-\item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to always
+\item[{\tt --rebuild\_deps}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
   not it thinks it needs to.  This option is implemented by having
   \holmake{} wipe all of its dependency cache (as per the
@@ -536,16 +541,14 @@ whose value are commas instead), but can otherwise be arbitrary text.
 \paragraph{Special and pre-defined variables}
 
 \index{Holmake@\holmake!variables in makefiles}
-If defined, the \texttt{INCLUDES} variable is used to add directories
-to the list of directories consulted when files are compiled and
-linked.  The effect is as if the directories specified had all been
-included on the command-line with \texttt{-I} options.  The
-\texttt{PRE\_INCLUDES} variable works similarly, but the directories
-specified here are placed before the \mbox{\texttt{-I <holdir>}}
-option that is used in invocations of compiler.  This
-option gives the user a way of over-riding code in the core
-distribution as the compiler will find their code
-before the distribution's.
+If defined, the \texttt{INCLUDES} variable is used to add directories to the list of directories consulted when files are compiled and linked.
+The effect is as if the directories specified had all been included on the command-line with \texttt{-I} options.
+The \texttt{PRE\_INCLUDES} variable works similarly, but the directories specified here are placed before the \mbox{\texttt{-I <sigobj>}} option that is used in invocations of compiler.
+This option gives the user a way of over-riding code in the core distribution as the compiler will find their code before the distribution's.
+
+\index{Holmake@\holmake!recursive invocation}
+By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.
+If the \texttt{-r} (``force recursion'') command-line flag is used, these directories are also ``clean''-ed when a cleaning target is given to \holmake{}.
 
 The \texttt{OPTIONS} variable is used for the specification of just
 four possible options (others are ignored): \texttt{NO\_SIGOBJ},
@@ -556,6 +559,8 @@ present are enabled.  These have the same effect as the corresponding
 command-line options. The \texttt{EXTRA\_CLEANS} variable is used to
 specify the name of additional files that should be deleted when a
 \texttt{Holmake clean} command is issued.
+
+Under Poly/ML, the \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
 
 Within a command, the variable \texttt{\$<} is used to stand for the
 name of the first dependency of the rule.  The variable \texttt{\$@} is
@@ -618,6 +623,10 @@ above including the sub-string ``\texttt{MOSML}'' in their names can
 also be used by simply writing their names directly (i.e., without the
 enclosing \varref{\dots}), as long as these references occur first on
 a command-line.
+
+Under Poly/ML, commands involving the variable \texttt{MOSMLC} are interpreted ``appropriately''.
+If the behaviour is not as desired, we recommend using \texttt{ifdef~POLY}~(see below) to write rules that pertain only to HOL under Poly/ML.
+We strongly discourage the use of \texttt{MOSMLYAC} and \texttt{MOSMLLEX}, even when running HOL under Moscow~ML.
 
 If a reference is made to an otherwise undefined string, then it is
 treated as a reference to an environment variable.  If there is no
@@ -767,9 +776,8 @@ Poly/ML 5.4.1 Release
 \end{alltt}
 \end{samepage}
 
-Finally, note that heaps are required to be built first in a directory, and that heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
-This has the unfortunate consequence that one cannot package up a heap embodying the standard theories for the real numbers in \texttt{src/real}, but that such a heap has to built in some other directory.
-This is counter-intuitive.
+Finally, note that when using the \texttt{HOLHEAP} variable, heaps are required to be built before everything else in a directory, and that such heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
+Thus, if one wanted to package up a heap embodying the standard theories for the real numbers, and to do it in \texttt{src/real} (which feels natural), this heap could be built using the method described here, but could only be referred to as a \texttt{HOLHEAP} in the directories that used it, \emph{not} in \texttt{src/real}'s \texttt{Holmakefile}.
 
 \index{heaps (in Poly/ML)|)}
 \section{Timing and Counting Theorems}
@@ -1047,9 +1055,10 @@ If this has been made the default, it may be useful to occasionally turn the mer
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
 \index{tokens!suppressing parsing behaviour of}
 The default behaviour is to use parentheses, so that
-\begin{verbatim}
-   \HOLtm{$/\ p}
-\end{verbatim}
+% encode all the special characters below so that emacs font-locking has a reasonable chance of working
+\begin{alltt}
+   \holtm\lb\dol/\bs p\rb
+\end{alltt}
 would get printed as $(\land)\;\,p$.
 Note that this doesn't reflect the default behaviour in the interactive loop, which is to use dollar-signs (as in the input above); see Section~\ref{sec:parser:architecture}.
 However, with the \texttt{nodollarparens} option specified, nothing at all is printed to indicate that the special syntax has been ``escaped''.
@@ -1130,6 +1139,25 @@ The default width is $63$, which seems to work well with 11pt fonts.
 %
 This default can also be changed at the time the \munge{} command is
 run (see Section~\ref{sec:running-munger} below).
+
+\item[\texttt{-}$\mathit{name}$]
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
+(Only for use with \holthm{} and \holtm.)
+This option causes the printing of the term or theorem to be done with respect to a grammar that has all overloading for $\mathit{name}$ removed.
+For example, the command \texttt{\holtm[-+]\lb{}x + y\rb} will print as
+\[
+\texttt{arithmetic\dol+}\;x\;y
+\]
+because the underlying constant will no longer map to the string \texttt{"+"} and, in the absence of any other mappings for it, will be printed as a fully qualified name.
+
+\index{integers, the HOL theory of@integers, the \HOL{} theory of}
+If the theory of integers is loaded, then the command \texttt{\holtm[-+]\lb{}x + y:int\rb} will print as \[
+\texttt{int\_add}\;x\;y
+\]
+because the mapping from the integer addition constant to \texttt{"+"} is removed, but the mapping to \texttt{"int\_add"} remains, allowing that form to be what is printed.
+
+The \texttt{-} option can be useful when complicated notation involving overloads is first introduced in a document.
 
 \item[\texttt{\indentoption}] Indents the argument.
 %

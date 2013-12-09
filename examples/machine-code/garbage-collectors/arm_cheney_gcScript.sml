@@ -1,12 +1,15 @@
 
 open HolKernel boolLib bossLib Parse; val _ = new_theory "arm_cheney_gc";
 
-open decompilerLib;
+open decompilerLib prog_armLib;
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory;
 open tailrecLib tailrecTheory;
 open cheney_gcTheory; (* an abstract implementation is imported *)
+
+val decompile_arm = decompile arm_tools;
+val basic_decompile_arm = basic_decompile arm_tools;
 
 
 

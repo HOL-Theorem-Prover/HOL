@@ -24,6 +24,7 @@ val _ = let
   end
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
+  fun tybpp pps (t:TypeBasePure.typeBase) = PP.add_string pps "<typeBase>"
   open PolyML
   val version_string_w1 =
       hd (String.tokens Char.isSpace Compiler.compilerVersion)
@@ -62,7 +63,8 @@ in
   install_pp (pp2polypp (with_pp Arbnum.pp_num));
   install_pp (pp2polypp (with_pp Arbint.pp_int));
   install_pp (pp2polypp (with_pp Arbrat.pp_rat));
-  install_pp (pp2polypp (with_pp locpp))
+  install_pp (pp2polypp (with_pp locpp));
+  install_pp (pp2polypp (with_pp tybpp))
 end
 
 (*---------------------------------------------------------------------------*
@@ -183,6 +185,8 @@ struct
             true)
   fun amquiet () = !qd
 end;
+
+val _ = app Meta.fakeload ["PP", "PolyML"];
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

@@ -1,0 +1,2 @@
+selftest.exe: selftest.uo basis_emitTheory.uo ConstMapML.uo
+	$(HOLMOSMLC) -o $@ $<

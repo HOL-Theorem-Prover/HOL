@@ -231,6 +231,29 @@ fun compare p =
 val empty_tmset = HOLset.empty compare
 fun term_eq t1 t2 = compare(t1,t2) = EQUAL
 
+(* ----------------------------------------------------------------------
+    All "atoms" (variables (bound or free) and constants).
+
+    Does not respect alpha-equivalence
+   ---------------------------------------------------------------------- *)
+
+fun all_atomsl tlist A =
+    case tlist of
+        [] => A
+      | t::ts =>
+        let
+        in
+          case t of
+              Fv _ => all_atomsl ts (HOLset.add(A,t))
+            | Const _ => all_atomsl ts (HOLset.add(A,t))
+            | Comb(Rator,Rand) => all_atomsl (Rator::Rand::ts) A
+            | Abs(v,body) => all_atomsl (body::ts) (HOLset.add(A,v))
+            | Clos _ => all_atomsl (push_clos t::ts) A
+            | Bv _ => all_atomsl ts A
+        end
+
+fun all_atoms t = all_atomsl [t] empty_tmset
+
 (*---------------------------------------------------------------------------
         Free variables of a term. Tail recursive. Returns a set.
  ---------------------------------------------------------------------------*)

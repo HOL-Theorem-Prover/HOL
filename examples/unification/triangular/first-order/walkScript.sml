@@ -154,6 +154,26 @@ Cases_on `x` THEN SRW_TAC [][] THENL [
   SRW_TAC [][Once (DISCH_ALL vwalk_def)]
 ]);
 
+val vwalk_no_cycles = store_thm("vwalk_no_cycles",
+  ``wfs s ⇒ ∀v u. (vwalk s v = Var u) ∧ v ∈ FDOM s ⇒ (v ≠ u)``,
+  strip_tac >>
+  HO_MATCH_MP_TAC vwalk_ind >>
+  rw[FLOOKUP_DEF] >>
+  Cases_on`v ∈ FDOM s` >> rw[] >>
+  rw[Once vwalk_def,FLOOKUP_DEF] >>
+  Cases_on`s ' v` >> rw[] >>
+  spose_not_then strip_assume_tac >>
+  qspecl_then[`n`,`v`]mp_tac(UNDISCH vwalk_vR)>>
+  simp[] >>
+  Cases_on`v=n`>>fs[]>>
+  spose_not_then strip_assume_tac >>
+  `(vR s)^+ v v` by (
+    match_mp_tac (CONJUNCT2(SPEC_ALL(TC_RULES))) >>
+    qexists_tac`n` >> simp[] >>
+    match_mp_tac TC_SUBSET >>
+    simp[vR_def,FLOOKUP_DEF] ) >>
+  METIS_TAC[wfs_no_cycles])
+
 (* vwalk with concrete alists *)
 
 val _ = overload_on("vwalk_al", ``λal. vwalk (alist_to_fmap al)``);

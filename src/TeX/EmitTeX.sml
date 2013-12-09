@@ -342,11 +342,14 @@ local
           if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
-    fun addann ty s =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ varmunge s ^ "}"
-    val annotation = case ann of BV _ => addann "BoundVar"
-                               | FV _ => addann "FreeVar"
-                               | _ => (fn s => s)
+    fun addann ty f s =
+      "\\" ^ !texPrefix ^ ty ^ "{" ^ f s ^ "}"
+    fun annotation s =
+        case ann of BV _ => addann "BoundVar" varmunge s
+                  | FV _ => addann "FreeVar" varmunge s
+                  | Const _ => addann "Const" I s
+                  | TyOp _ => addann "TyOp" I s
+                  | _ => s
     val (s',sz) = smap overrides (s,sz)
   in
     PP.add_stringsz pps (dollarpfx ^ annotation s' ^ dollarsfx, sz + szdelta)
@@ -409,7 +412,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
              if ll < 2 then
                ()
              else
-               (S " of ";
+               (S " "; S "of"; BR(1,0);
                 BB PP.INCONSISTENT 0;
                   app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
                       (List.take(l, ll - 2));

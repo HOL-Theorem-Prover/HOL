@@ -58,9 +58,16 @@ fun read_buildsequence {kernelname} bseq_fname = let
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine
-  fun read_file acc fstr =
+  fun read_file acc visitedincludes (f as (fstr,fname)) oldstreams =
       case readline fstr of
-        NONE => List.rev acc
+        NONE =>
+        let
+          val _ = TextIO.closeIn fstr
+        in
+          case oldstreams of
+              h::t => read_file acc visitedincludes h t
+            | [] => List.rev acc
+        end
       | SOME s => let
           (* drop trailing and leading whitespace *)
           val ss = Substring.full s
@@ -68,11 +75,54 @@ fun read_buildsequence {kernelname} bseq_fname = let
           val ss = Substring.dropr Char.isSpace ss
 
           (* drop trailing comment *)
-          val (ss, _) = Substring.position "#" ss
-          val s = Substring.string ss
+          val (hashpfx, hashsfx) = Substring.position "#" ss
+          fun skip() = read_file acc visitedincludes f oldstreams
         in
-          if s = "" then read_file acc fstr
-          else let
+          if Substring.size hashpfx = 0 then
+            if Substring.isPrefix "#include " hashsfx then
+              let
+                val includefname =
+                    Substring.string
+                      (Substring.slice(hashsfx, size "#include ", NONE))
+                val includefname_opt =
+                    SOME (OS.Path.mkAbsolute
+                            { path = includefname,
+                              relativeTo = fullPath [HOLDIR, "tools"]})
+                    handle OS.Path.Path => NONE
+              in
+                case includefname_opt of
+                    NONE => (warn ("Ignoring bad #include: " ^ includefname);
+                             skip())
+                  | SOME includefname =>
+                    let
+                      val includefname = OS.Path.mkCanonical includefname
+                        (* necessary if user specified a non-canonical absolute
+                           path *)
+                    in
+                      if Binaryset.member(visitedincludes, includefname) then
+                        die ("Recursive request to #include "^
+                             includefname ^ "(in "^fname^")")
+                      else let
+                        val newstr_opt = SOME (TextIO.openIn includefname)
+                                         handle IO.Io _ => NONE
+                      in
+                        case newstr_opt of
+                            SOME strm =>
+                            read_file acc
+                                      (Binaryset.add(visitedincludes,
+                                                     includefname))
+                                      (strm,includefname)
+                                      ((fstr,includefname)::oldstreams)
+                          | NONE => die ("Couldn't open #include-d file "^
+                                         includefname ^
+                                         "(included from "^fname^")")
+                      end
+                    end
+              end
+            else skip()
+          else
+            let
+              val s = Substring.string hashpfx
               fun extract_testcount (s,acc) =
                   if String.sub(s,0) = #"!" then
                     extract_testcount (String.extract(s,1,NONE), acc+1)
@@ -87,7 +137,8 @@ fun read_buildsequence {kernelname} bseq_fname = let
                     in
                       grabsys 1
                       handle Subscript =>
-                             die ("Malformed "^name^" spec: "^s)
+                             die ("Malformed "^name^" spec: "^s^
+                                  "  (from "^fname^")")
                     end
                   else ("", s)
               val extract_mlsys = extract_brackets "system" #"[" #"]"
@@ -105,13 +156,18 @@ fun read_buildsequence {kernelname} bseq_fname = let
                  (knl = "" orelse knl = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
-                    read_file ((dirname,testcount)::acc) fstr
+                    read_file ((dirname,testcount)::acc)
+                              visitedincludes
+                              f
+                              oldstreams
                   else
                     die ("** File "^dirname0^
-                         " from build sequence is not a directory")
-                else die ("** File "^s^" from build sequence does not "^
-                          "exist or is inacessible -- skipping it")
-              else read_file acc fstr
+                         " from build sequence file "^fname^
+                         " is not a directory")
+                else die ("** File "^s^" from build sequence file "^fname^
+                          " does not \
+                          \exist or is inacessible -- skipping it")
+              else read_file acc visitedincludes f oldstreams
             end
         end
   val bseq_file =
@@ -119,7 +175,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
       handle IO.Io _ => die ("Fatal error: couldn't open sequence file: "^
                              bseq_fname)
 in
-  read_file [] bseq_file before TextIO.closeIn bseq_file
+  read_file [] (Binaryset.empty String.compare) (bseq_file,bseq_fname) []
 end
 
 fun cline_selftest cmdline = let
@@ -576,7 +632,8 @@ in
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
 					 "minisat.exe"])
-                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers",
+                                         "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
 			print(String.concat
 				  ["\nMiniSat has NOT been built!! ",
@@ -602,7 +659,7 @@ handle OS.SysErr(s, erropt) =>
      | BuildExit => ()
 
 fun write_theory_graph () = let
-  val dotexec = "/usr/bin/dot"
+  val dotexec = Systeml.DOT_PATH
 in
   if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
     (* of course, this will always be the case on Windows *)
@@ -777,10 +834,10 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake extra_args analyse_failstatus do_selftests dir = let
-  val hmstatus = Systeml.systeml ([HOLMAKE, "--qof"] @ extra_args())
+fun Holmake sysl isSuccess extra_args analyse_failstatus do_selftests dir = let
+  val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
 in
-  if OS.Process.isSuccess hmstatus then
+  if isSuccess hmstatus then
     if do_selftests > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then

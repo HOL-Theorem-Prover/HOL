@@ -107,8 +107,8 @@ handle Io _ => NONE
 
 exception satCheckError;
 fun satCheck model t =
- (let
-       val mtm  = list_mk_conj model (*  (l1 /\ ... /\ ln) *)
+   let
+      val mtm  = list_mk_conj model (*  (l1 /\ ... /\ ln) *)
       val th1  = ASSUME mtm (* l1 /\ ... /\ ln |- l1 /\ ... /\ ln *)
       val thl  = map
                   (fn th => if is_neg(concl th)
@@ -119,10 +119,16 @@ fun satCheck model t =
       val th2 = SUBST_CONV subl t t (* l1 /\ ... /\ ln |- t = t[l1/T,...] *)
       val th3 = CONV_RULE (RHS_CONV computeLib.EVAL_CONV) th2 (* l1 /\ ... /\ ln |- t = T *)
       val th4 = EQT_ELIM th3 (* l1 /\ ... /\ ln |- t *)
-  in
-   DISCH mtm th4 (* |- l1 /\ ... /\ ln ==> t *)
-  end)  handle Interrupt => raise Interrupt
-                    |  _ => raise satCheckError;
+   in
+      DISCH mtm th4 (* |- l1 /\ ... /\ ln ==> t *)
+   end
+   handle Interrupt => raise Interrupt
+        | HOL_ERR {origin_function = "EQT_ELIM", ...} =>
+             if is_neg t
+                then UNDISCH (EQF_ELIM (REWRITE_CONV [] t))
+                     handle HOL_ERR _ => raise satCheckError
+             else raise satCheckError
+        |  _ => raise satCheckError;
 
 end
 end

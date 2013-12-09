@@ -2,6 +2,12 @@ open HolKernel boolLib bossLib Parse finite_mapTheory termTheory ramanaLib pred_
 
 val _ = new_theory "collapse";
 
+(* NB: collapsing a substitution means it's not triangular any more. The
+ * intended method for applying triangular substitutions is to use walk*. The
+ * relationship to directly applying a collapsed substitution proved here is
+ * not intended as an implementation strategy, because it would destroy the
+ * shared-tails benefits of using triangular substutions. *)
+
 val collapse_def = Define`
   collapse s = FUN_FMAP (\v.walkstar s (Var v)) (FDOM s)`;
 
@@ -81,5 +87,19 @@ val subst_APPLY_walkstar = Q.store_thm(
 STRIP_TAC THEN HO_MATCH_MP_TAC apply_ts_ind THEN
 SRW_TAC [][apply_ts_thm] THEN
 Cases_on `FLOOKUP s t` THEN SRW_TAC [][] );
+
+val collapse_noids = store_thm("collapse_noids",
+  ``wfs s ==> noids (collapse s)``,
+  rw[noids_def,FLOOKUP_DEF] >>
+  spose_not_then strip_assume_tac >>
+  `v ∈ FDOM s` by fs[collapse_def] >>
+  imp_res_tac collapse_FAPPLY_eq_walkstar >>
+  rfs[] >>
+  Cases_on`vwalk s v` >> rfs[] >> rw[] >>
+  metis_tac[vwalk_no_cycles])
+
+val wfs_collapse = store_thm("wfs_collapse",
+  ``wfs s ==> wfs (collapse s)``,
+  metis_tac[collapse_idempotent,collapse_noids,wfs_idempotent])
 
 val _ = export_theory ();

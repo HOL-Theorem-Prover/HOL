@@ -1,11 +1,22 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/garbage-collectors $(HOLDIR)/examples/machine-code/compiler $(HOLDIR)/examples/machine-code/decompiler $(HOLDIR)/examples/machine-code/hoare-triple $(HOLDIR)/tools/mlyacc/mlyacclib $(HOLDIR)/examples/machine-code/instruction-set-models/common $(HOLDIR)/examples/machine-code/instruction-set-models/x86 $(HOLDIR)/examples/machine-code/instruction-set-models/ppc $(HOLDIR)/examples/ARM/v7
+INCLUDES = $(HOLDIR)/examples/machine-code/garbage-collectors \
+           $(HOLDIR)/examples/machine-code/compiler \
+           $(HOLDIR)/examples/machine-code/decompiler \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/tools/mlyacc/mlyacclib \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/x86 \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/ppc \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/arm
 OPTIONS=QUIT_ON_FAILURE
 
 ifdef POLY
 HOLHEAP = local-hol-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../decompiler/decompilerLib \
+BARE_THYS = ../instruction-set-models/arm/prog_armLib \
+            ../instruction-set-models/x86/prog_x86Lib \
+            ../instruction-set-models/ppc/prog_ppcLib \
+            ../decompiler/decompilerLib \
             ../compiler/compilerLib \
             ../garbage-collectors/lisp_gcTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))

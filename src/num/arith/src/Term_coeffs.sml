@@ -21,7 +21,7 @@ structure Term_coeffs :> Term_coeffs =
 struct
   open Arbint HolKernel boolLib Arith_cons Rsyntax;
 
-  val << = String.<
+  val op << = String.<
   infix << ##;
 
 fun failwith function = raise (mk_HOL_ERR "Term_coeffs" function "");

@@ -183,13 +183,7 @@ val inftree_Axiom = store_thm(
   HO_MATCH_MP_TAC inftree_ind THEN SRW_TAC [][FUN_EQ_THM])
 
 
-val inftree_case_def = new_specification(
-  "inftree_case_def",
-  ["inftree_case"],
-  (SIMP_RULE bool_ss [SKOLEM_THM, FORALL_AND_THM] o Q.GEN `lf` o Q.GEN `nd` o
-   SPECL [``lf : 'a -> 'd``,
-          ``\ (b:'b) (d:'c -> ('a,'b,'c)inftree) (r:'c->'d). nd b d : 'd``])
-  inftree_Axiom)
+val inftree_case_def = hd (Prim_rec.define_case_constant inftree_Axiom)
 val _ = export_rewrites ["inftree_case_def"]
 
 val inftree_nchotomy = store_thm(
@@ -235,4 +229,3 @@ val _ = adjoin_to_theory {
 
 
 val _ = export_theory()
-

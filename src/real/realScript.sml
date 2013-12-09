@@ -2090,19 +2090,9 @@ val REAL_ARCH_LEAST = store_thm("REAL_ARCH_LEAST",
 (* Now define finite sums; NB: sum(m,n) f = f(m) + f(m+1) + ... + f(m+n-1)   *)
 (*---------------------------------------------------------------------------*)
 
-val sumc = new_recursive_definition
-  {name = "sumc",
-   def = (--`(sumc n 0 f = 0) /\
-               (sumc n (SUC m) f = sumc n m f + f(n + m))`--),
-   rec_axiom = num_Axiom}
-
-val SUM_DEF = new_definition("SUM_DEF",
-  (--`sum(m,n) f = sumc m n f`--));
-
-val sum = store_thm("sum",
-  (--`!f n m. (sum(n,0) f = 0) /\
-              (sum(n,SUC m) f = sum(n,m) f + f(n + m))`--),
-  REWRITE_TAC[SUM_DEF, sumc]);
+val sum = Lib.with_flag (boolLib.def_suffix, "") Define`
+   (sum (n,0) f = 0) /\
+   (sum (n,SUC m) f = sum (n,m) f + f (n + m): real)`
 
 (*---------------------------------------------------------------------------*)
 (* Useful manipulative theorems for sums                                     *)
@@ -3568,9 +3558,8 @@ val lt_int = store_thm(
 (* Floor and ceiling (nums)                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val NUM_FLOOR_def =
- Define
-   `NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
+val NUM_FLOOR_def = zDefine`
+   NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
 
 val NUM_CEILING_def =
  Define

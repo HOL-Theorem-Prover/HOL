@@ -225,6 +225,37 @@ val LEAST_EQ = store_thm(
 val _ = export_rewrites ["LEAST_EQ"]
 
 (* ----------------------------------------------------------------------
+    OLEAST ("option LEAST") returns NONE if the argument is a predicate
+    that is everywhere false.  Otherwise it returns SOME n, where n is the
+    least number making the predicate true.
+   ---------------------------------------------------------------------- *)
+
+val OLEAST_def = new_definition(
+  "OLEAST_def",
+  ``(OLEAST) P = if ?n. P n then SOME (LEAST n. P n) else NONE``)
+val _ = set_fixity "OLEAST" Binder
+
+val OLEAST_INTRO = store_thm(
+  "OLEAST_INTRO",
+  ``((!n. ~ P n) ==> Q NONE) /\
+    (!n. P n /\ (!m. m < n ==> ~P m) ==> Q (SOME n)) ==>
+    Q ((OLEAST) P)``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [OLEAST_def] THEN SRW_TAC [][] THENL [
+    DEEP_INTRO_TAC LEAST_ELIM THEN METIS_TAC [],
+    FULL_SIMP_TAC (srw_ss()) []
+  ]);
+
+val OLEAST_EQNS = store_thm(
+  "OLEAST_EQNS",
+  ``((OLEAST n. n = x) = SOME x) /\
+    ((OLEAST n. x = n) = SOME x) /\
+    ((OLEAST n. F) = NONE) /\
+    ((OLEAST n. T) = SOME 0)``,
+  REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
+  METIS_TAC [arithmeticTheory.NOT_ZERO_LT_ZERO]);
+val _ = export_rewrites ["OLEAST_EQNS"]
+
+(* ----------------------------------------------------------------------
     OWHILE ("option while") which returns SOME result if the loop
     terminates, NONE otherwise.
    ---------------------------------------------------------------------- *)

@@ -179,6 +179,8 @@ val dynlib_available = (load "Dynlib"; true) handle _ => false;
 
 print "\n";
 
+val DOT_PATH = "/usr/bin/dot"
+
 val _ = let
   val override = Path.concat(holdir, "config-override")
 in
@@ -199,6 +201,7 @@ verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
+verdict ("DOT_PATH", DOT_PATH);
 
 val _ = let
   val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"

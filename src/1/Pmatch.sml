@@ -1,13 +1,14 @@
 structure Pmatch :> Pmatch =
 struct
 
-open HolKernel boolSyntax;
+open HolKernel boolSyntax PmatchHeuristics;
 
 type thry   = {Tyop : string, Thy : string} ->
               {case_const : term, constructors : term list} option
 
 val ERR = mk_HOL_ERR "Pmatch";
 
+val allow_new_clauses = ref true;
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -39,6 +40,22 @@ fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 
 fun match_info db s = db s
 
+(* should probably be in somewhere like HolKernel *)
+local val counter = ref 0
+in
+fun vary vlist =
+  let val slist = ref (map (fst o dest_var) vlist)
+      val _ = counter := 0
+      fun pass str =
+         if Lib.mem str (!slist)
+         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
+         else (slist := str :: !slist; str)
+  in
+    fn ty => mk_var(pass "v", ty)
+  end
+end;
+
+
 (*---------------------------------------------------------------------------
  * This datatype carries some information about the origin of a
  * clause in a function definition.
@@ -47,19 +64,30 @@ fun match_info db s = db s
 datatype pattern = GIVEN   of term * int
                  | OMITTED of term * int
 
+fun pattern_cmp (GIVEN(_,i)) (GIVEN(_, j)) = i <= j
+  | pattern_cmp all others = raise ERR "pattern_cmp" ""
+
 fun psubst theta (GIVEN (tm,i)) = GIVEN(subst theta tm, i)
   | psubst theta (OMITTED (tm,i)) = OMITTED(subst theta tm, i);
 
 fun dest_pattern (GIVEN (tm,i)) = ((GIVEN,i),tm)
   | dest_pattern (OMITTED (tm,i)) = ((OMITTED,i),tm);
 
-val pat_of = #2 o dest_pattern;
-val row_of_pat = #2 o #1 o dest_pattern;
+fun pat_of (GIVEN (tm,_)) = tm
+  | pat_of (OMITTED(tm,_)) = tm
 
-fun not_omitted (GIVEN(tm,_)) = tm
-  | not_omitted (OMITTED _) = raise ERR"not_omitted" ""
-val givens = mapfilter not_omitted;
+fun row_of_pat (GIVEN(_, i)) = i
+  | row_of_pat (OMITTED _) = ~1
 
+fun dest_given (GIVEN(tm,_)) = tm
+  | dest_given (OMITTED _) = raise ERR "dest_given" ""
+
+fun mk_omitted tm = OMITTED(tm,~1)
+
+fun is_omitted (OMITTED _) = true
+  | is_omitted otherwise   = false;
+
+val givens = mapfilter dest_given;
 
 (*---------------------------------------------------------------------------
  * Produce an instance of a constructor, plus genvars for its arguments.
@@ -81,21 +109,21 @@ fun fresh_constr ty_match (colty:hol_type) gv c =
  * is a variable.                                                            *
  *---------------------------------------------------------------------------*)
 
-fun mk_groupl Literal rows =
+fun mk_groupl literal rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
-               if (is_var Literal andalso is_var p) orelse p = Literal
-               then if is_var Literal
+               if (is_var literal andalso is_var p) orelse p = literal
+               then if is_var literal
                     then (((prefix,p::rst), rhs)::in_group, not_in_group)
                     else (((prefix,rst), rhs)::in_group, not_in_group)
                else (in_group, row::not_in_group)
-        | func _ _ = raise ERR "mk_groupc" ""
+        | func _ _ = raise ERR "mk_groupl" ""
   in
     itlist func rows ([],[])
   end;
 
 (*---------------------------------------------------------------------------*
  * Goes through a list of rows and picks out the ones beginning with a       *
- * pattern with constructor = Name.                                          *
+ * pattern with constructor = c.                                             *
  *---------------------------------------------------------------------------*)
 
 fun mk_group c rows =
@@ -123,7 +151,7 @@ let  fun part {constrs = [],      rows, A} = rev A
          let val (in_group, not_in_group) = mk_groupl c rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, []), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, []), mk_omitted (mk_arb res_ty))]
                  else in_group
              val gvars = if is_var c then [c] else []
          in
@@ -151,14 +179,12 @@ let val fresh = fresh_constr ty_match colty gv
              val (in_group, not_in_group) = mk_group c' rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
-                 then [((prefix, #2(fresh c)), OMITTED (mk_arb res_ty, ~1))]
+                 then [((prefix, #2(fresh c)), mk_omitted (mk_arb res_ty))]
                  else in_group
          in
-         part{constrs = crst,
-              rows = not_in_group,
-              A = {constructor = c',
-                   new_formals = gvars,
-                   group = in_group'}::A}
+          part{constrs = crst,
+               rows = not_in_group,
+               A = {constructor = c', new_formals = gvars, group = in_group'}::A}
          end
 in part{constrs=constructors, rows=rows, A=[]}
 end;
@@ -185,24 +211,6 @@ fun mk_pat c =
   in map build
   end;
 
-(*---------------------------------------------------------------------------*)
-(* Use of funky internal variable names, prefixed with *v, to avoid name     *)
-(* clashes.                                                                  *)
-(*---------------------------------------------------------------------------*)
-
-local val counter = ref 0
-in
-fun vary vlist =
-  let val slist = ref (map (fst o dest_var) vlist)
-      val _ = counter := 0
-      fun pass str =
-         if Lib.mem str (!slist)
-         then (counter := !counter + 1; pass ("v"^int_to_string(!counter)))
-         else (slist := str :: !slist; str)
-  in
-    fn ty => mk_var(pass "v", ty)
-  end
-end;
 
 fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
   | v_to_prefix _ = raise ERR "mk_case" "v_to_prefix"
@@ -229,9 +237,9 @@ fun is_zero_emptystr_or_var tm =
 fun is_closed_or_var tm = is_var tm orelse null (free_vars tm)
 
 
-(*---------------------------------------------------------------------------*)
-(* Reconstructed code from TypeBasePure, to avoid circularity.               *)
-(*---------------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------------
+    Reconstructed code from TypeBasePure, to avoid circularity.
+   ---------------------------------------------------------------------------*)
 
 fun case_const_of   {case_const : term, constructors : term list} = case_const
 fun constructors_of {case_const : term, constructors : term list} = constructors
@@ -253,7 +261,7 @@ fun is_constructor tybase c =
   end handle HOL_ERR _ => false;
 
 fun is_constructor_pat tybase tm =
-    is_var tm orelse is_constructor tybase (fst (strip_comb tm));
+    is_constructor tybase (fst (strip_comb tm));
 
 fun is_constructor_var_pat ty_info tm =
     is_var tm orelse is_constructor_pat ty_info tm
@@ -304,7 +312,17 @@ fun under_literal_bool_case conv tm =
     incomplete set of patterns is given.
  ----------------------------------------------------------------------------*)
 
-fun mk_case ty_info ty_match FV range_ty =
+fun bring_to_front_list n l = let
+   val (l0, l1) = Lib.split_after n l
+   val (x, l1') = (hd l1, tl l1)
+  in x :: (l0 @ l1') end
+
+fun undo_bring_to_front n l = let
+   val (x, l') = (hd l, tl l)
+   val (l0, l1) = Lib.split_after n l'
+ in (l0 @ x::l1) end
+
+fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR "mk_case" s
  val fresh_var = vary FV
@@ -336,8 +354,17 @@ fun mk_case ty_info ty_match FV range_ty =
    | mk{path as u::rstp, rows as ((prefix, []), rhs)::rst} =
         mk{path = path,
            rows = ((prefix, [fresh_var(type_of u)]), rhs)::rst}
-   | mk{path = u::rstp, rows as ((_, p::_), _)::_} =
-     let val (pat_rectangle,rights) = unzip rows
+   | mk{path = rstp0, rows = rows0 as ((_, pL as (_ :: _)), _)::_} =
+     if ((#skip_rows heu) andalso length rows0 > 1 andalso all is_var pL)
+     then mk {path = rstp0, rows = [hd rows0]}
+     else
+     let val col_index = (#col_fun heu) ty_info (map (fn ((_, pL), _) => pL) rows0)
+         val u_rstp = bring_to_front_list col_index rstp0
+         val (u, rstp) = (hd u_rstp, tl u_rstp)
+         val rows = map (fn ((prefix, pL), rhs) => ((prefix, bring_to_front_list col_index pL), rhs)) rows0
+         val ((_, pL), _) = hd rows
+         val p = hd pL
+         val (pat_rectangle,rights) = unzip rows
          val col0 = map(Lib.trye hd o #2) pat_rectangle
      in
      if all is_var col0
@@ -345,11 +372,18 @@ fun mk_case ty_info ty_match FV range_ty =
               val pat_rectangle' = map v_to_prefix pat_rectangle
               val (pref_patl,tm) = mk{path = rstp,
                                       rows = zip pat_rectangle' rights'}
-          in (map v_to_pats pref_patl, tm)
+              val pat_rect1 = map v_to_pats pref_patl
+              val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
+          in (pat_rect1', tm)
           end
      else
      let val pty = type_of p
-         val thy_tyop = type_names pty
+         val thy_tyop =
+             type_names pty
+             handle HOL_ERR _ =>
+                    raise ERR "mk_case0_heu"
+                          ("Term "^Parse.term_to_string p^
+                           " is a bad pattern (of var type?)")
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
        let val other_var = fresh_var pty
@@ -371,12 +405,15 @@ fun mk_case ty_info ty_match FV range_ty =
                                  switch_tm (case_functions@[u])
            val tree' = under_literal_bool_case beta_conv tree
            val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
+           val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
        in
-           (pat_rect1,tree')
+           (pat_rect1',tree')
        end
      else
-     if all (is_constructor_var_pat ty_info) col0 (* col0 is constrs *) then
-       let val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
+       case List.find (not o is_constructor_var_pat ty_info) col0 of
+         NONE => let
+
+           val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
            val nrows = flatten (map (expand constructors pty) rows)
            val subproblems = divide(constructors, pty, range_ty, nrows)
@@ -387,22 +424,55 @@ fun mk_case ty_info ty_match FV range_ty =
                           (zip new_formals groups)
            val rec_calls = map mk news
            val (pat_rect,dtrees) = unzip rec_calls
-           val case_functions = map list_mk_abs(zip new_formals dtrees)
-           val types = map type_of (case_functions@[u])
-           val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
-                                          Ty = list_mk_fun(types, range_ty)}
-           val tree = list_mk_comb(case_const', case_functions@[u])
+           val tree =
+             if ((#collapse_cases heu) andalso
+                 (List.all (aconv (hd dtrees)) (tl dtrees)) andalso
+                 (List.all (fn (vL, tree) =>
+                    (List.all (fn v => not (free_in v tree)) vL)) (zip new_formals dtrees))) then
+               (* If all cases lead to the same result, no split is necessary *)
+               (hd dtrees)
+             else let
+               val case_functions = map list_mk_abs(zip new_formals dtrees)
+               val types = map type_of (u::case_functions)
+               val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
+                                              Ty = list_mk_fun(types, range_ty)}
+               val tree = list_mk_comb(case_const', u::case_functions)
+             in tree end
            val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
+           val pat_rect1' = map (fn (x, y, pL) => (x, y, undo_bring_to_front col_index pL)) pat_rect1
        in
-          (pat_rect1,tree)
-       end
-     else
-        mk_case_fail "Some patterns are not constructors or variables"
+          (pat_rect1',tree)
+         end
+       | SOME t => mk_case_fail ("Pattern "^
+                                 trace ("Unicode", 0) Parse.term_to_string t^
+                                 " is not a constructor or variable")
      end
      end
  in mk
  end;
 
+fun mk_case0 ty_info ty_match FV range_ty rows =
+let
+  fun run_heu heu = mk_case0_heu heu ty_info
+    ty_match FV range_ty rows;
+
+  val (min_fun0, heu_fun) = (!pmatch_heuristic) ()
+  fun min_fun ((pL1, dt1), (pL2, dt2)) =
+    min_fun0 ((map (fn (x, _, _) => x) pL1, dt1), (map (fn (x, _, _) => x) pL2, dt2))
+
+  fun res_min NONE res = res
+    | res_min (SOME res1) res2 =
+        (case min_fun (res1, res2) of GREATER => res2 | _ => res1)
+
+  fun aux min = case (heu_fun ()) of
+     NONE => (case min of NONE => (print "SHOULD NOT HAPPEN! EMPTY PMATCH-HEURISTIC!"; fail()) | SOME min' => min')
+   | SOME heu => let
+       val res = run_heu heu
+       val min' = res_min min res
+     in aux (SOME min') end
+in
+  aux NONE
+end
 
 (*---------------------------------------------------------------------------
      Repeated variable occurrences in a pattern are not allowed.
@@ -478,11 +548,11 @@ fun mk_case1 tybase (exp, plist) =
     | SOME tyinfo =>
        let val c = case_const_of tyinfo
            val fns = map (fn (p,R) => list_mk_abs(snd(strip_comb p),R)) plist
-           val ty' = list_mk_fun (map type_of fns@[type_of exp],
+           val ty' = list_mk_fun (type_of exp::map type_of fns,
                                   type_of (snd (hd plist)))
            val theta = Type.match_type (type_of c) ty'
-       in list_mk_comb(inst theta c,fns@[exp])
-       end;
+       in list_mk_comb(inst theta c,exp::fns)
+       end
 
 fun mk_case2 v (exp, plist) =
        let fun mk_switch [] = raise ERR "mk_case" "null patterns"
@@ -494,7 +564,7 @@ fun mk_case2 v (exp, plist) =
                      else mk_literal_case(mk_abs(v,switch),exp)
        end;
 
-fun mk_case' tybase (exp, plist) =
+fun mk_case tybase (exp, plist) =
   let val col0 = map fst plist
   in if all (is_constructor_var_pat tybase) col0
         andalso not (all is_var col0)
@@ -527,7 +597,9 @@ local fun build_case_clause((ty,constr),rhs) =
 in
 fun dest_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (cases,arg) = front_last args
+      val (cases,arg) =
+          case args of h::t => (t, h)
+                     | _ => raise ERR "dest_case" "case exp has too few args"
   in case match_info tybase (type_names (type_of arg))
       of NONE => raise ERR "dest_case" "unable to destruct case expression"
        | SOME tyinfo =>
@@ -553,10 +625,19 @@ fun dest_case tybase M =
 
 fun is_case1 tybase M =
   let val (c,args) = strip_comb M
-      val (tynames as {Tyop=tyop,...}) = type_names (type_of (last args))
-  in case match_info tybase tynames
-      of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
-       | SOME tyinfo => same_const c (case_const_of tyinfo)
+      val (tynames as {Tyop=tyop, ...}) =
+          type_names (type_of (hd args)) handle Empty => raise ERR "" ""
+      (* will get caught later *)
+  in
+    case match_info tybase tynames of
+      NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
+    | SOME tyinfo => let
+        val gconst = case_const_of tyinfo
+        val gty = type_of gconst
+        val argtys = fst (strip_fun gty)
+      in
+        same_const c gconst andalso length args = length argtys
+      end
   end
   handle HOL_ERR _ => false;
 
@@ -573,7 +654,7 @@ local fun dest tybase (pat,rhs) =
                       val pat0 = if is_var v then subst [v |-> e] pat
                                              else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
-                  in if null (subtract fvs patvars)
+                  in if null (subtract fvs patvars) andalso null (free_vars e)
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
@@ -629,7 +710,7 @@ fun rename_case thy sub cs =
                              rename_case thy sub exp))
                        pat_exps
        val arg' = rename_case thy sub arg
-       val cs' = mk_case' thy (arg', pat_exps')
+       val cs' = mk_case thy (arg', pat_exps')
    in cs'
    end
 
@@ -647,19 +728,32 @@ fun mk_functional thy eqs =
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map no_repeat_vars pats
-     val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
+     val rows = zip (map (fn x => ([]:term list,[x])) pats) (map GIVEN (enumerate R))
      val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
      val range_ty = type_of (Lib.trye hd R)
-     val (patts, case_tm) = mk_case (match_info thy) (match_type thy)
+     val (patts, case_tm) = mk_case0 (match_info thy) (match_type thy)
                                      FV range_ty {path=[a], rows=rows}
      fun func (_,(tag,i),[pat]) = tag (pat,i)
        | func _ = err "error in pattern-match translation"
      val patts1 = map func patts
-     val patts2 = sort(fn p1=>fn p2=> row_of_pat p1 < row_of_pat p2) patts1
+     val (omits,givens) = Lib.partition is_omitted patts1
+     val givens' = sort pattern_cmp givens
+     val patts2 = givens' @ omits
      val finals = map row_of_pat patts2
      val originals = map (row_of_pat o #2) rows
+     val new_rows = length finals - length originals
+     val clause_s = if new_rows = 1 then " clause " else " clauses "
+     val _ = if new_rows > 0 then
+               (msg ("\n  pattern completion has added "^
+                     Int.toString new_rows^clause_s^
+                     "to the original specification.");
+                if !allow_new_clauses then ()
+                else
+                  err ("new clauses not allowed under current setting of "^
+                       Lib.quote("Functional.allow_new_clauses")^" flag"))
+             else ()
      fun int_eq i1 (i2:int) =  (i1=i2)
      val inaccessibles = filter(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
@@ -685,5 +779,28 @@ fun mk_functional thy eqs =
     pats = patts3}
  end
 end;
+
+(*---------------------------------------------------------------------------
+   Given a list of (pattern,expression) pairs, mk_pattern_fn creates a term
+   as an abstraction containing a case expression on the function's argument.
+ ---------------------------------------------------------------------------*)
+
+fun mk_pattern_fn thy (pes: (term * term) list) =
+  let fun err s = raise ERR "mk_pattern_fn" s
+      val (p0,e0) = Lib.trye hd pes
+          handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"
+      val pty = type_of p0 and ety = type_of e0
+      val (ps,es) = unzip pes
+      val _ = if all (Lib.equal pty o type_of) ps then ()
+              else err "patterns have varying types"
+      val _ = if all (Lib.equal ety o type_of) es then ()
+              else err "expressions have varying types"
+      val fvar = genvar (pty --> ety)
+      val eqs = list_mk_conj (map (fn (p,e) => mk_eq(mk_comb(fvar,p), e)) pes)
+      val {functional,pats} = mk_functional thy eqs
+      val f = snd (dest_abs functional)
+   in
+     f
+  end
 
 end;

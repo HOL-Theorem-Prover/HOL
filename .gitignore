@@ -30,6 +30,9 @@
 *.hix
 *.fdb_latexmk
 
+#Generated Verilog from Iyoda/Gordon hw compilation
+*.vl
+
 config-override
 tools-poly/poly-includes.ML
 
@@ -115,6 +118,7 @@ Manual/Reference/entries.tex
 examples/dev/*.vl
 
 examples/machine-code/lisp/*.s
+examples/machine-code/just-in-time/*.s
 
 examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
@@ -122,6 +126,12 @@ examples/muddy/muddyC/muddy.so
 
 examples/set-theory/hol_sets/ordinalML.*
 
+examples/theorem-prover/lisp-runtime/bin/*.s
+
+
 examples/computability/lambda/computability-heap
+
+examples/miniML/hol2miniml/*.txt
+examples/miniML/hol2miniml/miniml-heap
 
 local-hol-heap

@@ -1,0 +1,14 @@
+INCLUDES = ../model
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = mips-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../model/mipsLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../../base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif

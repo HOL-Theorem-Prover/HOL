@@ -1,9 +1,8 @@
 structure quantHeuristicsScript =
 struct
 
-
 open HolKernel Parse boolLib Drule BasicProvers
-     pairTheory listTheory optionTheory metisLib simpLib 
+     pairTheory listTheory optionTheory metisLib simpLib
      boolSimps pureSimps TotalDefn numLib ConseqConv
 
 val _ = new_theory "quantHeuristics";
@@ -703,7 +702,6 @@ val EXISTS_NOT_FORALL_THM = store_thm ("EXISTS_NOT_FORALL_THM",
 PROVE_TAC[])
 
 
-
 val MOVE_EXISTS_IMP_THM = store_thm ("MOVE_EXISTS_IMP_THM",
 ``(?x. ((!y. (~(P x y)) ==> R y) ==> Q x)) =
          (((!y. (~(!x. P x y)) ==> R y)) ==> ?x. Q x)``,
@@ -713,7 +711,6 @@ val MOVE_EXISTS_IMP_THM = store_thm ("MOVE_EXISTS_IMP_THM",
 val UNWIND_EXISTS_THM = store_thm ("UNWIND_EXISTS_THM",
  ``!a P. (?x. P x) = ((!x. ~(x = a) ==> ~(P x)) ==> P a)``,
  PROVE_TAC[]);
-
 
 
 val LEFT_IMP_AND_INTRO = store_thm ("LEFT_IMP_AND_INTRO",
@@ -736,6 +733,9 @@ val RIGHT_IMP_OR_INTRO = store_thm ("RIGHT_IMP_OR_INTRO",
 val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
    ``!P i x. ~(P i) ==> (P x) ==> ~(x = i)``, PROVE_TAC[])
 
+
+val DISJ_IMP_INTRO  = store_thm ("DISJ_IMP_INTRO",
+  ``(!x. P x \/ Q x) ==> ((~(P y) ==> Q y) /\ (~(Q y) ==> P y))``, PROVE_TAC[])
 
 (******************************************************************************)
 (* Removing functions under quantifiers                                       *)
@@ -788,10 +788,15 @@ val ISR_exists = store_thm ("ISR_exists",
   ``ISR x = (?r. x = INR r)``,
 Cases_on `x` THEN SIMP_TAC std_ss [])
 
-val ISL_ISR_NEG = store_thm ("ISL_ISR_NEG",
-  ``(~(ISR x) = ISL x) /\
-    (~(ISL x) = ISR x)``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+val INL_NEQ_ELIM = store_thm ("INL_NEQ_ELIM",
+  ``((!l. x <> INL l) <=> (ISR x)) /\
+    ((!l. INL l <> x) <=> (ISR x))``,
+Cases_on `x` THEN SIMP_TAC std_ss []);
+
+val INR_NEQ_ELIM = store_thm ("INR_NEQ_ELIM",
+  ``((!r. x <> INR r) <=> (ISL x)) /\
+    ((!r. INR r <> x) <=> (ISL x))``,
+Cases_on `x` THEN SIMP_TAC std_ss []);
 
 val LENGTH_LE_PLUS = store_thm ("LENGTH_LE_PLUS",
   ``(n + m) <= LENGTH l <=> (?l1 l2. (LENGTH l1 = n) /\ m <= LENGTH l2 /\ (l = l1 ++ l2))``,
@@ -839,7 +844,7 @@ local
     val es = mk_e [] n
 
     (* equality *)
-    val thm_eq = let 
+    val thm_eq = let
       val l = mk_eq (len_t, n_t);
       val thm_aux = SIMP_CONV arith_ss [LENGTH_EQ_NUM_compute, GSYM LEFT_EXISTS_AND_THM] l;
     in
@@ -847,7 +852,7 @@ local
     end
 
     (* equality plus *)
-    val thm_eqp = let 
+    val thm_eqp = let
       val l = mk_eq (len_t, mk_plus(n_t, mk_var("x", ``:num``)));
       val thm_aux = SIMP_CONV list_ss [LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM, thm_eq] l;
     in
@@ -855,26 +860,26 @@ local
     end
 
     (* less equal *)
-    val thm_le = let  
+    val thm_le = let
       val l = mk_leq (n_t, len_t);
       val thm_aux = SIMP_CONV list_ss [LENGTH_LE_NUM, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
-    in 
+    in
       CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
     end
 
     (* less equal plus *)
-    val thm_lep = let  
+    val thm_lep = let
       val l = mk_leq (mk_plus(n_t, mk_var("x", ``:num``)), len_t);
       val thm_aux = SIMP_CONV list_ss [LENGTH_LE_PLUS, thm_eq, GSYM LEFT_EXISTS_AND_THM] l;
-    in 
+    in
       CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["l'"])) thm_aux
     end
 
     (* less *)
-    val thm_less = let  
+    val thm_less = let
       val l = mk_less (pre_n_t, len_t);
       val thm_aux = SIMP_CONV list_ss [arithmeticTheory.LESS_EQ, thm_le] l;
-    in 
+    in
       thm_aux
     end
   in

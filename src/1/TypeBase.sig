@@ -46,6 +46,7 @@ sig
    val dest_case          : term -> term * term * (term * term) list
    val is_case            : term -> bool
    val strip_case         : term -> term * (term * term) list
+   val mk_pattern_fn      : (term * term) list -> term
 
    val mk_record          : hol_type * (string * term) list -> term
    val dest_record        : term -> hol_type * (string * term) list

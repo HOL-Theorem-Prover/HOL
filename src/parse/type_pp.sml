@@ -78,13 +78,6 @@ end
 val pp_array_types = ref true
 val _ = register_btrace ("pp_array_types", pp_array_types)
 
-fun dest_arraytype ty = let
-  val {Thy, Tyop, Args} = dest_thy_type ty
-in
-  if Thy = "fcp" andalso Tyop = "cart" then (hd Args, hd (tl Args))
-  else raise ERR "dest_arraytype: not an array type"
-end
-
 fun pp_type0 (G:grammar) backend = let
   val {infixes,suffixes} = rules G
   fun lookup_tyop s = let
@@ -127,19 +120,6 @@ fun pp_type0 (G:grammar) backend = let
           val s = dest_numtype ty
         in
           add_string s
-        end handle HOL_ERR _ =>
-        let
-          val _ = !pp_array_types orelse
-                  raise mk_HOL_ERR "" "" "" (* will be caught below *)
-          val (bty, cty) = dest_arraytype ty
-          (* ignore parenthesis requirements on sub-arguments knowing that
-             all suffixes, including array bracketting, are tightest binders
-             in grammar and all at the same tightest level. *)
-        in
-          pr_ty pps bty Sfx (depth - 1);
-          add_string "[";
-          pr_ty pps cty Top (depth - 1);
-          add_string "]"
         end handle HOL_ERR _ =>
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
@@ -190,65 +170,74 @@ fun pp_type0 (G:grammar) backend = let
             end_block();
             add_string ")"
           end
+          val {Thy, Tyop = realTyop, Args = realArgs} = dest_thy_type ty
         in
-          case Args of
-            [] => let
-            in
-              case lookup_tyop Tyop of
-                NONE => print_ghastly ()
-              | _ => add_ann_string (Tyop, TyOp tooltip)
+          if Tyop = "cart" andalso length Args = 2 andalso
+             Thy = "fcp" andalso realTyop = "cart" andalso !pp_array_types
+          then
+            (pr_ty pps (hd Args) Sfx (depth - 1);
+             add_string "[";
+             pr_ty pps (hd (tl Args)) Top (depth - 1);
+             add_string "]")
+          else
+            case Args of
+              [] => let
+              in
+                case lookup_tyop Tyop of
+                  NONE => print_ghastly ()
+                | _ => add_ann_string (Tyop, TyOp tooltip)
 
-            end
-          | [arg1, arg2] => (let
-              val rule = valOf (lookup_tyop Tyop)
-            in
-              case rule of
-                SR => let
-                in
-                  begin_block INCONSISTENT 0;
-                  (* knowing that there are two args, we know that they will
-                     be printed with parentheses, so the gravity we pass in
-                     here makes no difference. *)
-                  print_args Top Args;
-                  add_break(1,0);
-                  add_ann_string (Tyop, TyOp tooltip);
-                  end_block()
-                end
-              | IR(prec, assoc, printthis) => let
-                  val parens_needed =
-                      case grav of
-                        Sfx => true
-                      | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                      else (n >= prec)
-                      | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                      else (n >= prec)
-                      | _ => false
-                in
-                  pbegin parens_needed;
-                  begin_block INCONSISTENT 0;
-                  pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
-                  add_break(1,0);
-                  add_ann_string (printthis, TySyn tooltip);
-                  add_break(1,0);
-                  pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
-                  end_block();
-                  pend parens_needed
-                end
-            end handle Option => print_ghastly())
-          | _ => let
-            in
-              case lookup_tyop Tyop of
-                NONE => print_ghastly()
-              | SOME _ => let
-                in
-                  begin_block INCONSISTENT 0;
-                  print_args Sfx Args;
-                  add_break(1,0);
-                  add_ann_string (Tyop, TyOp tooltip);
-                  end_block()
-                end
-            end
-        end
+              end
+            | [arg1, arg2] => (let
+                val rule = valOf (lookup_tyop Tyop)
+              in
+                case rule of
+                  SR => let
+                  in
+                    begin_block INCONSISTENT 0;
+                    (* knowing that there are two args, we know that they will
+                       be printed with parentheses, so the gravity we pass in
+                       here makes no difference. *)
+                    print_args Top Args;
+                    add_break(1,0);
+                    add_ann_string (Tyop, TyOp tooltip);
+                    end_block()
+                  end
+                | IR(prec, assoc, printthis) => let
+                    val parens_needed =
+                        case grav of
+                          Sfx => true
+                        | Lfx (n, s) => if s = printthis then assoc <> LEFT
+                                        else (n >= prec)
+                        | Rfx (n, s) => if s = printthis then assoc <> RIGHT
+                                        else (n >= prec)
+                        | _ => false
+                  in
+                    pbegin parens_needed;
+                    begin_block INCONSISTENT 0;
+                    pr_ty pps arg1 (Lfx (prec, printthis)) (depth - 1);
+                    add_break(1,0);
+                    add_ann_string (printthis, TySyn tooltip);
+                    add_break(1,0);
+                    pr_ty pps arg2 (Rfx (prec, printthis)) (depth -1);
+                    end_block();
+                    pend parens_needed
+                  end
+              end handle Option => print_ghastly())
+            | _ => let
+              in
+                case lookup_tyop Tyop of
+                  NONE => print_ghastly()
+                | SOME _ => let
+                  in
+                    begin_block INCONSISTENT 0;
+                    print_args Sfx Args;
+                    add_break(1,0);
+                    add_ann_string (Tyop, TyOp tooltip);
+                    end_block()
+                  end
+              end
+          end
   end
 in
   pr_ty

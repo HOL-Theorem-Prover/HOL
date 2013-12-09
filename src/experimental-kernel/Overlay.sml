@@ -9,7 +9,7 @@
 infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?> |>
 infixr ##
 infixr 3 -->;
-infix 8 via by;
+infix 8 via by suffices_by
 
 (* infixes for THEN shorthands *)
 infix >> >- >|
@@ -28,5 +28,3 @@ structure PP = HOLPP
 type 'a quotation = 'a PP.quotation
 type ppstream = PP.ppstream
 datatype frag = datatype PP.frag
-
-

@@ -182,7 +182,7 @@ Cases_on `v IN FDOM s` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 RES_TAC THEN SRW_TAC [][] THEN
 METIS_TAC [IN_DISJOINT]);
 
-val _ = set_fixity "s_o_s"(Infixl 750);
+val _ = set_fixity "s_o_s"(Infixl 740);
 
 val s_o_s_def = Define`
   s1 s_o_s s2 = FUN_FMAP (($'' s1) o ($'' s2 o Var)) (FDOM s1 ∪ FDOM s2)`;

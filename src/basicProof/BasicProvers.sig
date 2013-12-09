@@ -41,6 +41,7 @@ sig
   val SPOSE_NOT_THEN    : (thm -> tactic) -> tactic
 
   val by                : term quotation * tactic -> tactic  (* infix *)
+  val suffices_by       : term quotation * tactic -> tactic  (* infix *)
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
 

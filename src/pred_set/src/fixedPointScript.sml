@@ -136,7 +136,7 @@ val fnsum_def = new_definition(
   ``fnsum f1 f2 X = f1 X UNION f2 X``);
 
 val _ = set_fixity "++" (Infixl 480)
-val _ = overload_on ("++", ``fnsum``);
+val _ = inferior_overload_on ("++", ``fnsum``);
 
 val fnsum_monotone = store_thm(
   "fnsum_monotone",

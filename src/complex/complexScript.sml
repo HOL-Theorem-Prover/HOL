@@ -261,7 +261,7 @@ val COMPLEX_NEGNEG = store_thm("COMPLEX_NEGNEG",
   ``!z:complex. --z = z``,
   REWRITE_TAC [complex_neg, RE, IM, REAL_NEGNEG]);
 
-val COMPLEX_NEG_EQ = store_thm("COMPLEX_NEG_Q",
+val COMPLEX_NEG_EQ = store_thm("COMPLEX_NEG_EQ",
   ``!z:complex w:complex. (-z = w) = (z = -w)``,
   REWRITE_TAC [complex_neg, COMPLEX_RE_IM_EQ, RE, IM, REAL_NEG_EQ]);
 
@@ -315,7 +315,7 @@ val COMPLEX_NEG_0 = store_thm("COMPLEX_NEG_0",
   REWRITE_TAC [complex_of_num, complex_of_real, complex_neg, RE, IM,
                REAL_NEG_0]);
 
-val COMPLEX_NEG_EQ0 = store_thm("COMPLEX_NEG_0",
+val COMPLEX_NEG_EQ0 = store_thm("COMPLEX_NEG_EQ0",
   ``!z:complex. (-z = 0) = (z = 0)``,
   REWRITE_TAC[COMPLEX_NEG_EQ,COMPLEX_NEG_0]);
 
@@ -331,7 +331,7 @@ val COMPLEX_SUB_LZERO = store_thm("COMPLEX_SUB_LZERO",
   ``!z:complex. 0 - z = -z``,
   REWRITE_TAC [complex_sub, COMPLEX_ADD_LID]);
 
-val COMPLEX_SUB_LNEG = store_thm("COMPLEX_SUB_G",
+val COMPLEX_SUB_LNEG = store_thm("COMPLEX_SUB_LNEG",
   ``!z:complex w:complex. -z - w = -(z + w)``,
   REPEAT GEN_TAC THEN REWRITE_TAC [complex_sub, COMPLEX_NEG_ADD]);
 
@@ -419,11 +419,11 @@ val COMPLEX_MUL_LNEG = store_thm("COMPLEX_MUL_LNEG",
   ``! z:complex w:complex. -z * w = -(z * w)``,
   REWRITE_TAC[COMPLEX_NEG_LMUL]);
 
-val COMPLEX_SUB_LDISTRIB = store_thm("COMPLEX_ADD_LDISTRIB",
+val COMPLEX_SUB_LDISTRIB = store_thm("COMPLEX_SUB_LDISTRIB",
   ``!z:complex w:complex v:complex. z * (w - v) = z * w - z * v``,
   REWRITE_TAC [complex_sub, COMPLEX_ADD_LDISTRIB, GSYM COMPLEX_NEG_RMUL]);
 
-val COMPLEX_SUB_RDISTRIB = store_thm("COMPLEX_ADD_RDISTRIB",
+val COMPLEX_SUB_RDISTRIB = store_thm("COMPLEX_SUB_RDISTRIB",
   ``!z:complex w:complex v:complex. (z - w) * v = z * v - w * v``,
   PROVE_TAC [COMPLEX_MUL_COMM,COMPLEX_SUB_LDISTRIB]);
 
@@ -440,7 +440,7 @@ val COMPLEX_EQ_LMUL = store_thm("COMPLEX_EQ_LMUL",
   ONCE_REWRITE_TAC [GSYM COMPLEX_SUB_0] THEN
   REWRITE_TAC [GSYM COMPLEX_SUB_LDISTRIB, COMPLEX_ENTIRE, COMPLEX_SUB_RZERO]);
 
-val COMPLEX_EQ_RMUL = store_thm("COMPLEX_EQ_LMUL",
+val COMPLEX_EQ_RMUL = store_thm("COMPLEX_EQ_RMUL",
   ``!z:complex w:complex v:complex.
                (z * v = w * v) = (v = 0) \/ (z = w)``,
   PROVE_TAC[COMPLEX_MUL_COMM, COMPLEX_EQ_LMUL]);

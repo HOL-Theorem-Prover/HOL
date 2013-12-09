@@ -1,11 +1,14 @@
+(*
 set_trace "Unicode" 0;
 set_trace "pp_annotations" 0;
+*)
 
 use (HOLDIR^"/src/pfl/defchoose");
 
-quietdec := true;
+(* quietdec := true; *)
 open numSyntax optionSyntax pairSyntax optionTheory;
-quietdec := false;
+(* quietdec := false; *)
+
 
 val suc_zero = ``SUC 0``;
 
@@ -238,6 +241,8 @@ fun mk_typed_vars name vlist tylist =
        (Globals.priming, SOME"") vary (vlist,tylist,[])
  end;
 
+fun single x = [x];
+
 fun new_base_cases eqns vars =
  let fun munge fns [] vars bcases = ([],bcases)
        | munge fns (h::t) vars bcases =
@@ -311,7 +316,7 @@ fun limit_spec_def base_case =
      val fapp = mk_is_some(list_mk_comb(fconst, limvar::args'))
      val tm' = list_mk_forall(args',mk_exists(limvar,fapp))
  in
-   DEFCHOOSE (lim_name^"_spec", tm')
+   DEFCHOOSE (lim_name^"_spec", lim_name, tm')
  end
  handle e => raise wrap_exn "Index" "limit_spec_def" e;
 
@@ -422,7 +427,7 @@ fun list_mk_conj_imp ([],b) = b
 (*                                                                           *)
 (* iack (SUC d) 0 0 = SOME(0+1) and iack (SUC d) 0 (SUC n) = SOME(SUC n + 1) *)
 (*                                                                           *)
-(* so if we generated a pack 0 n = SOME (n+1) goal that wouldn't work cuz    *)
+(* so if we generated a pack 0 n = SOME (n+1) goal that wouldn't work because*)
 (* the rewrite rules for iack are too specific to rewrite that.              *)
 (*---------------------------------------------------------------------------*)
 
@@ -476,8 +481,7 @@ fun pbase_clause pfn_def idef limspec ifn_def_pos =
  BASE_DEFINED_TAC idef limspec ifn_def_pos THEN
  ASM_REWRITE_TAC [idef]
 
-
-fun precursive_clause pfn_def idef limspec =
+fun precursive_clause pfn_def idef limspec = ...
 
 val (peqns,idef,limspec_thms,pfn_defs,fn_defs,dom_defs) = test ack_tm;
 

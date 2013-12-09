@@ -965,7 +965,7 @@ val COUNTABLE_ENUM = store_thm
        ++ Q.EXISTS_TAC `K e`
        ++ RW_TAC std_ss [EXTENSION, IN_SING, IN_IMAGE, IN_UNIV, K_THM])
    ++ DISJ2_TAC
-   ++ Q.EXISTS_TAC `num_case e f`
+   ++ Q.EXISTS_TAC `\n. num_CASE n e f`
    ++ RW_TAC std_ss [IN_INSERT, IN_IMAGE, EXTENSION, IN_UNIV]
    ++ EQ_TAC <<
    [RW_TAC std_ss [] <<
@@ -973,11 +973,9 @@ val COUNTABLE_ENUM = store_thm
      ++ RW_TAC std_ss [num_case_def],
      Q.EXISTS_TAC `SUC x'`
      ++ RW_TAC std_ss [num_case_def]],
-    RW_TAC std_ss []
-    ++ Cases_on `x'` <<
-    [RW_TAC std_ss [num_case_def],
-     RW_TAC std_ss [num_case_def]
-     ++ PROVE_TAC []]]);
+    RW_TAC std_ss [] ++
+    METIS_TAC [num_case_def, TypeBase.nchotomy_of ``:num``]]
+    );
 
 val BIGUNION_IMAGE_UNIV = store_thm
   ("BIGUNION_IMAGE_UNIV",

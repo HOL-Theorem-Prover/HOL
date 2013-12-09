@@ -18,36 +18,36 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
        | _ => false)
   val doparen = if paren_required then (fn c => add_string c)
                 else (fn c => nothing)
-  fun doguard g =
-      add_string "if" >>
-      add_break (1,2) >>
-      printer (Top,Top,Top) (depth - 1) g >>
-      add_break (1,0) >>
-      add_string "then"
+  fun doguard needs_else (g,t) =
+      block PP.CONSISTENT 0
+            (block PP.CONSISTENT 0
+                   ((if needs_else then
+                       add_string "else" >> add_string " " >>
+                       add_string "if"
+                     else
+                       add_string "if") >>
+                    add_break (1,2) >>
+                    printer (Top,Top,Top) (depth - 1) g >>
+                    add_break (1,0) >>
+                    add_string "then") >>
+             add_break (1,2) >>
+             printer (Top,Top,Top) (depth - 1) t)
 
-  fun doone (t, e) = let
+  fun doelse e = let
+    val prec = Prec(70, "COND")
   in
-    add_break(1,2) >>
-    printer (Top,Top,Top) (depth -1) t >>
-    add_break(1,0) >>
-    (if is_cond e then let
-         val (g,t,e) = dest_cond e
-       in
-         block PP.CONSISTENT 0
-               (add_string "else" >> add_string " " >> doguard g) >>
-         doone(t,e)
-       end
-    else
-      add_string "else" >>
-      add_break (1,2) >>
-      printer (Prec(70, "COND"), Prec(70, "COND"), rgr) (depth - 1) e)
+    case Lib.total dest_cond e of
+        SOME (g,t,e_next) => (doguard true (g,t) >> add_break(1,0) >>
+                              doelse e_next)
+      | NONE => block PP.CONSISTENT 0
+                      (add_string "else" >> add_break (1,2) >>
+                       printer (prec,prec,rgr) (depth - 1) e)
   end
   val (g,t,e) = dest_cond tm
 in
   doparen "(" >>
   block PP.CONSISTENT 0
-    (block PP.CONSISTENT 0 (doguard g) >>
-     doone (t, e)) >>
+    (doguard false (g,t) >> add_break(1,0) >> doelse e) >>
   doparen ")"
 end
 

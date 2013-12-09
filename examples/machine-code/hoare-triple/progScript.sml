@@ -260,6 +260,13 @@ val SPEC_PRE_DISJ_INTRO = store_thm("SPEC_PRE_DISJ_INTRO",
   \\ MATCH_MP_TAC (MATCH_MP SPEC_WEAKEN (SPEC_ALL SPEC_REFL))
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def]);
 
+val SPEC_EXISTS_EXISTS = store_thm("SPEC_EXISTS_EXISTS",
+  ``(!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)``,
+  SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS] \\ REPEAT STRIP_TAC
+  \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
+  \\ IMP_RES_TAC SPEC_WEAKEN \\ POP_ASSUM MATCH_MP_TAC
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
+
 val SPEC_TAILREC = store_thm("SPEC_TAILREC",
   ``!f1 (f2:'a->'b) g p res res' c m.
       (!x y. g x /\ p x /\ (y = f1 x) ==> SPEC m (res x) c (res y)) /\

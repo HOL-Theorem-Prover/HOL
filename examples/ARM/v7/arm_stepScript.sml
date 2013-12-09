@@ -798,8 +798,7 @@ val align_bx_bit = Q.store_thm("align_bx_bit",
    (!a:word32 n. (a || n2w n) ' 0 = a ' 0 \/ ODD n) /\
    (!a:word32 n. (a ?? n2w n) ' 0 = a ' 0 <> ODD n) /\
    (!a:word32 n. (a + n2w n) ' 0  = a ' 0 <> ODD n)`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss]
-    [WORD_ADD_BIT0, n2w_def, GSYM LSB_def, LSB_ODD]);
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [WORD_ADD_BIT0, n2w_def, BIT0_ODD]);
 
 val aligned_bx_thm = Q.store_thm("aligned_bx_thm",
   `!a:word32. aligned_bx a = (~a ' 0 ==> ~a ' 1)`,
@@ -2662,9 +2661,7 @@ val compare_branch_instr = save_thm("compare_branch_instr",
 
 val error_option_case_COND_RAND = Q.store_thm("error_option_case_COND_RAND",
   `!c f f1 a0 a1 a2 a3.
-     error_option_case f f1
-       (if c then ValueState a0 a1
-             else ValueState a2 a3) =
+     error_option_CASE (if c then ValueState a0 a1 else ValueState a2 a3) f f1 =
      if c then
        f a0 a1
      else

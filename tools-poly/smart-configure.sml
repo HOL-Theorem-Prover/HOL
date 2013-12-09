@@ -212,6 +212,8 @@ val dynlib_available = false;
 
 print "\n";
 
+val DOT_PATH = "/usr/bin/dot"
+
 fun verdict (prompt, value) =
     if value = "" then
       (print ("\n*** No value for "^prompt^
@@ -226,6 +228,7 @@ verdict ("OS", OS);
 verdict ("poly", poly);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
+verdict ("DOT_PATH", DOT_PATH);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";
@@ -239,4 +242,4 @@ print "\n";
 val configfile = OS.Path.concat (OS.Path.concat (holdir, "tools-poly"), "configure.sml");
 
 
-use configfile;
+use configfile handle Fail s => die s;

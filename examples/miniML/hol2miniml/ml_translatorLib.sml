@@ -508,7 +508,7 @@ end
 fun type_of_cases_const ty = let
   val th = TypeBase.case_def_of ty
   val ty = th |> SPEC_ALL |> CONJUNCTS |> hd |> SPEC_ALL
-              |> concl |> dest_eq |> fst |> rator |> type_of
+              |> concl |> dest_eq |> fst |> repeat rator |> type_of
   in ty end
 
 fun name_of_type ty = let
@@ -675,7 +675,7 @@ fun list_lemma () = let
     EVAL ``LIST_TYPE (a:('a -> v -> bool)) (x::xs) v``]
   val LIST_TYPE_SIMP = prove(
     ``!xs b. CONTAINER LIST_TYPE (\x v. if b x \/ MEM x xs then p x v else ARB) xs = LIST_TYPE (p:('a -> v -> bool)) xs``,
-    Induct THEN FULL_SIMP_TAC std_ss [FUN_EQ_THM,list_def,MEM,DISJ_ASSOC,CONTAINER_def])
+    Induct THEN FULL_SIMP_TAC std_ss [FUN_EQ_THM,list_def,listTheory.MEM,DISJ_ASSOC,CONTAINER_def])
     |> Q.SPECL [`xs`,`\x.F`] |> SIMP_RULE std_ss [] |> GSYM;
   in LIST_TYPE_SIMP end handle HOL_ERR _ => TRUTH;
 
@@ -764,7 +764,7 @@ fun define_ref_inv tys = let
     (WF_REL_TAC [QUOTE ("measure (" ^ build_measure tys ^ ")")]
      \\ REPEAT STRIP_TAC
      \\ TRY (Q.PAT_ASSUM `MEM x xs` (fn th =>
-              ASSUME_TAC th THEN Induct_on [ANTIQUOTE (rand (concl th))]))
+              ASSUME_TAC th THEN Induct_on [ANTIQUOTE (rand (rand (concl th)))]))
      \\ FULL_SIMP_TAC std_ss [MEM,FORALL_PROD,size_def] \\ REPEAT STRIP_TAC
      \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC \\ DECIDE_TAC)
 (*
@@ -828,12 +828,19 @@ fun define_ref_inv tys = let
                 (zip inv_defs eq_lemmas)
   in res end;
 
+fun domain ty = ty |> dest_fun_type |> fst
+fun codomain ty = ty |> dest_fun_type |> snd
+
 (*
 val ty = ``:'a list``; derive_thms_for_type ty
 val ty = ``:'a # 'b``; derive_thms_for_type ty
 val ty = ``:'a + num``; derive_thms_for_type ty
 val ty = ``:num option``; derive_thms_for_type ty
 val ty = ``:unit``; derive_thms_for_type ty
+
+val _ = Hol_datatype `tree = Node of num => 'a => tree list`;
+val ty = ``:'a tree``; derive_thms_for_type ty
+
 *)
 
 fun derive_thms_for_type ty = let
@@ -874,20 +881,23 @@ fun derive_thms_for_type ty = let
     val cases_th = TypeBase.case_def_of ty
     val (x1,x2) = cases_th |> CONJUNCTS |> hd |> concl |> repeat (snd o dest_forall)
                            |> dest_eq
-    val ty1 = x1 |> rand |> type_of
+    val ty1 = x1 |> repeat rator |> type_of |> domain
     val ty2 = x2 |> type_of
     val cases_th = INST_TYPE [ty2 |-> ``:'return_type``] cases_th
                    |> INST_TYPE (match_type ty1 ty)
+    fun replace_match_exp f tm = let
+      val (x,y) = dest_comb tm
+      in if is_const x then mk_comb(x,f y) else mk_comb(replace_match_exp f x,y) end
     val cases_tm =
       cases_th |> CONJUNCTS |> hd |> concl |> repeat (snd o dest_forall)
-               |> dest_eq |> fst |> rator
+               |> dest_eq |> fst |> replace_match_exp (fn tm => mk_arb (type_of tm))
     fun rename [] = []
       | rename (x::xs) = let val k = "f" ^ int_to_string (length xs + 1)
                          in (x,mk_var(k,type_of x)) :: rename xs end
     val vs = rev (rename (free_vars cases_tm))
     val cases_tm = subst (map (fn (x,y) => x |-> y) vs) cases_tm
-    val exp = ``^cases_tm x``
-    val input_var = rand exp
+    val exp = cases_tm |> replace_match_exp (fn tm => mk_var ("x",type_of tm))
+    val input_var = filter (fn x => not (mem x (free_vars cases_tm))) (free_vars exp) |> hd
     val ret_ty = type_of exp
     val xs = rev (map rand (find_terms is_eq (concl case_th)))
     fun add_nums [] = []
@@ -1089,7 +1099,7 @@ fun inst_cons_thm tm hol2deep = let
 fun inst_case_thm_for tm = let
   val (_,_,names) = TypeBase.dest_case tm
   val names = map fst names
-  val th = case_of (type_of (rand tm))
+  val th = case_of ((repeat rator tm) |> type_of |> domain)
   val pat = th |> UNDISCH_ALL |> concl |> rand |> rand
   val (ss,i) = match_term pat tm
   val th = INST ss (INST_TYPE i th)
@@ -1268,7 +1278,9 @@ fun single_line_def def = let
   val v = mk_var("generated_definition",mk_type("fun",[``:unit``,type_of const]))
   val lemma  = def |> SPEC_ALL |> CONJUNCTS |> map SPEC_ALL |> LIST_CONJ
   val def_tm = (subst [const|->mk_comb(v,``()``)] (concl lemma))
-  val _ = quietDefine [ANTIQUOTE def_tm]
+  (* The following code seens to depend on that first a split the unit argument takes place,
+     since the new pattern match heuristics drop such splits, the old one needs to be used. *)
+  val _ = Pmatch.with_classic_heuristic quietDefine [ANTIQUOTE def_tm]
   val curried = fetch "-" "generated_definition_curried_def"
   val c = curried |> SPEC_ALL |> concl |> dest_eq |> snd |> rand
   val c2 = curried |> SPEC_ALL |> concl |> dest_eq |> fst
@@ -1284,7 +1296,7 @@ fun single_line_def def = let
   val (a,tm) = dest_abs tm
   val tm = (REWRITE_CONV [GSYM FALSE_def,GSYM TRUE_def] THENC
             SIMP_CONV std_ss [Once pair_case_def,GSYM curried]) (subst [a|->c,v|->cc] tm)
-           |> concl |> rand |> rator |> rand
+           |> concl |> rand |> rand
   val vs = free_vars tm
   val goal = mk_eq(mk_container c2, mk_container tm)
   val pre_tm =
@@ -1384,7 +1396,7 @@ fun preprocess_def def = let
   val def = if def |> SPEC_ALL |> concl |> dest_eq |> fst |> is_const
             then SPEC_ALL (RW1 [FUN_EQ_THM] def) else def
   val def = PURE_REWRITE_RULE ([ADD1,boolTheory.literal_case_DEF,
-              boolTheory.bool_case_DEF,num_case_thm] @ get_preprocessor_rws()) def
+              num_case_thm] @ get_preprocessor_rws()) def
   val def = CONV_RULE (REDEPTH_CONV BETA_CONV) def
   val def = rename_bound_vars_rule "v" (GEN_ALL def) |> SPEC_ALL
   in (is_rec,def,ind) end;

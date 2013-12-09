@@ -1,20 +1,11 @@
 open HolKernel Parse boolTheory boolLib pairTheory
 
+open testutils
+
 val _ = set_trace "Unicode" 0
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
-fun die () = (print "FAILED!\n"; Process.exit Process.failure)
-fun sdie s = (print ("FAILED!\n  "^s^"\n"); Process.exit Process.failure)
-
-fun tpp s = let
-  val t = Parse.Term [QUOTE s]
-  val _ = tprint ("Testing printing of `"^s^"`")
-  val res = term_to_string t
-in
-  if res = s then print "OK\n"
-  else die ()
-end
-
+val die = fn () => die "FAILED!\n"
+fun sdie s = testutils.die ("FAILED!\n  "^s^"\n")
 
 val _ = app tpp ["\\(x,y). x /\\ y",
                  "\\(x,y,z). x /\\ y /\\ z",
@@ -32,6 +23,12 @@ val _ = let
 in
   ()
 end handle e => die()
+
+(* parsing of case expressions with conditionals as arms *)
+val _ = tprint "Parsing case expressions with conditional arms"
+val t1 = ``case p:'a#'b of (x,y) => if y = a then x else f x y``
+val t2 = ``pair_CASE (p:'a # 'b) (\x y. if y = a then x else f x y)``
+val _ = if aconv t1 t2 then print "OK\n" else die()
 
 val _ = print "**** More Inductive Definition tests ****\n"
 open IndDefLib
@@ -97,5 +94,7 @@ val (single_rules, single_ind, single_cases) = Hol_reln`
   (!x y. RTC single x y \/ (x = y + TWO) ==> single x y)
 `;
 val _ = checkhyps single_rules
+
+
 
 val _ = Process.exit Process.success

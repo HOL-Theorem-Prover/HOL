@@ -500,11 +500,12 @@ val LNTH_EQ = store_thm(
 val LTAKE = new_recursive_definition {
   def = ``(LTAKE 0 ll = SOME []) /\
           (LTAKE (SUC n) ll =
-             option_case
-                NONE
-                (\hd. option_case NONE (\tl. SOME (hd::tl))
-                         (LTAKE n (THE (LTL ll))))
-                (LHD ll))``,
+             case LHD ll of
+                 NONE => NONE
+               | SOME hd =>
+                   case LTAKE n (THE (LTL ll)) of
+                       NONE => NONE
+                     | SOME tl => SOME (hd::tl))``,
   name = "LTAKE",
   rec_axiom = prim_recTheory.num_Axiom};
 
@@ -1020,7 +1021,7 @@ val LFINITE_DROP = store_thm(
   FULL_SIMP_TAC (srw_ss()) []);
 
 val option_case_NONE = prove(
-  ``!f x y. (option_case NONE f x = SOME y) =
+  ``!f x y. (option_CASE x NONE f = SOME y) =
             (?z. (x = SOME z) /\ (f z = SOME y))``,
   REPEAT GEN_TAC THEN Cases_on `x` THEN SIMP_TAC (srw_ss()) []);
 

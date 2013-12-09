@@ -1,0 +1,26 @@
+src/real
+src/complex
+!!examples/separationLogic/src/
+src/HolQbf
+src/HolSmt
+src/opentheory
+(otknl)src/opentheory/logging
+!examples/misc
+# these examples require Muddy, which is MoscowML specific
+[mosml]!examples/muddy/muddyC
+[mosml]!examples/muddy
+[mosml]!examples/HolBdd
+[mosml]!!examples/HolCheck
+!examples/lambda/basics
+!examples/logic
+!!examples/unification/triangular/nominal
+!examples/lambda/barendregt
+!examples/computability
+!!examples/lambda/other-models
+!!examples/lambda/typing
+!!examples/computability/lambda
+!!examples/computability/register
+src/Boolify/src
+src/float
+src/probability
+src/temporal/src

@@ -595,18 +595,31 @@ val SNOC_CONV =
 (*   |- REVERSE [x0,...,xn] = [xn,...,x0]                         *)
 (*----------------------------------------------------------------*)
 
-val REVERSE_CONV =
-    let val fthm = rich_listTheory.REVERSE_FOLDL
-        val conv = ((RATOR_CONV BETA_CONV) THENC BETA_CONV)
-    in
-  fn tm =>
-    (let val lst = listSyntax.dest_reverse tm
-         val fthm' = ISPEC lst fthm
-     in
-         TRANS fthm' (FOLDL_CONV conv (rhs(concl fthm')))
-     end)
-         handle e => raise wrap_exn "List_conv" "REVERSE_CONV" e
-     end;
+local
+   val reverse_empty = CONJUNCT1 listTheory.REVERSE_DEF
+   val cnv1 = Conv.REWR_CONV listTheory.REVERSE_REV
+   val cnv2 = Conv.REWR_CONV reverse_empty
+   val dst = listSyntax.dest_list o listSyntax.dest_reverse
+in
+   fun REVERSE_CONV tm =
+      let
+         val (l, ty) = Lib.with_exn dst tm (ERR "REVERSE_CONV" "")
+      in
+         if List.null l
+            then cnv2 tm
+         else let
+                 val (rev_empty, rev_cons) =
+                    Drule.CONJ_PAIR
+                       (Thm.INST_TYPE [Type.alpha |-> ty] listTheory.REV_DEF)
+                 val cnv3 = Conv.REWR_CONV rev_cons
+              in
+                 (cnv1
+                  THENC Lib.funpow (List.length l - 1)
+                           (fn c => c THENC cnv3) cnv3
+                  THENC Conv.REWR_CONV rev_empty) tm
+              end
+      end
+end
 
 (*----------------------------------------------------------------*)
 (* FLAT_CONV : conv                                               *)

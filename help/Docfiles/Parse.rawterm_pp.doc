@@ -13,7 +13,7 @@ Functions that pretty-print HOL types, terms and theorems do so
 through an abstraction called a ``backend''. Using these backends
 allows output to be customised to the facilities provided by different
 display devices. For example, on terminals supporting DEC's vt100
-colour coding, free variables are displayed in blue. There is a also a
+colour coding, free variables are displayed in blue. There is also a
 ``raw terminal'' backend, that doesn't change the output in any way.
 
 When an interactive session begins, HOL links all of the

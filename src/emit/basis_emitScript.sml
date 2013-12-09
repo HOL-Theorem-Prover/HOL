@@ -602,19 +602,22 @@ val GENLIST_compute = Q.prove(
 
 val defs =
   map DEFN [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
-            MEM, FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
+            FILTER, FOLDR, FOLDL, SNOC, GENLIST_compute, EVERY_DEF,
             EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
             CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
-            ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF,
-            list_size_def, PAD_LEFT, PAD_RIGHT]
+            EL_compute, LENGTH_THM, LEN_DEF, REV_DEF, SUM,
+            list_size_def, PAD_LEFT, PAD_RIGHT] @
+  [DEFN_NOSIG MEM, DEFN ALL_DISTINCT]
 
 val _ = eSML "list"
   (MLSIG "type num = numML.num" ::
+   MLSIG "val MEM : ''a -> ''a list -> bool" ::
    OPEN ["num"] ::
    defs)
 
 val _ = eCAML "list"
   (MLSIG "type num = NumML.num" ::
+   MLSIG "val _MEM : 'a -> 'a list -> bool" ::
    MLSTRUCT "type num = NumML.num" ::
    OPEN ["Num"] ::
    defs)
@@ -692,18 +695,19 @@ val SEG_compute = Q.prove(
     THEN REWRITE_TAC [NOT_CONS_NIL, HD, TL, NOT_SUC, PRE, SEG,
                       combinTheory.FAIL_THM]);
 
-val REPLACE_ELEMENT_compute = Q.prove(
-`(!e n. REPLACE_ELEMENT e n [] = []) /\
- (!e n x l. REPLACE_ELEMENT e n (x::l) =
-  if n = 0 then e::l else x::REPLACE_ELEMENT e (PRE n) l)`,
-SRW_TAC[][REPLACE_ELEMENT_DEF] THEN
+val LUPDATE_compute = Q.prove(
+`(!e n. LUPDATE e n [] = []) /\
+ (!e n x l. LUPDATE e n (x::l) =
+  if n = 0 then e::l else x::LUPDATE e (PRE n) l)`,
+SRW_TAC[][LUPDATE_def] THEN
 Cases_on `n` THEN
-FULL_SIMP_TAC (srw_ss()) [REPLACE_ELEMENT_DEF])
+FULL_SIMP_TAC (srw_ss()) [LUPDATE_def])
 
 val defs =
-  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,
-            FIRSTN_compute,IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
-            REPLACE_ELEMENT_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
+  map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,FIRSTN_compute,
+            BUTLASTN_compute,LASTN_compute,
+            IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP_AUX_def,
+            LUPDATE_compute, REWRITE_RULE [FUN_EQ_THM] SPLITP_compute,
             PREFIX_DEF,REPLICATE_compute,
             SCANL,SCANR,SEG_compute,SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF];
 
@@ -766,7 +770,7 @@ val _ = eSML "string"
    :: MLSTRUCT "fun CHR n =\
        \ Char.chr(valOf(Int.fromString(numML.toDecString n)));"
    :: MLSTRUCT "fun ORD c = numML.fromDecString(Int.toString(Char.ord c));"
-   :: MLSTRUCT "fun STRING c s = String.^(Char.toString c,s);"
+   :: MLSTRUCT "fun STRING c s = String.^(String.str c,s);"
    :: MLSTRUCT "fun DEST_STRING s = if s = \"\" then NONE \n\
        \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
    :: MLSTRUCT "fun string_lt a b = String.compare(a,b) = LESS"
@@ -971,7 +975,7 @@ val BITWISE_compute = Q.prove(
           (if opr (ODD a) (ODD b) then 1 else 0)`,
   Cases THEN1 REWRITE_TAC [CONJUNCT1 BITWISE_def]
     THEN REWRITE_TAC
-         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, LSB_ODD, SBIT_def]);
+         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, BIT0_ODD, SBIT_def]);
 
 val BIT_MODF_compute = Q.prove(
   `!n f x b e y.
@@ -1080,7 +1084,7 @@ val defs =
         BIT_MODF_compute, BIT_MODIFY_EVAL,
         BIT_REV_compute, BIT_REVERSE_EVAL,
         LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def, MOD_2EXP_EQ_compute,
-        BITV_def, BIT_def, SLICE_def, LSB_def, SIGN_EXTEND_def, BOOLIFY_compute]
+        BITV_def, BIT_def, SLICE_def, SIGN_EXTEND_def, BOOLIFY_compute]
 
 val _ = eSML "bit"
   (MLSIG  "type num = numML.num" ::

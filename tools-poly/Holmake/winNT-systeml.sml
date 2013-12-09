@@ -56,6 +56,7 @@ val GNUMAKE =
 val DYNLIB =
 val version =
 val release =
+val DOT_PATH =
 
 val isUnix = false
 
@@ -108,5 +109,3 @@ end (* local *)
 
 
 end; (* struct *)
-
-

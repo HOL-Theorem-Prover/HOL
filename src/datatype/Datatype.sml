@@ -1237,7 +1237,7 @@ fun write_tyinfo tyinfo =
  in
    {ax        = axiom_name,
     induction = induction_name,
-    case_def  = name"_case_def",
+    case_def  = case_constant_defn_name {type_name = tname},
     case_cong = case_cong_name,
     nchotomy  = nchotomy_name,
     size      = size_info,

@@ -441,6 +441,7 @@ type monoset = (string * thm) list;
  * MONO_OR  = |- (A ==> B) /\ (C ==> D) ==> (A \/ C ==> B \/ D)
  * MONO_IMP = |- (B ==> A) /\ (C ==> D) ==> ((A ==> C) ==> (B ==> D))
  * MONO_NOT = |- (B ==> A) ==> (~A ==> ~B)
+ * MONO_COND = |- (w ==> x) /\ (y ==> z) ==> (COND b w y) ==> (COND b x z)
  * MONO_ALL = |- (!x. P x ==> Q x) ==> ((!x. P x) ==> (!x. Q x))
  * MONO_EXISTS = |- (!x. P x ==> Q x) ==> ((?x. P x) ==> (?x. Q x))
  *---------------------------------------------------------------------------*)
@@ -468,6 +469,10 @@ val MONO_RESEXISTS = prove(
   REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
 
+val MONO_COND = let open Rewrite boolTheory in
+  ONCE_REWRITE_RULE[AND_IMP_INTRO]MONO_COND
+end
+
 val bool_monoset =
  [("/\\", MONO_AND),
   ("\\/", MONO_OR),
@@ -475,6 +480,7 @@ val bool_monoset =
   ("!",   MONO_FORALL),
   ("==>", MONO_IMP),
   ("~",   MONO_NOT),
+  ("COND",MONO_COND),
   ("RES_FORALL", MONO_RESFORALL),
   ("RES_EXISTS", MONO_RESEXISTS)]
 

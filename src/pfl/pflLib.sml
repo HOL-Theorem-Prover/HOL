@@ -1,6 +1,9 @@
 structure pflLib =
 struct
 
+open HolKernel boolLib bossLib ;
+open arithmeticTheory optionTheory;
+
 val ERR = mk_HOL_ERR "pflLib";
 
 val MAX_LE_THM = Q.prove

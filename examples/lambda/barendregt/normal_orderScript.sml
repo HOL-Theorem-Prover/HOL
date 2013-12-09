@@ -527,12 +527,12 @@ val _ = overload_on ("upcons", ``λx y. pcons x () y``)
 
 
 val pair_case_unit = prove(
-  ``pair_case (f : unit -> 'a -> 'b) v = f () (SND v)``,
+  ``pair_CASE v (f : unit -> 'a -> 'b) = f () (SND v)``,
   Cases_on `v` THEN SRW_TAC [][oneTheory.one]);
 
 val option_case_unit = prove(
-  ``option_case n (f : unit # 'a -> 'b) (OPTION_MAP ($, ()) x) =
-    option_case n (λx. f ((), x)) x``,
+  ``option_CASE (OPTION_MAP ($, ()) x) n (f : unit # 'a -> 'b)  =
+    option_CASE x n (λx. f ((), x))``,
   Cases_on `x` THEN SRW_TAC [][]);
 
 val nopath_def = new_specification(
@@ -556,7 +556,8 @@ val mem_nopath = Store_thm(
 
 val mem_nopath_expanded = Store_thm(
   "mem_nopath_expanded",
-  ``mem M (option_case (stopped_at M) (λy. pcons M l (f y)) v)``,
+  ``mem M (case v of NONE => stopped_at M
+                   | SOME y => pcons M l (f y))``,
   Cases_on `v` THEN SRW_TAC [][]);
 
 val nopath_okpath = store_thm(
@@ -572,7 +573,7 @@ val nopath_okpath = store_thm(
 
 val option_case_CONG = store_thm(
   "option_case_CONG",
-  ``(x = x') ⇒ (option_case n f x = option_case n f x')``,
+  ``(x = x') ⇒ (option_CASE x n f = option_CASE x' n f)``,
   SRW_TAC [][]);
 
 val normstar_nopath = store_thm(

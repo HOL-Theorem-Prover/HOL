@@ -1275,14 +1275,16 @@ val SER_BIJ_COMPRESS1 = store_thm
        ++ RW_TAC std_ss [])
    ++ Know
       `sum (0, N) f =
-       sum (0, N) (sum_case f (K 0) o (\n. if n IN s then INL n else INR n))`
+       sum (0, N) ((\x. sum_CASE x f (K 0)) o
+                   (\n. if n IN s then INL n else INR n))`
    >> (MATCH_MP_TAC SUM_EQ
        ++ RW_TAC std_ss [sum_case_def, o_THM, K_DEF])
    ++ Rewr
    ++ Know
       `sum (0, n) (f o h) =
        sum (0, n + N)
-       (sum_case f (K 0) o (\i. if i < n then INL (h i) else INR (i - n)))`
+       ((\x. sum_CASE x f (K 0)) o
+        (\i. if i < n then INL (h i) else INR (i - n)))`
    >> (KILL_TAC
        ++ REVERSE (Induct_on `N`)
        >> RW_TAC arith_ss [sum, o_THM, ADD_CLAUSES, K_THM, REAL_ADD_RID]
@@ -1292,10 +1294,10 @@ val SER_BIJ_COMPRESS1 = store_thm
    ++ Rewr
    ++ MATCH_MP_TAC SUM_REORDER_LE
    ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
+   ++ ASM_SIMP_TAC (srw_ss()) [sumTheory.FORALL_SUM]
    ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                     IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-   [MATCH_ACCEPT_TAC REAL_LE_REFL,
-    Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
+   [Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
     ++ RW_TAC std_ss []
     ++ Q.EXISTS_TAC `y`
     ++ RW_TAC std_ss []
@@ -1335,14 +1337,16 @@ val SER_BIJ_COMPRESS2 = store_thm
            ++ RW_TAC std_ss [o_THM])
        ++ Know
        `sum (0, n) f =
-        sum (0, n) (sum_case f (K 0) o (\n. if n IN s then INL n else INR n))`
+        sum (0, n) ((\x. sum_CASE x f (K 0)) o
+                    (\n. if n IN s then INL n else INR n))`
         >> (MATCH_MP_TAC SUM_EQ
             ++ RW_TAC std_ss [sum_case_def, o_THM, K_DEF])
        ++ Rewr
        ++ Know
        `sum (0, N) (f o h) =
         sum (0, N + n)
-        (sum_case f (K 0) o (\i. if i < N then INL (h i) else INR (i - N)))`
+        ((\x. sum_CASE x f (K 0)) o
+         (\i. if i < N then INL (h i) else INR (i - N)))`
        >> (KILL_TAC
            ++ REVERSE (Induct_on `n`)
            >> RW_TAC arith_ss [sum, o_THM, ADD_CLAUSES, K_THM, REAL_ADD_RID]
@@ -1351,11 +1355,11 @@ val SER_BIJ_COMPRESS2 = store_thm
            ++ RW_TAC arith_ss [sum_case_def, o_THM])
        ++ Rewr
        ++ MATCH_MP_TAC SUM_REORDER_LE
+       ++ ASM_SIMP_TAC (srw_ss()) [sumTheory.FORALL_SUM]
        ++ Q.PAT_ASSUM `BIJ h X Y` MP_TAC
        ++ BasicProvers.NORM_TAC std_ss [SUBSET_DEF, IN_IMAGE, INJ_DEF, IN_UNIV,
                                         IN_COUNT, INJ_DEF, BIJ_DEF, SURJ_DEF] <<
-       [MATCH_ACCEPT_TAC REAL_LE_REFL,
-        Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
+       [Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `n'`)
         ++ RW_TAC std_ss []
         ++ Q.EXISTS_TAC `y`
         ++ Suff `y < N` >> RW_TAC arith_ss []

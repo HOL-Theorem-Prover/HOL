@@ -45,8 +45,8 @@ Unfortunately, it is more likely that the user had wanted the tactic:
 }
 Such a tactic could be defined as follows:
 {
-   let CONJUNCTS_THENL (f:thm_tactic) thm =
-         itlist $THEN (map f (CONJUNCTS thm)) ALL_TAC;;
+   fun CONJUNCTS_THENL (f:thm_tactic) thm =
+     List.foldl (op THEN) ALL_TAC (map f (CONJUNCTS thm));
 }
 or by using {REPEAT_TCL}.
 

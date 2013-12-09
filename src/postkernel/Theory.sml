@@ -1069,7 +1069,7 @@ fun new_type_definition (name,thm) = let
    store_definition (name^"_TY_DEF", tydef) before
    call_hooks (TheoryDelta.NewTypeOp{Name = name, Thy = Thy})
  end
- handle e => raise (wrap_exn "Definition" "new_type_definition" e);
+ handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
 
 
 fun new_definition(name,M) =

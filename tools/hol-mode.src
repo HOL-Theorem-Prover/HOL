@@ -60,6 +60,14 @@
   :group 'hol
   :type 'boolean)
 
+(defcustom hol-unicode-print-font-filename
+  "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf"
+  "File name of font to use when printing HOL output to a PDF file."
+  :group 'hol
+  :type '(file :must-match t))
+
+
+
 (defvar hol-generate-locpragma-p t
   "*Whether or not to generate (*#loc row col *) pragmas for HOL.")
 
@@ -314,8 +322,7 @@ or \">-\"."
                               ") before "
                               "Feedback.set_trace " ste " old end"))
        (e-string (concat "proofManagerLib." (if arg "expandf" "e")))
-       (tactic-string
-        (format "%s (%s) handle e => Raise e" e-string region-string))
+       (tactic-string (format "%s (%s)" e-string region-string))
        (sender (if hol-emit-time-elapsed-p
                    'send-timed-string-to-hol
                  'send-string-to-hol)))
@@ -418,6 +425,25 @@ With prefix argument, drop the goal afterwards."
        hol-echo-commands-p t))
   (if arg (send-raw-string-to-hol "proofManagerLib.drop()" hol-echo-commands-p nil)))
 
+(defun hol-start-termination-proof (arg)
+  "Send definition around point to HOL process as Defn.tgoal.
+If prefix ARG is true, or if in transient mark mode, region is active and
+the region contains no backquotes, then send region instead."
+  (interactive "P")
+  (let ((txt (condition-case nil
+                 (with-hol-locpragma (region-beginning)
+                    (buffer-substring (region-beginning) (region-end)))
+               (error nil))))
+    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+            arg)
+      (hol-send-string-as-termination-proof txt)
+    (hol-send-string-as-termination-proof (hol-term-at-point)))))
+
+(defun hol-send-string-as-termination-proof (str)
+  (send-raw-string-to-hol
+   (concat
+    "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `" str "`)") nil t))
+
 (defun remove-sml-comments (end)
   (let (done (start (point)))
     (while (and (not done) (re-search-forward "(\\*\\|\\*)" end t))
@@ -518,6 +544,7 @@ that the buffer has already had HOL terms, comments and strings removed."
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
+          (modify-syntax-entry ?_ "w")
           (setq hol-buffer-name buf) ; version of this variable in tmpbuf
           (setq hol-buffer-ready hol-ok) ; version of this variable in tmpbuf
           (setq case-fold-search nil) ; buffer-local version
@@ -571,7 +598,11 @@ that the buffer has already had HOL terms, comments and strings removed."
        (send-timed-string-to-hol string echoit)
      (send-string-to-hol string echoit)))
 
-(setq temporary-file-directory "/tmp")
+(if (null temporary-file-directory)
+    (if (equal system-type 'windows-nt)
+        (if (not (null (getenv "TEMP")))
+            (setq temporary-file-directory (getenv "TEMP")))
+      (setq temporary-file-directory "/tmp")))
 
 (defun make-temp-file-xemacs (prefix &optional dir-flag)
   "Create a temporary file.
@@ -919,30 +950,35 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (hol-toggle-trace "PPBackEnd use styles"))
 
+(defun hol-toggle-pp-cases ()
+  "Toggles the \"pp_cases\" trace."
+  (interactive)
+  (hol-toggle-trace "pp_cases"))
+
 (defun hol-toggle-pp-annotations ()
   "Toggles whether HOL produces annotations while pretty-printing."
   (interactive)
   (hol-toggle-trace "PPBackEnd use annotations"))
 
 (defun hol-toggle-goalstack-fvs ()
-  "Toggles the trace \"goalstack fvs\"."
+  "Toggles the trace \"Goalstack.print_goal_fvs\"."
   (interactive)
-  (hol-toggle-trace "goalstack fvs"))
+  (hol-toggle-trace "Goalstack.print_goal_fvs"))
 
 (defun hol-toggle-goalstack-print-goal-at-top ()
-  "Toggles the trace \"goalstack print goal at top\"."
+  "Toggles the trace \"Goalstack.print_goal_at_top\"."
   (interactive)
-  (hol-toggle-trace "goalstack print goal at top"))
+  (hol-toggle-trace "Goalstack.print_goal_at_top"))
 
 (defun hol-toggle-goalstack-num-assums (arg)
   "Toggles the number of assumptions shown in a goal."
   (interactive "nMax. number of visible assumptions: ")
-  (hol-toggle-trace "goalstack number of assums" arg))
+  (hol-toggle-trace "Goalstack.howmany_printed_assums" arg))
 
 (defun hol-toggle-goalstack-num-subgoals (arg)
   "Toggles the number of shown subgoals."
   (interactive "nMax. number of shown subgoals: ")
-  (hol-toggle-trace "Subgoal number" arg))
+  (hol-toggle-trace "Goalstack.howmany_printed_subgoals" arg))
 
 (defun hol-toggle-simplifier-trace (arg)
   "Toggles the trace \"simplifier\".  With ARG sets trace to this value."
@@ -1122,11 +1158,12 @@ module if not already loaded.)"
 (let* (
    (pos (string-match "[^/]*Script\.sml" arg)))
    (cond (pos (substring arg pos -10))
-         (t "..."))))
+         (t "<insert theory name here>"))))
 
 (defun hol-template-new-script-file ()
+  "Inserts standard template for a HOL theory"
    (interactive)
-   (insert "\n\nopen HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
+   (insert "open HolKernel Parse boolLib bossLib;\n\nval _ = new_theory \"")
    (insert (hol-extract-script-name buffer-file-name))
    (insert "\";\n\n\n\n\nval _ = export_theory();\n\n"))
 
@@ -1518,7 +1555,20 @@ module if not already loaded.)"
   "The face for presenting HOL types."
   :group 'hol-faces)
 
-
+(defun hol-region-to-unicode-pdf (filename beg end)
+  "Print region to FILE as a PDF, handling Unicode characters."
+  (interactive "FFile to write to: \nr")
+  (if (and transient-mark-mode (not mark-active))
+      (error "No active region"))
+  (let* ((temp-ps-file (make-temp-file "holprint" nil ".ps"))
+         (lpr-switches
+          (list "-font" hol-unicode-print-font-filename
+                "-out" temp-ps-file))
+         (lpr-add-switches nil)
+         (lpr-command "uniprint"))
+    (lpr-region beg end)
+    (shell-command (concat "ps2pdf " temp-ps-file " " filename))
+    (delete-file temp-ps-file)))
 
 ;;The key combinations
 (define-key global-map "\M-h" 'hol-map)
@@ -1563,6 +1613,7 @@ module if not already loaded.)"
 (define-key hol-map "r"    'hol-rotate)
 (define-key hol-map "R"    'hol-restart-goal)
 (define-key hol-map "t"    'mark-hol-tactic)
+(define-key hol-map "T"    'hol-start-termination-proof)
 (define-key hol-map "i"    'hol-type-info)
 (define-key hol-map "s"    'interactive-send-string-to-hol)
 (define-key hol-map "u"    'hol-use-file)
@@ -1593,6 +1644,7 @@ module if not already loaded.)"
 (define-key holpp-map "b"    'hol-toggle-emacs-tooltips)
 (define-key holpp-map "t"    'hol-toggle-pp-annotations)
 (define-key holpp-map "s"    'hol-toggle-pp-styles)
+(define-key holpp-map "c"    'hol-toggle-pp-cases)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1758,6 +1810,9 @@ module if not already loaded.)"
 (define-key global-map [menu-bar hol-menu hol-printing unicode]
    '("Unicode" . hol-toggle-unicode))
 
+(define-key global-map [menu-bar hol-menu hol-printing ppcases]
+  '("Toggle pretty-printing of cases" . hol-toggle-pp-cases))
+
 (define-key global-map [menu-bar hol-menu hol-printing sep2]
    '(menu-item "--"))
 
@@ -1916,7 +1971,3 @@ module if not already loaded.)"
 
 (define-key global-map [menu-bar hol-menu hol-process hol-start]
    '("Start HOL" . hol))
-
-
-
-

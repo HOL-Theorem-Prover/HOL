@@ -1,6 +1,10 @@
 \DOC
 
-\TYPE {EXT_CONSEQ_REWRITE_CONV : conv list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv}
+\BLTYPE
+EXT_CONSEQ_REWRITE_CONV : conv list -> thm list ->
+                          (thm list * thm list * thm list) ->
+                          directed_conseq_conv
+\ELTYPE
 
 \SYNOPSIS
 Applies {CONSEQ_REWRITE_CONV} interleaved with conversions and rewrites.
@@ -11,12 +15,12 @@ Applies {CONSEQ_REWRITE_CONV} interleaved with conversions and rewrites.
    |- (!x. T) /\ (T /\ (T /\ T)) /\ (\x. P) y /\ T ==>
       something
 }
-The problem is that CONSEQ_REWRITE_CONV applies consequence
+The problem is that {CONSEQ_REWRITE_CONV} applies consequence
 conversions, but no normal convs or simplifications. This is changed
-by {EXT_CONSEQ_REWRITE_CONV}.  {EXT_CONSEQ_REWRITE_CONV} gets a list
-of conversions and a list of rewrite theorems. Moreover there are the
+by {EXT_CONSEQ_REWRITE_CONV}. {EXT_CONSEQ_REWRITE_CONV} gets a list of
+conversions and a list of rewrite theorems. Moreover there are the
 parameters of {CONSEQ_REWRITE_CONV}. It then applies these conversions
-(e.g. DEPTH_CONV BETA_CONV) and a REWRITE_CONV with the given theorem
+(e.g. {DEPTH_CONV BETA_CONV}) and a {REWRITE_CONV} with the given theorem
 list interleaved with {CONSEQ_REWRITE_CONV}. As a result the theorem
 above might look now like
 {

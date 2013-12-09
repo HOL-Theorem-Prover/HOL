@@ -754,6 +754,37 @@ end
  * Timing                                                                    *
  *---------------------------------------------------------------------------*)
 
+local
+   val second = Time.fromReal 1.0
+   val minute = Time.fromReal 60.0
+   val hour = Time.fromReal (60.0 * 60.0)
+   fun divmod (x, y) = (x div y, x mod y)
+   fun toStr v u = StringCvt.padLeft #"0" 2 (Int.toString v) ^ u
+in
+   fun timeToString t =
+      if Time.< (t, second)
+         then Time.fmt 5 t ^ "s"
+      else if Time.< (t, minute)
+         then Time.toString t ^ "s"
+      else let
+              val (m, s) = divmod (Time.toSeconds t, 60)
+           in
+              if Time.< (t, hour)
+                 then Int.toString m ^ "m" ^ toStr s "s"
+              else let
+                     val (h, m) = divmod (m, 60)
+                     val (d, h) = divmod (h, 24)
+                   in
+                      (if d = 0
+                          then ""
+                       else if d = 1
+                          then "1 day "
+                       else Int.toString d ^ " days ") ^
+                      Int.toString h ^ "h" ^ toStr m "m" ^ toStr s "s"
+                   end
+           end
+end
+
 fun start_time () = Timer.startCPUTimer ()
 
 fun end_time timer =
@@ -762,9 +793,9 @@ fun end_time timer =
       val gc = Timer.checkGCTime timer
    in
       TextIO.output (TextIO.stdOut,
-           "runtime: " ^ Time.toString usr ^ "s,\
-       \    gctime: " ^ Time.toString gc ^ "s, \
-       \    systime: " ^ Time.toString sys ^ "s.\n");
+           "runtime: " ^ timeToString usr ^ ",\
+       \    gctime: " ^ timeToString gc ^ ", \
+       \    systime: " ^ timeToString sys ^ ".\n");
       TextIO.flushOut TextIO.stdOut
    end
 

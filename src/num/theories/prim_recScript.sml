@@ -609,6 +609,7 @@ REWRITE_TAC[relationTheory.WF_DEF]
  *---------------------------------------------------------------------------*)
 
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
 val WF_measure =
 Q.store_thm("WF_measure", `!m. WF (measure m)`,

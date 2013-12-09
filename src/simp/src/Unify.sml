@@ -74,6 +74,9 @@ end (* struct *)
 
 
 (*
+simp_unify_terms [] ``2 <= x`` ``m <= m``
+SATISFY_CONV ([], [arithmeticTheory.LESS_EQ_REFL]) ``?x. 2 <= x``
+
 simp_unify_terms [] ``f(X) /\ g(Y+2)`` ``f(2+2) /\ g(2 + Y)``
 
 simp_unify_terms [`b:'a`] `P (x:'a) (b:'a):bool` `P (a:'a) (b:'a):bool`;;

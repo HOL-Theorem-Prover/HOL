@@ -340,14 +340,17 @@ val shut_parser_up =
    trace ("syntax_error", 0) o
    trace ("show_typecheck_errors", 0)
 
-fun FIRST_ASSUM ttac (A, g) =
-   let
-      fun find ttac [] = raise ERR "FIRST_ASSUM" ""
-        | find ttac (a :: L) = ttac (ASSUME a) (A, g)
-                               handle HOL_ERR _ => find ttac L
-   in
-      shut_parser_up (find ttac) A
-   end
+local
+  fun find ttac name goal [] = raise ERR name  ""
+    | find ttac name goal (a :: L) =
+      ttac (ASSUME a) goal handle HOL_ERR _ => find ttac name goal L
+in
+  fun FIRST_ASSUM ttac (A, g) =
+        shut_parser_up (find ttac "FIRST_ASSUM" (A, g)) A
+  fun LAST_ASSUM ttac (A, g) =
+        shut_parser_up (find ttac "LAST_ASSUM" (A, g)) (List.rev A)
+end
+
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic for the first assumption at which it succeeds and
@@ -361,8 +364,10 @@ fun FIRST_ASSUM ttac (A, g) =
 local
    fun UNDISCH_THEN tm ttac (asl, w) =
       let val (_, A) = Lib.pluck (equal tm) asl in ttac (ASSUME tm) (A, w) end
+   fun f ttac th = UNDISCH_THEN (concl th) ttac
 in
-   fun FIRST_X_ASSUM ttac = FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac)
+   val FIRST_X_ASSUM = FIRST_ASSUM o f
+   val LAST_X_ASSUM = LAST_ASSUM o f
 end
 
 (*---------------------------------------------------------------------------

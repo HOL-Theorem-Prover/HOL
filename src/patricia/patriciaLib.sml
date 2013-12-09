@@ -273,7 +273,7 @@ end;
 
 fun eval_eq m n = numLib.REDUCE_CONV (mk_eq(m,n));
 fun eval_bit x n = wordsLib.WORD_EVAL_CONV (bitSyntax.mk_bit(x,n));
-fun eval_mod_2exp x n = numLib.REDUCE_CONV (numSyntax.mk_mod_2exp(x,n));
+fun eval_mod_2exp x n = numLib.REDUCE_CONV (bitSyntax.mk_mod_2exp(x,n));
 fun eval_branching_bit m n = PAT_CONV (mk_branching_bit(m,n));
 fun eval_mod_2exp_eq n a b =
    wordsLib.WORD_EVAL_CONV (bitSyntax.mk_mod_2exp_eq(n,a,b));

@@ -43,155 +43,21 @@
 # If combining these annotations, the required order is [system] then
 # (kernel) then test level.  Thus [mosml]!!foo, not !![mosml]foo, and
 # [poly](otknl)!foo, not (otknl)[poly]!foo.
+#
+# Finally if a line begins with "#include" (without the quotes), then
+# the file specified after the include directive is loaded and treated
+# the same as if its contents had been inserted into the main file.
+# Those files may include other #include directives. If the file is
+# specified with a relative path, then it’s relative to HOLDIR/tools
+# (the directory containing this file).
 
-
-tools/mlyacc/mlyacclib
-[mosml]src/portableML/mosml
-[poly]src/portableML/poly
-src/portableML
-src/prekernel
-**KERNEL**
-src/postkernel
-# these three directories are required to even run hol.bare.unquote
-src/parse
-src/bool
-src/1
-src/proofman
-[poly]bin/hol.bare
-
-src/compute/src
-src/HolSat/sat_solvers/minisat
-src/HolSat/sat_solvers/zc2hs
-src/HolSat
-src/taut
-src/marker
-src/q
-src/combin
-src/lite
-src/refute
-src/simp/src
-src/metis
-src/meson/src
-src/IndDef
-src/basicProof
-src/relation
-src/one
-src/pair/src
-src/sum
-src/tfl/src
-src/option
-src/num/theories
-src/num/reduce/src
-src/num/arith/src
-src/num
-src/num/termination
-
-# A Poly/ML heap, numheap, is deposited in src/num/termination to
-# speed up the last few theories (sets, extra numbers, and lists) before
-# bossLib
-src/num/extra_theories
-src/monad
-src/pred_set/src
-src/datatype/equiv
-src/datatype/record
-src/datatype
-!src/datatype/theory_tests
-src/list/src
-src/quantHeuristics
-src/unwind
-src/HolSat/vector_def_CNF
-src/boss
-!src/boss/theory_tests
-# Up to this point is needed for hol (which loads bossLib).
-# (Maybe unwind could be omitted).
-[poly]bin/hol
-
-!src/tfl/src/test
-src/TeX
-!examples/RSA
-src/sort
-src/string
-!src/string/theorytesting
-!examples/STE
-src/res_quan/src
-src/quotient/src
-!src/quotient/examples
-src/finite_map
-!examples/ind_def
-!!examples/decidable_separationLogic/src/
-src/bag
-!!examples/unification/triangular/first-order
-src/n-bit
-!examples/ARM/arm6-verification
-!!examples/ARM/arm6-verification/correctness
-src/ring/src
-src/integer
-!examples/rings
-src/llist
-src/path
-!src/integer/testing
-src/patricia
-src/update
-src/emit
-!!examples/ARM/v4
-!!examples/ARM/v7
-src/hol88
-!examples/dev
-!src/quotient/examples/lambda
-!src/quotient/examples/sigma
-src/rational
-src/real
-src/complex
-!!examples/separationLogic/src/
-src/HolQbf
-src/HolSmt
-src/opentheory
-(otknl)src/opentheory/logging
-!examples/misc
-# these examples require Muddy, which is MoscowML specific
-[mosml]!examples/muddy/muddyC
-[mosml]!examples/muddy
-[mosml]!examples/HolBdd
-[mosml]!!examples/HolCheck
-src/datatype/inftree
-!examples/lambda/basics
-!examples/logic
-!!examples/unification/triangular/nominal
-!examples/lambda/barendregt
-!examples/computability
-!!examples/lambda/other-models
-!!examples/lambda/typing
-!!examples/computability/lambda
-!!examples/computability/register
-src/Boolify/src
-src/float
-src/probability
-src/temporal/src
+#include sequences/kernel
+#include sequences/core-theories
+#include sequences/more-theories
+#include sequences/large-theories
 
 #
 # Examples only from here on
 #
-!examples/parity
-!examples/MLsyntax
-!examples/set-theory/zfset
-!examples/set-theory/vbg
-!examples/set-theory/hol_sets
-!!examples/category
-!!examples/miller/ho_prover
-!!examples/miller/miller
 
-# Crypto examples
-!!examples/Crypto/AES
-!!examples/Crypto/IDEA
-!!examples/Crypto/MARS
-!!examples/Crypto/RC6
-# the Crypto/Serpent/Reference example causes Poly/ML to crash
-!!examples/Crypto/Serpent/Reference
-!!examples/Crypto/Serpent/Bitslice
-!!examples/Crypto/SHA-1
-!!examples/Crypto/TEA
-!!examples/Crypto/TWOFISH
-
-[poly]!!examples/miniML/hol2miniml
-[poly]!!!examples/theorem-prover
-[poly]!!!examples/machine-code/lisp
+#include sequences/final-examples

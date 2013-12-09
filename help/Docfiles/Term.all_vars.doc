@@ -1,4 +1,4 @@
-\DOC all_vars
+\DOC
 
 \TYPE {all_vars : term -> term list}
 
@@ -9,7 +9,7 @@ Returns the set of all variables in a term.
 variable, term.
 
 \DESCRIBE
-An invocation {all_vars ty} returns a list representing the set of
+An invocation {all_vars tm} returns a list representing the set of
 all bound and free term variables occurring in {tm}.
 
 \FAILURE
@@ -17,8 +17,8 @@ Never fails.
 
 \EXAMPLE
 {
-- all_vars (Term `!x y. x /\ y /\ y ==> z`);
-> val it = [`z`, `y`, `x`] : term list
+- all_vars ``!x y. x /\ y /\ y ==> z``;
+> val it = [``z``, ``y``, ``x``] : term list
 }
 
 
@@ -27,5 +27,5 @@ Code should not depend on how elements are arranged in the
 result of {all_vars}.
 
 \SEEALSO
-Term.free_vars, Term.all_varsl.
+Term.all_atoms, Term.all_varsl, Term.free_vars.
 \ENDDOC

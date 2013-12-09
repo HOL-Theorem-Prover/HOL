@@ -9,16 +9,8 @@ sig
     val decompile_io : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
     val decompile_io_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
 
-    val decompile_arm  : string -> term quotation -> thm * thm
-    val decompile_ppc  : string -> term quotation -> thm * thm
-    val decompile_x86  : string -> term quotation -> thm * thm
-
     val basic_decompile : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
     val basic_decompile_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
-
-    val basic_decompile_arm : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_ppc : string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_x86 : string -> (term * term) option -> term quotation -> thm * thm
 
     (* some internals exposed *)
 
@@ -33,9 +25,6 @@ sig
     val get_abbreviate_code : unit -> bool
     val UNABBREV_CODE_RULE  : thm -> thm
     val UNABBREV_ALL        : thm -> thm
-
-    val add_executable_data_name     : string -> unit
-    val remove_executable_data_name  : string -> unit
 
     val add_modifier          : string -> (thm -> thm) -> unit
     val remove_all_modifiers  : unit -> unit

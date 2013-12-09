@@ -78,6 +78,8 @@ fun GEN [QUOTE s] th =
      end
   | GEN _ _ = raise ERR "GEN" "unexpected quote format"
 
+val GENL = rev_itlist GEN
+
 fun SPEC q =
  W(Thm.SPEC o ptm_with_ty q o (type_of o fst o dest_forall o concl));
 
@@ -171,10 +173,13 @@ fun REFINE_EXISTS_TAC q (asl, w) = let
   val t = ptm_with_ctxtty' ctxt (type_of qvar) q
   val qvars = set_diff (free_vars t) ctxt
   val newgoal = subst [qvar |-> t] body
+  fun chl [] ttac = ttac
+    | chl (h::t) ttac = X_CHOOSE_THEN h (chl t ttac)
 in
-  SUBGOAL_THEN (list_mk_exists(rev qvars, newgoal))
-  (REPEAT_TCL CHOOSE_THEN (fn th => Tactic.EXISTS_TAC t THEN ACCEPT_TAC th))
-  (asl, w)
+  SUBGOAL_THEN
+    (list_mk_exists(rev qvars, newgoal))
+    (chl (rev qvars) (fn th => Tactic.EXISTS_TAC t THEN ACCEPT_TAC th))
+    (asl, w)
 end
 
 fun X_CHOOSE_THEN q ttac thm (g as (asl,w)) =

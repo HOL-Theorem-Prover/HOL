@@ -19,7 +19,7 @@
 structure Sup_Inf :> Sup_Inf =
 struct
   open Arbint
-  val << = String.<
+  val op << = String.<
   infix <<
 
 

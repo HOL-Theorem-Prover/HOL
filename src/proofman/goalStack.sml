@@ -13,9 +13,22 @@ val ERR = mk_HOL_ERR "goalStack";
 
 val show_nsubgoals = ref 10;
 val chatting = ref true;
+val show_stack_subgoal_count = ref true
+val print_fvs = ref false
+val print_goal_at_top = ref true;
+val reverse_assums = ref false;
+val print_number_assums = ref 1000000;
 
-val _ = Feedback.register_trace ("Subgoal number", show_nsubgoals, 10000);
-val _ = Feedback.register_btrace("goalstack chatting", chatting);
+val _ = register_trace ("Goalstack.howmany_printed_subgoals", show_nsubgoals,
+                        10000);
+val _ = register_btrace("Goalstack.show_proved_subtheorems", chatting);
+val _ = register_btrace("Goalstack.show_stack_subgoal_count",
+                        show_stack_subgoal_count);
+val _ = register_btrace("Goalstack.print_goal_fvs", print_fvs)
+val _ = register_btrace("Goalstack.print_goal_at_top", print_goal_at_top)
+val _ = register_btrace("Goalstack.print_assums_reversed", reverse_assums)
+val _ = register_trace ("Goalstack.howmany_printed_assums",
+                        print_number_assums, 1000000)
 
 fun say s = if !chatting then Lib.say s else ();
 
@@ -157,18 +170,6 @@ fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
 (* Prettyprinting *)
 
 local
-val print_fvs = ref false
-val _ = register_btrace ("goalstack fvs", print_fvs)
-
-val print_goal_at_top = ref true;
-val _ = register_btrace ("goalstack print goal at top", print_goal_at_top)
-
-val reverse_assums = ref false;
-val _ = register_btrace ("goalstack reverse assums", reverse_assums)
-
-val print_number_assums = ref 1000000;
-val _ = register_trace ("goalstack number of assums",
-                        print_number_assums, 1000000)
 
 
 fun ppgoal ppstrm (asl,w) =
@@ -300,6 +301,10 @@ fun pp_gstk ppstrm  =
              ellipsis_action();
              Portable.pr_list
                pr_goal (fn () => ()) add_newline goals_to_print;
+             if length goals > 1 andalso !show_stack_subgoal_count then
+               (add_string ("\n" ^ Int.toString (length goals) ^ " subgoals");
+                add_newline())
+             else ();
              end_block()
            end
        | pr (GSTK{prop = PROVED (th,_), ...}) =

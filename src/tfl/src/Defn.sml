@@ -2,7 +2,7 @@ structure Defn :> Defn =
 struct
 
 open HolKernel Parse boolLib;
-open pairLib Rules wfrecUtils Functional Induction DefnBase;
+open pairLib Rules wfrecUtils Pmatch Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
 type proofs = Manager.proofs
@@ -558,17 +558,15 @@ val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM];
 (* and wordsLib.                                                             *)
 (*---------------------------------------------------------------------------*)
 
-fun elim_triv_literal_case th =
- let val const_eq_conv = !const_eq_ref
-     val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
-               RAND_CONV const_eq_conv THENC
-               PURE_ONCE_REWRITE_CONV [bool_case_thm]
-(*     val cnv1 = REWRITE_CONV [pairTheory.pair_case_thm] THENC LIST_BETA_CONV
-     val rule = CONV_RULE (RAND_CONV (REPEATC cnv THENC cnv1))
-*)
-     val rule = CONV_RULE (RAND_CONV (REPEATC cnv))
- in rule th
- end;
+fun elim_triv_literal_CONV tm =
+   let
+      val const_eq_conv = !const_eq_ref
+      val cnv = TRY_CONV (REWR_CONV literal_case_THM THENC BETA_CONV) THENC
+                RATOR_CONV (RATOR_CONV (RAND_CONV const_eq_conv)) THENC
+                PURE_ONCE_REWRITE_CONV [COND_CLAUSES]
+   in
+       cnv tm
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the recursion theorem and extract termination conditions,     *)
@@ -576,7 +574,9 @@ fun elim_triv_literal_case th =
 (*---------------------------------------------------------------------------*)
 
 fun wfrec_eqns facts tup_eqs =
- let val {functional,pats} = mk_functional facts (protect tup_eqs)
+  let
+     val {functional,pats} =
+        mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body
@@ -598,17 +598,18 @@ fun wfrec_eqns facts tup_eqs =
                                 (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
-                   (LIST_BETA_CONV THENC REPEATC (RWcnv THENC LIST_BETA_CONV))
+                   (LIST_BETA_CONV
+                    THENC REPEATC ((RWcnv THENC LIST_BETA_CONV) ORELSEC
+                                   elim_triv_literal_CONV))
      val corollaries' = map rule corollaries
-     val corollaries'' = map elim_triv_literal_case corollaries'
- in
-    {proto_def=proto_def,
-     SV=Listsort.sort Term.compare SV,
-     WFR=WFR,
-     pats=pats,
-     extracta = map (extract [R1] congs f (proto_def,WFR))
-                    (zip given_pats corollaries'')}
- end;
+  in
+     {proto_def=proto_def,
+      SV=Listsort.sort Term.compare SV,
+      WFR=WFR,
+      pats=pats,
+      extracta = map (extract [R1] congs f (proto_def,WFR))
+                     (zip given_pats corollaries')}
+  end
 
 (*---------------------------------------------------------------------------
  * Pair patterns with termination conditions. The full list of patterns for
@@ -991,9 +992,9 @@ fun mutrec thy bindstem eqns =
                val Pdom = #1(dom_rng Pty)
                val tmty = type_of tm
                val tmdom = #1(dom_rng tmty)
-               val sum_ty = Pty --> tmty --> mk_sum_type Pdom tmdom --> bool
+               val gv = genvar (sumSyntax.mk_sum(Pdom, tmdom))
            in
-              list_mk_comb(mk_const("sum_case",sum_ty),[P,tm])
+              mk_abs(gv, sumSyntax.mk_sum_case(P,tm,gv))
            end) preds
       val mut_ind1 = Rules.simplify [sum_case_def] (SPEC Psum_case mut_ind0)
       val (ant,_) = dest_imp (concl mut_ind1)
@@ -1050,14 +1051,14 @@ fun pairf (stem,eqs0) =
      val rng_ty    = type_of rhs
      val tuple_dom = list_mk_prod_type argtys
      val stem'     = mk_var (stem'name, tuple_dom --> rng_ty)
-     val defvars   = rev (Lib.with_flag (Globals.priming, SOME"")
-                               (variants [f])
-                               (map (curry mk_var "x") argtys))
      fun untuple_args (rules,induction) =
       let val eq1 = concl(hd rules)
           val (lhs,rhs) = dest_eq(snd(strip_forall eq1))
           val (tuplec,args) = strip_comb lhs
           val (SV,p) = front_last args
+          val defvars   = rev (Lib.with_flag (Globals.priming, SOME"")
+                                             (variants (f::SV))
+                                             (map (curry mk_var "x") argtys))
           val tuplecSV = list_mk_comb(tuplec,SV)
           val def_args = SV@defvars
           val fvar = mk_var(atom_name f,
@@ -1172,7 +1173,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
                    R = R, SV=SV, stem=stem}
         end
  end
- handle e => raise wrap_exn "Defn" "stdrec_defn" e;
+ handle e => raise wrap_exn "Defn" "stdrec_defn" e
 
 (*---------------------------------------------------------------------------
     A general, basic, interface to function definitions. First try to
@@ -1221,7 +1222,13 @@ fun prim_mk_defn stem eqns =
     end
     | (_::_::_) => mutrec_defn (facts,stem,eqns)  (* mutrec defns being made *)
  end
- handle e => raise wrap_exn "Defn" "prim_mk_defn" e;
+ handle e as HOL_ERR {origin_structure = "Defn", message = message, ...} =>
+       if not (String.isPrefix "at Induction.mk_induction" message) orelse
+          PmatchHeuristics.is_classic ()
+          then raise wrap_exn "Defn" "prim_mk_defn" e
+       else (Feedback.HOL_MESG "Trying classic cases heuristic..."
+             ; PmatchHeuristics.with_classic_heuristic (prim_mk_defn stem) eqns)
+      | e => raise wrap_exn "Defn" "prim_mk_defn" e
 
 (*---------------------------------------------------------------------------*)
 (* Version of mk_defn that restores the term signature and grammar if it     *)
@@ -1230,7 +1237,7 @@ fun prim_mk_defn stem eqns =
 
 fun mk_defn stem eqns =
   Parse.try_grammar_extension
-    (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns);
+    (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns)
 
 fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs
@@ -1620,6 +1627,69 @@ in
   List.exists TypeBase.is_constructor possible_ops
 end
 
+fun unify_error pv1 pv2 = let
+  open Preterm
+  val (nm,ty1,l1) = dest_ptvar pv1
+  val (_,ty2,l2) = dest_ptvar pv2
+in
+  "Couldn't unify types of head symbol " ^
+  Lib.quote nm ^ " at positions " ^ locn.toShortString l1 ^ " and " ^
+  locn.toShortString l2 ^ " with types " ^
+  type_to_string (Pretype.toType ty1) ^ " and " ^
+  type_to_string (Pretype.toType ty2)
+end
+
+fun ptdefn_freevars pt = let
+  open Preterm
+  val (uvars, body) = strip_pforall pt
+  val (l,r) = pdest_eq body
+  val (f0, args) = strip_pcomb l
+  val f = head_var f0
+  val lfs = op_U eq (map ptfvs args)
+  val rfs = ptfvs r
+  infix \\
+  fun s1 \\ s2 = op_set_diff eq s1 s2
+in
+  op_union eq (rfs \\ lfs \\ uvars) [f]
+end
+
+fun defn_absyn_to_term a = let
+  val alist = Absyn.strip_conj a
+  val pts = map absyn_to_preterm alist
+  val _ = List.app
+            (Preterm.typecheck_phase1 (SOME (term_to_string, type_to_string)))
+            pts
+  fun foldthis (pv as Preterm.Var{Name,Ty,Locn}, env) =
+      let
+      in
+         if String.sub(Name,0) = #"_" then env
+         else
+           case Binarymap.peek(env,Name) of
+               NONE => Binarymap.insert(env,Name,pv)
+             | SOME pv' =>
+               let
+                 val pty' = Preterm.ptype_of pv'
+                 val _ =
+                     Pretype.unify Ty pty'
+                     handle HOL_ERR _ =>
+                            raise mk_HOL_ERR "Defn" "defn_absyn_to_term"
+                                  (unify_error pv pv')
+               in
+                 env
+               end
+      end
+    | foldthis (_, env) = raise Fail "defn_absyn_to_term: can't happen"
+  val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
+  val _ = List.foldl foldthis (Binarymap.mkDict String.compare) all_frees
+  open Preterm
+in
+  plist_mk_rbinop (Antiq {Tm=boolSyntax.conjunction,Locn=locn.Loc_None}) pts
+                  |> overloading_resolution
+                  |> Preterm.to_term
+                  |> Preterm.remove_case_magic
+                  |> !Preterm.post_process_term
+end
+
 fun parse_absyn absyn0 = let
   val (absyn,fn_names) = elim_wildcards absyn0
   val oinfo = term_grammar.overload_info (term_grammar())
@@ -1628,8 +1698,11 @@ fun parse_absyn absyn0 = let
   val to_restore =
       map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
   fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
+  val tm  = defn_absyn_to_term absyn handle e => (restore(); raise e)
+(* Old parsing of abstract syntax:
   val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
             handle e => (restore(); raise e)
+*)
 in
   restore();
   (tm, fn_names)

@@ -370,11 +370,12 @@ val sem_match = store_thm
    [(* Atom c *) RW_TAC list_ss [sem_def,match_def],
     (* r | r' *) RW_TAC list_ss [sem_def,match_def],
     (* r & r' *) RW_TAC list_ss [sem_def,match_def],
-    (* r # r' *) RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM]
+    (* r # r' *) RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM]
     THEN EQ_TAC THEN RW_TAC list_ss [] THENL
     [Q.EXISTS_TAC `(w1,w2)`
-     THEN SIMP_TAC list_ss [MEM_SPLITS] THEN PROVE_TAC [MEM_SPLITS],
-     Cases_on`x` THEN FULL_SIMP_TAC list_ss [] THEN PROVE_TAC[SPLITS_APPEND]],
+     THEN SIMP_TAC list_ss [MEM_SPLITS] THEN SIMP_TAC std_ss [IN_DEF] THEN METIS_TAC [MEM_SPLITS],
+     Cases_on`x` THEN FULL_SIMP_TAC list_ss [IN_DEF] THEN PROVE_TAC[SPLITS_APPEND, IN_DEF]],
+
     (* r1 % r2 *)
     RW_TAC list_ss [sem_def,match_def,EXISTS_ELIM_THM,GSYM IN_THM]
     THEN EQ_TAC THEN SIMP_TAC list_ss [pairTheory.EXISTS_PROD] THENL
@@ -385,14 +386,14 @@ val sem_match = store_thm
      THEN ASM_SIMP_TAC list_ss []
      THEN MAP_EVERY Q.EXISTS_TAC [`w1`, `l' ::w2`]
      THEN RW_TAC list_ss []
-     THEN METIS_TAC [listTheory.NULL,APPEND_CONS,listTheory.HD],
+     THEN METIS_TAC [listTheory.NULL,APPEND_CONS,listTheory.HD, IN_DEF],
      Cases_on `l` THEN FULL_SIMP_TAC list_ss []
      THEN BasicProvers.NORM_TAC list_ss []
      THEN Cases_on `p_2` THEN FULL_SIMP_TAC list_ss [] THENL
      [METIS_TAC [listTheory.APPEND_FRONT_LAST,listTheory.NULL,
-                 SPLITS_APPEND,APPEND_NIL],
+                 SPLITS_APPEND,APPEND_NIL,IN_DEF],
       METIS_TAC [SPLITS_APPEND,CONS_APPEND,listTheory.NULL, listTheory.HD,
-                 listTheory.APPEND_ASSOC,listTheory.APPEND_FRONT_LAST]]],
+                 listTheory.APPEND_ASSOC,listTheory.APPEND_FRONT_LAST,IN_DEF]]],
     (* Repeat r *)
     RW_TAC list_ss [sem_def]
     THEN ONCE_REWRITE_TAC [match_def]
@@ -410,14 +411,14 @@ val sem_match = store_thm
       `CONCAT wlist = CONCAT (w::suffix)`
       by (RW_TAC list_ss [CONCAT_APPEND_DISTRIB,CONCAT_def] THEN
           RULE_ASSUM_TAC (CONV_RULE (ONCE_DEPTH_CONV ETA_CONV)) THEN
-          METIS_TAC[NULL_CONCAT_THM,APPEND,NULL_EQ_NIL]) THEN
+          METIS_TAC[NULL_CONCAT_THM,APPEND,NULL_EQ_NIL,IN_DEF]) THEN
       `MEM (w,CONCAT suffix) (TL(SPLITS(CONCAT wlist)))`
       by RW_TAC list_ss [CONCAT_def, MEM_TL_SPLITS] THEN
-      PROVE_TAC []
+      PROVE_TAC [IN_DEF]
       ,
       `?wlist. (p_2=CONCAT wlist) /\ EVERY (sem r) wlist` by PROVE_TAC[] THEN
       Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN
-      PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND]]],
+      PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND,IN_DEF]]],
     RW_TAC std_ss [sem_def, match_def]]);
 
 val () = export_theory ();

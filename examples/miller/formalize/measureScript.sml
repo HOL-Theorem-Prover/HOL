@@ -1686,7 +1686,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
     Know
     `s INTER BIGUNION (IMAGE f UNIV) =
-     BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
+     BIGUNION (IMAGE (\x. case x of 0 => {} | SUC n => s INTER f n) UNIV)`
     >> (KILL_TAC
         ++ PSET_TAC [EXTENSION]
         ++ (EQ_TAC ++ RW_TAC std_ss [NOT_IN_EMPTY]) <<
@@ -1786,7 +1786,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
     Know
     `s INTER BIGUNION (IMAGE f UNIV) =
-     BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
+     BIGUNION (IMAGE (\x. case x of 0 => {} | SUC n => s INTER f n) UNIV)`
     >> (KILL_TAC
         ++ PSET_TAC [EXTENSION]
         ++ (EQ_TAC ++ RW_TAC std_ss [NOT_IN_EMPTY]) <<
@@ -2194,7 +2194,7 @@ val MONOTONE_CONVERGENCE = store_thm
    RW_TAC std_ss [measure_space_def, IN_FUNSET, IN_UNIV]
    ++ (MP_TAC o
        INST_TYPE [beta |-> ``:num``] o
-       Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `num_case {} f`])
+       Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `\x. num_CASE x {} f`])
       MEASURE_COUNTABLE_INCREASING
    ++ Cond
    >> (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] <<
@@ -2216,7 +2216,7 @@ val MONOTONE_CONVERGENCE = store_thm
          ++ RW_TAC std_ss [num_case_def]
          ++ PROVE_TAC []]])
    ++ RW_TAC std_ss []
-   ++ Know `measure m o f = (\n. (measure m o (num_case {} f)) (SUC n))`
+   ++ Know `measure m o f = (\n. (measure m o (\x. num_CASE x {} f)) (SUC n))`
    >> (FUN_EQ_TAC
        ++ RW_TAC std_ss [num_case_def, o_THM])
    ++ Rewr

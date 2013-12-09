@@ -239,7 +239,7 @@ fun is_literal tm =
                orelse !other_literals tm
 
 fun is_pure_literal x =
-  is_literal x andalso not (is_zero x) andalso not (is_emptystring x);
+  is_literal x andalso not (is_zero x) andalso not (is_string_lit x);
 
 
 end (* Literal *)

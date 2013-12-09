@@ -33,6 +33,11 @@ ML=$2
 kernel=$3
 shift 3
 
+otheropts=$(echo "$@" | sed '
+s/ //g
+s/-fullbuild//
+')
+
 if [ -d $holdir -a -x $holdir -a -r $holdir ]
 then
   cd $holdir
@@ -76,7 +81,7 @@ cd developers
 mlsys=$($ML < mlsysinfo.sml | grep MLSYSTEM | awk '{print $3}')
 cd ..
 
-holid="$kernel:$rev:$mlsys"
+holid="$kernel:$rev:$mlsys:$otheropts"
 
 cpuperlprog='
   while (<>) {
@@ -112,6 +117,21 @@ case $(uname) in
       mem=$(top -l 1 | grep ^PhysMem | perl -ne 'split; print $_[7] + $_[9]') ;;
 esac
 
+maybeBuild ()
+{
+    if [ -r build-running ]
+    then
+        echo "Another build appears to be running - giving up"
+    else
+        (touch build-running &&
+         $ML < tools/smart-configure.sml 2>&1 &&
+         bin/build cleanAll 2>&1 &&
+         bin/build $kernel "$@" 2>&1 ;
+         /bin/rm build-running) | tee build-log
+    fi
+}
+
+
 (echo "Running in $holdir on machine $(hostname)" &&
  echo "Uname info (srm): $(uname -srm)" &&
  echo "Cpu: $cpu" &&
@@ -131,8 +151,5 @@ esac
  fi &&
  echo "-- Configuration Description Ends --" &&
  echo &&
- $ML < tools/smart-configure.sml 2>&1 &&
- bin/build cleanAll 2>&1 &&
- bin/build $kernel "$@" 2>&1) |
- tee build-log |
+ maybeBuild "$@") |
  $gbs "$from" "$holid"

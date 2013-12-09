@@ -186,21 +186,23 @@ fun getline env (condstate, b) =
         else if String.isPrefix "ifdef" s orelse String.isPrefix "ifndef" s orelse
                 String.isPrefix "ifeq" s orelse String.isPrefix "ifneq" s
         then
-          getline env (SkippingElses::SkippingElses::rest, advance b)
+          getline env (SkippingElses::condstate, advance b)
         else
-          getline env (SkippingElses::rest, advance b)
+          getline env (condstate, advance b)
       end
     | (SOME s, NoTrueCondYet::rest) => let
         val s = strip_leading_wspace s
       in
         if String.isPrefix "endif" s then getline env (rest, advance b)
+        else if String.isPrefix "if" s then
+          getline env (SkippingElses :: condstate, advance b)
         else if String.isPrefix "else" s then let
             val s = strip_leading_wspace (String.extract(s, 4, NONE))
           in
             if String.isPrefix "if" s then
               case evaluate_cond b env s of
                 NONE => error b "ReadHMF: bogus string following else"
-              | SOME false => getline env (NoTrueCondYet::rest, advance b)
+              | SOME false => getline env (condstate, advance b)
               | SOME true => getline env (GrabbingText::rest, advance b)
             else if s = "" then getline env (GrabbingText::rest, advance b)
             else error b "ReadHMF: bogus string following else"

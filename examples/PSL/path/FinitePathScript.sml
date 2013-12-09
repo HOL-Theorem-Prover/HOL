@@ -121,7 +121,7 @@ val HD_RESTN =
   ("HD_RESTN",
    ``!p. HD(RESTN p i) = EL i p``,
    Induct_on `i`
-    THEN RW_TAC list_ss [HEAD_def,REST_def,RESTN_def]);
+    THEN ASM_SIMP_TAC list_ss [HEAD_def,REST_def,RESTN_def, EL]);
 
 (******************************************************************************
 * ELEM p i = EL i p for finite paths
@@ -454,7 +454,7 @@ val EL_SEL_LEMMA =
       i <= j /\ m <= j-i ==> (EL m (SEL p (i,j)) = ELEM p (i+m))``,
    Induct
     THEN RW_TAC list_ss
-          [SEL_REC_def,ELEM_def,RESTN_def,
+          [SEL_REC_def,ELEM_def,RESTN_def, EL,
            HD_SEL,TL_SEL,RESTN_def,DECIDE``i + SUC m = SUC(i+m)``]);
 
 val EL_SEL =
@@ -469,9 +469,9 @@ val EL_SEL0 =
   ("EL_SEL0",
    ``!j i p. j <= i ==> (EL j (SEL p (0,i)) = ELEM p j)``,
    Induct
-    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,HD_SEL0]
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,HD_SEL0,EL]
     THEN Induct_on `i`
-    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,TL_SEL0]);
+    THEN RW_TAC list_ss [SEL_REC_def,ELEM_def,RESTN_def,TL_SEL0,EL]);
 
 val SEL_REC_REST =
  store_thm
@@ -617,7 +617,7 @@ val RESTN_EL =
   ("RESTN_EL",
    ``!i w. i < LENGTH w ==> (RESTN w i = EL i w :: RESTN w (i + 1))``,
    Induct
-    THEN RW_TAC simp_list_ss [RESTN_def,REST_def,LENGTH_NIL_LEMMA,DECIDE``0 < n = n >= 1``]
+    THEN RW_TAC simp_list_ss [RESTN_def,REST_def,LENGTH_NIL_LEMMA,EL,DECIDE``0 < n = n >= 1``]
     THENL
      [PROVE_TAC[LENGTH_NIL_LEMMA,CONS,NULL_EQ_NIL],
       FULL_SIMP_TAC std_ss

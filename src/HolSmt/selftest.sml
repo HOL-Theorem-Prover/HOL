@@ -98,7 +98,7 @@ fun auto_tac (_, t) =
   let
     val simpset = bossLib.++ (bossLib.srw_ss (), wordsLib.WORD_ss)
     val t_eq_t' = simpLib.SIMP_CONV simpset [integerTheory.INT_ABS,
-      integerTheory.INT_MAX, integerTheory.INT_MIN, boolTheory.bool_case_DEF]
+      integerTheory.INT_MAX, integerTheory.INT_MIN]
       t
       handle Conv.UNCHANGED =>
         Thm.REFL t
@@ -990,12 +990,12 @@ in
 
     (* data types: case constants *)
 
-    (``dt1_case f b z foo = f``, [thm_AUTO, thm_YO]),
-    (``dt1_case f b z bar = b``, [thm_AUTO, thm_YO]),
-    (``dt1_case f b z baz = z``, [thm_AUTO, thm_YO]),
-    (``dt1_case c c c x = c``, [(*thm_AUTO,*) thm_YO]),
-    (``list_case n c [] = n``, [thm_AUTO, thm_YO]),
-    (``list_case n c (x::xs) = c x xs``, [thm_AUTO, thm_YO]),
+    (``dt1_CASE foo f b z = f``, [thm_AUTO, thm_YO]),
+    (``dt1_CASE bar f b z = b``, [thm_AUTO, thm_YO]),
+    (``dt1_CASE baz f b z = z``, [thm_AUTO, thm_YO]),
+    (``dt1_CASE x c c c = c``, [(*thm_AUTO,*) thm_YO]),
+    (``list_CASE [] n c = n``, [thm_AUTO, thm_YO]),
+    (``list_CASE (x::xs) n c = c x xs``, [thm_AUTO, thm_YO]),
 
     (* records: field selectors *)
 

@@ -671,6 +671,23 @@ val REAL_SUM_IMAGE_MONO_SET = store_thm
   >> REAL_ARITH_TAC
   ++ METIS_TAC [REAL_SUM_IMAGE_POS,IN_DIFF]);
 
+val REAL_SUM_IMAGE_CROSS_SYM = store_thm
+ ("REAL_SUM_IMAGE_CROSS_SYM", ``!f s1 s2. FINITE s1 /\ FINITE s2 ==>
+   (REAL_SUM_IMAGE (\(x,y). f (x,y)) (s1 CROSS s2) = REAL_SUM_IMAGE (\(y,x). f (x,y)) (s2 CROSS s1))``,
+  RW_TAC std_ss []
+  ++ `s2 CROSS s1 = IMAGE (\a. (SND a, FST a)) (s1 CROSS s2)`
+	by (RW_TAC std_ss [IN_IMAGE, IN_CROSS,EXTENSION] ++ METIS_TAC [FST,SND,PAIR])
+  ++ POP_ORW
+  ++ `INJ (\a. (SND a, FST a)) (s1 CROSS s2) (IMAGE (\a. (SND a, FST a)) (s1 CROSS s2))`
+       by (RW_TAC std_ss [INJ_DEF, IN_IMAGE, IN_CROSS]
+           ++ METIS_TAC [FST,SND,PAIR])
+  ++ RW_TAC std_ss [REAL_SUM_IMAGE_IMAGE, IMAGE_FINITE, FINITE_CROSS, o_DEF]
+  ++ `(\(x,y). f (x,y)) = (\a. f a)`
+       by (RW_TAC std_ss [FUN_EQ_THM]
+	   ++ Cases_on `a`
+	   ++ RW_TAC std_ss [])
+  ++ RW_TAC std_ss []);
+
 val _ = overload_on ("SIGMA", ``REAL_SUM_IMAGE ``);
 
 val _ = export_theory ();

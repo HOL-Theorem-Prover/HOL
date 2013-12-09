@@ -25,9 +25,9 @@ val _ = Hol_datatype `
 
 val _ = Hol_datatype `
   Zea =
-      Zea_i of Zsize => word64   (* constant       *)
-    | Zea_r of Zsize => Zreg     (* register name  *)
-    | Zea_m of Zsize => word64   (* memory address *) `;
+      Zea_i of Zsize => word64           (* constant                        *)
+    | Zea_r of Zsize => Zreg             (* register name                   *)
+    | Zea_m of Zsize => word64 => bool   (* memory address, is stack access *) `;
 
 val _ = Hol_datatype   `iiid = <| proc : num ; program_order_index : num |>`;
 

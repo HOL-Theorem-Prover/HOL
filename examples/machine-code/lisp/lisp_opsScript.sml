@@ -8,6 +8,10 @@ open lisp_typeTheory lisp_invTheory lisp_gcTheory lisp_equalTheory;
 open ppc_encodeLib x86_encodeLib;
 open prog_armLib prog_ppcLib prog_x86Lib;
 
+val decompile_arm = decompile prog_armLib.arm_tools;
+val decompile_ppc = decompile prog_ppcLib.ppc_tools;
+val decompile_x86 = decompile prog_x86Lib.x86_tools;
+
 infix \\
 val op \\ = op THEN;
 val _ = map Parse.hide ["r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10","r11","r12","r13"];

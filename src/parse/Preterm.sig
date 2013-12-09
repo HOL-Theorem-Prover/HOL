@@ -26,6 +26,19 @@ sig
   val term_to_preterm : string list -> term -> preterm
 
   val eq : preterm -> preterm -> bool
+  val pdest_eq : preterm -> preterm * preterm
+  val lhs : preterm -> preterm
+  val head_var : preterm -> preterm
+  val ptype_of : preterm -> pretype
+  val dest_ptvar : preterm -> (string * pretype * locn.locn)
+  val plist_mk_rbinop : preterm -> preterm list -> preterm
+  val strip_pcomb : preterm -> preterm * preterm list
+  val strip_pforall : preterm -> preterm list * preterm
+  val ptfvs : preterm -> preterm list
+   (* ptfvs ignores free variables that might be hiding in Pattern, Overload
+      or Antiq constructors because these are all of fixed type that can't
+      vary; ptfvs is designed to find free variables that might have
+      unifiable type variables in their types *)
 
 
   (* Performs the first phase of type-checking, altering the types
@@ -69,4 +82,3 @@ sig
   val last_tcerror : (tcheck_error * locn.locn) option ref
 
 end;
-

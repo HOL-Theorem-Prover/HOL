@@ -30,9 +30,12 @@ sig
   val pop_assum : thm_tactic -> tactic
   val first_assum : thm_tactic -> tactic
   val first_x_assum : thm_tactic -> tactic
+  val last_assum : thm_tactic -> tactic
+  val last_x_assum : thm_tactic -> tactic
   val disch_then : thm_tactic -> tactic
 
   val qx_gen_tac : term quotation -> tactic
+  val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
   val qexists_tac : term quotation -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
@@ -58,6 +61,8 @@ sig
   val imp_res_tac : thm_tactic
 
   val map_every : ('a -> tactic) -> 'a list -> tactic
+  val qx_genl_tac : term quotation list -> tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
   val decide_tac : tactic
   val metis_tac : thm list -> tactic

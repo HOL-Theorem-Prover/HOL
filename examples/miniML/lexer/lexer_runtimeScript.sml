@@ -346,18 +346,18 @@ metis_tac []);
 
 val lexer_def = tDefine "lexer" `
 (lexer (trans,finals,start) [] acc = SOME (REVERSE acc)) ∧
-(lexer (trans,finals,start) s acc =
-  case lexer_get_token trans finals start "" NONE s of
+(lexer (trans,finals,start) (c::cs) acc =
+  case lexer_get_token trans finals start "" NONE (c::cs) of
     | NONE => NONE
     | SOME (f,lexeme,s') =>
         lexer (trans,finals,start) s' (f (REVERSE lexeme)::acc))`
 (WF_REL_TAC `measure (\(x,y,z). STRLEN y)` >>
  rw [] >>
- `lexer_get_token_invariant trans finals start start "" NONE (STRING v8 v9)`
+ `lexer_get_token_invariant trans finals start start "" NONE (STRING c cs)`
            by metis_tac [lexer_get_token_invariant_initial] >>
  imp_res_tac lexer_get_token_partial_correctness >>
  fs [] >>
- `STRLEN (STRING v8 v9) = STRLEN (MAP FST path' ++ p_2)`
+ `STRLEN (STRING c cs) = STRLEN (MAP FST path' ++ p_2)`
            by metis_tac [lexer_get_token_partial_correctness] >>
  fs [] >>
  cases_on `path'` >>
@@ -446,7 +446,7 @@ rw [correct_lex_def] >>
  dfa_path trans start state path ∧
  (REVERSE q' = MAP FST path) ∧
  (FLOOKUP finals state = SOME q) ∧
- (STRCAT (REVERSE q') r' = STRCAT (REVERSE "") (STRING v8 v9)) ∧
+ (STRCAT (REVERSE q') r' = STRCAT (REVERSE "") (STRING c cs)) ∧
  (∀path_extension state'.
     dfa_path trans state state' path_extension ∧
     (∃s''. STRCAT (MAP FST path_extension) s'' = r') ⇒

@@ -134,26 +134,14 @@ sig
 (* Quantifier Heuristics Parameters are the main way to configure the behaviour. They
    are a record of theorems, conversion and full heuristics used during proof search. *)
 
-  type quant_param =
-    {distinct_thms      : thm list, (* Dichotomy theorems showing distinctiness *)
-     cases_thms         : thm list, (* Dichotomy theorems showing case completeness *)
-     rewrite_thms       : thm list, (* Theorems used for rewrites *)
-     instantiation_thms : thm list, (* Theorems used for direct instantiations *)
-     imp_thms           : thm list, (* Theorems used for weakening and strengthening *)
-     context_thms       : thm list, (* additional context *)
-     inference_thms     : thm list, (* Theorems used as inference rules to derive guesses from guesses for subterms. *)
-     convs              : conv list, (* Conversions used *)
-     filter             : (term -> term -> bool) list, (* Getting a free variable and a term, these ML functions decide, whether to try and find a guess *)
-     top_heuristics     : quant_heuristic list, (* Heuristics that should only be applied at top level *)
-     context_heuristics : (thm list -> quant_heuristic) list, (* Heuristics that may use the context of the given theorems *)
-     heuristics         : quant_heuristic list, (* Heuristics that should be applied for all subterms *)
-     final_rewrite_thms : thm list (* Rewrites used for cleaning up after instantiations. *) };
+  type quant_param;
 
 (* constructing quantifier heuristics parameters*)
 
   val distinct_qp      : thm list -> quant_param
   val cases_qp         : thm list -> quant_param
   val rewrite_qp       : thm list -> quant_param
+  val inst_filter_qp   : (term -> term -> term -> term list -> bool) list -> quant_param
   val instantiation_qp : thm list -> quant_param
   val imp_qp           : thm list -> quant_param
   val fixed_context_qp : thm list -> quant_param
@@ -162,8 +150,10 @@ sig
   val filter_qp        : (term -> term -> bool) list -> quant_param
   val top_heuristics_qp: quant_heuristic list -> quant_param
   val context_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
+  val context_top_heuristics_qp : (thm list -> quant_heuristic) list -> quant_param
   val heuristics_qp    : quant_heuristic list -> quant_param
   val oracle_qp        : (term -> term -> (term * term list) option) -> quant_param (* creates heuristic that produces oracle guesses *)
+  val context_oracle_qp: (thm list -> term -> term -> (term * term list) option) -> quant_param (* creates heuristic that produces oracle guesses *)
   val final_rewrite_qp : thm list -> quant_param
 
   (* a stateful version and combining several*)
@@ -186,6 +176,7 @@ sig
      quant_param list -> quant_param;
 
 
+  val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
 
 (*Heuristics that might be useful to write own ones*)
   val QUANT_INSTANTIATE_HEURISTIC___CONV                : conv -> quant_heuristic;
@@ -197,14 +188,6 @@ sig
   val QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN   : thm list -> quant_heuristic;
 
   val QUANT_INSTANTIATE_HEURISTIC___max_rec_depth : int ref
-
-  val QUANT_INSTANTIATE_HEURISTIC___COMBINE :
-    ((term -> term -> bool) list) -> quant_heuristic list ->
-    quant_heuristic list -> (thm list -> quant_heuristic) list -> quant_heuristic_cache ref option -> thm list -> quant_heuristic_base;
-
-
-  val COMBINE_HEURISTIC_FUNS : (unit -> guess_collection) list -> guess_collection;
-
 
   (*use this to create sys for debugging own heuristics*)
   val qp_to_heuristic : quant_param -> quant_heuristic_cache ref option -> thm list -> term -> term -> guess_collection
@@ -244,14 +227,29 @@ sig
   val QUANT_TAC  : (string * Parse.term Lib.frag list * Parse.term Parse.frag list list) list
    -> tactic;
 
+(* Predefined filters to use with filter_qp *)
+val subterm_filter       : term list -> term -> term -> bool
+val subterm_match_filter : term list -> term -> term -> bool
+val type_filter          : hol_type list -> term -> term -> bool
+val type_match_filter    : hol_type list -> term -> term -> bool
+val neg_filter           : (term -> term -> bool) -> term -> term -> bool
+
 (*combination with simplifier*)
   val QUANT_INST_ss        : quant_param list -> simpLib.ssfrag;
   val EXPAND_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
   val FAST_QUANT_INST_ss   : quant_param list -> simpLib.ssfrag;
 
 (* Traces *)
-(* "QUANT_INSTANTIATE_HEURISTIC" can be used to get debug information on
-   how guesses are obtained *)
+(* "QUANT_INST_DEBUG" can be used to get debug information on
+   how guesses are obtained
+
+   "QUANT_INST___print_term_length" used for printing debug concisely
+
+
+   "QUANT_INST___REC_DEPTH" can set the maximal recursion depth, default is 250.
+   If the search is aborted, because the depth is not big enough, a warning
+   is printed. Decrease for speed and increase if the warning appears and you want to search deeper.
+*)
 
 
 

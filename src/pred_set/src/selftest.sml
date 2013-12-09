@@ -19,26 +19,18 @@ in
   #2 verdict
 end;
 
-
-fun testpp desired = let
-  val t = Parse.Term [QUOTE desired]
-  val _ = print (padr 65 ("Pretty-printing of "^desired))
-  val s = term_to_string t
-in
-  if s = desired then print "OK\n"
-  else (print "FAILED\n"; Process.exit Process.failure)
-end
-
 val _ =
-    app testpp ["{}",
-                "0",
-                "{x | x < 10}",
-                "{x | x < 10} y",
-                "{x + y | x < y}",
-                "{x + y | x > 6}",
-                "{x + y | x | x < y}",
-                "{(case x of T => y | F => y + 1) | y > 3}",
-                "{x | x < (case y of T => 3 | F => 2)}"]
+    app testutils.tpp [
+      "{}",
+      "0",
+      "{x | x < 10}",
+      "{x | x < 10} y",
+      "{x + y | x < y}",
+      "{x + y | x > 6}",
+      "{x + y | x | x < y}",
+      "{(case x of 0 => y | SUC n => y + n) | y > 3}",
+      "{x | x < (case y of 0 => 3 | SUC n => 2)}"
+    ]
 
 val _ = temp_add_rule {
           fixity = Closefix,
@@ -50,7 +42,7 @@ val _ = temp_add_rule {
                          TOK "}"]}
 val _ = temp_overload_on ("lterange", ``\m n. { i | m < i /\ i <= n}``)
 
-val _ = app testpp ["{ 3 <.. 5 }", "{x | x < 6}"]
+val _ = app testutils.tpp ["{ 3 <.. 5 }", "{x | x < 6}"]
 
 val imgtests = [(``IMAGE (\x. x + 1) {3;4}``, ``{4;5}``),
                 (``IMAGE (K 0) {3;4}``, ``{0}``),

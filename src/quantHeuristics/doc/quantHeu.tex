@@ -1,0 +1,1363 @@
+\documentclass[a4paper,12pt,DIV=12,oneside]{scrbook}
+
+\usepackage{amsthm}
+\usepackage{palatino}
+\usepackage{amssymb} 
+\usepackage{amsmath}
+\usepackage[sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\newcommand{\tablehead}[1]{\addlinespace\multicolumn{2}{l}{\textit{#1}}\\}
+
+\let\vec\relax
+\DeclareMathAccent{\vec}{\mathord}{letters}{"7E}
+
+\usepackage{accents}
+
+\newcommand{\HOL}{{HOL}}
+\newcommand{\fv}{\textit{fv}}
+
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{theorem}[lemma]{Theorem}
+
+\theoremstyle{definition}
+\newtheorem{definition}[lemma]{Definition}
+\newtheorem{example}[lemma]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[lemma]{Remark}
+
+\newcommand{\GE}{\ensuremath{G_\exists}}
+\newcommand{\GEP}{\ensuremath{G_{\accentset{\bullet}{\exists}}}}
+\newcommand{\GEG}{\ensuremath{G_{\accentset{\_\,\_}{\exists}}}}
+\newcommand{\GU}{\ensuremath{G_\forall}}
+\newcommand{\GUP}{\ensuremath{G_{\accentset{\bullet}{\forall}}}}
+\newcommand{\GUG}{\ensuremath{G_{\accentset{\_\,\_}{\forall}}}}
+\newcommand{\GO}{\ensuremath{G_{?}}}
+
+\pagestyle{plain}
+
+%------------------------------------------------------------------------------------------
+% The title page
+%------------------------------------------------------------------------------------------
+
+\begin{document}
+
+\title{Quantifier Heuristics Library}
+\author{Thomas Tuerk}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}
+\section{Motivation}
+\label{sec_motivation}
+
+In interactive proofs it is often useful to be able to find instantiations
+for quantifiers. The unwind library\footnote{see \texttt{src/simp/src/Unwind.sml}} allows
+instantiations of ``trivial'' quantifiers:
+
+\[ \forall x_1\ \ldots x_i \ldots x_n.\ P_1 \wedge \ldots \wedge x_i = c \wedge \ldots \wedge P_n \Longrightarrow Q \]
+and
+\[ \exists x_1\ \ldots x_i \ldots x_n.\ P_1 \wedge \ldots \wedge x_i =
+c \wedge \ldots \wedge P_n \] can be simplified by
+instantiating $x_i$ with $c$. Because unwind-conversions are 
+part of \texttt{bool\_ss}, they are used with nearly every call of the simplifier
+and often simplify proofs considerably. However, the unwind library can only handle these common cases. If the term structure is
+only slightly more complicated, it fails. For example, $\exists x.\ P(a) \Longrightarrow (x = 2) \wedge Q(x)$
+cannot be tackled.
+
+There is also the satisfy library\footnote{see \texttt{src/simp/src/Satisfy.sml}}, which uses unification to 
+show existentially quantified formulas. It can handle problems like
+$\exists x.\ P_1(x,c_1)\ \wedge \ldots P_n(x,c_n)$ if given
+theorems of the form $\forall x\ c.\ P_i(x, c)$. This is often handy, but still rather limited.
+
+The quantifier heuristics library\footnote{see
+  \texttt{src/quantHeur/quantHeuristicsLib.sml}} provides more power
+and flexibility.  It can handle all the examples that the unwind and
+satisfy libraries can handle. A few simple examples of what it can do
+are shown in Table~\ref{table_examples}. Besides the power demonstrated
+by these examples, the library is highly flexible as well.  At it's
+core, there is a modular, syntax driven search for instantiation.
+This search consists of a collection of interleaved heuristics.  Users
+can easily configure existing heuristics and add own ones. Thereby, it
+is easy to teach the library about new predicates, logical connectives
+or datatypes.
+
+\begin{table}[h]
+\centering\scriptsize
+\begin{tabularx}{\textwidth}{lll}\toprule
+\textbf{Problem} & \textbf{Result} \\\midrule
+
+\tablehead{basic examples}
+$\exists x.\ x = 2 \wedge P (x)$ & $P(2)$ \\
+$\forall x.\ x = 2 \Longrightarrow P (x)$ & $P(2)$ \\
+
+\tablehead{solutions and counterexamples}
+$\exists x.\ x = 2$ & $\textit{true}$ \\
+$\forall x.\ x = 2$ & $\textit{false}$ \\
+
+\tablehead{complicated nestings of standard operators}
+$\exists x_1. \forall x_2.\ (x_1 = 2) \wedge P(x_1, x_2)$ & 
+$\forall x_2.\ P(2, x_2)$ \\
+
+$\exists x_1, x_2.\ P_1(x_2) \Longrightarrow (x_1 = 2) \wedge P(x_1, x_2)$ & 
+$\exists x_2.\ P_1(x_2) \Longrightarrow P(2, x_2)$ \\
+$\exists x.\ ((x = 2) \vee (2 = x)) \wedge P(x)$ & $P(2)$ \\
+
+\tablehead{exploiting unification}
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(10))$ & $P (f(10))$ \\
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(x + 2))$ & $P (f(8 + 2))$ \\
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(x))$ & - (\text{no instantiation found}) \\
+
+\tablehead{partial instantiation for datatypes}
+$\forall p.\ c = \textsf{FST}(p) \Longrightarrow P(p)$ & $\forall p_2.\ P(c, p_2)$ \\
+
+$\forall x.\ \textsf{IS\_NONE}(x) \vee P(x)$ & $\forall x'.\ P (\textsf{SOME}(x'))$ \\
+
+$\forall l.\ l \neq [\,] \Longrightarrow P(l)$ & $\forall \textit{hd}, \textit{tl}.\
+P(\textit{hd} :: \textit{tl})$ \\
+
+\tablehead{context}
+$P_1(c) \Longrightarrow \exists x.\ P_1(x) \vee P_2(x)$ & \textit{true} \\
+$P_1(c) \Longrightarrow \forall x.\ \neg P_1(x) \wedge P_2(x)$ & $\neg P_1(c)$ \\
+
+$(\forall x.\ P_1(x) \Rightarrow (x = 2)) \Longrightarrow (\forall x.\ P_1(x) \Rightarrow P_2(x))$ &
+$(\forall x.\ P_1(x) \Rightarrow (x = 2)) \Rightarrow (P_1(2) \Rightarrow P_2(2))$ \\
+
+$\big((\forall x.\ P_1(x) \Rightarrow P_2(x)) \wedge P_1(2)\big) \Longrightarrow \exists x.\ P_2(x)$ &
+\textit{true} \\
+\bottomrule
+\end{tabularx}
+\caption{Examples}
+\label{table_examples}
+\end{table}
+
+\section{Structure}
+
+This presentation of the quantifier heuristics library is structured into two parts.
+The first part presents the logical foundations, whereas the second part presents the HOL~4 interface.
+Readers not interested in the foundations, might skip the first part.
+
+The first part starts with an introduction of the concept of guesses in Section~\ref{sec_guesses}. Then,
+Section \ref{sec_base_guesses} shows how guesses can be derived for interesting terms like equations.
+These guesses form the base cases of the search for instantiations. Then, Section \ref{sec_lifting_guesses}
+discusses how these guesses are lifted over the term structure. Other concepts used for the search
+are discussed in Section~\ref{sec_other_techniques}. In order to illustrate
+this abstract presentation, Section~\ref{sec_examples} shows how
+guess-search works for simple examples.
+
+The second part starts with a high level presentation of the user-interface in 
+Section~\ref{sec_interface}. An important concept of the interface are
+quantifier heuristic parameters, which allow configuring the behaviour of the library.
+In Section~\ref{sec_qps} first predefined parameters are presented.
+Then it is demonstrated using concrete examples, how own parameters can be developed.
+
+The presentation closes with a short conclusion.
+
+
+\chapter{Theoretical Foundations}
+
+\section{Guesses}\label{sec_guesses}
+
+\subsection{Weak Guesses for Existential Quantifiers}
+
+In the introduction, it is stated that the core component of this work
+is a search based on heuristics. Abstractly, given a term $\exists x.\
+P(x)$ we want to find an instantiation $\lambda \fv. i(\fv)$ such that
+$\exists x.\ P(x) \Longleftrightarrow \exists \fv.\ P(i(\fv))$
+holds. In the following, such an $i$ is called a \emph{guess} for 
+variable $x$ in $P(x)$. In order to justify such a guess, we define
+special predicates that capture the intended semantics.
+
+\begin{definition}[Existential Guess]
+  $i$ is an \emph{existential guess} for $P$ (denoted by $\GE(i, P)$)
+  if and only if the equivalence $\exists x.\ P(x) \Longleftrightarrow
+  \exists \fv.\ P(i(\fv))$ holds.
+\end{definition}
+
+\begin{example}
+$\GE(K\ 2, \lambda x.\ x = 2)$ holds, because $\exists x.\ x = 2
+\Longleftrightarrow 2 = 2$ holds. More interestingly,
+$\GE(\lambda(x, xs').\ x::xs'), \lambda xs.\ xs \neq [] \wedge P(xs))$
+holds. Therefore, $\exists xs.\ xs \neq []\ \wedge\ P(xs)$ can be simplified
+to $\exists x\ xs'.\ x::xs' \neq []\ \wedge\ P(x::xs')$. 
+\end{example}
+
+So, when trying to process $\exists x.\ P(x)$, we search
+for an existential guess $i$ such that $\GE(i, \lambda x. P(x))$
+holds. If such a guess is found, the original term can be simplified to
+$\exists \fv.\ P(i(\fv))$, which is really \emph{simpler} provided sensible heuristics for creating
+guesses are used. In particular, guesses $i$ that do not depend on $\fv$ frequently occur in practice. 
+The quantifier disappears completely in this common case.
+
+\subsection{Strong Guesses for Existential Quantifiers}
+
+The general idea for coming up with a guess $\GE(i, P)$ is preforming 
+a bottom-up search of the syntax tree of $P$. Unluckily, $\GE$ is
+not well suited for such a search, because it is too weak to easily lift 
+guesses for subterms. Consider, for example, terms of the form 
+$\exists x.\ P_1(x) \vee P_2(x)$. If we have a guess $\GE(i, P_1)$, we unluckily can't lift it
+to a guess $\GE(i, \lambda x.\ P_1(x) \vee P_2(x))$ in general. A counterexample
+is $P_1(x) := \textit{false}$, $P_2(x) := (x = 2)$ and $i := K\ 3 = \lambda \fv.\ 3$.
+Therefore, stronger types of guesses are introduced that work well with lifting:
+
+\begin{definition}[Point Existenstial Guess]
+$i$ is a \emph{point existential guess} for $P$ (denoted by $\GEP(i, P)$) if and only if $\forall \fv.\ P(i(\fv))$ holds.
+\end{definition}
+
+\begin{example}
+  $\GEP(K\ 2, \lambda x.\ x=2)$ holds, because $2=2$ holds. In
+  addition to weak existential guesses $\GE(i,P)$, point existential
+  guesses $\GEP(i,P)$ carry information about the point $i$: the point
+  $i$ satisfies $P$. For example $\GEP(\lambda (x,xs').\ x::xs',\ \lambda
+  xs.\ xs \neq [])$ means that $\lambda xs.\ xs \neq []$ holds for all
+  points of the form $x :: xs'$ (for arbitrary $x$, $xs'$).
+\end{example}
+
+
+\begin{definition}[Gap Existential Guess]
+  $i$ is a \emph{gap existential guess} for $P$ (denoted by $\GEG(i, P)$)
+  if and only if $\forall v.\ \big(\big(\forall \fv.\ v \neq
+  i(\fv)\big) \Longrightarrow \neg P(v)\big)$ holds.
+\end{definition}
+
+\begin{example}
+In addition to weak existential guesses $\GE(i,P)$, gap existential
+guesses $\GEG(i,P)$ carry information about all points except the gap $i$.
+The guess $\GEG(K\ 2, \lambda x.\ x = 2\ \wedge\ Q(x))$ holds, because $\lambda x.\ (x = 2)\ \wedge\ Q(x)$ 
+does not hold for all values except possibly $2$. Since nothing is known about $Q$, we don't know,
+whether $P$ holds for the point $2$. This point is a gap in the argument.
+\end{example}
+
+\noindent
+Point and gap existential guesses are stronger than existential
+guesses, i.\,e.\ $\GEP(i, P)$ and $\GEG(i, P)$ imply $\GE(i, P)$ for
+all $i$, $P$. Therefore, they can also be used to instantiate
+existential quantifiers.  Moreover, they allow lifting. For example,
+the rule $\GEP(i, P_1) \Longrightarrow \GEP(i, \lambda x.\ P_1(x) \vee
+P_2(x))$ holds.
+
+\subsection{Guesses for Universal Quantifiers}
+
+Existential and universal quantification are closely related to each
+other by negation. In order to lift guesses over negation and also in
+order to be able to instantiate universal quantifiers, it makes sense
+to define corresponding guesses for universal quantification
+exploiting this duality.
+
+\begin{definition}[Universal Guess]
+  $i$ is an \emph{universal guess} for $P$ (denoted by $\GU(i, P)$)
+  if and only if the equivalence $\forall x.\ P(x) \Longleftrightarrow
+  \forall \fv.\ P(i(\fv))$ holds.
+\end{definition}
+
+\begin{definition}[Point Universal Guess]
+$i$ is a \emph{point universal guess} for $P$ (denoted by $\GUP(i, P)$) if and only if $\forall \fv.\ \neg\ P(i(\fv))$ holds.
+\end{definition}
+
+\begin{definition}[Gap Universal Guess]
+  $i$ is a \emph{gap universal guess} for $P$ (denoted by $\GUG(i,
+  P)$) if and only if $\forall v.\ \big(\big(\forall \fv.\ v \neq
+  i(\fv)\big) \Longrightarrow P(v)\big)$ holds.
+\end{definition}
+
+Similar to guesses for existential quantification, we are mainly interested in weak universal guesses. Point and gap
+universal guesses are stronger than universal ones and allow lifting. 
+
+
+\subsection{Overview}
+
+Above, 6 types of guesses are formally introduced. Informally, they can be described by the following table:
+%
+\begin{center}
+\begin{tabular}{cc@{\quad}|@{\quad}l}
+\textbf{$i$ is a $\ldots$ guess for $P$} &  & \textbf{intuition} \\\hline
+(weak) existential & ($\GE$) & $\exists x.\ P(x)$ can be safely instantiated with $i$ \\
+(weak) universal & ($\GU$) & $\forall x.\ P(x)$ can be safely instantiated with $i$ \\
+point existential & ($\GEP$) & $P(i)$ holds \\
+point universal & ($\GUP$) & $\neg P(i)$ holds \\
+gap existential & ($\GEG$) & all $v$ except possibly $i$ do not satisfy $P$\\
+gap universal & ($\GUG$) & all $v$ except possibly $i$ satisfy $P$\\
+\end{tabular}
+\end{center}
+%
+This informal description also shows the relative strength of these guesses.
+%
+\begin{lemma}[Strength of Guesses]\label{lemma_guesses_strength}%
+Point and gap guesses are stronger than weak guesses. This means that the following
+implications hold for all $i$ and $P$:
+\[
+\begin{array}{rcl@{\qquad}rcl}
+  \GEG(i, P) & \Longrightarrow & \GE(i, P) &
+  \GEP(i, P) & \Longrightarrow & \GE(i, P) \\
+  \GUG(i, P) & \Longrightarrow & \GU(i, P) &
+  \GUP(i, P) & \Longrightarrow & \GU(i, P)
+\end{array}
+\]
+\noindent
+Point and gap guesses cannot be compared to each other in general.
+\end{lemma}
+
+So, the core of the framework searches for guesses. Once found, the guesses are used as described by the following theorem:
+
+\begin{theorem}[Usage of Guesses]\label{lemma_guesses_usage}
+Guesses are used to simplify formulae with quantifiers in various ways. In the most basic case, they can 
+be used to (partially) instantiate quantifiers as follows:
+\[%
+\begin{array}[t]{cccrclc}
+  \GE(i, P) & \Longrightarrow & \Big( & \exists x.\ P(x) & \Leftrightarrow & \exists \fv.\ P(i(\fv)) & \Big) \\ 
+  \GU(i, P) & \Longrightarrow & \Big( & \forall x.\ P(x) & \Leftrightarrow & \forall \fv.\ P(i(\fv)) & \Big) \\ 
+\end{array}
+\]
+%
+If the guess does not depend on a free variable (as denoted by $K\ i_c$), the quantifier can be removed completely:
+\[
+\begin{array}[t]{cccrclc}
+  \GE(K\ i_c, P) & \Longrightarrow & \Big( & \exists x.\ P(x) & \Leftrightarrow & P(i_c) & \Big) \\ 
+  \GU(K\ i_c, P) & \Longrightarrow & \Big( & \forall x.\ P(x) & \Leftrightarrow & P(i_c) & \Big) \\ 
+\end{array}
+\]
+Point guesses lead to even more simplification:
+\[
+\begin{array}[t]{cccrclc}
+  \GEP(i, P) & \Longrightarrow & \Big( & \exists x.\ P(x) & \Leftrightarrow & \textit{true} & \Big) \\ 
+  \GUP(i, P) & \Longrightarrow & \Big( & \forall x.\ P(x) & \Leftrightarrow & \textit{false} & \Big) \\ 
+\end{array}
+\]
+In contrast, the additional strength of gap guesses 
+is mainly important for lifting. For instantiating quantifiers the same rules as for
+existential and universal guesses apply.
+However, gap existential guesses are useful for handling unique existential quantification, provided
+the guess does not contain free variables.
+\[
+\begin{array}[t]{cccrclc}
+  \GE(K\ i_c, P) & \Longrightarrow & \Big( & \exists! x.\ P(x) & \Leftrightarrow & 
+    (P(i_c)\ \wedge\ \forall v.\ P(v) \Rightarrow v = i_c) & \Big) \\ 
+  \GEG(K\ i_c, P) & \Longrightarrow & \Big( & \exists! x.\ P(x) & \Leftrightarrow & 
+    P(i_c) & \Big) \\ 
+  \GEP(K\ i_c, P) & \Longrightarrow & \Big( & \exists! x.\ P(x) & \Leftrightarrow & 
+    (\forall v.\ P(v) \Rightarrow v = i_c) & \Big) 
+\end{array}
+\]
+\end{theorem}
+
+
+\subsection{Oracle Guesses}
+
+So far, we discussed guesses that carry semantic information and allow
+proving equivalences. These are the ones interesting from a theoretical point of view.
+For implementing an actual tool, guesses without justification are interesting as well.
+The HOL~4 implementation supports also \emph{oracle guesses}.
+\begin{definition}[Oracle Guess]
+  $i$ is an \emph{oracle guess} for $P$ (denoted by $\GO(i,
+  P)$) if the user says so. This means that $\GO(i, P)$ holds for all $i$ and $P$.
+\end{definition}
+%
+An oracle guess carries no semantic information, it just states something
+like ``\textit{Trust me! This is a sensible guess!}''. Therefore, oracle
+guesses can only be used to prove implications instead of
+equivalences. 
+%
+\begin{lemma}[Usage of Oracle Guesses]
+\[
+\begin{array}[t]{cccrclc}
+  \GO(i, P) & \Longrightarrow & \Big( & \exists x.\ P(x) & \Leftarrow & \exists \fv.\ P(i(\fv)) & \Big) \\ 
+  \GO(i, P) & \Longrightarrow & \Big( & \forall x.\ P(x) & \Rightarrow & \forall \fv.\ P(i(\fv)) & \Big) 
+\end{array}
+\]
+\end{lemma}
+%
+Oracle guesses allow the user to instantiate quantifiers without formal justification. 
+Therefore, they require hardly any theoretical foundation and 
+are mainly interesting for tool implementation. Therefore, they won't be discussed much below.
+
+\section{Base Guesses}
+\label{sec_base_guesses}
+After introducing guesses, guess-search can be presented now.
+This presentation is twofold. In this section, guesses for basic terms are discussed. Lifting guesses 
+is presented in the next section.
+
+\subsection{Equations}
+The most basic, but also most common source of guesses are equations:
+
+\begin{lemma}[Guesses for Equations with Variables at Top-Level]\label{lemma_guesses_equation_top}
+Given an equation $x = t$ such that the variable $x$ 
+does not occur in $t$, the term $t$ is both a point and gap existential guess for
+$x$:
+\[%
+\begin{array}{ccc}
+\GEP(K\ t,\ \lambda x.\ (x = t)) & \qquad\qquad & \GEG(K\ t,\ \lambda x.\ (x = t)) \\
+\end{array}
+\]
+\end{lemma}
+%
+\begin{lemma}[Point Existential Guesses for Equations]\label{lemma_guesses_equation_T}
+Given an equation $t_1(x) = t_2(x)$ and a term $i_c$ such that 
+the formula $t_1(i_c) = t_2(i_c)$ holds, the term $i_c$ is a point existential guess for
+$x$. This means that the following holds.
+\[
+t_1(i_c) = t_2(i_c) \Longrightarrow
+\GEP(K\ i_c,\ \lambda x.\ (t_1(x) = t_2(x)))
+\]
+\end{lemma}
+\noindent
+Therefore, unification can be used to find point existential guesses for equations.
+
+
+\subsection{Dichotomies}\label{subsec_base_guesses_dichotomies}
+Many datatype definitions provide dichotomy theorems of the form
+\[
+  \forall x.\ x = c_1\ \vee\ (\exists \fv.\ x = c_2(\fv)) \qquad \text{and} \qquad
+  \forall \fv.\ c_1\ \neq c_2(\fv)
+\]
+The option- and list-datatypes of HOL~4, for example, provide the following theorems:
+\[
+\begin{array}{ccc}
+  \forall x.\ x = \textsf{NONE}\ \vee\ (\exists v.\ x = \textsf{SOME}(v)) & \qquad \qquad &
+  \forall v.\ \textsf{NONE} \neq \textsf{SOME}(v) \\
+
+  \forall x.\ x = [\,]\ \vee\ (\exists \textit{hd}, \textit{tl}.\ x = \textit{hd}::\textit{tl}) & &
+  \forall \textit{hd}, \textit{tl}.\ [\,] \neq \textit{hd}::\textit{tl}
+\end{array}
+\]
+%
+Such theorems can be exploited for creating guesses:
+\begin{lemma}[Dichotomy Guesses]\label{lemma_guesses_dichotomy}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+(\forall \fv.\ c_1 \neq c_2(\fv)) & \Longrightarrow &
+\GUP(\lambda \fv.\ c_2(\fv),\ \lambda x.\ (x = c_1)) \\
+
+(\forall x.\ x = c_1\ \vee\ (\exists \fv.\ x = c_2(\fv))) & \Longrightarrow &
+\GUG(\lambda \fv.\ c_2(\fv),\ \lambda x.\ (x = c_1)) 
+\end{array}
+\]
+\end{lemma}
+%
+Exploiting dichotomy is very useful in practice. Holfoot uses it to reason about lists.
+The variable \textit{pdata'} in the list-reversal example of the introduction can, for example,
+be instantiated using the dichotomy of lists. Without this rule, Holfoot's inference rules for 
+singly-linked list predicates would need to unfold the data-content manually.
+
+Many other datatypes unluckily have more than just two
+cases. Currently, general $n$-chotomies cannot be exploited, because
+this would require an extension of the guess concept.  However,
+monochotomies can be handled.
+
+\subsection{Monochotomies}
+Datatypes like pairs and records do not have two cases, but only one. This
+structure can be exploited as well. Notice, that for this case, the guess does not depend on the predicate $P$ any
+more. It just depends on the type of the variable we try to instantiate.
+%
+\begin{lemma}[Monochotomy Guesses]\label{lemma_guesses_monochotomy}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+(\forall x.\ \exists \fv.\ x = c(\fv))) & \Longrightarrow &
+\forall P.\ \GEG(\lambda \fv.\ c(\fv),\ P) \\
+(\forall x.\ \exists \fv.\ x = c(\fv))) & \Longrightarrow &
+\forall P.\ \GUG(\lambda \fv.\ c(\fv),\ P) \\
+\end{array}
+\]
+\end{lemma}
+
+\subsection{Other guesses}
+The base guesses presented above are at the most important ones. However, other
+trivial base guesses are exploited as well for the implementation. 
+The most important ones are point guesses that can be derived 
+from some context information:
+%
+\begin{lemma}[Context Guesses]\label{lemma_guesses_context}
+\[
+\begin{array}{l@{\quad\quad}l}
+P(c) \Longrightarrow \GEP(K\ c,\ \lambda x.\ P(x))  \\
+\neg P(c) \Longrightarrow \GUP(K\ c,\ \lambda x.\ P(x)) 
+\end{array}
+\]
+\end{lemma}
+%
+\noindent
+Moreover, generating guesses on the fly for constants is important to
+implement lifting efficiently:
+%
+\begin{lemma}[Guesses for Constants]\label{lemma_guesses_const}
+Given a term $c$ such that a variable $x$ does not occur in $c$, any term $i$ is a 
+valid existential and universal guess: 
+\[
+\begin{array}{l@{\quad\quad}l}
+\GE(i,\ \lambda x.\ c) & \GU(i,\ \lambda x.\ c) 
+\end{array}
+\]
+\end{lemma}
+
+
+
+\section{Lifting Guesses}\label{sec_lifting_guesses}
+
+In Sec.~\ref{sec_base_guesses} the base cases of the search for guesses have been presented.
+It remains to discuss, how guesses are lifted over common operators.
+
+\subsection{Negation}
+Guesses are defined with negation in mind. Therefore, it is straightforward to lift
+guesses over negation:
+%
+\begin{lemma}[Lifting Guesses over Negation]\label{lemma_guesses_lift_neg}
+\[
+\begin{array}{lll@{\quad}lll}
+\GEP(i,\ \lambda x.\ P(x)) & \Rightarrow & \GUP(i,\ \lambda x.\ \neg P(x)) &
+\GUP(i,\ \lambda x.\ P(x)) & \Rightarrow & \GEP(i,\ \lambda x.\ \neg P(x)) \\
+\GE(i,\ \lambda x.\ P(x)) & \Rightarrow & \GU(i,\ \lambda x.\ \neg P(x)) &
+\GU(i,\ \lambda x.\ P(x)) & \Rightarrow & \GE(i,\ \lambda x.\ \neg P(x)) \\
+\GEG(i,\ \lambda x.\ P(x)) & \Rightarrow & \GUG(i,\ \lambda x.\ \neg P(x)) &
+\GUG(i,\ \lambda x.\ P(x)) & \Rightarrow & \GEG(i,\ \lambda x.\ \neg P(x))
+\end{array}
+\]
+\end{lemma}
+
+\subsection{Disjunction}
+
+Lifting guesses over a disjunction $P_1(x) \vee P_2(x)$ is a bit more
+complicated. Point existential guesses are straightforward to lift. If we
+have a point existential guess for either $P_1$ or $P_2$, it is also one for
+the disjunction:
+%
+\begin{lemma}[Lifting Point Existential Guesses over Disjunction]\label{lemma_guesses_lift_disj_T}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+\GEP(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_1(x) \vee P_2(x)) \\
+\GEP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_1(x) \vee P_2(x)) 
+\end{array}
+\]
+\end{lemma}
+%
+In contrast, point universal guesses have to hold for both disjuncts:
+\begin{lemma}[Lifting Point Universal Guesses over Disjunction]\label{lemma_guesses_lift_disj_F}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+\GUP(i,\ \lambda x.\ P_1(x)) \wedge \GUP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUP(i,\ \lambda x.\ P_1(x) \vee P_2(x))
+\end{array}
+\]
+\end{lemma}
+%
+For gap guesses, it is the other way round:
+%
+\begin{lemma}[Lifting Gap Existential Guesses over Disjunction]\label{lemma_guesses_lift_disj_SE}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+\GEG(i,\ \lambda x.\ P_1(x)) \wedge \GEG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEG(i,\ \lambda x.\ P_1(x) \vee P_2(x))
+\end{array}
+\]
+\end{lemma}
+%
+\begin{lemma}[Lifting Gap Universal Guesses over Disjunction]\label{lemma_guesses_lift_disj_SA}
+\[
+\begin{array}{l@{\quad}l@{\quad}l}
+\GUG(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_1(x) \vee P_2(x)) \\
+\GUG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_1(x) \vee P_2(x)) 
+\end{array}
+\]
+\end{lemma}
+
+For weak existential guesses, existential guesses for both subterms are needed. However,
+Lemma~\ref{lemma_guesses_const} leads to a nice rule, provided the
+variable does not occur in one of the operands.
+
+\begin{lemma}[Lifting Existential Guesses over Disjunction]\label{lemma_guesses_lift_disj_E}
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+\GE(i,\ \lambda x.\ P_1(x)) \wedge \GE(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ P_1(x) \vee P_2(x)) \\
+\GE(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ P_1(x) \vee p_2) \\
+\GE(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ p_1 \vee P_2(x))
+\end{array}
+\]
+\end{lemma}
+
+For universal guesses it is even more complicated, because the handling of free variables does not fit well.
+The guess is not allowed to depend on any free variable (denoted by $K\ i_c$). 
+\begin{lemma}[Lifting Universal Guesses over Disjunction]\label{lemma_guesses_lift_disj_A}
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+\begin{array}{cl}
+\GU(K\ i_c,\ \lambda x.\ P_1(x)) & \wedge \\
+\GU(K\ i_c,\ \lambda x.\ P_2(x)) 
+\end{array} & \Longrightarrow & \GU(K\ i_c,\ \lambda x.\ P_1(x) \vee P_2(x)) \\[1em]
+\GU(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ P_1(x) \vee p_2) \\
+\GU(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ p_1 \vee P_2(x))
+\end{array}
+\]
+\end{lemma}
+
+So, for the strong types of guesses, one of the dual guesses behaves
+nicely.  In contrast, none of the weak guesses does. As motivated
+above, this is the main reason for introducing the stronger types of
+guesses.
+
+
+\subsection{Other Boolean Operations}
+
+We have seen above how to handle negation and disjunction. Other Boolean operations can be expressed in terms of these.
+Therefore, the above lemmata can also be used to lift guesses over other Boolean operations. However, for efficiency
+reasons the implementation in HOL~4 uses special, derived rules. Here, some of these rules are listed without further explanation:
+
+\begin{lemma}[Lifting Guesses over Conjunction]\label{lemma_guesses_lift_conj}
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+\GEP(i,\ \lambda x.\ P_1(x)) \wedge \GEP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GUP(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GUP(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GUP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUP(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GEG(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GEG(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GEG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEG(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GUG(i,\ \lambda x.\ P_1(x)) \wedge \GUG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+
+\GE(K\ i_c,\ \lambda x.\ P_1(x)) \wedge \GE(K\ i_c,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(K\ i_c,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GE(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ P_1(x) \wedge p_2) \\
+\GE(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ p_1 \wedge P_2(x)) \\
+
+\GU(i,\ \lambda x.\ P_1(x)) \wedge \GU(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ P_1(x) \wedge P_2(x)) \\
+\GU(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ P_1(x) \wedge p_2) \\
+\GU(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ p_1 \wedge P_2(x))
+\end{array}
+\]
+\end{lemma}
+
+\begin{lemma}[Lifting Guesses over Implication]\label{lemma_guesses_lift_imp}
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+\GEP(i,\ \lambda x.\ P_1(x)) \wedge \GUP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUP(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GUP(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GEP(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+
+\GEG(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GUG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GUG(i,\ \lambda x.\ P_1(x)) \wedge \GEG(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GEG(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+
+\GU(i,\ \lambda x.\ P_1(x)) \wedge \GE(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GU(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ P_1(x) \Rightarrow p_2) \\
+\GE(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GE(i,\ \lambda x.\ p_1 \Rightarrow P_2(x)) \\
+
+\GE(K\ i_c,\ \lambda x.\ P_1(x)) \wedge \GU(K\ i_c,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GU(K\ i_c,\ \lambda x.\ P_1(x) \Rightarrow P_2(x)) \\
+\GE(i,\ \lambda x.\ P_1(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ P_1(x) \Rightarrow p_2) \\
+\GU(i,\ \lambda x.\ P_2(x)) & \Longrightarrow & \GU(i,\ \lambda x.\ p_1 \Rightarrow P_2(x)) \\
+\end{array}
+\]
+\end{lemma}
+
+
+\subsection{Quantifiers}
+
+It remains to lift guesses over quantifiers. Let's first consider universal quantification. 
+If the guess does depend on the quantified variables, it becomes a free variable of the guess:
+
+\begin{lemma}[Lifting Guesses over Universal Quantification (1)]\label{lemma_guesses_lift_forall_1}
+\[
+\begin{array}{c}
+(\forall y.\ \GEP(\lambda \fv.\ i(\fv, y),\ \lambda x.\ P(x, y)) \Longrightarrow \\
+\GEP(\lambda \fv'.\ i(\textsf{FST}(\fv'), \textsf{SND}(\fv')),\ \lambda x.\ \forall y.\ P(x, y)) \\[1em]
+
+(\forall y.\ \GU(\lambda \fv.\ i(\fv, y),\ \lambda x.\ P(x, y)) \Longrightarrow \\
+\GU(\lambda \fv'.\ i(\textsf{FST}(\fv'), \textsf{SND}(\fv')),\ \lambda x.\ \forall y.\ P(x, y)) \\[1em]
+
+(\forall y.\ \GUG(\lambda \fv.\ i(\fv, y),\ \lambda x.\ P(x, y)) \Longrightarrow \\
+\GUG(\lambda \fv'.\ i(\textsf{FST}(\fv'), \textsf{SND}(\fv')),\ \lambda x.\ \forall y.\ P(x, y)) \\[1em]
+
+(\forall y.\ \GEG(\lambda \fv.\ i(\fv, y),\ \lambda x.\ P(x, y)) \Longrightarrow \\
+\GEG(\lambda \fv'.\ i(\textsf{FST}(\fv'), \textsf{SND}(\fv')),\ \lambda x.\ \forall y.\ P(x, y)) \\
+\end{array}
+\]
+\end{lemma}
+%
+Notice however, that weak existential and point universal guesses can't be lifted that way. If a guess does not depend on the quantified variable,
+it is possible, though:
+
+\begin{lemma}[Lifting Guesses over Universal Quantification (2)]\label{lemma_guesses_lift_forall_2}
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+(\forall y.\ \GEP(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GEP(i,\ \lambda x.\ \forall y.\ P(x, y)) \\
+(\forall y.\ \GE(K\ i_c,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GE(K\ i_c,\ \lambda x.\ \forall y.\ P(x, y)) \\
+(\forall y.\ \GEG(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GEG(i,\ \lambda x.\ \forall y.\ P(x, y)) \\
+(\forall y.\ \GUP(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GUP(i,\ \lambda x.\ \forall y.\ P(x, y)) \\
+(\forall y.\ \GU(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GU(i,\ \lambda x.\ \forall y.\ P(x, y)) \\
+(\forall y.\ \GUG(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GUG(i,\ \lambda x.\ \forall y.\ P(x, y)) 
+\end{array}
+\]
+\end{lemma}
+
+Rules for lifting guesses over existential quantification are dual. However, unique existential quantification needs a bit
+of attention:
+
+\begin{lemma}[Lifting Guesses over Unique Existential Quantification]
+\[
+\begin{array}{c@{\quad}c@{\quad}l}
+(\forall y.\ \GUP(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GUP(i,\ \lambda x.\ \exists! y.\ P(x, y)) \\
+(\forall y.\ \GEG(i,\ \lambda x.\ P(x, y)) & \Longrightarrow & \GEG(i,\ \lambda x.\ \exists! y.\ P(x, y)) 
+\end{array}
+\]
+\end{lemma}
+
+
+\section{Related Techniques}\label{sec_other_techniques}
+
+Above base guesses and lifting of guesses have been presented. This section now
+briefly discusses other techniques that enhance guess search: 
+
+\subsection{Rewrites}\label{subsec_other_techniques_rewrites}
+
+A very powerful, yet simple technique for teaching the guess search
+about new constructs are rewrite rules. For example, the rules above
+cannot generate guesses for the predicate $\textsf{IS\_SOME}$. By
+rewriting $\textsf{IS\_SOME}(x)$ to $\exists x'.\ x =
+\textsf{SOME}(x')$, however, the rules for equations and
+quantification as well as the dichotomy rule for option types can be
+used.
+
+The HOL~4 implementation uses rewrites to add support for predicates
+like $\textsf{IS\_SOME}$ or $\textsf{NULL}$ on lists. However, adding
+rules like $\textsf{append}(l_1, l_2) = [\,] \Longleftrightarrow (l_1 =
+[\,]\ \wedge\ l_2 = [\,])$ for list-append turned out to be beneficial
+in practice as well.
+
+\subsection{Strengthening and Weakening}\label{subsec_other_techniques_imp}
+
+Rewrite rules are very useful. However, sometimes only implications instead of
+equivalences are available. These can be exploited as well:
+
+\begin{lemma}[Strengthening / Weakening Guesses]\label{lemma_guesses_strengthen_weaken}
+\[
+\left(\forall x.\ P_1(x) \Rightarrow P_2(x)\right) \Longrightarrow 
+\left(\begin{array}{@{}rcl}
+\forall x.\ \GEP(i, P_1) & \Longrightarrow & \GEP(i,\ \lambda x.\ P_2) \qquad \wedge\\
+\forall x.\ \GUG(i, P_1) & \Longrightarrow & \GUG(i,\ \lambda x.\ P_2) \qquad \wedge\\
+\forall x.\ \GUP(i, P_2) & \Longrightarrow & \GUP(i,\ \lambda x.\ P_1) \qquad \wedge\\
+\forall x.\ \GEG(i, P_2) & \Longrightarrow & \GEG(i,\ \lambda x.\ P_1)
+\end{array}
+\right)
+\]
+\end{lemma}
+
+
+
+\subsection{Minimising Variable Occurrences}\label{subsec_varmin}
+
+As for example Lemma~\ref{lemma_guesses_lift_disj_E} illustrates, it
+is easier to find guesses for a variable if it occurs in fewer 
+positions. Therefore, the HOL~4 implementation preprocesses the term and tries to
+minimise the number of occurrences. For example,
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f (x + 2))$ is
+rewritten to $\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f (8 +
+2))$ by this prepossessing step. This explains, why this example
+can be handled, whereas apparently similar ones cannot (see Table~\ref{table_examples}).
+The implementation for minimising variable occurrences is based 
+on simple rules like $(x = t) \wedge P(x)
+\ \Longleftrightarrow\ (x = t) \wedge P(t)$ or $x \neq t \vee P(x)
+\ \Longleftrightarrow\ x \neq t \vee P(t)$. 
+
+
+\section{Examples}\label{sec_examples}
+
+In the last few sections, the method for searching guesses has been presented on an abstract level.
+Let's now consider a few examples to see how this methods works in practice.
+
+\subsection{Example 1}
+Let's start with the example 
+$\exists x.\ (\forall y.\ Q(y)\ \wedge\ (x=7)) \
+\wedge\ P(x)$. This example cannot be handled by
+existing tools. However, the lemmata presented above allow to
+derive a guess for this example:
+%
+\[\begin{array}{cc@{\qquad}l}
+\GEG(K\ 7, \lambda x.\ x = 7) & \text{(1)} & \text{from Lemma~\ref{lemma_guesses_equation_top}} \\
+\GEG(K\ 7, \lambda x.\ Q(y)\ \wedge\ (x=7)) & \text{(2)} & \text{from (1) and Lemma~\ref{lemma_guesses_lift_conj}} \\
+\GEG(K\ 7, \lambda x.\ \forall y.\ Q(y)\ \wedge\ (x=7)) & \text{(3)} & \text{from (2) and Lemma~\ref{lemma_guesses_lift_forall_2}} \\
+\GEG(K\ 7, \lambda x.\ (\forall y.\ Q(y)\ \wedge\ (x=7)) \wedge P(x)) & \text{(4)} & \text{from (3) and Lemma~\ref{lemma_guesses_lift_conj}}
+\end{array}
+\]
+%
+With Lemma~\ref{lemma_guesses_usage} we can therefore simplify 
+$\exists x.\ (\forall y.\ Q(y)\ \wedge\ (x=7)) \ \wedge\ P(x)$ to 
+$(\forall y.\ Q(y)\ \wedge\ (7=7)) \ \wedge\ P(7)$ and with some general infrastructure further to
+$(\forall y.\ Q(y)) \ \wedge\ P(7)$.
+Here, only the trace that succeeds is presented. The search actually produces more guesses. 
+For example, $\GEP(K\ 7, \lambda x.\ x = 7)$ is derived as well, but then fails to be lifted over
+the conjunction.
+
+\subsection{Example 2}\label{subsec_Example_2}
+The example $\forall x.\ \textsf{IS\_NONE}(x) \vee P(x)$ illustrates partial instantiations for datatypes.
+\[\begin{array}{cc@{\qquad}l}
+\GUG(\lambda x'.\ \textsf{SOME}(x'), \lambda x.\ x = \textsf{NONE}) & \text{(1)} & \text{from Lemma~\ref{lemma_guesses_dichotomy}} \\
+\GUG(\lambda x'.\ \textsf{SOME}(x'), \lambda x.\ \textsf{IS\_NONE}(x)) & \text{(2)} & \text{rewrite of (1)} \\
+\GUG(\lambda x'.\ \textsf{SOME}(x'), \lambda x.\ \textsf{IS\_NONE}(x) \vee P(x)) & \text{(3)} & \text{from (2) and Lemma~\ref{lemma_guesses_lift_disj_SA}} 
+\end{array}
+\]
+Therefore, 
+$\forall x.\ \textsf{IS\_NONE}(x) \vee P(x)$ can be simplified to 
+$\forall x'.\ P(\textsf{SOME}(x'))$.
+
+\subsection{Example 3}
+Let's consider $\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f (x + 2))$. The guess
+\[\begin{array}{cc@{\quad}l}
+\GEP(K\ 8, \lambda x.\ f (8 + 2) = f (x + 2)) & \text{(1)} & \text{from Lemma~\ref{lemma_guesses_equation_T}} \\
+\end{array}
+\]
+can be easily derived. However, then we are stuck, because we cannot derive a point existential guess for the conjunct $P (f (x + 2))$.
+So, we weaken the guess:
+\[\begin{array}{cc@{\quad}l}
+\GE(K\ 8, \lambda x.\ f (8 + 2) = f (x + 2)) & \text{(2)} & \text{from (1) and Lemma~\ref{lemma_guesses_strength}} \\
+\end{array}
+\]
+Unluckily, we are still stuck, because $P (f (x + 2))$ depends on $x$. However, our tool can rewrite the overall term
+such that this dependence disappears (see Sec.~\ref{subsec_varmin}).
+\[\begin{array}{cc@{\quad}l}
+\GE(K\ 8, \lambda x.\ (f (8 + 2) = f (x + 2)) \wedge P(f(8 + 2))) & \text{(3)} & \text{from (2), Lemma~\ref{lemma_guesses_lift_conj},
+\ref{lemma_guesses_lift_neg}} \\
+\GE(K\ 8, \lambda x.\ (f (8 + 2) = f (x + 2)) \wedge P(f(x + 2))) & \text{(4)} & \text{from (3) and rewrite}
+\end{array}
+\]
+Thus, we found a guess and can instantiate the quantifier with 8.
+
+\subsection{Example 4}
+Finally, consider $\big((\forall x.\ P_1(x) \Rightarrow P_2(x)) \wedge P_1(2)\big) \Longrightarrow \exists x.\ P_2(x)$. 
+First, HOL~4's general infrastructure processes this and allows us to concentrate on 
+$\exists x.\ P_2(x)$, while using (1) $\forall x.\ P_1(x) \Rightarrow P_2(x)$ and (2)~$P_1(2)$ as lemmata.
+Then guesses can be derived as follows:
+\[\begin{array}{cc@{\qquad}l}
+\GEP(K\ 2, \lambda x.\ P_1(x)) & \text{(3)} & \text{from (2), Lemma~\ref{lemma_guesses_context}} \\
+\GEP(K\ 2, \lambda x.\ P_2(x)) & \text{(4)} & \text{from (1), (3), Lemma~\ref{lemma_guesses_strengthen_weaken}}
+\end{array}
+\]
+Thus, we found a guess and can simplify the original goal first to 
+$\big((\forall x.\ P_1(x) \Rightarrow P_2(x)) \wedge P_1(2)\big) \Longrightarrow \textit{true}$ and then further to
+\textit{true}.
+
+
+\chapter{HOL~4 implementation}
+
+\section{User Interface}\label{sec_interface}
+
+The quantifier heuristics library can be found in the sub-directory
+\texttt{src/quantHeuristics}.  The entry point to the framework is the
+library \texttt{quantHeuristicsLib}. 
+
+\subsection{Conversions}
+Usually the library is used for
+converting a term containing quantifiers to an equivalent one. For this,
+the following high level entry points exists:
+\bigskip
+
+\noindent
+\begin{tabular}{@{}ll}
+\texttt{QUANT\_INSTANTIATE\_CONV} & \texttt{: quant\_param list -> conv} \\
+\texttt{QUANT\_INST\_ss} & \texttt{: quant\_param list -> ssfrag} \\
+\texttt{QUANT\_INSTANTIATE\_TAC} & \texttt{: quant\_param list -> tactic} \\
+\texttt{ASM\_QUANT\_INSTANTIATE\_TAC} & \texttt{: quant\_param list -> tactic} 
+\end{tabular}
+\bigskip
+
+All these functions get a list of \emph{quantifier heuristic parameters} as arguments. These
+parameters essentially configure, which heuristics are used during the guess-search. If
+an empty list is provided, the tools know about the standard Boolean combinators, equations and context.
+\texttt{std\_qp} adds support for common datatypes like pairs or lists. 
+Quantifier heuristic parameters are explained in more detail in 
+Section~\ref{sec_qps}.
+
+So, some simple usage of the quantifier heuristic library looks like:
+{\scriptsize
+\begin{verbatim}
+> QUANT_INSTANTIATE_CONV [] ``?x. (!z. Q z /\ (x=7)) /\ P x``;
+val it = |- (?x. (!z. Q z /\ (x = 7)) /\ P x) <=> (!z. Q z) /\ P 7: thm
+
+> QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_SOME x ==> P x``
+val it = |- (!x. IS_SOME x ==> P x) <=> !x_x'. P (SOME x_x'): thm
+\end{verbatim}}
+
+Usually, the quantifier heuristics library is used together with the
+simplifier using \texttt{QUANT\_INST\_ss}. Besides interleaving
+simplification and quantifier instantiation, this has the benefit of 
+being able to use context information collected by the simplifier:
+
+{\scriptsize
+\begin{verbatim}
+> QUANT_INSTANTIATE_CONV [] ``P m ==> ?n. P n``
+Exception- UNCHANGED raised
+
+> SIMP_CONV (bool_ss ++ QUANT_INST_ss []) [] ``P m ==> ?n. P n``
+val it = |- P m ==> (?n. P n) <=> T: thm
+\end{verbatim}}
+
+It's usually best to use \texttt{QUANT\_INST\_ss}
+together with e.\,g.\ \texttt{SIMP\_TAC} when using the library with tactics.
+However, if free variables of the goal should be instantiated, then
+\texttt{ASM\_QUANT\_INSTANTIATE\_TAC} should be used:
+
+{\scriptsize
+\begin{verbatim}
+P x
+------------------------------------
+  IS_SOME x
+  : proof
+
+> e (ASM\_QUANT_INSTANTIATE_TAC [std_qp])
+P (SOME x_x') : proof
+\end{verbatim}}
+
+There is also \texttt{QUANT\_INSTANTIATE\_TAC} as a shortcut
+for using \texttt{QUANT\_INSTANTIATE\_CONV} as a tactic. It does not
+instantiate free variables or considers the assumptions.
+
+
+\subsection{Unjustified Guesses}
+
+Most heuristics justify the guesses they produce and therefore allow to
+prove equivalences.
+However, the implementation also supports unjustified guesses, which may be bogus.
+Let's consider the example $\exists x.\ P(x) \Longrightarrow (x = 2)\ \wedge\ Q(x)$.
+Because nothing is known about $P$ and $Q$, we can't find a safe instantiation for $x$ here.
+However, $2$ looks tempting and is probably sensible in many situations. (Counterexample:
+$P(2)$, $\neg Q(2)$ and $\neg P(3)$ hold)
+
+\texttt{implication\_concl\_qp} is a quantifier parameter that looks for valid guesses in the conclusion of an implication. 
+Then, it assumes without justification that these guesses are probably sensible for the whole implication as well. 
+Because these guesses might be wrong, one can either use implications or
+expansion theorems like $\exists x. P(x)\ \Leftrightarrow (\forall x.\ (x \neq c) \Rightarrow \neg P(x)) \Rightarrow P(c)$.
+
+{\scriptsize
+\begin{verbatim}
+> QUANT_INSTANTIATE_CONV [implication_concl_qp] ``?x. P x ==> (x = 2) /\ Q x``
+Exception- UNCHANGED raised
+
+> QUANT_INSTANTIATE_CONSEQ_CONV [implication_concl_qp] CONSEQ_CONV_STRENGTHEN_direction 
+     ``?x. P x ==> (x = 2) /\ Q x``
+val it =
+   |- (P 2 ==> Q 2) ==> ?x. P x ==> (x = 2) /\ Q x: thm
+
+> EXPAND_QUANT_INSTANTIATE_CONV [implication_concl_qp] ``?x. P x ==> (x = 2) /\ Q x``
+val it = |- (?x. P x ==> (x = 2) /\ Q x) <=>
+            (!x. x <> 2 ==> ~(P x ==> (x = 2) /\ Q 2)) ==> P 2 ==> Q 2: thm
+
+> SIMP_CONV (std_ss++EXPAND_QUANT_INST_ss [implication_concl_qp]) [] ``?x. P x ==> (x = 2) /\ Q x``
+val it =
+   |- (?x. P x ==> (x = 2) /\ Q x) <=> (!x. x <> 2 ==> P x) ==> P 2 ==> Q 2: thm
+\end{verbatim}}
+
+
+The following entry points should be used to exploit unjustified guesses:
+\bigskip
+
+\noindent
+\begin{tabular}{@{}ll}
+\texttt{QUANT\_INSTANTIATE\_CONSEQ\_CONV} & \texttt{: quant\_param list -> directed\_conseq\_conv} \\
+\texttt{EXPAND\_QUANT\_INSTANTIATE\_CONV} & \texttt{: quant\_param list -> conv} \\
+\texttt{EXPAND\_QUANT\_INST\_ss} & \texttt{: quant\_param list -> ssfrag} \\
+\texttt{QUANT\_INSTANTIATE\_CONSEQ\_TAC} & \texttt{: quant\_param list -> tactic} 
+\end{tabular}
+
+\subsection{Debugging}
+
+To debug the guess-search, it is possible to print tracing information. 
+This is done by setting the trace \texttt{QUANT\_INSTANTIATE\_HEURISTIC} to 1 or 2. For
+the example in Sec.~\ref{subsec_Example_2} the debug output looks like:
+
+{\scriptsize
+\begin{verbatim}
+val _ = set_trace "QUANT_INSTANTIATE_HEURISTIC" 1
+val thm = QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_NONE x \/ P x``
+
+searching guesses for ``x`` in ``~(IS_NONE x \/ P x)``
+  searching guesses for ``x`` in ``IS_NONE x \/ P x``
+    searching guesses for ``x`` in ``IS_NONE x``
+      searching guesses for ``x`` in ``x = NONE``
+      7 guesses found for ``x`` in ``x = NONE``
+       - guess_exists_point (``NONE``, [], X)
+       - guess_forall_point (``SOME x_x``, [x_x], X)
+       - guess_forall (``SOME x_x``, [x_x], X)
+       - guess_forall (``SOME x_x'``, [x_x'], X)
+       - guess_exists (``NONE``, [], X)
+       - guess_forall_gap (``SOME x_x'``, [x_x'], X)
+       - guess_exists_gap (``NONE``, [], X)
+    7 guesses found for ``x`` in ``IS_NONE x``
+     - guess_exists_point (``NONE``, [], X)
+     - guess_forall_point (``SOME x_x``, [x_x], X)
+     - guess_forall (``SOME x_x``, [x_x], X)
+     - guess_forall (``SOME x_x'``, [x_x'], X)
+     - guess_exists (``NONE``, [], X)
+     - guess_forall_gap (``SOME x_x'``, [x_x'], X)
+     - guess_exists_gap (``NONE``, [], X)
+    searching guesses for ``x`` in ``P x``
+    no guesses found for ``x`` in ``P x``
+  4 guesses found for ``x`` in ``IS_NONE x \/ P x``
+   - guess_exists_point (``NONE``, [], X)
+   - guess_forall (``SOME x_x'``, [x_x'], X)
+   - guess_exists (``NONE``, [], X)
+   - guess_forall_gap (``SOME x_x'``, [x_x'], X)
+4 guesses found for ``x`` in ``~(IS_NONE x \/ P x)``
+ - guess_forall_point (``NONE``, [], X)
+ - guess_forall (``NONE``, [], X)
+ - guess_exists (``SOME x_x'``, [x_x'], X)
+ - guess_exists_gap (``SOME x_x'``, [x_x'], X)
+searching guesses for ``x_x'`` in ``~P (SOME x_x')``
+  searching guesses for ``x_x'`` in ``P (SOME x_x')``
+  no guesses found for ``x_x'`` in ``P (SOME x_x')``
+no guesses found for ``x_x'`` in ``~P (SOME x_x')``
+
+val thm = |- (!x. IS_NONE x \/ P x) <=> !x_x'. P (SOME x_x'):  thm
+\end{verbatim}}
+
+
+\subsection{Interface Details}
+
+The high level interface is mainly build around
+an highly configurable conversion and a corresponding consequence conversion.
+\texttt{EXTENSIBLE\_QUANT\_INSTANTIATE\_CONV} gets the following arguments:
+
+\begin{description}
+  \item[\texttt{cache\_ref\_opt\ :\ quant\_heuristic\_cache ref option}]
+     a cache for guesses. If \texttt{NONE} is passed,
+     a new cache is created on the fly. New caches can be created by \texttt{mk\_quant\_heuristic\_cache} and then
+     used to cache results through multiple calls.
+  \item[\texttt{re\ :\ bool}]  redescent into a term after some instantiation has been found?
+     It determines, whether internally \texttt{DEPTH\_CONV} or \texttt{REDEPTH\_CONV} is used.
+
+  \item[\texttt{min\_var\_occs\ :\ bool}]  add a preprocessing step to minimise the number of occurrences of 
+    a variable (see Sec.\ref{subsec_varmin}). Since this preprocessing might be slow, one might want to skip it.
+
+  \item[\texttt{expand\ :\ bool}]  use expansion to exploit unjustified guesses?
+
+  \item[\texttt{ctx\ :\ thm list}]  a list of theorems that come from the context (e.\,g.\ collected by the simplifier).
+
+  \item[\texttt{base\_arg\ :\ quant\_param}]  a parameter that should always be used. This is by default
+   \texttt{basic\_qp}, which can handle the standard Boolean connectives, equations and context. In special circumstances,
+     it might be beneficial to use \texttt{empty\_qp}, though.
+
+  \item[\texttt{args\ :\ quant\_param list}]  list of quantifier heuristic parameters to use.
+\end{description}
+
+The consequence conversion
+\texttt{EXTENSIBLE\_QUANT\_INSTANTIATE\_CONSEQ\_CONV} gets the same
+arguments, except \texttt{expand} and \texttt{ctx}. Since it can use
+implications, expansion is not needed. Because
+\texttt{DEPTH\_CONSEQ\_CONV} collects its own context and can't easily
+be used with the simplifier anyhow, \texttt{ctx} is unnecessary. 
+\texttt{EXTENSIBLE\_QUANT\_INST\_ss} is a wrapper of the conversion that removes the arguments
+\texttt{re} and \texttt{ctx}, because they are taken care of by the simplifier.
+
+All other entry points, including the ones presented above are derived
+form the conversion and consequence conversion. By default the argument
+\texttt{cache\_ref\_opt} is set to \texttt{NONE}, \texttt{re} is false,
+preprocessing turned on, expanding turned off, an empty context is used and
+\texttt{basic\_qp} is always present. Versions of the high level entry points
+containing \texttt{FAST} in their name, turn preprocessing off; \texttt{EXPAND} means that
+expansion is turned on and \texttt{RE} that \texttt{re} is set to true.
+
+\subsection{Explicit Instantiations}
+
+A special (slightly degenerated) use of the framework, is turning guess search off completely and
+providing instantiations explicitly. The tactic \texttt{QUANT\_TAC} allows this. This means that
+it allows to partially instantiate quantifiers at subpositions
+with explicitly given terms. As such, it can be seen as 
+a generalisation of \texttt{EXISTS\_TAC}. 
+%
+{\scriptsize
+\begin{verbatim}
+val it = !x. (!z. P x z) ==> ?a b.    Q a        b z : proof
+
+> e( QUANT_INST_TAC [("z", `0`, []), ("a", `SUC a'`, [`a'`])] )
+
+val it = !x. (    P x 0) ==> ?  b a'. Q (SUC a') b z : proof
+\end{verbatim}}
+%
+This tactic is implemented using oracle guesses. It normally
+produces implications, which is fine when used as a tactic. There is
+also a conversion called \texttt{INST\_QUANT\_CONV} with the same
+functionality. For a conversion, implications are
+problematic. Therefore, the simplifier and Metis are used to prove
+the validity of the explicitly given instantiations. This succeeds
+usually only for simple examples.
+
+
+\section{Quantifier Heuristic Parameters}\label{sec_qps}
+
+Quantifier heuristic parameters play a similar role for the quantifier
+instantiation library as simpsets do for the simplifier. They contain
+theorems, ML code and general configuration parameters that allow to configure
+guess-search. There are predefined parameters that handle
+common constructs and the user can define own parameters.
+
+\subsection{Quantifier Heuristic Parameters for Common Datatypes}
+
+There are \texttt{option\_qp}, \texttt{list\_qp}, \texttt{num\_qp} and \texttt{sum\_qp} for option types, lists, 
+natural numbers and sum types respectively. 
+Some examples are displayed in the following table:
+%
+\[\begin{array}{r@{\quad \Longleftrightarrow \quad}l}
+\forall x.\ \texttt{IS\_SOME}(x) \Rightarrow P(x) & \forall x'.\ P (\texttt{SOME}(x')) \\
+\forall x.\ \texttt{IS\_NONE}(x)& \textit{false} \\
+\forall l.\ l \neq [\,] \Rightarrow P(l)& \forall h, l'.\ P(h::l')  \\
+\forall x.\ x = c + 3& \textit{false} \\
+\forall x.\ x \neq 0 \Rightarrow P(x)& \forall x'.\ P(\texttt{SUC}(x')) 
+\end{array}\]
+
+\subsection{Quantifier Heuristic Parameters for Tuples}
+
+For tuples the situation is peculiar, because each quantifier over a variable of a product type
+can be instantiated. The challenge is to decide which quantifiers should be instantiated and 
+which new variable names to use for the components of the pair.
+There is a quantifier heuristic parameter called \texttt{pair\_default\_qp}. It first looks for
+subterms of the form $(\lambda (x_1, \ldots, x_n).\ \ldots)\ x$. If such a term is found, $x$ is instantiated with
+$(x_1, \ldots, x_n)$. Otherwise, subterms of the form $\texttt{FST}(x)$ and $\texttt{SND}(x)$ are searched. If such a term
+is found, $x$ is instantiated as well. This parameter therefore allows simplifications like:
+%
+\[\begin{array}{r@{\quad \Longleftrightarrow \quad}l}
+\forall p.\ (x = \texttt{SND}(p)) \Rightarrow P(p)& \forall p_1.\ P(p_1, x) \\
+\exists p.\ (\lambda (p_a, p_b, p_c). P(p_a, p_b, p_c))\ p & \exists p_a, p_b, p_c.\ P(p_a, p_b, p_c) 
+\end{array}\]
+
+\texttt{pair\_default\_qp} is implemented in terms of the more general
+quantifier heuristic parameter \texttt{pair\_qp}, which allows the
+user to provide a list of ML functions. These functions get the
+variable and the term. If they return a tuple of variables, these
+variables are used for the instantiation, otherwise the next function
+in the list is called or - if there is no function left - the variable
+is not instantiated. In the example of $\exists p.\ (\lambda (p_a,
+p_b, p_c). P(p_a, p_b, p_c))\ p$ these functions are given the
+variable $p$ and the term $(\lambda (p_a, p_b, p_c). P(p_a, p_b,
+p_c))\ p$ and return $\texttt{SOME} (p_a, p_b, p_c)$. 
+
+\subsection{Quantifier Heuristic Parameter for Records}
+
+Records are similar to pairs, because they can always be instantiated. Here, it is interesting that the necessary
+monochotomy lemma comes from HOL~4's \texttt{Type\_Base} library. This means that \texttt{record\_qp} is stateful.
+If a new record type is defined, the automatically proven monochotomy lemma is then automatically used
+by \texttt{record\_qp}. In contrast to the pair parameter, the one for records gets only one function instead of a
+list of functions to decide which variables to instantiate. However, this function is simpler, because it just needs
+to return true or false. The names of the new variables are constructed from the field-names of the record.
+The quantifier heuristic parameter \texttt{default\_record\_qp} expands all records.
+
+\subsection{Stateful Quantifier Heuristic Parameters}
+
+The parameter for records is stateful, as it uses knowledge from
+\texttt{Type\_Base}. Such information is not only useful for records
+but for general datatypes. The quantifier heuristic parameter
+\texttt{TypeBase\_qp} uses automatically proven theorems about new
+datatypes to exploit mono- and dichotomies. Moreover, there is also a
+stateful \texttt{pure\_stateful\_qp} that allows the user to
+explicitly add other parameters to it.  \texttt{stateful\_qp} is a
+combination of \texttt{pure\_stateful\_qp} and \texttt{TypeBase\_qp}.
+
+\subsection{Standard Quantifier Heuristic Parameter}
+
+The standard quantifier heuristic parameter \texttt{std\_qp} combines
+the parameters for lists, options, natural numbers, the default one
+for pairs and the default one for records.
+
+
+\section{User defined Quantifier Heuristic Parameters}\label{sec_qps_user}
+
+The user is also able to define own parameters. There
+is \texttt{empty\_qp}, which does not contain any information. Several
+parameters can be combined using the function
+\texttt{combine\_qps}. Together with the basic types of user defined
+parameters that are explained below, these functions provide an
+interface for user defined quantifier heuristic parameters.
+
+\subsection{Rewrites / Conversions}
+
+As discussed in Sec.~\ref{subsec_other_techniques_rewrites}, adding 
+rewrites is a very powerful technique. \texttt{rewrite\_qp} allows to provide rewrites in the form of rewrite theorems.
+For the example of \texttt{IS\_SOME} discussed in Sec.~\label{subsec_other_techniques_rewrites} this
+looks like:
+
+{\scriptsize
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [] ``!x. IS_SOME x ==> P x`` 
+Exception- UNCHANGED raised
+
+> val IS_SOME_EXISTS = prove (``IS_SOME x = (?x'. x = SOME x')``, Cases_on `x` THEN SIMP_TAC std_ss []);
+val IS_SOME_EXISTS = |- IS_SOME x <=> ?x'. x = SOME x': thm
+
+> val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS]] ``!x. IS_SOME x ==> P x`` 
+val thm = |- (!x. IS_SOME x ==> P x) <=> !x'. IS_SOME (SOME x') ==> P (SOME x'): thm
+\end{verbatim}}
+
+To clean up the result after instantiation, theorems used to rewrite the result after instantiation can be provided via
+\texttt{final\_rewrite\_qp}.
+
+{\scriptsize
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS], final_rewrite_qp[option_CLAUSES]] 
+    ``!x. IS_SOME x ==> P x``
+val thm = |- (!x. IS_SOME x ==> P x) <=> !x'. P (SOME x'): thm
+\end{verbatim}}
+
+If rewrites are not enough, \texttt{conv\_qp} can be used to add conversions:
+
+{\scriptsize
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [] ``?x. (\y. y = 2) x`` 
+Exception- UNCHANGED raised
+
+> val thm = QUANT_INSTANTIATE_CONV [convs_qp[BETA_CONV]] ``?x. (\y. y = 2) x``
+val thm = |- (?x. (\y. y = 2) x) <=> T: thm
+\end{verbatim}}
+
+\subsection{Strengthening / Weakening}
+
+In rare cases, equivalences that can be used for rewrites are unavailable. There might be just implications that
+can be used for strengthening or weakening (see Sec.~\ref{subsec_other_techniques_imp}). The function
+\texttt{imp\_qp} might be used to provide such implication.
+
+{\scriptsize
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [list_qp] ``!l. 0 < LENGTH l ==> P l`` 
+Exception- UNCHANGED raised
+
+> val LENGTH_LESS_IMP = prove (``!l n. n < LENGTH l ==> l <> []``, Cases_on `l` THEN SIMP_TAC list_ss []);
+val LENGTH_LESS_IMP = |- !l n. n < LENGTH l ==> l <> []: thm
+
+> val thm = QUANT_INSTANTIATE_CONV [imp_qp[LENGTH_LESS_IMP], list_qp] ``!l. 0 < LENGTH l ==> P l``
+val thm =
+   |- (!l. 0 < LENGTH l ==> P l) <=>
+      !l_t l_h. 0 < LENGTH (l_h::l_t) ==> P (l_h::l_t): thm
+
+> val thm = SIMP_CONV (list_ss ++ QUANT_INST_ss [imp_qp[LENGTH_LESS_IMP], list_qp]) [] 
+              ``!l. SUC (SUC n) < LENGTH l ==> P l``
+val thm =
+   |- (!l. SUC (SUC n) < LENGTH l ==> P l) <=>
+      !l_h l_t_h l_t_t_t l_t_t_h. n < SUC (LENGTH l_t_t_t) ==> P (l_h::l_t_h::l_t_t_h::l_t_t_t): thm
+\end{verbatim}}
+
+  
+\subsection{Filtering}
+Sometimes, one might want to avoid to instantiate certain quantifiers. 
+The function \texttt{filter\_qp} allows to add ML-functions that filter the handled
+quantifiers. These functions are given a variable $x$ and a term $P(x)$. 
+The tool only tries to find instantiate $x$ in $P(x)$, if all filter functions
+return \textit{true}.  
+
+{\scriptsize
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [] ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x, y, z)``
+val thm = |- (?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x,y,z)) <=> P (1,2,3): thm
+
+> val thm = QUANT_INSTANTIATE_CONV [filter_qp [fn v => fn t => (v = ``y:num``)]] 
+   ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x, y, z)``
+val thm = |- (?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x,y,z)) <=>
+              ?x   z. (x = 1) /\            (z = 3) /\ P (x,2,z): thm
+\end{verbatim}}
+
+\subsection{Satisfying and Contradicting Instantiations}
+
+As the satisfy library\footnote{see \texttt{src/simp/src/Satisfy.sml}} demonstrates, it is often 
+useful to use unification and explicitly given theorems to 
+find instantiations. In addition to satisfying instantiations, the quantifier heuristics framework
+is also able to use contradicting ones. The theorems used for finding instantiations usually come from
+the context. However, \texttt{instantiation\_qp} allows to add additional ones:
+
+{\scriptsize
+\begin{verbatim}
+> val thm = SIMP_CONV (std_ss++QUANT_INST_ss[]) [] ``P n ==> ?m:num. n <= m /\ P m``
+Exception- UNCHANGED raised
+
+> val thm = SIMP_CONV (std_ss++QUANT_INST_ss[instantiation_qp[arithmeticTheory.LESS_EQ_REFL]]) [] 
+               ``P n ==> ?m:num. n <= m /\ P m``
+> val thm =
+   |- P n ==> ?m:num. n <= m /\ P m = T : thm
+\end{verbatim}}
+
+\subsection{Di- and Monochotomies}
+
+As discussed in Sec.~\ref{subsec_base_guesses_dichotomies}, dichotomies can be exploited for guess search.
+\texttt{distinct\_qp} provides an interface to add theorems
+of the form $\forall x.\ c_1(x) \neq c_2(x)$. 
+\texttt{cases\_qp} expects theorems of the form
+$\forall x. \ (x = \exists \fv. c_1(\fv))\ \vee \ldots \vee (x = \exists \fv. c_n(\fv))$. 
+These theorems are for $n = 2$ used with Lemma~\ref{lemma_guesses_dichotomy} and
+for $n=1$ with Lemma~\ref{lemma_guesses_monochotomy}. All other cases are currently ignored.
+
+\subsection{Lifting Theorems}
+
+In Section~\ref{sec_lifting_guesses} theorems have been presented that
+allow lifting guesses. The function \texttt{inference\_qp} enables the
+user to provide it's own lifting inference rules. Those rules have to
+be theorems of the form $G_1 \wedge \ldots \wedge G_n \Longrightarrow
+G$, where all $G_i$ are guesses that might be universally quantified
+and $G$ is a guess. Examples for such inference rules can be found in
+Section~\ref{sec_lifting_guesses}. Usually, inferences look like
+Lemma~\ref{lemma_guesses_lift_conj}. However, also rules like
+Lemma~\ref{lemma_guesses_lift_forall_1} or
+\ref{lemma_guesses_lift_forall_2} are supported.
+
+\begin{example}
+When trying to add support for the Boolean operation of equivalence,
+there are two choices.  One can use rewriting and replace every
+occurrence of $P_1 \Leftrightarrow P_2$ with for example $(P_1 \wedge
+P_2) \vee (\neg P_1 \wedge \neg P_2)$. However, this may lead to an
+exponential blowup of the size of the original term, since both $P_1$
+and $P_2$ occur twice in the result. Therefore, it is more efficient to 
+provide a new lifting inference for equivalences. Such a rule can easily be derived
+using the existing rules for basic Boolean operations.
+\end{example}
+
+\subsection{Oracle Guesses}
+
+Sometimes, the user does not want to justify guesses. The tactic
+\texttt{QUANT\_TAC} is implemented using oracle guesses for example. 
+A simple interface to oracle guesses is provided by \texttt{oracle\_qp}.
+It expects a ML function that given a variable and a term returns
+an pair of an instantiation and the free variables in this instantiation.
+
+As an example, lets define a parameter that states that every list is non-empty:
+{\scriptsize
+\begin{verbatim}
+val dummy_list_qp = oracle_qp (fn v => fn t =>
+  let
+     val (v_name, v_list_ty) = dest_var v;
+     val v_ty = listSyntax.dest_list_type v_list_ty;
+
+     val x = mk_var (v_name ^ "_hd", v_ty);
+     val xs = mk_var (v_name ^ "_tl", v_list_ty);
+     val x_xs = listSyntax.mk_cons (x, xs)
+  in
+     SOME (x_xs, [x, xs])
+  end)
+\end{verbatim}}
+
+\noindent
+Notice, that an option type is returned and that the function is
+allowed to throw \texttt{HOL\_ERR} exceptions. 
+With this definition, the call
+\begin{verbatim}
+NORE_QUANT_INSTANTIATE_CONSEQ_CONV [dummy_list_qp] 
+   CONSEQ_CONV_STRENGTHEN_direction ``?x:'a list y:'b. P (x, y)``
+\end{verbatim}
+results in 
+\verb+(?y x_hd x_tl. P (x_hd::x_tl,y)) ==> ?x y. P (x,y) : thm+. 
+
+\subsection{User defined Quantifier Heuristics}\label{subsec_user_defined_quantheu}
+
+At the lowest level, our tool searches guesses using ML-functions
+called \emph{quantifier heuristics}. Slightly simplified, such a
+quantifier heuristic gets a variable and a term and returns a set of
+guesses for this variable and term. Heuristics allow full
+flexibility. However, to write your own heuristics a lot of knowledge
+about the ML-datastructures and auxiliary functions is
+required. Therefore, no details are discussed here. Please have a look
+at the source code and contact Thomas Tuerk
+(\url{tt291@cl.cam.ac.uk}), if you have questions.
+\texttt{heuristics\_qp} and \texttt{top\_heuristics\_qp} provide
+interfaces to add user defined heuristics to a quantifier heuristics
+parameter.
+
+
+\chapter{Conclusion}\label{sec_conclusion}
+
+The quantifier heuristic is a powerful tool to instantiate quantifiers. 
+It subsumes the power of the existing unwind and satisfy libraries. More importantly though,
+it is very flexible and easily extendable by the user. Moreover,
+it can be used to instantiate quantifiers using unjustified guesses.
+
+\bibliographystyle{plain}
+\bibliography{paper}
+
+\end{document}

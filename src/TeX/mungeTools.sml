@@ -8,11 +8,13 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
+             | Mathmode of string
              | AllTT | ShowTypes
              | Conj of int
              | Rule | StackedRule
              | NoDollarParens
              | Merge | NoMerge
+             | Unoverload of string
 
 val numErrors = ref 0
 type posn = int * int
@@ -28,8 +30,8 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun usage() =
     die ("Usage:\n  "^
-         CommandLine.name()^" [-w<linewidth>] [--nomergeanalysis] " ^
-         "[overridesfile] or\n"^
+         CommandLine.name()^" [-w<linewidth>] [-m[<math-spacing>]] [--nomergeanalysis] " ^
+         "[overridesfile]\nor\n  "^
          CommandLine.name()^" -index filename")
 
 fun stringOpt pos s =
@@ -85,7 +87,16 @@ fun stringOpt pos s =
           val (pfx,sfx) = position "/" ss
           fun rmws ss = ss |> dropl Char.isSpace |> dropr Char.isSpace |> string
         in
-          if size sfx < 2 then (warn (pos, s ^ " is not a valid option"); NONE)
+          if size sfx < 2 then
+            if String.isPrefix "m" s then
+              SOME (Mathmode (String.extract(s,1,NONE)))
+            else if String.isPrefix "-" s then
+              if String.size s >= 2 then
+                SOME (Unoverload (String.extract(s,1,NONE)))
+              else
+                (warn (pos, s ^ " is not a valid option"); NONE)
+            else
+              (warn (pos, s ^ " is not a valid option"); NONE)
           else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
         end
     end
@@ -144,6 +155,7 @@ structure OptSet : sig
   val addList : elem list -> set -> set
   val has : elem -> set -> bool
   val listItems : set -> elem list
+  val fold : (elem * 'a -> 'a) -> 'a -> set -> 'a
 end where type elem = opt = struct
   type elem = opt
   type set = elem list
@@ -152,6 +164,7 @@ end where type elem = opt = struct
   fun addList s1 s2 = s1 @ s2
   fun has e s = Lib.mem e s
   fun listItems l = l
+  val fold = List.foldl
 end
 
 type optionset = OptSet.set
@@ -169,6 +182,10 @@ fun optset_indent s =
     | SOME i => spaces i
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
+fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
+
+val optset_unoverloads =
+    OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -254,10 +271,13 @@ local
   val _ = set_trace "EmitTeX: print datatype names as types" 1
   exception BadSpec
   fun getThm spec = let
-    val [theory,theorem] = String.tokens (isChar #".") spec
+    val (theory,theorem) =
+        case String.tokens (isChar #".") spec of
+            [thy,th] => (thy,th)
+          | _ => raise BadSpec
   in
     DB.fetch theory theorem
-  end handle Bind => raise BadSpec
+  end
   fun block_list pps begb pfun newl endb = let
     fun pr [] = ()
       | pr [i] = ( begb pps; pfun pps i; endb pps)
@@ -301,6 +321,16 @@ in
       addz "}"
     end
 
+    fun clear_overloads slist f = let
+      val tyg = type_grammar()
+      val oldg = term_grammar()
+      val _ = List.app temp_clear_overloads_on slist
+      val _ = List.map hide slist
+      val newg = term_grammar()
+    in
+      (fn x => (temp_set_grammars(tyg,newg); f x; temp_set_grammars(tyg,oldg)))
+    end
+
     fun optprintermod f pps =
         f pps |> (if OptSet.has ShowTypes opts then
                     trace ("types", 1)
@@ -315,6 +345,9 @@ in
               |> (if OptSet.has Merge opts then
                     trace ("pp_avoids_symbol_merges", 1)
                   else (fn f => f))
+              |> (case optset_unoverloads opts of
+                      [] => (fn f => f)
+                    | slist => clear_overloads slist)
 
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 

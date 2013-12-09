@@ -46,20 +46,34 @@ open Systeml;
 
 fun which_hol () =
   case !phase of
-    Initial => (POLY, "--poly_not_hol")
-  | Bare => (fullPath [HOLDIR, "bin", "hol.builder0"], "")
-  | Full => (fullPath [HOLDIR, "bin", "hol.builder"], "");
+    Initial => [POLY, "--poly_not_hol"]
+  | Bare => [fullPath [HOLDIR, "bin", "hol.builder0"]]
+  | Full => [fullPath [HOLDIR, "bin", "hol.builder"]]
+
+fun aug_systeml proc args = let
+  open Posix.Process
+  val env' =
+      "SELFTESTLEVEL="^Int.toString do_selftests :: Posix.ProcEnv.environ()
+in
+  case fork() of
+    NONE => (exece(proc,proc::args,env')
+             handle _ => die ("Exece of "^proc^" failed"))
+  | SOME cpid => let
+      val (_, result) = waitpid(W_CHILD cpid, [])
+    in
+      result
+    end
+end
+
 
 val Holmake = let
-  fun extras() = let
-    val (wp,hol) = which_hol()
-  in
-    ["--poly", wp, hol]
-  end
+  fun extras() = "--poly" :: which_hol()
+  fun isSuccess Posix.Process.W_EXITED = true
+    | isSuccess _ = false
   fun analysis hmstatus = let
     open Posix.Process
   in
-    case fromStatus hmstatus of
+    case hmstatus of
       W_EXITSTATUS w8 => "exited with code "^Word8.toString w8
     | W_EXITED => "exited normally???"
     | W_SIGNALED sg => "with signal " ^
@@ -68,7 +82,7 @@ val Holmake = let
                       SysWord.toString (Posix.Signal.toWord sg)
   end
 in
-  buildutils.Holmake extras analysis do_selftests
+  buildutils.Holmake aug_systeml isSuccess extras analysis do_selftests
 end
 
 (* create a symbolic link - Unix only *)

@@ -1004,7 +1004,7 @@ fun sidecond_tac dir =
                                             rwt
                                             (dir w))) (asl,w))
 
-val _ = set_trace "goalstack print goal at top" 0
+val _ = set_trace "Goalstack.print_goal_at_top" 0
 
 val listpm_tMAP = prove(
   ``(listpm apm pi (MAP f l) =

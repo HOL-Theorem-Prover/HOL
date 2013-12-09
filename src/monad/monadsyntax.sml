@@ -137,7 +137,8 @@ fun dest_bind G t = let
                  NONE => if is_var f then #1 (dest_var f)
                          else raise UserPP_Failed
                | SOME s => s
-  val _ = prname = monad_unitbind orelse prname = monad_bind orelse
+  val _ = prname = monad_unitbind orelse
+          (prname = monad_bind andalso pairSyntax.is_pabs y) orelse
           raise UserPP_Failed
 in
   SOME (prname, x, y)
@@ -194,9 +195,10 @@ end
 val _ = temp_add_user_printer ("monadsyntax.print_monads", ``x:'a``,
                                print_monads)
 
-val _ = temp_overload_on (monad_bind, ``BIND``)
-val _ = temp_overload_on (monad_unitbind, ``IGNORE_BIND``)
-val _ = temp_overload_on ("return", ``UNIT``)
+fun mkc s = prim_mk_const{Thy = "state_transformer", Name = s}
+val _ = temp_overload_on (monad_bind, mkc "BIND")
+val _ = temp_overload_on (monad_unitbind, mkc "IGNORE_BIND")
+val _ = temp_overload_on ("return", mkc "UNIT")
 
 val _ = TexTokenMap.temp_TeX_notation
             {hol = "<-", TeX = ("\\HOLTokenLeftmap", 1)}

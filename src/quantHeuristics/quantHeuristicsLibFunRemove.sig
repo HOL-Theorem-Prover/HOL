@@ -2,7 +2,7 @@ signature quantHeuristicsLibFunRemove =
 sig
 
   include Abbrev
-   
+
   type quant_fun_remove_arg;
 
   val QUANT_FUN_REMOVE_CONV : quant_fun_remove_arg list -> conv
@@ -10,8 +10,8 @@ sig
 
   (* very simple for to state that some function can be remove.
      First argument is a theorem of the form
-       "IS_REMOVABLE_QUANT_FUN (\x. f x)". 
-     It is important, that there is lambda abstraction, but "f x" can be complicated 
+       "IS_REMOVABLE_QUANT_FUN (\x. f x)".
+     It is important, that there is lambda abstraction, but "f x" can be complicated
      and even contain free variables.
 
      The string is suffix used for the new variable names and the

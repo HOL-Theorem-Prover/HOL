@@ -20,6 +20,7 @@ sig
   val ID_EX_TAC              : tactic
   val REFINE_EXISTS_TAC      : tmquote -> tactic
   val GEN                    : tmquote -> thm -> thm
+  val GENL                   : tmquote list -> thm -> thm
   val SPEC                   : tmquote -> thm -> thm
   val ID_SPEC                : thm -> thm
   val SPECL                  : tmquote list -> thm -> thm

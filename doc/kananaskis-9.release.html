@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+<head>
+<meta http-equiv="content-type"
+      content="text/html ; charset=UTF-8">
+<title>Release Notes for Kananaskis-9 version of HOL 4</title>
+<style type="text/css">
+<!--
+  body {color: #333333; background: #FFFFFF;
+        margin-left: 1em; margin-right: 1em }
+  code, pre {color: #006400; font-weight: bold; font-family: "Andale Mono", "Lucida Console", monospace; }
+  div.footer { font-size: small; display: flex; justify-content: space-between; }
+}
+-->
+</style>
+
+</head>
+
+<body>
+<h1>Notes on HOL 4, Kananaskis-9 release</h1>
+
+<p>We are pleased to announce the Kananaskis-9 release of HOL 4.</p>
+
+<h2 id="contents">Contents</h2>
+<ul>
+  <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
+  <li> <a href="#new-theories">New theories</a> </li>
+  <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-examples">New examples</a> </li>
+  <li> <a href="#incompatibilities">Incompatibilities</a> </li>
+</ul>
+
+<h2 id="new-features">New features:</h2>
+
+<ul>
+<li><p>The <code>Define</code> function for making function definitions now treats each clause (each conjunct) of the definition as independent when assessing the types of the new functions’ parameters.
+For example, the following now works as a definition (termination still has to be proved manually):
+<pre>
+   (f x = x + 1 + g (x > 4)) ∧
+   (g x = if x then f 0 else 1)
+</pre>
+<p> In earlier releases, the parser would have rejected this because the two <code>x</code> parameters would have been required to have the same types (in the clause for <code>f</code>, the author wants <code>x</code> to have type <code>:num</code>, and in the clause for <code>g</code>, type <code>:bool</code>).
+
+<p>This feature is most useful when dealing with algebraic types with numerous constructors, where it can be a pain to keep the names of parameters under constructors apart.
+
+<p>Thanks to Scott Owens for the <a href="http://github.com/mn200/HOL/issues/112">feature suggestion</a>.
+</li>
+
+<li><p>The compilation of pattern-matching in function definitions now attempts to be cleverer about organising its nested case-splits.
+This should result in less complicated definitions (and accompanying induction principles).
+
+<p>Thanks to Thomas Türk for the implementation of this feature.
+
+</ul>
+
+<h2 id="bugs-fixed">Bugs fixed:</h2>
+
+<ul>
+<li><p> Type abbreviations involving array types (of the form <code>ty1[ty2]</code>) weren’t being pretty-printed.
+Thanks to Hamed Nemati for the bug report.
+(<a href="http://github.com/mn200/HOL/issues/106">GitHub issue</a>)
+
+<li><p>
+It was possible to prove a theorem which caused an unexportable theory.
+Thanks to Joseph Chan for the bug report.
+(<a href="http://github.com/mn200/HOL/issues/115">GitHub issue</a>)
+
+<li><p>
+The error messages printed by, and the documentation for, <code>new_type_definition</code> have been improved.
+Thanks to Rob Arthan for the bug report.
+(<a href="http://github.com/mn200/HOL/issues/128">GitHub issue</a>)
+
+<li><p>
+<code>Holmake</code>’s parsing of nested conditional directives (<code>ifdef</code>, <code>ifeq</code>, <code>ifndef</code> <i>etc.</i>) was incorrect.
+
+<li><p>
+Evaluation and simplification were not correctly handling (real valued) terms such as <code>``0 * 1/2``</code> and <code>``1/2 * 0``</code>.
+
+<li><p>
+Parsing code for tracking the way overloaded constants should be printed stored information in a data structure that grew unreasonably when theories were loaded.
+Thanks to Scott Owens for the bug report.
+
+<li><p>
+The emacs mode got confused when called on to <code>open</code> a theory whose name included the substring <code>_fun_</code>.
+Thanks to Magnus Myreen for the bug report.
+
+</ul>
+
+<h2 id="new-theories">New theories:</h2>
+
+<h2 id="new-tools">New tools:</h2>
+
+<ul>
+<li><p>There is a new tactic <code>HINT_EXISTS_TAC</code> designed to instantiate existential goals.
+If the goal is of the form
+<pre>
+   ∃x. P(x) ∧ Q(x) ∧ R(x)
+</pre>
+<p>and there is an assumption of the form <code>Q(t)</code> (say), then <code>HINT_EXISTS_TAC</code> applied to this goal will instantiate the existential with the term <code>t</code>.
+
+<p>Thanks to Vincent Aravantinos for the <a href="http://github.com/mn200/HOL/commit/e5e35f623cbdb19e1331b119fc5dd3d11f019016">implementation</a> of this tactic.
+
+<li><p>A new tactic, <code>suffices_by</code>, an infix, taking two arguments, a quotation and a tactic.
+When <code>`some term` suffices_by tac</code> is executed, the system attempts to prove that <code>some term</code> implies the current goal by applying <code>tac</code>.
+The sub-goal(s) resulting from the application of <code>tac</code> will be presented to the user, along with <code>some term</code>.
+(<a href="http://github.com/mn200/HOL/issues/116">GitHub issue</a>)
+</p>
+</ul>
+
+<h2 id="new-examples">New examples:</h2>
+
+<ul>
+<li> <p> Theories in <code>examples/parsing</code> to do with context-free languages, their properties and Parsing Expression Grammars.  The material not to do with PEGs is derived from Aditi Barthwal’s PhD thesis, with more still to be updated and brought across.
+
+<li> <p>
+Theories in <code>examples/ARM_security_properties</code> provide proofs of several security lemmas for the ARM Instruction Set Architecture.
+To obtain guarantees that arbitrary (and unknown) user processes are able to run isolated from privileged software and other user processes, instruction level noninterference and integrity properties are provided, along with proofs that transitions to privileged modes can only occur in a controlled manner.
+A proof tool is included, which assists the verification of relational state predicates semi-automatically.
+
+<p> The work has been done as part of the PROSPER project by members from KTH Royal Institute of Technology and SICS Swedish ICT.
+Some of the obtained theorems are tied to that project (but can be adopted for others), while some guarantees are generally applicable.
+
+</ul>
+
+<h2 id="incompatibilities">Incompatibilities:</h2>
+
+<ul>
+
+<li><p>The <code>MEM</code> constant has been replaced with an abbreviation that maps that string to <code>λe l. e ∈ set l</code>.
+In other words, if you enter <code>``MEM x mylist``</code>, the underlying term would be <code>x ∈ set mylist</code> (recall also that <code>set</code> is another name for <code>LIST_TO_SET</code>).
+The pretty-printer will reverse this transformation so that the same term will print as <code>``MEM e l``</code>.
+The entry-points for making <code>MEM</code>-terms in <code>listSyntax</code> do the right thing.
+Similarly, exporting code with <code>EmitML</code> will continue to work.
+
+<p>Thus, SML code that takes <code>MEM</code>-terms apart using functions like <code>rand</code> and <code>rator</code> will likely need to be adjusted.
+If the SML code uses <code>listSyntax.{dest,mk,is}_mem</code>, it will be fine.
+(<a href="http://github.com/mn200/HOL/issues/52">GitHub issue</a>)
+
+<li><p>The case-constants generated for algebraic data types now have different types.
+The value that is “switched on” is now the first argument of the constant rather than the last.
+The names of these constants have also changed, emphasising the change.
+For example, the old constant for natural numbers, <code>num_case</code> had type
+<pre>
+   α → (num → α) → num → α
+</pre>
+<p> Now the case constant for the natural numbers is called <code>num_CASE</code> and has type
+<pre>
+   num → α → (num → α) → α
+</pre>
+
+<p>This change is invisible if the “<code>case</code>-<code>of</code>” syntax is used.
+
+<p>This change makes more efficient evaluation (with <code>EVAL</code>) of expressions with case constants possible.
+
+<p>In addition, the <code>bool_case</code> constant has been deleted entirely: when the arguments are flipped as above it becomes identical to <code>COND</code> (<code>if</code>-<code>then</code>-<code>else</code>).
+This means that simple case-expressions over booleans will print as <code>if</code>-<code>then</code>-<code>else</code> forms.
+Thus
+<pre>
+   > ``case b of T => 1 | F => 3``;
+   val it = ``if b then 1 else 3``: term
+</pre>
+<p>More complicated case expressions involving booleans will still print with the <code>case</code> form:
+<pre>
+   > ``case p of (x,T) => 3 | (y,F) => y``;
+   val it =
+     ``case p of (x,T) => 3 | (x,F) => x``: term
+</pre>
+
+<p>At the ML level, we have tried to retain a degree of backwards compatibility.
+For example, the automatically defined case constants for algebraic types will still be saved in their home-theories with the name “<i>type</i><code>_case_def</code>”.
+In addition, case terms for the core types of the system (options, lists, numbers, pairs, sums, etc) can still be constructed and destructed through functions in the relevant <i>type</i><code>Syntax</code> modules in the same way.
+For example, <code>numSyntax.mk_num_case</code> still has the type
+<pre>
+   term * term * term -> term
+</pre>
+<p> and the returned term-triple still corresponds to the 0-case, the successor-case and the number-argument (in that order), as before.
+This is despite the fact that the underlying term has those sub-terms in a different order (the number-argument comes first).
+(<a href="http://github.com/mn200/HOL/issues/97">GitHub issue</a>)
+
+
+<li><p>
+The various printing traces in the <code>Goalstack</code> module have been renamed to all be of the form <code>"Goalstack.&lt;some_name&gt;"</code>.
+For example, what was the trace <code>"goalstack print goal at top"</code> is now <code>"Goalstack.print_goal_at_top"</code>.
+This change collects all the goalstack-related traces together when the traces are listed (<i>e.g.</i>, with the <code>traces()</code> command).
+There is also a new trace, <code>"Goalstack.show_stack_subgoal_count"</code>, which, if true (the default), includes the number of sub-goals currently under consideration when a goalstack is printed.</li>
+
+<li><p>The <code>-r</code> command-line option to <code>Holmake</code> now forces recursive behaviour (even with cleaning targets, which is a new feature), rather than being a shorter form of the <code>--rebuild_deps</code> flag.
+
+</ul>
+<hr>
+<div class="footer">
+<p><em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-9</a></em></p>
+<p>(<a href="kananaskis-8.release.html">Release notes for previous version</a>)</p>
+</div>
+
+</body> </html>

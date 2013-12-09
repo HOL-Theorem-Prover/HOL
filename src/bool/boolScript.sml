@@ -22,9 +22,10 @@ val _ = new_theory "bool";
  *---------------------------------------------------------------------------*)
 
 (* parsing/printing support for theory min *)
-val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
 val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="fun"},name=([],"->")}
 val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="bool"},name=([],"bool")}
+val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
+val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=([],"select")}
 
 val ns = ["Data","Bool"]
 
@@ -37,7 +38,6 @@ val _ = TeX_notation {hol = "\\", TeX = ("\\HOLTokenLambda{}", 1)}
 val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
-val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=(ns,"select")}
 
 (* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
@@ -247,15 +247,11 @@ val INFINITY_AX =
 val arb = new_constant("ARB",alpha);  (* Doesn't have to be defined at all. *)
 val _ = OpenTheory_const_name {const={Thy="bool",Name="ARB"},name=(ns,"arb")}
 
-val bool_case_DEF =
- Definition.new_definition
-   ("bool_case_DEF",  Term `bool_case = \(x:'a) y b. COND b x y`);
-
 val literal_case_DEF =
  Definition.new_definition
    ("literal_case_DEF",  Term `literal_case = \(f:'a->'b) x. f x`);
 
-val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
+val _ = List.app add_const ["ARB", "literal_case"];
 val _ = overload_on ("case", ``bool$literal_case``);
 val _ = OpenTheory_const_name {const={Thy="bool",Name="literal_case"},name=(["HOL4"],"literal_case")}
 
@@ -267,7 +263,7 @@ val _ = (add_infix ("IN", 425, Parse.NONASSOC); add_const "IN");
 val _ = unicode_version {u = UChar.setelementof, tmnm = "IN"};
 val _ = TeX_notation {hol = "IN", TeX = ("\\HOLTokenIn{}",1)}
 val _ = TeX_notation {hol = UChar.setelementof, TeX = ("\\HOLTokenIn{}",1)}
-val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"in")}
+val _ = OpenTheory_const_name {const={Thy="bool",Name="IN"},name=(["Set"],"member")}
 
 val RES_FORALL_DEF =
  Definition.new_definition
@@ -3708,35 +3704,18 @@ val SKOLEM_THM = save_thm("SKOLEM_THM",
             !e0 e1. bool_case e0 e1 F = e1
  ---------------------------------------------------------------------------*)
 
-val bool_case_thm = save_thm("bool_case_thm",
- let val x = Term`e0:'a`
-     val y = Term`e1:'a`
-     val th1 = RIGHT_BETA (AP_THM bool_case_DEF x)
-     val th2 = RIGHT_BETA (AP_THM th1 y)
-     val th3 = RIGHT_BETA (AP_THM th2 (Term`T`))
-     val th4 = RIGHT_BETA (AP_THM th2 (Term`F`))
-     val th5 = SPEC y (SPEC x COND_CLAUSES)
-     val th6 = TRANS th3 (CONJUNCT1 th5)
-     val th7 = TRANS th4 (CONJUNCT2 th5)
- in
-   CONJ (GEN x (GEN y th6)) (GEN x (GEN y th7))
- end);
-
+val bool_case_thm = let
+  val (vs,_) = strip_forall (concl COND_CLAUSES)
+in
+  save_thm("bool_case_thm",
+           COND_CLAUSES |> SPECL vs |> CONJUNCTS |> map (GENL vs) |> LIST_CONJ)
+end
 
 (* ------------------------------------------------------------------------- *)
 (*    bool_case_ID = |- !x b. bool_case x x b = x                            *)
 (* ------------------------------------------------------------------------- *)
 
-val bool_case_ID = save_thm("bool_case_ID",
- let val x = mk_var("x",alpha);
-     val b = mk_var("b",bool);
-     val th0 = RIGHT_BETA(AP_THM
-                 (RIGHT_BETA(AP_THM
-                   (RIGHT_BETA(AP_THM bool_case_DEF x)) x)) b)
-     val th1 = TRANS th0 (SPEC x (SPEC b COND_ID))
- in
-   GEN x (GEN b th1)
- end);
+val bool_case_ID = save_thm("bool_case_ID", COND_ID)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -3744,13 +3723,14 @@ val bool_case_ID = save_thm("bool_case_ID",
 (* ------------------------------------------------------------------------- *)
 
 val boolAxiom = save_thm("boolAxiom",
- let val th1 = CONJUNCT1 bool_case_thm
-     val [e0,e1] = fst(strip_forall(concl th1))
-     val th2 = SPEC e1 (SPEC e0 th1)
-     val th3 = SPEC e1 (SPEC e0 (CONJUNCT2 bool_case_thm))
-     val th4 = CONJ th2 th3
-     val th5 = EXISTS (Term`?fn. (fn T = ^e0) /\ (fn F = ^e1)`,
-                       Term`bool_case ^e0 ^e1`) th4
+ let
+   val ([e0,e1], _) = strip_forall (concl COND_CLAUSES)
+   val (th2, th3) = CONJ_PAIR (SPECL [e0, e1] COND_CLAUSES)
+   val f_t = Term`\b. if b then ^e0 else ^e1`
+   val f_T = TRANS (BETA_CONV (mk_comb(f_t, T))) th2
+   val f_F = TRANS (BETA_CONV (mk_comb(f_t, F))) th3
+   val th4 = CONJ f_T f_F
+   val th5 = EXISTS (Term`?fn. (fn T = ^e0) /\ (fn F = ^e1)`, f_t) th4
  in
     GEN e0 (GEN e1 th5)
  end);
@@ -3777,37 +3757,13 @@ val bool_INDUCT = save_thm("bool_INDUCT",
      GEN P (DISCH tm1 th9)
  end);
 
-val bool_case_EQ_COND = save_thm("bool_case_EQ_COND",
- let val b = mk_var("b",bool)
-     val x = mk_var("x",alpha)
-     val y = mk_var("y",alpha)
-     val bool_case_tm = mk_thy_const{Name="bool_case",Thy="bool",
-                             Ty = alpha --> alpha --> bool --> alpha}
-     val bool_case_app = list_mk_comb(bool_case_tm,[x,y,b])
-     val th1 = RIGHT_BETA (AP_THM bool_case_DEF x)
-     val th2 = RIGHT_BETA (AP_THM th1 y)
-     val th3 = RIGHT_BETA (AP_THM th2 b)
- in
-   GEN b (GEN x (GEN y th3))
- end);
-
-
 (* ---------------------------------------------------------------------------
    |- !P Q x x' y y'.
          (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
          ((case P of T -> x || F -> y) = (case Q of T -> x' || F -> y'))
   --------------------------------------------------------------------------- *)
 
-val bool_case_CONG = save_thm("bool_case_CONG",
- let val P = mk_var("P",bool)
-     val Q = mk_var("Q",bool)
-     val th = SUBS [SYM(SPEC_ALL (SPEC P bool_case_EQ_COND)),
-                    SYM(SPEC_ALL (SPEC Q bool_case_EQ_COND))]
-               (SPEC_ALL COND_CONG)
-     val fvs = free_vars (concl th)
- in
-   GENL (rev fvs) th
- end);
+val bool_case_CONG = save_thm("bool_case_CONG", COND_CONG)
 
 val FORALL_BOOL = save_thm
 ("FORALL_BOOL",
@@ -4283,16 +4239,14 @@ val literal_case_id = save_thm
     val u = mk_var("u",beta)
     val eq = mk_eq(x,a)
     val bcase = inst [alpha |-> beta]
-                     (prim_mk_const{Name = "bool_case",Thy="bool"})
-    val g = mk_abs(x,list_mk_comb(bcase,[t, u, eq]))
+                     (prim_mk_const{Name = "COND",Thy="bool"})
+    val g = mk_abs(x,list_mk_comb(bcase,[eq, t, u]))
     val lit_thm = RIGHT_BETA(SPEC a (SPEC g literal_case_THM))
-    val bool_case_th = SPECL [mk_eq(a,a),t,u]
-                         (INST_TYPE [alpha |-> beta] bool_case_EQ_COND)
     val Teq = SYM (EQT_INTRO(REFL a))
     val ifT = CONJUNCT1(SPECL[t,u] (INST_TYPE[alpha |-> beta] COND_CLAUSES))
     val ifeq = SUBS [Teq] ifT
  in
-    TRANS lit_thm (TRANS bool_case_th ifeq)
+    TRANS lit_thm ifeq
  end);
 
 (*---------------------------------------------------------------------------
@@ -4480,13 +4434,13 @@ end
 
 (* define case operator *)
 val itself_case_thm = let
-  val witness = ``\(b:'b) (i:'a itself). b``
-  val witness_applied1 = BETA_CONV (mk_comb(witness, ``b:'b``))
-  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 ``(:'a)``)
+  val witness = ``\(i:'a itself) (b:'b). b``
+  val witness_applied1 = BETA_CONV (mk_comb(witness, ``(:'a)``))
+  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 ``b:'b``)
 in
   new_specification("itself_case_thm",
                     ["itself_case"],
-                    EXISTS (``?f:'b -> 'a itself -> 'b. !b. f b (:'a) = b``,
+                    EXISTS (``?f:'a itself -> 'b -> 'b. !b. f (:'a) b = b``,
                             witness)
                            (GEN_ALL witness_applied2))
 end

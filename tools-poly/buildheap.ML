@@ -48,17 +48,22 @@ fun create_heap (objs, outputheap, base) = let
   val ofile = OS.FileSys.tmpName()
   val ostrm = openOut ofile
   fun p s = output(ostrm, s ^ "\n")
+  fun system_ps s =
+      if OS.Process.isSuccess (Systeml.system_ps s) then ()
+      else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
 in
   p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
+  p "val _ = print \"\\n\";";
   p ("val _ = List.map hload [" ^
      String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
-  p "fun main() = (List.app use (CommandLine.arguments()); PolyML.rootFunction());";
+  p "fun safe_use s = if String.sub (s, 0) = #\"-\" then () else use s";
+  p "fun main() = (List.app safe_use (CommandLine.arguments()); PolyML.rootFunction());";
   p "val _ = PolyML.shareCommonData main;";
   p "in";
-  p ("val _ = PolyML.export(\""^ outputheap ^"\", main); end;");
+  p ("val _ = PolyML.export(\""^ outputheap ^"\", main) end");
   closeOut ostrm;
   system_ps (base ^ " < " ^ ofile);
   system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^

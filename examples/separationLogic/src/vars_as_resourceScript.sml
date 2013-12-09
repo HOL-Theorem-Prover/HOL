@@ -97,26 +97,12 @@ val IS_SPLIT_PERMISSION_STRUCTURE_THM2 = store_thm ("IS_SPLIT_PERMISSION_STRUCTU
 ``IS_PERMISSION_STRUCTURE (f, total_perm) =
   ?perm_split1 perm_split2. IS_SPLIT_PERMISSION_STRUCTURE (f, total_perm, perm_split1, perm_split2)``,
 
-  SIMP_TAC std_ss [IS_PERMISSION_STRUCTURE_def,
-                   IS_SPLIT_PERMISSION_STRUCTURE_def] THEN
-  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
-  REPEAT STRIP_TAC THENL [
-     Q.ABBREV_TAC `perm_split12 = \c. @p12. (f (SOME (FST p12)) (SOME (SND p12)) = SOME c)` THEN
-     Q.EXISTS_TAC `\c. FST (perm_split12 c)` THEN
-     Q.EXISTS_TAC `\c. SND (perm_split12 c)` THEN
-     Q.UNABBREV_TAC `perm_split12` THEN
-     SIMP_TAC std_ss [] THEN GEN_TAC THEN
-     SELECT_ELIM_TAC THEN
-     SIMP_TAC std_ss [PAIR_EXISTS_THM] THEN
-     METIS_TAC[],
-
-     METIS_TAC[]
-  ]
-);
+  SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IS_PERMISSION_STRUCTURE_def,
+                                       IS_SPLIT_PERMISSION_STRUCTURE_def] THEN
+  METIS_TAC[]);
 
 
 (*Define one concrete permission structure*)
-
 local
    open realLib;
 
@@ -2104,21 +2090,18 @@ val asl_star___var_res_bool_proposition = store_thm (
        (var_res_bool_proposition f b1) (var_res_bool_proposition f b2) =
         var_res_bool_proposition f (b1 /\ b2))``,
 
-   SIMP_TAC std_ss [asl_star_def, var_res_bool_proposition_REWRITE,
+   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss++QUANT_INST_ss[pair_default_qp]) [asl_star_def, var_res_bool_proposition_REWRITE,
       IN_ABS, VAR_RES_COMBINATOR_REWRITE, FUN_EQ_THM] THEN
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_IMP THEN
-   FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_THM,
-     asl_emp_def, IN_ABS, GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
-     PAIR_EXISTS_THM] THEN
-   QUANT_INSTANTIATE_TAC [] THEN
+   FULL_SIMP_TAC (std_ss++QUANT_INST_ss[]) [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION___WITH_COMBINATOR_THM,
+     asl_emp_def, IN_ABS, GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] THEN
    EQ_TAC THEN1 METIS_TAC[] THEN
    STRIP_TAC THEN
    Q.EXISTS_TAC `FEMPTY` THEN
    ASM_SIMP_TAC std_ss [VAR_RES_STACK_COMBINE_REWRITE] THEN
    METIS_TAC[]
 );
-
 
 val var_res_prop_expression___NIL = store_thm (
 "var_res_prop_expression___NIL",
@@ -2317,17 +2300,15 @@ val VAR_RES_IS_WEAK_STACK_PROPOSITION___asl_neg = store_thm (
 "VAR_RES_IS_WEAK_STACK_PROPOSITION___asl_neg",
 ``!p. VAR_RES_IS_WEAK_STACK_PROPOSITION p ==>
       VAR_RES_IS_WEAK_STACK_PROPOSITION (asl_neg p)``,
-SIMP_TAC std_ss [VAR_RES_IS_WEAK_STACK_PROPOSITION_def, asl_bool_EVAL,
-   PAIR_FORALL_THM] THEN
+SIMP_TAC std_ss [VAR_RES_IS_WEAK_STACK_PROPOSITION_def, asl_bool_EVAL, pairTheory.FORALL_PROD] THEN
 METIS_TAC[]);
-
 
 val VAR_RES_IS_WEAK_STACK_PROPOSITION___ASL_INTUITIONISTIC_NEGATION = store_thm (
 "VAR_RES_IS_WEAK_STACK_PROPOSITION___ASL_INTUITIONISTIC_NEGATION",
 ``!f p. IS_SEPARATION_COMBINATOR f /\ VAR_RES_IS_WEAK_STACK_PROPOSITION p ==>
         VAR_RES_IS_WEAK_STACK_PROPOSITION (ASL_INTUITIONISTIC_NEGATION (VAR_RES_COMBINATOR f) p)``,
-SIMP_TAC std_ss [VAR_RES_IS_WEAK_STACK_PROPOSITION_def, asl_bool_EVAL,
-   PAIR_FORALL_THM, ASL_INTUITIONISTIC_NEGATION_def, IN_ABS,
+SIMP_TAC (std_ss++QUANT_INST_ss[pair_default_qp, filter_qp [pair_ty_filter]]) [VAR_RES_IS_WEAK_STACK_PROPOSITION_def, asl_bool_EVAL,
+   ASL_INTUITIONISTIC_NEGATION_def, IN_ABS,
    ASL_IS_SEPARATE_def, VAR_RES_COMBINATOR_REWRITE,
    LET_THM, COND_NONE_SOME_REWRITES] THEN
 SIMP_TAC std_ss [IS_SOME_EXISTS, GSYM RIGHT_EXISTS_AND_THM,
@@ -2335,7 +2316,6 @@ SIMP_TAC std_ss [IS_SOME_EXISTS, GSYM RIGHT_EXISTS_AND_THM,
    IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 REPEAT STRIP_TAC THEN
 METIS_TAC[]);
-
 
 val var_res_bigstar_def = Define `var_res_bigstar f b =
    asl_bigstar (VAR_RES_COMBINATOR f) (BAG_INSERT (var_res_prop_stack_true f) b)`
@@ -2689,22 +2669,15 @@ SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___IMP,
                  VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_stack_true]);
 
 
-
 val VAR_RES_IS_STACK_IMPRECISE___asl_emp =
 store_thm ("VAR_RES_IS_STACK_IMPRECISE___asl_emp",
 ``!f. IS_SEPARATION_COMBINATOR f ==>
       ~(VAR_RES_IS_STACK_IMPRECISE (asl_emp (VAR_RES_COMBINATOR f)))``,
-SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF_2,
-                 asl_emp___VAR_RES_COMBINATOR, IN_ABS] THEN
-SIMP_TAC (std_ss++CONJ_ss) [PAIR_EXISTS_THM, FDOM_FEMPTY, NOT_IN_EMPTY,
-                            EMPTY_SUBSET] THEN
-SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM, asl_emp_def,
-                 IN_ABS, GSYM LEFT_EXISTS_AND_THM] THEN
-REPEAT STRIP_TAC THEN
-Q.EXISTS_TAC `FEMPTY |+ (ARB,ARB)` THEN
-Q.EXISTS_TAC `uf x` THEN
-Q.EXISTS_TAC `x` THEN
-ASM_SIMP_TAC std_ss [NOT_EQ_FEMPTY_FUPDATE]);
+SIMP_TAC (std_ss++QUANT_INST_ss[pair_default_qp, distinct_qp[NOT_EQ_FEMPTY_FUPDATE]]) [
+  VAR_RES_IS_STACK_IMPRECISE___ALTERNATIVE_DEF_2,
+  asl_emp___VAR_RES_COMBINATOR, IN_ABS, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_SUBSET,
+  NOT_EQ_FEMPTY_FUPDATE] THEN
+SIMP_TAC std_ss [pred_setTheory.MEMBER_NOT_EMPTY, asl_emp_NOT_EMPTY]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_emp =
@@ -3605,9 +3578,8 @@ store_thm ("asl_star___var_res_prop_stack_true",
 GEN_TAC THEN STRIP_TAC THEN
 ONCE_REWRITE_TAC [EXTENSION] THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
-ASM_SIMP_TAC std_ss [IN_ABS, asl_star_def,
+ASM_SIMP_TAC (std_ss++QUANT_INST_ss[pair_default_qp]) [IN_ABS, asl_star_def,
    var_res_prop_stack_true_REWRITE,
-   PAIR_FORALL_THM, PAIR_EXISTS_THM,
    VAR_RES_COMBINATOR_def,
    PRODUCT_SEPARATION_COMBINATOR_REWRITE,
    asl_emp_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -4157,12 +4129,12 @@ EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs) eL ==>
 VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs (var_res_exp_full_prop P eL)``,
 
 SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___ALTERNATIVE_DEF,
-   var_res_exp_full_prop_def, IN_ABS, PAIR_FORALL_THM] THEN
+   var_res_exp_full_prop_def, IN_ABS, pairTheory.FORALL_PROD] THEN
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE (`(MAP (\e. e x1') eL) = (MAP (\e. e x1) eL)` by ALL_TAC) THEN (
+Tactical.REVERSE (`(MAP (\e. e p_1') eL) = (MAP (\e. e p_1) eL)` by ALL_TAC) THEN (
    FULL_SIMP_TAC list_ss [LET_THM]
 ) THEN
-Q.PAT_ASSUM `P X x2` (K ALL_TAC) THEN
+Q.PAT_ASSUM `P X p_2` (K ALL_TAC) THEN
 Induct_on `eL` THEN (
    ASM_SIMP_TAC list_ss []
 ) THEN
@@ -5680,7 +5652,7 @@ REPEAT STRIP_TAC THEN
 IMP_RES_TAC IS_SEPARATION_COMBINATOR___IS_VAR_RES_COMBINATOR THEN
 ASM_SIMP_TAC std_ss [var_res_prog_quant_best_local_action_def,
    ASL_PROGRAM_IS_ABSTRACTION___quant_best_local_action,
-   VAR_RES_HOARE_TRIPLE_def, PAIR_FORALL_THM]);
+   VAR_RES_HOARE_TRIPLE_def, pairTheory.FORALL_PROD]);
 
 
 
@@ -7163,7 +7135,7 @@ REPEAT STRIP_TAC THENL [
       AND_IMP_INTRO, var_res_permission_THM2],
 
 
-   MATCH_MP_TAC (SIMP_RULE std_ss [PAIR_FORALL_THM] ASL_INFERENCE_prog_parallel) THEN
+   MATCH_MP_TAC (SIMP_RULE std_ss [pairTheory.FORALL_PROD] ASL_INFERENCE_prog_parallel) THEN
    ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR]
 ]);
 
@@ -8177,13 +8149,13 @@ Tactical.REVERSE (Cases_on `BAG_ALL_DISTINCT (BAG_UNION wpb''' rpb)`) THEN1 (
 
       ASM_SIMP_TAC std_ss [asl_star_def, IN_SING, IN_ABS,
         VAR_RES_COMBINATOR_REWRITE, SOME___VAR_RES_STACK_COMBINE,
-        PAIR_FORALL_THM] THEN
+        pairTheory.FORALL_PROD] THEN
       CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
-      Q.PAT_ASSUM `VAR_RES_STACK_IS_SEPARATE x1 Y` MP_TAC THEN
+      Q.PAT_ASSUM `VAR_RES_STACK_IS_SEPARATE p_1 Y` MP_TAC THEN
       SIMP_TAC (std_ss++CONJ_ss) [
          VAR_RES_STACK_IS_SEPARATE_def, IN_SING,
          VAR_RES_STACK_SPLIT12___REWRITES, IN_DIFF, IN_COMPL] THEN
-      `var_res_sl___has_write_permission pv x1 /\
+      `var_res_sl___has_write_permission pv p_1 /\
        var_res_sl___has_read_permission pv (FST x)` by ALL_TAC THEN1 (
          FULL_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE_2,
             var_res_sl___has_read_permission_def,
@@ -10757,17 +10729,17 @@ FULL_SIMP_TAC (std_ss++CONJ_ss) [
    SOME___best_local_action, IN_ABS,
    var_res_prop_stack_true_def, var_res_bool_proposition_REWRITE,
    asl_emp_def, IN_BIGINTER, VAR_RES_COMBINATOR_REWRITE,
-   GSYM SUBSET_DEF, PAIR_EXISTS_THM, IN_IMAGE,
-   GSYM LEFT_FORALL_IMP_THM, PAIR_FORALL_THM] THEN
+   GSYM SUBSET_DEF, pairTheory.FORALL_PROD, pairTheory.EXISTS_PROD, IN_IMAGE,
+   GSYM LEFT_FORALL_IMP_THM] THEN
 QUANT_INSTANTIATE_TAC [] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN Q.PAT_ASSUM `X = SOME (FST s)` (K ALL_TAC) THEN
 ASM_SIMP_TAC std_ss [asl_star_def, IN_ABS, IN_SING,
    VAR_RES_COMBINATOR_REWRITE, var_res_ext_state_var_update_def,
-   PAIR_EXISTS_THM, GSYM RIGHT_EXISTS_IMP_THM] THEN
+   pairTheory.EXISTS_PROD, GSYM RIGHT_EXISTS_IMP_THM] THEN
 QUANT_INSTANTIATE_TAC [] THEN
 SIMP_TAC std_ss [VAR_RES_STACK_COMBINE___COMM] THEN
 GEN_TAC THEN
-Q.EXISTS_TAC `var_res_state_var_update v (THE (e (FST s))) x1` THEN
+Q.EXISTS_TAC `var_res_state_var_update v (THE (e (FST s))) p_1` THEN
 ASM_SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
    var_res_state_var_update_def, FAPPLY_FUPDATE_THM,
    FDOM_FUPDATE, IN_INSERT, VAR_RES_STACK_IS_SEPARATE_def] THEN
@@ -10785,7 +10757,6 @@ REPEAT STRIP_TAC THENL [
    GEN_TAC THEN Cases_on `x = v` THEN (
       ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, FMERGE_DEF]
    ),
-
 
    FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INSERT],
 
@@ -11538,7 +11509,7 @@ Q.ABBREV_TAC `fail_cond =
    vs SUBSET FDOM (FST s)` THEN
 Tactical.REVERSE (Cases_on `fail_cond=T`) THEN1 (
    POP_ASSUM MP_TAC THEN
-   FULL_SIMP_TAC std_ss [
+   FULL_SIMP_TAC (std_ss++QUANT_INST_ss [pair_default_qp]) [
       fasl_order_THM, NONE___INF_fasl_action_order, IN_ABS,
       GSYM LEFT_FORALL_IMP_THM,
       NONE___best_local_action,
@@ -11547,9 +11518,7 @@ Tactical.REVERSE (Cases_on `fail_cond=T`) THEN1 (
       IS_SEPARATION_COMBINATOR_EXPAND_THM,
       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
       VAR_RES_COMBINATOR_REWRITE,
-      SOME___VAR_RES_STACK_COMBINE,
-      PAIR_FORALL_THM] THEN
-   QUANT_INSTANTIATE_TAC [] THEN
+      SOME___VAR_RES_STACK_COMBINE] THEN
    DISCH_TAC THEN CCONTR_TAC THEN
    Q.PAT_ASSUM `~fail_cond` MP_TAC THEN
    Q.UNABBREV_TAC `fail_cond` THEN
@@ -11572,19 +11541,19 @@ FULL_SIMP_TAC (std_ss++CONJ_ss) [
    SOME___best_local_action, IN_ABS,
    var_res_prop_stack_true_def, var_res_bool_proposition_REWRITE,
    asl_emp_def, IN_BIGINTER, VAR_RES_COMBINATOR_REWRITE,
-   GSYM SUBSET_DEF, PAIR_EXISTS_THM, IN_IMAGE,
-   GSYM LEFT_FORALL_IMP_THM, PAIR_FORALL_THM,
+   GSYM SUBSET_DEF, pairTheory.EXISTS_PROD, IN_IMAGE,
+   GSYM LEFT_FORALL_IMP_THM, pairTheory.FORALL_PROD,
    var_res_exp_const_def] THEN
 QUANT_INSTANTIATE_TAC [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `VAR_RES_STACK_COMBINE (SOME x1') (SOME x1) = SOME (FST s)` (K ALL_TAC) THEN
+Q.PAT_ASSUM `VAR_RES_STACK_COMBINE (SOME p_1') (SOME p_1) = SOME (FST s)` (K ALL_TAC) THEN
 FULL_SIMP_TAC std_ss [var_res_ext_state_var_update_def,
    asl_star_def, IN_ABS, IN_SING, VAR_RES_COMBINATOR_REWRITE,
-   PAIR_EXISTS_THM] THEN
+   pairTheory.EXISTS_PROD] THEN
 `?c2. (e (FST s) = SOME c2)` by ALL_TAC THEN1 (
    ASM_SIMP_TAC std_ss [GSYM IS_SOME_EXISTS]
 ) THEN
-Q.EXISTS_TAC `var_res_state_var_update v c2 x1` THEN
+Q.EXISTS_TAC `var_res_state_var_update v c2 p_1` THEN
 ONCE_REWRITE_TAC[VAR_RES_STACK_COMBINE___COMM] THEN
 QUANT_INSTANTIATE_TAC [] THEN
 FULL_SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
@@ -11594,8 +11563,8 @@ FULL_SIMP_TAC std_ss [SOME___VAR_RES_STACK_COMBINE,
    VAR_RES_STACK_COMBINE___MERGE_FUNC_def,
    var_res_permission_THM2, COND_REWRITES,
    GSYM fmap_EQ_THM] THEN
-`~(v IN FDOM x1''')` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x. x IN FDOM x1''' /\ x IN FDOM x1 ==> Z`
+`~(v IN FDOM p_1''')` by ALL_TAC THEN1 (
+   Q.PAT_ASSUM `!x. x IN FDOM p_1''' /\ x IN FDOM p_1 ==> Z`
       (MP_TAC o Q.SPEC `v`) THEN
    ASM_SIMP_TAC std_ss [var_res_permission_THM2]
 ) THEN
@@ -11616,7 +11585,7 @@ REPEAT CONJ_TAC THENL [
 
    SIMP_TAC std_ss [var_res_exp_var_update_def,
       var_res_state_var_update_def, FUPDATE_EQ] THEN
-   Tactical.REVERSE (`e (x1 |+ (v,c,var_res_write_permission)) = e (FST s)` by ALL_TAC) THEN1 (
+   Tactical.REVERSE (`e (p_1 |+ (v,c,var_res_write_permission)) = e (FST s)` by ALL_TAC) THEN1 (
       ASM_SIMP_TAC std_ss []
    ) THEN
    Q.PAT_ASSUM `!st1 st2. X ==> (e st1 = e st2)` MATCH_MP_TAC THEN
@@ -11627,7 +11596,7 @@ REPEAT CONJ_TAC THENL [
 
 
       Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `v'`) THEN
-      `v' IN FDOM x1` by METIS_TAC[] THEN
+      `v' IN FDOM p_1` by METIS_TAC[] THEN
       ASM_SIMP_TAC std_ss [COND_REWRITES]
    ]
 ]);
@@ -12009,14 +11978,12 @@ ASM_SIMP_TAC std_ss [
    GSYM LEFT_EXISTS_AND_THM, VAR_RES_STACK_IS_SUBSTATE_def,
    ASL_IS_SUBSTATE___PRODUCT_SEPARATION_COMBINATOR,
    VAR_RES_COMBINATOR_def] THEN
-SIMP_TAC (std_ss++CONJ_ss) [
-   PAIR_FORALL_THM, PAIR_EXISTS_THM,
+SIMP_TAC (std_ss++QUANT_INST_ss[pair_default_qp]) [
    GSYM LEFT_FORALL_IMP_THM, IS_SOME_EXISTS,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
+SIMP_TAC (std_ss++CONJ_ss) [] THEN
 REPEAT STRIP_TAC THEN
 METIS_TAC[]);
-
-
 
 
 
@@ -12108,8 +12075,8 @@ ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    VAR_RES_LOCK_ENV_MAP_def] THEN
 MATCH_MP_TAC EQ_SYM THEN
 MATCH_MP_TAC (
-   SIMP_RULE std_ss [PAIR_FORALL_THM] LIST_TO_FUN_DISTINCT_THM) THEN
-ASM_SIMP_TAC list_ss [MEM_MAP, PAIR_EXISTS_THM, MAP_MAP_o,
+   SIMP_RULE std_ss [pairTheory.FORALL_PROD] LIST_TO_FUN_DISTINCT_THM) THEN
+ASM_SIMP_TAC list_ss [MEM_MAP, pairTheory.EXISTS_PROD, MAP_MAP_o,
    combinTheory.o_DEF, ETA_THM] THEN
 PROVE_TAC[]);
 
@@ -12183,7 +12150,7 @@ EQ_TAC THENL [
    METIS_TAC[],
 
    SIMP_TAC std_ss [asl_star_def, IN_ABS, VAR_RES_COMBINATOR_REWRITE,
-      PAIR_EXISTS_THM] THEN
+      pairTheory.EXISTS_PROD] THEN
    FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM,
       var_res_prop_stack_true_def, var_res_bool_proposition_REWRITE,
       IN_ABS, asl_emp_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -13374,7 +13341,7 @@ REPEAT STRIP_TAC THENL [
       var_res_prop_expression_def, var_res_stack_proposition_def,
       IN_ABS, LET_THM, asl_emp_def, IS_SEPARATION_COMBINATOR_EXPAND_THM,
       GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
-      VAR_RES_COMBINATOR_REWRITE, PAIR_EXISTS_THM] THEN
+      VAR_RES_COMBINATOR_REWRITE, pairTheory.EXISTS_PROD] THEN
    PROVE_TAC[]
 ]);
 

@@ -14,16 +14,19 @@ in
   | [] => raise Fail "String.fields returns empty list??"
 end
 
-fun lookup nm =
+fun lookup ty s nm =
     SOME (uncurry DB.fetch (splitnm nm))
     handle HOL_ERR _ =>
            (Feedback.HOL_WARNING "ThmSetData" "lookup"
-                                 ("Bad theorem name: " ^ nm);
+                                 ("Bad theorem name: \"" ^ nm ^ "\" from string \"" ^
+                                  s ^ "\" and set-type \"" ^ ty ^ "\"");
             NONE)
 
-fun read s =
+fun read ty s =
   SOME (List.mapPartial
-            (fn n => Option.map (fn r => (n,r)) (lookup n))
+            (fn n => if n = "" then NONE
+                     else
+                       Option.map (fn r => (n,r)) (lookup ty s n))
             (String.fields Char.isSpace s))
   handle HOL_ERR _ => NONE
 
@@ -68,12 +71,13 @@ in
   List.map (fn (s,(i,th)) => (s,th)) items
 end
 
-fun new s = let
-  val (mk,dest) = LoadableThyData.new {merge = set_alist_merge, read = read,
-                                       write = writeset, thydataty = s}
-  val _ = destmap := Binarymap.insert(!destmap,s,dest)
+fun new ty = let
+  val (mk,dest) = LoadableThyData.new {merge = set_alist_merge,
+                                       read = read ty,
+                                       write = writeset, thydataty = ty}
+  val _ = destmap := Binarymap.insert(!destmap,ty,dest)
   fun foldthis (nm,set) =
-      case lookup nm of
+      case lookup ty ("<internal>: "^nm) nm of
         SOME r => (nm, r) :: set
       | NONE => raise mk_HOL_ERR "ThmSetData" "new" ("Bad theorem name: "^nm)
   fun mk' slist =

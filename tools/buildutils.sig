@@ -61,14 +61,20 @@ sig
   val setup_logfile : unit -> unit
   val finish_logging : bool -> unit
 
-  val Holmake : (unit -> string list) -> (OS.Process.status -> string) ->
+  val Holmake : (string -> string list -> 'a) -> ('a -> bool) ->
+                (unit -> string list) ->
+                ('a -> string) ->
                 int -> string -> unit
-      (* [Holmake extras analysis selftest dir] invokes Holmake, using
-         function extras to generate extra commandline arguments, and
-         function analysis to generate extra diagnostics from the exit
-         code of the call to Holmake. The dir argument is also used
-         for feedback; the assumption is that the current directory is
-         already dir. The selftest parameter is the user's specification
-         of the selftest level. *)
+      (* [Holmake sysl isSuccess extras analysis selftest dir] invokes
+         Holmake, using function extras to generate extra commandline
+         arguments, and function analysis to generate extra
+         diagnostics from the exit code of the call to Holmake. The
+         dir argument is also used for feedback; the assumption is
+         that the current directory is already dir. The selftest
+         parameter is the user's specification of the selftest level.
+         The sysl function actually does the invocation (fork/exec,
+         whatever), taking the path to the thing to run, and the
+         additional arguments. The isSuccess parameter interprets
+         whether or not the result of sysl constitutes a success. *)
 
 end

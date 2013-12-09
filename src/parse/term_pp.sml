@@ -78,6 +78,9 @@ fun convert_case tm =
         (split_on, splits)
       end
 
+val prettyprint_cases = ref true;
+val _ = register_btrace ("pp_cases", prettyprint_cases)
+
 (* ----------------------------------------------------------------------
     A flag controlling whether to print escaped syntax with a dollar
     or enclosing parentheses.  Thus whether the term mk_comb(+, 3) comes
@@ -168,18 +171,19 @@ fun avoid_symbolmerge G (add_string, add_xstring, add_break) = let
   fun new_addxstring f (xstr as {s,sz,ann}) ls = let
     val allspaces = str_all (equal #" ") s
   in
-    case sz of SOME 0 => nothing
-    |_=> (if ls = " " orelse allspaces then f xstr
-          else if not (!avoid_symbol_merges) then f xstr
-          else if String.sub(ls, size ls - 1) = #"\"" then f xstr
-          (* special case the quotation because term_tokens relies on
-             the base token technology (see base_lexer) to separate the
-             end of a string from the next character *)
-          else if creates_comment (ls, s) orelse bad_merge (ls, s) then
-            add_string " " >> f xstr
-          else
-            f xstr) >>
-         setlaststring (if allspaces then " " else s)
+    case s of
+      "" => nothing
+    | _ => (if ls = " " orelse allspaces then f xstr
+            else if not (!avoid_symbol_merges) then f xstr
+            else if String.sub(ls, size ls - 1) = #"\"" then f xstr
+            (* special case the quotation because term_tokens relies on
+               the base token technology (see base_lexer) to separate the
+               end of a string from the next character *)
+            else if creates_comment (ls, s) orelse bad_merge (ls, s) then
+              add_string " " >> f xstr
+            else
+              f xstr) >>
+           setlaststring (if allspaces then " " else s)
   end
   fun new_addstring f s = new_addxstring (fn{s,...}=>f s) {s=s,sz=NONE,ann=NONE}
   fun new_add_break (p as (n,m)) =
@@ -272,6 +276,12 @@ exception DoneExit
 
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
+fun unfakeconst vnm =
+    case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+      SOME s => SOME("", s)
+        (* first argument in result might conceivably contain useful
+           information, but I'm not sure what it should be right now *)
+   | NONE => NONE
 
 fun grammar_name G tm = let
   val oinfo = term_grammar.overload_info G
@@ -281,9 +291,9 @@ in
   else if is_var tm then let
       val (vnm, _) = dest_var tm
     in
-      case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+      case unfakeconst vnm of
         NONE => SOME vnm
-      | x => x
+      | SOME(_ (* thy *), nm) => SOME nm
     end
   else NONE
 end
@@ -341,7 +351,9 @@ fun decdepth n = if n < 0 then n else n - 1
 fun atom_name tm = let
   val (vnm, _) = dest_var tm
 in
-  Lib.unprefix GrammarSpecials.fakeconst_special vnm handle HOL_ERR _ => vnm
+  case unfakeconst vnm of
+    NONE => vnm
+  | SOME((* thy *)_, nm) => nm
 end handle HOL_ERR _ => fst (dest_const tm)
 
 
@@ -1480,8 +1492,8 @@ fun pp_term (G : grammar) TyG backend = let
       case dest_term tm of
         VAR(vname, Ty) => let
           val (isfake, vname) =
-              (true, Lib.unprefix GrammarSpecials.fakeconst_special vname)
-              handle HOL_ERR _ => (false, vname)
+              (true, #2 (valOf (unfakeconst vname)))
+              handle Option => (false, vname)
           val vrule = lookup_term vname
           val add_type=
             add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty
@@ -1498,7 +1510,8 @@ fun pp_term (G : grammar) TyG backend = let
                 add_ann_string (s, PPBackEnd.BV (Ty, fn () => s^": "^tystr Ty))
               else if not isfake then
                 add_ann_string (s, PPBackEnd.FV (Ty, fn () => s^": "^tystr Ty))
-              else add_string s)
+              else add_ann_string(s, PPBackEnd.Const({Ty = Ty, Thy = "??",
+                                                      Name = "??"}, s)))
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
@@ -1785,7 +1798,7 @@ fun pp_term (G : grammar) TyG backend = let
 
           (* case expressions *)
           (fn () =>
-              if is_const f then
+              if (is_const f andalso (!prettyprint_cases)) then
                 case grammar_name G f of
                   SOME "case" =>
                   (let

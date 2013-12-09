@@ -1,0 +1,540 @@
+\index{quantHeuristicsLib|(}
+\index{Quantifier Instantiation|see {quantHeuristicsLib}}
+
+\setcounter{sessioncount}{0}
+
+\subsection{Motivation}
+
+Often interactive proofs can be simplified by instantiating
+quantifiers. The \ml{Unwind} library\index{Unwind}, which is part of the simplifier allows
+instantiations of ``trivial'' quantifiers:
+
+\[ \forall x_1\ \ldots x_i \ldots x_n.\ P_1 \wedge \ldots \wedge x_i = c \wedge \ldots \wedge P_n \Longrightarrow Q \]
+and
+\[ \exists x_1\ \ldots x_i \ldots x_n.\ P_1 \wedge \ldots \wedge x_i =
+c \wedge \ldots \wedge P_n \] can be simplified by
+instantiating $x_i$ with $c$. Because unwind-conversions are 
+part of \holtxt{bool\_ss}, they are used with nearly every call of the simplifier
+and often simplify proofs considerably. However, the \ml{Unwind} library can only handle these common cases. If the term structure is
+only slightly more complicated, it fails. For example, $\exists x.\ P(x) \Longrightarrow (x = 2) \wedge Q(x)$
+cannot be tackled.
+
+There is also the \ml{Satisfy} library\index{Satisfy}, which uses
+unification to show existentially quantified formulas. It can handle
+problems like $\exists x.\ P_1(x,c_1)\ \wedge \ldots P_n(x,c_n)$ if
+given theorems of the form $\forall x\ c.\ P_i(x, c)$. This is often
+handy, but still rather limited.
+
+The quantifier heuristics library (\ml{quantHeuristicsLib}) provides more power
+and flexibility. A few simple examples of what it can do
+are shown in Table~\ref{table_qh_examples}. Besides the power demonstrated
+by these examples, the library is highly flexible as well.  At it's
+core, there is a modular, syntax driven search for instantiation.
+This search consists of a collection of interleaved heuristics.  Users
+can easily configure existing heuristics and add own ones. Thereby, it
+is easy to teach the library about new predicates, logical connectives
+or datatypes.
+
+\newcommand{\mytablehead}[1]{\\\multicolumn{2}{l}{\textit{#1}}\\}
+\begin{table}[h]
+\centering\scriptsize
+\begin{tabular}{lll}
+\textbf{Problem} & \textbf{Result} \\\hline
+
+\mytablehead{basic examples}
+$\exists x.\ x = 2 \wedge P (x)$ & $P(2)$ \\
+$\forall x.\ x = 2 \Longrightarrow P (x)$ & $P(2)$ \\
+
+\mytablehead{solutions and counterexamples}
+$\exists x.\ x = 2$ & $\textit{true}$ \\
+$\forall x.\ x = 2$ & $\textit{false}$ \\
+
+\mytablehead{complicated nestings of standard operators}
+$\exists x_1. \forall x_2.\ (x_1 = 2) \wedge P(x_1, x_2)$ & 
+$\forall x_2.\ P(2, x_2)$ \\
+
+$\exists x_1, x_2.\ P_1(x_2) \Longrightarrow (x_1 = 2) \wedge P(x_1, x_2)$ & 
+$\exists x_2.\ P_1(x_2) \Longrightarrow P(2, x_2)$ \\
+$\exists x.\ ((x = 2) \vee (2 = x)) \wedge P(x)$ & $P(2)$ \\
+
+\mytablehead{exploiting unification}
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(10))$ & $P (f(10))$ \\
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(x + 2))$ & $P (f(8 + 2))$ \\
+$\exists x.\ (f (8 + 2) = f (x + 2)) \wedge P (f(x))$ & - (\textrm{no instantiation found}) \\
+
+\mytablehead{partial instantiation for datatypes}
+$\forall p.\ c = \textsf{FST}(p) \Longrightarrow P(p)$ & $\forall p_2.\ P(c, p_2)$ \\
+
+$\forall x.\ \textsf{IS\_NONE}(x) \vee P(x)$ & $\forall x'.\ P (\textsf{SOME}(x'))$ \\
+
+$\forall l.\ l \neq [\,] \Longrightarrow P(l)$ & $\forall \textit{hd}, \textit{tl}.\
+P(\textit{hd} :: \textit{tl})$ \\
+
+\mytablehead{context}
+$P_1(c) \Longrightarrow \exists x.\ P_1(x) \vee P_2(x)$ & \textit{true} \\
+$P_1(c) \Longrightarrow \forall x.\ \neg P_1(x) \wedge P_2(x)$ & $\neg P_1(c)$ \\
+
+$(\forall x.\ P_1(x) \Rightarrow (x = 2)) \Longrightarrow (\forall x.\ P_1(x) \Rightarrow P_2(x))$ &
+$(\forall x.\ P_1(x) \Rightarrow (x = 2)) \Rightarrow (P_1(2) \Rightarrow P_2(2))$ \\
+
+$\big((\forall x.\ P_1(x) \Rightarrow P_2(x)) \wedge P_1(2)\big) \Longrightarrow \exists x.\ P_2(x)$ &
+\textit{true} \\
+\hline
+\end{tabular}
+\caption{Examples}
+\label{table_qh_examples}
+\end{table}
+
+\subsection{User Interface}\label{sec_interface}
+
+The quantifier heuristics library can be found in the sub-directory
+\holtxt{src/quantHeuristics}.  The entry point to the framework is the
+library \holtxt{quantHeuristicsLib}. 
+
+\subsubsection{Conversions}
+Usually the library is used for
+converting a term containing quantifiers to an equivalent one. For this,
+the following high level entry points exists:
+\bigskip
+
+\noindent
+\begin{tabular}{@{}ll}
+\texttt{QUANT\_INSTANTIATE\_CONV} & \texttt{: quant\_param list -> conv} \\
+\texttt{QUANT\_INST\_ss} & \texttt{: quant\_param list -> ssfrag} \\
+\texttt{QUANT\_INSTANTIATE\_TAC} & \texttt{: quant\_param list -> tactic} \\
+\texttt{ASM\_QUANT\_INSTANTIATE\_TAC} & \texttt{: quant\_param list -> tactic} 
+\end{tabular}
+\bigskip
+
+All these functions get a list of \emph{quantifier heuristic parameters} as arguments. These
+parameters essentially configure, which heuristics are used during the guess-search. If
+an empty list is provided, the tools know about the standard Boolean combinators, equations and context.
+\texttt{std\_qp} adds support for common datatypes like pairs or lists. 
+Quantifier heuristic parameters are explained in more detail in 
+Section~\ref{quantHeu_subsec_qps}.
+
+So, some simple usage of the quantifier heuristic library looks like:
+
+\begin{session}
+\begin{verbatim}
+- QUANT_INSTANTIATE_CONV [] ``?x. (!z. Q z /\ (x=7)) /\ P x``;
+> val it = |- (?x. (!z. Q z /\ (x = 7)) /\ P x) <=> (!z. Q z) /\ P 7: thm
+
+- QUANT_INSTANTIATE_CONV [std_qp] ``!x. IS_SOME x ==> P x``
+> val it = |- (!x. IS_SOME x ==> P x) <=> !x_x'. P (SOME x_x'): thm
+\end{verbatim}
+\end{session}
+
+Usually, the quantifier heuristics library is used together with the
+simplifier using \holtxt{QUANT\_INST\_ss}. Besides interleaving
+simplification and quantifier instantiation, this has the benefit of 
+being able to use context information collected by the simplifier:
+
+\begin{session}
+\begin{verbatim}
+- QUANT_INSTANTIATE_CONV [] ``P m ==> ?n. P n``
+Exception- UNCHANGED raised
+
+- SIMP_CONV (bool_ss ++ QUANT_INST_ss []) [] ``P m ==> ?n. P n``
+> val it = |- P m ==> (?n. P n) <=> T: thm
+\end{verbatim}
+\end{session}
+
+It's usually best to use \holtxt{QUANT\_INST\_ss}
+together with e.\,g.\ \holtxt{SIMP\_TAC} when using the library with tactics.
+However, if free variables of the goal should be instantiated, then
+\holtxt{ASM\_QUANT\_INSTANTIATE\_TAC} should be used:
+
+\begin{session}
+\begin{verbatim}
+P x
+------------------------------------
+  IS_SOME x
+  : proof
+
+- e (ASM_QUANT_INSTANTIATE_TAC [std_qp])
+> P (SOME x_x') : proof
+\end{verbatim}
+\end{session}
+
+There is also \holtxt{QUANT\_INSTANTIATE\_TAC}. This tactic does not
+instantiate free variables. Neither does it take assumptions into consideration.
+It is just a shortcut for using \holtxt{QUANT\_INSTANTIATE\_CONV} as a tactic.
+
+
+\subsubsection{Unjustified Guesses}
+
+Most heuristics justify the guesses they produce and therefore allow to
+prove equivalences of e.\,g.\ the form $\exists x.\ P(x) \Leftrightarrow P(i)$.
+However, the implementation also supports unjustified guesses, which may be bogus.
+Let's consider e.\,g.\ the formula $\exists x.\ P(x) \Longrightarrow (x = 2)\ \wedge\ Q(x)$.
+Because nothing is known about $P$ and $Q$, we can't find a safe instantiation for $x$ here.
+However, $2$ looks tempting and is probably sensible in many situations. (Counterexample:
+$P(2)$, $\neg Q(2)$ and $\neg P(3)$ hold)
+
+\texttt{implication\_concl\_qp} is a quantifier parameter that looks for valid guesses in the conclusion of an implication. 
+Then, it assumes without justification that these guesses are probably sensible for the whole implication as well. 
+Because these guesses might be wrong, one can either use implications or
+expansion theorems like $\exists x.\ P(x)\ \Longleftrightarrow (\forall x.\ x \neg c \Rightarrow \neg P(x)) \Rightarrow P(c)$.
+
+\begin{session}
+\begin{verbatim}
+- QUANT_INSTANTIATE_CONV [implication_concl_qp] 
+     ``?x. P x ==> (x = 2) /\ Q x``
+Exception- UNCHANGED raised
+
+- QUANT_INSTANTIATE_CONSEQ_CONV [implication_concl_qp] 
+     CONSEQ_CONV_STRENGTHEN_direction 
+     ``?x. P x ==> (x = 2) /\ Q x``
+> val it =
+   |- (P 2 ==> Q 2) ==> ?x. P x ==> (x = 2) /\ Q x: thm
+
+- EXPAND_QUANT_INSTANTIATE_CONV [implication_concl_qp] 
+    ``?x. P x ==> (x = 2) /\ Q x``
+> val it = |- (?x. P x ==> (x = 2) /\ Q x) <=>
+              (!x. x <> 2 ==> ~(P x ==> (x = 2) /\ Q 2)) ==> P 2 ==> Q 2
+
+- SIMP_CONV (std_ss++EXPAND_QUANT_INST_ss [implication_concl_qp]) [] 
+    ``?x. P x ==> (x = 2) /\ Q x``
+> val it =
+   |- (?x. P x ==> (x = 2) /\ Q x) <=> 
+      (!x. x <> 2 ==> P x) ==> P 2 ==> Q 2: thm
+\end{verbatim}
+\end{session}
+
+The following entry points should be used to exploit unjustified guesses:
+\bigskip
+
+\noindent
+\begin{tabular}{@{}ll}
+\texttt{QUANT\_INSTANTIATE\_CONSEQ\_CONV} & \texttt{: quant\_param list -> directed\_conseq\_conv} \\
+\texttt{EXPAND\_QUANT\_INSTANTIATE\_CONV} & \texttt{: quant\_param list -> conv} \\
+\texttt{EXPAND\_QUANT\_INST\_ss} & \texttt{: quant\_param list -> ssfrag} \\
+\texttt{QUANT\_INSTANTIATE\_CONSEQ\_TAC} & \texttt{: quant\_param list -> tactic} 
+\end{tabular}
+
+
+\subsubsection{Explicit Instantiations}
+
+A special (degenerated) use of the framework, is turning guess search off completely and
+providing instantiations explicitly. The tactic \holtxt{QUANT\_TAC} allows this. This means that
+it allows to partially instantiate quantifiers at subpositions
+with explicitly given terms. As such, it can be seen as 
+a generalisation of \holtxt{EXISTS\_TAC}\index{EXISTS\_TAC}. 
+%
+\begin{session}
+\begin{verbatim}
+- val it = !x. (!z. P x z) ==> ?a b.    Q a        b z : proof
+
+> e( QUANT_INST_TAC [("z", `0`, []), ("a", `SUC a'`, [`a'`])] )
+- val it = !x. (    P x 0) ==> ?  b a'. Q (SUC a') b z : proof
+\end{verbatim}
+\end{session}
+% 
+This tactic is implemented using unjustified guesses. It normally
+produces implications, which is fine when used as a tactic. There is
+also a conversion called \holtxt{INST\_QUANT\_CONV} with the same
+functionality. For a conversion, implications are
+problematic. Therefore, the simplifier and Metis are used to prove
+the validity of the explicitly given instantiations. This succeeds
+only for simple examples.
+
+
+\subsection{Quantifier Heuristic Parameters}\label{quantHeu_subsec_qps}
+
+Quantifier heuristic parameters play a similar role for the quantifier
+instantiation library as simpsets do for the simplifier. They contain
+theorems, ML code and general configuration parameters that allow to configure
+guess-search. There are predefined parameters that handle
+common constructs and the user can define own parameters.
+
+\subsubsection{Quantifier Heuristic Parameters for Common Datatypes}
+
+There are \holtxt{option\_qp}, \holtxt{list\_qp}, \holtxt{num\_qp} and \holtxt{sum\_qp} for option types, lists, 
+natural numbers and sum types respectively. 
+Some examples are displayed in the following table:
+%
+\[\begin{array}{r@{\quad \Longleftrightarrow \quad}l}
+\forall x.\ \holtxt{IS\_SOME}(x) \Rightarrow P(x) & \forall x'.\ P (\holtxt{SOME}(x')) \\
+\forall x.\ \holtxt{IS\_NONE}(x)& \textit{false} \\
+\forall l.\ l \neq [\,] \Rightarrow P(l)& \forall h, l'.\ P(h::l')  \\
+\forall x.\ x = c + 3& \textit{false} \\
+\forall x.\ x \neq 0 \Rightarrow P(x)& \forall x'.\ P(\holtxt{SUC}(x')) 
+\end{array}\]
+
+\subsubsection{Quantifier Heuristic Parameters for Tuples}
+
+For tuples the situation is peculiar, because each quantifier over a variable of a product type
+can be instantiated. The challenge is to decide which quantifiers should be instantiated and 
+which new variable names to use for the components of the pair.
+There is a quantifier heuristic parameter called \holtxt{pair\_default\_qp}. It first looks for
+subterms of the form $(\lambda (x_1, \ldots, x_n).\ \ldots)\ x$. If such a term is found $x$ is instantiated with
+$(x_1, \ldots, x_n)$. Otherwise, subterms of the form $\holtxt{FST}(x)$ and $\holtxt{SND}(x)$ are searched. If such a term
+is found, $x$ is instantiated as well. This parameter therefore allows simplifications like:
+%
+\[\begin{array}{r@{\quad \Longleftrightarrow \quad}l}
+\forall p.\ (x = \holtxt{SND}(p)) \Rightarrow P(p)& \forall p_1.\ P(p_1, x) \\
+\exists p.\ (\lambda (p_a, p_b, p_c). P(p_a, p_b, p_c))\ p & \exists p_a, p_b, p_c.\ P(p_a, p_b, p_c) 
+\end{array}\]
+
+\holtxt{pair\_default\_qp} is implemented in terms of the more general
+quantifier heuristic parameter \holtxt{pair\_qp}, which allows the
+user to provide a list of ML functions. These functions get the
+variable and the term. If they return a tuple of variables, these
+variables are used for the instantiation, otherwise the next function
+in the list is called or - if there is no function left - the variable
+is not instantiated. In the example of $\exists p.\ (\lambda (p_a,
+p_b, p_c). P(p_a, p_b, p_c))\ p$ these functions are given the
+variable $p$ and the term $(\lambda (p_a, p_b, p_c). P(p_a, p_b,
+p_c))\ p$ and return $\holtxt{SOME} (p_a, p_b, p_c)$.  This simple
+ML-interface gives the user full control over what quantifier over
+product types to expand and how to name the new variables.
+
+\subsubsection{Quantifier Heuristic Parameter for Records}
+
+Records are similar to pairs, because they can always be instantiated. Here, it is interesting that the necessary
+monochotomy lemma comes from HOL~4's \holtxt{Type\_Base} library. This means that \holtxt{record\_qp} is stateful.
+If a new record type is defined, the automatically proven monochotomy lemma is then automatically used
+by \holtxt{record\_qp}. In contrast to the pair parameter, the one for records gets only one function instead of a
+list of functions to decide which variables to instantiate. However, this function is simpler, because it just needs
+to return true or false. The names of the new variables are constructed from the field-names of the record.
+The quantifier heuristic parameter \holtxt{default\_record\_qp} expands all records.
+
+\subsubsection{Stateful Quantifier Heuristic Parameters}
+
+The parameter for records is stateful, as it uses knowledge from
+\holtxt{Type\_Base}. Such information is not only useful for records
+but for general datatypes. The quantifier heuristic parameter
+\holtxt{TypeBase\_qp} uses automatically proven theorems about new
+datatypes to exploit mono- and dichotomies. Moreover, there is also a
+stateful \holtxt{pure\_stateful\_qp} that allows the user to
+explicitly add other parameters to it.  \holtxt{stateful\_qp} is a
+combination of \holtxt{pure\_stateful\_qp} and \holtxt{TypeBase\_qp}.
+
+\subsubsection{Standard Quantifier Heuristic Parameter}
+
+The standard quantifier heuristic parameter \holtxt{std\_qp} combines
+the parameters for lists, options, natural numbers, the default one
+for pairs and the default one for records.
+
+
+\subsection{User defined Quantifier Heuristic Parameters}\label{sec_qps_user}
+
+The user is also able to define own parameters. There
+is \holtxt{empty\_qp}, which does not contain any information. Several
+parameters can be combined using 
+\holtxt{combine\_qps}. Together with the basic types of user defined
+parameters that are explained below, these functions provide an
+interface for user defined quantifier heuristic parameters.
+
+\subsubsection{Rewrites / Conversions}
+
+A very powerful, yet simple technique for teaching the guess search
+about new constructs are rewrite rules. For example, the standard rules
+for equations and basic logical operations
+cannot generate guesses for the predicate \holtxt{IS\_SOME}. By
+rewriting \holtxt{IS\_SOME(x)} to \holtxt{?x'. x =
+SOME(x')}, however, these rules fire.
+
+\holtxt{option\_qp} uses this rewrite to implement support for 
+\holtxt{IS\_SOME}. Similarly support for predicates like \holtxt{NULL} is
+implemented using rewrites. Even adding
+rewrites like $\textsf{append}(l_1, l_2) = [\,] \Longleftrightarrow (l_1 =
+[\,]\ \wedge\ l_2 = [\,])$ for list-append turned out to be beneficial
+in practice.
+\bigskip
+
+\holtxt{rewrite\_qp} allows to provide rewrites in the form of rewrite theorems.
+For the example of \holtxt{IS\_SOME} this looks like:
+
+\begin{session}
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [] ``!x. IS_SOME x ==> P x`` 
+Exception- UNCHANGED raised
+
+> val IS_SOME_EXISTS = prove (``IS_SOME x = (?x'. x = SOME x')``, 
+   Cases_on `x` THEN SIMP_TAC std_ss []);
+val IS_SOME_EXISTS = |- IS_SOME x <=> ?x'. x = SOME x': thm
+
+> val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS]] 
+    ``!x. IS_SOME x ==> P x`` 
+val thm = |- (!x. IS_SOME x ==> P x) <=> 
+             !x'. IS_SOME (SOME x') ==> P (SOME x'): thm
+\end{verbatim}
+\end{session}
+
+To clean up the result after instantiation, theorems used to rewrite the result after instantiation can be provided via
+\holtxt{final\_rewrite\_qp}.
+\begin{session}
+\begin{verbatim}
+> val thm = QUANT_INSTANTIATE_CONV [rewrite_qp[IS_SOME_EXISTS], 
+                                    final_rewrite_qp[option_CLAUSES]] 
+      ``!x. IS_SOME x ==> P x``
+val thm = |- (!x. IS_SOME x ==> P x) <=> !x'. P (SOME x'): thm
+\end{verbatim}
+\end{session}
+
+If rewrites are not enough, \holtxt{conv\_qp} can be used to add conversions:
+\begin{session}
+\begin{verbatim}
+- val thm = QUANT_INSTANTIATE_CONV [] ``?x. (\y. y = 2) x`` 
+Exception- UNCHANGED raised
+
+- val thm = QUANT_INSTANTIATE_CONV [convs_qp[BETA_CONV]] ``?x. (\y. y = 2) x``
+> val thm = |- (?x. (\y. y = 2) x) <=> T: thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Strengthening / Weakening}
+
+In rare cases, equivalences that can be used for rewrites are unavailable. There might be just implications that
+can be used for strengthening or weakening. The function
+\holtxt{imp\_qp} might be used to provide such implication.
+
+\begin{session}
+\begin{verbatim}
+- val thm = QUANT_INSTANTIATE_CONV [list_qp] ``!l. 0 < LENGTH l ==> P l`` 
+Exception- UNCHANGED raised
+
+- val LENGTH_LESS_IMP = prove (``!l n. n < LENGTH l ==> l <> []``, 
+    Cases_on `l` THEN SIMP_TAC list_ss []);
+> val LENGTH_LESS_IMP = |- !l n. n < LENGTH l ==> l <> []: thm
+
+- val thm = QUANT_INSTANTIATE_CONV [imp_qp[LENGTH_LESS_IMP], list_qp] 
+    ``!l. 0 < LENGTH l ==> P l``
+> val thm =
+   |- (!l. 0 < LENGTH l ==> P l) <=>
+      !l_t l_h. 0 < LENGTH (l_h::l_t) ==> P (l_h::l_t): thm
+
+- val thm = SIMP_CONV (list_ss ++ 
+              QUANT_INST_ss [imp_qp[LENGTH_LESS_IMP], list_qp]) [] 
+              ``!l. SUC (SUC n) < LENGTH l ==> P l``
+> val thm =
+   |- (!l. SUC (SUC n) < LENGTH l ==> P l) <=>
+      !l_h l_t_h l_t_t_t l_t_t_h. n < SUC (LENGTH l_t_t_t) ==> 
+                                  P (l_h::l_t_h::l_t_t_h::l_t_t_t): thm
+\end{verbatim}
+\end{session}
+
+  
+\subsubsection{Filtering}
+Sometimes, one might want to avoid to instantiate certain quantifiers. 
+The function \holtxt{filter\_qp} allows to add ML-functions that filter the handled
+quantifiers. These functions are given a variable $x$ and a term $P(x)$. 
+The tool only tries to instantiate $x$ in $P(x)$, if all filter functions
+return \textit{true}.  
+
+\begin{session}
+\begin{verbatim}
+- val thm = QUANT_INSTANTIATE_CONV [] 
+     ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x, y, z)``
+> val thm = |- (?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x,y,z)) <=> 
+               P (1,2,3): thm
+
+- val thm = QUANT_INSTANTIATE_CONV 
+     [filter_qp [fn v => fn t => (v = ``y:num``)]] 
+     ``?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x, y, z)``
+> val thm = |- (?x y z. (x = 1) /\ (y = 2) /\ (z = 3) /\ P (x,y,z)) <=>
+                ?x   z. (x = 1) /\            (z = 3) /\ P (x,2,z): thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Satisfying and Contradicting Instantiations}
+
+As the satisfy library demonstrates, it is often 
+useful to use unification and explicitly given theorems to 
+find instantiations. In addition to satisfying instantiations, the quantifier heuristics framework
+is also able to use contradicting ones. The theorems used for finding instantiations usually come from
+the context. However, \holtxt{instantiation\_qp} allows to add additional ones:
+
+\begin{session}
+\begin{verbatim}
+> val thm = SIMP_CONV (std_ss++QUANT_INST_ss[]) [] 
+    ``P n ==> ?m:num. n <= m /\ P m``
+Exception- UNCHANGED raised
+
+> val thm = SIMP_CONV (std_ss++
+               QUANT_INST_ss[instantiation_qp[LESS_EQ_REFL]]) [] 
+               ``P n ==> ?m:num. n <= m /\ P m``
+> val thm = |- P n ==> ?m:num. n <= m /\ P m = T : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Di- and Monochotomies}
+
+Dichotomies can be exploited for guess search.
+\holtxt{distinct\_qp} provides an interface to add theorems
+of the form $\forall x.\ c_1(x) \neq c_2(x)$. 
+\holtxt{cases\_qp} expects theorems of the form
+$\forall x. \ (x = \exists \textit{fv}. c_1(\textit{fv}))\ \vee \ldots \vee (x = \exists \textit{fv}. c_n(\textit{fv}))$. 
+However, only theorems for $n = 2$ and $n = 1$ are used. All other cases are currently ignored.
+
+\subsubsection{Oracle Guesses}
+
+Sometimes, the user does not want to justify guesses. The tactic
+\holtxt{QUANT\_TAC} is implemented using oracle guesses for example. 
+A simple interface to oracle guesses is provided by \holtxt{oracle\_qp}.
+It expects a ML function that given a variable and a term returns
+a pair of an instantiation and the free variables in this instantiation.
+
+As an example, lets define a parameter that states that every list is non-empty:
+\begin{verbatim}
+   val dummy_list_qp = oracle_qp (fn v => fn t =>
+     let
+        val (v_name, v_list_ty) = dest_var v;
+        val v_ty = listSyntax.dest_list_type v_list_ty;
+
+        val x = mk_var (v_name ^ "_hd", v_ty);
+        val xs = mk_var (v_name ^ "_tl", v_list_ty);
+        val x_xs = listSyntax.mk_cons (x, xs)
+     in
+        SOME (x_xs, [x, xs])
+     end)
+\end{verbatim}
+
+\noindent
+Notice, that an option type is returned and that the function is
+allowed to throw \holtxt{HOL\_ERR} exceptions. 
+With this definition, we get
+
+\begin{session}
+\begin{verbatim}
+- NORE_QUANT_INSTANTIATE_CONSEQ_CONV [dummy_list_qp] 
+    CONSEQ_CONV_STRENGTHEN_direction ``?x:'a list y:'b. P (x, y)``
+> val it = ?y x_hd x_tl. P (x_hd::x_tl,y)) ==> ?x y. P (x,y) : thm
+\end{verbatim} 
+\end{session}
+
+\subsubsection{Lifting Theorems}
+
+The function \holtxt{inference\_qp} enables the
+user to provide theorems that allow lifting guesses over
+user defined connectives. As writing these lifting theorems requires
+deep knowledge about guesses, it is not discussed here. Please have a
+look at the detailed documentation of the quantifier heuristics library as
+well as its sources. You might also want to contact
+Thomas Tuerk (\url{tt291@cl.cam.ac.uk}).
+
+
+\subsubsection{User defined Quantifier Heuristics}
+
+At the lowest level, the tool searches guesses using ML-functions
+called \emph{quantifier heuristics}. Slightly simplified, such a
+quantifier heuristic gets a variable and a term and returns a set of
+guesses for this variable and term. Heuristics allow full
+flexibility. However, to write your own heuristics a lot of knowledge
+about the ML-datastructures and auxiliary functions is
+required. Therefore, no details are discussed here. Please have a look
+at the source code and contact Thomas Tuerk
+(\url{tt291@cl.cam.ac.uk}), if you have questions.
+\holtxt{heuristics\_qp} and \holtxt{top\_heuristics\_qp} provide
+interfaces to add user defined heuristics to a quantifier heuristics
+parameter.
+
+\index{quantHeuristicsLib|)}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

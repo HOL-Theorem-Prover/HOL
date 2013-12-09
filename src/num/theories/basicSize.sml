@@ -56,7 +56,6 @@ local
   (*----------------------------------------------------------------------*)
 
   val option_info = Option.valOf (TypeBase.read {Tyop="option", Thy="option"})
-  val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_size_info = (option_size_tm,TypeBasePure.ORIG option_size_def)
   val option_info' = TypeBasePure.put_size option_size_info option_info
 

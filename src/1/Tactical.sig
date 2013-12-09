@@ -24,6 +24,8 @@ sig
   val EVERY_ASSUM    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
   val FIRST_X_ASSUM  : thm_tactic -> tactic
+  val LAST_ASSUM     : thm_tactic -> tactic
+  val LAST_X_ASSUM   : thm_tactic -> tactic
   val ASSUM_LIST     : (thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic

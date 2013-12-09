@@ -17,20 +17,20 @@ Directory structure:
     - determinism
     - equivalence of the big and small step semantics
 
-- hol2miniml
+- translator
     A proof-producing translator from HOL functions to MiniML
 
-- hol2miniml/okasaki-examples
+- translator/okasaki-examples
     15 data structures/algorithms from Chris Okasaki's Purely Functional Data
     Structures.  The translator is applied to them, and 12 of the 15 are
     verified.
 
-- hol2miniml/other-examples
+- translator/other-examples
     Example applications of the translator to existing examples, including AES,
     TEA, and RC6 from HOL/examples/Crypto; the probabilistic primality checker
     from examples/miller; and some examples in auxiliary.
 
-- hol2miniml/other-examples/auxiliary
+- translator/other-examples/auxiliary
     A copying GC, 91 function, regular expression matched and SLR parser
     generator taken from other places, and ollected here for the translator.
 

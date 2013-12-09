@@ -1,4 +1,7 @@
 open HolKernel Parse boolLib bossLib blastLib;
+open testutils
+
+(* fun die s = print (s^"\n"); *)
 
 val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
@@ -12,38 +15,42 @@ in
   else prs w s
 end
 
-fun die() = ()
-fun die() = OS.Process.exit OS.Process.failure
-
 val _ = print "\n";
-val _ = print (prs 65 "Parsing :bool[32] list")
+val _ = tprint "Parsing :bool[32] list"
 val ty1 = listSyntax.mk_list_type (wordsSyntax.mk_int_word_type 32)
 val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
 val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
-        else (print "FAILED!\n"; die())
+        else die "FAILED!"
 
-val _ = print (prs 65 "Parsing :('a + 'b)[32]")
+val _ = tprint "Parsing :('a + 'b)[32]"
 val ty1 = fcpSyntax.mk_cart_type
             (sumSyntax.mk_sum(alpha,beta),
              fcpSyntax.mk_int_numeric_type 32);
 val ty2 = Parse.Type`:('a + 'b)[32]`
 val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
-        else (print "FAILED\n"; die())
+        else die "FAILED"
 
-val _ = print (prs 65 "Printing :('a + 'b)[32]")
+val _ = tprint "Printing :('a + 'b)[32]"
 val _ = if type_to_string ty2 = ":('a + 'b)[32]" then print "OK\n"
-        else (print "FAILED\n"; die())
+        else die "FAILED"
+
+val _ = tprint "Parsing abbreviated word types"
+val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
+val _ = type_abbrev("u8", u8)
+val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
+        else print "OK\n"
+val _ = tprint "Printing abbreviated word types"
+val _ = if type_to_string u8 = ":u8" then print "OK\n" else die "FAILED!"
 
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
   val res = Lib.total c tm
   val elapsed = Timer.checkRealTimer rt
 in
-  TextIO.print (trunc 65 tm ^ Time.toString elapsed ^
-                (case res of
-                   NONE => "FAILED!"
-                 | _ => "") ^ "\n");
-  case res of NONE => die() | _ => ()
+  TextIO.print (trunc 65 tm ^ Time.toString elapsed);
+  case res of
+      NONE => die "FAILED!"
+    | _ => print "\n"
 end
 
 fun test_fail orig (c:conv) tm = let
@@ -55,11 +62,10 @@ fun test_fail orig (c:conv) tm = let
                        else
                          SOME ("unexpected exception from " ^ origin_function)
 in
-  TextIO.print ("Expecting failure: " ^ trunc 46 tm ^
-                (case res of
-                   NONE => "OK"
-                 | SOME s => s) ^ "\n");
-  case res of SOME _ => die() | _ => ()
+  TextIO.print ("Expecting failure: " ^ trunc 46 tm);
+  case res of
+      NONE => print "OK\n"
+    | SOME s => die s
 end
 
 fun test_counter (c:conv) tm = let
@@ -68,15 +74,14 @@ fun test_counter (c:conv) tm = let
                        if Lib.can Drule.EQF_ELIM thm then
                          NONE
                        else
-                         SOME "invalid counterexample"
+                         SOME "bad counterexample"
                    | HOL_ERR {origin_function,...} =>
                          SOME ("unexpected exception from " ^ origin_function)
 in
-  TextIO.print ("Counterexample: " ^ trunc 49 tm ^
-                (case res of
-                   NONE => "OK"
-                 | SOME s => s) ^ "\n");
-  case res of SOME _ => die() | _ => ()
+  TextIO.print ("Counterexample: " ^ trunc 49 tm);
+  case res of
+      NONE => print "OK\n"
+    | SOME s => die s
 end
 
 (*

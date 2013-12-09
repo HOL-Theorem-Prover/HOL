@@ -85,6 +85,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                 if mypath = path then ()
                 else
                   (warn ("*** Switching to execute "^path);
+                   warn ("*** (Honouring last Holmake call in this directory)");
                    Systeml.exec(path,
                                 path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";
@@ -105,6 +106,7 @@ in
       diag "In the wrong distribution, but --nolmbc takes precedence."
     else
       (warn ("*** Switching to execute "^p);
+       warn ("*** (As we are in/under its HOLDIR)");
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
@@ -221,10 +223,27 @@ end handle OS.SysErr (mesg, _) => let
            end
          | DirNotFound => true
 
+val nice_dir =
+    case OS.Process.getEnv "HOME" of
+        SOME h => (fn s => if String.isPrefix h s then
+                             "~" ^ String.extract(s,size h,NONE)
+                           else s)
+      | NONE => (fn s => s)
 
-fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k} =
+fun xterm_log s =
+    ignore (OS.Process.system ("/bin/bash -c 'echo -ne \"\\033]0;" ^ s ^ "\\007\"'"))
+
+val terminal_log =
+    if Systeml.isUnix then xterm_log
+    else (fn s => ())
+
+
+fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k,
+                   cleantgt} =
 let
   val {abspath=dir,relpath} = dir
+  val k = fn () => (terminal_log ("Holmake: "^nice_dir dir); k())
+  val tgts = case cleantgt of SOME s => [s] | NONE => []
   fun recurse visited (newdir,nm) =
       if Binaryset.member(visited, newdir) then SOME visited
       else let
@@ -236,10 +255,12 @@ let
                 | SOME d => SOME (Path.mkCanonical (Path.concat(d, nm)))
           val nm = case newrelpath of NONE => newdir | SOME d => d
           val _ = warn ("Recursively calling Holmake in "^nm)
+          val _ = terminal_log ("Holmake: "^nice_dir nm)
         in
-          hm {relpath=newrelpath,abspath=newdir} visited [] []
+          hm {relpath=newrelpath,abspath=newdir} visited [] tgts
           before
           (warn ("Finished recursive invocation in "^nm);
+           terminal_log ("Holmake: "^nice_dir dir);
            FileSys.chDir dir)
         end
   fun do_em accg [] = if k() then SOME accg else NONE

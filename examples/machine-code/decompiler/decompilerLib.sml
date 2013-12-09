@@ -3,11 +3,14 @@ struct
 
 open HolKernel boolLib bossLib Parse;
 
-open prog_ppcLib prog_x86Lib prog_armLib;
-
 open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
 open set_sepTheory progTheory helperLib addressTheory;
 
+structure Parse =
+struct
+   open Parse
+   val (Type, Term) = parse_from_grammars addressTheory.address_grammars
+end
 
 (* ------------------------------------------------------------------------------ *)
 (* Decompilation stages:                                                          *)
@@ -26,7 +29,6 @@ val decompiler_memory = ref ([]:(string * (thm * int * int option)) list)
 val decompiler_finalise = ref (I:(thm * thm -> thm * thm))
 val code_abbreviations = ref ([]:thm list);
 val abbreviate_code = ref false;
-val executable_data_names = ref ([]:string list);
 val user_defined_modifier = ref (fn (name:string) => fn (th:thm) => th);
 val decompile_as_single_function = ref false;
 
@@ -39,8 +41,6 @@ fun get_decompiled name =
   snd (hd (filter (fn (x,y) => x = name) (!decompiler_memory))) handle _ => fail();
 
 fun add_code_abbrev thms = (code_abbreviations := thms @ !code_abbreviations);
-fun add_executable_data_name n = (executable_data_names := n :: !executable_data_names);
-fun remove_executable_data_name n = (executable_data_names := filter (fn m => not (n = m)) (!executable_data_names));
 fun set_abbreviate_code b = (abbreviate_code := b);
 fun get_abbreviate_code () = !abbreviate_code;
 
@@ -121,36 +121,16 @@ fun list_union [] xs = xs
   | list_union (y::ys) xs =
       if mem y xs then list_union ys xs else list_union ys (y::xs);
 
-fun strip_string s = let
-  fun strip_space [] = []
-    | strip_space (x::xs) =
-        if mem x [#" ",#"\t",#"\n"] then strip_space xs else x::xs
-  in (implode o rev o strip_space o rev o strip_space o explode) s end;
-
 fun strings_to_qcode strs = [(QUOTE o concat o map (fn x => x ^ "\n")) strs]
-
-fun quote_to_strings q = let (* turns a quote `...` into a list of strings *)
-  fun get_QUOTE (QUOTE t) = t | get_QUOTE _ = fail()
-  val xs = explode (get_QUOTE (hd q))
-  fun strip_comments l [] = []
-    | strip_comments l [x] = if 0 < l then [] else [x]
-    | strip_comments l (x::y::xs) =
-        if x = #"(" andalso y = #"*" then strip_comments (l+1) xs else
-        if x = #"*" andalso y = #")" then strip_comments (l-1) xs else
-        if 0 < l    then strip_comments l (y::xs) else x :: strip_comments l (y::xs)
-  fun lines [] [] = []
-    | lines xs [] = [implode (rev xs)]
-    | lines xs (y::ys) =
-        if mem y [#"\n",#"|"]
-        then implode (rev xs) :: lines [] ys
-        else lines (y::xs) ys
-  val zs = lines [] (strip_comments 0 xs)
-  val qs = filter (fn z => not (z = "")) (map strip_string zs)
-  in qs end;
 
 fun append_lists [] = [] | append_lists (x::xs) = x @ append_lists xs
 
-val curr_tools = ref arm_tools;
+val (no_tools:decompiler_tools) = let
+  val no_jump = fn x => fail()
+  val no_spec = fn x => fail()
+  in (no_spec, no_jump, TRUTH, T) end
+
+val curr_tools = ref no_tools;
 
 fun set_tools tools = (curr_tools := tools);
 fun get_tools () = !curr_tools
@@ -180,7 +160,7 @@ val GUARD_THM = prove(``!m n x. GUARD n x = GUARD m x``, REWRITE_TAC [GUARD_def]
 
 (* formatting *)
 
-val stack_terms = [``xSTACK ebp``,``aSTACK r11``];
+val stack_terms = ([]):term list;
 
 fun DISCH_ALL_AS_SINGLE_IMP th = let
   val th = RW [AND_IMP_INTRO] (DISCH_ALL th)
@@ -191,7 +171,10 @@ fun replace_abbrev_vars tm = let
                     Substring.full o fst o dest_var) v, type_of v) handle HOL_ERR e => v |-> v
   in subst (map f (free_vars tm)) tm end
 
-fun name_for_abbrev tm =
+fun name_for_abbrev p tm = let
+  val x = get_sep_domain tm
+  in first (fn t => rator t = x) p |> rand |> dest_var |> fst end
+  handle HOL_ERR _ =>
   "v" ^ (int_to_string (Arbnum.toInt(numSyntax.dest_numeral(cdr (car tm))))) handle HOL_ERR e =>
   if (fst (dest_const (car tm)) = "tT") handle HOL_ERR e => false then "k" else
   if is_const (cdr (car tm)) andalso is_const(car (car tm)) handle HOL_ERR e => false then
@@ -219,19 +202,21 @@ fun abbreviate (var_name,tm) th = raw_abbreviate (var_name,cdr tm,tm) th
 
 fun ABBREV_POSTS dont_abbrev_list prefix th = let
   fun dont_abbrev tm = mem tm (dont_abbrev_list @ stack_terms)
-  fun next_abbrev [] = fail()
-    | next_abbrev (tm::xs) =
-    if (is_var (cdr tm) andalso (name_for_abbrev tm = fst (dest_var (cdr tm))))
-       handle HOL_ERR e => false then next_abbrev xs else
-    if (prefix ^ (name_for_abbrev tm) = fst (dest_var (cdr tm)))
-       handle HOL_ERR e => false then next_abbrev xs else
-    if can dest_sep_hide tm then next_abbrev xs else
-    if dont_abbrev (car tm) then next_abbrev xs else
-      (prefix ^ name_for_abbrev tm,tm)
+  fun next_abbrev p [] = fail()
+    | next_abbrev p (tm::xs) =
+    if (is_var (cdr tm) andalso (name_for_abbrev p tm = fst (dest_var (cdr tm))))
+       handle HOL_ERR e => false then next_abbrev p xs else
+    if (prefix ^ (name_for_abbrev p tm) = fst (dest_var (cdr tm)))
+       handle HOL_ERR e => false then next_abbrev p xs else
+    if can dest_sep_hide tm then next_abbrev p xs else
+    if dont_abbrev (car tm) then next_abbrev p xs else
+      (prefix ^ name_for_abbrev p tm,tm)
   val (th,b) = let
     val (_,p,_,q) = dest_spec (concl th)
+    val p = list_dest dest_star p
+            |> filter (fn tm => (is_var o rand) tm handle HOL_ERR _ => false)
     val xs = list_dest dest_star q
-    val th = abbreviate (next_abbrev xs) th
+    val th = abbreviate (next_abbrev p xs) th
     in (th,true) end handle HOL_ERR e => (th,false) handle Empty => (th,false)
   in if b then ABBREV_POSTS dont_abbrev_list prefix th else th end;
 
@@ -300,16 +285,6 @@ fun pair_jump_apply (f:int->int) ((th1,x1:int,x2:int option),NONE) = ((th1,x1,ju
   | pair_jump_apply f ((th1:thm,x1,x2),SOME (th2:thm,y1:int,y2:int option)) =
       ((th1,x1,jump_apply f x2),SOME (th2,y1,jump_apply f y2));
 
-fun parse_renamer instruction = let
-  val xs = Substring.tokens (fn x => x = #"/") (Substring.full instruction)
-  in if length xs < 2 then (instruction,fn x => x,false) else (Substring.string (hd xs),fn th => let
-    val vs = free_vars (concl th)
-    val vs = filter (fn v => mem (fst (dest_var v)) ["f","df"]) vs
-    val w = Substring.string (hd (tl xs))
-    fun make_new_name v = ((implode o rev o tl o rev o explode o fst o dest_var) v) ^ w
-    val s = map (fn v => v |-> mk_var(make_new_name v,type_of v)) vs
-    in INST s th end, mem (Substring.string (hd (tl xs))) (!executable_data_names)) end;
-
 fun introduce_guards thms = let
   val pattern = (fst o dest_eq o concl o SPEC_ALL) cond_def
 (*
@@ -353,13 +328,10 @@ fun derive_individual_specs tools (code:string list) = let
       val _ = echo 1 "  (insert command)\n"
       in (n+1,(ys @ [(n,(th,i,j),NONE)])) end
     else let
-      val (instruction, renamer, exec_flag) = parse_renamer instruction
       val _ = echo 1 ("  "^instruction^":")
-      val _ = prog_x86Lib.set_x86_exec_flag exec_flag
       val i = int_to_string n
-      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@") o renamer
+      val g = RW [precond_def] o ABBREV_ALL dont_abbrev_list ("new@")
       val (x,y) = pair_apply g (f instruction)
-      val _ = prog_x86Lib.set_x86_exec_flag false
       val _ = echo 1 ".\n"
       in (n+1,(ys @ [(n,x,y)])) end
   val _ = echo 1 "\nDeriving theorems for individual instructions.\n"
@@ -383,7 +355,8 @@ fun inst_pc_var tools thms = let
   fun triple_apply f (y,(th1,x1:int,x2:int option),NONE) = (y,(f y th1,x1,x2),NONE)
     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
         (y,(f y th1,x1,x2),SOME (f y th2,y1,y2))
-  val i = [mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
+  val i = [mk_var("pc",``:word32``) |-> mk_var("p",``:word32``),
+           mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
            mk_var("rip",``:word64``) |-> mk_var("p",``:word64``)]
   val (_,_,_,pc) = tools
   val ty = (hd o snd o dest_type o type_of) pc
@@ -450,7 +423,7 @@ fun abbreviate_code name thms = let
   in thms end
 
 fun stage_1 name tools qcode = let
-  val code = filter (fn x => not (x = "")) (quote_to_strings qcode)
+  val code = filter (fn x => not (x = "")) (helperLib.quote_to_strings qcode)
   val thms = derive_individual_specs tools code
   val thms = inst_pc_var tools thms
   val thms = abbreviate_code name thms
@@ -822,6 +795,11 @@ fun prepare_sep_disj_posts th1 th2 = let
        in (th1,th2) end
      else (th1,th2) end;
 
+val merge_mem = ref (T,TRUTH,TRUTH);
+(*
+val (guard,th1,th2) = (!merge_mem);
+*)
+
 fun MERGE guard th1 th2 = let
   (* fill in preconditions *)
   val th1 = remove_primes th1
@@ -855,8 +833,8 @@ fun MERGE guard th1 th2 = let
   val ys2 = map dest_sep_hide (filter (can dest_sep_hide) xs2)
   val zs1 = (filter (not o can dest_sep_hide) xs1)
   val zs2 = (filter (not o can dest_sep_hide) xs2)
-  val qs1 = filter (fn x => mem (car x) ys1) zs2
-  val qs2 = filter (fn x => mem (car x) ys2) zs1
+  val qs1 = filter (fn x => mem (car x) ys1 handle HOL_ERR _ => false) zs2
+  val qs2 = filter (fn x => mem (car x) ys2 handle HOL_ERR _ => false) zs1
   val th1 = foldr (uncurry UNHIDE_PRE_RULE) th1 qs1
   val th2 = foldr (uncurry UNHIDE_PRE_RULE) th2 qs2
   (* hide relevant postconditions *)
@@ -868,8 +846,9 @@ fun MERGE guard th1 th2 = let
   val xs2 = filter (fn x => not (p = get_sep_domain x)) (list_dest dest_star (fst_sep_disj q2))
   val ys1 = map dest_sep_hide (filter (can dest_sep_hide) xs1)
   val ys2 = map dest_sep_hide (filter (can dest_sep_hide) xs2)
-  val zs1 = map car (filter (not o can dest_sep_hide) xs1)
-  val zs2 = map car (filter (not o can dest_sep_hide) xs2)
+  fun safe_car tm = car tm handle HOL_ERR _ => tm
+  val zs1 = map safe_car (filter (not o can dest_sep_hide) xs1)
+  val zs2 = map safe_car (filter (not o can dest_sep_hide) xs2)
   val qs1 = filter (fn x => mem x ys1) zs2
   val qs2 = filter (fn x => mem x ys2) zs1
   val th1 = foldr (uncurry HIDE_POST_RULE) th1 qs2
@@ -887,7 +866,14 @@ fun MERGE guard th1 th2 = let
   val th = MATCH_MP th (g (mk_neg guard) th2)
   val th = UNDISCH (RW [UNION_IDEMPOT] th)
   val th = remove_primes th
-  in th end;
+  in th end handle HOL_ERR e => let
+    val _ = (merge_mem := (guard,th1,th2))
+    val th1 = DISCH_ALL th1
+    val th2 = DISCH_ALL th2
+    val _ = print ("\n\nval guard = ``"^ term_to_string guard ^"``;\n\n")
+    val _ = print ("\n\nval th1 = mk_thm([],``"^ term_to_string (concl th1) ^"``);\n\n")
+    val _ = print ("\n\nval th2 = mk_thm([],``"^ term_to_string (concl th2) ^"``);\n\n")
+    in raise HOL_ERR e end;
 
 fun merge_spectree_thm (LEAF (th,i)) = let
       val th = SIMP_RULE (bool_ss++sep_cond_ss) [SEP_EXISTS_COND] th
@@ -1644,7 +1630,7 @@ fun extract_function name th entry exit function_in_out = let
     val goal = mk_eq((fst o dest_imp o concl o
       ISPEC (pairSyntax.mk_fst(mk_comb(step_fun,x_in)))) sumTheory.INL,F)
     val simp_lemma = auto_prove "simp_lemma" (goal,SIMP_TAC std_ss []
-      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr o cdr))
+      THEN REPEAT (AUTO_DECONSTRUCT_TAC (cdr o cdr))
       THEN SIMP_TAC std_ss [])
     val simp_lemma = Q.SPEC `x` (GEN_TUPLE x_in simp_lemma)
     val simp_lemma = PURE_REWRITE_RULE [GSYM step_def] simp_lemma
@@ -1674,12 +1660,13 @@ fun extract_function name th entry exit function_in_out = let
                                  POST_CONV (fix_star xin))) lemma2
   val l1 = GEN_TUPLE x_in (GEN_TUPLE new_output l1)
   val l2 = GEN_TUPLE x_in (GEN_TUPLE new_input l2) handle HOL_ERR _ => l2
-  val goal = (snd o dest_imp o concl) thi
+  val goal = (fst o dest_imp o concl) thi
   val th = auto_prove "decompiler certificate" (goal,
-    MATCH_MP_TAC thi THEN STRIP_TAC
+    STRIP_TAC
     THEN1 (ONCE_REWRITE_TAC [simp_lemma] THEN REWRITE_TAC [] THEN
-           REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN ASM_SIMP_TAC std_ss [])
-    THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN ASM_SIMP_TAC std_ss []))
+           REPEAT STRIP_TAC THEN MATCH_MP_TAC l2 THEN FULL_SIMP_TAC std_ss [])
+    THEN1 (REPEAT STRIP_TAC THEN MATCH_MP_TAC l1 THEN FULL_SIMP_TAC std_ss []))
+  val th = MP thi th
   val th = SPEC x_in th
   val th = RW [GSYM SPEC_MOVE_COND] th
   val th = introduce_post_let th
@@ -1746,10 +1733,6 @@ fun decompile tools name qcode = decompile_io tools name NONE qcode;
 fun decompile_io_strings tools name fio strs = decompile_io tools name fio (strings_to_qcode strs);
 fun decompile_strings tools name strs = decompile tools name (strings_to_qcode strs);
 
-val decompile_arm = decompile arm_tools
-val decompile_ppc = decompile ppc_tools
-val decompile_x86 = decompile x86_tools
-
 fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term quotation) = let
   val _ = set_tools tools
   val (thms,loops) = stage_12 name tools qcode
@@ -1761,9 +1744,5 @@ fun basic_decompile (tools :decompiler_tools) name function_in_out (qcode :term 
   in (result,CONJ def pre) end;
 
 fun basic_decompile_strings tools name fio strs = basic_decompile tools name fio (strings_to_qcode strs);
-
-val basic_decompile_arm = basic_decompile arm_tools
-val basic_decompile_ppc = basic_decompile ppc_tools
-val basic_decompile_x86 = basic_decompile x86_tools
 
 end;

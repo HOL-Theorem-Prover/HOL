@@ -1,2 +1,4 @@
 OPTIONS = NO_OVERLAY
 
+selftest.exe: selftest.uo Redblackset.uo
+	$(MOSMLC) -o $@ $<

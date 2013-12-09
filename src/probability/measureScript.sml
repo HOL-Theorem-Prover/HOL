@@ -1844,7 +1844,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF],
     Know
     `s INTER BIGUNION (IMAGE f UNIV) =
-     BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
+     BIGUNION (IMAGE (\m. case m of 0 => {} | SUC n => s INTER f n) UNIV)`
     >> (KILL_TAC
         ++ RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, GSPECIFICATION, IN_IMAGE, IN_UNIV,
 	   	  	  IN_INTER]
@@ -1854,10 +1854,10 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
          ++ Q.EXISTS_TAC `SUC x'`
          ++ RW_TAC arith_ss [IN_INTER, num_case_def],
          POP_ASSUM (MP_TAC)
-         ++ Cases_on `x'` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
+         ++ Cases_on `m` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
          ++ RW_TAC arith_ss [num_case_def, IN_INTER],
          POP_ASSUM (MP_TAC)
-         ++ Cases_on `x'` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
+         ++ Cases_on `m` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
          ++ RW_TAC arith_ss [num_case_def, IN_INTER]
          ++ Q.EXISTS_TAC `f n`
          ++ RW_TAC std_ss []
@@ -1866,7 +1866,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (REVERSE (Cases_on `m`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -1957,7 +1957,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
         ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, SUBSET_DEF])
     ++ Know
          `s INTER BIGUNION (IMAGE f UNIV) =
-          BIGUNION (IMAGE (num_case {} (\n. s INTER f n)) UNIV)`
+          BIGUNION (IMAGE (\m. case m of 0 => {} | SUC n => s INTER f n) UNIV)`
     >> (KILL_TAC
         ++ RW_TAC std_ss [Once EXTENSION, IN_BIGUNION, GSPECIFICATION, IN_IMAGE, IN_UNIV,
 	   	  	  IN_INTER]
@@ -1967,10 +1967,10 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
          ++ Q.EXISTS_TAC `SUC x'`
          ++ RW_TAC arith_ss [IN_INTER, num_case_def],
          POP_ASSUM (MP_TAC)
-         ++ Cases_on `x'` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
+         ++ Cases_on `m` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
          ++ RW_TAC arith_ss [num_case_def, IN_INTER],
          POP_ASSUM (MP_TAC)
-         ++ Cases_on `x'` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
+         ++ Cases_on `m` >> RW_TAC arith_ss [num_case_def, NOT_IN_EMPTY]
          ++ RW_TAC arith_ss [num_case_def, IN_INTER]
          ++ Q.EXISTS_TAC `f n`
          ++ RW_TAC std_ss []
@@ -1979,7 +1979,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
     ++ MATCH_MP_TAC CLOSED_CDI_INCREASING
     ++ Q.PAT_ASSUM `f IN X` MP_TAC
     ++ RW_TAC std_ss [SMALLEST_CLOSED_CDI, IN_FUNSET, IN_UNIV, GSPECIFICATION]
-    >> (REVERSE (Cases_on `x`) >> RW_TAC arith_ss []
+    >> (REVERSE (Cases_on `m`) >> RW_TAC arith_ss []
         ++ RW_TAC arith_ss []
         ++ PROVE_TAC [SMALLEST_CLOSED_CDI, ALGEBRA_EMPTY, SUBSET_DEF])
     ++ Cases_on `n` >> RW_TAC arith_ss [num_case_def, EMPTY_SUBSET]
@@ -2229,7 +2229,7 @@ val MONOTONE_CONVERGENCE = store_thm
    RW_TAC std_ss [measure_space_def, IN_FUNSET, IN_UNIV]
    ++ (MP_TAC o
        INST_TYPE [beta |-> ``:num``] o
-       Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `num_case {} f`])
+       Q.SPECL [`m`, `BIGUNION (IMAGE f UNIV)`, `\x. num_CASE x {} f`])
       MEASURE_COUNTABLE_INCREASING
    ++ Cond
    >> (RW_TAC std_ss [IN_FUNSET, IN_UNIV, num_case_def, measure_space_def] <<
@@ -2251,7 +2251,7 @@ val MONOTONE_CONVERGENCE = store_thm
          ++ RW_TAC std_ss [num_case_def]
          ++ PROVE_TAC []]])
    ++ RW_TAC std_ss []
-   ++ Know `measure m o f = (\n. (measure m o (num_case {} f)) (SUC n))`
+   ++ Know `measure m o f = (\n. (measure m o (\x. num_CASE x {} f)) (SUC n))`
    >> (RW_TAC std_ss [FUN_EQ_THM]
        ++ RW_TAC std_ss [num_case_def, o_THM])
    ++ Rewr

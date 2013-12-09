@@ -28,5 +28,7 @@ Code should not depend on how elements are arranged in the
 result of {all_varsl}.
 
 \SEEALSO
-Term.FVL, Term.free_vars_lr, Term.free_vars, Term.free_varsl, Term.empty_varset, Type.type_vars.
+Term.all_atoms, Term.all_vars, Term.empty_varset, Term.free_vars_lr,
+Term.free_vars, Term.free_varsl, Term.FVL, Type.type_vars.
+
 \ENDDOC

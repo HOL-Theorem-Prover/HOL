@@ -145,7 +145,7 @@ end
 
 val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = tprint "Testing parsing of case expressions with function type"
-val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
+val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
           NONE => die "FAILED"
         | SOME _ => print "OK\n"
 
@@ -154,9 +154,10 @@ val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
                         `case T of | T => F | F => T`)
     handle HOL_ERR _ => NONE
 val _ = case t_opt of
-          SOME t => if Lib.can (find_term (same_const ``bool_case``)) t then
-                      print "OK\n"
-                    else die "FAILED"
+          SOME t =>
+            if Lib.can (find_term (same_const boolSyntax.bool_case)) t then
+              print "OK\n"
+            else die "FAILED"
         | NONE => die "FAILED"
 
 val _ = tprint "Testing parsing of _ variables (1)"
@@ -266,35 +267,28 @@ val _ = print "OK\n"
 
 
 (* pretty-printing tests - turn Unicode off *)
-val _ = set_trace "Unicode" 0
-val _ = Parse.current_backend := PPBackEnd.raw_terminal
-fun tppw width s = let
-  val t = Parse.Term [QUOTE s]
-  val pfxsize = size "Testing printing of `` ..."
-  fun trunc s = if size s + pfxsize > 62 then let
-                    val s' = String.substring(s,0,58 - pfxsize)
-                  in
-                    s' ^ " ..."
-                  end
-                else s
-  fun pretty s = s |> String.translate (fn #"\n" => "\\n" | c => str c)
-                   |> trunc
-  val _ = tprint ("Testing printing of `"^pretty s^"`")
-  val res = Portable.pp_to_string width Parse.pp_term t
-in
-  if res = s then print "OK\n"
-  else (print "FAILED!\n"; Process.exit Process.failure)
-end
-val tpp = tppw 80
+val tpp = let open testutils
+             in
+               unicode_off (raw_backend testutils.tpp)
+             end
 
+fun typp s = let
+  open testutils
+  val ty = Parse.Type [QUOTE s]
+  val _ = tprint ("Testing p/printing of "^s)
+  val res = unicode_off (raw_backend type_to_string) ty
+in
+  if s <> res then die "FAILED!\n" else print "OK\n"
+end
+
+val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
+                  ":'a -> 'b -> 'c",
+                  ":(bool -> bool) -> 'a"]
 
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
                  "f ($/\\ p)",
                  "(((p /\\ q) /\\ r) /\\ s) /\\ t",
-                 "case e1 of T => (case e2 of T => F | F => T) | F => T",
-                 "case e1 of T => F | F => case e2 of T => F | F => T",
-                 "(case x of T => (\\x. x) | F => $~) y",
                  "!x. P (x /\\ y)",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
@@ -302,14 +296,14 @@ val _ = app tpp ["let x = T in x /\\ y",
                  "(:'a)"]
 
 val _ = tpp "x = y"
-val _ = tppw 10 "xxxxxx =\nyyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"
 
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 100),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
-val _ = tppw 10 "xxxxxx =\n  yyyyyy"
+val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
@@ -356,6 +350,37 @@ val _ = app tpp [
            bound "f", " ", fx, " /\\ ", fy])
 ]
 
+open testutils
+val test = tpp_expected
+             |> Lib.with_flag (linewidth,!Globals.linewidth)
+             |> unicode_off
+             |> raw_backend
+val _ = app test [
+      {input = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb\n\
+               \then p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
+               \else if (e1 = e2) /\\ k1 <> k2\n\
+               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \then T else F",
+       testf = K ("Large COND 1"),
+       output = "if oless e1 e2 /\\ oless x y /\\ foobabbbbbbb then\n\
+                \  p /\\ q /\\ r /\\ ppppp xxxx yyyyy\n\
+                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
+                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else F"},
+      {input = "if oless e1 e2 /\\ oless x y /\\ foobabb\n\
+               \then p /\\ q /\\ r /\\ ppppp xxxx\n\
+               \else if (e1 = e2) /\\ k1 <> k2\n\
+               \then T else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2\n\
+               \then T else F",
+       testf = K ("Large COND 2"),
+       output = "if oless e1 e2 /\\ oless x y /\\ foobabb then\
+                \ p /\\ q /\\ r /\\ ppppp xxxx\n\
+                \else if (e1 = e2) /\\ k1 <> k2 then T\n\
+                \else if (e1 = e2) /\\ (k1 = k2) /\\ oless t1 t2 then T\n\
+                \else F"}
+]
+
+
 (* test DiskThms *)
 val _ = let
   val _ = tprint "Testing DiskThms"
@@ -375,6 +400,14 @@ in
   die "FAILED"
 end
 
+val _ = let
+  val _ = tprint "REWRITE with T (if this appears to hang it has failed)"
+  val t = mk_disj(mk_var("p", bool),T)
+  val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
+in
+  if null sgs andalso aconv (concl (vfn [])) t then print "OK\n"
+  else die "FAILED"
+end
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

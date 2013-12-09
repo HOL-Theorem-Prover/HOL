@@ -29,7 +29,7 @@ infix >> >- >|
 
 infixr ##;
 infixr 3 -->;
-infix 8 via by;
+infix 8 via by suffices_by
 
 structure Process = OS.Process
 structure FileSys = OS.FileSys

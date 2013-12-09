@@ -1587,19 +1587,15 @@ val development0_coinduction = store_thm(
                             P p (residual1 x r (first p) ps))) ==>
        !sigma ps. P sigma ps ==> development0 sigma ps``,
   GEN_TAC THEN STRIP_TAC THEN
-  Q.SPEC_THEN `\p. P (FST p) (SND p) : bool`
+  Q.SPEC_THEN `{ p | P (FST p) (SND p) }`
               (ASSUME_TAC o SIMP_RULE (srw_ss()) [SUBSET_DEF,
                                                   pairTheory.FORALL_PROD])
               (MATCH_MP fixedPointTheory.gfp_coinduction
                         development_f_monotone) THEN
   SIMP_TAC (srw_ss()) [development0_def] THEN
-  Q_TAC SUFF_TAC `!sigma ps. (sigma, ps) IN (\x. P (FST x) (SND x)) ==>
-                             (sigma, ps) IN gfp development_f` THEN1
-    SRW_TAC [][IN_DEF] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   SIMP_TAC (srw_ss()) [development_f_def] THEN
-  FULL_SIMP_TAC (srw_ss()) [IN_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC THEN
-  SRW_TAC [][]);
+  REPEAT STRIP_TAC THEN RES_TAC THEN SRW_TAC [][]);
 
 val development0_cases = save_thm(
   "development0_cases",

@@ -57,7 +57,7 @@ val SHD_STL_ISO = store_thm
   ("SHD_STL_ISO",
    ``!h t. ?x. (shd x = h) /\ (stl x = t)``,
    REPEAT STRIP_TAC
-   ++ Q.EXISTS_TAC `num_case h t`
+   ++ Q.EXISTS_TAC `\x. num_CASE x h t`
    ++ RW_TAC arith_ss [shd_def]
    ++ MATCH_MP_TAC EQ_EXT
    ++ Cases >> RW_TAC std_ss [stl_def]

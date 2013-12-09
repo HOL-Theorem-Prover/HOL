@@ -20,7 +20,7 @@
 structure Sol_ranges :> Sol_ranges =
 struct
   open Arbint
-  val << = String.<
+  val op << = String.<
 
 
 open Rationals;

@@ -47,7 +47,6 @@ val sumc_ADD = store_thm(
                sumc (MAP2 0 $+ cs ds) vs``,
   HO_MATCH_MP_TAC sumc_ind THEN REPEAT STRIP_TAC THENL [
     SIMP_TAC bool_ss [sumc_thm, MAP2_def, INT_ADD_LID],
-    SIMP_TAC bool_ss [sumc_thm, MAP2_def, INT_ADD_LID],
     SIMP_TAC bool_ss [sumc_thm, MAP2_def, INT_ADD_LID,
                       MAP2_zero_ADD],
     Cases_on `ds` THEN

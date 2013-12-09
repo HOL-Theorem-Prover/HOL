@@ -519,5 +519,25 @@ in
    end_style      = end_style}
 end
 
+val debug_blocks_terminal : t = let
+  fun sty_to_string (PP.CONSISTENT, n) = "C" ^ Int.toString n
+    | sty_to_string (PP.INCONSISTENT, n) = "I" ^ Int.toString n
+in
+  {name = "debug_blocks",
+   add_break      = PP.add_break,
+   add_string     = PP.add_string,
+   add_xstring    = (fn pps => fn {s,sz,...} => add_ssz pps (s,sz)),
+   add_newline    = PP.add_newline,
+   begin_block    = (fn pps => fn sty => fn i =>
+                        (PP.add_stringsz
+                           pps
+                           (sty_to_string (sty,i) ^ "[", 0);
+                         PP.begin_block pps sty i)),
+   end_block      = (fn pps => (PP.add_stringsz pps ("]", 0);
+                                PP.end_block pps)),
+   begin_style    = fn pps => fn sty => (),
+   end_style      = fn pps => ()}
+end
+
 
 end (* struct *)

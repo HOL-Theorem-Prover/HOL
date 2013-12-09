@@ -129,6 +129,15 @@ val K_o_THM = store_thm("K_o_THM",
   --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
+val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",
+   `(!a x f. (a =+ x) f a = x) /\
+    (!a b x f. a <> b ==> ((a =+ x) f b = f b))`,
+   REWRITE_TAC [UPDATE_def]
+   THEN BETA_TAC
+   THEN REWRITE_TAC []
+   THEN REPEAT STRIP_TAC
+   THEN ASM_REWRITE_TAC [])
+
 val APPLY_UPDATE_THM = Q.store_thm("APPLY_UPDATE_THM",
   `!f a b c. (a =+ b) f c = (if a = c then b else f c)`,
   PURE_REWRITE_TAC [UPDATE_def]

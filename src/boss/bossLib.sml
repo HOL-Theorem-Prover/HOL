@@ -86,7 +86,7 @@ val op && = simpLib.&&;
      simplification is quick.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory
+local open sumTheory pred_setTheory
       infix ++
 in
 val pure_ss = pureSimps.pure_ss
@@ -97,6 +97,7 @@ val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
+                        ++ rewrites [IN_INSERT, NOT_IN_EMPTY, IN_UNION]
 end
 
 val DECIDE = numLib.DECIDE;
@@ -128,6 +129,7 @@ val measureInduct_on  = numLib.measureInduct_on;
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
+val op suffices_by    = BasicProvers.suffices_by
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
