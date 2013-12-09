@@ -632,7 +632,8 @@ in
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
 					 "minisat.exe"])
-                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers",
+                                         "minisat", "DELTHISminisat.exe"])
 	 | other => if not (Gnumake dir) then
 			print(String.concat
 				  ["\nMiniSat has NOT been built!! ",
