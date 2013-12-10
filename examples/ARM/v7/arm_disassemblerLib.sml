@@ -620,12 +620,15 @@ in
            else
              commy [register d, register n, rotation (m,rot)])
    | ("Bit_Field_Clear_Insert", [msb,d,lsb,n]) =>
-        let val width = ``^msb - ^lsb + 1w`` |> eval in
+        let
+           val width = constant (``^msb - ^lsb + 1w`` |> eval)
+           val width = if width = "#0" then "#32" else width
+        in
           if is_PC n then
-            f "bfc" (commy [register d, constant lsb, constant width])
+            f "bfc" (commy [register d, constant lsb, width])
           else
             f "bfi"
-              (commy [register d, register n, constant lsb, constant width])
+              (commy [register d, register n, constant lsb, width])
         end
    | ("Count_Leading_Zeroes", [d,m]) =>
         f "clz" (rcommy [d,m])
