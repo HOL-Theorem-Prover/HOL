@@ -572,15 +572,23 @@ in
    | ("Multiply_Accumulate_Accumulate", [dhi,dlo,m,n]) =>
         f "umaal" (rcommy [dlo,dhi,n,m])
    | ("Saturate", [u,sat,d,imm5,sh,n]) =>
-        f (if is_T u then "usat" else "ssat")
-          (commy [register d,
-            constant (``if ^u then ^sat else ^sat + 1w`` |> eval),
-            disassemble_imm_shift (imm5,mk_word2 (if is_T sh then 2 else 0),n)])
+        let
+           val imm = constant (``if ^u then ^sat else ^sat + 1w`` |> eval)
+           val imm = if is_T u then imm else if imm = "#0" then "#32" else imm
+        in
+           f (if is_T u then "usat" else "ssat")
+             (commy [register d, imm,
+               disassemble_imm_shift
+                  (imm5,mk_word2 (if is_T sh then 2 else 0),n)])
+        end
    | ("Saturate_16", [u,imm4,d,n]) =>
-        f (if is_T u then "usat16" else "ssat16")
-          (commy [register d,
-                  constant (``if ^u then ^imm4 else ^imm4 + 1w`` |> eval),
-                  register n])
+        let
+           val imm = constant (``if ^u then ^imm4 else ^imm4 + 1w`` |> eval)
+           val imm = if is_T u then imm else if imm = "#0" then "#16" else imm
+        in
+           f (if is_T u then "usat16" else "ssat16")
+             (commy [register d, imm, register n])
+        end
    | ("Saturating_Add_Subtract", [opc,n,d,m]) =>
         f (case uint_of_word opc
            of 0 => "qadd" | 1 => "qsub" | 2 => "qdadd" | 3 => "qdsub"
