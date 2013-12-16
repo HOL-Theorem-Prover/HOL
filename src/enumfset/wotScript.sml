@@ -44,12 +44,6 @@ CONV_TAC (DEPTH_CONV NOT_FORALL_CONV) THEN
 REWRITE_TAC [DE_MORGAN_THM] THEN REPEAT STRIP_TAC THEN
 EXISTS_TAC ``x:'a`` THEN AR THEN RES_TAC);
 
-(* missing from relationTheory ( also the corresp. thm. for RC ): *)
-
-val STRORD_trich = prove (
-``!R:'a reln. trichotomous R <=> trichotomous (STRORD R)``,
-SRW_TAC [] [STRORD, trichotomous] THEN METIS_TAC []);
-
 (* A general set lemma, dual-ish to BIGUNION_SUBSET but only an ==> : *)
 
 val SUBSET_BIGUNION = prove (
@@ -218,7 +212,7 @@ REPEAT STRIP_TAC THEN REWRITE_TAC [comparable_def] THEN GEN_TAC THEN
 IMP_RES_TAC (GSYM U_conclusion) THEN AR THEN
 REWRITE_TAC [U_def] THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
 REWRITE_TAC [cpl_def] THEN STRIP_TAC THEN AR THEN
-DISJ2_TAC THEN MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC ``C:'x set`` THEN 
+DISJ2_TAC THEN MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC ``C:'x set`` THEN
 ASM_REWRITE_TAC [setsuc_incr]);
 
 (* "Since the union of a chain of comparable sets is comparable... ." *)
@@ -325,7 +319,7 @@ SUBGOAL_THEN ``lub_sub B PSUBSET (x:'x set)`` ASSUME_TAC THENL
 ,AR THEN
  IMP_RES_TAC (REWRITE_RULE [SUBSET_DEF] (ASSUME ``B:'x set set SUBSET t0``))
  THEN IMP_RES_TAC lub_sub_in_t0 THEN
- MATCH_MP_TAC (MATCH_MP psub_setsuc 
+ MATCH_MP_TAC (MATCH_MP psub_setsuc
                (CONJ (ASSUME ``lub_sub (B:'x set set) IN t0``)
                      (ASSUME ``x:'x set IN t0``))) THEN AR
 ]);
@@ -461,7 +455,7 @@ val mex_less_def = Define`$mex_less:'x reln = STRORD $mex_less_eq`;
 
 val TotOrdTheorem_ALT = prove (``StrongLinearOrder ($mex_less:'x reln)``,
 REWRITE_TAC [mex_less_def, StrongLinearOrder, GSYM STRORD_Strong,
-             GSYM STRORD_trich] THEN
+             trichotomous_STRORD] THEN
 CONJ_TAC THENL [MATCH_MP_TAC WeakOrd_Ord, ALL_TAC] THEN
 REWRITE_TAC [REWRITE_RULE [WeakLinearOrder] TotOrdTheorem]);
 
@@ -531,7 +525,7 @@ IMP_RES_TAC (REWRITE_RULE [SPECIFICATION, GSYM MEMBER_NOT_EMPTY]
 IMP_RES_TAC weakwell_weaklinear THEN IMP_RES_TAC WeakLinearOrder THEN
 IMP_RES_TAC WeakOrd_Ord THEN IMP_RES_TAC Order THEN
 REWRITE_TAC [StrongWellOrder, StrongLinearOrder] THEN
-ASM_REWRITE_TAC [GSYM STRORD_trich, GSYM STRORD_Strong, WF_DEF] THEN
+ASM_REWRITE_TAC [trichotomous_STRORD, GSYM STRORD_Strong, WF_DEF] THEN
 REPEAT STRIP_TAC THEN RES_TAC THEN
 EXISTS_TAC ``m:'a`` THEN ASM_REWRITE_TAC [STRORD] THEN
 GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC [] THEN

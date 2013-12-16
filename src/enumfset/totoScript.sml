@@ -103,7 +103,7 @@ METIS_TAC [cpn_distinct]);
 val SPLIT_PAIRS = maybe_thm ("SPLIT_PAIRS",
  Term`!x y:'a#'b. (x = y) <=> (FST x = FST y) /\ (SND x = SND y)`,
 REPEAT GEN_TAC THEN
-CONV_TAC (LAND_CONV (BINOP_CONV (REWR_CONV (GSYM PAIR)))) THEN 
+CONV_TAC (LAND_CONV (BINOP_CONV (REWR_CONV (GSYM PAIR)))) THEN
 REWRITE_TAC [PAIR_EQ]);
 
 (* cpn_nchotomy = |- !a. (a = LESS) \/ (a = EQUAL) \/ (a = GREATER) *)
@@ -279,7 +279,7 @@ val toto_trans_less = save_thm ("toto_trans_less",
                 (CONJ totoGLtrans (CONJ totoLEtrans totoELtrans)))));
 
 val WeakLinearOrder_of_TO =
- Define`WeakLinearOrder_of_TO (c:'a comp) x y = 
+ Define`WeakLinearOrder_of_TO (c:'a comp) x y =
         case c x y of LESS => T | EQUAL => T | GREATER => F`;
 
 val StrongLinearOrder_of_TO =
@@ -316,15 +316,9 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
  IMP_RES_TAC toto_equal_sym THEN ASM_REWRITE_TAC [cpn_case_def]
 ]);
 
-(* repeated from wotTheory (should be in relationTheory): *)
-
-val STRORD_trich = prove (
-``!R:'a reln. trichotomous R <=> trichotomous (STRORD R)``,
-SRW_TAC [] [STRORD, trichotomous] THEN METIS_TAC []);
-
 val STRORD_SLO = maybe_thm ("STRORD_SLO", Term`!R:'a reln.
                       WeakLinearOrder R ==> StrongLinearOrder (STRORD R)`,
-RW_TAC bool_ss [WeakLinearOrder, StrongLinearOrder, GSYM STRORD_trich] THEN
+RW_TAC bool_ss [WeakLinearOrder, StrongLinearOrder, trichotomous_STRORD] THEN
 METIS_TAC [WeakOrd_Ord, STRORD_Strong]);
 
 val Strongof_toto_STRORD = maybe_thm ("Strongof_toto_STRORD", Term`!c:'a toto.
@@ -469,7 +463,7 @@ val TO_of_less_rel = maybe_thm ("TO_of_less_rel", Term
  !x y. ((TO_of_LinearOrder r x y = LESS) <=> r x y)`,
 REWRITE_TAC
  [StrongLinearOrder, StrongOrder, irreflexive_def, TO_of_LinearOrder] THEN
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 Cases_on `x=y` THEN ASM_REWRITE_TAC [all_cpn_distinct] THEN
 Cases_on `r x y` THEN ASM_REWRITE_TAC [all_cpn_distinct]);
 
@@ -632,7 +626,7 @@ SRW_TAC [] [StrongLinearOrder, StrongOrder_ALT,
 trichotomous, Order, irreflexive_def, transitive_def] THENL
 [IMP_RES_TAC LESS_TRANS
 ,STRIP_ASSUME_TAC (Q.SPECL [`a`, `b`] LESS_LESS_CASES) THEN AR]);
-(* ****** 
+(* ******
 val StrongWellOrder_LESS = maybe_thm ("StrongWellOrder_LESS",
  Term`StrongWellOrder ($< :num reln)`,
 REWRITE_TAC [StrongWellOrder, prim_recTheory.WF_LESS, StrongLinearOrder,
@@ -695,7 +689,7 @@ val num_to_dt_defn = Hol_defn "num_to_dt"
 `num_to_dt n = if n = 0 then zer
                else if ODD n then bit1 (num_to_dt (DIV2 (n - 1)))
                else bit2 (num_to_dt (DIV2 (n - 2)))`;
-                    
+
 val half_lem = prove (Term`!m. m DIV 2 <= m`,
 GEN_TAC THEN SIMP_TAC arith_ss [DIV_LESS_EQ]);
 
@@ -925,7 +919,7 @@ REPEAT CONJ_TAC THENL
 val ListOrd = Define`ListOrd (c:'a toto) =
          TO_of_LinearOrder (listorder (StrongLinearOrder_of_TO (apto c)))`;
 
-val TO_ListOrd = maybe_thm ("TO_ListOrd", 
+val TO_ListOrd = maybe_thm ("TO_ListOrd",
                          Term`!c:'a toto. TotOrd (ListOrd c)`,
 GEN_TAC THEN REWRITE_TAC [ListOrd] THEN
 ASSUME_TAC (ISPEC (Term`c:'a toto`) TotOrd_apto) THEN
@@ -942,7 +936,7 @@ Term`(!c:'a toto. (ListOrd c ([]:'a list) [] = EQUAL) /\
                            EQUAL => ListOrd c  x y |
                            GREATER => GREATER))`,
 GEN_TAC THEN ASSUME_TAC (SPEC_ALL TotOrd_apto) THEN
-REWRITE_TAC [ListOrd, TO_of_LinearOrder, list_distinct, 
+REWRITE_TAC [ListOrd, TO_of_LinearOrder, list_distinct,
              GSYM list_distinct, list_11] THEN
 IMP_RES_TAC Strong_Strong_of_TO THEN
 REWRITE_TAC [listorder, StrongLinearOrder_of_TO] THEN
@@ -989,7 +983,7 @@ AR THEN RES_TAC THEN EQ_TAC THEN DISCH_TAC THEN RES_TAC THEN AR);
 
 (* **************************************************************** *)
 (* The following treatment of total order on type one is completely *)
-(* silly, but might be prudent to have. SUPPRESSED FOR NOW.         *) 
+(* silly, but might be prudent to have. SUPPRESSED FOR NOW.         *)
 (* **************************************************************** *)
 (* ************************
 val oneOrd = Define`oneOrd (x:one) (y:one) = EQUAL`;
