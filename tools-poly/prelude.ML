@@ -71,6 +71,14 @@ end
  * Set up the help paths.                                                    *
  *---------------------------------------------------------------------------*)
 
+val _ = let
+fun huse s = use (Path.concat(HOLDIR, s));
+in
+huse "help/src-sml/Database.sig";
+huse "help/src-sml/Database.sml";
+huse "tools-poly/poly/Help.sig";
+huse "tools-poly/poly/Help.sml"
+end;
 local
   open Path
   fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
