@@ -219,7 +219,7 @@ generalization, and so on, support the familiar patterns of inference.
 
 A number of derived inference rules are pre-defined when the \HOL\
 system is entered (of which \ml{UNDISCH} is one of the first).  In
-Section~\ref{avra_standard}, the abstract derivations are given for
+Section~\ref{sec:standard-rule-derivation}, the abstract derivations are given for
 the pre-defined rules that reflect the more usual inference patterns
 of the predicate (and lambda) calculi.  Like those shown, some of the
 pre-defined derived rules in \HOL\ generate relatively short proofs.
@@ -231,7 +231,7 @@ All of the pre-defined derived rules in \HOL\ are described
 in \REFERENCE.
 
 \section{Rewriting}
-\label{avra_rewrite}
+\label{sec:rewriting}
 
 \index{rewriting!rules for|(}
 \index{REWRITE_RULE@\ml{REWRITE\_RULE}|(}
@@ -260,8 +260,8 @@ instantiation\index{type instantiation, in HOL logic@type instantiation, in \HOL
  of \ml{REWRITE\_RULE} rests
 ultimately on the primitive rules \ml{SUBST} (for making the substitutions);
 \ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}} (for instantiating types); and the derived rules for
-generalization and specialization (see Sections~\ref{avra_gen}
-and \ref{avra_spec}) for instantiating terms.  The definition
+generalization and specialization (see Sections~\ref{sec:gen}
+and \ref{sec:spec}) for instantiating terms.  The definition
 of \ml{REWRITE\_RULE} in \ML\
 also relies on a large number of general and \HOL-oriented
 \ML\ functions.
@@ -336,7 +336,7 @@ and do so whilst still generating the entire chain of inferences.
 \index{rewriting!rules for|)}
 
 \section{Derivation of the Standard Rules}
-\label{avra_standard}
+\label{sec:standard-rule-derivation}
 
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!pre-defined|(}
 %
@@ -357,7 +357,7 @@ Theorems,%
 in accordance with the definition given at the beginning of this
 chapter, are treated as rules without hypotheses; thus the derivation
 of a theorem resembles the derivation of a rule except in not having
-hypotheses. (The derivation of \ml{TRUTH}, Section~\ref{avra_T}, is
+hypotheses. (The derivation of \ml{TRUTH}, Section~\ref{sec:T}, is
 the only example given of this, but there are several others in \HOL.)
 There are also some rules that are intrinsically more general than
 theorems.  For example, for any two terms $t_1$ and $t_2$, the theorem
@@ -621,7 +621,7 @@ $$\Gamma\turn t_1=t_2\over \Gamma\turn t_1\ t = t_2\ t$$
 
 
 \subsection{Modus Ponens for equality}
-\label{avra_eq_mp}
+\label{sec:eqmp}
 
 \begin{holboxed}
 \index{EQ_MP@\ml{EQ\_MP}|pin}
@@ -677,7 +677,7 @@ $$\Gamma\turn t_1=t_2\over
 
 
 \subsection{\T-Introduction}
-\label{avra_T}
+\label{sec:T}
 
 \index{T@\holtxt{T}!rules of inference for|(}
 \begin{hol}
@@ -735,7 +735,7 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 \end{verbatim}
 \end{holboxed}
 
-\label{avra_spec}
+\label{sec:spec}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -815,7 +815,7 @@ $$\Gamma\turn t\over\Gamma\turn t=\T$$
 \end{verbatim}
 \end{holboxed}
 
-\label{avra_gen}
+\label{sec:gen}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1166,7 +1166,7 @@ t'[t_1,\ldots,t_n]$\hfill [\rul{BETA\_CONV} (n times)]
 
 
 \subsection{\texorpdfstring{$\wedge$-introduction}{Conjunction-introduction}}
-\label{avra_conj}
+\label{sec:conj}
 
 
 \begin{holboxed}

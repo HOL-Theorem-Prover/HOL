@@ -1893,7 +1893,7 @@ in two ways:
 The tactic \ml{SRW\_TAC} has a different type from the other
 simplification tactics.  It does not take a \simpset{} as an argument.
 Instead its operation always builds on the built-in \simpset{}
-\ml{srw\_ss()} (further described in Section~\ref{sec:srw_ss}).  The
+\ml{srw\_ss()} (further described in Section~\ref{sec:srw-ss}).  The
 theorems provided as \ml{SRW\_TAC}'s second argument are treated in
 the same way as by the other simplification tactics.  Finally, the
 list of \simpset{} fragments are merged into the underlying
@@ -2098,7 +2098,7 @@ efficient, but less general than the simplifier.  For example:
 \end{session}
 
 \subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
-\label{sec:srw_ss}
+\label{sec:srw-ss}
 \index{srw_ss (simplification set)@\ml{srw\_ss} (simplification set)}
 
 The last \simpset{} exported by \ml{bossLib} is hidden behind a
