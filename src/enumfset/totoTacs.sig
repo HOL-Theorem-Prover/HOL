@@ -24,4 +24,7 @@ val stringto_CONV: conv;
 val lextoto_CONV: conv -> conv -> conv;
 val listoto_CONV: conv -> conv;
 
+val numOrd_CONV : conv
+val num_pre_CONV : conv
+
 end;
