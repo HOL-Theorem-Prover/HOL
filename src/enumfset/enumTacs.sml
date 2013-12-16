@@ -23,8 +23,6 @@ fun ulist x = [x];
 
 val ERR = mk_HOL_ERR "enumTacs";
 
-val _ = intLib.deprecate_int ();
-
 (* ********************************************************************* *)
 (* The style of writing conversions here is modeled on that expounded    *)
 (* by Lawrence Paulson in "A higher-order implementation of rewriting".  *)
@@ -93,11 +91,11 @@ val [none_none, some_none, none_some, some_some] = CONJUNCTS smerge;
 
 fun smerge_CONV key_conv =
 let fun merge_c t =
-((REWR_CONV some_some THENC RAND_CONV key_conv THENC
+((REWR_CONV some_some THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV key_conv))) THENC
          cpn_REWR_CONV THENC RAND_CONV merge_c) ORELSEC
 REWR_CONV none_some ORELSEC REWR_CONV some_none ORELSEC REWR_CONV none_none) t
 in merge_c end;
-
 
 val [im_lengthen, im_zero, im_one]  = CONJUNCTS incr_smerge;
 
@@ -230,8 +228,6 @@ val bl_to_bt_CONV = RATOR_CONV (REWR_CONV bl_to_bt) THENC bl_rev_CONV;
 val list_to_bt_CONV = REWR_CONV list_to_bt THENC
                       RAND_CONV list_to_bl_CONV THENC bl_to_bt_CONV;
 
-(* list_to_bt_CONV (Term`list_to_bt [(1,()); (2,()); (3,()); (4,())]`); *)
-
 (* ******************************************************************* *)
 (* set_TO_ENUMERAL_CONV, DISPLAY_TO_set_CONV, DISPLAY_TO_ENUMERAL_CONV *)
 (* ******************************************************************* *)
@@ -283,10 +279,12 @@ fun DISPLAY_TO_ENUMERAL_CONV keyconv cmp =
    NOT_IN_nt = |- !cmp y. y IN ENUMERAL cmp nt <=> F *)
 
 fun IN_CONV key_conv =
-let fun apf_c t = ((REWR_CONV IN_node THENC RAND_CONV key_conv THENC
-                    cpn_REWR_CONV THENC (apf_c ORELSEC ALL_CONV)) ORELSEC
-                   REWR_CONV NOT_IN_nt) t
-                  handle _ => pred_setLib.IN_CONV key_conv t
+let fun apf_c t =
+    ((REWR_CONV IN_node THENC
+      RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV key_conv))) THENC
+      cpn_REWR_CONV THENC (apf_c ORELSEC ALL_CONV)) ORELSEC
+     REWR_CONV NOT_IN_nt) t
+    handle _ => pred_setLib.IN_CONV key_conv t
 in apf_c end;
 
 (* ******************************************************************* *)
@@ -526,7 +524,8 @@ val [inone_none, isome_none, inone_some, isome_some] = CONJUNCTS sinter;
 
 fun sinter_CONV key_conv =
 let fun inter_c t =
-((REWR_CONV isome_some THENC RAND_CONV key_conv THENC
+((REWR_CONV isome_some THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV key_conv))) THENC
          cpn_REWR_CONV THENC (RAND_CONV inter_c ORELSEC inter_c)) ORELSEC
 REWR_CONV inone_some ORELSEC REWR_CONV isome_none ORELSEC REWR_CONV inone_none)
 t in inter_c end;
@@ -565,7 +564,8 @@ val [dnone_none, dsome_none, dnone_some, dsome_some] = CONJUNCTS sdiff;
 
 fun sdiff_CONV key_conv =
 let fun diff_c t =
-((REWR_CONV dsome_some THENC RAND_CONV key_conv THENC
+((REWR_CONV dsome_some THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV key_conv))) THENC
          cpn_REWR_CONV THENC (RAND_CONV diff_c ORELSEC diff_c)) ORELSEC
 REWR_CONV dnone_some ORELSEC REWR_CONV dsome_none ORELSEC REWR_CONV dnone_none)
 t in diff_c end;
@@ -644,6 +644,8 @@ val mo5 = Term`smerge_out numto [5]
       [NONE; SOME [1; 3]; SOME [1; 2; 3; 4]]`;
 smerge_out_CONV numto_CONV mo5;
 
+incr_ssort_CONV numto_CONV ``incr_ssort numto [3; 1; 3; 4; 2; 1]``;
+
 val blco = Term`BL_CONS 5 (onebl 7 nt (zerbl (onebl 11
                    (node (node nt 8 nt) 9 (node nt 10 nt)) nbl)))`;
 BL_CONS_CONV blco;
@@ -660,6 +662,8 @@ val bltt = Term`bl_to_bt (onebl (1,()) nt
                (node (node nt (5,()) nt) (7,()) (node nt (9,()) nt))
                nbl)))`;
 bl_to_bt_CONV bltt;
+
+list_to_bt_CONV (Term`list_to_bt [(1,()); (2,()); (3,()); (4,())]`);
 
 DISPLAY_TO_set_CONV (Term`{5; 4; 6; 3; 3; 2}`);
 
@@ -678,13 +682,13 @@ val s50 = Term`{10;19;18;17;16;15;14;13;12;11;
        99;98;96;93;89;84;80;82;85;88;92;95;97;81;83;87;92;91;90;94}`;
 
 val t50 = DISPLAY_TO_ENUMERAL_CONV numto_CONV (Term`numto`) s50;
- (* 13270 infs. 0.064s *)
+ (* 14977 infs. 0.064s *)
 val qt50 = DISPLAY_TO_ENUMERAL_CONV qk_numto_CONV (Term`qk_numto`) s50;
- (* 12416 infs 0.064s *)
+ (* 13112 infs 0.064s *)
 val t100 = DISPLAY_TO_ENUMERAL_CONV numto_CONV (Term`numto`) s100;
- (* 27315 infs. 0.140s *)
+ (* 30873 infs. 0.140s *)
 val qt100 = DISPLAY_TO_ENUMERAL_CONV qk_numto_CONV (Term`qk_numto`) s100;
- (* 27774 infs 0.148s*)
+ (* 29400 infs 0.148s*)
 
 val apft = Term`5 IN ENUMERAL numto (node nt 5 nt)`;
 IN_CONV numto_CONV apft;

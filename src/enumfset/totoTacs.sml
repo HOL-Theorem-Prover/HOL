@@ -1,5 +1,6 @@
 (* File: totoTacs.sml. Author: F. Lockwood Morris. Begun 25 Oct. 2012.    *)
 (* Revised 23 Sept 2013 to include treatment of type int. *)
+(* Revised 12 Dec. 2013 to suit HOL-Kananaskis 9. *)
 
 (* Conversions for evaluating expressions of type cpn, that is three-way
    comparisons, typically of the form f x y, where f:t->t->cpn satisfies
@@ -10,20 +11,18 @@ structure totoTacs :> totoTacs =
 struct
 (*
 app load ["totoTheory", "pred_setLib", "bossLib",
-          "reduceLib", "relationTheory", "stringLib", "intLib"];
+          "reduceLib", "relationTheory", "stringLib"];
 *)
 open Parse HolKernel boolLib bossLib;
 
 val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib relationTheory
-     listTheory pairTheory optionTheory pred_setLib stringLib intLib;
+     listTheory pairTheory optionTheory pred_setLib stringLib;
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
 val ERR = mk_HOL_ERR "totoTacs";
-
-val _ = intLib.deprecate_int (); (* until we get to intto, or throughout *)
 
 (* At least for composing conversions, Hol's MATCH_MP is prone to yield
   generality that we don't want, by introducing variants of variables
@@ -122,16 +121,9 @@ fun numOrd_CONV t =
             Raise (ERR "numOrd_CONV" "not a numOrd test")
  end end;
 
-(* numOrd_CONV (Term`numOrd 57 54`); *)
-
 val numto_CONV = 
 RATOR_CONV (RATOR_CONV (REWR_CONV apnumto_thm)) THENC
                  numOrd_CONV;
-(*
-numto_CONV (Term`apto numto 6 6`);
-numto_CONV (Term`apto numto 6 7`);
-numto_CONV (Term`apto numto 8 7`);
-*)
 
 fun charOrd_CONV t =
  let val (Ca, Cb) = dest_binop (Term`charOrd`)
@@ -151,27 +143,8 @@ fun charOrd_CONV t =
     else Raise (ERR "charOrd_CONV" "not a good character comparison")
  end;
 
-(* charOrd_CONV (Term`charOrd (#"A") (#"B")`);
-   charOrd_CONV (Term`charOrd (#"A") (#"A")`);
-   charOrd_CONV (Term`charOrd (#"Z") (#"B")`);
-   charOrd_CONV (Term`charOrd (CHR 0) (CHR 0)`); *)
-
 val charto_CONV = RATOR_CONV (RATOR_CONV (REWR_CONV apcharto_thm)) THENC
                  charOrd_CONV;
-
-(* charto_CONV (Term`apto charto #"8" #"7"`); *)
-
-(* val testn = Count.apply (numto_CONV o Term);
-
-testn`apto numto 5 7`;
-testn`apto numto 0 0`; 
-
-   val testc = Count.apply (charOrd_CONV o Term);
-
-testc`charOrd #"A" #"B"`;
-testc`charOrd #"<" #"<"`;
-testc`charOrd #"a" #">"`;
-*)
 
 (* ********* qk_numto_CONV similar to numto_CONV: *********** *)
 
@@ -190,16 +163,9 @@ fun qk_numOrd_CONV t =
             Raise (ERR "qk_numOrd_CONV" "not a qk_numOrd test")
  end end;
 
-(* qk_numOrd_CONV (Term`qk_numOrd 57 54`);  (* LESS *) *)
-
 val qk_numto_CONV = 
 RATOR_CONV (RATOR_CONV (REWR_CONV ap_qk_numto_thm)) THENC
                  qk_numOrd_CONV;
-(*
-qk_numto_CONV (Term`apto qk_numto 6 6`); (* EQUAL *)
-qk_numto_CONV (Term`apto qk_numto 6 7`); (* GREATER *)
-qk_numto_CONV (Term`apto qk_numto 8 7`); (* GREATER *)
-*)
 
 (* ******************************************************************** *)
 (* **********                lextoto_CONV                     ********* *)
@@ -210,7 +176,8 @@ qk_numto_CONV (Term`apto qk_numto 8 7`); (* GREATER *)
    Tests follow declaration of stringto_CONV below. *)
 
 fun lextoto_CONV Aconv Bconv =
-REWR_CONV aplextoto THENC RAND_CONV Aconv THENC
+REWR_CONV aplextoto THENC
+RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV Aconv))) THENC
      ((REWR_CONV EQUAL_REWR THENC Bconv) ORELSEC
       REWR_CONV LESS_REWR ORELSEC REWR_CONV GREATER_REWR);
 
@@ -231,16 +198,12 @@ val [lsnn, lsnc, lscn, lscc] = map GEN_ALL (CONJUNCTS (SPEC_ALL aplistoto));
 
 fun listoto_CONV elem_conv =
  let fun lis_c t =
- ((REWR_CONV lscc THENC RAND_CONV elem_conv THENC 
+ ((REWR_CONV lscc THENC 
+   RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV elem_conv))) THENC 
    ((REWR_CONV EQUAL_REWR THENC lis_c) ORELSEC
     REWR_CONV LESS_REWR ORELSEC REWR_CONV GREATER_REWR)) ORELSEC
   REWR_CONV lsnn ORELSEC REWR_CONV lsnc ORELSEC REWR_CONV lscn) t
  in lis_c ORELSEC (fn _ => Raise (ERR "listoto_CONV" "unsuitable args")) end;
-
-(* val lnC = listoto_CONV numto_CONV;
-lnC (Term`apto (listoto numto) [5; 3; 7] [5; 3]`);
-lnC (Term`apto (listoto numto) [5; 3; 7] [5; 3; 7]`);
-lnC (Term`apto (listoto numto) [5; 3] [5; 3; 7]`);   *)
 
 (* ******* Type string treated as synonymous with char list ******* *)
 
@@ -252,17 +215,53 @@ if rand (rator t) = rand t then SPEC (rand t) refl_clause_string else
  (RATOR_CONV (RATOR_CONV (RAND_CONV (REWR_CONV stringto))) THENC
   listoto_CONV charto_CONV) t;
 
-(* stringto_CONV (Term`apto stringto "abcdefghijklmnopq" "abcdefghijklmnopr"`);
-   stringto_CONV (Term`apto stringto "abc" "ab"`); *)
-(* Count.apply string_EQ_CONV
+(* ************ test cases, just to put everyone throught the motions:
+
+numOrd_CONV (Term`numOrd 57 54`);
+
+numto_CONV (Term`apto numto 6 6`);
+numto_CONV (Term`apto numto 6 7`);
+numto_CONV (Term`apto numto 8 7`);
+
+charOrd_CONV (Term`charOrd (#"A") (#"B")`);
+charOrd_CONV (Term`charOrd (#"A") (#"A")`);
+charOrd_CONV (Term`charOrd (#"Z") (#"B")`);
+charOrd_CONV (Term`charOrd (CHR 0) (CHR 0)`);
+
+charto_CONV (Term`apto charto #"8" #"7"`);
+
+val testn = Count.apply (numto_CONV o Term);
+
+testn`apto numto 5 7`;
+testn`apto numto 0 0`; 
+
+val testc = Count.apply (charOrd_CONV o Term);
+
+testc`charOrd #"A" #"B"`;
+testc`charOrd #"<" #"<"`;
+testc`charOrd #"a" #">"`;
+
+qk_numOrd_CONV (Term`qk_numOrd 57 54`);  (* LESS *)
+
+qk_numto_CONV (Term`apto qk_numto 6 6`); (* EQUAL *)
+qk_numto_CONV (Term`apto qk_numto 6 7`); (* GREATER *)
+qk_numto_CONV (Term`apto qk_numto 8 7`); (* GREATER *)
+
+val lnC = listoto_CONV numto_CONV;
+lnC (Term`apto (listoto numto) [5; 3; 7] [5; 3]`);
+lnC (Term`apto (listoto numto) [5; 3; 7] [5; 3; 7]`);
+lnC (Term`apto (listoto numto) [5; 3] [5; 3; 7]`);
+
+stringto_CONV (Term`apto stringto "abcdefghijklmnopq" "abcdefghijklmnopr"`);
+   stringto_CONV (Term`apto stringto "abc" "ab"`);
+Count.apply string_EQ_CONV
   (Term`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`);
-(* last used 2355 inference steps *)
+(* last used 270 inference steps *)
 Count.apply stringto_CONV (Term
  `apto stringto "abcdefghijklmnopqrstuvwxyz" "abcdefghijklmnopqrstuvwxyzA"`);
-(* 989 inference steps, not quite as good as the 772 steps from specially
-   written stringOrd/stringto, but close enough. *) *)
+(* 1067 inference steps, not quite as good as the 772 steps from specially
+   written stringOrd/stringto (under HOL-Kananaskis-8), but close enough. *)
 
-(*
 val p1 = Term`(6, "ab")`;
 val p2 = Term`(7, "ab")`;
 val p3 = Term`(6, "ac")`;
@@ -275,58 +274,6 @@ lexns (Term`apto (numto lextoto stringto) ^p1 ^p3`);
 lexns (Term`apto (numto lextoto stringto) ^p3 ^p1`);
 lexns (Term`apto (numto lextoto stringto) ^p2 ^p3`);
 lexns (Term`apto (numto lextoto stringto) ^p3 ^p2`);
-lexns (Term`apto (numto lextoto stringto) ^p3 ^p3`); *)
-
-(* ****************************************************************** *)
-(*                           intto_CONV                               *)
-(* ****************************************************************** *)
-
-(* integer parsing remains deprecated; note use of suffix i below. *)
-
-(* An integer ground term is, as well as I can see, either a application of
-   ``$&`` to a num ground term (which is either ``0`` or an application
-   of NUMERAL to a pile of ZERO, BIT0, and BIT1) or an application of
-   numeric_negate:int -> int to such a &-application. ``-0`` is considered
-   possible, but if it never occurs, then one of the first two REWR_CONV's
-   in each list of five for different signs will succeed. *)
-
-fun intOrd_CONV t =
-let val (l, r) = (rand (rator t), rand t)
-in if rator l = ``numeric_negate``
-   then if rator r = ``numeric_negate``
-        then (REWR_CONV neg_neg_thm THENC numOrd_CONV) t
-        else (FORK_CONV
-              (RAND_CONV (RAND_CONV num_pre_CONV), RAND_CONV num_pre_CONV) THENC
-              (REWR_CONV neg_BIT1_lt_thm ORELSEC
-               REWR_CONV neg_BIT2_lt_thm ORELSEC
-               REWR_CONV neg_lt_BIT1_thm ORELSEC
-               REWR_CONV neg_lt_BIT2_thm ORELSEC
-               REWR_CONV neg_ZERO_eq_ZERO_thm)) t
-   else if rator r = ``numeric_negate``
-        then (FORK_CONV
-              (RAND_CONV num_pre_CONV, RAND_CONV (RAND_CONV num_pre_CONV)) THENC
-              (REWR_CONV gt_neg_BIT1_thm ORELSEC
-               REWR_CONV gt_neg_BIT2_thm ORELSEC
-               REWR_CONV BIT1_gt_neg_thm ORELSEC
-               REWR_CONV BIT2_gt_neg_thm ORELSEC
-               REWR_CONV ZERO_eq_neg_ZERO_thm)) t
-        else (REWR_CONV pos_pos_thm THENC numOrd_CONV) t
-end;
-
-(* map intOrd_CONV
- [``intOrd (-2i) (-3i)``, ``intOrd (-2i) 3i``, ``intOrd (-2i) 2i``,
-  ``intOrd (-2i) 0i``, ``intOrd (-3i) 0i``, ``intOrd (-0i) 0i``,
-  ``intOrd 2i 3i``, ``intOrd 2i (-3i)``, ``intOrd 3i (-3i)``,
-  ``intOrd 0i (-2i)``, ``intOrd (0i) (-3i)``, ``intOrd 0i (-0i)``]; *)
-
-val intto_CONV = 
-RATOR_CONV (RATOR_CONV (REWR_CONV apintto_thm)) THENC
-                 intOrd_CONV;
-
-(* map intto_CONV
- [``apto intto (-2i) (-3i)``, ``apto intto (-2i) 3i``, ``apto intto (-2i) 2i``,
-  ``apto intto (-2i) 0i``, ``apto intto (-3i) 0i``, ``apto intto (-0i) 0i``,
-  ``apto intto 2i 3i``, ``apto intto 2i (-3i)``, ``apto intto 3i (-3i)``,
-``apto intto 0i (-2i)``, ``apto intto (0i) (-3i)``, ``apto intto 0i (-0i)``];*)
-
+lexns (Term`apto (numto lextoto stringto) ^p3 ^p3`);
+*************** *)
 end;

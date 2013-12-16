@@ -1,4 +1,4 @@
-(* file wotScirpt.sml; author F.L.Morris; created as Script file. 2/24/10 *)
+(* file wotScript.sml; author F.L.Morris; created as Script file. 2/24/10 *)
 (* Proves the well-ordering theorem for an arbitrary HOL type, beginning
   with the existence of a total order, stealing ideas from the proof of
   Zorn's Lemma in Halmos's Naive Set Theory, and trying to streamline by
@@ -48,7 +48,7 @@ EXISTS_TAC ``x:'a`` THEN AR THEN RES_TAC);
 
 val STRORD_trich = prove (
 ``!R:'a reln. trichotomous R <=> trichotomous (STRORD R)``,
-RW_TAC (srw_ss ()) [STRORD, trichotomous] THEN METIS_TAC []);
+SRW_TAC [] [STRORD, trichotomous] THEN METIS_TAC []);
 
 (* A general set lemma, dual-ish to BIGUNION_SUBSET but only an ==> : *)
 

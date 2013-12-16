@@ -1,4 +1,4 @@
-(* file HS/Ord/totoScript.sml, created 12/21-30/09 as TotOrdScript, L. Morris *)
+(* file HS/FIN/totoScript.sml, created 12/21-30/09 as TotOrdScript, L. Morris *)
 (* Revised to make part of efficient-set-represetation project Feb.14 2012 *)
 (* Revised for PIN directory April 14 2013; revised for intto Sept 23 2013 *)
 (* Revised to narrow interface with wotTheory Sept 27 2013. *)
@@ -14,14 +14,14 @@
 
 structure totoScript = struct
 
-(* app load ["wotTheory", "stringTheory", "intLib"]; *)
+(* app load ["wotTheory", "stringTheory"]; *)
 
 open HolKernel boolLib Parse;
 
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory pairTheory;
 open bossLib PairRules arithmeticTheory numeralTheory Defn;
-open stringTheory listTheory intLib;
+open stringTheory listTheory;
 
 val _ = new_theory "toto";
 
@@ -29,8 +29,6 @@ val _ = new_theory "toto";
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
-
-val _ = intLib.deprecate_int (); (* at least unti intto, actually throughout *)
 
 val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
 
@@ -96,7 +94,7 @@ REWRITE_TAC [trichotomous, IMP_DISJ_THM, DE_MORGAN_THM, GSYM DISJ_ASSOC]);
 
 val TotOrd_TO_of_LO = maybe_thm ("TotOrd_TO_of_LO",Term`!r:'a->'a->bool.
                  LinearOrder r ==> TotOrd (TO_of_LinearOrder r)`,
-RW_TAC (srw_ss ()) [LinearOrder, Order, antisymmetric_def,
+SRW_TAC [] [LinearOrder, Order, antisymmetric_def,
     transitive_def, TO_of_LinearOrder, TotOrd, trichotomous_ALT] THEN
 METIS_TAC [cpn_distinct]);
 
@@ -208,7 +206,7 @@ REWRITE_TAC [toto_thm]);
 
 val toto_not_less_refl = store_thm ("toto_not_less_refl",
 ``!cmp:'a toto h. (apto cmp h h = LESS) <=> F``,
-RW_TAC (srw_ss ()) [toto_antisym, toto_refl]);
+SRW_TAC [] [toto_antisym, toto_refl]);
 
 val toto_swap_cases = store_thm ("toto_swap_cases",
 Term`!c:'a toto x y. apto c y x =
@@ -322,7 +320,7 @@ REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
 
 val STRORD_trich = prove (
 ``!R:'a reln. trichotomous R <=> trichotomous (STRORD R)``,
-RW_TAC (srw_ss ()) [STRORD, trichotomous] THEN METIS_TAC []);
+SRW_TAC [] [STRORD, trichotomous] THEN METIS_TAC []);
 
 val STRORD_SLO = maybe_thm ("STRORD_SLO", Term`!R:'a reln.
                       WeakLinearOrder R ==> StrongLinearOrder (STRORD R)`,
@@ -357,7 +355,7 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC WeakLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
 IMP_RES_TAC WeakOrd_Ord);
 
-val TotOrd_TO_of_Strong = maybe_thm("TotOrd_TO_of_Strong",Term`!r:'a reln.
+val TotOrd_TO_of_Strong = store_thm("TotOrd_TO_of_Strong",Term`!r:'a reln.
                  StrongLinearOrder r ==> TotOrd (TO_of_LinearOrder r)`,
 REPEAT STRIP_TAC THEN MATCH_MP_TAC TotOrd_TO_of_LO THEN
 IMP_RES_TAC StrongLinearOrder THEN ASM_REWRITE_TAC [LinearOrder] THEN
@@ -516,7 +514,7 @@ Cases_on `phi x y` THEN AR);
    WF and LEX are both defined in relationTheory, it seems most natural
    to work with StrongLinearOrder, and transfer the results to TotOrd. *)
 
-val StrongOrder_ALT = maybe_thm ("StrongOrder_ALT",
+val StrongOrder_ALT = store_thm ("StrongOrder_ALT",
  Term`!Z:'a reln. StrongOrder Z <=> irreflexive Z /\ transitive Z`,
 GEN_TAC THEN REWRITE_TAC [StrongOrder] THEN EQ_TAC THEN
 STRIP_TAC THEN AR THEN
@@ -630,7 +628,7 @@ REWRITE_TAC [pre_aplextoto]);
 
 val StrongLinearOrder_LESS = maybe_thm ("StrongLinearOrder_LESS",
 ``StrongLinearOrder ($< :num reln)``,
-RW_TAC (srw_ss ()) [StrongLinearOrder, StrongOrder_ALT,
+SRW_TAC [] [StrongLinearOrder, StrongOrder_ALT,
 trichotomous, Order, irreflexive_def, transitive_def] THENL
 [IMP_RES_TAC LESS_TRANS
 ,STRIP_ASSUME_TAC (Q.SPECL [`a`, `b`] LESS_LESS_CASES) THEN AR]);
@@ -1007,94 +1005,7 @@ ASSUME_TAC TO_oneOrd THEN REWRITE_TAC [oneto] THEN
 IMP_RES_THEN SUBST1_TAC TO_apto_TO_IMP THEN REWRITE_TAC [oneOrd]);
 ************************** *)
 
-(* **************************************************************** *)
-(* Theorems to support intto_CONV, for comparing at type int.       *)
-(* **************************************************************** *)
-
-(* integer parsing remains deprecated; note use of suffix i below. *)
-
-(* An integer ground term is, as well as I can see, either a application of
-   ``$&`` to a num ground term (which is either ``0`` or an application
-   of NUMERAL to a pile of ZERO, BIT0, and BIT1) or an application of
-   numeric_negate:int -> int to such a &-application. ``-0`` is possible. *)
-
-val intOrd = Define`intOrd = TO_of_LinearOrder ($< :int reln)`;
-
-val StrongLinearOrder_int_lt = maybe_thm ("StrongLinearOrder_int_lt",
-``StrongLinearOrder ($< :int reln)``,
-RW_TAC (srw_ss ())[StrongLinearOrder,
- StrongOrder_ALT, trichotomous, Order, irreflexive_def, transitive_def] THENL
-[IMP_RES_TAC integerTheory.INT_LT_TRANS
-,STRIP_ASSUME_TAC (SPECL [``a:int``, ``b:int``] integerTheory.INT_LT_TOTAL)
- THEN AR]);
-
-val TO_intOrd = maybe_thm ("TO_intOrd", ``TotOrd intOrd``,
-REWRITE_TAC [intOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
-ACCEPT_TAC StrongLinearOrder_int_lt);
-
-val intto = Define`intto = TO intOrd`;
-
-val apintto_thm = store_thm ("apintto_thm", ``apto intto = intOrd``,
-REWRITE_TAC [intto, GSYM TO_apto_TO_ID, TO_intOrd]);
-
-val pos_pos_thm = store_thm ("pos_pos_thm",
-``!m:num n:num. intOrd (&m) (&n) = numOrd m n``,
- RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, numOrd]);
-
-val neg_neg_thm = store_thm ("neg_neg_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (numeric_negate (&n)) =
-                numOrd n m``,
- RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, numOrd]);
-
-val BIT1_nz = store_thm ("BIT1_nz",
-``!n. BIT1 n <> 0``,
-RW_TAC (srw_ss ()) [arithmeticTheory.NOT_ZERO_LT_ZERO, numeralTheory.numeral_lt,
-                    GSYM arithmeticTheory.ALT_ZERO]);
-
-val BIT2_nz = store_thm ("BIT2_nz",
-``!n. BIT2 n <> 0``,
-RW_TAC (srw_ss ()) [arithmeticTheory.NOT_ZERO_LT_ZERO, numeralTheory.numeral_lt,
-                    GSYM arithmeticTheory.ALT_ZERO]);
-
-val neg_lt_BIT1_thm = store_thm ("neg_lt_BIT1_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (& (BIT1 n)) = LESS``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT1_nz]);
-
-val neg_lt_BIT2_thm = store_thm ("neg_lt_BIT2_thm",
-``!m:num n:num. intOrd (numeric_negate (&m)) (& (BIT2 n)) = LESS``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT2_nz]);
-
-val neg_BIT1_lt_thm = store_thm ("neg_BIT1_lt_thm",
-``!m:num n:num. intOrd (numeric_negate (& (BIT1 m))) (& n) = LESS``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd,  BIT1_nz]);
-
-val neg_BIT2_lt_thm = store_thm ("neg_BIT2_lt_thm",
-``!m:num n:num. intOrd (numeric_negate (& (BIT2 m))) (& n) = LESS``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT2_nz]);
-
-val neg_ZERO_eq_ZERO_thm = store_thm ("neg_ZERO_eq_ZERO_thm",
-``intOrd (numeric_negate (& ZERO)) (& ZERO) = EQUAL``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
-
-val BIT1_gt_neg_thm = store_thm ("BIT1_gt_neg_thm",
-``!m:num n:num. intOrd (& (BIT1 m)) (numeric_negate (&n)) = GREATER``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT1_nz]);
-
-val BIT2_gt_neg_thm = store_thm ("BIT2_gt_neg_thm",
-``!m:num n:num. intOrd (& (BIT2 m)) (numeric_negate (&n)) = GREATER``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT2_nz]);
-
-val gt_neg_BIT1_thm = store_thm ("gt_neg_BIT1_thm",
-``!m:num n:num. intOrd (& m) (numeric_negate (& (BIT1 n))) = GREATER``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT1_nz]);
-
-val gt_neg_BIT2_thm = store_thm ("gt_neg_BIT2_thm",
-``!m:num n:num. intOrd (& m) (numeric_negate (& (BIT2 n))) = GREATER``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, BIT2_nz]);
-
-val ZERO_eq_neg_ZERO_thm = store_thm ("ZERO_eq_neg_ZERO_thm",
-``intOrd (& ZERO) (numeric_negate (& ZERO)) = EQUAL``,
-RW_TAC (srw_ss ()) [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
+(* intto moved to inttoTheory, to avoid always loading intLib *)
 
 val _ = export_theory ();
 val _ = print_theory "-";

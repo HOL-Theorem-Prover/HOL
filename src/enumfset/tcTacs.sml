@@ -11,7 +11,7 @@ structure tcTacs :> tcTacs =
 struct
 (* comment out load before Holmaking *)
 (* app load ["pred_setTheory", "totoTacs", "enumTacs", "fmapalTacs",
-             "tcTheory", "numLib"]; *)
+             "tcTheory"]; *)
 
 open Parse HolKernel boolLib bossLib;
 val _ = set_trace "Unicode" 0;
@@ -22,7 +22,6 @@ val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
 val ERR = mk_HOL_ERR "tcTacs";
-val _ = intLib.deprecate_int ();
 
 (* A conversion to translate the most convenient explicit representation,
    namely ``fmap [(a1, {v11; ... ; v1m1}); ... ; (an, {vn1; ... ; vnmn})]``,
@@ -114,24 +113,19 @@ val corfmap = rand (concl (ENUF_CONV numto_CONV ``numto`` ``fmap ^cormenex``));
    TC_ITER_CONV REDUCE_CONV tins;
 
    Count.apply (TC_CONV numto_CONV) ``(FMAP_TO_RELN ^corfmap)^+``;
-                                           (*runtime:  0.036s, Prims:    7038*)
+                                           (*runtime:  0.036s, Prims:    7326*)
    val one_to_ten = ``fmap [(1,{4}); (2,{6}); (3,{1}); (4,{5}); (5,{9});
                             (6,{8}); (8,{10}); (9,{2}); (10,{7})]``;
    val one_ten_chain = rand (concl (
        Count.apply (ENUF_CONV numto_CONV ``numto``) one_to_ten));
-                                           (*runtime:  0.008s, Prims:    2699*)
+                                           (*runtime:  0.008s, Prims:    2741*)
 
 val small_tc = rand (concl (
    Count.apply (TC_CONV numto_CONV) ``(FMAP_TO_RELN ^one_ten_chain)^+``));
-                                           (*runtime:  0.164s, Prims:   24049*)
+                                           (*runtime:  0.164s, Prims:   25411*)
 
    Count.apply (TC_CONV REDUCE_CONV) ``(FMAP_TO_RELN ^one_to_ten)^+``;
-                                           (*runtime:  0.052s, Prims:   18127*)
-   rand (concl (Count.apply 
-     (RAND_CONV (FMAPAL_TO_fmap_CONV numto_CONV) THENC
-                 RAND_CONV (MAP_ELEM_CONV (RAND_CONV
-                   (ENUMERAL_TO_DISPLAY_CONV numto_CONV))))
-              small_tc));
+                                           (*runtime: 0.04400s, Prims: 17569*)
 
 val ls = rand (rand (concl (FMAPAL_TO_fmap_CONV numto_CONV (rand small_tc))));
 
@@ -161,24 +155,24 @@ val beer_bottles = ``fmap
 
 val beer_chain = rand (concl (
  Count.apply (ENUF_CONV numto_CONV ``numto``) beer_bottles));
-                                          (*runtime:  0.196s, Prims:   41576*)
+                                          (*runtime:  0.12s, Prims:   43892*)
 
  val beer_tc_fmapal = rand (rand (concl (
  Count.apply (TC_CONV numto_CONV) ``(FMAP_TO_RELN ^beer_chain)^+``)));
-                                          (*runtime: 11.941s, Prims: 2455910*)
-              (* reduced from 2526365 without use of OL_bt, bt_to_list_CONV *)
+                                          (*runtime: 11.905s, Prims: 2800937*)
+
  Count.apply (FMAPAL_TO_fmap_CONV numto_CONV)
               beer_tc_fmapal;
-              (*runtime: 0.032s, Prims: 7728 *)
+              (*runtime: 0.032s, Prims: 8280 *)
 rand (concl
  (Count.apply (MAP_ELEM_CONV (RAND_CONV (ENUMERAL_TO_DISPLAY_CONV numto_CONV)))
   (rand (rand (concl (FMAPAL_TO_fmap_CONV numto_CONV beer_tc_fmapal))))));
-                   (*runtime: 3.256s, Prims: 418538*)
+                   (*runtime: 3.104s, Prims: 444149*)
 (* Unreasonable amount of work converting, but one can finally read the
    output and see that it is correct. *)
 
  Count.apply (FAPPLY_CONV numto_CONV) ``^beer_tc_fmapal ' 50``;
-                                          (*runtime:  0.004s,  Prims:    250*)
+                                          (*runtime:  0.004s,  Prims:    307*)
 
 (* |- (FMAP_TO_RELN
       (FMAPAL numto
@@ -213,7 +207,7 @@ rand (concl
 
 val beer_tc_fmap =  rand (rand (concl (Count.apply (TC_CONV REDUCE_CONV)
                                 ``(FMAP_TO_RELN ^beer_bottles)^+``)));
-                                          (*runtime: 44.783s,Prims:23956961*)
+                                          (*runtime: 42.143s,Prims:23897363*)
 
 (* |- (FMAP_TO_RELN
       (fmap
@@ -233,5 +227,6 @@ val beer_tc_fmap =  rand (rand (concl (Count.apply (TC_CONV REDUCE_CONV)
 
 Count.apply (FAPPLY_CONV REDUCE_CONV) ``^beer_tc_fmap ' 50``;
                                              (*runtime: 0.016s, Prims: 4077*)
+
 **************************** *)
 end;

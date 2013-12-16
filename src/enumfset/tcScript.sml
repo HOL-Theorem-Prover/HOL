@@ -12,8 +12,8 @@
 structure tcScript = struct
 
 (* app load ["pred_setLib", "pred_setTheory", "relationTheory", "pairTheory",
-"optionTheory", "TotalDefn", "bossLib", "finite_mapTheory", "numLib", "intLib",
-"totoTheory"]; *) (* totoTheory only for definiton of type 'a reln *)
+"optionTheory", "TotalDefn", "bossLib", "finite_mapTheory",
+"wotTheory"]; *) (* wotTheory only for definiton of type 'a reln *)
 
 open HolKernel boolLib Parse bossLib;
 val _ = set_trace "Unicode" 0;
@@ -28,7 +28,6 @@ val _ = new_theory "tc";
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 fun rrs th = REWRITE_RULE [SPECIFICATION] th;
-val _ = intLib.deprecate_int (); (* because intLib gets loaded now (9/13) *)
 
 val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
 
@@ -524,10 +523,10 @@ val TC_MOD = Define
 
 val TC_MOD_EMPTY_ID = store_thm ("TC_MOD_EMPTY_ID",
 ``!x:'a ra:'a set. TC_MOD x {} = I``,
-REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) [TC_MOD]);
+REPEAT GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [TC_MOD]);
 
 val I_o_f  = store_thm ("I_o_f", ``!f:'a |-> 'b. I o_f f = f``,
-RW_TAC (srw_ss ()) [fmap_EXT]);
+SRW_TAC [] [fmap_EXT]);
 
 val subTC_MAX_RDOM = store_thm ("subTC_MAX_RDOM",
 ``!R:'a reln s x. x NOTIN RDOM R ==> (subTC R (x INSERT s) = subTC R s)``,
@@ -543,7 +542,7 @@ HO_MATCH_MP_TAC FINITE_INDUCT THEN CONJ_TAC THENL
 [REWRITE_TAC [UNION_EMPTY]
 ,REPEAT STRIP_TAC THEN
  `RDOM R UNION (e INSERT s) = (e INSERT RDOM R) UNION s`
- by (RW_TAC (srw_ss ()) [EXTENSION, IN_UNION, IN_INSERT, DISJ_ASSOC] THEN
+ by (SRW_TAC [] [EXTENSION, IN_UNION, IN_INSERT, DISJ_ASSOC] THEN
      CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV DISJ_COMM))) THEN REFL_TAC) THEN
  AR THEN Cases_on `e IN RDOM R` THENL
  [IMP_RES_THEN (ASM_REWRITE_TAC o ulist) ABSORPTION_RWT
@@ -599,7 +598,7 @@ ASM_REWRITE_TAC [EXTENSION] THENL
     (INST_TYPE [beta |-> ``:'a set``, gamma |-> ``:'a set``] o_f_DEF))) THEN
  GEN_TAC THEN CONV_TAC (RAND_CONV (REWR_CONV SPECIFICATION)) THEN
  RW_TAC bool_ss [TC_MOD, SPECIFICATION, UNION_EMPTY]
-,RW_TAC (srw_ss ()) []
+,SRW_TAC [] []
 ]);
 
 (* Define the recursion over RDOM R *)
@@ -631,19 +630,6 @@ GEN_TAC THEN Induct THENL
    ASM_REWRITE_TAC [FDOM_o_f] THEN
    RES_TAC THEN ASM_REWRITE_TAC [TC_ITER]
 ]]]);
-(* ********* not used?
-val TC_COMPUTE = Define
-`TC_COMPUTE (f:'a|->'a set) = TC_ITER (SET_TO_LIST (FDOM f)) f`;
-
-val TC_COMPUTE_THM = store_thm ("TC_COMPUTE_THM",
-``!f:'a|->'a set. FMAP_TO_RELN (TC_COMPUTE f) = (FMAP_TO_RELN f)^+``,
-RW_TAC bool_ss [TC_COMPUTE] THEN
-MATCH_MP_TAC (GSYM TC_ITER_THM) THEN Q.EXISTS_TAC `{}` THEN
-SUBST1_TAC (MATCH_MP SET_TO_LIST_INV (ISPEC ``f:'a|->'a set`` FDOM_FINITE)) THEN
-REWRITE_TAC [UNION_EMPTY, subTC_EMPTY]);
-
-(* might could write the conversion now? *)
-*********** *)
 
 val _ = export_theory ();
 val _ = print_theory "-";

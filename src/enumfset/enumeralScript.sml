@@ -6,11 +6,11 @@ structure enumeralScript = struct
 
 open HolKernel boolLib Parse;
 
-(* app load ["totoTheory", "res_quanLib", "intLib", "totoTacs"]; *)
+(* app load ["totoTheory", "res_quanLib"]; *)
 
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory res_quanTheory res_quanLib;
-open totoTheory bossLib listTheory totoTacs;
+open totoTheory bossLib listTheory;
 
 val _ = new_theory "enumeral";
 
@@ -82,7 +82,7 @@ val bt_to_list_ac = Define
 
 val bt_to_list_ac_thm = maybe_thm ("bt_to_list_ac_thm",
 ``!t:'a bt m. bt_to_list_ac t m = bt_to_list t ++ m``,
-Induct THEN RW_TAC (srw_ss ()) [bt_to_list, bt_to_list_ac]);
+Induct THEN SRW_TAC [] [bt_to_list, bt_to_list_ac]);
 
 val bt_to_list_thm = store_thm ("bt_to_list_thm",
 ``!t:'a bt. bt_to_list t = bt_to_list_ac t []``,
@@ -102,7 +102,7 @@ val K2 = Define`K2 (a:'a) = 2`;
 
 val bt_rev_size = maybe_thm ("bt_rev_size", Term
 `!ft bl:'a bl. bl_size K2 (bt_rev ft bl) = bt_size K2 ft + bl_size K2 bl`,
-Induct THEN
+Induct THEN 
 ASM_REWRITE_TAC [bl_size_def, bt_size_def, K2,bt_rev,arithmeticTheory.ADD] THEN
 SIMP_TAC arith_ss []);
 
@@ -166,22 +166,22 @@ REPEAT STRIP_TAC THEN Cases_on `l` THEN REWRITE_TAC [smerge]);
 val smerge_set = maybe_thm ("smerge_set",
 ``!cmp:'a toto l m. (set (smerge cmp l m) = set l UNION set m)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [smerge, smerge_nil] THEN
-Induct_on `m` THEN
-RW_TAC (srw_ss ()) [smerge, smerge_nil] THEN
+SRW_TAC [] [smerge, smerge_nil] THEN
+Induct_on `m` THEN 
+SRW_TAC [] [smerge, smerge_nil] THEN
 Cases_on `apto cmp h h'` THENL
 [ALL_TAC, `h = h'` by IMP_RES_TAC toto_equal_eq, ALL_TAC] THEN
-RW_TAC (srw_ss ()) [toto_equal_eq] THEN
+SRW_TAC [] [toto_equal_eq] THEN
 RW_TAC bool_ss [toto_equal_eq, EXTENSION, IN_INSERT, IN_UNION, DISJ_ASSOC] THEN
 tautLib.TAUT_TAC);
 
 val smerge_OL = store_thm ("smerge_OL",
 ``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (smerge cmp l m)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [smerge, OL, smerge_nil] THEN
-Induct_on `m` THEN
-RW_TAC (srw_ss ()) [smerge, OL, smerge_nil] THEN
-Cases_on `apto cmp h h'` THEN RW_TAC (srw_ss ()) [OL] THENL
+SRW_TAC [] [smerge, OL, smerge_nil] THEN
+Induct_on `m` THEN 
+SRW_TAC [] [smerge, OL, smerge_nil] THEN
+Cases_on `apto cmp h h'` THEN SRW_TAC [] [OL] THENL
 [`MEM p l \/ MEM p (h' :: m)`
  by (RW_TAC bool_ss [GSYM IN_LIST_TO_SET, GSYM IN_UNION] THEN
      ASM_REWRITE_TAC [GSYM smerge_set, IN_LIST_TO_SET]) THENL
@@ -212,7 +212,7 @@ val OL_sublists = Define
 
 val OL_sublists_ind = theorem "OL_sublists_ind";
 
-(* OL_sublists_ind = |- !P. (!cmp. P cmp []) /\
+(* OL_sublists_ind = |- !P. (!cmp. P cmp []) /\ 
           (!cmp lol. P cmp lol ==> P cmp (NONE::lol)) /\
           (!cmp m lol. P cmp lol ==> P cmp (SOME m::lol)) ==> !v v1. P v v1 *)
 
@@ -267,7 +267,7 @@ val incr_sbuild = Define
 val incr_sbuild_set = maybe_thm ("incr_sbuild_set",
 ``!cmp l:'a list. lol_set (incr_sbuild cmp l) = set l``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [lol_set, incr_sbuild, incr_smerge_set, INSERT_UNION_EQ]);
+SRW_TAC [] [lol_set, incr_sbuild, incr_smerge_set, INSERT_UNION_EQ]);
 
 val  OL_EMPTY = maybe_thm ("OL_EMPTY",
 ``!cmp:'a toto. OL cmp []``,
@@ -280,7 +280,7 @@ RW_TAC bool_ss [OL, MEM]);
 val incr_sbuild_OL = maybe_thm ("incr_sbuild_OL",
 ``!cmp l:'a list. OL_sublists cmp (incr_sbuild cmp l)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [incr_sbuild, incr_smerge_OL, OL_sublists] THEN
+SRW_TAC [] [incr_sbuild, incr_smerge_OL, OL_sublists] THEN
 METIS_TAC [OL_SING, incr_smerge_OL]);
 
 val incr_ssort = Define
@@ -288,7 +288,7 @@ val incr_ssort = Define
 
 val incr_ssort_set = maybe_thm ("incr_ssort_set",
 ``!cmp:'a toto l. set (incr_ssort cmp l) = set l``,
-RW_TAC (srw_ss ()) [incr_ssort, smerge_out_set, incr_sbuild_set]);
+SRW_TAC [] [incr_ssort, smerge_out_set, incr_sbuild_set]);
 
 val incr_ssort_OL = maybe_thm ("incr_ssort_OL",
 ``!cmp:'a toto l. OL cmp (incr_ssort cmp l)``,
@@ -358,7 +358,7 @@ val IN_bt_to_set = store_thm ("IN_bt_to_set",
   (!cmp:'a toto l x r y. y IN ENUMERAL cmp (node l x r) =
    y IN ENUMERAL cmp l /\ (apto cmp y x = LESS) \/ (y = x) \/
    y IN ENUMERAL cmp r /\ (apto cmp x y = LESS))``,
-RW_TAC (srw_ss ()) [bt_to_set] THEN CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
+SRW_TAC [] [bt_to_set] THEN CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
 tautLib.TAUT_TAC);
 
 (* Following look-up function (disguised as two theorems) to make bt's
@@ -371,10 +371,10 @@ val NOT_IN_nt = save_thm ("NOT_IN_nt", CONJUNCT1 IN_bt_to_set);
 val IN_node = store_thm ("IN_node",
 ``!cmp x:'a l y r. x IN ENUMERAL cmp (node l y r) <=> case apto cmp x y of
  LESS => x IN ENUMERAL cmp l | EQUAL => T | GREATER => x IN ENUMERAL cmp r``,
-RW_TAC (srw_ss ()) [bt_to_set] THEN Cases_on `apto cmp x y` THEN
+SRW_TAC [] [bt_to_set] THEN Cases_on `apto cmp x y` THEN
 (Q.SUBGOAL_THEN `(x = y) = (apto cmp x y = EQUAL)` SUBST1_TAC
            THEN1 MATCH_ACCEPT_TAC (GSYM toto_equal_eq)) THEN
-IMP_RES_TAC toto_antisym THEN RW_TAC (srw_ss ()) []);
+IMP_RES_TAC toto_antisym THEN SRW_TAC [] []);
 
 (* Following "mut_rec" theorems seem relevant to conversion to ol's, not to
    evaluating IN. *)
@@ -388,12 +388,12 @@ val bt_to_set_lb_ub_mut_rec = maybe_thm ("bt_to_set_lb_ub_mut_rec",
          bt_to_set_lb_ub cmp lb l ub
      else
        bt_to_set_lb_ub cmp lb r ub``,
-RW_TAC (srw_ss ()) [bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
+SRW_TAC [] [bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
 EQ_TAC THEN STRIP_TAC THEN AR THEN IMP_RES_TAC totoLLtrans THENL
 [Q.UNDISCH_TAC `apto cmp x' ub = LESS` THEN AR
-,IMP_RES_TAC NOT_EQ_LESS_IMP THEN RW_TAC (srw_ss ()) []
+,IMP_RES_TAC NOT_EQ_LESS_IMP THEN SRW_TAC [] []
 ,Q.UNDISCH_TAC `apto cmp lb x' = LESS` THEN AR
-,IMP_RES_TAC NOT_EQ_LESS_IMP THEN RW_TAC (srw_ss ()) []
+,IMP_RES_TAC NOT_EQ_LESS_IMP THEN SRW_TAC [] []
 ]);
 
 val bt_to_set_lb_mut_rec = maybe_thm ("bt_to_set_lb_mut_rec",
@@ -402,10 +402,10 @@ val bt_to_set_lb_mut_rec = maybe_thm ("bt_to_set_lb_mut_rec",
          bt_to_set_lb_ub cmp lb l x UNION {x} UNION  bt_to_set_lb cmp x r
      else
        bt_to_set_lb cmp lb r``,
-RW_TAC (srw_ss ()) [bt_to_set_lb, bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
+SRW_TAC [] [bt_to_set_lb, bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
 EQ_TAC THEN STRIP_TAC THEN AR THEN IMP_RES_TAC totoLLtrans THENL
 [Q.UNDISCH_TAC `apto cmp lb x' = LESS` THEN AR
-,IMP_RES_TAC NOT_EQ_LESS_IMP THEN RW_TAC (srw_ss ()) []
+,IMP_RES_TAC NOT_EQ_LESS_IMP THEN SRW_TAC [] []
 ]);
 
 val bt_to_set_ub_mut_rec = maybe_thm ("bt_to_set_ub_mut_rec",
@@ -414,10 +414,10 @@ val bt_to_set_ub_mut_rec = maybe_thm ("bt_to_set_ub_mut_rec",
          bt_to_set_ub cmp l x UNION {x} UNION  bt_to_set_lb_ub cmp x r ub
      else
        bt_to_set_ub cmp l ub``,
-RW_TAC (srw_ss ()) [bt_to_set_ub, bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
+SRW_TAC [] [bt_to_set_ub, bt_to_set_lb_ub, EXTENSION, IN_bt_to_set] THEN
 EQ_TAC THEN STRIP_TAC THEN AR THEN IMP_RES_TAC totoLLtrans THENL
 [Q.UNDISCH_TAC `apto cmp x' ub = LESS` THEN AR
-,IMP_RES_TAC NOT_EQ_LESS_IMP THEN RW_TAC (srw_ss ()) []
+,IMP_RES_TAC NOT_EQ_LESS_IMP THEN SRW_TAC [] []
 ]);
 
 (* ****************************************************************** *)
@@ -463,28 +463,28 @@ val bt_to_ol = Define
 val ol_set_lb_ub = maybe_thm ("ol_set_lb_ub",``!cmp:'a toto t lb ub.
    bt_to_set_lb_ub cmp lb t ub = set (bt_to_ol_lb_ub cmp lb t ub)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bt_to_set_lb_ub_mut_rec, bt_to_ol_lb_ub,
+SRW_TAC [] [bt_to_set_lb_ub_mut_rec, bt_to_ol_lb_ub,
                     LIST_TO_SET_APPEND, EXTENSION] THEN
-RW_TAC (srw_ss ()) [NOT_IN_nt, bt_to_set_lb_ub]);
+SRW_TAC [] [NOT_IN_nt, bt_to_set_lb_ub]);
 
 val ol_set_lb =  maybe_thm ("ol_set_lb",``!cmp:'a toto t lb.
    bt_to_set_lb cmp lb t = set (bt_to_ol_lb cmp lb t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bt_to_set_lb_mut_rec, bt_to_ol_lb,
+SRW_TAC [] [bt_to_set_lb_mut_rec, bt_to_ol_lb,
                     LIST_TO_SET_APPEND, EXTENSION, ol_set_lb_ub] THEN
-RW_TAC (srw_ss ()) [NOT_IN_nt, bt_to_set_lb]);
+SRW_TAC [] [NOT_IN_nt, bt_to_set_lb]);
 
 val ol_set_ub = maybe_thm ("ol_set_ub",``!cmp:'a toto t ub.
    bt_to_set_ub cmp t ub = set (bt_to_ol_ub cmp t ub)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bt_to_set_ub_mut_rec, bt_to_ol_ub,
+SRW_TAC [] [bt_to_set_ub_mut_rec, bt_to_ol_ub,
                     LIST_TO_SET_APPEND, EXTENSION, ol_set_lb_ub] THEN
-RW_TAC (srw_ss ()) [NOT_IN_nt, bt_to_set_ub]);
+SRW_TAC [] [NOT_IN_nt, bt_to_set_ub]);
 
 val ol_set = store_thm ("ol_set",
 ``!cmp:'a toto t. ENUMERAL cmp t = set (bt_to_ol cmp t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bt_to_set_mut_rec, bt_to_ol,
+SRW_TAC [] [bt_to_set_mut_rec, bt_to_ol,
                     LIST_TO_SET_APPEND, EXTENSION, ol_set_lb, ol_set_ub] THEN
 REWRITE_TAC [NOT_IN_nt]);
 
@@ -495,8 +495,8 @@ val list_split_lem = maybe_thm ("list_split_lem",
 ``!cmp:'a toto l x r. OL cmp (l ++ [x] ++ r) <=>
    OL cmp l /\ (!a. a IN set l ==> (apto cmp a x = LESS)) /\
    OL cmp r /\ (!z. z IN set r ==> (apto cmp x z = LESS))``,
-GEN_TAC THEN Induct THEN RW_TAC (srw_ss ()) [OL] THEN EQ_TAC THEN
-RW_TAC (srw_ss ()) [] THENL
+GEN_TAC THEN Induct THEN SRW_TAC [] [OL] THEN EQ_TAC THEN
+SRW_TAC [] [] THENL
 [POP_ASSUM MATCH_MP_TAC THEN REWRITE_TAC []
 ,RES_TAC
 ,RES_TAC
@@ -511,24 +511,24 @@ RW_TAC (srw_ss ()) [] THENL
 val MEM_lb_ub_lem = maybe_thm ("MEM_lb_ub_lem",
 ``!cmp:'a toto lb t ub a. MEM a (bt_to_ol_lb_ub cmp lb t ub) ==>
     (apto cmp lb a = LESS) /\ (apto cmp a ub = LESS)``,
-REWRITE_TAC [GSYM IN_LIST_TO_SET, GSYM ol_set_lb_ub] THEN
-RW_TAC (srw_ss ()) [bt_to_set_lb_ub]);
+REWRITE_TAC [GSYM ol_set_lb_ub] THEN
+SRW_TAC [] [bt_to_set_lb_ub]);
 
 val OL_bt_to_ol_lb_ub = store_thm ("OL_bt_to_ol_lb_ub",
 ``!cmp:'a toto t lb ub. OL cmp (bt_to_ol_lb_ub cmp lb t ub)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bt_to_ol_lb_ub, ol_set_lb_ub, list_split_lem] THEN
+SRW_TAC [] [bt_to_ol_lb_ub, ol_set_lb_ub, list_split_lem] THEN
 IMP_RES_TAC MEM_lb_ub_lem THEN REWRITE_TAC [OL]);
 
 val MEM_lb_lem = maybe_thm ("MEM_lb_lem",
 ``!cmp:'a toto lb t a. MEM a (bt_to_ol_lb cmp lb t) ==>(apto cmp lb a = LESS)``,
-REWRITE_TAC [GSYM IN_LIST_TO_SET, GSYM ol_set_lb] THEN
-RW_TAC (srw_ss ()) [bt_to_set_lb]);
+REWRITE_TAC [GSYM ol_set_lb] THEN
+SRW_TAC [] [bt_to_set_lb]);
 
 val OL_bt_to_ol_lb = store_thm ("OL_bt_to_ol_lb",
 ``!cmp:'a toto t lb. OL cmp (bt_to_ol_lb cmp lb t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())
+SRW_TAC []
  [bt_to_ol_lb, ol_set_lb, list_split_lem, OL_bt_to_ol_lb_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_lb_ub_lem
@@ -538,12 +538,12 @@ RW_TAC (srw_ss ())
 val MEM_ub_lem = maybe_thm ("MEM_ub_lem",
 ``!cmp:'a toto t ub a. MEM a (bt_to_ol_ub cmp t ub) ==>(apto cmp a ub = LESS)``,
 REWRITE_TAC [GSYM ol_set_ub] THEN
-RW_TAC (srw_ss ()) [bt_to_set_ub]);
+SRW_TAC [] [bt_to_set_ub]);
 
 val OL_bt_to_ol_ub = store_thm ("OL_bt_to_ol_ub",
 ``!cmp:'a toto t ub. OL cmp (bt_to_ol_ub cmp t ub)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())
+SRW_TAC []
  [bt_to_ol_ub, ol_set_ub, list_split_lem, OL_bt_to_ol_lb_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_ub_lem
@@ -553,8 +553,8 @@ RW_TAC (srw_ss ())
 val OL_bt_to_ol = store_thm ("OL_bt_to_ol",
 ``!cmp:'a toto t. OL cmp (bt_to_ol cmp t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())
- [bt_to_ol, GSYM ol_set, list_split_lem, OL_bt_to_ol_lb, OL_bt_to_ol_ub] THENL
+SRW_TAC []
+ [bt_to_ol, ol_set, list_split_lem, OL_bt_to_ol_lb, OL_bt_to_ol_ub] THENL
 [REWRITE_TAC [OL]
 ,IMP_RES_TAC MEM_ub_lem
 ,IMP_RES_TAC MEM_lb_lem
@@ -574,7 +574,7 @@ val bt_to_ol_lb_ub_ac = Define
 val ol_lb_ub_ac_thm = maybe_thm ("ol_lb_ub_ac_thm",
 ``!cmp:'a toto t lb ub m. bt_to_ol_lb_ub_ac cmp lb t ub m =
                           bt_to_ol_lb_ub cmp lb t ub ++ m``,
-GEN_TAC THEN Induct THEN RW_TAC (srw_ss ())[bt_to_ol_lb_ub, bt_to_ol_lb_ub_ac]);
+GEN_TAC THEN Induct THEN SRW_TAC [][bt_to_ol_lb_ub, bt_to_ol_lb_ub_ac]);
 
 val bt_to_ol_lb_ac = Define
 `(bt_to_ol_lb_ac (cmp:'a toto) lb nt m = m) /\
@@ -586,7 +586,7 @@ val bt_to_ol_lb_ac = Define
 val ol_lb_ac_thm = maybe_thm ("ol_lb_ac_thm",
 ``!cmp:'a toto t lb m. bt_to_ol_lb_ac cmp lb t m = bt_to_ol_lb cmp lb t ++ m``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())[bt_to_ol_lb, bt_to_ol_lb_ac, ol_lb_ub_ac_thm]);
+SRW_TAC [][bt_to_ol_lb, bt_to_ol_lb_ac, ol_lb_ub_ac_thm]);
 
 val bt_to_ol_ub_ac = Define
 `(bt_to_ol_ub_ac (cmp:'a toto) nt ub m = m) /\
@@ -598,7 +598,7 @@ val bt_to_ol_ub_ac = Define
 val ol_ub_ac_thm = maybe_thm ("ol_ub_ac_thm",
 ``!cmp:'a toto t ub m. bt_to_ol_ub_ac cmp t ub m = bt_to_ol_ub cmp t ub ++ m``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())[bt_to_ol_ub, bt_to_ol_ub_ac, ol_lb_ub_ac_thm]);
+SRW_TAC [][bt_to_ol_ub, bt_to_ol_ub_ac, ol_lb_ub_ac_thm]);
 
 val bt_to_ol_ac = Define
 `(bt_to_ol_ac (cmp:'a toto) nt m = m) /\
@@ -608,7 +608,7 @@ val bt_to_ol_ac = Define
 val ol_ac_thm = maybe_thm ("ol_ac_thm",
 ``!cmp:'a toto t m. bt_to_ol_ac cmp t m = bt_to_ol cmp t ++ m``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ())[bt_to_ol, bt_to_ol_ac, ol_lb_ac_thm, ol_ub_ac_thm]);
+SRW_TAC [][bt_to_ol, bt_to_ol_ac, ol_lb_ac_thm, ol_ub_ac_thm]);
 
 (* ********* "OWL" for [set] Ordered With List *********** *)
 
@@ -617,7 +617,8 @@ val OWL = Define`OWL (cmp:'a toto) (s:'a set) (l:'a list) =
 
 val OWL_unique = maybe_thm ("OWL_unique",
 ``!cmp:'a toto s l m. OWL cmp s l /\ OWL cmp s m ==> (l = m)``,
-RW_TAC bool_ss [OWL] THEN METIS_TAC [OL_MEM_EQ]);
+RW_TAC bool_ss [OWL] THEN
+METIS_TAC [OL_MEM_EQ]);
 
 (* We want to compute bt_to_ol  with as few comparisons as may be. The
    definitions have used APPEND. *)
@@ -662,7 +663,7 @@ val OU_EMPTY = store_thm ("OU_EMPTY",
 ``!cmp:'a toto t:'a set. OU cmp t {} = t``,
 REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_ID]);
 
-val sing_UO = maybe_thm ("sing_UO",``!cmp:'a toto x:'a t:'a set.
+val sing_UO = maybe_thm ("sing_UO",``!cmp:'a toto x:'a t:'a set. 
         {x} UNION {y | y IN t /\ (apto cmp x y = LESS)} = UO cmp {x} t``,
 RW_TAC bool_ss [UO, IN_SING]);
 
@@ -672,7 +673,7 @@ val LESS_UO_LEM = store_thm ("LESS_UO_LEM",
 RW_TAC bool_ss [GSYM sing_UO] THEN EQ_TAC THEN
 REWRITE_TAC [IN_UNION, IN_SING] THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THENL
-[CONV_TAC LEFT_IMP_FORALL_CONV THEN
+[CONV_TAC LEFT_IMP_FORALL_CONV THEN 
  Q.EXISTS_TAC `x` THEN RW_TAC bool_ss []
 ,REPEAT STRIP_TAC THENL [AR, IMP_RES_TAC toto_trans_less]
 ]);
@@ -685,7 +686,7 @@ REWRITE_TAC [GSYM UNION_ASSOC] THEN ONCE_REWRITE_TAC [sing_UO] THEN REFL_TAC);
 
 val OU_UO_OU_LEM = maybe_thm ("OU_UO_OU_lem",
 ``!cmp:'a toto l x r. OU cmp l (UO cmp {x} r) = UO cmp (OU cmp l {x}) r``,
-RW_TAC (srw_ss ()) [OU, UO, EXTENSION, IN_UNION] THEN
+SRW_TAC [] [OU, UO, EXTENSION, IN_UNION] THEN
 EQ_TAC THEN REPEAT STRIP_TAC THEN AR THEN
 METIS_TAC [totoLLtrans]);
 
@@ -759,7 +760,7 @@ REWRITE_TAC [bl_to_set, sing_UO]);
 val bl_rev_set_lem = maybe_thm ("bl_rev_set_lem",``!cmp:'a toto b t.
  ENUMERAL cmp (bl_rev t b) = OU cmp (ENUMERAL cmp t) (bl_to_set cmp b)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bl_rev, bl_to_set_OU_UO] THEN
+SRW_TAC [] [bl_rev, bl_to_set_OU_UO] THEN
 REWRITE_TAC [bl_to_set, OU_EMPTY] THEN
 REWRITE_TAC [bt_to_set_OU_UO, OU_ASSOC]);
 
@@ -781,13 +782,13 @@ REWRITE_TAC [bl_to_bt, bl_rev_set_lem, bt_to_set, EMPTY_OU]);
 
 val LESS_ALL_UO_LEM = store_thm ("LESS_ALL_UO_LEM",
 ``!cmp:'a toto a s. LESS_ALL cmp a s ==> (UO cmp {a} s = a INSERT s)``,
-RW_TAC (srw_ss ()) [LESS_ALL, UO, EXTENSION, IN_UNION] THEN METIS_TAC []);
+SRW_TAC [] [LESS_ALL, UO, EXTENSION, IN_UNION] THEN METIS_TAC []);
 
 val LESS_ALL_OU_UO_LEM = store_thm ("LESS_ALL_OU_UO_LEM",
 ``!cmp:'a toto a s t. LESS_ALL cmp a s /\ LESS_ALL cmp a t ==>
                       (OU cmp (UO cmp {a} s) t = a INSERT (OU cmp s t))``,
 REPEAT STRIP_TAC THEN IMP_RES_THEN SUBST1_TAC LESS_ALL_UO_LEM THEN
-RW_TAC (srw_ss ()) [UO, OU, EXTENSION, IN_UNION] THEN
+SRW_TAC [] [UO, OU, EXTENSION, IN_UNION] THEN
 METIS_TAC [LESS_ALL]);
 
 val BL_ACCUM_set = maybe_thm ("BL_ACCUM_set",
@@ -796,7 +797,7 @@ val BL_ACCUM_set = maybe_thm ("BL_ACCUM_set",
     (bl_to_set cmp (BL_ACCUM a t b) =
       a INSERT (OU cmp (ENUMERAL cmp t) (bl_to_set cmp b)))``,
 GEN_TAC THEN GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [BL_ACCUM, bl_to_set_OU_UO, bt_to_set_OU_UO] THENL
+SRW_TAC [] [BL_ACCUM, bl_to_set_OU_UO, bt_to_set_OU_UO] THENL
 [METIS_TAC [LESS_ALL_UO_LEM, LESS_ALL_OU_UO_LEM, bl_to_set]
 ,METIS_TAC [LESS_ALL_UO_LEM, LESS_ALL_OU_UO_LEM, bl_to_set]
 ,REWRITE_TAC [bl_to_set] THEN
@@ -821,7 +822,7 @@ IMP_RES_TAC BL_ACCUM_set);
 val list_to_bl_set = maybe_thm ("list_to_bl_set",
 ``!cmp:'a toto l. OL cmp l ==> (bl_to_set cmp (list_to_bl l) = set l)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [bl_to_set, list_to_bl, LIST_TO_SET_THM, OL] THEN
+SRW_TAC [] [bl_to_set, list_to_bl, LIST_TO_SET_THM, OL] THEN
 RES_THEN (SUBST1_TAC o SYM) THEN MATCH_MP_TAC BL_CONS_set THEN
 RES_THEN SUBST1_TAC THEN RW_TAC bool_ss [IN_LIST_TO_SET, LESS_ALL]);
 
@@ -851,7 +852,7 @@ val OL_UNION = maybe_thm ("OL_UNION",
 ``!cmp:'a toto. !l m::OL cmp. OL cmp (smerge cmp l m) /\
                       (set (smerge cmp l m) = set l UNION set m)``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, smerge_set, smerge_OL]);
+SRW_TAC [] [SPECIFICATION, smerge_set, smerge_OL]);
 
 val OL_UNION_IMP = save_thm ("OL_UNION_IMP", REWRITE_RULE [SPECIFICATION]
                              (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_UNION));
@@ -892,14 +893,14 @@ val sinter_subset_inter = maybe_thm ("sinter_subset_inter",
 ``!cmp:'a toto l m x. MEM x (sinter cmp l m) ==> MEM x l /\ MEM x m``,
 HO_MATCH_MP_TAC sinter_ind THEN
 RW_TAC (srw_ss()) [sinter, MEM] THEN POP_ASSUM MP_TAC THEN
-Cases_on `apto cmp x y` THEN RW_TAC (srw_ss ()) [] THEN RES_TAC THEN AR THEN
+Cases_on `apto cmp x y` THEN SRW_TAC [] [] THEN RES_TAC THEN AR THEN
 DISJ1_TAC THEN IMP_RES_TAC toto_equal_eq);
 
 val sinter_OL = maybe_thm ("sinter_OL",
 ``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (sinter cmp l m)``,
 HO_MATCH_MP_TAC sinter_ind THEN
 RW_TAC (srw_ss()) [sinter, sinter_nil, OL] THEN
-Cases_on `apto cmp x y` THEN RW_TAC (srw_ss ()) [OL] THEN
+Cases_on `apto cmp x y` THEN SRW_TAC [] [OL] THEN
 IMP_RES_TAC sinter_subset_inter THEN RES_TAC);
 
 val inter_subset_sinter = maybe_thm ("inter_subset_sinter",
@@ -908,15 +909,15 @@ val inter_subset_sinter = maybe_thm ("inter_subset_sinter",
 GEN_TAC THEN GEN_TAC THEN Induct THEN REWRITE_TAC [MEM] THEN
 GEN_TAC THEN STRIP_TAC THEN Induct THEN REWRITE_TAC [MEM] THEN
 RW_TAC (srw_ss()) [sinter] THENL
-[RW_TAC (srw_ss ()) [toto_refl, MEM]
+[SRW_TAC [] [toto_refl, MEM]
 ,Cases_on `apto cmp h h'` THEN RES_TAC THEN
- RW_TAC (srw_ss ()) [sinter, MEM] THENL
+ SRW_TAC [] [sinter, MEM] THENL
  [IMP_RES_TAC OL THEN IMP_RES_TAC totoLLtrans THEN
   IMP_RES_TAC toto_not_less_refl
  ,IMP_RES_TAC OL THEN RES_TAC
  ]
 ,Cases_on `apto cmp h h'` THEN RES_TAC THEN
- RW_TAC (srw_ss ()) [sinter, MEM] THENL
+ SRW_TAC [] [sinter, MEM] THENL
  [`OL cmp l` by IMP_RES_TAC OL THEN RES_TAC THEN
   `MEM h' (h' :: m)` by REWRITE_TAC [MEM] THEN RES_TAC
  ,IMP_RES_TAC toto_equal_eq THEN AR
@@ -924,7 +925,7 @@ RW_TAC (srw_ss()) [sinter] THENL
   IMP_RES_TAC totoLGtrans THEN IMP_RES_TAC toto_not_less_refl
  ]
 ,Cases_on `apto cmp h h'` THEN RES_TAC THEN
- RW_TAC (srw_ss ()) [sinter, MEM] THENL
+ SRW_TAC [] [sinter, MEM] THENL
  [`MEM x (h' :: m)` by ASM_REWRITE_TAC [MEM] THEN IMP_RES_TAC OL THEN RES_TAC
  ,DISJ2_TAC THEN IMP_RES_TAC OL THEN RES_TAC
  ,IMP_RES_TAC OL THEN RES_TAC
@@ -934,7 +935,7 @@ RW_TAC (srw_ss()) [sinter] THENL
 
 val sinter_set = maybe_thm ("sinter_set", ``!cmp:'a toto l m.
  OL cmp l /\ OL cmp m ==> (set (sinter cmp l m) = set l INTER set m)``,
-RW_TAC (srw_ss ()) [IN_INTER, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
+SRW_TAC [] [IN_INTER, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
 [MATCH_ACCEPT_TAC sinter_subset_inter
 ,METIS_TAC [inter_subset_sinter]
 ]);
@@ -943,7 +944,7 @@ val OL_INTER = maybe_thm ("OL_INTER",
 ``!cmp:'a toto. !l m::OL cmp. OL cmp (sinter cmp l m) /\
                       (set (sinter cmp l m) = set l INTER set m)``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, sinter_set, sinter_OL]);
+SRW_TAC [] [SPECIFICATION, sinter_set, sinter_OL]);
 
 val OL_INTER_IMP = save_thm ("OL_INTER_IMP", REWRITE_RULE [SPECIFICATION]
                              (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_INTER));
@@ -984,7 +985,7 @@ val diff_subset_sdiff = maybe_thm ("diff_subset_sdiff",
 ``!cmp:'a toto l m x. MEM x l /\ ~MEM x m ==> MEM x (sdiff cmp l m)``,
 HO_MATCH_MP_TAC sdiff_ind THEN
 RW_TAC (srw_ss()) [sdiff, MEM] THEN POP_ASSUM MP_TAC THEN
-Cases_on `apto cmp x y` THEN RW_TAC (srw_ss ()) [] THEN RES_TAC THEN AR THEN
+Cases_on `apto cmp x y` THEN SRW_TAC [] [] THEN RES_TAC THEN AR THEN
 IMP_RES_TAC toto_equal_eq);
 
 val OL_NOT_MEM = maybe_thm ("OL_NOT_MEM",
@@ -1001,9 +1002,9 @@ GEN_TAC THEN Induct THEN REWRITE_TAC [MEM] THEN
 RW_TAC (srw_ss()) [sdiff] THEN POP_ASSUM MP_TAC THEN
 `OL cmp m` by IMP_RES_TAC OL THEN `OL cmp l` by IMP_RES_TAC OL THENL
 [Cases_on `apto cmp h h'` THEN
- RW_TAC (srw_ss ()) [sdiff, MEM] THEN DISJ2_TAC THEN RES_TAC
+ SRW_TAC [] [sdiff, MEM] THEN DISJ2_TAC THEN RES_TAC
 ,Cases_on `apto cmp h h'` THEN
- RW_TAC (srw_ss ()) [sdiff, MEM] THENL
+ SRW_TAC [] [sdiff, MEM] THENL
  [IMP_RES_TAC toto_glneq
  ,METIS_TAC [MEM]
  ,IMP_RES_TAC toto_equal_eq THEN METIS_TAC [OL_NOT_MEM]
@@ -1012,7 +1013,7 @@ RW_TAC (srw_ss()) [sdiff] THEN POP_ASSUM MP_TAC THEN
   ,METIS_TAC [OL, totoLLtrans, toto_glneq]
  ]]
 ,Cases_on `apto cmp h h'` THEN
- RW_TAC (srw_ss ()) [sdiff, MEM] THENL
+ SRW_TAC [] [sdiff, MEM] THENL
  [METIS_TAC [OL, totoLLtrans, toto_glneq]
  ,METIS_TAC [MEM]
 ]]);
@@ -1021,16 +1022,16 @@ val sdiff_OL = maybe_thm ("sdiff_OL",
 ``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (sdiff cmp l m)``,
 GEN_TAC THEN Induct THEN1 REWRITE_TAC [sdiff_nil, OL] THEN GEN_TAC THEN
 Induct THEN1 (REWRITE_TAC [sdiff_nil] THEN tautLib.TAUT_TAC) THEN
-RW_TAC (srw_ss ()) [sdiff] THEN REWRITE_TAC [OL] THEN
+SRW_TAC [] [sdiff] THEN REWRITE_TAC [OL] THEN
 IMP_RES_TAC OL THEN
-Cases_on `apto cmp h h'` THEN RW_TAC (srw_ss ()) [OL] THEN
+Cases_on `apto cmp h h'` THEN SRW_TAC [] [OL] THEN
 IMP_RES_TAC sdiff_subset_diff THEN RES_TAC);
 
 (* Note that sdiff_set, like sinter_set, depends on sorted input lists. *)
 
 val sdiff_set = maybe_thm ("sdiff_set", ``!cmp:'a toto l m.
  OL cmp l /\ OL cmp m ==> (set (sdiff cmp l m) = set l DIFF set m)``,
-RW_TAC (srw_ss ()) [IN_DIFF, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
+SRW_TAC [] [IN_DIFF, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
 [METIS_TAC [sdiff_subset_diff]
 ,MATCH_ACCEPT_TAC diff_subset_sdiff
 ]);
@@ -1039,7 +1040,7 @@ val OL_DIFF = maybe_thm ("OL_DIFF",
 ``!cmp:'a toto. !l m::OL cmp. OL cmp (sdiff cmp l m) /\
                       (set (sdiff cmp l m) = set l DIFF set m)``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, sdiff_set, sdiff_OL]);
+SRW_TAC [] [SPECIFICATION, sdiff_set, sdiff_OL]);
 
 val OL_DIFF_IMP = save_thm ("OL_DIFF_IMP", REWRITE_RULE [SPECIFICATION]
                              (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) OL_DIFF));
@@ -1084,7 +1085,7 @@ Q.SUBGOAL_THEN
 
 val bt_to_ol_thm = maybe_thm ("bt_to_ol_thm",
 ``!cmp:'a toto t. bt_to_ol cmp t = bt_to_ol_ac cmp t []``,
-RW_TAC (srw_ss ()) [ol_ac_thm]);
+SRW_TAC [] [ol_ac_thm]);
 
 val OWL_UNION_THM = store_thm ("OWL_UNION_THM", ``!cmp:'a toto s l t m.
     OWL cmp s l /\ OWL cmp t m ==> OWL cmp (s UNION t) (smerge cmp l m)``,
@@ -1126,33 +1127,33 @@ val OL_bt = Define
 val OL_bt_lb_ub_lem = maybe_thm ("OL_bt_lb_ub_lem",
 ``!cmp t lb ub. OL_bt_lb_ub cmp lb t ub ==> (apto cmp lb ub = LESS)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [OL_bt_lb_ub] THEN METIS_TAC [ totoLLtrans]);
+SRW_TAC [] [OL_bt_lb_ub] THEN METIS_TAC [ totoLLtrans]);
 
 val OL_bt_lb_ub_thm = maybe_thm ("OL_bt_lb_ub_thm",
 ``!cmp t:'a bt lb ub. OL_bt_lb_ub cmp lb t ub ==>
                       (bt_to_ol_lb_ub cmp lb t ub = bt_to_list t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [OL_bt_lb_ub, bt_to_ol_lb_ub, bt_to_list] THEN
+SRW_TAC [] [OL_bt_lb_ub, bt_to_ol_lb_ub, bt_to_list] THEN
 METIS_TAC [OL_bt_lb_ub_lem]);
 
 val OL_bt_lb_thm = maybe_thm ("OL_bt_lb_thm",
 ``!cmp t:'a bt lb. OL_bt_lb cmp lb t ==>
                    (bt_to_ol_lb cmp lb t = bt_to_list t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [OL_bt_lb, bt_to_ol_lb, OL_bt_lb_ub_thm, bt_to_list] THEN
+SRW_TAC [] [OL_bt_lb, bt_to_ol_lb, OL_bt_lb_ub_thm, bt_to_list] THEN
 METIS_TAC [OL_bt_lb_ub_lem]);
 
 val OL_bt_ub_thm = maybe_thm ("OL_bt_ub_thm",
 ``!cmp t:'a bt ub. OL_bt_ub cmp t ub ==>
                    (bt_to_ol_ub cmp t ub = bt_to_list t)``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [OL_bt_ub, bt_to_ol_ub, OL_bt_lb_ub_thm, bt_to_list] THEN
+SRW_TAC [] [OL_bt_ub, bt_to_ol_ub, OL_bt_lb_ub_thm, bt_to_list] THEN
 METIS_TAC [OL_bt_lb_ub_lem]);
 
 val OL_bt_thm = maybe_thm ("OL_bt_thm",
 ``!cmp t:'a bt. OL_bt cmp t ==> (bt_to_ol cmp t = bt_to_list t)``,
 GEN_TAC THEN Cases THEN
-RW_TAC (srw_ss ()) [OL_bt, bt_to_ol, OL_bt_lb_thm, OL_bt_ub_thm, bt_to_list]);
+SRW_TAC [] [OL_bt, bt_to_ol, OL_bt_lb_thm, OL_bt_ub_thm, bt_to_list]);
 
 val better_bt_to_ol = store_thm ("better_bt_to_ol",
 ``!cmp t:'a bt. bt_to_ol cmp t = if OL_bt cmp t then bt_to_list_ac t []

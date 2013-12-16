@@ -23,8 +23,6 @@ fun ulist x = [x];
 
 val ERR = mk_HOL_ERR "fmapalTacs";
 
-val _ = intLib.deprecate_int();
-
 (* **************************************************************** *)
 (* See introductory comment in enumTacs.sml.                        *)
 (* **************************************************************** *)
@@ -33,25 +31,23 @@ val _ = intLib.deprecate_int();
 (*             Conversions for sorting lists with constant keys           *)
 (* ********************************************************************** *)
 
-val [none_none, none_some, some_none, some_some] = CONJUNCTS merge;
+val [none_any, some_none, some_some] = CONJUNCTS merge;
 
-(* none_none = |- !cmp. merge cmp [] [] = []
-   none_some = |- !v9 v8 cmp. merge cmp [] (v8::v9) = v8::v9
-   some_none =
-    |- !v5 v13 v12 cmp. merge cmp ((v12,v13)::v5) [] = (v12,v13)::v5
-   some_some =
-    |- !l2 l1 cmp b2 b1 a2 a1.
-         merge cmp ((a1,b1)::l1) ((a2,b2)::l2) =
-         case apto cmp a1 a2 of
-            less -> (a1,b1)::merge cmp l1 ((a2,b2)::l2)
-         || equal -> (a1,b1)::merge cmp l1 l2
-         || greater -> (a2,b2)::merge cmp ((a1,b1)::l1) l2 *)
+(* none_any = |- !l cmp. merge cmp [] l = l: thm
+   some_none = |- !v5 v4 cmp. merge cmp (v4::v5) [] = v4::v5: thm
+   some_some = |- !l2 l1 cmp b2 b1 a2 a1.
+     merge cmp ((a1,b1)::l1) ((a2,b2)::l2) =
+     case apto cmp a1 a2 of
+       LESS => (a1,b1)::merge cmp l1 ((a2,b2)::l2)
+     | EQUAL => (a1,b1)::merge cmp l1 l2
+     | GREATER => (a2,b2)::merge cmp ((a1,b1)::l1) l2 *)
 
 fun merge_CONV key_conv =
 let fun merge_c t =
-((REWR_CONV some_some THENC RAND_CONV key_conv THENC
+((REWR_CONV some_some THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV key_conv))) THENC
          cpn_REWR_CONV THENC RAND_CONV merge_c) ORELSEC
-REWR_CONV none_some ORELSEC REWR_CONV some_none ORELSEC REWR_CONV none_none) t
+REWR_CONV none_any ORELSEC REWR_CONV some_none) t
 in merge_c end;
 
 val [im_lengthen, im_zero, im_one]  = CONJUNCTS incr_merge;
@@ -147,7 +143,8 @@ FUN_fmap_CONV elemconv THENC fmap_TO_FMAPAL_CONV keyconv cmp;
    FAPPLY_nt = |- !cmp x. FMAPAL cmp nt ' x = FEMPTY ' x *)
 
 fun FAPPLY_CONV keyconv =
-let fun apf_c t = ((REWR_CONV FAPPLY_node THENC RAND_CONV keyconv THENC
+let fun apf_c t = ((REWR_CONV FAPPLY_node THENC RATOR_CONV
+                    (RATOR_CONV (RATOR_CONV (RAND_CONV keyconv))) THENC
                     cpn_REWR_CONV THENC (apf_c ORELSEC ALL_CONV)) ORELSEC
                    REWR_CONV FAPPLY_nt) t;
     fun apf_i t = ((REWR_CONV FAPPLY_fmap_CONS THENC
@@ -372,7 +369,8 @@ val [imnone_none, imsome_none, imnone_some,imsome_some] = CONJUNCTS inter_merge;
 
 fun inter_merge_CONV keyconv =
 let fun interm_c t =
-((REWR_CONV imsome_some THENC RAND_CONV keyconv THENC
+((REWR_CONV imsome_some THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV keyconv))) THENC
          cpn_REWR_CONV THENC (RAND_CONV interm_c ORELSEC interm_c)) ORELSEC
 REWR_CONV imnone_some ORELSEC REWR_CONV imsome_none
                       ORELSEC REWR_CONV imnone_none)
@@ -406,7 +404,8 @@ val [dmnone_none, dmsome_none, dmnone_some, dmsome_some] = CONJUNCTS diff_merge;
 
 fun diff_merge_CONV keyconv =
 let fun diffm_c t =
-((REWR_CONV dmsome_some THENC RAND_CONV keyconv THENC
+((REWR_CONV dmsome_some THENC
+ RATOR_CONV (RATOR_CONV (RATOR_CONV  (RAND_CONV keyconv))) THENC
          cpn_REWR_CONV THENC (RAND_CONV diffm_c ORELSEC diffm_c)) ORELSEC
 REWR_CONV dmnone_some ORELSEC REWR_CONV dmsome_none
                       ORELSEC REWR_CONV dmnone_none)
@@ -503,7 +502,8 @@ val keyconv = REDUCE_CONV;
 
 fun IN_FDOM_CONV keyconv =
 let fun ifc t =
-((REWR_CONV in_fdom_node THENC RAND_CONV keyconv THENC
+((REWR_CONV in_fdom_node THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV keyconv))) THENC
   cpn_REWR_CONV THENC (ifc ORELSEC ALL_CONV)) ORELSEC
  REWR_CONV in_fdom_nt) t;
 fun ifl t = ((REWR_CONV infdomcons THENC RATOR_CONV (RAND_CONV keyconv) THENC
@@ -572,8 +572,9 @@ val [brc_nt, brc_node] = CONJUNCTS bt_rplacv_cn;
 
 fun bt_rplacv_CONV keyconv =
 let fun brcn t =
-((REWR_CONV brc_node THENC RAND_CONV keyconv THENC cpn_REWR_CONV THENC
-  TRY_CONV brcn) ORELSEC
+((REWR_CONV brc_node THENC
+  RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV keyconv))) THENC
+  cpn_REWR_CONV THENC TRY_CONV brcn) ORELSEC
  REWR_CONV brc_nt) t
 in brcn THENC REPEATC BETA_CONV end;
 

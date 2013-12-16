@@ -1,18 +1,19 @@
 (* file HS/PIN/fmapalScript.sml, created 6/2/13 F.L. Morris *)
 (* tree-based finite function representation; name a homage to numeralTheory *)
 (* Uses bt, bl basics from enumeralScript, puts 'a#'b in place of 'a. *)
+(* Revised 13 Dec. 2013 for HOL_Kananaskis 9. *)
 
 structure fmapalScript = struct
 
 open HolKernel boolLib Parse;
 
-(* app load ["totoTheory", "totoTacs", "res_quanLib", "enumeralTheory",
-          "finite_mapTheory", "combinTheory"]; *)
+(* app load ["totoTheory", "res_quanLib", "enumeralTheory",
+             "finite_mapTheory", "combinTheory"]; *)
 (* comment out above load when Holmaking *)
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory res_quanTheory res_quanLib;
 open pairTheory PairRules optionTheory finite_mapTheory;
-open totoTheory totoTacs bossLib listTheory enumeralTheory;
+open totoTheory bossLib listTheory enumeralTheory;
 
 val _ = new_theory "fmapal";
 
@@ -24,7 +25,6 @@ val _ = new_theory "fmapal";
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 fun rrs th = REWRITE_RULE [SPECIFICATION] th;
-val _ = intLib.deprecate_int (); (* because intLib gets loaded now (9/13) *)
 
 (* ****** Make FUNION infix. ********* *)
 
@@ -57,7 +57,7 @@ val MEM_FST = maybe_thm ("MEM_FST",
 ``!x l:('a#'b)list. (?y. MEM (x,y) l) <=> MEM x (MAP FST l)``,
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM, MAP]
-,P_PGEN_TAC ``a:'a, b:'b`` THEN RW_TAC (srw_ss ()) [MAP,MEM] THEN
+,P_PGEN_TAC ``a:'a, b:'b`` THEN SRW_TAC [] [MAP,MEM] THEN
  METIS_TAC [MEM]
 ]);
 
@@ -65,7 +65,7 @@ val ORL_OL_FST = maybe_thm ("ORL_OL_FST",
 ``!cmp:'a toto l:('a#'b) list. ORL cmp l <=> OL cmp (MAP FST l)``,
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [ORL, OL, MAP]
-,P_PGEN_TAC ``a:'a, b:'b`` THEN RW_TAC (srw_ss ()) [MAP, ORL, OL] THEN
+,P_PGEN_TAC ``a:'a, b:'b`` THEN SRW_TAC [] [MAP, ORL, OL] THEN
  CONV_TAC (LAND_CONV (ONCE_DEPTH_CONV FORALL_IMP_CONV)) THEN
  REWRITE_TAC [MEM_FST]
 ]);
@@ -144,8 +144,7 @@ val merge = Define`(merge (cmp:'a toto) [] (l:('a#'b)list) = l)
 val merge_ind = theorem "merge_ind";
 
 (* merge_ind = |- !P.
-     (!cmp. P cmp [] []) /\ (!cmp v8 v9. P cmp [] (v8::v9)) /\
-     (!cmp v12 v13 v5. P cmp ((v12,v13)::v5) []) /\
+     (!cmp l. P cmp [] l) /\ (!cmp v4 v5. P cmp (v4::v5) []) /\
      (!cmp a1 b1 l1 a2 b2 l2.
         ((apto cmp a1 a2 = EQUAL) ==> P cmp l1 l2) /\
         ((apto cmp a1 a2 = GREATER) ==> P cmp ((a1,b1)::l1) l2) /\
@@ -155,18 +154,17 @@ val merge_ind = theorem "merge_ind";
 
 val merge_thm = maybe_thm ("merge_thm", Term
 `!cmp:'a toto. (!m:('a#'b)list. merge cmp [] m = m)
-            /\ (!l:('a#'b)list. merge cmp l [] = l)
-            /\ (!a1:'a b1:'b a2:'a b2:'b l1 l2.
-                merge cmp ((a1, b1) :: l1) ((a2, b2) :: l2) =
-                    case apto cmp a1 a2 of
-                     LESS => (a1, b1) :: merge cmp l1 ((a2, b2) :: l2)
-                 | EQUAL => (a1, b1:'b) :: merge cmp l1 l2
-               | GREATER => (a2, b2) :: merge cmp ((a1, b1) :: l1) l2)`,
-GEN_TAC THEN REWRITE_TAC [merge] THEN CONJ_TAC THENL
-[Cases_on `m:('a#'b)list` THEN REWRITE_TAC [merge]
-,Cases_on `l:('a#'b)list` THENL
- [REWRITE_TAC [merge]
- ,PURE_ONCE_REWRITE_TAC [GSYM PAIR] THEN REWRITE_TAC [merge]]]);
+             /\ (!l:('a#'b)list. merge cmp l [] = l)
+             /\ (!a1:'a b1:'b a2:'a b2:'b l1 l2.
+                 merge cmp ((a1, b1) :: l1) ((a2, b2) :: l2) =
+                     case apto cmp a1 a2 of
+                      LESS => (a1, b1) :: merge cmp l1 ((a2, b2) :: l2)
+                  | EQUAL => (a1, b1:'b) :: merge cmp l1 l2
+                | GREATER => (a2, b2) :: merge cmp ((a1, b1) :: l1) l2)`,
+GEN_TAC THEN REWRITE_TAC [merge] THEN
+Cases_on `l:('a#'b)list` THENL
+[REWRITE_TAC [merge]
+,PURE_ONCE_REWRITE_TAC [GSYM PAIR] THEN REWRITE_TAC [merge]]);
 
 (* If we are to use incr_sort, we doubtless will need to prove that its
 ouput is sorted and contains the pairs that assocv would find from its
@@ -184,9 +182,9 @@ GEN_TAC THEN Induct THENL
 ,P_PGEN_TAC (Term`(a:'a,b:'b)`) THEN Induct THENL
  [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [merge_thm, smerge_nil, MAP]
  ,P_PGEN_TAC (Term`(a':'a,b':'b)`) THEN
-  RW_TAC (srw_ss ()) [merge_thm, smerge, MAP, FST] THEN
+  SRW_TAC [] [merge_thm, smerge, MAP, FST] THEN
   Cases_on `apto cmp a a'` THEN
-  RW_TAC (srw_ss ()) []
+  SRW_TAC [] []
 ]]);
 
 val merge_ORL = maybe_thm ("merge_ORL", ``!cmp:'a toto l m:('a#'b)list.
@@ -201,7 +199,6 @@ val merge_subset_union = maybe_thm ("merge_subset_union",
 HO_MATCH_MP_TAC merge_ind THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL
 [REWRITE_TAC [MEM, merge]
-,REWRITE_TAC [MEM, merge]
 ,REWRITE_TAC [MEM, merge]
 ,CONV_TAC (RAND_CONV (REWRITE_CONV [merge])) THEN
  Cases_on `apto cmp a1 a2` THEN
@@ -407,7 +404,7 @@ val ORL_OL_FST_sublists = maybe_thm ("ORL_OL_FST_sublists",
 GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [ORL_sublists, OL_sublists, MAP]
 ,Cases THEN
- RW_TAC (srw_ss ()) [ORL_sublists, OL_sublists, MAP, OPTION_MAP_DEF] THEN
+ SRW_TAC [] [ORL_sublists, OL_sublists, MAP, OPTION_MAP_DEF] THEN
  ASM_REWRITE_TAC [ORL_OL_FST]
 ]);
 
@@ -417,7 +414,7 @@ incr_smerge cmp (MAP FST l) (MAP (OPTION_MAP (MAP FST)) lol)``,
 GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [incr_merge, incr_smerge, MAP]
 ,Cases THEN
- RW_TAC (srw_ss ()) [incr_merge, incr_smerge, MAP, OPTION_MAP_DEF] THEN
+ SRW_TAC [] [incr_merge, incr_smerge, MAP, OPTION_MAP_DEF] THEN
  REWRITE_TAC [merge_FST_smerge]
 ]);
 
@@ -431,7 +428,7 @@ val NOT_MEM_NIL = maybe_thm ("NOT_MEM_NIL",
 ``(!x:'c. ~MEM x l) <=> (l = [])``,
 EQ_TAC THENL
 [CONV_TAC (CONTRAPOS_CONV THENC (RAND_CONV (NOT_FORALL_CONV))) THEN
- Cases_on `l` THEN RW_TAC (srw_ss ()) [] THEN
+ Cases_on `l` THEN SRW_TAC [] [] THEN
  Q.EXISTS_TAC `h` THEN REWRITE_TAC []
 ,RW_TAC bool_ss [MEM]]);
 
@@ -456,7 +453,7 @@ val ORL_MEM_FST	= maybe_thm ("ORL_MEM_FST",
     !x y p q. MEM (x,y) l /\ MEM (p,q) l /\ (x = p) ==> (y = q)``,
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
-,P_PGEN_TAC ``g:'a,h:'b`` THEN RW_TAC (srw_ss ()) [] THENL
+,P_PGEN_TAC ``g:'a,h:'b`` THEN SRW_TAC [] [] THENL
 [`~MEM (g,q) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
  Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR
 ,`~MEM (g,y) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
@@ -468,7 +465,7 @@ val ORL_MEM_EQ = maybe_thm ("ORL_MEM_EQ",
 ``!cmp l m:('a#'b)list. ORL cmp l /\ ORL cmp m ==>
    ((!ab. MEM ab l <=> MEM ab m) <=> (l = m))``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [GSYM NOT_MEM_NIL]
+[SRW_TAC [] [GSYM NOT_MEM_NIL]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN Induct THENL
  [RW_TAC (srw_ss()) [SOME_MEM_NOT_NIL]
  ,P_PGEN_TAC ``p:'a,q:'b`` THEN
@@ -603,7 +600,7 @@ val assocv_merge_out = maybe_thm ("assocv_merge_out",
         (assocv (merge_out cmp l lol) = assocv (l ++ OPTION_FLAT lol))``,
 GEN_TAC THEN
 HO_MATCH_MP_TAC OPTION_FLAT_ind THEN
-RW_TAC (srw_ss ()) [OPTION_FLAT, merge_out] THENL
+SRW_TAC [] [OPTION_FLAT, merge_out] THENL
 [`ORL_sublists cmp lol` by (ONCE_REWRITE_TAC [GSYM ORL_sublists] THEN AR) THEN
  RES_TAC
 ,`ORL cmp a /\ ORL_sublists cmp lol` by REWRITE_TAC [REWRITE_RULE
@@ -625,9 +622,9 @@ val assocv_incr_merge = maybe_thm ("assocv_incr_merge",
   ORL_sublists cmp lol ==>
   (assocv (merge_out cmp l (incr_merge cmp m lol)) =
    assocv (merge_out cmp (merge cmp l m) lol))``,
-GEN_TAC THEN Induct THEN RW_TAC (srw_ss ())
+GEN_TAC THEN Induct THEN SRW_TAC []
  [assocv_merge_out, OPTION_FLAT, merge_out, incr_merge, assocv_APPEND] THEN
-Cases_on `h` THEN RW_TAC (srw_ss ()) [incr_merge, merge_out] THEN
+Cases_on `h` THEN SRW_TAC [] [incr_merge, merge_out] THEN
 `ORL cmp x /\ ORL_sublists cmp lol` by METIS_TAC [ORL_sublists] THEN
 Q.SUBGOAL_THEN `merge cmp (merge cmp l m) x = merge cmp l (merge cmp m x)`
 SUBST1_TAC THEN1 (MATCH_MP_TAC (GSYM merge_ASSOC) THEN AR) THEN
@@ -638,13 +635,13 @@ METIS_TAC [assocv_merge_out]);
 
 val assocv_NIL = maybe_thm ("assocv_NIL",
 ``assocv ([]:('a#'b)list) = K NONE``,
-CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) [assocv]);
+CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] [assocv]);
 
 val OPTION_UPDATE_K_NONE = maybe_thm ("OPTION_UPDATE_K_NONE",
 ``!f:'a->'b option. (OPTION_UPDATE f (K NONE) = f) /\
                     (OPTION_UPDATE (K NONE) f = f)``,
 CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THEN
-RW_TAC (srw_ss ()) [OPTION_UPDATE, optry_ID]);
+SRW_TAC [] [OPTION_UPDATE, optry_ID]);
 
 val ORL_SING = maybe_thm ("ORL_SING",
 ``!cmp x:('a#'b). ORL cmp [x]``,
@@ -654,13 +651,13 @@ val assocv_incr_build = maybe_thm ("assocv_incr_build",
 ``!cmp:'a toto m l:('a#'b)list. ORL cmp l ==>
  (assocv (merge_out cmp l (incr_build cmp m)) = assocv (l ++ m))``,
 GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [assocv_APPEND, incr_build, merge_out] THENL
+SRW_TAC [] [assocv_APPEND, incr_build, merge_out] THENL
 [REWRITE_TAC [OPTION_UPDATE_K_NONE, assocv_NIL, merge_thm]
 ,Q.SUBGOAL_THEN
  `OPTION_UPDATE (assocv l) (assocv (h::m)) = assocv ((l ++ [h]) ++ m)`
   SUBST1_TAC THENL
  [Q.SUBGOAL_THEN `h::m = [h] ++ m` SUBST1_TAC THEN1 REWRITE_TAC [APPEND] THEN
-  RW_TAC (srw_ss ()) [assocv_APPEND, OPTION_UPDATE_ASSOC]
+  SRW_TAC [] [assocv_APPEND, OPTION_UPDATE_ASSOC]
  ,`ORL cmp [h]` by MATCH_ACCEPT_TAC ORL_SING THEN
   `ORL_sublists cmp (incr_build cmp m)` by MATCH_ACCEPT_TAC incr_build_ORL THEN
   Q.SUBGOAL_THEN
@@ -820,24 +817,24 @@ CONJ_TAC THENL
 [ONCE_REWRITE_TAC [INTER_COMM] THEN MATCH_ACCEPT_TAC UNION_OVER_INTER
 ,GEN_TAC THEN Cases_on `x IN FDOM f` THEN ASM_REWRITE_TAC [DRESTRICT_DEF] THEN
  ASM_REWRITE_TAC [IN_UNION, IN_INTER] THEN
- RW_TAC (srw_ss ()) [FDOM_FUNION, FDOM_DRESTRICT, FUNION_DEF, DRESTRICT_DEF]]);
+ SRW_TAC [] [FDOM_FUNION, FDOM_DRESTRICT, FUNION_DEF, DRESTRICT_DEF]]);
 
 val DRESTRICT_SING = maybe_thm ("DRESTRICT_SING",
 ``!x:'a y:'b s. x IN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY |+ (x,y))``,
-RW_TAC (srw_ss ()) [DRESTRICT_DEF]);
+SRW_TAC [] [DRESTRICT_DEF]);
 
 val DRESTRICT_SING_FEMPTY = maybe_thm ("DRESTRICT_SING_FEMPTY",
 ``!x:'a y:'b s. x NOTIN s ==> (DRESTRICT (FEMPTY |+ (x,y)) s = FEMPTY)``,
-RW_TAC (srw_ss ()) [DRESTRICT_DEF]);
+SRW_TAC [] [DRESTRICT_DEF]);
 
 val DRESTRICT_IN = maybe_thm ("DRESTRICT_IN",
 ``!s x f:'a|->'b. x IN s ==> (DRESTRICT f s ' x = f ' x)``,
 GEN_TAC THEN GEN_TAC THEN Induct THEN
-RW_TAC (srw_ss ()) [DRESTRICT_DEF, IN_INTER, FAPPLY_FUPDATE_THM]);
+SRW_TAC [] [DRESTRICT_DEF, IN_INTER, FAPPLY_FUPDATE_THM]);
 
 val DRESTRICT_NOT_IN = maybe_thm ("DRESTRICT_NOT_IN",
 ``!s x f:'a|->'b. x NOTIN s ==> (DRESTRICT f s ' x = FEMPTY ' x)``,
-RW_TAC (srw_ss ()) [DRESTRICT_DEF, IN_INTER]);
+SRW_TAC [] [DRESTRICT_DEF, IN_INTER]);
 
 val IN_FDOM_DRESTRICT_IMP = maybe_thm ("IN_FDOM_DRESTRICT_IMP",
 ``!f:'a|->'b s x. x IN FDOM (DRESTRICT f s) ==> x IN s``,
@@ -854,31 +851,31 @@ val FAPPLY_node = store_thm ("FAPPLY_node",
        case apto cmp x a of LESS => FMAPAL cmp l ' x
                        |   EQUAL => b
                        | GREATER => FMAPAL cmp r ' x``,
-RW_TAC (srw_ss ()) [bt_to_fmap, FUNION_DEF] THENL
+SRW_TAC [] [bt_to_fmap, FUNION_DEF] THENL
 [Q.SUBGOAL_THEN `x IN {y | apto cmp y a = LESS}`
- (fn xin => RW_TAC (srw_ss ()) [MATCH_MP DRESTRICT_IN xin,
+ (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
                                 CONV_RULE SET_SPEC_CONV xin]) THEN
  METIS_TAC [IN_INTER, FDOM_DRESTRICT]
 ,`apto cmp a a = LESS` by IMP_RES_THEN
  (MATCH_ACCEPT_TAC o CONV_RULE SET_SPEC_CONV) IN_FDOM_DRESTRICT_IMP THEN
  METIS_TAC [toto_refl, all_cpn_distinct]
-,RW_TAC (srw_ss ()) [toto_refl, FAPPLY_FUPDATE_THM]
+,SRW_TAC [] [toto_refl, FAPPLY_FUPDATE_THM]
 ,POP_ASSUM (MP_TAC o CONV_RULE (ONCE_DEPTH_CONV SET_SPEC_CONV) o
             REWRITE_RULE [FDOM_DRESTRICT, IN_INTER]) THEN
- RW_TAC (srw_ss ()) [] THENL
- [Cases_on `apto cmp x a` THEN RW_TAC (srw_ss ()) [] THENL
+ SRW_TAC [] [] THENL
+ [Cases_on `apto cmp x a` THEN SRW_TAC [] [] THENL
   [IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN
    Q.SUBGOAL_THEN `x NOTIN {z | apto cmp a z = LESS}`
     (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_NOT_IN) THEN
    CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN
-   RW_TAC (srw_ss ()) [GSYM toto_antisym]
+   SRW_TAC [] [GSYM toto_antisym]
   ,METIS_TAC [toto_equal_eq]
   ,Q.SUBGOAL_THEN `x IN {z | apto cmp a z = LESS}`
                   (REWRITE_TAC o ulist o MATCH_MP DRESTRICT_IN) THEN
    CONV_TAC SET_SPEC_CONV THEN ASM_REWRITE_TAC [GSYM toto_antisym]
   ]
  ,Q.SUBGOAL_THEN `x IN {z | apto cmp a z = LESS}`
-  (fn xin => RW_TAC (srw_ss ()) [MATCH_MP DRESTRICT_IN xin,
+  (fn xin => SRW_TAC [] [MATCH_MP DRESTRICT_IN xin,
          REWRITE_RULE [GSYM toto_antisym] (CONV_RULE SET_SPEC_CONV xin)]) THEN
   CONV_TAC SET_SPEC_CONV THEN
   REWRITE_TAC [GSYM toto_antisym] THEN
@@ -913,28 +910,28 @@ val bt_map = Define
 val bt_FST_FDOM = store_thm ("bt_FST_FDOM",
 ``!cmp t:('a#'b)bt. FDOM (FMAPAL cmp t) = ENUMERAL cmp (bt_map FST t)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_to_set, bt_to_fmap, bt_map]
+[SRW_TAC [] [bt_to_set, bt_to_fmap, bt_map]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [bt_to_set, bt_to_fmap, bt_map,  FDOM_DRESTRICT] THEN
+ SRW_TAC [] [bt_to_set, bt_to_fmap, bt_map,  FDOM_DRESTRICT] THEN
  REWRITE_TAC [EXTENSION, IN_INTER, IN_UNION] THEN
  GEN_TAC THEN CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC]);
 
 val bt_fst_lb_FDOM = maybe_thm ("bt_fst_lb_FDOM", ``!cmp lb t:('a#'b)bt.
  FDOM (bt_to_fmap_lb cmp lb t) = bt_to_set_lb cmp lb (bt_map FST t)``,
-RW_TAC (srw_ss ()) [bt_to_set_lb,  bt_to_fmap_lb, bt_FST_FDOM, FDOM_DRESTRICT]
+SRW_TAC [] [bt_to_set_lb,  bt_to_fmap_lb, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
 
 val bt_fst_ub_FDOM = maybe_thm ("bt_fst_ub_FDOM", ``!cmp t:('a#'b)bt ub.
  FDOM (bt_to_fmap_ub cmp t ub) = bt_to_set_ub cmp (bt_map FST t) ub``,
-RW_TAC (srw_ss ()) [bt_to_set_ub,  bt_to_fmap_ub, bt_FST_FDOM, FDOM_DRESTRICT]
+SRW_TAC [] [bt_to_set_ub,  bt_to_fmap_ub, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
 
 val bt_fst_lb_ub_FDOM = maybe_thm ("bt_fst_lb_ub_FDOM",
 ``!cmp lb t:('a#'b)bt ub. FDOM (bt_to_fmap_lb_ub cmp lb t ub) =
                           bt_to_set_lb_ub cmp lb (bt_map FST t) ub``,
-RW_TAC (srw_ss ())
+SRW_TAC []
  [bt_to_set_lb_ub,  bt_to_fmap_lb_ub, bt_FST_FDOM, FDOM_DRESTRICT]
 THEN REWRITE_TAC [EXTENSION, IN_INTER] THEN GEN_TAC THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
@@ -942,15 +939,15 @@ CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN REFL_TAC);
 val IN_lb_ub_imp = maybe_thm ("IN_lb_ub_imp",
 ``!cmp x lb t:'a bt ub. x IN bt_to_set_lb_ub cmp lb t ub ==>
                       (apto cmp lb x = LESS) /\ (apto cmp x ub = LESS)``,
-RW_TAC (srw_ss ()) [bt_to_set_lb_ub]);
+SRW_TAC [] [bt_to_set_lb_ub]);
 
 val IN_lb_imp = maybe_thm ("IN_lb_imp",
 ``!cmp x lb t:'a bt. x IN bt_to_set_lb cmp lb t ==> (apto cmp lb x = LESS)``,
-RW_TAC (srw_ss ()) [bt_to_set_lb]);
+SRW_TAC [] [bt_to_set_lb]);
 
 val IN_ub_imp = maybe_thm ("IN_ub_imp",
 ``!cmp x t:'a bt ub. x IN bt_to_set_ub cmp t ub ==> (apto cmp x ub = LESS)``,
-RW_TAC (srw_ss ()) [bt_to_set_ub]);
+SRW_TAC [] [bt_to_set_ub]);
 
 val piecewise_FUNION = prove (
 ``!a b c x y z:'a|->'b.(a=x)/\(b=y)/\(c=z)==>
@@ -967,8 +964,8 @@ val bt_to_fmap_lb_ub_mut_rec = maybe_thm ("bt_to_fmap_lb_ub_mut_rec",
       bt_to_fmap_lb_ub cmp lb l ub
   else
     bt_to_fmap_lb_ub cmp lb r ub``,
-RW_TAC (srw_ss ()) [fmap_EXT, bt_fst_lb_ub_FDOM] THEN
-RW_TAC (srw_ss ()) [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map] THENL
+SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM] THEN
+SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map] THENL
 [REWRITE_TAC [EXTENSION, IN_UNION, bt_to_set] THEN GEN_TAC THEN
  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
  METIS_TAC [totoLLtrans, IN_SING]
@@ -1037,8 +1034,8 @@ val bt_to_fmap_lb_mut_rec = maybe_thm ("bt_to_fmap_lb_mut_rec",
       bt_to_fmap_lb cmp x r
   else
     bt_to_fmap_lb cmp lb r``,
-RW_TAC (srw_ss ()) [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_lb_FDOM] THEN
-RW_TAC (srw_ss ()) [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
+SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_lb_FDOM] THEN
+SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
                     bt_to_fmap_lb, bt_to_set_lb] THENL
 [REWRITE_TAC [EXTENSION, IN_UNION, bt_to_set] THEN GEN_TAC THEN
  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
@@ -1086,8 +1083,8 @@ val bt_to_fmap_ub_mut_rec = maybe_thm ("bt_to_fmap_ub_mut_rec",
       bt_to_fmap_lb_ub cmp x r ub
   else
       bt_to_fmap_ub cmp l ub``,
-RW_TAC (srw_ss ()) [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_ub_FDOM] THEN
-RW_TAC (srw_ss ()) [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
+SRW_TAC [] [fmap_EXT, bt_fst_lb_ub_FDOM, bt_fst_ub_FDOM] THEN
+SRW_TAC [] [bt_to_fmap_lb_ub, bt_to_set_lb_ub, bt_map,
                     bt_to_fmap_ub, bt_to_set_ub] THENL
 [REWRITE_TAC [EXTENSION, IN_UNION, bt_to_set] THEN GEN_TAC THEN
  CONV_TAC (DEPTH_CONV SET_SPEC_CONV) THEN
@@ -1175,7 +1172,7 @@ val FUPDATE_LIST_FUNION = maybe_thm ("FUPDATE_LIST_FUNION",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [FUPDATE_LIST_THM]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [FUPDATE_LIST_THM, FUNION_FUPDATE_1]
+ SRW_TAC [] [FUPDATE_LIST_THM, FUNION_FUPDATE_1]
 ]);
 
 val fmap_rec = maybe_thm ("fmap_rec",
@@ -1194,7 +1191,7 @@ REWRITE_TAC [fmap_rec]);
 
 val fmap_APPEND = maybe_thm ("fmap_APPEND",
 ``!m n:('a#'b)list. fmap (m ++ n) = fmap m FUNION fmap n``,
-RW_TAC (srw_ss ()) [fmap, FUPDATE_LIST_APPEND, REVERSE_APPEND] THEN
+SRW_TAC [] [fmap, FUPDATE_LIST_APPEND, REVERSE_APPEND] THEN
 REWRITE_TAC [FUPDATE_LIST_FUNION, FUNION_FEMPTY_1]);
 
 (* Show ordered lists represent the right finite maps. *)
@@ -1202,40 +1199,40 @@ REWRITE_TAC [FUPDATE_LIST_FUNION, FUNION_FEMPTY_1]);
 val orl_fmap_lb_ub = maybe_thm ("orl_fmap_lb_ub",``!cmp t:('a#'b)bt lb ub.
    bt_to_fmap_lb_ub cmp lb t ub = fmap (bt_to_orl_lb_ub cmp lb t ub)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_to_orl_lb_ub, fmap_NIL, bt_to_fmap_lb_ub,
+[SRW_TAC [] [bt_to_orl_lb_ub, fmap_NIL, bt_to_fmap_lb_ub,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [bt_to_fmap_lb_ub_mut_rec, bt_to_orl_lb_ub,
+ SRW_TAC [] [bt_to_fmap_lb_ub_mut_rec, bt_to_orl_lb_ub,
                      fmap_APPEND, fmap_UNIT]
 ]);
 
 val orl_fmap_lb =  maybe_thm ("orl_fmap_lb",``!cmp t:('a#'b)bt lb.
    bt_to_fmap_lb cmp lb t = fmap (bt_to_orl_lb cmp lb t)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_to_orl_lb, fmap_NIL, bt_to_fmap_lb,
+[SRW_TAC [] [bt_to_orl_lb, fmap_NIL, bt_to_fmap_lb,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [bt_to_fmap_lb_mut_rec, bt_to_orl_lb,
+ SRW_TAC [] [bt_to_fmap_lb_mut_rec, bt_to_orl_lb,
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
 ]);
 
 val orl_fmap_ub =  maybe_thm ("orl_fmap_ub",``!cmp t:('a#'b)bt ub.
    bt_to_fmap_ub cmp t ub = fmap (bt_to_orl_ub cmp t ub)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_to_orl_ub, fmap_NIL, bt_to_fmap_ub,
+[SRW_TAC [] [bt_to_orl_ub, fmap_NIL, bt_to_fmap_ub,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [bt_to_fmap_ub_mut_rec, bt_to_orl_ub,
+ SRW_TAC [] [bt_to_fmap_ub_mut_rec, bt_to_orl_ub,
                      fmap_APPEND, fmap_UNIT, orl_fmap_lb_ub]
 ]);
 
 val orl_fmap = maybe_thm ("orl_fmap",
 ``!cmp t:('a#'b)bt. FMAPAL cmp t = fmap (bt_to_orl cmp t)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_to_orl, fmap_NIL, bt_to_fmap,
+[SRW_TAC [] [bt_to_orl, fmap_NIL, bt_to_fmap,
                      bt_to_fmap, DRESTRICT_FEMPTY]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [bt_to_fmap_mut_rec, bt_to_orl, fmap_APPEND,
+ SRW_TAC [] [bt_to_fmap_mut_rec, bt_to_orl, fmap_APPEND,
                      fmap_UNIT, orl_fmap_lb, orl_fmap_ub]
 ]);
 
@@ -1264,9 +1261,9 @@ val ORL_split_lem = maybe_thm ("ORL_split_lem",
    ORL cmp l /\ (!a. a IN set (MAP FST l) ==> (apto cmp a x = LESS)) /\
    ORL cmp r /\ (!z. z IN set (MAP FST r) ==> (apto cmp x z = LESS))``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [ORL_ALT]
-,P_PGEN_TAC ``p:'a,q:'b`` THEN RW_TAC (srw_ss ()) [ORL_ALT] THEN EQ_TAC THEN
- RW_TAC (srw_ss ()) [] THENL
+[SRW_TAC [] [ORL_ALT]
+,P_PGEN_TAC ``p:'a,q:'b`` THEN SRW_TAC [] [ORL_ALT] THEN EQ_TAC THEN
+ SRW_TAC [] [] THENL
  [POP_ASSUM MATCH_MP_TAC THEN REWRITE_TAC []
  ,RES_TAC
  ,RES_TAC
@@ -1345,9 +1342,9 @@ val orl_lb_ub_ac_thm = maybe_thm ("orl_lb_ub_ac_thm",
 ``!cmp t:('a#'b)bt lb ub m. bt_to_orl_lb_ub_ac cmp lb t ub m =
                           bt_to_orl_lb_ub cmp lb t ub ++ m``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ())[bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
+[SRW_TAC [][bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ())[bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
+ SRW_TAC [][bt_to_orl_lb_ub, bt_to_orl_lb_ub_ac]
 ]);
 
 val bt_to_orl_lb_ac = Define
@@ -1361,9 +1358,9 @@ val orl_lb_ac_thm = maybe_thm ("orl_lb_ac_thm",
 ``!cmp t:('a#'b)bt lb m. bt_to_orl_lb_ac cmp lb t m =
                           bt_to_orl_lb cmp lb t ++ m``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ())[bt_to_orl_lb, bt_to_orl_lb_ac]
+[SRW_TAC [][bt_to_orl_lb, bt_to_orl_lb_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ())[bt_to_orl_lb, bt_to_orl_lb_ac, orl_lb_ub_ac_thm]
+ SRW_TAC [][bt_to_orl_lb, bt_to_orl_lb_ac, orl_lb_ub_ac_thm]
 ]);
 
 val bt_to_orl_ub_ac = Define
@@ -1377,9 +1374,9 @@ val orl_ub_ac_thm = maybe_thm ("orl_ub_ac_thm",
 ``!cmp t:('a#'b)bt ub m. bt_to_orl_ub_ac cmp t ub m =
                          bt_to_orl_ub cmp t ub ++ m``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ())[bt_to_orl_ub, bt_to_orl_ub_ac]
+[SRW_TAC [][bt_to_orl_ub, bt_to_orl_ub_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ())[bt_to_orl_ub, bt_to_orl_ub_ac, orl_lb_ub_ac_thm]
+ SRW_TAC [][bt_to_orl_ub, bt_to_orl_ub_ac, orl_lb_ub_ac_thm]
 ]);
 
 val bt_to_orl_ac = Define
@@ -1390,9 +1387,9 @@ val bt_to_orl_ac = Define
 val orl_ac_thm = maybe_thm ("orl_ac_thm",
 ``!cmp t:('a#'b)bt m. bt_to_orl_ac cmp t m = bt_to_orl cmp t ++ m``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ())[bt_to_orl, bt_to_orl_ac]
+[SRW_TAC [][bt_to_orl, bt_to_orl_ac]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ())[bt_to_orl, bt_to_orl_ac, orl_lb_ac_thm, orl_ub_ac_thm]
+ SRW_TAC [][bt_to_orl, bt_to_orl_ac, orl_lb_ac_thm, orl_ub_ac_thm]
 ]);
 
 (* ********* "ORWL" for (fmap) ORdered With List ************ *)
@@ -1408,7 +1405,7 @@ GEN_TAC THEN Induct THENL
  DISCH_THEN (fn orlc => 
   STRIP_ASSUME_TAC (MATCH_MP (CONJUNCT1 ORL_NOT_MEM) orlc) THEN
   STRIP_ASSUME_TAC (REWRITE_RULE [ORL] orlc)) THEN
- RW_TAC (srw_ss ()) [fmap_rec, FAPPLY_FUPDATE_THM, FDOM_FUPDATE] THEN
+ SRW_TAC [] [fmap_rec, FAPPLY_FUPDATE_THM, FDOM_FUPDATE] THEN
  METIS_TAC []
 ]);
 
@@ -1424,7 +1421,7 @@ val assocv_fmap_thm = maybe_thm ("assocv_fmap_thm",
 Induct THEN CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THENL
 [RW_TAC (srw_ss()) [assocv, FLOOKUP_DEF, fmap_rec, FDOM_FEMPTY]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
- RW_TAC (srw_ss ()) [assocv, FLOOKUP_DEF, fmap_rec] THENL
+ SRW_TAC [] [assocv, FLOOKUP_DEF, fmap_rec] THENL
  [METIS_TAC []
  ,METIS_TAC [FAPPLY_FUPDATE_THM]
  ,METIS_TAC []
@@ -1432,7 +1429,7 @@ Induct THEN CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV) THENL
 
 val fmap_ALT = maybe_thm ("fmap_ALT",
 ``!l:('a#'b)list. fmap l = unlookup (assocv l)``,
-RW_TAC (srw_ss ()) [assocv_fmap_thm, FLOOKUP_unlookup_ID]);
+SRW_TAC [] [assocv_fmap_thm, FLOOKUP_unlookup_ID]);
 
 val incr_sort_fmap = maybe_thm ("incr_sort_fmap",
 ``!cmp l:('a#'b)list. fmap (incr_sort cmp l) = fmap l``,
@@ -1449,8 +1446,8 @@ RW_TAC bool_ss [ORWL, orl_fmap, ORL_bt_to_orl]);
 val IS_SOME_assocv_rec = maybe_thm ("IS_SOME_assocv_rec",
 ``(IS_SOME o assocv ([]:('a#'b)list) = {}) /\
   (!a:'a b:'b l. IS_SOME o assocv ((a,b)::l) = a INSERT IS_SOME o assocv l)``,
-RW_TAC (srw_ss ()) [assocv, combinTheory.o_THM, EXTENSION, SPECIFICATION] THEN
-Cases_on `x = a` THEN RW_TAC (srw_ss ()) []);
+SRW_TAC [] [assocv, combinTheory.o_THM, EXTENSION, SPECIFICATION] THEN
+Cases_on `x = a` THEN SRW_TAC [] []);
 
 val FINITE_assocv = maybe_thm ("FINITE_assocv",
 ``!l:('a#'b)list. FINITE (IS_SOME o assocv l)``,
@@ -1502,35 +1499,35 @@ RW_TAC (srw_ss())
 val sing_UFO = maybe_thm ("sing_UFO",
 ``!cmp x:'a y:'b t:'a|->'b. UFO cmp (FEMPTY |+ (x,y)) t =
   (FEMPTY |+ (x,y)) FUNION (DRESTRICT t {z | apto cmp x z = LESS})``,
-RW_TAC (srw_ss ()) [UFO]);
+SRW_TAC [] [UFO]);
 
 val bt_to_fmap_OFU_UFO = maybe_thm ("bt_to_fmap_OFU_UFO",
 ``!cmp l x:'a y:'b r. FMAPAL cmp (node l (x,y) r) =
    OFU cmp (FMAPAL cmp l) (UFO cmp (FEMPTY |+ (x,y)) (FMAPAL cmp r))``,
-RW_TAC (srw_ss ()) [OFU, bt_to_fmap, LESS_UO_LEM, FDOM_OFU, FDOM_UFO] THEN
+SRW_TAC [] [OFU, bt_to_fmap, LESS_UO_LEM, FDOM_OFU, FDOM_UFO] THEN
 REWRITE_TAC [GSYM FUNION_ASSOC] THEN
 ONCE_REWRITE_TAC [GSYM sing_UFO] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-AP_TERM_TAC THEN RW_TAC (srw_ss ()) [UO, LESS_ALL, EXTENSION] THEN
+AP_TERM_TAC THEN SRW_TAC [] [UO, LESS_ALL, EXTENSION] THEN
 METIS_TAC [totoLLtrans]);
 
 val FAPPLY_OFU = maybe_thm ("FAPPLY_OFU",
 ``!cmp x u:'a|->'b v:'a|->'b. OFU cmp u v ' x =
    if LESS_ALL cmp x (FDOM v) then u ' x else v ' x``,
-RW_TAC (srw_ss ()) [OFU, FDOM_OFU, FUNION_DEF, DRESTRICT_DEF] THEN
+SRW_TAC [] [OFU, FDOM_OFU, FUNION_DEF, DRESTRICT_DEF] THEN
 `x NOTIN FDOM u` by METIS_TAC [] THEN
 `x NOTIN FDOM v` by METIS_TAC [LESS_ALL, all_cpn_distinct, toto_equal_eq] THEN
 IMP_RES_THEN SUBST1_TAC NOT_FDOM_FAPPLY_FEMPTY THEN REFL_TAC);
 
 val OFU_FEMPTY = maybe_thm ("OFU_FEMPTY",
 ``!cmp t:'a|->'b. OFU cmp t FEMPTY = t``,
-RW_TAC (srw_ss ()) [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]);
+SRW_TAC [] [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]);
 
 val FEMPTY_OFU = maybe_thm ("FEMPTY_OFU",
 ``!cmp f:'a|->'b. OFU cmp FEMPTY f = f``,
-RW_TAC (srw_ss ())
+SRW_TAC []
  [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
-  `~LESS_ALL cmp x (FDOM f)` by RW_TAC (srw_ss ()) [LESS_ALL]
-  THEN1 (Q.EXISTS_TAC `x` THEN RW_TAC (srw_ss ()) [toto_refl]) THEN AR);
+  `~LESS_ALL cmp x (FDOM f)` by SRW_TAC [] [LESS_ALL]
+  THEN1 (Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN AR);
 
 val LESS_ALL_OFU = maybe_thm ("LESS_ALL_OFU",
 ``!cmp x u:'a|->'b v:'a|->'b. LESS_ALL cmp x (FDOM (OFU cmp u v)) <=>
@@ -1558,7 +1555,7 @@ REWRITE_TAC [bl_to_fmap, sing_UFO]);
 val bl_rev_fmap_lem = maybe_thm ("bl_rev_fmap_lem", ``!cmp b t:('a#'b)bt.
  FMAPAL cmp (bl_rev t b) = OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b)``,
 GEN_TAC THEN Induct THEN TRY (GEN_TAC THEN P_PGEN_TAC ``x:'a,y:'b``) THEN
-RW_TAC (srw_ss ()) [bl_rev, bl_to_fmap_OFU_UFO] THEN
+SRW_TAC [] [bl_rev, bl_to_fmap_OFU_UFO] THEN
 REWRITE_TAC [bl_to_fmap, OFU_FEMPTY, bt_to_fmap_OFU_UFO, OFU_ASSOC]);
 
 (* Converting a bl to a bt preserves the represented fmap. *)
@@ -1583,7 +1580,7 @@ REWRITE_TAC [bl_to_bt, bl_rev_fmap_lem, bt_to_fmap, FEMPTY_OFU]);
 val LESS_ALL_UFO_LEM = maybe_thm ("LESS_ALL_UFO_LEM",
 ``!cmp x:'a y:'b f. LESS_ALL cmp x (FDOM f) ==>
                     (UFO cmp (FEMPTY |+ (x,y)) f = f |+ (x,y))``,
-RW_TAC (srw_ss ()) [LESS_ALL, UFO, fmap_EXT, FUNION_DEF, DRESTRICT_DEF,
+SRW_TAC [] [LESS_ALL, UFO, fmap_EXT, FUNION_DEF, DRESTRICT_DEF,
                     EXTENSION, FAPPLY_FUPDATE_THM] THEN
 METIS_TAC []);
 
@@ -1591,21 +1588,21 @@ val LESS_ALL_OFU_UFO_LEM = maybe_thm ("LESS_ALL_OFU_UFO_LEM",
 ``!cmp x:'a y:'b f g. LESS_ALL cmp x (FDOM f) /\ LESS_ALL cmp x (FDOM g) ==>
 (OFU cmp (UFO cmp (FEMPTY |+ (x,y)) f) g = (OFU cmp f g) |+ (x,y))``,
 REPEAT STRIP_TAC THEN IMP_RES_THEN (REWRITE_TAC o ulist)  LESS_ALL_UFO_LEM THEN
-RW_TAC (srw_ss ()) [fmap_EXT] THENL
+SRW_TAC [] [fmap_EXT] THENL
 [REWRITE_TAC [FDOM_OFU, FDOM_FUPDATE] THEN
  IMP_RES_THEN SUBST1_TAC (GSYM LESS_ALL_UO_LEM) THEN
  IMP_RES_TAC LESS_ALL_OU_UO_LEM
-,RW_TAC (srw_ss ()) [FAPPLY_OFU, FAPPLY_FUPDATE_THM] THEN RES_TAC
+,SRW_TAC [] [FAPPLY_OFU, FAPPLY_FUPDATE_THM] THEN RES_TAC
 ]);
 
 val DRESTRICT_SUPERSET = maybe_thm ("DRESTRICT_SUPERSET",
 ``!f:'a|->'b s. FDOM f SUBSET s ==> (DRESTRICT f s = f)``,
-RW_TAC (srw_ss ()) [DRESTRICT_DEF, SUBSET_DEF, fmap_EXT] THEN
+SRW_TAC [] [DRESTRICT_DEF, SUBSET_DEF, fmap_EXT] THEN
 METIS_TAC [EXTENSION, IN_INTER]);
 
 val SING_FUNION = maybe_thm ("SING_FUNION",
 ``!f x:'a y:'b. FEMPTY |+ (x,y) FUNION f = f |+ (x,y)``,
-RW_TAC (srw_ss ())
+SRW_TAC []
  [fmap_EXT, FUNION_DEF, FAPPLY_FUPDATE_THM, GSYM INSERT_SING_UNION]);
 
 val BL_ACCUM_fmap = maybe_thm ("BL_ACCUM_fmap",
@@ -1615,7 +1612,7 @@ val BL_ACCUM_fmap = maybe_thm ("BL_ACCUM_fmap",
     OFU cmp (FMAPAL cmp t) (bl_to_fmap cmp b) |+ (x,y))``,
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THEN
 TRY (GEN_TAC THEN P_PGEN_TAC ``p:'a,q:'b``) THEN
-RW_TAC (srw_ss ()) [BL_ACCUM, bl_to_fmap_OFU_UFO, bt_to_fmap_OFU_UFO] THENL
+SRW_TAC [] [BL_ACCUM, bl_to_fmap_OFU_UFO, bt_to_fmap_OFU_UFO] THENL
 [METIS_TAC [LESS_ALL_UFO_LEM, LESS_ALL_OFU_UFO_LEM, bl_to_fmap]
 ,METIS_TAC [LESS_ALL_UFO_LEM, LESS_ALL_OFU_UFO_LEM, bl_to_fmap]
 ,REWRITE_TAC  [bl_to_fmap] THEN
@@ -1642,7 +1639,7 @@ val list_to_bl_fmap = maybe_thm ("list_to_bl_fmap",
 ``!cmp l:('a#'b)list. ORL cmp l ==>
    (bl_to_fmap cmp (list_to_bl l) = fmap l)``,
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a, y:'b``) THEN
-RW_TAC (srw_ss ()) [bl_to_fmap, list_to_bl, fmap_rec, ORL] THEN
+SRW_TAC [] [bl_to_fmap, list_to_bl, fmap_rec, ORL] THEN
 RES_THEN (SUBST1_TAC o SYM) THEN MATCH_MP_TAC BL_CONS_fmap THEN
 RES_THEN SUBST1_TAC THEN METIS_TAC [MEM_IN_DOM_fmap, LESS_ALL]);
 
@@ -1686,16 +1683,16 @@ REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [assocv] THENL
 val merge_smerge = maybe_thm ("merge_smerge", ``!cmp l m:('a#'b)list.
          MAP FST (merge cmp l m) = smerge cmp (MAP FST l) (MAP FST m)``,
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``a:'a,b:'b``) THEN
-RW_TAC (srw_ss ()) [merge_thm] THEN
+SRW_TAC [] [merge_thm] THEN
 Induct_on `m` THEN TRY (P_PGEN_TAC ``c:'a,d:'b``) THEN
 Cases_on `apto cmp a c` THEN
-RW_TAC (srw_ss ()) [smerge, smerge_nil, merge_thm, MAP]);
+SRW_TAC [] [smerge, smerge_nil, merge_thm, MAP]);
 
 val IS_SOME_assocv = maybe_thm ("IS_SOME_assocv",
 ``!l:('a#'b)list. IS_SOME o (assocv l) = set (MAP FST l)``,
 CONV_TAC (QUANT_CONV FUN_EQ_CONV) THEN
 REWRITE_TAC [combinTheory.o_THM] THEN Induct THENL
-[RW_TAC (srw_ss ()) [assocv, LIST_TO_SET, combinTheory.C_THM]
+[SRW_TAC [] [assocv, LIST_TO_SET, combinTheory.C_THM]
 ,P_PGEN_TAC (Term`y:'a,z:'b`) THEN GEN_TAC THEN
  ASM_REWRITE_TAC [assocv, LIST_TO_SET_THM, MAP, FST, HD] THEN
  CONV_TAC (RAND_CONV (REWR_CONV (GSYM SPECIFICATION))) THEN
@@ -1767,7 +1764,7 @@ val ORL_FUNION = maybe_thm ("ORL_FUNION",
 ``!cmp. !l:('a#'b)list m::ORL cmp. ORL cmp (merge cmp l m) /\
             (fmap (merge cmp l m) = fmap l FUNION fmap m)``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, merge_ORL, merge_fmap]);
+SRW_TAC [] [SPECIFICATION, merge_ORL, merge_fmap]);
 
 val ORL_FUNION_IMP = save_thm ("ORL_FUNION_IMP", REWRITE_RULE [SPECIFICATION]
                        (CONV_RULE (DEPTH_CONV RES_FORALL_CONV) ORL_FUNION));
@@ -1797,11 +1794,11 @@ val FMAPAL_FDOM_THM = store_thm ("FMAPAL_FDOM_THM",
              LESS => x IN FDOM (FMAPAL cmp l)
           | EQUAL => T
         | GREATER => x IN FDOM (FMAPAL cmp r))``,
-RW_TAC (srw_ss ()) [IN_bt_to_set, bt_FST_FDOM, bt_map] THEN
+SRW_TAC [] [IN_bt_to_set, bt_FST_FDOM, bt_map] THEN
 Q.SUBGOAL_THEN `(x = a) <=> (apto cmp x a = EQUAL)` SUBST1_TAC
 THEN1 MATCH_ACCEPT_TAC (GSYM toto_equal_eq) THEN
 Cases_on `apto cmp x a` THEN
-RW_TAC (srw_ss ()) [GSYM toto_antisym]);
+SRW_TAC [] [GSYM toto_antisym]);
 
 (* *********************************************************************** *)
 (* inter_merge, for domain restriction, followed by diff_merge, for        *)
@@ -1846,7 +1843,7 @@ STRIP_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [cpn_case_def] THENL
 
 val LESS_NOT_MEM = maybe_thm ("LESS_NOT_MEM",
 ``!cmp x m y:'a. (apto cmp x y = LESS) /\ OL cmp (y::m) ==> ~MEM x m``,
-GEN_TAC THEN GEN_TAC THEN Induct THEN RW_TAC (srw_ss ()) [MEM] THENL
+GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [MEM] THENL
 [METIS_TAC [OL, MEM, totoLLtrans, toto_glneq]
 ,IMP_RES_TAC OL THEN
  `apto cmp x h = LESS` by (MATCH_MP_TAC totoLLtrans THEN
@@ -1894,7 +1891,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL
 val FST_inter_merge = maybe_thm ("FST_inter_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (inter_merge cmp l m)) = set (MAP FST l) INTER set m)``,
-RW_TAC (srw_ss ())
+SRW_TAC []
  [inter_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
@@ -1902,9 +1899,9 @@ val inter_merge_ORL = maybe_thm ("inter_merge_ORL",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
                         ORL cmp (inter_merge cmp l m)``,
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a,y:'b``) THEN Induct THEN
-RW_TAC (srw_ss ()) [inter_merge] THEN REWRITE_TAC [ORL] THEN
+SRW_TAC [] [inter_merge] THEN REWRITE_TAC [ORL] THEN
 IMP_RES_TAC ORL THEN IMP_RES_TAC OL THEN
-Cases_on `apto cmp x h` THEN RW_TAC (srw_ss ()) [] THEN
+Cases_on `apto cmp x h` THEN SRW_TAC [] [] THEN
 RW_TAC bool_ss [ORL] THEN IMP_RES_TAC inter_merge_subset_inter THEN RES_TAC);
 
 val IN_IS_SOME_NOT_NONE = maybe_thm ("IN_IS_SOME_NOT_NONE",
@@ -1946,7 +1943,7 @@ val ORL_DRESTRICT = maybe_thm ("ORL_DRESTRICT",
 ``!cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (inter_merge cmp l m) /\
             (fmap (inter_merge cmp l m) = DRESTRICT (fmap l) (set m))``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, inter_merge_ORL, inter_merge_fmap]);
+SRW_TAC [] [SPECIFICATION, inter_merge_ORL, inter_merge_fmap]);
 
 val ORL_DRESTRICT_IMP = save_thm ("ORL_DRESTRICT_IMP",
 REWRITE_RULE [SPECIFICATION]
@@ -2050,7 +2047,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL
 val FST_diff_merge = maybe_thm ("FST_diff_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (diff_merge cmp l m)) = set (MAP FST l) DIFF set m)``,
-RW_TAC (srw_ss ())
+SRW_TAC []
  [diff_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
@@ -2058,9 +2055,9 @@ val diff_merge_ORL = maybe_thm ("diff_merge_ORL",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
                         ORL cmp (diff_merge cmp l m)``,
 GEN_TAC THEN Induct THEN TRY (P_PGEN_TAC ``x:'a,y:'b``) THEN Induct THEN
-RW_TAC (srw_ss ()) [diff_merge] THEN REWRITE_TAC [ORL] THEN
+SRW_TAC [] [diff_merge] THEN REWRITE_TAC [ORL] THEN
 IMP_RES_TAC ORL THEN IMP_RES_TAC OL THEN
-Cases_on `apto cmp x h` THEN RW_TAC (srw_ss ()) [] THEN
+Cases_on `apto cmp x h` THEN SRW_TAC [] [] THEN
 RW_TAC bool_ss [ORL] THEN IMP_RES_TAC diff_merge_subset_inter THEN RES_TAC);
 
 val INTER_OVER_DIFF = maybe_thm ("INTER_OVER_DIFF",
@@ -2105,7 +2102,7 @@ val ORL_DRESTRICT_COMPL = maybe_thm ("ORL_DRESTRICT_COMPL",
 ``!cmp. !l:('a#'b)list::ORL cmp. !m::OL cmp. ORL cmp (diff_merge cmp l m) /\
 (fmap (diff_merge cmp l m) = DRESTRICT (fmap l) (COMPL (set m)))``,
 CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
-RW_TAC (srw_ss ()) [SPECIFICATION, diff_merge_ORL, diff_merge_fmap]);
+SRW_TAC [] [SPECIFICATION, diff_merge_ORL, diff_merge_fmap]);
 
 val ORL_DRESTRICT_COMPL_IMP = save_thm ("ORL_DRESTRICT_COMPL_IMP",
 REWRITE_RULE [SPECIFICATION]
@@ -2152,7 +2149,7 @@ Q.SUBGOAL_THEN
 
 val bt_to_orl_thm = maybe_thm ("bt_to_orl_thm",
 ``!cmp t:('a#'b)bt. bt_to_orl cmp t = bt_to_orl_ac cmp t []``,
-RW_TAC (srw_ss ()) [orl_ac_thm]);
+SRW_TAC [] [orl_ac_thm]);
 
 val ORWL_FUNION_THM = store_thm ("ORWL_FUNION_THM", ``!cmp s:'a|->'b l t m.
     ORWL cmp s l /\ ORWL cmp t m ==> ORWL cmp (s FUNION t) (merge cmp l m)``,
@@ -2169,7 +2166,7 @@ METIS_TAC [OWL, ORWL, ORL_DRESTRICT_COMPL_IMP]);
 
 val bt_map_ACTION = maybe_thm ("bt_map_ACTION",
 ``!f:'b->'c g:'a->'b t:'a bt. bt_map f (bt_map g t) = bt_map (f o g) t``,
-GEN_TAC THEN GEN_TAC THEN Induct THEN RW_TAC (srw_ss ()) [bt_map]);
+GEN_TAC THEN GEN_TAC THEN Induct THEN SRW_TAC [] [bt_map]);
 
 (* The following may be useful for o_f_CONV, and more so for tc_CONV. *)
 
@@ -2178,7 +2175,7 @@ val AP_SND = Define`AP_SND (f:'b->'c) (a:'a,b:'b) = (a, f b)`;
 val FST_two_ways = prove (
 ``!f:'b->'c. FST o AP_SND f = (FST:'a#'b->'a)``,
 GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-P_PGEN_TAC ``a:'a,b:'b`` THEN RW_TAC (srw_ss ()) [combinTheory.o_THM, AP_SND]);
+P_PGEN_TAC ``a:'a,b:'b`` THEN SRW_TAC [] [combinTheory.o_THM, AP_SND]);
 
 val o_f_bt_map = store_thm ("o_f_bt_map",
 ``!cmp f:'b -> 'c t:('a#'b)bt.
@@ -2194,23 +2191,23 @@ REPEAT GEN_TAC THEN REWRITE_TAC [fmap_EXT, FDOM_o_f] THEN CONJ_TAC THENL
                            (REWRITE_RULE [GSYM o_f_FDOM] o_f_DEF) THEN
               MP_TAC (REWRITE_RULE [FMAPAL_FDOM_THM] infd)) THEN
   REWRITE_TAC [bt_map, AP_SND, FAPPLY_node] THEN
-  Cases_on `apto cmp x a` THEN RW_TAC (srw_ss ()) []
+  Cases_on `apto cmp x a` THEN SRW_TAC [] []
 ]]);
 
 (* **** following is for INSERT - {} sets, adapted to fmap etc. **** *)
 
 val FAPPLY_fmap_NIL = store_thm ("FAPPLY_fmap_NIL",
 ``!x:'a. fmap ([]:('a#'b)list) ' x = FEMPTY ' x``,
-RW_TAC (srw_ss ()) [fmap, FUPDATE_LIST_THM]);
+SRW_TAC [] [fmap, FUPDATE_LIST_THM]);
 
 val FAPPLY_fmap_CONS = store_thm ("FAPPLY_fmap_CONS",
 ``!x y:'a z:'b l. fmap ((y,z)::l) ' x =
    if x = y then z else fmap l ' x``,
-RW_TAC (srw_ss ()) [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
+SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
 
 val fmap_CONS = maybe_thm ("fmap_CONS",
 ``!x:'a y:'b l. fmap ((x,y)::l) = fmap l |+ (x,y)``,
-RW_TAC (srw_ss ()) [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
+SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
 
 val o_f_FUPDATE_ALT = maybe_thm ("o_f_FUPDATE_ALT",
 ``!f:'b->'c fm:'a|->'b k v. f o_f fm |+ (k,v) = (f o_f fm) |+ (k,f v)``,
@@ -2226,7 +2223,7 @@ IMP_RES_TAC o_f_FAPPLY THEN ASM_REWRITE_TAC [DOMSUB_FAPPLY_THM] THEN
 val o_f_fmap = store_thm ("o_f_fmap",
 ``!f:'b->'c l:('a#'b)list. f o_f fmap l = fmap (MAP (AP_SND f) l)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [fmap, FUPDATE_LIST_THM]
+[SRW_TAC [] [fmap, FUPDATE_LIST_THM]
 ,P_PGEN_TAC ``y:'a, z:'b`` THEN
  RW_TAC bool_ss [MAP, fmap_CONS, AP_SND, o_f_FUPDATE_ALT]
 ]);
@@ -2260,9 +2257,9 @@ val ORL_bt = Define
 val ORL_bt_lb_ub_lem = maybe_thm ("ORL_bt_lb_ub_lem",
 ``!cmp t lb ub. ORL_bt_lb_ub cmp lb t ub ==> (apto cmp lb ub = LESS)``,
 GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [ORL_bt_lb_ub]
+[SRW_TAC [] [ORL_bt_lb_ub]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- RW_TAC (srw_ss ()) [ORL_bt_lb_ub] THEN METIS_TAC [totoLLtrans]
+ SRW_TAC [] [ORL_bt_lb_ub] THEN METIS_TAC [totoLLtrans]
 ]);
 
 val ORL_bt_lb_ub_thm = maybe_thm ("ORL_bt_lb_ub_thm",
@@ -2271,7 +2268,7 @@ val ORL_bt_lb_ub_thm = maybe_thm ("ORL_bt_lb_ub_thm",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_lb_ub, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
- RW_TAC (srw_ss ()) [ORL_bt_lb_ub, bt_to_orl_lb_ub, bt_to_list] THEN
+ SRW_TAC [] [ORL_bt_lb_ub, bt_to_orl_lb_ub, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
 ]);
 
@@ -2281,7 +2278,7 @@ val ORL_bt_lb_thm = maybe_thm ("ORL_bt_lb_thm",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_lb, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
- RW_TAC (srw_ss ()) [ORL_bt_lb, bt_to_orl_lb, ORL_bt_lb_ub_thm, bt_to_list] THEN
+ SRW_TAC [] [ORL_bt_lb, bt_to_orl_lb, ORL_bt_lb_ub_thm, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
 ]);
 
@@ -2291,7 +2288,7 @@ val ORL_bt_ub_thm = maybe_thm ("ORL_bt_ub_thm",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [bt_to_orl_ub, bt_to_list]
 ,P_PGEN_TAC ``a:'a,b:'b`` THEN
- RW_TAC (srw_ss ()) [ORL_bt_ub, bt_to_orl_ub, ORL_bt_lb_ub_thm, bt_to_list] THEN
+ SRW_TAC [] [ORL_bt_ub, bt_to_orl_ub, ORL_bt_lb_ub_thm, bt_to_list] THEN
  METIS_TAC [ORL_bt_lb_ub_lem]
 ]);
 
@@ -2299,7 +2296,7 @@ val ORL_bt_thm = maybe_thm ("ORL_bt_thm",
 ``!cmp t:('a#'b) bt. ORL_bt cmp t ==> (bt_to_orl cmp t = bt_to_list t)``,
 GEN_TAC THEN Induct THENL (* really Cases, but need !a to use P_PGEN_TAC *)
 [REWRITE_TAC [bt_to_orl, bt_to_list]
-,P_PGEN_TAC ``a:'a,b:'b`` THEN RW_TAC (srw_ss ())
+,P_PGEN_TAC ``a:'a,b:'b`` THEN SRW_TAC []
        [ORL_bt, bt_to_orl, ORL_bt_lb_thm, ORL_bt_ub_thm, bt_to_list]]);
 
 val better_bt_to_orl = store_thm ("better_bt_to_orl",
@@ -2331,7 +2328,7 @@ val fmap_FDOM_rec = store_thm ("fmap_FDOM_rec",
 ``(!x:'a. x IN FDOM (fmap ([]:('a#'b)list)) = F) /\
   (!x w:'a z:'b l. x IN FDOM (fmap ((w,z)::l)) =
                   (x = w) \/ x IN FDOM (fmap l))``,
-RW_TAC (srw_ss ()) [fmap_FDOM]);
+SRW_TAC [] [fmap_FDOM]);
 
 val list_rplacv_NIL = maybe_thm ("list_rplacv_NIL",
 ``!x:'a y:'b l cn. (!m. cn m <> []) ==>
@@ -2347,12 +2344,12 @@ val list_rplacv_cont_lem = maybe_thm ("list_rplacv_cont_lem",
                   (list_rplacv_cn (x,y) l (cn' o cn) =
                    cn' (list_rplacv_cn (x,y) l cn))``,
 GEN_TAC THEN GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [list_rplacv_cn]
+[SRW_TAC [] [list_rplacv_cn]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
- RW_TAC (srw_ss ()) [list_rplacv_cn] THEN RES_TAC THEN
+ SRW_TAC [] [list_rplacv_cn] THEN RES_TAC THEN
  Q.SUBGOAL_THEN `(\m. cn' (cn ((w,z)::m))) = (cn' o (\m. cn ((w,z)::m)))`
  (ASM_REWRITE_TAC o ulist) THEN
- CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) []
+ CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []
 ]);
 
 val bool_lem = prove (``!P Q.(if ~P then ~P else P /\ Q) <=> P ==> Q``,
@@ -2365,17 +2362,17 @@ in if ans = [] then x NOTIN FDOM (fmap l)
    else x IN FDOM (fmap l) /\ (fmap l |+ (x,y) = fmap ans)``,
 GEN_TAC THEN GEN_TAC THEN REWRITE_TAC [LET_THM] THEN BETA_TAC THEN
 Induct THENL
-[RW_TAC (srw_ss ()) [list_rplacv_cn, fmap_FDOM, MAP]
+[SRW_TAC [] [list_rplacv_cn, fmap_FDOM, MAP]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
  REWRITE_TAC [list_rplacv_cn, fmap_FDOM_rec] THEN Cases_on `x = w` THEN AR THENL
- [RW_TAC (srw_ss ()) [fmap_CONS]
- ,`!m.(\m. (\m.m) ((w,z)::m)) m <> []` by RW_TAC (srw_ss ()) [] THEN
+ [SRW_TAC [] [fmap_CONS]
+ ,`!m.(\m. (\m.m) ((w,z)::m)) m <> []` by SRW_TAC [] [] THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) list_rplacv_NIL THEN
   REWRITE_TAC [bool_lem] THEN DISCH_TAC THEN
   `(fmap (list_rplacv_cn (x,y) l (\m.m)) = fmap l |+ (x,y)) /\
    list_rplacv_cn (x,y) l (\m.m) <> []` by METIS_TAC [] THEN
   Q.SUBGOAL_THEN `(\m. (\m.m)((w,z)::m)) = (\m. ((w,z)::m)) o (\m.m)` SUBST1_TAC
-  THEN1 (CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) []) THEN
+  THEN1 (CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []) THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) list_rplacv_cont_lem THEN BETA_TAC THEN
   ASM_REWRITE_TAC [fmap_CONS] THEN MATCH_MP_TAC FUPDATE_COMMUTES THEN
   CONV_TAC (RAND_CONV (REWR_CONV EQ_SYM_EQ)) THEN AR
@@ -2404,7 +2401,7 @@ GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
 [RW_TAC (srw_ss()) [bt_rplacv_cn, FMAPAL_FDOM_THM]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
  RW_TAC (srw_ss()) [bt_rplacv_cn, FMAPAL_FDOM_THM] THEN
- Cases_on `apto cmp x w` THEN RW_TAC (srw_ss ()) []
+ Cases_on `apto cmp x w` THEN SRW_TAC [] []
 ]);
 
 val bt_rplacv_cont_lem = maybe_thm ("bt_rplacv_cont_lem",
@@ -2412,9 +2409,9 @@ val bt_rplacv_cont_lem = maybe_thm ("bt_rplacv_cont_lem",
                   (bt_rplacv_cn cmp (x,y) t (cn' o cn) =
                    cn' (bt_rplacv_cn cmp (x,y) t cn))``,
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
-[RW_TAC (srw_ss ()) [bt_rplacv_cn]
+[SRW_TAC [] [bt_rplacv_cn]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN Cases_on `apto cmp x w` THEN
- RW_TAC (srw_ss ()) [bt_rplacv_cn] THEN RES_TAC THENL
+ SRW_TAC [] [bt_rplacv_cn] THEN RES_TAC THENL
  [Q.SUBGOAL_THEN `(\m. cn' (cn (node m (w,z) t'))) =
                        (cn' o (\m. cn (node m (w,z) t')))`
   (ASM_REWRITE_TAC o ulist)
@@ -2422,7 +2419,7 @@ GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN Induct THENL
                        (cn' o (\m. cn (node t (w,z) m)))`
   (ASM_REWRITE_TAC o ulist)
  ] THEN
- CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) []
+ CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []
 ]);
 
 (* FUNION_FUPDATE_1 =
@@ -2443,40 +2440,40 @@ in if ans = nt then x NOTIN FDOM (FMAPAL cmp t)
 else x IN FDOM (FMAPAL cmp t) /\ (FMAPAL cmp t |+ (x,y) = FMAPAL cmp ans)``,
 GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN REWRITE_TAC [LET_THM] THEN BETA_TAC THEN
 Induct THENL
-[RW_TAC (srw_ss ()) [bt_rplacv_cn, FMAPAL_FDOM_THM]
+[SRW_TAC [] [bt_rplacv_cn, FMAPAL_FDOM_THM]
 ,P_PGEN_TAC ``w:'a,z:'b`` THEN
  REWRITE_TAC [bt_rplacv_cn, FMAPAL_FDOM_THM] THEN
  Cases_on `apto cmp x w` THEN ASM_REWRITE_TAC [cpn_case_def] THENL
- [`!m.(\m. (\m.m) (node m (w,z) t')) m <> nt` by RW_TAC (srw_ss ()) [] THEN
+ [`!m.(\m. (\m.m) (node m (w,z) t')) m <> nt` by SRW_TAC [] [] THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) bt_rplacv_nt THEN
   REWRITE_TAC [bool_lem] THEN DISCH_TAC THEN
   `(FMAPAL cmp (bt_rplacv_cn cmp (x,y) t (\m.m)) = FMAPAL cmp t |+ (x,y)) /\
    bt_rplacv_cn cmp (x,y) t (\m.m) <> nt` by METIS_TAC [] THEN
   Q.SUBGOAL_THEN
   `(\m. (\m.m)(node m (w,z) t')) = (\m. (node m (w,z) t')) o (\m.m)` SUBST1_TAC
-  THEN1 (CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) []) THEN
+  THEN1 (CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []) THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) bt_rplacv_cont_lem THEN BETA_TAC THEN
   ASM_REWRITE_TAC [bt_to_fmap, DRESTRICT_FUPDATE] THEN
   Q.SUBGOAL_THEN `x IN {z | apto cmp z w = LESS}` (REWRITE_TAC o ulist)
   THEN1 (CONV_TAC SET_SPEC_CONV THEN AR) THEN
   REWRITE_TAC [FUNION_FUPDATE_1]
- ,RW_TAC (srw_ss ()) [bt_to_fmap] THEN
+ ,SRW_TAC [] [bt_to_fmap] THEN
   ONCE_REWRITE_TAC [GSYM FUNION_FUPDATE_1] THEN
   Q.SUBGOAL_THEN
   `x NOTIN FDOM (DRESTRICT (FMAPAL cmp t) {y | apto cmp y w = LESS})`
   (REWRITE_TAC o ulist o MATCH_MP FUNION_FUPDATE_HALF_2) THENL
   [REWRITE_TAC [FDOM_DRESTRICT, IN_INTER, DE_MORGAN_THM] THEN
-   DISJ2_TAC THEN CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN RW_TAC (srw_ss ()) []
+   DISJ2_TAC THEN CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN SRW_TAC [] []
   ,IMP_RES_TAC toto_equal_imp_eq THEN ASM_REWRITE_TAC [FUPDATE_EQ]
   ]
- ,`!m.(\m. (\m.m) (node t (w,z) m)) m <> nt` by RW_TAC (srw_ss ()) [] THEN
+ ,`!m.(\m. (\m.m) (node t (w,z) m)) m <> nt` by SRW_TAC [] [] THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) bt_rplacv_nt THEN
   REWRITE_TAC [bool_lem] THEN DISCH_TAC THEN
   `(FMAPAL cmp (bt_rplacv_cn cmp (x,y) t' (\m.m)) = FMAPAL cmp t' |+ (x,y)) /\
    bt_rplacv_cn cmp (x,y) t' (\m.m) <> nt` by METIS_TAC [] THEN
   Q.SUBGOAL_THEN
   `(\m. (\m.m) (node t (w,z) m)) = (\m. (node t (w,z) m)) o (\m.m)` SUBST1_TAC
-  THEN1 (CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ()) []) THEN
+  THEN1 (CONV_TAC FUN_EQ_CONV THEN SRW_TAC [] []) THEN
   IMP_RES_THEN (REWRITE_TAC o ulist) bt_rplacv_cont_lem THEN BETA_TAC THEN
   ASM_REWRITE_TAC [bt_to_fmap, DRESTRICT_FUPDATE] THEN
   Q.SUBGOAL_THEN `x IN {z | apto cmp w z = LESS}` (REWRITE_TAC o ulist)
@@ -2488,7 +2485,7 @@ Induct THENL
   REWRITE_TAC [FDOM_FUNION, IN_UNION, FDOM_DRESTRICT, IN_INTER, DE_MORGAN_THM,
                FDOM_FUPDATE, IN_INSERT, FDOM_FEMPTY, NOT_IN_EMPTY] THEN
   CONJ_TAC THENL
-  [DISJ2_TAC THEN CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN RW_TAC (srw_ss ()) []
+  [DISJ2_TAC THEN CONV_TAC (RAND_CONV SET_SPEC_CONV) THEN SRW_TAC [] []
   ,IMP_RES_TAC (CONJUNCT2 toto_glneq)
 ]]]);
 
@@ -2497,7 +2494,7 @@ Induct THENL
 (* ***************************************************************** *)
 
 val FST_PAIR_ID = prove (``!f:'a->'b. FST o (\x. (x,f x)) = I``,
-GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN RW_TAC (srw_ss ())[combinTheory.o_THM]);
+GEN_TAC THEN CONV_TAC FUN_EQ_CONV THEN SRW_TAC [][combinTheory.o_THM]);
 
 val FUN_fmap_thm = store_thm ("FUN_fmap_thm",
 ``!f:'a->'b l:'a list. fmap (MAP (\x. (x, f x)) l) = FUN_FMAP f (set l)``,

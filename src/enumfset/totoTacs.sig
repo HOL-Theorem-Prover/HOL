@@ -20,7 +20,6 @@ val numto_CONV: conv;
 val charto_CONV: conv;
 val qk_numto_CONV: conv;
 val stringto_CONV: conv;
-val intto_CONV: conv;
 
 val lextoto_CONV: conv -> conv -> conv;
 val listoto_CONV: conv -> conv;
