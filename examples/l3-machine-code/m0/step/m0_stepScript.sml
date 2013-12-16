@@ -1060,14 +1060,12 @@ val STM_UPTO_SUC =
    |> save_as "STM_UPTO_SUC"
 
 val bit_count_9_m_8 = Q.store_thm("bit_count_9_m_8",
-   `!a: word32 r: word9.
-      a - 4w * n2w (bit_count r) + 4w * n2w (bit_count_upto 8 r) =
-      a - 4w * (if word_bit 8 r then 1w else 0w)`,
+   `!r: word9. word_bit 8 r ==> (bit_count_upto 8 r = bit_count r - 1)`,
    lrw [wordsTheory.bit_count_def, wordsTheory.word_bit_def,
-        wordsTheory.WORD_LEFT_ADD_DISTRIB, GSYM wordsTheory.word_add_n2w,
         wordsTheory.bit_count_upto_SUC
         |> Q.ISPECL [`r:word9`, `8`]
-        |> numLib.REDUCE_RULE]
+        |> numLib.REDUCE_RULE
+       ]
    )
 
 val word_bit_9_expand = Q.store_thm("word_bit_9_expand",

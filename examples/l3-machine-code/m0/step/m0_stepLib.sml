@@ -447,13 +447,14 @@ in
          [[``~word_bit 8 (registers: word9)``],
           [``word_bit 8 (registers: word9)``]] []
         ``dfn'LoadMultiple (T, 13w, registers)``
-        |> List.map (REWRITE_RULE [count_list_8] o
+        |> List.map (REWRITE_RULE [count_list_8, wordsTheory.word_mul_n2w] o
                      utilsLib.MATCH_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV
                        ``n2w a <> n2w b: word4`` o
                      utilsLib.ALL_HYP_CONV_RULE
                         (DATATYPE_CONV
                          THENC SIMP_CONV std_ss
-                                  [Aligned_plus, word_bit_0_of_load]
+                                  [Aligned_plus, word_bit_0_of_load,
+                                   wordsTheory.word_mul_n2w]
                          THENC DATATYPE_CONV))
         |> addThms
 
@@ -554,12 +555,14 @@ in
    val Push_rwt =
       EV [PUSH, STM_UPTO_def, IncPC_rwt, LR_def, R_name_rwt, write'R_name_rwt,
           write'MemA_4_rwt, write'SP_def, m0_stepTheory.R_x_not_pc,
-          count_list_8, bit_count_9_m_8] [] []
+          count_list_8] [] []
          ``dfn'Push (registers)``
          |> List.map
              (utilsLib.ALL_HYP_CONV_RULE
                  (REWRITE_CONV [Aligned_plus] THENC wordsLib.WORD_EVAL_CONV) o
-              SIMP_RULE bool_ss [wordsTheory.WORD_MULT_CLAUSES] o
+              SIMP_RULE bool_ss
+                 [wordsTheory.WORD_MULT_CLAUSES, wordsTheory.word_mul_n2w,
+                  bit_count_9_m_8] o
               REWRITE_RULE
                  (boolTheory.COND_ID ::
                   List.drop
@@ -834,7 +837,7 @@ in
          val ld = String.isPrefix "LDM" s'
       in
          if ld orelse String.isPrefix "POP" s'
-            then endian_rule o
+            then utilsLib.FULL_CONV_RULE numLib.REDUCE_CONV o endian_rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV) o
                  bit_count_rule o
                  word_bit_rule o
@@ -842,7 +845,8 @@ in
                      then split_wb_cond_rule (String.isSubstring "(WB)" s')
                   else Lib.I)
          else if String.isPrefix "STM" s' orelse String.isPrefix "PUSH" s'
-            then stm_rule2 o stm_rule1 o bit_count_rule o endian_rule o
+            then numLib.REDUCE_RULE o stm_rule2 o stm_rule1 o bit_count_rule o
+                 endian_rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV) o
                  word_bit_rule
          else Lib.I
