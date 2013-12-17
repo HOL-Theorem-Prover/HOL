@@ -186,11 +186,11 @@ val BranchWritePC_rwt =
 
 val BXWritePC_rwt =
    EV [BXWritePC_def, BranchTo_rwt]
-      [[``^st.CurrentMode <> Mode_Handler``, ``~word_bit 0 (imm32:word32)``]] []
+      [[``^st.CurrentMode <> Mode_Handler``, ``word_bit 0 (imm32:word32)``]] []
     ``BXWritePC imm32`` |> hd
 
 val BLXWritePC_rwt =
-   EV [BLXWritePC_def, BranchTo_rwt] [[``~word_bit 0 (imm32:word32)``]] []
+   EV [BLXWritePC_def, BranchTo_rwt] [[``word_bit 0 (imm32:word32)``]] []
     ``BLXWritePC imm32`` |> hd
 
 val LoadWritePC_rwt =
@@ -457,19 +457,14 @@ in
                                    wordsTheory.word_mul_n2w]
                          THENC DATATYPE_CONV))
         |> addThms
-
    val LoadMultiple_rwt =
       EV [LDM, LDM_UPTO_def, IncPC_rwt, LDM_UPTO_PC, write'R_name_rwt,
           Aligned_SP]
-         [[``~word_bit 8 (registers: word9)``]] []
-        ``dfn'LoadMultiple
-            (~word_bit (w2n (v2w [F; b2; b1; b0]: word4)) registers,
-             v2w [F; b2; b1; b0], registers)``
+         [[``~word_bit 8 (registers: word9)``,
+           ``b = ~word_bit (w2n (n: word4)) (registers: word9)``]] []
+        ``dfn'LoadMultiple (b, n, registers)``
         |> List.map
-             (utilsLib.MATCH_HYP_CONV_RULE
-                 (REWRITE_CONV [m0_stepTheory.v2w_13_15_rwts])
-                 ``x <> 15w:word4`` o
-              REWRITE_RULE
+             (REWRITE_RULE
                  ([boolTheory.COND_ID, count_list_8] @
                   List.drop
                      (utilsLib.mk_cond_update_thms [``:m0_state``], 3)))
@@ -1636,10 +1631,10 @@ end
 (* ---------------------------- *)
 
 val BranchExchange_rwt =
-   EV [dfn'BranchExchange_def, BXWritePC_rwt, R_name_rwt, Aligned_BranchEx]
+   EV [dfn'BranchExchange_def, BXWritePC_rwt, R_name_rwt]
       [] []
       ``dfn'BranchExchange m``
-   |> List.map (MATCH_HYP_RW [] ``~word_bit x (y: word32)``)
+   |> List.map (MATCH_HYP_RW [] ``word_bit x (y: word32)``)
    |> addThms
 
 (* ---------------------------- *)
@@ -1647,7 +1642,7 @@ val BranchExchange_rwt =
 val BranchLinkExchangeRegister_rwt =
    EV [dfn'BranchLinkExchangeRegister_def, BLXWritePC_rwt, R_name_rwt,
        write'LR_def, write'R_name_rwt, PC_rwt, RName_LR_rwt,
-       Aligned_BranchEx, Aligned_BranchLinkEx] [] []
+       Aligned_BranchLinkEx] [] []
       ``dfn'BranchLinkExchangeRegister m``
    |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
                 utilsLib.MATCH_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV

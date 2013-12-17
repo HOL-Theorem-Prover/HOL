@@ -470,11 +470,13 @@ val Aligned_Branch_Wide10 = utilsLib.ustore_thm("Aligned_Branch_Wide10",
    \\ blastLib.BBLAST_TAC
    )
 
+(*
 val Aligned_BranchEx = utilsLib.ustore_thm("Aligned_BranchEx",
    `~word_bit 0 (r: word32) ==>
     (((31 >< 1) r : 31 word @@ (0w: word1)) = r)`,
    blastLib.BBLAST_TAC
    )
+*)
 
 val Aligned_BranchLink = utilsLib.ustore_thm("Aligned_BranchLink",
    `Aligned (w:word32, 2) ==>
