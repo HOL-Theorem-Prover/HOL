@@ -455,6 +455,13 @@ val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
 
+val OPTION_IGNORE_BIND_thm = store_thm(
+  "OPTION_IGNORE_BIND_thm",
+  ``(OPTION_IGNORE_BIND NONE m = NONE) /\
+    (OPTION_IGNORE_BIND (SOME v) m = m)``,
+  SRW_TAC[][OPTION_IGNORE_BIND_def]);
+val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
+
 val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
   name = "OPTION_GUARD_def",
   rec_axiom = boolTheory.boolAxiom,

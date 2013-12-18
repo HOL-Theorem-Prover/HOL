@@ -264,6 +264,13 @@ val emp_SELECT_STATE = Q.store_thm ("emp_SELECT_STATE",
 
 (* ........................................................................ *)
 
+val cond_true_elim = Theory.save_thm("cond_true_elim",
+   simpLib.SIMP_PROVE bool_ss [set_sepTheory.SEP_CLAUSES]
+      ``(!p:'a set set. p * cond T = p) /\
+        (!p:'a set set. cond T * p = p)``)
+
+(* ........................................................................ *)
+
 val UPDATE_FRAME_STATE = Q.store_thm ("UPDATE_FRAME_STATE",
    `!m f u r.
       (!b s a w. b <> f a ==> (m (u s a w) b = m (r s) b)) ==>

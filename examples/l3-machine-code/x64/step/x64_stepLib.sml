@@ -105,14 +105,16 @@ local
                          THENC EVAL
                          THENC REWRITE_CONV [num2Zreg_thm])
          (List.tabulate (8, fn i => ``RexReg (^b, ^(mk_3 i))``))
+   val cmp =
+      x64Lib.x64_compset
+        [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
+         immediate8, immediate16, immediate32, immediate64,
+         immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
+         RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T]
+   val () = computeLib.add_conv
+               (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
 in
-   val x64_CONV =
-      utilsLib.CHANGE_CBV_CONV
-         (x64Lib.x64_compset
-            [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
-             immediate8, immediate16, immediate32, immediate64,
-             immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
-             RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T])
+   val x64_CONV = utilsLib.CHANGE_CBV_CONV cmp
 end
 
 (* ------------------------------------------------------------------------ *)

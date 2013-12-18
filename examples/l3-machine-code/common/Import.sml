@@ -445,8 +445,11 @@ val For = HolKernel.mk_monop state_transformerSyntax.for_tm
 
 datatype monop =
      Abs
+   | Bin
    | BNot
    | Cast of ParseDatatype.pretype
+   | Dec
+   | Flat
    | FPAbs of int
    | FPAdd of int
    | FPEqual of int
@@ -457,6 +460,7 @@ datatype monop =
    | FPSub of int
    | Fst
    | Head
+   | Hex
    | IsAlpha
    | IsAlphaNum
    | IsDigit
@@ -496,6 +500,7 @@ datatype binop =
    | Bit
    | Div
    | Exp
+   | Fld
    | Ge
    | Gt
    | In
@@ -834,6 +839,10 @@ in
    fun Mop (m : monop, x) =
       (case m of
          BNot => wordsSyntax.mk_word_1comp
+       | Bin => ASCIInumbersSyntax.mk_fromBinString
+       | Dec => ASCIInumbersSyntax.mk_fromDecString
+       | Hex => ASCIInumbersSyntax.mk_fromHexString
+       | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd
        | IsAlpha => stringSyntax.mk_isalpha
@@ -927,6 +936,7 @@ in
       | Ult    => wordsSyntax.mk_word_lo
       | Splitl => rich_listSyntax.mk_splitl
       | Splitr => rich_listSyntax.mk_splitr
+      | Fld    => stringSyntax.mk_fields
       | Tok    => stringSyntax.mk_tokens
       | Lt   => pick (SOME wordsSyntax.mk_word_lt, NONE,
                       SOME numSyntax.mk_less, SOME intSyntax.mk_less)

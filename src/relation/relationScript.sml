@@ -1903,6 +1903,18 @@ val IDEM_RTC = store_thm(
   ``IDEM RTC``,
   SRW_TAC [][IDEM, RTC_IDEM]);
 
+val trichotomous_STRORD = store_thm(
+  "trichotomous_STRORD",
+  ``trichotomous (STRORD R) <=> trichotomous R``,
+  SRW_TAC [][STRORD, trichotomous] THEN METIS_TAC[]);
+val _ = export_rewrites ["trichotomous_STRORD"]
+
+val trichotomous_RC = store_thm(
+  "trichotomous_RC",
+  ``trichotomous (RC R) <=> trichotomous R``,
+  SRW_TAC [][RC_DEF, trichotomous] THEN METIS_TAC[]);
+val _ = export_rewrites ["trichotomous_RC"]
+
 (* ----------------------------------------------------------------------
     We may define notions of linear (i.e., total) order, but in the
     absence of numbers I don't see much to prove about them.

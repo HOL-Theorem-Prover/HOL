@@ -71,6 +71,14 @@ end
  * Set up the help paths.                                                    *
  *---------------------------------------------------------------------------*)
 
+val _ = let
+fun huse s = use (Path.concat(HOLDIR, s));
+in
+huse "help/src-sml/Database.sig";
+huse "help/src-sml/Database.sml";
+huse "tools-poly/poly/Help.sig";
+huse "tools-poly/poly/Help.sml"
+end;
 local
   open Path
   fun HELP s = toString(fromString(concat(HOLDIR, concat("help",s))))
@@ -138,13 +146,21 @@ val build_stamp =
      stamp
  end handle _ => "";
 
+val exit_string =
+    if Systeml.OS = "winNT" then
+      "To exit type <Control>-Z <Return>  (*not* quit();)"
+    else
+      "To exit type <Control>-D"
+
 val _ =
 TextIO.output(TextIO.stdOut,
    "\n---------------------------------------------------------------------\n"
   ^"       HOL-4 ["
   ^Globals.release^" "^Lib.int_to_string(Globals.version)
   ^" ("^Thm.kernelid^", "^build_stamp^")"
-  ^"]\n\n       For introductory HOL help, type: help \"hol\";"
+  ^"]\n\n"
+  ^"       For introductory HOL help, type: help \"hol\";\n"
+  ^"       "^exit_string
   ^"\n---------------------------------------------------------------------\n\
    \\n")
 

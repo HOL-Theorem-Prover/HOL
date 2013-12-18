@@ -8,6 +8,9 @@ sig
   val s2n_tm : term
   val n2s_tm : term
 
+  val fromBinString_tm : term
+  val fromDecString_tm : term
+  val fromHexString_tm : term
   val num_from_bin_string_tm : term
   val num_from_oct_string_tm : term
   val num_from_dec_string_tm : term
@@ -22,6 +25,9 @@ sig
   val mk_s2n : term * term * term -> term
   val mk_n2s : term * term * term -> term
 
+  val mk_fromBinString : term -> term
+  val mk_fromDecString : term -> term
+  val mk_fromHexString : term -> term
   val mk_num_from_bin_string : term -> term
   val mk_num_from_oct_string : term -> term
   val mk_num_from_dec_string : term -> term
@@ -36,6 +42,9 @@ sig
   val dest_s2n : term -> term * term * term
   val dest_n2s : term -> term * term * term
 
+  val dest_fromBinString : term -> term
+  val dest_fromDecString : term -> term
+  val dest_fromHexString : term -> term
   val dest_num_from_bin_string : term -> term
   val dest_num_from_oct_string : term -> term
   val dest_num_from_dec_string : term -> term
@@ -50,6 +59,9 @@ sig
   val is_s2n : term -> bool
   val is_n2s : term -> bool
 
+  val is_fromBinString : term -> bool
+  val is_fromDecString : term -> bool
+  val is_fromHexString : term -> bool
   val is_num_from_bin_string : term -> bool
   val is_num_from_oct_string : term -> bool
   val is_num_from_dec_string : term -> bool

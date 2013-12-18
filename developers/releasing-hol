@@ -1,6 +1,15 @@
 # this -*- shell-script -*- can be used to create a HOL tar ball.
 
-homesvn=https://hol.svn.sourceforge.net/svnroot/hol
+set -e
+
+die () {
+  echo "$@" >&2
+  exit 1
+}
+
+warn () {
+    echo "$@" >&2
+}
 
 usage () {
         echo "Usage: releasing-hol [--relname=<name>] (-Lpath)* <ref> <ML>" >&2
@@ -20,7 +29,7 @@ do
         -L ) Lpaths+=(-L$2) ; shift 2 ;;
         --relname ) userrelname=$2 ; shift 2 ;;
         -- ) shift ; break ;;
-        * ) echo "Internal error!" >&2 ; exit 1 ;;
+        * ) die "Internal getopt error!" ;;
     esac
 done
 
@@ -36,11 +45,6 @@ else
     releasename=$gitref
 fi
 ML=$2
-
-die () {
-  echo "$@" >&2
-  exit 1
-}
 
 MLbase=$(basename $ML)
 [ $MLbase = mosml ] || [ $MLbase = poly ] ||
@@ -70,26 +74,19 @@ createdir () {
 
 # initial setup
 createdir $texlogs
-/bin/rm -rf "/tmp/hol"                     # final directory to be tarred
+archive=/tmp/hol-$releasename
+/bin/rm -rf $archive                     # final directory to be tarred
 
 if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
     :
 else
-    echo "Local HOL directory looks bogus" >&2
-    exit 1
+    die "Local HOL directory looks bogus"
 fi
 
-archive=/tmp/hol-$releasename
 
 echo "Archiving from $localholdir to $archive"
 git archive --prefix="hol-$releasename/" $gitref | tar -x -C /tmp
-
-if [ $? -ne 0 ] ; then
-  die "git archive failed, consult /tmp/svn-export.log"
-else
-  echo
-fi
 
 if [ ! -r $archive/std.prelude -o ! -d $archive/src ]
 then
@@ -113,7 +110,7 @@ echo
 echo "Copying theory graph from local installation"
 # see the file help/src-sml/DOT for instructions on how to generate the
 # theorygraph files
-/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* $archive/help/theorygraph ||
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* $archive/help/theorygraph 2> /dev/null ||
   die "Couldn't copy theory graph."
 
 if [ $ML = "mosml" ]
@@ -158,8 +155,8 @@ cd $archive
 (while read line ; do
   case $line in
       \#* ) : ;;
-      * ) (/bin/rm -r $line && echo "  Removed $line") ||
-        die "Couldn't delete $line"
+      * ) (/bin/rm -r $line 2> /dev/null && echo "  Removed $line") ||
+        warn "  *** Couldn't delete $line ***"
   esac
  done) < $localholdir/developers/deleted-in-release.txt
 echo

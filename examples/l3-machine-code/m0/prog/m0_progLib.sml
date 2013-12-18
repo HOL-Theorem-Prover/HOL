@@ -544,7 +544,8 @@ local
       helperLib.PRE_CONV
          (DEPTH_COND_CONV
              (REWRITE_CONV [m0_stepTheory.Aligned_numeric]
-              THENC NOT_F_CONV))
+              THENC NOT_F_CONV)
+          THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV

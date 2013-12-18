@@ -624,9 +624,6 @@ val m_def = arm_progTheory.arm_BE_WORD_def
 
 local
    val RName_PC_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
-   val cond_ELIM =
-      simpLib.SIMP_PROVE bool_ss [set_sepTheory.SEP_CLAUSES]
-        ``!p:'a set set. p * cond T = p``
    fun spec_rewrites thm tms = List.map (REWRITE_CONV [thm]) tms
    val spec_rwts =
       spec_rewrites armTheory.Extend_def
@@ -668,7 +665,7 @@ local
              (DEPTH_CONV DISJOINT_CONV
               THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
               THENC NOT_F_CONV)
-          THENC PURE_ONCE_REWRITE_CONV [cond_ELIM])
+          THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
@@ -960,13 +957,6 @@ end
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
-
-fun opc_class s =
-   let
-      val i = arm_stepLib.hex_to_bits_32 s
-   in
-      (listSyntax.mk_list (i, Type.bool), arm_stepLib.arm_instruction i)
-   end
 
 val () = arm_config "vfp" "flat"
 val () = arm_config "vfp" "array"

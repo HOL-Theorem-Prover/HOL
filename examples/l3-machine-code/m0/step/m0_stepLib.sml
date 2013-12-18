@@ -186,11 +186,11 @@ val BranchWritePC_rwt =
 
 val BXWritePC_rwt =
    EV [BXWritePC_def, BranchTo_rwt]
-      [[``^st.CurrentMode <> Mode_Handler``, ``~word_bit 0 (imm32:word32)``]] []
+      [[``^st.CurrentMode <> Mode_Handler``, ``word_bit 0 (imm32:word32)``]] []
     ``BXWritePC imm32`` |> hd
 
 val BLXWritePC_rwt =
-   EV [BLXWritePC_def, BranchTo_rwt] [[``~word_bit 0 (imm32:word32)``]] []
+   EV [BLXWritePC_def, BranchTo_rwt] [[``word_bit 0 (imm32:word32)``]] []
     ``BLXWritePC imm32`` |> hd
 
 val LoadWritePC_rwt =
@@ -447,28 +447,24 @@ in
          [[``~word_bit 8 (registers: word9)``],
           [``word_bit 8 (registers: word9)``]] []
         ``dfn'LoadMultiple (T, 13w, registers)``
-        |> List.map (REWRITE_RULE [count_list_8] o
+        |> List.map (REWRITE_RULE [count_list_8, wordsTheory.word_mul_n2w] o
                      utilsLib.MATCH_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV
                        ``n2w a <> n2w b: word4`` o
                      utilsLib.ALL_HYP_CONV_RULE
                         (DATATYPE_CONV
                          THENC SIMP_CONV std_ss
-                                  [Aligned_plus, word_bit_0_of_load]
+                                  [Aligned_plus, word_bit_0_of_load,
+                                   wordsTheory.word_mul_n2w]
                          THENC DATATYPE_CONV))
         |> addThms
-
    val LoadMultiple_rwt =
       EV [LDM, LDM_UPTO_def, IncPC_rwt, LDM_UPTO_PC, write'R_name_rwt,
           Aligned_SP]
-         [[``~word_bit 8 (registers: word9)``]] []
-        ``dfn'LoadMultiple
-            (~word_bit (w2n (v2w [F; b2; b1; b0]: word4)) registers,
-             v2w [F; b2; b1; b0], registers)``
+         [[``~word_bit 8 (registers: word9)``,
+           ``b = ~word_bit (w2n (n: word4)) (registers: word9)``]] []
+        ``dfn'LoadMultiple (b, n, registers)``
         |> List.map
-             (utilsLib.MATCH_HYP_CONV_RULE
-                 (REWRITE_CONV [m0_stepTheory.v2w_13_15_rwts])
-                 ``x <> 15w:word4`` o
-              REWRITE_RULE
+             (REWRITE_RULE
                  ([boolTheory.COND_ID, count_list_8] @
                   List.drop
                      (utilsLib.mk_cond_update_thms [``:m0_state``], 3)))
@@ -554,12 +550,14 @@ in
    val Push_rwt =
       EV [PUSH, STM_UPTO_def, IncPC_rwt, LR_def, R_name_rwt, write'R_name_rwt,
           write'MemA_4_rwt, write'SP_def, m0_stepTheory.R_x_not_pc,
-          count_list_8, bit_count_9_m_8] [] []
+          count_list_8] [] []
          ``dfn'Push (registers)``
          |> List.map
              (utilsLib.ALL_HYP_CONV_RULE
                  (REWRITE_CONV [Aligned_plus] THENC wordsLib.WORD_EVAL_CONV) o
-              SIMP_RULE bool_ss [wordsTheory.WORD_MULT_CLAUSES] o
+              SIMP_RULE bool_ss
+                 [wordsTheory.WORD_MULT_CLAUSES, wordsTheory.word_mul_n2w,
+                  bit_count_9_m_8] o
               REWRITE_RULE
                  (boolTheory.COND_ID ::
                   List.drop
@@ -834,7 +832,7 @@ in
          val ld = String.isPrefix "LDM" s'
       in
          if ld orelse String.isPrefix "POP" s'
-            then endian_rule o
+            then utilsLib.FULL_CONV_RULE numLib.REDUCE_CONV o endian_rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV) o
                  bit_count_rule o
                  word_bit_rule o
@@ -842,7 +840,8 @@ in
                      then split_wb_cond_rule (String.isSubstring "(WB)" s')
                   else Lib.I)
          else if String.isPrefix "STM" s' orelse String.isPrefix "PUSH" s'
-            then stm_rule2 o stm_rule1 o bit_count_rule o endian_rule o
+            then numLib.REDUCE_RULE o stm_rule2 o stm_rule1 o bit_count_rule o
+                 endian_rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV) o
                  word_bit_rule
          else Lib.I
@@ -1049,7 +1048,8 @@ local
          [thm1, thm2] => (thm1, thm2)
        | _ => raise ERR "fetch_thm" "expecting 1 or 2 theorems"
 
-   val rule = MATCH_HYP_RW [] ``a /\ b`` o MATCH_HYP_RW [] ``a \/ b``
+   val rule =
+      MATCH_HYP_RW [] ``a /\ b: bool`` o MATCH_HYP_RW [] ``a \/ b: bool``
 
    fun check (l, s) thm =
       if utilsLib.vacuous thm
@@ -1152,16 +1152,13 @@ in
       |> Lib.C Thm.AP_THM st
       |> Conv.RIGHT_CONV_RULE
              (Thm.BETA_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV [m0Theory.boolify16_v2w, Decode_simps]
               THENC ONCE_REWRITE_CONV [DecodeImmShift_rwt]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.word_bit_CONV
-              THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC Conv.DEPTH_CONV selective_v2w_eq_CONV
               THENC SIMP_CONV bool_ss
-                      ([Decode_simps, BitCount, bit_count_lt_1] @
-                        DECODE_UNPREDICTABLE_rwt)
+                      ([pairTheory.FST, Decode_simps, BitCount,
+                        bit_count_lt_1] @ DECODE_UNPREDICTABLE_rwt)
               THENC Conv.DEPTH_CONV utilsLib.WGROUND_CONV
               THENC REWRITE_CONV [DecodeRegShift_rwt]
               THENC Conv.DEPTH_CONV PairedLambda.PAIRED_BETA_CONV)
@@ -1176,7 +1173,6 @@ val DecodeThumb2 =
    |> Conv.RIGHT_CONV_RULE
           (Thm.BETA_CONV
            THENC PURE_REWRITE_CONV [pairTheory.FST, pairTheory.SND]
-           THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
            THENC REWRITE_CONV [m0Theory.boolify16_v2w, Decode_simps]
            THENC Conv.DEPTH_CONV PairedLambda.let_CONV
            THENC Conv.DEPTH_CONV bitstringLib.v2w_eq_CONV
@@ -1635,10 +1631,10 @@ end
 (* ---------------------------- *)
 
 val BranchExchange_rwt =
-   EV [dfn'BranchExchange_def, BXWritePC_rwt, R_name_rwt, Aligned_BranchEx]
+   EV [dfn'BranchExchange_def, BXWritePC_rwt, R_name_rwt]
       [] []
       ``dfn'BranchExchange m``
-   |> List.map (MATCH_HYP_RW [] ``~word_bit x (y: word32)``)
+   |> List.map (MATCH_HYP_RW [] ``word_bit x (y: word32)``)
    |> addThms
 
 (* ---------------------------- *)
@@ -1646,7 +1642,7 @@ val BranchExchange_rwt =
 val BranchLinkExchangeRegister_rwt =
    EV [dfn'BranchLinkExchangeRegister_def, BLXWritePC_rwt, R_name_rwt,
        write'LR_def, write'R_name_rwt, PC_rwt, RName_LR_rwt,
-       Aligned_BranchEx, Aligned_BranchLinkEx] [] []
+       Aligned_BranchLinkEx] [] []
       ``dfn'BranchLinkExchangeRegister m``
    |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV []) o
                 utilsLib.MATCH_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV
