@@ -72,8 +72,8 @@ in
            val number = major * 100 + 10 * minor + point
          in
            (if number >= 551
-               then ["-lpolymain", "-lpolyml", "-lpthread", "-lgmp", "-lm",
-                     "-ldl", "-lstdc++", "-Wl,-no_compact_unwind,-no_pie"]
+               then ["-lpthread", "-lm", "-ldl", "-lstdc++",
+                     "-Wl,-no_pie"]
             else if number >= 550
                then ["-Wl,-no_pie"]
             else ["-segprot", "POLY", "rwx", "rwx"]) @
@@ -92,7 +92,7 @@ fun compile systeml exe obj =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 8
+val version_number = 9
 val release_string = "Kananaskis"
 
 (*

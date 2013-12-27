@@ -226,47 +226,31 @@ val mips_mk_pre_post =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val reg = Lib.total (Int.toString o wordsSyntax.uint_of_word)
-   val CauseRegister_ty = ``:CauseRegister``
-   val HLStatus_ty = ``:HLStatus``
-   val obool_ty = ``:bool option``
-   fun rename f =
-      fn tm =>
-         case boolSyntax.dest_strip_comb tm of
-            ("mips_prog$mips_CP0_Count", [v]) => SOME (v |-> f ("count", word))
-          | ("mips_prog$mips_CP0_Cause", [v]) =>
-               SOME (v |-> f ("cause", CauseRegister_ty))
-          | ("mips_prog$mips_CP0_EPC", [v]) => SOME (v |-> f ("epc", dword))
-          | ("mips_prog$mips_CP0_Status_BEV", [v]) =>
-               SOME (v |-> f ("bev", bool))
-          | ("mips_prog$mips_LLbit", [v]) => SOME (v |-> f ("llbit", obool_ty))
-          | ("mips_prog$mips_HLStatus", [v]) =>
-               SOME (v |-> f ("hlstatus", HLStatus_ty))
-          | ("mips_prog$mips_HI", [v]) => SOME (v |-> f ("hi", dword))
-          | ("mips_prog$mips_LO", [v]) => SOME (v |-> f ("lo", dword))
-          | ("mips_prog$mips_gpr", [x, v]) =>
-               Option.map (fn n => v |-> f ("r" ^ n, dword)) (reg x)
-          | ("mips_prog$mips_MEM", [_, v]) => SOME (v |-> f ("b", byte))
-          | _ => NONE
+   val mips_rename1 =
+      Lib.total
+        (fn "mips_prog$mips_CP0_Count" => "count"
+          | "mips_prog$mips_CP0_Cause" => "cause"
+          | "mips_prog$mips_CP0_EPC" => "epc"
+          | "mips_prog$mips_CP0_Status_BEV" => "bev"
+          | "mips_prog$mips_LLbit" => "llbit"
+          | "mips_prog$mips_HLStatus" => "hlstatus"
+          | "mips_prog$mips_HI" => "hi"
+          | "mips_prog$mips_LO" => "lo"
+          | _ => fail())
+   val mips_rename2 =
+      Lib.total
+        (fn "mips_prog$mips_gpr" =>
+              Lib.curry (op ^) "r" o Int.toString o wordsSyntax.uint_of_word
+          | "mips_prog$mips_MEM" => K "b"
+          | _ => fail())
 in
-   fun rename_vars thm =
-      let
-         val (_, p, _, _) = progSyntax.dest_spec (Thm.concl thm)
-         val () = stateLib.varReset()
-         val _ = stateLib.gvar "b" Type.bool
-         val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry stateLib.gvar
-         val p = progSyntax.strip_star p
-      in
-         Thm.INST (List.mapPartial (rename avoid) p) thm
-      end
-      handle e as HOL_ERR _ => Raise e
+   val mips_rename = stateLib.rename_vars (mips_rename1, mips_rename2, ["b"])
 end
 
 local
    fun check_unique_reg_CONV tm =
       let
-         val (_, p, _, _) = progSyntax.dest_spec tm
-         val p = progSyntax.strip_star p
+         val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_mips_gpr)) p
       in
          if Lib.mk_set rp = rp
@@ -305,7 +289,7 @@ local
       THENC POST_CONV WGROUND_RW_CONV
 in
    fun simp_triple_rule thm =
-      rename_vars (Conv.CONV_RULE cnv thm)
+      mips_rename (Conv.CONV_RULE cnv thm)
       handle FalseTerm => raise ERR "simp_triple_rule" "condition false"
 end
 
@@ -377,7 +361,7 @@ local
 in
    fun combinations (thm, t) =
       let
-         val (m, p, c, q) = progSyntax.dest_spec t
+         val (m, p, c, q) = temporal_stateSyntax.dest_spec' t
          val pl = progSyntax.strip_star p
          val ql = progSyntax.strip_star q
          val rs = mk_assign (pl, ql)
@@ -416,7 +400,8 @@ in
                        |> Drule.DISCH_ALL
                        |> Conv.CONV_RULE cnv
                        |> Drule.UNDISCH_ALL,
-                   progSyntax.mk_spec (m, p', sbst c, q'))
+                   temporal_stateSyntax.mk_spec_or_temporal_next m
+                     (stateLib.generate_temporal()) (p', sbst c, q'))
                end) groups
       end
 end
@@ -426,13 +411,14 @@ local
       (case Drule.CONJUNCTS mips_progTheory.mips_component_11 of
           [r, m] => [r, m]
         | _ => raise ERR "component_11" "")
-   val mips_rwts = List.drop (utilsLib.datatype_rewrites "mips"
+   val mips_rwts = List.drop (utilsLib.datatype_rewrites true "mips"
                                 ["mips_state", "CP0", "StatusRegister"], 1)
    val STATE_TAC = ASM_REWRITE_TAC mips_rwts
 in
    val spec =
       stateLib.spec
            mips_progTheory.MIPS_IMP_SPEC
+           mips_progTheory.MIPS_IMP_TEMPORAL
            [mips_stepTheory.get_bytes]
            []
            (mips_select_state_pool_thm :: mips_select_state_thms)
@@ -462,14 +448,12 @@ in
 end
 
 local
-   fun get_opcode thm =
-      let
-         val (_, _, c, _) = progSyntax.dest_spec (Thm.concl thm)
-      in
-         c |> pred_setSyntax.strip_set |> hd
-           |> pairSyntax.dest_pair |> snd
-           |> bitstringSyntax.dest_v2w |> fst
-      end
+   val get_opcode =
+      fst o bitstringSyntax.dest_v2w o
+      snd o pairSyntax.dest_pair o
+      hd o pred_setSyntax.strip_set o
+      temporal_stateSyntax.dest_code' o
+      Thm.concl
    val the_spec = ref (mips_spec_opt false)
    val spec_label_set = ref (Redblackset.empty String.compare)
    val spec_rwts = ref (utilsLib.mk_rw_net get_opcode [])
@@ -537,6 +521,9 @@ val map_tys = [dword, word5]
 val mk_pre_post = mips_mk_pre_post
 val write = mips_write_footprint
 val EXTRA_TAC = ALL_TAC
+
+val () = mips_config false
+val () = stateLib.set_temporal true
 
 local
    val gen = Random.newgenseed 1.0

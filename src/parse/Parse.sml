@@ -637,7 +637,7 @@ struct
   val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
   val _ = unicode_lambda()
 
-  val _ = traceset 1
+  val _ = traceset (if Systeml.OS = "winNT" then 0 else 1)
 
   val _ = Theory.register_hook
               ("Parse.ProvideUnicode",

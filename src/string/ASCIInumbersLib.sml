@@ -18,8 +18,9 @@ local
       [s2n_def, n2s_def, HEX_def, UNHEX_def,
        num_from_bin_string_def, num_from_oct_string_def,
        num_from_dec_string_def, num_from_hex_string_def,
-       num_to_bin_string_def, num_to_oct_string_def, num_to_dec_string_def,
-       num_to_hex_string_def]
+       num_to_bin_string_def, num_to_oct_string_def,
+       num_to_dec_string_def, num_to_hex_string_def,
+       fromBinString_def, fromDecString_def, fromHexString_def]
 in
    fun add_ASCIInumbers_compset cmp = computeLib.add_thms thms cmp
 end

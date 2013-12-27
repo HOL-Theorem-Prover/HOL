@@ -114,6 +114,10 @@ val R_x_pc = Q.store_thm("R_x_pc",
    \\ asm_simp_tac (srw_ss()) [R_name_def, DISCH_ALL R_x_not_pc]
    )
 
+val reverse_endian_def = Define`
+   reverse_endian (w: word32) =
+   (7 >< 0) w @@ (15 >< 8) w @@ (23 >< 16) w @@ (31 >< 24) w`
+
 (* ------------------------------------------------------------------------ *)
 
 val notoverflow = METIS_PROVE [integer_wordTheory.overflow]
@@ -466,11 +470,13 @@ val Aligned_Branch_Wide10 = utilsLib.ustore_thm("Aligned_Branch_Wide10",
    \\ blastLib.BBLAST_TAC
    )
 
+(*
 val Aligned_BranchEx = utilsLib.ustore_thm("Aligned_BranchEx",
    `~word_bit 0 (r: word32) ==>
     (((31 >< 1) r : 31 word @@ (0w: word1)) = r)`,
    blastLib.BBLAST_TAC
    )
+*)
 
 val Aligned_BranchLink = utilsLib.ustore_thm("Aligned_BranchLink",
    `Aligned (w:word32, 2) ==>
@@ -484,6 +490,41 @@ val Aligned_BranchLinkEx = utilsLib.ustore_thm("Aligned_BranchLinkEx",
     (((31 >< 1) (w + 4w - 2w) : 31 word @@ (1w: word1)) = (w + 2w) !! 1w)`,
    simp [Aligned]
    \\ blastLib.BBLAST_TAC
+   )
+
+val tm = Term.subst [``b0:bool`` |-> boolSyntax.F] (bitstringSyntax.mk_vec 32 0)
+
+val Aligned_Branch = Q.store_thm("Aligned_Branch",
+   `(Aligned (pc:word32, 2) ==> Aligned (pc + 4w + ^tm, 2)) = T`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
+   `Aligned (w: 31 word @@ (0w: word1), 2)`,
+   rw [Aligned]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Aligned (pc + (x + 4w), 4) = Aligned (x, 4))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
+   `Aligned (pc: word32, 4) ==>
+    (Align (pc + 4w, 4) + x = pc + (x + 4w))`,
+   lrw [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
+
+val Aligned_base_pc_lit = Q.store_thm("Aligned_base_pc_lit",
+   `Aligned
+       (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
+   simp [Aligned, Align]
+   \\ blastLib.FULL_BBLAST_TAC
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -706,6 +747,26 @@ val get_bytes = Q.store_thm("get_bytes",
              b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word16) =
      v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)`,
    blastLib.BBLAST_TAC
+   )
+
+val concat_bytes = Q.store_thm("concat_bytes",
+   `!w: word32. (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w`,
+   blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_bytes = Q.store_thm("reverse_endian_bytes",
+   `!w: word32.
+       ((7 >< 0) (reverse_endian w) = (31 >< 24) w) /\
+       ((15 >< 8) (reverse_endian w) = (23 >< 16) w) /\
+       ((23 >< 16) (reverse_endian w) = (15 >< 8) w) /\
+       ((31 >< 24) (reverse_endian w) = (7 >< 0) w)`,
+   rw [reverse_endian_def]
+   \\ blastLib.BBLAST_TAC
+   )
+
+val reverse_endian_id = Q.store_thm("reverse_endian_id",
+   `!w. reverse_endian (reverse_endian w) = w`,
+   rw [reverse_endian_def, reverse_endian_bytes, concat_bytes]
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -1001,14 +1062,12 @@ val STM_UPTO_SUC =
    |> save_as "STM_UPTO_SUC"
 
 val bit_count_9_m_8 = Q.store_thm("bit_count_9_m_8",
-   `!a: word32 r: word9.
-      a - 4w * n2w (bit_count r) + 4w * n2w (bit_count_upto 8 r) =
-      a - 4w * (if word_bit 8 r then 1w else 0w)`,
+   `!r: word9. word_bit 8 r ==> (bit_count_upto 8 r = bit_count r - 1)`,
    lrw [wordsTheory.bit_count_def, wordsTheory.word_bit_def,
-        wordsTheory.WORD_LEFT_ADD_DISTRIB, GSYM wordsTheory.word_add_n2w,
         wordsTheory.bit_count_upto_SUC
         |> Q.ISPECL [`r:word9`, `8`]
-        |> numLib.REDUCE_RULE]
+        |> numLib.REDUCE_RULE
+       ]
    )
 
 val word_bit_9_expand = Q.store_thm("word_bit_9_expand",

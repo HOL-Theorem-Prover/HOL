@@ -3,10 +3,13 @@ sig
 
     include Abbrev
 
+    type instruction =
+        (thm * int * int option) * (thm * int * int option) option
+
+    (* (derive spec, generate branch, status thm, program counter term) *)
     type decompiler_tools =
-      (* ( derive spec, generate branch, status thm, program counter term ) *)
-      (string -> (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
-      (term -> term -> int -> bool -> string * int) * Thm.thm * Abbrev.term
+      (string -> instruction) * (term -> term -> int -> bool -> string * int) *
+      Thm.thm * Term.term
 
     datatype ftree_type =
       FUN_IF of term * ftree_type * ftree_type
@@ -23,6 +26,10 @@ sig
 
     val cache                  : (string -> 'a) -> string -> 'a
     val to_lower               : string -> string
+    val remove_whitespace      : string -> string
+    val quote_to_strings       : 'a frag list -> string list
+
+    val instruction_apply      : (thm -> thm) -> instruction -> instruction
 
     val all_distinct           : ''a list -> ''a list
     val replace_terml          : (term -> term) -> term -> term

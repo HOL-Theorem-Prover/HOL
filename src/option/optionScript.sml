@@ -300,6 +300,14 @@ val IF_EQUALS_OPTION = store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites ["IF_EQUALS_OPTION"]
 
+val IF_NONE_EQUALS_OPTION = store_thm(
+  "IF_NONE_EQUALS_OPTION",
+  ``(((if P then X else NONE) = NONE) <=> (P ==> IS_NONE X)) /\
+    (((if P then NONE else X) = NONE) <=> (IS_SOME X ==> P)) /\
+    (((if P then X else NONE) = SOME x) <=> P /\ (X = SOME x)) /\
+    (((if P then NONE else X) = SOME x) <=> ~P /\ (X = SOME x))``,
+  OPTION_CASES_TAC(--`X:'a option`--) THEN SRW_TAC [](option_rws));
+val _ = export_rewrites ["IF_NONE_EQUALS_OPTION"]
 
 (* ----------------------------------------------------------------------
     OPTION_MAP theorems
@@ -446,6 +454,13 @@ val _ = export_rewrites ["OPTION_BIND_EQUALS_OPTION"]
 val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
+
+val OPTION_IGNORE_BIND_thm = store_thm(
+  "OPTION_IGNORE_BIND_thm",
+  ``(OPTION_IGNORE_BIND NONE m = NONE) /\
+    (OPTION_IGNORE_BIND (SOME v) m = m)``,
+  SRW_TAC[][OPTION_IGNORE_BIND_def]);
+val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
 
 val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
   name = "OPTION_GUARD_def",

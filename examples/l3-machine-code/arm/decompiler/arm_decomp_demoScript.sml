@@ -1,8 +1,9 @@
 open HolKernel Parse boolLib bossLib;
 
-open rel_decompilerLib arm_relLib
+open core_decompilerLib
+open arm_core_decompLib
 
-val _ = new_theory "arm_decomp_demo";
+val () = new_theory "arm_decomp_demo";
 
 (* the first PID exmaple *)
 
@@ -138,10 +139,9 @@ val PID_ADA_EQUIV_PID_C = store_thm("PID_ADA_EQUIV_PID_C",
       (d7_a,rmode_a) = (d7_c,rmode_c)``,
   SIMP_TAC std_ss [PID_ADA_lemma,PID_C_lemma,LET_DEF]);
 
-
 (* the second PID example *)
 
-val (PID_C2_cert, PID_C2_def) = rel_decompilerLib.fast_decompile "PID_C2" `
+val (PID_C2_cert, PID_C2_def) = core_decompilerLib.core_decompile "PID_C2" `
                          (* ----------------------------------- *)
     e59f322c  00012f94   (* ldr        r3, [pc, #556]  ; 824c   *)
     e59f222c  00012f80   (* ldr        r2, [pc, #556]  ; 8250   *)
@@ -286,4 +286,4 @@ val (PID_C2_cert, PID_C2_def) = rel_decompilerLib.fast_decompile "PID_C2" `
 val _ = save_thm("PID_C2_def",PID_C2_def);
 val _ = save_thm("PID_C2_cert",PID_C2_cert);
 
-val _ = export_theory();
+val () = export_theory()

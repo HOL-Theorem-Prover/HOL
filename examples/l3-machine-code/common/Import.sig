@@ -3,8 +3,11 @@ sig
 
    datatype monop =
        Abs
+     | Bin
      | BNot
      | Cast of ParseDatatype.pretype
+     | Dec
+     | Flat
      | FPAbs of int
      | FPAdd of int
      | FPEqual of int
@@ -15,6 +18,7 @@ sig
      | FPSub of int
      | Fst
      | Head
+     | Hex
      | IsAlpha
      | IsAlphaNum
      | IsDigit
@@ -54,6 +58,7 @@ sig
      | Bit
      | Div
      | Exp
+     | Fld
      | Ge
      | Gt
      | In
@@ -82,7 +87,6 @@ sig
 
    val start : string -> unit
    val finish : int -> unit
-   val open_monad_syntax : unit -> unit
 
    val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit

@@ -28,7 +28,7 @@ local
          c |> rator |> rand |> rand |> listSyntax.dest_list |> fst |> length
       end
    val find_exit =
-      stateLib.get_pc_inc
+      stateLib.get_pc_delta
          (Lib.equal "x64_prog$x64_PC" o fst o boolSyntax.dest_strip_comb)
    fun finalise th = (th, get_length th, find_exit th)
 in

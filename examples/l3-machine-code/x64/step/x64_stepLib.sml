@@ -55,7 +55,7 @@ end
 local
    fun datatype_thms thms =
       thms @ [cond_rand_thms, snd_exception_thms] @
-      utilsLib.datatype_rewrites "x64"
+      utilsLib.datatype_rewrites true "x64"
         ["x64_state", "Zreg", "Zeflags", "Zsize", "Zbase", "Zrm", "Zdest_src",
          "Zimm_rm", "Zmonop_name", "Zbinop_name", "Zcond", "Zea", "Zinst"]
 in
@@ -105,14 +105,16 @@ local
                          THENC EVAL
                          THENC REWRITE_CONV [num2Zreg_thm])
          (List.tabulate (8, fn i => ``RexReg (^b, ^(mk_3 i))``))
+   val cmp =
+      x64Lib.x64_compset
+        [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
+         immediate8, immediate16, immediate32, immediate64,
+         immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
+         RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T]
+   val () = computeLib.add_conv
+               (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
 in
-   val x64_CONV =
-      utilsLib.CHANGE_CBV_CONV
-         (x64Lib.x64_compset
-            [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
-             immediate8, immediate16, immediate32, immediate64,
-             immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
-             RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T])
+   val x64_CONV = utilsLib.CHANGE_CBV_CONV cmp
 end
 
 (* ------------------------------------------------------------------------ *)
@@ -714,8 +716,7 @@ end
 local
    val TIDY_UP_CONV =
       REWRITE_CONV
-         (List.take
-            (List.drop (utilsLib.datatype_rewrites "x64" ["Zreg"], 10), 2))
+         (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
       THENC utilsLib.WGROUND_CONV
    val rwts = [pairTheory.FST, pairTheory.SND, word_thms]
    val get_strm1 = Term.rand o Term.rand o Term.rand o utilsLib.rhsc
@@ -744,9 +745,8 @@ local
    val MP_Next  = Drule.MATCH_MP x64_stepTheory.NextStateX64
    val MP_Next0 = Drule.MATCH_MP x64_stepTheory.NextStateX64_0
    val STATE_CONV =
-      REWRITE_CONV (utilsLib.datatype_rewrites "x64" ["x64_state"] @
-         [combinTheory.K_THM, combinTheory.o_THM,
-          boolTheory.COND_ID, cond_rand_thms])
+      REWRITE_CONV (utilsLib.datatype_rewrites true "x64" ["x64_state"] @
+                    [boolTheory.COND_ID, cond_rand_thms])
    fun unchanged s = raise ERR "x64_step" ("Failed to evaluate: " ^ s)
    val cache =
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)

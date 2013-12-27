@@ -19,11 +19,53 @@ val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
 
+type instruction = (thm * int * int option) * (thm * int * int option) option
+
+(* (derive spec, generate branch, status thm, program counter term) *)
 type decompiler_tools =
-  (* ( derive spec, generate branch, status thm, program counter term ) *)
-  (string ->
-   (Thm.thm * int * int option) * (Thm.thm * int * int option) option) *
-  (term -> term -> int -> bool -> string * int) * Thm.thm * Abbrev.term
+  (string -> instruction) * (term -> term -> int -> bool -> string * int) *
+  Thm.thm * Term.term
+
+fun instruction_apply f =
+   fn ((th1, x1, x2), NONE): instruction => ((f th1, x1, x2), NONE)
+    | ((th1, x1, x2), SOME (th2, y1, y2)) =>
+         ((f th1, x1, x2), SOME (f th2, y1, y2)): instruction
+
+(* Remove whitespace before and after a string *)
+val remove_whitespace =
+   Substring.string o Substring.dropr Char.isSpace o
+   Substring.dropl Char.isSpace o Substring.full
+
+(* Turns a quote `...` into a list of strings *)
+local
+   fun strip_comments (d, a) s =
+      if Substring.size s = 0
+         then a
+      else let
+              val (l, r) =
+                 Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
+              val a' = if 0 < d then a else a @ [l]
+           in
+              if Substring.isPrefix "(*" r
+                 then strip_comments (d + 1, a') (Substring.triml 2 r)
+              else if Substring.isPrefix "*)" r
+                 then strip_comments (d - 1, a') (Substring.triml 2 r)
+              else if Substring.size r = 0
+                 then a'
+              else let
+                      val (r1, r2) = Substring.splitAt (r, 1)
+                   in
+                      strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
+                   end
+           end
+   val lines =
+      List.mapPartial
+         (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
+      String.tokens (fn c => c = #"\n" orelse c = #"|") o
+      Substring.concat o strip_comments (0, []) o Substring.full
+in
+   val quote_to_strings = fn [QUOTE s] => lines s | _ => raise General.Bind
+end
 
 (* mechanism for printing *)
 
@@ -379,10 +421,7 @@ local
       let
          val cnv = Conv.RAND_CONV (PURE_REWRITE_CONV [ASSUME atm])
       in
-         fn tm =>
-            if progSyntax.is_cond tm
-               then cnv tm
-            else NO_CONV tm
+         fn tm => if progSyntax.is_cond tm then cnv tm else NO_CONV tm
       end
 in
    fun MOVE_COND_RULE tm thm =
@@ -920,6 +959,11 @@ local
           word_arith_lemma4, SEP_CLAUSES, pred_setTheory.UNION_IDEMPOT,
           SEP_DISJ_ASSOC]
    val rule3 = PURE_REWRITE_RULE [GSYM AND_IMP_INTRO, AND_CLAUSES2]
+   val SPEC_FRAME_COMPOSE_DISJ_ALT =
+      SPEC_FRAME_COMPOSE_DISJ
+      |> Q.SPECL [`x`,`p`,`emp`] |> RW [SEP_CLAUSES]
+   fun get_post tm = tm |> rand
+   val is_sep_disj = can dest_sep_disj
 in
    fun find_composition1 th1 th2 =
       let
@@ -927,19 +971,24 @@ in
          val (xs1,xs2,ys1,ys2) = match_and_partition q p
          val tm1 = mk_star (list_mk_star xs1 ty, list_mk_star xs2 ty)
          val tm2 = mk_star (list_mk_star ys1 ty, list_mk_star ys2 ty)
-         val th1 = CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
-                   handle HOL_ERR _ => (* found a SEP_DISJ *)
-                   CONV_RULE
-                      (POST_CONV
-                         ((RATOR_CONV o RAND_CONV) (MOVE_STAR_CONV tm1))) th1
+         val th1 = if not (is_sep_disj (get_post (concl th1))) then
+                     CONV_RULE (POST_CONV (MOVE_STAR_CONV tm1)) th1
+                   else
+                     CONV_RULE
+                        (POST_CONV
+                           ((RATOR_CONV o RAND_CONV) (MOVE_STAR_CONV tm1))) th1
          val th2 = CONV_RULE (PRE_CONV (MOVE_STAR_CONV tm2)) th2
          val th = MATCH_MP SPEC_FRAME_COMPOSE (DISCH_ALL_AS_SINGLE_IMP th2)
          val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
                   handle HOL_ERR _ => (* found a SEP_DISJ *)
                   let
-                     val th = MATCH_MP SPEC_FRAME_COMPOSE_DISJ
-                                (DISCH_ALL_AS_SINGLE_IMP th2)
-                     val th = MATCH_MP th (DISCH_ALL_AS_SINGLE_IMP th1)
+                     val th = MATCH_MP (MATCH_MP SPEC_FRAME_COMPOSE_DISJ
+                                (DISCH_ALL_AS_SINGLE_IMP th2))
+                                (DISCH_ALL_AS_SINGLE_IMP th1)
+                              handle HOL_ERR _ =>
+                              MATCH_MP (MATCH_MP SPEC_FRAME_COMPOSE_DISJ_ALT
+                                (DISCH_ALL_AS_SINGLE_IMP th2))
+                                (DISCH_ALL_AS_SINGLE_IMP th1)
                   in
                      DISCH_ALL (rule1 (UNDISCH_ALL th))
                   end
@@ -1336,11 +1385,15 @@ fun SEP_R_TAC (hs,goal) = let
   fun app [] = [] | app (x::xs) = x @ app xs
   val xs = app (map (fn x => (map (fn y => (dest_pair(cdr y),dest_pair(cdr (cdr x)))) o
                               filter is_one_pair o list_dest dest_star o car) x) xs)
-  fun get_tac ((a,x),(f,df)) = let
-    val goal = mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
-    in [ANTIQUOTE goal] by ALL_TAC THEN1 SEP_READ_TAC
-       THEN NTAC 2 (POP_ASSUM (fn th => FULL_SIMP_TAC pure_ss [th])) end
-  in EVERY (map get_tac xs) (hs,goal) end;
+  fun get_goal ((a,x),(f,df)) =
+    mk_conj(mk_eq(mk_comb(f,a),x),pred_setSyntax.mk_in(a,df))
+  val all_goals = list_mk_conj (map get_goal xs)
+  val goals = list_dest dest_conj all_goals
+  val tac = [ANTIQUOTE all_goals] by (SEP_READ_TAC THEN NO_TAC)
+            THEN FULL_SIMP_TAC pure_ss []
+            THEN REPEAT (POP_ASSUM
+              (fn th => if mem (concl th) goals then ALL_TAC else NO_TAC))
+  in tac (hs,goal) end;
 
 fun INST_MATCH name th [] = fail()
   | INST_MATCH name th (tm::tms) = let

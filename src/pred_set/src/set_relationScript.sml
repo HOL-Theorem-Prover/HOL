@@ -1570,7 +1570,7 @@ FULL_SIMP_TAC (srw_ss()) [] THENL
      `x IN s DELETE x` by METIS_TAC [nth_min_lem1] THEN
      FULL_SIMP_TAC (srw_ss()) [],
  `SUC m + n = SUC (m + n)` by DECIDE_TAC THEN
-     METIS_TAC []]);
+     METIS_TAC [NOT_IS_SOME_EQ_NONE]]);
 
 val nth_min_inj_lem = Q.prove (
 `!r' s r.

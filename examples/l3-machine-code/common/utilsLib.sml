@@ -78,6 +78,56 @@ fun classes eq =
 
 (* ------------------------------------------------------------------------- *)
 
+local
+   fun find_pos P =
+      let
+         fun iter n [] = n
+           | iter n (h::t) = if P h then n else iter (n + 1) t
+      in
+         iter 0
+      end
+in
+   fun process_option P g s d l f =
+      let
+         val (l, r) = List.partition P l
+         val positions = Lib.mk_set (List.map g l)
+         val result =
+            if List.null positions
+               then d
+            else if List.length positions = 1
+               then f (hd positions)
+            else raise ERR "process_option" ("More than one " ^ s ^ " option.")
+      in
+         (result, r)
+      end
+   fun process_opt opt = process_option (Lib.C Lib.mem (List.concat opt))
+                           (fn option => find_pos (Lib.mem option) opt)
+end
+
+(* ------------------------------------------------------------------------- *)
+
+fun maximal (cmp: 'a cmp) f =
+   let
+      fun max_acc (best as (left, vm, m, right)) l =
+         fn [] => (m, List.revAppend (left, right))
+          | h :: t =>
+              let
+                 val vh = f h
+                 val best' = case cmp (vh, vm) of
+                                General.GREATER => (l, vh, h, t)
+                              | _ => best
+              in
+                 max_acc best' (h :: l) t
+              end
+   in
+      fn [] => raise ERR "maximal" "empty"
+       | h :: t => max_acc ([], f h, h, t) [h] t
+   end
+
+fun minimal cmp = maximal (Lib.flip_cmp cmp)
+
+(* ------------------------------------------------------------------------- *)
+
 fun padLeft c n l = List.tabulate (n - List.length l, fn _ => c) @ l
 (* fun padRight c n l = l @ List.tabulate (n - List.length l, fn _ => c) *)
 
@@ -126,6 +176,24 @@ val rhsc = boolSyntax.rhs o Thm.concl
 val eval = rhsc o bossLib.EVAL
 val dom = fst o Type.dom_rng
 val rng = snd o Type.dom_rng
+
+local
+   val cnv = Conv.QCONV (REWRITE_CONV [boolTheory.DE_MORGAN_THM])
+in
+   fun mk_negation tm = rhsc (cnv (boolSyntax.mk_neg tm))
+end
+
+val strip_add_or_sub =
+   let
+      fun iter a t =
+         case Lib.total wordsSyntax.dest_word_add t of
+            SOME (l, r) => iter ((true, r) :: a) l
+          | NONE => (case Lib.total wordsSyntax.dest_word_sub t of
+                        SOME (l, r) => iter ((false, r) :: a) l
+                      | NONE => (t, a))
+   in
+      iter []
+   end
 
 val get_function =
    fst o boolSyntax.strip_comb o boolSyntax.lhs o
@@ -205,6 +273,9 @@ local
    val T_imp = Drule.GEN_ALL (hd thms)
    val F_imp = Drule.GEN_ALL (List.nth (thms, 2))
    val NT_imp = DECIDE ``(~F ==> t) = t``
+   val T_imp_rule = Conv.CONV_RULE (Conv.REWR_CONV T_imp)
+   val F_imp_rule = Conv.CONV_RULE (Conv.REWR_CONV F_imp)
+   val NT_imp_rule = Conv.CONV_RULE (Conv.REWR_CONV NT_imp)
    fun dest_neg_occ_var tm1 tm2 =
       case Lib.total boolSyntax.dest_neg tm1 of
          SOME v => if Term.is_var v andalso not (Term.var_occurs v tm2)
@@ -216,15 +287,13 @@ in
       case Lib.total boolSyntax.dest_imp (Thm.concl thm) of
          SOME (l, r) =>
             if l = boolSyntax.T
-               then Conv.CONV_RULE (Conv.REWR_CONV T_imp) thm
+               then T_imp_rule thm
             else if l = boolSyntax.F
-               then Conv.CONV_RULE (Conv.REWR_CONV F_imp) thm
+               then F_imp_rule thm
             else if Term.is_var l andalso not (Term.var_occurs l r)
-               then Conv.CONV_RULE (Conv.REWR_CONV T_imp)
-                       (Thm.INST [l |-> boolSyntax.T] thm)
+               then T_imp_rule (Thm.INST [l |-> boolSyntax.T] thm)
             else (case dest_neg_occ_var l r of
-                     SOME v => Conv.CONV_RULE (Conv.REWR_CONV NT_imp)
-                                  (Thm.INST [v |-> boolSyntax.F] thm)
+                     SOME v => F_imp_rule (Thm.INST [v |-> boolSyntax.F] thm)
                    | NONE => Drule.UNDISCH thm)
        | NONE => raise ERR "ELIM_UNDISCH" ""
 end
@@ -684,6 +753,7 @@ val basic_rewrites =
     pairTheory.FST,
     pairTheory.SND,
     pairTheory.pair_case_thm,
+    pairTheory.CURRY_DEF,
     optionTheory.option_case_compute,
     optionTheory.IS_SOME_DEF,
     optionTheory.THE_DEF]
@@ -737,11 +807,11 @@ local
                     end
             else r
 in
-   fun datatype_rewrites thy l =
+   fun datatype_rewrites extra thy l =
       let
          fun typ name = Type.mk_thy_type {Thy = thy, Args = [], Tyop = name}
       in
-         List.drop (basic_rewrites, 2) @
+         (if extra then List.drop (basic_rewrites, 2) else []) @
          List.concat (List.map (datatype_rewrites1 o typ) l)
       end
 end
@@ -760,7 +830,8 @@ local
          val ftch = fetch1 thy
          val ty2num = ftch (name ^ "2num_thm")
          val num2ty = ftch ("num2" ^ name ^ "_thm")
-         fun add r = computeLib.add_thms (r @ ty2num @ num2ty) cmp
+         val fupds = TypeBase.updates_of ty
+         fun add r = computeLib.add_thms (r @ ty2num @ num2ty @ fupds) cmp
       in
          (case Lib.total TypeBase.case_const_of ty of
              SOME tm => computeLib.set_skip cmp tm NONE
@@ -877,7 +948,7 @@ in
          REWRITE_CONV
            ([boolTheory.COND_ID,
              mk_cond_rand_thms (bit_field_insert_tm :: a @ u)] @
-             datatype_rewrites thy [r, s])
+             datatype_rewrites true thy [r, s])
          THENC Conv.DEPTH_CONV EXTRACT_BIT_CONV
          THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true)
       end
@@ -916,7 +987,7 @@ local
          in
             x |-> Term.mk_comb (Term.rator y, v)
          end
-   fun eval_idx c i = 
+   fun eval_idx c i =
       rhsc (numLib.REDUCE_CONV (Term.mk_comb (c, numSyntax.term_of_int i)))
 in
    fun mk_reg_thm thy r =
@@ -940,7 +1011,8 @@ in
                             |> Term.rand
                             |> pairSyntax.dest_pabs
          val cnds = Term.mk_abs (fst (pairSyntax.dest_pair ix), cnds)
-         val ty = wordsSyntax.dim_of m         val l = 
+         val ty = wordsSyntax.dim_of m
+         val l =
             List.tabulate (fcpSyntax.dest_int_numeric_type ty, eval_idx cnds)
          val tm = (Term.subst s o bitstringSyntax.mk_v2w)
                      (listSyntax.mk_list (List.rev l, Type.bool), ty)

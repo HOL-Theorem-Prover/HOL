@@ -9,6 +9,8 @@
   body {color: #333333; background: #FFFFFF;
         margin-left: 1em; margin-right: 1em }
   code, pre {color: #006400; font-weight: bold; font-family: "Andale Mono", "Lucida Console", monospace; }
+  div.footer { font-size: small; display: flex; justify-content: space-between; }
+}
 -->
 </style>
 
@@ -69,6 +71,20 @@ The error messages printed by, and the documentation for, <code>new_type_definit
 Thanks to Rob Arthan for the bug report.
 (<a href="http://github.com/mn200/HOL/issues/128">GitHub issue</a>)
 
+<li><p>
+<code>Holmake</code>’s parsing of nested conditional directives (<code>ifdef</code>, <code>ifeq</code>, <code>ifndef</code> <i>etc.</i>) was incorrect.
+
+<li><p>
+Evaluation and simplification were not correctly handling (real valued) terms such as <code>``0 * 1/2``</code> and <code>``1/2 * 0``</code>.
+
+<li><p>
+Parsing code for tracking the way overloaded constants should be printed stored information in a data structure that grew unreasonably when theories were loaded.
+Thanks to Scott Owens for the bug report.
+
+<li><p>
+The emacs mode got confused when called on to <code>open</code> a theory whose name included the substring <code>_fun_</code>.
+Thanks to Magnus Myreen for the bug report.
+
 </ul>
 
 <h2 id="new-theories">New theories:</h2>
@@ -96,6 +112,14 @@ The sub-goal(s) resulting from the application of <code>tac</code> will be prese
 
 <ul>
 <li> <p> Theories in <code>examples/parsing</code> to do with context-free languages, their properties and Parsing Expression Grammars.  The material not to do with PEGs is derived from Aditi Barthwal’s PhD thesis, with more still to be updated and brought across.
+
+<li> <p>
+Theories in <code>examples/ARM_security_properties</code> provide proofs of several security lemmas for the ARM Instruction Set Architecture.
+To obtain guarantees that arbitrary (and unknown) user processes are able to run isolated from privileged software and other user processes, instruction level noninterference and integrity properties are provided, along with proofs that transitions to privileged modes can only occur in a controlled manner.
+A proof tool is included, which assists the verification of relational state predicates semi-automatically.
+
+<p> The work has been done as part of the PROSPER project by members from KTH Royal Institute of Technology and SICS Swedish ICT.
+Some of the obtained theorems are tied to that project (but can be adopted for others), while some guarantees are generally applicable.
 
 </ul>
 
@@ -165,7 +189,9 @@ There is also a new trace, <code>"Goalstack.show_stack_subgoal_count"</code>, wh
 
 </ul>
 <hr>
-
+<div class="footer">
 <p><em><a href="http://hol.sourceforge.net">HOL 4, Kananaskis-9</a></em></p>
+<p>(<a href="kananaskis-8.release.html">Release notes for previous version</a>)</p>
+</div>
 
 </body> </html>

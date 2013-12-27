@@ -770,7 +770,7 @@ val _ = eSML "string"
    :: MLSTRUCT "fun CHR n =\
        \ Char.chr(valOf(Int.fromString(numML.toDecString n)));"
    :: MLSTRUCT "fun ORD c = numML.fromDecString(Int.toString(Char.ord c));"
-   :: MLSTRUCT "fun STRING c s = String.^(Char.toString c,s);"
+   :: MLSTRUCT "fun STRING c s = String.^(String.str c,s);"
    :: MLSTRUCT "fun DEST_STRING s = if s = \"\" then NONE \n\
        \          else SOME(String.sub(s,0),String.extract(s,1,NONE));"
    :: MLSTRUCT "fun string_lt a b = String.compare(a,b) = LESS"

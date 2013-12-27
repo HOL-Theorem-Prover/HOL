@@ -132,31 +132,126 @@ val SIZES_ss =
                ``words$UINT_MAX(:'a)``,
                ``words$dimword(:'a)``]}]
 
-val word_EQ_CONV =
-   let
-      fun is_word_literal t = wordsSyntax.is_word_literal t orelse is_uintmax t
-      val comp = reduceLib.num_compset ()
-      val () = computeLib.add_thms
-                 (word_eq_n2w ::
-                  List.map numLib.SUC_RULE [MOD_2EXP_EQ, MOD_2EXP_MAX]) comp
-      val () = computeLib.add_conv
-                 (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) comp
-      val cnv = CHANGED_CONV (computeLib.CBV_CONV comp)
-      fun err s = raise ERR "word_EQ_CONV" s
-   in
-      fn tm =>
-         case Lib.total boolSyntax.dest_eq tm of
-            NONE => err "not an equality"
-          | SOME (w1, w2) =>
-              if is_word_literal w1 andalso is_word_literal w2
-                 then if w1 = w2
-                         then Thm.SPEC w1
-                                 (INST_TYPE [alpha |-> type_of w1] REFL_CLAUSE)
-                      else if null (Term.type_vars_in_term w1)
-                         then cnv tm
-                      else err "contains type variables"
-              else err "non-literal in equality"
-   end
+local
+   val thm =
+      LIST_CONJ
+        (List.drop (CONJUNCTS (SPEC_ALL numeralTheory.numeral_evenodd), 3))
+   val odd_conv =
+      PURE_REWRITE_CONV
+         [arithmeticTheory.NUMERAL_DEF, thm,
+          PURE_REWRITE_RULE [arithmeticTheory.ALT_ZERO] (CONJUNCT1 thm)]
+   val div2_conv =
+      PURE_REWRITE_CONV
+          [arithmeticTheory.NORM_0, numeralTheory.numeral_suc,
+           numeralTheory.numeral_div2]
+   val bool_conv = REWRITE_CONV []
+   val (mod_2exp_max0_conv, mod_2exp_max1_conv, mod_2exp_max2_conv) =
+      Lib.triple_of_list
+         (List.map Conv.REWR_CONV
+             (CONJUNCTS
+                 (PURE_REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1]
+                     (numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_MAX))))
+   val args_max_conv =
+      Conv.RAND_CONV div2_conv
+      THENC Conv.RATOR_CONV (Conv.RAND_CONV (Conv.TRY_CONV reduceLib.PRE_CONV))
+   val err_max = ERR "mod_2exp_max_conv" ""
+   val (mod_2exp_eq0_conv, mod_2exp_eq1_conv, mod_2exp_eq2_conv,
+        mod_2exp_eq_eq_conv) =
+      Lib.quadruple_of_list
+         (List.map Conv.REWR_CONV
+             (CONJUNCTS
+                 (PURE_REWRITE_RULE [GSYM arithmeticTheory.PRE_SUB1]
+                     (numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_EQ))))
+   val args_conv =
+      Conv.RAND_CONV div2_conv
+      THENC Conv.RATOR_CONV (Conv.RAND_CONV div2_conv)
+      THENC Conv.RATOR_CONV
+               (Conv.RATOR_CONV
+                   (Conv.RAND_CONV (Conv.TRY_CONV reduceLib.PRE_CONV)))
+   val err = ERR "mod_2exp_eq_conv" ""
+in
+   fun mod_2exp_max_conv tm =
+      let
+         val (n, a) = Lib.with_exn bitSyntax.dest_mod_2exp_max tm err_max
+      in
+         if n = numSyntax.zero_tm
+            then mod_2exp_max0_conv tm
+         else let
+                 val m = Lib.with_exn Term.rand n err_max
+                 val odd_thm = odd_conv (numSyntax.mk_odd a)
+                 val odd_rhs = rhs (concl odd_thm)
+                 val cnv1 = if numSyntax.is_bit1 m
+                               then mod_2exp_max1_conv
+                            else mod_2exp_max2_conv
+                 val cnv2 =
+                    if odd_rhs = boolSyntax.T
+                       then Conv.FORK_CONV
+                              (K odd_thm, args_max_conv THENC mod_2exp_max_conv)
+                    else if odd_rhs = boolSyntax.F
+                       then Conv.LAND_CONV (K odd_thm)
+                    else raise err_max
+              in
+                 (cnv1 THENC cnv2 THENC bool_conv) tm
+              end
+      end
+   fun mod_2exp_eq_conv tm =
+      let
+         val (n, a, b) = Lib.with_exn bitSyntax.dest_mod_2exp_eq tm err
+      in
+         if n = numSyntax.zero_tm
+            then mod_2exp_eq0_conv tm
+         else if a = b
+            then mod_2exp_eq_eq_conv tm
+         else let
+                 val m = Lib.with_exn Term.rand n err
+                 val odd_thm = (Conv.BINOP_CONV odd_conv THENC bool_conv)
+                                  (boolSyntax.mk_eq
+                                      (numSyntax.mk_odd a,
+                                       numSyntax.mk_odd b))
+                 val odd_rhs = rhs (concl odd_thm)
+                 val cnv1 = if numSyntax.is_bit1 m
+                               then mod_2exp_eq1_conv
+                            else mod_2exp_eq2_conv
+                 val cnv2 =
+                    if odd_rhs = boolSyntax.T
+                       then Conv.FORK_CONV
+                              (K odd_thm, args_conv THENC mod_2exp_eq_conv)
+                    else if odd_rhs = boolSyntax.F
+                       then Conv.LAND_CONV (K odd_thm)
+                    else raise err
+              in
+                 (cnv1 THENC cnv2 THENC bool_conv) tm
+              end
+      end
+end
+
+local
+   val (n2w_n2w_conv, n2w_max_conv, max_n2w_conv) =
+      Lib.triple_of_list
+         (List.map Conv.REWR_CONV (CONJUNCTS wordsTheory.word_eq_n2w))
+   val sizes_conv = Conv.RATOR_CONV (Conv.RAND_CONV SIZES_CONV)
+   val cnv1 = max_n2w_conv THENC sizes_conv THENC mod_2exp_max_conv
+   val cnv2 = n2w_max_conv THENC sizes_conv THENC mod_2exp_max_conv
+   val cnv3 =
+      n2w_n2w_conv THENC Conv.RATOR_CONV sizes_conv THENC mod_2exp_eq_conv
+   val err = ERR "word_EQ_CONV" "not a ground word equality"
+in
+   fun word_EQ_CONV tm =
+      let
+         val (l, r) = Lib.with_exn boolSyntax.dest_eq tm err
+      in
+         if l = r
+            then Drule.ISPEC l boolTheory.REFL_CLAUSE
+         else if is_uintmax l andalso wordsSyntax.is_word_literal r
+            then cnv1 tm
+         else if is_uintmax r andalso wordsSyntax.is_word_literal l
+            then cnv2 tm
+         else if wordsSyntax.is_word_literal l andalso
+                 wordsSyntax.is_word_literal r
+            then cnv3 tm
+         else raise err
+      end
+end
 
 (* ------------------------------------------------------------------------- *)
 

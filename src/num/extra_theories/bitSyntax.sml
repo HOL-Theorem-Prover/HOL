@@ -35,6 +35,9 @@ val (mod_2exp_tm,mk_mod_2exp,dest_mod_2exp,is_mod_2exp) =
 val (bit_reverse_tm,mk_bit_reverse, dest_bit_reverse,is_bit_reverse) =
    binop "BIT_REVERSE"
 
+val (mod_2exp_max_tm,mk_mod_2exp_max,dest_mod_2exp_max,is_mod_2exp_max) =
+   binop "MOD_2EXP_MAX"
+
 val (mod_2exp_eq_tm,mk_mod_2exp_eq,dest_mod_2exp_eq,is_mod_2exp_eq) =
    triop "MOD_2EXP_EQ"
 

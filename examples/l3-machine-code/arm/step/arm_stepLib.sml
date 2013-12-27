@@ -80,7 +80,7 @@ end
 
 fun datatype_thms thms =
    thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
-   utilsLib.datatype_rewrites "arm"
+   utilsLib.datatype_rewrites true "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
       "PSR", "VFPNegMul"]
 
@@ -97,9 +97,8 @@ val COND_UPDATE_CONV =
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
 val STATE_CONV =
-   REWRITE_CONV (utilsLib.datatype_rewrites "arm" ["arm_state"] @
-                 [combinTheory.K_THM, combinTheory.o_THM,
-                  boolTheory.COND_ID, cond_rand_thms])
+   REWRITE_CONV (utilsLib.datatype_rewrites true "arm" ["arm_state"] @
+                 [boolTheory.COND_ID, cond_rand_thms])
 
 local
    val cmp = computeLib.bool_compset ()
@@ -2240,13 +2239,13 @@ local
      ("VMOV (single,imm)", ("VFPOther", [xF 9, xF 11])),
      ("VMOV (double,imm)", ("VFPOther", [xT 9, xF 11])),
      ("VCMP (single,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 10, xT 11])),
      ("VCMP (double,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 10, xT 11])),
      ("VCMP (single)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 10, xT 11])),
      ("VCMP (double)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 10, xT 11])),
      ("VMRS (nzcv)", ("VFPMrs", [xT 0, xT 1, xT 2, xT 3])),
      ("VMRS", ("VFPMrs", [])),
      ("NOP", ("Hint", List.tabulate (8, xF)))
