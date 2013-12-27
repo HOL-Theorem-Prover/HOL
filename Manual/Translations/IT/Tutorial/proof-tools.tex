@@ -1,0 +1,796 @@
+\chapter{Strumenti di dimostrazione: Logica Proposizionale}
+\label{chap:proof-tools}
+
+\newcommand{\naive}{na\"\i{}ve}
+
+Gli utenti di \HOL{} possono creare i loro propri strumenti di dimostrazione 
+combinando le regole e le tattiche predefinite. La disciplina dei tipi \ML{} 
+assicura che solo metodi logicamente validi possono essere usati per creare valori 
+di tipo \ml{thm}. In questo capitolo, è descritto un esempio reale.
+
+Sono date due implementazioni dello strumento per illustrare vari stili 
+di programmazione della dimostrazione. La prima implementazione è quella ovvia, ma 
+è inefficiente a causa del metodo di `forza bruta' utilizzato. La seconda 
+implementazione tenta di essere molto più intelligente. 
+Sono anche discusse estensioni agli strumenti per permettere un'applicabilità 
+più generale.
+
+Il problema da risolvere è quello di decidere la verità di una formula 
+chiusa della logica proposizionale. Una tale formula ha la forma generale 
+\[
+\begin{array}{ccl}
+\varphi & ::= & v \;|\;\neg\varphi\;|\;\varphi
+\land \varphi \;|\; \varphi \lor \varphi \;|\; \varphi \Rightarrow
+\varphi\;|\;\varphi = \varphi
+\\[1ex]
+\mathit{formula} &::= & \forall \vec{v}. \;\varphi
+\end{array}
+\]
+dove le variabili $v$ sono tutte di tipo booleano, e dove il 
+quantificatore universale al livello più esterno cattura tutte le 
+variabili libere.
+
+\section{Metodo 1: Tabelle di verità}
+
+\setcounter{sessioncount}{0}
+
+Il primo metodo che deve essere implementato è il metodo di forza bruta di tentare 
+tutte le combinazioni booleane possibili. L'unico vero vantaggio di questo approccio 
+è che è eccezionalmente semplice da implementare. Prima dimostreremo 
+il teorema motivante:
+\begin{hol}
+\begin{verbatim}
+   val FORALL_BOOL = prove(
+     ``(!v. P v) = P T /\ P F``,
+     SRW_TAC [][EQ_IMP_THM] THEN Cases_on `v` THEN SRW_TAC [][]);
+\end{verbatim}
+\end{hol}
+La dimostrazione procede dividendo il goal in due metà, mostrando
+\[
+(\forall v. \;P(v))\Rightarrow P(\top) \land P(\bot)
+\]
+(Goal che è automaticamente mostrato dal semplificatore), e
+\[
+P(\top) \land P(\bot) \Rightarrow P(v)
+\]
+per una variabile booleana arbitraria $v$. Dopo lo splitting dei casi su $v$, 
+le assunzioni sono poi sufficienti a mostrare il goal. (Questo teorema è 
+di fatto già dimostrato nella teoria \theoryimp{bool}.)
+
+Il prossimo, e ultimo passo, è di riscrivere con questo teorema:
+\begin{hol}
+\begin{verbatim}
+   val tautDP = SIMP_CONV bool_ss [FORALL_BOOL]
+\end{verbatim}
+\end{hol}
+
+Questo permette il seguente
+
+\begin{session}
+\begin{verbatim}
+- tautDP ``!p q. p /\ q /\ ~p``;
+> val it = |- (!p q. p /\ q /\ ~p) = F : thm
+
+- tautDP ``!p. p \/ ~p``
+> val it = |- (!p. p \/ ~p) = T : thm
+\end{verbatim}
+\end{session}
+e anche il più leggermente intimidatorio
+\begin{session}
+\begin{verbatim}
+- time tautDP
+     ``!p q c a. ~(((~a \/ p /\ ~q \/ ~p /\ q) /\
+                    (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+                   (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) \/
+                 ~(p /\ q) \/ c /\ ~a``;
+runtime: 0.147s,    gctime: 0.012s,     systime: 0.000s.
+> val it =
+    |- (!p q c a.
+          ~(((~a \/ p /\ ~q \/ ~p /\ q) /\ (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+            (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) \/ ~(p /\ q) \/ c /\ ~a) =
+       T : thm
+\end{verbatim}
+\end{session}
+
+Questo è un algoritmo terribile per risolvere questo problema. La funzione\linebreak 
+\ml{tautLib.TAUT\_CONV} incorporata nel sistema risolve il problema di sopra 
+molto più velocemente. L'unico merito 
+reale in questa soluzione è che richiede di scrivere una sola riga. Questa è 
+un'illustrazione generale del fatto che gli strumenti di alto livello di \HOL{}, 
+in particolare il semplificatore, possono fornire prototipi veloci per una varietà 
+di compiti di dimostrazione.
+
+\section{Metodo 2: l'Algoritmo DPLL}
+
+Il metodo Davis-Putnam-Loveland-Logemann~\cite{DPLL-paper} per 
+decidere la soddisfacibilità di formule proposizionali in CNF
+(Conjunctive Normal form) è una tecnica potente, ancora oggi usata nei 
+risolutori dell'ultima generazione. Se eliminiamo i quantificatori universali 
+dalle nostre formule di input, il nostro compito può essere visto come determinare 
+la validità di una formula proposizionale. Testare la negazione di una tale 
+formula per la soddisfacibilità è un test per la validità: se la negazione 
+della formula è soddisfacibile, allora non è valida (l'assegnazione 
+che soddisfa renderà l'originale falsa): se la negazione della formula è 
+insoddisfacibile, allora la formula è valida (nessuna assegnazione la può rendere 
+falsa).
+
+\smallskip
+\noindent
+(Il codice sorgente per questo esempio è disponibile nel file \texttt{examples/dpll.sml}.)
+
+\subsection*{Preliminari}
+
+Per iniziare, assumiamo che abbiamo già del codice per convertire formule 
+arbitrarie in CNF{}, e per poi decidere la soddisfacibilità di queste 
+formule. Assumiamo inoltre che se l'input all'ultima procedura è 
+insoddisfacibile, allora restituirà un teorema della forma
+\[ \vdash \varphi = \holtxt{F}
+\]
+o se è soddisfacibile, allora restituirà un'assegnazione che soddisfa, 
+un mapping da variabili a booleani. Questo mapping sarà una funzione da 
+variabili \HOL{} a uno dei termini \HOL{} \holtxt{T} o \holtxt{F}.
+Così, assumeremo
+\begin{hol}
+\begin{verbatim}
+   datatype result = Unsat of thm | Sat of term -> term
+   val toCNF : term -> thm
+   val DPLL : term -> result
+\end{verbatim}
+\end{hol}
+(Il teorema restituito da \ml{toCNF} uguaglierà il termine di input a 
+un altro in CNF{}.)
+
+\smallskip
+\noindent
+Prima di guardare all'implementazione di queste funzioni, dovremo 
+considerare
+\begin{itemize}
+\item come trasformare i nostri input per adattarsi alla funzione; e
+\item come usare gli output dalle funzioni per produrre i nostri risultati 
+	desiderati
+\end{itemize}
+
+Stiamo assumendo che il nostro input sia una formula quantificata universalmente. 
+Entrambe le procedure CNF e DPLL si aspettano formule senza quantificatori. 
+Vogliamo anche passare a queste procedure la negazione della formula 
+originaria. Entrambe la manipolazioni di termini richieste si possono fare 
+con le funzioni che si trovano nella struttura \ml{boolSyntax}. (in generale, 
+le teorie importanti (come \theoryimp{bool}) sono accompangnate da 
+moduli \ml{Syntax} che contengono funzioni per manipolare le 
+forme di termini associate con quella teoria.)
+
+In questo caso abbiamo bisogno delle funzioni
+\begin{hol}
+\begin{verbatim}
+   strip_forall : term -> term list * term
+   mk_neg       : term -> term
+\end{verbatim}
+\end{hol}
+La funzione \ml{strip\_forall} spoglia un termine di tutte le sue quantificazioni 
+universali più esterne, restituendo la lista delle variabili spogliate 
+e il corpo della quantificazione. La funzione \ml{mk\_neg} prende un 
+termine di tipo \holtxt{bool} e restituisce il termine corrispondente alla sua 
+negazione.
+
+Usando queste funzioni, è facile vedere come saremo in grado di prendere 
+$\forall\vec{v}.\;\varphi$ come input, e passare il termine $\neg\varphi$ 
+alla funzione \ml{toCNF}. Una domanda più significativa è come 
+usare i risultati di queste chiamate. La chiamata a \ml{toCNF}  restituirà un 
+teorema
+\[
+\vdash \neg\varphi = \varphi'
+\]
+La formula $\varphi'$ è ciò che passeremo poi a \ml{DPLL}. (Possiamo 
+estrarla usando le funzioni \ml{concl} e \ml{rhs}.) Se 
+\ml{DPLL} restituisce il teorema $\vdash \varphi' = \holtxt{F}$, 
+un'applicazione di \ml{TRANS} a questo e al teorema mostrato di sopra 
+deriverà la formula $\vdash \neg\varphi = F$. Al fine di derivare il 
+risultato finale, avremo bisogno di trasformare questo in $\vdash\varphi$. Questo 
+si ottiene meglio fornendo un teorema fatto su misura che incorpora l'uguaglianza (non 
+ce n'è già uno simile nel sistema):
+\begin{hol}
+\begin{verbatim}
+   val NEG_EQ_F = prove(``(~p = F) = p``, REWRITE_TAC []);
+\end{verbatim}
+\end{hol}
+Per trasformare $\vdash \varphi$ in $\vdash (\forall
+\vec{v}.\;\varphi) = \holtxt{T}$, eseguiremo la seguente dimostrazione:
+\[
+\infer[\texttt{\scriptsize EQT\_INTRO}]{
+  \vdash (\forall \vec{v}.\;\varphi) = \holtxt{T}}{
+  \infer[\texttt{\scriptsize GENL}(\vec{v})]{\vdash \forall \vec{v}.\;\varphi}{
+    \vdash \varphi
+  }
+}
+\]
+L'altra possibilità è che \ml{DPLL}  restituirà un'assegnazione che soddisfa 
+dimostrando che $\varphi'$. Se questo è 
+il caso, vogliamo mostrare che $\forall\vec{v}.\;\varphi$ è falsa.
+Possiamo fare questo assumendo questa formula, e specializzando le 
+variabili quantificate universalmente in linea con il mapping fornito. In 
+questo modo, sarà possibile produrre il teorema
+\[
+\forall \vec{v}.\;\varphi \vdash \varphi[\vec{v} := \mbox{\emph{satisfying
+  assignment}}]
+\]
+Poiché non ci sono variabili libere in $\forall\vec{v}.\;\varphi$, la 
+sostituzione produrrà una formula booleana completamente ground. Questa 
+si riscriverà direttamente a \holtxt{F} (se l'assegnazione 
+rende $\neg\varphi$ vero, deve rendere $\varphi$ falso). Trasformare 
+$\phi\vdash \holtxt{F}$ in $\vdash \phi = \holtxt{F}$ è questione di 
+richiamare \ml{DISCH} e poi di riscrivere con il teorema incorporato 
+\ml{IMP\_F\_EQ\_F}:
+\[
+\vdash \forall t.\;t \Rightarrow \holtxt{F} = (t = \holtxt{F})
+\]
+Mettendo tutto ciò che sta di sopra insieme, possiamo scrivere la nostra funzione wrapper, 
+che chiameremo \ml{DPLL\_UNIV}, con il suffisso \ml{UNIV} 
+che ci ricorda che l'input deve essere quantificato universalmente.
+\begin{hol}
+\begin{verbatim}
+   fun DPLL_UNIV t = let
+     val (vs, phi) = strip_forall t
+     val cnf_eqn = toCNF (mk_neg phi)
+     val phi' = rhs (concl cnf_eqn)
+   in
+     case DPLL phi' of
+       Unsat phi'_eq_F => let
+         val negphi_eq_F = TRANS cnf_eqn phi'_eq_F
+         val phi_thm = CONV_RULE (REWR_CONV NEG_EQ_F) negphi_eq_F
+       in
+         EQT_INTRO (GENL vs phi_thm)
+       end
+     | Sat f => let
+         val t_assumed = ASSUME t
+         fun spec th =
+             spec (SPEC (f (#1 (dest_forall (concl th)))) th)
+             handle HOL_ERR _ => REWRITE_RULE [] th
+       in
+         CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH t (spec t_assumed))
+       end
+   end
+\end{verbatim}
+\end{hol}
+
+La funzione ausiliaria \ml{spec} che è usata nel secondo caso 
+si basa sul fatto che \ml{dest\_forall} solleverà un'eccezione 
+\ml{HOL\_ERR} se il termine a cui è applicata non è quantificato universalmente. 
+Quando l'argomento di \ml{spec} non è quantificato universalmente, questo significa 
+che la ricorsione è conclusa, e tutte le variabili universali della 
+formula originaria sono state specializzate. Quindi la formula risultante 
+può essere riscritta a falso (le riscritture incorporate in \ml{REWRITE\_RULE} 
+gestiscono tutti i casi necessari).
+
+Anche la funzione \ml{DPLL\_UNIV} usa \ml{REWR\_CONV} in due posti. 
+La funzione \ml{REWR\_CONV} applica una singola riscrittura (al primo ordine) al 
+livello principale di un termine. Questi usi di \ml{REWR\_CONV} sono fatti con 
+chiamate alla funzione \ml{CONV\_RULE}. Questa esegue [lifts ndt] un conversione $c$ (una 
+funzione che prende un termine $t$ e che produce un teorema $\vdash t = t'$), 
+così che $\ml{CONV\_RULE}\;c$ porta il teorema $\vdash t$ a $\vdash t'$.
+
+
+\subsection{Conversione in Forma Normale Congiuntiva}
+\label{sec:conv-conj-norm}
+
+Una formula in Forma Normale Congiuntiva è una congiunzione di disgiunzioni 
+di letterali (cioè o variabili, o variabili negate). E' possibile 
+convertire formule della forma che ci attendiamo in CNF semplicemente 
+riscrivendo con il seguenti teoremi
+\begin{eqnarray*}
+\neg (\phi \land \psi) &=& \neg\phi \lor \neg\psi\\
+\neg (\phi \lor \psi) &=& \neg\phi \land \neg\psi\\
+\phi \lor (\psi \land \xi) &=& (\phi \lor \psi) \land (\phi \lor \xi)\\
+(\psi \land \xi)\lor\phi \ &=& (\phi \lor \psi) \land (\phi \lor
+\xi)\\[1ex]
+\phi \Rightarrow\psi &=& \neg\phi \lor \psi\\
+(\phi = \psi) &=& (\phi \Rightarrow \psi) \land (\psi \Rightarrow
+\phi)
+\end{eqnarray*}
+Sfortunatamente, usare questi teoremi come riscritture può risultare in un 
+incremento esponenziale nella dimensione di una formula. (Si consideri di usarli 
+per convertire un input in Forma Normale Disgiuntiva, una disgiunzione 
+di congiunzioni di letterali, in CNF{}.)
+
+Un approccio migliore è di convertire in ciò che è conosciuta come una ``CNF 
+definizionale''. \HOL{} include funzioni per fare questo nella structure 
+\ml{defCNF}. Sfortunatamente, questo approccio aggiunge quantificatori, esistenziali, 
+extra alla formula. Per esempio
+\begin{session}
+\begin{verbatim}
+- defCNF.DEF_CNF_CONV ``p \/ (q /\ r)``;
+> val it =
+    |- p \/ q /\ r =
+       ?x. (x \/ ~q \/ ~r) /\ (r \/ ~x) /\ (q \/ ~x) /\ (p \/ x) : thm
+\end{verbatim}
+\end{session}
+Sotto la \holtxt{x} legata esistenzialmente, il codice ha prodotto una 
+formula in CNF{}. Con esempio piccolo come questo, la formula è di fatto 
+più grande di quella prodotto dalla traduzione ingenua, ma con esempi 
+più realistici, la differenza diventa velocemente significativa. L'ultimo 
+esempio usato con \ml{tautDP} è 20 volte più grande quando tradotto 
+ingenuamente di quando usando \ml{defCNF}, e la traduzione richiede 150 
+volte più tempo per essere eseguita.
+
+Ma cosa facciamo di queste variabili quantificate esistenzialmente extra? Di fatto, 
+possiamo ignorare la quantificazione quando chiamiamo la procedura core DPLL. 
+Se passiamo il corpo non quantificato a DPLL, otteniamo indietro o un 
+verdetto di insoddisfacibilità della forma $\vdash \varphi' = \holtxt{F}$, o una 
+assegnazione per tutte le variabili libere che soddisfa. Se capita la 
+seconda, la stessa assegnazione soddisferà anche 
+l'originale. Se capita la prima, eseguiremo la seguente dimostrazione
+\[
+\infer{\vdash (\exists \vec{x}.\;\varphi') = \holtxt{F}}{
+  \infer{\vdash (\exists \vec{x}.\;\varphi') \Rightarrow \holtxt{F}}{
+    \infer{\vdash\forall \vec{x}.\;\varphi' \Rightarrow \holtxt{F}}{
+      \infer{\vdash\varphi' \Rightarrow \holtxt{F}}{
+        \vdash \varphi' = \holtxt{F}
+      }
+    }
+  }
+}
+\]
+producendo un teorema della forma attesa dalla nostra funzione 
+\ml{wrapper}.
+
+Di fatto, c'è una funzione alternativa nell'API \ml{defCNF} che 
+useremo preferendola a \ml{DEF\_CNF\_CONV}. Il problema con 
+\ml{DEF\_CNF\_CONV} è che può produrre una grande quantificazione, 
+che coinvolge molte variabili. Useremo piuttosto 
+\ml{DEF\_CNF\_VECTOR\_CONV}. Al posto di un output della forma 
+\[
+\vdash \varphi = (\exists \vec{x}.\; \varphi')
+\]
+questa seconda funzione produce
+\[
+\vdash \varphi = (\exists (v : \textsf{num} \rightarrow
+\textsf{bool}).\; \varphi')
+\]
+dove le variabili individuali $x_i$ della prima formula sono sostituite 
+da chiamate alla funzione $v$ $v(i)$, e c'è una sola variabile 
+quantificata, $v$. Questa variabile non influenzerà l'operazione della 
+dimostrazione abbozzata di sopra. E fino a quando non richiediamo che i letterali siano 
+variabili o le loro negazioni, ma permettiamo anche che siano termini della 
+forma $v(i)$ e $\neg v(i)$, allora anche l'azione della procedura 
+DPLL sulla formula $\varphi'$ non sarà influenzata.
+
+Sfortunatamente per uniformità, in casi semplici, le funzioni di conversione 
+a una CNF definizionale possono risultate in nessuna quantificazione 
+esistenziale del tutto. Questo rende la nostra implementazione di \ml{DPLL} 
+in qualche modo più complicata. Calcoliamo una variabile \ml{body} che 
+sarà passata in cima alla funzione \ml{CoreDPLL}, esattamente come una 
+funzione \ml{transform} che trasformerà un risultato di insoddisfacibilità 
+in qualcosa della forma desiderata. Se il risultato della conversione a 
+CNF produce una quantificazione esistenziale, usiamo la dimostrazione abbozzata 
+di sopra. Altrimenti, la trasformazione può essere la funzione identità,
+\ml{I}:
+\begin{hol}
+\begin{verbatim}
+   fun DPLL t = let
+     val (transform, body) = let
+       val (vector, body) = dest_exists t
+       fun transform body_eq_F = let
+         val body_imp_F = CONV_RULE (REWR_CONV (GSYM IMP_F_EQ_F)) body_eq_F
+         val fa_body_imp_F = GEN vector body_imp_F
+         val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
+       in
+         CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
+       end
+     in
+       (transform, body)
+     end handle HOL_ERR _ => (I, t)
+   in
+     case CoreDPLL body of
+       Unsat body_eq_F => Unsat (transform body_eq_F)
+     | x => x
+   end
+\end{verbatim}
+\end{hol}
+dove dobbiamo ancora implementare la procedura DPLL core (chiamata 
+\ml{CoreDPLL} di sopra). Il codice di sopra usa \ml{REWR\_CONV} con il 
+teorema \ml{IMP\_F\_EQ\_F} per influenzare due delle trasformazioni 
+della dimostrazione. La funzione \ml{GSYM} è usata per invertire 
+le uguaglianza di primo livello di un teorema. Infine, 
+la conversione \ml{FORALL\_IMP\_CONV} prende un termine della forma 
+\[
+\forall x.\;P(x) \Rightarrow Q
+\]
+e restituisce il teorema
+\[
+\vdash (\forall x.\;P(x) \Rightarrow Q) = ((\exists
+x.\;P(x))\Rightarrow Q)
+\]
+
+
+
+
+\subsection{La Procedura DPLL Core}
+\label{sec:dpll-procedure}
+
+La procedura può essere vista come una piccola variazione sulla tecnica 
+di base ``tabelle di verità'' che abbiamo già visto. Come con quella 
+procedura, l'operazione core è un case-split su una variabile booleana.
+Ci sono tuttavia due differenze significative: DPLL può essere vista come 
+una ricerca per un'assegnazione soddisfacente, così che se selezionando una variabile 
+in modo da avere un particolare valore risulta in un'assegnazione soddisfacente, non abbiamo 
+bisogno di controllare anche cosa accade se alla stessa variabile è dato il 
+valore di verità opposto. In secondo luogo, DPLL fa una certa attenzione a selezionare delle variabili 
+opportune su cui fare lo split. In particolare è usata la \emph{unit propagation} 
+per eliminare variabili che non causeranno ramificazioni nello 
+spazio di ricerca.
+
+La nostra implementazione della procedura DPLL core è una funzione che prende 
+un termine e restituisce un valore del tipo \ml{result}: o un teorema 
+che uguaglia il termine originario a falso, o un'assegnazione soddisfacente (nella 
+forma di una funzione da termini a termini). Mentre la ricerca DPLL per 
+un'assegnazione soddisfacente procede, è costruita in modo incrementale 
+un'assegnazione. Questo suggerisce che il nucleo ricorsivo della nostra funzione 
+avrà bisogno di prendere un termine (la formula corrente) e un contesto (l'assegnazione 
+corrente) come parametri. L'assegnazione può essere rappresentata in modo 
+naturale come un insieme di equazioni, dove ciascuna equazione è o either $v =
+\holtxt{T}$ o $v = \holtxt{F}$.
+
+Questo suggerisce che una rappresentazione per la dichiarazione del nostro programma è 
+un teorema: le ipotesi rappresenteranno l'assegnazione, e la conclusione 
+può essere la formula corrente. Naturalmente, i teoremi \HOL{} 
+non possono semplicemente essere desiderati esistere. In questo caso, possiamo rendere 
+ogni cosa valida assumendo anche la formula iniziale. Così, quando 
+iniziamo la nostra dichiarazione iniziale sarà $\phi\vdash\phi$. Dopo aver effettuato lo splitting sulla 
+$v$, genereremo due nuove dichiarazioni 
+$\phi,(v\!=\!\holtxt{T})\vdash \phi_1$, e
+$\phi,(v\!=\!\holtxt{F})\vdash \phi_2$, dove i $\phi_i$ sono il 
+risultato di semplificare $\phi$ sotto l'assunzione aggiuntiva 
+che vincola $v$.
+
+Il modo più semplice per aggiungere un'assunzione a un teorema è usare la 
+regola \ml{ADD\_ASSUM}. Ma in questa situazione, vogliamo anche 
+semplificare la conclusione del teorema con la stessa assunzione. Questo 
+significa che sarà sufficiente riscrivere con il teorema 
+$\psi\vdash\psi$, dove $\psi$ è la nuova assunzione. L'azione di 
+riscrivere con un tale teorema farà apparire la nuova assunzione 
+tra le assunzioni del risultato.
+
+La funzione \ml{casesplit} è così:
+\begin{hol}
+\begin{verbatim}
+   fun casesplit v th = let
+     val eqT = ASSUME (mk_eq(v, boolSyntax.T))
+     val eqF = ASSUME (mk_eq(v, boolSyntax.F))
+   in
+     (REWRITE_RULE [eqT] th, REWRITE_RULE [eqF] th)
+   end
+\end{verbatim}
+\end{hol}
+
+Un case split può risultare in una formula che è stata riscritta fino al 
+vero o al falso. Questi sono i casi base della ricorsione. Se la 
+formula è stata riscritta a vero, allora abbiamo trovato un'assegnazione 
+soddisfacente, una che è ora archiviata per noi nelle ipotesi del 
+teorema stesso. La seguente funzione \ml{mk\_satmap}, estrae 
+quelle ipotesi in una map finita, e poi restituisce la funzione 
+di lookup per quella map finita.
+\begin{hol}
+\begin{verbatim}
+   fun mk_satmap th = let
+     val hyps = hypset th
+     fun foldthis (t,acc) = let
+       val (l,r) = dest_eq t
+     in
+       Binarymap.insert(acc,l,r)
+     end handle HOL_ERR _ => acc
+     val fmap = HOLset.foldl foldthis (Binarymap.mkDict Term.compare) hyps
+   in
+     Sat (fn v => Binarymap.find(fmap,v)
+                  handle Binarymap.NotFound => boolSyntax.T)
+   end
+\end{verbatim}
+\end{hol}
+La funzione \ml{foldthis} di sopra aggiunge le equazioni che sono archiviate come 
+ipotesi nella map finita. La gestione delle eccezione in 
+\ml{foldthis} è necessario perché una delle ipotesi sarà la 
+formula originaria. La gestione delle eccezioni nella funzione che cerca 
+i binding delle variabili è necessaria perché una formula può essere ridotta a 
+vero senza che tutte le variabili siano state assegnate a un valore qualsiasi, così 
+mappiamo in modo arbitrario tali variabili a \holtxt{T}.
+
+Se la formula è stata riscritta a falso, allora possiamo semplicemente restituire 
+questo teorema direttamente. Un tale teorema non è del tutto nella forma giusta 
+per il chiamante esterno, che si aspetta un'equazione, così se il 
+risultato finale è della forma $\phi\vdash \holtxt{F}$, dovremo 
+trasformare questo in $\vdash \phi = \holtxt{F}$.
+
+La domanda successiva da affrontare è cosa fare con i risultati delle 
+chiamate ricorsive. Se un case split restituisce un'assegnazione soddisfacente questa 
+può essere restituita senza modifiche. Ma se una chiamata ricorsiva restituisce un teorema 
+che uguaglia l'input a falso, c'è bisogno di fare di più. Se questa è la 
+prima chiamata, allora è necessario controllare l'altro ramo. Se anche questo 
+restituisce che il teorema è insoddisfacibile, allora abbiamo due teoremi.
+\[
+\phi_0,\Delta,(v\!=\!\holtxt{T})\vdash \holtxt{F} \qquad
+\phi_0,\Delta,(v\!=\!\holtxt{F})\vdash \holtxt{F}
+\] dove $\phi_0$ è la formula originaria, $\Delta$ è il resto 
+dell'assegnazione corrente, e $v$ è la variabile su cui è stato appena eseguito 
+uno split. Per trasformare questi due teoremi nel desiderato
+\[
+\phi_0,\Delta\vdash \holtxt{F}
+\]
+useremo la regola d'inferenza \ml{DISJ\_CASES}:
+\[
+\infer{\Gamma \cup \Delta_1 \cup \Delta_2 \vdash \phi}{
+  \Gamma \vdash \psi \lor \xi &
+  \Delta_1 \cup \{\psi\}\vdash \phi &
+  \Delta_2 \cup \{\xi\} \vdash \phi
+}
+\]
+e il teorema \ml{BOOL\_CASES\_AX}:
+\[
+\vdash \forall t.\;(t = \holtxt{T}) \lor (t = \holtxt{F})
+\]
+
+Possiamo mettere insieme questi frammenti e scrivere la funzione \ml{CoreDPLL} 
+di alto livello, nella Figura~\ref{fig:coredpll}.
+\begin{figure}[htbp]
+\begin{holboxed}
+\begin{verbatim}
+fun CoreDPLL form = let
+  val initial_th = ASSUME form
+  fun recurse th = let
+    val c = concl th
+  in
+    if c = boolSyntax.T then
+      mk_satmap th
+    else if c = boolSyntax.F then
+      Unsat th
+    else let
+        val v = find_splitting_var c
+        val (l,r) = casesplit v th
+      in
+        case recurse l of
+          Unsat l_false => let
+          in
+            case recurse r of
+              Unsat r_false =>
+                Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
+            | x => x
+          end
+        | x => x
+      end
+  end
+in
+  case (recurse initial_th) of
+    Unsat th => Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH form th))
+  | x => x
+end
+\end{verbatim}
+\end{holboxed}
+\caption{Il nucleo della funzione DPLL}
+\label{fig:coredpll}
+\end{figure}
+
+
+Tutto ciò che rimane da fare è capire su quale variabile effettuare 
+il case split. Le variabili più importanti su cui effettuare lo split sono quelle 
+che appaiono in quelle che sono chiamate ``unit clauses'', clausole che contengono 
+solo un letterale. Se c'è una unit clause in una formula allora è 
+della forma
+\[
+\phi \land v \land \phi'
+\]
+o
+\[
+\phi \land \neg v \land \phi'
+\]
+In entrambe le situazioni, effettuare lo split su $v$ risulterà sempre in un ramo 
+che valuta direttamente a falso. Così eliminiamo una variabile 
+senza accrescere la dimensione del problema. Il processo di 
+eliminare clausole unitarie è di solito chiamato ``unit propagation''. 
+La unit propagation di solito non è pensata come un'operazione 
+di case splitting, ma eseguirla in questo modo renderà il nostro codice più semplice.
+
+Se una formula non include una clausola unitaria, allora la scelta della prossima 
+variabile su cui eseguire lo split è molto più di una magia nera. Qui 
+implementeremo una scelta molto semplice: per eseguire lo split sulla variabile che occorre 
+più di frequente. La nostra funzione \ml{find\_splitting\_var} prende una formula 
+e restituisce la variabile su cui eseguire lo split.
+\begin{hol}
+\begin{verbatim}
+   fun find_splitting_var phi = let
+     fun recurse acc [] = getBiggest acc
+       | recurse acc (c::cs) = let
+           val ds = strip_disj c
+         in
+           case ds of
+             [lit] => (dest_neg lit handle HOL_ERR _ => lit)
+           | _ => recurse (count_vars ds acc) cs
+         end
+   in
+     recurse (Binarymap.mkDict Term.compare) (strip_conj phi)
+   end
+\end{verbatim}
+\end{hol}
+Questa funzione lavora passando una lista di clausole alla funzione 
+più interna \ml{recurse}. Questa spoglia ciascuna clausola una alla volta. Se una 
+clausola ha un solo disgiunto è una clausola unitaria e la variabile può 
+essere restituita direttamente. Altrimenti, le variabili nelle clausole sono 
+contate e aggiunte da \ml{count\_vars} alla map che si accumula, e la 
+ricorsione può continuare.
+
+La funzione \ml{count\_vars} ha la seguente implementazione:
+\begin{hol}
+\begin{verbatim}
+   fun count_vars ds acc =
+     case ds of
+       [] => acc
+     | lit::lits => let
+         val v = dest_neg lit handle HOL_ERR _ => lit
+       in
+         case Binarymap.peek (acc, v) of
+           NONE => count_vars lits (Binarymap.insert(acc,v,1))
+         | SOME n => count_vars lits (Binarymap.insert(acc,v,n + 1))
+       end
+\end{verbatim}
+\end{hol}
+
+L'uso di un albero binario per archiviare dati variabili rende efficiente 
+aggiornare i dati mentre sono raccolti. Estrarre la variabile 
+con il conteggio più grande è poi una scansione lineare dell'albero, che possiamo 
+fare con la funzione \ml{foldl}:
+\begin{hol}
+\begin{verbatim}
+   fun getBiggest acc =
+     #1 (Binarymap.foldl(fn (v,cnt,a as (bestv,bestcnt)) =>
+                            if cnt > bestcnt then (v,cnt) else a)
+                        (boolSyntax.T, 0)
+                        acc
+\end{verbatim}
+\end{hol}
+
+\subsection{Performance}
+\label{sec:dpll-performance}
+
+Quando vengono dati input un pò oltre quelli chiaramente banali, la funzione 
+che abbiamo scritto (al livello alto, \ml{DPLL\_UNIV}) ha delle performance considerevolmente 
+migliori rispetto all'implementazione con le tavole di verità. Per esempio, la 
+generalizzazione del seguente termine, con 29 variabili, richiede a 
+\ml{wrapper} tre secondi e mezzo per essere dimostrata come tautologia:
+\begin{hol}
+\begin{verbatim}
+   (s0_0 = (x_0 = ~y_0)) /\ (c0_1 = x_0 /\ y_0) /\
+   (s0_1 = ((x_1 = ~y_1) = ~c0_1)) /\
+   (c0_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c0_1) /\
+   (s0_2 = ((x_2 = ~y_2) = ~c0_2)) /\
+   (c0_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c0_2) /\
+   (s1_0 = ~(x_0 = ~y_0)) /\ (c1_1 = x_0 /\ y_0 \/ x_0 \/ y_0) /\
+   (s1_1 = ((x_1 = ~y_1) = ~c1_1)) /\
+   (c1_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c1_1) /\
+   (s1_2 = ((x_2 = ~y_2) = ~c1_2)) /\
+   (c1_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c1_2) /\
+   (c_3 = ~c_0 /\ c0_3 \/ c_0 /\ c1_3) /\
+   (s_0 = ~c_0 /\ s0_0 \/ c_0 /\ s1_0) /\
+   (s_1 = ~c_0 /\ s0_1 \/ c_0 /\ s1_1) /\
+   (s_2 = ~c_0 /\ s0_2 \/ c_0 /\ s1_2) /\ ~c_0 /\
+   (s2_0 = (x_0 = ~y_0)) /\ (c2_1 = x_0 /\ y_0) /\
+   (s2_1 = ((x_1 = ~y_1) = ~c2_1)) /\
+   (c2_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c2_1) /\
+   (s2_2 = ((x_2 = ~y_2) = ~c2_2)) /\
+   (c2_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c2_2) ==>
+   (c_3 = c2_3) /\ (s_0 = s2_0) /\ (s_1 = s2_1) /\ (s_2 = s2_2)
+\end{verbatim}
+\end{hol}
+(Se si desidera la velocità reale, la funzione incorporata \ml{tautLib.TAUT\_PROVE} esegue ciò che sta sopra in meno di un centesimo di secondo, usando uno strumento esterno per generare la dimostrazione di insoddisfacibilità, e per poi tradurre quella dimostrazione indietro in HOL.)
+
+\section{Estendere l'Applicabilità della nostra Procedura}
+\label{sec:dpll-applicability-extension}
+
+La funzione \ml{DPLL\_UNIV} richiede che il suo input sia quantificato 
+universalmente, con tutte le variabili libere legate, e che ciascun letterale sia 
+una variabile o la negazione di una variabile. Questo rende \ml{DPLL\_UNIV} 
+poco facile da usare quando viene ad essere usata come parte della dimostrazione di 
+un goal. In questa sezione, scriveremo un ulteriore livello 
+``wrapper'' per avvolgere \ml{DPLL\_UNIV}, producendo uno strumento che può 
+essere applicato a molti più goal.
+
+\paragraph{Mitigare il Requisito di Quantificazione}  Il primo passo è 
+permettere formule che non sono chiuse. Al fine di trasmettere una formula 
+che \emph{è} chiusa a \ml{DPLL\_UNIV}, possiamo semplicemente generalizzare 
+sulle variabili libere della formula. Se \ml{DPLL\_UNIV} dice poi che 
+la nuova, formula ground è vera, allora lo sarà anche l'originale. Dall'altro 
+lato, se \ml{DPLL\_UNIV} dice che la formula ground è 
+falsa, allora non possiamo concludere niente di più e dovremo sollevare 
+un'eccezione.
+
+Il codice che implementa questo è mostrato di sotto:
+\begin{hol}
+\begin{verbatim}
+   fun nonuniv_wrap t = let
+     val fvs = free_vars t
+     val gen_t = list_mk_forall(fvs, t)
+     val gen_t_eq = DPLL_UNIV gen_t
+   in
+     if rhs (concl gen_t_eq) = boolSyntax.T then let
+         val gen_th = EQT_ELIM gen_t_eq
+       in
+         EQT_INTRO (SPECL fvs gen_th)
+       end
+     else
+       raise mk_HOL_ERR "dpll" "nonuniv_wrap" "No conclusion"
+   end
+\end{verbatim}
+\end{hol}
+
+\paragraph{Permettere Foglie Non Letterali}
+Possiamo fare meglio di \ml{nonuniv\_wrap}: piuttosto che quantificare solamente 
+solo sulle variabili libere (che abbiamo convenientemente assunto che saranno solo 
+booleane), possiamo trasformare ogni parte foglia del termine che non è una 
+variabile o la negazione di una variabile in una nuova variabile. Prima 
+estraiamo quelle foglie con valore booleano che non sono le costanti vero o 
+falso.
+\begin{hol}
+\begin{verbatim}
+   fun var_leaves acc t = let
+     val (l,r) = dest_conj t handle HOL_ERR _ =>
+                 dest_disj t handle HOL_ERR _ =>
+                 dest_imp t handle HOL_ERR _ =>
+                 dest_bool_eq t
+   in
+     var_leaves (var_leaves acc l) r
+   end handle HOL_ERR _ =>
+     if type_of t <> bool then
+       raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
+     else if t = boolSyntax.T then acc
+     else if t = boolSyntax.F then acc
+     else HOLset.add(acc, t)
+\end{verbatim}
+\end{hol}
+Si noti che non abbiamo tentato esplicitamente di separare le negazioni 
+booleane (il che si potrebbe fare con \ml{dest\_neg}). Questo perché 
+anche \ml{dest\_imp} distrugge termini \holtxt{\~{}p}, restituendo 
+\holtxt{p} e \holtxt{F} come l'antecedente e la conclusione. Abbiamo 
+anche usato una funzione \ml{dest\_bool\_eq} progettata per dividere solo 
+quelle uguaglianze che sono su valori booleani. La sua definizione è
+\begin{hol}
+\begin{verbatim}
+   fun dest_bool_eq t = let
+     val (l,r) = dest_eq t
+     val _ = type_of l = bool orelse
+             raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
+   in
+     (l,r)
+   end
+\end{verbatim}
+\end{hol}
+
+Ora possiamo scrivere la nostra funzione finale \ml{DPLL\_TAUT}:
+\begin{hol}
+\begin{verbatim}
+   fun DPLL_TAUT tm =
+     let val (univs,tm') = strip_forall tm
+         val insts = HOLset.listItems (var_leaves empty_tmset tm')
+         val vars = map (fn t => genvar bool) insts
+         val theta = map2 (curry (op |->)) insts vars
+         val tm'' = list_mk_forall (vars,subst theta tm')
+     in
+         EQT_INTRO (GENL univs
+                      (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
+     end
+\end{verbatim}
+\end{hol}
+Si noti come questo codice prima tira fuori tutte le quantificazioni universali 
+esterne (con \ml{strip\_forall}), e poi ri-generalizza 
+(con \ml{list\_mk\_forall}). Le chiamate a \ml{GENL} e \ml{SPECL} 
+annullano queste manipolazioni, ma al livello dei teoremi. Questo produce 
+un teorema che uguaglia l'input originale a vero. (Se il termine di input non 
+è un'istanza di una formula proposizionale valida, la chiamata a 
+\ml{EQT\_ELIM} solleverà un'eccezione.)
+
+\section*{Esercizi}
+
+\begin{enumerate}
+\item Estendere la procedura così che gestisca le espressioni condizionali 
+	(entrambi i rami dei termini devono essere di tipo booleano).
+\end{enumerate}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
