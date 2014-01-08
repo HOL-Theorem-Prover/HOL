@@ -608,20 +608,6 @@ in
       arm_rename
 end
 
-(*
-
-val dst = dest_arm_MEM
-val n = 4
-val be = false
-
-val m_def = arm_progTheory.arm_WORD_def
-val rwts = [arm_stepTheory.concat_bytes]
-
-val be = true
-val m_def = arm_progTheory.arm_BE_WORD_def
-
-*)
-
 local
    val RName_PC_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
    fun spec_rewrites thm tms = List.map (REWRITE_CONV [thm]) tms
