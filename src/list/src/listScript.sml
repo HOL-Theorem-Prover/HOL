@@ -2256,7 +2256,7 @@ val GENLIST_AUX_compute = save_thm(
 val _ = export_rewrites ["GENLIST_AUX_compute"]
 
 (*---------------------------------------------------------------------------
-       String padding (left and right)
+       List padding (left and right)
  ---------------------------------------------------------------------------*)
 
 val PAD_LEFT_def = Define`
