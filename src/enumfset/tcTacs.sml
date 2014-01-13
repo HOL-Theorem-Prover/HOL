@@ -51,10 +51,14 @@ REWRITE_TAC [pred_setTheory.UNION_EMPTY]);
 fun PRE_TC_CONV keyconv Aplus =
 let val A = rand Aplus;
     val hypb = ISPEC A subTC_EMPTY;
+    val [elemty, elemsetty] = snd (dest_type (type_of (rand A)));
+    val fdomt = mk_comb (mk_const ("FDOM",
+     type_subst [alpha |-> elemty, beta |-> elemsetty]
+                ``:('a |-> 'b) -> 'a -> bool``), rand A);
     val hypa =
         SYM ((FDOM_CONV THENC
               TO_set_CONV keyconv THENC
-              REWR_CONV EMPTY_UNION_EQN) ``FDOM ^(rand A)``)
+              REWR_CONV EMPTY_UNION_EQN) fdomt)
 in MATCH_MP TC_ITER_THM (CONJ hypa hypb) end;
 
 fun TC_MOD_CONV keyconv =

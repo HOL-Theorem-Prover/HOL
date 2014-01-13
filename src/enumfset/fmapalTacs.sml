@@ -497,9 +497,6 @@ val [notinfdomnil,infdomcons] = CONJUNCTS fmap_FDOM_rec;
 val [T_OR, F_OR] = CONJUNCTS (prove (``(!p. T \/ p = T) /\ (!p. F \/ p = p)``,
  REWRITE_TAC [OR_CLAUSES]));
 
-val t = ``3 IN FDOM (fmap [(4, F); (3, T); (5, T)])``;
-val keyconv = REDUCE_CONV;
-
 fun IN_FDOM_CONV keyconv =
 let fun ifc t =
 ((REWR_CONV in_fdom_node THENC
@@ -774,11 +771,14 @@ list_rplacv_CONV REDUCE_CONV ``list_rplacv_cn (3,T) [(1,F); (2,F)] (\m.m)``;
 val t = ``fmap [(1,F); (2,F); (3,F); (4,F); (5,F)] |+ (3,T)``;
 val tbad = ``fmap [(1,F); (2,F)] |+ (3,T)``;
 val eqconv = REDUCE_CONV;
-fmap_FUPDATE_CONV eqconv t;  fmap_FUPDATE_CONV eqconv tbad;
+fmap_FUPDATE_CONV eqconv t;
+(* Deliberately gives "will not extend domain" error: *)
+fmap_FUPDATE_CONV eqconv tbad;
 
 val tf = rand (concl (fmap_TO_FMAPAL_CONV numto_CONV ``numto``
                              ``fmap [(1,F); (2,F); (3,F); (4,F); (5,F)]``));
 FMAPAL_FUPDATE_CONV numto_CONV ``FUPDATE ^tf (3,T)``;
+(* Deliberately gives "will not extend domain" error: *)
 FMAPAL_FUPDATE_CONV numto_CONV ``FUPDATE ^tf (6,T)``;
 
 bt_rplacv_CONV numto_CONV ``bt_rplacv_cn numto (3,T) ^(rand tf) (\m.m)``;
