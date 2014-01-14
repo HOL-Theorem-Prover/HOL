@@ -24,6 +24,7 @@ sig
     val SIZES_CONV          : conv
     val word_EQ_CONV        : conv
 
+    val BIT_SET_CONV        : conv
     val BITS_INTRO_CONV     : conv
     val WORD_ARITH_CONV     : conv
     val WORD_CANCEL_CONV    : conv

@@ -292,26 +292,29 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 local
-   val PEEK_RWT = Q.prove(
-     `(!k p m l r:'a ptree.
-         (BIT m k = T) ==> (PEEK (Branch p m l r) k = PEEK l k)) /\
-       !k p m l r:'a ptree.
-         (BIT m k = F) ==> (PEEK (Branch p m l r) k = PEEK r k)`,
-     SRW_TAC [] [PEEK_def])
-
-   val (peek_empty, peek_leaf, peek_branch_l, peek_branch_r) =
-      let
-         val l = CONJUNCTS PEEK_def
-         val (t1, t2) = CONJ_PAIR PEEK_RWT
-      in
-         (hd l, hd (tl l), t1, t2)
-      end
+   val (peek_empty, peek_leaf, peek_branch) =
+      case CONJUNCTS PEEK_def of
+         [e, p, b] => (e, p, Q.GENL [`m`, `p`, `k`] (Drule.SPEC_ALL b))
+       | _ => fail()
 
    val leaf_rule =
       Conv.CONV_RULE
         (Conv.RHS_CONV
            (RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.NEQ_CONV))
             THENC PURE_REWRITE_CONV [boolTheory.COND_CLAUSES]))
+
+   val bit_set_rule =
+      CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV (RAND_CONV
+         (RATOR_CONV (RATOR_CONV (RAND_CONV wordsLib.BIT_SET_CONV)))))))
+
+   val branch_rule =
+      RIGHT_CONV_RULE
+         (RATOR_CONV
+            (RAND_CONV
+               (RATOR_CONV
+                  (RATOR_CONV
+                     (RAND_CONV (pred_setLib.IN_CONV Arithconv.NEQ_CONV)))
+                THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES])))
 in
    fun PTREE_PEEK_CONV tm =
       let
@@ -320,23 +323,16 @@ in
          val inst_ty = Thm.SPEC i o Thm.INST_TYPE [Type.alpha |-> ty]
          val peek_empty_ty = inst_ty peek_empty
          val peek_leaf_ty = inst_ty peek_leaf
-         val peek_branch_l_ty = inst_ty peek_branch_l
-         val peek_branch_r_ty = inst_ty peek_branch_r
+         val peek_branch_ty = bit_set_rule (inst_ty peek_branch)
          fun cnv tm =
             case dest_strip (fst (patriciaSyntax.dest_peek tm)) of
                ("Empty", []) => peek_empty_ty
              | ("Leaf", a as [_, _]) => leaf_rule (Drule.SPECL a peek_leaf_ty)
              | ("Branch", [p, m, _, _]) =>
                   let
-                     val th = eval_bit m i
-                     val xthm =
-                        Drule.MATCH_MP
-                           (Drule.SPECL [p, m]
-                              (if is_eqt th
-                                  then peek_branch_l_ty
-                               else peek_branch_r_ty)) th
+                     val thm = branch_rule (Drule.SPECL [p, m] peek_branch_ty)
                   in
-                     (Conv.REWR_CONV xthm THENC cnv) tm
+                     (Conv.REWR_CONV thm THENC cnv) tm
                   end
              | _ => raise ERR "PTREE_PEEK_CONV" "unexpected term"
       in
