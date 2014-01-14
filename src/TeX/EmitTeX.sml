@@ -408,16 +408,17 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         let val l = strip_type (type_of t)
             val ll = length l
         in
-          (PT t;
-             if ll < 2 then
-               ()
-             else
-               (S " "; S "of"; BR(1,0);
-                BB PP.INCONSISTENT 0;
-                  app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
-                      (List.take(l, ll - 2));
-                  TP (List.nth(l, ll - 2));
-                EB()))
+          BB PP.CONSISTENT 0;
+          PT t;
+          if ll < 2 then ()
+          else
+            (S " "; S "of"; BR(1,2);
+             BB PP.INCONSISTENT 0;
+             app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
+                 (List.take(l, ll - 2));
+             TP (List.nth(l, ll - 2));
+             EB());
+          EB()
         end
 
     fun enumerated_type n =
@@ -434,12 +435,23 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
       end
 
     fun pp_constructor_spec (n, l) =
-          (if !print_datatype_names_as_types then pp_type_name n else PT n; BR(1,2);
-           BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
-             S "= ";
-             app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
-                 (List.take(l, length l - 1));
-             pp_clause (last l);
+        if !print_datatype_names_as_types then pp_type_name n
+        else if enumerated_type n then
+          (BB PP.CONSISTENT 0;
+           PT n; S " ";
+           BB PP.INCONSISTENT 0;
+           S "="; S " ";
+           app (fn x => (pp_clause x; BR(1,0); S"|"; S" "))
+               (List.take(l, length l - 1));
+           pp_clause(last l);
+           EB();
+           EB())
+        else
+          (BB PP.CONSISTENT 2;
+           PT n; S " "; S "="; BR(1,2);
+           app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
+               (List.take(l, length l - 1));
+           pp_clause (last l);
            EB())
 
     fun pp_record_spec l =
@@ -448,11 +460,11 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         in
           (PT (hd l); S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
-             S "<| ";
-             app (fn x => (pp_record x; S ";"; BR(1,0)))
+           S "<|"; S " ";
+           app (fn x => (pp_record x; S ";"; BR(1,0)))
                (List.take(ll, length ll - 1));
-             pp_record (last ll);
-             S " |>";
+           pp_record (last ll);
+           S " "; S "|>";
            EB())
         end
 

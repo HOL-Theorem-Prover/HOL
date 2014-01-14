@@ -63,3 +63,29 @@ val _ = tprint "Testing UNIV printing (:num)"
 val s = pp_to_string 70 pp_term_as_tex (pred_setSyntax.mk_univ numSyntax.num)
 val _ = if s = "\\ensuremath{\\cal{U}}(:\\HOLTyOp{num})" then print "OK\n"
         else die()
+
+val _ = Feedback.emit_MESG := false
+fun dtype_test n s = pp_to_string n (raw_pp_theorem_as_tex (fn _ => NONE)) (theorem ("datatype_" ^ s))
+val _ = tprint "Testing datatype printing"
+val _ = Hol_datatype`foo = C of bool -> 'a -> bool | D of foo => 'a => num list | Econ of foo => foo => 'a`;
+val s = dtype_test 55 "foo"
+val _ = if s = "\\HOLFreeVar{foo} =\n\
+               \    \\HOLConst{C} \\HOLKeyword{of} \\HOLTyOp{bool} -> \\ensuremath{\\alpha} -> \\HOLTyOp{bool}\n\
+               \  \\HOLTokenBar{} \\HOLConst{D} \\HOLKeyword{of} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha} \\HOLTokenImp{} \\HOLTyOp{num} \\HOLTyOp{list}\n\
+               \  \\HOLTokenBar{} \\HOLConst{Econ} \\HOLKeyword{of} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha}"
+        then
+          print "OK\n"
+        else die()
+
+val _ = tprint "Testing enumerated datatype printing"
+val _ = Hol_datatype `bar = ETA | ETB | ETC | ETD | ETE | ETF | ETG | ETH | ETI | ETJ`;
+val s = dtype_test 20 "bar"
+val _ = if s = "\\HOLFreeVar{bar} = \\HOLConst{ETA} \\HOLTokenBar{} \\HOLConst{ETB}\n\
+               \    \\HOLTokenBar{} \\HOLConst{ETC} \\HOLTokenBar{} \\HOLConst{ETD}\n\
+               \    \\HOLTokenBar{} \\HOLConst{ETE} \\HOLTokenBar{} \\HOLConst{ETF}\n\
+               \    \\HOLTokenBar{} \\HOLConst{ETG} \\HOLTokenBar{} \\HOLConst{ETH}\n\
+               \    \\HOLTokenBar{} \\HOLConst{ETI} \\HOLTokenBar{} \\HOLConst{ETJ}"
+        then
+          print "OK\n"
+        else
+          die()
