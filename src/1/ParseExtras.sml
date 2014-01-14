@@ -4,6 +4,10 @@ struct
 open Parse HolKernel boolSyntax
 
 fun tight_equality() = set_fixity "=" (Infix(NONASSOC, 450))
+fun temp_tight_equality() = temp_set_fixity "=" (Infix(NONASSOC, 450))
+
+fun loose_equality () = set_fixity "=" (Infix(NONASSOC, 100))
+fun temp_loose_equality () = temp_set_fixity "=" (Infix(NONASSOC, 100))
 
 fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
   open term_pp_types smpp
