@@ -11,7 +11,7 @@ notifications:
     on_failure: always
   irc:
     channels:
-      - "chat.freenode.net@hol"
+      - "chat.freenode.net#hol"
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
