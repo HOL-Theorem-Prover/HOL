@@ -570,28 +570,50 @@ in
 end
 
 local
-   fun bit_set_compset () =
-     let
-        val cmp = words_compset ()
-        val _ = computeLib.add_thms
-                 [REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def] cmp
-     in
-        cmp
-     end
+   val DIV2_CONV =
+      PURE_REWRITE_CONV
+         [numeralTheory.numeral_div2, numeralTheory.numeral_suc,
+          arithmeticTheory.NORM_0]
+
+   val conv1 =
+      Conv.REWR_CONV
+         (REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] wordsTheory.BIT_SET_def)
+      THENC RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.NEQ_CONV))
+      THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES]
+
+   val conv2 =
+      RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.ODD_CONV))
+      THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES]
+
+   val conv3 =
+      RAND_CONV DIV2_CONV
+      THENC RATOR_CONV (RAND_CONV Arithconv.SUC_CONV)
+
+   fun bit_set_conv tm =
+      let
+         val thm1 = conv1 tm
+      in
+         if boolSyntax.is_cond (rhs (concl thm1))
+            then let
+                    val thm2 = Conv.RIGHT_CONV_RULE conv2 thm1
+                 in
+                    Conv.RIGHT_CONV_RULE
+                      ((if pred_setSyntax.is_insert (rhs (concl thm2))
+                           then RAND_CONV
+                        else I) (conv3 THENC bit_set_conv)) thm2
+                 end
+         else thm1
+      end
 in
-   val BIT_SET_CONV =
-     REWR_CONV BIT_SET
-       THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset ()))
-       THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
-               Q.ISPEC `0n` pred_setTheory.IN_INSERT,
-               Q.ISPEC `^Na` pred_setTheory.IN_INSERT]
+   val BIT_SET_CONV = REWR_CONV wordsTheory.BIT_SET THENC RAND_CONV bit_set_conv
 end
 
 val BIT_ss =
   simpLib.named_merge_ss "bit"
     [simpLib.rewrites [BIT_ZERO],
      simpLib.std_conv_ss
-       {conv = BIT_SET_CONV,
+       {conv = BIT_SET_CONV
+               THENC TRY_CONV (pred_setLib.IN_CONV Arithconv.NEQ_CONV),
         name = "BITS_CONV",
         pats = [``bit$BIT n ^Na``]}]
 

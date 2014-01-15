@@ -596,11 +596,14 @@ fun addPath I file =
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile file I deps = let
+fun poly_compile quietp file I deps = let
   val modName = fromFileNoSuf file
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
+  val say = if quietp then (fn s => ())
+            else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
+  val _ = say ("HOLMOSMLC -c " ^ fromFile file)
 in
 case file of
   SIG _ =>
@@ -633,9 +636,17 @@ case file of
 | _ => raise Match
 end
 
-fun poly_link result files =
-let val out = TextIO.openOut result
-    fun p s =
+fun poly_link quietp result files =
+let
+  val _ = if not quietp then
+            TextIO.output(TextIO.stdOut,
+                          "HOLMOSMLC -o " ^ result ^ " " ^
+                          String.concatWith " "
+                                            (map (fn s => s ^ ".uo") files) ^
+                          "\n")
+          else ()
+  val out = TextIO.openOut result
+  fun p s =
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
@@ -732,12 +743,13 @@ in
       val _ = diag ("Processing mosml build command: "^c)
     in
       case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
-        (Mosml_compile (objs, src), I) => poly_compile (toFile src) I (deps @ objs)
+        (Mosml_compile (objs, src), I) =>
+          poly_compile (noecho orelse quiet_flag) (toFile src) I (deps @ objs)
       | (Mosml_link (result, objs), I) => let
         in
           diag ("Moscow ML command is link -o "^result^" ["^
                 String.concatWith ", " (map fromFile objs) ^ "]");
-          poly_link result (map fromFileNoSuf objs)
+          poly_link (noecho orelse quiet_flag) result (map fromFileNoSuf objs)
         end
       | (Mosml_error, _) => (warn ("*** Couldn't interpret Moscow ML command: "^c);
                              OS.Process.failure)
@@ -1033,7 +1045,7 @@ in
       val _ = exists_readable file orelse
               (print ("Wanted to compile "^file^", but it wasn't there\n");
                raise FileNotFound)
-      val res = poly_compile arg include_flags deps
+      val res = poly_compile true arg include_flags deps
     in
       OS.Process.isSuccess res
     end
@@ -1065,7 +1077,7 @@ in
         else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
         else "holmake_not_interactive.uo" :: objectfiles0
     in
-      if isSuccess (poly_link script (List.map OS.Path.base objectfiles))
+      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
       then let
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"

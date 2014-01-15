@@ -35,6 +35,8 @@ sig
      | Msb
      | Neg
      | Not
+     | PadLeft
+     | PadRight
      | Rev
      | SE of ParseDatatype.pretype
      | Size

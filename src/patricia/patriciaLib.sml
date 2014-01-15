@@ -6,7 +6,8 @@ struct
             "patriciaSyntax"];
 *)
 
-open HolKernel Parse boolLib bossLib Q computeLib patriciaTheory patriciaSyntax;
+open HolKernel Parse boolLib bossLib
+open patriciaTheory patriciaSyntax;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -255,20 +256,20 @@ fun pp_term_ptree ppstrm t =
 
 val PAT_CONV =
 let val compset = wordsLib.words_compset()
-    val _ = add_thms [BRANCHING_BIT_def,BRANCH_def] compset
+    val _ = computeLib.add_thms [BRANCHING_BIT_def,BRANCH_def] compset
 in
-  CBV_CONV compset
+  computeLib.CBV_CONV compset
 end;
 
 val QSORT_CONV =
 let open sortingTheory
     val compset = reduceLib.num_compset()
     val _ = listSimps.list_rws compset
-    val _ = add_thms
+    val _ = computeLib.add_thms
               [pairTheory.UNCURRY_DEF, QSORT_DEF, PARTITION_DEF, PART_DEF]
               compset
 in
-  CBV_CONV compset
+  computeLib.CBV_CONV compset
 end;
 
 fun eval_eq m n = numLib.REDUCE_CONV (mk_eq(m,n));
@@ -290,69 +291,63 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-val PEEK_RWT = prove(
-  `(!k p m l r. (BIT m k = T) ==> (PEEK (Branch p m l r) k = PEEK l k)) /\
-    !k p m l r. (BIT m k = F) ==> (PEEK (Branch p m l r) k = PEEK r k)`,
-  SRW_TAC [] [PEEK_def]);
+local
+   val (peek_empty, peek_leaf, peek_branch) =
+      case CONJUNCTS PEEK_def of
+         [e, p, b] => (e, p, Q.GENL [`m`, `p`, `k`] (Drule.SPEC_ALL b))
+       | _ => fail()
 
-val (peek_empty,peek_leaf,peek_branch_l,peek_branch_r) =
-let val l = CONJUNCTS PEEK_def in
-  (hd l,hd (tl l),SPEC_ALL (CONJUNCT1 PEEK_RWT),SPEC_ALL (CONJUNCT2 PEEK_RWT))
-end;
+   val leaf_rule =
+      Conv.CONV_RULE
+        (Conv.RHS_CONV
+           (RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.NEQ_CONV))
+            THENC PURE_REWRITE_CONV [boolTheory.COND_CLAUSES]))
 
-fun peek_ptree t k =
-  case dest_strip t of
-    ("Empty", []) => ([REWR_CONV (Thm.SPEC k peek_empty)], t)
-  | ("Leaf", [j, d]) =>
-       ([REWR_CONV (numLib.REDUCE_RULE (Drule.ISPECL [k,j,d] peek_leaf))], t)
-  | ("Branch", [p, m, l, r]) =>
-        let val bthm = eval_bit m k in
-          if is_eqt bthm then
-            let val (c, lhs) = peek_ptree l k
-                val v = nvariant (all_vars lhs, mk_var("v", type_of lhs))
-            in
-              (REWR_CONV (MATCH_MP peek_branch_l bthm) :: c,
-               mk_branch(p,m,lhs,v))
-            end
-          else
-            let val (c, rhs) = peek_ptree r k
-                val v = nvariant (all_vars rhs, mk_var("v", type_of rhs))
-            in
-              (REWR_CONV (MATCH_MP peek_branch_r bthm) :: c,
-               mk_branch(p,m,v,rhs))
-            end
-        end
-  | _ => raise ERR "peek_ptree" "Not Empty, Leaf or Branch";
+   val bit_set_rule =
+      CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV (RAND_CONV
+         (RATOR_CONV (RATOR_CONV (RAND_CONV wordsLib.BIT_SET_CONV)))))))
 
-fun peek_ptree_thm(t,k) =
-let val (cs, rt) = peek_ptree t k
-    val mt = mk_peek(rt, k)
+   val branch_rule =
+      RIGHT_CONV_RULE
+         (RATOR_CONV
+            (RAND_CONV
+               (RATOR_CONV
+                  (RATOR_CONV
+                     (RAND_CONV (pred_setLib.IN_CONV Arithconv.NEQ_CONV)))
+                THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES])))
 in
-  EVERY_CONV cs mt
-end;
+   fun PTREE_PEEK_CONV tm =
+      let
+         val (t, i) = patriciaSyntax.dest_peek tm
+         val ty = patriciaSyntax.dest_ptree_type (Term.type_of t)
+         val inst_ty = Thm.SPEC i o Thm.INST_TYPE [Type.alpha |-> ty]
+         val peek_empty_ty = inst_ty peek_empty
+         val peek_leaf_ty = inst_ty peek_leaf
+         val peek_branch_ty = bit_set_rule (inst_ty peek_branch)
+         fun cnv tm =
+            case dest_strip (fst (patriciaSyntax.dest_peek tm)) of
+               ("Empty", []) => peek_empty_ty
+             | ("Leaf", a as [_, _]) => leaf_rule (Drule.SPECL a peek_leaf_ty)
+             | ("Branch", [p, m, _, _]) =>
+                  let
+                     val thm = branch_rule (Drule.SPECL [p, m] peek_branch_ty)
+                  in
+                     (Conv.REWR_CONV thm THENC cnv) tm
+                  end
+             | _ => raise ERR "PTREE_PEEK_CONV" "unexpected term"
+      in
+         cnv tm
+      end
+end
 
-fun PTREE_PEEK_CONV tm = REWR_CONV (peek_ptree_thm (dest_peek tm)) tm;
-
-val IN_PTREE_SOME = prove(
-  `(PEEK t k = SOME ()) ==> (k IN_PTREE t = T)`,
-  SRW_TAC [] [IN_PTREE_def]);
-
-val IN_PTREE_NONE = prove(
-  `(PEEK t k = NONE) ==> (k IN_PTREE t = F)`,
-  SRW_TAC [] [IN_PTREE_def]);
-
-fun PTREE_IN_PTREE_CONV tm =
-let val (k,t) = dest_in_ptree tm
-    val peek_thm = peek_ptree_thm(t,k)
-    val is_some = (optionSyntax.is_some o rhs o concl) peek_thm
-    val thm = if is_some then IN_PTREE_SOME else IN_PTREE_NONE
-in
-  REWR_CONV (MATCH_MP thm peek_thm) tm
-end;
+val PTREE_IN_PTREE_CONV =
+   Conv.REWR_CONV IN_PTREE_def
+   THENC Conv.RAND_CONV PTREE_PEEK_CONV
+   THENC PURE_ONCE_REWRITE_CONV [optionTheory.IS_SOME_DEF]
 
 (* ------------------------------------------------------------------------- *)
 
-val ADD_RWT = prove(
+val ADD_RWT = Q.prove(
   `(!j d e. ADD (Leaf j d) (j,e) = Leaf j e) /\
    (!j d k e b q.
       ((j = k) = F) /\
@@ -475,7 +470,7 @@ end;
 
 fun PTREE_ADD_CONV tm = REWR_CONV (add_ptree_thm (dest_add tm)) tm;
 
-val INSERT_PTREE = prove(
+val INSERT_PTREE = Q.prove(
   `(ADD t (k,()) = t') ==> (k INSERT_PTREE t = t')`,
   SRW_TAC [] []);
 
@@ -488,7 +483,7 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-val REMOVE_RWT = prove(
+val REMOVE_RWT = Q.prove(
   `(!k p m l r.
       (MOD_2EXP_EQ m k p = F) ==>
       (REMOVE (Branch p m l r) k = Branch p m l r)) /\
@@ -576,7 +571,7 @@ fun PTREE_REMOVE_CONV tm = REWR_CONV (remove_ptree_thm (dest_remove tm)) tm;
 
 (* ------------------------------------------------------------------------- *)
 
-val TRANSFORM_RWT = prove(
+val TRANSFORM_RWT = Q.prove(
   `!f p m l r x y.
      (TRANSFORM f l = x) /\ (TRANSFORM f r = y) ==>
      (TRANSFORM f (Branch p m l r) = Branch p m x y)`,
@@ -584,7 +579,7 @@ val TRANSFORM_RWT = prove(
 
 val (transform_empty,transform_leaf,transform_branch) =
   (CONJUNCT1 TRANSFORM_def, CONJUNCT1 (CONJUNCT2 TRANSFORM_def),
-   (GEN `f` o GEN `p` o GEN `m` o SPEC_ALL) TRANSFORM_RWT);
+   (Q.GEN `f` o Q.GEN `p` o Q.GEN `m` o SPEC_ALL) TRANSFORM_RWT);
 
 fun PTREE_TRANSFORM_CONV tm =
 let
@@ -607,7 +602,7 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-val SIZE_RWT = prove(
+val SIZE_RWT = Q.prove(
   `!p m l r x y.
      (SIZE l = x) /\ (SIZE r = y) ==>
      (SIZE (Branch p m l r) = x + y)`,
@@ -615,7 +610,7 @@ val SIZE_RWT = prove(
 
 val (size_empty,size_leaf,size_branch) =
   (CONJUNCT1 SIZE, CONJUNCT1 (CONJUNCT2 SIZE),
-   (GEN `p` o GEN `m` o SPEC_ALL) SIZE_RWT);
+   (Q.GEN `p` o Q.GEN `m` o SPEC_ALL) SIZE_RWT);
 
 fun ptree_size t =
   case dest_strip t of
@@ -634,7 +629,7 @@ fun PTREE_SIZE_CONV tm =
 
 (* ------------------------------------------------------------------------- *)
 
-val DEPTH_RWT = prove(
+val DEPTH_RWT = Q.prove(
   `!p m l r x y.
      (DEPTH l = x) /\ (DEPTH r = y) ==>
      (DEPTH (Branch p m l r) = 1 + MAX x y)`,
@@ -642,7 +637,7 @@ val DEPTH_RWT = prove(
 
 val (depth_empty,depth_leaf,depth_branch) =
   (CONJUNCT1 DEPTH_def, CONJUNCT1 (CONJUNCT2 DEPTH_def),
-   (GEN `p` o GEN `m` o SPEC_ALL) DEPTH_RWT);
+   (Q.GEN `p` o Q.GEN `m` o SPEC_ALL) DEPTH_RWT);
 
 fun ptree_depth t =
   case dest_strip t of
@@ -662,7 +657,7 @@ fun PTREE_DEPTH_CONV tm =
 
 (* ------------------------------------------------------------------------- *)
 
-val EVERY_LEAF_RWT = prove(
+val EVERY_LEAF_RWT = Q.prove(
   `(!P p m l r.
      (EVERY_LEAF P l = F) ==>
      (EVERY_LEAF P (Branch p m l r) = F)) /\
@@ -676,7 +671,7 @@ val EVERY_LEAF_RWT = prove(
 
 val (every_leaf_empty,every_leaf_leaf,
      every_leaf_l,every_leaf_r,every_leaf_T) =
-  case map (GEN `P` o GEN `p` o GEN `m` o SPEC_ALL)
+  case map (Q.GEN `P` o Q.GEN `p` o Q.GEN `m` o SPEC_ALL)
            (CONJUNCTS EVERY_LEAF_RWT)
   of
     [a,b,c] => (CONJUNCT1 EVERY_LEAF_def, CONJUNCT1 (CONJUNCT2 EVERY_LEAF_def),
@@ -718,7 +713,7 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-val EXISTS_LEAF_RWT = prove(
+val EXISTS_LEAF_RWT = Q.prove(
   `(!P p m l r.
      (EXISTS_LEAF P l = T) ==>
      (EXISTS_LEAF P (Branch p m l r) = T)) /\
@@ -732,7 +727,7 @@ val EXISTS_LEAF_RWT = prove(
 
 val (exists_leaf_empty,exists_leaf_leaf,
      exists_leaf_l,exists_leaf_r,exists_leaf_F) =
-  case map (GEN `P` o GEN `p` o GEN `m` o SPEC_ALL)
+  case map (Q.GEN `P` o Q.GEN `p` o Q.GEN `m` o SPEC_ALL)
            (CONJUNCTS EXISTS_LEAF_RWT)
   of
     [a,b,c] => (CONJUNCT1 EXISTS_LEAF_def,
@@ -777,16 +772,17 @@ end;
 val is_ptree_term_size_limit = ref 5000;
 
 val is_ptree_compset = wordsLib.words_compset();
-val _ = add_thms [REWRITE_RULE [bitTheory.LT_TWOEXP] IS_PTREE_def,
-                  (GSYM o CONJUNCT1) ptree_distinct,
-                  (GSYM o CONJUNCT1 o CONJUNCT2) ptree_distinct]
-                 is_ptree_compset;
-val _ = add_conv (every_leaf_tm,  2, PTREE_EVERY_LEAF_CONV) is_ptree_compset;
+val _ = computeLib.add_thms
+           [REWRITE_RULE [bitTheory.LT_TWOEXP] IS_PTREE_def,
+            (GSYM o CONJUNCT1) ptree_distinct,
+            (GSYM o CONJUNCT1 o CONJUNCT2) ptree_distinct] is_ptree_compset;
+val _ = computeLib.add_conv
+           (every_leaf_tm,  2, PTREE_EVERY_LEAF_CONV) is_ptree_compset;
 
 fun IS_PTREE_EVAL_CONV t =
   if !is_ptree_term_size_limit = ~1 orelse
      term_size t < !is_ptree_term_size_limit
-  then CHANGED_CONV (CBV_CONV is_ptree_compset) t else NO_CONV t;
+  then CHANGED_CONV (computeLib.CBV_CONV is_ptree_compset) t else NO_CONV t;
 
 val PMATCH = PART_MATCH (snd o dest_imp);
 
@@ -820,7 +816,7 @@ end handle UNCHANGED => IS_PTREE_EVAL_CONV t;
 val rhsc = rhs o concl;
 val lhsc = lhs o concl;
 
-val PTREE_OF_NUMSET_RWT = prove(
+val PTREE_OF_NUMSET_RWT = Q.prove(
   `(!x t s y.
      IS_PTREE t /\ FINITE s /\ (PTREE_OF_NUMSET t s = y) ==>
      (PTREE_OF_NUMSET t (x INSERT s) = x INSERT_PTREE y)) /\
@@ -866,15 +862,15 @@ fun PTREE_OF_NUMSET_CONV tm =
 (* Conversion for applications of ADD, REMOVE and INSERT_PTREE (ARI)         *)
 (* ------------------------------------------------------------------------- *)
 
-val DEPTH_ADD_THM = prove(
+val DEPTH_ADD_THM = Q.prove(
   `(c1 = t) /\ (ADD t (k,d) = c2) ==> (ADD c1 (k,d) = c2)`,
   SRW_TAC [] []);
 
-val DEPTH_REMOVE_THM = prove(
+val DEPTH_REMOVE_THM = Q.prove(
   `(c1 = t) /\ (REMOVE t k = c2) ==> (REMOVE c1 k = c2)`,
   SRW_TAC [] []);
 
-val DEPTH_INSERT_PTREE_THM = prove(
+val DEPTH_INSERT_PTREE_THM = Q.prove(
   `(c1 = t) /\ (k INSERT_PTREE t = c2) ==> (k INSERT_PTREE c1 = c2)`,
   SRW_TAC [] []);
 
@@ -1087,7 +1083,7 @@ let val d = root_const_depth tm in
       | NONE => create_ptree_definition (const_variant tm) tm
 end;
 
-val DEPTH_PEEK_THM = prove(
+val DEPTH_PEEK_THM = Q.prove(
   `(c1 = t) /\ (PEEK t k = c2) ==> (PEEK c1 k = c2)`,
   SRW_TAC [] []);
 
@@ -1112,21 +1108,22 @@ let val (x,t) = dest tm in
     conv tm
 end;
 
-val thm = prove(
+val thm = Q.prove(
   `!f. (c1 = t) /\ (f k t = c2) ==> (f k c1 = c2)`,
   SRW_TAC [] []);
 
 val PTREE_IN_PTREE_ARI_CONV = mk_ptree_conv2
-  dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV (ISPEC `$IN_PTREE` thm);
+  dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV (Q.ISPEC `$IN_PTREE` thm);
 
-val PTREE_EVERY_LEAF_ARI_CONV = mk_ptree_conv2
-  dest_every_leaf mk_every_leaf PTREE_EVERY_LEAF_CONV (ISPEC `EVERY_LEAF` thm);
+val PTREE_EVERY_LEAF_ARI_CONV =
+  mk_ptree_conv2 dest_every_leaf mk_every_leaf PTREE_EVERY_LEAF_CONV
+    (Q.ISPEC `EVERY_LEAF` thm);
 
-val PTREE_EXISTS_LEAF_ARI_CONV = mk_ptree_conv2
-  dest_exists_leaf mk_exists_leaf PTREE_EXISTS_LEAF_CONV
-  (ISPEC `EXISTS_LEAF` thm);
+val PTREE_EXISTS_LEAF_ARI_CONV =
+  mk_ptree_conv2 dest_exists_leaf mk_exists_leaf PTREE_EXISTS_LEAF_CONV
+    (Q.ISPEC `EXISTS_LEAF` thm);
 
-val thm = prove(
+val thm = Q.prove(
   `!f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)`,
   SRW_TAC [] []);
 
@@ -1141,52 +1138,57 @@ let val t = dest tm in
 end;
 
 val PTREE_SIZE_ARI_CONV = mk_ptree_conv
-  dest_size mk_size PTREE_SIZE_CONV (ISPEC `SIZE` thm);
+  dest_size mk_size PTREE_SIZE_CONV (Q.ISPEC `SIZE` thm);
 
 val PTREE_DEPTH_ARI_CONV = mk_ptree_conv
-  dest_depth mk_depth PTREE_DEPTH_CONV (ISPEC `DEPTH` thm);
+  dest_depth mk_depth PTREE_DEPTH_CONV (Q.ISPEC `DEPTH` thm);
 
 (* ------------------------------------------------------------------------- *)
 
-fun add_ptree_convs compset =
- (add_conv (peek_tm,         2, PTREE_PEEK_ARI_CONV)        compset;
-  add_conv (add_tm,          2, PTREE_ARI_CONV)             compset;
-  add_conv (remove_tm,       2, PTREE_ARI_CONV)             compset;
-  add_conv (insert_ptree_tm, 2, PTREE_ARI_CONV)             compset;
-  add_conv (size_tm,         1, PTREE_SIZE_ARI_CONV)        compset;
-  add_conv (depth_tm,        1, PTREE_DEPTH_ARI_CONV)       compset;
-  add_conv (every_leaf_tm,   2, PTREE_EVERY_LEAF_ARI_CONV)  compset;
-  add_conv (exists_leaf_tm,  2, PTREE_EXISTS_LEAF_ARI_CONV) compset;
-  add_conv (in_ptree_tm,     2, PTREE_IN_PTREE_ARI_CONV)    compset;
-  add_conv (is_ptree_tm,     1, PTREE_IS_PTREE_CONV)        compset;
-  add_conv (ptree_of_numset_tm, 2, PTREE_OF_NUMSET_CONV)    compset);
+local
+   open computeLib
+in
+   fun add_ptree_convs compset =
+    (add_conv (peek_tm,         2, PTREE_PEEK_ARI_CONV)        compset;
+     add_conv (add_tm,          2, PTREE_ARI_CONV)             compset;
+     add_conv (remove_tm,       2, PTREE_ARI_CONV)             compset;
+     add_conv (insert_ptree_tm, 2, PTREE_ARI_CONV)             compset;
+     add_conv (size_tm,         1, PTREE_SIZE_ARI_CONV)        compset;
+     add_conv (depth_tm,        1, PTREE_DEPTH_ARI_CONV)       compset;
+     add_conv (every_leaf_tm,   2, PTREE_EVERY_LEAF_ARI_CONV)  compset;
+     add_conv (exists_leaf_tm,  2, PTREE_EXISTS_LEAF_ARI_CONV) compset;
+     add_conv (in_ptree_tm,     2, PTREE_IN_PTREE_ARI_CONV)    compset;
+     add_conv (is_ptree_tm,     1, PTREE_IS_PTREE_CONV)        compset;
+     add_conv (ptree_of_numset_tm, 2, PTREE_OF_NUMSET_CONV)    compset);
+end
 
-val _ = add_funs [PEEK_TRANSFORM];
-val _ = add_ptree_convs the_compset;
+val _ = computeLib.add_funs [PEEK_TRANSFORM];
+val _ = add_ptree_convs computeLib.the_compset;
 
 fun add_ptree_compset compset =
 let open listTheory pred_setTheory in
-  add_thms [pairTheory.UNCURRY_DEF,
-            optionTheory.THE_DEF, optionTheory.option_case_def,
-            IS_EMPTY_def, FIND_def, ADD_INSERT, PEEK_TRANSFORM,
-            FOLDL, NUMSET_OF_PTREE_def, ADD_LIST_def, LIST_TO_SET_THM,
-            PTREE_OF_NUMSET_EMPTY, UNION_PTREE_def, COND_CLAUSES,
-            EMPTY_DELETE, DELETE_INSERT, DELETE_UNION] compset;
+  computeLib.add_thms
+     [pairTheory.UNCURRY_DEF,
+      optionTheory.THE_DEF, optionTheory.option_case_def,
+      IS_EMPTY_def, FIND_def, ADD_INSERT, PEEK_TRANSFORM,
+      FOLDL, NUMSET_OF_PTREE_def, ADD_LIST_def, LIST_TO_SET_THM,
+      PTREE_OF_NUMSET_EMPTY, UNION_PTREE_def, COND_CLAUSES,
+      EMPTY_DELETE, DELETE_INSERT, DELETE_UNION] compset;
   add_ptree_convs compset
 end;
 
 fun ptree_compset () =
-let val compset = new_compset []
+let val compset = computeLib.new_compset []
     val _ = add_ptree_compset compset
 in
   compset
 end;
 
-val PTREE_CONV = CBV_CONV (ptree_compset());
+val PTREE_CONV = computeLib.CBV_CONV (ptree_compset());
 
 (* ------------------------------------------------------------------------- *)
 
-val DEPTH_IS_PTREE_THM = prove(
+val DEPTH_IS_PTREE_THM = Q.prove(
   `(t = x) /\ (c = x) /\ IS_PTREE t  ==> IS_PTREE c`,
   NTAC 2 (SRW_TAC [] []));
 
@@ -1196,7 +1198,7 @@ let val thm3 = EQT_ELIM (PTREE_IS_PTREE_CONV (mk_is_ptree tm))
     val _ = save_thm(s^"_is_ptree_thm", is_ptree_thm)
     val _ = HOL_MESG ("Saved IS_PTREE theorem for new constant " ^ quote s)
 in
-  add_thms [is_ptree_thm] is_ptree_compset
+  computeLib.add_thms [is_ptree_thm] is_ptree_compset
 end handle HOL_ERR _ => HOL_WARNING "patriciaLib" "Define_ptree"
       "Failed to prove IS_PTREE (is_ptree_term_size_limit might be too small).";
 

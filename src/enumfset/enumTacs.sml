@@ -7,16 +7,15 @@
 structure enumTacs :> enumTacs =
 struct
 (* comment out load before Holmaking *)
-(* app load ["totoTheory", "pred_setLib",
-"reduceLib", "relationTheory", "enumeralTheory",
-"stringLib", "totoTacs", "bossLib", "finite_mapTheory"]; *)
+(* app load ["totoTheory", "pred_setLib", "reduceLib", "relationTheory",
+             "enumeralTheory", "totoTacs", "bossLib", "finite_mapTheory"]; *)
 
 open Parse HolKernel boolLib;
 
 val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib bossLib
  relationTheory listTheory pairTheory optionTheory enumeralTheory pred_setLib
- stringLib totoTacs finite_mapTheory;
+ totoTacs finite_mapTheory;
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
@@ -199,9 +198,6 @@ let fun btl t = ((REWR_CONV bt_list_node THENC
                  REWR_CONV bt_list_nt) t
 in btl end;
 
-(* bt_to_list_CONV ``bt_to_list_ac
-     (node (node nt 1 nt) 2 (node (node nt 3 nt) 4 (node nt 5 nt))) []``; *)
-
 val [lb_nil, lb_rec] = CONJUNCTS list_to_bl;
 
 (* lb_nil = |- list_to_bl [] = nbl
@@ -374,7 +370,7 @@ in olc end;
 
 (* Top-level conversion works on a bt_to_ol, not a bt_to_ol_ac, term. 
    Improved to check OL_bt first, and if this comes out T, as it always
-   should, to used bt_to_list_CONV in place of bt_to_ol_lb/ub_CONV. *)
+   should, to use bt_to_list_CONV in place of bt_to_ol_lb/ub_CONV. *)
 
 val [aTT, aTF, aFT, aFF] = CONJUNCTS (prove (
 ``(T/\T=T) /\ (T/\F=F) /\ (F/\T=F) /\ (F/\F=F)``,
@@ -476,8 +472,16 @@ fun ENUMERAL_TO_set_CONV keyconv t =
  CONJUNCT1 (CONV_RULE (REWR_CONV OWL) (ENUMERAL_TO_OWL keyconv t));
 
 fun set_TO_DISPLAY_CONV t =
-let val iet = rand (concl (REWRITE_CONV [FOLDR]
-                           ``FOLDR $INSERT {} ^(rand t)``))
+let val ttype = type_of t;
+    val elem_type = hd (snd (dest_type ttype));
+    val foldrt = mk_comb (mk_comb (mk_comb
+     (mk_const ("FOLDR", type_subst [alpha |-> elem_type, beta |-> ttype]
+                         ``:('a -> 'b -> 'b) -> 'b -> 'a list -> 'b``),
+      mk_const ("INSERT", type_subst [alpha |-> elem_type]
+                          ``:'a -> ('a -> bool) -> 'a -> bool``)),
+     mk_const ("EMPTY", type_subst [alpha |-> elem_type] ``:'a -> bool``)),
+    rand t);
+    val iet = rand (concl (REWRITE_CONV [FOLDR] foldrt))
 in SYM (DISPLAY_TO_set_CONV iet) end;
 
 fun ENUMERAL_TO_DISPLAY_CONV keyconv = ENUMERAL_TO_set_CONV keyconv
@@ -624,6 +628,8 @@ in CONV_RULE (RAND_CONV (incr_ssort_CONV keyconv) THENC
               RATOR_CONV (RAND_CONV (REWR_CONV (SYM eqn)))) th end;
 
 (* Test Cases: ******************************************************
+load "stringLib"; open stringLib;
+
 REVERS_CONV (Term`REVERSE [1; 2; 3; 4; 5]`);
 (* val it = |- REVERSE [1; 2; 3; 4; 5] = [5; 4; 3; 2; 1] : thm *)
 
@@ -699,6 +705,9 @@ IN_CONV REDUCE_CONV ``6 IN {3; 5; 2}``;
 
 val fake = ASSUME ``OWL numto {5; 4; 3} [3; 4; 5]``;
    OWL_TO_ENUMERAL fake;
+
+bt_to_list_CONV ``bt_to_list_ac
+     (node (node nt 1 nt) 2 (node (node nt 3 nt) 4 (node nt 5 nt))) []``;
 
 val cmp = ``numto``;
 val tbt = rand (rand (concl (DISPLAY_TO_ENUMERAL_CONV

@@ -357,6 +357,11 @@ val (word_replicate_tm, mk_word_replicate,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
+val (bit_set_tm, mk_bit_set, dest_bit_set, is_bit_set) =
+   syntax_fns 3 HolKernel.dest_binop HolKernel.mk_binop "BIT_SET"
+
+(* - - - - - - - - - - - - - - - - - - - - - - *)
+
 val s = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
 
 val (word_bits_tm, mk_word_bits, dest_word_bits, is_word_bits) = s "word_bits"

@@ -477,6 +477,8 @@ datatype monop =
    | Msb
    | Neg
    | Not
+   | PadLeft
+   | PadRight
    | Rev
    | SE of ParseDatatype.pretype
    | Size
@@ -580,6 +582,13 @@ in
 end
 
 local
+   local
+      val try_pbeta =
+         Lib.total (boolSyntax.rhs o Thm.concl o PairedLambda.PAIRED_BETA_CONV)
+   in
+      fun pbeta t = Option.getOpt (try_pbeta t, t)
+   end
+
    val one_tm = numSyntax.mk_numeral Arbnum.one
 
    fun mk_w tm ty = wordsSyntax.mk_n2w (tm, wordsSyntax.dest_word_type ty)
@@ -591,6 +600,11 @@ local
    val upper_tm = mk_map stringSyntax.toupper_tm
    fun mk_lower tm = Term.mk_comb (lower_tm, tm)
    fun mk_upper tm = Term.mk_comb (upper_tm, tm)
+
+   val pad_left_tm = ``\(a:'a, b, c). list$PAD_LEFT a b c``
+   val pad_right_tm = ``\(a:'a, b, c). list$PAD_RIGHT a b c``
+   fun mk_pad_left tm  = pbeta (boolSyntax.mk_icomb (pad_left_tm, tm))
+   fun mk_pad_right tm = pbeta (boolSyntax.mk_icomb (pad_right_tm, tm))
 
    fun enum2num ty =
       Lib.with_exn mk_local_const
@@ -658,11 +672,7 @@ local
          val p = pairSyntax.list_mk_pair l
          val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
       in
-         fn tm =>
-            (ptm, tm) |> Term.mk_comb
-                      |> PairRules.PBETA_CONV
-                      |> Thm.concl
-                      |> boolSyntax.rhs
+         fn tm => pbeta (Term.mk_comb (ptm, tm))
       end
 
    fun mk_fp_triop f =
@@ -685,11 +695,7 @@ local
          val p = pairSyntax.list_mk_pair l
          val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
       in
-         fn tm =>
-            (ptm, tm) |> Term.mk_comb
-                      |> PairRules.PBETA_CONV
-                      |> Thm.concl
-                      |> boolSyntax.rhs
+         fn tm => pbeta (Term.mk_comb (ptm, tm))
       end
 
    fun pickCast ty2 tm =
@@ -856,6 +862,8 @@ in
        | Length => listSyntax.mk_length
        | Msb => wordsSyntax.mk_word_msb
        | Not => boolSyntax.mk_neg
+       | PadLeft => mk_pad_left
+       | PadRight => mk_pad_right
        | Rev => wordsSyntax.mk_word_reverse
        | Smax => mk_word_smax
        | Smin => mk_word_smin

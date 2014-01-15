@@ -1,0 +1,6 @@
+OBJS = totoTheory.uo totoTacs.uo tcTacs.uo enumTacs.uo fmapalTacs.uo tcTheory.uo
+
+selftest.exe: selftest.uo $(OBJS)
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

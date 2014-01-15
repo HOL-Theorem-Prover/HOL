@@ -11,11 +11,12 @@ val ERR = Feedback.mk_HOL_ERR "arm_decompLib"
 (* automation *)
 
 local
-   val w0_var = mk_var ("w0", ``:word32``)
+   fun w_var i = Term.mk_var ("w" ^ Int.toString i, ``:word32``)
+   fun word32 w = wordsSyntax.mk_wordi (Arbnum.fromHexString w, 32)
    val ok_rule = PURE_ONCE_REWRITE_RULE [GSYM arm_OK_def]
    val sbst =
       [``vfp:bool`` |-> boolSyntax.T, ``arch:Architecture`` |-> ``ARMv7_A``]
-   fun arm_OK_intro w0 = ok_rule o Thm.INST ((w0_var |-> w0) :: sbst)
+   fun arm_OK_intro l = ok_rule o Thm.INST (l @ sbst)
    fun format_thm th =
       (th, 4,
        stateLib.get_pc_delta
@@ -23,13 +24,17 @@ local
 in
    val set_opt = arm_progLib.arm_config "vfp"
    fun l3_arm_triples hex =
-      let
-         val hs = String.tokens (fn c => c = #" ") hex
-         val xs = stateLib.fix_precond (arm_progLib.arm_spec_hex (hd hs))
-         val w0 = wordsSyntax.mk_wordi (Arbnum.fromHexString (last hs), 32)
-     in
-        List.map (arm_OK_intro w0) xs
-     end
+      case String.tokens (fn c => c = #" ") hex of
+         h :: r =>
+           let
+              val ws = List.tabulate (List.length r, w_var)
+              val l =
+                List.map (fn (v, hx) => v |-> word32 hx) (ListPair.zip (ws, r))
+           in
+              List.map (arm_OK_intro l)
+                 (stateLib.fix_precond (arm_progLib.arm_spec_hex h))
+           end
+       | _ => raise ERR "l3_arm_triples" "empty string"
    fun l3_arm_spec hex =
       case List.map format_thm (l3_arm_triples hex) of
          [x] => (x, NONE)

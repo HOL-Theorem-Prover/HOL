@@ -212,6 +212,10 @@ val is_reverse      = can dest_reverse
 val is_list_case    = can dest_list_case
 val is_genlist    = can dest_genlist
 
+val s3 = HolKernel.syntax_fns "list" 3 HolKernel.dest_triop HolKernel.mk_triop
+
+val (pad_left_tm, mk_pad_left, dest_pad_left, is_pad_left) = s3 "PAD_LEFT"
+val (pad_right_tm, mk_pad_right, dest_pad_right, is_pad_right) = s3 "PAD_RIGHT"
 
 fun mk_list (l,ty) = itlist (curry mk_cons) l (mk_nil ty);
 

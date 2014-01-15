@@ -1,0 +1,263 @@
+\chapter{Introduzione a ML}
+\label{ML}
+
+Questo capitolo è una breve introduzione al meta-linguaggio \ML. 
+L'obiettivo è solo quello di dare una sensazione di come sia interagire con 
+il linguaggio. Si può trovare un'introduzione più dettagliata 
+in numerosi libri di testo e pagine web; si veda per esempio l'elenco delle risorse 
+sulla home page 
+di MoscowML\footnote{\url{http://www.dina.kvl.dk/~sestoft/mosml.html}},
+o le FAQ 
+\texttt{comp.lang.ml}\footnote{\url{http://www.faqs.org/faqs/meta-lang-faq/}}.
+
+\section{Come interagire con ML}
+
+\ML{} è un linguaggio di programmazione interattivo come il Lisp. Al livello 
+dell'interprete si possono valutare espressioni ed eseguire dichiarazioni. Le prime 
+risultano nella stampa a schermo del valore dell'espressione e del suo tipo, le seconde 
+nel binding di un valore a un nome.
+
+Un modo standard di interagire con \ML{} è quello di configurare lo schermo 
+della workstation in modo tale che ci siano due finestre:
+\begin{myenumerate}
+\item Una finestra di modifica in cui i comandi \ML{} sono inizialmente battuti 
+  e registrati.
+\item Una finestra shell (o l'equivalente non-Unix) che è usata per 
+  valutare i comandi.
+\end{myenumerate}
+
+\noindent
+Un modo comune per ottenere questo è lavorare all'interno di \ml{Emacs} con una 
+finestra di testo e una finestra shell.
+
+Dopo ave battuto un comando sulla finestra di modifica (testo) esso può essere 
+trasferito alla shell e valutato in \HOL{} con un `copia e incolla'. In 
+\ml{Emacs} questo si ottiene copiando il testo in un buffer e poi facendo il 
+suo `yanking' nella shell. Il vantaggio di lavorare con un editor è 
+che se il comando ha un errore, allora il testo può essere modificato semplicemente 
+e usato di nuovo; inoltre esso salva i comandi in un file che può poi 
+essere usato di nuovo più avanti (attraverso un caricamento batch). In \ml{Emacs}, la finestra 
+di shell registra anche la sessione, inclusi sia l'input dell'utente 
+sia la risposta del sistema. Le sessioni in questo tutorial sono state prodotte 
+in questo modo. Queste sessioni sono divise in segmenti mostrati in riquadri 
+con un numero sul loro angolo superiore destro (per indicare la loro 
+posizione nella sessione completa).
+
+Le interazioni in questi riquadri dovrebbero essere intese operare in 
+sequenza. Per esempio, si assume che i binding delle variabili fatte in box precedenti 
+persistano nei successivi. Per entrare nel sistema \HOL{} si 
+digita {\small\verb|hol|} o {\small\verb|hol.noquote|} in Unix, 
+eventualmente preceduti dall'informazione del percorso se la directory bin del sistema 
+\HOL{} non è nel proprio percorso. Il sistema \HOL{} quindi 
+stampa un messaggio di sign-on e ci colloca all'interno di \ML. Il prompt \ML{} è 
+{\small\verb|-|}, perciò le righe cominciano con {\small\verb|-|} sono quelle digitate 
+dall'utente e le altre righe sono le risposte del sistema.
+
+  Qui, come nelle altre parti del \TUTORIAL{}, assumeremo che si stia usando 
+  {\small\verb|hol|}.
+
+\setcounter{sessioncount}{0}
+\begin{session}\begin{alltt}
+\$ bin/hol
+
+-----------------------------------------------------------------
+       HOL-4 [\holnsversion (built Fri Apr 12 15:34:35 2002)]
+
+       For introductory HOL help, type: help "hol";
+-----------------------------------------------------------------
+
+[loading theories and proof tools ************* ]
+[closing file "/local/scratch/mn200/Work/hol98/tools/end-init-boss.sml"]
+- 1 :: [2,3,4,5];
+> val it = [1, 2, 3, 4, 5] : int list
+\end{alltt}
+\end{session}
+
+L'espressione \ML{} {\small\verb|1 :: [2,3,4,5]|} ha la forma $e_1\
+op\ e_2$ dove $e_1$ è l'espressione {\small\verb|1|} (il cui valore 
+è l'intero $1$), $e_2$ è l'espressione {\small\verb|[2,3,4,5]|}
+(il cui valore è una lista di quattro interi) e $op$ è l'operatore 
+infisso `{\small\verb|::|}' che è come la funzione del Lisp {\it cons}.
+Altre funzioni di elaborazione di liste includono {\small\verb|hd|} ($car$ in
+Lisp), {\small\verb|tl|} ($cdr$ in Lisp) e {\small\verb|null|}
+($null$ in Lisp). Il punto e virgola `{\small\verb|;|}' termina una 
+frase complessiva. La risposta del sistema è mostrata sulla linea che comincia 
+con il prompt {\small\verb|>|}. Essa consiste del valore 
+dell'espressione seguito, dopo un segno di due punti, dal suo tipo. Il type checker di \ML{} 
+deduce il tipo delle espressioni usando metodi inventati da Robin Milner 
+\cite{Milner-types}. Il tipo {\small\verb|int list|} è il tipo delle 
+`liste di interi'; {\small\verb|list|} è un operatore di tipo unario. 
+Il sistema di tipi di \ML{} è molto simile al sistema di tipi della 
+logica \HOL{} che è spiegata nel Capitolo~\ref{HOLlogic}.
+
+Il valore dell'ultima espressione valutata dal top level \ML{} è sempre 
+memorizzata in una variabile chiamata {\small\verb|it|}.
+
+\begin{session}
+\begin{verbatim}
+- val l = it;
+> val l = [1, 2, 3, 4, 5] : int list
+
+- tl l;
+> val it = [2, 3, 4, 5] : int list
+
+- hd it;
+> val it = 2 : int
+
+- tl(tl(tl(tl(tl l))));
+> val it = [] : int list
+\end{verbatim}
+\end{session}
+
+Seguendo gli standard del $\lambda$-calcolo, l'applicazione di una 
+funzione $f$ a un argomento $x$ può essere scritta senza parentesi come $f\
+x$ (benché è permesso anche 
+il più convenzionale $f${\small\verb|(|}$x${\small\verb|)|}). L'espressione 
+$f\ x_1\ x_2\ \cdots\ x_n$ abbrevia l'espressione 
+meno intelligibile {\small\verb|(|}$\cdots${\small\verb|((|}$f\ x_1$%
+{\small\verb|)|}$x_2${\small\verb|)|}$\cdots${\small\verb|)|}$x_n$ 
+(l'applicazione di funzione è associativa a sinistra).
+
+Le dichiarazioni hanno la forma {\small\verb|val |}$x_1${\small\verb|=|}$e_1${\small\verb| and |}$\cdots
+${\small\verb| and |}$x_n${\small\verb|=|}$e_n$ e hanno l'effetto che il valore di 
+ogni espressione $e_i$ venga legato al nome $x_i$.
+
+\begin{session}
+\begin{verbatim}
+- val l1 = [1,2,3] and l2 = ["a","b","c"];
+> val l1 = [1, 2, 3] : int list
+  val l2 = ["a", "b", "c"] : string list
+\end{verbatim}
+\end{session}
+
+Espressioni \ML{} come {\small\verb|"a"|}, {\small\verb|"b"|},
+{\small\verb|"foo"|} \etc\ sono {\it stringhe\/} e hanno il tipo 
+{\small\verb|string|}. Qualsiasi sequenza di caratteri {\small ASCII} può 
+essere scritta tra virgolette\footnote{I caratteri di nuova riga devono essere scritti come 
+  \ml{$\backslash$n}, e le virgolette come \ml{$\backslash$"}.}. La funzione 
+{\small\verb|explode|} divide una stringa in una lista di caratteri 
+singoli, che sono scritti come stringhe di un singolo carattere, con 
+anteposto un carattere {\small\verb|#|}.
+
+\begin{session}
+\begin{verbatim}
+- explode "a b c";
+> val it = [#"a", #" ", #"b", #" ", #"c"] : char list
+\end{verbatim}
+\end{session}
+
+Un'espressione della forma 
+{\small\verb|(|}$e_1${\small\verb|,|}$e_2${\small\verb|)|} viene valutata 
+a una coppia dei valori di $e_1$ e $e_2$. Se $e_1$ ha il tipo 
+$\sigma_1$ e $e_2$ ha il tipo $\sigma_2$ allora 
+{\small\verb|(|}$e_1${\small\verb|,|}$e_2${\small\verb|)|} ha il tipo 
+$\sigma_1${\small\verb|*|}$\sigma_2$. Il primo e il secondo componente 
+di una coppia possono essere estratti con le funzioni \ML{} {\small\verb|#1|} 
+e {\small\verb|#2|} rispettivamente. Se una tupla ha più di due componenti, 
+il suo $n$-esimo componente può essere estratto con una funzione 
+{\small\verb|#|$n$}.
+
+I valori {\small\verb|(1,2,3)|}, {\small\verb|(1,(2,3))|} e
+{\small\verb|((1,2), 3)|} sono tutti distinti e hanno i tipi 
+\linebreak{} {\small\verb|int * int * int|}, {\small\verb|int * (int * int)|} and
+{\small\verb|(int * int) * int|} rispettivamente.
+
+\begin{session}
+\begin{verbatim}
+- val triple1 = (1,true,"abc");
+> val triple1 = (1, true, "abc") : int * bool * string
+- #2 triple1;
+> val it = true : bool
+
+- val triple2 = (1, (true, "abc"));
+> val triple2 = (1, (true, "abc")) : int * (bool * string)
+- #2 triple2;;
+> val it = (true, "abc") : bool * string
+\end{verbatim}
+\end{session}
+
+\noindent L'espressioni \ML{} {\small\verb|true|} e {\small\verb|false|} 
+denotano i due valori di verità di tipo {\small\verb|bool|}.
+
+I tipi \ML{} possono contenere {\it variabili di tipo\/} {\small\verb|'a|},
+{\small\verb|'b|}, {\small\verb|'c|}, \etc\ Tali tipi sono chiamati {\it
+polimorfici\/}. Una funzione con un tipo polimorfico dovrebbe essere pensata come 
+se possedesse tutti i tipi che si possono ottenere sostituendo le variabili di tipo con dei tipi.
+Questo è illustrato di sotto con la funzione {\small\verb|zip|}.
+
+Le funzioni sono definite con dichiarazioni della forma {\small\verb|fun|}$\ f\
+v_1\ \ldots\ v_n$ \ml{=} $e$ dove ciascuna $v_i$ è o una variabile o un pattern 
+composto di variabili.
+
+La funzione {\small\verb|zip|}, di sotto, converte una coppia di liste
+{\small\verb|([|}$x_1${\small\verb|,|}$\ldots${\small\verb|,|}$x_n$%
+{\small\verb|], [|}$y_1${\small\verb|,|}$\ldots${\small\verb|,|}$y_n$%
+{\small\verb|])|} in una lista di coppie 
+{\small\verb|[(|}$x_1${\small\verb|,|}$y_1${\small\verb|),|}$\ldots$%
+{\small\verb|,(|}$x_n${\small\verb|,|}$y_n${\small\verb|)]|}.
+
+\begin{session}
+\begin{verbatim}
+- fun zip(l1,l2) =
+    if null l1 orelse null l2 then []
+    else (hd l1,hd l2) :: zip(tl l1,tl l2);
+> val zip = fn : 'a list * 'b list -> ('a * 'b) list
+
+- zip([1,2,3],["a","b","c"]);
+> val it = [(1, "a"), (2, "b"), (3, "c")] : (int * string) list
+\end{verbatim}
+\end{session}
+
+Le funzioni possono essere {\it curried\/}, \ie\ prendono i lori argomenti `uno alla volta' 
+al posto che come una tupla. Questo è illustrato con la funzione 
+{\small\verb|curried_zip|} di sotto:
+
+\begin{session}
+\begin{verbatim}
+- fun curried_zip l1 l2 = zip(l1,l2);
+> val curried_zip = fn : 'a list -> 'b list -> ('a * 'b) list
+
+- fun zip_num l2 = curried_zip [0,1,2] l2;
+> val zip_num = fn : 'a list -> (int * 'a) list
+
+- zip_num ["a","b","c"];
+> val it = [(0, "a"), (1, "b"), (2, "c")] : (int * string) list
+\end{verbatim}
+\end{session}
+
+La valutazione di un'espressione o {\it ha successo\/} o {\it
+  fallisce\/}. Nel primo caso, la valutazione restituisce un valore; nel 
+secondo caso la valutazione è interrotta ed è sollevata 
+un'\emph{eccezione}. Questa eccezione è passata a qualunque cosa abbia invocato la valutazione. 
+Questo contesto può o propagare il fallimento (questo è il default) o 
+può {\it gestirlo\/}. Queste due possibilità sono illustrate di sotto. 
+La gestione di un'eccezione è un'espressione della forma 
+$e_1${\small\verb| handle _ => |}$e_2$. Un'espressione di questa forma è 
+valutata valutando per prima cosa $e_1$. Se la valutazione ha successo (\ie\
+non fallisce) allora il valore dell'intera espressione è il valore di 
+$e_1$. Se la valutazione di $e_1$ ha sollevato un'eccezione, allora il valore 
+dell'intera espressione è ottenuto valutando $e_2$.\footnote{Questa 
+  descrizione della gestione dell'eccezioni è di fatto una semplificazione grossolana 
+	del modo in cui le eccezioni possono essere gestite in \ML{}; si consulti un testo appropriato 
+	per una spiegazione migliore.}.
+
+\begin{session}
+\begin{verbatim}
+- 3 div 0;
+! Uncaught exception:
+! Div
+
+- 3 div 0 handle _ => 0;
+> val it = 0 : int
+\end{verbatim}
+\end{session}
+
+Le sessioni di sopra sono sufficienti per dare un idea dell'\ML. Nel prossimo 
+capitolo, sarà introdotta la logica supportata dal sistema \HOL{} (la logica di 
+ordine superiore), insieme con gli strumenti all'interno di \ML{} per 
+manipolarla.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
