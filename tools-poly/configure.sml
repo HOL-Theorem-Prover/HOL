@@ -252,19 +252,27 @@ open Systeml;
      Now compile Systeml.sml in tools-poly/Holmake/
  ---------------------------------------------------------------------------*)
 
+fun canread s = OS.FileSys.access(s, [FileSys.A_READ])
+val modTime = OS.FileSys.modTime;
+
 let
   val _ = print "Compiling system specific functions ("
   val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
   val uifile = fullPath [holdir, "sigobj", "Systeml.ui"]
   fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", Path.file s])
 in
-  let val oo = TextIO.openOut uifile
-  in
-    TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sig"] ^ "\n");
-    TextIO.closeOut oo
-  end;
+  if not (canread uifile) orelse
+     Time.>(modTime sigfile, modTime uifile)
+  then
+    let
+      val oo = TextIO.openOut uifile
+    in
+      TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sig"] ^ "\n");
+      TextIO.closeOut oo;
+      print "sig "
+    end
+  else ();
   to_sigobj sigfile;
-  print "sig ";
   let val oo = TextIO.openOut (fullPath [holdir, "sigobj", "Systeml.uo"])
   in
     TextIO.output (oo, fullPath [holdir, "sigobj", "Systeml.sml"] ^ "\n");
