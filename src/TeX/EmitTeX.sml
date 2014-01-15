@@ -434,25 +434,27 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         TP (last (strip_type (hd l)))
       end
 
-    fun pp_constructor_spec (n, l) =
-        if !print_datatype_names_as_types then pp_type_name n
-        else if enumerated_type n then
-          (BB PP.CONSISTENT 0;
-           PT n; S " ";
-           BB PP.INCONSISTENT 0;
-           S "="; S " ";
-           app (fn x => (pp_clause x; BR(1,0); S"|"; S" "))
-               (List.take(l, length l - 1));
-           pp_clause(last l);
-           EB();
-           EB())
-        else
-          (BB PP.CONSISTENT 2;
-           PT n; S " "; S "="; BR(1,2);
-           app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
-               (List.take(l, length l - 1));
-           pp_clause (last l);
-           EB())
+    fun pp_constructor_spec (n, l) = let
+      val PT0 = if !print_datatype_names_as_types then pp_type_name else PT
+    in
+      if enumerated_type n then
+        (BB PP.CONSISTENT 0;
+         PT0 n; S " ";
+         BB PP.INCONSISTENT 0;
+         S "="; S " ";
+         app (fn x => (pp_clause x; BR(1,0); S"|"; S" "))
+             (List.take(l, length l - 1));
+         pp_clause(last l);
+         EB();
+         EB())
+      else
+        (BB PP.CONSISTENT 2;
+         PT0 n; S " "; S "="; BR(1,2);
+         app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
+             (List.take(l, length l - 1));
+         pp_clause (last l);
+         EB())
+    end
 
     fun pp_record_spec l =
         let val ll = tl l

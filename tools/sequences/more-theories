@@ -1,6 +1,7 @@
 !src/boss/theory_tests
 !src/tfl/src/test
 src/TeX
+!src/TeX/theory_tests
 !examples/RSA
 src/sort
 src/string

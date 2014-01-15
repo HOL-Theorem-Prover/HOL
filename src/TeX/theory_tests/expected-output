@@ -1,0 +1,15 @@
+\HOLTyOp{term} =
+    \HOLConst{Var} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type}
+  \HOLTokenBar{} \HOLConst{Const} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type} \HOLTokenImp{} \HOLTyOp{const_tag}
+  \HOLTokenBar{} \HOLConst{Comb} \HOLKeyword{of} \HOLTyOp{term} \HOLTokenImp{} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Abs} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type} \HOLTokenImp{} \HOLTyOp{term} ;
+
+\HOLTyOp{type} = \HOLConst{Tyvar} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenBar{} \HOLConst{Tyapp} \HOLKeyword{of} \HOLTyOp{type_op} \HOLTokenImp{} \HOLTyOp{type} \HOLTyOp{list} ;
+
+\HOLTyOp{type_op} = \HOLConst{Typrim} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{num} \HOLTokenBar{} \HOLConst{Tydefined} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term} ;
+
+\HOLTyOp{const_tag} =
+    \HOLConst{Prim}
+  \HOLTokenBar{} \HOLConst{Defined} \HOLKeyword{of} \HOLTyOp{num} \HOLTokenImp{} (\HOLTyOp{string} \HOLTokenProd{} \HOLTyOp{term}) \HOLTyOp{list} \HOLTokenImp{} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Tyabs} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Tyrep} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term}
