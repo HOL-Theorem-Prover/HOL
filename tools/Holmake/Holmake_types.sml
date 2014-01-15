@@ -354,7 +354,8 @@ fun get_rule_info rdb env tgt =
 val base_environment = let
   open Systeml
   val alist =
-      [("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+      [("CC", [LIT CC]),
+       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
        ("HOLDIR", [LIT HOLDIR]),
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
