@@ -90,8 +90,8 @@ where \cpn\ is the \HOL\ datatype of three elements {\tt LESS},
 {\tt EQUAL}, {\tt GREATER}. A polymorphic defined type, \verb$'a toto$, has
 been created isomorphic to the class of functions \verb$: 'a -> 'a -> cpn$
 satisfying a predicate \verb$totoTheory.TotOrd$ which axiomatizes total
-order-hood. The represention function for the type is called {\tt apto}
-(for ``apply total order``). Specifically what is needed in order to use
+order-hood. The representation function for the type is called {\tt apto}
+(for ``apply total order''). Specifically what is needed in order to use
 \lty\ as an element [argument] type is (the name of) an element of type
 \lty\ \toto, say {\tt tyto}, and a conversion, say {\tt tyto_CONV}, that
 will reduce terms of the form \verb$apto tyto x y$ to one of {\tt LESS},
@@ -427,7 +427,8 @@ fresh element as an intermediate stop in building a path between any two
 elements, is captured by the definition
 
 \begin{Verbatim}
-subTC \HOLFreeVar{R} \HOLFreeVar{s} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenEquiv{}\HOLFreeVar{R} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenDisj{} \HOLTokenExists{}\HOLBoundVar{a} \HOLBoundVar{b}. (\HOLFreeVar{R} ^|^ \HOLFreeVar{s})\HOLTokenSupStar{} \HOLBoundVar{a} \HOLBoundVar{b} \HOLTokenConj{} \HOLBoundVar{a} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLBoundVar{b} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLFreeVar{R} \HOLFreeVar{x} \HOLBoundVar{a} \HOLTokenConj{} \HOLFreeVar{R} \HOLBoundVar{b} \HOLFreeVar{y}
+subTC \HOLFreeVar{R} \HOLFreeVar{s} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenEquiv{}
+  \HOLFreeVar{R} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenDisj{} \HOLTokenExists{}\HOLBoundVar{a} \HOLBoundVar{b}. (\HOLFreeVar{R} ^|^ \HOLFreeVar{s})\HOLTokenSupStar{} \HOLBoundVar{a} \HOLBoundVar{b} \HOLTokenConj{} \HOLBoundVar{a} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLBoundVar{b} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLFreeVar{R} \HOLFreeVar{x} \HOLBoundVar{a} \HOLTokenConj{} \HOLFreeVar{R} \HOLBoundVar{b} \HOLFreeVar{y}
 \end{Verbatim}
 where $\left(R\right.$ \verb8^|^8 $\left.s\right)^*$
 denotes the reflexive transitive closure of the relation $R$ restricted
