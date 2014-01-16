@@ -114,6 +114,7 @@ src/TeX/holindex-demo.ps
 Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex
+Manual/Translations/*/*/*.pdf
 
 examples/dev/*.vl
 
