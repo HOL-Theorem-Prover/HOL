@@ -467,41 +467,44 @@ val FOLDR_CONV  =
 (*   where conv' applied to t[x,x'] returns the theorem |-t[x,x'] = e''.     *)
 (*---------------------------------------------------------------------------*)
 
-
-val FOLDL_CONV  =
-    let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FOLDL) in
-  fn conv => fn tm =>
-    let val (f,e,l) = listSyntax.dest_foldl tm
-        val ithm' = ISPEC f ithm
-        fun itfn (term) =
-            let val (f,e,l) = case strip_comb term
-                                  of (_,[f,e,l]) => (f,e,l)
-                                   | _ => raise ERR "FOLDL_CONV" ""
-            in
-                if (is_const l)
-                    then let val {Name=nill,Ty} = dest_const l
-                         in
-                             if not(nill = "NIL")
-                         then raise ERR "FOLDL_CONV"
-                               ("expecting null list, term is :" ^ nill)
-                             else ISPECL[f,e] bthm
-                         end
-                else
-                    let val (h,t) = case snd(strip_comb l)
-                                    of [h,t] => (h,t)
-                                     | _ => raise ERR "FOLDL_CONV" ""
-                        val th = ISPECL[e,h,t] ithm'
-                        val lem = CONV_RULE
-                            ((RAND_CONV o RATOR_CONV o RAND_CONV) conv) th
-                    in
-                        (TRANS lem (itfn (rhs(concl lem))))
-                    end
-            end
-    in
-        (itfn tm)
-    end
-        handle e => raise wrap_exn "List_conv" "FOLDL_CONV" e
-    end;
+local
+   val (bcnv, ithm) =
+      (Conv.REWR_CONV ## Drule.SPEC_ALL) (CONJ_PAIR listTheory.FOLDL)
+   fun dest_exl tm =
+      let
+         val (_, e, l) = listSyntax.dest_foldl tm
+      in
+         (e, Lib.total listSyntax.dest_cons l)
+      end
+   fun with_foldl f x = Lib.with_exn f x (ERR "FOLDL_CONV" "")
+in
+   fun FOLDL_CONV cnv tm =
+      let
+         val (f, e, l) = with_foldl listSyntax.dest_foldl tm
+         val (ll, lty) = with_foldl listSyntax.dest_list l
+      in
+         if List.null ll
+            then bcnv tm
+         else let
+                 val rule = CONV_RULE (RHS_CONV (RATOR_CONV (RAND_CONV cnv)))
+                 val ety = Term.type_of e
+                 val ev = Term.mk_var ("e", ety)
+                 val xv = Term.mk_var ("x", lty)
+                 val lv = Term.mk_var ("l", Term.type_of l)
+                 val ithm = Drule.INST_TY_TERM
+                               ([Term.mk_var ("f", Term.type_of f) |-> f],
+                                [Type.alpha |-> lty, Type.beta |-> ety]) ithm
+                 fun iter tm =
+                    case dest_exl tm of
+                       (e, NONE) => bcnv tm
+                     | (e, SOME (x, l)) =>
+                         RIGHT_CONV_RULE iter
+                           (rule (Thm.INST [ev |-> e, xv |-> x, lv |-> l] ithm))
+              in
+                 iter tm
+              end
+      end
+end
 
 (* --------------------------------------------------------------------- *)
 (* list_FOLD_CONV : thm -> conv -> conv                                  *)
