@@ -8,7 +8,7 @@ Conversion for evaluating applications of {ADD} and {REMOVE} to Patricia tree co
 
 \DESCRIBE
 
-Given a constant {c} defined using {Define_mk_ptree}, the conversion {PTREE_DEFN_CONV} will evaluate term of the form {c}, {c |+ (k,x)} and {c \\ k} where {k} is a natural number literal.
+Given a constant {c} defined using {Define_mk_ptree}, the conversion {PTREE_DEFN_CONV} will evaluate term of the form {c |+ (k,x)}, {c \\ k} and {c} where {k} is a natural number literal.
 
 \EXAMPLE
 
