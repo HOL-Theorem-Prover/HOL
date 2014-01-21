@@ -8,11 +8,6 @@ struct
 open HolKernel Parse boolLib bossLib
 open patriciaTheory patriciaSyntax;
 
-(* ------------------------------------------------------------------------- *)
-
-val emit_mesg = !Feedback.emit_MESG
-val () = Feedback.emit_MESG := false;
-
 val ERR = mk_HOL_ERR "patricia"
 
 (* ------------------------------------------------------------------------- *)
@@ -40,7 +35,7 @@ fun dest_ptree t =
            end
    else raise ERR "dest_ptree" ""
 
-fun mk_ptree Empty = mk_empty ``:'a``
+fun mk_ptree Empty = mk_empty Type.alpha
   | mk_ptree (Leaf (k, d)) = mk_leaf (numLib.mk_numeral k, d)
   | mk_ptree (Branch (p, m, l, r)) =
        mk_branch (numLib.mk_numeral p, numLib.term_of_int m,
@@ -254,18 +249,6 @@ fun pp_term_ptree ppstrm t =
 
 (* ------------------------------------------------------------------------- *)
 
-val QSORT_CONV =
-   let
-      open sortingTheory
-      val compset = reduceLib.num_compset ()
-      val () = listSimps.list_rws compset
-      val () = computeLib.add_thms
-                 [pairTheory.UNCURRY_DEF, QSORT_DEF, PARTITION_DEF, PART_DEF]
-                 compset
-   in
-      computeLib.CBV_CONV compset
-   end
-
 local
    val ct_conv = Conv.REWR_CONV ConseqConvTheory.AND_CLAUSES_TX
    val cf_conv = Conv.REWR_CONV ConseqConvTheory.AND_CLAUSES_FX
@@ -282,8 +265,6 @@ in
       RATOR_CONV (RATOR_CONV (RAND_CONV cnv1))
       THENC ((it_conv THENC cnv2) ORELSEC (if_conv THENC cnv3))
 end
-
-fun is_eqt t = same_const T (rhs (concl t)) handle HOL_ERR _ => false
 
 fun dest_strip t = let val (l, r) = strip_comb t in (fst (dest_const l), r) end
 
@@ -360,7 +341,7 @@ val BRANCHING_BIT_numeral = Q.prove(
     (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT2 y)) = 0) /\
     (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT1 y)) = 0)`,
    REPEAT STRIP_TAC
-   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [BRANCHING_BIT_def]))
+   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [patriciaTheory.BRANCHING_BIT_def]))
    \\ SIMP_TAC std_ss
         [numeralTheory.numeral_distrib, numeralTheory.numeral_eq,
          numeralTheory.numeral_evenodd, numeralTheory.numeral_div2]
@@ -474,11 +455,10 @@ local
    val j = Term.mk_var ("j", numLib.num)
    val k = Term.mk_var ("k", numLib.num)
    val wcnv = RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV MOD_2EXP_CONV)))
+   val branch_tm = Term.prim_mk_const {Name = "BRANCH", Thy = "patricia"}
    val remove_left =
-      patriciaSyntax.is_remove o
-      (fn l => hd (List.drop (l, 2))) o
-      pairSyntax.strip_pair o
-      HolKernel.dest_monop ``patricia$BRANCH`` (ERR "" "")
+      patriciaSyntax.is_remove o (fn l => hd (List.drop (l, 2))) o
+      pairSyntax.strip_pair o HolKernel.dest_monop branch_tm (ERR "" "")
 in
    fun PTREE_REMOVE_CONV tm =
       let
@@ -677,46 +657,6 @@ end
 
 (* ------------------------------------------------------------------------- *)
 
-(* The following conversion has the same performance as CBV_CONV.
-
-local
-   val not_empty_cnv =
-      REWRITE_CONV (List.take (CONJUNCTS (GSYM ptree_distinct), 2))
-   val every_cnv = PTREE_EVERY_LEAF_CONV wordsLib.WORD_EVAL_CONV
-   val is_ptree = REWRITE_RULE [bitTheory.LT_TWOEXP] IS_PTREE_def
-   val (is_ptree_empty, is_ptree_leaf, is_ptree_branch) =
-      Lib.triple_of_list (List.map SPEC_ALL (CONJUNCTS is_ptree))
-   val k = Term.mk_var ("k", numLib.num)
-in
-   fun IS_PTREE_CONV tm =
-      let
-         val t = dest_is_ptree tm
-         val tty = patriciaSyntax.dest_ptree_type (Term.type_of t)
-         val d = Term.mk_var ("d", tty)
-         val inst_ty = Thm.INST_TYPE [Type.alpha |-> tty]
-         val leaf = Drule.EQT_INTRO (inst_ty is_ptree_leaf)
-         val branch_cnv = Conv.REWR_CONV (inst_ty is_ptree_branch)
-         fun cnv t =
-            case dest_strip (dest_is_ptree t) of
-               ("Empty", []) => inst_ty is_ptree_empty
-             | ("Leaf", [kk, dd]) => Thm.INST [k |-> kk, d |-> dd] leaf
-             | ("Branch", [_, _, _, _]) =>
-                 (branch_cnv
-                  THENC CONJ_CONV wordsLib.WORD_EVAL_CONV
-                           (CONJ_CONV cnv
-                              (CONJ_CONV cnv
-                                 (CONJ_CONV not_empty_cnv
-                                    (CONJ_CONV not_empty_cnv
-                                       (CONJ_CONV every_cnv every_cnv)))))) t
-             | _ =>
-                raise ERR "PTREE_IS_PTREE_CONV" "Not Empty, Leaf or Branch"
-      in
-         cnv tm
-      end
-end
-
-*)
-
 val is_ptree_compset = wordsLib.words_compset ()
 val () = computeLib.add_thms
            [REWRITE_RULE [bitTheory.LT_TWOEXP] IS_PTREE_def,
@@ -726,33 +666,24 @@ val () = computeLib.add_conv
            (every_leaf_tm,  2, PTREE_EVERY_LEAF_CONV wordsLib.WORD_EVAL_CONV)
            is_ptree_compset
 
-val IS_PTREE_EVAL_CONV = CHANGED_CONV (computeLib.CBV_CONV is_ptree_compset)
-
-val PMATCH = PART_MATCH (snd o dest_imp)
-
-val IS_PTREE_ADD_CONV = PMATCH ADD_IS_PTREE
-val IS_PTREE_ADD_LIST_CONV = PMATCH ADD_LIST_IS_PTREE
-val IS_PTREE_REMOVE_CONV = PMATCH REMOVE_IS_PTREE
-val IS_PTREE_TRANSFORM_CONV = PMATCH TRANSFORM_IS_PTREE
-val IS_PTREE_INSERT_PTREE_CONV = PMATCH INSERT_PTREE_IS_PTREE
-val IS_PTREE_PTREE_OF_NUMSET_CONV = PMATCH PTREE_OF_NUMSET_IS_PTREE
-
-val IS_PTREE_X_CONV =
-  IS_PTREE_ADD_CONV ORELSEC IS_PTREE_INSERT_PTREE_CONV ORELSEC
-  IS_PTREE_REMOVE_CONV ORELSEC IS_PTREE_TRANSFORM_CONV ORELSEC
-  IS_PTREE_ADD_LIST_CONV ORELSEC IS_PTREE_PTREE_OF_NUMSET_CONV
-
-fun PTREE_IS_PTREE_CONV t =
-   let
-      val thm = ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV IS_PTREE_X_CONV t
-      val (l, r) = dest_imp (concl thm)
-      val is_ptree_thm = IS_PTREE_EVAL_CONV l
-   in
-     if is_eqt is_ptree_thm
-        then EQT_INTRO (MATCH_MP thm (EQT_ELIM is_ptree_thm))
-     else raise ERR "PTREE_IS_PTREE_CONV" ""
-   end
-   handle UNCHANGED => IS_PTREE_EVAL_CONV t
+local
+   val IS_PTREE_EVAL_CONV = CHANGED_CONV (computeLib.CBV_CONV is_ptree_compset)
+   val IS_PTREE_X_CONV =
+      Conv.FIRST_CONV
+        (List.map (PART_MATCH (snd o dest_imp))
+          [ADD_IS_PTREE, ADD_LIST_IS_PTREE, INSERT_PTREE_IS_PTREE,
+           REMOVE_IS_PTREE, PTREE_OF_NUMSET_IS_PTREE, TRANSFORM_IS_PTREE])
+in
+   fun PTREE_IS_PTREE_CONV t =
+      let
+         val thm = ConseqConv.DEPTH_STRENGTHEN_CONSEQ_CONV IS_PTREE_X_CONV t
+         val is_ptree_thm = IS_PTREE_EVAL_CONV (fst (dest_imp (concl thm)))
+      in
+         Lib.with_exn (EQT_INTRO o MATCH_MP thm o EQT_ELIM) is_ptree_thm
+           (ERR "PTREE_IS_PTREE_CONV" "")
+      end
+      handle UNCHANGED => IS_PTREE_EVAL_CONV t
+end
 
 (* ------------------------------------------------------------------------- *)
 
@@ -808,15 +739,16 @@ fun PTREE_OF_NUMSET_CONV tm =
 (* ------------------------------------------------------------------------- *)
 
 val DEPTH_ADD_THM = Q.prove(
-   `(c1 = t) /\ (ADD t (k,d) = c2) ==> (ADD c1 (k,d) = c2)`,
+   `(c1 = t) /\ (patricia$ADD t (k,d) = c2) ==> (patricia$ADD c1 (k,d) = c2)`,
    SRW_TAC [] [])
 
 val DEPTH_REMOVE_THM = Q.prove(
-   `(c1 = t) /\ (REMOVE t k = c2) ==> (REMOVE c1 k = c2)`,
+   `(c1 = t) /\ (patricia$REMOVE t k = c2) ==> (patricia$REMOVE c1 k = c2)`,
    SRW_TAC [] [])
 
 val DEPTH_INSERT_PTREE_THM = Q.prove(
-   `(c1 = t) /\ (k INSERT_PTREE t = c2) ==> (k INSERT_PTREE c1 = c2)`,
+   `(c1 = t) /\ (patricia$INSERT_PTREE k t = c2) ==>
+                (patricia$INSERT_PTREE k c1 = c2)`,
    SRW_TAC [] [])
 
 fun DEPTH_ARI_CONV rwt tm =
@@ -897,13 +829,15 @@ fun const_definition c =
    end
 
 fun root_const tm =
-   if is_add tm
-      then let val (t, _) = dest_add tm in root_const t end
-   else if is_remove tm
-      then let val (t, _) = dest_remove tm in root_const t end
-   else if is_insert_ptree tm
-      then let val (_, t) = dest_insert_ptree tm in root_const t end
-   else tm
+   case Lib.total patriciaSyntax.dest_add tm of
+      SOME (t, _) => root_const t
+    | NONE =>
+     (case Lib.total patriciaSyntax.dest_remove tm of
+         SOME (t, _) => root_const t
+       | NONE =>
+        (case Lib.total patriciaSyntax.dest_insert_ptree tm of
+            SOME (_, t) => root_const t
+          | NONE => tm))
 
 fun is_add_remove_insert tm =
    is_add tm orelse is_remove tm orelse is_insert_ptree tm
@@ -934,23 +868,23 @@ fun is_ptree_const tm = isSome (List.find (term_eq tm) (!ptree_consts_ref))
 fun root_const_depth tm =
    let
       fun const_depth d tm =
-         if is_add tm
-            then let val (t, _) = dest_add tm in const_depth (d + 1) t end
-         else if is_remove tm
-            then let val (t, _) = dest_remove tm in const_depth (d + 1) t end
-         else if is_insert_ptree tm
-            then let
-                    val (_, t) = dest_insert_ptree tm
-                 in
-                    const_depth (d + 1) t
-                 end
-         else if is_ptree_const tm
-            then d
-         else if not (!ptree_strict_defn_check) orelse is_ptree (dest_ptree tm)
-            then ~d - 1
-         else raise ERR "root_const_depth" ""
+         case Lib.total patriciaSyntax.dest_add tm of
+            SOME (t, _) => const_depth (d + 1) t
+          | NONE =>
+           (case Lib.total patriciaSyntax.dest_remove tm of
+               SOME (t, _) => const_depth (d + 1) t
+             | NONE =>
+              (case Lib.total patriciaSyntax.dest_insert_ptree tm of
+                  SOME (_, t) => const_depth (d + 1) t
+                | NONE =>
+                   if is_ptree_const tm
+                      then d
+                   else if not (!ptree_strict_defn_check) orelse
+                           is_ptree (dest_ptree tm)
+                      then ~d - 1
+                   else raise ERR "root_const_depth" ""))
    in
-     const_depth 0 tm
+      const_depth 0 tm
    end
 
 fun insert_ptree_defn thm =
@@ -1019,10 +953,10 @@ fun create_ptree_definition v tm =
    end
 
 fun find_const_ptree tm =
-  case List.find (fn c => term_eq tm (rhsc (const_definition c)))
-                 (!ptree_consts_ref) of
-     SOME c => SOME (SYM (const_definition c))
-   | NONE => NONE
+   case List.find (fn c => term_eq tm (rhsc (const_definition c)))
+                  (!ptree_consts_ref) of
+      SOME c => SOME (SYM (const_definition c))
+    | NONE => NONE
 
 fun PTREE_ARI_CONV tm =
    let
@@ -1039,7 +973,7 @@ fun PTREE_ARI_CONV tm =
    end
 
 val DEPTH_PEEK_THM = Q.prove(
-   `(c1 = t) /\ (PEEK t k = c2) ==> (PEEK c1 k = c2)`,
+   `(c1 = t) /\ (patricia$PEEK t k = c2) ==> (patricia$PEEK c1 k = c2)`,
    SRW_TAC [] [])
 
 fun PTREE_PEEK_ARI_CONV tm =
@@ -1065,7 +999,7 @@ fun mk_ptree_conv2 dest mk conv d_thm tm =
                  val thm = ptree_thm true t
               in
                  MATCH_MP d_thm (CONJ thm (conv (mk (x, rhsc thm))))
-               end
+              end
       else conv tm
    end
 
@@ -1074,16 +1008,16 @@ val thm = Q.prove(
    SRW_TAC [] [])
 
 val PTREE_IN_PTREE_ARI_CONV =
-   mk_ptree_conv2
-     dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV (Q.ISPEC `$IN_PTREE` thm)
+   mk_ptree_conv2 dest_in_ptree mk_in_ptree PTREE_IN_PTREE_CONV
+     (Drule.ISPEC patriciaSyntax.in_ptree_tm thm)
 
 val PTREE_EVERY_LEAF_ARI_CONV =
-  mk_ptree_conv2 dest_every_leaf mk_every_leaf (PTREE_EVERY_LEAF_CONV EVAL)
-    (Q.ISPEC `EVERY_LEAF` thm)
+   mk_ptree_conv2 dest_every_leaf mk_every_leaf (PTREE_EVERY_LEAF_CONV EVAL)
+     (Drule.ISPEC patriciaSyntax.every_leaf_tm thm)
 
 val PTREE_EXISTS_LEAF_ARI_CONV =
-  mk_ptree_conv2 dest_exists_leaf mk_exists_leaf (PTREE_EXISTS_LEAF_CONV EVAL)
-    (Q.ISPEC `EXISTS_LEAF` thm)
+   mk_ptree_conv2 dest_exists_leaf mk_exists_leaf (PTREE_EXISTS_LEAF_CONV EVAL)
+     (Drule.ISPEC patriciaSyntax.exists_leaf_tm thm)
 
 val thm = Q.prove(
    `!f. (c1 = t) /\ (f t = c2) ==> (f c1 = c2)`,
@@ -1098,22 +1032,24 @@ fun mk_ptree_conv dest mk conv d_thm tm =
                  val thm = ptree_thm true t
               in
                  MATCH_MP d_thm (CONJ thm (conv (mk (rhsc thm))))
-               end
+              end
       else conv tm
    end
 
 val PTREE_SIZE_ARI_CONV =
-   mk_ptree_conv dest_size mk_size PTREE_SIZE_CONV (Q.ISPEC `SIZE` thm)
+   mk_ptree_conv dest_size mk_size PTREE_SIZE_CONV
+     (Drule.ISPEC patriciaSyntax.size_tm thm)
 
 val PTREE_DEPTH_ARI_CONV =
-   mk_ptree_conv dest_depth mk_depth PTREE_DEPTH_CONV (Q.ISPEC `DEPTH` thm)
+   mk_ptree_conv dest_depth mk_depth PTREE_DEPTH_CONV
+     (Drule.ISPEC patriciaSyntax.depth_tm thm)
 
 (* ------------------------------------------------------------------------- *)
 
 local
    open computeLib
 in
-   fun add_ptree_convs compset =
+   fun add_ptree_core compset =
     ( add_conv (peek_tm,         2, PTREE_PEEK_ARI_CONV)        compset
     ; add_conv (add_tm,          2, PTREE_ARI_CONV)             compset
     ; add_conv (remove_tm,       2, PTREE_ARI_CONV)             compset
@@ -1125,11 +1061,11 @@ in
     ; add_conv (in_ptree_tm,     2, PTREE_IN_PTREE_ARI_CONV)    compset
     ; add_conv (is_ptree_tm,     1, PTREE_IS_PTREE_CONV)        compset
     ; add_conv (ptree_of_numset_tm, 2, PTREE_OF_NUMSET_CONV)    compset
+    ; add_thms [PEEK_TRANSFORM] compset
     )
 end
 
-val () = computeLib.add_funs [PEEK_TRANSFORM]
-val () = add_ptree_convs computeLib.the_compset
+val () = add_ptree_core computeLib.the_compset
 
 fun add_ptree_compset compset =
    let
@@ -1142,7 +1078,7 @@ fun add_ptree_compset compset =
          FOLDL, NUMSET_OF_PTREE_def, ADD_LIST_def, LIST_TO_SET_THM,
          PTREE_OF_NUMSET_EMPTY, UNION_PTREE_def, COND_CLAUSES,
          EMPTY_DELETE, DELETE_INSERT, DELETE_UNION] compset
-    ; add_ptree_convs compset
+    ; add_ptree_core compset
    end
 
 fun ptree_compset () =
@@ -1215,7 +1151,5 @@ fun dest_ptree tm =
 val is_ptree = Lib.can dest_ptree
 
 (* ------------------------------------------------------------------------- *)
-
-val () = Feedback.emit_MESG := emit_mesg
 
 end
