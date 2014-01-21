@@ -1173,34 +1173,31 @@ local
       REWR_CONV (EQT_INTRO (SPEC_ALL patriciaTheory.ADD_LIST_TO_EMPTY_IS_PTREE))
    val empty_is_ptree_conv =
       Conv.REWR_CONV (EQT_INTRO patriciaTheory.EMPTY_IS_PTREE)
-   fun to_add_list l =
-      let
-         val ty = Term.type_of (snd (hd l))
-         val tm =
-            listSyntax.mk_list
-               (List.map (pairSyntax.mk_pair o (numLib.mk_numeral ## I)) l,
-                pairSyntax.mk_prod (numLib.num, ty))
-      in
-        patriciaSyntax.mk_add_list (patriciaSyntax.mk_empty ty, tm)
-      end
+   fun to_add_list_cnv l =
+      if List.null l
+         then empty_is_ptree_conv
+      else let
+              val ty = Term.type_of (snd (hd l))
+              val tm =
+                 listSyntax.mk_list
+                    (List.map (pairSyntax.mk_pair o (numLib.mk_numeral ## I)) l,
+                     pairSyntax.mk_prod (numLib.num, ty))
+              val tm =
+                 patriciaSyntax.mk_add_list (patriciaSyntax.mk_empty ty, tm)
+           in
+              RAND_CONV (fn _ => SYM (PTREE_ADD_CONV tm)) THENC is_ptree_cnv
+           end
 in
    fun Define_mk_ptree_with_is_ptree s t =
       let
          val thm = Define_mk_ptree s t
          val l = list_of_ptree t
-         val cnv = RAND_CONV (fn _ => thm)
          val e = patriciaSyntax.mk_is_ptree (lhs (concl thm))
+         val is_ptree_thm =
+            EQT_ELIM ((RAND_CONV (fn _ => thm) THENC (to_add_list_cnv l)) e)
       in
-         if List.null l
-            then (thm, EQT_ELIM ((cnv THENC empty_is_ptree_conv) e))
-         else let
-                 val add_list_thm = PTREE_ADD_CONV (to_add_list l)
-                 val is_ptree_thm =
-                    EQT_ELIM ((cnv THENC RAND_CONV (fn _ => SYM add_list_thm)
-                               THENC is_ptree_cnv) e)
-              in
-                 (thm, is_ptree_thm)
-              end
+          computeLib.add_thms [is_ptree_thm] is_ptree_compset
+        ; (thm, is_ptree_thm)
       end
 end
 
