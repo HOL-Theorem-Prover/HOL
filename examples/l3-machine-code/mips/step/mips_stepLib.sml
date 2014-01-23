@@ -164,6 +164,7 @@ val lEV =
 val pEV =
    EVR (rule o COND_UPDATE_RULE)
       [dfn'ADD_def, dfn'SUB_def, dfn'DADD_def, dfn'DSUB_def,
+       dfn'MOVN_def, dfn'MOVZ_def,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
@@ -173,7 +174,7 @@ val rEV =
    EV [dfn'ADDU_def, dfn'DADDU_def, dfn'SUBU_def, dfn'DSUBU_def, dfn'SLT_def,
        dfn'SLTU_def, dfn'AND_def, dfn'OR_def, dfn'XOR_def, dfn'NOR_def,
        dfn'SLLV_def, dfn'SRLV_def, dfn'SRAV_def, dfn'DSLLV_def, dfn'DSRLV_def,
-       dfn'DSRAV_def, dfn'MTHI_def, dfn'MTLO_def,
+       dfn'DSRAV_def, dfn'MUL_def, write'HI_def, write'LO_def,
        extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
@@ -189,21 +190,25 @@ val sEV =
 
 val hEV =
    EVC [dfn'MFHI_def, dfn'MFLO_def, dfn'MTHI_def, dfn'MTLO_def, dfn'JALR_def,
-        extra_cond_rand_thms]
-       [[``rd <> 0w: word5``, ``^st.HLStatus <> HLmtlo``,
-         ``^st.HLStatus <> HLmthi``]]
+        write'HI_def, write'LO_def, HI_def, LO_def, extra_cond_rand_thms]
+       [[``rd <> 0w: word5``, ``^st.hi = SOME vHI``, ``^st.lo = SOME vLO``]]
        [[], [`rd` |-> r0]]
 
 val mEV =
-   EV [dfn'MULT_def, dfn'MULTU_def, dfn'DMULT_def, dfn'DMULTU_def,
-       extra_cond_rand_thms]
+   EV [dfn'MADD_def, dfn'MADDU_def, dfn'MSUB_def, dfn'MSUBU_def,
+       dfn'MULT_def, dfn'MULTU_def, dfn'DMULT_def, dfn'DMULTU_def,
+       write'HI_def, write'LO_def, HI_def, LO_def, extra_cond_rand_thms,
+       blastLib.BBLAST_PROVE
+          ``(!a:word32 b:word32. (63 >< 32) ((a @@ b) : word64) = a) /\
+            (!a:word32 b:word32. (31 ><  0) ((a @@ b) : word64) = b)``]
       [[``rs <> 0w: word5``, ``rt <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``,
+        ``^st.hi = SOME vHI``, ``^st.lo = SOME vLO``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0])
 
 val dEV =
    EV [dfn'DIV_def, dfn'DIVU_def, dfn'DDIV_def, dfn'DDIVU_def,
-       extra_cond_rand_thms]
+       write'HI_def, write'LO_def, extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``^st.gpr (rt) <> 0w``, ``rs <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
       [[], [`rs` |-> r0]]
@@ -233,6 +238,8 @@ val ADD = pEV ``dfn'ADD (rs, rt, rd)``
 val SUB = pEV ``dfn'SUB (rs, rt, rd)``
 val DADD = pEV ``dfn'DADD (rs, rt, rd)``
 val DSUB = pEV ``dfn'DSUB (rs, rt, rd)``
+val MOVN = pEV ``dfn'MOVN (rs, rt, rd)``
+val MOVZ = pEV ``dfn'MOVZ (rs, rt, rd)``
 
 val ADDU = rEV ``dfn'ADDU (rs, rt, rd)``
 val DADDU = rEV ``dfn'DADDU (rs, rt, rd)``
@@ -266,6 +273,11 @@ val MFLO = hEV ``dfn'MFLO (rd)``
 val MTHI = hEV ``dfn'MTHI (rd)``
 val MTLO = hEV ``dfn'MTLO (rd)``
 
+val MUL = rEV ``dfn'MUL (rs, rt, rd)``
+val MADD = mEV ``dfn'MADD (rs, rt)``
+val MADDU = mEV ``dfn'MADDU (rs, rt)``
+val MSUB = mEV ``dfn'MSUB (rs, rt)``
+val MSUBU = mEV ``dfn'MSUBU (rs, rt)``
 val MULT = mEV ``dfn'MULT (rs, rt)``
 val MULTU = mEV ``dfn'MULTU (rs, rt)``
 val DMULT = mEV ``dfn'DMULT (rs, rt)``
@@ -590,7 +602,12 @@ val mips_ipatterns = List.map (I ## pattern)
     ("MULT",   "FFFFFF__________FFFFFFFFFFFTTFFF"),
     ("MULTU",  "FFFFFF__________FFFFFFFFFFFTTFFT"),
     ("DMULT",  "FFFFFF__________FFFFFFFFFFFTTTFF"),
-    ("DMULTU", "FFFFFF__________FFFFFFFFFFFTTTFT")
+    ("DMULTU", "FFFFFF__________FFFFFFFFFFFTTTFT"),
+    ("MADD",   "FTTTFF__________FFFFFFFFFFFFFFFF"),
+    ("MADDU",  "FTTTFF__________FFFFFFFFFFFFFFFT"),
+    ("MSUB",   "FTTTFF__________FFFFFFFFFFFFFTFF"),
+    ("MSUBU",  "FTTTFF__________FFFFFFFFFFFFFTFT"),
+    ("MUL",    "FTTTFF_______________FFFFFFFFFTF")
    ]
 
 val mips_dpatterns = List.map (I ## pattern)
@@ -603,6 +620,8 @@ val mips_rpatterns = List.map (I ## pattern)
     ("SLLV",   "FFFFFF_______________FFFFFFFFTFF"),
     ("SRLV",   "FFFFFF_______________FFFFFFFFTTF"),
     ("SRAV",   "FFFFFF_______________FFFFFFFFTTT"),
+    ("MOVZ",   "FFFFFF_______________FFFFFFFTFTF"),
+    ("MOVN",   "FFFFFF_______________FFFFFFFTFTT"),
     ("DSLLV",  "FFFFFF_______________FFFFFFTFTFF"),
     ("DSRLV",  "FFFFFF_______________FFFFFFTFTTF"),
     ("DSRAV",  "FFFFFF_______________FFFFFFTFTTT"),

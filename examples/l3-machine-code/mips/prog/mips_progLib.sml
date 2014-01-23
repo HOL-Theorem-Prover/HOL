@@ -84,13 +84,13 @@ val state_id =
       [["CP0", "PC", "gpr"],
        ["CP0", "LLbit", "PC", "gpr"],
        ["CP0", "PC"],
-       ["CP0", "HLStatus", "PC"],
-       ["CP0", "HLStatus", "PC", "gpr"],
-       ["CP0", "HLStatus", "LO", "PC"],
-       ["CP0", "HI", "HLStatus", "PC"],
-       ["CP0", "HI", "HLStatus", "LO", "PC"],
+       ["CP0", "PC", "lo"],
+       ["CP0", "PC", "hi"],
+       ["CP0", "PC", "hi", "lo"],
+       ["CP0", "PC", "gpr", "hi", "lo"],
        ["CP0", "MEM", "PC"],
        ["MEM", "PC"],
+       ["gpr", "hi", "lo"],
        ["gpr"]]
 
 val CP0_id =
@@ -127,14 +127,11 @@ val mips_frame =
        (`K mips_c_LLbit`,
         `\s:mips_state a w. s with LLbit := w`,
         `I: mips_state -> mips_state`),
-       (`K mips_c_HI`,
-        `\s:mips_state a w. s with HI := w`,
+       (`K mips_c_hi`,
+        `\s:mips_state a w. s with hi := w`,
         `I: mips_state -> mips_state`),
-       (`K mips_c_LO`,
-        `\s:mips_state a w. s with LO := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_HLStatus`,
-        `\s:mips_state a w. s with HLStatus := w`,
+       (`K mips_c_lo`,
+        `\s:mips_state a w. s with lo := w`,
         `I: mips_state -> mips_state`),
        (`mips_c_gpr`, `\s:mips_state a w. s with gpr := (a =+ w) r`,
         `\s:mips_state. s with gpr := r`),
@@ -160,9 +157,8 @@ local
        | "mips_CP0_ErrCtl" => 10
        | "mips_BranchStatus" => 11
        | "mips_LLbit" => 12
-       | "mips_HLStatus" => 13
-       | "mips_HI" => 14
-       | "mips_LO" => 15
+       | "mips_hi" => 14
+       | "mips_lo" => 15
        | "mips_PC" => 16
        | _ => ~1
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -208,9 +204,8 @@ in
       stateLib.write_footprint mips_1 mips_2
          [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
           ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``)]
-         [("mips$mips_state_HI_fupd", "mips_HI"),
-          ("mips$mips_state_LO_fupd", "mips_LO"),
-          ("mips$mips_state_HLStatus_fupd", "mips_HLStatus"),
+         [("mips$mips_state_hi_fupd", "mips_hi"),
+          ("mips$mips_state_lo_fupd", "mips_lo"),
           ("mips$mips_state_LLbit_fupd", "mips_LLbit")]
          [("mips$mips_state_PC_fupd", "mips_PC"),
           ("mips$mips_state_BranchStatus_fupd", "mips_BranchStatus")]
@@ -233,9 +228,8 @@ local
           | "mips_prog$mips_CP0_EPC" => "epc"
           | "mips_prog$mips_CP0_Status_BEV" => "bev"
           | "mips_prog$mips_LLbit" => "llbit"
-          | "mips_prog$mips_HLStatus" => "hlstatus"
-          | "mips_prog$mips_HI" => "hi"
-          | "mips_prog$mips_LO" => "lo"
+          | "mips_prog$mips_hi" => "hi"
+          | "mips_prog$mips_lo" => "lo"
           | _ => fail())
    val mips_rename2 =
       Lib.total
