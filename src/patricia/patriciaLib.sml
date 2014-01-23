@@ -341,8 +341,9 @@ val BRANCHING_BIT_numeral = Q.prove(
     (!x y. BRANCHING_BIT (NUMERAL (BIT1 x)) (NUMERAL (BIT2 y)) = 0) /\
     (!x y. BRANCHING_BIT (NUMERAL (BIT2 x)) (NUMERAL (BIT1 y)) = 0)`,
    REPEAT STRIP_TAC
-   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [patriciaTheory.BRANCHING_BIT_def]))
-   \\ SIMP_TAC std_ss
+   THEN CONV_TAC
+          (LHS_CONV (ONCE_REWRITE_CONV [patriciaTheory.BRANCHING_BIT_def]))
+   THEN SIMP_TAC std_ss
         [numeralTheory.numeral_distrib, numeralTheory.numeral_eq,
          numeralTheory.numeral_evenodd, numeralTheory.numeral_div2]
    )
