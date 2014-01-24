@@ -1,3 +1,6 @@
+structure problem_set_1_answers =
+struct
+
 open HolKernel Parse boolLib bossLib intSyntax pairSyntax listSyntax stringLib numLib sexp;
 
 val problem_set_1_answers = [
@@ -447,3 +450,5 @@ mksym "M1" "LST") (mksym "COMMON-LISP" "NIL"))) (mksym "COMMON-LISP" "NIL")))) (
 mksym "COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" "NIL")))))
 
 ];
+
+end

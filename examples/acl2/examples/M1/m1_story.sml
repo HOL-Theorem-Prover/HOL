@@ -1,3 +1,6 @@
+structure m1_story =
+struct
+
 open HolKernel Parse boolLib bossLib intSyntax pairSyntax listSyntax stringLib numLib sexp;
 
 val m1_story = [
@@ -1849,3 +1852,5 @@ mkpair (mkpair (mksym "COMMON-LISP" "QUOTE") (mkpair (mksym "COMMON-LISP"
 mksym "COMMON-LISP" "NIL"))))) (mksym "COMMON-LISP" "NIL")))))
 
 ];
+
+end
