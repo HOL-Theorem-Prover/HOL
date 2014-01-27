@@ -312,6 +312,8 @@ val BLTZL = EVC [dfn'BLTZL_def] [] [] ``dfn'BLTZL (rs, offset)``
 val BGEZL = EVC [dfn'BGEZL_def] [] [] ``dfn'BGEZL (rs, offset)``
 val BLTZALL = EVC [dfn'BLTZALL_def] [] [] ``dfn'BLTZALL (rs, offset)``
 val BGEZALL = EVC [dfn'BGEZALL_def] [] [] ``dfn'BGEZALL (rs, offset)``
+val ERET = EVR (REWRITE_RULE [satTheory.AND_INV] o COND_UPDATE_RULE)
+   [dfn'ERET_def] [] [] ``dfn'ERET``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -706,7 +708,8 @@ val mips_patterns = List.map (I ## pattern)
     ("LL",      "TTFFFF__________________________"),
     ("LLD",     "TTFTFF__________________________"),
     ("LD",      "TTFTTT__________________________"),
-    ("SD",      "TTTTTT__________________________")
+    ("SD",      "TTTTTT__________________________"),
+    ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
    ]
 
 local

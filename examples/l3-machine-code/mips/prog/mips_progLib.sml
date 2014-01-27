@@ -82,6 +82,7 @@ end
 val state_id =
    utilsLib.mk_state_id_thm mipsTheory.mips_state_component_equality
       [["CP0", "PC", "gpr"],
+       ["CP0", "LLbit", "PC"],
        ["CP0", "LLbit", "PC", "gpr"],
        ["CP0", "PC"],
        ["CP0", "PC", "lo"],
@@ -114,6 +115,10 @@ val mips_frame =
        (`K mips_c_CP0_ErrCtl`,
         `\s:mips_state a w. s with CP0 := cp0 with ErrCtl := w`,
         `\s:mips_state. s with CP0 := cp0`),
+       (`K mips_c_CP0_Status_ERL`,
+        `\s:mips_state a w.
+            s with CP0 := cp0 with Status := status with ERL := w`,
+        `\s:mips_state. s with CP0 := cp0 with Status := status`),
        (`K mips_c_CP0_Status_EXL`,
         `\s:mips_state a w.
             s with CP0 := cp0 with Status := status with EXL := w`,
@@ -147,16 +152,17 @@ local
          "cond" => 0
        | "mips_exception" => 1
        | "mips_CP0_Status_RE" => 2
-       | "mips_CP0_Status_EXL" => 3
-       | "mips_CP0_Status_BEV" => 4
-       | "mips_CP0_Config_BE" => 5
-       | "mips_CP0_Count" => 6
-       | "mips_CP0_Cause" => 7
-       | "mips_CP0_EPC" => 8
-       | "mips_CP0_Debug" => 9
-       | "mips_CP0_ErrCtl" => 10
-       | "mips_BranchStatus" => 11
-       | "mips_LLbit" => 12
+       | "mips_CP0_Status_ERL" => 3
+       | "mips_CP0_Status_EXL" => 4
+       | "mips_CP0_Status_BEV" => 5
+       | "mips_CP0_Config_BE" => 6
+       | "mips_CP0_Count" => 7
+       | "mips_CP0_Cause" => 8
+       | "mips_CP0_EPC" => 9
+       | "mips_CP0_Debug" => 10
+       | "mips_CP0_ErrCtl" => 11
+       | "mips_BranchStatus" => 12
+       | "mips_LLbit" => 13
        | "mips_hi" => 14
        | "mips_lo" => 15
        | "mips_PC" => 16
@@ -187,7 +193,8 @@ local
    val st = Term.mk_var ("s", ``:mips_state``)
    val cp0_status_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
-         [("mips$StatusRegister_EXL_fupd", "mips_CP0_Status_EXL")]
+         [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
+          ("mips$StatusRegister_EXL_fupd", "mips_CP0_Status_EXL")]
          []
          (fn (s, l) => s = "mips$CP0_Status" andalso l = [``^st.CP0``])
    val cp0_write_footprint =
@@ -226,6 +233,9 @@ local
         (fn "mips_prog$mips_CP0_Count" => "count"
           | "mips_prog$mips_CP0_Cause" => "cause"
           | "mips_prog$mips_CP0_EPC" => "epc"
+          | "mips_prog$mips_CP0_ErrorEPC" => "errorpc"
+          | "mips_prog$mips_CP0_Status_ERL" => "erl"
+          | "mips_prog$mips_CP0_Status_EXL" => "exl"
           | "mips_prog$mips_CP0_Status_BEV" => "bev"
           | "mips_prog$mips_LLbit" => "llbit"
           | "mips_prog$mips_hi" => "hi"
