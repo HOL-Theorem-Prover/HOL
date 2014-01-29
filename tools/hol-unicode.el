@@ -81,4 +81,7 @@
 (define-key hol-unicode-superscript-map "8" "⁸")
 (define-key hol-unicode-superscript-map "9" "⁹")
 (define-key hol-unicode-superscript-map "0" "⁰")
+(define-key hol-unicode-superscript-map "+" "⁺")
+(define-key hol-unicode-superscript-map "-" "⁻")
+(define-key hol-unicode-superscript-map "=" "⁼")
 ;; ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
