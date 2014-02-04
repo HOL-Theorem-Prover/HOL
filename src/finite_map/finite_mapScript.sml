@@ -49,7 +49,6 @@ val _ = set_fixity "'" (Infixl 2000);    (* fmap application *)
 
 val _ = set_fixity "|+"  (Infixl 600);   (* fmap update *)
 val _ = set_fixity "|++" (Infixl 500);   (* iterated update *)
-val _ = set_fixity "\\\\" (Infixl 600)   (* domain subtraction *)
 
 
 (*---------------------------------------------------------------------------
@@ -1394,7 +1393,9 @@ val FINITE_PRED_11 = Q.store_thm
 
 val fmap_domsub = new_definition(
   "fmap_domsub",
-  ``(\\) fm k = DRESTRICT fm (COMPL {k})``);
+  ``fdomsub fm k = DRESTRICT fm (COMPL {k})``);
+val _ = overload_on ("\\\\", ``fdomsub``);
+(* this has been set up as an infix in relationTheory *)
 
 val DOMSUB_FEMPTY = store_thm(
   "DOMSUB_FEMPTY",

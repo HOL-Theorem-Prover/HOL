@@ -1984,6 +1984,8 @@ val inv_diag = store_thm(
 (* domain of a relation *)
 (* if I just had UNIONs and the like around, I could prove great things like
      RDOM (R RUNION R') = RDOM R UNION RDOM R'
+   I can still prove x IN RDOM (R1 RUNION R2) = x IN RDOM R1 \/ x IN RDOM R2
+   though.
 *)
 val RDOM_DEF = new_definition(
   "RDOM_DEF",
@@ -2003,6 +2005,11 @@ val IN_RRANGE = store_thm(
   "IN_RRANGE",
   ``y IN RRANGE R = ?x. R x y``,
   SRW_TAC [][RRANGE_DEF, IN_DEF]);
+
+val IN_RDOM_RUNION = store_thm(
+  "IN_RDOM_RUNION",
+  ``x IN RDOM (R1 RUNION R2) <=> x IN RDOM R1 \/ x IN RDOM R2``,
+  SIMP_TAC (srw_ss()) [RDOM_DEF, RUNION, boolTheory.IN_DEF, EXISTS_OR_THM]);
 
 (* top and bottom elements of RSUBSET lattice *)
 val RUNIV = new_definition(
@@ -2025,6 +2032,53 @@ val REMPTY_SUBSET = store_thm(
     (R RSUBSET REMPTY = (R = REMPTY))``,
   SRW_TAC [][RSUBSET, FUN_EQ_THM]);
 val _ = export_rewrites ["REMPTY_SUBSET"]
+
+(* ----------------------------------------------------------------------
+    Restrictions on relations
+
+    In theory there are 3 flavours of restriction, each taking a relation
+    and a set.
+
+    1. restricting the domain of a relation (perhaps the most natural,
+       gets to be RRESTRICT below)
+    2. restricting the range of a relation
+    3. restricting both, forcing the relation to be 'a -> 'a -> bool
+
+    In addition, it might be nice to have notation for removal of just
+    one element in each flavour, which can be expressed as restriction
+    to the complement of the singleton set containing that element.
+
+   ---------------------------------------------------------------------- *)
+
+val RRESTRICT_DEF = new_definition(
+  "RRESTRICT_DEF",
+  ``RRESTRICT R s (x:'a) (y:'b) <=> R x y /\ x IN s``);
+val _ = export_rewrites ["RRESTRICT_DEF"]
+
+val IN_RDOM_RRESTRICT = store_thm(
+  "IN_RDOM_RRESTRICT",
+  ``x IN RDOM (RRESTRICT (R:'a -> 'b -> bool) s) <=> x IN RDOM R /\ x IN s``,
+  SIMP_TAC bool_ss [boolTheory.IN_DEF, RDOM_DEF, RRESTRICT_DEF] THEN
+  METIS_TAC[])
+val _ = export_rewrites ["IN_RDOM_RRESTRICT"]
+
+val RDOM_DELETE_DEF = new_definition(
+  "RDOM_DELETE_DEF",
+  ``RDOM_DELETE R x u v <=> R u v /\ u <> x``);
+val _ = export_rewrites ["RDOM_DELETE_DEF"]
+
+(* this syntax is compatible (easily confused) with that for finite maps *)
+val _ = set_fixity "\\\\" (Infixl 600)
+val _ = overload_on("\\\\", ``RDOM_DELETE``)
+
+val IN_RDOM_DELETE = store_thm(
+  "IN_RDOM_DELETE",
+  ``x IN RDOM (R \\ k) <=> x IN RDOM R /\ x <> k``,
+  SIMP_TAC bool_ss [boolTheory.IN_DEF, RDOM_DEF, RDOM_DELETE_DEF] THEN
+  METIS_TAC[]);
+val _ = export_rewrites ["IN_RDOM_DELETE"]
+
+
 
 
 (*===========================================================================*)
