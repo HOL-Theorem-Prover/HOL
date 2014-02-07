@@ -2807,6 +2807,126 @@ val DROP_splitAtPki = store_thm(
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss][DROP_LENGTH_TOO_LONG]);
 
+(* ----------------------------------------------------------------------
+    List monad related stuff
+   ---------------------------------------------------------------------- *)
+
+(* the bind function is flatMap with arguments in a different order *)
+val LIST_BIND_def = Define`
+  LIST_BIND l f = FLAT (MAP f l)
+`
+
+val LIST_BIND_THM = store_thm(
+  "LIST_BIND_THM",
+  ``(LIST_BIND [] f = []) /\
+    (LIST_BIND (h::t) f = f h ++ LIST_BIND t f)``,
+  SIMP_TAC (srw_ss()) [LIST_BIND_def]);
+val _ = export_rewrites ["LIST_BIND_THM"]
+
+val LIST_IGNORE_BIND_def = Define`
+  LIST_IGNORE_BIND m1 m2 = LIST_BIND m1 (K m2)
+`;
+
+val LIST_BIND_ID = store_thm(
+  "LIST_BIND_ID",
+  ``(LIST_BIND l (\x.x) = FLAT l) /\
+    (LIST_BIND l I = FLAT l)``,
+  SIMP_TAC (srw_ss()) [LIST_BIND_def]);
+
+val LIST_BIND_APPEND = store_thm(
+  "LIST_BIND_APPEND",
+  ``LIST_BIND (l1 ++ l2) f = LIST_BIND l1 f ++ LIST_BIND l2 f``,
+  Induct_on `l1` THEN ASM_SIMP_TAC (srw_ss()) [APPEND_ASSOC]);
+
+val LIST_BIND_MAP = store_thm(
+  "LIST_BIND_MAP",
+  ``LIST_BIND (MAP f l) g = LIST_BIND l (g o f)``,
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) []);
+
+val MAP_LIST_BIND = store_thm(
+  "MAP_LIST_BIND",
+  ``MAP f (LIST_BIND l g) = LIST_BIND l (MAP f o g)``,
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [MAP_APPEND]);
+
+(* monad associativity *)
+val LIST_BIND_LIST_BIND = store_thm(
+  "LIST_BIND_LIST_BIND",
+  ``LIST_BIND (LIST_BIND l g) f = LIST_BIND l (combin$C LIST_BIND f o g)``,
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND]);
+
+
+(* the "return" or "pure" constant for lists isn't an existing one, unlike
+   the situation with 'a option, where SOME fits the bill. *)
+val SINGL_def = Define`SINGL x = [x]`
+
+val SINGL_LIST_APPLY_L = store_thm(
+  "SINGL_LIST_APPLY_L",
+  ``LIST_BIND (SINGL x) f = f x``,
+  SIMP_TAC (srw_ss()) [SINGL_def]);
+
+val SINGL_LIST_APPLY_R = store_thm(
+  "SINGL_LIST_APPLY_R",
+  ``LIST_BIND l SINGL = l``,
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [SINGL_def, LIST_BIND_def]);
+
+(* shows that lists are what Haskell would call Applicative *)
+(* in 'a option, the apply applies a function to an argument if both are
+   SOME, and otherwise returns NONE.  In lists, there is a cross-product
+   created - this makes sense when you think of the list monad as being
+   the non-determinism thing: you'd want every possible combination of
+   the possibilities in fs and xs *)
+val LIST_APPLY_def = Define`
+  LIST_APPLY fs xs = LIST_BIND fs (combin$C MAP xs)
+`
+
+(* derives the lift2 function to boot *)
+val LIST_LIFT2_def = Define`
+  LIST_LIFT2 f xs ys = LIST_APPLY (MAP f xs) ys
+`
+(* e.g.,
+    > EVAL ``LIST_LIFT2 (+) [1;3;4] [10;5]``
+        |- ...  = [11;6;13;8;14;9]
+    i.e., the sums of all possible pairs
+*)
+
+
+(* proofs of the relevant "laws" *)
+val SINGL_APPLY_MAP = store_thm(
+  "SINGL_APPLY_MAP",
+  ``LIST_APPLY (SINGL f) l = MAP f l``,
+  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def]);
+
+val SINGL_SINGL_APPLY = store_thm(
+  "SINGL_SINGL_APPLY",
+  ``LIST_APPLY (SINGL f) (SINGL x) = SINGL (f x)``,
+  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def]);
+
+val SINGL_APPLY_PERMUTE = store_thm(
+  "SINGL_APPLY_PERMUTE",
+  ``LIST_APPLY fs (SINGL x) = LIST_APPLY (SINGL (\f. f x)) fs``,
+  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def] THEN
+  Induct_on `fs` THEN ASM_SIMP_TAC (srw_ss()) []);
+
+val MAP_FLAT = store_thm(
+  "MAP_FLAT",
+  ``MAP f (FLAT l) = FLAT (MAP (MAP f) l)``,
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [MAP_APPEND])
+
+(*
+val _ = set_mapped_fixity { fixity = Infixl 500, term_name = "FAPPLY",
+                            tok = "<*>" }
+val _ = overload_on ("FAPPLY", ``LIST_APPLY``)
+*)
+
+val LIST_APPLY_o = store_thm(
+  "LIST_APPLY_o",
+  ``LIST_APPLY (LIST_APPLY (LIST_APPLY (SINGL (o)) fs) gs) xs =
+    LIST_APPLY fs (LIST_APPLY gs xs)``,
+  ASM_SIMP_TAC (srw_ss()) [LIST_APPLY_def, SINGL_def] THEN
+  Induct_on `fs` THEN
+  ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND, MAP_LIST_BIND,
+                           APPEND_11] THEN
+  SIMP_TAC (srw_ss()) [combinTheory.o_DEF, MAP_MAP_o, LIST_BIND_MAP]);
 
 (* --------------------------------------------------------------------- *)
 
