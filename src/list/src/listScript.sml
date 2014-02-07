@@ -159,6 +159,7 @@ val FLAT = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(FLAT []     = []) /\
           (!h t. FLAT (h::t) = APPEND h (FLAT t))`--};
+val _ = export_rewrites ["FLAT"]
 
 val LENGTH = new_recursive_definition
       {name = "LENGTH",
@@ -172,6 +173,7 @@ val MAP = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!f:'a->'b. MAP f [] = []) /\
                    (!f h t. MAP f (h::t) = f h::MAP f t)`--};
+val _ = export_rewrites ["MAP"]
 
 val LIST_TO_SET_DEF = new_recursive_definition{
   name = "LIST_TO_SET_DEF",
@@ -2861,8 +2863,8 @@ val _ = adjoin_to_theory
  end)};
 
 val _ = export_rewrites
-          ["APPEND_11", "FLAT",
-           "MAP", "MAP2", "NULL_DEF",
+          ["APPEND_11",
+           "MAP2", "NULL_DEF",
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_MAP", "MAP_APPEND",
            "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL",
