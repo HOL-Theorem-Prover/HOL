@@ -721,8 +721,8 @@ astratto e stabilito che\[
 & & \land\\
 & & \con{diamond}\,(\con{RTC}\;R) & \equiv & \con{confluent}\;R\\
 \end{array}
-\]  (We have also established a couple of other useful results along
-the way.)
+\]  (Abbiamo anche stabilito un paio di utili risultati lungo 
+la strada.)
 
 \newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Purtroppo, non si da il 
 caso che $\rightarrow$, la nostra relazione di un passo per i combinatori, abbia 
@@ -1385,12 +1385,14 @@ il nostro prossimo goal rappresenta un termine \verb!K # z -||-> y! nelle assunz
 Abbiamo un teorema che riguarda proprio questa situazione. Ma prima 
 di applicarlo volenti o nolenti, proviamo ad immaginare esattamente qual è la 
 situazione. Un diagramma della situazione corrente potrebbe apparire come
+\shorthandoff{"}
 \[\xymatrix @C=2cm {
 *+<4pt>[F--]\txt{\fbox{\texttt{K\kern2mm \#\kern2mm z}} \texttt{\#} \fbox{\texttt{u}}} \ar[r] & \txt{\texttt{z}} \ar@{.>}[d] \\
 *+<4pt>[F--]\txt{\fbox{\texttt{y}} \texttt{\#} \fbox{\texttt{v}}} \ar@{.>}[r] & \txt{\texttt{?u?}}
 \ar "1,1"!<-12pt,0pt>;"2,1"!<-12pt,0pt>
 \ar "1,1"!<28pt,0pt>;"2,1"!<11pt,0pt>
 } \]
+\shorthandon{"}
 Il nostro teorema ci dice che \texttt{y} deve di fatto essere della forma 
 \verb!K # w! per qualche \texttt{w}, e che ci deve essere una freccia 
 tra \texttt{z} e \texttt{w}. Così:
