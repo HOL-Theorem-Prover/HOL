@@ -4,9 +4,18 @@
 
 \documentclass[12pt,fleqn]{book}
 
-%\usepackage[italian]{babel}         % lingua italiana
+% Lingua italiana.Start
 \usepackage[latin1]{inputenc}
-%\usepackage[T1]{fontenc}  
+\usepackage[T1]{fontenc}  
+\usepackage[italian]{babel}         
+% lingua italiana.End
+
+% to use with Italian babel this command must be put here: see ligic.tex at line 963
+\newcommand\ttbs{\texttt{\symbol{"5C}}}
+\newcommand\ttland{\texttt{/\ttbs}}
+
+% NOTE: use \shorthandoff{"} just before xymatrix and then \shorthandon{"} just after: see the file combin.tex at line 1388
+% Lingua italiana.End
 
 %\usepackage{amsmath}
 \usepackage{alltt}
