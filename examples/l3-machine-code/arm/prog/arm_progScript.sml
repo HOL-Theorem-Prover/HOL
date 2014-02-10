@@ -20,11 +20,11 @@ val arm_instr_def = Define`
    { (arm_c_MEM a, arm_d_word8 ((7 >< 0) i));
      (arm_c_MEM (a + 1w), arm_d_word8 ((15 >< 8) i));
      (arm_c_MEM (a + 2w), arm_d_word8 ((23 >< 16) i));
-     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }`;
+     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }`
 
 val ARM_MODEL_def = Define`
    ARM_MODEL = (STATE arm_proj, NEXT_REL (=) NextStateARM, arm_instr,
-                ($= :arm_state -> arm_state -> bool))`;
+                ($= :arm_state -> arm_state -> bool), (K F: arm_state -> bool))`
 
 val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -34,7 +34,8 @@ val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
 
 val ARM_IMP_TEMPORAL = Theory.save_thm ("ARM_IMP_TEMPORAL",
    temporal_stateTheory.IMP_TEMPORAL
-   |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`]
+   |> Q.ISPECL [`arm_proj`, `NextStateARM`, `arm_instr`,
+                `(=): arm_state -> arm_state -> bool`, `K F: arm_state -> bool`]
    |> REWRITE_RULE [GSYM ARM_MODEL_def]
    )
 

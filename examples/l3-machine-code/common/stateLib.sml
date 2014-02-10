@@ -813,7 +813,7 @@ in
       let
          val (model_tm, tm) = boolSyntax.dest_eq (Thm.concl model_def)
          val proj_def = case pairSyntax.strip_pair tm of
-                           [a, _, _, _] => get_def a
+                           [a, _, _, _, _] => get_def a
                          | _ => raise ERR "mk_pre_post" "bad model definition"
          val read = read_footprint proj_def comp_defs cpool extras
          val mk_spec_or_temporal_next =

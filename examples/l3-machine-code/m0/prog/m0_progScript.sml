@@ -24,7 +24,7 @@ val m0_instr_def = Define`
 
 val M0_MODEL_def = Define`
   M0_MODEL = (STATE m0_proj, NEXT_REL (=) NextStateM0, m0_instr,
-              ($= :m0_state -> m0_state -> bool))`
+              ($= :m0_state -> m0_state -> bool), K F : m0_state -> bool)`
 
 val M0_IMP_SPEC = Theory.save_thm ("M0_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -34,7 +34,8 @@ val M0_IMP_SPEC = Theory.save_thm ("M0_IMP_SPEC",
 
 val M0_IMP_TEMPORAL_NEXT = Theory.save_thm ("M0_IMP_TEMPORAL_NEXT",
    temporal_stateTheory.IMP_TEMPORAL
-   |> Q.ISPECL [`m0_proj`, `NextStateM0`, `m0_instr`]
+   |> Q.ISPECL [`m0_proj`, `NextStateM0`, `m0_instr`,
+                `(=) : m0_state -> m0_state -> bool`, `K F : m0_state -> bool`]
    |> REWRITE_RULE [GSYM M0_MODEL_def]
    )
 

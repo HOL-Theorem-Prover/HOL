@@ -9,14 +9,16 @@ val op \\ = op THEN;
 (* ------------------------------------------------------------------------ *)
 
 val TEMPORAL_NEXT_def = Define`
-   TEMPORAL_NEXT model p c q =
-   TEMPORAL model c (T_IMPLIES (NOW p) (NEXT (NOW q)))`
+   TEMPORAL_NEXT
+      ((to_set,next,instr,less,avoid): ('a, 'b, 'c) processor) p c q =
+   TEMPORAL (to_set,next,instr,$=,K F) c (T_IMPLIES (NOW p) (NEXT (NOW q)))`
 
 (* ------------------------------------------------------------------------ *)
 
-val INIT = strip_tac
-           \\ `?to_set next instr less. x = (to_set,next,instr,less)`
-           by metis_tac [pairTheory.PAIR]
+val INIT =
+   strip_tac
+   \\ `?to_set next instr less avoid. x = (to_set,next,instr,less,avoid)`
+   by metis_tac [pairTheory.PAIR]
 
 val TEMPORAL_NEXT_MOVE_COND = Q.store_thm("TEMPORAL_NEXT_MOVE_COND",
    `!x p c q g.
@@ -64,8 +66,8 @@ val SPLIT_STATE_cor = METIS_PROVE [SPLIT_STATE]
      ?u v. SPLIT (STATE m s) (u, v) /\ p u /\ (\v. v = FRAME_STATE m y s) v``
 
 val TEMPORAL_STATE_SEMANTICS = Q.store_thm("TEMPORAL_STATE_SEMANTICS",
-   `!m next instr p q.
-       TEMPORAL_NEXT (STATE m, next, instr, (=)) p {} q =
+   `!m next instr less avoid p q.
+       TEMPORAL_NEXT (STATE m, next, instr, less, avoid) p {} q =
        !state y seq.
           p (SELECT_STATE m y (seq 0)) /\ rel_sequence next seq state ==>
           q (SELECT_STATE m y (seq 1)) /\
@@ -85,12 +87,12 @@ val TEMPORAL_STATE_SEMANTICS = Q.store_thm("TEMPORAL_STATE_SEMANTICS",
    )
 
 val IMP_TEMPORAL = Q.prove(
-   `!m next instr p q.
+   `!m next instr less avoid p q.
        (!y s.
           p (SELECT_STATE m y s) ==>
           ?v. (next s = SOME v) /\ q (SELECT_STATE m y v) /\
               (FRAME_STATE m y s = FRAME_STATE m y v)) ==>
-       TEMPORAL_NEXT (STATE m, NEXT_REL (=) next, instr, (=)) p {} q`,
+       TEMPORAL_NEXT (STATE m, NEXT_REL (=) next, instr, less, avoid) p {} q`,
    rewrite_tac [TEMPORAL_STATE_SEMANTICS]
    \\ REPEAT strip_tac
    \\ `NEXT_REL (=) next (seq 0) (seq (SUC 0))`
@@ -122,21 +124,21 @@ val TEMPORAL_NEXT_CODE = Q.store_thm("TEMPORAL_NEXT_CODE",
    )
 
 val TEMPORAL_MOVE_CODE = Q.store_thm("TEMPORAL_MOVE_CODE",
-   `!to_set next instr less p c q.
-       TEMPORAL_NEXT (to_set,next,instr,less)
+   `!to_set next instr less avoid p c q.
+       TEMPORAL_NEXT (to_set,next,instr,less,avoid)
           (p * CODE_POOL instr c) {} (q * CODE_POOL instr c) =
-    TEMPORAL_NEXT (to_set,next,instr,less) p c q`,
+    TEMPORAL_NEXT (to_set,next,instr,less,avoid) p c q`,
    simp [TEMPORAL_NEXT_def, TEMPORAL_def, T_IMPLIES_def, NOW_def, NEXT_def,
          CODE_POOL_EMP, SEP_CLAUSES]
    )
 
 val IMP_TEMPORAL = Theory.save_thm ("IMP_TEMPORAL",
    IMP_TEMPORAL
-   |> Q.SPECL [`m`, `next`, `instr: 'd -> 'b # 'c -> bool`,
+   |> Q.SPECL [`m`, `next`, `instr: 'd -> 'b # 'c -> bool`, `less`, `avoid`,
                `p * CODE_POOL instr (c: 'd -> bool)`,
                `q * CODE_POOL instr (c: 'd -> bool)`]
    |> REWRITE_RULE [TEMPORAL_MOVE_CODE]
-   |> Q.GENL [`q`, `p`, `c`, `instr`, `next`, `m`]
+   |> Q.GENL [`q`, `p`, `c`, `avoid`, `less`, `instr`, `next`, `m`]
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -168,7 +170,6 @@ val SEP_ARRAY_TEMPORAL_FRAME = Q.store_thm("SEP_ARRAY_TEMPORAL_FRAME",
                         (postfix: 'a word list)``)
    \\ full_simp_tac (srw_ss()++helperLib.star_ss) []
    )
-
 
 (* ------------------------------------------------------------------------ *)
 
