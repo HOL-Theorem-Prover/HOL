@@ -61,7 +61,7 @@ val NextStateMIPS_branch = utilsLib.ustore_thm("NextStateMIPS_branch",
      (next_state.BranchStatus = NONE) ==>
      (NextStateMIPS s =
       SOME (next_state with
-            <| PC := a + 4w;
+            <| PC := a;
                CP0 := next_state.CP0 with
                       Count := next_state.CP0.Count + 1w |>))`,
     lrw [NextStateMIPS_def, Next_def, AddressTranslation_def,
