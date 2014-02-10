@@ -341,6 +341,22 @@ in
   PP.end_block pps
 end
 
+(* Pretty-print the grammar rules *)
+fun print_term_grammar() = let
+  fun tmprint g = snd (print_from_grammars (!the_type_grammar,g))
+  fun ppaction pps () = let
+    open PP
+  in
+    begin_block pps CONSISTENT 0;
+    prettyprint_grammar_rules tmprint pps (!the_term_grammar);
+    add_newline pps;
+    end_block pps
+  end
+in
+  print (HOLPP.pp_to_string (!Globals.linewidth) ppaction ())
+end
+
+
 (* Pretty-printing terms and types without certain overloads or abbreviations *)
 
 fun overload_info_for s = let

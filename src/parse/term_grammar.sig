@@ -239,6 +239,9 @@ sig
   val rules_for : grammar -> string -> (int * user_delta) list
 
 
+  val prettyprint_grammar_rules
+                          : (grammar -> ppstream -> term -> unit) ->
+                            ppstream -> grammar -> unit
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
                             ppstream -> grammar -> unit
 

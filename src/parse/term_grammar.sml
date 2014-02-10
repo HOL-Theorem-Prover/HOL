@@ -1091,7 +1091,7 @@ end
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
-fun prettyprint_grammar tmprint pstrm (G :grammar) = let
+fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
   open Portable
   val {add_string, add_break, begin_block, end_block,
        add_newline,...} = with_ppstream pstrm
@@ -1231,6 +1231,15 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     pprint_grule rule;
     end_block()
   end
+
+in
+  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G)
+end
+
+fun prettyprint_grammar tmprint pstrm (G :grammar) = let
+  open Portable
+  val {add_string, add_break, begin_block, end_block,
+       add_newline,...} = with_ppstream pstrm
   fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
     #Name (Term.dest_thy_const (hd (#actual_ops r))) = k
@@ -1296,11 +1305,10 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
                (Net.itnet cons printers []);
        end_block())
   end
-
 in
   begin_block CONSISTENT 0;
   (* rules *)
-  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G);
+  prettyprint_grammar_rules tmprint pstrm G;
   add_newline();
   (* known constants *)
   add_string "Known constants:";

@@ -69,6 +69,8 @@ signature Parse = sig
 
   val term_grammar : unit -> term_grammar.grammar
 
+  val print_term_grammar : unit -> unit
+
   (* the following functions modify the grammar, and do so in such a
      way that the exported theory will have the same grammar  *)
 
