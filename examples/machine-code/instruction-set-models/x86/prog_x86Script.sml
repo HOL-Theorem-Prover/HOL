@@ -182,7 +182,8 @@ val X86_INSTR_def    = Define `
      xMem a (SOME (c,X86_INSTR_PERM b)) T INSERT X86_INSTR (a+1w,(cs,b)))`;
 
 val X86_MODEL_def = Define `
-  X86_MODEL = (x86_2set, X86_NEXT_REL, X86_INSTR, X86_ICACHE)`;
+  X86_MODEL = (x86_2set, X86_NEXT_REL, X86_INSTR, X86_ICACHE,
+               (K F):x86_state->bool)`;
 
 val xCODE_def = Define `xCODE = CODE_POOL X86_INSTR`;
 
@@ -204,7 +205,7 @@ val X86_SPEC_SEMANTICS = store_thm("X86_SPEC_SEMANTICS",
     !y s t1 seq.
       p (x86_2set' y t1) /\ X86_ICACHE t1 s /\ rel_sequence X86_NEXT_REL seq s ==>
       ?k t2. q (x86_2set' y t2) /\ X86_ICACHE t2 (seq k) /\ (x86_2set'' y t1 = x86_2set'' y t2)``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,X86_MODEL_def,STAR_def,SEP_REFINE_def]
+  SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,X86_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THENL [
     FULL_SIMP_TAC bool_ss [SPLIT_x86_2set_EXISTS]
     \\ NTAC 3 (POP_ASSUM MP_TAC) \\ ASM_SIMP_TAC std_ss []

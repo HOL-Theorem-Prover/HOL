@@ -128,15 +128,12 @@ val ss = rewrites [x64_exec_def, ZREAD_REG_def, ZREAD_EFLAG_def,
   read_m16_seq_def, write_m16_seq_def, read_m64_seq_def,
   write_m64_seq_def, APPLY_UPDATE_THM, WORD_EQ_ADD_LCANCEL,
   x64_address_lemma, write_reg_seq_def, jump_to_ea_def,
-  read_stack_seq_def, write_stack_seq_def, write_stack_def, read_stack_def,
   x64_exec_push_def, x64_exec_push_rip_def, Zrm_is_memory_access_def,
   write_eflag_seq_def, if_some_lemma, ZREAD_CLAUSES,
   call_dest_from_ea_def, Zbinop_name_distinct, get_ea_address_def,
   erase_eflags_def, write_result_erase_eflags_def,restrict_size_def,
   word_signed_overflow_add_def, word_signed_overflow_sub_def, w2w_n2w,
   bitTheory.BITS_THM, value_width_def, word_size_msb_def,
-  write_reg_not_rsp_def, rsp_add_imm_aux_def,
-  x64_exec_pop_aux_def, x64_exec_push_aux_def, x64_exec_drop_def,
   EVAL ``dimindex (:8) <= dimindex (:64)``,
   EVAL ``dimindex (:16) <= dimindex (:64)``,
   EVAL ``dimindex (:32) <= dimindex (:64)``]
@@ -276,7 +273,6 @@ fun x64_test_aux i input output = let
     THEN ASM_SIMP_TAC std_ss [ZREAD_CLAUSES,optionTheory.THE_DEF,Zreg_distinct,Zeflags_distinct]
     THEN STRIP_ASSUME_TAC x64_state_EXPAND
     THEN FULL_SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_MEM_def,ZREAD_RIP_def,
-           ZWRITE_STACK_def,ZREAD_STACK_def,
            ZWRITE_MEM_def,ZWRITE_REG_def,ZWRITE_EFLAG_def,ZWRITE_RIP_def, APPLY_UPDATE_THM,Zreg_distinct]
     THEN EVAL_TAC)
   val result = REWRITE_RULE [GSYM AND_IMP_INTRO] result

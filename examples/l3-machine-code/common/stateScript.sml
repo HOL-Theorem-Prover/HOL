@@ -61,7 +61,7 @@ val SPLIT_STATE_cor = METIS_PROVE [SPLIT_STATE]
 
 val R_STATE_SEMANTICS = Q.store_thm ("R_STATE_SEMANTICS",
    `!m next instr r p q.
-       SPEC (STATE m, next, instr, r) p {} q =
+       SPEC (STATE m, next, instr, r, K F) p {} q =
        !y s t1 seq.
           p (SELECT_STATE m y t1) /\ r t1 s /\ rel_sequence next seq s ==>
           ?k t2. q (SELECT_STATE m y t2) /\ r t2 (seq k) /\
@@ -84,7 +84,7 @@ val R_STATE_SEMANTICS = Q.store_thm ("R_STATE_SEMANTICS",
 
 val STATE_SEMANTICS = Q.store_thm ("STATE_SEMANTICS",
    `!m next instr p q.
-       SPEC (STATE m, next, instr, $=) p {} q =
+       SPEC (STATE m, next, instr, $=, K F) p {} q =
        !y s seq.
           p (SELECT_STATE m y s) /\ rel_sequence next seq s ==>
           ?k. q (SELECT_STATE m y (seq k)) /\
@@ -100,7 +100,7 @@ val IMP_R_SPEC = Q.prove(
              p (SELECT_STATE m y s) /\
              (next s = SOME v) /\ q (SELECT_STATE m y t2) /\ r t2 v /\
              (FRAME_STATE m y t1 = FRAME_STATE m y t2)) ==>
-       SPEC (STATE m, NEXT_REL r next, instr, r) p {} q`,
+       SPEC (STATE m, NEXT_REL r next, instr, r, K F) p {} q`,
    rewrite_tac [R_STATE_SEMANTICS, relationTheory.PreOrder,
                 relationTheory.reflexive_def, relationTheory.transitive_def]
    \\ REPEAT strip_tac
@@ -135,7 +135,7 @@ val IMP_SPEC = Q.prove(
           p (SELECT_STATE m y s) ==>
           ?v. (next s = SOME v) /\ q (SELECT_STATE m y v) /\
               (FRAME_STATE m y s = FRAME_STATE m y v)) ==>
-       SPEC (STATE m, NEXT_REL (=) next, instr, (=)) p {} q`,
+       SPEC (STATE m, NEXT_REL (=) next, instr, (=), K F) p {} q`,
    REPEAT strip_tac
    \\ qspec_then `(=)` (match_mp_tac o REWRITE_RULE [PreOrder_EQ]) IMP_R_SPEC
    \\ metis_tac [])

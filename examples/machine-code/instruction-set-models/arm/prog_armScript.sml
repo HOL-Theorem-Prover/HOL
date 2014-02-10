@@ -204,7 +204,8 @@ val ARM_INSTR_def    = Define `ARM_INSTR (a,w:word32) =
     aMem (a+0w) (( 7 ><  0) w) }`;
 
 val ARM_MODEL_def = Define `
-  ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. x = (y:arm_state)))`;
+  ARM_MODEL = (arm2set, ARM_NEXT_REL, ARM_INSTR, (\x y. x = (y:arm_state)),
+               (K F):arm_state -> bool)`;
 
 val aST_LIST_def = Define `
   (aST_LIST a [] = emp) /\
@@ -222,7 +223,7 @@ val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
   ``SPEC ARM_MODEL p {} q =
     !y s seq. p (arm2set' y s) /\ rel_sequence ARM_NEXT_REL seq s ==>
               ?k. q (arm2set' y (seq k)) /\ (arm2set'' y s = arm2set'' y (seq k))``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def,SEP_REFINE_def]
+  SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS] \\ METIS_TAC [])
   \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
@@ -377,11 +378,10 @@ val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   \\ FULL_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
   \\ METIS_TAC []);
 
-val ARM_SPEC_CODE = (RW [GSYM ARM_MODEL_def] o SIMP_RULE std_ss [ARM_MODEL_def] o prove)
-  (``SPEC ARM_MODEL (CODE_POOL (FST (SND (SND ARM_MODEL))) c * p) {}
-                    (CODE_POOL (FST (SND (SND ARM_MODEL))) c * q) =
-    SPEC ARM_MODEL p c q``,
-  REWRITE_TAC [SPEC_CODE]);
+val ARM_SPEC_CODE =
+  SPEC_CODE |> ISPEC ``ARM_MODEL``
+  |> SIMP_RULE std_ss [ARM_MODEL_def]
+  |> RW [GSYM ARM_MODEL_def];
 
 val IMP_ARM_SPEC_LEMMA = prove(
   ``!p q.

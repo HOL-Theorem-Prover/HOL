@@ -8,26 +8,27 @@ infix \\ val op \\ = op THEN;
 (* --- definitions --- *)
 
 val TEMPORAL_def = Define `
-  TEMPORAL ((to_set,next,instr,less): ('a,'b,'c) processor) c exp =
+  TEMPORAL ((to_set,next,instr,less,allow): ('a,'b,'c) processor) c exp =
    !state seq r.
      rel_sequence next seq state ==>
-     let f p state = SEP_REFINE (p * CODE_POOL instr c * r) less to_set state in
+     let f p state = SEP_REFINE (p * CODE_POOL instr c * r) less to_set state
+                     \/ allow state in
         exp f seq`
 
 val f = ``f: 'a set set -> 'b set``
 val seq = ``seq: num -> 'b``
 
-val NOW_def        = Define `NOW p ^f seq       = f p (seq 0)`
-val NEXT_def       = Define `NEXT p ^f seq      = p f (\n. seq (n + 1:num))`
-val EVENTUALLY_def = Define`EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))`
-val ALWAYS_def     = Define`ALWAYS p ^f seq     = !k. p f (\n. seq (n + k:num))`
+val NOW_def        = Define `NOW p ^f seq        = f p (seq 0)`
+val NEXT_def       = Define `NEXT p ^f seq       = p f (\n. seq (n + 1:num))`
+val EVENTUALLY_def = Define `EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))`
+val ALWAYS_def     = Define `ALWAYS p ^f seq      = !k. p f (\n. seq (n + k:num))`
 
 val T_AND_def     = Define `T_AND p q ^f ^seq = p f seq /\ q f seq`
 val T_IMPLIES_def = Define `T_IMPLIES p q ^f ^seq = p f seq ==> q f seq`
 
 (* --- theorems --- *)
 
-val INIT = `?to_set next instr less. model = (to_set,next,instr,less)`
+val INIT = `?to_set next instr less allow. model = (to_set,next,instr,less,allow)`
            by METIS_TAC [PAIR]
 
 val SPEC_EQ_TEMPORAL = Q.store_thm("SPEC_EQ_TEMPORAL",
@@ -39,7 +40,7 @@ val SPEC_EQ_TEMPORAL = Q.store_thm("SPEC_EQ_TEMPORAL",
          NOW_def, EVENTUALLY_def, rel_sequence_def]
    \\ SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM, GSYM rel_sequence_def]
    \\ METIS_TAC []
-   )
+   );
 
 val TEMPORAL_ALWAYS = Q.store_thm("TEMPORAL_ALWAYS",
    `TEMPORAL model code (ALWAYS p) <=> TEMPORAL model code p`,

@@ -158,7 +158,8 @@ val PPC_INSTR_def    = Define `PPC_INSTR (a,w:word32) =
     pMem (a+3w) (SOME (( 7 ><  0) w)) }`;
 
 val PPC_MODEL_def = Define `
-  PPC_MODEL = (ppc2set, PPC_NEXT_REL, PPC_INSTR, (\x y. (x = (y:ppc_state))))`;
+  PPC_MODEL = (ppc2set, PPC_NEXT_REL, PPC_INSTR, (\x y. (x = (y:ppc_state))),
+               (K F):ppc_state -> bool)`;
 
 val pLINK_REGISTER_def = Define `pLINK_REGISTER x  = pLR x * cond (ALIGNED x)`;
 
@@ -172,7 +173,7 @@ val PPC_SPEC_SEMANTICS = store_thm("PPC_SPEC_SEMANTICS",
   ``SPEC PPC_MODEL p {} q =
     !y s seq. p (ppc2set' y s) /\ rel_sequence PPC_NEXT_REL seq s ==>
               ?k. q (ppc2set' y (seq k)) /\ (ppc2set'' y s = ppc2set'' y (seq k))``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,PPC_MODEL_def,STAR_def,SEP_REFINE_def]
+  SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,PPC_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_ppc2set_EXISTS] \\ METIS_TAC [])
   \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o

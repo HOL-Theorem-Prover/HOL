@@ -23,7 +23,6 @@ val T64 = ``18446744073709551616:num``
 val _ = Hol_datatype `
   x64_el =  zReg of Zreg => word64
           | zStatus of Zeflags => bool option
-          | zStack of word64 list
           | zRIP of word64
           | zMem of word64 => ((word8 # x64_permission set) option) => bool `;
 
@@ -38,14 +37,13 @@ val _ = Parse.type_abbrev("x64_set",``:x64_el set``);
 (* ----------------------------------------------------------------------------- *)
 
 val x64_2set'_def = Define `
-  x64_2set' (rs,st,ep,es,ms) (r,e,s,t,m,i) =
+  x64_2set' (rs,st,ep,ms) (r,e,s,m,i) =
     IMAGE (\a. zReg a (r a)) rs UNION
     IMAGE (\a. zStatus a (s a)) st UNION
     (if ep then {zRIP e} else {}) UNION
-    (if es then {zStack t} else {}) UNION
-    IMAGE (\a. zMem a (m a) (X64_ACCURATE a (r,e,s,t,m,i))) ms`;
+    IMAGE (\a. zMem a (m a) (X64_ACCURATE a (r,e,s,m,i))) ms`;
 
-val x64_2set_def   = Define `x64_2set s = x64_2set' (UNIV,UNIV,T,T,UNIV) s`;
+val x64_2set_def   = Define `x64_2set s = x64_2set' (UNIV,UNIV,T,UNIV) s`;
 val x64_2set''_def = Define `x64_2set'' x s = x64_2set s DIFF x64_2set' x s`;
 
 (* theorems *)
@@ -53,8 +51,8 @@ val x64_2set''_def = Define `x64_2set'' x s = x64_2set s DIFF x64_2set' x s`;
 val x64_2set'_SUBSET_x64_2set = prove(
   ``!y s. x64_2set' y s SUBSET x64_2set s``,
   STRIP_TAC \\ STRIP_TAC
-  \\ `?rs st ep es ms. y = (rs,st,ep,es,ms)` by METIS_TAC [PAIR]
-  \\ `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
+  \\ `?rs st ep ms. y = (rs,st,ep,ms)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [SUBSET_DEF,x64_2set'_def,x64_2set_def,IN_IMAGE,IN_UNION,IN_UNIV]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [NOT_IN_EMPTY]);
@@ -75,9 +73,9 @@ val SUBSET_x64_2set = prove(
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [x64_2set'_SUBSET_x64_2set]
   \\ Q.EXISTS_TAC `({ a | a | ?x. zReg a x IN u },{ a | a | ?x. zStatus a x IN u },
-                    (?x. zRIP x IN u),(?x. zStack x IN u),
+                    (?x. zRIP x IN u),
                     { a | a | ?x y. zMem a x y IN u })`
-  \\ `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [x64_2set'_def,x64_2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
   \\ STRIP_TAC \\ ASM_REWRITE_TAC [] \\ EQ_TAC \\ REPEAT STRIP_TAC
@@ -96,38 +94,35 @@ val SPLIT_x64_2set_EXISTS = prove(
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_DIFF,IN_UNION,DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER]
   \\ METIS_TAC []);
 
-val X64_GET_MEMORY_def = Define `X64_GET_MEMORY (r,e,t,t',m,i) = m`;
+val X64_GET_MEMORY_def = Define `X64_GET_MEMORY (r,e,t,m,i) = m`;
 
 val IN_x64_2set = prove(``
   (!r x s. zReg r x IN (x64_2set s) = (x = ZREAD_REG r s)) /\
-  (!r x s. zReg r x IN (x64_2set' (rs,st,e,es,ms) s) = (x = ZREAD_REG r s) /\ r IN rs) /\
-  (!r x s. zReg r x IN (x64_2set'' (rs,st,e,es,ms) s) = (x = ZREAD_REG r s) /\ ~(r IN rs)) /\
+  (!r x s. zReg r x IN (x64_2set' (rs,st,e,ms) s) = (x = ZREAD_REG r s) /\ r IN rs) /\
+  (!r x s. zReg r x IN (x64_2set'' (rs,st,e,ms) s) = (x = ZREAD_REG r s) /\ ~(r IN rs)) /\
   (!a x s. zStatus a x IN (x64_2set s) = (x = ZREAD_EFLAG a s)) /\
-  (!a x s. zStatus a x IN (x64_2set' (rs,st,e,es,ms) s) = (x = ZREAD_EFLAG a s) /\ a IN st) /\
-  (!a x s. zStatus a x IN (x64_2set'' (rs,st,e,es,ms) s) = (x = ZREAD_EFLAG a s) /\ ~(a IN st)) /\
+  (!a x s. zStatus a x IN (x64_2set' (rs,st,e,ms) s) = (x = ZREAD_EFLAG a s) /\ a IN st) /\
+  (!a x s. zStatus a x IN (x64_2set'' (rs,st,e,ms) s) = (x = ZREAD_EFLAG a s) /\ ~(a IN st)) /\
   (!x s. zRIP x IN (x64_2set s) = (x = ZREAD_RIP s)) /\
-  (!x s. zRIP x IN (x64_2set' (rs,st,e,es,ms) s) = (x = ZREAD_RIP s) /\ e) /\
-  (!x s. zRIP x IN (x64_2set'' (rs,st,e,es,ms) s) = (x = ZREAD_RIP s) /\ ~e) /\
-  (!x s. zStack x IN (x64_2set s) = (x = ZREAD_STACK s)) /\
-  (!x s. zStack x IN (x64_2set' (rs,st,e,es,ms) s) = (x = ZREAD_STACK s) /\ es) /\
-  (!x s. zStack x IN (x64_2set'' (rs,st,e,es,ms) s) = (x = ZREAD_STACK s) /\ ~es) /\
+  (!x s. zRIP x IN (x64_2set' (rs,st,e,ms) s) = (x = ZREAD_RIP s) /\ e) /\
+  (!x s. zRIP x IN (x64_2set'' (rs,st,e,ms) s) = (x = ZREAD_RIP s) /\ ~e) /\
   (!p x y s. zMem p x y IN (x64_2set s) = (X64_GET_MEMORY s p = x) /\ (y = X64_ACCURATE p s)) /\
-  (!p x y s. zMem p x y IN (x64_2set' (rs,st,e,es,ms) s) = (X64_GET_MEMORY s p = x) /\ (y = X64_ACCURATE p s) /\ p IN ms) /\
-  (!p x y s. zMem p x y IN (x64_2set'' (rs,st,e,es,ms) s) = (X64_GET_MEMORY s p = x) /\ (y = X64_ACCURATE p s) /\ ~(p IN ms))``,
+  (!p x y s. zMem p x y IN (x64_2set' (rs,st,e,ms) s) = (X64_GET_MEMORY s p = x) /\ (y = X64_ACCURATE p s) /\ p IN ms) /\
+  (!p x y s. zMem p x y IN (x64_2set'' (rs,st,e,ms) s) = (X64_GET_MEMORY s p = x) /\ (y = X64_ACCURATE p s) /\ ~(p IN ms))``,
   REPEAT STRIP_TAC
-  \\ `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR] \\ ASM_SIMP_TAC std_ss []
+  \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR] \\ ASM_SIMP_TAC std_ss []
   \\ SRW_TAC [] [x64_2set'_def,x64_2set''_def,x64_2set_def,IN_UNION,
        IN_INSERT,NOT_IN_EMPTY,IN_DIFF,PUSH_IN_INTO_IF,ZREAD_REG_def,
-       ZREAD_RIP_def,ZREAD_EFLAG_def,X64_GET_MEMORY_def,ZREAD_STACK_def]
+       ZREAD_RIP_def,ZREAD_EFLAG_def,X64_GET_MEMORY_def]
   \\ METIS_TAC []);
 
 val x64_2set''_11 = prove(
   ``!y y2 s s2. (x64_2set'' y2 s2 = x64_2set'' y s) ==> (y = y2)``,
   REPEAT STRIP_TAC \\ CCONTR_TAC
-  \\ `?rs st ep es m st. y = (rs,st,ep,es,m)` by METIS_TAC [PAIR]
-  \\ `?rs2 st2 ep2 es2 m2. y2 = (rs2,st2,ep2,es2,m2)` by METIS_TAC [PAIR]
-  \\ `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
-  \\ `?r2 e2 t2 t'2 m2 i2. s2 = (r2,e2,t2,t'2,m2,i2)` by METIS_TAC [PAIR]
+  \\ `?rs st ep m st. y = (rs,st,ep,m)` by METIS_TAC [PAIR]
+  \\ `?rs2 st2 ep2 m2. y2 = (rs2,st2,ep2,m2)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
+  \\ `?r2 e2 t2 m2 i2. s2 = (r2,e2,t2,m2,i2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ,EXTENSION]
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.SPEC `zReg xi yi`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
@@ -135,22 +130,19 @@ val x64_2set''_11 = prove(
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `ei` o Q.SPEC `zRIP ei`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC [])
-  THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `ex` o Q.SPEC `zStack ex`)
-    \\ FULL_SIMP_TAC std_ss [IN_x64_2set,ZREAD_STACK_def] \\ METIS_TAC [])
   THEN (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.GEN `xi` o Q.GEN `yi` o Q.GEN `zi` o Q.SPEC `zMem xi yi zi`)
     \\ FULL_SIMP_TAC std_ss [IN_x64_2set] \\ METIS_TAC []));
 
 val DELETE_x64_2set = prove(``
-  (!a. (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) DELETE zReg a (r a) =
-       (x64_2set' (rs DELETE a,st,ei,es,ms) (r,e,s,t,m,i))) /\
-  (!c. (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) DELETE zStatus c (s c) =
-       (x64_2set' (rs,st DELETE c,ei,es,ms) (r,e,s,t,m,i))) /\
-  (!c. (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) DELETE zRIP e =
-       (x64_2set' (rs,st,F,es,ms) (r,e,s,t,m,i))) /\
-  (!c. (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) DELETE zStack t =
-       (x64_2set' (rs,st,ei,F,ms) (r,e,s,t,m,i))) /\
-  (!b. (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) DELETE zMem b (m b) (X64_ACCURATE b (r,e,s,t,m,i)) =
-       (x64_2set' (rs,st,ei,es,ms DELETE b) (r,e,s,t,m,i)))``,
+  (!a. (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) DELETE zReg a (r a) =
+       (x64_2set' (rs DELETE a,st,ei,ms) (r,e,s,m,i))) /\
+  (!c. (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) DELETE zStatus c (s c) =
+       (x64_2set' (rs,st DELETE c,ei,ms) (r,e,s,m,i))) /\
+  (!c. (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) DELETE zRIP e =
+       (x64_2set' (rs,st,F,ms) (r,e,s,m,i))) /\
+  (!b. (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) DELETE
+         zMem b (m b) (X64_ACCURATE b (r,e,s,m,i)) =
+       (x64_2set' (rs,st,ei,ms DELETE b) (r,e,s,m,i)))``,
   REPEAT STRIP_TAC
   \\ SRW_TAC [] [x64_2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,
        EXISTS_OR_THM,IN_DELETE,IN_INSERT,NOT_IN_EMPTY,PUSH_IN_INTO_IF,
@@ -158,9 +150,9 @@ val DELETE_x64_2set = prove(``
   \\ Cases_on `x` \\ SRW_TAC [] [] \\ METIS_TAC []);
 
 val EMPTY_x64_2set = prove(``
-  (x64_2set' (rs,st,e,es,ms) s = {}) = (rs = {}) /\ (ms = {}) /\ (st = {}) /\ ~e /\ ~es``,
+  (x64_2set' (rs,st,e,ms) s = {}) = (rs = {}) /\ (ms = {}) /\ (st = {}) /\ ~e``,
   REPEAT STRIP_TAC
-  \\ `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR] \\ ASM_SIMP_TAC std_ss []
+  \\ `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR] \\ ASM_SIMP_TAC std_ss []
   \\ SRW_TAC [] [x64_2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,
        EXISTS_OR_THM,IN_DELETE,IN_INSERT,NOT_IN_EMPTY,PUSH_IN_INTO_IF]
   \\ SIMP_TAC std_ss [x64_el_distinct,x64_el_11] \\ METIS_TAC [PAIR,FST]);
@@ -173,7 +165,6 @@ val EMPTY_x64_2set = prove(``
 val zR1_def = Define `zR1 a x = SEP_EQ {zReg a x}`;
 val zM1_def = Define `zM1 a x b = SEP_EQ {zMem a x b}`;
 val zS1_def = Define `zS1 a x = SEP_EQ {zStatus a x}`;
-val zSS_def = Define `zSS xs = SEP_EQ {zStack xs}`
 val zPC_def = Define `zPC x = SEP_EQ {zRIP x}`;
 
 val zS_def = Define `
@@ -189,8 +180,11 @@ val X64_INSTR_def    = Define `
   (X64_INSTR (a,((c:word8)::cs)) =
      zMem a (SOME (c,X64_INSTR_PERM T)) T INSERT X64_INSTR (a+1w,(cs)))`;
 
+val X64_STACK_FULL_def = Define `
+  X64_STACK_FULL ((r,e,s,m,i):x64_state) = (r zGhost_stack_top = r RSP)`;
+
 val X64_MODEL_def = Define `
-  X64_MODEL = (x64_2set, X64_NEXT_REL, X64_INSTR, X64_ICACHE)`;
+  X64_MODEL = (x64_2set, X64_NEXT_REL, X64_INSTR, X64_ICACHE, X64_STACK_FULL)`;
 
 val zCODE_def = Define `zCODE = CODE_POOL X64_INSTR`;
 
@@ -233,56 +227,61 @@ val lemma =
 val X64_SPEC_SEMANTICS = store_thm("X64_SPEC_SEMANTICS",
   ``SPEC X64_MODEL p {} q =
     !y s t1 seq.
-      p (x64_2set' y t1) /\ X64_ICACHE t1 s /\ rel_sequence X64_NEXT_REL seq s ==>
-      ?k t2. q (x64_2set' y t2) /\ X64_ICACHE t2 (seq k) /\ (x64_2set'' y t1 = x64_2set'' y t2)``,
-  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_def,X64_MODEL_def,STAR_def,SEP_REFINE_def]
-  \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THENL [
-    FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
-    \\ NTAC 3 (POP_ASSUM MP_TAC) \\ ASM_SIMP_TAC std_ss []
-    \\ REPEAT STRIP_TAC \\ RES_TAC
-    \\ Q.EXISTS_TAC `k` \\ Q.EXISTS_TAC `t2`
-    \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [],
-    FULL_SIMP_TAC std_ss [METIS_PROVE [] ``((?x. P x) ==> b) = !x. P x ==> b``,
-                          METIS_PROVE [] ``(b /\ (?x. P x)) = ?x. b /\ P x``]
-    \\ FULL_SIMP_TAC std_ss [GSYM AND_IMP_INTRO]
-    \\ IMP_RES_TAC lemma \\ RES_TAC
+      p (x64_2set' y t1) /\ X64_ICACHE t1 s /\ rel_sequence X64_NEXT_REL seq s /\
+      ~(X64_STACK_FULL s) ==>
+      ?k t2. q (x64_2set' y t2) /\ X64_ICACHE t2 (seq k) /\
+             (x64_2set'' y t1 = x64_2set'' y t2) \/ X64_STACK_FULL (seq k)``,
+  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_thm,X64_MODEL_def,STAR_def,
+    SEP_REFINE_def,PULL_EXISTS]
+  \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THEN1
+   (FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
+    \\ NTAC 4 (POP_ASSUM MP_TAC) \\ ASM_SIMP_TAC std_ss []
+    \\ REPEAT STRIP_TAC
+    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
+    \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC THEN1 METIS_TAC []
+    \\ Q.EXISTS_TAC `k` \\ DISJ1_TAC \\ Q.EXISTS_TAC `t2`
+    \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
+  THEN1
+   (IMP_RES_TAC lemma \\ FULL_SIMP_TAC std_ss [PULL_FORALL]
     \\ FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
-    \\ IMP_RES_TAC x64_2set''_11 \\ METIS_TAC []]);
+    \\ IMP_RES_TAC x64_2set''_11
+    \\ FULL_SIMP_TAC std_ss [PULL_EXISTS]
+    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`\x. x = (x64_2set'' y t1)`,
+          `t1`,`seq`,`y`]) \\ FULL_SIMP_TAC std_ss []
+    \\ REVERSE (REPEAT STRIP_TAC) THEN1 (METIS_TAC [])
+    \\ Q.LIST_EXISTS_TAC [`i`,`s''`]
+    \\ IMP_RES_TAC x64_2set''_11
+    \\ FULL_SIMP_TAC std_ss []));
 
 
 (* ----------------------------------------------------------------------------- *)
 (* Theorems for construction of |- SPEC X64_MODEL ...                            *)
 (* ----------------------------------------------------------------------------- *)
 
-
-
 val STAR_x64_2set = store_thm("STAR_x64_2set",
-  ``((zR1 a x * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (x = r a) /\ a IN rs /\ p (x64_2set' (rs DELETE a,st,ei,es,ms) (r,e,s,t,m,i))) /\
-    ((zS1 c z * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (z = s c) /\ c IN st /\ p (x64_2set' (rs,st DELETE c,ei,es,ms) (r,e,s,t,m,i))) /\
-    ((zPC q * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (q = e) /\ ei /\ p (x64_2set' (rs,st,F,es,ms) (r,e,s,t,m,i))) /\
-    ((zSS v * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (v = t) /\ es /\ p (x64_2set' (rs,st,ei,F,ms) (r,e,s,t,m,i))) /\
-    ((zM1 b y w * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (y = m b) /\ (w = X64_ACCURATE b (r,e,s,t,m,i)) /\ b IN ms /\ p (x64_2set' (rs,st,ei,es,ms DELETE b) (r,e,s,t,m,i))) /\
-    ((~(zM1 b y) * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      (y = m b) /\ b IN ms /\ p (x64_2set' (rs,st,ei,es,ms DELETE b) (r,e,s,t,m,i))) /\
-    ((cond g * p) (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)) =
-      g /\ p (x64_2set' (rs,st,ei,es,ms) (r,e,s,t,m,i)))``,
+  ``((zR1 a x * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      (x = r a) /\ a IN rs /\ p (x64_2set' (rs DELETE a,st,ei,ms) (r,e,s,m,i))) /\
+    ((zS1 c z * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      (z = s c) /\ c IN st /\ p (x64_2set' (rs,st DELETE c,ei,ms) (r,e,s,m,i))) /\
+    ((zPC q * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      (q = e) /\ ei /\ p (x64_2set' (rs,st,F,ms) (r,e,s,m,i))) /\
+    ((zM1 b y w * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      (y = m b) /\ (w = X64_ACCURATE b (r,e,s,m,i)) /\ b IN ms /\ p (x64_2set' (rs,st,ei,ms DELETE b) (r,e,s,m,i))) /\
+    ((~(zM1 b y) * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      (y = m b) /\ b IN ms /\ p (x64_2set' (rs,st,ei,ms DELETE b) (r,e,s,m,i))) /\
+    ((cond g * p) (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+      g /\ p (x64_2set' (rs,st,ei,ms) (r,e,s,m,i)))``,
   REPEAT STRIP_TAC
   \\ SIMP_TAC std_ss [SEP_HIDE_def,SEP_CLAUSES]
   \\ SIMP_TAC std_ss [SEP_EXISTS]
-  \\ SIMP_TAC std_ss [zR1_def,zS1_def,zM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,zPC_def,ZREAD_RIP_def,zSS_def,
+  \\ SIMP_TAC std_ss [zR1_def,zS1_def,zM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,zPC_def,ZREAD_RIP_def,
        EMPTY_SUBSET,IN_x64_2set,ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_MEM_def,GSYM DELETE_DEF,
-       X64_GET_MEMORY_def,ZREAD_STACK_def]
-  THEN1 METIS_TAC [DELETE_x64_2set]
+       X64_GET_MEMORY_def]
   THEN1 METIS_TAC [DELETE_x64_2set]
   THEN1 METIS_TAC [DELETE_x64_2set]
   THEN1 METIS_TAC [DELETE_x64_2set]
   \\ Cases_on `y = m b` \\ ASM_SIMP_TAC std_ss []
-  \\ Cases_on `w = X64_ACCURATE b (r,e,s,t,m,i)`
+  \\ Cases_on `w = X64_ACCURATE b (r,e,s,m,i)`
   \\ ASM_SIMP_TAC std_ss [DELETE_x64_2set,AC CONJ_ASSOC CONJ_COMM]);
 
 val CODE_POOL_x64_2set_AUZ_LEMMA = prove(
@@ -294,10 +293,10 @@ val address_list_def = Define `
   (address_list a (SUC n) = a INSERT address_list (a+1w) n)`;
 
 val x64_pool_def = Define `
-  (x64_pool (r,s,e,t,m,i) p ([]) = T) /\
-  (x64_pool (r,s,e,t,m,i) p ((c::cs)) =
-     (SOME (c:word8,X64_INSTR_PERM T) = m p) /\ X64_ACCURATE p (r,s,e,t,m,i) /\
-     x64_pool (r,s,e,t,m,i) (p+1w) (cs))`;
+  (x64_pool (r,s,e,m,i) p ([]) = T) /\
+  (x64_pool (r,s,e,m,i) p ((c::cs)) =
+     (SOME (c:word8,X64_INSTR_PERM T) = m p) /\ X64_ACCURATE p (r,s,e,m,i) /\
+     x64_pool (r,s,e,m,i) (p+1w) (cs))`;
 
 val LEMMA1 = prove(
   ``!p q cs y b. zMem p y b IN X64_INSTR (q,(cs)) ==> ?k. k < LENGTH cs /\ (p = q + n2w k)``,
@@ -322,9 +321,9 @@ val LEMMA2 = prove(
 val CODE_POOL_x64_2set_LEMMA = prove(
   ``!cs p ms.
       LENGTH cs < 5000 ==>
-      (zCODE {(p,(cs))} (x64_2set' (rs,st,ei,es,ms) (r,s,e,t,m,i)) =
-       (ms = address_list p (LENGTH cs)) /\ (rs = {}) /\ (st = {}) /\ ~ei /\ ~es /\
-       x64_pool (r,s,e,t,m,i) p (cs))``,
+      (zCODE {(p,(cs))} (x64_2set' (rs,st,ei,ms) (r,s,e,m,i)) =
+       (ms = address_list p (LENGTH cs)) /\ (rs = {}) /\ (st = {}) /\ ~ei /\
+       x64_pool (r,s,e,m,i) p (cs))``,
   Induct
   \\ FULL_SIMP_TAC bool_ss [INSERT_SUBSET,GSYM DELETE_DEF,
       LENGTH,x64_pool_def, EMPTY_SUBSET,zCODE_def,
@@ -351,8 +350,8 @@ val CODE_POOL_x64_2set_LEMMA = prove(
   \\ ASM_SIMP_TAC bool_ss [CODE_POOL_x64_2set_AUZ_LEMMA,GSYM CONJ_ASSOC,IN_x64_2set,ZREAD_MEM_def]
   \\ Cases_on `SOME (h,X64_INSTR_PERM T) = m p` \\ ASM_REWRITE_TAC []
   \\ REWRITE_TAC [DIFF_INSERT,DELETE_x64_2set,X64_GET_MEMORY_def]
-  \\ Cases_on `X64_ACCURATE p (r,s,e,t,m,i)` \\ ASM_SIMP_TAC std_ss []
-  \\ `zMem p (m p) T = zMem p (m p) (X64_ACCURATE p (r,s,e,t,m,i))` by
+  \\ Cases_on `X64_ACCURATE p (r,s,e,m,i)` \\ ASM_SIMP_TAC std_ss []
+  \\ `zMem p (m p) T = zMem p (m p) (X64_ACCURATE p (r,s,e,m,i))` by
        FULL_SIMP_TAC std_ss [x64_el_11]
   \\ ONCE_ASM_REWRITE_TAC [] \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ REWRITE_TAC [DIFF_INSERT,DELETE_x64_2set,X64_GET_MEMORY_def]
@@ -361,11 +360,11 @@ val CODE_POOL_x64_2set_LEMMA = prove(
 
 val CODE_POOL_x64_2set = store_thm("CODE_POOL_x64_2set",
   ``!cs p ms.
-      zCODE {(p,(cs))} (x64_2set' (rs,st,ei,es,ms) (r,s,e,t,m,i)) =
+      zCODE {(p,(cs))} (x64_2set' (rs,st,ei,ms) (r,s,e,m,i)) =
       if LENGTH cs < 5000 then
-        (ms = address_list p (LENGTH cs)) /\ (rs = {}) /\ (st = {}) /\ ~ei /\ ~es /\
-        x64_pool (r,s,e,t,m,i) p (cs)
-      else zCODE {(p,(cs))} (x64_2set' (rs,st,ei,es,ms) (r,s,e,t,m,i))``,
+        (ms = address_list p (LENGTH cs)) /\ (rs = {}) /\ (st = {}) /\ ~ei /\
+        x64_pool (r,s,e,m,i) p (cs)
+      else zCODE {(p,(cs))} (x64_2set' (rs,st,ei,ms) (r,s,e,m,i))``,
   METIS_TAC [CODE_POOL_x64_2set_LEMMA]);
 
 val icache_revert_def = Define `
@@ -373,14 +372,13 @@ val icache_revert_def = Define `
     if m1 a = m2 a then i1 a else i2 a`;
 
 val X64_ACCURATE_UPDATE = store_thm("X64_ACCURATE_UPDATE",
-  ``(X64_ACCURATE a ((xr =+ yr) r,e,s,t,m,i) = X64_ACCURATE a (r,e,s,t,m,i)) /\
-    (X64_ACCURATE a (r,xe,s,t,m,i) = X64_ACCURATE a (r,e,s,t,m,i)) /\
-    (X64_ACCURATE a (r,e,s,xt,m,i) = X64_ACCURATE a (r,e,s,t,m,i)) /\
-    (X64_ACCURATE a (r,e,(xs =+ ys) s,t,m,i) = X64_ACCURATE a (r,e,s,t,m,i)) /\
-    (~(xm = a) ==> (X64_ACCURATE a (r,e,s,t,(xm =+ ym) m,i) = X64_ACCURATE a (r,e,s,t,m,i))) /\
+  ``(X64_ACCURATE a ((xr =+ yr) r,e,s,m,i) = X64_ACCURATE a (r,e,s,m,i)) /\
+    (X64_ACCURATE a (r,xe,s,m,i) = X64_ACCURATE a (r,e,s,m,i)) /\
+    (X64_ACCURATE a (r,e,(xs =+ ys) s,m,i) = X64_ACCURATE a (r,e,s,m,i)) /\
+    (~(xm = a) ==> (X64_ACCURATE a (r,e,s,(xm =+ ym) m,i) = X64_ACCURATE a (r,e,s,m,i))) /\
     (~(a = b) ==>
-       (X64_ACCURATE a (r,e,s,t,m,icache_revert (m,i) ((b =+ w) m2,i2)) =
-        X64_ACCURATE a (r,e,s,t,m,icache_revert (m,i) (m2,i2))))``,
+       (X64_ACCURATE a (r,e,s,m,icache_revert (m,i) ((b =+ w) m2,i2)) =
+        X64_ACCURATE a (r,e,s,m,icache_revert (m,i) (m2,i2))))``,
   SIMP_TAC std_ss [X64_ACCURATE_def,APPLY_UPDATE_THM,icache_revert_def]);
 
 val icache_revert_ID = store_thm("icache_revert_ID",
@@ -389,27 +387,25 @@ val icache_revert_ID = store_thm("icache_revert_ID",
 
 val icache_revert_update = prove(
   ``b IN ms ==>
-    (x64_2set'' (rs,st,ei,es,ms) (r,x,t,t',m, icache_revert (m,i) ((b =+ w) m2,j)) =
-     x64_2set'' (rs,st,ei,es,ms) (r,x,t,t',m, icache_revert (m,i) (m2,j)))``,
+    (x64_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) ((b =+ w) m2,j)) =
+     x64_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) (m2,j)))``,
   SIMP_TAC std_ss [EXTENSION] \\ STRIP_TAC \\ Cases
   \\ SIMP_TAC std_ss [IN_x64_2set,ZREAD_REG_def,ZREAD_EFLAG_def,APPLY_UPDATE_THM,
        ZREAD_RIP_def,X64_GET_MEMORY_def,X64_ACCURATE_def,
-       icache_revert_def,ZREAD_STACK_def] \\ METIS_TAC []);
+       icache_revert_def] \\ METIS_TAC []);
 
 val UPDATE_x64_2set'' = store_thm("UPDATE_x64_2set''",
   ``(!a x. a IN rs ==>
-      (x64_2set'' (rs,st,ei,es,ms) ((a =+ x) r,e,s,t',m,i) = x64_2set'' (rs,st,ei,es,ms) (r,e,s,t',m,i))) /\
+      (x64_2set'' (rs,st,ei,ms) ((a =+ x) r,e,s,m,i) = x64_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
     (!a x. a IN st ==>
-      (x64_2set'' (rs,st,ei,es,ms) (r,e,(a =+ x) s,t',m,i) = x64_2set'' (rs,st,ei,es,ms) (r,e,s,t',m,i))) /\
+      (x64_2set'' (rs,st,ei,ms) (r,e,(a =+ x) s,m,i) = x64_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
     (!a x y.
-      ((x64_2set'' (rs,st,T,es,ms) (r,x,s,t',m,i) = x64_2set'' (rs,st,T,es,ms) (r,y,s,t',m,i)) = T)) /\
-    (!a x y e1 e2.
-      ((x64_2set'' (rs,st,T,T,ms) (r,e1,s,x,m,i) = x64_2set'' (rs,st,T,T,ms) (r,e2,s,y,m,i)) = T)) /\
+      ((x64_2set'' (rs,st,T,ms) (r,x,s,m,i) = x64_2set'' (rs,st,T,ms) (r,y,s,m,i)) = T)) /\
     (!a x. a IN ms ==>
-      (x64_2set'' (rs,st,ei,es,ms) (r,e,s,t',(a =+ x) m,i) = x64_2set'' (rs,st,ei,es,ms) (r,e,s,t',m,i))) /\
+      (x64_2set'' (rs,st,ei,ms) (r,e,s,(a =+ x) m,i) = x64_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
     (!a x. a IN ms ==>
-      (x64_2set'' (rs,st,ei,es,ms) (r,x,t,t',m, icache_revert (m,i) ((a =+ w) m2,j)) =
-       x64_2set'' (rs,st,ei,es,ms) (r,x,t,t',m, icache_revert (m,i) (m2,j))))``,
+      (x64_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) ((a =+ w) m2,j)) =
+       x64_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) (m2,j))))``,
   SIMP_TAC std_ss [x64_2set_def,x64_2set''_def,x64_2set'_def,EXTENSION,IN_UNION,
        IN_INSERT,NOT_IN_EMPTY,IN_IMAGE,IN_DIFF,IN_UNIV,ZREAD_REG_def,ZREAD_MEM_def,
        ZREAD_EFLAG_def,APPLY_UPDATE_THM,ZREAD_RIP_def,icache_revert_update]
@@ -442,93 +438,93 @@ val IMP_X64_SPEC_LEMMA = prove(
   \\ FULL_SIMP_TAC std_ss [X64_NEXT_REL_def]
   \\ `seq 0 = s` by FULL_SIMP_TAC std_ss [rel_sequence_def]
   \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `1`
-  \\ `X64_ICACHE t1 u` by IMP_RES_TAC X64_ICACHE_TRANS
-  \\ Q.PAT_ASSUM `!y s t1. bbb` (STRIP_ASSUME_TAC o UNDISCH_ALL o
+  \\ Q.PAT_ASSUM `!y s t1. bbb` (MP_TAC o
        RW [GSYM AND_IMP_INTRO] o Q.SPECL [`y`,`u`,`t1`])
-  \\ Q.EXISTS_TAC `t2`
-  \\ FULL_SIMP_TAC std_ss [optionTheory.SOME_11] \\ METIS_TAC []);
+  \\ IMP_RES_TAC X64_ICACHE_TRANS
+  \\ FULL_SIMP_TAC std_ss []
+  \\ REPEAT STRIP_TAC
+  \\ METIS_TAC []);
 
-val X64_ICACHE_EZTRACT_def = Define `
-  X64_ICACHE_EZTRACT ((r1,e1,s1,t1,m1,i1):x64_state) = i1`;
+val X64_ICACHE_EXTRACT_def = Define `
+  X64_ICACHE_EXTRACT ((r1,e1,s1,m1,i1):x64_state) = i1`;
 
 val X64_ICACHE_THM2 = prove(
   ``!s t. X64_ICACHE s t = ?z. t = X64_ICACHE_UPDATE z s``,
   REPEAT STRIP_TAC
-  \\ `?r1 e1 s1 t1 m1 i1. s = (r1,e1,s1,t1,m1,i1)` by METIS_TAC [PAIR]
-  \\ `?r2 e2 s2 t2 m2 i2. t = (r2,e2,s2,t2,m2,i2)` by METIS_TAC [PAIR]
+  \\ `?r1 e1 s1 m1 i1. s = (r1,e1,s1,m1,i1)` by METIS_TAC [PAIR]
+  \\ `?r2 e2 s2 m2 i2. t = (r2,e2,s2,m2,i2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [X64_ICACHE_UPDATE_def,X64_ICACHE_THM]);
 
 val X64_ICACHE_X64_ACCURATE = prove(
-  ``X64_ICACHE (r1,e1,s1,t1,m1,i1) (r1,e1,s1,t1,m1,i2) =
-    !a. X64_ACCURATE a (r1,e1,s1,t1,m1,i2) \/ (i1 a = i2 a)``,
+  ``X64_ICACHE (r1,e1,s1,m1,i1) (r1,e1,s1,m1,i2) =
+    !a. X64_ACCURATE a (r1,e1,s1,m1,i2) \/ (i1 a = i2 a)``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC std_ss [X64_ACCURATE_def,X64_ICACHE_def,FUN_EQ_THM]
          \\ Cases_on `a IN insert` \\ ASM_SIMP_TAC std_ss []
          \\ Cases_on `a IN delete` \\ ASM_SIMP_TAC std_ss [])
   \\ SIMP_TAC std_ss [X64_ICACHE_def,FUN_EQ_THM]
-  \\ Q.EXISTS_TAC `{ a | X64_ACCURATE a (r1,e1,s1,t1,m1,i2) /\ ~(i2 a = NONE) }`
-  \\ Q.EXISTS_TAC `{ a | X64_ACCURATE a (r1,e1,s1,t1,m1,i2) /\ (i2 a = NONE) }`
+  \\ Q.EXISTS_TAC `{ a | X64_ACCURATE a (r1,e1,s1,m1,i2) /\ ~(i2 a = NONE) }`
+  \\ Q.EXISTS_TAC `{ a | X64_ACCURATE a (r1,e1,s1,m1,i2) /\ (i2 a = NONE) }`
   \\ SIMP_TAC std_ss [GSPECIFICATION]
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `addr`)
-  \\ Cases_on `X64_ACCURATE addr (r1,e1,s1,t1,m1,i2)`
+  \\ Cases_on `X64_ACCURATE addr (r1,e1,s1,m1,i2)`
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [X64_ACCURATE_def] \\ METIS_TAC []);
 
 val X64_ICACHE_icache_revert = prove(
-  ``X64_ICACHE (r1,e1,s1,t1,m1,i1) (r1,e1,s1,t1,m1,i2) ==>
-    X64_ICACHE (r2,e2,s2,t2,m2,icache_revert (m1,i1) (m2,i2)) (r2,e2,s2,t2,m2,i2)``,
+  ``X64_ICACHE (r1,e1,s1,m1,i1) (r1,e1,s1,m1,i2) ==>
+    X64_ICACHE (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2)) (r2,e2,s2,m2,i2)``,
   SIMP_TAC std_ss [X64_ICACHE_X64_ACCURATE] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `a`)
   \\ FULL_SIMP_TAC std_ss [X64_ACCURATE_def,icache_revert_def]
   \\ Cases_on `m1 a = m2 a` \\ ASM_SIMP_TAC std_ss []);
 
 val X64_ICACHE_REVERT_def = Define `
-  X64_ICACHE_REVERT (r2,e2,s2,t2,m2,i2) (r1,e1,s1,t1,m1,i1) =
-    (r2,e2,s2,t2,m2,icache_revert (m1,i1) (m2,i2))`;
+  X64_ICACHE_REVERT (r2,e2,s2,m2,i2) (r1,e1,s1,m1,i1) =
+    (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))`;
 
 val X64_ICACHE_X64_ICACHE_REVERT = store_thm("X64_ICACHE_X64_ICACHE_REVERT",
-  ``!s t u. X64_ICACHE s t /\ (X64_ICACHE_EZTRACT t = X64_ICACHE_EZTRACT u) ==>
+  ``!s t u. X64_ICACHE s t /\ (X64_ICACHE_EXTRACT t = X64_ICACHE_EXTRACT u) ==>
             X64_ICACHE (X64_ICACHE_REVERT u s) u``,
   NTAC 3 STRIP_TAC
-  \\ `?r1 e1 s1 t1 m1 i1. s = (r1,e1,s1,t1,m1,i1)` by METIS_TAC [PAIR]
-  \\ `?r2 e2 s2 t2 m2 i2. t = (r2,e2,s2,t2,m2,i2)` by METIS_TAC [PAIR]
-  \\ `?r3 e3 s3 t3 m3 i3. u = (r3,e3,s3,t3,m3,i3)` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_REVERT_def,X64_ICACHE_EZTRACT_def]
+  \\ `?r1 e1 s1 m1 i1. s = (r1,e1,s1,m1,i1)` by METIS_TAC [PAIR]
+  \\ `?r2 e2 s2 m2 i2. t = (r2,e2,s2,m2,i2)` by METIS_TAC [PAIR]
+  \\ `?r3 e3 s3 m3 i3. u = (r3,e3,s3,m3,i3)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_REVERT_def,X64_ICACHE_EXTRACT_def]
   \\ REPEAT STRIP_TAC
-  \\ `(r1,e1,s1,t1,m1) = (r2,e2,s2,t2,m2)` by FULL_SIMP_TAC std_ss [X64_ICACHE_def]
+  \\ `(r1,e1,s1,m1) = (r2,e2,s2,m2)` by FULL_SIMP_TAC std_ss [X64_ICACHE_def]
   \\ FULL_SIMP_TAC std_ss []
   \\ METIS_TAC [X64_ICACHE_icache_revert]);
 
-val X64_ICACHE_EZTRACT_CLAUSES = store_thm("X64_ICACHE_EZTRACT_CLAUSES",
+val X64_ICACHE_EXTRACT_CLAUSES = store_thm("X64_ICACHE_EXTRACT_CLAUSES",
   ``!s r w f fv xs.
-      (X64_ICACHE_EZTRACT (ZWRITE_RIP w s) = X64_ICACHE_EZTRACT s) /\
-      (X64_ICACHE_EZTRACT (ZWRITE_REG r w s) = X64_ICACHE_EZTRACT s) /\
-      (X64_ICACHE_EZTRACT (ZWRITE_STACK xs s) = X64_ICACHE_EZTRACT s) /\
-      (X64_ICACHE_EZTRACT (ZWRITE_EFLAG f fv s) = X64_ICACHE_EZTRACT s)``,
+      (X64_ICACHE_EXTRACT (ZWRITE_RIP w s) = X64_ICACHE_EXTRACT s) /\
+      (X64_ICACHE_EXTRACT (ZWRITE_REG r w s) = X64_ICACHE_EXTRACT s) /\
+      (X64_ICACHE_EXTRACT (ZWRITE_EFLAG f fv s) = X64_ICACHE_EXTRACT s)``,
   REPEAT STRIP_TAC
-  THEN `?r e t t' m i. s = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
-  THEN ASM_SIMP_TAC std_ss [X64_ICACHE_EZTRACT_def,ZWRITE_RIP_def,
-          ZWRITE_REG_def,ZWRITE_EFLAG_def,ZWRITE_STACK_def]);
+  THEN `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
+  THEN ASM_SIMP_TAC std_ss [X64_ICACHE_EXTRACT_def,ZWRITE_RIP_def,
+          ZWRITE_REG_def,ZWRITE_EFLAG_def]);
 
 val X64_ACCURATE_CLAUSES = store_thm("X64_ACCURATE_CLAUSES",
-  ``(X64_ACCURATE a ((r =+ w) x,e,s,t,m,i) = X64_ACCURATE a (x,e,s,t,m,i)) /\
-    (X64_ACCURATE a (x,e,(f =+ fv) s,t,m,i) = X64_ACCURATE a (x,e,s,t,m,i)) /\
-    (~(b = a) ==> (X64_ACCURATE a (x,e,s,t,(b =+ v) m,i) = X64_ACCURATE a (x,e,s,t,m,i)))``,
+  ``(X64_ACCURATE a ((r =+ w) x,e,s,m,i) = X64_ACCURATE a (x,e,s,m,i)) /\
+    (X64_ACCURATE a (x,e,(f =+ fv) s,m,i) = X64_ACCURATE a (x,e,s,m,i)) /\
+    (~(b = a) ==> (X64_ACCURATE a (x,e,s,(b =+ v) m,i) = X64_ACCURATE a (x,e,s,m,i)))``,
   SIMP_TAC std_ss [X64_ACCURATE_def,APPLY_UPDATE_THM]);
 
 val X64_ACCURATE_IMP = store_thm("X64_ACCURATE_IMP",
-  ``X64_ACCURATE a (r,e2,t,t',m,i) ==>
-    X64_ACCURATE a (r,e1,t,t2,m,icache_revert (m,i) (m,icache x m i)) /\
-    X64_ACCURATE a (r,e1,t,t2,m,icache x m i) /\
-    X64_ACCURATE a (r,e1,t,t2,m,i)``,
+  ``X64_ACCURATE a (r,e2,t,m,i) ==>
+    X64_ACCURATE a (r,e1,t,m,icache_revert (m,i) (m,icache x m i)) /\
+    X64_ACCURATE a (r,e1,t,m,icache x m i) /\
+    X64_ACCURATE a (r,e1,t,m,i)``,
   Cases_on `x` THEN SIMP_TAC std_ss [X64_ACCURATE_def,icache_revert_def,icache_def]
   THEN METIS_TAC []);
 
 val ZREAD_INSTR_IMP = store_thm("ZREAD_INSTR_IMP",
   ``!x r e t i m a w p.
-      (m a = SOME (w,X64_INSTR_PERM p)) /\ X64_ACCURATE a (r,e,t,t',m,i) ==>
-      (ZREAD_INSTR a (r,e,t,t',m,icache x m i) = SOME w)``,
+      (m a = SOME (w,X64_INSTR_PERM p)) /\ X64_ACCURATE a (r,e,t,m,i) ==>
+      (ZREAD_INSTR a (r,e,t,m,icache x m i) = SOME w)``,
   Cases THEN REPEAT STRIP_TAC
   THEN FULL_SIMP_TAC std_ss [X64_ACCURATE_def,icache_def,ZREAD_INSTR_def]
   THEN Cases_on `a IN q` \\ ASM_SIMP_TAC std_ss []
@@ -536,42 +532,42 @@ val ZREAD_INSTR_IMP = store_thm("ZREAD_INSTR_IMP",
   THEN Cases_on `p` \\ ASM_SIMP_TAC (srw_ss()) [X64_INSTR_PERM_def]);
 
 val X64_ICACHE_REVERT_EMPTY = prove(
-  ``(X64_ICACHE_EZTRACT v = X64_ICACHE_EMPTY) ==>
-    X64_ICACHE (X64_ICACHE_REVERT v (r,e,t,t',m,i)) v``,
+  ``(X64_ICACHE_EXTRACT v = X64_ICACHE_EMPTY) ==>
+    X64_ICACHE (X64_ICACHE_REVERT v (r,e,t,m,i)) v``,
   REPEAT STRIP_TAC
-  \\ `?r1 e1 s1 t1 m1 i1. v = (r1,e1,s1,t1,m1,i1)` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_REVERT_def,X64_ICACHE_EZTRACT_def]
+  \\ `?r1 e1 s1 m1 i1. v = (r1,e1,s1,m1,i1)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_REVERT_def,X64_ICACHE_EXTRACT_def]
   \\ FULL_SIMP_TAC std_ss [X64_ICACHE_def]
   \\ Q.EXISTS_TAC `{}` \\ Q.EXISTS_TAC `UNIV`
   \\ SIMP_TAC std_ss [NOT_IN_EMPTY,IN_UNIV,X64_ICACHE_EMPTY_def]);
 
 val IMP_X64_SPEC_LEMMA2 = prove(
   ``!p q.
-      (!rs st ei es ms x r e t t' m i.
-         p (x64_2set' (rs,st,ei,es,ms) (r,e,t,t',m,i)) ==>
+      (!rs st ei es ms x r e t m i.
+         p (x64_2set' (rs,st,ei,ms) (r,e,t,m,i)) ==>
          ?v.
-           (X64_NEXT (X64_ICACHE_UPDATE x (r,e,t,t',m,i)) = SOME v) /\
-           ((X64_ICACHE_EZTRACT v = X64_ICACHE_EMPTY) \/
-            (X64_ICACHE_EZTRACT (X64_ICACHE_UPDATE x (r,e,t,t',m,i)) = X64_ICACHE_EZTRACT v)) /\
-           p (x64_2set' (rs,st,ei,es,ms) (X64_ICACHE_UPDATE x (r,e,t,t',m,i))) /\
-           q (x64_2set' (rs,st,ei,es,ms) (X64_ICACHE_REVERT v (r,e,t,t',m,i))) /\
-           (x64_2set'' (rs,st,ei,es,ms) (r,e,t,t',m,i) =
-            x64_2set'' (rs,st,ei,es,ms) (X64_ICACHE_REVERT v (r,e,t,t',m,i)))) ==>
+           (X64_NEXT (X64_ICACHE_UPDATE x (r,e,t,m,i)) = SOME v) /\
+           ((X64_ICACHE_EXTRACT v = X64_ICACHE_EMPTY) \/
+            (X64_ICACHE_EXTRACT (X64_ICACHE_UPDATE x (r,e,t,m,i)) = X64_ICACHE_EXTRACT v)) /\
+           p (x64_2set' (rs,st,ei,ms) (X64_ICACHE_UPDATE x (r,e,t,m,i))) /\
+           q (x64_2set' (rs,st,ei,ms) (X64_ICACHE_REVERT v (r,e,t,m,i))) /\
+           (x64_2set'' (rs,st,ei,ms) (r,e,t,m,i) =
+            x64_2set'' (rs,st,ei,ms) (X64_ICACHE_REVERT v (r,e,t,m,i)))) ==>
       SPEC X64_MODEL p {} q``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_X64_SPEC_LEMMA
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC X64_ICACHE_THM2
   \\ ASM_SIMP_TAC std_ss []
-  \\ `?rs st ei es ms. y = (rs,st,ei,es,ms)` by METIS_TAC [PAIR]
-  \\ `?r e t t' m i. t1 = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
+  \\ `?rs st ei ms. y = (rs,st,ei,ms)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. t1 = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`es`,`ms`,`z`,`r`,`e`,`t`,`t'`,`m`,`i`])
+  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
   \\ ASM_SIMP_TAC std_ss []
-  \\ Q.EXISTS_TAC `(X64_ICACHE_REVERT v (r,e,t,t',m,i))`
+  \\ Q.EXISTS_TAC `(X64_ICACHE_REVERT v (r,e,t,m,i))`
   \\ FULL_SIMP_TAC std_ss []
   THEN1 (METIS_TAC [X64_ICACHE_REVERT_EMPTY])
   \\ MATCH_MP_TAC X64_ICACHE_X64_ICACHE_REVERT
-  \\ Q.EXISTS_TAC `(X64_ICACHE_UPDATE z (r,e,t,t',m,i))` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `(X64_ICACHE_UPDATE z (r,e,t,m,i))` \\ ASM_SIMP_TAC std_ss []);
 
 val IMP_X64_SPEC = save_thm("IMP_X64_SPEC",
   (RW1 [STAR_COMM] o RW [X64_SPEC_CODE,GSYM zCODE_def] o
@@ -1001,42 +997,42 @@ val zCODE_IMP_BYTE_MEMORY = store_thm("zCODE_IMP_BYTE_MEMORY",
   \\ ASM_SIMP_TAC std_ss [GSPECIFICATION]);
 
 val x64_2set_ICACHE_EMPTY = prove(
-  ``(x64_2set' (rs,st,ei,es,ms) (r,e2,t,t',m,(\a. if a IN ms then NONE else i a)) =
-     x64_2set' (rs,st,ei,es,ms) (r,e2,t,t',m,X64_ICACHE_EMPTY)) /\
-    (x64_2set'' (rs,st,ei,es,ms) (r,e2,t,t',m,(\a. if a IN ms then NONE else i a)) =
-     x64_2set'' (rs,st,ei,es,ms) (r,e2,t,t',m,i))``,
+  ``(x64_2set' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
+     x64_2set' (rs,st,ei,ms) (r,e2,t,m,X64_ICACHE_EMPTY)) /\
+    (x64_2set'' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
+     x64_2set'' (rs,st,ei,ms) (r,e2,t,m,i))``,
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [EXTENSION] \\ Cases
-  \\ SIMP_TAC std_ss [IN_x64_2set,ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_STACK_def,
+  \\ SIMP_TAC std_ss [IN_x64_2set,ZREAD_REG_def,ZREAD_EFLAG_def,
          ZREAD_RIP_def,X64_GET_MEMORY_def,X64_ACCURATE_def,X64_ICACHE_EMPTY_def]
   \\ SRW_TAC [][]);
 
 val IMP_X64_SPEC_LEMMA3 = prove(
   ``!p q.
-      (!rs st ei es ms x r e t t' m i.
-         p (x64_2set' (rs,st,ei,es,ms) (r,e,t,t',m,i)) ==>
+      (!rs st ei es ms x r e t m i.
+         p (x64_2set' (rs,st,ei,ms) (r,e,t,m,i)) ==>
          ?v.
-           (X64_NEXT (r,e,t,t',m,icache x m i) = SOME v) /\
-           (X64_ICACHE_EZTRACT v = X64_ICACHE_EMPTY) /\
-           p (x64_2set' (rs,st,ei,es,ms) (r,e,t,t',m,icache x m i)) /\
-           q (x64_2set' (rs,st,ei,es,ms) ((\(r,e,t,t',m,i). (r,e,t,t',m,X64_ICACHE_EMPTY)) v)) /\
-           (x64_2set'' (rs,st,ei,es,ms) (r,e,t,t',m,i) =
-            x64_2set'' (rs,st,ei,es,ms) ((\(r,e,t,t',m,i2). (r,e,t,t',m,i)) v))) ==>
+           (X64_NEXT (r,e,t,m,icache x m i) = SOME v) /\
+           (X64_ICACHE_EXTRACT v = X64_ICACHE_EMPTY) /\
+           p (x64_2set' (rs,st,ei,ms) (r,e,t,m,icache x m i)) /\
+           q (x64_2set' (rs,st,ei,ms) ((\(r,e,t,m,i). (r,e,t,m,X64_ICACHE_EMPTY)) v)) /\
+           (x64_2set'' (rs,st,ei,ms) (r,e,t,m,i) =
+            x64_2set'' (rs,st,ei,ms) ((\(r,e,t,m,i2). (r,e,t,m,i)) v))) ==>
       SPEC X64_MODEL p {} q``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_X64_SPEC_LEMMA
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC X64_ICACHE_THM2
   \\ ASM_SIMP_TAC std_ss []
-  \\ `?rs st ei es ms. y = (rs,st,ei,es,ms)` by METIS_TAC [PAIR]
-  \\ `?r e t t' m i. t1 = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
+  \\ `?rs st ei ms. y = (rs,st,ei,ms)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. t1 = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`es`,`ms`,`z`,`r`,`e`,`t`,`t'`,`m`,`i`])
+  \\ Q.PAT_ASSUM `!rs.bb` (STRIP_ASSUME_TAC o UNDISCH o Q.SPECL [`rs`,`st`,`ei`,`ms`,`z`,`r`,`e`,`t`,`m`,`i`])
   \\ ASM_SIMP_TAC std_ss [X64_ICACHE_UPDATE_def]
-  \\ `?r e t t' m i. v = (r,e,t,t',m,i)` by METIS_TAC [PAIR]
+  \\ `?r e t m i. v = (r,e,t,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss []
-  \\ Q.EXISTS_TAC `(r',e',t'',t''',m',(\addr. if addr IN ms then NONE else i addr))`
+  \\ Q.EXISTS_TAC `(r',e',t',m',(\addr. if addr IN ms then NONE else i addr))`
   \\ ASM_SIMP_TAC std_ss [x64_2set_ICACHE_EMPTY]
   \\ SIMP_TAC std_ss [X64_ICACHE_EMPTY_def,X64_ICACHE_def,FUN_EQ_THM]
-  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_EZTRACT_def]
+  \\ FULL_SIMP_TAC std_ss [X64_ICACHE_EXTRACT_def]
   \\ Q.EXISTS_TAC `{}` \\ Q.EXISTS_TAC `UNIV` \\ SRW_TAC [] [] \\ EVAL_TAC);
 
 val IMP_X64_SPEC2 = save_thm("IMP_X64_SPEC2",
@@ -1046,15 +1042,15 @@ val IMP_X64_SPEC2 = save_thm("IMP_X64_SPEC2",
 
 val cpuid_thm = let
   val th = x64_step "0FA2" (* cpuid *)
-  val th = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,t',m,i)`] th
+  val th = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,m,i)`] th
   val th = RW [ZREAD_CLAUSES] th
   val th = RW [ZREAD_REG_def,X64_ICACHE_UPDATE_def,ZWRITE_RIP_def,ZCLEAR_ICACHE_def] th
   in th end
 
 val zBYTE_MEMORY_Z_x64_2set = prove(
   ``!df ms.
-      (zBYTE_MEMORY_Z df f * p) (x64_2set' (rs,st,ei,es,ms) (r,e,t,t',m,i)) =
-      p (x64_2set' (rs,st,ei,es,ms DIFF df) (r,e,t,t',m,i)) /\ df SUBSET ms /\
+      (zBYTE_MEMORY_Z df f * p) (x64_2set' (rs,st,ei,ms) (r,e,t,m,i)) =
+      p (x64_2set' (rs,st,ei,ms DIFF df) (r,e,t,m,i)) /\ df SUBSET ms /\
       !a. a IN df ==> (m a = SOME (f a, {Zread;Zwrite;Zexecute}))``,
   HO_MATCH_MP_TAC WORD_SET_INDUCT \\ REPEAT STRIP_TAC THENL [
     SIMP_TAC std_ss [zBYTE_MEMORY_Z_def,zBYTE_MEMORY_ANY_def,SEP_CLAUSES]
@@ -1098,10 +1094,10 @@ val zCODE_SET_INSERT = store_thm("zCODE_SET_INSERT",
 
 val zCODE_SET_x64_2set = prove(
   ``!df ms.
-      (zCODE (zCODE_SET df f) * p) (x64_2set' (rs,st,ei,es,ms) (r,e,t,t',m,i)) =
-      p (x64_2set' (rs,st,ei,es,ms DIFF df) (r,e,t,t',m,i)) /\ df SUBSET ms /\
+      (zCODE (zCODE_SET df f) * p) (x64_2set' (rs,st,ei,ms) (r,e,t,m,i)) =
+      p (x64_2set' (rs,st,ei,ms DIFF df) (r,e,t,m,i)) /\ df SUBSET ms /\
       !a. a IN df ==> (m a = SOME (f a, {Zread;Zwrite;Zexecute})) /\
-                      X64_ACCURATE a (r,e,t,t',m,i)``,
+                      X64_ACCURATE a (r,e,t,m,i)``,
   HO_MATCH_MP_TAC WORD_SET_INDUCT \\ REPEAT STRIP_TAC THENL [
     SIMP_TAC std_ss [zCODE_SET_def,zCODE_def,SEP_CLAUSES]
     \\ `{(a,[f a]) | a IN {}} = {}` by
@@ -1137,7 +1133,7 @@ val X64_SPEC_CPUID = store_thm("X64_SPEC_CPUID",
          zCODE_SET_x64_2set,zBYTE_MEMORY_Z_x64_2set]
   \\ ONCE_REWRITE_TAC [CODE_POOL_x64_2set]
   \\ REWRITE_TAC [listTheory.LENGTH,address_list_def]
-  \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,X64_ICACHE_EZTRACT_def]
+  \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,X64_ICACHE_EXTRACT_def]
   \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [GSYM STAR_ASSOC,
          STAR_x64_2set, IN_DELETE, APPLY_UPDATE_THM, x64_decoderTheory.Zreg_distinct,
          GSYM ALIGNED_def, wordsTheory.n2w_11, Zeflags_distinct,
@@ -1155,7 +1151,7 @@ val X64_SPEC_CPUID = store_thm("X64_SPEC_CPUID",
        X64_ICACHE_REVERT_def,icache_revert_ID]
   \\ SIMP_TAC std_ss [ZWRITE_REG_def,ZCLEAR_ICACHE_def,ZWRITE_RIP_def,X64_ICACHE_REVERT_def]
   \\ ASM_SIMP_TAC (srw_ss()) [STAR_x64_2set,APPLY_UPDATE_THM,zCODE_SET_x64_2set]
-  \\ SIMP_TAC std_ss [X64_ACCURATE_def,X64_ICACHE_EMPTY_def,X64_ICACHE_EZTRACT_def]
+  \\ SIMP_TAC std_ss [X64_ACCURATE_def,X64_ICACHE_EMPTY_def,X64_ICACHE_EXTRACT_def]
   \\ ONCE_REWRITE_TAC [CODE_POOL_x64_2set]
   \\ ASM_SIMP_TAC std_ss [LENGTH,x64_pool_def,X64_ACCURATE_def]
   \\ FULL_SIMP_TAC std_ss [icache_revert_def,X64_ACCURATE_def]
