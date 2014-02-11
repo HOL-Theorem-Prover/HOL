@@ -438,11 +438,15 @@ fun x64_prove_one_spec th c = let
     \\ SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_RIP_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ SIMP_TAC std_ss [CAN_ZREAD_MEM,CAN_ZWRITE_MEM,IN_INSERT,word_arith_lemma1]
-    \\ SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,ZREAD_MEM2_def,wordsTheory.WORD_ADD_0]
+    \\ SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,
+         ZREAD_MEM2_def,wordsTheory.WORD_ADD_0]
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
     \\ SIMP_TAC std_ss [CAN_ZREAD_MEM,CAN_ZWRITE_MEM,IN_INSERT,word_arith_lemma1]
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
-    THEN1 (SIMP_TAC std_ss [markerTheory.Abbrev_def]
+    THEN1 (SIMP_TAC std_ss [GSYM arithmeticTheory.ADD_ASSOC]
+           \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
+           \\ SIMP_TAC std_ss [arithmeticTheory.ADD_ASSOC]
+           \\ SIMP_TAC std_ss [markerTheory.Abbrev_def]
            \\ REPEAT STRIP_TAC \\ FLIP_TAC \\ MATCH_MP_TAC (GEN_ALL ZREAD_INSTR_IMP)
            \\ Q.EXISTS_TAC `T` \\ ASM_SIMP_TAC std_ss []
            \\ FULL_SIMP_TAC std_ss [wordsTheory.word_add_n2w,GSYM wordsTheory.WORD_ADD_ASSOC])
@@ -452,6 +456,7 @@ fun x64_prove_one_spec th c = let
     \\ SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ STRIP_TAC \\ IMP_RES_TAC X64_ACCURATE_IMP
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,GSYM word_add_n2w]
     \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET])
   val th = INST [``w:bool``|-> (if !x64_code_write_perm then T else F)] th
   in RW [STAR_ASSOC,SEP_CLAUSES,markerTheory.Abbrev_def] th end;
