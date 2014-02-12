@@ -121,14 +121,23 @@ maybeBuild ()
 {
     if [ -r build-running ]
     then
-        echo "Another build appears to be running - giving up"
-    else
-        (touch build-running &&
-         $ML < tools/smart-configure.sml 2>&1 &&
-         bin/build cleanAll 2>&1 &&
-         bin/build $kernel "$@" 2>&1 ;
-         /bin/rm build-running) | tee build-log
+        local now=$(date +%s)
+        local brtime=$(stat --format=%Y build-running)
+        # if mtime on file is recent enough; don't build.  Otherwise, drop
+        # through and allow build to go ahead.  This is because the
+        # build-running flag in the file system doesn't seem to be quite
+        # reliable in practice.
+        if ((now - brtime < 60 * 60 * 24))
+        then
+            echo "Another build appears to be running - giving up"
+            return 0
+        fi
     fi
+    (touch build-running &&
+     $ML < tools/smart-configure.sml 2>&1 &&
+     bin/build cleanAll 2>&1 &&
+     bin/build $kernel "$@" 2>&1 ;
+     /bin/rm build-running) | tee build-log
 }
 
 
