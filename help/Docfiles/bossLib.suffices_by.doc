@@ -57,6 +57,6 @@ rule; the difference is which of the two premises to the rule is
 worked on by the provided tactics.
 
 \SEEALSO
-bossLib.by, Parse.parse_in_context.
+bossLib.by, Parse.parse_in_context, Tactic.SUFF_TAC.
 
 \ENDDOC
