@@ -421,7 +421,8 @@ fun strip_comb ((_, prmap): overload_info) t = let
 in
   case sorted of
     [] => NONE
-  | m :: _ => SOME (rearrange m)
+  | (m as (_, _, _, (_, nm))) :: _ => if nm = "" then NONE
+                                      else SOME (rearrange m)
 end
 fun oi_strip_comb oinfo t = let
   fun recurse acc t =

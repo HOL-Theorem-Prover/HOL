@@ -180,9 +180,17 @@ val LIST_TO_SET_DEF = new_recursive_definition{
   rec_axiom = list_Axiom,
   def = ``(!x:'a. LIST_TO_SET [] x <=> F) /\
           (!h:'a t x. LIST_TO_SET (h::t) x = (x = h) \/ LIST_TO_SET t x)``}
+val _ = export_rewrites ["LIST_TO_SET_DEF"]
+
 val _ = overload_on ("set", ``LIST_TO_SET``)
 val _ = overload_on ("MEM", ``\h:'a l:'a list. h IN LIST_TO_SET l``)
-val _ = export_rewrites ["LIST_TO_SET_DEF"]
+val _ = overload_on ("", ``\h:'a l:'a list. ~(h IN LIST_TO_SET l)``)
+  (* last over load here causes the term ~(h IN LIST_TO_SET l) to not print
+     using overloads.  In particular, this prevents the existing overload for
+     NOTIN from firing in this type instance, and allows ~MEM a l to print
+     because the pretty-printer will traverse into the negated term (printing
+     the ~), and then the MEM overload will "fire".
+  *)
 
 val LIST_TO_SET = store_thm(
   "LIST_TO_SET",
