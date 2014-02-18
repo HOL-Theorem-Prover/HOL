@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# assumes a particular flavour of grep, as per http://stackoverflow.com/questions/3001177/how-do-i-grep-for-all-non-ascii-characters-in-unix
+
+# As of 18 Feb 2014, sources include some Unicode in comments.
+
+grep -R --color=auto -P -n "[\x80-\xFF]" --include=*.sml --exclude=*Theory.sml --exclude=*Theory.sig --exclude selftest.sml --exclude EmitTeX.sml "$(dirname $0)/../src/"
