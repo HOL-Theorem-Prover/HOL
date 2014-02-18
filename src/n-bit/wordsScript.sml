@@ -4586,7 +4586,7 @@ val word_reverse_reverse = prove(
   `!w. word_reverse (word_reverse w) = w:'a word`,
   FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
   THEN REPEAT STRIP_TAC
-  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN `(dimindex (:'a) - 1 - i) < dimindex (:'a)` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
   THEN AP_TERM_TAC THEN DECIDE_TAC);
 
@@ -4594,10 +4594,10 @@ val word_reverse_lsl = prove(
   `!w n. word_reverse (w << n) = (word_reverse w >>> n):'a word`,
   FULL_SIMP_TAC std_ss [word_reverse_def,word_lsl_def,word_lsr_def,
     fcpTheory.CART_EQ,fcpTheory.FCP_BETA] THEN REPEAT STRIP_TAC
-  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN `(dimindex (:'a) - 1 - i) < dimindex (:'a)` by DECIDE_TAC
   THEN Cases_on `i + n < dimindex (:'a)`
   THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]
-  THEN `i + n < dimindex (:'a) = n <= dimindex (:'a) − 1 − i` by DECIDE_TAC
+  THEN `i + n < dimindex (:'a) = n <= dimindex (:'a) - 1 - i` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA,SUB_PLUS]);
 
 val word_reverse_lsr = prove(
@@ -4608,8 +4608,8 @@ val word_reverse_EQ_ZERO = prove(
   `!w:'a word. (word_reverse w = 0w) = (w = 0w)`,
   FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_reverse_def,word_0]
   THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
-  THEN `dimindex (:'a) − 1 − i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
-  THEN `dimindex (:'a) − 1 − (dimindex (:'a) − 1 − i) = i` by DECIDE_TAC
+  THEN `dimindex (:'a) - 1 - i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
+  THEN `dimindex (:'a) - 1 - (dimindex (:'a) - 1 - i) = i` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss []);
 
 val word_reverse_EQ_ONE = prove(
@@ -4617,8 +4617,8 @@ val word_reverse_EQ_ONE = prove(
   FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,
     word_reverse_def,WORD_NEG_1_T]
   THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
-  THEN `dimindex (:'a) − 1 − i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
-  THEN `dimindex (:'a) − 1 − (dimindex (:'a) − 1 − i) = i` by DECIDE_TAC
+  THEN `dimindex (:'a) - 1 - i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
+  THEN `dimindex (:'a) - 1 - (dimindex (:'a) - 1 - i) = i` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss []);
 
 val word_reverse_thm = store_thm("word_reverse_thm",
@@ -4639,7 +4639,7 @@ val word_reverse_thm = store_thm("word_reverse_thm",
   THEN FULL_SIMP_TAC std_ss [word_reverse_def,word_or_def,word_and_def,
     word_xor_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_1comp_def]
   THEN REPEAT STRIP_TAC
-  THEN `(dimindex (:'a) − 1 − i) < dimindex (:'a)` by DECIDE_TAC
+  THEN `(dimindex (:'a) - 1 - i) < dimindex (:'a)` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]);
 
 (* ------------------------------------------------------------------------- *)
