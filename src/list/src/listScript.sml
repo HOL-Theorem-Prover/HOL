@@ -2865,17 +2865,19 @@ val LIST_BIND_LIST_BIND = store_thm(
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
-val SINGL_def = Define`SINGL x = [x]`
+val _ = overload_on("SINGL", ``\x:'a. [x]``)
+val _ = overload_on("", ``\x:'a. [x]``)
 
 val SINGL_LIST_APPLY_L = store_thm(
   "SINGL_LIST_APPLY_L",
   ``LIST_BIND (SINGL x) f = f x``,
-  SIMP_TAC (srw_ss()) [SINGL_def]);
+  SIMP_TAC (srw_ss()) []);
+val _ = export_rewrites ["SINGL_LIST_APPLY_L"]
 
 val SINGL_LIST_APPLY_R = store_thm(
   "SINGL_LIST_APPLY_R",
   ``LIST_BIND l SINGL = l``,
-  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [SINGL_def, LIST_BIND_def]);
+  Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [LIST_BIND_def]);
 
 (* shows that lists are what Haskell would call Applicative *)
 (* in 'a option, the apply applies a function to an argument if both are
@@ -2902,17 +2904,18 @@ val LIST_LIFT2_def = Define`
 val SINGL_APPLY_MAP = store_thm(
   "SINGL_APPLY_MAP",
   ``LIST_APPLY (SINGL f) l = MAP f l``,
-  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def]);
+  SIMP_TAC (srw_ss()) [LIST_APPLY_def, LIST_BIND_def]);
 
 val SINGL_SINGL_APPLY = store_thm(
   "SINGL_SINGL_APPLY",
   ``LIST_APPLY (SINGL f) (SINGL x) = SINGL (f x)``,
-  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def]);
+  SIMP_TAC (srw_ss()) [LIST_APPLY_def, LIST_BIND_def]);
+val _ = export_rewrites ["SINGL_SINGL_APPLY"]
 
 val SINGL_APPLY_PERMUTE = store_thm(
   "SINGL_APPLY_PERMUTE",
   ``LIST_APPLY fs (SINGL x) = LIST_APPLY (SINGL (\f. f x)) fs``,
-  SIMP_TAC (srw_ss()) [SINGL_def, LIST_APPLY_def, LIST_BIND_def] THEN
+  SIMP_TAC (srw_ss()) [LIST_APPLY_def, LIST_BIND_def] THEN
   Induct_on `fs` THEN ASM_SIMP_TAC (srw_ss()) []);
 
 val MAP_FLAT = store_thm(
@@ -2930,7 +2933,7 @@ val LIST_APPLY_o = store_thm(
   "LIST_APPLY_o",
   ``LIST_APPLY (LIST_APPLY (LIST_APPLY (SINGL (o)) fs) gs) xs =
     LIST_APPLY fs (LIST_APPLY gs xs)``,
-  ASM_SIMP_TAC (srw_ss()) [LIST_APPLY_def, SINGL_def] THEN
+  ASM_SIMP_TAC (srw_ss()) [LIST_APPLY_def] THEN
   Induct_on `fs` THEN
   ASM_SIMP_TAC (srw_ss()) [LIST_BIND_APPEND, MAP_LIST_BIND,
                            APPEND_11] THEN

@@ -22,6 +22,9 @@ val _ = set_trace "Unicode" 0
 
 val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}"]
 
+val _ = tpp_expected {input = "SINGL 3", output = "[3]",
+                      testf = standard_tpp_message}
+
 val _ =
     if List.all (test "FIRSTN_CONV" Term.compare term_to_string FIRSTN_CONV)
                 [(``FIRSTN 3 [1;2;3;4;5]``, ``[1;2;3]``),
