@@ -75,6 +75,7 @@ sig
 (* Extensions by definition *)
   structure Definition : sig
     val new_type_definition    : string * thm -> thm
+    val loose_specification    : string * thm -> thm
     val new_definition         : string * term -> thm
     val new_specification      : string * string list * thm -> thm
 

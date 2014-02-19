@@ -110,8 +110,7 @@ sig
 
   (* definitional rules of inference *)
   val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm
-  val prim_constant_definition : string -> term -> thm
-  val prim_specification : string -> string list -> thm -> thm
+  val prim_specification : string -> thm -> string list * thm
 
   (* Fetching theorems from disk *)
 

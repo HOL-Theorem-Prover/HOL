@@ -1071,6 +1071,17 @@ fun new_type_definition (name,thm) = let
  end
  handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
 
+fun loose_specification(name, th) = let
+  val thy = current_theory()
+  val (cnames,def) = Thm.prim_specification thy th
+ in
+  store_definition (name, def) before
+  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
+           cnames
+ end
+ handle e => raise (wrap_exn "Definition" "loose_specification" e);
+
+(* TODO: implement these two in terms of the above
 
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
@@ -1093,6 +1104,8 @@ fun new_specification (name, cnames, th) = let
   ; final
  end
  handle e => raise (wrap_exn "Definition" "new_specification" e);
+
+*)
 
 end (* Definition struct *)
 
