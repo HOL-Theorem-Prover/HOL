@@ -469,7 +469,7 @@ val stack_list_rev_APPEND = prove(
   \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM,LENGTH,
        GSYM WORD_SUB_PLUS,word_add_n2w,MULT_CLAUSES]);
 
-val stack_ok_POPS = prove(
+val stack_ok_POPS = store_thm("stack_ok_POPS",
   ``stack_ok rsp top base stack dm m /\ k <= LENGTH stack ==>
     stack_ok (rsp + n2w (8 * k)) top base (DROP k stack) dm m``,
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
@@ -582,7 +582,7 @@ val EL_LENGTH = prove(
   ``!xs y ys. EL (LENGTH xs) (xs ++ y::ys) = y``,
   Induct \\ FULL_SIMP_TAC std_ss [LENGTH,EL,APPEND,HD,TL]);
 
-val stack_ok_EL = prove(
+val stack_ok_EL = store_thm("stack_ok_EL",
   ``stack_ok rsp top base stack dm m /\
     w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
     (r8 + rsp IN dm /\ (r8 + rsp && 0x7w = 0x0w)) /\
@@ -607,6 +607,49 @@ val stack_ok_EL = prove(
   THEN1 (SIMP_TAC std_ss [GSYM word_mul_n2w]
          \\ Q.PAT_ASSUM `0x7w && rsp = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
   \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
+
+val LENGTH_LESS_REV = prove(
+  ``!xs m. m < LENGTH xs ==> ?ys z zs. (xs = ys ++ z::zs) /\ (LENGTH zs = m)``,
+  recInduct SNOC_INDUCT \\ SIMP_TAC std_ss [LENGTH,LENGTH_SNOC]
+  \\ SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
+  \\ Cases_on `m` \\ FULL_SIMP_TAC std_ss [LENGTH_NIL,APPEND,CONS_11,APPEND_NIL]
+  THEN1 (METIS_TAC []) \\ RES_TAC \\ Q.LIST_EXISTS_TAC [`ys`,`z`,`zs ++ [x]`]
+  \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH,GSYM APPEND_ASSOC,LENGTH_APPEND,ADD1]);
+
+val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
+  ``stack_ok rsp top base stack dm m /\
+    w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
+    (base - 8w - r8 IN dm /\ (base - 8w - r8 && 0x7w = 0x0w)) /\
+    (m (base - 8w - r8) = EL (w2n r8 DIV 8) (REVERSE stack))``,
+  SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
+  \\ Cases_on `r8` \\ FULL_SIMP_TAC std_ss [w2n_n2w]
+  \\ MP_TAC (DIVISION |> SIMP_RULE std_ss [PULL_FORALL]
+                      |> Q.SPECL [`8`,`n`] |> RW1 [MULT_COMM])
+  \\ ASM_SIMP_TAC std_ss [] \\ Q.ABBREV_TAC `k = n DIV 8`
+  \\ POP_ASSUM (K ALL_TAC) \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ POP_ASSUM (K ALL_TAC)
+  \\ IMP_RES_TAC LENGTH_LESS_REV
+  \\ FULL_SIMP_TAC std_ss [REVERSE_APPEND,REVERSE_DEF]
+  \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
+  \\ POP_ASSUM (ASSUME_TAC o GSYM)
+  \\ FULL_SIMP_TAC std_ss [] \\ POP_ASSUM (K ALL_TAC)
+  \\ ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
+  \\ SIMP_TAC std_ss [rich_listTheory.EL_LENGTH_APPEND
+       |> Q.SPEC `x::xs` |> SIMP_RULE (srw_ss()) []]
+  \\ SIMP_TAC std_ss [LENGTH_REVERSE]
+  \\ FULL_SIMP_TAC std_ss [stack_list_APPEND,stack_list_def]
+  \\ Q.PAT_ASSUM `xx = base` (ASSUME_TAC o GSYM) \\ POP_ASSUM (K ALL_TAC)
+  \\ Q.PAT_ASSUM `xx = base` (ASSUME_TAC o GSYM)
+  \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,LEFT_ADD_DISTRIB]
+  \\ SIMP_TAC std_ss [MULT_CLAUSES,GSYM word_arith_lemma1]
+  \\ SIMP_TAC std_ss [WORD_ADD_SUB,WORD_ADD_ASSOC]
+  \\ ONCE_REWRITE_TAC [word_arith_lemma1]
+  \\ ONCE_REWRITE_TAC [word_arith_lemma1]
+  \\ SIMP_TAC std_ss [WORD_ADD_SUB,WORD_ADD_ASSOC]
+  \\ SEP_R_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ SIMP_TAC std_ss [GSYM word_mul_n2w]
+  \\ Q.PAT_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
+  \\ blastLib.BBLAST_TAC);
 
 val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
   val ((th,_,_),_) = x64_spec_memory64 (x64_encode "mov [rsp+r8], r0")
