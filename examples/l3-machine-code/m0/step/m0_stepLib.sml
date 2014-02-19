@@ -464,7 +464,8 @@ in
            ``b = ~word_bit (w2n (n: word4)) (registers: word9)``]] []
         ``dfn'LoadMultiple (b, n, registers)``
         |> List.map
-             (REWRITE_RULE
+             (Drule.ADD_ASSUM ``n <> 13w: word4`` o
+              REWRITE_RULE
                  ([boolTheory.COND_ID, count_list_8] @
                   List.drop
                      (utilsLib.mk_cond_update_thms [``:m0_state``], 3)))
@@ -1326,21 +1327,7 @@ val thumb_patterns = List.map (I ## pattern)
 
 val thumb2_patterns = List.map (I ## pattern)
   [("B.W",   "TTTTF___________TF_T____________"),
-   ("BL",    "TTTTF___________TT_T____________"),
-   ("BEQ.W", "TTTTF_FFFF______TF_F____________"),
-   ("BNE.W", "TTTTF_FFFT______TF_F____________"),
-   ("BCS.W", "TTTTF_FFTF______TF_F____________"),
-   ("BCC.W", "TTTTF_FFTT______TF_F____________"),
-   ("BMI.W", "TTTTF_FTFF______TF_F____________"),
-   ("BPL.W", "TTTTF_FTFT______TF_F____________"),
-   ("BVS.W", "TTTTF_FTTF______TF_F____________"),
-   ("BVC.W", "TTTTF_FTTT______TF_F____________"),
-   ("BHI.W", "TTTTF_TFFF______TF_F____________"),
-   ("BLS.W", "TTTTF_TFFT______TF_F____________"),
-   ("BGE.W", "TTTTF_TFTF______TF_F____________"),
-   ("BLT.W", "TTTTF_TFTT______TF_F____________"),
-   ("BGT.W", "TTTTF_TTFF______TF_F____________"),
-   ("BLE.W", "TTTTF_TTFT______TF_F____________")
+   ("BL",    "TTTTF___________TT_T____________")
   ]
 
 (* -- *)
@@ -1765,7 +1752,7 @@ val Register_rwt =
    EV ([dfn'Register_def, R_name_rwt, doRegister_def, ArithmeticOpcode_def,
         Shift_C_LSL_rwt, psr_id] @ al())
       [[``d <> 15w:word4``]] (mapl (`op`, arithlogic))
-         ``dfn'Register (op, setflags, d, n, m, SRType_LSL, 0)``
+         ``dfn'Register (op, setflags, d, n, m)``
       |> addThms
 
 val Register_add_pc_rwt =
@@ -1773,14 +1760,14 @@ val Register_add_pc_rwt =
        DataProcessingPC_def, DataProcessingALU_def, Shift_C_LSL_rwt,
        AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY]
       [] []
-      ``dfn'Register (4w, F, 15w, 15w, m, SRType_LSL, 0)``
+      ``dfn'Register (4w, F, 15w, 15w, m)``
       |> addThms
 
 val TestCompareRegister_rwt =
    EV ([dfn'TestCompareRegister_def, R_name_rwt, doRegister_def,
         ArithmeticOpcode_def, Shift_C_LSL_rwt, psr_id, cmp, tst, cmn] @ al())
       [] (mapl (`op`, testcompare))
-         ``dfn'TestCompareRegister (op, n, m, SRType_LSL, 0)``
+         ``dfn'TestCompareRegister (op, n, m)``
       |> addThms
 
 val ShiftRegister_rwt =
