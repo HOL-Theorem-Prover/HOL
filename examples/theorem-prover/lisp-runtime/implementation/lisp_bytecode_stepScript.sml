@@ -583,7 +583,7 @@ val SPEC_CODE_UNION = store_thm("SPEC_CODE_UNION",
   ``!x p c d q. SPEC x p (c UNION d) q ==>
                 SPEC x (CODE_POOL ((FST (SND (SND x))):'a -> 'b -> bool) c * p) d
                        (CODE_POOL (FST (SND (SND x))) c * q)``,
-  STRIP_TAC \\ `?x1 x2 x3 x4. x = (x1,x2,x3,x4)` by METIS_TAC [PAIR]
+  STRIP_TAC \\ `?x1 x2 x3 x4 x5. x = (x1,x2,x3,x4,x5)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [SPEC_def,RUN_def] \\ REPEAT STRIP_TAC
   \\ MP_TAC (Q.ISPEC `x3:'a->'b->bool` (Q.SPECL [`c`,`d`] (GSYM CODE_POOL_UNION_LEMMA)))
   \\ REPEAT STRIP_TAC
