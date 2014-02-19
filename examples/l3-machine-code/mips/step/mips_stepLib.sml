@@ -125,7 +125,8 @@ val SignalException =
 val rule =
    utilsLib.ALL_HYP_CONV_RULE (SIMP_CONV std_ss (mips_thms [])) o
    REWRITE_RULE [] o
-   utilsLib.INST_REWRITE_RULE [ASSUME ``~^st.CP0.Status.EXL``]
+   utilsLib.INST_REWRITE_RULE
+      [ASSUME ``~^st.CP0.Status.EXL``, ASSUME ``^st.exceptionSignalled = F``]
 
 val () = utilsLib.resetStepConv ()
 
@@ -326,8 +327,8 @@ val mem_thms =
     Drule.UNDISCH StoreMemory_doubleword,
     PSIZE_def, ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
-    address_align, cond_sign_extend, byte_address, extract_byte,
-    wordsTheory.word_concat_0_0,
+    address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
+    wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
     EVAL ``(word_replicate 2 (0w:word1) : word2 @@ (0w:word1)) : word3``,
     EVAL ``(word_replicate 2 (1w:word1) : word2 @@ (0w:word1)) : word3``,
@@ -344,14 +345,18 @@ val select_rule =
        select_pc_le, select_pc_be]
 
 val memcntxts =
+  [[``~^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
+   [``~^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``]]
+
+(*
+val memcntxts =
   [[``FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [``~FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [``~^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [ ``FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``],
    [``~FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``],
    [``~^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``]]
-
-val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
+*)
 
 val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
 
@@ -367,6 +372,7 @@ val memcntxts =
 val dmemcntxts =
    List.map (fn l => ``(2 >< 0) ^addr = 0w: word3`` :: l) memcntxts
 
+(*
 fun merge_cases thms =
    let
       fun thm i = List.nth (thms, i)
@@ -378,6 +384,14 @@ fun merge_cases thms =
         (utilsLib.MERGE_CASES ``^st.CP0.Status.RE``
             (utilsLib.MERGE_CASES ``FST (UserMode ^st)`` (thm 3) (thm 4))
             (thm 5))
+   end
+*)
+
+fun merge_cases thms =
+   let
+      fun thm i = List.nth (thms, i)
+   in
+      utilsLib.MERGE_CASES ``^st.CP0.Config.BE`` (thm 0) (thm 1)
    end
 
 fun EVL l tm =
@@ -393,7 +407,15 @@ fun EVL l tm =
    end
 
 fun store_rule thms =
-   utilsLib.ALL_HYP_CONV_RULE (SIMP_CONV std_ss (cond_rand_thms :: thms))
+   utilsLib.ALL_HYP_CONV_RULE
+     (SIMP_CONV std_ss (cond_rand_thms :: mem_thms @ thms))
+
+(*
+val UserMode_rule =
+   List.map
+     (utilsLib.ALL_HYP_CONV_RULE
+       (REWRITE_CONV [UserMode_def, boolTheory.DE_MORGAN_THM]))
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -410,11 +432,11 @@ val loadHalf =
 
 val loadWord =
    evr select_rule (loadWord_def :: mem_thms) memcntxts []
-      ``loadWord (base, rt, offset, unsigned)``
+      ``loadWord (link, base, rt, offset, unsigned)``
 
 val loadDoubleword =
    ev ([loadDoubleword_def, double_aligned] @ mem_thms) dmemcntxts []
-      ``loadDoubleword (base, rt, offset)``
+      ``loadDoubleword (link, base, rt, offset)``
 
 val LB  = EVL [loadByte] ``dfn'LB (base, rt, offset) ^st``
 val LBU = EVL [loadByte] ``dfn'LBU (base, rt, offset) ^st``
@@ -501,8 +523,8 @@ local
             ``^st.MEM (s.PC + 3w) = ^(mk_byte 24)``
            ])
    fun fetch_thm i = rule (List.nth (Fetch, i))
-   val Fetch_be = fetch_thm 2
-   val Fetch_le = fetch_thm 5
+   val Fetch_be = fetch_thm 0
+   val Fetch_le = fetch_thm 1
 in
    fun pad_opcode v =
       let
@@ -864,7 +886,8 @@ local
       Conv.QCONV
         (REWRITE_CONV
             (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
-             [boolTheory.COND_ID, cond_rand_thms]))
+             [boolTheory.COND_ID, cond_rand_thms,
+              ASSUME ``~^st.exceptionSignalled``]))
    val BranchNone_RULE =
       utilsLib.FULL_CONV_RULE STATE_CONV o
       Thm.INST [st |-> ``^st with BranchStatus := NONE``]
@@ -893,7 +916,8 @@ in
                                |> Conv.RIGHT_CONV_RULE
                                     (Conv.RAND_CONV (Conv.REWR_CONV ethm)
                                      THENC snd_conv)
-               val thm4 = STATE_CONV (mk_proj_exception (rhsc thm3))
+               val tm = rhsc thm3
+               val thm4 = STATE_CONV (mk_proj_exception tm)
                val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4]
             in
                MP_Next thm ::

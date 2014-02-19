@@ -82,6 +82,8 @@ end
 val state_id =
    utilsLib.mk_state_id_thm mipsTheory.mips_state_component_equality
       [["CP0", "PC", "gpr"],
+       ["CP0", "PC", "exceptionSignalled", "gpr"],
+       ["CP0", "PC", "exceptionSignalled"],
        ["CP0", "LLbit", "PC"],
        ["CP0", "LLbit", "PC", "gpr"],
        ["CP0", "PC"],
@@ -89,6 +91,7 @@ val state_id =
        ["CP0", "PC", "hi"],
        ["CP0", "PC", "hi", "lo"],
        ["CP0", "PC", "gpr", "hi", "lo"],
+       ["CP0", "LLbit", "MEM", "PC"],
        ["CP0", "MEM", "PC"],
        ["MEM", "PC"],
        ["gpr", "hi", "lo"],
@@ -115,6 +118,9 @@ val mips_frame =
        (`K mips_c_CP0_ErrCtl`,
         `\s:mips_state a w. s with CP0 := cp0 with ErrCtl := w`,
         `\s:mips_state. s with CP0 := cp0`),
+       (`K mips_c_CP0_LLAddr`,
+        `\s:mips_state a w. s with CP0 := cp0 with LLAddr := w`,
+        `\s:mips_state. s with CP0 := cp0`),
        (`K mips_c_CP0_Status_ERL`,
         `\s:mips_state a w.
             s with CP0 := cp0 with Status := status with ERL := w`,
@@ -128,6 +134,9 @@ val mips_frame =
         `I: mips_state -> mips_state`),
        (`K mips_c_BranchStatus`,
         `\s:mips_state a w. s with BranchStatus := w`,
+        `I: mips_state -> mips_state`),
+       (`K mips_c_exceptionSignalled`,
+        `\s:mips_state a w. s with exceptionSignalled := w`,
         `I: mips_state -> mips_state`),
        (`K mips_c_LLbit`,
         `\s:mips_state a w. s with LLbit := w`,
@@ -202,6 +211,7 @@ local
          [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
           ("mips$CP0_EPC_fupd", "mips_CP0_EPC"),
           ("mips$CP0_Debug_fupd", "mips_CP0_Debug"),
+          ("mips$CP0_LLAddr_fupd", "mips_CP0_LLAddr"),
           ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
          [("mips$CP0_Count_fupd", "mips_CP0_Count")]
          [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
@@ -209,15 +219,16 @@ local
 in
    val mips_write_footprint =
       stateLib.write_footprint mips_1 mips_2
-         [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
-          ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``)]
-         [("mips$mips_state_hi_fupd", "mips_hi"),
-          ("mips$mips_state_lo_fupd", "mips_lo"),
-          ("mips$mips_state_LLbit_fupd", "mips_LLbit")]
-         [("mips$mips_state_PC_fupd", "mips_PC"),
-          ("mips$mips_state_BranchStatus_fupd", "mips_BranchStatus")]
-         [("mips$mips_state_CP0_fupd", cp0_write_footprint)]
-         (K false)
+        [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
+         ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``)]
+        [("mips$mips_state_hi_fupd", "mips_hi"),
+         ("mips$mips_state_lo_fupd", "mips_lo"),
+         ("mips$mips_state_exceptionSignalled_fupd", "mips_exceptionSignalled"),
+         ("mips$mips_state_LLbit_fupd", "mips_LLbit")]
+        [("mips$mips_state_PC_fupd", "mips_PC"),
+         ("mips$mips_state_BranchStatus_fupd", "mips_BranchStatus")]
+        [("mips$mips_state_CP0_fupd", cp0_write_footprint)]
+        (K false)
 end
 
 val mips_mk_pre_post =
