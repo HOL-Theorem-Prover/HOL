@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 val _ = new_theory "prog_x64_extra";
 
 open prog_x64Theory prog_x64Lib x64_encodeLib;
-open helperLib progTheory set_sepTheory;
+open helperLib progTheory set_sepTheory addressTheory;
 
 open wordsTheory wordsLib listTheory arithmeticTheory;
 open whileTheory pairTheory relationTheory combinTheory optionTheory;
