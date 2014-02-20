@@ -16,7 +16,8 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/Pmatch.uo) \
        $(dprot $(SIGOBJ)/TypeBasePure.uo) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
-       $(dprot $(SIGOBJ)/Preterm.uo)
+       $(dprot $(SIGOBJ)/Preterm.uo) \
+       $(dprot $(SIGOBJ)/type_pp.uo)
 
 EXTRA_CLEANS = $(TARGET)
 
