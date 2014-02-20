@@ -164,7 +164,7 @@ fun pp_type0 (G:grammar) backend = let
           in
             add_string "(";
             begin_block INCONSISTENT 0;
-            if not (null Args) then (print_args Top Args; add_break(1,0))
+            if not (null Args) then (print_args Sfx Args; add_break(1,0))
             else ();
             add_string (Thy ^ "$" ^ Tyop);
             end_block();

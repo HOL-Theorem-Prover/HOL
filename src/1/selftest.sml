@@ -284,6 +284,22 @@ end
 val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
                   ":'a -> 'b -> 'c",
                   ":(bool -> bool) -> 'a"]
+local
+  open testutils
+  val ct = current_theory
+  val _ = new_type ("option", 1)
+  val ty = mk_thy_type{Thy = ct(), Tyop = "option", Args = [alpha --> beta]}
+  val _ = tprint ("Testing p/printing of (min_grammar) (('a -> 'b) "^ct()^"$option)")
+  val pfn =
+    PP.pp_to_string 70 (#1 (print_from_grammars min_grammars))
+                    |> raw_backend
+                    |> unicode_off
+  val s = pfn ty
+in
+val _ = if s = "(('a -> 'b) "^ct()^"$option)" then print "OK\n"
+        else die ("FAILED! - "^s)
+end
+
 
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
