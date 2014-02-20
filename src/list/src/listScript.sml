@@ -2889,6 +2889,9 @@ val LIST_APPLY_def = Define`
   LIST_APPLY fs xs = LIST_BIND fs (combin$C MAP xs)
 `
 
+(* pick up the <*> syntax *)
+val _ = overload_on("APPLICATIVE_FAPPLY", ``LIST_APPLY``)
+
 (* derives the lift2 function to boot *)
 val LIST_LIFT2_def = Define`
   LIST_LIFT2 f xs ys = LIST_APPLY (MAP f xs) ys
@@ -2922,12 +2925,6 @@ val MAP_FLAT = store_thm(
   "MAP_FLAT",
   ``MAP f (FLAT l) = FLAT (MAP (MAP f) l)``,
   Induct_on `l` THEN ASM_SIMP_TAC (srw_ss()) [MAP_APPEND])
-
-(*
-val _ = set_mapped_fixity { fixity = Infixl 500, term_name = "FAPPLY",
-                            tok = "<*>" }
-val _ = overload_on ("FAPPLY", ``LIST_APPLY``)
-*)
 
 val LIST_APPLY_o = store_thm(
   "LIST_APPLY_o",
