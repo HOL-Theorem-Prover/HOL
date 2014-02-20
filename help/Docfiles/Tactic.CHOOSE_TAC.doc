@@ -11,8 +11,9 @@ tactic, existential.
 
 \DESCRIBE
 When applied to a theorem {A' |- ?x. t} and a goal, {CHOOSE_TAC} adds
-{t[x'/x]} to the assumptions of the goal, where {x'} is a variant of {x}
-which is not free in the assumption list; normally {x'} is just {x}.
+{t[x'/x]} to the assumptions of the goal, where {x'} is a variant of
+{x} which is not free in the goal or assumption list; normally {x'} is
+just {x}.
 {
          A ?- u
    ====================  CHOOSE_TAC (A' |- ?x. t)
@@ -36,9 +37,9 @@ and we have the following theorems available:
 }
 Then the goal can be solved by the application of:
 {
-   CHOOSE_TAC th1 
-     THEN EXISTS_TAC (Term `t+1`) 
-     THEN UNDISCH_TAC (Term `input (t:num) :bool`) 
+   CHOOSE_TAC th1
+     THEN EXISTS_TAC (Term `t+1`)
+     THEN UNDISCH_TAC (Term `input (t:num) :bool`)
      THEN MATCH_ACCEPT_TAC th2
 }
 
