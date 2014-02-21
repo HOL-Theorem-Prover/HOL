@@ -292,8 +292,6 @@ val RES_SELECT_DEF =
 
 val _ = (add_const "RES_SELECT"; associate_restriction ("@",  "RES_SELECT"));
 
-(* Note: RES_ABSTRACT comes later, defined by new_specification *)
-
 (*---------------------------------------------------------------------------*)
 (* Experimental rewriting directives                                         *)
 (*---------------------------------------------------------------------------*)
@@ -3948,19 +3946,19 @@ val RES_ABSTRACT_EXISTS =
     val B22 = GENL [p, m1, m2] B21
     (* Cleaning up *)
     val C1 = CONJ A9 B22
-    val C2 = EXISTS
-      (Term `?f.
-               (!p (m : 'a -> 'b) x. x IN p ==> (f p m x = m x)) /\
-               (!p m1 m2.
-                  (!x. x IN p ==> (m1 x = m2 x)) ==> (f p m1 = f p m2))`,
-       Term `\p (m : 'a -> 'b) x. (if x IN p then m x else ARB x)`) C1
+    val C2 = ASSUME (Term `RES_ABSTRACT = ^witness`)
+    val C3 = SUBST [lhs (concl C2) |-> SYM C2]
+      (Term `(!p (m : 'a -> 'b) x. x IN p ==> (RES_ABSTRACT p m x = m x)) /\
+             (!p m1 m2.
+                (!x. x IN p ==> (m1 x = m2 x)) ==>
+                  (RES_ABSTRACT p m1 = RES_ABSTRACT p m2))`) C1
   in
-    C2
+    C3
   end;
 
 val RES_ABSTRACT_DEF =
-  Definition.new_specification
-  ("RES_ABSTRACT_DEF", ["RES_ABSTRACT"], RES_ABSTRACT_EXISTS);
+  Definition.loose_specification
+  ("RES_ABSTRACT_DEF", RES_ABSTRACT_EXISTS);
 
 val _ = add_const "RES_ABSTRACT";
 val _ = associate_restriction ("\\", "RES_ABSTRACT");
@@ -4435,14 +4433,13 @@ end
 (* define case operator *)
 val itself_case_thm = let
   val witness = ``\(i:'a itself) (b:'b). b``
-  val witness_applied1 = BETA_CONV (mk_comb(witness, ``(:'a)``))
-  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 ``b:'b``)
+  val a = ``(:'a)`` val b = ``b:'b``
+  val witness_applied1 = BETA_CONV (mk_comb(witness, a))
+  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 b)
+  val th1 = AP_THM (AP_THM (ASSUME ``itself_case = ^witness``) a) b
+  val th2 = TRANS th1 witness_applied2
 in
-  new_specification("itself_case_thm",
-                    ["itself_case"],
-                    EXISTS (``?f:'a itself -> 'b -> 'b. !b. f (:'a) b = b``,
-                            witness)
-                           (GEN_ALL witness_applied2))
+  loose_specification ("itself_case_thm", (GEN_ALL th2))
 end
 
 

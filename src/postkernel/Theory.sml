@@ -1073,6 +1073,8 @@ fun new_type_definition (name,thm) = let
 
 fun loose_specification(name, th) = let
   val thy = current_theory()
+  val _ = print("Attempting to specify "^name^" with:\n")
+  val _ = print((HOLPP.pp_to_string 80 (!pp_thm) th)^"\n")
   val (cnames,def) = Thm.prim_specification thy th
  in
   store_definition (name, def) before
@@ -1085,7 +1087,8 @@ fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)          = dest M
      val Thy             = current_theory()
-     val ([Name],def_th) = Thm.prim_specification Thy (Thm.ASSUME eq)
+     val (cnames,def_th) = Thm.prim_specification Thy (Thm.ASSUME eq)
+     val Name            = case cnames of [Name] => Name | _ => raise Match
  in
    store_definition (name, post(V,def_th)) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
