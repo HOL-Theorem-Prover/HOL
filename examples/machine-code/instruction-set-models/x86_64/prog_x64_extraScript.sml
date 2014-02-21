@@ -850,7 +850,7 @@ val io_getchar_tm =
   ``SPEC X64_MODEL
        (zPC pi * ~zR1 RAX * ~zR1 RDI * ^caller_saver_tm * ^callee_saved_tm *
         ^IO (pi,input,po,output) * ~zS * zSTACK (base,x::stack)) {}
-       (zPC x * zR1 RAX (w2w (HD (SNOC (-1w) input))) * ~zR1 RDI *
+       (zPC x * zR1 RAX (HD (SNOC (~0w) (MAP w2w input))) * ~zR1 RDI *
         ^caller_saver_tm * ^callee_saved_tm *
         ^IO (pi,DROP 1 input,po,output) * ~zS * zSTACK (base,stack))``;
 
