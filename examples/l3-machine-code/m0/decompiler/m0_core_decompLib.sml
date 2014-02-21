@@ -6,7 +6,7 @@ open m0_core_decompTheory core_decompilerLib tripleLib m0_decompLib
 
 val ERR = Feedback.mk_HOL_ERR "m0_core_decompLib"
 
-val _ = hide "cond"
+val _ = Parse.hide "cond"
 
 (* ------------------------------------------------------------------------ *)
 
@@ -202,13 +202,25 @@ fun config_for_m0 () =
 
 val () = config_for_m0 ()
 
+fun m0_core_decompile name qcode =
+   ( config_for_m0 ()
+   ; core_decompilerLib.code_parser := NONE
+   ; core_decompilerLib.core_decompile name qcode
+   )
+
+fun m0_core_decompile_code name qcode =
+   ( config_for_m0 ()
+   ; core_decompilerLib.code_parser := SOME (m0AssemblerLib.m0_code)
+   ; core_decompilerLib.core_decompile name qcode
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
 
 open m0_core_decompLib
 
-val (test_cert, test_def) = core_decompilerLib.core_decompile "test"`
+val (test_cert, test_def) = m0_core_decompLib.m0_core_decompile "test"`
    2100  (*     movs r1, #0 *)
    0003  (*     mov  r3, r0 *)
    3328  (*     adds r3, #40 *)
@@ -217,6 +229,16 @@ val (test_cert, test_def) = core_decompilerLib.core_decompile "test"`
    4411  (*     add  r1, r2 *)
    4298  (*     cmp  r0, r3 *)
    DBFA  (*     blt  l1 *)`
+
+val (test2_cert, test2_def) = m0_core_decompLib.m0_core_decompile_code "test2"
+   `movs r1, #0        ; accumulator
+    mov  r3, r0        ; first address
+    adds r3, #40       ; last address (10 loads)
+l1: ldr  r2, [r0, #4]  ; load data
+    adds r0, #4        ; increment address
+    add  r1, r2        ; add to accumulator
+    cmp  r0, r3        ; test if done
+    blt  l1            ; loop if not done`
 
 val () = utilsLib.add_datatypes [``:RName``] computeLib.the_compset
 val () = computeLib.add_funs

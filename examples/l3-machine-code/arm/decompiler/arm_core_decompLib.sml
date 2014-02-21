@@ -33,6 +33,18 @@ fun config_for_arm () =
 
 val () = config_for_arm ()
 
+fun arm_core_decompile name qcode =
+   ( config_for_arm ()
+   ; core_decompilerLib.code_parser := NONE
+   ; core_decompilerLib.core_decompile name qcode
+   )
+
+fun arm_core_decompile_code name qcode =
+   ( config_for_arm ()
+   ; core_decompilerLib.code_parser := SOME armAssemblerLib.arm_code
+   ; core_decompilerLib.core_decompile name qcode
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 end

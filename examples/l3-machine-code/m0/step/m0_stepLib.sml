@@ -2050,9 +2050,15 @@ in
       end
 end
 
+fun thumb_step_code config =
+   List.map (thumb_step_hex config) o
+   (m0AssemblerLib.m0_code: string quotation -> string list)
+
 (* ---------------------------- *)
 
 (* testing:
+
+open m0_stepLib
 
 val be = true
 val sel = true

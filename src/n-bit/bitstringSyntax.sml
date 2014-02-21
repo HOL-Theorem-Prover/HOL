@@ -130,6 +130,9 @@ local
    fun boolify a n =
       if n <= 0 then a else boolify ((n mod 2 = 1) :: a) (n div 2)
 
+   val removeWS =
+      String.translate (fn c => if Char.isSpace c then "" else String.str c)
+
    fun fromHexString s =
       case Int.scan StringCvt.HEX Substring.getc (Substring.full s) of
         SOME (i, r) => if Substring.size r = 0 then i else raise ERR "" ""
@@ -150,10 +153,9 @@ in
 
    fun bitstring_of_hexstring s =
       let
-         val n = hexSize s
+         val s = removeWS s
          val l = int_to_bitlist (fromHexString s)
-         val m = List.length l
-         val l = List.tabulate (n - m, K false) @ l
+         val l = List.tabulate (hexSize s - List.length l, K false) @ l
       in
          bitstring_of_bitlist l
       end

@@ -6,6 +6,7 @@ sig
    val m0_config: bool -> string -> unit
    val m0_introduction: Drule.rule
    val m0_spec: string -> Thm.thm list
+   val m0_spec_code: string quotation -> Thm.thm list list
    val m0_spec_hex: string -> Thm.thm list
    val memory_introduction: Drule.rule
    val mk_thumb2_pair: bool -> Term.term -> Term.term

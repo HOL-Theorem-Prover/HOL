@@ -58,19 +58,34 @@ val l3_arm_tools_mapped_no_status = arm_tools_opt "mapped" TRUTH
 val l3_arm_tools_mapped32 = arm_tools_opt "mapped32" arm_progTheory.aS_HIDE
 val l3_arm_tools_mapped32_no_status = arm_tools_opt "mapped32" TRUTH
 
-fun arm_decompile opt f =
-   fn name => fn qcode =>
-      ( set_opt opt
-      ; arm_progLib.set_newline ""
-      ; (UNABBREV_CODE_RULE ## I) (decompile f name qcode)
-      )
+fun arm_decompile iscode tools opt name (qcode: string quotation) =
+   let
+      val q = if iscode then armAssemblerLib.arm_code
+              else helperLib.quote_to_strings
+      val decomp = decompilerLib.decompile_with q tools
+   in
+      set_opt opt
+    ; arm_progLib.set_newline ""
+    ; (decompilerLib.UNABBREV_CODE_RULE ## I) (decomp name qcode)
+   end
 
-val l3_arm_decompile = arm_decompile "mapped" l3_arm_tools
-val l3_arm_decompile_no_status = arm_decompile  "mapped" l3_arm_tools_no_status
+val l3_arm_decompile = arm_decompile false l3_arm_tools "mapped"
+val arm_decompile_code = arm_decompile true l3_arm_tools "mapped"
 
-val l3_arm_decompile32 = arm_decompile "mapped32" l3_arm_tools
-val l3_arm_decompile32_no_status =
-   arm_decompile  "mapped32" l3_arm_tools_no_status
+val l3_arm_decompile_no_status =
+   arm_decompile false l3_arm_tools_no_status "mapped"
+
+val arm_decompile_code_no_status =
+   arm_decompile true l3_arm_tools_no_status "mapped"
+
+val arm_decompile32 = arm_decompile false l3_arm_tools "mapped32"
+val arm_decompile32_code = arm_decompile true l3_arm_tools "mapped32"
+
+val arm_decompile32_no_status =
+   arm_decompile false l3_arm_tools_no_status "mapped32"
+
+val arm_decompile32_code_no_status =
+   arm_decompile true l3_arm_tools_no_status "mapped32"
 
 (* testing
 

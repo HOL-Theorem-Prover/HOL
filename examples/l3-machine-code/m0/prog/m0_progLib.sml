@@ -779,17 +779,21 @@ in
               end
           | NONE => loop looped opc "failed to add suitable spec" s
       end
-    and loop looped opc e s =
-       if looped orelse
-          not (addInstructionClass (m0_stepLib.thumb_instruction opc))
-          then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
-       else m0_spec_hex true s
-    val m0_spec_hex = m0_spec_hex false
+   and loop looped opc e s =
+      if looped orelse
+         not (addInstructionClass (m0_stepLib.thumb_instruction opc))
+         then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
+      else m0_spec_hex true s
+   val m0_spec_hex = m0_spec_hex false
+   val m0_spec_code = List.map m0_spec_hex o
+                      (m0AssemblerLib.m0_code: string quotation -> string list)
 end
 
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
+
+open m0_progLib
 
 m0_config false "flat"
 m0_config false "array"

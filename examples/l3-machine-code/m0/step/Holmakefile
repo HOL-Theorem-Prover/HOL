@@ -5,7 +5,7 @@ ifdef POLY
 HOLHEAP = m0-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/m0Lib
+BARE_THYS = ../model/m0Lib ../model/m0AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)

@@ -932,12 +932,15 @@ in
               end
           | NONE => loop looped i "failed to add suitable spec" s
       end
-    and loop looped i e s =
-       if looped
-          then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
-       else ( List.app addInstructionClass (arm_stepLib.arm_instruction i)
-            ; arm_spec_hex true s)
-    val arm_spec_hex = arm_spec_hex false
+   and loop looped i e s =
+      if looped
+         then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
+      else ( List.app addInstructionClass (arm_stepLib.arm_instruction i)
+           ; arm_spec_hex true s)
+   val arm_spec_hex = arm_spec_hex false
+   val arm_spec_code =
+      List.map arm_spec_hex o
+      (armAssemblerLib.arm_code: string quotation -> string list)
 end
 
 (* ------------------------------------------------------------------------ *)

@@ -20,7 +20,7 @@ struct
 end
 
 open Parse
-val _ = hide "add"
+val _ = Parse.hide "add"
 
 infix \\
 val op \\ = op THEN
@@ -3685,6 +3685,25 @@ in
             end
       end
 end
+
+fun arm_step_code config =
+   let
+      val step_hex = List.map (arm_step_hex config)
+      open assemblerLib
+   in
+      fn q: string quotation =>
+         let
+            val (code, warnings) = armAssemblerLib.arm_code_with_warnings q
+         in
+            if List.null warnings
+               then ()
+            else ( printn "\n>>>> Warning: contains UNPREDICTABLE code. >>>>\n"
+                 ; printLines warnings
+                 ; printn "\n<<<<\n"
+                 )
+          ; step_hex code
+         end
+   end
 
 local
    fun cases l =
