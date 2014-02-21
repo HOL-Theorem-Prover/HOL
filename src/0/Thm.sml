@@ -1099,11 +1099,9 @@ fun mk_defn_thm (witness_tag, c) =
 fun ERR f msg = HOL_ERR {origin_structure = "Thm",
                          origin_function = f, message = msg}
 val TYDEF_ERR = ERR "prim_type_definition"
-val DEF_ERR   = ERR "new_definition"
-val SPEC_ERR  = ERR "new_specification"
+val SPEC_ERR  = ERR "prim_specification"
 
 val TYDEF_FORM_ERR = TYDEF_ERR "expected a theorem of the form \"?x. P x\""
-val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
 
 (* some simple term manipulation functions *)
 fun mk_exists (absrec as (Bvar,_)) =
@@ -1183,6 +1181,8 @@ in
 end
 
 (* subsumed by prim_specification
+val DEF_ERR   = ERR "new_definition"
+val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\""
 fun prim_constant_definition Thy M = let
   val (lhs, rhs) = with_exn dest_eq M DEF_FORM_ERR
   val {Name, Thy, Ty} =
