@@ -618,20 +618,20 @@ più alto. Entrambi i livelli descrivono oggetti simili, ma
 alcuni dettagli che sono evidenti al livello inferiore non sono più 
 visibili al livello superiore. La logica è semplificata.
 
-Simply forming a new type does not complete the quotient operation.
-Rather, one wishes to recreate the
+Formare semplicemente un nuovo tipo non completa l'operazione quoziente.
+Piuttosto, si desidera ricreare 
 %significant parts of the
-pre-existing logical environment at the new,
-higher, and more abstract level.  This includes not only the new
-types, but also new versions of the constants that form and
-manipulate values of those types, and also new versions of the
-theorems that describe properties of those constants.  All of these
+l'ambiente logico pre-esistente al nuovo livello, 
+più alto, e più astratto. Questo include non solo i nuovi 
+tipi, ma anche le nuove versioni delle costanti che formano e 
+manipolano i valori di questi tipi, e anche le nuove versioni dei 
+teoremi che descrivono le proprietà di queste costanti. Ognuna di queste 
 %must be recreated at the higher level, in order to
-form a logical layer, above which all the lower representational details
-may be safely and forever forgotten.
+formano uno strato logico, sopra il quale tutti i dettagli rappresentazionali  più bassi 
+si possono dimenticare con sicurezza e per sempre.
 
-This can be done in a single call of the
-main tool of this package.
+Questo si può fare in una singola chiamata dello 
+strumento principale di questo pacchetto.
 
 \begin{hol}
 \begin{verbatim}
@@ -652,112 +652,111 @@ define_quotient_types :
         thm list
 \end{verbatim}
 \end{hol}
-{\tt define\_quotient\_types} takes a single argument which is a
-record with the following fields.
+{\tt define\_quotient\_types} prende un singolo argomento che è un 
+record con i seguenti campi.
 
-{\it types\/} is a list of records, each of which contains two fields:
-{\it name}, which is the name of a new quotient type to be created, and
-{\it equiv}, which is
-either 1)
-a theorem that a binary relation {\it R\/}
-is an equivalence relation
-(see [HOQ] \S 4)
-of the form
+{\it types\/} è una lista di record, ognuno dei quali contiene due campi:
+{\it name}, che è il nome di un nuovo tipo quoziente da creare, e 
+{\it equiv}, che è
+o 1)
+un teorema che una relazione binaria {\it R\/}
+è una relazione di equivalenza 
+(si veda [HOQ] \S 4)
+della forma
 $$
 \mbox{\tt |-}\
 \forall x\ y.\ R\ x\ y \ \Leftrightarrow \
                 (R\ x = R\ y),
 $$
-or 2)
-a theorem that {\it R\/} is a nonempty partial equivalence relation,
-(see [HOQ] \S 5)
-of the form
+o 2)
+un teorema che {\it R\/} è una relazione di equivalenza parziale non vuota,
+(si veda [HOQ] \S 5)
+della forma 
 $$
 \mbox{\tt |-}\
 (\exists x.\ R\ x\ x) \ \wedge \
 (\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
                 R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)).
 $$
-The process of forming the new quotient types is described
+Il processo di formare i nuovi tipi quoziente è descritto 
 in [HOQ] \S 8.
 
-{\it defs\/} is a list of records specifying the constants to be lifted.
-Each record contains the following four fields:
-{\it func\/} is an HOL term, which must be a single constant, which is the
-constant to be lifted.
-{\it fname\/} is the name of the new constant being defined as the lifted version of {\it func}.
-{\it fixity\/} is the HOL fixity of the new constant being created,
-as specified in the HOL structure {\tt Parse}.
-{\it def\_name} is the name under which the new constant definition is to
-be stored in the current theory.
-The
-process of defining lifted constants
-is described in [HOQ] \S 9.
+{\it defs\/} è una lista di record che specifica le costanti da sollevare.
+Ciascun record contiene i seguenti quattro campi:
+{\it func\/} è un termine HOL, che deve essere una singola costante, che è la 
+costante da sollevare.
+{\it fname\/} è il nome della nuova costante da definire come la versione sollevata di {\it func}.
+{\it fixity\/} è la fixity HOL della nuova costante da creare, 
+come specificato nella struttura HOL {\tt Parse}.
+{\it def\_name} è il nome sotto il quale deve essere archiviata la definizione nella nuova costante 
+nella teoria attuale.
+Il 
+processo di definire le costanti sollevate 
+è descritto in [HOQ] \S 9.
 
-{\it tyop\_equivs\/} is a list of conditional equivalence theorems
-for type operators (see [HOQ] \S 4.1).
-These are used for bringing into regular form
-theorems on new type operators, so that they can be lifted
-(see [HOQ] \S 11 and \S 12).
+{\it tyop\_equivs\/} è una lista di teoremi di equivalenza condizionali 
+per operatori di tipo (si veda [HOQ] \S 4.1).
+Questi sono usati per portare in forma regolare 
+i teoremi sui nuovi operatori di tipo, così che essi possono essere sollevati
+(si veda [HOQ] \S 11 and \S 12).
 
-{\it tyop\_quotients\/} is a list of conditional quotient theorems
-for type operators (see [HOQ] \S 5.2).
-These are used for lifting both constants and theorems.
+{\it tyop\_quotients\/} è una lista di teoremi quoziente condizionali 
+per operatori di tipo (si veda [HOQ] \S 5.2).
+Questi sono usati per sollevare sia le costanti sia i teoremi.
 
-{\it tyop\_simps\/} is a list of theorems used to simplify type operator
-relations and map functions, e.g.,
-for pairs,
-{\tt |- (\$= \#\#\# \$=) = \$=} and
+{\it tyop\_simps\/} è una lista di teoremi per semplificare relazioni operatori di tipo 
+e mappare funzioni, ad esempio,
+{\tt |- (\$= \#\#\# \$=) = \$=} e
 {\tt |- (I \#\# I) = I}.
 
-The rest of the arguments refer to the general process of lifting theorems
-over the quotients being defined,
-as described in [HOQ] \S 10.
+Il resto degli argomenti si riferisce al processo generale di sollevare i teoremi 
+sui quozienti che vengono definiti,
+come descritto in [HOQ] \S 10.
 
-{\it respects\/} is a list of theorems about the respectfulness of the
-constants being lifted.
-These theorems are described in
+{\it respects\/} è una lista di teoremi circa il rispetto delle 
+costanti che sono sollevate.
+Questi teoremi sono descritti in 
 [HOQ] \S 10.1.
 
-{\it poly\_preserves\/} is a list of theorems about the preservation of
-polymorphic constants in the HOL logic
-across a quotient operation.
+{\it poly\_preserves\/} è una lista di teoremi circa la preservazione di 
+costanti polimorfiche nella logica HOL 
+attraverso un'operazione quoziente.
 %as if they were definitions across the quotient operation.
-In other words, they state that any quotient operation preserves these
-constants as a homomorphism.
-These theorems are described in
+In altre parole, essi affermano che qualsiasi operazione quozionte preserva queste 
+costanti come un omomorfismo.
+Questo teoremi sono descritti in
 [HOQ] \S 10.2.
 
-{\it poly\_respects\/} is a list of theorems showing the respectfulness
-of the polymorphic constants mentioned in {\it poly\_preserves}.
-These are
-described in
+{\it poly\_respects\/} è una lista di teoremi che mostra il rispetto 
+delle costanti polimorfiche menzionate in {\it poly\_preserves}.
+Queste sono 
+descritte in 
 [HOQ] \S 10.3.
 
-{\it old\_thms\/} is a list of theorems concerning the lower, representative
-types and contants, which are to be automatically lifted and proved at the
-higher, more abstract quotient level.
-These theorems are described in
+{\it old\_thms\/} è una lista di teoremi che concernono i tipi e le costanti più basse, 
+rappresentative, che devono essere sollevate e dimostrate automaticamente al 
+più alto, e più astratto livello quoziente.
+Questo teoremi sono descritti in
 [HOQ] \S 10.4.
 
-{\tt define\_quotient\_types} returns a list of theorems, which are the
-lifted versions of the {\it old\_thms}.
+{\tt define\_quotient\_types} restituisce una lista di teoremi, che sono le 
+versioni sollevate degli {\it old\_thms}.
 
-A similar function,
-{\tt define\_quotient\_types\_rule}, takes a single argument which is a
-record with the same fields as above except for {\it old\_thms},
-and returns an SML function of type {\tt thm -> thm}.
-This result, typically called {\tt LIFT\_RULE},
-is then used to lift the old theorems individually, one at a time.
+Una funzione analoga, 
+{\tt define\_quotient\_types\_rule}, prende un singolo argomento che è un 
+record con gli stessi campi di sopra eccetto per {\it old\_thms}, 
+e restituisce una funzione SML di tipo {\tt thm -> thm}. 
+Questo risultato tipicamente chiamato {\tt LIFT\_RULE}, 
+è poi usato per sollevare i vecchi teoremi individualmente, uno alla volta.
 
-For backwards compatibility with
-the excellent quotients package
+Per retro-compatibilità con 
+l'eccellente pacchetto quozienti 
 {\tt EquivType}
-created by
+creato da 
 John Harrison
 %to whom much credit is due, and
-(which provided much inspiration),
-the following function is also provided:
+(che ha fornito molta ispirazione), 
+è anche fornita la seguente funzione:
 
 \begin{hol}
 \begin{verbatim}
@@ -774,10 +773,10 @@ define_equivalence_type :
 \end{verbatim}
 \end{hol}
 \noindent
-This function is limited to a single quotient type, but may be
-more convenient when the generality of {\tt define\_quotient\_types}
-is not needed.
-This function is defined in terms of {\tt define\_quotient\_types} as
+Questa funzione è limitata ad un singolo tipo quoziente, ma può essere 
+più conveniente quando la generalità di {\tt define\_quotient\_types}
+non è necessaria.
+Questa funzione è definita in termini di {\tt define\_quotient\_types} come
 
 \begin{hol}
 \begin{verbatim}
@@ -791,16 +790,16 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
       old_thms=old_thms};
 \end{verbatim}
 \end{hol}
-\index{type definitions, nella logica HOL@type definitions, nella logica \HOL{}!quotients|)}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!quozienti|)}
 
 
-\section{Case Expressions}\label{CaseExp}
+\section{Espressioni Case}\label{CaseExp}
 \index{case expressions|(}
 
-Within the HOL{} logic, case expressions provide a very compact and convenient notation for multi-way selection among the values of several expressions.
-This is modeled on the case constructs in functional programming languages such as Standard ML.
-Such case expressions can simplify the expression of complicated branches between different cases or combinations of cases.
-The basic syntax (where the non-terminal $\mathit{term}$ stands for any \HOL{} term) is
+All'interno della logica \HOL{}, le espressioni case forniscono una notazione molto compatta e conveniente per la selezione multi-way tra i valori di più espressioni.
+Questo è modellato sui costrutti case nei linguaggi di programmazione funzionale come lo Standard ML.
+Tali espressioni case possono semplificare l'espressione di rami complicati tra casi differenti o combinazioni di casi.
+La sintassi base (dove il $\mathit{term}$ non-terminale sta per qualsiasi termine \HOL{}) è
 \begin{eqnarray*}
 \mathit{term} & ::= & \texttt{case}\;\mathit{term}\;\texttt{of}\;\mathit{cases}\\
 \mathit{cases} &::= & \mathit{case}_1 \;\mathit{morecases}\\
@@ -808,14 +807,14 @@ The basic syntax (where the non-terminal $\mathit{term}$ stands for any \HOL{} t
 \mathit{morecases} & ::= & \varepsilon\;\;\;|\;\;\;\texttt{|}\;\mathit{case}\;\mathit{morecases}\\
 \mathit{case} & ::= & \mathit{term} \;\texttt{=>}\; \mathit{term}
 \end{eqnarray*}
-The choice in the rule for the first case ($\mathit{case}_1$) allows the use of more uniform syntax, where every case is preceded by a vertical bar.
-Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms with the syntax used by SML.
+La scelta nella regola per il primo caso ($\mathit{case}_1$) permette l'uso di una sintassi più uniforme, dove ciascun caso è preceduto da una barra verticale.
+Omettendo la barra, che è ciò che fa il pretty-printer quando la sintassi è stampata, si conforma con la sintassi usata dall'SML.
 
-Based on the value of a test expression, a list of pattern expressions
-are considered in sequence to see if they match the test expression.
-The first pattern which successfully matches causes its associated result
-expression to be evaluated and its value yielded as the value of the
-entire case expression.  For example,
+Sulla base del valore di una espressione di test, sono considerate in sequenza una lista di 
+espressioni pattern per vedere se si accordano con l'espressione di test.
+Il primo pattern che matcha con successo fa sì che l'espressione risultato ad esso 
+associata sia valutata e il suo valore restituito come il valore dell'intera 
+espressione case. Per esempio,
 %
 \begin{hol}
 \begin{verbatim}
@@ -828,13 +827,13 @@ entire case expression.  For example,
 \end{hol}
 %
 
-This could have been expressed using several ``if--then--else'' constructs,
-but the case expression is much more compact and clean, with the
-selection between various choices made clearly evident.
+Questo avrebbe potuto essere espresso usando diversi costrutti ``if--then--else'', 
+ma l'espressione case è molto più compatta e pulita, con la 
+selezione tra varie scelte rese chiaramente evidenti.
 
-In addition to literals as patterns, as above, patterns may be
-constructor expressions.  Many standard HOL{} types have constructors,
-including \ml{num}, \ml{list}, and \ml{option}.
+Oltre ai letterali come pattern, come di sopra, i pattern possono essere 
+espressioni costruttore. Molti tipi standard \HOL{} hanno dei costruttori, 
+compresi \ml{num}, \ml{list}, e \ml{option}.
 %
 \begin{hol}
 \begin{verbatim}
@@ -843,38 +842,38 @@ including \ml{num}, \ml{list}, and \ml{option}.
    | SOME s => "married to " ++ name_of s
 \end{verbatim}
 \end{hol}
-(This example uses the optional bar in front of the first case.)
+(Questo esempio usa la barra opzionale all'inizio del primo caso.)
 
-HOL{} supports a rich structure of case expressions using a single
-notation.  The format is related to that of definitions of recursive
-functions, as described in Section~\ref{TFL}.  In addition, case
-expressions may contain literals as patterns, either singly or as
-elements of deeply nested patterns.
+\HOL{} supporta una ricca struttura di espressioni case che usano una singola 
+notazione. Il formato è legato a quello delle definizioni di funzioni 
+ricorsive, come descritto nella Sezione~\ref{TFL}. Inoltre, le espressioni 
+case possono contenere letterali come pattern, o singolarmente come 
+elementi di pattern più profondamente annidati.
 
-Case expressions may test values of any type.  If the test expression
-is a type with constructors, then the patterns may be expressed
-using the constructors applied to arguments, as for example \ml{SOME s}
-in the example above.  A free variable within the constructor pattern,
-for example \ml{s} in the pattern \ml{SOME s}, becomes bound to the
-corresponding value within the value of the test expression, and
-can be used within the associated result expression for that pattern.
+Le espressioni case possono testare valori di qualsiasi tipo. Se l'espressione test 
+è un tipo con costruttori, allora i pattenr possono essere espressi 
+usando i costruttori applicati agli argomenti, come per esempio \ml{SOME s} 
+nell'esempio di sopra. Una variabile libeera all'interno del pattern costruttore, 
+per esempio \ml{s} nel pattern \ml{SOME s}, diventa legata al 
+corrispondente valore all'interno del valore dell'espressione di test, e 
+può essere usata all'interno dell'espressione risultato associata per quel pattern.
 
-In addition to the constructors of standard types in HOL{},
-constructor patterns may also be used for types created by use of the
-datatype definition facility described in Section~\ref{sec:datatype},
-including user-defined types.
+Oltre ai costruttori per i tipi standard in \HOL{}, 
+i pattern costruttore possono essere usati anche per i tipi creati per mezzo della 
+definizione di datatype descritta nella Sezione~\ref{sec:datatype}, 
+compresi i tipi definiti dall'utente.
 
-Whether or not the test expression is a type with constructors,
-the patterns may be expressed using the appropriate literals of that type,
-if any such literals exist.
-A complex pattern may contain either or both of literals and constructor
-patterns nested within it.
-However, literals and constructors may not be mixed as alternatives of
-each other within the same case expression,
-except insofar as a particular pattern may be both a literal
-and also a (0-ary) constructor of its type, as for example \ml{0} (zero)
-is both a literal and a constructor of the type \ml{num}.
-Here is an example of this kind of improper mixture.
+Sia che l'espressione di testi sia un tipo con costruttori o meno, 
+i pattern possono essere espressi usando i letterali appropriati di quel tipo, 
+se esistono tali letterali. 
+Un pattern complesso può contenere o letterali o pattern costruttore 
+o entrambi annidati l'uno con l'altro.
+Tuttavia, i letterali e i costruttori non possono essere mischiati come alternative 
+gli uni degli altri all'interno della stessa espressione case, 
+a meno che un particolare pattern possa essere sia un letterale 
+e anche un costruttore (0-ario) del suo tipo, come per esempio \ml{0} (zero) 
+è sia un letterale sia un costruttore del tipo \ml{num}. 
+Qui c'è un esempio di questo genere di miscuglio improprio.
 %
 \begin{hol}
 \begin{verbatim}
@@ -886,16 +885,16 @@ Here is an example of this kind of improper mixture.
 \end{verbatim}
 \end{hol}
 %
-In this pattern, the constructor pattern \ml{SUC m} is given as
-an alternative to the literal patterns \ml{1} and \ml{2}.
-This makes this attempted case expression invalid.
-Deleting either group of rows would resolve the conflict,
-and make the expression valid.
-Note that the pattern \ml{0} is acceptable to either group.
+In questo pattern, il pattern costruttore \ml{SUC m} è dato come 
+un'alternativa ai pattern letterali \ml{1} and \ml{2}. 
+Ciò rende questo espressione case invalida. 
+Cancellare uno dei due gruppi di righe risolverebbe il conflitto, 
+e renderebbe valida l'espressione. 
+Si noti che il pattern \ml{0} è accettabile per entrambi i gruppi.
 
-Patterns can be nested as well, as shown in the next example, where
-the function \ml{parents} returns a pair containing the person's father
-and/or mother, where each is represented by \ml{NONE} if deceased.
+Anche i pattern possono essere nidificati, come mostrato nel prossimo esempio, dove 
+la funzione \ml{parents} restituisce una coppia contenente il padre della persona 
+e/o la madre, dove ciascuno è rappresentato da \ml{NONE} se deceduto.
 %
 \begin{hol}
 \begin{verbatim}
@@ -905,12 +904,12 @@ and/or mother, where each is represented by \ml{NONE} if deceased.
 \end{verbatim}
 \end{hol}
 %
-This shows the nesting of option patterns within a pair pattern,
-and also the use of a wildcard \ml{\_} to match the cases not given.
+Questo mostra l'annidamento di pattern option all'interno di un pattern coppia, 
+e anche l'uso di una wildcard \ml{\_} per matchare i casi non forniti.
 
-If the set of patterns is sparse, there may be several new rows generated
-automatically to fill it out, and possibly some new variables or the
-\ml{ARB} constant to properly represent the case expression.
+Se l'insieme di pattern è rado [sparse nel testo originale (ndt)], ci possono essere alcune nuove righe generate 
+automaticamente per compilarlo, e possibilmente alcune nuove variabili o la 
+costante \ml{ARB} per rappresentare propriamente l'espressione case.
 %
 \begin{hol}
 \begin{verbatim}
@@ -931,39 +930,39 @@ automatically to fill it out, and possibly some new variables or the
 \end{verbatim}
 \end{hol}
 
-This is just a brief description of some of the
-expressive capabilities of the case expression with patterns.
-Many more examples of patterns are provided in Section~\ref{TFL}
-on the definition of recursive functions.
+Questo è soltanto una breve descrizione di alcune delle 
+capacità espressive dell'espressione case con pattern. 
+Molti altri esempi di pattern sono forniti nella Sezione~\ref{TFL} 
+sulla definizione delle funzioni ricorsive.
 
-\index{case expressions|)}
+\index{espressioni case|)}
 
 
-\section{Recursive Functions}\label{TFL}
+\section{Funzioni Ricorsive}\label{TFL}
 
-HOL{} provides a function definition mechanism based on the
-wellfounded recursion theorem proved in \theoryimp{relationTheory},
-discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
-possibly recursive, specification of a function, and attempts to
-define the function in the logic. \ml{Define} may be used to define
-abbreviations, recursive functions, and mutually recursive
-functions. An induction theorem may be generated as a by-product of
-\ml{Define}'s activity. This induction theorem follows the recursion
-structure of the function, and may be useful when proving properties
-of the function. \ml{Define} is not always successful in attempting
-to make the specified definition, usually because an automatic
-termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
-which defers the termination proof to the user, can be used.
-The technology underlying \ml{Define} and \ml{Hol\_defn} is explained
-in detail in Slind~\cite{slind-thesis}.
+\HOL{} fornisce una meccanismo di definizione di funzione basato sul 
+teorema di ricorsione benfondata fornito in \theoryimp{relationTheory}, 
+discusso nella Sezione~\ref{relation}.  \ml{Define} prende una specifica di alto livello, 
+possibilmente ricorsiva, di una funzione e tenta di 
+definire la funzione nella logica. \ml{Define} può essere usato per definire 
+abbreviazioni, funzioni ricorsive, e funzioni mutuamente 
+ricorsive. Un teorema d'induzione può essere generato come un sotto-prodotto 
+dell'attività di \ml{Define}. Questo teorema d'induzione segue la struttura 
+ricorsiva della funzione, e può essere utile quando di dimostrano proprietà 
+della funzione. \ml{Define} non ha sempre successo nel tentare di 
+eseguire la definizione specificata, di solito perché una dimostrazione 
+automatica di terminazione fallisce: in quel caso, si può usare un altro punto d'entrata, 
+\ml{Hol\_defn}, rinvia la dimostrazione di terminazione all'utente. 
+La tecnologia che sottosta a \ml{Define} e \ml{Hol\_defn} è spiegata 
+in dettaglio in Slind~\cite{slind-thesis}.
 
 
 \index{Define@\ml{Define}}
 
- In particular, \ml{Define} takes as input a quotation representing a
-conjunction of equations. The specified function(s) may be phrased
-using ML-style pattern-matching. A call
-\ml{Define `}\textit{spec}\ml{`} should conform with the grammar in Table
+In particolare, \ml{Define} prende come input una quotation che rappresenta una 
+congiunzione di equazioni. La (o le) funzione (funzioni) specificate possono essere formulate 
+usando un pattern-matching in stile ML. Una chiamata 
+\ml{Define `}\textit{spec}\ml{`} dovrebbe conformarsi con la grammatica nella Tabella
 \ref{define:syntax}.
 \begin{table}[htbp]
 \begin{center}
@@ -989,14 +988,14 @@ $
 \hline
 \end{array}
 $
-\caption{Syntax of Function Declaration}\label{define:syntax}
+\caption{Sintassi della Dichiarazione di Funzione}\label{define:syntax}
 \end{center}
 \end{table}
 
-\paragraph{Pattern Expansion}
-In general, \ml{Define} attempts to derive exactly the specified
-conjunction of equations. However, the rich syntax of patterns allows
-some ambiguity. For example, the input
+\paragraph{Espansione di Pattern}
+In generale, \ml{Define} tenta di derivare esattamente la congiunzione 
+di equazioni specificata. Tuttavia, la ricca sintassi dei pattern ammette 
+qualche ambiguità. Per esempio, l'input
 %
 \begin{hol}
 \begin{verbatim}
@@ -1005,28 +1004,28 @@ some ambiguity. For example, the input
 \end{verbatim}
 \end{hol}
 %
-is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
-\holtxt{2}?  This ambiguity is dealt with in the usual way for compilers and
-interpreters for functional languages: namely, the conjunction of
-equations is treated as being applied left-conjunct first, followed
-by processing the right conjunct. Therefore, in the example above, the
-value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
-ambiguities arising from such overlapping patterns are systematically
-translated away in a pre-processing step.
+è ambiguo per \holtxt{f 0 0}: il risultato dovrebbe essere \holtxt{1} o
+\holtxt{2}? Questa ambiguità è gestita ne modo usuale per i compilatori e 
+gli interpreti per i linguaggi funzionali: cioè, la congiunzione delle 
+equazioni è trattata come fosse applicata prima la congiunzione sinistra, seguita 
+dall'elaborazione del congiunto destro. Quindi, nell'esempio di sopra, il 
+valore di \holtxt{f 0 0} è \holtxt{1}. Nell'implementazione, 
+le ambiguità che sorgono da tali pattern sovrapposti sono tradotti 
+sistematicamente in un passo di pre-elaborazione.
 
- Another case of ambiguity in patterns is shown above: the specification
-is incomplete since it does not tell how \holtxt{f} should behave when
-applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
-implementation, such missing clauses are filled in, and have the value
-\holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
-of partial functions into total functions suitable for HOL. However,
-since the user has not completely specified the function, the system
-takes that as a hint that the user is not interested in using the
-function at the missing-but-filled-in clauses, and so such clauses are
-dropped from the final theorem.
+Un altro caso di ambiguità nei pattern è mostrato di sotto: la specifica 
+è incompleta dal momento che non dice come \holtxt{f} dovrebbe comportarsi quando 
+applicata a due argomenti diversi da zero: ad esempio, \holtxt{f (SUC m) (SUC n)}. Nella 
+implementazione, tali clausole mancanti sono riempite, e hanno il valore 
+\holtxt{ARB}. Questo passo di `completamento del pattern' è un modo di trasformare le descrizioni 
+di funzioni parziali in funzioni totali adatte per HOL. Tuttavia, 
+dal momento che l'utente non specificato in modo completo la funzione, il sistema 
+lo prende come un suggerimento che l'utente non è interessato nell'usare la 
+funzione per le clausole mancanti ma riempite, e così tali clausole sono 
+eliminate dal teorema finale.
 
-In summary, \ml{Define} will derive the unambiguous and complete
-equations
+In sintesi, \ml{Define} deriverà le equazioni non ambigue e 
+complete
 %
 \begin{hol}
 \begin{verbatim}
@@ -1037,11 +1036,12 @@ equations
 \end{verbatim}
 \end{hol}
 %
-from the above ambiguous and incomplete equations. The odd-looking
-variable names are due to the pre-processing steps described above. The
-above result is only an intermediate value: in the final result returned
-by \ml{Define}, the last equation is droppped since it was not
-specified by the original input.
+dall'equazioni ambigue e incomplete di sopra. Gli strani 
+nomi delle variabili sono dovuti ai passi di pre-elaborazione descritti di sopra. Il 
+risultato di sopra è solo un valore intermedio: nel risultato finale restituito 
+da \ml{Define}, l'ultima equazione è rimossa dal momento che non è stata 
+specificata dall'input originale.
+
 \begin{hol}
 \begin{verbatim}
   |- (f 0 (SUC v4) = 1) /\
@@ -1050,45 +1050,45 @@ specified by the original input.
 \end{verbatim}
 \end{hol}
 
-\paragraph{Termination}
+\paragraph{Terminazione}
 
-When processing the specification of a recursive function, \ml{Define}
-must perform a termination proof. It automatically constructs
-termination conditions for the function, and invokes a termination
-prover in an attempt to prove the termination conditions.  If the
-function is primitive recursive, in the sense that it exactly follows
-the recursion pattern of a previously declared HOL datatype, then this
-proof always succeeds, and \ml{Define} stores the derived equations in
-the current theory segment.
-Otherwise, the function is not an
-instance of primitive recursion, and the termination prover may
-succeed or fail. If the termination proof fails, then \ml{Define} fails.
-If it succeeds, then \ml{Define} stores the specified equations in the
-current theory segment. An induction theorem customized for the defined
-function is also stored in the current segment. Note, however, that an
-induction theorem is not stored for primitive recursive functions, since
-that theorem would be identical to the induction theorem resulting from
-the declaration of the datatype.
+Durante l'elaborazione della specifica di una funzione ricorsiva, \ml{Define} 
+deve eseguire una dimostrazione di terminazione. Essa costruisce automaticamente 
+delle condizioni di terminazione per la funzione, e invoca un dimostratore 
+di terminazione nel tentativo di dimostrare le condizioni di terminazione. Se la 
+funzione è ricorsiva primitiva, nel senso che segue esattamente 
+il pattern ricorsione di un datatype HOL dichiarato in precedenza, allora questa 
+dimostrazione avrà sempre successo, e \ml{Define} archivia l'equazioni derivate nel 
+segmento attuale di teoria.
+Altrimenti, la funzione non è 
+un'istanza di ricorsione primitiva, e il dimostratore di terminazione può 
+avere successo o fallire. Se la dimostrazione di terminazione fallisce, allora \ml{Define} fallisce. 
+Se ha successo, allora \ml{Define} archivia l'equazioni specificate nell'attuale 
+segmento di teoria. E' anche archiviato nell'attuale segmento di teoria un teorema d'induzione 
+customizzato per la funzione specificata. Si noti, tuttavia, che 
+non è archiviato un teorema d'induzione per le funzioni ricorsive primitive, dal 
+momento che quel teorema sarebbe identico al teorema d'induzione che risulta 
+dalla dichiarazione del datatype.
 
 
-\paragraph{Storing definitions in the theory segment}
+\paragraph{Archiviare le definizioni nel segmento di teoria}
 
- \ml{Define} automatically generates names with which to store the
-definition and, (if it exists) the associated induction theorem, in
-the current theory. The name for storing the definition is built by
-concatenating the name of the function with the value of the reference
-variable \ml{Defn.def\_suffix}. The name for storing the induction theorem
-is built by concatenating the name of the function with the value of
-the reference variable \ml{Defn.ind\_suffix}. For mutually recursive
-functions, where there is a choice of names, the name of the function
-in the first clause is taken.
+\ml{Define} genera automaticamente nomi con i quali archiviare la 
+definizione e, (se esiste) il teorema d'induzione associato, nella teoria 
+attuale. Il nome per archiviare la definizione è costruito 
+concatenando il nome della funzione con il valore della variabile 
+reference \ml{Defn.def\_suffix}. Il nome per archiviare il teorema d'induzione 
+è costruito concatenando il nome della funzione con il valore 
+della variabile reference \ml{Defn.ind\_suffix}. Per funzioni 
+mutuamente ricorsive, dove c'è una scelta di nomi, è preso il nome della funzione 
+nella prima clausola.
 
- Since the names used to store elements in the current theory segment
-are transformed into ML bindings after the theory is exported, it is
-required that every invocation of \ml{Define} generate names that are
-valid ML identifiers. For this reason, \ml{Define} requires
-alphanumeric function names. If one wishes to define symbolic
-identifiers, the ML function \ml{xDefine} should be used.
+Dal momento che i nomi usati per archiviare elementi nel segmento attuale di teoria 
+sono trasformati in binding ML dopo che la teoria è esportata, è 
+richiesto che ogni invocazione di \ml{Define} generi nomi che sono 
+identificatori ML validi. Per questa ragione, \ml{Define} richiede 
+nomi alfanumerici di funzione. Se si desidera definire identificatori 
+simbolici, si dovrebbe usare la funzione ML \ml{xDefine}.
 
 \index{xDefine@\ml{xDefine}}
 \begin{hol}
@@ -1096,14 +1096,14 @@ identifiers, the ML function \ml{xDefine} should be used.
   xDefine : string -> term quotation -> thm
 \end{verbatim}
 \end{hol}
-The \ml{xDefine} function is identical to
-\ml{Define} except that it takes an explicit name to use when
-storing the definition in the current theory.
+La funzione \ml{xDefine} è identica a 
+\ml{Define} eccetto per il fatto che prende un nome esplicito da usare quando 
+si archivia la definizione nella teoria attuale.
 
-\subsection{Function definition examples}
- We will give a number of examples that display the range of functions
-that may be defined with \ml{Define}. First, we have a recursive function
-that uses ``destructors'' in the recursive call.
+\subsection{Esempi di definizione di funzione}
+Daremo un numero di esempi che mostrano la gamma di funzioni 
+che possono essere definite con \ml{Define}. Innanzi tutto, abbiamo una funzione ricorsiva 
+che usa ``de-costruttori'' nella chiamata ricorsiva.
 
 \begin{hol}
 \begin{verbatim}
@@ -1116,9 +1116,9 @@ that uses ``destructors'' in the recursive call.
 \end{verbatim}
 \end{hol}
 %
-Since \holtxt{fact} is not
-primitive recursive, an induction theorem for \holtxt{fact} is generated and
-stored in the current theory.
+Dal momento che \holtxt{fact} non è 
+ricorsiva primitiva, è generato un teorema d'induzione per \holtxt{fact} e 
+archiviato nella teoria attuale.
 %
 \begin{hol}
 \begin{verbatim}
@@ -1129,9 +1129,9 @@ stored in the current theory.
 \end{verbatim}
 \end{hol}
 
-Next we have a recursive function with relatively complex
-pattern-matching. We omit to examine the generated induction
-theorem.
+Poi abbiamo una funzione ricorsiva con un pattern-matching 
+relativamente complesso. Tralasciamo di esaminare il teorema 
+d'induzione generato.
 %
 \begin{hol}
 \begin{verbatim}
@@ -1149,8 +1149,8 @@ theorem.
 \end{verbatim}
 \end{hol}
 
-Next we define a curried recursive function, which uses
-wildcard expansion and pattern-matching pre-processing.
+Poi definiamo una funzione ricorsiva curried, che usa 
+espansione di caratteri jolly e pre-elaborazione di pattern-matching.
 %
 \begin{hol}
 \begin{verbatim}
@@ -1167,8 +1167,8 @@ wildcard expansion and pattern-matching pre-processing.
 \end{verbatim}
 \end{hol}
 
- Next we make a primitive recursive definition. Note that no
-induction theorem is generated in this case.
+Poi facciamo una definizione ricorsiva primitiva. Si noti che, in questo caso, non 
+è generato alcun teorema d'induzione.
 %
 \begin{hol}
 \begin{verbatim}
@@ -1184,10 +1184,10 @@ induction theorem is generated in this case.
 \end{verbatim}
 \end{hol}
 
-\ml{Define} may also be used to define mutually recursive functions.
-For example, we can define a datatype of propositions and a function for
-putting a proposition into negation normal form as follows.
-First we define a datatype, named \ml{prop}, of boolean formulas:
+\ml{Define} può essere usata anche per definire funzioni mutuamente ricorsive. 
+Per esempio, possiamo definire un datatype di proposizioni e una funzione per 
+mettere una proposizione in forma normale negata come segue. 
+Prima definiamo un datatype, chiamato \ml{prop}, di formule booleane:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1199,8 +1199,8 @@ First we define a datatype, named \ml{prop}, of boolean formulas:
 \end{verbatim}
 \end{hol}
 %
-Then two mutually recursive functions \holtxt{nnfpos} and \holtxt{nnfneg}
-are defined:
+Poi sono definite due funzioni mutuamente ricorsive 
+\holtxt{nnfpos} e \holtxt{nnfneg}:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1232,7 +1232,7 @@ The system makes the definition and returns the theorem
 \end{verbatim}
 \end{hol}
 
-\ml{Define} may also be used to define non-recursive functions.
+\ml{Define} può anche essere usata per definire funzioni non-ricorsive.
 %
 \begin{hol}
 \begin{verbatim}
@@ -1241,10 +1241,10 @@ The system makes the definition and returns the theorem
 \end{verbatim}
 \end{hol}
 
-\ml{Define} may also be used to define non-recursive functions
-with complex pattern-matching. The pattern-matching pre-processing of
-{Define} can be convenient for this purpose, but can also generate a
-large number of equations. For example:
+\ml{Define} può essere usata anche per definire funzioni non-ricorsive 
+con un pattern-matching complesso. La pre-elaborazione del pattern-matching di 
+\ml{Define} può essere conveniente per questo scopo, ma può anche generare un 
+grande numero di equazioni. Per esempio:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1257,14 +1257,14 @@ large number of equations. For example:
 \end{verbatim}
 \end{hol}
 %
-yields a definition with thirty-one clauses.
+restituisce una definizione con trentuno clausole.
 
 
-\subsection{When termination is not automatically proved}
+\subsection{Quando la terminazione non è dimostrata automaticamente}
 
-If the termination proof for a prospective definition
-fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
-situations, the \ML{} function \ml{Hol\_defn} should be used.
+Se la dimostrazione di terminazione per una definizione potenziale 
+fallisce, l'invocazione di \ml{Define} (o \ml{xDefine}) fallisce. In tali 
+situazioni, si dovrebbe usare la funzione \ML{} \ml{Hol\_defn}.
 %
 \index{Hol_defn@\ml{Hol\_defn}}
 
@@ -1274,24 +1274,24 @@ situations, the \ML{} function \ml{Hol\_defn} should be used.
 \end{verbatim}
 \end{hol}
 
-\ml{Hol\_defn} makes the requested definition, but defers the proof of
-termination to the user. For setting up termination proofs, there are
-several useful entrypoints, namely
+\ml{Hol\_defn} esegue la definizione richiesta, ma rinvia la dimostrazione di 
+terminazione all'utente. Per la creazione di dimostrazioni di terminazione, esistono 
+alcuni utili entrypoint, cioè
 \begin{hol}
 \begin{verbatim}
   Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
   Defn.tprove : Defn.defn * tactic -> thm * thm
 \end{verbatim}
 \end{hol}
-\ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
-analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the
-result of \ml{Hol\_defn} and set up a goal for proving termination
-of the definition.
+\ml{Defn.tgoal} è analogo a \ml{set\_goal} e \ml{Defn.tprove} è 
+analogo a \ml{prove}, Così, \ml{Defn.tgoal} è usato per prendere il 
+risultato di \ml{Hol\_defn} e creare un goal per dimostrare la terminazione 
+della definizione.
 
-\paragraph{Example.} An invocation of {\small\verb+Define+} on
-the following equations for Quicksort will currently fail, since the
-termination proof is currently beyond the capabilities of the naive termination
-prover. Instead, we make an application of {\small\verb+Hol_defn+}:
+\paragraph{Esempio.} Un'invocazione di {\small\verb+Define+} sulle 
+seguenti equazioni per Quicksort attualmente fallirà, dal momento che la 
+dimostrazione di terminazione è attualmente oltre le capacità del dimostratore elementare 
+di terminazione. Piuttosto, eseguiamo un'applicazione di {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1305,8 +1305,8 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
          qsort ord (FILTER (\x. ~(ord x h)) t))`
 \end{verbatim}
 \end{session}
-which returns the following value of type \ml{defn}, but does not try
-to prove termination.
+che restituisce il seguente valore di tipo \ml{defn}, ma non tenta di 
+dimostrare la terminazione.
 \begin{session}
 \begin{verbatim}
   HOL function definition (recursive)
@@ -1335,11 +1335,11 @@ to prove termination.
 \end{verbatim}
 \end{session}
 
-The type \ml{defn} has a prettyprinter installed for it: the above
-output is typical, showing the components of a \ml{defn} in an understandable
-format. Although it is possible to directly work with elements of
-type \ml{defn}, it is more convenient to invoke
-\ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
+Il tipo \ml{defn} ha un prettyprinter installato per esso: l'output 
+di sopra è tipico, mostrando i componenti di una \ml{defn} in un formato 
+comprensibile. Benché sia possibile lavorare direttamente con elementi di 
+tipo \ml{defn}, è più conveniente invocare 
+\ml{Defn.tgoal}, che imposta una dimostrazione di terminazione in un goalstack.
 %
 \begin{session}
 \begin{verbatim}
@@ -1355,13 +1355,13 @@ type \ml{defn}, it is more convenient to invoke
 \end{verbatim}
 \end{session}
 %
-The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
-and show that the arguments to \holtxt{qsort} are in the relation.
-The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
-initiate the termination proof. Clearly, \ml{qsort} terminates because the list
-argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate
-measure function results in two subgoals, both of which are easy to
-prove.
+Il goal è trovare una relazione benfondata sugli argomenti per \holtxt{qsort} 
+e mostrare che gli argomenti per \holtxt{qsort} sono nella relazione. 
+La funzione \ml{WF\_REL\_TAC} è quasi sempre utilizzata a questo punto per 
+iniziare la dimostrazione di terminazione. Chiaramente, \ml{qsort} termina perché la lista 
+argomento diventa più piccola. L'invocazione di \ml{WF\_REL\_TAC} con la funzione di misura 
+appropriata risulta in due subgoal, ognuno dei quali è facile da 
+dimostrare.
 
 \begin{session}
 \begin{verbatim}
@@ -1375,17 +1375,17 @@ prove.
 \end{verbatim}
 \end{session}
 %
-Execution of \ml{WF\_REL\_TAC} has automatically proved the
-wellfoundedness of the termination relation
-\holtxt{measure (LENGTH o SND)}
-and the remainder of the goal has been simplified into a
-pair of easy goals. Once both goals are proved, we can encapsulate
-the termination proof with \ml{tDefine}, which takes a quotation
-(representing desired recursion equations) and a tactic $t$,
-defines the specified function, calculates the termination conditions,
-and applies $t$ to them. If the termination conditions are proved by
-$t$ then the recursion equations and induction theorem are stored
-in the current theory segment before the recursion equations are returned:
+L'esecuzione di \ml{WF\_REL\_TAC} ha dimostrato automaticamente la 
+benfondatezza della relazione di terminazione 
+\holtxt{measure (LENGTH o SND)} 
+e il resto del goal è stato semplificato in una 
+coppia di goal semplici. Una volta che entrambi i goal sono dimostrati, possiamo incapsulare 
+la relazione di terminazione con \ml{tDefine}, che prende una quotation 
+(che rappresenta l'equazioni di ricorsione desiderate) e una tattica $t$, 
+definisce la funzione specificata, calcola le condizioni di terminazione, 
+e applica $t$ ad esse. Se le condizioni di terminazione sono dimostrate da 
+$t$ allora l'equazioni di ricorsione e il teorema d'induzione sono archiviati 
+nel segmento di teoria attuale prima che le equazioni di ricorsione siano restituite:
 
 \begin{session}
 \begin{verbatim}
@@ -1404,9 +1404,9 @@ in the current theory segment before the recursion equations are returned:
 \end{verbatim}
 \end{session}
 
-The custom induction theorem for a function can be obtained by using \holtxt{fetch},
-which returns named elements in the specified theory.\footnote{In a call to \texttt{fetch}, the
-first argument denotes a theory; the current theory may be specified by \texttt{"-"}.}
+Il teorema d'induzione custom per una funzione si può ottenere usando \holtxt{fetch}, 
+che restituisce elementi nominati nella teoria specifica\footnote{In una chiamata a \texttt{fetch}, il 
+primo argomento denota una teoria; la teoria attuale può essere specificata da \texttt{"-"}.}.
 \begin{session}
 \begin{verbatim}
   - fetch "-" "qsort_ind";
@@ -1421,26 +1421,27 @@ first argument denotes a theory; the current theory may be specified by \texttt{
 \end{verbatim}
 \end{session}
 
-\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can
-be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
+\noindent Il teorema d'induzione prodotto da \holtxt{Define} e \holtxt{tDefine} può 
+essere applicato da \ml{recInduct}. Si veda la Sezione \ref{sec:bossLib} per i dettagli.
 
-\subsubsection{Techniques for proving termination}
 
-There are two problems to deal with when trying to prove termination.
-First, one has to understand, intuitively and then mathematically,
-why the function under consideration terminates. Second, one must
-be able to phrase this in \HOL. In the following, we shall give a few
-examples of how this is done.
+\subsubsection{Tecniche per dimostrare la terminazione}
 
-There are a number of basic and advanced means of specifying wellfounded
-relations. The most common starting point for dealing with termination
-problems for recursive functions is to find some function, known as a a
-\emph{measure} under which the arguments of a function call are larger
-than the arguments to any recursive calls that result.
+Ci sono due problemi da affrontare quando di tenta di dimostrare la terminazione. 
+Primo, bisogna comprendere, intuitivamente e poi matematicamente, 
+perché la funzione in considerazione termina. Secondo, si deve 
+essere in grado di formulare questo in \HOL. In ciò che segue, daremo alcuni 
+esempi di come questo è fatto.
 
-For a very simple starter example, consider the following definition
-of a function that computes the greatest common divisor of two
-numbers:
+C'è un certo numero di strumenti base e avanzati per specificare relazioni 
+benfondate. Il punto di partenza più comune per trattare i problemi 
+di terminazione per funzioni ricorsive è trovare qualche funzione, conosciuta come una 
+\emph{misura} sotto la quale gli argomenti di una chiamata di funzione sono più grandi 
+degli argomenti a qualsiasi chiamata ricorsiva che ne risulta.
+
+Per un esempio di partenza molto semplice, si consideri la seguente definizione 
+di una funzione che calcola il massimo comun divisore di due 
+numeri:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1460,12 +1461,12 @@ numbers:
 \end{verbatim}
 \end{session}
 %
-The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
-since we know that \holtxt{m} is not 0, it is the case that
-\holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the
-termination of \holtxt{gcd} in HOL is to use a `measure` function
-to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
-The definition of {measure} in \HOL{} is equivalent to
+L'invocazione \holtxt{gcd(m,n)} esegue una ricorsione nel suo primo argomento, e 
+dal momento che sappiamo che \holtxt{m} non è 0, si da il caso che 
+\holtxt{n MOD m} sia più piccolo di \holtxt{m}. Il modo di formulare la 
+terminazione di \holtxt{gcd} in HOL è di usare una funzione `misura' 
+per mappare dal dominio di \holtxt{gcd}---una coppia di numeri---a un numero. 
+La definizione di {misura} in \HOL{} è equivalente a
 %
 \begin{hol}
 \begin{verbatim}
@@ -1473,8 +1474,8 @@ The definition of {measure} in \HOL{} is equivalent to
 \end{verbatim}
 \end{hol}
 %
-Now we must pick out the argument position to measure and
-invoke \ml{WF\_REL\_TAC}:
+Ora dobbiamo scegliere la posizione di argomento da misurare e 
+invocare \ml{WF\_REL\_TAC}:
 \begin{session}
 \begin{verbatim}
   - e (WF_REL_TAC `measure FST`);
@@ -1485,15 +1486,15 @@ invoke \ml{WF\_REL\_TAC}:
 \end{verbatim}
 \end{session}
 %
-This goal is easy to prove with a few simple arithmetic facts.
+Questo goal è facile da dimostrare con alcuni semplici fatti aritmetici.
 
-\paragraph{Weighting Functions}
+\paragraph{Funzioni di Ponderazione}
 
-Sometimes one needs a measure function that is itself recursive.  For
-example, consider a type of binary trees and a function that
-linearizes trees. The algorithm works by rotating the tree until it
-gets a \holtxt{Leaf} in the left branch, then it recurses into the right
-branch. At the end of execution the tree has been linearized.
+A volte, si ha bisogno di una funzione di misura che sia essa stessa ricorsiva. Per 
+esempio, si consideri un tipo di alberi binari e una funzione che 
+linearizza gli alberi. L'algoritmo funziona ruotando l'albero fino a quando 
+ottiene un \holtxt{Leaf} nel ramo sinistro, poi esegue una ricorsione nel ramo 
+destro. Alla fine dell'esecuzione l'albero  è stato linearizzato.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
@@ -1519,10 +1520,10 @@ branch. At the end of execution the tree has been linearized.
 \end{verbatim}
 \end{session}
 %
-Since the size of the tree is unchanged in the last clause in the
-definition of \holtxt{Unbal}, a simple size measure will not work. Instead, we
-can assign weights to nodes in the tree such that the recursive calls of
-\holtxt{Unbal} decrease the total weight in every case. One such assignment is
+Dal momento che la dimensione dell'albero non è modificata nell'ultima clausola nella 
+definizione di \holtxt{Unbal}, una semplice misura di dimensione non funziona. Piuttosto, 
+possiamo assegnare dei pesi ai nodi nell'albero tali che le chiamate ricorsive di 
+\holtxt{Unbal} diminuiscono il peso totale in ogni case. Una tale assegnazione è 
 %
 \begin{session}
 \begin{verbatim}
@@ -1532,7 +1533,7 @@ can assign weights to nodes in the tree such that the recursive calls of
 \end{verbatim}
 \end{session}
 %
-Now we can invoke \ml{WF\_REL\_TAC}:
+Ora possiamo invocare \ml{WF\_REL\_TAC}:
 %
 \begin{session}
 \begin{verbatim}
@@ -1548,24 +1549,24 @@ Now we can invoke \ml{WF\_REL\_TAC}:
 \end{verbatim}
 \end{session}
 %
-Both of these goals are quite easy to prove.
+Entrambi questi goal sono piuttosto facili da dimostrare.
 %
-The technique of `weighting` nodes in a datatype in order to prove
-termination also goes by the name of \emph{polynomial interpretation}. It
-must be admitted that finding the correct weighting for a termination
-proof is more an art than a science. Typically, one makes a guess and
-then tries the termination proof to see if it works.
+Le tecniche di `ponderazione' di nodi in un datatype al fine di dimostrare 
+la terminazione vanno anche sotto il nome di \emph{interpretazione polinomiale}. Bisogna 
+ammettere che trovare la ponderazione corretta per una dimostrazione 
+di terminazione è più un'arte che una scienza. Tipicamente, si fa una congettura e 
+si prova la dimostrazione di terminazione per vedere se funziona.
 
-\paragraph{Lexicographic Combinations}
+\paragraph{Combinazioni Lessicografiche}
 
-Occasionally, there's a combination of factors that complicate the
-termination argument. For example, the following specification
-describes a naive pattern matching algorithm on strings (represented
-as lists here). The function takes four arguments: the first, $p$,
-is the remainder of the pattern being matched. The second,
-$\mathit{rst}$, is the remainder of the string being searched.  The third
-argument, $p_0$, holds the original pattern to be matched.
-The fourth argument, $s$, is the string being searched.
+Saltuariamente, c'è una combinazione di fattori che complica 
+l'argomento di terminazione. Per esempio, la seguente specifica 
+descrive un ingenuo algoritmo di pattern matching su stringhe (qui 
+rappresentate come liste). La funzione prende quattro argomenti: il primo, $p$, 
+è il rimanente del pattern da matchare. Il secondo, 
+$\mathit{rst}$, è il rimanente della stringa che viene cercata. Il terzo 
+argomento, $p_0$, mantiene il pattern originale da matchare. 
+Il quarto argomento, $s$, è la stringa che viene cercata.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1585,29 +1586,29 @@ The fourth argument, $s$, is the string being searched.
 \end{verbatim}
 \end{session}
 %
-The first clause of the definition states that if $p$ becomes exhausted, then a match has
-been found;  the function returns \holtxt{T}. The second clause represents the case
-where $s$ becomes exhausted but $p$ is not, in which case the function returns
-\holtxt{F}. The remaining case is when there's more searching to do; the function
-checks if the head of the pattern $p$ is the same as the head of
-$\mathit{rst}$. If yes, then the search proceeds recursively, using the
-tail of $p$ and the tail of $\mathit{rst}$. If no, that means that $p$ has
-failed to match, so the algorithm advances one character ahead in
-$\mathit{s}$ and starts matching from the beginning of $p_0$. If
-$\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that
-$\mathit{rst}$ and $s$ both represent the string being
-searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into
-$\mathit{rst}$  as long as there are matches with the pattern $p$. However,
-if the search eventually fails, then $s$, which `remembers` where the search
-started from, is used to restart the search.
+La prima clausola della definizione afferma che se $p$ si esaurisce, allora è stato 
+trovato un match; la funzione restituisce \holtxt{T}. La seconda clausola rappresenta il caso 
+dove $s$ è esaurito ma $p$ no, in questo caso la funzione restituisce 
+\holtxt{F}. Il caso rimanente è quando c'è più ricerca da fare; la funzione 
+controlla se la testa del pattern $p$ è la stessa della testa di 
+$\mathit{rst}$. Se sì, allora la ricerca procede ricorsivamente, usando la 
+coda di $p$ e la coda di $\mathit{rst}$. Se no, questo significa che $p$ ha 
+fallito il match, così l'algoritmo avanza di un carattere in avanti in 
+$\mathit{s}$ e inizia il matching dall'inizio di $p_0$. Se 
+$\mathit{s}$ è vuoto allora, comunque, restituisce \holtxt{F}. Si noti che 
+$\mathit{rst}$ e $s$ rappresentano entrambi la stringa da 
+cercare: $\mathit{rst}$ è una versione `locale` di $s$: eseguiamo una ricorsione in 
+$\mathit{rst}$ fino a quando ci sono dei match con il pattern $p$. Tuttavia, 
+se la ricerca alla fine fallisce, allora $s$, che `ricorda` dove la ricerca 
+è iniziata, è usata per riavviare la ricerca.
 
-So much for the behaviour of the function. Why does it terminate? There
-are two recursive calls. The first call reduces the size of $p$ and $\mathit{rst}$, and
-leaves the other arguments unchanged. The second call can increase the
-size of $p$ and $\mathit{rst}$, but reduces the size $s$. This is a classic situation
-in which to use a  lexicographic ordering: some arguments to the function are reduced in
-some recursive calls, and some others are reduced in other recursive calls.
-Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as follows:
+Questo per quanto riguarda il comportamento della funzione. Perché termina? Ci 
+sono due chiamate ricorsive. La prima chiamata riduce la dimensione di $p$ e $\mathit{rst}$, e 
+lascia l'altro argomento invariato. La seconda chiamata può accrescere la 
+dimensione di $p$ e $\mathit{rst}$, ma riduce la dimensione di $s$. Questa è una classica situazione 
+in cui usare un ordine lessicografico: alcuni argomenti alla funzione sono ridotti in 
+alcune chiamate ricorsive, e altri sono ridotti in altre chiamate ricorsive. 
+Si ricordi che \holtxt{LEX} è un operatore infisso, definito in \ml{pairTheory} come segue:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1615,13 +1616,13 @@ Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as fol
 \end{verbatim}
 \end{hol}
 %
-In the second recursive call, the length of \holtxt{s} is reduced, and in
-the first it stays the same. This motivates having the length of the
-$s$ be the first component of the lexicographic
-combination, and the length of $\mathit{rst}$ as the second
-component. Formally, we want to map from the four-tuple of
-arguments into a lexicographic combination of relations.
-This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
+Nella seconda chiamata ricorsiva, la lunghezza di \holtxt{s} è ridotta, e nella 
+prima rimane uguale. Questo spinge ad avere la lunghezza della 
+$s$ come il primo componente della combinazione 
+lessicografica, e la lunghezza di $\mathit{rst}$ come il secondo 
+componente. Formalmente, vogliamo mappare dalla quadrupla degli 
+argomenti in una combinazione lessicografica di relazioni. 
+Questo è permesso da \holtxt{inv\_image} di \ml{relationTheory}:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1629,10 +1630,10 @@ This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
 \end{verbatim}
 \end{hol}
 %
-The desired relation maps from the four-tuple of arguments into a pair
-of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
-$n$ is the length of the second argument. These lengths are then
-compared lexicographically with respect to less-than ($<$).
+La relazione desiderata mappa dalla quadrupla degli argomenti in una coppia 
+di numeri $(m,n)$, dove $m$ è la lunghezza del quarto argomento, e 
+$n$ è la lunghezza del secondo argomento. Queste lunghezze sono poi 
+confrontate dal punto di vista lessicografico rispetto a minore-di ($<$).
 \begin{session}
 \begin{verbatim}
   Defn.tgoal match_defn;
@@ -1651,18 +1652,18 @@ compared lexicographically with respect to less-than ($<$).
 \end{verbatim}
 \end{session}
 %
-The first subgoal needs a case-split on \holtxt{s} before it is proved by
-rewriting, and the second is also easy to prove by rewriting.
+Il primo subgoal ha bisogno di un case-split su \holtxt{s} prima di essere dimostrato per 
+riscritture, e il secondo è anch'esso facile da dimostrare per riscrittura.
 
-\subsubsection{How termination conditions are synthesized}
+\subsubsection{Come sono sintetizzate le condizioni di terminazione}
 
-\index{congruence rules!in termination analysis|(}
-It is occasionally important to understand, at least in part, how
-\ml{Hol\_defn} constructs termination constraints. In some cases, it is
-even necessary for users to influence this process in order to have correct
-termination constraints extracted. The process is driven by so-called
-\emph{congruence theorems} for particular \HOL{} constants.
-For example, consider the following recursive definition of factorial:
+\index{regole di congruenza!nelle analisi di terminazione|(}
+A volte è importante comprendere, almeno in parte, come 
+\ml{Hol\_defn} costruisce i vincoli di terminazione. In alcuni casi, è 
+persino necessario che gli utenti influenzino questo processo al fine di avere estratti 
+dei vincoli di terminazione corretti. Il processo è guidato dai cosiddetti 
+\emph{teoremi di congruenza} per particolari vincoli \HOL{}. 
+Per esempio, si consideri la seguente definizione ricorsiva di fattoriale:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1670,9 +1671,9 @@ For example, consider the following recursive definition of factorial:
 \end{verbatim}
 \end{hol}
 %
-In the absence of knowledge of how the `if-then-else` construct
-affects the \emph{context} of recursive calls, \ml{Hol\_defn} would
-extract the termination constraints:
+In assenza di una conoscenza di come il costrutto `if-then-else` 
+influisce il \emph{contesto} delle chiamate ricorsive, \ml{Hol\_defn} 
+estrarrebbe i vincoli di terminazione:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1681,9 +1682,9 @@ extract the termination constraints:
 \end{verbatim}
 \end{hol}
 %
-which are unprovable, because the \emph{context} of the recursive call has not
-been taken account of. This example is in fact not a problem for HOL,
-since the following congruence theorem is known to \ml{Hol\_defn}:
+che non sono dimostrabili, perché il \emph{contesto} delle chiamate ricorsive non è 
+stato preso in considerazione. Questo esempio di fatto non è un problema per HOL, 
+dal momento che il seguente teorema di congruenza è conosciuto da \ml{Hol\_defn}:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1695,41 +1696,41 @@ since the following congruence theorem is known to \ml{Hol\_defn}:
 \end{verbatim}
 \end{hol}
 %
-This theorem is understood by \ml{Hol\_defn} as an ordered sequence
-of instructions to follow when the termination condition extractor
-hits an `if-then-else`. The theorem is read as follows: when an
-instance `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` is
-encountered while the extractor traverses the function definition,
-do the following:
+Questo teorema è compreso da \ml{Hol\_defn} come una sequenza ordinata 
+di istruzioni da seguire quando l'estrattore di condizioni di terminazione 
+incontra un `if-then-else`. Il teorema è letto come segue: quando 
+un'istanza `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` è 
+incontrata mentre l'estrattore passa attraverso la definizione di funzione, 
+fa ciò che segue.
 \begin{enumerate}
 
-\item Traverse $B$ and extract termination conditions
-     $\mathit{TCs}(B)$ from any recursive calls in it.
-     This returns a theorem $\mathit{TCs}(B) \vdash B = B'$.
+\item Traversa $B$ ed estrae le condizioni di terminazione 
+	$\mathit{TCs}(B)$ da ogni chiamata ricorsiva al suo interno.
+	Questo restituisce un teorema $\mathit{TCs}(B) \vdash B = B'$.
 
-\item Assume $B'$ and extract termination conditions from any
-  recursive calls in $X$. This returns a theorem
-  $\mathit{TCs}(X) \vdash X = X'$.
+\item Assume $B'$ ed estrae le condizioni di terminazione da ogni 
+	chiamata ricorsiva in $X$. Questo restituisce un teorema 
+	$\mathit{TCs}(X) \vdash X = X'$.
 
-\item Assume $\neg B'$ and extract termination conditions from any
-   recursive calls in $Y$. This returns a theorem
-   $\mathit{TCs}(Y) \vdash Y = Y'$.
+\item Assume $\neg B'$ ed estrae le condizioni di terminazione da ogni 
+	chiamata ricorsiva in $Y$. Questo restituisce un teorema 
+	$\mathit{TCs}(Y) \vdash Y = Y'$.
 
-\item  By equality reasoning with (1), (2), and (3), derive the theorem
+\item Ragionando in modo equazionale con (1), (2), e (3), deriva il teorema
 \[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
   \vdash
   (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) =
   (\mathtt{if}\ B'\ \mathtt{then}\ X'\ \mathtt{else}\ Y')
 \]
-\item Replace \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ by
+\item Sostituisce \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ con
 \texttt{if} $B'$ \texttt{then} $X'$ \texttt{else} $Y'$.
 
 \end{enumerate}
 
 
-The termination conditions are accumulated until the
-extraction process finishes, and appear as hypotheses in the final
-result. Thus the extracted termination conditions for \holtxt{fact} are
+Le condizioni di terminazione sono accumulate fino a quando 
+il processo di terminazione non finisce, ed appaiono come ipotesi nel risultato 
+finale. Così le condizioni di terminazione estratte per \holtxt{fact} sono
 %
 \begin{hol}
 \begin{verbatim}
@@ -1738,30 +1739,31 @@ result. Thus the extracted termination conditions for \holtxt{fact} are
 \end{verbatim}
 \end{hol}
 %
-and are easy to prove. The notion of \emph{context} of a recursive call
-is defined by  the set of congruence rules used in extracting termination
-conditions. This set can be obtained by invoking \holtxt{DefnBase.read\_congs},
-and manipulated by \holtxt{DefnBase.add\_cong},
-\holtxt{DefnBase.drop\_cong} and \holtxt{DefnBase.export\_cong}.
-The `add' and `drop' functions only affect the current state of the congruence database; in contrast, the `export' function provides a way for theories to specify that a particular theorem should be added to the congruence database in all descendent theories.
-\index{congruence rules!in termination analysis|)}
+e sono facili da dimostrare. La nozione di \emph{contesto} di una chiamata ricorsiva 
+è definita dall'insieme di regole di congruenza usate nell'estrazione delle condizioni 
+di terminazione. Questo insieme si può ottenere invocando \holtxt{DefnBase.read\_congs}, 
+e manipolare con \holtxt{DefnBase.add\_cong},
+\holtxt{DefnBase.drop\_cong} e \holtxt{DefnBase.export\_cong}.
+Le funzioni `add' e `drop' influenzano solo lo stato attuale del database di congruenza; per contro, la funzione `export' fornisce un modo per le teorie di specificare che un particolare teorema dovrebbe essere aggiunto al database di congruenza in tutte le teorie discendenti.
+\index{regole di congruenza!nelle analisi di terminazione|(}
 
 
 
-\paragraph{Higher Order Recursion and Congruence Rules}
 
-A `higher-order` recursion is one in which a higher-order function is
-used to apply the recursive function to arguments. In order for the
-correct termination conditions to be proved for such a recursion,
-congruence rules for the higher order function must be known to the
-termination condition extraction mechanism. Congruence rules for
-common higher-order functions, \eg, \holtxt{MAP}, \holtxt{EVERY}, and
-\holtxt{EXISTS} for lists, are already known to the
-mechanism. However, at times, one must manually prove and install a
-congruence theorem for a new user-defined higher-order function.
+\paragraph{Ricorsione di Ordine Superiore e Regole di Congruenza}
 
-For example, suppose we define a higher-order function \holtxt{SIGMA} for
-summing the results of a function in a list.
+Una ricorsione di `ordine superiore' è una in cui una funzione di ordine superiore è 
+usata per applicare la funzione ricorsiva agli argomenti. Al fine di 
+dimostrare le condizioni di terminazione corrette per una tale ricorsione, 
+le regole di congruenza per la funzione di ordine superiore devono essere conosciute 
+dal meccanismo di estrazione delle condizioni di terminazione. Le regole di congrueza per 
+funzioni di ordine superiore comuni, ad esempio \holtxt{MAP}, \holtxt{EVERY}, and
+\holtxt{EXISTS} per le liste, sono già conosciute dal 
+meccanismo. Tuttavia, a volte, di deve dimostrare ed installare manualmente un 
+teorema di congruenza per una nuova funzione di ordine superiore definita dall'utente.
+
+Per esempio, supponiamo di definire una funzione di ordine superiore \holtxt{SIGMA} per 
+sommare i risultati di una funzione in una lista.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1771,9 +1773,9 @@ summing the results of a function in a list.
 \end{verbatim}
 \end{session}
 %
-We then use \holtxt{SIGMA} in the definition of a function for
-summing the results of a function in a arbitrarily
-(finitely) branching tree.
+Usiamo poi \holtxt{SIGMA} nella definizione di una funzione per 
+sommare i risultati di una funzione in un albero 
+arbitrariamente (finitamente) ramificato.
 %
 \begin{session}
 \begin{verbatim}
@@ -1785,12 +1787,12 @@ summing the results of a function in a arbitrarily
 \end{verbatim}
 \end{session}
 %
-In this definition, \holtxt{SIGMA} is applied to a partial application
-\holtxt{(ltree\_sigma f)} of the function being defined. Such a situation
-is called a \emph{higher-order recursion}. Since the recursive call of
-\holtxt{ltree\_sigma} is not fully applied, special efforts have
-to be made to extract the correct termination conditions. Otherwise,
-the following unhappy situation results:
+In questa definizione, \holtxt{SIGMA} è applicato a un'applicazione parziale 
+\holtxt{(ltree\_sigma f)} della funzione da definire. Una tale situazione 
+è chiamata una \emph{ricorsione di ordine superiore}. Dal momento che la chiamata ricorsiva di 
+\holtxt{ltree\_sigma} non è applicata in modo completo, bisogna fare degli sforzi 
+speciali per estrarre le condizioni di terminazione corrette. Altrimenti, 
+risulta la seguente infelice situazione:
 %
 \begin{session}
 \begin{verbatim}
@@ -1809,15 +1811,15 @@ the following unhappy situation results:
 \end{verbatim}
 \end{session}
 %
-\index{congruence rules!in termination analysis}
-The termination conditions for \holtxt{ltree\_sigma} seem to
-require finding a wellfounded relation \holtxt{R} such that the pair
-\holtxt{(f,a)} is \holtxt{R}-less than
-\holtxt{(f, Node v tl)}. However, this is a hopeless task, since there is no
-relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact
-that they are both \holtxt{ltree}s. The termination condition extractor
-has not performed properly, because it didn't know a congruence rule
-for \holtxt{SIGMA}. Such a congruence theorem is the following:
+\index{regole di congruenza!nelle analisi di terminazione|(}
+Le condizioni di terminazione per \holtxt{ltree\_sigma} sembrano 
+richiedere di trovare una relazione benfondata \holtxt{R} tale che la coppia 
+\holtxt{(f,a)} è \holtxt{R}-minore di 
+\holtxt{(f, Node v tl)}. Tuttavia, questo è un compito senza speranza, dal momento che non c'è alcuna 
+relazione tra \holtxt{a} e \holtxt{Node v tl}, oltre al fatto 
+che entrambi sono \holtxt{ltree}. L'estrattore di condizioni di terminazione 
+non ha funzionato in modo appropriato, perché non conosceva una regola di congruenza 
+per \holtxt{SIGMA}. Una tale teorema di congruenza è il seguente:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1828,7 +1830,7 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
+Una volta che a \ml{Hol\_defn} è stato fornito questo teorema, attraverso le funzioni \ml{add\_cong} o \ml{export\_cong} di \ml{DefnBase}, le condizioni di terminazione estratte per la definizione sono ora dimostrabili, dal momento che \holtxt{a} è un sottotermine proprio di \holtxt{Node v tl}.
 %
 \begin{session}
 \begin{verbatim}
@@ -1850,38 +1852,38 @@ Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{ad
 \end{verbatim}
 \end{session}
 
-\subsection{Recursion schemas}
+\subsection{Schemi di Ricorsione}
 
-In higher order logic, very general patterns of recursion, known as
-\emph{recursion schemas} or sometimes \emph{program schemas}, can be
-defined. One example is the following:
+Nella logica di ordine superiore, possono essere definiti pattern molto generali di ricorsione, conosciuti come 
+\emph{schemi di ricorsione} o a volte \emph{schemi di programma}. 
+Un esempio è il seguente:
 %
 \[
   \konst{linRec} (x) =
     \itelse{d(x)}{e(x)}{f(\konst{linRec}(g\; x))}
 \]
 %
-In this specification, the variables $d$, $e$, $f$, and $g$ are
-functions, that, when instantiated in different ways, allow
-\konst{linRec} to implement different recursive functions. In this,
-\konst{linRec} is like many other higher order functions. However,
-notice that if $d(x) = \konst{F}$, $f(x) = x+1$, and
-$g(x) = x$, then the resulting instantiation of
-\konst{linRec} could be used to obtain a contradiction:
+In questa specifica, le variabili $d$, $e$, $f$, e $g$ sono 
+funzioni, che, quando istanziate in modi differenti, permettono a 
+\konst{linRec} di implementare funzioni ricorsive differenti. In questo, 
+\konst{linRec} è come molte altre funzioni di ordine superiore. Tuttavia, 
+si noti che se $d(x) = \konst{F}$, $f(x) = x+1$, e
+$g(x) = x$, allora l'istanziazione risultante di 
+\konst{linRec} potrebbe essere usata per ottenere una contraddizione:
 %
 \[
   \konst{linRec} (x) = \konst{linRec}(x) + 1
 \]
 %
-This is not, however, derivable in \HOL{}, because recursion schemas
-are defined by instantiating the wellfounded recursion theorem, and
-therefore certain abstract termination constraints arise that
-must be satisfied before recursion equations can be used in an
-unfettered manner. The entrypoint for defining a schema is
-\ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
-behaves as follows (note that the schematic variables should
-only occur on the right-hand side of the definition when making
-the definition of a schema):
+Questo, comunque, non è derivabile in \HOL{}, perché gli schemi di ricorsione 
+sono definiti istanziando il teorema di ricorsione benfondata, e 
+pertanto sorgono certi vincoli astratti di terminazione che 
+devono essere soddisfatti prima che le equazioni di ricorsione possano essere usati senza 
+restrizioni. L'entrypoint per definire uno schema è 
+\ml{TotalDefn.DefineSchema}. Nell'esempio \konst{linRec} 
+si comporta nel modo seguente (si noti che le variabili schematiche dovrebbero 
+occorrere solo sul lato destro della definizione quando si fa 
+la definizione di uno schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1900,9 +1902,9 @@ the definition of a schema):
 \end{verbatim}
 \end{session}
 %
-The hypotheses of the returned theorem hold the abstract termination
-constraints. A similarly constrained induction theorem is also
-stored in the current theory segment.
+Le ipotesi del teorema restituito soddisfano i vincoli astratti 
+di terminazione. Un teorema d'induzione vincolato in modo simile è 
+anche archiviato nel segmento attuale di teoria.
 %
 \begin{session}
 \begin{verbatim}
@@ -1911,133 +1913,133 @@ stored in the current theory segment.
 \end{verbatim}
 \end{session}
 %
-These constraints are abstract, since they place termination requirements
-on variables that have not yet been instantiated. Once instantiations
-for the variables are found, then the constraints may be eliminated
-by finding a suitable wellfounded relation for \holtxt{R} and then
-proving the other constraints.
+Questi vincoli sono astratti, dal momento che pongono dei requisiti di terminazione 
+su variabili che non sono state ancora istanziate. Una volta che sono trovate 
+istanziazioni per le variabili, i vincoli possono poi essere eliminati 
+trovando un'adeguata relazione benfondata per \holtxt{R} e poi 
+dimostrando gli altri vincoli.
 
-\section{Inductive Relations}
-\index{inductive relations|(}
+\section{Relazioni Induttive}
+\index{relazioni induttive|(}
 
-\index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
-\index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
-Inductive definitions are made with the function \ml{Hol\_reln}, found
-in the \ml{bossLib} structure, and the resulting definitions and
-theorems are handled with functions defined in the library
-\ml{IndDefLib}. The \ml{Hol\_reln} function takes a
-term quotation as input and attempts to define the relations there
-specified.  The input term quotation must parse to a term that
-conforms to the following grammar:
+\index{Hol_reln, definire relazioni induttive@\ml{Hol\_reln}, definire relazioni induttive}
+\index{relazioni induttive!Hol_reln (funzione ML)@\ml{Hol\_reln} (funzione ML)}
+Le definizioni induttive sono fatte con la funzione \ml{Hol\_reln}, che si trova 
+nella struttura \ml{bossLib}, e le definizioni e i teoremi 
+risultanti sono gestiti con funzioni definite nella libreria 
+\ml{IndDefLib}. La funzione \ml{Hol\_reln}  prende una 
+term quotation come input e tenta di definire le relazioni li 
+specificate. La term quotation di input deve essere parsata a un termine che 
+si conforma alla seguente grammatica:
 \newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
 \begin{eqnarray*}
-   \nonterm{inputFormat} &::=& \nonterm{clause} \;\holtxt{/\bk}\; \nonterm{inputFormat} \;\;|\;\; \nonterm{clause}\\
-   \nonterm{clause}       &::=& (\holtxt{!}x_1 \dots
-   x_n. \;\;\nonterm{hypothesis} \;\holtxt{==>}
-   \;\nonterm{conclusion})\\
-   &|& (\holtxt{!}x_1\dots x_n.\;\;\nonterm{conclusion})\\
-   \nonterm{conclusion}   &::=& \nonterm{con} \;\mathit{sv_1}\; \mathit{sv_2} \dots\\
-   \nonterm{hypothesis}   &::=& \mbox{any term}\\
-   \nonterm{con}          &::=& \mbox{a new relation constant}
+   \nonterm{formatoDiInput} &::=& \nonterm{clausola} \;\holtxt{/\bk}\; \nonterm{formatoDiInput} \;\;|\;\; \nonterm{clausola}\\
+   \nonterm{clausola}       &::=& (\holtxt{!}x_1 \dots
+   x_n. \;\;\nonterm{ipotesi} \;\holtxt{==>}
+   \;\nonterm{conclusione})\\
+   &|& (\holtxt{!}x_1\dots x_n.\;\;\nonterm{conclusione})\\
+   \nonterm{conclusione}   &::=& \nonterm{con} \;\mathit{sv_1}\; \mathit{sv_2} \dots\\
+   \nonterm{ipotesi}   &::=& \mbox{qualsiasi termine}\\
+   \nonterm{con}          &::=& \mbox{una nuova costante di relazione}
 \end{eqnarray*}
-The (optional) $\mathit{sv}_i$ terms that appear after a constant name
-are so-called ``schematic variables''.  The same variables must always
-follow all new constants throughout the definition.  These variables
-and the names of the constants-to-be must not be quantified over in
-each {\nonterm{clause}}.  A {\nonterm{clause}} should have no other
-free variables.  Any that occur will be universally quantified as part
-of the process of definition, and a warning message emitted.
-(Universal quantifiers at the head of the clause can be used to bind
-free variables, but it is also permissible to use existential
-quantification in the hypotheses.  If a clause has no free variables,
-it is permissible to have no universal quantification.)
+I termini (opzionali) $\mathit{sv}_i$ che appaiono dopo il nome di una costante 
+sono le cosiddette ``variabili schematiche''. Le stesse variabili devono sempre 
+seguire tutte le costanti nuove in tutta la definizione. Queste variabili 
+e i nomi delle costanti-to-be non devono essere quantificate in 
+ciascuna {\nonterm{clausola}}. Una {\nonterm{clausola}} non dovrebbe avere 
+altre variabili libere. Qualunque variabile che occorra sarà quantificata universalmente come parte 
+del processo di definizione, e sarà emesso un messaggio di warning. 
+(I quantificatori universali alla testa della clausola possono essere usati per legare 
+le variabili libere, ma è anche ammissibile usare la quantificazione 
+esistenziale nelle ipotesi. Se una clausola non ha variabili libere, 
+è ammissibili non avere alcuna quantificazione universale.)
 
-A successful invocation of \ml{Hol\_reln} returns three theorems
-$(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
-the current theory segment.
+Un'invocazione di successo di \ml{Hol\_reln} restituisce tre teoremi 
+$(\mathit{rules},\mathit{ind},\mathit{cases})$. Ognuno è anche archiviato nel 
+segmento di teoria attuale.
 \begin{itemize}
-\item $\mathit{rules}$ is a conjunction of implications
-that will be the same as the input term quotation; the theorem is
-saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function.
-\item $\mathit{ind}$ is the induction principle for the relations,
-saved under the name \ml{<stem>\_ind}.
-\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
-  for the relations, saved under the name \ml{<stem>\_cases}. A cases
-  theorem is of the form
+\item $\mathit{rules}$ è una congiunzione di implicazioni 
+	che sarà la stessa della term quotation di input; il teorema è 
+	salvato sotto il nome \ml{<stem>\_rules}, dove \ml{<stem>} è il nome della 
+	prima relazione definita dalla funzione.
+\item $\mathit{ind}$ è il principio d'induzione per le relazioni, 
+	salvato sotto il nome \ml{<stem>\_ind}.
+\item $\mathit{cases}$ è il cosiddetto teorema dei `casi' o di `inversione' 
+	per le relazioni, salvato sotto il nome \ml{<stem>\_cases}. Un teorema 
+	dei casi è della forma
 %
 \begin{verbatim}
-   (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
-                              <R1's second rule possibility> \/ ...)
+   (!a0 .. an.  R1 a0 .. an = <Prima regola di possibilità di R1> \/
+                              <Seconda regola di possibilità di R1> \/ ...)
                    /\
-   (!a0 .. am.  R2 a0 .. am = <R2's first rule possibility> \/
-                              <R2's second rule possibility> \/ ...)
+   (!a0 .. am.  R2 a0 .. am = <Prima regola di possibilità di R2> \/
+                              <Seconda regola di possibilità di R2> \/ ...)
                    /\
    ...
 \end{verbatim}
 %
-and is used to decompose an element in the relation into the
-possible ways of obtaining it by the rules.
+ed è usato per decomporre un elemento nella relazione nei 
+possibili modi di ottenerlo dalle regole.
 \end{itemize}
 
-\index{xHol_reln, defining inductive relations@\ml{xHol\_reln}, defining inductive relations}
-\index{inductive relations!xHol_reln (ML function)@\ml{xHol\_reln} (ML function)}
-If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
-The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
+\index{xHol_reln, definire relazioni induttive@\ml{xHol\_reln}, definire relazioni induttive}
+\index{relazioni induttive!xHol_reln (ML function)@\ml{xHol\_reln} (funzione ML)}
+Se lo ``stem'' della prima costante definita in un insieme di clausole è tale che i binding \ML{} risultanti in un file di teoria esportato risulteranno in un codice \ML{} non legale, allora si dovrebbe usare la funzione \ml{xHol\_reln}.
+La funzione \ml{xHol\_reln} è analoga alla funzione \ml{xDefine} per definire funzioni ricorsive (si veda la Sezione~\ref{TFL}).
 
-\paragraph{Strong Induction Principles}
-So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
+\paragraph{Principi d'Induzione Completa}
+Le cosiddette versioni ``complete'' dei principi d'induzione (in cui le istanze della relazione da definire appaiono come ipotesi extra), sono dimostrate automaticamente quando è fatta una definizione con \ml{Hol\_reln}. Il principio d'induzione completa per una relazione è usato quando è usata la tattica \ml{Induct\_on}.
 
-\paragraph{Adding Monotone Operators}
-\index{inductive relations!monotone operators for}
-New constants may occur recursively throughout rules' hypotheses, as
-long as it can be shown that the rules remain monotone with respect to
-the new constants.  \ml{Hol\_reln} automatically attempts to prove such
-monotonicity results, using a set of theorems held in a reference
-\ml{IndDefLib.the\_monoset}.  Monotonicity theorems must be of the form
+\paragraph{Aggiungere Operatori Monotoni}
+\index{relazioni induttive!operatori monotoni per}
+Nuove costanti possono occorrere ricorsivamente all'interno delle ipotesi delle regole, purché 
+si possa dimostrare che le regole rimangono monotone rispetto alle 
+nuove costanti. \ml{Hol\_reln} tenterà di dimostrare automaticamente tali 
+risultati di monotonicità, usando un insieme di teoremi mantenuti in una reference 
+\ml{IndDefLib.the\_monoset}. I teoremi di monotonicità devono essere della forma
 \[
 \mathit{cond}_1 \land \cdots \land \mathit{cond}_m \Rightarrow
 (\mathit{Op}\;\mathit{arg}_1 \dots \mathit{arg}_n \Rightarrow
 \mathit{Op}\;\mathit{arg}'_1 \dots \mathit{arg}'_n)
 \]
-where each $\mathit{arg}$ and $\mathit{arg}'$ term must be a variable,
-and where there must be as many $\mathit{cond}_i$ terms as there are
-arguments to $\mathit{Op}$ that vary.  Each $\mathit{cond}_i$ must be
-of the form \[ \forall \vec{v}. \;\mathit{arg}\;\vec{v} \Rightarrow
+dove ciascun termine $\mathit{arg}$ e $\mathit{arg}'$ deve avere una variabile, 
+e dove ci devono essere tanti termini $\mathit{cond}_i$ quanti sono gli 
+argomenti a $\mathit{Op}$ che variano. Ciascun $\mathit{cond}_i$ deve essere 
+della forma \[ \forall \vec{v}. \;\mathit{arg}\;\vec{v} \Rightarrow
 \mathit{arg}'\;\vec{v}
 \]
-where the vector of variables $\vec{v}$ may be empty, and where the
-$\mathit{arg}$ and $\mathit{arg}'$ may actually be reversed (as in the
-rule for negation).
+dove il vettore di variabili $\vec{v}$ può essere vuoto, e dove i 
+$\mathit{arg}$ e $\mathit{arg}'$ possono essere di fatto invertiti (come nella 
+regola per la negazione).
 
-For example, the monotonicity rule for conjunction is
+Per esempio, la regola di monotonicità per la congiunzione è
 \[
 (P \Rightarrow P') \land (Q \Rightarrow Q') \Rightarrow (P \land Q
 \Rightarrow P' \land Q')
 \]
-The monotonicity rule for the \holtxt{EVERY} operator in the theory of
-lists (see Section~\ref{avra_list}), is
+La regola di monotonicità per l'operatore \holtxt{EVERY} nella teoria delle 
+liste (si veda la Sezione~\ref{avra_list}), è 
 \[
 (\forall x. \;P(x) \Rightarrow Q(x)) \Rightarrow
 (\holtxt{EVERY}\;P\;\ell \Rightarrow \holtxt{EVERY}\;Q\;\ell)
 \]
-With a monotonicity result available for an operator such as
-\holtxt{EVERY}, it is then possible to write inductive definitions
-where hypotheses include mention of the new relation as arguments to
-the given operators.
+Con un risultato di monotonicità disponibile per un operatore come 
+\holtxt{EVERY}, è poi possibile scrivere definizioni induttive 
+dove le ipotesi includono una menzione della nuova relazione come argomenti agli 
+operatori dati.
 
-\index{export_mono (ML function)@\ml{export\_mono} (\ML{} function)}
-Monotonicity results that the user derives may be stored in the global
-\ml{the\_monoset} variable by using the \ml{export\_mono} function.
-This function takes a string naming a theorem in the current theory
-segment, and adds that theorem to the monotonicity theorems
-immediately, and in such a way that this situation will also obtain when
-the current theory is subsequently reloaded.
+\index{export_mono (funzione ML)@\ml{export\_mono} (funzione \ML{})}
+I risultati di monotonicità che l'utente deriva possono essere archiviati nella variabile 
+globale \ml{the\_monoset} usando la funzione \ml{export\_mono}. 
+Questa funzione prende una stringa che nomina un teorema nel segmento di teoria 
+attuale, e aggiunge quel teorema ai teoremi di monotonicità 
+immediatamente, e in un tal modo che questa situazione si otterrà anche quando 
+la teoria attuale è successivamente ricaricata.
 
-\paragraph{Examples}
+\paragraph{Esempi}
 
-A simple example of defining two mutually recursive relations is
-the following:
+Un semplice esempio di definizione di due relazioni mutuamente ricorsive è 
+il seguente:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -2049,7 +2051,7 @@ the following:
 \end{verbatim}
 \end{session}
 %
-The result is three theorems
+Il risultato sono tre teoremi
 %
 \begin{session}
 \begin{verbatim}
@@ -2073,11 +2075,11 @@ The result is three theorems
 \end{verbatim}
 \end{session}
 %
-The next example shows how to inductively define the reflexive and
-transitive closure of relation $R$. Note that \holtxt{R}, as a
-schematic variable, is not quantified in the rules. This is
-appropriate because it is \holtxt{RTC R} that has the inductive
-characterisation, not \holtxt{RTC} itself.
+Il prossimo esempio mostra come definire induttivamente la chiusura riflessiva e 
+transitiva di una relazione $R$. Si noti che \holtxt{R}, come una 
+variabile schematica, non è quantificata nelle regole. Questo è 
+appropriato perché è \holtxt{RTC R} che ha la caratterizzazione 
+induttiva, \holtxt{RTC} di per sé.
 %
 \begin{session}
 \begin{verbatim}
@@ -2099,51 +2101,51 @@ characterisation, not \holtxt{RTC} itself.
 \end{verbatim}
 \end{session}
 %
-The \ml{Hol\_reln} function may be used to define multiple relations,
-as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
-may or may not be mutually recursive.  The clauses for each relation
-need not be contiguous.
+La funzione \ml{Hol\_reln} può essere usata per definire relazioni multiple, 
+come nella definizione di \holtxt{EVEN} e \holtxt{ODD}. Le relazioni 
+possono essere mutuamente ricorsive o meno. Le clausole per ciascuna relazione 
+non hanno bisogno di essere contigue.
 
-\subsection{Proofs with Inductive Relations}
-\index{inductive relations!performing proofs}
+\subsection{Dimostrazioni con Relazioni Induttive}
+\index{relazioni induttive!eseguire dimostrazioni}
 
-The ``rules'' theorem of an inductive relation provides a straightforward way of proving arguments belong to a relation.
-If confronted with a goal of the form \holtxt{R~x~y}, one might make progress by performing a \ml{MATCH\_MP\_TAC} (or perhaps, an \ml{HO\_MATCH\_MP\_TAC}) with one of the implications in the ``rules'' theorem.
+Il teorema ``regole'' di una definizione induttiva fornisce un modo diretto di dimostrare argomenti che appartengono a una relazione.
+Se ci si trova di fronte a un goal della forma \holtxt{R~x~y}, si potrebbe fare progressi eseguendo una \ml{MATCH\_MP\_TAC} (o magari, una \ml{HO\_MATCH\_MP\_TAC}) con una delle implicazioni nel teorema ``regole''.
 
-The ``cases'' theorem can be used for the same purpose because it is an equality, of the general form \holtxt{R~x~y~$\iff$\dots}.
-Because the right-hand side of this theorem will often include other occurrences of the relation, it is generally not safe to simply rewrite with it.
+Il teorema ``casi'' può essere usato per lo stesso scopo perché è un'uguaglianza, della forma generale \holtxt{R~x~y~$\iff$\dots}.
+Dal momento che il lato destro di questo teorema includerà spesso altre occorrenze della relazione, non è in generale sicuro riscrivere semplicemente con esso.
 \index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}
-The rewriting-control directives \ml{Once}, \ml{SimpLHS} and \ml{SimpRHS} can be useful here.
+\index{Once (controllo delle applicazioni di riscrittura)@\ml{Once} (controllo delle applicazioni di riscrittura)}
+Qui possono essere usate le direttive di controllo-di-riscrittura \ml{Once}, \ml{SimpLHS} e \ml{SimpRHS}.
 \index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
-In addition, the ``cases'' theorem can be used as an ``elimination'' form: if one has an assumption of the form \holtxt{R~x~y}, rewriting this (perhaps with \ml{FULL\_SIMP\_TAC} if the term occurs in the goal's assumptions) into the possible ways it may have come about is often a good approach.
+Inoltre, il teorema ``casi'' può essere usato come una forma di eliminazione: se si ha un'assunzione della forma \holtxt{R~x~y}, riscrivere questo (magari con \ml{FULL\_SIMP\_TAC} se il termine occorre nelle assunzioni del goal) nei possibili modi in cui può essere avvenuto è spesso un buon approccio.
 
-Inductive relations naturally also support proof by induction.
-Because an inductive relation is the least relation satisfying the given rules, one can use induction to show goals of the form
+Le relazioni induttive naturalmente supportano anche dimostrazioni per induzione.
+Poiché una relazione induttiva è la relazione minima che soddisfa le regole date, si può usare l'induzione per mostrare goal della forma
 \begin{alltt}
    \(\forall\)x y. R x y \(\Rightarrow\) P
 \end{alltt}
-where \holtxt{P} is an arbitrary predicate likely including references to variables \holtxt{x} and \holtxt{y}.
+dove \holtxt{P} è un predicato arbitrario che probabilmente include riferimenti alle variabili \holtxt{x} e \holtxt{y}.
 
-The low-level approach to goals of this form is to apply
+L'approccio di basso livello a goal di questa forma è di applicare
 \begin{verbatim}
    HO_MATCH_MP_TAC R_ind
 \end{verbatim}
-\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
-A slightly more high-level approach is use the \ml{Induct\_on} tactic.
-(This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
-When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
-For the sake of aesthetics, the constant may also be applied to arguments.
-Thus, one can write
+\index{Induct_on (tattica d'induzione ML)@\ml{Induct\_on} (tattica d'induzione \ML{})}
+Un approccio leggermente di più alto livello è di usare la tattica \ml{Induct\_on}. 
+(Questa tattica è anche usata per eseguire induzioni strutturali su tipi di dato algebrici; si veda la Sezione~\ref{sec:bossLib}.) 
+Quando si esegue una regola d'induzione, la quotation passata a \ml{Induct\_on} dovrebbe essere della costante usata.
+Per questioni estetiche, la costante può anche essere applicata a degli argomenti. 
+Così, si può scrivere
 \begin{verbatim}
    Induct_on `R`
 \end{verbatim}
-or
+o
 \begin{verbatim}
    Induct_on `R x y`
 \end{verbatim}
-and the effect will be the same.
-\index{inductive relations|)}
+e l'effetto sarà lo stesso.
+\index{relazioni induttive|)}
 
 
 %%% Local Variables:
