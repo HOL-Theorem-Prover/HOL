@@ -8,6 +8,6 @@ sig
    val hex: BitsN.nbit -> string
    val printLines: lines -> unit
    val printn: string -> unit
-   val quote_to_strings: 'a frag list -> string list
+   val quote_to_strings: string quotation -> string list
    val word: int -> string -> BitsN.nbit
 end

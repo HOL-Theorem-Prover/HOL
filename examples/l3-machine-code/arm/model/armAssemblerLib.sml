@@ -220,48 +220,50 @@ fun arm_code q =
       else raise assemblerLib.Assembler warnings
    end
 
-fun code3 s =
-   let
-      val w = assemblerLib.word 32 s
-      val c = BitsN.bits (w, 31, 28)
-      val () = arm.SetPassCondition c
-      val (m, a) = arm.instructionToString (c, arm.DecodeARM w)
-   in
-      (StringCvt.padLeft #"0" 8 (L3.lowercase s), m, a)
-   end
-
-fun codeStrings l =
-   let
-      val mm = ref 0
-      val ma = ref 0
-      fun iter acc =
-         fn [] =>
-              ( mm := !mm + 1
-              ; ma := !ma + 2
-              ; List.map
-                  (fn (c, m, a) =>
-                      c ^ "  (*  " ^ StringCvt.padRight #" " (!mm) m ^
-                      StringCvt.padRight #" " (!ma) a ^ "*)") acc
-              )
-          | s :: r =>
-              let
-                 val c as (_, m, a) = code3 s
-              in
-                 mm := Int.max (!mm, String.size m)
-               ; ma := Int.max (!ma, String.size a)
-               ; iter (c :: acc) r
-              end
-   in
-      List.rev (iter [] l)
-   end
-
 local
+   fun code3 s =
+      let
+         val w = assemblerLib.word 32 s
+         val c = BitsN.bits (w, 31, 28)
+         val () = arm.SetPassCondition c
+         val h = StringCvt.padLeft #"0" 8 (L3.lowercase s)
+         val (m, a) = arm.instructionToString (c, arm.DecodeARM w)
+                      handle arm.UNPREDICTABLE _ => ("WORD", h)
+      in
+         (h, m, a)
+      end
+      handle Option => raise ERR "" ("could not decode: " ^ s)
+   fun commentCode (mm, ma) =
+      fn (c, m, a) =>
+          c ^ "  (*  " ^ StringCvt.padRight #" " mm m ^
+          StringCvt.padRight #" " ma a ^ "*)"
+   fun commentHex (mm, ma) =
+      fn (c, m, a) =>
+          StringCvt.padRight #" " mm m ^
+          StringCvt.padRight #" " ma a ^ "; " ^ c
+   fun codeStrings f l =
+      let
+         val mm = ref 0
+         val ma = ref 0
+         fun iter acc =
+            fn [] => List.map (f (!mm + 1, !ma + 2)) acc
+             | s :: r =>
+                 let
+                    val c as (_, m, a) = code3 s
+                 in
+                    mm := Int.max (!mm, String.size m)
+                  ; ma := Int.max (!ma, String.size a)
+                  ; iter (c :: acc) r
+                 end
+      in
+         List.rev (iter [] l): string list
+      end
    open assemblerLib
 in
    fun print_arm_code q =
       let
          val (code, wrns) = arm_code_with_warnings q
-         val code = codeStrings code
+         val code = codeStrings commentCode code
       in
          if List.null wrns
             then ()
@@ -274,6 +276,10 @@ in
       handle Assembler l => ( printn ">> Failed to assemble code."
                             ; printLines l
                             ; printn "<<")
+   val arm_disassemble =
+      codeStrings commentHex o List.concat o
+      List.map (String.tokens Char.isSpace) o assemblerLib.quote_to_strings
+   val print_arm_disassemble = List.app printn o arm_disassemble
 end
 
 end (* structure armParse *)

@@ -188,6 +188,7 @@ local
       (case m0.Encode (al, (ast, m0.Enc_Narrow)) of
           m0.Thumb16 _ => true
         | _ => false) handle m0.UNPREDICTABLE _ => true
+   fun pad16 s = StringCvt.padLeft #"0" 4 (L3.lowercase s)
 in
    fun thumbCondition opc =
       if BitsN.toNat (BitsN.bits (opc, 15, 12)) = 13
@@ -206,7 +207,7 @@ in
                    val ast = m0.Decode (m0.Thumb opc)
                    val (m, a) = m0.instructionToString (c, ast)
                 in
-                   ("     " ^ s, m, a)
+                   ("     " ^ pad16 w, m, a)
                 end
        | [w1, w2] =>
                 let
@@ -215,24 +216,27 @@ in
                    val w = if canEncodeAsThumb ast then ".w" else ""
                    val (m, a) = m0.instructionToString (al, ast)
                 in
-                   (s, m ^ w, a)
+                   (pad16 w1 ^ " " ^ pad16 w2, m ^ w, a)
                 end
        | _ => raise ERR "decode" "bad string"
 end
 
-fun codeStrings l =
+fun commentCode (mm, ma) =
+   fn (c, m, a) =>
+       c ^ "  (*  " ^ StringCvt.padRight #" " mm m ^
+       StringCvt.padRight #" " ma a ^ "*)"
+
+fun commentHex (mm, ma) =
+   fn (c, m, a) =>
+       StringCvt.padRight #" " mm m ^
+       StringCvt.padRight #" " ma a ^ "; " ^ c
+
+fun codeStrings f l =
    let
       val mm = ref 0
       val ma = ref 0
       fun iter acc =
-         fn [] =>
-              ( mm := !mm + 1
-              ; ma := !ma + 2
-              ; List.map
-                  (fn (c, m, a) =>
-                      c ^ "  (*  " ^ StringCvt.padRight #" " (!mm) m ^
-                      StringCvt.padRight #" " (!ma) a ^ "*)") acc
-              )
+         fn [] => List.map (f (!mm + 1, !ma + 2)) acc
           | s :: r =>
               let
                  val c as (_, m, a) = decode s
@@ -242,19 +246,23 @@ fun codeStrings l =
                ; iter (c :: acc) r
               end
    in
-      List.rev (iter [] l)
+      List.rev (iter [] l): string list
    end
 
 local
    open assemblerLib
 in
    fun print_m0_code q =
-      List.app printn (codeStrings (m0_code q))
+      List.app printn (codeStrings commentCode (m0_code q))
       handle Assembler l =>
                ( printn ">> Failed to assemble code."
                ; printLines l
                ; printn "<<")
 end
+
+val m0_disassemble = codeStrings commentHex o assemblerLib.quote_to_strings
+
+val print_m0_disassemble = List.app assemblerLib.printn o m0_disassemble
 
 end (* structure m0Parse *)
 
