@@ -1071,29 +1071,28 @@ fun new_type_definition (name,thm) = let
  end
  handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
 
-fun loose_specification(name, th) = let
-  val thy = current_theory()
-  val _ = print("Attempting to specify "^name^" with:\n")
-  val _ = print((HOLPP.pp_to_string 80 (!pp_thm) th)^"\n")
-  val (cnames,def) = Thm.prim_specification thy th
- in
-  store_definition (name, def) before
-  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
-           cnames
- end
- handle e => raise (wrap_exn "Definition" "loose_specification" e);
 
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
-     val (V,eq)          = dest M
-     val Thy             = current_theory()
-     val (cnames,def_th) = Thm.prim_specification Thy (Thm.ASSUME eq)
-     val Name            = case cnames of [Name] => Name | _ => raise Match
+     val (V,eq)      = dest M
+     val def_th      = Thm.prim_constant_definition (current_theory()) eq
+     val {Name,Thy,...} = dest_thy_const (rand (rator (concl def_th)))
  in
    store_definition (name, post(V,def_th)) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
  end
  handle e => raise (wrap_exn "Definition" "new_definition" e);
+
+fun new_specification (name, cnames, th) = let
+  val thy   = current_theory()
+  val def   = Thm.prim_specification thy cnames th
+  val final = store_definition (name, def)
+ in
+  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy = thy}))
+           cnames
+  ; final
+ end
+ handle e => raise (wrap_exn "Definition" "new_specification" e);
 
 end (* Definition struct *)
 
