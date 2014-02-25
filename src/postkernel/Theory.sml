@@ -1071,12 +1071,22 @@ fun new_type_definition (name,thm) = let
  end
  handle e => raise (wrap_exn "Theory.Definition" "new_type_definition" e);
 
+fun gen_new_specification(name, th) = let
+  val thy = current_theory()
+  val (cnames,def) = Thm.gen_prim_specification thy th
+ in
+  store_definition (name, def) before
+  List.app (fn s => call_hooks (TheoryDelta.NewConstant{Name=s, Thy=thy}))
+           cnames
+ end
+ handle e => raise (wrap_exn "Definition" "gen_new_specification" e);
 
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
-     val (V,eq)      = dest M
-     val def_th      = Thm.prim_constant_definition (current_theory()) eq
-     val {Name,Thy,...} = dest_thy_const (rand (rator (concl def_th)))
+     val (V,eq)          = dest M
+     val Thy             = current_theory()
+     val (cnames,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
+     val Name            = case cnames of [Name] => Name | _ => raise Match
  in
    store_definition (name, post(V,def_th)) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
