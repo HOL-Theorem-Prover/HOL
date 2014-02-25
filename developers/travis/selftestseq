@@ -12,3 +12,4 @@ src/bag
 !examples/lambda/basics
 !examples/parsing
 !examples/unification/triangular/first-order
+!examples/zipper

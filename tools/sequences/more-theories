@@ -3,6 +3,7 @@
 src/TeX
 !src/TeX/theory_tests
 !examples/RSA
+!examples/zipper
 src/sort
 src/string
 !src/string/theorytesting
