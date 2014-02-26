@@ -31,6 +31,7 @@ sig
   datatype ParenStyle
      = Always
      | OnlyIfNecessary
+     | NotEvenIfRand
      | ParoundName
      | ParoundPrec
 

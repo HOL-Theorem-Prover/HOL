@@ -801,6 +801,7 @@ fun ParenStyleToString Always = "Always"
   | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
   | ParenStyleToString ParoundName = "ParoundName"
   | ParenStyleToString ParoundPrec = "ParoundPrec"
+  | ParenStyleToString NotEvenIfRand = "NotEvenIfRand"
 
 fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
