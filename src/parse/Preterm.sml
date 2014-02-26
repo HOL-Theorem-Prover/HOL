@@ -551,7 +551,7 @@ fun remove_elim_magics ptm =
   | Const _ => ptm
   | Antiq _ => ptm
   | Comb{Rator = (rator as Const{Name, ...}), Rand = ptm1, Locn} =>
-      if Name = nat_elim_term then ptm1
+      if Name = nat_elim_term then remove_elim_magics ptm1
       else Comb{Rator = rator, Rand = remove_elim_magics ptm1, Locn = Locn}
   | Comb{Rator, Rand, Locn} => Comb{Rator = remove_elim_magics Rator,
                                     Rand = remove_elim_magics Rand, Locn = Locn}

@@ -55,7 +55,8 @@ fun free s = "\^[[0;1;34m" ^ s ^ "\^[[0m"
 val concat = String.concat
 
 val colourtests =
-    [("Pretty-printing of case expression bound variables",
+    [("&3 should print as 3", "&3", "3"),
+     ("Pretty-printing of case expression bound variables",
       "case x of 0 => 1 | SUC n => n * 2",
       concat ["case ",free "x"," of 0 => 1 | ", "SUC ", bound "n", " => ",
               bound "n", " * 2"]),
