@@ -85,3 +85,11 @@
 (define-key hol-unicode-superscript-map "-" "⁻")
 (define-key hol-unicode-superscript-map "=" "⁼")
 ;; ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
+
+(define-prefix-command 'hol-unicode-zero-map)
+(global-set-key (kbd "C-)") 'hol-unicode-zero-map)
+(define-key hol-unicode-zero-map "+" "⊕")
+(define-key hol-unicode-zero-map "*" "⊗")
+(define-key hol-unicode-zero-map "-" "⊖")
+(define-key hol-unicode-zero-map "." "⊙")
+(define-key hol-unicode-zero-map "/" "⊘")
