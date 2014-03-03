@@ -1,11 +1,27 @@
-#!/bin/sh
+#!/bin/bash
+wspace_re='[ \t]+$'
+
+if [ $# -ge 1 ]
+then
+    if [ "$1" = "-n" ]
+    then
+        trailingcommand=(-print)
+        shift
+    else
+        trailingcommand=(-print -exec perl -i -pe "s/$wspace_re//;" '{}' ';')
+    fi
+fi
 
 if [ $# -ne 1 ]
 then
     echo "Usage:" >& 2
-    echo "  $0 directory-to-purge" >& 2
+    echo "  $0 [-n] directory-to-purge" >& 2
+    echo >& 2
+    echo "  -n for \"dry-run\", to just print out files with trailing whitespace"
     exit 1
 fi
 
-
-find "$1" \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' \) \! -name '*ML.sml' \! -name '*Theory.sml' \! -name '*Theory.sig' -exec grep -q ' \+$' \{\} \; -print -exec perl -i -pe 's/ +$//;' \{\} +
+find "$1" \( -name '*.sml' -o -name '*.sig' -o -name '*.tex' -o -name '*.ML' -o -name '*.lem' \) \
+          \! -name '*ML.sml' \! -name '*Theory.sml' \! -name '*Theory.sig' \
+          -exec perl -e "while (<>) { if (/$wspace_re/) { exit 0; }}; exit 1" \{\} \; \
+          "${trailingcommand[@]}"
