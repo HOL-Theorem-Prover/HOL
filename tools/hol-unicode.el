@@ -13,6 +13,7 @@
 (global-set-key (kbd "C-~") (lambda () (interactive) (insert "¬")))
 (global-set-key (kbd "C-S-c") "⊆")
 (global-set-key (kbd "C-S-q") "≤")
+(global-set-key (kbd "C-M-~") "∼")
 
 (global-set-key (kbd "C-{") "⟦")
 (global-set-key (kbd "C-}") "⟧")
