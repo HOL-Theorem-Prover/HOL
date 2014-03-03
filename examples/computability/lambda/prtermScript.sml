@@ -1573,7 +1573,7 @@ val crecCn_succeeds1 = store_thm(
                                              MAP (λg. THE (Phi g x)) gs))))))))
   ` THEN1 (Q.UNABBREV_TAC `RHS` THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
            FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `gs`, `x`, `[]`] MP_TAC) THEN
-           SRW_TAC [][]) THEN
+           SRW_TAC [][Abbr`LL`]) THEN
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][] THEN
