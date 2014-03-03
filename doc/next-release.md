@@ -19,6 +19,8 @@ New features:
 
 * Our TUTORIAL and LOGIC manuals are now available in Italian translations.  Many thanks to Domenico Masini for doing this work.
 
+* The abbreviation tactics (`Q.ABBREV_TAC` and others) now handle abstractions as abbreviations better.  In particular, if one sets up an abstraction as an abbreviation (*e.g.*, ``Q.ABBREV_TAC `f = (λn. 2 * n + 10)` ``), then the simplifier will find and replace instances not just of the abstraction itself (the old behaviour), but also instances of applications of the abstraction to arguments.  For example, given the abbreviation for `f` above, the simplifier would turn a goal such as `2 * (z + 1) + 10 < 100` into `f (z + 1) < 100`.
+
 Bugs fixed:
 -----------
 
@@ -39,7 +41,6 @@ New tools:
 
 New examples:
 -------------
-
 
 Incompatibilities:
 ------------------

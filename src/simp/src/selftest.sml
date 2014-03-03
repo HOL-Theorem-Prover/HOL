@@ -1,19 +1,20 @@
 open HolKernel Parse boolLib simpLib
+open testutils boolSimps
 
 val _ = Portable.catch_SIGINT()
 
 fun infloop_protect (startstr : string) (endfn : 'a -> bool)
     (f : 'b -> 'a) (x : 'b) =
     let
-      val _ =  print (StringCvt.padRight #" " 70 startstr)
+      val _ =  tprint startstr
       val r = f x
     in
       if endfn r then
         (print "OK\n"; (true, SOME r))
       else
-        (print "FAILED\n"; (false, SOME r))
-    end handle Interrupt => (print "FAILED\n"; (false, NONE))
-             | e => (print "EXN\n"; Raise e)
+        die "FAILED\n"
+    end handle Interrupt => die "FAILED"
+             | e => die ("EXN: "^General.exnMessage e)
 
 (* earlier versions of the simplifier would go into an infinite loop on
    terms of this form. *)
@@ -22,18 +23,18 @@ val test_term = ``^const_term /\ x /\ y``
 
 val (test1_flag, result1) =
     infloop_protect
-      "AC looping (if this test appears to hang, it has failed)... "
+      "AC looping (if test appears to hang, it has failed)"
       (K true)
-      (QCONV (SIMP_CONV boolSimps.bool_ss
+      (QCONV (SIMP_CONV bool_ss
                         [AC CONJ_ASSOC CONJ_COMM]))
       test_term
 
 (* test that AC works with the arguments messed up *)
 fun test2P th2 = aconv (rhs (concl (valOf result1))) (rhs (concl th2))
 val (test2_flag, _) =
-    infloop_protect "Permuted AC arguments... "
+    infloop_protect "Permuted AC arguments"
                     test2P
-                    (QCONV (SIMP_CONV boolSimps.bool_ss
+                    (QCONV (SIMP_CONV bool_ss
                                       [AC CONJ_COMM CONJ_ASSOC]))
                     test_term
 
@@ -41,9 +42,9 @@ val (test2_flag, _) =
 fun test3P th = aconv (rhs (concl th)) ``P(f (g (x:'a):'a) : 'a):bool``
 val (test3_flag, _) =
     infloop_protect
-      "Bounded rewrites (if this test appears to hang, it has failed)... "
+      "Bounded rewrites (if test appears to hang, it has failed)"
       test3P
-      (QCONV (SIMP_CONV boolSimps.bool_ss
+      (QCONV (SIMP_CONV bool_ss
                         [Once (Q.ASSUME `x:'a = f (y:'a)`),
                          Q.ASSUME `y:'a = g (x:'a)`]))
       ``P (x:'a) : bool``
@@ -60,9 +61,9 @@ fun test4P (sgs, vfn) =
 
 val (test4_flag, _) =
     infloop_protect
-      "Abbreviations + ASM_SIMP_TAC... "
+      "Abbreviations + ASM_SIMP_TAC"
       test4P
-      (ASM_SIMP_TAC boolSimps.bool_ss [markerSyntax.Abbr`y`])
+      (ASM_SIMP_TAC bool_ss [markerSyntax.Abbr`y`])
       ([``Abbrev (y:'b = f (x : 'a))``, ``P (y:'b) : bool``],
        ``Q (y:'b) : bool``)
 
@@ -79,7 +80,7 @@ val test5P =
                            aconv (concl th) goal5 andalso null (hyp th)
                          end)
         (fn g => (EQ_TAC THEN STRIP_TAC THEN
-                  SIMP_TAC boolSimps.bool_ss [Once EQ_SYM_EQ] THEN
+                  SIMP_TAC bool_ss [Once EQ_SYM_EQ] THEN
                   POP_ASSUM ACCEPT_TAC) g)
         ([], goal5)
 
@@ -114,7 +115,7 @@ val (test7_flag, _) = let
   fun check th = aconv (rhs (concl th)) ``f (x:'a):'a = z``
 in
   infloop_protect
-      "Bounded rewrites on variables don't get decremented prematurely"
+      "Bounded rwts on variables don't get decremented prematurely"
       check
       doit
       t
@@ -168,13 +169,27 @@ in
   infloop_protect "Satisfy" check doit t
 end
 
+val _ = let
+  val asm = ``Abbrev(f = (\x. x /\ y))``
+  val g = ([asm], ``p /\ y``)
+  val doit = ASM_SIMP_TAC bool_ss []
+  fun geq (asl1, g1) (asl2, g2) =
+      aconv g1 g2 andalso
+      case (asl1, asl2) of
+           ([a1], [a2]) => aconv a1 asm andalso aconv a2 asm
+         | _ => false
+  fun check (sgs, vfn) = let
+    val sgs_ok =
+      case sgs of
+          [goal] => geq goal ([asm], ``(f:bool -> bool) p``)
+        | _ => false
+  in
+    sgs_ok andalso geq (dest_thm (vfn [mk_thm (hd sgs)])) g
+  end
+in
+  infloop_protect "Abbrev-simplification with abstraction" check doit g
+end
+
 (* ---------------------------------------------------------------------- *)
 
-val _ = Process.exit
-          (if List.all I [test1_flag, test2_flag, test3_flag, test4_flag,
-                          test5_flag, test6_flag, test7_flag, test8_flag,
-                          test9_flag, test10_flag, test11_flag]
-           then
-             Process.success
-           else
-             Process.failure);
+val _ = Process.exit Process.success
