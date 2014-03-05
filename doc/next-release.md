@@ -33,6 +33,14 @@ Bugs fixed:
 New theories:
 -------------
 
+* A theory of “list ranges” (`listRangeTheory`).  A range is a term written `[ lo ..< hi ]`, meaning the list consisting of the (natural) numbers from `lo` up to, but not including, `hi`.  The theory comes with some basic and obvious theorems, such as
+
+        MEM i [lo ..< hi] ⇔ lo ≤ i ∧ i < hi
+
+   and
+
+        LENGTH [lo ..< hi] = hi - lo
+
 New tools:
 ----------
 
