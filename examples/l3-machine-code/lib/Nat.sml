@@ -11,10 +11,10 @@ struct
 
    fun fromInt i = if i < 0 then raise Domain else i
    fun toInt i = i
-   fun fromString s =
-      Option.map fromInt (IntExtra.fromString s) handle Domain => NONE
-   val fromBinString = Option.map fromInt o IntExtra.fromBinString
-   val fromHexString = Option.map fromInt o IntExtra.fromHexString
+   fun from_int i = if i < 0 then NONE else SOME i
+   val fromString = Option.composePartial (from_int, IntExtra.fromString)
+   val fromBinString = Option.composePartial (from_int, IntExtra.fromBinString)
+   val fromHexString = Option.composePartial (from_int, IntExtra.fromHexString)
    val toString = Int.toString
    val toBinString = IntExtra.toBinString
    val toHexString = IntExtra.toHexString
