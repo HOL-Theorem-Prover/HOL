@@ -81,7 +81,7 @@ val _ = Hol_datatype `Coprocessors =
 (* ------------- *)
 
 val _ = Hol_datatype `arm_state =
-  <| registers      : proc # RName -> word32;    (* general-purpose *)
+  <| registers      : proc # RName -> word32;   (* general-purpose *)
      psrs           : proc # PSRName -> ARMpsr; (* program-status  *)
      event_register : proc -> bool;
      interrupt_wait : proc -> bool;
