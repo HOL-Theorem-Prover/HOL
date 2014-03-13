@@ -2,6 +2,8 @@
 Notes on HOL 4, ?????? release
 ====================================
 
+(Released: ??? date)
+
 We are pleased to announce the ?????? release of HOL 4.
 
 Contents
