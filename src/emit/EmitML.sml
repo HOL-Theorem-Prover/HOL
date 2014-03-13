@@ -1552,12 +1552,8 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
                 raise wrap_exn "EmitML" "emitML" e)
    end handle Io _ =>
-             HOL_WARNING "EmitML" "emitML"
-              ("I/O error prevented exporting files to "^Lib.quote path)
-           | e => HOL_WARNING "EmitML" "emitML"
-                     (exn_to_string e
-                        ^" prevents writing ML files to "
-                        ^Lib.quote path)
+              raise mk_HOL_ERR "EmitML" "emitML"
+                    ("I/O error prevented exporting files to "^Lib.quote path)
  end
 
 val emit_xML =
