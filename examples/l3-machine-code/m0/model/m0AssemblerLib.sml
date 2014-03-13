@@ -137,7 +137,7 @@ fun m0_syntax_pass2 (l, ldict) =
                     val chk = check (!pc + 1 <= lpc, label, line)
                  in
                     encode (line, pc, cond, enc,
-                       case ast of
+                      case ast of
                          Branch (BranchLinkImmediate _) =>
                            Branch (BranchLinkImmediate (offset))
                        | Branch (BranchTarget (_)) =>
