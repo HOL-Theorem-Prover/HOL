@@ -1536,6 +1536,8 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
      val pathPrefix = Path.concat(path, capitalize s)
      val sigfile = pathPrefix^ sigSuffix
      val structfile = pathPrefix^ structSuffix
+     fun trydelete s = OS.FileSys.remove s handle OS.SysErr _ => ()
+     fun cleanFiles() = (trydelete sigfile; trydelete structfile)
  in
    let val (sigStrm,sigPPstrm) = mk_file_ppstream sigfile
        val (structStrm,structPPstrm) = mk_file_ppstream structfile
@@ -1550,6 +1552,7 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
     emit_adjoin_call s (consts,pcs)
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
+                cleanFiles();
                 raise wrap_exn "EmitML" "emitML" e)
    end handle Io _ =>
               raise mk_HOL_ERR "EmitML" "emitML"
