@@ -1629,6 +1629,7 @@ val BIJ_ID =
 val BIJ_EMPTY = store_thm("BIJ_EMPTY",
 (--`!f:'a->'b. (!s. BIJ f {} s = (s = {})) /\ (!s. BIJ f s {} = (s = {}))`--),
      REWRITE_TAC [BIJ_DEF,INJ_EMPTY,SURJ_EMPTY]);
+val _ = export_rewrites ["BIJ_EMPTY"]
 
 val BIJ_COMPOSE =
     store_thm
