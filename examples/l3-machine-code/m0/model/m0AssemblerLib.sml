@@ -12,6 +12,8 @@ local
 in
 end
 
+val ERR = Feedback.mk_HOL_ERR "m0AssemblerLib"
+
 val hex = assemblerLib.hex
 fun hex32 w = hex (BitsN.bits (w, 31, 16)) ^ " " ^ hex (BitsN.bits (w, 15, 0))
 val w16 = assemblerLib.word 16
@@ -29,7 +31,7 @@ fun m0_syntax_pass1 q =
       val labelDict =
         ref (Redblackmap.mkDict String.compare : (string, int) Redblackmap.dict)
       fun addLabel s =
-         case p_label s of
+         case p_label (L3.lowercase s) of
             SOME l =>
               labelDict := Redblackmap.update
                              (!labelDict, l,

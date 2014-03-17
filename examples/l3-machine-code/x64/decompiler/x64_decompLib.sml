@@ -54,8 +54,13 @@ val (x64_tools:decompiler_tools) =
 
 val x64_decompile = decompilerLib.decompile x64_tools
 
+val x64_decompile_code =
+   decompilerLib.decompile_with x64AssemblerLib.x64_code_no_spaces x64_tools
+
 
 (* Testing:
+
+val (text_cert, test_def) = x64_decompile_code "test" `add rax, rbx`
 
 val x64_triples = Count.apply x64_triples
 

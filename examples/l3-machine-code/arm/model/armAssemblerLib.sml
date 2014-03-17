@@ -12,6 +12,8 @@ local
 in
 end
 
+val ERR = Feedback.mk_HOL_ERR "armAssemblerLib"
+
 fun init () =
    let
       open arm
@@ -34,7 +36,7 @@ fun arm_syntax_pass1 q =
       val labelDict =
         ref (Redblackmap.mkDict String.compare : (string, int) Redblackmap.dict)
       fun addLabel s =
-         case p_label s of
+         case p_label (L3.lowercase s) of
             SOME l =>
               labelDict := Redblackmap.update
                              (!labelDict, l,

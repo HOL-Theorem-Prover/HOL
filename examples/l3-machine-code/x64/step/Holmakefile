@@ -5,7 +5,7 @@ ifdef POLY
 HOLHEAP = x64-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/x64Lib
+BARE_THYS = ../model/x64Lib ../model/x64AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
