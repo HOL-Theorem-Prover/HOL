@@ -996,6 +996,11 @@ val DELETE_NON_ELEMENT =
       THEN RES_TAC,
       RES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
 
+val DELETE_NON_ELEMENT_RWT = save_thm(
+  "DELETE_NON_ELEMENT_RWT",
+  DELETE_NON_ELEMENT |> SPEC_ALL |> EQ_IMP_RULE |> #1
+                     |> Q.GENL [`s`, `x`])
+
 val IN_DELETE_EQ =
     store_thm
     ("IN_DELETE_EQ",
