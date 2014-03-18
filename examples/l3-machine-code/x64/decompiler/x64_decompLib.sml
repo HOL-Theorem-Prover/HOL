@@ -38,8 +38,8 @@ in
          val (th1, th2) =
             let
                val m = match_pc_cond (find_term (can match_pc_cond) (concl th))
-               fun fix l = finalise o DISCH_ALL o
-                           REWRITE_RULE [UNDISCH (INST m l), lemma3]
+               fun fix l = finalise o REWRITE_RULE [lemma3] o
+                           DISCH_ALL o REWRITE_RULE [UNDISCH (INST m l)]
             in
                (fix lemma1 th, SOME (fix lemma2 th))
             end
