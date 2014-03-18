@@ -36,7 +36,7 @@ val (decomp_cert,decomp_def) = x64_decompLib.x64_decompile "decomp" `
 
 val _ = save_thm("decomp_cert",decomp_cert);
 
-val () = x64_progLib.x64_spec_trace := SOME (fn s => print (" " ^ s))
+val () = Feedback.set_trace "x64 spec" 2
 
 val (decomp1_cert,decomp1_def) = x64_decompLib.x64_decompile "decomp1" `
   (*  0: *) 55              (* push   %rbp *)
@@ -66,4 +66,4 @@ val (decomp1_cert,decomp1_def) = x64_decompLib.x64_decompile "decomp1" `
 
 val _ = save_thm("decomp1_cert",decomp1_cert);
 
-val _ = export_theory();
+val _ = export_theory()

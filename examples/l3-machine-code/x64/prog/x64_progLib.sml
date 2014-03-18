@@ -258,8 +258,9 @@ local
            NO_TAC STATE_TAC
    val disassemble1 =
       hd o x64AssemblerLib.x64_disassemble o Lib.list_of_singleton o QUOTE
+   val x64_spec_trace = ref 0
+   val () = Feedback.register_trace ("x64 spec", x64_spec_trace, 2)
 in
-   val x64_spec_trace = ref NONE
    val x64_spec =
       (* utilsLib.cache 2000 String.compare *)
          (fn s =>
@@ -267,7 +268,10 @@ in
                 val thm = x64_stepLib.x64_step s
                 val t = x64_mk_pre_post thm
              in
-                case !x64_spec_trace of SOME f => f (disassemble1 s) | _ => ()
+                case !x64_spec_trace of
+                   1 => assemblerLib.printn (s ^ " ; " ^ disassemble1 s)
+                 | 2 => print (" " ^ disassemble1 s)
+                 | _ => ()
               ; spec (thm, t)
              end)
 end
@@ -280,7 +284,7 @@ val x64_spec_code = List.map x64_spec o x64AssemblerLib.x64_code_no_spaces
 
 open x64_progLib
 
-val () = x64_spec_trace := SOME assemblerLib.printn
+val () = Feedback.set_trace "x64 spec" 1
 
 val thms = x64_spec_code
   `ret                          ; c3
