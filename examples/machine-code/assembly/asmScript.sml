@@ -69,7 +69,6 @@ val _ = new_theory "asm";
 (* -- syntax of ASM instruction -- *)
 
 val _ = temp_type_abbrev("reg",``:num``);
-val _ = temp_type_abbrev("wb",``:bool``);
 val _ = temp_type_abbrev("imm",``:'a word``);
 
 val _ = Hol_datatype `
@@ -92,7 +91,7 @@ val _ = Hol_datatype `
         | SubCarry of reg => reg => reg `
 
 val _ = Hol_datatype `
-  addr = Addr of reg => 'a word => wb `
+  addr = Addr of reg => 'a word `
 
 val _ = Hol_datatype `
   mem_op = Load | Load8 | Load32
@@ -112,7 +111,7 @@ val _ = Hol_datatype `
 val _ = Hol_datatype `
   asm = Skip
       | Inst of 'a inst
-      | Jump of cond => 'a word
+      | Jump of cond => 'a word => (* delay slot: *) ('a inst) option
       | Call of 'a word => reg
       | JumpReg of reg
       | Loc of reg => 'a word `
@@ -126,7 +125,7 @@ val _ = Hol_datatype `
      ; avoid_regs : num list
      ; link_reg : num
      ; allow_call : bool
-     ; allow_wb : bool
+     ; has_delay_slot : bool
      ; two_reg_arith : bool
      ; imm_min : 'a word
      ; imm_max : 'a word
@@ -170,8 +169,8 @@ val jump_offset_ok_def = Define `
                        (w2n w MOD c.code_alignment = 0)`;
 
 val addr_ok_def = Define `
-  addr_ok (Addr r w wb) c =
-    reg_ok r c /\ addr_offset_ok w c /\ (wb ==> c.allow_wb)`;
+  addr_ok (Addr r w) c =
+    reg_ok r c /\ addr_offset_ok w c`;
 
 val inst_ok_def = Define `
   (inst_ok (Const r w) c = reg_ok r c) /\
@@ -181,7 +180,10 @@ val inst_ok_def = Define `
 val asm_ok_def = Define `
   (asm_ok (Skip) c = T) /\
   (asm_ok (Inst i) c = inst_ok i c) /\
-  (asm_ok (Jump x w) c = jump_offset_ok w c) /\
+  (asm_ok (Jump x w NONE) c = jump_offset_ok w c /\ ~c.has_delay_slot) /\
+  (asm_ok (Jump x w (SOME i)) c =
+     jump_offset_ok w c /\ inst_ok i c /\ c.has_delay_slot /\
+     (!r w. (i = Const r w) ==> imm_ok w c)) /\
   (asm_ok (Call w r) c = reg_ok r c /\ c.allow_call /\
                          (c.link_reg = r) /\ jump_offset_ok w c) /\
   (asm_ok (JumpReg r) c = reg_ok r c) /\
@@ -281,8 +283,8 @@ val arith_upd_def = Define `
         clear_flags) s)`
 
 val addr_def = Define `
-  addr (Addr r offset wb) s =
-    (read_reg r s + offset,wb,r)`
+  addr (Addr r offset) s =
+    (read_reg r s + offset)`
 
 val read_mem_word_def = Define `
   (read_mem_word a 0 s = (0w:'a word,s)) /\
@@ -293,11 +295,10 @@ val read_mem_word_def = Define `
 
 val mem_load_def = Define `
   mem_load n r a s =
-    let (a,wb,wr) = addr a s in
+    let a = addr a s in
     let (w,s) = read_mem_word a n s in
     let s = upd_reg r w s in
-      assert (a && n2w (n-1) = 0w)
-        (if wb then assert (wr <> r) (upd_reg wr a s) else s)`
+      assert (a && n2w (n-1) = 0w) s`
 
 val write_mem_word_def = Define `
   (write_mem_word a 0 w s = s) /\
@@ -307,11 +308,10 @@ val write_mem_word_def = Define `
 
 val mem_store_def = Define `
   mem_store n r a s =
-    let (a,wb,wr) = addr a s in
+    let a = addr a s in
     let w = read_reg r s in
     let s = write_mem_word a n w s in
-      assert (a && n2w (n-1) = 0w)
-        (if wb then assert (wr <> r) (upd_reg wr a s) else s)`
+      assert (a && n2w (n-1) = 0w) s`
 
 val mem_op_upd_def = Define `
   (mem_op Load r a = mem_load (dimindex (:'a) DIV 8) r a) /\
@@ -334,14 +334,18 @@ val read_cond_def = Define `
   (read_cond (Is f) s = s.flags f) /\
   (read_cond (Not f) s = OPTION_MAP (~) (s.flags f))`;
 
+val delay_inst_def = Define `
+  (delay_inst NONE s = s) /\
+  (delay_inst (SOME i) s = inst i s)`;
+
 val asm_def = Define `
   (asm Skip pc s = upd_pc pc s) /\
   (asm (Inst i) pc s = upd_pc pc (inst i s)) /\
-  (asm (Jump c l) pc s =
+  (asm (Jump c l d) pc s =
      case read_cond c s of
      | NONE => assert F s
-     | SOME T => jump_to_offset l s
-     | SOME F => upd_pc pc s) /\
+     | SOME T => delay_inst d (jump_to_offset l s)
+     | SOME F => delay_inst d (upd_pc pc s)) /\
   (asm (Call l r) pc s = jump_to_offset l (upd_reg r pc s)) /\
   (asm (JumpReg r) pc s = upd_pc (read_reg r s) s) /\
   (asm (Loc r l) pc s = upd_pc pc (upd_reg r (s.pc + l) s))`
@@ -392,7 +396,7 @@ val enc_ok_def = Define `
     ((c.code_alignment = 1) ==> ODD (LENGTH (enc Skip))) /\
     (!w. (LENGTH (enc w)) MOD c.code_alignment = 0) /\
     (* label instantiation does not affect length of code *)
-    (!w b. LENGTH (enc (Jump b w)) = LENGTH (enc (Jump b 0w))) /\
+    (!w b d. LENGTH (enc (Jump b w d)) = LENGTH (enc (Jump b 0w d))) /\
     (!w r. LENGTH (enc (Call w r)) = LENGTH (enc (Call 0w r))) /\
     (!w r. LENGTH (enc (Loc r w)) = LENGTH (enc (Loc r 0w))) /\
     (* no overlap between instructions with different behaviour *)
