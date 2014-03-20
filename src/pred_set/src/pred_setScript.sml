@@ -12,7 +12,8 @@
 
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
-          "Defn", "TotalDefn", "metisLib"];
+          "Defn", "TotalDefn", "metisLib", "OpenTheoryMap",
+          "numpairTheory"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
@@ -4361,6 +4362,12 @@ val SUBSET_DELETE_BOTH = Q.store_thm
  `!s1 s2 x. s1 SUBSET s2 ==> (s1 DELETE x) SUBSET (s2 DELETE x)`,
  RW_TAC set_ss [SUBSET_DEF,SUBSET_DELETE,IN_DELETE]);
 
+val POW_EMPTY = store_thm("POW_EMPTY",
+  ``!s. POW s <> {}``,
+  SRW_TAC[][EXTENSION,IN_POW] THEN
+  METIS_TAC[EMPTY_SUBSET])
+val _ = export_rewrites["POW_EMPTY"]
+
 (*---------------------------------------------------------------------------*)
 (* Recursion equations for POW                                               *)
 (*---------------------------------------------------------------------------*)
@@ -4994,12 +5001,10 @@ METIS_TAC []);
 
 val infinite_pow_uncountable = Q.store_thm ("infinite_pow_uncountable",
 `!s. INFINITE s ==> ~countable (POW s)`,
-RWTAC [countable_surj, infinite_num_inj] THENL
-[RWTAC [POW_DEF, EXTENSION, SUBSET_DEF] THEN
-     METIS_TAC [],
- IMP_RES_TAC inj_surj THEN
-     FSTAC [UNIV_NOT_EMPTY] THEN
-     METIS_TAC [pow_no_surj, SURJ_COMPOSE]]);
+RWTAC [countable_surj, infinite_num_inj] THEN
+IMP_RES_TAC inj_surj THEN
+FSTAC [UNIV_NOT_EMPTY] THEN
+METIS_TAC [pow_no_surj, SURJ_COMPOSE]);
 
 val countable_Usum = store_thm(
   "countable_Usum",
