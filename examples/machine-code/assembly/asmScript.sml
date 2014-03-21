@@ -111,7 +111,8 @@ val _ = Hol_datatype `
 val _ = Hol_datatype `
   asm = Skip
       | Inst of 'a inst
-      | Jump of cond => 'a word => (* delay slot: *) ('a inst) option
+      | Jump of cond => 'a word
+      | JumpCmp of cmp => reg => 'a reg_imm => 'a word => (* delay slot *) 'a inst
       | Call of 'a word => reg
       | JumpReg of reg
       | Loc of reg => 'a word `
@@ -180,9 +181,10 @@ val inst_ok_def = Define `
 val asm_ok_def = Define `
   (asm_ok (Skip) c = T) /\
   (asm_ok (Inst i) c = inst_ok i c) /\
-  (asm_ok (Jump x w NONE) c = jump_offset_ok w c /\ ~c.has_delay_slot) /\
-  (asm_ok (Jump x w (SOME i)) c =
+  (asm_ok (Jump x w) c = jump_offset_ok w c /\ ~c.has_delay_slot) /\
+  (asm_ok (JumpCmp cmp r ri w i) c =
      jump_offset_ok w c /\ inst_ok i c /\ c.has_delay_slot /\
+     arith_ok (Cmp cmp r ri) c /\
      (!r w. (i = Const r w) ==> imm_ok w c)) /\
   (asm_ok (Call w r) c = reg_ok r c /\ c.allow_call /\
                          (c.link_reg = r) /\ jump_offset_ok w c) /\
@@ -249,6 +251,12 @@ val cmp_upd_def = Define `
   (cmp_upd Less w1 w2 = upd_flag Lt (SOME (w1 < w2)) o clear_flags) /\
   (cmp_upd Lower w1 w2 = upd_flag Lo (SOME (w1 <+ w2)) o clear_flags) /\
   (cmp_upd Test w1 w2 = upd_flag Eq (SOME (w1 && w2 = 0w)) o clear_flags)`;
+
+val word_cmp_def = Define `
+  (word_cmp Equal w1 w2 = (w1 = w2)) /\
+  (word_cmp Less w1 w2 = (w1 < w2)) /\
+  (word_cmp Lower w1 w2 = (w1 <+ w2)) /\
+  (word_cmp Test w1 w2 = (w1 && w2 = 0w))`;
 
 val word_shift_def = Define `
   (word_shift Lsl w n = w << n) /\
@@ -334,18 +342,18 @@ val read_cond_def = Define `
   (read_cond (Is f) s = s.flags f) /\
   (read_cond (Not f) s = OPTION_MAP (~) (s.flags f))`;
 
-val delay_inst_def = Define `
-  (delay_inst NONE s = s) /\
-  (delay_inst (SOME i) s = inst i s)`;
-
 val asm_def = Define `
   (asm Skip pc s = upd_pc pc s) /\
   (asm (Inst i) pc s = upd_pc pc (inst i s)) /\
-  (asm (Jump c l d) pc s =
+  (asm (Jump c l) pc s =
      case read_cond c s of
      | NONE => assert F s
-     | SOME T => delay_inst d (jump_to_offset l s)
-     | SOME F => delay_inst d (upd_pc pc s)) /\
+     | SOME T => jump_to_offset l s
+     | SOME F => upd_pc pc s) /\
+  (asm (JumpCmp cmp r ri l i) pc s =
+     if word_cmp cmp (read_reg r s) (reg_imm ri s)
+     then inst i (jump_to_offset l s)
+     else inst i (upd_pc pc s)) /\
   (asm (Call l r) pc s = jump_to_offset l (upd_reg r pc s)) /\
   (asm (JumpReg r) pc s = upd_pc (read_reg r s) s) /\
   (asm (Loc r l) pc s = upd_pc pc (upd_reg r (s.pc + l) s))`
@@ -396,7 +404,9 @@ val enc_ok_def = Define `
     ((c.code_alignment = 1) ==> ODD (LENGTH (enc Skip))) /\
     (!w. (LENGTH (enc w)) MOD c.code_alignment = 0) /\
     (* label instantiation does not affect length of code *)
-    (!w b d. LENGTH (enc (Jump b w d)) = LENGTH (enc (Jump b 0w d))) /\
+    (!w b. LENGTH (enc (Jump b w)) = LENGTH (enc (Jump b 0w))) /\
+    (!c r ri w i. LENGTH (enc (JumpCmp c r ri w i)) =
+                  LENGTH (enc (JumpCmp c r ri 0w i))) /\
     (!w r. LENGTH (enc (Call w r)) = LENGTH (enc (Call 0w r))) /\
     (!w r. LENGTH (enc (Loc r w)) = LENGTH (enc (Loc r 0w))) /\
     (* no overlap between instructions with different behaviour *)
