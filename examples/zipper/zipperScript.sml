@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib bossLib;
 
 open lcsymtacs
+open listTheory
+
 fun asimp thl = asm_simp_tac(srw_ss() ++ ARITH_ss) thl
 
 val _ = new_theory "zipper";
@@ -19,6 +21,7 @@ val index_invariant = store_thm(
   "index_invariant",
   ``index z < size z``,
   Cases_on `z` >> simp[]);
+val _ = export_rewrites ["index_invariant"]
 
 val size_nonzero = store_thm(
   "size_nonzero",
@@ -33,88 +36,115 @@ val LENGTH_toList = store_thm(
 val _ = export_rewrites ["LENGTH_toList"]
 
 val moveLeft_def = Define`
-  (moveLeft (Z [] a s) = NONE) ∧
-  (moveLeft (Z (h::t) a s) = SOME (Z t h (a::s)))
+  (moveLeft (Z [] a s) = Z [] a s) ∧
+  (moveLeft (Z (h::t) a s) = Z t h (a::s))
 `
 
 val moveRight_def = Define`
-  (moveRight (Z p a []) = NONE) ∧
-  (moveRight (Z p a (h::t)) = SOME (Z (a::p) h t))
+  (moveRight (Z p a []) = Z p a []) ∧
+  (moveRight (Z p a (h::t)) = Z (a::p) h t)
 `;
 
 val moveLeft_invariant = store_thm(
   "moveLeft_invariant",
-  ``moveLeft z = SOME z' ⇒ toList z = toList z' ∧ index z = index z' + 1``,
+  ``toList (moveLeft z) = toList z ∧ size (moveLeft z) = size z``,
   `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
-  Cases_on `p` >> rw[moveLeft_def] >> rw[toList_def, index_def, arithmeticTheory.ADD1])
+  Cases_on `p` >> rw[moveLeft_def] >> simp[]);
+val _ = export_rewrites ["moveLeft_invariant"]
+
+val moveLeft_index_lemma = prove(
+  ``index (moveLeft z) = if 0 < index z then index z - 1 else 0``,
+  `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
+  Cases_on `p` >> rw[moveLeft_def]);
+
+val moveLeft_index = store_thm(
+  "moveLeft_index",
+  ``0 < index z ⇒ index (moveLeft z) = index z - 1``,
+  simp[moveLeft_index_lemma]);
 
 val moveLeft_possible = store_thm(
   "moveLeft_possible",
-  ``0 < index z ==> ?z'. moveLeft z = SOME z'``,
+  ``0 < index z ==> moveLeft z <> z``,
   `?p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
   Cases_on `p` >> simp[moveLeft_def]);
 
-val moveLeft_invariant = store_thm(
-  "moveLeft_invariant",
-  ``moveLeft z = SOME z' ==>
-    toList z' = toList z /\ index z' = index z - 1 /\ size z' = size z``,
-  `?p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
-  Cases_on `p` >> rw[moveLeft_def] >> simp[]);
-
-
 val moveRight_possible = store_thm(
   "moveRight_possible",
-  ``index z < size z - 1 ==> ?z'. moveRight z = SOME z'``,
+  ``index z < size z - 1 ==> moveRight z <> z``,
   `?p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
   Cases_on `s` >> simp[moveRight_def, index_def, size_def]);
 
 val moveRight_invariant = store_thm(
   "moveRight_invariant",
-  ``moveRight z = SOME z' ==>
-    toList z' = toList z /\ index z' = index z + 1 /\ size z' = size z``,
+  ``toList (moveRight z) = toList z /\ size (moveRight z) = size z``,
   `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
   Cases_on `s` >> rw[moveRight_def] >>
-  asimp[toList_def, index_def, arithmeticTheory.ADD1, size_def])
+  simp[toList_def, index_def, arithmeticTheory.ADD1, size_def])
+val _ = export_rewrites ["moveRight_invariant"]
 
-val rptM_def = Define`
-  (rptM 0 f = SOME) ∧
-  (rptM (SUC n) f = \x. OPTION_BIND (f x) (rptM n f))
-`;
-val _ = export_rewrites ["rptM_def"]
+val moveRight_index_lemma = prove(
+  ``index (moveRight z) = if index z < size z - 1 then index z + 1
+                          else index z``,
+  `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
+  Cases_on `s` >> simp[moveRight_def]);
+
+val moveRight_index = store_thm(
+  "moveRight_index",
+  ``index z < size z - 1 ⇒ index (moveRight z) = index z + 1``,
+  simp[moveRight_index_lemma]);
 
 val moveToI_def = Define`
-  moveToI i z = if index z < i then rptM (i - index z) moveRight z
-                else rptM (index z - i) moveLeft z
+  moveToI i z = if index z < i then FUNPOW moveRight (i - index z) z
+                else FUNPOW moveLeft (index z - i) z
 `;
 
-val moveToI_correct = store_thm(
-  "moveToI_correct",
-  ``i < size z ==>
-    ?z'. moveToI i z = SOME z' /\ index z' = i /\ toList z' = toList z``,
-  simp[moveToI_def] >> strip_tac >> Cases_on `index z < i` >> simp[] >| [
-    Induct_on `i - index z` >> asimp[] >> rpt strip_tac >>
-    qmatch_assum_rename_tac `SUC n = i - index z` [] >>
-    qpat_assum `SUC n = i - index z` (assume_tac o SYM) >>
-    simp[rptM_def] >>
-    `index z < size z - 1` by decide_tac >>
-    `?z'. moveRight z = SOME z' /\ toList z' = toList z /\
-          index z' = index z + 1 /\ size z' = size z`
-      by metis_tac[moveRight_possible, moveRight_invariant] >>
-    `index z' < size z'` by metis_tac [index_invariant] >>
-    Cases_on `n = 0` >> simp[] >>
-    first_x_assum (qspecl_then [`i`, `z'`] mp_tac) >> asimp[] >>
-    `n = i - (index z + 1)` by decide_tac >> metis_tac[],
+val moveToI_lemma = prove(
+  ``size (moveToI i z) = size z ∧ toList (moveToI i z) = toList z ∧
+    index (moveToI i z) = if i < size z then i else size z - 1``,
+  simp[moveToI_def] >> `index z < size z` by simp[] >> COND_CASES_TAC >| [
+    qabbrev_tac `m = i - index z` >>
+    `i = m + index z ∧ 0 < m` by simp[Abbr`m`] >>
+    markerLib.RM_ABBREV_TAC "m" >> BasicProvers.VAR_EQ_TAC >>
+    pop_assum mp_tac >> pop_assum kall_tac >>
+    Induct_on `m` >> simp[] >> rpt gen_tac >>
+    simp[arithmeticTheory.FUNPOW_SUC] >>
+    Cases_on `m = 0` >> simp[moveRight_index_lemma],
 
-    Induct_on `index z - i` >> asimp[] >> rpt strip_tac
-    >- (`index z - i = 0` by decide_tac >> simp[]) >>
-    `0 < index z` by decide_tac >>
-    `?z'. moveLeft z = SOME z' /\ toList z' = toList z /\
-          size z' = size z /\ index z' = index z - 1`
-      by metis_tac[moveLeft_possible, moveLeft_invariant] >>
-    first_x_assum (qspecl_then [`z'`, `i`] mp_tac) >> asimp[] >>
-    `?n. index z - i = SUC n` by metis_tac[] >> simp[] >>
-    `index z - (i + 1) = n` by decide_tac >> metis_tac[]
-  ]);
+    qabbrev_tac `m = index z - i` >>
+    `index z = m + i` by simp[Abbr`m`] >>
+    markerLib.RM_ABBREV_TAC "m" >> pop_assum mp_tac >> pop_assum kall_tac >>
+    qid_spec_tac `i` >>
+    Induct_on `m` >> simp[arithmeticTheory.FUNPOW_SUC] >>
+    gen_tac >> strip_tac >>
+    first_x_assum (qspec_then `SUC i` mp_tac) >> simp[] >>
+    simp[moveLeft_index_lemma]
+  ])
+
+val moveToI_invariant = save_thm(
+  "moveToI_invariant",
+  LIST_CONJ (List.take(CONJUNCTS moveToI_lemma, 2)));
+val _ = export_rewrites ["moveToI_invariant"]
+
+val moveToI_index = store_thm(
+  "moveToI_index",
+  ``i < size z ⇒ index (moveToI i z) = i``,
+  simp[moveToI_lemma]);
+
+val moveToI_index_COND = save_thm(
+  "moveToI_index_COND",
+  List.last (CONJUNCTS moveToI_lemma))
+
+val zipper_EQ = store_thm(
+  "zipper_EQ",
+  ``(z1 = z2) <=> toList z1 = toList z2 /\ index z1 = index z2``,
+  Cases_on `z1` >> Cases_on`z2` >> simp[EQ_IMP_THM] >> strip_tac >>
+  fs[APPEND_11_LENGTH]);
+
+val moveToI_moveToI = store_thm(
+  "moveToI_moveToI",
+  ``moveToI i (moveToI j z) = moveToI i z``,
+  simp[zipper_EQ, moveToI_index_COND]);
+val _ = export_rewrites ["moveToI_moveToI"]
 
 val zmap_def = Define`
   zmap f (Z p a s) = Z (MAP f p) (f a) (MAP f s)
@@ -133,7 +163,6 @@ val index_zmap = store_thm(
   Cases_on `z` >> simp[])
 val _ = export_rewrites ["index_zmap"]
 
-open listTheory
 val zmap_zmap_o = store_thm(
   "zmap_zmap_o",
   ``zmap f (zmap g z) = zmap (f o g) z``,
@@ -158,51 +187,76 @@ val size_fromList = store_thm(
   ``0 < LENGTH l ==> size (fromList l) = LENGTH l``,
   Cases_on `l` >> simp[]);
 
+val index_fromList = store_thm(
+  "index_fromList",
+  ``0 < LENGTH l ⇒ index (fromList l) = 0``,
+  Cases_on `l` >> simp[]);
+
 val toList_fromList = store_thm(
   "toList_fromList",
   ``0 < LENGTH l ==> toList (fromList l) = l``,
   Cases_on `l` >> simp[]);
 
-val zipper_EQ = store_thm(
-  "zipper_EQ",
-  ``(z1 = z2) <=> toList z1 = toList z2 /\ index z1 = index z2``,
-  Cases_on `z1` >> Cases_on`z2` >> simp[EQ_IMP_THM] >> strip_tac >>
-  fs[APPEND_11_LENGTH]);
-
-val moveToI0_fromList_toList = store_thm(
-  "moveToI0_fromList_toList",
-  ``moveToI 0 z = SOME (fromList (toList z))``,
-  `0 < size z` by simp[] >>
-  `?z'. moveToI 0 z = SOME z' /\ toList z' = toList z /\
-        index z' = 0` by metis_tac [moveToI_correct] >>
-  Cases_on `z` >> fs[] >>
-  `?h t. z' = Z [] h t`
-     by (Cases_on `z'` >> fs[] >> metis_tac[LENGTH_NIL]) >>
-  fs[] >> qpat_assum `h::t = ZZ` (fn th => REWRITE_TAC [SYM th]) >>
-  simp[]);
+val fromList_toList = store_thm(
+  "fromList_toList",
+  ``fromList (toList z) = moveToI 0 z``,
+  simp[zipper_EQ] >> `0 < size z` by simp[] >>
+  simp[toList_fromList, index_fromList, moveToI_index]);
+val _ = export_rewrites ["fromList_toList"]
 
 val zapply_def = Define`
-  zapply fz xz = THE (moveToI (MAX (index fz) (index xz))
-                              (fromList (toList fz <*> toList xz)))
+  zapply fz xz = moveToI (MAX (index fz) (index xz))
+                         (fromList (toList fz <*> toList xz))
 `
 
 val zmap_pure = store_thm(
   "zmap_pure",
   ``zapply (zpure f) z = zmap f z``,
-  simp[zapply_def, zpure_def, toList_def,
-       listTheory.LIST_APPLY_DEF, MAP_toList] >>
-  qabbrev_tac `fz0 = fromList (toList (zmap f z))` >>
-  `size fz0 = size z`
-    by metis_tac[size_fromList, LENGTH_toList, size_zmap,
-                 size_nonzero] >>
-  `index z < size fz0` by simp[index_invariant] >>
-  `toList fz0 = toList (zmap f z)`
-    by metis_tac[toList_fromList, LENGTH_toList, size_nonzero] >>
-  `?fz. moveToI (index z) fz0 = SOME fz /\ index fz = index z /\
-        toList fz = toList fz0`
-    by metis_tac[moveToI_correct] >>
-  simp[] >> simp[zipper_EQ]);
+  simp[zapply_def, zpure_def, listTheory.SINGL_APPLY_MAP, MAP_toList] >>
+  simp[zipper_EQ, moveToI_index]);
+
+val pure_pure_apply = store_thm(
+  "pure_pure_apply",
+  ``zapply (zpure f) (zpure x) = zpure (f x)``,
+  simp[zmap_pure] >> simp[zmap_def, zpure_def]);
+
+val pure_apply_permute = store_thm(
+  "pure_apply_permute",
+  ``zapply fs (zpure x) = zapply (zpure (λf. f x)) fs``,
+  simp[zapply_def, zpure_def, SINGL_APPLY_PERMUTE]);
+
+val LENGTH_LIST_APPLY = store_thm(
+  "LENGTH_LIST_APPLY",
+  ``LENGTH (LIST_APPLY fs xs) = LENGTH fs * LENGTH xs``,
+  simp[LIST_APPLY_DEF] >> Induct_on `fs` >> simp[] >>
+  simp[arithmeticTheory.MULT_CLAUSES]);
 
 
+val mult_lemma = prove(
+  ``x < y ∧ 0 < v ⇒ x < y * v``,
+  Induct_on `v` >> simp[arithmeticTheory.MULT_CLAUSES]);
+
+val lemma = prove(
+  ``MAX (index z1) (index z2) < size (fromList (toList z1 <*> toList z2))``,
+  simp[size_fromList, LENGTH_LIST_APPLY, arithmeticTheory.ZERO_LESS_MULT] >>
+  metis_tac [index_invariant, size_nonzero, mult_lemma,
+             arithmeticTheory.MULT_COMM]);
+
+val lemma' = prove(
+  ``MAX (index z1) (index z2) <
+    size (fromList (toList (zmap f z1) <*> toList z2))``,
+  simp[size_fromList, LENGTH_LIST_APPLY, arithmeticTheory.ZERO_LESS_MULT] >>
+  metis_tac [index_invariant, size_nonzero, mult_lemma,
+             arithmeticTheory.MULT_COMM]);
+
+val apply_pure_o = store_thm(
+  "apply_pure_o",
+  ``zapply (zapply (zapply (zpure (o)) fs) gs) xs =
+    zapply fs (zapply gs xs)``,
+  simp[zmap_pure] >>
+  simp[zapply_def, moveToI_index, lemma, size_fromList, toList_fromList,
+       LENGTH_LIST_APPLY, arithmeticTheory.ZERO_LESS_MULT, lemma'] >>
+  simp[GSYM LIST_APPLY_o, SINGL_APPLY_MAP, MAP_toList,
+       arithmeticTheory.MAX_ASSOC]);
 
 val _ = export_theory();
