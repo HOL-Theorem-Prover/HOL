@@ -25,6 +25,19 @@ New features:
 
 * The `MAX_SET` function in `pred_setTheory` is now defined (to have value `0`) on the empty set.
 
+* There is an alternative syntax for specifying datatypes.  Instead of the `Hol_datatype` entry-point, one can also use `Datatype`, which takes a slightly different syntax, inspired by Haskell.  This does away with the use of the (somewhat confusing) `of` and `=>` tokens.
+
+  For example, one would define a simple type of binary tree with
+
+          Datatype`tree = Lf num | Node tree tree`
+
+  If the arguments to a constructor are not just simple types, then they need to be enclosed in parentheses.  For example:
+
+          Datatype`mytype = Constr mytype ('a -> bool) | BaseCase
+
+  The `Hol_datatype` entry-point can continue to be used.  The LaTeX output of `EmitTeX` uses the new format.
+
+
 Bugs fixed:
 -----------
 

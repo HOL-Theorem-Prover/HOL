@@ -22,7 +22,7 @@ struct
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
-open Portable;
+open Portable Lib;
 
 datatype pretype
    = dVartype of string
@@ -170,7 +170,6 @@ in
   recurse [i1]
 end
 
-
 fun parse_record_defn qb = let
   val () = scan "<|" qb
   val result = sepby1 ";" parse_record_fld qb
@@ -191,6 +190,11 @@ in
     end
   | _ => (constr_id, [])
 end
+
+fun optscan tok qb =
+    case qbuf.current qb of
+        (tok',_) => if tok = tok' then (qbuf.advance qb; qb)
+                    else qb
 
 fun parse_form qb =
     case pdtok_of qb of
@@ -218,6 +222,68 @@ in
     (base_tokens.BT_EOI,_) => result
   | (_,locn) => raise ERRloc "parse" locn
                              "Parse failed"
+end
+
+fun parse_harg qb =
+  case qbuf.current qb of
+      (base_tokens.BT_Ident s, _) =>
+      if String.sub(s,0) = #"(" then
+        let
+          val (adv,_,_) = pdtok_of qb
+          val _ = adv()
+        in
+          parse_type qb before scan ")" qb
+        end
+      else let
+        val qb' = qbuf.new_buffer [QUOTE s]
+      in
+        qbuf.advance qb; parse_type qb'
+      end
+    | (base_tokens.BT_AQ ty, _) => dAQ ty
+    | (_, locn) => raise ERRloc "parse_harg" locn
+                         "Unexpected token in constructor's argument"
+
+fun parse_hargs qb =
+  case pdtok_of qb of
+      (_, base_tokens.BT_Ident "|", _) => []
+    | (_, base_tokens.BT_Ident ";", _) => []
+    | (_, base_tokens.BT_EOI, _) => []
+    | _ => let
+      val arg = parse_harg qb
+      val args = parse_hargs qb
+    in
+      arg::args
+    end
+
+fun parse_hphrase qb = let
+  val constr_id = parse_constructor_id qb
+in
+  (constr_id, parse_hargs qb)
+end
+
+fun parse_hform qb =
+    case pdtok_of qb of
+      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
+    | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
+                            |> sepby1 "|" parse_hphrase)
+
+fun parse_HG qb = let
+  val tyname = ident qb
+  val () = scan "=" qb
+in
+  (tyname, parse_hform qb)
+end
+
+
+fun hparse q = let
+  val strm = qbuf.new_buffer q
+  val result = sepby1 ";" parse_HG strm
+  val qb = optscan (base_tokens.BT_Ident ";") strm
+in
+  case qbuf.current qb of
+      (base_tokens.BT_EOI,_) => result
+    | (_,locn) => raise ERRloc "parse" locn
+                        "Parse failed"
 end
 
 

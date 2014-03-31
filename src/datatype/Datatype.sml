@@ -1313,7 +1313,8 @@ fun astHol_datatype astl =
   HOL_MESG message
  end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
 
-val Hol_datatype = astHol_datatype o ParseDatatype.parse;
+val Hol_datatype = astHol_datatype o ParseDatatype.parse
+val Datatype = astHol_datatype o ParseDatatype.hparse
 
 val _ = Parse.temp_set_grammars ambient_grammars
 
