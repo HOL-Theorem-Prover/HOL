@@ -102,6 +102,7 @@ struct
   val rfs = rfsrw_tac []
 
   val op>> = op Tactical.THEN
+  val op// = op Tactical.THEN
   val op>- = op Tactical.THEN1
   val op>| = op Tactical.THENL
 
