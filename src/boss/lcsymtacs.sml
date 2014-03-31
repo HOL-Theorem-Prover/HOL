@@ -93,6 +93,8 @@ struct
 
   val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
   val simp = stateful asm_simp_tac let_arith_list
+  val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
+  val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
   val lrw = srw_tac let_arith_list
   val lfs = fsrw_tac let_arith_list
   val lrfs = rfsrw_tac let_arith_list

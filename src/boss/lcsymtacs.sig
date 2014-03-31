@@ -77,6 +77,8 @@ sig
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
 
   val simp : thm list -> tactic
+  val csimp : thm list -> tactic
+  val dsimp : thm list -> tactic
   val lrw : thm list -> tactic
   val lfs : thm list -> tactic
   val lrfs : thm list -> tactic
