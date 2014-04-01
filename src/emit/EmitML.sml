@@ -998,20 +998,20 @@ end;
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
   | elemi (DATATYPE q) (cs,il) =
-       let val tyAST = ParseDatatype.parse q
+       let val tyAST = ParseDatatype.hparse q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs, defs @ (iDATATYPE tyAST :: il))
        end
   | elemi (EQDATATYPE(sl,q)) (cs,il) =
-       let val tyAST = ParseDatatype.parse q
+       let val tyAST = ParseDatatype.hparse q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
        end
   | elemi (ABSDATATYPE(sl,q)) (cs,il) = (* build rewrites for pseudo constrs *)
      let open ParseDatatype
-         val tyAST = parse q
+         val tyAST = hparse q
          val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
          val pconstrs = constrl tyAST
          val constr_names = flatten(map (map fst o snd) pconstrs)
