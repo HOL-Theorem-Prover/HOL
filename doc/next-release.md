@@ -35,7 +35,7 @@ New features:
 
           Datatype`mytype = Constr mytype ('a -> bool) | BaseCase
 
-  The `Hol_datatype` entry-point can continue to be used.  The LaTeX output of `EmitTeX` uses the new format.
+  The `Hol_datatype` entry-point can continue to be used.  However, the LaTeX output of `EmitTeX` uses the new format, and the various `DATATYPE` constructors used in the `EmitML` module take quotations in the new format, rather than the old.
 
 
 Bugs fixed:
