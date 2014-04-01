@@ -434,7 +434,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
     fun pp_type_name n =
       let val l = strip_type (type_of n)
       in
-        TP (last (strip_type (hd l)))
+        TP0 (last (strip_type (hd l)))
       end
 
     fun pp_constructor_spec (n, l) = let
