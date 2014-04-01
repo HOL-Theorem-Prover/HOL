@@ -393,8 +393,11 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend ostrm tm
     val PT = PT0 |> trace ("types", 0)
-    fun TP0 ty = type_pp.pp_type (Parse.type_grammar()) backend ostrm ty
-    val TP = TP0
+    val TP0 = type_pp.pp_type (Parse.type_grammar()) backend ostrm
+    fun TP ty =
+        if is_vartype ty orelse null (#2 (dest_type ty)) then TP0 ty
+        else
+          (S "("; BB PP.INCONSISTENT 0; TP0 ty; EB(); S")")
 
     fun strip_type t =
       if is_vartype t then
@@ -412,9 +415,9 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
           PT t;
           if ll < 2 then ()
           else
-            (S " "; S "of"; BR(1,2);
+            (S " ";
              BB PP.INCONSISTENT 0;
-             app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
+             app (fn x => (TP x; BR(1,0)))
                  (List.take(l, ll - 2));
              TP (List.nth(l, ll - 2));
              EB());
