@@ -21,6 +21,12 @@ sig
    val mk_float_var: hol_type * hol_type -> string -> term
    val mk_ifloat_var: int * int -> string -> term
 
+   val floatToReal : term -> real
+   val wordToReal  : term -> real
+   val realToFloat : real -> term
+   val realToWord  : real -> term
+   val native_ty   : hol_type
+
    val EQ_tm: term
    val GT_tm: term
    val LT_tm: term
@@ -31,6 +37,7 @@ sig
    val float_bottom_tm: term
    val float_compare_tm: term
    val float_div_tm: term
+   val float_equal_tm: term
    val float_exponent_tm: term
    val float_greater_equal_tm: term
    val float_greater_than_tm: term
@@ -47,10 +54,12 @@ sig
    val float_minus_min_tm: term
    val float_minus_zero_tm: term
    val float_mul_tm: term
+   val float_mul_add_tm: term
    val float_negate_tm: term
    val float_plus_infinity_tm: term
    val float_plus_min_tm: term
    val float_plus_zero_tm: term
+   val float_sqrt_tm: term
    val float_round_tm: term
    val float_round_to_integral_tm: term
    val float_sign_tm: term
@@ -94,6 +103,7 @@ sig
    val dest_float_bottom: term -> term
    val dest_float_compare: term -> term * term
    val dest_float_div: term -> term * term * term
+   val dest_float_equal: term -> term * term
    val dest_float_exponent: term -> term
    val dest_float_greater_equal: term -> term * term
    val dest_float_greater_than: term -> term * term
@@ -110,22 +120,24 @@ sig
    val dest_float_minus_min: term -> term
    val dest_float_minus_zero: term -> term
    val dest_float_mul: term -> term * term * term
+   val dest_float_mul_add: term -> term * term * term * term
    val dest_float_negate: term -> term
    val dest_float_plus_infinity: term -> term
    val dest_float_plus_min: term -> term
    val dest_float_plus_zero: term -> term
-   val dest_float_round: term -> term * term * term
+   val dest_float_round: term -> term * term * term * hol_type * hol_type
    val dest_float_round_to_integral: term -> term * term
    val dest_float_sign: term -> term
    val dest_float_significand: term -> term
    val dest_float_some_nan: term -> term
+   val dest_float_sqrt: term -> term * term
    val dest_float_sub: term -> term * term * term
    val dest_float_to_real: term -> term
    val dest_float_top: term -> term
    val dest_float_value: term -> term
    val dest_integral_round: term -> term * term
    val dest_largest: term -> term
-   val dest_round: term -> term * term
+   val dest_round: term -> term * term * hol_type * hol_type
    val dest_threshold: term -> term
    val dest_ulp: term -> term
 
@@ -150,6 +162,7 @@ sig
    val is_float_bottom: term -> bool
    val is_float_compare: term -> bool
    val is_float_div: term -> bool
+   val is_float_equal: term -> bool
    val is_float_exponent: term -> bool
    val is_float_greater_equal: term -> bool
    val is_float_greater_than: term -> bool
@@ -166,6 +179,7 @@ sig
    val is_float_minus_min: term -> bool
    val is_float_minus_zero: term -> bool
    val is_float_mul: term -> bool
+   val is_float_mul_add: term -> bool
    val is_float_negate: term -> bool
    val is_float_plus_infinity: term -> bool
    val is_float_plus_min: term -> bool
@@ -175,10 +189,12 @@ sig
    val is_float_sign: term -> bool
    val is_float_significand: term -> bool
    val is_float_some_nan: term -> bool
+   val is_float_sqrt: term -> bool
    val is_float_sub: term -> bool
    val is_float_to_real: term -> bool
    val is_float_top: term -> bool
    val is_float_value: term -> bool
+   val is_ground_real: term -> bool
    val is_integral_round: term -> bool
    val is_largest: term -> bool
    val is_round: term -> bool
@@ -206,6 +222,7 @@ sig
    val mk_float_bottom: term -> term
    val mk_float_compare: term * term -> term
    val mk_float_div: term * term * term -> term
+   val mk_float_equal: term * term -> term
    val mk_float_exponent: term -> term
    val mk_float_greater_equal: term * term -> term
    val mk_float_greater_than: term * term -> term
@@ -222,22 +239,24 @@ sig
    val mk_float_minus_min: term -> term
    val mk_float_minus_zero: term -> term
    val mk_float_mul: term * term * term -> term
+   val mk_float_mul_add: term * term * term * term -> term
    val mk_float_negate: term -> term
    val mk_float_plus_infinity: term -> term
    val mk_float_plus_min: term -> term
    val mk_float_plus_zero: term -> term
-   val mk_float_round: term * term * term -> term
+   val mk_float_round: term * term * term * hol_type * hol_type -> term
    val mk_float_round_to_integral: term * term -> term
    val mk_float_sign: term -> term
    val mk_float_significand: term -> term
    val mk_float_some_nan: term -> term
+   val mk_float_sqrt: term * term -> term
    val mk_float_sub: term * term * term -> term
    val mk_float_to_real: term -> term
    val mk_float_top: term -> term
    val mk_float_value: term -> term
    val mk_integral_round: term * term -> term
    val mk_largest: term -> term
-   val mk_round: term * term -> term
+   val mk_round: term * term * hol_type * hol_type -> term
    val mk_threshold: term -> term
    val mk_ulp: term -> term
 

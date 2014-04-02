@@ -4,6 +4,8 @@ struct
 open Abbrev HolKernel
 open fcpSyntax binary_ieeeTheory
 
+val ERR = Feedback.mk_HOL_ERR "binary_ieeeSyntax"
+
 (* ------------------------------------------------------------------------- *)
 
 val float_value_ty =
@@ -30,19 +32,19 @@ val dest_ifloat_ty =
 
 fun mk_floating_point (s, e, f) =
    TypeBase.mk_record
-       (mk_float_ty (wordsSyntax.dim_of f, wordsSyntax.dim_of e),
-        [("Sign", s), ("Exponent", e), ("Significand", f)])
+      (mk_float_ty (wordsSyntax.dim_of f, wordsSyntax.dim_of e),
+       [("Sign", s), ("Exponent", e), ("Significand", f)])
 
 fun dest_floating_point tm =
-   case TypeBase.dest_record tm of
+   case Lib.with_exn TypeBase.dest_record tm (ERR "dest_floating_point" "") of
       (_, [("Sign", s), ("Exponent", e), ("Significand", f)]) => (s, e, f)
     | _ => raise ERR "dest_floating_point" ""
 
 fun float_of_triple ((t, w), (s, e, f)) =
    mk_floating_point
       (wordsSyntax.mk_wordii (if s then 1 else 0, 1),
-        wordsSyntax.mk_wordi (e, w),
-        wordsSyntax.mk_wordi (f, t))
+       wordsSyntax.mk_wordi (e, w),
+       wordsSyntax.mk_wordi (f, t))
 
 local
    val sz = Arbnum.toInt o wordsSyntax.size_of
@@ -61,6 +63,16 @@ end
 fun mk_float_var tw = fn v => Term.mk_var (v, mk_float_ty tw)
 fun mk_ifloat_var tw = fn v => Term.mk_var (v, mk_ifloat_ty tw)
 
+fun is_pure_real_literal tm =
+   case Lib.total realSyntax.dest_injected tm of
+      SOME a => numSyntax.is_numeral a
+    | NONE => false
+
+fun is_ground_real tm =
+   case Lib.total realSyntax.dest_div tm of
+      SOME (a, b) => realSyntax.is_real_literal a andalso is_pure_real_literal b
+    | NONE => realSyntax.is_real_literal tm
+
 (* ------------------------------------------------------------------------- *)
 
 val monop =
@@ -72,6 +84,10 @@ val binop =
 
 val triop =
    HolKernel.syntax_fns "binary_ieee" 3 HolKernel.dest_triop HolKernel.mk_triop
+
+val quadop =
+   HolKernel.syntax_fns
+     "binary_ieee" 4 HolKernel.dest_quadop HolKernel.mk_quadop
 
 val tw_monop =
    HolKernel.syntax_fns "binary_ieee" 1
@@ -112,6 +128,32 @@ val etw_monop =
          in
             boolSyntax.mk_icomb (tm1, pairSyntax.mk_pair (t1, t2))
          end)
+
+val tw_binop = 
+   HolKernel.syntax_fns "binary_ieee" 2
+      (fn tm1 => fn e => fn tm2 =>
+         let
+            val (a, b) = HolKernel.dest_binop tm1 e tm2
+            val (ty1, ty2) = dest_float_ty (Term.type_of tm2)
+         in
+            (a, b, ty1, ty2)
+         end)
+      (fn tm1 => fn (tm2, tm3, t, w) =>
+          Term.inst [``:'w`` |-> w, ``:'t`` |-> t]
+             (HolKernel.mk_binop tm1 (tm2, tm3)))
+
+val tw_triop =
+   HolKernel.syntax_fns "binary_ieee" 3
+      (fn tm1 => fn e => fn tm2 =>
+         let
+            val (a, b, c) = HolKernel.dest_triop tm1 e tm2
+            val (ty1, ty2) = dest_float_ty (Term.type_of tm2)
+         in
+            (a, b, c, ty1, ty2)
+         end)
+      (fn tm1 => fn (tm2, tm3, tm4, t, w) =>
+          Term.inst [``:'w`` |-> w, ``:'t`` |-> t]
+             (HolKernel.mk_triop tm1 (tm2, tm3, tm4)))
 
 (* ------------------------------------------------------------------------- *)
 
@@ -211,8 +253,6 @@ val (ulp_tm, mk_ulp, dest_ulp, is_ulp) = monop "ulp"
 
 val (ULP_tm, mk_ULP, dest_ULP, is_ULP) = monop "ULP"
 
-val (round_tm, mk_round, dest_round, is_round) = binop "round"
-
 val (integral_round_tm, mk_integral_round, dest_integral_round,
      is_integral_round) = binop "integral_round"
 
@@ -220,8 +260,8 @@ val (float_round_to_integral_tm, mk_float_round_to_integral,
      dest_float_round_to_integral, is_float_round_to_integral) =
    binop "float_round_to_integral"
 
-val (float_round_tm, mk_float_round, dest_float_round, is_float_round) =
-   triop "float_round"
+val (float_sqrt_tm, mk_float_sqrt, dest_float_sqrt, is_float_sqrt) =
+   binop "float_sqrt"
 
 val (float_add_tm, mk_float_add, dest_float_add, is_float_add) =
    triop "float_add"
@@ -253,6 +293,19 @@ val (float_less_equal_tm, mk_float_less_equal, dest_float_less_equal,
 val (float_greater_equal_tm, mk_float_greater_equal, dest_float_greater_equal,
      is_float_greater_equal) =
    binop "float_greater_equal"
+
+val (float_equal_tm, mk_float_equal, dest_float_equal, is_float_equal) =
+   binop "float_equal"
+
+val (float_mul_add_tm, mk_float_mul_add, dest_float_mul_add, is_float_mul_add) =
+   quadop "float_mul_add"
+
+(* ------------------------------------------------------------------------- *)
+
+val (round_tm, mk_round, dest_round, is_round) = tw_binop "round"
+
+val (float_round_tm, mk_float_round, dest_float_round, is_float_round) = 
+   tw_triop "float_round"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -293,6 +346,112 @@ val (_, mk_int_ulp, dest_int_ulp, is_int_ulp) = tw_monop "ulp"
 
 val (_, mk_int_ULP, dest_int_ULP, is_int_ULP) = etw_monop "ULP"
 
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   numToReal
+   realToNum
+   ------------------------------------------------------------------------- *)
+
+val n256 = Arbnum.fromInt 256
+val irealwidth = 8 * PackRealBig.bytesPerElem
+val realwidth = Arbnum.fromInt irealwidth
+val native_ty = mk_ifloat_ty (Real.precision - 1, irealwidth - Real.precision)
+
+val native_itself =
+   (boolSyntax.mk_itself o pairSyntax.mk_prod o dest_float_ty) native_ty
+
+val native_plus_infinity_tm = mk_float_plus_infinity native_itself
+val native_minus_infinity_tm = mk_float_minus_infinity native_itself
+
+local
+   val byte =  Word8.fromInt o Arbnum.toInt
+   fun loop a i x =
+      if i <= 0
+         then byte (Arbnum.mod (x, n256)) :: a
+      else let
+              val (r, q) = Arbnum.divmod (x, n256)
+           in
+              loop (byte q :: a) (i - 1) r
+           end
+in
+   val numToReal = PackRealBig.fromBytes o Word8Vector.fromList o
+                   loop [] (PackRealBig.bytesPerElem - 1)
+end
+
+local
+   val byte = Arbnum.fromInt o Word8.toInt o Word8Vector.sub
+in
+   fun realToNum r =
+      if Real.isNan r
+         then raise ERR "realToNum" "NaN"
+      else let
+              val v = PackRealBig.toBytes r
+              val l = List.tabulate
+                        (PackRealBig.bytesPerElem, fn i => byte (v, 7 - i))
+           in
+              List.foldl
+                 (fn (b, a) => Arbnum.+ (Arbnum.* (a, n256), b)) Arbnum.zero
+                 (List.rev l)
+           end
+end
+
+(* -------------------------------------------------------------------------
+   wordToReal
+   realToWord
+   ------------------------------------------------------------------------- *)
+
+fun wordToReal tm =
+   let
+      val (v, n) = wordsSyntax.dest_mod_word_literal tm
+   in
+      n = realwidth orelse raise ERR "wordToReal" "length mismatch"
+    ; numToReal v
+   end
+
+fun realToWord r = wordsSyntax.mk_word (realToNum r, realwidth)
+
+(* -------------------------------------------------------------------------
+   floatToReal
+   realToFloat
+   ------------------------------------------------------------------------- *)
+
+local
+   val exponent = irealwidth - Real.precision
+   val signval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (irealwidth - 1))
+   val expval = Arbnum.pow (Arbnum.two, Arbnum.fromInt exponent)
+   val manval = Arbnum.pow (Arbnum.two, Arbnum.fromInt (Real.precision - 1))
+   fun odd n = Arbnum.mod (n, Arbnum.two) = Arbnum.one
+in
+   fun floatToReal tm =
+      let
+         val ((t, w), (s, e, f)) = triple_of_float tm
+         val _ = t + 1 = Real.precision andalso w = exponent orelse
+                 raise ERR "floatToReal" "size mismatch"
+      in
+         numToReal
+            (Arbnum.+ (if s then signval else Arbnum.zero,
+                       Arbnum.+ (Arbnum.* (e, manval), f)))
+      end
+      handle e as HOL_ERR {origin_function = "dest_floating_point", ...} =>
+         if Term.type_of tm = native_ty
+            then if is_float_plus_infinity tm
+                    then Real.posInf
+                 else if is_float_minus_infinity tm
+                    then Real.negInf
+                 else raise e
+         else raise ERR "floatToReal" "not native float type"
+   fun realToFloat r =
+      case Real.class r of
+         IEEEReal.INF => if Real.signBit r then native_minus_infinity_tm
+                         else native_plus_infinity_tm
+       | IEEEReal.NAN => raise ERR "realToFloat" "NaN"
+       | _ =>
+           let
+              val n = realToNum r
+              val (e, f) = Arbnum.divmod (n, manval)
+              val (s, e) = Arbnum.divmod (e, expval)
+           in
+              float_of_triple ((Real.precision - 1, exponent), (odd s, e, f))
+           end
+end
 
 end
