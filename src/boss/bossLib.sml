@@ -35,7 +35,8 @@ val ERR = mk_HOL_ERR "bossLib";
 
 fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 
-val Hol_datatype = Datatype.Hol_datatype;
+val Hol_datatype = Datatype.Hol_datatype
+val Datatype = Datatype.Datatype
 
 
 (*---------------------------------------------------------------------------

@@ -251,6 +251,7 @@ signature Parse = sig
   val ParoundName      : ParenStyle
   val ParoundPrec      : ParenStyle
   val Always           : ParenStyle
+  val NotEvenIfRand    : ParenStyle
 
   val AroundEachPhrase : PhraseBlockStyle
   val AroundSamePrec   : PhraseBlockStyle

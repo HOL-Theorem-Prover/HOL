@@ -19,6 +19,7 @@ sig
    val pairCompare :
     ('a * 'a -> order) * ('b * 'b -> order) -> ('a * 'b) * ('a * 'b) -> order
    val prefix : char * string -> string
+   val revString : string -> string
    val snd : 'a * 'b -> 'b
    val splitl : (char -> bool) * string -> string * string
    val splitr : (char -> bool) * string -> string * string

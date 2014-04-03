@@ -293,11 +293,25 @@ end
 
 val PERM_IND = save_thm("PERM_IND", remove_eq_asm perm_ind)
 
+val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [`l2`, `l1`, `x`]
+
 val PERM_SWAP_AT_FRONT = store_thm(
   "PERM_SWAP_AT_FRONT",
   ``PERM (x::y::l1) (y::x::l2) = PERM l1 l2``,
   METIS_TAC [remove_eq_asm (List.nth(CONJUNCTS perm_rules, 2)),
              PERM_REFL, PERM_TRANS, PERM_CONS_IFF]);
+
+val PERM_SWAP = PERM_SWAP_AT_FRONT |> EQ_IMP_RULE |> #2
+                                   |> Q.GENL [`l2`, `l1`, `y`, `x`]
+
+val PERM_NILNIL = prove(``PERM [][]``, SRW_TAC[][])
+
+val PERM_STRONG_IND = save_thm(
+  "PERM_STRONG_IND",
+  IndDefLib.derive_strong_induction(
+    LIST_CONJ [PERM_NILNIL, PERM_MONO', PERM_SWAP, PERM_TRANS],
+    PERM_IND))
+val _ = IndDefLib.export_rule_induction "PERM_STRONG_IND"
 
 val PERM_LENGTH = Q.store_thm(
   "PERM_LENGTH",

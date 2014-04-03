@@ -32,8 +32,7 @@ val _ = set_fixity "|+"  (Infixl 600);
 val _ = set_fixity "|++" (Infixl 500);
 val _ = set_fixity "\\\\" (Infixl 600);
 
-val _ = Hol_datatype`
-  ptree = Empty | Leaf of num => 'a | Branch of num => num => ptree => ptree`;
+val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
 
 val _ = computeLib.auto_import_definitions := false;
 

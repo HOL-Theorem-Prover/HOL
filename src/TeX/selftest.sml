@@ -70,9 +70,9 @@ val _ = tprint "Testing datatype printing"
 val _ = Hol_datatype`foo = C of bool -> 'a -> bool | D of foo => 'a => num list | Econ of foo => foo => 'a`;
 val s = dtype_test 55 "foo"
 val _ = if s = "\\HOLFreeVar{foo} =\n\
-               \    \\HOLConst{C} \\HOLKeyword{of} \\HOLTyOp{bool} -> \\ensuremath{\\alpha} -> \\HOLTyOp{bool}\n\
-               \  \\HOLTokenBar{} \\HOLConst{D} \\HOLKeyword{of} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha} \\HOLTokenImp{} \\HOLTyOp{num} \\HOLTyOp{list}\n\
-               \  \\HOLTokenBar{} \\HOLConst{Econ} \\HOLKeyword{of} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha} \\HOLTyOp{foo} \\HOLTokenImp{} \\ensuremath{\\alpha}"
+               \    \\HOLConst{C} (\\HOLTyOp{bool} -> \\ensuremath{\\alpha} -> \\HOLTyOp{bool})\n\
+               \  \\HOLTokenBar{} \\HOLConst{D} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha} (\\HOLTyOp{num} \\HOLTyOp{list})\n\
+               \  \\HOLTokenBar{} \\HOLConst{Econ} (\\ensuremath{\\alpha} \\HOLTyOp{foo}) (\\ensuremath{\\alpha} \\HOLTyOp{foo}) \\ensuremath{\\alpha}"
         then
           print "OK\n"
         else die()

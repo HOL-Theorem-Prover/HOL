@@ -25,7 +25,7 @@ type nthy_rec = {Name : string, Thy : string}
     datatype PhraseBlockStyle =
       AroundSameName | AroundSamePrec | AroundEachPhrase | NoPhrasing
     datatype ParenStyle =
-      Always | OnlyIfNecessary | ParoundName | ParoundPrec
+      Always | OnlyIfNecessary | ParoundName | ParoundPrec | NotEvenIfRand
 
   fun rule_elements0 acc pplist =
     case pplist of
@@ -1404,11 +1404,13 @@ fun paren_style_encode Always = "A"
   | paren_style_encode OnlyIfNecessary = "O"
   | paren_style_encode ParoundPrec = "C"
   | paren_style_encode ParoundName = "N"
+  | paren_style_encode NotEvenIfRand = "R"
 val paren_style_reader =
     (literal "A" >> return Always) ||
     (literal "O" >> return OnlyIfNecessary) ||
     (literal "C" >> return ParoundPrec) ||
-    (literal "N" >> return ParoundName)
+    (literal "N" >> return ParoundName) ||
+    (literal "R" >> return NotEvenIfRand)
 
 fun ppel_encode ppel =
     case ppel of

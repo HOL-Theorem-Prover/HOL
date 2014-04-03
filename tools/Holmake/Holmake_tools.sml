@@ -16,9 +16,58 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
+val spacify = String.concatWith " "
+fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
+fun collapse_bslash_lines s = let
+  val charlist = explode s
+  fun trans [] = []
+    | trans (#"\\"::(#"\n"::rest)) = trans rest
+    | trans (x::xs) = x :: trans xs
+in
+  implode (trans charlist)
+end
+
+fun realspace_delimited_fields s = let
+  open Substring
+  fun inword cword words ss =
+      case getc ss of
+        NONE => List.rev (implode (List.rev cword) :: words)
+      | SOME (c,ss') => let
+        in
+          case c of
+            #" " => outword (implode (List.rev cword) :: words) ss'
+          | #"\\" => let
+            in
+              case getc ss' of
+                NONE => List.rev (implode (List.rev (c::cword)) :: words)
+              | SOME (c',ss'') => inword (c'::cword) words ss''
+            end
+          | _ => inword (c::cword) words ss'
+        end
+  and outword words ss =
+      case getc ss of
+        NONE => List.rev words
+      | SOME(c, ss') => let
+        in
+          case c of
+            #" " => outword words ss'
+          | _ => inword [] words ss
+        end
+in
+  outword [] (full s)
+end
+
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
+
+fun die_with message = let
+  open TextIO
+in
+  output(stdErr, message ^ "\n");
+  flushOut stdErr;
+  OS.Process.exit OS.Process.failure
+end
 
 fun output_functions {quiet_flag: bool, debug:bool} = let
   val execname = CommandLine.name()
@@ -32,6 +81,8 @@ fun output_functions {quiet_flag: bool, debug:bool} = let
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info}
 end
+
+fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns

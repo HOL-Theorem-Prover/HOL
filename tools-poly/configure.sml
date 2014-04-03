@@ -516,7 +516,7 @@ val _ =
       val target      = fullPath [holdir, "bin", "hol.bare"]
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = fullPath[HOLDIR,"bin", "hol.builder0"] ^ " -i"
-      val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ") -i"
+      val hol_heapcalc= "$(" ^ fullPath[HOLDIR,"bin","heapname"] ^ ") --gcthreads=1 -i"
       val prelude = ["prelude.ML"]
       val prelude2 = prelude @ ["prelude2.ML"]
    in

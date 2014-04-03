@@ -1127,6 +1127,16 @@ local
    val BIT_COUNT_CONV = BIT_COUNT_UPTO_CONV THENC BIT_THMS_CONV
    val bit_count_rule = utilsLib.FULL_CONV_RULE (Conv.DEPTH_CONV BIT_COUNT_CONV)
    val rule = bit_count_rule o endian_rule
+   fun ground_mul_conv tm =
+      case Lib.total wordsSyntax.dest_word_mul tm of
+         SOME (a, b) =>
+            if wordsSyntax.is_word_literal a andalso
+               wordsSyntax.is_word_literal b
+               then wordsLib.WORD_EVAL_CONV tm
+            else raise ERR "ground_mul_conv" ""
+       | NONE => raise ERR "ground_mul_conv" ""
+   val ground_mul_rule =
+      utilsLib.FULL_CONV_RULE (Conv.DEPTH_CONV ground_mul_conv)
    val stm_rule1 =
       utilsLib.MATCH_HYP_CONV_RULE
          (Conv.RAND_CONV
@@ -1168,7 +1178,8 @@ in
          val s' = utilsLib.uppercase s
       in
          if String.isPrefix "LDM" s'
-            then rule o Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
+            then ground_mul_rule o rule o
+                 Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
          else if String.isPrefix "STM" s'
             then stm_rule2 o stm_rule1 o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV)

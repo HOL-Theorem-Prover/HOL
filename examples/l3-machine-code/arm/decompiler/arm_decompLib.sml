@@ -89,30 +89,22 @@ val arm_decompile32_code_no_status =
 
 (* testing
 
-open rel_decompilerLib
+open arm_decompLib
 
-val hex = "B0821003"
-val hex = "07921003"
+val q =
+   `movs r1, #0        ; accumulator
+    mov  r3, r0        ; first address
+    adds r3, #40       ; last address (10 loads)
+label:
+    ldr  r2, [r0, #4]  ; load data
+    adds r0, #4        ; increment address
+    add  r1, r2        ; add to accumulator
+    cmp  r0, r3        ; test if done
+    blt  label         ; loop if not done`
 
-val l3_arm_spec = Count.apply l3_arm_spec
+val () = armAssemblerLib.print_arm_code q
 
-  l3_arm_spec "07921003";
-  l3_arm_spec "17921003";
-  l3_arm_spec "27921003";
-  l3_arm_spec "37921003";
-  l3_arm_spec "47921003";
-  l3_arm_spec "57921003";
-  l3_arm_spec "67921003";
-  l3_arm_spec "77921003";
-  l3_arm_spec "87921003";
-  l3_arm_spec "97921003";
-  l3_arm_spec "A7921003";
-  l3_arm_spec "B7921003";
-  l3_arm_spec "C7921003";
-  l3_arm_spec "D7921003";
-  l3_arm_spec "E7921003";
-
-fast_decompile "test" `e59f322c  00012f94`
+val (test_cert, test_def) = arm_decompile_code "test" q
 
 *)
 

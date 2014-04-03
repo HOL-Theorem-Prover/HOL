@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib
-open binary_ieeeLib;
+open machine_ieeeLib;
 
 val () = new_theory "machine_ieee";
 
@@ -7,10 +7,14 @@ val () = new_theory "machine_ieee";
    Bit-vector Encodings
    ------------------------------------------------------------------------ *)
 
-fun get_thm_name thm =
-   case DB.match [current_theory()] (Thm.concl thm) of
-      [((_, name), _)] => (thm, name)
-    | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
+local
+   val mtch = DB.match [Theory.current_theory()] o Thm.concl
+in
+   fun get_thm_name thm =
+      case mtch thm of
+         [((_, name), _)] => (thm, name)
+       | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
+end
 
 (*
     | l => (PolyML.prettyPrint
@@ -21,10 +25,10 @@ fun get_thm_name thm =
 (* 16-bit, 32-bit and 64-bit encodings *)
 
 val thms =
-   [("fp16", 10, 5),
-    ("fp32", 23, 8),
-    ("fp64", 52, 11)]
-   |> List.map binary_ieeeLib.mk_fp_encoding
+   [("fp16", 10, 5, SOME "half"),
+    ("fp32", 23, 8, SOME "single"),
+    ("fp64", 52, 11, SOME "double")]
+   |> List.map machine_ieeeLib.mk_fp_encoding
    |> List.concat
    |> List.map get_thm_name
    |> (fn l =>

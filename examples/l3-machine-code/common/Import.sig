@@ -93,7 +93,8 @@ sig
    val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit
    val Def : string * Term.term * Term.term -> Theory.thm
-   val tDef : string * Term.term * Term.term * Term.term -> Theory.thm
+   val tDef :
+      string * Term.term * Term.term * Term.term * Tactic.tactic -> Theory.thm
    val Def0 : string * Term.term -> Theory.thm
 
    val bTy : ParseDatatype.pretype

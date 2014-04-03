@@ -20,7 +20,7 @@ struct
  open Parse relationTheory mesonLib;
 *)
 
-open HolKernel Parse boolLib relationTheory mesonLib;
+open HolKernel Parse boolLib relationTheory mesonLib metisLib
 
 val _ = new_theory "pair";
 
@@ -646,6 +646,34 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
 
+(* more relational properties of LEX *)
+val total_LEX = store_thm(
+  "total_LEX",
+  ``total R1 /\ total R2 ==> total (R1 LEX R2)``,
+  ASM_SIMP_TAC (srw_ss()) [total_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
+  METIS_TAC[]);
+val _ = export_rewrites ["total_LEX"]
+
+val transitive_LEX = store_thm(
+  "transitive_LEX",
+  ``transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)``,
+  SIMP_TAC (srw_ss()) [transitive_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
+  METIS_TAC[]);
+val _ = export_rewrites ["transitive_LEX"]
+
+val reflexive_LEX = store_thm(
+  "reflexive_LEX",
+  ``reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2``,
+  SIMP_TAC (srw_ss()) [reflexive_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
+  METIS_TAC[])
+val _ = export_rewrites ["reflexive_LEX"]
+
+val symmetric_LEX = store_thm(
+  "symmetric_LEX",
+  ``symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)``,
+  SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
+  METIS_TAC[]);
+val _ = export_rewrites ["symmetric_LEX"]
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.

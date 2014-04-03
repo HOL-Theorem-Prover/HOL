@@ -652,6 +652,11 @@ local
    val mk_int_min = s (K I) intSyntax.min_tm
    val mk_int_max = s (K I) intSyntax.max_tm
 
+   fun mk_rev tm =
+      (if Lib.can wordsSyntax.dim_of tm
+          then wordsSyntax.mk_word_reverse
+       else listSyntax.mk_reverse) tm
+
    val c_mk_comb = Lib.curry Term.mk_comb
 
    fun mk_from_enum ty =
@@ -864,7 +869,7 @@ in
        | Not => boolSyntax.mk_neg
        | PadLeft => mk_pad_left
        | PadRight => mk_pad_right
-       | Rev => wordsSyntax.mk_word_reverse
+       | Rev => mk_rev
        | Smax => mk_word_smax
        | Smin => mk_word_smin
        | Snd => pairSyntax.mk_snd
@@ -1001,10 +1006,10 @@ fun z_def def =
    Feedback.trace ("Define.storage_message", 0)
    bossLib.zDefine [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)]
 
-fun t_def s def m =
+fun t_def s def m tac =
    Feedback.trace ("Define.storage_message", 0)
    (bossLib.tDefine s [HOLPP.ANTIQUOTE (boolSyntax.mk_eq def)])
-     (MEASURE_TAC m)
+     (MEASURE_TAC m THEN tac)
 
 val mesg =
    Lib.with_flag
@@ -1030,7 +1035,7 @@ fun Def (s, a, b) =
       (if isrec then z_def else new_def s) def before mesg s
    end
 
-fun tDef (s, a, b, m) =
+fun tDef (s, a, b, m, t) =
    let
       val ty = Type.--> (Term.type_of a, Term.type_of b)
       val c = Term.mk_var (s, ty)
@@ -1043,7 +1048,7 @@ fun tDef (s, a, b, m) =
                 else (Term.mk_comb (c, a), b)
       val () = resetAnon ()
    in
-      t_def s def m before mesg s
+      t_def s def m t before mesg s
    end
 
 fun Def0 (s, b) = new_def s (Term.mk_var (s, Term.type_of b), b) before mesg s

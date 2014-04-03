@@ -1,4 +1,8 @@
+EXTRA_CLEANS = selftest.exe
 OPTIONS=QUIT_ON_FAILURE
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
 
 fp-sig.uo: fp-sig.sml
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.sml

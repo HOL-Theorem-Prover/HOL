@@ -396,6 +396,13 @@ val _ = app test [
                 \else F"}
 ]
 
+val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
+                        block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                        pp_elements = [TOK "/"], term_name = "div" };
+val _ = test {input = "f /x",
+              testf = (fn s => "Prefix op without parens: "^s),
+              output = "f /x"}
+
 
 (* test DiskThms *)
 val _ = let

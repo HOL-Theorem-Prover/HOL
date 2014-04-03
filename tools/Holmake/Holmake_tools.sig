@@ -13,18 +13,27 @@ sig
          | UI of CodeType
          | Unhandled of string
 
+  (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string
+  val spacify : string list -> string
+  val nspaces : (string -> unit) -> int -> unit
+  val collapse_bslash_lines : string -> string
+  val realspace_delimited_fields : string -> string list
 
+  (* diagnostics/output *)
   type output_functions = {warn : string -> unit, info : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> unit}
   val output_functions : {quiet_flag: bool, debug:bool} -> output_functions
+  val die_with : string -> 'a
+
 
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit
 
+  (* File IO *)
   val string_part : File -> string
   val toCodeType : string -> CodeType
   val toFile : string -> File
@@ -32,6 +41,7 @@ sig
   val fromFile : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
+  val exists_readable : string -> bool
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool

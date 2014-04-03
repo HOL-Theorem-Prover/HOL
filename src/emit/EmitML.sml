@@ -998,20 +998,20 @@ end;
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
   | elemi (DATATYPE q) (cs,il) =
-       let val tyAST = ParseDatatype.parse q
+       let val tyAST = ParseDatatype.hparse q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs, defs @ (iDATATYPE tyAST :: il))
        end
   | elemi (EQDATATYPE(sl,q)) (cs,il) =
-       let val tyAST = ParseDatatype.parse q
+       let val tyAST = ParseDatatype.hparse q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
        end
   | elemi (ABSDATATYPE(sl,q)) (cs,il) = (* build rewrites for pseudo constrs *)
      let open ParseDatatype
-         val tyAST = parse q
+         val tyAST = hparse q
          val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
          val pconstrs = constrl tyAST
          val constr_names = flatten(map (map fst o snd) pconstrs)
@@ -1536,6 +1536,8 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
      val pathPrefix = Path.concat(path, capitalize s)
      val sigfile = pathPrefix^ sigSuffix
      val structfile = pathPrefix^ structSuffix
+     fun trydelete s = OS.FileSys.remove s handle OS.SysErr _ => ()
+     fun cleanFiles() = (trydelete sigfile; trydelete structfile)
  in
    let val (sigStrm,sigPPstrm) = mk_file_ppstream sigfile
        val (structStrm,structPPstrm) = mk_file_ppstream structfile
@@ -1550,14 +1552,11 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
     emit_adjoin_call s (consts,pcs)
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
+                cleanFiles();
                 raise wrap_exn "EmitML" "emitML" e)
    end handle Io _ =>
-             HOL_WARNING "EmitML" "emitML"
-              ("I/O error prevented exporting files to "^Lib.quote path)
-           | e => HOL_WARNING "EmitML" "emitML"
-                     (exn_to_string e
-                        ^" prevents writing ML files to "
-                        ^Lib.quote path)
+              raise mk_HOL_ERR "EmitML" "emitML"
+                    ("I/O error prevented exporting files to "^Lib.quote path)
  end
 
 val emit_xML =

@@ -13,6 +13,7 @@
 (global-set-key (kbd "C-~") (lambda () (interactive) (insert "¬")))
 (global-set-key (kbd "C-S-c") "⊆")
 (global-set-key (kbd "C-S-q") "≤")
+(global-set-key (kbd "C-M-~") "∼")
 
 (global-set-key (kbd "C-{") "⟦")
 (global-set-key (kbd "C-}") "⟧")
@@ -85,3 +86,11 @@
 (define-key hol-unicode-superscript-map "-" "⁻")
 (define-key hol-unicode-superscript-map "=" "⁼")
 ;; ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
+
+(define-prefix-command 'hol-unicode-zero-map)
+(global-set-key (kbd "C-)") 'hol-unicode-zero-map)
+(define-key hol-unicode-zero-map "+" "⊕")
+(define-key hol-unicode-zero-map "*" "⊗")
+(define-key hol-unicode-zero-map "-" "⊖")
+(define-key hol-unicode-zero-map "." "⊙")
+(define-key hol-unicode-zero-map "/" "⊘")

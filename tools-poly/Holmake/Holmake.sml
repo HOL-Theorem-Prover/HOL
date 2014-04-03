@@ -14,14 +14,6 @@ open Systeml Holmake_tools
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 
-fun die_with message = let
-  open TextIO
-in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
-  OS.Process.exit OS.Process.failure
-end
-
 fun main () = let
 
 val execname = OS.Path.file (CommandLine.name())
@@ -38,58 +30,6 @@ val DEFAULT_OVERLAY = "Overlay.ui";
 val SYSTEML = Systeml.systeml
 
 
-
-val spacify = String.concatWith " "
-
-fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
-
-fun collapse_bslash_lines s = let
-  val charlist = explode s
-  fun trans [] = []
-    | trans (#"\\"::(#"\n"::rest)) = trans rest
-    | trans (x::xs) = x :: trans xs
-in
-  implode (trans charlist)
-end
-
-fun realspace_delimited_fields s = let
-  open Substring
-  fun inword cword words ss =
-      case getc ss of
-        NONE => List.rev (implode (List.rev cword) :: words)
-      | SOME (c,ss') => let
-        in
-          case c of
-            #" " => outword (implode (List.rev cword) :: words) ss'
-          | #"\\" => let
-            in
-              case getc ss' of
-                NONE => List.rev (implode (List.rev (c::cword)) :: words)
-              | SOME (c',ss'') => inword (c'::cword) words ss''
-            end
-          | _ => inword (c::cword) words ss'
-        end
-  and outword words ss =
-      case getc ss of
-        NONE => List.rev words
-      | SOME(c, ss') => let
-        in
-          case c of
-            #" " => outword words ss'
-          | _ => inword [] words ss
-        end
-in
-  outword [] (full s)
-end
-
-
-local val expand_backslash =
-        String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
-in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
-end
-
-fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
 (*---------------------------------------------------------------------------
      Support for handling the preprocessing of files containing ``
@@ -650,7 +590,7 @@ let
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (EXE_POLY ^ " " ^
+  p (EXE_POLY ^ " --gcthreads=1 " ^
      String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
      " <<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";

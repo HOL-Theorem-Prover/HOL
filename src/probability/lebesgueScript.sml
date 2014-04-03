@@ -1525,9 +1525,6 @@ val pos_fn_integral_sum_cmul_indicator = store_thm
   ++ RW_TAC real_ss []
   ++ METIS_TAC [le_refl]);
 
-
-
-
 (************************************************************)
 (* LEBESGUE MONOTONE CONVERGENCE                            *)
 (************************************************************)
@@ -1617,7 +1614,8 @@ val lebesgue_monotone_convergence_lemma = store_thm
 		++ METIS_TAC [extreal_of_num_def])
       ++ MATCH_MP_TAC le_trans
       ++ Q.EXISTS_TAC `pos_fn_integral m (fi n)`
-      ++ RW_TAC std_ss [] >> (MATCH_MP_TAC pos_fn_integral_mono ++ METIS_TAC [le_mul,lt_le])
+      ++ RW_TAC std_ss [] >> (Q.UNABBREV_TAC `ri` ++ BETA_TAC
+                              ++ MATCH_MP_TAC pos_fn_integral_mono ++ METIS_TAC [le_mul,lt_le])
       ++ Q.PAT_ASSUM `!z. IMAGE ri UNIV z ==> z <= y'` MATCH_MP_TAC
       ++ ONCE_REWRITE_TAC [GSYM SPECIFICATION]
       ++ RW_TAC std_ss [IN_IMAGE,IN_UNIV]

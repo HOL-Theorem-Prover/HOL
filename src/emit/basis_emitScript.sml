@@ -81,7 +81,7 @@ val _ = EmitML.reshape_thm_hook :=
      !EmitML.reshape_thm_hook);
 
 val _ = eSML "num"
-    (EQDATATYPE ([], `num = ZERO | BIT1 of num | BIT2 of num`)
+    (EQDATATYPE ([], `num = ZERO | BIT1 num | BIT2 num`)
      :: OPEN ["combin"]
      :: MLSTRUCT "val num_size = I" (* Not sure this is needed *)
      :: MLSTRUCT "fun NUMERAL x = x"   (* Not sure this is needed *)
@@ -300,7 +300,7 @@ val _ = eSML "num"
 \    end;\n\n"]));
 
 val _ = eCAML "num"
-  (DATATYPE (`num = ZERO | BIT1 of num | BIT2 of num`)
+  (DATATYPE (`num = ZERO | BIT1 num | BIT2 num`)
   :: map MLSTRUCT
     ["let num_size x = x",
        "let _NUMERAL x = x",
@@ -444,7 +444,7 @@ val defs =
        CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN,POW_EQNS];
 
 val _ = eSML "set"
-   (ABSDATATYPE (["'a"], `set = EMPTY | INSERT of 'a => set`)
+   (ABSDATATYPE (["'a"], `set = EMPTY | INSERT 'a set`)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "val EMPTY    : 'a set"
@@ -875,7 +875,7 @@ val defs =
        (REWRITE_RULE [th] FEVERY_FUPDATE)]
 
 val _ = eSML "fmap"
-  (ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
+  (ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE fmap ('a#'b)`)
    :: OPEN ["num", "list", "set", "option"]
    :: MLSIG "type num = numML.num"
    :: MLSIG "type 'a set = 'a setML.set"
@@ -886,7 +886,7 @@ val _ = eSML "fmap"
 
 val _ = eCAML "fmap"
   (MLSIGSTRUCT ["type num = NumML.num", "type 'a set = 'a SetML.set"]
-   @ ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE of fmap => 'a # 'b`)
+   @ ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE fmap ('a # 'b)`)
    :: OPEN ["num", "list", "set", "option"]
    :: MLSIG "val _FDOM     : ('a,'b) fmap -> 'a set"
    :: MLSIG "val _FRANGE   : ('a,'b) fmap -> 'b set"
@@ -914,7 +914,7 @@ val ISR_THM = Q.prove
  REWRITE_TAC[ISR])
 
 val defs =
-  DATATYPE `sum = INL of 'a | INR of 'b`
+  DATATYPE `sum = INL 'a | INR 'b`
   :: map DEFN [CONJ OUTL OUTL_INR, OUTR, ISL_THM, ISR_THM]
 
 val _ = eSML "sum" defs
@@ -1124,19 +1124,19 @@ val defs = [SUMi, MULi, EXPi, dimindexi, mk_fcp_def, index_comp, fcp_subst_comp]
 val _ = eSML "fcp"
   ([OPEN ["num"],
     MLSIG "type num = numML.num",
-    DATATYPE(`itself = ITSELF of num`),
-    ABSDATATYPE (["'a","'b"], `cart = FCPi of (num -> 'a) # 'b itself`),
-    EQDATATYPE (["'a"],`bit0 = BIT0A of 'a | BIT0B of 'a`),
-    EQDATATYPE (["'a"],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)] @
+    DATATYPE(`itself = ITSELF num`),
+    ABSDATATYPE (["'a","'b"], `cart = FCPi ((num -> 'a) # 'b itself)`),
+    EQDATATYPE (["'a"],`bit0 = BIT0A 'a | BIT0B 'a`),
+    EQDATATYPE (["'a"],`bit1 = BIT1A 'a | BIT1B 'a | BIT1C`)] @
    map DEFN defs)
 
 val _ = eCAML "fcp"
  (MLSIGSTRUCT ["type num = NumML.num"]
    @ OPEN ["num"]
-  :: DATATYPE(`itself = ITSELF of num`)
-  :: ABSDATATYPE (["'a","'b"], `cart = FCPi of (num -> 'a) # 'b itself`)
-  :: EQDATATYPE (["'a"],`bit0 = BIT0A of 'a | BIT0B of 'a`)
-  :: EQDATATYPE (["'a"],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)
+  :: DATATYPE(`itself = ITSELF num`)
+  :: ABSDATATYPE (["'a","'b"], `cart = FCPi ((num -> 'a) # 'b itself)`)
+  :: EQDATATYPE (["'a"],`bit0 = BIT0A 'a | BIT0B 'a`)
+  :: EQDATATYPE (["'a"],`bit1 = BIT1A 'a | BIT1B 'a | BIT1C`)
   :: map (DEFN o REWRITE_RULE [GSYM FCPi_def, FUN_EQ_THM]) defs)
 
 (* == Words =============================================================== *)
@@ -1442,7 +1442,7 @@ val _ = temp_overload_on("int_of_num", ``integer$int_of_num``);
 
 val _ = eSML "int"
  (OPEN ["num", "words"]
-  :: EQDATATYPE ([], `int = int_of_num of num | neg_int_of_num of num`)
+  :: EQDATATYPE ([], `int = int_of_num num | neg_int_of_num num`)
   :: MLSIG "type num = numML.num"
   :: MLSIG "type 'a itself = 'a fcpML.itself"
   :: MLSIG "type 'a word = 'a wordsML.word"
@@ -1482,7 +1482,7 @@ val _ = eCAML "int"
     ["type num = NumML.num",
      "type 'a itself = 'a FcpML.itself",
      "type 'a word = 'a WordsML.word"]
-   @ EQDATATYPE ([], `int = int_of_num of num | neg_int_of_num of num`)
+   @ EQDATATYPE ([], `int = int_of_num num | neg_int_of_num num`)
   :: MLSIG "val fromString : string -> int"
   :: MLSTRUCT
        "let fromString s =\n\

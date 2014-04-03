@@ -1055,6 +1055,29 @@ REPEAT GEN_TAC
      THEN DISCH_THEN (ANTE_RES_THEN (MP_TAC o Q.SPEC`b`))
      THEN REWRITE_TAC[]]);
 
+val total_inv_image = store_thm(
+  "total_inv_image",
+  ``!R f. total R ==> total (inv_image R f)``,
+  SRW_TAC[][total_def, inv_image_def]);
+val _ = export_rewrites ["total_inv_image"]
+
+val reflexive_inv_image = store_thm(
+  "reflexive_inv_image",
+  ``!R f. reflexive R ==> reflexive (inv_image R f)``,
+  SRW_TAC[][reflexive_def, inv_image_def]);
+val _ = export_rewrites ["reflexive_inv_image"]
+
+val symmetric_inv_image = store_thm(
+  "symmetric_inv_image",
+  ``!R f. symmetric R ==> symmetric (inv_image R f)``,
+  SRW_TAC[][symmetric_def, inv_image_def]);
+val _ = export_rewrites ["symmetric_inv_image"]
+
+val transitive_inv_image = store_thm(
+  "transitive_inv_image",
+  ``!R f. transitive R ==> transitive (inv_image R f)``,
+  SRW_TAC[][transitive_def, inv_image_def] THEN METIS_TAC[]);
+val _ = export_rewrites ["transitive_inv_image"]
 
 (*---------------------------------------------------------------------------
  * Now the WF recursion theorem. Based on Tobias Nipkow's Isabelle development

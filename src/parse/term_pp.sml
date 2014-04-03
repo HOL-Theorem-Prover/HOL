@@ -211,6 +211,7 @@ fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
     Always => true
   | OnlyIfNecessary => false
+  | NotEvenIfRand => false
   | ParoundName => grav_name pgrav <> fname
   | ParoundPrec => grav_prec pgrav <> fprec
 
@@ -1302,7 +1303,7 @@ fun pp_term (G : grammar) TyG backend = let
           val addparens =
               parens_needed_outright orelse
               pneeded_by_style(rr, pgrav, fname, fprec) orelse
-              combpos = RandCP
+              (combpos = RandCP andalso #paren_style rr <> NotEvenIfRand)
           val rprec = if addparens then Top else rgrav
           val pp_elements = block_up_els [] (elements @ [LastTM])
           val real_args = args @ [Rand]

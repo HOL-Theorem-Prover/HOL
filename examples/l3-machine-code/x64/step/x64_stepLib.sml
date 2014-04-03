@@ -750,8 +750,7 @@ local
    fun unchanged s = raise ERR "x64_step" ("Failed to evaluate: " ^ s)
    val cache =
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)
-   fun addToCache (s, thm) =
-      (cache := Redblackmap.insert (!cache, s, thm); thm)
+   fun addToCache (s, thm) = (cache := Redblackmap.insert (!cache, s, thm); thm)
    fun checkCache s = Redblackmap.peek (!cache, s)
 in
    fun x64_step s =
@@ -786,37 +785,39 @@ in
       end
 end
 
+val x64_step_code = List.map x64_step o x64AssemblerLib.x64_code_no_spaces
+
 (*
-fun number_of_rewrites () = List.length (getThms ())
 
-number_of_rewrites ()
+List.length (getThms ())
 
-val s = "418803";
-Count.apply x64_step "418803";
+open x64_stepLib
+
+val thms = Count.apply x64_step_code
+  `nop                       ; 90
+   mov [r11], al             ; 41 88 03
+   jb 0x7                    ; 72 07
+   add dword [rbp-0x8], 0x1  ; 83 45 f8 01
+   movsxd rdx, eax           ; 48 63 d0
+   movsx eax, al             ; 0f be c0
+   movzx eax, al             ; 0f b6 c0`
+
 Count.apply x64_step "90";
+Count.apply x64_step "418803";
 Count.apply x64_step "487207";
-Count.apply x64_decode "485A"
-
-Count.apply x64_step "48BA________________"
-Count.apply x64_decode "48BA________________"
-
-Count.apply x64_step "41B8________"
-Count.apply x64_decode "41B8________"
-
-Count.apply x64_decode "8345F8__"
-Count.apply x64_step "8345F8__"
-
-Count.apply x64_decode "8345F801"
-Count.apply x64_step "8345F801"
-
-Count.apply x64_step "4863D0"
+Count.apply x64_step "8345F801";
+Count.apply x64_step "4863D0";
 Count.apply x64_step "0FBEC0";
 Count.apply x64_step "0FB6C0";
 
-val l = List.map (Count.apply x64_step) hex_list
-val l = Count.apply (List.map x64_step) hex_list
+Count.apply x64_step "48BA________________";
+Count.apply x64_decode "48BA________________"
 
-val _ = Count.apply (List.map x64_step) hex_list
+Count.apply x64_step "41B8________";
+Count.apply x64_decode "41B8________"
+
+Count.apply x64_decode "8345F8__";
+Count.apply x64_step "8345F8__"
 
 *)
 

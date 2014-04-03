@@ -73,5 +73,6 @@ struct
       l @ List.tabulate (Nat.- (n, List.length l), fn _ => e)
    fun padLeftString (e, (n, l)) = StringCvt.padLeft e n l
    fun padRightString (e, (n, l)) = StringCvt.padRight e n l
+   val revString = String.implode o List.rev o String.explode
 
 end (* structure L3 *)

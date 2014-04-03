@@ -1147,17 +1147,24 @@ fun get_pc_delta is_pc =
 
 local
    val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
-   fun is_reducible tm =
-      case Lib.total wordsSyntax.dest_word_add tm of
-         SOME (v, _) => not (Term.is_var v)
-       | _ => not (boolSyntax.is_cond tm)
+   fun is_irreducible tm =
+      Term.is_var tm orelse
+      (case Lib.total wordsSyntax.dest_word_add tm of
+          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+        | NONE => false) orelse
+      (case Lib.total wordsSyntax.dest_word_sub tm of
+          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+        | NONE => false) orelse
+      (case Lib.total boolSyntax.dest_cond tm of
+          SOME (_, x, y) => is_irreducible x andalso is_irreducible y
+        | NONE => false)
 in
    fun PC_CONV s =
       Conv.ONCE_DEPTH_CONV
          (fn tm =>
             case boolSyntax.dest_strip_comb tm of
               (c, [t]) =>
-                 if c = s andalso is_reducible t
+                 if c = s andalso not (is_irreducible t)
                     then Conv.RAND_CONV ARITH_SUB_CONV tm
                  else raise ERR "PC_CONV" ""
              | _ => raise ERR "PC_CONV" "")
