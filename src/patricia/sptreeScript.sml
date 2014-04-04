@@ -1,161 +1,179 @@
 open HolKernel Parse boolLib bossLib;
 open lcsymtacs
+open arithmeticTheory
 
 val _ = new_theory "sptree";
 
-
-val _ = Datatype`pspt = pLN | pLS 'a | pBN pspt pspt | pBS pspt 'a pspt`
-val pisEmpty_def = Define`
-  (pisEmpty pLN <=> T) /\
-  (pisEmpty _ <=> F)
+val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
+(* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
+val isEmpty_def = Define`
+  (isEmpty LN <=> T) /\
+  (isEmpty _ <=> F)
 `;
 
 val wf_def = Define`
-  (wf pLN <=> T) /\
-  (wf (pLS a) <=> T) /\
-  (wf (pBN t1 t2) <=> wf t1 /\ wf t2 /\ ~(pisEmpty t1 /\ pisEmpty t2)) /\
-  (wf (pBS t1 a t2) <=> wf t1 /\ wf t2 /\ ~(pisEmpty t1 /\ pisEmpty t2))
+  (wf LN <=> T) /\
+  (wf (LS a) <=> T) /\
+  (wf (BN t1 t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2)) /\
+  (wf (BS t1 a t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2))
 `
 
-val plookup_def = zDefine`
-  (plookup n pLN = NONE) /\
-  (plookup n (pLS a) = if n = 0 then SOME a else NONE) /\
-  (plookup n (pBN t1 t2) =
+val lookup_def = tDefine "lookup" `
+  (lookup n LN = NONE) /\
+  (lookup n (LS a) = if n = 0 then SOME a else NONE) /\
+  (lookup n (BN t1 t2) =
      if n = 0 then NONE
-     else plookup (n DIV 2) (if EVEN n then t1 else t2)) /\
-  (plookup n (pBS t1 a t2) =
+     else lookup ((n - 1) DIV 2) (if EVEN n then t1 else t2)) /\
+  (lookup n (BS t1 a t2) =
      if n = 0 then SOME a
-     else plookup (n DIV 2) (if EVEN n then t1 else t2))
-`;
+     else lookup ((n - 1) DIV 2) (if EVEN n then t1 else t2))
+` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X])
 
-val pinsert_def = zDefine`
-  (pinsert k a pLN = if k = 0 then pLS a
-                     else if EVEN k then pBN (pinsert (k DIV 2) a pLN) pLN
-                     else pBN pLN (pinsert (k DIV 2) a pLN)) /\
-  (pinsert k a (pLS a') =
-     if k = 0 then pLS a
-     else if EVEN k then pBS (pinsert (k DIV 2) a pLN) a' pLN
-     else pBS pLN a' (pinsert (k DIV 2) a pLN)) /\
-  (pinsert k a (pBN t1 t2) =
-     if k = 0 then pBS t1 a t2
-     else if EVEN k then pBN (pinsert (k DIV 2) a t1) t2
-     else pBN t1 (pinsert (k DIV 2) a t2)) /\
-  (pinsert k a (pBS t1 a' t2) =
-     if k = 0 then pBS t1 a t2
-     else if EVEN k then pBS (pinsert (k DIV 2) a t1) a' t2
-     else pBS t1 a' (pinsert (k DIV 2) a t2))
-`;
+val insert_def = tDefine "insert" `
+  (insert k a LN = if k = 0 then LS a
+                     else if EVEN k then BN (insert ((k-1) DIV 2) a LN) LN
+                     else BN LN (insert ((k-1) DIV 2) a LN)) /\
+  (insert k a (LS a') =
+     if k = 0 then LS a
+     else if EVEN k then BS (insert ((k-1) DIV 2) a LN) a' LN
+     else BS LN a' (insert ((k-1) DIV 2) a LN)) /\
+  (insert k a (BN t1 t2) =
+     if k = 0 then BS t1 a t2
+     else if EVEN k then BN (insert ((k - 1) DIV 2) a t1) t2
+     else BN t1 (insert ((k - 1) DIV 2) a t2)) /\
+  (insert k a (BS t1 a' t2) =
+     if k = 0 then BS t1 a t2
+     else if EVEN k then BS (insert ((k - 1) DIV 2) a t1) a' t2
+     else BS t1 a' (insert ((k - 1) DIV 2) a t2))
+` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X]);
 
-val pdelete_def = zDefine`
-  (pdelete k pLN = pLN) /\
-  (pdelete k (pLS a) = if k = 0 then pLN else pLS a) /\
-  (pdelete k (pBN t1 t2) =
-     if k = 0 then pBN t1 t2
+val delete_def = zDefine`
+  (delete k LN = LN) /\
+  (delete k (LS a) = if k = 0 then LN else LS a) /\
+  (delete k (BN t1 t2) =
+     if k = 0 then BN t1 t2
      else if EVEN k then
-       let t1' = pdelete (k DIV 2) t1
+       let t1' = delete ((k - 1) DIV 2) t1
        in
-         if pisEmpty t1' /\ pisEmpty t2 then pLN
-         else pBN t1' t2
+         if isEmpty t1' /\ isEmpty t2 then LN
+         else BN t1' t2
      else
-       let t2' = pdelete (k DIV 2) t2
+       let t2' = delete ((k - 1) DIV 2) t2
        in
-         if pisEmpty t1 /\ pisEmpty t2' then pLN
-         else pBN t1 t2') /\
-  (pdelete k (pBS t1 a t2) =
-     if k = 0 then pBN t1 t2
+         if isEmpty t1 /\ isEmpty t2' then LN
+         else BN t1 t2') /\
+  (delete k (BS t1 a t2) =
+     if k = 0 then BN t1 t2
      else if EVEN k then
-       let t1' = pdelete (k DIV 2) t1
+       let t1' = delete ((k - 1) DIV 2) t1
        in
-         if pisEmpty t1' /\ pisEmpty t2 then pLS a
-         else pBS t1' a t2
+         if isEmpty t1' /\ isEmpty t2 then LS a
+         else BS t1' a t2
      else
-       let t2' = pdelete (k DIV 2) t2
+       let t2' = delete ((k - 1) DIV 2) t2
        in
-         if pisEmpty t1 /\ pisEmpty t2' then pLS a
-         else pBS t1 a t2')
+         if isEmpty t1 /\ isEmpty t2' then LS a
+         else BS t1 a t2')
 `;
 
-val psize_def = Define`
-  (psize pLN = 0) /\
-  (psize (pLS a) = 1) /\
-  (psize (pBN t1 t2) = psize t1 + psize t2) /\
-  (psize (pBS t1 a t2) = psize t1 + psize t2 + 1)
+val fromList_def = Define`
+  fromList l = SND (FOLDL (\(i,t) a. (i + 1, insert i a t)) (0,LN) l)
 `;
 
-val wfEQ_def = Define`
-  wfEQ t1 t2 <=> (t1 = t2) /\ wf t1
+val size_def = Define`
+  (size LN = 0) /\
+  (size (LS a) = 1) /\
+  (size (BN t1 t2) = size t1 + size t2) /\
+  (size (BS t1 a t2) = size t1 + size t2 + 1)
 `;
 
-val wfEQ_equiv = prove(
-  ``(?t:'a pspt. wfEQ t t) /\
-    (!x y:'a pspt. wfEQ x y <=> wfEQ x x /\ wfEQ y y /\ (wfEQ x = wfEQ y))``,
-  simp[wfEQ_def, FUN_EQ_THM] >> conj_tac >-
-    (qexists_tac `pLN` >> simp[wf_def]) >>
-  metis_tac[]);
+val insert_notEmpty = store_thm(
+  "insert_notEmpty",
+  ``~isEmpty (insert k a t)``,
+  Cases_on `t` >> rw[Once insert_def, isEmpty_def]);
 
-val pinsert_notEmpty = prove(
-  ``~pisEmpty (pinsert k a t)``,
-  Cases_on `t` >> rw[Once pinsert_def, pisEmpty_def]);
-
-val wf_pisEmpty = prove(
-  ``wfEQ t1 t2 ==> (pisEmpty t1 <=> pisEmpty t2)``,
-  simp[wfEQ_def]);
-
-val wf_insert = prove(
-  ``!t1 t2. wfEQ t1 t2 ==> wfEQ (pinsert k a t1) (pinsert k a t2)``,
-  simp[wfEQ_def] >> map_every qid_spec_tac [`a`, `k`] >>
-  ho_match_mp_tac (theorem "pinsert_ind") >>
+val wf_insert = store_thm(
+  "wf_insert",
+  ``!k a t. wf t ==> wf (insert k a t)``,
+  ho_match_mp_tac (theorem "insert_ind") >>
   rpt strip_tac >>
-  simp[Once pinsert_def] >> rw[wf_def, pinsert_notEmpty] >> fs[wf_def]);
+  simp[Once insert_def] >> rw[wf_def, insert_notEmpty] >> fs[wf_def]);
 
-val wf_delete = prove(
-  ``!t1 t2 k. wfEQ t1 t2 ==> wfEQ (pdelete k t1) (pdelete k t2)``,
-  simp[wfEQ_def] >> Induct >> rw[wf_def, pdelete_def] >>
+val wf_delete = store_thm(
+  "wf_delete",
+  ``!t k. wf t ==> wf (delete k t)``,
+  Induct >> rw[wf_def, delete_def] >>
   rw[wf_def] >> rw[] >> fs[] >> metis_tac[]);
 
-val wf_plookup = prove(
-  ``wfEQ t1 t2 ==> (k1 = k2) ⇒ (plookup k1 t1 = plookup k2 t2)``,
-  simp[wfEQ_def]);
+val lookup_insert1 = store_thm(
+  "lookup_insert1",
+  ``!k a t. lookup k (insert k a t) = SOME a``,
+  ho_match_mp_tac (theorem "insert_ind") >> rpt strip_tac >>
+  simp[Once insert_def] >> rw[lookup_def]);
 
-val lookup_insert1 = prove(
-  ``!k a t. plookup k (pinsert k a t) = SOME a``,
-  ho_match_mp_tac (theorem "pinsert_ind") >> rpt strip_tac >>
-  simp[Once pinsert_def] >> rw[plookup_def]);
-
-val punion_def = Define`
-  (punion pLN t = t) /\
-  (punion (pLS a) t =
+val union_def = Define`
+  (union LN t = t) /\
+  (union (LS a) t =
      case t of
-       | pLN => pLS a
-       | pLS b => pLS a
-       | pBN t1 t2 => pBS t1 a t2
-       | pBS t1 _ t2 => pBS t1 a t2) /\
-  (punion (pBN t1 t2) t =
+       | LN => LS a
+       | LS b => LS a
+       | BN t1 t2 => BS t1 a t2
+       | BS t1 _ t2 => BS t1 a t2) /\
+  (union (BN t1 t2) t =
      case t of
-       | pLN => pBN t1 t2
-       | pLS a => pBS t1 a t2
-       | pBN t1' t2' => pBN (punion t1 t1') (punion t2 t2')
-       | pBS t1' a t2' => pBS (punion t1 t1') a (punion t2 t2')) /\
-  (punion (pBS t1 a t2) t =
+       | LN => BN t1 t2
+       | LS a => BS t1 a t2
+       | BN t1' t2' => BN (union t1 t1') (union t2 t2')
+       | BS t1' a t2' => BS (union t1 t1') a (union t2 t2')) /\
+  (union (BS t1 a t2) t =
      case t of
-       | pLN => pBS t1 a t2
-       | pLS a' => pBS t1 a t2
-       | pBN t1' t2' => pBS (punion t1 t1') a (punion t2 t2')
-       | pBS t1' a' t2' => pBS (punion t1 t1') a (punion t2 t2'))
+       | LN => BS t1 a t2
+       | LS a' => BS t1 a t2
+       | BN t1' t2' => BS (union t1 t1') a (union t2 t2')
+       | BS t1' a' t2' => BS (union t1 t1') a (union t2 t2'))
 `;
 
+val foldi_def = Define`
+  (foldi f i acc LN = acc) /\
+  (foldi f i acc (LS a) = f i a acc) /\
+  (foldi f i acc (BN t1 t2) =
+     foldi f (2 * i + 1) (foldi f (2 * i + 2) acc t1) t2) /\
+  (foldi f i acc (BS t1 a t2) =
+     foldi f (2 * i + 1) (f i a (foldi f (2 * i + 2) acc t1)) t2)
+`;
+
+val toList_def = Define`toList = foldi (\k v a. CONS v a) 0 []`
 val numeral_div0 = prove(
   ``(BIT1 n DIV 2 = n) /\
     (BIT2 n DIV 2 = SUC n) /\
     (SUC (BIT1 n) DIV 2 = SUC n) /\
     (SUC (BIT2 n) DIV 2 = SUC n)``,
-  REWRITE_TAC[GSYM arithmeticTheory.DIV2_def, numeralTheory.numeral_suc,
-              REWRITE_RULE [arithmeticTheory.NUMERAL_DEF]
+  REWRITE_TAC[GSYM DIV2_def, numeralTheory.numeral_suc,
+              REWRITE_RULE [NUMERAL_DEF]
                            numeralTheory.numeral_div2])
 val BIT0 = prove(
   ``BIT1 n <> 0  /\ BIT2 n <> 0``,
-  REWRITE_TAC[arithmeticTheory.BIT1, arithmeticTheory.BIT2,
-              arithmeticTheory.ADD_CLAUSES, numTheory.NOT_SUC]);
+  REWRITE_TAC[BIT1, BIT2,
+              ADD_CLAUSES, numTheory.NOT_SUC]);
+
+val PRE_BIT1 = prove(
+  ``BIT1 n - 1 = 2 * n``,
+  REWRITE_TAC [BIT1, NUMERAL_DEF,
+               ALT_ZERO, ADD_CLAUSES,
+               BIT2, SUB_MONO_EQ,
+               MULT_CLAUSES, SUB_0]);
+
+val PRE_BIT2 = prove(
+  ``BIT2 n - 1 = 2 * n + 1``,
+  REWRITE_TAC [BIT1, NUMERAL_DEF,
+               ALT_ZERO, ADD_CLAUSES,
+               BIT2, SUB_MONO_EQ,
+               MULT_CLAUSES, SUB_0]);
+
+
+val BITDIV = prove(
+  ``((BIT1 n - 1) DIV 2 = n) /\ ((BIT2 n - 1) DIV 2 = n)``,
+  simp[PRE_BIT1, PRE_BIT2] >> simp[DIV_EQ_X]);
 
 fun computerule rwts th q =
     th
@@ -164,34 +182,27 @@ fun computerule rwts th q =
       |> map (Q.INST [`k` |-> q])
       |> map (CONV_RULE
                 (RAND_CONV (SIMP_CONV bool_ss
-                                      ([numeral_div0, BIT0,
-                                       numTheory.NOT_SUC,
+                                      ([numeral_div0, BIT0, PRE_BIT1,
+                                       numTheory.NOT_SUC, BITDIV,
                                        EVAL ``SUC 0 DIV 2``,
                                        numeralTheory.numeral_evenodd,
-                                       arithmeticTheory.EVEN] @ rwts))))
+                                       EVEN] @ rwts))))
 
-val pinsert_compute = save_thm(
-  "pinsert_compute",
-  let val zeroes = computerule [] pinsert_def `0`
-  in
-    LIST_CONJ (zeroes @
-               computerule [] pinsert_def `BIT1 n` @
-               computerule [] pinsert_def `BIT2 n` @
-               computerule zeroes pinsert_def `SUC 0` @
-               computerule [] pinsert_def `SUC (BIT1 n)` @
-               computerule [] pinsert_def `SUC (BIT2 n)`)
-  end)
+val insert_compute = save_thm(
+  "insert_compute",
+    LIST_CONJ (prove (``insert (NUMERAL n) a t = insert n a t``,
+                      REWRITE_TAC [NUMERAL_DEF]) ::
+               computerule [] insert_def `0` @
+               computerule [] insert_def `BIT1 n` @
+               computerule [] insert_def `BIT2 n`))
 
-val pdelete_compute = save_thm(
-  "pdelete_compute",
-  let val zeroes = computerule [] pdelete_def `0`
-  in
-    LIST_CONJ (zeroes @
-             computerule [] pdelete_def `BIT1 n` @
-             computerule [] pdelete_def `BIT2 n` @
-             computerule zeroes pdelete_def `SUC 0` @
-             computerule [] pdelete_def `SUC (BIT1 n)` @
-             computerule [] pdelete_def `SUC (BIT2 n)`)
-  end);
+val delete_compute = save_thm(
+  "delete_compute",
+    LIST_CONJ (
+      prove(``delete (NUMERAL n) t = delete n t``,
+            REWRITE_TAC [NUMERAL_DEF]) ::
+      computerule [] delete_def `0` @
+      computerule [] delete_def `BIT1 n` @
+      computerule [] delete_def `BIT2 n`))
 
 val _ = export_theory();
