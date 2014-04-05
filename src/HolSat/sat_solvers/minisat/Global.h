@@ -53,10 +53,6 @@ typedef const char    cchar;
 template<class T> static inline T min(T x, T y) { return (x < y) ? x : y; }
 template<class T> static inline T max(T x, T y) { return (x > y) ? x : y; }
 
-template <bool> struct STATIC_ASSERTION_FAILURE;
-template <> struct STATIC_ASSERTION_FAILURE<true>{};
-#define TEMPLATE_FAIL STATIC_ASSERTION_FAILURE<false>()
-
 
 //=================================================================================================
 // 'malloc()'-style memory allocation -- never returns NULL; aborts instead:
@@ -190,6 +186,10 @@ public:
     // Vector interface:
     const T& operator [] (int index) const  { return data[index]; }
     T&       operator [] (int index)        { return data[index]; }
+
+template <bool> struct STATIC_ASSERTION_FAILURE;
+// template <> struct STATIC_ASSERTION_FAILURE<true>{};
+#define TEMPLATE_FAIL STATIC_ASSERTION_FAILURE<false>()
 
     // Don't allow copying (error prone):
     vec<T>&  operator = (vec<T>& other) { TEMPLATE_FAIL; }
