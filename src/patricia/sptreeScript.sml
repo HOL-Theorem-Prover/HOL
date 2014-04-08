@@ -241,6 +241,24 @@ val lookup_NONE_domain = store_thm(
   ``(lookup k t = NONE) <=> k NOTIN domain t``,
   simp[domain_lookup] >> Cases_on `lookup k t` >> simp[]);
 
+val domain_union = store_thm(
+  "domain_union",
+  ``domain (union t1 t2) = domain t1 UNION domain t2``,
+  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_union] >>
+  qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]);
+
+(*
+val lookup_delete = store_thm(
+  "lookup_delete",
+  ``!t k1 k2.
+      lookup k1 (delete k2 t) = if k1 = k2 then NONE
+                                else lookup k1 t``,
+  Induct >> simp[delete_def, lookup_def]
+  >- rw[lookup_def]
+  >- (map_every qx_gen_tac [`k1`, `k2`] >>
+      rw[lookup_def]
+*)
+
 val foldi_def = Define`
   (foldi f i acc LN = acc) /\
   (foldi f i acc (LS a) = f i a acc) /\
