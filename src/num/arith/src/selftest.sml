@@ -1,8 +1,8 @@
 open simpLib Parse HolKernel boolLib
 
-fun die s = (print s; Process.exit Process.failure)
+open testutils
 
-fun pr s = print (StringCvt.padRight #" " 60 s)
+val pr = tprint
 
 val _ = pr "Testing REDUCE_ss ..."
 val ss = simpLib.empty_ss ++ numSimps.REDUCE_ss
@@ -64,6 +64,17 @@ in
     SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
                else die "FAILED!\n"
   | NONE => die "FAILED!\n"
+end
+
+val _ = pr "Testing arith on nested COND clause"
+val _ = let
+  val t = ``x <= y ==> x <= y + if p then q else r``
+  val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
+in
+  case result of
+      SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
+                 else die "FAILED!\n"
+    | NONE => die "FAILED!\n"
 end
 
 val _ = pr "Testing r-cache behaviour with CONJ_ss ..."
