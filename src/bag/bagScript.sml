@@ -2,9 +2,9 @@ open HolKernel Parse boolLib boolSimps bossLib
      numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
 
-fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
+open lcsymtacs
 
-infix >-
+fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 val _ = new_theory "bag";
 
@@ -137,6 +137,18 @@ val BAG_INN_BAG_INSERT_STRONG = store_thm (
   SRW_TAC [][] THEN
   `m < SUC m` by DECIDE_TAC THEN
   PROVE_TAC[BAG_INN_LESS]);
+
+val BAG_UNION_EQ_LCANCEL1 = store_thm(
+  "BAG_UNION_EQ_LCANCEL1",
+  ``(b = BAG_UNION b c) <=> (c = {||})``,
+  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
+val _ = export_rewrites ["BAG_UNION_EQ_LCANCEL1"]
+
+val BAG_UNION_EQ_RCANCEL1 = store_thm(
+  "BAG_UNION_EQ_RCANCEL1",
+  ``(b = BAG_UNION c b) <=> (c = {||})``,
+  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = y + x) <=> (y = 0)``])
+val _ = export_rewrites ["BAG_UNION_EQ_RCANCEL1"]
 
 val BAG_IN_BAG_UNION = Q.store_thm(
   "BAG_IN_BAG_UNION",
@@ -1505,6 +1517,13 @@ val BAG_IN_FINITE_BAG_IMAGE = store_thm(
  before
  export_rewrites ["BAG_IN_FINITE_BAG_IMAGE"];
 
+val BAG_IMAGE_EQ_EMPTY = store_thm(
+  "BAG_IMAGE_EQ_EMPTY",
+  ``FINITE_BAG b ==> ((BAG_IMAGE f b = {||}) <=> (b = {||}))``,
+  qid_spec_tac `b` >> ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >>
+  simp[]);
+val _ = export_rewrites ["BAG_IMAGE_EQ_EMPTY"]
+
 (*---------------------------------------------------------------------------
         CHOICE and REST for bags.
  ---------------------------------------------------------------------------*)
@@ -1595,10 +1614,14 @@ val BAG_UNION_STABLE = Q.prove
  EQ_TAC THEN DISCH_THEN (fn th => GEN_TAC THEN MP_TAC(SPEC_ALL th)) THEN
  RW_TAC arith_ss []);
 
-val SUB_BAG_UNION_MONO = Q.store_thm
-("SUB_BAG_UNION_MONO",
-`!x y. SUB_BAG x (BAG_UNION x y)`,
-RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]);
+val SUB_BAG_UNION_MONO_0 = prove(
+  ``!x y. SUB_BAG x (BAG_UNION x y)``,
+  RW_TAC arith_ss [SUB_BAG,BAG_UNION,BAG_INN]);
+val SUB_BAG_UNION_MONO = save_thm(
+  "SUB_BAG_UNION_MONO",
+  CONJ SUB_BAG_UNION_MONO_0
+       (ONCE_REWRITE_RULE [COMM_BAG_UNION] SUB_BAG_UNION_MONO_0))
+val _ = export_rewrites ["SUB_BAG_UNION_MONO"]
 
 val PSUB_BAG_CARD = Q.store_thm
 ("PSUB_BAG_CARD",
@@ -2151,6 +2174,12 @@ val BAG_NOT_LESS_EMPTY = store_thm(
   SRW_TAC [][mlt1_def]);
 val _ = export_rewrites ["BAG_NOT_LESS_EMPTY"]
 
+val NOT_mlt_EMPTY = store_thm(
+  "NOT_mlt_EMPTY",
+  ``~mlt R b {||}``,
+  simp[Once relationTheory.TC_CASES2])
+val _ = export_rewrites ["NOT_mlt_EMPTY"]
+
 val BAG_LESS_ADD = store_thm(
   "BAG_LESS_ADD",
   ``mlt1 r N (M0 + {|a|}) ==>
@@ -2232,7 +2261,6 @@ val TC_mlt1_FINITE_BAG = store_thm(
   HO_MATCH_MP_TAC relationTheory.TC_INDUCT THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [mlt1_def]);
 
-
 val TC_mlt1_UNION2_I = store_thm(
   "TC_mlt1_UNION2_I",
   ``!b2 b1. FINITE_BAG b2 /\ FINITE_BAG b1 /\ b2 <> {||} ==>
@@ -2261,24 +2289,219 @@ val TC_mlt1_UNION1_I = store_thm(
             (mlt1 R)^+ b2 (b1 + b2)``,
   METIS_TAC [COMM_BAG_UNION,TC_mlt1_UNION2_I]);
 
-val mlt_TO_EMPTY_BAG = Q.store_thm(
-  "mlt_TO_EMPTY_BAG",
-  `FINITE_BAG b2 /\ b2 <> {||} ==> mlt r {||} b2`,
-  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
-  Q.ID_SPEC_TAC `b2` THEN
-  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
-  SRW_TAC [][] THEN
-  Cases_on `b2 = {||}`  THEN1 (
-    MATCH_MP_TAC relationTheory.TC_SUBSET THEN
-    SRW_TAC [][mlt1_def] ) THEN
-  MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.TC_RULES)) THEN
-  Q.EXISTS_TAC `b2` THEN
-  SRW_TAC [][] THEN
-  MATCH_MP_TAC relationTheory.TC_SUBSET THEN
-  SRW_TAC [][mlt1_def] THEN
-  MAP_EVERY Q.EXISTS_TAC [`e`,`{||}`,`b2`] THEN
-  SRW_TAC [][BAG_INSERT_UNION,COMM_BAG_UNION]);
-val _ = export_rewrites ["mlt_TO_EMPTY_BAG"];
+val mlt_INSERT_CANCEL_I = store_thm(
+  "mlt_INSERT_CANCEL_I",
+  ``!a b. mlt R a b ==> mlt R (BAG_INSERT e a) (BAG_INSERT e b)``,
+  ho_match_mp_tac relationTheory.TC_lifts_monotonicities >>
+  simp[mlt1_def] >> rw[] >>
+  map_every qexists_tac [`e'`, `rep`, `BAG_INSERT e res`] >>
+  simp[BAG_UNION_INSERT]);
+
+val mlt1_INSERT_CANCEL = store_thm(
+  "mlt1_INSERT_CANCEL",
+  ``WF R ==> (mlt1 R (BAG_INSERT e a) (BAG_INSERT e b) <=> mlt1 R a b)``,
+  simp[mlt1_def, EQ_IMP_THM] >> rpt strip_tac >> dsimp[]
+  >- (Cases_on `e = e'`
+      >- (fs[BAG_UNION_INSERT] >>
+          `~(BAG_IN e' rep)` by metis_tac [relationTheory.WF_NOT_REFL] >>
+          `BAG_IN e' res` by metis_tac[BAG_IN_BAG_UNION, BAG_IN_BAG_INSERT] >>
+          `?b0. res = BAG_INSERT e' b0` by metis_tac[BAG_DECOMPOSE] >>
+          fs[BAG_UNION_INSERT] >> metis_tac[]) >>
+      `BAG_IN e res` by metis_tac[BAG_IN_BAG_UNION, BAG_IN_BAG_INSERT,
+                                  NOT_IN_EMPTY_BAG] >>
+      `?b0. res = BAG_INSERT e b0` by metis_tac [BAG_DECOMPOSE] >>
+      fs[BAG_UNION_INSERT] >> fs[Once BAG_INSERT_commutes] >>
+      metis_tac[]) >>
+  map_every qexists_tac [`e'`, `rep`, `BAG_INSERT e res`] >>
+  simp[BAG_UNION_INSERT]);
+
+(* dominates R b1 b2 should be read as "b2 dominates b1 wrt relation R" *)
+val dominates_def = Define`
+  dominates R b1 b2 = !x. BAG_IN x b1 ==> ?y. BAG_IN y b2 /\ R x y
+`;
+
+val dominates_EMPTY = store_thm(
+  "dominates_EMPTY",
+  ``dominates R {||} b``,
+  simp[dominates_def]);
+val _ = export_rewrites ["dominates_EMPTY"]
+
+(* the transitivity requirement can be seen in the following example.
+   Imagine R is (\m n. n = SUC m), whose transitive closure is <.
+   Then we have
+      mlt R {|0|} {|2|}
+   because the first step removes 2 and replaces it with a 1.  The next step
+   then replaces the 1 with a 0.
+
+   But the alternative "definition" of mlt below is not satisfied because x has to
+   be {|2|} and y has to be {|0|}.  But y is not dominated by x, because there is
+   nothing in x that is R-bigger than 0.
+*)
+val mlt_dominates_thm = store_thm(
+  "mlt_dominates_thm",
+  ``transitive R ==>
+    !b1 b2. mlt R b1 b2 <=>
+            FINITE_BAG b1 /\ FINITE_BAG b2 /\
+            ?x y. x <> {||} /\ SUB_BAG x b2 /\
+                  (b1 = (b2 - x) + y) /\
+                  dominates R y x``,
+  simp[EQ_IMP_THM, FORALL_AND_THM] >> strip_tac >> conj_tac
+  >- (ho_match_mp_tac relationTheory.TC_STRONG_INDUCT_LEFT1 >>
+      conj_tac
+      >- (simp[mlt1_def, dominates_def] >> map_every qx_gen_tac [`b1`, `b2`] >>
+          strip_tac >> map_every qexists_tac [`{|e|}`, `rep`] >>
+          simp[COMM_BAG_UNION]) >>
+      rpt strip_tac >>
+      qmatch_assum_rename_tac `mlt1 R B0 B1` [] >>
+      qmatch_assum_rename_tac `mlt R B1 B2` [] >>
+      fs[mlt1_def] >>
+      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` [] >>
+      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` []>>
+      Cases_on `BAG_IN E Y`
+      >- (map_every qexists_tac [`X`, `Y - {| E |} + Rep`] >>
+          simp[] >> reverse conj_tac
+          >- (fs[dominates_def] >>
+              metis_tac [BAG_IN_DIFF_E, relationTheory.transitive_def]) >>
+          pop_assum mp_tac >>
+          qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+          simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
+               BAG_IN, BAG_INN] >>
+          disch_then (fn allth => disch_then
+                       (fn YE => qx_gen_tac `ee` >> qspec_then `ee` mp_tac allth >>
+                                 mp_tac YE)) >>
+          COND_CASES_TAC >> simp[]) >>
+      map_every qexists_tac [`BAG_INSERT E X`, `Y + Rep`] >> simp[] >>
+      reverse (rpt conj_tac)
+      >- (fs[dominates_def] >> metis_tac[])
+      >- (pop_assum mp_tac >>
+          qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+          simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
+               BAG_IN, BAG_INN] >>
+          disch_then (fn allth => disch_then
+                       (fn YE => qx_gen_tac `ee` >> qspec_then `ee` mp_tac allth >>
+                                 mp_tac YE)) >>
+          COND_CASES_TAC >> simp[]) >>
+      pop_assum mp_tac >>
+      qpat_assum `X <= B2` mp_tac >>
+      qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+      simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
+           BAG_IN, BAG_INN, SUB_BAG_LEQ] >>
+      disch_then
+        (fn allth1 => disch_then
+        (fn allth2 => disch_then
+        (fn YE => qx_gen_tac `ee` >>
+                  qspec_then `ee` mp_tac allth1 >>
+                  qspec_then `ee` mp_tac allth2 >>
+                  mp_tac YE))) >>
+      COND_CASES_TAC >> simp[]) >>
+  rpt strip_tac >> rw[] >>
+  `FINITE_BAG x` by metis_tac[FINITE_SUB_BAG] >>
+  fs[] >> map_every (C qpat_assum mp_tac) [
+    `FINITE_BAG b2`, `FINITE_BAG y`, `dominates R y x`,
+    `x <= b2`, `x <> {||}`] >>
+  map_every qid_spec_tac [`b2`, `y`] >> pop_assum mp_tac >>
+  pop_assum kall_tac >> qid_spec_tac `x` >>
+  ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >> simp[] >> rpt strip_tac >>
+  Cases_on `x = {||}`
+  >- (rw[] >> fs[dominates_def] >>
+      match_mp_tac relationTheory.TC_SUBSET >> simp[mlt1_def, FINITE_BAG_DIFF] >>
+      map_every qexists_tac [`e`, `y`, `b2 - {|e|}`] >>
+      simp[COMM_BAG_UNION, SUB_BAG_DIFF_EQ]) >>
+  match_mp_tac (relationTheory.TC_RULES |> SPEC_ALL |> CONJUNCT2) >>
+  qexists_tac `b2 - {|e|} + BAG_FILTER (\x. R x e) y` >> reverse conj_tac
+  >- (match_mp_tac relationTheory.TC_SUBSET >> simp[mlt1_def, FINITE_BAG_DIFF]>>
+      map_every qexists_tac [`e`, `BAG_FILTER (\x. R x e) y`, `b2 - {|e|}`] >>
+      simp[] >> simp[COMM_BAG_UNION] >> match_mp_tac SUB_BAG_DIFF_EQ >>
+      fs[SUB_BAG_LEQ, BAG_INSERT, EMPTY_BAG] >>
+      qx_gen_tac `a` >>
+      first_x_assum (fn th => qspec_then `a` mp_tac th >> COND_CASES_TAC >>
+                              decide_tac)) >>
+  `b2 - BAG_INSERT e x + y =
+   b2 - {|e|} + BAG_FILTER (\x. R x e) y - x + BAG_FILTER (\x. ~R x e) y`
+    by (qpat_assum `BAG_INSERT e x <= b2` mp_tac >>
+        simp_tac bool_ss [FUN_EQ_THM, SUB_BAG_LEQ, BAG_DIFF, BAG_UNION, EMPTY_BAG,
+                          BAG_INSERT, BAG_FILTER_DEF] >> simp[] >>
+        strip_tac >> qx_gen_tac `a` >> pop_assum (qspec_then `a` mp_tac) >>
+        rpt COND_CASES_TAC >> simp[] >> fs[]) >>
+  fs[AND_IMP_INTRO] >> first_x_assum match_mp_tac >> simp[FINITE_BAG_DIFF] >>
+  conj_tac
+  >- (fs[SUB_BAG_LEQ, BAG_INSERT, EMPTY_BAG, BAG_FILTER_DEF, BAG_DIFF,
+         BAG_UNION] >> qx_gen_tac `a` >>
+      first_x_assum (qspec_then `a` mp_tac) >>
+      COND_CASES_TAC >> simp[]
+      >- MATCH_ACCEPT_TAC (DECIDE ``!x y z. x + 1 <= z ==> x <= z - 1 + y``) >>
+      MATCH_ACCEPT_TAC (DECIDE ``!x y z. x <= y ==> x <= y + z``)) >>
+  fs[dominates_def] >> metis_tac[])
+
+(*
+val mlt_INSERT_CANCEL = store_thm(
+  "mlt_INSERT_CANCEL",
+  ``transitive R /\ WF R ==> (mlt R (BAG_INSERT e a) (BAG_INSERT e b) <=> mlt R a b)``,
+  simp[mlt_dominates_thm] >> strip_tac >> eq_tac >> strip_tac >> simp[] >> ...
+*)
+
+val mlt_UNION_RCANCEL_I = store_thm(
+  "mlt_UNION_RCANCEL_I",
+  ``mlt R a b /\ FINITE_BAG c ==>
+    mlt R (BAG_UNION a c) (BAG_UNION b c)``,
+  `mlt R a b ==>
+   !c. FINITE_BAG c ==>
+       mlt R (BAG_UNION a c) (BAG_UNION b c)`
+    suffices_by metis_tac[] >> strip_tac >>
+  ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >>
+  simp[BAG_UNION_INSERT, mlt_INSERT_CANCEL_I]);
+
+(*val mlt_UNION_RCANCEL = store_thm(
+  "mlt_UNION_RCANCEL",
+  ``mlt R (BAG_UNION a c) (BAG_UNION b c) <=>
+    mlt R a b /\ FINITE_BAG c``,
+  reverse (Cases_on `FINITE_BAG c`) >> simp[]
+  >- (strip_tac >> imp_res_tac TC_mlt1_FINITE_BAG >> fs[]) >>
+  map_every qid_spec_tac [`a`, `b`] >> pop_assum mp_tac >>
+  qid_spec_tac `c` >> ho_match_mp_tac STRONG_FINITE_BAG_INDUCT >>
+  simp[BAG_UNION_INSERT]*)
+
+val mlt_UNION_LCANCEL_I = save_thm(
+  "mlt_UNION_LCANCEL_I",
+  ONCE_REWRITE_RULE [COMM_BAG_UNION] mlt_UNION_RCANCEL_I);
+
+val mlt_UNION_lemma = prove(
+  ``WF R ==>
+    (mlt R b1 (BAG_UNION b1 b2) <=>
+      FINITE_BAG b1 /\ FINITE_BAG b2 /\ b2 <> {||})``,
+  strip_tac >> `WF (mlt R)` by simp[relationTheory.WF_TC_EQN, WF_mlt1] >>
+  reverse eq_tac >- simp[TC_mlt1_UNION2_I] >>
+  strip_tac >> imp_res_tac TC_mlt1_FINITE_BAG >>
+  fs[] >> strip_tac >> fs[] >> metis_tac[relationTheory.WF_NOT_REFL]);
+
+val mlt_UNION_CANCEL_EQN = store_thm(
+  "mlt_UNION_CANCEL_EQN",
+  ``WF R ==>
+    (mlt R b1 (BAG_UNION b1 b2) <=>
+       FINITE_BAG b1 /\ FINITE_BAG b2 /\ b2 <> {||}) /\
+    (mlt R b1 (BAG_UNION b2 b1) <=>
+       FINITE_BAG b1 /\ FINITE_BAG b2 /\ b2 <> {||})``,
+  metis_tac[COMM_BAG_UNION, mlt_UNION_lemma])
+
+val mlt_UNION_EMPTY_EQN = save_thm(
+  "mlt_UNION_EMPTY_EQN",
+  mlt_UNION_CANCEL_EQN |> Q.INST [`b1` |-> `{||}`]
+                       |> SIMP_RULE (srw_ss()) []);
+
+(*
+val mltLT_SING0 = store_thm(
+  "mltLT_SING0",
+  ``mlt (<) {|0:num|} b <=> FINITE_BAG b /\ b <> {|0|} /\ b <> {||}``,
+  eq_tac
+  >- (strip_tac >> imp_res_tac TC_mlt1_FINITE_BAG >> simp[] >>
+      rpt strip_tac >>
+      full_simp_tac (srw_ss() ++ boolSimps.ETA_ss)
+        [SIMP_RULE bool_ss [] relationTheory.WF_NOT_REFL, WF_mlt1,
+         relationTheory.WF_TC_EQN] >>
+
+*)
+
+
 
 (*---------------------------------------------------------------------------*)
 (* Size of a finite multiset is taken to be the sum of the sizes of all the  *)
