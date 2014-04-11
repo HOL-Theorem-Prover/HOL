@@ -1,4 +1,5 @@
 <!-- search and replace ?????? strings corresponding to release name -->
+<!-- indent code within bulleted lists to column 11 -->
 Notes on HOL 4, ?????? release
 ====================================
 
@@ -29,11 +30,11 @@ New features:
 
   For example, one would define a simple type of binary tree with
 
-          Datatype`tree = Lf num | Node tree tree`
+           Datatype`tree = Lf num | Node tree tree`
 
   If the arguments to a constructor are not just simple types (expressible as single tokens), then they need to be enclosed in parentheses.  For example:
 
-          Datatype`mytype = Constr mytype ('a -> bool) | BaseCase
+           Datatype`mytype = Constr mytype ('a -> bool) | BaseCase`
 
   The `Hol_datatype` entry-point can continue to be used.  However, the LaTeX output of `EmitTeX` uses the new format, and the various `DATATYPE` constructors used in the `EmitML` module take quotations in the new format, rather than the old.
 
@@ -52,11 +53,11 @@ New theories:
 
 * A theory of “list ranges” (`listRangeTheory`).  A range is a term written `[ lo ..< hi ]`, meaning the list consisting of the (natural) numbers from `lo` up to, but not including, `hi`.  The theory comes with some basic and obvious theorems, such as
 
-        MEM i [lo ..< hi] ⇔ lo ≤ i ∧ i < hi
+           MEM i [lo ..< hi] ⇔ lo ≤ i ∧ i < hi
 
    and
 
-        LENGTH [lo ..< hi] = hi - lo
+           LENGTH [lo ..< hi] = hi - lo
 
 New tools:
 ----------
