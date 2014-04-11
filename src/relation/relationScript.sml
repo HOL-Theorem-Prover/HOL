@@ -637,21 +637,31 @@ val RTC_CASES_RTC_TWICE = store_thm(
     MESON_TAC [RTC_RULES, RTC_SUBSET, RTC_RTC]
   ]);
 
-val TC_CASES1 =
+val TC_CASES1_E =
 Q.store_thm
-("TC_CASES1",
+("TC_CASES1_E",
   `!R x z. TC R x z ==> R x z \/ ?y:'a. R x y /\ TC R y z`,
 GEN_TAC
  THEN TC_INDUCT_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
 
-val TC_CASES2 =
+val TC_CASES1 = store_thm(
+  "TC_CASES1",
+  ``TC R x z <=> R x z \/ ?y:'a. R x y /\ TC R y z``,
+  MESON_TAC[TC_RULES, TC_CASES1_E])
+
+val TC_CASES2_E =
 Q.store_thm
-("TC_CASES2",
+("TC_CASES2_E",
     `!R x z. TC R x z ==> R x z \/ ?y:'a. TC R x y /\ R y z`,
 GEN_TAC
  THEN TC_INDUCT_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
+
+val TC_CASES2 = store_thm(
+  "TC_CASES2",
+  ``TC R x z <=> R x z \/ ?y:'a. TC R x y /\ R y z``,
+  MESON_TAC [TC_RULES, TC_CASES2_E]);
 
 val TC_MONOTONE = store_thm(
   "TC_MONOTONE",
@@ -986,7 +996,7 @@ GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[WF_DEF]
    THEN ASM_REWRITE_TAC[],
   Q.X_GEN_TAC`m` THEN STRIP_TAC THEN Q.UNDISCH_TAC`TC R (a:'a) m`
    THEN DISCH_THEN(fn th => STRIP_ASSUME_TAC
-              (CONJ th (MATCH_MP TC_CASES2 th)))
+              (CONJ th (MATCH_MP TC_CASES2_E th)))
    THENL
    [ Q.EXISTS_TAC`a` THEN ASM_REWRITE_TAC[] THEN RES_TAC
      THEN MAP_EVERY Q.EXISTS_TAC [`b'`, `z`] THEN ASM_REWRITE_TAC[],

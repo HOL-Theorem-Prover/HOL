@@ -70,6 +70,12 @@ New examples:
 Incompatibilities:
 ------------------
 
+- In `relationTheory`, the theorems `TC_CASES1` and `TC_CASES2` have been renamed to `TC_CASES1_E` and `TC_CASES2_E` respectively, where the `_E` suffix indicates that these are elimination rules.  In other words, these theorems are of the form `TC R x y ⇒ ...`.  This has been done so that new equivalences can be introduced under the old names.  For example, `TC_CASES1` now states
+
+           TC R x z ⇔ R x z ∨ ∃y. R x y ∧ TC R y z
+
+   This change makes the naming consistent with similar theorems `RTC_CASES1` and `RTC_CASES2` about the reflexive and transitive closure.
+
 * * * * *
 
 *[HOL4, ?????](http://hol.sourceforge.net)*
