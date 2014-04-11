@@ -601,6 +601,7 @@ REWRITE_TAC[relationTheory.WF_DEF]
    GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC
     THEN Q.EXISTS_TAC`SUC w`
     THEN MATCH_ACCEPT_TAC LESS_SUC_REFL]);
+val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
 (*---------------------------------------------------------------------------

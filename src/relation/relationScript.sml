@@ -1035,6 +1035,10 @@ Q.new_definition
 ("inv_image_def",
    `inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool`);
 
+val inv_image_thm = save_thm(
+  "inv_image_thm",
+  SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def)
+val _ = export_rewrites ["inv_image_thm"]
 
 val WF_inv_image = Q.store_thm("WF_inv_image",
 `!R (f:'a->'b). WF R ==> WF (inv_image R f)`,
