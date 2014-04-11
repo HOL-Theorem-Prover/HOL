@@ -31,7 +31,7 @@ New features:
 
           Datatype`tree = Lf num | Node tree tree`
 
-  If the arguments to a constructor are not just simple types, then they need to be enclosed in parentheses.  For example:
+  If the arguments to a constructor are not just simple types (expressible as single tokens), then they need to be enclosed in parentheses.  For example:
 
           Datatype`mytype = Constr mytype ('a -> bool) | BaseCase
 
