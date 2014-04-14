@@ -1,13 +1,12 @@
 structure listSimps :> listSimps =
 struct
 
-open simpLib listTheory;
+open boolLib HolKernel simpLib
+open listTheory listSyntax;
 
 (*-==============================================================-*)
 (*- CONVERSIONS added by TT 03 Dec 2009                          -*)
 (*-==============================================================-*)
-
-open boolLib HolKernel listSyntax
 
 structure Parse =
 struct
