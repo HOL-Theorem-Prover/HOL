@@ -484,7 +484,8 @@ val string_lt_trans = store_thm("string_lt_trans",
     Exportation
  ---------------------------------------------------------------------------*)
 
-val _ = computeLib.add_persistent_funs ["ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
+val _ = computeLib.add_persistent_funs
+          ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn ppstrm =>

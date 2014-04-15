@@ -354,30 +354,28 @@ in
        mrw (GSYM bitTheory.MOD_2EXP_def)) thms
 end
 
-fun add_word_convs cmp =
-   List.app (fn x => computeLib.add_conv x cmp)
-     [(fcpSyntax.dimindex_tm,   1, SIZES_CONV),
-      (wordsSyntax.dimword_tm,  1, SIZES_CONV),
-      (wordsSyntax.uint_max_tm, 1, SIZES_CONV),
-      (wordsSyntax.int_min_tm,  1, SIZES_CONV),
-      (wordsSyntax.int_max_tm,  1, SIZES_CONV),
-      (pred_setSyntax.finite_tm,1, SIZES_CONV),
-      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)]
+fun add_words_compset extras cmp =
+  ( computeLib.add_thms thms cmp
+  ; List.app (fn x => computeLib.add_conv (x, 1, SIZES_CONV) cmp)
+     [fcpSyntax.dimindex_tm, wordsSyntax.dimword_tm, wordsSyntax.uint_max_tm,
+      wordsSyntax.int_min_tm, wordsSyntax.int_max_tm, pred_setSyntax.finite_tm]
+  ; computeLib.add_conv
+      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV) cmp
+  ; if extras
+       then List.app (fn f => f cmp)
+              [listSimps.list_rws, bitLib.add_bit_compset,
+               numposrepLib.add_numposrep_compset,
+               ASCIInumbersLib.add_ASCIInumbers_compset]
+    else ()
+  )
 
-val () = computeLib.add_funs thms
-val () = add_word_convs computeLib.the_compset
+val () = add_words_compset false computeLib.the_compset
 
 fun words_compset () =
    let
-      val compset = reduceLib.num_compset ()
+      val cmp = reduceLib.num_compset ()
    in
-     listSimps.list_rws compset
-     ; bitLib.add_bit_compset compset
-     ; numposrepLib.add_numposrep_compset compset
-     ; ASCIInumbersLib.add_ASCIInumbers_compset compset
-     ; computeLib.add_thms thms compset
-     ; add_word_convs compset
-     ; compset
+      add_words_compset true cmp; cmp
    end
 
 val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset ())

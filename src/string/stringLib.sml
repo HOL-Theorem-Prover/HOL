@@ -6,9 +6,9 @@ open stringTheory stringSyntax;
 
 val ERR = mk_HOL_ERR "stringLib";
 
-(*---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
      Conversions.
- ---------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------ *)
 
 val ORD_CHR_CONV =
    let
@@ -84,13 +84,12 @@ in
       end
 end
 
-val () = computeLib.add_funs [stringTheory.IMPLODE_EXPLODE_I]
 val () = computeLib.add_convs [(stringSyntax.ord_tm, 1, ORD_CHR_CONV)]
 
 val () = Defn.const_eq_ref :=
            (!Defn.const_eq_ref ORELSEC string_EQ_CONV ORELSEC char_EQ_CONV)
 
-(*---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
       Examples.
 
   val test = Count.apply (string_EQ_CONV o Term);
@@ -102,11 +101,29 @@ val () = Defn.const_eq_ref :=
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyz"`;
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
 
- ---------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------ *)
 
-(*---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
+    String compset
+   ------------------------------------------------------------------------ *)
+
+val string_rwts =
+   [isLower_def, isUpper_def, isDigit_def, isAlpha_def, isHexDigit_def,
+    isAlphaNum_def, isPrint_def, isSpace_def, isGraph_def, isPunct_def,
+    isAscii_def, isCntrl_def, toLower_def, toUpper_def, char_lt_def,
+    char_le_def, char_gt_def, char_ge_def, SUB_def, STR_def, SUBSTRING_def,
+    TRANSLATE_def, TOKENS_def, FIELDS_def, IMPLODE_EXPLODE_I, EXTRACT_def,
+    DEST_STRING_def, string_lt_def, string_le_def, string_gt_def, string_ge_def,
+    ORD_CHR_COMPUTE, CHAR_EQ_THM]
+
+fun add_string_compset cmp =
+   ( computeLib.add_thms string_rwts cmp
+   ; computeLib.add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV) cmp
+   )
+
+(* ------------------------------------------------------------------------
      Define enum <-> string maps.
- ---------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------ *)
 
 local
    val e2s = stringSyntax.fromMLstring o fst o Term.dest_const
