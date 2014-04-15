@@ -241,14 +241,12 @@ fun test_orderings ty =
                                ; die "test_orderings failed"
                                )
                        end) cs) cs))
-       ([("float_less_than", mk_float_less_than),
+        [("float_less_than", mk_float_less_than),
          ("float_less_equal", mk_float_less_equal),
          ("float_greater_than", mk_float_greater_than),
          ("float_greater_equal", mk_float_greater_equal),
-         ("float_equal", mk_float_equal)] @
-        (if is_native
-            then [] (* Poly/ML's compareReal doesn't work for infinities *)
-         else [("float_compare", mk_float_compare)]))
+         ("float_equal", mk_float_equal),
+         ("float_compare", mk_float_compare)]
     ; print "\nDone.\n"
    end
 

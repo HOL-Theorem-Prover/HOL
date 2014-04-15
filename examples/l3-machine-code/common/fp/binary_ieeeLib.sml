@@ -1028,14 +1028,13 @@ val mul_add_CONV =
       (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL,
        native_float_mul_add_CONV, 2)
 
-(* Poly/ML's Real.compareReal doesn't work for infinities. *)
+(**************************************************************
+ NOTE:
+   Real.compareReal for Poly/ML < revision 1918 doesn't work for infinities.
+ **************************************************************)
 
-(*
 val compare_CONV =
    lcf_or_native_order_conv (float_compare_CONV, native_float_compare_CONV)
-*)
-
-val compare_CONV = float_compare_CONV
 
 val equal_CONV =
    lcf_or_native_order_conv (float_equal_CONV, native_float_equal_CONV)
