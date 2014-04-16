@@ -166,6 +166,7 @@ val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
 
 val SUB_def = Define `SUB (s:string, n) = EL n s`;
 val STR_def = Define `STR (c:char) = [c]`;
+val TOCHAR_def = Define `TOCHAR [c] = c: char`;
 
 val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
 

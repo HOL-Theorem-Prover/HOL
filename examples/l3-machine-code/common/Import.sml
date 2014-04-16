@@ -590,6 +590,8 @@ local
    end
 
    val one_tm = numSyntax.mk_numeral Arbnum.one
+   val t_tm = ``#"t"``
+   val f_tm = ``#"f"``
 
    fun mk_w tm ty = wordsSyntax.mk_n2w (tm, wordsSyntax.dest_word_type ty)
    val mk_word0 = mk_w numSyntax.zero_tm
@@ -721,6 +723,8 @@ local
                     then wordsSyntax.mk_word_to_hex_string tm
                  else if ty2 = Type.bool
                     then boolSyntax.mk_neg (boolSyntax.mk_eq (tm, mk_word0 ty1))
+                 else if ty2 = stringSyntax.char_ty
+                    then stringSyntax.mk_chr (wordsSyntax.mk_w2n tm)
                  else Term.mk_comb (num2enum ty2, wordsSyntax.mk_w2n tm)
          else if ty1 = bitstringSyntax.bitstring_ty
             then if wordsSyntax.is_word_type ty2
@@ -736,6 +740,8 @@ local
                  else if ty2 = Type.bool
                     then boolSyntax.mk_neg (boolSyntax.mk_eq
                            (bitstringSyntax.mk_v2n tm, numSyntax.zero_tm))
+                 else if ty2 = stringSyntax.char_ty
+                    then stringSyntax.mk_chr (bitstringSyntax.mk_v2n tm)
                  else Term.mk_comb (num2enum ty2, bitstringSyntax.mk_v2n tm)
          else if ty1 = numSyntax.num
             then if wordsSyntax.is_word_type ty2
@@ -751,6 +757,8 @@ local
                  else if ty2 = Type.bool
                     then boolSyntax.mk_neg (boolSyntax.mk_eq
                            (tm, numSyntax.zero_tm))
+                 else if ty2 = stringSyntax.char_ty
+                    then stringSyntax.mk_chr tm
                  else Term.mk_comb (num2enum ty2, tm)
          else if ty1 = intSyntax.int_ty
             then if wordsSyntax.is_word_type ty2
@@ -766,6 +774,8 @@ local
                  else if ty2 = Type.bool
                     then boolSyntax.mk_neg (boolSyntax.mk_eq
                            (tm, intSyntax.zero_tm))
+                 else if ty2 = stringSyntax.char_ty
+                    then stringSyntax.mk_chr (intSyntax.mk_Num tm)
                  else Term.mk_comb (num2enum ty2, intSyntax.mk_Num tm)
          else if ty1 = stringSyntax.string_ty
             then if wordsSyntax.is_word_type ty2
@@ -780,6 +790,8 @@ local
                     then tm
                  else if ty2 = Type.bool
                     then Term.mk_comb (string2bool, tm)
+                 else if ty2 = stringSyntax.char_ty
+                    then stringSyntax.mk_tochar tm
                  else Term.mk_comb (string2enum ty2, tm)
          else if ty1 = Type.bool
             then if wordsSyntax.is_word_type ty2
@@ -799,7 +811,25 @@ local
                            stringSyntax.fromMLstring "false")
                  else if ty2 = Type.bool
                     then tm
+                 else if ty2 = stringSyntax.char_ty
+                    then mk_from_bool (tm, t_tm, f_tm)
                  else raise ERR "pickCast" "bool -> ?"
+         else if ty1 = stringSyntax.char_ty
+            then if wordsSyntax.is_word_type ty2
+                    then wordsSyntax.mk_n2w (stringSyntax.mk_ord tm, dw ty2)
+                 else if ty2 = bitstringSyntax.bitstring_ty
+                    then bitstringSyntax.mk_n2v (stringSyntax.mk_ord tm)
+                 else if ty2 = numSyntax.num
+                    then stringSyntax.mk_ord tm
+                 else if ty2 = intSyntax.int_ty
+                    then intSyntax.mk_injected (stringSyntax.mk_ord tm)
+                 else if ty2 = stringSyntax.string_ty
+                    then stringSyntax.mk_str tm
+                 else if ty2 = Type.bool
+                    then boolSyntax.mk_eq (tm, t_tm)
+                 else if ty2 = stringSyntax.char_ty
+                    then tm
+                 else Term.mk_comb (num2enum ty2, stringSyntax.mk_ord tm)
          else case mk_from_enum ty1 of
                  SOME e2n =>
                     if wordsSyntax.is_word_type ty2
@@ -815,6 +845,8 @@ local
                     else if ty2 = Type.bool
                        then boolSyntax.mk_neg (boolSyntax.mk_eq
                               (tm, hd (TypeBase.constructors_of ty1)))
+                    else if ty2 = stringSyntax.char_ty
+                       then stringSyntax.mk_chr (e2n tm)
                     else Term.mk_comb (num2enum ty2, e2n tm)
                | _ => raise ERR "pickCast"
                         ("bad domain: " ^ typeName ty1 ^ " -> " ^ typeName ty2)
