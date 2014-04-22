@@ -592,7 +592,6 @@ un comportamento di parsing speciale:
 \begin{hol}
 \begin{verbatim}
    (=):bool->bool->bool
-	$
 \end{verbatim}
 \end{hol}
 
@@ -2759,16 +2758,16 @@ Una conversione fornita dall'utente non dovrebbe mai restituire l'identità rifle
 semplificatore. Piuttosto che restituire un tale risultato, si sollevi un \ml{HOL\_ERR} o 
 un'eccezione \ml{Conv.UNCHANGED}. (Entrambe sono trattate allo stesso modo dal semplificatore.)
 
-\paragraph{Context-aware decision procedures}
-Another, more involved, method for embedding user code into the
-simplifier is \emph{via} the \ml{dprocs} field of the \simpset{}
-fragment structure.  This method is more general than adding
-conversions, and also allows user code to construct and maintain its
-own bespoke logical contexts.
+\paragraph{Procedure di decisione consapevoli del contesto}
+Un altro metodo, più complicato, per incorporare codice utente nel 
+semplificatore è \emph{attraverso} il campo \ml{dprocs} della struttura 
+frammento \simpset{}. Questo metodo è più generale rispetto ad aggiungere 
+conversioni, e permette anche al codice utente di costruire e mantenere i suoi 
+propri contesti logici costruiti su misura.
 
-The \ml{dprocs} field requires lists of values of the type
-\ml{Traverse.reducer}.  These values are constructed with the
-constructor \ml{REDUCER}:
+Il campo \ml{dprocs} richiede liste di valori di tipo 
+\ml{Traverse.reducer}. Questi valori sono costruiti con il 
+costruttore \ml{REDUCER}:
 \begin{hol}
 \begin{verbatim}
    REDUCER : {initial : context,
@@ -2779,19 +2778,19 @@ constructor \ml{REDUCER}:
           -> reducer
 \end{verbatim}
 \end{hol}
-The \ml{context} type is an alias for the built-in \ML{} type
-\ml{exn}, that of exceptions.  The exceptions here are used as a
-``universal type'', capable of storing data of any type.  For example,
-if the desired data is a pair of an integer and a boolean, then the
-following declaration could be made:
+Il tipo \ml{context} è un alias per il tipo \ML{} incorporato 
+\ml{exn}, quello delle eccezioni. Le eccezioni sono qui usate come un 
+``tipo universale'', capace di archiviare dati di qualsiasi tipo. Per esempio, 
+se il dato desiderato è una coppia di un intero e un booleano, allora si 
+può fare la seguente dichiarazione:
 \begin{hol}
 \begin{verbatim}
    exception my_data of int * bool
 \end{verbatim}
 \end{hol}
-It is not necessary to make this declaration visible with a wide
-scope.  Indeed, only functions accessing and creating contexts of this
-form need to see it. For example:
+Non è necessario rendere questa dichiarazione visibile con uno scopo 
+ampio. Infatti, solo le funzioni che accedono e creano contesti di questa 
+forma hanno bisogno di vederla. Per esempio:
 \begin{hol}
 \begin{verbatim}
   fun get_data c = (raise c) handle my_data (i,b) => (i,b)
@@ -2799,215 +2798,215 @@ form need to see it. For example:
 \end{verbatim}
 \end{hol}
 
-When creating a value of \ml{reducer} type, the user must provide an
-initial context, and two functions.  The first, \ml{addcontext}, is
-called by the simplifier's traversal mechanism to give every embedded
-decision procedure access to theorems representing new context
-information.  For example, this function is called with theorems from
-the current assumptions in \ml{ASM\_SIMP\_TAC}, and with the theorems
-from the theorem-list arguments to all of the various simplification
-functions.  As a term is traversed, the congruence rules governing
-this traversal may also provide additional theorems; these will also
-be passed to the \ml{addcontext} function.  (Of course, it is entirely
-up to the \ml{addcontext} function as to how these theorems will be
-handled; they may even be ignored entirely.)
+Quando crea un valore di tipo \ml{reducer}, l'utente deve fornire un 
+contesto iniziale, e due funzioni. La prima, \ml{addcontext}, è 
+chiamata dal meccanismo di attraversamento del semplificatore per dare ad ogni 
+procedura di decisione incorporata accesso ai teoremi che rappresentano la nuova informazione 
+di contesto. Per esempio, questa funzione è chiamata con i teoremi dalle 
+assunzioni attuali in \ml{ASM\_SIMP\_TAC}, e con i teoremi 
+dagli argomenti lista di teoremi a tutt le varie funzioni di 
+semplificazione. Mentre un termine è attraversato, le regole di congruenza che governano 
+questo attraversamento possono fornire teoremi addizionali; questi saranno passati 
+anche alla funzione \ml{addcontext}. (Naturalmente, è del tutto a carico 
+della funzione \ml{addcontext} come questi teoremi saranno 
+gestiti; essi possono persino essere ignorati completamente.)
 
-When an embedded reducer is applied to a term, the provided \ml{apply}
-function is called.  As well as the term to be transformed, the
-\ml{apply} function is also passed a record containing a
-side-condition solver, the decision procedure's current context, and
-the stack of side-conditions attempted so far.  The stack and solver
-are the same as the additional arguments provided to user-supplied
-conversions.  The power of the reducer abstraction is having access to
-a context that can be built appropriately for each decision procedure.
+Quando un riduttore è applicato a un termine, è richiamata la funzione 
+\ml{apply} fornita. Oltre che al termine da trasformare, la 
+funzione \ml{apply} è passata anche a un record che contiene un 
+risolutore di condizione collaterale, l'attuale contesto della procedura di decisione. e 
+allo stack delle condizioni collaterali tentate fino ad ora. Lo stack e il risolutore 
+sono gli stessi degli argomenti addizionali dati alle conversioni fornite 
+dall'utente. La potenza dell'astrazione del riduttore è di avere accesso a 
+un contesto che può essere costruito in modo appropriato per ogni procedura di decisione.
 
-Decision procedures are applied last when a term is encountered by the
-simplifier.  More, they are applied \emph{after} the simplifier has
-already recursed into any sub-terms and tried to do as much rewriting
-as possible.  This means that although simplifier rewriting occurs in
-a top-down fashion, decision procedures will be applied bottom-up and
-only as a last resort.
+Le procedure di decisione sono applicate per l'ultima volta quando un termine è incontrato dal 
+semplificatore. Inoltre, esse sono applicate \emph{dopo} che il semplificatore ha 
+giaà eseguito un ricorsione in ogni sotto-termine e ha tentato di fare quante più riscritture 
+possibili. Questo significa che benché la riscrittura del semplificatore avvenda in un maniera che va 
+dall'alto verso il basso, le procedure di decisione saranno applicate dal basso verso l'alto e 
+solo come ultima risorsa.
 
-As with user-conversions, decision procedures must raise an exception
-rather than return instances of reflexivity.
+Come per le conversioni-utente, le procedure di decisione devono sollevare un'eccezione 
+piuttosto che restituire istanze di riflessività.
 
-\subsubsection{Special rewrite forms}
+\subsubsection{Forme speciali di riscrittura}
 \label{sec:simp-special-rewrite-forms}
 
-Some of the simplifier's features can be accessed in a relatively
-simple way by using \ML{} functions to construct special theorem
-forms.  These special theorems can then be passed in the
-simplification tactics' theorem-list arguments.
+Si può accedere ad alcune delle caratteristiche del semplificatore in un modo 
+relativamente semplice usando funzioni \ML{} per costruire speciali forme 
+di teorema. Questi teoremi speciali possono poi essere passati negli 
+argomenti lista-di-teoremi delle tattiche di semplificazione.
 
-Two of the simplifier's advanced features, AC-normalisation and
-congruence rules can be accessed in this way.  Rather than construct a
-custom \simpset{} fragment including the required AC or congruence
-rules, the user can instead use the functions \ml{AC} or \ml{Cong}:
+A due delle caratteristiche avanzate del semplificatore, la normalizzazione-AC e 
+le regole di congruenza si può accedere in questo modo. Piuttosto che costruire un 
+frammento \simpset{} custom che include le regole AC o di congruenza 
+richieste, l'utente può usare piuttosto le funzioni \ml{AC} o \ml{Cong}:
 \begin{hol}
 \begin{verbatim}
    AC : thm -> thm -> thm
    Cong : thm -> thm
 \end{verbatim}
 \end{hol}
-For example, if the theorem value
+Per esempio, se il valore teorema
 \begin{hol}
 \begin{verbatim}
    AC DISJ_ASSOC DISJ_COMM
 \end{verbatim}
 \end{hol}
-appears amongst the theorems passed to a simplification tactic, then
-the simplifier will perform AC-normalisation of disjunctions.  The
-\ml{Cong} function provides a similar interface for the addition of
-new congruence rules.
+appare tra i teoremi passati a una tattica di semplificazionie, allora 
+il semplificatore eseguirà una normalizzazione-AC di disgiunzioni. La 
+funzione \ml{Cong} fornisce un'interfaccia analoga per l'aggiunta di 
+nuove regole di congruenza.
 
-\index{simplification!guaranteeing termination}
-\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)|pin}
-\index{Ntimes (controlling rewrite applications)@\ml{Ntimes} (controlling rewrite applications)|pin}
-Two other functions provide a crude mechanism for controlling the
-number of times an individual rewrite will be applied.
+\index{semplificazione!garantire la terminazione}
+\index{Once (controllo delle applicazioni di riscrittura)@\ml{Once} (controllo delle applicazioni di riscrittura)|pin}
+\index{Ntimes (controllo delle applicazioni di riscrittura)@\ml{Ntimes} (controllo delle applicazioni di riscrittura)|pin}
+Altre due funzioni forniscono un meccanismo crudo per controllare il 
+numero di volte che una riscrittura individuale sarà applicata.
 \begin{hol}
 \begin{verbatim}
    Once : thm -> thm
    Ntimes : thm -> int -> thm
 \end{verbatim}
 \end{hol}
-A theorem ``wrapped'' in the \ml{Once} function will only be applied
-once when the simplifier is applied to a given term.  A theorem
-wrapped in \ml{Ntimes} will be applied as many times as given in the
-integer parameter.
+Un teorema ``avvolto'' nella funzione \ml{Once} sarà applicato 
+una sola volta quando il semplificatore è applicato a un termine dato. Un teorema 
+avvolto in \ml{Ntimes} sarà applicato tante volte quante sono date nel 
+parametro intero.
 
-\paragraph{Simplifying at particular sub-terms}
-\index{simplification!at particular sub-terms}
-We have already seen (Section~\ref{sec:simp-congruences} above) that
-the simplifier's congruence technology can be used to force the
-simplifier to ignore particular terms.  The example in the section
-above discussed how a congruence rule might be used to ensure that
-only the guards of conditional expressions should be simplified.
+\paragraph{Semplificare a particolari sotto-termini}
+\index{semplificazione!a particolari sotto-termini}
+Abbiamo già visto (Sezione~\ref{sec:simp-congruences} di sopra) che 
+la tecnologia di congruenza del semplificatore può essere usata per forzare il 
+semplificatore ad ignorare termini particolari. L'esempio nella sezione 
+di sopra ha discusso come un regola di congruenza potrebbe essere usata per assicurare che 
+solo le guardie delle espressioni condizionali dovrebbero essere semplificate.
 
-In many proofs, it is common to want to rewrite only on one side or
-the other of a binary connective (often, this connective is an
-equality).  For example, this occurs when rewriting with equations
-from complicated recursive definitions that are not just structural
-recursions.  In such definitions, the left-hand side of the equation
-will have a function symbol attached to a sequence of variables, e.g.:
+In molte dimostrazioni, è comune voler riscrivere solo un lato o 
+l'altro di un connettivo binario (spesso, questo connettivo è 
+un'eguaglianza). Per esempio, questo capita quando si riscrive con equazioni 
+da complicate definizioni ricorsive che non sono soltanto ricorsioni 
+strutturali. In tali definizioni, il lato sinistro dell'equazioni 
+avrà un simbolo funzione attaccato a una sequenza di variabili, ad esempio:
 \begin{hol}
 \begin{verbatim}
    |- f x y = ... f (g x y) z ...
 \end{verbatim}
 \end{hol}
-Theorems of a similar shape are also returned as the ``cases''
-theorems from inductive definitions.
+Teoremi di una forma analoga sono anche restituiti come i teoremi 
+``casi'' dalle definizioni induttive.
 
-Whatever their origin, such theorems are the classic example of
-something to which one would want to attach the \ml{Once} qualifier.
-However, this may not be enough:  one may wish to prove a result such
-as
+Qualunque sia la loro origine, tali teoremi sono il classico esempio di 
+qualcosa a cui si vorrebbe attaccare il qualificatore \ml{Once}. 
+Tuttavia, questo può non essere sufficiente: si può desiderare di dimostrare un risultato 
+come 
 \begin{hol}
 \begin{verbatim}
    f (constructor x) y = ... f (h x y) z ...
 \end{verbatim}
 \end{hol}
-(With relations, the goal may often feature an implication instead of
-an equality.)  In this situation, one often wants to expand just the
-instance of \holtxt{f} on the left, leaving the other occurrence
-alone.  Using \ml{Once} will expand only one of them, but without
-specifying which one is to be expanded.
+(Con le relazioni, il goal può spesso rappresentare un'implicazione al posto di 
+un'eguaglianza.) In questa situazioni, spesso si vuole semplicemente espandere 
+l'istanza di \holtxt{f} sulla sinistra, lasciando l'altra occorrenza 
+da sola. Usare \ml{Once} espanderà solo una di esse, ma senza 
+specificare quale deve essere espansa.
 
-The solution to this problem is to use special congruence rules,
-constructed as special forms that can be passed as theorems like
-\ml{Once}.  The functions
+La soluzione a questo problema è di usare speciali regole di congruenza, 
+costruite come forme speciali che possono essere passate come teoremi come 
+\ml{Once}. Le funzioni
 \begin{hol}
 \begin{verbatim}
    SimpL : term -> thm
    SimpR : term -> thm
 \end{verbatim}
 \end{hol}
-construct congruence rules to force rewriting to the left or right of
-particular terms.  For example, if \holtxt{opn} is a binary operator,
-\ml{SimpL~\holquote{(opn)}} returns \ml{Cong} applied to the theorem
+costruiscono regole di congruenza per forzare la riscritture alla sinistra o alla destra di 
+termini particolari. Per esempio, se \holtxt{opn} è un operatore binario, 
+\ml{SimpL~\holquote{(opn)}} restituisce \ml{Cong} applicato al teorema
 \begin{hol}
 \begin{verbatim}
    |- (x = x') ==> (opn x y = opn x' y)
 \end{verbatim}
 \end{hol}
 \index{SimpLHS@\ml{SimpLHS}|pin}\index{SimpRHS@\ml{SimpRHS}|pin}
-Because the equality case is so common, the special values
-\ml{SimpLHS} and \ml{SimpRHS} are provided to force
-simplification on the left or right of an equality respectively.
-These are just defined to be applications of \ml{SimpL} and \ml{SimpR}
-to equality.
+Dal momento che il caso eguaglianza è così comune, gli speciali valori 
+\ml{SimpLHS} e \ml{SimpRHS} sono forniti per forzare 
+la semplificazione sulla sinistra o sulla destra di un'eguaglianza rispettivamente. 
+Queste sono definite essere solo applicazioni di \ml{SimpL} e \ml{SimpR} 
+all'eguaglianza.
 
-Note that these rules apply throughout a term, not just to the
-uppermost occurrence of an operator.  Also, the topmost operator in
-the term need not be that of the congruence rule.  This behaviour is
-an automatic consequence of the implementation in terms of congruence
-rules.
+Si noti che queste regole si applicano per tutto un termine, non soltanto 
+all'occorrenza più alta di un operatore. Inoltre, l'operatore più alto nel 
+termine non ha bisogno di essere quello della regola di congruenza. Questo comportamento è 
+una conseguenza automatica dell'implementazione in termini di regole 
+di congruenza.
 
-\subsubsection{Limiting simplification}
+\subsubsection{Limitare la semplificazione}
 \label{sec:limit-simpl}
 
-\index{simplification!guaranteeing termination}
-In addition to the \ml{Once} and \ml{Ntimes} theorem-forms just
-discussed, which limit the number of times a particular rewrite is
-applied, the simplifier can also be limited in the total number of
-rewrites it performs. The \ml{limit} function (in \ml{simpLib} and
+\index{semplificazione!garantire la terminazione}
+Oltre alle forme-di-teoremi \ml{Once} and \ml{Ntimes} appena 
+discusse, che limitano il numero di volte che una particolare riscrittura è 
+applicata, il semplificatore può anche essere limitato nel numero totale di 
+riscritture che esso esegue. La funzione \ml{limit} (in \ml{simpLib} e
 \ml{bossLib})
 \begin{hol}
 \begin{verbatim}
    limit : int -> simpset -> simpset
 \end{verbatim}
 \end{hol}
-records a numeric limit in a \simpset{}.  When a limited \simpset{}
-then works over a term, it will never apply more than the given number
-of rewrites to that term.  When conditional rewrites are used, the
-rewriting done in the discharge of side-conditions counts against the
-limit, as long as the rewrite is ultimately applied.  The application
-of user-provided congruence rules, user-provided conversions and
-decision procedures also all count against the limit.
+registra un limite numerico in un \simpset{}. Quando un \simpset{} limitato 
+poi lavora su un termine, non applicherà mai più del numero dato 
+di riscritture a quel termine. Quando sono usate riscritture condizionali, la 
+riscrittura fatta nello scaricamento delle condizioni collaterali pesano negativamente sul 
+limite, finché la riscrittura è infine applicata. Anche l'applicazione 
+delle regole di congruenza, delle conversioni e delle procedure 
+di decisione fornite dall'utente pesano tutte negativamente sul limite.
 
-When the simplifier yields control to a user-provided conversion or
-decision procedure it cannot guarantee that these functions will ever
-return (and they may also take arbitrarily long to work, often a worry
-with arithmetic decision procedures), but use of \ml{limit} is
-otherwise a good method for ensuring that simplification terminates.
+Quando il semplificatore cede il controllo a una conversione o a una procedura di 
+decisione fornita dall'utente non può garantire che queste funzioni restituiranno 
+alla fine un risultato (e inoltre esse possono prendere un tempo arbitrariamente lungo per terminare, spesso una preoccupazione 
+con le procedure di decisione aritmetica), ma l'uso di \ml{limit} è 
+altrimenti un buon metodo per assicurare che la semplificazione termina.
 
-\subsubsection{Rewriting with arbitrary pre-orders}
+\subsubsection{Riscrittura con pre-ordini arbitrari}
 \label{sec:preorder-rewriting}
-\index{simplification!with pre-orders}
+\index{semplificazione!con i pre-ordini}
 
-In addition to simplifying with respect to equality, it is also
-possible to use the simplifier to ``rewrite'' with respect to a relation
-that is reflexive and transitive (a \emph{preorder}).  This can be a
-very powerful way of working with transition relations in operational
-semantics.
+Oltre a semplificare rispetto all'eguaglianza, è anche 
+possibile usare il semplificatore per ``riscrivere'' rispetto a una relazione 
+che è riflessiva e transitiva (un \emph{preordine}). Questo può essere un 
+modo molto potente di lavorare con relazioni di transizione nella semantica 
+operazionale.
 
 {\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}}
 
-  Imagine, for example, that one has set up a ``deep embedding'' of the
-  $\lambda$-calculus.  This will entail the definition of a new type
-  (\texttt{lamterm}, say) within the logic, as well as definitions of
-  appropriate functions (\eg, substitution) and relations over
-  \texttt{lamterm}.  One is likely to work with the reflexive and
-  transitive closure of $\beta$-reduction (\bred).  This relation has
-  congruence rules such as
+  Si immagini, per esempio, che si debba impostare un ``profondo incorporamento'' del 
+	$\lambda$-calcolo. Questo implicherà la definizione di un nuovo tipo 
+	(diciamo, \texttt{lamterm}) all'interno della logica, così come le definizioni delle 
+	funzioni appropriate (ad esempio, la sostituzione) e le relazioni su 
+	\texttt{lamterm}. E' probabile che si lavori con la chiusura riflessiva 
+	e transitiva della $\beta$-riduzione (\bred). Questa relazione ha 
+	regole di congruenza come
 \[
 \begin{array}{c@{\qquad\qquad}c}
 \infer{M_1 \,N\;\bred\;M_2\,N}{M_1 \;\bred\;M_2} &
 \infer{M \,N_1\;\bred\;M\,N_2}{N_1 \;\bred\;N_2}\\[3mm]
 \multicolumn{2}{c}{\infer{(\lambda v.M_1)\;\bred\;(\lambda v.M_2)}{M_1\;\bred M_2}}
 \end{array}
-\] and one important rewrite
+\] e un'importante riscrittura 
 \[
 \infer{(\lambda v. M)\,N \;\bred\; M[v := N]}{}
 \]
-Having to apply these rules manually in order to show that a
-given starting term can reduce to particular destination is usually
-very painful, involving many applications, not only of the theorems
-above, but also of the theorems describing reflexive and transitive
-closure (see Section~\ref{relation}).
+Dovendo applicare queste regole manualmente mostrare che un 
+dato termine iniziale si può ridurre a una particolare destinazione è di solito 
+molto doloroso, coinvolgendo molte applicazioni, non solo quelle dei teoremi 
+di sopra, ma anche quelle dei teoremi che descrivono la chiusura riflessiva e 
+transitiva (si veda la Sezione~\ref{relation}).
 
-Though the $\lambda$-calculus is non-deterministic, it is also confluent, so
-the following theorem holds:
+Benché il $\lambda$-calcolo sia non-deterministico, esso è anche confluente, così 
+vale il seguente teorema:
 \[
 \infer{
   M_1 \;\bred\;N\;\;=\;\;M_2\;\bred\; N
@@ -3015,104 +3014,104 @@ the following theorem holds:
   \beta\textrm{-nf}\;N & M_1 \;\bred\;M_2
 }
 \]
-This is the critical theorem that justifies the switch from rewriting
-with equality to rewriting with \bred.  It says that if one has a term
-$M_1\bred N$, with $N$ a $\beta$-normal form, and if $M_1$ rewrites to
-$M_2$ under \bred, then the original term is equal to $M_2\bred N$.
-With luck, $M_2$ will actually be syntactically identical to $N$, and
-the reflexivity of \bred{} will prove the desired result.  Theorems
-such as these, that justify the switch from one rewriting relation to
-another are known as \emph{weakening congruences}.
+Questo è il teorema critico che giustifica il cambio dalla riscrittura 
+con l'eguaglianza alla riscrittura con \bred. Esso dice che se si ha un termine 
+$M_1\bred N$, dove $N$ è una forma $\beta$-normale, e se $M_1$ riscrive a 
+$M_2$ sotto \bred, allora il termine originale è uguale a $M_2\bred N$. 
+Avendo fortuna, $M_2$ sarà sintatticamente identico a $N$, e 
+la riflessività di \bred{} dimostrerà il risultato desiderato. I teoremi 
+come questi, che giustificano il cambio da una relazione di riscrittura a 
+un'altra sono conosciuti come \emph{congruenze d'indebolimento}.
 
-When adjusted appropriately, the simplifier can be modified to exploit
-the five theorems above, and automatically prove results such as
+Quando aggiustato in modo appropriato, il semplificatore può essere modificato per sfruttare 
+i cinque teoremi di sopra, e dimostrare automaticamente risultati come 
 \[
 u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
 \]
-(on the assumption that the terms $u$ and $v$ are $\lambda$-calculus
-variables, making the result a $\beta$-normal form).
+(sotto le assunzioni che i termini $u$ e $v$ siano variabili del 
+$\lambda$-calcolo, rendendo il risultato come una forma $\beta$-normale).
 
-In addition, one will quite probably have various rewrite theorems
-that one will want to use in addition to those specified above.  For
-example, if one has earlier proved a theorem such as
+Inoltre, si avranno probabilmente vari teoremi di riscrittura 
+che si vorranno usare oltre a quelli specificati di sopra. Per 
+esempio, se in precedenza si è dimostrato un teorema come
 \[
 K\,x\,y \bred x
 \]
-then the simplifier can take this into account as well.
+allora il semplificatore può prendere anche questo in considerazione.
 
-The function achieving all this is
+La funzione che ottiene tutto questo è
 \index{add_relsimp@\ml{add\_relsimp}}
 \begin{verbatim}
    simpLib.add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
                            subsets: thm list, rewrs : thm list} ->
                           simpset -> simpset
 \end{verbatim}
-The fields of the record that is the first argument are:
+I campo del record che è il primo argomento sono:
 \begin{description}
-\item[\texttt{trans}] The theorem stating that the relation is
-  transitive, in the form $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
-\item[\texttt{refl}] The theorem stating that the relation is
-  reflexive, in the form $\forall x. R\,x\,x$.
-\item[\texttt{weakenings}] A list of weakening congruences, of the
-  general form $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, where at least one of the
-  $P_i$ will presumably mention the new relation $R$ applied to a
-  variable that appears in $t_1$.  Other
-  antecedents may be side-conditions such as the requirement in the
-  example above that the term $N$ be in $\beta$-normal form.
-\item[\texttt{subsets}] Theorems of the form $R'\,x\,y \Rightarrow R\,x\,y$.
-  These are used to augment the resulting \simpset's ``filter'' so that
-  theorems in the context mentioning $R'$ will derive useful rewrites
-  involving $R$.  In the example of $\beta$-reduction, one might also have
-  a relation $\rightarrow_{wh}^*$ for weak-head reduction.  Any weak-head
-  reduction is also a $\beta$-reduction, so it can be useful to have the
-  simplifier automatically ``promote'' facts about weak-head reduction
-  to facts about $\beta$-reduction, and to then use them as rewrites.
-\item[\texttt{rewrs}] Possibly conditional rewrites, presumably mostly
-  of the form $P \Rightarrow R\,t_1\,t_2$.  Rewrites over equality can also be
-  included here, allowing useful additional facts to be included.  For
-  example, when working with the $\lambda$-calculus, one might include both
-  the rewrite for $K$ above, as well as the definition of
-  substitution.
+\item[\texttt{trans}] Il teorema che afferma che la relazione è 
+	transitiva, nella forma $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
+\item[\texttt{refl}] Il teorema che afferma che la relazione è 
+	riflessiva, nella forma $\forall x. R\,x\,x$.
+\item[\texttt{weakenings}] Una lista di congruenze d'indebolimento, della 
+	forma generale $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, dove almeno una delle 
+	$P_i$ menzionerà presumibilmente la nuova relazione $R$ applicata a una 
+	variabile che appare in $t_1$. Altri 
+	antecedenti possono essere condizioni collaterali come il requisito 
+	nell'esempio di sopra che il termine $N$ sia in forma $\beta$-normale.
+\item[\texttt{subsets}] Teoremi della forma $R'\,x\,y \Rightarrow R\,x\,y$.
+	Questi sono usati per aumentare il risultante ``filtro'' del \simpset{} così che 
+	i teoremi nel contesto che menziona $R'$ deriveranno utili riscritture 
+	che coinvolgono $R$. Nell'esempio della $\beta$-riduzione, si potrebbe avere anche 
+	una relazione $\rightarrow_{wh}^*$ per la riduzione weak-head. Qualsiasi riduzione 
+	weak-head è anche una $\beta$-riduzione, così può essere utile anche avere che 
+	il semplificatore ``promuova'' automaticamente i fatti circa la riduzione weak-head 
+	a fatti circa la $\beta$-riduzione, e poi li usi come riscritture.
+\item[\texttt{rewrs}] Possibilmente riscritture condizionali, presumibilmente la maggior parte 
+	della forma $P \Rightarrow R\,t_1\,t_2$. Qui possono anche essere 
+	incluse riscritture sull'eguaglianza, che permettono di includere utili fatti aggiuntivi. Per 
+	esempio, quando si lavora con il $\lambda$-calcolo, si potrebbe includere sia 
+	la riscrittura per $K$ di sopra, così come la definizione della 
+	sostituzione.
 \end{description}
 } % end of block defining \bred
 
-The application of this function to a \simpset{} \texttt{ss} will
-produce an augmented \texttt{ss} that has all of \texttt{ss}'s
-existing behaviours, as well as the ability to rewrite with the given
-relation.
+L'applicazione di questa funzione a un \simpset{} \texttt{ss} 
+produrrà un \texttt{ss} aumentato che ha tutti i comportamenti del 
+\texttt{ss} esistente, così come la capacità di riscrivere con la relazione 
+data.
 
 
-\index{simplification|)}
+\index{semplificazione|)}
 
 \section{Efficient Applicative Order Reduction---\texttt{computeLib}}
 \label{sec:computeLib}
 
-Section \ref{sec:datatype} and Section \ref{TFL} show the ability of
-\HOL{} to represent many of the standard constructs of functional
-programming. If one then wants to `run' functional programs on
-arguments, there are several choices. First, one could apply the
-simplifier, as demonstrated in Section \ref{sec:simpLib}. This allows
-all the power of the rewriting process to be brought to bear,
-including, for example, the application of decision procedures to
-prove constraints on conditional rewrite rules.  Second, one could
-write the program, and all the programs it transitively depends on,
-out to a file in a suitable concrete syntax, and invoke a compiler or
-interpreter. This functionality is available in \HOL{} via use of
+La Sezione~\ref{sec:datatype} e la Sezione~\ref{TFL} mostrano la capacità di 
+\HOL{} di rappresentare molti dei costrutti standard della programmazione 
+funzionale. Se si vuole quindi `eseguire' programmi funzionali su 
+argomenti, ci sono molte scelte. Primo, si può applicare il 
+semplificatore, come mostrato nella Sezione~\ref{sec:simpLib}. Questo permette 
+di esercitare tutto il potere del processo di riscrittura, 
+inclusa, per esempio, l'applicazione delle procedure di decisione per 
+dimostrare vincoli sulle regole di riscrittura condizionale. Secondo, si potrebbe 
+scrivere il programma, e tutti i programmi da cui dipende in modo transitivo, 
+in un file in una sintassi concreta adatta, e invocare un compilatore o 
+un interprete. Questa funzionalità è disponibile in \HOL{} attraverso l'uso di 
 \ml{EmitML.exportML}.
 
-Third, \ml{computeLib} can be used. This library supports call-by-value
-evaluation of \HOL{} functions by deductive steps. In other words, it
-is quite similar to having an \ML{} interpreter inside the \HOL{} logic,
-working by forward inference. When used in this way, functional
-programs can be executed more quickly than by using the simplifier.
+Terzo, si può usare \ml{computeLib}. Questa libreria supporta una valutazione 
+call-by-value delle funzioni \HOL{} per passi deduttivi. In altre parole, è 
+molto simile ad avere un interprete \ML{} all'interno della logica \HOL{}, 
+lavorando per inferenza in avanti. Quando usati in questo modo, i programmi 
+funzionali possono essere eseguiti più velocemente che usando il semplificatore.
 
-The most accessible entry-points for using the \ml{computeLib} library
-are the conversion \ml{EVAL} and its tactic counterpart
-\ml{EVAL\_TAC}.  These depend on an internal database that stores
-function definitions. In the following example, loading \ml{sortingTheory}
-augments this database with relevant definitions, that of Quicksort
-(\holtxt{QSORT}) in particular, and then we can evaluate
-\holtxt{QSORT} on a concrete list.
+Gli entry-point più accessibili per usare la libreria \ml{computeLib} 
+sono la conversione \ml{EVAL} e la sua tattica corrispondente 
+\ml{EVAL\_TAC}. Queste dipendono su un database interno che archivia 
+definizioni di funzione. Nel seguente esempio, caricare \ml{sortingTheory} 
+aumenta questo database con le definizioni rilevanti, in particolare quella 
+di Quicksort (\holtxt{QSORT}), e poi possiamo valutare 
+\holtxt{QSORT} su una lista concreta.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -3123,16 +3122,16 @@ augments this database with relevant definitions, that of Quicksort
   > val it = |- QSORT $<= [76; 34; 102; 3; 4] = [3; 4; 34; 76; 102] : thm
 \end{verbatim}
 \end{session}
-Often, the argument to a function has no variables: in that case
-application of \ml{EVAL} ought to return a ground result,
-as in the above example. However, \ml{EVAL} can also evaluate functions on
-arguments with variables---so-called \emph{symbolic} evaluation---and
-in that case, the behaviour of \ml{EVAL} depends on the structure of the
-recursion equations. For example, in the following session, if there is
-sufficient information in the input, symbolic execution can deliver
-an interesting result. However, if there is not enough information
-in the input to allow the algorithm any traction, no expansion will
-take place.
+Spesso, l'argomento a una funzione non ha variabili: in quel caso 
+l'applicazione di \ml{EVAL} dovrebbe restituire un risultato ground, 
+come nell'esempio di sopra. Tuttavia, \ml{EVAL} può anche valutare funzioni su 
+argomenti con variabili---la cosiddetta valutazione \emph{simbolica}---e 
+in quel caso, il comportamento di \ml{EVAL} dipende dalla struttura 
+dell'equazioni di ricorsione. Per esempio, nella seguente sessione, se c'è 
+sufficiente informazione nell'input, la valutazione simbolica può restituire 
+un risultato interessante. Tuttavia, se nell'input non c'è informazione 
+sufficiente a permettere all'algoritmo alcuna presa, non avrà luogo 
+alcuna espansione
 %
 \begin{session}
 \begin{verbatim}
@@ -3145,12 +3144,12 @@ take place.
 \end{session}
 %
 
-\subsection{Dealing with divergence}
+\subsection{Trattare con la divergenza}
 
-The major difficulty with using \ml{EVAL} is termination. All too
-often, symbolic evaluation with \ml{EVAL} will diverge, or generate
-enormous terms. The usual cause is conditionals with variables in the
-test. For example, the following definition is provably equal to \holtxt{FACT},
+La difficoltà maggiore con l'uso di \ml{EVAL} è la terminazione. Troppo 
+spesso, la valutazione simbolica con \ml{EVAL} divergerà, o genererà 
+termini enormi. Il caso usuale sono i condizionali con le variabili nel 
+test. Per esempio, la seguente definizione è probabilmente uguale a \holtxt{FACT},
 %
 \begin{session}
 \begin{verbatim}
@@ -3159,7 +3158,7 @@ test. For example, the following definition is provably equal to \holtxt{FACT},
 \end{verbatim}
 \end{session}
 %
-But the two definitions evaluate completely differently.
+Ma le due definizioni sono valutate in modo completamente differente.
 %
 \begin{session}
 \begin{verbatim}
@@ -3172,10 +3171,10 @@ But the two definitions evaluate completely differently.
 \end{verbatim}
 \end{session}
 %
-The primitive-recursive definition of \holtxt{FACT} does not expand
-at all, while the destructor-style recursion of \holtxt{fact} never stops
-expanding. A rudimentary monitoring facility shows the behaviour, first
-on a ground argument, then on a symbolic argument.
+La definizione ricorsiva primitiva di \holtxt{FACT} non si espande 
+per nulla, mentre la ricorsione stile-decostruttore di \holtxt{fact} non smette mai 
+di espandere. Un rudimentale strumento di monitoraggio mostra il comportamento, prima 
+su un argomento ground, poi su un argomento simbolico.
 %
 \begin{session}
 \begin{verbatim}
@@ -3206,118 +3205,121 @@ on a ground argument, then on a symbolic argument.
 \end{verbatim}
 \end{session}
 %
-In each recursive expansion, the test involves a variable, and hence
-cannot be reduced to either \holtxt{T} or \holtxt{F}. Thus, expansion
-never stops.
+In ogni espansione ricorsiva, il testo coinvolge una variabile, e di conseguenza 
+non può essere ridotta a \holtxt{T} o a \holtxt{F}. Così, l'espansione 
+non si ferma mai.
 
 Some simple remedies can be adopted in trying to deal with
 non-terminating symbolic evaluation.
+
+Si possono adottare alcuni semplici rimedi nel provare a trattare con 
+una valutazione simbolica che non termina.
 \begin{itemize}
-\item \ml{RESTR\_EVAL\_CONV} behaves like \ml{EVAL} except
-  it takes an extra list of constants. During
-  evaluation, if one of the supplied constants is encountered, it will
-  not be expanded. This allows evaluation down to a specified level,
-  and can be used to cut-off some looping evaluations.
-\item \ml{set\_skip} can also be used to control
- evaluation. See the \REFERENCE{} entry for \ml{CBV\_CONV} for
- discussion of \ml{set\_skip}.
+\item \ml{RESTR\_EVAL\_CONV} si comporta come \ml{EVAL} eccetto 
+	che prende una lista extra di costanti. Durante 
+	la valutazione, se si incontra una delle costanti fornite, essa 
+	non sarà espansa. Questo permette di valutare giù fino a un livello specificato. 
+	e può essere usato per tagliare alcune valutazioni circolari.
+\item anche \ml{set\_skip} può essere usata per controllare 
+	la valutazione. Si veda la voce per \ml{CBV\_CONV} in \REFERENCE{} per 
+	una discussione di \ml{set\_skip}
 
 \end{itemize}
 
-\paragraph{Custom evaluators}
+\paragraph{Valutatori custom}
 
-For some problems, it is desirable to construct a customized
-evaluator, specialized to a fixed set of definitions. The \ml{compset}
-type found in \ml{computeLib} is the type of definition databases. The
-functions \ml{new\_compset}, \ml{bool\_compset}, \ml{add\_funs}, and
-\ml{add\_convs} provide the standard way to build up such
-databases. Another quite useful \holtxt{compset} is
-\ml{reduceLib.num\_compset}, which may be used for evaluating
-terms with numbers and booleans.  Given a \ml{compset}, the function
-\ml{CBV\_CONV} generates an evaluator: it is used to implement \ml{EVAL}.
-See \REFERENCE{} for more details.
+Per alcuni problemi, è desiderabile costruire un valutatore 
+personalizzato, specializzato su un insieme fissato di definizioni. Il tipo 
+\ml{compset} che si trova in \ml{computeLib} è il tipo dei database di definizione. Le 
+funzioni \ml{new\_compset}, \ml{bool\_compset}, \ml{add\_funs}, e
+\ml{add\_convs} forniscono il modo standard per costruire tali 
+database. Un altro \holtxt{compset} piuttosto utile è 
+\ml{reduceLib.num\_compset}, che può essere usato per valutare 
+termini con numeri e booleani. Dato un \ml{compset}, la funzione 
+\ml{CBV\_CONV} genera un valutatore: è usata per implementare \ml{EVAL}. 
+Si veda \REFERENCE{} per maggiori dettagli.
 
-\paragraph{Dealing with Functions over Peano Numbers}
+\paragraph{Trattare con Funzioni sui Numeri di Peano}
 
-Functions defined by pattern-matching over Peano-style numbers are not
-in the right format for \ml{EVAL}, since the calculations will be
-asymptotically inefficient. Instead, the same definition should be
-used over numerals, which is a positional notation described in
-Section~\ref{sec:numerals}. However, it is preferable for proofs to
-work over Peano numbers. In order to bridge this gap, the function
-\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} is used to convert a function
-over Peano numbers to one over numerals, which is the format that
-\ml{EVAL} prefers. \ml{Define} will automatically call
-\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} on its result.
+Le funzioni definite per pattern-matching su numeri nello stile di Peano non sono 
+nel formato giusto per \ml{EVAL}, dal momento che i calcoli saranno 
+asintoticamente inefficienti. Piuttosto, la stessa definizione dovrebbe essere 
+usata su numerali, che è una notazione posizionale descritta nella 
+Sezione~\ref{sec:numerals}. Tuttavia, è preferibile per le dimostrazioni 
+lavorare su numeri di Peano. Per colmare questa lacuna, la funzione 
+\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} è usata per convertire una funzione 
+su numeri di Peano in una su numerali, che è il formato che 
+\ml{Eval} preferisce. \ml{Define} chiamerà automaticamente 
+\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} sul suo risultato.
 
-\paragraph{Storing definitions}
+\paragraph{Archiviare le definizioni}
 
-\ml{Define} automatically adds its definition to the global compset
-used by \ml{EVAL} and \ml{EVAL\_TAC}. However, when \ml{Hol\_defn} is
-used to define a function, its defining equations are not added to the
-global compset until \ml{tprove} is used to prove the termination
-constraints.  Moreover, \ml{tprove} does not add the definition
-persistently into the global compset. Therefore, one must use
-\ml{add\_persistent\_funs} in a theory to be sure that definitions
-made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant
-theories.  Another point: one must call \ml{add\_persistent\_funs}
-before \ml{export\_theory} is called.
+\ml{Define} aggiunge automaticamente la sua definizione al compset globale 
+usato da \ml{EVAL} e \ml{EVAL\_TAC}. Tuttavia, quando \ml{Hol\_defn} è 
+usata per definire una funzione, le sue equazioni di definizione non sono aggiunte al 
+compset globale fino a quando \ml{tprove} è usata per dimostrare i vincoli 
+di terminazione. Inoltre, \ml{tprove} non aggiunge la definizione 
+in modo persistente nel compset globale. Di conseguenza, si deve usare 
+\ml{add\_persistent\_funs} in una teoria per essere sicuri che le definizioni 
+fatte da \ml{Hol\_defn} siano disponibili a \ml{Eval} nelle teorie 
+discendenti. Un altro punto: si deve chiamare \ml{add\_persistent\_funs} 
+prima di chiamare \ml{export\_theory}.
 
 
-\section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
+\section{Le Librerie Aritmetiche---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
 \label{sec:numLib}
-\index{decision procedures!Presburger arithmetic over natural numbers}
+\index{procedure di decisione!Aritemtica Presburger su numeri naturali}
 
-Each of the arithmetic libraries of \HOL{} provide a
-suite of definitions and theorems as well as automated inference support.
+Ognuna delle librerie aritmetiche di \HOL{} fornisce una 
+suite di definizioni e teoremi così come il supporto per l'inferenza automatica.
 
 \paragraph{numLib}
 
-The most basic numbers in \HOL{} are the natural numbers. The
-\ml{numLib} library encompasses the theories \ml{numTheory},
-\ml{prim\_recTheory}, \ml{arithmeticTheory}, and \ml{numeralTheory}.
-This library also incorporates an evaluator for numeric expression
-from \ml{reduceLib} and a decision procedure for linear arithmetic
-\ml{ARITH\_CONV}. The evaluator and the decision procedure are
-integrated into the simpset \ml{arith\_ss} used by the simplifier.
-As well, the linear arithmetic decision procedure can be directly
-invoked through \ml{DECIDE} and \ml{DECIDE\_TAC}, both found in
+I numeri più di base in \HOL{} sono i numeri naturali. La 
+libreria \ml{numLib} comprende le teorie \ml{numTheory},
+\ml{prim\_recTheory}, \ml{arithmeticTheory}, e \ml{numeralTheory}. 
+Questa libreria incorpora anche un valutatore per espressioni numeriche 
+da \ml{reduceLib} e una procedura di decisione per l'aritmetica lineare 
+\ml{ARITH\_CONV}. Il valutatore e la procedura di decisione sono 
+integrati nel simpset \ml{arith\_ss} usato dal semplificatore. 
+Allo stesso modo, la procedura di decisione dell'aritmetica lineare può essere invocata 
+direttamente attraverso \ml{DECIDE} e \ml{DECIDE\_TAC}, che si trovano entrambe in 
 \ml{bossLib}.
 
 
-\index{decision procedures!Presburger arithmetic over integers}
-\paragraph{intLib}
+\index{procedure di decisione!Aritemtica Presburger su interi}
+\paragraph{intLib} 
 
-The \ml{intLib} library comprises \ml{integerTheory}, an extensive
-theory of the integers, plus two decision procedures
-for full Presburger arithmetic. These are available as
-\ml{intLib.COOPER\_CONV} and \ml{intLib.ARITH\_CONV}. These
-decision procedures are able to deal with linear arithmetic
-over the integers and the natural numbers, as well as dealing
-with arbitrary alternation of quantifiers.  The \ml{ARITH\_CONV}
-procedure is an implementation of the Omega Test, and seems to
-generally perform better than Cooper's algorithm.  There are problems
-for which this is not true however, so it is useful to have both
-procedures available.
+La libreria \ml{intLib} comprende \ml{integerTheory}, un'estesa 
+teoria degli interi, più due procedure di decisione 
+per la completa aritmetica Presburger. Queste sono disponibili come 
+\ml{intLib.COOPER\_CONV} e \ml{intLib.ARITH\_CONV}. Queste 
+procedure di decisione sono in grado di trattare con l'aritmetica lineare 
+sugli interi e i numeri naturali, così come di trattare 
+con un'alternanza arbitraria di quantificatori. La procedura 
+\ml{ARITH\_CONV} è un'implementazione dell'Omega Test, e sembra 
+in generale avere migliori performance rispetto all'algoritmo di Cooper. Ci sono 
+comunque problemi per cui questo non è vero, così è utile avere disponibili 
+entrambe le procedure.
 
 \paragraph{realLib}
 
-The \ml{realLib} library provides a foundational development
-of the real numbers and analysis. See Section \ref{reals}
-for a quick description of the theories.
-Also provided is a theory of polynomials, in \theoryimp{polyTheory}.
-A decision procedure for linear arithmetic on the real numbers
-is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
-and \ml{REAL\_ARITH\_TAC}.
+La libreria \ml{realLib} fornisce uno sviluppo fondazionale 
+dei numeri reali e dell'analisi. Si veda la Sezione~\ref{reals} 
+per una rapida descrizione delle teorie. 
+E' anche fornita una teoria dei polinomi, in \theoryimp{polyTheory}. 
+Una procedura di decisione per l'aritmetica lineare sui numeri reali 
+è anche fornita da \ml{realLib}, sotto il nome \ml{REAL\_ARITH\_CONV}
+e \ml{REAL\_ARITH\_TAC}.
 
-\section{Bit Vector Library---\texttt{wordsLib}}
+\section{Libreria Bit Vector---\texttt{wordsLib}}
 
-The library \theoryimp{wordsLib} provides tool support for bit-vectors, this includes facilities for: evaluation, parsing, pretty-printing and simplification.
+La libreria \theoryimp{wordsLib} fornisce uno strumento di supporto per i bit-vectors, questo include infrastrutture per: la valutazione, il parsing, il pretty-printing e la semplificazione.
 
-\subsection{Evaluation}
+\subsection{Valutazione}
 
-The library \theoryimp{wordsLib} should be loaded when evaluating ground bit-vector terms.  This library provides a \emph{compset} \ml{words\_compset}, which
-can be used in the construction of custom \emph{compsets} and conversions.
+La libreria \theoryimp{wordsLib} dovrebbe essere caricata quando si valutano termini bit-vector ground. Questa libreria fornisce un \emph{compset} \ml{words\_compset}, che 
+può essere usato nella costruzione di \emph{compese} e conversioni personalizzati.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
@@ -3328,11 +3330,12 @@ can be used in the construction of custom \emph{compsets} and conversions.
 > val it = |- 8w + 9w = 1w : thm
 \end{verbatim}
 \end{session}
-Note that a type annotation is used here to designate the word size.  When the word size is represented by a type variable (\ie{} for arbitrary length words), evaluation may give partial or unsatisfactory results.
+Si noti che qui è usata un'annotazione di tipo per designare la dimensione word. Quando la dimensione word è rappresentata da una variabile di tipo (cioè per word i lunghezza arbitraria), la valutazione 
+può dare risultati parziali o insoddisfacenti.
 
-\subsection{Parsing and pretty-printing}
+\subsection{Parsing e pretty-printing}
 
-Words can be parsed in binary, decimal and hexadecimal.   For example:
+I word possono essere parsati in binario, decimale e esadecimale. Per esempio:
 \begin{session}
 \begin{verbatim}
 - ``0b111010w : word8``;
@@ -3342,7 +3345,7 @@ Words can be parsed in binary, decimal and hexadecimal.   For example:
 > val it = ``58w`` : term
 \end{verbatim}
 \end{session}
-It is possible to parse octal numbers, but this must be enabled first by setting the reference \ml{base\_tokens.allow\_octal\_input} to true.  For example:
+E' possibile fare il parsing di numeri ottali, ma questo deve essere prima abilitato impostando la reference \ml{base\_tokens.allow\_octal\_input} a true. Per esempio:
 \begin{session}
 \begin{verbatim}
 - ``072w : word8``;
@@ -3356,8 +3359,8 @@ It is possible to parse octal numbers, but this must be enabled first by setting
 \end{verbatim}
 \end{session}
 
-Words can be pretty-printed using the standard number bases. For example, the function
-\ml{wordsLib.output\_words\_as\_bin} will select binary format:
+I word possono essere stampati usando le basi numeriche standard. Per esempio, la funzione 
+\ml{wordsLib.output\_words\_as\_bin} selezionerà il formato binario:
 \begin{session}
 \begin{verbatim}
 - wordsLib.output_words_as_bin();
@@ -3367,11 +3370,11 @@ Words can be pretty-printed using the standard number bases. For example, the fu
 > val it = |- $FCP ODD = 0b1010101010101010w : thm
 \end{verbatim}
 \end{session}
-The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
-the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
-The function \ml{output\_words\_as\_oct} will automatically enable the parsing of octal numbers.
+La funzione \ml{output\_words\_as} è più flessibile e permette alla base numerica di variare a seconda della 
+lunghezza del word e del valore numerico. Il pretty-printer di default (installato quando si carica \theoryimp{wordsLib}) stampa valori piccoli in decimale e valori grandi in esadecimale.
+La funzione \ml{output\_words\_as\_oct} abiliterà automaticamente il parsing per i numeri ottali.
 
-The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
+La variabile di traccia \ml{"word printing"} fornisce un metodo alternativo per cambiare la base numerica di output --- è particolarmente adatta per selezionare temporaneamente una base numerica, per esempio:
 \begin{session}
 \begin{verbatim}
 - Feedback.trace ("word printing", 1) Parse.print_term ``32w``;
@@ -3379,11 +3382,11 @@ The trace variable \ml{"word printing"} provides an alternative method for chang
 0b100000w> val it = () : unit
 \end{verbatim}
 \end{session}
-The choices are as follows: 0 (default) -- small numbers decimal, large numbers hexadecimal; 1 -- binary; 2 -- octal; 3 -- decimal; and 4 -- hexadecimal.
+Le scelte sono come segue: 0 (default) -- numeri piccoli in decimale, numeri grandi in esadecimale: 1 -- binario; 2 -- ottale; 3 -- decimale; e 4 -- esadecimale.
 
-\subsubsection{Types}
+\subsubsection{Tipi}
 
-You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenient parsing abbreviations for \ty{:\bool[4]} and \ty{:\bool[8]} --- this facility is available for many standard word sizes.  Users wishing to use this notation for non-standard word sizes can use the function \ml{wordsLib.mk\_word\_size}:
+Si può aver notato che \ty{:word4} e \ty{:word8} sono stati usati come convenienti abbreviazioni di parsing per \ty{:\bool[4]} e \ty{:\bool[8]} --- questa agevolazione è disponibile per molte dimensioni standard di word. Gli utenti che desiderano usare questa notazione per dimensioni di non-standard di word possono usare la funzione \ml{wordsLib.mk\_word\_size}:
 \begin{session}
 \begin{verbatim}
 - ``:word15``;
@@ -3398,9 +3401,9 @@ You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenie
 \end{verbatim}
 \end{session}
 
-\subsubsection{Operator overloading}
+\subsubsection{Overloading degli operatori}
 
-The symbols for the standard arithmetic operations (addition, subtraction and multiplication) are overloaded with operators from other standard theories, \ie{} for the natural, integer, rational and real numbers.  In many cases type inference will resolve overloading, however, in some cases this is not possible.  The choice of operator will then depend upon the order in which theories are loaded.  To change this behaviour the functions \ml{wordsLib.deprecate\_word} and \ml{wordsLib.prefer\_word} are provided.  For example, in the following session, the selection of word operators is deprecated:
+I simboli per le operazioni aritmetiche standard (addizione, sottrazione e moltiplicazione) sono sottoposte a overload con operatori per altre teorie standard, cioè per i numeri naturali, interi, razionali e reali. In molti casi l'inferenza di tipo risolverà l'overloading, tuttavia, in alcuni casi questo non è possibile. La scelta dell'operatore dipenderà dall'ordine in cui le teorie sono caricate. Per cambiare questo comportamento sono fornite le funzioni \ml{wordsLib.deprecate\_word} e \ml{wordsLib.prefer\_word}. Per esempio, nella seguente sessione, la selezione degli operatori word è deprecata:
 \begin{session}
 \begin{verbatim}
 - type_of ``a + b``;
@@ -3416,7 +3419,7 @@ The symbols for the standard arithmetic operations (addition, subtraction and mu
 > val it = ``:num`` : hol_type
 \end{verbatim}
 \end{session}
-In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
+Di sopra, l'addizione tra numeri naturali è scelta al posto dell'addizione word. Al contrario, i word sono preferiti rispetto agli interi di sotto:
 \begin{session}
 \begin{verbatim}
 - load "intLib"; ...
@@ -3433,11 +3436,11 @@ In the above, natural number addition is chosen in preference to word addition. 
 > it = ``:bool['a]`` : hol_type
 \end{verbatim}
 \end{session}
-Of course, type annotations could have been added to avoid this problem entirely.  Note that, unlike \ml{deprecate\_int}, the function \ml{deprecate\_word} does not remove the overloadings, it simply lowers their priority.
+Naturalmente, potrebbero essere state aggiunte annotazioni di tipo per evitare questo problema completamente. Si noti che, diversamente da \ml{deprecate\_int}, la funzione \ml{deprecate\_word} non rimuove gli overloading, semplicemente abbassa la loro precedenza.
 
-\subsubsection{Guessing word lengths}
+\subsubsection{Indovinare le lunghezze word}
 
-It can be a nuisance to add type annotations when specifying the return type for operations such as: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} and \holtxt{word\_replicate}.  This is because there is often a ``standard'' length that could be guessed, \eg{} concatenation usually sums the constituent word lengths.  A facility for word length guessing is controlled by the reference \ml{wordsLib.guessing\_word\_lengths}, which is false by default.  The guesses are made during a post-processing step that occurs after the application of \ml{Parse.Term}.  This is demonstrated below.
+Può essere una seccatura aggiungere annotazioni di tipo quando si specifica il tipo di ritorno per operazioni come: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} e \holtxt{word\_replicate}. Questo perché c'è spesso una lunghezza ``standard'' che potrebbe essere indovinata, ad esempio la concatenazione di solito somma le lunghezze dei word costituenti. Un'agevolazione per indovinare la lunghezza word è controllata dalla reference \ml{wordsLib.guessing\_word\_lengths}, che è falsa di default. Le congetture sono eseguite durante un passo di post-processing che avviene dopo l'applicazione di \ml{Parse.Term}. Questo è mostrato di sotto.
 \begin{session}
 \begin{verbatim}
 - wordsLib.guessing_word_lengths:=true;
@@ -3452,33 +3455,33 @@ It can be a nuisance to add type annotations when specifying the return type for
      : term
 \end{verbatim}
 \end{session}
-In the example above, word length guessing is turned on.  Two guesses are made: the extraction is expected to give a four bit word, and the concatenation gives a twelve bit word ($3 \times 4$).  If non-standard numeric lengths are required then type annotations can be added to avoid guesses being made.  With guessing turned off the result types would remain as invented type variables, \ie{} as alpha and beta above.
+Nell'esempio di sopra, le congetture sulla lunghezza dei word sono attivate. Sono fatte due congetture: ci si aspetta che l'estrazione dia un word di quattro bit, e che la concatenazione dia un word di dodici bit ($3 \times 4$). Se sono richieste lunghezze numeriche non standard allo si possono aggiungere delle annotazioni di tipo per evitare che siano fatte delle congetture. Quando la congettura è disattivata i tipi risultanti rimangono come variabili di tipo inventate, cioé come gli alfa e i beta di sopra.
 
-\subsection{Simplification and conversions}
+\subsection{Semplificazione e conversioni}
 
-The following \emph{simpset} fragments are provided:
+Sono forniti i seguenti frammenti \emph{simpset}:
 \begin{description}
-\item[\ml{SIZES\_ss}] evaluates a group of functions that operate over numeric types, such as \holtxt{dimindex} and \holtxt{dimword}.
-\item[\ml{BIT\_ss}] tries to simplify occurrences of the function \holtxt{BIT}.
-\item[\ml{WORD\_LOGIC\_ss}] simplifies bitwise logic operations.
-\item[\ml{WORD\_ARITH\_ss}] simplifies word arithmetic operations.  Subtraction is replaced with multiplication by -1.
-\item[\ml{WORD\_SHIFT\_ss}] simplifies shift operations.
-\item[\ml{WORD\_ss}] contains all of the above fragments, and also does some extra ground term evaluation.  This fragment is added to \ml{srw\_ss}.
-\item[\ml{WORD\_ARITH\_EQ\_ss}] simplifies \holtxt{``a = b``} to \holtxt{``a - b = 0w``}.
-\item[\ml{WORD\_BIT\_EQ\_ss}] aggressively expands non-arithmetic bit-vector operations into Boolean expressions.  (Should be used with care -- it includes \ml{fcpLib.FCP\_ss}.)
-\item[\ml{WORD\_EXTRACT\_ss}] simplification for a variety of operations: word-to-word conversions; concatenation; shifts and bit-field extraction.  Can be used in situations where \ml{WORD\_BIT\_EQ\_ss} is unsuitable.
-\item[\ml{WORD\_MUL\_LSL\_ss}] simplifies multiplication by a word literal into a sum of partial products.
+\item[\ml{SIZES\_ss}] valuta un gruppo di funzioni che operano su tipi numerici, come \holtxt{dimindex} e \holtxt{dimword}.
+\item[\ml{BIT\_ss}] prova a semplificare le occorrenze della funzione\holtxt{BIT}.
+\item[\ml{WORD\_LOGIC\_ss}] semplifica operazioni logiche bitwise.
+\item[\ml{WORD\_ARITH\_ss}] semplifica operazioni aritmetiche word. La sottrazione è sostituita con la moltiplicazione da -1.
+\item[\ml{WORD\_SHIFT\_ss}] semplifica operazioni shift.
+\item[\ml{WORD\_ss}] contiene tutti i frammenti di sopra, e fa anche una valutazione estra dei termini ground. Questo frammento è aggiunto a \ml{srw\_ss}.
+\item[\ml{WORD\_ARITH\_EQ\_ss}] semplifica \holtxt{``a = b``} to \holtxt{``a - b = 0w``}.
+\item[\ml{WORD\_BIT\_EQ\_ss}] espande in modo aggressivo operazioni bit-vector non-aritmetiche in espressioni booleane. (Dovrebbe essere usata con attenzione -- include \ml{fcpLib.FCP\_ss}.)
+\item[\ml{WORD\_EXTRACT\_ss}] semplificazione per una varietà di operazioni: conversioni da word a word; concatenazione; shift e estrazione bit-field.  Può essere usata in  situationi dove \ml{WORD\_BIT\_EQ\_ss} non è adatta.
+\item[\ml{WORD\_MUL\_LSL\_ss}] semplifica la moltiplicazione con un letterale word in una somma di prodotti parziali.
 \end{description}
-Many of these \emph{simpset} fragments have corresponding conversions.  For example, the conversion \ml{WORD\_ARITH\_CONV} is based on \ml{WORD\_ARITH\_EQ\_ss}, however, it does some extra work to ensure that \holtxt{``a = b``} and \holtxt{``b = a``} convert into the same expression.  Therefore, this conversion is suited to reasoning about the equality of arithmetic word expressions.
+Molti di questi frammenti \emph{simpset} hanno delle conversioni corrispondenti. Per esempio, la conversione \ml{WORD\_ARITH\_CONV} è basata si \ml{WORD\_ARITH\_EQ\_ss}, tuttavia, fa del lavoro extra per assicurare che \holtxt{``a = b``} e \holtxt{``b = a``} si convertano nella stessa espressioni. Di conseguenza, questa conversione è adatta per ragionare circa l'eguaglianza delle espressioni aritmetiche word.
 
-The behaviour of the fragments listed above are demonstrated using the following function:
+Il comportamento dei frammenti elencati di sopra è mostrato usando la seguente funzione:
 \begin{session}
 \begin{verbatim}
 - fun conv ss = SIMP_CONV (pure_ss++ss) [];
 > val conv = fn : ssfrag -> term -> thm
 \end{verbatim}
 \end{session}
-The following session demonstrates \ml{SIZES\_ss}:
+La seguente sessione mostra \ml{SIZES\_ss}:
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.SIZES_ss ``dimindex(:12)``;
@@ -3488,7 +3491,7 @@ The following session demonstrates \ml{SIZES\_ss}:
 > val it = |- FINITE univ(:32) <=> T : thm
 \end{verbatim}
 \end{session}
-The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions:
+Il frammento \ml{BIT\_ss} converte \holtxt{BIT} in un test di appartenenza su un insieme di posizioni bit (più alte):
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.BIT_ss ``BIT 3 5``;
@@ -3499,7 +3502,7 @@ The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set 
   thm
 \end{verbatim}
 \end{session}
-This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
+Questa semplificazione fornisce supporto per il ragionamento circa le operazioni bitwise su lunghezze word arbitrarie. I frammenti aritmetico, logico e shift aiutano a ripulire espressioni word di base:
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
@@ -3521,7 +3524,7 @@ This simplification provides some support for reasoning about bitwise operations
 \end{verbatim}
 \end{session}
 
-The remaining fragments are not included in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}.  The bit equality fragment is demonstrated below.
+I frammenti rimanenti non sono inclusi in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}. Il frammento eguaglianza bit è mostrato di sotto.
 \begin{session}
 \begin{verbatim}
 - SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
@@ -3530,7 +3533,7 @@ The remaining fragments are not included in \ml{wordsLib.WORD\_ss} or \ml{srw\_s
      : thm
 \end{verbatim}
 \end{session}
-The extract fragment is useful for reasoning about bit-field operations and is best used in combination with \ml{wordsLib.SIZES\_ss} or \ml{wordsLib.WORD\_ss}, for example:
+Il frammento esatto è utile per il ragionamento circa operazioni bit-field ed è usato meglio in combinazione con \ml{wordsLib.SIZES\_ss} o \ml{wordsLib.WORD\_ss}, per esempio:
 \begin{session}
 \begin{verbatim}
 - SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
@@ -3540,14 +3543,14 @@ The extract fragment is useful for reasoning about bit-field operations and is b
      : thm
 \end{verbatim}
 \end{session}
-Finally, the fragment \ml{WORD\_MUL\_LSL\_ss} is demonstrated below.
+Infine, il frammento \ml{WORD\_MUL\_LSL\_ss} è mostrato di sotto.
 \begin{session}
 \begin{verbatim}
 - conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
 > val it = |- 5w * a = a << 2 + a : thm
 \end{verbatim}
 \end{session}
-Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to undo this simplification, for example:
+Riscrivere con il teorema \ml{wordsTheory.WORD\_MUL\_LSL} fornisce un mezzo per annullare questa semplificazione, per esempio:
 \begin{session}
 \begin{verbatim}
 - SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
@@ -3555,23 +3558,24 @@ Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to 
 > val it = |- a << 2 + a = 5w * a : thm
 \end{verbatim}
 \end{session}
-Obviously, without adding safeguards, this rewrite theorem cannot be deployed when used in combination with the \ml{WORD\_MUL\_LSL\_ss} fragment.
+Ovviamente, senza aggiungere delle garanzie, questo teorema di riscrittura non può essere dispiegato in combinazione con il frammento \ml{WORD\_MUL\_LSL\_ss}.
 
-\subsubsection{Decision procedures}
+\subsubsection{Procedure di decisione}
 
-A decision procedure for words is provided in the form of
-\ml{blastLib.BBLAST\_PROVE}.  This procedure uses \emph{bit-blasting} ---
-converting word expressions into propositions and then using a SAT solver to
-decide the goal.\footnote{This approach enables counter-examples to be given
-when a goal's negation is satisfiable.} This approach is reasonably general and
-can tackle a wide range of bit-vector problems.  However, there are some
-limitations: the approach only works for constant word lengths, linear
-arithmetic (multiplication by literals) and for shifts and bit-field
-extractions with respect to literal values.  Also note that some problems will
-be potentially slow to prove, e.g.{} when word sizes are large and/or when
-there are many nested additions (perhaps through multiplication).
+Una procedura di decisione per i word è fornita nella forma di 
+\ml{blastLib.BBLAST\_PROVE}. Questa procedura usa il \emph{bit-blasting} --- 
+convertire espressioni word in proposizioni e poi usare il risolutore SAT per 
+decidere il goal\footnote{Questo approccio permette di dare contro-esempi 
+quando la negazione di un goal è insoddisfacibile.}. Questo approccio è ragionevolmente generale e 
+può affrontare un ampia gamma di problemi bit-vector. Tuttavia, ci sono alcune 
+limitazioni: l'approccio funziona solo per lunghezze word costanti, artimetica 
+lineare (moltiplicazione per letterali) e per shift e estrazioni 
+bit-field rispetto a valori letterali. Si noti inoltre che alcuni problemi saranno 
+potenzialmente lenti da dimostrare, ad esempio quando le dimensioni dei word sono grandi e/o quando 
+ci sono molte addizioni annidate (magari attraverso la moltiplicazione).
 
-The following examples show \ml{BBLAST\_PROVE} in use:
+
+I seguenti esempi mostrano \ml{BBLAST\_PROVE} in uso:
 \begin{session}
 \begin{verbatim}
 - blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
@@ -3583,9 +3587,9 @@ The following examples show \ml{BBLAST\_PROVE} in use:
 > val it = |- w2w a <+ 256w : thm
 \end{verbatim}
 \end{session}
-The decision procedure \ml{BBLAST\_PROVE} is based on the conversion
-\ml{BBLAST\_CONV}. This conversion can be used to convert bit-vector problems
-into a propositional form; for example:
+La procedura di decisione \ml{BBLAST\_PROVE} è basata sulla conversione 
+\ml{BBLAST\_CONV}. Questa conversione può essere usata per convertire problemi bit-vector 
+in una forma proposizionale; per esempio:
 \begin{session}
 \begin{verbatim}
 - blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
@@ -3594,20 +3598,20 @@ into a propositional form; for example:
    : thm
 \end{verbatim}
 \end{session}
-There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}; with only the latter making use of goal assumptions.
+Ci sono anche tattiche bit-blasting: \ml{BBLAST\_TAC} e \ml{FULL\_BBLAST\_TAC}; dove solo la seconda fa uso delle assunzioni del goal.
 
-\section{The \texttt{HolSat} Library}\label{sec:HolSatLib}
+\section{La libreria \texttt{HolSat}}\label{sec:HolSatLib}
 \input{HolSat.tex}
 
 
-\section{The \texttt{HolQbf} Library}\label{sec:HolQbfLib}
+\section{La libreria \texttt{HolQbf}}\label{sec:HolQbfLib}
 \input{HolQbf.tex}
 
 
-\section{The \texttt{HolSmt} library}\label{sec:HolSmtLib}
+\section{La libreria \texttt{HolSmt}}\label{sec:HolSmtLib}
 \input{HolSmt.tex}
 
-\section{The \texttt{Quantifier Heuristics} library}\label{sec:QuantHeuristicsLib}
+\section{La libreria \texttt{Quantifier Heuristics}}\label{sec:QuantHeuristicsLib}
 \input{QuantHeuristics.tex}
 
 
