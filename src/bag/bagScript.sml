@@ -2428,9 +2428,7 @@ val mlt_dominates_thm = store_thm(
   >- (fs[SUB_BAG_LEQ, BAG_INSERT, EMPTY_BAG, BAG_FILTER_DEF, BAG_DIFF,
          BAG_UNION] >> qx_gen_tac `a` >>
       first_x_assum (qspec_then `a` mp_tac) >>
-      COND_CASES_TAC >> simp[]
-      >- MATCH_ACCEPT_TAC (DECIDE ``!x y z. x + 1 <= z ==> x <= z - 1 + y``) >>
-      MATCH_ACCEPT_TAC (DECIDE ``!x y z. x <= y ==> x <= y + z``)) >>
+      COND_CASES_TAC >> simp[] >> decide_tac) >>
   fs[dominates_def] >> metis_tac[])
 
 (*
