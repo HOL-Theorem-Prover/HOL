@@ -432,5 +432,22 @@ in
   else die "FAILED"
 end
 
+val _ = let
+  val _ = tprint "EVERY_CONJ_CONV"
+  fun mkb s = mk_var(s, bool)
+  val p = mkb "p"
+  val q = mkb "q"
+  val t = list_mk_conj [T, mk_var("p", bool), mk_var("q",bool)]
+  val I = mk_abs(p, p)
+  val I_thm = SYM (BETA_CONV (mk_comb(I,q)))
+  fun I_CONV t = if aconv t T then ALL_CONV t
+                 else REWR_CONV I_thm t
+  val result = EVERY_CONJ_CONV I_CONV t
+  val expected = mk_conj(mk_comb(I, p), mk_comb(I, q))
+in
+  if aconv (rhs (concl result)) expected then print "OK\n"
+  else die "FAILED"
+end
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
