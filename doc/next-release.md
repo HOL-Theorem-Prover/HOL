@@ -38,6 +38,12 @@ New features:
 
   The `Hol_datatype` entry-point can continue to be used.  However, the LaTeX output of `EmitTeX` uses the new format, and the various `DATATYPE` constructors used in the `EmitML` module take quotations in the new format, rather than the old.
 
+* The arithmetic decision procedure for natural numbers will now prove slightly more goals by doing case-splits on boolean sub-terms that are not in the Presburger subset.  This means that goals such as
+
+           0 < y ⇒ x < x + (if P then y else y + 1)
+
+   are now provable.
+
 
 Bugs fixed:
 -----------
