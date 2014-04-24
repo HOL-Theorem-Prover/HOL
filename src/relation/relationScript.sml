@@ -171,11 +171,10 @@ val RTC_RTC = store_thm(
   GEN_TAC THEN HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN MESON_TAC [RTC_RULES]);
 
 val RTC_TRANSITIVE = store_thm(
-  "RTC_TRANSITIVE",
+  "RTC_TRANSITIVE[simp]",
   ``!R:'a->'a->bool. transitive (RTC R)``,
   REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]);
 val transitive_RTC = save_thm("transitive_RTC", RTC_TRANSITIVE);
-val _ = export_rewrites ["transitive_RTC"]
 
 val RTC_REFLEXIVE = store_thm(
   "RTC_REFLEXIVE",
@@ -197,11 +196,10 @@ val RC_lifts_monotonicities = store_thm(
   METIS_TAC [RC_DEF]);
 
 val RC_MONOTONE = store_thm(
-  "RC_MONOTONE",
+  "RC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> RC R x y ==> RC Q x y``,
   STRIP_TAC THEN REWRITE_TAC [RC_DEF] THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [] THEN RES_TAC THEN ASM_REWRITE_TAC [])
-val _ = IndDefLib.export_mono "RC_MONOTONE"
 
 val RC_lifts_invariants = store_thm(
   "RC_lifts_invariants",
@@ -224,11 +222,10 @@ val SC_lifts_equalities = store_thm(
   METIS_TAC [SC_DEF]);
 
 val SC_MONOTONE = store_thm(
-  "SC_MONOTONE",
+  "SC_MONOTONE[mono]",
   ``(!x:'a y. R x y ==> Q x y) ==> SC R x y ==> SC Q x y``,
   STRIP_TAC THEN REWRITE_TAC [SC_DEF] THEN STRIP_TAC THEN RES_TAC THEN
   ASM_REWRITE_TAC [])
-val _ = IndDefLib.export_mono "SC_MONOTONE"
 
 val symmetric_RC = store_thm(
   "symmetric_RC",
@@ -664,18 +661,16 @@ val TC_CASES2 = store_thm(
   MESON_TAC [TC_RULES, TC_CASES2_E]);
 
 val TC_MONOTONE = store_thm(
-  "TC_MONOTONE",
+  "TC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> TC R x y ==> TC Q x y``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   TC_INDUCT_TAC THEN ASM_MESON_TAC [TC_RULES]);
-val _ = IndDefLib.export_mono "TC_MONOTONE"
 
 val RTC_MONOTONE = store_thm(
-  "RTC_MONOTONE",
+  "RTC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> RTC R x y ==> RTC Q x y``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN ASM_MESON_TAC [RTC_RULES]);
-val _ = IndDefLib.export_mono "RTC_MONOTONE"
 
 val EQC_INDUCTION = store_thm(
   "EQC_INDUCTION",
@@ -776,12 +771,11 @@ val ALT_equivalence = store_thm(
   MESON_TAC []);
 
 val EQC_MONOTONE = store_thm(
-  "EQC_MONOTONE",
+  "EQC_MONOTONE[mono]",
   ``(!x y. R x y ==> R' x y) ==> EQC R x y ==> EQC R' x y``,
   STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC STRONG_EQC_INDUCTION THEN
   METIS_TAC [EQC_R, EQC_TRANS, EQC_SYM, EQC_REFL]);
-val _ = IndDefLib.export_mono "EQC_MONOTONE"
 
 val RTC_EQC = store_thm(
   "RTC_EQC",

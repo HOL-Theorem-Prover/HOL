@@ -2170,6 +2170,18 @@ Definition has been stored under "tsize_def".
 \end{verbatim}
 \end{session}
 
+Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
+Thus:
+\begin{session}
+\begin{verbatim}
+val useful_rwt = store_thm(
+  "useful_rwt[simp]",
+  ...term...,
+  ...tactic...);
+\end{verbatim}
+\end{session}
+is a way of avoiding having to write a call to \ml{export\_rewrites}.
+
 As a general rule, \ml{(srw\_ss())} includes all of its context's
 ``obvious rewrites'', as well as code to do standard calculations
 (such as the arithmetic performed in the above example).  It does not

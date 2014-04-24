@@ -927,7 +927,7 @@ in
 end
 
 val {mk,dest,export} =
-    ThmSetData.new_exporter "BasicProvers.stateful_simpset" add_rewrites
+    ThmSetData.new_exporter "simp" add_rewrites
 
 fun export_rewrites slist = List.app export slist
 

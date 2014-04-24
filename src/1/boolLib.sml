@@ -8,7 +8,7 @@ struct
 
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
-     BoundedRewrites TexTokenMap
+     BoundedRewrites TexTokenMap ThmSetData
 
 local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
@@ -111,4 +111,51 @@ end (* local open *)
 
 val def_suffix = ref "_def"
 
+local
+open Feedback Theory
+fun resolve_storename s = let
+  open Substring
+  val (bracketl,rest) = position "[" (full s)
+in
+  if isEmpty rest then (s,[])
+  else let
+    val (names,bracketr) = position "]" (slice(rest,1,NONE))
+  in
+    if size bracketr <> 1 then
+      raise mk_HOL_ERR "boolLib" "resolve_storename"
+            ("Malformed theorem-binding specifier: "^s)
+    else
+      (string bracketl, String.fields (fn c => c = #",") (string names))
+  end
+end
+in
+fun save_thm_attrs fname (n, attrs, th) = let
+  fun do_attr a = let
+    val storefn = valOf (ThmSetData.data_storefn a)
+                        handle Option => raise mk_HOL_ERR "boolLib" fname
+                                               ("No attribute with name "^a)
+    val exportfn = ThmSetData.data_exportfn a
+  in
+    storefn n;
+    case exportfn of
+        NONE => ()
+      | SOME ef => ef (current_theory()) [th]
+  end
+in
+  Theory.save_thm(n,th) before app do_attr attrs
+end
+fun store_thm(n0,t,tac) = let
+  val (n, attrs) = resolve_storename n0
+  val th = Tactical.prove(t,tac)
+              handle e => (print ("Failed to prove theorem " ^ n ^ ".\n");
+                           Raise e)
+in
+  save_thm_attrs "store_thm" (n,attrs,th)
+end
+fun save_thm(n0,th) = let
+  val (n,attrs) = resolve_storename n0
+in
+  save_thm_attrs "save_thm" (n,attrs,th)
+end
+end (* local *)
 end;
