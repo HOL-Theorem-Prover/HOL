@@ -188,10 +188,11 @@ in
   new_exporter s (fn _ => fn _ => ());
   Theory.adjoin_to_theory {
     sig_ps = NONE,
-    struct_ps = SOME (fn pps =>
-                         PP.add_string pps
-                                       ("val _ = new_exporter "^Lib.mlquote s^
-                                        "(fn _ => fn _ => ())"))
+    struct_ps = SOME
+      (fn pps =>
+          PP.add_string pps
+                 ("val _ = ThmSetData.new_exporter "^Lib.mlquote s^
+                  "(fn _ => fn _ => ())"))
   }
 end
 
