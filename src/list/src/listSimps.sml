@@ -355,7 +355,8 @@ val list_rws = computeLib.add_thms
       EL_restricted, EL_simp_restricted, SNOC,
       computeLib.lazyfy_thm list_case_compute,
       list_size_def, ALL_DISTINCT, FRONT_DEF, LAST_compute,
-      GENLIST_AUX_compute, GENLIST_NUMERALS]
+      GENLIST_AUX_compute, GENLIST_NUMERALS,
+      LIST_TO_SET_THM ]
 
 fun list_compset () =
    let
