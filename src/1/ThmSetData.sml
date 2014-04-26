@@ -192,7 +192,7 @@ in
       (fn pps =>
           PP.add_string pps
                  ("val _ = ThmSetData.new_exporter "^Lib.mlquote s^
-                  "(fn _ => fn _ => ())"))
+                  " (fn _ => fn _ => ())\n"))
   }
 end
 
