@@ -979,7 +979,7 @@ val BAG_DISJOINT = new_definition(
         DISJOINT (SET_OF_BAG b1) (SET_OF_BAG b2)``);
 
 val BAG_DISJOINT_EMPTY = store_thm(
-  "BAG_DISJOINT_EMPTY",
+  "BAG_DISJOINT_EMPTY[simp]",
   ``!b:'a->num.
        BAG_DISJOINT b EMPTY_BAG /\ BAG_DISJOINT EMPTY_BAG b``,
   REWRITE_TAC [BAG_OF_EMPTY, BAG_DISJOINT, DISJOINT_EMPTY]);
@@ -1012,6 +1012,15 @@ val BAG_DISJOINT_BAG_INSERT = store_thm (
   SIMP_TAC std_ss [BAG_DISJOINT_BAG_IN,
 		   BAG_IN_BAG_INSERT] THEN
   METIS_TAC[]);
+
+val BAG_DISJOINT_BAG_UNION = store_thm(
+  "BAG_DISJOINT_BAG_UNION[simp]",
+  ``(BAG_DISJOINT b1 (BAG_UNION b2 b3) <=>
+       BAG_DISJOINT b1 b2 /\ BAG_DISJOINT b1 b3) /\
+    (BAG_DISJOINT (BAG_UNION b1 b2) b3 <=>
+       BAG_DISJOINT b1 b3 /\ BAG_DISJOINT b2 b3)``,
+  SIMP_TAC (srw_ss()) [BAG_DISJOINT, SET_OF_BAG_UNION] THEN
+  METIS_TAC[DISJOINT_SYM]);
 
 val _ = print "Developing theory of finite bags\n"
 
