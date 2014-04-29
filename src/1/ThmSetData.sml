@@ -177,7 +177,7 @@ fun new_exporter name addfn = let
   end
   val store = #2 (Binarymap.find(!data_map,name))
 in
-  Binarymap.insert(!data_map,name,(dest,store,SOME addfn));
+  data_map := Binarymap.insert(!data_map,name,(dest,store,SOME addfn));
   register_hook ("ThmSetData.onload." ^ name, hook);
   List.app onload (ancestry "-");
   {export = export, mk = mk, dest = dest}
