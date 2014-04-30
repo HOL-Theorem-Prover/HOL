@@ -518,13 +518,13 @@ val SUB_BAG_LEQ = store_thm (
   ]);
 
 val SUB_BAG_EMPTY = store_thm (
-  "SUB_BAG_EMPTY",
+  "SUB_BAG_EMPTY[simp]",
   ``(!b:'a->num. SUB_BAG {||} b) /\
     (!b:'a->num. SUB_BAG b {||} = (b = {||}))``,
   SRW_TAC [][SUB_BAG_LEQ, EMPTY_BAG, FUN_EQ_THM]);
 
 val SUB_BAG_REFL = store_thm(
-  "SUB_BAG_REFL",
+  "SUB_BAG_REFL[simp]",
   ``!(b:'a -> num). SUB_BAG b b``,
   REWRITE_TAC [SUB_BAG]);
 
@@ -581,6 +581,11 @@ val BAG_DIFF_EMPTY_simple = save_thm(
   "BAG_DIFF_EMPTY_simple",
   LIST_CONJ (List.take(CONJUNCTS BAG_DIFF_EMPTY, 3)))
 val _ = export_rewrites ["BAG_DIFF_EMPTY_simple"];
+
+val BAG_DIFF_EQ_EMPTY = store_thm(
+  "BAG_DIFF_EQ_EMPTY[simp]",
+  ``(b - c = {||}) <=> b <= c``,
+  simp[BAG_DIFF, FUN_EQ_THM, SUB_BAG_LEQ, EMPTY_BAG]);
 
 val BAG_DIFF_INSERT_same = store_thm(
   "BAG_DIFF_INSERT_same",
@@ -792,6 +797,12 @@ val SUB_BAG_INSERT = Q.store_thm(
              SUB_BAG b1 b2`,
   SRW_TAC [ARITH_ss][BAG_INSERT, SUB_BAG_LEQ, EQ_IMP_THM] THEN
   POP_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN SRW_TAC [ARITH_ss][]);
+
+val SUB_BAG_INSERT_I = store_thm(
+  "SUB_BAG_INSERT_I",
+  ``!b c e. SUB_BAG b c ==> SUB_BAG b (BAG_INSERT e c)``,
+  SRW_TAC[][BAG_INSERT, SUB_BAG_LEQ] THEN
+  POP_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN SRW_TAC[ARITH_ss][]);
 
 val NOT_IN_SUB_BAG_INSERT = Q.store_thm(
   "NOT_IN_SUB_BAG_INSERT",
@@ -2495,20 +2506,41 @@ val mlt_UNION_EMPTY_EQN = save_thm(
   mlt_UNION_CANCEL_EQN |> Q.INST [`b1` |-> `{||}`]
                        |> SIMP_RULE (srw_ss()) []);
 
-(*
+val SUB_BAG_SING = store_thm(
+  "SUB_BAG_SING[simp]",
+  ``b <= {|e|} <=> (b = {||}) \/ (b = {|e|})``,
+  simp[SUB_BAG_LEQ, FUN_EQ_THM, EMPTY_BAG, BAG_INSERT, EQ_IMP_THM] >>
+  rpt strip_tac >> simp[] >> Cases_on `b e = 1`
+  >- (disj2_tac >> rw[] >> first_x_assum (qspec_then `x` mp_tac) >> simp[]) >>
+  disj1_tac >> qx_gen_tac `x` >> first_x_assum (qspec_then `x` mp_tac) >>
+  rw[] >> simp[]);
+
+val SUB_BAG_DIFF_simple = store_thm(
+  "SUB_BAG_DIFF_simple[simp]",
+  ``b - c <= b:'a bag``,
+  simp[SUB_BAG_DIFF]);
+
 val mltLT_SING0 = store_thm(
   "mltLT_SING0",
   ``mlt (<) {|0:num|} b <=> FINITE_BAG b /\ b <> {|0|} /\ b <> {||}``,
-  eq_tac
-  >- (strip_tac >> imp_res_tac TC_mlt1_FINITE_BAG >> simp[] >>
-      rpt strip_tac >>
-      full_simp_tac (srw_ss() ++ boolSimps.ETA_ss)
-        [SIMP_RULE bool_ss [] relationTheory.WF_NOT_REFL, WF_mlt1,
-         relationTheory.WF_TC_EQN] >>
-
-*)
-
-
+  reverse eq_tac
+  >- (strip_tac >> simp[mlt_dominates0, relationTheory.transitive_def] >>
+      Cases_on `BAG_IN 0 b`
+      >- (map_every qexists_tac [`b - {|0|}`, `{||}`] >>
+          simp[] >>
+          qpat_assum`BAG_IN 0 b` mp_tac >>
+          simp[BAG_IN, BAG_INN, FUN_EQ_THM, EMPTY_BAG,
+               BAG_INSERT, BAG_DIFF] >> rw[] >> rw[] >>
+          simp[]) >>
+      map_every qexists_tac [`b`, `{|0|}`] >> simp[] >>
+      simp[dominates_def] >>
+      `?e b0. b = BAG_INSERT e b0` by metis_tac [BAG_cases] >>
+      metis_tac[BAG_IN_BAG_INSERT, DECIDE ``x <> 0 <=> 0 < x``]) >>
+  simp[mlt_dominates_thm, relationTheory.transitive_def] >>
+  rpt strip_tac
+  >- (fs[] >> fs[] >> rw[] >> fs[] >> rw[] >>
+      metis_tac[BAG_DISJOINT_BAG_IN, BAG_IN_BAG_INSERT]) >>
+  fs[]);
 
 (*---------------------------------------------------------------------------*)
 (* Size of a finite multiset is taken to be the sum of the sizes of all the  *)
