@@ -143,7 +143,7 @@ fun all_comb l =
 
 val oEV =
    EVR (rule o COND_UPDATE_RULE)
-      [dfn'ADDI_def, dfn'DADDI_def,
+      [dfn'ADDI_def, dfn'DADDI_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``]]
@@ -165,7 +165,7 @@ val lEV =
 val pEV =
    EVR (rule o COND_UPDATE_RULE)
       [dfn'ADD_def, dfn'SUB_def, dfn'DADD_def, dfn'DSUB_def,
-       dfn'MOVN_def, dfn'MOVZ_def,
+       dfn'MOVN_def, dfn'MOVZ_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
@@ -365,6 +365,7 @@ val memcntxts =
       (fn l =>
          [``rt <> 0w:word5``,
           ``~word_bit 0 ^addr``,
+          ``~^st.exceptionSignalled``,
           ``(1 >< 0) ^addr = 0w: word2``,
           ``(1 >< 0) ^st.PC = 0w: word2``] @ l)
       memcntxts
@@ -556,12 +557,6 @@ end
 (* Decoder *)
 
 local
-   val boolify_conv =
-      Conv.RAND_CONV
-         (Conv.CHANGED_CONV
-            (REWRITE_CONV [mipsTheory.boolify5_v2w, mipsTheory.boolify6_v2w,
-                           mipsTheory.boolify26_v2w]))
-      THENC PairedLambda.let_CONV
    val Decode =
       Decode_def
       |> Thm.SPEC (bitstringSyntax.mk_vec 32 0)
@@ -570,7 +565,6 @@ local
               REWRITE_CONV [mipsTheory.boolify32_v2w]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
-              THENC Conv.DEPTH_CONV boolify_conv
              )
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
 in
@@ -877,9 +871,16 @@ local
    val get_state = snd o pairSyntax.dest_pair o rhsc
    fun mk_mips_const n = Term.prim_mk_const {Thy = "mips", Name = n}
    val state_exception_tm = mk_mips_const "mips_state_exception"
-   val state_BranchStatus_tm = mk_mips_const "mips_state_BranchStatus"
+   val state_exceptionSignalled_tm =
+      mk_mips_const "mips_state_exceptionSignalled"
+   val state_BranchDelay_tm = mk_mips_const "mips_state_BranchDelay"
+   val state_BranchTo_tm = mk_mips_const "mips_state_BranchTo"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
-   fun mk_proj_BranchStatus r = Term.mk_comb (state_BranchStatus_tm, r)
+   fun mk_proj_exceptionSignalled r =
+      Term.mk_comb (state_exceptionSignalled_tm, r)
+   fun mk_proj_BranchDelay r = Term.mk_comb (state_BranchDelay_tm, r)
+   fun mk_proj_BranchTo r = Term.mk_comb (state_BranchTo_tm, r)
+   val st_BranchDelay_tm = mk_proj_BranchDelay st
    val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
    val snd_conv = Conv.REWR_CONV pairTheory.SND
    val STATE_CONV =
@@ -887,18 +888,14 @@ local
         (REWRITE_CONV
             (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
              [boolTheory.COND_ID, cond_rand_thms,
-              ASSUME ``~^st.exceptionSignalled``]))
-   val BranchNone_RULE =
-      utilsLib.FULL_CONV_RULE STATE_CONV o
-      Thm.INST [st |-> ``^st with BranchStatus := NONE``]
-   val Branch_tm = mk_mips_const "Branch"
-   fun is_branch thm =
-      case Lib.total (fst o Term.dest_comb o utilsLib.rhsc) thm of
-         SOME t => t = Branch_tm
-       | NONE => false
+              ASSUME ``^st.BranchTo = NONE``]))
+   val NO_BRANCH_DELAY_RULE =
+      PURE_REWRITE_RULE [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]
    val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV STATE_CONV)
-   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nobranch
-   val MP_NextB = state_rule o Drule.MATCH_MP NextStateMIPS_branch
+   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay
+   val MP_NextB = state_rule o Drule.MATCH_MP NextStateMIPS_delay
+   val MP_NextE = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule o
+                  Drule.MATCH_MP NextStateMIPS_exception o NO_BRANCH_DELAY_RULE
    val Run_CONV = utilsLib.Run_CONV ("mips", st) o utilsLib.rhsc
 in
    fun mips_eval be =
@@ -917,27 +914,28 @@ in
                                     (Conv.RAND_CONV (Conv.REWR_CONV ethm)
                                      THENC snd_conv)
                val tm = rhsc thm3
-               val thm4 = STATE_CONV (mk_proj_exception tm)
-               val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4]
+               val thms = List.map (fn f => STATE_CONV (f tm))
+                             [mk_proj_exception,
+                              mk_proj_exceptionSignalled,
+                              mk_proj_BranchDelay,
+                              mk_proj_BranchTo]
+               val thm = Drule.LIST_CONJ ([thm1, thm2, thm3] @ thms)
             in
-               MP_Next thm ::
-               (if is_branch thm2
-                   then []
-                else let
-                        val thm3b = BranchNone_RULE thm3
-                        val tm = rhsc thm3b
-                        val thm4b = STATE_CONV (mk_proj_exception tm)
-                        val thm5b = STATE_CONV (mk_proj_BranchStatus tm)
-                        val thm =
-                           Drule.LIST_CONJ [thm1, thm2, thm3b, thm4b, thm5b]
-                     in
-                        [MP_NextB thm]
-                     end)
+               if rhsc (List.nth (thms, 2)) = st_BranchDelay_tm
+                  then MP_Next thm ::
+                       (if optionSyntax.is_none (rhsc (Lib.last thms))
+                           then [MP_NextB thm]
+                        else [])
+               else [MP_NextE thm]
             end
       end
 end
 
 fun mips_eval_hex be = mips_eval be o bitstringSyntax.bitstring_of_hexstring
+
+val be = false
+val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"
+val v = bitstringSyntax.bitstring_of_hexstring "00c72820"
 
 (* ========================================================================= *)
 

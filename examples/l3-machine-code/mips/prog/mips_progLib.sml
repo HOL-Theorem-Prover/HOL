@@ -132,8 +132,11 @@ val mips_frame =
        (`K mips_c_PC`,
         `\s:mips_state a w. s with PC := w`,
         `I: mips_state -> mips_state`),
-       (`K mips_c_BranchStatus`,
-        `\s:mips_state a w. s with BranchStatus := w`,
+       (`K mips_c_BranchDelay`,
+        `\s:mips_state a w. s with BranchDelay := w`,
+        `I: mips_state -> mips_state`),
+       (`K mips_c_BranchTo`,
+        `\s:mips_state a w. s with BranchTo := w`,
         `I: mips_state -> mips_state`),
        (`K mips_c_exceptionSignalled`,
         `\s:mips_state a w. s with exceptionSignalled := w`,
@@ -170,11 +173,12 @@ local
        | "mips_CP0_EPC" => 9
        | "mips_CP0_Debug" => 10
        | "mips_CP0_ErrCtl" => 11
-       | "mips_BranchStatus" => 12
-       | "mips_LLbit" => 13
-       | "mips_hi" => 14
-       | "mips_lo" => 15
-       | "mips_PC" => 16
+       | "mips_BranchDelay" => 12
+       | "mips_BranchTo" => 13
+       | "mips_LLbit" => 14
+       | "mips_hi" => 15
+       | "mips_lo" => 16
+       | "mips_PC" => 17
        | _ => ~1
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
@@ -224,9 +228,10 @@ in
         [("mips$mips_state_hi_fupd", "mips_hi"),
          ("mips$mips_state_lo_fupd", "mips_lo"),
          ("mips$mips_state_exceptionSignalled_fupd", "mips_exceptionSignalled"),
-         ("mips$mips_state_LLbit_fupd", "mips_LLbit")]
+         ("mips$mips_state_LLbit_fupd", "mips_LLbit"),
+         ("mips$mips_state_BranchTo_fupd", "mips_BranchTo")]
         [("mips$mips_state_PC_fupd", "mips_PC"),
-         ("mips$mips_state_BranchStatus_fupd", "mips_BranchStatus")]
+         ("mips$mips_state_BranchDelay_fupd", "mips_BranchDelay")]
         [("mips$mips_state_CP0_fupd", cp0_write_footprint)]
         (K false)
 end
@@ -528,6 +533,7 @@ end
 (* Testing...
 
 val imp_spec = MIPS_IMP_SPEC
+val imp_temp = mips_progTheory.MIPS_IMP_TEMPORAL
 val read_thms = [mips_stepTheory.get_bytes]
 val write_thms = []: thm list
 val select_state_thms = (mips_select_state_pool_thm :: mips_select_state_thms)

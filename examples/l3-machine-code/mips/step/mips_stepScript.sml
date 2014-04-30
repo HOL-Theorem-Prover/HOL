@@ -25,9 +25,8 @@ val NextStateMIPS_def = Define`
    let s1 = SND (Next s0) in
      if s1.exception = NoException then SOME s1 else NONE`
 
-val BranchStatus_id = Q.prove(
-   `(!s. (s.BranchStatus = NONE) ==> (s with BranchStatus := NONE = s)) /\
-     !s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,
+val exceptionSignalled_id = Q.prove(
+   `!s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,
    lrw [mips_state_component_equality])
 
 val LoadMemory_ARB_CCA = Q.prove(
@@ -36,45 +35,80 @@ val LoadMemory_ARB_CCA = Q.prove(
        LoadMemory (ARB, len, paddr, vaddr, iord) s`,
    lrw [LoadMemory_def])
 
-val NextStateMIPS_nobranch = utilsLib.ustore_thm("NextStateMIPS_nobranch",
+val tac =
+   lrw [NextStateMIPS_def, Next_def, AddressTranslation_def,
+        exceptionSignalled_id, LoadMemory_ARB_CCA]
+   \\ Cases_on `(SND (Run (Decode w) s)).BranchTo`
+   \\ Cases_on `(SND (Run (Decode w) s)).BranchDelay`
+   \\ lrw []
+   \\ fs [mips_state_component_equality]
+
+val NextStateMIPS_nodelay = utilsLib.ustore_thm("NextStateMIPS_nodelay",
     `(s.exception = NoException) /\
-     ~s.exceptionSignalled /\
-     (s.BranchStatus = NONE) ==>
-     (Fetch s = (w, s)) /\
+     (s.BranchDelay = NONE) /\
+     ~s.exceptionSignalled ==>
+     (Fetch s = (SOME w, s)) /\
      (Decode w = i) /\
      (SND (Run i s) = next_state) /\
-     (next_state.exception = s.exception) ==>
-     (NextStateMIPS s =
-      SOME (next_state with
-            <| PC := if next_state.exceptionSignalled then
-                        next_state.PC
-                     else
-                        next_state.PC + 4w;
-               CP0 := next_state.CP0 with
-                      Count := next_state.CP0.Count + 1w |>))`,
-    lrw [NextStateMIPS_def, Next_def, AddressTranslation_def, BranchStatus_id,
-         LoadMemory_ARB_CCA]
-    \\ fs [mips_state_component_equality]
-    )
-
-val NextStateMIPS_branch = utilsLib.ustore_thm("NextStateMIPS_branch",
-    `(s.exception = NoException) /\
-     ~s.exceptionSignalled /\
-     (s.BranchStatus = SOME a) ==>
-     (Fetch s = (w, s)) /\
-     (Decode w = i) /\ 
-     (SND (Run i (s with BranchStatus := NONE)) = next_state) /\
      (next_state.exception = s.exception) /\
-     (next_state.BranchStatus = NONE) ==>
+     (next_state.exceptionSignalled = s.exceptionSignalled) /\
+     (next_state.BranchDelay = s.BranchDelay) /\
+     (next_state.BranchTo = b) ==>
      (NextStateMIPS s =
       SOME (next_state with
-            <| PC := if next_state.exceptionSignalled then next_state.PC else a;
+               <| PC := next_state.PC + 4w;
+                  BranchDelay := b;
+                  BranchTo := NONE;
+                  CP0 := next_state.CP0 with
+                         Count := next_state.CP0.Count + 1w |>))`,
+    tac)
+
+val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
+    `(s.exception = NoException) /\
+     (s.BranchDelay = NONE) /\
+     ~s.exceptionSignalled ==>
+     (Fetch s = (SOME w, s)) /\
+     (Decode w = i) /\
+     (SND (Run i s) = next_state) /\
+     (next_state.exception = s.exception) /\
+     (next_state.exceptionSignalled = e) /\
+     (next_state.BranchDelay = NONE) /\
+     (next_state.BranchTo = b) ==>
+     (NextStateMIPS s =
+      SOME (if e /\ (b = NONE) then
+               next_state with
+               <| PC := next_state.PC;
+                  exceptionSignalled := F;
+                  CP0 := next_state.CP0 with
+                         Count := next_state.CP0.Count + 1w |>
+            else
+               next_state with
+                  <| PC := next_state.PC + 4w;
+                     BranchDelay := b;
+                     BranchTo := NONE;
+                     exceptionSignalled := F;
+                     CP0 := next_state.CP0 with
+                            Count := next_state.CP0.Count + 1w |>))`,
+    tac)
+
+val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
+    `(s.exception = NoException) /\
+     (s.BranchDelay = SOME a) /\
+     ~s.exceptionSignalled ==>
+     (Fetch s = (SOME w, s)) /\
+     (Decode w = i) /\
+     (SND (Run i s) = next_state) /\
+     (next_state.exception = s.exception) /\
+     (next_state.exceptionSignalled = s.exceptionSignalled) /\
+     (next_state.BranchDelay = s.BranchDelay) /\
+     (next_state.BranchTo = NONE) ==>
+     (NextStateMIPS s =
+      SOME (next_state with
+            <| PC := a;
+               BranchDelay := NONE;
                CP0 := next_state.CP0 with
                       Count := next_state.CP0.Count + 1w |>))`,
-    lrw [NextStateMIPS_def, Next_def, AddressTranslation_def, BranchStatus_id,
-         LoadMemory_ARB_CCA]
-    \\ fs [mips_state_component_equality]
-    )
+    tac)
 
 (* ------------------------------------------------------------------------ *)
 
