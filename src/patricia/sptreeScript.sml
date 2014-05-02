@@ -367,6 +367,7 @@ val domain_insert = store_thm("domain_insert",
   BasicProvers.CASE_TAC >>
   `x ∈ domain (insert k v LN)` by metis_tac[domain_lookup] >>
   fs[domain_sing])
+val _ = export_rewrites["domain_insert","domain_sing"]
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
