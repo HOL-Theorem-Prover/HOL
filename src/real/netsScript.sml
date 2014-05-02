@@ -23,7 +23,8 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
      jrhUtils realTheory topologyTheory;
 
-infix THEN THENL ORELSE ORELSEC ##;
+val re_subset = REWRITE_RULE [pred_setTheory.SPECIFICATION]
+                             pred_setTheory.SUBSET_DEF
 
 val _ = new_theory "nets";
 
@@ -143,7 +144,7 @@ val MTOP_TENDS = store_thm("MTOP_TENDS",
     DISCH_THEN(X_CHOOSE_THEN (--`n:'b`--) STRIP_ASSUME_TAC) THEN
     EXISTS_TAC (--`n:'b`--) THEN ASM_REWRITE_TAC[] THEN
     GEN_TAC THEN DISCH_TAC THEN
-    UNDISCH_TAC (--`(P:'a->bool) re_subset N`--) THEN
+    UNDISCH_TAC (--`(P:'a->bool) SUBSET N`--) THEN
     REWRITE_TAC[re_subset] THEN DISCH_TAC THEN
     REPEAT(FIRST_ASSUM MATCH_MP_TAC) THEN
     ONCE_REWRITE_TAC[METRIC_SYM] THEN
@@ -191,7 +192,7 @@ val SEQ_TENDS = store_thm("SEQ_TENDS",
 
 val LIM_TENDS = store_thm("LIM_TENDS",
   (--`!m1:('a)metric. !m2:('b)metric. !f x0 y0.
-      limpt(mtop m1) x0 re_universe ==>
+      limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) <= d ==>
@@ -208,10 +209,10 @@ val LIM_TENDS = store_thm("LIM_TENDS",
     SUBST1_TAC(ISPECL [(--`m1:('a)metric`--), (--`x0:'a`--), (--`x:'a`--)] METRIC_SYM) THEN
     ASM_REWRITE_TAC[],
     DISCH_THEN(X_CHOOSE_THEN (--`d:real`--) STRIP_ASSUME_TAC) THEN
-    UNDISCH_TAC (--`limpt(mtop m1) (x0:'a) re_universe`--) THEN
+    UNDISCH_TAC (--`limpt(mtop m1) (x0:'a) UNIV`--) THEN
     REWRITE_TAC[MTOP_LIMPT] THEN
     DISCH_THEN(MP_TAC o SPEC (--`d:real`--)) THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[re_universe] THEN
+    REWRITE_TAC[pred_setTheory.UNIV_DEF] THEN
     DISCH_THEN(X_CHOOSE_THEN (--`y:'a`--) STRIP_ASSUME_TAC) THEN
     EXISTS_TAC (--`y:'a`--) THEN CONJ_TAC THENL
      [MATCH_MP_TAC METRIC_NZ THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
@@ -227,7 +228,7 @@ val LIM_TENDS = store_thm("LIM_TENDS",
 
 val LIM_TENDS2 = store_thm("LIM_TENDS2",
   (--`!m1:('a)metric. !m2:('b)metric. !f x0 y0.
-      limpt(mtop m1) x0 re_universe ==>
+      limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) < d ==>

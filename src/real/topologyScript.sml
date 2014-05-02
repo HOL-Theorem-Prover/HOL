@@ -2,9 +2,6 @@
 (* Topologies and metric spaces, including metric on real line               *)
 (*===========================================================================*)
 
-structure topologyScript =
-struct
-
 (*
 app load ["hol88Lib",
           "numLib",
@@ -14,10 +11,8 @@ app load ["hol88Lib",
 *)
 
 open HolKernel Parse boolLib
-     hol88Lib pairLib jrhUtils realTheory;
-
-infix THEN THENL ORELSE ORELSEC ##;
-
+open BasicProvers boolSimps simpLib metisLib
+open hol88Lib pairLib jrhUtils realTheory;
 
 val _ = new_theory "topology";
 
@@ -26,8 +21,11 @@ val _ = new_theory "topology";
 (* Minimal amount of set notation is convenient                              *)
 (*---------------------------------------------------------------------------*)
 
-val re_Union = new_definition("re_Union",
-  (--`re_Union P = \x:'a. ?s. P s /\ s x`--));
+val _ = temp_overload_on ("re_Union", ``BIGUNION``)
+val _ = temp_overload_on ("BIGUNION", ``BIGUNION``)
+
+val re_Union = pred_setTheory.BIGUNION_applied
+
 
 val re_union = new_infixl_definition("re_union",
   (--`$re_union P Q = \x:'a. P x \/ Q x`--), 500);
@@ -35,41 +33,32 @@ val re_union = new_infixl_definition("re_union",
 val re_intersect = new_infixl_definition("re_intersect",
   (--`$re_intersect P Q = \x:'a. P x /\ Q x`--), 600);
 
-val re_null = new_definition("re_null",
-  (--`re_null = \x:'a. F`--));
+val re_null = pred_setTheory.EMPTY_DEF
 
-val re_universe = new_definition("re_universe",
-  (--`re_universe = \x:'a. T`--));
+val re_universe = pred_setTheory.UNIV_DEF
 
-val re_subset = new_definition("re_subset",
-  (--`$re_subset P Q = !x:'a. P x ==> Q x`--));
-val _ = set_fixity "re_subset" (Infix(NONASSOC, 450))
+val _ = temp_overload_on ("re_subset", ``(SUBSET)``)
+val _ = temp_overload_on ("SUBSET", ``(SUBSET)``)
+val _ = temp_set_fixity "re_subset" (Infix(NONASSOC, 450))
+val re_subset = SIMP_RULE bool_ss [IN_DEF] pred_setTheory.SUBSET_DEF
 
-val re_compl = new_definition("re_compl",
-  (--`re_compl P = \x:'a. ~(P x):bool`--));
+val re_compl = prove(
+  ``COMPL P = \x:'a. ~P x``,
+  SIMP_TAC (srw_ss()) [FUN_EQ_THM, pred_setTheory.SPECIFICATION]);
 
-val SUBSET_REFL = store_thm("SUBSET_REFL",
-  (--`!P:'a->bool. P re_subset P`--),
-  GEN_TAC THEN REWRITE_TAC[re_subset]);
+val SUBSET_REFL = pred_setTheory.SUBSET_REFL
 
-val COMPL_MEM = store_thm("COMPL_MEM",
-  (--`!P:'a->bool. !x. P x = ~(re_compl P x)`--),
+val COMPL_MEM = prove(
+  ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
   REPEAT GEN_TAC THEN REWRITE_TAC[re_compl] THEN
   BETA_TAC THEN REWRITE_TAC[]);
 
-val SUBSET_ANTISYM = store_thm("SUBSET_ANTISYM",
-  (--`!P:'a->bool. !Q. P re_subset Q /\ Q re_subset P = (P = Q)`--),
-  REPEAT GEN_TAC THEN REWRITE_TAC[re_subset] THEN
-  CONV_TAC(ONCE_DEPTH_CONV AND_FORALL_CONV) THEN
-  REWRITE_TAC[TAUT_CONV (--`(a ==> b) /\ (b ==> a) = (a = b)`--)] THEN
-  CONV_TAC(RAND_CONV FUN_EQ_CONV) THEN REFL_TAC);
+val SUBSET_ANTISYM = prove(
+  ``!P:'a->bool. !Q. P re_subset Q /\ Q re_subset P = (P = Q)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_ANTISYM])
 
-val SUBSET_TRANS = store_thm("SUBSET_TRANS",
-  (--`!P:'a->bool. !Q R. P re_subset Q /\ Q re_subset R ==> P re_subset R`--),
-  REPEAT GEN_TAC THEN REWRITE_TAC[re_subset] THEN
-  CONV_TAC(ONCE_DEPTH_CONV AND_FORALL_CONV) THEN
-  DISCH_THEN(MATCH_ACCEPT_TAC o GEN (--`x:'a`--) o end_itlist IMP_TRANS o
-    CONJUNCTS o SPEC (--`x:'a`--)));
+val SUBSET_TRANS = pred_setTheory.SUBSET_TRANS
 
 (*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)topology                                           *)
@@ -77,15 +66,15 @@ val SUBSET_TRANS = store_thm("SUBSET_TRANS",
 
 val istopology = new_definition("istopology",
   (--`!L. istopology L =
-              L re_null /\
-              L re_universe /\
+              L {} /\
+              L univ(:'a) /\
              (!a b. L a /\ L b ==> L (a re_intersect b)) /\
              (!P. P re_subset L ==> L (re_Union P))`--));
 
 val topology_tydef = new_type_definition
  ("topology",
   prove ((--`?t. istopology t`--),
-        EXISTS_TAC (--`re_universe:('a->bool)->bool`--) THEN
+        EXISTS_TAC ``univ(:'a->bool)`` THEN
         REWRITE_TAC[istopology, re_universe]));
 
 val topology_tybij = define_new_type_bijections
@@ -93,8 +82,8 @@ val topology_tybij = define_new_type_bijections
      ABS="topology", REP="open",tyax=topology_tydef};
 
 val TOPOLOGY = store_thm("TOPOLOGY",
-  (--`!L. open(L) re_null /\
-          open(L) re_universe /\
+  (--`!L. open(L) {} /\
+          open(L) univ(:'a) /\
           (!x y. open(L) x /\ open(L) y ==> open(L) (x re_intersect y)) /\
           (!P. P re_subset (open L) ==> open(L) (re_Union P))`--),
   GEN_TAC THEN REWRITE_TAC[GSYM istopology] THEN
@@ -121,37 +110,42 @@ val OPEN_OWN_NEIGH = store_thm("OPEN_OWN_NEIGH",
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[neigh] THEN
   EXISTS_TAC (--`S':'a->bool`--) THEN ASM_REWRITE_TAC[SUBSET_REFL]);
 
-val OPEN_UNOPEN = store_thm("OPEN_UNOPEN",
-  (--`!S' top. open(top) S' = (re_Union (\P:'a->bool. open(top) P
-                               /\ P re_subset S') = S')`--),
+val OPEN_UNOPEN = store_thm(
+  "OPEN_UNOPEN",
+  ``!S' top.
+       open(top) S' <=>
+       (re_Union { P | open(top) P /\ P re_subset S' } = S')``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM SUBSET_ANTISYM] THEN
-    REWRITE_TAC[re_Union, re_subset] THEN BETA_TAC THEN CONJ_TAC THEN GEN_TAC THENL
-     [DISCH_THEN(X_CHOOSE_THEN (--`s:'a->bool`--) STRIP_ASSUME_TAC) THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC,
-      DISCH_TAC THEN EXISTS_TAC (--`S':'a->bool`--) THEN ASM_REWRITE_TAC[]],
+    ASM_SIMP_TAC (srw_ss()) [re_Union, re_subset] THEN CONJ_TAC THEN
+    GEN_TAC THENL [
+      DISCH_THEN(Q.X_CHOOSE_THEN `s` STRIP_ASSUME_TAC) THEN
+      FIRST_ASSUM MATCH_MP_TAC THEN
+      FULL_SIMP_TAC (srw_ss()) [IN_DEF],
+      DISCH_TAC THEN EXISTS_TAC ``S':'a->bool`` THEN
+      ASM_SIMP_TAC(srw_ss())[IN_DEF]
+    ],
     DISCH_THEN(SUBST1_TAC o SYM) THEN
     MATCH_MP_TAC TOPOLOGY_UNION THEN
-    REWRITE_TAC[re_subset] THEN BETA_TAC THEN
-    GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[]]);
+    SIMP_TAC (srw_ss()) [re_subset]
+  ])
 
 val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
-  (--`!S' top. open(top) S' = !x:'a. S' x ==> ?P. P x /\ open(top) P /\ P re_subset S'`--),
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
+  ``!S' top. open(top) S' <=>
+             !x:'a. S' x ==> ?P. P x /\ open(top) P /\ P re_subset S'``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
     EXISTS_TAC (--`S':'a->bool`--) THEN ASM_REWRITE_TAC[SUBSET_REFL],
     DISCH_TAC THEN C SUBGOAL_THEN SUBST1_TAC
-     (--`S' = re_Union (\P:'a->bool. open(top) P /\ P re_subset S')`--) THENL
+     ``S' = re_Union { P | open(top) P /\ P re_subset S'}`` THENL
      [ONCE_REWRITE_TAC[GSYM SUBSET_ANTISYM] THEN CONJ_TAC THENL
-       [ONCE_REWRITE_TAC[re_subset] THEN REWRITE_TAC [re_Union] THEN BETA_TAC THEN
-        GEN_TAC THEN DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
-        DISCH_THEN(X_CHOOSE_TAC (--`P:'a->bool`--)) THEN EXISTS_TAC (--`P:'a->bool`--) THEN
-        ASM_REWRITE_TAC[],
-        REWRITE_TAC[re_subset, re_Union] THEN BETA_TAC THEN GEN_TAC THEN
-        DISCH_THEN(CHOOSE_THEN STRIP_ASSUME_TAC) THEN
-        FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC],
+       [ONCE_REWRITE_TAC[re_subset] THEN
+        ASM_SIMP_TAC (srw_ss()) [] THEN
+        ASM_SIMP_TAC (srw_ss()) [IN_DEF],
+        SIMP_TAC (srw_ss()) [re_subset] THEN REPEAT STRIP_TAC THEN
+        FULL_SIMP_TAC (srw_ss()) [IN_DEF]],
       MATCH_MP_TAC TOPOLOGY_UNION THEN ONCE_REWRITE_TAC[re_subset] THEN
-      GEN_TAC THEN BETA_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[]]]);
+      SIMP_TAC (srw_ss()) []]]);
 
 val OPEN_NEIGH = store_thm("OPEN_NEIGH",
   (--`!S' top. open(top) S' = !x:'a. S' x ==> ?N. neigh(top)(N,x) /\ N re_subset S'`--),
@@ -173,7 +167,7 @@ val OPEN_NEIGH = store_thm("OPEN_NEIGH",
 (*---------------------------------------------------------------------------*)
 
 val closed = new_definition("closed",
-  (--`closed(L:('a)topology) S' = open(L)(re_compl S')`--));
+  (--`closed(L:('a)topology) S' = open(L)(COMPL S')`--));
 
 (*---------------------------------------------------------------------------*)
 (* Define limit point in topological space                                   *)
@@ -194,7 +188,7 @@ val CLOSED_LIMPT = store_thm("CLOSED_LIMPT",
   CONV_TAC(ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
   FREEZE_THEN (fn th => ONCE_REWRITE_TAC[th]) (SPEC (--`S':'a->bool`--) COMPL_MEM) THEN
   REWRITE_TAC[] THEN
-  SPEC_TAC((--`re_compl(S':'a->bool)`--),(--`S':'a->bool`--)) THEN
+  SPEC_TAC((--`COMPL(S':'a->bool)`--),(--`S':'a->bool`--)) THEN
   GEN_TAC THEN REWRITE_TAC[NOT_IMP] THEN
   CONV_TAC(ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
   REWRITE_TAC[DE_MORGAN_THM] THEN
@@ -299,14 +293,16 @@ val mtop = new_definition("mtop",
     topology(\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))`--));
 
 val mtop_istopology = store_thm("mtop_istopology",
-  (--`!m:('a)metric. istopology
-    (\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))`--),
+  ``!m:('a)metric.
+      istopology (\S'. !x. S' x ==>
+                           ?e. &0 < e /\
+                               (!y. (dist m)(x,y) < e ==> S' y))``,
   GEN_TAC THEN
-  REWRITE_TAC[istopology, re_null, re_universe, re_Union, re_intersect, re_subset] THEN
-  CONV_TAC(REDEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+  SIMP_TAC bool_ss [istopology, re_null, re_universe, re_Union,
+                    re_intersect, re_subset] THEN
+  REPEAT CONJ_TAC THENL
    [EXISTS_TAC (--`&1`--) THEN MATCH_ACCEPT_TAC REAL_LT_01,
-        REPEAT GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
+    REPEAT GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
     DISCH_THEN(fn th => POP_ASSUM(CONJUNCTS_THEN(MP_TAC o SPEC (--`x:'a`--)))
                     THEN REWRITE_TAC[th]) THEN
     DISCH_THEN(X_CHOOSE_TAC (--`e1:real`--)) THEN
@@ -324,12 +320,8 @@ val mtop_istopology = store_thm("mtop_istopology",
     THEN CONJ_TAC THEN FIRST_ASSUM (MATCH_MP_TAC o CONJUNCT2)
     THEN FIRST_ASSUM ACCEPT_TAC,
     GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-    DISCH_THEN(X_CHOOSE_THEN (--`y:'a->bool`--)
-     (fn th => POP_ASSUM(X_CHOOSE_TAC (--`e:real`--) o C MATCH_MP (CONJUNCT2 th) o
-                     C MATCH_MP (CONJUNCT1 th)) THEN ASSUME_TAC th)) THEN
-    EXISTS_TAC (--`e:real`--) THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC (--`z:'a`--) THEN
-    DISCH_THEN(fn th => FIRST_ASSUM(ASSUME_TAC o C MATCH_MP th o CONJUNCT2)) THEN
-    EXISTS_TAC (--`y:'a->bool`--) THEN ASM_REWRITE_TAC[]]);
+    FULL_SIMP_TAC bool_ss [IN_DEF] THEN METIS_TAC[]
+  ]);
 
 val MTOP_OPEN = store_thm("MTOP_OPEN",
   (--`!S' (m:('a)metric). open(mtop m) S' =
@@ -454,7 +446,7 @@ val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
 (*---------------------------------------------------------------------------*)
 
 val MR1_LIMPT = store_thm("MR1_LIMPT",
-  (--`!x. limpt(mtop mr1) x re_universe`--),
+  ``!x. limpt(mtop mr1) x univ(:real)``,
   GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, re_universe] THEN
   X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN
   EXISTS_TAC (--`x + (e / &2)`--) THEN
@@ -477,5 +469,3 @@ val _ = adjoin_to_theory
     PP.add_newline ppstrm))};
 
 val _ = export_theory();
-
-end;
