@@ -330,6 +330,44 @@ val domain_foldi = save_thm(
                  |> SIMP_RULE (srw_ss()) [lrnext_thm]
                  |> SYM);
 
+val insert_union = store_thm("insert_union",
+  ``∀k v s. insert k v s = union (insert k v LN) s``,
+  completeInduct_on`k` >> simp[Once insert_def] >> rw[] >>
+  simp[Once union_def] >>
+  Cases_on`s`>>simp[Once insert_def] >>
+  simp[Once union_def] >>
+  first_x_assum match_mp_tac >>
+  simp[arithmeticTheory.DIV_LT_X])
+
+val domain_sing = store_thm("domain_sing",
+  ``∀k v. domain (insert k v LN) = {k}``,
+  completeInduct_on`k` >>
+  simp[Once insert_def] >> rw[] >>
+  `(k - 1) DIV 2 < k` by (
+    fsrw_tac[ARITH_ss][DIV_LT_X] ) >> fs[] >>
+  ONCE_REWRITE_TAC[MULT_COMM] >>
+  `0 < 2` by simp[] >>
+  qmatch_abbrev_tac`a + b = k` >>
+  (qsuff_tac`a + (b-1) + 1 = k` >- simp[Abbr`b`]) >>
+  `(k - 1) MOD 2 = b - 1` by (
+    simp[MOD_2] >>
+    Cases_on`k`>>fs[EVEN,Abbr`b`] ) >>
+  pop_assum(SUBST1_TAC o SYM) >>
+  unabbrev_all_tac >>
+  (DIVISION |> Q.SPEC`2` |> UNDISCH |> Q.SPEC`k-1` |> CONJUNCT1 |> SYM |> SUBST1_TAC) >>
+  simp[])
+
+val domain_insert = store_thm("domain_insert",
+  ``∀k v t. domain (insert k v t) = k INSERT domain t``,
+  rw[Once pred_setTheory.EXTENSION] >>
+  rw[domain_lookup] >>
+  Cases_on`x = k` >> rw[lookup_insert1] >>
+  rw[Once insert_union] >>
+  rw[lookup_union] >>
+  BasicProvers.CASE_TAC >>
+  `x ∈ domain (insert k v LN)` by metis_tac[domain_lookup] >>
+  fs[domain_sing])
+
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
 val toListA_def = Define`
