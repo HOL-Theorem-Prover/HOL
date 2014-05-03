@@ -339,6 +339,11 @@ val insert_union = store_thm("insert_union",
   first_x_assum match_mp_tac >>
   simp[arithmeticTheory.DIV_LT_X])
 
+val domain_empty = store_thm("domain_empty",
+  ``∀t. wf t ⇒ (isEmpty t ⇔ (domain t = ∅))``,
+  Induct >> simp[wf_def,isEmpty_def] >>
+  metis_tac[])
+
 val domain_sing = store_thm("domain_sing",
   ``∀k v. domain (insert k v LN) = {k}``,
   completeInduct_on`k` >>
@@ -397,6 +402,110 @@ val toList_def = Define`toList m = toListA [] m`
 val isEmpty_toList = store_thm("isEmpty_toList",
   ``∀t. wf t ⇒ (isEmpty t ⇔ (toList t = []))``,
   rw[toList_def,isEmpty_toListA])
+
+val div2_even_lemma = prove(
+  ``∀x. ∃n. (x = (n - 1) DIV 2) ∧ EVEN n ∧ 0 < n``,
+  Induct >- ( qexists_tac`2` >> simp[] ) >> fs[] >>
+  qexists_tac`n+2` >>
+  simp[ADD1,EVEN_ADD] >>
+  Cases_on`n`>>fs[EVEN,EVEN_ODD,ODD_EXISTS,ADD1] >>
+  simp[] >> rw[] >>
+  qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
+  disch_then(qspecl_then[`m`,`3`]mp_tac) >>
+  simp[] >> disch_then kall_tac >>
+  qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
+  disch_then(qspecl_then[`m`,`1`]mp_tac) >>
+  simp[])
+
+val div2_odd_lemma = prove(
+  ``∀x. ∃n. (x = (n - 1) DIV 2) ∧ ODD n ∧ 0 < n``,
+  Induct >- ( qexists_tac`1` >> simp[] ) >> fs[] >>
+  qexists_tac`n+2` >>
+  simp[ADD1,ODD_ADD] >>
+  fs[ODD_EXISTS,ADD1] >>
+  simp[] >> rw[] >>
+  qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
+  disch_then(qspecl_then[`m`,`2`]mp_tac) >>
+  simp[] >> disch_then kall_tac >>
+  qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
+  disch_then(qspecl_then[`m`,`0`]mp_tac) >>
+  simp[])
+
+val spt_eq_thm = store_thm("spt_eq_thm",
+  ``∀t1 t2. wf t1 ∧ wf t2 ⇒
+    ((t1 = t2) ⇔ ∀n. lookup n t1 = lookup n t2)``,
+  Induct >> simp[wf_def,lookup_def]
+  >- (
+    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    `domain t2 = {}` by (
+      simp[pred_setTheory.EXTENSION] >>
+      metis_tac[lookup_NONE_domain] ) >>
+    Cases_on`t2`>>fs[domain_def,wf_def] >>
+    metis_tac[domain_empty] )
+  >- (
+    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    Cases_on`t2`>>fs[lookup_def]
+    >- (first_x_assum(qspec_then`0`mp_tac)>>simp[])
+    >- (first_x_assum(qspec_then`0`mp_tac)>>simp[]) >>
+    fs[wf_def] >>
+    rfs[domain_empty] >>
+    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[domain_lookup] >|
+      [ qspec_then`x`strip_assume_tac div2_even_lemma
+      , qspec_then`x`strip_assume_tac div2_odd_lemma
+      ] >>
+    first_x_assum(qspec_then`n`mp_tac) >>
+    fs[ODD_EVEN] >> simp[] )
+  >- (
+    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    rfs[domain_empty] >>
+    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[domain_lookup] >>
+    Cases_on`t2`>>fs[] >>
+    TRY (
+      first_x_assum(qspec_then`0`mp_tac) >>
+      simp[lookup_def] >> NO_TAC) >>
+    TRY (
+      qspec_then`x`strip_assume_tac div2_even_lemma >>
+      first_x_assum(qspec_then`n`mp_tac) >> fs[] >>
+      simp[lookup_def] >> NO_TAC) >>
+    TRY (
+      qspec_then`x`strip_assume_tac div2_odd_lemma >>
+      first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
+      simp[lookup_def] >> NO_TAC) >>
+    qmatch_assum_rename_tac`wf (BN s1 s2)`[] >>
+    `wf s1 ∧ wf s2` by fs[wf_def] >>
+    first_x_assum(qspec_then`s2`mp_tac) >>
+    first_x_assum(qspec_then`s1`mp_tac) >>
+    simp[] >> ntac 2 strip_tac >>
+    fs[lookup_def] >> rw[] >>
+    metis_tac[prim_recTheory.LESS_REFL,div2_even_lemma,div2_odd_lemma
+             ,EVEN_ODD] )
+  >- (
+    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    rfs[domain_empty] >>
+    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[domain_lookup] >>
+    Cases_on`t2`>>fs[] >>
+    TRY (
+      first_x_assum(qspec_then`0`mp_tac) >>
+      simp[lookup_def] >> NO_TAC) >>
+    TRY (
+      qspec_then`x`strip_assume_tac div2_even_lemma >>
+      first_x_assum(qspec_then`n`mp_tac) >> fs[] >>
+      simp[lookup_def] >> NO_TAC) >>
+    TRY (
+      qspec_then`x`strip_assume_tac div2_odd_lemma >>
+      first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
+      simp[lookup_def] >> NO_TAC) >>
+    qmatch_assum_rename_tac`wf (BS s1 z s2)`[] >>
+    `wf s1 ∧ wf s2` by fs[wf_def] >>
+    first_x_assum(qspec_then`s2`mp_tac) >>
+    first_x_assum(qspec_then`s1`mp_tac) >>
+    simp[] >> ntac 2 strip_tac >>
+    fs[lookup_def] >> rw[] >>
+    metis_tac[prim_recTheory.LESS_REFL,div2_even_lemma,div2_odd_lemma
+             ,EVEN_ODD,optionTheory.SOME_11] ))
 
 val numeral_div0 = prove(
   ``(BIT1 n DIV 2 = n) /\
