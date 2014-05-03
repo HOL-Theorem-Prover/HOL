@@ -377,7 +377,26 @@ val toListA_def = Define`
   (toListA acc (BN t1 t2) = toListA (toListA acc t2) t1) /\
   (toListA acc (BS t1 a t2) = toListA (a :: toListA acc t2) t1)
 `;
+
+local open listTheory rich_listTheory in
+val toListA_append = store_thm("toListA_append",
+  ``∀t acc. toListA acc t = toListA [] t ++ acc``,
+  Induct >> REWRITE_TAC[toListA_def]
+  >> metis_tac[APPEND_ASSOC,CONS_APPEND,APPEND])
+end
+
+val isEmpty_toListA = store_thm("isEmpty_toListA",
+  ``∀t acc. wf t ⇒ (isEmpty t ⇔ (toListA acc t = acc))``,
+  Induct >> simp[toListA_def,isEmpty_def,wf_def] >>
+  rw[] >> fs[] >>
+  fs[Once toListA_append] >>
+  simp[Once toListA_append,SimpR``$++``])
+
 val toList_def = Define`toList m = toListA [] m`
+
+val isEmpty_toList = store_thm("isEmpty_toList",
+  ``∀t. wf t ⇒ (isEmpty t ⇔ (toList t = []))``,
+  rw[toList_def,isEmpty_toListA])
 
 val numeral_div0 = prove(
   ``(BIT1 n DIV 2 = n) /\
