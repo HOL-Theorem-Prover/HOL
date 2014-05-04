@@ -259,9 +259,15 @@ val () = test_monops ``:half``
 val () = test_binops ``:half``
 val () = test_orderings ``:half``
 
+val () = test_monops ``:single``
+val () = test_binops ``:single``
+val () = test_orderings ``:single``
+
+(*
 val () = test_monops native_ty
 val () = test_binops native_ty
 val () = test_orderings native_ty
+*)
 
 val elapsed = Timer.checkRealTimer tt;
 
