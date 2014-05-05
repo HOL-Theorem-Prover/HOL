@@ -14,9 +14,11 @@ val _ = new_theory "sptree";
    is also possible to delete values at an index.
 
    Should EVAL well. Big drawback is that there doesn't seem to be an
-   efficient way to do an in index-order traversal of the elements.
-   There is a fold function that gives you access to all the key-value
-   pairs, but these will come out in an inconvenient order.
+   efficient way (i.e., O(n)) to do an in index-order traversal of the
+   elements. There is an O(n) fold function that gives you access to
+   all the key-value pairs, but these will come out in an inconvenient
+   order. If you iterate over the keys with an increment, you will get
+   O(n log n) performance.
 
    The insert, delete and union operations all preserve a
    well-formedness condition ("wf") that ensures there is only one
@@ -25,10 +27,8 @@ val _ = new_theory "sptree";
 
 val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
 (* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
-val isEmpty_def = Define`
-  (isEmpty LN <=> T) /\
-  (isEmpty _ <=> F)
-`;
+
+val _ = overload_on ("isEmpty", ``\t. t = LN``)
 
 val wf_def = Define`
   (wf LN <=> T) /\
@@ -106,11 +106,12 @@ val size_def = Define`
   (size (BN t1 t2) = size t1 + size t2) /\
   (size (BS t1 a t2) = size t1 + size t2 + 1)
 `;
+val _ = export_rewrites ["size_def"]
 
 val insert_notEmpty = store_thm(
   "insert_notEmpty",
   ``~isEmpty (insert k a t)``,
-  Cases_on `t` >> rw[Once insert_def, isEmpty_def]);
+  Cases_on `t` >> rw[Once insert_def]);
 
 val wf_insert = store_thm(
   "wf_insert",
@@ -126,10 +127,57 @@ val wf_delete = store_thm(
   rw[wf_def] >> rw[] >> fs[] >> metis_tac[]);
 
 val lookup_insert1 = store_thm(
-  "lookup_insert1",
+  "lookup_insert1[simp]",
   ``!k a t. lookup k (insert k a t) = SOME a``,
   ho_match_mp_tac (theorem "insert_ind") >> rpt strip_tac >>
   simp[Once insert_def] >> rw[lookup_def]);
+
+val DIV2_EQ_DIV2 = prove(
+  ``(m DIV 2 = n DIV 2) <=>
+      (m = n) \/
+      (n = m + 1) /\ EVEN m \/
+      (m = n + 1) /\ EVEN n``,
+  `0 < 2` by simp[] >>
+  map_every qabbrev_tac [`nq = n DIV 2`, `nr = n MOD 2`] >>
+  qspec_then `2` mp_tac DIVISION >> asm_simp_tac bool_ss [] >>
+  disch_then (qspec_then `n` mp_tac) >> asm_simp_tac bool_ss [] >>
+  map_every qabbrev_tac [`mq = m DIV 2`, `mr = m MOD 2`] >>
+  qspec_then `2` mp_tac DIVISION >> asm_simp_tac bool_ss [] >>
+  disch_then (qspec_then `m` mp_tac) >> asm_simp_tac bool_ss [] >>
+  rw[] >> markerLib.RM_ALL_ABBREVS_TAC >>
+  simp[EVEN_ADD, EVEN_MULT] >>
+  `!p. p < 2 ==> (EVEN p <=> (p = 0))`
+    by (rpt strip_tac >> `(p = 0) \/ (p = 1)` by decide_tac >> simp[]) >>
+  simp[]);
+
+val EVEN_PRE = prove(
+  ``x <> 0 ==> (EVEN (x - 1) <=> ~EVEN x)``,
+  Induct_on `x` >> simp[] >> Cases_on `x` >> fs[] >>
+  simp_tac (srw_ss()) [EVEN]);
+
+val lookup_insert_COND_EQN = store_thm(
+  "lookup_insert_COND_EQN",
+  ``!k2 v t k1. lookup k1 (insert k2 v t) =
+                if k1 = k2 then SOME v else lookup k1 t``,
+  ho_match_mp_tac (theorem "insert_ind") >> rpt strip_tac >>
+  simp[Once insert_def] >> rw[lookup_def] >> simp[] >| [
+    fs[lookup_def] >> pop_assum mp_tac >> Cases_on `k1 = 0` >> simp[] >>
+    COND_CASES_TAC >> simp[lookup_def, DIV2_EQ_DIV2, EVEN_PRE],
+    fs[lookup_def] >> pop_assum mp_tac >> Cases_on `k1 = 0` >> simp[] >>
+    COND_CASES_TAC >> simp[lookup_def, DIV2_EQ_DIV2, EVEN_PRE] >>
+    rpt strip_tac >> metis_tac[EVEN_PRE],
+    fs[lookup_def] >> COND_CASES_TAC >>
+    simp[lookup_def, DIV2_EQ_DIV2, EVEN_PRE],
+    fs[lookup_def] >> COND_CASES_TAC >>
+    simp[lookup_def, DIV2_EQ_DIV2, EVEN_PRE] >>
+    rpt strip_tac >> metis_tac[EVEN_PRE],
+    simp[DIV2_EQ_DIV2, EVEN_PRE],
+    simp[DIV2_EQ_DIV2, EVEN_PRE] >> COND_CASES_TAC
+    >- metis_tac [EVEN_PRE] >> simp[],
+    simp[DIV2_EQ_DIV2, EVEN_PRE],
+    simp[DIV2_EQ_DIV2, EVEN_PRE] >> COND_CASES_TAC
+    >- metis_tac [EVEN_PRE] >> simp[]
+  ])
 
 val union_def = Define`
   (union LN t = t) /\
@@ -156,7 +204,7 @@ val union_def = Define`
 val isEmpty_union = store_thm(
   "isEmpty_union",
   ``isEmpty (union m1 m2) <=> isEmpty m1 /\ isEmpty m2``,
-  map_every Cases_on [`m1`, `m2`] >> simp[union_def, isEmpty_def]);
+  map_every Cases_on [`m1`, `m2`] >> simp[union_def]);
 
 val wf_union = store_thm(
   "wf_union",
@@ -207,10 +255,27 @@ val domain_def = Define`
 val _ = export_rewrites ["domain_def"]
 
 val FINITE_domain = store_thm(
-  "FINITE_domain",
+  "FINITE_domain[simp]",
   ``FINITE (domain t)``,
   Induct_on `t` >> simp[]);
-val _ = export_rewrites ["FINITE_domain"]
+
+val lookup_fromList = store_thm(
+  "lookup_fromList",
+  ``lookup n (fromList l) = if n < LENGTH l then SOME (EL n l)
+                            else NONE``,
+  simp[fromList_def] >>
+  `!i n t. lookup n (SND (FOLDL (\ (i,t) a. (i+1,insert i a t)) (i,t) l)) =
+           if n < i then lookup n t
+           else if n < LENGTH l + i then SOME (EL (n - i) l)
+           else lookup n t`
+    suffices_by (simp[] >> strip_tac >> simp[lookup_def]) >>
+  Induct_on `l` >> simp[] >> pop_assum kall_tac >>
+  rw[lookup_insert_COND_EQN] >>
+  full_simp_tac (srw_ss() ++ ARITH_ss) [] >>
+  `0 < n - i` by simp[] >>
+  Cases_on `n - i` >> fs[] >>
+  qmatch_assum_rename_tac `n - i = SUC nn` [] >>
+  `nn = n - (i + 1)` by decide_tac >> simp[]);
 
 val bit_cases = prove(
   ``!n. (n = 0) \/ (?m. n = 2 * m + 1) \/ (?m. n = 2 * m + 2)``,
@@ -247,7 +312,45 @@ val domain_union = store_thm(
   simp[pred_setTheory.EXTENSION, domain_lookup, lookup_union] >>
   qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]);
 
-(*
+val domain_insert = store_thm(
+  "domain_insert[simp]",
+  ``domain (insert k v t) = k INSERT domain t``,
+  simp[domain_lookup, pred_setTheory.EXTENSION, lookup_insert_COND_EQN] >>
+  metis_tac[]);
+
+val domain_sing = save_thm(
+  "domain_sing",
+  domain_insert |> Q.INST [`t` |-> `LN`] |> SIMP_RULE bool_ss [domain_def]);
+
+val domain_fromList = store_thm(
+  "domain_fromList",
+  ``domain (fromList l) = count (LENGTH l)``,
+  simp[fromList_def] >>
+  `!i t. domain (SND (FOLDL (\ (i,t) a. (i + 1, insert i a t)) (i,t) l)) =
+         domain t UNION IMAGE ((+) i) (count (LENGTH l))`
+    suffices_by (simp[] >> strip_tac >> simp[pred_setTheory.EXTENSION]) >>
+  Induct_on `l` >> simp[pred_setTheory.EXTENSION, EQ_IMP_THM] >>
+  rpt strip_tac >> simp[DECIDE ``(x = x + y) <=> (y = 0)``] >>
+  qmatch_assum_rename_tac `nn < SUC (LENGTH l)` [] >>
+  Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
+
+val lookup_empty_delete = store_thm(
+  "lookup_empty_delete",
+  ``!t k k'. (delete k t = LN) /\ k' <> k ==> (lookup k' t = NONE)``,
+  Induct >> simp[delete_def, lookup_def]
+  >- rw[]
+  >- (map_every qx_gen_tac [`k1`, `k2`] >>
+      rw[lookup_def, delete_def]
+      >- (Cases_on `k2 = 0` >> simp[] >>
+          `(k2 - 1) DIV 2 <> (k1 - 1) DIV 2` suffices_by
+             metis_tac[optionTheory.IS_SOME_DEF] >>
+          simp[DIV2_EQ_DIV2, EVEN_PRE]) >>
+      Cases_on `k2 = 0` >> simp[] >>
+      `(k2 - 1) DIV 2 <> (k1 - 1) DIV 2` suffices_by
+         metis_tac[optionTheory.IS_SOME_DEF] >>
+      simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE]) >>
+  rw[lookup_def, delete_def]);
+
 val lookup_delete = store_thm(
   "lookup_delete",
   ``!t k1 k2.
@@ -255,9 +358,30 @@ val lookup_delete = store_thm(
                                 else lookup k1 t``,
   Induct >> simp[delete_def, lookup_def]
   >- rw[lookup_def]
-  >- (map_every qx_gen_tac [`k1`, `k2`] >>
-      rw[lookup_def]
-*)
+  >- (map_every qx_gen_tac [`k1`, `k2`] >> rw[lookup_def]
+      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+              suffices_by metis_tac[lookup_empty_delete] >>
+          simp[DIV2_EQ_DIV2, EVEN_PRE])
+      >- simp[DIV2_EQ_DIV2, EVEN_PRE]
+      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+            suffices_by metis_tac[lookup_empty_delete] >>
+          simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])
+      >- (simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE]))
+  >- (map_every qx_gen_tac [`a`, `k1`, `k2`] >> rw[lookup_def]
+      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+              suffices_by metis_tac[lookup_empty_delete] >>
+          simp[DIV2_EQ_DIV2, EVEN_PRE])
+      >- simp[DIV2_EQ_DIV2, EVEN_PRE]
+      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+              suffices_by metis_tac[lookup_empty_delete] >>
+          simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])
+      >- (simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])))
+
+val domain_delete = store_thm(
+  "domain_delete[simp]",
+  ``domain (delete k t) = domain t DELETE k``,
+  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_delete] >>
+  metis_tac[]);
 
 val foldi_def = Define`
   (foldi f i acc LN = acc) /\
@@ -340,39 +464,8 @@ val insert_union = store_thm("insert_union",
   simp[arithmeticTheory.DIV_LT_X])
 
 val domain_empty = store_thm("domain_empty",
-  ``∀t. wf t ⇒ (isEmpty t ⇔ (domain t = ∅))``,
-  Induct >> simp[wf_def,isEmpty_def] >>
-  metis_tac[])
-
-val domain_sing = store_thm("domain_sing",
-  ``∀k v. domain (insert k v LN) = {k}``,
-  completeInduct_on`k` >>
-  simp[Once insert_def] >> rw[] >>
-  `(k - 1) DIV 2 < k` by (
-    fsrw_tac[ARITH_ss][DIV_LT_X] ) >> fs[] >>
-  ONCE_REWRITE_TAC[MULT_COMM] >>
-  `0 < 2` by simp[] >>
-  qmatch_abbrev_tac`a + b = k` >>
-  (qsuff_tac`a + (b-1) + 1 = k` >- simp[Abbr`b`]) >>
-  `(k - 1) MOD 2 = b - 1` by (
-    simp[MOD_2] >>
-    Cases_on`k`>>fs[EVEN,Abbr`b`] ) >>
-  pop_assum(SUBST1_TAC o SYM) >>
-  unabbrev_all_tac >>
-  (DIVISION |> Q.SPEC`2` |> UNDISCH |> Q.SPEC`k-1` |> CONJUNCT1 |> SYM |> SUBST1_TAC) >>
-  simp[])
-
-val domain_insert = store_thm("domain_insert",
-  ``∀k v t. domain (insert k v t) = k INSERT domain t``,
-  rw[Once pred_setTheory.EXTENSION] >>
-  rw[domain_lookup] >>
-  Cases_on`x = k` >> rw[lookup_insert1] >>
-  rw[Once insert_union] >>
-  rw[lookup_union] >>
-  BasicProvers.CASE_TAC >>
-  `x ∈ domain (insert k v LN)` by metis_tac[domain_lookup] >>
-  fs[domain_sing])
-val _ = export_rewrites["domain_insert","domain_sing"]
+  ``∀t. wf t ⇒ ((t = LN) ⇔ (domain t = ∅))``,
+  simp[] >> Induct >> simp[wf_def] >> metis_tac[])
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
@@ -391,8 +484,8 @@ val toListA_append = store_thm("toListA_append",
 end
 
 val isEmpty_toListA = store_thm("isEmpty_toListA",
-  ``∀t acc. wf t ⇒ (isEmpty t ⇔ (toListA acc t = acc))``,
-  Induct >> simp[toListA_def,isEmpty_def,wf_def] >>
+  ``∀t acc. wf t ⇒ ((t = LN) ⇔ (toListA acc t = acc))``,
+  Induct >> simp[toListA_def,wf_def] >>
   rw[] >> fs[] >>
   fs[Once toListA_append] >>
   simp[Once toListA_append,SimpR``$++``])
@@ -400,7 +493,7 @@ val isEmpty_toListA = store_thm("isEmpty_toListA",
 val toList_def = Define`toList m = toListA [] m`
 
 val isEmpty_toList = store_thm("isEmpty_toList",
-  ``∀t. wf t ⇒ (isEmpty t ⇔ (toList t = []))``,
+  ``∀t. wf t ⇒ ((t = LN) ⇔ (toList t = []))``,
   rw[toList_def,isEmpty_toListA])
 
 val div2_even_lemma = prove(
