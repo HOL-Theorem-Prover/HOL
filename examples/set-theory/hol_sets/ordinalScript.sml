@@ -1083,8 +1083,8 @@ val islimit_0 = store_thm("islimit_0", ``islimit 0``, simp[])
 
 val ordinal_IVT = store_thm(
   "ordinal_IVT",
-  ``(∀s:α ordinal set.
-          s ≼ univ(:'a inf) ∧ s ≠ ∅ ⇒ f (sup s) = sup (IMAGE f s) : α ordinal) ∧
+  ``(∀a:α ordinal.
+       0 < a ∧ islimit a ⇒ f a : α ordinal = sup (IMAGE f (preds a))) ∧
     (∀x y. x ≤ y ⇒ f x ≤ f y) ∧ α₁ < α₂ ∧ f α₁ ≤ γ ∧ γ < f α₂ ⇒
     ∃β. α₁ ≤ β ∧ β < α₂ ∧ f β ≤ γ ∧ γ < f β⁺``,
   strip_tac >>
@@ -1095,8 +1095,8 @@ val ordinal_IVT = store_thm(
   markerLib.RM_ALL_ABBREVS_TAC >>
   `¬islimit μ`
     by (strip_tac >> `sup (preds μ)= μ` by fs[sup_preds_omax_NONE] >>
-        `preds μ <> ∅` by (strip_tac >> fs[]) >>
-        `f μ = sup (IMAGE f (preds μ))` by metis_tac[preds_inj_univ] >>
+        `0 < μ` by (spose_not_then assume_tac >> fs[]) >>
+        `f μ = sup (IMAGE f (preds μ))` by metis_tac[] >>
         `∃δ. δ < μ ∧ γ < f δ` by metis_tac[predimage_sup_thm] >>
         `δ ≤ α₁` by metis_tac[] >>
         `f δ ≤ f α₁` by metis_tac[] >>
