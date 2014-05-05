@@ -9,7 +9,7 @@ val _ = new_theory "zipper";
 
 val _ = ParseExtras.tight_equality()
 
-val _ = Hol_datatype `zipper = Z of 'a list => 'a => 'a list`
+val _ = Datatype `zipper = Z ('a list) 'a  ('a list)`
 
 val focus_def = Define`focus (Z p a s) = a`
 val toList_def = Define`toList (Z p a s) = REVERSE p ++ [a] ++ s`
@@ -18,22 +18,19 @@ val index_def = Define`index (Z p a s) = LENGTH p`
 val _ = export_rewrites ["focus_def", "toList_def", "size_def", "index_def"]
 
 val index_invariant = store_thm(
-  "index_invariant",
+  "index_invariant[simp]",
   ``index z < size z``,
   Cases_on `z` >> simp[]);
-val _ = export_rewrites ["index_invariant"]
 
 val size_nonzero = store_thm(
-  "size_nonzero",
+  "size_nonzero[simp]",
   ``0 < size z``,
   Cases_on `z` >> simp[]);
-val _ = export_rewrites ["size_nonzero"]
 
 val LENGTH_toList = store_thm(
-  "LENGTH_toList",
+  "LENGTH_toList[simp]",
   ``LENGTH (toList z) = size z``,
   Cases_on `z` >> simp[]);
-val _ = export_rewrites ["LENGTH_toList"]
 
 val moveLeft_def = Define`
   (moveLeft (Z [] a s) = Z [] a s) ∧
@@ -46,11 +43,10 @@ val moveRight_def = Define`
 `;
 
 val moveLeft_invariant = store_thm(
-  "moveLeft_invariant",
+  "moveLeft_invariant[simp]",
   ``toList (moveLeft z) = toList z ∧ size (moveLeft z) = size z``,
   `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
   Cases_on `p` >> rw[moveLeft_def] >> simp[]);
-val _ = export_rewrites ["moveLeft_invariant"]
 
 val moveLeft_index_lemma = prove(
   ``index (moveLeft z) = if 0 < index z then index z - 1 else 0``,
@@ -75,12 +71,11 @@ val moveRight_possible = store_thm(
   Cases_on `s` >> simp[moveRight_def, index_def, size_def]);
 
 val moveRight_invariant = store_thm(
-  "moveRight_invariant",
+  "moveRight_invariant[simp]",
   ``toList (moveRight z) = toList z /\ size (moveRight z) = size z``,
   `∃p a s. z = Z p a s` by (Cases_on `z` >> simp[]) >>
   Cases_on `s` >> rw[moveRight_def] >>
   simp[toList_def, index_def, arithmeticTheory.ADD1, size_def])
-val _ = export_rewrites ["moveRight_invariant"]
 
 val moveRight_index_lemma = prove(
   ``index (moveRight z) = if index z < size z - 1 then index z + 1
@@ -121,9 +116,8 @@ val moveToI_lemma = prove(
   ])
 
 val moveToI_invariant = save_thm(
-  "moveToI_invariant",
+  "moveToI_invariant[simp]",
   LIST_CONJ (List.take(CONJUNCTS moveToI_lemma, 2)));
-val _ = export_rewrites ["moveToI_invariant"]
 
 val moveToI_index = store_thm(
   "moveToI_index",
@@ -141,10 +135,9 @@ val zipper_EQ = store_thm(
   fs[APPEND_11_LENGTH]);
 
 val moveToI_moveToI = store_thm(
-  "moveToI_moveToI",
+  "moveToI_moveToI[simp]",
   ``moveToI i (moveToI j z) = moveToI i z``,
   simp[zipper_EQ, moveToI_index_COND]);
-val _ = export_rewrites ["moveToI_moveToI"]
 
 val zmap_def = Define`
   zmap f (Z p a s) = Z (MAP f p) (f a) (MAP f s)
@@ -152,16 +145,14 @@ val zmap_def = Define`
 val _ = export_rewrites ["zmap_def"]
 
 val size_zmap = store_thm(
-  "size_zmap",
+  "size_zmap[simp]",
   ``size (zmap f z) = size z``,
   Cases_on `z` >> simp[]);
-val _ = export_rewrites ["size_zmap"]
 
 val index_zmap = store_thm(
-  "index_zmap",
+  "index_zmap[simp]",
   ``index (zmap f z) = index z``,
   Cases_on `z` >> simp[])
-val _ = export_rewrites ["index_zmap"]
 
 val zmap_zmap_o = store_thm(
   "zmap_zmap_o",
@@ -198,36 +189,36 @@ val toList_fromList = store_thm(
   Cases_on `l` >> simp[]);
 
 val fromList_toList = store_thm(
-  "fromList_toList",
+  "fromList_toList[simp]",
   ``fromList (toList z) = moveToI 0 z``,
   simp[zipper_EQ] >> `0 < size z` by simp[] >>
   simp[toList_fromList, index_fromList, moveToI_index]);
-val _ = export_rewrites ["fromList_toList"]
 
 val zapply_def = Define`
   zapply fz xz = moveToI (MAX (index fz) (index xz))
                          (fromList (toList fz <*> toList xz))
 `
+val _ = overload_on("APPLICATIVE_FAPPLY", ``zapply``)
 
 val zmap_pure = store_thm(
   "zmap_pure",
-  ``zapply (zpure f) z = zmap f z``,
+  ``zpure f <*> z = zmap f z``,
   simp[zapply_def, zpure_def, listTheory.SINGL_APPLY_MAP, MAP_toList] >>
   simp[zipper_EQ, moveToI_index]);
 
 val pure_pure_apply = store_thm(
   "pure_pure_apply",
-  ``zapply (zpure f) (zpure x) = zpure (f x)``,
+  ``zpure f <*> zpure x = zpure (f x)``,
   simp[zmap_pure] >> simp[zmap_def, zpure_def]);
 
 val pure_apply_permute = store_thm(
   "pure_apply_permute",
-  ``zapply fs (zpure x) = zapply (zpure (λf. f x)) fs``,
+  ``fs <*> zpure x = zpure (λf. f x) <*> fs``,
   simp[zapply_def, zpure_def, SINGL_APPLY_PERMUTE]);
 
 val LENGTH_LIST_APPLY = store_thm(
   "LENGTH_LIST_APPLY",
-  ``LENGTH (LIST_APPLY fs xs) = LENGTH fs * LENGTH xs``,
+  ``LENGTH (fs <*> xs) = LENGTH fs * LENGTH xs``,
   simp[LIST_APPLY_DEF] >> Induct_on `fs` >> simp[] >>
   simp[arithmeticTheory.MULT_CLAUSES]);
 
@@ -251,8 +242,7 @@ val lemma' = prove(
 
 val apply_pure_o = store_thm(
   "apply_pure_o",
-  ``zapply (zapply (zapply (zpure (o)) fs) gs) xs =
-    zapply fs (zapply gs xs)``,
+  ``zpure (o) <*> fs <*> gs <*> xs = fs <*> (gs <*> xs)``,
   simp[zmap_pure] >>
   simp[zapply_def, moveToI_index, lemma, size_fromList, toList_fromList,
        LENGTH_LIST_APPLY, arithmeticTheory.ZERO_LESS_MULT, lemma'] >>
