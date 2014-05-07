@@ -2407,7 +2407,8 @@ val dominates_SUBSET = store_thm(
    be {|2|} and y has to be {|0|}.  But y is not dominated by x, because there is
    nothing in x that is R-bigger than 0.
 *)
-val mlt_dominates0 = prove(
+val mlt_dominates_thm1 = store_thm(
+  "mlt_dominates_thm1",
   ``transitive R ==>
     !b1 b2. mlt R b1 b2 <=>
             FINITE_BAG b1 /\ FINITE_BAG b2 /\
@@ -2576,8 +2577,8 @@ val BAG_INTER_FINITE = store_thm(
   ``FINITE_BAG b1 \/ FINITE_BAG b2 ==> FINITE_BAG (BAG_INTER b1 b2)``,
   metis_tac[FINITE_SUB_BAG, BAG_INTER_SUB_BAG]);
 
-val mlt_dominates_thm = store_thm(
-  "mlt_dominates_thm",
+val mlt_dominates_thm2 = store_thm(
+  "mlt_dominates_thm2",
   ``WF R /\ transitive R ==>
     !b1 b2. mlt R b1 b2 <=>
             FINITE_BAG b1 /\ FINITE_BAG b2 /\
@@ -2585,7 +2586,7 @@ val mlt_dominates_thm = store_thm(
                   BAG_DISJOINT x y /\
                   (b1 = (b2 - x) + y) /\
                   bdominates R y x``,
-  rpt strip_tac >> simp[mlt_dominates0] >>
+  rpt strip_tac >> simp[mlt_dominates_thm1] >>
   map_every Cases_on [`FINITE_BAG b1`, `FINITE_BAG b2`] >> simp[] >>
   reverse eq_tac >> strip_tac >- metis_tac[] >>
   qabbrev_tac `II = BAG_INTER x y` >>
@@ -2630,7 +2631,7 @@ val mlt_INSERT_CANCEL = store_thm(
   "mlt_INSERT_CANCEL",
   ``transitive R /\ WF R ==>
     (mlt R (BAG_INSERT e a) (BAG_INSERT e b) <=> mlt R a b)``,
-  simp[mlt_dominates_thm] >> strip_tac >> eq_tac >> strip_tac >> simp[]
+  simp[mlt_dominates_thm2] >> strip_tac >> eq_tac >> strip_tac >> simp[]
   >- (map_every qexists_tac [`x`, `y`] >> simp[] >>
       `x <= b`
         by (qpat_assum `x <= BAG_INSERT e b` mp_tac >>
@@ -2721,7 +2722,7 @@ val mltLT_SING0 = store_thm(
   "mltLT_SING0",
   ``mlt (<) {|0:num|} b <=> FINITE_BAG b /\ b <> {|0|} /\ b <> {||}``,
   reverse eq_tac
-  >- (strip_tac >> simp[mlt_dominates0, relationTheory.transitive_def] >>
+  >- (strip_tac >> simp[mlt_dominates_thm1, relationTheory.transitive_def] >>
       Cases_on `BAG_IN 0 b`
       >- (map_every qexists_tac [`b - {|0|}`, `{||}`] >>
           simp[] >>
@@ -2733,7 +2734,7 @@ val mltLT_SING0 = store_thm(
       simp[dominates_def] >>
       `?e b0. b = BAG_INSERT e b0` by metis_tac [BAG_cases] >>
       metis_tac[BAG_IN_BAG_INSERT, DECIDE ``x <> 0 <=> 0 < x``]) >>
-  simp[mlt_dominates_thm, relationTheory.transitive_def] >>
+  simp[mlt_dominates_thm2, relationTheory.transitive_def] >>
   rpt strip_tac
   >- (fs[] >> fs[] >> rw[] >> fs[] >> rw[] >>
       metis_tac[BAG_DISJOINT_BAG_IN, BAG_IN_BAG_INSERT]) >>
