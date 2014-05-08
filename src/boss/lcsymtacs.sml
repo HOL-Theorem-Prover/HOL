@@ -38,6 +38,7 @@ struct
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
+  val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
