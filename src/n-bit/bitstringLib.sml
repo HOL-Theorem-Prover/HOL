@@ -292,7 +292,9 @@ end
 
 (* ------------------------------------------------------------------------- *)
 
-(* Simplify expressions of the form ``word_bit i (v2w [...])``.
+(* Simplify expressions of the form
+
+   ``word_bit i (v2w [...])`` and ``v2w [...] ' i``.
 
    For example:
 
@@ -314,7 +316,11 @@ local
 in
    fun word_bit_CONV tm =
       let
-         val (i, t) = wordsSyntax.dest_word_bit tm
+         val ((i, t), c) =
+            case Lib.total wordsSyntax.dest_word_bit tm of
+               SOME x => (x, ALL_CONV)
+             | NONE => (Lib.swap (fcpSyntax.dest_fcp_index tm),
+                        wordsLib.WORD_BIT_INDEX_CONV false)
          val ty = wordsSyntax.dim_of t
          val lt_thm =
                numSyntax.mk_less (i, fcpSyntax.mk_dimindex ty)
@@ -323,7 +329,7 @@ in
                  |> Drule.EQT_ELIM
          val thm = Drule.MATCH_MP word_bit_last_shiftr lt_thm
       in
-         (Conv.REWR_CONV thm THENC cnv) tm
+         (c THENC Conv.REWR_CONV thm THENC cnv) tm
       end
       handle HOL_ERR {message = m, ...} => raise ERR "word_bit_CONV" m
 end
