@@ -214,6 +214,12 @@ val NotMon = Q.prove(
    |> Drule.SPEC_ALL
    |> usave_as "NotMon"
 
+val NotHyp = Q.prove(
+   `!mode. GoodMode mode ==> mode <> 26w`,
+   rw [GoodMode_def] \\ rw [])
+   |> Drule.SPEC_ALL
+   |> usave_as "NotHyp"
+
 val R_mode_11 = Q.store_thm("R_mode_11",
    `!r1 r2 m. (R_mode m r1 = R_mode m r2) = (r1 = r2)`,
    wordsLib.Cases_word_value
@@ -222,6 +228,18 @@ val R_mode_11 = Q.store_thm("R_mode_11",
    \\ simp [R_mode_def]
    \\ rw []
    )
+
+val IsSecure = Q.prove(
+   `!s. ~s.Extensions Extension_Security ==> (IsSecure () s = (T, s))`,
+   rw [IsSecure_def, HaveSecurityExt_def, pred_setTheory.SPECIFICATION])
+   |> Drule.SPEC_ALL
+   |> usave_as "IsSecure"
+
+val CurrentModeIsHyp = Q.prove(
+   `!mode s. GoodMode s.CPSR.M ==> (CurrentModeIsHyp () s = (F, s))`,
+   simp [CurrentModeIsHyp_def, DISCH_ALL BadMode, DISCH_ALL NotHyp])
+   |> Drule.SPEC_ALL
+   |> usave_as "CurrentModeIsHyp"
 
 (* ------------------------------------------------------------------------ *)
 

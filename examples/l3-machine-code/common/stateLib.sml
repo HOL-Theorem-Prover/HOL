@@ -879,7 +879,7 @@ fun rename_vars (rename1, rename2, bump) =
 
    Given a thm_def of the form
 
-    |- !x. f x = p1 * ... * pn * cond c1 * ... cond cm
+    |- !x. f x = p1 * ... * pn * cond c1 * ... * cond cm
 
    (where the conds need not be at the end) and a theorem "thm" of the form
 

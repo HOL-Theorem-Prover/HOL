@@ -56,5 +56,6 @@ sig
      (string * term list -> bool) ->
      term list * term list * term -> term list * term list
    val MOVE_COND_CONV: conv
+   val MOVE_COND_RULE: term -> rule
    val PC_CONV: string -> conv
 end

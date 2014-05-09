@@ -85,6 +85,18 @@ val arm_frame =
        (`K arm_c_CPSR_V`,
         `\s:arm_state a w. s with CPSR := cpsr with V := w`,
         `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_Q`,
+        `\s:arm_state a w. s with CPSR := cpsr with Q := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_A`,
+        `\s:arm_state a w. s with CPSR := cpsr with A := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_I`,
+        `\s:arm_state a w. s with CPSR := cpsr with I := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_F`,
+        `\s:arm_state a w. s with CPSR := cpsr with F := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_J`,
         `\s:arm_state a w. s with CPSR := cpsr with J := w`,
         `\s:arm_state. s with CPSR := cpsr`),
@@ -93,6 +105,18 @@ val arm_frame =
         `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_E`,
         `\s:arm_state a w. s with CPSR := cpsr with E := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_M`,
+        `\s:arm_state a w. s with CPSR := cpsr with M := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_GE`,
+        `\s:arm_state a w. s with CPSR := cpsr with GE := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_IT`,
+        `\s:arm_state a w. s with CPSR := cpsr with IT := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_psr'rst`,
+        `\s:arm_state a w. s with CPSR := cpsr with psr'rst := w`,
         `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_FP_FPSCR_N`,
         `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with N := w`,
@@ -242,18 +266,25 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "arm_exception" => 1
-       | "arm_CPSR_J" => 5
-       | "arm_CPSR_E" => 6
-       | "arm_CPSR_T" => 7
-       | "arm_CPSR_M" => 8
-       | "arm_CPSR_N" => 9
-       | "arm_CPSR_Z" => 10
-       | "arm_CPSR_C" => 11
-       | "arm_CPSR_V" => 12
-       | "arm_FP_FPSCR_N" => 13
-       | "arm_FP_FPSCR_Z" => 14
-       | "arm_FP_FPSCR_C" => 15
-       | "arm_FP_FPSCR_V" => 16
+       | "arm_CPSR_A" => 2
+       | "arm_CPSR_I" => 3
+       | "arm_CPSR_F" => 4
+       | "arm_CPSR_psr'rst" => 5
+       | "arm_CPSR_IT" => 6
+       | "arm_CPSR_J" => 10
+       | "arm_CPSR_E" => 11
+       | "arm_CPSR_T" => 12
+       | "arm_CPSR_M" => 13
+       | "arm_CPSR_N" => 14
+       | "arm_CPSR_Z" => 15
+       | "arm_CPSR_C" => 16
+       | "arm_CPSR_V" => 17
+       | "arm_CPSR_Q" => 18
+       | "arm_CPSR_GE" => 19
+       | "arm_FP_FPSCR_N" => 20
+       | "arm_FP_FPSCR_Z" => 21
+       | "arm_FP_FPSCR_C" => 22
+       | "arm_FP_FPSCR_V" => 23
        | _ => ~1
    val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -308,7 +339,15 @@ local
          ("arm$PSR_Q_fupd", "arm_CPSR_Q"),
          ("arm$PSR_J_fupd", "arm_CPSR_J"),
          ("arm$PSR_T_fupd", "arm_CPSR_T"),
-         ("arm$PSR_E_fupd", "arm_CPSR_E")] [] []
+         ("arm$PSR_E_fupd", "arm_CPSR_E"),
+         ("arm$PSR_A_fupd", "arm_CPSR_A"),
+         ("arm$PSR_I_fupd", "arm_CPSR_I"),
+         ("arm$PSR_F_fupd", "arm_CPSR_F"),
+         ("arm$PSR_M_fupd", "arm_CPSR_M"),
+         ("arm$PSR_IT_fupd", "arm_CPSR_IT"),
+         ("arm$PSR_GE_fupd", "arm_CPSR_GE"),
+         ("arm$PSR_psr'rst_fupd", "arm_CPSR_psr'rst")
+         ] [] []
         (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
@@ -503,12 +542,20 @@ local
           | "arm_prog$arm_CPSR_Z" => "z"
           | "arm_prog$arm_CPSR_C" => "c"
           | "arm_prog$arm_CPSR_V" => "v"
+          | "arm_prog$arm_CPSR_Q" => "q"
+          | "arm_prog$arm_CPSR_A" => "a"
+          | "arm_prog$arm_CPSR_F" => "f"
+          | "arm_prog$arm_CPSR_I" => "i"
+          | "arm_prog$arm_CPSR_GE" => "ge"
+          | "arm_prog$arm_CPSR_IT" => "it"
           | "arm_prog$arm_CPSR_M" => "mode"
+          | "arm_prog$arm_CPSR_psr'rst" => "psr_other"
           | "arm_prog$arm_FP_FPSCR_N" => "fp_n"
           | "arm_prog$arm_FP_FPSCR_Z" => "fp_z"
           | "arm_prog$arm_FP_FPSCR_C" => "fp_c"
           | "arm_prog$arm_FP_FPSCR_V" => "fp_v"
           | "arm_prog$arm_FP_FPSCR_RMode" => "rmode"
+          | "arm_prog$arm_CP15" => "cp15"
           | _ => fail())
    val arm_rename2 =
       Lib.total
@@ -606,6 +653,27 @@ in
       stateLib.introduce_triple_definition (true, arm_CONFIG_def) o
       extend_arm_code_pool o
       arm_rename
+end
+
+local
+   fun is_mode tm =
+      case Lib.total wordsSyntax.dest_word_extract tm of
+         SOME (_, _, _, ty) => ty = fcpSyntax.mk_int_numeric_type 5
+       | NONE => false
+   val config0 = GSYM (SPEC_ALL arm_CONFIG_def)
+   val mode0 = ``mode: word5``
+   val (_, mk_goodmode, _, _) = step_1 "GoodMode"
+in
+   fun change_config_rule thm =
+      let
+         val mode = HolKernel.find_term is_mode (Thm.concl thm)
+         val config = Thm.INST [mode0 |-> mode] config0
+      in
+        thm
+        |> stateLib.MOVE_COND_RULE (mk_goodmode mode)
+        |> MATCH_MP progTheory.SPEC_DUPLICATE_COND
+        |> CONV_RULE (RAND_CONV (helperLib.STAR_REWRITE_CONV config))
+      end
 end
 
 local
@@ -998,9 +1066,32 @@ val thm = arm_intro (last (arm_spec "STMIA;3,2,1"))
 
 val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
+val arm_spec_code = Count.apply arm_spec_code
 
-arm_spec_hex "eeb65a00"
 set_trace "stateLib.spec" 1
+
+  arm_spec_code `mrs r1, cpsr`
+  arm_spec_code `msr cpsr, r1` (* forces user mode *)
+  arm_spec_code `msr cpsr_f, r1`
+  arm_spec_code `msr cpsr_x, #0x0000ff00`
+  arm_spec_code `msr cpsr_s, #0x00ff0000`
+  arm_spec_code `msr cpsr_f, #0xf0000000`
+
+  (* The following RFE instructions change the operating mode.
+     As such, arm_CONFIG is not automatically introduced in the post-condition.
+     This is achieved with some post-processing.
+  *)
+
+  val f = List.map (List.map change_config_rule)
+
+  (f o arm_spec_code) `rfeia r1!`
+  (f o arm_spec_code) `rfeia r1`
+
+  (*
+
+  val thm = arm_spec_code `rfeia r1` |> hd |> hd
+
+  *)
 
   arm_spec_hex "E79F2003"  (* ldr r2, [pc, r3] *)
   arm_spec_hex "E18F20D4"  (* ldrd r2, r3, [pc, r4] *)
