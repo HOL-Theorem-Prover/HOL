@@ -622,10 +622,8 @@ REWRITE_TAC [pre_aplextoto]);
 
 val StrongLinearOrder_LESS = maybe_thm ("StrongLinearOrder_LESS",
 ``StrongLinearOrder ($< :num reln)``,
-SRW_TAC [] [StrongLinearOrder, StrongOrder_ALT,
-trichotomous, Order, irreflexive_def, transitive_def] THENL
-[IMP_RES_TAC LESS_TRANS
-,STRIP_ASSUME_TAC (Q.SPECL [`a`, `b`] LESS_LESS_CASES) THEN AR]);
+SRW_TAC [ARITH_ss] [StrongLinearOrder, StrongOrder_ALT,
+                    trichotomous, Order, irreflexive_def]);
 (* ******
 val StrongWellOrder_LESS = maybe_thm ("StrongWellOrder_LESS",
  Term`StrongWellOrder ($< :num reln)`,

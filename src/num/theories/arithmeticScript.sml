@@ -328,6 +328,12 @@ val LESS_TRANS = store_thm ("LESS_TRANS",
     THENL [SUBST_TAC[SYM(ASSUME (``n:num = p``))], ALL_TAC]
     THEN ASM_REWRITE_TAC[]);
 
+val transitive_LESS = store_thm(
+  "transitive_LESS[simp]",
+  ``transitive $<``,
+  REWRITE_TAC [relationTheory.transitive_def] THEN
+  MATCH_ACCEPT_TAC LESS_TRANS);
+
 val LESS_ANTISYM = store_thm ("LESS_ANTISYM",
    ``!m n. ~((m < n) /\ (n < m))``,
    REPEAT STRIP_TAC
