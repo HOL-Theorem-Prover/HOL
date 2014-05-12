@@ -302,6 +302,11 @@ val NOT_ZERO_LT_ZERO = store_thm ("NOT_ZERO_LT_ZERO",
    GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `n` num_CASES) THEN
    REWRITE_TAC [NOT_LESS_0, LESS_0, NOT_SUC]);
 
+val NOT_LT_ZERO_EQ_ZERO = store_thm(
+  "NOT_LT_ZERO_EQ_ZERO[simp]",
+  ``!n. ~(0 < n) <=> (n = 0)``,
+  REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO]);
+
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
 (* --------------------------------------------------------------------- *)
