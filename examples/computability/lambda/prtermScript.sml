@@ -1177,7 +1177,10 @@ val recbnf_of_correct = Store_thm(
     FULL_SIMP_TAC (srw_ss()) [minimise_def, pr_steps_pred_EQ0] THEN
     Q.EXISTS_TAC `steps n (toTerm (numdB t))` THEN CONJ_TAC THENL [
       METIS_TAC [bnf_steps],
-      Tactical.REVERSE (SRW_TAC [][]) THEN1 METIS_TAC [] THEN
+      Tactical.REVERSE (SRW_TAC [][])
+         THEN1 (`∃i. i < n ∧ ¬(0 < pr_steps_pred [i; t])` by METIS_TAC[] THEN
+                FULL_SIMP_TAC (srw_ss()) [pr_steps_pred_EQ0] THEN
+                METIS_TAC[]) THEN
       SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
       Q.X_GEN_TAC `N` THEN REPEAT STRIP_TAC THEN
       SRW_TAC [][pr_steps_correct, fromTerm_11] THEN

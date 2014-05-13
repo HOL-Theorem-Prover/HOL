@@ -83,6 +83,12 @@ Incompatibilities:
 
    This change makes the naming consistent with similar theorems `RTC_CASES1` and `RTC_CASES2` about the reflexive and transitive closure.
 
+- A theorem stating
+
+           ⊢ ¬(0 < n) ⇔ (n = 0)
+
+  (for `n` a natural number) has been added to the automatic rewrites used by `SRW_TAC` and `srw_ss()`.
+
 * * * * *
 
 *[HOL4, ?????](http://hol.sourceforge.net)*
