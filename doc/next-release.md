@@ -1,7 +1,8 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
+
 Notes on HOL 4, ?????? release
-====================================
+==============================
 
 (Released: ??? date)
 
@@ -28,21 +29,21 @@ New features:
 
 * There is an alternative syntax for specifying datatypes.  Instead of the `Hol_datatype` entry-point, one can also use `Datatype`, which takes a slightly different syntax, inspired by Haskell.  This does away with the use of the (somewhat confusing) `of` and `=>` tokens.
 
-  For example, one would define a simple type of binary tree with
+    For example, one would define a simple type of binary tree with
 
            Datatype`tree = Lf num | Node tree tree`
 
-  If the arguments to a constructor are not just simple types (expressible as single tokens), then they need to be enclosed in parentheses.  For example:
+    If the arguments to a constructor are not just simple types (expressible as single tokens), then they need to be enclosed in parentheses.  For example:
 
            Datatype`mytype = Constr mytype ('a -> bool) | BaseCase`
 
-  The `Hol_datatype` entry-point can continue to be used.  However, the LaTeX output of `EmitTeX` uses the new format, and the various `DATATYPE` constructors used in the `EmitML` module take quotations in the new format, rather than the old.
+    The `Hol_datatype` entry-point can continue to be used.  However, the LaTeX output of `EmitTeX` uses the new format, and the various `DATATYPE` constructors used in the `EmitML` module take quotations in the new format, rather than the old.
 
 * The arithmetic decision procedure for natural numbers will now prove slightly more goals by doing case-splits on boolean sub-terms that are not in the Presburger subset.  This means that goals such as
 
            0 < y ⇒ x < x + (if P then y else y + 1)
 
-   are now provable.
+    are now provable.
 
 
 Bugs fixed:
@@ -61,7 +62,7 @@ New theories:
 
            MEM i [lo ..< hi] ⇔ lo ≤ i ∧ i < hi
 
-   and
+    and
 
            LENGTH [lo ..< hi] = hi - lo
 
@@ -81,13 +82,13 @@ Incompatibilities:
 
            TC R x z ⇔ R x z ∨ ∃y. R x y ∧ TC R y z
 
-   This change makes the naming consistent with similar theorems `RTC_CASES1` and `RTC_CASES2` about the reflexive and transitive closure.
+    This change makes the naming consistent with similar theorems `RTC_CASES1` and `RTC_CASES2` about the reflexive and transitive closure.
 
 - A theorem stating
 
            ⊢ ¬(0 < n) ⇔ (n = 0)
 
-  (for `n` a natural number) has been added to the automatic rewrites used by `SRW_TAC` and `srw_ss()`.
+    (for `n` a natural number) has been added to the automatic rewrites used by `SRW_TAC` and `srw_ss()`.
 
 * * * * *
 
