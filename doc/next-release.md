@@ -66,6 +66,27 @@ New theories:
 
            LENGTH [lo ..< hi] = hi - lo
 
+* A new development in `src/floating-point`, which is a reworking of the theories in  `src/float`. Key differences are listed below.
+
+    1. The data representation:
+
+        - The old `ieeeTheory` uses a pair ` ``:num # num`` ` to represent the exponent and fraction widths and a triple ` ``:num # num # num`` ` to represent sign, exponent and fraction values.
+
+        - The new `binary_ieeeTheory` makes use of HOL records and bit-vectors. The floating-point type ` ``:(α, β) float`` ` has values of the form
+
+                  <| Sign : word1; Exponent : β word; Significand : α word |>
+
+            The fraction and exponent widths are now constrained by the type, which facilitates type-checking and avoids having to pass size arguments to operations.
+
+    2. The new development now supports standard bit-vector encoding schemes. The theory `machine_ieeeTheory` defines floating-point operations over 16-bit, 32-bit and 64-bit values. For example, the 16-bit floating point operations are defined by mapping to and from the type ``:(10, 5) float``, which is given the type abbreviation ``:half``. Theories for other sizes can be built using `machine_ieeeLib.mk_fp_encoding`.
+
+    3. There is now syntax support via the structures `binary_ieeeSyntax` and `machine_ieeeSyntax`.
+
+    4. Ground term evaluation is now supported for most operations. This can be enabled by loading `binary_ieeeLib`.
+
+    5. The full development does not build under Moscow&nbsp;ML&nbsp;2.01, as it makes use of the `IEEEReal` and `PackRealBig` basis structures.
+
+
 New tools:
 ----------
 
