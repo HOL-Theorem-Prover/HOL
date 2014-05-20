@@ -88,7 +88,7 @@ sig
   val rfs : thm list -> tactic
 
   val >> : tactic * tactic -> tactic
-  val // : tactic * tactic -> tactic
+  val \\ : tactic * tactic -> tactic
   val >| : tactic * tactic list -> tactic
   val >- : tactic * tactic -> tactic
 
