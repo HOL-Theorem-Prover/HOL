@@ -257,11 +257,11 @@ val inter_def = Define`
 
 val wf_mk_BN = prove(
   ``!t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2``,
-  map_every Cases_on [`t1`,`t2`] \\ fs [mk_BN_def,wf_def]);
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,wf_def]);
 
 val wf_mk_BS = prove(
   ``!t1 x t2. wf (mk_BS t1 x t2) <=> wf t1 /\ wf t2``,
-  map_every Cases_on [`t1`,`t2`] \\ fs [mk_BS_def,wf_def]);
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,wf_def]);
 
 val wf_inter = store_thm(
   "wf_inter",
@@ -403,7 +403,7 @@ val domain_fromList = store_thm(
 
 val ODD_IMP_NOT_ODD = prove(
   ``!k. ODD k ==> ~(ODD (k-1))``,
-  Cases \\ fs [ODD]);
+  Cases >> fs [ODD]);
 
 val lookup_delete = store_thm(
   "lookup_delete",
