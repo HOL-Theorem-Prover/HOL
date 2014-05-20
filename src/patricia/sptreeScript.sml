@@ -67,33 +67,29 @@ val insert_def = tzDefine "insert" `
      else BS t1 a' (insert ((k - 1) DIV 2) a t2))
 ` (WF_REL_TAC `measure FST` >> simp[DIV_LT_X]);
 
+val mk_BN_def = Define `
+  (mk_BN LN LN = LN) /\
+  (mk_BN t1 t2 = BN t1 t2)`;
+
+val mk_BS_def = Define `
+  (mk_BS LN x LN = LS x) /\
+  (mk_BS t1 x t2 = BS t1 x t2)`;
+
 val delete_def = zDefine`
   (delete k LN = LN) /\
   (delete k (LS a) = if k = 0 then LN else LS a) /\
   (delete k (BN t1 t2) =
      if k = 0 then BN t1 t2
      else if EVEN k then
-       let t1' = delete ((k - 1) DIV 2) t1
-       in
-         if isEmpty t1' /\ isEmpty t2 then LN
-         else BN t1' t2
+       mk_BN (delete ((k - 1) DIV 2) t1) t2
      else
-       let t2' = delete ((k - 1) DIV 2) t2
-       in
-         if isEmpty t1 /\ isEmpty t2' then LN
-         else BN t1 t2') /\
+       mk_BN t1 (delete ((k - 1) DIV 2) t2)) /\
   (delete k (BS t1 a t2) =
      if k = 0 then BN t1 t2
      else if EVEN k then
-       let t1' = delete ((k - 1) DIV 2) t1
-       in
-         if isEmpty t1' /\ isEmpty t2 then LS a
-         else BS t1' a t2
+       mk_BS (delete ((k - 1) DIV 2) t1) a t2
      else
-       let t2' = delete ((k - 1) DIV 2) t2
-       in
-         if isEmpty t1 /\ isEmpty t2' then LS a
-         else BS t1 a t2')
+       mk_BS t1 a (delete ((k - 1) DIV 2) t2))
 `;
 
 val fromList_def = Define`
@@ -120,10 +116,20 @@ val wf_insert = store_thm(
   rpt strip_tac >>
   simp[Once insert_def] >> rw[wf_def, insert_notEmpty] >> fs[wf_def]);
 
+val mk_BN_thm = prove(
+  ``!t1 t2. mk_BN t1 t2 =
+            if isEmpty t1 /\ isEmpty t2 then LN else BN t1 t2``,
+  REPEAT Cases >> EVAL_TAC);
+
+val mk_BS_thm = prove(
+  ``!t1 t2. mk_BS t1 x t2 =
+            if isEmpty t1 /\ isEmpty t2 then LS x else BS t1 x t2``,
+  REPEAT Cases >> EVAL_TAC);
+
 val wf_delete = store_thm(
   "wf_delete",
   ``!t k. wf t ==> wf (delete k t)``,
-  Induct >> rw[wf_def, delete_def] >>
+  Induct >> rw[wf_def, delete_def, mk_BN_thm, mk_BS_thm] >>
   rw[wf_def] >> rw[] >> fs[] >> metis_tac[]);
 
 val lookup_insert1 = store_thm(
@@ -155,8 +161,8 @@ val EVEN_PRE = prove(
   Induct_on `x` >> simp[] >> Cases_on `x` >> fs[] >>
   simp_tac (srw_ss()) [EVEN]);
 
-val lookup_insert_COND_EQN = store_thm(
-  "lookup_insert_COND_EQN",
+val lookup_insert = store_thm(
+  "lookup_insert",
   ``!k2 v t k1. lookup k1 (insert k2 v t) =
                 if k1 = k2 then SOME v else lookup k1 t``,
   ho_match_mp_tac (theorem "insert_ind") >> rpt strip_tac >>
@@ -227,6 +233,60 @@ val lookup_union = store_thm(
   Cases_on `m2` >> simp[lookup_def, union_def] >>
   rw[optcase_lemma]);
 
+val inter_def = Define`
+  (inter LN t = LN) /\
+  (inter (LS a) t =
+     case t of
+       | LN => LN
+       | LS b => LS a
+       | BN t1 t2 => LN
+       | BS t1 _ t2 => LS a) /\
+  (inter (BN t1 t2) t =
+     case t of
+       | LN => LN
+       | LS a => LN
+       | BN t1' t2' => mk_BN (inter t1 t1') (inter t2 t2')
+       | BS t1' a t2' => mk_BN (inter t1 t1') (inter t2 t2')) /\
+  (inter (BS t1 a t2) t =
+     case t of
+       | LN => LN
+       | LS a' => LS a
+       | BN t1' t2' => mk_BN (inter t1 t1') (inter t2 t2')
+       | BS t1' a' t2' => mk_BS (inter t1 t1') a (inter t2 t2'))
+`;
+
+val wf_mk_BN = prove(
+  ``!t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2``,
+  map_every Cases_on [`t1`,`t2`] \\ fs [mk_BN_def,wf_def]);
+
+val wf_mk_BS = prove(
+  ``!t1 x t2. wf (mk_BS t1 x t2) <=> wf t1 /\ wf t2``,
+  map_every Cases_on [`t1`,`t2`] \\ fs [mk_BS_def,wf_def]);
+
+val wf_inter = store_thm(
+  "wf_inter",
+  ``!m1 m2. wf m1 ==> wf (inter m1 m2)``,
+  Induct >> simp[wf_def, inter_def] >>
+  Cases_on `m2` >> simp[wf_def,wf_mk_BS,wf_mk_BN]);
+
+val lookup_mk_BN = prove(
+  ``lookup k (mk_BN t1 t2) = lookup k (BN t1 t2)``,
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,lookup_def]);
+
+val lookup_mk_BS = prove(
+  ``lookup k (mk_BS t1 x t2) = lookup k (BS t1 x t2)``,
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,lookup_def]);
+
+val lookup_inter = store_thm(
+  "lookup_inter",
+  ``!m1 m2 k. lookup k (inter m1 m2) =
+              case (lookup k m1,lookup k m2) of
+              | (SOME v, SOME w) => SOME v
+              | _ => NONE``,
+  Induct >> simp[lookup_def] >> Cases_on `m2` >>
+  simp[lookup_def, inter_def, lookup_mk_BS, lookup_mk_BN] >>
+  rw[optcase_lemma] >> BasicProvers.CASE_TAC);
+
 val lrnext_def = new_specification(
   "lrnext_def", ["lrnext"],
   numeralTheory.bit_initiality
@@ -270,7 +330,7 @@ val lookup_fromList = store_thm(
            else lookup n t`
     suffices_by (simp[] >> strip_tac >> simp[lookup_def]) >>
   Induct_on `l` >> simp[] >> pop_assum kall_tac >>
-  rw[lookup_insert_COND_EQN] >>
+  rw[lookup_insert] >>
   full_simp_tac (srw_ss() ++ ARITH_ss) [] >>
   `0 < n - i` by simp[] >>
   Cases_on `n - i` >> fs[] >>
@@ -312,10 +372,17 @@ val domain_union = store_thm(
   simp[pred_setTheory.EXTENSION, domain_lookup, lookup_union] >>
   qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]);
 
+val domain_inter = store_thm(
+  "domain_inter",
+  ``domain (inter t1 t2) = domain t1 INTER domain t2``,
+  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_inter] >>
+  rw [] >> Cases_on `lookup x t1` >> fs[] >>
+  BasicProvers.CASE_TAC);
+
 val domain_insert = store_thm(
   "domain_insert[simp]",
   ``domain (insert k v t) = k INSERT domain t``,
-  simp[domain_lookup, pred_setTheory.EXTENSION, lookup_insert_COND_EQN] >>
+  simp[domain_lookup, pred_setTheory.EXTENSION, lookup_insert] >>
   metis_tac[]);
 
 val domain_sing = save_thm(
@@ -334,22 +401,9 @@ val domain_fromList = store_thm(
   qmatch_assum_rename_tac `nn < SUC (LENGTH l)` [] >>
   Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
 
-val lookup_empty_delete = store_thm(
-  "lookup_empty_delete",
-  ``!t k k'. (delete k t = LN) /\ k' <> k ==> (lookup k' t = NONE)``,
-  Induct >> simp[delete_def, lookup_def]
-  >- rw[]
-  >- (map_every qx_gen_tac [`k1`, `k2`] >>
-      rw[lookup_def, delete_def]
-      >- (Cases_on `k2 = 0` >> simp[] >>
-          `(k2 - 1) DIV 2 <> (k1 - 1) DIV 2` suffices_by
-             metis_tac[optionTheory.IS_SOME_DEF] >>
-          simp[DIV2_EQ_DIV2, EVEN_PRE]) >>
-      Cases_on `k2 = 0` >> simp[] >>
-      `(k2 - 1) DIV 2 <> (k1 - 1) DIV 2` suffices_by
-         metis_tac[optionTheory.IS_SOME_DEF] >>
-      simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE]) >>
-  rw[lookup_def, delete_def]);
+val ODD_IMP_NOT_ODD = prove(
+  ``!k. ODD k ==> ~(ODD (k-1))``,
+  Cases \\ fs [ODD]);
 
 val lookup_delete = store_thm(
   "lookup_delete",
@@ -357,25 +411,11 @@ val lookup_delete = store_thm(
       lookup k1 (delete k2 t) = if k1 = k2 then NONE
                                 else lookup k1 t``,
   Induct >> simp[delete_def, lookup_def]
-  >- rw[lookup_def]
-  >- (map_every qx_gen_tac [`k1`, `k2`] >> rw[lookup_def]
-      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
-              suffices_by metis_tac[lookup_empty_delete] >>
-          simp[DIV2_EQ_DIV2, EVEN_PRE])
-      >- simp[DIV2_EQ_DIV2, EVEN_PRE]
-      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
-            suffices_by metis_tac[lookup_empty_delete] >>
-          simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])
-      >- (simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE]))
-  >- (map_every qx_gen_tac [`a`, `k1`, `k2`] >> rw[lookup_def]
-      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
-              suffices_by metis_tac[lookup_empty_delete] >>
-          simp[DIV2_EQ_DIV2, EVEN_PRE])
-      >- simp[DIV2_EQ_DIV2, EVEN_PRE]
-      >- (`(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
-              suffices_by metis_tac[lookup_empty_delete] >>
-          simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])
-      >- (simp[DIV2_EQ_DIV2, EVEN_PRE] >> metis_tac[EVEN_PRE])))
+  >> rw [lookup_def,lookup_mk_BN,lookup_mk_BS]
+  >> `(k1 - 1) DIV 2 <> (k2 - 1) DIV 2`
+        by simp[DIV2_EQ_DIV2, EVEN_PRE]
+  >> fs [] >> CCONTR_TAC >> fs [] >> srw_tac [] []
+  >> fs [EVEN_ODD] >> imp_res_tac ODD_IMP_NOT_ODD);
 
 val domain_delete = store_thm(
   "domain_delete[simp]",
@@ -626,7 +666,6 @@ val PRE_BIT2 = prove(
                ALT_ZERO, ADD_CLAUSES,
                BIT2, SUB_MONO_EQ,
                MULT_CLAUSES, SUB_0]);
-
 
 val BITDIV = prove(
   ``((BIT1 n - 1) DIV 2 = n) /\ ((BIT2 n - 1) DIV 2 = n)``,
