@@ -33,4 +33,6 @@ sig
   *)
   val fupdate_NORMALISE_CONV : Abbrev.conv
 
+  val add_finite_map_compset : computeLib.compset -> unit
+
 end
