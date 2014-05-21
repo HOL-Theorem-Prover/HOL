@@ -40,6 +40,7 @@ sig
   val RESTR_EVAL_RULE : term list -> thm -> thm
   val RESTR_EVAL_TAC  : term list -> tactic
 
+  val add_datatype_info : compset -> TypeBasePure.tyinfo -> unit
   val write_datatype_info : TypeBasePure.tyinfo -> unit
 
   val add_persistent_funs : string list -> unit
