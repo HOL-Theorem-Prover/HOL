@@ -224,8 +224,7 @@ in
            List.partition (fn thm => Lib.total get_f thm = case_const) simpls
         val case_thm = List.map lazyfy_thm case_thm
     in
-       (add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs;
-        Option.app (fn t => set_skip cs t (SOME 1)) case_const)
+      add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
     end
     val write_datatype_info = add_datatype_info the_compset
 end
