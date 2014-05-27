@@ -590,7 +590,7 @@ let
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (EXE_POLY ^ " --gcthreads=1 " ^
+  p (protect(EXE_POLY) ^ " --gcthreads=1 " ^
      String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
      " <<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";

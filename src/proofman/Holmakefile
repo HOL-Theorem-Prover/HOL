@@ -24,6 +24,6 @@ EXTRA_CLEANS = $(TARGET)
 $(TARGET): $(DEPS)
 	cd $(protect $(HOLDIR)/tools-poly) && \
         $(POLY) < builder0.ML && \
-        cc -o $@ hol.builder0.o $(POLY_LDFLAGS) && \
+        cc -o $(protect $@) hol.builder0.o $(POLY_LDFLAGS) && \
         rm hol.builder0.o
 endif
