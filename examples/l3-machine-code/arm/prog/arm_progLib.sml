@@ -588,7 +588,9 @@ local
       PURE_REWRITE_RULE arm_CPSR_T_F
    val addr_eq_conv =
       SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
-   val reg_eq_conv = REWRITE_CONV [arm_stepTheory.R_mode_11]
+   val reg_eq_conv = PURE_REWRITE_CONV [arm_stepTheory.R_mode_11]
+                     THENC Conv.DEPTH_CONV wordsLib.word_EQ_CONV
+                     THENC REWRITE_CONV []
    val arm_PC_INTRO0 =
       arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                    |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]

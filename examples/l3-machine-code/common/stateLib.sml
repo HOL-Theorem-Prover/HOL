@@ -1004,8 +1004,7 @@ in
          fun mk_frame cs = Term.mk_comb (Term.mk_comb (m_tm, df_intro cs), f)
          val insert_conv =
             utilsLib.ALL_HYP_CONV_RULE
-               (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]
-                THENC dom_eq_conv) o
+               (PURE_REWRITE_CONV [pred_setTheory.IN_DELETE]) o
             utilsLib.INST_REWRITE_CONV [Drule.UNDISCH_ALL insert_thm]
          val (mk_dvar, mk_subst) =
             case Lib.total optionSyntax.dest_option d_ty of
@@ -1044,14 +1043,19 @@ in
                        val rwt =
                           insert_conv (List.foldr progSyntax.mk_star frame xs)
                        val ineqs =
-                          rwt |> Thm.hyp |> hd
-                              |> boolSyntax.strip_conj
+                          rwt |> Thm.hyp
+                              |> List.map boolSyntax.strip_conj
+                              |> List.concat
                               |> List.filter is_ineq
-                              |> List.map ASSUME
-                       val rule =
+                              |> List.map
+                                   (utilsLib.ALL_HYP_CONV_RULE dom_eq_conv o
+                                    ASSUME)
+                       val (rwt, rule) =
                           if List.null ineqs
-                             then apply_id_rule
-                          else SIMP_RULE (update_ss++simpLib.rewrites ineqs) []
+                             then (rwt, apply_id_rule)
+                          else (utilsLib.ALL_HYP_CONV_RULE
+                                  (REWRITE_CONV ineqs) rwt,
+                                SIMP_RULE (update_ss++simpLib.rewrites ineqs)[])
                     in
                        th |> SPECC_FRAME_RULE frame
                           |> helperLib.PRE_POST_RULE
