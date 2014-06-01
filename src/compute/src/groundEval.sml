@@ -1,16 +1,13 @@
 structure groundEval =
 struct
+
+open HolKernel Parse boolLib
+
 (* used to track where the values in a term are.
 
    A value is essentially a weak-head normal form, where constants get
    to be to values too.
 *)
-
-val _ = overload_on ("B1", ``BIT1``);
-val _ = overload_on ("B2", ``BIT2``);
-val _ = overload_on ("iZ", ``numeral$iZ``);
-val _ = overload_on ("NUM", ``NUMERAL``)
-
 datatype vTree = KnownValue | vComb of vTree * vTree | Constructor
 
 fun mk_vcomb(Constructor, KnownValue) = KnownValue
@@ -21,6 +18,7 @@ fun kvify (vComb _) = KnownValue
   | kvify vt = vt
 
 datatype GEset = GE of { constrs : term HOLset.set,
+                         case_consts : term HOLset.set,
                          rwts : ((term -> thm) * vTree) Net.net }
 
 fun constrs (GE {constrs,...}) = constrs
@@ -33,10 +31,10 @@ fun vTreeOf geset t =
                    else KnownValue
       | _ => KnownValue
 
-fun add_rwt thm (geset as GE{constrs, rwts}) = let
+fun add_rwt thm (geset as GE{constrs, rwts, case_consts}) = let
   val c = thm |> concl |> strip_forall |> #2
 in
-  GE {constrs = constrs,
+  GE {constrs = constrs, case_consts = case_consts,
       rwts = Net.insert (lhs c, (REWR_CONV thm, vTreeOf geset (rhs c)))
                         rwts
      }
@@ -93,16 +91,6 @@ fun nspaces x = CharVector.tabulate(x, K #" ")
 fun trace(x, LZT(s,t)) = print (nspaces x ^ s ^ term_to_string t ^ "\n")
   | trace(x, MSG s) = print (nspaces x ^ s ^ "\n")
 
-val ncset = HOLset.addList(empty_tmset,
-                           [``NUMERAL``, ``BIT1``, ``BIT2``,
-                            ``0:num``, ``ZERO``]);
-
-val ge0 = GE {constrs = ncset, rwts = Net.empty }
-val ge = List.foldl (fn (th,ge) => add_rwt th ge) ge0
-                    (Rewrite.mk_rewrites numeralTheory.numeral_distrib @
-                     Rewrite.mk_rewrites numeralTheory.numeral_add @
-                     Rewrite.mk_rewrites numeralTheory.numeral_suc @
-                     Rewrite.mk_rewrites numeralTheory.numeral_iisuc)
 
 fun try_conv t (c,vt) =
     let
@@ -203,25 +191,4 @@ in
 end
 ;
 
-(*
-fun dot t = reduction ge (vTreeOf ge t) t (Conv (fn x => x));
-fun testdot t expected = let
-  val result = dot t
-in
-    aconv (result_term (dot t)) expected andalso
-    result_tree result = KnownValue
-  orelse
-    raise Fail ("Reduction of " ^ term_to_string t ^ " didn't give back " ^
-                term_to_string expected)
-end
-
-testdot ``1 + 1`` ``2``;
-testdot ``2 + 1`` ``3``;
-testdot ``3 + 4`` ``7``;
-testdot ``4 + 5 + 9`` ``18``;
-
-testdot ``(\x. x + y) 5`` ``5 + y``;
-testdot ``(\x. x + x + 1) ((\y. y + 10) 4)`` ``29``;
-
-*)
 end
