@@ -1,2 +1,0 @@
-selftest.exe: selftest.uo groundEval.uo
-	$(HOLMOSMLC) -o $@ $<

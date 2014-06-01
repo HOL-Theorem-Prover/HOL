@@ -1,8 +1,6 @@
-open arithmeticTheory HolKernel boolLib Parse
+open arithmeticTheory HolKernel boolLib Parse testutils
 
-fun tprint s = print (StringCvt.padRight #" " 60 s)
-
-fun fail() = (print "FAILED\n"; OS.Process.exit OS.Process.failure)
+fun fail() = die "FAILED\n"
 
 val _ = tprint "Testing that I can parse num$0"
 val _ = (Parse.Term`num$0`; print "OK\n")
@@ -81,3 +79,40 @@ val colourtests =
     ]
 
 val _ = app colourpp_test colourtests
+
+open groundEval numeralTheory
+
+val _ = overload_on ("B1", ``BIT1``);
+val _ = overload_on ("B2", ``BIT2``);
+val _ = overload_on ("iZ", ``numeral$iZ``);
+val _ = overload_on ("NUM", ``NUMERAL``)
+
+val ncset = HOLset.addList(empty_tmset,
+                           [``NUMERAL``, ``BIT1``, ``BIT2``,
+                            ``0:num``, ``ZERO``]);
+
+val ge0 = GE {constrs = ncset, rwts = Net.empty, case_consts = empty_tmset }
+val ge = List.foldl (fn (th,ge) => add_rwt th ge) ge0
+                    (Rewrite.mk_rewrites numeralTheory.numeral_distrib @
+                     Rewrite.mk_rewrites numeralTheory.numeral_add @
+                     Rewrite.mk_rewrites numeralTheory.numeral_suc @
+                     Rewrite.mk_rewrites numeralTheory.numeral_iisuc)
+
+fun dot t = reduction ge (vTreeOf ge t) t (Conv (fn x => x));
+fun testdot t expected = let
+  val result = dot t
+in
+    aconv (result_term (dot t)) expected andalso
+    result_tree result = KnownValue
+  orelse
+    die ("Reduction of " ^ term_to_string t ^ " didn't give back " ^
+         term_to_string expected)
+end;
+
+val _ = testdot ``1 + 1`` ``2``;
+val _ = testdot ``2 + 1`` ``3``;
+val _ = testdot ``3 + 4`` ``7``;
+val _ = testdot ``4 + 5 + 9`` ``18``;
+
+val _ = testdot ``(\x. x + y) 5`` ``5 + y``;
+val _ = testdot ``(\x. x + x + 1) ((\y. y + 10) 4)`` ``29``;
