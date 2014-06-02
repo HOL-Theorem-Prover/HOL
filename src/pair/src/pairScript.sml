@@ -560,6 +560,11 @@ val _ = adjoin_to_theory
       S "      distinct=NONE}];"
   end)};
 
+val datatype_pair = store_thm(
+  "datatype_pair",
+  ``DATATYPE (pair ((,) : 'a -> 'b -> 'a # 'b))``,
+  REWRITE_TAC [DATATYPE_TAG_THM]);
+
 
 (*---------------------------------------------------------------------------
                  Wellfoundedness and pairs.

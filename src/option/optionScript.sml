@@ -655,6 +655,11 @@ val _ = adjoin_to_theory
     S "        end;"
   end)};
 
+val datatype_option = store_thm(
+  "datatype_option",
+  ``DATATYPE (option (NONE:'a option) (SOME:'a -> 'a option))``,
+  REWRITE_TAC [DATATYPE_TAG_THM])
+
 val _ = TypeBase.write
   [TypeBasePure.mk_datatype_info
      {ax=TypeBasePure.ORIG option_Axiom,

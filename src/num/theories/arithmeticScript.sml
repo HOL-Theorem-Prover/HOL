@@ -4301,6 +4301,11 @@ val _ = adjoin_to_theory
    S "      distinct=SOME numTheory.NOT_SUC}];"
  end)};
 
+val datatype_num = store_thm(
+  "datatype_num",
+  ``DATATYPE (num 0 SUC)``,
+  REWRITE_TAC[DATATYPE_TAG_THM]);
+
 val _ = export_theory()
 
 end

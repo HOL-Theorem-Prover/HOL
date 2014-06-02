@@ -490,6 +490,11 @@ val _ = TypeBase.write
       one_one=SOME INR_INL_11,
       distinct=SOME sum_distinct}];
 
+val datatype_sum = store_thm(
+  "datatype_sum",
+  ``DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))``,
+  REWRITE_TAC[DATATYPE_TAG_THM]);
+
 val _ = export_theory();
 
 end
