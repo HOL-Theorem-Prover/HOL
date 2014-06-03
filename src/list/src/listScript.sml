@@ -2936,6 +2936,64 @@ val LIST_APPLY_o = store_thm(
                            APPEND_11] THEN
   SIMP_TAC (srw_ss()) [combinTheory.o_DEF, MAP_MAP_o, LIST_BIND_MAP]);
 
+(* ----------------------------------------------------------------------
+    LLEX : lexicographic ordering on lists
+   ---------------------------------------------------------------------- *)
+
+val LLEX_def = Define`
+  (LLEX R [] l2 <=> l2 <> []) /\
+  (LLEX R (h1::t1) l2 <=>
+     case l2 of
+         [] => F
+       | h2::t2 => if R h1 h2 then T
+                   else if h1 = h2 then LLEX R t1 t2
+                   else F)
+`;
+
+fun pmap f (a, b) = (f a, f b)
+val def' = uncurry CONJ (pmap SPEC_ALL (CONJ_PAIR LLEX_def))
+val LLEX_THM = save_thm(
+  "LLEX_THM[simp]",
+  CONJ (def' |> Q.INST [`l2` |-> `[]`]
+             |> SIMP_RULE (srw_ss()) [])
+       (def' |> Q.INST [`l2` |-> `h2::t2`]
+             |> SIMP_RULE (srw_ss()) []))
+
+val LLEX_NIL2 = store_thm(
+  "LLEX_NIL2[simp]",
+  ``~LLEX R l []``,
+  Cases_on `l` THEN SIMP_TAC (srw_ss()) [LLEX_def]);
+
+open relationTheory
+val LLEX_transitive = store_thm(
+  "LLEX_transitive",
+  ``transitive R ==> transitive (LLEX R)``,
+  SIMP_TAC(srw_ss()) [transitive_def] THEN STRIP_TAC THEN Induct THEN
+  SIMP_TAC (srw_ss()) [LLEX_def] THEN
+  MAP_EVERY Q.X_GEN_TAC [`h`, `y`, `z`] THEN Cases_on `y` THEN
+  SIMP_TAC (srw_ss()) [] THEN Cases_on `z` THEN
+  SIMP_TAC (srw_ss()) [] THEN METIS_TAC[]);
+
+val LLEX_total = store_thm(
+  "LLEX_total",
+  ``total (RC R) ==> total (RC (LLEX R))``,
+  SIMP_TAC (srw_ss()) [total_def, RC_DEF] THEN STRIP_TAC THEN Induct THEN
+  SIMP_TAC (srw_ss()) [LLEX_def] THEN MAP_EVERY Q.X_GEN_TAC [`h`, `y`] THEN
+  Cases_on `y` THEN SIMP_TAC (srw_ss()) [] THEN METIS_TAC[]);
+
+val LLEX_not_WF = store_thm(
+  "LLEX_not_WF",
+  ``(?a b. R a b) ==> ~WF (LLEX R)``,
+  STRIP_TAC THEN SIMP_TAC (srw_ss()) [WF_DEF] THEN
+  Q.EXISTS_TAC `\s. ?n. s = GENLIST (K a) n ++ [b]` THEN CONJ_TAC
+  THEN1 (Q.EXISTS_TAC `[b]` THEN SIMP_TAC (srw_ss()) [] THEN
+         Q.EXISTS_TAC `0` THEN SIMP_TAC (srw_ss()) []) THEN
+  REWRITE_TAC [GSYM IMP_DISJ_THM] THEN
+  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [SKOLEM_THM] THEN
+  Q.EXISTS_TAC `SUC` THEN Induct_on `n` THEN
+  ONCE_REWRITE_TAC [GENLIST_CONS] THEN
+  ASM_SIMP_TAC (srw_ss()) [LLEX_def]);
+
 (* --------------------------------------------------------------------- *)
 
 val LAST_compute = Q.store_thm("LAST_compute",
