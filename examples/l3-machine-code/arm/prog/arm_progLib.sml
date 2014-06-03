@@ -645,6 +645,10 @@ in
       stateLib.pick_endian_rule
         (is_big_end, be_sep_array_introduction, le_sep_array_introduction)
    val word_memory_introduction =
+      Conv.CONV_RULE
+         (stateLib.PRE_COND_CONV
+            (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
+                [arm_stepTheory.Aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -702,11 +706,6 @@ local
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
-   fun DEPTH_COND_CONV cnv =
-      Conv.ONCE_DEPTH_CONV
-         (fn tm => if progSyntax.is_cond tm
-                      then Conv.RAND_CONV cnv tm
-                   else raise ERR "DEPTH_COND_CONV" "")
    exception FalseTerm
    fun NOT_F_CONV tm =
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
@@ -715,18 +714,14 @@ local
       THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
-   val PRE_COND_CONV =
-      helperLib.PRE_CONV
-         (DEPTH_COND_CONV
-             (DEPTH_CONV DISJOINT_CONV
-              THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
-              THENC NOT_F_CONV)
-          THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
       THENC WGROUND_RW_CONV
-      THENC PRE_COND_CONV
+      THENC stateLib.PRE_COND_CONV
+               (DEPTH_CONV DISJOINT_CONV
+                THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
+                THENC NOT_F_CONV)
       THENC helperLib.POST_CONV
               (PURE_REWRITE_CONV spec_rwts
                THENC stateLib.PC_CONV "arm_prog$arm_PC")

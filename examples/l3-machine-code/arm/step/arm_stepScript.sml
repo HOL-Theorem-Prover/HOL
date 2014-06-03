@@ -189,6 +189,19 @@ val R_mode_def = Define`
 
 (* ------------------------------------------------------------------------ *)
 
+val R_mode = Q.store_thm("R_mode",
+   `(!m. R_mode m 0w = RName_0usr) /\
+    (!m. R_mode m 1w = RName_1usr) /\
+    (!m. R_mode m 2w = RName_2usr) /\
+    (!m. R_mode m 3w = RName_3usr) /\
+    (!m. R_mode m 4w = RName_4usr) /\
+    (!m. R_mode m 5w = RName_5usr) /\
+    (!m. R_mode m 6w = RName_6usr) /\
+    (!m. R_mode m 7w = RName_7usr) /\
+    (!m. R_mode m 15w = RName_PC)`,
+   simp [R_mode_def]
+   )
+
 val R_x_not_pc = Q.prove(
    `!d mode. d <> 15w ==> (R_mode mode d <> RName_PC)`,
    wordsLib.Cases_word_value \\ simp [R_mode_def] \\ rw [])

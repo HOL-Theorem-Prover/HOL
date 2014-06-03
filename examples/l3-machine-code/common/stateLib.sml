@@ -61,6 +61,14 @@ in
       end
 end
 
+fun PRE_COND_CONV cnv =
+   helperLib.PRE_CONV
+      (Conv.ONCE_DEPTH_CONV
+         (fn tm => if progSyntax.is_cond tm
+                      then Conv.RAND_CONV cnv tm
+                   else raise ERR "PRE_COND_CONV" "")
+       THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
+
 (* Some syntax functions *)
 
 fun mk_state_pred x =
