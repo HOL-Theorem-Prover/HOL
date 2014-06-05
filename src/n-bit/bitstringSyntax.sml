@@ -133,10 +133,12 @@ local
    val removeWS =
       String.translate (fn c => if Char.isSpace c then "" else String.str c)
 
+   val err = ERR "bitstring_of_hexstring" "failed to parse HEX"
+
    fun fromHexString s =
       case Int.scan StringCvt.HEX Substring.getc (Substring.full s) of
-        SOME (i, r) => if Substring.size r = 0 then i else raise ERR "" ""
-      | _ => raise ERR "" ""
+        SOME (i, r) => if Substring.size r = 0 then i else raise err
+      | _ => raise err
 
    fun hexSize s =
       let
