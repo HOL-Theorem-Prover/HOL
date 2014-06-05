@@ -37,71 +37,21 @@ fun toHexString x = fmt StringCvt.HEX x
   val fromBinString : string -> num
 *)
 
-fun intexp (base, exponent) =
-   let
-      fun recurse acc b n =
-         if Int.<= (n, 0)
-            then acc
-         else if Int.mod (n, 2) = 1
-            then recurse (Int.* (acc, b)) b (Int.- (n, 1))
-         else recurse acc (Int.* (b, b)) (Int.div (n, 2))
-   in
-      recurse 1 base exponent
-   end
-
-fun genFromString rdx =
-   let
-      open StringCvt
-      val (base, chunksize, chunkshift) =
-         case rdx of
-            BIN => (2, 10, fromInt 1024)
-          | OCT => (8, 5, fromInt 32768)
-          | DEC => (10, 5, fromInt 100000)
-          | HEX => (16, 5, fromInt 1048576)
-      val scanner = Int.scan rdx
-      fun readchunk s = StringCvt.scanString scanner s
-      fun recurse acc s =
-         let
-            val sz = size s
-         in
-            if Int.<= (sz, chunksize)
-               then fromInt (intexp (base, sz)) * acc +
-                    fromInt (valOf (readchunk s))
-            else let
-                    val sz_less_cs = Int.- (sz, chunksize)
-                    val pfx = substring (s, 0, chunksize)
-                    val sfx = String.extract (s, chunksize, NONE)
-                 in
-                    recurse
-                      (chunkshift * acc + fromInt (valOf (readchunk pfx))) sfx
-                 end
-         end
-   in
-      recurse zero
-   end
-   handle Option => raise Fail "String not numeric"
-
-val fromHexString = genFromString StringCvt.HEX
-val fromOctString = genFromString StringCvt.OCT
-val fromBinString = genFromString StringCvt.BIN
-val fromString = genFromString StringCvt.DEC
-
 local
-   fun toChar n =
-      str (if Int.< (n, 10)
-              then chr (Int.+ (ord #"0", n))
-           else chr (Int.- (Int.+ (ord #"A", n), 10)))
-   fun toBaseString base n =
-      let
-         val (q, r) = divMod (n, base)
-         val s = toChar (toInt r)
-      in
-         if q = zero then s else toBaseString base q ^ s
-      end
+   val radix = fn StringCvt.HEX => "HEX"
+                | StringCvt.OCT => "OCT"
+                | StringCvt.BIN => "BIN"
+                | StringCvt.DEC => "DEC"
+   fun err rdx = Fail ("String not " ^ radix rdx)
 in
-   val toBinString = toBaseString (fromInt 2)
-   val toOctString = toBaseString (fromInt 8)
-   val toHexString = toBaseString (fromInt 16)
+   fun genFromString rdx s =
+      case Int.scan rdx Substring.getc (Substring.full s) of
+         SOME (i, r) => if Substring.size r = 0 then i else raise (err rdx)
+       | _ => raise (err rdx)
+   val fromHexString = genFromString StringCvt.HEX
+   val fromOctString = genFromString StringCvt.OCT
+   val fromBinString = genFromString StringCvt.BIN
+   val fromString = genFromString StringCvt.DEC
 end
 
 fun fromInt n = if n < 0 then raise Overflow else n
