@@ -495,7 +495,7 @@ val domain_foldi = save_thm(
                  |> SYM);
 
 val insert_union = store_thm("insert_union",
-  ``∀k v s. insert k v s = union (insert k v LN) s``,
+  ``!k v s. insert k v s = union (insert k v LN) s``,
   completeInduct_on`k` >> simp[Once insert_def] >> rw[] >>
   simp[Once union_def] >>
   Cases_on`s`>>simp[Once insert_def] >>
@@ -504,7 +504,7 @@ val insert_union = store_thm("insert_union",
   simp[arithmeticTheory.DIV_LT_X])
 
 val domain_empty = store_thm("domain_empty",
-  ``∀t. wf t ⇒ ((t = LN) ⇔ (domain t = ∅))``,
+  ``!t. wf t ==> ((t = LN) <=> (domain t = EMPTY))``,
   simp[] >> Induct >> simp[wf_def] >> metis_tac[])
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
@@ -518,13 +518,13 @@ val toListA_def = Define`
 
 local open listTheory rich_listTheory in
 val toListA_append = store_thm("toListA_append",
-  ``∀t acc. toListA acc t = toListA [] t ++ acc``,
+  ``!t acc. toListA acc t = toListA [] t ++ acc``,
   Induct >> REWRITE_TAC[toListA_def]
   >> metis_tac[APPEND_ASSOC,CONS_APPEND,APPEND])
 end
 
 val isEmpty_toListA = store_thm("isEmpty_toListA",
-  ``∀t acc. wf t ⇒ ((t = LN) ⇔ (toListA acc t = acc))``,
+  ``!t acc. wf t ==> ((t = LN) <=> (toListA acc t = acc))``,
   Induct >> simp[toListA_def,wf_def] >>
   rw[] >> fs[] >>
   fs[Once toListA_append] >>
@@ -533,11 +533,11 @@ val isEmpty_toListA = store_thm("isEmpty_toListA",
 val toList_def = Define`toList m = toListA [] m`
 
 val isEmpty_toList = store_thm("isEmpty_toList",
-  ``∀t. wf t ⇒ ((t = LN) ⇔ (toList t = []))``,
+  ``!t. wf t ==> ((t = LN) <=> (toList t = []))``,
   rw[toList_def,isEmpty_toListA])
 
 val div2_even_lemma = prove(
-  ``∀x. ∃n. (x = (n - 1) DIV 2) ∧ EVEN n ∧ 0 < n``,
+  ``!x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n``,
   Induct >- ( qexists_tac`2` >> simp[] ) >> fs[] >>
   qexists_tac`n+2` >>
   simp[ADD1,EVEN_ADD] >>
@@ -551,7 +551,7 @@ val div2_even_lemma = prove(
   simp[])
 
 val div2_odd_lemma = prove(
-  ``∀x. ∃n. (x = (n - 1) DIV 2) ∧ ODD n ∧ 0 < n``,
+  ``!x. ?n. (x = (n - 1) DIV 2) /\ ODD n /\ 0 < n``,
   Induct >- ( qexists_tac`1` >> simp[] ) >> fs[] >>
   qexists_tac`n+2` >>
   simp[ADD1,ODD_ADD] >>
@@ -565,8 +565,8 @@ val div2_odd_lemma = prove(
   simp[])
 
 val spt_eq_thm = store_thm("spt_eq_thm",
-  ``∀t1 t2. wf t1 ∧ wf t2 ⇒
-    ((t1 = t2) ⇔ ∀n. lookup n t1 = lookup n t2)``,
+  ``!t1 t2. wf t1 /\ wf t2 ==>
+    ((t1 = t2) <=> !n. lookup n t1 = lookup n t2)``,
   Induct >> simp[wf_def,lookup_def]
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
@@ -607,7 +607,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
     qmatch_assum_rename_tac`wf (BN s1 s2)`[] >>
-    `wf s1 ∧ wf s2` by fs[wf_def] >>
+    `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>
     simp[] >> ntac 2 strip_tac >>
@@ -632,13 +632,91 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
     qmatch_assum_rename_tac`wf (BS s1 z s2)`[] >>
-    `wf s1 ∧ wf s2` by fs[wf_def] >>
+    `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>
     simp[] >> ntac 2 strip_tac >>
     fs[lookup_def] >> rw[] >>
     metis_tac[prim_recTheory.LESS_REFL,div2_even_lemma,div2_odd_lemma
              ,EVEN_ODD,optionTheory.SOME_11] ))
+
+val mk_wf_def = Define `
+  (mk_wf LN = LN) /\
+  (mk_wf (LS x) = LS x) /\
+  (mk_wf (BN t1 t2) = mk_BN (mk_wf t1) (mk_wf t2)) /\
+  (mk_wf (BS t1 x t2) = mk_BS (mk_wf t1) x (mk_wf t2))`;
+
+val wf_mk_wf = store_thm("wf_mk_wf[simp]",
+  ``!t. wf (mk_wf t)``,
+  Induct \\ fs [wf_def,mk_wf_def,wf_mk_BS,wf_mk_BN]);
+
+val wf_mk_id = store_thm("wf_mk_id[simp]",
+  ``!t. wf t ==> (mk_wf t = t)``,
+  Induct \\ srw_tac [] [wf_def,mk_wf_def,mk_BS_thm,mk_BN_thm]);
+
+val lookup_mk_wf = store_thm("lookup_mk_wf[simp]",
+  ``!x t. lookup x (mk_wf t) = lookup x t``,
+  Induct_on `t` \\ fs [mk_wf_def,lookup_mk_BS,lookup_mk_BN]
+  \\ srw_tac [] [lookup_def]);
+
+val domain_mk_wf = store_thm("domain_mk_wf[simp]",
+  ``!t. domain (mk_wf t) = domain t``,
+  fs [pred_setTheory.EXTENSION,domain_lookup]);
+
+val mk_wf_eq = store_thm("mk_wf_eq[simp]",
+  ``!t1 t2. (mk_wf t1 = mk_wf t2) <=> !x. lookup x t1 = lookup x t2``,
+  metis_tac [spt_eq_thm,wf_mk_wf,lookup_mk_wf]);
+
+val union_mk_wf = store_thm("union_mk_wf[simp]",
+  ``!t1 t2. union (mk_wf t1) (mk_wf t2) = mk_wf (union t1 t2)``,
+  REPEAT STRIP_TAC
+  \\ `union (mk_wf t1) (mk_wf t2) = mk_wf (union (mk_wf t1) (mk_wf t2))` by
+        metis_tac [wf_union,wf_mk_wf,wf_mk_id]
+  \\ POP_ASSUM (fn th => once_rewrite_tac [th])
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_union]);
+
+val inter_mk_wf = store_thm("union_mk_wf[simp]",
+  ``!t1 t2. inter (mk_wf t1) (mk_wf t2) = mk_wf (inter t1 t2)``,
+  REPEAT STRIP_TAC
+  \\ `inter (mk_wf t1) (mk_wf t2) = mk_wf (inter (mk_wf t1) (mk_wf t2))` by
+        metis_tac [wf_inter,wf_mk_wf,wf_mk_id]
+  \\ POP_ASSUM (fn th => once_rewrite_tac [th])
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_inter]);
+
+val insert_mk_wf = store_thm("insert_mk_wf[simp]",
+  ``!x v t. insert x v (mk_wf t) = mk_wf (insert x v t)``,
+  REPEAT STRIP_TAC
+  \\ `insert x v (mk_wf t) = mk_wf (insert x v (mk_wf t))` by
+        metis_tac [wf_insert,wf_mk_wf,wf_mk_id]
+  \\ POP_ASSUM (fn th => once_rewrite_tac [th])
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_insert]);
+
+val delete_mk_wf = store_thm("delete_mk_wf[simp]",
+  ``!x t. delete x (mk_wf t) = mk_wf (delete x t)``,
+  REPEAT STRIP_TAC
+  \\ `delete x (mk_wf t) = mk_wf (delete x (mk_wf t))` by
+        metis_tac [wf_delete,wf_mk_wf,wf_mk_id]
+  \\ POP_ASSUM (fn th => once_rewrite_tac [th])
+  \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_delete]);
+
+val union_LN = store_thm("union_LN[simp]",
+  ``!t. (union t LN = t) /\ (union LN t = t)``,
+  Cases \\ fs [union_def]);
+
+val inter_LN = store_thm("inter_LN[simp]",
+  ``!t. (inter t LN = LN) /\ (inter LN t = LN)``,
+  Cases \\ fs [inter_def]);
+
+val union_assoc = store_thm("union_assoc",
+  ``!t1 t2 t3. union t1 (union t2 t3) = union (union t1 t2) t3``,
+  Induct \\ Cases_on `t2` \\ Cases_on `t3` \\ fs [union_def]);
+
+val inter_assoc = store_thm("inter_assoc",
+  ``!t1 t2 t3. inter t1 (inter t2 t3) = inter (inter t1 t2) t3``,
+  Induct \\ Cases_on `t2` \\ Cases_on `t3` \\ fs [inter_def]
+  \\ srw_tac [] [mk_BN_thm,mk_BS_thm] \\ fs [inter_def]
+  \\ srw_tac [] [mk_BN_thm,mk_BS_thm] \\ fs [inter_def]
+  \\ metis_tac [inter_LN]);
 
 val numeral_div0 = prove(
   ``(BIT1 n DIV 2 = n) /\
