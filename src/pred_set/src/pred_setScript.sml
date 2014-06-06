@@ -24,10 +24,13 @@ val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
 
 fun store_thm(r as(n,t,tac)) = let
-  val th = Tactical.store_thm r
+  val th = boolLib.store_thm r
 in
   if String.isPrefix "IN_" n then let
-      val stem = String.extract(n,3,NONE)
+      val stem0 = String.extract(n,3,NONE)
+      val stem = Substring.full stem0
+                    |> Substring.position "["
+                    |> #1 |> Substring.string
     in
       if isSome (CharVector.find (equal #"_") stem) then th
       else
@@ -911,7 +914,7 @@ val INSERT_INTER =
       STRIP_TAC THEN ASM_REWRITE_TAC [],
       STRIP_TAC THEN ASM_REWRITE_TAC []]);
 
-val DISJOINT_INSERT = store_thm("DISJOINT_INSERT",
+val DISJOINT_INSERT = store_thm("DISJOINT_INSERT[simp]",
 (--`!(x:'a) s t. DISJOINT (x INSERT s) t = (DISJOINT s t) /\ ~(x IN t)`--),
      REWRITE_TAC [IN_DISJOINT,IN_INSERT] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
@@ -925,6 +928,10 @@ val DISJOINT_INSERT = store_thm("DISJOINT_INSERT",
       end,
       REPEAT STRIP_TAC THEN ASM_CASES_TAC (--`x':'a = x`--) THENL
       [ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]]]);
+
+val DISJOINT_INSERT' = save_thm(
+  "DISJOINT_INSERT'[simp]",
+  ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_INSERT);
 
 val INSERT_SUBSET =
     store_thm
@@ -1521,7 +1528,7 @@ val INJ_COMPOSE =
 
 val INJ_EMPTY =
     store_thm
-    ("INJ_EMPTY",
+    ("INJ_EMPTY[simp]",
      (--`!f:'a->'b. (!s. INJ f {} s) /\ (!s. INJ f s {} = (s = {}))`--),
      REWRITE_TAC [INJ_DEF,NOT_IN_EMPTY,EXTENSION] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
@@ -5186,7 +5193,7 @@ val _ = export_rewrites
      "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV",
      "DIFF_SUBSET",
      (* "DISJOINT" theorems *)
-     "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
+     "DISJOINT_EMPTY", "DISJOINT_UNION_BOTH",
      "DISJOINT_EMPTY_REFL_RWT",
      (* "IMAGE" theorems *)
      "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",
