@@ -219,10 +219,6 @@ val INTER_INSERT = prove(
                            else s INTER t``,
   SRW_TAC [][EXTENSION] THEN METIS_TAC []);
 
-val DISJOINT_INSERT = prove(
-  ``DISJOINT s (e INSERT t) = ~(e IN s) /\ DISJOINT s t``,
-  SRW_TAC [][DISJOINT_DEF, INTER_INSERT]);
-
 val avoid_finite_set0 = prove(
   ``!s1. FINITE s1 ==>
          FINITE ub /\ s1 SUBSET ub ==>
@@ -581,7 +577,7 @@ val OKpm_avoids = prove(
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][] THENL [
     SRW_TAC [][avoid_finite_set],
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    SRW_TAC [][DISJOINT_INSERT] THEN
+    SRW_TAC [][] THEN
     Cases_on `e IN patoms pi` THENL [
       Q_TAC (NEW_TAC "z") `patoms pi UNION tysFV ty UNION {e} UNION Set` THEN
       Q.EXISTS_TAC `cpmpm [(z,e)] pi` THEN
