@@ -32,8 +32,7 @@ val IsSmall_FINITE = Q.store_thm(
 "IsSmall_FINITE",
 `∀s. FINITE s ⇒ IsSmall s`,
 ho_match_mp_tac FINITE_INDUCT >>
-srw_tac [][IsSmall_def] >- (
-  srw_tac [][INJ_DEF] ) >>
+srw_tac [][IsSmall_def] >>
 map_every qexists_tac [`λx. if x = e then z else f x`,`Suc z`] >>
 fsrw_tac [][INJ_DEF,explode_def,Suc_def,U_def,Singleton_def] >>
 srw_tac [][] >> metis_tac [NotInSelf]);

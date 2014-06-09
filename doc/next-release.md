@@ -111,6 +111,12 @@ Incompatibilities:
 
     (for `n` a natural number) has been added to the automatic rewrites used by `SRW_TAC` and `srw_ss()`.
 
+- Some new automatic rewrites from `pred_setTheory`:
+
+    * `⊢ DISJOINT (x INSERT s) t ⇔ DISJOINT s t ∧ x ∉ t`  (and the version of this with `DISJOINT s (x INSERT t)` as the l.h.s.)
+    * `⊢ ∀f s. INJ f ∅ s`
+    * `⊢ ∀f s. INJ f s ∅ ⇔ (s = ∅)`
+
 * * * * *
 
 <div class="footer">
