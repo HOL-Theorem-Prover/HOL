@@ -9,7 +9,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Inst of string * string
              | NoTurnstile | Width of int
              | Mathmode of string
-             | AllTT | ShowTypes
+             | AllTT | ShowTypes of int
              | Conj of int
              | Rule | StackedRule
              | NoDollarParens
@@ -48,13 +48,20 @@ fun stringOpt pos s =
   | "nostile" => SOME NoTurnstile
   | "of" => SOME TypeOf
   | "rule" => SOME Rule
-  | "showtypes" => SOME ShowTypes
   | "spaceddef" => SOME SpacedDef
   | "stackedrule" => SOME StackedRule
   | "tt" => SOME TT
   | _ => let
     in
-      if String.isPrefix ">>" s then let
+      if String.isPrefix "showtypes" s then let
+        val numpart_s = String.extract(s,9,NONE)
+      in
+        if numpart_s = "" then SOME (ShowTypes 1) else
+        case Int.fromString numpart_s of
+          NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+        | SOME i => SOME (ShowTypes i)
+      end
+      else if String.isPrefix ">>" s then let
           val numpart_s = String.extract(s,2,NONE)
         in
           if numpart_s = "" then SOME (Indent 2)
@@ -183,6 +190,7 @@ fun optset_indent s =
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
+fun optset_showtypes s = get_first (fn ShowTypes i => SOME i | _ => NONE) s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
@@ -332,9 +340,9 @@ in
     end
 
     fun optprintermod f pps =
-        f pps |> (if OptSet.has ShowTypes opts then
-                    trace ("types", 1)
-                  else trace ("types", 0))
+        f pps |> (case optset_showtypes opts of
+                    NONE => trace ("types", 0)
+                  | SOME i => trace ("types", i))
               |> (if OptSet.has NoDollarParens opts then
                     trace ("EmitTeX: dollar parens", 0)
                   else

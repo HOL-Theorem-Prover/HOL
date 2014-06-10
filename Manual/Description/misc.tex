@@ -1104,9 +1104,10 @@ In this situation, the \texttt{stackedrule} option is appropriate.
 
 The term or theorem must be within a \LaTeX{} math-environment (it is typeset as if inline, with the \texttt{tt} option).
 
-\item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
+\item[\texttt{showtypes}$n$] (For use with \holthm{} and \holtm.)
 %
-Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
+Causes the term or theorem to be printed with the \texttt{types} trace set to level~$n$.
+The $n$ is optional and defaults to $1$ if omitted (equivalent to having the \ml{show\_types} reference set to \ml{true}).
 
 \item[\texttt{stackedrule}] (For use with \holthm{} and \holtm.)
 This is similar to the \texttt{rule} option, but causes implication hypotheses to be presented as a ``stack'', centered in a \LaTeX{} array on top of one another.
