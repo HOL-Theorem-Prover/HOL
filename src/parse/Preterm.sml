@@ -687,10 +687,12 @@ fun typecheck_phase1 pfns ptm =
              case pfns of
                NONE => (tcheck_say s; raise ERRloc "typecheck" l s)
              | SOME (_, typ) =>
-               (tcheck_say
-                    (String.concat [s , "Wanted it to have type:  ",
-                                    typ ty, "\n"]);
-                raise ERRloc "typecheck" l s)
+               let
+                 val s' = String.concat [s, "Wanted it to have type:  ",
+                                         typ ty, "\n"]
+               in
+                 (tcheck_say s'; raise ERRloc "typecheck" l s')
+               end
            end
 
 (* ---------------------------------------------------------------------- *)
