@@ -61,6 +61,7 @@
 (define-key hol-unicode-not-map "=" "≠")
 (define-key hol-unicode-not-map ":" "∉")
 (define-key hol-unicode-not-map "0" "∅")
+(define-key hol-unicode-not-map "~" "≁")
 
 (define-key hol-unicode-subscript-map "1" "₁")
 (define-key hol-unicode-subscript-map "2" "₂")
@@ -72,6 +73,7 @@
 (define-key hol-unicode-subscript-map "8" "₈")
 (define-key hol-unicode-subscript-map "9" "₉")
 (define-key hol-unicode-subscript-map "0" "₀")
+(define-key hol-unicode-subscript-map "t" "ₜ")
 
 (define-key hol-unicode-superscript-map "1" "¹")
 (define-key hol-unicode-superscript-map "2" "²")
