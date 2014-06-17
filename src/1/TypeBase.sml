@@ -169,7 +169,50 @@ fun is_record_type x = TypeBasePure.is_record_type (theTypeBase()) x;
 (* ----------------------------------------------------------------------
     Initialise the case-split munger in the pretty-printer
    ---------------------------------------------------------------------- *)
+local
+  fun group_by f =
+    let
+      fun i x [] = [[x]]
+        | i x (y::ys) =
+          if f x (hd y)
+          then ((x::y)::ys)
+          else y::(i x ys)
+      fun g acc [] = acc
+        | g acc (x::xs) =
+          g (i x acc) xs
+    in
+      g []
+    end
+  fun aconv_snd x y = aconv (snd x) (snd y)
+  fun max x y = if x < y then y else x
+  fun lengths [] n acc = (n,acc)
+    | lengths (l::ls) n acc =
+      let
+        val m = length l
+      in
+        lengths ls (max n m) ((m,l)::acc)
+      end
+in
+  fun pp_strip_case tm =
+    let
+      val (split_on, splits) = strip_case tm
+      val reduced_splits =
+        let
+          val groups = group_by aconv_snd splits
+          (* groups are in order, but each group is reversed *)
+          val (maxl,lgs) = lengths groups 0 []
+          (* lgs are now reversed *)
+        in
+          case total (pluck (equal maxl o fst)) lgs of
+            SOME ((_,(p,v)::_),lgs) =>
+              rev ((mk_var("_",type_of p),v)::flatten (map snd lgs))
+          | _ => splits
+        end
+    in
+      (split_on, reduced_splits)
+    end
+end
 
-val _ = term_pp.init_casesplit_munger strip_case
+val _ = term_pp.init_casesplit_munger pp_strip_case
 
 end
