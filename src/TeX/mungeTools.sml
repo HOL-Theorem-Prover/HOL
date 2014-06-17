@@ -12,6 +12,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | AllTT | ShowTypes of int
              | Conj of int
              | Rule | StackedRule
+             | RuleName of string
              | NoDollarParens
              | Merge | NoMerge
              | Unoverload of string
@@ -72,6 +73,9 @@ fun stringOpt pos s =
                           (warn(pos, "Negative indents illegal"); NONE)
                         else SOME (Indent i)
         end
+      else if String.isPrefix "rulename=" s then let
+        val name = String.extract(s,9,NONE)
+        in SOME (RuleName name) end
       else if String.isPrefix "width=" s then let
           val numpart_s = String.extract(s,6,NONE)
         in
@@ -191,6 +195,7 @@ fun optset_indent s =
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
 fun optset_showtypes s = get_first (fn ShowTypes i => SOME i | _ => NONE) s
+fun optset_rulename s = get_first (fn RuleName s => SOME s | _ => NONE) s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
@@ -315,8 +320,14 @@ in
              (fn () => addz "\\end{array}"))
           else
             ((fn () => addz "&"), (fn () => ()), (fn () => ()))
+      val rulename =
+        (case optset_rulename opts of
+           NONE => (fn () => ())
+         | SOME s => (fn () => (addz"[\\HOLRuleName{"; addz s; addz"}]")))
     in
-      addz "\\infer{\\HOLinline{";
+      addz "\\infer";
+      rulename();
+      addz "{\\HOLinline{";
       printer c;
       addz "}}{";
       hypbegin();

@@ -1104,6 +1104,14 @@ In this situation, the \texttt{stackedrule} option is appropriate.
 
 The term or theorem must be within a \LaTeX{} math-environment (it is typeset as if inline, with the \texttt{tt} option).
 
+For adding a name to the rule, see the \texttt{rulename} option below.
+
+\item[\texttt{rulename=}$\mathit{name}$] (Only has an effect with \texttt{rule} or \texttt{stackedrule}.)
+Adds \textit{name} as the optional argument to the \texttt{\bs{}infer} command when typesetting the rule.
+The name is wrapped with \texttt{\bs{}HOLRuleName}, which by default is the same as \texttt{\bs{}textsf}.
+For ease of parsing options, \textit{name} should not contain braces, brackets, or commas.
+(A name including such special characters could be typeset by renewing the \texttt{\bs{}HOLRuleName} command.)
+
 \item[\texttt{showtypes}$n$] (For use with \holthm{} and \holtm.)
 %
 Causes the term or theorem to be printed with the \texttt{types} trace set to level~$n$.
@@ -1120,6 +1128,8 @@ will print as
 \infer{r}{\begin{array}{c}p \lor q \\ p \Rightarrow r \\ q \Rightarrow r\end{array}}
 \]
 For this purely propositional example with single-letter variable names, the result looks a little odd, but if the hypotheses are textually larger, this option is indispensable.
+
+For adding a name to the rule, see the \texttt{rulename} option.
 
 \item[\texttt{tt}] %
 Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
