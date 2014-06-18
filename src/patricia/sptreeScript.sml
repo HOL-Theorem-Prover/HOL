@@ -264,7 +264,7 @@ val wf_mk_BS = prove(
   map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,wf_def]);
 
 val wf_inter = store_thm(
-  "wf_inter",
+  "wf_inter[simp]",
   ``!m1 m2. wf (inter m1 m2)``,
   Induct >> simp[wf_def, inter_def] >>
   Cases_on `m2` >> simp[wf_def,wf_mk_BS,wf_mk_BN]);
@@ -666,6 +666,12 @@ val domain_mk_wf = store_thm("domain_mk_wf[simp]",
 val mk_wf_eq = store_thm("mk_wf_eq[simp]",
   ``!t1 t2. (mk_wf t1 = mk_wf t2) <=> !x. lookup x t1 = lookup x t2``,
   metis_tac [spt_eq_thm,wf_mk_wf,lookup_mk_wf]);
+
+val inter_eq = store_thm("inter_eq[simp]",
+  ``!t1 t2 t3 t4.
+       (inter t1 t2 = inter t3 t4) <=>
+       !x. lookup x (inter t1 t2) = lookup x (inter t3 t4)``,
+  metis_tac [spt_eq_thm,wf_inter]);
 
 val union_mk_wf = store_thm("union_mk_wf[simp]",
   ``!t1 t2. union (mk_wf t1) (mk_wf t2) = mk_wf (union t1 t2)``,
