@@ -1,7 +1,17 @@
 structure groundEval =
 struct
 
+(* see:
+ - Barras, TPHOLs2001??
+ - also Norrish, "rewriting conversions with continuations" (JAR 2009?)
+*)
+
 open HolKernel Parse boolLib
+
+(* the road not taken:
+
+   mark values with a special function (Value : 'a -> 'a)
+*)
 
 (* used to track where the values in a term are.
 
@@ -10,8 +20,9 @@ open HolKernel Parse boolLib
 *)
 datatype vTree = KnownValue | vComb of vTree * vTree | Constructor
 
-fun mk_vcomb(Constructor, KnownValue) = KnownValue
-  | mk_vcomb(Constructor, Constructor) = KnownValue
+(* see comment below: this may handle e.g. CONS constructor with arity > 1 *)
+fun mk_vcomb(Constructor, KnownValue) = Constructor
+  | mk_vcomb(Constructor, Constructor) = Constructor
   | mk_vcomb(vt1, vt2) = vComb(vt1,vt2)
 
 fun kvify (vComb _) = KnownValue
@@ -24,6 +35,10 @@ datatype GEset = GE of { constrs : term HOLset.set,
 fun constrs (GE {constrs,...}) = constrs
 fun rwts (GE {rwts,...}) = rwts
 
+(* arguably not quite right because constructors may have arity > 1.
+   Consider, CONS h t in the body of an abstraction.  The vTree of this
+   should be a KnownValue, not a vComb(KnownValue, KnownValue).
+*)
 fun vTreeOf geset t =
     case dest_term t of
         COMB(t1, t2) => mk_vcomb(vTreeOf geset t1, vTreeOf geset t2)
