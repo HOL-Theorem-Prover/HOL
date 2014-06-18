@@ -265,7 +265,7 @@ val wf_mk_BS = prove(
 
 val wf_inter = store_thm(
   "wf_inter",
-  ``!m1 m2. wf m1 ==> wf (inter m1 m2)``,
+  ``!m1 m2. wf (inter m1 m2)``,
   Induct >> simp[wf_def, inter_def] >>
   Cases_on `m2` >> simp[wf_def,wf_mk_BS,wf_mk_BN]);
 
