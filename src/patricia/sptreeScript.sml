@@ -719,10 +719,10 @@ val union_assoc = store_thm("union_assoc",
 
 val inter_assoc = store_thm("inter_assoc",
   ``!t1 t2 t3. inter t1 (inter t2 t3) = inter (inter t1 t2) t3``,
-  Induct \\ Cases_on `t2` \\ Cases_on `t3` \\ fs [inter_def]
-  \\ srw_tac [] [mk_BN_thm,mk_BS_thm] \\ fs [inter_def]
-  \\ srw_tac [] [mk_BN_thm,mk_BS_thm] \\ fs [inter_def]
-  \\ metis_tac [inter_LN]);
+  fs [lookup_inter] \\ REPEAT STRIP_TAC
+  \\ Cases_on `lookup x t1` \\ fs []
+  \\ Cases_on `lookup x t2` \\ fs []
+  \\ Cases_on `lookup x t3` \\ fs []);
 
 val numeral_div0 = prove(
   ``(BIT1 n DIV 2 = n) /\
