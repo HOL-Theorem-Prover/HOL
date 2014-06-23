@@ -403,6 +403,37 @@ val _ = test {input = "f /x",
               testf = (fn s => "Prefix op without parens: "^s),
               output = "f /x"}
 
+fun bfnprinter gs be sys ppfns gravs depth t = let
+  val (bvar, body) = dest_abs t
+in
+  if aconv bvar body then #add_string ppfns "I"
+  else if aconv body boolSyntax.T then #add_string ppfns "(K T)"
+  else if aconv body boolSyntax.F then #add_string ppfns "(K F)"
+  else if aconv body (mk_neg bvar) then #add_string ppfns "neg"
+  else raise term_pp_types.UserPP_Failed
+end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+
+val _ = temp_add_user_printer("boolfunction", ``v : bool -> bool``,
+                              bfnprinter)
+
+val _ = test {input = "\\x:bool. x",
+              testf = (K "Boolean identity with special user printer"),
+              output = "I"}
+val _ = test {input = "\\x:'a. x",
+              testf = (K "Non-boolean identity with special user printer"),
+              output = "\\x. x"}
+val _ = test {
+      input = "\\x:bool. T",
+      testf = (K "Constant T with type :bool -> bool w/special user printer"),
+      output = "(K T)"
+    }
+val _ = test {
+      input = "\\x:'a. T",
+      testf = (K "Constant T with type :'a -> bool w/special user printer"),
+      output = "\\x. T"
+    }
+
+
 
 (* test DiskThms *)
 val _ = let
