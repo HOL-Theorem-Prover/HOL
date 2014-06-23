@@ -52,12 +52,6 @@ val zero_extend_def = zDefine`
 val sign_extend_def = zDefine`
   sign_extend n v = PAD_LEFT (HD v) n v`;
 
-val shiftl_def = Define`
-  shiftl v m = PAD_RIGHT F (LENGTH v + m) v`;
-
-val shiftr_def = Define`
-  shiftr v m = TAKE (LENGTH v - m) v`;
-
 val fixwidth_def = zDefine`
   fixwidth n v =
      let l = LENGTH v in
@@ -66,8 +60,21 @@ val fixwidth_def = zDefine`
        else
           DROP (l - n) v`;
 
+val shiftl_def = Define`
+  shiftl v m = PAD_RIGHT F (LENGTH v + m) v`;
+
+val shiftr_def = Define`
+  shiftr v m = TAKE (LENGTH v - m) v`;
+
 val field_def = Define`
   field h l v = fixwidth (SUC h - l) (shiftr v l)`;
+
+val rotate_def = Define`
+  rotate v m =
+    let l = LENGTH v in
+    let x = m MOD l
+    in
+       field (x - 1) 0 v ++ field (l - 1) x v`;
 
 val testbit_def = zDefine`
   testbit b v = (field b b v = [T])`;
@@ -729,11 +736,9 @@ val word_asr_v2w = Q.store_thm("word_asr_v2w",
 
 val word_ror_v2w = Q.store_thm("word_ror_v2w",
   `!n v. word_ror (v2w v : 'a word) n =
-         let l = fixwidth (dimindex(:'a)) v
-         and x = n MOD dimindex(:'a)
-         in
-            v2w (field (x - 1) 0 l ++ field (dimindex(:'a) - 1) x l)`,
-  wrw [wordsTheory.word_ror, word_or_def, word_lsl_def, word_bits_def]
+         v2w (rotate (fixwidth (dimindex(:'a)) v) n)`,
+  wrw [wordsTheory.word_ror, word_or_def, word_lsl_def, word_bits_def,
+       rotate_def, length_fixwidth]
   \\ `?p. dimindex(:'a) = i + p + 1`
   by metis_tac [arithmeticTheory.LESS_ADD_1, arithmeticTheory.ADD_ASSOC]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit]
@@ -756,7 +761,8 @@ val word_ror_v2w = Q.store_thm("word_ror_v2w",
   \\ Cases_on `i + q < dimdinex(:'a)`
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit, el_field, length_fixwidth,
           arithmeticTheory.ADD1, el_fixwidth,
-          DECIDE ``i + (p + 1) <= p + v - q = i + q < v``]);
+          DECIDE ``i + (p + 1) <= p + v - q = i + q < v``]
+  );
 
 val word_reverse_v2w = Q.store_thm("word_reverse_v2w",
   `!v. word_reverse (v2w v : 'a word) =
@@ -998,6 +1004,8 @@ time (List.map EVAL)
    ``reduce_nand (v2w [T;T;F;F] : word8)``,
    ``reduce_nor (v2w [T;T;F;F] : word8)``,
    ``reduce_xnor (v2w [T;T;F;F] : word8)``,
+
+   ``(v2w [T;T;F;F] : word4) #>> 3``,
 
    ``(v2w [T;T;F;F] : word8) >>> 2``,
    ``(v2w [T;T;F;F] : word8) << 2``,

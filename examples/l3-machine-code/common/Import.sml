@@ -1014,9 +1014,11 @@ in
       | Lsl  => pick (SOME (pickShift (wordsSyntax.mk_word_lsl_bv,
                                        wordsSyntax.mk_word_lsl)),
                       SOME bitstringSyntax.mk_shiftl, NONE, NONE)
+      | Ror  => pick (SOME (pickShift (wordsSyntax.mk_word_ror_bv,
+                                       wordsSyntax.mk_word_ror)),
+                      SOME bitstringSyntax.mk_rotate, NONE, NONE)
       | Lsr  => pickShift (wordsSyntax.mk_word_lsr_bv, wordsSyntax.mk_word_lsr)
       | Asr  => pickShift (wordsSyntax.mk_word_asr_bv, wordsSyntax.mk_word_asr)
-      | Ror  => pickShift (wordsSyntax.mk_word_ror_bv, wordsSyntax.mk_word_ror)
       | Rol  => pickShift (wordsSyntax.mk_word_rol_bv, wordsSyntax.mk_word_rol))
 end
 
