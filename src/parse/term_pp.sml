@@ -606,8 +606,8 @@ fun pp_term (G : grammar) TyG backend = let
    in
      if printers_exist then let
          fun sysprint (pg,lg,rg) depth tm = pr_term tm pg lg rg depth
-         val candidates = Net.match tm uprinters
          fun test (pat,_,_) = can (match_term pat) tm
+         val candidates = filter test (Net.match tm uprinters)
          fun printwith f = f (TyG, G)
                              backend sysprint ppfns
                              (pgrav, lgrav, rgrav)

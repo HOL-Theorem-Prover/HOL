@@ -55,6 +55,8 @@ Bugs fixed:
 
 * On Windows, the Unicode trace is now off by default.
 
+* Pretty-printers added to the system with `add_user_printer` weren’t having terms-to-be-printed tested against the supplied patterns (except by the gross approximation provided by the built-in term-net structure).  Thanks to Ramana Kumar for the [bug report](https://github.com/mn200/HOL/issues/172).
+
 New theories:
 -------------
 
