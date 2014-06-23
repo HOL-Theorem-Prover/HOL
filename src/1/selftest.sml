@@ -403,15 +403,16 @@ val _ = test {input = "f /x",
               testf = (fn s => "Prefix op without parens: "^s),
               output = "f /x"}
 
-fun bfnprinter gs be sys ppfns gravs depth t = let
-  val (bvar, body) = dest_abs t
-in
-  if aconv bvar body then #add_string ppfns "I"
-  else if aconv body boolSyntax.T then #add_string ppfns "(K T)"
-  else if aconv body boolSyntax.F then #add_string ppfns "(K F)"
-  else if aconv body (mk_neg bvar) then #add_string ppfns "neg"
-  else raise term_pp_types.UserPP_Failed
-end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+fun bfnprinter gs be sys (ppfns : term_pp_types.ppstream_funs) gravs depth t =
+  let
+    val (bvar, body) = dest_abs t
+  in
+    if aconv bvar body then #add_string ppfns "I"
+    else if aconv body boolSyntax.T then #add_string ppfns "(K T)"
+    else if aconv body boolSyntax.F then #add_string ppfns "(K F)"
+    else if aconv body (mk_neg bvar) then #add_string ppfns "neg"
+    else raise term_pp_types.UserPP_Failed
+  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
 
 val _ = temp_add_user_printer("boolfunction", ``v : bool -> bool``,
                               bfnprinter)
