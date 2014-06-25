@@ -1,16 +1,12 @@
 \documentclass[landscape,10pt]{article}
-\usepackage[landscape,a4paper,left=5mm,noheadfoot]{geometry}
+\usepackage[landscape,a4paper,left=3mm,right=3mm,noheadfoot]{geometry}
 \usepackage{multicol}
 \usepackage{helvet}
 \usepackage[colorlinks]{hyperref}
 \usepackage{underscore}
 % http://www.tex.ac.uk/tex-archive/help/Catalogue/entries/underscore.html
 
-\hyperbaseurl{http://hol.sourceforge.net/kananaskis-4-helpdocs/help/Docfiles/HTML/}
-% To use a local copy of the on-line help ...
-%\hyperbaseurl{file:$HOLDIR/help/Docfiles/HTML/}
-
-\newcommand{\hol}[2]{{\sffamily #1.\href{#1.#2.html}{#2}}}
+\newcommand{\hol}[2]{{\sffamily #1.\href{http://hol.sourceforge.net/kananaskis-9-helpdocs/help/Docfiles/HTML/#1.#2.html}{#2}}}
 \newcommand{\holnoref}[2]{{\sffamily #1.#2}}
 % You can customise the above e.g. without hyperlinks and full path..
 %\newcommand{\hol}[2]{{\sffamily #2}}
@@ -21,7 +17,7 @@
 
 \begin{document}
 \begin{center}
-\Large A HOL Quick Reference
+\Large HOL Quick Reference
 \end{center}
 \footnotesize
 \begin{multicols}{3}
@@ -38,17 +34,17 @@
 \end{tabular}
 \subsection*{Goal Stack Operations}
 \begin{tabular}{ll}
-\hol{goalstackLib}{g} \var{term} & starts a new goal \\
-\hol{goalstackLib}{e} \var{tactic} & applies a tactic to the top goal \\
-\hol{goalstackLib}{b}() & undoes previous expansion \\
-\holnoref{goalstackLib}{restart}() & undoes all expansions \\
-\holnoref{goalstackLib}{drop}() & abandons the top goal \\
-\holnoref{goalstackLib}{dropn} \var{int} & abandons a number of goals \\
-\hol{goalstackLib}{p}() & prints the state of the top goal \\
-\holnoref{goalstackLib}{status}() & prints the state of all goals \\
-\hol{goalstackLib}{top_thm}() & returns the last theorem proved \\
-\hol{goalstackLib}{r} \var{int} & rotates sub-goals \\
-\holnoref{goalstackLib}{R} \var{int} & rotates proofs \\
+\hol{proofManagerLib}{g} \var{term} & starts a new goal \\
+\hol{proofManagerLib}{e} \var{tactic} & applies a tactic to the top goal \\
+\hol{proofManagerLib}{b}() & undoes previous expansion \\
+\holnoref{proofManagerLib}{restart}() & undoes all expansions \\
+\holnoref{proofManagerLib}{drop}() & abandons the top goal \\
+\holnoref{proofManagerLib}{dropn} \var{int} & abandons a number of goals \\
+\hol{proofManagerLib}{p}() & prints the state of the top goal \\
+\holnoref{proofManagerLib}{status}() & prints the state of all goals \\
+\hol{proofManagerLib}{top_thm}() & returns the last theorem proved \\
+\hol{proofManagerLib}{r} \var{int} & rotates sub-goals \\
+\holnoref{proofManagerLib}{R} \var{int} & rotates proofs \\
 \end{tabular}
 \subsection*{Some Basic Tactics}
 \begin{tabular}{ll}
@@ -106,8 +102,10 @@
 \holnoref{intLib}{ARITH_TAC} & uses Omega test \\
 \holnoref{intLib}{COOPER_TAC} & Cooper's algorithm \\
 \holnoref{realLib}{REAL_ARITH_TAC} & \\
+\\
 \end{tabular}
 \end{multicols}
+
 \begin{multicols}{2}
 \subsection*{Term Rewriting Tactics}
 \begin{tabular}{ll}
@@ -120,8 +118,9 @@
 \hol{Rewrite}{PURE_ASM_REWRITE_TAC} [\var{thms}] & rewrites goal only using assumptions and theorems \\
 \hol{Rewrite}{PURE_ONCE_ASM_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite \\
 \hol{Rewrite}{ASM_REWRITE_TAC} [\var{thms}] & rewrites using assums., theorems and basic rewrites \\
-\hol{Rewrite}{ONCE_ASM_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite \\
+\hol{Rewrite}{ONCE_ASM_REWRITE_TAC} [\var{thms}] & as above but executes just a single rewrite
 \end{tabular}
+
 \subsection*{Simplification Tactics}
 \begin{tabular}{ll}
 \hol{simpLib}{SIMP_TAC} \var{simpset} [\var{thms}] & simplifies goal using theorems and simplification set \\
@@ -135,8 +134,11 @@ uses a list of \emph{simpset} fragments  \\[4pt]
 \holnoref{simpLib}{++}(\var{simpset},\var{ssfrag}) & adds a fragment to a \emph{simpset} \\ % infix
 \holnoref{simpLib}{\&\&}(\var{simpset},[\var{thms}]) & adds rewrites to a \emph{simpset} \\ % infix
 \holnoref{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem
-to enable AC simplification \\
+to enable AC simplification
 \end{tabular}
+\end{multicols}
+
+\begin{multicols}{2}
 \subsection*{Simplification Sets and Fragments}
 \begin{tabular}{ll}
 \hol{pureSimps}{pure_ss} & minimal \emph{simpset} for conditional rewriting \\
@@ -170,8 +172,8 @@ to enable AC simplification \\
 \holnoref{pred_setSimps}{SET_SPEC_ss} & rewrites for set membership \\
 \holnoref{pred_setSimps}{PRED_SET_ss} & rewrites for sets \\
 \end{tabular}
-
 \end{multicols}
+
 \begin{multicols}{2}
 \subsection*{Specialize and Generalize Rules}
 \begin{tabular}{ll}
