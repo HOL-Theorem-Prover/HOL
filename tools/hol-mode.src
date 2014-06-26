@@ -1129,7 +1129,7 @@ first is to show that the new term implies the old goal, and the
 second is to show the new term.
 
 (Loads the BasicProvers module if not already loaded.)"
-  (interactive "p")
+  (interactive "P")
   (let ((tactic (if p "suffices_by" "by")))
     (send-string-to-hol
      (format "proofManagerLib.e (BasicProvers.%s(`%s`,ALL_TAC))"
