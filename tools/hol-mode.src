@@ -1116,16 +1116,25 @@ printed out.  (That's assuming that quietdec is false to start with.)"
    (concat "proofManagerLib.dropn (case proofManagerLib.status() of "
            "Manager.PRFS l => List.length l)") nil t))
 
-(defun hol-subgoal-tactic ()
-  "Sends term at point (delimited by backquote characters) as a
-subgoal.  Will usually create at least two sub-goals; one will be the
-term just sent, and the others will be the term sent STRIP_ASSUME'd
-onto the assumption list of the old goal.  (Loads the BasicProvers
-module if not already loaded.)"
-  (interactive)
-  (send-string-to-hol
-   (format "proofManagerLib.e (BasicProvers.by(`%s`,ALL_TAC))"
-           (hol-term-at-point))))
+(defun hol-subgoal-tactic (p)
+  "Without a prefix argument, sends term at point (delimited by backquote
+characters) as a subgoal to prove.  Will usually create at least two sub-
+goals; one will be the term just sent, and the others will be the term sent
+STRIP_ASSUME'd onto the assumption list of the old goal.  This mimicks what
+happens with the \"by\" command.
+
+With a prefix argument, sends the delimited term as if the
+argument of a \"suffices_by\" command, making two new goals: the
+first is to show that the new term implies the old goal, and the
+second is to show the new term.
+
+(Loads the BasicProvers module if not already loaded.)"
+  (interactive "p")
+  (let ((tactic (if p "suffices_by" "by")))
+    (send-string-to-hol
+     (format "proofManagerLib.e (BasicProvers.%s(`%s`,ALL_TAC))"
+             tactic
+             (hol-term-at-point)))))
 
 
 ;; (defun hol-return-key ()
