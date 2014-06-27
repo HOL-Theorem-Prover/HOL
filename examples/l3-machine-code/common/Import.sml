@@ -956,8 +956,10 @@ local
                then d
             else raise ERR "Bop" "pick") (tm1, tm2)
       end
-   fun pickShift (a, b) (tm1 : term, tm2) : term =
+   fun pickWordShift (a, b) (tm1 : term, tm2) : term =
       (if wordsSyntax.is_word_type (Term.type_of tm2) then a else b) (tm1, tm2)
+   fun pickShift (a, b, c) =
+      pick (SOME (pickWordShift (a, b)), SOME c, NONE, NONE)
    fun COMM f (x, y) = f (y, x)
    fun icurry tm =
        Term.mk_comb
@@ -968,9 +970,12 @@ in
    fun Bop (b : binop, x, y) = (x, y) |>
      (case b of
         And    => boolSyntax.mk_conj
-      | BAnd   => wordsSyntax.mk_word_and
-      | BOr    => wordsSyntax.mk_word_or
-      | BXor   => wordsSyntax.mk_word_xor
+      | BAnd   => pick (SOME wordsSyntax.mk_word_and,
+                        SOME bitstringSyntax.mk_band, NONE, NONE)
+      | BOr    => pick (SOME wordsSyntax.mk_word_or,
+                        SOME bitstringSyntax.mk_bor, NONE, NONE)
+      | BXor   => pick (SOME wordsSyntax.mk_word_xor,
+                        SOME bitstringSyntax.mk_bxor, NONE, NONE)
       | In     => pred_setSyntax.mk_in
       | Insert => pred_setSyntax.mk_insert
       | Mdfy   => mk_modify
@@ -1011,15 +1016,16 @@ in
       | Rep  => pick (SOME (wordsSyntax.mk_word_replicate o Lib.swap),
                       SOME bitstringSyntax.mk_replicate, NONE, NONE)
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
-      | Lsl  => pick (SOME (pickShift (wordsSyntax.mk_word_lsl_bv,
-                                       wordsSyntax.mk_word_lsl)),
-                      SOME bitstringSyntax.mk_shiftl, NONE, NONE)
-      | Ror  => pick (SOME (pickShift (wordsSyntax.mk_word_ror_bv,
-                                       wordsSyntax.mk_word_ror)),
-                      SOME bitstringSyntax.mk_rotate, NONE, NONE)
-      | Lsr  => pickShift (wordsSyntax.mk_word_lsr_bv, wordsSyntax.mk_word_lsr)
-      | Asr  => pickShift (wordsSyntax.mk_word_asr_bv, wordsSyntax.mk_word_asr)
-      | Rol  => pickShift (wordsSyntax.mk_word_rol_bv, wordsSyntax.mk_word_rol))
+      | Lsl  => pickShift (wordsSyntax.mk_word_lsl_bv, wordsSyntax.mk_word_lsl,
+                           bitstringSyntax.mk_shiftl)
+      | Lsr  => pickShift (wordsSyntax.mk_word_lsr_bv, wordsSyntax.mk_word_lsr,
+                           bitstringSyntax.mk_shiftr)
+      | Ror  => pickShift (wordsSyntax.mk_word_ror_bv, wordsSyntax.mk_word_ror,
+                           bitstringSyntax.mk_rotate)
+      | Asr  => pickWordShift
+                   (wordsSyntax.mk_word_asr_bv, wordsSyntax.mk_word_asr)
+      | Rol  => pickWordShift
+                   (wordsSyntax.mk_word_rol_bv, wordsSyntax.mk_word_rol))
 end
 
 (* ------------------------------------------------------------------------ *)
