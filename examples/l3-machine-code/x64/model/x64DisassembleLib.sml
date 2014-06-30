@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------------
-   Assembly code support for the x86-64 architecture specification
+   Disassembly support for the x86-64 architecture specification
    ------------------------------------------------------------------------- *)
 
 structure x64DisassembleLib :> x64DisassembleLib =
