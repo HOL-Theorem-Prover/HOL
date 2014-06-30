@@ -132,10 +132,7 @@ local
    fun iter a =
       fn h1 :: h2 :: r =>
         (case IntExtra.fromHexString (String.implode [h1, h2]) of
-            SOME i =>
-               if i <= 255
-                  then iter (BitsN.fromNat (i, 8) :: a) r
-               else raise err
+            SOME i => iter (BitsN.fromNat (i, 8) :: a) r
           | NONE => raise err)
        | [] => List.rev a
        | _ => raise err
