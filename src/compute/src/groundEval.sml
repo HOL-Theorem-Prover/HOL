@@ -10,6 +10,16 @@ open HolKernel Parse boolLib
 *)
 datatype vTree = KnownValue | vComb of vTree * vTree | Constructor
 
+fun arg_vts vt =
+    let
+      fun recurse acc vt =
+          case vt of
+              vComb(vt1, vt2) => recurse vt1 (vt2::acc)
+            | _ => acc
+    in
+      recurse [] vt
+    end
+
 fun mk_vcomb(Constructor, KnownValue) = KnownValue
   | mk_vcomb(Constructor, Constructor) = KnownValue
   | mk_vcomb(vt1, vt2) = vComb(vt1,vt2)
@@ -23,6 +33,7 @@ datatype GEset = GE of { constrs : term HOLset.set,
 
 fun constrs (GE {constrs,...}) = constrs
 fun rwts (GE {rwts,...}) = rwts
+fun case_consts (GE {case_consts,...}) = case_consts
 
 fun vTreeOf geset t =
     case dest_term t of
@@ -99,6 +110,19 @@ fun try_conv t (c,vt) =
       SOME (th, vt)
     end handle HOL_ERR _ => NONE
 
+fun headarg_CONV n t = let
+  fun recurse t = let
+    val (l, r) = dest_comb t
+  in
+    if is_comb l then
+      RATOR_CONV (headarg_CONV n) t
+    else
+      FIRST_CONV (Net.match n t) t
+  end
+in
+  SOME (recurse t) handle HOL_ERR _ => NONE
+end
+
 fun tracek n s (Conv _) = trace(n, MSG (s ^ " Conv(...)"))
   | tracek n s (Trans(th, _)) = trace(n, LZT(s ^ " Trans: ", concl th))
 
@@ -115,9 +139,30 @@ fun reduction geset vt t k = let
          vComb(vt1, vt2) =>
           let
             val (l,r) = dest_comb t
+            val (f, xs) = strip_comb l
           in
-            trace (i, LZT("L-Descending into ", l));
-            std (i + 2) vt1 l (Conv(do_right (i + 2) vt t vt2 r k))
+            if HOLset.member(case_consts geset, f) then (
+              trace (i, MSG ("Head symbol is a case constant"));
+              (* difference comes about because if we are looking at just
+                   <case-const> @ <one-argument>
+                 we can treat this situation as if it was normal.  If instead
+                 there are further arguments off to the right, then we want
+                 to evaluate the first, as before, but our continuation
+                 is different *)
+              case xs of
+                  [] => std (i + 2) vt2 r (Conv(finish i vt t k (TM(f, vt1))))
+                | arg1 :: others =>
+                  let
+                    val arg_vts = arg_vts vt
+                  in
+                    std (i + 2) (hd arg_vts) arg1
+                        (Conv(caseconstK i vt t f (others @ r)
+                                         (tl arg_vts) k))
+                  end
+            ) else (
+              trace (i, LZT("L-Descending into ", l));
+              std (i + 2) vt1 l (Conv(do_right (i + 2) vt t vt2 r k))
+            )
           end
         | _ => apply_unchanged k vt t)
 
@@ -185,6 +230,54 @@ fun reduction geset vt t k = let
                 else
                   std i vt (rhs (concl newth)) (kcombine k newth)
               end
+      end
+  and caseconstK i pvt pt cc otherargs othervts k argresult =
+      let
+        val _ = trace (i + 2, LZT ("Arg1 finished with ",
+                                   result_term argresult))
+        val _ = case k of
+                    Trans(th, _) => trace(i,
+                                          LZT("finish conv is Trans(|- ",
+                                              concl th))
+                  | _ => trace(i, MSG ("finish conv is Conv(...)"))
+        fun add_othervts vt0 =
+            List.foldl (fn (argvt, acc) => vComb(acc,argvt)) vt0 othervts
+        val result0 =
+            case argresult of
+                TM _ => TM(pt, pvt)
+              | THM(argth, _) =>
+                let
+                  val th0 = AP_TERM f argth
+                in
+                  THM(List.foldl (fn (argth, acc) => AP_THM acc argth) th0
+                                 otherargs,
+                      add_othervts (vComb(KnownValue, KnownValue)))
+                end
+        val result_tm = result_term result0
+        val _ = sanity k ptm orelse
+                raise Fail ("finish on " ^ term_to_string result_tm ^
+                            " and " ^
+                            term_to_string (concl (Kthm k)))
+      in
+        case headarg_CONV (rwts geset) result_tm of
+            NONE =>
+            if changedp result0 then (
+              trace(i, LZT("Applying kont to ", result_term result0));
+              apply_cont k (result_tree result0) (result_thm result0)
+            ) else
+              apply_unchanged k (result_tree result0) (result_term result0)
+          | SOME newth =>
+            let
+            in
+              trace(i, LZT ("Conv resulted in: |- ", concl newth));
+              if changedp result0 then
+                std i (add_othervts KnownValue)
+                    (rhs (concl newth))
+                    (kcombine k (TRANS (result_thm result0) newth))
+              else
+                std i (add_othervts KnownValue) (rhs (concl newth))
+                    (kcombine k newth)
+            end
       end
 in
   std 0 vt t k
