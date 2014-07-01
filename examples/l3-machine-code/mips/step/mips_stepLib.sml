@@ -20,7 +20,7 @@ end
 
 open Parse
 
-val ERR = Feedback.mk_HOL_ERR "mips_evalLib"
+val ERR = Feedback.mk_HOL_ERR "mips_stepLib"
 
 val () = show_assums := true
 

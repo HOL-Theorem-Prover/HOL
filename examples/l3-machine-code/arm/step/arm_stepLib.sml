@@ -25,8 +25,8 @@ val _ = Parse.hide "add"
 infix \\
 val op \\ = op THEN
 
-val ERR = Feedback.mk_HOL_ERR "arm_evalLib"
-val WARN = Feedback.HOL_WARNING "arm_evalLib"
+val ERR = Feedback.mk_HOL_ERR "arm_stepLib"
+val WARN = Feedback.HOL_WARNING "arm_stepLib"
 
 val () = show_assums := true
 

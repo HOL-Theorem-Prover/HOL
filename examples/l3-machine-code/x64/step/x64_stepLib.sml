@@ -16,7 +16,7 @@ end
 
 open Parse
 
-val ERR = Feedback.mk_HOL_ERR "x64_evalLib"
+val ERR = Feedback.mk_HOL_ERR "x64_stepLib"
 
 val () = show_assums := true
 

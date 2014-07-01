@@ -19,8 +19,8 @@ open Parse
 infix \\
 val op \\ = op THEN
 
-val ERR = Feedback.mk_HOL_ERR "m0_evalLib"
-val WARN = Feedback.HOL_WARNING "m0_evalLib"
+val ERR = Feedback.mk_HOL_ERR "m0_stepLib"
+val WARN = Feedback.HOL_WARNING "m0_stepLib"
 
 val () = show_assums := true
 
