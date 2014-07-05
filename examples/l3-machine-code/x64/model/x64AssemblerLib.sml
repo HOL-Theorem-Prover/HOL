@@ -165,7 +165,8 @@ in
               case x64.x64_decode l of
                  x64.Zfull_inst (_, (ast, [])) =>
                     let
-                       val s = x64.joinString (x64.instructionToString ast)
+                       val s = x64.joinString
+                                 (x64.instructionToString (ast, List.length l))
                     in
                        (s, SOME (bs, check c l s))
                     end

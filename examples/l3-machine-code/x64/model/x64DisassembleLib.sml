@@ -25,7 +25,8 @@ local
               case x64.x64_decode h of
                  x64.Zfull_inst (_, (ast, rest)) =>
                     let
-                       val s = x64.joinString (x64.instructionToString ast)
+                       val w = List.length h - List.length rest
+                       val s = x64.joinString (x64.instructionToString (ast, w))
                        val used =
                           List.take (h, List.length h - List.length rest)
                        val b = String.concat
@@ -37,7 +38,7 @@ local
           end
    val decodeStream = decodeStream []
    val err = ERR "x64_disassemble_byte_list" "not a byte list"
-   val w8 = mk_int_word_type 8
+   val w8 = wordsSyntax.mk_int_word_type 8
    fun toByte b = BitsN.fromNat (wordsSyntax.uint_of_word b, 8)
 in
    fun x64_disassemble tm =
