@@ -979,7 +979,7 @@ val _ = computeLib.add_persistent_funs [
      "word_extract_v2w",
      "word_slice_v2w",
      "word_join_v2w",
-     "word_concat_v2w",
+     "word_concat_v2w_rwt",
      "word_reduce_v2w",
      "reduce_and_v2w",
      "reduce_or_v2w"
