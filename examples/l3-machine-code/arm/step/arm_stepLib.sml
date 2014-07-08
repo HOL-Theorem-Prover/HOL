@@ -1674,41 +1674,7 @@ end
 
 (* -- *)
 
-local
-   fun rename b v =
-      case Lib.total Term.dest_var v of
-        SOME (s, ty) =>
-          if String.sub (s, 0) = #"_"
-             then SOME (v |-> Term.mk_var (b ^ String.extract (s, 1, NONE), ty))
-          else NONE
-      | NONE => NONE
-  val tf =
-     fn #"f" => #"F"
-      | #"0" => #"F"
-      | #"t" => #"T"
-      | #"1" => #"T"
-      | s    => s
-   fun mk_pat_term s =
-      let
-         val p = s |> String.explode
-                   |> List.filter (not o Char.isSpace)
-                   |> List.map tf
-                   |> Lib.separate #";"
-                   |> String.implode
-      in
-         Parse.Term [HOLPP.QUOTE ("[" ^ p ^ "]")]
-      end
-in
-   fun pattern s =
-      let
-         val tm = mk_pat_term s
-         val vs = Term.free_vars tm
-         val s = List.mapPartial (rename "x") vs
-      in
-         Term.subst s tm
-      end
-   fun epattern s = pattern (s ^ "____")
-end
+fun epattern s = utilsLib.pattern (s ^ "____")
 
 val arm_patterns = List.map (I ## epattern)
   [("BranchExchange",                       "FFFTFFTF____________FFFT"),
@@ -1847,8 +1813,8 @@ in
       end
    fun mk_pattern_opcode c p =
       listSyntax.mk_list
-         (fst (listSyntax.dest_list (pattern c)) @ fst (listSyntax.dest_list p),
-          Type.bool)
+         (fst (listSyntax.dest_list (utilsLib.pattern c)) @
+          fst (listSyntax.dest_list p), Type.bool)
 end
 
 local
@@ -1874,11 +1840,11 @@ local
        | s as "SpecialFromImmediate" =>
             ("MoveTo" ^ s, [true, false, false, false, false, false, false])
        | s => (s, [true])
-   val c14 = pattern "TTTF"
-   val c15 = pattern "TTTT"
+   val c14 = utilsLib.pattern "TTTF"
+   val c15 = utilsLib.pattern "TTTT"
    fun unconditional c =
       let
-         val cond = Term.term_eq (pattern c)
+         val cond = Term.term_eq (utilsLib.pattern c)
       in
          cond c14 orelse cond c15
       end

@@ -73,6 +73,7 @@ sig
    val o_RULE: rule
    val padLeft: 'a -> int -> 'a list -> 'a list
    val partitions: 'a list -> 'a list list list
+   val pattern: string -> term
    val pick: bool list -> 'a list -> 'a list
    val process_opt:
       ''a list list -> string -> 'b -> ''a list -> (int -> 'b) -> 'b * ''a list

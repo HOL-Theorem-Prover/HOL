@@ -578,35 +578,7 @@ in
       end
 end
 
-local
-   fun rename b v =
-      case Lib.total Term.dest_var v of
-        SOME (s, ty) =>
-          if String.sub (s, 0) = #"_"
-             then SOME (v |-> Term.mk_var (b ^ String.extract (s, 1, NONE), ty))
-          else NONE
-      | NONE => NONE
-   fun mk_pat_term s =
-      let
-         val p = s |> utilsLib.uppercase
-                   |> String.explode
-                   |> Lib.separate #";"
-                   |> String.implode
-      in
-         Parse.Term [HOLPP.QUOTE ("[" ^ p ^ "]")]
-      end
-in
-   fun pattern s =
-      let
-         val tm = mk_pat_term s
-         val vs = Term.free_vars tm
-         val s = List.mapPartial (rename "x") vs
-      in
-         Term.subst s tm
-      end
-end
-
-val mips_ipatterns = List.map (I ## pattern)
+val mips_ipatterns = List.map (I ## utilsLib.pattern)
    [
     ("ADDI",   "FFTFFF__________________________"),
     ("ADDIU",  "FFTFFT__________________________"),
@@ -628,12 +600,12 @@ val mips_ipatterns = List.map (I ## pattern)
     ("MUL",    "FTTTFF_______________FFFFFFFFFTF")
    ]
 
-val mips_dpatterns = List.map (I ## pattern)
+val mips_dpatterns = List.map (I ## utilsLib.pattern)
    [
     ("JALR",   "FFFFFF_____FFFFF__________FFTFFT")
    ]
 
-val mips_rpatterns = List.map (I ## pattern)
+val mips_rpatterns = List.map (I ## utilsLib.pattern)
    [
     ("SLLV",   "FFFFFF_______________FFFFFFFFTFF"),
     ("SRLV",   "FFFFFF_______________FFFFFFFFTTF"),
@@ -659,7 +631,7 @@ val mips_rpatterns = List.map (I ## pattern)
     ("DSUBU",  "FFFFFF_______________FFFFFTFTTTT")
    ]
 
-val mips_jpatterns = List.map (I ## pattern)
+val mips_jpatterns = List.map (I ## utilsLib.pattern)
    [
     ("SLL",    "FFFFFFFFFFF_______________FFFFFF"),
     ("SRL",    "FFFFFFFFFFF_______________FFFFTF"),
@@ -672,7 +644,7 @@ val mips_jpatterns = List.map (I ## pattern)
     ("DSRA32", "FFFFFFFFFFF_______________TTTTTT")
    ]
 
-val mips_patterns0 = List.map (I ## pattern)
+val mips_patterns0 = List.map (I ## utilsLib.pattern)
    [
     ("LUI",    "FFTTTTFFFFF_____________________"),
     ("DIV",    "FFFFFF__________FFFFFFFFFFFTTFTF"),
@@ -685,13 +657,13 @@ val mips_patterns0 = List.map (I ## pattern)
     ("MFLO",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF")
    ]
 
-val mips_cpatterns = List.map (I ## pattern)
+val mips_cpatterns = List.map (I ## utilsLib.pattern)
    [
     ("MFC0",    "FTFFFFFFFFF__________FFFFFFFF___"),
     ("MTC0",    "FTFFFFFFTFF__________FFFFFFFF___")
    ]
 
-val mips_patterns = List.map (I ## pattern)
+val mips_patterns = List.map (I ## utilsLib.pattern)
    [
     ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
     ("BLTZ",    "FFFFFT_____FFFFF________________"),

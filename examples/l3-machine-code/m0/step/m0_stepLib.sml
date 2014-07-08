@@ -1204,42 +1204,7 @@ end
 
 (* -- *)
 
-local
-   fun rename b v =
-      case Lib.total Term.dest_var v of
-        SOME (s, ty) =>
-          if String.sub (s, 0) = #"_"
-             then SOME (v |-> Term.mk_var (b ^ String.extract (s, 1, NONE), ty))
-          else NONE
-      | NONE => NONE
-  val tf =
-     fn #"f" => #"F"
-      | #"0" => #"F"
-      | #"t" => #"T"
-      | #"1" => #"T"
-      | s    => s
-   fun mk_pat_term s =
-      let
-         val p = s |> String.explode
-                   |> List.filter (not o Char.isSpace)
-                   |> List.map tf
-                   |> Lib.separate #";"
-                   |> String.implode
-      in
-         Parse.Term [HOLPP.QUOTE ("[" ^ p ^ "]")]
-      end
-in
-   fun pattern s =
-      let
-         val tm = mk_pat_term s
-         val vs = Term.free_vars tm
-         val s = List.mapPartial (rename "x") vs
-      in
-         Term.subst s tm
-      end
-end
-
-val thumb_patterns = List.map (I ## pattern)
+val thumb_patterns = List.map (I ## utilsLib.pattern)
   [("ADDS",            "FFFTTFF_________"),
    ("SUBS",            "FFFTTFT_________"),
    ("ADDS (imm3)",     "FFFTTTF_________"),
@@ -1325,7 +1290,7 @@ val thumb_patterns = List.map (I ## pattern)
    ("B",               "TTTFF___________")
   ]
 
-val thumb2_patterns = List.map (I ## pattern)
+val thumb2_patterns = List.map (I ## utilsLib.pattern)
   [("B.W",   "TTTTF___________TF_T____________"),
    ("BL",    "TTTTF___________TT_T____________")
   ]

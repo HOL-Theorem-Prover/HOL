@@ -183,6 +183,23 @@ in
    fun mk_negation tm = rhsc (cnv (boolSyntax.mk_neg tm))
 end
 
+local
+   fun mk_x (s, ty) = Term.mk_var ("x" ^ String.extract (s, 1, NONE), ty)
+   fun rename v =
+      case Lib.total Term.dest_var v of
+         SOME (s_ty as (s, _)) =>
+           if String.sub (s, 0) = #"_" then SOME (v |-> mk_x s_ty) else NONE
+       | NONE => NONE
+   val mk_l = String.implode o Lib.separate #";" o String.explode o uppercase
+in
+   fun pattern s =
+      let
+         val tm = Parse.Term [HOLPP.QUOTE ("[" ^ mk_l s ^ "]")]
+      in
+         Term.subst (List.mapPartial rename (Term.free_vars tm)) tm
+      end
+end
+
 val strip_add_or_sub =
    let
       fun iter a t =
