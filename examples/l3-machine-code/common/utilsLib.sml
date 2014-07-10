@@ -586,7 +586,7 @@ in
       let
          val mtch = Term.match_term (boolSyntax.lhs (Thm.concl thm))
       in
-         fn tm => PURE_REWRITE_CONV [Drule.INST_TY_TERM (mtch tm) thm] tm
+         fn tm => PURE_ONCE_REWRITE_CONV [Drule.INST_TY_TERM (mtch tm) thm] tm
                   handle HOL_ERR _ => raise ERR "INST_REWRITE_CONV1" ""
       end
    fun INST_REWRITE_CONV l =
@@ -1157,7 +1157,7 @@ in
                      THENC REWRITE_CONV (datatype_thms (rwt @ h))
                      THENC (!step_conv)
                      THENC c)
-               val stm = Term.mk_comb (tm, st)
+               val stm = Term.mk_comb (tm, st) handle HOL_ERR _ => tm
                val sbst = context_subst stm s
                fun cnvs rwt =
                   if List.null sbst
