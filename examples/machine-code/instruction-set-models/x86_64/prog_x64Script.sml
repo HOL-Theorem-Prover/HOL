@@ -5,6 +5,7 @@ open listTheory pairTheory combinTheory addressTheory fcpTheory;
 
 open set_sepTheory progTheory x64_Theory x64_seq_monadTheory x64_icacheTheory;
 open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
+open temporalTheory;
 
 val _ = new_theory "prog_x64";
 
@@ -1545,5 +1546,31 @@ val SIGN_EXTEND_IGNORE = store_thm("SIGN_EXTEND_IGNORE",
   Cases_on `imm8` \\ SRW_TAC [] [SIGN_EXTEND_def,LET_DEF]
   \\ FULL_SIMP_TAC (srw_ss()) [] \\ IMP_RES_TAC MOD_MULT
   \\ ASM_REWRITE_TAC [GSYM (EVAL ``72057594037927935 * 256``)]);
+
+
+(* ----------------------------------------------------------------------------- *)
+(* SPEC_1 introduction                                                           *)
+(* ----------------------------------------------------------------------------- *)
+
+local
+  val lemma =
+    SPEC_IMP_SPEC_1 |> Q.GEN `model`
+    |> ISPEC ``X64_MODEL``
+    |> SIMP_RULE std_ss [X64_MODEL_def,LET_DEF]
+    |> RW [GSYM X64_MODEL_def]
+    |> Q.INST [`pre`|->`zPC pc1 * p`,`post`|->`zPC pc2 * q`]
+    |> RW [AND_IMP_INTRO] |> RW1 [CONJ_COMM] |> RW [GSYM AND_IMP_INTRO]
+  val goal = lemma |> concl |> dest_imp |> fst
+  val lemma2 = prove(
+    ``pc1 <> pc2:word64 ==> ^goal``,
+    FULL_SIMP_TAC std_ss [SEP_REFINE_def,x64_2set_def,PULL_EXISTS,
+      GSYM STAR_ASSOC,FORALL_PROD,STAR_x64_2set,X64_ICACHE_def]
+    \\ SIMP_TAC std_ss [WORD_EQ_ADD_CANCEL,n2w_11]);
+in
+  val X64_SPEC_IMP_SPEC_1 = save_thm("X64_SPEC_IMP_SPEC_1",
+    MATCH_MP lemma (lemma2 |> UNDISCH) |> DISCH_ALL
+    |> RW [AND_IMP_INTRO] |> RW1 [CONJ_COMM] |> RW [GSYM AND_IMP_INTRO]
+    |> RW1 [STAR_COMM]);
+end;
 
 val _ = export_theory();
