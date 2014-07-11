@@ -1047,17 +1047,21 @@ local
    val dr = Type.dom_rng o Term.type_of
    val dom = fst o dr
    val rng = snd o dr
-   fun is_def thy tm =
+   fun mk_def thy tm =
       let
          val name = fst (Term.dest_const tm)
+         val (l, r) = splitAtChar (Lib.equal #"@") name
       in
-         Lib.can Term.prim_mk_const {Thy = thy, Name = "dfn'" ^ name}
+         if r = "" orelse
+            Option.isSome (Int.fromString (String.extract (r, 1, NONE)))
+            then Term.prim_mk_const {Thy = thy, Name = "dfn'" ^ l}
+         else raise ERR "mk_def" ""
       end
    fun buildAst thy ty =
       let
          val cs = TypeBase.constructors_of ty
          val (t0, n) = List.partition (Lib.equal ty o Term.type_of) cs
-         val (t1, n) = List.partition (is_def thy) n
+         val (t1, n) = List.partition (Lib.can (mk_def thy)) n
          val t1 =
             List.map (fn t => Term.mk_comb (t, Term.mk_var ("x", dom t))) t1
          val n =
@@ -1084,8 +1088,7 @@ local
    fun run_thm0 pv thy ast =
       let
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         val f = Term.prim_mk_const
-                   {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const (leaf ast))}
+         val f = mk_def thy (leaf ast)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
                 then `!s. Run ^ast s = (^f, s)`
@@ -1096,12 +1099,11 @@ local
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
          val x = hd (Term.free_vars ast)
          val tm = Term.rator (HolKernel.find_term (is_call x) ast)
-         val f = Term.prim_mk_const
-                   {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const tm)}
+         val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
          pv (if rng f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f ^x, s)`
-             else `!s. Run ^ast s = ^f ^x s`) : thm
+                then `!s. Run ^ast s = (^f, s)`
+             else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_rwts thy =
       let
