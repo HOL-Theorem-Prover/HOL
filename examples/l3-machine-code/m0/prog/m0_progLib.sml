@@ -134,7 +134,7 @@ in
 end
 
 local
-   val pc_tm = Term.mk_var ("pc", word)
+   val pc_tm = ``m0$Align (pc + 4w: word32, 4)``
    fun is_pc_relative tm =
       case Lib.total dest_m0_MEM tm of
          SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
