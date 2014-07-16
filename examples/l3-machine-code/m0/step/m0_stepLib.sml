@@ -1812,14 +1812,11 @@ fun memEV ctxt tm =
        PC_rwt, IncPC_rwt, write'R_name_rwt, R_name_rwt,
        m0_stepTheory.R_x_not_pc, m0Theory.offset_case_def,
        pairTheory.pair_case_thm, Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt,
-       Align4_base_pc_plus]
+       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt]
       [[``t <> 13w:word4``]] ctxt tm
     |> List.map (utilsLib.ALL_HYP_CONV_RULE
                    (REWRITE_CONV []
-                    THENC utilsLib.INST_REWRITE_CONV
-                             [Aligned4_base_pc_plus]
-                    THENC REWRITE_CONV [Aligned_base_pc_lit]))
+                    THENC utilsLib.INST_REWRITE_CONV [Aligned4_base_pc]))
     |> addThms
 
 (* ---------------------------- *)

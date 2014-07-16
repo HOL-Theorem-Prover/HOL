@@ -506,23 +506,10 @@ val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
    \\ blastLib.FULL_BBLAST_TAC
    )
 
-val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
-   `Aligned (pc: word32, 4) ==>
-    (Aligned (pc + (x + 4w), 4) = Aligned (x, 4))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
-   `Aligned (pc: word32, 4) ==>
-    (Align (pc + 4w, 4) + x = pc + (x + 4w))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned_base_pc_lit = Q.store_thm("Aligned_base_pc_lit",
+val Aligned4_base_pc = Q.store_thm("Aligned4_base_pc",
    `Aligned
-       (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
+       (Align (pc, 4) +
+        w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
    simp [Aligned, Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
