@@ -6,8 +6,12 @@ open lcsymtacs updateLib utilsLib
 open stateTheory temporal_stateTheory
 open helperLib progSyntax temporalSyntax temporal_stateSyntax
 
-infix \\
-val op \\ = op THEN;
+structure Parse = struct
+  open Parse
+  val (Type, Term) =
+     parse_from_grammars temporal_stateTheory.temporal_state_grammars
+end
+open Parse
 
 val ERR = Feedback.mk_HOL_ERR "stateLib"
 
@@ -39,7 +43,7 @@ val MOVE_COND_CONV =
 
 local
    val cond_T = Q.prove (
-      `!p. (cond T * p = p) /\ (p * cond T = p)`,
+      `!p. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o

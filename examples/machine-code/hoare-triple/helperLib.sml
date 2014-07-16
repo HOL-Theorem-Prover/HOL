@@ -10,6 +10,7 @@ struct
    open Parse
    val (Type, Term) = parse_from_grammars progTheory.prog_grammars
 end
+open Parse
 
 val ERR = Feedback.mk_HOL_ERR "helperLib"
 
@@ -412,7 +413,7 @@ val PRE_POST_RULE = CONV_RULE o PRE_POST_CONV
 
 local
    val cond_T = Q.prove (
-      `!p. (cond T * p = p) /\ (p * cond T = p)`,
+      `!p. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       PRE_POST_RULE (REWRITE_CONV [cond_T]) o
