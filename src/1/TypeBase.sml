@@ -217,26 +217,31 @@ in
 end
 *)
 
-(* Less ambitious version, which only fires if all but one row have equal
-   right-hand-sides. *)
+(* Less ambitious version, which only fires if all (>1) but one row have
+   the same right-hand-side and it doesn't depend on any pattern variables.*)
 fun pp_strip_case tm =
   let
     val (split_on, splits) = strip_case tm
     fun sole_exception (p,v) =
       let
         val (l1,l2) = partition (aconv v o snd) splits
+        val v_rest = snd (hd l2)
       in
-        length l1 = 1
-        andalso all (aconv (snd (hd l2)) o snd) (tl l2)
+        if
+          length l1 = 1
+          andalso HOLset.isEmpty (FVL [v_rest] empty_varset)
+          andalso all (aconv v_rest o snd) (tl l2)
+        then (hd l1, v_rest)
+        else raise Match
       end
     val reduced_splits =
       case splits of
         [] => splits
       | [_] => splits
+      | [_,_] => splits
       | _ =>
         let
-          val u as (p,v) = first sole_exception splits
-          val v_rest = snd (first (not o aconv v o snd) splits)
+          val (u as (p,_),v_rest) = tryfind sole_exception splits
         in
           [u,(mk_var("_",type_of p),v_rest)]
         end
