@@ -219,36 +219,39 @@ end
 
 (* Less ambitious version, which only fires if all (>1) but one row have
    the same right-hand-side and it doesn't depend on any pattern variables.*)
-fun pp_strip_case tm =
-  let
-    val (split_on, splits) = strip_case tm
-    fun sole_exception (p,v) =
-      let
-        val (l1,l2) = partition (aconv v o snd) splits
-        val v_rest = snd (hd l2)
-      in
-        if
-          length l1 = 1
-          andalso HOLset.isEmpty (FVL [v_rest] empty_varset)
-          andalso all (aconv v_rest o snd) (tl l2)
-        then (hd l1, v_rest)
-        else raise Match
-      end
-    val reduced_splits =
-      case splits of
-        [] => splits
-      | [_] => splits
-      | [_,_] => splits
-      | _ =>
+local
+  val disjoint = HOLset.isEmpty o HOLset.intersection
+  fun FV tm = FVL [tm] empty_varset
+in
+  fun pp_strip_case tm =
+    let
+      val (split_on, splits) = strip_case tm
+      fun sole_exception (p,v) =
         let
-          val (u as (p,_),v_rest) = tryfind sole_exception splits
+          val (l1,l2) = partition (aconv v o snd) splits
+          val v_rest = snd (hd l2)
+          fun good (p,v) = aconv v_rest v andalso disjoint (FV p, FV v)
         in
-          [u,(mk_var("_",type_of p),v_rest)]
+          if length l1 = 1 andalso all good l2
+          then (hd l1, v_rest)
+          else raise Match
         end
-        handle HOL_ERR _ => splits
-  in
-    (split_on, reduced_splits)
-  end
+      val reduced_splits =
+        case splits of
+          [] => splits
+        | [_] => splits
+        | [_,_] => splits
+        | _ =>
+          let
+            val (u as (p,_),v_rest) = tryfind sole_exception splits
+          in
+            [u,(mk_var("_",type_of p),v_rest)]
+          end
+          handle HOL_ERR _ => splits
+    in
+      (split_on, reduced_splits)
+    end
+end
 
 val _ = term_pp.init_casesplit_munger pp_strip_case
 
