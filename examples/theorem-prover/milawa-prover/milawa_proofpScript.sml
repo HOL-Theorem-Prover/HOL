@@ -5366,7 +5366,7 @@ val init_thm = prove(
    (SIMP_TAC std_ss [milawa_initTheory.core_assum_thm]));
 
 
-(* relating the above results to the the main routine *)
+(* relating the above results to the main routine *)
 
 val define_safe_list_side_tm =
   milawa_initTheory.define_safe_list_side_def

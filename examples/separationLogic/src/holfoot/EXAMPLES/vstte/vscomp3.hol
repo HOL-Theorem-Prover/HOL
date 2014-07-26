@@ -1,7 +1,7 @@
 (******************************************************************************)
 (* Holfoot can proof partial correctness of programs using separation logic.  *)
 (*                                                                            *)
-(* The entire proof is done using HOL 4. This includes not just the the       *)
+(* The entire proof is done using HOL 4. This includes not just the           *)
 (* proof of some verification conditions, but the whole proof. This includes  *)
 (* formal definitions of the programming and specification language as well   *)
 (* as verified inferences.                                                    *)

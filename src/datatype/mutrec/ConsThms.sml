@@ -157,7 +157,7 @@ val conjuncts_list = map mk_all_conjuncts cons_var_newvar_list
 val filtered_list = filter (fn x => x <> []) conjuncts_list
 
 (* goals is a list, containining one goal for each type;
-   each goal says that the the constructors for that type are distinct *)
+   each goal says that the constructors for that type are distinct *)
 
 val goals = map list_mk_conj filtered_list
 

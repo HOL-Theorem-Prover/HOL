@@ -34,7 +34,7 @@ fun thm_eq thm1 thm2 = Term.aconv (Thm.concl thm1) (Thm.concl thm2)
 
     - proj_opt
 
-      Used to determine if the the current option setting is different from
+      Used to determine if the current option setting is different from
       "basic_opt".
 
     - closeness : ''opt -> ''opt -> int

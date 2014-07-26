@@ -7,7 +7,7 @@
 
 ; The following utility, pprint-file, takes an input file of forms and writes
 ; out a file of corresponding forms in user-level syntax.  In order to do this,
-; it applies ACL2's untranslate function to the the result of translating each
+; it applies ACL2's untranslate function to the result of translating each
 ; definition and theorem.  An optional argument controls whether or not first
 ; to evaluate the forms in the input file -- generally necessary for
 ; translation to work, but not if we are dealing with a file of built-ins.
