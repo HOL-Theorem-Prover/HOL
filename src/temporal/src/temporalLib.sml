@@ -269,7 +269,7 @@ fun temporal2hol truesig  = (--`\t:num.T`--)
 
 
 (* ****************************************************************************	*)
-(* 		Computing the the names of the variables 			*)
+(* 		Computing the names of the variables    		  	*)
 (* ****************************************************************************	*)
 
 fun var_names truesig          = []

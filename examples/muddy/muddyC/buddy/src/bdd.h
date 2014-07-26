@@ -173,8 +173,8 @@ DESCR   {* The fields are \\[\baselineskip] \begin{tabular}{ll}
   {\bf Name}         & {\bf Number of } \\
   uniqueAccess & accesses to the unique node table \\
   uniqueChain  & iterations through the cache chains in the unique node table\\
-  uniqueHit    & entries actually found in the the unique node table \\
-  uniqueMiss   & entries not found in the the unique node table \\
+  uniqueHit    & entries actually found in the unique node table \\
+  uniqueMiss   & entries not found in the unique node table \\
   opHit        & entries found in the operator caches \\
   opMiss       & entries not found in the operator caches \\
   swapCount    & number of variable swaps in reordering \\

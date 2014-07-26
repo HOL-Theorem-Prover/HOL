@@ -443,7 +443,7 @@ open Rsyntax   (* use records *)
     (* replace_recursion actually does the job of replacing recursive calls
        (like (varcon_atpat ap)) with variables (like r) in definition
        given in order to make body of return function. It returns
-       the the modified term (which will be the body of our function) and
+       the modified term (which will be the body of our function) and
        the variables representing the recursions (in reverse order). The arg
        all_vars initially contains the args (which are variables) of the
        constructors; the recursive variables are added on as they
