@@ -18,7 +18,7 @@ pdf: description.pdf HolBdd.pdf holCheck.pdf
 
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.pdf \
-            *.bbl *.blg HolBdd.pdf holCheck.pdf
+            *.bbl *.blg *.out HolBdd.pdf holCheck.pdf
 
 description.pdf: description.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX}  description
