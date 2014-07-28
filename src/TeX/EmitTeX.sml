@@ -335,24 +335,31 @@ local
           core_s ^ digitstr ^ prime_str
         end
 
-  fun ann_string overrides pps (s,sz,ann) = let
+  fun ann_string overrides pps (s,sz_opt,ann) = let
     open PPBackEnd
     val (dollarpfx,dollarsfx,s,szdelta) =
         if String.sub(s,0) = #"$" andalso size s > 1 then
           if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
-    fun addann ty f s =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ f s ^ "}"
-    fun annotation s =
-        case ann of BV _ => addann "BoundVar" varmunge s
-                  | FV _ => addann "FreeVar" varmunge s
-                  | Const _ => addann "Const" I s
-                  | TyOp _ => addann "TyOp" I s
-                  | _ => s
-    val (s',sz) = smap overrides (s,sz)
+    fun addann ty s =
+      "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    fun smapper s = smap overrides (s, sz_opt)
+    val unmapped_sz = case sz_opt of NONE => size s | SOME i => i
+    val (string_to_print, sz) =
+        case ann of
+            BV _ => apfst (addann "BoundVar" o varmunge) (smapper s)
+          | FV _ => apfst (addann "FreeVar" o varmunge) (smapper s)
+          | Const _ => apfst (addann "Const") (smapper s)
+          | TyOp _ => apfst (addann "TyOp") (smapper s)
+          | Literal StringLit => (addann "StringLit"
+                                         (String.substring(s, 1, size s - 2)),
+                                  unmapped_sz)
+          | Literal FldName => apfst (addann "FieldName") (smapper s)
+          | Literal NumLit => (addann "NumLit" s, unmapped_sz)
+          | _ => smapper s
   in
-    PP.add_stringsz pps (dollarpfx ^ annotation s' ^ dollarsfx, sz + szdelta)
+    PP.add_stringsz pps (dollarpfx ^ string_to_print ^ dollarsfx, sz + szdelta)
   end
 
   fun add_string overrides pps (s,sz) = PP.add_stringsz pps (smap overrides (s,sz))

@@ -11,13 +11,16 @@ open Portable
 (* Datatypes used by the backends                                             *)
 (* ========================================================================== *)
 
-datatype annotation = BV of hol_type * (unit -> string)
-                    | FV of hol_type * (unit -> string)
-                    | TyV
-                    | TyOp of (unit -> string)
-                    | TySyn of (unit -> string)
-                    | Const of {Thy:string,Name:string,Ty:hol_type} * string
-                    | Note of string;
+  datatype lit_type = FldName | StringLit | NumLit
+
+  datatype annotation = BV of hol_type * (unit -> string)
+                      | FV of hol_type * (unit -> string)
+                      | TyV
+                      | TyOp of (unit -> string)
+                      | TySyn of (unit -> string)
+                      | Const of {Thy:string,Name:string,Ty:hol_type} * string
+                      | Note of string
+                      | Literal of lit_type
 
 (* The default 16 color palette *)
 datatype pp_color =

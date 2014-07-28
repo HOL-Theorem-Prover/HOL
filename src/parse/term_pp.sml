@@ -845,7 +845,8 @@ fun pp_term (G : grammar) TyG backend = let
           else ""
     in
       pbegin showtypes >>
-      add_string (numeral_str ^ sfx) >>
+      add_ann_string (numeral_str ^ sfx,
+                      PPBackEnd.Literal PPBackEnd.NumLit) >>
       (if showtypes then
          add_string (" "^type_intro) >> add_break (0,0) >>
          doTy (#2 (dom_rng injty))
@@ -903,13 +904,14 @@ fun pp_term (G : grammar) TyG backend = let
                 val prec = Prec(prec0, recsel_special)
                 val add_parens = add_l orelse add_r
                 val lprec = if add_parens then Top else lgrav
+                open PPBackEnd
               in
                 block INCONSISTENT 0
                       (pbegin add_parens >>
                        pr_term t2 prec lprec prec (decdepth depth) >>
                        add_string fldtok >>
                        add_break(0,0) >>
-                       add_string fldname >>
+                       add_ann_string (fldname, Literal FldName) >>
                        pend add_parens)
               end
             | NONE => fail
@@ -1543,13 +1545,15 @@ fun pp_term (G : grammar) TyG backend = let
           fun normal_const () = let
             fun cope_with_rules s = let
               val crules = lookup_term s
+              open PPBackEnd
             in
               if isSome crules then
                 pr_sole_name tm s (map #3 (valOf crules))
               else if s = "0" andalso can_pr_numeral NONE then
                 pr_numeral NONE tm
               else if Literal.is_emptystring tm then
-                add_string "\"\""
+                add_xstring {s="\"\"", sz = NONE,
+                             ann = SOME (Literal StringLit)}
               else add_ann_string s
             end
           in
@@ -1765,7 +1769,9 @@ fun pp_term (G : grammar) TyG backend = let
           (* strings *)
           (case total Literal.dest_string_lit tm of
              NONE => fail
-           | SOME s => add_string (Literal.string_literalpp s)) |||
+           | SOME s =>
+             add_ann_string (Literal.string_literalpp s,
+                             PPBackEnd.Literal PPBackEnd.StringLit)) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
