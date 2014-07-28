@@ -135,7 +135,7 @@ val myDatatype =
                      (String.extract (s, w, SOME (String.size s - w - 1)))
                    ; s ^ "\n")) o
        Feedback.trace ("Theory.save_thm_reporting", 0) o
-       Lib.with_flag (Datatype.big_record_size, 25))
+       Lib.with_flag (Datatype.big_record_size, 30))
        Datatype.astHol_datatype
    end
 
@@ -404,6 +404,11 @@ fun CC [] = raise ERR "CC" "empty"
    in
       List.foldr mk lst f
    end
+
+(* Word Replicate *)
+
+fun REP (w, n, ty) =
+   wordsSyntax.mk_word_replicate_ty (n, w, wordsSyntax.dest_word_type (Ty ty))
 
 (* Equality *)
 
@@ -988,6 +993,7 @@ in
       | Splitr => rich_listSyntax.mk_splitr
       | Fld    => stringSyntax.mk_fields
       | Tok    => stringSyntax.mk_tokens
+      | Rep    => bitstringSyntax.mk_replicate
       | Lt   => pick (SOME wordsSyntax.mk_word_lt, NONE,
                       SOME numSyntax.mk_less, SOME intSyntax.mk_less)
       | Gt   => pick (SOME wordsSyntax.mk_word_gt, NONE,
@@ -1013,8 +1019,6 @@ in
                       SOME intSyntax.mk_quot)
       | Rem  => pick (SOME wordsSyntax.mk_word_srem, NONE, NONE,
                       SOME intSyntax.mk_rem)
-      | Rep  => pick (SOME (wordsSyntax.mk_word_replicate o Lib.swap),
-                      SOME bitstringSyntax.mk_replicate, NONE, NONE)
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
       | Lsl  => pickShift (wordsSyntax.mk_word_lsl_bv, wordsSyntax.mk_word_lsl,
                            bitstringSyntax.mk_shiftl)

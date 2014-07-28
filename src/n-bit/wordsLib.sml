@@ -337,7 +337,7 @@ local
       reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
       word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
       word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
-      l2w_def, w2l_def, s2w_def, w2s_def,
+      l2w_def, w2l_def, s2w_def, w2s_def, add_with_carry_def,
       word_from_bin_list_def, word_from_oct_list_def,
       word_from_dec_list_def, word_from_hex_list_def,
       word_to_bin_list_def, word_to_oct_list_def,

@@ -28,9 +28,7 @@ in
       HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
    val arm_2 =
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
-   val word2 = wordsSyntax.mk_int_word_type 2
    val word5 = wordsSyntax.mk_int_word_type 5
-   val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
    val (_, _, dest_arm_instr, _) = arm_1 "arm_instr"
@@ -391,147 +389,38 @@ val REG_CONV =
 val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 
 local
-   fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
-   val regs = List.mapPartial (Lib.total dest_arm_REG)
-   val fp_regs = List.mapPartial (Lib.total dest_arm_FP_REG)
-   fun instantiate (a, b) =
-      if Term.is_var a then SOME (a |-> b)
-      else if a = b then NONE
-           else raise ERR "instantiate" "bad constant match"
-   fun bits n i =
-      List.map bitstringSyntax.mk_b
-         (utilsLib.padLeft false n (bitstringSyntax.int_to_bitlist i))
-   fun dest_reg n r =
-      let
-         val t = if n = 4 then Term.rand r else r
-         val l = case Lib.total bitstringSyntax.dest_v2w t of
-                    SOME (l, _) => fst (listSyntax.dest_list l)
-                  | NONE => bits n (wordsSyntax.uint_of_word t)
-      in
-         List.length l = n orelse raise ERR "dest_reg" "assertion failed"
-         ; l
-      end
-      handle HOL_ERR {message = s, ...} => raise ERR "dest_reg" s
-   fun match_register n (tm1, v1, _) (tm2, v2, _) =
-      let
-         val l = case Lib.total reg_index tm1 of
-                    SOME i => bits n i
-                  | NONE => dest_reg n tm1
-      in
-         ((v2 |-> v1) ::
-          List.mapPartial instantiate (ListPair.zip (dest_reg n tm2, l)),
-          [tm2])
-      end
-   fun groupings n ok rs =
-      let
-         fun frees t =
-            if n = 4
-               then Term.free_vars (Term.rand t handle HOL_ERR _ => t)
-            else Term.free_vars t
-         val no_free = List.null o frees
-         fun exists_free l = List.exists (fn (t, _, _) => not (no_free t)) l
-         val (cs, vs) = List.partition (fn (t, _, _) => no_free t) rs
-         fun add_c l =
-            List.map
-              (fn x =>
-                 [x] @ List.map (fn c => List.map (fn y => c :: y) x) cs) l
-            |> List.concat
-      in
-        if List.null vs
-           then [([], [])]
-        else
-        vs
-        |> utilsLib.partitions
-        |> add_c
-        |> List.map
-              (List.mapPartial
-                  (fn l =>
-                     let
-                        val (unchanged, changed) =
-                           List.partition (fn (_, a, b) => a = b) l
-                     in
-                        if 1 < List.length l andalso List.length changed < 2
-                           andalso exists_free l
-                           then SOME (changed @ unchanged)
-                        else NONE
-                     end))
-        |> Lib.mk_set
-        |> Lib.mapfilter
-             (fn p =>
-                concat_unzip
-                  (List.map
-                     (fn l =>
-                        let
-                           val (h, t) =
-                              Lib.pluck (fn (tm, _, _) => no_free tm) l
-                              handle
-                                 HOL_ERR
-                                   {message = "predicate not satisfied", ...} =>
-                                   (hd l, tl l)
-                           fun mtch x =
-                              let
-                                 val s = match_register n h x
-                              in
-                                 Lib.assert ok (fst s); s
-                              end
-                        in
-                           concat_unzip (List.map mtch t)
-                        end) p))
-      end
-   (* check that the pre-condition predictate (from "cond P" terms) is not
-      violated *)
-   fun assign_ok p =
-      let
-         val l = List.mapPartial (Lib.total progSyntax.dest_cond) p
-         val c = boolSyntax.list_mk_conj l
-      in
-         fn s => utilsLib.rhsc (REG_CONV (Term.subst s c)) <> boolSyntax.F
-      end
+   val dest_reg = dest_arm_REG
+   val reg_width = 4
+   val proj_reg = SOME reg_index
+   val reg_conv = REG_CONV
+   val ok_conv = ALL_CONV
    val r15 = wordsSyntax.mk_wordii (15, 4)
-   fun assume_not_pc r =
-      Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (r, r15)))
-   fun star_subst s = List.map (utilsLib.rhsc o REG_CONV o Term.subst s)
-   fun mk_assign f (p, q) =
-      List.map
-         (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
-         (ListPair.zip (f p, f q))
-   val mk_arm_model =
-      temporal_stateSyntax.mk_spec_or_temporal_next ``ARM_MODEL``
+   fun asm tm = Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (tm, r15)))
+   val model_tm = ``ARM_MODEL``
 in
-   fun combinations (thm, t) =
-      let
-         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
-         val mk = mk_arm_model (stateLib.generate_temporal())
-         val pl = progSyntax.strip_star p
-         val ql = progSyntax.strip_star q
-         val ds = mk_assign fp_regs (pl, ql)
-         val (n, dst, rs) =
-            if List.length ds < 2
-               then (4, dest_arm_REG, mk_assign regs (pl, ql))
-            else (5, dest_arm_FP_REG, ds)
-         val groups = groupings n (assign_ok pl) rs
-      in
-         List.map
-            (fn (s, d) =>
-                let
-                   val do_reg =
-                      star_subst s o
-                      List.filter
-                         (fn tm => case Lib.total dst tm of
-                                      SOME (a, _) => not (Lib.mem a d)
-                                    | NONE => true)
-                   val pl' = do_reg pl
-                   val p' = progSyntax.list_mk_star pl'
-                   val q' = progSyntax.list_mk_star (do_reg ql)
-                   val rwts =
-                      Lib.mapfilter (assume_not_pc o Term.rand o fst) (regs pl')
-                   val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
-                in
-                   (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    mk (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
-                end) groups
-      end
+   val reg_combinations =
+      stateLib.register_combinations
+         (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
 end
+
+local
+   val dest_reg = dest_arm_FP_REG
+   val reg_width = 5
+   val proj_reg = NONE
+   val reg_conv = REG_CONV
+   val ok_conv = ALL_CONV
+   fun asm (tm: term) = (raise ERR "" ""): thm
+   val model_tm = ``ARM_MODEL``
+in
+   val fp_combinations =
+      stateLib.register_combinations
+         (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
+end
+
+fun combinations thm_t =
+   case fp_combinations thm_t of
+      [_] => reg_combinations thm_t
+    | l => l
 
 (* ------------------------------------------------------------------------ *)
 

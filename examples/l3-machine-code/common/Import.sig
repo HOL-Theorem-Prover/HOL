@@ -168,6 +168,7 @@ sig
    val EX : Term.term * Term.term * Term.term * ParseDatatype.pretype ->
             Term.term
    val BFI : Term.term * Term.term * Term.term * Term.term -> Term.term
+   val REP : Term.term * Term.term * ParseDatatype.pretype -> Term.term
    val CC : Term.term list -> Term.term
    val EQ : Term.term * Term.term -> Term.term
    val MU : Term.term * ParseDatatype.pretype -> Term.term

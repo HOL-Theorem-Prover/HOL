@@ -27,11 +27,6 @@ fun thm_eq thm1 thm2 = Term.aconv (Thm.concl thm1) (Thm.concl thm2)
 
       The default build option.
 
-    - get_opcode
-
-      Extract and database index key (usual the instructions op-code) from
-      the specification theorom.
-
     - proj_opt
 
       Used to determine if the current option setting is different from
@@ -46,6 +41,11 @@ fun thm_eq thm1 thm2 = Term.aconv (Thm.concl thm1) (Thm.concl thm2)
     - convert_opt_rule
 
       Gives the rule for conversting from one option setting to another.
+
+    - get_opcode
+
+      Extracts the database index key (usual the instructions op-code) from
+      the specification theorom.
 
     - basic_spec : thm * term -> thm
 

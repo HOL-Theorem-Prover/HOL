@@ -749,10 +749,10 @@ val Aligned_numeric = Q.store_thm("Aligned_numeric",
            Aligned (y, 4)) /\
     (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 x))): word32, 4) =
            Aligned (y - 2w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT1 x)): word32, 2) =
-           Aligned (y + 1w, 2)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT1 x)): word32, 2) =
-           Aligned (y - 1w, 2)) /\
+    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (f x))): word32, 2) =
+             Aligned (y + 1w, 2)) /\
+    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (f x))): word32, 2) =
+             Aligned (y - 1w, 2)) /\
     (!x y. Aligned (y + n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2)) /\
     (!x y. Aligned (y - n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2))`,
    REPEAT strip_tac

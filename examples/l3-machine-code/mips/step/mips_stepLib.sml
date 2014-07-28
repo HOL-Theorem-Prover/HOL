@@ -17,7 +17,6 @@ struct
       mipsTheory.mips_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
-
 open Parse
 
 val ERR = Feedback.mk_HOL_ERR "mips_stepLib"

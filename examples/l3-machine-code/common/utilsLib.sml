@@ -1101,7 +1101,7 @@ local
          val tm = Term.rator (HolKernel.find_term (is_call x) ast)
          val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
-         pv (if rng f = oneSyntax.one_ty
+         pv (if Term.type_of f = oneSyntax.one_ty
                 then `!s. Run ^ast s = (^f, s)`
              else `!s. Run ^ast s = ^f s`) : thm
       end
@@ -1111,7 +1111,7 @@ local
          val (arg0, args) =
             List.partition (List.null o Term.free_vars) (buildAst thy ty)
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         fun pv q = Q.prove(q, tac)
+         fun pv q = Q.prove (q, tac)
       in
          List.map (run_thm0 pv thy) arg0 @ List.map (run_thm pv thy) args
       end

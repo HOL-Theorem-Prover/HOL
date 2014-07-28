@@ -30,6 +30,7 @@ val dword = wordsSyntax.mk_int_word_type 64
 val (_, mk_mips_PC, _, _) = mips_1 "mips_PC"
 val (_, mk_mips_MEM, dest_mips_MEM, is_mips_MEM) = mips_2 "mips_MEM"
 val (_, mk_mips_gpr, dest_mips_gpr, is_mips_gpr) = mips_2 "mips_gpr"
+val st = Term.mk_var ("s", ``:mips_state``)
 
 (* -- *)
 
@@ -64,7 +65,7 @@ in
          val pc = stateLib.gvar "pc" dword
          val pc_a = mk_mips_PC pc
          val (a, tm) = Thm.dest_thm thm
-         val pc_subst = Term.subst [``s.PC`` |-> pc]
+         val pc_subst = Term.subst [``^st.PC`` |-> pc]
          val a = List.map pc_subst a
          val (m, a) = List.partition (is_mem_access pc) a
          val m = List.map dest_code_access m
@@ -203,7 +204,6 @@ in
 end
 
 local
-   val st = Term.mk_var ("s", ``:mips_state``)
    val cp0_status_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
          [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
