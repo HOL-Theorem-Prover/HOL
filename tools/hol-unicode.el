@@ -133,7 +133,7 @@
 (define-key hol-unicode-superscript-map "x" "ˣ")
 (define-key hol-unicode-superscript-map "y" "ʸ")
 (define-key hol-unicode-superscript-map "z" "ᶻ")
-ᵗ
+
 ;; ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ ₊ ₋ ₌
 
 (define-prefix-command 'hol-unicode-zero-map)
