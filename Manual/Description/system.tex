@@ -1116,7 +1116,7 @@ $t${\small\verb+ |- +}$t$ \\
 \end{center}
 
 \noindent
-{\small\verb+ASSUME +}$t${\small\verb++} evaluates to $t${\small\verb+|- +}$t$.
+{\small\verb+ASSUME +}$t$ evaluates to $t${\small\verb+ |- +}$t$.
 Failure if $t$ is not of type \ml{bool}.
 
 \bigskip
@@ -1177,7 +1177,7 @@ Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
 
 \begin{holboxed}
 \begin{verbatim}
-   SUBST : (thm * term)list -> term -> thm -> thm
+   SUBST : (thm * term) list -> term -> thm -> thm
 \end{verbatim}\end{holboxed}
 
 \begin{center}
