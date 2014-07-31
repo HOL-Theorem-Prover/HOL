@@ -37,7 +37,7 @@ open dep_rewrite more_listTheory more_setTheory variableTheory;
 open pairLib;
 open numLib;
 open bossLib;
-open MutualIndThen;
+open Mutual;
 
 
 open tactics;
