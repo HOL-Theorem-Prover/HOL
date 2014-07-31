@@ -1289,7 +1289,7 @@ $\Gamma$.
 \ml{INST\_TYPE[$\alpha_1$~|->~$\sigma_1$%
   ,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$} returns the result of
 instantiating each occurrence of $\alpha_i$ in the theorem $th$ to
-$\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if an $\alpha_i$ is
+$\sigma_i$ (for $1 \leq i \leq n$). Failure if an $\alpha_i$ is
 not a type variable.
 
 The polymorphic \ML{} infix function {\small\verb+|->+} is used to
@@ -1873,7 +1873,7 @@ declares the sequent
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in
 this theory is $name$.
-Failure occurs if:
+Failure if:
 \begin{myenumerate}
 \item $t$ contains free variables that are not in any of
 the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
