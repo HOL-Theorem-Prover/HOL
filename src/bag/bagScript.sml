@@ -1317,6 +1317,48 @@ val BAG_CARD_BAG_INN = Q.store_thm(
     RES_TAC THEN ASM_SIMP_TAC std_ss []
   ]);
 
+val SUB_BAG_DIFF_EQ = Q.store_thm
+("SUB_BAG_DIFF_EQ",
+ `!b1 b2. SUB_BAG b1 b2 ==> (b2 = BAG_UNION b1 (BAG_DIFF b2 b1))`,
+ RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN,FUN_EQ_THM]
+   THEN MATCH_MP_TAC (ARITH `a >= b ==> (a = b + (a - b))`)
+   THEN POP_ASSUM (MP_TAC o Q.SPECL [`x`, `b1 x`])
+   THEN RW_TAC arith_ss []);
+
+val SUB_BAG_DIFF_EXISTS = Q.prove
+(`!b1 b2. SUB_BAG b1 b2 ==> ?d. b2 = BAG_UNION b1 d`,
+ PROVE_TAC [SUB_BAG_DIFF_EQ]);
+
+val SUB_BAG_CARD = Q.store_thm
+("SUB_BAG_CARD",
+`!b1 b2:'a bag. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2`,
+RW_TAC bool_ss []
+  THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
+  THEN RW_TAC bool_ss []
+  THEN `FINITE_BAG d /\ FINITE_BAG b1` by PROVE_TAC [FINITE_BAG_UNION]
+  THEN Q.PAT_ASSUM `SUB_BAG x y` (K ALL_TAC)
+  THEN Q.PAT_ASSUM `FINITE_BAG (BAG_UNION x y)` (K ALL_TAC)
+  THEN REPEAT (POP_ASSUM MP_TAC)
+  THEN Q.ID_SPEC_TAC `d`
+  THEN HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT
+  THEN RW_TAC arith_ss [BAG_UNION_EMPTY,BAG_UNION_INSERT]
+  THEN PROVE_TAC [BAG_CARD_THM,FINITE_BAG_UNION,ARITH `x <=y ==> x <= y+1`]);
+
+val _ = ParseExtras.temp_tight_equality()
+val BAG_CARD_DIFF = store_thm(
+  "BAG_CARD_DIFF",
+  ``!b. FINITE_BAG b ==>
+        !c. c <= b ==> BAG_CARD (b - c) = BAG_CARD b - BAG_CARD c``,
+  Induct_on `FINITE_BAG` >> simp[BAG_CARD_THM] >> qx_gen_tac `b` >> strip_tac >>
+  map_every qx_gen_tac [`e`, `c`] >> strip_tac >>
+  `FINITE_BAG c` by metis_tac[FINITE_BAG_THM, FINITE_SUB_BAG] >>
+  Cases_on `BAG_IN e c`
+  >- (`?c0. c = BAG_INSERT e c0` by metis_tac[BAG_DECOMPOSE] >>
+      lfs[BAG_CARD_THM, SUB_BAG_INSERT]) >>
+  simp[BAG_DIFF_INSERT, BAG_CARD_THM, FINITE_BAG_DIFF] >>
+  lfs[NOT_IN_SUB_BAG_INSERT] >>
+  `BAG_CARD c <= BAG_CARD b` by simp[SUB_BAG_CARD] >> simp[]);
+
 (* --------------------------------------------------------------------
     FILTER for bags (alternatively, intersection with a set)
    ---------------------------------------------------------------------- *)
@@ -1352,16 +1394,26 @@ val FINITE_BAG_FILTER = store_thm(
 
 val BAG_INN_BAG_FILTER = store_thm(
   "BAG_INN_BAG_FILTER",
-  ``BAG_INN e n (BAG_FILTER P b) = (n = 0) \/ P e /\ BAG_INN e n b``,
+  ``BAG_INN e n (BAG_FILTER P b) <=> (n = 0) \/ P e /\ BAG_INN e n b``,
   SRW_TAC [numSimps.ARITH_ss][BAG_FILTER_DEF, BAG_INN]);
 val _ = export_rewrites ["BAG_INN_BAG_FILTER"]
 
 val BAG_IN_BAG_FILTER = store_thm(
   "BAG_IN_BAG_FILTER",
-  ``BAG_IN e (BAG_FILTER P b) = P e /\ BAG_IN e b``,
+  ``BAG_IN e (BAG_FILTER P b) <=> P e /\ BAG_IN e b``,
   SRW_TAC [][BAG_IN])
  before
  export_rewrites ["BAG_IN_BAG_FILTER"];
+
+val BAG_FILTER_FILTER = store_thm(
+  "BAG_FILTER_FILTER",
+  ``BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (λa. P a ∧ Q a) b``,
+  simp[BAG_FILTER_DEF] >> simp[FUN_EQ_THM] >> rw[] >> fs[]);
+
+val BAG_FILTER_SUB_BAG = store_thm(
+  "BAG_FILTER_SUB_BAG[simp]",
+  ``!P b. BAG_FILTER P b <= b``,
+  dsimp[BAG_FILTER_DEF, SUB_BAG]);
 
 val SET_OF_BAG_EQ_INSERT = store_thm(
   "SET_OF_BAG_EQ_INSERT",
@@ -1601,32 +1653,6 @@ val PSUB_BAG_REST = Q.store_thm
    THEN RW_TAC arith_ss []);
 
 
-val SUB_BAG_DIFF_EQ = Q.store_thm
-("SUB_BAG_DIFF_EQ",
- `!b1 b2. SUB_BAG b1 b2 ==> (b2 = BAG_UNION b1 (BAG_DIFF b2 b1))`,
- RW_TAC bool_ss [SUB_BAG,BAG_UNION,BAG_DIFF,BAG_INN,FUN_EQ_THM]
-   THEN MATCH_MP_TAC (ARITH `a >= b ==> (a = b + (a - b))`)
-   THEN POP_ASSUM (MP_TAC o Q.SPECL [`x`, `b1 x`])
-   THEN RW_TAC arith_ss []);
-
-val SUB_BAG_DIFF_EXISTS = Q.prove
-(`!b1 b2. SUB_BAG b1 b2 ==> ?d. b2 = BAG_UNION b1 d`,
- PROVE_TAC [SUB_BAG_DIFF_EQ]);
-
-val SUB_BAG_CARD = Q.store_thm
-("SUB_BAG_CARD",
-`!b1 b2:'a bag. FINITE_BAG b2 /\ SUB_BAG b1 b2 ==> BAG_CARD b1 <= BAG_CARD b2`,
-RW_TAC bool_ss []
-  THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
-  THEN RW_TAC bool_ss []
-  THEN `FINITE_BAG d /\ FINITE_BAG b1` by PROVE_TAC [FINITE_BAG_UNION]
-  THEN Q.PAT_ASSUM `SUB_BAG x y` (K ALL_TAC)
-  THEN Q.PAT_ASSUM `FINITE_BAG (BAG_UNION x y)` (K ALL_TAC)
-  THEN REPEAT (POP_ASSUM MP_TAC)
-  THEN Q.ID_SPEC_TAC `d`
-  THEN HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT
-  THEN RW_TAC arith_ss [BAG_UNION_EMPTY,BAG_UNION_INSERT]
-  THEN PROVE_TAC [BAG_CARD_THM,FINITE_BAG_UNION,ARITH `x <=y ==> x <= y+1`]);
 
 val BAG_UNION_STABLE = Q.prove
 (`!b1 b2. (b1 = BAG_UNION b1 b2) = (b2 = {||})`,
@@ -1655,8 +1681,32 @@ RW_TAC bool_ss [PSUB_BAG]
   THEN POP_ASSUM (K ALL_TAC)
   THEN `FINITE_BAG (BAG_UNION b1 b0)`
         by PROVE_TAC[FINITE_BAG_UNION, BAG_UNION_INSERT, FINITE_BAG_THM]
-  THEN PROVE_TAC [BAG_CARD_THM, ARITH `x <y+1n = x <= y`,
+  THEN PROVE_TAC [BAG_CARD_THM, ARITH `x < y + 1n <=> x <= y`,
                   SUB_BAG_CARD, SUB_BAG_UNION_MONO]);
+
+val EL_BAG_BAG_INSERT = store_thm(
+  "EL_BAG_BAG_INSERT[simp]",
+  ``{|x|} = BAG_INSERT y b <=> x = y /\ b = {||}``,
+  simp[EQ_IMP_THM] >>
+  simp[BAG_EXTENSION, BAG_INN, BAG_INSERT, EMPTY_BAG] >>
+  strip_tac >>
+  `x = y`
+    by (spose_not_then assume_tac >>
+        first_x_assum (qspecl_then [`1`, `y`] mp_tac) >>
+        simp[]) >> rw[] >>
+  simp[EQ_IMP_THM] >> spose_not_then strip_assume_tac >> Cases_on `e = x`
+  >- (rw[] >> first_x_assum (qspecl_then [`n+1`, `e`] mp_tac) >>
+      simp[]) >>
+  first_x_assum (qspecl_then [`n`, `e`] mp_tac) >> simp[]);
+
+val EL_BAG_SUB_BAG = store_thm(
+  "EL_BAG_SUB_BAG[simp]",
+  ``{| x |} <= b <=> BAG_IN x b``,
+  simp_tac (srw_ss() ++ COND_elim_ss ++ DNF_ss)
+           [SUB_BAG, BAG_INN, BAG_IN, BAG_INSERT, EMPTY_BAG, EQ_IMP_THM,
+            arithmeticTheory.GREATER_EQ] >> simp[]);
+
+
 
 (* ----------------------------------------------------------------------
     A "fold"-like operation for bags, ITBAG, by analogy with the set
@@ -1834,26 +1884,26 @@ val BAG_EVERY =
     ``BAG_EVERY P b = !e. BAG_IN e b ==> P e``);
 
 val BAG_EVERY_THM = store_thm ("BAG_EVERY_THM",
-``(!P. (BAG_EVERY P EMPTY_BAG)) /\
-  (!P e b. (BAG_EVERY P (BAG_INSERT e b) = P e /\ BAG_EVERY P b))``,
+``(!P. BAG_EVERY P EMPTY_BAG) /\
+  (!P e b. BAG_EVERY P (BAG_INSERT e b) <=> P e /\ BAG_EVERY P b)``,
 SIMP_TAC (srw_ss()) [BAG_EVERY] THEN METIS_TAC []);
 val _ = export_rewrites ["BAG_EVERY_THM"]
 
 val BAG_EVERY_UNION = Q.store_thm(
 "BAG_EVERY_UNION",
-`BAG_EVERY P (b1 + b2) = BAG_EVERY P b1 /\ BAG_EVERY P b2`,
+`BAG_EVERY P (b1 + b2) <=> BAG_EVERY P b1 /\ BAG_EVERY P b2`,
 SRW_TAC [][BAG_EVERY] THEN METIS_TAC []);
 val _ = export_rewrites["BAG_EVERY_UNION"];
 
 val BAG_EVERY_MERGE = Q.store_thm(
 "BAG_EVERY_MERGE",
-`BAG_EVERY P (BAG_MERGE b1 b2) = BAG_EVERY P b1 /\ BAG_EVERY P b2`,
+`BAG_EVERY P (BAG_MERGE b1 b2) <=> BAG_EVERY P b1 /\ BAG_EVERY P b2`,
 SRW_TAC [][BAG_EVERY, DISJ_IMP_THM, FORALL_AND_THM]);
 val _ = export_rewrites ["BAG_EVERY_MERGE"]
 
 val BAG_EVERY_SET = Q.store_thm(
 "BAG_EVERY_SET",
-`BAG_EVERY P b = SET_OF_BAG b SUBSET {x | P x}`,
+`BAG_EVERY P b <=> SET_OF_BAG b SUBSET {x | P x}`,
 SRW_TAC [][BAG_EVERY, SET_OF_BAG, SUBSET_DEF]);
 
 val BAG_FILTER_EQ_EMPTY = Q.store_thm(
@@ -1899,14 +1949,14 @@ val BAG_ALL_DISTINCT = new_definition ("BAG_ALL_DISTINCT",
   ``BAG_ALL_DISTINCT b = (!e. b e <= 1:num)``);
 
 val BAG_ALL_DISTINCT_THM = store_thm ("BAG_ALL_DISTINCT_THM",
-``BAG_ALL_DISTINCT EMPTY_BAG /\
-  (!e b. (BAG_ALL_DISTINCT (BAG_INSERT e b) =
-         ~(BAG_IN e b) /\ BAG_ALL_DISTINCT b))``,
-`(!x. ((x + 1 <= 1) = (x = 0)) /\ (~(x >= 1) = (x = 0))) /\ 0n <= 1`
-   by bossLib.DECIDE_TAC THEN
-SRW_TAC [COND_elim_ss, DNF_ss]
-        [BAG_ALL_DISTINCT, EMPTY_BAG, BAG_INSERT, BAG_IN, BAG_INN,
-         EQ_IMP_THM] THEN METIS_TAC []);
+  ``BAG_ALL_DISTINCT EMPTY_BAG /\
+    !e b. BAG_ALL_DISTINCT (BAG_INSERT e b) <=>
+           ~BAG_IN e b /\ BAG_ALL_DISTINCT b``,
+  `(!x. ((x + 1 <= 1) = (x = 0)) /\ (~(x >= 1) = (x = 0))) /\ 0n <= 1`
+     by bossLib.DECIDE_TAC THEN
+  SRW_TAC [COND_elim_ss, DNF_ss]
+          [BAG_ALL_DISTINCT, EMPTY_BAG, BAG_INSERT, BAG_IN, BAG_INN,
+           EQ_IMP_THM] THEN METIS_TAC []);
 val _ = export_rewrites ["BAG_ALL_DISTINCT_THM"]
 
 val forall_eq_thm = prove (``(!s:'a. (P s = Q s)) ==> ((!s. P s) = (!s. Q s))``,
@@ -1975,10 +2025,8 @@ val _ = export_rewrites ["BAG_ALL_DISTINCT_BAG_OF_SET"]
 val BAG_IN_BAG_DIFF_ALL_DISTINCT = store_thm (
   "BAG_IN_BAG_DIFF_ALL_DISTINCT",
   ``!b1 b2 e. BAG_ALL_DISTINCT b1 ==>
-       (BAG_IN e (BAG_DIFF b1 b2) =
-        BAG_IN e b1 /\ ~BAG_IN e b2)``,
-  SIMP_TAC std_ss [BAG_ALL_DISTINCT,
-		   BAG_IN, BAG_INN, BAG_DIFF] THEN
+              (BAG_IN e (BAG_DIFF b1 b2) <=> BAG_IN e b1 /\ ~BAG_IN e b2)``,
+  SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_IN, BAG_INN, BAG_DIFF] THEN
   REPEAT STRIP_TAC THEN `b1 e <= 1` by PROVE_TAC[] THEN DECIDE_TAC);
 
 val SUB_BAG_ALL_DISTINCT = store_thm (
@@ -1998,8 +2046,8 @@ val SUB_BAG_ALL_DISTINCT = store_thm (
 
 val BAG_ALL_DISTINCT_BAG_INN = store_thm (
   "BAG_ALL_DISTINCT_BAG_INN",
-  ``!b n e. BAG_ALL_DISTINCT b ==> (BAG_INN e n b =
-            (n = 0) \/ ((n = 1) /\ BAG_IN e b))``,
+  ``!b n e. BAG_ALL_DISTINCT b ==>
+            (BAG_INN e n b <=> n = 0 \/ n = 1 /\ BAG_IN e b)``,
   SIMP_TAC std_ss [BAG_INN, BAG_ALL_DISTINCT, BAG_IN] THEN
   REPEAT STRIP_TAC THEN
   Cases_on `n = 0` THEN ASM_SIMP_TAC std_ss [] THEN
@@ -2182,9 +2230,9 @@ FULL_SIMP_TAC (srw_ss()) []);
    might want to take the transitive closure of this (overloaded below). *)
 val mlt1_def = new_definition(
   "mlt1_def",
-  ``mlt1 r b1 b2 = FINITE_BAG b1 /\ FINITE_BAG b2 /\
-                   ?e rep res. (b1 = rep + res) /\ (b2 = res + {|e|}) /\
-                               !e'. BAG_IN e' rep ==> r e' e``);
+  ``mlt1 r b1 b2 <=> FINITE_BAG b1 /\ FINITE_BAG b2 /\
+                     ?e rep res. (b1 = rep + res) /\ (b2 = res + {|e|}) /\
+                                 !e'. BAG_IN e' rep ==> r e' e``);
 
 val _ = overload_on ("mlt", ``\R. TC (mlt1 R)``);
 
@@ -2482,10 +2530,7 @@ val mlt_dominates_thm1 = store_thm(
   >- (match_mp_tac relationTheory.TC_SUBSET >> simp[mlt1_def, FINITE_BAG_DIFF]>>
       map_every qexists_tac [`e`, `BAG_FILTER (\x. R x e) y`, `b2 - {|e|}`] >>
       simp[] >> simp[COMM_BAG_UNION] >> match_mp_tac SUB_BAG_DIFF_EQ >>
-      fs[SUB_BAG_LEQ, BAG_INSERT, EMPTY_BAG] >>
-      qx_gen_tac `a` >>
-      first_x_assum (fn th => qspec_then `a` mp_tac th >> COND_CASES_TAC >>
-                              decide_tac)) >>
+      simp[] >> metis_tac[SUB_BAG_BAG_IN]) >>
   `b2 - BAG_INSERT e x + y =
    b2 - {|e|} + BAG_FILTER (\x. R x e) y - x + BAG_FILTER (\x. ~R x e) y`
     by (qpat_assum `BAG_INSERT e x <= b2` mp_tac >>
@@ -2624,8 +2669,6 @@ val BAG_DIFF_INSERT_SUB_BAG = store_thm(
   simp[SUB_BAG_LEQ, BAG_INSERT, BAG_DIFF, FUN_EQ_THM] >> strip_tac >>
   qx_gen_tac `e2` >> pop_assum (qspec_then `e2` mp_tac) >> rw[] >>
   simp[]);
-
-
 
 val mlt_INSERT_CANCEL = store_thm(
   "mlt_INSERT_CANCEL",
