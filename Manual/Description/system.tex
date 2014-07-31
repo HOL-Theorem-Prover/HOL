@@ -2017,7 +2017,7 @@ characterized by the definitional
 
 \noindent which is stored as a definition with the automatically
 generated name
-\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
+\ty{op}\ml{\_TY\_DEF}\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
 \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
 is defined in the theory \ml{bool} by:
 
@@ -2055,7 +2055,7 @@ following \ML\ function is provided:
       : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 \end{verbatim}\end{holboxed}
 
-\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}
+\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}.
 The {\verb+tyax+} argument must be a definitional axiom of the form returned by
 \ml{new\_type\_definition}.  The {\verb+name+} argument is the name under which
 the constant definition (a constant specification, in fact) made by
