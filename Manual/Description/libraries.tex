@@ -226,7 +226,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   If the ``quotation'' syntax with a bare dollar is used,%
 %
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
-\index{tokens!suppressing parsing behaviour of|(}
+\index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
 special form.  For example, \holtxt{\holquote{\dol{}if~P}} turns into
@@ -1110,8 +1110,8 @@ of the form {\small\verb+^(+}$t${\small\verb+)+}
 %
 \ml{term} or \ml{type}) are called antiquotations.
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}
-\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}
+\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}%
+\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
 %
 An antiquotation \holtxt{\^{}($t$)} evaluates to the
 \ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}

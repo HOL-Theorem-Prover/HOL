@@ -40,8 +40,8 @@ In this theory, the type constant {\small\verb+bool+} of booleans,
 the binary type operator $(\alpha,\beta)${\small\verb+fun+} of functions, and the type
 constant {\small\verb+ind+} of individuals are declared. Building on
 these types, three primitive constants
-\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}
-\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}
+\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}%
+\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}%
 are declared: equality, implication, and a choice operator:
 \index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
 \index{equality, in HOL logic@equality, in \HOL{} logic}
@@ -65,8 +65,8 @@ characteristic\index{characteristic predicate, of type definitions}
 {\small\verb+@x.+}$t${\small\verb+ x+} denotes an arbitrary member of the
 set denoted by $\sigma$. The constant {\small\verb+@+} is a higher order
 version of Hilbert's
-\index{Hilbert, D.}
-\index{epsilon operator}
+\index{Hilbert, D.}%
+\index{epsilon operator}%
  $\hilbert$-operator; it is related to the constant
 $\iota$ in Church's formulation of higher order logic. For more details,
 see Church's
@@ -274,8 +274,8 @@ together, sufficient for developing all of standard mathematics. Thus,
 in principle, the user of the \HOL{} system should never need to make a
 non-definitional
 %
-\index{axioms!dispensibility of adding}
-\index{definitional theories}
+\index{axioms!dispensibility of adding}%
+\index{definitional theories}%
 %
 theory. In practice, it is often very tempting to take the risk of
 introducing new axioms because deriving them from definitions can be
@@ -408,9 +408,9 @@ infix
 \ml{arithmeticTheory} has been loaded, then \ml{``x+1``} is
 translated to \ml{``\$+~x~1``}. The escape character \ml{\$}
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}
-\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}
-\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}%
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}%
 %
 suppresses the infix behaviour of \ml{+} and prevents the quotation
 parser getting confused.  In general, \ml{\$} can be used to suppress
@@ -638,8 +638,8 @@ proved. Many other theorems may be found in \theoryimp{bool} theory.
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|(}
 
 The theory \theoryimp{combin}
-\index{combin@\theoryimp{combin}}
-\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+\index{combin@\theoryimp{combin}}%
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}%
 contains the definitions of function composition (infixed \ml{o}),
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
 a reversed function application operator,
@@ -997,8 +997,8 @@ transformation:
 \ml{\bs(x,y).x+y}, is not a subterm of the abstraction
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!subterms of}
 in which it occurs; it disappears on parsing.
-\index{binders, in HOL logic@binders, in \HOL{} logic!parsing of}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!of binders}
+\index{binders, in HOL logic@binders, in \HOL{} logic!parsing of}%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of binders}%
 This can lead to unexpected errors (accompanied by obscure error
 messages).  For example, antiquoting a pair into the bound variable
 position of a lambda abstraction fails:
@@ -1038,8 +1038,8 @@ The quotation parser
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of let-terms@of \holtxt{let}-terms}
 %
 accepts \ml{let}-terms
-\index{terms, in HOL logic@terms, in \HOL{} logic!let-@\holtxt{let}-}
-\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!as abbreviations}
+\index{terms, in HOL logic@terms, in \HOL{} logic!let-@\holtxt{let}-}%
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!as abbreviations}%
 similar to those in \ML. For example, the following terms are allowed:
 
 \begin{hol}
@@ -1339,9 +1339,9 @@ theory, the constants \ml{0}
 \index{ zero, in HOL logic@\ml{0} (zero, in \HOL{} logic)}
 and \ml{SUC} (the successor function) are defined
 and Peano's axioms
-\index{axioms!in num theory@in \ml{num} theory}
-\index{Peano's axioms}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}
+\index{axioms!in num theory@in \ml{num} theory}%
+\index{Peano's axioms}%
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}%
 pre-proved in the form:
 
 \begin{hol}
@@ -1419,8 +1419,8 @@ the primitive recursive definition whose form is determined by \ml{x} and
 \paragraph{The less-than relation}
 
 The less-than relation `\holtxt{<}'
-\index{ less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}
-\index{less than, in HOL logic@less than, in \HOL{} logic}
+\index{ less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}%
+\index{less than, in HOL logic@less than, in \HOL{} logic}%
 is most naturally defined by primitive recursion. However, in our
 development it is needed for the proof of the
   primitive recursion theorem, so it must be defined before definition
@@ -3136,9 +3136,9 @@ used.
 
 The theory \theoryimp{path}
 %
-\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}
-\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}
-\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}
+\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}%
+\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}%
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}%
 %
 defines a binary type operator $(\alpha,\beta)\ml{path}$, which
 stands for possibly infinite paths of the following form
