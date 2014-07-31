@@ -162,7 +162,7 @@ inferences. The \ML\ definition of \ml{UNDISCH} is simply
 
 \begin{session}
 \begin{verbatim}
-- val UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
+- fun UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
 > val UNDISCH = fn : thm -> thm
 \end{verbatim}
 \end{session}
