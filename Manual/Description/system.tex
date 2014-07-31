@@ -520,7 +520,7 @@ only possible type assignment; for example, the first occurrence of
 \holtxt{x} could have type \holtxt{bool} and the second one have type
 \holtxt{num}.  In that case there would be two \emph{different}
 variables with name \holtxt{x}, namely \holtxt{x}$_{\holtxt{bool}}$ and
-\holtxt{x}$_{\holtxt{num}}$, the second of which is free.  However, the
+\holtxt{x}$_{\holtxt{num}\vphantom{l}}$, the second of which is free.  However, the
 only way to construct a term with this second type assignment is by
 using constructors, since the type checker uses the heuristic that all
 variables in a term with the same name have the same type.  This is
