@@ -737,26 +737,26 @@ The expressions in the same row are equivalent.
 {\it Kind of type} & {\it \ML\ quotation} & {\it Constructor expression}  \\ \hline
  & & \\
 Type variable &
-{\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
-Type constant & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
- & $:\mathit{thy}$\verb+$+$\mathit{op}$
+{\small\verb+:'+}$\mathit{alphanum}$ & {\small\holtxt{mk\_vartype("'}}$\mathit{alphanum}${\small\holtxt{")}}   \\ \hline
+Type constant & {\small\verb+:+}$\mathit{op}$ & {\small\verb+mk_type("+}$\mathit{op}${\small\verb+",[])+}   \\ \hline
+ & {\small\verb+:+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
   & \parbox{7cm}
-   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
-    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[]\rb{}}}   \\ \hline
-Function type & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
-$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\
+   {{\small\holtxt{mk\_thy\_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
+    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[]\rb{}}}}   \\ \hline
+Function type & {\small\verb+:+}$\sigma_1${\small\verb+->+}$\sigma_2$ &
+$\sigma_1${\small\verb+-->+}$\sigma_2$ \\
 \hline
 Compound type &
-{\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$op$ &
-{\small\verb+mk_type("+}$op${\small\verb+", [+}
- $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+])+}
+{\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{op}$ &
+{\small\holtxt{mk\_type("}}$\mathit{op}${\small\holtxt{",[}}%
+ $\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\holtxt{])}}
 \\
 \hline
-& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
+& {\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
 & \parbox{7cm}
-   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
-    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[}
- $\sigma_1, \ldots, \sigma_n$ \holtxt{]\rb{}}} \\ \hline
+   {{\small\holtxt{mk\_thy\_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
+    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[}}%
+ $\sigma_1{\small\holtxt{,\ldots,}}\sigma_n${\small\holtxt{]\rb{}}}} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -787,20 +787,20 @@ the next table.
 {\it Kind of term} & {\it \ML\ quotation} &
 {\it Constructor expression}  \\ \hline
  & & \\
-Variable & $var${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_var("+}$var${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+Variable & $\mathit{var}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_var("+}$\mathit{var}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
 %
-Constant & $const${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_const("+}$const${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+Constant & $\mathit{const}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_const("+}$\mathit{const}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
 %
-Constant & $\mathit{thy}$\verb+$+$\mathit{const}${\small\verb+:+}$\sigma$ &
+Constant & $\mathit{thy}${\small\verb+$+}$\mathit{const}${\small\verb+:+}$\sigma$ &
 {\small\verb+mk_thy_const{Name="+}$\mathit{const}${\small\verb+",Thy="+}$\mathit{thy}${\small\verb+",Ty=+}$\sigma${\small\verb+}+} \\ \hline
 %
 Combination & $t_1\ t_2$ &
-{\small\verb+mk_comb(+}$t_1${\small\verb+, +}$t_2${\small\verb+)+} \\ \hline
+{\small\verb+mk_comb(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
 %
-Abstraction & \holtxt{\bs$x$.$t$} &
-{\small\verb+mk_abs(+}$x${\small\verb+, +}$t${\small\verb+)+} \\ \hline
+Abstraction & {\small\holtxt{\bs}}$x${\small\holtxt{.}}$t$ &
+{\small\verb+mk_abs(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 \end{tabular}
 \end{center}
 %
@@ -829,10 +829,10 @@ supports the following syntactic abbreviations.
  & &  \\
 $t\ t_1 \cdots t_n$ &
 {\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
-{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$t_n${\small\verb+])+} \\ \hline
+{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\holtxt{,\ldots,}}$t_n${\small\verb+])+} \\ \hline
 {\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
-\holtxt{\bs}$x_1${\small\verb+. +}$\cdots${\small\verb+ \+}$x_n${\small\verb+.+}$t$ &
-{\small\verb+list_mk_abs([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
+{\small\holtxt{\bs}}$x_1${\small\verb+.+}$\cdots${\small\holtxt{\bs}}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_abs([+}$x_1${\small\holtxt{,\ldots,}}$x_n${\small\verb+],+}$t${\small\verb+)+}
 \\ \hline
 \end{tabular}
 \end{center}
