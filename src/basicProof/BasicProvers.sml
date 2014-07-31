@@ -234,7 +234,7 @@ fun induct_on_type st ty g =
                     "but there is no associated induction theorem"])
         | SOME thm => (* now select induction tactic *)
            if null (TypeBasePure.constructors_of facts) (* not a datatype *)
-             then HO_MATCH_MP_TAC thm else
+             then primInduct st (HO_MATCH_MP_TAC thm) else
            if is_mutind_thm thm
                then Mutual.MUTUAL_INDUCT_TAC thm
            else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
