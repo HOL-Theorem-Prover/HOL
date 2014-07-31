@@ -2,6 +2,8 @@ open HolKernel Parse boolLib bossLib;
 open lcsymtacs
 open arithmeticTheory
 open logrootTheory
+open listTheory
+open alistTheory
 
 val _ = new_theory "sptree";
 
@@ -255,6 +257,51 @@ val inter_def = Define`
        | BS t1' a' t2' => mk_BS (inter t1 t1') a (inter t2 t2'))
 `;
 
+val inter_eq_def = Define`
+  (inter_eq LN t = LN) /\
+  (inter_eq (LS a) t =
+     case t of
+       | LN => LN
+       | LS b => if a = b then LS a else LN
+       | BN t1 t2 => LN
+       | BS t1 b t2 => if a = b then LS a else LN) /\
+  (inter_eq (BN t1 t2) t =
+     case t of
+       | LN => LN
+       | LS a => LN
+       | BN t1' t2' => mk_BN (inter_eq t1 t1') (inter_eq t2 t2')
+       | BS t1' a t2' => mk_BN (inter_eq t1 t1') (inter_eq t2 t2')) /\
+  (inter_eq (BS t1 a t2) t =
+     case t of
+       | LN => LN
+       | LS a' => if a' = a then LS a else LN
+       | BN t1' t2' => mk_BN (inter_eq t1 t1') (inter_eq t2 t2')
+       | BS t1' a' t2' =>
+           if a' = a then
+             mk_BS (inter_eq t1 t1') a (inter_eq t2 t2')
+           else mk_BN (inter_eq t1 t1') (inter_eq t2 t2'))`;
+
+val difference_def = Define`
+  (difference LN t = LN) /\
+  (difference (LS a) t =
+     case t of
+       | LN => LS a
+       | LS b => LN
+       | BN t1 t2 => LS a
+       | BS t1 b t2 => LN) /\
+  (difference (BN t1 t2) t =
+     case t of
+       | LN => BN t1 t2
+       | LS a => BN t1 t2
+       | BN t1' t2' => mk_BN (difference t1 t1') (difference t2 t2')
+       | BS t1' a t2' => mk_BN (difference t1 t1') (difference t2 t2')) /\
+  (difference (BS t1 a t2) t =
+     case t of
+       | LN => BS t1 a t2
+       | LS a' => BN t1 t2
+       | BN t1' t2' => mk_BS (difference t1 t1') a (difference t2 t2')
+       | BS t1' a' t2' => mk_BN (difference t1 t1') (difference t2 t2'))`;
+
 val wf_mk_BN = prove(
   ``!t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2``,
   map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,wf_def]);
@@ -286,6 +333,26 @@ val lookup_inter = store_thm(
   Induct >> simp[lookup_def] >> Cases_on `m2` >>
   simp[lookup_def, inter_def, lookup_mk_BS, lookup_mk_BN] >>
   rw[optcase_lemma] >> BasicProvers.CASE_TAC);
+
+val lookup_inter_eq = store_thm(
+  "lookup_inter_eq",
+  ``!m1 m2 k. lookup k (inter_eq m1 m2) =
+              case lookup k m1 of
+              | NONE => NONE
+              | SOME v => (if lookup k m2 = SOME v then SOME v else NONE)``,
+  Induct >> simp[lookup_def] >> Cases_on `m2` >>
+  simp[lookup_def, inter_eq_def, lookup_mk_BS, lookup_mk_BN] >>
+  rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
+  fs [lookup_def, lookup_mk_BS, lookup_mk_BN]);
+
+val lookup_difference = store_thm(
+  "lookup_difference",
+  ``!m1 m2 k. lookup k (difference m1 m2) =
+              if lookup k m2 = NONE then lookup k m1 else NONE``,
+  Induct >> simp[lookup_def] >> Cases_on `m2` >>
+  simp[lookup_def, difference_def, lookup_mk_BS, lookup_mk_BN] >>
+  rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
+  fs [lookup_def, lookup_mk_BS, lookup_mk_BN])
 
 val lrnext_def = new_specification(
   "lrnext_def", ["lrnext"],
@@ -493,6 +560,33 @@ val domain_foldi = save_thm(
   set_foldi_keys |> SPEC_ALL |> Q.INST [`i` |-> `0`, `a` |-> `{}`]
                  |> SIMP_RULE (srw_ss()) [lrnext_thm]
                  |> SYM);
+
+val toAList_def = Define `
+  toAList = foldi (\k v a. (k,v)::a) 0 []`
+
+val set_toAList_lemma = prove(
+  ``!t a i. set (foldi (\k v a. (k,v) :: a) i a t) =
+            set a UNION IMAGE (\n. (i + lrnext i * n,
+                    THE (lookup n t))) (domain t)``,
+  Induct_on `t`
+  \\ fs [foldi_def,GSYM pred_setTheory.IMAGE_COMPOSE,lookup_def]
+  THEN1 fs [Once pred_setTheory.INSERT_SING_UNION, pred_setTheory.UNION_COMM]
+  THEN1 (simp[pred_setTheory.EXTENSION] \\ rpt gen_tac \\
+         Cases_on `MEM x a` \\ simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]
+         \\ fs [MULT2_DIV',EVEN_ADD,EVEN_DOUBLE])
+  \\ simp[pred_setTheory.EXTENSION] \\ rpt gen_tac
+  \\ Cases_on `MEM x a'` \\ simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]
+  \\ fs [MULT2_DIV',EVEN_ADD,EVEN_DOUBLE])
+  |> Q.SPECL [`t`,`[]`,`0`] |> GEN_ALL
+  |> SIMP_RULE (srw_ss()) [GSYM toAList_def,lrnext_thm,MEM,LIST_TO_SET,
+       pred_setTheory.UNION_EMPTY,pred_setTheory.EXTENSION,
+       pairTheory.FORALL_PROD]
+
+val MEM_toAList = store_thm("MEM_toAList",
+  ``!t k v. MEM (k,v) (toAList t) <=> (lookup k t = SOME v)``,
+  fs [set_toAList_lemma,domain_lookup]  \\ REPEAT STRIP_TAC
+  \\ Cases_on `lookup k t` \\ fs []
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ fs []);
 
 val insert_union = store_thm("insert_union",
   ``!k v s. insert k v s = union (insert k v LN) s``,
