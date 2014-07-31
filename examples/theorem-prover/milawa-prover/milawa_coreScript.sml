@@ -288,6 +288,11 @@ val sexp_lex_parse_BAR = prove(
   \\ Cases_on `str2sym_aux cs F`
   \\ FULL_SIMP_TAC (srw_ss()) []);
 
+fun auto_prove (goal,tac) = let
+  val (rest,validation) = tac ([], goal)
+  in if length rest = 0 then validation []
+     else failwith("auto_prove failed") end
+
 val sexp_lex_parse_chars = let
   fun is_true tm = (tm = T)
   fun is_identifier_char c =
@@ -300,7 +305,7 @@ val sexp_lex_parse_chars = let
   fun thm_for_char c = let
     val sym_evals = CONJ (EVAL ``next_token (STRING ^c cs)``)
                          (EVAL ``str2sym (STRING ^c cs)``)
-    in prove(
+    in auto_prove(
       ``(sexp_lex_parse (^c::cs,s,L_READ,mem) =
           let (str,cs) = str2sym (STRING ^c cs) in
             sexp_lex_parse (cs,s,L_RETURN (Sym str),mem))``,
