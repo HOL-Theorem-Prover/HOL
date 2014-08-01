@@ -1208,7 +1208,7 @@ theorems in the theory \ml{one} are:
 \begin{hol}
 \index{one_Axiom@\ml{one\_Axiom}}
 \begin{verbatim}
-   one_axiom   |- !(f:'a->one) (g:'a -> one). f = g
+   one_axiom   |- !(f:'a->one) (g:'a->one). f = g
    one         |- !(v:one). v = one
    one_Axiom   |- !(e:'a). ?!(fn:one->'a). fn one = e
 \end{verbatim}
@@ -2084,7 +2084,7 @@ sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
 \item [powser] Power series.
-\item [transc] Transcendental functions, \emph{e.g.}, exp, sin,
+\item [transc] Transcendental functions, e.g., exp, sin,
 cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
 gauge integral the fundamental theorem of calculus, and McLaurin's
 theorem.
@@ -2194,7 +2194,7 @@ provides a flexible means for defining words -- one can supply a function
 \subsubsection{Bit theory}
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers,
-e.g. \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
+e.g.\ \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
 \holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
 unbounded length.  The operations in \theoryimp{bit} are primarily defined using \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of \holtxt{BIT}, the following theorem holds:
 \begin{hol}
