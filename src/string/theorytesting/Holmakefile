@@ -13,4 +13,4 @@ stringlit_output: stringlit_input munge.exe expected-stringlit
 munge.exe: $(dprot $(SIGOBJ)/stringLib.uo) $(dprot $(HOLDIR)/bin/mkmunge.exe)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) stringLib
 
-EXTRA_CLEANS = stringlit_output munge.exe
+EXTRA_CLEANS = stringlit_output munge.exe munger.o
