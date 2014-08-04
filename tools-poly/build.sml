@@ -172,7 +172,6 @@ in
       []            => build_hol default_link
     | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
     | ["-nosymlink"]=> build_hol cp
-    | ["-small"]    => build_hol mv                (* by renaming *)
     | ["-dir",path] => buildDir cp (path, 0)
     | ["-dir",path,
        "-symlink"]  => buildDir (symlink_check()) (path, 0)
