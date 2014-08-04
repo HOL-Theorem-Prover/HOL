@@ -1024,13 +1024,15 @@ in
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete [thysmlfile, thysigfile]
         val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val _ = app safedelete [script, scriptuo, scriptui]
         val () =
             if not (isSuccess res2) then
               (failed_script_cache := Binaryset.add(!failed_script_cache, s);
                warn ("Failed script build for "^script^" - "^
                      posix_diagnostic res2))
             else ()
+        val _ = if isSuccess res2 orelse not debug then
+                  app safedelete [script, scriptuo, scriptui]
+                else ()
       in
         (isSuccess res2) andalso
         (exists_readable thysmlfile orelse
