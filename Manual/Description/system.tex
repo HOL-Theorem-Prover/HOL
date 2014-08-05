@@ -1178,7 +1178,8 @@ Failure occurs if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
 \begin{holboxed}
 \begin{verbatim}
    SUBST : (thm * term) list -> term -> thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1233,7 +1234,8 @@ $1\leq i\leq n$.
 \begin{holboxed}\index{ABS@\ml{ABS}|pin}
 \begin{verbatim}
    ABS : term -> thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 
 \begin{center}
@@ -1306,7 +1308,8 @@ construct values of the record type \ml{redex-residue}.  It is defined
 \begin{holboxed}\index{DISCH@\ml{DISCH}|pin}
 \begin{verbatim}
    DISCH : term -> thm -> thm
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1628,7 +1631,8 @@ existing theory segment by simply importing the corresponding module.
 \index{load (ML function)@\ml{load} (\ML{} function)|pin}
 \begin{verbatim}
    load : string -> unit
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \noindent
 Executing {\small\verb+load +}$name${\small\verb+Theory+} imports the
@@ -2127,44 +2131,48 @@ and surjective (onto):
 \noindent The theorem argument to each of these functions must be a theorem
 of the form returned by \ml{define\_new\_type\_bijections}:
 
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
-   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
-\end{alltt}\end{hol}}
+\begin{hol}
+\begin{alltt}
+   |- (!a. \m{abs}(\m{rep} a) = a) /\bs (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
+\end{alltt}
+\end{hol}
 
 \noindent If \m{th} is a theorem of this form, then evaluating
 \ml{prove\_rep\_fn\_one\_one \m{th}} proves that the function \m{rep} is
 one-to-one, and returns the theorem:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- !a a'. (\m{rep} a = \m{rep} a') = (a = a')
-\end{alltt}\end{hol}
+\end{alltt}
+\end{hol}
 
 \noindent Likewise, \ml{prove\_rep\_fn\_onto \m{th}} proves that \m{rep} is
 onto the set of values that satisfy \m{P}:
 
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- !r. \m{P} r = (?a. r = \m{rep} a)
-\end{alltt}\end{hol}}
+\end{alltt}
+\end{hol}
 
 \noindent Evaluating \ml{prove\_abs\_fn\_one\_one \m{th}} proves that \m{abs}
 is one-to-one for values that satisfy \m{P}, and returns the theorem:
 
-{\def\bk{\char'134}
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- !r r'. \m{P} r ==> \m{P} r' ==> ((\m{abs} r = \m{abs} r') = (r = r'))
-\end{alltt}\end{hol}}
+\end{alltt}
+\end{hol}
 
 \noindent And evaluating \ml{prove\_abs\_fn\_onto \m{th}} proves that \m{abs}
 is onto, returning the theorem:
 
-{\def\bk{\char'134}
 \begin{hol}
 \begin{alltt}
-   |- !a. ?r. (a = \m{abs} r) /\bk \m{P} r
+   |- !a. ?r. (a = \m{abs} r) /\bs \m{P} r
 \end{alltt}
-\end{hol}}
+\end{hol}
 
 \noindent All four functions will fail if applied to any theorem that does not
 have the form of a theorem returned by \ml{define\_new\_type\_bijections}.
