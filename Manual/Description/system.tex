@@ -1117,7 +1117,7 @@ $t${\small\verb+ |- +}$t$ \\
 
 \noindent
 {\small\verb+ASSUME +}$t$ evaluates to $t${\small\verb+ |- +}$t$.
-Failure if $t$ is not of type \ml{bool}.
+Failure occurs if $t$ is not of type \ml{bool}.
 
 \bigskip
 
@@ -1168,7 +1168,7 @@ in $t_2$ becoming bound after substitution. The substitution
 %back-tick quotations.
 \noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
 evaluates to the theorem \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
-Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
+Failure occurs if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
 (\ie\ is not of the form \holtxt{(\bs$x$.$t_1$)$t_2$}.
 
 \bigskip
@@ -1219,7 +1219,7 @@ $\Gamma${\small\verb+ |- +}$t[t_1,\ldots,t_n]$
 \bigskip
 
 \noindent returns $\Gamma${\small\verb+ |- +}$t[t'_1,\ldots,t'_n]$.
-Failure if:
+Failure occurs if:
 \begin{myenumerate}
 \item any of the arguments are of the wrong form;
 \item the type of $x_i$ is not equal to the type of $t_i$ for some
@@ -1250,7 +1250,7 @@ $\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\s
 \noindent
 {\small\verb+ABS +}$x${\small\verb+ +}$\Gamma${\small\verb+ |- +}$t_1${\small\verb+=+}$t_2$ returns the theorem
 $\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\small\verb+.+}$t_2${\small\verb+)+}.
-Failure if $x$ is not a variable, or $x$
+Failure occurs if $x$ is not a variable, or $x$
  occurs free in any assumption in $\Gamma$.
 
 
@@ -1686,7 +1686,7 @@ If $c$ is not an allowed name for a constant, a warning will be issued.
 \noindent Executing \ml{new\_axiom("}$name$\ml{",}$t$\ml{)} declares the
 sequent
 \ml{(\lb\rb{},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL{} logic} of the current theory with name $name$.
-Failure if:
+Failure occurs if:
 \begin{myenumerate}
 \item the type of $t$ is not \verb+bool+;
 
