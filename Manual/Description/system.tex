@@ -40,8 +40,8 @@ their own application specific theories.
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic|(} The name
 of a \HOL{} variable
 %
-\index{tokens|(}
-\index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}
+\index{tokens|(}%
+\index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}%
 %
 can be any \ML{} string, but the quotation mechanism will parse only
 names that are identifiers (see Section~\ref{ident} below).  Using non-identifiers as variable names is discouraged except in special
@@ -175,8 +175,8 @@ have been declared in the current theory. See Section~\ref{theoryfns}
 for details of how such declarations are made. There are two primitive
 constructor
 %
-\index{types, in HOL logic@types, in \HOL{} logic!constructors for}
-\index{type constructors!in HOL logic@in \HOL{} logic}
+\index{types, in HOL logic@types, in \HOL{} logic!constructors for}%
+\index{type constructors!in HOL logic@in \HOL{} logic}%
 %
 functions for values of type \ml{hol\_type}:
 %
@@ -216,14 +216,14 @@ $\ml{mk\_thy\_type}\{\ml{Tyop} = \mathit{name},\
 fails if
 %
 \begin{myenumerate}
-\item $\mathit{name}$ is not a type operator of theory $\mathit{thyname}$
+\item $\mathit{name}$ is not a type operator of theory $\mathit{thyname}$;
 \item $\mathit{name}$ is a type operator of theory $\mathit{thyname}$,
 but its arity is not $n$.
 \end{myenumerate}
 %
 For example, \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}}
-\index{truth values, in HOL logic@truth values, in \HOL{} logic}
-\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}
+\index{truth values, in HOL logic@truth values, in \HOL{} logic}%
+\index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}%
 evaluates to an \ML{} value of type \ml{term} representing the type
 \ty{bool}.
 %
@@ -251,8 +251,8 @@ is the type variable \ml{'a} and \ml{beta} is the type variable
 \noindent
 There are two primitive destructor
 %
-\index{types, in HOL logic@types, in \HOL{} logic!destructors for}
-\index{type destructors, in HOL logic@type destructors, in \HOL{} logic}
+\index{types, in HOL logic@types, in \HOL{} logic!destructors for}%
+\index{type destructors, in HOL logic@type destructors, in \HOL{} logic}%
 %
 functions for values of type \ml{hol\_type}:
 \begin{holboxed}
@@ -267,8 +267,8 @@ functions for values of type \ml{hol\_type}:
 
 \noindent The function \ml{dest\_vartype}
 %
-\index{type variables, in HOL logic@type variables, in \HOL{} logic!destructors for}
-\index{compound types, in HOL logic@compound types, in \HOL{} logic!destructors for}
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!destructors for}%
+\index{compound types, in HOL logic@compound types, in \HOL{} logic!destructors for}%
 %
 extracts the name of a type variable.  A compound type is destructed
 by the function \ml{dest\_thy\_type} into the name of the type
@@ -289,9 +289,9 @@ constants have been declared in the current theory. See
 Section~\ref{theoryfns} for details of how such declarations are made.
 
 There are four primitive constructor
-\index{variables, in HOL logic@variables, in \HOL{} logic!constructor for}
-\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
-\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
+\index{variables, in HOL logic@variables, in \HOL{} logic!constructor for}%
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}%
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}%
 functions for values of type \ml{term}:
 
 \begin{holboxed}
@@ -436,8 +436,8 @@ It would be tedious to always have to input types and terms
 using the constructor functions. The \HOL{} system, adapting the
 approach taken in \LCF\index{LCF@\LCF}, has special
 quotation
-\index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax}
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax}%
 parsers for \HOL{} types and terms which enable types and terms
 to be input using a fairly standard syntax. For example, the \ML{}
 expression $\holquote{\ml{:bool -> bool}}$ denotes exactly the same
@@ -520,7 +520,7 @@ only possible type assignment; for example, the first occurrence of
 \holtxt{x} could have type \holtxt{bool} and the second one have type
 \holtxt{num}.  In that case there would be two \emph{different}
 variables with name \holtxt{x}, namely \holtxt{x}$_{\holtxt{bool}}$ and
-\holtxt{x}$_{\holtxt{num}}$, the second of which is free.  However, the
+\holtxt{x}$_{\holtxt{num}\vphantom{l}}$, the second of which is free.  However, the
 only way to construct a term with this second type assignment is by
 using constructors, since the type checker uses the heuristic that all
 variables in a term with the same name have the same type.  This is
@@ -737,26 +737,26 @@ The expressions in the same row are equivalent.
 {\it Kind of type} & {\it \ML\ quotation} & {\it Constructor expression}  \\ \hline
  & & \\
 Type variable &
-{\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
-Type constant & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
- & $:\mathit{thy}$\verb+$+$\mathit{op}$
+{\small\verb+:'+}$\mathit{alphanum}$ & {\small\holtxt{mk\_vartype("'}}$\mathit{alphanum}${\small\holtxt{")}}   \\ \hline
+Type constant & {\small\verb+:+}$\mathit{op}$ & {\small\verb+mk_type("+}$\mathit{op}${\small\verb+",[])+}   \\ \hline
+ & {\small\verb+:+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
   & \parbox{7cm}
-   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
-    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[]\rb{}}}   \\ \hline
-Function type & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
-$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\
+   {{\small\holtxt{mk\_thy\_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
+    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[]\rb{}}}}   \\ \hline
+Function type & {\small\verb+:+}$\sigma_1${\small\verb+->+}$\sigma_2$ &
+$\sigma_1${\small\verb+-->+}$\sigma_2$ \\
 \hline
 Compound type &
-{\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$op$ &
-{\small\verb+mk_type("+}$op${\small\verb+", [+}
- $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+])+}
+{\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{op}$ &
+{\small\holtxt{mk\_type("}}$\mathit{op}${\small\holtxt{",[}}%
+ $\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\holtxt{])}}
 \\
 \hline
-& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
+& {\small\verb+:(+}$\sigma_1${\small\holtxt{,\ldots,}}$\sigma_n${\small\verb+)+}$\mathit{thy}${\small\verb+$+}$\mathit{op}$
 & \parbox{7cm}
-   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
-    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[}
- $\sigma_1, \ldots, \sigma_n$ \holtxt{]\rb{}}} \\ \hline
+   {{\small\holtxt{mk\_thy\_type\lb{}Thy="}}$\mathit{thy}${\small\holtxt{",}} \newline
+    {\small\holtxt{\quad Tyop="}}$\mathit{op}${\small\holtxt{",Args=[}}%
+ $\sigma_1{\small\holtxt{,\ldots,}}\sigma_n${\small\holtxt{]\rb{}}}} \\ \hline
 \end{tabular}
 \end{center}
 
@@ -787,20 +787,20 @@ the next table.
 {\it Kind of term} & {\it \ML\ quotation} &
 {\it Constructor expression}  \\ \hline
  & & \\
-Variable & $var${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_var("+}$var${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+Variable & $\mathit{var}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_var("+}$\mathit{var}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
 %
-Constant & $const${\small\verb+:+}$\sigma$ &
-{\small\verb+mk_const("+}$const${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+Constant & $\mathit{const}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_const("+}$\mathit{const}${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
 %
-Constant & $\mathit{thy}$\verb+$+$\mathit{const}${\small\verb+:+}$\sigma$ &
+Constant & $\mathit{thy}${\small\verb+$+}$\mathit{const}${\small\verb+:+}$\sigma$ &
 {\small\verb+mk_thy_const{Name="+}$\mathit{const}${\small\verb+",Thy="+}$\mathit{thy}${\small\verb+",Ty=+}$\sigma${\small\verb+}+} \\ \hline
 %
 Combination & $t_1\ t_2$ &
-{\small\verb+mk_comb(+}$t_1${\small\verb+, +}$t_2${\small\verb+)+} \\ \hline
+{\small\verb+mk_comb(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
 %
-Abstraction & \holtxt{\bs$x$.$t$} &
-{\small\verb+mk_abs(+}$x${\small\verb+, +}$t${\small\verb+)+} \\ \hline
+Abstraction & {\small\holtxt{\bs}}$x${\small\holtxt{.}}$t$ &
+{\small\verb+mk_abs(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
 \end{tabular}
 \end{center}
 %
@@ -829,10 +829,10 @@ supports the following syntactic abbreviations.
  & &  \\
 $t\ t_1 \cdots t_n$ &
 {\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
-{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$t_n${\small\verb+])+} \\ \hline
+{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\holtxt{,\ldots,}}$t_n${\small\verb+])+} \\ \hline
 {\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
-\holtxt{\bs}$x_1${\small\verb+. +}$\cdots${\small\verb+ \+}$x_n${\small\verb+.+}$t$ &
-{\small\verb+list_mk_abs([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
+{\small\holtxt{\bs}}$x_1${\small\verb+.+}$\cdots${\small\holtxt{\bs}}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_abs([+}$x_1${\small\holtxt{,\ldots,}}$x_n${\small\verb+],+}$t${\small\verb+)+}
 \\ \hline
 \end{tabular}
 \end{center}
@@ -1116,7 +1116,7 @@ $t${\small\verb+ |- +}$t$ \\
 \end{center}
 
 \noindent
-{\small\verb+ASSUME +}$t${\small\verb++} evaluates to $t${\small\verb+|- +}$t$.
+{\small\verb+ASSUME +}$t$ evaluates to $t${\small\verb+ |- +}$t$.
 Failure if $t$ is not of type \ml{bool}.
 
 \bigskip
@@ -1177,7 +1177,7 @@ Failure if the argument to \ml{BETA\_CONV} is not a $\beta$-redex
 
 \begin{holboxed}
 \begin{verbatim}
-   SUBST : (thm * term)list -> term -> thm -> thm
+   SUBST : (thm * term) list -> term -> thm -> thm
 \end{verbatim}\end{holboxed}
 
 \begin{center}
@@ -1289,7 +1289,7 @@ $\Gamma$.
 \ml{INST\_TYPE[$\alpha_1$~|->~$\sigma_1$%
   ,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$} returns the result of
 instantiating each occurrence of $\alpha_i$ in the theorem $th$ to
-$\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if an $\alpha_i$ is
+$\sigma_i$ (for $1 \leq i \leq n$). Failure if an $\alpha_i$ is
 not a type variable.
 
 The polymorphic \ML{} infix function {\small\verb+|->+} is used to
@@ -1381,7 +1381,7 @@ A tagged theorem can be created via
 \end{verbatim}
 \end{holboxed}
 
-which directly creates the requested theorem and attaches the given
+\noindent which directly creates the requested theorem and attaches the given
 tag to it. The tag is created with a call to
 
 \begin{holboxed}
@@ -1479,8 +1479,8 @@ with the types, constants, axioms and theorems in all the segments
 reachable by following pointers to parents. This collection of
 reachable segments is called the \emph{ancestry}
 %
-\index{ancestry, of HOL system theories@ancestry, of \HOL{} system theories}
-\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
+\index{ancestry, of HOL system theories@ancestry, of \HOL{} system theories}%
+\index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}%
 %
 of the segment.
 
@@ -1550,7 +1550,7 @@ The exact set of theories loaded can be determined with the
 This function provides a general mechanism for examining the structure
 of the theory hierarchy.  The argument is the name of a theory (or
 \texttt{"-"} as an abbreviation for the current theory), to which
-\texttt{ancestry} will respondwith a list of the argument's ancestors
+\texttt{ancestry} will respond with a list of the argument's ancestors
 in the theory hierarchy.
 
 \begin{holboxed}
@@ -1570,7 +1570,7 @@ in the theory hierarchy.
 
 \index{theories, in HOL logic@theories, in \HOL{} logic!creation of|(}
 %
-New theory segment are created by a call to \ml{new\_theory}.
+New theory segment is created by a call to \ml{new\_theory}.
 %
 \begin{holboxed}
 \index{new_theory@\ml{new\_theory}|pin}
@@ -1688,7 +1688,7 @@ sequent
 \ml{(\lb\rb{},$t$)} to be an axiom\index{axioms!declaration of, in HOL logic@declaration of, in \HOL{} logic} of the current theory with name $name$.
 Failure if:
 \begin{myenumerate}
-\item the type of $t$ is not \verb+bool+.
+\item the type of $t$ is not \verb+bool+;
 
 \item $t$ contains out-of-date constants or types, \ie, constants or
   types that have been re-declared after $t$ was built.
@@ -1707,8 +1707,8 @@ Once a theorem has been proved, it can be saved with the function
 Evaluating \ml{save\_thm("}$\mathit{name}$\ml{",}$\mathit{th}$\ml{)}
 will save the theorem
 %
-\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of}
-\index{saving theorems}
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of}%
+\index{saving theorems}%
 %
 $\mathit{th}$ with name $\mathit{name}$ in the current theory
 segment.
@@ -1721,7 +1721,7 @@ file, which, after compilation, can be imported into future sessions.
 \begin{holboxed}
 \index{export_theory@\ml{export\_theory}|pin}
 \begin{verbatim}
-    export_theory : unit -> unit
+   export_theory : unit -> unit
 \end{verbatim}
 \end{holboxed}
 
@@ -1830,8 +1830,8 @@ constant definitions, constant specifications and type definitions.
 
 In \LOGIC{} a constant definition
 %
-\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}
-\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}
+\index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}%
+\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}%
 %
 over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie\
 a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
@@ -1873,7 +1873,7 @@ declares the sequent
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in
 this theory is $name$.
-Failure occurs if:
+Failure if:
 \begin{myenumerate}
 \item $t$ contains free variables that are not in any of
 the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
@@ -1899,12 +1899,12 @@ is defined to be a pair:
 such that:
 
 \begin{myenumerate}
-\item $c_1$, $\dots$, $c_n$ are distinct names.
+\item $c_1$, $\dots$, $c_n$ are distinct names;
 \item $\lquant{{x_1}_{\sigma_1}
-\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$;
 \item $tyvars(\lquant{{x_1}_{\sigma_1}
 \cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ for
-$1\leq i\leq n$.
+$1\leq i\leq n$;
 \item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
 \ \in\ {\sf Theorems}_{\cal T}$.
 \end{myenumerate}
@@ -1959,8 +1959,8 @@ variables which occur in the term
 In \LOGIC{} it is explained that
 defining
 %
-\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!introduction of}
-\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|(}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!introduction of}%
+\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|(}%
 %
 a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$
 consists of introducing $\ty{op}$ as a new $n$-ary type operator and
@@ -1979,11 +1979,11 @@ for a theory ${\cal T}$ is a $3$-tuple
 
 \begin{myenumerate}
 \item $\sigma\in{\sf Types}_{\cal T}$  and
-$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$.
-\item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$.
+$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$;
+\item \ty{op} is not the name of a type constant in ${\sf Struc}_{\cal T}$;
 \item $p\in{\sf Terms}_{\cal T}$ is a closed term of
 type $\sigma\fun\ty{bool}$  and
-$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
+$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$;
 \item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
 \end{myenumerate}
 
@@ -2017,7 +2017,7 @@ characterized by the definitional
 
 \noindent which is stored as a definition with the automatically
 generated name
-\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
+\ty{op}\ml{\_TY\_DEF}\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. The constant
 \ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
 is defined in the theory \ml{bool} by:
 
@@ -2055,7 +2055,7 @@ following \ML\ function is provided:
       : {name:string, ABS:string, REP:string, tyax:thm} -> thm
 \end{verbatim}\end{holboxed}
 
-\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}
+\noindent This function takes a record {\small\verb+{ABS, REP, name, tyax}+}.
 The {\verb+tyax+} argument must be a definitional axiom of the form returned by
 \ml{new\_type\_definition}.  The {\verb+name+} argument is the name under which
 the constant definition (a constant specification, in fact) made by

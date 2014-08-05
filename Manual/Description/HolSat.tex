@@ -137,7 +137,7 @@ The input term.
 The external SAT solver to use. The default is \texttt{SatSolvers.minisatp}. If ZChaff is installed (see \S\ref{subsec:hs-zchaff}), then \texttt{SatSolvers.zchaff} may also be used.
 \item{\texttt{infile : string option}}
 
-The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}}. Overrides \texttt{term} if set. The input term is instead read from the file.
+The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}} Overrides \texttt{term} if set. The input term is instead read from the file.
 \item{\texttt{proof : string option}}
 
 The name of a proof trace file. Overrides \texttt{solver} if set. The file must be in the native format of {\tt{HolSatLib}}, and must correspond to a proof for \texttt{infile}, which must also be set. The included version of MiniSat has been modified to produce proofs in the native format, and ZChaff proofs are translated to this format using the included proof translator \texttt{src/HolSat/sat\_solvers/zc2hs} (type \texttt{zc2hs -h} for usage help). \texttt{zc2hs} is used internally by \texttt{ZSAT\_PROVE} etc.

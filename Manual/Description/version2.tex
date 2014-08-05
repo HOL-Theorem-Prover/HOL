@@ -38,7 +38,7 @@ goals (this is generally considered `bad style'). The old
 resolution tools are available in the directory
 {\small\verb%contrib/resolve%}.
 
-The type definition package (i.e. the \ML\ function
+The type definition package (i.e.\ the \ML\ function
 {\small\verb%define_type%}) has been rewritten to be faster and more
 robust. A number of identifier names have changed and its internal
 workings have been reorganized. A tool for mutually recursive type
@@ -339,7 +339,7 @@ must be explicitly defined), then executing:
 
 \noindent Note that associations between user defined binders and their
 restrictions are not stored in theory files, so they have to be set up
-for each \HOL\ session (e.g. with a {\small\verb%hol-init.ml%} initialization file).
+for each \HOL\ session (e.g.\ with a {\small\verb%hol-init.ml%} initialization file).
 
 Here is an example session:
 
@@ -522,7 +522,7 @@ of the paired abstraction is an unspecified function of the structure
 of $t$ (it is approximately left to right). Failure if $c$ is not the
 name of a constant.
 
-For example, if the library \ml{sets} (i.e. what used to be \ml{all\_sets})
+For example, if the library \ml{sets} (i.e.\ what used to be \ml{all\_sets})
 is loaded, then
 
 \begin{hol}\begin{verbatim}
@@ -775,7 +775,7 @@ The old escape character is returned.\index{syntax blocks|)}
 \section{User-programmable quotation typechecker}
 
 The typechecker for \HOL\ quotations contains a number of arbitrary
-design decisions. Several people have suggested changes, e.g. that
+design decisions. Several people have suggested changes, e.g.\ that
 full Hindley/Milner type inference be performed. Rather than try to
 create a single new improved typechecker, a facility is now provided
 that enables the user to write his or her own one and then to install

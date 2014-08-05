@@ -16,7 +16,7 @@ ps: tutorial.ps
 pdf: tutorial.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log tutorial.{ps,pdf}
+	rm -f *.dvi *.aux *.toc *.log tutorial.ps tutorial.pdf
 
 tutorial.pdf: tutorial.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX} tutorial.tex ; ${PDFLATEX} tutorial.tex
