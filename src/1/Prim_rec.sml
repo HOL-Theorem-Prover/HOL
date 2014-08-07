@@ -1817,5 +1817,44 @@ end (* local where partition is defined *)
 
  ---------------------------------------------------------------------------*)
 
+fun prove_case_rand_thm {nchotomy, case_def} = let
+  val cs = strip_conj (concl case_def)
+  fun cfvs c = FVL (#1 (strip_forall c)) empty_tmset
+  val vs = foldl (fn (c,s) => HOLset.intersection(cfvs c, s))
+                 (cfvs (hd cs))
+                 (tl cs)
+  val vs_l = HOLset.listItems vs
+  val (_, eqn1) = strip_forall (hd cs)
+  val (const,args) = strip_comb (lhs eqn1)
+  val (arg1_ty, casefs) = case args of
+                           h::t => (type_of h,t)
+                         | _ => raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
+                                      "Case constant theorem has too few arguments"
+  val v = variant vs_l (mk_var("x", arg1_ty))
+  val t = list_mk_comb(const, v::tl args)
+  val tyvs = foldl (fn (v,s) => HOLset.addList(s, type_vars_in_term v))
+                   (HOLset.empty Type.compare)
+                   vs_l
+  fun foldthis (sv, acc) = if acc = sv then mk_vartype(dest_vartype acc ^ "1")
+                           else acc
+  val fresh_tyvar = HOLset.foldl foldthis alpha tyvs
+  val f = variant vs_l (mk_var("f", type_of t --> fresh_tyvar))
+  val ctor_args = map (fn c => c |> strip_forall |> #2 |> lhs |> strip_comb
+                                 |> #2 |> hd |> strip_comb |> #2)
+                      cs
+  val new_lhs = mk_comb(f, t)
+  val cfs' =
+      ListPair.map
+        (fn (cf, args) => list_mk_abs(args, mk_comb(f, list_mk_comb(cf, args))))
+        (casefs, ctor_args)
+  val const' = inst [#2 (strip_fun (type_of const)) |-> fresh_tyvar] const
+  val rhs' = list_mk_comb(const', v::cfs')
+in
+  prove(mk_eq(mk_comb(f,t),rhs'),
+        STRUCT_CASES_TAC (ISPEC v nchotomy) THEN
+        PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
+        PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
+end
+
 
 end; (* Prim_rec *)
