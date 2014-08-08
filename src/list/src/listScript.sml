@@ -311,7 +311,7 @@ val list_cases = TypeBase.nchotomy_of ``:'a list``;
 
 val list_CASES = store_thm
 ("list_CASES",
- --`!l. (l = []) \/ (?t h. l = h::t)`--,
+ --`!l. (l = []) \/ (?h t. l = h::t)`--,
  mesonLib.MESON_TAC [list_cases]);
 
 val list_nchotomy = save_thm("list_nchotomy", list_CASES);
