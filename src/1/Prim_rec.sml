@@ -1817,8 +1817,7 @@ end (* local where partition is defined *)
 
  ---------------------------------------------------------------------------*)
 
-fun prove_case_rand_thm {nchotomy, case_def} = let
-  val cs = strip_conj (concl case_def)
+fun usefuls cs = let
   fun cfvs c = FVL (#1 (strip_forall c)) empty_tmset
   val vs = foldl (fn (c,s) => HOLset.intersection(cfvs c, s))
                  (cfvs (hd cs))
@@ -1827,11 +1826,17 @@ fun prove_case_rand_thm {nchotomy, case_def} = let
   val (_, eqn1) = strip_forall (hd cs)
   val (const,args) = strip_comb (lhs eqn1)
   val (arg1_ty, casefs) = case args of
-                           h::t => (type_of h,t)
-                         | _ => raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
-                                      "Case constant theorem has too few arguments"
+                              h::t => (type_of h,t)
+                            | _ => raise mk_HOL_ERR "Prim_rec" "prove_case_rand_thm"
+                                         "Case constant theorem has too few arguments"
   val v = variant vs_l (mk_var("x", arg1_ty))
-  val t = list_mk_comb(const, v::tl args)
+in
+  (const, list_mk_comb(const, v::tl args), casefs, vs_l, v)
+end
+
+fun prove_case_rand_thm {nchotomy, case_def} = let
+  val cs = strip_conj (concl case_def)
+  val (const,t,casefs,vs_l,v) = usefuls cs
   val tyvs = foldl (fn (v,s) => HOLset.addList(s, type_vars_in_term v))
                    (HOLset.empty Type.compare)
                    vs_l
@@ -1855,6 +1860,105 @@ in
         PURE_REWRITE_TAC [case_def] THEN BETA_TAC THEN
         PURE_REWRITE_TAC [EQT_INTRO (SPEC_ALL EQ_REFL)])
 end
+
+(* prove a theorem of the form
+     ty_CASE x f1 .. fn :bool <=>
+       (?a1 .. ai. x = ctor1 a1 .. ai /\ f1 a1 .. ai) \/
+       (?b1 .. bj. x = ctor2 b1 .. bj /\ f2 b1 .. bj) \/
+       ...
+*)
+fun prove_case_elim_thm {case_def,nchotomy} = let
+  val cs = strip_conj (concl case_def)
+  val (const,t0,casefs0,vs_l,v) = usefuls cs
+  val casefs = map (inst [type_of t0 |-> bool]) casefs0
+  val t = inst [type_of t0 |-> bool] t0
+  val t_thm = ASSUME t
+  val nch = SPEC v nchotomy
+  val disjs0 = strip_disj (concl nch)
+  fun mapthis (ex_eqn, cf) = let
+    val (vs, eqn) = strip_exists ex_eqn
+  in
+    list_mk_exists(vs, mk_conj(eqn, list_mk_comb(cf,vs)))
+  end
+  val _ = length casefs = length disjs0 orelse
+          raise mk_HOL_ERR "Prim_rec" "prove_case_elim_thm"
+                "case_def and nchotomy theorem don't match up"
+  val disjs = ListPair.map mapthis (disjs0,casefs)
+  fun prove_case_from_eqn ext = let
+    (* ext is of the form ``?a1 .. ai. x = ctor1 a1 .. ai /\ f1 a1 .. ai`` *)
+    val (vs,body) = strip_exists ext
+    val body_th = ASSUME body
+    val res0 = EQT_ELIM (PURE_REWRITE_CONV [body_th,case_def] t)
+    fun foldthis (v,(ext,th)) = let
+      val ex' = mk_exists(v,ext)
+    in
+      (ex', CHOOSE (v,ASSUME ex') th)
+    end
+  in
+    List.foldr foldthis (body,res0) vs
+  end
+  val ths = map (#2 o prove_case_from_eqn) disjs
+  val (ds, d) = front_last disjs
+  fun disj_recurse ds ths =
+      case (ds, ths) of
+          ([d], [th]) => (d, th)
+        | (d::ds, th::ths) =>
+          let
+            val (d2, th2) = disj_recurse ds ths
+            val t = mk_disj(d,d2)
+          in
+            (t, DISJ_CASES (ASSUME t) th th2)
+          end
+        | _ => raise Fail "prove_case_elim_thm: can't happen"
+  val (_, case1) = disj_recurse disjs ths
+
+  fun prove_exists d = let
+    val (vs, body) = strip_exists d
+    val (c1, c2) = dest_conj body
+    val body_th = CONJ (ASSUME c1) (ASSUME c2)
+    val ex_thm =
+        List.foldr (fn (v, th) => EXISTS(mk_exists(v,concl th),v) th)
+                   body_th vs
+    val elim =
+        EQ_MP (PURE_REWRITE_CONV [ASSUME c1, case_def] t) t_thm
+  in
+    PROVE_HYP elim ex_thm
+  end
+  val exists_thms = map prove_exists disjs
+  fun mkholes ds =
+      case ds of
+          [] => []
+        | d::t => (NONE::map SOME t) ::
+                  (map (cons (SOME d)) (mkholes t))
+  val holes = mkholes (map concl exists_thms)
+  fun holemerge (th, holedlist) =
+      case holedlist of
+          [NONE] => th
+        | NONE::rest => DISJ1 th (list_mk_disj (map valOf rest))
+        | SOME t::rest =>
+          DISJ2 t (holemerge (th, rest))
+        | [] => raise Fail "Can't happen"
+  val eqconcls =
+      ListPair.map (DISCH t o holemerge) (exists_thms, holes)
+  fun existentialify_asm th = let
+    val eq = hd (hyp th)
+    val (_, vs) = eq |> rhs |> strip_comb
+    fun foldthis (v, (ext, th)) = let
+      val ext' = mk_exists(v,ext)
+    in
+      (ext', CHOOSE(v, ASSUME ext') th)
+    end
+  in
+    #2 (List.foldr foldthis (eq, th) vs)
+  end
+  val existentialified_asms = map existentialify_asm eqconcls
+in
+  IMP_ANTISYM_RULE
+    (PROVE_HYP nch (#2 (disj_recurse disjs0 existentialified_asms)))
+    (DISCH_ALL case1)
+end
+
+
 
 
 end; (* Prim_rec *)
