@@ -850,20 +850,6 @@ in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
 
-fun temp_add_binder name = let in
-   the_term_grammar :=
-     add_binder {term_name = name, tok = name} (!the_term_grammar);
-   term_grammar_changed := true
- end
-
-fun add_binder name = let in
-    temp_add_binder name;
-    update_grms "add_binder" ("temp_add_binder",
-                              String.concat
-                                ["(", quote name,
-                                 ", std_binder_precedence)"])
-  end
-
 datatype 'a erroption = Error of string | Some of 'a
 fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let
   open term_grammar

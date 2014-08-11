@@ -119,6 +119,8 @@ Incompatibilities:
     * `⊢ ∀f s. INJ f ∅ s`
     * `⊢ ∀f s. INJ f s ∅ ⇔ (s = ∅)`
 
+- The `add_binder` and `temp_add_binder` entry-points in `Parse` have been removed.  They are subsumed by `set_fixity <name> Binder` and `temp_set_fixity <name> Binder` respectively.  In addition, `add_binder` was broken, creating an unloadable theory on export.
+
 * * * * *
 
 <div class="footer">
