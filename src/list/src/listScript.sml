@@ -2994,6 +2994,347 @@ val LLEX_not_WF = store_thm(
   ONCE_REWRITE_TAC [GENLIST_CONS] THEN
   ASM_SIMP_TAC (srw_ss()) [LLEX_def]);
 
+
+
+(*---------------------------------------------------------------------------*)
+(* Various lemmas from the CakeML project https://cakeml.org                 *)
+(*---------------------------------------------------------------------------*)
+
+local
+  val op>> = op Tactical.THEN
+  val rw = SRW_TAC []
+  val metis_tac = METIS_TAC
+  val fs = FULL_SIMP_TAC (srw_ss())
+  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
+
+in
+
+
+(* nub *)
+
+val nub_def = Define `
+(nub [] = []) ∧
+(nub (x::l) =
+  if MEM x l then
+    nub l
+  else
+    x :: nub l)`;
+
+val nub_set = Q.store_thm ("nub_set",
+`!l. set l = set (nub l)`,
+Induct >>
+rw [nub_def, EXTENSION] >>
+metis_tac []);
+
+val all_distinct_nub = Q.store_thm ("all_distinct_nub",
+`!l. ALL_DISTINCT (nub l)`,
+Induct >>
+rw [nub_def] >>
+metis_tac [nub_set]);
+
+val filter_helper = Q.prove (
+`!x l1 l2. ~MEM x l2 ⇒ (MEM x (FILTER (\x. x ∉ set l2) l1) = MEM x l1)`,
+Induct_on `l1` >>
+rw [] >>
+metis_tac []);
+
+val nub_append = Q.store_thm ("nub_append",
+`!l1 l2.
+  nub (l1++l2) = nub (FILTER (\x. ~MEM x l2) l1) ++ nub l2`,
+Induct_on `l1` >>
+rw [nub_def] >>
+fs [] >>
+BasicProvers.FULL_CASE_TAC >>
+rw [] >>
+metis_tac [filter_helper]);
+
+val list_to_set_diff = Q.store_thm ("list_to_set_diff",
+`!l1 l2. set l2 DIFF set l1 = set (FILTER (\x. x ∉ set l1) l2)`,
+Induct_on `l2` >>
+rw []);
+
+val card_eqn_help = Q.prove (
+`!l1 l2. CARD (set l2) - CARD (set l1 ∩ set l2) = CARD (set (FILTER (\x. x ∉ set l1) l2))`,
+rw [Once INTER_COMM] >>
+SIMP_TAC (bool_ss) [GSYM CARD_DIFF, FINITE_LIST_TO_SET] >>
+metis_tac [list_to_set_diff]);
+
+val length_nub_append = Q.store_thm ("length_nub_append",
+`!l1 l2. LENGTH (nub (l1 ++ l2)) = LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))`,
+rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub, GSYM nub_set] >>
+fs [FINITE_LIST_TO_SET, CARD_UNION_EQN] >>
+ASSUME_TAC (Q.SPECL [`l1`, `l2`] card_eqn_help) >>
+`CARD (set l1 ∩ set l2) ≤ CARD (set l2)` 
+           by metis_tac [CARD_INTER_LESS_EQ, FINITE_LIST_TO_SET, INTER_COMM] >>
+RW_TAC arith_ss []);
+
+
+
+
+val ALL_DISTINCT_DROP = store_thm("ALL_DISTINCT_DROP",
+  ``∀ls n. ALL_DISTINCT ls ⇒ ALL_DISTINCT (DROP n ls)``,
+  Induct >> SIMP_TAC (srw_ss()) [] >> rw[])
+
+val EXISTS_LIST_EQ_MAP = store_thm("EXISTS_LIST_EQ_MAP",
+  ``∀ls f. EVERY (λx. ∃y. x = f y) ls ⇒ ∃l. ls = MAP f l``,
+  Induct >> ASM_SIMP_TAC (srw_ss()) [] >> rw[]
+  THEN1 (Q.EXISTS_TAC `[]` THEN rw [])
+  >> RES_TAC >> Q.EXISTS_TAC`y::l`>>ASM_SIMP_TAC (srw_ss()) [])
+
+val LIST_TO_SET_FLAT = store_thm("LIST_TO_SET_FLAT",
+  ``!ls. set (FLAT ls) = BIGUNION (set (MAP set ls))``,
+  Induct >> ASM_SIMP_TAC (srw_ss()) [])
+
+val MEM_APPEND_lemma = store_thm("MEM_APPEND_lemma",
+  ``∀a b c d x. (a ++ [x] ++ b = c ++ [x] ++ d) ∧ x ∉ set b ∧ x ∉ set a ⇒ (a = c) ∧ (b = d)``,
+  rw[APPEND_EQ_APPEND_MID] >> fs[] >>
+  fs[APPEND_EQ_SING])
+
+val EVERY2_REVERSE = store_thm("EVERY2_REVERSE",
+  ``!R l1 l2. EVERY2 R l1 l2 ==> EVERY2 R (REVERSE l1) (REVERSE l2)``,
+  rw[EVERY2_EVERY,EVERY_MEM,FORALL_PROD] >>
+  REV_FULL_SIMP_TAC (srw_ss()) [MEM_ZIP,GSYM LEFT_FORALL_IMP_THM,EL_REVERSE] >>
+  FIRST_X_ASSUM MATCH_MP_TAC >>
+  ASM_SIMP_TAC (arith_ss) []);
+
+val SUM_MAP_PLUS = store_thm("SUM_MAP_PLUS",
+  ``∀f g ls. SUM (MAP (λx. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)``,
+  NTAC 2 GEN_TAC >> Induct >> simp[SUM])
+
+val TAKE_LENGTH_ID_rwt = store_thm("TAKE_LENGTH_ID_rwt",
+  ``!l m. (m = LENGTH l) ==> (TAKE m l = l)``,
+  rw[TAKE_LENGTH_ID])
+
+val TAKE_LENGTH_ID_rwt = store_thm("TAKE_LENGTH_ID_rwt",
+  ``!l m. (m = LENGTH l) ==> (TAKE m l = l)``,
+  rw[TAKE_LENGTH_ID])
+
+val ZIP_DROP = store_thm("ZIP_DROP",
+  ``!a b n. n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
+      (ZIP (DROP n a,DROP n b) = DROP n (ZIP (a,b)))``,
+  Induct THEN SRW_TAC[][LENGTH_NIL_SYM,arithmeticTheory.ADD1] THEN
+  Cases_on`b` THEN FULL_SIMP_TAC(srw_ss())[ZIP] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  FULL_SIMP_TAC(arith_ss)[])
+
+val GENLIST_EL = store_thm("GENLIST_EL",
+  ``!ls f n. (n = LENGTH ls) /\ (!i. i < n ==> (f i = EL i ls)) ==>
+             (GENLIST f n = ls)``,
+  rw[LIST_EQ_REWRITE])
+
+val EVERY2_trans = store_thm("EVERY2_trans",
+  ``(!x y z. R x y /\ R y z ==> R x z) ==>
+    !x y z. EVERY2 R x y /\ EVERY2 R y z ==> EVERY2 R x z``,
+  SRW_TAC[][EVERY2_EVERY,EVERY_MEM,FORALL_PROD] THEN
+  REPEAT (Q.PAT_ASSUM`LENGTH X = Y`MP_TAC) THEN
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP] THEN
+  METIS_TAC[])
+
+val EVERY2_sym = store_thm("EVERY2_sym",
+  ``(!x y. R1 x y ==> R2 y x) ==> !x y. EVERY2 R1 x y ==> EVERY2 R2 y x``,
+  SRW_TAC[][EVERY2_EVERY,EVERY_MEM,FORALL_PROD] THEN
+  (Q.PAT_ASSUM`LENGTH X = Y`MP_TAC) THEN
+  STRIP_TAC THEN
+  FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP])
+
+val EVERY2_LUPDATE_same = store_thm("EVERY2_LUPDATE_same",
+  ``!P l1 l2 v1 v2 n. P v1 v2 /\ EVERY2 P l1 l2 ==>
+    EVERY2 P (LUPDATE v1 n l1) (LUPDATE v2 n l2)``,
+  GEN_TAC THEN Induct THEN
+  SRW_TAC[][LUPDATE_def] THEN
+  Cases_on`n`THEN SRW_TAC[][LUPDATE_def] THEN
+  Cases_on`l2`THEN FULL_SIMP_TAC(srw_ss())[LUPDATE_def])
+
+val EVERY2_refl = store_thm("EVERY2_refl",
+  ``(!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)``,
+  Induct_on`ls` >>rw[])
+
+val EVERY2_THM = store_thm("EVERY2_THM",
+  ``(!P ys. EVERY2 P [] ys = (ys = [])) /\
+    (!P yys x xs. EVERY2 P (x::xs) yys = ?y ys. (yys = y::ys) /\ (P x y) /\ (EVERY2 P xs ys)) /\
+    (!P xs. EVERY2 P xs [] = (xs = [])) /\
+    (!P xxs y ys. EVERY2 P xxs (y::ys) = ?x xs. (xxs = x::xs) /\ (P x y) /\ (EVERY2 P xs ys))``,
+  REPEAT CONJ_TAC THEN GEN_TAC THEN TRY (
+    SRW_TAC[][EVERY2_EVERY,LENGTH_NIL] THEN
+    SRW_TAC[][EQ_IMP_THM] THEN NO_TAC ) THEN
+  Cases THEN SRW_TAC[][EVERY2_EVERY])
+
+val LIST_REL_trans = store_thm("LIST_REL_trans",
+  ``∀l1 l2 l3. (∀n. n < LENGTH l1 ∧ R (EL n l1) (EL n l2) ∧ R (EL n l2) (EL n l3) ⇒ R (EL n l1) (EL n l3)) ∧
+      LIST_REL R l1 l2 ∧ LIST_REL R l2 l3 ⇒ LIST_REL R l1 l3``,
+  Induct >> simp[] >> rw[LIST_REL_CONS1] >> fs[LIST_REL_CONS1] >> rw[] THEN1 (
+    FIRST_X_ASSUM(Q.SPEC_THEN`0`MP_TAC)>>rw[] ) >>
+  FIRST_X_ASSUM MATCH_MP_TAC >>
+  Q.EXISTS_TAC`t'` >> rw[] >>
+  FIRST_X_ASSUM(Q.SPEC_THEN`SUC n`MP_TAC)>>simp[]);
+
+val SWAP_REVERSE = store_thm("SWAP_REVERSE",
+  ``!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)``,
+  SRW_TAC[][EQ_IMP_THM])
+
+val SWAP_REVERSE_SYM = store_thm("SWAP_REVERSE_SYM",
+  ``!l1 l2. (REVERSE l1 = l2) = (l1 = REVERSE l2)``,
+  metis_tac[SWAP_REVERSE])
+
+val BIGUNION_IMAGE_set_SUBSET = store_thm("BIGUNION_IMAGE_set_SUBSET",
+  ``(BIGUNION (IMAGE f (set ls)) ⊆ s) =
+    (∀x. MEM x ls ⇒ f x ⊆ s)``,
+  SRW_TAC[DNF_ss][SUBSET_DEF] THEN METIS_TAC[])
+
+val IMAGE_EL_count_LENGTH = store_thm("IMAGE_EL_count_LENGTH",
+  ``∀f ls. IMAGE (λn. f (EL n ls)) (count (LENGTH ls)) = IMAGE f (set ls)``,
+  rw[EXTENSION,MEM_EL] >> PROVE_TAC[])
+
+val GENLIST_EL_MAP = store_thm("GENLIST_EL_MAP",
+  ``!f ls. GENLIST (λn. f (EL n ls)) (LENGTH ls) = MAP f ls``,
+  GEN_TAC >> Induct >> rw[GENLIST_CONS,combinTheory.o_DEF])
+
+val LENGTH_FILTER_LEQ_MONO = store_thm("LENGTH_FILTER_LEQ_MONO",
+  ``!P Q. (!x. P x ==> Q x) ==> !ls. (LENGTH (FILTER P ls) <= LENGTH (FILTER Q ls))``,
+  REPEAT GEN_TAC >> STRIP_TAC >>
+  Induct >> rw[] >>
+  FULL_SIMP_TAC arith_ss [] >>
+  PROVE_TAC[])
+
+val LIST_EQ_MAP_PAIR = store_thm("LIST_EQ_MAP_PAIR",
+  ``!l1 l2. (MAP FST l1 = MAP FST l2) /\ (MAP SND l1 = MAP SND l2) ==> (l1 = l2)``,
+  SRW_TAC[][MAP_EQ_EVERY2,EVERY2_EVERY,EVERY_MEM,LIST_EQ_REWRITE,FORALL_PROD] THEN
+  REV_FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP] THEN
+  METIS_TAC[pair_CASES,PAIR_EQ])
+
+val TAKE_SUM = store_thm("TAKE_SUM",
+  ``!n m l. n + m <= LENGTH l ==> (TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l))``,
+  Induct_on `l` THEN SRW_TAC[][] THEN SRW_TAC[][] THEN
+  Cases_on `n` THEN FULL_SIMP_TAC(arith_ss)[arithmeticTheory.ADD1])
+
+val ALL_DISTINCT_FILTER_EL_IMP = store_thm("ALL_DISTINCT_FILTER_EL_IMP",
+  ``!P l n1 n2. ALL_DISTINCT (FILTER P l) /\
+    n1 < LENGTH l /\ n2 < LENGTH l /\
+    (P (EL n1 l)) /\ (EL n1 l = EL n2 l) ==> (n1 = n2)``,
+  GEN_TAC THEN Induct THEN1 SRW_TAC[][] THEN
+  SRW_TAC[][] THEN FULL_SIMP_TAC(srw_ss())[MEM_FILTER]
+  THEN1 PROVE_TAC[] THEN
+  Cases_on `n1` THEN Cases_on `n2` THEN
+  FULL_SIMP_TAC(srw_ss())[MEM_EL] THEN
+  PROVE_TAC[] )
+
+val FLAT_EQ_NIL = store_thm("FLAT_EQ_NIL",
+  ``!ls. (FLAT ls = []) = (EVERY ($= []) ls)``,
+  Induct THEN SRW_TAC[][EQ_IMP_THM] >> rw [APPEND]); 
+
+val ALL_DISTINCT_MAP_INJ = store_thm("ALL_DISTINCT_MAP_INJ",
+  ``!ls f. (!x y. MEM x ls /\ MEM y ls /\ (f x = f y) ==> (x = y)) /\ ALL_DISTINCT ls  ==> ALL_DISTINCT (MAP f ls)``,
+  Induct THEN SRW_TAC[][MEM_MAP] THEN PROVE_TAC[])
+
+val LENGTH_o_REVERSE = store_thm("LENGTH_o_REVERSE",
+  ``(LENGTH o REVERSE = LENGTH) /\
+    (LENGTH o REVERSE o f = LENGTH o f)``,
+  SRW_TAC[][FUN_EQ_THM])
+
+val REVERSE_o_REVERSE = store_thm("REVERSE_o_REVERSE",
+  ``(REVERSE o REVERSE o f = f)``,
+  SRW_TAC[][FUN_EQ_THM])
+
+val GENLIST_PLUS_APPEND = store_thm("GENLIST_PLUS_APPEND",
+  ``GENLIST ($+ a) n1 ++ GENLIST ($+ (n1 + a)) n2 = GENLIST ($+ a) (n1 + n2)``,
+  rw[Once arithmeticTheory.ADD_SYM,SimpRHS] >>
+  RW_TAC arith_ss [GENLIST_APPEND] >>
+  SRW_TAC[ETA_ss][arithmeticTheory.ADD_ASSOC])
+
+val LIST_TO_SET_GENLIST = store_thm("LIST_TO_SET_GENLIST",
+  ``!f n. LIST_TO_SET (GENLIST f n) = IMAGE f (count n)``,
+  SRW_TAC[][EXTENSION,MEM_GENLIST] THEN PROVE_TAC[])
+
+val MEM_ZIP_MEM_MAP = store_thm("MEM_ZIP_MEM_MAP",
+  ``(LENGTH (FST ps) = LENGTH (SND ps)) /\ MEM p (ZIP ps)
+    ==> MEM (FST p) (FST ps) /\ MEM (SND p) (SND ps)``,
+  Cases_on `p` >> Cases_on `ps` >> SRW_TAC[][] >>
+  REV_FULL_SIMP_TAC(srw_ss())[MEM_ZIP,MEM_EL] THEN
+  PROVE_TAC[])
+
+val DISJOINT_GENLIST_PLUS = store_thm("DISJOINT_GENLIST_PLUS",
+  ``DISJOINT x (set (GENLIST ($+ n) (a + b))) ==>
+    DISJOINT x (set (GENLIST ($+ n) a)) /\
+    DISJOINT x (set (GENLIST ($+ (n + a)) b))``,
+  rw[GSYM GENLIST_PLUS_APPEND] >>
+  metis_tac[DISJOINT_SYM,arithmeticTheory.ADD_SYM])
+
+val EVERY2_MAP = store_thm("EVERY2_MAP",
+  ``(EVERY2 P (MAP f l1) l2 = EVERY2 (λx y. P (f x) y) l1 l2) ∧
+    (EVERY2 Q l1 (MAP g l2) = EVERY2 (λx y. Q x (g y)) l1 l2)``,
+  rw[EVERY2_EVERY] >>
+  Cases_on `LENGTH l1 = LENGTH l2` >> fs[] >>
+  rw[ZIP_MAP,EVERY_MEM,MEM_MAP] >>
+  SRW_TAC[DNF_ss][pairTheory.FORALL_PROD, LENGTH_MAP] >>
+  PROVE_TAC[]);
+
+val exists_list_GENLIST = store_thm(
+"exists_list_GENLIST",
+``(∃ls. P ls) = (∃n f. P (GENLIST f n))``,
+rw[EQ_IMP_THM] THEN1 (
+  MAP_EVERY Q.EXISTS_TAC [`LENGTH ls`,`combin$C EL ls`] >>
+  Q.MATCH_ABBREV_TAC `P ls2` >>
+  Q_TAC SUFF_TAC `ls2 = ls` THEN1 rw[] >>
+  rw[LIST_EQ_REWRITE,Abbr`ls2`] ) >>
+PROVE_TAC[])
+
+val EVERY_MEM_MONO = store_thm("EVERY_MEM_MONO",
+  ``∀P Q l. (∀x. MEM x l ∧ P x ⇒ Q x) ∧ EVERY P l ⇒ EVERY Q l``,
+  NTAC 2 GEN_TAC >> Induct >> rw[])
+
+val EVERY2_MEM_MONO = store_thm("EVERY2_MEM_MONO",
+  ``∀P Q l1 l2. (∀x. MEM x (ZIP (l1,l2)) ∧ UNCURRY P x ⇒ UNCURRY Q x) ∧ EVERY2 P l1 l2 ⇒ EVERY2 Q l1 l2``,
+  rw[EVERY2_EVERY] >> MATCH_MP_TAC EVERY_MEM_MONO >> PROVE_TAC[])
+
+val mem_exists_set = Q.store_thm ("mem_exists_set",
+`!x y l. MEM (x,y) l ⇒ ∃z. (x = FST z) ∧ z ∈ set l`,
+Induct_on `l` >>
+rw [] >>
+metis_tac [FST]);
+
+val every_zip_snd = Q.store_thm ("every_zip_snd",
+`!l1 l2 P.
+  (LENGTH l1 = LENGTH l2) ⇒
+  (EVERY (\x. P (SND x)) (ZIP (l1,l2)) = EVERY P l2)`,
+Induct_on `l1` >>
+rw [] >>
+Cases_on `l2` >>
+fs [ZIP]);
+
+val every_zip_fst = Q.store_thm ("every_zip_fst",
+`!l1 l2 P.
+(LENGTH l1 = LENGTH l2) ⇒
+(EVERY (\x. P (FST x)) (ZIP (l1,l2)) = EVERY P l1)`,
+Induct_on `l1` >>
+rw [] >>
+Cases_on `l2` >>
+fs [ZIP]);
+
+val el_append3 = Q.store_thm ("el_append3",
+`!l1 x l2. EL (LENGTH l1) (l1++ [x] ++ l2) = x`,
+Induct_on `l1` >>
+rw [] >>
+rw []);
+
+val lupdate_append = Q.store_thm ("lupdate_append",
+`!x n l1 l2. n < LENGTH l1 ⇒ (LUPDATE x n (l1++l2) = LUPDATE x n l1 ++ l2)`,
+ Induct_on `l1` >>
+ rw [] >>
+ Cases_on `n` >>
+ rw [LUPDATE_def] >>
+ fs []);
+
+val lupdate_append2 = Q.store_thm ("lupdate_append2",
+`!v l1 x l2 l3. LUPDATE v (LENGTH l1) (l1++[x]++l2) = l1++[v]++l2`,
+ Induct_on `l1` >>
+ rw [LUPDATE_def])
+
+end;
+(* end CakeML lemmas *)
+
+
+
 (* --------------------------------------------------------------------- *)
 
 val LAST_compute = Q.store_thm("LAST_compute",
