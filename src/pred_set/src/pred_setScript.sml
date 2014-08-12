@@ -5171,10 +5171,68 @@ REPEAT GEN_TAC THEN
    SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
 ) THEN
 METIS_TAC[SUBSET_FINITE]);
-
-
 (* END misc thms *)
 
+(*---------------------------------------------------------------------------*)
+(* Various lemmas from the CakeML project https://cakeml.org                 *)
+(*---------------------------------------------------------------------------*)
+
+val INSERT_EQ_SING = store_thm("INSERT_EQ_SING",
+  ``∀s x y. (x INSERT s = {y}) ⇔ ((x = y) ∧ s ⊆ {y})``,
+  SRW_TAC [] [SUBSET_DEF,EXTENSION] THEN METIS_TAC []);
+
+val CARD_UNION_LE = store_thm("CARD_UNION_LE",
+  ``FINITE s ∧ FINITE t ⇒ CARD (s ∪ t) ≤ CARD s + CARD t``,
+  SRW_TAC [][] THEN IMP_RES_TAC CARD_UNION THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [])
+
+val IMAGE_SUBSET_gen = store_thm("IMAGE_SUBSET_gen",
+  ``∀f s u t. s ⊆ u ∧ (IMAGE f u ⊆ t) ⇒ IMAGE f s ⊆ t``,
+  SIMP_TAC (srw_ss())[SUBSET_DEF] THEN METIS_TAC[])
+
+val CARD_REST = store_thm("CARD_REST",
+  ``!s. FINITE s /\ s <> {} ==> (CARD (REST s) = CARD s - 1)``,
+  SRW_TAC[][] THEN
+  IMP_RES_TAC CHOICE_INSERT_REST THEN
+  POP_ASSUM (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [Once(SYM th)]))) THEN
+  Q.SPEC_THEN`REST s`MP_TAC CARD_INSERT THEN SRW_TAC[][] THEN
+  FULL_SIMP_TAC(srw_ss())[REST_DEF])
+
+val SUBSET_DIFF_EMPTY = store_thm("SUBSET_DIFF_EMPTY",
+  ``!s t. (s DIFF t = {}) = (s SUBSET t)``,
+  SRW_TAC[][EXTENSION,SUBSET_DEF] THEN PROVE_TAC[])
+
+val DIFF_INTER_SUBSET = store_thm("DIFF_INTER_SUBSET",
+  ``!r s t. r SUBSET s ==> (r DIFF s INTER t = r DIFF t)``,
+  SRW_TAC[][EXTENSION,SUBSET_DEF] THEN PROVE_TAC[])
+
+val UNION_DIFF_2 = store_thm("UNION_DIFF_2",
+  ``!s t. (s UNION (s DIFF t) = s)``,
+  SRW_TAC[][EXTENSION] THEN PROVE_TAC[])
+
+val count_add = store_thm("count_add",
+  ``!n m. count (n + m) = count n UNION IMAGE ($+ n) (count m)``,
+  SRW_TAC[ARITH_ss][EXTENSION,EQ_IMP_THM] THEN
+  Cases_on `x < n` THEN SRW_TAC[ARITH_ss][] THEN
+  Q.EXISTS_TAC `x - n` THEN
+  SRW_TAC[ARITH_ss][])
+
+val IMAGE_EQ_SING = store_thm("IMAGE_EQ_SING",
+  ``(IMAGE f s = {z}) <=> (s <> {}) /\ !x. x IN s ==> (f x = z)``,
+  EQ_TAC THEN
+  SRW_TAC[DNF_ss][EXTENSION] THEN
+  PROVE_TAC[])
+
+val count_add1 = Q.store_thm ("count_add1",
+`!n. count (n + 1) = n INSERT count n`,
+METIS_TAC [COUNT_SUC, arithmeticTheory.ADD1]);
+
+val compl_insert = Q.store_thm ("compl_insert",
+`!s x. COMPL (x INSERT s) = COMPL s DELETE x`,
+ SRW_TAC [] [EXTENSION, IN_COMPL] THEN
+ METIS_TAC []);
+
+
+(* end CakeML lemmas *)
 
 val _ = export_rewrites
     [
