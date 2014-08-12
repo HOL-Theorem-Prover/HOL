@@ -1,0 +1,14 @@
+INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple ../step ../../common
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = arm8-step-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../step/arm8_stepLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ${HOLDIR}/examples/l3-machine-code/base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif

@@ -385,6 +385,7 @@ fun inst_pc_var tools thms = let
     | triple_apply f (y,(th1,x1,x2),SOME (th2,y1:int,y2:int option)) =
         (y,(f y th1,x1,x2),SOME (f y th2,y1,y2))
   val i = [mk_var("pc",``:word32``) |-> mk_var("p",``:word32``),
+           mk_var("pc",``:word64``) |-> mk_var("p",``:word64``),
            mk_var("eip",``:word32``) |-> mk_var("p",``:word32``),
            mk_var("rip",``:word64``) |-> mk_var("p",``:word64``)]
   val (_,_,_,pc) = tools

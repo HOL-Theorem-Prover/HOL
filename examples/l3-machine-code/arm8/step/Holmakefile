@@ -1,0 +1,6 @@
+INCLUDES = ../model ../../common ../../base
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = ${HOLDIR}/examples/l3-machine-code/base/base-heap
+endif
