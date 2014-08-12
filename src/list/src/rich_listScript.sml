@@ -12,6 +12,7 @@ in
    val APPEND_SNOC = APPEND_SNOC
    val CONS_11 = CONS_11
    val EL = EL
+   val EL_LUPDATE = EL_LUPDATE
    val EVERY_DEF = EVERY_DEF
    val EVERY_SNOC = EVERY_SNOC
    val EXISTS_DEF = EXISTS_DEF
@@ -29,6 +30,7 @@ in
    val LENGTH = LENGTH
    val LENGTH_NIL = LENGTH_NIL
    val LENGTH_SNOC = LENGTH_SNOC
+   val LIST_EQ_REWRITE = LIST_EQ_REWRITE
    val MAP = MAP
    val MAP_APPEND = MAP_APPEND
    val MAP_SNOC = MAP_SNOC
@@ -2245,6 +2247,31 @@ val EL_APPEND2 = Q.store_thm ("EL_APPEND2",
    THEN INDUCT_TAC
    THEN ASM_REWRITE_TAC [EL, APPEND, HD, TL, LENGTH, NOT_SUC_LESS_EQ_0,
                          SUB_MONO_EQ, LESS_EQ_MONO]);
+
+local
+  val op >> = op THEN
+  val rw = SRW_TAC[]
+  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
+  val fs = FULL_SIMP_TAC(srw_ss())
+in
+val LUPDATE_APPEND2 = store_thm("LUPDATE_APPEND2",
+  ``∀l1 l2 n x. LENGTH l1 ≤ n ⇒ (LUPDATE x n (l1 ++ l2) = l1 ++ (LUPDATE x (n-LENGTH l1) l2))``,
+  rw[] >> simp[LIST_EQ_REWRITE] >>
+  Q.X_GEN_TAC`z` >>
+  simp[EL_LUPDATE] >> rw[] >>
+  simp[EL_APPEND2,EL_LUPDATE] >> fs[] >>
+  Cases_on`z < LENGTH l1`>>fs[]>>
+  simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
+
+val LUPDATE_APPEND1 = store_thm("LUPDATE_APPEND1",
+  ``∀l1 l2 n x. n < LENGTH l1 ⇒ (LUPDATE x n (l1 ++ l2) = (LUPDATE x n l1) ++ l2)``,
+  rw[] >> simp[LIST_EQ_REWRITE] >>
+  Q.X_GEN_TAC`z` >>
+  simp[EL_LUPDATE] >> rw[] >>
+  simp[EL_APPEND2,EL_LUPDATE] >> fs[] >>
+  Cases_on`z < LENGTH l1`>>fs[]>>
+  simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
+end
 
 val EL_CONS = Q.store_thm ("EL_CONS",
    `!n. 0 < n ==> !x l. EL n (CONS x l) = EL (PRE n) l`,

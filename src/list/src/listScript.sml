@@ -2728,6 +2728,11 @@ val MEM_LUPDATE = store_thm(
 val LUPDATE_compute = save_thm("LUPDATE_compute",
    numLib.SUC_RULE LUPDATE_def)
 
+val LUPDATE_MAP = store_thm("LUPDATE_MAP",
+``!x n l f. MAP f (LUPDATE x n l) = LUPDATE (f x) n (MAP f l)``,
+ Induct_on `l` THEN SRW_TAC[][LUPDATE_def] THEN Cases_on `n` THEN
+ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
+
 val EVERYi_def = Define`
   (EVERYi P [] = T) /\
   (EVERYi P (h::t) = P 0 h /\ EVERYi (P o SUC) t)

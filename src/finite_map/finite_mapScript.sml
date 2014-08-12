@@ -2301,28 +2301,6 @@ val fmap_rel_OPTREL_FLOOKUP = store_thm("fmap_rel_OPTREL_FLOOKUP",
   rw[fmap_rel_def,optionTheory.OPTREL_def,FLOOKUP_DEF,EXTENSION] >>
   PROVE_TAC[]);
 
-val LUPDATE_APPEND2 = store_thm("LUPDATE_APPEND2",
-  ``∀l1 l2 n x. LENGTH l1 ≤ n ⇒ (LUPDATE x n (l1 ++ l2) = l1 ++ (LUPDATE x (n-LENGTH l1) l2))``,
-  rw[] >> simp[LIST_EQ_REWRITE] >>
-  qx_gen_tac`z` >>
-  simp[EL_LUPDATE] >> rw[] >>
-  simp[EL_APPEND2,EL_LUPDATE] >> fs[] >>
-  Cases_on`z < LENGTH l1`>>fs[]>>
-  simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
-
-val LUPDATE_APPEND1 = store_thm("LUPDATE_APPEND1",
-  ``∀l1 l2 n x. n < LENGTH l1 ⇒ (LUPDATE x n (l1 ++ l2) = (LUPDATE x n l1) ++ l2)``,
-  rw[] >> simp[LIST_EQ_REWRITE] >>
-  qx_gen_tac`z` >>
-  simp[EL_LUPDATE] >> rw[] >>
-  simp[EL_APPEND2,EL_LUPDATE] >> fs[] >>
-  Cases_on`z < LENGTH l1`>>fs[]>>
-  simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
-
-val LUPDATE_MAP = store_thm("LUPDATE_MAP",
-``!x n l f. MAP f (LUPDATE x n l) = LUPDATE (f x) n (MAP f l)``,
- Induct_on `l` >> rw [LUPDATE_def] >> Cases_on `n` >> fs [LUPDATE_def]);
-
 val FLOOKUP_DRESTRICT = store_thm("FLOOKUP_DRESTRICT",
   ``!fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE``,
   SRW_TAC[][FLOOKUP_DEF,DRESTRICT_DEF] THEN FULL_SIMP_TAC std_ss []);
