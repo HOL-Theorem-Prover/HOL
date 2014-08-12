@@ -48,7 +48,7 @@ SRW_TAC[][ALOOKUP_FAILS,MEM_MAP,pairTheory.FORALL_PROD])
 
 val ALOOKUP_TABULATE = store_thm(
   "ALOOKUP_TABULATE",
-  ``ALL_DISTINCT l /\ MEM x l ==>
+  ``MEM x l ==>
     (ALOOKUP (MAP (\k. (k, f k)) l) x = SOME (f x))``,
   Induct_on `l` THEN SRW_TAC [][]);
 
@@ -397,5 +397,169 @@ val alist_to_fmap_PERM = store_thm(
 rpt strip_tac >>
 match_mp_tac (fst (EQ_IMP_RULE PERM_fmap_to_alist)) >>
 metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_PERM])
+
+(*---------------------------------------------------------------------------*)
+(* Various lemmas from the CakeML project https://cakeml.org                 *)
+(*---------------------------------------------------------------------------*)
+local open pairTheory boolSimps in
+
+val ALOOKUP_ALL_DISTINCT_EL = store_thm("ALOOKUP_ALL_DISTINCT_EL",
+  ``∀ls n. n < LENGTH ls ∧ ALL_DISTINCT (MAP FST ls) ⇒ (ALOOKUP ls (FST (EL n ls)) = SOME (SND (EL n ls)))``,
+  Induct >> simp[] >>
+  Cases >> simp[] >>
+  Cases >> simp[] >>
+  rw[] >> fs[MEM_MAP] >>
+  metis_tac[MEM_EL])
+
+val ALOOKUP_ZIP_MAP_SND = store_thm("ALOOKUP_ZIP_MAP_SND",
+  ``∀l1 l2 k f. (LENGTH l1 = LENGTH l2) ⇒
+      (ALOOKUP (ZIP(l1,MAP f l2)) = OPTION_MAP f o (ALOOKUP (ZIP(l1,l2))))``,
+  Induct >> simp[LENGTH_NIL,LENGTH_NIL_SYM,FUN_EQ_THM] >>
+  gen_tac >> Cases >> simp[] >> rw[] >> rw[])
+
+val ALOOKUP_FILTER = store_thm("ALOOKUP_FILTER",
+  ``∀ls x. ALOOKUP (FILTER (λ(k,v). P k) ls) x =
+           if P x then ALOOKUP ls x else NONE``,
+  Induct >> simp[] >> Cases >> simp[] >> rw[] >> fs[] >> metis_tac[])
+
+val ALOOKUP_APPEND_same = store_thm("ALOOKUP_APPEND_same",
+  ``∀l1 l2 l. (ALOOKUP l1 = ALOOKUP l2) ==> (ALOOKUP (l1 ++ l) = ALOOKUP (l2 ++ l))``,
+  rw[ALOOKUP_APPEND,FUN_EQ_THM])
+val ALOOKUP_IN_FRANGE = store_thm("ALOOKUP_IN_FRANGE",
+  ``∀ls k v. (ALOOKUP ls k = SOME v) ⇒ v ∈ FRANGE (alist_to_fmap ls)``,
+  Induct >> simp[] >> Cases >> simp[] >> rw[] >>
+  simp[IN_FRANGE,DOMSUB_FAPPLY_THM] >>
+  full_simp_tac std_ss [Once(SYM (CONJUNCT1 ALOOKUP_EQ_FLOOKUP)),FLOOKUP_DEF] >>
+  fs[] >> METIS_TAC[])
+
+val FRANGE_alist_to_fmap_SUBSET = store_thm(
+"FRANGE_alist_to_fmap_SUBSET",
+``FRANGE (alist_to_fmap ls) ⊆ IMAGE SND (set ls)``,
+srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,pairTheory.EXISTS_PROD] >>
+qmatch_assum_rename_tac `MEM z (MAP FST ls)`[] >>
+qexists_tac `z` >>
+match_mp_tac alist_to_fmap_FAPPLY_MEM >>
+rw[])
+
+val IN_FRANGE_alist_to_fmap_suff = store_thm(
+"IN_FRANGE_alist_to_fmap_suff",
+``(∀v. MEM v (MAP SND ls) ⇒ P v) ⇒ (∀v. v ∈ FRANGE (alist_to_fmap ls) ⇒ P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_alist_to_fmap_SUBSET) >>
+fs[MEM_MAP] >>
+PROVE_TAC[])
+
+val alist_to_fmap_MAP_matchable = store_thm(
+"alist_to_fmap_MAP_matchable",
+``∀f1 f2 al mal v. INJ f1 (set (MAP FST al)) UNIV ∧
+  (mal = MAP (λ(x,y). (f1 x,f2 y)) al) ∧
+  (v = MAP_KEYS f1 (f2 o_f alist_to_fmap al)) ⇒
+  (alist_to_fmap mal = v)``,
+METIS_TAC[alist_to_fmap_MAP])
+
+val MAP_values_fmap_to_alist = store_thm(
+"MAP_values_fmap_to_alist",
+``∀f fm. MAP (λ(k,v). (k, f v)) (fmap_to_alist fm) = fmap_to_alist (f o_f fm)``,
+rw[fmap_to_alist_def,MAP_MAP_o,MAP_EQ_f])
+
+val INJ_I = prove (
+``∀s t. INJ I s t ⇔ s ⊆ t``,
+SRW_TAC[][INJ_DEF,SUBSET_DEF])
+
+val MAP_KEYS_I = store_thm(
+"MAP_KEYS_I",
+``∀fm. MAP_KEYS I fm = fm``,
+rw[GSYM fmap_EQ_THM,MAP_KEYS_def,EXTENSION] >>
+metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM])
+
+val alist_to_fmap_MAP_values = store_thm(
+"alist_to_fmap_MAP_values",
+``∀f al. alist_to_fmap (MAP (λ(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
+rw[] >>
+Q.ISPECL_THEN [`I:γ->γ`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
+SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I])
+
+val set_MAP_FST_fmap_to_alist = store_thm(
+"set_MAP_FST_fmap_to_alist",
+``set (MAP FST (fmap_to_alist fm)) = FDOM fm``,
+METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
+
+val alookup_distinct_reverse = Q.store_thm ("alookup_distinct_reverse",
+`!l k. ALL_DISTINCT (MAP FST l) ⇒ (ALOOKUP (REVERSE l) k = ALOOKUP l k)`,
+ Induct_on `l` >>
+ rw [] >>
+ PairCases_on `h` >>
+ fs [] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [ALOOKUP_APPEND] >>
+ rw [] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [] >>
+ imp_res_tac ALOOKUP_MEM >>
+ fs [MEM_MAP] >>
+ metis_tac [FST]);
+
+val flookup_fupdate_list = Q.store_thm ("flookup_fupdate_list",
+`!l k m.
+  FLOOKUP (m |++ l) k =
+  case ALOOKUP (REVERSE l) k of
+     | SOME v => SOME v
+     | NONE => FLOOKUP m k`,
+ ho_match_mp_tac ALOOKUP_ind >>
+ rw [FUPDATE_LIST_THM, ALOOKUP_def, FLOOKUP_UPDATE] >>
+ BasicProvers.FULL_CASE_TAC >>
+ fs [ALOOKUP_APPEND] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [FLOOKUP_UPDATE] >>
+ rw [] >>
+ imp_res_tac FLOOKUP_FUPDATE_LIST_ALOOKUP_NONE >>
+ imp_res_tac FLOOKUP_FUPDATE_LIST_ALOOKUP_SOME >>
+ fs [FLOOKUP_UPDATE]);
+
+val fupdate_list_funion = store_thm("fupdate_list_funion",
+``!m l. m|++l = FUNION (FEMPTY |++l) m``,
+ Induct_on `l`
+ >- rw [FUPDATE_LIST, FUNION_FEMPTY_1] >> 
+ REWRITE_TAC [FUPDATE_LIST_THM] >>
+ rpt GEN_TAC >>
+ pop_assum (qspecl_then [`m|+h`] mp_tac) >>
+ rw [] >>
+ rw [fmap_eq_flookup, FLOOKUP_FUNION] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ PairCases_on `h` >>
+ fs [FLOOKUP_UPDATE, flookup_fupdate_list] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs []);
+
+val mem_to_flookup = Q.store_thm ("mem_to_flookup",
+`!x y l. ALL_DISTINCT (MAP FST l) ∧ MEM (x,y) l ⇒ (FLOOKUP (FEMPTY |++ l) x = SOME y)`,
+ Induct_on `l` >>
+ rw [] >>
+ fs [flookup_fupdate_list] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [ALOOKUP_APPEND] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [] >>
+ imp_res_tac ALOOKUP_MEM >>
+ imp_res_tac alookup_distinct_reverse >>
+ fs [] >>
+ res_tac >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs [MEM_MAP] >>
+ rw [] >>
+ metis_tac [FST]);
+
+val alookup_filter = Q.store_thm ("alookup_filter",
+`!f l x. ALOOKUP l x = ALOOKUP (FILTER (λ(x',y). x = x') l) x`,
+ Induct_on `l` >>
+ rw [ALOOKUP_def] >>
+ PairCases_on `h` >>
+ fs []);
+
+val alist_range_def = Define `
+alist_range m = { v | ?k. ALOOKUP m k = SOME v }`;
+
+end
+(* end CakeML lemmas *)
 
 val _ = export_theory ();
