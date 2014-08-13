@@ -3056,7 +3056,7 @@ val ZIP_COUNT_LIST = store_thm("ZIP_COUNT_LIST",
     (ZIP (l1,COUNT_LIST n) = GENLIST (λn. (EL n l1, n)) (LENGTH l1))``,
     simp[LIST_EQ_REWRITE,LENGTH_COUNT_LIST,EL_ZIP,EL_COUNT_LIST])
 
-val map_replicate = Q.prove (
+val map_replicate = Q.store_thm ("map_replicate",
 `!f n x. MAP f (REPLICATE n x) = REPLICATE n (f x)`,
  Induct_on `n` >>
  rw [REPLICATE]);
