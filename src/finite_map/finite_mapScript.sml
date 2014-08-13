@@ -2254,7 +2254,9 @@ val fmap_size_def =
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
 
-local open lcsymtacs optionTheory rich_listTheory listTheory boolSimps in
+local 
+  open lcsymtacs optionTheory rich_listTheory listTheory boolSimps sortingTheory 
+in
 
 val o_f_FUNION = store_thm("o_f_FUNION",
   ``f o_f (f1 ⊌ f2) = (f o_f f1) ⊌ (f o_f f2)``,
@@ -2694,6 +2696,23 @@ val fevery_funion = Q.store_thm ("fevery_funion",
  rw [FEVERY_ALL_FLOOKUP, FLOOKUP_FUNION] >>
  BasicProvers.EVERY_CASE_TAC >>
  fs []);
+
+ (* Sorting stuff *)
+
+val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
+  ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
+  Induct >> rw[] >>
+  fs[PERM_CONS_EQ_APPEND] >>
+  rw[FUPDATE_LIST_THM] >>
+  PairCases_on`h` >> fs[] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  match_mp_tac EQ_TRANS >>
+  qexists_tac `(fm |++ (M ++ N)) |+ (h0,h1)` >>
+  conj_tac >- metis_tac[ALL_DISTINCT_PERM,PERM_MAP] >>
+  rw[FUPDATE_LIST_APPEND] >>
+  `h0 ∉ set (MAP FST N)` by metis_tac[PERM_MEM_EQ,MEM_MAP,MEM_APPEND] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  rw[FUPDATE_LIST_THM]);
 
 
 end

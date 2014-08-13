@@ -401,7 +401,7 @@ metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
-local open pairTheory boolSimps in
+local open pairTheory boolSimps sortingTheory relationTheory in
 
 val ALOOKUP_ALL_DISTINCT_EL = store_thm("ALOOKUP_ALL_DISTINCT_EL",
   ``∀ls n. n < LENGTH ls ∧ ALL_DISTINCT (MAP FST ls) ⇒ (ALOOKUP ls (FST (EL n ls)) = SOME (SND (EL n ls)))``,
@@ -558,6 +558,43 @@ val alookup_filter = Q.store_thm ("alookup_filter",
 
 val alist_range_def = Define `
 alist_range m = { v | ?k. ALOOKUP m k = SOME v }`;
+
+(* Sorting and permutation based stuff *)
+
+val alookup_stable_sorted = Q.store_thm ("alookup_stable_sorted",
+`!R sort x l.
+  transitive R ∧ total R ∧
+  STABLE sort (inv_image R FST)
+  ⇒
+  (ALOOKUP (sort (inv_image R FST) l) x = ALOOKUP l x)`,
+ rw [] >>
+ ONCE_REWRITE_TAC [alookup_filter] >>
+ fs [STABLE_DEF, SORTS_DEF] >>
+ pop_assum (mp_tac o GSYM o Q.SPEC `(λ(x',y). x = x')`) >>
+ rw [] >>
+ match_mp_tac (METIS_PROVE [] ``(x = x') ⇒ (f x y = f x' y)``) >> 
+ pop_assum match_mp_tac >>
+ rw [] >>
+ PairCases_on `x'` >>
+ PairCases_on `y` >>
+ fs [transitive_def, total_def] >>
+ metis_tac []);
+
+val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
+  ``∀l1 l2. ALL_DISTINCT (MAP FST l1) ∧ PERM (MAP FST l1) (MAP FST l2) ∧ (set l1 = set l2) ⇒ (ALOOKUP l1 = ALOOKUP l2)``,
+  simp[EXTENSION] >>
+  rw[FUN_EQ_THM] >>
+  Cases_on`ALOOKUP l2 x` >- (
+    imp_res_tac ALOOKUP_FAILS >>
+    imp_res_tac MEM_PERM >>
+    fs[FORALL_PROD,MEM_MAP,EXISTS_PROD] >>
+    metis_tac[ALOOKUP_FAILS] ) >>
+  qmatch_assum_rename_tac`ALOOKUP l2 x = SOME p`[] >>
+  imp_res_tac ALOOKUP_MEM >>
+  `ALL_DISTINCT (MAP FST l2)` by (
+    metis_tac[ALL_DISTINCT_PERM]) >>
+  imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
+  metis_tac[])
 
 end
 (* end CakeML lemmas *)
