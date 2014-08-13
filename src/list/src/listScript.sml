@@ -3025,8 +3025,8 @@ val nub_def = Define `
   else
     x :: nub l)`;
 
-val nub_set = Q.store_thm ("nub_set",
-`!l. set l = set (nub l)`,
+val nub_set = Q.store_thm ("nub_set[simp]",
+`!l. set (nub l) = set l`,
 Induct >>
 rw [nub_def, EXTENSION] >>
 metis_tac []);
@@ -3066,7 +3066,7 @@ metis_tac [list_to_set_diff]);
 
 val length_nub_append = Q.store_thm ("length_nub_append",
 `!l1 l2. LENGTH (nub (l1 ++ l2)) = LENGTH (nub l1) + LENGTH (nub (FILTER (\x. ~MEM x l1) l2))`,
-rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub, GSYM nub_set] >>
+rw [GSYM ALL_DISTINCT_CARD_LIST_TO_SET, all_distinct_nub] >>
 fs [FINITE_LIST_TO_SET, CARD_UNION_EQN] >>
 ASSUME_TAC (Q.SPECL [`l1`, `l2`] card_eqn_help) >>
 `CARD (set l1 ∩ set l2) ≤ CARD (set l2)` 
