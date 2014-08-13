@@ -3061,6 +3061,24 @@ val map_replicate = Q.store_thm ("map_replicate",
  Induct_on `n` >>
  rw [REPLICATE]);
 
+val take_drop_partition = Q.store_thm ("take_drop_partition",
+`!n m l. m ≤ n ⇒ (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)`,
+ Induct_on `m` >>
+ rw [] >>
+ Cases_on `l` >>
+ rw []
+ THEN1 RW_TAC arith_ss [] >>
+ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`n - 1`, `t`]) >>
+ rw [] >>
+ FULL_SIMP_TAC arith_ss [ADD1]);
+
+val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
+`!n. ALL_DISTINCT (COUNT_LIST n)`,
+ Induct_on `n` >>
+ rw [COUNT_LIST_def, MEM_MAP] >>
+ MATCH_MP_TAC ALL_DISTINCT_MAP_INJ >>
+ rw []);
+ 
 end
 (* end CakeML lemmas *)
 
