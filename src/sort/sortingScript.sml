@@ -1338,6 +1338,103 @@ val QSORT3_STABLE =
          (IND_STEP_TAC THEN RW_TAC arith_ss [LENGTH]) THEN
     METIS_TAC [FILTER_APPEND_DISTRIB, filter_filter, QSORT3_SPLIT]);
 
+
+(*---------------------------------------------------------------------------*)
+(* Various useful theorems from the CakeML project https://cakeml.org.       *)
+(*---------------------------------------------------------------------------*)
+
+local open lcsymtacs rich_listTheory in
+
+val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
+`∀R L x. MEM x (QSORT3 R L) ⇔ MEM x L`,
+ ho_match_mp_tac (fetch "-" "QSORT3_IND") >>
+ rw [QSORT3_DEF] >>
+ fs [] >>
+ eq_tac >>
+ rw [] >>
+ fs [PART3_FILTER] >>
+ rw [] >>
+ fs [MEM_FILTER] >>
+ metis_tac []);
+
+val QSORT3_SORTED = Q.store_thm ("QSORT3_SORTED",
+`∀R L. transitive R ∧ total R ⇒ SORTED R (QSORT3 R L)`,
+ rw [] >>
+ imp_res_tac QSORT3_SORTS >>
+ fs [SORTS_DEF]);
+
+val sorted_count_list = Q.store_thm ("sorted_count_list",
+`!n. SORTED $<= (COUNT_LIST n)`,
+ Induct_on `n`
+ >- rw [COUNT_LIST_def] >>
+ rw [COUNT_LIST_SNOC, SNOC_APPEND] >>
+ match_mp_tac SORTED_APPEND >>
+ FULL_SIMP_TAC (srw_ss()++ARITH_ss) [transitive_def, MEM_COUNT_LIST] >>
+ decide_tac);
+
+val sorted_perm_eq = Q.store_thm ("sorted_perm_eq",
+`∀R l1 l2.
+  antisymmetric R ∧ total R ∧ transitive R ∧ SORTED R l1 ∧ SORTED R l2 ∧ PERM l1 l2
+  ⇒
+  (l1 = l2)`,
+ Induct_on `l1` >>
+ rw [] >>
+ Cases_on `l2` >>
+ fs [] >>
+ `h = h'` 
+       by (fs [antisymmetric_def] >>
+           FIRST_X_ASSUM match_mp_tac >>
+           rw [] >>
+           imp_res_tac SORTED_EQ >>
+           rw [] >>
+           Cases_on `h = h'` >>
+           fs [total_def, transitive_def]
+           >- metis_tac []
+           >- (FIRST_X_ASSUM match_mp_tac >>
+               fs [] >>
+               imp_res_tac MEM_PERM >>
+               fs [] >>
+               metis_tac [])
+           >- metis_tac []
+           >- (FIRST_X_ASSUM match_mp_tac >>
+               fs [] >>
+               imp_res_tac MEM_PERM >>
+               fs [] >>
+               metis_tac [])) >>
+ metis_tac [SORTED_EQ, PERM_CONS_IFF]);
+
+val sorted_map = Q.store_thm ("sorted_map",
+`!R f l. transitive R ⇒ (SORTED R (MAP f l) ⇔ SORTED (inv_image R f) l)`,
+ Induct_on `l` >>
+ rw [SORTED_EQ] >>
+ eq_tac >>
+ rw [] >>
+ fs [MEM_MAP] >>
+ metis_tac []);
+
+val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
+`!y f l n. 
+  SORTED (inv_image $<= f) l ∧
+  PERM (MAP f l) (COUNT_LIST n)
+  ⇒
+  (MAP f l = COUNT_LIST n)`,
+ rw [] >>
+ `transitive $<= ∧ total $<= ∧ antisymmetric $<=`
+          by srw_tac [ARITH_ss] [transitive_def,total_def,antisymmetric_def] >>
+ metis_tac [sorted_map, sorted_perm_eq, sorted_count_list]);
+
+val SORTED_weaken = store_thm("SORTED_weaken",
+  ``∀R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
+      ==> SORTED R' ls``,
+  NTAC 2 GEN_TAC THEN
+  Induct THEN SRW_TAC[][] THEN
+  Cases_on`ls` THEN
+  FULL_SIMP_TAC(srw_ss())[SORTED_DEF] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN
+  METIS_TAC[])
+
+end
+
 val _ = export_theory();
 
 end;
