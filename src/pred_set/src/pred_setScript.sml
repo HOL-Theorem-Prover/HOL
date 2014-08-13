@@ -5231,6 +5231,11 @@ val compl_insert = Q.store_thm ("compl_insert",
  SRW_TAC [] [EXTENSION, IN_COMPL] THEN
  METIS_TAC []);
 
+val in_max_set = Q.store_thm ("in_max_set",
+`!s. FINITE s ⇒ !x. x ∈ s ⇒ x ≤ MAX_SET s`,
+ HO_MATCH_MP_TAC FINITE_INDUCT THEN
+ SRW_TAC [] [MAX_SET_THM] THEN
+ SRW_TAC [] []);
 
 (* end CakeML lemmas *)
 
