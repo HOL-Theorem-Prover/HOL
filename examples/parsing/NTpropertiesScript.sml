@@ -67,17 +67,15 @@ val derives_TOK = store_thm(
   match_mp_tac RTC_R_I >> simp[derive_def] >> metis_tac[])
 
 val nullable_CONS_TOK = store_thm(
-  "nullable_CONS_TOK",
+  "nullable_CONS_TOK[simp]",
   ``nullable G (TOK t :: rest) = F``,
   simp[nullable_def] >> strip_tac >>
   qspecl_then [`G`, `[]`, `rest`, `t`, `[]`] mp_tac derives_TOK >> simp[])
-val _ = export_rewrites ["nullable_CONS_TOK"]
 
 val nullable_NIL = store_thm(
-  "nullable_NIL",
+  "nullable_NIL[simp]",
   ``nullable G [] = T``,
   simp[nullable_def])
-val _ = export_rewrites ["nullable_NIL"]
 
 val nullable_CONS_NT = store_thm(
   "nullable_CONS_NT",
@@ -289,14 +287,12 @@ val firstSet_NIL = Store_thm(
   simp[grammarTheory.derive_def]);
 
 val firstSet_TOK = store_thm(
-  "firstSet_TOK",
+  "firstSet_TOK[simp]",
   ``firstSet G (TOK t::rest) = {t}``,
   simp[firstSet_def, EXTENSION, EQ_IMP_THM] >> rw[]
   >- (qspecl_then [`G`, `[t]`, `rest`] mp_tac derives_preserves_leading_toks >>
       simp[] >> strip_tac >> fs[]) >>
   metis_tac[relationTheory.RTC_REFL]);
-val _ = export_rewrites ["firstSet_TOK"]
-
 
 val firstSet_NT = store_thm(
   "firstSet_NT",
