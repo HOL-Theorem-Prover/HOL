@@ -1,9 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
+open listTheory
 open grammarTheory
 open lcsymtacs
 open pred_setTheory
-open listTheory
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC
 fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q []
@@ -179,10 +179,7 @@ val ptree_nullableML = store_thm(
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
   dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >> map_every qx_gen_tac [`N`, `sn`] >>
   strip_tac >> simp[EXTENSION] >> qexists_tac `MAP ptree_head subs` >> simp[] >>
-  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
-  `∀p. MEM p subs ⇒ DISJOINT (ptree_NTs p) (N INSERT sn)`
-    suffices_by simp[] >>
-  simp[Once DISJOINT_SYM, DISJOINT_INSERT] >> simp[Once DISJOINT_SYM]);
+  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP]);
 
 val rptfree_subtree = store_thm(
   "rptfree_subtree",
@@ -195,7 +192,7 @@ val rptfree_subtree = store_thm(
   dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >> conj_tac
   >- (strip_tac >> qexists_tac `Nd N subs` >>
       dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP]) >>
-  map_every qx_gen_tac [`N'`, `pt`] >> strip_tac >> metis_tac[]);
+  metis_tac[]);
 
 val rptfree_nullable_ptrees_possible = store_thm(
   "rptfree_nullable_ptrees_possible",
