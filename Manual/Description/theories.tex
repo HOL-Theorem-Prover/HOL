@@ -2799,6 +2799,16 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 \end{verbatim}
 \end{hol}
 
+\paragraph {Removal of duplicates}
+The \holtxt{nub} function removes all duplicate entries from a list.
+\begin{hol}
+\begin{verbatim}
+   nub_DEF
+     |- (nub [] = []) /\
+        (!x l. nub (x::l) = if MEM x l then nub l else x::nub l)
+\end{verbatim}
+\end{hol}
+
 \paragraph {Conversion to sets}
 
 Lists can be converted to sets (\ml{LIST\_TO\_SET}) by partial
