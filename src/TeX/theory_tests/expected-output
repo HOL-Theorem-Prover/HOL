@@ -13,3 +13,5 @@
   \HOLTokenBar{} \HOLConst{Defined} \HOLTyOp{num} ((\HOLTyOp{string} \HOLTokenProd{} \HOLTyOp{term}) \HOLTyOp{list}) \HOLTyOp{term}
   \HOLTokenBar{} \HOLConst{Tyabs} \HOLTyOp{string} \HOLTyOp{term}
   \HOLTokenBar{} \HOLConst{Tyrep} \HOLTyOp{string} \HOLTyOp{term}
+
+\HOLinline{\HOLFreeVar{x}.\HOLFieldName{fld1}}

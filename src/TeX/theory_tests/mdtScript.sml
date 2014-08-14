@@ -26,4 +26,6 @@ val _ = Hol_datatype`
    | Tyrep of string => term
 `;
 
+val _ = Datatype`testrcd = <| fld1 : bool ; fld2 : 'a -> num |>`;
+
 val _ = export_theory();
