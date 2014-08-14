@@ -1,5 +1,5 @@
 This directory contains a modernised version of src/float. The data
-representation has been updated to make used of HOL4 bit-vectors. There is also
+representation has been updated to make use of HOL4 bit-vectors. There is also
 additional tool support, e.g. for relatively efficient evaluation of basic
 floating-point arithmetic operations.
 
