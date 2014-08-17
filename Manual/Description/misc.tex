@@ -432,7 +432,7 @@ variable, presumably giving rise to some useful string (such as
 \texttt{unix}), and then have the resulting variable
 (\texttt{FOO\_unix}, say) expanded.  This effectively allows the
 construction of functions by cases (define variables
-\texttt{FOO\_unix}, \texttt{FOO\_macos} etc; then use the nested
+\texttt{FOO\_unix}, \texttt{FOO\_macos} etc.; then use the nested
 variable reference above).  If the internal variable expands to
 something containing spaces, this will not turn a normal variable
 reference into a function call (see below).  On the other hand,
@@ -526,7 +526,7 @@ whose value are commas instead), but can otherwise be arbitrary text.
   of file-names that include spaces or other shell-significant
   characters like less-than and greater-than.  Those make-file
   variables that point directly at executables (\texttt{MOSMLC},
-  \texttt{MOSMLLEX} etc) are automatically protected in this way.
+  \texttt{MOSMLLEX} etc.) are automatically protected in this way.
   Others, which might be used in concatenation with other elements,
   are not so protected.  Thus, if \texttt{DIR} might include spaces,
   one should write

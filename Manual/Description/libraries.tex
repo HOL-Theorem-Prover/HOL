@@ -940,8 +940,8 @@ This is useful if one wants to use variables
 \index{variables, in HOL logic@variables, in \HOL{} logic!with constant names}
 %
 with the same names as previously declared (or built-in) constants
-(\eg\ \ml{o}, \ml{I}, \ml{S} \etc).  The name $x$ is still a constant
-for the constructors, theories, etc; \ml{hide} affects parsing and
+(\eg\ \ml{o}, \ml{I}, \ml{S}, \etc).  The name $x$ is still a constant
+for the constructors, theories, \etc; \ml{hide} affects parsing and
 printing by removing the given name from the ``overload map'' described
 above in Section~\ref{sec:parser:architecture}.  Note that the effect
 of \ml{hide} is \emph{temporary}; its effects do not persist in
@@ -2378,7 +2378,7 @@ tools such as \ml{PROVE\_TAC} instead.)
 
 There are two routes by which a theorem for rewriting can be passed to
 the simplifier: either as an explicit argument to one of the \ML{}
-functions (\ml{SIMP\_CONV}, \ml{ASM\_SIMP\_TAC} etc) that take theorem
+functions (\ml{SIMP\_CONV}, \ml{ASM\_SIMP\_TAC} etc.) that take theorem
 lists as arguments, or by being included in a \simpset{} fragment
 which is merged into a \simpset.  In both cases, these theorems are
 transformed before being used.  The transformations applied are
