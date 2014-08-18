@@ -1958,6 +1958,23 @@ in
     (DISCH_ALL case1)
 end
 
+fun prove_case_eq_thm (rcd as {case_def, nchotomy}) = let
+  val elim = prove_case_elim_thm rcd
+  val rand_thm = prove_case_rand_thm rcd
+  val fvar = rator (lhs (concl rand_thm))
+  val (dom, rng) = dom_rng (type_of fvar)
+  val fvs = free_vars (concl rand_thm)
+  val v = variant fvs (mk_var("v", dom))
+  val v' = variant (v::fvs) v
+  val rand_thm' = rand_thm |> INST_TYPE [rng |-> bool]
+                           |> INST [inst [rng |-> bool] fvar |->
+                                    mk_abs(v', mk_eq(v', v))]
+                           |> BETA_RULE
+in
+  rand_thm' |> CONV_RULE (RAND_CONV (REWR_CONV elim))
+            |> BETA_RULE
+end
+
 
 
 

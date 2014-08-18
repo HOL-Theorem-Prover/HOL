@@ -48,6 +48,7 @@ sig
    val prove_constructors_one_one  : thm -> thm option list
    val prove_case_rand_thm         : {case_def : thm, nchotomy : thm} -> thm
    val prove_case_elim_thm         : {case_def : thm, nchotomy : thm} -> thm
+   val prove_case_eq_thm           : {case_def : thm, nchotomy : thm} -> thm
 
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm
