@@ -1,5 +1,6 @@
 \documentclass[landscape,10pt]{article}
 \usepackage[landscape,a4paper,left=3mm,right=3mm,noheadfoot]{geometry}
+\usepackage[T1]{fontenc}
 \usepackage{multicol}
 \usepackage{helvet}
 \usepackage[colorlinks]{hyperref}
@@ -37,7 +38,7 @@
 \hol{proofManagerLib}{g} \var{term} & starts a new goal \\
 \hol{proofManagerLib}{e} \var{tactic} & applies a tactic to the top goal \\
 \hol{proofManagerLib}{b}() & undoes previous expansion \\
-\holnoref{proofManagerLib}{restart}() & undoes all expansions \\
+\hol{proofManagerLib}{restart}() & undoes all expansions \\
 \holnoref{proofManagerLib}{drop}() & abandons the top goal \\
 \holnoref{proofManagerLib}{dropn} \var{int} & abandons a number of goals \\
 \hol{proofManagerLib}{p}() & prints the state of the top goal \\
@@ -72,7 +73,7 @@
 \hol{Tactical}{ALL_TAC} & leaves the goal unchanged \\
 \hol{Tactical}{TRY} & do nothing if the tactic fails \\
 \hol{Tactical}{REPEAT} & repeat a tactic until it fails \\
-\holnoref{Tactic}{NTAC} & apply a tactic some number of times \\
+\hol{Tactic}{NTAC} & apply a tactic some number of times \\
 \hol{Tactical}{MAP_EVERY} & apply a tactic using theorems in a list \\
 \end{tabular}
 \subsection*{Using Assumptions}
@@ -84,7 +85,7 @@
 \hol{Tactical}{PAT_ASSUM} \var{thm-tactic} & use matching assumption \\
 \hol{Tactical}{FIRST_X_ASSUM} \var{thm-tactic} & use first successful assum. \\
 \hol{Tactic}{STRIP_ASSUME_TAC} \var{thm} & split and add assumption \\
-\holnoref{Tactic}{WEAKEN_TAC} \var{term-pred} & remove assumptions \\
+\hol{Tactic}{WEAKEN_TAC} \var{term-pred} & remove assumptions \\
 \hol{Tactic}{RULE_ASSUM_TAC} & apply rule to assumptions \\
 \hol{Tactic}{IMP_RES_TAC} \var{thm} & resolve \var{thm} using assums. \\
 \hol{Tactic}{RES_TAC} & mutually resolve assums. \\
@@ -92,13 +93,13 @@
 \end{tabular}
 \subsection*{Decision Procedures}
 \begin{tabular}{ll}
-\holnoref{tautLib}{TAUT_TAC} & tautology checker \\
+\hol{tautLib}{TAUT_TAC} & tautology checker \\
 \hol{bossLib}{DECIDE_TAC} & above, plus linear arithmetic \\
 \hol{mesonLib}{MESON_TAC} [\var{thms}] & first-order prover \\
 \hol{BasicProvers}{PROVE_TAC} [\var{thms}] & uses Meson \\
 \holnoref{metisLib}{METIS_TAC} [\var{thms}] & new first-order prover \\
 \hol{bossLib}{EVAL_TAC} & evaluation tactic  \\
-\holnoref{numLib}{ARITH_TAC} & for Preburger arithmetic \\
+\holnoref{numLib}{ARITH_TAC} & for Presburger arithmetic \\
 \holnoref{intLib}{ARITH_TAC} & uses Omega test \\
 \holnoref{intLib}{COOPER_TAC} & Cooper's algorithm \\
 \holnoref{realLib}{REAL_ARITH_TAC} & \\
@@ -131,9 +132,9 @@
 uses a list of \emph{simpset} fragments  \\[4pt]
 \hol{simpLib}{rewrites} [\var{thms}] & constructs a rewrite fragment \\
 \hol{simpLib}{mk_simpset} [\var{ssfrag}] & constructs a \emph{simpset} from fragments \\
-\holnoref{simpLib}{++}(\var{simpset},\var{ssfrag}) & adds a fragment to a \emph{simpset} \\ % infix
+\hol{simpLib}{++}(\var{simpset},\var{ssfrag}) & adds a fragment to a \emph{simpset} \\ % infix
 \holnoref{simpLib}{\&\&}(\var{simpset},[\var{thms}]) & adds rewrites to a \emph{simpset} \\ % infix
-\holnoref{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem
+\hol{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem
 to enable AC simplification
 \end{tabular}
 \end{multicols}
@@ -147,7 +148,7 @@ to enable AC simplification
 \hol{bossLib}{arith_ss} & as above + arithmetic rewrites and decision procedure for linear arithmetic \\
 \hol{bossLib}{list_ss} & a version of the above for the theory of lists \\
 \holnoref{realLib}{real_ss} & adds some real number evaluation and rewrites to the arithmetic \emph{simpset} \\
-\hol{bossLib}{srw_ss}() & returns `stateful' \emph{simpset}; has type thms. from loaded theories
+\hol{bossLib}{srw_ss}() & returns `stateful' \emph{simpset}; has type theorems from loaded theories
 \end{tabular}
 
 \medskip
@@ -161,7 +162,7 @@ to enable AC simplification
 \holnoref{boolSimps}{CONJ_ss} & congruence rule for conjunction \\
 \holnoref{boolSimps}{ETA_ss} & eta conversion \\
 \holnoref{boolSimps}{LET_ss} & rewrites out `let' terms \\
-\holnoref{boolSimps}{DNF_ss} & converts term to disjunctive-normal-form\\
+\hol{boolSimps}{DNF_ss} & converts term to disjunctive-normal-form\\
 \holnoref{pairSimps}{PAIR_ss} & rewrites for pairs \\
 \holnoref{optionSimps}{OPTION_ss} & rewrites for options \\
 \holnoref{stringSimps}{STRING_ss} & rewrites for strings \\
@@ -254,7 +255,7 @@ to enable AC simplification
 \begin{tabular}{ll}
 \holnoref{numLib}{prefer_num}() & give numerals and operators natural
 number types by default \\
-\holnoref{intLib}{prefer_int}() & give numerals and operators integer
+\hol{intLib}{prefer_int}() & give numerals and operators integer
 types by default\\
 \hol{Parse}{overload_on}(\var{name},\var{term}) & establishes constant as one of the overloading possibilities for a string \\
 \hol{Parse}{add_infix}(\var{name},\var{int},\var{assoc}) & adds string as infix with given precedence \& associativity to grammar \\
@@ -294,7 +295,7 @@ display of theorem assumptions\\
 \hol{Lib}{time} \var{function} & measure how long a function application takes \\
 \hol{Count}{thm_count}() & returns the current value of the theorem counter \\
 \holnoref{Count}{reset_thm_count}() & resets the theorem counter \\
-\holnoref{Count}{apply} \var{function} & returns the theorem count for a function application \\
+\hol{Count}{apply} \var{function} & returns the theorem count for a function application \\
 \end{tabular}
 \end{multicols}
 \end{document}
