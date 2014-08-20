@@ -16,6 +16,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | NoDollarParens
              | Merge | NoMerge
              | Unoverload of string
+             | Depth of int
 
 val numErrors = ref 0
 type posn = int * int
@@ -82,6 +83,13 @@ fun stringOpt pos s =
           case Int.fromString numpart_s of
             NONE => (warn(pos, s ^ " is not a valid option"); NONE)
           | SOME i => SOME (Width i)
+        end
+      else if String.isPrefix "depth=" s then let
+          val numpart_s = String.extract(s,6,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => SOME (Depth i)
         end
       else if String.isPrefix "conj" s then let
           val numpart_s = String.extract(s,4,NONE)
@@ -181,6 +189,7 @@ end
 type optionset = OptSet.set
 
 fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
+fun optset_depth s = get_first (fn Depth i => SOME i | _ => NONE) s
 fun spaces 0 = ""
   | spaces 1 = " "
   | spaces 2 = "  "
@@ -354,6 +363,9 @@ in
         f pps |> (case optset_showtypes opts of
                     NONE => trace ("types", 0)
                   | SOME i => trace ("types", i))
+              |> (case optset_depth opts of
+                    NONE => (fn f => f)
+                  | SOME i => Lib.with_flag (Globals.max_print_depth, i))
               |> (if OptSet.has NoDollarParens opts then
                     trace ("EmitTeX: dollar parens", 0)
                   else
