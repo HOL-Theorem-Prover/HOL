@@ -15,6 +15,7 @@ val add_finite_map_compset = computeLib.add_thms
   ,DOMSUB_FLOOKUP_THM
   ,FUNION_FEMPTY_1
   ,FUNION_FEMPTY_2
+  ,FUNION_FUPDATE_1
   ,FUPDATE_LIST_THM
   ,FDOM_FUPDATE
   ,FDOM_FEMPTY
