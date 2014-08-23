@@ -1,6 +1,7 @@
 val () = PolyML.print_depth 0;
 local
-  val fifoPath =
+  val defaultFifoPath =
+  val fifoPath = Option.getOpt(OS.Process.getEnv "VIMHOL_FIFO",defaultFifoPath)
   structure Queue :> (* Modified from http://mlton.org/MLtonThread *)
      sig
         type 'a t
@@ -98,6 +99,7 @@ local
   val ppid = ref (Thread.fork(poller,[]))
 in
   structure Vimhol = struct
+    val fifoPath = fifoPath
     fun pActive() = Thread.isActive (!ppid)
     fun rActive() = Thread.isActive (!rpid)
     val stopTail = stopTail

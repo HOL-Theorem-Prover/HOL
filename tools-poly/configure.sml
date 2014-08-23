@@ -492,13 +492,13 @@ val _ =
     val tmpprefix = qstr("/tmp/vimhol")
   in
     fill_holes (src1,tar1)
-      ["let s:holpipe =" -->
-       "let s:holpipe = "^holpipe,
+      ["let s:defaultholpipe =" -->
+       "let s:defaultholpipe = "^holpipe,
        "let s:tmpprefix =" -->
        "let s:tmpprefix = "^tmpprefix];
     fill_holes (src2,tar2)
-      ["val fifoPath ="-->
-       "val fifoPath = "^holpipe];
+      ["val defaultFifoPath ="-->
+       "val defaultFifoPath = "^holpipe];
     output(tar3, "use "^(qstr tar2));
     closeOut tar3;
     output(tar4,"augroup filetypedetect\n");
