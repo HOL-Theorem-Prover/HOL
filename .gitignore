@@ -138,3 +138,4 @@ examples/miniML/hol2miniml/*.txt
 examples/miniML/hol2miniml/miniml-heap
 
 local-hol-heap
+examples/l3-machine-code/**/*-heap
