@@ -59,6 +59,8 @@ Bugs fixed:
 
 * Character literals weren’t pretty-printing to LaTeX.  We also improved the handling of string literals.  Thanks to Ramana Kumar for the [bug reports](http://github.com/HOL-Theorem-Prover/HOL/issues/190).
 
+* Piotr Trojanek found and fixed many documentation bugs in our various manuals.
+
 New theories:
 -------------
 
