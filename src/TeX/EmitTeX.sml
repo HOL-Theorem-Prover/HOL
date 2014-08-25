@@ -357,6 +357,9 @@ local
                                   unmapped_sz)
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
+          | Literal CharList => (addann "CharLit"
+                                        (String.substring(s, 2, size s - 3)),
+                                 unmapped_sz)
           | _ => smapper s
   in
     PP.add_stringsz pps (dollarpfx ^ string_to_print ^ dollarsfx, sz + szdelta)

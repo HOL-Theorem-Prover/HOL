@@ -30,7 +30,7 @@ sig
     | Underline
     | UserStyle of string
 
-  datatype lit_type = FldName | StringLit | NumLit
+  datatype lit_type = FldName | StringLit | NumLit | CharLit
 
   datatype annotation = BV of hol_type * (unit -> string)
                       | FV of hol_type * (unit -> string)

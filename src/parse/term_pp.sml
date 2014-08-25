@@ -1776,7 +1776,8 @@ fun pp_term (G : grammar) TyG backend = let
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of
              NONE => fail
-           | SOME c => add_string ("#" ^ Lib.mlquote (str c))) |||
+           | SOME c => add_ann_string ("#" ^ Lib.mlquote (str c),
+                                       PPBackEnd.Literal PPBackEnd.CharLit)) |||
 
           (* numerals *)
           (fn _ => if Literal.is_numeral tm andalso can_pr_numeral NONE then

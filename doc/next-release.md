@@ -57,6 +57,8 @@ Bugs fixed:
 
 * Pretty-printers added to the system with `add_user_printer` weren’t having terms-to-be-printed tested against the supplied patterns (except by the gross approximation provided by the built-in term-net structure).  Thanks to Ramana Kumar for the [bug report](https://github.com/mn200/HOL/issues/172).
 
+* Character literals weren’t pretty-printing to LaTeX.  We also improved the handling of string literals.  Thanks to Ramana Kumar for the [bug reports](http://github.com/HOL-Theorem-Prover/HOL/issues/190).
+
 New theories:
 -------------
 
