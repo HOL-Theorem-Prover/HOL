@@ -17,7 +17,7 @@ transformation systems.
 
 {DefineSchema} takes its input in exactly the same format as {Define}.
 
-The termination constraints of a schmatic definition are collected on
+The termination constraints of a schematic definition are collected on
 the hypotheses of the definition, and also on the hypotheses of the 
 automatically proved induction theorem, but a termination proof is only
 attempted when the termination conditions have no occurrences of 
