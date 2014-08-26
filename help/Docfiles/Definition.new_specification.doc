@@ -19,7 +19,7 @@ satisfying the property:
 }
 This theorem is stored, with name {name}, as a definition in
 the current theory segment. It is also returned by the call to
-{new_specification} 
+{new_specification}.
 
 \FAILURE
 {new_specification} fails if the theorem argument has assumptions or
