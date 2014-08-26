@@ -9,7 +9,7 @@ General-purpose function definition facility.
 definition, abbreviation, recursive function, mutual recursion.
 
 \DESCRIBE
-{Define} takes a high-level specification of an HOL function, and
+{Define} takes a high-level specification of a HOL function, and
 attempts to define the function in the logic. If this attempt is
 successful, the specification is derived from the definition. The
 derived specification is returned to the user, and also stored in the
