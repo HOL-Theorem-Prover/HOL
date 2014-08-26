@@ -5,19 +5,19 @@ MoscowML. The notice from that code is appended.
 
 Currently, we do the following:
 
-  0. translate all files in help/Docfiles into a database usable by
+  0. Translate all files in help/Docfiles into a database usable by
      invoking "help" interactively.
 
-  1. translate all files in help/Docfiles into HTML versions
+  1. Translate all files in help/Docfiles into HTML versions
      (via Doc2Html).
 
-  2. translate all signature files found in <holdir>/sigobj into
+  2. Translate all signature files found in <holdir>/sigobj into
      HTML versions. Links for all value bindings are resolved to
      the results of (1), if possible. Theory signatures are internally
      linked to provide efficient access. A signature file contains a
      link to its source.
 
-  3. generate an index of all HOL identifiers, with links to the 
+  3. Generate an index of all HOL identifiers, with links to the
      documentation, and the host signature.
 
   4. Generate a HOLPage which brings all the above together on one
