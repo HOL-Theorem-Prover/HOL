@@ -586,4 +586,137 @@ end
 
 (* ------------------------------------------------------------------------ *)
 
+val prefixGroup = Q.store_thm("prefixGroup",
+   `prefixGroup w =
+       if w ' 7 then
+          if w ' 6 /\ w ' 5 /\ w ' 4 /\ ~w ' 3 /\ ~w ' 2 then
+             if ~w ' 1 /\ w ' 0 then 0 else 1
+          else
+             0
+       else if w ' 6 then
+          if w ' 5 then
+             if ~w ' 4 /\ ~w ' 3 /\ w ' 2 then
+                if w ' 1 then
+                   if w ' 0 then 4 else 3
+                else
+                   2
+             else
+                0
+          else if w ' 4 then 0 else 5
+       else if w ' 5  /\ w ' 2 /\ w ' 1 /\ ~w ' 0 then
+          2
+       else
+          0`,
+   rewrite_tac [prefixGroup_def]
+   \\ wordsLib.Cases_on_word_value `w`
+   \\ EVAL_TAC)
+
+val RexReg = Q.prove(
+   `!r: word4. RexReg (r ' 3,v2w [r ' 2; r ' 1; r ' 0]) = num2Zreg (w2n r)`,
+   rewrite_tac [x64Theory.RexReg_def]
+   \\ wordsLib.Cases_word_value
+   \\ EVAL_TAC
+   )
+
+val RexReg2 = Q.prove(
+   `!r: word4. (2 >< 0) r = v2w [r ' 2; r ' 1; r ' 0]: word3`,
+   wordsLib.Cases_word_value
+   \\ EVAL_TAC
+   )
+
+val RegNot4_def = Define`
+   RegNot4 (r: word4) = if (2 >< 0) r = (4w: word3) then 0w else r`
+
+val RegNot4or5_def = Define`
+   RegNot4or5 (r: word4) =
+      if ((2 >< 0) r = (4w: word3)) \/ ((2 >< 0) r = (5w: word3)) then
+         0w
+      else
+         r`
+
+val RegNot = Q.prove(
+   `(2 >< 0) (RegNot4 r) <> (4w: word3) /\
+    (2 >< 0) (RegNot4or5 r) <> (4w: word3) /\
+    (2 >< 0) (RegNot4or5 r) <> (5w: word3)`,
+   rw [RegNot4_def, RegNot4or5_def]
+   \\ fs []
+   )
+
+val tac =
+   NTAC 2 strip_tac
+   \\ wordsLib.Cases_on_word_value `(2 >< 0) r2: word3`
+   \\ simp [x64Theory.readModRM_def, x64Theory.boolify8_def]
+   \\ blastLib.BBLAST_TAC
+   \\ simp [x64Theory.readDisplacement_def, RexReg]
+   \\ blastLib.BBLAST_TAC
+   \\ simp []
+   \\ CONV_TAC (Conv.DEPTH_CONV bitstringLib.n2w_v2w_CONV)
+   \\ rule_assum_tac (Conv.CONV_RULE (Conv.RHS_CONV bitstringLib.n2w_v2w_CONV))
+   \\ pop_assum (SUBST1_TAC o SYM)
+   \\ rw [RexReg2, RexReg]
+
+val readModRM_byte_not_4 = Q.prove(
+   `!r1: word4 r2:word4 b2 b1 X B rest.
+      (2 >< 0) r2 <> (4w: word3) ==>
+      (readModRM
+          (REX b2 b1 X B,
+           (1w: word2) @@ ((((2 >< 0) r1: word3) @@
+                            ((2 >< 0) r2: word3)) : word6) :: rest) =
+       let (displacement, strm2) = immediate8 rest in
+          (if b1 = r1 ' 3 then num2Zreg (w2n r1) else RexReg (b1,(2 >< 0) r1),
+           Zm (NONE, ZregBase (if b2 = r2 ' 3 then num2Zreg (w2n r2)
+                               else RexReg (b2,(2 >< 0) r2)), displacement),
+           strm2))`,
+   tac
+   )
+
+val readModRM_dword_not_4 = Q.prove(
+   `!r1: word4 r2:word4 b1 b2 X B rest.
+      (2 >< 0) r2 <> (4w: word3) ==>
+      (readModRM
+          (REX b2 b1 X B,
+           (2w: word2) @@ ((((2 >< 0) r1: word3) @@
+                            ((2 >< 0) r2: word3)) : word6) :: rest) =
+       let (displacement, strm2) = immediate32 rest in
+          (if b1 = r1 ' 3 then num2Zreg (w2n r1) else RexReg (b1,(2 >< 0) r1),
+           Zm (NONE, ZregBase (if b2 = r2 ' 3 then num2Zreg (w2n r2)
+                               else RexReg (b2,(2 >< 0) r2)), displacement),
+           strm2))`,
+   tac
+   )
+
+val readModRM_not_4_or_5 = Q.prove(
+   `!r1: word4 r2:word4 b1 b2 X B rest.
+      (2 >< 0) r2 <> (4w: word3) /\ (2 >< 0) r2 <> (5w: word3) ==>
+      (readModRM
+          (REX b2 b1 X B,
+           (0w: word2) @@ ((((2 >< 0) r1: word3) @@
+                            ((2 >< 0) r2: word3)) : word6) :: rest) =
+       (if b1 = r1 ' 3 then num2Zreg (w2n r1) else RexReg (b1,(2 >< 0) r1),
+        Zm (NONE, ZregBase (if b2 = r2 ' 3 then num2Zreg (w2n r2)
+                            else RexReg (b2,(2 >< 0) r2)), 0w), rest))`,
+   tac)
+
+fun rule q = Drule.GEN_ALL o REWRITE_RULE [RegNot] o Q.SPECL [`r1`, q]
+
+val readModRM_byte_not_4 = Theory.save_thm("readModRM_byte_not_4",
+   rule `RegNot4 r2` readModRM_byte_not_4
+   )
+
+val readModRM_dword_not_4 = Theory.save_thm("readModRM_dword_not_4",
+   rule `RegNot4 r2` readModRM_dword_not_4
+   )
+
+val readModRM_not_4_or_5 = Theory.save_thm("readModRM_not_4_or_5",
+   rule `RegNot4or5 r2` readModRM_not_4_or_5
+   )
+
+val rbp = Q.store_thm("rbp",
+   `!r b. (RexReg (b, r) = RBP) = ~b /\ (r = 5w)`,
+   wordsLib.Cases_word_value
+   \\ rw [x64Theory.RexReg_def, x64Theory.num2Zreg_thm]
+   )
+
+(* ------------------------------------------------------------------------ *)
+
 val () = export_theory ()

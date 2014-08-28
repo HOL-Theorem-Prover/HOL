@@ -265,7 +265,7 @@ in
       (* utilsLib.cache 2000 String.compare *)
          (fn s =>
              let
-                val thm = x64_stepLib.x64_step s
+                val thm = x64_stepLib.x64_step_hex s
                 val t = x64_mk_pre_post thm
              in
                 case !x64_spec_trace of
