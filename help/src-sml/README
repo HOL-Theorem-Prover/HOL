@@ -30,7 +30,7 @@ the directory help/Docfiles. Each file must have the format
    <structure-name>.doc
 
 If <id> is a symbolic identifier (not alphanumeric) then an alphanumeric
-name <alpha> has to be invented for for it. Thus the file name will be
+name <alpha> has to be invented for it. Thus the file name will be
 <structure-name>.<alpha>.doc. The structure "Symbolic" must then be
 augmented as well, in order that the system can do the proper
 translations between <id> and <alpha>. See

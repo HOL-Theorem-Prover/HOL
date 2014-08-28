@@ -77,7 +77,7 @@ examples of how this is done.
 
 There are a number of basic and advanced means of specifying wellfounded
 relations. The most common starting point for dealing with termination
-problems for recursive functions is to find some function, known as a a
+problems for recursive functions is to find some function, known as a
 'measure' under which the arguments of a function call are larger than
 the arguments to any recursive calls that result.
 
