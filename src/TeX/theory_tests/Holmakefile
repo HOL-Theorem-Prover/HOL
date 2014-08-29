@@ -2,9 +2,13 @@ CMPDIR = $(protect $(HOLDIR)/tools/cmp)
 
 INCLUDES = $(CMPDIR)
 
-output: input munge.exe expected-output
-	./munge.exe < $< > $@
+.PHONY: check_output
+
+check_output: output expected-output
 	$(CMPDIR)/cmp.exe output expected-output
+
+output: input munge.exe
+	./munge.exe < $< > $@
 
 munge.exe: mdtTheory.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
