@@ -1372,37 +1372,6 @@ val sorted_count_list = Q.store_thm ("sorted_count_list",
  FULL_SIMP_TAC (srw_ss()++ARITH_ss) [transitive_def, MEM_COUNT_LIST] >>
  decide_tac);
 
-val sorted_perm_eq = Q.store_thm ("sorted_perm_eq",
-`∀R l1 l2.
-  antisymmetric R ∧ total R ∧ transitive R ∧ SORTED R l1 ∧ SORTED R l2 ∧ PERM l1 l2
-  ⇒
-  (l1 = l2)`,
- Induct_on `l1` >>
- rw [] >>
- Cases_on `l2` >>
- fs [] >>
- `h = h'` 
-       by (fs [antisymmetric_def] >>
-           FIRST_X_ASSUM match_mp_tac >>
-           rw [] >>
-           imp_res_tac SORTED_EQ >>
-           rw [] >>
-           Cases_on `h = h'` >>
-           fs [total_def, transitive_def]
-           >- metis_tac []
-           >- (FIRST_X_ASSUM match_mp_tac >>
-               fs [] >>
-               imp_res_tac MEM_PERM >>
-               fs [] >>
-               metis_tac [])
-           >- metis_tac []
-           >- (FIRST_X_ASSUM match_mp_tac >>
-               fs [] >>
-               imp_res_tac MEM_PERM >>
-               fs [] >>
-               metis_tac [])) >>
- metis_tac [SORTED_EQ, PERM_CONS_IFF]);
-
 val sorted_map = Q.store_thm ("sorted_map",
 `!R f l. transitive R ⇒ (SORTED R (MAP f l) ⇔ SORTED (inv_image R f) l)`,
  Induct_on `l` >>
@@ -1413,15 +1382,15 @@ val sorted_map = Q.store_thm ("sorted_map",
  metis_tac []);
 
 val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
-`!y f l n. 
+`!y f l n.
   SORTED (inv_image $<= f) l ∧
   PERM (MAP f l) (COUNT_LIST n)
   ⇒
   (MAP f l = COUNT_LIST n)`,
  rw [] >>
- `transitive $<= ∧ total $<= ∧ antisymmetric $<=`
-          by srw_tac [ARITH_ss] [transitive_def,total_def,antisymmetric_def] >>
- metis_tac [sorted_map, sorted_perm_eq, sorted_count_list]);
+ `transitive $<= ∧ antisymmetric $<=`
+          by srw_tac [ARITH_ss] [transitive_def,antisymmetric_def] >>
+ metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]);
 
 val SORTED_weaken = store_thm("SORTED_weaken",
   ``∀R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
