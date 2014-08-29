@@ -1035,7 +1035,8 @@ fun pp_term (G : grammar) TyG backend = let
                 else valOf recfupd_info
             in
               block INCONSISTENT 2
-                    (add_string fld >>
+                    (add_ann_string
+                       (fld, PPBackEnd.Literal PPBackEnd.FldName) >>
                      add_string " " >>
                      add_string updtok >>
                      add_break(1,0) >>

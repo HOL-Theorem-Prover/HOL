@@ -15,3 +15,11 @@
   \HOLTokenBar{} \HOLConst{Tyrep} \HOLTyOp{string} \HOLTyOp{term}
 
 \HOLinline{\HOLFreeVar{x}.\HOLFieldName{fld1}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} := \HOLConst{T}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLTokenLeftrec{}\HOLFieldName{fld1} := \HOLConst{T}; \HOLFieldName{fld2} := \HOLConst{K} \HOLNumLit{3}\HOLTokenRightrec{}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} updated_by (\HOLConst{\HOLTokenNeg{}})}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld2} updated_by \HOLFreeVar{g}}
