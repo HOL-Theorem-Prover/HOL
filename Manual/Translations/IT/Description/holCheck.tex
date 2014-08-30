@@ -445,7 +445,7 @@ Since \hc{} supports only boolean variables, only those are allowed in the state
 
 Only the variables in the state space are allowed. They may be primed to indicate the value of that variable in the next state. It is strongly recommended that primed variables not be used for anything other than this function. \hc{} may wander into uncharted territory otherwise.
 
-\hc{} can handle from about about 50 to 100 variables currently, depending on the transition system in question. This number should rise as standard model checking optmisations such as partitioning, cone-of-influnce, and symmetry reductions are implemented.
+\hc{} can handle from about 50 to 100 variables currently, depending on the transition system in question. This number should rise as standard model checking optmisations such as partitioning, cone-of-influnce, and symmetry reductions are implemented.
 
 The wildcard ``.'' action represents any action, and is always present. It may only be explicitly defined by the user if it is the only action, to prevent internal inconsistency. If it is not defined, then it is internally generated as a conjunction or disjunction over the defined actions, depending on whether or not the synchronous flag \texttt{ric} is true. It may be used in \(\mu\)-calculus properties, and represents the entire transition system for \ctl properties. Usually, for synchronous transition systems, the user defines just the ``.'' action, since all actions happen simultaneously so there is usually not much call for giving them separate identities.
 

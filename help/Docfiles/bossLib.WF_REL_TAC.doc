@@ -11,7 +11,7 @@ recursive definition, termination.
 \DESCRIBE
 {WF_REL_TAC} builds a tactic that starts a termination proof. An
 invocation {WF_REL_TAC q}, where {q} should parse into a term that
-denotes a wellfounded relation, builds a tactic {tac} that is intended
+denotes a well-founded relation, builds a tactic {tac} that is intended
 to be applied to a goal arising from an application of {tgoal} or
 {tprove}. Such a goal has the form
 {
@@ -40,7 +40,7 @@ Suppose that a version of Quicksort had been defined as follows:
 }
 Then one can start a termination proof as follows: set up a
 goalstack with {tgoal} and then apply {WF_REL_TAC} with a quotation
-denoting a suitable wellfounded relation.
+denoting a suitable well-founded relation.
 {
    - tgoal qsort_defn;
    > val it =
@@ -61,7 +61,7 @@ denoting a suitable wellfounded relation.
       !rst x ord. LENGTH (FILTER (\x'. ~ord x x') rst) < LENGTH (x::rst)
 }
 Execution of {WF_REL_TAC} has automatically proved the
-wellfoundedness of
+well-foundedness of
 {
    measure (LENGTH o SND)
 }
@@ -75,9 +75,9 @@ why the function under consideration terminates. Second, one must
 be able to phrase this in HOL. In the following, we shall give a few
 examples of how this is done.
 
-There are a number of basic and advanced means of specifying wellfounded
+There are a number of basic and advanced means of specifying well-founded
 relations. The most common starting point for dealing with termination
-problems for recursive functions is to find some function, known as a a
+problems for recursive functions is to find some function, known as a
 'measure' under which the arguments of a function call are larger than
 the arguments to any recursive calls that result.
 

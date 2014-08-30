@@ -234,7 +234,7 @@ in a arbitrarily (finitely) branching tree.
          1. !tl v f a. R (f,a) (f,Node v tl) : defn
 }
 The termination conditions for {ltree_sigma} seem to require finding a
-wellfounded relation {R} such that the pair {(f,a)} is {R}-less than
+well-founded relation {R} such that the pair {(f,a)} is {R}-less than
 {(f, Node v tl)}. However, this is a hopeless task, since there is no
 relation between {a} and {Node v tl}, besides the fact that they are
 both {ltree}s. The termination condition extractor has not performed
