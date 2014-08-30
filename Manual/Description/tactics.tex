@@ -5,7 +5,9 @@
 \index{tactics!purpose of|(}
 There are three primary devices that together make theorem proving practical
 in \HOL. All three originate with Milner
-\index{Milner, R.}\index{LCF@\LCF!Edinburgh} for Edinburgh \LCF.
+\index{Milner, R.}%
+\index{LCF@\LCF!Edinburgh}%
+for Edinburgh \LCF.
 The first is the theory as
 a record of (among other things) facts already proved
 and thence available as lemmas
@@ -147,7 +149,7 @@ Unlike theorems, goals need not be defined as an abstract type; they
 are transparent and can be constructed freely. Thus, an \ML{} type
 abbreviation is introduced for goals.\footnote{However, if goals were
   an abstract type, the print abbreviation could be avoided where not
-  intended.}.  The operations on goals are therefore just the ordinary
+  intended.}  The operations on goals are therefore just the ordinary
 pair selectors and constructor.
 Likewise, type abbreviations are introduced for justifications
 (proofs) and tactics. Conceptually, the following abbreviations are
@@ -228,8 +230,8 @@ applied to a list of theorems (if, for example, the function were
 defined incorrectly); but again, no false theorems can result.
 Likewise, a tactic that is not strongly valid cannot result in a false
 theorem; the worst outcome of applying such a tactic is the production
-of unsolvable subgoals
-\index{consistency, of HOL logic@consistency, of \HOL{} logic|)}
+of unsolvable subgoals%
+\index{consistency, of HOL logic@consistency, of \HOL{} logic|)}%
 \index{security, in goal directed proof|)}\index{validity, of tactics|)}.
 
 Tactics are specified using the following notation:
@@ -435,16 +437,16 @@ proof function is specified in terms of the derived rule \ml{CONJ}
 (Section~\ref{sec:conj}).
 
 The second method is to compose
-\index{tactics!indirect implementation of}
-\index{tactics!compound}
-\index{proof construction}
+\index{tactics!indirect implementation of}%
+\index{tactics!compound}%
+\index{proof construction}%
 existing tactics by the use
 of \ML{} functions called {\it tacticals\/}.
 \index{tacticals}
 The tacticals provided in \HOL{} are listed in Section~\ref{tacticals}.
 For example, two existing tactics can be sequenced
-\index{sequencing!of tactics}
-\index{tactics!sequencing of}
+\index{sequencing!of tactics}%
+\index{tactics!sequencing of}%
  by use of the
 tactical \ml{THEN}:\index{THEN@\ml{THEN}}
 if $T_1$ and
@@ -479,10 +481,10 @@ the composed tactics are valid
 \index{validity, of tactics} when the constituent tactics are valid,
 as a consequence of the way the tacticals are defined. Tactics written
 directly in \ML{} may fail
-\index{failure, of tactics!debugging}
-\index{failure, of tactics|(}
-\index{debugging, of tactics}
-\index{tactics!debugging of}
+\index{failure, of tactics!debugging}%
+\index{failure, of tactics|(}%
+\index{debugging, of tactics}%
+\index{tactics!debugging of}%
 in a variety of ways, and although, as usual, they cannot cause false
 theorems to appear, the failures can be difficult to understand and
 trace.\footnote{A possible extension to \HOL\ would be a `debugging
@@ -541,7 +543,7 @@ always preserved.
 
 This section contains a selection of the more commonly
 \index{tactics!list of some|(}
-used tactics in the \HOL{} system. (see \REFERENCE\
+used tactics in the \HOL{} system. (See \REFERENCE\
 for the complete list, with fuller explanations.)
 
 It should be recalled that the \ML{} type \ml{thm\_tactic} abbreviates
@@ -1495,8 +1497,8 @@ be combined in \HOL{} interactions.
 The first proof style, that of popping assumptions
 \index{popping, of assumptions}
 from the assumption `stack',
-\index{assumptions!as stack}
-\index{stack, of assumptions}
+\index{assumptions!as stack}%
+\index{stack, of assumptions}%
 is illustrated using its main tool: the tactical \ml{POP\_ASSUM}.
 
 \index{POP_ASSUM@\ml{POP\_ASSUM}|pin}
@@ -1743,7 +1745,7 @@ extended to such cases by re-conceiving the stack as an array\index{assumptions!
 use of the tactical \ml{ASSUM\_LIST}:\index{ASSUM_LIST@\ml{ASSUM\_LIST}|(}
 
 \begin{hol}\begin{verbatim}
-   ASSUM_LIST : (thm list -> tactic ) -> tactic
+   ASSUM_LIST : (thm list -> tactic) -> tactic
 \end{verbatim}\end{hol}
 
 \noindent where
@@ -1798,17 +1800,18 @@ OK..
 
 \noindent The problem is now to combine the two assumptions to produce the
 obvious conclusion. That requires denoting
-\index{denoting assumptions}
-\index{assumptions!denoting of, in proofs} them, for which \ml{ASSUM\_LIST}
+\index{denoting assumptions}%
+\index{assumptions!denoting of, in proofs}%
+them, for which \ml{ASSUM\_LIST}
 provides the means. Finally,
 \ml{ASSUME\_TAC} places the conclusion of the new result in the assumptions.
-(The \ML{} function \ml{el: int -> * list -> *} is used here to select a
+(The \ML{} function \ml{el:\ int -> * list -> *} is used here to select a
 numbered element of a list.)
 
 \begin{session}\begin{verbatim}
 #e(ASSUM_LIST(\thl. ASSUME_TAC
                        (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                           (SPEC "m:num"(el 2 thl)))));;
+                           (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "n * n = n"
     [ "!m. m + n = m" ]
@@ -1840,7 +1843,7 @@ of \ml{POP\_ASSUM\_LIST} that selects the first element of those supplied
 and re-assumes the others.)
 
 \begin{hol}\begin{alltt}
-   POP_ASSUM_LIST \(f\) ([\(t\sb{1}\);\(\ \ldots\ \);\(t\sb{n}\)],\(t\)) =  \(f\) [ASSUME \(t\sb{1}\);\(\ \ldots\ \);ASSUME \(t\sb{n}\)] ([],t)
+   POP_ASSUM_LIST \(f\) ([\(t\sb{1}\);\(\ \ldots\ \);\(t\sb{n}\)],\(t\)) = \(f\) [ASSUME \(t\sb{1}\);\(\ \ldots\ \);ASSUME \(t\sb{n}\)] ([],t)
 \end{alltt}\end{hol}
 
 \noindent This is used when the existing assumptions have served
@@ -1856,7 +1859,7 @@ their purpose and can be discarded, as in the current example:
 
 #e(POP_ASSUM_LIST(\thl. ASSUME_TAC
                            (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                               (SPEC "m:num"(el 2 thl)))));;
+                               (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "n * n = n"
     [ "n = 0" ]
@@ -1876,7 +1879,7 @@ but here it can be used immediately:
 
 #e(POP_ASSUM_LIST(\thl. SUBST1_TAC
                            (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                               (SPEC "m:num"(el 2 thl)))));;
+                               (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "0 * 0 = 0"
 \end{verbatim}\end{session}
@@ -1910,7 +1913,7 @@ This means that (i) the resulting tactics cannot easily be generalized
 for use in other contexts, and (ii) the \ML{} text does not supply
 useful documentation
 \index{tactics!as documentation of proofs} of the solution of the goal.
-Also, as shown in the last example, it slightly unsatisfactory
+Also, as shown in the last example, it is slightly unsatisfactory
 to push and subsequently pop assumptions, especially in immediate succession,
 where this could be avoided.
 
@@ -1921,10 +1924,10 @@ These are characterized by:
 \index{FIRST_ASSUM@\ml{FIRST\_ASSUM}}
 \index{EVERY_ASSUM@\ml{EVERY\_ASSUM}}
 \begin{hol}\begin{alltt}
-   FIRST_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))  =
+   FIRST_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
     (\(f\)(ASSUME \(t\sb{1}\)) ORELSE \(\ldots\) ORELSE \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
 
-   EVERY_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))  =
+   EVERY_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
     (\(f\)(ASSUME \(t\sb{1}\)) THEN \(\ldots\) THEN  \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
 \end{alltt}\end{hol}
 
