@@ -90,7 +90,7 @@ the constant:
    GSPEC : (** -> (* # bool)) -> * -> bool
 \end{verbatim}\end{hol}
 
-\noindent The function \ml{GSPEC} takes a function \ml{f : ** -> (* \# bool)}
+\noindent The function \ml{GSPEC} takes a function \ml{f :\ ** -> (* \# bool)}
 and constructs the set (i.e. predicate of type {\small\verb!*->bool!}) of all
 values \ml{FST(f x)} for which \ml{SND(f x)} holds, for some value \ml{x} of
 type \ml{**}. The formal definition of the constant \ml{GSPEC} is given by the
@@ -258,7 +258,7 @@ When $v$ is a variable, evaluating:
 \noindent This states that $t$ is an element of the set of all $v$ such that
 $P$ exactly when $P[t/v]$ holds. Note that, in general, the term $t$ need not
 be a variable. The following session illustrates this use of
-\ml{SET\_SPEC\_CONV} for membership{\samepage in a particular set abstraction:
+\ml{SET\_SPEC\_CONV} for membership {\samepage in a particular set abstraction:
 
 \setcounter{sessioncount}{1}
 \begin{session}\begin{verbatim}
