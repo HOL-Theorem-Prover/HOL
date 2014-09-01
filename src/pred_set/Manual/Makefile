@@ -27,7 +27,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps *.pdf
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps *.pdf theorems.tex
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex

@@ -26,7 +26,7 @@ or axiom that is garbage is exported when {export_theory} is invoked.
 
 The notion of garbage is hereditary. Any type, term, definition, or theorem
 is garbage if any of its constituents are. Furthermore, if a type operator or 
-term constant had been defined, and its witness theorem later later becomes
+term constant had been defined, and its witness theorem later becomes
 garbage, then that type or term is garbage, as is anything built from it.
 
 \FAILURE
