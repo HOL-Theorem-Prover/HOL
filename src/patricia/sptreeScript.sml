@@ -588,6 +588,15 @@ val MEM_toAList = store_thm("MEM_toAList",
   \\ Cases_on `lookup k t` \\ fs []
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ fs []);
 
+val ALOOKUP_toAList = store_thm("ALOOKUP_toAList",
+  ``!t x. ALOOKUP (toAList t) x = lookup x t``,
+  strip_tac>>strip_tac>>Cases_on `lookup x t` >-
+    simp[ALOOKUP_FAILS,MEM_toAList] >>
+  Cases_on`ALOOKUP (toAList t) x`>-
+    fs[ALOOKUP_FAILS,MEM_toAList] >>
+  imp_res_tac ALOOKUP_MEM >>
+  fs[MEM_toAList])
+
 val insert_union = store_thm("insert_union",
   ``!k v s. insert k v s = union (insert k v LN) s``,
   completeInduct_on`k` >> simp[Once insert_def] >> rw[] >>
@@ -893,5 +902,39 @@ val delete_compute = save_thm(
       computerule delete_def `BIT1 n` @
       computerule delete_def `BIT2 n`))
 val _ = computeLib.add_persistent_funs ["delete_compute"]
+
+val fromAList_def = Define `
+  (fromAList [] = LN) /\
+  (fromAList ((x,y)::xs) = insert x y (fromAList xs))`;
+
+val lookup_fromAList = store_thm("lookup_fromAList",
+  ``!ls x.lookup x (fromAList ls) = ALOOKUP ls x``,
+  ho_match_mp_tac (fetch "-" "fromAList_ind")>>
+  rw[fromAList_def,lookup_def]>>
+  fs[lookup_insert]>> simp[EQ_SYM_EQ])
+
+val domain_fromAList = store_thm("domain_fromAList",
+  ``!ls. domain (fromAList ls) = set (MAP FST ls)``,
+  simp[pred_setTheory.EXTENSION,domain_lookup,lookup_fromAList,
+       MEM_MAP,pairTheory.EXISTS_PROD]>>
+  metis_tac[ALOOKUP_MEM,ALOOKUP_FAILS,
+            optionTheory.option_CASES,
+            optionTheory.NOT_SOME_NONE])
+
+val lookup_fromAList_toAList = store_thm("lookup_fromAList_toAList",
+  ``!t x. lookup x (fromAList (toAList t)) = lookup x t``,
+  simp[lookup_fromAList,ALOOKUP_toAList])
+
+val wf_fromAList = store_thm("wf_fromAList",
+  ``!ls. wf (fromAList ls)``,
+  Induct >>
+    rw[fromAList_def,wf_def]>>
+  Cases_on`h`>>
+  rw[fromAList_def]>>
+    simp[wf_insert])
+
+val fromAList_toAList = store_thm("fromAList_toAList",
+  ``!t. wf t ==> (fromAList (toAList t) = t)``,
+  metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
 
 val _ = export_theory();
