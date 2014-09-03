@@ -82,6 +82,10 @@ ws = [\ \t];
 newline = "\n" | "\015\n";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
+fullquotebegin = "``" | "\226\128\156" ;
+fullquoteend = "``" | "\226\128\157";
+quotebegin = "`" | "\226\128\152";
+quoteend = "`" | "\226\128\153";
 
 %%
 
@@ -92,25 +96,24 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <INITIAL>")" => (ECHO yyarg yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else continue());
-<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
+<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
                  print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2);
                  safeprint yyarg (drop_upto #":" yytext);
                  YYBEGIN tyquote;
                  continue());
-<INITIAL>"``" {ws}* ":^" =>
+<INITIAL>{fullquotebegin} {ws}* ":^" =>
               (print yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2^
                       ":\", ANTIQUOTE (");
                YYBEGIN ANTIQ;
                continue();
                YYBEGIN tyquote;
                continue());
-<INITIAL>"``" => (print yyarg ("(Parse.Term [QUOTE \""^locpragma yyarg (yytext,yypos) 0);
+<INITIAL>{fullquotebegin} => (print yyarg ("(Parse.Term [QUOTE \""^locpragma yyarg (yytext,yypos) 0);
                   YYBEGIN tmquote; continue());
-<INITIAL>"`" => (print yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0); YYBEGIN quote;
+<INITIAL>{quotebegin} => (print yyarg ("[QUOTE \""^locpragma yyarg (yytext,yypos) 0); YYBEGIN quote;
                  continue());
 <INITIAL>"\"" => (ECHO yyarg yytext; YYBEGIN string; continue());
 <INITIAL>{newline} => (newline yyarg (yypos,yytext); continue());
-<INITIAL>[^()*`"\n\015]+ => (ECHO yyarg yytext;continue());
 <INITIAL>. => (ECHO yyarg yytext;continue());
 
 <string>"\\\\" => (ECHO yyarg yytext; continue());
@@ -141,14 +144,12 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <tmcomment,tycomment,qcomment>"\"" => (ECHO yyarg "\\\""; continue());
 <tmcomment,tycomment,qcomment>"\t" => (ECHO yyarg "\\t"; continue());
 <tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`"; continue());
-<tmcomment,tycomment>"``" => (print yyarg "\"])"; comdepth := 0;
+<tmcomment,tycomment>{fullquoteend} => (print yyarg "\"])"; comdepth := 0;
                               YYBEGIN INITIAL; continue());
-<qcomment>"`" => (print yyarg "\"]"; comdepth := 0;
+<qcomment>{quoteend} => (print yyarg "\"]"; comdepth := 0;
                   YYBEGIN INITIAL; continue());
 <tmcomment,tycomment,qcomment>[\128-\255] => (ECHO yyarg (bslash_escape yytext);
                                               continue());
-<comment,tmcomment,tycomment,qcomment>[^\n\015\\"\t^`*()\128-\255]+ => (ECHO yyarg yytext; continue());
-
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yyarg yytext; continue());
 
 <quote,tmquote,tyquote>"^"+{ws} => (ECHO yyarg yytext; continue());
@@ -161,8 +162,8 @@ lowergreek = "\206" [\177-\191] | "\207" [\128-\137] ;
 <quote,tmquote,tyquote>"^"{symbol} => (ECHO yyarg yytext; continue());
 <quote,tmquote,tyquote>{newline} => (qnewline yyarg (yypos,yytext); continue());
 
-<quote>"`" => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
-<tmquote,tyquote>"``" => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
+<quote>{quoteend} => (print yyarg "\"]"; YYBEGIN INITIAL; continue());
+<tmquote,tyquote>{fullquoteend} => (print yyarg "\"])"; YYBEGIN INITIAL; continue());
 
 <quote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN qcomment; continue());
 <tmquote>"(*" => (ECHO yyarg yytext; inc comdepth; YYBEGIN tmcomment;
