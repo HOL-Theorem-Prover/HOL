@@ -97,7 +97,7 @@ val exc_vector_base_constlem = store_thm(
 val read_cpsr_effect_lem = store_thm(
     "read_cpsr_effect_lem",
     ``!s H .  ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s = (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (s.psrs (0, CPSR)))) s)``,
-    RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def] 
+    RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN FULL_SIMP_TAC (srw_ss()) []
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]);
@@ -107,7 +107,7 @@ val read_cpsr_effect_lem = store_thm(
 val read_cpsr_effect_fixed_lem = store_thm(
     "read_cpsr_effect_fixed_lem",
     ``!s H xI xF.  ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with <|M := 16w; I:= xI; F:= xF|>))) s = (read_cpsr <|proc:=0|> >>= (\ (cpsr). H ((s.psrs (0, CPSR))  with <|M := 16w; I:= xI; F:= xF|> ))) s)``,
-    RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def] 
+    RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN FULL_SIMP_TAC (srw_ss()) []
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]);
@@ -119,7 +119,7 @@ val read_cpsr_par_effect_lem = store_thm(
     "read_cpsr_par_effect_lem",
     ``!s A H . (const_comp A) ==> (((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, cpsr))) s = ((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, s.psrs (0, CPSR)))) s)``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]);
@@ -129,7 +129,7 @@ val read_cpsr_par_effect_fixed_lem = store_thm(
     "read_cpsr_par_effect_fixed_lem",
     ``!s A H xI xF. (const_comp A) ==> (((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, (cpsr with <|M := 16w; I:= xI; F:= xF|>) ))) s = ((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, (s.psrs (0, CPSR))  with <|M := 16w; I:= xI; F:= xF|>))) s)``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]);
@@ -140,7 +140,7 @@ val read_cpsr_par_effect_with_16_lem = store_thm(
     "read_cpsr_par_effect_with_16_lem",
     ``!s A H. (const_comp A) ==> (((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, (cpsr with M := 16w) ))) s = ((A ||| read_cpsr <|proc:=0|>) >>= (\ (b, cpsr). H (b, (s.psrs (0, CPSR))  with M := 16w))) s)``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]);
@@ -148,10 +148,10 @@ val read_cpsr_par_effect_with_16_lem = store_thm(
 
 val read_cpsr_triple_par_effect_lem = store_thm(
     "read_cpsr_triple_par_effect_lem",
-    ``!s A B H . (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, cpsr, b))) s) 
+    ``!s A B H . (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, cpsr, b))) s)
                                     = (((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, (s.psrs (0, CPSR)),b))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
@@ -161,10 +161,10 @@ val read_cpsr_triple_par_effect_lem = store_thm(
 
 val read_cpsr_triple_par_effect_lem2 = store_thm(
     "read_cpsr_triple_par_effect_lem2",
-    ``!s A B H . (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, cpsr))) s) 
+    ``!s A B H . (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, cpsr))) s)
                                     = (((A ||| B ||| read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, (s.psrs (0, CPSR))))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -174,10 +174,10 @@ val read_cpsr_triple_par_effect_lem2 = store_thm(
 
 val read_cpsr_triple_par_effect_with_16_lem = store_thm(
     "read_cpsr_triple_par_effect_with_16_lem",
-    ``!s A B H . (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, (cpsr with M := 16w), b))) s) 
+    ``!s A B H . (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, (cpsr with M := 16w), b))) s)
                                     = (((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, ((s.psrs (0, CPSR)) with M := 16w),b))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
@@ -187,10 +187,10 @@ val read_cpsr_triple_par_effect_with_16_lem = store_thm(
 
 val read_cpsr_triple_par_effect_with_16_lem2 = store_thm(
     "read_cpsr_triple_par_effect_with_16_lem2",
-    ``!s A B H . (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, (cpsr with M := 16w)))) s) 
+    ``!s A B H . (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, (cpsr with M := 16w)))) s)
                                     = (((A ||| B ||| read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, ((s.psrs (0, CPSR)) with M := 16w)))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -199,10 +199,10 @@ val read_cpsr_triple_par_effect_with_16_lem2 = store_thm(
 
 val read_cpsr_triple_par_effect_fixed_lem = store_thm(
     "read_cpsr_triple_par_effect_fixed_lem",
-    ``!s A B H xI xF. (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, (cpsr with  <|M := 16w; I:= xI; F:= xF|>), b))) s) 
+    ``!s A B H xI xF. (const_comp A) ==> ((((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, (cpsr with  <|M := 16w; I:= xI; F:= xF|>), b))) s)
                                     = (((A ||| read_cpsr <|proc:=0|> ||| B) >>= (\ (a, cpsr, b). H (a, ((s.psrs (0, CPSR)) with <|M := 16w; I:= xI; F:= xF|>),b))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
@@ -212,10 +212,10 @@ val read_cpsr_triple_par_effect_fixed_lem = store_thm(
 
 val read_cpsr_triple_par_effect_fixed_lem2 = store_thm(
     "read_cpsr_triple_par_effect_fixed_lem2",
-    ``!s A B H xI xF. (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, (cpsr with <|M := 16w; I:= xI; F:= xF|>)))) s) 
+    ``!s A B H xI xF. (const_comp A) ==> (const_comp B) ==> ((((A ||| B |||  read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, (cpsr with <|M := 16w; I:= xI; F:= xF|>)))) s)
                                     = (((A ||| B ||| read_cpsr <|proc:=0|>) >>= (\ (a, b, cpsr). H (a, b, ((s.psrs (0, CPSR)) with <|M := 16w; I:= xI; F:= xF|>)))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -227,10 +227,10 @@ val read_cpsr_triple_par_effect_fixed_lem2 = store_thm(
 val read_cpsr_quintuple_par_effect_lem = store_thm(
     "read_cpsr_quintule_par_effect_lem",
     ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
-                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s) 
+                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (s.psrs (0, CPSR)), d))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -244,16 +244,16 @@ val read_cpsr_quintuple_par_effect_lem = store_thm(
 
 val read_cpsr_quintuple_par_effect_lem2 = store_thm(
     "read_cpsr_quintule_par_effect_lem2",
-    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==> 
-                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s) 
+    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
+                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s)
                     = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (s.psrs (0, CPSR)), d, e))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
-       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]   
+       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
        THEN Cases_on `D b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `E b'`
@@ -263,10 +263,10 @@ val read_cpsr_quintuple_par_effect_lem2 = store_thm(
 val read_cpsr_quintuple_par_effect_with_16_lem = store_thm(
     "read_cpsr_quintule_par_effect_with_16_lem",
     ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
-                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with M := 16w), d))) s) 
+                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with M := 16w), d))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -280,16 +280,16 @@ val read_cpsr_quintuple_par_effect_with_16_lem = store_thm(
 
 val read_cpsr_quintuple_par_effect_with_16_lem2 = store_thm(
     "read_cpsr_quintule_par_effect_with_16_lem2",
-    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==> 
-                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with M := 16w), d, e))) s) 
+    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
+                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with M := 16w), d, e))) s)
                     = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
-       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]   
+       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
        THEN Cases_on `D b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `E b'`
@@ -300,10 +300,10 @@ val read_cpsr_quintuple_par_effect_with_16_lem2 = store_thm(
 val read_cpsr_quintuple_par_effect_fixed_lem = store_thm(
     "read_cpsr_quintule_par_effect_fixed_lem",
     ``!s A B C D H xI xF. (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
-                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with <|M := 16w; I:= xI; F:= xF|>), d))) s) 
+                     ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with <|M := 16w; I:= xI; F:= xF|>), d))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with <|M := 16w; I:= xI; F:= xF|>), d))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -317,16 +317,16 @@ val read_cpsr_quintuple_par_effect_fixed_lem = store_thm(
 
 val read_cpsr_quintuple_par_effect_fixed_lem2 = store_thm(
     "read_cpsr_quintule_par_effect_fixed_lem2",
-    ``!s A B D E H xI xF. (const_comp A) ==>  (const_comp B) ==> 
-                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with <|M := 16w; I:= xI; F:= xF|>), d, e))) s) 
+    ``!s A B D E H xI xF. (const_comp A) ==>  (const_comp B) ==>
+                     ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with <|M := 16w; I:= xI; F:= xF|>), d, e))) s)
                     = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with <|M := 16w; I:= xI; F:= xF|>), d, e))) s))``,
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
-       THEN Cases_on `A s` 
+       THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `B b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN RES_TAC
-       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]   
+       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, readT_def]
        THEN Cases_on `D b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `E b'`
@@ -353,7 +353,7 @@ val read_reg_read_cpsr_par_effect_fixed_lem = store_thm(
 
 val cpsr_simp_lem = store_thm(
     "cpsr_simp_lem",
-    ``!s H . (assert_mode 16w s) ==> 
+    ``!s H . (assert_mode 16w s) ==>
        (((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s)
       = ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H ((s.psrs (0, CPSR)) with M := 16w))) s))``,
     RW_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, read_cpsr_effect_lem, ARM_READ_CPSR_def]
@@ -363,7 +363,7 @@ val cpsr_simp_lem = store_thm(
 
 val cpsr_simp_ext_lem = store_thm(
     "cpsr_simp_ext_lem",
-    ``!s H. (assert_mode 16w s) ==> 
+    ``!s H. (assert_mode 16w s) ==>
              ((s.psrs(0,CPSR)).I = xI) ==>
              ((s.psrs(0,CPSR)).F = xF) ==>
        (((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s)
@@ -375,7 +375,7 @@ val cpsr_simp_ext_lem = store_thm(
 
 val cpsr_par_simp_lem = store_thm(
     "cpsr_par_simp_lem",
-    ``!s H n. (assert_mode 16w s) ==> 
+    ``!s H n. (assert_mode 16w s) ==>
        ((((read_reg <|proc:=0|> n  ||| read_cpsr <|proc:=0|>) >>= (\ (a, cpsr). H (a, cpsr))) s)
       = (((read_reg <|proc:=0|> n ||| read_cpsr <|proc:=0|>) >>= (\ (a, cpsr). H (a, (s.psrs (0, CPSR)) with M := 16w))) s))``,
     RW_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, read_reg_constlem, read_cpsr_par_effect_lem, ARM_READ_CPSR_def]
@@ -385,7 +385,7 @@ val cpsr_par_simp_lem = store_thm(
 
 val cpsr_triple_simp_ext_lem = store_thm(
     "cpsr_triple_simp_ext_lem",
-    ``!s H . (assert_mode 16w s) ==> 
+    ``!s H . (assert_mode 16w s) ==>
              ((s.psrs(0,CPSR)).I = xI) ==>
              ((s.psrs(0,CPSR)).F = xF) ==>
        ((((read_reg <|proc:=0|> 15w ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (b,cpsr,d). H (b,cpsr,d))) s)
@@ -397,7 +397,7 @@ val cpsr_triple_simp_ext_lem = store_thm(
 
 val cpsr_triple_simp_ext_lem2 = store_thm(
     "cpsr_triple_simp_ext_lem2",
-    ``!s H . (assert_mode 16w s) ==> 
+    ``!s H . (assert_mode 16w s) ==>
              ((s.psrs(0,CPSR)).I = xI) ==>
              ((s.psrs(0,CPSR)).F = xF) ==>
        ((((read_sctlr <|proc := (0 :num)|>
@@ -413,7 +413,7 @@ val cpsr_triple_simp_ext_lem2 = store_thm(
 
 val cpsr_quintuple_simp_ext_lem = store_thm(
     "cpsr_quintuple_simp_ext_lem",
-    ``!s H a n m. (assert_mode 16w s) ==> 
+    ``!s H a n m. (assert_mode 16w s) ==>
              ((s.psrs(0,CPSR)).I = xI) ==>
              ((s.psrs(0,CPSR)).F = xF) ==>
        ((((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s)
@@ -425,7 +425,7 @@ val cpsr_quintuple_simp_ext_lem = store_thm(
 
 val cpsr_quintuple_simp_ext_lem2 = store_thm(
     "cpsr_quintuple_simp_ext_lem2",
-    ``!s H x . (assert_mode 16w s) ==> 
+    ``!s H x . (assert_mode 16w s) ==>
              ((s.psrs(0,CPSR)).I = xI) ==>
              ((s.psrs(0,CPSR)).F = xF) ==>
        ((((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s)
@@ -440,7 +440,7 @@ val cpsr_quintuple_simp_ext_lem2 = store_thm(
 (**********************  simplifications ***************************)
 (******  A.3. computations wrapped by preserving predicate   *******)
 
-val (simp_ext_lem, const_lem_list, H_sig, effect_fixed_lem, additional_spec_list) = 
+val (simp_ext_lem, const_lem_list, H_sig, effect_fixed_lem, additional_spec_list) =
 (cpsr_simp_ext_lem,
                   [read_reg_constlem],
                   ``:(ARMpsr ->('a M))``,
@@ -451,9 +451,9 @@ val (simp_ext_lem, const_lem_list, H_sig, effect_fixed_lem, additional_spec_list
 
 fun CPSR_SIMP_TAC simp_ext_lem const_lem_list H_sig effect_fixed_lem additional_spec_list s2prime =
     RW_TAC (srw_ss()) []
-       THEN EQ_TAC 
+       THEN EQ_TAC
        THEN RW_TAC (srw_ss()) [preserve_relation_mmu_def, fix_flags_def, fixed_flags_def]
-       THEN RW_TAC (srw_ss()) const_lem_list 
+       THEN RW_TAC (srw_ss()) const_lem_list
        THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
        THEN NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [assert_mode_def])
        THENL[ DISJ1_TAC
@@ -468,15 +468,15 @@ fun CPSR_SIMP_TAC simp_ext_lem const_lem_list H_sig effect_fixed_lem additional_
        THEN ASSUME_TAC (SPECL [``xI:bool``, ``(s2.psrs (0,CPSR)).F:bool``, ``s2:arm_state``, mk_var ("H", H_sig)]  (GEN_ALL simp_ext_lem))
        THEN ASSUME_TAC (SPECL (List.concat [[``s1:arm_state``], additional_spec_list, [mk_var ("H", H_sig), ``xI:bool``, ``(s2.psrs (0,CPSR)).F:bool``]]) effect_fixed_lem)
        THEN ASSUME_TAC (SPECL (List.concat [[``s2:arm_state``], additional_spec_list, [mk_var ("H", H_sig), ``xI:bool``, ``(s2.psrs (0,CPSR)).F:bool``]])  effect_fixed_lem)
-       THEN SPEC_ASSUM_TAC (``!(a:word4) (n:word4) (m:word4). X``, [``aa:word4``, ``nn:word4``, ``mm:word4``])        THEN SPEC_ASSUM_TAC (``!(x:word4). X``, [``x:word4``]) 
-       THEN UNDISCH_ALL_TAC 
+       THEN SPEC_ASSUM_TAC (``!(a:word4) (n:word4) (m:word4). X``, [``aa:word4``, ``nn:word4``, ``mm:word4``])        THEN SPEC_ASSUM_TAC (``!(x:word4). X``, [``x:word4``])
+       THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) [assert_mode_def]
        THEN FULL_SIMP_TAC (srw_ss()) const_lem_list;
 
 
 val cpsr_simp_rel_lem = store_thm(
     "cpsr_simp_rel_lem",
-    ``!H inv2 uf uy. 
+    ``!H inv2 uf uy.
        (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) (assert_mode 16w) (inv2) uf uy)
       = (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with M := 16w)))(assert_mode 16w) (inv2) uf uy)``,
      RW_TAC (srw_ss()) [cpsr_simp_lem, preserve_relation_mmu_def]);
@@ -484,7 +484,7 @@ val cpsr_simp_rel_lem = store_thm(
 
 val cpsr_simp_rel_ext_lem = store_thm(
     "cpsr_simp_rel_ext_lem",
-    ``!H inv2 uf uy xI xF. 
+    ``!H inv2 uf uy xI xF.
        (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) (assert_mode 16w) (inv2) uf (fix_flags xI xF uy))
       = (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with <|M := 16w; I:= xI; F:= xF|>)))(assert_mode 16w) (inv2) uf (fix_flags xI xF uy))``,
     FIRST [
@@ -504,7 +504,7 @@ val cpsr_simp_rel_ext_lem = store_thm(
 
 val cpsr_par_simp_rel_lem = store_thm(
     "cpsr_par_simp_rel_lem",
-    ``!n H inv2 uf uy. 
+    ``!n H inv2 uf uy.
        (preserve_relation_mmu ((read_reg <|proc:=0|> n ||| read_cpsr <|proc:=0|>) >>= (\ (a, cpsr). H (a, cpsr))) (assert_mode 16w) (inv2) uf uy)
       = (preserve_relation_mmu ((read_reg <|proc:=0|> n ||| read_cpsr <|proc:=0|>) >>= (\ (a, cpsr). H (a, cpsr with M := 16w)))(assert_mode 16w) (inv2) uf uy)``,
      RW_TAC (srw_ss()) [cpsr_par_simp_lem, preserve_relation_mmu_def, read_reg_constlem, read_cpsr_par_effect_with_16_lem]);
@@ -512,7 +512,7 @@ val cpsr_par_simp_rel_lem = store_thm(
 
 val cpsr_triple_simp_rel_ext_lem = store_thm(
     "cpsr_triple_simp_rel_ext_lem",
-    ``!H inv2 uf uy xI xF.  
+    ``!H inv2 uf uy xI xF.
        (preserve_relation_mmu ((read_reg <|proc:=0|> 15w ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (b,cpsr,d). H (b,cpsr,d))) (assert_mode 16w) (inv2) uf (fix_flags xI xF uy))
       = (preserve_relation_mmu ((read_reg <|proc:=0|> 15w ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (b,cpsr,d). H (b,(cpsr with <|M := 16w; I:= xI; F:= xF|>),d))) (assert_mode 16w) (inv2) uf (fix_flags xI xF uy))``,
     FIRST [
@@ -534,7 +534,7 @@ val cpsr_triple_simp_rel_ext_lem = store_thm(
 
 val cpsr_triple_simp_rel_ext_lem2 = store_thm(
     "cpsr_triple_simp_rel_ext_lem2",
-    ``!H inv2 uf uy xI xF.  
+    ``!H inv2 uf uy xI xF.
        (preserve_relation_mmu ((read_sctlr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_cpsr <|proc:=0|>) >>= (\ (a,b,cpsr). H (a,b,cpsr))) (assert_mode 16w) (inv2)  uf (fix_flags xI xF uy))
       = (preserve_relation_mmu ((read_sctlr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_cpsr <|proc:=0|>) >>= (\ (a,b,cpsr). H (a,b,(cpsr with <|M := 16w; I:= xI; F:= xF|>)))) (assert_mode 16w) (inv2) uf (fix_flags xI xF uy))``,
     FIRST [
@@ -556,7 +556,7 @@ val cpsr_triple_simp_rel_ext_lem2 = store_thm(
 
 val cpsr_quintuple_simp_rel_ext_lem = store_thm(
     "cpsr_quintuple_simp_rel_ext_lem",
-    ``!aa nn mm H inv2 uf uy xI xF . 
+    ``!aa nn mm H inv2 uf uy xI xF .
        (preserve_relation_mmu ((read_reg <|proc:=0|> aa ||| read_reg <|proc:=0|> nn ||| read_reg <|proc:=0|> mm ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (aa, bb, cc, cpsr, dd). H (aa, bb, cc, cpsr, dd))) (assert_mode 16w) (inv2)  uf (fix_flags xI xF uy))
       = (preserve_relation_mmu ((read_reg <|proc:=0|> aa ||| read_reg <|proc:=0|> nn ||| read_reg <|proc:=0|> mm ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (aa, bb, cc, cpsr, dd). H (aa, bb, cc, (cpsr with <|M := 16w; I:= xI; F:= xF|>), dd))) (assert_mode 16w) (inv2)  uf (fix_flags xI xF uy))``,
 FIRST
@@ -624,13 +624,13 @@ val lookup_read__reg_help_lem1 = top_thm();
 g `(nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = ValueState ARB s)) `;
 e(EVAL_TAC);
 e(RW_TAC (srw_ss())  []);
-e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``)); 
+e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``));
 val lookup_read__reg_help_lem2 = top_thm();
 
 
 g `(nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. read__reg <|proc := 0|> rname)) s) = Error "LookUpRName: n = 15w") `;
 e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []); 
+e(RW_TAC (srw_ss())  []);
 val lookup_read__reg_help_lem3 = top_thm();
 
 
@@ -697,17 +697,17 @@ val read_reg_thm = save_thm("read_reg_thm", MATCH_MP extras_lem2 read_reg_empty_
 
 g `(nw <> 15w) ==> (access_violation s) ==> ((((LookUpRName <|proc := 0|> (nw,16w)  >>=  ( \ rname. write__reg <|proc := 0|> rname value)) s) = (ValueState () s))) `;
 e(EVAL_TAC);
-e(RW_TAC (srw_ss())  [] 
+e(RW_TAC (srw_ss())  []
    THEN `!(x:unit). x = ()` by (Cases_on `x` THEN EVAL_TAC)
    THEN SPEC_ASSUM_TAC (``!x. X``, [``ARB:unit``])
    THEN FULL_SIMP_TAC (srw_ss()) []);
-e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``)); 
+e(IMP_RES_TAC (blastLib.BBLAST_PROVE ``((nw:word4) <> (0w:word4)) ==> (nw <> 1w) ==> (nw <> 2w) ==> (nw <> 3w) ==> (nw <> 4w)  ==> (nw <> 5w) ==> (nw <> 6w) ==> (nw <> 7w) ==> (nw <> 8w) ==> (nw <> 9w) ==> (nw <> 10w) ==> (nw <> 11w) ==> (nw <> 12w)  ==> (nw <> 13w) ==> (nw <> 14w) ==> (nw = 15w)``));
 val lookup_write__reg_help_lem2 = top_thm();
 
 
 g `(nw = 15w) ==> (access_violation s) ==>  (((LookUpRName <|proc := 0|> (nw,16w)  >>=  (λrname. write__reg <|proc := 0|> rname value)) s) = Error "LookUpRName: n = 15w") `;
 e(EVAL_TAC);
-e(RW_TAC (srw_ss())  []); 
+e(RW_TAC (srw_ss())  []);
 val lookup_write__reg_help_lem3 = top_thm();
 
 
@@ -735,7 +735,7 @@ e(DISJ1_TAC);
 e(`access_violation s1' = access_violation s2'` by METIS_TAC [similar_def]);
 e(Cases_on `access_violation s2'` THEN FULL_SIMP_TAC (srw_ss()) [seqT_def, write__reg_def, constT_def, writeT_def]);
 e(RW_TAC (srw_ss()) []);
-(*** untouched 1 *) 
+(*** untouched 1 *)
 e(IMP_RES_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
                THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
                THEN RW_TAC (srw_ss()) []
@@ -743,15 +743,15 @@ e(IMP_RES_TAC  (SPECL [``s1':arm_state``, ``s1:arm_state``, ``a:RName``, ``nw:wo
                THEN EVAL_TAC
                THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
 (*** untouched 2 *)
-e (IMP_RES_TAC  (SPECL [``s2':arm_state``, ``s2:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))   
+e (IMP_RES_TAC  (SPECL [``s2':arm_state``, ``s2:arm_state``, ``a:RName``, ``nw:word4``] (GEN_ALL lookup_read__reg_help_lem1))
                THEN FULL_SIMP_TAC (srw_ss()) [assert_mode_def, untouched_def, LET_DEF]
                THEN RW_TAC (srw_ss()) []
                THEN REPEAT (UNDISCH_MATCH_TAC ``(reg:RName) <> rn_u``)
                THEN EVAL_TAC
                THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []);
-(*** mode 1 *)               
+(*** mode 1 *)
 e(FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def]);
-(*** mode w *)               
+(*** mode w *)
 e(FULL_SIMP_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def]);
 (*** similar *)
 e(UNDISCH_TAC ``similar g s1' s2'``);
@@ -800,13 +800,13 @@ val arch_version_alternative_def = store_thm(
     ``arch_version ii = (read_arch ii >>= (\arch. constT(version_number arch)))``,
     RW_TAC (srw_ss()) [arch_version_def, constT_def, seqT_def]);
 
-g `preserve_relation_mmu (arch_version <|proc:=0|>) 
+g `preserve_relation_mmu (arch_version <|proc:=0|>)
 	      (assert_mode 16w) (assert_mode  16w) strict_unt empty_sim`;
 e(RW_TAC (srw_ss()) [arch_version_alternative_def]);
 go_on 1;
 val arch_version_thm = save_thm("arch_version_thm", (MATCH_MP extras_lem4 (SPEC_ALL (top_thm()))));
 
- 
+
 (* ===================================================================== *)
 
 (* address mode *)
@@ -814,9 +814,9 @@ val arch_version_thm = save_thm("arch_version_thm", (MATCH_MP extras_lem4 (SPEC_
 
 g `preserve_relation_mmu (thumb_expand_imm_c (imm12,c_in)) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim`;
 e(RW_TAC (srw_ss()) [thumb_expand_imm_c_def, LET_DEF]
-    THEN Cases_on `(9 >< 8) (imm12:word12) = (0w:word2)` THEN Cases_on `(9 >< 8) imm12 = (1w:word2)` THEN Cases_on `(9 >< 8) imm12 = (2w:word2)` THEN Cases_on `(9 >< 8) imm12 = (3w:word2)`  
+    THEN Cases_on `(9 >< 8) (imm12:word12) = (0w:word2)` THEN Cases_on `(9 >< 8) imm12 = (1w:word2)` THEN Cases_on `(9 >< 8) imm12 = (2w:word2)` THEN Cases_on `(9 >< 8) imm12 = (3w:word2)`
     THEN ASSUME_TAC (blastLib.BBLAST_PROVE ``((((9 >< 8) (imm12:word12)) <> (0w:word2)) /\ (((9 >< 8) imm12) <> (1w:word2)) /\ (((9 >< 8) imm12) <> (2w:word2)) /\ (((9 >< 8) imm12) <> (3w:word2))) ==> F``)
-    THEN UNDISCH_ALL_TAC 
+    THEN UNDISCH_ALL_TAC
     THEN RW_TAC (srw_ss()) []);
 go_on 11;
 val thumb_expand_imm_c_thm = save_thm("thumb_expand_imm_c_thm", (MATCH_MP extras_lem2 (SPEC_ALL (top_thm()))));
@@ -920,7 +920,7 @@ val _ = g `preserve_relation_mmu
            monitor.state))) (assert_mode 16w) (assert_mode 16w) empty_unt empty_sim `;
 val _ = e(Cases_on `(monitor.IsExclusiveLocal (memaddrdesc.paddress,<|proc := 0|>,n)
            monitor.state)`
-   THEN RW_TAC (srw_ss()) [] 
+   THEN RW_TAC (srw_ss()) []
    THEN Cases_on `(monitor.IsExclusiveGlobal
               (memaddrdesc.paddress,<|proc := 0|>,n) r)`
    THEN RW_TAC (srw_ss()) []
@@ -962,13 +962,13 @@ val write_cpsr_thm = store_thm(
     "write_cpsr_thm",
     `` !k k'. preserve_relation_mmu ( write_cpsr <|proc :=0 |> (cpsr with <|I := xI; F := xF; M := k'|>)) (assert_mode k) (assert_mode k') empty_unt (fix_flags xI xF empty_sim)``,
    `!psr. (psr <> CPSR) ==> (0 <> PSRName2num psr)` by (EVAL_TAC THEN RW_TAC (srw_ss()) [])
-      THEN RW_TAC (srw_ss()) [preserve_relation_mmu_def,write_cpsr_def,write__psr_def,writeT_def,similar_def,untouched_def,assert_mode_def, fix_flags_def, fixed_flags_def, empty_sim_def, empty_unt_def] 
-      THEN EVAL_TAC 
+      THEN RW_TAC (srw_ss()) [preserve_relation_mmu_def,write_cpsr_def,write__psr_def,writeT_def,similar_def,untouched_def,assert_mode_def, fix_flags_def, fixed_flags_def, empty_sim_def, empty_unt_def]
+      THEN EVAL_TAC
       THEN FULL_SIMP_TAC (srw_ss()) []
       THEN FULL_SIMP_TAC (srw_ss()) [equal_user_register_def]
       THEN ASSUME_TAC (SPECL [``s1:arm_state``, ``s1 with psrs updated_by ((0,CPSR) =+ cpsr with <|I := xI; F := (s2.psrs (0,CPSR)).F; M := k'|>)``, ``g:word32``]  trivially_untouched_av_lem)
       THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``s2 with psrs updated_by ((0,CPSR) =+ cpsr with <|I := xI; F := (s2.psrs (0,CPSR)).F; M := k'|>)``, ``g:word32``]  trivially_untouched_av_lem)
-      THEN UNDISCH_ALL_TAC 
+      THEN UNDISCH_ALL_TAC
       THEN RW_TAC (srw_ss()) []);
 
 
@@ -1291,8 +1291,8 @@ val _ = add_to_simplist null_check_if_thumbee_help_lem;
 val current_mode_is_user_or_system_eval_lem = store_thm(
     "current_mode_is_user_or_system_eval_lem",
     ``!s x s'.
-     (assert_mode 16w s)      ==> 
-     (~ (access_violation s)) ==> 
+     (assert_mode 16w s)      ==>
+     (~ (access_violation s)) ==>
      (current_mode_is_user_or_system <|proc:=0|> s = ValueState x s')
         ==> x``,
     EVAL_TAC THEN RW_TAC (srw_ss()) []);
@@ -1300,11 +1300,11 @@ val current_mode_is_user_or_system_eval_lem = store_thm(
 val current_mode_is_user_or_system_eval_lem2 = store_thm(
     "current_mode_is_user_or_system_eval_lem2",
     ``!s x s'.
-     (assert_mode 16w s)      ==> 
+     (assert_mode 16w s)      ==>
      (current_mode_is_user_or_system <|proc:=0|> s = ValueState x s') ==>
-     (~ (access_violation s')) 
+     (~ (access_violation s'))
         ==> x``,
-    EVAL_TAC  
+    EVAL_TAC
       THEN REPEAT STRIP_TAC
       THEN Cases_on `access_violation s` THEN FULL_SIMP_TAC (srw_ss()) []
       THENL [METIS_TAC [], UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []]);
@@ -1337,7 +1337,7 @@ val user_simp_lem = store_thm(
                   errorT E
                 else
                   elsecomp)) s)
-      = 
+      =
       ((current_mode_is_user_or_system <|proc := 0|> >>=
              (λis_user_or_system_mode.
                 errorT E)) s))``,
@@ -1353,7 +1353,7 @@ val user_simp_or_lem = store_thm(
                   errorT E
                 else
                   elsecomp)) s)
-      = 
+      =
       ((current_mode_is_user_or_system <|proc := 0|> >>=
              (λis_user_or_system_mode.
                 errorT E)) s))``,
@@ -1370,7 +1370,7 @@ val user_simp_par_or_lem = store_thm(
                   errorT E
                 else
                   elsecomp)) s)
-      = 
+      =
       (((current_mode_is_user_or_system <|proc := 0|> ||| P )>>=
              (λ(is_user_or_system_mode,otherparam).
                 errorT E)) s))``,
@@ -1378,7 +1378,7 @@ val user_simp_par_or_lem = store_thm(
        THEN RW_TAC (srw_ss()) []
        THEN Cases_on `P s`
        THEN FULL_SIMP_TAC (srw_ss()) []
-       THEN Cases_on `access_violation b` 
+       THEN Cases_on `access_violation b`
        THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
@@ -1394,7 +1394,7 @@ val user_simp_par_or_and_lem = store_thm(
                   errorT E
                 else
                   elsecomp)) s)
-      = 
+      =
       (((current_mode_is_user_or_system <|proc := 0|> ||| P )>>=
              (λ(is_user_or_system_mode,otherparam).
                 errorT E)) s))``,
@@ -1402,7 +1402,7 @@ val user_simp_par_or_and_lem = store_thm(
        THEN RW_TAC (srw_ss()) []
        THEN Cases_on `P s`
        THEN FULL_SIMP_TAC (srw_ss()) []
-       THEN Cases_on `access_violation b` 
+       THEN Cases_on `access_violation b`
        THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
@@ -1416,7 +1416,7 @@ val user_simp_par_or_eqv_lem = store_thm(
                   errorT E
                 else
                   elsecomp)) s)
-      = 
+      =
       (((current_mode_is_user_or_system <|proc := 0|> ||| P )>>=
              (λ(is_user_or_system_mode,otherparam).
                 errorT E)) s))``,
@@ -1424,7 +1424,7 @@ val user_simp_par_or_eqv_lem = store_thm(
        THEN RW_TAC (srw_ss()) []
        THEN Cases_on `P s`
        THEN FULL_SIMP_TAC (srw_ss()) []
-       THEN Cases_on `access_violation b` 
+       THEN Cases_on `access_violation b`
        THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
@@ -1439,7 +1439,7 @@ val priv_simp_rel_lem = store_thm(
              ifcomp
            else
              elsecomp)) (assert_mode 16w) (inv2) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        (current_mode_is_priviledged <|proc:=0|> >>=
           (\current_mode_is_priviledged.
@@ -1458,7 +1458,7 @@ val user_simp_rel_lem = store_thm(
                   (errorT E: 'a M)
                 else
                   elsecomp))) (assert_mode 16w) (assert_mode 16w) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        ((current_mode_is_user_or_system <|proc := 0|> >>=
              (λis_user_or_system_mode.
@@ -1476,7 +1476,7 @@ val user_simp_or_rel_lem = store_thm(
                   (errorT E: 'a M)
                 else
                   elsecomp))) (assert_mode 16w) (assert_mode 16w) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        ((current_mode_is_user_or_system <|proc := 0|> >>=
              (λis_user_or_system_mode.
@@ -1494,7 +1494,7 @@ val user_simp_par_or_rel_lem = store_thm(
                   (errorT E: 'a M)
                 else
                   elsecomp))) (assert_mode 16w) (assert_mode 16w) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        (((current_mode_is_user_or_system <|proc := 0|> ||| P)>>=
              (λ(is_user_or_system_mode,otherparam).
@@ -1512,7 +1512,7 @@ val user_simp_par_or_eqv_rel_lem = store_thm(
                   (errorT E: 'a M)
                 else
                   elsecomp))) (assert_mode 16w) (assert_mode 16w) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        (((current_mode_is_user_or_system <|proc := 0|> ||| P)>>=
              (λ(is_user_or_system_mode,otherparam).
@@ -1530,7 +1530,7 @@ val user_simp_par_or_and_rel_lem = store_thm(
                   (errorT E: 'a M)
                 else
                   elsecomp))) (assert_mode 16w) (assert_mode 16w) uf uy)
-        = 
+        =
       (preserve_relation_mmu
        (((current_mode_is_user_or_system <|proc := 0|> ||| P)>>=
              (λ(is_user_or_system_mode,otherparam).
@@ -1600,7 +1600,7 @@ val _ = add_to_simplist priv_simp_preserves_comb_thm;
 
 
 
-val coproc_accepted_ax =  new_axiom("coproc_accepted_ax", 
+val coproc_accepted_ax =  new_axiom("coproc_accepted_ax",
                           ``!s s' inst accept. (assert_mode 16w s) ==> (coproc_accepted <|proc:=0|> inst s = ValueState accept s') ==> (~accept)``);
 
 
@@ -1614,7 +1614,7 @@ val coproc_accepted_usr_def = store_thm(
     "coproc_accepted_usr_def",
     ``!s inst. (assert_mode 16w s) ==> (coproc_accepted <|proc:=0|> inst s = ValueState F s)``,
     RW_TAC (srw_ss()) []
-       THEN Cases_on `coproc_accepted <|proc := 0|> inst s` 
+       THEN Cases_on `coproc_accepted <|proc := 0|> inst s`
        THEN FULL_SIMP_TAC (srw_ss()) []
        THEN IMP_RES_TAC coproc_accepted_ax
        THEN ASSUME_TAC (SPECL [``s:arm_state``, ``inst:CPinstruction``] coproc_accepted_constlem)
@@ -1639,12 +1639,12 @@ val coproc_accepted_simp_lem = store_thm(
                      ifcomp
                    else
                      elsecomp)) s
-         =        
+         =
          (coproc_accepted <|proc:=0|> inst >>=
                 (λaccepted.ifcomp)) s)``,
      REPEAT STRIP_TAC
         THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-        THEN Cases_on `coproc_accepted <|proc := 0|> inst s` 
+        THEN Cases_on `coproc_accepted <|proc := 0|> inst s`
         THEN IMP_RES_TAC coproc_accepted_ax
         THEN FULL_SIMP_TAC (srw_ss()) []);
 
@@ -1659,7 +1659,7 @@ val coproc_accepted_simp_rel_lem = store_thm(
                      ifcomp
                    else
                      elsecomp)) (assert_mode 16w) (inv2) uf uy)
-        = 
+        =
       (preserve_relation_mmu
         (coproc_accepted <|proc:=0|> (coproc,ThisInstr) >>=
                 (λaccepted. ifcomp)) (assert_mode 16w) (inv2) uf uy)``,
@@ -1742,7 +1742,7 @@ val cpsr_write_by_instr_part1 =
        :(bool # bool # CP15nsacr # bool -> unit M)``;
 
 
-val cpsr_write_by_instr_part2 = 
+val cpsr_write_by_instr_part2 =
 ``(λ(sctlr,scr,cpsr).
              write_cpsr <|proc := 0|>
                (cpsr with
@@ -1885,7 +1885,7 @@ val cpsr_write_by_instr_components_complete = `` (cpsr with
                   M := 16w|>)``;
 
 
-val cpsr_write_by_instr_unpriv_def = Define `cpsr_write_by_instr_unpriv (value:word32, bytemask:word4, affect_execstate:bool) = ((current_mode_is_priviledged <|proc := 0|> 
+val cpsr_write_by_instr_unpriv_def = Define `cpsr_write_by_instr_unpriv (value:word32, bytemask:word4, affect_execstate:bool) = ((current_mode_is_priviledged <|proc := 0|>
           ||| is_secure <|proc := 0|> ||| read_nsacr <|proc := 0|>
           ||| bad_mode <|proc := 0|> ((4 >< 0) value)) >>=
        (λ(p,s,n,b).
@@ -1931,7 +1931,7 @@ val cpsr_write_by_instr_unpriv_def = Define `cpsr_write_by_instr_unpriv (value:w
 
 val priv_simp_lem2 = store_thm(
     "priv_simp_lem2",
-    ``!s x H . (assert_mode 16w s) ==> 
+    ``!s x H . (assert_mode 16w s) ==>
        ((((current_mode_is_priviledged <|proc:=0|> ||| is_secure <|proc:=0|> ||| read_nsacr <|proc:=0|> ||| bad_mode <|proc:=0|> x) >>= (\ (p,s,n,b). H (p,s,n,b))) s)
       = (((current_mode_is_priviledged <|proc:=0|> ||| is_secure <|proc:=0|> ||| read_nsacr <|proc:=0|> ||| bad_mode <|proc:=0|> x) >>= (\ (p,s,n,b). H (F,s,n,b))) s))``,
     EVAL_TAC THEN RW_TAC (srw_ss()) []);
@@ -1939,8 +1939,8 @@ val priv_simp_lem2 = store_thm(
 
 val cpsr_write_by_instr_simp_lem = store_thm(
     "cpsr_write_by_instr_simp_lem",
-    ``!s value bytemask affect_execstate. (assert_mode 16w s) ==> 
-      (cpsr_write_by_instr <|proc:=0|> (value,bytemask,affect_execstate) s 
+    ``!s value bytemask affect_execstate. (assert_mode 16w s) ==>
+      (cpsr_write_by_instr <|proc:=0|> (value,bytemask,affect_execstate) s
      = cpsr_write_by_instr_unpriv (value,bytemask,affect_execstate) s)``,
     RW_TAC (srw_ss()) [cpsr_write_by_instr, cpsr_write_by_instr_unpriv_def]
        THEN IMP_RES_TAC (SPECL [``s:arm_state``, ``((4 >< 0)(value:word32)):word5``, cpsr_write_by_instr_part1] (INST_TYPE [alpha |-> (type_of(``()``))] priv_simp_lem2))
@@ -1949,7 +1949,7 @@ val cpsr_write_by_instr_simp_lem = store_thm(
 
 val cpsr_write_by_instr_simp_rel_lem = store_thm(
     "cpsr_write_by_instr_simp_rel_lem",
-    ``!value bytemask affect_execstate uf uy. 
+    ``!value bytemask affect_execstate uf uy.
       (preserve_relation_mmu (cpsr_write_by_instr <|proc:=0|> (value,bytemask,affect_execstate)) (assert_mode 16w) (assert_mode 16w) uf uy)
      = (preserve_relation_mmu (cpsr_write_by_instr_unpriv (value,bytemask,affect_execstate)) (assert_mode 16w) (assert_mode 16w) uf uy)``,
     RW_TAC (srw_ss()) [cpsr_write_by_instr_simp_lem, preserve_relation_mmu_def]);
@@ -2076,10 +2076,3 @@ val simplist_export_thm = save_thm(
 
 
 val _ = export_theory();
-
-
- 
-
-
-
-

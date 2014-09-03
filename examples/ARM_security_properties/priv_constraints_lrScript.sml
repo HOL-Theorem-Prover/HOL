@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib Parse proofManagerLib;
 open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory 
+open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory
 	       tacticsLib ARM_prover_extLib;
 
 val _ =  new_theory("priv_constraints_lr");
@@ -16,7 +16,7 @@ val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val prove_abs_LR_const_action =
  fn (a, thms, abody_thm, expr) =>
     let
-	val _ =  set_goal([], `` 
+	val _ =  set_goal([], ``
     			 (priv_LR_constraints_abs ^a ^expr (mode:bool[5]) ) ``)
 	val (a_abs,a_body) = pairLib.dest_pabs a;
 	val unbeta_thm= (PairRules.UNPBETA_CONV a_abs a_body)
@@ -28,7 +28,7 @@ val prove_abs_LR_const_action =
 				  (priv_LR_constraints ^unbeta_a ^expr mode)``,
 					     (ASSUME_TAC (SPECL [a_body,``^unbeta_a``, expr,``mode:bool[5]``]
 								(INST_TYPE [beta |-> a_body_type,
-									    alpha |-> ``:arm_state``] 
+									    alpha |-> ``:arm_state``]
 									   (List.nth(thms,0)))))
 						 THEN ASSUME_TAC unbeta_thm
 						 THEN RES_TAC);
@@ -49,7 +49,7 @@ val prove_abs_LR_const_action =
 			      SPECL[a, expr,``mode:bool[5]``]
 				   (INST_TYPE [alpha |-> abs_type,
 					       beta  |-> ``:arm_state``,
-					       gamma |-> a_body_type] 
+					       gamma |-> a_body_type]
 					      (List.nth(thms,1)))))
 			THEN (RW_TAC (srw_ss()) [])
 			THEN (FULL_SIMP_TAC (srw_ss()) [])
@@ -67,7 +67,7 @@ val untouched_LR_abs_def =
     Define `untouched_LR_abs f mode  =
 	   !s a c s'. (f a s = ValueState c s') ==>
 	   let lr = get_lr_by_mode mode
-	    	 in 
+	    	 in
     	       (((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M) /\
                 (s'.registers (0, lr) =
 		s.registers (0, lr)))`;
@@ -77,18 +77,18 @@ val untouched_LR_def =
 	   !s c s'. (f s = ValueState c s') ==>
               (* (ARM_MODE s' = 19w) ==> *)
 	   let lr = get_lr_by_mode mode
-	    	 in 
+	    	 in
     	       (((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M) /\
                 (s'.registers (0, lr) =
 		s.registers (0, lr)))`;
 
 val priv_LR_constraints_def =
     Define `priv_LR_constraints f lr_value mode =
-	    ! s s' a . (f s = ValueState a s') ==> 
+	    ! s s' a . (f s = ValueState a s') ==>
 	        (~access_violation s') ==>
     	       ((s'.psrs (0,CPSR)).M= mode) ==>
 	    let lr = get_lr_by_mode mode
-	    in 
+	    in
     	  	(*((s'.psrs(0,CPSR)).M = 19w) ==>*)
 		((s'.registers (0, lr) =
 		  lr_value))`;
@@ -96,11 +96,11 @@ val priv_LR_constraints_def =
 
 val priv_LR_constraints_abs_def =
     Define `priv_LR_constraints_abs f lr_value mode =
-		! s s' a c. (f c s = ValueState a s') ==> 
+		! s s' a c. (f c s = ValueState a s') ==>
 	        (~access_violation s') ==>
     	       ((s'.psrs (0,CPSR)).M= mode) ==>
 	    let lr = get_lr_by_mode mode
-	    in 
+	    in
     	  	(*((s'.psrs(0,CPSR)).M = 19w) ==>*)
 		((s'.registers (0, lr) =
 		  lr_value))`;
@@ -108,72 +108,72 @@ val priv_LR_constraints_abs_def =
 
 (*********************   proof rules *******************************)
 
-val seqT_priv_LR_constraints_before_thm = 
+val seqT_priv_LR_constraints_before_thm =
     store_thm("seqT_priv_LR_constraints_before_thm",
 	      `` ! g f pc mode . priv_LR_constraints_abs f pc mode  ==>
 	     priv_LR_constraints (g >>= f) pc  mode ``,
 	      (RW_TAC (srw_ss()) [seqT_def,
 				  priv_LR_constraints_def,
-				  priv_LR_constraints_abs_def]) 
+				  priv_LR_constraints_abs_def])
 		  THEN FULL_SIMP_TAC (let_ss) []
 		  THEN ASSUME_TAC
 		  (SPECL [``g:'a M``, ``f: 'a -> 'b M``,
 			  ``s:arm_state``,``a:'b``,
 			  ``s':arm_state``(* ,``b:arm_state``, *)
 			 (* ``a':'a`` *)]
-			 seqT_access_violation_thm) 
-		  THEN FULL_SIMP_TAC (srw_ss()) [seqT_def] 
-		  THEN Cases_on `g s` 
-		  THEN FULL_SIMP_TAC (srw_ss()) [] 
+			 seqT_access_violation_thm)
+		  THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
+		  THEN Cases_on `g s`
+		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN Cases_on `access_violation b`
 		  (* THEN Q.UNABBREV_TAC `spsr` *)
-		  THEN PAT_ASSUM ``! s s' a c .X ==> Z`` 
+		  THEN PAT_ASSUM ``! s s' a c .X ==> Z``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``s':arm_state``,
 					 ``a:'b``,``a':'a``] thm))
 		  THEN FULL_SIMP_TAC (srw_ss()) []
-		  THEN RES_TAC 
+		  THEN RES_TAC
 		  THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
 	     );
 
-val parT_priv_LR_constraints_before_thm = 
+val parT_priv_LR_constraints_before_thm =
     store_thm("parT_priv_LR_constraints_before_thm",
 	      `` ! g f pc mode . priv_LR_constraints f pc mode ==>
 	     priv_LR_constraints (g ||| f) pc mode ``,
-	      RW_TAC (srw_ss()) 
+	      RW_TAC (srw_ss())
 		      [parT_def,seqT_def,
 		       priv_LR_constraints_def,
 		       untouched_LR_def,constT_def]
 		  THEN FULL_SIMP_TAC (let_ss) []
-		  THEN IMP_RES_TAC 
-		  (SIMP_RULE bool_ss 
+		  THEN IMP_RES_TAC
+		  (SIMP_RULE bool_ss
 			     [seqT_def,parT_def,constT_def]
 			     (SPECL [``g:'a M``, ``f: 'b M``,
 				     ``s:arm_state``,``a:('a#'b)``,
-				     ``s':arm_state`` ,``b:arm_state``,  
+				     ``s':arm_state`` ,``b:arm_state``,
 				     ``a':'a``  ]
-				    parT_access_violation_thm)) 
-		  THEN Cases_on `g s` 
-		  THEN Cases_on `f b` 
+				    parT_access_violation_thm))
+		  THEN Cases_on `g s`
+		  THEN Cases_on `f b`
 		  (* THEN Q.UNABBREV_TAC `spsr`  *)
-		  THEN FULL_SIMP_TAC (srw_ss()) [] 
+		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN PAT_ASSUM ``! s s' a  .(f s = ValueState a s') ==> Z`` (fn thm => ASSUME_TAC
 		  (SPECL [``b:arm_state``,``b':arm_state``,``a'':'b``] thm))
-		  THEN Cases_on `access_violation b` 
-		  THEN Cases_on `access_violation b'`   
-		  THEN RES_TAC 
+		  THEN Cases_on `access_violation b`
+		  THEN Cases_on `access_violation b'`
+		  THEN RES_TAC
 		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN FIRST_PROVE [ FULL_SIMP_TAC (srw_ss()) []
 						   THEN RW_TAC (srw_ss()) [] ,
 				     (UNDISCH_ALL_TAC
-					  THEN  RW_TAC (srw_ss()) []  
+					  THEN  RW_TAC (srw_ss()) []
 					  THEN FULL_SIMP_TAC (srw_ss()) [])]);
 
-val seqT_priv_LR_constraints_after_thm = 
+val seqT_priv_LR_constraints_after_thm =
     store_thm("seqT_priv_LR_constraints_after_thm",
-	      `` ! g f pc mode . 
+	      `` ! g f pc mode .
 	     priv_LR_constraints g pc  mode ==>
-	     (  untouched_LR_abs f mode ) ==> 
+	     (  untouched_LR_abs f mode ) ==>
 	     priv_LR_constraints (g >>= f) pc mode ``,
 	      (RW_TAC (srw_ss()) [seqT_def,
 				  priv_LR_constraints_def,
@@ -183,113 +183,113 @@ val seqT_priv_LR_constraints_after_thm =
 			Cases_on `g s` THEN
 			FULL_SIMP_TAC (srw_ss()) [] THEN
 			Cases_on `access_violation b`
-			THEN Q.UNABBREV_TAC `lr` 
-			THEN PAT_ASSUM ``! s s' a  .X ==> Z`` 
+			THEN Q.UNABBREV_TAC `lr`
+			THEN PAT_ASSUM ``! s s' a  .X ==> Z``
 			(fn thm => ASSUME_TAC
 				       (SPECL [``s:arm_state``,``b:arm_state``,
 					       ``a':'a``] thm))
-			
-			THEN PAT_ASSUM ``! s1 a c s2. X`` 
+
+			THEN PAT_ASSUM ``! s1 a c s2. X``
 			(fn thm => ASSUME_TAC
 				       (SPECL [``b:arm_state``,``a':'a``,
 					       ``a:'b``,``s':arm_state``] thm))
-			
-			THEN RES_TAC 
+
+			THEN RES_TAC
 			THEN UNDISCH_ALL_TAC
 			THEN RW_TAC (srw_ss()) []
 			THEN FULL_SIMP_TAC (srw_ss()) [get_lr_by_mode_def]
 			THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val parT_priv_LR_constraints_after_thm = 
+val parT_priv_LR_constraints_after_thm =
     store_thm("parT_priv_LR_constraints_after_thm",
 `` ! g f pc mode . priv_LR_constraints g pc mode ==>
-	     (untouched_LR f mode ) ==> 
+	     (untouched_LR f mode ) ==>
 	     priv_LR_constraints (g ||| f) pc mode ``,
-	      (RW_TAC (srw_ss()) 
+	      (RW_TAC (srw_ss())
 		      [parT_def,seqT_def,
 		       priv_LR_constraints_def,
-		       untouched_LR_def,constT_def]) 
+		       untouched_LR_def,constT_def])
 		  THEN FULL_SIMP_TAC (let_ss) []THEN
 		  Cases_on `g s` THEN
 		  Cases_on `f b` THEN
 		  Cases_on `access_violation b` THEN
-		  Cases_on `access_violation b'`   THEN 
-		   Q.UNABBREV_TAC `lr` THEN 
+		  Cases_on `access_violation b'`   THEN
+		   Q.UNABBREV_TAC `lr` THEN
 		  FULL_SIMP_TAC (srw_ss()) [] THEN
-		  PAT_ASSUM ``! s a s' .(f s = ValueState a s') ==> Z`` 
+		  PAT_ASSUM ``! s a s' .(f s = ValueState a s') ==> Z``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a'':'b``,``b':arm_state``] thm))
-		  THEN PAT_ASSUM ``! s1 c s2. X`` 
+		  THEN PAT_ASSUM ``! s1 c s2. X``
 		  (fn thm => ASSUME_TAC
-				 (SPECL [``s:arm_state``,``b:arm_state``,``a':'a``] thm))	 
-		  THEN RES_TAC 
+				 (SPECL [``s:arm_state``,``b:arm_state``,``a':'a``] thm))
+		  THEN RES_TAC
 		  THEN UNDISCH_ALL_TAC
-		  THEN  RW_TAC (srw_ss()) []  
+		  THEN  RW_TAC (srw_ss()) []
 		  THEN  FULL_SIMP_TAC (srw_ss()) [get_lr_by_mode_def]
 		);
 
 
-val seqT_LR_trans_untouched_thm = 
+val seqT_LR_trans_untouched_thm =
     store_thm("seqT_LR_trans_untouched_thm",
-	      `` !f g mode . 
-	     (untouched_LR f mode ) ==> 
-	     (untouched_LR_abs g mode ) ==> 
+	      `` !f g mode .
+	     (untouched_LR f mode ) ==>
+	     (untouched_LR_abs g mode ) ==>
 	     (untouched_LR (f>>=g) mode)``,
 	      (RW_TAC (srw_ss()) [seqT_def,untouched_LR_abs_def,
-				  untouched_LR_def]) 
+				  untouched_LR_def])
 THEN Cases_on `f s`
 		  THEN FULL_SIMP_TAC (let_ss) []
-		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X`` 
+		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X``
 		  (fn thm => ASSUME_TAC
-				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))	 
+				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))
 		  THEN RES_TAC
 		  THEN Cases_on `access_violation b`
 		  THEN FULL_SIMP_TAC (srw_ss()) []
-		  THEN RW_TAC (srw_ss()) [] 
-		  THEN PAT_ASSUM ``! s a c s'. X`` 
+		  THEN RW_TAC (srw_ss()) []
+		  THEN PAT_ASSUM ``! s a c s'. X``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a:'a``,
-					 ``c:'b``,``s':arm_state``] thm))	 
+					 ``c:'b``,``s':arm_state``] thm))
 		  THEN RES_TAC
 		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN RW_TAC (srw_ss()) []);
- 
-val parT_LR_trans_untouched_thm = 
+
+val parT_LR_trans_untouched_thm =
     store_thm("parT_LR_trans_untouched_thm",
-	      `` !f g mode. 
-	     (untouched_LR f mode ) ==> 
-	     (untouched_LR g mode ) ==> 
+	      `` !f g mode.
+	     (untouched_LR f mode ) ==>
+	     (untouched_LR g mode ) ==>
 	     (untouched_LR (f ||| g) mode )``,
 	      (RW_TAC (srw_ss()) [seqT_def,parT_def,constT_def,
-				  untouched_LR_def]) 
+				  untouched_LR_def])
 		  THEN Cases_on `f s`
 		  THEN Cases_on `access_violation b`
 		  THEN Cases_on `g b`
 		  THEN Cases_on `access_violation b'`
 		  THEN FULL_SIMP_TAC (let_ss) []
-		  THEN PAT_ASSUM ``! s c s'. X`` 
+		  THEN PAT_ASSUM ``! s c s'. X``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a':'b``,
-					 ``b':arm_state``] thm))	 
-		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X`` 
+					 ``b':arm_state``] thm))
+		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X``
 		  (fn thm => ASSUME_TAC
-				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))	 
+				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))
 		  THEN RES_TAC
 		  THEN FULL_SIMP_TAC (srw_ss()) []
-		  THEN RW_TAC (srw_ss()) [] 
+		  THEN RW_TAC (srw_ss()) []
 		  );
- 
 
-val LR_first_abs_lemma = 
+
+val LR_first_abs_lemma =
     store_thm ("LR_first_abs_lemma",
-	       ``!f g x mode . (f=g) ==> ((priv_LR_constraints f x mode) = 
+	       ``!f g x mode . (f=g) ==> ((priv_LR_constraints f x mode) =
 				    (priv_LR_constraints g x mode))``,
 	       RW_TAC (srw_ss()) []);
 
 
-val LR_second_abs_lemma = 
+val LR_second_abs_lemma =
     store_thm ("LR_second_abs_lemma",
-	       ``! f x mode . (! y. priv_LR_constraints (f y) x mode ) = 
+	       ``! f x mode . (! y. priv_LR_constraints (f y) x mode ) =
     priv_LR_constraints_abs f x mode ``,
 	       RW_TAC (srw_ss()) [priv_LR_constraints_def,priv_LR_constraints_abs_def]
 		      THEN METIS_TAC []);
@@ -298,7 +298,7 @@ val LR_second_abs_lemma =
 (********************* end of proof rules *******************************)
 (******************* basic lemmas **************************************)
 
-val read_cpsr_fixed_lem = 
+val read_cpsr_fixed_lem =
     store_thm("read_cpsr_fixed_lem",
 ``!s . read_cpsr <|proc := 0|> s = ValueState (s.psrs (0,CPSR)) s``,
 	      EVAL_TAC
@@ -324,31 +324,31 @@ RW_TAC (bool_ss) [write_reg_def,
 				       THEN RW_TAC (srw_ss()) []))
 	     ]);
 
-val read_cpsr_lrc_ut_thm = 
+val read_cpsr_lrc_ut_thm =
     store_thm("read_cpsr_lrc_ut_thm",
 	      `` ! mode.
 	     (untouched_LR (read_cpsr <|proc:=0|> ) mode)``,
 EVAL_TAC
 THEN RW_TAC (srw_ss()) [] );
 
-val branch_to_lrc_ut_thm = 
+val branch_to_lrc_ut_thm =
     store_thm("branch_to_lrc_ut_thm",
 ``!adr mode . untouched_LR (
  branch_to <|proc:=0|> adr) mode ``,
 EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val constT_lrc_ut_thm = 
+val constT_lrc_ut_thm =
     store_thm("constT_lrc_ut_thm",
 `` untouched_LR_abs (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ()) mode``,
 EVAL_TAC
 THEN RW_TAC (srw_ss()) [] );
 
-val ui_write_cpsr_LR_ut_thm = 
+val ui_write_cpsr_LR_ut_thm =
     store_thm("ui_write_cpsr_LR_ut_thm",
 ``untouched_LR (
 	   read_cpsr <|proc:=0|> >>=
@@ -358,13 +358,13 @@ val ui_write_cpsr_LR_ut_thm =
                   <|I := T; IT := 0w; J := F; T := sctlr.TE;
                     E := sctlr.EE|>))) mode``,
 EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val irq_write_cpsr_LR_ut_thm = 
+val irq_write_cpsr_LR_ut_thm =
     store_thm("irq_write_cpsr_LR_ut_thm",
 ``untouched_LR (
 	   read_cpsr <|proc:=0|> >>=
@@ -377,13 +377,13 @@ val irq_write_cpsr_LR_ut_thm =
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []);
 
-val fiq_write_cpsr_LR_ut_thm = 
+val fiq_write_cpsr_LR_ut_thm =
     store_thm("fiq_write_cpsr_LR_ut_thm",
 ``untouched_LR (
 	   read_cpsr <|proc:=0|> >>=
@@ -399,15 +399,15 @@ val fiq_write_cpsr_LR_ut_thm =
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
 
-val ab_write_cpsr_LR_ut_thm = 
+val ab_write_cpsr_LR_ut_thm =
     store_thm("ab_write_cpsr_LR_ut_thm",
 ``untouched_LR (
 	   read_cpsr <|proc:=0|> >>=
@@ -420,63 +420,63 @@ val ab_write_cpsr_LR_ut_thm =
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>))) mode``,
 EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
-THEN RW_TAC (srw_ss()) [] 
+THEN RW_TAC (srw_ss()) []
 THEN FULL_SIMP_TAC (srw_ss()) []);
 
 
-fun get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt = 
-    
-    let 
-	val (l,r,rb1)= decompose_term a'; 
+fun get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt =
+
+    let
+	val (l,r,rb1)= decompose_term a';
 	val (l2,r2,rb2)= decompose_term rb1
 	val (l3,r3,rb3)= decompose_term rb2
 	val (l4,r4,rb4)= decompose_term l3
 	val (l5,r5,rb5)= decompose_term r4
 	val (l6,r6,rb6)= decompose_term r5;
-		  
+
 		  (* proof of r5 *)
 	val thm1 = LIST_MP [ rw_cpsr_thm,
 			     (SPECL [vt,
-				     ``mode:bool[5]``] 
-				    branch_to_lrc_ut_thm)] 
-			   (SPECL [l6,r6,``mode:bool[5]``] 
+				     ``mode:bool[5]``]
+				    branch_to_lrc_ut_thm)]
+			   (SPECL [l6,r6,``mode:bool[5]``]
 				  (INST_TYPE [alpha |-> ``:unit``,
 					      beta |-> ``:unit``]
 					     parT_LR_trans_untouched_thm));
 		  (* proof of r4 *)
-	val thm2 = LIST_MP [ 
+	val thm2 = LIST_MP [
 		   (SPECL [lr_arg,
-			   ``mode:bool[5]``] 
+			   ``mode:bool[5]``]
 			  write_lr_reg_lrc_thm),
-		   thm1] 
+		   thm1]
 			   (SPECL [l5,r5,lr_arg,
-				   ``mode:bool[5]``] 
+				   ``mode:bool[5]``]
 				  (INST_TYPE [alpha |-> ``:unit``,
 					      beta |-> ``:(unit#unit)``]
 					     parT_priv_LR_constraints_after_thm));
 		  (* proof of l3 *)
-	val thm3 = 
-	    MP (SPECL [l4,r4,lr_arg,``mode:bool[5]``] 
+	val thm3 =
+	    MP (SPECL [l4,r4,lr_arg,``mode:bool[5]``]
 		      (INST_TYPE [alpha |-> ``:unit``,
 				  beta |-> ``:(unit#unit#unit)``]
 				 parT_priv_LR_constraints_before_thm)) thm2;
 		  (* proof of rb2 *)
-	val thm4 = LIST_MP [ 
+	val thm4 = LIST_MP [
 		   thm3,
-		   constT_lrc_ut_thm] 
-			   (SPECL [l3,r3,lr_arg,``mode:bool[5]``] 
+		   constT_lrc_ut_thm]
+			   (SPECL [l3,r3,lr_arg,``mode:bool[5]``]
 				  (INST_TYPE [beta |-> ``:unit``,
 					      alpha |-> ``:(unit#unit#unit#unit)``]
 					     seqT_priv_LR_constraints_after_thm));
 	(* proof of rb1 *)
-	val (thm5 , _) = prove_abs_LR_const_action 
+	val (thm5 , _) = prove_abs_LR_const_action
 			     (r2, [LR_first_abs_lemma,
 				   LR_second_abs_lemma],
 			      thm4, lr_arg);
-	val thm6 = MP (SPECL [l2,r2,lr_arg,``mode:bool[5]``] 
+	val thm6 = MP (SPECL [l2,r2,lr_arg,``mode:bool[5]``]
 			     (INST_TYPE [beta |-> ``:unit``,
 					 alpha |-> ``:(unit#unit)``]
 					seqT_priv_LR_constraints_before_thm)) thm5;
@@ -485,16 +485,16 @@ fun get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt =
     end
 
 
-val take_undef_writing_part_LR_thm = 
-    save_thm ("take_undef_writing_part_LR_thm",   
-	      let 
+val take_undef_writing_part_LR_thm =
+    save_thm ("take_undef_writing_part_LR_thm",
+	      let
 		  val vt = ``(ExcVectorBase + 4w:bool[32])``
 		  val rw_cpsr_thm = ui_write_cpsr_LR_ut_thm
 		  val a = SIMP_CONV (bool_ss) [take_undef_instr_exception_def]
 				    ``take_undef_instr_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
 	      in
-		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm ``(if cpsr:ARMpsr.T then 
+		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm ``(if cpsr:ARMpsr.T then
 						(pc:word32) − 2w else pc − 4w)`` vt
 	      end
 	     );
@@ -507,7 +507,7 @@ val take_data_abort_writing_part_LR_thm =
 		   val a = SIMP_CONV (bool_ss) [take_data_abort_exception_def]
 				    ``take_data_abort_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
-		  val lr_arg = ``(if cpsr:ARMpsr.T then 
+		  val lr_arg = ``(if cpsr:ARMpsr.T then
 						(pc:word32) else pc − 4w)``;
 	      in
 		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg  vt
@@ -522,7 +522,7 @@ val take_fiq_writing_part_LR_thm =
 		   val a = SIMP_CONV (bool_ss) [take_fiq_exception_def]
 				    ``take_fiq_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
-		  val lr_arg = ``(if cpsr:ARMpsr.T then 
+		  val lr_arg = ``(if cpsr:ARMpsr.T then
 				      (pc:word32) else pc − 4w)``
 	      in
 		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt
@@ -536,7 +536,7 @@ val take_irq_writing_part_LR_thm =
 		   val a = SIMP_CONV (bool_ss) [take_irq_exception_def]
 				    ``take_irq_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
-		  val lr_arg = ``(if cpsr:ARMpsr.T then 
+		  val lr_arg = ``(if cpsr:ARMpsr.T then
 				      (pc:word32) else pc − 4w)``
 	      in
 		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt
@@ -550,23 +550,23 @@ val take_prefetch_abort_writing_part_LR_thm =
 		   val a = SIMP_CONV (bool_ss) [take_prefetch_abort_exception_def]
 				    ``take_prefetch_abort_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
-		  val lr_arg = ``(if cpsr:ARMpsr.T then 
+		  val lr_arg = ``(if cpsr:ARMpsr.T then
 				      (pc:word32) else pc − 4w)``
 	      in
 		  get_take_exp_writing_part_LR_thm a' rw_cpsr_thm lr_arg vt
 	      end
 	     );
 
-	    
-val take_svc_writing_part_LR_thm = 
-    save_thm ("take_svc_writing_part_LR_thm",   
+
+val take_svc_writing_part_LR_thm =
+    save_thm ("take_svc_writing_part_LR_thm",
 	      let val vt = ``(ExcVectorBase + 8w:bool[32])``
 		  val rw_cpsr_thm = ui_write_cpsr_LR_ut_thm
 		  val a = SIMP_CONV (bool_ss) [take_svc_exception_def]
 				    ``take_svc_exception <|proc:=0|> ``
 		  val (_, a') =  (dest_eq (concl a))
 		  val (_,_,rb) = decompose_term a'
-		  val lr_arg = 	``(if cpsr:ARMpsr.T then 
+		  val lr_arg = 	``(if cpsr:ARMpsr.T then
 				       ((pc:word32) - 2w) else pc − 4w)``
 
 	      in
@@ -576,34 +576,34 @@ val take_svc_writing_part_LR_thm =
 
 val satisfy_LR_constraints_def =
     Define ` satisfy_LR_constraints f mode value =
-		! s s' a . 
-		  (f s = ValueState a s') ==> 
-		  ((s'.psrs(0,CPSR)).M = mode) ==> 
+		! s s' a .
+		  (f s = ValueState a s') ==>
+		  ((s'.psrs(0,CPSR)).M = mode) ==>
 		  (~access_violation s') ==>
 		  (s'.registers (0, get_lr_by_mode (mode)) =
-		   (if (s.psrs (0,CPSR)).T then 
+		   (if (s.psrs (0,CPSR)).T then
 			(get_pc_value s - 2w) + value
 		    else
 			(get_pc_value s) - 4w))`;
 
 val satisfy_LR_constraints_abs_def =
     Define ` satisfy_LR_constraints_abs f mode value =
-		! s c s' a . 
-		  (f c s = ValueState a s') ==> 
-		  ((s'.psrs(0,CPSR)).M = mode) ==> 
+		! s c s' a .
+		  (f c s = ValueState a s') ==>
+		  ((s'.psrs(0,CPSR)).M = mode) ==>
 		  (~access_violation s') ==>
 		  (s'.registers (0, get_lr_by_mode (mode)) =
-		   (if (s.psrs (0,CPSR)).T then 
+		   (if (s.psrs (0,CPSR)).T then
 			(get_pc_value s - 2w) + value
 		    else
 			(get_pc_value s) - 4w ))`;
 
 
 
-fun prove_take_exception_LR_constraints te te_def wp_thm fixed_rp_thm fixed_cpsr_thm 
-					fixed_pc_thm2 const_comp_rp_thm sl_elm2 
-					spec_lists  ltype = 
- let   
+fun prove_take_exception_LR_constraints te te_def wp_thm fixed_rp_thm fixed_cpsr_thm
+					fixed_pc_thm2 const_comp_rp_thm sl_elm2
+					spec_lists  ltype =
+ let
      val (l,r,rb1)= decompose_term te
      val sl_elm2 =  ``(a':(word32 # word32 # ARMpsr # CP15scr # CP15sctlr))``
      val spec_list = List.nth(spec_lists,0)
@@ -620,11 +620,11 @@ fun prove_take_exception_LR_constraints te te_def wp_thm fixed_rp_thm fixed_cpsr
 	    THEN FIRST_PROVE
 	    [
 	     IMP_RES_TAC hlp_seqT_thm
-	     		 THEN TRY (PAT_ASSUM ``!a. X`` (fn thm => ASSUME_SPEC_TAC sl_elm2 thm))  
-	     		 THEN PAT_ASSUM ``X a' b'= ValueState a s'`` 
+	     		 THEN TRY (PAT_ASSUM ``!a. X`` (fn thm => ASSUME_SPEC_TAC sl_elm2 thm))
+	     		 THEN PAT_ASSUM ``X a' b'= ValueState a s'``
 			 (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
-			 THEN ASSUME_TAC ( SPECL 
-					       spec_list  (GEN_ALL  (SIMP_RULE (bool_ss) [priv_LR_constraints_def] 
+			 THEN ASSUME_TAC ( SPECL
+					       spec_list  (GEN_ALL  (SIMP_RULE (bool_ss) [priv_LR_constraints_def]
 									       wp_thm)))
 			 THEN ASSUME_TAC (SPECL spec_list3 fixed_cpsr_thm)
 			 THEN ASSUME_TAC (SPECL spec_list3 fixed_pc_thm2)
@@ -635,23 +635,23 @@ fun prove_take_exception_LR_constraints te te_def wp_thm fixed_rp_thm fixed_cpsr
 	   ,
 	   IMP_RES_TAC (SPEC r (
 			INST_TYPE [beta |-> ``:unit``,
-				   alpha |-> ltype ] 
+				   alpha |-> ltype ]
 				  hlp_errorT_thm))
-		       THEN 
-		       PAT_ASSUM ``! (s:arm_state) . X `` 
+		       THEN
+		       PAT_ASSUM ``! (s:arm_state) . X ``
 		       (fn thm => ASSUME_TAC (SPEC ``s:arm_state`` thm))
-		       THEN RW_TAC (srw_ss()) [] 
+		       THEN RW_TAC (srw_ss()) []
 		       THEN FULL_SIMP_TAC (srw_ss()) []
-	    ] 
+	    ]
  end;
 
-val take_undef_instr_exception_LR_thm = 
+val take_undef_instr_exception_LR_thm =
     store_thm ("take_undef_instr_exception_LR_thm",
-	       `` ! mode. 
+	       `` ! mode.
 	      satisfy_LR_constraints (take_undef_instr_exception <|proc:=0|>  )
 	     mode (0w:word32)``,
-	       let 
-		   val athm = SIMP_CONV (bool_ss) [take_undef_instr_exception_def] 
+	       let
+		   val athm = SIMP_CONV (bool_ss) [take_undef_instr_exception_def]
 					``take_undef_instr_exception <|proc:=0|>``
 		   val (_, te) =  (dest_eq (concl athm))
 		   val te_def = take_undef_instr_exception_def
@@ -668,14 +668,14 @@ val take_undef_instr_exception_LR_thm =
 		   val ltype = ``:(word32 # word32 # ARMpsr # CP15scr # CP15sctlr)``
 	 	   val fixed_pc_thm2 = fixed_pc_undef_svc_thm2
 	       in
-		   prove_take_exception_LR_constraints te te_def 
-						       take_undef_writing_part_LR_thm 
+		   prove_take_exception_LR_constraints te te_def
+						       take_undef_writing_part_LR_thm
 						       fixed_rp_thm
 						       fixed_cpsr_thm fixed_pc_thm2
 						       const_comp_rp_thm
 						       sl_elm2 spec_lists ltype
 	       end);
-    
+
 val take_svc_exception_LR_thm =
     store_thm ("take_svc_exception_LR_thm",
 	       let
@@ -687,7 +687,7 @@ val take_svc_exception_LR_thm =
 		   `` ! mode. satisfy_LR_constraints ^rb1  mode 0w``
 		  end
 ,
-	       let 
+	       let
 		   val athm = SIMP_CONV (bool_ss) [take_svc_exception_def]
 					``take_svc_exception <|proc:=0|> ``;
 		   val (_, a) =  (dest_eq (concl athm))
@@ -706,21 +706,21 @@ val take_svc_exception_LR_thm =
 		   val ltype = ``:(word32 # word32 # ARMpsr # CP15scr # CP15sctlr)``
 	 	   val fixed_pc_thm2 = fixed_pc_undef_svc_thm2
 	    in
-		  prove_take_exception_LR_constraints te te_def 
-						       wp_thm 
+		  prove_take_exception_LR_constraints te te_def
+						       wp_thm
 						       fixed_rp_thm
 						       fixed_cpsr_thm fixed_pc_thm2
 						       const_comp_rp_thm
 						       sl_elm2 spec_lists ltype
 	       end);
-    
+
 
 
 val take_data_abort_exception_LR_thm =
     store_thm ("take_data_abort_exception_LR_thm",
 	       `` ! mode. satisfy_LR_constraints (take_data_abort_exception <|proc:=0|>)  mode 2w ``
 	     ,
-	     let 
+	     let
 		 val athm = SIMP_CONV (bool_ss) [take_data_abort_exception_def]
 				      ``take_data_abort_exception <|proc:=0|> ``;
 		 val (_, te) =  (dest_eq (concl athm))
@@ -738,8 +738,8 @@ val take_data_abort_exception_LR_thm =
 		 val const_comp_rp_thm = const_comp_take_abort_irq_exception_rp_thm
 		 val fixed_pc_thm2 = fixed_pc_abt_irq_thm2
 	     in
-		 prove_take_exception_LR_constraints te te_def 
-						     wp_thm 
+		 prove_take_exception_LR_constraints te te_def
+						     wp_thm
 						     fixed_rp_thm
 						     fixed_cpsr_thm
 						     fixed_pc_thm2
@@ -753,7 +753,7 @@ val take_prefetch_abort_exception_LR_thm =
     store_thm ("take_prefetch_abort_exception_LR_thm",
 	       `` ! mode. satisfy_LR_constraints (take_prefetch_abort_exception <|proc:=0|>)  mode 2w ``
 	     ,
-	     let 
+	     let
 		 val athm = SIMP_CONV (bool_ss) [take_prefetch_abort_exception_def]
 				      ``take_prefetch_abort_exception <|proc:=0|> ``;
 		 val (_, te) =  (dest_eq (concl athm))
@@ -771,8 +771,8 @@ val take_prefetch_abort_exception_LR_thm =
 		 val const_comp_rp_thm = const_comp_take_abort_irq_exception_rp_thm
 		 val fixed_pc_thm2 = fixed_pc_abt_irq_thm2
 	     in
-		 prove_take_exception_LR_constraints te te_def 
-						     wp_thm 
+		 prove_take_exception_LR_constraints te te_def
+						     wp_thm
 						     fixed_rp_thm
 						     fixed_cpsr_thm
 						     fixed_pc_thm2
@@ -780,12 +780,12 @@ val take_prefetch_abort_exception_LR_thm =
 						     sl_elm2 spec_lists
 						     ltype
 	     end);
-    
+
 val take_irq_exception_LR_thm =
     store_thm ("take_irq_exception_LR_thm",
 	       `` ! mode. satisfy_LR_constraints (take_irq_exception <|proc:=0|>)  mode 2w ``
 	     ,
-	     let 
+	     let
 		 val athm = SIMP_CONV (bool_ss) [take_irq_exception_def]
 				      ``take_irq_exception <|proc:=0|> ``;
 		 val (_, te) =  (dest_eq (concl athm))
@@ -803,8 +803,8 @@ val take_irq_exception_LR_thm =
 		 val const_comp_rp_thm = const_comp_take_abort_irq_exception_rp_thm
 		 val fixed_pc_thm2 = fixed_pc_abt_irq_thm2
 	     in
-		 prove_take_exception_LR_constraints te te_def 
-						     wp_thm 
+		 prove_take_exception_LR_constraints te te_def
+						     wp_thm
 						     fixed_rp_thm
 						     fixed_cpsr_thm
 						     fixed_pc_thm2
@@ -812,10 +812,6 @@ val take_irq_exception_LR_thm =
 						     sl_elm2 spec_lists
 						     ltype
 	     end);
-    
+
 
 val _ = export_theory();
-
-
-
-

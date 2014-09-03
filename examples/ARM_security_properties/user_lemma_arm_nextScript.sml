@@ -9,7 +9,7 @@ open user_lemma_basicsTheory user_lemma_primitive_operationsTheory;
 open user_lemma_instructionsTheory;
 open wordsTheory wordsLib;
 
-val _ =  new_theory("user_lemma_arm_next"); 
+val _ =  new_theory("user_lemma_arm_next");
 
 val _ = temp_overload_on ("return", ``constT``);
 
@@ -23,8 +23,8 @@ val _ = temp_overload_on ("return", ``constT``);
 val no_armv4_axiom = new_axiom("no_armv4_axiom", ``!s. ((ARMinfo_arch o arm_state_information) s) <> ARMv4``);
 
 
-val fetch_instruction_thm = prove_and_save_s (``fetch_instruction <|proc:=0|> 
-                                       (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d))) 
+val fetch_instruction_thm = prove_and_save_s (``fetch_instruction <|proc:=0|>
+                                       (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))
                                        (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))``,
                                        "fetch_instruction_thm");
 
@@ -55,21 +55,21 @@ val align_lem = store_thm(
 val read_memA4_av_lem = store_thm(
     "read_memA4_av_lem",
     ``!pc. (mmu_requirements s g) ==>
-       ((read_memA <|proc:=0|> (pc, 4)) s = ValueState x t) ==> 
+       ((read_memA <|proc:=0|> (pc, 4)) s = ValueState x t) ==>
        (    ¬permitted_byte_pure (pc) F s.coprocessors.state.cp15.C1
                                         s.coprocessors.state.cp15.C2
                                         s.coprocessors.state.cp15.C3 F s.memory
         \/  ¬permitted_byte_pure (align(pc,4)) F s.coprocessors.state.cp15.C1
-                                                 s.coprocessors.state.cp15.C2 
+                                                 s.coprocessors.state.cp15.C2
 						 s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (pc,4) + 1w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (pc,4) + 2w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (pc,4) + 3w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory)
        ==> (access_violation t)``,
     RW_TAC (srw_ss()) []
@@ -79,14 +79,14 @@ val read_memA4_av_lem = store_thm(
        THEN (REPEAT (CHANGED_TAC ((TRY (UNDISCH_MATCH_TAC ``X = ValueState x t``)) THEN RW_TAC (srw_ss()) [])))
        THEN FIRST [MP_TAC (blastLib.BBLAST_PROVE ``(((1 -- 0) (pc:word32)) = 0w) \/ (((1 -- 0) (pc:word32)) = 1w) \/ (((1 -- 0) (pc:word32)) = 2w) \/ (((1 -- 0) (pc:word32)) = 3w)``)
                                 THEN RW_TAC (srw_ss()) []
-                                THEN CCONTR_TAC 
+                                THEN CCONTR_TAC
                                 THEN FULL_SIMP_TAC (srw_ss()) []
                                 THEN ASSUME_TAC (SPEC ``pc:word32`` (CONJUNCT1 (CONJUNCT2 align_lem)))
-                                THEN UNDISCH_ALL_TAC 
-                                THEN RW_TAC (srw_ss()) [] 
-                                THEN CCONTR_TAC 
+                                THEN UNDISCH_ALL_TAC
+                                THEN RW_TAC (srw_ss()) []
+                                THEN CCONTR_TAC
                                 THEN FULL_SIMP_TAC (srw_ss()) []
-                                THEN UNDISCH_ALL_TAC 
+                                THEN UNDISCH_ALL_TAC
                                 THEN RW_TAC (srw_ss()) []
                                 THEN FULL_SIMP_TAC (srw_ss()) [aligned_def, align_def]
                                 THEN NO_TAC,
@@ -97,15 +97,15 @@ val read_memA4_av_lem = store_thm(
 val read_memA2_av_lem = store_thm(
     "read_memA2_av_lem",
     ``!pc. (mmu_requirements s g) ==>
-       ((read_memA <|proc:=0|> (pc, 2)) s = ValueState x t) ==> 
+       ((read_memA <|proc:=0|> (pc, 2)) s = ValueState x t) ==>
        (    ¬permitted_byte_pure (pc) F s.coprocessors.state.cp15.C1
                                         s.coprocessors.state.cp15.C2
                                         s.coprocessors.state.cp15.C3 F s.memory
         \/  ¬permitted_byte_pure (align(pc,2)) F s.coprocessors.state.cp15.C1
-                                                 s.coprocessors.state.cp15.C2 
+                                                 s.coprocessors.state.cp15.C2
 						 s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (pc,2) + 1w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory)
        ==> (access_violation t)``,
     RW_TAC (srw_ss()) []
@@ -115,14 +115,14 @@ val read_memA2_av_lem = store_thm(
        THEN (REPEAT (CHANGED_TAC ((TRY (UNDISCH_MATCH_TAC ``X = ValueState x t``)) THEN RW_TAC (srw_ss()) [])))
        THEN FIRST [ MP_TAC (blastLib.BBLAST_PROVE ``(((0 -- 0) (pc:word32)) = 0w) \/ (((0 -- 0) (pc:word32)) = 1w)``)
                        THEN RW_TAC (srw_ss()) []
-		       THEN CCONTR_TAC 
+		       THEN CCONTR_TAC
 		       THEN FULL_SIMP_TAC (srw_ss()) []
 		       THEN ASSUME_TAC (SPEC ``pc:word32`` (CONJUNCT1 (align_lem)))
-		       THEN UNDISCH_ALL_TAC 
-		       THEN RW_TAC (srw_ss()) [] 
-		       THEN CCONTR_TAC 
+		       THEN UNDISCH_ALL_TAC
+		       THEN RW_TAC (srw_ss()) []
+		       THEN CCONTR_TAC
 		       THEN FULL_SIMP_TAC (srw_ss()) []
-		       THEN UNDISCH_ALL_TAC 
+		       THEN UNDISCH_ALL_TAC
 		       THEN RW_TAC (srw_ss()) []
 		       THEN FULL_SIMP_TAC (srw_ss()) [aligned_def, align_def]
 		       THEN NO_TAC,
@@ -137,18 +137,18 @@ val fetch_arm_av_lem = store_thm(
                                         s.coprocessors.state.cp15.C2
                                         s.coprocessors.state.cp15.C3 F s.memory
         \/  ¬permitted_byte_pure (align(s.registers (0,RName_PC),4)) F s.coprocessors.state.cp15.C1
-                                                 s.coprocessors.state.cp15.C2 
+                                                 s.coprocessors.state.cp15.C2
 						 s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (s.registers (0,RName_PC),4) + 1w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (s.registers (0,RName_PC),4) + 2w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (s.registers (0,RName_PC),4) + 3w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory) ==>
-       (((fetch_arm <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))) s) = ValueState x t) 
+       (((fetch_arm <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))) s) = ValueState x t)
        ==> (access_violation t)``,
     NTAC 2 DISCH_TAC
       THEN PROTECTED_OR_RW_TAC [armTheory.fetch_arm_def, read_pc_def, readT_def, seqT_def, parT_def, arch_version_def, read__reg_def, read_arch_def, constT_def] THEN PROTECTED_OR_RW_TAC []
@@ -163,12 +163,12 @@ val fetch_thumb_av_lem = store_thm(
                                         s.coprocessors.state.cp15.C2
                                         s.coprocessors.state.cp15.C3 F s.memory
         \/  ¬permitted_byte_pure (align(s.registers (0,RName_PC),2)) F s.coprocessors.state.cp15.C1
-                                                 s.coprocessors.state.cp15.C2 
+                                                 s.coprocessors.state.cp15.C2
 						 s.coprocessors.state.cp15.C3 F s.memory
         \/ ¬permitted_byte_pure (align (s.registers (0,RName_PC),2) + 1w) F s.coprocessors.state.cp15.C1
-	                                              s.coprocessors.state.cp15.C2 
+	                                              s.coprocessors.state.cp15.C2
 						      s.coprocessors.state.cp15.C3 F s.memory) ==>
-       (((fetch_thumb <|proc:=0|> bEE (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))) s) = ValueState x t) 
+       (((fetch_thumb <|proc:=0|> bEE (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))) s) = ValueState x t)
        ==> (access_violation t)``,
       NTAC 2 DISCH_TAC
          THEN PROTECTED_OR_RW_TAC [armTheory.fetch_thumb_def, read_pc_def, readT_def, seqT_def, parT_def, arch_version_def, read__reg_def, read_arch_def, constT_def, read_cpsr_def, read__psr_def] THEN PROTECTED_OR_RW_TAC []
@@ -182,21 +182,21 @@ val fetch_instr_av_lem = store_thm(
     "fetch_instr_av_lem",
     ``(mmu_requirements s g) ==>
       (~aligned_word_readable s ((s.psrs (0,CPSR)).T) (s.registers (0,RName_PC))) ==>
-      ((fetch_instruction <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d))) 
-                                       (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d))) s) = ValueState x t) 
+      ((fetch_instruction <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))
+                                       (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d))) s) = ValueState x t)
       ==> (access_violation t)``,
     Q.ABBREV_TAC `readword = (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))`
        THEN Q.ABBREV_TAC `readhalfword = (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))`
        THEN RW_TAC (srw_ss()) [armTheory.fetch_instruction_def, seqT_def, aligned_word_readable_def]
        THENL [(Cases_on `(s.psrs (0,CPSR)).T`), ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC, ALL_TAC]
-       THEN (Cases_on `access_violation s` 
-              THENL [FULL_SIMP_TAC (srw_ss()) [armTheory.actual_instr_set_def, read_arch_def, seqT_def, readT_def] 
+       THEN (Cases_on `access_violation s`
+              THENL [FULL_SIMP_TAC (srw_ss()) [armTheory.actual_instr_set_def, read_arch_def, seqT_def, readT_def]
                        THEN METIS_TAC [],
-                    IMP_RES_TAC instr_set_and_T_flag_thm THEN FULL_SIMP_TAC (srw_ss()) [errorT_def] 
-                       THEN FIRST [Q.UNABBREV_TAC `readhalfword` 
-                                      THEN IMP_RES_TAC fetch_thumb_av_lem 
+                    IMP_RES_TAC instr_set_and_T_flag_thm THEN FULL_SIMP_TAC (srw_ss()) [errorT_def]
+                       THEN FIRST [Q.UNABBREV_TAC `readhalfword`
+                                      THEN IMP_RES_TAC fetch_thumb_av_lem
                                       THEN NO_TAC,
-                                   Q.UNABBREV_TAC `readword` 
+                                   Q.UNABBREV_TAC `readword`
                                       THEN IMP_RES_TAC fetch_arm_av_lem]]));
 
 
@@ -494,7 +494,7 @@ val mmu_arm_next_svc_thm = store_thm(
        THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [] THEN FULL_SIMP_TAC (srw_ss()) [priv_mode_constraints_v4_def, LET_DEF]
        THEN IMP_RES_TAC similarity_implies_equal_mode_thm
        THEN `(s1.psrs (0,CPSR)).T =  (s2.psrs (0,CPSR)).T` by FULL_SIMP_TAC (srw_ss()) [similar_def]
-       THEN Cases_on `ARM_MODE s1' = 19w` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [ALL_TAC, METIS_TAC []]   
+       THEN Cases_on `ARM_MODE s1' = 19w` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [ALL_TAC, METIS_TAC []]
        THEN `((s1'.psrs (0,SPSR_svc)).T) =  ((s1.psrs (0,CPSR)).T)` by (FULL_SIMP_TAC (srw_ss()) [priv_mode_constraints_v2a_def] THEN RW_TAC (srw_ss()) [])
        THEN `((s1'.psrs (0,SPSR_svc)).J) =  ((s1.psrs (0,CPSR)).J)` by (FULL_SIMP_TAC (srw_ss()) [priv_mode_constraints_v2a_def] THEN RW_TAC (srw_ss()) [])
        THEN `((s2'.psrs (0,SPSR_svc)).T) =  ((s2.psrs (0,CPSR)).T)` by (FULL_SIMP_TAC (srw_ss()) [priv_mode_constraints_v2a_def] THEN RW_TAC (srw_ss()) [])
@@ -504,7 +504,7 @@ val mmu_arm_next_svc_thm = store_thm(
        THEN Cases_on `a`
        THEN IMP_RES_TAC similarity_implies_equal_mode_thm
        THEN ASSUME_TAC (SPECL [``s1':arm_state``, ``s1:arm_state``, ``irpt:HWInterrupt``, ``g:word32``] (GEN_ALL bad_PC_lem))
-       THEN ASSUME_TAC (SPECL [``s2':arm_state``, ``s2:arm_state``, ``irpt:HWInterrupt``, ``g:word32``] (GEN_ALL bad_PC_lem))  
+       THEN ASSUME_TAC (SPECL [``s2':arm_state``, ``s2:arm_state``, ``irpt:HWInterrupt``, ``g:word32``] (GEN_ALL bad_PC_lem))
        THEN ASSUME_TAC (SPECL [``s1':arm_state``, ``s1:arm_state``, ``(s1.psrs (0,CPSR)).T``, ``g:word32``, ``(s1.registers (0,RName_PC))``] (GEN_ALL global_aligned_word_readable_lem))
        THEN ASSUME_TAC (SPECL [``s2':arm_state``, ``s2:arm_state``, ``(s2.psrs (0,CPSR)).T``, ``g:word32``, ``(s2.registers (0,RName_PC))``] (GEN_ALL global_aligned_word_readable_lem))
        THEN RES_TAC
@@ -533,14 +533,14 @@ val mmu_arm_next_svc_thm = store_thm(
 val pmc_34_lem = store_thm(
     "pmc_34_lem",
     ``(mmu_requirements s1 g) ==> (priv_mode_constraints_v4 g s0 s1) ==> (priv_mode_constraints_v3 g s0 s1)``,
-    RW_TAC (srw_ss()) [priv_mode_constraints_v3_def, priv_mode_constraints_v4_def] 
+    RW_TAC (srw_ss()) [priv_mode_constraints_v3_def, priv_mode_constraints_v4_def]
        THEN ASSUME_TAC you_and_me_thm
-       THEN IMP_RES_TAC mmu_requirements_simp 
+       THEN IMP_RES_TAC mmu_requirements_simp
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def, aligned_word_readable_def]
        THEN PAT_ASSUM ``!addr iw. X`` (fn th => ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFEw``, ``F``] th)
                                           THEN ASSUME_TAC (SPECL [``s1.registers (0,RName_LRsvc) + 0xFFFFFFFCw``, ``F``] th))
-       THEN UNDISCH_ALL_TAC 
+       THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) [negated_inequalities]
        THEN FULL_SIMP_TAC (srw_ss()) [address_border, negated_inequalities, negated_and_or, address_trans]
        THEN METIS_TAC [address_border, negated_inequalities, negated_and_or, address_trans]);
@@ -567,4 +567,3 @@ val mmu_arm_next_comb_thm = store_thm(
 
 
 val _ = export_theory();
-
