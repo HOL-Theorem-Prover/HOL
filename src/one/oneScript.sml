@@ -73,7 +73,7 @@ val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
   The following theorem shows that there is only one value of type :one
  ---------------------------------------------------------------------------*)
 
-val one = store_thm("one",
+val one = store_thm("one[simp]",
  Term`!v:one. v = one`,
  GEN_TAC THEN
  ACCEPT_TAC (CONV_RULE (DEPTH_CONV BETA_CONV)
