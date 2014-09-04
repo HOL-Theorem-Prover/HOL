@@ -5,6 +5,8 @@ open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheor
 
 
 val _ =  new_theory("priv_constraints_cpsr_pc");
+val _ = diminish_srw_ss ["one"]
+val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
 val _ = goalStack.chatting := !Globals.interactive
 

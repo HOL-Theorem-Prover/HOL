@@ -10,7 +10,10 @@ open tacticsLib ARM_prover_extLib;
 (*********************************************************************************)
 
 val _ =  new_theory("priv_constraints_bisim");
+
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
+val _ = diminish_srw_ss ["one"]
+val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
 val prove_abs_spsr_const_action =
  fn (a, thms, abody_thm, expr,mode) =>

@@ -4,6 +4,8 @@ open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheor
 
 val _ =  new_theory("priv_constraints_spsr");
 
+val _ = diminish_srw_ss ["one"]
+val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
 (****************************************************************)
 (*         CONSTRAINTS ON SPSR FLAGS IN PRIVILEGED MODE         *)

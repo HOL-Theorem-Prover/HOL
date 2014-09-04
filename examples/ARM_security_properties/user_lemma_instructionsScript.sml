@@ -11,6 +11,8 @@ open wordsTheory wordsLib;
 val _ =  new_theory("user_lemma_instructions");
 
 val _ = temp_overload_on ("return", ``constT``);
+val _ = diminish_srw_ss ["one"]
+val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
 val _ = goalStack.chatting := !Globals.interactive
 
