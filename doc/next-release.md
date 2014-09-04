@@ -125,6 +125,12 @@ Incompatibilities:
 
 - The `add_binder` and `temp_add_binder` entry-points in `Parse` have been removed.  They are subsumed by `set_fixity <name> Binder` and `temp_set_fixity <name> Binder` respectively.  In addition, `add_binder` was broken, creating an unloadable theory on export.
 
+- There is a new automatic rewrite from `oneTheory`:
+
+           ⊢ ∀v:one. v = ()
+
+    stating that every value in the type `one` (analogue of SML’s `unit` type) is equal to the designated value `()`.
+
 * * * * *
 
 <div class="footer">
