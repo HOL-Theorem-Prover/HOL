@@ -45,6 +45,7 @@ New features:
 
     are now provable.
 
+* The Vim mode for HOL now supports multiple simultaneous sessions. See its README for details.
 
 Bugs fixed:
 -----------
