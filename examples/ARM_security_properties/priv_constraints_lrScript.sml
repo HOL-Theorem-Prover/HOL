@@ -12,6 +12,7 @@ val _ =  new_theory("priv_constraints_lr");
 (****************************************************************)
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
+val _ = goalStack.chatting := !Globals.interactive
 
 val prove_abs_LR_const_action =
  fn (a, thms, abody_thm, expr) =>
@@ -22,8 +23,8 @@ val prove_abs_LR_const_action =
 	val unbeta_thm= (PairRules.UNPBETA_CONV a_abs a_body)
 	val unbeta_a = mk_comb (a, a_abs)
 	val snd = get_type_inst (type_of(a_body) , false)
-	val a_body_type = get_type_inst (snd, true);			  
-	val proved_unbeta_lemma = store_thm ("proved_unbeta_lemma",
+	val a_body_type = get_type_inst (snd, true);
+	val proved_unbeta_lemma = prove(
 					     ``(priv_LR_constraints ^a_body ^expr mode)=
 				  (priv_LR_constraints ^unbeta_a ^expr mode)``,
 					     (ASSUME_TAC (SPECL [a_body,``^unbeta_a``, expr,``mode:bool[5]``]
@@ -34,8 +35,7 @@ val prove_abs_LR_const_action =
 						 THEN RES_TAC);
 
 	val proved_preserve_unbeta_a =
-	    store_thm ("proved_preserve_unbeta_a",
-		       `` (priv_LR_constraints ^unbeta_a ^expr mode )``,
+	    prove(`` (priv_LR_constraints ^unbeta_a ^expr mode )``,
 		       (ASSUME_TAC (proved_unbeta_lemma))
 			   THEN (ASSUME_TAC abody_thm)
 			   THEN (FULL_SIMP_TAC (srw_ss()) []));

@@ -13,7 +13,7 @@ open tacticsLib proofManagerLib arm_seq_monadTheory List;
 
 exception not_matched_pattern;
 
-fun proof_progress s = TextIO.print s; 
+fun proof_progress s = if !Globals.interactive then TextIO.print s else ();
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val words_ss = simpLib.mk_simpset [wordsLib.WORD_ss];
 val simplist = ref [];
@@ -435,9 +435,8 @@ fun prove_const a pred expr cm postfix thms =
 		val snd = get_type_inst (type_of(a_body) , false)
 		val a_body_type = get_type_inst (snd, true)
 		val expr_elm = List.nth(expr,0)
-		  
-		val proved_unbeta_lemma = store_thm ("proved_unbeta_lemma",
-						     ``(priv_cpsr_flags_constraints ^a_body ^expr_elm)=
+
+		val proved_unbeta_lemma = prove(``(priv_cpsr_flags_constraints ^a_body ^expr_elm)=
 					  (priv_cpsr_flags_constraints ^unbeta_a ^expr_elm)``,
 						     (ASSUME_TAC (SPECL [a_body,``^unbeta_a``, expr_elm]
 									(INST_TYPE [beta |-> a_body_type,
@@ -479,7 +478,9 @@ fun prove_const a pred expr cm postfix thms =
 	val prove_simple_unproved_action =
 	 fn (a, opr,cm ) =>
 	    let val a_name = opr
-		val _ = TextIO.print ("Do you have a theorem to prove " ^ (term_to_string (a)) ^ "  theorem? \n\n")
+		val _ = if !Globals.interactive then
+                          TextIO.print ("Do you have a theorem to prove " ^ (term_to_string (a)) ^ "  theorem? \n\n")
+                        else ()
 	    (* val resp = valOf (TextIO.inputLine TextIO.stdIn)  *)
 	    in
 		if (same_const  opr ``readT``)
@@ -569,10 +570,9 @@ fun prove_const a pred expr cm postfix thms =
     end;
 fun get_first_cpc_lemmma abody expr_elm unbeta_a unbeta_thm thms =
     let val snd = get_type_inst (type_of(abody) , false)
-	val abody_type = get_type_inst (snd, true)			  
-	val  proved_unbeta_lemma = 
-	     store_thm ("proved_unbeta_lemma",
-			``(priv_cpsr_flags_constraints ^abody ^expr_elm)=
+	val abody_type = get_type_inst (snd, true)
+	val  proved_unbeta_lemma =
+	     prove (``(priv_cpsr_flags_constraints ^abody ^expr_elm)=
 	     (priv_cpsr_flags_constraints ^unbeta_a ^expr_elm)``,
 		   (ASSUME_TAC (SPECL [abody,``^unbeta_a``, expr_elm]
 				      (INST_TYPE [beta |-> abody_type,
@@ -597,10 +597,9 @@ fun get_first_spc_lemma abody expr unbeta_a unbeta_thm thms =
     let val snd = get_type_inst (type_of(abody) , false)
 	val mode = List.nth(expr,0)
 	val bvt = List.nth(expr,1)
-	val abody_type = get_type_inst (snd, true)			  
-	val  proved_unbeta_lemma = 
-	     store_thm ("proved_unbeta_lemma",
-			``(set_pc_to ^abody ^mode ^bvt)=
+	val abody_type = get_type_inst (snd, true)
+	val  proved_unbeta_lemma =
+	     prove (``(set_pc_to ^abody ^mode ^bvt)=
 	     (set_pc_to ^unbeta_a ^mode ^bvt)``,
 		   (ASSUME_TAC (SPECL [abody,``^unbeta_a``, mode]
 				      (INST_TYPE [beta |-> abody_type,

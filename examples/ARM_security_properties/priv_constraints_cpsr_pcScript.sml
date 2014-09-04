@@ -6,6 +6,7 @@ open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheor
 
 val _ =  new_theory("priv_constraints_cpsr_pc");
 
+val _ = goalStack.chatting := !Globals.interactive
 
 (**** the problem: vector table is based on mode not exception type ******)
 
@@ -439,9 +440,9 @@ fun prove_take_exception_cfc_thm
       val unbeta_a = mk_comb (r, rabs)
       val snd = get_type_inst (type_of(rbody) , false)
       val rbody_type = get_type_inst (snd, true);
-	  
-      val thm4 = store_thm ("proved_unbeta_lemma",
-			    ``(priv_cpsr_flags_constraints 
+
+      val thm4 = prove(
+			    ``(priv_cpsr_flags_constraints
 			       ^rbody (sctlr:CP15sctlr))=
 		 (priv_cpsr_flags_constraints ^unbeta_a
 						   (sctlr:CP15sctlr))``,

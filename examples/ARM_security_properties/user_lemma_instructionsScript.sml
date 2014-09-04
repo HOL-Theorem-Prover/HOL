@@ -12,6 +12,7 @@ val _ =  new_theory("user_lemma_instructions");
 
 val _ = temp_overload_on ("return", ``constT``);
 
+val _ = goalStack.chatting := !Globals.interactive
 
 (* import simplist *)
 val _ = simp_thms_list := (CONJUNCTS simplist_export_thm);
@@ -966,8 +967,6 @@ val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
               `((s1'.psrs (0,CPSR)).IT = 0w) /\ ((b.psrs (0,CPSR)).IT = 0w)` by FULL_SIMP_TAC (srw_ss())  [priv_mode_constraints_v2a_def, priv_mode_constraints_v1_def, LET_DEF]
                 THEN IMP_RES_TAC IT_advance_constlem
                 THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []]);
-
-
 
 
 

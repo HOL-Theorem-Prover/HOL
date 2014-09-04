@@ -13,7 +13,7 @@ open tacticsLib  inference_rulesTheory;
 
 exception not_matched_pattern;
 
-fun proof_progress s = TextIO.print s; 
+fun proof_progress s = if !Globals.interactive then TextIO.print s else ()
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val words_ss = simpLib.mk_simpset [wordsLib.WORD_ss];
 val global_mode = ref ``16w:bool[5]``;
@@ -781,10 +781,9 @@ fun prove a src_inv trg_inv uargs pthms  =
 		val unbeta_a = mk_comb (a, a_abs)
 		val snd = get_type_inst (type_of(a_body) , false)
 		val a_body_type = get_type_inst (snd, true)
-				  
-		val proved_unbeta_lemma = 
-		    store_thm ("proved_unbeta_lemma",
-			       ``(preserve_relation_mmu ^a_body ^src_inv ^trg_inv ^uf_fun ^uy_fun)=
+
+		val proved_unbeta_lemma =
+		    Tactical.prove (``(preserve_relation_mmu ^a_body ^src_inv ^trg_inv ^uf_fun ^uy_fun)=
 		    (preserve_relation_mmu ^unbeta_a ^src_inv ^trg_inv ^uf_fun ^uy_fun)``,
 			       (ASSUME_TAC (SPECL [a_body,``^unbeta_a``,src_inv,trg_inv,uf_fun,uy_fun]
 						  (INST_TYPE[alpha |-> a_body_type] first_abs_lemma)))
@@ -792,8 +791,7 @@ fun prove a src_inv trg_inv uargs pthms  =
 				   THEN (RES_TAC))
 
 		val proved_preserve_unbeta_a =
-		    store_thm ("proved_preserve_unbeta_a",
-			       `` (preserve_relation_mmu ^unbeta_a ^src_inv ^trg_inv ^uf_fun ^uy_fun)``,
+		    Tactical.prove (`` (preserve_relation_mmu ^unbeta_a ^src_inv ^trg_inv ^uf_fun ^uy_fun)``,
 			       (ASSUME_TAC (proved_unbeta_lemma))
 				   THEN (ASSUME_TAC proved_a)
 				   THEN (FULL_SIMP_TAC (srw_ss()) []))
@@ -822,7 +820,9 @@ fun prove a src_inv trg_inv uargs pthms  =
 	val prove_simple_unproved_action =
 	 fn (a, opr ,uargs, pthms) =>
 	    let val a_name = opr
-		val _ = TextIO.print ("Do you have a theorem to prove " ^ (term_to_string (a)) ^ "  theorem? \n\n")
+		val _ = if !Globals.interactive then
+                          TextIO.print ("Do you have a theorem to prove " ^ (term_to_string (a)) ^ "  theorem? \n\n")
+                        else ()
 		val simp_thms = [List.nth(pthms,2),
 				 List.nth(pthms,3)]
 	    in

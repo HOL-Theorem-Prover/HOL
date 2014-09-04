@@ -11,6 +11,7 @@ open wordsTheory wordsLib;
 
 val _ =  new_theory("user_lemma_primitive_operations");
 
+val _ = goalStack.chatting := !Globals.interactive
 val _ = temp_overload_on ("return", ``constT``);
 
 
