@@ -3,7 +3,7 @@
 \TYPE {PairCases_on : term quotation -> tactic}
 
 \SYNOPSIS
-Recursively split variables of product type
+Recursively split variables of product type.
 
 \KEYWORDS
 tactic

@@ -3,7 +3,7 @@
 \TYPE {exists : ('a -> bool) -> 'a list -> bool}
 
 \SYNOPSIS
-Check if a predicate holds somewhere in a list
+Check if a predicate holds somewhere in a list.
 
 \KEYWORDS
 list, predicate, search

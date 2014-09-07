@@ -3,7 +3,7 @@
 \TYPE {try : ('a -> 'b) -> 'a -> 'b}
 
 \SYNOPSIS
-Apply a function and print any exceptions
+Apply a function and print any exceptions.
 
 \KEYWORDS
 exception, error, application

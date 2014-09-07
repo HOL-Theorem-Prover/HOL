@@ -3,7 +3,7 @@
 \TYPE {monitoring : (term -> bool) option ref}
 
 \SYNOPSIS
-Monitoring support for evaluation
+Monitoring support for evaluation.
 
 \KEYWORDS
 evaluation, monitoring.

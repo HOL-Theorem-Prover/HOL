@@ -3,7 +3,7 @@
 \TYPE {format_ERR : error_record -> string}
 
 \SYNOPSIS
-Maps argument record of {HOL_ERR} to a string
+Maps argument record of {HOL_ERR} to a string.
 
 \KEYWORDS
 error, exception
