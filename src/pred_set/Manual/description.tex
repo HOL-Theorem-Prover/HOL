@@ -1,8 +1,8 @@
 \chapter{The pred{\und}sets Library}
 
 The \ml{pred\_sets} library contains a theory of predicates regarded as sets.
-A predicate {\small\verb!s:*->bool!} is considered as a collection or `set' of
-elements of type \ml{*}, and the standard operations on sets such as union,
+A predicate {\small\verb!s:'a->bool!} is considered as a collection or `set' of
+elements of type \ml{'a}, and the standard operations on sets such as union,
 intersection, and set difference are appropriately defined for this
 representation.  The library was originally written in 1989 by Ton Kalker.  It
 was completely rewritten by the present author for \HOL\ version 2.01 in early
@@ -13,7 +13,7 @@ operations on sets.  The present document is itself also adapted from the
 manual for the \ml{sets} library~\cite{melham}.
 
 There is only one theory in the \ml{pred\_sets} library, namely the theory
-`\ml{pred\_sets}'. This document explains the logical basis of this theory and
+`\ml{pred\_set}'. This document explains the logical basis of this theory and
 the theorem-proving support provided by library.  The latter includes
 conversions for expanding set specifications and for evaluating various
 operations on finite sets described by enumeration of their elements.  The
@@ -58,7 +58,7 @@ derived by proof:
 \begin{hol}
 \index{EXTENSION@{\ptt EXTENSION}}
 \begin{verbatim}
-   EXTENSION   |- !s t. (s = t) = (!x. x IN s = x IN t)
+   EXTENSION   |- !s t. (s = t) <=> (!x. x IN s = x IN t)
 \end{verbatim}\end{hol}
 
 \noindent \ml{EXTENSION} states that two sets are equal exactly when they have
@@ -87,13 +87,14 @@ the constant:
 \begin{hol}
 \index{GSPEC@{\ptt GSPEC}}
 \begin{verbatim}
-   GSPEC : (** -> (* # bool)) -> * -> bool
-\end{verbatim}\end{hol}
+   GSPEC : ('b -> ('a # bool)) -> 'a -> bool
+\end{verbatim}
+\end{hol}
 
-\noindent The function \ml{GSPEC} takes a function \ml{f :\ ** -> (* \# bool)}
-and constructs the set (i.e. predicate of type {\small\verb!*->bool!}) of all
+\noindent The function \ml{GSPEC} takes a function \ml{f :\ 'b -> ('a \# bool)}
+and constructs the set (i.e. predicate of type {\small\verb!'a->bool!}) of all
 values \ml{FST(f x)} for which \ml{SND(f x)} holds, for some value \ml{x} of
-type \ml{**}. The formal definition of the constant \ml{GSPEC} is given by the
+type \ml{'b}. The formal definition of the constant \ml{GSPEC} is given by the
 following constant specification:
 
 \begin{hol}
@@ -101,7 +102,8 @@ following constant specification:
 \index{GSPECIFICATION@{\ptt GSPECIFICATION}}
 \begin{verbatim}
    GSPECIFICATION   |- !f v. v IN (GSPEC f) = (?x. v,T = f x)
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent This theorem is analogous to the axiom of specification\index{axiom
 of specification!for generalized set specifications} for \ml{IN}.
@@ -116,7 +118,8 @@ above, let \ml{f} in this definition be the function
 \begin{hol}
 \begin{verbatim}
    |- !v. v IN (GSPEC \x.E[x],P[x]) = ?x. (v = E[x]) /\ P[x]
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent That is, a value \ml{v} is in the set constructed by \ml{GSPEC}
 exactly when for some \ml{x} for which \ml{P[x]}, the value \ml{v} is equal to
@@ -156,7 +159,8 @@ already been loaded. (See section~\ref{using} for a description of how
 \ml{pred\_sets} is loaded.)
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #let gtr = new_definition (`gtr`, "gtr N = {n | n > N}");;
 gtr = |- !N. gtr N = {n | n > N}
 
@@ -175,7 +179,8 @@ on only one side of the bar `{\small\verb!|!}'.  The set abstraction
 {\small\verb!{n | n > N}!} therefore parses to the generalized set
 specification
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    GSPEC(\n. (n,n > N))
 \end{verbatim}\end{hol}
 
@@ -183,7 +188,8 @@ specification
 interpretation `the set of all \ml{n} greater than \ml{N}'.  By contrast, the
 term
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    GSPEC(\(n,N). (n,n > N))
 \end{verbatim}\end{hol}
 
@@ -194,7 +200,8 @@ specification that binds the variable \ml{n} only. Note that only
 default\pagebreak[3] interpretations are pretty-printed using the {\samepage
 set abstraction notation:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #set_flag(`print_set`,true);;
 false : bool
 
@@ -207,7 +214,8 @@ false : bool
 
 \noindent That is, a term of the form:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    GSPEC (\bk(\m{x\sb{1}},\(\dots\),\m{x\sb{n}}).(\(E\),\(P\)))
 \end{alltt}\end{hol}
 
@@ -219,7 +227,8 @@ In general, the expression $E$ in a set abstraction
 {\small\verb!"{!$E$\verb! | !$P$\verb!}"!} need not be just a variable.
 Consider, for example, the following \HOL\ session:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #let S = "{(n,m) | n < m}";;
 S = "{(n,m) | n < m}" : term
 
@@ -245,13 +254,15 @@ conversion implements the axiom of specification for set abstractions.%
 \index{axiom of specification!for set abstractions}
 When $v$ is a variable, evaluating:
 
-\begin{hol}\def\m#1{\mbox{\small$#1$}}\begin{alltt}
+\begin{hol}\def\m#1{\mbox{\small$#1$}}
+\begin{alltt}
    SET_SPEC_CONV "\m{t} IN \lb\m{v} \vb \m{P}\rb";;
 \end{alltt}\end{hol}
 
 \noindent returns the theorem:
 
-\begin{hol}\def\m#1{\mbox{\small$#1$}}\begin{alltt}
+\begin{hol}\def\m#1{\mbox{\small$#1$}}
+\begin{alltt}
    {\vb}- \m{t} IN \lb\m{v} \vb \m{P}\rb = \m{P[t/v]}
 \end{alltt}\end{hol}
 
@@ -261,8 +272,9 @@ be a variable. The following session illustrates this use of
 \ml{SET\_SPEC\_CONV} for membership {\samepage in a particular set abstraction:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#SET_SPEC_CONV "12 IN {n | n > N}";;
+\begin{session}
+\begin{verbatim}
+#SET_SPEC_CONV ``12 IN {n | n > N}``;
 |- 12 IN {n | n > N} = 12 > N
 \end{verbatim}\end{session}}
 
@@ -273,7 +285,8 @@ of the form {\small\verb!"!$t$\verb! IN {!$E$\verb! | !$P$\verb!}"!} where
 {\small $E$} is not a variable.  Applying the conversion to a term of this kind
 yields the theorem:
 
-\begin{hol}\def\m#1{\mbox{\small$#1$}}\begin{alltt}
+\begin{hol}\def\m#1{\mbox{\small$#1$}}
+\begin{alltt}
    {\vb}- \m{t} IN \lb\m{E} \vb \m{P}\rb = ?\m{x\sb{1}\dots x\sb{n}}. (\m{t} = \m{E}) /\bk \m{P}
 \end{alltt}\end{hol}
 
@@ -287,7 +300,8 @@ The following session illustrates the form of the theorem proved by
 \ml{SET\_SPEC\_CONV} for the second type of input term discussed above:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #let th1 = SET_SPEC_CONV "p IN {(n,m) | n < m}";;
 th1 = |- p IN {(n,m) | n < m} = (?n m. (p = n,m) /\ n < m)
 
@@ -303,7 +317,8 @@ further simplified.  The value of the expression `\ml{(n,m)}' is an injective
 function of the values of \ml{n} and \ml{m}, and so by eliminating the
 existential quantifiers these two theorems could be simplified to:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    th1    |- p IN {(n,m) | n < m} = (FST p < SND p)
 
    th2    |- (a,b) IN {(n,m) | n < m} = (a < b)
@@ -320,9 +335,9 @@ case.\index{SET\_SPEC\_CONV@{\ptt SET\_SPEC\_CONV}|)}%
 \section{The empty and universal sets}
 
 The following two constants are defined in the \ml{pred\_sets} library:
-{\small\verb!EMPTY:*->bool!}, which denotes the empty set; and
-{\small\verb!UNIV:*->bool!}, which denotes the universe, or set of all values
-of type \ml{*}.{\samepage  These constants are defined formally as follows:
+{\small\verb!EMPTY:'a->bool!}, which denotes the empty set; and
+{\small\verb!UNIV:'a->bool!}, which denotes the universe, or set of all values
+of type \ml{'a}.{\samepage  These constants are defined formally as follows:
 
 \begin{hol}
 \index{definition!of EMPTY@of {\ptt EMPTY}}
@@ -541,7 +556,8 @@ extending the \HOL\ parser so that a quotation of the form
 {\small\verb!"{!\tt$t_1$,$t_2$,\dots,$t_n$\verb!}"!} parses to the following
 set built up from \ml{EMPTY} by repeatedly using the function \ml{INSERT}:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    INSERT \m{t\sb{1}} (INSERT \m{t\sb{2}} \dots (INSERT \m{t\sb{n}} EMPTY)\dots)
 \end{alltt}\end{hol}
 
@@ -556,7 +572,8 @@ comma in a context {\small\verb!"{!\dots\verb!}"!}, as the following session
 illustrates:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #set_flag(`print_set`,false);;
 true : bool
 
@@ -593,7 +610,8 @@ conversion for finite sets is a decision procedure for membership called
 order to determine whether a given value is an element of a particular finite
 set.  The function
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    IN_CONV : conv -> conv
 \end{verbatim}\end{hol}
 
@@ -607,13 +625,15 @@ If \ml{conv} is an equality conversion of the kind described above, then the
 function returned by \ml{IN\_CONV conv} is a conversion that decides membership
 in finite sets of values of the base type \ml{ty}.  In particular, a call:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    IN\_CONV conv "\m{t} IN \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb"
 \end{alltt}\end{hol}
 
 \noindent returns the theorem
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- \m{t} IN \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb = T
 \end{alltt}\end{hol}
 
@@ -623,7 +643,8 @@ where $1 \leq i \leq n$.  If, on the other hand \ml{conv} proves the theorem
 {\tt |- ($t$ = $t_i$) = F} for all $i$ where $1 \leq i \leq n$, then the result
 is the theorem
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- \m{t} IN \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb = F
 \end{alltt}\end{hol}
 
@@ -632,7 +653,8 @@ is the theorem
 The following session shows how \ml{IN\_CONV} can be used in practice.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #IN_CONV num_EQ_CONV "1 IN {2,1,3}";;
 |- 1 IN {2,1,3} = T
 
@@ -646,7 +668,8 @@ assertions\pagebreak[3] being proved.
 
 An example in which \ml{IN\_CONV} fails is the following:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #IN_CONV num_EQ_CONV "x IN {1,2,3}";;
 evaluation failed     IN_CONV
 
@@ -661,7 +684,8 @@ conversion is not required to prove anything if the value being tested for
 membership happens to be syntactically identical to an element of the given
 set:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #IN_CONV NO_CONV "x IN {1,x,3}";;
 |- x IN {1,x,3} = T
 \end{verbatim}\end{session}
@@ -677,7 +701,8 @@ The\index{UNION\_CONV@{\ptt UNION\_CONV}|(}%
 \index{conversions!UNION\_CONV@{\ptt UNION\_CONV}|(}
 \ml{pred\_sets} library contains a conversion
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    UNION_CONV : conv -> conv
 \end{verbatim}\end{hol}
 
@@ -710,7 +735,8 @@ insertion of values into the set {\small$s$}.\pagebreak[3] When {\small$s$} is
 a finite set of the form {\small\verb!"{!\tt$u_1$,\dots,$u_m$\verb!}"!}, the
 {\samepage resulting theorem will have the form shown below.
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb UNION \lb\m{u\sb{1}},\dots,\m{u\sb{m}}\rb = \lb\m{t\sb{1}},\m{\dots},\m{t\sb{n}},\m{u\sb{1}},\m{\dots},\m{u\sb{m}}\rb
 \end{alltt}\end{hol}
 
@@ -725,7 +751,8 @@ conversion \ml{conv} maps the term {\small\verb!"!$t_i$\verb! = !$u_j$\verb!"!}
 to the theorem {\small\verb!|- (!$t_i$\verb! = !$u_j$\verb!) = T!}, then the
 resulting theorem will be
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- \lb\m{t\sb{1}},\dots\m{t\sb{i}},\dots,\m{t\sb{n}}\rb UNION \lb\m{u\sb{1}},\dots,\m{u\sb{j}},\dots,\m{u\sb{m}}\rb = \lb\m{t\sb{1}},\m{\dots},\m{t\sb{n}},\m{u\sb{1}},\dots,\m{u\sb{j}},\dots,\m{u\sb{m}}\rb
 \end{alltt}\end{hol}
 
@@ -736,7 +763,8 @@ sequence of elements in the resulting finite set.  The function
 Some examples of \ml{UNION\_CONV} in use are shown in the following \HOL\
 session:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #UNION_CONV NO_CONV "{1,2,3} UNION {4,5,6}";;
 |- {1,2,3} UNION {4,5,6} = {1,2,3,4,5,6}
 
@@ -750,7 +778,8 @@ redundant by virtue of being alpha-equivalent to elements of the second set
 are eliminated from the resulting set.  An example in which the equality
 conversion is actually used is:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #UNION_CONV num_EQ_CONV "{1,2,3} UNION {3,2,SUC 0}";;
 |- {1,2,3} UNION {3,2,SUC 0} = {3,2,SUC 0}
 \end{verbatim}\end{session}
@@ -768,7 +797,8 @@ The\index{INSERT\_CONV@{\ptt INSERT\_CONV}|(}%
 conversion \ml{INSERT\_CONV} performs the following reduction
 on finite sets:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    {\normalsize\rm reduce}\quad"\m{t} INSERT \lb\m{t\sb{1}},\dots,\m{t\sb{i}},\dots,\m{t\sb{n}}\rb"\quad\m{\normalsize\rm to}\quad"\lb\m{t\sb{1}},\dots,\m{t\sb{i}},\dots,\m{t\sb{n}}\rb"
 \end{alltt}\end{hol}
 
@@ -787,20 +817,23 @@ the terms {\small$t$} and  {\small$t_i$} are alpha-equivalent, of if
 the conversion \ml{conv} maps {\small\verb!"!$t$\verb! = !$t_i$\verb!"!} to
 the theorem {\small\verb!|- (!$t$\verb! = !$t_i$\verb!) = T!}, then the call:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    INSERT\_CONV conv "\m{t} INSERT \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb";;
 \end{alltt}\end{hol}
 
 \noindent will return the theorem:
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    |- \m{t} INSERT \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb = \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb
 \end{alltt}\end{hol}
 
 Here is an example of \ml{INSERT\_CONV} in use:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #INSERT_CONV num_EQ_CONV "(SUC 2) INSERT {0,1,2,3}";;
 |- {SUC 2,0,1,2,3} = {0,1,2,3}
 \end{verbatim}\end{session}
@@ -809,7 +842,8 @@ When applied repeatedly, \ml{INSERT\_CONV} can be used to reduce finite sets by
 eliminating as many redundant occurrences of elements as possible.  An easy to
 program, but slow-running, way of doing this is to use \ml{DEPTH\_CONV}:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #DEPTH_CONV (INSERT_CONV num_EQ_CONV) "{1,3,x,SUC 1,SUC(SUC 1),2,1,3,x}";;
 |- {1,3,x,SUC 1,SUC(SUC 1),2,1,3,x} = {2,1,3,x}
 \end{verbatim}\end{session}
@@ -857,7 +891,8 @@ is not simply alpha-equivalent to the deleted value.
 The following session shows \ml{DELETE\_CONV} in use:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #DELETE_CONV num_EQ_CONV "{0,1,2,3} DELETE (SUC 1)";;
 |- {0,1,2,3} DELETE (SUC 1) = {0,1,3}
 \end{verbatim}\end{session}%
@@ -942,8 +977,8 @@ and \ml{REST}; for a full list of these theorems, see chapter~\ref{theorems}.
 
 \section{Image of a function on a set}
 
-The {\it image\/} of a function {\small\verb!f:*->**!} on a set
-{\small\verb!s:*->bool!} is the set of values {\small\verb!f(x)!} for all
+The {\it image\/} of a function {\small\verb!f:'a->'b!} on a set
+{\small\verb!s:'a->bool!} is the set of values {\small\verb!f(x)!} for all
 \ml{x} in \ml{s}.  In the \ml{pred\_sets} library, the image of a function on a
 set is defined in terms of the obvious set abstraction:
 
@@ -978,7 +1013,8 @@ The\index{IMAGE\_CONV@{\ptt IMAGE\_CONV}|(}%
 a conversion for computing the image of a function {\small\verb!f!} on a finite
 set {\small\verb!{!\tt$t_1$,\dots,$t_n$\verb!}!}.  The function
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    IMAGE_CONV : conv -> conv -> conv
 \end{verbatim}\end{hol}
 
@@ -995,11 +1031,12 @@ We first define a conversion that evaluates the
 result of applying the function {\small\verb!(\x.x+2)!} to a term {\small$t$}.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#let AP_CONV = BETA_CONV THENC (TRY_CONV ADD_CONV);;
+\begin{session}
+\begin{verbatim}
+- val AP_CONV = BETA_CONV THENC (TRY_CONV ADD_CONV);;
 AP_CONV = - : conv
 
-#AP_CONV "(\n.n+2) 7";;
+- AP_CONV ``(\n.n+2) 7``;
 |- (\n. n + 2)7 = 9
 \end{verbatim}\end{session}
 
@@ -1007,12 +1044,13 @@ AP_CONV = - : conv
 conversion for computing the image of {\small\verb!(\x.x+2)!} on a finite set
 of numerical values.
 
-\begin{session}\begin{verbatim}
-#IMAGE_CONV AP_CONV NO_CONV "IMAGE (\x.x+2) {1,2,3,4}";;
-|- IMAGE(\x. x + 2){1,2,3,4} = {3,4,5,6}
+\begin{session}
+\begin{verbatim}
+- IMAGE_CONV AP_CONV NO_CONV ``IMAGE (\x.x+2) {1;2;3;4}``;
+val it = |- IMAGE(\x. x + 2){1;2;3;4} = {3;4;5;6} : thm
 
-#IMAGE_CONV AP_CONV NO_CONV "IMAGE (\x.x+2) {n,1,n}";;
-|- IMAGE(\x. x + 2){n,1,n} = {3,n + 2}
+- IMAGE_CONV AP_CONV NO_CONV ``IMAGE (\x.x+2) {n;1;n}``;
+val it = |- IMAGE(\x. x + 2){n;1;n} = {3;n + 2} : thm
 \end{verbatim}\end{session}
 
 \noindent In this case, the second parameter supplied to \ml{IMAGE\_CONV} is
@@ -1024,7 +1062,8 @@ second example above).
 The following session illustrates the use of the second parameter to
 \ml{IMAGE\_CONV}.
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #IMAGE_CONV BETA_CONV NO_CONV "IMAGE (\x. SUC x) {1,SUC 0,2,0}";;
 |- IMAGE(\x. SUC x){1,SUC 0,2,0} = {SUC 1,SUC(SUC 0),SUC 2,SUC 0}
 
@@ -1044,9 +1083,9 @@ conversion in chapter~\ref{entries}.\index{IMAGE\_CONV@{\ptt IMAGE\_CONV}|)}%
 \section{Mappings between sets}
 
 The \ml{pred\_sets} library contains a few basic definitions and theorems
-having to do with mappings between sets.  A function \ml{f:*->**} is an {\it
-injective\/} (one-to-one) mapping from a set {\small\verb!s:*->bool!} to a set
-{\small\verb!t:**->bool!} if it takes distinct elements of the set \ml{s} to
+having to do with mappings between sets.  A function \ml{f:'a->'b} is an {\it
+injective\/} (one-to-one) mapping from a set {\small\verb!s:'a->bool!} to a set
+{\small\verb!t:'b->bool!} if it takes distinct elements of the set \ml{s} to
 distinct element of the set \ml{t}:
 
 \begin{hol}
@@ -1060,7 +1099,7 @@ distinct element of the set \ml{t}:
        (!x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y))
 \end{verbatim}\end{hol}
 
-\noindent Likewise, a function \ml{f:*->**} is a {\it surjective\/} (onto)
+\noindent Likewise, a function \ml{f:'a->'b} is a {\it surjective\/} (onto)
 mapping from \ml{s} to \ml{t} if for every element \ml{x} of \ml{t} there is
 some element \ml{y} of \ml{s} for which {\small\verb!f y = x!}:
 
@@ -1075,7 +1114,7 @@ some element \ml{y} of \ml{s} for which {\small\verb!f y = x!}:
        (!x. x IN t ==> (?y. y IN s /\ (f y = x)))
 \end{verbatim}\end{hol}
 
-\noindent Finally, a function \ml{f:*->**} is a {\it bijection\/} from \ml{s}
+\noindent Finally, a function \ml{f:'a->'b} is a {\it bijection\/} from \ml{s}
 to \ml{t} if it is both injective and surjective:
 
 \begin{hol}
@@ -1182,7 +1221,8 @@ The\index{FINITE\_CONV@{\ptt FINITE\_CONV}|(}
 conversion \ml{FINITE\_CONV} which automatically proves that sets of the form
 {\small\verb!"{!\tt$t_1$,\dots,$t_n$\verb!}"!} are finite.  Evaluating
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
    FINITE\_CONV "FINITE \lb\m{t\sb{1}},\dots,\m{t\sb{n}}\rb";;
 \end{alltt}\end{hol}
 
@@ -1208,8 +1248,9 @@ for proving that the intersection of an arbitrary set \ml{t} with a finite set
 \ml{s} is finite.  We first set up an appropriate goal:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#g "!s:*->bool. FINITE s ==> !t. FINITE(s INTER t)";;
+\begin{session}
+\begin{verbatim}
+#g "!s:'a->bool. FINITE s ==> !t. FINITE(s INTER t)";;
 "!s. FINITE s ==> (!t. FINITE(s INTER t))"
 
 () : void
@@ -1217,7 +1258,8 @@ for proving that the intersection of an arbitrary set \ml{t} with a finite set
 
 \noindent Expanding with \ml{SET\_INDUCT\_TAC} yields:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 #expand SET_INDUCT_TAC;;
 OK..
 2 subgoals
@@ -1275,9 +1317,9 @@ either implicitly as in the theorem:
 \index{FINITE\_ISO\_NUM@{\ptt FINITE\_ISO\_NUM}}
 \begin{verbatim}
    FINITE_ISO_NUM
-     |- !s:*->bool.
+     |- !s:'a->bool.
          FINITE s ==>
-         (?f:num->*.
+         (?f:num->'a.
            (!n m.
              n < (CARD s) /\ m < (CARD s) ==> (f n = f m) ==> (n = m)) /\
            (s = {f n | n < (CARD s)}))
@@ -1321,7 +1363,8 @@ wishes to create a theory \ml{foo} whose parents include the theory
 \ml{pred\_sets} in the library. This may be done as follows:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 #new_theory `foo`;;
 () : void
 
@@ -1337,7 +1380,8 @@ could have been achieved (in a fresh session) by first loading the library and
 then creating \ml{foo}:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 #load_library `pred_sets`;;
   \(\vdots\)
 Library pred_sets loaded.
@@ -1357,7 +1401,8 @@ theory \ml{foo}.  This must be done by {\it first\/} loading the
 \ml{pred\_sets} library and {\it then\/} loading the theory \ml{foo}.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{alltt}
+\begin{session}
+\begin{alltt}
 #load_library `pred_sets`;;
   \(\vdots\)
 Library pred_sets loaded.
@@ -1404,4 +1449,3 @@ Note that the function \ml{load\_pred\_sets} becomes available upon loading the
 of loading the library can neither be made into a new parent (i.e.\ the system
 is not in draft mode) nor be made the current
 theory.\index{load\_pred\_sets@{\ptt load\_pred\_sets}|)}
-
