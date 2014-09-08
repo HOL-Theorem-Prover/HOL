@@ -3,7 +3,7 @@
 \TYPE {SUFF_TAC : term -> tactic}
 
 \SYNOPSIS
-Introduces an implicational subgoal
+Introduces an implicational subgoal.
 
 \KEYWORDS
 tactic

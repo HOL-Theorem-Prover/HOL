@@ -89,8 +89,10 @@ help/theorygraph/theories.jpg
 help/theorygraph/theories.pdf
 
 src/bool/SharingTables.*
-src/emit/ML/*
-src/emit/Caml/*
+src/emit/ML/*.sml
+src/emit/ML/*.sig
+src/emit/Caml/*.ml
+src/emit/Caml/*.mli
 src/quotient/Manual/quotient.pdf
 src/quotient/src/*.html
 src/quotient/src/*.lst
