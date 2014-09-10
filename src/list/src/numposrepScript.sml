@@ -201,7 +201,7 @@ val LOG_l2n = store_thm("LOG_l2n",
   Cases_on`l2n b l = 0` THEN simp[] THEN
   `0 < b` by simp[] THEN
   fs[l2n_eq_0] THEN
-  `∃z. MEM z l ∧ 0 < z` by (                                                                                                                                                                                 [3/60]
+  `∃z. MEM z l ∧ 0 < z` by (
     Q.EXISTS_TAC`LAST l` THEN simp[] THEN
     Cases_on`l` THEN simp[rich_listTheory.MEM_LAST] THEN
     fs[] ) THEN
