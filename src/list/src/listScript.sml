@@ -3335,6 +3335,65 @@ val lupdate_append2 = Q.store_thm ("lupdate_append2",
  Induct_on `l1` >>
  rw [LUPDATE_def])
 
+val LAST_REVERSE = store_thm("LAST_REVERSE",
+  ``∀ls. ls ≠ [] ⇒ (LAST (REVERSE ls) = HD ls)``,
+  Induct >> simp[])
+
+val dropWhile_DEF = Define`
+  (dropWhile P [] = []) /\
+  (dropWhile P (h::t) = if P h then dropWhile P t else (h::t))`
+val _ = export_rewrites["dropWhile_DEF"]
+
+val dropWhile_splitAtPki = store_thm("dropWhile_splitAtPki",
+  ``∀P. dropWhile P = splitAtPki (combin$C (K o $~ o P)) (K I)``,
+  GEN_TAC >>
+  simp[FUN_EQ_THM] >>
+  Induct >>
+  simp[splitAtPki_def] >>
+  rw[] >> AP_THM_TAC >>
+  Q.MATCH_ABBREV_TAC`f a b = f a' b'` >>
+  `b = b'` by (markerLib.UNABBREV_ALL_TAC >> simp[FUN_EQ_THM]) >>
+  `a = a'` by (markerLib.UNABBREV_ALL_TAC >> simp[FUN_EQ_THM]) >>
+  REV_FULL_SIMP_TAC (srw_ss()) [])
+
+val dropWhile_eq_nil = store_thm("dropWhile_eq_nil",
+  ``∀P ls. (dropWhile P ls = []) ⇔ EVERY P ls``,
+  GEN_TAC >> Induct >> simp[] >> rw[])
+
+val MEM_dropWhile_IMP = store_thm("MEM_dropWhile_IMP",
+  ``∀P ls x. MEM x (dropWhile P ls) ⇒ MEM x ls``,
+  GEN_TAC >> Induct >> simp[] >> rw[])
+
+val HD_dropWhile = store_thm("HD_dropWhile",
+  ``∀P ls. EXISTS ($~ o P) ls ⇒ ¬ P (HD (dropWhile P ls))``,
+  GEN_TAC >> Induct >> simp[] >> rw[])
+
+val LENGTH_dropWhile_LESS_EQ = store_thm("LENGTH_dropWhile_LESS_EQ",
+  ``∀P ls. LENGTH (dropWhile P ls) ≤ LENGTH ls``,
+  GEN_TAC >> Induct >> simp[] >> rw[] >> simp[])
+
+val dropWhile_APPEND_EVERY = store_thm("dropWhile_APPEND_EVERY",
+  ``∀P l1 l2. EVERY P l1 ⇒ (dropWhile P (l1 ++ l2) = dropWhile P l2)``,
+  GEN_TAC >> Induct >> simp[dropWhile_DEF])
+
+val dropWhile_APPEND_EXISTS = store_thm("dropWhile_APPEND_EXISTS",
+  ``∀P l1 l2. EXISTS ($~ o P) l1 ⇒ (dropWhile P (l1 ++ l2) = dropWhile P l1 ++ l2)``,
+  GEN_TAC >> Induct >> simp[dropWhile_DEF] >> rw[])
+
+local
+  val fs = FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss)
+  val rw = SRW_TAC[numSimps.ARITH_ss]
+in
+val EL_LENGTH_dropWhile_REVERSE = store_thm("EL_LENGTH_dropWhile_REVERSE",
+  ``∀P ls k. LENGTH (dropWhile P (REVERSE ls)) ≤ k ∧ k < LENGTH ls ⇒ P (EL k ls)``,
+  GEN_TAC >> Induct >> simp[LENGTH] >> rw[] >>
+  Cases_on`k`>>fs[LENGTH_NIL,dropWhile_eq_nil,EVERY_APPEND] >>
+  FIRST_X_ASSUM MATCH_MP_TAC >> simp[] >>
+  Cases_on`EVERY P (REVERSE ls)` THEN1 (
+    fs[dropWhile_APPEND_EVERY,GSYM dropWhile_eq_nil] ) >>
+  fs[NOT_EVERY,dropWhile_APPEND_EXISTS,arithmeticTheory.ADD1])
+end
+
 end;
 (* end CakeML lemmas *)
 
