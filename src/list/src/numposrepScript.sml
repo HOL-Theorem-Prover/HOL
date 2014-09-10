@@ -171,6 +171,8 @@ local
   val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
   val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
   val rw = SRW_TAC[ARITH_ss]
+  val op >> = op THEN
+  val op >- = op THEN1
 in
 val l2n_eq_0 = store_thm("l2n_eq_0",
   ``∀b. 0 < b ⇒ ∀l. (l2n b l = 0) ⇔ EVERY ($= 0 o combin$C $MOD b) l``,
@@ -209,6 +211,37 @@ val LOG_l2n = store_thm("LOG_l2n",
   RES_TAC THEN
   `z = 0` by METIS_TAC[MOD_EQ_0_0,GREATER_DEF] THEN
   fs[])
+
+val l2n_dropWhile_0 = store_thm("l2n_dropWhile_0",
+  ``∀b ls. 0 < b ⇒ (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls)))= l2n b ls)``,
+  GEN_TAC >> HO_MATCH_MP_TAC SNOC_INDUCT >>
+  simp[dropWhile_DEF,REVERSE_SNOC] >> rw[] >>
+  rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND])
+
+val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
+  ``∀b l. 1 < b ∧ EXISTS ($<> 0) l ∧ EVERY ($>b) l ⇒
+          (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))``,
+  Tactical.REPEAT STRIP_TAC >>
+  `0 < b` by simp[] >>
+  simp[Once(GSYM l2n_dropWhile_0)] >>
+  Q.MATCH_ABBREV_TAC`x = PRE (LENGTH y)` >>
+  Q_TAC SUFF_TAC`x = PRE (LENGTH (REVERSE y))` >- rw[] >>
+  markerLib.UNABBREV_ALL_TAC >>
+  MATCH_MP_TAC (MP_CANON LOG_l2n) >>
+  simp[dropWhile_eq_nil,rich_listTheory.EXISTS_REVERSE,
+       rich_listTheory.EVERY_REVERSE,combinTheory.o_DEF] >>
+  fs[EVERY_MEM] >>
+  Tactical.REVERSE CONJ_TAC >- METIS_TAC[MEM_dropWhile_IMP,MEM_REVERSE] >>
+  Q.MATCH_ABBREV_TAC`0:num < LAST (REVERSE ls)` >>
+  Cases_on`ls = []` >- (
+    fs[Abbr`ls`,dropWhile_eq_nil,EVERY_MEM,EXISTS_MEM] >>
+    METIS_TAC[] ) >>
+  simp[LAST_REVERSE] >>
+  Q_TAC SUFF_TAC`~ (($= 0) (HD ls))` >- simp[] >>
+  Q.UNABBREV_TAC`ls` >>
+  MATCH_MP_TAC HD_dropWhile >>
+  fs[EXISTS_MEM] >> METIS_TAC[])
+
 end
 
 (* ------------------------------------------------------------------------- *)
