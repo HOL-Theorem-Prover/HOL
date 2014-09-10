@@ -167,6 +167,50 @@ val n2l_l2n = save_thm("n2l_l2n",
           |> REWRITE_RULE []
           |> Q.GEN `l` |> Q.GEN `b`);
 
+local
+  val simp = ASM_SIMP_TAC (srw_ss()++ARITH_ss)
+  val fs = FULL_SIMP_TAC (srw_ss()++ARITH_ss)
+  val rw = SRW_TAC[ARITH_ss]
+in
+val l2n_eq_0 = store_thm("l2n_eq_0",
+  ``∀b. 0 < b ⇒ ∀l. (l2n b l = 0) ⇔ EVERY ($= 0 o combin$C $MOD b) l``,
+  NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
+  Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[])
+
+val l2n_SNOC_0 = store_thm("l2n_SNOC_0",
+  ``∀b ls. 0 < b ⇒ (l2n b (SNOC 0 ls) = l2n b ls)``,
+  GEN_TAC THEN Induct THEN simp[l2n_def])
+
+val MOD_EQ_0_0 = prove(
+  ``∀n b. 0 < b ⇒ (n MOD b = 0) ⇒ n < b ⇒ (n = 0)``,
+  SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
+
+val LOG_l2n = store_thm("LOG_l2n",
+  ``∀b. 1 < b ⇒ ∀l. l ≠ [] ∧ 0 < LAST l ∧ EVERY ($> b) l ⇒ (LOG b (l2n b l) = PRE (LENGTH l))``,
+  NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
+  rw[] THEN fs[LAST_DEF] THEN
+  Cases_on`l=[]` THEN fs[l2n_def] THEN1 (
+    simp[LOG_EQ_0] ) THEN
+  Q.MATCH_ASSUM_ABBREV_TAC`LOG b z = d` THEN
+  `h + b * z = b * z + h` by simp[] THEN POP_ASSUM SUBST1_TAC THEN
+  Q.SPECL_THEN[`b`,`h`,`z`]MP_TAC LOG_add_digit THEN
+  simp[Abbr`d`] THEN
+  Q_TAC SUFF_TAC`0 < z` THEN1 (
+    simp[] THEN Cases_on`l` THEN fs[] ) THEN
+  simp[Abbr`z`] THEN
+  Cases_on`l2n b l = 0` THEN simp[] THEN
+  `0 < b` by simp[] THEN
+  fs[l2n_eq_0] THEN
+  `∃z. MEM z l ∧ 0 < z` by (                                                                                                                                                                                 [3/60]
+    Q.EXISTS_TAC`LAST l` THEN simp[] THEN
+    Cases_on`l` THEN simp[rich_listTheory.MEM_LAST] THEN
+    fs[] ) THEN
+  fs[EVERY_MEM] THEN
+  RES_TAC THEN
+  `z = 0` by METIS_TAC[MOD_EQ_0_0,GREATER_DEF] THEN
+  fs[])
+end
+
 (* ------------------------------------------------------------------------- *)
 
 val n2l_BOUND = Q.store_thm("n2l_BOUND",
