@@ -3797,9 +3797,10 @@ local
    val MP_Next0 = Drule.MATCH_MP arm_stepTheory.NextStateARM_arm0
    val Run_CONV = utilsLib.Run_CONV ("arm", st) o get_val
 in
-   fun eval_arm tms =
+   fun arm_eval config =
       let
-         val tms = Lib.mk_set (default_tms @ tms)
+         val tms =
+            Lib.mk_set (default_tms @ arm_configLib.mk_config_terms config)
          val ftch = fetch tms
          val dec = arm_decode tms
          val run = eval enc tms
@@ -3834,7 +3835,7 @@ local
 in
    fun arm_step_hex config =
       let
-         val ev = eval_arm (arm_configLib.mk_config_terms config)
+         val ev = arm_eval config
       in
          fn s =>
             let
@@ -3880,7 +3881,7 @@ local
 in
    fun arm_step config =
       let
-         val ev = eval_arm (arm_configLib.mk_config_terms config)
+         val ev = arm_eval config
       in
          fn s =>
             let
