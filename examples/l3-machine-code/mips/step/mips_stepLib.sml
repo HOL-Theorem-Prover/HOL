@@ -117,7 +117,8 @@ val EVC = EVR COND_UPDATE_RULE
 val () = utilsLib.setStepConv utilsLib.WGROUND_CONV
 
 val SignalException =
-   ev [SignalException_def, extra_cond_rand_thms] [[``~^st.CP0.Status.EXL``]] []
+   ev [SignalException_def, extra_cond_rand_thms, ExceptionCode_def]
+      [[``~^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] []
       ``SignalException (ExceptionType)``
    |> hd
 
@@ -213,6 +214,13 @@ val dEV =
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
       [[], [`rs` |-> r0]]
 
+val bEV =
+   EVC [dfn'BEQ_def, dfn'BEQ_def, dfn'BNE_def, dfn'BLEZ_def, dfn'BGTZ_def,
+        dfn'BLTZ_def, dfn'BGEZ_def, dfn'BLTZAL_def, dfn'BGEZAL_def,
+        dfn'BEQL_def, dfn'BNEL_def, dfn'BLEZL_def, dfn'BGTZL_def,
+        dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
+        CheckBranch_def] [[``^st.BranchDelay = NONE``]] []
+
 (* ------------------------------------------------------------------------- *)
 
 (*
@@ -296,24 +304,27 @@ val J = EV [dfn'J_def] [] [] ``dfn'J (instr_index)``
 val JAL = EV [dfn'JAL_def] [] [] ``dfn'JAL (instr_index)``
 val JR = EV [dfn'JR_def] [] [] ``dfn'JR (instr_index)``
 val JALR = hEV ``dfn'JALR (rs, rd)``
-val BEQ = EVC [dfn'BEQ_def] [] [] ``dfn'BEQ (rs, rt, offset)``
-val BNE = EVC [dfn'BNE_def] [] [] ``dfn'BNE (rs, rt, offset)``
-val BLEZ = EVC [dfn'BLEZ_def] [] [] ``dfn'BLEZ (rs, offset)``
-val BGTZ = EVC [dfn'BGTZ_def] [] [] ``dfn'BGTZ (rs, offset)``
-val BLTZ = EVC [dfn'BLTZ_def] [] [] ``dfn'BLTZ (rs, offset)``
-val BGEZ = EVC [dfn'BGEZ_def] [] [] ``dfn'BGEZ (rs, offset)``
-val BLTZAL = EVC [dfn'BLTZAL_def] [] [] ``dfn'BLTZAL (rs, offset)``
-val BGEZAL = EVC [dfn'BGEZAL_def] [] [] ``dfn'BGEZAL (rs, offset)``
-val BEQL = EVC [dfn'BEQL_def] [] [] ``dfn'BEQL (rs, rt, offset)``
-val BNEL = EVC [dfn'BNEL_def] [] [] ``dfn'BNEL (rs, rt, offset)``
-val BLEZL = EVC [dfn'BLEZL_def] [] [] ``dfn'BLEZL (rs, offset)``
-val BGTZL = EVC [dfn'BGTZL_def] [] [] ``dfn'BGTZL (rs, offset)``
-val BLTZL = EVC [dfn'BLTZL_def] [] [] ``dfn'BLTZL (rs, offset)``
-val BGEZL = EVC [dfn'BGEZL_def] [] [] ``dfn'BGEZL (rs, offset)``
-val BLTZALL = EVC [dfn'BLTZALL_def] [] [] ``dfn'BLTZALL (rs, offset)``
-val BGEZALL = EVC [dfn'BGEZALL_def] [] [] ``dfn'BGEZALL (rs, offset)``
-val ERET = EVR (REWRITE_RULE [satTheory.AND_INV] o COND_UPDATE_RULE)
-   [dfn'ERET_def] [] [] ``dfn'ERET``
+val BEQ = bEV ``dfn'BEQ (rs, rt, offset)``
+val BNE = bEV ``dfn'BNE (rs, rt, offset)``
+val BLEZ = bEV ``dfn'BLEZ (rs, offset)``
+val BGTZ = bEV ``dfn'BGTZ (rs, offset)``
+val BLTZ = bEV ``dfn'BLTZ (rs, offset)``
+val BGEZ = bEV ``dfn'BGEZ (rs, offset)``
+val BLTZAL = bEV ``dfn'BLTZAL (rs, offset)``
+val BGEZAL = bEV ``dfn'BGEZAL (rs, offset)``
+val BEQL = bEV ``dfn'BEQL (rs, rt, offset)``
+val BNEL = bEV ``dfn'BNEL (rs, rt, offset)``
+val BLEZL = bEV ``dfn'BLEZL (rs, offset)``
+val BGTZL = bEV ``dfn'BGTZL (rs, offset)``
+val BLTZL = bEV ``dfn'BLTZL (rs, offset)``
+val BGEZL = bEV ``dfn'BGEZL (rs, offset)``
+val BLTZALL = bEV ``dfn'BLTZALL (rs, offset)``
+val BGEZALL = bEV ``dfn'BGEZALL (rs, offset)``
+
+(* Assumes EXL is high, which permits return from exception *)
+val ERET =
+   EVR COND_UPDATE_RULE [dfn'ERET_def, KernelMode_def, CheckBranch_def]
+     [[``^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] [] ``dfn'ERET``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -566,6 +577,14 @@ local
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
              )
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
+   val unpredictable_tm = ``mips$Unpredictable``
+   fun fix_unpredictable thm =
+      case Lib.total (boolSyntax.dest_cond o utilsLib.rhsc) thm of
+         SOME (b, t, _) =>
+            if t = unpredictable_tm
+               then REWRITE_RULE [ASSUME (boolSyntax.mk_neg b)] thm
+            else thm
+       | _ => thm
 in
    fun DecodeMIPS pat =
       let
@@ -574,6 +593,7 @@ in
          Decode |> Thm.INST s
                 |> REWRITE_RULE []
                 |> Conv.RIGHT_CONV_RULE (Conv.REPEATC PairedLambda.let_CONV)
+                |> fix_unpredictable
       end
 end
 
@@ -792,7 +812,6 @@ end
   List.map (mips_decode o snd) (Redblackmap.listItems mips_dict)
 *)
 
-
 (* ------------------------------------------------------------------------- *)
 
 (* Evaluator *)
@@ -854,6 +873,8 @@ local
    val st_BranchDelay_tm = mk_proj_BranchDelay st
    val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
    val snd_conv = Conv.REWR_CONV pairTheory.SND
+   val delay_none_tm = ``^st.BranchDelay = NONE``
+   val delay_ok = not o List.exists (Lib.equal delay_none_tm) o Thm.hyp
    val STATE_CONV =
       Conv.QCONV
         (REWRITE_CONV
@@ -894,7 +915,8 @@ in
             in
                if rhsc (List.nth (thms, 2)) = st_BranchDelay_tm
                   then MP_Next thm ::
-                       (if optionSyntax.is_none (rhsc (Lib.last thms))
+                       (if delay_ok thm andalso
+                           optionSyntax.is_none (rhsc (Lib.last thms))
                            then [MP_NextB thm]
                         else [])
                else [MP_NextE thm]
@@ -904,10 +926,28 @@ end
 
 fun mips_eval_hex be = mips_eval be o bitstringSyntax.bitstring_of_hexstring
 
+(* ========================================================================= *)
+
+(* Testing
+
+open mips_stepLib
+
+val step = mips_eval false
+fun test s = step (Redblackmap.find (mips_dict, s))
+
+test "ADDI";
+test "ADDU";
+test "J";
+test "BEQ";
+test "BEQL";
+test "BLTZAL";
+test "ERET"
+
 val be = false
 val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"
 val v = bitstringSyntax.bitstring_of_hexstring "00c72820"
+val v = bitstringSyntax.bitstring_of_hexstring "07d00000"
 
-(* ========================================================================= *)
+*)
 
 end
