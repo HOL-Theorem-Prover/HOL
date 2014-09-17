@@ -63,6 +63,25 @@ val NextStateMIPS_nodelay = utilsLib.ustore_thm("NextStateMIPS_nodelay",
                          Count := next_state.CP0.Count + 1w |>))`,
     tac)
 
+val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
+    `(s.exception = NoException) /\
+     (s.BranchDelay = SOME a) /\
+     ~s.exceptionSignalled ==>
+     (Fetch s = (SOME w, s)) /\
+     (Decode w = i) /\
+     (SND (Run i s) = next_state) /\
+     (next_state.exception = s.exception) /\
+     (next_state.exceptionSignalled = s.exceptionSignalled) /\
+     (next_state.BranchDelay = s.BranchDelay) /\
+     (next_state.BranchTo = NONE) ==>
+     (NextStateMIPS s =
+      SOME (next_state with
+            <| PC := a;
+               BranchDelay := NONE;
+               CP0 := next_state.CP0 with
+                      Count := next_state.CP0.Count + 1w |>))`,
+    tac)
+
 val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
     `(s.exception = NoException) /\
      (s.BranchDelay = NONE) /\
@@ -91,7 +110,8 @@ val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
                             Count := next_state.CP0.Count + 1w |>))`,
     tac)
 
-val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
+val NextStateMIPS_exception_delay =
+   utilsLib.ustore_thm("NextStateMIPS_exception_delay",
     `(s.exception = NoException) /\
      (s.BranchDelay = SOME a) /\
      ~s.exceptionSignalled ==>
@@ -99,13 +119,14 @@ val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
      (Decode w = i) /\
      (SND (Run i s) = next_state) /\
      (next_state.exception = s.exception) /\
-     (next_state.exceptionSignalled = s.exceptionSignalled) /\
-     (next_state.BranchDelay = s.BranchDelay) /\
+     (next_state.exceptionSignalled = e) /\
+     (next_state.BranchDelay = if e then NONE else SOME a) /\
      (next_state.BranchTo = NONE) ==>
      (NextStateMIPS s =
       SOME (next_state with
-            <| PC := a;
+            <| PC := if e then next_state.PC else a;
                BranchDelay := NONE;
+               exceptionSignalled := F;
                CP0 := next_state.CP0 with
                       Count := next_state.CP0.Count + 1w |>))`,
     tac)

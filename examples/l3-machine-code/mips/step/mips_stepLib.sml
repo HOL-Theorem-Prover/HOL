@@ -118,7 +118,7 @@ val () = utilsLib.setStepConv utilsLib.WGROUND_CONV
 
 val SignalException =
    ev [SignalException_def, extra_cond_rand_thms, ExceptionCode_def]
-      [[``~^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] []
+      [[``~^st.CP0.Status.EXL``]] []
       ``SignalException (ExceptionType)``
    |> hd
 
@@ -881,13 +881,18 @@ local
             (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
              [boolTheory.COND_ID, cond_rand_thms,
               ASSUME ``^st.BranchTo = NONE``]))
+   val BRANCH_DELAY_RULE =
+      PURE_REWRITE_RULE [ASSUME ``^st.BranchDelay = SOME a``]
    val NO_BRANCH_DELAY_RULE =
       PURE_REWRITE_RULE [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]
    val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV STATE_CONV)
+   val exc_rule = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule
    val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay
    val MP_NextB = state_rule o Drule.MATCH_MP NextStateMIPS_delay
-   val MP_NextE = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule o
-                  Drule.MATCH_MP NextStateMIPS_exception o NO_BRANCH_DELAY_RULE
+   val MP_NextE = exc_rule o Drule.MATCH_MP NextStateMIPS_exception o
+                  NO_BRANCH_DELAY_RULE
+   val MP_NextF = exc_rule o Drule.MATCH_MP NextStateMIPS_exception_delay o
+                  BRANCH_DELAY_RULE
    val Run_CONV = utilsLib.Run_CONV ("mips", st) o utilsLib.rhsc
 in
    fun mips_eval be =
@@ -919,7 +924,7 @@ in
                            optionSyntax.is_none (rhsc (Lib.last thms))
                            then [MP_NextB thm]
                         else [])
-               else [MP_NextE thm]
+               else [MP_NextE thm, MP_NextF thm]
             end
       end
 end
