@@ -3,7 +3,7 @@
 \TYPE {completeInduct_on : term quotation -> tactic}
 
 \SYNOPSIS
-Perform complete induction
+Perform complete induction.
 
 \KEYWORDS
 induction, complete.

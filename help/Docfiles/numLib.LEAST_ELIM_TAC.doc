@@ -3,7 +3,7 @@
 \TYPE {LEAST_ELIM_TAC : tactic}
 
 \SYNOPSIS
-Eliminates a {LEAST} term from the current goal
+Eliminates a {LEAST} term from the current goal.
 
 \KEYWORDS
 

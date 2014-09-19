@@ -3,7 +3,7 @@
 \TYPE {partition : ('a -> bool) -> 'a list -> 'a list * 'a list}
 
 \SYNOPSIS
-Split a list by a predicate
+Split a list by a predicate.
 
 \KEYWORDS
 list

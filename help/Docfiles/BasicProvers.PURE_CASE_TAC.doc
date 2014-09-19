@@ -3,7 +3,7 @@
 \TYPE {PURE_CASE_TAC : tactic}
 
 \SYNOPSIS
-Case splits on a term {t} that features in the goal as {case t of ...}
+Case splits on a term {t} that features in the goal as {case t of ...}.
 
 \DESCRIBE
 {BasicProvers.PURE_CASE_TAC} searches the goal for an instance of

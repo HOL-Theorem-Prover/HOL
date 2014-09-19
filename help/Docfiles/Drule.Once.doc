@@ -3,7 +3,7 @@
 \TYPE {Once : thm -> thm}
 
 \SYNOPSIS
-Rewriting control
+Rewriting control.
 
 \KEYWORDS
 Rewriting, simplification.

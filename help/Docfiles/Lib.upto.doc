@@ -3,7 +3,7 @@
 \TYPE {upto : int -> int -> int list}
 
 \SYNOPSIS
-Builds a list of integers
+Builds a list of integers.
 
 \DESCRIBE
 An invocation {upto b t} returns the list {[b, b+1, ..., t]}, if {b <= t}.
