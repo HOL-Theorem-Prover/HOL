@@ -3387,6 +3387,12 @@ val CROSS_EMPTY = store_thm(
   SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]);
 val _ = export_rewrites ["CROSS_EMPTY"]
 
+val CROSS_EMPTY_EQN = store_thm("CROSS_EMPTY_EQN",
+  ``(s CROSS t = {}) <=> (s = {}) \/ (t = {})``,
+  SRW_TAC[][EQ_IMP_THM] THEN SRW_TAC[][CROSS_EMPTY] THEN
+  FULL_SIMP_TAC(srw_ss())[EXTENSION,pairTheory.FORALL_PROD] THEN
+  METIS_TAC[])
+
 val CROSS_INSERT_LEFT = store_thm(
   "CROSS_INSERT_LEFT",
   ``!P Q x. (x INSERT P) CROSS Q = ({x} CROSS Q) UNION (P CROSS Q)``,

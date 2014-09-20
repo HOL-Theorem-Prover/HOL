@@ -288,6 +288,14 @@ val CARDEQ_CROSS = store_thm(
        pairTheory.EXISTS_PROD] >>
   fs[BIJ_DEF, INJ_DEF, SURJ_DEF] >> metis_tac []);
 
+val CARDEQ_CROSS_SYM = store_thm("CARDEQ_CROSS_SYM",
+  ``s × t ≈ t × s``,
+  simp[cardeq_def] >>
+  qexists_tac`λp. (SND p,FST p)` >>
+  simp[BIJ_IFF_INV] >>
+  qexists_tac`λp. (SND p,FST p)` >>
+  simp[])
+
 val CARDEQ_SUBSET_CARDLEQ = store_thm(
   "CARDEQ_SUBSET_CARDLEQ",
   ``s ≈ t ⇒ s ≼ t``,
@@ -297,6 +305,10 @@ val CARDEQ_CARDLEQ = store_thm(
   "CARDEQ_CARDLEQ",
   ``s1 ≈ s2 ∧ t1 ≈ t2 ⇒ (s1 ≼ t1 ⇔ s2 ≼ t2)``,
   metis_tac[cardeq_SYM, CARDEQ_SUBSET_CARDLEQ, cardleq_TRANS])
+
+val CARDLEQ_FINITE = store_thm("CARDLEQ_FINITE",
+  ``∀s1 s2. FINITE s2 ∧ s1 ≼ s2 ⇒ FINITE s1``,
+  metis_tac[cardleq_def,FINITE_INJ])
 
 val _ = type_abbrev ("inf", ``:num + 'a``)
 
@@ -400,6 +412,20 @@ val cardlt_TRANS = store_thm(
   ``∀s t u:'a set. s ≺ t ∧ t ≺ u ⇒ s ≺ u``,
   metis_tac [cardleq_TRANS, cardleq_ANTISYM, CARDEQ_SUBSET_CARDLEQ,
              cardeq_SYM, cardlt_lenoteq]);
+
+val cardlt_leq_trans = store_thm("cardlt_leq_trans",
+  ``∀r s t. r ≺ s ∧ s ≼ t ⇒ r ≺ t``,
+  rw[cardlt_lenoteq] >- metis_tac[cardleq_TRANS] >>
+  metis_tac[CARDEQ_CARDLEQ,cardeq_REFL,cardleq_ANTISYM])
+
+val cardleq_lt_trans = store_thm("cardleq_lt_trans",
+  ``∀r s t. r ≼ s ∧ s ≺ t ⇒ r ≺ t``,
+  rw[cardlt_lenoteq] >- metis_tac[cardleq_TRANS] >>
+  metis_tac[CARDEQ_CARDLEQ,cardeq_REFL,cardleq_ANTISYM])
+
+val cardleq_empty = store_thm("cardleq_empty",
+  ``x ≼ {} ⇔ (x = {})``,
+  simp[cardleq_lteq,CARDEQ_0])
 
 val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]
 
@@ -757,6 +783,22 @@ val CARD_BIGUNION = store_thm(
        [SURJ_DEF, FORALL_PROD, pairTheory.EXISTS_PROD] >>
   fs[SURJ_DEF] >> metis_tac[]);
 
+val CARD_MUL_ABSORB_LE = store_thm("CARD_MUL_ABSORB_LE",
+  ``∀s t. INFINITE t ∧ s ≼ t ⇒ s × t ≼ t``,
+  metis_tac[CARDLEQ_CROSS_CONG,SET_SQUARED_CARDEQ_SET,
+            cardleq_lteq,cardleq_TRANS,cardleq_REFL])
+
+val CARD_MUL_LT_LEMMA = store_thm("CARD_MUL_LT_LEMMA",
+  ``∀s t. s ≼ t ∧ t ≺ u ∧ INFINITE u ⇒ s × t ≺ u``,
+  rw[] >>
+  Cases_on`FINITE t` >- (
+    metis_tac[CARDLEQ_FINITE,FINITE_CROSS] ) >>
+  metis_tac[CARD_MUL_ABSORB_LE,cardleq_lt_trans])
+
+val CARD_MUL_LT_INFINITE = store_thm("CARD_MUL_LT_INFINITE",
+  ``∀s t. s ≺ t ∧ t ≺ u ∧ INFINITE u ⇒ s × t ≺ u``,
+  metis_tac[CARD_MUL_LT_LEMMA,cardleq_lteq])
+
 (* set exponentiation *)
 val set_exp_def = Define`
   set_exp A B = { f | (∀b. b ∈ B ⇒ ∃a. a ∈ A ∧ (f b = SOME a)) ∧
@@ -793,6 +835,21 @@ val CARDEQ_CARD_EQN = store_thm(
   "CARDEQ_CARD_EQN",
   ``FINITE s1 ∧ FINITE s2 ⇒ (s1 =~ s2 ⇔ (CARD s1 = CARD s2))``,
   metis_tac [CARD_CARDEQ_I, CARDEQ_CARD]);
+
+val CARDLEQ_CARD = store_thm("CARDLEQ_CARD",
+  ``FINITE s1 ∧ FINITE s2 ⇒ (s1 ≼ s2 ⇔ CARD s1 ≤ CARD s2)``,
+  rw[EQ_IMP_THM] >-
+    metis_tac[cardleq_def,INJ_CARD] >>
+  Cases_on`CARD s1 = CARD s2` >-
+    metis_tac[cardleq_lteq,CARDEQ_CARD_EQN] >>
+  simp[Once cardleq_lteq] >> disj1_tac >>
+  simp[cardleq_def] >>
+  gen_tac >> match_mp_tac PHP >>
+  fsrw_tac[ARITH_ss][])
+
+val CARD_LT_CARD = store_thm("CARD_LT_CARD",
+  ``FINITE s1 ∧ FINITE s2 ⇒ (s1 ≺ s2 ⇔ CARD s1 < CARD s2)``,
+  rw[] >> simp[cardlt_lenoteq,CARDLEQ_CARD,CARDEQ_CARD_EQN])
 
 val EMPTY_set_exp = store_thm(
   "EMPTY_set_exp",
