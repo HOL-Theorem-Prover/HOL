@@ -190,6 +190,13 @@ val ConditionalCompareImmediate_rwt =
           (sf, sub_op, imm, cond, (n, z, c, v), rn)``
       |> List.map COND_UPDATE_RULE
 
+val ConditionalCompareRegister_rwt =
+   EV [dfn'ConditionalCompareRegister_def, ConditionHolds_def]
+      [] (TF0 `sub_op`)
+      ``dfn'ConditionalCompareRegister
+          (sf, sub_op, cond, (n, z, c, v), rm, rn)``
+      |> List.map COND_UPDATE_RULE
+
 val ConditionalSelect_rwt =
    EV [dfn'ConditionalSelect_def, ConditionHolds_def] (SPLIT_31 "d") []
       ``dfn'ConditionalSelect (sf, else_inv, else_inc, cond, m, n, d)``
@@ -305,7 +312,7 @@ val LoadStoreImmediate_rwt =
              (TF `wback` [[`memop` |-> ``MemOp_STORE``]]))
             ``dfn'LoadStoreImmediate
                  (^(mk_sz i), regsize_word, memop, acctype, signed, F, F,
-                  wback, postindex, offset, n, t)``
+                  wback, postindex, unsigned_offset, offset, n, t)``
             |> map_sp_rule)
       [8, 16, 32, 64]
       |> List.concat
@@ -378,7 +385,8 @@ in
       EV [LoadStoreImmediate_def, LoadStoreImmediateN_def, lem1] []
          (utilsLib.augment (`size`, List.tabulate (4, w2)) [[]])
          ``LoadStoreImmediate
-              (size,v2w [x0; x1],acctype,wback,postindex,offset,n,t)``
+              (size,v2w [x0; x1],acctype,wback,postindex,unsigned_offset,
+               offset,n,t)``
    val LoadStorePair =
       EV [LoadStorePair_def, LoadStorePairN_def, lem2]
          [[``~((memop = MemOp_LOAD) /\ (t = t2: word5))``]]
@@ -576,6 +584,7 @@ val ps = (List.concat o List.map decode_rwt)
    ("BitfieldMove32",               "F__TFFTTFFF_____F_______________"),
    ("BitfieldMove64",               "T__TFFTTFT______________________"),
    ("ConditionalCompareImmediate",  "..TTTFTFFTF_________TF_____F____"),
+   ("ConditionalCompareRegister",   "..TTTFTFFTF_________FF_____F____"),
    ("ConditionalSelect",            "._FTTFTFTFF_________F___________"),
    ("CountLeading",                 ".TFTTFTFTTFFFFFFFFFTF___________"),
    ("ExtractRegister32",            "FFFTFFTTTFF_____F_______________"),
@@ -662,14 +671,14 @@ local
    val net = mk_net
      (Address_rwt @ AddSubCarry_rwt @ AddSubExtendRegister_rwt @
       AddSubImmediate_rwt @ AddSubShiftedRegister_rwt @ LogicalImmediate_rwt @
-      LogicalShiftedRegister_rwt @ Shift_rwt @ MoveWide_rwt @ BitfieldMove_rwt
-      @ ConditionalCompareImmediate_rwt @ ConditionalSelect_rwt @
-      CountLeading_rwt @ ExtractRegister_rwt @ Division_rwt @
-      MultiplyAddSub_rwt @ MultiplyAddSubLong_rwt @ MultiplyHigh_rwt @
-      Reverse32_rwt @ Reverse64_rwt @ CRC_rwt @ BranchImmediate_rwt @
-      BranchRegister_rwt @ BranchConditional_rwt @ CompareAndBranch_rwt @
-      TestBitAndBranch_rwt @ LoadStoreImmediate_rwt @ LoadStoreRegister_rwt @
-      LoadLiteral_rwt @ LoadStorePair_rwt
+      LogicalShiftedRegister_rwt @ Shift_rwt @ MoveWide_rwt @ BitfieldMove_rwt @
+      ConditionalCompareImmediate_rwt @ ConditionalCompareRegister_rwt @
+      ConditionalSelect_rwt @ CountLeading_rwt @ ExtractRegister_rwt @
+      Division_rwt @ MultiplyAddSub_rwt @ MultiplyAddSubLong_rwt @
+      MultiplyHigh_rwt @ Reverse32_rwt @ Reverse64_rwt @ CRC_rwt @
+      BranchImmediate_rwt @ BranchRegister_rwt @ BranchConditional_rwt @
+      CompareAndBranch_rwt @ TestBitAndBranch_rwt @ LoadStoreImmediate_rwt @
+      LoadStoreRegister_rwt @ LoadLiteral_rwt @ LoadStorePair_rwt
       )
    val get_next = Term.rator o utilsLib.lhsc
    val r = REWRITE_RULE []

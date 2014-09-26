@@ -303,6 +303,7 @@ local
           | "arm8_prog$arm8_PSTATE_Z" => "z"
           | "arm8_prog$arm8_PSTATE_C" => "c"
           | "arm8_prog$arm8_PSTATE_V" => "v"
+          | "arm8_prog$arm8_SP_EL0" => "sp"
           | _ => fail())
    val arm_rename2 =
       Lib.total
@@ -462,7 +463,7 @@ local
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
       THENC SELECTIVE_ARM8_CONV
-      THENC REWRITE_CONV [rwt]
+      THENC REWRITE_CONV [rwt, arm8_stepTheory.ExtendValue_0]
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
@@ -654,6 +655,8 @@ local
          List.map (fn x => (print "."; add1_pending x)) thms_ts
          ; thms_ts
       end
+   val string_to_opcode =
+      bitstringSyntax.bitstring_of_hexstring o StringCvt.padLeft #"0" 8
 in
    val list_db = list_db
    fun arm8_config options =
@@ -678,7 +681,7 @@ in
       )
    fun arm8_spec_hex looped s =
       let
-         val opc = bitstringSyntax.bitstring_of_hexstring s
+         val opc = string_to_opcode s
       in
          case find_spec opc of
          (*

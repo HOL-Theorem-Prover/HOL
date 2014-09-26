@@ -323,6 +323,18 @@ val ExtendWord = Theory.save_thm("ExtendWord",
       [``ExtendWord (w, T)``, ``ExtendWord (w, F)``]
    )
 
+val ExtendValue_0 = Q.store_thm("ExtendValue_0",
+   `(!v: word64. ExtendValue (v, ExtendType_UXTX, 0) = v) /\
+    (!v: word32. ExtendValue (w2w v, ExtendType_UXTW, 0) = w2w v: word64)`,
+   simp [ExtendValue_def, Extend_def, bitstringTheory.field_id_imp,
+         bitstringTheory.shiftl_replicate_F, bitstringTheory.replicate_def]
+   \\ blastLib.BBLAST_TAC
+   \\ simp [bitstringTheory.testbit_el, bitstringTheory.testbit_geq_len,
+            bitstringTheory.length_field, bitstringTheory.el_field,
+            bitstringTheory.el_w2v]
+   \\ blastLib.BBLAST_TAC
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 (*
