@@ -74,7 +74,8 @@ val rotate_def = Define`
     let l = LENGTH v in
     let x = m MOD l
     in
-       field (x - 1) 0 v ++ field (l - 1) x v`;
+       if x = 0 then fixwidth l v
+       else field (x - 1) 0 v ++ field (l - 1) x v`;
 
 val testbit_def = zDefine`
   testbit b v = (field b b v = [T])`;
@@ -738,7 +739,7 @@ val word_ror_v2w = Q.store_thm("word_ror_v2w",
   `!n v. word_ror (v2w v : 'a word) n =
          v2w (rotate (fixwidth (dimindex(:'a)) v) n)`,
   wrw [wordsTheory.word_ror, word_or_def, word_lsl_def, word_bits_def,
-       rotate_def, length_fixwidth]
+       rotate_def, length_fixwidth, fixwidth_fixwidth, v2w_fixwidth]
   \\ `?p. dimindex(:'a) = i + p + 1`
   by metis_tac [arithmeticTheory.LESS_ADD_1, arithmeticTheory.ADD_ASSOC]
   \\ lrw [wordsTheory.word_bit, bit_v2w, testbit]

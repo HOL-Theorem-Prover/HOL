@@ -461,7 +461,10 @@ local
                ["word_mul", "word_add", "word_sub", "word_1comp", "word_2comp",
                 "word_xor", "word_and", "word_or",
                 "word_xnor", "word_nand", "word_nor",
-                "word_T", "word_H", "word_L"])
+                "word_T", "word_H", "word_L"] @
+           map (pair "arithmetic")
+               ["+", "-", "*", "DIV", "DIV2", "EXP", "ODD", "EVEN",
+                "<=", ">=", "<", ">"])
 
   fun is_hex_digit_literal t =
      numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
