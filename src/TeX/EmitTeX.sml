@@ -335,6 +335,9 @@ local
           core_s ^ digitstr ^ prime_str
         end
 
+  val stringmunge =
+    UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}" | s => s)
+
   fun ann_string overrides pps (s,sz_opt,ann) = let
     open PPBackEnd
     val (dollarpfx,dollarsfx,s,szdelta) =
@@ -353,7 +356,8 @@ local
           | Const _ => apfst (addann "Const") (smapper s)
           | TyOp _ => apfst (addann "TyOp") (smapper s)
           | Literal StringLit => (addann "StringLit"
-                                         (String.substring(s, 1, size s - 2)),
+                                         (stringmunge
+                                           (String.substring(s, 1, size s - 2))),
                                   unmapped_sz)
           | Literal FldName => apfst (addann "FieldName") (smapper s)
           | Literal NumLit => (addann "NumLit" s, unmapped_sz)
