@@ -336,7 +336,9 @@ local
         end
 
   val stringmunge =
-    UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}" | s => s)
+    UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}"
+                     | "~" => "\\HOLTokenTilde{}"
+                     | s => s)
 
   fun ann_string overrides pps (s,sz_opt,ann) = let
     open PPBackEnd
