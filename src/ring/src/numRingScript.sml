@@ -26,7 +26,7 @@ local open numeralTheory in
 val num_rewrites = save_thm("num_rewrites", LIST_CONJ
   [ numeral_distrib, numeral_eq, numeral_suc, numeral_iisuc,
     numeral_add, numeral_mult, iDUB_removal,
-    ISPEC(--`ALT_ZERO`--) REFL_CLAUSE, ISPEC(--`0:num`--) REFL_CLAUSE ]);
+    ISPEC ``arithmetic$ZERO`` REFL_CLAUSE, ISPEC ``num$0`` REFL_CLAUSE ]);
 end;
 
 
