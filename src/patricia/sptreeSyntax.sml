@@ -190,23 +190,34 @@ in
       end
 end
 
-fun sptree_print Gs B sys ppfns gravs d t =
+fun sptree_print Gs B sys ppfns (pg, _, _) d t =
    let
-      open term_pp_types smpp
-      val {add_string = str, add_break = brk, ...} =
+      open Portable term_pp_types smpp
+      val {add_string = str, add_break = brk, ublock, ...} =
          ppfns: term_pp_types.ppstream_funs
       val t2 = sptree_pretty_term t
                handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+      fun delim s =
+         case pg of
+            Prec (j, _) => if 200 <= j then str s else nothing
+          | _ => nothing
+
    in
       case Lib.total dest_fromAList t2 of
-         SOME l => (str "sptree$fromAList"
-                    >> brk (1, 2)
-                    >> sys (Top, Top, Top) (d - 1) l)
+         SOME l => ublock INCONSISTENT 0
+                      (delim "("
+                       >> str "sptree$fromAList"
+                       >> brk (1, 2)
+                       >> sys (Top, Top, Top) (d - 1) l
+                       >> delim ")")
        | NONE =>
            (case Lib.total dest_fromList t2 of
-               SOME l => (str "sptree$fromList"
-                          >> brk (1, 2)
-                          >> sys (Top, Top, Top) (d - 1) l)
+               SOME l => ublock INCONSISTENT 0
+                            (delim "("
+                             >> str "sptree$fromList"
+                             >> brk (1, 2)
+                             >> sys (Top, Top, Top) (d - 1) l
+                             >> delim ")")
              | NONE => raise term_pp_types.UserPP_Failed)
    end
 
