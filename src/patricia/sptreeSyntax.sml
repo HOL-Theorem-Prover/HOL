@@ -153,7 +153,7 @@ fun sptree_print Gs B sys ppfns gravs d t =
        | NONE =>
            (case Lib.total dest_fromList t2 of
                SOME l => (str "sptree$fromList"
-                          >> brk (1, 0)
+                          >> brk (1, 2)
                           >> sys (Top, Top, Top) (d - 1) l)
              | NONE => raise term_pp_types.UserPP_Failed)
    end
