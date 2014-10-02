@@ -522,9 +522,7 @@ local open Defn
            String.concat (Lib.commafy (map (Lib.quote o #1 o dest_var) V))
      in
         if !allow_schema_definition
-           then HOL_MESG (String.concat
-                  ["Definition is schematic in the following variables:\n    ",
-                   Vstr])
+           then ()
         else raise ERR "defnDefine"
          ("  The following variables are free in the \n right hand side of\
           \ the proposed definition: " ^ Vstr)
