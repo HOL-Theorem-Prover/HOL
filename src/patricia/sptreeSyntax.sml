@@ -86,16 +86,39 @@ fun dest_sptree tm =
     | SOME ("sptree$BS", [t1, v, t2]) => BS (dest_sptree t1, v, dest_sptree t2)
     | _ => raise ERR "dest_sptree" ""
 
+fun mk_sptree t =
+   case t of
+      LN => mk_ln Type.alpha
+    | LS a => mk_ls a
+    | BN (LN, t2) =>
+         let
+            val tm = mk_sptree t2
+         in
+            mk_bn (mk_ln (sptree_ty_of tm), tm)
+         end
+    | BN (t1, LN) =>
+         let
+            val tm = mk_sptree t1
+         in
+            mk_bn (tm, mk_ln (sptree_ty_of tm))
+         end
+    | BN (t1, t2) => mk_bn (mk_sptree t1, mk_sptree t2)
+    | BS (t1, a, t2) =>
+         let
+            val ln = mk_ln (Term.type_of a)
+            val tm1 = if t1 = LN then ln else mk_sptree t1
+            val tm2 = if t2 = LN then ln else mk_sptree t2
+         in
+            mk_bs (tm1, a, tm2)
+         end
+
 local
    open Arbnum
+   fun even n = n mod two = zero
    fun lrnext n =
       if n = zero
          then one
-      else let
-              val x = if n mod two = zero then two else one
-           in
-              times2 (lrnext ((n - x) div two))
-           end
+      else times2 (lrnext ((n - (if even n then two else one)) div two))
    fun foldi f i acc =
       fn LN => acc
        | LS a => f i a acc
@@ -111,10 +134,39 @@ local
            in
               foldi f (i + inc) (f i a (foldi f (i + two * inc) acc t1)) t2
            end
+   fun insert k a =
+      fn LN => if k = zero
+                  then LS a
+               else if even k
+                  then BN (insert ((k - one) div two) a LN, LN)
+               else BN (LN, insert ((k - one) div two) a LN)
+       | LS a' =>
+               if k = zero
+                  then LS a
+               else if even k
+                  then BS (insert ((k - one) div two) a LN, a', LN)
+               else BS (LN, a', insert ((k - one) div two) a LN)
+       | BN (t1, t2) =>
+               if k = zero
+                  then BS (t1, a, t2)
+               else if even k
+                  then BN (insert ((k - one) div two) a t1, t2)
+               else BN (t1, insert ((k - one) div two) a t2)
+       | BS (t1, a', t2) =>
+               if k = zero
+                  then BS (t1, a, t2)
+               else if even k
+                  then BS (insert ((k - one) div two) a t1, a', t2)
+               else BS (t1, a', insert ((k - one) div two) a t2)
 in
    val toAList =
       Lib.sort (fn (a, _) => fn (b, _) => Arbnum.< (a, b)) o
       foldi (fn k => fn v => fn a => (k, v) :: a) zero [] o dest_sptree
+   fun fromList l =
+      mk_sptree (snd (List.foldl (fn (a, (i, t)) => (i + one, insert i a t))
+                        (zero, LN) l))
+   fun fromAList l =
+      mk_sptree (List.foldl (fn ((i, a), t) => insert i a t) LN l)
 end
 
 local
@@ -175,6 +227,11 @@ val () = remove_sptree_printer ()
 
 val th = EVAL ``fromAList [(23746, a:num); (73246, b); (912, c); (0, d)]``
 val th = EVAL ``fromList [a;b;c;d:num]``
+
+val tm = fromList (List.tabulate (100, fn i => numSyntax.term_of_int (2 * i)))
+val tm = fromAList (List.tabulate (100, fn i => (Arbnum.fromInt (2 * i), numSyntax.term_of_int i)))
+
+val th = EVAL ``wf ^tm``
 
 *)
 

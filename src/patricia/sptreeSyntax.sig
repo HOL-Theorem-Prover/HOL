@@ -10,6 +10,9 @@ sig
    val mk_sptree_ty : hol_type -> hol_type
    val sptree_ty_of : term -> hol_type
 
+   val fromList : term list -> term
+   val fromAList : (Arbnum.num * term) list -> term
+
    val bn_tm : term
    val bs_tm : term
    val delete_tm : term
