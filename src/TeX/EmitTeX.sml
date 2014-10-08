@@ -397,9 +397,10 @@ val print_datatype_names_as_types = ref false
 val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
 
 fun pp_datatype_theorem backend ostrm thm =
-let val {add_string,add_break,begin_block,add_newline,end_block,...} =
+let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...} =
            PPBackEnd.with_ppstream backend ostrm
     val S = add_string
+    val SX = add_xstring
     val BR = add_break
     val BB = begin_block
     val NL = add_newline
@@ -478,7 +479,13 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
 
     fun pp_record_spec l =
         let val ll = tl l
-            fun pp_record x = (PT x; S " : "; TP (type_of x))
+            fun pp_record x =
+              let
+                val (x,ty) = dest_var x
+                val ann = SOME (PPBackEnd.Literal PPBackEnd.FldName)
+              in
+                (SX {s=x,sz=NONE,ann=ann}; S " : "; TP ty)
+              end
         in
           (PT (hd l); S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
