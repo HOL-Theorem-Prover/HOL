@@ -477,7 +477,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
          EB())
     end
 
-    fun pp_record_spec l =
+    fun pp_record_spec ty l =
         let val ll = tl l
             fun pp_record x =
               let
@@ -487,7 +487,10 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
                 (SX {s=x,sz=NONE,ann=ann}; S " : "; TP ty)
               end
         in
-          (PT (hd l); S " ="; BR(1,2);
+          (if !print_datatype_names_as_types
+           then TP0 (mk_type(fst(dest_var(hd l)),type_vars ty))
+           else PT (hd l);
+           S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
            S "<|"; S " ";
            app (fn x => (pp_record x; S ";"; BR(1,0)))
@@ -498,10 +501,12 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
         end
 
     fun pp_binding (n, l) =
-          if fst (dest_var n) = "record" then
-            pp_record_spec l
-          else
-            pp_constructor_spec (n, l)
+          let val (x,ty) = dest_var n in
+            if x = "record" then
+              pp_record_spec ty l
+            else
+              pp_constructor_spec (n, l)
+          end
 
     val t = map strip_comb (strip_conj (snd (dest_comb (concl thm))))
 in
