@@ -382,6 +382,22 @@ in
 
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
+    fun clear_abbrevs slist f = let
+      val oldg = type_grammar()
+      val tmg = term_grammar()
+      val _ = List.app temp_disable_tyabbrev_printing slist
+      val newg = type_grammar()
+    in
+      (fn x => (temp_set_grammars(newg,tmg); f x; temp_set_grammars(oldg,tmg)))
+    end
+
+    fun opttyprintermod f pps =
+      f pps |> (case optset_unoverloads opts of
+                    [] => (fn f => f)
+                  | slist => clear_abbrevs slist)
+
+    fun stdtypeprint pps t = opttyprintermod (raw_pp_type_as_tex overrides) pps t
+
     val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
              else ()
     val parse_start = " (*#loc "^ Int.toString argline ^ " " ^
@@ -465,7 +481,7 @@ in
                     else Parse.Type [QQ parse_start, QQ spec]
         in
           add_string pps (optset_indent opts);
-          raw_pp_type_as_tex overrides pps typ
+          stdtypeprint pps typ
         end
     val () = if not alltt andalso not rulep then add_string pps "}" else ()
   in () end handle

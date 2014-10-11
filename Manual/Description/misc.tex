@@ -1157,8 +1157,8 @@ run (see Section~\ref{sec:running-munger} below).
 \item[\texttt{-}$\mathit{name}$]
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
-(Only for use with \holthm{} and \holtm.)
 This option causes the printing of the term or theorem to be done with respect to a grammar that has all overloading for $\mathit{name}$ removed.
+When used with \holty, prints the type with all type abbreviations for $\mathit{name}$ removed.
 For example, the command \texttt{\holtm[-+]\lb{}x + y\rb} will print as
 \[
 \texttt{arithmetic\dol+}\;x\;y
