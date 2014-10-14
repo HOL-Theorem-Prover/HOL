@@ -48,20 +48,29 @@ val arm8_tools_map8_no_status = arm8_tools_opt "map8" TRUTH
 val arm8_tools_map32 = arm8_tools_opt "map32" arm8_progTheory.aS_HIDE
 val arm8_tools_map32_no_status = arm8_tools_opt "map32" TRUTH
 
-fun gen_arm8_decompile tools opt name (qcode: string quotation) =
+fun gen_arm8_decompile iscode tools opt name (qcode: string quotation) =
    let
-      val decomp = decompilerLib.decompile_with helperLib.quote_to_strings tools
+      val q = if iscode then arm8AssemblerLib.arm8_code
+              else arm8AssemblerLib.arm8_code
+      val decomp = decompilerLib.decompile_with q tools
    in
       arm8_progLib.arm8_config opt
     ; (decompilerLib.UNABBREV_CODE_RULE ## I) (decomp name qcode)
    end
 
-val arm8_decompile = gen_arm8_decompile arm8_tools "map8"
+val arm8_decompile = gen_arm8_decompile false arm8_tools "map8"
 val arm8_decompile_no_status =
-   gen_arm8_decompile arm8_tools_no_status "map8"
-val arm8_decompile32 = gen_arm8_decompile arm8_tools "map32"
+   gen_arm8_decompile false arm8_tools_no_status "map8"
+val arm8_decompile32 = gen_arm8_decompile false arm8_tools "map32"
 val arm8_decompile32_no_status =
-   gen_arm8_decompile arm8_tools_no_status "map32"
+   gen_arm8_decompile false arm8_tools_no_status "map32"
+
+val arm8_decompile_code = gen_arm8_decompile true arm8_tools "map8"
+val arm8_decompile_code_no_status =
+   gen_arm8_decompile true arm8_tools_no_status "map8"
+val arm8_decompile32_code = gen_arm8_decompile true arm8_tools "map32"
+val arm8_decompile32_code_no_status =
+   gen_arm8_decompile true arm8_tools_no_status "map32"
 
 (* testing
 
@@ -70,6 +79,12 @@ open arm8_decompLib
 val (test_cert, test_def) = arm8_decompile_no_status "test"
    `54000048
     1b000001
+    `
+
+val (test_cert, test_def) = arm8_decompile_code_no_status "test"
+   `mov x1, #4
+    add x2, x3, x4
+    str x2, [x1, #8]!
     `
 
 *)

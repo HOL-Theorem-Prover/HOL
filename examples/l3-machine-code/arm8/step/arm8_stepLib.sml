@@ -6,8 +6,8 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs arm8Theory arm8_stepTheory
-open state_transformerSyntax blastLib
+open lcsymtacs sptreeTheory arm8Theory arm8_stepTheory arm8AssemblerLib
+open blastLib
 
 structure Parse =
 struct
@@ -15,14 +15,14 @@ struct
    fun remove (s, tmg) = fst (term_grammar.mfupdate_overload_info
                                 (Overload.remove_overloaded_form s) tmg)
    val (tyg, tmg) = arm8_stepTheory.arm8_step_grammars
-   val tmg = List.foldl remove tmg ["cond"]
+   val tmg = List.foldl remove tmg ["cond", "size"]
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
 open Parse
 
 (*
-val _ = Parse.hide "cond"
-val () = Parse.reveal "cond"
+val _ = List.map Parse.hide ["cond", "size"]
+val () = List.map Parse.reveal ["cond", "size"]
 *)
 
 val ERR = Feedback.mk_HOL_ERR "arm8_stepLib"
@@ -383,9 +383,9 @@ local
 in
    val LoadStoreImmediate =
       EV [LoadStoreImmediate_def, LoadStoreImmediateN_def, lem1] []
-         (utilsLib.augment (`size`, List.tabulate (4, w2)) [[]])
+         (utilsLib.augment (`sz`, List.tabulate (4, w2)) [[]])
          ``LoadStoreImmediate
-              (size,v2w [x0; x1],acctype,wback,postindex,unsigned_offset,
+              (sz,v2w [x0; x1],acctype,wback,postindex,unsigned_offset,
                offset,n,t)``
    val LoadStorePair =
       EV [LoadStorePair_def, LoadStorePairN_def, lem2]
@@ -771,6 +771,8 @@ local
 in
    fun arm8_step_hex s = Lib.with_exn step_hex s (ERR "arm8_step_hex" s)
 end
+
+val arm8_step_code = List.map arm8_step_hex o arm8AssemblerLib.arm8_code
 
 (* Testing...
 

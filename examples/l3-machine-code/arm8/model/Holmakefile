@@ -1,5 +1,1 @@
-INCLUDES = ../../common ../../base
-
-ifdef POLY
-HOLHEAP = ${HOLDIR}/examples/l3-machine-code/base/base-heap
-endif
+INCLUDES = ../../common ../../base ../../lib

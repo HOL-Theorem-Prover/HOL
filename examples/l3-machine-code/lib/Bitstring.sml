@@ -153,6 +153,14 @@ struct
    fun op >>+ (l, s) = List.take (l, List.length l - Nat.toInt s)
                        handle General.Subscript => []
 
+   fun op #>> (l, s) =
+      let
+         val n = List.length l
+         val x = n - s mod n
+      in
+         List.drop (l, x) @ List.take (l, x)
+      end
+
    fun setSize s l =
       let
          val n = List.length l
@@ -189,13 +197,21 @@ struct
          setSize (Int.max (log2plus1 r, maxLength (l1, l2))) (fromInt r)
       end
 
-   fun op || (l1, l2) =
+   fun bitwise f =
       let
-         val m = maxLength (l1, l2)
+         val mapf = List.map f
       in
-         List.map (fn (a, b) => a orelse b)
-            (ListPair.zip (setSize m l1, setSize m l2))
+         fn (l1, l2) =>
+            let
+               val m = maxLength (l1, l2)
+            in
+               mapf (ListPair.zip (setSize m l1, setSize m l2))
+            end
       end
+
+   val op || = bitwise (fn (a, b) => a orelse b)
+   val op && = bitwise (fn (a, b) => a andalso b)
+   val op ?? = bitwise (fn (a, b) => a = b)
 
    val op @@ = op @
 

@@ -39,6 +39,11 @@ sig
    val bit: bitstring * Nat.nat -> bool
 
    val << : bitstring * Nat.nat -> bitstring
+   val #>> : bitstring * Nat.nat -> bitstring
+   val >>+ : bitstring * Nat.nat -> bitstring
    val + : bitstring * bitstring -> bitstring
+   val || : bitstring * bitstring -> bitstring
+   val && : bitstring * bitstring -> bitstring
+   val ?? : bitstring * bitstring -> bitstring
    val @@ : bitstring * bitstring -> bitstring
 end

@@ -709,6 +709,7 @@ in
               | NONE => raise ERR "arm8_spec_hex" "not supported"
            ; arm8_spec_hex true s)
    val arm8_spec_hex = arm8_spec_hex false
+   val arm8_spec_code = List.map arm8_spec_hex o arm8AssemblerLib.arm8_code
 end
 
 (* ------------------------------------------------------------------------ *)

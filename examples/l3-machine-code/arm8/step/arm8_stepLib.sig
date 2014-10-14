@@ -7,6 +7,7 @@ sig
    val arm8_names: string list
    val arm8_pattern: string -> Term.term option
    val arm8_step: Term.term -> Thm.thm list
+   val arm8_step_code: string quotation -> Thm.thm list list
    val arm8_step_hex: string -> Thm.thm list
 
    val ARM8_CONV: Conv.conv

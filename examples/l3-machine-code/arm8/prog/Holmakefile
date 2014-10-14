@@ -9,6 +9,6 @@ BARE_THYS = ../step/arm8_stepLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ${HOLDIR}/examples/l3-machine-code/base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../step/arm8-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
