@@ -369,7 +369,7 @@ val lrnext_thm = save_thm(
   LIST_CONJ (CONJUNCTS lrnext' @ CONJUNCTS lrnext_def))
 val _ = computeLib.add_persistent_funs ["lrnext_thm"]
 
-val domain_def = Define`
+val domain_def = zDefine`
   (domain LN = {}) /\
   (domain (LS _) = {0}) /\
   (domain (BN t1 t2) =
@@ -560,6 +560,7 @@ val domain_foldi = save_thm(
   set_foldi_keys |> SPEC_ALL |> Q.INST [`i` |-> `0`, `a` |-> `{}`]
                  |> SIMP_RULE (srw_ss()) [lrnext_thm]
                  |> SYM);
+val _ = computeLib.add_persistent_funs ["domain_foldi"]
 
 val toAList_def = Define `
   toAList = foldi (\k v a. (k,v)::a) 0 []`

@@ -37,6 +37,7 @@ val s1' = syntax_fns 2 HolKernel.dest_monop HolKernel.mk_monop
 val (domain_tm, mk_domain, dest_domain, is_domain) = s1' "domain"
 val (fromAList_tm, mk_fromAList, dest_fromAList, is_fromAList) = s1 "fromAList"
 val (fromList_tm, mk_fromList, dest_fromList, is_fromList) = s1 "fromList"
+val (lrnext_tm, mk_lrnext, dest_lrnext, is_lrnext) = s1 "lrnext"
 val (ls_tm, mk_ls, dest_ls, is_ls) = s1 "LS"
 val (mk_wf_tm, mk_mk_wf, dest_mk_wf, is_mk_wf) = s1 "mk_wf"
 val (size_tm, mk_size, dest_size, is_size) = s1 "size"
