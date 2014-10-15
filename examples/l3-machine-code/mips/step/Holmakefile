@@ -5,7 +5,7 @@ ifdef POLY
 HOLHEAP = mips-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/mipsLib
+BARE_THYS = ../model/mipsLib ../../Lib/MutableMap ../model/mips
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)

@@ -525,7 +525,8 @@ in
                       | _ => err "more than two specs" s)
                 | NONE => loop "failed to add suitable spec"
             end)
-    val mips_spec_hex = mips_spec_hex ()
+   val mips_spec_hex = mips_spec_hex ()
+   val mips_spec_code = mips_spec_hex o mips.encodeInstruction
 end
 
 (* ------------------------------------------------------------------------ *)

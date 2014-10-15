@@ -8,6 +8,8 @@ struct
 open HolKernel boolLib bossLib
 open lcsymtacs blastLib mipsTheory mips_stepTheory
 
+local open mips in end
+
 structure Parse =
 struct
    open Parse
@@ -931,6 +933,21 @@ end
 
 fun mips_eval_hex be = mips_eval be o bitstringSyntax.bitstring_of_hexstring
 
+fun ishex s =
+   String.size s = 8 andalso List.all Char.isHexDigit (String.explode s)
+
+fun mips_step_code be =
+   let
+      val ev = mips_eval_hex be
+   in
+      fn s =>
+         let
+            val h = mips.encodeInstruction s
+         in
+            if ishex h then ev h else raise ERR "mips_step_code" h
+         end
+   end
+
 (* ========================================================================= *)
 
 (* Testing
@@ -952,6 +969,8 @@ val be = false
 val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"
 val v = bitstringSyntax.bitstring_of_hexstring "00c72820"
 val v = bitstringSyntax.bitstring_of_hexstring "07d00000"
+
+val ths = mips_step_code true "addi $1, $2, 3"
 
 *)
 

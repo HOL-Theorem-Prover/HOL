@@ -49,6 +49,8 @@ struct
          ; w
       end
 
+   fun resize i w = fromNat (toNat w, Nat.fromInt i)
+
    fun fromLit (s, i) =
       Option.map
          (fn n =>
@@ -175,12 +177,14 @@ struct
    fun replicate (a as B (_, s1), n) =
       let
          open Nat
-         val _ = zero < n orelse raise Fail "replicate must be > 0"
+         val _ = zero < n orelse raise Fail "replicate must be > 0-bit"
          val l = toList a
          val m = pred s1
       in
          tabulate (s1 * n, fn i => List.nth (l, toInt (m - i mod s1)))
       end
+
+   fun resize_replicate i = resize i o replicate
 
    fun bitFieldInsert (x, y, h, l) =
       modify (fn (i, b) =>

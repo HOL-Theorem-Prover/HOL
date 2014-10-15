@@ -80,6 +80,8 @@ sig
    val quot: nbit * nbit -> nbit
    val rem: nbit * nbit -> nbit
    val replicate: nbit * Nat.nat -> nbit
+   val resize: int -> nbit -> nbit
+   val resize_replicate: int -> nbit * Nat.nat -> nbit
    val reverse: nbit -> nbit
    val signExtend: Nat.nat -> nbit -> nbit
    val size: nbit -> Nat.nat
