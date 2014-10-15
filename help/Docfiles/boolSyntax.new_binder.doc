@@ -24,10 +24,10 @@ Fails if the type does not correspond to the above pattern.
 \EXAMPLE
 {
    - new_theory "anorak";
-   () : unit
+   > val it = () : unit
 
-   - new_binder ("!!", (bool-->bool)-->bool);;
-   () : unit
+   - new_binder ("!!", (bool-->bool)-->bool);
+   > val it = () : unit
 
    - Term `!!x. T`;
    > val it = `!! x. T` : term
