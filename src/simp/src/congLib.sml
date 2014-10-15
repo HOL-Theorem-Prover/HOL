@@ -161,7 +161,7 @@ val cong_reducer =
         end
   in REDUCER {name=SOME"cong_reducer",
               addcontext=addcontext, apply=apply,
-              initial=CONVNET (Ho_Net.empty_net)}
+              initial=CONVNET (Ho_Net.empty)}
   end;
 
 
