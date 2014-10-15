@@ -442,7 +442,7 @@ the region contains no backquotes, then send region instead."
 (defun hol-send-string-as-termination-proof (str)
   (send-raw-string-to-hol
    (concat
-    "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `" str "`)") nil t))
+    "Defn.tgoal (Defn.Hol_defn \"HOLmode_defn\" `" str "`) handle e => Raise e") nil t))
 
 (defun remove-sml-comments (end)
   (let (done (start (point)))
