@@ -1,6 +1,6 @@
 \DOC get_results
 
-\TYPE {get_results : model ->  (term_bdd * thm option * term list option) list option}
+\TYPE {get_results : model -> (term_bdd * thm option * term list option) list option}
 
 \SYNOPSIS
 Returns the results of model checking the HolCheck model, if the model has been checked. 
