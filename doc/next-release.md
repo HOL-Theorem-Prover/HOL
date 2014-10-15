@@ -93,6 +93,7 @@ New theories:
 
     5. The full development does not build under Moscow&nbsp;ML&nbsp;2.01, as it makes use of the `IEEEReal` and `PackRealBig` basis structures.
 
+* A theory of “simple Patricia trees” (`sptreeTheory`). This theory implements a type `α sptree`, which is a finite map from natural numbers to values of type `α`.  (This type is not really a Patricia tree at all; for those, see the other theories in `src/patricia`.) Values of type `α sptree` feature efficient lookup, insertion, deletion and union (efficient when evaluated with `EVAL` or simplified).  Though there is a efficient (linear-time) fold operation, it does not iterate over the key-value pairs in key-order.
 
 New tools:
 ----------
