@@ -114,4 +114,6 @@ sig
   val PMATCH_MP_TAC          : thm_tactic
   val PMATCH_MP              : thm -> thm -> thm
 
+  val pvariant               : term list -> term -> term
+
 end
