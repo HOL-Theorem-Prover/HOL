@@ -759,6 +759,7 @@ val _ = eSML "string"
    :: MLSIG "type num = numML.num"
    :: MLSIG "type char = Char.char"
    :: MLSIG "type string = String.string"
+   :: MLSIG "val DEST_STRING : string -> (char * string) option"
    :: MLSIG "val CHR : num -> char"
    :: MLSIG "val ORD : char -> num"
    :: MLSIG "val string_lt : string -> string -> bool"
@@ -782,6 +783,7 @@ val _ = eSML "string"
 val _ = eCAML "string"
   (MLSIGSTRUCT ["type num = NumML.num"]
    @ OPEN ["list", "option"]
+   :: MLSIG "val _DEST_STRING : string -> (char * string) option"
    :: MLSIG "val _CHR : num -> char"
    :: MLSIG "val _ORD : char -> num"
    :: MLSIG "val string_lt : string -> string -> bool"
@@ -1157,7 +1159,7 @@ val fromNum_def = Define`
 
 val _ = ConstMapML.insert_cons ``n2w_itself``;
 
-val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
+val sizes = [1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64, 128, 256]
 
 val ALPHA_BETA_RULE = GEN_ALL o Q.INST [`a` |-> `m`, `b` |-> `n`] o SPEC_ALL
 
