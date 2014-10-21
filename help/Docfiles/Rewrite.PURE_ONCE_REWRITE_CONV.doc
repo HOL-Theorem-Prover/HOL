@@ -11,7 +11,7 @@ conversion.
 \DESCRIBE
 {PURE_ONCE_REWRITE_CONV} generates rewrites from the list of theorems
 supplied by the user, without including the tautologies given in
-{basic_rewrites}. The applicable rewrites are employeded once, without
+{implicit_rewrites}. The applicable rewrites are employeded once, without
 entailing in a recursive search for matches over the term.
 See {GEN_REWRITE_CONV} for more details about rewriting strategies in
 HOL.
