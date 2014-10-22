@@ -23,3 +23,5 @@
 \HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} updated_by (\HOLConst{\HOLTokenNeg{}})}
 
 \HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld2} updated_by \HOLFreeVar{g}}
+
+\HOLinline{\HOLFreeVar{x} \HOLConst{INSERT} \HOLFreeVar{s}}

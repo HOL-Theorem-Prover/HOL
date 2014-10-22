@@ -9,3 +9,5 @@
 \HOLtm{x with fld1 updated_by $~}
 
 \HOLtm{x with <| fld2 updated_by g |>}
+
+\HOLtm{x INSERT s}

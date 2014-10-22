@@ -650,31 +650,56 @@ fun pp_term (G : grammar) TyG backend = let
                    type_pp.pp_type_with_depth TyG backend pps (decdepth depth)
                    ty)
 
-    (* els is a list of pp_elements; args is a list of terms to be inserted
-       in place of RE TM elements.  Returns the unused args *)
-    fun print_ellist (lprec, cprec, rprec) (els, args : term list) = let
-      val recurse  = print_ellist (lprec, cprec, rprec)
+    (* Prints "elements" from a concrete syntax rule.
+
+         els is the list of pp_elements;
+         args is a list of terms to be inserted in place of RE TM elements;
+         fopt is a term corresponding to the constant (if any) at the head
+           position of the term.
+
+       Returns the unused args *)
+    fun print_ellist fopt (lprec, cprec, rprec) (els, args : term list) = let
+      fun onetok acc [] = acc
+        | onetok NONE (RE (TOK s) :: rest) = onetok (SOME s) rest
+        | onetok (SOME _) (RE (TOK s) :: rest) = NONE
+        | onetok acc (_ :: rest) = onetok acc rest
+      val tok_string =
+          case (fopt, onetok NONE els) of
+              (SOME f, SOME s) =>
+                if CharVector.all Char.isAlphaNum s then
+                  let
+                    val crecord = if is_const f then dest_thy_const f
+                                  else {Name = #1 (dest_var f),
+                                        Ty = type_of f,
+                                        Thy = ""}
+                  in
+                    (fn s => add_ann_string(s, PPBackEnd.Const (crecord,s)))
+                  end
+                else add_string
+            | _ => add_string
+      fun recurse (els, args) =
+          case els of
+            [] => return args
+          | (e :: es) => let
+            in
+              case e of
+                PPBlock(more_els, (sty, ind)) =>
+                  block sty ind (recurse (more_els,args)) >-
+                  (fn rest => recurse (es,rest))
+              | HardSpace n => (hardspace n >> recurse (es, args))
+              | BreakSpace (n, m) => (add_break(n,m) >> recurse (es, args))
+              | RE (TOK s) => (tok_string s >> recurse (es, args))
+              | RE TM => (pr_term (hd args) Top Top Top (decdepth depth) >>
+                          recurse (es, tl args))
+              | FirstTM => (pr_term (hd args) cprec lprec cprec (decdepth depth) >>
+                            recurse (es, tl args))
+              | LastTM => (pr_term (hd args) cprec cprec rprec (decdepth depth) >>
+                           recurse (es, tl args))
+              | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
+              | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
+          end
     in
-      case els of
-        [] => return args
-      | (e :: es) => let
-        in
-          case e of
-            PPBlock(more_els, (sty, ind)) =>
-              block sty ind (recurse (more_els,args)) >-
-              (fn rest => recurse (es,rest))
-          | HardSpace n => (hardspace n >> recurse (es, args))
-          | BreakSpace (n, m) => (add_break(n,m) >> recurse (es, args))
-          | RE (TOK s) => (add_string s >> recurse (es, args))
-          | RE TM => (pr_term (hd args) Top Top Top (decdepth depth) >>
-                      recurse (es, tl args))
-          | FirstTM => (pr_term (hd args) cprec lprec cprec (decdepth depth) >>
-                        recurse (es, tl args))
-          | LastTM => (pr_term (hd args) cprec cprec rprec (decdepth depth) >>
-                       recurse (es, tl args))
-          | EndInitialBlock _ => raise Fail "term_pp - encountered EIB"
-          | BeginFinalBlock _ => raise Fail "term_pp - encountered BFB"
-        end
+      recurse (els, args)
     end
 
 
@@ -1050,12 +1075,12 @@ fun pp_term (G : grammar) TyG backend = let
                       [] => nothing (* should never happen *)
                     | [u] => print_update (decdepth depth) u
                     | u::us => (print_update (decdepth depth) u >>
-                                print_ellist(Top,Top,Top) (sep, []) >>
+                                print_ellist NONE (Top,Top,Top) (sep, []) >>
                                 recurse (decdepth depth) us)
             in
-              print_ellist (Top,Top,Top) (ldelim, []) >>
+              print_ellist NONE (Top,Top,Top) (ldelim, []) >>
               block INCONSISTENT 0 (recurse depth updates) >>
-              print_ellist (Top,Top,Top) (rdelim, []) >>
+              print_ellist NONE (Top,Top,Top) (rdelim, []) >>
               nothing
             end
           in
@@ -1194,8 +1219,8 @@ fun pp_term (G : grammar) TyG backend = let
       end
     in
       case nilrule of
-        SOME r => print_ellist (Top,Top,Top) (#leftdelim r, []) >>
-                  print_ellist (Top,Top,Top) (#rightdelim r, []) >>
+        SOME r => print_ellist NONE (Top,Top,Top) (#leftdelim r, []) >>
+                  print_ellist NONE (Top,Top,Top) (#rightdelim r, []) >>
                   return ()
       | NONE => let
           (* if only rule is a list form rule and we've got to here, it
@@ -1264,7 +1289,8 @@ fun pp_term (G : grammar) TyG backend = let
           ptype_block
               (pbegin (addparens orelse comb_show_type) >>
                begblock
-                    (print_ellist (lprec, prec, rprec)
+                    (print_ellist (SOME f)
+                                  (lprec, prec, rprec)
                                   (pp_elements, arg_terms)) >>
                pend (addparens orelse comb_show_type))
         end
@@ -1291,7 +1317,9 @@ fun pp_term (G : grammar) TyG backend = let
           ptype_block
               (pbegin (addparens orelse comb_show_type) >>
                begblock
-                 (print_ellist (lprec, prec, Top) (pp_elements, real_args)) >>
+                 (print_ellist (SOME f)
+                               (lprec, prec, Top)
+                               (pp_elements, real_args)) >>
                pend (addparens orelse comb_show_type))
         end
       | SUFFIX TYPE_annotation =>
@@ -1316,7 +1344,9 @@ fun pp_term (G : grammar) TyG backend = let
           ptype_block
               (pbegin (addparens orelse comb_show_type) >>
                begblock
-                 (print_ellist (Top, prec, rprec) (pp_elements, real_args)) >>
+                 (print_ellist (SOME f)
+                               (Top, prec, rprec)
+                               (pp_elements, real_args)) >>
                pend (addparens orelse comb_show_type))
         end
       | PREFIX (BINDER lst) => let
@@ -1350,7 +1380,9 @@ fun pp_term (G : grammar) TyG backend = let
         in
           ptype_block
             (uncurry block (#2 (#block_style rr))
-               (print_ellist (Top, Top, Top) (elements, args @ [Rand]) >>
+               (print_ellist (SOME f)
+                             (Top, Top, Top)
+                             (elements, args @ [Rand]) >>
                 return ()))
         end
       | LISTRULE lrules => let
@@ -1374,14 +1406,14 @@ fun pp_term (G : grammar) TyG backend = let
               else let
               in
                 pr_term head Top Top Top (decdepth depth) >>
-                print_ellist (Top,Top,Top) (sep, []) >>
+                print_ellist NONE (Top,Top,Top) (sep, []) >>
                 recurse (decdepth depth) tail
               end
             end
           in
-            print_ellist (Top,Top,Top) (ldelim, []) >>
+            print_ellist NONE (Top,Top,Top) (ldelim, []) >>
             block consistency breakspacing (recurse depth tm) >>
-            print_ellist (Top,Top,Top) (rdelim, []) >> return ()
+            print_ellist NONE (Top,Top,Top) (rdelim, []) >> return ()
           end
         in
           ptype_block (pr_list tm)
