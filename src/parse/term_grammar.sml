@@ -197,6 +197,29 @@ in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
 
+fun unfakeconst vnm =
+    case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
+      SOME s => SOME("", s)
+        (* first argument in result might conceivably contain useful
+           information, but I'm not sure what it should be right now *)
+   | NONE => NONE
+
+fun grammar_name G tm = let
+  val oinfo = overload_info G
+in
+  if Term.is_const tm then
+    Overload.overloading_of_term oinfo tm
+  else if Term.is_var tm then let
+      val (vnm, _) = Term.dest_var tm
+    in
+      case unfakeconst vnm of
+        NONE => SOME vnm
+      | SOME(_ (* thy *), nm) => SOME nm
+    end
+  else NONE
+end
+
+
 (* invariant of user_printers is that there is only ever one value with a
    given name in the mapping from terms to print functions *)
 fun fupdate_user_printers f g =

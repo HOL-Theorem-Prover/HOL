@@ -277,28 +277,6 @@ exception DoneExit
 
 fun symbolic s = HOLsym (String.sub(s,String.size(s)-1));
 
-fun unfakeconst vnm =
-    case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
-      SOME s => SOME("", s)
-        (* first argument in result might conceivably contain useful
-           information, but I'm not sure what it should be right now *)
-   | NONE => NONE
-
-fun grammar_name G tm = let
-  val oinfo = term_grammar.overload_info G
-in
-  if is_const tm then
-    Overload.overloading_of_term oinfo tm
-  else if is_var tm then let
-      val (vnm, _) = dest_var tm
-    in
-      case unfakeconst vnm of
-        NONE => SOME vnm
-      | SOME(_ (* thy *), nm) => SOME nm
-    end
-  else NONE
-end
-
 (* term tm can be seen to have name s according to grammar G *)
 fun has_name G s tm = (grammar_name G tm = SOME s)
 
@@ -1784,7 +1762,7 @@ fun pp_term (G : grammar) TyG backend = let
               end
           end (* pr_atomf *)
           fun maybe_pr_atomf () =
-              if grammar_name G f = SOME "case" then
+              if grammar_name G oif = SOME "case" then
                 pr_atomf (strip_comb tm)
               else
                 case Overload.oi_strip_comb overload_info tm of
@@ -1840,7 +1818,7 @@ fun pp_term (G : grammar) TyG backend = let
           (* case expressions *)
           (fn () =>
               if (is_const f andalso (!prettyprint_cases)) then
-                case grammar_name G f of
+                case grammar_name G oif of
                   SOME "case" =>
                   (let
                      val (split_on, splits) = convert_case tm

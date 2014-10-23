@@ -140,6 +140,8 @@ sig
   val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
   val numeral_info   : grammar -> (char * string option) list
   val overload_info  : grammar -> overload_info
+  val unfakeconst    : string -> (string * string) option
+  val grammar_name   : grammar -> term -> string option
 
   (*------------------------------------------------------------------------
    * known constants are those strings that the parsing process will
