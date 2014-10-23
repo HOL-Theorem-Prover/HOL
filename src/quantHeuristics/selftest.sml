@@ -317,4 +317,3 @@ val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
 
 
 val _ = Process.exit Process.success;
-

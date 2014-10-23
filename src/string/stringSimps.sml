@@ -8,4 +8,3 @@ val STRING_ss = BasicProvers.thy_ssfrag "string"
 val string_rewrites = frag_rewrites STRING_ss
 
 end
-

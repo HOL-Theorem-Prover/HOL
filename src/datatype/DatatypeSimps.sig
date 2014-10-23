@@ -117,4 +117,3 @@ val expand_type_quants_stateful_ss : unit -> ssfrag
 val cases_to_top_RULE : rule
 
 end
-

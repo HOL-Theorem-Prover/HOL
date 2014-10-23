@@ -159,5 +159,3 @@ val srws = flatten (map BODY_CONJUNCTS (COND_CLAUSES :: sort_thms));
 fun simp_norm q = time (SIMP_CONV empty_ss srws) (--q--);
 
 simp_norm `merge_sort L12`; (* ~ 5s *)
-
-

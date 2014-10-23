@@ -291,4 +291,3 @@ val _ = export_theory();
 val _ = print_theory_to_file "-" "quotient_sum.lst";
 
 val _ = html_theory "quotient_sum";
-

@@ -994,4 +994,3 @@ val _ = export_theory();
 val _ = print_theory_to_file "-" "quotient_pred_set.lst";
 
 val _ = html_theory "quotient_pred_set";
-

@@ -25,4 +25,3 @@ val MAKE_SIMPLE_SUBST_TAC : tactic
 val SIMPLE_SUBST_TAC : tactic
 
 end;
-

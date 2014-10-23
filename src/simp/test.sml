@@ -67,11 +67,3 @@ CACHED_ARITH [] (--`3 < 1`--);; (* cache hit, failure *)
 val CC = SIMP_PROVE bool_ss [] (--`!P:'a->'b. (x = x') ==> (P x = P x')`--);
 val CC2 = SIMP_PROVE bool_ss [] (--`!P:'a->'b->'c. (x = x') /\ (y = y') ==> (P x y = P x' y')`--);
 SIMP_PROVE arith_ss [CC,CC2] (--`y >= z ==> z >= y ==> (P y (x + 2):bool = P z (2 + x))`--);
-
-
-
-
-
-
-
-

@@ -8,4 +8,3 @@ struct
    open quotient_pred_setTheory
    open quotient
 end
-

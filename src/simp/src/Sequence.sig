@@ -38,5 +38,3 @@ signature Sequence = sig
   val seq_diagonalize : 'a seq -> 'b seq -> ('a * 'b) seq
   val seq_permutations : 'a list -> 'a list seq
 end (* sig *)
-
-

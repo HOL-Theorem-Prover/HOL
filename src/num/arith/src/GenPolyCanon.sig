@@ -87,5 +87,3 @@ end;
   theorems.
 
 *)
-
-

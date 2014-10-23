@@ -312,4 +312,3 @@ val _ = adjoin_to_theory
   end)};
 
 val _ = export_theory();
-
