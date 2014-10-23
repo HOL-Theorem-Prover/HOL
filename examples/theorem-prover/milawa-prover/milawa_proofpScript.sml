@@ -219,8 +219,10 @@ val lookup_thm = add_prove(
   \\ Cases \\ FS [LOOKUP_DOT_def]);
 
 val MEM_IMP_INDEX_OF = prove(
-  ``!xs y n. MEM y xs ==> ?k. (INDEX_OF n y xs = SOME (n+k)) /\ (EL k xs = y)``,
-  Induct \\ SIMP_TAC std_ss [MEM,INDEX_OF_def] \\ NTAC 3 STRIP_TAC
+  ``!xs y n. MEM y xs ==>
+             ?k. (milawa_exec$INDEX_OF n y xs = SOME (n+k)) /\ (EL k xs = y)``,
+  Induct \\ SIMP_TAC std_ss [MEM,milawa_execTheory.INDEX_OF_def]
+  \\ NTAC 3 STRIP_TAC
   \\ Cases_on `y = h` \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   THEN1 (Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC std_ss [EL,HD])
   \\ RES_TAC \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `n+1`)
