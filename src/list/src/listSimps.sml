@@ -351,12 +351,12 @@ val list_rws = computeLib.add_thms
       NULL_DEF, CONS_11, NOT_CONS_NIL, NOT_NIL_CONS, MEM, EXISTS_DEF, EVERY_DEF,
       ZIP, UNZIP, TAKE_compute, DROP_compute, PAD_LEFT, PAD_RIGHT, isPREFIX,
       REVERSE_REV, REV_DEF, SUM_SUM_ACC, SUM_ACC_DEF,
-      FILTER, FOLDL, FOLDR, dropWhile_DEF,
+      FILTER, FOLDL, FOLDR, dropWhile_def,
       EL_restricted, EL_simp_restricted, SNOC,
       computeLib.lazyfy_thm list_case_compute,
       list_size_def, ALL_DISTINCT, FRONT_DEF, LAST_compute,
       GENLIST_AUX_compute, GENLIST_NUMERALS,
-      LIST_TO_SET_THM ]
+      LIST_TO_SET_THM, nub_def, INDEX_FIND_def, FIND_def, INDEX_OF_def ]
 
 fun list_compset () =
    let

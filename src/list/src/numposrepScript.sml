@@ -175,20 +175,21 @@ local
   val op >- = op THEN1
 in
 val l2n_eq_0 = store_thm("l2n_eq_0",
-  ``∀b. 0 < b ⇒ ∀l. (l2n b l = 0) ⇔ EVERY ($= 0 o combin$C $MOD b) l``,
+  ``!b. 0 < b ==> !l. (l2n b l = 0) <=> EVERY ($= 0 o combin$C $MOD b) l``,
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
   Q.X_GEN_TAC`z` THEN Cases_on`0=z MOD b` THEN simp[])
 
 val l2n_SNOC_0 = store_thm("l2n_SNOC_0",
-  ``∀b ls. 0 < b ⇒ (l2n b (SNOC 0 ls) = l2n b ls)``,
+  ``!b ls. 0 < b ==> (l2n b (SNOC 0 ls) = l2n b ls)``,
   GEN_TAC THEN Induct THEN simp[l2n_def])
 
 val MOD_EQ_0_0 = prove(
-  ``∀n b. 0 < b ⇒ (n MOD b = 0) ⇒ n < b ⇒ (n = 0)``,
+  ``!n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)``,
   SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
 
 val LOG_l2n = store_thm("LOG_l2n",
-  ``∀b. 1 < b ⇒ ∀l. l ≠ [] ∧ 0 < LAST l ∧ EVERY ($> b) l ⇒ (LOG b (l2n b l) = PRE (LENGTH l))``,
+  ``!b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
+        (LOG b (l2n b l) = PRE (LENGTH l))``,
   NTAC 2 STRIP_TAC THEN Induct THEN simp[l2n_def] THEN
   rw[] THEN fs[LAST_DEF] THEN
   Cases_on`l=[]` THEN fs[l2n_def] THEN1 (
@@ -203,7 +204,7 @@ val LOG_l2n = store_thm("LOG_l2n",
   Cases_on`l2n b l = 0` THEN simp[] THEN
   `0 < b` by simp[] THEN
   fs[l2n_eq_0] THEN
-  `∃z. MEM z l ∧ 0 < z` by (
+  `?z. MEM z l /\ 0 < z` by (
     Q.EXISTS_TAC`LAST l` THEN simp[] THEN
     Cases_on`l` THEN simp[rich_listTheory.MEM_LAST] THEN
     fs[] ) THEN
@@ -213,13 +214,14 @@ val LOG_l2n = store_thm("LOG_l2n",
   fs[])
 
 val l2n_dropWhile_0 = store_thm("l2n_dropWhile_0",
-  ``∀b ls. 0 < b ⇒ (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls)))= l2n b ls)``,
+  ``!b ls.
+      0 < b ==> (l2n b (REVERSE (dropWhile ($= 0) (REVERSE ls))) = l2n b ls)``,
   GEN_TAC >> HO_MATCH_MP_TAC SNOC_INDUCT >>
-  simp[dropWhile_DEF,REVERSE_SNOC] >> rw[] >>
+  simp[dropWhile_def,REVERSE_SNOC] >> rw[] >>
   rw[] >> rw[l2n_SNOC_0] >> rw[SNOC_APPEND])
 
 val LOG_l2n_dropWhile = store_thm("LOG_l2n_dropWhile",
-  ``∀b l. 1 < b ∧ EXISTS ($<> 0) l ∧ EVERY ($>b) l ⇒
+  ``!b l. 1 < b /\ EXISTS ($<> 0) l /\ EVERY ($>b) l ==>
           (LOG b (l2n b l) = PRE (LENGTH (dropWhile ($= 0) (REVERSE l))))``,
   Tactical.REPEAT STRIP_TAC >>
   `0 < b` by simp[] >>

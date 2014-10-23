@@ -5184,15 +5184,15 @@ METIS_TAC[SUBSET_FINITE]);
 (*---------------------------------------------------------------------------*)
 
 val INSERT_EQ_SING = store_thm("INSERT_EQ_SING",
-  ``∀s x y. (x INSERT s = {y}) ⇔ ((x = y) ∧ s ⊆ {y})``,
+  ``!s x y. (x INSERT s = {y}) <=> ((x = y) /\ s SUBSET {y})``,
   SRW_TAC [] [SUBSET_DEF,EXTENSION] THEN METIS_TAC []);
 
 val CARD_UNION_LE = store_thm("CARD_UNION_LE",
-  ``FINITE s ∧ FINITE t ⇒ CARD (s ∪ t) ≤ CARD s + CARD t``,
+  ``FINITE s /\ FINITE t ==> CARD (s UNION t) <= CARD s + CARD t``,
   SRW_TAC [][] THEN IMP_RES_TAC CARD_UNION THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [])
 
 val IMAGE_SUBSET_gen = store_thm("IMAGE_SUBSET_gen",
-  ``∀f s u t. s ⊆ u ∧ (IMAGE f u ⊆ t) ⇒ IMAGE f s ⊆ t``,
+  ``!f s u t. s SUBSET u /\ (IMAGE f u SUBSET t) ==> IMAGE f s SUBSET t``,
   SIMP_TAC (srw_ss())[SUBSET_DEF] THEN METIS_TAC[])
 
 val CARD_REST = store_thm("CARD_REST",
@@ -5238,7 +5238,7 @@ val compl_insert = Q.store_thm ("compl_insert",
  METIS_TAC []);
 
 val in_max_set = Q.store_thm ("in_max_set",
-`!s. FINITE s ⇒ !x. x ∈ s ⇒ x ≤ MAX_SET s`,
+`!s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s`,
  HO_MATCH_MP_TAC FINITE_INDUCT THEN
  SRW_TAC [] [MAX_SET_THM] THEN
  SRW_TAC [] []);
