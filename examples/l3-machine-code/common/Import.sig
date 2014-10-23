@@ -3,11 +3,14 @@ sig
 
    datatype monop =
        Abs
-     | Bin
      | BNot
+     | Bin
+     | Cardinality
      | Cast of ParseDatatype.pretype
      | Dec
-     | Flat
+     | Difference
+     | Drop
+     | Element
      | FPAbs of int
      | FPAdd of int
      | FPEqual of int
@@ -16,16 +19,21 @@ sig
      | FPMul of int
      | FPNeg of int
      | FPSub of int
+     | Flat
      | Fst
      | Head
      | Hex
+     | IndexOf
+     | Intersect
      | IsAlpha
      | IsAlphaNum
      | IsDigit
      | IsHexDigit
      | IsLower
+     | IsMember
      | IsSome
      | IsSpace
+     | IsSubset
      | IsUpper
      | K1 of ParseDatatype.pretype
      | Length
@@ -35,8 +43,12 @@ sig
      | Msb
      | Neg
      | Not
+     | Nub
      | PadLeft
      | PadRight
+     | Remove
+     | RemoveExcept
+     | RemoveDuplicates
      | Rev
      | SE of ParseDatatype.pretype
      | Size
@@ -46,8 +58,10 @@ sig
      | SofL
      | Some
      | Tail
+     | Take
      | ToLower
      | ToUpper
+     | Union
      | ValOf
 
    datatype binop =
@@ -178,6 +192,7 @@ sig
    val MN : Term.term * Term.term -> Term.term
    val MD : Term.term * ParseDatatype.pretype -> Term.term
    val For : Term.term -> Term.term
+   val Foreach : Term.term -> Term.term
    val Mop : monop * Term.term -> Term.term
    val Bop : binop * Term.term * Term.term -> Term.term
 

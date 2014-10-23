@@ -444,17 +444,22 @@ val MD = state_transformerSyntax.mk_widen o (I ## Ty)
 
 val For = HolKernel.mk_monop state_transformerSyntax.for_tm
 
+val Foreach = HolKernel.mk_monop state_transformerSyntax.foreach_tm
+
 (* ------------------------------------------------------------------------ *)
 
 (* Primitive binary and unary operations *)
 
 datatype monop =
      Abs
-   | Bin
    | BNot
+   | Bin
+   | Cardinality
    | Cast of ParseDatatype.pretype
    | Dec
-   | Flat
+   | Difference
+   | Drop
+   | Element
    | FPAbs of int
    | FPAdd of int
    | FPEqual of int
@@ -463,16 +468,21 @@ datatype monop =
    | FPMul of int
    | FPNeg of int
    | FPSub of int
+   | Flat
    | Fst
    | Head
    | Hex
+   | IndexOf
+   | Intersect
    | IsAlpha
    | IsAlphaNum
    | IsDigit
    | IsHexDigit
    | IsLower
+   | IsMember
    | IsSome
    | IsSpace
+   | IsSubset
    | IsUpper
    | K1 of ParseDatatype.pretype
    | Length
@@ -482,8 +492,12 @@ datatype monop =
    | Msb
    | Neg
    | Not
+   | Nub
    | PadLeft
    | PadRight
+   | Remove
+   | RemoveExcept
+   | RemoveDuplicates
    | Rev
    | SE of ParseDatatype.pretype
    | Size
@@ -493,8 +507,10 @@ datatype monop =
    | SofL
    | Some
    | Tail
+   | Take
    | ToLower
    | ToUpper
+   | Union
    | ValOf
 
 datatype binop =
@@ -592,26 +608,63 @@ local
          Lib.total (boolSyntax.rhs o Thm.concl o PairedLambda.PAIRED_BETA_CONV)
    in
       fun pbeta t = Option.getOpt (try_pbeta t, t)
+      fun mk_uncurry f_tm tm = pbeta (boolSyntax.mk_icomb (f_tm, tm))
    end
 
    val one_tm = numSyntax.mk_numeral Arbnum.one
    val t_tm = ``#"t"``
    val f_tm = ``#"f"``
 
-   fun mk_w tm ty = wordsSyntax.mk_n2w (tm, wordsSyntax.dest_word_type ty)
-   val mk_word0 = mk_w numSyntax.zero_tm
-   val mk_word1 = mk_w one_tm
+   local
+      fun mk_w tm ty = wordsSyntax.mk_n2w (tm, wordsSyntax.dest_word_type ty)
+   in
+      val mk_word0 = mk_w numSyntax.zero_tm
+      val mk_word1 = mk_w one_tm
+   end
 
-   val mk_map = Lib.curry boolSyntax.mk_icomb listSyntax.map_tm
-   val lower_tm = mk_map stringSyntax.tolower_tm
-   val upper_tm = mk_map stringSyntax.toupper_tm
-   fun mk_lower tm = Term.mk_comb (lower_tm, tm)
-   fun mk_upper tm = Term.mk_comb (upper_tm, tm)
+   fun mk_sign_extend ty tm =
+      wordsSyntax.mk_sw2sw (tm, wordsSyntax.dest_word_type (Ty ty))
 
-   val pad_left_tm = ``\(a:'a, b, c). list$PAD_LEFT a b c``
-   val pad_right_tm = ``\(a:'a, b, c). list$PAD_RIGHT a b c``
-   fun mk_pad_left tm  = pbeta (boolSyntax.mk_icomb (pad_left_tm, tm))
-   fun mk_pad_right tm = pbeta (boolSyntax.mk_icomb (pad_right_tm, tm))
+   local
+      val mk_map = Lib.curry boolSyntax.mk_icomb listSyntax.map_tm
+      val lower_tm = mk_map stringSyntax.tolower_tm
+      val upper_tm = mk_map stringSyntax.toupper_tm
+   in
+      fun mk_lower tm = Term.mk_comb (lower_tm, tm)
+      fun mk_upper tm = Term.mk_comb (upper_tm, tm)
+   end
+
+   val mk_pad_left  = mk_uncurry ``\(a:'a, b, c). list$PAD_LEFT a b c``
+   val mk_pad_right = mk_uncurry ``\(a:'a, b, c). list$PAD_RIGHT a b c``
+   val mk_ismember  = mk_uncurry ``\(x:'a, l). x IN list$LIST_TO_SET l``
+   val mk_take      = mk_uncurry ``\(x, l:'a list). list$TAKE x l``
+   val mk_drop      = mk_uncurry ``\(x, l:'a list). list$DROP x l``
+   val mk_element   = mk_uncurry ``\(x, l:'a list). list$EL x l``
+   val mk_remove    = mk_uncurry ``\(l1, l2). list$FILTER (\x. ~MEM x l1) l2``
+   val mk_remove_e  = mk_uncurry ``\(l1, l2). list$FILTER (\x. MEM x l1) l2``
+   val mk_indexof   = mk_uncurry ``\(x:'a, l). list$INDEX_OF x l``
+
+   val mk_word_min  = mk_uncurry ``\(m:'a word, n). words$word_min m n``
+   val mk_word_max  = mk_uncurry ``\(m:'a word, n). words$word_max m n``
+   val mk_word_smin = mk_uncurry ``\(m:'a word, n). words$word_smin m n``
+   val mk_word_smax = mk_uncurry ``\(m:'a word, n). words$word_smax m n``
+
+   val mk_num_min = mk_uncurry ``\(m, n). arithmetic$MIN m n``
+   val mk_num_max = mk_uncurry ``\(m, n). arithmetic$MAX m n``
+   val mk_int_min = mk_uncurry ``\(m, n). integer$int_min m n``
+   val mk_int_max = mk_uncurry ``\(m, n). integer$int_max m n``
+
+   val mk_union      = mk_uncurry ``\(s1:'a set, s2). pred_set$UNION s1 s2``
+   val mk_intersect  = mk_uncurry ``\(s1:'a set, s2). pred_set$INTER s1 s2``
+   val mk_difference = mk_uncurry ``\(s1:'a set, s2). pred_set$DIFF s1 s2``
+   val mk_issubset   = mk_uncurry ``\(s1:'a set, s2). pred_set$SUBSET s1 s2``
+
+   fun mk_rev tm =
+      (if Lib.can wordsSyntax.dim_of tm
+          then wordsSyntax.mk_word_reverse
+       else listSyntax.mk_reverse) tm
+
+   val c_mk_comb = Lib.curry Term.mk_comb
 
    fun enum2num ty =
       Lib.with_exn mk_local_const
@@ -622,49 +675,6 @@ local
       Lib.with_exn mk_local_const
         ("num2" ^ typeName ty, Type.--> (numLib.num, ty))
         (ERR "pickCast" "num2enum not found")
-
-   fun mk_test a b c d = boolSyntax.mk_cond (boolSyntax.mk_eq (a, b), c, d)
-
-   val string2bool =
-      let
-         val v = Term.mk_var ("s", stringSyntax.string_ty)
-      in
-         Term.mk_abs (v,
-            mk_test v (stringSyntax.fromMLstring "true") boolSyntax.T
-              (mk_test v (stringSyntax.fromMLstring "false") boolSyntax.F
-                 (boolSyntax.mk_arb Type.bool)))
-      end
-
-   val fstTy = fst o pairSyntax.dest_prod o Term.type_of
-
-   fun s f (tm1:term) tm2 = pairSyntax.mk_uncurry (f tm2 tm1, tm2)
-
-   fun ialpha tm =
-      Term.inst [Type.alpha |-> wordsSyntax.dest_word_type (fstTy tm)]
-
-   fun mk_from_bool (x as (tm, a, b)) =
-      if tm = boolSyntax.T
-         then a
-      else if tm = boolSyntax.F
-         then b
-      else boolSyntax.mk_cond x
-
-   val mk_word_min  = s ialpha wordsSyntax.word_min_tm
-   val mk_word_max  = s ialpha wordsSyntax.word_max_tm
-   val mk_word_smin = s ialpha wordsSyntax.word_smin_tm
-   val mk_word_smax = s ialpha wordsSyntax.word_smax_tm
-
-   val mk_num_min = s (K I) numSyntax.min_tm
-   val mk_num_max = s (K I) numSyntax.max_tm
-   val mk_int_min = s (K I) intSyntax.min_tm
-   val mk_int_max = s (K I) intSyntax.max_tm
-
-   fun mk_rev tm =
-      (if Lib.can wordsSyntax.dim_of tm
-          then wordsSyntax.mk_word_reverse
-       else listSyntax.mk_reverse) tm
-
-   val c_mk_comb = Lib.curry Term.mk_comb
 
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
@@ -709,6 +719,27 @@ local
       in
          fn tm => pbeta (Term.mk_comb (ptm, tm))
       end
+
+   local
+      fun mk_test a b c d = boolSyntax.mk_cond (boolSyntax.mk_eq (a, b), c, d)
+   in
+      val string2bool =
+         let
+            val v = Term.mk_var ("s", stringSyntax.string_ty)
+         in
+            Term.mk_abs (v,
+               mk_test v (stringSyntax.fromMLstring "true") boolSyntax.T
+                 (mk_test v (stringSyntax.fromMLstring "false") boolSyntax.F
+                    (boolSyntax.mk_arb Type.bool)))
+         end
+   end
+
+   fun mk_from_bool (x as (tm, a, b)) =
+      if tm = boolSyntax.T
+         then a
+      else if tm = boolSyntax.F
+         then b
+      else boolSyntax.mk_cond x
 
    fun pickCast ty2 tm =
       let
@@ -873,7 +904,7 @@ local
 
       fun pickMinMax (a, b, c) tm =
          let
-            val ty = fstTy tm
+            val ty = (fst o pairSyntax.dest_prod o Term.type_of) tm
          in
            (if wordsSyntax.is_word_type ty
                then a
@@ -886,61 +917,72 @@ local
 in
    fun Mop (m : monop, x) =
       (case m of
-         BNot => wordsSyntax.mk_word_1comp
+         Abs =>
+           pick (SOME wordsSyntax.mk_word_abs, NONE, SOME intSyntax.mk_absval)
+       | BNot => wordsSyntax.mk_word_1comp
        | Bin => ASCIInumbersSyntax.mk_fromBinString
+       | Cardinality => pred_setSyntax.mk_card
+       | Cast ty => pickCast (Ty ty)
        | Dec => ASCIInumbersSyntax.mk_fromDecString
-       | Hex => ASCIInumbersSyntax.mk_fromHexString
+       | Difference => mk_difference
+       | Drop => mk_drop
+       | Element => mk_element
+       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
+       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
+       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPEqual _ => mk_fp_binop m
+       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
+       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
+       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPLess _ => mk_fp_binop m
+       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
+       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd
+       | Hex => ASCIInumbersSyntax.mk_fromHexString
+       | IndexOf => mk_indexof
+       | Intersect => mk_intersect
        | IsAlpha => stringSyntax.mk_isalpha
        | IsAlphaNum => stringSyntax.mk_isalphanum
        | IsDigit => stringSyntax.mk_isdigit
        | IsHexDigit => stringSyntax.mk_ishexdigit
        | IsLower => stringSyntax.mk_islower
-       | IsSpace => stringSyntax.mk_isspace
-       | IsUpper => stringSyntax.mk_isupper
+       | IsMember => mk_ismember
        | IsSome => optionSyntax.mk_is_some
+       | IsSpace => stringSyntax.mk_isspace
+       | IsSubset => mk_issubset
+       | IsUpper => stringSyntax.mk_isupper
+       | K1 ty => (fn tm => combinSyntax.mk_K_1 (tm, Ty ty))
        | Length => listSyntax.mk_length
+       | Log =>
+         pick (SOME wordsSyntax.mk_word_log2, SOME bitSyntax.mk_log2, NONE)
+       | Max => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
+       | Min => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
        | Msb => wordsSyntax.mk_word_msb
+       | Neg =>
+         pick (SOME wordsSyntax.mk_word_2comp, NONE, SOME intSyntax.mk_negated)
        | Not => boolSyntax.mk_neg
        | PadLeft => mk_pad_left
        | PadRight => mk_pad_right
+       | Remove => mk_remove
+       | RemoveExcept => mk_remove_e
+       | RemoveDuplicates => listSyntax.mk_nub
        | Rev => mk_rev
+       | SE ty => mk_sign_extend ty
+       | Size => wordsSyntax.mk_word_len
        | Smax => mk_word_smax
        | Smin => mk_word_smin
        | Snd => pairSyntax.mk_snd
        | SofL => listSyntax.mk_list_to_set
        | Some => optionSyntax.mk_some
        | Tail => listSyntax.mk_tl
+       | Take => mk_take
        | ToLower => mk_lower
        | ToUpper => mk_upper
+       | Union => mk_union
        | ValOf => optionSyntax.mk_the
-       | Min => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
-       | Max => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
-       | Abs => pick (SOME wordsSyntax.mk_word_abs, NONE,
-                      SOME intSyntax.mk_absval)
-       | Neg => pick (SOME wordsSyntax.mk_word_2comp, NONE,
-                      SOME intSyntax.mk_negated)
-       | Size => wordsSyntax.mk_word_len
-       | Log => pick (SOME wordsSyntax.mk_word_log2,
-                      SOME bitSyntax.mk_log2, NONE)
-       | K1 ty => (fn tm => combinSyntax.mk_K_1 (tm, Ty ty))
-       | SE ty =>
-           (fn tm =>
-              wordsSyntax.mk_sw2sw (tm, wordsSyntax.dest_word_type (Ty ty)))
-       | Cast ty => pickCast (Ty ty)
-       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
-       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
-       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
-       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
-       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
-       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
-       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
-       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
-       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
-       | FPEqual _ => mk_fp_binop m
-       | FPLess _ => mk_fp_binop m
        | _ => mk_fp_triop m
       ) x
 end

@@ -1509,9 +1509,7 @@ val DECODE_UNPREDICTABLE_rwt =
       ``DECODE_UNPREDICTABLE (mc, e)``
       |> List.map Drule.GEN_ALL
 
-val Take_rwt =
-  EV [Take_def] [] []
-    ``Take (c, def)`` |> hd
+val Do_rwt = EV [Do_def] [] [] ``Do (c, def)`` |> hd
 
 val ConditionPassed_rwt =
    EV [ConditionPassed_def, CurrentCond_def] [] []
@@ -1559,7 +1557,7 @@ val DecodeImmShift_rwt =
    |> Drule.GEN_ALL
 
 val DecodeHint_rwt =
-   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Take_rwt] [] []
+   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Do_rwt] [] []
      ``DecodeHint (c, ^(bitstringSyntax.mk_vec 8 0))``
      |> hd
 
@@ -1585,7 +1583,7 @@ local
              (Thm.BETA_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV
-                     ([Take_rwt, ArchVersion_rwts, FST_Skip,
+                     ([Do_rwt, ArchVersion_rwts, FST_Skip,
                        ARMExpandImm_def, ARMExpandImm_C_rwt,
                        (* DecodeImmShift_rwt, *)
                        HaveDSPSupport_rwt,
