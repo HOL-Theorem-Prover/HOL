@@ -321,10 +321,6 @@ val prettyprint_bigrecs = ref true;
 
 val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
 
-fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
-  | first_tok (RE (TOK s)::_) = s
-  | first_tok (_ :: t) = first_tok t
-
 fun decdepth n = if n < 0 then n else n - 1
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
