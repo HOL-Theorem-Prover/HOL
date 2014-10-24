@@ -3,7 +3,7 @@
 \TYPE {Raise : exn -> 'a}
 
 \SYNOPSIS
-Print an exception before re-raising it
+Print an exception before re-raising it.
 
 \KEYWORDS
 I/O, exception

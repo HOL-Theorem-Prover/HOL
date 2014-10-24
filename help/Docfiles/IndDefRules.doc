@@ -3,7 +3,7 @@
 \TYPE {structure IndDefRules}
 
 \SYNOPSIS
-Tom Melham's inference support for inductive definitions
+Tom Melham's inference support for inductive definitions.
 
 \KEYWORDS
 inductive
