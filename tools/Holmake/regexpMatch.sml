@@ -53,9 +53,8 @@ fun charset_compare(cset1,cset2) =
            else compare rst1 rst2
           end
  in
-    if PolyML.pointerEq(cset1,cset2)
-      then EQUAL
-      else compare (listItems cset1) (listItems cset2)
+    if Systeml.pointer_eq(cset1,cset2) then EQUAL
+    else compare (listItems cset1) (listItems cset2)
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -78,9 +77,8 @@ val Empty_Regexp = Symbs Empty_Charset;
 (*---------------------------------------------------------------------------*)
 
 fun regexp_compare (r1,r2) =
- if PolyML.pointerEq(r1,r2)
-   then EQUAL
-  else
+ if Systeml.pointer_eq(r1,r2) then EQUAL
+ else
  case (r1,r2)
   of (Epsilon, Epsilon) => EQUAL
    | (Epsilon, _)       => LESS

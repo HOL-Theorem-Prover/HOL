@@ -59,6 +59,7 @@ val release =
 val DOT_PATH =
 
 val isUnix = false
+val pointer_eq = PolyML.pointerEq
 
 val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
