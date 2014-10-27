@@ -359,4 +359,29 @@ fun match r =
    fn s => Vector.sub(final,exec (Substring.full s))
  end;
 
+fun pred_to_set P =
+    Binaryset.foldl (fn (c, acc) => if P c then Binaryset.add(acc, c) else acc)
+                    empty_cset
+                    allchars
+
+fun fromList cs = Binaryset.addList (empty_cset, cs)
+
+structure POSIX = struct
+  val alnum_set = pred_to_set Char.isAlphaNum
+  val alpha_set = pred_to_set Char.isAlpha
+  val ascii_set = pred_to_set Char.isAscii
+  val blank_set = fromList [#" ", #"\t"]
+  val cntrl_set = pred_to_set Char.isCntrl
+  val digit_set = pred_to_set Char.isDigit
+  val graph_set = pred_to_set Char.isGraph
+  val lower_set = pred_to_set Char.isLower
+  val print_set = pred_to_set Char.isPrint
+  val punct_set = pred_to_set Char.isPunct
+  val space_set = pred_to_set Char.isSpace
+  val upper_set = pred_to_set Char.isUpper
+  val xdigit_set = pred_to_set Char.isHexDigit
+  val word_set = Binaryset.add(alnum_set, #"_")
+
+end
+
 end

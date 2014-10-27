@@ -19,6 +19,25 @@ sig
 
   val empty_cset : char Binaryset.set
   val univ_cset : char Binaryset.set
+  val pred_to_set : (char -> bool) -> char Binaryset.set
+
+  structure POSIX : sig
+    val alnum_set  : char Binaryset.set
+    val alpha_set  : char Binaryset.set
+    val ascii_set  : char Binaryset.set
+    val blank_set  : char Binaryset.set
+    val cntrl_set  : char Binaryset.set
+    val digit_set  : char Binaryset.set
+    val graph_set  : char Binaryset.set
+    val lower_set  : char Binaryset.set
+    val print_set  : char Binaryset.set
+    val punct_set  : char Binaryset.set
+    val space_set  : char Binaryset.set
+    val upper_set  : char Binaryset.set
+    val xdigit_set : char Binaryset.set
+    val word_set   : char Binaryset.set
+  end
+
   val regexp_compare : regexp * regexp -> order
   val regexpEqual : regexp -> regexp -> bool
 
