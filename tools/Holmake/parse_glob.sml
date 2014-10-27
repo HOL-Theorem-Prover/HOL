@@ -5,6 +5,8 @@ open regexpMatch
 
 type sbuf = string * int
 
+datatype t = RE of regexpMatch.regexp | CHAR of char
+
 fun current(s,i) = SOME(String.sub(s,i)) handle Subscript => NONE
 fun advance (s,i) = (s, i + 1)
 fun new s = (s,0)
@@ -48,6 +50,14 @@ fun lift st f s =
 
 fun return s sb = SOME(s,sb)
 fun sing c = Symbs (Binaryset.singleton Char.compare c)
+
+fun toRegexp1 (CHAR c) = sing c
+  | toRegexp1 (RE re) = re
+
+fun toRegexp [] = Epsilon
+  | toRegexp [e] = toRegexp1 e
+  | toRegexp (e :: rest) = Dot(toRegexp1 e, toRegexp rest)
+
 fun ADVANCE sb = SOME((), advance sb)
 
 fun CURRENT sb =
@@ -159,12 +169,12 @@ end
 val parse_component = let
   fun doit c =
       case c of
-          #"*" => consume (Not (Symbs empty_cset))
-        | #"?" => consume (Symbs univ_cset)
-        | #"[" => (ADVANCE >> parse_cset) ++ consume (sing #"[")
+          #"*" => consume (RE (Not (Symbs empty_cset)))
+        | #"?" => consume (RE (Symbs univ_cset))
+        | #"[" => (ADVANCE >> lift parse_cset RE) ++ consume (CHAR #"[")
         | #"\\" => ADVANCE >>
-                   (oncurrent (consume o sing) ++ return (sing #"\\"))
-        | _  => consume (sing c)
+                   (oncurrent (consume o CHAR) ++ return (CHAR #"\\"))
+        | _  => consume (CHAR c)
 in
   oncurrent doit
 end
@@ -175,14 +185,11 @@ in
   (parse_component >- meld) ++ return []
 end sb
 
-fun parse_glob s = let
-  val sb = new s
-in
-  case parse_components sb of
-      SOME ([], _) => Epsilon
-    | SOME (h::t, _) =>
-        dot_rassociate (List.foldl (fn (re1, re2) => Dot(re2, re1)) h t)
-    | NONE => raise Fail "parse_components failed"
-end
+fun parse_glob_components s =
+    case parse_components (new s) of
+        SOME (l, _) => l
+      | NONE => raise Fail "parse_glob_components failed"
+
+fun parse_glob s = toRegexp (parse_glob_components s)
 
 end

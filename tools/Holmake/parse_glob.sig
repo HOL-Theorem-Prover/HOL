@@ -1,7 +1,11 @@
 signature parse_glob =
 sig
 
+  datatype t = RE of regexpMatch.regexp | CHAR of char
+
   val parse_glob : string -> regexpMatch.regexp
+  val parse_glob_components : string -> t list
+  val toRegexp : t list -> regexpMatch.regexp
 
 end
 
