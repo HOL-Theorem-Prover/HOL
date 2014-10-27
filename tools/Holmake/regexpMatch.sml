@@ -23,6 +23,7 @@ val print = fn s => if !debug then print s else ()
 type charset = Char.char Binaryset.set;
 
 val Empty_Charset = Binaryset.empty Char.compare;
+val empty_cset = Empty_Charset
 fun isEmpty_Charset cset = Binaryset.isEmpty cset;
 
 (* ----------------------------------------------------------------------
@@ -33,6 +34,7 @@ val MAX_ORD = 255;  (* Char.maxOrd is 255 *)
 val alphabet = List.tabulate(MAX_ORD + 1, Char.chr)
 val ALPHABET_SIZE = MAX_ORD + 1;
 val allchars = Binaryset.addList(Empty_Charset, alphabet);
+val univ_cset = allchars
 
 fun charset_compare(cset1,cset2) =
  let open Binaryset

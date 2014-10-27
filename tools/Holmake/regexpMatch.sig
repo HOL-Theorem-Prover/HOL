@@ -17,6 +17,8 @@ sig
     | Dot of regexp * regexp
     | Star of regexp
 
+  val empty_cset : char Binaryset.set
+  val univ_cset : char Binaryset.set
   val regexp_compare : regexp * regexp -> order
   val regexpEqual : regexp -> regexp -> bool
 
