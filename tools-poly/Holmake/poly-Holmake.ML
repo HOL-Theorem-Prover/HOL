@@ -15,6 +15,8 @@ fun useC f =
 
 val _ = use "../tools/Holmake/Systeml.sig"
 val _ = use "Holmake/Systeml.sml";
+val _ = useC "regexpMatch";
+val _ = useC "parse_glob";
 val _ = useC "internal_functions";
 val _ = useC "Holmake_types";
 val _ = useC "Holmake_tools";
@@ -35,4 +37,3 @@ val _ = use "Holmake/Holmake.sml";
 
 val _ = PolyML.shareCommonData Holmake.main;
 val _ = PolyML.export ("Holmake/Holmake", Holmake.main);
-

@@ -6,6 +6,11 @@ val _ = use "../tools/Holmake/Systeml.sig";
 val _ = use "Holmake/Systeml.sml";
 val _ = use "poly/Binarymap.sig";
 val _ = use "poly/Binarymap.sml";
+val _ = use "poly/Binaryset.sig";
+val _ = use "poly/Binaryset.sml";
+val _ = use "poly/Listsort.sig";
+val _ = use "poly/Listsort.sml";
+
 open Systeml
 structure Path = OS.Path
 structure FileSys = OS.FileSys
@@ -20,7 +25,8 @@ val _ = let
     use (nm ^ ".sml")
   end
 in
-  app appthis ["internal_functions", "Holmake_types", "ReadHMF"]
+  app appthis ["regexpMatch", "parse_glob", "internal_functions",
+               "Holmake_types", "ReadHMF"]
 end;
 
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
@@ -53,6 +59,3 @@ end
 
 val _ = PolyML.shareCommonData main
 val _ = PolyML.export ("heapname", main);
-
-
-

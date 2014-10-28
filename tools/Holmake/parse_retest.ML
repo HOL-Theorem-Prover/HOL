@@ -11,6 +11,8 @@ use "regexpMatch.sig";
 use "regexpMatch.sml";
 use "parse_glob.sig";
 use "parse_glob.sml";
+use "internal_functions.sig";
+use "internal_functions.sml";
 print "Testing\n";
 fun column_print (s1, s2, s3, s4) =
     StringCvt.padRight #" " 30 s1 ^
