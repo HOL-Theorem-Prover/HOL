@@ -1044,6 +1044,23 @@ The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{co
 %
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
 
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX munger)}
+\item[\texttt{m}$\mathit{space}$,\texttt{nomath}] The \texttt{m} option makes \HOL{} material be typeset in ``math-mode''.
+In particular, the output of the pretty-printer will be modified so that newline characters are replaced by \texttt{\bs\bs} commands.
+This then requires that the surrounding \LaTeX{} environment be array-like, so that the \texttt{\bs\bs} command will have the desired effect.
+
+In addition, because raw spaces have minimal effect in math-mode (something like \texttt{f\textvisiblespace{}x} will be typeset as $f x$), math-mode munging also replaces spaces with math-mode macros.
+By default, the command \texttt{\bs;\bs;} is used, but if the \texttt{m} option is followed by some characters, each is interpreted as a single-letter macro name, with each macro concatenated together to provide the space command that will be used.
+
+For example, if the option is \texttt{m;}, then the spacing command will be \texttt{\bs;}.
+If the option is \texttt{m;!}, then the spacing command will be \texttt{\bs;\bs!}.
+The comma character cannot be used because it conflicts with parsing the list of options, but one can use \texttt{c} instead, so that the option \texttt{mc} will make the spacing command be \texttt{\bs,}.
+
+The \texttt{m} option can be installed globally with the \texttt{-m} command-line option.
+If this option is enabled globally, it can be cancelled on a case-by-case basis by using the \texttt{nomath} option.
+The \texttt{nomath} option also takes precedence over any \texttt{m} options that might occur.
+
 \item[\texttt{merge}, \texttt{nomerge}] (For use with \holtm{} and \holthm.)
 By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
 %
@@ -1304,6 +1321,14 @@ document.
 
 \smallskip \noindent The \texttt{-w}, \texttt{--nomergeanalysis} and
 overrides file options can be given in any order.
+
+\paragraph{Setting Math-mode Spacing} If one expects to include all of the various \texttt{\bs{}HOL} commands in \LaTeX{} math contexts (as described above), then the \texttt{-m} option both sets the default width for math-mode spaces, and also
+enables math-mode typesetting by default.
+
+The specification of spacing is with a string of characters, as already described.
+Note that if the command-line option includes any semi-colons or exclamation marks (\eg, \texttt{-mc;}), then they need to be quoted to prevent the shell from getting confused.
+If the \texttt{-m} option appears without any additional characters, the default math-mode spacing will be \texttt{\bs;\bs;}.
+
 
 \subsection{Holindex}
 
