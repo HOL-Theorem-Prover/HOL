@@ -8,7 +8,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
-             | Mathmode of string
+             | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
              | Conj of int
              | Rule | StackedRule
@@ -46,6 +46,7 @@ fun stringOpt pos s =
   | "merge" => SOME Merge
   | "nodollarparens" => SOME NoDollarParens
   | "nomerge" => SOME NoMerge
+  | "nomath" => SOME NoMath
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | "of" => SOME TypeOf
@@ -205,6 +206,7 @@ fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
 fun optset_showtypes s = get_first (fn ShowTypes i => SOME i | _ => NONE) s
 fun optset_rulename s = get_first (fn RuleName s => SOME s | _ => NONE) s
+fun optset_nomath s = OptSet.has NoMath s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
