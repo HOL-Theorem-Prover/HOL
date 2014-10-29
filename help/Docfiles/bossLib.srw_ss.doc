@@ -17,7 +17,7 @@ enter the {TypeBase}, and as theories are loaded.  For this reason, it
 can't be accessed as a simple value, but is instead hidden behind a
 function.
 
-The value behind {srw_ss()} can change in three ways.  First, whenever
+The value behind {srw_ss()} can change in three ways.  Firstly, whenever
 a type enters the {TypeBase}, the type's associated simplification
 theorems (accessible directly using the function {TypeBase.simpls_of})
 are all added to the {simpset}.  This ensures that the "obvious"
