@@ -23,6 +23,8 @@
 
 \newcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
 \newenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
+\newenvironment{HOLmath}{\begin{displaymath}\begin{array}{l}}{\end{array}\end{displaymath}\ignorespacesafterend}
+\newenvironment{HOLarray}{\begin{array}[t]{l}}{\end{array}}
 
 \newcommand{\HOLKeyword}[1]{{\bfseries{\textsf{#1}}}}
 \newcommand{\HOLBoundVar}[1]{\ensuremath{\mathit{#1}}}

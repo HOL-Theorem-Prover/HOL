@@ -1050,7 +1050,7 @@ The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{co
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
 
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
-\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX munger)}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
 \item[\texttt{m}$\mathit{space}$,\texttt{nomath}] The \texttt{m} option makes \HOL{} material be typeset in ``math-mode''.
 In particular, the output of the pretty-printer will be modified so that newline characters are replaced by \texttt{\bs\bs} commands.
 This then requires that the surrounding \LaTeX{} environment be array-like, so that the \texttt{\bs\bs} command will have the desired effect.
@@ -1065,6 +1065,8 @@ The comma character cannot be used because it conflicts with parsing the list of
 The \texttt{m} option can be installed globally with the \texttt{-m} command-line option.
 If this option is enabled globally, it can be cancelled on a case-by-case basis by using the \texttt{nomath} option.
 The \texttt{nomath} option also takes precedence over any \texttt{m} options that might occur.
+
+See also the discussion about math-mode munging in Section~\ref{sec:math-mode-munging} below.
 
 \item[\texttt{merge}, \texttt{nomerge}] (For use with \holtm{} and \holthm.)
 By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
@@ -1231,6 +1233,45 @@ Because it uses instantiation, free variables in theorem hypotheses will get ren
 
 If $\mathit{nm}_1$ and $\mathit{nm}_2$ both begin with the colon character then they are parsed as types, and type instantiation is performed on the term or theorem argument instead of variable substitution.
 \end{description}
+
+\subsection{Math-Mode Munging}
+\label{sec:math-mode-munging}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
+
+There are a few steps needed to make math-mode munging a relatively painless affair.
+First, there are two \LaTeX{} macros from \texttt{holtexbasic.sty} that should probably be overridden:
+\begin{description}
+\item[\texttt{\bs{}HOLConst}] By default this will print names in typewriter font.
+In math mode, this will probably look better in sans serif, suggesting
+\begin{verbatim}
+   \renewcommand{\HOLConst}[1]{\textsf{#1}}
+\end{verbatim}
+Depending on personal taste, the \texttt{\bs{}HOLKeyword} macro might be redefined similarly.
+This macro is used for keywords such as \texttt{if}.
+\item[\texttt{\bs{}HOLinline}] This macro, used to wrap standard \texttt{\holtm} arguments, puts text into typewriter font.
+One possibility for its redefinition would be
+\begin{verbatim}
+   \renewcommand{\HOLinline}[1]{\ensuremath{#1}}
+\end{verbatim}
+Note that if the term being typeset causes the pretty-printer to break over multiple lines, \LaTeX{} will complain because of the appearance of \texttt{\bs\bs} commands.
+If necessary, this can be avoided on a case-by-case basis by setting the \texttt{width} option to a larger than normal width.
+\end{description}
+
+When using math-mode munging, one also has to be aware of how larger pieces of text will appear.
+In non-math-mode munging, material is usually put into \texttt{alltt} environments.
+The recommended alternative for math-mode is to use the \texttt{\bs{}HOLmath} environment:
+\begin{alltt}
+   \textit{article text}
+
+   \bs{}begin\lb{}HOLmath\rb
+   \holthm\lb{}bool.AND_CLAUSES\rb
+   \bs{}end\lb{}HOLmath\rb
+\end{alltt}
+This uses a standard \texttt{array} environment within a \texttt{displaymath}.
+
+Occasionally, one will want to arrange blocks of \HOL{} material within a larger math context.
+The \texttt{HOLarray} environment is a simple alias for a single-column left-aligned array that one can use in these situations.
 
 
 \subsection{Creating a Munger}
