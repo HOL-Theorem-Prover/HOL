@@ -4,7 +4,7 @@ open bossLib simpLib
 
 val _ = new_theory "cl";
 
-val _ = Hol_datatype `cl = S | K | # of cl => cl`;
+val _ = Datatype `cl = S | K | # cl cl`;
 
 val _ = set_fixity "#"  (Infixl 1100);
 

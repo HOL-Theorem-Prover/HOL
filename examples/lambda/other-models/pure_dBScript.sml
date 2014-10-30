@@ -11,7 +11,7 @@ val _ = new_theory "pure_dB"
 val _ = set_fixity "=" (Infix(NONASSOC, 100))
 
 (* the type of pure de Bruijn terms *)
-val _ = Hol_datatype`pdb = dV of num | dAPP of pdb => pdb | dABS of pdb`
+val _ = Datatype`pdb = dV num | dAPP pdb pdb | dABS pdb`
 
 (* Definitions of lift and substitution from Nipkow's "More Church-Rosser
    proofs" *)

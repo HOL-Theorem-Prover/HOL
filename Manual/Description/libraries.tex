@@ -2122,7 +2122,7 @@ all situations where the simplifier is used.
 This versatility is illustrated in the following example:
 \begin{session}
 \begin{verbatim}
-- Hol_datatype `tree = Leaf | Node of num => tree => tree`;
+- Datatype `tree = Leaf | Node num tree tree`;
 <<HOL message: Defined type: "tree">>
 > val it = () : unit
 

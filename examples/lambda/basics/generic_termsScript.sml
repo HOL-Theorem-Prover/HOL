@@ -17,9 +17,9 @@ val _ = new_theory "generic_terms"
 
 val _ = computeLib.auto_import_definitions := false
 
-val _ = Hol_datatype `
-  pregterm = var of string => 'v
-           | lam of string => 'b => pregterm list => pregterm list
+val _ = Datatype `
+  pregterm = var string 'v
+           | lam string 'b (pregterm list) (pregterm list)
 `;
 
 val fv_def = Define `
