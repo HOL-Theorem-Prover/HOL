@@ -20,7 +20,7 @@ fun Store_thm (p as (n,t,tac)) = store_thm p before export_rewrites [n]
 
 val _ = new_theory "lnameless"
 
-val _ = Hol_datatype`lnt = var string | bnd num | app lnt lnt | abs lnt`;
+val _ = Datatype`lnt = var string | bnd num | app lnt lnt | abs lnt`;
 
 val open_def = Define`
   (open k u (bnd i) = if i = k then u else bnd i) /\
