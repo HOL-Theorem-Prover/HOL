@@ -8,6 +8,12 @@ EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 BARE_THYS = ../model/arm8Lib ../../Lib/MutableMap ../model/arm8 ../model/arm8AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b ../../base/base-heap -o $(HOLHEAP) $(BARE_THYS)
 

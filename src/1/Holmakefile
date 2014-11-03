@@ -3,8 +3,11 @@ MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml DiskFiles.lex.sml
 
-mustbuild: selftest.exe
-.PHONY: mustbuild
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
 
 DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<

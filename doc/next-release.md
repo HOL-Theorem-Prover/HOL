@@ -144,6 +144,25 @@ Incompatibilities:
 
 - Constants that print to the TeX backend as symbolic identifiers (*e.g.*, non-alphanumeric tokens like `+`, `**`) are now annotated there with the `\HOLSymConst` command rather than `\HOLConst`.  The default behaviour of `\HOLSymConst` (defined in `holtexbasic.sty`) is to do nothing.
 
+-   If
+    * `Holmake` is called in a directory with a `Holmakefile`, **and**
+    * that `Holmakefile` has at least one explicit target, **and**
+    * `Holmake` is called with no command-line targets,
+
+    **then:** `Holmake` will attempt to build *only* the first target in that `Holmakefile`. We believe that this will cause problems in only a relatively small number of scenarios. The advantage of this change is that it makes `Holmake` easier to control from a `Holmakefile`. It also makes `Holmake`’s behaviour rather more like that of normal `make`.
+
+    One scenario, among others, where this change may cause problems is where Poly/ML users have set up a rule to create a HOL heap. The fix is to prepend something like the following to your `Holmakefile`:
+
+           THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+           TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+           all: $(TARGETS) ...
+           .PHONY: all
+
+    so that `all` becomes the first target of the `Holmakefile`.  Any previous targets, such as HOL heaps, should be inserted where the `...` occurs above.
+
+    Note that `Holmakefile`s that only include variable declarations such as `OPTIONS = ...`, `INCLUDES = ....`, and `HOLHEAP = ...` don’t have any targets at all, so that `Holmake`’s behaviour in such files’ directories will not change.
+
 
 * * * * *
 

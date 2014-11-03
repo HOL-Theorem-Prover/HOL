@@ -340,33 +340,37 @@ in
     end
 end
 
-fun generate_all_plausible_targets first_target = let
-  val extra_targets = case first_target of NONE => [] | SOME s => [toFile s]
-  fun find_files ds P =
+fun find_files ds P =
     case OS.FileSys.readDir ds of
-      NONE => (OS.FileSys.closeDir ds; [])
-    | SOME fname => if P fname then fname::find_files ds P
-                               else find_files ds P
-  val cds = OS.FileSys.openDir "."
-  fun not_a_dot f = not (String.isPrefix "." f)
-  fun ok_file f =
-    case (toFile f) of
-      SIG _ => true
-    | SML _ => true
-    | _ => false
-  val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
-  fun src_to_target (SIG (Script s)) = UO (Theory s)
-    | src_to_target (SML (Script s)) = UO (Theory s)
-    | src_to_target (SML s) = (UO s)
-    | src_to_target (SIG s) = (UI s)
-    | src_to_target _ = raise Fail "Can't happen"
-  val initially = map (src_to_target o toFile) src_files @ extra_targets
-  fun remove_sorted_dups [] = []
-    | remove_sorted_dups [x] = [x]
-    | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
-                                     else x :: remove_sorted_dups (y::z)
-in
-  remove_sorted_dups (Listsort.sort file_compare initially)
-end
+        NONE => (OS.FileSys.closeDir ds; [])
+      | SOME fname => if P fname then fname::find_files ds P
+                      else find_files ds P
+
+fun generate_all_plausible_targets first_target =
+    case first_target of
+        SOME s => [toFile s]
+      | NONE =>
+        let
+          val cds = OS.FileSys.openDir "."
+          fun not_a_dot f = not (String.isPrefix "." f)
+          fun ok_file f =
+              case (toFile f) of
+                  SIG _ => true
+                | SML _ => true
+                | _ => false
+          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          fun src_to_target (SIG (Script s)) = UO (Theory s)
+            | src_to_target (SML (Script s)) = UO (Theory s)
+            | src_to_target (SML s) = (UO s)
+            | src_to_target (SIG s) = (UI s)
+            | src_to_target _ = raise Fail "Can't happen"
+          val initially = map (src_to_target o toFile) src_files
+          fun remove_sorted_dups [] = []
+            | remove_sorted_dups [x] = [x]
+            | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
+                                             else x :: remove_sorted_dups (y::z)
+        in
+          remove_sorted_dups (Listsort.sort file_compare initially)
+        end
 
 end (* struct *)

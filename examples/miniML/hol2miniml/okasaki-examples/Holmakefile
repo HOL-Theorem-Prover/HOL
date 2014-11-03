@@ -8,6 +8,12 @@ EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 BARE_THYS = ../ml_translatorLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
 endif

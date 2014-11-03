@@ -257,12 +257,13 @@ In this way, one can get a staged application of \holmake{} across multiple dire
     Harmful} by Peter Miller for why this is not ideal.}
 
 \subsection{\holmake{}'s command-line arguments}
+\index{Holmake@\holmake!command-line arguments}
+Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
+If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
+If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
+If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build that target (only).
 
-Like {\tt make}, \holmake{} takes command-line arguments corresponding
-to the targets that the user desires to build.  If there are none,
-then \holmake{} will attempt to build all ML modules and HOL theories
-it can detect in the current directory.  In addition, there are three
-special targets that can be used:
+In addition, there are three special targets that can be used:
 \begin{description}
 \item[{\tt clean}] Removes all compiled files (unless over-ridden by a
   make-file target of the same name, see

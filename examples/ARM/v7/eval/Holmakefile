@@ -1,15 +1,23 @@
 INCLUDES=.. $(HOLDIR)/src/emit/ML
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+.PHONY: all
+
 emit_eval.ui:
-	
+
 emit_eval.uo:
-	
+
 ifdef POLY
 HOLHEAP = arm-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../armTheory ../armLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+all: $(HOLHEAP)
 
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o arm-heap $(BARE_THYS)

@@ -2,6 +2,12 @@ EXTRA_CLEANS = selftest.exe
 BOOLLIB = $(dprot $(SIGOBJ)/boolLib.ui)
 NUMTHY = $(dprot $(SIGOBJ)/numeralTheory.uo)
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
 selftest.exe : selftest.uo numSimps.uo
 	HOLMOSMLC -o $@ $<
 

@@ -10,7 +10,11 @@ BARE_THYS = ../../lambda/barendregt/normal_orderTheory \
             ../../lambda/other-models/pure_dBTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-alltheories: $(patsubst %Script.sml,%Theory.uo,$(wildcard *Script.sml))
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
 
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o computability-heap $(BARE_THYS)

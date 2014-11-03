@@ -4,5 +4,11 @@ endif
 
 EXTRA_CLEANS = selftest.exe
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo ind_types.uo Datatype.uo $(dprot $(SIGOBJ)/ParseDatatype.uo) $(dprot $(SIGOBJ)/RecordType.uo)
 	$(HOLMOSMLC) -o $@ $<

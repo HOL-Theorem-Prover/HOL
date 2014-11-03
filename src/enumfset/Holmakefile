@@ -1,6 +1,10 @@
-OBJS = totoTheory.uo totoTacs.uo tcTacs.uo enumTacs.uo fmapalTacs.uo tcTheory.uo
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-selftest.exe: selftest.uo $(OBJS)
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+selftest.exe: selftest.uo $(TARGETS)
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe
