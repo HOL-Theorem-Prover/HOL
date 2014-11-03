@@ -77,8 +77,8 @@ in
    add_newline();
    add_ann_string ("TyOp", TyOp (fn () => "TyOp"));
    add_newline();
-   add_ann_string ("Const", Const ({Name = "test-name", Thy = "test-thy",
-        Ty = Type.bool},"==>"));
+   add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
+                                   Ty = (Type.bool, fn () => "bool")});
    add_newline();
    add_ann_string ("Note", Note "Some note") ;
    add_newline();

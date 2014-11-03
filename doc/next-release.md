@@ -51,6 +51,11 @@ New features:
 
 * `Holmake` has a new function, `wildcard` which allows expansion of “glob” patterns (*e.g.*, `*Script.sml`) into lists of matching filenames.
 
+* The standard pretty-printer now annotates constants with their types as well as variables.  (Note that these annotations are typically only visible by using mouse-over tooltips in the emacs mode.)  The annotation also includes the constant’s real name, in the form `thy$name`, making overloads easier to tell apart.
+
+    For example, this means that it is possible to have integers, reals and numbers all in scope, to write something like `MAP (+)`, and to then see what constants are involved by using the mouse.  (See [Github issue #39](https://github.com/HOL-Theorem-Prover/HOL/issues/39).)
+
+
 Bugs fixed:
 -----------
 
@@ -136,6 +141,9 @@ Incompatibilities:
            ⊢ ∀v:one. v = ()
 
     stating that every value in the type `one` (analogue of SML’s `unit` type) is equal to the designated value `()`.
+
+- Constants that print to the TeX backend as symbolic identifiers (*e.g.*, non-alphanumeric tokens like `+`, `**`) are now annotated there with the `\HOLSymConst` command rather than `\HOLConst`.  The default behaviour of `\HOLSymConst` (defined in `holtexbasic.sty`) is to do nothing.
+
 
 * * * * *
 

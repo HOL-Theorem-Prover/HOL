@@ -356,6 +356,7 @@ local
             BV _ => apfst (addann "BoundVar" o varmunge) (smapper s)
           | FV _ => apfst (addann "FreeVar" o varmunge) (smapper s)
           | Const _ => apfst (addann "Const") (smapper s)
+          | SymConst _ => apfst (addann "SymConst") (smapper s)
           | TyOp _ => apfst (addann "TyOp") (smapper s)
           | Literal StringLit => (addann "StringLit"
                                          (stringmunge

@@ -68,3 +68,11 @@ sig
   val oi_strip_comb : overload_info -> term -> (term * term list) option
 
 end
+
+(* [oi_strip_comb oinfo t] returns SOME(f, args, pattern) if the the term t
+   matches the pattern orig in the overload info's print-map, and this pattern
+   decomposes t into operator f applied to arguments args.
+
+   Further, this is the best such match, according to the heuristics
+   that overloading uses.
+*)

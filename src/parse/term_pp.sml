@@ -327,14 +327,23 @@ fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
 
 fun decdepth n = if n < 0 then n else n - 1
 
+val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
+
 fun atom_name tm = let
   val (vnm, _) = dest_var tm
 in
   case unfakeconst vnm of
     NONE => vnm
-  | SOME((* thy *)_, nm) => nm
+  | SOME s => s
 end handle HOL_ERR _ => fst (dest_const tm)
 
+fun is_fakeconst tm = let
+  val (vnm, _) = dest_var tm
+in
+  String.isPrefix GrammarSpecials.fakeconst_special vnm
+end handle HOL_ERR _ => false
+
+fun is_constish tm = is_const tm orelse is_fakeconst tm
 
 fun pp_term (G : grammar) TyG backend = let
   fun block x = backend_block backend x
@@ -606,6 +615,36 @@ fun pp_term (G : grammar) TyG backend = let
     val pr_term = pr_term binderp showtypes showtypes_v ppfns NoCP
     val {add_string,add_break,add_xstring,...} = ppfns
     fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
+    fun var_ann t s = let
+      val (vnm, ty) = dest_var t
+      fun k bvs =
+          add_ann_string(s,
+                         ((if HOLset.member(bvs, t) then PPBackEnd.BV
+                           else PPBackEnd.FV)
+                          (ty, fn () => vnm ^ " :" ^ tystr ty)))
+    in
+      getbvs >- k
+    end
+
+    fun constann t s = let
+      val (Thy,Name,Ty,fake) = let
+        val {Thy,Name,Ty} = dest_thy_const t
+      in
+        (Thy,Name,Ty,Name)
+      end handle HOL_ERR _ => let
+            val (s, ty) = dest_var t
+          in
+            case GrammarSpecials.dest_fakeconst_name s of
+                SOME{original = SOME{Thy,Name},fake} => (Thy,Name,ty,fake)
+              | SOME{original = NONE, fake} => ("", fake, ty, fake)
+              | NONE => raise mk_HOL_ERR "term_pp" "constann"
+                              "Called on non-const (fake or o/wise)"
+          end
+      val constr = if CharVector.all Char.isAlphaNum s then PPBackEnd.Const
+                   else PPBackEnd.SymConst
+    in
+      add_ann_string(s, constr {Thy = Thy, Name = Name, Ty = (Ty, fn () => tystr Ty)})
+    end
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
@@ -643,17 +682,8 @@ fun pp_term (G : grammar) TyG backend = let
         | onetok acc (_ :: rest) = onetok acc rest
       val tok_string =
           case (fopt, onetok NONE els) of
-              (SOME f, SOME s) =>
-                if CharVector.all Char.isAlphaNum s then
-                  let
-                    val crecord = if is_const f then dest_thy_const f
-                                  else {Name = #1 (dest_var f),
-                                        Ty = type_of f,
-                                        Thy = ""}
-                  in
-                    (fn s => add_ann_string(s, PPBackEnd.Const (crecord,s)))
-                  end
-                else add_string
+              (SOME f, SOME _) =>
+                if is_constish f then constann f else var_ann f
             | _ => add_string
       fun recurse (els, args) =
           case els of
@@ -815,11 +845,6 @@ fun pp_term (G : grammar) TyG backend = let
       pend addparens
     end
 
-    fun is_fakeconst tm = let
-      val (vnm, _) = dest_var tm
-    in
-      String.isPrefix GrammarSpecials.fakeconst_special vnm
-    end handle HOL_ERR _ => false
     fun can_pr_numeral stropt = List.exists (fn (k,s') => s' = stropt) num_info
     fun pr_numeral injtermopt tm = let
       open Overload
@@ -1180,21 +1205,10 @@ fun pp_term (G : grammar) TyG backend = let
           LISTRULE lrules => List.find (fn r => #nilstr r = n) lrules
         | _ => NONE
       val nilrule = find_partial check_rule rules
-      val fakerec = {Thy = "", Name = "", Ty = Type.alpha}
       val ty = type_of tm
-      fun add s = let
-        fun addk bvs =
-          if is_const tm then
-            add_ann_string (s, PPBackEnd.Const (dest_thy_const tm, s))
-          else if is_fakeconst tm then
-            add_ann_string (s, PPBackEnd.Const (fakerec, s))
-          else if HOLset.member(bvs,tm) orelse binderp then
-            add_ann_string (s, PPBackEnd.BV (ty, fn () => tystr ty))
-          else
-            add_ann_string (s, PPBackEnd.FV (ty, fn () => tystr ty))
-      in
-        getbvs >- addk
-      end
+      fun add s =
+        if is_constish tm then constann tm s
+        else var_ann tm s
     in
       case nilrule of
         SOME r => print_ellist NONE (Top,Top,Top) (#leftdelim r, []) >>
@@ -1506,7 +1520,7 @@ fun pp_term (G : grammar) TyG backend = let
       case dest_term tm of
         VAR(vname, Ty) => let
           val (isfake, vname) =
-              (true, #2 (valOf (unfakeconst vname)))
+              (true, valOf (unfakeconst vname))
               handle Option => (false, vname)
           val vrule = lookup_term vname
           val add_type=
@@ -1518,14 +1532,8 @@ fun pp_term (G : grammar) TyG backend = let
           fun calc_print_type nfv =
             showtypes_v orelse
             showtypes andalso not isfake andalso (binderp orelse nfv)
-          fun adds s =
-              getbvs >- (fn bvs =>
-              if HOLset.member(bvs, tm) orelse binderp then
-                add_ann_string (s, PPBackEnd.BV (Ty, fn () => s^": "^tystr Ty))
-              else if not isfake then
-                add_ann_string (s, PPBackEnd.FV (Ty, fn () => s^": "^tystr Ty))
-              else add_ann_string(s, PPBackEnd.Const({Ty = Ty, Thy = "??",
-                                                      Name = "??"}, s)))
+          val adds =
+              if is_constish tm then constann tm else var_ann tm
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
@@ -1544,7 +1552,7 @@ fun pp_term (G : grammar) TyG backend = let
                  pend print_type)))
         end
       | CONST(c as {Name, Thy, Ty}) => let
-          val add_ann_string = fn s => add_ann_string (s, PPBackEnd.Const (c,s))
+          val add_ann_string = constann tm
           fun add_prim_name() = add_ann_string (Thy ^ "$" ^ Name)
           fun with_type action = let
           in
@@ -1618,10 +1626,10 @@ fun pp_term (G : grammar) TyG backend = let
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
-          val (oif, oiargs) =
+          val (oif, oiargs, overloadedp) =
               case Overload.oi_strip_comb overload_info tm of
-                NONE => (f, args @ [Rand])
-              | SOME p => p
+                NONE => (f, args @ [Rand], false)
+              | SOME (f, args) => (f, args, true)
 
           fun check_for_setcomprehensions () =
               if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
@@ -1670,7 +1678,7 @@ fun pp_term (G : grammar) TyG backend = let
           fun pr_atomf (f,args) = let
             (* the tm, Rator and Rand bindings that we began with are
                overridden by the f and args values that may be the product of
-               oi_strip_comb *)
+               oi_strip_comb.*)
             val fname = atom_name f
             val tm = list_mk_comb (f, args)
             val Rator = rator tm
@@ -1764,16 +1772,14 @@ fun pp_term (G : grammar) TyG backend = let
           fun maybe_pr_atomf () =
               if grammar_name G oif = SOME "case" then
                 pr_atomf (strip_comb tm)
-              else
-                case Overload.oi_strip_comb overload_info tm of
-                  SOME (p as (f,args)) => let
-                  in
-                    case args of
-                      [] => pr_term f pgrav lgrav rgrav depth
-                    | _ => pr_atomf p
-                  end
-                | NONE => if is_var f then pr_atomf (f, args @ [Rand])
-                          else pr_comb tm Rator Rand
+              else if overloadedp then
+                case oiargs of
+                    [] => (* term is a comb, but it somehow overloads to a
+                             single "constant" *)
+                          pr_term oif pgrav lgrav rgrav depth
+                  | _ => pr_atomf (oif, oiargs)
+              else if is_var f then pr_atomf (f, args @ [Rand])
+              else pr_comb tm Rator Rand
         in
           (* check for various literal and special forms *)
 

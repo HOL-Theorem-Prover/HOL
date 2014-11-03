@@ -20,7 +20,7 @@
 
 \HOLinline{\HOLFreeVar{x} with \HOLTokenLeftrec{}\HOLFieldName{fld1} := \HOLConst{T}; \HOLFieldName{fld2} := \HOLConst{K} \HOLNumLit{3}\HOLTokenRightrec{}}
 
-\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} updated_by (\HOLConst{\HOLTokenNeg{}})}
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} updated_by (\HOLSymConst{\HOLTokenNeg{}})}
 
 \HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld2} updated_by \HOLFreeVar{g}}
 

@@ -197,13 +197,6 @@ in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
 
-fun unfakeconst vnm =
-    case Lib.total (Lib.unprefix GrammarSpecials.fakeconst_special) vnm of
-      SOME s => SOME("", s)
-        (* first argument in result might conceivably contain useful
-           information, but I'm not sure what it should be right now *)
-   | NONE => NONE
-
 fun grammar_name G tm = let
   val oinfo = overload_info G
 in
@@ -212,9 +205,7 @@ in
   else if Term.is_var tm then let
       val (vnm, _) = Term.dest_var tm
     in
-      case unfakeconst vnm of
-        NONE => SOME vnm
-      | SOME(_ (* thy *), nm) => SOME nm
+      Option.map #fake (GrammarSpecials.dest_fakeconst_name vnm)
     end
   else NONE
 end

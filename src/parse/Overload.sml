@@ -406,7 +406,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val inst_data = List.mapPartial test matches
   val sorted = Listsort.sort cmp inst_data
   fun rearrange (tmi, _, _, (orig, nm)) = let
-    val (bvs,_) = strip_abs orig
+    val (bvs,basepat) = strip_abs orig
     fun findarg v =
         case List.find (fn {redex,residue} => redex = v) tmi of
           NONE => mk_const("ARB", type_of v)
@@ -415,8 +415,21 @@ fun strip_comb ((_, prmap): overload_info) t = let
     val fconst_ty = List.foldr (fn (arg,acc) => type_of arg --> acc)
                                (type_of t)
                                args
+    val origopt = let
+      val (hd, args) = HolKernel.strip_comb basepat
+    in
+      if ListPair.all (uncurry aconv) (bvs, args) then
+        let
+          val {Name,Thy,...} = dest_thy_const hd
+        in
+          SOME {Thy=Thy,Name=Name}
+        end handle HOL_ERR _ => NONE
+      else NONE
+    end
   in
-    (mk_var(GrammarSpecials.fakeconst_special ^ nm, fconst_ty), args)
+    (mk_var(GrammarSpecials.mk_fakeconst_name {fake = nm, original = origopt},
+            fconst_ty),
+     args)
   end
 in
   case sorted of
@@ -446,8 +459,8 @@ end
 
 fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
     case strip_comb oinfo t of
-      SOME (f, []) => SOME (unprefix GrammarSpecials.fakeconst_special
-                                     (#1 (dest_var f)))
+      SOME (f, []) => f |> dest_var |> #1 |> GrammarSpecials.dest_fakeconst_name
+                        |> Option.map #fake
     | _ => NONE
 
 fun overloading_of_nametype (oinfo:overload_info) r =

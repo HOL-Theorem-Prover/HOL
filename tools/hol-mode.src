@@ -1399,10 +1399,8 @@ second is to show the new term.
 
 (defun holpp-execute-code-face-tooltip (start end toolprop codeface)
   (let ((tooltipprop
-           (if (equal toolprop nil) nil
-                (list 'help-echo toolprop))))
-       (add-text-properties start end (append codeface tooltipprop))))
-
+         (if (equal toolprop nil) nil (list 'help-echo toolprop))))
+    (add-text-properties start end (append codeface tooltipprop))))
 
 (defun holpp-execute-code (code arg1 start end)
   (cond ((equal code "FV")
@@ -1417,6 +1415,8 @@ second is to show the new term.
         ((equal code "TY")
              (holpp-execute-code-face-tooltip start end arg1
              '(face hol-type)))
+        ((equal code "CO")
+         (holpp-execute-code-face-tooltip start end arg1 nil))
         ((equal code "ST")
            (add-text-properties start end
              (holpp-decode-full-style arg1)))))

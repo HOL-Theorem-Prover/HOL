@@ -32,14 +32,16 @@ sig
 
   datatype lit_type = FldName | StringLit | NumLit | CharLit
 
-  datatype annotation = BV of hol_type * (unit -> string)
-                      | FV of hol_type * (unit -> string)
-                      | TyV
-                      | TyOp of (unit -> string)
-                      | TySyn of (unit -> string)
-                      | Const of {Thy:string,Name:string,Ty:hol_type} * string
-                      | Note of string
-                      | Literal of lit_type
+  datatype annotation =
+    BV of hol_type * (unit -> string)
+  | FV of hol_type * (unit -> string)
+  | TyV
+  | TyOp of (unit -> string)
+  | TySyn of (unit -> string)
+  | Const of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
+  | SymConst of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
+  | Note of string
+  | Literal of lit_type
 
   type xstring = {s:string,sz:int option,ann:annotation option}
 
