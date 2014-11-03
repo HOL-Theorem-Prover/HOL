@@ -59,7 +59,7 @@ holindex.grm.sml holindex.grm-sig.sml: holindex.grm holindexData.uo
 holindex.grm.ui holindex.grm.uo: holindex.grm.sml holindex.grm-sig.uo holindexData.uo
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm-sig.ui $<
 
-AssembleHolindexParser.uo: AssembleHolindexParser.sml holindex.grm.uo holindex.lex.uo holindexData.uo
+AssembleHolindexParser.uo: AssembleHolindexParser.sml AssembleHolindexParser.ui holindex.grm.uo holindex.lex.uo holindexData.uo
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holindex.grm.ui holindex.lex.ui $<
 
 selftest.exe: selftest.uo EmitTeX.uo

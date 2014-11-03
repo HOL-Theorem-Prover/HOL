@@ -4,5 +4,5 @@ all: selftest.exe $(UOFILES)
 
 .PHONY: all
 
-selftest.exe: selftest.uo
+selftest.exe: selftest.uo Q.uo
 	$(HOLMOSMLC) -o $@ $<
