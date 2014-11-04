@@ -400,10 +400,6 @@ val BIGINTER_EMPTY = Q.prove
 (`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("empty set",bool)) EMPTY`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
-val MAX_SET_EMPTY = Q.prove
-(`MAX_SET EMPTY = FAIL MAX_SET ^(mk_var("empty set",bool)) EMPTY`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
-
 val MIN_SET_EMPTY = Q.prove
 (`MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
@@ -440,7 +436,7 @@ val defs =
        let val (c1,c2) = TAKE2_CONJUNCTS SUM_SET_THM
        in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
        let val (c1,c2) = TAKE2_CONJUNCTS MAX_SET_THM
-       in CONJ MAX_SET_EMPTY (CONJ c1 (UNDISCH (SPEC_ALL c2))) end,
+       in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
        CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN,POW_EQNS];
 
 val _ = eSML "set"
