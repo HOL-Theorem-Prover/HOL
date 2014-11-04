@@ -46,7 +46,7 @@ New features:
 
 * The Vim mode for HOL now supports multiple simultaneous sessions. See its `README` for details.
 
-* Many of the standard libraries now provide an `add_X_compset : compset -> unit` (e.g., `add_pred_set_compset`) to ease building of custom call-by-name evaluation conversions that don't, like `EVAL`, include everything in `the_compset()`.
+* Many of the standard libraries now provide an `add_X_compset : compset -> unit` (*e.g.*, `add_pred_set_compset`) to ease building of custom call-by-name evaluation conversions that don't, like `EVAL`, include everything in `the_compset()`.
 
 * `Holmake` has a new function, `wildcard` which allows expansion of “glob” patterns (*e.g.*, `*Script.sml`) into lists of matching filenames.
 
