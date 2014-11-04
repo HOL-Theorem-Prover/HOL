@@ -15,9 +15,6 @@ all: $(UOFILES) selftest.exe
 selftest.sml: selftest.ML
 	$(CP) $< $@
 
-selftest.uo: selftest.sml
-	$(HOLMOSMLC) -c $@ $<
-
 selftest.exe: selftest.uo armML.uo numML.uo wordsML.uo
 	$(HOLMOSMLC) -o $@ $<
 
