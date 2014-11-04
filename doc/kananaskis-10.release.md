@@ -163,7 +163,7 @@ Incompatibilities:
 
     so that `all` becomes the first target of the `Holmakefile`.  Any previous targets, such as HOL heaps, should be inserted where the `...` occurs above.
 
-    Note that `Holmakefile`s that only include variable declarations such as `OPTIONS = ...`, `INCLUDES = ....`, and `HOLHEAP = ...` don’t have any targets at all, so that `Holmake`’s behaviour in such files’ directories will not change.
+    Note that `Holmakefile`s that only include variable declarations such as `OPTIONS = ...`, `INCLUDES = ...`, and `HOLHEAP = ...` don’t have any targets at all, so that `Holmake`’s behaviour in such files’ directories will not change.
 
 
 * * * * *
