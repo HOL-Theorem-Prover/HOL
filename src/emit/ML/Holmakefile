@@ -7,6 +7,11 @@ EXTRA_CLEANS = selftest.exe selftest.sml
 ifdef SELFTESTLEVEL
 ifneq ($(SELFTESTLEVEL),0)
 ifneq ($(SELFTESTLEVEL),1)
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES) selftest.exe
+.PHONY: all
+
 selftest.sml: selftest.ML
 	$(CP) $< $@
 
