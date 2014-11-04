@@ -1,12 +1,11 @@
+% Release notes for HOL4, Kananaskis-10
+
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-Notes on HOL 4, ?????? release
-==============================
-
 (Released: ??? date)
 
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-10 release of HOL 4.
 
 Contents
 --------
@@ -167,7 +166,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ?????](http://hol.sourceforge.net)*
+*[HOL4, Kananaskis-10](http://hol.sourceforge.net)*
 
 [Release notes for the previous version](kananaskis-9.release.html)
 
