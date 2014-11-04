@@ -183,9 +183,15 @@ cd /tmp
 
 echo "Creating tar file"
 tar czf hol-$releasename.tar.gz $(basename $archive)
+echo
 
+echo -n "Release notes in "
 mv $archive/doc/$releasename.release.md . ||
   die "No release notes for $releasename in doc directory"
 
+echo -n "$(pwd)/$releasename.release.md"
+
 pandoc -t html5 -c index.css -s $releasename.release.md -o $releasename.release.html ||
   die "Failed to run pandoc successfully"
+
+echo " and $(pwd)/$releasename.release.html"
