@@ -14,7 +14,7 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New examples](#new-examples)
+-   [Examples](#examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features:
@@ -109,8 +109,11 @@ New tools:
 - New libraries `enumLib` and `fmapalLib` provide representations in `pred_set` and finite map types of enumerated constant sets and maps as minimum-depth binary search trees. A suitable total order on the set elements (map arguments) must be supplied, with a conversion for evaluating it; assistance with this is provided. The primary objective has been an `IN_CONV`, and a similar `FAPPLY_CONV`, operating with a logarithmic number of comparisons, but additional operations such as `UNION_CONV`, `INTER_CONV`, and `FUPDATE_CONV` are included and have reasonable asymptotic running times. A conversion `TC_CONV` implements Warshall’s algorithm for transitive closure of a binary relation (treated as a set-valued finite map).
 
 
-New examples:
--------------
+Examples:
+---------
+
+- The `miniml` example has been removed. This work has evolved into the [CakeML project](http://cakeml.org).  That project’s `git` repository contains all of the material that was once in the HOL distribution, and, given its continuing evolution, much more besides.
+
 
 Incompatibilities:
 ------------------
