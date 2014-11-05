@@ -3,7 +3,7 @@
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: ??? date)
+(Released: 7 November 2014)
 
 We are pleased to announce the Kananaskis-10 release of HOL 4.
 
