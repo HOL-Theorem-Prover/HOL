@@ -245,13 +245,13 @@ val LOG_RWT = Q.store_thm("LOG_RWT",
    SRW_TAC [ARITH_ss] [LOG_DIV, ADD1, LOG_UNIQUE, EXP]);
 
 val LOG_EQ_0 = store_thm("LOG_EQ_0",
-  ``∀a b. 1 < a ∧ 0 < b ⇒ ((LOG a b = 0) ⇔ b < a)``,
+  ``!a b. 1 < a /\ 0 < b ==> ((LOG a b = 0) <=> b < a)``,
   SRW_TAC[][LOG_RWT])
 
 val LOG_MULT = store_thm("LOG_MULT",
-  ``∀b x. 1 < b ∧ 0 < x ⇒ (LOG b (b * x) = SUC (LOG b x))``,
+  ``!b x. 1 < b /\ 0 < x ==> (LOG b (b * x) = SUC (LOG b x))``,
   SRW_TAC[][] THEN
-  `0 < b ∧ x ≠ 0` by DECIDE_TAC THEN
+  `0 < b /\ x <> 0` by DECIDE_TAC THEN
   `0 < b * x` by (
     Cases_on`b` THEN FULL_SIMP_TAC(srw_ss())[ADD1,RIGHT_ADD_DISTRIB] THEN
     DECIDE_TAC ) THEN
@@ -260,7 +260,7 @@ val LOG_MULT = store_thm("LOG_MULT",
   ASM_SIMP_TAC(srw_ss())[MULT_DIV])
 
 val LOG_add_digit = store_thm("LOG_add_digit",
-  ``∀b x y. 1 < b ∧ 0 < y ∧ x < b ⇒ (LOG b (b * y + x) = SUC (LOG b y))``,
+  ``!b x y. 1 < b /\ 0 < y /\ x < b ==> (LOG b (b * y + x) = SUC (LOG b y))``,
   SRW_TAC[][] THEN
   `0 < b * y + x` by (
     Cases_on`x` THEN ASM_SIMP_TAC(srw_ss()++ARITH_ss)[] THEN
@@ -268,7 +268,7 @@ val LOG_add_digit = store_thm("LOG_add_digit",
     DECIDE_TAC ) THEN
   ASM_SIMP_TAC(srw_ss()++ARITH_ss)[LOG_RWT,boolSimps.SimpLHS] THEN
   SRW_TAC[][] THEN1 (
-    `b ≤ b * y` by ASM_SIMP_TAC(srw_ss()++ARITH_ss)[] THEN
+    `b <= b * y` by ASM_SIMP_TAC(srw_ss()++ARITH_ss)[] THEN
     DECIDE_TAC ) THEN
   `x + b * y = y * b + x` by SIMP_TAC(srw_ss()++ARITH_ss)[] THEN
   POP_ASSUM SUBST1_TAC THEN

@@ -2632,11 +2632,11 @@ val APPEND_EQ_CONS = store_thm(
 
 (* could just use APPEND_EQ_APPEND and APPEND_EQ_SING, but this gives you
    four possibilities
-      |- (x ++ [e] ++ y = a ++ b) ⇔
-           (∃l'. (x = a ++ l') ∧ (b = l' ++ [e] ++ y)) ∨
-           (a = x ++ [e]) ∧ (b = y) ∨
-           (a = x) ∧ (b = e::y) ∨
-           ∃l. (a = x ++ [e] ++ l) ∧ (y = l ++ b)
+      |- (x ++ [e] ++ y = a ++ b) <=>
+           (?l'. (x = a ++ l') /\ (b = l' ++ [e] ++ y)) \/
+           (a = x ++ [e]) /\ (b = y) \/
+           (a = x) /\ (b = e::y) \/
+           ?l. (a = x ++ [e] ++ l) /\ (y = l ++ b)
    Note that the middle two are instances of the outer two with the
    existentially quantified l set to []
 *)

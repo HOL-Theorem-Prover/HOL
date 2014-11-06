@@ -1407,7 +1407,7 @@ val BAG_IN_BAG_FILTER = store_thm(
 
 val BAG_FILTER_FILTER = store_thm(
   "BAG_FILTER_FILTER",
-  ``BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (λa. P a ∧ Q a) b``,
+  ``BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (\a. P a /\ Q a) b``,
   simp[BAG_FILTER_DEF] >> simp[FUN_EQ_THM] >> rw[] >> fs[]);
 
 val BAG_FILTER_SUB_BAG = store_thm(
