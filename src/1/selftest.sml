@@ -327,11 +327,13 @@ val _ = let
   fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
   fun texp (i,out) = md tpp_expected
                         {testf = standard_tpp_message, input = i, output = out}
+  val _ = temp_overload_on ("⊤", ``T``)
 in
   app (md tpp) ["!x. p x /\\ q x", "\\x. x", "\\x::p. x /\\ y",
-                 "!x::p. q x \\/ r x"];
+                "!x::p. q x \\/ r x", "!x. x /\\ T <=> x"];
   app texp [("∀x. p x", "!x. p x"), ("x ∧ y", "x /\\ y"),
-            ("λx. x", "\\x. x")]
+            ("λx. x", "\\x. x")];
+  temp_clear_overloads_on "⊤"
 end
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"

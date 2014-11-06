@@ -380,7 +380,7 @@ fun isize0 acc f [] = acc
   | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue + 1) f rest
 fun isize f x = isize0 0 f x
 
-fun strip_comb ((_, prmap): overload_info) t = let
+fun strip_comb ((_, prmap): overload_info) namePred t = let
   val matches = PrintMap.match(prmap, t)
   val cmp0 = pair_compare (measure_cmp (isize term_size),
                            pair_compare (measure_cmp (isize type_size),
@@ -388,6 +388,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
+    val _ = assert namePred nm
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])
@@ -437,9 +438,9 @@ in
   | (m as (_, _, _, (_, nm))) :: _ => if nm = "" then NONE
                                       else SOME (rearrange m)
 end
-fun oi_strip_comb oinfo t = let
+fun oi_strip_combP oinfo P t = let
   fun recurse acc t =
-      case strip_comb oinfo t of
+      case strip_comb oinfo P t of
         NONE => let
         in
           case Lib.total dest_comb t of
@@ -456,12 +457,16 @@ in
   else recurse [] t
 end
 
+fun oi_strip_comb oinfo t = oi_strip_combP oinfo (fn _ => true) t
 
-fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
-    case strip_comb oinfo t of
+
+fun overloading_of_termP (oinfo as (_, prmap) : overload_info) P t =
+    case strip_comb oinfo P t of
       SOME (f, []) => f |> dest_var |> #1 |> GrammarSpecials.dest_fakeconst_name
                         |> Option.map #fake
     | _ => NONE
+
+fun overloading_of_term oinfo t = overloading_of_termP oinfo (fn _ => true) t
 
 fun overloading_of_nametype (oinfo:overload_info) r =
     case Lib.total prim_mk_const r of

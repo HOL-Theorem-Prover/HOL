@@ -301,6 +301,16 @@ fun bv2term (Simple t) = t
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
+fun oi_strip_comb' oinfo t =
+    if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
+    else Overload.oi_strip_combP oinfo str_unicode_ok t
+
+fun overloading_of_term' oinfo t =
+    if current_trace "PP.avoid_unicode" = 0 then
+      Overload.overloading_of_term oinfo t
+    else
+      Overload.overloading_of_termP oinfo str_unicode_ok t
+
 fun pp_unicode_free ppel =
     case ppel of
         PPBlock(ppels, _) => List.all pp_unicode_free ppels
@@ -802,7 +812,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun tm nmight_print str = let
       val {Name,...} = dest_thy_const tm
       val actual_name0 =
-        case Overload.overloading_of_term overload_info tm of
+        case overloading_of_term' overload_info tm of
           NONE => Name
         | SOME s => s
       fun testit s = if isPrefix s actual_name0 then SOME s else NONE
@@ -1078,7 +1088,7 @@ fun pp_term (G : grammar) TyG backend = let
                string, and a boolean, which is true iff the update is a value
                update (not a "fupd") *)
             val (fld, value) = dest_comb t
-            val rname = valOf (Overload.overloading_of_term overload_info fld)
+            val rname = valOf (overloading_of_term' overload_info fld)
           in
             if isPrefix recfupd_special rname then let
                 val (f, x) = dest_comb value
@@ -1177,7 +1187,7 @@ fun pp_term (G : grammar) TyG backend = let
             #base_type (valOf (Overload.info_for_name overload_info nm))
           end
         else
-          case Overload.overloading_of_term overload_info f of
+          case overloading_of_term' overload_info f of
             NONE => let
               val {Thy,Name,Ty} = dest_thy_const f
             in
@@ -1548,7 +1558,7 @@ fun pp_term (G : grammar) TyG backend = let
         else false
 
     fun const_has_multi_ovl tm =
-      case Overload.overloading_of_term overload_info tm of
+      case overloading_of_term' overload_info tm of
         NONE => (* no printing form *) true
       | SOME s =>
           case Overload.info_for_name overload_info s of
@@ -1631,7 +1641,7 @@ fun pp_term (G : grammar) TyG backend = let
                 add_string ")"
               end
             else
-              case Overload.overloading_of_term overload_info tm of
+              case overloading_of_term' overload_info tm of
                 NONE => add_prim_name()
               | SOME s =>
                 (* term is overloaded *)
@@ -1674,7 +1684,7 @@ fun pp_term (G : grammar) TyG backend = let
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
           val (oif, oiargs, overloadedp) =
-              case Overload.oi_strip_comb overload_info tm of
+              case oi_strip_comb' overload_info tm of
                 NONE => (f, args @ [Rand], false)
               | SOME (f, args) => (f, args, true)
 

@@ -38,6 +38,8 @@ sig
   val info_for_name : overload_info -> string -> overloaded_op_info option
   val is_overloaded : overload_info -> string -> bool
   val overloading_of_term : overload_info -> Term.term -> string option
+  val overloading_of_termP : overload_info -> (string -> bool) -> Term.term ->
+                             string option
   val overloading_of_nametype :
     overload_info -> {Name : string, Thy : string} ->
     string option
@@ -66,6 +68,8 @@ sig
   val gen_remove_mapping : string -> term -> overload_info -> overload_info
 
   val oi_strip_comb : overload_info -> term -> (term * term list) option
+  val oi_strip_combP : overload_info -> (string -> bool) -> term ->
+                       (term * term list) option
 
 end
 
