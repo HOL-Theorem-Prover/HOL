@@ -70,6 +70,8 @@ Bugs fixed:
 
 * Piotr Trojanek found and fixed many documentation bugs in our various manuals.
 
+* The `remove_rules_for_term` and `temp_remove_rules_for_term` functions tended to remove rules for binders as well as the desired rules.
+
 New theories:
 -------------
 

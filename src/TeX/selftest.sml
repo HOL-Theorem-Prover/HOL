@@ -18,6 +18,8 @@ val _ = if s1 = s2 then print "OK\n" else die()
 
 val _ = tprint "Testing syntactic-sugar overriding"
 val _ = temp_remove_rules_for_term "~"
+        (* Note that this is one of the few places where temp_remove_rules_for_term is
+           called; tests here are at least somewhat a test of its functionality too. *)
 val _ = temp_add_rule {term_name   = "~",
                        fixity      = Prefix 900,
                        pp_elements = [TOK "TOK1"],
