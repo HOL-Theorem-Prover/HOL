@@ -485,56 +485,50 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 (* Handler for simple cong. rule antecedents: ones without quantification.   *)
 (*---------------------------------------------------------------------------*)
 
-fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = let
-  val _ = lztrace(5, "simple",
-                  (fn () => "ant: " ^ ppstring pp_term ant))
-in
- case total ((I##dest_eq) o strip_imp_only) ant of
-   SOME (L,(lhs,rhs)) => let
-     val outcome =
+fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = 
+ let val _ = lztrace(5, "simple", (fn () => "ant: " ^ ppstring pp_term ant))
+ in case total ((I##dest_eq) o strip_imp_only) ant 
+    of NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
+    | SOME (L,(lhs,rhs)) => 
+      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
-         else let val cps' =
-                   if null L then cps else
-                       {context = (map ASSUME L @ cntxt,b),
-                        prover  = prover,
-                        simpls  = add_cntxt b simpls (map ASSUME L)}
+         else let val cps' = if null L then cps else
+                   {context = (map ASSUME L @ cntxt,b),
+                    prover  = prover,
+                    simpls  = add_cntxt b simpls (map ASSUME L)}
               in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NO_CHANGE (L,lhs)
                                            | UNCHANGED => NO_CHANGE (L,lhs)
               end
-   in
-     case outcome of
-       CHANGE th => let
-         val Mnew = boolSyntax.rhs(concl th)
-       in
-         lztrace(5, "simple",
-                 (fn () => "outcome: " ^ ppstring pp_term Mnew));
-         (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
-       end
-     |  _ => (lztrace(5, "simple", (fn () => "unchanged outcome "^
-                                             ppstring pp_term lhs));
-              (outcome, map (subst [rhs |-> lhs]) rst))
-   end
- | NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
-end
+      in
+      case outcome 
+       of CHANGE th => 
+          let val Mnew = boolSyntax.rhs(concl th)
+              val _ = lztrace(5, "simple", (fn () => "outcome: " ^ ppstring pp_term Mnew))
+          in
+           (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
+          end
+        | otherwise => 
+          let val _ = lztrace(5, "simple", (fn () => "unchanged outcome "^ppstring pp_term lhs))
+          in (outcome, map (subst [rhs |-> lhs]) rst)
+          end
+      end
+ end
 
+
+(*---------------------------------------------------------------------------*)
+(* Handler for cong. rule antecedents dealing with functions, i.e., of form  *)
+(*                                                                           *)
+(*  !x1 ... xn. P x1 .... xn ==> (f x1 ... xn = f' x1 ... xn)                *)
+(*                                                                           *)
+(* It can happen that "f" above also has a congruence rule for it, e.g., if  *)
+(* f is a higher order function. Then we have to recursively prove the       *)
+(* congruence rule instance for f, thus accumulating any termination         *)
+(* conditions that might lurk underneath.                                    *)
+(*---------------------------------------------------------------------------*)
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
-let fun tr (i,mf) = lztrace(i,"complex",mf)
-    fun trterm (i,m,t) = tr(i, (fn () => m ^ ppstring pp_term t))
-    fun trvlist (i,m,tlist) =
-        tr(i, (fn () => String.concatWith "\n"
-                           (m :: map (ppstring pp_term) tlist)))
-    fun trthlist (i,m,thlist) =
-        tr(i,
-           trace ("assumptions", 1)
-             (fn () => String.concatWith "\n"
-                         (m :: map (ppstring pp_thm) thlist)))
-    val _  = trterm(5, "Antecedent: ", ant)
-    val _ = trthlist(6, "Context: ", cntxt)
-    val ant_frees = free_vars ant
-    val _ = trvlist(10, "Antecedent frees: ", ant_frees)
+let val ant_frees = free_vars ant
     val context_frees = free_varsl (map concl (fst context))
-    val _ = trvlist(10, "Context frees: ", context_frees)
     val (vlist,ceqn) = strip_forall ant
     val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
@@ -564,8 +558,6 @@ in
  case outcome of
    CHANGE th => let
      val Mnew = boolSyntax.rhs(concl th)
-     val _ = trterm(5, "rhs of CHANGE th (Mnew): ", Mnew)
-     val _ = trvlist(10, "assumptions of CHANGE th: ", hyp th)
      val g = list_mk_pabs(vstrl1,Mnew)
      val gvstrl1 = list_mk_comb(g,vstrl1)
      val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
@@ -577,17 +569,12 @@ in
           of SOME (_,tup) => pairTools.PGEN v tup thm
            | NONE => raise RW_ERR "complex" "generalize"
      val result = itlist generalize vlist (itlist DISCH L th1)
-     val _ = lztrace(6, "complex",
-                     trace ("assumptions", 1)
-                     (fn () => "Changed outcome: " ^
-                               ppstring pp_thm result))
    in
      (CHANGE result, map (subst [rhsv |-> g]) rst)
    end
  | otherwise => let
    in
-     tr(5, K "outcome was no change");
-     (outcome, map (subst [rhsv |-> f]) rst)
+      (outcome, map (subst [rhsv |-> f]) rst)
    end
 end;
 
@@ -607,16 +594,14 @@ end;
  * isolate the free variables.
  *---------------------------------------------------------------------------*)
 
-fun do_cong cnv cps th0 = let
-  val th = th0
-(*  val th = GENVAR_THM th0 *)
-  val (a, c) = dest_imp (concl th)
-  val _ = lztrace(6, "do_cong",
-                  (fn () => "th concl: "^ppstring pp_term c))
-  val ants = strip_conj a
-  val _ = lztrace(6, "do_cong",
+fun do_cong cnv (cps as {context,prover,simpls}) tm = 
+ let val th = CONG_STEP simpls tm
+     val (a,c) = dest_imp (concl th)
+     val _ = lztrace(6, "do_cong",(fn () => "th concl: "^ppstring pp_term c))
+     val ants = strip_conj a
+     val _ = lztrace(6, "do_cong",
                     (fn () => String.concatWith "\n"
-                               ("ants: " :: map (ppstring pp_term) ants)))
+                           ("ants: " :: map (ppstring pp_term) ants)))
   fun loop [] = []    (* loop proves each antecedent in turn. *)
     | loop (ant::rst) =
       let val (outcome,rst') =
@@ -636,10 +621,132 @@ in
 end;
 
 
-fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
+(*---------------------------------------------------------------------------
+ * Note.
+ * When doing rewriting of quantified antecedents to congruence rules, as
+ * in the one for "let" statements
+ *
+ *     |- (M = M') /\ (!x. (x = M') ==> (f x = g x)) ==> LET f M = LET g M',
+ *                    |----------------------------|
+ *
+ * the temptation is there to only rewrite (in context) f to g, and
+ * use MK_COMB to get f x = g x. (Assume that f is a lambda term.) However,
+ * the free variables in the context (i.e., x) map to bound variables in
+ * f and the attempt to abstract on the way out of the rewrite will fail, or
+ * isolate the free variables.
+ *---------------------------------------------------------------------------*)
+
+fun try_cong cnv (cps as {context,prover,simpls}) tm = 
+ let 
+ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = 
+      case total ((I##dest_eq) o strip_imp_only) ant 
+       of NONE (* Not an equality, so just assume *)
+          => (CHANGE(ASSUME ant), rst)
+        | SOME (L,(lhs,rhs)) 
+          => let val outcome =
+               if aconv lhs rhs then NO_CHANGE (L,lhs)
+               else let val cps' = if null L then cps else
+                         {context = (map ASSUME L @ cntxt,b),
+                          prover  = prover,
+                          simpls  = add_cntxt b simpls (map ASSUME L)}
+                    in CHANGE(cnv cps' lhs) 
+                         handle HOL_ERR _ => NO_CHANGE (L,lhs)
+                              | UNCHANGED => NO_CHANGE (L,lhs)
+                    end
+          in
+      case outcome 
+       of CHANGE th => 
+          let val Mnew = boolSyntax.rhs(concl th)
+          in (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
+          end
+        | otherwise => (outcome, map (subst [rhs |-> lhs]) rst)
+      end
+
+ fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
+  let val ant_frees = free_vars ant
+    val context_frees = free_varsl (map concl (fst context))
+    val (vlist,ceqn) = strip_forall ant
+    val (L0,eq) = strip_imp_only ceqn
+    val (lhs,rhs) = dest_eq eq
+    val nvars = length (snd (strip_comb rhs))  (* guessing ... *)
+    val (f,args) = (I##rev) (dest_combn lhs nvars)
+    val (rhsv,_) = dest_combn rhs nvars
+    val (outcome,L,vstructs) = 
+     if is_pabs f then 
+      let           val vstrl = #1(strip_pabs f)
+          val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
+          val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
+          val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
+          val outcome = 
+              if aconv lhs rhs then NO_CHANGE (L,lhs) 
+              else
+               let val lhs_beta_maybe = 
+                       Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
+                   val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
+                   val cps' = case L of [] => cps
+                              | otherwise =>
+                                {context = (map ASSUME L @ cntxt,b), prover = prover, 
+                                 simpls  = add_cntxt b simpls (map ASSUME L)}
+               in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
+                  handle HOL_ERR _ => 
+                         if aconv lhs lhs' then NO_CHANGE (L,lhs)
+                         else CHANGE lhs_beta_maybe
+                      | UNCHANGED => if aconv lhs lhs' then NO_CHANGE (L,lhs)
+                            else CHANGE lhs_beta_maybe
+               end
+      in (outcome,L,vstrl1)
+      end
+     else
+     let val outcome = CHANGE (try_cong cnv cps lhs) handle e => NO_CHANGE(vlist,lhs)
+     in (outcome,L0,vlist)
+     end
+  in
+  case outcome 
+   of CHANGE th => 
+      let val Mnew = boolSyntax.rhs(concl th)
+         val g = list_mk_pabs(vstructs,Mnew)
+        val gvstrl1 = list_mk_comb(g,vstructs)
+        val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
+                     handle HOL_ERR _ => REFL gvstrl1)
+        val th1 = TRANS th eq (* f vstrl1 = g vstrl1 *)
+        val pairs = zip args vstructs
+       fun generalize v thm =
+            case assoc1 v pairs
+            of SOME (_,tup) => pairTools.PGEN v tup thm
+             | NONE => raise RW_ERR "complex" "generalize"
+       val result = itlist generalize vlist (itlist DISCH L th1)
+      in
+        (CHANGE result, map (subst [rhsv |-> g]) rst)
+      end
+    | otherwise => (outcome, map (subst [rhsv |-> f]) rst)
+  end (* complex *)
+
+  val th = CONG_STEP simpls tm
+  val (a,c) = dest_imp (concl th)
+  val ants = strip_conj a
+  fun loop [] = []    (* loop proves each antecedent in turn. *)
+    | loop (ant::rst) =
+      let val (outcome,rst') =
+           if is_forall ant
+             then complex cnv cps (ant,rst)
+             else simple cnv cps (ant,rst)
+      in
+        outcome::loop rst'
+      end
+  val outcomes = loop ants
+  fun mk_ant (NO_CHANGE (L,tm)) = itlist DISCH L (REFL tm)
+    | mk_ant (CHANGE th) = th
+ in
+   if Lib.all unchanged outcomes
+     then raise UNCHANGED
+     else MATCH_MP th (LIST_CONJ (map mk_ant outcomes))
+ end
+
+
+fun SUB_QCONV cnv cps tm =
  case dest_term tm
   of COMB(Rator,Rand) =>
-      (do_cong cnv cps (CONG_STEP simpls tm)
+      (try_cong cnv cps tm
        handle UNCHANGED => raise UNCHANGED
           | HOL_ERR _ =>
               let val th = cnv cps Rator
@@ -669,7 +776,7 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
           in TRANS (TRANS th1 eq_thm') th2
           end
       end
-   | otherwise => raise UNCHANGED     (* Constants and  variables *);
+   | otherwise => raise UNCHANGED     (* Constants and  variables *)
 
 
 fun DEPTH_QCONV cnv cps tm =
