@@ -54,6 +54,7 @@ New features:
 
     For example, this means that it is possible to have integers, reals and numbers all in scope, to write something like `MAP (+)`, and to then see what constants are involved by using the mouse.  (See [Github issue #39](https://github.com/HOL-Theorem-Prover/HOL/issues/39).)
 
+*   Unicode is handled slightly better on Windows systems.  By default, the pretty-printer avoids printing with Unicode characters there, but can still parse Unicode input successfully.  This is important because many of the examples distributed with HOL use Unicode characters in their scripts (nothing in `src/` does).  This behaviour can be adjusted by toggling the `PP.avoid_unicode` trace.  On Windows this trace is initialised to true; elsewhere it is initialised to false.
 
 Bugs fixed:
 -----------

@@ -299,6 +299,43 @@ fun bv2term (Simple t) = t
   | bv2term (Restricted {Bvar,...}) = Bvar
 
 
+fun str_unicode_ok s = CharVector.all Char.isPrint s
+
+fun pp_unicode_free ppel =
+    case ppel of
+        PPBlock(ppels, _) => List.all pp_unicode_free ppels
+      | RE (TOK s) => str_unicode_ok s
+      | _ => true
+
+fun is_unicode_ok_rule r =
+    current_trace "PP.avoid_unicode" = 0 orelse
+    (case r of
+         LISTRULE ls => List.all (fn {separator,leftdelim,rightdelim,...} =>
+                                     List.all pp_unicode_free separator andalso
+                                     List.all pp_unicode_free leftdelim andalso
+                                     List.all pp_unicode_free rightdelim)
+                                 ls
+       | PREFIX (STD_prefix rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | PREFIX (BINDER bs) =>
+         List.all (fn LAMBDA => true | BinderString {tok,...} => str_unicode_ok tok)
+                  bs
+       | SUFFIX TYPE_annotation => true
+       | SUFFIX (STD_suffix rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX (STD_infix (rrs, _)) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX (FNAPP rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX VSCONS => true
+       | INFIX RESQUAN_OP => true
+       | CLOSEFIX rrs =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs)
 
 fun rule_to_rr rule =
   case rule of
@@ -834,10 +871,16 @@ fun pp_term (G : grammar) TyG backend = let
                        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
+      val lambda' = if current_trace "PP.avoid_unicode" > 0 then
+                      List.filter str_unicode_ok lambda
+                    else lambda
+      val tok = case lambda' of
+                    [] => raise PP_ERR "pr_abs" "No token for lambda abstraction"
+                  | h::_ => h
     in
       pbegin addparens >>
       block CONSISTENT 2
-            (add_string (hd lambda) >>
+            (add_string tok >>
              record_bvars bvars_seen_here
                (pr_vstructl bvars >>
                 add_string endbinding >> add_break (1,0) >>
@@ -1565,7 +1608,9 @@ fun pp_term (G : grammar) TyG backend = let
           val r = {Name = Name, Thy = Thy}
           fun normal_const () = let
             fun cope_with_rules s = let
-              val crules = lookup_term s
+              val crules =
+                  Option.map (List.filter (is_unicode_ok_rule o #3))
+                             (lookup_term s)
               open PPBackEnd
             in
               if isSome crules then
@@ -1685,7 +1730,9 @@ fun pp_term (G : grammar) TyG backend = let
             val tm = list_mk_comb (f, args)
             val Rator = rator tm
             val (args,Rand) = front_last args
-            val candidate_rules = lookup_term fname
+            val candidate_rules =
+                Option.map (List.filter (is_unicode_ok_rule o #3))
+                           (lookup_term fname)
             fun is_list (r as {nilstr, cons, ...}:listspec) tm =
                 has_name_by_parser G nilstr tm orelse
                 (is_comb tm andalso
@@ -1705,7 +1752,8 @@ fun pp_term (G : grammar) TyG backend = let
                     val bindex = case valOf restr_binder of
                                    NONE => binder_to_string G LAMBDA
                                  | SOME s => s
-                    val optrule = lookup_term bindex
+                    val optrule = Option.map (List.filter (is_unicode_ok_rule o #3))
+                                             (lookup_term bindex)
                     fun ok_rule (_, _, r) =
                         case r of
                           PREFIX(BINDER b) => true
