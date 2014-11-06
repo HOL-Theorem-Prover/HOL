@@ -1354,11 +1354,13 @@ fun pp_term (G : grammar) TyG backend = let
               Prec(n, _) => n > fprec
             | _ => false
           val addparens = addparens orelse combpos = RandCP
+          val print_tok = if is_constish f then constann f tok
+                          else var_ann f tok
         in
           ptype_block
             (pbegin (addparens orelse comb_show_type) >>
              block INCONSISTENT 2
-               (add_string tok >>
+               (print_tok >>
                 record_bvars bvars_seen_here
                   (pr_vstructl bvs >>
                    add_string endbinding >> spacep true >>
