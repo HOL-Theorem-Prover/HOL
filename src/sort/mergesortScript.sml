@@ -34,14 +34,14 @@ stable R l1 l2 =
 
 val sort2_def = Define `
 sort2 R x y =
-  if R x y then 
+  if R x y then
     [x;y]
   else
     [y;x]`;
 
 val sort3_def = Define `
 sort3 R x y z =
-  if R x y then 
+  if R x y then
     if R y z then
       [x;y;z]
     else if R x z then
@@ -99,14 +99,14 @@ mergesort R l = mergesortN R (LENGTH l) l`;
 
 val sort2_tail_def = Define `
 sort2_tail (neg:bool) R x y =
-  if R x y ≠ neg then 
+  if R x y ≠ neg then
     [x;y]
   else
     [y;x]`;
 
 val sort3_tail_def = Define `
 sort3_tail (neg:bool) R x y z =
-  if R x y ≠ neg then 
+  if R x y ≠ neg then
     if R y z ≠ neg then
       [x;y;z]
     else if R x z ≠ neg then
@@ -147,7 +147,7 @@ val mergesortN_tail_def = tDefine "mergesortN_tail" `
 (mergesortN_tail negate R n l =
   let len1 = DIV2 n in
   let neg = ¬negate in
-    merge_tail neg R (mergesortN_tail neg R (DIV2 n) l) 
+    merge_tail neg R (mergesortN_tail neg R (DIV2 n) l)
                      (mergesortN_tail neg R (n - len1) (DROP len1 l))
                      [])`
  (WF_REL_TAC `measure (\(neg,R,n,l). n)` >>
@@ -195,7 +195,7 @@ val mergesortN_perm = Q.store_thm ("mergesortN_perm",
  >- (every_case_tac >>
      fs [sort2_perm, sort3_perm] >>
      metis_tac []) >>
- `len1 ≤ n` 
+ `len1 ≤ n`
              by (UNABBREV_ALL_TAC >>
                  fs [DIV2_def, DIV_LESS_EQ]) >>
  metis_tac [take_drop_partition, PERM_TRANS, PERM_CONG, merge_perm]);
@@ -209,7 +209,7 @@ val mergesort_perm = Q.store_thm ("mergesort_perm",
 
 val sort2_sorted = Q.store_thm ("sort2_sorted",
 `!R x y.
-  total R 
+  total R
   ⇒
   SORTED R (sort2 R x y)`,
  rw [sort2_def, SORTED_DEF, total_def] >>
@@ -243,7 +243,7 @@ val merge_sorted = Q.store_thm ("merge_sorted",
      metis_tac []));
 
 val mergesortN_sorted = Q.store_thm ("mergesortN_sorted",
-`!R n l. 
+`!R n l.
   total R ∧ transitive R
   ⇒
   SORTED R (mergesortN R n l)`,
@@ -303,7 +303,7 @@ val sort3_stable = Q.store_thm ("sort3_stable",
  metis_tac [total_def, transitive_def]);
 
 val filter_merge = Q.store_thm ("filter_merge",
-`!P R l1 l2. 
+`!P R l1 l2.
   transitive R ∧
   (∀x y. P x ∧ P y ⇒ R x y) ∧
   SORTED R l1
@@ -316,7 +316,7 @@ val filter_merge = Q.store_thm ("filter_merge",
  REV_FULL_SIMP_TAC (srw_ss()) [SORTED_EQ, FILTER_APPEND]
  >- metis_tac []
  >- metis_tac []
- >- (`FILTER P l1 = []` 
+ >- (`FILTER P l1 = []`
            by (rw [FILTER_EQ_NIL] >>
                CCONTR_TAC >>
                fs [EXISTS_MEM] >>
@@ -357,7 +357,7 @@ val mergesortN_stable = Q.store_thm ("mergesortN_stable",
      TRY (rw [stable_def] >> NO_TAC) >>
      Cases_on `t'` >>
      rw [sort2_stable, sort3_stable])
- >- (`len1 ≤ n` 
+ >- (`len1 ≤ n`
              by (UNABBREV_ALL_TAC >>
                  fs [DIV2_def, DIV_LESS_EQ]) >>
      metis_tac [stable_cong, merge_stable, take_drop_partition, stable_trans, mergesortN_sorted]));
@@ -365,7 +365,7 @@ val mergesortN_stable = Q.store_thm ("mergesortN_stable",
 val mergesort_stable = Q.store_thm ("mergesort_stable",
 `!R l. transitive R ∧ total R ⇒ stable R l (mergesort R l)`,
  metis_tac [mergesortN_stable, mergesort_def, TAKE_LENGTH_ID]);
- 
+
 (* packaging things up *)
 
 val mergesort_STABLE_SORT = Q.store_thm ("mergesort_STABLE_SORT",
@@ -433,13 +433,13 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
   (neg = T) ∧
   transitive R ∧
   SORTED R (REVERSE l1) ∧
-  SORTED R (REVERSE l2) 
+  SORTED R (REVERSE l2)
   ⇒
   merge_tail neg R l1 l2 acc = (merge R (REVERSE l1) (REVERSE l2)) ++ acc`,
  ho_match_mp_tac merge_tail_ind >>
  rw [merge_tail_def, merge_def, REV_REVERSE_LEM, merge_empty] >>
  fs [] >>
- `SORTED R (REVERSE l1) ∧ SORTED R (REVERSE l2)` 
+ `SORTED R (REVERSE l1) ∧ SORTED R (REVERSE l2)`
         by metis_tac [SORTED_transitive_APPEND_IFF] >>
  fs []
  >- (match_mp_tac (GSYM merge_last_lem1) >>
@@ -459,8 +459,8 @@ val mergesortN_tail_correct = Q.store_thm ("mergesortN_correct",
 `!negate R n l.
   total R ∧
   transitive R
-  ⇒ 
-  mergesortN_tail negate R n l = 
+  ⇒
+  mergesortN_tail negate R n l =
     (if negate then REVERSE (mergesortN R n l) else mergesortN R n l)`,
  ho_match_mp_tac mergesortN_tail_ind >>
  rw [] >>
