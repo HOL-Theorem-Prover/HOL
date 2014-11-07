@@ -24,4 +24,4 @@ sig
    val pp_gstk      : ppstream -> gstk -> unit
    val set_goal_pp  : (ppstream -> goal -> unit) -> (ppstream -> goal -> unit)
 
- end
+end
