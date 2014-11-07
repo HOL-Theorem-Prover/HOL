@@ -40,6 +40,7 @@ val tac =
         exceptionSignalled_id, LoadMemory_ARB_CCA]
    \\ Cases_on `(SND (Run (Decode w) s)).BranchTo`
    \\ Cases_on `(SND (Run (Decode w) s)).BranchDelay`
+   \\ TRY (Cases_on `x`)
    \\ lrw []
    \\ fs [mips_state_component_equality]
 
@@ -51,87 +52,71 @@ val NextStateMIPS_nodelay = utilsLib.ustore_thm("NextStateMIPS_nodelay",
      (Decode w = i) /\
      (SND (Run i s) = next_state) /\
      (next_state.exception = s.exception) /\
-     (next_state.exceptionSignalled = s.exceptionSignalled) /\
-     (next_state.BranchDelay = s.BranchDelay) /\
-     (next_state.BranchTo = b) ==>
-     (NextStateMIPS s =
-      SOME (next_state with
-               <| PC := next_state.PC + 4w;
-                  BranchDelay := b;
-                  BranchTo := NONE;
-                  CP0 := next_state.CP0 with
-                         Count := next_state.CP0.Count + 1w |>))`,
-    tac)
-
-val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
-    `(s.exception = NoException) /\
-     (s.BranchDelay = SOME a) /\
-     ~s.exceptionSignalled ==>
-     (Fetch s = (SOME w, s)) /\
-     (Decode w = i) /\
-     (SND (Run i s) = next_state) /\
-     (next_state.exception = s.exception) /\
-     (next_state.exceptionSignalled = s.exceptionSignalled) /\
-     (next_state.BranchDelay = s.BranchDelay) /\
-     (next_state.BranchTo = NONE) ==>
-     (NextStateMIPS s =
-      SOME (next_state with
-            <| PC := a;
-               BranchDelay := NONE;
-               CP0 := next_state.CP0 with
-                      Count := next_state.CP0.Count + 1w |>))`,
-    tac)
-
-val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
-    `(s.exception = NoException) /\
-     (s.BranchDelay = NONE) /\
-     ~s.exceptionSignalled ==>
-     (Fetch s = (SOME w, s)) /\
-     (Decode w = i) /\
-     (SND (Run i s) = next_state) /\
-     (next_state.exception = s.exception) /\
-     (next_state.exceptionSignalled = e) /\
      (next_state.BranchDelay = NONE) /\
      (next_state.BranchTo = b) ==>
      (NextStateMIPS s =
-      SOME (if e /\ (b = NONE) then
-               next_state with
-               <| PC := next_state.PC;
+      SOME (next_state with
+               <| PC := case b of SOME (T, a) => a | _ => next_state.PC + 4w;
+                  BranchDelay := case b of SOME (F, a) => SOME (SOME a)
+                                         | SOME (T, _) => SOME NONE
+                                         | _ => NONE;
+                  BranchTo := NONE;
                   exceptionSignalled := F;
                   CP0 := next_state.CP0 with
-                         Count := next_state.CP0.Count + 1w |>
-            else
-               next_state with
-                  <| PC := next_state.PC + 4w;
-                     BranchDelay := b;
-                     BranchTo := NONE;
-                     exceptionSignalled := F;
-                     CP0 := next_state.CP0 with
-                            Count := next_state.CP0.Count + 1w |>))`,
-    tac)
+                         Count := next_state.CP0.Count + 1w |>))`,
+    tac
+    )
 
-val NextStateMIPS_exception_delay =
-   utilsLib.ustore_thm("NextStateMIPS_exception_delay",
+val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
     `(s.exception = NoException) /\
-     (s.BranchDelay = SOME a) /\
+     (s.BranchDelay = SOME d) /\
      ~s.exceptionSignalled ==>
      (Fetch s = (SOME w, s)) /\
      (Decode w = i) /\
      (SND (Run i s) = next_state) /\
      (next_state.exception = s.exception) /\
-     (next_state.exceptionSignalled = e) /\
-     (next_state.BranchDelay = if e then NONE else SOME a) /\
+     (next_state.BranchDelay = s.BranchDelay) /\
      (next_state.BranchTo = NONE) ==>
      (NextStateMIPS s =
       SOME (next_state with
-            <| PC := if e then next_state.PC else a;
+            <| PC := case d of SOME a => a | NONE => next_state.PC + 4w;
                BranchDelay := NONE;
                exceptionSignalled := F;
                CP0 := next_state.CP0 with
                       Count := next_state.CP0.Count + 1w |>))`,
-    tac)
+    tac
+    )
+
+(* exceptions can occur in the branch delay slot *)
+val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
+    `(s.exception = NoException) /\
+     (s.BranchDelay = SOME d) /\
+     ~s.exceptionSignalled ==>
+     (Fetch s = (SOME w, s)) /\
+     (Decode w = i) /\
+     (SND (Run i s) = next_state) /\
+     (next_state.exception = s.exception) /\
+     (next_state.BranchDelay = if b then NONE else s.BranchDelay) /\
+     (next_state.BranchTo = NONE) ==>
+     (NextStateMIPS s =
+      SOME (next_state with
+            <| PC := if b then
+                        next_state.PC + 4w
+                     else
+                        (case d of SOME a => a | NONE => next_state.PC + 4w);
+               BranchDelay := NONE;
+               exceptionSignalled := F;
+               CP0 := next_state.CP0 with
+                      Count := next_state.CP0.Count + 1w |>))`,
+    tac
+    )
 
 (* ------------------------------------------------------------------------ *)
+
+val not31 = Q.store_thm("not31",
+   `x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))`,
+   blastLib.BBLAST_TAC
+   )
 
 val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
    `((v2w [F; F; F; F; F] = 0w: word5)) /\
@@ -556,5 +541,39 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
    )
 
 (* ------------------------------------------------------------------------ *)
+
+val branch_delay = Q.store_thm("branch_delay",
+   `(!b x y.
+       (case (if b then (F, x) else (T, y)) of
+           (T, a) => SOME NONE
+         | (F, a) => SOME (SOME a)) =
+       (if b then SOME (SOME x) else SOME NONE)) /\
+    (!b x y.
+       (case (if b then (F, x) else (T, y)) of
+           (T, a) => a
+         | (F, a) => y) = y) /\
+    (!b x y.
+       (if b then
+           (case THE (if b then SOME (F, x) else NONE) of
+               (T, a) => SOME NONE
+             | (F, a) => SOME (SOME a))
+        else
+           NONE) =
+       (if b then SOME (SOME x) else NONE)) /\
+    (!b x y.
+       (if b then
+           (case THE (if b then SOME (F, x) else NONE) of
+               (T, a) => a
+             | (F, a) => y)
+        else
+           y) = y) /\
+    (!b. (if b then T else F) = b) /\
+    (!b x y.
+        (if b then x else y) + 4w = (if b then x + 4w else y + 4w)) /\
+    (!x. x + 4w + 4w = x + 8w)`,
+   rw [] \\ fs [])
+
+(* ------------------------------------------------------------------------ *)
+
 
 val () = export_theory ()

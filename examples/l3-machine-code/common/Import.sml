@@ -664,8 +664,6 @@ local
           then wordsSyntax.mk_word_reverse
        else listSyntax.mk_reverse) tm
 
-   val c_mk_comb = Lib.curry Term.mk_comb
-
    fun enum2num ty =
       Lib.with_exn mk_local_const
         (typeName ty ^ "2num", Type.--> (ty, numLib.num))
