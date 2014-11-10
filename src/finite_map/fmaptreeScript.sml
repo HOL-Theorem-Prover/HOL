@@ -247,5 +247,3 @@ val fmtree_Axiom = store_thm(
   SRW_TAC [][fmtreerec_thm]);
 
 val _ = export_theory()
-
-

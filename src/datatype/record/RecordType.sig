@@ -25,5 +25,3 @@ end
     accessor and update information.
 
 *)
-
-

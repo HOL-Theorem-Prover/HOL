@@ -59,7 +59,7 @@ datatype rewrites = RW of {thms :thm list,  net :conv Ho_Net.net}
 
 fun dest_rewrites(RW{thms, ...}) = thms
 
-val empty_rewrites = RW{thms = [],  net = Ho_Net.empty_net}
+val empty_rewrites = RW{thms = [],  net = Ho_Net.empty}
 
 val implicit = ref empty_rewrites;
 
@@ -219,7 +219,7 @@ val HIGHER_REWRITE_CONV =
           val beta_fns = map2 BETA_VAR preds concs
           val ass_list = zip pats (zip preds (zip thl beta_fns))
           fun insert p = Ho_Net.enter ([],p,p)
-          val mnet = itlist insert pats Ho_Net.empty_net
+          val mnet = itlist insert pats Ho_Net.empty
           fun look_fn t = mapfilter
                     (fn p => if can (ho_match_term [] empty_tmset p) t then p
                              else fail())

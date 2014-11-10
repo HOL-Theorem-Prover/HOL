@@ -3,7 +3,7 @@
 \TYPE {list_mk_binder : term option -> term list * term -> term}
 
 \SYNOPSIS
-Performs a sequence of variable binding operations on a term
+Performs a sequence of variable binding operations on a term.
 
 \KEYWORDS
 variable, binding, abstraction.

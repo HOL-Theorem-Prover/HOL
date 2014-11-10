@@ -15,4 +15,3 @@ sig
   val REFUTE_THEN   : (thm -> tactic) -> tactic
   val GEN_FOL_CONV  : (term*int)list * (term*int) list -> conv
 end;
-

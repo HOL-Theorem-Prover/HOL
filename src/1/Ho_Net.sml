@@ -83,15 +83,15 @@ fun label_for_lookup tm =
   end;
 
 (* double constructor design may seem redundant but it allows us to avoid
-   a value polymorphism problem, and have a simple value for empty_net.
+   a value polymorphism problem, and have a simple value for empty.
    If you try
-     val empty_net = NODE(mkDict label_cmp, [])
-   then empty_net can't be fully polymorphic, thanks to the call to
+     val empty = NODE(mkDict label_cmp, [])
+   then empty can't be fully polymorphic, thanks to the call to
    mkDict. *)
 datatype 'a net = NODE of (term_label,'a net) dict * 'a list
                 | EMPTY of 'a list
 
-val empty_net = EMPTY []
+val empty = EMPTY []
 
 
 
@@ -114,7 +114,7 @@ fun net_update (elem, tms:(term list * term) list, net) =
    | tm::rtms =>
         let val (label,ntms) = stored_label tm
             val child = case check_edge(net, label) of
-                          NONE => empty_net
+                          NONE => empty
                         | SOME n => n
             val new_child = net_update(elem,ntms @ rtms,child)
         in

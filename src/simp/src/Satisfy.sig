@@ -49,4 +49,3 @@ signature Satisfy = sig
    val SATISFY_TAC : tactic
    val add_facts : factdb -> thm list -> factdb
 end (* sig *)
-

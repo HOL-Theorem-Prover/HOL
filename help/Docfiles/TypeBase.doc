@@ -3,7 +3,7 @@
 \TYPE {structure TypeBase}
 
 \SYNOPSIS
-A database of facts stemming from datatype declarations
+A database of facts stemming from datatype declarations.
 
 \KEYWORDS
 type, datatype, constructor, induction, primitive recursion.

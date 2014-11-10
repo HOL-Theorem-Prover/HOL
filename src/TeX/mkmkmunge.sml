@@ -19,7 +19,3 @@ val _ = systeml
               "-I", HOLDIR ++ "src" ++ "TeX"] @
              toload @
              [HOLDIR ++ "src" ++ "TeX" ++ "mosmlmunge.uo"])
-
-
-
-

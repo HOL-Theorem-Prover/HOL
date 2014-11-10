@@ -2999,5 +2999,3 @@ val _ = save_thm("NOT_SBEFORE",NOT_SBEFORE);
 val _ = export_theory();
 
 (* html_theory "-"; *)
-
-

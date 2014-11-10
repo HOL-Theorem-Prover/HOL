@@ -40,16 +40,16 @@ sig
     operations are not exact. In this sense, term nets are akin to
     hash tables.
 
-  [empty] is the empty term net.
+   [empty] is the empty term net.
 
-  [insert (tm, x) net]
+   [insert (tm, x) net]
 
     The term tm is used as a key to compute a path at which to
     store x in net. If the path does not already exist in net,
     it is created. Note that insert merely adds x to the net;
     if x has already been stored under tm, then it is not overwritten.
 
-  [match tm net]
+   [match tm net]
 
     Term nets can be used to cut down on the number of match attempts
     that a matching function would have to make, say when rewriting

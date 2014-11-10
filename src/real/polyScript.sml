@@ -1430,4 +1430,3 @@ val POLY_NORMALIZE_CONV =
 val _ = export_theory ();
 
 end;
-

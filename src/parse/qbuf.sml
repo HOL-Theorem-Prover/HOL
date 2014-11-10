@@ -10,7 +10,7 @@ struct
   (* qbufs are references to quadruples:
        field #1   :  the optional lexing function for a current QUOTE part
                      of the quotation
-       field #2   :  the "current token" and its location  (advance recalculates this)
+       field #2   :  the "current token" and its location (advance recalculates this)
        field #3   :  the first fragment number of the remainder frag list
        field #4   :  the frag list that we're consuming.
 
@@ -123,7 +123,3 @@ struct
   end
 
 end;
-
-
-
-

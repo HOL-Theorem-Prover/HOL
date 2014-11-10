@@ -94,6 +94,3 @@ sig
   val EQ_tr : travrules
 
 end (* sig *)
-
-
-
