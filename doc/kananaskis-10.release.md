@@ -1,12 +1,11 @@
+% Release notes for HOL4, Kananaskis-10
+
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-Notes on HOL 4, ?????? release
-==============================
+(Released: 10 November 2014)
 
-(Released: ??? date)
-
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-10 release of HOL 4.
 
 Contents
 --------
@@ -15,13 +14,13 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New examples](#new-examples)
+-   [Examples](#examples)
 -   [Incompatibilities](#incompatibilities)
 
 New features:
 -------------
 
-* Our *TUTORIAL*, *LOGIC* and *DESCRIPTION* manuals are now available in Italian translations.  Many, many thanks to Domenico Masini for doing this work.
+* Our *TUTORIAL* and *LOGIC* manuals are now available in Italian translations.  Work on the *DESCRIPTION* manual is also far advanced. Many, many thanks to Domenico Masini for doing this work.
 
 * The abbreviation tactics (`Q.ABBREV_TAC` and others) now handle abstractions as abbreviations better.  In particular, if one sets up an abstraction as an abbreviation (*e.g.*, ``Q.ABBREV_TAC `f = (λn. 2 * n + 10)` ``), then the simplifier will find and replace instances not just of the abstraction itself (the old behaviour), but also instances of applications of the abstraction to arguments.  For example, given the abbreviation for `f` above, the simplifier would turn a goal such as `2 * (z + 1) + 10 < 100` into `f (z + 1) < 100`.
 
@@ -47,7 +46,7 @@ New features:
 
 * The Vim mode for HOL now supports multiple simultaneous sessions. See its `README` for details.
 
-* Many of the standard libraries now provide an `add_X_compset : compset -> unit` (e.g., `add_pred_set_compset`) to ease building of custom call-by-name evaluation conversions that don't, like `EVAL`, include everything in `the_compset()`.
+* Many of the standard libraries now provide an `add_X_compset : compset -> unit` (*e.g.*, `add_pred_set_compset`) to ease building of custom call-by-name evaluation conversions that don't, like `EVAL`, include everything in `the_compset()`.
 
 * `Holmake` has a new function, `wildcard` which allows expansion of “glob” patterns (*e.g.*, `*Script.sml`) into lists of matching filenames.
 
@@ -55,6 +54,7 @@ New features:
 
     For example, this means that it is possible to have integers, reals and numbers all in scope, to write something like `MAP (+)`, and to then see what constants are involved by using the mouse.  (See [Github issue #39](https://github.com/HOL-Theorem-Prover/HOL/issues/39).)
 
+*   Unicode is handled slightly better on Windows systems.  By default, the pretty-printer avoids printing with Unicode characters there, but can still parse Unicode input successfully.  This is important because many of the examples distributed with HOL use Unicode characters in their scripts (nothing in `src/` does).  This behaviour can be adjusted by toggling the `PP.avoid_unicode` trace.  On Windows this trace is initialised to true; elsewhere it is initialised to false.
 
 Bugs fixed:
 -----------
@@ -70,6 +70,8 @@ Bugs fixed:
 * Character literals weren’t pretty-printing to LaTeX.  We also improved the handling of string literals.  Thanks to Ramana Kumar for the [bug reports](http://github.com/HOL-Theorem-Prover/HOL/issues/190).
 
 * Piotr Trojanek found and fixed many documentation bugs in our various manuals.
+
+* The `remove_rules_for_term` and `temp_remove_rules_for_term` functions tended to remove rules for binders as well as the desired rules.
 
 New theories:
 -------------
@@ -110,8 +112,11 @@ New tools:
 - New libraries `enumLib` and `fmapalLib` provide representations in `pred_set` and finite map types of enumerated constant sets and maps as minimum-depth binary search trees. A suitable total order on the set elements (map arguments) must be supplied, with a conversion for evaluating it; assistance with this is provided. The primary objective has been an `IN_CONV`, and a similar `FAPPLY_CONV`, operating with a logarithmic number of comparisons, but additional operations such as `UNION_CONV`, `INTER_CONV`, and `FUPDATE_CONV` are included and have reasonable asymptotic running times. A conversion `TC_CONV` implements Warshall’s algorithm for transitive closure of a binary relation (treated as a set-valued finite map).
 
 
-New examples:
--------------
+Examples:
+---------
+
+- The `miniml` example has been removed. This work has evolved into the [CakeML project](http://cakeml.org).  That project’s `git` repository contains all of the material that was once in the HOL distribution, and, given its continuing evolution, much more besides.
+
 
 Incompatibilities:
 ------------------
@@ -161,13 +166,13 @@ Incompatibilities:
 
     so that `all` becomes the first target of the `Holmakefile`.  Any previous targets, such as HOL heaps, should be inserted where the `...` occurs above.
 
-    Note that `Holmakefile`s that only include variable declarations such as `OPTIONS = ...`, `INCLUDES = ....`, and `HOLHEAP = ...` don’t have any targets at all, so that `Holmake`’s behaviour in such files’ directories will not change.
+    Note that `Holmakefile`s that only include variable declarations such as `OPTIONS = ...`, `INCLUDES = ...`, and `HOLHEAP = ...` don’t have any targets at all, so that `Holmake`’s behaviour in such files’ directories will not change.
 
 
 * * * * *
 
 <div class="footer">
-*[HOL4, ?????](http://hol.sourceforge.net)*
+*[HOL4, Kananaskis-10](http://hol.sourceforge.net)*
 
 [Release notes for the previous version](kananaskis-9.release.html)
 

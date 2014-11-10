@@ -4,7 +4,7 @@ val _ = set_trace "Unicode" 0
 
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
+val tprint = testutils.tprint
 
 fun substtest (M, x, N, result) = let
 in
@@ -320,6 +320,21 @@ val _ = add_rule {term_name = "=",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
+
+val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
+  fun texp (i,out) = md tpp_expected
+                        {testf = standard_tpp_message, input = i, output = out}
+  val _ = temp_overload_on ("⊤", ``T``)
+in
+  app (md tpp) ["!x. p x /\\ q x", "\\x. x", "\\x::p. x /\\ y",
+                "!x::p. q x \\/ r x", "!x. x /\\ T <=> x"];
+  app texp [("∀x. p x", "!x. p x"), ("x ∧ y", "x /\\ y"),
+            ("λx. x", "\\x. x")];
+  temp_clear_overloads_on "⊤"
+end
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
