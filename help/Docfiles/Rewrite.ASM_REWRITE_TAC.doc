@@ -12,7 +12,7 @@ tactic.
 bool
 
 \DESCRIBE
-{ASM_REWRITE_TAC} generates rewrites with the tautologies in {basic_rewrites},
+{ASM_REWRITE_TAC} generates rewrites with the tautologies in {implicit_rewrites},
 the set of assumptions, and a list of theorems supplied by the user. These are
 applied top-down and recursively on the goal, until no more matches are found.
 The order in which the set of rewrite equations is applied is an implementation

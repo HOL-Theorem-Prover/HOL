@@ -24,17 +24,17 @@ Never fails.
 
 \EXAMPLE
 {
-#is_presburger "!m n p. m < (2 * n) /\ (n + n) <= p ==> m < SUC p";;
-true : bool
+- is_presburger ``!m n p. m < (2 * n) /\ (n + n) <= p ==> m < SUC p``;
+> val it = true : bool
 
-#is_presburger "!m n p q. m < (n * p) /\ (n * p) < q ==> m < q";;
-false : bool
+- is_presburger ``!m n p q. m < (n * p) /\ (n * p) < q ==> m < q``;
+> val it = false : bool
 
-#is_presburger "(m <= n) ==> !p. (m < SUC(n + p))";;
-true : bool
+- is_presburger ``(m <= n) ==> !p. (m < SUC(n + p))``;
+> val it = true : bool
 
-#is_presburger "(m + n) - m = n";;
-true : bool
+- is_presburger ``(m + n) - m = n``;
+> val it = true : bool
 }
 \USES
 Useful for determining whether a decision procedure for Presburger arithmetic

@@ -5,7 +5,9 @@
 \index{tactics!purpose of|(}
 There are three primary devices that together make theorem proving practical
 in \HOL. All three originate with Milner
-\index{Milner, R.}\index{LCF@\LCF!Edinburgh} for Edinburgh \LCF.
+\index{Milner, R.}%
+\index{LCF@\LCF!Edinburgh}%
+for Edinburgh \LCF.
 The first is the theory as
 a record of (among other things) facts already proved
 and thence available as lemmas
@@ -147,7 +149,7 @@ Unlike theorems, goals need not be defined as an abstract type; they
 are transparent and can be constructed freely. Thus, an \ML{} type
 abbreviation is introduced for goals.\footnote{However, if goals were
   an abstract type, the print abbreviation could be avoided where not
-  intended.}.  The operations on goals are therefore just the ordinary
+  intended.}  The operations on goals are therefore just the ordinary
 pair selectors and constructor.
 Likewise, type abbreviations are introduced for justifications
 (proofs) and tactics. Conceptually, the following abbreviations are
@@ -228,8 +230,8 @@ applied to a list of theorems (if, for example, the function were
 defined incorrectly); but again, no false theorems can result.
 Likewise, a tactic that is not strongly valid cannot result in a false
 theorem; the worst outcome of applying such a tactic is the production
-of unsolvable subgoals
-\index{consistency, of HOL logic@consistency, of \HOL{} logic|)}
+of unsolvable subgoals%
+\index{consistency, of HOL logic@consistency, of \HOL{} logic|)}%
 \index{security, in goal directed proof|)}\index{validity, of tactics|)}.
 
 Tactics are specified using the following notation:
@@ -309,7 +311,7 @@ compound tactics, as discussed later (see Section~\ref{tacticals}).
 In just the way that the derived rule \ml{REWRITE\_RULE}
 \index{REWRITE_TAC@\ml{REWRITE\_TAC}|(}
  is central
-to forward proof (Section~\ref{avra_rewrite}), the corresponding
+to forward proof (Section~\ref{sec:rewriting}), the corresponding
 function \ml{REWRITE\_TAC}
 \index{rewriting!main tactic for|(}
 \index{rewriting!importance of, in goal directed proof|(}
@@ -331,7 +333,7 @@ Rewriting often does a large share of the work in goal directed proof searches.\
 \index{rewriting!importance of, in goal directed proof|)}
 \index{rewriting!main tactic for|)}
 
-A simple example from list theory (Section~\ref{avra_list})
+A simple example from list theory (Section~\ref{sec:list})
 illustrates the use of tactics.
 A conjunctive goal is declared, and \ml{CONJ\_TAC} applied to it:
 
@@ -375,7 +377,8 @@ First the theorems achieving the subgoals are proved, then from those,
 the theorem achieving the original goal:
 \vfill
 \newpage
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val th1 = p1_1[];
 > val th1 = |- HD [1; 2; 3] = 1 : thm
 
@@ -384,7 +387,8 @@ the theorem achieving the original goal:
 
 - p1[th1,th2];
 > val it = |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2;3]) : thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Although only the theorems achieving the subgoals are `seen' here,
 the proof functions of the three tactic applications together perform
@@ -425,23 +429,24 @@ whose definition in \HOL{} is as follows:
      in
          ([(asl,l), (asl,r)],(fn [th1, th2] => CONJ th1 th2))
      end
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent This shows how the subgoals are constructed, and how the
 proof function is specified in terms of the derived rule \ml{CONJ}
-(Section~\ref{avra_conj}).
+(Section~\ref{sec:conj}).
 
 The second method is to compose
-\index{tactics!indirect implementation of}
-\index{tactics!compound}
-\index{proof construction}
+\index{tactics!indirect implementation of}%
+\index{tactics!compound}%
+\index{proof construction}%
 existing tactics by the use
 of \ML{} functions called {\it tacticals\/}.
 \index{tacticals}
 The tacticals provided in \HOL{} are listed in Section~\ref{tacticals}.
 For example, two existing tactics can be sequenced
-\index{sequencing!of tactics}
-\index{tactics!sequencing of}
+\index{sequencing!of tactics}%
+\index{tactics!sequencing of}%
  by use of the
 tactical \ml{THEN}:\index{THEN@\ml{THEN}}
 if $T_1$ and
@@ -476,10 +481,10 @@ the composed tactics are valid
 \index{validity, of tactics} when the constituent tactics are valid,
 as a consequence of the way the tacticals are defined. Tactics written
 directly in \ML{} may fail
-\index{failure, of tactics!debugging}
-\index{failure, of tactics|(}
-\index{debugging, of tactics}
-\index{tactics!debugging of}
+\index{failure, of tactics!debugging}%
+\index{failure, of tactics|(}%
+\index{debugging, of tactics}%
+\index{tactics!debugging of}%
 in a variety of ways, and although, as usual, they cannot cause false
 theorems to appear, the failures can be difficult to understand and
 trace.\footnote{A possible extension to \HOL\ would be a `debugging
@@ -535,11 +540,10 @@ can be represented as theorems of the \HOL{} system---security is
 always preserved.
 
 \section{Some tactics built into HOL}
-\label{avra_builtin}
 
 This section contains a selection of the more commonly
 \index{tactics!list of some|(}
-used tactics in the \HOL{} system. (see \REFERENCE\
+used tactics in the \HOL{} system. (See \REFERENCE\
 for the complete list, with fuller explanations.)
 
 It should be recalled that the \ML{} type \ml{thm\_tactic} abbreviates
@@ -574,7 +578,7 @@ these goals by forward proof. The tactic
 would then solve $g$, where \ml{THENL}
 \index{THENL@\ml{THENL}} is the tactical that applies
 the respective elements of the tactic list to the subgoals produced
-by \ml{T} (see Section~\ref{avra_thenl}).
+by \ml{T} (see Section~\ref{sec:thenl}).
 
 \end{itemize}
 
@@ -640,9 +644,11 @@ applies {\small\verb%GEN_TAC%} to universally quantified goals.
 \subsection{Conjunction}
 
 \index{CONJ_TAC@\ml{CONJ\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    CONJ_TAC : tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
@@ -666,13 +672,15 @@ $t_1\ \ \ \ \ \ t_2$
 \end{itemize}
 
 \subsection{Discharging an assumption}
-\label{avradisch}
+\label{sec:disch}
 
 \index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
 \index{DISCH_TAC@\ml{DISCH\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    DISCH_TAC : tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
@@ -701,9 +709,11 @@ $v$ under the assumption.
 \subsection{Combined simple decompositions}
 
 \index{STRIP_TAC@\ml{STRIP\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    STRIP_TAC : tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
@@ -717,7 +727,7 @@ then {\small\verb%DISCH_TAC%} makes each $t_i$ into a separate assumption.
 \item{\bf Use:} Useful for splitting a goal up into manageable pieces.
 Often the best thing to do first is {\small\verb%REPEAT STRIP_TAC%},
 where \ml{REPEAT} is the tactical that repeatedly applies a tactic
-until it fails (see Section~\ref{avra_repeat}).
+until it fails (see Section~\ref{sec:repeat}).
 \end{itemize}
 
 
@@ -935,9 +945,11 @@ tactics can use these new results.
 \subsection{Identity}
 
 \index{ALL_TAC@\ml{ALL\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    ALL_TAC : tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 \index{identity tactic}\index{tactics!identity for}
@@ -951,7 +963,7 @@ tactics can use these new results.
 \item Writing tacticals (see description of {\small\verb%REPEAT%}
 in Section~\ref{tacticals}).
 \index{THENL@\ml{THENL}}
-\item With {\small\verb%THENL%} (see Section~\ref{avra_thenl});
+\item With {\small\verb%THENL%} (see Section~\ref{sec:thenl});
 for example, if tactic $T$ produces two subgoals
 $T_1$ is to be applied to the first while
 nothing is to be done to the second,
@@ -963,9 +975,11 @@ tactic required.
 \subsection{Null}
 
 \index{NO_TAC@\ml{NO\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    NO_TAC : tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 \item{\bf Summary:} Tactic that always fails.
@@ -1285,7 +1299,8 @@ will evaluate to a theorem,
 $th$ say,
 that achieves the goal $g$. Thus
 
-\begin{hol}\begin{alltt}
+\begin{hol}
+\begin{alltt}
     \(p\)
     (mapshape
      (map length \(gll\))
@@ -1297,7 +1312,8 @@ that achieves the goal $g$. Thus
     \(p\)([\(th\sb{1}\);\(\ldots\);\(th\sb{n}\)]) =
 
     \(th\)
-\end{alltt}\end{hol}
+\end{alltt}
+\end{hol}
 
 This shows that
 \index{justifications, in goal-directed proof search!THEN example of@\ml{THEN} example of}
@@ -1313,10 +1329,12 @@ achieving \ml{flat $gll$}, returns a theorem
 \subsection{Selective sequencing}
 
 \index{THENL@\ml{THENL}}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    THENL : tactic -> tactic list -> tactic
-\end{verbatim}\end{holboxed}
-\label{avra_thenl}
+\end{verbatim}
+\end{holboxed}
+\label{sec:thenl}
 
 \index{selective sequencing tactical}
 If tactic $T$ produces $n$ subgoals and $T_1$, $\dots$,
@@ -1368,7 +1386,7 @@ The tactical \ml{EVERY} applies a list of tactics one after the other.
 \begin{verbatim}
    REPEAT : tactic -> tactic
 \end{verbatim}\end{holboxed}
-\label{avra_repeat}
+\label{sec:repeat}
 
 If $T$ is a
 tactic then {\small\verb%REPEAT %}$T$ is a tactic\index{tactics!repetition of}
@@ -1376,7 +1394,8 @@ tactic then {\small\verb%REPEAT %}$T$ is a tactic\index{tactics!repetition of}
 that repeatedly applies
 $T$ until it fails. It is defined in \ML{} by:
 
-{\small\baselineskip\HOLSpacing\begin{verbatim}
+{\small\baselineskip\HOLSpacing
+\begin{verbatim}
    letrec REPEAT T g = ((T THEN REPEAT T) ORELSE ALL_TAC) g
 \end{verbatim}}
 
@@ -1432,7 +1451,7 @@ the specific assumptions to be discarded. That, however,
 raises the more general problem of denoting\index{assumptions!denoting of, in proofs}\index{denoting assumptions} assumptions in the first place.
 Assumptions are also denoted
 so that they can be
-manipulated: given as parameters, combined to draw inferences, \etc\  The only
+manipulated: given as parameters, combined to draw inferences, etc.  The only
 straightforward way to denote them in the existing system is to supply
 their quoted text.  Though adequate, this
 method may result in bulky \ML{} expressions; and it may take some effort to present the text
@@ -1453,7 +1472,7 @@ system support.
 
 Short of implementing new tactics, two other standard
 approaches are reflected in the current system.  Both were originally
-developed for Cambridge \LCF\ \cite{lcp_rewrite,new-LCF-man}; both reflect
+developed for Cambridge \LCF\ \cite{lcp-rewrite,new-LCF-man}; both reflect
 fresh views of the assumptions; and both rely on tacticals\index{tacticals!purpose of} that transform
 tactics.  The two approaches are
 partly but not completely complementary.
@@ -1474,13 +1493,12 @@ be combined in \HOL{} interactions.
 
 
 \subsection{Theorem continuations with popping}
-\label{avra_manip1}
 
 The first proof style, that of popping assumptions
 \index{popping, of assumptions}
 from the assumption `stack',
-\index{assumptions!as stack}
-\index{stack, of assumptions}
+\index{assumptions!as stack}%
+\index{stack, of assumptions}%
 is illustrated using its main tool: the tactical \ml{POP\_ASSUM}.
 
 \index{POP_ASSUM@\ml{POP\_ASSUM}|pin}
@@ -1506,7 +1524,7 @@ are called theorem continuations,
 take theorems and then continue the proof.\footnote{There is a superficial analogy
 with continuations in denotational semantics.}
 The use of \ml{POP\_ASSUM}\ can be illustrated by applying it
-to a particular tactic, namely \ml{DISCH\_TAC} (Section~\ref{avradisch}).
+to a particular tactic, namely \ml{DISCH\_TAC} (Section~\ref{sec:disch}).
 
 \index{DISCH_TAC@\ml{DISCH\_TAC}}
 \begin{holboxed}\begin{verbatim}
@@ -1722,12 +1740,12 @@ As noted earlier, \ml{POP\_ASSUM} is useful when an assumption
 is required that is still at the top of the stack,
 as in the examples.  However, it is often
 necessary to access assumptions made at arbitrary previous times, in order to
-give them as parameters, combine them, \etc\ The stack approach can be
+give them as parameters, combine them, etc. The stack approach can be
 extended to such cases by re-conceiving the stack as an array\index{assumptions!as array}\index{array, of assumptions}, and by
 use of the tactical \ml{ASSUM\_LIST}:\index{ASSUM_LIST@\ml{ASSUM\_LIST}|(}
 
 \begin{hol}\begin{verbatim}
-   ASSUM_LIST : (thm list -> tactic ) -> tactic
+   ASSUM_LIST : (thm list -> tactic) -> tactic
 \end{verbatim}\end{hol}
 
 \noindent where
@@ -1782,17 +1800,18 @@ OK..
 
 \noindent The problem is now to combine the two assumptions to produce the
 obvious conclusion. That requires denoting
-\index{denoting assumptions}
-\index{assumptions!denoting of, in proofs} them, for which \ml{ASSUM\_LIST}
+\index{denoting assumptions}%
+\index{assumptions!denoting of, in proofs}%
+them, for which \ml{ASSUM\_LIST}
 provides the means. Finally,
 \ml{ASSUME\_TAC} places the conclusion of the new result in the assumptions.
-(The \ML{} function \ml{el: int -> * list -> *} is used here to select a
+(The \ML{} function \ml{el:\ int -> * list -> *} is used here to select a
 numbered element of a list.)
 
 \begin{session}\begin{verbatim}
 #e(ASSUM_LIST(\thl. ASSUME_TAC
                        (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                           (SPEC "m:num"(el 2 thl)))));;
+                           (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "n * n = n"
     [ "!m. m + n = m" ]
@@ -1824,7 +1843,7 @@ of \ml{POP\_ASSUM\_LIST} that selects the first element of those supplied
 and re-assumes the others.)
 
 \begin{hol}\begin{alltt}
-   POP_ASSUM_LIST \(f\) ([\(t\sb{1}\);\(\ \ldots\ \);\(t\sb{n}\)],\(t\)) =  \(f\) [ASSUME \(t\sb{1}\);\(\ \ldots\ \);ASSUME \(t\sb{n}\)] ([],t)
+   POP_ASSUM_LIST \(f\) ([\(t\sb{1}\);\(\ \ldots\ \);\(t\sb{n}\)],\(t\)) = \(f\) [ASSUME \(t\sb{1}\);\(\ \ldots\ \);ASSUME \(t\sb{n}\)] ([],t)
 \end{alltt}\end{hol}
 
 \noindent This is used when the existing assumptions have served
@@ -1840,7 +1859,7 @@ their purpose and can be discarded, as in the current example:
 
 #e(POP_ASSUM_LIST(\thl. ASSUME_TAC
                            (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                               (SPEC "m:num"(el 2 thl)))));;
+                               (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "n * n = n"
     [ "n = 0" ]
@@ -1860,7 +1879,7 @@ but here it can be used immediately:
 
 #e(POP_ASSUM_LIST(\thl. SUBST1_TAC
                            (MP (SPECL ["m:num";"n:num"] (el 1 thl))
-                               (SPEC "m:num"(el 2 thl)))));;
+                               (SPEC "m:num" (el 2 thl)))));;
 ##OK..
 "0 * 0 = 0"
 \end{verbatim}\end{session}
@@ -1894,7 +1913,7 @@ This means that (i) the resulting tactics cannot easily be generalized
 for use in other contexts, and (ii) the \ML{} text does not supply
 useful documentation
 \index{tactics!as documentation of proofs} of the solution of the goal.
-Also, as shown in the last example, it it slightly unsatisfactory
+Also, as shown in the last example, it is slightly unsatisfactory
 to push and subsequently pop assumptions, especially in immediate succession,
 where this could be avoided.
 
@@ -1905,10 +1924,10 @@ These are characterized by:
 \index{FIRST_ASSUM@\ml{FIRST\_ASSUM}}
 \index{EVERY_ASSUM@\ml{EVERY\_ASSUM}}
 \begin{hol}\begin{alltt}
-   FIRST_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))  =
+   FIRST_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
     (\(f\)(ASSUME \(t\sb{1}\)) ORELSE \(\ldots\) ORELSE \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
 
-   EVERY_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))  =
+   EVERY_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
     (\(f\)(ASSUME \(t\sb{1}\)) THEN \(\ldots\) THEN  \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
 \end{alltt}\end{hol}
 

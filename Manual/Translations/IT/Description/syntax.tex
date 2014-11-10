@@ -1,0 +1,154 @@
+\chapter{Syntax}
+{
+ \newcommand{\term}      {\mbox{\it term}}
+ \newcommand{\IMP}       {\mbox{\tt ==>}}
+ \newcommand{\ALL}       {\mbox{\tt !}}
+ \newcommand{\EXISTS}    {\mbox{\tt ?}}
+ \newcommand{\CHOOSE}    {\mbox{\tt @}}
+ \newcommand{\EXISTSONE} {\mbox{\tt ?!}}
+ \newcommand{\LET}       {\mbox{\tt let}}
+ \newcommand{\und}       {\mbox{\tt and}}
+ \newcommand{\IN}        {\mbox{\tt in}}
+ \newcommand{\CONS}      {\mbox{\tt CONS}}
+ \newcommand{\INSERT}    {\mbox{\tt INSERT}}
+ \newcommand{\SUC}       {\mbox{\tt SUC}}
+ \newcommand{\vstr}      {\mbox{\it vstr}}
+ \newcommand{\numeral}   {\mbox{\it numeral}}
+ \newcommand{\charseq}   {\mbox{\it charseq}}
+
+The HOL logic is a classical higher-order predicate calculus. Its
+syntax enjoys two main differences from the syntax of standard first
+order logic.\footnote{We assume the reader is familiar with first
+  order logic.}  First, there is no distinction in HOL between terms
+and formulas: HOL has only terms. Second, each term has a type: types
+are used in order to build well-formed terms. There are two ways to
+construct types and terms in HOL: by use of a parser, or by use of the
+programmer's interface. In this chapter, we will focus on the concrete
+syntax accepted by the parsers.
+
+
+\section{Types}
+
+A HOL type can be a variable, a constant, or a compound type, which is
+a constant of arity $n$ applied to a list of $n$ types.
+\[
+\begin{array}{rclr}
+  \type & ::= & \mbox{\bf '}\ident & \mbox{(type variable)} \\
+  & | &  \verb+bool+ & \mbox{(type of truth values)} \\
+  & | &  \verb+ind+ & \mbox{(type of individuals)} \\
+  & | &  \type\ \verb+->+\ \type & \mbox{(function arrow)} \\
+  & | &  \type\ \ident\ \type\ & \mbox{(binary compound type)}\\
+  & | &  \ident & \mbox{(nullary type constant)} \\
+  & | & \type\; \ident & \mbox{(unary compound type)} \\
+  & | & (\type_1,\ldots,\type_n) \ident & \mbox{(compound type)}
+\end{array}
+\]
+Type constants are also known as type operators. They must be
+alphanumeric. Type variables are alphanumerics written with a leading
+prime ('). In \HOL{}, the type constants {\tt bool}, {\tt fun}, and
+{\tt ind} are primitive. The introduction of new type constants is
+described in Section~\ref{type-defs}. {\tt bool} is the two element type
+of truth values. The binary operator {\tt fun} is used to denote
+function types; it can be written with an infix arrow. The nullary
+type constant {\tt ind} denotes an infinite set of individuals; it is
+used for a few highly technical developments in the system and can be
+ignored by beginners.  Thus
+\begin{verbatim}
+     'a -> 'b
+     (bool -> 'a) -> ind
+\end{verbatim}
+are both well-formed types. The function arrow is "right associative",
+which means that ambiguous uses of the arrow in types are resolved by
+adding parentheses in a right-to-left sweep: thus the type expression
+\begin{verbatim}
+     ind -> ind -> ind -> ind
+\end{verbatim}
+is identical to
+\begin{verbatim}
+     ind -> (ind -> (ind -> ind)).
+\end{verbatim}
+The product (\verb+#+) and sum (\verb!+!) are other infix type
+operators, also right associative; however, they are not loaded by
+default in \HOL{}. How to load in useful logical context is described
+in Section~\ref{theoryfns}.
+
+\section{Terms}
+
+Ultimately, a HOL term can only be a variable, a constant, an
+application, or a lambda term.
+\[
+\begin{array}{rclr}
+  \term & ::= & \ident & \mbox{(variable or constant)} \\
+  & | &  \term\  \term & \mbox{(combination)} \\
+  & | &  \bs\ident.\  \term &
+  \mbox{(lambda abstraction)}
+\end{array}
+\]
+In the system, the usual logical operators have already been defined,
+including truth (\verb+T+), falsity (\verb+F+), negation (\verb+~+),
+equality (\verb+=+), conjunction (\verb+/\+), disjunction (\verb+\/+),
+implication (\verb+==>+), universal (\verb+!+) and existential
+(\verb+?+) quantification, and an indefinite description operator
+(\verb+@+). As well, the basis includes conditional, lambda, and `let'
+expressions. Thus the set of terms available is, in general, an
+extension of the following grammar:
+\[
+\begin{array}{rclr}
+  \mbox{\it term} & ::= & \term : \type & \mbox{(type constraint)} \\
+  & | & \term\ \term & \mbox{(application)} \\
+  & | & \verb+~+ \term & \mbox{(negation)} \\
+  & | & \term\ =\ \term & \mbox{(equality)} \\
+  & | & \term\ \IMP\ \term & \mbox{(implication)} \\
+  & | & \term\ \verb+\/+\ \term & \mbox{(disjunction)} \\
+  & | & \term\ \verb+/\+\ \term & \mbox{(conjunction)} \\
+  & | & \texttt{if}\ \term\ \texttt{then}\ \term\ \texttt{else}\ \term &
+  \mbox{(conditional)} \\
+  & | & \bs\ident_1\ldots\ident_n.\  \term & \mbox{(lambda abstraction)} \\
+  & | & \ALL \ident_1\ldots\ident_n.\ \term & \mbox{(forall)} \\
+  & | & \EXISTS \ident_1\ldots\ident_n.\ \term & \mbox{(exists)} \\
+  & | & \CHOOSE \ident_1\ldots\ident_n.\ \term & \mbox{(choose)} \\
+  & | & \EXISTSONE \ident_1\ldots\ident_n.\ \term &\mbox{(exists-unique)} \\
+  & | & \LET\; \ident = \term  & \\
+  &   & [\und\ \ident = \term]^{*}\ \IN\ \term & \mbox{(let expression)} \\
+  & | & \verb+T+ & \mbox{(truth)} \\
+  & | & \verb+F+ & \mbox{(falsity)} \\
+  & | & \ident & \mbox{(constant or variable)} \\
+  & | & \verb+(+ \term \verb+)+ & \mbox{(parenthesized term)}
+\end{array}
+\]
+
+Some examples may be found in Table \ref{syntaxExamples}. Term
+application can be iterated. Application is left associative so that
+$\term\ \term\ \term \ldots \term$ is equivalent in the eyes of the
+parser to $(\ldots((\term\ \term)\ \term) \ldots)\ \term$.
+
+The lexical structure for term identifiers is much like that for
+ML: identifiers can be alphanumeric or symbolic. Variables must be
+alphanumeric. A symbolic identifier is any concatenation of the characters
+in the following list:
+\begin{verbatim}
+    #?+*/\=<>&%@!,:;_|~-
+\end{verbatim}
+with the exception of the keywords \verb+\+, \verb+;+, \verb+=>+,
+\verb+|+, and \verb+:+ (colon). Any alphanumeric can be a constant except the
+keywords \verb+let+, \verb+in+, \verb+and+, and \verb+of+.
+
+ \begin{table}[h]
+\begin{center}
+ \begin{tabular}{|r|l|} \hline
+ \verb+x = T+ & {\it x is equal to true.} \\
+ \verb+!x. Person x ==> Mortal x+ & {\it All persons are mortal.} \\
+ \verb+!x y z. (x ==> y) /\ (y ==> z) ==> x ==> z+ & {\it Implication is
+ transitive.} \\
+ \verb+!x. P x ==> Q x+ & {\it P is a subset of Q} \\
+ \verb+S = \f g x. f x (g x)+ & {\it Definition of a famous combinator.} \\ \hline
+ \end{tabular}
+ \caption{Concrete Syntax Examples}\label{syntaxExamples}
+\end{center}
+ \end{table}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

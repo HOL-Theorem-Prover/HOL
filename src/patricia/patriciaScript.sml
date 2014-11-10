@@ -32,8 +32,7 @@ val _ = set_fixity "|+"  (Infixl 600);
 val _ = set_fixity "|++" (Infixl 500);
 val _ = set_fixity "\\\\" (Infixl 600);
 
-val _ = Hol_datatype`
-  ptree = Empty | Leaf of num => 'a | Branch of num => num => ptree => ptree`;
+val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
 
 val _ = computeLib.auto_import_definitions := false;
 
@@ -604,6 +603,11 @@ val ADD_LIST_IS_PTREE = store_thm("ADD_LIST_IS_PTREE",
     \\ Cases_on `y`
     \\ SRW_TAC [] []);
 
+val ADD_LIST_TO_EMPTY_IS_PTREE = store_thm("ADD_LIST_TO_EMPTY_IS_PTREE",
+   `!l. IS_PTREE (ADD_LIST Empty l)`,
+   METIS_TAC [ADD_LIST_IS_PTREE, EMPTY_IS_PTREE]
+   )
+
 val PTREE_OF_NUMSET_IS_PTREE = store_thm("PTREE_OF_NUMSET_IS_PTREE",
   `!t s. IS_PTREE t ==> IS_PTREE (PTREE_OF_NUMSET t s)`,
   SRW_TAC [] [PTREE_OF_NUMSET_def]
@@ -1003,9 +1007,9 @@ val SIZE_REMOVE = store_thm("SIZE_REMOVE",
 (* ------------------------------------------------------------------------- *)
 
 val SIZE = store_thm("SIZE",
-  `(SIZE Empty = 0) /\
-   (!k d. SIZE (Leaf k d) = 1) /\
-   (!p m l r. SIZE (Branch p m l r) = SIZE l + SIZE r)`,
+  `(SIZE (Empty: 'a ptree) = 0) /\
+   (!k d. SIZE (Leaf k d : 'a ptree) = 1) /\
+   (!p m l r. SIZE (Branch p m l r : 'a ptree) = SIZE l + SIZE r)`,
   SRW_TAC [] [SIZE_def, TRAVERSE_def]);
 val _ = computeLib.add_persistent_funs ["SIZE"];
 

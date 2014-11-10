@@ -22,5 +22,6 @@ src/opentheory
 !!examples/computability/register
 src/Boolify/src
 src/float
+[poly]src/floating-point
 src/probability
 src/temporal/src

@@ -42,6 +42,7 @@ val (boolify_tm, mk_boolify, dest_boolify, is_boolify) = s "boolify"
 val (testbit_tm, mk_testbit, dest_testbit, is_testbit) = s "testbit"
 val (shiftl_tm, mk_shiftl, dest_shiftl, is_shiftl) = s "shiftl"
 val (shiftr_tm, mk_shiftr, dest_shiftr, is_shiftr) = s "shiftr"
+val (rotate_tm, mk_rotate, dest_rotate, is_rotate) = s "rotate"
 val (modify_tm, mk_modify, dest_modify, is_modify) = s "modify"
 val (add_tm, mk_add, dest_add, is_add) = s "add"
 val (bor_tm, mk_bor, dest_bor, is_bor) = s "bor"
@@ -130,10 +131,15 @@ local
    fun boolify a n =
       if n <= 0 then a else boolify ((n mod 2 = 1) :: a) (n div 2)
 
+   val removeWS =
+      String.translate (fn c => if Char.isSpace c then "" else String.str c)
+
+   val err = ERR "bitstring_of_hexstring" "failed to parse HEX"
+
    fun fromHexString s =
       case Int.scan StringCvt.HEX Substring.getc (Substring.full s) of
-        SOME (i, r) => if Substring.size r = 0 then i else raise ERR "" ""
-      | _ => raise ERR "" ""
+        SOME (i, r) => if Substring.size r = 0 then i else raise err
+      | _ => raise err
 
    fun hexSize s =
       let
@@ -150,10 +156,9 @@ in
 
    fun bitstring_of_hexstring s =
       let
-         val n = hexSize s
+         val s = removeWS s
          val l = int_to_bitlist (fromHexString s)
-         val m = List.length l
-         val l = List.tabulate (n - m, K false) @ l
+         val l = List.tabulate (hexSize s - List.length l, K false) @ l
       in
          bitstring_of_bitlist l
       end

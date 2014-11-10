@@ -335,24 +335,41 @@ local
           core_s ^ digitstr ^ prime_str
         end
 
-  fun ann_string overrides pps (s,sz,ann) = let
+  val stringmunge =
+    UTF8.translate (fn "\\" => "\\HOLTokenBackslash{}"
+                     | "~" => "\\HOLTokenTilde{}"
+                     | s => s)
+
+  fun ann_string overrides pps (s,sz_opt,ann) = let
     open PPBackEnd
     val (dollarpfx,dollarsfx,s,szdelta) =
         if String.sub(s,0) = #"$" andalso size s > 1 then
           if !dollar_parens then ("(", ")", String.extract(s,1,NONE),2)
           else ("", "", String.extract(s,1,NONE),0)
         else ("", "", s,0)
-    fun addann ty f s =
-      "\\" ^ !texPrefix ^ ty ^ "{" ^ f s ^ "}"
-    fun annotation s =
-        case ann of BV _ => addann "BoundVar" varmunge s
-                  | FV _ => addann "FreeVar" varmunge s
-                  | Const _ => addann "Const" I s
-                  | TyOp _ => addann "TyOp" I s
-                  | _ => s
-    val (s',sz) = smap overrides (s,sz)
+    fun addann ty s =
+      "\\" ^ !texPrefix ^ ty ^ "{" ^ s ^ "}"
+    fun smapper s = smap overrides (s, sz_opt)
+    val unmapped_sz = case sz_opt of NONE => size s | SOME i => i
+    val (string_to_print, sz) =
+        case ann of
+            BV _ => apfst (addann "BoundVar" o varmunge) (smapper s)
+          | FV _ => apfst (addann "FreeVar" o varmunge) (smapper s)
+          | Const _ => apfst (addann "Const") (smapper s)
+          | SymConst _ => apfst (addann "SymConst") (smapper s)
+          | TyOp _ => apfst (addann "TyOp") (smapper s)
+          | Literal StringLit => (addann "StringLit"
+                                         (stringmunge
+                                           (String.substring(s, 1, size s - 2))),
+                                  unmapped_sz)
+          | Literal FldName => apfst (addann "FieldName") (smapper s)
+          | Literal NumLit => (addann "NumLit" s, unmapped_sz)
+          | Literal CharList => (addann "CharLit"
+                                        (String.substring(s, 2, size s - 3)),
+                                 unmapped_sz)
+          | _ => smapper s
   in
-    PP.add_stringsz pps (dollarpfx ^ annotation s' ^ dollarsfx, sz + szdelta)
+    PP.add_stringsz pps (dollarpfx ^ string_to_print ^ dollarsfx, sz + szdelta)
   end
 
   fun add_string overrides pps (s,sz) = PP.add_stringsz pps (smap overrides (s,sz))
@@ -381,9 +398,10 @@ val print_datatype_names_as_types = ref false
 val _ = register_btrace ("EmitTeX: print datatype names as types", print_datatype_names_as_types)
 
 fun pp_datatype_theorem backend ostrm thm =
-let val {add_string,add_break,begin_block,add_newline,end_block,...} =
+let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...} =
            PPBackEnd.with_ppstream backend ostrm
     val S = add_string
+    val SX = add_xstring
     val BR = add_break
     val BB = begin_block
     val NL = add_newline
@@ -393,8 +411,12 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         term_pp.pp_term (Parse.term_grammar()) (Parse.type_grammar())
                         backend ostrm tm
     val PT = PT0 |> trace ("types", 0)
-    fun TP0 ty = type_pp.pp_type (Parse.type_grammar()) backend ostrm ty
-    val TP = TP0
+    val TP0 = type_pp.pp_type (Parse.type_grammar()) backend ostrm
+    val adest_type = type_grammar.abb_dest_type (Parse.type_grammar())
+    fun TP ty =
+        if is_vartype ty orelse null (#2 (adest_type ty)) then TP0 ty
+        else
+          (S "("; BB PP.INCONSISTENT 0; TP0 ty; EB(); S")")
 
     fun strip_type t =
       if is_vartype t then
@@ -408,16 +430,17 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
         let val l = strip_type (type_of t)
             val ll = length l
         in
-          (PT t;
-             if ll < 2 then
-               ()
-             else
-               (S " "; S "of"; BR(1,0);
-                BB PP.INCONSISTENT 0;
-                  app (fn x => (TP x; S " "; S "=>"; BR(1,0)))
-                      (List.take(l, ll - 2));
-                  TP (List.nth(l, ll - 2));
-                EB()))
+          BB PP.CONSISTENT 0;
+          PT t;
+          if ll < 2 then ()
+          else
+            (S " ";
+             BB PP.INCONSISTENT 0;
+             app (fn x => (TP x; BR(1,0)))
+                 (List.take(l, ll - 2));
+             TP (List.nth(l, ll - 2));
+             EB());
+          EB()
         end
 
     fun enumerated_type n =
@@ -430,37 +453,61 @@ let val {add_string,add_break,begin_block,add_newline,end_block,...} =
     fun pp_type_name n =
       let val l = strip_type (type_of n)
       in
-        TP (last (strip_type (hd l)))
+        TP0 (last (strip_type (hd l)))
       end
 
-    fun pp_constructor_spec (n, l) =
-          (if !print_datatype_names_as_types then pp_type_name n else PT n; BR(1,2);
-           BB (if enumerated_type n then PP.INCONSISTENT else PP.CONSISTENT) 0;
-             S "= ";
-             app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
-                 (List.take(l, length l - 1));
-             pp_clause (last l);
-           EB())
+    fun pp_constructor_spec (n, l) = let
+      val PT0 = if !print_datatype_names_as_types then pp_type_name else PT
+    in
+      if enumerated_type n then
+        (BB PP.CONSISTENT 0;
+         PT0 n; S " ";
+         BB PP.INCONSISTENT 0;
+         S "="; S " ";
+         app (fn x => (pp_clause x; BR(1,0); S"|"; S" "))
+             (List.take(l, length l - 1));
+         pp_clause(last l);
+         EB();
+         EB())
+      else
+        (BB PP.CONSISTENT 2;
+         PT0 n; S " "; S "="; BR(1,2);
+         app (fn x => (pp_clause x; BR(1,0); S "|"; S " "))
+             (List.take(l, length l - 1));
+         pp_clause (last l);
+         EB())
+    end
 
-    fun pp_record_spec l =
+    fun pp_record_spec ty l =
         let val ll = tl l
-            fun pp_record x = (PT x; S " : "; TP (type_of x))
+            fun pp_record x =
+              let
+                val (x,ty) = dest_var x
+                val ann = SOME (PPBackEnd.Literal PPBackEnd.FldName)
+              in
+                (SX {s=x,sz=NONE,ann=ann}; S " : "; TP ty)
+              end
         in
-          (PT (hd l); S " ="; BR(1,2);
+          (if !print_datatype_names_as_types
+           then TP0 (mk_type(fst(dest_var(hd l)),type_vars ty))
+           else PT (hd l);
+           S " ="; BR(1,2);
            BB PP.CONSISTENT 3;
-             S "<| ";
-             app (fn x => (pp_record x; S ";"; BR(1,0)))
+           S "<|"; S " ";
+           app (fn x => (pp_record x; S ";"; BR(1,0)))
                (List.take(ll, length ll - 1));
-             pp_record (last ll);
-             S " |>";
+           pp_record (last ll);
+           S " "; S "|>";
            EB())
         end
 
     fun pp_binding (n, l) =
-          if fst (dest_var n) = "record" then
-            pp_record_spec l
-          else
-            pp_constructor_spec (n, l)
+          let val (x,ty) = dest_var n in
+            if x = "record" then
+              pp_record_spec ty l
+            else
+              pp_constructor_spec (n, l)
+          end
 
     val t = map strip_comb (strip_conj (snd (dest_comb (concl thm))))
 in

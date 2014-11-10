@@ -1,0 +1,2155 @@
+\chapter{Principi Avanzati di Definizione}\label{HOLdefinitions}
+
+\section{I Datatype}\label{sec:datatype}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!tipi algebrici}
+\index{Hol_datatype@\ml{Hol\_datatype}|(}
+\index{tipi di dato algebrici|see{\ml{Hol\_datatype}}}
+\index{tipi di dato!definizione in HOL@definizione in \HOL{}}
+\index{tipi di dato!definizione in HOL@definizione in \HOL{}|seealso{\ml{Hol\_datatype}}}
+
+Nonostante la logica \HOL{} fornisca principi primitivi di definizione 
+che permettono di introdurre nuovi tipi, il livello di dettaglio è 
+a grana molto fine. Lo stile delle definizioni di datatype nei linguaggi 
+di programmazione funzionale fornisce una motivazione per un interfaccia di 
+alto livello per definire datatype algebrici.
+
+La funzione \verb+Hol_datatype+ supporta la definizione di tali 
+tipi di dato; le specifiche dei tipi possono essere ricorsive, mutuamente 
+ricorsive, ricorsive annidate, e coinvolgere record. La sintassi delle 
+dichiarazioni che \verb+Hol_datatype+ accetta si trova nella Tabella
+\ref{datatype}.
+
+\newcommand{\itelse}[3]{\mbox{$\mathtt{if}\ {#1}\ \mathtt{then}\ {#2}\ \mathtt{else}\ {#3}$}}
+
+\newcommand{\bk}{\char'134}
+\newcommand{\ident}      {\mbox{\it ident}}
+\newcommand{\clause}      {\mbox{\it clause}}
+\newcommand{\type}       {\mbox{\it hol\_type}}
+{
+\newcommand{\binding} {\mbox{\it binding}}
+\newcommand{\recdspec}  {\mbox{\it record-spec}}
+\newcommand{\constr} {\mbox{\it constructor-spec}}
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{|rcl|}
+\hline
+\multicolumn{3}{|l|}
+{\texttt{Hol\_datatype `}[\binding\ \texttt{;}]* \binding\texttt{`}}\\
+& &\\
+\binding & \verb+::=+ & \ident\ \verb+=+ \constr\\
+         & \verb+|+ & \ident\ \verb+=+ \recdspec\\
+& & \\
+\constr & \verb+::=+ & [\clause\ \verb+|+]* \clause \\
+& & \\
+\clause & \verb+::=+ & \ident \\
+        & \verb+|+ & \ident\ \verb+of+\ [\type\ \verb+=>+]* \type\\
+& & \\
+\recdspec & \verb+::=+ & \verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]*
+                                   \ident\ \verb+:+ \type\ \verb+|>+\\
+
+\hline
+\end{tabular}
+\caption{Dichiarazione di Datatype}\label{datatype}
+\end{center}
+\end{table}
+}
+
+
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!mantenimento della TypeBase@mantenimento della \ml{TypeBase}}
+\index{TypeBase@\ml{TypeBase}}
+%
+\HOL{} mantiene un database sottostante di fatti datatype chiamata la 
+\ml{TypeBase}. Questo database è usato per supportare vari strumenti 
+di dimostrazione di alto livello (si veda la Sezione~\ref{sec:bossLib}), ed è aumentato ogni volta 
+che si fa una dichiarazione \verb+Hol_datatype+. Quando un datatype è 
+definito per mezzo di \verb+Hol_datatype+, la seguente informazione è derivata 
+e archiviata nel database.
+
+\begin{itemize}
+\item teorema d'inizializzazione per il tipo 
+\item iniettività dei costruttori 
+\item distinzione dei costruttori
+\item teorema d'induzione strutturale
+\item teorema di analisi dei casi
+\item definizione della costante `case' per il tipo 
+\item teorema di congruenza per la costante case
+\item definizione della `dimensione' del tipo
+\end{itemize}
+
+Quando il sistema \HOL{} 
+si avvia, la \ml{TypeBase} contiene già le voci rilevanti per 
+i tipi \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
+e \holtxt{list}.
+
+\paragraph{Esempio: Alberi Binari}
+La seguente dichiarazione ML di un tipo di dati di alberi binari
+\begin{hol}
+\begin{verbatim}
+  datatype ('a,'b) btree = Leaf of 'a
+                         | Node of ('a,'b) btree * 'b * ('a,'b) btree
+\end{verbatim}
+\end{hol}
+\noindent sarebbe dichiarata in \HOL{} come 
+\begin{hol}
+\begin{verbatim}
+   Hol_datatype `btree = Leaf of 'a
+                       | Node of btree => 'b => btree`
+\end{verbatim}
+\end{hol}
+\noindent La notazione \holtxt{=>} in una descrizione di datatype HOL 
+è intesa sostituire \holtxt{*} in una descrizione di datatype ML, 
+e evidenzia il fatto che, in HOL, i costruttori sono di default 
+curried. Si noti anche che non è menzionato alcun parametro di tipo 
+per il nuovo tipo: le variabili di tipo sono sempre in ordine alfabetivo.
+
+Vale la pena ripetere questo punto delicato: il formato delle definizioni di datatype 
+non ha abbastanza informazione per determinare sempre l'ordine degli 
+argomenti per gli operatori di tipo introdotti. Così, quando si definisce un tipo 
+che è polimorfico in più di un argomento, c'è la questione di 
+quale sarà l'ordine degli argomenti del nuovo operatore. Per un altro 
+esempio, se si definisce
+%
+\begin{hol}
+\begin{verbatim}
+   Hol_datatype `sum = Left of 'left | Right of 'right`;
+\end{verbatim}
+\end{hol}
+%
+e poi si scrive \ml{('a,'b)sum}, il valore \ml{'a} sarà sotto il 
+costruttore \ml{Left} o \ml{Right}? Il sistema sceglie di far apparire 
+gli argomenti corrispondenti alla variabili nell'ordine dato dall'ordine 
+alfabetico dei nomi delle variabili. Così, nell'esempio 
+dato, l'\ml{'a} di \ml{('a,'b)sum} sarà l'argomento \ml{Left} 
+perché \ml{left} viene prima di \ml{right} nell'ordine alfabetico 
+standard (ASCII).
+
+\subsection{Ulteriori esempi}
+
+Nel seguito, daremo una panoramica del genere di tipi che 
+possono essere definiti per mezzo di \ml{Hol\_datatype}.
+
+Per iniziare, i tipi enumerati possono essere definiti come nel seguente esempio:
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `enum = A1  | A2  | A3  | A4  | A5
+          | A6  | A7  | A8  | A9  | A10
+          | A11 | A12 | A13 | A14 | A15
+          | A16 | A17 | A18 | A19 | A20
+          | A21 | A22 | A23 | A24 | A25
+          | A26 | A27 | A28 | A29 | A30`
+\end{verbatim}
+\end{hol}
+%
+Altri tipi non ricorsivi possono essere definiti così:
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `foo = N of num
+         | B of bool
+         | Fn of 'a -> 'b
+         | Pr of 'a # 'b`
+\end{verbatim}
+\end{hol}
+%
+Spostandoci ai tipi ricorsivi, abbiamo già visto un tipo di alberi 
+binari che hanno valori polimorfici presso i nodi interni. Questa volta, 
+li dichiareremo in formato ``accoppiato''.
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `tree = Leaf of 'a
+          | Node of tree # 'b # tree`
+\end{verbatim}
+\end{hol}
+%
+Questa specifica sembra più vicina alla dichiarazione che si potrebbe fare 
+in ML, ma può essere più difficile da gestire nella dimostrazione rispetto al 
+formato curried usato di sopra.
+
+La sintassi di base del lambda calcolo denominato è facile da descrivere:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `lambda = Var of string
+            | Const of 'a
+            | Comb of lambda => lambda
+            | Abs of lambda => lambda`
+\end{verbatim}
+\end{hol}
+%
+La sintassi per i termini `de Bruijn' è più o meno simile:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `dB = Var of string
+        | Const of 'a
+        | Bound of num
+        | Comb  of dB => dB
+        | Abs   of dB`
+\end{verbatim}
+\end{hol}
+%
+Gli alberi arbitrariamente ramificanti possono essere definiti permettendo a un nodo di mantenere 
+la lista dei suoi sotto-alberi. In un tale caso, i nodi foglia non hanno bisogno di essere 
+dichiarati esplicitamente.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `ntree = Node of 'a => ntree list`
+\end{verbatim}
+\end{hol}
+%
+Un tipo di `termini del primo ordine' può essere dichiarato nel modo seguente:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `term = Var of string
+          | Fnapp of string # term list`
+\end{verbatim}
+\end{hol}
+%
+Possono anche essere definiti tipi mutuamente ricorsivi. Il seguente, estratto 
+da Elsa Gunter da Definition of Standard ML, cattura un sottoinsieme di 
+Core ML.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `atexp = var_exp of string
+           | let_exp of dec => exp ;
+
+       exp = aexp    of atexp
+           | app_exp of exp => atexp
+           | fn_exp  of match ;
+
+     match = match  of rule
+           | matchl of rule => match ;
+
+      rule = rule of pat => exp ;
+
+       dec = val_dec   of valbind
+           | local_dec of dec => dec
+           | seq_dec   of dec => dec ;
+
+   valbind = bind  of pat => exp
+           | bindl of pat => exp => valbind
+           | rec_bind of valbind ;
+
+       pat = wild_pat
+           | var_pat of string`
+\end{verbatim}
+\end{hol}
+%
+Tipi record semplici possono essere introdotti usando la notazione \holtxt{<| ... |>}.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+\end{verbatim}
+\end{hol}
+%
+L'uso di tipi record può essere ricorsivo. Per esempio, la seguente 
+dichiarazione potrebbe essere usata per formalizzare un semplice file system.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `file = Text of string | Dir of directory
+       ;
+     directory = <| owner : string ;
+                    files : (string # file) list |>`
+\end{verbatim}
+\end{hol}
+
+\subsection{Definizioni di tipo che falliscono}
+
+Ora ci rivolgiamo ad alcuni tipi che non possono essere dichiarati con \ml{Hol\_datatype}. 
+In alcuni casi essi non possono esistere del tutto in HOL; in altri, il tipo 
+può essere incorporato nella logica HOL, ma \ml{Hol\_datatype} non è in grado di rendere 
+la definizione.
+
+Per prima cosa, un tipo vuoto non è permesso in HOL, così il seguente tentativo 
+è destinato a fallire.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `foo = A of foo`
+\end{verbatim}
+\end{hol}
+%
+I cosiddetti `tipi annidati', che occasionalmente sono piuttosto utili, non possono 
+al momento essere costruiti con \ml{Hol\_datatype}:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `btree = Leaf of 'a
+           | Node of  ('a # 'a) btree`
+\end{verbatim}
+\end{hol}
+%
+I tipi non possono eseguire la ricorsione su entrambi i lati delle frecce funzione. La ricorsione 
+sulla destra è coerente (si veda la teoria \theoryimp{inftree}), ma 
+\ml{Hol\_datatype} non è in grado di definire tipi algebrici che 
+la richiedono. Così, esempi come il seguente falliranno:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `flist = Nil
+           | Cons of 'a => ('b -> flist)`
+\end{verbatim}
+\end{hol}
+%
+La ricorsione sulla sinistra deve fallire per ragioni di cardinalità. Per 
+esempio, HOL non permette il seguente tentativo di modellare il lambda 
+calcolo non tipizzato come un insieme (si noti la \holtxt{->} nella clausola per il 
+costruttore \holtxt{Abs}):
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `lambda = Var of string
+            | Const of 'a
+            | Comb of lambda => lambda
+            | Abs of lambda -> lambda`
+\end{verbatim}
+\end{hol}
+
+\subsection{Teoremi che sorgono da una definizione di datatype}
+
+Le conseguenze di un'invocazione di \ml{Hol\_datatype} sono archiviate nell'attuale segmento di teoria e nella \ml{TypeBase}. 
+Le principali conseguenze di una definizione di datatype sono i teoremi di ricorsione primitiva e d'induzione. 
+Questi forniscono la capacità di definire semplici funzioni sul tipo, e un principio d'induzione per il tipo.
+\index{teoremi d'induzione, nella logica HOL@teoremi d'induzione, nella logica \HOL{}!per tipi di dato algenrico}
+Così, per un tipo denominato \holtxt{ty}, il teorema di ricorsione primitiva è archiviato sono \ml{ty\_Axiom} e il teorema d'induzione è messo sotto \ml{ty\_induction}.
+Altre conseguenze includono la distinzione dei costruttori (\ml{ty\_distinct}), e l'iniettività dei costruttori (\verb+ty_11+). 
+Una versione `degenerata' di \ml{ty\_induction} è anche archiviata sotto \ml{ty\_nchotomy}: essa prevede ragionamenti per casi sulla costruzione degli elementi di \ml{ty}.
+Infine, sono archiviati alcuni teoremi per scopi speciali: per esempio, \ml{ty\_case\_cong} mantiene un teorema di congruenza per enunciati ``case'' su elementi di \ml{ty}. 
+Questi enunciati case sono definiti da \ml{ty\_case\_def}.
+Inoltre, è aggiunta alla teoria attuale una definizione della ``dimensione'' del tipo, sotto il nome \ml{ty\_size\_def}.
+
+Per esempio, l'invocazione 
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `tree = Leaf of num
+          | Node of tree => tree`
+\end{verbatim}
+\end{hol}
+%
+risulta nel fatto che le definizioni
+%
+\begin{hol}
+\begin{verbatim}
+  tree_case_def =
+    |- (!f f1 a. case f f1 (Leaf a) = f a) /\
+       !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
+
+  tree_size_def
+    |- (!a. tree_size (Leaf a) = 1 + a) /\
+       !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
+\end{verbatim}
+\end{hol}
+%
+sono aggiunte alla teoria attuale. I seguenti teoremi circa i datatype 
+sono inoltre dimostrati e archiviati nella teoria attuale.
+%
+\begin{hol}
+\begin{verbatim}
+  tree_Axiom
+    |- !f0 f1.
+       ?fn. (!a. fn (Leaf a) = f0 a) /\
+            !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+  tree_induction
+    |- !P. (!n. P (Leaf n)) /\
+           (!t t0. P t /\ P t0 ==> P (Node t t0)) ==> !t. P t
+  tree_nchotomy
+    |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+  tree_11
+    |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+       !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
+  tree_distinct
+    |- !a1 a0 a. ~(Leaf a = Node a0 a1)
+  tree_case_cong
+    |- !M M' f f1.
+        (M = M') /\
+        (!a. (M' = Leaf a) ==> (f a = f' a)) /\
+        (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
+          ==>
+        (tree_CASE M f f1 M = tree_CASE M' f' f1')
+\end{verbatim}
+\end{hol}
+%
+Quando è definito un tipo che coinvolge record, molte più definizioni sono 
+fatte e aggiunte alla teoria attuale.
+
+Una definizione di tipo mutuamente ricorsiva ha come risultato che i 
+teoremi e le definizioni di sopra sono aggiunte per ognuno dei tipi definiti.
+
+\section{Tipi Record}\label{sec:records}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!tipi record}
+\index{tipi record}
+
+I tipi record sono dei modi convenienti d'impacchettare insieme un numero di 
+tipi componenti, e di dare a questi componenti dei nomi così da facilitare 
+l'accesso ad essi. I tipi record sono semanticamente equivalenti a grandi 
+tipi coppia (prodotto), ma la possibilità di etichettare i campi con nomi di 
+propria scelta è una grande comodità. I tipi record come 
+implementati in \HOL{} sono analoghi ai tipi \texttt{struct} del C e ai 
+record del Pascal.
+
+Costruiti correttamente, i tipi record forniscono utili funzionalità di manutenibilità. 
+Se si può sempre accedere al campo {\tt fieldn} di un tipo record 
+semplicemente scrivendo {\tt record.fieldn}, allora dei cambiamenti al tipo che 
+risultano nell'aggiunta o cancellazione di altri campi non invalideranno 
+questo riferimento. Una mancanza nei tipi record dell'SML è che non 
+permettono la stessa manutenibilità quando sono interessati degli aggiornamenti 
+(funzionali) dei record. L'implementazione HOL permette di scrivere
+\begin{hol}
+\begin{verbatim}
+  rec with fieldn := new_value
+\end{verbatim}
+\end{hol}
+che sostituisce il vecchio valore di {\tt fieldn} nel record {\tt rec}
+con {\tt new\_value}. Non sarà necessario cambiare questa espressione se 
+un altro campo è aggiunto, modificato o cancellato dalla definizione originale 
+del record.
+
+\paragraph{Definire un tipo record}
+I tipi record sono definiti con la funzione \texttt{Hol\_datatype}, come 
+discusso in precedenza. Per esempio, per creare un tipo record chiamato 
+{\tt person} con campi booleani, stringa e numero chiamati {\tt
+  employed}, {\tt name} e {\tt age}, si inserirebbe:
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `person = <| employed : bool ;
+                 age : num ;
+                 name : string |>`
+\end{verbatim}
+\end{hol}
+L'ordine in cui i campi sono inseriti non è significativo. Oltre 
+a definire il tipo (chiamato {\tt person}), la funzione di definizione 
+di datatype definisce anche due altre insiemi di costanti. Queste sono le 
+funzioni di accesso al campo e le funzioni di aggiornamento funzionale. Le funzioni 
+di accesso al campo hanno nomi della forma 
+   $\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$.
+Queste funzioni possono essere usate direttamente, o si può usare la notazione standard 
+di accesso ai campi per accedere ai valori del campo di un record. Così, 
+si scriverebbe l'espressione: \holtxt{bob.employed} allo scopo 
+di restituire il valore del campo {\tt employed} di {\tt bob}. 
+L'alternativa, \holtxt{person\_employed bob}, funziona, ma sarebbe 
+stampata usando la prima sintassi, con il punto.\index{tipi record!notazione di selezione dei campi}
+
+Alle funzioni di aggiornamento funzionale sono dati i nomi 
+\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} 
+per ciascun campo nel 
+tipo. Esse prendono due argomenti, una funzione e un record da 
+aggiornare. Il parametro funzione è un endomorfismo sul tipo del campo, 
+così che il record risultante è lo stesso dell'originale, eccetto per il fatto che 
+il campo specificato ha avuto la funzione applicata ad esso per 
+generare il nuovo valore per quel campo. Esse possono essere scritte con la 
+parola chiave \texttt{with} e l'operatore \texttt{updated\_by}. Così che 
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed updated_by $~
+	$
+\end{verbatim}
+\end{hol}\noindent
+%
+è un valore record identico a \texttt{bob} eccetto per il fatto che il 
+valore booleano nel campo \texttt{employed} è stato invertito.
+
+Inoltre, c'è un addolcimento sintattico disponibile per permettere di scrivere un 
+record con uno dei suoi campi sostituito da un valore specifico. Questo è 
+fatto usando l'operatore \holtxt{:=} al posto di
+\holtxt{updated\_by}:
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed := T
+\end{verbatim}
+\end{hol}
+%
+Questo forma è tradotta al momento del parsing per essere un uso del corrispondente 
+aggiornamento funzionale, insieme con un udo del combinatorio-\textsf{K} dalla 
+teoria \texttt{combin}. Perciò, l'esempio di sopra è in realtà
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed updated_by (K T)
+\end{verbatim}
+\end{hol}
+%
+che a sua volta è una forma più carina di
+%
+\begin{hol}
+\begin{verbatim}
+  person_employed_fupd (K T) bob
+\end{verbatim}
+\end{hol}
+%
+Se si desidera una catena di aggiornamenti, allora gli aggiornamenti multipli possono essere 
+specificati all'interno di coppie \holtxt{<|}-\holtxt{|>}, separati da 
+punti-e-virgola, così:
+%
+\begin{hol}
+\begin{verbatim}
+  bob with <| age := 10; name := "Child labourer" |>
+\end{verbatim}
+\end{hol}
+%
+Entrambe le forme di aggiornamento (usando \texttt{updated\_by} e \texttt{:=}) possono essere 
+usati in una catena di aggiornamenti.
+
+\paragraph{Specificare letterali record}
+
+Il parser accetta liste di specifiche di campo tra coppie 
+\holtxt{<|}-\holtxt{|>} senza la parola chiave \holtxt{with}.
+Queste sono tradotte in sequenze di aggiornamenti di un valore arbitrario 
+(letteralmente, il valore HOL \holtxt{ARB}), e sono trattate come letterali.
+Così,
+%
+\begin{hol}
+\begin{verbatim}
+  <| age := 21; employed := F; name := "Layabout" |>
+\end{verbatim}
+\end{hol}
+
+\paragraph{Usare i teoremi prodotti da definizioni di record}
+
+Oltre a definire il tipo e le funzioni descritti di sopra, una definizione 
+di tipo record dimostra anche una suite di utili teoremi. Questi sono tutti 
+salvati (usando {\tt save\_thm}) nel segmento attuale.  %
+%
+\index{TypeBase@\ml{TypeBase}}
+%
+Alcuni sono anche aggiunti alle semplificazioni della \ml{TypeBase} per il 
+tipo, così saranno automaticamente applicati quando si semplifica con il 
+simpset \ml{srw\_ss()}, o con le tattiche \ml{RW\_TAC} e
+\ml{SRW\_TAC} (si veda la Sezione~\ref{sec:simpLib}).
+
+Tutti i teoremi sono salvati sotto i nomi che cominciano con il nome del 
+tipo. La lista di sotto è un esempio dei teoremi dimostrati. Le 
+stringhe d'identificazione sono suffissi appesi al nome del tipo al 
+fine di generare il nome finale del teorema.
+
+\newcommand{\rewruse}{Questo teorema è installato nella \texttt{TypeBase}.}
+\newcommand{\field}[1]{\mbox{\it field}_{#1}}
+\newcommand{\update}{\mbox{\tt\_fupd}}
+
+\begin{description}
+\item[\texttt{\_accessors}] Le definizioni delle funzioni di accesso.
+  \rewruse
+\item[\texttt{\_fn\_updates}] Le definizioni delle funzioni di aggiornamento 
+  funzionale.
+\item[\texttt{\_accfupds}] Un teorema che stabilisce forme più semplici per 
+	espressioni che sono della forma $\field{i}\, (\field{j}\update\;f\; r)$. Se 
+	$i = j$, allora il lato destro è $f (\field{i}(r))$, se no, è $(\field{i}\;r)$.
+  \rewruse
+\item[\texttt{\_component\_equality}] Un teorema che stabilisce che $(r_1 =
+  r_2) \equiv \bigwedge_i (\field{i}(r_1) = \field{i}(r_2))$.
+\item[\texttt{\_fupdfupds}] Un teorema che stabilisce che $\field{i}\update
+  \;f \,(\field{i}\update \;g\;r) = \field{i}\update\;(f \circ g)\;r$.
+  \rewruse
+\item[\texttt{\_fupdcanon}] Un teorema che stabilisce i risultati di commutatività 
+	per tutte le possibili coppie di aggiornamenti di campo. Essi sono costruiti in 
+	un modo tale che se usati come riscritture, renderanno canoniche 
+	le sequenze di aggiornamenti. Così, per tutti gli $i < j$, è generato \[
+	\field{j}\update\;f\;(\field{i}\update\;g\;r) =
+  \field{i}\update\;g\;(\field{j}\update\;f\;r)
+  \]
+ \rewruse
+\end{description}
+
+\paragraph{Record grandi} La dimensione di certi teoremi dimostrati nel 
+pacchetto tipi record cresce come il quadrato del numero di campi nel 
+record. (In particolare, i teoremi di canonicalizzazione dell'aggiornamento e 
+e i teoremi \texttt{acc\_fupd} hanno questa proprietà.) Per evitare inefficienza 
+con record grandi, l'implementazione dei tipi record usa una 
+rappresentazione sottostante più efficiente quando il numero dei campi cresce 
+troppo. Il punto esatto in cui è applicata questa ottimizzazione è applicata è 
+controllato dalla variabile reference 
+\texttt{Datatype.big\_record\_size}. Questo valore è inizializzato a 20, 
+ma gli utenti possono cambiarlo a scelta.
+
+Sfortunatamente, la rappresentazione di record grandi ha lo svantaggio che 
+ogni funzione di aggiornamento e di accesso ha due forme: termini differenti che 
+sono stampati allo stesso modo. Una forma è una semplice costante, ed è la forma 
+prodotta quando un termine è sottoposto al parsing. L'altra è un pò più complicata, ma 
+ammette l'uso di teoremi più piccoli quando dei valori record sono 
+semplificati. Di conseguenza, si raccomanda che i nuovi teoremi, dimostrati 
+dall'utente che menzionano campi di record grandi o aggiornamenti di campi passino 
+attraverso una fase di semplificazione (\texttt{SIMP\_RULE}), applicando le 
+riscritture della \texttt{TypeBase}, prima di essere salvati.
+
+Il pretty-printing di record grandi può essere controllato con il 
+flag di trace \texttt{pp\_bigrecs}.
+\index{Hol_datatype@\ml{Hol\_datatype}|)}
+
+
+\section{Tipi Quoziente}\label{quotients}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!quozienti|(}
+\index{tipi quoziente, definizione di}
+
+\HOL{} fornisce una libreria per definire nuovi tipi che sono quozienti 
+di tipi esistenti, rispetto alle relazioni di equivalenza parziale. 
+Questa libreria è descritta in {\it ``Higher Order Quotients in Higher
+Order Logic''} [HOQ], da cui è presa la seguente descrizione.
+
+Si accede alla libreria quotient aprendo {\tt quotientLib}, 
+il che rende accessibili tutti i suoi strumenti e teoremi.
+
+La definizione di nuovi tipi corrispondenti ai quozienti di 
+tipi esistenti per relazioni di equivalenza è chiamata ``sollevare'' 
+i tipi da un livello inferiore, più rappresentativo a uno superiore 
+più alto. Entrambi i livelli descrivono oggetti simili, ma 
+alcuni dettagli che sono evidenti al livello inferiore non sono più 
+visibili al livello superiore. La logica è semplificata.
+
+Formare semplicemente un nuovo tipo non completa l'operazione quoziente.
+Piuttosto, si desidera ricreare 
+%significant parts of the
+l'ambiente logico pre-esistente al nuovo livello, 
+più alto, e più astratto. Questo include non solo i nuovi 
+tipi, ma anche le nuove versioni delle costanti che formano e 
+manipolano i valori di questi tipi, e anche le nuove versioni dei 
+teoremi che descrivono le proprietà di queste costanti. Ognuna di queste 
+%must be recreated at the higher level, in order to
+formano uno strato logico, sopra il quale tutti i dettagli rappresentazionali  più bassi 
+si possono dimenticare con sicurezza e per sempre.
+
+Questo si può fare in una singola chiamata dello 
+strumento principale di questo pacchetto.
+
+\begin{hol}
+\begin{verbatim}
+define_quotient_types :
+        {types: {name: string,
+                 equiv: thm} list,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         tyop_equivs : thm list,
+         tyop_quotients : thm list,
+         tyop_simps : thm list,
+         respects : thm list,
+         poly_preserves : thm list,
+         poly_respects : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+\end{hol}
+{\tt define\_quotient\_types} prende un singolo argomento che è un 
+record con i seguenti campi.
+
+{\it types\/} è una lista di record, ognuno dei quali contiene due campi:
+{\it name}, che è il nome di un nuovo tipo quoziente da creare, e 
+{\it equiv}, che è
+o 1)
+un teorema che una relazione binaria {\it R\/}
+è una relazione di equivalenza 
+(si veda [HOQ] \S 4)
+della forma
+$$
+\mbox{\tt |-}\
+\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                (R\ x = R\ y),
+$$
+o 2)
+un teorema che {\it R\/} è una relazione di equivalenza parziale non vuota,
+(si veda [HOQ] \S 5)
+della forma 
+$$
+\mbox{\tt |-}\
+(\exists x.\ R\ x\ x) \ \wedge \
+(\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)).
+$$
+Il processo di formare i nuovi tipi quoziente è descritto 
+in [HOQ] \S 8.
+
+{\it defs\/} è una lista di record che specifica le costanti da sollevare.
+Ciascun record contiene i seguenti quattro campi:
+{\it func\/} è un termine HOL, che deve essere una singola costante, che è la 
+costante da sollevare.
+{\it fname\/} è il nome della nuova costante da definire come la versione sollevata di {\it func}.
+{\it fixity\/} è la fixity HOL della nuova costante da creare, 
+come specificato nella struttura HOL {\tt Parse}.
+{\it def\_name} è il nome sotto il quale deve essere archiviata la definizione nella nuova costante 
+nella teoria attuale.
+Il 
+processo di definire le costanti sollevate 
+è descritto in [HOQ] \S 9.
+
+{\it tyop\_equivs\/} è una lista di teoremi di equivalenza condizionali 
+per operatori di tipo (si veda [HOQ] \S 4.1).
+Questi sono usati per portare in forma regolare 
+i teoremi sui nuovi operatori di tipo, così che essi possono essere sollevati
+(si veda [HOQ] \S 11 and \S 12).
+
+{\it tyop\_quotients\/} è una lista di teoremi quoziente condizionali 
+per operatori di tipo (si veda [HOQ] \S 5.2).
+Questi sono usati per sollevare sia le costanti sia i teoremi.
+
+{\it tyop\_simps\/} è una lista di teoremi per semplificare relazioni operatori di tipo 
+e mappare funzioni, ad esempio,
+{\tt |- (\$= \#\#\# \$=) = \$=} e
+{\tt |- (I \#\# I) = I}.
+
+Il resto degli argomenti si riferisce al processo generale di sollevare i teoremi 
+sui quozienti che vengono definiti,
+come descritto in [HOQ] \S 10.
+
+{\it respects\/} è una lista di teoremi circa il rispetto delle 
+costanti che sono sollevate.
+Questi teoremi sono descritti in 
+[HOQ] \S 10.1.
+
+{\it poly\_preserves\/} è una lista di teoremi circa la preservazione di 
+costanti polimorfiche nella logica HOL 
+attraverso un'operazione quoziente.
+%as if they were definitions across the quotient operation.
+In altre parole, essi affermano che qualsiasi operazione quozionte preserva queste 
+costanti come un omomorfismo.
+Questo teoremi sono descritti in
+[HOQ] \S 10.2.
+
+{\it poly\_respects\/} è una lista di teoremi che mostra il rispetto 
+delle costanti polimorfiche menzionate in {\it poly\_preserves}.
+Queste sono 
+descritte in 
+[HOQ] \S 10.3.
+
+{\it old\_thms\/} è una lista di teoremi che concernono i tipi e le costanti più basse, 
+rappresentative, che devono essere sollevate e dimostrate automaticamente al 
+più alto, e più astratto livello quoziente.
+Questo teoremi sono descritti in
+[HOQ] \S 10.4.
+
+{\tt define\_quotient\_types} restituisce una lista di teoremi, che sono le 
+versioni sollevate degli {\it old\_thms}.
+
+Una funzione analoga, 
+{\tt define\_quotient\_types\_rule}, prende un singolo argomento che è un 
+record con gli stessi campi di sopra eccetto per {\it old\_thms}, 
+e restituisce una funzione SML di tipo {\tt thm -> thm}. 
+Questo risultato tipicamente chiamato {\tt LIFT\_RULE}, 
+è poi usato per sollevare i vecchi teoremi individualmente, uno alla volta.
+
+Per retro-compatibilità con 
+l'eccellente pacchetto quozienti 
+{\tt EquivType}
+creato da 
+John Harrison
+%to whom much credit is due, and
+(che ha fornito molta ispirazione), 
+è anche fornita la seguente funzione:
+
+\begin{hol}
+\begin{verbatim}
+define_equivalence_type :
+        {name: string,
+         equiv: thm,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         welldefs : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+\end{hol}
+\noindent
+Questa funzione è limitata ad un singolo tipo quoziente, ma può essere 
+più conveniente quando la generalità di {\tt define\_quotient\_types}
+non è necessaria.
+Questa funzione è definita in termini di {\tt define\_quotient\_types} come
+
+\begin{hol}
+\begin{verbatim}
+fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
+    define_quotient_types
+     {types=[{name=name, equiv=equiv}], defs=defs, tyop_equivs=[],
+      tyop_quotients=[FUN_QUOTIENT],
+      tyop_simps=[FUN_REL_EQ,FUN_MAP_I], respects=welldefs,
+      poly_preserves=[FORALL_PRS,EXISTS_PRS],
+      poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
+      old_thms=old_thms};
+\end{verbatim}
+\end{hol}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!quozienti|)}
+
+
+\section{Espressioni Case}\label{CaseExp}
+\index{case expressions|(}
+
+All'interno della logica \HOL{}, le espressioni case forniscono una notazione molto compatta e conveniente per la selezione multi-way tra i valori di più espressioni.
+Questo è modellato sui costrutti case nei linguaggi di programmazione funzionale come lo Standard ML.
+Tali espressioni case possono semplificare l'espressione di rami complicati tra casi differenti o combinazioni di casi.
+La sintassi base (dove il $\mathit{term}$ non-terminale sta per qualsiasi termine \HOL{}) è
+\begin{eqnarray*}
+\mathit{term} & ::= & \texttt{case}\;\mathit{term}\;\texttt{of}\;\mathit{cases}\\
+\mathit{cases} &::= & \mathit{case}_1 \;\mathit{morecases}\\
+\mathit{case}_1 & ::= & \texttt{\bfseries |}\;\mathit{case} \;\;\;|\;\;\;\mathit{case}\\
+\mathit{morecases} & ::= & \varepsilon\;\;\;|\;\;\;\texttt{|}\;\mathit{case}\;\mathit{morecases}\\
+\mathit{case} & ::= & \mathit{term} \;\texttt{=>}\; \mathit{term}
+\end{eqnarray*}
+La scelta nella regola per il primo caso ($\mathit{case}_1$) permette l'uso di una sintassi più uniforme, dove ciascun caso è preceduto da una barra verticale.
+Omettendo la barra, che è ciò che fa il pretty-printer quando la sintassi è stampata, si conforma con la sintassi usata dall'SML.
+
+Sulla base del valore di una espressione di test, sono considerate in sequenza una lista di 
+espressioni pattern per vedere se si accordano con l'espressione di test.
+Il primo pattern che matcha con successo fa sì che l'espressione risultato ad esso 
+associata sia valutata e il suo valore restituito come il valore dell'intera 
+espressione case. Per esempio,
+%
+\begin{hol}
+\begin{verbatim}
+  case n of
+     0 => "none"
+   | 1 => "one"
+   | 2 => "two"
+   | _ => "many"
+\end{verbatim}
+\end{hol}
+%
+
+Questo avrebbe potuto essere espresso usando diversi costrutti ``if--then--else'', 
+ma l'espressione case è molto più compatta e pulita, con la 
+selezione tra varie scelte rese chiaramente evidenti.
+
+Oltre ai letterali come pattern, come di sopra, i pattern possono essere 
+espressioni costruttore. Molti tipi standard \HOL{} hanno dei costruttori, 
+compresi \ml{num}, \ml{list}, e \ml{option}.
+%
+\begin{hol}
+\begin{verbatim}
+  case spouse(employee) of
+   | NONE   => "single"
+   | SOME s => "married to " ++ name_of s
+\end{verbatim}
+\end{hol}
+(Questo esempio usa la barra opzionale all'inizio del primo caso.)
+
+\HOL{} supporta una ricca struttura di espressioni case che usano una singola 
+notazione. Il formato è legato a quello delle definizioni di funzioni 
+ricorsive, come descritto nella Sezione~\ref{TFL}. Inoltre, le espressioni 
+case possono contenere letterali come pattern, o singolarmente come 
+elementi di pattern più profondamente annidati.
+
+Le espressioni case possono testare valori di qualsiasi tipo. Se l'espressione test 
+è un tipo con costruttori, allora i pattenr possono essere espressi 
+usando i costruttori applicati agli argomenti, come per esempio \ml{SOME s} 
+nell'esempio di sopra. Una variabile libeera all'interno del pattern costruttore, 
+per esempio \ml{s} nel pattern \ml{SOME s}, diventa legata al 
+corrispondente valore all'interno del valore dell'espressione di test, e 
+può essere usata all'interno dell'espressione risultato associata per quel pattern.
+
+Oltre ai costruttori per i tipi standard in \HOL{}, 
+i pattern costruttore possono essere usati anche per i tipi creati per mezzo della 
+definizione di datatype descritta nella Sezione~\ref{sec:datatype}, 
+compresi i tipi definiti dall'utente.
+
+Sia che l'espressione di testi sia un tipo con costruttori o meno, 
+i pattern possono essere espressi usando i letterali appropriati di quel tipo, 
+se esistono tali letterali. 
+Un pattern complesso può contenere o letterali o pattern costruttore 
+o entrambi annidati l'uno con l'altro.
+Tuttavia, i letterali e i costruttori non possono essere mischiati come alternative 
+gli uni degli altri all'interno della stessa espressione case, 
+a meno che un particolare pattern possa essere sia un letterale 
+e anche un costruttore (0-ario) del suo tipo, come per esempio \ml{0} (zero) 
+è sia un letterale sia un costruttore del tipo \ml{num}. 
+Qui c'è un esempio di questo genere di miscuglio improprio.
+%
+\begin{hol}
+\begin{verbatim}
+  case n of
+     0 => "none"
+   | 1 => "one"
+   | 2 => "two"
+   | SUC m => "many"
+\end{verbatim}
+\end{hol}
+%
+In questo pattern, il pattern costruttore \ml{SUC m} è dato come 
+un'alternativa ai pattern letterali \ml{1} and \ml{2}. 
+Ciò rende questo espressione case invalida. 
+Cancellare uno dei due gruppi di righe risolverebbe il conflitto, 
+e renderebbe valida l'espressione. 
+Si noti che il pattern \ml{0} è accettabile per entrambi i gruppi.
+
+Anche i pattern possono essere nidificati, come mostrato nel prossimo esempio, dove 
+la funzione \ml{parents} restituisce una coppia contenente il padre della persona 
+e/o la madre, dove ciascuno è rappresentato da \ml{NONE} se deceduto.
+%
+\begin{hol}
+\begin{verbatim}
+  case parents(john) of
+     (NONE,NONE) => "orphan"
+   | _ => "not an orphan"
+\end{verbatim}
+\end{hol}
+%
+Questo mostra l'annidamento di pattern option all'interno di un pattern coppia, 
+e anche l'uso di una wildcard \ml{\_} per matchare i casi non forniti.
+
+Se l'insieme di pattern è rado [sparse nel testo originale (ndt)], ci possono essere alcune nuove righe generate 
+automaticamente per compilarlo, e possibilmente alcune nuove variabili o la 
+costante \ml{ARB} per rappresentare propriamente l'espressione case.
+%
+\begin{hol}
+\begin{verbatim}
+- ``case a of
+      (1, y, z) => y + z
+    | (x, 2, z) => x - z
+    | (x, y, 3) => x * y``;
+> val it =
+    ``case a of
+        (1,2,3) => 2 + 3
+      | (1,2,z) => 2 + z
+      | (1,y,3) => y + 3
+      | (1,y,z) => y + z
+      | (x,2,3) => x - 3
+      | (x,2,z') => x - z'
+      | (x,y',3) => x * y'
+      | (x,y',z') => ARB`` : term
+\end{verbatim}
+\end{hol}
+
+Questo è soltanto una breve descrizione di alcune delle 
+capacità espressive dell'espressione case con pattern. 
+Molti altri esempi di pattern sono forniti nella Sezione~\ref{TFL} 
+sulla definizione delle funzioni ricorsive.
+
+\index{espressioni case|)}
+
+
+\section{Funzioni Ricorsive}\label{TFL}
+
+\HOL{} fornisce una meccanismo di definizione di funzione basato sul 
+teorema di ricorsione benfondata fornito in \theoryimp{relationTheory}, 
+discusso nella Sezione~\ref{relation}.  \ml{Define} prende una specifica di alto livello, 
+possibilmente ricorsiva, di una funzione e tenta di 
+definire la funzione nella logica. \ml{Define} può essere usato per definire 
+abbreviazioni, funzioni ricorsive, e funzioni mutuamente 
+ricorsive. Un teorema d'induzione può essere generato come un sotto-prodotto 
+dell'attività di \ml{Define}. Questo teorema d'induzione segue la struttura 
+ricorsiva della funzione, e può essere utile quando di dimostrano proprietà 
+della funzione. \ml{Define} non ha sempre successo nel tentare di 
+eseguire la definizione specificata, di solito perché una dimostrazione 
+automatica di terminazione fallisce: in quel caso, si può usare un altro punto d'entrata, 
+\ml{Hol\_defn}, rinvia la dimostrazione di terminazione all'utente. 
+La tecnologia che sottosta a \ml{Define} e \ml{Hol\_defn} è spiegata 
+in dettaglio in Slind~\cite{slind-thesis}.
+
+
+\index{Define@\ml{Define}}
+
+In particolare, \ml{Define} prende come input una quotation che rappresenta una 
+congiunzione di equazioni. La (o le) funzione (funzioni) specificate possono essere formulate 
+usando un pattern-matching in stile ML. Una chiamata 
+\ml{Define `}\textit{spec}\ml{`} dovrebbe conformarsi con la grammatica nella Tabella
+\ref{define:syntax}.
+\begin{table}[htbp]
+\begin{center}
+$
+\begin{array}{|rll|}
+\hline
+\mathit{spec} & ::= &  \mathit{eqn} \\
+              & \mid  & (\mathit{eqn}) \land \mathit{spec} \\
+  & & \\
+\mathit{eqn} & ::= & \mathit{alphanumeric}\ \mathit{pat} \ldots \mathit{pat} = \mathit{term} \\
+  & & \\
+  & & \\
+\mathit{pat} & ::= & \mathit{variable} \\
+    & \mid   & \mathit{wildcard} \\
+    & \mid   & \mathit{cname} \\
+    & \mid   & (\mathit{cname}_n\ \mathit{pat}_1 \ldots \mathit{pat}_n) \\
+  & & \\
+\mathit{cname} & ::= & \mathit{alphanumeric} \mid \mathit{symbolic} \\
+  & & \\
+\mathit{wildcard} & ::=  & \_\!\_ \\
+                  & \mid & \_\!\_ \mathit{wildcard} \\
+  & & \\
+\hline
+\end{array}
+$
+\caption{Sintassi della Dichiarazione di Funzione}\label{define:syntax}
+\end{center}
+\end{table}
+
+\paragraph{Espansione di Pattern}
+In generale, \ml{Define} tenta di derivare esattamente la congiunzione 
+di equazioni specificata. Tuttavia, la ricca sintassi dei pattern ammette 
+qualche ambiguità. Per esempio, l'input
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(f 0 _ = 1)
+    /\    (f _ 0 = 2)`
+\end{verbatim}
+\end{hol}
+%
+è ambiguo per \holtxt{f 0 0}: il risultato dovrebbe essere \holtxt{1} o
+\holtxt{2}? Questa ambiguità è gestita ne modo usuale per i compilatori e 
+gli interpreti per i linguaggi funzionali: cioè, la congiunzione delle 
+equazioni è trattata come fosse applicata prima la congiunzione sinistra, seguita 
+dall'elaborazione del congiunto destro. Quindi, nell'esempio di sopra, il 
+valore di \holtxt{f 0 0} è \holtxt{1}. Nell'implementazione, 
+le ambiguità che sorgono da tali pattern sovrapposti sono tradotti 
+sistematicamente in un passo di pre-elaborazione.
+
+Un altro caso di ambiguità nei pattern è mostrato di sotto: la specifica 
+è incompleta dal momento che non dice come \holtxt{f} dovrebbe comportarsi quando 
+applicata a due argomenti diversi da zero: ad esempio, \holtxt{f (SUC m) (SUC n)}. Nella 
+implementazione, tali clausole mancanti sono riempite, e hanno il valore 
+\holtxt{ARB}. Questo passo di `completamento del pattern' è un modo di trasformare le descrizioni 
+di funzioni parziali in funzioni totali adatte per HOL. Tuttavia, 
+dal momento che l'utente non specificato in modo completo la funzione, il sistema 
+lo prende come un suggerimento che l'utente non è interessato nell'usare la 
+funzione per le clausole mancanti ma riempite, e così tali clausole sono 
+eliminate dal teorema finale.
+
+In sintesi, \ml{Define} deriverà le equazioni non ambigue e 
+complete
+%
+\begin{hol}
+\begin{verbatim}
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+     (f (SUC v2) (SUC v4) = ARB)
+\end{verbatim}
+\end{hol}
+%
+dall'equazioni ambigue e incomplete di sopra. Gli strani 
+nomi delle variabili sono dovuti ai passi di pre-elaborazione descritti di sopra. Il 
+risultato di sopra è solo un valore intermedio: nel risultato finale restituito 
+da \ml{Define}, l'ultima equazione è rimossa dal momento che non è stata 
+specificata dall'input originale.
+
+\begin{hol}
+\begin{verbatim}
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+\end{verbatim}
+\end{hol}
+
+\paragraph{Terminazione}
+
+Durante l'elaborazione della specifica di una funzione ricorsiva, \ml{Define} 
+deve eseguire una dimostrazione di terminazione. Essa costruisce automaticamente 
+delle condizioni di terminazione per la funzione, e invoca un dimostratore 
+di terminazione nel tentativo di dimostrare le condizioni di terminazione. Se la 
+funzione è ricorsiva primitiva, nel senso che segue esattamente 
+il pattern ricorsione di un datatype HOL dichiarato in precedenza, allora questa 
+dimostrazione avrà sempre successo, e \ml{Define} archivia l'equazioni derivate nel 
+segmento attuale di teoria.
+Altrimenti, la funzione non è 
+un'istanza di ricorsione primitiva, e il dimostratore di terminazione può 
+avere successo o fallire. Se la dimostrazione di terminazione fallisce, allora \ml{Define} fallisce. 
+Se ha successo, allora \ml{Define} archivia l'equazioni specificate nell'attuale 
+segmento di teoria. E' anche archiviato nell'attuale segmento di teoria un teorema d'induzione 
+customizzato per la funzione specificata. Si noti, tuttavia, che 
+non è archiviato un teorema d'induzione per le funzioni ricorsive primitive, dal 
+momento che quel teorema sarebbe identico al teorema d'induzione che risulta 
+dalla dichiarazione del datatype.
+
+
+\paragraph{Archiviare le definizioni nel segmento di teoria}
+
+\ml{Define} genera automaticamente nomi con i quali archiviare la 
+definizione e, (se esiste) il teorema d'induzione associato, nella teoria 
+attuale. Il nome per archiviare la definizione è costruito 
+concatenando il nome della funzione con il valore della variabile 
+reference \ml{Defn.def\_suffix}. Il nome per archiviare il teorema d'induzione 
+è costruito concatenando il nome della funzione con il valore 
+della variabile reference \ml{Defn.ind\_suffix}. Per funzioni 
+mutuamente ricorsive, dove c'è una scelta di nomi, è preso il nome della funzione 
+nella prima clausola.
+
+Dal momento che i nomi usati per archiviare elementi nel segmento attuale di teoria 
+sono trasformati in binding ML dopo che la teoria è esportata, è 
+richiesto che ogni invocazione di \ml{Define} generi nomi che sono 
+identificatori ML validi. Per questa ragione, \ml{Define} richiede 
+nomi alfanumerici di funzione. Se si desidera definire identificatori 
+simbolici, si dovrebbe usare la funzione ML \ml{xDefine}.
+
+\index{xDefine@\ml{xDefine}}
+\begin{hol}
+\begin{verbatim}
+  xDefine : string -> term quotation -> thm
+\end{verbatim}
+\end{hol}
+La funzione \ml{xDefine} è identica a 
+\ml{Define} eccetto per il fatto che prende un nome esplicito da usare quando 
+si archivia la definizione nella teoria attuale.
+
+\subsection{Esempi di definizione di funzione}
+Daremo un numero di esempi che mostrano la gamma di funzioni 
+che possono essere definite con \ml{Define}. Innanzi tutto, abbiamo una funzione ricorsiva 
+che usa ``de-costruttori'' nella chiamata ricorsiva.
+
+\begin{hol}
+\begin{verbatim}
+  Define
+    `fact x = if x = 0 then 1 else x * fact(x-1)`;
+
+  Equations stored under "fact_def".
+  Induction stored under "fact_ind".
+  > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
+\end{verbatim}
+\end{hol}
+%
+Dal momento che \holtxt{fact} non è 
+ricorsiva primitiva, è generato un teorema d'induzione per \holtxt{fact} e 
+archiviato nella teoria attuale.
+%
+\begin{hol}
+\begin{verbatim}
+  - DB.fetch "-" "fact_ind";
+
+  > val it =
+     |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
+\end{verbatim}
+\end{hol}
+
+Poi abbiamo una funzione ricorsiva con un pattern-matching 
+relativamente complesso. Tralasciamo di esaminare il teorema 
+d'induzione generato.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(flatten  []           = [])
+     /\   (flatten ([]::rst)     = flatten rst)
+     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+
+  Equations stored under "flatten_def".
+  Induction stored under "flatten_ind".
+
+  > val it =
+      |- (flatten [] = []) /\
+         (flatten ([]::rst) = flatten rst) /\
+         (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
+\end{verbatim}
+\end{hol}
+
+Poi definiamo una funzione ricorsiva curried, che usa 
+espansione di caratteri jolly e pre-elaborazione di pattern-matching.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(min (SUC x) (SUC y) = min x y + 1)
+     /\   (min  ____    ____   = 0)`;
+
+  Equations stored under "min_def".
+  Induction stored under "min_ind".
+
+  > val it =
+      |- (min (SUC x) (SUC y) = min x y + 1) /\
+         (min (SUC v2) 0 = 0) /\
+         (min 0 v1 = 0) : thm
+\end{verbatim}
+\end{hol}
+
+Poi facciamo una definizione ricorsiva primitiva. Si noti che, in questo caso, non 
+è generato alcun teorema d'induzione.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(filter P [] = [])
+    /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
+
+  Definition has been stored under "filter_def".
+
+  > val it =
+     |- (!P. filter P [] = []) /\
+        !P h t. filter P (h::t) =
+                 (if P h then h::filter P t else filter P t) : thm
+\end{verbatim}
+\end{hol}
+
+\ml{Define} può essere usata anche per definire funzioni mutuamente ricorsive. 
+Per esempio, possiamo definire un datatype di proposizioni e una funzione per 
+mettere una proposizione in forma normale negata come segue. 
+Prima definiamo un datatype, chiamato \ml{prop}, di formule booleane:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `prop = VAR of 'a
+          | NOT of prop
+          | AND of prop => prop
+          | OR  of prop => prop`;
+\end{verbatim}
+\end{hol}
+%
+Poi sono definite due funzioni mutuamente ricorsive 
+\holtxt{nnfpos} e \holtxt{nnfneg}:
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+     `(nnfpos (VAR x)   = VAR x)
+   /\ (nnfpos (NOT p)   = nnfneg p)
+   /\ (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+   /\ (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+
+   /\ (nnfneg (VAR x)   = NOT (VAR x))
+   /\ (nnfneg (NOT p)   = nnfpos p)
+   /\ (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+   /\ (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
+\end{verbatim}
+\end{hol}
+%
+The system makes the definition and returns the theorem
+%
+\begin{hol}
+\begin{verbatim}
+  |- (nnfpos (VAR x) = VAR x) /\
+     (nnfpos (NOT p) = nnfneg p) /\
+     (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q)) /\
+     (nnfpos (OR p q) = OR (nnfpos p) (nnfpos q)) /\
+     (nnfneg (VAR x) = NOT (VAR x)) /\
+     (nnfneg (NOT p) = nnfpos p) /\
+     (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
+     (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
+\end{verbatim}
+\end{hol}
+
+\ml{Define} può anche essere usata per definire funzioni non-ricorsive.
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+    `f x (y,z) = (x + 1 = y DIV z)`;
+\end{verbatim}
+\end{hol}
+
+\ml{Define} può essere usata anche per definire funzioni non-ricorsive 
+con un pattern-matching complesso. La pre-elaborazione del pattern-matching di 
+\ml{Define} può essere conveniente per questo scopo, ma può anche generare un 
+grande numero di equazioni. Per esempio:
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+    `(g (0,_,_,_,_) = 1) /\
+     (g (_,0,_,_,_) = 2) /\
+     (g (_,_,0,_,_) = 3) /\
+     (g (_,_,_,0,_) = 4) /\
+     (g (_,_,_,_,0) = 5)`
+\end{verbatim}
+\end{hol}
+%
+restituisce una definizione con trentuno clausole.
+
+
+\subsection{Quando la terminazione non è dimostrata automaticamente}
+
+Se la dimostrazione di terminazione per una definizione potenziale 
+fallisce, l'invocazione di \ml{Define} (o \ml{xDefine}) fallisce. In tali 
+situazioni, si dovrebbe usare la funzione \ML{} \ml{Hol\_defn}.
+%
+\index{Hol_defn@\ml{Hol\_defn}}
+
+\begin{hol}
+\begin{verbatim}
+  Hol_defn : string -> term quotation -> Defn.defn
+\end{verbatim}
+\end{hol}
+
+\ml{Hol\_defn} esegue la definizione richiesta, ma rinvia la dimostrazione di 
+terminazione all'utente. Per la creazione di dimostrazioni di terminazione, esistono 
+alcuni utili entrypoint, cioè
+\begin{hol}
+\begin{verbatim}
+  Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
+  Defn.tprove : Defn.defn * tactic -> thm * thm
+\end{verbatim}
+\end{hol}
+\ml{Defn.tgoal} è analogo a \ml{set\_goal} e \ml{Defn.tprove} è 
+analogo a \ml{prove}, Così, \ml{Defn.tgoal} è usato per prendere il 
+risultato di \ml{Hol\_defn} e creare un goal per dimostrare la terminazione 
+della definizione.
+
+\paragraph{Esempio.} Un'invocazione di {\small\verb+Define+} sulle 
+seguenti equazioni per Quicksort attualmente fallirà, dal momento che la 
+dimostrazione di terminazione è attualmente oltre le capacità del dimostratore elementare 
+di terminazione. Piuttosto, eseguiamo un'applicazione di {\small\verb+Hol_defn+}:
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+ val qsort_def =
+  Hol_defn "qsort"
+    `(qsort ord [] = []) /\
+     (qsort ord (h::t) =
+         qsort ord (FILTER (\x. ord x h) t)
+         ++ [h] ++
+         qsort ord (FILTER (\x. ~(ord x h)) t))`
+\end{verbatim}
+\end{session}
+che restituisce il seguente valore di tipo \ml{defn}, ma non tenta di 
+dimostrare la terminazione.
+\begin{session}
+\begin{verbatim}
+  HOL function definition (recursive)
+
+  Equation(s) :
+   [...] |- qsort ord [] = []
+   [...]
+  |- qsort ord (h::t) =
+     qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+     qsort ord (FILTER (\x. ~ord x h) t)
+
+  Induction :
+   [...]
+  |- !P.
+       (!ord. P ord []) /\
+       (!ord h t.
+          P ord (FILTER (\x. ~ord x h) t) /\
+          P ord (FILTER (\x. ord x h) t) ==>
+          P ord (h::t)) ==>
+       !v v1. P v v1
+
+  Termination conditions :
+    0. !t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)
+    1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
+    2. WF R
+\end{verbatim}
+\end{session}
+
+Il tipo \ml{defn} ha un prettyprinter installato per esso: l'output 
+di sopra è tipico, mostrando i componenti di una \ml{defn} in un formato 
+comprensibile. Benché sia possibile lavorare direttamente con elementi di 
+tipo \ml{defn}, è più conveniente invocare 
+\ml{Defn.tgoal}, che imposta una dimostrazione di terminazione in un goalstack.
+%
+\begin{session}
+\begin{verbatim}
+  Defn.tgoal qsort_def;
+
+  > val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         ?R.
+           (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
+           (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
+\end{verbatim}
+\end{session}
+%
+Il goal è trovare una relazione benfondata sugli argomenti per \holtxt{qsort} 
+e mostrare che gli argomenti per \holtxt{qsort} sono nella relazione. 
+La funzione \ml{WF\_REL\_TAC} è quasi sempre utilizzata a questo punto per 
+iniziare la dimostrazione di terminazione. Chiaramente, \ml{qsort} termina perché la lista 
+argomento diventa più piccola. L'invocazione di \ml{WF\_REL\_TAC} con la funzione di misura 
+appropriata risulta in due subgoal, ognuno dei quali è facile da 
+dimostrare.
+
+\begin{session}
+\begin{verbatim}
+  - e (WF_REL_TAC `measure (LENGTH o SND)`);
+  OK..
+  2 subgoals:
+  > val it =
+     !t h ord. LENGTH (FILTER (\x. ord x h) t) < LENGTH (h::t)
+
+     !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
+\end{verbatim}
+\end{session}
+%
+L'esecuzione di \ml{WF\_REL\_TAC} ha dimostrato automaticamente la 
+benfondatezza della relazione di terminazione 
+\holtxt{measure (LENGTH o SND)} 
+e il resto del goal è stato semplificato in una 
+coppia di goal semplici. Una volta che entrambi i goal sono dimostrati, possiamo incapsulare 
+la relazione di terminazione con \ml{tDefine}, che prende una quotation 
+(che rappresenta l'equazioni di ricorsione desiderate) e una tattica $t$, 
+definisce la funzione specificata, calcola le condizioni di terminazione, 
+e applica $t$ ad esse. Se le condizioni di terminazione sono dimostrate da 
+$t$ allora l'equazioni di ricorsione e il teorema d'induzione sono archiviati 
+nel segmento di teoria attuale prima che le equazioni di ricorsione siano restituite:
+
+\begin{session}
+\begin{verbatim}
+  - val qsort_def =  tDefine "qsort"
+     `(qsort ord [] = []) /\
+      (qsort ord (h::t) =
+          qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+          qsort ord (FILTER (\x. ~(ord x h)) t))`
+     (WF_REL_TAC `measure (LENGTH o SND)` THEN ...);
+
+  > val qsort_def =
+      |- (qsort ord [] = []) /\
+         (qsort ord (h::t) =
+            qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+            qsort ord (FILTER (\x. ~ord x h) t)) : thm
+\end{verbatim}
+\end{session}
+
+Il teorema d'induzione custom per una funzione si può ottenere usando \holtxt{fetch}, 
+che restituisce elementi nominati nella teoria specifica\footnote{In una chiamata a \texttt{fetch}, il 
+primo argomento denota una teoria; la teoria attuale può essere specificata da \texttt{"-"}.}.
+\begin{session}
+\begin{verbatim}
+  - fetch "-" "qsort_ind";
+  >  val qsort_ind =
+      |- !P.
+           (!ord. P ord []) /\
+           (!ord h t.
+              P ord (FILTER (\x. ~ord x h) t) /\
+              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t))
+            ==>
+           !v v1. P v v1  : thm
+\end{verbatim}
+\end{session}
+
+\noindent Il teorema d'induzione prodotto da \holtxt{Define} e \holtxt{tDefine} può 
+essere applicato da \ml{recInduct}. Si veda la Sezione \ref{sec:bossLib} per i dettagli.
+
+
+\subsubsection{Tecniche per dimostrare la terminazione}
+
+Ci sono due problemi da affrontare quando di tenta di dimostrare la terminazione. 
+Primo, bisogna comprendere, intuitivamente e poi matematicamente, 
+perché la funzione in considerazione termina. Secondo, si deve 
+essere in grado di formulare questo in \HOL. In ciò che segue, daremo alcuni 
+esempi di come questo è fatto.
+
+C'è un certo numero di strumenti base e avanzati per specificare relazioni 
+benfondate. Il punto di partenza più comune per trattare i problemi 
+di terminazione per funzioni ricorsive è trovare qualche funzione, conosciuta come una 
+\emph{misura} sotto la quale gli argomenti di una chiamata di funzione sono più grandi 
+degli argomenti a qualsiasi chiamata ricorsiva che ne risulta.
+
+Per un esempio di partenza molto semplice, si consideri la seguente definizione 
+di una funzione che calcola il massimo comun divisore di due 
+numeri:
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  - val gcd_defn =
+      Hol_defn "gcd"
+         `(gcd (0,n) = n) /\
+          (gcd (m,n) = gcd (n MOD m, m))`;
+
+  - Defn.tgoal gcd_defn;
+
+  > val it =
+      Proof manager status: 1 proof.
+      1. Incomplete:
+           Initial goal:
+           ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
+\end{verbatim}
+\end{session}
+%
+L'invocazione \holtxt{gcd(m,n)} esegue una ricorsione nel suo primo argomento, e 
+dal momento che sappiamo che \holtxt{m} non è 0, si da il caso che 
+\holtxt{n MOD m} sia più piccolo di \holtxt{m}. Il modo di formulare la 
+terminazione di \holtxt{gcd} in HOL è di usare una funzione `misura' 
+per mappare dal dominio di \holtxt{gcd}---una coppia di numeri---a un numero. 
+La definizione di {misura} in \HOL{} è equivalente a
+%
+\begin{hol}
+\begin{verbatim}
+  |- measure f x y = (f x < f y).
+\end{verbatim}
+\end{hol}
+%
+Ora dobbiamo scegliere la posizione di argomento da misurare e 
+invocare \ml{WF\_REL\_TAC}:
+\begin{session}
+\begin{verbatim}
+  - e (WF_REL_TAC `measure FST`);
+  OK..
+  1 subgoal:
+  > val it =
+     !v2 n. n MOD SUC v2 < SUC v2
+\end{verbatim}
+\end{session}
+%
+Questo goal è facile da dimostrare con alcuni semplici fatti aritmetici.
+
+\paragraph{Funzioni di Ponderazione}
+
+A volte, si ha bisogno di una funzione di misura che sia essa stessa ricorsiva. Per 
+esempio, si consideri un tipo di alberi binari e una funzione che 
+linearizza gli alberi. L'algoritmo funziona ruotando l'albero fino a quando 
+ottiene un \holtxt{Leaf} nel ramo sinistro, poi esegue una ricorsione nel ramo 
+destro. Alla fine dell'esecuzione l'albero  è stato linearizzato.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  - Hol_datatype
+      `btree = Leaf
+             | Brh of btree => btree`;
+
+  - val Unbal_defn =
+      Hol_defn "Unbal"
+        `(Unbal Leaf = Leaf)
+     /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
+     /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
+
+  - Defn.tgoal Unbal_defn;
+
+  > val it =
+      Proof manager status: 1 proof.
+      1. Incomplete:
+         Initial goal:
+          ?R. WF R /\
+              (!bt. R bt (Brh Leaf bt)) /\
+              !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
+\end{verbatim}
+\end{session}
+%
+Dal momento che la dimensione dell'albero non è modificata nell'ultima clausola nella 
+definizione di \holtxt{Unbal}, una semplice misura di dimensione non funziona. Piuttosto, 
+possiamo assegnare dei pesi ai nodi nell'albero tali che le chiamate ricorsive di 
+\holtxt{Unbal} diminuiscono il peso totale in ogni case. Una tale assegnazione è 
+%
+\begin{session}
+\begin{verbatim}
+  Define
+   `(Weight (Leaf) = 0) /\
+    (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
+\end{verbatim}
+\end{session}
+%
+Ora possiamo invocare \ml{WF\_REL\_TAC}:
+%
+\begin{session}
+\begin{verbatim}
+  e (WF_REL_TAC `measure Weight`);
+  OK..
+
+  2 subgoals:
+  > val it =
+   !bt. Weight bt < Weight (Brh Leaf bt)
+
+   !bt bt2 bt1.
+      Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
+\end{verbatim}
+\end{session}
+%
+Entrambi questi goal sono piuttosto facili da dimostrare.
+%
+Le tecniche di `ponderazione' di nodi in un datatype al fine di dimostrare 
+la terminazione vanno anche sotto il nome di \emph{interpretazione polinomiale}. Bisogna 
+ammettere che trovare la ponderazione corretta per una dimostrazione 
+di terminazione è più un'arte che una scienza. Tipicamente, si fa una congettura e 
+si prova la dimostrazione di terminazione per vedere se funziona.
+
+\paragraph{Combinazioni Lessicografiche}
+
+Saltuariamente, c'è una combinazione di fattori che complica 
+l'argomento di terminazione. Per esempio, la seguente specifica 
+descrive un ingenuo algoritmo di pattern matching su stringhe (qui 
+rappresentate come liste). La funzione prende quattro argomenti: il primo, $p$, 
+è il rimanente del pattern da matchare. Il secondo, 
+$\mathit{rst}$, è il rimanente della stringa che viene cercata. Il terzo 
+argomento, $p_0$, mantiene il pattern originale da matchare. 
+Il quarto argomento, $s$, è la stringa che viene cercata.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  val match_defn =
+    Hol_defn "match"
+      `(match [] __ __ __ = T)  /\
+       (match __ [] __ __ = F)  /\
+       (match (a::pp) (b::ss) p0 s =
+         if a=b then match pp ss p0 s
+           else
+         if NULL(s) then F
+           else
+         match p0 (TL s) p0 (TL s))`;
+
+  - val Match = Define `Match pat str = match pat str pat str`;
+\end{verbatim}
+\end{session}
+%
+La prima clausola della definizione afferma che se $p$ si esaurisce, allora è stato 
+trovato un match; la funzione restituisce \holtxt{T}. La seconda clausola rappresenta il caso 
+dove $s$ è esaurito ma $p$ no, in questo caso la funzione restituisce 
+\holtxt{F}. Il caso rimanente è quando c'è più ricerca da fare; la funzione 
+controlla se la testa del pattern $p$ è la stessa della testa di 
+$\mathit{rst}$. Se sì, allora la ricerca procede ricorsivamente, usando la 
+coda di $p$ e la coda di $\mathit{rst}$. Se no, questo significa che $p$ ha 
+fallito il match, così l'algoritmo avanza di un carattere in avanti in 
+$\mathit{s}$ e inizia il matching dall'inizio di $p_0$. Se 
+$\mathit{s}$ è vuoto allora, comunque, restituisce \holtxt{F}. Si noti che 
+$\mathit{rst}$ e $s$ rappresentano entrambi la stringa da 
+cercare: $\mathit{rst}$ è una versione `locale` di $s$: eseguiamo una ricorsione in 
+$\mathit{rst}$ fino a quando ci sono dei match con il pattern $p$. Tuttavia, 
+se la ricerca alla fine fallisce, allora $s$, che `ricorda` dove la ricerca 
+è iniziata, è usata per riavviare la ricerca.
+
+Questo per quanto riguarda il comportamento della funzione. Perché termina? Ci 
+sono due chiamate ricorsive. La prima chiamata riduce la dimensione di $p$ e $\mathit{rst}$, e 
+lascia l'altro argomento invariato. La seconda chiamata può accrescere la 
+dimensione di $p$ e $\mathit{rst}$, ma riduce la dimensione di $s$. Questa è una classica situazione 
+in cui usare un ordine lessicografico: alcuni argomenti alla funzione sono ridotti in 
+alcune chiamate ricorsive, e altri sono ridotti in altre chiamate ricorsive. 
+Si ricordi che \holtxt{LEX} è un operatore infisso, definito in \ml{pairTheory} come segue:
+%
+\begin{hol}
+\begin{verbatim}
+  |- LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
+\end{verbatim}
+\end{hol}
+%
+Nella seconda chiamata ricorsiva, la lunghezza di \holtxt{s} è ridotta, e nella 
+prima rimane uguale. Questo spinge ad avere la lunghezza della 
+$s$ come il primo componente della combinazione 
+lessicografica, e la lunghezza di $\mathit{rst}$ come il secondo 
+componente. Formalmente, vogliamo mappare dalla quadrupla degli 
+argomenti in una combinazione lessicografica di relazioni. 
+Questo è permesso da \holtxt{inv\_image} di \ml{relationTheory}:
+%
+\begin{hol}
+\begin{verbatim}
+   |- inv_image R f = \x y. R (f x) (f y)
+\end{verbatim}
+\end{hol}
+%
+La relazione desiderata mappa dalla quadrupla degli argomenti in una coppia 
+di numeri $(m,n)$, dove $m$ è la lunghezza del quarto argomento, e 
+$n$ è la lunghezza del secondo argomento. Queste lunghezze sono poi 
+confrontate dal punto di vista lessicografico rispetto a minore-di ($<$).
+\begin{session}
+\begin{verbatim}
+  Defn.tgoal match_defn;
+
+  - e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
+  OK..
+  2 subgoals:
+  > val it =
+   !s ss a b.
+     (a=b) ==> LENGTH s < LENGTH s \/ LENGTH ss < LENGTH (b::ss)
+
+   !ss s a b.
+     ~(a = b) /\ ~NULL s ==>
+     LENGTH (TL s) < LENGTH s \/
+     (LENGTH (TL s) = LENGTH s) /\ LENGTH (TL s) < LENGTH (b::ss)
+\end{verbatim}
+\end{session}
+%
+Il primo subgoal ha bisogno di un case-split su \holtxt{s} prima di essere dimostrato per 
+riscritture, e il secondo è anch'esso facile da dimostrare per riscrittura.
+
+\subsubsection{Come sono sintetizzate le condizioni di terminazione}
+
+\index{regole di congruenza!nelle analisi di terminazione|(}
+A volte è importante comprendere, almeno in parte, come 
+\ml{Hol\_defn} costruisce i vincoli di terminazione. In alcuni casi, è 
+persino necessario che gli utenti influenzino questo processo al fine di avere estratti 
+dei vincoli di terminazione corretti. Il processo è guidato dai cosiddetti 
+\emph{teoremi di congruenza} per particolari vincoli \HOL{}. 
+Per esempio, si consideri la seguente definizione ricorsiva di fattoriale:
+%
+\begin{hol}
+\begin{verbatim}
+  fact n = if n=0 then 1 else n * fact (n-1)
+\end{verbatim}
+\end{hol}
+%
+In assenza di una conoscenza di come il costrutto `if-then-else` 
+influisce il \emph{contesto} delle chiamate ricorsive, \ml{Hol\_defn} 
+estrarrebbe i vincoli di terminazione:
+%
+\begin{hol}
+\begin{verbatim}
+  0. WF R
+  1. !n. R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+che non sono dimostrabili, perché il \emph{contesto} delle chiamate ricorsive non è 
+stato preso in considerazione. Questo esempio di fatto non è un problema per HOL, 
+dal momento che il seguente teorema di congruenza è conosciuto da \ml{Hol\_defn}:
+%
+\begin{hol}
+\begin{verbatim}
+ |- !b b' x x' y y'.
+      (b = b') /\
+      (b' ==> (x = x')) /\
+      (~b' ==> (y = y')) ==>
+       ((if b then x else y) = (if b' then x' else y'))
+\end{verbatim}
+\end{hol}
+%
+Questo teorema è compreso da \ml{Hol\_defn} come una sequenza ordinata 
+di istruzioni da seguire quando l'estrattore di condizioni di terminazione 
+incontra un `if-then-else`. Il teorema è letto come segue: quando 
+un'istanza `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` è 
+incontrata mentre l'estrattore passa attraverso la definizione di funzione, 
+fa ciò che segue.
+\begin{enumerate}
+
+\item Traversa $B$ ed estrae le condizioni di terminazione 
+	$\mathit{TCs}(B)$ da ogni chiamata ricorsiva al suo interno.
+	Questo restituisce un teorema $\mathit{TCs}(B) \vdash B = B'$.
+
+\item Assume $B'$ ed estrae le condizioni di terminazione da ogni 
+	chiamata ricorsiva in $X$. Questo restituisce un teorema 
+	$\mathit{TCs}(X) \vdash X = X'$.
+
+\item Assume $\neg B'$ ed estrae le condizioni di terminazione da ogni 
+	chiamata ricorsiva in $Y$. Questo restituisce un teorema 
+	$\mathit{TCs}(Y) \vdash Y = Y'$.
+
+\item Ragionando in modo equazionale con (1), (2), e (3), deriva il teorema
+\[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
+  \vdash
+  (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) =
+  (\mathtt{if}\ B'\ \mathtt{then}\ X'\ \mathtt{else}\ Y')
+\]
+\item Sostituisce \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ con
+\texttt{if} $B'$ \texttt{then} $X'$ \texttt{else} $Y'$.
+
+\end{enumerate}
+
+
+Le condizioni di terminazione sono accumulate fino a quando 
+il processo di terminazione non finisce, ed appaiono come ipotesi nel risultato 
+finale. Così le condizioni di terminazione estratte per \holtxt{fact} sono
+%
+\begin{hol}
+\begin{verbatim}
+   0. WF R
+   1. !n. ~(n = 0) ==> R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+e sono facili da dimostrare. La nozione di \emph{contesto} di una chiamata ricorsiva 
+è definita dall'insieme di regole di congruenza usate nell'estrazione delle condizioni 
+di terminazione. Questo insieme si può ottenere invocando \holtxt{DefnBase.read\_congs}, 
+e manipolare con \holtxt{DefnBase.add\_cong},
+\holtxt{DefnBase.drop\_cong} e \holtxt{DefnBase.export\_cong}.
+Le funzioni `add' e `drop' influenzano solo lo stato attuale del database di congruenza; per contro, la funzione `export' fornisce un modo per le teorie di specificare che un particolare teorema dovrebbe essere aggiunto al database di congruenza in tutte le teorie discendenti.
+\index{regole di congruenza!nelle analisi di terminazione|(}
+
+
+
+
+\paragraph{Ricorsione di Ordine Superiore e Regole di Congruenza}
+
+Una ricorsione di `ordine superiore' è una in cui una funzione di ordine superiore è 
+usata per applicare la funzione ricorsiva agli argomenti. Al fine di 
+dimostrare le condizioni di terminazione corrette per una tale ricorsione, 
+le regole di congruenza per la funzione di ordine superiore devono essere conosciute 
+dal meccanismo di estrazione delle condizioni di terminazione. Le regole di congrueza per 
+funzioni di ordine superiore comuni, ad esempio \holtxt{MAP}, \holtxt{EVERY}, and
+\holtxt{EXISTS} per le liste, sono già conosciute dal 
+meccanismo. Tuttavia, a volte, di deve dimostrare ed installare manualmente un 
+teorema di congruenza per una nuova funzione di ordine superiore definita dall'utente.
+
+Per esempio, supponiamo di definire una funzione di ordine superiore \holtxt{SIGMA} per 
+sommare i risultati di una funzione in una lista.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  Define `(SIGMA f [] = 0) /\
+          (SIGMA f (h::t) = f h + SIGMA f t)`;
+\end{verbatim}
+\end{session}
+%
+Usiamo poi \holtxt{SIGMA} nella definizione di una funzione per 
+sommare i risultati di una funzione in un albero 
+arbitrariamente (finitamente) ramificato.
+%
+\begin{session}
+\begin{verbatim}
+  Hol_datatype `ltree = Node of 'a => ltree list`;
+
+  Defn.Hol_defn
+    "ltree_sigma"
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+\end{verbatim}
+\end{session}
+%
+In questa definizione, \holtxt{SIGMA} è applicato a un'applicazione parziale 
+\holtxt{(ltree\_sigma f)} della funzione da definire. Una tale situazione 
+è chiamata una \emph{ricorsione di ordine superiore}. Dal momento che la chiamata ricorsiva di 
+\holtxt{ltree\_sigma} non è applicata in modo completo, bisogna fare degli sforzi 
+speciali per estrarre le condizioni di terminazione corrette. Altrimenti, 
+risulta la seguente infelice situazione:
+%
+\begin{session}
+\begin{verbatim}
+  HOL function definition (recursive)
+
+  Equation(s) :
+    [..] |- ltree_sigma f (Node v tl)
+              = f v + SIGMA (\a. ltree_sigma f a) tl
+
+  Induction :
+    [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
+
+  Termination conditions :
+    0. WF R
+    1. !tl v f a. R (f,a) (f,Node v tl) : defn
+\end{verbatim}
+\end{session}
+%
+\index{regole di congruenza!nelle analisi di terminazione|(}
+Le condizioni di terminazione per \holtxt{ltree\_sigma} sembrano 
+richiedere di trovare una relazione benfondata \holtxt{R} tale che la coppia 
+\holtxt{(f,a)} è \holtxt{R}-minore di 
+\holtxt{(f, Node v tl)}. Tuttavia, questo è un compito senza speranza, dal momento che non c'è alcuna 
+relazione tra \holtxt{a} e \holtxt{Node v tl}, oltre al fatto 
+che entrambi sono \holtxt{ltree}. L'estrattore di condizioni di terminazione 
+non ha funzionato in modo appropriato, perché non conosceva una regola di congruenza 
+per \holtxt{SIGMA}. Una tale teorema di congruenza è il seguente:
+%
+\begin{hol}
+\begin{verbatim}
+  SIGMA_CONG =
+   |- !l1 l2 f g.
+       (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
+       (SIGMA f l1 = SIGMA g l2)
+\end{verbatim}
+\end{hol}
+%
+Una volta che a \ml{Hol\_defn} è stato fornito questo teorema, attraverso le funzioni \ml{add\_cong} o \ml{export\_cong} di \ml{DefnBase}, le condizioni di terminazione estratte per la definizione sono ora dimostrabili, dal momento che \holtxt{a} è un sottotermine proprio di \holtxt{Node v tl}.
+%
+\begin{session}
+\begin{verbatim}
+  val _ = DefnBase.add_cong SIGMA_CONG;
+
+  Defn.Hol_defn
+    "ltree_sigma"
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+
+  > val it =
+      HOL function definition (recursive)
+
+      Equation(s) :  ...  (* as before *)
+      Induction :    ...  (* as before *)
+
+      Termination conditions :
+        0. WF R
+        1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
+\end{verbatim}
+\end{session}
+
+\subsection{Schemi di Ricorsione}
+
+Nella logica di ordine superiore, possono essere definiti pattern molto generali di ricorsione, conosciuti come 
+\emph{schemi di ricorsione} o a volte \emph{schemi di programma}. 
+Un esempio è il seguente:
+%
+\[
+  \konst{linRec} (x) =
+    \itelse{d(x)}{e(x)}{f(\konst{linRec}(g\; x))}
+\]
+%
+In questa specifica, le variabili $d$, $e$, $f$, e $g$ sono 
+funzioni, che, quando istanziate in modi differenti, permettono a 
+\konst{linRec} di implementare funzioni ricorsive differenti. In questo, 
+\konst{linRec} è come molte altre funzioni di ordine superiore. Tuttavia, 
+si noti che se $d(x) = \konst{F}$, $f(x) = x+1$, e
+$g(x) = x$, allora l'istanziazione risultante di 
+\konst{linRec} potrebbe essere usata per ottenere una contraddizione:
+%
+\[
+  \konst{linRec} (x) = \konst{linRec}(x) + 1
+\]
+%
+Questo, comunque, non è derivabile in \HOL{}, perché gli schemi di ricorsione 
+sono definiti istanziando il teorema di ricorsione benfondata, e 
+pertanto sorgono certi vincoli astratti di terminazione che 
+devono essere soddisfatti prima che le equazioni di ricorsione possano essere usati senza 
+restrizioni. L'entrypoint per definire uno schema è 
+\ml{TotalDefn.DefineSchema}. Nell'esempio \konst{linRec} 
+si comporta nel modo seguente (si noti che le variabili schematiche dovrebbero 
+occorrere solo sul lato destro della definizione quando si fa 
+la definizione di uno schema):
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  - TotalDefn.DefineSchema
+      `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
+
+  <<HOL message: Definition is schematic in the following variables:
+      "d", "e", "f", "g">>
+
+  Equations stored under "linRec_def".
+  Induction stored under "linRec_ind".
+  > val it =
+     [..]
+    |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
+\end{verbatim}
+\end{session}
+%
+Le ipotesi del teorema restituito soddisfano i vincoli astratti 
+di terminazione. Un teorema d'induzione vincolato in modo simile è 
+anche archiviato nel segmento attuale di teoria.
+%
+\begin{session}
+\begin{verbatim}
+  hyp it;
+  > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
+\end{verbatim}
+\end{session}
+%
+Questi vincoli sono astratti, dal momento che pongono dei requisiti di terminazione 
+su variabili che non sono state ancora istanziate. Una volta che sono trovate 
+istanziazioni per le variabili, i vincoli possono poi essere eliminati 
+trovando un'adeguata relazione benfondata per \holtxt{R} e poi 
+dimostrando gli altri vincoli.
+
+\section{Relazioni Induttive}
+\index{relazioni induttive|(}
+
+\index{Hol_reln, definire relazioni induttive@\ml{Hol\_reln}, definire relazioni induttive}
+\index{relazioni induttive!Hol_reln (funzione ML)@\ml{Hol\_reln} (funzione ML)}
+Le definizioni induttive sono fatte con la funzione \ml{Hol\_reln}, che si trova 
+nella struttura \ml{bossLib}, e le definizioni e i teoremi 
+risultanti sono gestiti con funzioni definite nella libreria 
+\ml{IndDefLib}. La funzione \ml{Hol\_reln}  prende una 
+term quotation come input e tenta di definire le relazioni li 
+specificate. La term quotation di input deve essere parsata a un termine che 
+si conforma alla seguente grammatica:
+\newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
+\begin{eqnarray*}
+   \nonterm{formatoDiInput} &::=& \nonterm{clausola} \;\holtxt{/\bk}\; \nonterm{formatoDiInput} \;\;|\;\; \nonterm{clausola}\\
+   \nonterm{clausola}       &::=& (\holtxt{!}x_1 \dots
+   x_n. \;\;\nonterm{ipotesi} \;\holtxt{==>}
+   \;\nonterm{conclusione})\\
+   &|& (\holtxt{!}x_1\dots x_n.\;\;\nonterm{conclusione})\\
+   \nonterm{conclusione}   &::=& \nonterm{con} \;\mathit{sv_1}\; \mathit{sv_2} \dots\\
+   \nonterm{ipotesi}   &::=& \mbox{qualsiasi termine}\\
+   \nonterm{con}          &::=& \mbox{una nuova costante di relazione}
+\end{eqnarray*}
+I termini (opzionali) $\mathit{sv}_i$ che appaiono dopo il nome di una costante 
+sono le cosiddette ``variabili schematiche''. Le stesse variabili devono sempre 
+seguire tutte le costanti nuove in tutta la definizione. Queste variabili 
+e i nomi delle costanti-to-be non devono essere quantificate in 
+ciascuna {\nonterm{clausola}}. Una {\nonterm{clausola}} non dovrebbe avere 
+altre variabili libere. Qualunque variabile che occorra sarà quantificata universalmente come parte 
+del processo di definizione, e sarà emesso un messaggio di warning. 
+(I quantificatori universali alla testa della clausola possono essere usati per legare 
+le variabili libere, ma è anche ammissibile usare la quantificazione 
+esistenziale nelle ipotesi. Se una clausola non ha variabili libere, 
+è ammissibili non avere alcuna quantificazione universale.)
+
+Un'invocazione di successo di \ml{Hol\_reln} restituisce tre teoremi 
+$(\mathit{rules},\mathit{ind},\mathit{cases})$. Ognuno è anche archiviato nel 
+segmento di teoria attuale.
+\begin{itemize}
+\item $\mathit{rules}$ è una congiunzione di implicazioni 
+	che sarà la stessa della term quotation di input; il teorema è 
+	salvato sotto il nome \ml{<stem>\_rules}, dove \ml{<stem>} è il nome della 
+	prima relazione definita dalla funzione.
+\item $\mathit{ind}$ è il principio d'induzione per le relazioni, 
+	salvato sotto il nome \ml{<stem>\_ind}.
+\item $\mathit{cases}$ è il cosiddetto teorema dei `casi' o di `inversione' 
+	per le relazioni, salvato sotto il nome \ml{<stem>\_cases}. Un teorema 
+	dei casi è della forma
+%
+\begin{verbatim}
+   (!a0 .. an.  R1 a0 .. an = <Prima regola di possibilità di R1> \/
+                              <Seconda regola di possibilità di R1> \/ ...)
+                   /\
+   (!a0 .. am.  R2 a0 .. am = <Prima regola di possibilità di R2> \/
+                              <Seconda regola di possibilità di R2> \/ ...)
+                   /\
+   ...
+\end{verbatim}
+%
+ed è usato per decomporre un elemento nella relazione nei 
+possibili modi di ottenerlo dalle regole.
+\end{itemize}
+
+\index{xHol_reln, definire relazioni induttive@\ml{xHol\_reln}, definire relazioni induttive}
+\index{relazioni induttive!xHol_reln (ML function)@\ml{xHol\_reln} (funzione ML)}
+Se lo ``stem'' della prima costante definita in un insieme di clausole è tale che i binding \ML{} risultanti in un file di teoria esportato risulteranno in un codice \ML{} non legale, allora si dovrebbe usare la funzione \ml{xHol\_reln}.
+La funzione \ml{xHol\_reln} è analoga alla funzione \ml{xDefine} per definire funzioni ricorsive (si veda la Sezione~\ref{TFL}).
+
+\paragraph{Principi d'Induzione Completa}
+Le cosiddette versioni ``complete'' dei principi d'induzione (in cui le istanze della relazione da definire appaiono come ipotesi extra), sono dimostrate automaticamente quando è fatta una definizione con \ml{Hol\_reln}. Il principio d'induzione completa per una relazione è usato quando è usata la tattica \ml{Induct\_on}.
+
+\paragraph{Aggiungere Operatori Monotoni}
+\index{relazioni induttive!operatori monotoni per}
+Nuove costanti possono occorrere ricorsivamente all'interno delle ipotesi delle regole, purché 
+si possa dimostrare che le regole rimangono monotone rispetto alle 
+nuove costanti. \ml{Hol\_reln} tenterà di dimostrare automaticamente tali 
+risultati di monotonicità, usando un insieme di teoremi mantenuti in una reference 
+\ml{IndDefLib.the\_monoset}. I teoremi di monotonicità devono essere della forma
+\[
+\mathit{cond}_1 \land \cdots \land \mathit{cond}_m \Rightarrow
+(\mathit{Op}\;\mathit{arg}_1 \dots \mathit{arg}_n \Rightarrow
+\mathit{Op}\;\mathit{arg}'_1 \dots \mathit{arg}'_n)
+\]
+dove ciascun termine $\mathit{arg}$ e $\mathit{arg}'$ deve avere una variabile, 
+e dove ci devono essere tanti termini $\mathit{cond}_i$ quanti sono gli 
+argomenti a $\mathit{Op}$ che variano. Ciascun $\mathit{cond}_i$ deve essere 
+della forma \[ \forall \vec{v}. \;\mathit{arg}\;\vec{v} \Rightarrow
+\mathit{arg}'\;\vec{v}
+\]
+dove il vettore di variabili $\vec{v}$ può essere vuoto, e dove i 
+$\mathit{arg}$ e $\mathit{arg}'$ possono essere di fatto invertiti (come nella 
+regola per la negazione).
+
+Per esempio, la regola di monotonicità per la congiunzione è
+\[
+(P \Rightarrow P') \land (Q \Rightarrow Q') \Rightarrow (P \land Q
+\Rightarrow P' \land Q')
+\]
+La regola di monotonicità per l'operatore \holtxt{EVERY} nella teoria delle 
+liste (si veda la Sezione~\ref{avra_list}), è 
+\[
+(\forall x. \;P(x) \Rightarrow Q(x)) \Rightarrow
+(\holtxt{EVERY}\;P\;\ell \Rightarrow \holtxt{EVERY}\;Q\;\ell)
+\]
+Con un risultato di monotonicità disponibile per un operatore come 
+\holtxt{EVERY}, è poi possibile scrivere definizioni induttive 
+dove le ipotesi includono una menzione della nuova relazione come argomenti agli 
+operatori dati.
+
+\index{export_mono (funzione ML)@\ml{export\_mono} (funzione \ML{})}
+I risultati di monotonicità che l'utente deriva possono essere archiviati nella variabile 
+globale \ml{the\_monoset} usando la funzione \ml{export\_mono}. 
+Questa funzione prende una stringa che nomina un teorema nel segmento di teoria 
+attuale, e aggiunge quel teorema ai teoremi di monotonicità 
+immediatamente, e in un tal modo che questa situazione si otterrà anche quando 
+la teoria attuale è successivamente ricaricata.
+
+\paragraph{Esempi}
+
+Un semplice esempio di definizione di due relazioni mutuamente ricorsive è 
+il seguente:
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  Hol_reln
+    `EVEN 0 /\
+     (!n. ODD n ==> EVEN (n + 1)) /\
+     (!n. EVEN n ==> ODD (n + 1))`;
+\end{verbatim}
+\end{session}
+%
+Il risultato sono tre teoremi
+%
+\begin{session}
+\begin{verbatim}
+  > val it =
+    (|- EVEN 0 /\
+        (!n. ODD n ==> EVEN (n + 1)) /\
+        (!n. EVEN n ==> ODD (n + 1)),
+
+     |- !EVEN' ODD'.
+           EVEN' 0 /\
+           (!n. ODD' n ==> EVEN' (n + 1)) /\
+           (!n. EVEN' n ==> ODD' (n + 1))
+           ==>
+           (!a0. EVEN a0 ==> EVEN' a0) /\
+           (!a1. ODD a1 ==> ODD' a1),
+
+     |- (!a0. EVEN a0 = (a0 = 0) \/
+                        ?n. (a0 = n + 1) /\ ODD n) /\
+        (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
+    ) : thm * thm * thm
+\end{verbatim}
+\end{session}
+%
+Il prossimo esempio mostra come definire induttivamente la chiusura riflessiva e 
+transitiva di una relazione $R$. Si noti che \holtxt{R}, come una 
+variabile schematica, non è quantificata nelle regole. Questo è 
+appropriato perché è \holtxt{RTC R} che ha la caratterizzazione 
+induttiva, \holtxt{RTC} di per sé.
+%
+\begin{session}
+\begin{verbatim}
+  - Hol_reln `(!x. RTC R x x) /\
+             (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
+
+  > val it =
+     (|- !R. (!x. RTC R x x) /\
+             !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
+
+      |- !R RTC'.
+           (!x. RTC' x x) /\
+           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z)
+           ==>
+           (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
+
+      |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
+     ) : thm * thm * thm
+\end{verbatim}
+\end{session}
+%
+La funzione \ml{Hol\_reln} può essere usata per definire relazioni multiple, 
+come nella definizione di \holtxt{EVEN} e \holtxt{ODD}. Le relazioni 
+possono essere mutuamente ricorsive o meno. Le clausole per ciascuna relazione 
+non hanno bisogno di essere contigue.
+
+\subsection{Dimostrazioni con Relazioni Induttive}
+\index{relazioni induttive!eseguire dimostrazioni}
+
+Il teorema ``regole'' di una definizione induttiva fornisce un modo diretto di dimostrare argomenti che appartengono a una relazione.
+Se ci si trova di fronte a un goal della forma \holtxt{R~x~y}, si potrebbe fare progressi eseguendo una \ml{MATCH\_MP\_TAC} (o magari, una \ml{HO\_MATCH\_MP\_TAC}) con una delle implicazioni nel teorema ``regole''.
+
+Il teorema ``casi'' può essere usato per lo stesso scopo perché è un'uguaglianza, della forma generale \holtxt{R~x~y~$\iff$\dots}.
+Dal momento che il lato destro di questo teorema includerà spesso altre occorrenze della relazione, non è in generale sicuro riscrivere semplicemente con esso.
+\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}
+\index{Once (controllo delle applicazioni di riscrittura)@\ml{Once} (controllo delle applicazioni di riscrittura)}
+Qui possono essere usate le direttive di controllo-di-riscrittura \ml{Once}, \ml{SimpLHS} e \ml{SimpRHS}.
+\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+Inoltre, il teorema ``casi'' può essere usato come una forma di eliminazione: se si ha un'assunzione della forma \holtxt{R~x~y}, riscrivere questo (magari con \ml{FULL\_SIMP\_TAC} se il termine occorre nelle assunzioni del goal) nei possibili modi in cui può essere avvenuto è spesso un buon approccio.
+
+Le relazioni induttive naturalmente supportano anche dimostrazioni per induzione.
+Poiché una relazione induttiva è la relazione minima che soddisfa le regole date, si può usare l'induzione per mostrare goal della forma
+\begin{alltt}
+   \(\forall\)x y. R x y \(\Rightarrow\) P
+\end{alltt}
+dove \holtxt{P} è un predicato arbitrario che probabilmente include riferimenti alle variabili \holtxt{x} e \holtxt{y}.
+
+L'approccio di basso livello a goal di questa forma è di applicare
+\begin{verbatim}
+   HO_MATCH_MP_TAC R_ind
+\end{verbatim}
+\index{Induct_on (tattica d'induzione ML)@\ml{Induct\_on} (tattica d'induzione \ML{})}
+Un approccio leggermente di più alto livello è di usare la tattica \ml{Induct\_on}. 
+(Questa tattica è anche usata per eseguire induzioni strutturali su tipi di dato algebrici; si veda la Sezione~\ref{sec:bossLib}.) 
+Quando si esegue una regola d'induzione, la quotation passata a \ml{Induct\_on} dovrebbe essere della costante usata.
+Per questioni estetiche, la costante può anche essere applicata a degli argomenti. 
+Così, si può scrivere
+\begin{verbatim}
+   Induct_on `R`
+\end{verbatim}
+o
+\begin{verbatim}
+   Induct_on `R x y`
+\end{verbatim}
+e l'effetto sarà lo stesso.
+\index{relazioni induttive|)}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% mode: visual-line
+%%% TeX-master: "description"
+%%% End:

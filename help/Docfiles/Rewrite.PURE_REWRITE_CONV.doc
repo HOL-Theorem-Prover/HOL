@@ -10,14 +10,14 @@ conversion.
 
 \DESCRIBE
 This conversion provides a method for rewriting a term with the theorems given,
-and excluding simplification with tautologies in {basic_rewrites}. Matching
+and excluding simplification with tautologies in {implicit_rewrites}. Matching
 subterms are found recursively, until no more matches are found.
 For more details on rewriting see
 {GEN_REWRITE_CONV}.
 
 \USES
 {PURE_REWRITE_CONV} is useful when the simplifications that arise by
-rewriting a theorem with {basic_rewrites} are not wanted.
+rewriting a theorem with {implicit_rewrites} are not wanted.
 
 \FAILURE
 Does not fail. May result in divergence, in which case

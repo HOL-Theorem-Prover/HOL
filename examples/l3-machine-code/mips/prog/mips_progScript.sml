@@ -17,8 +17,9 @@ val mips_instr_def = Define`
      (mips_c_MEM (a + 3w), mips_d_word8 ((31 >< 24) i)) }`;
 
 val MIPS_MODEL_def = Define`
-  MIPS_MODEL = (STATE mips_proj, NEXT_REL (=) NextStateMIPS, mips_instr,
-                 ($= :mips_state -> mips_state -> bool))`
+  MIPS_MODEL =
+    (STATE mips_proj, NEXT_REL (=) NextStateMIPS, mips_instr,
+     ($= :mips_state -> mips_state -> bool), K F : mips_state -> bool)`
 
 val MIPS_IMP_SPEC = Theory.save_thm ("MIPS_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -28,7 +29,9 @@ val MIPS_IMP_SPEC = Theory.save_thm ("MIPS_IMP_SPEC",
 
 val MIPS_IMP_TEMPORAL = Theory.save_thm ("MIPS_IMP_TEMPORAL",
    temporal_stateTheory.IMP_TEMPORAL
-   |> Q.ISPECL [`mips_proj`, `NextStateMIPS`, `mips_instr`]
+   |> Q.ISPECL [`mips_proj`, `NextStateMIPS`, `mips_instr`,
+                `(=) : mips_state -> mips_state -> bool`,
+                `K F : mips_state -> bool`]
    |> REWRITE_RULE [GSYM MIPS_MODEL_def]
    )
 

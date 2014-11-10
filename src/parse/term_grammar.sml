@@ -25,7 +25,7 @@ type nthy_rec = {Name : string, Thy : string}
     datatype PhraseBlockStyle =
       AroundSameName | AroundSamePrec | AroundEachPhrase | NoPhrasing
     datatype ParenStyle =
-      Always | OnlyIfNecessary | ParoundName | ParoundPrec
+      Always | OnlyIfNecessary | ParoundName | ParoundPrec | NotEvenIfRand
 
   fun rule_elements0 acc pplist =
     case pplist of
@@ -196,6 +196,20 @@ fun mfupdate_user_printers f (GCONS g) = let
 in
   (GCONS (update_G g (U #user_printers new_uprinters) $$), result)
 end
+
+fun grammar_name G tm = let
+  val oinfo = overload_info G
+in
+  if Term.is_const tm then
+    Overload.overloading_of_term oinfo tm
+  else if Term.is_var tm then let
+      val (vnm, _) = Term.dest_var tm
+    in
+      Option.map #fake (GrammarSpecials.dest_fakeconst_name vnm)
+    end
+  else NONE
+end
+
 
 (* invariant of user_printers is that there is only ever one value with a
    given name in the mapping from terms to print functions *)
@@ -717,7 +731,7 @@ end
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
-  fun stringbinder LAMBDA = false
+  fun stringbinder LAMBDA = true
     | stringbinder (BinderString r) = #term_name r <> s
 in
   case rule of
@@ -725,8 +739,7 @@ in
   | INFIX (STD_infix(slist, assoc)) =>
       INFIX(STD_infix (List.filter rr_ok slist, assoc))
   | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_ok slist))
-  | PREFIX (BINDER slist) =>
-      PREFIX (BINDER (List.filter (not o stringbinder) slist))
+  | PREFIX (BINDER slist) => PREFIX (BINDER (List.filter stringbinder slist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_ok slist)
   | LISTRULE rlist => LISTRULE (List.filter lr_ok rlist)
   | _ => rule
@@ -1091,7 +1104,7 @@ end
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
-fun prettyprint_grammar tmprint pstrm (G :grammar) = let
+fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
   open Portable
   val {add_string, add_break, begin_block, end_block,
        add_newline,...} = with_ppstream pstrm
@@ -1231,6 +1244,15 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
     pprint_grule rule;
     end_block()
   end
+
+in
+  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G)
+end
+
+fun prettyprint_grammar tmprint pstrm (G :grammar) = let
+  open Portable
+  val {add_string, add_break, begin_block, end_block,
+       add_newline,...} = with_ppstream pstrm
   fun uninteresting_overload (k,r:Overload.overloaded_op_info) =
     length (#actual_ops r) = 1 andalso
     #Name (Term.dest_thy_const (hd (#actual_ops r))) = k
@@ -1296,11 +1318,10 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
                (Net.itnet cons printers []);
        end_block())
   end
-
 in
   begin_block CONSISTENT 0;
   (* rules *)
-  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G);
+  prettyprint_grammar_rules tmprint pstrm G;
   add_newline();
   (* known constants *)
   add_string "Known constants:";
@@ -1396,11 +1417,13 @@ fun paren_style_encode Always = "A"
   | paren_style_encode OnlyIfNecessary = "O"
   | paren_style_encode ParoundPrec = "C"
   | paren_style_encode ParoundName = "N"
+  | paren_style_encode NotEvenIfRand = "R"
 val paren_style_reader =
     (literal "A" >> return Always) ||
     (literal "O" >> return OnlyIfNecessary) ||
     (literal "C" >> return ParoundPrec) ||
-    (literal "N" >> return ParoundName)
+    (literal "N" >> return ParoundName) ||
+    (literal "R" >> return NotEvenIfRand)
 
 fun ppel_encode ppel =
     case ppel of

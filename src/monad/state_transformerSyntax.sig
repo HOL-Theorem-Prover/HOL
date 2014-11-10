@@ -8,6 +8,7 @@ sig
 
   val bind_tm : term
   val for_tm : term
+  val foreach_tm : term
   val join_tm : term
   val mmap_tm : term
   val narrow_tm : term
@@ -18,6 +19,7 @@ sig
 
   val mk_bind : term * term -> term
   val mk_for : term * term * term -> term
+  val mk_foreach : term * term -> term
   val mk_join : term -> term
   val mk_mmap : term * term -> term
   val mk_narrow : term * term -> term
@@ -28,6 +30,7 @@ sig
 
   val dest_bind : term -> term * term
   val dest_for : term -> term * term * term
+  val dest_foreach : term -> term * term
   val dest_join : term -> term
   val dest_mmap : term -> term * term
   val dest_narrow : term -> term * term
@@ -38,6 +41,7 @@ sig
 
   val is_bind : term -> bool
   val is_for : term -> bool
+  val is_foreach : term -> bool
   val is_join : term -> bool
   val is_mmap : term -> bool
   val is_narrow : term -> bool

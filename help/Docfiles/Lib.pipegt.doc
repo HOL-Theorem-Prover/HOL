@@ -3,7 +3,7 @@
 \TYPE {op |> : 'a -> ('a -> 'b) -> 'b}
 
 \SYNOPSIS
-Infix operator for writing function application
+Infix operator for writing function application.
 
 \LIBRARY
 Lib

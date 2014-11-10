@@ -13,11 +13,21 @@ in
   ()
 end
 
+fun primrec_test ty = let
+  val rcd = {nchotomy = TypeBase.nchotomy_of ty,
+             case_def = TypeBase.case_def_of ty}
+  open Prim_rec
+in
+  (prove_case_elim_thm rcd, prove_case_rand_thm rcd)
+end
+
 val _ = Hol_datatype `type1 = one_constructor`
 val _ = Hol_datatype `type2 = ##`;
 val _ = Hol_datatype `type3 = /\`;
 val _ = Hol_datatype `type4 = /\ | \/ | feh`;
 val _ = Hol_datatype `type5 = foo of num | bar of 'a`;
+
+val _ = map primrec_test [``:type1``, ``:type4``, ``:'a type5``]
 
 
 val _ = Hol_datatype `foo = NIL | CONS of 'a => foo`;
@@ -32,13 +42,19 @@ val _ = Hol_datatype `ty = C1 of 'a
           | C3 of 'a => 'b => ty
           | C4 of ty => 'c => ty => 'a => 'b
           | C5 of ty => ty`;
+val _ = primrec_test ``:('a,'b,'c)ty``
 val _ = Hol_datatype `bintree = LEAF of 'a | TREE of bintree => bintree`;
 val _ = Hol_datatype `typ = C of one => (one#one)
                       => (one -> one -> 'a list)
                       => ('a,one#one,'a list) ty`;
+val _ = primrec_test ``:'a typ``
 val _ = Hol_datatype `Typ = D of one # (one#one)
                       # (one -> one -> 'a list)
                       # ('a, one#one, 'a list) ty`;
+val _ = primrec_test ``:'a Typ``
+val _ = Hol_datatype`ftyp = ftypC1 of num => (num -> num) => ftyp
+                          | ftypC2 of bool => (num -> bool)`;
+val _ = primrec_test ``:ftyp``
 
 val _ = Hol_datatype `
        var = V of num ;

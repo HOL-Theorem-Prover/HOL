@@ -5,7 +5,7 @@
 default: all
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind quotient.{ps,pdf}
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind quotient.ps quotient.pdf
 
 quotient.dvi: quotient.tex
 	latex quotient.tex

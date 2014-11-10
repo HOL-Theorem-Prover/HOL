@@ -3,6 +3,15 @@ compiler:
   - gcc
 before_script: developers/travis/before_install.sh
 script: poly < tools/smart-configure.sml && bin/build $BUILDOPTS -nograph
+notifications:
+  email:
+    recipients:
+      - hol-builds@lists.sourceforge.net
+    on_success: always
+    on_failure: always
+  irc:
+    channels:
+      - "irc.freenode.net#hol"
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
@@ -14,3 +23,4 @@ env:
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/selftestseq -selftest"
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/more_examples_seq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/more_examples_seq -selftest"
+    - ROOTPOLY= SVNPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"

@@ -909,7 +909,7 @@ fun HO_MATCH_MP_TAC th =
          in
             MP (DISCH tm (GEN_ALL (DISCH tm3 (UNDISCH th3)))) th
          end
-         handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "Bad theorem"
+         handle HOL_ERR _ => raise ERR "HO_MATCH_MP_TAC" "Bad theorem"
       val match_fun = HO_PART_MATCH (snd o dest_imp_only) sth
    in
       fn (asl, w) =>

@@ -1,0 +1,84 @@
+% =====================================================================
+% HOL Manual LaTeX Source: tutorial
+% =====================================================================
+
+\documentclass[12pt,fleqn]{book}
+
+% Lingua italiana.Start
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}  
+\usepackage[italian]{babel}         
+% lingua italiana.End
+
+% to use with Italian babel this command must be put here: see ligic.tex at line 963
+\newcommand\ttbs{\texttt{\symbol{"5C}}}
+\newcommand\ttland{\texttt{/\ttbs}}
+
+% NOTE: use \shorthandoff{"} just before xymatrix and then \shorthandon{"} just after: see the file combin.tex at line 1388
+% Lingua italiana.End
+
+%\usepackage{amsmath}
+\usepackage{alltt}
+\usepackage{../../../LaTeX/layout}
+\usepackage{graphicx}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+%HEVEA \usepackage{epsfig}
+
+\renewcommand\leadsto\rightarrow
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+\input{../../../LaTeX/commands}
+\input{../../../LaTeX/pic-macros}
+%\input{../../../LaTeX/docmacros}
+\usepackage{url}
+\usepackage[line,arrow,frame,matrix]{xy}
+\usepackage{tikz}
+\usetikzlibrary{arrows,positioning}
+\usepackage{../../../LaTeX/proof}
+%\includeonly{title,contents,preface,../LaTeX/ack,intro,ml,logic,
+% proof,references,Studies/preface,Studies/parity/parity}
+%             Studies/microprocessor/all,
+%\includeonly{Studies/microprocessor/all}
+%\includeonly{Studies/int_mod/mod_arith_study/tutorial}
+%\includeonly{binomial}
+%\includeonly{parity}
+\usepackage[strings]{underscore}
+
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+%   \pagenumbering{roman}                  % roman page numbers for prelims
+%   \setcounter{page}{1}                   % start at page 1
+
+   \include{title}                        % tutorial title page
+   \include{preface}                      % preface to entire tutorial
+   \input{../LaTeX/ack}                 % global acknowledgements
+   \tableofcontents
+
+%   \newpage
+%   \pagenumbering{arabic}                % arabic page numbers
+%   \setcounter{page}{1}                  % start at page 1
+
+   \include{intro}                       % intro: getting and installing hol
+   \include{ml}                          % intro to ml
+   \include{logic}                       % the HOL logic and intro to HOL proof
+   \include{euclid}                      % Euclid example
+   \include{parity}                      % parity example
+%   \include{tool}                        % conjunction canonicalization tool
+%   \include{binomial}                    % Andy Gordon's Binomial Thm in HOL
+   \include{combin}                      % Combinatory logic
+%   \include{conv}                        % Conversions
+   \include{proof-tools}                 % Write your own DPLL Sat prover
+   \include{more-examples}               % description of what's in examples/
+   \include{references}                  % references
+
+\end{document}

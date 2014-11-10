@@ -341,6 +341,22 @@ in
   PP.end_block pps
 end
 
+(* Pretty-print the grammar rules *)
+fun print_term_grammar() = let
+  fun tmprint g = snd (print_from_grammars (!the_type_grammar,g))
+  fun ppaction pps () = let
+    open PP
+  in
+    begin_block pps CONSISTENT 0;
+    prettyprint_grammar_rules tmprint pps (!the_term_grammar);
+    add_newline pps;
+    end_block pps
+  end
+in
+  print (HOLPP.pp_to_string (!Globals.linewidth) ppaction ())
+end
+
+
 (* Pretty-printing terms and types without certain overloads or abbreviations *)
 
 fun overload_info_for s = let
@@ -785,6 +801,7 @@ fun ParenStyleToString Always = "Always"
   | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
   | ParenStyleToString ParoundName = "ParoundName"
   | ParenStyleToString ParoundPrec = "ParoundPrec"
+  | ParenStyleToString NotEvenIfRand = "NotEvenIfRand"
 
 fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
@@ -832,20 +849,6 @@ val els_include_unicode = let
 in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
-
-fun temp_add_binder name = let in
-   the_term_grammar :=
-     add_binder {term_name = name, tok = name} (!the_term_grammar);
-   term_grammar_changed := true
- end
-
-fun add_binder name = let in
-    temp_add_binder name;
-    update_grms "add_binder" ("temp_add_binder",
-                              String.concat
-                                ["(", quote name,
-                                 ", std_binder_precedence)"])
-  end
 
 datatype 'a erroption = Error of string | Some of 'a
 fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let

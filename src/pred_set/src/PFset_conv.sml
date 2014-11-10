@@ -358,34 +358,38 @@ fun CARD_CONV tm =
 (*     MAX_SET {n1; ...; nk}                                                 *)
 (*---------------------------------------------------------------------------*)
 
-local open numSyntax
-      val MAX_SET_SING = CONJUNCT1 MAX_SET_THM
-      val MAX_SET_THM' = CONJUNCT2 MAX_SET_THM
-      val FINITE_EMPTY' = INST_TYPE [alpha |-> num] FINITE_EMPTY
-      val FINITE_INSERT' = INST_TYPE [alpha |-> num] FINITE_INSERT
-in
-fun MAX_SET_CONV tm  =
- let open numSyntax
-     val s = dest_max_set tm
-     val items = strip_set s
-     val (front,b) = front_last items
-     val FINITE_SING = EQ_MP(SYM(SPEC (mk_empty num) (SPEC b FINITE_INSERT')))
-                            (INST_TYPE [alpha |-> num] FINITE_EMPTY)
-     fun step x (finthm,maxthm) =
-      let val ys = dest_max_set (lhs (concl maxthm))
-          val (y,s) = dest_insert ys
-          val finthm' = EQ_MP (SYM (SPEC s (SPEC y FINITE_INSERT'))) finthm
-          val maxthm1 = SPEC y (SPEC x (MP (SPEC s MAX_SET_THM') finthm))
-          val maxthm2 = CONV_RULE (RHS_CONV
-                (RAND_CONV (REWR_CONV maxthm) THENC computeLib.EVAL_CONV)) maxthm1
-      in (finthm', maxthm2)
-      end
-     val (fin,maxthm) = itlist step front (FINITE_EMPTY',SPEC b MAX_SET_SING)
- in
-  maxthm
+val MAX_SET_CONV =
+ let open numSyntax pred_setTheory pred_setSyntax
+     val MAX_SET_EMPTY = CONJUNCT1 MAX_SET_THM
+     val MAX_SET_SING = GEN_ALL (CONJUNCT2 MAX_SET_REWRITES)
+     val MAX_SET_THM' = CONJUNCT2 MAX_SET_THM
+     val FINITE_EMPTY' = INST_TYPE [alpha |-> num] FINITE_EMPTY
+     val FINITE_INSERT' = INST_TYPE [alpha |-> num] FINITE_INSERT
+ in fn tm =>
+  let val set = dest_max_set tm
+  in case strip_set set
+    of [] => MAX_SET_EMPTY
+     | items =>
+       let val (front,b) = front_last items
+         val FINITE_LAST = EQ_MP (SYM(SPEC (mk_empty num) (SPEC b FINITE_INSERT')))
+                                 FINITE_EMPTY'
+         val MAX_LAST = SPEC b MAX_SET_SING
+         fun step x (finthm,maxthm) =
+           let val max1 = SPEC x MAX_SET_THM'
+               val max2 = MATCH_MP max1 finthm
+               val max3 = CONV_RULE (RHS_CONV (RAND_CONV (REWR_CONV maxthm))) max2
+               val max4 = CONV_RULE (RHS_CONV computeLib.EVAL_CONV) max3
+               val fin1 = SPEC (rand(concl finthm)) (SPEC x FINITE_INSERT')
+               val fin2 = EQ_MP (SYM fin1) finthm
+           in (fin2, max4)
+           end
+         val (fin,maxthm) = itlist step front (FINITE_LAST,MAX_LAST)
+       in
+         maxthm
+       end
+  end
  end
- handle e => raise wrap_exn "MAX_SET_CONV" "" e
-end;
+ handle e => raise wrap_exn "MAX_SET_CONV" "" e;
 
 
 (*---------------------------------------------------------------------------*)

@@ -9,4 +9,5 @@ sig
     val l3_m0_tools_mapped_no_status: helperLib.decompiler_tools
     val l3_m0_tools_no_status: helperLib.decompiler_tools
     val m0_decompile : string -> Term.term quotation -> Thm.thm * Thm.thm
+    val m0_decompile_code : string -> string quotation -> Thm.thm * Thm.thm
 end

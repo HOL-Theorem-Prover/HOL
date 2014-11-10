@@ -1,0 +1,1852 @@
+\chapter{Esempio: il Teorema di Euclide}
+\label{chap:euclid}
+
+\setcounter{sessioncount}{0}
+
+In questo capitolo, dimostriamo in \holn{} che per ogni numero, c'è un 
+numero primo che è più grande, cioè, che i numeri primi formano una 
+sequenza infinita. Questa dimostrazione è stata estratta e adattata da un 
+più ampio esempio, dovuto a John Harrison, in cui egli dimostrava il caso 
+$n = 4$ dell'ultimo teorema di Fermat. Lo sviluppo della dimostrazione ha lo scopo 
+di servire come un'introduzione all'esecuzione di dimostrazioni interattive di alto livello 
+in \holn\footnote{Le dimostrazioni discusse di sotto si possono trovare in 
+\texttt{examples/euclid.sml} della distribuzione \HOL{}.}.
+Molti dei dettagli possono essere difficili da cogliere per il lettore alle prime armi;
+ciononostante, si raccomanda di seguire l'esempio in modo completo 
+al fine di ottenere una vera sensazione dell'uso di \HOL{} per dimostrare teoremi non-banali.
+
+Alcuni tutorial sulla descrizione di sistemi di dimostrazione, mostrano il sistema mentre esegue 
+incredibili gesta di dimostrazione automatica di teoremi. In questo esempio, \textit{non} 
+abbiamo seguito questo approccio; piuttosto, cerchiamo di mostrare come si affronta 
+nella realtà il problema di dimostrare teoremi in \holn{}: quando 
+è possibile più di un modo per dimostrare qualcosa, considereremo 
+le scelte; quando sorge una difficoltà, tenteremo di spiegare come affrontare 
+il problema in modo chiaro.
+
+Si `guida' \holn{} interagendo con il loop interattivo ML. In questo 
+stile interattivo, si eseguono chiamate a funzioni ML per richiamare 
+un contesto logico già stabilito, ad esempio, attraverso \ml{load}; per definire 
+nuovi concetti, ad esempio, attraverso \ml{Hol\_datatype},  \ml{Define}, e \ml{Hol\_reln};
+e per eseguire dimostrazioni usando l'interfaccia goalstack, e 
+gli strumenti di dimostrazione da \ml{bossLib} (o se essi falliscono, dalle 
+librerie di basso livello).
+
+Cominciamo. Per prima cosa, avviamo il sistema, con il comando \ml{<holdir>/bin/hol}.
+Quindi con ``\ml{open}'' apriamo la teoria aritmetica; questo significa che tutti i binding \ML{} 
+dalla teoria \HOL{} sono resi disponibili al loop interattivo.
+\begin{session}
+\begin{verbatim}
+- open arithmeticTheory;
+  ...
+\end{verbatim}
+\end{session}
+Ora iniziamo la formalizzazione. Al fine di definire il concetto di 
+numero primo, abbiamo prima bisogno di definire la relazione di \emph{divisibilità}:
+
+\begin{session}
+\begin{verbatim}
+- val divides_def = Define `divides a b = ?x. b = a * x`;
+
+Definition has been stored under "divides_def".
+> val divides_def = |- !a b. divides a b = ?x. b = a * x : thm
+\end{verbatim}
+\end{session}
+
+La definizione è aggiunta alla teoria corrente con il nome 
+\ml{divides\_def}, ed è anche restituita dall'invocazione di 
+\ml{Define}. Approfittiamo di questo ed effettuiamo un binding del nome 
+\ML{} \ml{divides\_def} alla definizione. Nel modo usuale di 
+interagire con \HOL, un tale binding \ML{} è fatto per ogni 
+definizione e teorema (utile) dimostrato: l'ambiente \ML{} viene  
+così usato come un luogo conveniente per mantenere definizioni e teoremi per 
+un futuro riferimento nella sessione.
+
+Vogliamo trattare \ml{divides} come un infisso (non-associativo):
+\begin{session}
+\begin{verbatim}
+- set_fixity "divides" (Infix(NONASSOC, 450));
+\end{verbatim}
+\end{session}
+Poi definiamo la proprietà di essere un numero \emph{primo}: un numero $p$ è 
+primo se e solo se non è uguale a $1$ e non ha altri divisori oltre 
+$1$ e sé stesso:
+
+\begin{session}
+\begin{verbatim}
+- val prime_def =
+    Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
+
+Definition has been stored under "prime_def".
+> val prime_def =
+    |- !p. prime p = ~(p = 1) /\ !x. x divides p ==> (x = 1) \/ (x = p)
+    : thm
+\end{verbatim}
+\end{session}
+
+Questo conclude le definizioni da fare. Ora dobbiamo ``solo'' dimostrare 
+che ci sono infiniti numeri primi. Se fossimo arrivati ad affrontare questo 
+problema senza un background, allora saremmo costretti a passare per un processo 
+non completamente chiaro e spesso tremendamente difficile di ricerca dei giusti lemmi 
+richiesti per dimostrare il nostro teorema desiderato\footnote{Questo naturalmente è un 
+problema generale quando si affronta qualsiasi tipo di dimostrazione.}. Fortunatamente, stiamo 
+lavorando a partire da un dimostrazione già completata e possiamo dedicarci al problema 
+decisamente più semplice di spiegare come dimostrare i teoremi richiesti.
+
+\paragraph{Strumenti di dimostrazione}
+Lo sviluppo illustrerà che c'è spesso più di un modo di 
+affrontare una dimostrazione HOL, persino quando si ha in mente un'unica dimostrazione 
+(informale). In questo esempio, spesso \emph{troviamo} dimostrazioni usando 
+la tattica di riscrittura \ml{RW\_TAC} per espandere le definizioni ed eseguire semplificazioni 
+di base, riducendo spesso un goal alla sua essenza.
+\begin{session}
+\begin{verbatim}
+RW_TAC;
+val it = fn :simpset -> thm list -> term list * term ->
+             (term list * term) list * (thm list -> thm)
+\end{verbatim}
+\end{session}
+Il tipo ML di \ml{RW\_TAC} è 
+\ml{:simpset -> thm list -> tactic}\footnote{Sfortunatamente, il sistema MoscowML non stampa 
+il tipo delle tattiche nella sua forma abbreviata.}.
+Quando \ml{RW\_TAC} è applicata a un \textit{simpset}---per questo esempio sarà 
+sempre \ml{arith\_ss}---e a una lista di teoremi, i 
+teoremi saranno aggiunti al simpset come regole di riscrittura aggiuntive.
+Vedremo che \ml{arith\_ss} è anche informato in qualche modo circa 
+l'aritmetica\footnote{Specialmente l'aritmetica lineare: formule puramente 
+universali, che coinvolgono gli operatori {\tt SUC}, $+$, $-$, letterali 
+numerici, $<$, $\leq$, $>$, $\geq$, $=$, e la moltiplicazione per letterali 
+numerici}.
+A volte la semplificazione con \ml{RW\_TAC} dimostra il goal immediatamente.
+Spesso comunque, ci rimane un goal che richiede un pò di studio prima di 
+realizzare quali lemmi sono necessari per concludere la dimostrazione. Una volta che questi lemmi 
+sono stati dimostrati, o individuati nelle teorie progenitrici, 
+\ml{METIS\_TAC}\footnote{\ml{METIS\_TAC} 
+esegue una ricerca della dimostrazione al primo ordine nello stile della risoluzione.} può 
+essere invocata con essi, con la speranza che essa individuerà le istanziazioni 
+corrette necessarie per concludere la dimostrazione. Si noti che queste due operazioni, 
+la semplificazione e la ricerca automatica di una dimostrazione nello stile della risoluzione, non saranno sufficienti per 
+eseguire tutte le dimostrazioni in questo esempio: in particolare, il nostro sviluppo, avrà 
+anche bisogno dell'analisi dei casi e dell'induzione.
+
+\paragraph{Trovare i teoremi}
+Questo fa sorgere la seguente domanda: come si trovano i giusti lemmi e 
+le regole di riscrittura da usare? Questo è piuttosto problematico, specialmente dal momento che il numero di 
+teorie progenitrici, e di teoremi al loro interno, è grande. Ci sono molte 
+possibilità.
+\begin{itemize}
+\item Si può usare il sistema di help per cercare definizioni e 
+teoremi, così come procedure di dimostrazione; per esempio, un'invocazione di
+{\small
+\begin{verbatim}
+   help "arithmeticTheory"
+\end{verbatim}}
+mostrerà tutte le definizioni e i teoremi che sono stati archiviati nella 
+teoria dell'aritmetica. Comunque, bisogna conoscere il nome completo dell'elemento 
+che si sta cercando prima che il sistema di help sia utile, così i due 
+seguenti strumenti di ricerca sono spesso più utili.
+\item \verb+DB.match+ permette l'uso di pattern per individuare il 
+teorema cercato. Sarà restituito qualunque teorema archiviato che ha un'istanza del pattern 
+come un sotto termine.
+\item \verb+DB.find+ userà frammenti dei nomi come chiavi con cui 
+cercare l'informazione
+\end{itemize}
+
+\paragraph{Composizione di tattiche}
+Una volta che è stata trovata una dimostrazione di una proposizione, è d'abitudine, benché 
+non necessario, avviare un processo di \emph{revisione}, in cui la 
+sequenza di tattiche originaria è composta in un'unica tattica. A volte, 
+la tattica risultante è molto più breve, e in un certo senso più gradevole 
+da un punto di vista estetico. Alcuni utenti spendono un bel pò di tempo per raffinare queste tattiche, 
+nonostante non sembri esserci un reale maggior beneficio nel fare questo, dal momento che esse 
+sono ricette di dimostrazione \emph{ad hoc}, una per ciascun teorema. Nel 
+seguito, mostreremo in pochi casi come questo viene fatto.
+
+\section{Divisibilità}
+
+Iniziamo dimostrando un numero di teoremi circa la relazione 
+\verb+divides+. Vedremo che ciascuno di questi teoremi iniziali può essere 
+dimostrato con una singola invocazione di \ml{METIS\_TAC}. Sia \ml{RW\_TAC} 
+sia \ml{METIS\_TAC} sono ragionatori piuttosto potenti, e la scelta di un 
+ragionatore in una situazione particolare è una questione di esperienza. La 
+ragione principale per cui \ml{METIS\_TAC} funziona così bene è che \verb+divides+ 
+è definita per mezzo di un quantificatore esistenziale, e \ml{METIS\_TAC} 
+è piuttosto buono per istanziare in modo automatico gli esistenziali nel 
+corso di una dimostrazione. Per un semplice esempio, si consideri la dimostrazione di $\forall x.\
+x\; \mathtt{divides}\; 0$. Si inserisce una nuova proposizione da dimostrare 
+attraverso ``\ml{g}'', che avvia un nuovo goalstack.
+
+\begin{session}
+\begin{verbatim}
+- g `!x. x divides 0`;
+
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !x. x divides 0
+
+     : proofs
+\end{verbatim}
+\end{session}
+Il manager di dimostrazione ci dice che c'è soltanto una dimostrazione da gestire, e 
+ripete il goal dato. Ora espandiamo la definizione di 
+\verb+divides+. Si noti che ha luogo un'$\alpha$-conversione al fine di 
+mantenere distinta la $x$ del goal e la $x$ nella definizione di
+\ml{divides}:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [divides_def]);
+
+OK..
+1 subgoal:
+> val it =
+    ?x'. (x = 0) \/ (x' = 0)
+\end{verbatim}
+\end{session}
+E' naturalmente piuttosto facile istanziare il quantificatore esistenziale a 
+mano.
+\begin{session}
+\begin{verbatim}
+- e (EXISTS_TAC ``0``);
+
+OK..
+1 subgoal:
+> val it =
+    (x = 0) \/ (0 = 0)
+\end{verbatim}
+\end{session}
+Poi un passo di semplificazione conclude la dimostrazione.
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+
+Goal proved.
+|- (x = 0) \/ (0 = 0)
+
+Goal proved.
+|- ?x'. (x = 0) \/ (x' = 0)
+> val it =
+    Initial goal proved.
+    |- !x. x divides 0
+\end{verbatim}
+\end{session}
+
+Cosa è appena successo qui? L'applicazione di \ml{RW\_TAC} al goal 
+lo ha decomposto in una lista vuota di subgoal; in altre parole, il goal è stato 
+dimostrato da \ml{RW\_TAC}. Una volta che il goal è stato dimostrato, è tirato fuori 
+dal goalstack, stampato a video, e il teorema diventa 
+disponibile per l'uso al livello dello stack. Quando tutti i subgoal 
+richiesti da \textit{quel} livello sono stati dimostrati, anche il goal corrispondente a 
+quel livello può essere dimostrato. Questo processo di `svolgimento' continua fino a quando 
+lo stack è vuoto, o fino a quando raggiunge un goal con più di un subgoal 
+non dimostrato rimanente. Questo processo può essere difficile da 
+visualizzare,\footnote{Forse per il fatto che abbiamo usato uno stack per implementare quello 
+che teoricamente è un albero!} ma ciò non importa, dal momento che il goalstack è stato 
+scritto espressamente per permettere all'utente d'ignorare tali dettagli.
+
+Se le tre interazioni sono combinate insieme con \ml{THEN} per 
+formare una singola tattica, possiamo provare la dimostrazione 
+dall'inizio (usando la funzione \ml{restart}) e questa volta richiederà 
+soltanto un unico passo:
+\begin{session}
+\begin{verbatim}
+- restart();
+>   ...
+
+- e (RW_TAC arith_ss [divides_def] THEN EXISTS_TAC ``0``
+     THEN RW_TAC arith_ss []);
+OK..
+
+> val it =
+    Initial goal proved.
+    |- !x. x divides 0
+\end{verbatim}
+\end{session}
+Abbiamo visto un modo di dimostrare il teorema. Comunque, come menzionato 
+in precedenza, c'è un altro modo: si potrebbe lasciare che \ml{METIS\_TAC} espanda la 
+definizione di \ml{divides} e trovi l'istanziazione richiesta per 
+\verb+x'+ dal teorema \ml{MULT\_CLAUSES}\footnote{Potreste 
+  voler provare a digitare \ml{MULT\_CLAUSES} nel loop interativo 
+	per vedere esattamente cosa esso afferma.}.
+\begin{session}
+\begin{verbatim}
+- restart();
+>   ...
+
+- e (METIS_TAC [divides_def, MULT_CLAUSES]);
+OK..
+metis: r[+0+10]+0+0+0+1+2#
+> val it =
+    Initial goal proved.
+    |- !x. x divides 0
+\end{verbatim}
+\end{session}
+Mentre lavora, \ml{METIS\_TAC} stampa a video alcune diagnostiche 
+possibilmente interessanti. In ogni caso, avendo eseguito la nostra dimostrazione all'interno del pacchetto goalstack,
+    ora vogliamo avere accesso al valore del teorema che abbiamo 
+		dimostrato. Per far questo usiamo la funzione \ml{top\_thm}, e quindi 
+		usiamo \ml{drop} per svuotare lo stack:
+\begin{session}
+\begin{verbatim}
+- val DIVIDES_0 = top_thm();
+
+> val DIVIDES_0 = |- !x. x divides 0 : thm
+
+- drop();
+OK..
+> val it = There are currently no proofs. : proofs
+\end{verbatim}
+\end{session}
+
+Abbiamo usato \ml{METIS\_TAC} in questo modo per dimostrare la seguente 
+collezione di teoremi circa \ml{divides}. Come menzionato in precedenza, i 
+teoremi forniti a \ml{METIS\_TAC} nelle seguenti dimostrazioni (di solito) non 
+provengono dal nulla: in molti casi è stato fatto un qualche lavoro esplorativo 
+con \ml{RW\_TAC} per espandere le definizioni e vedere quali lemmi sarebbero 
+stati richiesti da \ml{METIS\_TAC}.
+
+\begin{description}
+\label{euclid:extra-proofs}
+\item [\small{({\it DIVIDES\_0\/})}]
+\begin{tabular}[t]{l}
+\verb+!x. x divides 0+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_ZERO\/})}]
+\begin{tabular}[t]{l}
+\verb+!x. 0 divides x = (x = 0)+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_ONE\/})}]
+\begin{tabular}[t]{l}
+\verb+!x. x divides 1 = (x = 1)+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES, MULT_EQ_1]+
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_REFL\/})}]
+\begin{tabular}[t]{l}
+\verb+!x. x divides x+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_CLAUSES]+ \\
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_TRANS\/})}]
+\begin{tabular}[t]{l}
+\verb+!a b c. a divides b /\ b divides c ==> a divides c+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_ASSOC]+ \\
+\end{tabular}
+\item[\small{({\it DIVIDES\_ADD\/})}]
+\begin{tabular}[t]{l}
+\verb|!d a b. d divides a /\ d divides b ==> d divides (a+b)| \\ \hline
+ \verb|METIS_TAC [divides_def,LEFT_ADD_DISTRIB]|
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_SUB\/})}]
+\begin{tabular}[t]{l}
+\verb+!d a b. d divides a /\ d divides b ==> d divides (a-b)+ \\ \hline
+ \verb+METIS_TAC [divides_def, LEFT_SUB_DISTRIB]+ \\
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_ADDL\/})}]
+\begin{tabular}[t]{l}
+\verb|!d a b. d divides a /\ d divides (a+b) ==> d divides b| \\ \hline
+ \verb+METIS_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_LMUL\/})}]
+\begin{tabular}[t]{l}
+\verb+!d a x. d divides a ==> d divides (x * a)+ \\ \hline
+ \verb+METIS_TAC [divides_def, MULT_ASSOC, MULT_SYM]+ \\
+\end{tabular}
+
+\item[\small{({\it DIVIDES\_RMUL\/})}]
+\begin{tabular}[t]{l}
+\verb+!d a x. d divides a ==> d divides (a * x)+ \\ \hline
+ \verb+METIS_TAC [MULT_SYM, DIVIDES_LMUL]+ \\
+\end{tabular}
+
+\end{description}
+
+\noindent Assumeremo che le dimostrazioni di sopra siano state eseguite, e 
+che gli appropriati nomi ML siano stati dati a tutti i teoremi. 
+Ora affrontiamo un lemma circa la divisibilità che non soccombe a una 
+singola invocazione di \ml{METIS\_TAC}:
+\begin{description}
+\item [\small{({\it DIVIDES\_LE\/})}]
+\begin{tabular}[t]{l}
+\verb+!m n. m divides n ==> m <= n \/ (n = 0)+ \\ \hline
+\verb+RW_TAC arith_ss [divides_def]+ \\
+\verb+   THEN Cases_on `x`+ \\
+\verb+   THEN RW_TAC arith_ss [MULT_CLAUSES]+ \\
+\end{tabular}
+\end{description}
+Vediamo come questo è dimostrato. Il modo più semplice è di iniziare a semplificare 
+con la definizione di \ml{divides}:
+\begin{session}
+\begin{verbatim}
+- g `!m n . m divides n ==> m <= n \/ (n = 0)`;
+>   ...
+
+- e (RW_TAC arith_ss [divides_def]);
+
+1 subgoal:
+> val it =
+    m <= m * x \/ (m * x = 0)
+\end{verbatim}
+\end{session}
+
+Considerando il goal, di base abbiamo tre possibilità: (1) trovare una 
+collezione di lemmi che insieme implicano il goal e usare 
+\ml{METIS\_TAC}; (2) fare un case split su $m$; oppure (3) fare un case split su 
+$x$. La prima non sembra semplice, dal momento che il goal in realtà 
+non calza nella `forma' di un qualsiasi teorema pre-dimostrato di cui l'autore sia a 
+conoscenza. Benché l'opzione (2) sarà rigettata alla fine, proviamola 
+comunque. Per eseguire il case split, usiamo \verb+Cases_on+, che sta 
+per ``trova il termine dato nel goal ed esegui un'analisi dei casi sulle 
+possibilità di costruzione previste dal costruttore del suo datatype'' [corrisponde al pattern matching di ML (ndt)]. Dal momento che 
+l'occorrenza di $m$ nel goal ha il tipo $num$, i casi considerati saranno 
+se $m$ è $0$ o un successore.
+\begin{session}
+\begin{verbatim}
+- e (Cases_on `m`);
+OK..
+2 subgoals:
+> val it =
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
+
+    0 <= 0 * x \/ (0 * x = 0)
+\end{verbatim}
+\end{session}
+\noindent Il primo subgoal (l'ultimo stampato) è banale:
+
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+
+Goal proved.
+  ...
+
+Remaining subgoals:
+> val it =
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
+\end{verbatim}
+\end{session}
+\noindent Proviamo \ml{RW\_TAC} di nuovo:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+1 subgoal:
+> val it =
+    SUC n <= x * SUC n \/ (x = 0)
+\end{verbatim}
+\end{session}
+Il disgiunto a destra è stato semplificato; comunque, il disgiunto a sinistra ha 
+fallito di espandere la definizione della moltiplicazione nell'espressione 
+$\mathtt{SUC}\ n * x$, cosa che sarebbe stata conveniente. Di fatto l'ha cambiata 
+in $x * \mathtt{SUC}\ n$, che non è conveniente.
+Perché, visto che si suppone che \verb+arith_ss+ e di conseguenza \ml{RW\_TAC} siano esperte 
+nell'aritmetica? La risposta è duplice: primo, le clausole ricorsive per l'addizione e la 
+moltiplicazione non sono in \verb+arith_ss+ perché una loro applicazione senza controllo 
+da parte del sistema di riscrittura sembra che, in generale, renda alcune 
+dimostrazioni \emph{più} complicate, piuttosto che più semplici; in secondo luogo, il semplificatore 
+riorganizzerà i termini aritmetici per rendere più semplici alcune dimostrazioni automatiche. Così 
+l'assenza delle clausole ricorsive per la moltiplicazione 
+significa che $\mathtt{SUC}\ n * x$ non si espande a $(n * x) + x$;
+piuttosto, la riorganizzazione porta a $x * \mathtt{SUC}\; n$. OK, aggiungiamo 
+la definizione della moltiplicazione. Questo rivela un nuovo problema: come 
+individuare questa definizione. La funzione
+\begin{holboxed}
+\begin{verbatim}
+   DB.match : string list -> term
+                -> ((string * string) * (thm * class)) list
+\end{verbatim}
+\end{holboxed}
+
+\noindent
+è spesso utile a questo scopo. Essa prende una lista di nomi di teorie, e 
+un pattern, e cerca nella lista delle teorie un teorema, 
+una definizione, o un assioma che ha un'istanza del pattern come sotto termine. 
+Se la lista dei nomi di teorie è vuota, allora sono incluse nella ricerca 
+tutte le teorie caricate. Cerchiamo nella teoria dell'aritmetica il  
+sotto termine che deve essere riscritto.
+
+\begin{session}
+\begin{verbatim}
+- DB.match ["arithmetic"] ``SUC n * x``;
+
+> val it =
+   [(("arithmetic", "FACT"),
+     (|- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n, Def)),
+    (("arithmetic", "LESS_MULT_MONO"),
+     (|- !m i n. SUC n * m < SUC n * i = m < i, Thm)),
+    (("arithmetic", "MULT"),
+     (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
+    (("arithmetic", "MULT_CLAUSES"),
+     (|- !m n.
+           (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
+           (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
+    (("arithmetic", "MULT_LESS_EQ_SUC"),
+     (|- !m n p. m <= n = SUC p * m <= SUC p * n, Thm)),
+    (("arithmetic", "MULT_MONO_EQ"),
+     (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm)),
+    (("arithmetic", "ODD_OR_EVEN"),
+     (|- !n. ?m. (n = SUC (SUC 0) * m) \/ (n = SUC (SUC 0) * m + 1), Thm))]
+   : ...
+\end{verbatim}
+\end{session}
+
+Per alcuni, questo restituisce un pò troppa informazione; comunque, possiamo 
+focalizzare la ricerca stabilendo che il pattern appaia come una regola 
+di riscrittura:
+
+\begin{session}
+\begin{verbatim}
+- DB.match [] ``SUC n * x = M``;
+
+> val it =
+    [(("arithmetic", "MULT"),
+      (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
+     (("arithmetic", "MULT_CLAUSES"),
+      (|- !m n.
+            (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
+            (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
+     (("arithmetic", "MULT_MONO_EQ"),
+      (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm))] : ...
+\end{verbatim}
+\end{session}
+
+Sia {\small\verb+arithmeticTheory.MULT+} sia
+{\small\verb+arithmeticTheory.MULT_CLAUSES+} sarebbero accettabili; 
+scegliamo l'ultima.
+
+\begin{session}
+\begin{verbatim}
+- b();
+  ...
+
+e (RW_TAC arith_ss [MULT_CLAUSES]);
+
+OK..
+1 subgoal:
+> val it =
+    SUC n <= x + n * x \/ (x = 0)
+\end{verbatim}
+\end{session}
+Ora vediamo che, al fine di fare progressi nella dimostrazione, dovremo fare 
+un case split su $x$ comunque, e che avremmo dovuto fare lo split su di esso 
+fin dall'inizio. Di conseguenza facciamo un backup. Dovremo fare un backup (undo) tre volte.
+\begin{session}
+\begin{verbatim}
+- b();
+> val it =
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
+
+- b();
+> val it =
+    SUC n <= SUC n * x \/ (SUC n * x = 0)
+
+
+    0 <= 0 * x \/ (0 * x = 0)
+
+- b();
+> val it =
+    m <= m * x \/ (m * x = 0)
+\end{verbatim}
+\end{session}
+
+Ora possiamo andare avanti e fare un'analisi dei casi su $x$. Eseguiremo anche\linebreak 
+l'invocazione a una tattica composta, dal momento che sappiamo già che dovremo 
+invocare \ml{RW\_TAC} in entrambi i rami dell'analisi dei casi. Questo può essere 
+fatto usando \ml{THEN}. Quando $t_1 \ \mbox{\ml{THEN}}\ t_2$ è applicato 
+a un goal $g$, prima $t_1$ è applicato a $g$, dando una lista di nuovi 
+subgoal, poi $t_2$ è applicato ad ogni membro della lista. Tutti i goal 
+risultanti da queste applicazioni di $t_2$ sono raccolti insieme e 
+restituiti.
+\begin{session}
+\begin{verbatim}
+- e (Cases_on `x` THEN RW_TAC arith_ss [MULT_CLAUSES]);
+OK..
+
+Goal proved.
+|- m <= m * x \/ (m * x = 0)
+> val it =
+    Initial goal proved.
+    |- !m n. m divides n ==> m <= n \/ (n = 0)
+\end{verbatim}
+\end{session}
+Questo è stato facile! Ovviamente fare un case split su $x$ era la scelta 
+giusta. Il processo di {\it trovare\/} la dimostrazione ora è terminato, e 
+tutto ciò che rimane da fare è impacchettare la dimostrazione in una singola 
+tattica come abbiamo visto di sopra. Al posto di usare \ml{top\_thm} e il goalstack, 
+possiamo bypassarlo e usare la funzione \ml{store\_thm}. Questa funzione 
+prende una stringa, un termine e una tattica e applica la tattica al termine 
+per ottenere un teorema, e quindi archivia il teorema nella teoria corrente 
+sotto il nome dato.
+\begin{session}
+\begin{verbatim}
+- val DIVIDES_LE = store_thm (
+     "DIVIDES_LE",
+     ``!m n. m divides n ==> m <= n \/ (n = 0)``,
+     RW_TAC arith_ss  [divides_def]
+       THEN Cases_on `x`
+       THEN RW_TAC arith_ss  [MULT_CLAUSES]);
+
+> val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : thm
+\end{verbatim}
+\end{session}
+Archiviare i teoremi nel nostro script di salvataggio della sessione in questo stile 
+(piuttosto che con il goalstack) risulta in uno script più conciso, e 
+rende anche più facile trasformare il nostro script in un file di teoria, come facciamo 
+nella sessione~\ref{sec:script-to-theory}.
+
+\subsection{Divisibilità e fattoriale}
+
+Il prossimo lemma, {\small{\it DIVIDES\_FACT\/}}, dice che ogni numero 
+maggiore di $0$ e $\leq n$ divide il fattoriale di 
+$n$. Il fattoriale si trova in \verb+arithmeticTheory.FACT+ ed è stato 
+definito per ricorsione primitiva:
+\begin{description}
+\item [\small{({\it FACT\/})}]
+\begin{minipage}[t]{0.5\textwidth}
+\begin{verbatim}
+  (FACT 0 = 1) /\
+  (!n. FACT (SUC n) = SUC n * FACT n)
+\end{verbatim}
+\end{minipage}
+\end{description}
+Una dimostrazione lucidata di {\small{\it DIVIDES\_FACT\/}} è la 
+seguente\footnote{Questa e le successive dimostrazioni usano i teoremi dimostrati 
+  alla pagina~\pageref{euclid:extra-proofs}, che sono state aggiunte all'ambiente \ML{} 
+	dopo essere state dimostrate.}:
+\begin{description}
+\item [\small{({\it DIVIDES\_FACT\/})}]
+\begin{tabular}[t]{l}
+\verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
+\verb+RW_TAC arith_ss [LESS_EQ_EXISTS]+ \\
+\verb+ THEN Induct_on `p`+ \\
+\verb+ THEN RW_TAC arith_ss [FACT,ADD_CLAUSES]+ \\
+\verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
+\verb+ THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
+\verb+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
+\end{tabular}
+\end{description}
+Esamineremo questa dimostrazione nel dettaglio, così dovremmo prima tentare di 
+comprendere perché il teorema è vero. Qual è l'intuizione sottostante?
+Supponiamo che $0 < m \leq n$, e così $\mbox{\tt FACT}\ n = 1 * \cdots * m *
+\cdots * n$. Mostrare che $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$ 
+significa esibire un $q$ tale che $q * m = \mbox{\tt FACT}\ n$. Così $q
+= \mbox{\tt FACT}\ n \div m$. Se dovessimo intraprendere questo approccio alla 
+dimostrazione, finiremmo per dover trovare e applicare dei lemmi circa $\div$. 
+Questo sembra portarci un pò fuori strada; non c'è una dimostrazione 
+che non usa la divisione? Ebbene sì, possiamo dimostrare il teorema per 
+induzione su $n - m$: nel caso migliore, dovremo dimostrare $n\;
+\mbox{\tt divides}\ (\mbox{\tt FACT}\; n)$, che dovrebbe essere facile; nel 
+caso induttivo, l'ipotesi d'induzione sembrerebbe doverci dare 
+ciò di cui abbiamo bisogno. Questa strategia per il caso induttivo è un pò vaga, 
+perché stiamo provando a figurarci mentalmente una formula piuttosto 
+complicata, ma possiamo contare sul fatto che il sistema calcoli in modo accurato il 
+i casi d'induzione per noi. Se il caso induttivo si rivelerà non essere 
+ciò che ci aspettavamo, dovremo ripensare il nostro approccio.
+\begin{session}
+\begin{verbatim}
+- g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
+
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}
+\end{session}
+Al posto di eseguire un'induzione direttamente su $n-m$, faremo un'induzione su una variabile 
+testimone, ottenuta usando il teorema \verb+LESS_EQ_EXISTS+.
+\begin{session}
+\begin{verbatim}
+- LESS_EQ_EXISTS;
+> val it = |- !m n. m <= n = (?p. n = m + p) : thm
+
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
+OK..
+1 subgoal:
+> val it =
+    m divides FACT (m + p)
+    ------------------------------------
+       0 < m
+\end{verbatim}
+\end{session}
+\noindent Ora eseguiamo un'induzione su $p$:
+\begin{session}
+\begin{verbatim}
+- e (Induct_on `p`);
+OK..
+2 subgoals:
+> val it =
+    m divides FACT (m + SUC p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
+
+    m divides FACT (m + 0)
+   ------------------------------------
+      0 < m
+\end{verbatim}
+\end{session}
+\noindent Il primo goal può ovviamente essere semplificato:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+1 subgoal:
+> val it =
+    m divides FACT m
+    ------------------------------------
+      0 < m
+\end{verbatim}
+\end{session}
+\noindent Ora possiamo fare un'analisi dei casi su $m$: se è $0$, abbiamo un 
+goal banale; se è un successore, allora possiamo usare la definizione di 
+\ml{FACT} e i teoremi \ml{DIVIDES\_RMUL} e 
+\ml{DIVIDES\_REFL}.
+\begin{session}
+\begin{verbatim}
+- e (Cases_on `m`);
+OK..
+2 subgoals:
+> val it =
+    SUC n divides FACT (SUC n)
+    ------------------------------------
+      0 < SUC n
+
+    0 divides FACT 0
+    ------------------------------------
+      0 < 0
+\end{verbatim}
+\end{session}
+
+ Qui il primo subgoal ha un'assunzione che è falsa, Possiamo 
+ dimostrare questo al sistema usando la funzione 
+\ml{DECIDE} per dimostrare un semplice fatto dell'aritmetica (cioè, che nessun 
+numero $x$ è minore di sé stesso), e quindi passare il teorema 
+risultante a \ml{METIS\_TAC}, che può combinare questo con l'assunzione 
+contraddittoria\footnote{Si noti come il sistema interattivo 
+	stampi il teorema dimostrato con \ml{[.]} prima del 
+	turnstile. Questa notazione indica che un teorema ha un'assunzione 
+(in questo caso l'asserzione falsa $0<0$).}.
+
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
+OK..
+metis: r[+0+4]#
+
+Goal proved.
+ [.] |- 0 divides FACT 0
+
+Remaining subgoals:
+> val it =
+    SUC n divides FACT (SUC n)
+    ------------------------------------
+      0 < SUC n
+\end{verbatim}
+\end{session}
+Usando i teoremi identificati di sopra, il subgoal rimanente può 
+essere dimostrato con \ml{RW\_TAC}.
+
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+OK..
+
+Goal proved.   ...
+
+Remaining subgoals:
+> val it =
+    m divides FACT (m + SUC p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
+\end{verbatim}
+\end{session}
+Quest'ultimo passo, cioè l'invocazione di \ml{RW\_TAC}, 
+potrebbe essere ottenuta anche con \ml{METIS\_TAC}. Si noti che 
+l'unica differenza è l'uso di \ml{DIVIDES\_LMUL} nel semplificatore 
+\emph{al posto di} \ml{DIVIDES\_RMUL} in \ml{METIS\_TAC}. Questo è dovuto al 
+già menzionato riarrangiamento algebrico dei termini aritmetici nel semplificatore.
+\begin{session}
+\begin{verbatim}
+- b();
+> ...
+
+- e (METIS_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
+OK..
+
+Goal proved.  ...
+\end{verbatim}
+\end{session}
+Ora abbiamo completato il caso base dell'induzione e possiamo spostarci al 
+caso di passo. Una cosa ovvia da provare è la semplificazione con le 
+definizioni dell'addizione e del fattoriale:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
+
+OK..
+1 subgoal:
+> val it =
+    m divides FACT (m + p) * SUC (m + p)
+    ------------------------------------
+      0.  0 < m
+      1.  m divides FACT (m + p)
+\end{verbatim}
+\end{session}
+\noindent E ora, per mezzo di \ml{DIVIDES\_RMUL} e l'ipotesi d'induzione, abbiamo 
+finito:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DIVIDES_RMUL]);
+OK..
+metis: r[+0+5]+0+0+0+0+1#
+
+Goal proved.
+  ...
+> val it =
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}
+\end{session}
+Abbiamo concluso la ricerca della dimostrazione, e possiamo spostarci al compito di 
+creare una singola tattica a partire dalla sequenza delle invocazioni delle tattiche che abbiamo 
+appena fatto. Assumiamo che sia stata tenuta traccia della sequenza delle invocazioni 
+in un file o nel buffer di un editor di testo. Avremmo dunque qualcosa 
+di simile a ciò che segue:
+\begin{hol}
+\begin{verbatim}
+    e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
+    e (Induct_on `p`);
+    (*1*)
+    e (RW_TAC arith_ss  []);
+    e (Cases_on `m`);
+    (*1.1*)
+    e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
+    (*1.2*)
+    e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+    (*2*)
+    e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
+    e (METIS_TAC [DIVIDES_RMUL]);
+\end{verbatim}
+\end{hol}
+\noindent
+
+Abbiamo aggiunto uno schema di numerazione per tenere traccia dei rami nella 
+dimostrazione. Possiamo cucire insieme l'espressioni di sopra nella seguente tattica 
+composta:
+
+\begin{hol}
+\begin{verbatim}
+    RW_TAC arith_ss [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THENL [RW_TAC arith_ss [] THEN Cases_on `m`
+            THENL [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+                   RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+            RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]
+\end{verbatim}
+\end{hol}
+
+\noindent Questo può essere testato per vedere che non abbiamo fatto errori:
+
+\begin{session}
+\begin{verbatim}
+- restart();
+> ...
+
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
+       THEN Induct_on `p` THENL
+       [RW_TAC arith_ss [] THEN Cases_on `m` THENL
+          [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+           RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+        RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]);
+OK..
+metis: r[+0+5]+0+0+0+0+1#
+metis: r[+0+4]#
+> val it =
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}
+\end{session}
+
+Per molti utenti, questa sarebbe la conclusione di questa dimostrazione: la 
+tattica ora può essere impacchettata in un'invocazione di 
+\ml{prove}\footnote{La funzione \ml{prove} prende un termine e una tattica 
+e tenta di dimostrare il termine usando la tattica fornita. Essa 
+restituisce il teorema dimostrato se la tattica ha successo. Essa non salva 
+il teorema alla teoria sviluppata.} o di \ml{store\_thm} e quella 
+sarebbe la conclusione. Comunque, un altro utente potrebbe notare 
+che questa tattica potrebbe essere abbreviata.
+
+Per iniziare, entrambi i rami dell'induzione iniziano con un'invocazione di 
+\ml{RW\_TAC}, e la semantica di \ml{THEN} ci permette di fondere le 
+occorrenze di \ml{RW\_TAC} prima di \ml{THENL}. La tattica rimaneggiata 
+è
+\begin{hol}
+\begin{verbatim}
+ RW_TAC arith_ss [LESS_EQ_EXISTS]
+   THEN Induct_on `p`
+   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+   THENL [Cases_on `m` THENL
+            [METIS_TAC [DECIDE ``!x. ~(x < x)``],
+             RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
+          METIS_TAC [DIVIDES_RMUL]]
+\end{verbatim}
+\end{hol}
+(Naturalmente, quando una tattica è stata rivisitata, dovrebbe essere testata per vedere 
+se continua a dimostrare il goal!) Ora si ricordi che l'uso di \ml{RW\_TAC} 
+nel caso base potrebbe essere sostituito da una chiamata a \ml{METIS\_TAC}. Così 
+sembra possibile fondere i due sotto casi del caso base in un'unica 
+invocazione di \ml{METIS\_TAC}:
+
+\begin{hol}
+\begin{verbatim}
+ RW_TAC arith_ss [LESS_EQ_EXISTS]
+   THEN Induct_on `p`
+   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+   THENL [Cases_on `m` THEN
+            METIS_TAC[DECIDE ``!x. ~(x<x)``,FACT,DIVIDES_RMUL,DIVIDES_REFL],
+          METIS_TAC [DIVIDES_RMUL]]
+\end{verbatim}
+\end{hol}
+
+\noindent
+In fine, spingendo questo revisionismo quasi al suo limite, ci 
+piacerebbe che ci fosse un'unica invocazione di \ml{METIS\_TAC} per concludere 
+la dimostrazione. La semantica di \ml{THEN} e di \ml{ALL\_TAC} vengono 
+in nostro aiuto: divideremo la costruzione di $m$ nel caso base, 
+come nell'incarnazione attuale della tattica, ma lasceremo il 
+caso induttivo di passo inalterato attraverso \ml{THENL}. Questo si ottiene 
+usando \verb+ALL_TAC+, questa è una tattica che agisce come una funzione 
+d'identità sul goal.
+\begin{hol}
+\begin{verbatim}
+   RW_TAC arith_ss [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
+     THENL [Cases_on `m`, ALL_TAC]
+     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``,
+                     FACT, DIVIDES_RMUL, DIVIDES_REFL]
+\end{verbatim}
+\end{hol}
+
+\noindent
+Il risultato è che ci saranno tre subgoal risultanti da 
+\ml{THENL}: i due sotto casi nel caso base e il caso di passo 
+inalterato. Ciascuno è dimostrato con una chiamata a \ml{METIS\_TAC}. Abbiamo finito ora?
+Non necessariamente. Per esempio, il case split esplicito, cioè \ml{Cases\_on `m`},
+può essere sostituito fornendo il teorema dei \emph{casi} per i numeri naturali 
+(\ml{num\_CASES}) a \ml{METIS\_TAC}. Con questo, il case split su $m$, sarà 
+generato automaticamente da \ml{METIS\_TAC} durante la ricerca della dimostrazione. Di conseguenza 
+possiamo abbreviare la tattica di nuovo.
+\begin{session}
+\begin{verbatim}
+- num_CASES;
+> val it = |- !m. (m = 0) \/ ?n. m = SUC n : thm
+
+- restart();
+- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
+     THEN Induct_on `p`
+     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``, FACT, num_CASES,
+                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL, ADD_CLAUSES]);
+\end{verbatim}
+\end{session}
+Ora abbiamo concluso il nostro esercizio di revisione delle tattiche. Certamente, 
+sarebbe difficile indovinare che questa tattica finale dimostrerebbe il 
+goal; i lemmi richiesti per l'invocazione finale di \ml{METIS\_TAC} 
+sono stati trovati attraverso un processo incrementale di revisione.
+
+\subsection{Divisibilità e fattoriale (di nuovo!)}
+
+Nella precedente dimostrazione, abbiamo fatto un passo di semplificazione iniziale al fine 
+di esporre una variabile su cui indurre. Comunque, la dimostrazione in realtà 
+è su $n - m$. Possiamo esprimere questo in modo diretto? La 
+risposta è un sì con riserva: l'induzione può essere dichiarata in modo naturale, ma 
+porta a dei goal in qualche modo meno naturali.
+\begin{session}
+\begin{verbatim}
+- restart();
+
+- e (Induct_on `n - m`);
+
+OK..
+2 subgoals:
+> val it =
+    !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+    ------------------------------------
+      !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+
+    !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}
+\end{session}
+    Questo è leggermente complicato da leggere, così usiamo \ml{STRIP\_TAC} e 
+    \ml{REPEAT} per spostare gli antecedenti dei goal nelle 
+		assunzioni. L'uso di \ml{THEN} assicura che la tatticca venga applicata 
+		in entrambi i rami dell'induzione.
+\begin{session}
+\begin{verbatim}
+- b();
+  ...
+
+- e (Induct_on `n - m` THEN REPEAT STRIP_TAC);
+
+OK..
+2 subgoals:
+> val it =
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
+
+    m divides FACT n
+    ------------------------------------
+      0.  0 = n - m
+      1.  0 < m
+      2.  m <= n
+\end{verbatim}
+\end{session}
+Osservando il primo goal, ragioniamo che se $0 = n - m$ e $m
+\leq n$, allora $m = n$. Possiamo dimostrare questo fatto, usando \ml{DECIDE\_TAC}\footnote
+{\ml{DECIDE\_TAC} è una procedura di decisione per un'utile classe di formule aritmetiche.}
+e aggiungerla alle ipotesi per mezzo dell'uso dell'operatore infisso ``\ml{by}'':
+\begin{session}
+\begin{verbatim}
+- e (`m = n` by DECIDE_TAC);
+OK..
+1 subgoal:
+> val it =
+    m divides FACT n
+    ------------------------------------
+      0.  0 = n - m
+      1.  0 < m
+      2.  m <= n
+      3.  m = n
+\end{verbatim}
+\end{session}
+
+\noindent Ora possiamo usare \ml{RW\_TAC} per propagare  l'uguaglianza appena derivata 
+attraverso il goal.
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+
+OK..
+1 subgoal:
+> val it =
+    m divides FACT m
+    ------------------------------------
+      0.  0 = m - m
+      1.  0 < m
+      2.  m <= m
+\end{verbatim}
+\end{session}
+    A questo punto nella dimostrazione precedente abbiamo fatto un'analisi dei casi su $m$. 
+		Comunque, abbiamo già l'ipotesi che $m$ è positivo 
+		(insieme alle altre due ipotesi al momento inutili). Così sappiamo che 
+		$m$ è il successore di qualche numero $k$. Potremmo desiderare di affermare 
+		questo fatto con un'invocazione di ``\ml{by}'' nel modo seguente:
+\[
+    \mbox{\ml{`?k. m = SUC k` by <tactic>}}
+\]
+Ma qual è la tattica? Se proviamo \ml{DECIDE\_TAC}, essa fallirà dal momento che 
+non gestisce enunciati esistenziali. Anche un'applicazione di 
+\ml{RW\_TAC} si dimostrerà insoddisfacente. Cosa fare?
+
+Quando capita una situazione di questo tipo, è spesso meglio iniziare una nuova dimostrazione per il 
+lemma richiesto. Questo si può fare semplicemente invocando ``\ml{g}'' 
+di nuovo. Un nuovo goalstack sarà creato e aggiunto a quello 
+corrente\footnote{Questa aggiunta di tentativi di dimostrazione (goalstack) è differente 
+  dall'aggiunta di goal e giustificazioni all'interno di un particolare 
+	goalstack.} e sarà stampata una panoramica dei tentativi di dimostrazione 
+esistenti:
+\begin{session}
+\begin{verbatim}
+- g `!m. 0 < m ==> ?k. m = SUC k`;
+
+> val it =
+    Proof manager status: 2 proofs.
+    2. Incomplete:
+         Initial goal:
+         !m n. 0 < m /\ m <= n ==> m divides FACT n
+
+
+         Current goal:
+         m divides FACT m
+         ------------------------------------
+           0.  0 = m - m
+           1.  0 < m
+           2.  m <= m
+
+    1. Incomplete:
+         Initial goal:
+         !m. 0 < m ==> ?k. m = SUC k
+\end{verbatim}
+\end{session}
+    Il nostro nuovo goal può essere dimostrato abbastanza velocemente. Una volta che lo abbiamo dimostrato, 
+		possiamo legarlo a un nome ML e usarlo nella dimostrazione precedente, 	per 
+		mezzo di una specie di gioco di prestigio con la funzione ``\ml{before}''\footnote{Una 
+		  versione infissa del combinatore {\tt K}, definito da {\tt fun (x before
+        y) = x}.}
+\begin{session}
+\begin{verbatim}
+- e (Cases THEN RW_TAC arith_ss []);
+
+OK..
+> val it =
+    Initial goal proved.
+    |- !m. 0 < m ==> ?k. m = SUC k
+
+- val lem = top_thm() before drop();
+
+OK..
+> val lem = |- !m. 0 < m ==> ?k. m = SUC k : thm
+\end{verbatim}
+\end{session}
+
+Ora possiamo ritornare al filo principale della dimostrazione. Lo stato del 
+subgoal corrente della dimostrazione può essere mostrato usando la funzione 
+``\ml{p}''.
+
+\begin{session}
+\begin{verbatim}
+- p ();
+
+> val it =
+    m divides FACT m
+    ------------------------------------
+      0.  0 = m - m
+      1.  0 < m
+      2.  m <= m
+\end{verbatim}
+\end{session}
+    Ora possiamo usare \ml{lem} nella dimostrazione. Un pò opportunisticamente, 
+		vireremo sull'invocazione usata nella precedente dimostrazione (più o meno) 
+		allo stesso punto, sperando che questo risolva il goal:
+\begin{session}
+\begin{verbatim}
+- e (`?k. m = SUC k` by
+     METIS_TAC[lem] THEN RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+OK..
+metis: r[+0+6]+0+0+0+0+0+1#
+
+Goal proved.   ...
+
+Remaining subgoals:
+> val it =
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
+\end{verbatim}
+\end{session}
+    Funziona! Questo si occupa del caso base, Per il passo d'induzione, 
+		le cose sembrano un pò più complicate che nella dimostrazione precedente.
+		Comunque, possiamo fare progressi realizzando che l'ipotesi 
+		implica che $0 < n$ e così, di nuovo per mezzo di \ml{lem}, possiamo trasformare $n$ 
+		in un successore, abilitando di conseguenza l'espansione di \ml{FACT}, come nella 
+		dimostrazione precedente:
+\begin{session}
+\begin{verbatim}
+- e (`0 < n` by DECIDE_TAC THEN `?k. n = SUC k` by METIS_TAC [lem]);
+OK..
+metis: r[+0+8]+0+0+0+0+0+0+2#
+1 subgoal:
+> val it =
+    m divides FACT n
+    ------------------------------------
+      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
+      1.  SUC v = n - m
+      2.  0 < m
+      3.  m <= n
+      4.  0 < n
+      5.  n = SUC k
+\end{verbatim}
+\end{session}
+\noindent La dimostrazione ora si conclude nello stesso modo di quella precedente:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [FACT, DIVIDES_RMUL]);
+OK..
+
+Goal proved.  ...
+> val it =
+    Initial goal proved.
+    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
+\end{verbatim}
+\end{session}
+\noindent Lasciamo i dettagli del cucire insieme la dimostrazione al lettore 
+interessato.
+
+\section{Primarietà}
+
+Ora ci spostiamo a stabilire alcuni fatti circa la primarietà dei 
+primi numeri: $0$ e $1$ non sono primi, ma $2$ lo è. Inoltre, tutti 
+i primi sono positivi. Queste sono piuttosto semplici da dimostrare.
+
+\begin{description}
+
+\item [\small{({\it NOT\_PRIME\_0\/})}]
+\begin{tabular}[t]{l}
+\verb+~prime 0+ \\ \hline
+\verb+RW_TAC arith_ss [prime_def,DIVIDES_0]+ \\
+\end{tabular}
+
+\item [\small{({\it NOT\_PRIME\_1\/})}]
+\begin{tabular}[t]{l}
+\verb+~prime 1+ \\ \hline
+\verb+RW_TAC arith_ss [prime_def]+ \\
+\end{tabular}
+
+\item [\small{({\it PRIME\_2\/})}]
+\begin{tabular}[t]{l}
+\verb+prime 2+ \\ \hline
+\verb+RW_TAC arith_ss [prime_def]+ \\
+\verb+ THEN METIS_TAC [DIVIDES_LE, DIVIDES_ZERO,+ \\
+\verb+                 DECIDE ``~(2=1)``, DECIDE ``~(2=0)``,+ \\
+\verb+                 DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``]+ \\
+\end{tabular}
+
+\item [\small{({\it PRIME\_POS\/})}]
+\begin{tabular}[t]{l}
+\verb+!p. prime p ==> 0<p+ \\ \hline
+\verb+Cases THEN RW_TAC arith_ss [NOT_PRIME_0]+ \\
+\end{tabular}
+\end{description}
+
+\section{Esistenza dei fattori primi}
+
+Ora siamo nella posizione di dimostrare un lemma più sostanziale: ogni numero 
+diverso da $1$ ha un fattore primo. La dimostrazione procede attraverso 
+un'\emph{induzione completa} su $n$. L'induzione completa è 
+necessaria dal momento che un fattore primo non sarà un predecessore. Dopo 
+l'induzione, la dimostrazione si divide nei casi se $n$ è primo o 
+no. Il primo caso ($n$ è primo) è 
+banale. Nel secondo caso, ci deve essere un $x$ che divide $n$, e 
+$x$ non è $1$ o $n$. Per {\small\it DIVIDES\_LE}, $n=0$ o $x \leq n$. Se 
+$n=0$, allora $2$ è un primo che divide $0$. Dall'altro lato, se $x \leq
+n$, ci sono due casi: se $x < n$ allora possiamo usare l'ipotesi 
+d'induzione e per la transitività di \ml{divides} abbiamo finito; altrimenti, 
+$x=n$ e quindi abbiamo una contraddizione con il fatto che $x$ non è $1$ 
+né $n$. La tattica ripulita è la seguente:
+\begin{description}
+\item [\small{({\it PRIME\_FACTOR\/})}]
+\begin{tabular}[t]{l}
+\verb+!n. ~(n = 1) ==> ?p. prime p /\ p divides n+ \\ \hline
+\verb+completeInduct_on `n`+ \\
+\verb+  THEN RW_TAC arith_ss []+ \\
+\verb+  THEN Cases `prime n` THENL+ \\
+\verb+  [METIS_TAC [DIVIDES_REFL], + \\
+\verb+   `?x. x divides n /\ ~(x=1) /\ ~(x=n)` + \\
+\verb+    by METIS_TAC[prime_def]+ \\
+\verb+     THEN METIS_TAC [LESS_OR_EQ, PRIME_2, +\\
+\verb+                  DIVIDES_LE,DIVIDES_TRANS,DIVIDES_0]]+ \\
+\end{tabular}
+\end{description}
+Iniziamo invocando l'induzione completa. Questo ci dà un'ipotesi 
+d'induzione che vale per ogni numero $m$ strettamente minore di $n$:
+\begin{session}
+\begin{verbatim}
+- g `!n. ~(n = 1) ==> ?p. prime p /\ p divides n`;
+
+- e (completeInduct_on `n`);
+OK..
+1 subgoal:
+> val it =
+    ~(n = 1) ==> ?p. prime p /\ p divides n
+    ------------------------------------
+      !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+\end{verbatim}
+\end{session}
+Possiamo spostare l'antecedente nelle ipotesi e fare il nostro case 
+split. Si noti che il termine dato a \ml{Cases\_on} non deve per forza essere nel 
+goal:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [] THEN Cases_on `prime n`);
+OK..
+2 subgoals:
+> val it =
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  prime n
+\end{verbatim}
+\end{session}
+\noindent Come menzionato, il primo caso è dimostrato con la riflessività della 
+divisibilità:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DIVIDES_REFL]);
+OK..
+metis: r[+0+7]+0+0+0+0+1#
+
+Goal proved.  ...
+\end{verbatim}
+\end{session}
+\noindent
+Nel secondo caso, otteniamo un divisore di $n$ che non è $1$ né $n$ 
+(dal momento che $n$ non è primo):
+\begin{session}
+\begin{verbatim}
+- e (`?x. x divides n /\ ~(x=1) /\ ~(x=n)` by METIS_TAC [prime_def]);
+OK..
+metis: r[+0+11]+0+0+0+0+0+0+1+1+1+1+0+1+1#
+1 subgoal:
+> val it =
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
+\end{verbatim}
+\end{session}
+A questo punto, la tattica ripulita invoca semplicemente \ml{METIS\_TAC} con 
+una collezione di teoremi. Tenteremo un'esposizione più 
+dettagliata. Data l'ipotesi, e {\small\it DIVIDES\_LE}, possiamo 
+affermare $x < n \lor n = 0$ e così dividere la dimostrazione in due casi:
+\begin{session}
+\begin{verbatim}
+- e (`x < n \/ (n=0)` by METIS_TAC [DIVIDES_LE,LESS_OR_EQ]);
+OK..
+metis: r[+0+14]+0+0+0+0+0+0+0+0+0+0+1+0+1#
+2 subgoals:
+> val it =
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
+      6.  n = 0
+
+    ?p. prime p /\ p divides n
+    ------------------------------------
+      0.  !m. m < n ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(n = 1)
+      2.  ~prime n
+      3.  x divides n
+      4.  ~(x = 1)
+      5.  ~(x = n)
+      6.  x < n
+\end{verbatim}
+\end{session}
+Nel primo subgoal, possiamo vedere che gli antecedenti dell'ipotesi 
+d'induzione sono soddisfatti e così $x$ ha un divisore primo. Possiamo quindi usare 
+la transitività della divisibilità per ottenere il fatto che questo divisore di $x$ è 
+anche un divisore di $n$, concludendo quindi questo ramo della dimostrazione:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DIVIDES_TRANS]);
+OK..
+metis: r[+0+11]+0+0+0+0+0+0+0+1+0+4+1+0+3+0+2+2+1#
+
+Goal proved.
+\end{verbatim}
+\end{session}
+\noindent I goal rimanenti possono essere chiariti per semplificazione:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss  []);
+OK..
+1 subgoal:
+> val it =
+    ?p. prime p /\ p divides 0
+    ------------------------------------
+      0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(0 = 1)
+      2.  ~prime 0
+      3.  x divides 0
+      4.  ~(x = 1)
+      5.  ~(x = 0)
+
+- DIVIDES_0;
+> val it = |- !x. x divides 0 : thm
+
+- e (RW_TAC arith_ss  [it]);
+OK..
+1 subgoal:
+> val it =
+    ?p. prime p
+    ------------------------------------
+      0.  !m. m < 0 ==> ~(m = 1) ==> ?p. prime p /\ p divides m
+      1.  ~(0 = 1)
+      2.  ~prime 0
+      3.  x divides 0
+      4.  ~(x = 1)
+      5.  ~(x = 0)
+\end{verbatim}
+\end{session}
+I due passi della semplificazione esplorativa ci hanno portato a uno stato dove 
+tutto ciò che dobbiamo fare è esibire un primo. E ne abbiamo già uno a portata di mano:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [PRIME_2]);
+OK..
+metis: r[+0+6]#
+
+Goal proved.   ...
+> val it =
+    Initial goal proved.
+    |- !n. ~(n = 1) ==> ?p. prime p /\ p divides n
+\end{verbatim}
+\end{session}
+Di nuovo, è necessario fare del lavoro per comporre e magari ripulire una singola 
+tattica, dai passi individuali di dimostrazione, ma non lo descriveremo\footnote{
+Di fatto, la tattica può essere semplificata in un'induzione completa 
+ seguita da un'invocazione di \ml{METIS\_TAC} con lemmi adeguati.}.
+Piuttosto andiamo avanti, perché il nostro obiettivo finale è a portata di mano.
+
+\section{Il teorema di Euclide}
+
+\noindent{\bf Teorema.} Ogni numero ha un primo più grande di lui.\\
+\noindent  {\it Dimostrazione Informale.} \\
+\noindent Assumiamo l'opposto; allora c'è un $n$ 
+tale che tutti i $p$ più grandi di $n$ non sono primi. Si consideri $\mbox{\tt
+FACT}(n) + 1$: esso non è uguale a 1 così, per {\small{\it PRIME\_FACTOR}}, 
+c'è un primo $p$ che lo divide. Si noti che $p$ divide anche 
+$\mbox{\tt FACT}(n)$ perché $p \leq n$\footnote{Per {\small{\it DIVIDES\_FACT}} [ndt].}. Per {\small{\it DIVIDES\_ADDL}},
+abbiamo $p=1$. Ma allora $p$ non è primo, il che è una contraddizione. \\
+\noindent {\it Fine della dimostrazione}.
+
+Una traduzione in HOL della dimostrazione può essere data nel modo seguente:
+\begin{description}
+\item [\small{({\it EUCLID\/})}]
+\begin{tabular}[t]{l}
+\verb+!n. ?p. n < p /\ prime p+ \\ \hline
+\verb+SPOSE_NOT_THEN STRIP_ASSUME_TAC+ \\
+\verb!  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
+\verb+  THEN RW_TAC arith_ss [FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
+\verb+  THEN METIS_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
+\verb+                  DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
+\end{tabular}
+\end{description}
+Consideriamo questo a parte e osserviamolo nel dettaglio. Una dimostrazione per 
+contraddizione può essere avviata usando la funzione di \ml{bossLib} 
+\ml{SPOSE\_NOT\_THEN}. Con essa, si assume la negazione del 
+goal attuale e quindi la si usa nel tentativo di dimostrare la falsità 
+(\verb+F+). La negazione assunta $\neg(\forall n.\ \exists p.\ n < p
+\land \mbox{\tt prime}\ p)$ è semplificata un pò in $\exists n.\
+\forall p.\ n < p \supset \, \neg \,\mbox{\tt prime}\ p$ e poi è 
+passata alla tattica \ml{STRIP\_ASSUME\_TAC}. Questo sposta il suo argomento 
+alla lista delle assunzioni del goal dopo aver eliminato la quantificazione 
+esistenziale su $n$.
+\begin{session}
+\begin{verbatim}
+- g `!n. ?p. n < p /\ prime p`;
+
+- e (SPOSE_NOT_THEN STRIP_ASSUME_TAC);
+OK..
+1 subgoal:
+> val it =
+    F
+    ------------------------------------
+      !p. n < p ==> ~prime p
+\end{verbatim}
+\end{session}
+Così abbiamo l'ipotesi che tutti i $p$ al di sopra di un certo $n$ non 
+specificato non sono primi, e il nostro compito è di mostrare che ciò non può essere. A questo 
+punto approfittiamo della grande ispirazione di Euclide e costruiamo un 
+termine esplicito da $n$. Nella dimostrazione informale ci viene chiesto di `considerare' 
+il termine $\mbox{\tt FACT}\ n + 1$\footnote{Il parser di HOL pensa che 
+$\mbox{\tt FACT}\ n + 1$ sia equivalente a $(\mbox{\tt FACT}\ n) + 1$.}
+Questo termine avrà certe proprietà (cioè, ha un fattore primo) che 
+porta a una contraddizione. Domanda: come `consideriamo' questo termine nella 
+dimostrazione formale HOL? Risposta: istanziando un lemma con esso e portando il 
+lemma nella dimostrazione. Il lemma e la sua istanziazione sono \footnote{La 
+funzione {\tt SPEC} implementa la regola della specializzazione universale.}:
+\begin{session}
+\begin{verbatim}
+- PRIME_FACTOR;
+> val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : thm
+
+- val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
+> val th =
+    |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
+\end{verbatim}
+\end{session}
+E' evidente che l'antecedente di \ml{th} può essere eliminato. In 
+\holn{}, si potrebbe fare questo in un cosiddetto stile di dimostrazione {\it in avanti\/} (dimostrando 
+$\vdash \neg(\mbox{\tt FACT}\ n + 1 = 1)$ e poi applicando {\it
+modus ponens}, il cui risultato può poi essere usato nella dimostrazione), oppure 
+si potrebbe portare \ml{th} nella dimostrazione e semplificarlo {\it in
+situ}. Scegliamo il secondo approccio.
+\begin{session}
+\begin{verbatim}
+- e (MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR));
+OK..
+1 subgoal:
+> val it =
+    (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
+    ------------------------------------
+      !p. n < p ==> ~prime p
+\end{verbatim}
+\end{session}
+    L'invocazione di \ml{MP\_TAC} ($\vdash M$) applicata a un goal 
+		$(\Delta, g)$ restituisce il goal $(\Delta, M \supset g)$. Ora 
+		semplifichiamo:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+2 subgoals:
+> val it =
+    ~prime p \/ ~(p divides FACT n + 1)
+    ------------------------------------
+      0.  !p. n < p ==> ~prime p
+      1.  prime p
+
+    ~(FACT n = 0)
+    ------------------------------------
+      !p. n < p ==> ~prime p
+\end{verbatim}
+\end{session}
+    Si ricordi che zero è minore di qualsiasi fattoriale, un fatto che si trova in 
+		\ml{arithmeticTheory} sotto il nome \ml{FACT\_LESS}. Così possiamo 
+		risolvere il goal principale per semplificazione:
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss [FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
+OK..
+Goal proved.  ...
+\end{verbatim}
+\end{session}
+Si noti l'uso `on-the-fly' di \verb+DECIDE+ per fornire una riscrittura 
+\textit{ad hoc}. Osservando il goal rimanente, si potrebbe pensare che il nostro obiettivo, di 
+dimostrare la falsità, è andato perso. Ma questo non è vero: un goal 
+$\neg P \lor \neg Q$ è logicamente equivalente a $P \imp Q \imp \mathtt{F}$.
+Nell'invocazione seguente, usiamo l'uguaglianza 
+$\vdash A \imp B = \neg A \lor B$ come una regola di riscrittura orientata da destra a sinistra per mezzo 
+dell'uso di \ml{GSYM}\footnote{In parole povere, \ml{GSYM} scambia i lati sinistro e 
+destro di qualsiasi equazione che trova.}.
+\begin{session}
+\begin{verbatim}
+- IMP_DISJ_THM;
+> val it = |- !A B. A ==> B = ~A \/ B : thm
+
+- e (RW_TAC arith_ss [GSYM IMP_DISJ_THM]);
+OK..
+1 subgoal:
+> val it =
+    ~(p divides FACT n + 1)
+    ------------------------------------
+      0.  !p. n < p ==> ~prime p
+      1.  prime p
+     : goalstack
+\end{verbatim}
+\end{session}
+
+Possiamo procedere velocemente per mostrare che $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$, 
+e di conseguenza che $p = 1$, quindi che $p$ non è primo, a quel punto abbiamo finito.
+Questo può essere impacchettato tutto in una singola invocazione di \ml{METIS\_TAC}:
+\begin{session}
+\begin{verbatim}
+- e (METIS_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
+                NOT_PRIME_1, NOT_LESS, PRIME_POS]);
+metis: r[+0+12]+0+0+0+0+0+0+0+1+1+0+0+0+0+1+1+1+1+4#
+
+Goal proved.
+ [..] |- ~(p divides FACT n + 1)
+
+Goal proved.
+ [.] |- ~prime p \/ ~(p divides FACT n + 1)
+
+Goal proved.
+ [.]
+|- (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
+
+Goal proved.
+ [.] |- F
+> val it =
+    Initial goal proved.
+    |- !n. ?p. n < p /\ prime p : goalstack
+\end{verbatim}
+\end{session}
+    Il teorema di Euclide ora è dimostrato, e possiamo riposare. Comunque, questa 
+		presentazione della dimostrazione finale sarà insoddisfacente per alcuni, 
+		dal momento che la dimostrazione è completamente nascosta nell'invocazione del 
+		ragionatore automatico. Bene allora, proviamo un'altra dimostrazione, questa volta 
+		impiegando il cosiddetto stile `asserzionale'. Quando usato in modo uniforme, 
+		questo permette una presentazione leggibile e lineare che rispecchia la 
+		dimostrazione informale. Il seguente dimostra il teorema di Euclide nello 
+		stile asserzionale. Pensiamo che sia abbastanza leggibile, certamente molto 
+		di più della dimostrazione standard basata su tattiche appena data\footnote{Si noti 
+		  che {\tt CCONTR\_TAC}, che è utilizzata per avviare la dimostrazione, 
+			istanzia una dimostrazione per contraddizione negando il goal e 
+			spostandolo nelle ipotesi, lasciando {\tt F} come il nuovo goal.}.
+
+\begin{description}
+\item [\small{({\it AGAIN\/})}]
+\begin{tabular}[t]{l}
+\verb+!n. ?p. n < p /\ prime p+ \\ \hline
+\verb|CCONTR_TAC THEN | \\
+\verb|`?n. !p. n < p ==> ~prime p`  by METIS_TAC []             THEN| \\
+\verb|`~(FACT n + 1 = 1)`           by RW_TAC arith_ss  [FACT_LESS,| \\
+\verb|                                    DECIDE``~(x=0)=0<x``] THEN| \\
+\verb|`?p. prime p /\  | \\
+\verb|     p divides (FACT n + 1)`  by METIS_TAC [PRIME_FACTOR] THEN| \\
+\verb|`0 < p`                       by METIS_TAC [PRIME_POS]    THEN| \\
+\verb|`p <= n`                      by METIS_TAC [NOT_LESS]     THEN| \\
+\verb|`p divides FACT n`            by METIS_TAC [DIVIDES_FACT] THEN| \\
+\verb|`p divides 1`                 by METIS_TAC [DIVIDES_ADDL] THEN| \\
+\verb|`p = 1`                       by METIS_TAC [DIVIDES_ONE]  THEN| \\
+\verb|`~prime p`                    by METIS_TAC [NOT_PRIME_1]  THEN| \\
+\verb|METIS_TAC []| \\
+\end{tabular}
+\end{description}
+
+\section{Trasformare lo script in una teoria}
+\label{sec:script-to-theory}
+
+Avendo dimostrato il nostro risultato, probabilmente vogliamo impacchettarlo in un modo 
+che lo renda disponibile per le sessioni future, ma che non ci richieda di 
+di passare di nuovo attraverso lo sforzo di dimostrare il teorema. Persino avere 
+uno script completo da cui sia possibile fare un copia e incolla è una 
+soluzione soggetta ad errori.
+
+Al fine di fare questo abbiamo bisogno un file con il nome 
+$x$\ml{Script.sml}, dove $x$ è il nome della teoria che desideriamo 
+esportare. Questo file ha quindi bisogno di essere compilato. Di fatto, usiamo realmente 
+il compilatore di Moscow ML, accuratamente aumentato con il contesto logico 
+appropriato. Comunque, il linguaggio accettato dal compilatore non è 
+esattamente lo stesso di quello accettato dal sistema interattivo, così abbiamo 
+bisogno di fare un poco di lavoro per smussare lo script originario nella 
+forma corretta.
+
+Daremo un'illustrazione di conversione a una forma che possa essere 
+compilata usando lo script
+\[
+  \mbox{\ml{<holdir>/examples/euclid.sml}}
+\] come nostra linea di base. Questo 
+file è già vicino ad essere nella forma corretta. Ha tutte le 
+dimostrazioni dei teoremi in una forma ``cucita'' così che quando eseguito, non 
+coinvolge per nulla il goal-stack. Nella sua forma data, può essere eseguito 
+come input per \textsf{hol} così:
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+$ cd examples/
+$ ../bin/hol < euclid.sml
+  ...
+
+> val EUCLID = |- !n. ?p. n < p /\ prime p : thm
+  ...
+
+> val EUCLID_AGAIN = |- !n. ?p. n < p /\ prime p : thm
+-
+\end{verbatim}
+\end{session}
+
+Comunque, vogliamo creare una \ml{euclidTheory} che possiamo caricare in 
+altre sessioni interattive. Così, il nostro primo passo è creare un file 
+\ml{euclidScript.sml}, e copiare in esso il corpo di 
+\ml{euclid.sml}
+
+La prima linea non-commentata apre \ml{arithmeticTheory}. Comunque, quando 
+si scrive per il compilatore, è necessario menzionare esplicitamente gli altri 
+moduli \HOL{} da cui dipende. Dobbiamo aggiungere
+\[
+\mbox{\ml{open HolKernel boolLib Parse bossLib}}
+\]
+La linea successiva che presenta una difficoltà è 
+\[
+  \mbox{\ml{set\_fixity "divides" (Infixr 450);}}
+\]
+Mentre è legittimo digitare espressioni direttamente nel 
+sistema interattivo, il compilatore richiede che ogni espressione di primo livello 
+sia una dichiarazione. Soddisfiamo questo requisito alterando questa linea 
+in una dichiarazione ``non fare nulla'' che non registra il risultato 
+dell'espressione:
+\[
+\mbox{\ml{val \_{} = set\_fixity "divides" (Infixr 450)}}
+\]
+Gli unici altri cambiamenti extra sono inserire tra parentesi il resto del testo dello script 
+con le chiamate a \ml{new\_theory} e \ml{export\_theory}. Così,
+prima della definizione di \ml{divides}, aggiungiamo:
+\[
+\mbox{\ml{val \_{} = new\_theory "euclid";}}
+\]
+and at the end of the file:
+\[
+\mbox{\ml{val \_{} = export\_theory();}}
+\]
+
+Ora, possiamo compilare lo script che abbiamo creato usando lo 
+strumento \textsf{Holmake}. Per mantenere le cose un pò più ordinate, per prima cosa spostiamo 
+il nostro script in una nuova directory.
+
+\begin{session}
+\begin{verbatim}
+$ mkdir euclid
+$ mv euclidScript.sml euclid
+$ cd euclid
+$ ../../bin/Holmake
+Analysing euclidScript.sml
+Trying to create directory .HOLMK for dependency files
+Compiling euclidScript.sml
+Linking euclidScript.uo to produce theory-builder executable
+<<HOL message: Created theory "euclid".>>
+Definition has been stored under "divides_def".
+Definition has been stored under "prime_def".
+Meson search level: .....
+Meson search level: .................
+ ...
+Exporting theory "euclid" ... done.
+Analysing euclidTheory.sml
+Analysing euclidTheory.sig
+Compiling euclidTheory.sig
+Compiling euclidTheory.sml
+\end{verbatim}
+\end{session}
+
+Ora abbiamo creato quattro nuovi file, varie forme di \ml{euclidTheory} 
+con quattro differenti suffissi. Solo \ml{euclidTheory.sig} è realmente 
+adatta per un consumo da parte dell'uomo. Mentre siamo ancora nella directory 
+\ml{euclid} che abbiamo creato, possiamo provare:
+
+\begin{session}
+\begin{alltt}
+\$ ../../bin/hol
+[...]
+
+[closing file "/local/scratch/mn200/Work/hol98/tools/end-init-boss.sml"]
+- load "euclidTheory";
+> val it = () : unit
+- open euclidTheory;
+> type thm = thm
+  val DIVIDES_TRANS =
+    |- !a b c. a divides b /\ b divides c ==> a divides c
+    : thm
+  ...
+  val DIVIDES_REFL = |- !x. x divides x : thm
+  val DIVIDES_0 = |- !x. x divides 0 : thm
+\end{alltt}
+\end{session}
+
+\section{Sommario}
+
+Il lettore ora ha visto un teorema interessante dimostrato, in grande dettaglio, 
+in \holn{}. La discussione ha illustrato gli strumenti di alto  livello forniti in 
+\ml{bossLib} e ha toccato questioni che includono la selezione degli strumenti, l'undo, 
+la `levigatura delle tattiche', la semplificazione esplorativa, e la `biforcazione' di 
+nuovi tentativi di dimostrazione. Abbiamo anche tentato di dare un'idea dei processi di 
+pensiero che un utente potrebbe impiegare. Ciò che segue è una raccolta più o meno 
+casuale di altre osservazioni.
+\begin{itemize}
+
+\item Nonostante la dimostrazione del teorema di Euclide sia breve e semplice da 
+comprendere quando presentata in modo informale, è stata richiesta una quantità 
+forse sorprendente di sviluppo a supporto dell'impostazione dell'argomento 
+classico di Euclide.
+
+\item Il supporto alla dimostrazione fornito da \ml{bossLib}
+(\verb+RW_TAC+, \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, \ml{DECIDE},
+\ml{Cases\_on}, \ml{Induct\_on}, e dal costrutto ``\ml{by}'') è stato 
+quasi completo per questo esempio: raramente è stato necessario ricorrere a 
+tattiche di basso livello.
+
+\item La semplificazione è un cavallo di battaglia delle tattiche; persino quando è stato usato 
+un ragionatore automatico come \ml{METIS\_TAC}, la sua applicazione è stata spesso 
+preparata da qualche semplificazione esplorativa. Vale la pena quindi prendere 
+confidenza con i punti di forza e di debolezza del semplificatore.
+
+\item Un problema comune con i sistemi interattivi di dimostrazione è trattare con 
+le ipotesi. Spesso \ml{METIS\_TAC} e il costrutto ``\ml{by}'' permettono 
+di usare le ipotesi senza ricorrere direttamente alla loro indicizzazione 
+(o al dar loro un nome, che equivale alla stessa cosa). Questo è desiderabile, 
+dal momento che le ipotesi sono concettualmente un {\it insieme}, e inoltre, 
+l'esperienza ha mostrato che il proliferare dell'indicizzazione nelle ipotesi risulta in 
+script di dimostrazione difficili da manutenere. Comunque, può confondere lavorare con 
+un grande insieme di ipotesi, nel qual caso i seguenti approcci possono essere 
+utili.
+
+Ci si può riferire direttamente alle ipotesi usando \ml{UNDISCH\_TAC} (rende 
+l'ipotesi designata l'antecedente del goal), 
+\ml{ASSUM\_LIST} (fornisce l'intera lista delle ipotesi a una tattica), 
+\ml{POP\_ASSUM} (da la prima ipotesi a una tattica), e 
+\ml{PAT\_ASSUM} (da a una tattica la prima ipotesi 
+{\it che soddisfa il matching\/}). (Si veda \REFERENCE{} per maggiori dettagli su tutte queste cose.)
+I numeri associati alle ipotesi dal gestore di dimostrazione verosimilmente potrebbero 
+essere usati per accedere alle ipotesi (sarebbe piuttosto semplice scrivere una 
+tattica simile). Comunque, iniziare una nuova dimostrazione è a volte la 
+cosa più illuminante da fare.
+
+In alcuni casi, è utile essere in grado di cancellare un'ipotesi. Questo si può 
+ottenere passando l'ipotesi a una tattica che la ignora.
+Per esempio, per scartare la prima ipotesi, si può invocare 
+\ml{POP\_ASSUM (K ALL\_TAC)}.
+
+\item Nell'esempio, non abbiamo usato le caratteristiche più avanzate di 
+\ml{bossLib}, in gran parte perché non forniscono, finora, molte più 
+funzionalità rispetto alla semplice sequenza di semplificazione, procedure 
+di decisione, e ragionamento automatico al primo ordine. Il tatticale 
+\ml{THEN} è dunque servito come una sostituzione adeguata. Nel futuro, 
+questi punti d'ingresso dovrebbero diventare più potenti.
+
+\item E' quasi sempre necessario avere un'idea della dimostrazione {\it
+    informale\/} al fine di avere successo quando di fa una dimostrazione 
+	formale. Tuttavia, troppo spesso i novizi adottano la seguente 
+	strategia: (1) riscrivere il goal con alcune definizioni rilevanti, e 
+	quindi (2) fare affidamento sulla sintassi del goal risultante per guidare 
+	la selezione delle tattiche successive. Un tale approccio costituisce un chiaro 
+	caso di cane che si morde la coda, ed è una strategia povera da adottare. 
+	La comprensione della struttura di alto livello della dimostrazione è uno dei 
+	fattori più importanti negli esercizi di verifica di successo.
+
+L'autore ha notato che molti degli esperti di verifica più di successo 
+lavorano usando un foglio di carta per tenere traccia dei passi principali che 
+devono essere fatti. Forse distogliere lo sguardo sulla carte aiuta a rompere 
+l'effetto ipnotizzante dello schermo del computer.
+
+Dall'altra parte, uno dei vantaggi di avere una logica meccanizzata 
+è che la macchina può essere usata come un calcolatore di espressioni formali, 
+e così l'utente lo può usare per esplorare velocemente e accuratamente varie 
+possibilità di dimostrazione.
+
+\item Gli strumenti molto potenti come \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, e
+\ml{RW\_TAC} sono il modo principale per fare progressi in una dimostrazione in 
+\ml{bossLib}. In molti casi, essi fanno ciò che si desidera, o addirittura 
+riescono a stupire l'utente con la loro potenza. Nella formalizzazione del 
+teorema di Euclide, gli strumenti hanno funzionato piuttosto bene. Tuttavia, a volte 
+sono eccessivamente aggressivi, o semplicemente fanno errori. In questi casi, si devono 
+usare, o persino scrivere, degli strumenti di dimostrazione più specializzati, e di conseguenza 
+alla fine bisogna imparare il supporto sottostante a \ml{bossLib}.
+
+\item Avere una buona conoscenza dei lemmi disponibile, e di dove essi 
+si trovano, è una parte essenziale per avere successo. Spesso gli strumenti 
+potenti possono sostituire i lemmi in un dominio ristretto, ma in generale, si 
+deve sapere cosa è stato già dimostrato. Abbiamo visto che i punti di ingresso 
+in \verb+DB+ aiutano a trovare velocemente i lemmi.
+
+\end{itemize}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

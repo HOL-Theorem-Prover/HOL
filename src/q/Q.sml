@@ -56,7 +56,7 @@ end
 
 val mk_type_rsubst = map (fn {redex,residue} => (pty redex |-> pty residue));
 
-fun store_thm(s,q,t) = Tactical.store_thm(s,btm q,t);
+fun store_thm(s,q,t) = boolLib.store_thm(s,btm q,t);
 fun prove (q, t) = Tactical.prove(btm q,t);
 fun new_definition(s,q) = Definition.new_definition(s,btm q);
 fun new_infixl_definition(s,q,f) = boolLib.new_infixl_definition(s,btm q,f);

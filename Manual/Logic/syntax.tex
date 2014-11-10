@@ -26,7 +26,7 @@ English is again the meta-language!
 
 The \HOL{} syntax contains syntactic categories of types and terms whose
 elements are intended to denote respectively certain sets and elements
-of sets. This set theoretic interpretation will be developed along side
+of sets. This set theoretic interpretation will be developed alongside
 the description of the \HOL{} syntax, and in the next chapter the \HOL\
 proof system will be shown to be sound for reasoning about properties
 of the set theoretic model.\footnote{There are other, `non-standard'
@@ -133,7 +133,7 @@ type operators.
 \end{picture}}
 \newcommand{\funty}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
 \put(.5,1.5){\makebox(0,0)[b]{\footnotesize function types}}
-\put(.5,0){\makebox(0,0)[b]{\footnotesize (domain $\sigma_1$, range $\sigma_2$)}}
+\put(.5,0){\makebox(0,0)[b]{\footnotesize (domain $\sigma_1$, codomain $\sigma_2$)}}
 \put(1,2.5){\vector(0,1){3.5}}
 \end{picture}}
 \newcommand{\cmpty}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
@@ -181,9 +181,9 @@ is written as $\sigma_1\times\sigma_2$.
 
 \item {\bf Function types:}\index{function types, in HOL logic@function types, in \HOL{} logic!abstract form of} If $\sigma_1$
 and $\sigma_2$ are types, then $\sigma_1\fun\sigma_2$ is the function
-type with {\it domain\/} $\sigma_1$ and {\it range} $\sigma_2$. It
+type with {\it domain\/} $\sigma_1$ and {\it codomain} $\sigma_2$. It
 denotes the set of all (total) functions from the set denoted by its
-domain to the set denoted by its range. (In the literature
+domain to the set denoted by its codomain. (In the literature
 $\sigma_1\fun\sigma_2$ is written without the arrow and
 backwards---\ie\ as $\sigma_2\sigma_1$.) Note that syntactically
 $\fun$ is simply a distinguished type operator of arity 2 written with
@@ -586,7 +586,7 @@ since instantiation may cause variables to become equal
 `accidentally': see Section~\ref{term-substitution}.
 
 A {\em term-in-context\/}\index{term-in-context}
-$\:\;\alpha\!s,\!x\!s.t\;\:$ consists of a context together with a term
+$\alpha\!s,\!x\!s.t$ consists of a context together with a term
 $t$ satisfying the following conditions.
 \begin{itemize}
 

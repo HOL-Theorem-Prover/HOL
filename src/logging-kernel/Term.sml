@@ -374,6 +374,28 @@ end
 
 val empty_tmset = HOLset.empty compare
 
+(* ----------------------------------------------------------------------
+    All "atoms" (variables (bound or free) and constants).
+
+    Does not respect alpha-equivalence
+   ---------------------------------------------------------------------- *)
+
+fun all_atomsl tlist A =
+    case tlist of
+        [] => A
+      | t::ts =>
+        let
+        in
+          case t of
+              Var _ => all_atomsl ts (HOLset.add(A,t))
+            | Const _ => all_atomsl ts (HOLset.add(A,t))
+            | App(Rator,Rand) => all_atomsl (Rator::Rand::ts) A
+            | Abs(v,body) => all_atomsl (body::ts) (HOLset.add(A,v))
+        end
+
+fun all_atoms t = all_atomsl [t] empty_tmset
+
+
 fun aconv t1 t2 = compare(t1, t2) = EQUAL
 
 val term_eq = aconv

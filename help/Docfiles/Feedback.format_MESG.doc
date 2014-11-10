@@ -3,7 +3,7 @@
 \TYPE {format_MESG : string -> string}
 
 \SYNOPSIS
-Maps argument of {HOL_MESG} to a string
+Maps argument of {HOL_MESG} to a string.
 
 \KEYWORDS
 message, formatting

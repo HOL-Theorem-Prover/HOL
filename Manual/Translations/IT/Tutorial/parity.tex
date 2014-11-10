@@ -1,0 +1,786 @@
+
+\chapter{Esempio: un Semplice Validatore di Parità}\label{parity}
+
+Questo capitolo consiste di un esempio pratico: la specifica e 
+la verifica di un semplice validatore di parità sequenziale. L'intenzione è 
+di ottenere due cose:
+
+\begin{myenumerate}
+\item Presentare un pezzo completo di lavoro con \HOL.
+\item Dare una sensazione di cosa vuol dire usare il sistema \HOL\ per 
+  una\linebreak dimostrazione complicata.
+\end{myenumerate}
+
+Per quanto riguarda (ii), si noti che benché i teoremi dimostrati siano, di fatto, 
+piuttosto semplici, il modo in cui essi sono dimostrati illustra il genere intricato di 
+`ingegnerizzazione della dimostrazione' che è tipico. Le dimostrazioni potrebbero essere 
+fatte in modo più elegante, ma presentarle in quel modo farebbe fallire il 
+proposito di illustrare varie caratteristiche di \HOL. Si spera che il 
+semplice esempio qui illustrato darà al lettore la sensazione di cosa significhi fare 
+una dimostrazione di grandi dimensioni.
+
+I lettori che non sono interessati nella verifica dell'hardware dovrebbero essere in grado 
+di imparare qualcosa circa il sistema \HOL{} anche se non desiderano 
+penetrare i dettagli dell'esempio sul validatore di parità qui usato. La 
+specifica e la verifica di un validatore di parità più complesso 
+è lasciato come esercizio (una soluzione è fornita nella directory {\small\verb|examples/parity|}).
+
+\section{Introduzione}
+
+Le sessioni di questo esempio comprendono la specifica e 
+la verifica di un dispositivo che calcolata la parità di una sequenza di 
+bit. Più precisamente, è data una verifica dettagliata di un dispositivo 
+con un input {\small\verb|in|}, un output {\small\verb|out|} e la 
+specifica che l'$n$-esimo output su {\small\verb|out|} è 
+{\small\verb|T|} se e solo se c'è stato un numero pari di 
+input di {\small\verb|T|} su {\small\verb|in|}. E' costruita una teoria chiamata 
+{\small\verb|PARITY|}; questa contiene la specifica e 
+la verifica del dispositivo. Tutti gli input \ML{} nei riquadri di sotto 
+possono essere trovati nel file {\small\verb|examples/parity/PARITYScript.sml|}. Si 
+suggerisce al lettore di inserire interattivamente questo per avere una 
+sensazione `pratica' dell'esempio. L'obiettivo del caso di studio è di illustrare 
+un dettagliato `proof hacking' su un esempio piccolo e abbastanza semplice.
+
+\section{Specifica}
+\label{example}
+Il primo passo è avviare il sistema \HOL{}. Usiamo di nuovo 
+\texttt{<holdir>/bin/hol}. Il prompt \ML{} è {\small\verb|-|}, così 
+le righe che cominciano con {\small\verb|-|} sono digitate dall'utente e le altre 
+linee sono le risposte del sistema.
+
+Per specificare il dispositivo, è definita una funzione primitiva ricorsiva 
+{\small\verb|PARITY|} così che per $n>0$, {\small\tt PARITY} 
+$n f$ è vero se il numero di {\small\verb|T|} nella sequenza 
+$f${\small\tt (}$1${\small\tt)}, $\ldots$ , $f${\small\tt
+  (}$n${\small\tt)} è pari.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- val PARITY_def = Define`
+    (PARITY 0 f = T) /\
+    (PARITY(SUC n) f = if f(SUC n) then ~(PARITY n f) else PARITY n f)`;
+Definition has been stored under "PARITY_def".
+> val PARITY_def =
+    |- (!f. PARITY 0 f = T) /\
+       !n f. PARITY (SUC n) f =
+             (if f (SUC n) then ~PARITY n f else PARITY n f)
+    : thm
+\end{verbatim}
+\end{session}
+
+\noindent
+
+L'effetto della nostra chiamata a {\small\verb|Define|}  è di archiviare la 
+definizione di {\small\verb|PARITY|} nella teoria corrente con il nome 
+{\small\verb|PARITY_def|} e di legare il teorema di definizione alla variabile \ML\
+con lo stesso nome. Si noti che vengono scritti due tipi di 
+nome: i nomi delle costanti nelle teorie e i nomi 
+delle variabili in \ML. L'utente in genere è libero di gestire questi nomi 
+come desidera (a seconda delle varie esigenze 
+lessicali), ma una convenzione comune è (come in questo caso) di dare alla 
+definizione di una costante {\small\tt CON} il nome 
+{\small\verb|CON_def|} nella teoria e anche in \ML. Un'altra 
+convenzione usata comunemente è di usare solo {\small\verb|CON|} per la 
+teoria e il nome \ML{} della definizione di una costante 
+{\small\verb|CON|}. Sfortunatamente, il sistema \HOL{} non usa una 
+convenzione uniforme, ma agli utenti si raccomanda di adottarne una. In questo 
+caso \ml{Define} ha fatto una delle scelte per noi, ma ci sono 
+altri scenari in cui dobbiamo scegliere il nome usato nel file 
+della teoria.
+
+La specifica del dispositivo di controllo di parità può ora essere data come:
+
+\begin{hol}
+\begin{verbatim}
+   !t. out t = PARITY t inp
+\end{verbatim}
+\end{hol}
+
+\noindent
+E' {\it intuitivamente\/} chiaro che questa specifica sarà 
+soddisfatta se le funzioni di segnale\footnote{I segnali sono modellati come funzioni 
+  da numeri, che rappresentano tempi, a booleani.} 
+{\small\verb|inp|} e {\small\verb|out|} soddisfano\footnote{Preferiremmo 
+  usare \ml{in} come uno dei nomi delle nostre variabili, ma questa è una parola 
+	riservata per le espressioni-\ml{let}.}:
+
+\begin{hol}
+\begin{verbatim}
+   out(0) = T
+\end{verbatim}
+\end{hol}
+
+\noindent e
+
+\begin{hol}
+\begin{verbatim}
+   !t. out(t+1)  =  (if inp(t+1) then ~(out t) else out t)
+\end{verbatim}
+\end{hol}
+
+\noindent Questo può essere verificato in modo formale in \HOL{} fornendo il 
+seguente lemma:
+
+\begin{hol}
+\begin{verbatim}
+   !inp out.
+      (out 0 = T) /\
+      (!t. out(SUC t) = if inp(SUC t) then ~out t else out t)
+    ==>
+      (!t. out t = PARITY t inp)
+\end{verbatim}
+\end{hol}
+
+\noindent La dimostrazione di questo può essere fatta per Induzione Matematica e, benché 
+banale, è una buona illustrazione di come tali dimostrazioni sono fatte. Il 
+lemma è dimostrato interattivamente usando il pacchetto subgoal di \HOL. La dimostrazione 
+è avviata mettendo il goal da dimostrare in un goal stack usando la 
+funzione {\small\verb|g|} che prende un goal come argomento.
+
+\begin{session}
+\begin{verbatim}
+- g `!inp out.
+        (out 0 = T) /\
+        (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t)) ==>
+        (!t. out t = PARITY t inp)`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         !inp out.
+           (out 0 = T) /\
+           (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
+           !t. out t = PARITY t inp
+\end{verbatim}
+\end{session}
+
+\noindent Il pacchetto subgoal stampa il goal all'inizio del goal stack.
+Il goal principale è espanso eliminando il quantificatore universale 
+(con {\small\verb|GEN_TAC|}) e quindi mettendo i due congiunti 
+dell'antecedente dell'implicazione nelle assunzioni del goal (con 
+{\small\verb|STRIP_TAC|}). La funzione \ML{} {\small\verb|expand|} 
+prende una tattica e la applica al goal principale; i subgoal risultanti 
+sono immessi nel goal stack. Il messaggio `{\small\verb|OK..|}' è 
+stampato appena prima dell'applicazione della tattica. Quindi è stampato 
+il subgoal risultante.
+
+
+\begin{session}
+\begin{verbatim}
+- expand(REPEAT GEN_TAC THEN STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    !t. out t = PARITY t inp
+    ------------------------------------
+      0.  out 0 = T
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+\noindent Poi è fatta l'induzione su {\small\verb|t|} 
+usando {\small\verb|Induct|}, che fa 
+l'induzione sulla variabile quantificata universalmente più esterna.
+
+\begin{session}
+\begin{verbatim}
+- expand Induct;
+OK..
+2 subgoals:
+> val it =
+    out (SUC t) = PARITY (SUC t) inp
+    ------------------------------------
+      0.  out 0 = T
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+      2.  out t = PARITY t inp
+
+    out 0 = PARITY 0 inp
+    ------------------------------------
+      0.  out 0 = T
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+\noindent Le assunzioni dei due subgoal 
+sono riportate numerate sotto le linee di trattini orizzontali. 
+L'ultimo goal stampato è quello in cima allo stack, che è il 
+caso base. Questo è risolto riscrivendolo con le sue assunzioni e la 
+definizione di {\small\verb|PARITY|}.
+
+
+\begin{session}
+\begin{verbatim}
+- expand(ASM_REWRITE_TAC[PARITY_def]);
+OK..
+
+Goal proved.
+ [.] |- out 0 = PARITY 0 inp
+
+Remaining subgoals:
+> val it =
+    out (SUC t) = PARITY (SUC t) inp
+    ------------------------------------
+      0.  out 0 = T
+      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+      2.  out t = PARITY t inp
+\end{verbatim}
+\end{session}
+
+Il goal principale è dimostrato, così il sistema lo estrae dal goal stack (e 
+mette il teorema dimostrato in uno stack di teoremi). Il nuovo goal principale è 
+il caso di passo dell'induzione. Questo goal è anch'esso risolto per riscrittura.
+
+\begin{session}
+\begin{verbatim}
+- expand(ASM_REWRITE_TAC[PARITY_def]);
+OK..
+
+Goal proved.
+ [..] |- out (SUC t) = PARITY (SUC t) inp
+
+Goal proved.
+ [..] |- !t. out t = PARITY t inp
+> val it =
+    Initial goal proved.
+    |- !inp out.
+         (out 0 = T) /\
+         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
+         !t. out t = PARITY t inp
+\end{verbatim}
+\end{session}
+
+\noindent Il goal è dimostrato, \ie\ è prodotta la lista vuota di subgoal. 
+Il sistema ora applica le funzioni di giustificazione prodotte dalle 
+tattiche alla lista di teoremi ottenendo i subgoal (iniziando con 
+la lista vuota). Questi teoremi sono stampati nell'ordine in cui 
+sono generati (si noti che le assunzioni dei teoremi sono stampate come 
+punti).
+
+La funzione \ML{}
+\begin{hol}
+\begin{verbatim}
+   top_thm : unit -> thm
+\end{verbatim}
+\end{hol}
+
+\noindent
+restituisce il teorema appena dimostrato (\ie\ quello in cima allo stack dei teoremi) 
+nella teoria corrente, e noi lo leghiamo al nome \ML{}
+\ml{UNIQUENESS\_LEMMA}.
+
+
+\begin{session}
+\begin{verbatim}
+- val UNIQUENESS_LEMMA = top_thm();
+> val UNIQUENESS_LEMMA =
+    |- !inp out.
+         (out 0 = T) /\
+         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
+         !t. out t = PARITY t inp
+    : thm
+\end{verbatim}
+\end{session}
+
+\section{Implementazione}
+\label{implementation}
+
+Il lemma appena dimostrato suggerisce che il checker di parità può essere 
+implementato mantenendo il valore di parità in un registro e poi 
+integrando il contenuto del registro ogni volta che {\small\verb|T|} 
+è inserito. Per rendere l'implementazione più interessante, si 
+assumerà che i registri `si accendano' archiviando {\small\verb|F|}. Così 
+l'output al tempo {\small\verb|0|} non può essere preso direttamente da un 
+registro, perché l'output del validatore di parità al tempo 
+{\small\verb|0|} è specificato essere {\small\verb|T|}. Un'altra cosa 
+complicata da notare è che se {\small\verb|t>0|} allora l'output del 
+validatore di parità al tempo {\small\verb|t|} è una funzione dell'input al 
+tempo {\small\verb|t|}. Così ci deve essere un percorso combinatorio 
+dall'input all'output.
+
+Il diagramma schematico di sotto mostra il disegno di 
+un dispositivo che è inteso implementare questa specifica.
+(L'input più a sinistra di \ml{MUX} è il selettore.)
+Questo funziona archiviando la parità della sequenza immessa finora 
+nella parte bassa dei due registri. Ogni volta che {\small\verb|T|} è immesso in 
+{\small\verb|in|}, questo valore archiviato è integrato. Si assume che i registri 
+`si accendano' in uno stato in cui stanno archiviando  {\small\verb|F|}. Il secondo 
+registro (connesso a {\small\verb|ONE|}) inizialmente restituisce l'output 
+ {\small\verb|F|} e 
+dopo restituisce sempre {\small\verb|T|}. Il suo ruolo è solo quello di assicurare che il 
+dispositivo 
+funzioni durante il primo ciclo collegando l'output {\small\verb|out|} al 
+dispositivo {\small\verb|ONE|} attraverso il multiplexer più basso. Per tutti i cicli successivi 
+{\small\verb|out|} è collegato a {\small\verb|l3|} e quindi o porta il 
+valore di parità archiviato (se l'input corrente è {\small\verb|F|}) oppure il 
+complemento di questo valore (se l'input corrente è {\small\verb|T|}).
+
+\begin{center}
+%BEGIN IMAGE
+\setlength{\unitlength}{5mm}
+\begin{picture}(14,30)(0,0.5)
+\put(8,20){\framebox(2,2){\small{\tt NOT}}}
+\put(6,16){\framebox(6,2){\small{\tt MUX}}}
+\put(2,16){\framebox(2,2){\small{\tt ONE}}}
+\put(2,12){\framebox(2,2){\small{\tt REG}}}
+\put(6,8){\framebox(6,2){\small{\tt MUX}}}
+\put(8,4){\framebox(2,2){\small{\tt REG}}}
+
+\puthrule(9,24){4}
+\puthrule(3,15){8}
+\puthrule(3,11){4}
+\puthrule(7,7){2}
+\puthrule(9,3){4}
+
+\putvrule(3,11){1}
+\putvrule(3,14){2}
+\putvrule(7,2){5}
+\putvrule(7,10){1}
+\putvrule(7,18){8}
+\putvrule(9,3){1}
+\putvrule(9,6){2}
+\putvrule(9,10){6}
+\putvrule(9,18){2}
+\putvrule(9,22){2}
+\putvrule(11,10){5}
+\putvrule(11,18){6}
+\putvrule(13,3){21}
+
+\put(6,26){\makebox(2,2){\small{\tt in}}}
+\put(6,0){\makebox(2,2){\small{\tt out}}}
+\put(9,18){\makebox(1.8,2){\small{\tt l1}}}
+\put(13,18){\makebox(1.8,2){\small{\tt l2}}}
+\put(9,12){\makebox(1.8,2){\small{\tt l3}}}
+\put(11,12){\makebox(1.8,2){\small{\tt l4}}}
+\put(4,11){\makebox(3,1){\small{\tt l5}}}
+
+\put(10,23){\makebox(2,2){$\bullet$}}
+\put(8,6){\makebox(2,2){$\bullet$}}
+\put(2,14){\makebox(2,2){$\bullet$}}
+
+\end{picture}
+\setlength{\unitlength}{1mm}
+%END IMAGE
+%HEVEA \imageflush
+\end{center}
+
+I dispositivi che compongono questo schema saranno modellati con predicati 
+\cite{Why-HOL-paper}. Per esempio, il predicato {\small\verb|ONE|} è vero 
+di un segnale {\small\verb|out|} se per tutti gli istanti {\small\verb|t|} il valore di 
+{\small\verb|out|} è {\small\verb|T|}.
+
+\begin{session}
+\begin{verbatim}
+- val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
+Definition stored under "ONE_def".
+> val ONE_def = |- !out. ONE out = !t. out t = T : thm
+\end{verbatim}
+\end{session}
+
+\noindent Si noti che, come discusso di sopra, `{\small\verb|ONE_def|}' è usato sia 
+come una variabile \ML{} e come il nome della definizione nella teoria.
+Si noti anche come `{\small\verb|:num->bool|}' è stato aggiunto per risolvere 
+le ambiguità di tipo; senza questa (o qualche altra informazione) il 
+controllore di tipo non sarebbe in grado di dedurre che {\small\tt t} deve avere 
+il tipo {\small\tt num}.
+
+Il predicato binario {\small\verb|NOT|} è vero di una coppia di segnali 
+{\small\verb|(inp,out)|} se il valore di {\small\verb|out|} è sempre 
+la negazione del valore di {\small\verb|inp|}. Gli invertitori sono così 
+modellati come non aventi alcun ritardo. Questo è appropriato per un 
+modello di livello registro-trasferimento, ma non per un livello inferiore.
+
+\begin{session}
+\begin{verbatim}
+- val NOT_def = Define`NOT(inp, out:num->bool) = !t. out t = ~(inp t)`;
+Definition stored under "NOT_def".
+> val NOT_def = |- !inp out. NOT (inp,out) = !t. out t = ~inp t : Thm.thm
+\end{verbatim}
+\end{session}
+
+\noindent Il dispositivo combinatorio finale necessario è un multiplexer.
+Questo è un `hardware condizionale'; l'input 
+{\small\verb|sw|} seleziona quale degli altri 
+due input devono essere collegati all'output {\small\verb|out|}.
+
+\begin{session}
+\begin{verbatim}
+- val MUX_def = Define`
+    MUX(sw,in1,in2,out:num->bool) =
+      !t. out t = if sw t then in1 t else in2 t`;
+Definition stored under "MUX_def".
+> val MUX_def =
+    |- !sw in1 in2 out.
+         MUX (sw,in1,in2,out) = !t. out t = (if sw t then in1 t else in2 t)
+    : thm
+\end{verbatim}
+\end{session}
+
+I dispositivi rimanenti nello schema sono i registri. Questi sono 
+elementi unità di ritardo; i valori restituiti come output al tempo {\small\verb|t+1|} sono 
+i valori immessi come input al tempo precedente {\small\verb|t|}, escluso il 
+tempo {\small\verb|0|} in cui il registro restituisce l'output 
+{\small\verb|F|}\footnote{Il tempo {\tt {\small 0}} rappresenta quando il 
+  dispositivo è acceso.}.
+
+\begin{session}
+\begin{verbatim}
+- val REG_def =
+    Define `REG(inp,out:num->bool) =
+              !t. out t = if (t=0) then F else inp(t-1)`;
+Definition stored under "REG_def".
+> val REG_def =
+    |- !inp out. REG (inp,out) = !t. out t =
+                 (if t = 0 then F else inp (t - 1))
+    : thm
+\end{verbatim}
+\end{session}
+
+Il diagramma schematico di sopra può essere rappresentato come un predicato 
+congiungendo le relazioni che valgono tra i vari 
+segnali e quindi quantificando esistenzialmente le linee interne. 
+Questa tecnica è spiegata altrove 
+(\eg\ si veda \cite{Camilleri-et-al,Why-HOL-paper}).
+
+\begin{session}
+\begin{verbatim}
+- val PARITY_IMP_def = Define
+   `PARITY_IMP(inp,out) =
+      ?l1 l2 l3 l4 l5.
+        NOT(l2,l1) /\ MUX(inp,l1,l2,l3) /\ REG(out,l2) /\
+        ONE l4     /\ REG(l4,l5)        /\ MUX(l5,l3,l4,out)`;
+Definition stored under "PARITY_IMP_def".
+> val PARITY_IMP_def =
+    |- !inp out.
+         PARITY_IMP (inp,out) =
+         ?l1 l2 l3 l4 l5.
+           NOT (l2,l1) /\ MUX (inp,l1,l2,l3) /\ REG (out,l2) /\ ONE l4 /\
+           REG (l4,l5) /\ MUX (l5,l3,l4,out)
+    : thm
+\end{verbatim}
+\end{session}\label{parity-imp}
+
+\section{Verification}
+
+Alla fine sarà dimostrato il seguente teorema:
+\begin{hol}
+\begin{verbatim}
+   |- !inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)
+\end{verbatim}
+\end{hol}
+Questo afferma che {\it se\/} {\small\verb|inp|} e {\small\verb|out|} 
+sono correlati come nel diagramma 
+schematico (\ie\ come nella definizione di {\small\verb|PARITY_IMP|}),
+{\it allora\/} la 
+coppia di segnali {\small\verb|(inp,out)|} soddisfa la specifica.
+
+Per prima cosa, è dimostrato il seguente lemma; la correttezza del validatore 
+di parità segue da questo e da {\small\verb|UNIQUENESS_LEMMA|} per la 
+transitività di {\small{\tt\verb+==>+}}.
+
+\begin{session}
+\begin{verbatim}
+- g `!inp out.
+        PARITY_IMP(inp,out) ==>
+        (out 0 = T) /\
+        !t. out(SUC t) = if inp(SUC t) then ~(out t) else out t`;
+> val it =
+    Proof manager status: 2 proofs.
+    2. Completed: ...
+    1. Incomplete:
+         Initial goal:
+         !inp out.
+           PARITY_IMP (inp,out) ==>
+           (out 0 = T) /\
+           !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+Il primo passo, per dimostrare questo goal è la riscrittura con le definizioni 
+seguita da una decomposizione del goal risultante per mezzo di 
+{\small\verb|STRIP_TAC|}. E' usata la tattica di riscrittura 
+{\small\verb|PURE_REWRITE_TAC|}; questa non fa alcuna semplificazione 
+incorporata, ma solo quelle date esplicitamente nella lista di 
+teoremi fornita come argomento. Una delle semplificazioni incorporate 
+usate da {\small\verb|REWRITE_TAC|} è {\small\tt |-~(x~=~T)~=~x}.
+{\small\verb|PURE_REWRITE_TAC|} è usata per evitare che venga effettuata una riscrittura  
+con questa semplificazione.
+\begin{session}
+\begin{verbatim}
+- expand(PURE_REWRITE_TAC
+           [PARITY_IMP_def, ONE_def, NOT_def, MUX_def, REG_def] THEN
+         REPEAT STRIP_TAC);
+OK..
+2 subgoals:
+> val it =
+    out (SUC t) = (if inp (SUC t) then ~out t else out t)
+    ------------------------------------
+      0.  !t. l1 t = ~l2 t
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
+      3.  !t. l4 t = T
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
+
+    out 0 = T
+    ------------------------------------
+      0.  !t. l1 t = ~l2 t
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
+      3.  !t. l4 t = T
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
+\end{verbatim}
+\end{session}
+
+Il goal principale è quello stampato per ultimo; la sua conclusione è 
+{\small\verb|out 0 = T|} e le sue assunzioni sono equazioni che collegano 
+i valori sulle linee nel circuito. Il prossimo passo naturale 
+sarebbe espandere il goal principale per mezzo della riscrittura con le assunzioni. Tuttavia, 
+se si facesse questo il sistema entrerebbe in un  loop infinito perché 
+le equazioni per {\small\verb|out|}, {\small\verb|l2|} e
+{\small\verb|l3|} sono mutuamente ricorsive. Al suo posto usiamo il 
+ragionatore al primo ordine {\small\verb|PROVE_TAC|} per fare il lavoro:
+
+\begin{session}
+\begin{verbatim}
+- expand(PROVE_TAC []);
+OK..
+Meson search level: .....
+
+Goal proved.
+ [......] |- out 0 = T
+
+Remaining subgoals:
+> val it =
+    out (SUC t) = (if inp (SUC t) then ~out t else out t)
+    ------------------------------------
+      0.  !t. l1 t = ~l2 t
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
+      3.  !t. l4 t = T
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+      5.  !t. out t = (if l5 t then l3 t else l4 t)
+\end{verbatim}
+\end{session}
+Il primo dei due subgoal è dimostrato. Ispezionando il goal 
+rimanente si può vedere che sarà risolto se il suo lato sinistro, 
+{\small\verb|out(SUC t)|}, è espanso usando l'assunzione:
+
+\begin{hol}
+\begin{verbatim}
+   !t. out t = if l5 t then l3 t else l4 t
+\end{verbatim}
+\end{hol}
+
+
+    Tuttavia, se questa assunzione è usata per riscrivere, allora anche 
+		tutti i sottotermini della forma {\small\verb|out t|} saranno espansi.
+		Per evitare questo, in realtà vogliamo riscrivere con una formula che 
+		riguarda specificatamente {\small\verb|out (SUC t)|}. Vogliamo estrarre 
+		in qualche modo l'assunzione che desideriamo dalla lista e riscrivere con 
+		una sua versione specializzata. Possiamo fare questo usando 
+		{\small\verb|PAT_ASSUM|}. Questa tattica è di tipo \ml{term -> thm
+      -> tactic}. Essa seleziona un'assunzione che è della forma data 
+		dal suo termine argomento, e la passa al secondo argomento, una 
+		funzione che si aspetta un teorema e restituisce una tattica. Qui è 
+		mostrata in azione:
+
+\begin{session}
+\begin{verbatim}
+- e (PAT_ASSUM ``!t. out t = X t``
+       (fn th => REWRITE_TAC [SPEC ``SUC t`` th]));
+<<HOL message: inventing new type variable names: 'a, 'b.>>
+OK..
+1 subgoal:
+> val it =
+    (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
+    (if inp (SUC t) then ~out t else out t)
+    ------------------------------------
+      0.  !t. l1 t = ~l2 t
+      1.  !t. l3 t = (if inp t then l1 t else l2 t)
+      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
+      3.  !t. l4 t = T
+      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
+\end{verbatim}
+\end{session}
+Il pattern qui usato ha sfruttato qualcosa chiamato \emph{higher order
+  matching}. L'assunzione attuale che è stato tolta dallo stack delle 
+assunzioni non ha un lato destro che appare come l'applicazione di una 
+funzione (\ml{X} nel pattern) al parametro \ml{t}, ma il lato destro 
+potrebbe comunque essere visto uguale all'applicazione di \emph{qualche} 
+funzione al parametro \ml{t}. Di fatto, il valore che si accordava con 
+\ml{X} era {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
+
+Ispezionando il goal di sopra si può vedere che il prossimo passo è di 
+svolgere le equazioni per le linee rimanenti del circuito. Facciamo 
+questo usando il simpset \ml{arith\_ss} fornito da \ml{bossLib} che 
+aiuta con l'aritmetica incarnata dalle sottrazioni e dai termini 
+\ml{SUC}.
+
+
+\begin{session}
+\begin{verbatim}
+- e (RW_TAC arith_ss []);
+OK..
+
+Goal proved.
+ [.....]
+|- (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
+   (if inp (SUC t) then ~out t else out t)
+
+Goal proved.
+ [......] |- out (SUC t) = (if inp (SUC t) then ~out t else out t)
+> val it =
+    Initial goal proved.
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+\noindent Il teorema appena dimostrato è chiamato
+{\small\verb|PARITY_LEMMA|} e salvato nella teoria corrente.
+
+\begin{session}
+\begin{verbatim}
+- val PARITY_LEMMA = top_thm ();
+> val PARITY_LEMMA =
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+{\small\verb|PARITY_LEMMA|} avrebbe potuto essere dimostrato in un unico passo con una 
+singola tattica composta. Il nostro goal iniziale poteva essere espanso con una 
+singola tattica corrispondente alla sequenza delle tattiche che sono state usate 
+interattivamente:
+
+\begin{session}
+\begin{verbatim}
+- restart()
+> ...
+- e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
+                       MUX_def, REG_def] THEN
+     REPEAT STRIP_TAC THENL [
+       PROVE_TAC [],
+       PAT_ASSUM ``!t. out t = X t``
+                 (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) THEN
+       RW_TAC arith_ss []
+     ]);
+<<HOL message: inventing new type variable names: 'a, 'b.>>
+OK..
+Meson search level: .....
+> val it =
+    Initial goal proved.
+    |- !inp out.
+         PARITY_IMP (inp,out) ==>
+         (out 0 = T) /\
+         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
+\end{verbatim}
+\end{session}
+
+Una volta in possesso di {\small\verb|PARITY_LEMMA|}, il teorema finale è facilmente 
+dimostrato. Questo sarà fatto in un unico passo usando la funzione \ML{} 
+{\small\verb|prove|}.
+
+\begin{session}
+\begin{verbatim}
+- val PARITY_CORRECT = prove(
+    ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC UNIQUENESS_LEMMA THEN
+    MATCH_MP_TAC PARITY_LEMMA THEN ASM_REWRITE_TAC []);
+> val PARITY_CORRECT =
+    |- !inp out. PARITY_IMP (inp,out) ==> !t. out t = PARITY t inp
+\end{verbatim}
+\end{session}
+
+\noindent Questo completa la dimostrazione del 
+dispositivo di controllo di parità.
+
+\section{Esercizi}
+\label{exercises}
+
+In questa sezione sono dati due esercizi: l'Esercizio~1 è 
+chiaro, ma l'Esercizio~2 è piuttosto complicato e a un principiante 
+potrebbe richiedere molti giorni per risolverlo.
+
+\subsection{Esercizio 1}
+
+Usando {\it solo\/} i dispositivi {\small\verb|ONE|}, {\small\verb|NOT|},
+{\small\verb|MUX|} e {\small\verb|REG|} definiti nella 
+Sezione~\ref{implementation}, progettare e verificare un registro 
+{\small\verb|RESET_REG|} con un input {\small\verb|inp|}, linea di ripristino 
+{\small\verb|reset|}, output {\small\verb|out|} e comportamento 
+specificato come segue.
+\begin{itemize}
+\item Se {\small\verb|reset|} è {\small\verb|T|} al tempo 
+	{\small\verb|t|}, allora anche il valore in {\small\verb|out|} al tempo 
+	{\small\verb|t|} è {\small\verb|T|}.
+\item Se {\small\verb|reset|} è {\small\verb|T|} al tempo 
+	{\small\verb|t|} o {\small\verb|t+1|}, allora il valore di output in 
+	{\small\verb|out|} al tempo {\small\verb|t+1|} è {\small\verb|T|},
+	altrimenti è uguale al valore di input al tempo {\small\verb|t|} su
+  {\small\verb|inp|}.
+\end{itemize}
+Questo è formalizzato in \HOL{} dalla definizione:
+
+
+
+\begin{hol}
+\begin{verbatim}
+   RESET_REG(reset,inp,out) =
+    (!t. reset t ==> (out t = T)) /\
+    (!t. out(t+1) = if reset t \/ reset(t+1) then T else inp t)
+\end{verbatim}
+\end{hol}
+
+\noindent Si noti che questa specifica è solo parziale; non specifica 
+l'output al tempo {\small\verb|0|} nel caso non ci sia alcun azzeramento.
+
+La soluzione all'esercizio dovrebbe essere la definizione di un predicato 
+{\small\verb|RESET_REG_IMP|} come una quantificazione esistenziale di una 
+congiunzione di applicazioni di {\small\verb|ONE|}, {\small\verb|NOT|},
+{\small\verb|MUX|} e {\small\verb|REG|} a nomi di linea
+adatti\footnote{Cioè  una definizione della stessa forma di 
+  {\small\tt PARITY\_IMP}
+%BEGIN LATEX
+a paginae~\pageref{parity-imp}.
+%END LATEX
+%HEVEA in section~\ref{parity-imp}
+}, insieme con una dimostrazione di:
+
+\begin{hol}
+\begin{verbatim}
+   RESET_REG_IMP(reset,inp,out) ==> RESET_REG(reset,inp,out)
+\end{verbatim}
+\end{hol}
+
+
+\subsection{Esercizio 2}
+
+\begin{enumerate}
+\item Specificare formalmente un validatore di parità azzerabile che ha due input 
+  booleani {\small\tt reset} e {\small\tt inp}, e un output booleano 
+	{\small\tt out} con il seguente comportamento:
+	\begin{quote}
+		Il valore in {\small\tt out} è {\small\tt T} se e solo se c'è stato 
+		un numero pari di input {\small\tt T} in {\small\tt inp} 
+		dall'ultima volta che {\small\tt T} è stato immesso in {\small\tt
+      reset}.
+	\end{quote}
+\item Sviluppare un'implementazione di questa specifica costruita usando {\it
+    solo\/} i dispositivi {\small\verb|ONE|}, {\small\verb|NOT|},
+  {\small\verb|MUX|} e {\small\verb|REG|} definiti nella 
+  Sezione~\ref{implementation}.
+	
+\item Verificare la correttezza della tua implementazione in \HOL.
+\end{enumerate}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

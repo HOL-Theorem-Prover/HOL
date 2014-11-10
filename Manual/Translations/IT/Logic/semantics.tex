@@ -1,0 +1,1579 @@
+% Revised version of Part II, Chapter 10 of HOL DESCRIPTION
+% Incorporates material from both of chapters 9 and 10 of the old
+% version of DESCRIPTION
+% Written by Andrew Pitts
+% 8 March 1991
+% revised August 1991
+\chapter{Teorie}\label{semantics}
+
+\section{Introduzione}
+
+Il risultato, se ce n'è uno, di una sessione con il sistema \HOL{} è un oggetto 
+chiamato una {\it teoria\/}. Questo oggetto è strettamente collegato con ciò che un 
+logico chiamerebbe una teoria\index{theories, nella logica HOL@teorie, nella logica \HOL{}!forma astratta di}, ma ci sono alcune differenze che sorgono 
+dalle necessità della dimostrazione meccanica. Una teoria \HOL{}, come la teoria di 
+un logico, contiene insiemi di tipi, costanti, definizioni e assiomi. In 
+aggiunta, tuttavia, una teoria \HOL{}, in qualsiasi punto del tempo, contiene una 
+esplicita lista di teoremi che sono già stati dimostrati dagli 
+assiomi e dalle definizioni. I logici non hanno alcuna necessità di distinguere i teoremi 
+attualmente dimostrati da quelli meramente dimostrabili; di conseguenza essi normalmente non 
+considerano insiemi di teoremi dimostrati come parte di una teoria; piuttosto, essi 
+considerano i teoremi di una teoria essere l'insieme (spesso infinito) di tutte 
+le conseguenze degli assiomi e le definizioni. Una differenza collegata 
+tra le teorie dei logici e le teorie \HOL{} è che per i logici, 
+le teorie sono oggetti statici, ma in \HOL{} esse possono essere pensate come 
+potenzialmente estensibili. Per esempio, il sistema \HOL{} fornisce strumenti 
+per aggiungere alle teorie e combinare teorie. Un'interazione tipica 
+con \HOL{} consiste nel combinare qualche teoria esistente, facendo qualche 
+definizione, dimostrando alcuni teoremi e poi salvare i nuovi risultati.
+
+Lo scopo del sistema \HOL{} è di fornire strumenti per permettere 
+di costruire teorie ben-formate. La logica \HOL{} è tipizzata: 
+ogni teoria specifica una firma di constanti di tipo e individuali; 
+queste poi determinano gli insiemi dei tipi e dei termini come nel capitolo 
+precedente. Tutti i teoremi di tali teorie sono conseguenze logiche 
+delle definizioni e degli assiomi della teoria. Il sistema \HOL{} assicura 
+che solo teorie ben-formate possono essere costruite permettendo di creare 
+teoremi solo per {\it dimostrazione formale\/}. Esplicitare questo comporta 
+definire cosa significa essere un teorema, il che porta alla descrizione 
+del sistema di dimostrazione di \HOL{}, che sarà dato di seguito. Esso è dimostrato essere {\em 
+valido\/} per la semantica insiemistica di \HOL{} descritta nel 
+capitolo precedente. Questo significa che un teorema è soddisfatto da un modello 
+se ha una dimostrazione formale da assiomi che sono a loro volta soddisfatti dal 
+modello. Dal momento che una contraddizione logica non è soddisfatta da alcun 
+modello, questo garantisce in particolare che una teoria che possiede un modello 
+è necessariamente coerente, cioè non può essere dimostrata una contraddizione 
+logica dai suoi assiomi.
+
+Questo capitolo descrive anche i vari meccanismi per i quali le teorie 
+\HOL\ possono essere estese a nuove teorie. Ogni meccanismo è mostrato 
+preservare la proprietà di possedere un modello. Così le teorie costruite 
+dalla teoria \HOL{} iniziale (che possiede un modello) usando 
+questi meccanismi sono garantite essere coerenti.
+
+
+\section{Sequenti}
+\label{sequents}
+
+La logica \HOL{} è formulata in termini di asserzioni ipotetiche chiamate 
+{\em sequenti}\index{sequenti!nella deduzione naturale}. Fissando una 
+firma (standard) $\Sigma_\Omega$, un sequente è una coppia $(\Gamma,
+t)$ dove $\Gamma$ è un insieme finito di formule su $\Sigma_\Omega$ 
+e $t$ è una singola formula su $\Sigma_\Omega$\footnote{Si noti che 
+il sottoscritto di tipo è omesso dai termini quando è chiaro dal 
+contesto che essi sono formule, cioè hanno tipo \ty{bool}.}. L'insieme di 
+formule $\Gamma$ che formano il primo componente di un sequente è chiamato 
+il suo insieme di {\it assunzioni\/}\index{assunzioni!di sequenti} e il 
+termine $t$ che forma il secondo componente è chiamato la sua {\it
+conclusione\/}\index{conclusioni!di sequenti}. Quando non dà origine ad 
+ambiguità, un sequente $(\{\},t)$ è scritto semplicemente $t$.
+
+
+Intuitivamente un modello $M$ di $\Sigma_\Omega$ {\em
+soddisfa}\index{soddisfazione di sequenti, da parte di un modello} un sequente 
+$(\Gamma, t)$ se qualsiasi interpretazione delle variabili libere rilevanti come 
+elementi di $M$ che rendono le formule in $\Gamma$ vere, rendono vera 
+anche la formula $t$. Per rendere questo più preciso, supponiamo che 
+$\Gamma=\{t_1,\ldots,t_p\}$ e sia $\alpha\!s,\!x\!s$  un 
+contesto contenente tutte le variabili di tipo e tutte le variabili libere 
+che occorrono nelle formule $t,t_{1},\ldots,t_{p}$. Supponiamo che 
+$\alpha\!s$ abbia lunghezza $n$, che $x\!s=x_{1},\ldots,x_{m}$ e che il 
+tipo di $x_{j}$ sia $\sigma_{j}$. Dal momento che le formule sono termini di tipo 
+$\bool$, la semantica dei termini definita nel capitolo precedente da 
+origine a elementi $\den{\alpha\!s,\!x\!s.t}_M$ e
+$\den{\alpha\!s,\!x\!s.t_{k}}_M$ ($k=1,\ldots,p$) in
+\[
+\prod_{X\!s\in{\cal U}^{n}} \left(
+\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_M(X\!s)\right) \fun \:\two  \]
+Diciamo che il modello $M$ {\em soddisfa\/} il sequente $(\Gamma,t)$ e
+scriviamo
+\[
+\Gamma \models_{M} t
+\]
+se per tutti gli $X\!s\in{\cal U}^{n}$ e
+tutti gli $y\!s\in\den{\alpha\!s.\sigma_{1}}_M(X\!s)\times\cdots\times
+\den{\alpha\!s.\sigma_{m}}_M(X\!s)$ con
+\[
+\den{\alpha\!s,\!x\!s.t_{k}}_M(X\!s)(y\!s)=1
+\]
+per tutti i $k=1,\ldots,p$, è anche il caso che
+\[
+\den{\alpha\!s,\!x\!s.t}_M(X\!s)(y\!s)=1.
+\]
+(Si ricordi che $\two$ è l'insieme $\{0,1\}$.)
+
+Nel caso $p=0$, la soddisfazione di $(\{\},t)$ da parte di $M$ sarà scritta 
+$\models_{M} t$. Così $\models_{M} t$ significa che la funzione dipendentemente tipizzata 
+\[
+\den{t}_M \in \prod_{X\!s\in{\cal U}^{n}}
+\left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_M(X\!s)\right) \fun \:\two
+\]
+è costante con valore $1\in\two$.
+
+\section{Logica}
+
+Un sistema deduttivo\index{sistemi deduttivi} 
+${\cal D}$ è un insieme di coppie $(L,(\Gamma,t))$ dove $L$ è una 
+lista (possibilmente vuota) di sequenti e $(\Gamma,t)$ è un sequente.
+
+Un sequente $(\Gamma,t)$ segue da\index{segue da, nella deduzione naturale}
+un insieme di sequenti 
+$\Delta$ per un sistema deduttivo 
+${\cal D}$ se
+e solo se esistono sequenti 
+$(\Gamma_1,t_1)$, $\ldots$ , $(\Gamma_n,t_n)$ tali che:
+\begin{enumerate}
+\item $(\Gamma,t) = (\Gamma_n,t_n)$, e
+\item per tutti gli $i$ tali che $1\leq i\leq n$
+\begin{enumerate}
+\item o
+$(\Gamma_i,t_i)\in \Delta$ o
+\item $(L_i,(\Gamma_i,t_i))\in{\cal D}$ per qualche lista $L_i$ di membri di
+$\Delta\cup\{(\Gamma_1,t_1),\ldots,(\Gamma_{i-1},t_{i-1})\}$ .
+\end{enumerate}
+\end{enumerate}
+La sequenza $(\Gamma_1,t_1),\cdots,(\Gamma_n,t_n)$
+è chiamata una {\it dimostrazione\/}\index{dimostrazione!nella deduzione naturale} di
+$(\Gamma,t)$ da $\Delta$ rispetto a ${\cal D}$.
+
+Si noti che se $(\Gamma,t)$ segue da $\Delta$, allora anche $(\Gamma,t)$
+segue da qualsiasi $\Delta'$ tale che $\Delta\subseteq\Delta'$.
+Questa proprietà è chiamata {\it monotonicità\/}\index{monotonicità, nei sistemi deduttivi}.
+
+La notazione\index{turnstile} $t_1,\ldots,t_n\vdash_{{\cal
+D},\Delta} t$ significa che il sequente $(\{t_1,\ldots,t_n\},\ t)$
+segue da $\Delta$ per ${\cal D}$.  Se o ${\cal D}$ o $\Delta$
+è chiaro dal contesto allora può essere omesso.  Nel caso in cui 
+non ci siano ipotesi\index{ipotesi!di sequenti} (cioè $n=0$),
+si scrive semplicemente $\vdash t$.
+
+In pratica, un particolare sistema deduttivo è di solito specificato da un 
+numero di \emph{regole d'inferenza} (schematiche),
+\index{regole d'inferenza, della logica HOL@regole d'inferenza, della logica \HOL{}!forma astratta di primitive} 
+che prendono la forma
+\[
+\frac{\Gamma_1\turn t_1 \qquad\cdots\qquad\Gamma_n\turn t_n}
+{\Gamma \turn t}
+\]
+I sequenti sopra la linea sono chiamate le {\it
+ipotesi\/}\index{ipotesi!di regole d'inferenza} della regola e il 
+sequente sotto la linea è chiamato la sua {\it
+conclusione}\index{conclusioni!di regole d'inferenza}. Una tale regola è 
+schematica perché può contenere meta-variabili 
+che stanno per termini arbitrari dei tipi appropriati. Istanziando 
+queste meta-variabili con termini reali, si ottiene una lista di sequenti 
+sopra la linea e un singolo sequente sotto la linea che insieme 
+costituiscono un elemento particolare del sistema deduttivo. Le 
+istanziazioni permesse per una particolare regola possono essere ristrette 
+imponendo una {\em condizione a lato\/} della regola.
+
+
+\subsection{Il sistema deduttivo \HOL{}}
+\label{HOLrules}
+
+Il sistema deduttivo della logica \HOL{} è specificato da otto regole 
+d'inferenza, date di seguito. Le prime tre regole non hanno ipotesi; 
+le loro conclusioni possono essere dedotte sempre. Gli identificatori nelle parentesi 
+quadre sono i nomi delle funzioni \ML\ nel sistema \HOL{} che 
+implementano le corrispondenti regole d'inferenza (si veda \DESCRIPTION). Qualsiasi 
+condizioni a lato che restringano lo scopo di una regola sono date immediatamente 
+al di sotto di essa.
+
+\bigskip
+
+\subsubsection*{Introduzione di assunzione [{\small\tt
+ASSUME}]}\index{introduzione di assunzione, nella logica HOL@Introduzione di assunzione, nella logica \HOL{}!forma astratta di}
+\[
+\overline{t \turn t}
+\]
+
+\subsubsection*{Riflessività [{\small\tt
+REFL}]}\index{REFL@\ml{REFL}}\index{riflessività, nella logica HOL@riflessività, nella logica \HOL{}!forma astratta di}
+\[
+\overline{\turn t = t}
+\]
+
+\subsubsection*{Beta-conversione [{\small\tt BETA\_CONV}]}
+\index{beta-conversione, nella logica HOL@beta-conversione, nella logica \HOL{}!forma astratta di}\index{BETA_CONV@\ml{BETA\_CONV}}
+\[
+\overline{\turn (\lquant{x}t_1)t_2 = t_1[t_2/x]}
+\]
+\begin{itemize}
+\item Dove $t_1[t_2/x]$ è 
+il risultato di sostituire $t_2$ per $x$
+in $t_1$, con un'adatta rinomina delle variabili per impedire che le variabili libere
+in $t_2$ diventino legate dopo la sostituzione.
+\end{itemize}
+
+\subsubsection*{Sostituzione [{\small\tt
+SUBST}]}\index{SUBST@\ml{SUBST}} \index{sostituzione regola, nella logica HOL@sostituzione, regola di, nella logica \HOL{}!forma astratta di}
+\[
+\frac{\Gamma_1\turn t_1 = t_1'\qquad\cdots\qquad\Gamma_n\turn t_n =
+t_n'\qquad\qquad \Gamma\turn t[t_1,\ldots,t_n]}
+{\Gamma_1\cup\cdots\cup\Gamma_n\cup\Gamma\turn t[t_1',\ldots,t_n']}
+\]
+\begin{itemize}
+\item Dove $t[t_1,\ldots,t_n]$ denota un termine $t$ con alcune occorrenze 
+libere di sottotermini $t_1$, $\ldots$ , $t_n$ isolati e 
+$t[t_1',\ldots,t_n']$ denota il risultato di sostituire ciascuna occorrenza 
+selezionata di $t_i$ per $t_i'$ (per $1{\leq}i{\leq}n$), con una rinomina 
+adatta delle variabili per impedire che variabili libere in $t_1'$ diventino 
+legate dopo la sostituzione.
+\end{itemize}
+
+\subsubsection*{Astrazione [{\small\tt ABS}]}
+\index{ABS@\ml{ABS}}\index{regola di astrazione}
+\[
+\frac{\Gamma\turn t_1 = t_2}
+{\Gamma\turn (\lquant{x}t_1) = (\lquant{x}t_2)}
+\]
+\begin{itemize}
+\item Purché $x$ non sia libera in $\Gamma$.
+\end{itemize}
+
+\subsubsection*{Istanziazione di tipo [{\small\tt INST\_TYPE}]}
+\index{type instantiation, nella logica HOL@type instantiation, nella logica \HOL{}!forma astratta di}
+\newcommand{\insttysub}{[\sigma_1,\ldots,\sigma_n/\alpha_1,\ldots,\alpha_n]}
+\[
+\frac{\Gamma\turn t}
+{\Gamma\insttysub\turn t\insttysub}
+\]
+\begin{itemize}
+\item Dove $t\insttysub$ è il risultato di sostituire, in parallelo, 
+	i tipi $\sigma_1$, $\dots$, $\sigma_n$ per le variabili di tipo 
+	$\alpha_1$, $\dots$, $\alpha_n$ in $t$, e dove $\Gamma\insttysub$
+	è il risultato di eseguire la stessa sostituzione in tutte le 
+	ipotesi del teorema.
+\item Dopo l'istanziazione, le variabili libere nell'input non possono 
+	diventare legate, ma variabili libere distinte nell'input possono diventare 
+	identiche.
+\end{itemize}
+
+\subsubsection*{Scaricamento di assunzione [{\small\tt
+DISCH}]}\index{discharging assumptions, nella logica HOL@discharging assumptions, nella logica \HOL{}!forma astratta di}\index{DISCH@\ml{DISCH}}
+\[
+\frac{\Gamma\turn t_2}
+{\Gamma -\{t_1\} \turn t_1 \imp t_2}
+\]
+\begin{itemize}
+\item Dove $\Gamma -\{t_1\}$ è la sottrazione insiemistica di $\{t_1\}$
+da $\Gamma$.
+\end{itemize}
+
+\subsubsection*{Modus Ponens [{\small\tt
+MP}]}\index{MP@\ml{MP}}\index{Modus Ponens, nella logica HOL@Modus Ponens, nella logica \HOL{}!forma astratta di}
+\[
+\frac{\Gamma_1 \turn t_1 \imp t_2  \qquad\qquad   \Gamma_2\turn t_1}
+{\Gamma_1 \cup \Gamma_2 \turn t_2}
+\]
+
+In aggiunta a queste otto regole, ci sono anche quattro {\it
+assiomi\/}\index{assiomi!come regole d'inferenza} che avrebbero potuto essere 
+considerate come regole d'inferenza senza le ipotesi. Questo non è fatto, 
+tuttavia, dal momento che è più naturale formulare gli assiomi usando qualche 
+costante logica definita e il principio di definizione di costante non è 
+stato ancora descritto. Gli assiomi sono dati nella Sezione~\ref{INIT} e 
+le definizioni delle costanti logiche extra che essi coinvolgono sono date nella 
+Sezione~\ref{LOG}.
+
+Il particolare insieme di regole e assiomi scelti per assiomatizzare la logica 
+\HOL\ è piuttosto arbitrario. In parte è basato sulle regole che erano state 
+utilizzate nella logica 
+\LCF\index{LCF@\LCF}\ 
+\PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}, dal momento che \HOL{} è stato 
+implementato modificando il sistema \LCF. In particolare, la 
+regola di sostituzione\index{substitution rule, nella logica HOL@substitution rule, nella logica \HOL{}!implementation of} {\small\tt SUBST} è esattamente 
+la stessa della corrispondente regola in \LCF; il codice che implementa questa regola 
+fu scritto da Robin Milner ed è altamente ottimizzato. Poiché 
+la sostituzione è un'attività così pervasiva nella dimostrazione, si è ritenuto 
+importante che la primitiva di sistema fosse il più veloce possibile. Da un 
+punto di vista logico sarebbe stato meglio avere una primitiva 
+di sostituzione più semplice, come la `Regola R' della logica di Andrews ${\cal
+Q}_0$, e poi derivare regole più complicate da essa.
+
+\subsection{Teorema di validità}
+\index{soundness!of HOL deductive system@of \HOL{} deductive system}
+\label{soundness}
+
+\index{inference rules, della logica HOL@inference rules, della logica \HOL{}!formal semantics of}
+\emph{Le regole del sistema deduttivo \HOL{} sono {\em valide} per 
+	la nozione di soddisfacimento definita nella Sezione~\ref{sequents}: per 
+	qualsiasi istanza di regole d'inferenza, se un modello (standard) 
+	soddisfa le ipotesi della regola soddisfa anche la 
+	conclusione.}
+
+\medskip
+
+\noindent{\bf Dimostrazione\ }
+La verifica della validità delle regole è semplice. 
+Le proprietà della semantica rispetto alla sostituzione date dai 
+Lemmi 3 e 4 nella Sezione~\ref{term-substitution} sono necessari per le regole 
+\ml{BETA\_CONV}, \ml{SUBST} and
+\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}}\footnote{Si noti in 
+	particolare che la seconda restrizione su \ml{INST\_TYPE} permette 
+	il risultato sulla semantica della sostituzione di tipi per variabili di tipo 
+	nei termini da applicare}. Il fatto che $=$ e $\imp$ siano 
+interpretate in modo standard (come nella Sezione~\ref{standard-signatures}) è 
+necessario per le regole \ml{REFL}\index{REFL@\ml{REFL}},
+\ml{BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}},
+\ml{SUBST}\index{SUBST@\ml{SUBST}}, \ml{ABS}\index{ABS@\ml{ABS}},
+\ml{DISCH}\index{DISCH@\ml{DISCH}} e \ml{MP}\index{MP@\ml{MP}}.
+
+\section{Teorie \HOL{}}
+\label{theories}
+
+Una {\it teoria\/}\index{theories, nella logica HOL@theories, nella logica \HOL{}!forma astratta di} \HOL{} ${\cal T}$ è una $4$-tupla:
+\begin{eqnarray*}
+{\cal T} & = & \langle{\sf Struc}_{\cal T},{\sf Sig}_{\cal T},
+               {\sf Axioms}_{\cal T},{\sf Theorems}_{\cal T}\rangle
+\end{eqnarray*}
+dove
+\begin{myenumerate}
+
+\item ${\sf Struc}_{\cal T}$ è una struttura di tipo\index{type structures, of HOL theories@type structures, of \HOL{} theories}  chiamata la 
+struttura di tipo di ${\cal T}$;
+
+\item ${\sf Sig}_{\cal T}$ è una firma\index{signatures, della logica HOL@signatures, della logica \HOL{}!of HOL theories@of \HOL{} theories}
+su ${\sf Struc}_{\cal T}$ chiamata la firma di ${\cal T}$;
+
+\item ${\sf Axioms}_{\cal T}$ è un insieme di sequenti su ${\sf Sig}_{\cal T}$
+chiamati gli assiomi\index{assiomi, in una teoria HOL@assiomi, in una teoria \HOL{}}
+ di  ${\cal T}$;
+
+\item ${\sf Theorems}_{\cal T}$ è un insieme di sequenti su 
+${\sf Sig}_{\cal T}$ chiamati i teoremi 
+%
+\index{theorems, nella logica HOL@theorems, nella logica \HOL{}!forma astratta di}
+%
+di ${\cal T}$, con 
+la proprietà che ogni membro segue da ${\sf Axioms}_{\cal T}$ per 
+il sistema deduttivo \HOL{}.
+
+\end{myenumerate}
+
+Gli insiemi ${\sf Types}_{\cal T}$ e ${\sf Terms}_{\cal T}$ dei tipi e 
+dei termini di una teoria ${\cal T}$ sono, rispettivamente, gli insiemi dei tipi e 
+dei termini costruibili dalla struttura di tipo e dalla firma di ${\cal
+T}$, cioè:
+\begin{eqnarray*}
+{\sf Types}_{\cal T} & = & {\sf Types}_{{\sf Struc}_{\cal T}}\\
+{\sf Terms}_{\cal T} & = & {\sf Terms}_{{\sf Sig}_{\cal T}}
+\end{eqnarray*}
+Un modello di una teoria $\cal T$ è specificato dando un modello (standard) 
+$M$ della sottostante firma della teoria con la proprietà che 
+$M$ soddisfa tutti i sequenti che sono assiomi di $\cal T$.  A causa 
+del Teorema di Validità~\ref{soundness}, segue che $M$ soddisfa 
+anche qualunque sequente nell'insieme dei teoremi dati, ${\sf
+Theorems}_{\cal T}$.
+
+\subsection{La teoria {\tt MIN}}
+\label{sec:min-thy}
+
+La {\it teoria minimale\/}\index{MIN@\ml{MIN}}\index{minimal theory, della logica HOL@minimal theory, della logica \HOL{}} \theory{MIN} è definita da:
+\[
+\theory{MIN} =
+\langle\{(\bool,0),\ (\ind,0)\},\
+ \{\imp_{\bool\fun\bool\fun\bool},
+=_{\alpha\fun\alpha\fun\bool},
+\hilbert_{(\alpha\fun\bool)\fun\alpha}\},\
+\{\},\ \{\}\rangle
+\]
+Dal momento che la teoria \theory{MIN} ha una firma che consiste solo di 
+elementi standard e non ha assiomi, essa possiede un unico modello standard, 
+che sarà indicato con {\em Min}.
+
+Benché la teoria \theory{MIN} contiene solo la sintassi standard 
+minimale, sfruttando i costrutti di ordine superiore di \HOL{} si può 
+costruire su di essa una collezione di termini piuttosto ricca. La seguente 
+teoria introduce nomi per alcuni di questi termini che denotano utili 
+operazioni logiche nel modello {\em Min}.
+
+Nell'implementazione, alla teoria \theory{MIN} è dato il nome 
+\theoryimp{min}, e contiene anche il distinto operatore di tipo 
+binario $\fun$, per costruire spazi di funzione.
+
+\subsection{La teoria {\tt LOG}}
+\index{LOG@\ml{LOG}}
+\label{LOG}
+
+La teoria \theory{LOG} ha la stessa struttura 
+di tipo di \theory{MIN}. La sua firma contiene le costanti in 
+\theory{MIN}. e le seguenti costanti:
+\[
+\T_\ty{bool}
+\index{T@\holtxt{T}!forma astratta di}
+\index{truth values, nella logica HOL@truth values, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\forall_{(\alpha\fun\ty{bool})\fun\ty{bool}}
+\index{universal quantifier, nella logica HOL@universal quantifier, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\exists_{(\alpha\fun\ty{bool})\fun\ty{bool}}
+\index{existential quantifier, nella logica HOL@existential quantifier, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\F_\ty{bool}
+\index{F@\holtxt{F}!forma astratta di}
+\]
+\[
+\neg_{\ty{bool}\fun\ty{bool}}
+\index{negation, nella logica HOL@negation, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\wedge_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}
+\index{conjunction, nella logica HOL@conjunction, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\vee_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}
+\index{disjunction, nella logica HOL@disjunction, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\OneOne_{(\alpha\fun\beta)\fun\ty\bool}
+\index{one-to-one predicate, nella logica HOL@one-to-one predicate, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\Onto_{(\alpha\fun\beta)\fun\ty\bool}
+\index{onto predicate, nella logica HOL@onto predicate, nella logica \HOL{}!forma astratta di}
+\]
+\[
+\TyDef_{(\alpha\fun\ty{bool})\fun(\beta\fun\alpha)\fun\ty{bool}}
+\]
+In connessione con queste costanti è usata la seguente notazione speciale:
+\begin{center}
+\index{existential quantifier, nella logica HOL@existential quantifier, nella logica \HOL{}!abbreviation for multiple}
+\index{universal quantifier, nella logica HOL@universal quantifier, nella logica \HOL{}!abbreviation for multiple}
+\begin{tabular}{|l|l|}\hline
+{\rm Notation} & {\rm Meaning}\\ \hline $\uquant{x_{\sigma}}t$ &
+$\forall(\lambda x_{\sigma}.\ t)$\\ \hline $\uquant{x_1\ x_2\ \cdots\
+x_n}t$ & $\uquant{x_1}(\uquant{x_2} \cdots\ (\uquant{x_n}t)
+\ \cdots\ )$\\ \hline
+$\equant{x_{\sigma}}t$
+  & $\exists(\lambda x_{\sigma}.\ t)$\\ \hline
+$\equant{x_1\ x_2\ \cdots\ x_n}t$
+  & $\equant{x_1}(\equant{x_2} \cdots\ (\equant{x_n}t)
+\ \cdots\ )$\\ \hline
+$t_1\ \wedge\ t_2$  & $\wedge\ t_1\ t_2$\\ \hline
+$t_1\ \vee\ t_2$  & $\vee\ t_1\ t_2$\\ \hline
+\end{tabular}\end{center}
+
+Gli assiomi della teoria \theory{LOG} consistono dei seguenti 
+sequenti:
+\[
+\begin{array}{l}
+
+\turn \T       =  ((\lquant{x_{\ty{bool}}}x) =
+               (\lquant{x_{\ty{bool}}}x))    \\
+\turn \forall  =  \lquant{P_{\alpha\fun\ty{bool}}}\ P =
+                    (\lquant{x}\T ) \\
+\turn \exists  =  \lquant{P_{\alpha\fun\ty{bool}}}\
+                    P({\hilbert}\ P) \\
+\turn \F       =  \uquant{b_{\ty{bool}}}\ b  \\
+\turn \neg    =  \lquant{b}\ b \imp \F \\
+\turn {\wedge}  =  \lquant{b_1\ b_2}\uquant{b}
+                     (b_1\imp (b_2 \imp b)) \imp b \\
+\turn {\vee}  =  \lquant{b_1\ b_2}\uquant{b}
+                   (b_1 \imp b)\imp ((b_2 \imp b) \imp b) \\
+\turn \OneOne  =  \lquant{f_{\alpha \fun\beta}}\uquant{x_1\ x_2}
+                    (f\ x_1 = f\ x_2)  \imp (x_1 = x_2) \\
+\turn \Onto  =  \lquant{f_{\alpha\fun\beta}}
+                  \uquant{y}\equant{x} y = f\ x \\
+\turn \TyDef  =   \begin{array}[t]{l}
+                  \lambda P_{\alpha\fun\ty{bool}}\
+                  rep_{\beta\fun\alpha}.
+                  \OneOne\ rep\ \ \wedge{}\\
+                  \quad(\uquant{x}P\ x \ =\ (\equant{y} x = rep\ y))
+                  \end{array}
+\end{array}
+\]
+Ininfe, come per la teoria \theory{MIN}, l'insieme ${\sf
+Theorems}_{\theory{LOG}}$ è considerato essere vuoto.
+
+Si noti che gli assiomi della teoria \theory{LOG} sono essenzialmente {\em
+definizioni\/} delle nuove costanti di \theory{LOG} come termini nella 
+teoria originaria \theory{MIN}. (Il meccanismo per fare tali 
+estensioni alle teorie attraverso definizioni di nuove costanti sarà riportato 
+in generale nella Sezione~\ref{defs}.) I primi sette assiomi definiscono le 
+costanti logiche per la verità, la quantificazione universale, la quantificazione 
+esistenziale, la falsità, la negazione, la congiunzione e la disgiunzione. 
+Benché queste definizioni possano essere oscure a qualche lettore, esse sono di 
+fatto definizioni standard di queste costanti logiche in termini di 
+implicazione, uguaglianza e scelta all'interno della logica di ordine superiore. I  
+due assiomi successivi definiscono le proprietà di una funzione di essere iniettiva e suriettiva; 
+esse saranno usate per esprimere l'assioma dell'infinito (si veda 
+la Sezione~\ref{INIT}), tra le altre cose. L'ultimo assioma definisce una 
+costante usata per le definizioni di tipo (si veda la Sezione~\ref{tydefs}).
+
+L'unico modello standard {\em Min\/} di \theory{MIN} dà origine a un 
+unico modello standard di 
+\theory{LOG}\index{LOG@\ml{LOG}!formal semantics of}. Questo 
+perché, data la semantica dei termini formulata nella 
+Sezione~\ref{semantics of terms}, per soddisfare le equazioni di sopra si è 
+costretti ad interpretare le nuove costanti nel modo seguente:
+\index{assiomi!semantica formale degli assiomi della logic HOL@semantica formale degli assiomi della logic \HOL{}|(}
+\begin{itemize}
+
+\item $\den{\T_{\bool}}\index{T@\holtxt{T}!formal semantics of} = 1 \in \two$
+
+\item \index{universal quantifier, nella logica HOL@universal quantifier, nella logica \HOL{}!formal semantics of}
+$\den{\forall_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
+ U}}(X\fun\two)\fun\two$ manda $X\in{\cal U}$ e $f\in X\fun\two$ a
+\[
+\den{\forall}(X)(f) = \left\{ \begin{array}{ll} 1 & \mbox{se
+$f^{-1}\{1\}=X$} \\ 0 & \mbox{altrimenti} \end{array} \right.
+\]
+\index{universal quantifier, nella logica HOL@universal quantifier, nella logica \HOL{}!formal semantics of}
+
+\item \index{existential quantifier, nella logica HOL@existential quantifier, nella logica \HOL{}!formal semantics of}
+$\den{\exists_{(\alpha\fun\bool)\fun\bool}}\in\prod_{X\in{\cal
+ U}}(X\fun\two)\fun\two$ manda $X\in{\cal U}$ e $f\in X\fun\two$ a
+\[
+\den{\exists}(X)(f) = \left\{ \begin{array}{ll}
+                                   1 & \mbox{se $f^{-1}\{1\}\not=\emptyset$} \\
+                                   0 & \mbox{altrimenti}
+                                  \end{array}
+                          \right. \]
+
+\item $\den{\F_{\bool}} = 0 \in \two$\index{F@\holtxt{F}!formal semantics of}
+
+\item $\den{\neg_{\bool\fun\bool}}\in\two\fun\two$ manda $b\in\two$ a
+ \[ \den{\neg}(b) = \left\{ \begin{array}{ll}
+                             1 & \mbox{se $b=0$} \\
+                             0 & \mbox{altrimenti}
+                            \end{array}
+                    \right. \]\index{negation, nella logica HOL@negation, nella logica \HOL{}!formal semantics of}
+
+\item $\den{\wedge_{\bool\fun\bool\fun\bool}}\in\two\fun\two\fun\two$ manda
+$b,b'\in\two$ a
+ \[ \den{\wedge}(b)(b') = \left\{ \begin{array}{ll}
+                                   1 & \mbox{se $b=1=b'$} \\
+                                    0 & \mbox{altrimenti}
+                                  \end{array}
+                           \right. \]\index{conjunction, nella logica HOL@conjunction, nella logica \HOL{}!formal semantics of}
+
+\item $\den{\vee_{\bool\fun\bool\fun\bool}}\in\two\fun\two\fun\two$ manda
+$b,b'\in\two$ a
+ \[ \den{\vee}(b)(b') = \left\{ \begin{array}{ll}
+                                 0 & \mbox{se $b=0=b'$} \\
+                                 1 & \mbox{altrimenti}
+                                \end{array}
+                        \right. \]\index{disjunction, nella logica HOL@disjunction, nella logica \HOL{}!formal semantics of}
+
+\item $\den{\OneOne_{(\alpha\fun\beta)\fun\bool}}\in\prod_{(X,Y)\in{\cal
+ U}^{2}} (X\fun Y)\fun \two$ manda $(X,Y)\in{\cal U}^{2}$ e
+ $f\in(X\fun Y)$   a
+ \[ \den{\OneOne}(X,Y)(f) = \left\{ \begin{array}{ll}
+                                     0 & \mbox{se $f(x)=f(x')$
+                                               per qualche $x\not=x'$ in $X$} \\
+                                     1 & \mbox{altrimenti}
+                                    \end{array}
+                            \right. \]\index{one-to-one predicate, nella logica HOL@one-to-one predicate, nella logica \HOL{}!formal semantics of}
+
+\item $\den{\Onto_{(\alpha\fun\beta)\fun\bool}}\in\prod_{(X,Y)\in{\cal
+ U}^{2}} (X\fun Y)\fun \two$ manda $(X,Y)\in{\cal U}^{2}$ e
+ $f\in(X\fun Y)$   a
+ \[ \den{\Onto}(X,Y)(f) = \left\{ \begin{array}{ll}
+                                   1 & \mbox{se $\{f(x):x\in X\}=Y$} \\
+                                   0 & \mbox{altrimenti}
+                                  \end{array}
+                           \right. \]\index{onto predicate, nella logica HOL@onto predicate, nella logica \HOL{}!formal semantics of}
+
+\item $\den{\TyDef_{(\alpha\fun\bool)\fun(\beta\fun\alpha)\fun\bool}}\in
+ \prod_{(X,Y)\in{\cal U}^{2}} (X\fun\two)\fun(Y\fun X)\fun\two$ \\
+ manda $(X,Y)\in{\cal U}^{2}$, $f\in(X\fun\two)$ and $g\in(Y\fun X)$  a
+ \[ \den{\TyDef}(X,Y)(f)(g) = \left\{ \begin{array}{ll}
+                                        1 & \mbox{se
+                                            $\den{\OneOne}(Y,X)(g)=1$}\\
+                                          & \mbox{e $f^{-1}\{1\}=
+                                            \{g(y) : y\in Y\}$} \\
+                                        0 & \mbox{altrimenti.}
+                                       \end{array}
+                               \right.
+\]
+\end{itemize}
+\index{assiomi!semantica formale degli assiomi della logic HOL@semantica formale degli assiomi della logic \HOL{}|)}
+Dal momento che queste definizioni sono state ottenute applicando la semantica dei 
+termini ai lati sinistri dell'equazioni che formano gli assiomi di 
+\theory{LOG}, questi assiomi sono soddisfatti e si ottiene un modello della 
+teoria \theory{LOG}.
+
+
+\subsection{La teoria {\tt INIT}}
+\label{INIT}
+
+La teoria \theory{INIT}\index{INIT@\ml{INIT}!forma astratta di} si
+ottiene aggiungendo i seguenti quattro assiomi\index{assiomi!della logica HOL@della logica \HOL{}} alla teoria 
+\theory{LOG}.
+\[
+\index{BOOL_CASES_AX@\ml{BOOL\_CASES\_AX}!forma astratta di}
+\index{ETA_AX@\ml{ETA\_AX}!forma astratta di}
+\index{SELECT_AX@\ml{SELECT\_AX}!forma astratta di}
+\index{INFINITY_AX@\ml{INFINITY\_AX}!forma astratta di}
+\index{assioma di scelta}
+\index{assioma dell'infinito}
+\begin{array}{@{}l@{\qquad}l}
+\mbox{\small\tt BOOL\_CASES\_AX}&\vdash \uquant{b} (b = \T ) \vee (b = \F )\\
+ \\
+\mbox{\small\tt ETA\_AX}&
+\vdash \uquant{f_{\alpha\fun\beta}}(\lquant{x}f\ x) = f\\
+ \\
+\mbox{\small\tt SELECT\_AX}&
+\vdash \uquant{P_{\alpha\fun\ty{bool}}\ x} P\ x \imp
+P({\hilbert}\ P)\\
+  \\
+\mbox{\small\tt INFINITY\_AX}&
+\vdash \equant{f_{\ind\fun \ind}} \OneOne \ f \conj \neg(\Onto \ f)\\
+\end{array}
+\]
+
+L'unico modello standard di \theory{LOG} soddisfa questi quattro assiomi 
+e di conseguenza è l'unico modello standard della teoria 
+\theory{INIT}.\index{INIT@\ml{INIT}!formal semantics of} (Per l'assioma 
+{\small\tt SELECT\_AX} è necessario usare la definizione di 
+$\den{\hilbert}$ data nella Sezione~\ref{standard-signatures}; per l'assioma 
+{\small\tt INFINITY\_AX} è ncessario il fatto che $\den{\ind}=\inds$ è 
+un insieme infinito.)
+
+La teoria \theory{INIT} è la teoria iniziale\index{initial theory,
+  della logica HOL@initial theory, della logica \HOL{}!forma astratta di} della 
+logica \HOL{}. Una teoria che estende \theory{INIT} sarà chiamata una 
+{\em teoria standard}\index{teoria standard}.
+
+\subsection{Implementare le teorie \texttt{LOG} e \texttt{INIT}}
+\label{sec:implementing-log-init}
+
+L'implementazione combina le teorie \theory{LOG} e
+\theory{INIT} in una teoria \theoryimp{bool}. Essa include tutte le 
+costanti e gli assiomi da queste teorie, e include un numero di 
+risultati derivati circa queste costanti. Per maggiori informazioni sulla 
+teoria \theoryimp{bool} d'implementazione, si veda \DESCRIPTION.
+
+\subsection{Coerenza}
+\label{consistency}
+
+Una teoria (standard) è {\em coerente\/}\index{teoria coerente} se 
+non è il caso che ogni sequente nella sua firma possa essere 
+derivato dagli assiomi della teoria usando la logica \HOL{}, o 
+in modo equivalente, se non può essere derivato in questo modo il particolare sequente $\turn\F$.
+
+L'esistenza di un modello (standard) di una teoria è sufficiente per 
+stabilire la sua coerenza. Perché per il Teorema 
+di Validità~\ref{soundness}, qualsiasi sequente che possa essere derivato dagli 
+assiomi della teoria sarà soddisfatto dal modello, mentre il sequente 
+$\turn\F$ non è mai soddisfatto in alcun modello. Così in particolare, 
+la teoria iniziale \theory{INIT} è coerente.
+
+Tuttavia, è possibile che una teoria sia coerente ma non 
+possieda un modello standard. Questo avviene perché la nozione di un 
+modello {\em standard\/} è piuttosto restrittiva---in particolare non c'è alcuna 
+scelta su come interpretare gli interi e la loro aritmetica in un tale 
+modello. Il famoso teorema di incompletezza di G\"odel assicura che ci 
+sono sequenti che sono soddisfatti in tutti i modelli standard (cioè che sono 
+`veri'), ma che non sono dimostrabili nella logica \HOL{}.
+
+
+
+
+
+\section{Estensioni di teorie}
+\index{extension, della logica HOL@extension, della logica \HOL{}!forma astratta di}
+\label{extensions}
+
+Una teoria ${\cal T}'$ è detta essere un'{\em
+estensione\/}\index{extension, of theory} di una teoria ${\cal T}$ se:
+\begin{myenumerate}
+\item ${\sf Struc}_{{\cal T}}\subseteq{\sf Struc}_{{\cal T}'}$.
+\item ${\sf Sig}_{{\cal T}}\subseteq{\sf Sig}_{{\cal T}'}$.
+\item ${\sf Axioms}_{{\cal T}}\subseteq{\sf Axioms}_{{\cal T}'}$.
+\item ${\sf Theorems}_{{\cal T}}\subseteq{\sf Theorems}_{{\cal T}'}$.
+\end{myenumerate}
+In questo caso, qualsiasi modello $M'$ della teoria più grande ${\cal T}'$ può essere 
+ristretto a un modello della teoria più piccola $\cal T$ nel modo 
+seguente. Primo, $M'$ dà origine a un modello della struttura e della firma 
+di $\cal T$ semplicemente dimenticando i valori di $M'$ alle costanti che non sono 
+in ${\sf Struc}_{\cal T}$ or ${\sf Sig}_{\cal T}$. Indicando questo modello 
+con $M$, si ha che per ogni $\sigma\in{\sf Types}_{\cal T}$, $t\in{\sf
+Terms}_{\cal T}$ e per tutti i contesti adatti che
+\begin{eqnarray*}
+\den{\alpha\!s.\sigma}_{M}   & = & \den{\alpha\!s.\sigma}_{M'} \\
+\den{\alpha\!s,\!x\!s.t}_{M} & = & \den{\alpha\!s,\!x\!s.t}_{M'}.
+\end{eqnarray*}
+Di conseguenza se $(\Gamma,t)$ è un sequente su ${\sf Sig}_{\cal T}$ 
+(e di conseguenza anche su ${\sf Sig}_{{\cal T}'}$), allora $\Gamma
+\models_{M} t$ se e solo se $\Gamma \models_{M'} t$. Dal momento che ${\sf
+Axioms}_{\cal T}\subseteq{\sf Axioms}_{{\cal T}'}$ e $M'$ è un modello 
+di ${\cal T}'$, segue che $M$ è un modello di $\cal T$. $M$ sarà 
+chiamata la {\em restrizione}\index{restrictions, of models} del
+modello $M'$ della teoria ${\cal T}'$ alla sotto-teoria $\cal T$.
+
+\bigskip
+
+Ci sono due meccanismi principali per fare estensioni alle teorie in \HOL:
+\begin{itemize}
+
+\item Estensione attraverso la specifica di una costante   (si veda la Sezione~\ref{specs}).
+
+\item Estensione attraverso la specifica di un tipo (si veda la 
+Sezione~\ref{tyspecs}).\footnote{Questo meccanismo di estensione di teorie non è 
+implementato nel sistema \HOL{}4.}
+
+\end{itemize}
+Il primo meccanismo permette la `specifica libera' di costanti (come nella 
+notazione {\bf Z}~\cite{Z}, per esempio); la seconda permette di 
+introdurre nuovi tipi e operatori di tipo. Come casi speciali (quando la 
+cosa che si sta definendo è univocamente determinata) si hanno anche:
+\begin{itemize}
+
+\item Estensione attraverso la definizione di una costante (si veda la Sezione~\ref{defs}).
+
+\item Estensione attraverso la definizione di un tipo (si veda la Sezione~\ref{tydefs}).
+
+\end{itemize}
+Questi meccanismi sono descritti nelle seguenti sezioni. Essi producono 
+tutti delle {\it estensioni definizionali\/} nel senso che essi estendono 
+una teoria aggiungendo delle nuove costanti e dei nuovi tipi che sono definiti in termini 
+di proprietà di quelli esistenti. La loro proprietà chiave è che la 
+teoria estesa possiede un modello (standard) se la teoria originale 
+lo ha. Così è garantito che una serie di queste estensioni che iniziano dalla teoria 
+\theory{INIT} risulterà in una teoria con un modello 
+standard, e di conseguenza in una teoria coerente. E' anche possibile estendere 
+teorie semplicemente aggiungendo nuove costanti e tipi non interpretati. Questo 
+preserva la coerenza, ma difficilmente sarà utile senza assiomi 
+addizionali. Tuttavia, quando si aggiungono arbitrariamente nuovi 
+assiomi\index{assiomi!non necessità di aggiungere}, non c'è alcuna garanzia 
+che la coerenza sia preservata. I vantaggi della postulazione rispetto 
+alla definizione sono stati paragonati da Bertrand Russell ai vantaggi del 
+furto rispetto al lavoro onesto\footnote{Si veda la pagina 71 del libro di Russel {\sl
+Introduction to Mathematical Philosophy\/}}. Dal momento che è sin troppo facile 
+introdurre assiomatizzazioni incoerenti, gli utenti del sistema \HOL{} sono 
+caldamente invitati a resistere alla tentazione di aggiungere assiomi, ma di lavorare 
+onestamente attraverso teorie definizionali.
+
+
+
+
+\subsection{Estensione per definizione di costanti}
+\index{extension, della logica HOL@extension, della logica \HOL{}!by constant definition|(}
+\label{defs}
+
+Una {\it definizione di costante\/}\index{definizione di costante} su una 
+firma $\Sigma_{\Omega}$ è una formula della forma 
+$\con{c}_{\sigma} = t_{\sigma}$, tale che:
+\begin{myenumerate}
+
+\item
+$\con{c}$ non è il nome di alcuna costante in $\Sigma_{\Omega}$;
+
+\item
+$t_{\sigma}$ è un termine chiuso in ${\sf Terms}_{\Sigma_{\Omega}}$.
+
+\item
+tutte le variabili di tipo che occorrono in $t_\sigma$ occorrono anche in $\sigma$
+
+\end{myenumerate}
+
+Data una teoria $\cal T$ e una tale definizione di costante su ${\sf
+Sig}_{\cal T}$, allora l'{\em estensione definizionale\/}\index{constant definition extension, della logica HOL@constant definition extension, della logica \HOL{}!forma astratta di} di ${\cal T}$
+per $\con{c}_{\sigma}=t_{\sigma}$ è la teoria ${\cal T}{+_{\it
+def}}\langle
+\con{c}_{\sigma}=t_{\sigma}\rangle$ definita da:
+\[
+{\cal T}{+_{\it def}}\langle
+\con{c}_{\sigma}=t_{\sigma}\rangle\  =\ \langle
+\begin{array}[t]{l}
+{\sf Struc}_{\cal T},\
+{\sf Sig}_{\cal T}\cup\{(\con{c},\sigma)\},\\
+{\sf Axioms}_{\cal T}\cup\{
+\con{c}_{\sigma}=t_{\sigma} \},\
+{\sf Theorems}_{\cal T}\rangle
+\end{array}
+\]
+
+Si noti che il meccanismo di estensione per definizione di costante è già 
+stato usato implicitamente nel formare la teoria \theory{LOG} dalla 
+teoria \theory{MIN} nella Sezione~\ref{LOG}. Così con la notazione 
+di questa sezione si ha
+\[
+\theory{LOG}\; =\; \theory{MIN}\;\begin{array}[t]{@{}l}
+   {+_{\it def}} \langle \T\index{T@\holtxt{T}!forma astratta di}\index{truth values, nella logica HOL@truth values, nella logica \HOL{}!forma astratta di} \ =\
+     ((\lquant{x_{\ty{bool}}}x) = (\lquant{x_{\ty{bool}}}x))\rangle\\
+   {+_{\it def}}\langle {\forall}\index{universal quantifier, nella logica HOL@universal quantifier, nella logica \HOL{}!forma astratta di}\ =\ \lquant{P_{\alpha\fun\ty{bool}}}\ P =
+     (\lquant{x}\T )\rangle\\
+   {+_{\it def}}\langle {\exists}\index{existential quantifier, nella logica HOL@existential quantifier, nella logica \HOL{}!forma astratta di}\ =\
+     \lquant{P_{\alpha\fun\ty{bool}}}\ P({\hilbert}\ P)\rangle\\
+   {+_{\it def}}\langle \F\index{F@\holtxt{F}!forma astratta di}
+ \ =\ \uquant{b_{\ty{bool}}}\ b\rangle\\
+   {+_{\it def}}\langle \neg\ =\ \lquant{b}\ b \imp \F \rangle\index{negation, nella logica HOL@negation, nella logica \HOL{}!forma astratta di}\\
+   {+_{\it def}}\langle {\wedge}\index{conjunction, nella logica HOL@conjunction, nella logica \HOL{}!forma astratta di}\ =\ \lquant{b_1\ b_2}\uquant{b}
+     (b_1\imp (b_2 \imp b)) \imp b\rangle\\
+   {+_{\it def}}\langle {\vee}\index{disjunction, nella logica HOL@disjunction, nella logica \HOL{}!forma astratta di}\ =\ \lquant{b_1\ b_2}\uquant{b}
+     (b_1 \imp b)\imp ((b_2 \imp b) \imp b)\rangle\\
+   {+_{\it def}}\langle\OneOne \ =\ \lquant{f_{\alpha \fun\beta}}
+     \uquant{x_1\ x_2} (f\ x_1 = f\ x_2)  \imp (x_1 = x_2)\rangle\index{one-to-one predicate, nella logica HOL@one-to-one predicate, nella logica \HOL{}!forma astratta di}\\
+   {+_{\it def}}\langle\Onto \  =\ \lquant{f_{\alpha\fun\beta}}\index{onto predicate, nella logica HOL@onto predicate, nella logica \HOL{}!forma astratta di}
+     \uquant{y}\equant{x} y = f\ x\rangle\\
+   {+_{\it def}}\langle\TyDef \  =\
+        \begin{array}[t]{@{}l}
+          \lambda P_{\alpha\fun\ty{bool}}\ rep_{\beta\fun\alpha}.\\
+          \OneOne\ rep\ \ \wedge\\
+          (\uquant{x}P\ x \ =\ (\equant{y} x = rep\ y)) \rangle\\
+\end{array}\end{array}
+\]
+
+Se $\cal T$ possiede un modello standard allora lo ha anche l'estensione 
+${\cal T}{+_{\it def}}\langle\con{c}_{\sigma}=t_{\sigma}\rangle$. Questo 
+sarà dimostrato come un corollario del corrispondente risultato nella\linebreak 
+Sezione~\ref{specs} mostrando che l'estensione per definizione di costante 
+è di fatto un caso speciale di estensione per specifica di costante. 
+(Questa riduzione richiede che si stia trattando con teorie 
+{\em standard\/} nel senso della sezione~\ref{INIT}, dal momento che benché 
+la quantificazione esistenziale non sia necessaria per le definizioni di costanti, è 
+necessaria per formulare il meccanismo di specifica di costante.)
+
+\medskip
+
+\noindent{\bf Nota\ } La condizione (iii) nella definizione di 
+ciò che costituisce una definizione di costante corretta è una restrizione 
+importante senza la quale la coerenza non potrebbe essere garantita. Per vedere 
+questo, consideriamo il termine $\equant{f_{\alpha\fun\alpha}} \OneOne \ f
+\conj \neg(\Onto \ f)$, che esprime la proposizione che il (l'insieme 
+di elementi denotati dal) tipo $\alpha$ è infinito. Il termine contiene 
+la variabile di tipo $\alpha$, mentre il tipo del termine, $\ty{bool}$,
+no. Così per (iii)
+\[
+\con{c}_\ty{bool} =
+\equant{f_{\alpha\fun\alpha}} \OneOne \ f \conj \neg(\Onto \ f)
+\]
+non è permessa come definizione di una costante. Il problema è che il 
+significato del lato destro della definizione varia con $\alpha$, 
+mentre il significato della costante sul lato sinistro è fissato, 
+dal momento che non contiene $\alpha$. Di fatto, se ci fosse permesso di 
+estendere la teoria coerente $\theory{INIT}$ con questa definizione, il 
+risultato darebbe una teoria incoerente. Perché istanziare $\alpha$ a 
+$\ty{ind}$ nel lato destro risulta in un termine che è dimostrabile 
+dagli assiomi di $\theory{INIT}$, e di conseguenza $\con{c}_\ty{bool}=\T$ è 
+dimostrabile nella teoria estesa. Ma ugualmente, istanziare $\alpha$
+a $\ty{bool}$ rende la negazione del lato destro dimostrabile 
+dagli assiomi di $\theory{INIT}$, e di conseguenza anche $\con{c}_\ty{bool}=\F$ è 
+dimostrabile nella teoria estesa. Combinando questi teoremi, si 
+ha che $\T=\F$, cioè $\F$ è dimostrabile nella teoria estesa.
+\index{extension, della logica HOL@extension, della logica \HOL{}!by constant definition|)}
+
+\subsection{Estensione per specifica di costante}
+\index{extension, della logica HOL@extension, della logica \HOL{}!by constant specification|(}
+\label{specs}
+
+Le specifiche di costanti\index{constant specification extension, della logica HOL@constant specification extension, della logica \HOL{}!abstract form
+of} introducono costanti (o insiemi di costanti) 
+che soddisfano proprietà (coerenti) arbitrariamente date. Per esempio, una 
+teoria potrebbe essere estesa da una specifica di costante in modo da avere due nuove 
+costanti $\con{b}_1$ e $\con{b}_2$ di tipo \ty{bool} tali che 
+$\neg(\con{b}_1=\con{b}_2)$. Questa specifica non definisce 
+in modo univoco $\con{b}_1$ e $\con{b}_2$, dal momento che è soddisfatta sia da 
+$\con{b}_1=\T$ e $\con{b}_2=\F$, sia da $\con{b}_1=\F$ e 
+$\con{b}_2=\T$. Per assicurare che tali specifiche sono 
+coerenti\index{consistency, della logica HOL@consistency, della logica \HOL{}!under constant specification}, esse possono essere fatte solo se è 
+già stato dimostrato che le proprietà che le nuove costanti devono 
+avere sono coerenti. Questo impedisce, per esempio, di introdurre tre 
+costanti booleane $\con{b}_1$, $\con{b}_2$ e $\con{b}_3$ tali che 
+$\con{b}_1\neq \con{b}_2$, $\con{b}_1\neq \con{b}_3$ e
+$\con{b}_2\neq \con{b}_3$.
+
+Supponiamo che $\equant{x_1\cdots x_n}t$ sia una formula, con $x_1,\ldots, x_n$ 
+variabili distinte. Se $\turn \equant{x_1 \cdots x_n}t$, allora una 
+specifica di costante permette di introdurre le nuove costanti $\con{c}_1$, $\ldots$ ,
+$\con{c}_n$ che soddisfano:
+\[
+\turn t[\con{c}_1,\cdots,\con{c}_n/x_1,\cdots,x_n]
+\]
+dove $t[\con{c}_1,\cdots,\con{c}_n/x_1,\cdots,x_n]$ denota il 
+risultato di sostituire simultaneamente $\con{c}_1, \ldots, \con{c}_n$ 
+per $x_1, \ldots, x_n$ rispettivamente. Naturalmente il tipo di ciascuna 
+costante $\con{c}_i$ deve essere lo stesso del tipo della corrispondente 
+variabile $x_i$. Per assicurare che questo meccanismo di estensione preserva la 
+proprietà di possedere un modello, è imposto su questi tipi un ulteriore 
+requisito più tecnico: essi devono contenere ciascuno tutte le variabili 
+di tipo che occorrono in $t$. Questa condizione è discussa ulteriormente nella 
+Sezione~\ref{constants} di sotto.
+
+Formalmente, una {\em specifica di costante\/}\index{constant specification} 
+per una teoria ${\cal T}$ è data da
+
+\medskip
+\noindent{\bf Dati}
+\[
+\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}\rangle
+\]
+
+\noindent{\bf Condizioni}
+\begin{myenumerate}
+
+\item
+$\con{c}_1,\ldots,\con{c}_n$ sono nomi distinti che 
+non sono i nomi di alcuna costante in ${\sf Sig}_{\cal T}$.
+
+\item
+$\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+
+\item
+$tyvars(t_{\ty{bool}})\ =\ tyvars(\sigma_i)$ per $1\leq i\leq n$.
+
+\item
+$\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
+\ \in\ {\sf Theorems}_{\cal T}$.
+
+\end{myenumerate}
+L'estensione di una teoria standard ${\cal T}$ per mezzo di una tale specifica 
+di costante è denotata da
+\[
+{\cal T}{+_{\it spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}} \rangle
+\]
+ed è definita essere la teoria:
+\[
+\langle
+\begin{array}[t]{@{}l}
+{\sf Struc}_{\cal T},\\
+{\sf Sig}_{\cal T} \cup
+\{{\con{c}_1}_{\sigma_1}, \ldots,
+{\con{c}_n}_{\sigma_n}\},\\
+{\sf Axioms}_{\cal T}\cup
+\{ t[\con{c}_1,\ldots,\con{c}_n/x_1,\ldots,x_n] \},\\
+{\sf Theorems}_{\cal T}
+\rangle
+\end{array}
+\]
+
+\noindent{\bf Proposizione\ }{\em
+La teoria ${\cal
+T}{+_{\it spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}
+\rangle$ ha un modello standard se la teoria ${\cal T}$ lo ha.}
+
+\medskip
+
+\noindent{\bf Dimostrazione\ }
+Supponiamo che $M$ sia un modello standard di ${\cal T}$. Sia 
+$\alpha\!s=\alpha_{1},\ldots,\alpha_{m}$ la lista di variabili di tipo 
+distinte che occorrono nella formula $t$. Allora $\alpha\!s,\!x\!s.t$ è un 
+termine-in-contesto, dove $x\!s=x_{1},\ldots,x_{n}$. (Cambiando ogni variabile 
+legata in $t$ in modo da renderle distinte da $x\!s$ se necessario.) 
+Interpretando questo termine-in-contesto nel modello $M$ si ottiene 
+\[
+\den{\alpha\!s,\!x\!s.t}_{M} \in \prod_{X\!s\in{\cal U}^{m}}
+\left(\prod_{i=1}^{n}\den{\alpha\!s.\sigma_{i}}_{M}(X\!s)\right)
+\fun \two
+\]
+Ora $\equant{x\!s}t$ è in ${\sf Theorems}_{\cal T}$ e di conseguenza per il 
+Teorema di Validità \ref{soundness}\index{consistency, della logica HOL@consistency, della logica \HOL{}!under constant specification} questo 
+sequente è soddisfatto da $M$. Usando la semantica di $\exists$ data nella 
+Sezione~\ref{LOG}, questo significa che per ogni $X\!s\in{\cal
+U}^{m}$ l'insieme
+\[
+S(X\!s) = \{y\!s\in\den{\alpha\!s.\sigma_{1}}_{M}(X\!s) \times\cdots\times
+          \den{\alpha\!s.\sigma_{n}}_{M}(X\!s)\; : \;
+          \den{\alpha\!s,\!x\!s.t}_{M}(X\!s)(y\!s)=1 \}
+\]
+non è vuoto. Dal momento che è anche un sottoinsieme di un prodotto finito di insiemi in 
+$\cal U$, ne segue che è un elemento di $\cal U$ (usando le proprietà 
+{\bf Sub} e {\bf Prod} dell'universo). Così si può applicare la funzione 
+di scelta globale $\ch\in\prod_{X\in{\cal U}}X$ per selezionare un elemento specifico.
+\[
+(s_{1}(X\!s),\ldots,s_{n}(X\!s)) =
+\ch(S(X\!s)) \in \prod_{i=1}^{n}\den{\alpha\!s.\sigma_{i}}_{M}(X\!s)
+\]
+per il quale  $\den{\alpha\!s,\!x\!s.t}_{M}(X\!s)$ prende il valore $1$. Estendiamo 
+$M$ a un modello $M'$ della firma di ${\cal
+T}{+_{\it spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}
+\rangle$ definendo che il suo valore per 
+ogni nuova costante $(\con{c}_{i},\sigma_{i})$ sia 
+\[
+M'(\con{c}_{i},\sigma_{i}) =
+s_{i} \in \prod_{X\!s\in{\cal U}^{m}}\den{\sigma_{i}}_{M}(X\!s) .
+\]
+Si noti che la Condizione (iii) nella definizione di una specifica 
+di costante assicura che $\alpha\!s$ è il contesto canonico di ogni 
+tipo $\sigma_{i}$, così che 
+$\den{\sigma_{i}}=\den{\alpha\!s.\sigma_{i}}$ e quindi $s_{i}$ è 
+di fatto un elemento del prodotto di sopra.
+
+Dal momento che $t$ è un termine della sotto-teoria $\cal T$ di \linebreak${\cal
+T}{+_{\it spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}
+\rangle$, 
+come notato all'inizio della Sezione~\ref{extensions}, si ha che 
+$\den{\alpha\!s,\!x\!s.t}_{M'} = \den{\alpha\!s,\!x\!s.t}_{M}$. Di conseguenza per 
+la definizione degli $s_{i}$, per tutti gli $X\!s\in{\cal U}^{m}$
+\[
+\den{\alpha\!s,\!x\!s.t}_{M'}(X\!s)(s_{1}(X\!s),\ldots,s_{n}(X\!s)) = 1
+\]
+Quindi usando il Lemma~4 nella 
+Sezione~\ref{term-substitution} sulla semantica della sostituzione insieme con 
+la definizione di $\den{\con{c}_{i}}_{M'}$, si ottiene infine che 
+per tutti gli $X\!s\in{\cal U}^{m}$
+\[
+\den{t[\con{c}_{1},\ldots,\con{c}_{n}/x_{1},\ldots,x_{n}]}_{M'}(X\!s)=1
+\]
+o in altre parole che $M'$ soddisfa 
+$t[\con{c}_{1},\ldots,\con{c}_{n}/x_{1},\ldots,x_{n}]$.
+Quindi $M'$ è un modello di ${\cal T}{+_{\it
+spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}
+\rangle$, come richiesto.
+
+\medskip
+
+Le costanti che sono affermate esistere in una specifica di costante 
+non sono necessariamente determinate in modo univoco. In modo corrispondente, ci possono 
+essere più modelli differenti di ${\cal T}{+_{\it
+spec}}\langle(\con{c}_1,\ldots,\con{c}_n),
+\lquant{{x_1}_{\sigma_1},\ldots,{x_n}_{\sigma_n}}t_{\ty{bool}}
+\rangle$ la cui restrizione a $\cal T$ è $M$; la costruzione di sopra 
+produce un tale modello in una maniera uniforme facendo uso della funzione 
+di scelta globale sull'universo.
+
+L'estensione per mezzo di una definizione di costante, $\con{c}_\sigma=t_\sigma$, è un 
+caso speciale di estensione per specifica di costante. Perché sia $t'$ 
+la formula $x_\sigma=t_\sigma$, dove $x_\sigma$ è una variabile che non 
+occorre in $t_\sigma$. Allora chiaramente $\turn
+\equant{x_\sigma}t'$ e si può applicare il metodo della specifica 
+di costante per ottenere la teoria
+\[
+{\cal T}{+_{\it spec}}\langle \con{c},\lquant{x_\sigma}t'\rangle
+\]
+Ma dal momento che $t'[\con{c}_\sigma/x_\sigma]$ è semplicemente 
+$\con{c}_\sigma=t_\sigma$,
+questa estensione porta esattamente a ${\cal T}{+_{\it def}}\langle
+\con{c}_{\sigma}=t_{\sigma}\rangle$.
+Così come corollario della Proposizione, si ha che per ogni modello 
+standard $M$ di $\cal T$, c'è un modello standard $M'$ di ${\cal
+T}{+_{\it def}}\langle\con{c}_{\sigma}=t_{\sigma}\rangle$ la cui 
+restrizione a $\cal T$ è $M$. In contrasto con il caso delle specifiche 
+di costante, $M'$ è determinato in modo univoco da $M$ e dalla definizione di 
+costante
+\index{extension, della logica HOL@extension, della logica \HOL{}!by constant specification|)}
+
+\subsection{Note circa le costanti in \HOL{}}
+\label{constants}
+
+Si noti come la Condizione (iii) nella definizione di una specifica di costante 
+sia stata necessaria nella dimostrazione che il meccanismo di estensione preserva la 
+proprietà di possedere un modello standard. Il suo ruolo è di assicurare che 
+le costanti introdotte abbiano, attraverso i loro tipi, la stessa dipendenza dalle 
+variabili di tipo che ha la formula che le specifica. La 
+situazione è la stessa di quella discussa nella Nota nella 
+Sezione~\ref{defs}. In un senso, ciò che causava il problema 
+nell'esempio dato in quella Nota non è tanto il metodo di estensione per mezzo 
+dell'introduzione di costanti, ma piuttosto la sintassi di \HOL{} che non 
+permette alle costanti di dipendere esplicitamente dalle variabili di tipo (nel modo 
+in cui lo fanno gli operatori di tipo). Così nell'esempio si vorrebbe 
+introdurre una costante `polimorfica' $\con{c}_\ty{bool}(\alpha)$ 
+che dipende esplicitamente da $\alpha$, e definirla essere 
+$\equant{f_{\alpha\fun\alpha}} \OneOne \ f \conj
+\neg(\Onto \ f)$. Allora nella teoria estesa si potrebbe derivare 
+$\con{c}_\ty{bool}(\ty{ind})=\T$ e 
+$\con{c}_\ty{bool}(\ty{bool})=\F$, ma ora non risulta alcuna contraddizione dal momento che 
+$\con{c}_\ty{bool}(\ty{ind})$ e $\con{c}_\ty{bool}(\ty{bool})$ 
+sono differenti.
+
+Nella versione attuale di \HOL, le costanti sono coppie-(nome,tipo).
+Si potrebbe immaginare una leggera estensione della sintassi di \HOL{} con 
+costanti `polimorfiche', specificate da coppie 
+$(\con{c},\alpha\!s.\sigma)$ dove ora $\alpha\!s.\sigma$ è un 
+tipo-in-contesto e la lista $\alpha\!s$ può ben contenere variabili di tipo 
+extra che non occorrono in $\sigma$. Una tale coppia darebbe origine 
+al particolare termine costante 
+$\con{c}_\sigma(\alpha\!s)$, e più in generale ai 
+termini costanti $\con{c}_{\sigma'}(\tau\!s)$ ottenuti da 
+questo istanziando le variabili di tipo $\alpha_i$ con i tipi 
+$\tau_i$ (così $\sigma'$ è l'istanza di $\sigma$ ottenuta 
+sostituendo  $\tau\!s$ per $\alpha\!s$). Questa nuova sintassi di costanti 
+polimorfiche è paragonabile alla sintassi esistente dei tipi composti (si veda 
+la sezione~\ref{types}): un operatore di tipo $n$-ario $\textsl{op}$ da origine a un 
+tipo composto $(\alpha_1,\ldots,\alpha_n){\textsl{op}}$ che dipende da $n$ 
+variabili di tipo. Analogamente, la sintassi di sopra delle costanti polimorfiche 
+registra come esse dipendono dalle variabili di tipo (as well as which generic
+type the constant has).
+
+Tuttavia, registrare esplicitamente la dipendenza delle costanti dalle variabili di tipo 
+da origine a una sintassi ingombrante che in pratica si preferirebbe 
+evitare laddove possibile. E' possibile evitarlo se il contesto 
+di tipo $\alpha\!s$ in $(\con{c},\alpha\!s.\sigma)$ è di fatto il 
+contesto {\em canonico\/} di $\sigma$, cioè contiene esattamente le variabili 
+di tipo di $\sigma$. Perché allora si può applicare il Lemma~1 della 
+Sezione~\ref{instances-and-substitution} per dedurre che la 
+costante polimorfica $\con{c}_{\sigma'}(\tau\!s)$ può essere abbreviata 
+alla costante ordinaria $\con{c}_{\sigma'}$ senza ambiguità---l'informazione 
+mancante $\tau\!s$ può essere ricostruita da $\sigma'$ e 
+dall'informazione circa la costante $\con{c}$ data nella firma. 
+Da questo prospettiva, il lato piuttosto tecnico delle Condizioni (iii) nelle 
+Sezioni~\ref{defs} e \ref{specs} diventano molto meno misteriose: 
+esse precisamente assicurano che nell'introdurre nuove costanti si stia sempre 
+trattando solo con i contesti canonici, e così si possano usare costanti ordinarie 
+piuttosto che quelle polimorfiche senza ambiguità. In questo modo si evita 
+di complicare la sintassi esistente al costo di restringere 
+in qualche modo l'applicabilità di questi meccanismi di estensioni delle teorie.
+
+
+\subsection{Estensione per definizione di tipo}
+\index{extension, della logica HOL@extension, della logica \HOL{}!by type definition|(}
+\index{representing types, nella logica HOL@representing types, nella logica \HOL{}!forma astratta di|(}
+\label{tydefs}
+
+Ogni tipo (monomorfico) $\sigma$ nella teoria iniziale \theory{INIT} 
+determina un insieme\linebreak $\den{\sigma}$ nell'universo $\cal U$. Tuttavia, 
+ci sono molti più insiemi in $\cal U$ dei tipi che sono in 
+\theory{INIT}. In particolare, mentre $\cal U$ è chiuso rispetto 
+all'operazione di prendere un sottoinsieme non-vuoto di $\den{\sigma}$, non c'è 
+alcun meccanismo corrispondente per formare un `sottotipo' di $\sigma$. Piuttosto, 
+i sottoinsiemi sono denotati indirettamente attraverso funzioni caratteristiche, per mezzo delle quali un 
+termine chiuso $p$ di tipo $\sigma\fun\ty{bool}$ determina il sottoinsieme 
+$\{x\in\den{\sigma} : \den{p}(x)=1\}$ (che è un insieme nell'universo 
+purché non sia vuoto). Tuttavia, è utile avere un 
+meccanismo per introdurre nuovi tipi che sono sottotipi di quelli 
+esistenti. Tali tipi sono definiti\index{extension, della logica HOL@extension, della logica \HOL{}!by type definition} in \HOL{} introducendo una nuova costante 
+di tipo e asserendo un assioma che la caratterizza denotare un 
+insieme in biezione (cioè in corrispondenza uno-a-uno) con un sottoinsieme 
+non-vuoto di un tipo esistente (chiamato il {\em tipo rappresentante\/}). 
+Per esempio, il tipo \ml{num} è definito essere uguale a un sottoinsieme 
+numerabile del tipo \ml{ind}, che è garantito esistere dall'assioma 
+{\small\tt INFINITY\_AX} (si veda la Sezione~\ref{INIT}).
+
+Così come definire tipi, è anche conveniente essere in grado di definire 
+operatori di tipo. Un esempio sarebbe un operatore di tipo \ty{inj} che 
+mappasse un insieme all'insieme di funzioni uno-a-uno (cioè iniettive) su 
+di esso. Il sottoinsieme di $\sigma\fun\sigma$ che rappresenta $(\sigma)\ty{inj}$ 
+sarebbe definito dal predicato \OneOne. Un altro esempio sarebbe un 
+operatore di tipo per il prodotto cartesiano binario \ty{prod}. Questo è definito 
+scegliendo un tipo rappresentante che contiene due variabili di tipo, diciamo 
+$\sigma[\alpha_1;\alpha_2]$, tale che per ogni tipo $\sigma_1$ e 
+$\sigma_2$, un sottoinsieme di $\sigma[\sigma_1;\sigma_2]$ rappresenta il 
+prodotto cartesiano di $\sigma_1$ e $\sigma_2$. I dettagli di una tale 
+definizione sono dati nella sezione di \DESCRIPTION\/ sulla teoria dei 
+prodotti cartesiani.
+
+I tipi in \HOL{} devono denotare insiemi non-vuoti. Così è 
+coerente\index{consistency, della logica HOL@consistency, della logica \HOL{}!under type definition} definire un nuovo tipo isomorfo a un 
+sottoinsieme specificato da un predicato $p$, solo se c'è almeno una cosa 
+per cui $p$ vale, cioè $\turn\equant{x}p\ x$. Per esempio, 
+sarebbe incoerente definire un operatore di tipo binario \ty{iso} tale 
+che $(\sigma_1,\sigma_2)\ty{iso}$ denotasse l'insieme di funzioni 
+uno-a-uno da $\sigma_1$ {\em onto\/} $\sigma_2$ perché per qualche 
+valore di $\sigma_1$ e $\sigma_2$ l'insieme sarebbe vuoto; per 
+esempio $(\ty{ind},\ty{bool})\ty{iso}$ denoterebbe l'insieme vuoto. Per 
+evitare questo, una precondizione di definire un nuovo tipo è che il 
+sottoinsieme rappresentante non sia vuoto.
+
+Riassumendo, un nuovo tipo è definito:
+\begin{enumerate}
+\item Specificando un tipo esistente.
+\item Specificando un sottoinsieme di questo tipo.
+\item Dimostrando che questo sottoinsieme non è vuoto.
+\item Specificando che il nuovo tipo è isomorfo a questo sottoinsieme.
+\end{enumerate}
+
+\noindent In maggiore dettaglio,
+definire un nuovo tipo $(\alpha_1,\ldots,\alpha_n)\ty{op}$ consiste nel:
+\begin{enumerate}
+\item
+Specificare un tipo-in-contesto, $\alpha_1,\ldots,\alpha_n.\sigma$ diciamo.
+Il tipo 
+$\sigma$ è chiamato il {\it tipo rappresentante\/}, e il tipo 
+$(\alpha_1,\ldots,\alpha_n)\ty{op}$ è inteso essere isomorfo a un 
+sottoinsieme di $\sigma$.
+
+\item
+Specificare un termine-in-contesto chiuso, $\alpha_1,\ldots,\alpha_n,.p$ 
+diciamo, di tipo $\sigma\fun\bool$. Il termine $p$ è chiamato la {\it 
+funzione caratteristica\/}\index{characteristic function, of type definitions}. Questo definisce il sottoinsieme di $\sigma$ al quale 
+$(\alpha_1,\ldots,\alpha_n)\ty{op}$ deve essere isomorfo\footnote{La 
+ragione per richiedere che $p$ sia chiuso, cioè non abbia variabili 
+libere, è che altrimenti per coerenza l'operatore di tipo definito 
+dovrebbe {\em dipendere\/} da (cioè essere una funzione di) queste 
+variabili. Tali tipi dipendenti non fanno (ancora!) parte del sistema \HOL{}}.
+
+\item
+Dimostrare $\turn \equant{x_{\sigma}} p\ x$.
+
+\item
+Asserire un assioma che dice che $(\alpha_1,\ldots,\alpha_n)\ty{op}$ è 
+isomorfo al sottoinsieme di $\sigma$ selezionato da $p$.
+
+\end{enumerate}
+
+Per rendere questo formale, la teoria \theory{LOG} fornisce 
+la costante polimorfica \TyDef\ definita nella Sezione~\ref{LOG}.
+La formula 
+$\equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f$
+asserisce che 
+esiste una funzione uno-a uno $f$ da $(\alpha_1,\ldots,\alpha_n)\ty{op}$ 
+al sottoinsieme di elementi di $\sigma$ per cui $p$ è vero.
+Di conseguenza, l'assioma che caratterizza $(\alpha_1,\ldots,\alpha_n)\ty{op}$ è:
+\[
+\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\
+p\ f
+\]
+
+Definire un nuovo tipo $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in una teoria 
+${\cal T}$ così consiste nell'introdurre $\ty{op}$ come un nuovo 
+operatore di tipo $n$-ario e l'assioma di sopra come un nuovo assioma. Formalmente, una {\em 
+definizione di tipo\/}\index{type definitions, nella logica HOL@type definitions, nella logica \HOL{}!abstract structure of} per una teoria ${\cal
+T}$ è data da
+
+\medskip
+
+\noindent{\bf Dati}
+\[
+\langle (\alpha_1,\ldots,\alpha_n)\ty{op},\ \sigma,\
+p_{\sigma\fun\ty{bool}}\rangle
+\]
+
+\noindent{\bf Condizioni}
+
+\begin{myenumerate}
+\item
+$(\ty{op},n)$ non è il nome di una costante di tipo in ${\sf Struc}_{\cal T}$.
+
+\item
+$\alpha_1,\ldots,\alpha_n.\sigma$ è un tipo-in-contesto con $\sigma
+\in{\sf Types}_{\cal T}$.
+
+\item $p_{\sigma\fun\bool}$ è un termine chiuso in ${\sf Terms}_{\cal T}$
+le cui variabili di tipo occorrono in $\alpha_1,\ldots,\alpha_n$.
+
+\item
+$\equant{x_{\sigma}}p\ x \ \in\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+
+L'estensione di una teoria standard ${\cal T}$ per mezzo di una tale definizione di tipo 
+è denotata da
+\[
+{\cal
+T}{+_{tydef}}\langle(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p\rangle
+\]
+e definita essere la teoria
+\[
+\langle
+\begin{array}[t]{@{}l}
+{\sf Struc}_{\cal T}\cup\{(\ty{op},n)\},\\
+  {\sf Sig}_{\cal T},\\
+  {\sf Axioms}_{\cal T}\cup\{
+\equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}
+\fun\sigma}}\TyDef\ p\ f\},\\
+  {\sf Theorems}_{\cal T}\rangle\\
+\end{array}
+\]
+
+\medskip
+
+\noindent{\bf Proposizione\ }{\em
+La teoria ${\cal T}{+_{\it
+tydef}}\langle(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p\rangle$ ha un 
+modello standard se la teoria ${\cal T}$ lo ha.}
+
+\medskip
+
+Al posto di dare una dimostrazione diretta di questo risultato, esso sarà dedotto come 
+corollario della proposizione corrispondente nella prossima sezione.
+\index{extension, della logica HOL@extension, della logica \HOL{}!by type definition|)}
+\index{representing types, nella logica HOL@representing types, nella logica \HOL{}!forma astratta di|)}
+
+
+\subsection{Estensione per specifica di tipo}
+\index{extension, della logica HOL@extension, della logica \HOL{}!by type specification|(}
+\label{tyspecs}
+\noindent
+(\textbf{Nota:} Questo meccanismo di estensione \emph{non} è 
+implementato nel sistema HOL4. Fu proposto da T.~Melham e 
+raffina una proposta di R.~Jones e R.~Arthan.)
+
+\smallskip
+\noindent Il meccanismo di definizione di 
+tipo permette d'introdurre nuovi tipi dando una concreta 
+rappresentazione del tipo come un `sottotipo' di un tipo esistente. Si 
+potrebbe invece desiderare d'introdurre un nuovo tipo che soddisfa qualche proprietà 
+senza dare un'esplicita rappresentazione per il tipo. Per 
+esempio, si potrebbe volere estendere \theory{INIT} con un tipo atomico 
+$\ty{one}$ che soddisfa $\turn\uquant{f_{\alpha\fun\ty{one}}\
+  g_{\alpha\fun\ty{one}}}f=g$ senza scegliere un tipo specifico in 
+$\theory{INIT}$ e dicendo che $\ty{one}$ è in biezione con un 
+suo sottoinsieme di un elemento. (L'idea è quella che la scelta del 
+tipo rappresentante è irrilevante per le proprietà di $\ty{one}$ che 
+possono essere espresse in \HOL.) Il meccanismo descritto in questa sezione 
+fornisce un modo di ottenere questo preservando allo stesso tempo 
+la proprietà fondamentale di possedere un modello standard e quindi 
+di mantenere la coerenza.
+
+Ogni formula chiusa $q$ che coinvolge una singola variabile di tipo $\alpha$ può 
+essere pensata come se specificasse una proprietà $q[\tau/\alpha]$ dei tipi 
+$\tau$. La sua interpretazione in un modello è della forma
+\[
+\den{\alpha,.q}\in \prod_{X\in{\cal U}}\den{\alpha.\bool}(X)
+\;= \prod_{X\in{\cal U}}\two \;=\; {\cal U}\fun\two
+\]
+che è una funzione caratteristica sull'universo, che determina un 
+sottoinsieme $\{X\in{\cal U}:\den{\alpha,.q}(X)=1\}$ che consiste di quegli 
+insiemi nell'universo per cui vale la proprietà $q$. Il modo 
+più generale per assicurare la coerenza nell'introduzione di un nuovo tipo 
+atomico $\nu$ che soddisfa $q[\nu/\alpha]$ sarebbe dimostrare 
+`$\equant{\alpha}q$'. Tuttavia, una tale 
+formula con la quantificazione sui tipi non è\footnote{ancora!} parte della 
+logica \HOL{} e si potrebbe procedere in modo indiretto---sostituendo la 
+formula con una (logicamente più debole) che può essere espressa formalmente con 
+la sintassi \HOL{}. La formula usata è
+\[
+(\equant{f_{\alpha\fun\sigma}}{\sf Type\_Definition}\ p\ f)\ \imp\ q
+\]
+dove $\sigma$ è un tipo, $p_{\sigma\fun\ty{bool}}$ è un termine chiuso 
+e non coinvolge la variabile di tipo $\alpha$. Questa formula dice `$q$ 
+vale di qualsiasi tipo che è in biezione con il sottotipo di $\sigma$ 
+determinato da $p$'. Se questa formula è dimostrabile e il sottotipo non è 
+vuoto, cioè se
+\[
+\equant{x_\sigma}p\ x
+\]
+è dimostrabile, allora è coerente introdurre un'estensione con un nuovo 
+tipo atomico $\nu$ che soddisfa $q[\nu/\alpha]$.
+
+Nel dare la definizione formale di questo meccanismo di estensione, saranno 
+fatti due raffinamenti. Per prima cosa, a $\sigma$ è permesso essere 
+polimorfico e di conseguenza è introdotta una nuova costante di ripo di arietà 
+appropriata, piuttosto che semplicemente un tipo atomico. In secondo luogo, alle formule 
+esistenziali di sopra è permesso di essere dimostrate (nella teoria che deve essere 
+estesa) da qualche ipotesi\footnote{Questo raffinamento accresce 
+l'applicabilità del meccanismo di estensione senza accrescere il suo 
+potere espressivo. Avremmo potuto fare un raffinamento simile per l'altro 
+meccanismo di estensione di teoria.}. Così una {\em specifica 
+di tipo\/}\index{specifica di tipo} per una teoria $\cal T$ è 
+data da
+
+\medskip
+
+\noindent{\bf Dati}
+\[
+\langle (\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\Gamma,q\rangle
+\]
+
+\noindent{\bf Condizioni}
+
+\begin{myenumerate}
+\item
+$(\ty{op},n)$ è una costante di tipo che non è in
+${\sf Struc}_{\cal T}$.
+
+\item
+$\alpha_1,\ldots,\alpha_n.\sigma$ è un tipo-in-contesto con 
+$\sigma\in{\sf Types}_{\cal T}$.
+
+\item $p_{\sigma\fun\bool}$ è un termine chiuso in ${\sf Terms}_{\cal T}$
+le cui variabili di tipo occorrono in $\alpha\!s=\alpha_1,\ldots,\alpha_n$.
+
+\item $\alpha$ è una variabile di tipo distinta da quelle in 
+$\alpha\!s$.
+
+\item $\Gamma$ è una lista di formule chiuse in ${\sf Terms}_{\cal T}$
+che non coinvolgono la variabile di tipo $\alpha$.
+
+\item $q$ è una formula chiusa in ${\sf Terms}_{\cal T}$.
+
+\item I sequenti
+\begin{eqnarray*}
+(\Gamma & , & \equant{x_\sigma}p\ x )\\
+(\Gamma & , & (\equant{f_{\alpha\fun\sigma}}{\sf Type\_Definition}\
+                 p\ f)\ \imp\ q )
+\end{eqnarray*}
+sono in ${\sf Theorems}_{\cal T}$.
+
+\end{myenumerate}
+L'estensione di una teoria standard $\cal T$ per mezzo di una tale specifica 
+di tipo è denotata
+\[
+{\cal T}{+_{\it tyspec}} \langle
+(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\Gamma,q\rangle
+\]
+ed è definita essere la teoria
+\[
+\langle
+\begin{array}[t]{@{}l}
+{\sf Struc}_{\cal T}\cup\{(\ty{op},n)\},\\
+  {\sf Sig}_{\cal T},\\
+  {\sf Axioms}_{\cal
+  T}\cup\{(\Gamma , q[(\alpha_1,\ldots,\alpha_n)\ty{op}/\alpha])\},\\
+  {\sf Theorems}_{\cal T}\rangle
+\end{array}
+\]
+
+\noindent{\bf Esempio\ } Per eseguire l'estensione di \theory{INIT} 
+mensionata all'inizio di questa sezione, si forma
+\[
+\theory{INIT}{+_{\it tyspec}} \langle
+()\ty{one},\ty{bool},p,\alpha,\emptyset,q\rangle
+\]
+dove $p$ è il termine $\lquant{b_\bool}b$ e $q$ è la formula 
+$\uquant{f_{\beta\fun\alpha}\ g_{\beta\fun\alpha}}f=g$. Così il 
+risultato è una teoria che estende \theory{INIT} con una 
+nuova costante di tipo $\ty{one}$ che soddisfa l'assioma 
+$\uquant{f_{\beta\fun\ty{one}}\ g_{\beta\fun\ty{one}}}f=g$.
+
+Per verificare che questa è un'applicazione corretta del meccanismo 
+di estensione, si devono controllare le Condizioni da (i) a (vii) di sopra. Solo l'ultima 
+non è banale: essa impone l'obbligo di dimostrare 
+due sequenti dagli assiomi di \theory{INIT}. Il primo sequente dice 
+che $p$ definisce un sottoinsieme abitato di $\bool$, il che è certamente 
+vero dal momento che $\T$ testimonia questo fatto. Il secondo sequente dice  
+in effetti che qualsiasi tipo $\alpha$ che sia in biezione con il sottoinsieme di 
+$\bool$ definito da $p$ ha la proprietà che c'è al massimo una 
+funzione ad esso da qualsiasi tipo dato $\beta$; la dimostrazione di questo dagli 
+assiomi di \theory{INIT} è lasciata come esercizio.
+
+\medskip
+
+\noindent{\bf Proposizione\ }{\em
+The theory ${\cal T}{+_{\it tyspec}}\langle
+(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\Gamma,q
+\rangle$ ha un modello standard se la teoria ${\cal T}$ lo ha.}
+
+\medskip
+
+\noindent{\bf Dimostrazione\ }
+Scriviamo $\alpha\!s$ per $\alpha_1,\ldots,\alpha_n$, e supponiamo che 
+$\alpha\!s'={\alpha'}_1,\ldots,{\alpha'}_m$  sia la lista delle variabili 
+di tipo che occorrono in $\Gamma$ e $q$, ma che non sono ancora nella lista 
+$\alpha\!s,\alpha$.
+
+Supponiamo che $M$ sia un modello standard di ${\cal T}$. Dal momento che $\alpha\!s,.p$ è 
+un termine-in-contesto di tipo $\sigma\fun\ty{bool}$, interpretarlo in 
+$M$ porta a
+\[
+\den{\alpha\!s,.p}_{M}
+\in \prod_{X\!s\in{\cal U}^{n}}\den{\alpha\!s.\sigma\fun\ty{bool}}_M(X\!s)
+= \prod_{X\!s\in{\cal U}^{n}}
+   \den{\alpha\!s.\sigma}_M(X\!s)\fun\two .
+\]
+
+Non c'è alcuna perdita di generalità nell'assumere che $\Gamma$ consista di 
+una singola formula $\gamma$. (Semplicemente rimpiazziamo $\Gamma$ con la congiunzione delle 
+formula che esso contiene, con la convenzione che questa congiunzione sia 
+$\T$ se $\Gamma$ è vuoto.) Per l'assunzione su $\alpha\!s'$ e per la 
+Condizione~(iv), $\alpha\!s,\alpha\!s',.\gamma$ è un termine-in-contesto.
+Interpretarlo in $M$ porta a
+\[
+\den{\alpha\!s,\alpha\!s'.\gamma}_{M}
+\in \prod_{(X\!s,X\!s')\in
+{\cal U}^{n+m}}\den{\alpha\!s,\alpha\!s'.\ty{bool}}_M(X\!s,X\!s')
+={\cal U}^{n+m}\fun\two
+\]
+
+Ora $(\gamma,\equant{x_{\sigma}}p\ x)$ è in ${\sf Theorems}_{\cal T}$ 
+e di conseguenza per il Teorema di Validità~\ref{soundness} questo sequente è 
+soddisfatto da $M$. Usando la semantica di $\exists$ data nella 
+Sezione~\ref{LOG} e la definizione di soddisfacimento di un sequente dalla 
+Sezione~\ref{sequents}, questo significa che per tutti gli $(X\!s,X\!s')\in{\cal U}^{n+m}$ 
+se $\den{\alpha\!s,\alpha\!s'.\gamma}_M(X\!s,X\!s')=1$, allora 
+l'insieme
+\[
+\{y\in\den{\alpha\!s.\sigma}_{M}\: :\: \den{\alpha\!s,.p}(X\!s)(y)=1\}
+\]
+non è vuoto. (Questo usa il fatto che $p$ non coinvolge 
+le variabili di tipo $\alpha\!s'$, così per il Lemma~4 nella 
+Sezione~\ref{term-substitution} 
+$\den{\alpha\!s,\alpha\!s'.p}_M(X\!s,X\!s')=\den{\alpha\!s,.p}_M(X\!s)$.) 
+Dal momento che è anche un sottoinsieme di un insieme in $\cal U$, esso 
+segue per la proprietà {\bf Sub} dell'universo che questo insieme è un elemento di 
+$\cal U$. Così definendo
+\[
+S(X\!s) = \left\{\hspace{-1mm}
+\begin{array}{ll}
+\{y\in\den{\alpha\!s.\sigma}_{M} : \den{\alpha\!s,.p}(X\!s)(y)=1\}
+  & \mbox{\rm se $\den{\alpha\!s,.\gamma}_M(X\!s,X\!s')=1$, qualche $X\!s'$}\\
+1 & \mbox{\rm altrimenti}
+\end{array}
+\right.%\}
+\]
+si ha che $S$ è una funzione ${\cal U}^n\fun{\cal U}$. Estendiamo $M$ 
+a un modello della firma di ${\cal T}'$ definendo che il suo valore alla 
+nuova costante di tipo $n$-aria $\ty{op}$ sia questa funzione $S$. Si noti 
+che i valori di $\sigma$, $p$, $\gamma$ e 
+$q$ in $M'$ sono gli stessi di quelli in $M$, dal momento che queste espressioni non 
+coinvolgono la nuova costante di tipo $\ty{op}$.
+
+Per ogni $X\!s\in{\cal U}^{n}$ definiamo $i_{X\!s}$ essere la funzione 
+d'inclusione per il sottoinsiem $S(X\!s)\subseteq\den{\alpha\!s.\sigma}_{M}$
+se $\den{\alpha\!s,\alpha\!s'.\gamma}_M(X\!s,X\!s')=1$ per qualche 
+$X\!s'$, e altrimenti essere la funzione 
+$1\fun\den{\alpha\!s.\sigma}_{M}$ che manda $0\in 1$ in
+$\ch(\den{\alpha\!s.\sigma}_{M})$. Allora
+$i_{X\!s}\in(S(X\!s)\fun\den{\alpha\!s.\sigma}_{M'}(X\!s))$ poiché
+$\den{\alpha\!s.\sigma}_{M'}=\den{\alpha\!s.\sigma}_M$. Usando la 
+semantica di $\TyDef$ data nella Sezione~\ref{LOG}, si ha che per qualsiasi 
+$(X\!s,X\!s')\in{\cal U}^{n+m}$, se
+$\den{\alpha\!s,\alpha\!s'.\gamma}_{M'}(X\!s,X\!s')=1$ allora
+\[
+\den{\TyDef}_{M'}(\den{\alpha\!s.\sigma}_{M'} ,
+   S(X\!s))(\den{\alpha\!s,.p}_{M'})(i_{X\!s}) = 1.
+\]
+Così $M'$ soddisfa il sequente
+\[
+(\gamma\ ,\ \equant{f_{(\alpha\!s)\ty{op}\fun\sigma}}\TyDef\ p\ f).
+\]
+Ma dal momento che il sequente $(\gamma,(\equant{f_{\alpha\fun\sigma}}{\sf
+Type\_Definition}\ p\ f)\ \imp\ q )$ è in ${\sf Theorems}_{\cal T}$,
+è soddisfatto dal modello $M$ e di conseguenza anche dal modello $M'$ 
+(dal momento che il sequente non coinvolge la nuova costante di tipo $\ty{op}$). 
+Istanziando $\alpha$ a $(\alpha\!s)\ty{op}$ in questo sequente (cosa che 
+è ammissibile dal momento che per la Condizione~(iv) $\alpha$ non occorre in 
+$\gamma$), si ha che $M'$ soddisfa il sequente
+\[
+(\gamma\ ,\
+(\equant{f_{(\alpha\!s)\ty{op}\fun\sigma}}\TyDef\ p\ f)\imp
+q[(\alpha\!s)\ty{op}/\alpha]).
+\]
+Applicando il Modus Ponens, si conclude che $M'$ soddisfa 
+$(\gamma\ ,\ q[(\alpha\!s)\ty{op}/\alpha])$ e
+quindi $M'$ è un modello di ${\cal T}'$, come richiesto.
+
+\medskip
+
+Un'estensione per definizione di tipo è di fatto un caso speciale di estensione 
+per specifica di tipo. Per vedere questo, supponiamo che 
+$\langle (\alpha_1,\ldots,\alpha_n)\ty{op},\ \sigma,\
+p_{\sigma\fun\ty{bool}}\rangle$ sia una definizione di tipo per una teoria 
+$\cal T$. Scegliendo una variabile di tipo $\alpha$ differente da 
+$\alpha_1,\ldots,\alpha_n$, $q$ denoti la formula
+\[
+\equant{f_{\alpha\fun\sigma}}{\sf Type\_Definition}\ p\ f
+\]
+Allora $\langle
+(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\emptyset,q\rangle$
+soddisfa tutte le condizioni necessarie per essere una specifica di tipo per
+$\cal T$. Dal momento che $q[(\alpha_1,\ldots,\alpha_n)\ty{op}/\alpha]$ è solo 
+$\equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}{\sf
+Type\_Definition}\ p\ f$, si ha che
+\[
+{\cal T}{+_{tydef}}
+\langle(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p\rangle
+={\cal T}{+_{\it tyspec}}
+\langle(\alpha_1,\ldots,\alpha_n)\ty{op},\sigma,p,\alpha,\emptyset,q\rangle
+\]
+Così la Proposizione nella Sezione~\ref{tydefs} è un caso speciale della 
+Proposizione di sopra.
+
+In un'estensione per specifica di tipo, la proprietà $q$ che è 
+affermata della nuova costante di tipo introdotta non ha bisogno di determinare la 
+costante di tipo in modo univoco (persino fino alla biezione). In modo corrispondente ci 
+possono essere molti modelli standard differenti della nuova teoria estesa la 
+cui restrizione a $\cal T$ è un dato modello $M$. Per contro, una definizione 
+di tipo determina la nuova costante di tipo in modo univoco fino alla biezione, 
+e due modelli qualsiasi della teoria estesa che si restringono allo stesso 
+modello della teoria originaria saranno isomorfi.
+\index{extension, della logica HOL@extension, della logica \HOL{}!by type specification|)}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "logic"
+%%% End:

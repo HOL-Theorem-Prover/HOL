@@ -7,6 +7,7 @@ sig
   val pattern_match : string -> string -> string option
   val tokenize : string -> string list
   val find_unescaped : char list -> Substring.substring -> int option
+  val wildcard : string -> string list
   val function_call : (string *
                        Substring.substring list *
                        (Substring.substring -> string)) -> string
@@ -55,10 +56,18 @@ end
    first such character.  If it returns NONE, then there is no such
    character.
 
+   [wildcard s] treats s as a "shell glob" pattern and matches it
+   against files in the current hierarchy (i.e., relative file names
+   are assessed against the current directory). The list of all files
+   that match are returned. If the pattern doesn't match any files,
+   the string is returned as is.
+
    [function_call(fnname, args, eval)] evaluates the internal function
    fnname when applied to arguments args.  These args are not
    evaluated to strings to allow for functions (like if) that don't
    necessarily look at all of their arguments.  Evaluation is provided
    by the eval function.
+
+
 
 *)

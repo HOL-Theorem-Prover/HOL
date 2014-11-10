@@ -337,7 +337,7 @@ local
       reduce_xor_def, reduce_xnor_def, reduce_nand_def, reduce_nor_def,
       word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
       word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
-      l2w_def, w2l_def, s2w_def, w2s_def,
+      l2w_def, w2l_def, s2w_def, w2s_def, add_with_carry_def,
       word_from_bin_list_def, word_from_oct_list_def,
       word_from_dec_list_def, word_from_hex_list_def,
       word_to_bin_list_def, word_to_oct_list_def,
@@ -354,30 +354,28 @@ in
        mrw (GSYM bitTheory.MOD_2EXP_def)) thms
 end
 
-fun add_word_convs cmp =
-   List.app (fn x => computeLib.add_conv x cmp)
-     [(fcpSyntax.dimindex_tm,   1, SIZES_CONV),
-      (wordsSyntax.dimword_tm,  1, SIZES_CONV),
-      (wordsSyntax.uint_max_tm, 1, SIZES_CONV),
-      (wordsSyntax.int_min_tm,  1, SIZES_CONV),
-      (wordsSyntax.int_max_tm,  1, SIZES_CONV),
-      (pred_setSyntax.finite_tm,1, SIZES_CONV),
-      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)]
+fun add_words_compset extras cmp =
+  ( computeLib.add_thms thms cmp
+  ; List.app (fn x => computeLib.add_conv (x, 1, SIZES_CONV) cmp)
+     [fcpSyntax.dimindex_tm, wordsSyntax.dimword_tm, wordsSyntax.uint_max_tm,
+      wordsSyntax.int_min_tm, wordsSyntax.int_max_tm, pred_setSyntax.finite_tm]
+  ; computeLib.add_conv
+      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV) cmp
+  ; if extras
+       then List.app (fn f => f cmp)
+              [listSimps.list_rws, bitLib.add_bit_compset,
+               numposrepLib.add_numposrep_compset,
+               ASCIInumbersLib.add_ASCIInumbers_compset]
+    else ()
+  )
 
-val () = computeLib.add_funs thms
-val () = add_word_convs computeLib.the_compset
+val () = add_words_compset false computeLib.the_compset
 
 fun words_compset () =
    let
-      val compset = reduceLib.num_compset ()
+      val cmp = reduceLib.num_compset ()
    in
-     listSimps.list_rws compset
-     ; bitLib.add_bit_compset compset
-     ; numposrepLib.add_numposrep_compset compset
-     ; ASCIInumbersLib.add_ASCIInumbers_compset compset
-     ; computeLib.add_thms thms compset
-     ; add_word_convs compset
-     ; compset
+      add_words_compset true cmp; cmp
    end
 
 val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset ())
@@ -463,7 +461,10 @@ local
                ["word_mul", "word_add", "word_sub", "word_1comp", "word_2comp",
                 "word_xor", "word_and", "word_or",
                 "word_xnor", "word_nand", "word_nor",
-                "word_T", "word_H", "word_L"])
+                "word_T", "word_H", "word_L"] @
+           map (pair "arithmetic")
+               ["+", "-", "*", "DIV", "DIV2", "EXP", "ODD", "EVEN",
+                "<=", ">=", "<", ">"])
 
   fun is_hex_digit_literal t =
      numSyntax.int_of_term t < 16 handle HOL_ERR _ => false
@@ -570,28 +571,50 @@ in
 end
 
 local
-   fun bit_set_compset () =
-     let
-        val cmp = words_compset ()
-        val _ = computeLib.add_thms
-                 [REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def] cmp
-     in
-        cmp
-     end
+   val DIV2_CONV =
+      PURE_REWRITE_CONV
+         [numeralTheory.numeral_div2, numeralTheory.numeral_suc,
+          arithmeticTheory.NORM_0]
+
+   val conv1 =
+      Conv.REWR_CONV
+         (REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] wordsTheory.BIT_SET_def)
+      THENC RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.NEQ_CONV))
+      THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES]
+
+   val conv2 =
+      RATOR_CONV (RATOR_CONV (RAND_CONV Arithconv.ODD_CONV))
+      THENC PURE_ONCE_REWRITE_CONV [boolTheory.COND_CLAUSES]
+
+   val conv3 =
+      RAND_CONV DIV2_CONV
+      THENC RATOR_CONV (RAND_CONV Arithconv.SUC_CONV)
+
+   fun bit_set_conv tm =
+      let
+         val thm1 = conv1 tm
+      in
+         if boolSyntax.is_cond (rhs (concl thm1))
+            then let
+                    val thm2 = Conv.RIGHT_CONV_RULE conv2 thm1
+                 in
+                    Conv.RIGHT_CONV_RULE
+                      ((if pred_setSyntax.is_insert (rhs (concl thm2))
+                           then RAND_CONV
+                        else I) (conv3 THENC bit_set_conv)) thm2
+                 end
+         else thm1
+      end
 in
-   val BIT_SET_CONV =
-     REWR_CONV BIT_SET
-       THENC RAND_CONV (computeLib.CBV_CONV (bit_set_compset ()))
-       THENC REWRITE_CONV [pred_setTheory.NOT_IN_EMPTY,
-               Q.ISPEC `0n` pred_setTheory.IN_INSERT,
-               Q.ISPEC `^Na` pred_setTheory.IN_INSERT]
+   val BIT_SET_CONV = REWR_CONV wordsTheory.BIT_SET THENC RAND_CONV bit_set_conv
 end
 
 val BIT_ss =
   simpLib.named_merge_ss "bit"
     [simpLib.rewrites [BIT_ZERO],
      simpLib.std_conv_ss
-       {conv = BIT_SET_CONV,
+       {conv = BIT_SET_CONV
+               THENC TRY_CONV (pred_setLib.IN_CONV Arithconv.NEQ_CONV),
         name = "BITS_CONV",
         pats = [``bit$BIT n ^Na``]}]
 

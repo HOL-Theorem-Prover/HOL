@@ -234,7 +234,7 @@ fun induct_on_type st ty g =
                     "but there is no associated induction theorem"])
         | SOME thm => (* now select induction tactic *)
            if null (TypeBasePure.constructors_of facts) (* not a datatype *)
-             then HO_MATCH_MP_TAC thm else
+             then primInduct st (HO_MATCH_MP_TAC thm) else
            if is_mutind_thm thm
                then Mutual.MUTUAL_INDUCT_TAC thm
            else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
@@ -332,8 +332,7 @@ fun labrhs t = (* term is a possibly labelled equality *)
  end;
 
 fun (q by tac) (g as (asl,w)) = let
-  val Absyn = Parse.Absyn
-  val a = Absyn q
+  val a = trace ("syntax_error", 0) Parse.Absyn q
   val (goal_pt, finisher) =
       case Lib.total Absyn.dest_eq a of
         SOME (Absyn.IDENT(_,"_"), r) =>
@@ -344,7 +343,8 @@ fun (q by tac) (g as (asl,w)) = let
         else
           raise ERR "by" "Top assumption must be an equality"
       | x => (Parse.absyn_to_preterm a, STRIP_ASSUME_TAC)
-  val tm = Parse.parse_preterm_in_context (free_varsl (w::asl)) goal_pt
+  val tm = trace ("show_typecheck_errors", 0)
+                 (Parse.parse_preterm_in_context (free_varsl (w::asl))) goal_pt
 in
   SUBGOAL_THEN tm finisher THEN1 tac
 end (asl, w)
@@ -423,7 +423,7 @@ fun case_rwlist () =
  itlist (fn tyi => fn rws => case_rws tyi @ rws)
         (TypeBase.elts()) [];
 
-(* Add the rewrites into a simpset to avoid re-processing them when 
+(* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
  * has an order of magnitude speedup on developments with large datatypes *)
 fun PURE_CASE_SIMP_CONV rws = simpLib.SIMP_CONV (boolSimps.bool_ss++simpLib.rewrites rws) []
@@ -927,7 +927,7 @@ in
 end
 
 val {mk,dest,export} =
-    ThmSetData.new_exporter "BasicProvers.stateful_simpset" add_rewrites
+    ThmSetData.new_exporter "simp" add_rewrites
 
 fun export_rewrites slist = List.app export slist
 

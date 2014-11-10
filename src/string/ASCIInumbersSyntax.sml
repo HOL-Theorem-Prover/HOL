@@ -53,4 +53,13 @@ val (num_to_hex_string_tm,mk_num_to_hex_string,
      dest_num_to_hex_string,is_num_to_hex_string) =
   monop "num_to_hex_string"
 
+val (fromBinString_tm, mk_fromBinString, dest_fromBinString, is_fromBinString) =
+  monop "fromBinString"
+
+val (fromDecString_tm, mk_fromDecString, dest_fromDecString, is_fromDecString) =
+  monop "fromDecString"
+
+val (fromHexString_tm, mk_fromHexString, dest_fromHexString, is_fromHexString) =
+  monop "fromHexString"
+
 end

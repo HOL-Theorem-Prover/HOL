@@ -17,7 +17,7 @@ open pred_setTheory;
 open numLib;
 open arithmeticTheory;
 open bossLib;
-open MutualIndThen;
+open Mutual;
 open ind_rel;
 open dep_rewrite;
 open more_setTheory;

@@ -1,0 +1,1590 @@
+\newcommand{\eos}{\hfill{}$\cdots\diamond\cdots$\hfill{}\vspace{5mm}}
+
+\newcommand{\mathpredn}{\mathbin{-\!\!\!\mid\mid\!\rightarrow}}
+
+\newcommand{\KC}{\con{K}}
+\newcommand{\SC}{\con{S}}
+\newcommand{\bk}{\char'134}
+
+
+\chapter{Esempio: Logica Combinatoria}
+\label{chap:combin}
+
+\section{Introduzione}
+\label{sec:Introduction}
+
+Questo piccolo caso di studio è una formalizzazione di una logica 
+combinatoria (priva di variabili). Questa logica è d'importanza fondamentale 
+nell'informatica teorica, ed ha una ricca teoria. L'esempio 
+si basa principalmente su uno sviluppo fatto da Tom Melham. Lo script 
+completo per lo sviluppo è disponibile come \texttt{clScript.sml} nella 
+directory \texttt{examples/ind\_def} della distribuzione. E' 
+autosufficiente e così include le risposte agli esercizi fissati al 
+termine di questo documento.
+
+Le sessioni HOL assumono che la traccia Unicode sia \emph{accesa} (così 
+come è di default), il che significa che benché gli input possono essere scritti in 
+puro ASCII, l'output usa tuttavia degli eleganti caratteri Unicode (simboli come 
+$\forall$ e $\Rightarrow$). I simboli Unicode potrebbero essere usati anche 
+nell'input.
+
+
+\section{Il tipo dei combinatori}
+\label{sec:Type-Combinators}
+
+La prima cosa che dobbiamo fare è definire il tipo dei 
+\emph{combinatori}. Di questi ce ne sono soltanto due, \KC{} e \SC, ma 
+dobbiamo anche essere in grado di \emph{combinarli}, e per questo abbiamo bisogno 
+di introdurre la nozione di applicazione. In mancanza di un simbolo ASCII 
+migliore, useremo il cancelletto (\#) per rappresentare questo nella logica:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `cl = K | S | # of cl => cl`;
+> val it = () : unit
+\end{verbatim}
+\end{session}
+Vogliamo anche che \# sia un infisso, così lo impostiamo come uno stretto infisso 
+associativo a sinistra:
+\begin{session}
+\begin{verbatim}
+- set_fixity "#" (Infixl 1100);
+> val it = () : unit
+\end{verbatim}
+\end{session}
+
+
+% C = S (S (K S) (S (K K) S)) (K K)
+
+
+\section{Regole di riduzione dei combinatori}
+\label{sec:Comb-Reduct}
+
+La logica combinatoria è lo studio di come valori di questo tipo possono evolversi 
+date varie regole che descrivono come cambiano. Di conseguenza, il nostro prossimo 
+passo è di definire le riduzioni che i combinatori possono subire. Ci 
+sono due regole base:
+\[\begin{array}{l@{\;\;\rightarrow\;\;}l}
+\KC\;x\;y & x\\
+\SC\;f\;g\;x & (f x)(g x)
+\end{array}\]
+Qui, nella nostra descrizione al di fuori di HOL, usiamo la giustapposizione al posto 
+del \#. Inoltre, la giustapposizione è anche associativa a sinistra, così che 
+$\con{K}\;x\;y$ dovrebbe essere letto come $\con{K}\;\#\;x\;\#\;y$ che è a sua 
+volta $(\con{K}\;\#\;x)\;\#\;y$.
+
+Dato un termine nella logica, vogliamo che queste riduzioni siano in grado di essere eseguite 
+in qualsiasi punto, non solo al top level, così abbiamo bisogno di due ulteriori 
+regole di congruenza:\[
+\begin{array}{l}
+\infer{x\;y\;\;\rightarrow\;\;x'\;y}{x\;\;\rightarrow\;\;x'}\\[5mm]
+\infer{x\;y\;\;\rightarrow\;\;x\;y'}{y\;\;\rightarrow\;\;y'}
+\end{array}\]
+In HOL, possiamo catturare questa relazione con una definizione induttiva. 
+Per prima cosa abbiamo bisogno di impostare il nostro simbolo freccia come un infisso per rendere ogni cosa 
+un pò più elegante
+\begin{session}
+\begin{verbatim}
+- set_fixity "-->" (Infix(NONASSOC, 450));
+> val it = () : unit
+\end{verbatim}
+\end{session}
+Rendiamo il nostro simbolo freccia non-associativo, rendendo di conseguenza un 
+errore di parsing scrivere \verb!x --> y --> z!. Sarebbe carino essere in grado 
+di scrivere questo e averlo con il significato di \verb!x --> y /\ y --> z!, ma questo al 
+momento non è possibile con il parser di HOL.
+
+Il nostro prossimo passo è di definire di fatto la relazione con la 
+funzione \ml{xHol\_reln}. In aggiunta a una quotation che specifica le 
+regole per la nuova relazione, essa richiede un nome da usare come la radice per 
+i teoremi che essa dimostra. Utilizziamo la stringa \ml{"redn"}\footnote{La 
+	funzione correlata \ml{Hol\_reln} può essere usata se la scelta della radice da parte del 
+	sistema è accettabile. In questo caso, \ml{Hol\_reln} non può gestire i 
+	caratteri non-alfanumerici in \holtxt{-->} e solleverà un 
+	errore.}.
+La funzione \ml{xHol\_reln} per 
+fare questo restituisce tre teoremi separati, e leghiamo il primo (il 
+teorema ``rules'') e il 
+terzo (il teorema ``cases'')
+\begin{session}
+\begin{alltt}
+val (redn_rules, _, redn_cases) = xHol_reln "redn"
+   `(!x y f. x --> y   ==>    f # x --> f # y) /\bs
+    (!f g x. f --> g   ==>    f # x --> g # x) /\bs
+    (!x y.   K # x # y --> x) /\bs
+    (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+> val redn_rules =
+    |- (\(\forall\)x y f. x --> y \(\Rightarrow\) f # x --> f # y) \(\land\)
+       (\(\forall\)f g x. f --> g \(\Rightarrow\) f # x --> g # x) \(\land\)
+       (\(\forall\)x y. K # x # y --> x) \(\land\)
+       \(\forall\)f g x. S # f # g # x --> f # x # (g # x) : thm
+  val redn_cases =
+    |- \(\forall\)a0 a1.
+         a0 --> a1 \(\Leftrightarrow\)
+         (\(\exists\)x y f. (a0 = f # x) \(\land\) (a1 = f # y) \(\land\) x --> y) \(\lor\)
+         (\(\exists\)f g x. (a0 = f # x) \(\land\) (a1 = g # x) \(\land\) f --> g) \(\lor\)
+         (\(\exists\)y. a0 = K # a1 # y) \(\lor\)
+         \(\exists\)f g x. (a0 = S # f # g # x) \(\land\) (a1 = f # x # (g # x))
+    : thm
+\end{alltt}
+\end{session}
+
+Oltre a dimostrare questi tre teoremi per noi, il pacchetto di 
+definizioni induttiva li ha anche salvati sul disco.
+
+Ora, usando il nostro teorema \texttt{redn\_rules} possiamo dimostrare singoli 
+passi della nostra relazione di riduzione:
+\begin{session}
+\begin{verbatim}
+- PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
+Meson search level: ...
+> val it = |- S # (K # x # x) --> S # x : thm
+\end{verbatim}
+\end{session}
+Il sistema che abbiamo appena definito è potente quanto il 
+$\lambda$-calcolo, le macchine di Turing, e tutti gli altri modelli standard 
+di computazione.
+
+Un utile risultato circa la logica combinatoria è che è 
+\emph{confluente}. Si consideri il termine $\SC\;z\;(\KC\;\KC)\;(\KC\; y\;
+x)$. Esso può subire due riduzioni, a $\SC\;z\;(\KC\;\KC)\;y$ e anche 
+a $(z\;(\KC\;y\;x))\,(\KC\;\KC\;(\KC\;y\;x))$. Fare queste due scelte 
+di riduzione significa che da questo punto in poi i termini hanno due 
+storie completamente separate? In parole povere, essere confluente 
+significa che la risposta a questa domanda è \emph{no}.
+
+
+\section{Chiusura transitiva e confluenza}
+\label{sec:Transitive-Clos-Conf}
+
+Una nozione cruciale a quella di confluenza è quella di \emph{chiusura 
+	transitiva}. Abbiamo definito un sistema che si evolve specificando come 
+un valore algebrico si può evolvere in possibili valori successivi in un singolo 
+passo. La prossima domanda naturale è di chiedere per una caratterizzazione 
+dell'evoluzione in uno o più passi della relazione $\rightarrow$.
+
+Di fatto, definiremo una relazione che vale tra due valori se 
+il secondo può essere raggiunto dal primo in zero o più passi. Questa 
+è la \emph{chiusura riflessiva, transitiva} della nostra relazione originaria. 
+Comunque, piuttosto che legare la nostra definizione alla nostra relazione originaria, 
+svilupperemo questa nozione in modo indipendente e dimostreremo una varietà di 
+risultati che sono veri di ogni sistema, non soltanto del nostro sistema di 
+logica combinatoria.
+
+Così, iniziamo la nostra digressione astratta con un'altra definizione 
+induttiva. La nostra nuova costante è \con{RTC}, tale che 
+$\con{RTC}\;R\;x\;y$ è vera se è possibile andare da $x$ a $y$ 
+con zero o più ``passi'' della relazione $R$. (La notazione 
+standard per $\con{RTC}\;R$ è $R^*$.) Possiamo esprimere quest'idea con 
+solo due regole. La prima \[ \infer{\con{RTC}\;R\;x\;x}{} \] dice 
+che è sempre possibile andare da $x$ a $x$ in zero o più 
+passi. La seconda \[
+\infer{\con{RTC}\;R\;x\;z}{R\;x\;y\qquad\con{RTC}\;R\;y\;z}
+\] dice che se si può fare un singolo passo da $x$ a $y$, e poi 
+zero o più passi per andare da $y$ a $z$, allora è possibile fare 
+zero o più passi per andare da $x$ a $z$. La realizzazione di 
+queste regole in HOL è di nuovo diretta.
+
+(Come accade, \con{RTC} è una costante già definita nel conteso 
+in cui stiamo lavorando (si trova in \texttt{relationTheory}), così la 
+nasconderemo dalla vista prima di iniziare. Evitiamo così messaggi che ci dicono 
+che stiamo immettendo termini ambigui. Le ambiguità verrebbero sempre 
+risolte in favore della definizione più recente, ma i warning 
+sono fastidiosi.)
+\begin{session}
+\begin{alltt}
+val _ = hide "RTC";
+
+val (RTC_rules, _, RTC_cases) = Hol_reln `
+    (!x.     RTC R x x) /\bs
+    (!x y z. R x y /\bs RTC R y z ==> RTC R x z)`;
+<<HOL message: inventing new type variable names: 'a>>
+> val RTC_rules =
+    |- \(\forall\)R. (\(\forall\)x. RTC R x x) \(\land\)
+           \(\forall\)x y z. R x y \(\land\) RTC R y z \(\Rightarrow\) RTC R x z : thm
+  val RTC_cases =
+    |- \(\forall\)R a0 a1. RTC R a0 a1 \(\Leftrightarrow\) (a1 = a0) \(\lor\)
+                                \(\exists\)y. R a0 y \(\land\) RTC R y a1 : thm
+\end{alltt}
+\end{session}
+Ora torniamo indietro alla nozione di confluenza. Vogliamo che questo significhi 
+qualcosa del tipo: ``benché un sistema possa prendere differenti percorsi a breve 
+scadenza, questi due percorsi possono sempre finire nello stesso posto''. 
+Questo suggerisce che definiamo confluente nel modo seguente:
+\begin{session}
+\begin{verbatim}
+- val confluent_def = Define
+    `confluent R =
+       !x y z. RTC R x y /\ RTC R x z ==>
+               ?u. RTC R y u /\ RTC R z u`;
+\end{verbatim}
+\end{session}
+Questa proprietà afferma di $R$ che possiamo ``completare il diamante''; 
+se abbiamo
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\end{tikzpicture}
+\end{center}
+allora possiamo completare con un nuovo valore $u$:
+\begin{center}
+\begin{tikzpicture}[scale=.8,transform shape]
+\node (middle) {};
+\node (x) [above=of middle] {$x$};
+\node (y) [left=of middle] {$y$};
+\node (z) [right=of middle] {$z$};
+\node (u) [below=of middle] {$u$};
+\path (x) edge [->,thick] node[auto,swap] {$*$} (y);
+\path (x) edge [->,thick] node[auto] {$*$} (z);
+\path (y) edge [->,thick,densely dotted] node[auto,swap] {$*$} (u);
+\path (z) edge [->,thick,densely dotted] node[auto] {$*$} (u);
+\end{tikzpicture}
+\end{center}
+
+Un'interessante proprietà delle relazioni confluenti è che da qualsiasi punto 
+iniziale esse producono non più di una \emph{forma normale}, dove una forma 
+normale è un valore da cui non si possono più fare ulteriori passi.
+\begin{session}
+\begin{alltt}
+- val normform_def = Define`normform R x = !y. ~(R x y)`;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+Definition has been stored under "normform_def".
+> val normform_def = |- \(\forall\)R x. normform R x \(\Leftrightarrow\) \(\forall\)y. \(\neg\)R x y : thm
+\end{alltt}
+\end{session}
+In altre parole, un sistema ha un $R$-forma normale in $x$ se non ci sono 
+connessioni attraverso $R$ ad altri valori. (Avremmo potuto scrivere 
+\verb!~?y. R x y! come nostro lato destro per la definizione di sopra.)
+
+Possiamo ora dimostrare il seguente:
+\begin{session}
+\begin{alltt}
+- g `!R. confluent R ==>
+         !x y z.
+           RTC R x y /\bs normform R y /\bs
+           RTC R x z /\bs normform R z ==> (y = z)`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)R.
+           confluent R \(\Rightarrow\)
+           \(\forall\)x y z. RTC R x y \(\land\) normform R y \(\land\) RTC R x z \(\land\) normform R z \(\Rightarrow\)
+                   (y = z)
+\end{alltt}
+\end{session}
+Riscriviamo la definizione di confluenza:
+\begin{session}
+\begin{alltt}
+- e (RW_TAC std_ss [confluent_def]);
+OK..
+1 subgoal:
+> val it =
+    y = z
+    ------------------------------------
+      0.  \(\forall\)x y z. RTC R x y \(\land\) RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      1.  RTC R x y
+      2.  normform R y
+      3.  RTC R x z
+      4.  normform R z
+\end{alltt}
+\end{session}
+    La nostra proprietà confluenza è ora l'assunzione 0, e possiamo usarla per 
+		dedurre che c'è un $u$ alla base del diamante:
+\begin{session}
+\begin{alltt}
+- e (`?u. RTC R y u /\bs RTC R z u` by PROVE_TAC []);
+OK..
+Meson search level: .........
+1 subgoal:
+> val it =
+    y = z
+    ------------------------------------
+      0.  \(\forall\)x y z. RTC R x y \(\land\) RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      1.  RTC R x y
+      2.  normform R y
+      3.  RTC R x z
+      4.  normform R z
+      5.  RTC R y u
+      6.  RTC R z u
+\end{alltt}
+\end{session}
+    Così, da $y$ possiamo fare zero o più passi per arrivare a $u$ e 
+		analogamente da $z$. Ma, sappiamo anche che siamo in una $R$-forma 
+		normale sia in $y$ sia in $z$. Non possiamo fare alcun passo da 
+		questi valori. Possiamo concludere sia che $u = y$ sia che $u = z$, e 
+		questo a sua volta significa che $y = z$, che è il nostro goal. Così possiamo 
+		concludere con
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [normform_def, RTC_cases]);
+OK..
+Meson search level: ..........
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)R.
+         confluent R \(\Rightarrow\)
+         \(\forall\)x y z.
+           RTC R x y \(\land\) normform R y \(\land\) RTC R x z \(\land\) normform R z \(\Rightarrow\)
+           (y = z)
+\end{alltt}
+\end{session}
+Impacchettando così da rimuovere i comandi del pacchetto sub-goal, possiamo 
+dimostrare e salvare il teorema per l'uso futuro con:
+\begin{session}
+\begin{verbatim}
+val confluent_normforms_unique = store_thm(
+  "confluent_normforms_unique",
+  ``!R. confluent R ==>
+        !x y z. RTC R x y /\ normform R y /\
+                RTC R x z /\ normform R z ==> (y = z)``,
+  RW_TAC std_ss [confluent_def] THEN
+  `?u. RTC R y u /\ RTC R z u` by PROVE_TAC [] THEN
+  PROVE_TAC [normform_def, RTC_cases]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+Chiaramente la confluenza è una proprietà interessante per un sistema. La 
+domanda è come potremmo riuscire a dimostrarla. Iniziamo definendo 
+la proprietà diamante che abbiamo usato nella definizione di confluenza.
+\begin{session}
+\begin{alltt}
+- val diamond_def = Define
+    `diamond R = !x y z. R x y /\bs R x z ==> ?u. R y u /\bs R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+Definition has been stored under "diamond_def".
+> val diamond_def =
+    |- \(\forall\)R. diamond R \(\Leftrightarrow\) \(\forall\)x y z. R x y \(\land\) R x z \(\Rightarrow\) \(\exists\)u. R y u \(\land\) R z u
+     : thm
+\end{alltt}
+\end{session}
+    Ora chiaramente abbiamo che la confluenza di una relazione è equivalente alla 
+		chiusura riflessiva, transitiva di quella relazione che ha la 
+		proprietà diamante.
+\begin{session}
+\begin{verbatim}
+val confluent_diamond_RTC = store_thm(
+  "confluent_diamond_RTC",
+  ``!R. confluent R = diamond (RTC R)``,
+  RW_TAC std_ss [confluent_def, diamond_def]);
+\end{verbatim}
+\end{session}
+    Fin qui tutto bene. Come possiamo poi mostrare la proprietà diamante per 
+		$\con{RTC}\;R$? La risposta che salta alla mente è di sperare che se 
+		la relazione originale ha la proprietà diamante, allora magari anche la 
+		chiusura riflessiva, transitiva l'avrà. Il teorema che vogliamo è 
+		\[ \con{diamond}\;R \supset \con{diamond}\,(\con{RTC}\;R)\] Graficmente, 
+		questo è sperare che da
+    \[\xymatrix @R=5mm @C=2.5mm {
+& x \ar[dl] \ar[dr] & \\
+y \ar@{.>}[dr] & & z \ar@{.>}[dl] \\
+& u}\]
+ saremo in grado di concludere \[\xymatrix @R=4mm @C=2mm {
+& & & x \ar[dl] \ar[dr] & \\
+& & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \ar@{-->}[ddrr] \\
+& & & u \\
+p \ar@{.>}[dddrrr] & & & & & & q \ar@{.>}[dddlll] \\ \\ \\
+& & & r}\] dove le linee tratteggiate indicano che questi passi (da $x$ a $p$, 
+per esempio) stanno usando $\con{RTC}\;R$. La presenza di due istanze 
+di $\con{RTC}\;R$ è un'indicazione che questa dimostrazione richiederà due 
+induzioni. Con la prima dimostreremo
+\[\xymatrix @R=4mm @C=2mm {
+& & & x \ar[dl] \ar[dr] & \\
+& & y \ar@{.>}[dr] \ar@{-->}[ddll] & & z \ar@{.>}[dl] \\
+& & & u \ar@{.>}[ddll] \\
+p \ar@{.>}[dr] \\
+& r}\]
+In altre parole, vogliamo mostrare che se facciamo un passo in una 
+direzione (verso $z$) e molti altri passi in un'altra (verso $p$), allora la 
+proprietà diamante per $R$ ci garantirà l'esistenza di $r$, 
+verso cui saremo in grado di fare molti passi sia da $p$ sia da $z$.
+
+Facciamo un pò d'attenzione ad esprimere il goal così che dopo aver eliminato 
+l'assunzione più esterna (che $R$ ha la proprietà diamante), esso si accorderà con il 
+principio di induzione per \con{RTC}\footnote{In questa e nelle seguenti 
+	dimostrazioni usando il pacchetto sub-goal, presenteremo il gestore di dimostrazione 
+	come se il goal da dimostrare fosse il primo in questo stack. In 
+	altre parole, abbiamo fatto una \texttt{dropn 1;} dopo ogni dimostrazione 
+	di successo per rimuovere l'evidenza del goal vecchio. In pratica, non c'è 
+	nulla di male nel lasciare questi goal nello stack del gestore di dimostrazione.}.
+\begin{session}
+\begin{alltt}
+- g `!R. diamond R ==>
+         !x p. RTC R x p ==>
+               !z. R x z ==>
+                   ?u. RTC R p u /\bs RTC R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)R.
+           diamond R \(\Rightarrow\)
+           \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+\end{alltt}
+\end{session}
+Per prima cosa, eliminiamo l'assunzione della proprietà diamante (due cose devono essere 
+eliminate: il quantificatore universale più esterno e l'antecedente 
+dell'implicazione):
+\begin{session}
+\begin{alltt}
+- e (GEN_TAC THEN STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+    ------------------------------------
+      diamond R
+\end{alltt}
+\end{session}
+Ora possiamo usare il principio d'induzione per la chiusura riflessiva e transitiva (in alternativa, eseguiamo una ``regola d'induzione''). 
+Per far questo, usiamo il comando \ml{Induct\_on} che è usato anche per fare 
+un'induzione strutturale su tipi di dati algebrici (come numeri e 
+liste). 
+Forniamo il nome della costante il cui principio d'induzione vogliamo 
+usare, e la tattica fa il resto:
+\begin{session}
+\begin{alltt}
+- e (Induct_on `RTC`);
+OK..
+1 subgoal:
+> val it =
+    (\(\forall\)x z. R x z \(\Rightarrow\) \(\exists\)u. RTC R x u \(\land\) RTC R z u) \(\land\)
+    \(\forall\)x x' p.
+      R x x' \(\land\) RTC R x' p \(\land\) (\(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u) \(\Rightarrow\)
+      \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+    ------------------------------------
+      diamond R
+\end{alltt}
+\end{session}
+Eseguiamo uno strip del goal il più possibile con l'obiettivo di rendere ciò che 
+rimane da dimostrare più facile da vedere:
+\begin{session}
+\begin{alltt}
+- e (REPEAT STRIP_TAC);
+OK..
+2 subgoals:
+> val it =
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
+
+    \(\exists\)u. RTC R x u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x z
+\end{alltt}
+\end{session}
+Questo primo goal è semplice. Esso corrisponde al caso dove i passi 
+principali da $x$ a $p$ sono di fatto nessun passo del tutto, e $p$ e $x$ 
+sono di fatto lo stesso posto. Nell'altra direzione, $x$ ha fatto 
+un passo verso $z$, e abbiamo bisogno di trovare un qualche posto raggiungibile in zero o 
+più passi sia da $x$ sia da $z$. Dato quello che conosciamo fino ad ora, l'unico 
+candidato è lo stesso $z$. Di fatto, non abbiamo nemmeno bisogno di fornire questo 
+testimone in modo esplicito. \texttt{PROVE\_TAC} lo troverà per noi, purché 
+noi gli diciamo quali sono le regole che governano \con{RTC}:
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: .....
+
+Goal proved. [..] |- \(\exists\)u. RTC R p u \(\land\) RTC R z u
+Remaining subgoals:
+> val it =
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
+\end{alltt}
+\end{session}
+    E cosa facciamo di questo goal restante? Le assunzioni uno e quattro 
+		tra di loro sono la cima di un $R$-diamante. Usiamo il fatto 
+		che abbiamo la proprietà diamante per $R$ e deduciamo che 
+		esiste un $v$ verso cui $x'$ e $z$ possono fare entrambi singoli passi:
+\begin{session}
+\begin{alltt}
+- e (`?v. R x' v /\bs R z v` by PROVE_TAC [diamond_def]);
+OK..
+Meson search level: ............
+1 subgoal:
+> val it =
+    \(\exists\)u. RTC R p u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' p
+      3.  \(\forall\)z. R x' z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+      4.  R x z
+      5.  R x' v
+      6.  R z v
+\end{alltt}
+\end{session}
+Ora possiamo applicare le nostre ipotesi d'induzione (assunzione 3) per completare 
+la lunga, striscia asimmetrica del diamante. Concluderemo che 
+c'è un $u$ tale che $\con{RTC}\;R\;p\;u$ e $\con{RTC}\;R\;v\;u$. Di 
+fatto abbiamo bisogno un $u$ tale che $\con{RTC}\;R\;z\;u$, ma poiché c'è 
+un singolo passo-$R$ tra $z$ e $v$ abbiamo anche quello allo stesso modo. Tutto ciò 
+di cui abbiamo bisogno di fornire a \texttt{PROVE\_TAC} sono le regole per \con{RTC}:
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: .......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)R.
+         diamond R \(\Rightarrow\)
+         \(\forall\)x p. RTC R x p \(\Rightarrow\) \(\forall\)z. R x z \(\Rightarrow\) \(\exists\)u. RTC R p u \(\land\) RTC R z u
+\end{alltt}
+\end{session}
+    Di nuovo possiamo (e dovremmo) impacchettare il lemma, evitando i 
+		comandi del pacchetto sub-goal:
+\begin{session}
+\begin{verbatim}
+val R_RTC_diamond = store_thm(
+  "R_RTC_diamond",
+  ``!R. diamond R ==>
+         !x p. RTC R x p ==>
+               !z. R x z ==>
+                   ?u. RTC R p u /\ RTC R z u``,
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [RTC_rules],
+    `?v. R x' v /\ R z v` by PROVE_TAC [diamond_def] THEN
+    PROVE_TAC [RTC_rules]
+  ]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+Ora possiamo spostarci a dimostrare che se $R$ ha la proprietà diamante, allora 
+anche $\con{RTC}\;R$. Vogliamo dimostrare questo di nuovo per induzione.
+E' molto forte la tentazione di affermare il goal come l'ovvio \[
+\con{diamond}\;R\supset\con{diamond}\,(\con{RTC}\;R)
+\] ma così facendo renderà di fatto più difficile applicare il principio 
+d'induzione quando è il momento giusto. E' meglio partire con una 
+dichiarazione del goal che è molto vicina nella forma al principio 
+d'induzione. Così, espandiamo manualmente il significato di \con{diamond} e dichiariamo 
+il nostro prossimo goal così:
+\begin{session}
+\begin{alltt}
+- g `!R. diamond R ==> !x y. RTC R x y ==>
+                             !z. RTC R x z ==>
+                                 ?u. RTC R y u /\bs RTC R z u`;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)R.
+           diamond R \(\Rightarrow\)
+           \(\forall\)x y. RTC R x y \(\Rightarrow\) \(\forall\)z. RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+\end{alltt}
+\end{session}
+    Di nuovo, eliminiamo l'assunzione della proprietà diamante, applichiamo il 
+		principio d'induzione, ed eseguiamo \ml{STRIP_TAC} ripetutamente:
+\begin{session}
+\begin{alltt}
+- e (GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN REPEAT STRIP_TAC);
+OK..
+2 subgoals:
+> val it =
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
+
+    \(\exists\)u. RTC R x u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  RTC R x z
+\end{alltt}
+\end{session}
+Il primo goal è di nuovo uno facile, corrispondendo al caso in cui 
+il percorso da $x$ a $y$ è stato uno senza alcun passo.
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules]);
+OK..
+Meson search level: ...
+
+Goal proved. [...]
+
+Remaining subgoals:
+> val it =
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
+\end{alltt}
+\end{session}
+Il goal è molto simile a quello che abbiamo visto in precedenza. Abbiamo la punta di 
+un diamante (``asimmetrico'') nelle assunzioni 1 e 4, così possiamo dedurre 
+l'esistenza di una destinazione comune per $x'$ e $z$:
+\begin{session}
+\begin{alltt}
+- e (`?v. RTC R x' v /\bs RTC R z v` by PROVE_TAC [R_RTC_diamond]);
+OK..
+Meson search level: ............
+1 subgoal:
+> val it =
+    \(\exists\)u. RTC R y u \(\land\) RTC R z u
+    ------------------------------------
+      0.  diamond R
+      1.  R x x'
+      2.  RTC R x' y
+      3.  \(\forall\)z. RTC R x' z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+      4.  RTC R x z
+      5.  RTC R x' v
+      6.  RTC R z v
+\end{alltt}
+\end{session}
+    A questo punto nell'ultima dimostrazione eravamo stati in grado di concludere il tutto 
+		appellandoci soltanto alle regole per \con{RTC}. Questa volta non è 
+		così semplice. Quando usiamo l'ipotesi d'induzione 
+		(assunzione 3), possiamo concludere che c'è un $u$ per cui sia 
+		$y$ sia $v$ si possono connettere in zero o più passi, ma al fine di 
+		mostrare che questo $u$ è raggiungibile da $z$, abbiamo bisogno di essere in grado di 
+		concludere $\con{RTC}\;R\;z\;u$ quando conosciamo che 
+		$\con{RTC}\;R\;z\;v$ (assunzione 6 di sopra) e 
+		$\con{RTC}\;R\;v\;u$ (la nostra conseguenza dell'ipotesi 
+		d'induzione). Lasciamo la dimostrazione di questo risultato generale come un 
+		esercizio, e qui assumiamo che essa è già stata dimostrato come il teorema 
+		\texttt{RTC\_RTC}.
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules, RTC_RTC]);
+Meson search level: .......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)R.
+         diamond R \(\Rightarrow\)
+         \(\forall\)x y. RTC R x y \(\Rightarrow\) \(\forall\)z. RTC R x z \(\Rightarrow\) \(\exists\)u. RTC R y u \(\land\) RTC R z u
+\end{alltt}
+\end{session}
+Possiamo impacchettare questo risultato come un lemma e poi dimostrare la versione 
+più elegante direttamente:
+\begin{session}
+\begin{verbatim}
+val diamond_RTC_lemma = prove(
+  ``!R.
+       diamond R ==>
+       !x y. RTC R x y ==> !z. RTC R x z ==> ?u. RTC R y u /\ RTC R z u``,
+  GEN_TAC THEN STRIP_TAC THEN Induct_on `RTC` THEN
+  REPEAT STRIP_TAC THENL [
+    PROVE_TAC [RTC_rules],
+    `?v. RTC R x' v /\ RTC R z v` by PROVE_TAC [R_RTC_diamond] THEN
+    PROVE_TAC [RTC_RTC, RTC_rules]
+  ]);
+val diamond_RTC = store_thm(
+  "diamond_RTC",
+  ``!R. diamond R ==> diamond (RTC R)``,
+  PROVE_TAC [diamond_def,diamond_RTC_lemma]);
+\end{verbatim}
+\end{session}
+
+\section{Di nuovo sui combinatori}
+\label{sec:Return-to-Land}
+
+Ora, siamo nella posizione di ritornare all'oggetto reale dello studio e 
+dimostrare la confluenza per la logica combinatoria. Abbiamo fatto uno sviluppo 
+astratto e stabilito che\[
+\begin{array}{ccccc}
+\con{diamond}\;R & \supset & \con{diamond}\,(\con{RTC}\;R)\\
+& & \land\\
+& & \con{diamond}\,(\con{RTC}\;R) & \equiv & \con{confluent}\;R\\
+\end{array}
+\]  (Abbiamo anche stabilito un paio di utili risultati lungo 
+la strada.)
+
+\newcommand{\topk}{\KC\;\SC\;(\KC\;\KC\;\KC)} Purtroppo, non si da il 
+caso che $\rightarrow$, la nostra relazione di un passo per i combinatori, abbia 
+la proprietà diamante. Un controesempio è $\topk$. La sua evoluzione possibile 
+può essere descritta graficamente: \[\xymatrix @R=5mm @C=2.5mm {
+& \topk \ar[dl] \ar[dr] & \\
+\SC & & \KC\;\SC\;\KC \ar[dl] \\
+& \SC}\]
+Se avessimo la proprietà diamante, sarebbe possibile trovare una destinazione 
+comune per $\KC\;\SC\;\KC$ e $\SC$. Tuttavia, \SC{} non ammette 
+alcuna riduzione di sorta, così non c'è una destinazione 
+comune\footnote{Di fatto il nostro contro esempio è più complicato 
+	del necessario. Il fatto che $\KC\;\SC\;\KC$ abbia una 
+	riduzione alla forma normale $\SC$ agisce anche come un contro esempio.
+	Puoi vedere perché?}.
+
+Questo è un problema. Dovremo prendere un altro approccio.
+Definiremo un'altra strategia di riduzione (\emph{riduzione parallela}), 
+e dimostreremo che la sua chiusura riflessiva, transitiva è di fatto la stessa 
+relazione della nostra chiusura riflessiva, transitiva originaria. Poi 
+mostreremo anche che la riduzione parallela ha la proprietà diamante. Questo 
+stabilirà che anche la sua chiusura riflessiva transitiva ce l'ha. 
+Poi, dal momento che sono la stessa relazione, avremo che la 
+chiusura riflessiva, transitiva della nostra relazione originaria ha la proprietà 
+diamante, e di conseguenza, la nostra relazione originaria sarà confluente.
+
+\subsection{Riduzione parallela}
+\label{sec:Parallel-Reduction}
+
+La nostra nuova relazione permette l'occorrenza di un qualsiasi numero di riduzioni 
+in parallelo. Usiamo il simbolo \texttt{-||->} per indicare la riduzione parallela 
+a causa delle sue linee parallele:
+\begin{session}
+\begin{verbatim}
+- set_fixity "-||->" (Infix(NONASSOC, 450));
+> val it = () : unit
+\end{verbatim}
+\end{session}
+    Poi possiamo definire la riduzione parallela stessa. Le regole appaiono molto 
+		simili a quelle per $\rightarrow$. La differenza è che 
+		permettiamo la transizione riflessiva, e diciamo che un'applicazione di 
+		$x\;u$ può essere trasformata in $y\;v$ se ci sono trasformazioni 
+		che portano $x$ in $y$ e $u$ in $v$. Questo è il motivo per cui dobbiamo avere 
+		incidentalmente la riflessività. Senza di essa, un termine come 
+		$(\KC\;x\;y)\,\KC$ non si potrebbe ridurre perché mentre il lato sinistro 
+		dell'applicazione ($\KC\;x\;y$) si può ridurre, il suo lato destro non può.
+\begin{session}
+\begin{alltt}
+- val (predn_rules, _, predn_cases) = xHol_reln "predn"
+      `(!x. x -||-> x) /\bs
+       (!x y u v. x -||-> y /\bs u -||-> v
+                         ==>
+                  x # u -||-> y # v) /\bs
+       (!x y. K # x # y -||-> x) /\bs
+       (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
+> val predn_rules =
+    |- (\(\forall\)x. x -||-> x) \(\land\)
+       (\(\forall\)x y u v. x -||-> y \(\land\) u -||-> v \(\Rightarrow\) x # u -||-> y # v) \(\land\)
+       (\(\forall\)x y. K # x # y -||-> x) \(\land\)
+       \(\forall\)f g x. S # f # g # x -||-> f # x # (g # x) : thm
+  val predn_cases =
+    |- \(\forall\)a0 a1.
+         a0 -||-> a1 \(\Leftrightarrow\)
+         (a1 = a0) \(\lor\)
+         (\(\exists\)x y u v. (a0 = x # u) \(\land\) (a1 = y # v) \(\land\)
+                    x -||-> y \(\land\) u -||-> v) \(\lor\)
+         (\(\exists\)y. a0 = K # a1 # y) \(\lor\)
+         \(\exists\)f g x. (a0 = S # f # g # x) \(\land\) (a1 = f # x # (g # x))
+    : thm
+\end{alltt}
+\end{session}
+
+\subsection{Usare \con{RTC}}
+\label{sec:Using-RTC}
+
+Ora possiamo impostare un'elegante sintassi per le chiusure riflessiva e 
+transitiva delle nostre due relazioni. Useremo per entrambe dei simbolo ASCII 
+che consistono del simbolo originario seguito da un asterisco. Si noti 
+anche come, definendo le due relazioni, dobbiamo usare il 
+carattere \texttt{\$} per effettuare l'``escape'' delle normali fixity dei simboli. Questo 
+è esattamente analogo al modo in cui è usata la parola chiave \texttt{op} 
+dell'ML. Per prima cosa creiamo il simbolo desiderato per la sintassi concreta, 
+e quindi ne effettuiamo l'``overload'' così che il parser lo espanderà alla forma 
+desiderata.
+\begin{session}
+\begin{verbatim}
+- set_fixity "-->*" (Infix(NONASSOC, 450));
+> val it = () : unit
+
+- overload_on ("-->*", ``RTC $-->``);
+> val it = () : unit
+\end{verbatim}
+\end{session}
+We do exactly the same thing for the reflexive and transitive closure
+of our parallel reduction.
+\begin{session}
+\begin{verbatim}
+- set_fixity "-||->*" (Infix(NONASSOC, 450));
+> val it = () : unit
+
+- overload_on ("-||->*", ``RTC $-||->``);
+> val it = () : unit
+\end{verbatim}
+\end{session}
+Incidentalmente, in congiunzione con \texttt{PROVE} possiamo ora 
+dimostrare automaticamente catene di riduzioni relativamente lunghe.
+\begin{session}
+\begin{verbatim}
+- PROVE [RTC_rules, redn_rules] ``S # K # K # x -->* x``;
+Meson search level: ......
+> val it = |- S # K # K # x -->* x : thm
+
+- PROVE [RTC_rules, redn_rules]
+    ``S # (S # (K # S) # K) # (S # K # K) # f # x -->*
+      f # (f # x)``;
+Meson search level: ...........................
+> val it = |- S # (S # (K # S) # K) # (S # K # K) # f # x -->* f # (f # x)
+           : thm
+\end{verbatim}
+\end{session}
+(L'ultima è una sequenza lunga sette riduzioni.)
+
+
+\subsection{Dimostrare che le \con{RTC} sono le stesse}
+\label{sec:Proving-RTCs-same}
+
+Iniziamo con la direzione più facile, e mostriamo che ogni cosa che è in 
+$\rightarrow^*$ è in $\mathpredn^*$. Poiché 
+\con{RTC} è monotona (fatto che è lasciato da dimostrare al lettore),
+possiamo ridurre questo per mostrare che $x\rightarrow y\supset x\mathpredn y$.
+
+Il nostro goal:
+\begin{session}
+\begin{alltt}
+- g `!x y. x -->* y ==> x -||->* y`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)x y. x -->* y \(\Rightarrow\) x -||->* y
+\end{alltt}
+\end{session}
+Effettuiamo il back-chain usando il nostro risultato di monotonicità
+\begin{session}
+\begin{alltt}
+- e (MATCH_MP_TAC RTC_monotone);
+OK..
+1 subgoal:
+> val it =
+    \(\forall\)x y. x --> y \(\Rightarrow\) x -||-> y
+\end{alltt}
+\end{session}
+Ora possiamo eseguire l'induzione sulle regole per $\rightarrow$:
+\begin{session}
+\begin{alltt}
+- e (Induct_on `$-->`);
+OK..
+1 subgoal:
+> val it =
+    (\(\forall\)x y f. x --> y \(\land\) x -||-> y \(\Rightarrow\) f # x -||-> f # y) \(\land\)
+    (\(\forall\)f g x. f --> g \(\land\) f -||-> g \(\Rightarrow\) f # x -||-> g # x) \(\land\)
+    (\(\forall\)x y. K # x # y -||-> x) \(\land\)
+    \(\forall\)f g x. S # f # g # x -||-> f # x # (g # x)
+\end{alltt}
+\end{session}
+Avremmo potuto dividere la congiunzione di 4 congiunti in quattro goal, ma non 
+c'è una vera necessità. E' abbastanza chiaro che ciascuno segue immediatamente dalle 
+regole per la riduzione parallela.
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [predn_rules]);
+OK..
+Meson search level: ............
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)x y. x -->* y \(\Rightarrow\) x -||->* y : goalstack
+\end{alltt}
+\end{session}
+Impacchettata in un piccolo pacchetto libero dal pacchetto subgoal, la nostra dimostrazione è
+\begin{session}
+\begin{verbatim}
+val RTCredn_RTCpredn = store_thm(
+  "RTCredn_RTCpredn",
+  ``!x y. x -->* y   ==>   x -||->* y``,
+  MATCH_MP_TAC RTC_monotone THEN
+  Induct_on `$-->` THEN PROVE_TAC [predn_rules]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+La nostra prossima dimostrazione è nell'altra direzione. Dovrebbe essere chiaro che 
+questa volta non saremo in grado di ricorrere semplicemente alla monotonicità di 
+\con{RTC}; un passo della relazione di riduzione parallela non può essere riflesso 
+da un passo della relazione di riduzione originale. E' chiaro che 
+rispecchiare un singolo passo della relazione di riduzione parallela potrebbe richiedere molti 
+passi della relazione originale. Dimostriamo dunque questo:
+\begin{session}
+\begin{alltt}
+- g `!x y. x -||-> y   ==>   x -->* y`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)x y. x -||-> y \(\Rightarrow\) x -->* y
+\end{alltt}
+\end{session}
+Questa volta la nostra induzione sarà sulle regole che definiscono la relazione 
+di riduzione parallela.
+\begin{session}
+\begin{alltt}
+- e (Induct_on `$-||->`);
+OK..
+1 subgoal:
+> val it =
+    (\(\forall\)x. x -->* x) \(\land\)
+    (\(\forall\)x y x' y'. x -||-> y \(\land\) x -->* y \(\land\) x' -||-> y' \(\land\) x' -->* y' \(\Rightarrow\)
+                 x # x' -->* y # y') \(\land\)
+    (\(\forall\)x y. K # x # y -->* x) \(\land\)
+    \(\forall\)f g x. S # f # g # x -->* f # x # (g # x)
+\end{alltt}
+\end{session}
+    Qui ci sono quattro congiunti, e dovrebbe essere chiaro che nessuno tranne 
+		il secondo può essere dimostrato immediatamente ricorrendo alle regole per 
+		la chiusura transitiva e per la stessa $\rightarrow$. Potremmo 
+		dividere le congiunzioni ed inserire un ramo \texttt{THENL}.
+		Tuttavia, avremmo bisogno di ripetere la stessa tattica tre volte per 
+		chiudere velocemente tre dei quattro rami. Piuttosto, usiamo il 
+		tatticale \texttt{TRY} per provare ad applicare la stessa tattica a tutti e quattro 
+		i rami. Se la nostra tattica fallisce sul ramo \#2, come ci aspettiamo, 
+		\texttt{TRY} ci proteggerà da questo fallimento e ci permetterà di 
+		procedere.
+\begin{session}
+\begin{alltt}
+e (REPEAT CONJ_TAC THEN
+   TRY (PROVE_TAC [RTC_rules, redn_rules]));
+OK..
+Meson search level: ....
+Meson search level: ....
+Meson search level: ...............................
+Meson search level: ..
+1 subgoal:
+> val it =
+    \(\forall\)x y x' y'. x -||-> y \(\land\) x -->* y \(\land\) x' -||-> y' \(\land\) x' -->* y' \(\Rightarrow\)
+                x # x' -->* y # y'
+\end{alltt}
+\end{session}
+    Si noti che avvolgere \texttt{TRY} intorno a \texttt{PROVE\_TAC} non è 
+		sempre saggio. Spesso la tattica \texttt{PROVE\_TAC} richiede un tempo 
+		estremamente lungo per esaurire il suo spazio di ricerca, e poi arrendersi con un 
+		fallimento. Qui, ``siamo stati fortunati''.
+
+    In ogni caso, che cosa ne facciamo di quest'ultimo subgoal? Se lo osserviamo per un tempo 
+		sufficiente, dovremmo vedere che è un altro fatto di monotonicità. Più 
+		precisamente, abbiamo bisogno di ciò che è chiamato un risultato di \emph{congruenza} per 
+		\holtxt{-->*}. In questa forma, non è molto adatto per una dimostrazione semplice. 
+		Andiamo via e dimostriamo \texttt{RTCredn\_ap\_monotonic} 
+		separatamente. (Un altro esercizio!) Il nostro nuovo teorema dovrebbe stabilire
+\begin{session}
+\begin{verbatim}
+val RTCredn_ap_congruence = store_thm(
+  "RTCredn_ap_congruence",
+  ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
+  ...);
+\end{verbatim}
+\end{session}
+    Ora che abbiamo questo, il nostro sub-goal è quasi immediatamente 
+		dimostrabile. Usandolo, sappiamo che \[\begin{array}{c}
+      x\;x' \rightarrow^* y\;x' \\
+      y\;x' \rightarrow^* y\;y'
+    \end{array}\]
+    Tutto ciò che dobbiamo fare è ``cucire insieme'' le due transizioni di sopra 
+		e andiamo da $x\;x'$ a $y\;y'$. Possiamo fare questo ricorrendo al nostro 
+		precedente risultato \texttt{RTC\_RTC}.
+\begin{session}
+\begin{alltt}
+e (PROVE_TAC [RTC_RTC, RTCredn_ap_congruence]);
+OK..
+Meson search level: .......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)x y. x -||-> y \(\Rightarrow\) x -->* y : goalstack
+\end{alltt}
+\end{session}
+Ma dato che possiamo rifinire ciò che pensavamo essere un ramo scomodo 
+con solo un'altra applicazione di \texttt{PROVE\_TAC}, non abbiamo bisogno di 
+usare il nostro footwork con \texttt{TRY} al passo precedente. Piuttosto, 
+possiamo semplicemente fondere le liste di teoremi passate ad entrambe le invocazioni, distribuire 
+con \texttt{REPEAT CONJ\_TAC} e avere di fatto una dimostrazione con una tattica 
+molto corta:
+\begin{session}
+\begin{verbatim}
+val predn_RTCredn = store_thm(
+  "predn_RTCredn",
+  ``!x y. x -||-> y  ==>  x -->* y``,
+  Induct_on `$-||->` THEN
+  PROVE_TAC [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_congruence]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+Ora è il momento di dimostrare che se un numero di passi di riduzione parallela 
+sono concatenati insieme, allora possiamo riflettere questo con qualche numero di 
+passi usando la relazione di riduzione originale. Il nostro goal:
+\begin{session}
+\begin{alltt}
+- g `!x y. x -||->* y  ==> x -->* y`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)x y. x -||->* y \(\Rightarrow\) x -->* y
+\end{alltt}
+\end{session}
+Usiamo l'appropriato principio di induzione per andare a:
+\begin{session}
+\begin{alltt}
+- e (Induct_on `RTC`);
+OK..
+1 subgoal:
+> val it =
+    (\(\forall\)x. x -->* x) \(\land\)
+    \(\forall\)x x' y. x -||-> x' \(\land\) x' -||-> y* \(\land\) x' -->* y \(\Rightarrow\) x -->* z
+\end{alltt}
+\end{session}
+Possiamo concludere questo in un singolo passo. La prima congiunzione è ovvia,
+e nella seconda \verb!x -||-> y! e il nostro ultimo risultato si combinano per 
+dirci che \verb!x -->* y!. Poi questo può essere concatenato insieme con 
+l'altra assunzione nel secondo congiunto e abbiamo finito.
+\begin{session}
+\begin{alltt}
+- e (PROVE_TAC [RTC_rules, predn_RTCredn, RTC_RTC]);
+OK..
+Meson search level: .......
+
+Goal proved.[...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)x y. x -||->* y \(\Rightarrow\) x -->* y : proof
+\end{alltt}
+\end{session}
+Impacchettata, questa dimostrazione è:
+\begin{session}
+\begin{verbatim}
+val RTCpredn_RTCredn = store_thm(
+  "RTCpredn_RTCredn",
+  ``!x y. x -||->* y   ==>  x -->* y``,
+  Induct_on `RTC` THEN PROVE_TAC [predn_RTCredn, RTC_RTC, RTC_rules]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+La nostra ultima azione è di usare ciò che abbiamo finora per concludere che 
+$\rightarrow^*$ e $\mathpredn^*$ sono uguali. Dichiariamo il nostro goal:
+\begin{session}
+\begin{verbatim}
+- g `$-||->* = $-->*`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         $-||->* = $-->*
+\end{verbatim}
+\end{session}
+Vogliamo ora ricorrere all'estensionalità. Il modo più semplice per far questo 
+è di riscrivere con il teorema \texttt{FUN\_EQ\_THM}:
+\begin{session}
+\begin{alltt}
+- FUN_EQ_THM;
+> val it = |- \(\forall\)f g. (f = g) \(\Leftrightarrow\) \(\forall\)x. f x = g x : thm
+\end{alltt}
+\end{session}
+Così, riscriviamo:
+\begin{session}
+\begin{alltt}
+- e (SIMP_TAC std_ss [FUN_EQ_THM]);
+OK..
+1 subgoal:
+> val it =
+    \(\forall\)x x'. x -||->* x' = x -->* x'
+\end{alltt}
+\end{session}
+
+Questo goal è una semplice conseguenza delle nostre implicazioni precedenti.
+\begin{session}
+\begin{verbatim}
+- e (PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
+OK..
+Meson search level: ......
+
+Goal proved. [...]
+> val it =
+    Initial goal proved.
+    |- $-||->* = $-->* : goalstack
+\end{verbatim}
+\end{session}
+Impacchettata, la dimostrazione è:
+\begin{session}
+\begin{verbatim}
+val RTCpredn_EQ_RTCredn = store_thm(
+  "RTCpredn_EQ_RTCredn",
+  ``$-||->* = $-->*``,
+  SIMP_TAC std_ss [FUN_EQ_THM] THEN
+  PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
+\end{verbatim}
+\end{session}
+
+
+\subsection{Dimostrare una proprietà diamante per la riduzione parallela}
+\label{sec:predn-diamond}
+
+Ora non ci resta che una dimostrazione sostanziale da fare. Prima ancora di poter 
+cominciare, c'è un numero di lemmi minori che abbiamo bisogno di dimostrare prima. 
+Questi sono essenzialmente delle specializzazioni del teorema 
+\texttt{predn\_cases}. Vogliamo delle caratterizzazioni esaustive delle 
+possibilità che si possono presentare quando i seguenti termini subiscono una riduzione parallela:
+$x\;y$, \KC, \SC, $\KC\;x$, $\SC\;x$, $\KC\;x\;y$, $\SC\;x\;y$ e
+$\SC\;x\;y\;z$.
+
+Per far questo, scriveremo una piccola funzione che deriva 
+le caratterizzazioni automaticamente:
+\begin{session}
+\begin{verbatim}
+- fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
+> val characterise = fn : term -> thm
+\end{verbatim}
+\end{session}
+La funzione \ml{characterise} specializza il teorema 
+\ml{predn\_cases} con il termine di input, e quindi semplifica. Il 
+simpset \ml{srw\_ss()}  include informazioni circa l'iniettività e 
+la disgiunzione [disjointness ndt] dei costruttori ed elimina le ovvie impossibilità.
+Per esempio,
+\begin{session}
+\begin{alltt}
+- val K_predn = characterise ``K``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val K_predn = |- \(\forall\)a1. K -||-> a1 = (a1 = K) : thm
+
+- val S_predn = characterise ``S``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val S_predn = |- \(\forall\)a1. S -||-> a1 = (a1 = S) : thm
+\end{alltt}
+\end{session}
+Sfortunatamente, ciò che otteniamo indietro dagli altri input non è così buono:
+\begin{session}
+\begin{alltt}
+- val Sx_predn0 = characterise ``S # x``;
+> val Sx_predn0 =
+    |- \(\forall\)a1.
+         S # x -||-> a1 =
+         (a1 = S # x) \(\lor\)
+         \(\exists\)y v. (a1 = y # v) \(\land\) S -||-> y \(\land\) x -||-> v : thm
+\end{alltt}
+\end{session}
+Quel primo disgiunto è ridondante, come dimostra il seguente:
+\begin{session}
+\begin{verbatim}
+val Sx_predn = prove(
+  ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  RW_TAC std_ss [Sx_predn0, predn_rules, S_predn]);
+\end{verbatim}
+\end{session}
+La nostra funzione \texttt{characterise} dovrà solo aiutarci nelle 
+dimostrazioni che seguono.
+\begin{session}
+\begin{verbatim}
+val Kx_predn = prove(
+  ``!x y. K # x -||-> y = ?z. (y = K # z) /\ (x -||-> z)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  RW_TAC std_ss [characterise ``K # x``, predn_rules, K_predn]);
+\end{verbatim}
+\end{session}
+Cosa facciamo di $\KC\;x\;y$? Un poco di ragionamento dimostra che ci sono 
+in realtà due casi questa volta.
+\begin{session}
+\begin{verbatim}
+val Kxy_predn = prove(
+  ``!x y z.
+       K # x # y -||-> z =
+       (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
+       (z = x)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  RW_TAC std_ss [characterise ``K # x # y``, predn_rules,
+                 Kx_predn]);
+\end{verbatim}
+\end{session}
+Per contro, c'è solo un caso per $\SC\;x\;y$ perché esso 
+non è ancora un ``redex'' al livello alto.
+\begin{session}
+\begin{verbatim}
+val Sxy_predn = prove(
+  ``!x y z. S # x # y -||-> z =
+            ?u v. (z = S # u # v) /\ (x -||-> u) /\ (y -||-> v)``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  RW_TAC std_ss [characterise ``S # x # y``, predn_rules,
+                 Sx_predn]);
+\end{verbatim}
+\end{session}
+Poi, la caratterizzazione per $\SC\;x\;y\;z$:
+\begin{session}
+\begin{verbatim}
+val Sxyz_predn = prove(
+  ``!w x y z. S # w # x # y -||-> z =
+              (?p q r. (z = S # p # q # r) /\
+                       w -||-> p /\ x -||-> q /\ y -||-> r) \/
+              (z = (w # y) # (x # y))``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  RW_TAC std_ss [characterise ``S # w # x # y``, predn_rules,
+                 Sxy_predn]);
+\end{verbatim}
+\end{session}
+Infine, vogliamo una caratterizzazione per $x\;y$. Ciò che 
+\texttt{characterise} ci da questa volta non può essere migliorato, 
+per quello che potremmo considerare a partire dai quattro disgiunti.
+\begin{session}
+\begin{alltt}
+- val x_ap_y_predn = characterise ``x # y``;
+> val x_ap_y_predn =
+    |- \(\forall\)a1.
+         x # y -||-> a1 =
+         (a1 = x # y) \(\lor\)
+         (\(\exists\)y' v. (a1 = y' # v) \(\land\) x -||-> y' \(\land\) y -||-> v) \(\lor\)
+         (x = K # a1) \(\lor\)
+         \(\exists\)f g. (x = S # f # g) \(\land\) (a1 = f # y # (g # y)) : thm
+\end{alltt}
+\end{session}
+\eos{}
+
+\noindent Ora siamo pronti per dimostrare il goal finale. Esso è
+\begin{session}
+\begin{alltt}
+- g `!x y. x -||-> y ==>
+           !z. x -||-> z ==> ?u. y -||-> u /\bs z -||-> u`;
+> val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+Possiamo ora condurre un'induzione e suddividere il goal nei suoi congiunti individuali:
+\begin{session}
+\begin{alltt}
+- e (Induct_on `$-||->` THEN REPEAT CONJ_TAC);
+OK..
+4 subgoals:
+> val it =
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
+
+
+    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+
+
+    \(\forall\)x y u v.
+      x -||-> y \(\land\)
+      (\(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u) \(\land\)
+      u -||-> v \(\land\)
+      (\(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u) \(\Rightarrow\)
+      \(\forall\)z. x # u -||-> z \(\Rightarrow\) \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
+
+
+    \(\forall\)x z. x -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+Il primo goal è facilmente smaltito. Il testimone che forniremmo 
+per questo caso è semplicemente \texttt{z}, ma \texttt{PROVE\_TAC} farà 
+il lavoro per noi:
+\begin{session}
+\begin{verbatim}
+- e (PROVE_TAC [predn_rules]);
+OK..
+Meson search level: ...
+
+Goal proved. [...]
+\end{verbatim}
+\end{session}
+    Il goal successivo include due istanze di termine della forma 
+		\verb!x # y -||-> z!. Possiamo ora usare il nostro teorema \verb!x_ap_y_predn! 
+		qui. Tuttavia, se riscriviamo in modo indiscriminato con esso, 
+		confonderemo in realtà il goal. Vogliamo riscrivere soltanto 
+		l'assunzione, non l'istanza al di sotto del quantificatore 
+		esistenziale. Iniziare il tutto applicando ripetutamente \ml{STRIP\_TAC} non ci 
+		può portare troppo fuori strada.
+\begin{session}
+\begin{alltt}
+- e (REPEAT STRIP_TAC);
+OK..
+1 subgoal:
+> val it =
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
+    ------------------------------------
+      0.  x -||-> y
+      1.  \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+      2.  u -||-> v
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+      4.  x # u -||-> z
+\end{alltt}
+\end{session}
+Abbiamo bisogno di suddividere l'assunzione 4. Siamo in grado di estrarla dalla 
+lista delle assunzioni usando il theorem-tactical \texttt{Q.PAT\_ASSUM}. Scriveremo.
+\begin{verbatim}
+    Q.PAT_ASSUM `x # y -||-> z`
+      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn])
+\end{verbatim}
+La quotation specifica il pattern su cui vogliamo effettuare il matching. Il secondo 
+argomento specifica come trasformeremo il teorema. Leggendo 
+le composizioni da destra a sinistra, prima semplificheremo con il 
+teorema \verb!x_ap_y_predn! e poi assumeremo il risultato indietro 
+nelle assunzioni, eliminando le disgiunzioni e gli esistenziali mentre andiamo 
+avanti\footnote{Un'alternativa alo posto di usare \texttt{PAT\_ASSUM} è di usare 
+  \texttt{by}: ci sarebbe da dichiarare per proprio conto la disgiunzione 
+	di quattro disgiunti, ma la dimostrazione sarebbe più ``dichiarativa'' nello 
+	stile, e benché più verbosa, sarebbe più manutenibile.}.
+
+Sappiamo già che fare questo produrrà quattro nuovi sub-goal 
+(c'erano quattro disgiunti nel teorema \verb!x_ap_y_predn!). Al meno 
+uno di questi dovrebbe essere banale perché corrisponderà al caso 
+in cui la riduzione parallela è semplicemente un passo ``non fare nulla''. Proviamo 
+ad eliminare i casi semplici con una chiamata ``speculativa'' a 
+\texttt{PROVE\_TAC} avvolta all'interno di un \texttt{TRY}. E prima di far 
+questo, dovremmo fare alcune riscritture per essere sicuri che le uguaglianze nelle 
+assunzioni sono eliminate.
+
+So:
+\begin{session}
+\begin{alltt}
+- e (Q.PAT_ASSUM `x # y -||-> z`
+      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
+     RW_TAC std_ss [] THEN
+     TRY (PROVE_TAC [predn_rules]));
+OK..
+Meson search level: ...............................
+Meson search level: ...............................
+Meson search level: ..................
+Meson search level: .....
+2 subgoals:
+> val it =
+    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
+    ------------------------------------
+      0.  S # f # g -||-> y
+      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+      2.  u -||-> v
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
+    ------------------------------------
+      0.  K # z -||-> y
+      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
+      2.  u -||-> v
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+Splendido! Abbiamo già eliminato due dei quattro disgiunti. Ora 
+il nostro prossimo goal rappresenta un termine \verb!K # z -||-> y! nelle assunzioni. 
+Abbiamo un teorema che riguarda proprio questa situazione. Ma prima 
+di applicarlo volenti o nolenti, proviamo ad immaginare esattamente qual è la 
+situazione. Un diagramma della situazione corrente potrebbe apparire come
+\shorthandoff{"}
+\[\xymatrix @C=2cm {
+*+<4pt>[F--]\txt{\fbox{\texttt{K\kern2mm \#\kern2mm z}} \texttt{\#} \fbox{\texttt{u}}} \ar[r] & \txt{\texttt{z}} \ar@{.>}[d] \\
+*+<4pt>[F--]\txt{\fbox{\texttt{y}} \texttt{\#} \fbox{\texttt{v}}} \ar@{.>}[r] & \txt{\texttt{?u?}}
+\ar "1,1"!<-12pt,0pt>;"2,1"!<-12pt,0pt>
+\ar "1,1"!<28pt,0pt>;"2,1"!<11pt,0pt>
+} \]
+\shorthandon{"}
+Il nostro teorema ci dice che \texttt{y} deve di fatto essere della forma 
+\verb!K # w! per qualche \texttt{w}, e che ci deve essere una freccia 
+tra \texttt{z} e \texttt{w}. Così:
+\begin{session}
+\begin{alltt}
+- e (`?w. (y = K # w) /\bs (z -||-> w)` by PROVE_TAC [Kx_predn]);
+OK..
+Meson search level: ......
+1 subgoal:
+> val it =
+    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
+    ------------------------------------
+      0.  K # z -||-> y
+      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
+      2.  u -||-> v
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+      4.  y = K # w
+      5.  z -||-> w
+\end{alltt}
+\end{session}
+    Ispezionando, appare chiaro che \texttt{u} deve essere 
+		\texttt{w}. Il primo congiunto richiede \verb!K # w # v -||-> w!,
+		che abbiamo perché questo è ciò che fa \KC{}, e il secondo 
+		congiunto è già nella lista delle assunzioni. Riscrivendo 
+		(eliminando prima quell'uguaglianza nella lista delle assunzioni 
+		renderà il lavoro di \texttt{PROVE\_TAC} molto più facile), e poi il ragionamento al 
+		primo ordine risolverà questo goal:
+\begin{session}
+\begin{alltt}
+- e (RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
+OK..
+Meson search level: ...
+
+Goal proved. [...]
+Remaining subgoals:
+> val it =
+    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
+    ------------------------------------
+      0.  S # f # g -||-> y
+      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+      2.  u -||-> v
+      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+This case involving \SC{} is analogous.  Here's the tactic to apply:
+\begin{session}
+\begin{alltt}
+- e (`?p q. (y = S # p # q) /\bs (f -||-> p) /\bs (g -||-> q)`
+        by PROVE_TAC [Sxy_predn] THEN
+     RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
+OK..
+Meson search level: ........
+Meson search level: ...........
+
+Goal proved.[...]
+Remaining subgoals:
+> val it =
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
+
+
+    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+Questo prossimo goal rappresenta un termine \verb!K # x # y -||-> z! per cui 
+abbiamo già un teorema. E di nuovo, usiamo in modo speculativo una chiamata a 
+\texttt{PROVE\_TAC} per eliminare i casi semplici immediatamente 
+(\verb!Kxy_predn! è un disgiunto così otteniamo due sub goal se non 
+eliminiamo nulla).
+\begin{session}
+\begin{alltt}
+- e (RW_TAC std_ss [Kxy_predn] THEN
+     TRY (PROVE_TAC [predn_rules]));
+OK..
+Meson search level: ..
+Meson search level: ...
+
+Goal proved. [...]
+Remaining subgoals:
+> val it =
+    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
+              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
+\end{alltt}
+\end{session}
+Ancora meglio! Abbiamo ottenuto entrambi i casi immediatamente, e ci siamo spostati sull'ultimo 
+caso. Possiamo provare la stessa strategia.
+\begin{session}
+\begin{alltt}
+- e (RW_TAC std_ss [Sxyz_predn] THEN PROVE_TAC [predn_rules]);
+OK..
+Meson search level: ..
+Meson search level: ...........
+
+Goal proved.[...]
+> val it =
+    Initial goal proved.
+    |- \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\)
+             \(\exists\)u. y -||-> u \(\land\) z -||-> u : goalstack
+\end{alltt}
+\end{session}
+La dimostrazione finale del goal può essere impacchettata in:
+\begin{session}
+\begin{verbatim}
+val predn_diamond_lemma = prove(
+  ``!x y. x -||-> y ==>
+          !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
+  Induct_on `$-||->` THEN REPEAT CONJ_TAC THENL [
+    PROVE_TAC [predn_rules],
+    REPEAT STRIP_TAC THEN
+    Q.PAT_ASSUM `x # y -||-> z`
+      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
+    RW_TAC std_ss [] THEN
+    TRY (PROVE_TAC [predn_rules]) THENL [
+      `?w. (y = K # w) /\ (z -||-> w)` by PROVE_TAC [Kx_predn] THEN
+      RW_TAC std_ss [] THEN PROVE_TAC [predn_rules],
+      `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
+         PROVE_TAC [Sxy_predn] THEN
+      RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]
+    ],
+    RW_TAC std_ss [Kxy_predn] THEN PROVE_TAC [predn_rules],
+    RW_TAC std_ss [Sxyz_predn] THEN PROVE_TAC [predn_rules]
+  ]);
+\end{verbatim}
+\end{session}
+\eos{}
+
+Siamo in dirittura di arrivo. Il lemma può essere trasformato in una dichiarazione 
+che coinvolge direttamente la costante \con{diamond}:
+\begin{session}
+\begin{verbatim}
+val predn_diamond = store_thm(
+  "predn_diamond",
+  ``diamond $-||->``,
+  PROVE_TAC [diamond_def, predn_diamond_lemma]);
+\end{verbatim}
+\end{session}
+
+Ed ora possiamo dimostrare che la nostra relazione originale è confluente in 
+un modo analogo:
+
+\begin{session}
+\begin{verbatim}
+val confluent_redn = store_thm(
+  "confluent_redn",
+  ``confluent $-->``,
+  PROVE_TAC [predn_diamond, confluent_diamond_RTC,
+             RTCpredn_EQ_RTCredn, diamond_RTC]);
+\end{verbatim}
+\end{session}
+
+
+
+\section{Esercizi}
+
+Se necessario, le risposte ai primi tre esercizi si possono trovare 
+esaminando il file sorgente in \texttt{examples/ind\_def/clScript.sml}.
+
+\begin{enumerate}
+\item Dimostrare che \[\con{RTC}\;R \;x\; y \;\;\land \;\;
+  \con{RTC}\;R\;y\;z\;\;\;\supset\;\;\; \con{RTC}\;R\;x\;z
+\] Si avrà bisogno di dimostrare il goal per induzione, e si avrà probabilmente 
+  bisogno di massaggiarlo prima leggermente per ottenere che si accordi all'appropriato 
+  principio d'induzione. Archiviare il teorema sotto il nome 
+	\texttt{RTC\_RTC}.
+\item Un'altra induzione. Mostrare che \[
+  (\forall x\,y.\; R_1\;x\;y\supset R_2\;x\;y) \supset
+  (\forall x\,y.\; \con{RTC}\;R_1\;x\;y \supset \con{RTC}\;R_2\;x\;y)
+\] Chiamare il teorema risultante \texttt{RTC\_monotone}.
+\item Ancora un'altra induzione \con{RTC}, ma dove $R$ non è più 
+  astratta, ed è piuttosto la relazione di riduzione originale. Dimostrare 
+\[
+x \rightarrow^* y \;\;\;\supset\;\;\;
+\forall z.\;\; x\;z \rightarrow^* y \;z \land
+z\;x \rightarrow^* z\;y
+\] Chiamarla \texttt{RTCredn\_ap\_congruence}.
+
+
+\item Fornire un controesempio per la seguente proprietà: \[
+\begin{array}{c}
+  \left(
+    \begin{array}{ll}
+      \forall x\,y\,z. &
+      R\;x\;y\;\;\land\;\; R\;x\;z \;\;\;\supset\\
+      & \exists u.\;\con{RTC}\;R\;y\;u \;\;\land\;\;\con{RTC}\;R\;z\;u
+      \end{array}\right)\\
+    \supset\\
+    \con{diamond}\;(\con{RTC}\;R)
+  \end{array}
+  \]
+\end{enumerate}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

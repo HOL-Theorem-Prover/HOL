@@ -2,7 +2,7 @@
 
 \TYPE {QCONV : conv -> conv}
 
-\SYNOPSIS Stops a conversion raising the {UNCHANGED} exception
+\SYNOPSIS Stops a conversion raising the {UNCHANGED} exception.
 
 \KEYWORDS
 conversion.

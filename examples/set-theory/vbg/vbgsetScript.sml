@@ -1,3 +1,5 @@
+(* Playing around with what is really Morse-Kelley set theory *)
+
 open HolKernel boolLib bossLib Parse
 open lcsymtacs
 open boolSimps
@@ -561,7 +563,7 @@ val FOUNDATION2 = store_thm(
      by (qpat_assum `Abbrev(poor = X)`
                     (fn th => ASSUME_TAC th THEN MP_TAC th) >>
          disch_then (SUBST1_TAC o REWRITE_RULE [markerTheory.Abbrev_def]) >>
-         rw[] >| [
+         BETA_TAC >> ASM_REWRITE_TAC[] >> rpt strip_tac >| [
            qsuff_tac `N i ⊆ P i` >- metis_tac [SUBSET_def] >>
            rw[Abbr`N`, SUBSET_def],
            `∀p. poor p ⇒ x ∩ f(i + 2) ⊆ p (i + 1)`
@@ -581,13 +583,13 @@ val FOUNDATION2 = store_thm(
     qpat_assum `Abbrev(N = X)`
       (fn th => ASSUME_TAC th >>
                 MP_TAC (REWRITE_RULE [markerTheory.Abbrev_def] th)) >>
-    disch_then SUBST1_TAC >> rw[] >> DISJ2_TAC >>
+    disch_then SUBST1_TAC >> BETA_TAC >> rw[] >> DISJ2_TAC >>
     qexists_tac `λn. if n = 0 then SPEC0 (λy. y ∈ N 0 ∧ y ≠ x) else N n` >>
     rw[] >>
     qpat_assum `Abbrev(poor = X)`
       (fn th => assume_tac th >>
                 SUBST1_TAC (REWRITE_RULE [markerTheory.Abbrev_def] th)) >>
-    simp[] >> conj_tac
+    BETA_TAC >> ASM_REWRITE_TAC [] THEN BETA_TAC >> simp[] >> conj_tac
       >- (rw[SUBSET_def] >>
           qpat_assum `poor N` mp_tac >>
           rw[Abbr`poor`] >> metis_tac [SUBSET_def, DECIDE ``0 + 1 = 1``]) >>

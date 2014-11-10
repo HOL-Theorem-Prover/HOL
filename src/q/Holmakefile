@@ -1,2 +1,8 @@
-selftest.exe: selftest.uo
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: selftest.exe $(UOFILES)
+
+.PHONY: all
+
+selftest.exe: selftest.uo Q.uo
 	$(HOLMOSMLC) -o $@ $<

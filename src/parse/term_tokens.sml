@@ -57,16 +57,19 @@ fun constid_categorise c =
 
 fun mixed s = let
   open UnicodeChars UTF8
-  val (c,s) = case getChar s of
-            NONE => raise Fail "Can't use emptystring as a grammar token"
-          | SOME ((c,_), s) => (c,s)
-  val test = categorise c
-  fun allok s =
-      case getChar s of
-        NONE => true
-      | SOME ((s, i), rest) => test s andalso allok rest
 in
-  not (allok s)
+  case getChar s of
+    NONE => false (* empty string is not mixed; it shouldn't really be
+                     showing up *)
+  | SOME ((c,_), s) => let
+      val test = categorise c
+      fun allok s =
+          case getChar s of
+            NONE => true
+          | SOME ((s, i), rest) => test s andalso allok rest
+    in
+      not (allok s)
+    end
 end
 
 (* lexer guarantees:

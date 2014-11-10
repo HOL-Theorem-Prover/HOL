@@ -208,7 +208,7 @@ local
       snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o
       Thm.concl
 in
-   fun write_datatype_info tyinfo =
+   fun add_datatype_info cs tyinfo =
     let open TypeBasePure Drule
         val size_opt =
           case size_of0 tyinfo
@@ -224,8 +224,9 @@ in
            List.partition (fn thm => Lib.total get_f thm = case_const) simpls
         val case_thm = List.map lazyfy_thm case_thm
     in
-       add_funs (size_opt @ boolify_opt @ case_thm @ simpls)
+      add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
     end
+    val write_datatype_info = add_datatype_info the_compset
 end
 
 (*---------------------------------------------------------------------------*)

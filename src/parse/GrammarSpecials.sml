@@ -6,6 +6,27 @@ struct
   val let_special = " _ let"
   val and_special = " _ and"
   val fakeconst_special = " _ fakeconst"
+
+  fun mk_fakeconst_name {original,fake} = let
+    open Coding
+  in
+    fakeconst_special ^
+    PairData.encode (StringData.encode,
+                     OptionData.encode KernelNameData.encode)
+                    (fake, original)
+  end
+
+  fun dest_fakeconst_name s = let
+    open Coding
+    val decoder =
+        PairData.decode (StringData.reader,
+                         OptionData.reader KernelNameData.reader)
+  in
+    case decoder (Lib.unprefix fakeconst_special s) of
+        SOME (fake, original) => SOME{fake = fake, original = original}
+      | _ => NONE
+  end handle Feedback.HOL_ERR _ => NONE
+
   val decimal_fraction_special = "/decfrac/"
 
   val recsel_special = " _ record select"

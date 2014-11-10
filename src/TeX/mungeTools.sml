@@ -8,13 +8,15 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | NoTurnstile | Width of int
-             | Mathmode of string
-             | AllTT | ShowTypes
+             | Mathmode of string | NoMath
+             | AllTT | ShowTypes of int
              | Conj of int
              | Rule | StackedRule
+             | RuleName of string
              | NoDollarParens
              | Merge | NoMerge
              | Unoverload of string
+             | Depth of int
 
 val numErrors = ref 0
 type posn = int * int
@@ -44,17 +46,25 @@ fun stringOpt pos s =
   | "merge" => SOME Merge
   | "nodollarparens" => SOME NoDollarParens
   | "nomerge" => SOME NoMerge
+  | "nomath" => SOME NoMath
   | "nosp" => SOME NoSpec
   | "nostile" => SOME NoTurnstile
   | "of" => SOME TypeOf
   | "rule" => SOME Rule
-  | "showtypes" => SOME ShowTypes
   | "spaceddef" => SOME SpacedDef
   | "stackedrule" => SOME StackedRule
   | "tt" => SOME TT
   | _ => let
     in
-      if String.isPrefix ">>" s then let
+      if String.isPrefix "showtypes" s then let
+        val numpart_s = String.extract(s,9,NONE)
+      in
+        if numpart_s = "" then SOME (ShowTypes 1) else
+        case Int.fromString numpart_s of
+          NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+        | SOME i => SOME (ShowTypes i)
+      end
+      else if String.isPrefix ">>" s then let
           val numpart_s = String.extract(s,2,NONE)
         in
           if numpart_s = "" then SOME (Indent 2)
@@ -65,12 +75,22 @@ fun stringOpt pos s =
                           (warn(pos, "Negative indents illegal"); NONE)
                         else SOME (Indent i)
         end
+      else if String.isPrefix "rulename=" s then let
+        val name = String.extract(s,9,NONE)
+        in SOME (RuleName name) end
       else if String.isPrefix "width=" s then let
           val numpart_s = String.extract(s,6,NONE)
         in
           case Int.fromString numpart_s of
             NONE => (warn(pos, s ^ " is not a valid option"); NONE)
           | SOME i => SOME (Width i)
+        end
+      else if String.isPrefix "depth=" s then let
+          val numpart_s = String.extract(s,6,NONE)
+        in
+          case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => SOME (Depth i)
         end
       else if String.isPrefix "conj" s then let
           val numpart_s = String.extract(s,4,NONE)
@@ -170,6 +190,7 @@ end
 type optionset = OptSet.set
 
 fun optset_width s = get_first (fn Width i => SOME i | _ => NONE) s
+fun optset_depth s = get_first (fn Depth i => SOME i | _ => NONE) s
 fun spaces 0 = ""
   | spaces 1 = " "
   | spaces 2 = "  "
@@ -183,6 +204,9 @@ fun optset_indent s =
 
 fun optset_conjnum s = get_first (fn Conj i => SOME i | _ => NONE) s
 fun optset_mathmode s = get_first (fn Mathmode s => SOME s | _ => NONE) s
+fun optset_showtypes s = get_first (fn ShowTypes i => SOME i | _ => NONE) s
+fun optset_rulename s = get_first (fn RuleName s => SOME s | _ => NONE) s
+fun optset_nomath s = OptSet.has NoMath s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
@@ -307,8 +331,14 @@ in
              (fn () => addz "\\end{array}"))
           else
             ((fn () => addz "&"), (fn () => ()), (fn () => ()))
+      val rulename =
+        (case optset_rulename opts of
+           NONE => (fn () => ())
+         | SOME s => (fn () => (addz"[\\HOLRuleName{"; addz s; addz"}]")))
     in
-      addz "\\infer{\\HOLinline{";
+      addz "\\infer";
+      rulename();
+      addz "{\\HOLinline{";
       printer c;
       addz "}}{";
       hypbegin();
@@ -332,9 +362,12 @@ in
     end
 
     fun optprintermod f pps =
-        f pps |> (if OptSet.has ShowTypes opts then
-                    trace ("types", 1)
-                  else trace ("types", 0))
+        f pps |> (case optset_showtypes opts of
+                    NONE => trace ("types", 0)
+                  | SOME i => trace ("types", i))
+              |> (case optset_depth opts of
+                    NONE => (fn f => f)
+                  | SOME i => Lib.with_flag (Globals.max_print_depth, i))
               |> (if OptSet.has NoDollarParens opts then
                     trace ("EmitTeX: dollar parens", 0)
                   else
@@ -350,6 +383,22 @@ in
                     | slist => clear_overloads slist)
 
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
+
+    fun clear_abbrevs slist f = let
+      val oldg = type_grammar()
+      val tmg = term_grammar()
+      val _ = List.app temp_disable_tyabbrev_printing slist
+      val newg = type_grammar()
+    in
+      (fn x => (temp_set_grammars(newg,tmg); f x; temp_set_grammars(oldg,tmg)))
+    end
+
+    fun opttyprintermod f pps =
+      f pps |> (case optset_unoverloads opts of
+                    [] => (fn f => f)
+                  | slist => clear_abbrevs slist)
+
+    fun stdtypeprint pps t = opttyprintermod (raw_pp_type_as_tex overrides) pps t
 
     val () = if not alltt andalso not rulep then add_string pps "\\HOLinline{"
              else ()
@@ -434,7 +483,7 @@ in
                     else Parse.Type [QQ parse_start, QQ spec]
         in
           add_string pps (optset_indent opts);
-          raw_pp_type_as_tex overrides pps typ
+          stdtypeprint pps typ
         end
     val () = if not alltt andalso not rulep then add_string pps "}" else ()
   in () end handle

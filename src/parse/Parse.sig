@@ -69,13 +69,14 @@ signature Parse = sig
 
   val term_grammar : unit -> term_grammar.grammar
 
+  val print_term_grammar : unit -> unit
+
   (* the following functions modify the grammar, and do so in such a
      way that the exported theory will have the same grammar  *)
 
   val add_const  : string -> unit
   val add_infix  : string * int * associativity -> unit
   val std_binder_precedence : int
-  val add_binder : string -> unit
   val add_rule   : {term_name : string, fixity :fixity,
                     pp_elements: pp_element list, paren_style : ParenStyle,
                     block_style : PhraseBlockStyle * block_info} -> unit
@@ -126,7 +127,6 @@ signature Parse = sig
     grammar exported to disk will be modified *)
 
   val temp_set_grammars : (type_grammar.grammar * term_grammar.grammar) -> unit
-  val temp_add_binder : string -> unit
   val temp_add_rule :
     {term_name : string, fixity : fixity,
      pp_elements: pp_element list, paren_style : ParenStyle,
@@ -249,6 +249,7 @@ signature Parse = sig
   val ParoundName      : ParenStyle
   val ParoundPrec      : ParenStyle
   val Always           : ParenStyle
+  val NotEvenIfRand    : ParenStyle
 
   val AroundEachPhrase : PhraseBlockStyle
   val AroundSamePrec   : PhraseBlockStyle

@@ -3,7 +3,7 @@
 \TYPE {type ('a,'b) istream}
 
 \SYNOPSIS
-Type of imperative streams
+Type of imperative streams.
 
 \KEYWORDS
 stream.

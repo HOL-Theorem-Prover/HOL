@@ -4,11 +4,16 @@ struct
 fun member e [] = false
   | member e (h::t) = e = h orelse member e t
 
+fun equal x y = x = y
+
 fun spacify0 acc [] = List.rev acc
   | spacify0 acc [x] = List.rev (x::acc)
   | spacify0 acc (h::t) = spacify0 (" "::h::acc) t
 
 val spacify = String.concat o spacify0 []
+
+fun dropWhile P [] = []
+  | dropWhile P (l as (h::t)) = if P h then dropWhile P t else l
 
 fun find_unescaped cset = let
   open Substring
@@ -153,6 +158,86 @@ in
   spacify (map mapthis (tokenize arglist))
 end
 
+fun split_to_directories (comps : parse_glob.t list) = let
+  open parse_glob
+  fun recurse h acc [] = List.rev (List.rev h::acc)
+    | recurse h acc (RE r :: rest) = recurse (RE r::h) acc rest
+    | recurse h acc (CHAR #"/" :: rest) = recurse [] (List.rev h::acc) rest
+    | recurse h acc (CHAR c :: rest) = recurse (CHAR c :: h) acc rest
+in
+  recurse [] [] comps
+end
+
+fun dirfiles dirname = let
+  val dirstrm = OS.FileSys.openDir dirname
+  fun recurse acc =
+      case OS.FileSys.readDir dirstrm of
+          NONE => "." :: ".." :: acc
+        | SOME fname => recurse (fname :: acc)
+in
+  recurse [] before OS.FileSys.closeDir dirstrm
+end
+
+fun safeIsDir s =
+    OS.FileSys.isDir s handle OS.SysErr _ => false
+
+fun wildcard s =
+    if s = "" then [""]
+    else let
+      open parse_glob
+      val comps = parse_glob_components s
+      val split_comps = split_to_directories comps
+      fun initial_split d l k =
+          case l of
+              h::t => if null h then
+                        initial_split "/" t (fn (d,s,r) => k (d,s ^ "/", r))
+                      else k (d,"", l)
+            | [] => k (d,"", l)
+      val (starting_dir,pfx, rest) =
+          initial_split (OS.FileSys.getDir()) split_comps (fn x => x)
+      fun recurse curpfx curdir complist : string list =
+          case complist of
+              c::cs => (* c must be non-null *)
+              let
+                val dotfiles_ok = case c of CHAR #"." :: _ => true
+                                          | _ => false
+                val re = toRegexp c
+                val files = Listsort.sort String.compare (dirfiles curdir)
+                val m = regexpMatch.match re
+                val require_dir = not (null cs)
+                val (_, _, cs') = initial_split "" cs (fn x => x)
+                val slashes = if require_dir then "/" else ""
+                fun check s =
+                    m s andalso
+                    (dotfiles_ok orelse String.sub(s,0) <> #".") andalso
+                    (not require_dir orelse
+                     safeIsDir (OS.Path.concat(curdir, s)))
+                      handle e => raise Fail (s ^ " - " ^ exnMessage e)
+              in
+                case List.filter check files of
+                    [] => []
+                  | fs =>
+                    let
+                      val newpfxs = map (fn s => curpfx ^ s ^ slashes) fs
+                    in
+                      if null cs' then newpfxs
+                      else let
+                        val newdirs = map (fn d => OS.Path.concat(curdir, d)) fs
+                        val more_results : string list list =
+                            ListPair.map (fn (pfx,dir) => recurse pfx dir cs')
+                                         (newpfxs,newdirs)
+                      in
+                        List.concat more_results
+                      end
+                    end
+              end
+            | [] => raise Fail "wildcard.recurse: should never happen"
+    in
+      case rest of
+          [] => (* happens if input was a series of forward slashes *) [s]
+        | _ => (case recurse pfx starting_dir rest of [] => [s] | x => x)
+    end
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -209,6 +294,13 @@ in
                       in
                         if size sfx = 0 then "" else findstr
                       end
+  | "wildcard" => if length args <> 1 then
+                    raise Fail "Bad number of arguments to 'wildcard' function"
+                  else let
+                    val arg_evalled = eval (hd args)
+                  in
+                    spacify (wildcard arg_evalled)
+                  end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

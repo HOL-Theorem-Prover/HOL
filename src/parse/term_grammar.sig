@@ -31,6 +31,7 @@ sig
   datatype ParenStyle
      = Always
      | OnlyIfNecessary
+     | NotEvenIfRand
      | ParoundName
      | ParoundPrec
 
@@ -139,6 +140,7 @@ sig
   val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
   val numeral_info   : grammar -> (char * string option) list
   val overload_info  : grammar -> overload_info
+  val grammar_name   : grammar -> term -> string option
 
   (*------------------------------------------------------------------------
    * known constants are those strings that the parsing process will
@@ -239,6 +241,9 @@ sig
   val rules_for : grammar -> string -> (int * user_delta) list
 
 
+  val prettyprint_grammar_rules
+                          : (grammar -> ppstream -> term -> unit) ->
+                            ppstream -> grammar -> unit
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
                             ppstream -> grammar -> unit
 

@@ -1,0 +1,3621 @@
+\chapter{Librerie}\label{HOLlibraries}
+
+% LaTeX macros in HOL manuals
+%
+% \holtxt{..}     for typewriter text that is HOL types or terms.  To
+%                 produce backslashes, for /\, \/ and \x. x + 1, use \bs
+% \ml{..}         for typewriter text that is ML input, including the
+%                 names of HOL API functions, such as mk_const
+% \theoryimp{..}  for names of HOL theories.
+
+% text inside \begin{verbatim} should be indented three spaces, unless
+% the verbatim is in turn inside a \begin{session}, in which case it
+% should be flush with the left margin.
+
+
+\newcommand{\simpset}{simpset}
+\newcommand{\Simpset}{Simpset}
+
+ \newcommand{\term}      {\mbox{\it term}}
+ \newcommand{\vstr}      {\mbox{\it vstr}}
+
+Una \emph{libreria} è un'astrazione intesa fornire un livello più alto 
+di organizzazione per applicazioni \HOL{}. In generale, una libreria può 
+contenere una collezione di teorie, procedure di dimostrazione, e materiale 
+di supporto, come la documentazione. Alcune librerie forniscono semplicemente 
+procedure di dimostrazione, come \ml{simpLib}, mentre altre forniscono teorie e 
+procedure di dimostrazioni, tale che \ml{intLib}. Le librerie possono includere altre 
+librerie.
+
+Nel sistema \HOL{}, le librerie sono tipicamente rappresentate da strutture 
+\ML{} nominate seguendo la convenzione che la libreria \emph{x} 
+si troverà nella struttura \ML{} \ml{xLib}. Caricare questa struttura 
+dovrebbe caricare tutte le sotto-componenti rilevanti della libreria e settare 
+qualunque parametro di sistema che sia appropriato per l'uso della libreria.
+
+Quando il sistema \HOL{} è invocato nella sua configurazione normale, alcune 
+utili librerie sono caricate automaticamente. La libreria \HOL{} 
+più di base è \ml{boolLib}, che supporta le definizioni della logica 
+\HOL{}, che si trova nella teoria \theoryimp{bool}, e fornisce un'utile 
+suite di strumenti di definizione e ragionamento.
+
+Un'altra libreria usata in modo pervasivo si trova nella struttura \ml{Parse} 
+(il lettore può vedere che non siamo strettamente fedeli alla nostra 
+convenzione circa le denominazioni delle librerie). La libreria parser fornisce supporto 
+per il parsing e il `pretty-printing' dei tipi, i termini, e 
+i teoremi \HOL{}.
+
+La libreria \ml{boss} fornisce una collezione base di teorie 
+standard e di procedure di dimostrazione di alto livello, e serve come una piattaforma 
+standard su cui lavorare. Essa è pre-caricata e aperta quando il sistema 
+\HOL{} si avvia. Essa include \ml{boolLib} e
+\ml{Parse}. Le teorie fornite includono \theoryimp{pair},
+\theoryimp{sum}, \theoryimp{option}; le teorie aritmetiche 
+\theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic},
+e \theoryimp{numeral}; e \theoryimp{list}. Altre librerie 
+incluse in \ml{bossLib} sono \ml{goalstackLib}, che fornisce 
+un gestore di dimostrazione per dimostrazioni basate su tattiche; \ml{simpLib}, che fornisce 
+una varietà di semplificatori; \ml{numLib}, che fornisce una procedura 
+di decisione per l'aritmetica; \ml{Datatype}, che fornisce 
+supporto di alto-livello per definire tipi di dato algebrici; e \ml{tflLib}, 
+che fornisce supporto per definire funzioni ricorsive.
+
+
+\section{Parsing e Prettyprinting}
+\label{sec:parsing-printing}
+
+Ogni tipo e termine in \HOL{} è in definitiva costruito per applicazione dei 
+costruttori (astratti) primitivi per i tipi e i termini. Tuttavia, al 
+fine di ospitare un'ampia varietà di espressioni matematiche, \HOL{} 
+fornisce un'infrastruttura flessibile per il parsing e il prettyprinting dei tipi 
+e dei termini attraverso la struttura \ml{Parse}.
+
+Il parser dei termini supporta l'inferenza di tipo, l'overloading, i binders, e 
+varie dichiarazioni di fixity (infisso, prefisso, suffisso, e
+combinazioni). Ci sono anche dei flag per controllare il comportamento 
+del parser. Inoltre, la struttura del parser è esposta così che 
+possano essere costruiti rapidamente nuovi parser per supportare applicazioni utente.
+
+Il parser è parametrizzato da grammatiche per tipi e termini. Il 
+comportamento del parser e del prettyprinter di conseguenza è di solito alterato 
+da manipolazioni di grammatica.
+%
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!grammatiche per}
+%
+Queste possono essere di due generi: \emph{temporanee} o \emph{permanenti}.
+I cambiamenti temporanei dovrebbero essere usati nelle implementazioni di librerie, o nei 
+file di script per quei cambiamenti che l'utente non vuole far 
+persistere nelle teorie discendenti da quella attuale. I cambiamenti permanenti 
+sono appropriati per l'uso in file di script, e saranno forzati in tutte 
+le teorie discendenti. Le funzioni che fanno cambiamenti temporanei sono denotate 
+da un prefisso \ml{temp\_} nei loro nomi.
+
+\subsection{Parsing dei tipi}
+\index{types, nella logica HOL@types, nella logica \HOL{}!parsing of|(}
+
+Il linguaggio dei tipi è semplice. Una grammatica astratta per il 
+linguaggio è presentata nella Figura~\ref{fig:abstract-type-grammar}. La 
+grammatica attuale (con i valori concreti per i simboli infissi e gli operatori 
+di tipo) può essere ispezionata usando la funzione \ml{type\_grammar}.
+\begin{figure}[tbhp]
+\newcommand{\nt}[1]{\mathit{#1}}
+\newcommand{\tok}[1]{\texttt{\bfseries #1}}
+\renewcommand{\bar}{\;\;|\;\;}
+\[
+\begin{array}{lcl}
+\tau &::=& \tau \odot \tau \bar \nt{vtype} \bar \nt{tyop} \bar
+           \tok{(} \;\nt{tylist}\;\tok{)} \;\nt{tyop}\bar \tau \;\nt{tyop}
+           \bar \tok{(}\;\tau\;\tok{)} \bar \tau\tok{[}\tau\tok{]}\\
+\odot &::=& \tok{->} \bar \tok{\#} \bar \tok{+} \bar \cdots\\
+\nt{vtype} &::=& \tok{'a} \bar \tok{'b} \bar \tok{'c} \bar \cdots\\
+\nt{tylist} &::=& \tau \bar \tau \;\tok{,}\;\nt{tylist}\\
+\nt{tyop} &::=& \tok{bool} \bar \tok{list} \bar \tok{num} \bar
+           \tok{fun} \bar \cdots
+\end{array}
+\]
+\caption{Una grammatica astratta per i tipi \HOL{} ($\tau$).  Gli infissi ($\odot$)
+  legano sempre più debolmente dei gli operatori di tipo~($\nt{tyop}$) (e 
+  e dei sottoscritti di tipo~($\tau\tok{[}\tau\tok{]}$)), così che 
+  $\tau_1 \,\odot\, \tau_2 \,\nt{tyop}$ è sempre parsato come $\tau_1\, \odot\,
+  (\tau_2 \,\nt{tyop})$.  Infissi differenti possono avere priorità 
+	differenti, e gli infissi a diversi livelli di priorità possono associare 
+	in modo differente (alla sinistra, alla destra, o non associare del tutto). Gli utenti possono 
+	estendere le categorie $\odot$ e $\nt{tyop}$ facendo nuove definizioni 
+	di tipo, e manipolando la grammatica direttamente.}
+\label{fig:abstract-type-grammar}
+\end{figure}
+
+\paragraph{Infissi di tipo}
+Gli infissi possono essere introdotti con la funzione \ml{add\_infix\_type}. 
+Questa imposta un mapping da un simbolo infisso (come \texttt{->}) al 
+nome di un operatore di tipo esistente (come \texttt{fun}). E' necessario 
+dare al simbolo binario un livello di precedenza e 
+un'associatività. Si veda \REFERENCE{} per maggiori dettagli.
+
+\paragraph{Abbreviazioni di tipo}
+\index{abbreviazioni di tipo}
+
+Gli utenti possono abbreviare pattern di tipo comuni con delle \emph{abbreviazioni}. 
+Questo è fatto con la funzione \ML{} \ml{type\_abbrev}:
+\begin{hol}
+\begin{verbatim}
+   type_abbrev : string * hol_type -> unit
+\end{verbatim}
+\end{hol}
+Un'abbreviazione è un nuovo operatore di tipo, di qualsiasi numero di argomenti, 
+che espande in un tipo esistente. Per esempio, si potrebbe sviluppare una 
+teoria leggera di numeri estesi con un infinito, in cui 
+tipo rappresentante fosse \holtxt{num option} (\holtxt{NONE} 
+rappresenterebbe il valore infinito). Si potrebbe impostare un'abbreviazione 
+\holtxt{infnum} che si espanderebbe a questo tipo sottostante. 
+Sono supportati anche i pattern polimorfici. Per esempio, come descritto 
+nella Sezione~\ref{sec:theory-of-sets}, l'abbreviazione \holtxt{set}, di 
+un unico argomento, è tale che \holtxt{:'a set} espande nel tipo 
+\holtxt{:'a -> bool}, per qualsiasi tipo \holtxt{:'a}.
+
+Quando i tipi devono essere stampati, l'espansione delle abbreviazioni fatta dal parser è invertita. 
+Per maggiori informazioni, si veda la voce \ml{type\_abbrev} in \REFERENCE.
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!parsing dei|)}
+
+\subsection{Parsing dei termini}
+
+Il parser dei termini fornisce un'infrastruttura basata sulla grammatica per supportare 
+la sintassi concreta per le formalizzazioni. Di solito, la grammatica \HOL{} viene 
+estesa quando viene fatta una nuova definizione o una specifica di costante. (L'introduzione 
+di una nuova costante è discussa 
+nelle Sezioni~\ref{sec:constant-definitions} e \ref{conspec}.) Tuttavia, 
+qualsiasi identificatore può avere assegnato ad esso in ogni momento uno stato di parsing. 
+In quello che segue, esploriamo alcune delle capacità del 
+parser dei termini \HOL{}.
+
+
+\subsubsection{Architettura del parser}
+\label{sec:parser:architecture}
+
+Il parser trasforma le stringhe in termini. Fa questo nella seguente 
+serie di fasi, ciascuna delle quali è influenzata dalla grammatica fornita. 
+Di solito questa grammatica è la grammatica globale di default, ma gli utenti possono 
+organizzarsi per usare grammatiche differenti se lo desiderano. %
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!grammatiche per}
+%
+Correttamente, il parsing avviene dopo che il lexing ha diviso l'input in una 
+serie di token. Per maggiori informazioni sul lexing, si veda la Sezione~\ref{HOL-lex}.
+\begin{description}
+\item[Sintassi Concreta:] Caratteristiche come gli infissi, i binder e le forme 
+	mix-fix sono tradotte, creando una forma di ``sintassi 
+	astratta'' intermedia (tipo ML \ml{Absyn}). Le fixity possibili sono 
+	discusse nella Sezione~\ref{sec:parseprint:fixities} di sotto. Le forme 
+	di sintassi concreta sono aggiunte alla grammatica con funzioni come 
+	\ml{add\_rule} e \ml{set\_fixity} (per le quali, si veda \REFERENCE). 
+	L'azione di questa fase di parsing è incarnata nella funzione 
+	\ml{Absyn}.
+
+ Il data type \ml{Absyn} è costruito usando i costruttori \ml{AQ} 
+	(un antiquote, si veda la Sezione~\ref{sec:quotation-antiquotation}); %
+%
+  \index{antiquotation, nei termini della logica HOL@antiquotation, nei termini della logica \HOL{}}%
+%
+  \ml{IDENT} (un identificatore); \ml{QIDENT} (un identificatore qualificato, 
+	dato come \holtxt{thy\$ident}); \ml{APP} (un'applicazione di una forma 
+	a un'altra); \ml{LA} (un'astrazione di una variabile su un corpo), 
+	e \ml{TYPED} (una forma accompagnata da un vincolo di tipo\footnote{I 
+		tipi nei vincoli \ml{Absyn} non sono tipi HOL completi, ma valori 
+		da un'altro tipo intermedio \ml{Pretype}.}, si veda 
+	la Sezione~\ref{sec:parseprint-type-constraints}). A questo stadio della 
+	traduzione, non viene fatta alcuna distinzione tra costanti e 
+	variabili: benché le forme \ml{QIDENT} debbano essere delle costanti, gli utente sono 
+	anche in grado di riferirsi alle costanti dando loro dei nomi nudi.
+
+  E' possibile che i nomi che occorrono nel valore \ml{Absyn} siano 
+	differenti da qualsiasi token che appariva nell'input 
+	originale. Per esempio, l'input
+\begin{verbatim}
+   ``if P then Q else R``
+\end{verbatim} si trasformerà in
+\begin{verbatim}
+   APP (APP (APP (IDENT "COND", IDENT "P"), IDENT "Q"), IDENT "R")
+\end{verbatim}
+  (Questo è un output leggermente semplificato: i vari costruttori per 
+	\ml{Absyn}, incluso \ml{APP}, prendono anche parametri di localizzazione.)
+
+  La grammatica standard include una regola che associa la speciale 
+	forma miz-fix per l'espressioni if-then-else con il sottostante 
+	``nome'' \holtxt{COND}. E' \holtxt{COND}. che sarà alla fine 
+	risolto come la costante \holtxt{bool\dol{}COND}.
+
+  Se si usa la sintassi di ``quotation'' con un dollaro nudo,%
+%
+\index{ escape, nel parser della logica HOL@\ml{\$} (escape, nel parser della logica \HOL{})}%
+\index{token!sopprimere il comportamento di parsing dei|(}
+%
+allora questa fase del parser non tratterà le stringhe come parte di una 
+forma speciale. Per esempio, \holtxt{\holquote{\dol{}if~P}} si trasforma 
+nella forma \ml{Absyn}
+\begin{verbatim}
+   APP(IDENT "if", IDENT "P")
+\end{verbatim}
+  \emph{non} in una forma che coinvolge \holtxt{COND}.
+
+  Più tipicamente, spesso si scrive qualcosa come 
+	\holtxt{\holquote{\$+~x}}, che genera la sintassi astratta
+\begin{verbatim}
+   APP(IDENT "+", IDENT "x")
+\end{verbatim}
+  Senza il segno di dollaro, il parser della sintassi concreta si lamenterebbe 
+	del fatto che l'infisso più non ha un argomento 
+	sinistro. Quando il risultato di successo del parsing è passato alla 
+	fase successiva, il fatto che ci sia una costante chiamata \holtxt{+} 
+	darà all'input il suo significato desiderato.
+
+  Si può eseguire l'``escape'' dei simboli racchiudendoli in parentesi. 
+	Così, quello di sopra si potrebbe scrivere \holtxt{\holquote{(+)~x}} per avere 
+	lo stesso effetto.
+\index{token!sopprimere il comportamento di parsing dei|)}
+
+  L'utente può inserire a questo punto nel processo di parsing delle funzioni 
+	di trasformazione intermedia sviluppate per proprio conto . Questo è fatto 
+	con la funzione
+\begin{verbatim}
+   add_absyn_postprocessor
+\end{verbatim}
+  La funzione dell'utente sarà di tipo \ml{Absyn~->~Absyn} e potrà 
+	eseguire qualunque cambiamento sia appropriato. Come tutti gli altri aspetti del 
+	parsing, queste funzioni sono parte di una grammatica: se l'utente non vuole
+	vedere usata una particolare funzione, può organizzarsi in modo che il parsing 
+	sia fatto rispetto a una grammatica differente.
+
+\item[Risoluzione dei Nomi:] Le forme nude \ml{IDENT} nel valore \ml{Absyn} 
+	sono risolte come variabili libere, nomi legati o costanti. 
+	Questo processo risulta in un valore del tipo di dati \ml{Preterm}, che 
+	ha costruttori simili a quelli in \ml{Absyn} eccetto che con le forme 
+	per le costanti. %
+	\index{parsing, della logica HOL@parsing, della logica \HOL{}!preterms}%
+	Una stringa può essere convertita direttamente in un \ml{Preterm} per mezzo della 
+	funzione \ml{Preterm}.
+
+  Un nome legato è il primo argomento a un costruttore \ml{LAM}, un 
+	identificatore che occorro sul lato sinistro di una freccia di 
+	una espressione case, o un identificatore che occorre all'interno di un pattern 
+	di comprensione d'insieme. Una costante è una stringa che è presente nel dominio 
+	dell'``overload map'' della grammatica. Le variabili libere sono tutti gli altri identificatori. 
+	Variabili libere dello stesso nome in un termine avranno lo stesso 
+	tipo. Gli identificatori sono testati per vedere se sono legati, e poi per 
+	vedere se sono costanti. Così è possibile scrivere
+\begin{verbatim}
+   \SUC. SUC + 3
+\end{verbatim}
+  ed avere la stringa \holtxt{SUC} trattata come un numero nel 
+	contesto dell'astrazione data, piuttosto che come la costante 
+	successore.
+
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!overloading}
+\index{overloading|see{parsing, of \HOL{} logic, overloading}}
+  L'``overloap map'' è una mappa da stringhe a liste di termini. I 
+	termini di solito sono solo costanti, ma possono essere termini arbitrari (dando 
+	origine a ``macro sintattiche'' o ``pattern'').\index{macro sintattiche}
+	Questa infrastruttura è usata per permettere ad un nome come \holtxt{+} di mappare a 
+	costanti di addizione differenti in teorie come 
+	\theoryimp{arithmetic}, \theoryimp{integer}, e
+  \theoryimp{words}. In questo modo i nomi ``reali'' delle costanti si possono 
+	slegare da ciò che l'utente digita. Nel caso dell'addizione, il 
+	più sui numeri naturali è di fatto chiamato \holtxt{+} (strettamente, 
+	\holtxt{arithmetic\$+}); ma sugli interi, è 
+	\holtxt{int\_add}, e su word è \holtxt{word\_add}. (Si noti 
+	che poiché ciascuna costante arriva da una teoria differente e così da un 
+	namespace differenti, esse potrebbero avere tutte il nome \holtxt{+}.)
+
+  \index{inferenza di tipo!nel parser HOL@nel parser \HOL{}}
+  Quando la risoluzione dei nomi determina che un identificatore dovrebbe essere trattato 
+	come una costante, esso è mappato a una forma pretermine che elenca tutte le 
+	possibilità per quella stringa. Successivamente, poiché i termini nel 
+	range della mappa di overload tipicamente avranno tipi differenti, 
+	l'inferenza di tipo spesso eliminerà le possibilità dalla lista. Se 
+	rimangono più possibilità dopo che l'inferenza di tipo è stata 
+	eseguita, allora sarà stampato un warning, e sarà scelta una 
+	delle possibilità. (Gli utenti possono controllare quali termini sono 
+	selezionati quando si presenta questa situazione.)
+
+  Quando un termine nella mappa di overload è scelto come l'opzione migliore, è 
+	sostituito nel termini alla posizione appropriata. Se il termine è una 
+	lambda astrazione, allora sono fatte tante $\beta$-riduzioni quante 
+	possibili, usando qualsiasi argomento a cui il termine sia stato applicato. E' 
+	in questo modo che un pattern sintattico può elaborare gli argomenti. (Si veda 
+	anche la Sezione~\ref{sec:parser:syntactic-patterns} per maggiori informazioni sui 
+	pattern sintattici.)
+\item[Inferenza di Tipo:] %
+  \index{inferenza di tipo!nel parser HOL@nel parser \HOL{}}%
+  Tutti i termini nella logica \HOL{} sono ben tipizzati. Il kernel rafforza 
+	questo attraverso le API per il tipo di dato \ml{term}. (In particolare, 
+	la funzione \ml{mk\_comb} %
+	\index{mk_comb@\ml{mk\_comb}}%
+	controlla che il tipo del primo argomento sia una funzione il cui 
+	dominio è uguale al tipo del secondo argomento.) Il lavoro del 
+	parser è di trasformare le stringhe fornite dall'utente in termini. Per convenienza, 
+	è vitale che l'utente non debba fornire tipi per tutti gli 
+	identificatori che digita. (Si veda la Sezione~\ref{sec:parser:type-inference} 
+	di sotto.)
+
+  In presenza di identificatori sottoposti a overload, l'inferenza di tipo può non essere 
+	in grado di assegnare un tipo unico a tutte le costanti. Se esistono 
+	più possibilità, ne sarà scelto uno quando il \ml{Preterm} è infine 
+	convertito in un termine genuino.
+\item[Conversione a un Termine:]%
+  Quando è stato completato il controllo di tipo di un \ml{Preterm}, la conversione finale da 
+	quel tipo al tipo del \ml{term} è per lo più semplice. L'utente 
+	può pure inserire ulteriore elaborazione a questo punto, così che una 
+	funzione fornita dall'utente modifichi il risultato prima che il parser 
+	lo restituisca.
+\end{description}
+
+\subsubsection{Caratteri unicode}
+\label{sec:parser:unicode-characters}
+
+\index{Unicode}\index{UTF-8}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!Caratteri unicode|(}
+E' possibile fare in modo che l'infrastruttura \HOL{} di parsing e stampa 
+utilizzi caratteri Unicode (scritti nella codifica UTF-8). Questo rende 
+possibile scrivere e leggere termini come
+\begin{alltt}
+   \(\forall\)x. P x \(\land\) Q x
+\end{alltt}
+piuttosto che
+\begin{alltt}
+   !x. P x /\bs{} Q x
+\end{alltt}
+Se lo desiderano, gli utenti possono semplicemente definire costanti che hanno caratteri 
+Unicode nei loro nomi, e lasciare le cose come stanno. Il problema con 
+questo approccio è che gli strumenti standard probabilmente creeranno file 
+di teoria che includono binding \ML{} (illegali) come \ml{val $\rightarrow$\_def =
+  \dots}. Il risultato saranno file \ml{...Theory.sig} e
+\ml{...Theory.sml} che falliranno di compilare, anche se la chiamata a 
+\ml{export\_theory} può avere successo. Questo problema può essere manovrato attraverso 
+l'uso di funzioni come \ml{set\_MLname}, probabilmente è una pratica 
+migliore usare solamente caratteri alfanumerici nei nomi delle costanti, e 
+usare poi funzioni come \ml{overload\_on} e \ml{add\_rule} per creare 
+la sintassi unicode per la costante sottostante.
+
+Se gli utenti hanno a disposizione dei font con il repertorio di caratteri appropriati per 
+mostrare la loro sintassi, e confidano nel fatto che anche ognuno degli utenti delle loro 
+teorie li hanno, allora questo è perfettamente ragionevole. Tuttavia, se 
+gli utenti vogliono mantenere la retro-compatibilità con la pura sintassi 
+ASCII, possono farlo definendo prima una sintassi ASCII pura. Dopo aver fatto 
+questo, possono creare una versione Unicode della sintassi con la 
+funzione \ml{Unicode.unicode\_version}. Quindi, quando la variabile 
+di traccia \ml{"Unicode"}  è $0$, la sintassi ASCII sarà usata per 
+il parsing e la stampa. Se la traccia è impostata a $1$, allora funzionerà 
+anche la sintassi unicode nel parse, e il pretty-priunter 
+la preferirà quando i termini sono stampati.
+
+Per esempio, in \ml{boolScript.sml}, il carattere Unicode per l'and 
+logico (\texttt{$\land$}), è impostato come un'alternativa unicode per 
+\texttt{/\bs} con la chiamata
+\begin{verbatim}
+   val _ = unicode_version {u = UChar.conj, tmnm = "/\\"};
+\end{verbatim}
+(In questo contesto, è stata aperta la struttura \ml{Unicode}, 
+dando accesso anche alla struttura \ml{UChar} che contiene i binding 
+per l'alfabeto Greco, e alcuni altri simboli matematici.)
+
+L'argomento a \ml{unicode\_version} è un record con campi \ml{u}
+e \ml{tmnm}. Entrambe sono stringhe. Il campo \ml{tmnm} può essere o 
+il nome di una costante, o un token che appare in una regola di sintassi concreta 
+(che possibilmente mappa a qualche altro nome). Se il \ml{tmnm} è solo il 
+nome di una costante, allora, con la variabili di traccia abilitata, la stringa 
+\ml{u} sarà sottoposta a overloading con lo stesso nome. Se il \ml{tmnm} è lo 
+stesso di un token di una regola di sintassi concreta, allora il comportamento è di 
+creare una nuova regola che mappa allo stesso nome, ma con la stringa \ml{u} 
+usata come il token.
+
+\paragraph{Regole di lexing con caratteri Unicode}
+%
+\index{token!Caratteri unicode}
+\index{identificatori, nella logica HOL@identificatori, nella logica \HOL{}!caratteri che non associano}
+%
+In parole povere, \HOL{} considera i caratteri divisi in tre 
+classi: alfanumerici, simboli che non associano e simboli. Questo 
+influenza il comportamento del lexer quando incontra delle stringhe di 
+caratteri. A meno che ci sia già nella grammatica uno specifico token ``misto'', 
+i token si dividono quando la classe di caratteri cambia. Così, nella 
+stringa
+\begin{verbatim}
+   ++a
+\end{verbatim}
+il lexer vedrà due token, \holtxt{++} e \holtxt{a}, perché 
+\holtxt{+} è un simbolo e \holtxt{a} è un alfanumerico. La 
+classificazione dei caratteri Unicode extra è molto 
+semplicistica: tutt le lettere greche eccetto \holtxt{$\lambda$} sono alfanumerici; 
+il simbolo di negazione logica \holtxt{$\neg$} non associa; e 
+ogni altra cosa è simbolica. (L'eccezzione per \holtxt{$\lambda$} è per 
+permettere a stringhe come \holtxt{$\lambda$x.x} di essere divise dal lexer in \emph{quattro} token.)
+
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!Caratteri unicode|)}
+
+\subsubsection{Pattern sintattici (``macro'')}
+\label{sec:parser:syntactic-patterns}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!overloading}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!pattern sintattici|(}
+
+La ``mappa di overload'' menzionata in precedenza è di fatto una combinazione di 
+mappe, una per il parsing, e una per la stampa. La mappa di parsing è da 
+nomi a liste di termini, e determina come i nomi che appaiono in un 
+\ml{Preterm} saranno tradotti in termini. In sostanza, i nomi legati sono tradotti 
+in variabili legate, nomi non legati che non sono nel dominio della mappa sono tradotti 
+in variabili libere, e nomi non legati nel dominio della mappa sono tradotti 
+in uno degli elementi dell'insieme associato con il nome dato. 
+Ogni termine nell'insieme delle possibilità può avere un tipo differente, così 
+l'inferenza di tipo sceglierà da quelli che hanno tipi coerenti con 
+il resto del termine dato. Se la lista risultante contiene più di 
+un elemento, allora il termine che appare prima nella lista sarà 
+scelto.
+
+Il caso d'uso più comune per la mappa di overload è di avere nomi mappati a 
+costanti. In questo modo, per esempio, le varie teorie aritmetiche possono 
+mappare la stringa \ml{"+"} alla nozione rilevante di addizione, ognuna delle 
+quali è una costante differente. Tuttavia, il sistema ha una flessibilità 
+extra perché i nomi possono mappare termini arbitrari. Per esempio, è 
+possibile mappare a istanze di costanti con specifici tipi. Così, la 
+stringa \ml{"<=>"} mappa l'eguaglianza, ma dove gli argomenti sono forzati 
+essere di tipo \holquote{:bool}.
+
+Inoltre, se il termine mappato è una lambda-astrazione (cioè, della 
+forma $\lambda x.\;M$), allora il parser eseguirà tutte le $\beta$-riduzioni 
+possibili per quel termine e gli argomenti che lo accompagnano. per 
+esempio, in \theoryimp{boolTheory} e nei suoi discendenti, la stringa 
+\ml{"<>"} è sottoposta a overload rispetto al termine \holquote{\bs{}x~y.~\td{}(x~=~y)}. 
+Inoltre, \ml{"<>"} è impostato come un infisso al livello della sintassi 
+concreta. Quando l'utente inserisce \holquote{x~\lt\gt~y}, il valore 
+\ml{Absyn} risultante è
+\begin{verbatim}
+   APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
+\end{verbatim}
+The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
+the \ml{"<>"} identifier maps to a list containing
+\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type
+\begin{verbatim}
+   :'a -> 'a -> bool
+\end{verbatim}
+e le variabili polimorfiche sono generalizzabili, permettendo all'inferenza 
+di tipo di dare i tipi (identici) appropriati a \ml{x} e \ml{y}. 
+Assumendo che questa opzione sia l'unico oveloading per il \ml{"<>"} lasciato 
+dopo l'inferenza di tipo, allora il termine risultante sarà 
+\holtxt{\td(x~=~y)}. Meglio, benché questa sarà la struttura 
+sottostante del termine in memoria, esso sarà di fatto stampato come 
+\holquote{x~\lt\gt~y}.
+
+Se il termine mappato nella mappa di overload contiene qualsiasi variabili libere, 
+queste variabili non saranno istanziate in alcun modo. In particolare, 
+se queste variabili hanno tipi polimorfici, allora le variabili di tipo in 
+questi tipi saranno costanti: non soggette a istanziazione dall'inferenza 
+di tipo.
+
+\paragraph{Il pretty-printing e i pattern sintattici} La seconda parte della ``mappa di overload'' è una mappa da termini a stringhe, che specifica come 
+i termini dovrebbero essere trasformati indietro in identificatori. (Benché di fatto 
+non costruisca un valore \ml{Absyn}, questo processo inverte la fase del parsing 
+di risoluzione dei nomi, producendo qualcosa che è poi stampato 
+secondo la parte di sintassi concreta della grammatica data.)
+
+Poiché il parsing può mappare nomi singoli in complicate strutture di termine, 
+la stampa deve essere in grado di ricondurre una complicata struttura di termine a 
+un nome singolo. Esso fa questo eseguendo 
+un term matching.%
+\index{matching!nel pretty-printing dei termini}%
+%
+\footnote{Il matching eseguito è del primo ordine; per contro il matching di ordine superiore 
+	è fatto nel semplificatore.}
+Se più pattern matchano con lo stesso termine, allora il printer sceglie il 
+match più specifico (quello che richiede l'istanziazione minima delle 
+variabili del pattern.) Se questo risulta ancora in più possibilità, ugualmente 
+specifiche, ha la precedenza il pattern aggiunto 
+più recentemente. (Gli utenti possono così manipolare le preferenze del printer 
+eseguendo delle chiamate altrimenti ridondanti alla funzione \ml{overload\_on}.)
+
+Nell'esempio di sopra dell'operatore non-uguale-a, il pattern sarà 
+\holtxt{\~{}(?x = ?y)}, dove i punti interrogativi, indicano variabili del pattern 
+istanziabili. Se un pattern include delle variabili libere (si ricordi che 
+la \ml{x} e la \ml{y} in questo esempio erano legate da un'astrazione), 
+allora queste non saranno istanziabili.
+
+Non c'è alcun'altra finezza nell'uso di questa infrastruttura: matching 
+``più grandi'', che coprono più di un termine hanno la precedenza. La difficoltà 
+che questo può causare è illustrata nel pattern \holtxt{IS\_PREFIX} dalla teoria 
+\theoryimp{rich\_listTheory}. Per questioni di retro-compatibilità 
+questo identificatore mappa a
+\begin{verbatim}
+   \x y. isPREFIX y x
+\end{verbatim}
+dove \holtxt{isPREFIX} è una costante da \theoryimp{listTheory}. 
+(La questione è che \holtxt{IS\_PREFIX} si aspetta i suoi argomenti in 
+ordine inverso a quello che si aspetta \holtxt{isPREFIX}.) Ora, quando questa 
+macro è impostata la mappa di overload contiene già un mapping dalla 
+stringa \holtxt{"isPREFIX"} alla costante \holtxt{isPREFIX} (questo 
+accade con ogni definizione di costante). Ma dopo la chiamata 
+che stabilisce il nuovo pattern per \holtxt{IS\_PREFIX}, la 
+forma \holtxt{isPREFIX} non sarà più stampata. Né è sufficiente, 
+ripetere la chiamata
+\begin{verbatim}
+   overload_on("isPREFIX", ``isPREFIX``)
+\end{verbatim}
+Piuttosto (supponendo che \holtxt{isPREFIX} sia di fatto la forma 
+di stampa preferita), la chiamata deve essere
+\begin{verbatim}
+   overload_on("isPREFIX", ``\x y. isPREFIX x y``)
+\end{verbatim}
+così che il pattern di \ml{isPREFIX} è lungo quanto quella di \ml{IS\_PREFIX}.
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!pattern sintattici|)}
+
+
+\subsubsection{Vincoli di tipo}
+\label{sec:parseprint-type-constraints}
+
+\index{vincoli di tipo!nel parser HOL@nel parser \HOL{}}
+Un termine può essere vincolato ad essere un certo tipo. Per esempio, 
+\holtxt{X:bool} vincola la variabile \holtxt{X} ad avere il tipo 
+\holtxt{bool}. Un tentativo di vincolare un 
+termine in modo inappropriato solleverà un'eccezione: per esempio,
+\begin{hol}
+\begin{verbatim}
+   if T then (X:ind) else (Y:bool)
+\end{verbatim}
+\end{hol}
+fallirà perché entrambi i rami di un condizionale dovono essere dello stesso 
+tipo. I vincoli di tipo possono essere visti come un suffisso che lega più 
+strettamente di qualunque altra cosa eccetto l'applicazione di funzione. Così $\term\
+\ldots\ \term \ : \type$ è uguale a $(\term\ \ldots\ \term)\ :
+\type$, ma $x < y:\holtxt{num}$ è un vincolo legittimo sulla sola 
+variabile $y$.
+
+
+L'inclusione di \holtxt{:} negli identificatori simbolici significa che può 
+essere necessario separare qualche vincolo con degli spazi vuoti. Per esempio,
+\begin{hol}
+\begin{verbatim}
+   $=:bool->bool->bool
+\end{verbatim}
+\end{hol}
+sarà suddiviso dal lexer \HOL{} come
+\begin{hol}
+\begin{verbatim}
+   $=: bool -> bool -> bool
+\end{verbatim}
+\end{hol}
+ed elaborato dal parser come un'applicazione del'identificatore simbolico \holtxt{\$=:} alla 
+lista di termini argomento [\holtxt{bool}, \holtxt{->}, \holtxt{bool},
+\holtxt{->}, \holtxt{bool}]. Uno spazio messo al punto giusto eviterà questo problema:
+\begin{hol}
+\begin{verbatim}
+   $= :bool->bool->bool
+\end{verbatim}
+\end{hol}
+è elaborato da parser come l'identificatore simbolico ``='' vincolato a un tipo. 
+Al posto del \holtxt{\$}, si possono anche usare le parentesi per rimuovere dai lessemi 
+un comportamento di parsing speciale:
+\begin{hol}
+\begin{verbatim}
+   (=):bool->bool->bool
+\end{verbatim}
+\end{hol}
+
+\subsubsection{Inferenza di tipo}
+\label{sec:parser:type-inference}
+
+\index{inferenza di tipo!nel parser HOL@nel parser \HOL{}|(}
+Si consideri il termine \holtxt{x = T}: esso (e tutti i suoi sottotermini) 
+ha un tipo nella logica \HOL{}. Ora, \holtxt{T} ha il tipo \holtxt{bool}. Questo 
+significa che la costante \holtxt{=} ha tipo \holtxt{xty -> bool -> bool},
+per qualche tipo \holtxt{xty}. Dal momento che lo schema di tipo per \holtxt{=} è 
+\holtxt{'a -> 'a -> bool}, sappiamo che \holtxt{xty} di fatto deve essere 
+\holtxt{bool} perché l'istanza di tipo sia ben formata. Sapendo 
+questo, possiamo dedurre che il tipo di \holtxt{x} deve essere \holtxt{bool}.
+
+Trascurando il gergo (``schema'' e ``istanza'') nel precedente 
+paragrafo, abbiamo condotto un assegnamento di tipo alla struttura di termine, 
+finendo con un termine ben formato. Sarebbe molto noioso per gli utenti 
+condurre un tale assegnamento a mano per ciascun termine immesso ad \HOL{}. 
+Così, \HOL{} usa un adattamento dell'algoritmo d'inferenza di tipo di Milner 
+per l'\ML{} quando si costruiscono dei termini attraverso il parsing. Alla fine dell'inferenza 
+di tipo, alle variabili di tipo non vincolate sono assegnati dei nomi da parte del sistema. 
+Di solito, questa assegnazione fa la cosa giusta. Tuttavia, a volte, il 
+tipo più generale non è ciò che si desidera e l'utente deve aggiungere dei vincoli 
+di tipo ai sotto termini rilevanti. Per situazioni complicate, si può assegnare la 
+variabili globale \ml{show\_types}. Quando è impostato questo flag, 
+i prettyprinter per i termini e i teoremi mostreranno come i tipi 
+sono stati assegnati ai sottotermini. Se non si vuole che il sistema assegni 
+delle variabili di tipo per proprio conto, si può impostare la variabile globale 
+\ml{guessing\_tyvars} a \ml{false}, nel qual caso 
+l'esistenza delle variabili di tipo non assegnate alla fine dell'inferenza di tipo 
+solleveranno un'eccezzione.
+\index{type inference!nel parser HOL@nel parser \HOL{}|)}
+
+
+\subsubsection{Overloading}
+\label{sec:parsing:overloading}
+
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!overloading|(}
+Una misura limitata di risoluzione di overloading è eseguita dal parser 
+del termine. Per esempio, il simbolo `tilde' (\holtxt{\~{}}) 
+denota la negazione booleana nella teoria iniziale di \HOL, e denota anche 
+l'invero additivo nelle teorie \ml{integer} e
+\ml{real}. Se carichiamo la teoria \ml{integer} 
+e immettiamo un termine ambiguo con \holtxt{\~{}}, il 
+sistema ci informerà che è stata eseguita la risoluzione dell'overloading.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- load "integerTheory";
+> val it = () : unit
+
+- Term `~~x`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~~x` : term
+
+- type_of it;
+> val it = `:bool` : hol_type
+\end{verbatim}
+\end{session}
+
+Per risolvere più scelte possibili è usato un meccanismo di priorità. 
+Nell'esempio, \holtxt{\~{}} potrebbe essere coerentemente scelto avere il tipo 
+\holtxt{:bool -> bool} o \holtxt{:int -> int}, e il 
+meccanismo ha scelto il primo. Per un controllo più fine, si possono usare dei 
+vincoli di tipo espliciti. Nella seguente sessione, il 
+\holtxt{\~{}\~{}x} nella prima quotation ha il tipo \holtxt{:bool},
+mentre nella seconda, un vincolo di tipo assicura che \holtxt{\~{}\~{}x} ha 
+il tipo \holtxt{:int}.
+
+\begin{session}
+\begin{verbatim}
+- show_types := true;
+> val it = () : unit
+
+- Term `~(x = ~~x)`;
+<<HOL message: more than one resolution of overloading was possible.>>
+> val it = `~((x :bool) = ~~x)` : term
+
+- Term `~(x:int = ~~x)`;
+> val it = `~((x :int) = ~~x)` : term
+\end{verbatim}
+\end{session}
+
+Si noti che il simbolo \holtxt{\~{}} sta per due costanti differenti nella 
+seconda quotation; la sua prima occorrenza è la negazione booleana, mentre 
+le altre due occorrenze sono l'operazione d'inverso additivo per 
+gli interi.
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!overloading|)}
+
+\subsubsection{Le fixity}
+\label{sec:parseprint:fixities}
+
+Al fine di fornire qualche flessibilità notazionale, le costanti sono disponibili in varie forme o {\it fixity}: oltre a essere costanti ordinarie (senza alcuna fixity), le costanti possono essere anche dei {\it binder}, {\it prefissi}, {\it suffissi}, {\it infissi}, o {\it closefix}.
+Più in generale, i termini possono anche essere rappresentati usando specifiche {\it mixfix} ragionevolmente arbitrarie. 
+Il grado in cui i termini legano i loro argomenti associati è conosciuto come precedenza. 
+Più grande è questo numero, più stretto il binding.
+Per esempio, nel momento in cui è introdotto, \verb-+- ha una precedenza di 500,  mentre il più stretto binder moltiplicazione (\verb+*+) ha una precedenza di 600.
+
+\paragraph{I binder}
+
+Un binder è un costrutto che lega una variabile; per esempio, il 
+quantificatore universale. In \HOL, questo è rappresentato usando un trucco che 
+risale ad Alnozo Church: un binder è una costante che prende una lambda 
+astrazione come suo argomento. Il binding lambda è usato per implementare 
+il binding del costrutto. Questa è una soluzione elegante ed uniforme. 
+Così la sintassi concreta \verb+!v. M+ è rappresentata 
+dall'applicazione della costante \verb+!+ all'astrazione \verb+(\v. M)+.
+
+I binder più comuni sono \verb+!+, \verb+?+, \verb+?!+, e
+\verb+@+. A volte si vogliono iterare applicazione dello stesso 
+binder, ad esempio,
+\begin{alltt}
+   !x. !y. ?p. ?q. ?r. \term.
+\end{alltt}
+Questo può invece essere reso come
+\begin{alltt}
+   !x y. ?p q r. \term.
+\end{alltt}
+
+\paragraph{Infissi}
+
+Le costanti infisse possono associare in tre modi differenti: a destra, 
+a sinistra o non associare del tutto. (Se \holtxt{+} fosse non-associativo, allora 
+il parser non riuscirebbe ad elaborare \holtxt{3 + 4 + 5}; si dovrebbe scrivere 
+\holtxt{(3 + 4) + 5} o \holtxt{3 + (4 + 5)} a seconda del significato 
+desiderato.) L'ordine di precedenza per l'insieme iniziale di infissi è 
+\holtxt{/\bs}, \holtxt{\bs/}, \holtxt{==>}, \holtxt{=},
+\begin{Large}\holtxt{,}\end{Large} (la virgola\footnote{Quando
+	è stata caricata \theoryimp{pairTheory}.}). Inoltre, tutte queste 
+costanti sono associative a destra. Così
+\begin{hol}
+\begin{verbatim}
+   X /\ Y ==> C \/ D, P = E, Q
+\end{verbatim}
+\end{hol}
+%
+è uguale a
+%
+\begin{hol}
+\begin{verbatim}
+   ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
+\end{verbatim}
+\end{hol}
+%
+\noindent Un'espressione
+\[
+\term \; \holtxt{<infix>}\; \term
+\]
+è rappresentata internamente come
+\[
+((\holtxt{<infix>}\; \term)\; \term)
+\]
+
+\paragraph{Prefissi}
+
+Mentre gli infissi appaiono tra i loro argomenti, i prefissi appaiono prima di essi.
+Questo potrebbe inizialmente apparire la stessa cosa di quanto accade con la normale applicazione di funzione dove il simbolo alla sinistra semplicemente non ha alcuna fixity: $f$ in $f(x)$ non si comporta forse come un prefisso?
+Di fatto tuttavia, in un termine come $f(x)$, dove $f$ e $x$ non hanno fixity, la sintassi è trattata come se ci fosse una invisibile applicazione di funzione infissa tra i due token: $f\cdot{}x$.
+Questo operatore infisso lega più strettamente, così che quando si scrive $f\,x + y$, il risultato del parser è $(f\cdot{}x) + y$\footnote{Ci sono operatori infissi che legano più strettamente, il punto nella selezione di campo fa sì che $f\,x.fld$ sia elaborato dal parser come $f\cdot(x.fld)$.\index{tipi record!notazione di selezione del campo}}.
+E' quindi utile permettere dei prefissi genuini così che gli operatori possano vivere a livelli di precedenza differenti rispetto all'applicazione di funzione.
+Un esempio di questo è \verb+~+, la negazione logica.
+Questo è un prefisso con una precedenza più bassa dell'applicazione di funzione.
+Normalmente
+\[
+   f\;x\; y\qquad \mbox{è elaborata dal parser come}\qquad (f\; x)\; y
+\] ma \[
+  \holtxt{\~{}}\; x\; y\qquad\mbox{è elaborata dal parser come}\qquad
+  \holtxt{\~{}}\; (x\; y)
+\]
+poiché la precedenza di \verb+~+ è più bassa di quella dell'applicazione di funzione.
+Il simbolo unario di negazione sarebbe anche tipicamente definito come un prefisso, se non altro per permettere di scrivere \[
+  {\it negop}\,{\it negop}\,3
+\]
+(qualunque cosa sia {\it negop}) senza bisogno di parentesi extra.
+
+Dall'altro lato, la sintassi \holtxt{univ} per l'insieme universale (si veda la Sezione~\ref{sec:theory-of-sets}\index{universal set}) è un esempio di un operatore prefisso che lega più strettamente dell'applicazione.
+Questo significa che \holtxt{f\,univ(:'a)} è elaborato dal parser come \holtxt{f(univ(:'a))}, non come \holtxt{(f univ)(:'a)} (su cui il parser fallirebbe il controllo di tipo).
+
+\paragraph{Suffissi}
+
+I suffissi appaiono dopo il loro argomenti. Non ci sono suffissi 
+introdotti nelle teorie standard disponibili in \HOL{}, ma gli utenti 
+sono sempre in grado di introdurli per loro conto se lo scelgono. I suffissi sono 
+associati con una precedenza esattamente come lo sono gli infissi e i prefissi. 
+Se \holtxt{p} è un prefisso, \holtxt{i} un infisso, e \holtxt{s} un 
+suffisso, allora ci sono sei ordinamenti possibili per i tre differenti 
+operatori, sulla base delle loro precedenze, dando cinque risultati per il parsing di 
+$\holtxt{p}\; t_1\; \holtxt{i}\; t_2\; \holtxt{s}$ a seconda delle 
+relative precedenze:
+\[
+\begin{array}{cl}
+\mbox{\begin{tabular}{c}Precedenze\\(dalla più bassa alla più alta)\end{tabular}} &
+\multicolumn{1}{c}{\mbox{Risultato del parsing}}\\
+\hline
+p,\;i,\;s & \holtxt{p}\;(t_1\;\holtxt{i}\;(t_2\;\holtxt{s}))\\
+p,\;s,\;i & \holtxt{p}\;((t_1\;\holtxt{i}\;t_2)\;\holtxt{s})\\
+i,\;p,\;s & (\holtxt{p}\;t_1)\;\holtxt{i}\;(t_2\;\holtxt{s})\\
+i,\;s,\;p & (\holtxt{p}\;t_1)\;\holtxt{i}\;(t_2\;\holtxt{s})\\
+s,\;p,\;i & (\holtxt{p}\;(t_1\;\holtxt{i}\;t_2))\;\holtxt{s}\\
+s,\;i,\;p & ((\holtxt{p}\;t_1)\;\holtxt{i}\;t_2)\;\holtxt{s}\\
+\end{array}
+\]
+
+\paragraph{I closefix}
+
+I termini closefix sono operatori che racchiudono completamente gli argomenti. 
+Un esempio che si potrebbe usare nello sviluppo di una teoria della 
+semantica denotazionale sono le parentesi semantiche. Così, le infrastrutture di parsing 
+di \HOL{} possono essere configurate in modo da permettere di scrivere \holtxt{denotation x} 
+come \holtxt{[| x |]}. I closefix non sono associati con delle precedenze 
+perché non possono competere per gli argomenti con altri operatori.
+
+
+\subsubsection{Trucchi e magia del parser}
+
+Qui descriviamo come ottenere alcuni effetti utili con il 
+parser in \HOL{}.
+
+\begin{description}
+
+\item[Aliasing] Se si vuole che una sintassi speciale sia un ``alias'' per una 
+	forma \HOL{} normale, questo è facile da ottenere; entrambi gli esempi fatti finora 
+	di fatto hanno fatto proprio questo. Tuttavia, se si vuole avere soltanto una 
+	normale sostituzione uno-a-uno di una stringa per un'altra, non si può 
+	usare la fase grammatica/sintassi per parsing per fare questo. Piuttosto, si 
+	può usare il meccanismo di overloading. Per esempio, sia 
+	\texttt{MEM} un alias per \texttt{IS\_EL}. Abbiamo bisogno della funzione 
+	\texttt{overload\_on} per impostare l'overload della constante originale sul nuovo 
+	nome:
+\begin{verbatim}
+   val _ = overload_on ("MEM", Term`IS_EL`);
+\end{verbatim}
+
+\item[Rendere l'addizione associativa a destra] Se si ha un numero di vecchi 
+	script che assumono che l'addizione sia associativa a destra perché questo è 
+	come era una volta \HOL{}, potrebbe essere troppo penoso convertire tutto. Il trucco 
+	è di rimuovere tutte le regole al livello dato della grammatica, e 
+	rimetterle come infissi che associano sulla destra. il modo più semplice per riconoscere 
+	quali regole sono nella grammatica è per ispezione (usando 
+	\ml{term\_grammar()}). Con la sola \ml{arithmeticTheory} 
+	caricata, gli unici infissi al livello 500 sono \holtxt{+} and
+  \holtxt{-}. Così, rimuoviamo le loro regole:
+\begin{verbatim}
+   val _ = app temp_remove_rules_for_term ["+", "-"];
+\end{verbatim}
+  \noindent E poi le rimettiamo con l'associatività 
+	appropriata:
+\begin{verbatim}
+   val _ = app (fn s => temp_add_infix(s, 500, RIGHT)) ["+", "-"];
+\end{verbatim}
+\noindent Si noti che usiamo le versioni \ml{temp\_} di queste due 
+funzioni così che altre teorie che dipendono da questa non saranno 
+influenzate. Si noti inoltre che non possiamo avere due infissi allo stesso 
+livello di precedenza con differenti associatività, così dobbiamo 
+rimuovere entrambi gli operatori, non solo l'addizione.
+
+\item[Sintassi mix-fix per {\it if-then-else}:]
+\index{condizionali, nella logica HOL@condizionali, nella logica \HOL{}!stampa dei}
+%
+Il primo passo per andare in questa direzione è di guardare all'aspetto generale 
+delle espressioni di questa forma. In questo caso, sarà:
+%
+\[
+  \holtxt{if}\;\; \dots \;\;\holtxt{then}\;\;\dots\;\;
+  \holtxt{else}\;\;\dots
+  \]
+%
+ Dal momento che ci deve essere un termine ``a penzoloni'' sulla destra, la 
+	fixity appropriata è \ml{Prefix}. Sapendo che il termine costante 
+	sottostante è chiamato \holtxt{COND}, il modo più semplice per ottenere 
+	la sintassi desiderata è:
+\begin{verbatim}
+val _ = add_rule
+   {term_name = "COND", fixity = Prefix 70,
+    pp_elements = [TOK "if", BreakSpace(1,0), TM, BreakSpace(1,0),
+                   TOK "then", BreakSpace(1,0), TM, BreakSpace(1,0),
+                   TOK "else", BreakSpace(1,0)],
+    paren_style = Always,
+    block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
+\end{verbatim}
+\noindent La regola effettiva è leggermente un pò più complicata, e 
+si può trovare nei sorgenti della teoria \theoryimp{bool}.
+
+\item[Sintassi mix-fix sintassi per la sostituzione di termini:]
+
+Qui ciò che si desidera è di essere in grado di scrivere qualcosa come:
+\[
+  \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}\,t_3
+\]
+denotando la sostituzione di $t_1$ per $t_2$ in $t_3$, magari 
+traducendolo in \holtxt{SUB $t_1$ $t_2$ $t_3$}. Questo sembra 
+come ci dovesse essere un altro \ml{Prefix}, ma la scelta delle 
+parentesi quadre (\holtxt{[} e \holtxt{]}) come delimitatori sarebbe 
+in conflitto con la sintassi concreta per i letterali lista se si facesse questo.
+Dato che i letterali lista sono di fatto della classe 
+\ml{CloseFix}, la nuova sintassi deve essere della stessa classe. Questo è abbastanza semplice 
+da fare: impostiamo la sintassi 
+\[
+\holtxt{[}\,t_1\,\holtxt{/}\,t_2\,\holtxt{]}
+\]
+in modo che mappi a \holtxt{SUB $t_1$ $t_2$}, un valore di un tipo 
+funzionale, che quando applicato a un terzo argomento apparirà 
+corretto\footnote{Si noti che facendo la stessa cosa per 
+	l'esempio \textit{if-then-else} di sopra sarebbe 
+	inappropriato, dal momento che permetterebbe di scrivere 
+\[ \holtxt{if}\;P\;\holtxt{then}\;Q\;\holtxt{else} \] 
+senza l'argomento finale}.
+La regola per questo è così:
+\begin{verbatim}
+  val _ = add_rule
+           {term_name = "SUB", fixity = Closefix,
+            pp_elements = [TOK "[", TM, TOK "/", TM, TOK "]"],
+            paren_style = OnlyIfNecessary,
+            block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2))};
+\end{verbatim}
+
+\end{description}
+
+\subsubsection{Nascondere le costanti}
+\label{hidden}
+
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!nascondere lo status di costante|(}
+\index{sistema HOL@sistema \HOL{}!nascondere le costanti nel|(}
+\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!nascondere lo status delle}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!overloading}
+%
+La seguente funzione può essere usata per nascondere lo status di costante di un 
+nome dal parser delle quotation.
+
+\begin{holboxed}
+\index{hide@\ml{hide}|pin}
+\begin{verbatim}
+  val hide   : string -> ({Name : string, Thy : string} list *
+                          {Name : string, Thy : string} list)
+\end{verbatim}
+\end{holboxed}
+
+\noindent La valutazione di \ml{hide "$x$"} 
+fa sì che il parser delle quotation tratti $x$ come una variabile (purché le regole 
+lessicali lo permettano), anche se $x$ è il nome di una costante nella teoria attuale 
+(le costanti e le variabili possono avere lo stesso nome).
+Questo è utile se si vogliono usare delle variabili 
+%
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!con nomi di costante}
+%
+con lo stesso nome di costanti dichiarate in precedenza (o incorporate) 
+(ad esempio \ml{o}, \ml{I}, \ml{S} \etc). Il nome $x$ è ancora una costante 
+per i costruttori, le teorie, ecc; \ml{hide} influisce solo sul parsing e 
+la stampa rimuovendo il nome dato dalla ``mappa di overload'' descritta 
+di sopra nella Sezione~\ref{sec:parser:architecture}. Si noti che l'effetto 
+di \ml{hide} è \emph{temporaneo}; i suoi effetti non persistono nelle 
+teorie discendenti da quella attuale. Si veda la voce \ml{hide} in 
+\REFERENCE{} per maggiori dettagli, inclusa una spiegazione del tipo 
+restituito.
+
+La funzione
+
+\begin{holboxed}
+\index{reveal@\ml{reveal}|pin}
+\begin{verbatim}
+   reveal : string -> unit
+\end{verbatim}
+\end{holboxed}
+
+\noindent annulla il nascondimento.
+
+La funzione
+
+\begin{holboxed}
+\index{hidden@\ml{hidden}|pin}
+\begin{verbatim}
+   hidden : string -> bool
+\end{verbatim}
+\end{holboxed}
+
+\noindent controlla se una stringa è il nome di una costante nascosta.
+\index{sistema HOL@sistema \HOL{}!adattamento dell'interfaccia utente del}
+\index{sistema HOL@sistema \HOL{}!nascondere le costanti nel|)}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!nascondere lo status di costante nel|)}
+
+\subsubsection{Adattare la profondità del pretty-print}
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!adattamento della profondità strutturale nella}
+
+La seguente reference \ML{} può essere usata per impostare la profondità massima 
+della stampa
+
+\begin{holboxed}
+\index{max_print_depth@\ml{max\_print\_depth}|pin}
+\begin{verbatim}
+   max_print_depth : int ref
+\end{verbatim}
+\end{holboxed}
+
+\index{profondità di stampa di default, per la logica HOL@profondità di stampa di default, per la logica \HOL{}|(}
+
+\noindent La profondità di default della stampa è $-1$ che è intesa significare 
+nessun massimo. I sotto termini annidati più profondamente della profondità 
+massima di stampa sono stampati come \holtxt{...}. Per esempio:
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- ADD_CLAUSES;
+> val it =
+    |- (0 + m = m) /\ (m + 0 = m) /\ (SUC m + n = SUC (m + n)) /\
+       (m + SUC n = SUC (m + n)) : thm
+
+- max_print_depth := 3;
+> val it = () : unit
+- ADD_CLAUSES;
+> val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
+\end{verbatim}
+\end{session}
+\index{profondità di stampa di default, per la logica HOL@profondità di stampa di default, per la logica \HOL{}|)}
+
+\subsection{Quotation e antiquotation}
+\label{sec:quotation-antiquotation}
+
+\index{quotation, nella logica HOL@quotation, nella logica \HOL{}!parser per}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!della sintassi di quotation|(}
+La sintassi correlata alla logica nel sistema HOL è tipicamente passato al 
+parser in forme speciali conosciute come \emph{quotation}. Una quotation di base 
+è delimitata da singoli accenti grave (cioè, \ml{`}, carattere ASCII~96). Quando 
+i valori quotation sono stampati dal loop interattivo ML, appaiono 
+piuttosto brutti a causa  dello speciale filtro che è fatto di questi 
+valori ancor prima che l'interprete li veda:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- val q = `f x = 3`;
+> val 'a q = [QUOTE " (*#loc 1 11*)f x = 3"] : 'a frag list
+\end{verbatim}
+\end{session}
+Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
+raw input form expected by the various HOL parsers.  They are also
+polymorphic (to be explained below).  Thus the function
+\ml{Parse.Term} function takes a (term) quotation and returns a term,
+and is thus of type \[ \ml{term quotation -> term}
+\]
+
+I parser dei termini e dei tipi possono essere chiamati anche implicitamente usando 
+i doppi accenti acuti come delimitatori. Per il parser dei tipi, il primo 
+carattere non spazio dopo il delimitatore principale deve essere un segno di deu punti.
+Così:
+\begin{session}
+\begin{verbatim}
+- val t = ``p /\ q``;
+> val t = ``p /\ q`` : term
+
+- val ty = ``:'a -> bool``;
+> val ty = ``:'a -> bool`` : hol_type
+\end{verbatim}
+\end{session}
+
+L'espressione legata alla variabile ML \ml{t} di sopra di fatto è espansa 
+a un'applicazione della funzione \ml{Parse.Term} alla quotation 
+argomento \ml{`p /\bs{} q`}. Analogamente, la seconda espressione si espande 
+in un'applicazione di \ml{Parse.Type} alla quotation \ml{`:'a -> bool`}.
+
+Il vantaggio importante delle quotation rispetto a normali stringhe \ML{} è 
+che esse possono includere caratteri di nuova riga e backslash senza 
+richiedere caratteri speciali di escape. Le nuove righe occorrono ogni volta che i termini vanno oltre 
+una dimensione banale, mentre i backslash occorrono non solo nella 
+rappresentazione di $\lambda$, ma anche nella sintassi per la congiunzione e 
+la disgiunzione.
+
+Se una quotation deve includere un carattere di accento grave, allora questo dovrebbe 
+essere fatto usando il carattere di escape proprio della sintassi della quotation, il 
+caret (\ml{\^}, carattere ASCII~94). Per avere un semplice caret, le cose diventano 
+leggermente più complicate. Se una sequenza di caret è seguita dallo 
+spazio vuoto (incluso un carattere di nuova riga), allora quella sequenza di caret è 
+passata al parser di HOL senza modifiche. Altrimenti, un singolo caret si può 
+ottenere scrivendone due in una riga. (L'ultima regola è analoga al 
+modo in cui in \ML{} la sintassi delle stringhe tratta il backslash.) Così:
+\begin{session}
+\begin{verbatim}
+- ``f ^` x ``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ` x`` : term
+
+- ``f ^ x``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ^ x`` : term
+\end{verbatim}
+\end{session}
+
+La regola per i caret non seguiti da uno spazio vuoto è illustrata qui, 
+includendo un esempio che accade quando non si segue la regola 
+per il quoting:
+\begin{session}
+\begin{verbatim}
+- ``f ^^+ x``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ^+ x`` : term
+
+- ``f ^+ x``;
+! Toplevel input:
+! (Parse.Term [QUOTE " (*#loc 2 3*)f ", ANTIQUOTE (+),
+!              QUOTE " (*#loc 2 7*) x"]);
+!                                                  ^
+! Ill-formed infix expression
+\end{verbatim}
+\end{session}
+
+L'uso principale del caret è d'introdurre le \emph{quntiquotation} (come 
+suggerito nell'ultimo esempio di sopra). All'interno di una quotation, l'espressioni 
+della forma {\small\verb+^(+}$t${\small\verb+)+}
+%
+\index{ antiquotation, nella logica HOL@{\small\verb+^+} (antiquotation, nella logica \HOL{})}
+%
+(dove $t$ è un'espressione \ML\ di tipo
+%
+\index{controllo di tipo, nella logica HOL@controllo di tipo, nella logica \HOL{}!antiquotation nel}
+%
+\ml{term} o \ml{type}) sono chiamate antiquotation.
+%
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!antiquotation}
+\index{antiquotation, nei termini della logica HOL@antiquotation, nei termini della logica \HOL{}}
+%
+Una quotation \holtxt{\^{}($t$)} è valutata al 
+valore \ML{} di $t$. Per esempio, {\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+} 
+è valutata allo stesso termine di {\small\verb+``x \/ (y /\ z)``+}. L'uso 
+più comune dell'antiquotation è quando il termine $t$ è legato a una variabile 
+\ML\ $x$. In questo caso {\small\verb+^(+}$x${\small\verb+)+} può essere 
+abbreviato da {\small\verb+^+}$x$.
+
+La seguente sessione illustra l'antiquotation.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- val y = ``x+1``;
+> val y = ``x + 1`` : term
+
+val z = ``y = ^y``;
+> val z = ``y = x + 1`` : term
+
+- ``!x:num.?y:num.^z``;
+> val it = ``!x. ?y. y = x + 1`` : term
+\end{verbatim}
+\end{session}
+
+\noindent Anche i tipi possono essere sottoposti all'antiquotation:
+
+\begin{session}
+\begin{verbatim}
+- val pred = ``:'a -> bool``;
+> val pred = ``:'a -> bool`` : hol_type
+
+- ``:^pred -> bool``;
+> val it = ``:('a -> bool) -> bool`` : hol_type
+\end{verbatim}
+\end{session}
+
+\noindent Le quotation sono polimorfiche, e la variabile di tipo di una 
+quotation corrisponde al tipo dell'entità che può essere sottoposta all'antiquotation 
+in quella quotation. Dal moemnto che il parser dei termini si aspetta solo termini 
+sottoposti ad antiquotation, l'antiquotation di un tipo all'interno di una quotation di termine richiede l'uso di
+\holtxt{ty\_antiq}. Per esempio,%
+%
+\index{ty_antiq@\ml{ty\_antiq}}
+
+\begin{session}
+\begin{verbatim}
+- ``!P:^pred. P x ==> Q x``;
+
+! Toplevel input:
+! Term `!P:^pred. P x ==> Q x`;
+!           ^^^^
+! Type clash: expression of type
+!   hol_type
+! cannot have type
+!   term
+
+- ``!P:^(ty_antiq pred). P x ==> Q x``;
+> val it = `!P. P x ==> Q x` : term
+\end{verbatim}
+\end{session}
+%
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!della sintassi delle quotation|)}
+
+
+
+\subsection{Retro-compatibilità della sintassi}
+
+Questa sezione del manuale documenta il cambiamento (esteso) fatto al 
+parsing di \HOL{} dei termini e dei tipi nella release Taupo (una delle 
+release HOL3) e al di là del punto di vista di un utente che non 
+vuole sapere come usare le nuove strutture, ma vuole essere sicuro 
+che il proprio vecchio codice continui a funzionare in modo pulito.
+
+I cambiamenti che possono far sì che i vecchi termini falliscano il parsing sono:
+\begin{itemize}
+\newcommand\condexp{\holtxt{$p$ => $q$ | $r$}}
+\item La precedenza delle annotazioni di tipo è completamente cambiata. Ora 
+	è un suffisso molto stretto (benché con una precedenza più debole di quella 
+	associata con l'applicazione di funzione), invece di uno debole.
+	Questo significa che \mbox{\tt (x,y:bool \# bool)} ora dovrebbe essere scritto 
+	come \mbox{\tt (x,y):bool \# bool}. La forma precedente sarà ora 
+	parsata come un'annotazione di tipo che si applica solo a \verb+y+. Questo 
+	cambiamento porta la sintassi delle logica più vicina a quella dell'SML e 
+	dovrebbe rendere in genere più facile annotare le tuple, dal momento che ora 
+	si può scrivere \[ (x\,:\,\tau_1,\;y\,:\,\tau_2,\dots z\,:\,\tau_n)
+  \] al posto di \[
+  (x\,:\,\tau_1, \;(y\,:\,\tau_2, \dots (z\,:\,\tau_n)))
+  \] dove le parentesi extra si sono dovute aggiungere solo per permettere di 
+	scrivere una forma di vincolo che occorre frequentemente.
+\item La maggior parte degli operatori aritmetici ora sono associativi a sinistra piuttosto che 
+	a destra. In particolare, $+$, $-$, $*$ e {\tt DIV} sono 
+	associativi a sinistra. In modo simile, gli analoghi operatori nelle altre 
+	teoria aritmetiche come {\tt integer} e {\tt real} sono anche associativi 
+	a sinistra. Questo porta il parser di \HOL{} in linea con la pratica 
+	matematica standard.
+\item Il binding dell'eguaglianza nell'espressioni {\tt let} è trattata esattamente 
+	nello stesso modo dell'eguaglianze negli altri contesti. Nelle versioni precedenti 
+	di \HOL, l'eguaglianze in questo contesto hanno una precedenza di bindig differente 
+	più debole.
+\item La vecchia sintassi per l'espressioni condizionali è stata 
+	rimossa. Così la stringa \holquote{\condexp} ora deve essere 
+	scritta 
+	$\holquote{\texttt{if}\;p\;\texttt{then}\;q\;\texttt{else}\;r}$.
+\item Alcune categorie lessicali sono sorvegliate più strettamente. I letterali 
+	stringa (le stringhe all'interno dei doppi apici) e quelli numerici non possono essere usati 
+	a meno che le teorie rilevanti non siano state caricate. Inoltre questi 
+	letterali non possono essere usati come variabili all'interno di scopi di binding.
+\end{itemize}
+
+
+\section{Un Semplice Gestore di Dimostrazione Interattivo}\label{sec:goalstack}
+
+Il \emph{goal stack} fornisce una semplice interfaccia di dimostrazione interattiva 
+basata sulle tattiche. Quando si vogliono usare le tattiche per decomporre una dimostrazione, sorgono 
+molti stati intermedi; il goalstack si prende cura del necessario mantenimento 
+di queste informazioni. L'implementazione dei goalstack qui riportati è un 
+ridisegno della concezione originale di Larry Paulson.
+
+La libreria goalstack è caricata automaticamente quando \HOL{} si avvia.
+
+I tipi astratti \ml{goalstack} e \ml{proofs} sono il 
+punto focale delle operazioni di dimostrazione all'indietro. il tipo \ml{proofs} può essere 
+considerato come una lista di goalstack indipendenti. La maggior parte delle operazioni agiscono sulla 
+testa della lista dei goalstack; ci sono anche operazioni così che il 
+punto focale può essere cambiato.
+
+\subsection{Avviare un goalstack di dimostrazione}
+
+\begin{hol}
+\begin{verbatim}
+   g        : term quotation -> proofs
+   set_goal : goal -> proofs
+\end{verbatim}
+\end{hol}
+
+Si ricordi che il tipo \ml{goal} è un'abbreviazione per 
+\ml{term list * term}. Per partire su un nuovo goal, si da a 
+\ml{set\_goal} un goal. Questa crea un nuovo goalstack e lo rende il 
+punto focale di ulteriori operazioni.
+
+Un'abbreviazione per \ml{set\_goal} è la funzione \ml{g}: essa 
+invoca il parser automaticamente, e non permette al goal di 
+avere alcuna assunzione.
+
+La chiamata a \ml{set\_goal}, o \ml{g}, aggiunge un nuovo tentativo di dimostrazione a 
+quelli esistenti, \textit{cioè}, al posto di sovrascrivere il tentativo 
+di dimostrazione attuale, il nuovo tentativo è impilato in cima.
+
+\subsection{Applicare una tattica a un goal}
+
+\begin{hol}
+\begin{verbatim}
+   expandf : tactic -> goalstack
+   expand  : tactic -> goalstack
+   e       : tactic -> goalstack
+\end{verbatim}
+\end{hol}
+
+Come si fa dunque di fatto a fare una dimostrazione goalstack? Nella maggior parte dei casi, 
+l'applicazione delle tattiche al goal attuale è fatto con la funzione 
+\verb+expand+. Nel raro caso in cui si voglia applicare una 
+tattica {\it invalida\/}, allora è usata \verb+expandf+. (Per una 
+spiegazione delle tattiche invalide, si veda il Capitolo 24 di \& Melham.) 
+Per espandere una tattica si può anche usare l'abbreviazione \verb+e+.
+
+
+\subsection{Undo}
+
+\begin{hol}
+\begin{verbatim}
+   b          : unit -> goalstack
+   drop       : unit -> proofs
+   dropn      : int  -> proofs
+   backup     : unit -> goalstack
+   restart    : unit -> goalstack
+   set_backup : int  -> unit
+\end{verbatim}
+\end{hol}
+
+Spesso (siamo tentati di dire {\it di solito}!) si prende una strada sbagliata 
+nel fare una dimostrazione, o si fa un errore nell'impostare un goal. Per annullare un passo 
+nel goalstack, sono usate la funzione \ml{backup} e la sua abbreviazione 
+\ml{b}. Questo ripristinerà il goalstack al suo stato 
+precedente.
+
+
+Per eseguire il backup completo al goal originale, può essere usata 
+la funzione \ml{restart}. Ovviamente, è anche importante liberarsi 
+dei tentativi di dimostrazione che sono sbagliati; per questo c'è \ml{drop}, 
+che si sbarazza del tentativo di dimostrazione corrente, e \ml{dropn}, che 
+elimina i primi $n$ tentativi di dimostrazione.
+
+
+Ogni tentativo di dimostrazione ha la sua \emph{lista-di-annullamento} degli stati 
+precedenti. La lista di annullamento per ciascun tentativo è di dimensione fissata (inzialmente 
+12). Se si vuole impostare questo valore per il tentativo corrente di dimostrazione, si può 
+usare la funzione \ml{set\_backup}. Se la dimensione della lista di 
+backup è impostata essere più piccola di quanto sia attualmente, la lista di annullamente sarà 
+immediatamente troncata. Non si può annullare un'operazione ``proofs-level'', come 
+\ml{set\_goal} o \ml{drop}.
+
+\subsection{Visualizzare lo stato del proof manager}
+
+\begin{hol}
+\begin{verbatim}
+   p            : unit -> goalstack
+   status       : unit -> proofs
+   top_goal     : unit -> goal
+   top_goals    : unit -> goal list
+   initial_goal : unit -> goal
+   top_thm      : unit -> thm
+\end{verbatim}
+\end{hol}
+
+Per visualizzare lo stato del proof manager in qualsiasi momento, si possono 
+usare le funzioni \ml{p} e \ml{status}. La prima mostra solo 
+i subgoal in cima al goalstack corrente, mentre la seconda da una 
+sintesi di ogni tentativo di dimostrazione.
+
+To get the top goal or goals of a proof attempt, use \ml{top\_goal}
+and \ml{top\_goals}. To get the original goal of a proof attempt,
+use \ml{initial\_goal}.
+
+Per ottenere il o i top goal di un tentativo di dimostrazione, si usi \ml{top\_goal}
+e \ml{top\_goals}. Per ottenere il goal originale di un tentativo di dimostrazione, 
+si usi \ml{initial\_goal}.
+
+Una volta che un teorema è stato dimostrato il goalstack che è stato usato per derivarlo 
+continua ad esistere (e anche la sua lista-di-annullamento): il suo compito principale ora è quello di 
+mantenere il teorema. Questo teorema può essere estratto con 
+\ml{top\_thm}.
+
+\subsection{Spostare il fuoco su un differente subgoal o tentativo di dimostrazione}
+
+\begin{hol}
+\begin{verbatim}
+   r             : int -> goalstack
+   R             : int -> proofs
+   rotate        : int -> goalstack
+   rotate_proofs : int -> proofs
+\end{verbatim}
+\end{hol}
+
+Spesso vogliamo spostare la nostra attenzione a un differente goal nella dimostrazione 
+attuale, o a una dimostrazione differente. Le funzioni che fanno questo sono 
+\ml{rotate} e \ml{rotate\_proofs}, rispettivamente. Le abbreviazioni 
+\ml{r} e \ml{R} sono più semplici da digitare.
+
+\section{Dimostrazione di Alto Livello---\texttt{bossLib}}
+% would use \ml{boss} above but it puts LaTeX into fits
+\label{sec:bossLib}
+\newcommand\bossLib{\ml{bossLib}}
+
+\index{bossLib@\ml{bossLib}}
+La libreria \bossLib\ introduce alcuni degli strumenti di dimostrazione di teoremi 
+più ampiamente utilizzati in \HOL{} e li fornisce di un'interfaccia conveniente 
+per l'interazione. La libreria attualmente si concentra su tre cose: 
+definizione di datatype e funzioni; operazioni interattive di dimostrazione 
+di alto livello, e composizione di ragionatori automatici. Il caricamento di \bossLib\ 
+impegna a lavorare in un contesto che fornisce già le teorie 
+dei booleani, le coppie, le somme, il tipo option, l'aritmetica, e le liste.
+
+
+\subsection{Supporto per passi di dimostrazione di alto livello}
+\label{sec:high-level-proof-steps}
+
+Le seguenti funzioni usano informazione nel database per facilitare 
+l'applicazione delle funzionalità di \HOL{} sottostanti.
+
+\index{Induct_on (tattica ML d'induzione)@\ml{Induct\_on} (tattica \ML{} d'induzione)}
+\index{Cases_on (tattica ML di case-split)@\ml{Cases\_on} (tattica \ML{} di case-split)}
+\begin{verbatim}
+   type_rws     : hol_type -> thm list
+   Induct       : tactic
+   Cases        : tactic
+   Cases_on     : term quotation -> tactic
+   Induct_on    : term quotation -> tactic
+\end{verbatim}
+
+\index{type_rws@\ml{type\_rws}}
+\index{TypeBase@\ml{TypeBase}}
+%
+La funzione \ml{type\_rws} cercherà per il tipo dato nel 
+database sottostante \ml{TypeBase} e restituirà utili regole di riscrittura per 
+quel tipo. Le regole di riscrittura del datatype sono costruite a partire dai 
+teoremi di iniettività e distinzione, insieme con la definizione di costante 
+case. Le tattiche di semplificazione \ml{RW\_TAC}, \ml{SRW\_TAC},
+e il \simpset{} \ml{(srw\_ss())} includono automaticamente questi 
+teoremi. Altre tattiche usate con altri \simpset{} avranno bisogno di questi 
+teoremi per essere aggiunte manualmente.
+
+\index{teoremi d'induzione, nella logica HOL@teoremi d'induzione, nella logica \HOL{}!per tipi di dato algebrici}
+%
+La tattica \ml{Induct} rende conveniente invocare l'induzione. Quando 
+è applicata a un goal, è esaminato il quantificatore universale principale; 
+se il suo tipo è quello di un datatype conosciuto, è estratta e applicata 
+l'appropriata tattica d'induzione strutturale.
+
+The \ml{Cases} tactic makes it convenient to invoke case
+analysis. The leading universal quantifier in the goal is examined; if
+its type is that of a known datatype, the appropriate structural
+case analysis theorem is extracted and applied.
+
+La tattica \ml{Cases\_on} prende una quotation, che è 
+parsata a un termine $M$, e poi in $M$ viene effettuata una ricerca per il goal. Se $M$ 
+è una variabile, allora si cerca per una variabile con lo stesso nome. Una volta 
+che si conosce il termine su cui effettuare lo split, il suo tipo e i fatti associati sono 
+ottenuti dal database sottostante e usati per eseguire il case 
+split. Se alcune delle variabili libere di $M$ sono legate nel goal, è fatto un tentativo 
+per rimuovere i quantificatori (universali) così che il case split abbia 
+vigore. Infine, $M$ non ha bisogno di apparire nel goal, benché dovrebbe almeno 
+contenere alcune delle variabili libere che compaiono già nel goal. Si noti 
+che la tattica \ml{Cases\_on} è più generale di \ml{Cases}, ma 
+richiede che gli sia dato un termine esplicito.
+
+\index{Induct_on (tattica ML d'induzione)@\ml{Induct\_on} (tattica \ML{} d'induzione)}
+La tattica \ml{Induct\_on} prende una quotation, che è parsata in un 
+termine $M$, e poi si cerca in $M$ il goal. Se $M$ è una 
+variabile, allora si cerca per una variabile con lo stesso nome. Una volta che il 
+termine su cui effettuare l'induzione è conosciuto, il suo tipo e i fatti associati sono 
+ottenuti dal database sottostante e usati per eseguire 
+l'induzione. Se $M$ non è una variabile, è creato una nuova variabile $v$ 
+che non occorre già nel goal, ed è usata per costruire un termine $v = M$ 
+a cui viene subordinato il goal prima che sia eseguita 
+l'induzione. Prima tuttavia, tutti i termini che contengono variabili libere da $M$ 
+sono spostate dalle assunzioni alla conclusione del goal, e tutte 
+le variabili libere dei $M$ sono quantificate universalmente. \ml{Induct\_on} è 
+più generale di \ml{Induct}, ma richiede che le venga dato un termine 
+esplicito.
+
+Sono stati forniti tre entry-point supplementari per induzioni più 
+esotiche:
+\begin{description}
+\item [\ml{completeInduct\_on}] esegue un'induzione completa sul 
+	termine denotato dalla quotazione data. L'induzione completa permette 
+	un'ipotesi d'induzione apparentemente\footnote{L'induzione completa e l'induzione 
+		matematica ordinaria sono entrambe derivabili l'una dall'altra.} più forte 
+	rispetto all'induzione matematica ordinaria: vale a dire, quando 
+	si esegue l'induzione su $n$, è permesso assumere che la proprietà valga per 
+	\emph{tutti} gli $m$ più piccoli di $n$. Formalmente: $\forall P.\ (\forall x.\
+  (\forall y.\ y < x \supset P\, y) \supset P\,x) \supset \forall x.\
+  P\,x$. Questo permette di usare l'ipotesi d'induzione più di 
+	una volta, e permette anche d'istanziare l'ipotesi d'induzione 
+	in modo diverso dal predecessore.
+
+\item [\ml{measureInduct\_on}] prende una quotation, e la suddivide 
+	per trovare un termine e una funzione misura con cui indurre.
+	Per esempio, se si volesse fare un'induzione sulla lunghezza di una lista 
+	\holtxt{L}, l'invocazione \ml{measureInduct\_on~`LENGTH L`} 
+	sarebbe appropriata.
+
+\item [\ml{recInduct}] prende un teorema d'induzione generato da 
+	\ml{Define} o \ml{Hol\_defn} e lo applica al goal attuale.
+
+\end{description}
+
+
+\subsection{Ragionatori Automatici}
+\label{sec:automated-reasoners}
+
+\ml{bossLib} riunisce i più potenti ragionatori in \HOL{} e 
+prova a rendere facile comporli in un modo semplice. Prendiamo i nostri ragionatori 
+base da \ml{mesonLib}, \ml{simpLib}, e \ml{numLib}, 
+ma il punto di \ml{bossLib} è di fornire un livello di astrazione così 
+che l'utente debba sapere solo pochi entry-point\footnote{Nella metà degli anni 1980 
+	Graham Birtwistle ha sostenuto un tale approccio, chiamandolo `HOL in Dieci 
+	Tattiche}. (Quest librerie sottostanti, e altre che forniscono strumenti analogamente 
+potenti sono descritte nel dettaglio nelle sezioni di sotto.)
+\begin{hol}
+\begin{verbatim}
+   PROVE      : thm list -> term -> thm
+   PROVE_TAC  : thm list -> tactic
+
+   METIS_TAC  : thm list -> tactic
+   METIS_PROVE: thm list -> term -> thm
+
+   DECIDE     : term quotation -> thm
+   DECIDE_TAC : tactic
+\end{verbatim}
+\end{hol}
+La regola d'inferenza \texttt{PROVE} (e la tattica corrispondente 
+\texttt{PROVE\_TAC}) prende una lista di teoremi e un termine, e tenta 
+di dimostrare il termine usando un ragionatore al primo ordine. Le due funzioni 
+\ml{METIS} eseguono la stessa funzionalità ma usano un metodo di dimostrazione 
+sottostante differente. Gli entry-point \texttt{PROVE} si riferiscono alla 
+libreria \texttt{meson}, che è ulteriormente descritta nella 
+Sezione~\ref{sec:mesonLib} di sotto. Il sistema \ml{METIS} è descritto 
+nella Sezione~\ref{sec:metisLib}. La regola d'inferenza \texttt{DECIDE} 
+(e la tattica corrispondente \texttt{DECIDE\_TAC}) applica una procedura 
+di decisione che (al meno) gestisce enunciati dell'aritmetica lineare.
+
+\begin{hol}
+\begin{verbatim}
+   RW_TAC   : simpset -> thm list -> tactic
+   SRW_TAC  : ssfrag list -> thm list -> tactic
+   &&       : simpset * thm list -> simpset  (* infix *)
+   std_ss   : simpset
+   arith_ss : simpset
+   list_ss  : simpset
+   srw_ss   : unit -> simpset
+\end{verbatim}
+\end{hol}
+%
+\index{RW_TAC@\ml{RW\_TAC}} La tattica di riscrittura \ml{RW\_TAC} lavora 
+prima aggiungendo i teoremi dati nel \simpset dato; poi 
+semplifica il goal quanto più possibile; quindi esegue dei case split 
+sull'espressioni condizionali nel goal; poi ripetutamente (1) 
+elimina tutte le ipotesi della forma $v = M$ o $M = v$ dove $v$ è 
+una variabile che non occorre in $M$, (2) rompe qualsiasi equazione tra 
+termini costruttore ovunque nel goal. Infine, 
+\ml{RW\_TAC} solleva le espressioni-\holtxt{let} all'interno del goal così che 
+l'equazioni binding appaiono come 
+abbreviazioni\index{abbreviazioni!dimostrazione basata-su-tattche} nelle 
+assunzioni.
+
+\index{SRW_TAC@\ml{SRW\_TAC}} La tattica \ml{SRW\_TAC} è analoga a 
+\ml{RW\_TAC}, ma lavora rispetto a un \simpset{} sottostante 
+(accessibile attraverso la funzione \ml{srw\_ss}) che viene aggiornato ogni volta che viene caricato 
+un nuovo contesto. Questo \simpset{} può essere aumentato attraverso 
+l'aggiornamento di ``frammenti \simpset{} '' (valori \ml{ssfrag}) e 
+teoremi. Nelle situazioni in cui ci sono grandi tipi archiviati nel 
+sistema, le performance di \ml{RW\_TAC} ne possono risentire perché 
+aggiunge ripetutamente tutti i teoremi di riscrittura per i tipi conosciuti in un 
+\simpset{} prima di attaccare il goal. Dall'altro lato, 
+\ml{SRW\_TAC} carica le riscritture nel \simpset{} al di sotto di 
+\ml{srw\_ss()} una volta sola, rendendo l'operazione più veloce in questa 
+situazione.
+
+\ml{bossLib} fornisce un numero d'insiemi di semplificazione. Il 
+simpset per la logica pura, le somme, le coppie e il tipo \ml{option} è 
+chiamato \ml{std\_ss}. Il simpset per l'aritmetica è chiamato 
+\ml{arith\_ss}, e il simpset per le liste è chiamato \ml{list\_ss}. 
+I simpset forniti da \bossLib{} aumentano strettamente di forza: 
+\ml{std\_ss} è contenuto in \ml{arith\_ss}, e \ml{arith\_ss} è 
+contenuto in \ml{list\_ss}. Il combinatore infisso \ml{\&\&} è usato 
+per costruire un nuovo \simpset{} da un \simpset{} e una lista di 
+teoremi dati. La tecnologia di semplificazione di \HOL{} è ulteriormente descritta nella 
+Sezione~\ref{sec:simpLib} di sotto e nelle \REFERENCE.
+
+\begin{hol}
+\begin{verbatim}
+   by : term quotation * tactic -> tactic (* infix 8 *)
+   SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+\end{verbatim}
+\end{hol}
+La funzione \ml{by} è un operatore infisso che prende una quotation 
+e una tattica $tac$. La quotation è parsata in un termine $M$. Quando 
+l'invocazione ``\ml{$M$ by $\mathit{tac}$}'' è applicata a un goal 
+$(A,g)$, è creato un nuovo subgoal $(A,M)$ e ad esso è applicata la tattica $tac$. 
+Se il goal è dimostrato, il teorema risultante è de-costruito e aggiunto 
+alle assunzioni del goal originale; così la dimostrazione procede con 
+il goal $((M::A), g)$. (Si noti tuttavia, che avverrà uno split dei casi 
+se la de-costruzione di $\ \vdash M$ espone delle disgiunzioni.) Così 
+\ml{by} permette di mischiare un utile stile di ragionamento `asserzionale' o `Mizar-like' 
+all'ordinaria dimostrazione basata sulle tattiche\footnote{Le dimostrazioni nel 
+	sistema Mizar sono documenti leggibili, diversamente dalla maggior parte 
+	delle dimostrazioni basate su tattiche.}
+
+L'entry-point \ml{SPOSE\_NOT\_THEN} inizia una dimostrazione per 
+contraddizione assumendo la negazione del goal e spostando la 
+negazione all'interno dei quantificatori. Essa fornisce il teorema 
+risultante come un argomento della funzione fornite, che userà il 
+teorema per costruire e applicare una tattica.
+
+\section{Dimostrazione al Primo Ordine---\texttt{mesonLib} e \texttt{metisLib}}
+\label{sec:first-order-proof}
+\index{procedure di decisione!logica del primo ordine}
+
+La dimostrazione del primo ordine è una potente tecnica di dimostrazione di teoremi che può 
+sbrigare goal complicati. Diversamente da strumenti come il semplificatore, o 
+dimostra un goal completamente, o fallisce. Non può trasformare un goal 
+in una forma differente (e più utile).
+
+\subsection{Model elimination---\texttt{mesonLib}}
+\label{sec:mesonLib}
+
+\index{meson (model elimination) procedura@\ml{meson} (model elimination) procedura}
+\index{metodo model elimination per la logica del primo ordine}
+
+La libreria \ml{meson} è un'implementazione del 
+metodo model-elimination per trovare dimostrazioni di goal nella logica 
+del primo ordine. Ci sono tre entry-point principali:
+\begin{hol}
+\begin{verbatim}
+   MESON_TAC     : thm list -> tactic
+   ASM_MESON_TAC : thm list -> tactic
+   GEN_MESON_TAC : int -> int -> int -> thm list -> tactic
+\end{verbatim}
+\end{hol}
+
+Ciascuna di quest tattiche tenta di dimostrare il goal. Esse o avranno 
+successo nel fare questo, o falliranno con un eccezione ``depth exceeded''. Se 
+il fattore di ramificazione nello spazio di ricerca è alto, le tattiche 
+\texttt{meson} possono richiedere anche molto tempo per raggiungere la profondità massima.
+
+Tutte le tattiche \texttt{meson} prendono una lista di teoremi. Questi 
+fatti extra sono usati dalla procedura di decisione per aiutare a dimostrare il goal.
+\texttt{MESON\_TAC} ignora le assunzioni del goal; gli altri due 
+entry-point includono le assunzioni come pare del sequente da 
+dimostrare.
+
+I parametri extra a \ml{GEN\_MESON\_TAC} forniscono un controllo extra del 
+comportamento dell'aumentare iterativo della profondità che è al centro della 
+ricerca per una dimostrazione. In ogni iterazione data, l'algoritmo ricerca 
+per una dimostrazione di profondità non più alta di un parametro $d$. Il 
+comportamento di default per \ml{MESON\_TAC} e \ml{ASM\_MESON\_TAC} è di iniziare $d$ 
+a 0, incrementarlo di uno ogni volta che una ricerca fallisce, e di fallire se 
+$d$ eccede il valore archiviato nel valore della reference 
+\ml{mesonLib.max\_depth}. Per contro, 
+\ml{GEN\_MESON\_TAC~min~max~step} inizia $d$ a \ml{min}, lo incrementa 
+di \ml{step}, e rinuncia quando $d$ eccede \ml{max}.
+
+La funzione \ml{PROVE\_TAC} da \ml{bossLib} esegue qualche 
+normalizzazione, prima di passare un goal e le sue assunzioni a 
+\ml{ASM\_MESON\_TAC}. A causa di questa normalizzazione, nella maggior parte 
+delle circostanze, si dovrebbe preferire \ml{PROVE\_TAC} 
+a \ml{ASM\_MESON\_TAC}.
+
+\subsection{Risoluzione---\texttt{metisLib}}
+\label{sec:metisLib}
+
+\index{procedura metis (risoluzione)@procedura \ml{metis} (risoluzione)}
+\index{metodo di risoluzione per la logica del primo ordine}
+
+La libreria \ml{metis} è un'implementazione del metodo di risoluzione 
+per trovare dimostrazioni di goal nella logica del primo ordine. Ci sono due 
+entry-point principali:
+
+\begin{hol}
+\begin{verbatim}
+   METIS_TAC   : thm list -> tactic
+   METIS_PROVE : thm list -> term -> thm
+\end{verbatim}
+\end{hol}
+
+Entrambe le funzioni prendono una lista di teoremi, e questi sono usati come lemmi 
+nella dimostrazione. \texttt{METIS\_TAC} è una tattica, e o avrà successo 
+nel dimostrare il goal, o se non ha successo o fallirà o continuerà a ciclare 
+all'infinito. \texttt{METIS\_PROVE} prende un termine $t$ e prova a dimostrare un 
+teorema con conclusione $t$: se ha successo, è restituito il teorema 
+$\vdash t$. Come per \texttt{METIS\_TAC}, potrebbe fallire o ciclare all'infinito se 
+la ricerca della dimostrazione non ha successo.
+
+La famiglia \texttt{metisLib} di strumenti di dimostrazione implementano la risoluzione 
+ordinata e il calcolo di paramodulazione ordinata per la logica del primo ordine, 
+che di solito li rende più adatti a goal che richiedono ragionamenti di eguaglianza 
+non banali rispetto alle tattiche in \texttt{mesonLib}.
+
+
+\section{Semplificazione---\texttt{simpLib}}
+\label{sec:simpLib}
+\index{semplificazione|(}
+
+Il semplificatore è il motore di riscrittura più sofisticato in \HOL{}. E' 
+raccomandato come un cavallo di battaglia di scopo generale durante la dimostrazione di teoremi 
+interattiva. Come strumenti di riscrittura, il ruolo generale del semplificatore 
+è di applicare teoremi della forma generale
+\[
+\vdash l = r
+\]
+a termini, rimpiazzando le istanze di $l$ nel termine con $r$. Così, la 
+ruotine base di semplificazione è una \emph{conversione}, che prende un termine 
+$t$, e restituisce un teorema $\vdash t = t'$, o l'eccezione 
+\ml{UNCHANGED}.
+
+La conversione di base è 
+\begin{hol}
+\begin{verbatim}
+   simpLib.SIMP_CONV : simpLib.simpset -> thm list -> term -> thm
+\end{verbatim}
+\end{hol}
+Il primo argomento, un \simpset, è il modo standard di fornire una 
+collezione di regole di (e altri dati, che saranno spiegati di sotto) al 
+semplificatore. Ci sono dei \simpset{} che accompagnano le teorie principali 
+di \HOL{}. Per esempio, il \simpset{} \ml{bool\_ss}
+in \ml{boolSimps} incorpora tutti i teoremi di riscrittura usuali desiderabili su formule 
+booleane:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
+> val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
+\end{verbatim}
+\end{session}
+Oltre alla riscrittura con i teoremi ovvi, \ml{bool\_ss} è 
+anche capace di eseguire semplificazioni che non sono esprimibili come 
+teoremi semplici:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
+> val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
+\end{verbatim}
+\end{session}
+In questo esempio, il semplificatore ha eseguito una $\beta$-riduzione nel 
+primo congiunto sotto il quantificatore esistenziale, e poi ha fatto una 
+riduzione ``unwinding'' o ``one-point'', riconoscendo che l'unico 
+valore possibile per la variabile quantificata \holtxt{x} era il valore 
+\holtxt{z}.
+
+Il secondo argomento a \ml{SIMP\_CONV} è una lista di teoremi da 
+aggiungere al \simpset fornito, e da aggiungere come regole di riscrittura addizionali.
+In questo modo, gli utenti possono aumentare temporaneamente i \simpset{} con 
+le loro proprie riscritture. Se un particolare insieme di teoremi è usato spesso come 
+un tale argomento, allora è possibile costruire un valore \simpset{} per 
+incorporare queste nuove riscritture.
+
+Per esempio, la riscrittura \ml{arithmeticTheory.LEFT\_ADD\_DISTRIB}, che 
+afferma che $p(m + n) = pm + pn$, non fa parte di alcun \simpset{} standard 
+di \HOL{}. Questo perché può causare un aumento poco attraente nella 
+dimensione del termine (ci sono due occorrenze di $p$ al lato destro 
+del teorema). Ciò nonostante, è chiaro che questo teorema può può 
+essere appropriato occasionalmente:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
+> val it = |- p * (n + 1) = p + n * p : thm
+\end{verbatim}
+\end{session}
+Si noti come il \simpset{} \ml{arith\_ss} non ha solamente semplificato il 
+termine intermedio \ml{(p * 1)}, ma ha anche riordinato l'addizione per 
+mettere il termine più semplice sulla sinistra, e ordinato gli argomenti 
+della moltiplicazione.
+
+
+\subsection{Tattiche di semplificazione}
+\label{sec:simplification-tactics}
+\index{semplificazione!tattiche}
+
+Il semplificatore è implementato intorno alla conversione \ml{SIMP\_CONV}, 
+che è una funzione per `convertire' i termini in teoremi. Per applicare 
+il semplificatore ai goal (alternativamente, per eseguire dimostrazioni basate su tattiche 
+con il semplificatore), \HOL{} fornisce cinque tattiche, ognuna delle quali è 
+disponibile in \ml{bossLib}.
+
+\subsubsection{\ml{SIMP\_TAC : simpset -> thm list -> tactic}}
+\index{SIMP_TAC@\ml{SIMP\_TAC}}
+
+\ml{SIMP\_TAC} è la tattica di semplificazione più semplice: essa tenta di 
+semplificare il goal attuale (ignorando le assunzioni) usando il \simpset{} 
+dato e i teoremi aggiuntivi. Non è niente di più che il 
+sollevamento della sottostante conversione \ml{SIMP\_CONV} al livello 
+di tattica attraverso l'uso della funzione standard \ml{CONV\_TAC}.
+
+\subsubsection{\ml{ASM\_SIMP\_TAC : simpset -> thm list -> tactic}}
+\index{ASM_SIMP_TAC@\ml{ASM\_SIMP\_TAC}}
+
+Come \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} semplifica il goal attuale 
+(lasciando le assunzioni intatte), ma include le assunzioni 
+del goal come regole di riscrittura extra. Così:
+\begin{session}
+\begin{verbatim}
+1 subgoal:
+> val it =
+    P x
+    ------------------------------------
+      x = 3
+     : goalstack
+
+- e (ASM_SIMP_TAC bool_ss []);
+OK..
+1 subgoal:
+> val it =
+    P 3
+    ------------------------------------
+      x = 3
+     : goalstack
+\end{verbatim}
+\end{session}
+\noindent
+In questo esempio, \ml{ASM\_SIMP\_TAC} ha usato \holtxt{x = 3} come una 
+regola di riscrittura addizionale, e ha sostituito la \holtxt{x} di \holtxt{P x}
+con \holtxt{3}. Quando un'assunzione è usata da \ml{ASM\_SIMP\_TAC} essa 
+è convertita in regole di riscrittura nello stesso modo dei teoremi passati nella 
+lista data come secondo argomento della tattica. Per esempio, 
+un'assunzione \holtxt{\~{}P} sarà trattata come la riscrittura \holtxt{|- P = F}.
+
+\subsubsection{\ml{FULL\_SIMP\_TAC : simpset -> thm list -> tactic}}
+\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+
+\noindent
+La tattica \ml{FULL\_SIMP\_TAC} semplifica non solo la conclusione di 
+un goal ma anche le sue assunzioni. Essa procede semplificando 
+ciascuna assunzione una alla volta, usando inoltre le assunzioni precedenti nella 
+semplificazione delle assunzioni successive. Dopo essere stata semplificata, ciascuna 
+assunzione è ri-aggiunta alla lista di assunzioni del goal con la 
+tattica \ml{STRIP\_ASSUME\_TAC}. Questo significa che le assunzioni che 
+diventano congiunzioni avranno ciascuno dei congiunti assunti separatamente. 
+Le assunzioni che diventano disgiunzioni faranno sì che un nuovo sotto goal sia 
+creato per ciascun disgiunto. Se un'assunzione è semplificata a falso, 
+questo risolverà il goal.
+
+\ml{FULL\_SIMP\_TAC} attacca le assunzioni nell'ordine in cui 
+appaiono nella lista dei termini che rappresentano le assunzioni 
+del goal. Tipicamente quindi, la prima assunzione da semplificare 
+sarà l'assunzione aggiunta più di recente. Vista alla luce della 
+stampa dei goal di \ml{goalstackLib}, \ml{FULL\_SIMP\_TAC} si fa 
+strada lungo l'elenco delle assunzioni, dal basso verso l'alto.
+
+La seguente sessione dimostra un uso semplice di \ml{FULL\_SIMP\_TAC}:
+\begin{session}
+\begin{verbatim}
+    x + y < z
+    ------------------------------------
+      0.  f x < 10
+      1.  x = 4
+     : goalstack
+
+- e (FULL_SIMP_TAC bool_ss []);
+OK..
+1 subgoal:
+> val it =
+    4 + y < z
+    ------------------------------------
+      0.  f 4 < 10
+      1.  x = 4
+     : goalstack
+\end{verbatim}
+\end{session}
+In questo esempio, l'assunzione \holtxt{x = 4} ha fatto sì che la \holtxt{x}
+nell'assunzione \holtxt{f x < 10} sia stata rimpiazzata da \holtxt{4}. La 
+\holtxt{x} nel goal è stata sostituita in modo analogo. Se le assunzioni fossero 
+apparse nell'ordine opposto, solo la \holtxt{x} del goal sarebbe 
+cambiata.
+
+La prossima sessione dimostra un comportamento ancora più interessante.
+\begin{session}
+\begin{verbatim}
+> val it =
+    f x + 1 < 10
+    ------------------------------------
+      x <= 4
+     : goalstack
+
+- e (FULL_SIMP_TAC bool_ss [arithmeticTheory.LESS_OR_EQ]);
+OK..
+2 subgoals:
+> val it =
+    f 4 + 1 < 10
+    ------------------------------------
+      x = 4
+
+    f x + 1 < 10
+    ------------------------------------
+      x < 4
+     : goalstack
+\end{verbatim}
+\end{session}
+In questo esempio, il goal è stato riscritto con il teorema che afferma
+\[
+\vdash x \leq y \equiv x < y \lor x = y
+\]
+Sostituendo l'assunzione con una disgiunzione che risulta in due sotto goal. 
+Nel secondo di questi, l'assunzione \holtxt{x = 4} ha ulteriormente 
+semplificato il resto del goal.
+
+\subsubsection{\ml{RW\_TAC : simpset -> thm list -> tactic}}
+\index{RW_TAC@\ml{RW\_TAC}}
+
+Nonostante il suo tipo sia lo stesso delle tattiche di semplificazioni già 
+descritte, \ml{RW\_TAC} è una tattica ``aumentata''. Essa è aumentata in 
+due modi:
+\begin{itemize}
+\item Quando si semplifica il goal, il \simpset{} fornito è aumentato 
+	non solo con i teoremi passati esplicitamente nel secondo argomento, 
+	ma anche con tutte le regole di riscrittura dalla \ml{TypeBase}, e 
+	anche con le assunzioni del goal.
+%
+  \index{TypeBase@\ml{TypeBase}}
+\item \ml{RW\_TAC} also does more than just perform simplification.
+  It also repeatedly ``strips'' the goal.  For example, it moves the
+  antecedents of implications into the assumptions, splits
+  conjunctions, and case-splits on conditional expressions.  This
+  behaviour can rapidly remove a lot of syntactic complexity from
+  goals, revealing the kernel of the problem.  On the other hand, this
+  aggressive splitting can also result in a large number of
+  sub-goals.  \ml{RW\_TAC}'s augmented behaviours are intertwined with
+  phases of simplification in a way that is difficult to describe.
+\end{itemize}
+
+\subsubsection{\ml{SRW\_TAC : ssfrag list -> thm list -> tactic}}
+\index{SRW_TAC@\ml{SRW\_TAC}}
+
+La tattica \ml{SRW\_TAC} ha un tipo differente dalle altre 
+tattiche di semplificazione. Non prende un \simpset{} come un argomento. 
+Piuttosto la sua operazione si fonda sempre sul \simpset{} incorporato 
+\ml{srw\_ss()} (ulteriormente descritto nella Sezione~\ref{sec:srw_ss}). I 
+teoremi forniti come il secondo argomento di \ml{SRW\_TAC} sono trattati nello 
+stesso modo delle altre tattiche di semplificazione.  Infine, la 
+lista dei frammenti \simpset{} sono incorporati nel \simpset{} 
+sottostante, permettendo all'utente di fondere capacità di semplificazione 
+aggiuntive se lo desidera.
+
+Per esempio, per includere la procedura di decisione Presburger, si potrebbe 
+scrivere
+\begin{hol}
+\begin{verbatim}
+   SRW_TAC [ARITH_ss][]
+\end{verbatim}
+\end{hol}
+I frammenti \Simpset{} sono descritti di sotto nella 
+Sezione~\ref{sec:simpset-fragments}.
+
+La tattica \ml{SRW\_TAC} esegue la stessa combinazione di semplificazione e 
+goal-splitting che fa \ml{RW\_TAC}. Le principali differenze tra le 
+due tattiche risiedono nel fatto che la seconda può essere inefficiente quando 
+si lavora con una grande \ml{TypeBase}, e nel fatto che lavorare con 
+\ml{SRW\_TAC} risparmia dal dover costruire esplicitamente 
+dei \simpset{} che includano tutte le riscritture ``appropriate'' del contesto 
+attuale. Il secondo ``vantaggio'' è basato sull'assunzione che 
+\ml{(srw\_ss())} non include mai riscritture inappropriate. La presenza 
+di riscritture non utilizzate non è mai un problema: la presenza di riscritture che 
+fanno la cosa sbagliata può essere causa di maggiore irritazione.
+
+\subsection{I \simpset{} standard}
+\label{sec:standard-simpsets}
+
+\HOL{} è fornito con un numero di \simpset{} standard. Ognuno di questi è 
+accessibile dall'interno di \ml{bossLib}, benché alcuni si originano in altre 
+strutture.
+
+\subsubsection{\ml{pure\_ss} and \ml{bool\_ss}}
+\label{sec:purebool-ss}
+%
+\index{pure_ss@\ml{pure\_ss}}
+%
+Il \simpset{} \ml{pure\_ss} (definito nella struttura \ml{pureSimps}) 
+non contiene del tutto teoremi di riscrittura, e gioca il ruolo di una tabula 
+rasa all'interno dello spazio dei \simpset{} possibili. Quando si costruisce un 
+\simpset{} completamente nuovo, \ml{pure\_ss} è un punto di partenza possibile. 
+Il \simpset{} \ml{pure\_ss} ha solo due componenti: regole di congruenza 
+per specificare come traversare i termini. e una funzione che trasforma 
+i teoremi in regole di riscrittura. Le regole di congruenza sono ulteriormente descritte 
+nella Sezione~\ref{sec:advanced-simplifier}; la generazione di regole 
+di riscrittura da teoremi è descritta nella 
+Sezione~\ref{sec:simplifier-rewriting}.
+
+\index{bool_ss (insieme di semplificazione)@\ml{bool\_ss} (insieme di semplificazione)}
+%
+Il \simpset{} \ml{bool\_ss} (definito nella struttura \ml{boolSimps}) è 
+spesso usato quando altri \simpset{} potrebbero essere troppo. Esso contiene 
+regole di riscritture per i connettivi booleani, e poco altro. Esso 
+contiene tutti i teoremi di de~Morgan per spostare le negazioni tra i 
+connettivi (congiunzione, disgiunzione, implicazione e espressioni 
+condizionali), incluse le regole dei quantificatori che hanno $\neg(\forall
+x.\,P(x))$ e $\neg(\exists x.\,P (x))$ sui loro lati sinistri. Esso 
+contiene anche le regole che specificano il comportamento dei connettivi 
+quando le costanti \holtxt{T} e \holtxt{F} appaiono come loro 
+argomenti. (Una di queste regole è \holtxt{|- T /\bs{} p = p}.)
+
+Come nell'esempio di sopra, \ml{bool\_ss} esegue anche 
+delle $\beta$-riduzioni e svolgimenti di un solo punto. Questi ultimi trasformano termini 
+della forma \[
+\exists x.\;P(x)\land\dots (x = e) \dots\land Q(x)
+\]
+in
+\[
+P(e) \land \dots \land Q(e)
+\]
+Analogamente, lo svolgimento trasformerà $\forall x.\;(x = e)
+\Rightarrow P(x)$ in $P(e)$.
+
+Infine, \ml{bool\_ss} include anche regole di congruenza che permettono 
+al semplificatore di fare delle assunzioni aggiuntive quando sono semplificate 
+implicazioni ed espressioni condizionali. Questa caratteristica è spiegata 
+ulteriormente nella Sezione~\ref{sec:simplifier-rewriting} di sotto, ma può essere 
+illustrata da qualche esempio (il primo dimostra anche lo svolgimento 
+sotto un quantificatore universale):
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
+> val it = |- (!x. (x = 3) /\ P x ==> Q x /\ P 3) = P 3 ==> Q 3 : thm
+
+- SIMP_CONV bool_ss [] ``if ~(x = 3) then P x else Q x``;
+> val it = |- (if ~(x = 3) then P x else Q x) =
+              (if ~(x = 3) then P x else Q 3) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{\ml{std\_ss}}
+%
+\index{std_ss (insieme di semplificazione)@\ml{std\_ss} (insieme di semplificazione)}
+%
+Il \simpset{} \ml{std\_ss} è definito in \ml{bossLib}, e aggiunge 
+regole di riscrittura pertinenti ai tipi di somme, coppie, option e 
+numeri naturali a \ml{bool\_ss}.
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+> val it = |- FST (x,y) + OUTR (INR z) = x + z : thm
+
+- SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
+> val it = |- (case SOME x of NONE => P | SOME v => f v) = f x : thm
+\end{verbatim}
+\end{session}
+
+Con i numeri naturali, il \simpset{} \ml{std\_ss} può calcolare 
+con valori ground, e anche includere una suite di ``riscritture ovvie'' 
+per formule che includono variabili.
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
+> val it = |- P (0 <= x) /\ Q (y + x - y) = P T /\ Q x : thm
+
+- SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
+> val it = |- 23 * 6 + 7 ** 2 - 31 DIV 3 = 177 : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{\ml{arith\_ss}}
+%
+\index{arith_ss (insieme di semplificazione)@\ml{arith\_ss} (insieme di semplificazione)}
+%
+Il \simpset{} \ml{arith\_ss} (definito in \ml{bossLib}) estende 
+\ml{std\_ss} aggiungendo la capacità di decidere formule dell'aritmetica 
+Presburger, e per normalizzare espressioni aritmetiche (raccogliendo 
+coefficienti , e ri-ordinazione di addendi). La sottostante procedura di decisione 
+per i numeri naturali è quella descritta nella 
+Sezione~\ref{sec:numLib} di sotto.
+
+Questi due aspetti del \simpset{} \ml{arith\_ss} sono dimostrati 
+qui:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
+> val it = |- x < 3 /\ P x ==> x < 20 DIV 2 = T : thm
+
+- SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
+> val it = |- 2 * x + y - x + y = x + 2 * y : thm
+\end{verbatim}
+\end{session}
+Si noti che la sottrazione su numeri naturali funziona in modi che possono 
+sembrare non intuitivi. In particolare, la normalizzazione del coefficiente non può 
+occorrere quando atteso prima:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
+! Uncaught exception:
+! UNCHANGED
+\end{verbatim}
+\end{session}
+Sui numeri naturali, l'espressione $2 x + y - z + y$  non è 
+uguale a $2 x + 2 y - z$. In particolare, queste espressioni non sono 
+uguali quando  $2x + y < z$.
+
+\subsubsection{\ml{list\_ss}}
+%
+\index{list_ss (insieme di semplificazione)@\ml{list\_ss} (insieme di semplificazione)}
+%
+L'ultimo valore \simpset{} puro in \ml{bossLib}, \ml{list\_ss} aggiunge 
+teoremi di riscrittura circa il tipo delle liste a \ml{arith\_ss}. Queste 
+riscritture includono i fatti ovvi circa i costruttori del tipo lista 
+\holtxt{NIL} e \holtxt{CONS}, come il fatto che \holtxt{CONS} è 
+iniettivo:
+\begin{hol}
+\begin{verbatim}
+   (h1 :: t1 = h2 :: t2) = (h1 = h2) /\ (t1 = t2)
+\end{verbatim}
+\end{hol}
+Opportunamente, \ml{list\_ss} include anche delle riscritture per le funzioni 
+definite per ricorsione primitiva sulle liste. Esempi includono 
+\holtxt{MAP}, \holtxt{FILTER} e \holtxt{LENGTH}. Così:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
+> val it = |- MAP (\x. x + 1) [1; 2; 3; 4] = [2; 3; 4; 5] : thm
+
+- SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
+> val it = |- FILTER (\x. x < 4) [1; 2; y + 4] = [1; 2] : thm
+
+- SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
+> val it = |- LENGTH (FILTER ODD [1; 2; 3; 4; 5]) = 3 : thm
+\end{verbatim}
+\end{session}
+Questi esempi dimostrano come il semplificatore può essere usato come un valutatore 
+simbolico di scopo generale per termini che assomigliano in grande misura a quelli 
+che appaiono in un linguaggio di programmazione funzionale. Si noti che 
+questa funzionalità è fornita anche da \ml{computeLib} (si veda 
+la Sezione~\ref{sec:computeLib} di sotto); \ml{computeLib} è più 
+efficiente, ma meno generale del semplificatore. Per esempio:
+\begin{session}
+\begin{verbatim}
+- EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
+> val it =
+    |- FILTER (\x. x < 4) [1; 2; y + 4] =
+       1::2::(if y + 4 < 4 then [y + 4] else []) : thm
+\end{verbatim}
+\end{session}
+
+\subsubsection{Il \simpset{} ``stateful''---\ml{srw\_ss()}}
+\label{sec:srw_ss}
+\index{srw_ss (insieme di semplificazione)@\ml{srw\_ss} (insieme di semplificazione)}
+
+L'ultimo \simpset{} esportato da \ml{bossLib} è nascosto dietro una 
+funzione. Il valore \ml{srw\_ss} ha il tipo \ml{unit -> simpset}, così 
+che si deve digitare \ml{srw\_ss()}  per ottenere un valore \simpset{}. 
+Questo uso di un tipo funzione permette al \simpset{} sottostante di essere 
+archiviato in una reference \ML{}, e permette ad esso di essere aggiornato 
+dinamicamente. In questo modo, la trasparenza referenziale è deliberatamente 
+spezzata. Tutti gli altri \simpset{} si comporteranno sempre in modo identico: 
+\ml{SIMP\_CONV~bool\_ss} è la stessa routine di semplificazione ovunque 
+e ogni volta che è chiamata.
+
+Per contro, \ml{srw\_ss} è progettata per essere aggiornata. Quando una teoria è 
+caricata, quando un nuovo tipo è definito. il valore dietro \ml{srw\_ss()} 
+cambia, e il comportamento di \ml{SIMP\_CONV} applicato a 
+\ml{(srw\_ss())} cambia con esso. La filosofia di sviluppo dietro 
+\ml{srw\_ss} è che essa dovrebbe essere sempre una ragionevole prima scelta in 
+tutte le situazioni dove il semplificatore è utilizzato.
+
+Questa versatilità è illustrata nel seguente esempio:
+\begin{session}
+\begin{verbatim}
+- Hol_datatype `tree = Leaf | Node of num => tree => tree`;
+<<HOL message: Defined type: "tree">>
+> val it = () : unit
+
+- SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
+<<HOL message: Initialising SRW simpset ... done>>
+> val it =
+    |- (Node x Leaf Leaf = Node 3 t1 t2) =
+       (x = 3) /\ (Leaf = t1) /\ (Leaf = t2) : thm
+
+- load "pred_setTheory";
+> val it = () : unit
+
+- SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
+> val it = |- x IN {y | y < 6} = x < 6 : thm
+\end{verbatim}
+\end{session}
+%
+Gli utenti possono aumentare il \simpset{} stateful da soli con la funzione
+%
+\begin{holboxed}
+\index{export_rewrites@\ml{export\_rewrites}}
+\begin{verbatim}
+   BasicProvers.export_rewrites : string list -> unit
+\end{verbatim}
+\end{holboxed}
+Le stringhe passate a \ml{export\_rewrites} sono i nomi di teoremi 
+nell'attuale segmento di teoria (quelli che saranno esportati quando 
+\ml{export\_theory} è chiamata). Non solo questi teoremi sono aggiunti 
+al \simpset{} sottostante nella sessione attuale, ma essi saranno 
+aggiunti nelle sessioni future quando la teoria è ricaricata.
+\begin{session}
+\begin{verbatim}
+- val tsize_def = Define`
+  (tsize Leaf = 0) /\
+  (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+`;
+Definition has been stored under "tsize_def".
+> val tsize_def =
+    |- (tsize Leaf = 0) /\
+       !n t1 t2. tsize (Node n t1 t2) = n + tsize t1 + tsize t2 : thm
+
+- val _ = BasicProvers.export_rewrites ["tsize_def"];
+
+- SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
+> val it = |- tsize (Node 4 (Node 6 Leaf Leaf) Leaf) = 10 : thm
+\end{verbatim}
+\end{session}
+
+Come regola generale, \ml{(srw\_ss())} include tutte le ``riscritture ovvie'' 
+del suo contesto, così come codice per fare calcoli standard 
+(come l'aritmetica esegita nell'esempio di sopra). Non 
+include procedure di decisione che possono esibire performance occasionalmente 
+povere, così i frammenti \simpset{} che contengono queste procedure 
+dovrebbero essere aggiunte manualmente a quelle invocazioni di semplificazione che ne 
+hanno bisogno.
+
+\subsection{Frammenti \simpset{}}
+\label{sec:simpset-fragments}
+\index{semplificazione!frammenti simpset}
+
+Il frammento \simpset{} è il blocco base di costruzione usato per 
+costruire valori \simpset{}. C'è una funzione base che 
+esegue questa costruzione:
+\begin{hol}
+\begin{verbatim}
+   op ++  : simpset * ssfrag -> simpset
+\end{verbatim}
+\end{hol}
+dove \ml{++} è un infisso. In generale, è meglio costruire sopra 
+il \simpset{} \ml{pure\_ss} o uno dei sui discendenti al fine di 
+selezionare la funzione ``filtro'' di default per convertire teoremi in 
+regole di riscrittura. (Questo processo di filtro è descritto di sotto nella 
+Sezione~\ref{sec:generating-rewrite-rules}.)
+
+Per le teorie principali (o gruppi di esse), una collezione di 
+frammenti \simpset{} rilevanti si trova di solito nel modulo \ml{<thy>Simps}, 
+dove \ml{<thy>} è il nome della teoria. Per esempio, i frammenti 
+\simpset{}  per la teoria dei numeri naturali si trovano in 
+\ml{numSimps}, e i frammenti per le liste si trovano in \ml{listSimps}.
+
+Alcuni frammenti \simpset{} standard della distribuzione sono descritti 
+nella Tabella~\ref{table:ssfrags}. Questi ed altri frammenti \simpset{} 
+sono descritti in maggior dettaglio nelle \REFERENCE.
+
+\begin{table}[htbp]
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lp{0.65\textwidth}}
+\ml{BOOL\_ss} &
+Riscritture standard per gli operatori booleani
+(congiunzione, negazione \&c), così come una conversione per eseguire 
+$\beta$-riduzioni.  (In \ml{boolSimps}.)
+\\
+\ml{CONG\_ss} & Regole di congruenza per l'implicazione e le espressioni
+condizionali. (In \ml{boolSimps}.)
+\\
+\ml{ARITH\_ss} &
+La procedura di decisione sui numeri naturali 
+per l'aritmetica universale Presburger. (In \ml{numSimps}.)
+\\
+\ml{PRED\_SET\_AC\_ss} & Normalizzazione-AC per unioni e intersezioni 
+su insiemi. (In \ml{pred\_setSimps}.)
+\end{tabular}
+\end{center}
+\caption{Alcuni dei frammenti \simpset{} standard di \HOL{}}
+\label{table:ssfrags}
+\end{table}
+
+I frammenti \simpset{} in definitiva sono costruiti con il costruttore 
+\ml{SSFRAG}:
+\begin{hol}
+\begin{verbatim}
+   SSFRAG : {
+     convs  : convdata list,
+     rewrs  : thm list,
+     ac     : (thm * thm) list,
+     filter : (controlled_thm -> controlled_thm list) option,
+     dprocs : Traverse.reducer list,
+     congs  : thm list,
+     name   : string option
+   } -> ssfrag
+\end{verbatim}
+\end{hol}
+Una descrizione completa per i vari campi del record passato a 
+\ml{SSFRAG}, e il loro significato è dato in \REFERENCE. La 
+funzione \ml{rewrites} fornisce una strada semplice per costruire un 
+frammento che include solo una lista di riscritture:
+\begin{hol}
+\begin{verbatim}
+   rewrites : thm list -> ssfrag
+\end{verbatim}
+\end{hol}
+
+\subsection{Riscrittura con il semplificatore}
+\label{sec:simplifier-rewriting}
+
+La riscrittura è l'``operazione core'' del semplificatore. Questa sezione 
+descrive l'azione di riscrittura in maggior dettaglio.
+
+
+\subsubsection{Riscrittura di base}
+\label{sec:basic-rewriting}
+
+Data una regola di riscrittura della forma \[
+\vdash \ell = r
+\]
+il semplificatore eseguirà una scansione dall'alto verso il basso del termine di input $t$, 
+cercando per dei \emph{match}~(si veda la Sezione~\ref{sec:simp-homatch} di sotto) 
+di $\ell$ all'interno di $t$. Questo match occorrerà in un sotto termine di $t$ 
+(chiamiamolo $t_0$) e restituirà un'istanziazione. Quando questa 
+istanziazione è applicata alla regola di riscrittura, il risultato sarà una nuova 
+equazione della forma \[
+\vdash t_0 = r'
+\]
+Poiché il sistema a quel punto ha un teorema che esprime un'equivalenza per 
+$t_0$ può creare la nuova equazione \[
+  \vdash \underbrace{(\dots t_0\dots)}_t = (\dots r' \dots)
+\]
+L'attraversamento del termine da semplificare è ripetuto fino a quando non si trova  
+alcun match ulteriore per le regole di riscrittura del semplificatore. La 
+strategia di attraversamento è
+\begin{enumerate}
+\item \label{enum:simp-traverse-toplevel}%
+  Mentre c'è un qualsiasi match per le regole di riscrittura archiviate a questo livello, 
+	si continui ad applicarle. \emph{Non} si può fare affidamento sull'ordine in cui le regole 
+	di riscrittura sono applicate, eccetto quando un \simpset{} 
+	include due riscritture con esattamente gli stessi lati sinistri. la 
+	riscrittura aggiunta per ultima sarà quella preferita per match. (Questo permette una 
+	certa misura di overloading della riscrittura nella costruzione dei 
+	\simpset{}.)
+%% may not wish to own up to above detail
+\item \label{enum:simp-traverse-recurse}%
+  Eseguire una ricorsione sui sotto termini del termine. Il modo in cui i termini sono 
+	attraversati a questo passo può essere controllato da \emph{regole di 
+		congruenza}~(una caratteristica avanzata, si veda la Sezione~\ref{sec:simp-congruences} 
+	di sotto)
+\item Se il passo~\ref{enum:simp-traverse-recurse} ha cambiato il termine 
+	completamente, si provi un'altra fase di riscrittura a questo livello. Se questo fallisce, 
+	o se non c'è stato alcun cambiamento dall'attraversamento dei sotto-termin, si provi 
+	qualsiasi procedura di decisione incorporata (si veda 
+	la Sezione~\ref{sec:simp-embedding-code}). Se la fase di riscrittura o 
+	qualsiasi delle procedure di decisione ha alterato il termine, ri ritorni al 
+	passo~\ref{enum:simp-traverse-toplevel}. Altrimenti di termini.
+\end{enumerate}
+
+\subsubsection{Riscrittura condizionale}
+\index{semplificazione!riscrittura condizionale}
+
+La descrizione di sopra è una leggera semplificazione dello stato reale delle 
+cose. Una caratteristica particolarmente potente del semplificatore è che 
+essa realmente usa regole di riscrittura \emph{condizionali}. Questi sono teoremi 
+della forma
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+Quando il semplificatore trova un match per il termine $\ell$ durante il suo attraversamento 
+del termine, tenta di scaricare la condizione $P$. Se il 
+semplificatore può semplificare il termine $P$ a vero, allora l'istanza di 
+$\ell$ nel termine attraversato può essereo sostituito dall'appropriata 
+istanziazione di $r$.
+
+Quando si semplifica $P$ (un termine che non necessariamente nemmeno occorre 
+nell'originale), il semplificatore si può trovare ad applicare un'altra 
+regola di riscrittura condizionale. Per fermare eccessive applicazioni 
+ricorsive, il semplificatore tiene traccia di uno stack di tutte le 
+condizioni collaterali su cui sta lavorando. Il semplificatore smette la dimostrazione 
+su una condizione collaterale se nota una ripetizione in questo stack. 
+C'è anche una variabile accessibile dall'utente, \ml{Cond\_rewr.stack\_limit} 
+che specifica la dimensione massima dello stack che il semplificatore può 
+di usare.
+
+Le riscritture condizionali possono essere estremamente utili. Per esempio, i teoremi 
+circa la divisione e il modulo sono spesso accompagnate da condizioni 
+che richiedono che il divisore non sia zero. Il semplificatore può spesso 
+scaricare queste, in particolare se include una procedura di decisione 
+aritmetica. Per esempio, il teorema \ml{MOD\_MOD} dalla teoria 
+\ml{arithmetic} afferma
+\[
+\vdash 0 < n \;\Rightarrow \; (k\,\textsf{MOD}\,n)\,\textsf{MOD}\,n = k
+\,\textsf{MOD}\,n
+\]
+Il semplificatore (in modo specifico, \ml{SIMP\_CONV~arith\_ss~[MOD\_MOD]}) 
+può usare questo teorema per semplificare il termine 
+\holtxt{(k~MOD~(x~+~1))~MOD~(x~+~1)}: la procedura di decisione 
+aritmetica può dimostrare che \holtxt{0 < x + 1}, giustificando la riscrittura.
+
+Benché le regole riscrittura condizionali siano potenti, non ogni teorema della 
+forma descritta di sopra è una scelta appropriata. Una riscrittura scelta male 
+può causare un considerevole degrado delle performance del semplificatore, dal momento 
+che perde tempo nel tentare di dimostrare condizioni collaterali impossibili. Per 
+esempio, il semplificatore non è molto bravo a trovare testimoni 
+esistenziali. Questo significa che la riscrittura condizionale \[
+\vdash x < y \land y < z \Rightarrow (x < z = \top)
+\]
+non funzionerà come si potrebbe sperare. In generale, il semplificatore non è un 
+buon strumento per eseguire ragionamenti di transitività. (Si provi invece uno strumento 
+al primo ordine come \ml{PROVE\_TAC})
+
+\subsubsection{Generare regole di riscrittura per i teoremi}
+\label{sec:generating-rewrite-rules}
+\index{teoremi equazionali, nella logica HOL@teoremi equazionali, nella logica \HOL{}!uso dei ... nel semplificatore}
+
+Ci sono due strade per cui un teorema per la riscrittura può essere passato al 
+semplificatore: o come un argomento esplicito a una delle funzioni 
+\ML{} (\ml{SIMP\_CONV}, \ml{ASM\_SIMP\_TAC} ecc) che prendono liste di 
+teoremi come argomenti, o includendoli in un frammento \simpset{} 
+che è incorporato in un \simpset. In entrambi i casi, questi teoremi sono 
+trasformati prima di essere usati. Le trasformazioni applicate sono 
+progettate per rendere l'uso interattivo quanto più conveniente possibile.
+
+In particolare, non è necessario passare al semplificatore teoremi 
+che sono esattamente della forma
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+Piuttosto, il semplificatore trasformerà i suoi teoremi di input per estrarre 
+le riscritture di questa stessa forma. L'esatta trasformazione eseguita è 
+dipendente dal \simpset{} utilizzato: ciascun \simpset{} contiene la sua 
+propriat funzione ``filtro'' che è applicata ai teoremi che sono aggiunti ad 
+esso. La maggior parte dei \simpset{} usano la funzione filtro dal \simpset{} 
+\ml{pure\_ss} (si veda la Sezione~\ref{sec:purebool-ss}). Tuttavia, quando un 
+frammento \simpset{} è aggiunto a un simpset completo, il frammento può 
+specificare un componente filtro addizionale. Se specificata, questa funzione 
+è di tipo \ml{controlled\_thm~->~controlled\_thm~list}, ed è applicata 
+ad ognuno dei teoremi prodotti dal filtro del \simpset{} esistente.
+%
+\index{semplificazione!garantire la terminazione}
+(Un teorema ``controllato'' è uno che è accompagnato da un pezzo di 
+dati di ``controllo'' che esprimono il limite (se ne esiste uno) sul numero di volte 
+che può essere applicato. Si veda la Sezione~\ref{sec:simp-special-rewrite-forms} 
+per come gli utenti possono introdurre questi limiti. Il tipo di ``controllo'' 
+appare nel modulo \ML{} \ml{BoundedRewrites}.)
+
+Il filtro che produce riscritture in \ml{pure\_ss} elimina 
+le congiunzioni, le implicazioni e le quantificazioni universali fino a quando o ha 
+un teorema di eguaglianza, o qualche altra forma booleana. Per esempio, 
+il teorema \ml{ADD\_MODULUS} afferma
+\[
+\vdash
+\begin{array}[t]{l}
+(\forall n\;x.\;\;0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n)) \;\;\land\\
+(\forall n\;x.\;\;0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n))
+\end{array}
+\]
+Questo teorema si trasforma in due regole di riscrittura \[
+\begin{array}{l}
+\vdash 0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n = x\,\textsf{MOD}\,n)\\
+\vdash 0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n = x\,\textsf{MOD}\,n)
+\end{array}
+\]
+
+Se guardando a un'eguaglianza dove ci sono delle variabili sul 
+lato destro che non occorrono sul lato sinistro, il 
+semplificatore trasforma questo nella regola \[
+\vdash (\ell = r) = \top
+\]
+Analogamente, se è una negazione booleana $\neg P$, diventa la regola \[
+\vdash P = \bot
+\]
+e altre formule booleane $P$ diventano \[
+\vdash P = \top
+\]
+
+Infine, se guardando a un'eguaglianza il cui lato sinistro è esso stesso 
+un'eguaglianza, e dove il lato destro non è a sua volta un'eguaglianza, 
+il semplificatore trasforma $(x = y) = P$ nelle due regole
+\[
+\begin{array}{l}
+\vdash (x = y) = P\\
+\vdash (y = x) = P
+\end{array}
+\]
+Questo è generalmente utile. Per esempio, un teorema come 
+\[
+\vdash \neg(\textsf{SUC}\,n = 0)
+\]
+farà sì che il semplificatore riscriva entrambi $(\textsf{SUC}\,n = 0)$ e 
+$(0 = \textsf{SUC}\,n)$ a falso.
+
+La restrizione che il lato destro di una tale regola non sia esso stesso 
+un'eguaglianza è una semplifice euristica che previene alcune forme di looping.
+
+
+\subsubsection{Regole di riscrittura di matching}
+\label{sec:simp-homatch}
+
+Dato un teorema di riscrittura $\vdash \ell = r$, il primo passo di 
+esecuzione di una riscrittura è determinare se $\ell$ può o meno essere 
+istanziata così da renderla uguale al termine che è 
+riscritto. Questo processo è conosciuto come matching. Per esempio, se $\ell$ 
+è il termine $\textsf{SUC}(n)$, allora farne il matching verso il termine 
+$\textsf{SUC}(3)$ avrà successo, e troverà l'istanziazione $n\mapsto
+3$. Contrariamente all'unificazione, il matching non è simmetrico: un 
+pattern $\textsf{SUC}(3)$ non matcherà il termine $\textsf{SUC}(n)$.
+
+\index{matching di ordine superiore} \index{matching!di ordine superiore} Il semplificatore 
+usa una speciale forma di matching di ordine superiore. Se un pattern 
+include una variabile di qualche tipo funzione (diciamo $f$), e quella variabile 
+è applicata a un argomento $a$ che non include alcuna variabile eccetto quelle 
+che sono legate da un'atrazione ad uno spopo più alto. allora il termine 
+combinato $f(a)$ matcherà qualsiasi termine del tipo appropriato fino a quando le 
+sole occorrenze delle variabili legate in $a$ sono in sotto-termini 
+che matchano $a$.
+
+Assumiamo per i seguenti esempi che la variabile $x$ sia legata a uno 
+scopo più alto. Allora, se $f(x)$ deve matchare $x + 4$, la variabile $f$ 
+sarà istanziata a $(\lambda x.\; x + 4)$. Se $f(x)$ deve matchare 
+$3 + z$, allora $f$ sarà istanziata a $(\lambda x.\;3 + z)$. 
+Inoltre $f(x + 1)$ matcha $x + 1 < 7$, ma non matcha $x + 2 <
+7$.
+
+Un matching di ordine superiore di questo genere rende più facile esprimere i risultati 
+dei movimenti dei quantificatori come regole di riscrittura, e avere queste regole applicate dal 
+semplificatore. Per esempio, il teorema
+\[
+\vdash (\exists x. \;P(x)\lor Q(x)) = (\exists x.\;P(x)) \lor (\exists
+x.\;Q(x))
+\]
+ha due variabili di un tipo funzione ($P$ e $Q$), ed entrambe sono 
+applicate alla variabile legata $x$. Questo significa che quando applicato 
+all'input \[
+\exists z. \;z < 4 \lor z + x = 5 * z
+\]
+il matcher troverà l'istanziazione \[
+\begin{array}{l}
+P \mapsto (\lambda z.\;z < 4)\\
+Q \mapsto (\lambda z.\;z + x = 5 * z)
+\end{array}
+\]
+
+Eseguendo questa istanziazione, e poi facendo qualche $\beta$-riduzione 
+sulla regola di riscrittura, si produce il teorema \[
+\vdash (\exists z. \;z < 4 \lor z + x = 5 * z) =
+(\exists z. \;z < 4) \lor (\exists z.\;z + x = 5 * z)
+\]
+come richiesto.
+
+Un altro esempio di una regola che il semplificatore userà con successo è
+\[
+\vdash f \circ (\lambda x.\; g(x)) = (\lambda x.\;f(g(x)))
+\]
+La presenza dell'astrazione sul lato sinistro della regola 
+richiede che un'astrazione appaia nel termine da matchare, così questa 
+regola può essere vista come un'implementazione di un metodo per muovere le astrazioni 
+al di sopra delle composizioni di funzione.
+
+Un esempio di un possibile lato sinistro che \emph{non} matchare come 
+in generale si potrebbe desiderare è $(\exists x.\;P(x + y))$. Questo è 
+perché il predicato $P$ è applicato a un argomento che include la 
+variabile libera $y$.
+
+\subsection{Caratteristiche avanzate}
+\label{sec:advanced-simplifier}
+
+Questa sezione descrive alcune delle caratteristiche avanzate del semplificatore.
+
+\subsubsection{Regole di congruenza}
+\label{sec:simp-congruences}
+\index{semplificazione!regole di congruenza}
+\index{regole di congruenza!nella semplificazione}
+Le regole di congruenza controllano il modo in cui il semplificatore traversa un termine.
+Esse forniscono anche un meccanismo per mezzo del quale possono essere 
+aggiunte al contesto del semplificatore assunzioni aggiuntive, che rappresentano informazione circa il 
+contesto contenitore. Le regole di congruenza più semplici sono incorporate nel 
+simpset \ml{pure\_ss}. Esse specificano come traversare termini applicazione e 
+astrazione. A questo livello fondamentale, queste regole di congruenza 
+sono poco di più che le regole d'inferenza \ml{ABS}
+\[
+\frac{\Gamma \turn t_1 = t_2}
+{\Gamma \turn (\lquant{x}t_1) = (\lquant{x}t_2)}
+\]
+(dove $x\not\in\Gamma$) e \ml{MK\_COMB}
+\[
+\frac{\Gamma \turn f = g \qquad \qquad \Delta \turn x = y}
+{\Gamma \cup \Delta \turn f(x) = g(y)}
+\]
+Quando si specifica l'azione del semplificatore, queste regole dovrebbero essere 
+lette verso l'alto. Con \ml{ABS}, per esempio, la regola dice ``quando 
+si semplifica un'astrazione, si semplifichi il corpo $t_1$ a qualche nuovo $t_2$, 
+e poi il risultato è formato ri-astraendo con la variabile 
+legata~$x$.''
+
+Ulteriori regole di congruenza dovrebbero essere aggiunte al semplificatore nella forma 
+di teoremi, attraverso il campo \ml{congs} dei record passati al 
+costruttore \ml{SSFRAG}. Tali regole di congruenza dovrebbero essere della forma
+\[
+\mathit{cond_1} \Rightarrow \mathit{cond_2} \Rightarrow \dots (E_1 =
+E_2)
+\]
+dove $E_1$ è la forma da riscrivere. Ciascun $\mathit{cond}_i$ può 
+essere o una formula booleana arbitraria (nel qual caso è trattata come 
+una condizione collaterale da scaricare) o un'equazione della forma generale
+\[
+\forall \vec{v}. \;\mathit{ctxt}_1 \Rightarrow \mathit{ctxt}_2
+\Rightarrow \dots (V_1(\vec{v}) = V_2(\vec{v}))
+\]
+dove la variabile $V_2$ deve occorrere libera in $E_2$.
+
+Per esempio, la forma teorema di \ml{MK\_COMB} sarebbe
+\[
+\vdash (f = g) \Rightarrow (x = y) \Rightarrow (f(x) = g(y))
+\]
+e la forma teorema di \ml{ABS} sarebbe
+\[
+\vdash (\forall x. \;f (x) = g (x)) \Rightarrow (\lambda x. \;f(x)) = (\lambda
+x.\;g(x))
+\]
+La forma per \ml{ABS} dimostra come è possibile per le regole 
+di congruenza gestire variabili legate. Dal momento che le regole di congruenza sono 
+matchate con il match di ordine superiore della Sezione~\ref{sec:simp-homatch}, 
+questa regola matcherà tutti i possibili termini astrazione.
+
+Questi semplici esempi non hanno ancora dimostrato l'uso delle 
+condizioni $\mathit{ctxt}$ su sotto-equazioni. Un esempio di questo è 
+la regola di congruenza (che si trova in \ml{CONG\_ss}) per le implicazioni. Questa 
+afferma
+\[
+\vdash (P = P') \Rightarrow (P' \Rightarrow (Q = Q')) \Rightarrow
+(P \Rightarrow Q = P' \Rightarrow Q')
+\]
+Questa regola dovrebbe essere letta: ``Quando si semplifica $P\Rightarrow Q$, prima 
+si semplifichi $P$ a $P'$. Poi si assuma $P'$, e si semplifichi $Q$ a $Q'$. 
+Poi il risultato è $P' \Rightarrow Q'$.''
+
+La regola per espressioni condizionali è
+\[
+\vdash \begin{array}[t]{l}
+  (P = P') \Rightarrow (P' \Rightarrow (x = x')) \Rightarrow
+  (\neg P' \Rightarrow (y = y')) \;\Rightarrow\\
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x'\;\textsf{else}\;y')
+\end{array}
+\]
+Questa regola permette di assumere la guardia quando si semplifica il 
+ramo-vero del condizionale, e di assumere la sua negazione quando si 
+semplifica il ramo-falso.
+
+Le assunzioni contestuali da regole di congruenza sono trasformate in 
+riscritture usando il meccanismo descritto nella 
+Sezione~\ref{sec:generating-rewrite-rules}.
+
+Le regole di congruenza possono essere usate per ottenere un numero di interessanti 
+effetti. Per esempio, una congruenza può specificare che i sotto-termini 
+\emph{non} siano semplificati se lo si desidera. Questo potrebbe essere usato per impedire 
+la semplificazione dei rami delle espressioni condizionali:
+\[
+\vdash (P = P') \Rightarrow
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x\;\textsf{else}\;y)
+\]
+Se aggiunta al semplificatore, questa regola prenderà la precedenza su qualsiasi 
+altra regola per le espressioni condizionali (mascherando quella sopra 
+\ml{CONG\_ss}, diciamo) e farà sì che il semplificatore di scendere solo
+nella guardia. Con le riscritture standard (da \ml{BOOL\_ss}):
+\[
+\begin{array}{l}
+\vdash \;\textsf{if}\;\top\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; x\\
+\vdash \;\textsf{if}\;\bot\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; y
+\end{array}
+\]
+gli utenti possono scegliere che il semplificatore ignori 
+i rami di un condizionali fino a quando la guarda di quel condizionale è semplificata 
+o a vero o a falso.
+
+
+\subsubsection{Normalizzazione-AC}
+\index{simplification!AC-normalisation}
+
+The simplifier can be used to normalise terms involving associative
+and commutative constants.  This process is known as
+\emph{AC-normalisation}.  The simplifier will perform AC-normalisation
+for those constants which have their associativity and commutativity
+theorems provided in a constituent \simpset{} fragment's \ml{ac}
+field.
+
+For example, the following \simpset{} fragment will cause
+AC-normalisation of disjunctions
+\begin{hol}
+\begin{verbatim}
+   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
+           rewrs = [], filter = NONE, convs = [],
+           dprocs = [], congs = []}
+\end{verbatim}
+\end{hol}
+The pair of provided theorems must state
+\begin{eqnarray*}
+x \oplus y &=& y \oplus x\\
+x \oplus (y \oplus z) &=& (x \oplus y) \oplus z
+\end{eqnarray*}
+for a constant $\oplus$.  The theorems may be universally quantified,
+and the associativity theorem may be oriented either way.  Further,
+either the associativity theorem or the commutativity theorem may be
+the first component of the pair.  Assuming the \simpset{} fragment
+above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
+demonstrated in the following example:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
+\end{verbatim}
+\end{session}
+
+\index{arith_ss (insieme di semplificazione)@\ml{arith\_ss} (insieme di semplificazione)}
+L'ordine degli operandi nella forma normale-AC in cui lavora la normalizzazione-AC 
+del semplificatore non è specificato. Tuttavia, la forma 
+normale è sempre associata a destra. Si noti inoltre che il \simpset{} 
+\ml{arith\_ss}, e il frammento \ml{ARITH\_ss} che ne è la base, ha 
+le sue procedure di normalizzazione su misura per l'addizione sui 
+numeri naturali. Combinare la normalizzazione-AC, come descritta qui, con 
+\ml{arith\_ss} può far sì che il semplificatore entri in un loop infinito.
+
+I teoremi AC possono essere aggiunti ai \simpset{} anche attraverso la lista di teoremi parte 
+dell'interfaccia della tattica e della conversione, usando la forma speciale di riscrittura 
+\ml{AC}:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
+\end{verbatim}
+\end{session}
+Si veda la Sezione~\ref{sec:simp-special-rewrite-forms} per maggiori informazioni su speciali 
+forme di riscrittura.
+
+\subsubsection{Incorporate codice}
+\label{sec:simp-embedding-code}
+
+Il semplificatore dispone di due modi diversi in cui il codice dell'utente può essere 
+incorporato nel suo attraversamento e semplificazione dei termini di input. Incorporando 
+il loro proprio codice gli utenti possono personalizzare il comportamento del 
+semplificatore in una misura significativa.
+
+\paragraph{Conversioni utente}
+Il più semplice dei due metodi permente al semplificatore di includere 
+conversioni fornite dall'utente. Queste sono aggiunte ai \simpset{} nel 
+campo {convs} dei frammenti \simpset{}. Questo campo prende liste di 
+valori di tipo
+\begin{hol}
+\begin{verbatim}
+   { name: string,
+    trace: int,
+      key: (term list * term) option,
+     conv: (term list -> term -> thm) -> term list -> term -> thm}
+\end{verbatim}
+\end{hol}
+
+I campo \ml{name} e \ml{trace} sono usati quando il tracing del semplificatore 
+è acceso. Se la conversione è applicata, e se il livello di traccia del 
+semplificatore è maggiore di o uguale al campo \ml{trace}, allora sarà 
+emesso un messagio circa l'applicazione della conversione 
+(che include il suo \ml{name}).
+
+Il campo \ml{key} del record di sopra è usato per specificare i 
+sotto-termini a cui la conversione dovrebbe essere applicata. Se il valore è 
+\ml{NONE}, allora la conversione sarà provata ad ogni posizione.
+Altrimenti, la conversione è applicata a posizioni di termine che matchano il 
+pattern fornito. Il primo componente del pattern è una lista di 
+variabili che dovrebbero essere trattate come costanti quando si cercano match 
+del pattern. Il secondo componente è il pattern di termine stesso. Il matching 
+verso questa componente \emph{non} è fatto dal match di ordine superiore della 
+Sezione~\ref{sec:simp-homatch}, ma da una ``term-net'' di ordine superiore. 
+Questa forma di matching non cerca di essere precisa; essa è usata per 
+eliminare in modo efficiente match chiaramente impossibili. Non controlla 
+i tipi, e non controlla binding multipli. Questo significa che la 
+conversione non sarà applicata a termini che sono match esatti 
+per il pattern fornito.
+
+Infine, la conversione stessa. Molti usi di questa infrastruttura sono per aggiungere 
+normali conversioni \HOL{} (di tipo \ml{term->thm}), e questo può essere 
+fatto ignorando i primi due parametri del campo \ml{conv} Per una 
+conversione \ml{myconv}, l'idioma standard è di scrivere 
+\ml{K~(K~myconv)}. Se l'utente lo desidera, tuttavia, il suo codice 
+\emph{può} riferirsi ai primi due parametri. Il secondo parametro è 
+lo stack delle condizioni collaterali che sono state tentate fino ad ora. Il 
+primo permette al codice dell'utente di richiamare il semplificatore, passando 
+lo stack delle condizioni collaterali, e una nuova condizione per risolvere. 
+L'argomento \ml{term} deve essere di tipo \holtxt{:bool}, e la chiamata 
+ricorsiva lo semplificherà a vero (e richiamerà \ml{EQT\_ELIM} per trasformare un termine 
+$t$ nel teorema $\vdash t$). Questa restrizione può essere sollevata in una 
+futura versione di \HOL{} ma per come stanno le cose ora, la chiamata ricorsiva può 
+essere usata \emph{solo} per scaricare la condizione collaterale. Si noti anche che 
+è responsabilità dell'utente passare uno stack appropriatamente aggiornato di 
+condizioni collaterali all'invocazione ricorsiva del semplificatore.
+
+Una conversione fornita dall'utente non dovrebbe mai restituire l'identità riflessiva 
+(un'istanza di $\vdash t = t$). Questo farà andare in loop il 
+semplificatore. Piuttosto che restituire un tale risultato, si sollevi un \ml{HOL\_ERR} o 
+un'eccezione \ml{Conv.UNCHANGED}. (Entrambe sono trattate allo stesso modo dal semplificatore.)
+
+\paragraph{Procedure di decisione consapevoli del contesto}
+Un altro metodo, più complicato, per incorporare codice utente nel 
+semplificatore è \emph{attraverso} il campo \ml{dprocs} della struttura 
+frammento \simpset{}. Questo metodo è più generale rispetto ad aggiungere 
+conversioni, e permette anche al codice utente di costruire e mantenere i suoi 
+propri contesti logici costruiti su misura.
+
+Il campo \ml{dprocs} richiede liste di valori di tipo 
+\ml{Traverse.reducer}. Questi valori sono costruiti con il 
+costruttore \ml{REDUCER}:
+\begin{hol}
+\begin{verbatim}
+   REDUCER : {initial : context,
+              addcontext : context * thm list -> context,
+              apply : {solver : term list -> term -> thm,
+                       context : context,
+                       stack : term list} -> term -> thm}
+          -> reducer
+\end{verbatim}
+\end{hol}
+Il tipo \ml{context} è un alias per il tipo \ML{} incorporato 
+\ml{exn}, quello delle eccezioni. Le eccezioni sono qui usate come un 
+``tipo universale'', capace di archiviare dati di qualsiasi tipo. Per esempio, 
+se il dato desiderato è una coppia di un intero e un booleano, allora si 
+può fare la seguente dichiarazione:
+\begin{hol}
+\begin{verbatim}
+   exception my_data of int * bool
+\end{verbatim}
+\end{hol}
+Non è necessario rendere questa dichiarazione visibile con uno scopo 
+ampio. Infatti, solo le funzioni che accedono e creano contesti di questa 
+forma hanno bisogno di vederla. Per esempio:
+\begin{hol}
+\begin{verbatim}
+  fun get_data c = (raise c) handle my_data (i,b) => (i,b)
+  fun mk_ctxt (i,b) = my_data(i,b)
+\end{verbatim}
+\end{hol}
+
+Quando crea un valore di tipo \ml{reducer}, l'utente deve fornire un 
+contesto iniziale, e due funzioni. La prima, \ml{addcontext}, è 
+chiamata dal meccanismo di attraversamento del semplificatore per dare ad ogni 
+procedura di decisione incorporata accesso ai teoremi che rappresentano la nuova informazione 
+di contesto. Per esempio, questa funzione è chiamata con i teoremi dalle 
+assunzioni attuali in \ml{ASM\_SIMP\_TAC}, e con i teoremi 
+dagli argomenti lista di teoremi a tutt le varie funzioni di 
+semplificazione. Mentre un termine è attraversato, le regole di congruenza che governano 
+questo attraversamento possono fornire teoremi addizionali; questi saranno passati 
+anche alla funzione \ml{addcontext}. (Naturalmente, è del tutto a carico 
+della funzione \ml{addcontext} come questi teoremi saranno 
+gestiti; essi possono persino essere ignorati completamente.)
+
+Quando un riduttore è applicato a un termine, è richiamata la funzione 
+\ml{apply} fornita. Oltre che al termine da trasformare, la 
+funzione \ml{apply} è passata anche a un record che contiene un 
+risolutore di condizione collaterale, l'attuale contesto della procedura di decisione. e 
+allo stack delle condizioni collaterali tentate fino ad ora. Lo stack e il risolutore 
+sono gli stessi degli argomenti addizionali dati alle conversioni fornite 
+dall'utente. La potenza dell'astrazione del riduttore è di avere accesso a 
+un contesto che può essere costruito in modo appropriato per ogni procedura di decisione.
+
+Le procedure di decisione sono applicate per l'ultima volta quando un termine è incontrato dal 
+semplificatore. Inoltre, esse sono applicate \emph{dopo} che il semplificatore ha 
+giaà eseguito un ricorsione in ogni sotto-termine e ha tentato di fare quante più riscritture 
+possibili. Questo significa che benché la riscrittura del semplificatore avvenda in un maniera che va 
+dall'alto verso il basso, le procedure di decisione saranno applicate dal basso verso l'alto e 
+solo come ultima risorsa.
+
+Come per le conversioni-utente, le procedure di decisione devono sollevare un'eccezione 
+piuttosto che restituire istanze di riflessività.
+
+\subsubsection{Forme speciali di riscrittura}
+\label{sec:simp-special-rewrite-forms}
+
+Si può accedere ad alcune delle caratteristiche del semplificatore in un modo 
+relativamente semplice usando funzioni \ML{} per costruire speciali forme 
+di teorema. Questi teoremi speciali possono poi essere passati negli 
+argomenti lista-di-teoremi delle tattiche di semplificazione.
+
+A due delle caratteristiche avanzate del semplificatore, la normalizzazione-AC e 
+le regole di congruenza si può accedere in questo modo. Piuttosto che costruire un 
+frammento \simpset{} custom che include le regole AC o di congruenza 
+richieste, l'utente può usare piuttosto le funzioni \ml{AC} o \ml{Cong}:
+\begin{hol}
+\begin{verbatim}
+   AC : thm -> thm -> thm
+   Cong : thm -> thm
+\end{verbatim}
+\end{hol}
+Per esempio, se il valore teorema
+\begin{hol}
+\begin{verbatim}
+   AC DISJ_ASSOC DISJ_COMM
+\end{verbatim}
+\end{hol}
+appare tra i teoremi passati a una tattica di semplificazionie, allora 
+il semplificatore eseguirà una normalizzazione-AC di disgiunzioni. La 
+funzione \ml{Cong} fornisce un'interfaccia analoga per l'aggiunta di 
+nuove regole di congruenza.
+
+\index{semplificazione!garantire la terminazione}
+\index{Once (controllo delle applicazioni di riscrittura)@\ml{Once} (controllo delle applicazioni di riscrittura)|pin}
+\index{Ntimes (controllo delle applicazioni di riscrittura)@\ml{Ntimes} (controllo delle applicazioni di riscrittura)|pin}
+Altre due funzioni forniscono un meccanismo crudo per controllare il 
+numero di volte che una riscrittura individuale sarà applicata.
+\begin{hol}
+\begin{verbatim}
+   Once : thm -> thm
+   Ntimes : thm -> int -> thm
+\end{verbatim}
+\end{hol}
+Un teorema ``avvolto'' nella funzione \ml{Once} sarà applicato 
+una sola volta quando il semplificatore è applicato a un termine dato. Un teorema 
+avvolto in \ml{Ntimes} sarà applicato tante volte quante sono date nel 
+parametro intero.
+
+\paragraph{Semplificare a particolari sotto-termini}
+\index{semplificazione!a particolari sotto-termini}
+Abbiamo già visto (Sezione~\ref{sec:simp-congruences} di sopra) che 
+la tecnologia di congruenza del semplificatore può essere usata per forzare il 
+semplificatore ad ignorare termini particolari. L'esempio nella sezione 
+di sopra ha discusso come un regola di congruenza potrebbe essere usata per assicurare che 
+solo le guardie delle espressioni condizionali dovrebbero essere semplificate.
+
+In molte dimostrazioni, è comune voler riscrivere solo un lato o 
+l'altro di un connettivo binario (spesso, questo connettivo è 
+un'eguaglianza). Per esempio, questo capita quando si riscrive con equazioni 
+da complicate definizioni ricorsive che non sono soltanto ricorsioni 
+strutturali. In tali definizioni, il lato sinistro dell'equazioni 
+avrà un simbolo funzione attaccato a una sequenza di variabili, ad esempio:
+\begin{hol}
+\begin{verbatim}
+   |- f x y = ... f (g x y) z ...
+\end{verbatim}
+\end{hol}
+Teoremi di una forma analoga sono anche restituiti come i teoremi 
+``casi'' dalle definizioni induttive.
+
+Qualunque sia la loro origine, tali teoremi sono il classico esempio di 
+qualcosa a cui si vorrebbe attaccare il qualificatore \ml{Once}. 
+Tuttavia, questo può non essere sufficiente: si può desiderare di dimostrare un risultato 
+come 
+\begin{hol}
+\begin{verbatim}
+   f (constructor x) y = ... f (h x y) z ...
+\end{verbatim}
+\end{hol}
+(Con le relazioni, il goal può spesso rappresentare un'implicazione al posto di 
+un'eguaglianza.) In questa situazioni, spesso si vuole semplicemente espandere 
+l'istanza di \holtxt{f} sulla sinistra, lasciando l'altra occorrenza 
+da sola. Usare \ml{Once} espanderà solo una di esse, ma senza 
+specificare quale deve essere espansa.
+
+La soluzione a questo problema è di usare speciali regole di congruenza, 
+costruite come forme speciali che possono essere passate come teoremi come 
+\ml{Once}. Le funzioni
+\begin{hol}
+\begin{verbatim}
+   SimpL : term -> thm
+   SimpR : term -> thm
+\end{verbatim}
+\end{hol}
+costruiscono regole di congruenza per forzare la riscritture alla sinistra o alla destra di 
+termini particolari. Per esempio, se \holtxt{opn} è un operatore binario, 
+\ml{SimpL~\holquote{(opn)}} restituisce \ml{Cong} applicato al teorema
+\begin{hol}
+\begin{verbatim}
+   |- (x = x') ==> (opn x y = opn x' y)
+\end{verbatim}
+\end{hol}
+\index{SimpLHS@\ml{SimpLHS}|pin}\index{SimpRHS@\ml{SimpRHS}|pin}
+Dal momento che il caso eguaglianza è così comune, gli speciali valori 
+\ml{SimpLHS} e \ml{SimpRHS} sono forniti per forzare 
+la semplificazione sulla sinistra o sulla destra di un'eguaglianza rispettivamente. 
+Queste sono definite essere solo applicazioni di \ml{SimpL} e \ml{SimpR} 
+all'eguaglianza.
+
+Si noti che queste regole si applicano per tutto un termine, non soltanto 
+all'occorrenza più alta di un operatore. Inoltre, l'operatore più alto nel 
+termine non ha bisogno di essere quello della regola di congruenza. Questo comportamento è 
+una conseguenza automatica dell'implementazione in termini di regole 
+di congruenza.
+
+\subsubsection{Limitare la semplificazione}
+\label{sec:limit-simpl}
+
+\index{semplificazione!garantire la terminazione}
+Oltre alle forme-di-teoremi \ml{Once} and \ml{Ntimes} appena 
+discusse, che limitano il numero di volte che una particolare riscrittura è 
+applicata, il semplificatore può anche essere limitato nel numero totale di 
+riscritture che esso esegue. La funzione \ml{limit} (in \ml{simpLib} e
+\ml{bossLib})
+\begin{hol}
+\begin{verbatim}
+   limit : int -> simpset -> simpset
+\end{verbatim}
+\end{hol}
+registra un limite numerico in un \simpset{}. Quando un \simpset{} limitato 
+poi lavora su un termine, non applicherà mai più del numero dato 
+di riscritture a quel termine. Quando sono usate riscritture condizionali, la 
+riscrittura fatta nello scaricamento delle condizioni collaterali pesano negativamente sul 
+limite, finché la riscrittura è infine applicata. Anche l'applicazione 
+delle regole di congruenza, delle conversioni e delle procedure 
+di decisione fornite dall'utente pesano tutte negativamente sul limite.
+
+Quando il semplificatore cede il controllo a una conversione o a una procedura di 
+decisione fornita dall'utente non può garantire che queste funzioni restituiranno 
+alla fine un risultato (e inoltre esse possono prendere un tempo arbitrariamente lungo per terminare, spesso una preoccupazione 
+con le procedure di decisione aritmetica), ma l'uso di \ml{limit} è 
+altrimenti un buon metodo per assicurare che la semplificazione termina.
+
+\subsubsection{Riscrittura con pre-ordini arbitrari}
+\label{sec:preorder-rewriting}
+\index{semplificazione!con i pre-ordini}
+
+Oltre a semplificare rispetto all'eguaglianza, è anche 
+possibile usare il semplificatore per ``riscrivere'' rispetto a una relazione 
+che è riflessiva e transitiva (un \emph{preordine}). Questo può essere un 
+modo molto potente di lavorare con relazioni di transizione nella semantica 
+operazionale.
+
+{\newcommand{\bred}{\ensuremath{\rightarrow^*_\beta}}
+
+  Si immagini, per esempio, che si debba impostare un ``profondo incorporamento'' del 
+	$\lambda$-calcolo. Questo implicherà la definizione di un nuovo tipo 
+	(diciamo, \texttt{lamterm}) all'interno della logica, così come le definizioni delle 
+	funzioni appropriate (ad esempio, la sostituzione) e le relazioni su 
+	\texttt{lamterm}. E' probabile che si lavori con la chiusura riflessiva 
+	e transitiva della $\beta$-riduzione (\bred). Questa relazione ha 
+	regole di congruenza come
+\[
+\begin{array}{c@{\qquad\qquad}c}
+\infer{M_1 \,N\;\bred\;M_2\,N}{M_1 \;\bred\;M_2} &
+\infer{M \,N_1\;\bred\;M\,N_2}{N_1 \;\bred\;N_2}\\[3mm]
+\multicolumn{2}{c}{\infer{(\lambda v.M_1)\;\bred\;(\lambda v.M_2)}{M_1\;\bred M_2}}
+\end{array}
+\] e un'importante riscrittura 
+\[
+\infer{(\lambda v. M)\,N \;\bred\; M[v := N]}{}
+\]
+Dovendo applicare queste regole manualmente mostrare che un 
+dato termine iniziale si può ridurre a una particolare destinazione è di solito 
+molto doloroso, coinvolgendo molte applicazioni, non solo quelle dei teoremi 
+di sopra, ma anche quelle dei teoremi che descrivono la chiusura riflessiva e 
+transitiva (si veda la Sezione~\ref{relation}).
+
+Benché il $\lambda$-calcolo sia non-deterministico, esso è anche confluente, così 
+vale il seguente teorema:
+\[
+\infer{
+  M_1 \;\bred\;N\;\;=\;\;M_2\;\bred\; N
+}{
+  \beta\textrm{-nf}\;N & M_1 \;\bred\;M_2
+}
+\]
+Questo è il teorema critico che giustifica il cambio dalla riscrittura 
+con l'eguaglianza alla riscrittura con \bred. Esso dice che se si ha un termine 
+$M_1\bred N$, dove $N$ è una forma $\beta$-normale, e se $M_1$ riscrive a 
+$M_2$ sotto \bred, allora il termine originale è uguale a $M_2\bred N$. 
+Avendo fortuna, $M_2$ sarà sintatticamente identico a $N$, e 
+la riflessività di \bred{} dimostrerà il risultato desiderato. I teoremi 
+come questi, che giustificano il cambio da una relazione di riscrittura a 
+un'altra sono conosciuti come \emph{congruenze d'indebolimento}.
+
+Quando aggiustato in modo appropriato, il semplificatore può essere modificato per sfruttare 
+i cinque teoremi di sopra, e dimostrare automaticamente risultati come 
+\[
+u ((\lambda f\,x. f (f\,x)) v) \bred u (\lambda x. v(v\,x))
+\]
+(sotto le assunzioni che i termini $u$ e $v$ siano variabili del 
+$\lambda$-calcolo, rendendo il risultato come una forma $\beta$-normale).
+
+Inoltre, si avranno probabilmente vari teoremi di riscrittura 
+che si vorranno usare oltre a quelli specificati di sopra. Per 
+esempio, se in precedenza si è dimostrato un teorema come
+\[
+K\,x\,y \bred x
+\]
+allora il semplificatore può prendere anche questo in considerazione.
+
+La funzione che ottiene tutto questo è
+\index{add_relsimp@\ml{add\_relsimp}}
+\begin{verbatim}
+   simpLib.add_relsimp  : {trans: thm, refl: thm, weakenings: thm list,
+                           subsets: thm list, rewrs : thm list} ->
+                          simpset -> simpset
+\end{verbatim}
+I campo del record che è il primo argomento sono:
+\begin{description}
+\item[\texttt{trans}] Il teorema che afferma che la relazione è 
+	transitiva, nella forma $\forall x y z. R\,x\,y \land R\,y\,z \Rightarrow R x z$.
+\item[\texttt{refl}] Il teorema che afferma che la relazione è 
+	riflessiva, nella forma $\forall x. R\,x\,x$.
+\item[\texttt{weakenings}] Una lista di congruenze d'indebolimento, della 
+	forma generale $P_1 \Rightarrow P_2 \Rightarrow \cdots (t_1 = t_2)$, dove almeno una delle 
+	$P_i$ menzionerà presumibilmente la nuova relazione $R$ applicata a una 
+	variabile che appare in $t_1$. Altri 
+	antecedenti possono essere condizioni collaterali come il requisito 
+	nell'esempio di sopra che il termine $N$ sia in forma $\beta$-normale.
+\item[\texttt{subsets}] Teoremi della forma $R'\,x\,y \Rightarrow R\,x\,y$.
+	Questi sono usati per aumentare il risultante ``filtro'' del \simpset{} così che 
+	i teoremi nel contesto che menziona $R'$ deriveranno utili riscritture 
+	che coinvolgono $R$. Nell'esempio della $\beta$-riduzione, si potrebbe avere anche 
+	una relazione $\rightarrow_{wh}^*$ per la riduzione weak-head. Qualsiasi riduzione 
+	weak-head è anche una $\beta$-riduzione, così può essere utile anche avere che 
+	il semplificatore ``promuova'' automaticamente i fatti circa la riduzione weak-head 
+	a fatti circa la $\beta$-riduzione, e poi li usi come riscritture.
+\item[\texttt{rewrs}] Possibilmente riscritture condizionali, presumibilmente la maggior parte 
+	della forma $P \Rightarrow R\,t_1\,t_2$. Qui possono anche essere 
+	incluse riscritture sull'eguaglianza, che permettono di includere utili fatti aggiuntivi. Per 
+	esempio, quando si lavora con il $\lambda$-calcolo, si potrebbe includere sia 
+	la riscrittura per $K$ di sopra, così come la definizione della 
+	sostituzione.
+\end{description}
+} % end of block defining \bred
+
+L'applicazione di questa funzione a un \simpset{} \texttt{ss} 
+produrrà un \texttt{ss} aumentato che ha tutti i comportamenti del 
+\texttt{ss} esistente, così come la capacità di riscrivere con la relazione 
+data.
+
+
+\index{semplificazione|)}
+
+\section{Efficient Applicative Order Reduction---\texttt{computeLib}}
+\label{sec:computeLib}
+
+La Sezione~\ref{sec:datatype} e la Sezione~\ref{TFL} mostrano la capacità di 
+\HOL{} di rappresentare molti dei costrutti standard della programmazione 
+funzionale. Se si vuole quindi `eseguire' programmi funzionali su 
+argomenti, ci sono molte scelte. Primo, si può applicare il 
+semplificatore, come mostrato nella Sezione~\ref{sec:simpLib}. Questo permette 
+di esercitare tutto il potere del processo di riscrittura, 
+inclusa, per esempio, l'applicazione delle procedure di decisione per 
+dimostrare vincoli sulle regole di riscrittura condizionale. Secondo, si potrebbe 
+scrivere il programma, e tutti i programmi da cui dipende in modo transitivo, 
+in un file in una sintassi concreta adatta, e invocare un compilatore o 
+un interprete. Questa funzionalità è disponibile in \HOL{} attraverso l'uso di 
+\ml{EmitML.exportML}.
+
+Terzo, si può usare \ml{computeLib}. Questa libreria supporta una valutazione 
+call-by-value delle funzioni \HOL{} per passi deduttivi. In altre parole, è 
+molto simile ad avere un interprete \ML{} all'interno della logica \HOL{}, 
+lavorando per inferenza in avanti. Quando usati in questo modo, i programmi 
+funzionali possono essere eseguiti più velocemente che usando il semplificatore.
+
+Gli entry-point più accessibili per usare la libreria \ml{computeLib} 
+sono la conversione \ml{EVAL} e la sua tattica corrispondente 
+\ml{EVAL\_TAC}. Queste dipendono su un database interno che archivia 
+definizioni di funzione. Nel seguente esempio, caricare \ml{sortingTheory} 
+aumenta questo database con le definizioni rilevanti, in particolare quella 
+di Quicksort (\holtxt{QSORT}), e poi possiamo valutare 
+\holtxt{QSORT} su una lista concreta.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  - load "sortingTheory";
+
+  - EVAL ``QSORT (<=) [76;34;102;3;4]``;
+  > val it = |- QSORT $<= [76; 34; 102; 3; 4] = [3; 4; 34; 76; 102] : thm
+\end{verbatim}
+\end{session}
+Spesso, l'argomento a una funzione non ha variabili: in quel caso 
+l'applicazione di \ml{EVAL} dovrebbe restituire un risultato ground, 
+come nell'esempio di sopra. Tuttavia, \ml{EVAL} può anche valutare funzioni su 
+argomenti con variabili---la cosiddetta valutazione \emph{simbolica}---e 
+in quel caso, il comportamento di \ml{EVAL} dipende dalla struttura 
+dell'equazioni di ricorsione. Per esempio, nella seguente sessione, se c'è 
+sufficiente informazione nell'input, la valutazione simbolica può restituire 
+un risultato interessante. Tuttavia, se nell'input non c'è informazione 
+sufficiente a permettere all'algoritmo alcuna presa, non avrà luogo 
+alcuna espansione
+%
+\begin{session}
+\begin{verbatim}
+  - EVAL ``REVERSE [u;v;w;x;y;z]``;
+  > val it = |- REVERSE [u; v; w; x; y; z] = [z; y; x; w; v; u] : thm
+
+  - EVAL ``REVERSE alist``;
+  > val it = |- REVERSE alist = REVERSE alist : thm
+\end{verbatim}
+\end{session}
+%
+
+\subsection{Trattare con la divergenza}
+
+La difficoltà maggiore con l'uso di \ml{EVAL} è la terminazione. Troppo 
+spesso, la valutazione simbolica con \ml{EVAL} divergerà, o genererà 
+termini enormi. Il caso usuale sono i condizionali con le variabili nel 
+test. Per esempio, la seguente definizione è probabilmente uguale a \holtxt{FACT},
+%
+\begin{session}
+\begin{verbatim}
+  Define `fact n = if n=0 then 1 else n * fact (n-1)`;
+  > val it = |- fact n = (if n = 0 then 1 else n * fact (n - 1)) : thm
+\end{verbatim}
+\end{session}
+%
+Ma le due definizioni sono valutate in modo completamente differente.
+%
+\begin{session}
+\begin{verbatim}
+  EVAL ``FACT n``;
+  > val it = |- FACT n = FACT n : thm
+
+  - EVAL ``fact n``;
+  <.... interrupt key struck ...>
+  > Interrupted.
+\end{verbatim}
+\end{session}
+%
+La definizione ricorsiva primitiva di \holtxt{FACT} non si espande 
+per nulla, mentre la ricorsione stile-decostruttore di \holtxt{fact} non smette mai 
+di espandere. Un rudimentale strumento di monitoraggio mostra il comportamento, prima 
+su un argomento ground, poi su un argomento simbolico.
+%
+\begin{session}
+\begin{verbatim}
+  - val [fact] = decls "fact";
+  - computeLib.monitoring := SOME (same_const fact);
+
+  - EVAL ``fact 4``;
+  fact 4 = (if 4 = 0 then 1 else 4 * fact (4 - 1))
+  fact 3 = (if 3 = 0 then 1 else 3 * fact (3 - 1))
+  fact 2 = (if 2 = 0 then 1 else 2 * fact (2 - 1))
+  fact 1 = (if 1 = 0 then 1 else 1 * fact (1 - 1))
+  fact 0 = (if 0 = 0 then 1 else 0 * fact (0 - 1))
+  > val it = |- fact 4 = 24 : thm
+
+  - EVAL ``fact n``;
+  fact n = (if n = 0 then 1 else n * fact (n - 1))
+  fact (n - 1) = (if n - 1 = 0 then 1 else (n - 1) * fact (n - 1 - 1))
+  fact (n - 1 - 1) =
+  (if n - 1 - 1 = 0 then 1 else (n - 1 - 1) * fact (n - 1 - 1 - 1))
+  fact (n - 1 - 1 - 1) =
+  (if n - 1 - 1 - 1 = 0 then
+     1
+   else
+     (n - 1 - 1 - 1) * fact (n - 1 - 1 - 1 - 1))
+     .
+     .
+     .
+\end{verbatim}
+\end{session}
+%
+In ogni espansione ricorsiva, il testo coinvolge una variabile, e di conseguenza 
+non può essere ridotta a \holtxt{T} o a \holtxt{F}. Così, l'espansione 
+non si ferma mai.
+
+Some simple remedies can be adopted in trying to deal with
+non-terminating symbolic evaluation.
+
+Si possono adottare alcuni semplici rimedi nel provare a trattare con 
+una valutazione simbolica che non termina.
+\begin{itemize}
+\item \ml{RESTR\_EVAL\_CONV} si comporta come \ml{EVAL} eccetto 
+	che prende una lista extra di costanti. Durante 
+	la valutazione, se si incontra una delle costanti fornite, essa 
+	non sarà espansa. Questo permette di valutare giù fino a un livello specificato. 
+	e può essere usato per tagliare alcune valutazioni circolari.
+\item anche \ml{set\_skip} può essere usata per controllare 
+	la valutazione. Si veda la voce per \ml{CBV\_CONV} in \REFERENCE{} per 
+	una discussione di \ml{set\_skip}
+
+\end{itemize}
+
+\paragraph{Valutatori custom}
+
+Per alcuni problemi, è desiderabile costruire un valutatore 
+personalizzato, specializzato su un insieme fissato di definizioni. Il tipo 
+\ml{compset} che si trova in \ml{computeLib} è il tipo dei database di definizione. Le 
+funzioni \ml{new\_compset}, \ml{bool\_compset}, \ml{add\_funs}, e
+\ml{add\_convs} forniscono il modo standard per costruire tali 
+database. Un altro \holtxt{compset} piuttosto utile è 
+\ml{reduceLib.num\_compset}, che può essere usato per valutare 
+termini con numeri e booleani. Dato un \ml{compset}, la funzione 
+\ml{CBV\_CONV} genera un valutatore: è usata per implementare \ml{EVAL}. 
+Si veda \REFERENCE{} per maggiori dettagli.
+
+\paragraph{Trattare con Funzioni sui Numeri di Peano}
+
+Le funzioni definite per pattern-matching su numeri nello stile di Peano non sono 
+nel formato giusto per \ml{EVAL}, dal momento che i calcoli saranno 
+asintoticamente inefficienti. Piuttosto, la stessa definizione dovrebbe essere 
+usata su numerali, che è una notazione posizionale descritta nella 
+Sezione~\ref{sec:numerals}. Tuttavia, è preferibile per le dimostrazioni 
+lavorare su numeri di Peano. Per colmare questa lacuna, la funzione 
+\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} è usata per convertire una funzione 
+su numeri di Peano in una su numerali, che è il formato che 
+\ml{Eval} preferisce. \ml{Define} chiamerà automaticamente 
+\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} sul suo risultato.
+
+\paragraph{Archiviare le definizioni}
+
+\ml{Define} aggiunge automaticamente la sua definizione al compset globale 
+usato da \ml{EVAL} e \ml{EVAL\_TAC}. Tuttavia, quando \ml{Hol\_defn} è 
+usata per definire una funzione, le sue equazioni di definizione non sono aggiunte al 
+compset globale fino a quando \ml{tprove} è usata per dimostrare i vincoli 
+di terminazione. Inoltre, \ml{tprove} non aggiunge la definizione 
+in modo persistente nel compset globale. Di conseguenza, si deve usare 
+\ml{add\_persistent\_funs} in una teoria per essere sicuri che le definizioni 
+fatte da \ml{Hol\_defn} siano disponibili a \ml{Eval} nelle teorie 
+discendenti. Un altro punto: si deve chiamare \ml{add\_persistent\_funs} 
+prima di chiamare \ml{export\_theory}.
+
+
+\section{Le Librerie Aritmetiche---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
+\label{sec:numLib}
+\index{procedure di decisione!Aritemtica Presburger su numeri naturali}
+
+Ognuna delle librerie aritmetiche di \HOL{} fornisce una 
+suite di definizioni e teoremi così come il supporto per l'inferenza automatica.
+
+\paragraph{numLib}
+
+I numeri più di base in \HOL{} sono i numeri naturali. La 
+libreria \ml{numLib} comprende le teorie \ml{numTheory},
+\ml{prim\_recTheory}, \ml{arithmeticTheory}, e \ml{numeralTheory}. 
+Questa libreria incorpora anche un valutatore per espressioni numeriche 
+da \ml{reduceLib} e una procedura di decisione per l'aritmetica lineare 
+\ml{ARITH\_CONV}. Il valutatore e la procedura di decisione sono 
+integrati nel simpset \ml{arith\_ss} usato dal semplificatore. 
+Allo stesso modo, la procedura di decisione dell'aritmetica lineare può essere invocata 
+direttamente attraverso \ml{DECIDE} e \ml{DECIDE\_TAC}, che si trovano entrambe in 
+\ml{bossLib}.
+
+
+\index{procedure di decisione!Aritemtica Presburger su interi}
+\paragraph{intLib} 
+
+La libreria \ml{intLib} comprende \ml{integerTheory}, un'estesa 
+teoria degli interi, più due procedure di decisione 
+per la completa aritmetica Presburger. Queste sono disponibili come 
+\ml{intLib.COOPER\_CONV} e \ml{intLib.ARITH\_CONV}. Queste 
+procedure di decisione sono in grado di trattare con l'aritmetica lineare 
+sugli interi e i numeri naturali, così come di trattare 
+con un'alternanza arbitraria di quantificatori. La procedura 
+\ml{ARITH\_CONV} è un'implementazione dell'Omega Test, e sembra 
+in generale avere migliori performance rispetto all'algoritmo di Cooper. Ci sono 
+comunque problemi per cui questo non è vero, così è utile avere disponibili 
+entrambe le procedure.
+
+\paragraph{realLib}
+
+La libreria \ml{realLib} fornisce uno sviluppo fondazionale 
+dei numeri reali e dell'analisi. Si veda la Sezione~\ref{reals} 
+per una rapida descrizione delle teorie. 
+E' anche fornita una teoria dei polinomi, in \theoryimp{polyTheory}. 
+Una procedura di decisione per l'aritmetica lineare sui numeri reali 
+è anche fornita da \ml{realLib}, sotto il nome \ml{REAL\_ARITH\_CONV}
+e \ml{REAL\_ARITH\_TAC}.
+
+\section{Libreria Bit Vector---\texttt{wordsLib}}
+
+La libreria \theoryimp{wordsLib} fornisce uno strumento di supporto per i bit-vectors, questo include infrastrutture per: la valutazione, il parsing, il pretty-printing e la semplificazione.
+
+\subsection{Valutazione}
+
+La libreria \theoryimp{wordsLib} dovrebbe essere caricata quando si valutano termini bit-vector ground. Questa libreria fornisce un \emph{compset} \ml{words\_compset}, che 
+può essere usato nella costruzione di \emph{compese} e conversioni personalizzati.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- load "wordsLib";
+> val it = () : unit
+
+- EVAL ``8w + 9w:word4``;
+> val it = |- 8w + 9w = 1w : thm
+\end{verbatim}
+\end{session}
+Si noti che qui è usata un'annotazione di tipo per designare la dimensione word. Quando la dimensione word è rappresentata da una variabile di tipo (cioè per word i lunghezza arbitraria), la valutazione 
+può dare risultati parziali o insoddisfacenti.
+
+\subsection{Parsing e pretty-printing}
+
+I word possono essere parsati in binario, decimale e esadecimale. Per esempio:
+\begin{session}
+\begin{verbatim}
+- ``0b111010w : word8``;
+> val it = ``58w`` : term
+
+- ``0x3Aw : word8``;
+> val it = ``58w`` : term
+\end{verbatim}
+\end{session}
+E' possibile fare il parsing di numeri ottali, ma questo deve essere prima abilitato impostando la reference \ml{base\_tokens.allow\_octal\_input} a true. Per esempio:
+\begin{session}
+\begin{verbatim}
+- ``072w : word8``;
+> val it = ``72w`` : term
+
+- base_tokens.allow_octal_input:=true;
+> val it = () : unit
+
+- ``072w : word8``;
+> val it = ``58w`` : term
+\end{verbatim}
+\end{session}
+
+I word possono essere stampati usando le basi numeriche standard. Per esempio, la funzione 
+\ml{wordsLib.output\_words\_as\_bin} selezionerà il formato binario:
+\begin{session}
+\begin{verbatim}
+- wordsLib.output_words_as_bin();
+> val it = () : unit
+
+- EVAL ``($FCP ODD):word16``;
+> val it = |- $FCP ODD = 0b1010101010101010w : thm
+\end{verbatim}
+\end{session}
+La funzione \ml{output\_words\_as} è più flessibile e permette alla base numerica di variare a seconda della 
+lunghezza del word e del valore numerico. Il pretty-printer di default (installato quando si carica \theoryimp{wordsLib}) stampa valori piccoli in decimale e valori grandi in esadecimale.
+La funzione \ml{output\_words\_as\_oct} abiliterà automaticamente il parsing per i numeri ottali.
+
+La variabile di traccia \ml{"word printing"} fornisce un metodo alternativo per cambiare la base numerica di output --- è particolarmente adatta per selezionare temporaneamente una base numerica, per esempio:
+\begin{session}
+\begin{verbatim}
+- Feedback.trace ("word printing", 1) Parse.print_term ``32w``;
+<<HOL message: inventing new type variable names: 'a>>
+0b100000w> val it = () : unit
+\end{verbatim}
+\end{session}
+Le scelte sono come segue: 0 (default) -- numeri piccoli in decimale, numeri grandi in esadecimale: 1 -- binario; 2 -- ottale; 3 -- decimale; e 4 -- esadecimale.
+
+\subsubsection{Tipi}
+
+Si può aver notato che \ty{:word4} e \ty{:word8} sono stati usati come convenienti abbreviazioni di parsing per \ty{:\bool[4]} e \ty{:\bool[8]} --- questa agevolazione è disponibile per molte dimensioni standard di word. Gli utenti che desiderano usare questa notazione per dimensioni di non-standard di word possono usare la funzione \ml{wordsLib.mk\_word\_size}:
+\begin{session}
+\begin{verbatim}
+- ``:word15``;
+! Uncaught exception:
+! HOL_ERR
+
+- wordsLib.mk_word_size 15;
+> val it = () : unit
+
+- ``:word15``;
+> val it = ``:bool[15]`` : hol_type
+\end{verbatim}
+\end{session}
+
+\subsubsection{Overloading degli operatori}
+
+I simboli per le operazioni aritmetiche standard (addizione, sottrazione e moltiplicazione) sono sottoposte a overload con operatori per altre teorie standard, cioè per i numeri naturali, interi, razionali e reali. In molti casi l'inferenza di tipo risolverà l'overloading, tuttavia, in alcuni casi questo non è possibile. La scelta dell'operatore dipenderà dall'ordine in cui le teorie sono caricate. Per cambiare questo comportamento sono fornite le funzioni \ml{wordsLib.deprecate\_word} e \ml{wordsLib.prefer\_word}. Per esempio, nella seguente sessione, la selezione degli operatori word è deprecata:
+\begin{session}
+\begin{verbatim}
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+<<HOL message: inventing new type variable names: 'a>>
+> val it = ``:bool['a]`` : hol_type
+
+- wordsLib.deprecate_word();
+> val it = () : unit
+
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = ``:num`` : hol_type
+\end{verbatim}
+\end{session}
+Di sopra, l'addizione tra numeri naturali è scelta al posto dell'addizione word. Al contrario, i word sono preferiti rispetto agli interi di sotto:
+\begin{session}
+\begin{verbatim}
+- load "intLib"; ...
+
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+> val it = ``:int`` : hol_type
+
+- wordsLib.prefer_word();
+> val it = () : unit
+- type_of ``a + b``;
+<<HOL message: more than one resolution of overloading was possible>>
+<<HOL message: inventing new type variable names: 'a>>
+> it = ``:bool['a]`` : hol_type
+\end{verbatim}
+\end{session}
+Naturalmente, potrebbero essere state aggiunte annotazioni di tipo per evitare questo problema completamente. Si noti che, diversamente da \ml{deprecate\_int}, la funzione \ml{deprecate\_word} non rimuove gli overloading, semplicemente abbassa la loro precedenza.
+
+\subsubsection{Indovinare le lunghezze word}
+
+Può essere una seccatura aggiungere annotazioni di tipo quando si specifica il tipo di ritorno per operazioni come: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} e \holtxt{word\_replicate}. Questo perché c'è spesso una lunghezza ``standard'' che potrebbe essere indovinata, ad esempio la concatenazione di solito somma le lunghezze dei word costituenti. Un'agevolazione per indovinare la lunghezza word è controllata dalla reference \ml{wordsLib.guessing\_word\_lengths}, che è falsa di default. Le congetture sono eseguite durante un passo di post-processing che avviene dopo l'applicazione di \ml{Parse.Term}. Questo è mostrato di sotto.
+\begin{session}
+\begin{verbatim}
+- wordsLib.guessing_word_lengths:=true;
+> val it = () : unit
+
+- ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
+<<HOL message: inventing new type variable names: 'a, 'b>>
+<<HOL message: assigning word length: 'a <- 4>>
+<<HOL message: assigning word length: 'b <- 12>>
+> val it =
+    ``concat_word_list [(4 >< 1) w; w2; w3]``
+     : term
+\end{verbatim}
+\end{session}
+Nell'esempio di sopra, le congetture sulla lunghezza dei word sono attivate. Sono fatte due congetture: ci si aspetta che l'estrazione dia un word di quattro bit, e che la concatenazione dia un word di dodici bit ($3 \times 4$). Se sono richieste lunghezze numeriche non standard allo si possono aggiungere delle annotazioni di tipo per evitare che siano fatte delle congetture. Quando la congettura è disattivata i tipi risultanti rimangono come variabili di tipo inventate, cioé come gli alfa e i beta di sopra.
+
+\subsection{Semplificazione e conversioni}
+
+Sono forniti i seguenti frammenti \emph{simpset}:
+\begin{description}
+\item[\ml{SIZES\_ss}] valuta un gruppo di funzioni che operano su tipi numerici, come \holtxt{dimindex} e \holtxt{dimword}.
+\item[\ml{BIT\_ss}] prova a semplificare le occorrenze della funzione\holtxt{BIT}.
+\item[\ml{WORD\_LOGIC\_ss}] semplifica operazioni logiche bitwise.
+\item[\ml{WORD\_ARITH\_ss}] semplifica operazioni aritmetiche word. La sottrazione è sostituita con la moltiplicazione da -1.
+\item[\ml{WORD\_SHIFT\_ss}] semplifica operazioni shift.
+\item[\ml{WORD\_ss}] contiene tutti i frammenti di sopra, e fa anche una valutazione estra dei termini ground. Questo frammento è aggiunto a \ml{srw\_ss}.
+\item[\ml{WORD\_ARITH\_EQ\_ss}] semplifica \holtxt{``a = b``} to \holtxt{``a - b = 0w``}.
+\item[\ml{WORD\_BIT\_EQ\_ss}] espande in modo aggressivo operazioni bit-vector non-aritmetiche in espressioni booleane. (Dovrebbe essere usata con attenzione -- include \ml{fcpLib.FCP\_ss}.)
+\item[\ml{WORD\_EXTRACT\_ss}] semplificazione per una varietà di operazioni: conversioni da word a word; concatenazione; shift e estrazione bit-field.  Può essere usata in  situationi dove \ml{WORD\_BIT\_EQ\_ss} non è adatta.
+\item[\ml{WORD\_MUL\_LSL\_ss}] semplifica la moltiplicazione con un letterale word in una somma di prodotti parziali.
+\end{description}
+Molti di questi frammenti \emph{simpset} hanno delle conversioni corrispondenti. Per esempio, la conversione \ml{WORD\_ARITH\_CONV} è basata si \ml{WORD\_ARITH\_EQ\_ss}, tuttavia, fa del lavoro extra per assicurare che \holtxt{``a = b``} e \holtxt{``b = a``} si convertano nella stessa espressioni. Di conseguenza, questa conversione è adatta per ragionare circa l'eguaglianza delle espressioni aritmetiche word.
+
+Il comportamento dei frammenti elencati di sopra è mostrato usando la seguente funzione:
+\begin{session}
+\begin{verbatim}
+- fun conv ss = SIMP_CONV (pure_ss++ss) [];
+> val conv = fn : ssfrag -> term -> thm
+\end{verbatim}
+\end{session}
+La seguente sessione mostra \ml{SIZES\_ss}:
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.SIZES_ss ``dimindex(:12)``;
+> val it = |- dimindex (:12) = 12 : thm
+
+- conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
+> val it = |- FINITE univ(:32) <=> T : thm
+\end{verbatim}
+\end{session}
+Il frammento \ml{BIT\_ss} converte \holtxt{BIT} in un test di appartenenza su un insieme di posizioni bit (più alte):
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.BIT_ss ``BIT 3 5``;
+> val it = |- BIT 3 5 <=> (3 = 0) \/ (3 = 2) : thm
+
+- conv wordsLib.BIT_ss ``BIT i 123``;
+> val it = |- BIT i 123 <=> i IN {0; 1; 3; 4; 5; 6} :
+  thm
+\end{verbatim}
+\end{session}
+Questa semplificazione fornisce supporto per il ragionamento circa le operazioni bitwise su lunghezze word arbitrarie. I frammenti aritmetico, logico e shift aiutano a ripulire espressioni word di base:
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    |- a && 12w || 11w && a = 15w && a :
+  thm
+
+- conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
+> val it =
+    |- 3w * b + a + 2w * b - a * 4w = a + b
+     : thm
+
+- conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it =
+    |- 0w << 12 + a >>> 0 + b << 2 << 3 = 0w + a + b << (2 + 3)
+     : thm
+\end{verbatim}
+\end{session}
+
+I frammenti rimanenti non sono inclusi in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}. Il frammento eguaglianza bit è mostrato di sotto.
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
+> val it =
+    |- (a && b = ~0w) <=> (a ' 1 /\ b ' 1) /\ a ' 0 /\ b ' 0
+     : thm
+\end{verbatim}
+\end{session}
+Il frammento esatto è utile per il ragionamento circa operazioni bit-field ed è usato meglio in combinazione con \ml{wordsLib.SIZES\_ss} o \ml{wordsLib.WORD\_ss}, per esempio:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
+   ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
+> val it =
+    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 || (1 >< 1) b
+     : thm
+\end{verbatim}
+\end{session}
+Infine, il frammento \ml{WORD\_MUL\_LSL\_ss} è mostrato di sotto.
+\begin{session}
+\begin{verbatim}
+- conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
+> val it = |- 5w * a = a << 2 + a : thm
+\end{verbatim}
+\end{session}
+Riscrivere con il teorema \ml{wordsTheory.WORD\_MUL\_LSL} fornisce un mezzo per annullare questa semplificazione, per esempio:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
+    ``a << 2 + a : word8``;
+> val it = |- a << 2 + a = 5w * a : thm
+\end{verbatim}
+\end{session}
+Ovviamente, senza aggiungere delle garanzie, questo teorema di riscrittura non può essere dispiegato in combinazione con il frammento \ml{WORD\_MUL\_LSL\_ss}.
+
+\subsubsection{Procedure di decisione}
+
+Una procedura di decisione per i word è fornita nella forma di 
+\ml{blastLib.BBLAST\_PROVE}. Questa procedura usa il \emph{bit-blasting} --- 
+convertire espressioni word in proposizioni e poi usare il risolutore SAT per 
+decidere il goal\footnote{Questo approccio permette di dare contro-esempi 
+quando la negazione di un goal è insoddisfacibile.}. Questo approccio è ragionevolmente generale e 
+può affrontare un ampia gamma di problemi bit-vector. Tuttavia, ci sono alcune 
+limitazioni: l'approccio funziona solo per lunghezze word costanti, artimetica 
+lineare (moltiplicazione per letterali) e per shift e estrazioni 
+bit-field rispetto a valori letterali. Si noti inoltre che alcuni problemi saranno 
+potenzialmente lenti da dimostrare, ad esempio quando le dimensioni dei word sono grandi e/o quando 
+ci sono molte addizioni annidate (magari attraverso la moltiplicazione).
+
+
+I seguenti esempi mostrano \ml{BBLAST\_PROVE} in uso:
+\begin{session}
+\begin{verbatim}
+- blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
+> val it =
+    |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
+     : thm
+
+- blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
+> val it = |- w2w a <+ 256w : thm
+\end{verbatim}
+\end{session}
+La procedura di decisione \ml{BBLAST\_PROVE} è basata sulla conversione 
+\ml{BBLAST\_CONV}. Questa conversione può essere usata per convertire problemi bit-vector 
+in una forma proposizionale; per esempio:
+\begin{session}
+\begin{verbatim}
+- blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
+> val it =
+   |- ((a + 5w) << 3) ' 5 <=> (~a ' 2 <=> ~(a ' 1 /\ a ' 0))
+   : thm
+\end{verbatim}
+\end{session}
+Ci sono anche tattiche bit-blasting: \ml{BBLAST\_TAC} e \ml{FULL\_BBLAST\_TAC}; dove solo la seconda fa uso delle assunzioni del goal.
+
+\section{La libreria \texttt{HolSat}}\label{sec:HolSatLib}
+\input{HolSat.tex}
+
+
+\section{La libreria \texttt{HolQbf}}\label{sec:HolQbfLib}
+\input{HolQbf.tex}
+
+
+\section{La libreria \texttt{HolSmt}}\label{sec:HolSmtLib}
+\input{HolSmt.tex}
+
+\section{La libreria \texttt{Quantifier Heuristics}}\label{sec:QuantHeuristicsLib}
+\input{QuantHeuristics.tex}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

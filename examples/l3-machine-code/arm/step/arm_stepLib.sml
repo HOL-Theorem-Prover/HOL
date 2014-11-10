@@ -20,13 +20,13 @@ struct
 end
 
 open Parse
-val _ = hide "add"
+val _ = Parse.hide "add"
 
 infix \\
 val op \\ = op THEN
 
-val ERR = Feedback.mk_HOL_ERR "arm_evalLib"
-val WARN = Feedback.HOL_WARNING "arm_evalLib"
+val ERR = Feedback.mk_HOL_ERR "arm_stepLib"
+val WARN = Feedback.HOL_WARNING "arm_stepLib"
 
 val () = show_assums := true
 
@@ -590,6 +590,62 @@ val SND_Shift_C_rwt = Q.prove(
    `!s. SND (Shift_C (value,typ,amount,carry_in) s) = s`,
    Cases_on `typ` \\ lrw [Shift_C_rwt]) |> Drule.GEN_ALL
 
+local
+   val rwt =
+      utilsLib.qm [wordsTheory.SHIFT_ZERO]
+        ``(if n = 0 then (x: 'a word,s) else (x #>> n, ^st)) = (x #>> n, s)``
+in
+   val ROR_rwt =
+      EV [ROR_def, ROR_C_def] [] []
+         ``ROR (x: 'a word, n)``
+         |> hd
+         |> SIMP_RULE bool_ss [rwt]
+end
+
+val () = setEvConv (Conv.DEPTH_CONV
+            (bitstringLib.extract_v2w_CONV
+             ORELSEC bitstringLib.v2w_eq_CONV
+             ORELSEC bitstringLib.FIX_CONV
+             ORELSEC wordsLib.SIZES_CONV))
+
+val arm_imm_lem = Q.prove(
+   `((if n = 0 then ((w, c1), s) else ((w #>> n, c2), s)) =
+     ((w #>> n, if n = 0 then c1 else c2), s)) /\
+    (2 * w2n (v2w [a; b; c; d] : word4) = w2n (v2w [a; b; c; d; F] : word5))`,
+   rw [] \\ wordsLib.n2w_INTRO_TAC 5 \\ blastLib.BBLAST_TAC
+   )
+
+val ARMExpandImm_C_rwt =
+   EV [ARMExpandImm_C_def, Shift_C_rwt, arm_imm_lem] [] []
+      ``ARMExpandImm_C (^(bitstringSyntax.mk_vec 12 0), c)``
+      |> hd
+      |> REWRITE_RULE [wordsTheory.w2n_eq_0]
+
+(*
+val ThumbExpandImm_C_rwt =
+   EV [ThumbExpandImm_C_def, ROR_C_def, wordsTheory.w2n_eq_0,
+       bitstringTheory.word_concat_v2w_rwt, merge_cond] [] []
+      ``ThumbExpandImm_C (^(mk_vec 12 0), c)``
+      |> hd
+*)
+
+val () = setEvConv utilsLib.WGROUND_CONV
+
+local
+   val rwt = Q.prove(
+      `(if b then (((x, y), s): (word32 # bool) # arm_state) else ((m, n), s)) =
+       ((if b then x else m, if b then y else n), s)`,
+      rw [])
+in
+   val ExpandImm_C_rwt =
+      EV [ExpandImm_C_def, ARMExpandImm_C_rwt, rwt]
+         [[``^st.Encoding <> Encoding_Thumb2``]] []
+         ``ExpandImm_C (^(bitstringSyntax.mk_vec 12 0), c)``
+         |> hd
+end
+
+(* ---------------------------- *)
+
 fun regEV npcs thms ctxt s tm =
    let
       val npc_thms = npc_thm npcs
@@ -1127,6 +1183,16 @@ local
    val BIT_COUNT_CONV = BIT_COUNT_UPTO_CONV THENC BIT_THMS_CONV
    val bit_count_rule = utilsLib.FULL_CONV_RULE (Conv.DEPTH_CONV BIT_COUNT_CONV)
    val rule = bit_count_rule o endian_rule
+   fun ground_mul_conv tm =
+      case Lib.total wordsSyntax.dest_word_mul tm of
+         SOME (a, b) =>
+            if wordsSyntax.is_word_literal a andalso
+               wordsSyntax.is_word_literal b
+               then wordsLib.WORD_EVAL_CONV tm
+            else raise ERR "ground_mul_conv" ""
+       | NONE => raise ERR "ground_mul_conv" ""
+   val ground_mul_rule =
+      utilsLib.FULL_CONV_RULE (Conv.DEPTH_CONV ground_mul_conv)
    val stm_rule1 =
       utilsLib.MATCH_HYP_CONV_RULE
          (Conv.RAND_CONV
@@ -1168,7 +1234,8 @@ in
          val s' = utilsLib.uppercase s
       in
          if String.isPrefix "LDM" s'
-            then rule o Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
+            then ground_mul_rule o rule o
+                 Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
          else if String.isPrefix "STM" s'
             then stm_rule2 o stm_rule1 o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV)
@@ -1442,9 +1509,7 @@ val DECODE_UNPREDICTABLE_rwt =
       ``DECODE_UNPREDICTABLE (mc, e)``
       |> List.map Drule.GEN_ALL
 
-val Take_rwt =
-  EV [Take_def] [] []
-    ``Take (c, def)`` |> hd
+val Do_rwt = EV [Do_def] [] [] ``Do (c, def)`` |> hd
 
 val ConditionPassed_rwt =
    EV [ConditionPassed_def, CurrentCond_def] [] []
@@ -1492,7 +1557,7 @@ val DecodeImmShift_rwt =
    |> Drule.GEN_ALL
 
 val DecodeHint_rwt =
-   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Take_rwt] [] []
+   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Do_rwt] [] []
      ``DecodeHint (c, ^(bitstringSyntax.mk_vec 8 0))``
      |> hd
 
@@ -1518,7 +1583,8 @@ local
              (Thm.BETA_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV
-                     ([Take_rwt, ArchVersion_rwts, FST_Skip,
+                     ([Do_rwt, ArchVersion_rwts, FST_Skip,
+                       ARMExpandImm_def, ARMExpandImm_C_rwt,
                        (* DecodeImmShift_rwt, *)
                        HaveDSPSupport_rwt,
                        HaveThumb2_def, DecodeHint_rwt,
@@ -1606,41 +1672,7 @@ end
 
 (* -- *)
 
-local
-   fun rename b v =
-      case Lib.total Term.dest_var v of
-        SOME (s, ty) =>
-          if String.sub (s, 0) = #"_"
-             then SOME (v |-> Term.mk_var (b ^ String.extract (s, 1, NONE), ty))
-          else NONE
-      | NONE => NONE
-  val tf =
-     fn #"f" => #"F"
-      | #"0" => #"F"
-      | #"t" => #"T"
-      | #"1" => #"T"
-      | s    => s
-   fun mk_pat_term s =
-      let
-         val p = s |> String.explode
-                   |> List.filter (not o Char.isSpace)
-                   |> List.map tf
-                   |> Lib.separate #";"
-                   |> String.implode
-      in
-         Parse.Term [HOLPP.QUOTE ("[" ^ p ^ "]")]
-      end
-in
-   fun pattern s =
-      let
-         val tm = mk_pat_term s
-         val vs = Term.free_vars tm
-         val s = List.mapPartial (rename "x") vs
-      in
-         Term.subst s tm
-      end
-   fun epattern s = pattern (s ^ "____")
-end
+fun epattern s = utilsLib.pattern (s ^ "____")
 
 val arm_patterns = List.map (I ## epattern)
   [("BranchExchange",                       "FFFTFFTF____________FFFT"),
@@ -1725,12 +1757,16 @@ val arm_patterns = List.map (I ## epattern)
    ("VFPData",                              "TTTFF___________TFT____F"),
    ("VFPOther",                             "TTTFT_TT________TFT____F"),
    ("VFPMrs",                               "TTTFTTTTFFFT____TFTF___T"),
+   ("MoveToRegisterFromSpecial",            "FFFTFFFF__________F_FFFF"),
+   ("MoveToSpecialFromRegister",            "FFFTFFTF__________F_FFFF"),
+   ("MoveToSpecialFromImmediate",           "FFTTFFTF________________"),
    ("Hint",                                 "FFTTFFTFFFFFTTTTFFFF____")
   ]
 
 val arm_patterns15 = List.map (I ## epattern)
   [("Setend",                                 "FFFTFFFF___T________FFFF"),
    ("ChangeProcessorState",                   "FFFTFFFF___F__________F_"),
+   ("ReturnFromException",                    "TFF__F_T________________"),
    ("BranchLinkExchangeImmediate (to Thumb)", "TFT_____________________")
   ]
 
@@ -1775,8 +1811,8 @@ in
       end
    fun mk_pattern_opcode c p =
       listSyntax.mk_list
-         (fst (listSyntax.dest_list (pattern c)) @ fst (listSyntax.dest_list p),
-          Type.bool)
+         (fst (listSyntax.dest_list (utilsLib.pattern c)) @
+          fst (listSyntax.dest_list p), Type.bool)
 end
 
 local
@@ -1799,12 +1835,14 @@ local
        | s as "LoadSignedByte (imm,pre)" => (s, [true, false])
        | s as "LoadHalf (imm,pre)" => (s, [true, false])
        | s as "LoadWord (imm,post)" => (s, [true, false])
+       | s as "SpecialFromImmediate" =>
+            ("MoveTo" ^ s, [true, false, false, false, false, false, false])
        | s => (s, [true])
-   val c14 = pattern "TTTF"
-   val c15 = pattern "TTTT"
+   val c14 = utilsLib.pattern "TTTF"
+   val c15 = utilsLib.pattern "TTTT"
    fun unconditional c =
       let
-         val cond = Term.term_eq (pattern c)
+         val cond = Term.term_eq (utilsLib.pattern c)
       in
          cond c14 orelse cond c15
       end
@@ -2239,15 +2277,28 @@ local
      ("VMOV (single,imm)", ("VFPOther", [xF 9, xF 11])),
      ("VMOV (double,imm)", ("VFPOther", [xT 9, xF 11])),
      ("VCMP (single,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xF 9, xT 10, xT 11])),
      ("VCMP (double,zero)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xT 4, xT 9, xT 10, xT 11])),
      ("VCMP (single)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xF 9, xT 10, xT 11])),
      ("VCMP (double)",
-        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 11])),
+        ("VFPOther", [xF 1, xT 2, xF 3, xF 4, xT 9, xT 10, xT 11])),
      ("VMRS (nzcv)", ("VFPMrs", [xT 0, xT 1, xT 2, xT 3])),
      ("VMRS", ("VFPMrs", [])),
+     ("MRS (cpsr)", ("MoveToRegisterFromSpecial", [])),
+     ("MSR (cpsr, reg)", ("MoveToSpecialFromRegister", [xF 3])),
+     ("MSR (cpsr, imm)", ("SpecialFromImmediate", [xF 3])),
+     ("MSR (cpsr, reg, control)", ("MoveToSpecialFromRegister", [xT 3])),
+     ("MSR (cpsr, imm, control)", ("MoveToSpecialFromImmediate", [xT 3])),
+     ("RFEDA", ("ReturnFromException", [xF 0, xF 1, xF 2])),
+     ("RFEDB", ("ReturnFromException", [xT 0, xF 1, xF 2])),
+     ("RFEIA", ("ReturnFromException", [xF 0, xT 1, xF 2])),
+     ("RFEIB", ("ReturnFromException", [xT 0, xT 1, xF 2])),
+     ("RFEDA (wb)", ("ReturnFromException", [xF 0, xF 1, xT 2])),
+     ("RFEDB (wb)", ("ReturnFromException", [xT 0, xF 1, xT 2])),
+     ("RFEIA (wb)", ("ReturnFromException", [xF 0, xT 1, xT 2])),
+     ("RFEIB (wb)", ("ReturnFromException", [xT 0, xT 1, xT 2])),
      ("NOP", ("Hint", List.tabulate (8, xF)))
      ]
    fun list_instructions () = List.map fst (Redblackmap.listItems ast)
@@ -2639,55 +2690,6 @@ val IfThen_rwt =
    EV [dfn'IfThen_def, IncPC_rwt] [] []
       ``dfn'IfThen (firstcond, mask)``
       |> addThms
-
-(* ---------------------------- *)
-
-local
-   val rwt =
-      utilsLib.qm [wordsTheory.SHIFT_ZERO]
-        ``(if n = 0 then (x: 'a word,s) else (x #>> n, ^st)) = (x #>> n, s)``
-in
-   val ROR_rwt =
-      EV [ROR_def, ROR_C_def] [] []
-         ``ROR (x: 'a word, n)``
-         |> hd
-         |> SIMP_RULE bool_ss [rwt]
-end
-
-val () = setEvConv (Conv.DEPTH_CONV
-            (bitstringLib.extract_v2w_CONV
-             ORELSEC bitstringLib.v2w_eq_CONV
-             ORELSEC bitstringLib.FIX_CONV
-             ORELSEC wordsLib.SIZES_CONV))
-
-(*
-val ThumbExpandImm_C_rwt =
-   EV [ThumbExpandImm_C_def, ROR_C_def, wordsTheory.w2n_eq_0,
-       bitstringTheory.word_concat_v2w_rwt, merge_cond] [] []
-      ``ThumbExpandImm_C (^(mk_vec 12 0), c)``
-      |> hd
-*)
-
-val ARMExpandImm_C_rwt =
-   EV [ARMExpandImm_C_def, Shift_C_rwt, DECIDE ``(2 * n = 0) = (n = 0n)``,
-       wordsTheory.w2n_eq_0] [] []
-      ``ARMExpandImm_C (^(bitstringSyntax.mk_vec 12 0), c)``
-      |> hd
-
-val () = setEvConv utilsLib.WGROUND_CONV
-
-local
-   val rwt = Q.prove(
-      `(if b then (((x, y), s): (word32 # bool) # arm_state) else ((m, n), s)) =
-       ((if b then x else m, if b then y else n), s)`,
-      rw [])
-in
-   val ExpandImm_C_rwt =
-      EV [ExpandImm_C_def, ARMExpandImm_C_rwt, rwt]
-         [[``^st.Encoding <> Encoding_Thumb2``]] []
-         ``ExpandImm_C (^(bitstringSyntax.mk_vec 12 0), c)``
-         |> hd
-end
 
 (* ---------------------------- *)
 
@@ -3454,15 +3456,18 @@ val () = resetEvConv ()
 
 (* ---------------------------- *)
 
-(* WORK IN PROGRESS (PSR updates, e.g. RFE, MRS, MSR)
-
-val usr_mode = ASSUME (hd (hd (cpsr'modes)))
 val COND_B_CONV = Conv.RATOR_CONV o Conv.RATOR_CONV o Conv.RAND_CONV
 val COND_T_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
 val COND_E_CONV = Conv.RAND_CONV
 
-val PSR_CONV = BIT_FIELD_INSERT_CONV "arm" "PSR"
-val PSR_TAC = REC_REG_BIT_FIELD_INSERT_TAC "arm" "PSR"
+fun COND_UPDATE2_CONV l =
+   COND_UPDATE_CONV
+   THENC DATATYPE_CONV
+   THENC COND_UPDATE_CONV
+   THENC SIMP_CONV (srw_ss()) l
+
+val PSR_CONV = utilsLib.BIT_FIELD_INSERT_CONV "arm" "PSR"
+val PSR_TAC = utilsLib.REC_REG_BIT_FIELD_INSERT_TAC "arm" "PSR"
 
 val PSR_FIELDS = Q.prove(
    `(!p v.
@@ -3477,13 +3482,25 @@ val PSR_FIELDS = Q.prove(
        p with <|GE := v|>) /\
     (!p v.
        rec'PSR (bit_field_insert 15 10 (v: word6) (reg'PSR p)) =
-       p with <|IT := bit_field_insert 7 2 v p.IT|>)`,
+       p with <|IT := bit_field_insert 7 2 v p.IT|>) /\
+    (!p v.
+       rec'PSR (bit_field_insert 4 0 (v: word5) (reg'PSR p)) =
+       p with <|M := bit_field_insert 4 0 v p.M|>)`,
    REPEAT CONJ_TAC \\ PSR_TAC `p`)
 
 val PSR_FLAGS = Q.prove(
    `(!b p v.
        rec'PSR (bit_field_insert 9 9 (if b then 1w:word1 else 0w) (reg'PSR p)) =
        p with <|E := b|>) /\
+    (!b p v.
+       rec'PSR (bit_field_insert 8 8 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       p with <|A := b|>) /\
+    (!b p v.
+       rec'PSR (bit_field_insert 7 7 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       p with <|I := b|>) /\
+    (!b p v.
+       rec'PSR (bit_field_insert 6 6 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       p with <|F := b|>) /\
     (!b p v.
        rec'PSR (bit_field_insert 5 5 (if b then 1w:word1 else 0w) (reg'PSR p)) =
        p with <|T := b|>)`,
@@ -3506,9 +3523,14 @@ val IT_concat = Q.prove(
    \\ rewrite_tac [wordsTheory.bit_field_insert_def]
    \\ blastLib.BBLAST_TAC)
 
-val CPSRWriteByInstr_usr_return =
+val insert_mode = Q.prove(
+   `!w: word32.
+       bit_field_insert 4 0 ((4 >< 0) w : word5) (v: word5) = (4 >< 0) w`,
+   blastLib.BBLAST_TAC)
+
+val CPSRWriteByInstr =
    CPSRWriteByInstr_def
-   |> Q.SPECL [`value`, `bytemask`, `T`]
+   |> Q.SPECL [`value`, `bytemask`, `is_exc_return`]
    |> Conv.CONV_RULE (Conv.X_FUN_EQ_CONV st)
    |> Drule.SPEC_ALL
    |> Conv.CONV_RULE
@@ -3519,50 +3541,187 @@ val CPSRWriteByInstr_usr_return =
                      PSR_FIELDS, PSR_FLAGS]
             THENC Conv.RAND_CONV
                      (Thm.BETA_CONV
-                      THENC REWRITE_CONV [usr_mode, hd BadMode_rwt]
                       THENC PairedLambda.let_CONV
-                      THENC REWRITE_CONV [usr_mode]
+                      THENC utilsLib.INST_REWRITE_CONV [BadMode]
+                      THENC REWRITE_CONV []
                      )
             THENC PairedLambda.let_CONV
             THENC REWRITE_CONV []
             THENC Conv.RAND_CONV
-                     (COND_T_CONV
-                         (utilsLib.NCONV 3 PairedLambda.let_CONV)
+                     (COND_T_CONV PairedLambda.let_CONV
                       THENC PSR_CONV
                      )
             THENC PairedLambda.let_CONV
             THENC Conv.RAND_CONV
                      (PSR_CONV
-                      THENC COND_T_CONV PairedLambda.let_CONV
-                      THENC SIMP_CONV (srw_ss()) []
-                      THENC PSR_CONV
+                      THENC COND_UPDATE2_CONV [IT_extract]
                      )
             THENC PairedLambda.let_CONV
             THENC Conv.RAND_CONV
                      (PSR_CONV
                       THENC COND_T_CONV
-                              (Conv.RAND_CONV
-                                  (PairedLambda.let_CONV
-                                   THENC PSR_CONV)
-                               THENC utilsLib.NCONV 3 PairedLambda.let_CONV
-                               THENC PSR_CONV)
+                               (PairedLambda.let_CONV
+                                THENC RAND_CONV DATATYPE_CONV
+                                THENC PairedLambda.let_CONV
+                                THENC DATATYPE_CONV
+                                THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+                                THENC SIMP_CONV (srw_ss()) [PSR_FLAGS]
+                                )
+                      THENC COND_UPDATE2_CONV
+                               [addressTheory.IF_IF,
+                                Q.SPEC `bytemask ' 3` CONJ_COMM]
                      )
             THENC PairedLambda.let_CONV
             THENC COND_T_CONV
-                     (utilsLib.NCONV 3 PairedLambda.let_CONV
-                      THENC Conv.RAND_CONV PairedLambda.let_CONV
-                      THENC PSR_CONV
-                     )
-            THENC REWRITE_CONV [IT_extract, IT_concat, unit_state_cond]
-           )
-        )
+                     (Conv.RAND_CONV
+                        (REWRITE_CONV [PSR_FLAGS] THENC COND_UPDATE2_CONV [])
+                      THENC PairedLambda.let_CONV
+                      THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+                      THENC Conv.RAND_CONV
+                               (DATATYPE_CONV
+                                THENC REWRITE_CONV [PSR_FLAGS]
+                                THENC COND_UPDATE2_CONV []
+                               )
+                      THENC PairedLambda.let_CONV
+                      THENC Conv.RAND_CONV (COND_UPDATE2_CONV [])
+                      THENC PairedLambda.let_CONV))
+            THENC REWRITE_CONV [PSR_FIELDS, addressTheory.IF_IF, IT_extract]
+            THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true))
+   |> utilsLib.ALL_HYP_CONV_RULE
+        (DATATYPE_CONV THENC REWRITE_CONV [boolTheory.COND_ID])
 
-val CPSRWriteByInstr_usr_1111 =
-   CPSRWriteByInstr_usr_return
-   |> Q.INST [`bytemask` |-> `0b1111w`]
-   |> Conv.CONV_RULE (Conv.RHS_CONV utilsLib.WGROUND_CONV THENC REWRITE_CONV [])
+val CPSRWriteByInstr_no_control =
+   REWRITE_RULE [ASSUME ``~((bytemask: word4) ' 0)``] CPSRWriteByInstr
 
-*)
+val CPSRWriteByInstr_control_usr =
+   REWRITE_RULE [ASSUME ``(bytemask: word4) ' 0``,
+                 ASSUME ``^st.CPSR.M = 16w``] CPSRWriteByInstr
+
+val CPSRWriteByInstr_control_not_usr =
+   CPSRWriteByInstr
+   |> Conv.CONV_RULE
+        (Conv.RHS_CONV
+            (REWRITE_CONV [ASSUME ``(bytemask: word4) ' 0``,
+                           ASSUME ``^st.CPSR.M <> 16w``]
+             THENC utilsLib.INST_REWRITE_CONV [BadMode]
+             THENC REWRITE_CONV []
+             THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+             THENC REWRITE_CONV []
+             THENC PairedLambda.let_CONV
+             THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+             THENC REWRITE_CONV []
+             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
+             THENC REWRITE_CONV []
+             THENC PairedLambda.let_CONV
+             THENC PairedLambda.let_CONV
+             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
+             THENC REWRITE_CONV []
+             THENC PairedLambda.let_CONV
+             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
+             THENC REWRITE_CONV []
+             THENC PairedLambda.let_CONV
+             THENC DATATYPE_CONV
+             THENC REWRITE_CONV [PSR_FIELDS]))
+   |> utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
+
+val CPSRWriteByInstr_exn_return =
+   CPSRWriteByInstr_control_not_usr
+   |> Q.INST [`bytemask` |-> `0b1111w`, `is_exc_return` |-> `T`]
+   |> Conv.CONV_RULE (Conv.RHS_CONV utilsLib.WGROUND_CONV
+                      THENC REWRITE_CONV [IT_concat, insert_mode])
+   |> utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [EVAL ``15w: word4 ' 0``])
+
+(* Partial support for PSR updates, e.g. RFE, MRS, MSR) *)
+
+fun rule tm = REWRITE_RULE [] o utilsLib.INST_REWRITE_RULE [ASSUME tm]
+val tm = bitstringSyntax.mk_vec 4 0
+val thms =
+   List.tabulate
+     (4, fn i => EVAL (fcpSyntax.mk_fcp_index (tm, numLib.term_of_int i)))
+
+fun is_j tm =
+   case Lib.total fcpSyntax.dest_fcp_index tm of
+      SOME (_, i) => i = numLib.term_of_int 24
+    | NONE => false
+
+fun unset_j_conv tm =
+   let
+      val t = HolKernel.find_term is_j tm
+   in
+      PURE_REWRITE_CONV [ASSUME (boolSyntax.mk_neg t)] tm
+   end
+
+val ReturnFromException_le_rwts =
+   EV [dfn'ReturnFromException_def, CurrentModeIsHyp,
+       CurrentModeIsNotUser_def, BadMode, pairTheory.FST, CurrentInstrSet_rwt,
+       CPSRWriteByInstr_exn_return, NotHyp, List.last BranchWritePC_rwt,
+       rule ``~^st.CPSR.E`` (hd MemA_4_rwt),
+       rule ``n <> 15w: word4`` R_rwt, write'R_rwt,
+       arm_stepTheory.Align_LoadWritePC,
+       wordsTheory.WORD_SUB_ADD, wordsTheory.WORD_ADD_SUB,
+       simpLib.SIMP_PROVE (srw_ss()) []
+          ``(!w: word32. w + 4w + 4w = w + 8w) /\
+            (!w: word32. w - 8w + 4w = w - 4w)``]
+      [[``^st.CPSR.M <> 16w``]]
+      [[`inc` |-> ``F``, `wordhigher` |-> ``F``, `wback` |-> ``T``],
+       [`inc` |-> ``F``, `wordhigher` |-> ``T``, `wback` |-> ``T``],
+       [`inc` |-> ``T``, `wordhigher` |-> ``F``, `wback` |-> ``T``],
+       [`inc` |-> ``T``, `wordhigher` |-> ``T``, `wback` |-> ``T``],
+       [`inc` |-> ``F``, `wordhigher` |-> ``F``, `wback` |-> ``F``],
+       [`inc` |-> ``F``, `wordhigher` |-> ``T``, `wback` |-> ``F``],
+       [`inc` |-> ``T``, `wordhigher` |-> ``F``, `wback` |-> ``F``],
+       [`inc` |-> ``T``, `wordhigher` |-> ``T``, `wback` |-> ``F``]]
+      ``dfn'ReturnFromException (inc, wordhigher, wback, n)``
+   |> List.map (Conv.CONV_RULE unset_j_conv o
+                utilsLib.ALL_HYP_CONV_RULE
+                  (DATATYPE_CONV
+                   THENC REWRITE_CONV
+                            [arm_stepTheory.Aligned_numeric,
+                             ASSUME ``^st.CPSR.M <> 16w``]))
+   |> addThms
+
+val MoveToRegisterFromSpecial_cpsr_rwts =
+   EV [dfn'MoveToRegisterFromSpecial_def, write'R_rwt,
+       arm_stepTheory.R_x_not_pc, utilsLib.mk_reg_thm "arm" "PSR",
+       bitstringTheory.ops_to_v2w, EVAL ``n2v 0xF8FF03DF``,
+       EVAL ``^(bitstringSyntax.mk_vec 32 0) &&
+              ^(bitstringSyntax.mk_vec 32 32)``,
+       CurrentModeIsUserOrSystem_def, BadMode, IncPC_rwt] [] []
+      ``dfn'MoveToRegisterFromSpecial (F, d)``
+   |> addThms
+
+fun MoveToSpecialFromImmediate_cpsr_rwts thm c =
+   EV ([dfn'MoveToSpecialFromImmediate_def, CurrentInstrSet_rwt, IncPC_rwt] @
+       thm :: thms) [] c
+      ``dfn'MoveToSpecialFromImmediate (F, imm, ^tm)``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                  (DATATYPE_CONV THENC REWRITE_CONV thms))
+   |> addThms
+
+val MoveToSpecialFromImmediate_cpsr_no_control_rwts =
+   MoveToSpecialFromImmediate_cpsr_rwts CPSRWriteByInstr_no_control
+      [[`b0` |-> ``F``]]
+
+val MoveToSpecialFromImmediate_cpsr_control_usr_rwts =
+   MoveToSpecialFromImmediate_cpsr_rwts CPSRWriteByInstr_control_usr
+      [[`b0` |-> ``T``]]
+
+fun MoveToSpecialFromRegister_cpsr_rwts thm c =
+   EV ([dfn'MoveToSpecialFromRegister_def, CurrentInstrSet_rwt, R_rwt,
+        IncPC_rwt] @ thm :: thms)
+      [[``n <> 15w: word4``]] c
+      ``dfn'MoveToSpecialFromRegister (F, n, ^tm)``
+   |> List.map (utilsLib.ALL_HYP_CONV_RULE
+                  (DATATYPE_CONV THENC REWRITE_CONV thms THENC DATATYPE_CONV))
+   |> addThms
+
+val MoveToSpecialFromRegister_cpsr_no_control_rwts =
+   MoveToSpecialFromRegister_cpsr_rwts CPSRWriteByInstr_no_control
+      [[`b0` |-> ``F``]]
+
+val MoveToSpecialFromRegister_cpsr_control_usr_rwts =
+   MoveToSpecialFromRegister_cpsr_rwts CPSRWriteByInstr_control_usr
+      [[`b0` |-> ``T``]]
 
 (* ========================================================================= *)
 
@@ -3636,9 +3795,10 @@ local
    val MP_Next0 = Drule.MATCH_MP arm_stepTheory.NextStateARM_arm0
    val Run_CONV = utilsLib.Run_CONV ("arm", st) o get_val
 in
-   fun eval_arm tms =
+   fun arm_eval config =
       let
-         val tms = default_tms @ tms
+         val tms =
+            Lib.mk_set (default_tms @ arm_configLib.mk_config_terms config)
          val ftch = fetch tms
          val dec = arm_decode tms
          val run = eval enc tms
@@ -3673,7 +3833,7 @@ local
 in
    fun arm_step_hex config =
       let
-         val ev = eval_arm (arm_configLib.mk_config_terms config)
+         val ev = arm_eval config
       in
          fn s =>
             let
@@ -3685,6 +3845,25 @@ in
             end
       end
 end
+
+fun arm_step_code config =
+   let
+      val step_hex = List.map (arm_step_hex config)
+      open assemblerLib
+   in
+      fn q: string quotation =>
+         let
+            val (code, warnings) = armAssemblerLib.arm_code_with_warnings q
+         in
+            if List.null warnings
+               then ()
+            else ( printn "\n>>>> Warning: contains UNPREDICTABLE code. >>>>\n"
+                 ; printLines warnings
+                 ; printn "\n<<<<\n"
+                 )
+          ; step_hex code
+         end
+   end
 
 local
    fun cases l =
@@ -3700,7 +3879,7 @@ local
 in
    fun arm_step config =
       let
-         val ev = eval_arm (arm_configLib.mk_config_terms config)
+         val ev = arm_eval config
       in
          fn s =>
             let
@@ -3714,5 +3893,49 @@ end
 val () = Parse.reveal "add"
 
 (* ---------------------------- *)
+
+(*
+
+val tms =
+   List.map fix_datatype [``~^st.CPSR.T``, ``^st.Encoding = Encoding_ARM``]
+
+val dec = arm_decode tms
+
+val config = ""
+val tms = arm_configLib.mk_config_terms config
+
+
+dec (mk_arm_opcode "MSR (cpsr, imm, control)")
+
+val (x, v) = mk_arm_opcode "RFEIA"
+val (x, v) = mk_arm_opcode "MSR (cpsr, imm, control)"
+
+dec (mk_arm_opcode "MSR (cpsr, imm)")
+dec (mk_arm_opcode "RFEIA")
+
+val dec = arm_decode_hex ""
+dec "E10F1000"
+dec "E12FF001"
+dec "E32FF0FF"
+dec "E328F40F"
+
+val ev = arm_step ""
+
+ev "MSR (cpsr, imm)";
+ev "MSR (cpsr, reg)";
+ev "MSR (cpsr, imm, control)";
+ev "MSR (cpsr, reg, control)";
+ev "MRS (cpsr)";
+ev "RFEIA";
+ev "RFEIB";
+ev "RFEDA";
+ev "RFEDB";
+ev "RFEIA (wb)";
+ev "RFEIB (wb)";
+ev "RFEDA (wb)";
+ev "RFEDB (wb)";
+
+*)
+
 
 end

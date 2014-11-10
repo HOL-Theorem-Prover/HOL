@@ -11,6 +11,7 @@ sig
   val is_ptree   : term -> bool
 
   val Define_mk_ptree : string -> term_ptree -> thm
+  val Define_mk_ptree_with_is_ptree : string -> term_ptree -> thm * thm
 
   val empty         : term_ptree
   val peek          : term_ptree -> num -> term option
@@ -48,10 +49,9 @@ sig
   val string_ptree_of_list : (string * term) list -> term_ptree
   val ptree_of_strings     : string list -> term_ptree
 
-  val custom_pp_term_ptree
-                    : (ppstream -> bool -> unit) ->
-                      (ppstream -> num * term -> unit) -> int ->
-                       ppstream -> term_ptree -> unit
+  val custom_pp_term_ptree :
+    (ppstream -> bool -> unit) -> (ppstream -> num * term -> unit) -> int ->
+    ppstream -> term_ptree -> unit
 
   val pp_term_ptree : ppstream -> term_ptree -> unit
 
@@ -60,9 +60,9 @@ sig
   val PTREE_REMOVE_CONV       : conv
   val PTREE_SIZE_CONV         : conv
   val PTREE_DEPTH_CONV        : conv
-  val PTREE_TRANSFORM_CONV    : conv
-  val PTREE_EVERY_LEAF_CONV   : conv
-  val PTREE_EXISTS_LEAF_CONV  : conv
+  val PTREE_TRANSFORM_CONV    : conv -> conv
+  val PTREE_EVERY_LEAF_CONV   : conv -> conv
+  val PTREE_EXISTS_LEAF_CONV  : conv -> conv
   val PTREE_IN_PTREE_CONV     : conv
   val PTREE_IS_PTREE_CONV     : conv
   val PTREE_INSERT_PTREE_CONV : conv
@@ -71,8 +71,7 @@ sig
   val PTREE_CONV              : conv
   val PTREE_DEFN_CONV         : conv
 
-  val ptree_new_defn_depth     : int ref
-  val is_ptree_term_size_limit : int ref
+  val ptree_new_defn_depth : int ref
 
   val add_ptree_compset : computeLib.compset -> unit
   val ptree_compset     : unit -> computeLib.compset

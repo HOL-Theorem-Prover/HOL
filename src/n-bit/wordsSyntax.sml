@@ -355,6 +355,16 @@ val s = syntax_fns 2 HolKernel.dest_binop
 val (word_replicate_tm, mk_word_replicate,
      dest_word_replicate, is_word_replicate) = s "word_replicate"
 
+fun mk_word_replicate_ty (n, w, ty) =
+   Term.list_mk_comb
+      (Term.inst [Type.alpha |-> dim_of w, Type.beta |-> ty] word_replicate_tm,
+       [n, w])
+
+(* - - - - - - - - - - - - - - - - - - - - - - *)
+
+val (bit_set_tm, mk_bit_set, dest_bit_set, is_bit_set) =
+   syntax_fns 3 HolKernel.dest_binop HolKernel.mk_binop "BIT_SET"
+
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
 val s = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop

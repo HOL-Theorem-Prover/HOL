@@ -838,7 +838,7 @@ val _ =
     ("ordinal",
      [MLSIG "type num = numML.num",
       OPEN ["num"],
-      DATATYPE `osyntax = End of num | Plus of osyntax => num => osyntax`,
+      DATATYPE `osyntax = End num | Plus osyntax num osyntax`,
       DEFN expt_def,
       DEFN coeff_def,
       DEFN finp_def,

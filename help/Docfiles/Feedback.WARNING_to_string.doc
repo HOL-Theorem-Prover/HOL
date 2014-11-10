@@ -3,7 +3,7 @@
 \TYPE {WARNING_to_string : (string -> string -> string -> string) ref}
 
 \SYNOPSIS
-Alterable function for formatting {HOL_WARNING}
+Alterable function for formatting {HOL_WARNING}.
 
 \KEYWORDS
 message, formatting

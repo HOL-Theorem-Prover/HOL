@@ -160,8 +160,8 @@ fun guess_term2type gtm =
     (gty_forall_point,
      ``SUC (y :num) + (z :num)``,
      [``(y :num)``, ``(z :num)``],
-     ``GUESS_EXISTS_POINT (λ(x :num # num). SUC (FST x) + SND x)
-       (λ(x :num). (P :num -> bool) x)``)
+     ``GUESS_EXISTS_POINT (\(x :num # num). SUC (FST x) + SND x)
+       (\(x :num). (P :num -> bool) x)``)
 
   Look at the ML-function check_guess for a more formal description, please.
 *)

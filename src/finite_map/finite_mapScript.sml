@@ -49,7 +49,6 @@ val _ = set_fixity "'" (Infixl 2000);    (* fmap application *)
 
 val _ = set_fixity "|+"  (Infixl 600);   (* fmap update *)
 val _ = set_fixity "|++" (Infixl 500);   (* iterated update *)
-val _ = set_fixity "\\\\" (Infixl 600)   (* domain subtraction *)
 
 
 (*---------------------------------------------------------------------------
@@ -175,7 +174,6 @@ val FDOM_DEF = Q.new_definition
 val update_rep = Term`\(f:'a->'b+one) x y. \a. if a=x then INL y else f a`;
 
 val empty_rep = Term`(\a. INR one):'a -> 'b + one`;
-
 
 
 (*---------------------------------------------------------------------------
@@ -1394,7 +1392,9 @@ val FINITE_PRED_11 = Q.store_thm
 
 val fmap_domsub = new_definition(
   "fmap_domsub",
-  ``(\\) fm k = DRESTRICT fm (COMPL {k})``);
+  ``fdomsub fm k = DRESTRICT fm (COMPL {k})``);
+val _ = overload_on ("\\\\", ``fdomsub``);
+(* this has been set up as an infix in relationTheory *)
 
 val DOMSUB_FEMPTY = store_thm(
   "DOMSUB_FEMPTY",
@@ -1826,8 +1826,6 @@ val _ =
    "FLOOKUP_UPDATE"];
 
 
-
-
 (*---------------------------------------------------------------------------*)
 (* Mapping for finite maps with two arguments, compare to o_f                *)
 (* added 17 March 2009 by Thomas Tuerk, updated 26 March                     *)
@@ -2248,6 +2246,478 @@ CONJ_TAC THEN GEN_TAC THENL [
 val fmap_size_def =
  Define
    `fmap_size kz vz fm = SIGMA (\k. kz k + vz (fm ' k)) (FDOM fm)`;
+
+(*---------------------------------------------------------------------------*)
+(* Various lemmas from the CakeML project https://cakeml.org                 *)
+(*---------------------------------------------------------------------------*)
+
+local
+  open lcsymtacs optionTheory rich_listTheory listTheory boolSimps sortingTheory
+in
+
+val o_f_FUNION = store_thm("o_f_FUNION",
+  ``f o_f (FUNION f1 f2) = FUNION (f o_f f1) (f o_f f2)``,
+  simp[GSYM fmap_EQ_THM,FUNION_DEF] >>
+  rw[o_f_FAPPLY]);
+
+val FDOM_FOLDR_DOMSUB = store_thm("FDOM_FOLDR_DOMSUB",
+  ``!ls fm. FDOM (FOLDR (\k m. m \\ k) fm ls) = FDOM fm DIFF set ls``,
+  Induct >> simp[] >>
+  ONCE_REWRITE_TAC[EXTENSION] >>
+  simp[] >> metis_tac[]);
+
+val FEVERY_SUBMAP = store_thm("FEVERY_SUBMAP",
+  ``FEVERY P fm /\ fm0 SUBMAP fm ==> FEVERY P fm0``,
+  SRW_TAC[][FEVERY_DEF,SUBMAP_DEF]);
+
+val FEVERY_ALL_FLOOKUP = store_thm("FEVERY_ALL_FLOOKUP",
+  ``!P f. FEVERY P f <=> !k v. (FLOOKUP f k = SOME v) ==> P (k,v)``,
+  SRW_TAC[][FEVERY_DEF,FLOOKUP_DEF]);
+
+val FUPDATE_LIST_CANCEL = store_thm("FUPDATE_LIST_CANCEL",
+  ``!ls1 fm ls2.
+    (!k. MEM k (MAP FST ls1) ==> MEM k (MAP FST ls2))
+    ==> (fm |++ ls1 |++ ls2 = fm |++ ls2)``,
+  Induct THEN SRW_TAC[][FUPDATE_LIST_THM] THEN
+  Cases_on`h` THEN
+  MATCH_MP_TAC FUPDATE_FUPDATE_LIST_MEM THEN
+  FULL_SIMP_TAC(srw_ss())[]);
+
+val FUPDATE_EQ_FUNION = store_thm("FUPDATE_EQ_FUNION",
+  ``!fm kv. fm |+ kv = FUNION (FEMPTY |+ kv) fm``,
+  gen_tac >> Cases >>
+  simp[GSYM fmap_EQ_THM,FDOM_FUPDATE,FAPPLY_FUPDATE_THM,FUNION_DEF] >>
+  simp[EXTENSION]);
+
+val FUPDATE_LIST_APPEND_COMMUTES = store_thm("FUPDATE_LIST_APPEND_COMMUTES",
+  ``!l1 l2 fm. DISJOINT (set (MAP FST l1)) (set (MAP FST l2)) ==>
+               (fm |++ l1 |++ l2 = fm |++ l2 |++ l1)``,
+  Induct >- rw[FUPDATE_LIST_THM] >>
+  Cases >> rw[FUPDATE_LIST_THM] >>
+  metis_tac[FUPDATE_FUPDATE_LIST_COMMUTES]);
+
+val fmap_rel_OPTREL_FLOOKUP = store_thm("fmap_rel_OPTREL_FLOOKUP",
+  ``fmap_rel R f1 f2 = !k. OPTREL R (FLOOKUP f1 k) (FLOOKUP f2 k)``,
+  rw[fmap_rel_def,optionTheory.OPTREL_def,FLOOKUP_DEF,EXTENSION] >>
+  PROVE_TAC[]);
+
+val FLOOKUP_DRESTRICT = store_thm("FLOOKUP_DRESTRICT",
+  ``!fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE``,
+  SRW_TAC[][FLOOKUP_DEF,DRESTRICT_DEF] THEN FULL_SIMP_TAC std_ss []);
+
+val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
+  ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
+  Induct >> rw[] >>
+  fs[sortingTheory.PERM_CONS_EQ_APPEND] >>
+  rw[FUPDATE_LIST_THM] >>
+  PairCases_on`h` >> fs[] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  match_mp_tac EQ_TRANS >>
+  qexists_tac `(fm |++ (M ++ N)) |+ (h0,h1)` >>
+  conj_tac >- metis_tac[sortingTheory.ALL_DISTINCT_PERM,sortingTheory.PERM_MAP] >>
+  rw[FUPDATE_LIST_APPEND] >>
+  `h0 NOTIN set (MAP FST N)`
+  by metis_tac[sortingTheory.PERM_MEM_EQ,MEM_MAP,MEM_APPEND] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  rw[FUPDATE_LIST_THM]);
+
+val IMAGE_FRANGE = store_thm("IMAGE_FRANGE",
+  ``!f fm. IMAGE f (FRANGE fm) = FRANGE (f o_f fm)``,
+  SRW_TAC[][EXTENSION] THEN
+  EQ_TAC THEN1 PROVE_TAC[o_f_FRANGE] THEN
+  SRW_TAC[][FRANGE_DEF] THEN
+  SRW_TAC[][o_f_FAPPLY] THEN
+  PROVE_TAC[]);
+
+val SUBMAP_mono_FUPDATE = store_thm("SUBMAP_mono_FUPDATE",
+  ``!f g x y. f \\ x SUBMAP g \\ x ==> f |+ (x,y) SUBMAP g |+ (x,y)``,
+  SRW_TAC[][SUBMAP_FUPDATE]);
+
+val SUBMAP_DOMSUB_gen = store_thm("SUBMAP_DOMSUB_gen",
+  ``!f g k. f \\ k SUBMAP g <=> f \\ k SUBMAP g \\ k``,
+  SRW_TAC[][SUBMAP_DEF,EQ_IMP_THM,DOMSUB_FAPPLY_THM]);
+
+val DOMSUB_SUBMAP = store_thm("DOMSUB_SUBMAP",
+  ``!f g x. f SUBMAP g /\ x NOTIN FDOM f ==> f SUBMAP g \\ x``,
+  SRW_TAC[][SUBMAP_DEF,DOMSUB_FAPPLY_THM] THEN
+  SRW_TAC[][] THEN METIS_TAC[]);
+
+val DRESTRICT_DOMSUB = store_thm("DRESTRICT_DOMSUB",
+  ``!f s k. DRESTRICT f s \\ k = DRESTRICT f (s DELETE k)``,
+  SRW_TAC[][GSYM fmap_EQ_THM,FDOM_DRESTRICT] THEN1 (
+    SRW_TAC[][EXTENSION] THEN METIS_TAC[] ) THEN
+  SRW_TAC[][DOMSUB_FAPPLY_THM] THEN
+  SRW_TAC[][DRESTRICT_DEF]);
+
+val DRESTRICT_SUBSET_SUBMAP_gen = store_thm("DRESTRICT_SUBSET_SUBMAP_gen",
+  ``!f1 f2 s t.
+     DRESTRICT f1 s SUBMAP DRESTRICT f2 s /\ t SUBSET s ==>
+     DRESTRICT f1 t SUBMAP DRESTRICT f2 t``,
+  rw[SUBMAP_DEF,DRESTRICT_DEF,SUBSET_DEF])
+
+
+val DRESTRICT_FUNION_SAME = store_thm("DRESTRICT_FUNION_SAME",
+  ``!fm s. FUNION (DRESTRICT fm s) fm = fm``,
+  SRW_TAC[][GSYM SUBMAP_FUNION_ABSORPTION])
+
+val DRESTRICT_EQ_DRESTRICT_SAME = store_thm("DRESTRICT_EQ_DRESTRICT_SAME",
+  ``(DRESTRICT f1 s = DRESTRICT f2 s) <=>
+    (s INTER FDOM f1 = s INTER FDOM f2) /\
+    (!x. x IN FDOM f1 /\ x IN s ==> (f1 ' x = f2 ' x))``,
+  SRW_TAC[][DRESTRICT_EQ_DRESTRICT,SUBMAP_DEF,DRESTRICT_DEF,EXTENSION] THEN
+  PROVE_TAC[])
+
+val FOLDL2_FUPDATE_LIST = store_thm(
+"FOLDL2_FUPDATE_LIST",
+``!f1 f2 bs cs a. (LENGTH bs = LENGTH cs) ==>
+  (FOLDL2 (\fm b c. fm |+ (f1 b c, f2 b c)) a bs cs =
+   a |++ ZIP (MAP2 f1 bs cs, MAP2 f2 bs cs))``,
+SRW_TAC[][FUPDATE_LIST,FOLDL2_FOLDL,MAP2_MAP,ZIP_MAP,MAP_ZIP,
+          rich_listTheory.FOLDL_MAP,rich_listTheory.LENGTH_MAP2,
+          LENGTH_ZIP,pairTheory.LAMBDA_PROD])
+
+val FOLDL2_FUPDATE_LIST_paired = store_thm(
+"FOLDL2_FUPDATE_LIST_paired",
+``!f1 f2 bs cs a. (LENGTH bs = LENGTH cs) ==>
+  (FOLDL2 (\fm b (c,d). fm |+ (f1 b c d, f2 b c d)) a bs cs =
+   a |++ ZIP (MAP2 (\b. UNCURRY (f1 b)) bs cs, MAP2 (\b. UNCURRY (f2 b)) bs cs))``,
+rw[FOLDL2_FOLDL,MAP2_MAP,ZIP_MAP,MAP_ZIP,LENGTH_ZIP,
+   pairTheory.UNCURRY,pairTheory.LAMBDA_PROD,FUPDATE_LIST,
+   rich_listTheory.FOLDL_MAP])
+
+val DRESTRICT_FUNION_SUBSET = store_thm("DRESTRICT_FUNION_SUBSET",
+  ``s2 SUBSET s1 ==>
+    ?h. (FUNION (DRESTRICT f s1) g = FUNION (DRESTRICT f s2) h)``,
+  strip_tac >>
+  qexists_tac `FUNION (DRESTRICT f s1) g` >>
+  match_mp_tac EQ_SYM >>
+  REWRITE_TAC[GSYM SUBMAP_FUNION_ABSORPTION] >>
+  rw[SUBMAP_DEF,DRESTRICT_DEF,FUNION_DEF] >>
+  fs[SUBSET_DEF])
+
+val FUPDATE_LIST_APPLY_NOT_MEM_matchable = store_thm(
+"FUPDATE_LIST_APPLY_NOT_MEM_matchable",
+``!kvl f k v. ~MEM k (MAP FST kvl) /\ (v = f ' k) ==> ((f |++ kvl) ' k = v)``,
+PROVE_TAC[FUPDATE_LIST_APPLY_NOT_MEM])
+
+val FUPDATE_LIST_APPLY_HO_THM = store_thm(
+"FUPDATE_LIST_APPLY_HO_THM",
+``!P f kvl k.
+(?n. n < LENGTH kvl /\ (k = EL n (MAP FST kvl)) /\ P (EL n (MAP SND kvl)) /\
+     (!m. n < m /\ m < LENGTH kvl ==> EL m (MAP FST kvl) <> k)) \/
+(~MEM k (MAP FST kvl) /\ P (f ' k))
+==> (P ((f |++ kvl) ' k))``,
+metis_tac[FUPDATE_LIST_APPLY_MEM,FUPDATE_LIST_APPLY_NOT_MEM])
+
+val FUPDATE_SAME_APPLY = store_thm(
+"FUPDATE_SAME_APPLY",
+``(x = FST kv) \/ (fm1 ' x = fm2 ' x) ==> ((fm1 |+ kv) ' x = (fm2 |+ kv) ' x)``,
+Cases_on `kv` >> rw[FAPPLY_FUPDATE_THM])
+
+val FUPDATE_SAME_LIST_APPLY = store_thm(
+"FUPDATE_SAME_LIST_APPLY",
+``!kvl fm1 fm2 x. MEM x (MAP FST kvl) ==> ((fm1 |++ kvl) ' x = (fm2 |++ kvl) ' x)``,
+ho_match_mp_tac SNOC_INDUCT >>
+conj_tac >- rw[] >>
+rw[FUPDATE_LIST,FOLDL_SNOC] >>
+match_mp_tac FUPDATE_SAME_APPLY >>
+qmatch_rename_tac `(y = FST p) \/ Z` ["Z"] >>
+Cases_on `y = FST p` >> rw[] >>
+first_x_assum match_mp_tac >>
+fs[MEM_MAP] >>
+PROVE_TAC[])
+
+val FUPDATE_LIST_ALL_DISTINCT_APPLY_MEM = store_thm(
+"FUPDATE_LIST_ALL_DISTINCT_APPLY_MEM",
+``!P ls k v fm. ALL_DISTINCT (MAP FST ls) /\
+  MEM (k,v) ls /\
+  P v ==>
+  P ((fm |++ ls) ' k)``,
+rw[] >>
+ho_match_mp_tac FUPDATE_LIST_APPLY_HO_THM >>
+disj1_tac >>
+fs[EL_ALL_DISTINCT_EL_EQ,MEM_EL] >>
+qpat_assum `(k,v) = X` (assume_tac o SYM) >>
+qexists_tac `n` >> rw[EL_MAP] >>
+first_x_assum (qspecl_then [`n`,`m`] mp_tac) >>
+rw[EL_MAP] >> spose_not_then strip_assume_tac >>
+rw[] >> fs[])
+
+val FUPDATE_LIST_ALL_DISTINCT_REVERSE = store_thm("FUPDATE_LIST_ALL_DISTINCT_REVERSE",
+  ``!ls. ALL_DISTINCT (MAP FST ls) ==> !fm. fm |++ (REVERSE ls) = fm |++ ls``,
+  Induct >- rw[] >>
+  qx_gen_tac `p` >> PairCases_on `p` >>
+  rw[FUPDATE_LIST_APPEND,FUPDATE_LIST_THM] >>
+  fs[] >>
+  rw[FUPDATE_FUPDATE_LIST_COMMUTES])
+
+(* FRANGE subset stuff *)
+
+val IN_FRANGE = store_thm(
+"IN_FRANGE",
+``!f v. v IN FRANGE f <=> ?k. k IN FDOM f /\ (f ' k = v)``,
+SRW_TAC[][FRANGE_DEF])
+
+val IN_FRANGE_FLOOKUP = store_thm("IN_FRANGE_FLOOKUP",
+``!f v. v IN FRANGE f <=> ?k. FLOOKUP f k = SOME v``,
+rw[IN_FRANGE,FLOOKUP_DEF])
+
+val FRANGE_FUPDATE_LIST_SUBSET = store_thm(
+"FRANGE_FUPDATE_LIST_SUBSET",
+``!ls fm. FRANGE (fm |++ ls) SUBSET FRANGE fm UNION (set (MAP SND ls))``,
+Induct >- rw[FUPDATE_LIST_THM] >>
+qx_gen_tac `p` >> qx_gen_tac `fm` >>
+pop_assum (qspec_then `fm |+ p` mp_tac) >>
+srw_tac[DNF_ss][SUBSET_DEF] >>
+first_x_assum (qspec_then `x` mp_tac) >> fs[FUPDATE_LIST_THM] >>
+rw[] >> fs[] >>
+PairCases_on `p` >>
+fsrw_tac[DNF_ss][FRANGE_FLOOKUP,FLOOKUP_UPDATE] >>
+pop_assum mp_tac >> rw[] >>
+PROVE_TAC[])
+
+val IN_FRANGE_FUPDATE_LIST_suff = store_thm(
+"IN_FRANGE_FUPDATE_LIST_suff",
+``(!v. v IN FRANGE fm ==> P v) /\ (!v. MEM v (MAP SND ls) ==> P v) ==>
+    !v. v IN FRANGE (fm |++ ls) ==> P v``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_FUPDATE_LIST_SUBSET) >>
+PROVE_TAC[])
+
+val FRANGE_FUNION_SUBSET = store_thm(
+"FRANGE_FUNION_SUBSET",
+``FRANGE (FUNION f1 f2) SUBSET FRANGE f1 UNION FRANGE f2``,
+srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,FUNION_DEF] >>
+PROVE_TAC[])
+
+val IN_FRANGE_FUNION_suff = store_thm(
+"IN_FRANGE_FUNION_suff",
+``(!v. v IN FRANGE f1 ==> P v) /\ (!v. v IN FRANGE f2 ==> P v) ==>
+  (!v. v IN FRANGE (FUNION f1 f2) ==> P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_FUNION_SUBSET) >>
+PROVE_TAC[])
+
+val FRANGE_DOMSUB_SUBSET = store_thm(
+"FRANGE_DOMSUB_SUBSET",
+``FRANGE (fm \\ k) SUBSET FRANGE fm``,
+srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,DOMSUB_FAPPLY_THM] >>
+PROVE_TAC[])
+
+val IN_FRANGE_DOMSUB_suff = store_thm(
+"IN_FRANGE_DOMSUB_suff",
+``(!v. v IN FRANGE fm ==> P v) ==> (!v. v IN FRANGE (fm \\ k) ==> P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_DOMSUB_SUBSET) >>
+PROVE_TAC[])
+
+val FRANGE_DRESTRICT_SUBSET = store_thm(
+"FRANGE_DRESTRICT_SUBSET",
+``FRANGE (DRESTRICT fm s) SUBSET FRANGE fm``,
+srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] >>
+PROVE_TAC[])
+
+val IN_FRANGE_DRESTRICT_suff = store_thm(
+"IN_FRANGE_DRESTRICT_suff",
+``(!v. v IN FRANGE fm ==> P v) ==> (!v. v IN FRANGE (DRESTRICT fm s) ==> P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_DRESTRICT_SUBSET) >>
+PROVE_TAC[])
+
+val FRANGE_FUPDATE_SUBSET = store_thm(
+"FRANGE_FUPDATE_SUBSET",
+``FRANGE (fm |+ kv) SUBSET FRANGE fm UNION {SND kv}``,
+Cases_on `kv` >>
+rw[FRANGE_DEF,SUBSET_DEF,DOMSUB_FAPPLY_THM] >>
+rw[] >> PROVE_TAC[])
+
+val IN_FRANGE_FUPDATE_suff = store_thm(
+"IN_FRANGE_FUPDATE_suff",
+`` (!v. v IN FRANGE fm ==> P v) /\ (P (SND kv))
+==> (!v. v IN FRANGE (fm |+ kv) ==> P v)``,
+rw[] >>
+imp_res_tac(SIMP_RULE(srw_ss())[SUBSET_DEF]FRANGE_FUPDATE_SUBSET) >>
+fs[])
+
+val IN_FRANGE_o_f_suff = store_thm("IN_FRANGE_o_f_suff",
+  ``(!v. v IN FRANGE fm ==> P (f v)) ==> !v. v IN FRANGE (f o_f fm) ==> P v``,
+  rw[IN_FRANGE] >> rw[] >> first_x_assum match_mp_tac >> PROVE_TAC[])
+
+(* DRESTRICT stuff *)
+
+val DRESTRICT_SUBMAP_gen = store_thm(
+"DRESTRICT_SUBMAP_gen",
+``f SUBMAP g ==> DRESTRICT f P SUBMAP g``,
+SRW_TAC[][SUBMAP_DEF,DRESTRICT_DEF])
+
+val DRESTRICT_SUBSET_SUBMAP = store_thm(
+"DRESTRICT_SUBSET_SUBMAP",
+``s1 SUBSET s2 ==> DRESTRICT f s1 SUBMAP DRESTRICT f s2``,
+SRW_TAC[][SUBMAP_DEF,SUBSET_DEF,DRESTRICT_DEF])
+
+val DRESTRICTED_FUNION = store_thm(
+"DRESTRICTED_FUNION",
+``!f1 f2 s. DRESTRICT (FUNION f1 f2) s = FUNION (DRESTRICT f1 s) (DRESTRICT f2 (s DIFF FDOM f1))``,
+rw[GSYM fmap_EQ_THM,DRESTRICT_DEF,FUNION_DEF] >> rw[] >>
+rw[EXTENSION] >> PROVE_TAC[])
+
+val FRANGE_DRESTRICT_SUBSET = store_thm(
+"FRANGE_DRESTRICT_SUBSET",
+``FRANGE (DRESTRICT fm s) SUBSET FRANGE fm``,
+SRW_TAC[][FRANGE_DEF,SUBSET_DEF,DRESTRICT_DEF] THEN
+SRW_TAC[][] THEN PROVE_TAC[])
+
+val DRESTRICT_FDOM = store_thm(
+"DRESTRICT_FDOM",
+``!f. DRESTRICT f (FDOM f) = f``,
+SRW_TAC[][GSYM fmap_EQ_THM,DRESTRICT_DEF])
+
+val DRESTRICT_SUBSET = store_thm("DRESTRICT_SUBSET",
+  ``!f1 f2 s t.
+    (DRESTRICT f1 s = DRESTRICT f2 s) /\ t SUBSET s ==>
+    (DRESTRICT f1 t = DRESTRICT f2 t)``,
+  rw[DRESTRICT_EQ_DRESTRICT]
+    >- metis_tac[DRESTRICT_SUBSET_SUBMAP,SUBMAP_TRANS]
+    >- metis_tac[DRESTRICT_SUBSET_SUBMAP,SUBMAP_TRANS] >>
+  fsrw_tac[DNF_ss][SUBSET_DEF,EXTENSION] >>
+  metis_tac[])
+
+val f_o_f_FUPDATE_compose = store_thm("f_o_f_FUPDATE_compose",
+  ``!f1 f2 k x v. x NOTIN FDOM f1 /\ x NOTIN FRANGE f2 ==>
+    (f1 |+ (x,v) f_o_f f2 |+ (k,x) = (f1 f_o_f f2) |+ (k,v))``,
+  rw[GSYM fmap_EQ_THM,f_o_f_DEF,FAPPLY_FUPDATE_THM] >>
+  simp[] >> rw[] >> fs[] >> rw[EXTENSION] >>
+  fs[IN_FRANGE] >> rw[]
+  >- PROVE_TAC[]
+  >- PROVE_TAC[] >>
+  qmatch_assum_rename_tac`y <> k`[] >>
+  `y IN FDOM (f1 f_o_f f2)` by rw[f_o_f_DEF] >>
+  rw[f_o_f_DEF])
+
+val fmap_rel_trans = store_thm("fmap_rel_trans",
+  ``(!x y z. R x y /\ R y z ==> R x z) ==>
+    !x y z. fmap_rel R x y /\ fmap_rel R y z ==>
+              fmap_rel R x z``,
+  SRW_TAC[][fmap_rel_def] THEN METIS_TAC[])
+
+val fmap_rel_sym = store_thm("fmap_rel_sym",
+  ``(!x y. R x y ==> R y x) ==>
+    !x y. fmap_rel R x y ==> fmap_rel R y x``,
+  SRW_TAC[][fmap_rel_def])
+
+val fmap_eq_flookup = Q.store_thm ("fmap_eq_flookup",
+`!m1 m2. (m1 = m2) = !k. FLOOKUP m1 k = FLOOKUP m2 k`,
+ rw [FLOOKUP_DEF, GSYM fmap_EQ_THM] >>
+ eq_tac >>
+ rw [EXTENSION]
+ >- metis_tac [NOT_SOME_NONE]
+ >- (Cases_on `x NOTIN FDOM m2` >>
+     fs []
+     >- metis_tac [NOT_SOME_NONE]
+     >- metis_tac [SOME_11]));
+
+val fupdate_list_map = Q.store_thm ("fupdate_list_map",
+`!l f x y.
+  x IN FDOM (FEMPTY |++ l)
+   ==>
+     ((FEMPTY |++ MAP (\(a,b). (a, f b)) l) ' x = f ((FEMPTY |++ l) ' x))`,
+     rpt gen_tac >>
+     Q.ISPECL_THEN[`FST`,`f o SND`,`l`,`FEMPTY:'a|->'c`]mp_tac(GSYM FOLDL_FUPDATE_LIST) >>
+     simp[LAMBDA_PROD] >>
+     disch_then kall_tac >>
+     qid_spec_tac`l` >>
+     ho_match_mp_tac SNOC_INDUCT >>
+     simp[FUPDATE_LIST_THM] >>
+     simp[FOLDL_SNOC,FORALL_PROD,FAPPLY_FUPDATE_THM,FDOM_FUPDATE_LIST,MAP_SNOC,FUPDATE_LIST_SNOC] >>
+     rw[] >> rw[])
+
+val fdom_fupdate_list2 = Q.store_thm ("fdom_fupdate_list2",
+`!kvl fm. FDOM (fm |++ kvl) = (FDOM fm DIFF set (MAP FST kvl)) UNION set (MAP FST kvl)`,
+rw [FDOM_FUPDATE_LIST, EXTENSION] >>
+metis_tac []);
+
+val flookup_thm = Q.store_thm ("flookup_thm",
+`!f x v. ((FLOOKUP f x = NONE) = (x NOTIN FDOM f)) /\
+         ((FLOOKUP f x = SOME v) = (x IN FDOM f /\ (f ' x = v)))`,
+rw [FLOOKUP_DEF]);
+
+val FUPDATE_EQ_FUPDATE_LIST = store_thm("FUPDATE_EQ_FUPDATE_LIST",
+  ``!fm kv. fm |+ kv = fm |++ [kv]``,
+  rw[FUPDATE_LIST_THM]);
+
+val fmap_inverse_def = Define `
+fmap_inverse m1 m2 =
+  !k. k IN FDOM m1 ==> ?v. (FLOOKUP m1 k = SOME v) /\ (FLOOKUP m2 v = SOME k)`;
+
+val fupdate_list_foldr = Q.store_thm ("fupdate_list_foldr",
+`!m l. FOLDR (\(k,v) env. env |+ (k,v)) m l = m |++ REVERSE l`,
+ Induct_on `l` >>
+ rw [FUPDATE_LIST] >>
+ PairCases_on `h` >>
+ rw [FOLDL_APPEND]);
+
+val fupdate_list_foldl = Q.store_thm ("fupdate_list_foldl",
+`!m l. FOLDL (\env (k,v). env |+ (k,v)) m l = m |++ l`,
+ Induct_on `l` >>
+ rw [FUPDATE_LIST] >>
+ PairCases_on `h` >>
+ rw []);
+
+val fmap_to_list = Q.store_thm ("fmap_to_list",
+`!m. ?l. ALL_DISTINCT (MAP FST l) /\ (m = FEMPTY |++ l)`,
+ho_match_mp_tac fmap_INDUCT >>
+rw [FUPDATE_LIST_THM] >|
+[qexists_tac `[]` >>
+     rw [FUPDATE_LIST_THM],
+ qexists_tac `(x,y)::l` >>
+     rw [FUPDATE_LIST_THM] >>
+     fs [FDOM_FUPDATE_LIST] >>
+     rw [FUPDATE_FUPDATE_LIST_COMMUTES] >>
+     fs [LIST_TO_SET_MAP] >>
+     metis_tac [FST]]);
+
+val disjoint_drestrict = Q.store_thm ("disjoint_drestrict",
+`!s m. DISJOINT s (FDOM m) ==> (DRESTRICT m (COMPL s) = m)`,
+ rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
+ Cases_on `k NOTIN s` >>
+ rw [] >>
+ fs [DISJOINT_DEF, EXTENSION, FLOOKUP_DEF] >>
+ metis_tac []);
+
+val drestrict_iter_list = Q.store_thm ("drestrict_iter_list",
+`!m l. FOLDR (\k m. m \\ k) m l = DRESTRICT m (COMPL (set l))`,
+ Induct_on `l` >>
+ rw [DRESTRICT_UNIV, DRESTRICT_DOMSUB] >>
+ match_mp_tac (PROVE [] ``(y = y') ==> (f x y = f x y')``) >>
+ rw [EXTENSION] >>
+ metis_tac []);
+
+val fevery_funion = Q.store_thm ("fevery_funion",
+`!P m1 m2. FEVERY P m1 /\ FEVERY P m2 ==> FEVERY P (FUNION m1 m2)`,
+ rw [FEVERY_ALL_FLOOKUP, FLOOKUP_FUNION] >>
+ BasicProvers.EVERY_CASE_TAC >>
+ fs []);
+
+ (* Sorting stuff *)
+
+val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
+  ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
+  Induct >> rw[] >>
+  fs[PERM_CONS_EQ_APPEND] >>
+  rw[FUPDATE_LIST_THM] >>
+  PairCases_on`h` >> fs[] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  match_mp_tac EQ_TRANS >>
+  qexists_tac `(fm |++ (M ++ N)) |+ (h0,h1)` >>
+  conj_tac >- metis_tac[ALL_DISTINCT_PERM,PERM_MAP] >>
+  rw[FUPDATE_LIST_APPEND] >>
+  `h0 NOTIN set (MAP FST N)` by metis_tac[PERM_MEM_EQ,MEM_MAP,MEM_APPEND] >>
+  imp_res_tac FUPDATE_FUPDATE_LIST_COMMUTES >>
+  rw[FUPDATE_LIST_THM]);
+
+
+end
+(* end CakeML lemmas *)
 
 (*---------------------------------------------------------------------------*)
 (* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)

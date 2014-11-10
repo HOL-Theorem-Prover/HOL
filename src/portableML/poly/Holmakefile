@@ -1,3 +1,7 @@
 OPTIONS = NO_OVERLAY
 
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES)
+
 MLSYSPortable.uo: Susp.ui

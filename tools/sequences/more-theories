@@ -1,7 +1,9 @@
 !src/boss/theory_tests
 !src/tfl/src/test
 src/TeX
+!src/TeX/theory_tests
 !examples/RSA
+!examples/zipper
 src/sort
 src/string
 !src/string/theorytesting
@@ -19,6 +21,7 @@ src/n-bit
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+src/enumfset
 !examples/rings
 src/llist
 src/path

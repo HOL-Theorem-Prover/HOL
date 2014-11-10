@@ -2,6 +2,10 @@ OPTIONS=NO_OVERLAY
 
 PORTABLED = $(dprot $(SIGOBJ)/Portable.ui)
 
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES)
+
 FinalTag-sig.uo: FinalTag-sig.sml Nonce.ui $(PORTABLED)
 	$(HOLMOSMLC) -c -toplevel $<
 

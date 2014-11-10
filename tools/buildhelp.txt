@@ -27,9 +27,8 @@ Options to the first version of the command include
   -otknl      : builds the OpenTheory or "logging" kernel
   -selftest N : builds include regression test level N
   -seq FNAME  : builds using build-sequence file FNAME
-  -small      : moves object files to SIGOBJ rather than copying or linking
   -stdknl     : builds the "standard" kernel
   -symlink    : no useful effect (retained for backwards compatibility)
 
 Commands clean and cleanAll can be given with leading hyphens.
-Options -small and -symlink can be given without their leading hyphens.
+The symlink option can be given without its leading hyphen.

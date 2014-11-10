@@ -26,7 +26,7 @@ pdf: reference.pdf
 
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind *.toc \
-         entries.tex theorems.tex reference.{ps,pdf}
+         entries.tex theorems.tex reference.ps reference.pdf
 
 reference.pdf: ids reference.tex $(OTHER)
 	${PDFLATEX}  reference

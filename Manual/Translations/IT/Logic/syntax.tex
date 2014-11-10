@@ -1,0 +1,1034 @@
+% Revised version of Part II, Chapter 9 of HOL DESCRIPTION
+% Incorporates material from both of chapters 9 and 10 of the old
+% version of DESCRIPTION
+% Written by Andrew Pitts
+% 8 March 1991
+% revised August 1991
+\chapter{Sintassi e Semantica}\label{logic}
+
+\section{Introduzione}
+\label{introduction}
+
+Questo capitolo descrive la sintassi e la semantica a modelli della 
+logica supportata dal sistema \HOL{}, che è una variante della 
+teoria dei tipi semplici di Church\index{Church, A.}  \cite{Church} e 
+che sarà d'ora in poi chiamata la logica \HOL{}, o semplicemente \HOL. Il 
+meta-linguaggio per questa descrizione sarà l'Italiano, arricchito con 
+varie notazioni e convenzioni matematiche. Il liguaggio oggetto 
+di questa descrizione è la logica \HOL{}. Si noti che c'è un 
+`meta-linguaggio', in un senso differente, associato con la logica 
+\HOL\, cioè il linguaggio di programmazione \ML. Questo è il linguaggio usato 
+per manipolare la logica \HOL{} da parte degli utenti del sistema. Si spera 
+che in base al contesto, non risulti alcuna confusione da questi due usi della 
+parola `meta-linguaggio'. Quando l'oggetto dello studio è l'\ML\ (come in 
+\cite{sml}), l'\ML\ è il linguaggio oggetto considerato---e 
+l'Italiano è di nuovo il meta-linguaggio!
+
+La sintassi di \HOL{} contiene categorie sintattiche di tipi e termini i cui 
+elementi sono intesi denotare rispettivamente certi insiemi e elementi 
+di insiemi. Questa interpretazione insiemistica sarà sviluppata accanto alla 
+descrizione della sintassi di \HOL{}, e nel prossimo capitolo il sistema di dimostrazione 
+di \HOL\ sarà mostrato essere valido per il ragionamento circa proprietà 
+del modello insiemistico\footnote{Ci sono altri, modelli 
+`non standard' di \HOL, che non ci riguarderanno qui.}. Questo modello è dato in 
+termini di un insieme di insiemi fisso $\cal U$, che sarà chiamato l'{\em 
+universo\/}\index{universo, nella semantica della logica HOL@universo, nella 
+semantica della logica \HOL{}\/} e che si assume avere le seguenti 
+proprietà.
+\begin{description}
+
+\item[Inhab] Ogni elemento di $\cal U$ è un insieme non vuoto.
+
+\item[Sub] Se $X\in{\cal U}$ e $\emptyset\not=Y\subseteq X$, allora
+$Y\in{\cal U}$.
+
+\item[Prod] Se $X\in{\cal U}$ e $Y\in{\cal U}$, allora $X\times
+Y\in{\cal U}$. L'insieme $X\times Y$ è il prodotto cartesiano, 
+consistente di coppie ordinate $(x,y)$ con $x\in X$ e $y\in Y$, con 
+l'usuale notazione insiemistica delle coppie ordinate, cioé 
+$(x,y)=\{\{x\},\{x,y\}\}$.
+
+\item[Pow] Se $X\in{\cal U}$, allora anche l'insieme potenza
+$P(X)=\{Y:Y\subseteq X\}$ è un elemento di $\cal U$.
+
+\item[Infty] $\cal U$ contiene un distinto insieme infinito $\inds$.
+
+\item[Choice] C'è un elemento distinto $\ch\in\prod_{X\in{\cal
+U}}X$. Gli elementi del prodotto $\prod_{X\in{\cal U}}X$ sono 
+funzioni (dipendentemente tipizzate): così per tutti gli $X\in{\cal U}$, $X$ è 
+non vuoto per {\bf Inhab} e $\ch(X)\in X$ testimonia questo\footnote{[ndt] Il prodotto cartesiano generalizzato $\prod_{X\in{\cal
+U}}X$ è definito come l'insieme di tutte le funzioni che mandano ciascun elemento $X\in{\cal U}$ in 
+un qualche elemento di $X$. Queste funzioni si possono, dunque, considerare come se scegliessero per ogni elemento 
+$X\in{\cal U}$ un elemento di $X$ rappresentativo di tutto l'insieme $X$ e per 
+questo si parla di funzioni di scelta. {\bf Choice} isola una di queste funzioni: $\ch$.}.
+
+\end{description}
+Ci sono alcune conseguenze di queste assunzioni che saranno necessarie.
+Nella teoria degli insiemi le funzioni sono identificate dai loro grafi, che sono 
+certi insiemi di coppie ordinate. Così l'insieme $X\fun Y$ di tutte le funzioni 
+da un insieme $X$ a un insieme $Y$ è un sottoinsieme di $P(X\times Y)$; ed è un 
+insieme non vuoto quando $Y$ non è vuoto. Così {\bf Sub}, {\bf Prod} e {\bf
+Pow} insieme implicano che $\cal U$ soddisfa anche
+\begin{description}
+
+\item[Fun] Se $X\in{\cal U}$ e $Y\in{\cal U}$, allora $X\fun Y\in{\cal U}$.
+
+\end{description}
+Iterando {\bf Prod}, si ottiene che il prodotto cartesiano di qualsiasi 
+numero finito, diverso da zero, di insiemi in $\cal U$ è ancora in $\cal U$.
+$\cal U$ contiene anche il prodotto cartesiano di nessun insieme, il che equivale a 
+dire che contiene un insieme di un unico elemento (in virtù di {\bf Sub} applicato 
+a qualsiasi insieme in ${\cal U}$---{\bf Infty} garantisce che ce n'è uno); per 
+precisione, sarà isolato un particolare insieme di un solo elemento.
+\begin{description}
+
+\item[Unit] $\cal U$ contiene un distinto insieme di un solo elemento $1=\{0\}$.
+
+\end{description}
+Analogamente, a causa di {\bf Sub} e {\bf Infty}, $\cal U$ contiene 
+insiemi di due elementi, uno dei quali sarà isolato.
+\begin{description}
+
+\item[Bool] $\cal U$ contiene un distinto insieme di due elementi 
+$\two=\{0,1\}$.
+
+\end{description}
+
+Le assunzioni di sopra circa $\cal U$ sono più deboli di quelle imposte su un 
+universo di insiemi dagli assiomi della 
+teoria degli insiemi di Zermelo-Fraenkel\index{teoria degli insiemi Zermelo-Fraenkel} con 
+l'Assioma di Scelta (\theory{ZFC})\index{assioma di scelta}\index{ZFC@\ml{ZFC}}, 
+principalmente perché a $\cal U$ non è 
+richiesto di soddisfare alcuna forma dell'Assioma di 
+Rimpiazzamento\index{assioma di rimpiazzamento}.
+Di fatto, è possibile dimostrare l'esistenza di un insieme 
+$\cal U$ con le proprietà di sopra dagli assiomi di \theory{ZFC}. 
+(Per esempio si potrebbe considerare $\cal U$ consistere di tutti gli insiemi non vuoti 
+nella gerarchia cumulativa di von~Neumann formata prima della fase 
+$\omega+\omega$.) Così, come per altri pezzi della matematica, è 
+possibile in linea di principio dare una versione completamente formale all'interno 
+della teoria degli insiemi \theory{ZFC} della semantica della logica \HOL{} che sarà fornita 
+di sotto.
+
+\section{Tipi}
+\label{types}
+
+I tipi\index{vincolo di tipo!nella logica HOL@nella logica \HOL{}} della 
+logica \HOL{} sono espressioni che denotano insiemi (nell'universo  $\cal U$).
+Seguendo la tradizione, 
+$\sigma$, possibilmente decorato con sottoscritti o primi, è usato per 
+variare su tipi arbitrari.
+
+Ci sono quattro specie di tipi nella logica \HOL{}. Questi possono essere descritti 
+informalmente dalla seguente grammatica {\small BNF},
+in cui $\alpha$ varia 
+su variabili di tipo, \textsl{c} varia su tipi atomici e \textsl{op} varia su 
+operatori di tipo.
+
+\newlength{\ttX}
+\settowidth{\ttX}{\tt X}
+\newcommand{\tyvar}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,0){\makebox(0,0)[b]{\footnotesize variabili di tipo}}
+\put(0,1.5){\vector(0,1){4.5}}
+\end{picture}}
+\newcommand{\tyatom}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,2.3){\makebox(0,0)[b]{\footnotesize tipi atomici}}
+\put(.5,3.3){\vector(0,1){2.6}}
+\end{picture}}
+\newcommand{\funty}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,1.5){\makebox(0,0)[b]{\footnotesize tipi funzione}}
+\put(.5,0){\makebox(0,0)[b]{\footnotesize (dominio $\sigma_1$, rango $\sigma_2$)}}
+\put(1,2.5){\vector(0,1){3.5}}
+\end{picture}}
+\newcommand{\cmpty}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(2,3.3){\makebox(0,0)[b]{\footnotesize tipi composti}}
+\put(1.9,4.5){\vector(0,1){1.5}}
+\end{picture}}
+%
+$$\sigma\quad ::=\quad {\mathord{\mathop{\alpha}\limits_{\tyvar}}}
+        \quad\mid\quad{\mathord{\mathop{c}\limits_{\tyatom}}}
+        \quad\mid\quad\underbrace{(\sigma_1, \ldots , \sigma_n){op}}_{\cmpty}
+        \quad\mid\quad\underbrace{\sigma_1\fun\sigma_2}_{\funty}$$
+
+\noindent In maggiore dettaglio, le quattro specie di tipi sono come segue.
+
+\begin{enumerate}
+
+\item {\bf Variabili di tipo:}\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{} logic!forma astratta di} queste stanno per insiemi 
+arbitrari nell'universo. Nella formulazione originale di Church della teoria dei tipi 
+semplici, le variabili di tipo sono parte del meta-linguaggio e sono usate per 
+variare su tipi del linguaggio oggetto. Le dimostrazioni contenenti variabili di tipo 
+erano concepite come schemi di dimostrazione (cioè famiglie di dimostrazioni). Per supportare 
+tali schemi di dimostrazione {\it all'interno} della logica \HOL{}, le variabili di tipo sono 
+state aggiunte al sistema di tipi del linguaggio oggetto\footnote{Questa tecnica 
+fu inventata da Robin Milner per la logica oggetto \PPL\ del suo sistema 
+\LCF.}.
+
+\item {\bf Tipi atomici:}\index{tipi atomici} questi denotano insiemi fissati nell'universo. Ogni 
+teoria determina una particolare collezione di tipi atomici. Per 
+esempio, i tipi atomici standard \ty{bool} e \ty{ind} denotano, 
+rispettivamente, l'insieme distinto di due elementi $\two$ e 
+l'insieme distinto infinito $\inds$.
+
+\item {\bf Tipi composti:}\index{tipi composti, nella logica HOL@tipi composti, nella logica \HOL{}!forma astratta di} questi hanno la 
+forma $(\sigma_1,\ldots,\sigma_n)\ty{op}$, dove $\sigma_1$, $\dots$,
+$\sigma_n$ sono i tipi argomento e $op$ è un {\it operatore di tipo\/} 
+di arietà $n$. Gli operatori di tipo denotano operazioni per costruire insiemi. 
+Il tipo $(\sigma_1,\ldots,\sigma_n)\ty{op}$ denota l'insieme che risulta 
+dall'applicare l'operazione denotata da $op$ agli insiemi denotati da 
+$\sigma_1$, $\dots$, $\sigma_n$. Per esempio, 
+\ty{list} è un operatore di tipo con arietà 1. Esso denota l'operazione 
+di formare tutte le liste finite di elementi da un dato insieme. Un altro 
+esempio è l'operatore \ty{prod} di arietà 2 che denota 
+l'operazione di prodotto cartesiano. Il tipo $(\sigma_1,\sigma_2)\ty{prod}$ 
+è scritto come $\sigma_1\times\sigma_2$.
+
+\item {\bf Tipi funzione:}\index{tipi funzione, nella logica HOL@tipi funzione, nella logica \HOL{}!forma astratta di} Se $\sigma_1$ 
+e $\sigma_2$ sono tipi, allora $\sigma_1\fun\sigma_2$ è il tipo 
+funzione con {\it dominio\/} $\sigma_1$ e {\it rango} $\sigma_2$. Esso 
+denota l'insieme di tutte le funzioni (totali) dall'insieme denotato dal suo 
+dominio all'insieme denotato dal suo rango. (Nella letteratura 
+$\sigma_1\fun\sigma_2$ è scritto senza la freccia e 
+alla rovescia--cioè come $\sigma_2\sigma_1$.) Si noti che sintatticamente 
+$\fun$ è semplicemente un distinto operatore di tipo di arietà 2 scritto con 
+notazione infissa. E' isolato nella definizione dei tipi \HOL{} 
+perché denoterà sempre la stessa operazione in qualsiasi 
+modello di una teoria \HOL{}---contrariamente agli altri operatori di tipo che 
+possono essere interpretati in modo differente in modelli differenti. (Si veda 
+la Sezione~\ref{semantics of types}.)
+
+\end{enumerate}
+
+Risulta conveniente identificare i tipi atomici con 
+tipi composto costruiti con operatori di tipo $0$-ari. Per esempio, 
+il tipo atomico \ty{bool} dei valori di verità può essere considerato come 
+un'abbreviazione per $()\ty{bool}$. Questa identificazione sarà fatta nei 
+dettagli tecnici che seguono, ma nella presentazione informale 
+i tipi atomici continueranno ad essere distinti dai tipi composti,
+e $()c$ sarà scritto come $c$.
+
+\subsection{Strutture di tipo}
+\label{type structures}
+\index{struttura di tipo, nella logica HOL@struttura di tipo, nella logica \HOL{}}
+
+Il termine `costante di tipo' è usato per comprendere sia i tipi atomici sia gli operatori 
+di tipo. Si assume che sia dato un insieme infinito {\sf
+TyNames} dei {\em nomi delle costanti di tipo\/}. La lettera 
+greca $\nu$ è usata per variare su membri arbitrari di {\sf TyNames},
+si continuerà ad usare \textsl{c} per variare sui nomi dei tipi 
+atomici (cioè costanti di tipo $0$-ari), e \textsl{op} è usato per variare 
+sui nomi degli operatori di tipo (cioè costanti di tipo $n$-arie, dove 
+$n>0$).
+
+Si assume che sia dato un insieme infinito {\sf TyVars} di {\em variabili 
+di tipo\/}\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}}. 
+Le lettere greche $\alpha,\beta,\ldots$, possibilmente con indici 
+sottoscritti o apici, sono usate per variare su {\sf Tyvars}. Gli insiemi 
+{\sf TyNames} e {\sf TyVars} sono assunti disgiunti.
+
+Una {\it struttura di tipo\/} è un insieme $\Omega$ di costanti di tipo. Una {\it costante 
+di tipo\/}\index{costanti di tipo, nella logica HOL@costanti di tipo, nella logica \HOL{}} è una coppia $(\nu,n)$ dove $\nu\in{\sf TyNames}$ è il 
+nome della costante e $n$ è la sua arietà. Così $\Omega\subseteq{\sf
+TyNames}\times\natnums$ (dove $\natnums$ è l'insieme dei numeri 
+naturali). Si assume che non esistano due distinte costanti di tipo che hanno lo 
+stesso nome 
+cioé ogni volta che $(\nu, n_1)\in\Omega$ e 
+$(\nu, n_2)\in\Omega$, allora $n_1 = n_2$.
+
+L'insieme {\sf Types}$_{\Omega}$ dei tipi su una struttura ${\Omega}$ 
+può ora essere definito come il più piccolo insieme tale che:
+
+\begin{itemize}
+
+\item {\sf TyVars}$\ \subseteq\ ${\sf Types}$_{\Omega}$.
+
+\item Se $(\nu,0)\in\Omega$ allora $()\nu\in{\sf Types}_{\Omega}$.
+
+\item Se $(\nu,n)\in\Omega$ e $\sigma_i\in{\sf Types}_{\Omega}$ per
+$1\leq i\leq n$, allora $(\sigma_1,\ \ldots\ ,\sigma_n)\nu\in{\sf
+Types}_{\Omega}$.
+
+\item Se $\sigma_1\in{\sf Types}_{\Omega}$ e $\sigma_2\in{\sf
+Types}_{\Omega}$ allora $\sigma_1\fun\sigma_2\in{\sf Types}_{\Omega}$.
+
+
+\end{itemize}
+Si assume che l'operatore di tipo $\fun$ associ\index{operatori di tipo, nella logica HOL@operatori di tipo, nella logica \HOL{}!associatività degli} a 
+destra, così che
+\[
+\sigma_1\fun\sigma_2\fun\ldots\fun \sigma_n\fun\sigma
+\]
+abbrevia
+\[
+\sigma_1\fun(\sigma_2\fun\ldots\fun (\sigma_n\fun\sigma)\ldots)
+\]
+La notazione $tyvars(\sigma)$ è usata per denotare l'insieme delle variabili 
+di tipo che occorrono in $\sigma$.
+
+\subsection{Semantica dei tipi}
+\label{semantics of types}
+
+
+Un {\em modello} $M$ di una struttura di tipo $\Omega$ è specificato dando 
+per ogni costante di tipo $(\nu,n)$ una funzione $n$-aria
+\[
+M(\nu):{\cal U}^{n}\longrightarrow{\cal U}
+\]
+Così dati gli insiemi $X_1,\ldots,X_n$ nell'universo $\cal U$,
+$M(\nu)(X_1,\ldots,X_n)$ è anche un insieme nell'universo. Nel caso $n=0$,
+questo equivale a specificare un elemento $M(\nu)\in{\cal U}$ per il 
+tipo atomico $\nu$.
+
+I tipi che non contengono alcuna variabile di tipo sono chiamati {\it monomorfici},
+mentre quelli che contengono variabili di tipo sono chiamati {\it
+polimorfici}\index{tipi polimorfici, nella logica HOL@tipi polimorfici, nella logica \HOL{}}\index{tipo, nella logica HOL@tipo, nella logica \HOL{}!polimorfico}. Qual è il 
+significato di un tipo polimorfico? Si può 
+dire quale insieme denota un tipo polimorfico solo una volta che si sono istanziate 
+le sue variabili di tipo su insiemi particolari. Così il suo significato complessivo non è un 
+singolo insieme, ma è piuttosto una funzione con valori su insiemi ${\cal
+U}^{n}\longrightarrow{\cal U}$, che assegna un insieme per ogni particolare 
+assegnazione di insiemi alle variabili di tipo rilevanti. L'arietà $n$ 
+corrisponde al numero di variabili di tipo coinvolte. E' conveniente 
+in tale contesto essere in grado di considerare che una variabile di tipo sia 
+coinvolta nella semantica di un tipo $\sigma$ sia che occorra effettivamente 
+in $\sigma$ sia che non occorra in esso, portando alla nozione di un 
+tipo-in-contesto.
+
+Un {\em contesto di tipo}\index{contesto di tipo}, $\alpha\!s$, è semplicemente una 
+lista finita (possibilmente vuota) di variabili di tipo {\em distinte\/} 
+$\alpha_{1},\ldots,\alpha_{n}$. Un {\em
+tipo-in-contesto\/}\index{tipo-in-contesto} è una coppia, scritta 
+$\alpha\!s.\sigma$, dove $\alpha\!s$ è un contesto di tipo, $\sigma$ è un 
+tipo (su una data struttura di tipo) e tutte le variabili di tipo 
+che occorrono in $\sigma$ appaiono da qualche parte nella lista $\alpha\!s$. La 
+lista $\alpha\!s$ può anche contenere variabili di tipo che non occorrono in 
+$\sigma$.
+
+Per ogni $\sigma$ ci sono dei contesti minimi $\alpha\!s$ per cui 
+$\alpha\!s.\sigma$ è un tipo-in-contesto, che differiscono solo per l'ordine 
+in cui le variabili di tipo di $\sigma$ sono elencate in $\alpha\!s$. Al 
+fine di selezionare uno di tali contesti, assumiamo che {\sf TyVars} 
+venga con un fissato ordine totale e definiamo il contesto {\em
+canonico}\index{contesti canonici, nella logica HOL@contesti canonici, nella logica \HOL{}!dei tipi} del tipo $\sigma$ in modo che esso consista esattamente 
+delle variabili di tipo che esso contiene, elencate in ordine\footnote{E' 
+possibile lavorare con contesti non ordinati, specificati da insiemi finiti 
+piuttosto che liste, ma scegliamo di non fare questo dal momento che complica 
+moderatamente la definizione della semantica che sarà data di 
+sotto}.
+
+Sia $M$ un modello di una struttura di tipo $\Omega$. Per ogni 
+tipo-in-contesto
+$\alpha\!s.\sigma$ su $\Omega$, definiamo una funzione 
+\[
+\den{\alpha\!s.\sigma}_{M}:{\cal U}^{n}\longrightarrow{\cal U}
+\]
+(dove $n$ è la lunghezza del contesto) per induzione sulla struttura 
+di $\sigma$ come segue.
+\begin{itemize}
+
+\item Se $\sigma$ è una variabile di tipo, essa deve essere $\alpha_{i}$ per qualche unico 
+$i=1,\ldots,n$ e allora $\den{\alpha\!s.\sigma}_{M}$ è la $i$\/esima
+funzione di proiezione, che manda $(X_{1},\ldots,X_{n})\in{\cal U}^{n}$
+a $X_{i}\in{\cal U}$.
+
+\item Se $\sigma$ è un tipo funzione\index{tipi funzione, nella logica HOL@tipi funzione, nella logica \HOL{}!semantica formale dei}
+$\sigma_{1}\fun\sigma_{2}$, allora $\den{\alpha\!s.\sigma}_M$ manda
+$X\!s\in{\cal U}^n$ all'insieme di tutte le funzioni 
+da $\den{\alpha\!s.\sigma_1}_M(X\!s)$ a
+$\den{\alpha\!s.\sigma_2}_M(X\!s)$. (Questo fa
+uso della proprietà {\bf Fun} di $\cal U$.)
+
+\item Se $\sigma$ è un 
+tipo composto $(\sigma_{1},\ldots,\sigma_{m})\nu$, allora
+$\den{\alpha\!s.\sigma}_{M}$ manda $X\!s$ a 
+$M(\nu)(S_{1},\ldots,S_{m})$ dove ogni $S_{j}$ è
+$\den{\alpha\!s.\sigma_{j}}_{M}(X\!s)$.
+\end{itemize}
+Si può ora definire che il significato di un tipo $\sigma$ in un modello $M$ è 
+la funzione
+\[
+\den{\sigma}_{M}:{\cal U}^{n}\longrightarrow{\cal U}
+\]
+data da $\den{\alpha\!s.\sigma}_{M}$, dove $\alpha\!s$ è il
+contesto canonico di $\sigma$. Se $\sigma$ è monomorfico, allora $n=0$
+e $\den{\sigma}_{M}$ può essere identificato con l'elemento
+$\den{\sigma}_{M}()$ di $\cal U$. Quando il particolare modello $M$ è 
+chiaro dal contesto, $\den{\_}_{M}$ sarà scritto $\den{\_}$.
+
+Per riassumere, dato un modello in $\cal U$ di una struttura di tipo $\Omega$, 
+la semantica interpreta i tipi monomorfici su $\Omega$ come gli insiemi in 
+$\cal U$ e più in generale, interpreta i tipi polimorfici\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!polimorfici}\index{tipi polimorfici, nella logica HOL@tipi polimorfici, nella logica \HOL{}!semantica formale dei} che coinvolgono $n$ variabili di tipo come funzioni $n$-arie ${\cal
+U}^{n}\longrightarrow{\cal U}$ sull'universo. I tipi funzione sono 
+interpretati da insiemi di funzioni complete.
+
+\medskip
+
+\noindent{\bf Esempi\ }
+Supponiamo che $\Omega$ contenga una costante di tipo $(\textsl{b},0)$ e che 
+il modello $M$ assegni l'insieme $\two$ a $\textsl{b}$. Allora:
+\begin{enumerate}
+
+\item $\den{\textsl{b}\fun\textsl{b}\fun\textsl{b}}=\two\fun\two\fun\two\in{\cal U}$.
+
+\item $\den{(\alpha\fun\textsl{b})\fun\alpha}:{\cal U}\longrightarrow{\cal U}$
+è la funzione che manda $X\in{\cal U}$ a $(X\fun\two)\fun X\in{\cal U}$.
+
+\item $\den{\alpha,\beta . (\alpha\fun\textsl{b})\fun\alpha}:{\cal
+U}^{2}\longrightarrow{\cal U}$ è la funzione che manda $(X,Y)\in{\cal
+U}^{2}$ a $(X\fun\two)\fun X\in{\cal U}$.
+
+\end{enumerate}
+
+\medskip
+
+\noindent{\bf Nota\ }
+Un approccio più tradizionale alla semantica implicherebbe dare 
+dei significati ai tipi in presenza di `ambienti' che assegnano insiemi in 
+$\cal U$ a tutte le variabili di tipo. L'uso di tipi-in-contesti è quasi 
+la stessa cosa di usare ambienti parziali con domini finiti---è 
+solo che il contesto vincola il dominio ammissibile a un particolare 
+insieme finito (ordinato) di variabili di tipo. Al livello dei tipi non c'è 
+molto da scegliere tra i due approcci. Tuttavia per la sintassi 
+e la semantica dei termini che sarà data di sotto, dove c'è una dipendenza 
+sia dalle variabili di tipo sia dalle variabili individuali, l'approccio usato 
+qui sembra migliore.
+
+\subsection{Istanze e sostituzione}
+\label{instances-and-substitution}
+
+Se $\sigma$ e $\tau_1,\ldots,\tau_n$ sono tipi su una struttura di tipo 
+$\Omega$,
+\[
+\sigma[\tau_{1},\ldots,\tau_{p}/\beta_{1},\ldots,\beta_{p}]
+\]
+denoterà il tipo risultante dalle sostituzioni simultanee per 
+ogni $i=1,\ldots,p$ di 
+$\tau_i$ per la variabile di tipo $\beta_i$ in $\sigma$.
+Il tipo risultante è chiamato una {\it istanza\/}\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!istanziazione di} di $\sigma$. Il 
+seguente lemma circa le istanze sarà utile più avanti; esso è dimostrato per 
+induzione sulla struttura di $\sigma$.
+
+\medskip
+
+\noindent{\bf Lemma 1\ }{\it
+Supponiamo che $\sigma$ sia un tipo che contiene le variabili di tipo distinte 
+$\beta_1,\ldots,\beta_p$ e che 
+$\sigma'=\sigma[\tau_{1},\ldots,\tau_{n}/\beta_1,\ldots,\beta_p]$ sia 
+un'istanza di $\sigma$. Allora i tipi $\tau_1,\ldots,\tau_p$ sono 
+determinati univocamente da $\sigma$ e $\sigma'$.
+}
+
+\medskip
+
+Abbiamo anche bisogno di sapere come la semantica dei tipi si comporta rispetto 
+alla sostituzione:
+
+\medskip
+
+\noindent{\bf Lemma 2\ }{\it Dati i tipi-in-contesto $\beta\!s.\sigma$ e
+$\alpha\!s.\tau_i$ ($i=1,\ldots,p$, dove $p$ è la 
+lunghezza di $\beta\!s$), sia $\sigma'$ l'istanza 
+$\sigma[\tau\!s/\beta\!s]$. Allora anche $\alpha\!s.\sigma'$ è un 
+tipo-in-contesto e il suo significato in qualsiasi modello $M$ è collegato a quello di 
+$\beta\!s.\sigma$ come segue. Per tutti gli $X\!s\in{\cal U}^n$ (dove $n$ 
+è la lunghezza di $\alpha\!s$)
+\[
+\den{\alpha\!s.\sigma'}(X\!s) =
+\den{\beta\!s.\sigma}(\den{\alpha\!s.\tau_{1}}(X\!s),
+    \ldots ,\den{\alpha\!s.\tau_{p}}(X\!s))
+\]
+}
+Ancora una volta, il lemma può essere dimostrato per induzione sulla struttura di 
+$\sigma$.
+
+\section{Termini}
+\label{terms}
+
+I termini della logica \HOL{} sono espressioni che denotano elementi degli insiemi 
+denotati dai tipi. La meta-variabile $t$ 
+è usata per variare su termini arbitrari, possibilmente decorata 
+con indici sottoscritti o apici.
+
+Ci sono quattro specie di termini nella logica \HOL{}. Queste possono essere 
+descritte approssimativamente nella seguente grammatica {\small BNF}, in 
+cui $x$ varia su variabili e $c$ varia su costanti.
+\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!forma astratta di}
+
+\settowidth{\ttX}{\tt X}
+\newcommand{\var}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,0){\makebox(0,0)[b]{\footnotesize variabili}}
+\put(0,1.5){\vector(0,1){4.5}}
+\end{picture}}
+\newcommand{\const}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,2.3){\makebox(0,0)[b]{\footnotesize costanti}}
+\put(.5,3.5){\vector(0,1){2.4}}
+\end{picture}}
+\newcommand{\app}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(.5,1.5){\makebox(0,0)[b]{\footnotesize applicazioni di funzione}}
+\put(.5,0){\makebox(0,0)[b]{\footnotesize (funzione $t$, argomento $t'$)}}
+\put(0.5,2.5){\vector(0,1){3.5}}
+\end{picture}}
+\newcommand{\abs}{\setlength{\unitlength}{\ttX}\begin{picture}(1,6)
+\put(1,3.3){\makebox(0,0)[b]{\footnotesize $\lambda$-astrazioni}}
+\put(0.7,4.5){\vector(0,1){1.5}}
+\end{picture}}
+%
+$$ t \quad ::=\quad {\mathord{\mathop{x}\limits_{\var}}}
+        \quad\mid\quad{\mathord{\mathop{\con{c}}\limits_{\const}}}
+        \quad\mid\quad\underbrace{t\ t'}_{\app}
+        \quad\mid\quad\underbrace{\lambda x .\ t}_{\abs}$$
+
+Informalmente, un $\lambda$-termine\index{lambda termini, nella logica HOL@lambda termini, nella logica \HOL{}}\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!forma astratta di} $\lambda x.\ t$ denota 
+una funzione $v\mapsto t[v/x]$, dove $t[v/x]$ denota il risultato di 
+sostituire $v$ per $x$ in $t$. Un'applicazione\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!forma astratta di} $t\ t'$ denota il 
+risultato di applicare la 
+funzione denotata da $t$ al valore denotato da $t'$. Questo sarà 
+reso più preciso di sotto.
+
+La grammatica {\small BNF} appena data omette di menzionare i tipi. Di fatto, ogni 
+termine nella 
+logica \HOL{} è associato con un unico tipo.
+La notazione $t_{\sigma}$ è 
+tradizionalmente usata per variare su termini di tipo $\sigma$. Una 
+grammatica più accurata dei 
+termini è:
+
+$$ t_{\sigma} \quad ::=\quad {\mathord{\mathop{x_{\sigma}}\limits_{}}}
+\quad\mid\quad
+{\mathord{\mathop{\con{c}_{\sigma}}\limits_{}}}
+\quad\mid\quad (t_{\sigma'\fun\sigma}\ t'_{\sigma'})_{\sigma}
+\quad\mid\quad(\lambda x_{\sigma_1} .\ t_{\sigma_2})
+_{\sigma_1\fun\sigma_2}$$\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!forma astratta di}
+
+Di fatto, esattamente come la definizione dei tipi era relativa a una particolare 
+struttura di tipo $\Omega$, la definizione formale dei termini è relativa a 
+una data collezione di costanti tipizzate su $\Omega$. Assumiamo che sia dato 
+un insieme infinito {\sf Names} di nomi. Una {\em costante\/} su 
+$\Omega$ è una coppia $(\con{c}, \sigma)$, dove $\con{c}\in{\sf Names}$
+e $\sigma\in{\sf Types}_{\Omega}$. Una {\em firma} su $\Omega$ 
+è semplicemente un insieme $\Sigma_\Omega$ di tali costanti.
+
+L'insieme {\sf Terms}$_{\Sigma_{\Omega}}$ di termini su 
+$\Sigma_{\Omega}$ è definito essere il più piccolo insieme chiuso sotto le 
+seguenti regole di formazione:
+\begin{enumerate}
+
+\item {\bf Costanti:} Se $(\con{c},\sigma)\in{\Sigma_{\Omega}}$ e
+$\sigma'\in{\sf Types}_{\Omega}$
+è un'istanza di $\sigma$, allora $(\con{c},{\sigma'})\in{\sf
+Terms}_{\Sigma_{\Omega}}$. I termini formati in questo modo sono chiamati {\it
+costanti\/}\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!forma astratta di} e sono scritti $\con{c}_{\sigma'}$.
+
+\item {\bf Variabili:}  Se  $x\in{\sf  Names}$  e  $\sigma\in{\sf
+Types}_{\Omega}$, allora ${\tt var}\ x_{\sigma}\in{\sf
+Terms}_{\Sigma_{\Omega}}$. I termini formati in questo modo sono chiamati {\it
+variabili}\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!forma astratta di}.  Il marcatore {\tt var}\ è semplicemente un accorgimento per 
+distinguere le variabili da costanti con lo stesso nome.  Una variabile 
+${\tt var}\ x_{\sigma}$ sarà di solito scritta come $x_{\sigma}$, se 
+è chiaro dal contesto che $x$ è una variabile piuttosto che una 
+costante
+
+\item {\bf Applicazioni di funzione:}  Se $t_{\sigma'{\fun}\sigma}\in{\sf
+Terms}_{\Sigma_{\Omega}}$ e $t'_{\sigma'}\in{\sf
+Terms}_{\Sigma_{\Omega}}$, allora $(t_{\sigma'\fun\sigma}\
+t'_{\sigma'})_{\sigma}\in {\sf Terms}_{\Sigma_{\Omega}}$.
+(I termini formati in questo modo sono chiamati {\it combinazioni}.)
+
+\item {\bf $\lambda$-Astrazioni:} Se ${\tt var}\ x_{\sigma_1}
+\in{\sf Terms}_{\Sigma_{\Omega}}$  e $t_{\sigma_2}\in{\sf
+Terms}_{\Sigma_{\Omega}}$, allora $(\lambda x_{\sigma_1}.\
+t_{\sigma_2})_{\sigma_1\fun\sigma_2}
+\in{\sf Terms}_{\Sigma_{\Omega}}$.
+
+\end{enumerate}
+
+Si noti che è possibile avere costanti e variabili\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!con gli stessi nomi} 
+con lo stesso nome. E' anche possibile avere variabili differenti con 
+lo stesso nome, se esse hanno tipi differenti.
+
+Il tipo sottoscritto a un termine può essere omesso se è chiaro dalla 
+struttura del termine o dal contesto in cui occorre quale deve essere il 
+suo tipo.
+
+L'applicazione di funzione\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!associatività della} è assunta associare 
+a sinistra, così che $t\ t_1\ t_2\ \ldots\ t_n$ abbrevia $(\
+\ldots\ ((t\ t_1)\ t_2)\ \ldots\ t_n)$.
+
+La notazione $\lambda x_1\ x_2\ \cdots\ x_n.\ t$ abbrevia $\lambda
+x_1.\ (\lambda x_2.\ \cdots\ (\lambda x_n.\ t)\ \cdots\ )$.
+
+Un termine è chiamato polimorfico\index{termini polimorfici, nella logica HOL@termini polimorfici, nella logica \HOL{}} se contiene una variabile 
+di tipo. Altrimenti è chiamato monomorfico. Si noti che un termine 
+$t_{\sigma}$ può essere polimorfico anche se $\sigma$ è 
+monomorfico -- per esempio, 
+$(f_{\alpha\fun\textsl{b}}\ x_{\alpha})_{\textsl{b}}$, dove $\textsl{b}$ è un tipo atomico. L'espressione 
+$tyvars(t_{\sigma})$ denota l'insieme di variabili di tipo che occorrono in 
+$t_{\sigma}$.
+
+L'occorrenza di una variabile $x_{\sigma}$ è chiamata {\it
+legata\/}\index{variabili legate, nella logica HOL@variabili legate, nella logica \HOL{}}\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!forma astratta di}
+ se essa occorre all'interno dello scopo di una $\lambda x_{\sigma}$ 
+che chiude dal punto di vista testuale, altrimenti l'occorrenza è chiamata {\it
+libera\/}\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}!forma astratta di}. Si noti che $\lambda x_{\sigma}$ non lega 
+$x_{\sigma'}$ se $\sigma\neq \sigma'$. Un termine in cui tutte le occorrenze 
+delle variabili sono legate è chiamato {\it chiuso\/}.
+
+\subsection{Termini-in-contesto}
+\label{terms-in-context}
+
+Un {\em contesto\/}\index{contesti, nella semantica della logica HOL@contesti, nella semantica della logica \HOL{}} $\alpha\!s,\!x\!s$ consiste di un contesto 
+di tipo $\alpha\!s$ insieme con una lista $x\!s=x_{1},\ldots,x_{m}$ di 
+variabili distinte i cui tipi contengono solo variabili di tipo dalla 
+lista $\alpha\!s$.
+
+La condizione che $x\!s$ contenga variabili {\em distinte\/} necessita 
+di qualche commento. Dal momento che una variabile è specificata sia da un nome sia da un 
+tipo, è permesso che $x\!s$ contenga 
+nomi\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!con gli stessi nomi} ripetuti, 
+ purché ai nomi siano attaccati tipi 
+differenti. Questo aspetto della sintassi  significa che si deve procedere con 
+cautela quando si definisce il significato dell'istanziazione delle variabili di tipo, 
+dal momento che l'istanziazione può far sì che delle variabili diventino uguali 
+`accidentalmente'. Si veda la Sezione~\ref{term-substitution}.
+
+Un {\em termine-in-contesto\/}\index{term-in-context}
+$\:\;\alpha\!s,\!x\!s.t\;\:$ consiste di un contesto insieme con un termine 
+$t$ che soddisfa le seguenti condizioni:
+\begin{itemize}
+
+\item $\alpha\!s$ contiene qualsiasi variabile di tipo che occorre in $x\!s$ e $t$.
+
+\item $x\!s$ contiene qualsiasi variabile che occorre libera in $t$.
+
+\item $x\!s$ non contiene alcuna variabile che occorre 
+legata in $t$.
+
+\end{itemize}
+Il contesto $\alpha\!s,\!x\!s$ può contenere variabili (di tipo) che 
+non appaiono in $t$. Si noti che la combinazione della seconda e della terza 
+condizione implica che una variabile non può avere occorrenze sia libere sia 
+legate in $t$. Per un termine arbitrario, c'è sempre un 
+termine $\alpha$-equivalente che soddisfa questa condizione, ottenuto 
+rinominando le variabili legate in caso di necessità\footnote{Si ricordi che due 
+termini sono detti essere $\alpha$-equivalenti se differiscono soltanto nei 
+nomi delle loro variabili legate.}. Nella semantica dei termini che sarà 
+data di seguito restringeremo l'attenzione a tali termini. Quindi il significato di un 
+termine arbitrario è considerato essere il significato di qualche $\alpha$-variante di 
+esso non avente variabili sia libere sia legate. (La semantica uguaglierà 
+le $\alpha$-varianti, così che non importa quale è scelta.) Evidentemente 
+per un tale termine c'è un contesto minimale $\alpha\!s,\!x\!s$, unico 
+a meno dell'ordine in cui le variabili sono elencate, per il quale 
+$\alpha\!s,\!x\!s.t$ è un termine-in-contesto. Come per le variabili di tipo, 
+assumeremo dato un fissato ordine totale sulle variabili. Quindi l'unico 
+contesto minimo con le variabili elencate in ordine sarà chiamato il contesto {\em
+canonico}\index{contesti canonici, nella logica HOL@contesti canonici, nella logica \HOL{}!di termini} del termine $t$.
+
+\subsection{Semantica dei termini}
+\label{semantics of terms}
+
+Sia $\Sigma_{\Omega}$ una firma\index{firme, della logica HOL@firme, della logica \HOL{}!semantica formale delle} su una struttura 
+di tipo $\Omega$ (si veda la Sezione~\ref{terms}). Un {\em modello\/} $M$ di 
+$\Sigma_{\Omega}$ è specificato da un modello della struttura di tipo più 
+per ogni costante\index{costanti primitive, della logica HOL@costanti primitive, della logica \HOL{}} $(\con{c},\sigma)\in\Sigma_{\Omega}$ un 
+elemento
+\[
+M(\con{c},\sigma) \in
+\prod_{X\!s\in{\cal U}^{n}}\den{\sigma}_{M}(X\!s)
+\]
+del prodotto cartesiano indicato, dove $n$ è il numero delle variabili 
+di tipo che occorrono in $\sigma$. In altre parole 
+$M(\con{c},\sigma)$ è una funzione (dipendentemente tipizzata) 
+che assegna ad ogni $X\!s\in{\cal U}^{n}$ un elemento di 
+$\den{\sigma}_{M}(X\!s)$. Nel caso che $n=0$ (così che 
+$\sigma$ è monomorfico), $\den{\sigma}_{M}$ era identificato 
+con un insieme in $\cal U$ e quindi $M(c,\sigma)$ può essere 
+identificato con un elemento di quell'insieme.
+
+Il significato dei termini \HOL{} in un tale modello sarà ora descritto. La 
+semantica interpreta termini chiusi che non coinvolgono variabili di tipo come 
+elementi di insiemi in $\cal U$ (il particolare insieme coinvolto essendo derivato 
+dal tipo del termine come nella Sezione~\ref{semantics of types}). Più 
+in generale, se il termine chiuso coinvolge $n$ variabili di tipo allora è 
+interpretato come un elemento di un prodotto $\prod_{X\!s\in{\cal
+U}^{n}}Y(X\!s)$, dove la funzione $Y:{\cal U}^{n}\longrightarrow{\cal
+U}$ è derivata dal tipo del termine (in un contesto di tipo derivato 
+dal termine). Così il significato del termine è una funzione (dipendentemente tipizzata) 
+che, quando applicata a qualsiasi significato scelto per le variabili 
+di tipo nel termine, dà un significato per il termine come un elemento di un 
+insieme in $\cal U$. Dall'altro lato, se il termine coinvolge $m$ variabili 
+libere ma nessuna variabile di tipo, allora è interpretato come una funzione 
+$Y_1\times\cdots\times Y_m\fun Y$ dove gli insiemi $Y_1,\ldots,Y_m$ in 
+$\cal U$ sono interpretazioni dei tipi delle variabili libere nel 
+termine e l'insieme $Y\in{\cal U}$ è l'interpretazione del tipo del 
+termine; così il significato del termine è una funzione che, quando 
+applicata a qualsiasi significato scelto per le variabili libere nel termine, 
+dà un significato per il termine. Infine, il caso più generale è quello di un 
+termine che coinvolge $n$ variabili di tipo e $m$ variabili libere: esso è 
+interpretato come un elemento di un prodotto
+\[
+\prod_{X\!s\in{\cal
+U}^{n}}Y_{1}(X\!s)\times\cdots\times Y_{m}(X\!s) \;\fun\; Y(X\!s)
+\]
+dove le funzioni $Y_{1},\ldots,Y_{m},Y:{\cal
+U}^{n}\longrightarrow{\cal U}$ sono determinati dai tipi delle variabili 
+libere e dal tipo del termine (in un conteso di tipo derivato dal 
+termine).
+
+Più precisamente, dato un termine-in-contesto $\alpha\!s,\!x\!s.t$
+su $\Sigma_{\Omega}$ supponiamo che 
+\begin{itemize}
+
+\item $t$ abbia il tipo $\tau$
+
+\item $x\!s=x_{1},\ldots,x_{m}$ ed ogni $x_{j}$ abbia il tipo $\sigma_{j}$
+
+\item $\alpha\!s=\alpha_{1},\ldots,\alpha_{n}$.
+
+\end{itemize}
+Allora dal momento che $\alpha\!s,\!x\!s.t$ è un termine-in-contesto, $\alpha\!s.\tau$ 
+e $\alpha\!s.\sigma_{j}$ sono tipi-in-contesto, e quindi danno origine 
+a funzioni $\den{\alpha\!s.\tau}_{M}$ e 
+$\den{\alpha\!s.\sigma_{j}}_{M}$ da ${\cal U}^{n}$ a $\cal U$ come nella 
+sezione~\ref{semantics of types}. Il significato di $\alpha\!s,\!x\!s.t$ 
+nel modello $M$ sarà dato da un elemento
+\[
+\den{\alpha\!s,\!x\!s.t}_{M} \in \prod_{X\!s\in{\cal U}^{n}}
+\left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}_{M}(X\!s)\right)
+\fun \den{\alpha\!s.\tau}_{M}(X\!s) .
+\]
+In altre parole, dato
+\begin{eqnarray*}
+X\!s & = & (X_{1},\ldots,X_{n})\in{\cal U}^{n} \\
+y\!s & = & (y_{1},\ldots,y_{m})\in\den{\alpha\!s.\sigma_{1}}_{M}(X\!s)
+           \times\cdots\times \den{\alpha\!s.\sigma_{m}}_{M}(X\!s)
+\end{eqnarray*}
+si ottiene un elemento $\den{\alpha\!s,\!x\!s.t}_{M}(X\!s)(y\!s)$ di
+$\den{\alpha\!s.\tau}_{M}(X\!s)$. La definizione di 
+$\den{\alpha\!s,\!x\!s.t}_{M}$ procede per induzione sulla struttura del 
+termine $t$ come segue. (Come prima, il sottoscritto $M$ sarà omesso dalle 
+parentesi semantiche $\den{ \_ }$ quando il particolare modello coinvolto è 
+chiaro dal contesto.)
+\begin{itemize}
+
+\item
+Se $t$ è una variabile\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!semantica formale delle}, deve essere $x_{j}$ per qualche unico 
+$j=1,\ldots,m$, so $\tau=\sigma_{j}$ e allora 
+$\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ è definito essere $y_{j}$.
+
+\item
+Supponiamo che $t$ sia una costante\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!semantica formale delle} $\con{c}_{\sigma'}$, dove 
+$(\con{c},\sigma)\in\Sigma_{\Omega}$ e $\sigma'$ è un'istanza di
+$\sigma$.  Allora per il Lemma~1 di \ref{instances-and-substitution},
+$\sigma'=\sigma[\tau_{1},\ldots,\tau_{p}/\beta_{1},\ldots,\beta_{p}]$
+per tipi univocamente determinati $\tau_{1},\ldots,\tau_{p}$ (dove
+$\beta_{1},\ldots,\beta_{p}$ sono le variabili di tipo che occorronoin
+$\sigma$). Allora definiamo $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ essere
+$M(\con{c},\sigma)(\den{\alpha\!s.\tau_{1}}(X\!s),
+\ldots,\den{\alpha\!s.\tau_{p}}(X\!s))$,
+che è un elemento di $\den{\alpha\!s.\tau}(X\!s)$ per il Lemma~2 di
+\ref{instances-and-substitution} (dal momento che $\tau$ è $\sigma'$).
+
+\item
+Supponiamo che $t$ sia un termine applicazione di funzione\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!semantica formale delle} $(t_{1}\
+t_{2})$\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!semantica formale delle} dove $t_{1}$ è di tipo 
+$\tau'\fun\tau$ e $t_{2}$ è di tipo $\tau'$. Allora
+$f=\den{\alpha\!s,\!x\!s.t_{1}}(X\!s)(y\!s)$, essendo un elemento di
+$\den{\alpha\!s.\tau'\fun\tau}(X\!s)$, è una funzione dall'insieme
+$\den{\alpha\!s.\tau'}(X\!s)$ all'insieme $\den{\alpha\!s.\tau}(X\!s)$
+che si può applicare all'elemento
+$y=\den{\alpha\!s,\!x\!s.t_{2}}(X\!s)(y\!s)$. Definiamo
+$\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ essere $f(y)$.
+
+\item Supponiamo che $t$ sia il termine astrazione\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!semantica formale della}
+$\lambda x.t_{2}$ dove $x$ è di tipo $\tau_{1}$ e $t_{2}$ di
+tipo $\tau_{2}$. Così $\tau=\tau_{1}\fun\tau_{2}$ e
+$\den{\alpha\!s.\tau}(X\!s)$ è l'insieme di funzioni
+$\den{\alpha\!s.\tau_{1}}(X\!s)\fun\den{\alpha\!s.\tau_{2}}(X\!s)$.
+Definiamo $\den{\alpha\!s,\!x\!s.t}(X\!s)(y\!s)$ essere l'elemento di 
+questo insieme che è la funzione che manda
+$y\in\den{\alpha\!s.\tau_{1}}(X\!s)$ a
+$\den{\alpha\!s,\!x\!s,\!x.t_{2}}(X\!s)(y\!s,y)$. (Si noti che dal momento che
+$\alpha\!s,\!x\!s.t$ è un termine in contesto, per convenzione la variabile 
+legata $x$ non occorre in $x\!s$ e così anche
+$\alpha\!s,\!x\!s,\!x.t_{2}$ è un termine in contesto.)
+\end{itemize}
+Ora definiamo il significato di un termine $t_{\tau}$ in un modello $M$ essere la 
+funzione dipendentemente tipizzata 
+\[ \den{t_{\tau}} \in \prod_{X\!s\in{\cal U}^{n}}
+   \left(\prod_{j=1}^{m}\den{\alpha\!s.\sigma_{j}}(X\!s)\right)
+   \fun \den{\alpha\!s.\tau}(X\!s)
+\]
+data da $\den{\alpha\!s,\!x\!s.t_{\tau}}$, dove $\alpha\!s,\!x\!s$ è il 
+contesto canonico di $t_{\tau}$. Così $n$ è il numero di variabili di tipi in 
+$t_{\tau}$, $\alpha\!s$ è una lista di quelle variabili di tipo, $m$ è il 
+numero di variabili ordinarie che occorrono libere in $t_{\tau}$ (assunte essere 
+distinte dalle variabili legate di $t_{\tau}$) e i $\sigma_{j}$ sono 
+i tipi di quelle variabili. (E' importante notare che la lista 
+$\alpha\!s$, che è parte del contesto canonico di $t$, può essere strettamente 
+più grande dei contesti di tipo canonici di $\sigma_{j}$ o $\tau$. Così 
+non avrebbe senso scrivere semplicemente $\den{\sigma_{j}}$ o $\den{\tau}$ nella 
+definizione di sopra.)
+
+Se $t_{\tau}$ è un termine chiuso, allora $m=0$ e per ogni $X\!s\in{\cal
+U}^{n}$ si può identificare $\den{t_{\tau}}$ con l'elemento 
+$\den{t_{\tau}}(X\!s)()\in\den{\alpha\!s.\tau}(X\!s)$. Così per termini chiusi 
+si ottiene
+\[ \den{t_{\tau}} \in \prod_{X\!s\in{\cal U}^{n}}
+\den{\alpha\!s.\tau}(X\!s)
+\]
+dove $\alpha\!s$ è la lista delle variabili di tipo che occorrono in $t_{\tau}$ e 
+$n$ è la lunghezza di quella lista. Se inoltre, nessuna variabile di tipo occorre in 
+$t_{\tau}$, allora $n=0$ e $\den{t_{\tau}}$ può essere identificato con 
+l'elemento $\den{t_{\tau}}()$ dell'insieme $\den{\tau}\in{\cal U}$.
+
+La semantica dei termini appare qualcosa di complicato a casua della 
+possibile dipendenza di un termine sia dalle variabili di tipo sia dalle variabili 
+ordinarie. Esempi di come la definizione della semantica 
+funziona in pratica si può trovare nella Sezione~\ref{LOG}, dove è dato il significato 
+di alcuni termini che denotano costanti logiche.
+
+\subsection{Sostituzione}
+\label{term-substitution}
+
+Dal momento che i termini possono coinvolgere sia variabili di tipo sia 
+variabili ordinarie, ci sono due differenti operazioni di sostituzione 
+sui termini che bisogna considerare---sostituzione di tipi per variabili 
+di tipo e sostituzione di termini per variabili.
+
+\subsubsection*{Sostituire tipi per variabili di tipo nei termini}
+\index{regola di sostituzione, nella logica HOL@regola di sostituzione, nella logica \HOL{}!semantica formale della}
+
+Supponiamo che $t$ sia un termine, con contesto canonico $\alpha\!s,\!x\!s$ diciamo, 
+dove $\alpha\!s = \alpha_1,\ldots,\alpha_n$, $x\!s = x_1,\ldots,x_m$
+e dove per $j=1,\ldots,m$ il tipo della variabile $x_j$ è 
+$\sigma_j$. Se $\alpha\!s'.\tau_{i}$ ($i=1,\ldots,n$) sono 
+tipi-in-contesto, allora sostituendo\index{sostituzione di tipo, nella logica HOL@sostituzione di tipo, nella logica \HOL{}!semantica formale della} i tipi 
+$\tau_{i}$ per le variabili di tipo $\alpha_{i}$ nella lista $x\!s$, si 
+ottiene una nuova lista di variabili $x\!s'$. Così il $j$\/esimo elemento di 
+$x\!s'$ ha il tipo $\sigma'_{j} = \sigma_{j}[\tau\!s/\alpha\!s]$. Saranno considerate solo 
+sostituzioni con la seguente proprietà.
+\begin{quote}
+Nell'istanziare\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!istanziazione di} le variabili di tipo $\alpha\!s$ con i tipi 
+$\tau\!s$, nessuna coppia di due variabili distinte nella lista $x\!s$ diventano uguali 
+nella lista $x\!s'$\footnote{Una tale identificazione di variabili potrebbe 
+accadere se le variabili avessero lo stesso nome componente e i loro tipi 
+diventassero uguali in seguito all'istanziazione.}.
+\end{quote}
+Questa condizione assicura che $\alpha\!s',x\!s'$ sia davvero un contesto. Allora 
+si ottiene un nuovo termine-in-contesto $\alpha\!s',\!x\!s'.t'$ 
+sostituendo i tipi $\tau\!s=\tau_{1},\ldots,\tau_{n}$ per le variabili 
+di tipo $\alpha\!s$ in $t$ (con un'adatta rinomina delle occorrenze 
+legate delle variabili per renderle distinte dalle variabili in 
+$x\!s'$). La notazione
+\[
+t[\tau\!s/\alpha\!s]
+\]
+è usata per il termine $t'$.
+
+\medskip
+
+\noindent{\bf Lemma 3\ }{\it
+Il significato di $\alpha\!s',\!x\!s'.t'$ in un modello è collegato a quello 
+di $t$ come segue. Per tutti $X\!s'\in{\cal U}^{n'}$ (dove $n'$ è la 
+lunghezza di $\alpha\!s'$)
+}
+\[
+\den{\alpha\!s',\!x\!s'.t'}(X\!s') =
+   \den{t}(\den{\alpha\!s'.\tau_{1}}(X\!s'),\ldots,
+   \den{\alpha\!s'.\tau_{n}}(X\!s')).
+\]
+
+\medskip
+
+Il lemma~2 in \ref{instances-and-substitution} è necessario per vedere che entrambi 
+i lati dell'equazione di sopra sono elementi dello stesso insieme di funzioni.
+La validità dell'equazione è dimostrata per induzione sulla struttura 
+del termine $t$.
+
+\subsubsection*{Sostituire termini per variabili nei termini}
+\index{regola di sostituzione, nella logica HOL@regola di sostituzione, nella logica \HOL{}!semantica formale della}
+
+Supponiamo che $t$ sia un termine, con contesto canonico $\alpha\!s,\!x\!s$ diciamo, 
+dove $\alpha\!s = \alpha_1,\ldots,\alpha_n$, $x\!s = x_1,\ldots,x_m$ 
+e dove per $j=1,\ldots,m$ il tipo della variabile $x_j$ è
+$\sigma_j$. Se si hanno termini-in-contesto $\alpha\!s,\!x\!s'.t_{j}$ per 
+$j=1,\ldots,m$ con $t_{j}$ dello stesso tipo di $x_{j}$, diciamo 
+$\sigma_{j}$, allora si ottiene un nuovo termine-in-contesto 
+$\alpha\!s,\!x\!s'.t''$ sostituendo i termini 
+$t\!s=t_1,\ldots,t_m$ per le variabili $x\!s$ in $t$ (con la rinomina 
+adatta delle occorrenze legate delle variabili per prevenire che le variabili
+libere delle $t_{j}$ diventino legate dopo la sostituzione). La 
+notazione
+\[
+t[t\!s/x\!s]
+\]
+è usata per il termine $t''$.
+
+\medskip
+
+\noindent{\bf Lemma 4\ }{\it
+Il significato di $\alpha\!s,\!x\!s'.t''$ in un modello è collegato con quello di 
+$t$ come segue. Per tutti $X\!s\in{\cal U}^{n}$ e tutti 
+$y\!s'\in\den{\alpha\!s.\sigma'_{1}} \times\cdots\times
+\den{\alpha\!s.\sigma'_{m'}}$ (dove $\sigma'_{j}$ è il tipo di
+$x'_{j}$)}
+\[
+\den{\alpha\!s,\!x\!s'.t''}(X\!s)(y\!s') = \den{t}(X\!s)(
+\den{\alpha\!s,\!x\!s'.t_{1}}(X\!s)(y\!s'),\ldots,
+\den{\alpha\!s,\!x\!s'.t_{m}}(X\!s)(y\!s'))
+\]
+
+\medskip
+
+Di nuovo, questo risultato è dimostrato per induzione sulla struttura del 
+termine $t$.
+
+
+\section{Nozioni standard}
+
+Fino ad ora la sintassi dei tipi e dei termini è stata molto generale. Per 
+rappresentare le formule standard della logica è necessario 
+imporre qualche struttura specifica. In particolare, ogni struttura di tipo 
+deve contenere un tipo atomico \ty{bool} che è inteso denotare 
+l'insieme distinto di due elementi $\two\in{\cal U}$, considerato come un insieme 
+di valori di verità. Le formule logiche sono allora identificate con 
+i termini\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!forma astratta di}\index{termini, nella logica HOL@termini, nella logica \HOL{}!as logical formulas} di 
+tipo \ty{bool}. In aggiunta, varie 
+costanti logiche sono assunte essere in tutte le firme. Questi 
+requisiti sono formalizzati definendo la nozione di una 
+firma standard.
+
+\subsection{Strutture di tipo standard}
+\label{standard-type-structures}
+
+Una struttura di tipo $\Omega$ è {\em standard\/} se contiene i 
+tipi atomici \ty{bool} (dei booleani o valori di verità) e \ty{ind} (degli 
+individui). (Nella letteratura, è spesso utilizzato il simbolo $o$ 
+al posto di \ty{bool} e $\iota$ al posto di \ty{ind}.)
+
+Un modello $M$ di $\Omega$ è {\em standard\/} se $M(\bool)$ e $M(\ind)$ sono 
+rispettivamente gli insiemi distinti $\two$ e $\ind$ nell'universo 
+$\cal U$.
+
+Si assumerà d'ora in avanti che le strutture di tipo e i loro modelli 
+sono standard.
+
+\subsection{Firme standard}
+\label{standard-signatures}
+\index{firme, della logica HOL@firme, della logica \HOL{}!standard}\index{firme standard, della logica HOL@firme standard, della logica \HOL{}}
+
+Una firma $\Sigma_{\Omega}$ è {\em standard\/} se contiene le 
+seguenti tre costanti primitive\index{costanti primitive, della logica HOL@costanti primitive, della logica \HOL{}}\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!primitive, forma astratta di}:
+\[
+{\imp}_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}
+\]
+\[
+{=}_{\alpha\fun\alpha\fun\ty{bool}}
+\]
+\[
+\hilbert_{(\alpha\fun\ty{bool})\fun\alpha}
+\]
+L'interpretazione intesa di queste costanti è che $\imp$ denota 
+l'implicazione, $=_{\sigma\fun\sigma\fun\ty{bool}}$ denota l'uguaglianza 
+sull'insieme denotato da $\sigma$, e 
+$\hilbert_{(\sigma\fun\ty{bool})\fun\sigma}$ denota una funzione di scelta 
+sull'insieme denotato da $\sigma$. Più precisamente, un modello $M$ di 
+$\Sigma_{\Omega}$ sarà chiamato {\em standard\/}\index{modelli standard, della logica HOL@modelli standard, della logica \HOL{}} se
+\begin{itemize}
+
+\item
+$M({\imp},\bool\fun\bool\fun\bool)\in(\two\fun\two\fun\two)$ è 
+la funzione d'implicazione standard\index{implicazione, nella logica HOL@implicazione, nella logica \HOL{}!semantica formale della}, che manda $b,b'\in\two$ su
+\[
+(b\imp b') = \left\{ \begin{array}{ll}
+                           0 & \mbox{se $b=1$ e $b'=0$} \\
+                           1 & \mbox{altrimenti}
+                          \end{array}
+             \right.%}
+\]
+
+\item
+$M({=},\alpha\fun\alpha\fun\bool)\in\prod_{X\in{\cal U}}.X\fun
+X\fun\two$ è la funzione che assegna ad ogni $X\in{\cal U}$ 
+la funzione di test dell'uguaglianza\index{uguaglianza, nella logica HOL@uguaglianza, nella logica \HOL{}!semantica formale della}, che manda $x,x'\in X$ a
+\[
+(x=_{X}x') = \left\{ \begin{array}{ll}
+                           1 & \mbox{se $x=x'$} \\
+                           0 & \mbox{altrimenti}
+                          \end{array}
+             \right.%}
+\]
+
+\item
+\index{operatore epsilon}$M(\hilbert,(\alpha\fun\bool)\fun\alpha)\in\prod_{X\in{\cal
+U}}.(X\fun\two)\fun X$ è la funzione cha assegna ad ogni $X\in{\cal
+U}$ la funzione di scelta\index{operatore di scelta, nella logica HOL@operatore di scelta, nella logica \HOL{}!semantica formale del} che manda $f\in(X\fun\two)$ a
+\[
+\ch_{X}(f) = \left\{ \begin{array}{ll}
+                           \ch(f^{-1}\{1\})
+                             & \mbox{se $f^{-1}\{1\}\not=\emptyset$}\\
+                           \ch(X) & \mbox{altrimenti}
+                          \end{array}
+             \right.%}
+\]
+dove $f^{-1}\{1\}=\{x\in X : f(x)=1\}$. (Si noti che $f^{-1}\{1\}$ è in
+$\cal U$ quando non è vuota, per la proprietà {\bf Sub} 
+dell'universo $\cal U$ data nella Sezione~\ref{introduction}. La funzione 
+$\ch$ è data dalla proprietà {\bf Choice}.)
+
+\end{itemize}
+
+Si assumerà da qui in avanti che le firme e i loro modelli sono 
+standard.
+
+\medskip
+
+\noindent{\bf Nota\ }
+Questa particolare scelta delle costanti primitive è arbitraria. La 
+collezione standard delle costanti logiche include $\T$ (`vero'), $\F$
+(`falso')\index{valori di verità, nella logica HOL@valori di verità, nella logica \HOL{}!forma astratta di}, $\imp$ (`implica'), $\wedge$ (`e'), $\vee$
+(`o'), $\neg$ (`non'), $\forall$ (`per tutti'), $\exists$ (`esiste'), 
+$=$ (`è uguale'), $\iota$ (`il'), e $\hilbert$ (`un'). Questo 
+insieme è ridondante, dal momento che può essere definito (in un senso spiegato nella 
+Sezione~\ref{defs}) da vari sottoinsiemi. In pratica, è 
+necessario lavorare con l'insieme completo delle costanti logiche, e il 
+particolare sottoinsieme preso come primitivo non è importante. il lettore 
+interessato può esplorare ulteriormente questo argomento leggendo il libro 
+di Andrews~\cite{Andrews} e i riferimenti che esso contiene.
+
+\medskip
+
+I termini di tipo \ty{bool} sono chiamati {\it formule\/}\index{formule come termini, nella logica HOL@formule come termini, nella logica \HOL{}}.
+
+Sono usate le seguenti abbreviazioni notazionali:
+
+\begin{center}
+\index{uguaglianza, nella logica HOL@uguaglianza, nella logica \HOL{}!forma astratta di}
+\index{implicazione, nella logica HOL@implicazione, nella logica \HOL{}!forma astratta di}
+\index{operatore di scelta, nella logica HOL@operatore di scelta, nella logica \HOL{}!forma astratta di}
+\index{quantificatore esistenziale, nella logica HOL@quantificatore esistenziale, nella logica \HOL{}!forma astratta di}
+\index{quantificatore universale, nella logica HOL@quantificatore universale, nella logica \HOL{}!forma astratta di}
+\index{operatore epsilon}
+\begin{tabular}{|l|l|}\hline
+{\rm Notazione} & {\rm Significato}\\ \hline
+$t_{\sigma}=t'_{\sigma}$ &
+  $=_{\sigma\fun\sigma\fun\ty{bool}}\ t_{\sigma}\ t'_{\sigma}$\\ \hline
+$t\imp t'$ &
+  $\imp_{\ty{bool}\fun\ty{bool}\fun\ty{bool}}\ t_\ty{bool}\
+t'_\ty{bool}$\\ \hline
+$\hilbert x_{\sigma}.\ t$ &
+  $ \hilbert_{(\sigma\fun\ty{bool})\fun\sigma}
+(\lambda x_{\sigma}.\ t)$\\ \hline
+\end{tabular}
+\end{center}
+Queste notazioni sono casi speciali di convenzioni generali di abbreviazione 
+supportate dal sistema \HOL{}. Le prime due sono infissi e la 
+terza è un binder (si vedano le sezioni di \DESCRIPTION\/ sul parsing e 
+il pretty-printing).
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "logic"
+%%% End:

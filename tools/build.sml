@@ -114,7 +114,6 @@ val _ =
     case cmdline of
       []            => build_hol default_link
     | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
-    | ["-small"]    => build_hol mv                (* by renaming *)
     | ["-dir",path] => buildDir cp (path, 0)
     | ["-dir",path,
        "-symlink"]  => buildDir (symlink_check()) (path, 0)

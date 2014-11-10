@@ -14,14 +14,6 @@ open Systeml Holmake_tools
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 
-fun die_with message = let
-  open TextIO
-in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
-  OS.Process.exit OS.Process.failure
-end
-
 fun main () = let
 
 val execname = OS.Path.file (CommandLine.name())
@@ -38,58 +30,6 @@ val DEFAULT_OVERLAY = "Overlay.ui";
 val SYSTEML = Systeml.systeml
 
 
-
-val spacify = String.concatWith " "
-
-fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
-
-fun collapse_bslash_lines s = let
-  val charlist = explode s
-  fun trans [] = []
-    | trans (#"\\"::(#"\n"::rest)) = trans rest
-    | trans (x::xs) = x :: trans xs
-in
-  implode (trans charlist)
-end
-
-fun realspace_delimited_fields s = let
-  open Substring
-  fun inword cword words ss =
-      case getc ss of
-        NONE => List.rev (implode (List.rev cword) :: words)
-      | SOME (c,ss') => let
-        in
-          case c of
-            #" " => outword (implode (List.rev cword) :: words) ss'
-          | #"\\" => let
-            in
-              case getc ss' of
-                NONE => List.rev (implode (List.rev (c::cword)) :: words)
-              | SOME (c',ss'') => inword (c'::cword) words ss''
-            end
-          | _ => inword (c::cword) words ss'
-        end
-  and outword words ss =
-      case getc ss of
-        NONE => List.rev words
-      | SOME(c, ss') => let
-        in
-          case c of
-            #" " => outword words ss'
-          | _ => inword [] words ss
-        end
-in
-  outword [] (full s)
-end
-
-
-local val expand_backslash =
-        String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
-in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
-end
-
-fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
 (*---------------------------------------------------------------------------
      Support for handling the preprocessing of files containing ``
@@ -596,11 +536,14 @@ fun addPath I file =
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile file I deps = let
+fun poly_compile quietp file I deps = let
   val modName = fromFileNoSuf file
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
+  val say = if quietp then (fn s => ())
+            else (fn s => TextIO.output(TextIO.stdOut, s ^ "\n"))
+  val _ = say ("HOLMOSMLC -c " ^ fromFile file)
 in
 case file of
   SIG _ =>
@@ -633,13 +576,21 @@ case file of
 | _ => raise Match
 end
 
-fun poly_link result files =
-let val out = TextIO.openOut result
-    fun p s =
+fun poly_link quietp result files =
+let
+  val _ = if not quietp then
+            TextIO.output(TextIO.stdOut,
+                          "HOLMOSMLC -o " ^ result ^ " " ^
+                          String.concatWith " "
+                                            (map (fn s => s ^ ".uo") files) ^
+                          "\n")
+          else ()
+  val out = TextIO.openOut result
+  fun p s =
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (EXE_POLY ^ " " ^
+  p (protect(EXE_POLY) ^ " --gcthreads=1 " ^
      String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
      " <<'__end-of-file__'");
   p "val _ = PolyML.Compiler.prompt1:=\"\";";
@@ -732,12 +683,13 @@ in
       val _ = diag ("Processing mosml build command: "^c)
     in
       case process_mosml_args (if isHolmosmlcc then " -c " ^ c else c) of
-        (Mosml_compile (objs, src), I) => poly_compile (toFile src) I (deps @ objs)
+        (Mosml_compile (objs, src), I) =>
+          poly_compile (noecho orelse quiet_flag) (toFile src) I (deps @ objs)
       | (Mosml_link (result, objs), I) => let
         in
           diag ("Moscow ML command is link -o "^result^" ["^
                 String.concatWith ", " (map fromFile objs) ^ "]");
-          poly_link result (map fromFileNoSuf objs)
+          poly_link (noecho orelse quiet_flag) result (map fromFileNoSuf objs)
         end
       | (Mosml_error, _) => (warn ("*** Couldn't interpret Moscow ML command: "^c);
                              OS.Process.failure)
@@ -1033,7 +985,7 @@ in
       val _ = exists_readable file orelse
               (print ("Wanted to compile "^file^", but it wasn't there\n");
                raise FileNotFound)
-      val res = poly_compile arg include_flags deps
+      val res = poly_compile true arg include_flags deps
     in
       OS.Process.isSuccess res
     end
@@ -1065,20 +1017,22 @@ in
         else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
         else "holmake_not_interactive.uo" :: objectfiles0
     in
-      if isSuccess (poly_link script (List.map OS.Path.base objectfiles))
+      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
       then let
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete [thysmlfile, thysigfile]
         val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val _ = app safedelete [script, scriptuo, scriptui]
         val () =
             if not (isSuccess res2) then
               (failed_script_cache := Binaryset.add(!failed_script_cache, s);
                warn ("Failed script build for "^script^" - "^
                      posix_diagnostic res2))
             else ()
+        val _ = if isSuccess res2 orelse not debug then
+                  app safedelete [script, scriptuo, scriptui]
+                else ()
       in
         (isSuccess res2) andalso
         (exists_readable thysmlfile orelse
@@ -1286,36 +1240,6 @@ in
   else true
 end
 
-fun generate_all_plausible_targets () = let
-  val extra_targets = case first_target of NONE => [] | SOME s => [toFile s]
-  fun find_files ds P =
-    case OS.FileSys.readDir ds of
-      NONE => (OS.FileSys.closeDir ds; [])
-    | SOME fname => if P fname then fname::find_files ds P
-                               else find_files ds P
-  val cds = OS.FileSys.openDir "."
-  fun not_a_dot f = not (String.isPrefix "." f)
-  fun ok_file f =
-    case (toFile f) of
-      SIG _ => true
-    | SML _ => true
-    | _ => false
-  val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
-  fun src_to_target (SIG (Script s)) = UO (Theory s)
-    | src_to_target (SML (Script s)) = UO (Theory s)
-    | src_to_target (SML s) = (UO s)
-    | src_to_target (SIG s) = (UI s)
-    | src_to_target _ = raise Fail "Can't happen"
-  val initially = map (src_to_target o toFile) src_files @ extra_targets
-  fun remove_sorted_dups [] = []
-    | remove_sorted_dups [x] = [x]
-    | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
-                                     else x :: remove_sorted_dups (y::z)
-in
-  remove_sorted_dups (Listsort.sort file_compare initially)
-end
-
-
 fun stop_on_failure tgts =
     case tgts of
       [] => true
@@ -1346,7 +1270,7 @@ fun hm_recur ctgt k =
 in
   case targets of
     [] => let
-      val targets = generate_all_plausible_targets ()
+      val targets = generate_all_plausible_targets first_target
       val targets = map fromFile targets
       val _ =
         if debug then let

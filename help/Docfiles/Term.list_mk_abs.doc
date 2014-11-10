@@ -14,7 +14,7 @@ An application {list_mk_abs ([v1,...,vn], M)} yields the term
 in the result.
 
 \FAILURE
-Fails if if some {vi} (1 <= i <= n) is not a variable.
+Fails if some {vi} (1 <= i <= n) is not a variable.
 
 \EXAMPLE
 {

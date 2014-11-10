@@ -30,6 +30,9 @@ val isTrue_not = prove(
   SIMP_TAC std_ss [fetch "-" "not_def"] \\ REPEAT STRIP_TAC
   \\ Cases_on `isTrue x` \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC);
 
+(*
+  fetch "-" "R_ev_rank"
+*)
 
 (* we define a tactic that can solve simple termination goals *)
 
@@ -392,4 +395,3 @@ val _ = atbl_install "MILAWA-INIT" R_ev_milawa_init;
 val milawa_main_def = impure_extract "MILAWA-MAIN" term_tac;
 
 val _ = export_theory();
-

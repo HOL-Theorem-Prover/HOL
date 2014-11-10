@@ -16,7 +16,7 @@ open prim_recTheory pairTheory pairLib listTheory;
 open combinTheory pred_setTheory;
 open numTheory numLib arithmeticTheory;
 open bossLib;
-open MutualIndThen;
+open Mutual;
 open dep_rewrite;
 open more_listTheory more_setTheory;
 open variableTheory;

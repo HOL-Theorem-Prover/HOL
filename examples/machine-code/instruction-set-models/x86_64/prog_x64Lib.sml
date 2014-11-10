@@ -59,7 +59,6 @@ fun pre_process_thm th = let
   val bs = find_terml (can (match_term ``ZREAD_MEM2 a``)) (concl th)
   val bs = bs @ find_terml (can (match_term ``ZWRITE_MEM2 a``)) (concl th)
   val bs = all_distinct (map cdr bs)
-  val ss = [(find_term (can (match_term ``ZREAD_STACK s``))) (concl th)] handle HOL_ERR _ => []
   fun make_eq_tm pattern lhs name = let
     val var = mk_var(name_for_resource x name, type_of pattern)
     in mk_eq(subst [lhs |-> name] pattern,var) end
@@ -67,28 +66,24 @@ fun pre_process_thm th = let
   val fs2 = map (make_eq_tm ``ZREAD_EFLAG f s`` ``f:Zeflags``) fs
   val ws2 = map (make_eq_tm ``ZREAD_MEM2_WORD32 a s`` ``a:word64``) ws
   val bs2 = map (make_eq_tm ``ZREAD_MEM2 a s`` ``a:word64``) bs
-  val ss2 = map (make_eq_tm ``ZREAD_STACK s`` ``ss:word64 list``) ss
-  val result = rs2 @ fs2 @ ws2 @ bs2 @ ss2 @ [``ZREAD_RIP s = rip``]
+  val result = rs2 @ fs2 @ ws2 @ bs2 @ [``ZREAD_RIP s = rip``]
   val th = foldr (uncurry DISCH) th result
   val th = RW [AND_IMP_INTRO,GSYM CONJ_ASSOC,wordsTheory.WORD_XOR_CLAUSES,
              wordsTheory.WORD_AND_CLAUSES,w2n_MOD] (SIMP_RULE std_ss [] th)
   in th end;
 
 fun x64_pre_post g s = let
-  fun get_arg tm = if mem (car tm) [``ZREAD_STACK``,``ZWRITE_STACK``]
-                   then ``ZREAD_STACK`` else (cdr o car) tm
+  fun get_arg tm = (cdr o car) tm
   val h = g
   val xs = find_terml (can (match_term ``(ZREAD_REG x s = y)``)) h
          @ find_terml (can (match_term ``(ZREAD_EFLAG x s = y)``)) h
          @ find_terml (can (match_term ``(ZREAD_MEM2_WORD32 x s = y)``)) h
          @ find_terml (can (match_term ``(ZREAD_MEM2 x s = y)``)) h
-         @ find_terml (can (match_term ``(ZREAD_STACK s = y)``)) h
   val xs = map (fn tm => ((get_arg o cdr o car) tm, cdr tm)) xs
   val ys = find_terml (can (match_term ``ZWRITE_MEM2 a x``)) h
          @ find_terml (can (match_term ``ZWRITE_MEM2_WORD32 a x``)) h
          @ find_terml (can (match_term ``ZWRITE_EFLAG a x``)) h
          @ find_terml (can (match_term ``ZWRITE_REG a x``)) h
-         @ find_terml (can (match_term ``ZWRITE_STACK x``)) h
   val ys = map (fn tm => (get_arg tm, cdr tm)) ys
   val new_rip = (cdr o hd) (find_terml (can (match_term ``ZWRITE_RIP e``)) h)
   fun assigned_aux x y [] = y
@@ -104,8 +99,6 @@ fun x64_pre_post g s = let
             (``~(zM1 a (SOME (w,zDATA_PERM ex)))``,``a:word64``,``w:word8``)
           else if type_of var = ``:word32`` then
             (``zM a w``,``a:word64``,``w:word32``)
-          else if type_of var = ``:word64 list`` then
-            (``zSS xs``,``ZREAD_STACK``,``xs:word64 list``)
           else fail()
     in (subst [name_tm|->name,var_tm|->var] pattern,
         subst [name_tm|->name,var_tm|->get_assigned_value name var] pattern) end
@@ -118,7 +111,6 @@ fun x64_pre_post g s = let
     not (can (match_term ``ZREAD_MEM2_WORD32 r s = v``) tm) andalso
     not (can (match_term ``CAN_ZWRITE_MEM r s``) tm) andalso
     not (can (match_term ``CAN_ZREAD_MEM r s``) tm) andalso
-    not (can (match_term ``ZREAD_STACK s = v``) tm) andalso
     not (can (match_term ``ZREAD_INSTR r s = v``) tm) andalso
     not (can (match_term ``ZREAD_EFLAG r s = v``) tm) andalso
     not (can (match_term ``ZREAD_RIP s = v``) tm)) handle e => true
@@ -339,6 +331,7 @@ fun introduce_zMEMORY64 th =
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end end
 
+(*
 fun introduce_zSTACK th =
   if not (can (find_term (fn x => x = ``RSP``)) (concl th)) then th else let
   val pattern = ``zM (a + 4w) x1 * zM a x2``
@@ -354,6 +347,7 @@ fun introduce_zSTACK th =
   val th = RW [GSYM res,GSYM STAR_ASSOC] (INST [x1|->y1,x2|->y2] th)
   val th = RW [STAR_ASSOC,LOAD64] th
   in th end handle HOL_ERR _ => th;
+*)
 
 fun calculate_length_and_jump th = let
   val (_,_,c,q) = dest_spec (concl th)
@@ -369,7 +363,7 @@ fun calculate_length_and_jump th = let
 
 fun post_process_thm mpred no_status th = let
   val th = if mpred = zMEM_MEMORY64 then introduce_zMEMORY64 th else th
-  val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th
+  (* val th = if mpred = zMEM_AUTO then introduce_zSTACK th else th *)
   val th = RW [GSYM zR_def] th
   val th = SIMP_RULE (std_ss++sw2sw_ss++w2w_ss) [wordsTheory.word_mul_n2w,SEP_CLAUSES] th
   val th = CONV_RULE FIX_WORD32_ARITH_CONV th
@@ -413,9 +407,10 @@ fun x64_prove_one_spec th c = let
                   mk_var("post",type_of post) |-> post,
                   mk_var("c",type_of c) |-> c] tm
   val FLIP_TAC = CONV_TAC (ONCE_REWRITE_CONV [EQ_SYM_EQ])
-  val th1 = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,t',m,i)`] th
+  val th1 = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,m,i)`] th
   val th1 = RW [ZREAD_CLAUSES,ZWRITE_MEM2_WORD32_def] th1
-  val th1 = RW [ZWRITE_EFLAG_def,X64_ICACHE_UPDATE_def,ZWRITE_MEM2_def,ZWRITE_REG_def,ZWRITE_STACK_def,
+  val th1 = RW [ZWRITE_EFLAG_def,X64_ICACHE_UPDATE_def,ZWRITE_MEM2_def,
+        ZWRITE_REG_def,
         APPLY_UPDATE_THM,WORD_EQ_ADD_CANCEL,x64_address_lemma,ZWRITE_RIP_def] th1
   val th = prove(tm,
 (*
@@ -434,20 +429,24 @@ fun x64_prove_one_spec th c = let
          X64_ICACHE_REVERT_def,zM_def,WORD_EQ_ADD_CANCEL,x64_address_lemma]
     \\ ONCE_REWRITE_TAC [CODE_POOL_x64_2set]
     \\ REWRITE_TAC [listTheory.LENGTH,address_list_def]
-    \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,X64_ICACHE_EZTRACT_def]
+    \\ SIMP_TAC std_ss [arithmeticTheory.ADD1,X64_ICACHE_EXTRACT_def]
     \\ SIMP_TAC (std_ss++wordsLib.SIZES_ss) [GSYM STAR_ASSOC,
          STAR_x64_2set, IN_DELETE, APPLY_UPDATE_THM, Zreg_distinct,
          GSYM ALIGNED_def, wordsTheory.n2w_11, Zeflags_distinct,
          Q.SPECL [`s`,`x INSERT t`] SET_EQ_SUBSET, INSERT_SUBSET,
          EMPTY_SUBSET,x64_pool_def,X64_ACCURATE_CLAUSES]
-    \\ SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_RIP_def,ZREAD_STACK_def]
+    \\ SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_EFLAG_def,ZREAD_RIP_def]
     \\ NTAC 3 (FLIP_TAC \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO])
     \\ SIMP_TAC std_ss [CAN_ZREAD_MEM,CAN_ZWRITE_MEM,IN_INSERT,word_arith_lemma1]
-    \\ SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,ZREAD_MEM2_def,wordsTheory.WORD_ADD_0]
+    \\ SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,
+         ZREAD_MEM2_def,wordsTheory.WORD_ADD_0]
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
     \\ SIMP_TAC std_ss [CAN_ZREAD_MEM,CAN_ZWRITE_MEM,IN_INSERT,word_arith_lemma1]
     \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
-    THEN1 (SIMP_TAC std_ss [markerTheory.Abbrev_def]
+    THEN1 (SIMP_TAC std_ss [GSYM arithmeticTheory.ADD_ASSOC]
+           \\ SIMP_TAC std_ss [bit_listTheory.bytes2word_thm,IN_zDATA_PERM]
+           \\ SIMP_TAC std_ss [arithmeticTheory.ADD_ASSOC]
+           \\ SIMP_TAC std_ss [markerTheory.Abbrev_def]
            \\ REPEAT STRIP_TAC \\ FLIP_TAC \\ MATCH_MP_TAC (GEN_ALL ZREAD_INSTR_IMP)
            \\ Q.EXISTS_TAC `T` \\ ASM_SIMP_TAC std_ss []
            \\ FULL_SIMP_TAC std_ss [wordsTheory.word_add_n2w,GSYM wordsTheory.WORD_ADD_ASSOC])
@@ -457,6 +456,7 @@ fun x64_prove_one_spec th c = let
     \\ SIMP_TAC std_ss [AND_IMP_INTRO]
     \\ STRIP_TAC \\ IMP_RES_TAC X64_ACCURATE_IMP
     \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,GSYM word_add_n2w]
     \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET])
   val th = INST [``w:bool``|-> (if !x64_code_write_perm then T else F)] th
   in RW [STAR_ASSOC,SEP_CLAUSES,markerTheory.Abbrev_def] th end;

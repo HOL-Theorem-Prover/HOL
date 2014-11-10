@@ -55,6 +55,14 @@ val gspec_simp_tests =
      (``{(x:num,y:bool) | F}``, ``{}:(num#bool) set``),
      (``{x + y | x | F}``, ``{}:num set``)]
 
+val max_set_tests =
+    [(``MAX_SET {}``, ``0n``),
+     (``MAX_SET {1}``, ``1n``),
+     (``MAX_SET {1;2}``, ``2n``),
+     (``MAX_SET {2;1}``, ``2n``),
+     (``MAX_SET {2;4;3}``, ``4n``)]
+
+
 val _ = let
   open Systeml OS.Path
 in
@@ -76,5 +84,7 @@ val _ =
            List.all (test (IMAGE_CONV computeLib.EVAL_CONV NO_CONV)) imgtests
            andalso
            List.all (test GSPEC_SIMP_CONV) gspec_simp_tests
+           andalso
+           List.all (test MAX_SET_CONV) max_set_tests
          then Process.success
          else Process.failure)

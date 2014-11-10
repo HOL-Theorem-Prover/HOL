@@ -67,10 +67,10 @@ substitute on both sides, which would not be the desirable result.
 
 As another example, {REWRITE_RULE} could be implemented as
 {
-    GEN_REWRITE_RULE TOP_DEPTH_CONV basic_rewrites
+    GEN_REWRITE_RULE TOP_DEPTH_CONV (implicit_rewrites())
 }
 which specifies that matches should be searched recursively
-starting from the whole term of the theorem, and {basic_rewrites} must
+starting from the whole term of the theorem, and {implicit_rewrites} must
 be added to the user defined set of theorems employed in rewriting.
 
 \SEEALSO

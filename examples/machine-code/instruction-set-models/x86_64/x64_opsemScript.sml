@@ -41,10 +41,9 @@ val ea_Zrm_index_def = Define `
 val ea_Zrm_def = Define `
   (ea_Zrm ii s (Zr r) = ea_Zr s r) /\
   (ea_Zrm ii s (Zm i b d) =
-     let mentions_rsp = ((b = SOME RSP) \/ (~(i = NONE) /\ (SND (THE i) = RSP))) in
-       seqT
-          (parT (ea_Zrm_index ii i) (ea_Zrm_base ii b))
-            (\(idx,b). constT (Zea_m s (idx + b + d) mentions_rsp)))`;
+     seqT
+        (parT (ea_Zrm_index ii i) (ea_Zrm_base ii b))
+          (\(idx,b). constT (Zea_m s (idx + b + d))))`;
 
 val ea_Zdest_def = Define `
   (ea_Zdest ii s (Zrm_i rm i) = ea_Zrm ii s rm) /\
@@ -63,22 +62,6 @@ val ea_Zimm_rm_def = Define `
 
 (* eval_ea calculates the value of an effective address *)
 
-val read_stack_def = Define `
-  read_stack ii a = seqT (parT (read_stack_seq ii) (read_reg ii RSP))
-                         (\(stack,rsp).
-                            let k = w2n (a - rsp) in
-                            let n = k DIV 8 in
-                              seqT (assertT (n < LENGTH stack /\ (k MOD 8 = 0)))
-                                (\w. constT (EL n stack)))`;
-
-val write_stack_def = Define `
-  write_stack ii a x = seqT (parT (read_stack_seq ii) (read_reg ii RSP))
-                            (\(stack,rsp).
-                               let k = w2n (a - rsp) in
-                               let n = k DIV 8 in
-                                 seqT (assertT (n < LENGTH stack /\ (k MOD 8 = 0)))
-                                   (\w. write_stack_seq ii (LUPDATE x n stack)))`;
-
 val restrict_size_def = Define `
   (restrict_size Z8  (i:word64) = constT (w2w ((w2w i):word8))) /\
   (restrict_size Z16 (i:word64) = constT (w2w ((w2w i):word16))) /\
@@ -88,12 +71,10 @@ val restrict_size_def = Define `
 val read_ea_def = Define `
   (read_ea ii (Zea_i s i) = seqT (constT i) (restrict_size s)) /\
   (read_ea ii (Zea_r s r) = seqT (read_reg ii r) (restrict_size s)) /\
-  (read_ea ii (Zea_m Z8  a F) = seqT (read_m8  ii a) (\w. constT (w2w w))) /\
-  (read_ea ii (Zea_m Z16 a F) = seqT (read_m16 ii a) (\w. constT (w2w w))) /\
-  (read_ea ii (Zea_m Z32 a F) = seqT (read_m32 ii a) (\w. constT (w2w w))) /\
-  (read_ea ii (Zea_m Z64 a F) = seqT (read_m64 ii a) (\w. constT w)) /\
-  (read_ea ii (Zea_m Z64 a T) = read_stack ii a) /\
-  (read_ea ii (Zea_m _ a T) = seqT (failureT) (\w. constT 0w))`;
+  (read_ea ii (Zea_m Z8  a) = seqT (read_m8  ii a) (\w. constT (w2w w))) /\
+  (read_ea ii (Zea_m Z16 a) = seqT (read_m16 ii a) (\w. constT (w2w w))) /\
+  (read_ea ii (Zea_m Z32 a) = seqT (read_m32 ii a) (\w. constT (w2w w))) /\
+  (read_ea ii (Zea_m Z64 a) = seqT (read_m64 ii a) (\w. constT w))`;
 
 val read_src_ea_def = Define `
   read_src_ea ii s ds = seqT (ea_Zsrc ii s ds) (\ea. addT ea (read_ea ii ea))`;
@@ -104,25 +85,19 @@ val read_dest_ea_def = Define `
 
 (* write_ea write a value to the supplied effective address *)
 
-val write_reg_not_rsp_def = Define `
-  write_reg_not_rsp ii r w =
-    seqT (assertT (r <> RSP)) (\v. write_reg ii r w)`;
-
 val write_ea_def = Define `
   (write_ea ii (Zea_i s i) x = failureT) /\  (* one cannot store into a constant *)
   (* 32-bit write clears top 32-bits, the others just update a subset of the bits *)
   (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r)
-                                 (\w. write_reg_not_rsp ii r (((64--8)w) !! ((7--0)x)))) /\
+                                 (\w. write_reg ii r (((64--8)w) << 8 !! ((7--0)x)))) /\
   (write_ea ii (Zea_r Z16 r) x = seqT (read_reg ii r)
-                                  (\w. write_reg_not_rsp ii r (((64--16)w) !! ((15--0)x)))) /\
-  (write_ea ii (Zea_r Z32 r) x = write_reg_not_rsp ii r (w2w ((w2w x):word32))) /\
-  (write_ea ii (Zea_r Z64 r) x = write_reg_not_rsp ii r x) /\
-  (write_ea ii (Zea_m Z8 a F) x = write_m8 ii a (w2w x)) /\
-  (write_ea ii (Zea_m Z16 a F) x = write_m16 ii a (w2w x)) /\
-  (write_ea ii (Zea_m Z32 a F) x = write_m32 ii a (w2w x)) /\
-  (write_ea ii (Zea_m Z64 a F) x = write_m64 ii a x) /\
-  (write_ea ii (Zea_m Z64 a T) x = write_stack ii a x) /\
-  (write_ea ii (Zea_m _ a T) x = failureT)`;
+                                  (\w. write_reg ii r (((64--16)w) << 16 !! ((15--0)x)))) /\
+  (write_ea ii (Zea_r Z32 r) x = write_reg ii r (w2w ((w2w x):word32))) /\
+  (write_ea ii (Zea_r Z64 r) x = write_reg ii r x) /\
+  (write_ea ii (Zea_m Z8 a) x = write_m8 ii a (w2w x)) /\
+  (write_ea ii (Zea_m Z16 a) x = write_m16 ii a (w2w x)) /\
+  (write_ea ii (Zea_m Z32 a) x = write_m32 ii a (w2w x)) /\
+  (write_ea ii (Zea_m Z64 a) x = write_m64 ii a x)`;
 
 
 (* jump_to_ea updates rip according to procedure call *)
@@ -130,7 +105,7 @@ val write_ea_def = Define `
 val jump_to_ea_def = Define `
   (jump_to_ea ii rip (Zea_i s i) = write_rip ii (rip + i)) /\
   (jump_to_ea ii rip (Zea_r s r) = seqT (read_reg ii r) (write_rip ii)) /\
-  (jump_to_ea ii rip (Zea_m s a b) = seqT (read_m64 ii a) (write_rip ii))`;
+  (jump_to_ea ii rip (Zea_m s a) = seqT (read_m64 ii a) (write_rip ii))`;
 
 
 (* call_dest_from_ea finds the destination according to procedure call semantics *)
@@ -138,13 +113,12 @@ val jump_to_ea_def = Define `
 val call_dest_from_ea_def = Define `
   (call_dest_from_ea ii rip (Zea_i s i) = constT (rip + i)) /\
   (call_dest_from_ea ii rip (Zea_r s r) = read_reg ii r) /\
-  (call_dest_from_ea ii rip (Zea_m s a F) = read_m64 ii a) /\
-  (call_dest_from_ea ii rip (Zea_m s a T) = read_stack ii a)`;
+  (call_dest_from_ea ii rip (Zea_m s a) = read_m64 ii a)`;
 
 val get_ea_address_def = Define `
   (get_ea_address (Zea_i s i) = 0w) /\
   (get_ea_address (Zea_r s r) = 0w) /\
-  (get_ea_address (Zea_m s a b) = a)`;
+  (get_ea_address (Zea_m s a) = a)`;
 
 
 (* rip modifiers *)
@@ -298,59 +272,35 @@ val read_cond_def = Define `
   (read_cond ii Z_NA     = seqT
      (parT (read_eflag ii Z_CF) (read_eflag ii Z_ZF)) (\(c,z). constT (c \/ z)))`;
 
-(* execute stack operations *)
-
-val x64_exec_pop_aux_def = Define `
-  x64_exec_pop_aux ii =
-     seqT (read_stack_seq ii) (\stack.
-     seqT (read_reg ii RSP) (\rsp.
-     seqT (assertT (stack <> [])) (\w.
-     seqT (write_stack_seq ii (TL stack)) (\w.
-     seqT (write_reg ii RSP (rsp + 8w)) (\w.
-     constT (HD stack))))))`;
+(* execute stack operations for non-RIP registers *)
 
 val x64_exec_pop_def = Define `
   x64_exec_pop ii rm =
-     seqT (x64_exec_pop_aux ii) (\w.
-     seqT (ea_Zrm ii Z64 rm) (\ea.
-           write_ea ii ea w))`
-
-val x64_exec_pop_rip_def = Define `
-  x64_exec_pop_rip ii =
-     seqT (x64_exec_pop_aux ii) (\w.
-           write_rip ii w)`
-
-val x64_exec_push_aux_def = Define `
-  x64_exec_push_aux ii w =
-     seqT (read_stack_seq ii) (\stack.
-     seqT (read_reg ii RSP) (\rsp.
-     seqT (write_reg_seq ii RSP (rsp - 8w)) (\v.
-           write_stack_seq ii (w::stack))))`
+     seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 8w))))
+          (\(old_esp,x). seqT (parT (ea_Zrm ii Z64 rm) (read_m64 ii old_esp))
+                              (\(ea,w). write_ea ii ea w))`;
 
 val x64_exec_push_def = Define `
   x64_exec_push ii imm_rm =
-     seqT (ea_Zimm_rm ii Z64 imm_rm) (\ea.
-     seqT (read_ea ii ea) (\w.
-           x64_exec_push_aux ii w))`
+     (seqT
+        (parT (seqT (ea_Zimm_rm ii Z64 imm_rm) (\ea. read_ea ii ea))
+              (seqT (read_reg ii RSP) (\w. constT (w - 8w))))
+        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))`;
+
+(* execute stack operations for RIP register *)
+
+val x64_exec_pop_rip_def = Define `
+  x64_exec_pop_rip ii =
+     seqT (seqT (read_reg ii RSP) (\esp. addT esp (write_reg ii RSP (esp + 8w))))
+          (\(old_esp,x). seqT (read_m64 ii old_esp)
+                              (\w. write_rip ii w))`;
 
 val x64_exec_push_rip_def = Define `
   x64_exec_push_rip ii =
-     seqT (read_rip ii) (\w.
-           x64_exec_push_aux ii w)`
-
-val x64_exec_drop_def = Define `
-  x64_exec_drop ii imm =
-    let k = w2n imm in
-    let n = k DIV 8 in
-      seqT (read_stack_seq ii) (\stack.
-      seqT (read_reg ii RSP) (\rsp.
-      seqT (assertT (n <= LENGTH stack /\ (k MOD 8  = 0))) (\w.
-      seqT (write_stack_seq ii (DROP n stack)) (\w.
-            write_reg_seq ii RSP (rsp + imm)))))`
-
-val rsp_add_imm_aux_def = Define `
-  (rsp_add_imm_aux (Zrm_i (Zr RSP) imm) = SOME imm) /\
-  (rsp_add_imm_aux _ = NONE)`;
+     (seqT
+        (parT (read_rip ii)
+              (seqT (read_reg ii RSP) (\w. constT (w - 8w))))
+        (\(w,esp). parT_unit (write_m64 ii esp w) (write_reg ii RSP esp)))`;
 
 (* check whether rm requires a lock, i.e. specifies a memory access *)
 
@@ -358,9 +308,7 @@ val rsp_add_imm_aux_def = Define `
 
 val x64_exec_def = Define `
   (x64_exec ii (Zbinop binop_name s ds) len = bump_rip ii len
-       (if (binop_name = Zadd) /\ rsp_add_imm_aux ds <> NONE then
-          x64_exec_drop ii (THE (rsp_add_imm_aux ds))
-        else if (binop_name = Zadc) \/ (binop_name = Zsbb) then
+       (if (binop_name = Zadc) \/ (binop_name = Zsbb) then
           seqT
             (parT (parT (read_src_ea ii s ds) (read_dest_ea ii s ds))
                   (read_eflag ii Z_CF))
@@ -438,8 +386,8 @@ val x64_exec_def = Define `
      (parT_unit (write_reg ii RDX ARB)
                 (clear_icache ii))))))) /\
   (x64_exec ii (Zret imm) len =
-     seqT (x64_exec_pop_rip ii) (\x.
-           x64_exec_drop ii imm)) /\
+     seqT (x64_exec_pop_rip ii ) (\x.
+     seqT (read_reg ii RSP) (\esp. (write_reg ii RSP (esp + imm))))) /\
   (x64_exec ii (Zlea s ds) len = bump_rip ii len
      (seqT
         ((parT (ea_Zsrc ii s ds) (ea_Zdest ii s ds)))

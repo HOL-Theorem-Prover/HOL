@@ -18,6 +18,11 @@ LIBD = $(dprot $(SIGOBJ)/Lib.ui)
 
 HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES)
+.PHONY: all
+
 Overlay.uo: Overlay.sml Net.ui Thm.ui $(FTAGD) $(FTYPED) $(FTERMD) $(FTHMD)
 	$(HOLMOSMLC) -c -toplevel $(FTAG) $(FTYPE) $(FTERM) $(FTHM) Net.ui Overlay.sml
 

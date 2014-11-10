@@ -51,9 +51,12 @@ fun replace (pos, argpos, comm, optstring, args) = let
   val width = case optset_width optset of
                 SOME w => w
               | NONE => !width
-  val local_math = case optset_mathmode optset of
-                     NONE => !mathmode
-                   | SOME s => SOME (tex_spacing s)
+  val local_math =
+      if optset_nomath optset then NONE
+      else
+        case optset_mathmode optset of
+            NONE => !mathmode
+          | SOME s => SOME (tex_spacing s)
   val printer = case local_math of
                   NONE => PP.pp_to_string
                 | SOME s => pp_to_mathstring s

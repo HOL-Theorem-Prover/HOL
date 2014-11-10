@@ -179,7 +179,7 @@ SECTION {* bvec *}
 SHORT   {* build a boolean vector with BDD variables *}
 PROTO   {* bvec bvec_var(int bitnum, int offset, int step) *}
 DESCR   {* Builds a boolean vector with the BDD variables $v_1, \ldots,
-           v_n$ as the elements. Each variable will be the the variabled
+           v_n$ as the elements. Each variable will be the variabled
 	   numbered {\tt offset + N*step} where {\tt N} ranges from 0 to
 	   {\tt bitnum}-1.*}
 RETURN  {* The boolean vector (which is already reference counted) *}

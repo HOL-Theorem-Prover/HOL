@@ -11,13 +11,18 @@ open Portable
 (* Datatypes used by the backends                                             *)
 (* ========================================================================== *)
 
-datatype annotation = BV of hol_type * (unit -> string)
-                    | FV of hol_type * (unit -> string)
-                    | TyV
-                    | TyOp of (unit -> string)
-                    | TySyn of (unit -> string)
-                    | Const of {Thy:string,Name:string,Ty:hol_type} * string
-                    | Note of string;
+  datatype lit_type = FldName | StringLit | NumLit | CharLit
+
+  datatype annotation =
+    BV of hol_type * (unit -> string)
+  | FV of hol_type * (unit -> string)
+  | TyV
+  | TyOp of (unit -> string)
+  | TySyn of (unit -> string)
+  | Const of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
+  | SymConst of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
+  | Note of string
+  | Literal of lit_type
 
 (* The default 16 color palette *)
 datatype pp_color =
@@ -336,18 +341,29 @@ val emacs_terminal = let
   fun tyv s = "(*(*(*TV"^s^"*)*)*)"
   fun tyop info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
   fun tysyn info s = "(*(*(*TY\000"^(lazy_string info)^"\000"^s^"*)*)*)"
+  fun const {Thy,Name,Ty=(_, tyf)} s = let
+    val thy' = if Thy = "" then "overloaded" else Thy
+  in
+    "(*(*(*CO\000" ^ thy' ^ "$" ^ Name ^ " : " ^ lazy_string tyf ^
+    "\000" ^ s ^ "*)*)*)"
+  end
   fun add_xstring pps {s, sz, ann} =
       if not (!backend_use_annotations) orelse not (isSome ann) then
-        add_ssz pps (s,sz) else
-      let val sz = case sz of NONE => UTF8.size s | SOME sz => sz in
-      case valOf ann of
-        FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz)
-      | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, sz)
-      | TyV => PP.add_stringsz pps (tyv s, sz)
-      | TyOp thy => PP.add_stringsz pps (tyop thy s, sz)
-      | TySyn r => PP.add_stringsz pps (tysyn r s, sz)
-      | _ => PP.add_stringsz pps (s,sz)
-      end
+        add_ssz pps (s,sz)
+      else
+        let
+          val sz = case sz of NONE => UTF8.size s | SOME sz => sz
+        in
+          case valOf ann of
+              FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz)
+            | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, sz)
+            | Const crec => PP.add_stringsz pps (const crec s, sz)
+            | SymConst crec => PP.add_stringsz pps (const crec s, sz)
+            | TyV => PP.add_stringsz pps (tyv s, sz)
+            | TyOp thy => PP.add_stringsz pps (tyop thy s, sz)
+            | TySyn r => PP.add_stringsz pps (tysyn r s, sz)
+            | _ => PP.add_stringsz pps (s,sz)
+        end
 
   val style_stack = ref ([]:pp_full_style list);
   fun begin_style pps sty =

@@ -4,15 +4,15 @@
 
 \SYNOPSIS
 
-Conversion for evaluating applications of {patricia$ADD}.
+Conversion for evaluating applications of {patricia$ADD} and {patricia$ADD_LIST}.
 
 \DESCRIBE
 
-The conversion {PTREE_ADD_CONV} evaluates terms of the form {t |+ (m,n)} where {t} is a well-formed Patricia tree (correctly constructed using {patricia$Empty}, {patricia$Leaf} and {patricia$Branch}) and {m} is a natural number literal.
+The conversion {PTREE_ADD_CONV} evaluates terms of the form {t |+ (m,n)} or {t |++ l} where {t} is a well-formed Patricia tree (correctly constructed using {patricia$Empty}, {patricia$Leaf} and {patricia$Branch}) and {m} is a natural number literal.
 
 \FAILURE
 
-The conversion will fail if the supplied term is not a suitable application of {patricia$ADD}.
+The conversion will fail if the supplied term is not a suitable application of {patricia$ADD} or {patricia$ADD_LIST}.
 
 \EXAMPLE
 {

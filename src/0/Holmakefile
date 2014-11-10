@@ -18,6 +18,11 @@ PORTABLE_UID = $(dprot $(SIGOBJ)/Portable.ui)
 COUNT_UID = $(dprot $(SIGOBJ)/Count.ui)
 HOLSET_UID = $(dprot $(SIGOBJ)/HOLset.ui)
 
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES)
+.PHONY: all
+
 Raw-sig.uo: Raw-sig.sml KernelTypes.uo $(LIB_UID) $(FTHEORY_UID)
 	$(HOLMOSMLC) -c -toplevel $(FTHEORY_UI) Raw-sig.sml
 

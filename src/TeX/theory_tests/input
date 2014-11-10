@@ -1,0 +1,13 @@
+\HOLthm{mdt.datatype_term}
+
+\HOLtm{x.fld1}
+
+\HOLtm{x with fld1 := T}
+
+\HOLtm{x with <| fld1 := T; fld2 := K 3 |>}
+
+\HOLtm{x with fld1 updated_by $~}
+
+\HOLtm{x with <| fld2 updated_by g |>}
+
+\HOLtm{x INSERT s}

@@ -100,4 +100,29 @@ struct
   val decode = lift reader
 end
 
+structure OptionData =
+struct
+
+  fun encode f NONE = "N"
+    | encode f (SOME x) = "S" ^ f x
+  fun reader f = (literal "N" >> return NONE) ++ (literal "S" >> f >- (return o SOME))
+  fun decode f = lift (reader f)
+end
+
+structure PairData =
+struct
+   fun encode (af, bf) (a,b) = af a ^ "," ^ bf b
+   fun reader (af, bf) = af >* (literal "," >> bf)
+   fun decode (af, bf) = lift (reader (af, bf))
+end
+
+structure KernelNameData =
+struct
+   fun encode {Name,Thy} =
+       PairData.encode (StringData.encode, StringData.encode) (Thy,Name)
+   val reader = PairData.reader (StringData.reader, StringData.reader) >-
+                (fn (Thy,Name) => return {Thy = Thy, Name = Name})
+   val decode = lift reader
+end
+
 end (* struct *)

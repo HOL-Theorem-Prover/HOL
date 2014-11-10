@@ -22,6 +22,7 @@ val binop =
 
 val (chr_tm,mk_chr,dest_chr,is_chr) = monop "CHR"
 val (ord_tm,mk_ord,dest_ord,is_ord) = monop "ORD"
+val (tochar_tm,mk_tochar,dest_tochar,is_tochar) = monop "TOCHAR"
 val (implode_tm,mk_implode,dest_implode,is_implode) = monop "IMPLODE"
 val (explode_tm,mk_explode,dest_explode,is_explode) = monop "EXPLODE"
 val (islower_tm,mk_islower,dest_islower,is_islower) = monop "isLower"

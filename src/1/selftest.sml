@@ -4,7 +4,7 @@ val _ = set_trace "Unicode" 0
 
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
+val tprint = testutils.tprint
 
 fun substtest (M, x, N, result) = let
 in
@@ -284,6 +284,22 @@ end
 val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
                   ":'a -> 'b -> 'c",
                   ":(bool -> bool) -> 'a"]
+local
+  open testutils
+  val ct = current_theory
+  val _ = new_type ("option", 1)
+  val ty = mk_thy_type{Thy = ct(), Tyop = "option", Args = [alpha --> beta]}
+  val _ = tprint ("Testing p/printing of (min_grammar) (('a -> 'b) "^ct()^"$option)")
+  val pfn =
+    PP.pp_to_string 70 (#1 (print_from_grammars min_grammars))
+                    |> raw_backend
+                    |> unicode_off
+  val s = pfn ty
+in
+val _ = if s = "(('a -> 'b) "^ct()^"$option)" then print "OK\n"
+        else die ("FAILED! - "^s)
+end
+
 
 val _ = app tpp ["let x = T in x /\\ y",
                  "(let x = T in \\y. x /\\ y) p",
@@ -304,6 +320,21 @@ val _ = add_rule {term_name = "=",
                   paren_style = OnlyIfNecessary,
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
+
+val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
+  fun texp (i,out) = md tpp_expected
+                        {testf = standard_tpp_message, input = i, output = out}
+  val _ = temp_overload_on ("⊤", ``T``)
+in
+  app (md tpp) ["!x. p x /\\ q x", "\\x. x", "\\x::p. x /\\ y",
+                "!x::p. q x \\/ r x", "!x. x /\\ T <=> x"];
+  app texp [("∀x. p x", "!x. p x"), ("x ∧ y", "x /\\ y"),
+            ("λx. x", "\\x. x")];
+  temp_clear_overloads_on "⊤"
+end
 
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
@@ -380,6 +411,45 @@ val _ = app test [
                 \else F"}
 ]
 
+val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
+                        block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                        pp_elements = [TOK "/"], term_name = "div" };
+val _ = test {input = "f /x",
+              testf = (fn s => "Prefix op without parens: "^s),
+              output = "f /x"}
+
+fun bfnprinter gs be sys (ppfns : term_pp_types.ppstream_funs) gravs depth t =
+  let
+    val (bvar, body) = dest_abs t
+  in
+    if aconv bvar body then #add_string ppfns "I"
+    else if aconv body boolSyntax.T then #add_string ppfns "(K T)"
+    else if aconv body boolSyntax.F then #add_string ppfns "(K F)"
+    else if aconv body (mk_neg bvar) then #add_string ppfns "neg"
+    else raise term_pp_types.UserPP_Failed
+  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+
+val _ = temp_add_user_printer("boolfunction", ``v : bool -> bool``,
+                              bfnprinter)
+
+val _ = test {input = "\\x:bool. x",
+              testf = (K "Boolean identity with special user printer"),
+              output = "I"}
+val _ = test {input = "\\x:'a. x",
+              testf = (K "Non-boolean identity with special user printer"),
+              output = "\\x. x"}
+val _ = test {
+      input = "\\x:bool. T",
+      testf = (K "Constant T with type :bool -> bool w/special user printer"),
+      output = "(K T)"
+    }
+val _ = test {
+      input = "\\x:'a. T",
+      testf = (K "Constant T with type :'a -> bool w/special user printer"),
+      output = "\\x. T"
+    }
+
+
 
 (* test DiskThms *)
 val _ = let
@@ -406,6 +476,23 @@ val _ = let
   val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
 in
   if null sgs andalso aconv (concl (vfn [])) t then print "OK\n"
+  else die "FAILED"
+end
+
+val _ = let
+  val _ = tprint "EVERY_CONJ_CONV"
+  fun mkb s = mk_var(s, bool)
+  val p = mkb "p"
+  val q = mkb "q"
+  val t = list_mk_conj [T, mk_var("p", bool), mk_var("q",bool)]
+  val I = mk_abs(p, p)
+  val I_thm = SYM (BETA_CONV (mk_comb(I,q)))
+  fun I_CONV t = if aconv t T then ALL_CONV t
+                 else REWR_CONV I_thm t
+  val result = EVERY_CONJ_CONV I_CONV t
+  val expected = mk_conj(mk_comb(I, p), mk_comb(I, q))
+in
+  if aconv (rhs (concl result)) expected then print "OK\n"
   else die "FAILED"
 end
 

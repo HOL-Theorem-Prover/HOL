@@ -16,7 +16,7 @@ end
 
 open Parse
 
-val ERR = Feedback.mk_HOL_ERR "x64_evalLib"
+val ERR = Feedback.mk_HOL_ERR "x64_stepLib"
 
 val () = show_assums := true
 
@@ -83,36 +83,58 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   fun mk_3 w = wordsSyntax.mk_wordii (w, 3)
+   val cnv = Conv.REWR_CONV x64Theory.readPrefix_def
+             THENC REWRITE_CONV [prefixGroup_def]
+             THENC EVAL
+             THENC REWRITE_CONV [rec'REX_def]
+             THENC EVAL
    fun mk_ibyte w = wordsSyntax.mk_wordii (w, 8)
-   val cmp = wordsLib.words_compset ()
-   val () = utilsLib.add_theory
-              ([], utilsLib.filter_inventory ["readPrefix"] x64Theory.inventory)
-              cmp
-   val prefix_CONV =
-      Conv.REWR_CONV x64Theory.readPrefix_def THENC computeLib.CBV_CONV cmp
-   val prefix_rwt =
-      utilsLib.map_conv prefix_CONV
+   val prefix_rwt1 =
+      utilsLib.map_conv cnv
          (List.tabulate (256, fn i => ``readPrefix (s, p, ^(mk_ibyte i)::l)``))
+   val prefix_rwt2 =
+      x64Theory.readPrefix_def
+      |> Q.SPEC `h::t`
+      |> SIMP_RULE (srw_ss()) []
+      |> GEN_ALL
+in
+   val prefix_CONV =
+      Conv.CHANGED_CONV (PURE_ONCE_REWRITE_CONV [prefix_rwt1])
+      ORELSEC (Conv.REWR_CONV prefix_rwt2
+               THENC Conv.RAND_CONV
+                        (Conv.REWR_CONV x64_stepTheory.prefixGroup
+                         THENC Conv.DEPTH_CONV blastLib.BBLAST_CONV
+                         THENC REWRITE_CONV [])
+               THENC numLib.REDUCE_CONV
+               THENC REWRITE_CONV [rec'REX_def]
+               THENC Conv.DEPTH_CONV blastLib.BBLAST_CONV)
+end
+
+local
+   fun mk_3 w = wordsSyntax.mk_wordii (w, 3)
    val boolify8_CONV =
-      Conv.RAND_CONV (Conv.REWR_CONV boolify8_n2w THENC numLib.REDUCE_CONV)
-      THENC PairedLambda.let_CONV
-   val x64_decode_rwt =
-      Conv.CONV_RULE (Conv.DEPTH_CONV boolify8_CONV THENC REWRITE_CONV [])
-        x64_decode_def
+      (Conv.REWR_CONV boolify8_n2w THENC numLib.REDUCE_CONV)
+      ORELSEC (Conv.REWR_CONV boolify8_def
+               THENC Conv.DEPTH_CONV blastLib.BBLAST_CONV)
    fun RexReg_rwt b =
       utilsLib.map_conv (REWRITE_CONV [RexReg_def]
                          THENC EVAL
                          THENC REWRITE_CONV [num2Zreg_thm])
          (List.tabulate (8, fn i => ``RexReg (^b, ^(mk_3 i))``))
-   val cmp =
-      x64Lib.x64_compset
-        [immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
-         immediate8, immediate16, immediate32, immediate64,
-         immediate_def, prefix_rwt, OpSize_rwt, x64_decode_rwt,
-         RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T]
+   val cmp = wordsLib.words_compset ()
+   val () =
+      utilsLib.add_theory
+         ([immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
+           immediate8, immediate16, immediate32, immediate64, immediate_def,
+           OpSize_rwt, rbp, x64Theory.readModRM_def, readModRM_not_4_or_5,
+           readModRM_byte_not_4, readModRM_dword_not_4,
+           RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T],
+          utilsLib.filter_inventory ["readPrefix"] x64Theory.inventory) cmp
+   val () = utilsLib.add_base_datatypes cmp
    val () = computeLib.add_conv
                (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
+   val () = computeLib.add_conv (``boolify8``, 1, boolify8_CONV) cmp
+   val () = computeLib.add_conv (``readPrefix``, 1, prefix_CONV) cmp
 in
    val x64_CONV = utilsLib.CHANGE_CBV_CONV cmp
 end
@@ -600,6 +622,24 @@ local
       end
    fun mk_byte w = wordsSyntax.mk_wordi (w, 8)
    fun toByte (x, y) = mk_byte (Arbnum.fromHexString (String.implode [x, y]))
+   val x64_fetch =
+      (x64_CONV THENC REWRITE_CONV [wordsTheory.WORD_ADD_0])``x64_fetch s``
+   fun fetch l =
+      List.foldl
+         (fn (b, (i, thm)) =>
+            let
+               val rwt = if i = 0
+                            then ``^st.MEM (^st.RIP) = SOME ^b``
+                         else let
+                                 val j = numSyntax.term_of_int i
+                              in
+                                 ``^st.MEM (^st.RIP + n2w ^j) = SOME ^b``
+                              end
+            in
+               (i + 1, PURE_REWRITE_RULE [ASSUME rwt, optionTheory.THE_DEF] thm)
+            end) (0, x64_fetch) l |> snd
+   val decode_tm = ``x64_decode (FST (x64_fetch ^st))``
+in
    fun get_bytes s =
       let
          fun iter a [] = List.rev a
@@ -621,27 +661,9 @@ local
       in
          iter [] (String.explode s)
       end
-   val x64_fetch =
-      (x64_CONV THENC REWRITE_CONV [wordsTheory.WORD_ADD_0])``x64_fetch s``
-   fun fetch s =
-      List.foldl
-         (fn (b, (i, thm)) =>
-            let
-               val rwt = if i = 0
-                            then ``^st.MEM (^st.RIP) = SOME ^b``
-                         else let
-                                 val j = numSyntax.term_of_int i
-                              in
-                                 ``^st.MEM (^st.RIP + n2w ^j) = SOME ^b``
-                              end
-            in
-               (i + 1, PURE_REWRITE_RULE [ASSUME rwt, optionTheory.THE_DEF] thm)
-            end) (0, x64_fetch) (get_bytes s) |> snd
-   val decode_tm = ``x64_decode (FST (x64_fetch ^st))``
-in
-   fun x64_decode s =
+   fun x64_decode l =
       let
-         val fetch_rwt = fetch s
+         val fetch_rwt = fetch l
          val thm =
             (Conv.RAND_CONV
                 (Conv.RAND_CONV (Conv.REWR_CONV fetch_rwt)
@@ -658,8 +680,9 @@ in
                              (optionSyntax.is_the h
                               orelse raise decode_err "trailing bytes"; thm))
                   | _ => raise decode_err "decode failed")
-           | _ => raise decode_err "too few bytes"
+           | _ => (Parse.print_thm thm; raise decode_err "too few bytes")
       end
+   val x64_decode_hex = x64_decode o get_bytes
 end
 
 local
@@ -747,76 +770,84 @@ local
    val STATE_CONV =
       REWRITE_CONV (utilsLib.datatype_rewrites true "x64" ["x64_state"] @
                     [boolTheory.COND_ID, cond_rand_thms])
-   fun unchanged s = raise ERR "x64_step" ("Failed to evaluate: " ^ s)
+   fun unchanged l =
+      raise ERR "x64_step"
+         ("Failed to evaluate: " ^
+            Hol_pp.term_to_string (listSyntax.mk_list (l, ``:word8``)))
+
    val cache =
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)
-   fun addToCache (s, thm) =
-      (cache := Redblackmap.insert (!cache, s, thm); thm)
+   fun addToCache (s, thm) = (cache := Redblackmap.insert (!cache, s, thm); thm)
    fun checkCache s = Redblackmap.peek (!cache, s)
 in
-   fun x64_step s =
+   fun x64_step l =
+      let
+         val thm1 = x64_decode l
+         val (thm2, thm3, len) = mk_len_icache_thms thm1
+         val thm4 = run_CONV thm1
+         val thm5 = (thm4 |> Drule.SPEC_ALL
+                          |> utilsLib.rhsc
+                          |> bump_rip len
+                          |> run)
+                    handle Conv.UNCHANGED => unchanged l
+         val r = get_state thm5
+                 handle HOL_ERR {origin_function = "dest_pair", ...} =>
+                   (Parse.print_thm thm5
+                    ; print "\n"
+                    ; raise ERR "eval" "failed to fully evaluate")
+         val thm6 = STATE_CONV (mk_proj_exception r)
+         val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5, thm6]
+      in
+         MP_Next thm
+         handle HOL_ERR {message = "different constructors", ...} =>
+            MP_Next0 thm
+      end
+   fun x64_step_hex s =
       let
          val s = utilsLib.uppercase s
       in
          case checkCache s of
             SOME thm => thm
-          | NONE =>
-            let
-               val thm1 = x64_decode s
-               val (thm2, thm3, len) = mk_len_icache_thms thm1
-               val thm4 = run_CONV thm1
-               val thm5 = (thm4 |> Drule.SPEC_ALL
-                                |> utilsLib.rhsc
-                                |> bump_rip len
-                                |> run)
-                          handle Conv.UNCHANGED => unchanged s
-               val r = get_state thm5
-                       handle HOL_ERR {origin_function = "dest_pair", ...} =>
-                         (Parse.print_thm thm5
-                          ; print "\n"
-                          ; raise ERR "eval" "failed to fully evaluate")
-               val thm6 = STATE_CONV (mk_proj_exception r)
-               val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5, thm6]
-            in
-               addToCache (s,
-                  MP_Next thm
-                  handle HOL_ERR {message = "different constructors", ...} =>
-                     MP_Next0 thm)
-            end
+          | NONE => addToCache (s, x64_step (get_bytes s))
       end
 end
 
+val x64_decode_code =
+   List.map x64_decode_hex o x64AssemblerLib.x64_code_no_spaces
+
+val x64_step_code = List.map x64_step_hex o x64AssemblerLib.x64_code_no_spaces
+
 (*
-fun number_of_rewrites () = List.length (getThms ())
 
-number_of_rewrites ()
+List.length (getThms ())
 
-val s = "418803";
-Count.apply x64_step "418803";
+open x64_stepLib
+
+val thms = Count.apply x64_step_code
+  `nop                       ; 90
+   mov [r11], al             ; 41 88 03
+   jb 0x7                    ; 72 07
+   add dword [rbp-0x8], 0x1  ; 83 45 f8 01
+   movsxd rdx, eax           ; 48 63 d0
+   movsx eax, al             ; 0f be c0
+   movzx eax, al             ; 0f b6 c0`
+
 Count.apply x64_step "90";
+Count.apply x64_step "418803";
 Count.apply x64_step "487207";
-Count.apply x64_decode "485A"
-
-Count.apply x64_step "48BA________________"
-Count.apply x64_decode "48BA________________"
-
-Count.apply x64_step "41B8________"
-Count.apply x64_decode "41B8________"
-
-Count.apply x64_decode "8345F8__"
-Count.apply x64_step "8345F8__"
-
-Count.apply x64_decode "8345F801"
-Count.apply x64_step "8345F801"
-
-Count.apply x64_step "4863D0"
+Count.apply x64_step "8345F801";
+Count.apply x64_step "4863D0";
 Count.apply x64_step "0FBEC0";
 Count.apply x64_step "0FB6C0";
 
-val l = List.map (Count.apply x64_step) hex_list
-val l = Count.apply (List.map x64_step) hex_list
+Count.apply x64_step "48BA________________";
+Count.apply x64_decode "48BA________________"
 
-val _ = Count.apply (List.map x64_step) hex_list
+Count.apply x64_step "41B8________";
+Count.apply x64_decode "41B8________"
+
+Count.apply x64_decode "8345F8__";
+Count.apply x64_step "8345F8__"
 
 *)
 

@@ -1,0 +1,2289 @@
+\chapter{La Logica \HOL{} in ML}\label{HOLsyschapter}
+
+In questo capitolo, è descritta la concreta rappresentazione della logica 
+\HOL{}. Questo implica descrivere le funzioni \ML\ che contengono 
+l'interfaccia alla logica (fino alla 
+Sezione~\ref{sec:system-terms} inclusa); le quotation, il parsing, e la stampa dei 
+tipi e dei termini logici (Sezione~\ref{quotation}); la rappresentazione dei 
+teoremi (Sezione~\ref{sec:theorems-in-ml}); la rappresentazione delle teorie 
+(Sezione~\ref{theoryfns}); la fondamentale teoria \HOL{} \texttt{bool} 
+(Sezione~\ref{boolfull}); le regole primitive d'inferenza 
+(Sezione~\ref{rules}); e i metodi per estendere le teorie 
+(nella Sezione~\ref{theoryfns} e anche più avanti nella 
+Sezione~\ref{sec:bossLib}). Si assume che il lettore sia familiare 
+con l'\ML. Se non lo è, dovrebbe leggere prima l'introduzione all'\ML\ in {\sl Getting Started
+with HOL\/} nel \TUTORIAL.
+
+Il sistema \HOL{} fornisce i tipi \ML\ \ml{hol\_type} e \ml{term} 
+che implementano i tipi e i termini della logica \HOL{}, come definito in 
+\LOGIC. Esso fornisce anche delle funzioni \ML\ primitive per creare e 
+manipolare valori di questi tipi. Su questa base è implementata la logica 
+\HOL{}. L'idea chiave del sistema \HOL{} dovuta a Robin
+Milner\index{Milner, R.}, e discussa in questo capitolo, è che 
+i teoremi sono rappresentati da un tipo astratto \ML\ i cui unici 
+valori predefiniti sono gli assiomi, e le cui sole operazioni sono regole 
+d'inferenza. Questo significa che l'unico modo per costruire teoremi in 
+\HOL{} è quello di applicare le regole d'inferenza ad assiomi o a teoremi esistenti; 
+di conseguenza la coerenza della logica è preservata.
+
+Il proposito del meta-linguaggio \ML\ è di fornire un ambiente 
+di programmazione in cui costruire strumenti di dimostrazione per assistere nella 
+costruzione di dimostrazioni. Quando il build del sistema \HOL{} è eseguito, una varietà di 
+utili teoremi è pre-dimostrato e un insieme di strumenti pre-definito. Il sistema 
+di base così offre un ricco ambiente iniziale; gli utenti lo possono arricchire ulteriormente 
+implementando i loro propri strumenti per applicazioni specifiche e costruire 
+le loro teorie per applicazioni specifiche.
+
+
+\section{Questioni lessicali}\label{HOL-lex}
+
+\index{identificatori, nella logica HOL@identificatori, nella logica \HOL{}|(} Il nome 
+di una variabile \HOL{} 
+%
+\index{tokens|(}
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!nomi di|(}
+%
+può essere qualsiasi stringa \ML{}, ma il meccanismo di quotation eseguirà il parsing solo 
+di nomi che sono identificatori (si veda la Sezione~\ref{ident} di sotto). Usare dei non-identificatori come nomi di variabili è sconsigliato eccetto in circostanze 
+speciali (per esempio, quando si scrivono delle regole derivate che generano 
+variabili con nomi che sono garantiti essere differenti da nomi 
+esistenti). Il nome di una variabile di tipo 
+%
+\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!nomi di}
+%
+nella logica \HOL{} è formato da un apice (\ml{'}) seguito da un  
+alfanumerico che a sua volta non contiene apici (si veda la Sezione~\ref{tyvars} 
+per degli esempi). Il nome di una costante di tipo o di un termine costante nella 
+logica \HOL{} può essere qualsiasi identificatore, benché alcuni nomi sono trattati 
+in modo speciale dal parser e dal printer di HOL e dovrebbero quindi essere 
+evitati.
+%
+\index{identificatori, nella logica HOL@identificatori, nella logica \HOL{}|)}
+
+\subsection{identificatori}\label{ident}
+
+In aggiunta a forme speciali già presenti nella grammatica rilevante, 
+un identificatore \HOL{} può essere di due forme:
+\begin{myenumerate}
+\item Una sequenza finita di \emph{alfanumerici} che cominciano con una lettera. Il 
+	carattere di underscore è considerato un carattere numerico, e così può 
+	occorrere dopo la prima lettera di un identificatore. I caratteri greci (approssimativamente 
+	caratteri Unicode che variano da \ml{U+0370} a \ml{U+03FF}) sono anch'essi lettere, eccetto per 
+	$\lambda$~(\ml{U+03BB}), che è trattata come un simbolo. \HOL{} è 
+	case-sensitive: le lettere maiuscole e minuscole sono considerate essere 
+	differenti.
+
+  Le cifre sono i caratteri ASCII 0--9, il carattere di underscore, e i 
+	sottoscritti e i soprascritti Unicode. Il carattere di apostrofo 
+	è speciale.%
+	\index{apostrofo, gestione lessicale del}
+  %
+  Non è una lettera, ma può comparire come parte di un identificatore di termine 
+	alfanumerico dopo la prima lettera. Esso deve apparire all'inizio del 
+	nome di una variabile di tipo, e può anche apparire nel contesto di un termine come 
+	una sequenza di apostrofi per conto proprio.
+
+\item Un identificatore \emph{simbolico}, cioè, una sequenza finita formata da 
+	qualsiasi combinazione dei simboli ASCII e dei simboli Unicode. I 
+	simboli ASCII di base sono
+\begin{verbatim}
+  #  ?  +  *  /  \  =  <  >  &  %  @  !  :  |  -  ^  `
+\end{verbatim}
+  L'uso del segno di omissione e del carattere di accento circonflesso è complicato dal fatto 
+	che questi caratteri hanno un significato speciale nel meccanismo 
+	di quotation; si veda la Sezione~\ref{sec:quotation-antiquotation}. I simboli 
+	ASCII di raggruppamento (graffe, quadre, e parentesi tonde), e i caratteri 
+	tilde~(\holtxt{\symbol{126}}), il punto~(\holtxt{.}),
+  la virgola~(\holtxt{,}), il punto-e-virgola~(\holtxt{;}) e il trattino~(\holtxt{-}) 
+	sono chiamati caratteri \emph{non-aggreganti}. %
+%
+  \index{identificatori, nella logica HOL@identificatori, nella logica \HOL{}!caratteri non-aggreganti}%
+%
+  A meno che il token desiderato non sia già presente nella grammatica, questi 
+	caratteri non si combinano tra di loro o con altri caratteri 
+	simbolici. Così, la stringa \holtxt{"(("} è vista come \emph{due} 
+	token, così come lo sono \holtxt{"+;"} e \holtxt{"-+"}.
+
+  \index{token!Caratteri unicode}
+  \index{Unicode}
+  I caratteri unicode che non sono né lettere né cifre sono considerati 
+	come simboli. Nessuno di questi è non-aggregante.
+
+\item Un \emph{numero} è una stringa di una o più cifre. Se non è la 
+	cifra iniziale, un underscore può essere usato all'interno della sequenza per 
+	fornire una spaziatura. Al fine di distinguere differenti generi di numeri 
+	si può usare un singolo carattere suffisso: per esempio \holtxt{3n} è un 
+	numero naturale mentre \holtxt{3i} è un intero. I prefissi \holtxt{0x} e 
+	\holtxt{0b} possono anche essere usati per cambiare la base del 
+	numero. Se è usato il prefisso \holtxt{0x}, possono anche essere usate 
+	le `cifre' esadecimali \holtxt{a}--\holtxt{f} e \holtxt{A}--\holtxt{F}. 
+	Si veda anche la Sezione~\ref{sec:numerals}.%
+\end{myenumerate}
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!names of|)}
+
+
+\paragraph{Separatori}
+
+I separatori usati dall'analizzatore lessicale \HOL{} sono (con i codici ASCII tra 
+parentesi):
+
+\bigskip
+
+lo spazio (32), il carriage return (13), il line feed (10), il tab ({\verb+^+}I, 9),
+il form feed ({\verb+^+}L, 12)
+
+
+\paragraph{Identificatori speciali}
+
+I seguenti identificatori validi sono usati dalla grammatica nella teoria 
+dei booleani, e di conseguenza anche in tutte le teorie discendenti. Essi non 
+dovrebbero essere usati come il nome di una variabile o di una costante a meno che l'utente sia 
+molto confidente della propria abilità di perdere tempo con le grammatiche
+%
+\begin{verbatim}
+   let  in  and  \  .  ;  =>  |    :  :=  with  updated_by   case   of
+\end{verbatim}
+
+\paragraph {Nomi di variabili di tipo}\label{tyvars}
+
+Il nome di una variabile di tipo nella logica \HOL{} è una stringa 
+che comincia con un apice (\ml{'}) seguito da un alfanumerico che a sua volta 
+non contiene primi; per esempio tutti quelli che seguono sono nomi validi 
+di variabili di tipo eccetto l'ultimo:
+%
+\begin{hol}
+\begin{verbatim}
+   'a   'b   'cat   'A11   'g_a_p   'f'oo
+\end{verbatim}
+\end{hol}
+
+\paragraph{Token utente}
+In generale, un utente \HOL{} ha una grande quantità di libertà di creare la sua propria sintassi, richiedendo token speciali a prescindere dalle variabili e dai nomi per le costanti. 
+Per esempio, la sintassi if-then-else per l'operatore condizionale %
+\index{condizionali, nella logica HOL@condizionali, nella logica \HOL{}!stampa dei}%
+ha token speciali (l'``if'', il ``then'' e l'``else'') che non sono nomi per le variabili, né per le costanti (la costante sottostante è di fatto chiamata \holtxt{COND}). 
+Per essere sicuro che le operazioni di stampa e parsing dei token siano appropriatamente l'una l'inverso dell'altra, gli utenti non dovrebbero creare token che includono spazi vuoti o le stringhe di commento (\ml{(*} and \ml{*)}).
+\index{token|)}
+
+\section{Tipi}\index{tipi, nella logica HOL@tipi, nella logica \HOL{}}
+
+I tipi ammessi dipendono da quali costanti di tipo
+%
+\index{costanti di tipo, nella logica HOL@costanti di tipo, nella logica \HOL{}}
+%
+sono state dichiarate nella teoria corrente. Si veda la Sezione~\ref{theoryfns} 
+per i dettagli di come tali dichiarazioni sono fatte. Ci sono due funzioni  
+primitive  
+%
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!costruttori per}
+\index{costruttori di tipo!nella logica HOL@nella logica \HOL{}}
+%
+che fungono da costruttori per valori di tipo \ml{hol\_type}:
+%
+\index{tipi funzioni, nella logica HOL@tipi funzioni, nella logica \HOL{}!costruttori per}
+\index{mk_vartype@\ml{mk\_vartype}|pin}
+\index{mk_type@\ml{mk\_type}|pin}
+\begin{holboxed}
+\begin{verbatim}
+   mk_vartype : string -> hol_type
+   mk_thy_type : {Tyop:string, Thy:string, Args:hol_type list} -> hol_type
+\end{verbatim}
+\end{holboxed}
+%
+La funzione \ml{mk\_vartype} costruisce una variabile di tipo 
+%
+\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!costruttori per}
+%
+con un nome dato; essa da un warning se il nome non è un nome ammissibile 
+per una variabile di tipo (cioè non è un \ml{'} seguito da un alfanumerico). 
+La funzione \ml{mk\_thy\_type} costruisce un tipo composto 
+%
+\index{tipi composti, nella logica HOL@tipi composti, nella logica \HOL{}!costruttori per}
+%
+da un record \ml{\lb Tyop,Thy,Args\rb{}} dove \ml{Tyop} è una stringa 
+che rappresenta il nome di un operatore di tipo, \ml{Thy} è una stringa 
+che rappresenta la teoria in cui \ml{Tyop} è stato dichiarato, e \ml{Args} 
+è una lista di tipi che rappresentano gli argomenti dell'operatore. 
+I tipi funzione $\sigma_1\fun\sigma_2$ della logica sono rappresentati in 
+\ML{} come se fossero tipi composti $(\sigma_1,\sigma_2)$\ml{fun} 
+(in \LOGIC, tuttavia, i tipi funzioni non erano considerati come tipi 
+composti).
+
+La valutazione di 
+$\ml{mk\_thy\_type}\{\ml{Tyop} = \mathit{name},\
+\ml{Thy} = \mathit{thyname},\
+\ml{Args} = [\sigma_1, \cdots ,\sigma_n]\}$
+fallisce se
+%
+\begin{myenumerate}
+\item $\mathit{name}$ non è un tipo operatore della teoria $\mathit{thyname}$
+\item $\mathit{name}$ è un tipo operatore della teoria $\mathit{thyname}$,
+ma la sua arietà non è $n$.
+\end{myenumerate}
+%
+Per esempio, \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}}
+\index{valori di verità, nella logica HOL@valori di verità, nella logica \HOL{}}
+\index{bool, il tipo nella logica HOL@\ml{bool}, il tipo nella logica \HOL{}}
+è valutato a un valore \ML{} di tipo \ml{hol\_type} che rappresenta il tipo
+\ty{bool}.
+%
+%\paragraph{Support for constructing types}
+
+Le costanti di tipo possono essere 
+legate a valori \ML\ e non hanno bisogno di essere costruiti ripetutamente, ad esempio il tipo costruito da\linebreak 
+\ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}} è abbreviato 
+dal valore \ML\ \ml{bool}. Analogamente, i tipi funzione possono essere costruiti 
+con la funzione infissa \ML\ \ml{-->}. Alcune variabili di tipo comuni 
+sono state costruite e legate a identificatori \ML{}, ad esempio, \ml{alpha} 
+è la variabile di tipo \ml{'a} e \ml{beta} è la variabile di tipo 
+\ml{'b}. Così il codice \ML\ \ml{alpha --> bool} è uguale a, ma molto più conciso di 
+%
+\begin{hol}
+\begin{verbatim}
+  mk_thy_type{Tyop="fun", Thy="min",
+              Args=[mk_vartype "'a",
+                    mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
+\end{verbatim}
+\end{hol}
+
+%\paragraph{Taking types apart}
+
+\noindent
+Ci sono due funzioni primitive
+%
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!de-costruttori per}
+\index{de-costruttori di tipo, nella logica HOL@de-costruttori di tipo, nella logica \HOL{}}
+%
+che fungono da de-costruttori per valori di tipo \ml{hol\_type}:
+\begin{holboxed}
+\index{tipi funzione, nella logica HOL@tipi funzione, nella logica \HOL{}!de-costruttori per}
+\index{dest_vartype@\ml{dest\_vartype}|pin}
+\index{dest_thy_type@\ml{dest\_thy\_type}|pin}
+\begin{verbatim}
+  dest_vartype : hol_type -> string
+  dest_thy_type : hol_type -> {Tyop:string, Thy:string, Args:hol_type list}
+\end{verbatim}
+\end{holboxed}
+
+\noindent La funzione \ml{dest\_vartype}
+%
+\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!de-costruttori per}
+\index{tipi composti, nella logica HOL@tipi composti, nella logica \HOL{}!de-costruttori per}
+%
+estrae il nome di una variabile di tipo. Un tipo composto è de-costruito 
+dalla funzione \ml{dest\_thy\_type} nel nome dell'operatore 
+di tipo, il nome della teoria in cui esso fu dichiarato, e una lista dei 
+tipi argomento; \ml{dest\_vartype} e \ml{dest\_thy\_type} sono così 
+le inverse di \ml{mk\_vartype} e \ml{mk\_thy\_type}, rispettivamente.
+I de-costruttori falliscono su argomenti della forma sbagliata.
+
+\section{Termini}\label{sec:system-terms}
+
+Le quattro specie primitive di termini della logica sono descritte in 
+\LOGIC. Le funzioni \ML\ per manipolarle sono descritte in 
+questa sezione. Ci sono anche termini \emph{derivati} che sono descritti 
+nella Sezione~\ref{derived-terms}.
+
+In qualunque momento, i termini che possono essere costruiti dipendono da quali 
+costanti sono state dichiarate nella teoria corrente. Si veda 
+la Sezione~\ref{theoryfns} per i dettagli su come sono fatte queste dichiarazioni.
+
+Ci sono quattro funzioni primitive
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!costruttori per}
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!costruttori per}
+\index{costruttori di termini, nella logica HOL@costruttori di termini, nella logica \HOL{}}
+che fungono da costruttori per valori di tipo \ml{term}:
+
+\begin{holboxed}
+\index{mk_var@\ml{mk\_var}|pin}
+\begin{verbatim}
+   mk_var : (string * hol_type) -> term
+\end{verbatim}
+\end{holboxed}
+
+\noindent\ml{mk\_var($x$,$\sigma$)} è valutata a una variabile 
+con nome $x$ e tipo $\sigma$; essa ha sempre successo.
+
+\begin{holboxed}
+\index{mk_thy_const@\ml{mk\_thy\_const}|pin}
+\begin{verbatim}
+   mk_thy_const : {Name:string, Thy:string, Ty:hol_type} -> term
+\end{verbatim}
+\end{holboxed}
+
+\noindent $\mathtt{mk\_thy\_const}\{\mathtt{Name} = \mathit{c},\
+\mathtt{Thy} = \mathit{thyname},\ \mathtt{Ty} = \sigma\}$
+ è valutata a un termine che rappresenta la costante
+\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!costruttori per}
+con nome $c$ e tipo $\sigma$; essa fallisce se:
+\begin{myenumerate}
+% \item $c$ is not an allowable constant name;
+\item $c$ non è il nome di una costante nella teoria $\mathit{thyname}$;
+\item $\sigma$ non è un'istanza del tipo generico di $c$
+(il tipo generico di una costante è stabilito quando la costante è definita;
+si veda la Sezione~\ref{theoryfns}).
+\end{myenumerate}
+
+\begin{holboxed}\index{mk_comb@\ml{mk\_comb}|pin}
+\begin{verbatim}
+   mk_comb : (term * term) -> term
+\end{verbatim}
+\end{holboxed}
+
+\noindent\ml{mk\_comb($t_1$,$t_2$)}
+%
+\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!costruttore per}
+%
+è valutata a un termine che rappresenta la combinazione
+%
+\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!costruttori per}
+%
+$t_1\ t_2$. Essa fallisce se:
+\begin{myenumerate}
+\item il tipo di $t_1$ non ha la forma \ml{$\sigma'$->$\sigma$};
+\item il tipo di $t_1$ ha la forma \ml{$\sigma'$->$\sigma$}, ma il 
+tipo di $t_2$ non è uguale a $\sigma'$.
+\end{myenumerate}
+
+\begin{holboxed}
+\index{mk_abs@\ml{mk\_abs}|pin}
+\begin{verbatim}
+   mk_abs : (term * term) -> term
+\end{verbatim}
+\end{holboxed}
+
+\noindent\ml{mk\_abs($x$,$t$)} è valutato a un termine che rappresenta 
+l'astrazione 
+%
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!costruttore per}
+%
+$\lquant{x}t$; essa fallisce se $x$ non è una variabile.
+
+
+Le quattro funzioni primitive di de-costruzione sui termini sono:
+%
+\index{de-costruttori di termini, nella logica HOL@de-costruttori di termini, nella logica \HOL{}}
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!de-costruttori per}
+\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!de-costruttori per}
+\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!de-costruttori per}
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!de-costruttori per}
+\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!de-costruttori per}
+%
+
+\begin{holboxed}
+
+\index{dest_var@\ml{dest\_var}|pin}
+\index{dest_thy_const@\ml{dest\_thy\_const}|pin}
+\index{dest_comb@\ml{dest\_comb}|pin}
+\index{dest_abs@\ml{dest\_abs}|pin}
+\begin{verbatim}
+   dest_var       : term -> (string * hol_type)
+   dest_thy_const : term -> {Name:string, Thy:string, Ty:hol_type}
+   dest_comb      : term -> (term * term)
+   dest_abs       : term -> (term * term)
+\end{verbatim}
+\end{holboxed}
+
+Queste sono le inverse di \ml{mk\_var}, \ml{mk\_thy\_const},
+\ml{mk\_comb} e \ml{mk\_abs}, rispettivamente. Esse falliscono quando applicate 
+a termini della forma sbagliata. Altre utili funzioni di de-costruzione sono
+\ml{rator}\index{rator@\ml{rator}},
+\ml{rand}\index{rand@\ml{rand}},
+\ml{bvar}\index{bvar@\ml{bvar}},
+\ml{body}\index{body@\ml{body}},
+\ml{lhs}\index{lhs@\ml{lhs}} and
+\ml{rhs}\index{rhs@\ml{rhs}}.
+Si veda \REFERENCE\ per i dettagli.
+
+La funzione
+
+\begin{holboxed}\index{type_of@\ml{type\_of}|pin}
+\begin{verbatim}
+   type_of : term -> hol_type
+\end{verbatim}
+\end{holboxed}
+
+\noindent restituisce il tipo
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!determinazione di}
+di un termine. La funzione 
+
+\begin{holboxed}\index{aconv@\ml{aconv}|pin}
+\begin{verbatim}
+   aconv : term -> term -> bool
+\end{verbatim}
+\end{holboxed}
+
+\noindent implementa il test di $\alpha$-convertibilà per
+termini del $\lambda$-calcolo.
+%
+\index{$\alpha$-convertibilà, nella logica HOL@$\alpha$-convertibilà, nella logica \HOL{}!determinazione di}
+%
+Dal punto di vista della logica \HOL{}, i termini $\alpha$-convertibili 
+sono identici. Una varietà di altre funzioni sono disponibili per 
+eseguire la $\beta$-riduzione (\ml{beta\_conv}), l'$\eta$-riduzione
+(\ml{eta\_conv}), la sostituzione (\ml{subst}), l'istanziazione di tipo (\ml{inst}), la computazione delle variabili libere (\ml{free\_vars}) e 
+altre operazioni comuni sui termini. Si veda \REFERENCE{} per maggiori dettagli.
+
+
+\section{Quotation}
+\label{quotation}\label{gen-abs}\label{let}
+\index{type checking, nella logica HOL@type checking, nella logica \HOL{}!della sintassi delle quotation|(}
+\index{quotation, nella logica HOL@quotation, nella logica \HOL{}|(}
+\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|(}
+\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|(}
+
+Sarebbe noioso dover sempre immettere tipi e termini 
+usando le funzioni costruttore. Il sistema \HOL{}, adattando 
+l'approccio preso in \LCF\index{LCF@\LCF}, ha dei parser 
+speciali per le quotation 
+\index{quotation, nella logica HOL@quotation, nella logica \HOL{}!parser per}
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!delle quotation di sintassi}
+per tipi e termini \HOL{} che permettono di immettere 
+tipi e termini usando una sintassi abbastanza standard. Per esempio, 
+l'espressione \ML{} $\holquote{\ml{:bool -> bool}}$ denota esattamente lo stesso 
+valore (con tipo \ML\ \ml{hol\_type}) di 
+
+\begin{hol}
+\index{bool, the type nella logica HOL@\ml{bool}, the type nella logica \HOL{}}
+\begin{verbatim}
+   mk_thy_type{Tyop = "fun",Thy = "min",
+               Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []},
+                       mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}]}
+\end{verbatim}
+\end{hol}
+
+\noindent e l'espressione \holtxt{\holquote{\bs{}x.~x~+~1}}
+%
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}}
+%
+può essere usata al posto di\footnote{Per poter essere elaborata con successo 
+	questa quotation richiede che la teoria dell'aritmetica sia già 
+	stata caricata, il che si può ottenere nel sistema interattivo attraverso 
+	\ml{load "arithmeticTheory"}.}
+
+\begin{hol}
+\begin{verbatim}
+  let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+  in
+   mk_abs
+    (mk_var("x",numty),
+     mk_comb(mk_comb
+      (mk_thy_const
+        {Name="+",Thy="arithmetic",Ty=numty --> numty --> numty},
+         mk_var("x", numty)),
+       mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
+        mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
+                mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
+  end
+\end{verbatim}
+\end{hol}
+
+Il printer \HOL{}, che è integrato nel loop toplevel \ML{}, 
+mostra in output anche i tipi e i termini usando questa sintassi. 
+%
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!della sintassi delle quotation}
+%
+I tipi sono stampati
+%
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!dei tipi}
+%
+nella forma \holquote{\ml{:}\textit{type}}. Per esempio, il valore \ML\ 
+di tipo \ml{hol\_type} che rappresenta 
+$\alpha\fun(\ty{ind}\fun\ty{bool})$ sarebbe stampato 
+come \ml{\holquote{:'a -> ind -> bool}}.
+Analogamente, i termini sono stampati nella forma \holquote{\textit{term}}. 
+Così, il termine che rappresenta $\uquant{x\ y}x<y \imp\equant{z}x+z = y$ 
+sarebbe stampato come:
+%
+\[ \holquote{\ml{!x y. x < y ==> ?z. x + z = y}} \]
+%
+Un segno iniziale di due punti è usato per distinguere una quotation di tipo da una quotation di termine: 
+la prima ha la forma \holquote{\ml{:}~$\cdots$~} e il secondo ha 
+la forma \holquote{~$\cdots$~}.
+\index{quotation, nella logica HOL@quotation, nella logica \HOL{}|)}
+
+La Sessione~\ref{sec:parsing-printing} ha informazioni più dettagliate circa 
+le capacità delle funzioni di parsing e stampa di termini e tipi 
+nel sistema. Il resto di questa sezione fornisce una breve 
+panoramica di ciò che è possibile.
+
+
+\subsection{Inferenza di tipo}
+\index{inferenza di tipo!nel parser HOL@nel parser \HOL{}|(}
+%
+Si noti che non c'è alcuna informazione esplicita di tipo in 
+\holtxt{\bs{}x.x+1}. Il type checker \HOL{} sa che \ml{1} ha 
+il tipo \holtxt{num} e \holtxt{+} ha il tipo \holtxt{num->(num->num)}. 
+Da questa informazione esso può inferire che entrambe le occorrenze di \ml{x} in 
+\holtxt{\bs{}x.x+1} potrebbero avere il tipo \holtxt{num}. Questa non è 
+l'unica assegnazione di tipo possibile; per esempio, la prima occorrenza di 
+\holtxt{x} potrebbe avere il tipo \holtxt{bool} e la seconda avere il tipo 
+\holtxt{num}. In quel caso ci sarebbero due variabili 
+\emph{differenti} con nome \holtxt{x}, cioè \holtxt{x}$_{\holtxt{bool}}$ e 
+\holtxt{x}$_{\holtxt{num}}$, la seconda delle quali è libera. Tuttavia, 
+l'unico modo di costruire in termine con questa seconda assegnazione di tipo è 
+usando dei costruttori, dal momento che il type checker usa l'euristica che tutte 
+le variabili in un termine con lo stesso nome hanno lo stesso tipo. Questo è 
+illustrato nella sessione seguente.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- ``x = (x = 1)``;
+Type inference failure: unable to infer a type for the application of
+
+$= (x :num)
+
+which has type
+
+:num -> bool
+
+to
+
+(x :num) = (1 :num)
+
+which has type
+
+:bool
+
+unification failure message: unify failed
+\end{verbatim}
+\end{session}
+
+Il valore desiderato può essere costruito direttamente per mezzo delle funzioni costruttore 
+primitive:
+
+\begin{session}
+\begin{verbatim}
+- mk_eq
+   (mk_var("x",bool),
+    mk_eq(mk_var("x",numty),
+          mk_numeral (Arbnum.fromString "1")));
+> val it = ``x <=> (x = 1)`` : term
+\end{verbatim}
+\end{session}
+
+Il type checker delle quotation originario fu progettato e implementato da 
+Robin milner\index{Milner, R.}. Esso sfrutta delle euristiche come quella 
+di sopra per inferire un tipo sensato per tutte le variabili che occorrono in un termine.
+
+\index{vincoli di tipo!nella logica HOL@nella logica \HOL{}} A volte, 
+l'utente può voler controllare il tipo esatto di un sottotermine. Per supportare tale 
+funzionalità, i tipo possono essere indicati esplicitamente facendo seguire a qualsiasi 
+termine un simbolo di due punti e poi un tipo. Per esempio, dato 
+\holtxt{\dq{}f(x:num):bool\dq} il type checker assegnerà a \holtxt{f} il tipo 
+\holtxt{num->bool} e a \holtxt{x} il tipo 
+\holtxt{num}. Questo trattamento dei tipi all'interno delle quotation è ereditato 
+da \LCF.
+%
+\index{LCF@\LCF}
+\index{ type quotes, in ML@\ml{\dq:$\cdots$\dq} (type quotes, in \ML)|)}
+\index{ term quotes, in ML@\ml{\dq$\cdots$\dq} (term quotes, in \ML)|)}
+\index{type inference!nel parser HOL@nel parser \HOL{}|)}
+
+\subsection{Visualizzare la grammatica}
+
+\index{parsing, della logica HOL@parsing, della logica \HOL{}!grammatiche per il}
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!grammatiche per la}
+Il comportamento del parser e del printer di \HOL{} è determinato 
+dalla grammatica corrente. Così, è importante una familiarità con il vocabolario 
+della collezione standard di teorie di \HOL{} se si vuole usare 
+\HOL{} in modo efficace. Si può esaminare la grammatica attuale usata 
+dal parser con le funzioni \verb+type_grammar+ e
+\verb+term_grammar+.
+
+Per esempio, nella seguente sessione, vediamo che la grammatica dei tipi 
+usata nel contesto di avvio di \HOL{} ha gli operatori di tipo 
+\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+,
+\verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
+\verb+bool+.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- type_grammar();
+> val it =
+    Rules:
+    (50)   TY  ::=  TY -> TY [fun] (R-associative)
+    (60)   TY  ::=  TY + TY [sum] (R-associative)
+    (70)   TY  ::=  TY # TY [prod] (R-associative)
+    (100)  TY  ::=  TY list | TY recspace | num | (TY, TY)prod | TY option |
+                    one | (TY, TY)sum | label | (TY, TY)fun | ind | bool
+     : grammar
+\end{verbatim}
+\end{session}
+
+Inoltre, \verb+fun+, \verb+sum+, e \verb+prod+ hanno le notazioni 
+infisse (\verb+->+), (\verb|+|), e (\verb+#+), rispettivamente, con 
+differenti precedenze: \verb+#+ (con 70) lega in modo più forte di 
+\verb|+| (60), che lega più forte di \verb+->+ (50). Tutti gli 
+operatori di tipo suffissi (con 100) legano più fortemente di quelli infissi.
+
+La prossima sessione, nella Figura~\ref{fig:term-grammar}, mostra 
+l'output (abbreviato) dell'invocazione della funzione \ml{term\_grammar} 
+nell'ambiente di avvio di \HOL{}. L'output omesso include un elenco 
+di tutte le costanti conosciute dal sistema, inclusi gli operatori prefissi, 
+insieme con tutti gli overload attualmente attivi. La grammatica ritratta 
+varia da operatori di binding con forza di binding molto bassa (0), 
+fino all'applicazione di funzione (2000) e alla selezione di record (2500), 
+che legano molto strettamente.
+
+\setcounter{sessioncount}{0}
+\begin{figure}[htbp]
+\begin{session}
+\begin{verbatim}
+- term_grammar();
+> val it =
+    (0)    TM  ::=  "LEAST" <..binders..>  "." TM |
+                    "?!" <..binders..>  "." TM | "?" <..binders..>  "." TM |
+                    "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
+                    "\" <..binders..>  "." TM
+    (2)    TM  ::=  "let" TM "in" TM  [let]
+    (4)    TM  ::=  TM "::" TM (restricted quantification operator)
+    (5)    TM  ::=  TM TM  (binder argument concatenation)
+    (7)    TM  ::=  "case" TM "of" TM  [case__magic]
+    (8)    TM  ::=  TM "|" TM  [case_split__magic]   (R-associative)
+    (9)    TM  ::=  TM "and" TM   (L-associative)
+    (10)   TM  ::=  TM "=>" TM  [case_arrow__magic]   (R-associative)
+    (50)   TM  ::=  TM "##" TM | TM "," TM   (R-associative)
+    (70)   TM  ::=  "if" TM "then" TM "else" TM  [COND]
+    (80)   TM  ::=  TM ":-" TM   (non-associative)
+    (100)  TM  ::=  TM "=" TM   (non-associative)
+    (200)  TM  ::=  TM "==>" TM   (R-associative)
+    (300)  TM  ::=  TM "\/" TM   (R-associative)
+    (400)  TM  ::=  TM "/\" TM   (R-associative)
+    (425)  TM  ::=  TM "IN" TM   (non-associative)
+    (440)  TM  ::=  TM "++" TM   (L-associative)
+    (450)  TM  ::=  TM "::" TM  [CONS] | TM ">=;" TM | TM "<=" TM |
+                    TM ">" TM | TM "<;" TM | TM ">=" TM | TM "<=" TM |
+                    TM ">" TM | TM "<" TM | TM "LEX" TM | TM "RSUBSET" TM |
+                    TM ":=" TM  [record field update] |
+                    TM "updated_by" TM  [functional record update] |
+                    TM "with" TM  [record update]
+                    (R-associative)
+    (500)  TM  ::=  TM "-" TM | TM "+" TM | TM "RUNION" TM   (L-associative)
+    (600)  TM  ::=  TM "DIV" TM | TM "*" TM | TM "RINTER" TM
+                    (L-associative)
+    (650)  TM  ::=  TM "MOD" TM   (L-associative)
+    (700)  TM  ::=  TM "**" TM | TM "EXP" TM   (R-associative)
+    (800)  TM  ::=  TM "O" TM | TM "o" TM   (R-associative)
+    (900)  TM  ::=  "~" TM
+    (1000) TM  ::=  TM ":" TY  (type annotation)
+    (2000) TM  ::=  TM TM  (function application) |    (L-associative)
+    (2500) TM  ::=  TM "." TM  [record field selection]   (L-associative)
+           TM  ::=  "[" ... "]"  (separator = ";") |
+                    "<|" ... "|>"  (separator = ";")
+           TM  ::=  "(" ")"  [one] |
+                    "(" TM ")"  [just parentheses, no term produced]
+    ... <further output omitted>
+  : grammar
+\end{verbatim}
+\end{session}
+\caption{Risultato della chiamata a \ml{term\_grammar()}}
+\label{fig:term-grammar}
+\end{figure}
+
+\subsection{Controllo di namespace}
+
+Per convenienza, il parser tratta con l'overload e 
+l'ambiguità. L'overload di letterali numerici è discusso nella 
+Sessione~\ref{arith-overloading}, benché a qualunque simbolo si possa applicare 
+l'overload, non solo i numerali. A volte una tale flessibilità è piuttosto 
+utile; comunque, può accadere che si voglia designare in modo esplicito 
+una costante particolare. In quel caso, la notazione 
+$\mathit{thy}\holtxt{\$}\mathit{const}$ può essere usata nel parser per 
+designare la costante $\mathit{const}$ dichiarata nella teoria 
+$\mathit{thy}$. Nell'esempio seguente, è esplicitamente specificato 
+l'operatore minore-di.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+- ``prim_rec$< x y``
+> val it = ``x < y`` : term
+\end{verbatim}
+\end{session}
+Si noti come il simbolo \holtxt{<} non sia trattato come un infisso dal 
+parser quando fornito nella sua forma ``fully-qualified''. Dal punto di vista sintattico, a tali 
+token non è mai dato un trattamento speciale dal parser della sintassi 
+concreta di \HOL.
+%
+\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!nomi di ... fully-qualified}
+
+\section{Modi di Costruire Tipi e Termini}
+
+\index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!costruttori per}
+\index{costruttori di tipo!nella logica HOL@nella logica \HOL{}}
+\index{costruttori di termine, nella logica HOL@costruttori di termine, nella logica \HOL{}|(}
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!costruttori per|(}
+La tabella di sotto mostra l'espressioni \ML\ per varie specie di quotazioni 
+di tipo\index{quotation, nella logica HOL@quotation, nella logica \HOL{}!di tipi}.
+L'espressioni nella stessa riga sono equivalenti.
+
+\bigskip
+
+\begin{center}
+\index{tipi composti, nella logica HOL@tipi composti, nella logica \HOL{}!costruttori per}
+\index{ variabili di tipo, nella logica HOL@\ml{'a,\,'b,\,}$\ldots$ (variabili di tipo, nella logica \HOL{})}
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!costruttori per}
+\index{ operatore di tipo funzione, nella logica HOL@\ml{->} (operatore di tipo funzione, nella logica \HOL{})}
+\index{mk_vartype@\ml{mk\_vartype}}
+\index{mk_type@\ml{mk\_type}}
+\index{virgolette di tipo, in ML@\ml{`:$\cdots$`} (virgolette di tipo, in \ML)}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf Types} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Specie di tipo} & {\it quotation \ML} & {\it Espressione costruttore}  \\ \hline
+ & & \\
+Variabile di tipo &
+{\small\verb+: '+}{\small $alphanum$}  & {\small\verb+mk_vartype("'+$alphanum$\verb+")+}   \\ \hline
+Costante di tipo & $:op$ & {\small\verb+mk_type("+}$op${\small\verb+",[])+}   \\ \hline
+ & $:\mathit{thy}$\verb+$+$\mathit{op}$
+  & \parbox{7cm}
+   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
+    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[]\rb{}}}   \\ \hline
+Tipo funzione & $: \sigma_1$ {\small\verb+->+} $\sigma_2$ &
+$\sigma_1$ {\small\verb+-->+} $\sigma_2$ \\
+\hline
+Tipo composto &
+{\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$op$ &
+{\small\verb+mk_type("+}$op${\small\verb+", [+}
+ $\sigma_1$ {\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+])+}
+\\
+\hline
+& {\small\verb+:(+}$\sigma_1${\small\verb+,+} $\ldots$ {\small\verb+,+} $\sigma_n${\small\verb+)+}$\mathit{thy}$\verb+$+$\mathit{op}$
+& \parbox{7cm}
+   {\small \holtxt{mk\_thy\_type\lb{}Thy="}$\mathit{thy}$\holtxt{",} \newline
+    \holtxt{\quad Tyop="}$\mathit{op}$\holtxt{", Args=[}
+ $\sigma_1, \ldots, \sigma_n$ \holtxt{]\rb{}}} \\ \hline
+\end{tabular}
+\end{center}
+
+
+Modi equivalenti di immettere le quattro specie di termini primitivi sono mostrati nella 
+prossima tabella.
+
+\bigskip
+
+\begin{center}
+\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!quotation of}
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!primitive}
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!costruttori per}
+\index{quotation, nella logica HOL@quotation, nella logica \HOL{}!di termini primitivi}
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!symbol for}
+\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!costruttori per}
+\index{applicazione di funzione, nella logica HOL@applicazione di funzione, nella logica \HOL{}!sintassi delle}
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!costruttori per}
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!sintassi delle}
+\index{mk_var@\ml{mk\_var}}
+\index{mk_const@\ml{mk\_const}}
+\index{mk_comb@\ml{mk\_comb}}
+\index{mk_abs@\ml{mk\_abs}}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf Termini primitivi} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Specie di termine} & {\it quotation \ML} &
+{\it Espressione costruttore}  \\ \hline
+ & & \\
+Variabile & $var${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_var("+}$var${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+%
+Costante & $const${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_const("+}$const${\small\verb+",+}$\sigma${\small\verb+)+} \\ \hline
+%
+Costante & $\mathit{thy}$\verb+$+$\mathit{const}${\small\verb+:+}$\sigma$ &
+{\small\verb+mk_thy_const{Name="+}$\mathit{const}${\small\verb+",Thy="+}$\mathit{thy}${\small\verb+",Ty=+}$\sigma${\small\verb+}+} \\ \hline
+%
+Combinazione & $t_1\ t_2$ &
+{\small\verb+mk_comb(+}$t_1${\small\verb+, +}$t_2${\small\verb+)+} \\ \hline
+%
+Atrazione & \holtxt{\bs$x$.$t$} &
+{\small\verb+mk_abs(+}$x${\small\verb+, +}$t${\small\verb+)$+} \\ \hline
+\end{tabular}
+\end{center}
+%
+\index{type checking, nella logica HOL@type checking, nella logica \HOL{}!delle quotation di sintassi|)}
+
+In aggiunta alle specie di termini nella tabella di sopra, il parser supporta 
+anche le seguenti abbreviazioni sintattiche.
+
+
+\begin{center}
+
+\index{variabili, nella logica HOL@variabili, nella logica \HOL{}!legate in modo multiplo}
+\index{list_mk_comb@\ml{list\_mk\_comb}|pin}
+\index{list_mk_abs@\ml{list\_mk\_abs}|pin}
+\index{list_mk_forall@\ml{list\_mk\_forall}|pin}
+\index{list_mk_exists@\ml{list\_mk\_exists}|pin}
+\index{combinazioni, nella logica HOL@combinazioni, nella logica \HOL{}!abbreviazione per ... multiple}
+\index{quantificatore esistenziale, nella logica HOL@quantificatore esistenziale, nella logica \HOL{}!abbreviazione per ... multiplo}
+\index{quantificatore universale, nella logica HOL@quantificatore universale, nella logica \HOL{}!abbreviazione per ... multiplo}
+\begin{tabular}{|l|l|l|} \hline
+\multicolumn{3}{|c|}{ } \\
+\multicolumn{3}{|c|}{\bf Operazioni sintattiche} \\
+\multicolumn{3}{|c|}{ } \\
+{\it Termine abbreviato} & {\it Significato} &
+{\it Espressione costruttore} \\ \hline
+ & &  \\
+$t\ t_1 \cdots t_n$ &
+{\small\verb+(+}$\cdots${\small\verb+(+}$t\ t_1${\small\verb+)+}$\cdots t_n${\small\verb+)+} &
+{\small\verb+list_mk_comb(+}$t${\small\verb+,[+}$t_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$t_n${\small\verb+])+} \\ \hline
+{\small\verb+\+}$x_1\cdots x_n${\small\verb+.+}$t$ &
+\holtxt{\bs}$x_1${\small\verb+. +}$\cdots${\small\verb+ \+}$x_n${\small\verb+.+}$t$ &
+{\small\verb+list_mk_abs([+}$x_1${\small\verb+, +}$\ldots${\small\verb+ ,+}$x_n${\small\verb+],+}$t${\small\verb+)+}
+\\ \hline
+\end{tabular}
+\end{center}
+
+
+\section{Teoremi}
+\label{sec:theorems-in-ml}
+
+In \LOGIC, la nozione di deduzione è stata introdotta in termini di
+\textit{sequenti},
+%
+\index{sequenti!nella deduzione naturale}
+%
+dove un sequente è una coppia il cui secondo componente è una formula che viene 
+asserita (una conclusione),
+%
+\index{conclusioni!di sequenti}
+%
+e il cui primo componente è un insieme di formule 
+(ipotesi).
+%
+\index{ipotesi!di sequenti}
+%
+Su questo era basata la nozione di un \textit{sistema
+  deduttivo}:
+\index{deduzione naturale}
+\index{sistemi deduttivi}
+%
+un insieme di coppie, il cui secondo componente è un sequente, e il cui primo 
+componente è un insieme di sequenti\footnote{Si noti che questi sequenti formano 
+  una lista, non un insieme; cioè, sono ordinati.}. Fu quindi definito il concetto di un sequente 
+\textit{che segue da}	
+%
+\index{segue da, nella deduzione naturale}
+%
+un insieme di sequenti attraverso un sistema deduttivo: un sequente 
+segue da un insieme di sequenti se il sequente è l'ultimo elemento di 
+qualche catena di sequenti, ognuno dei cui elementi o è nell'insieme, 
+o esso stesso segue dall'insieme attraverso elementi precedenti della 
+catena, attraverso il sistema deduttivo.
+
+\index{notazione turnstile|(} E' stata poi introdotta una notazione per `segue 
+da'. Il fatto che un sequente\linebreak $(\{t_1,\ldots,t_n\},\ t)$ segua da un 
+insieme di sequenti $\Delta$, attraverso un sistema deduttivo ${\cal D}$, è 
+denotato da: $t_1,\ldots,t_n\vdash_{{\cal D},\Delta} t$. (E' stato notato 
+che dove sia ${\cal D}$ sia $\Delta$ sono fossero chiari dal contesto, la loro 
+menzione potrebbe essere omessa; e dove l'insieme delle ipotesi fosse vuoto, 
+la sua menzione potrebbe essere omessa.)
+
+Un sequente che segue dall'insieme vuoto di sequenti attraverso un sistema 
+deduttivo è chiamato un \textit{teorema} di quel sistema deduttivo. In altre 
+parole, un teorema
+%
+\index{teoremi, nella deduzione naturale}
+%
+è l'ultimo elemento di una \textit{dimostrazione}
+%
+\index{dimostrazione!nella deduzione naturale}
+%
+(nel senso di \LOGIC) dall'insieme vuoto di sequenti. Quando una coppia 
+$(L,(\Gamma,t))$ appartiene a un sistema deduttivo, e la lista $L$ è 
+vuota, allora il sequente $(\Gamma,t)$ è chiamato un 
+\textit{assioma}\index{assiomi!nella deduzione naturale}. Qualsiasi coppia 
+$(L,(\Gamma,t))$ appartenente a un sistema deduttivo è chiamata una 
+\textit{inferenza primitiva}\index{inferenza, nella deduzione
+  naturale}\index{inferenza primitiva, nella deduzione naturale} del 
+sistema, con ipotesi\footnote{Si noti che `ipotesi' e 
+	`conclusione' sono usate anche per le componenti dei sequenti.} $L$ e 
+conclusione $(\Gamma,t)$.
+
+Una formula
+%
+\index{formule come termini, nella logica HOL@formule come termini, nella logica \HOL{}}
+%
+in astratto è rappresentata concretamente in \HOL{} da un termine il cui 
+tipo \HOL{} è \holtxt{:bool}. Perciò, un termine
+%
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!come formule logiche}
+%
+di tipo \holtxt{:bool} è usato per rappresentare un membro dell'insieme di 
+ipotesi di un sequente; e allo stesso modo per rappresentare la conclusione di un 
+sequente. Gli insiemi in questo contesto sono rappresentati da un'implementazione della 
+firma \ML{} \ml{HOLset} che supporta operazioni come 
+\ml{member} e \ml{union}.
+%
+\index{sequenti!rappresentazione dei, nella logica HOL@rappresentazione dei, nella logica \HOL{}}
+
+Un teorema in astratto è rappresentato concretamente nel sistema 
+\HOL{} da un valore con il tipo \ML{} astratto \ml{thm}.
+%
+\index{thm (tipo ML)@\ml{thm} (tipo \ML{})}
+%
+Il tipo \ml{thm} ha una funzione de-costruttore
+
+\begin{holboxed}
+\index{dest_thm@\ml{dest\_thm}|pin}
+\begin{verbatim}
+   dest_thm : thm -> (term list * term)
+\end{verbatim}
+\end{holboxed}
+
+\noindent che restituisce una coppia che consiste, rispettivamente, di una lista delle 
+ipotesi 
+\index{ipotesi!di teoremi} 
+e della conclusione,
+\index{conclusioni!di teoremi}
+%
+di un teorema. Non si dovrebbe fare affidamento sull'ordine delle assunzioni 
+nella lista. Le ipotesi di un teorema sono disponibili anche nella forma 
+di insieme con la funzione
+
+\begin{holboxed}
+\index{hyp_set@\ml{hyp\_set}}
+\begin{verbatim}
+   hyp_set : thm -> term HOLset.set
+\end{verbatim}
+\end{holboxed}
+
+Usando \ml{dest\_thm}, sono derivate ulteriori funzioni di 
+\index{teoremi, nella logica HOL@teoremi, nella logica \HOL{}!de-costruttori per}
+de-costruzione 
+
+\begin{holboxed}
+\index{hyp@\ml{hyp}|pin}
+\index{concl@\ml{concl}|pin}
+\begin{verbatim}
+   hyp   : thm -> term list
+   concl : thm -> term
+\end{verbatim}
+\end{holboxed}
+
+\noindent per estrarre, rispettivamente, la lista delle ipotesi e la conclusione 
+di un teorema. Il tipo \ML\ non ha 
+una funzione costruttore primitiva. In questo modo, il sistema di tipi \ML{} protegge 
+la logica \HOL{} 
+dalla costruzione arbitraria e non tracciata 
+di teoremi, che comprometterebbero 
+la coerenza\index{coerenza, della logica HOL@coerenza, della logica \HOL{}} della logica. 
+(Le funzioni che restituiscono teoremi come valori, ad esempio le funzioni che rappresentano inferenze primitive, 
+sono discusse nella Sezione~\ref{rules}.)
+%% derived-rules reference is dead for the moment (until we
+%% resuscitate drules.tex)
+%, and further in Chapter\ref{derived-rules}.)
+
+In \LOGIC è stato menzionato che il sistema deduttivo di \HOL{} 
+include quattro assiomi\footnote{Questa è una semplificazione: di fatto i 
+	vari assiomi sono un'estensione della logica di base.}. In quel 
+manuale, gli assiomi sono stati presentati in forma astratta. Concretamente, 
+gli assiomi sono semplicemente valori teorema che sono introdotti attraverso l'uso della 
+funzione \ML{} \ml{new\_axiom} (si veda la Sessione~\ref{theoryprims} 
+di sotto). Per esempio, l'assioma \ml{BOOL\_CASES\_AX} menzionato in 
+\LOGIC{} è stampato in \HOL{} come segue (dove \ml{T} e
+\ml{F} sono le costanti della logica \HOL{} che rappresentano la verità e 
+la falsità, rispettivamente):
+
+\begin{hol}
+\index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!axiom for}
+\begin{verbatim}
+   |- !t. (t = T) \/ (t = F) : thm
+\end{verbatim}
+\end{hol}
+
+\noindent
+Si noti lo speciale formato di stampa,
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!dei teoremi}
+%
+con l'approssimazione 
+alla notazione astratta $\vdash$,
+%
+\index{notazione dei teoremi, nella logica HOL@notazione dei teoremi, nella logica \HOL{}|(}
+%
+\ml{|-}, usata per indicare lo status di tipo \ML{} \ml{thm}; insieme con 
+l'assenza dei segni di quotation \HOL{} 
+%
+\index{ segno di teorema, nella logica HOL@\ml{"|-} (segno di teorema, nella logica \HOL{})}
+%
+nel contesto \ml{|-}. La sessione di sotto illustra l'uso delle 
+funzioni di de-costruzione:
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+   - val th = BOOL_CASES_AX;
+   > val th = |- !t. (t = T) \/ (t = F) : thm
+
+   - hyp th;
+   > val it = [] : term list
+
+   - concl th;
+   > val it = ``!t. (t = T) \/ (t = F)`` : term
+
+   - type_of it;
+   > val it = ``:bool`` : hol_type
+\end{verbatim}
+\end{session}
+\index{notazione turnstile|)}
+
+\noindent In aggiunta alle convenzioni di stampa menzionate di sopra, la 
+stampa di teoremi stampa le ipotesi 
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!delle ipotesi dei teoremi} 
+come dei punti (cioè un singolo punto di conclusione o dei puntini). Il flag \ml{show\_assums}
+\index{show_assums@\ml{show\_assums}} permette di stampare i teoremi 
+con le ipotesi mostrate in modo completo. Questi punti sono illustrati con un 
+teorema inferito, a scopo di esempio, da un altro assioma menzionato 
+in \LOGIC, \ml{SELECT\_AX}.
+
+\begin{session}
+\begin{verbatim}
+- val th = UNDISCH (SPEC_ALL SELECT_AX);
+> val th =  [.] |- P ($@ P) : thm
+
+- show_assums := true;
+> val it = () : unit
+
+- th;
+> val it =  [P x] |- P ($@ P) : thm
+\end{verbatim}
+\end{session}
+\index{notazione dei teoremi, nella logica HOL@notazione dei teoremi, nella logica \HOL{}|)}
+
+\section{Regole Primitive d'Inferenza della Logica \HOL{}}
+\label{rules}
+
+\index{regole d'inferenza, della logica HOL@regole d'inferenza, della logica \HOL{}!primitive|(}
+%
+Le regole primitive d'inferenza della logica sono state descritte 
+in astratto in \LOGIC. Le descrizioni si basavano su meta-variabili $t$,
+$t_1$, $t_2$, e così via. Nella logica \HOL{}, infinite famiglie di 
+inferenze primitive sono raggruppate insieme e pensate come singoli 
+schemi primitivi di inferenza. %
+%
+\index{famiglie d'inferenze, nella logica HOL@famiglie d'inferenze, nella logica \HOL{}}
+%
+Ciascuna famiglia contiene tutte le istanze concrete di un particolare 
+`pattern' d'inferenza. Queste possono essere prodotte, in astratto, 
+istanziando le meta-variabili delle regole in \LOGIC\ su termini 
+concreti.
+
+In \HOL, gli schemi primitivi d'inferenza sono rappresentati da funzioni \ML{} 
+che restituiscono teoremi come valori. Cioè, per particolari termini \HOL{}, 
+le funzioni \ML{} restituiscono l'istanza del teorema per quei termini. 
+Le funzioni \ML{} sono parte del tipo \ML{} astratto 
+\ml{thm}:
+%
+\index{thm (tipo ML)@\ml{thm} (tipo \ML{})}
+%
+benché \ml{thm} non abbia dei costruttori primitivi, esso ha (otto) 
+operazioni che restituiscono teoremi come valori: \ml{ASSUME}, \ml{REFL},
+\ml{BETA\_CONV}, \ml{SUBST}, \ml{ABS}, \ml{INST\_TYPE}, \ml{DISCH} e
+\ml{MP}.
+%
+\index{schemi d'inferenza, nella logica HOL@schemi d'inferenza, nella logica \HOL{}}
+
+Le funzioni \ML{} che implementano gli schemi primitivi d'inferenza nel 
+sistema \HOL{} sono descritte di sotto. E' usata qui la stessa notazione
+%
+\index{inferenze, nella logica HOL@inferenze, nella logica \HOL{}!notazione per le}
+%
+usata in \LOGIC: le ipotesi sono sopra una linea orizzontale e la 
+conclusione
+%
+\index{conclusioni!delle regole d'inferenza} di sotto. Per le costanti logiche è usata 
+la notazione {\small ASCII} leggibile dalla macchina.
+
+\subsection{Introduzione di assunzione}
+%
+\index{introduzione di assunzione, nella logica HOL@introduzione di assunzione, nella logica \HOL{}!funzione ML per@funzione \ML{} per}
+
+\begin{holboxed}
+\index{ASSUME@\ml{ASSUME}|pin}
+\begin{verbatim}
+   ASSUME : term -> thm
+\end{verbatim}\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+$t${\small\verb+ |- +}$t$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+{\small\verb+ASSUME +}$t${\small\verb++} è valutata a $t${\small\verb+|- +}$t$.
+Fallisce se $t$ non è di tipo \ml{bool}.
+
+\bigskip
+
+\subsection{Riflessività}\index{riflessività, nella logica HOL@riflessività, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+
+\begin{holboxed}\index{REFL@\ml{REFL}|pin}
+\begin{verbatim}
+   REFL : term -> thm
+\end{verbatim}
+\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+{\small\verb+ |- +}$t${\small\verb+ = +}$t$ \\
+\end{tabular}
+\end{center}
+
+\noindent {\small\verb+REFL +}$t${\small\verb++} è valutata a 
+{\small\verb+|- +}$t${\small\verb+ = +}$t$. Una chiamata a \ml{REFL} non fallisce mai.
+
+\bigskip
+
+\subsection{Beta-conversione}
+\index{beta-conversione, nella logica HOL@beta-conversione, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+
+\begin{holboxed}\index{BETA_CONV@\ml{BETA\_CONV}|pin}
+\begin{verbatim}
+   BETA_CONV : term -> thm
+\end{verbatim}
+\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+  \\ \hline
+\holtxt{ |- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item dove $t_1[t_2/x]$ denota il risultato di sostituire $t_2$ per $x$
+in $t_1$, con una rinomina appropriata delle variabili per evitare che variabili libere 
+in $t_2$ diventino legate dopo la sostituzione. La sostituzione 
+ $t_1[t_2/x]$ è sempre definita.
+\end{itemize}
+
+%'' below makes latex font-locking cope with the "unbalanced" double
+%back-tick quotations.
+\noindent \ml{BETA\_CONV ``(\bs$x$.$t_1$)$t_2$``} %''
+è valutata al teorema \ml{|- (\bs$x$.$t_1$)$t_2$ = $t_1[t_2/x]$}.
+Fallisce se l'argomento a \ml{BETA\_CONV} non è un $\beta$-redex
+(cioè non è della forma \holtxt{(\bs$x$.$t_1$)$t_2$}.
+
+\bigskip
+
+\subsection{Sostituzione}\index{regola di sostituzione, nella logica HOL@regola di sostituzione, nella logica \HOL{}!funzione ML per@funzione \ML\ per|(}\index{SUBST@\ml{SUBST}|(}
+
+\begin{holboxed}
+\begin{verbatim}
+   SUBST : (thm * term)list -> term -> thm -> thm
+\end{verbatim}\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma_1${\small\verb+ |- +} $t_1${\small\verb+=+}$t'_1$ {\small\verb+  +} $\cdots$ {\small\verb+  +}
+$\Gamma_n${\small\verb+ |- +} $t_n${\small\verb+=+}$t'_n$ {\small\verb+  +}
+$\Gamma${\small\verb+ |- +} $t[t_1,\ldots,t_n]$ \\ \hline
+$\Gamma_1 \cup \cdots
+\cup \Gamma_n \cup \Gamma${\small\verb+ |- +} $t[t'_1,\ldots,t'_n]$ \\
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\begin{itemize}
+\item dove $t[t_1,\ldots,t_n]$ denota un termine $t$ con qualche occorrenza 
+libera dei termini $t_1$, $\dots$, $t_n$ scelti e 
+$t[t'_1,\ldots,t'_n]$ denota il risultato di sostituire simultaneamente ciascuna 
+di tali occorrenze di $t_i$ con $t'_i$ (per $1{\leq}i {\leq} n$), 
+con un'appropriata rinomina delle variabili per evitare che variabili libere 
+in $t_i'$ diventino legate dopo la sostituzione.
+\end{itemize}
+
+\noindent
+Il primo argomento a {\small\verb+SUBST+} è una lista 
+{\small\verb+[(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\:\ldots\:${\small\verb+;(|-+}$t_n${\small\verb+=+}
+$t'_n${\small\verb+, +}$x_n${\small\verb+)]+}. Il secondo argomento è 
+un template di termine $t[x_1,\ldots,x_n]$ in cui le occorrenze della variabile 
+$x_i$ (dove $1 \leq i\leq n$) sono usate per segnare gli spazi in cui 
+le sostituzioni con {\small\verb+|- +}$t_i${\small\verb+=+}$t'_i$ devono essere 
+fatte. Così
+
+\bigskip
+
+{\small\verb+SUBST [(|-+}$t_1${\small\verb+=+}$t'_1${\small\verb+, +}$x_1${\small\verb+);+}$\ldots${\small\verb+;(|-+}$t_n${\small\verb+=+}
+$t'_n${\small\verb+, +}$x_n${\small\verb+)]  +}$t[x_1,\ldots,x_n]${\small\verb+  +}
+$\Gamma${\small\verb+ |- +}$t[t_1,\ldots,t_n]$
+
+\bigskip
+
+\noindent restituisce $\Gamma${\small\verb+ |- +}$t[t'_1,\ldots,t'_n]$.
+Fallisce se:
+\begin{myenumerate}
+\item qualcuno degli argomenti è della forma sbagliata;
+\item il tipo di $x_i$ non è uguale al tipo di $t_i$ per qualche
+$1\leq i\leq n$.
+\end{myenumerate}\index{SUBST@\ml{SUBST}|)}\index{regola di sostituzione, nella logica HOL@regola di sostituzione, nella logica \HOL{}!funzione ML per@funzione \ML\ per|)}
+
+\subsection{Astrazione}\index{regola di astrazione, nella logica HOL@regola di astrazione, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!regola d'inferenza per}
+
+
+\begin{holboxed}\index{ABS@\ml{ABS}|pin}
+\begin{verbatim}
+   ABS : term -> thm -> thm
+\end{verbatim}\end{holboxed}
+
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb+ |- +}$t_1${\small\verb+ = +}$t_2$ \\ \hline
+$\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\small\verb+.+}$t_2${\small\verb+)+} \\
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item dove $x$ non è libera in $\Gamma$.
+\end{itemize}
+
+\noindent
+{\small\verb+ABS +}$x${\small\verb+ +}$\Gamma${\small\verb+ |- +}$t_1${\small\verb+=+}$t_2$ restituisce il teorema 
+$\Gamma${\small\verb+ |- (\+}$x${\small\verb+.+}$t_1${\small\verb+) = (\+}$x${\small\verb+.+}$t_2${\small\verb+)+}.
+Fallisce se $x$ non è una variabile, o $x$
+ occorre libera in qualcuna delle assunzioni in $\Gamma$.
+
+
+\bigskip
+
+\subsection{Istanziazione di tipo}
+\index{istanziazione di tipo, nella logica HOL@istanziazione di tipo, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+\index{tipi, nella logica HOL@tipi, nella logica \HOL{}!istanziazione di}
+
+\begin{holboxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
+\begin{verbatim}
+   INST_TYPE : {redex : hol_type, residue : hol_type} list -> thm -> thm
+\end{verbatim}
+\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb+ |- +}$t$ \\ \hline
+$\Gamma[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]${\small\verb+ |- +}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+\end{tabular}
+\end{center}
+
+\bigskip
+
+\begin{itemize}
+\item dove $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+denota il risultato di sostituire (in parallelo) i tipi $\sigma_1$,
+$\ldots$\ , $\sigma_n$ per le variabili di tipo $\alpha_1$, $\ldots$\ ,
+$\alpha_n$ nel termine $t$. Analogamente, $\Gamma[\sigma_1,\ \ldots\
+,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$ denota il risultato di 
+eseguire la stessa sostituzione per tutte le ipotesi nell'insieme 
+$\Gamma$.
+\end{itemize}
+
+\noindent
+\ml{INST\_TYPE[$\alpha_1$~|->~$\sigma_1$%
+  ,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$} restituisce il risultato di 
+sostituire ciascuna occorrenza di $\alpha_i$ nel teorema $th$ con 
+$\sigma_i$ (per $1 \leq i \leq n$). Si verifica un fallimento se un $\alpha_i$ non 
+è una variabile di tipo.
+
+La funzione \ML{} polimorfica infissa {\small\verb+|->+} è usata per 
+costruire valori del tipo record \ml{redex-residue}. Essa è definita 
+\begin{verbatim}
+   fun ((x:'a) |-> (y:'b)) = {redex = x, residue = y}
+\end{verbatim}
+
+\bigskip
+
+\subsection{Scaricamento di un'assunzione}\index{scaricamento di assunzioni, nella logica HOL@scaricamento di assunzioni, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+
+
+\begin{holboxed}\index{DISCH@\ml{DISCH}|pin}
+\begin{verbatim}
+   DISCH : term -> thm -> thm
+\end{verbatim}\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma${\small\verb+ |- +} $t_2$ \\ \hline
+$\Gamma{-}\{t_1\}${\small\verb+ |- +} $t_1${\small\verb+ ==> +}$t_2$
+\end{tabular}
+\end{center}
+
+\begin{itemize}
+\item  $\Gamma{-}\{t_1\}$ denota l'insieme ottenuto rimuovendo $t_1$ 
+da $\Gamma$ (si noti che non è necessario che $t_1$ occorra in $\Gamma$; in questo caso 
+$\Gamma{-}\{t_1\} = \Gamma$).
+\end{itemize}
+
+\noindent
+{\small\verb+DISCH +}$t_1${\small\verb+ +}$\Gamma${\small\verb+ |- +}$t_2$
+è valutata al teorema 
+$\Gamma{-}\{t_1\}${\small\verb+ |- +}$t_1${\small\verb+ ==> +}$t_2$.
+\ml{DISCH} fallisce se il termine dato come suo primo argomento non è di 
+tipo \ml{bool}.
+
+
+
+\bigskip
+
+\subsection{Modus Ponens}\index{Modus Ponens, nella logica HOL@Modus Ponens, nella logica \HOL{}!funzione ML per@funzione \ML\ per}
+
+
+\begin{holboxed}\index{MP@\ml{MP}|pin}
+\begin{verbatim}
+   MP : thm -> thm -> thm
+\end{verbatim}\end{holboxed}
+
+\begin{center}
+\begin{tabular}{c}
+$\Gamma_1${\small\verb+ |- +}$t_1${\small\verb+ ==> +}$t_2$ {\small\verb+     +} $\Gamma_2${\small\verb+ |- +}$t_1$ \\
+\hline
+$\Gamma_1 \cup \Gamma_2${\small\verb+ |- +}$t_2$ \\
+\end{tabular}
+\end{center}
+
+\noindent
+{\small\verb+MP+} prende due teoremi (nell'ordine mostrato di sopra) e restituisce 
+il risultato dell'applicazione del Modus Ponens; fallisce se gli argomenti non sono della 
+forma corretta.
+\index{regole d'inferenza, della logica HOL@regole d'inferenza, della logica \HOL{}!primitive|)}
+
+\section{Oracoli}
+
+\HOL{} estende la tradizione \LCF\ permettendo l'uso di un 
+meccanismo di \emph{oracolo}, consentendo che formule arbitrarie diventino 
+elementi del tipo \ml{thm}. Per mezzo dell'uso di questo meccanismo, \HOL{} può 
+utilizzare i risultati di procedure di dimostrazione arbitrarie. Nonostante questa 
+liberalità, si possono fare ancora forti asserzioni circa la sicurezza 
+degli oggetti ML di tipo \ml{thm}.
+
+Per evitare la non validità, è attaccato un \emph{tag} a ogni teorema che deriva 
+da un oracolo. Questo tag è propagato attraverso ogni inferenza cui quel 
+teorema partecipa (un pò come le assunzioni ordinarie sono 
+propagate nella regola d'inferenza \ml{MP}). Se accade che la falsità 
+sia derivata, l'oracolo incriminato può essere trovato esaminando i 
+tag componenti del teorema. Un teorema dimostrato senza l'uso di 
+oracoli avrà un tag vuoto, e può essere così considerato essere stato dimostrato 
+soltanto attraverso passi deduttivi nella logica HOL.
+
+Un teorema taggato può essere creato attraverso
+
+\begin{holboxed}
+\index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
+\begin{verbatim}
+   mk_oracle_thm : string -> term list * term -> thm
+\end{verbatim}
+\end{holboxed}
+
+che crea direttamente il teorema richiesto e attacca ad esso il tag 
+dato. Il tag è creato attraverso una chiamata a
+
+\begin{holboxed}
+\index{Tag.read@\ml{Tag.read}!making tags}
+\begin{verbatim}
+   Tag.read : string -> tag
+\end{verbatim}
+\end{holboxed}
+
+Oltre a fornire un accesso di principio ai risultati di ragionatori 
+esterni, i tag sono usati per implementare alcune utili operazioni di `sistema' 
+sui teoremi. Per esempio, si può creare direttamente un teorema attraverso la 
+funzione \ml{mk\_thm}. Il tag \verb+MK_THM+  viene attaccato ad ogni 
+teorema creato con questa chiamata. Questo permette agli utenti di creare direttamente 
+utili teoremi, ad esempio, da usare come dati di test per regole d'inferenza 
+derivate. Un altro tag è usato per implementare il cosiddetto `check 
+di validità' per le tattiche.
+
+I tag in un teorema possono essere visualizzati impostando \verb+Globals.show_tags+ a 
+vero.
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+   - Globals.show_tags := true;
+   > val it = () : unit
+
+   - mk_thm([], Term `F`);;
+   > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
+\end{verbatim}
+\end{session}\index{mk_thm@\ml{mk\_thm}}
+
+Ci sono tre elementi alla sinistra del turnstile nella rappresentazioni completamente 
+stampata di un teorema: i primi due\footnote{I tag sono usati anche per 
+tenere traccia dell'uso di assiomi nelle dimostrazioni.} comprendono i tag componenti e il 
+terzo è la lista standard di assunzioni. Il tag componente di un teorema 
+può essere estratto da
+
+\begin{holboxed}
+\begin{verbatim}
+   Thm.tag : thm -> tag
+\end{verbatim}
+\end{holboxed}
+
+\noindent e stampato a video con
+
+\begin{holboxed}
+\begin{verbatim}
+   Tag.pp : ppstream -> tag -> unit.
+\end{verbatim}
+\end{holboxed}
+
+
+\section{Teorie}
+\label{theoryfns}
+
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!rappresentazione di|(}
+%
+In \LOGIC{} una teoria è descritta come una $4$-upla
+
+\[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
+                {\sf Sig}_{\cal T},\
+                {\sf Axioms}_{\cal T},\
+                {\sf Theorems}_{\cal T}\rangle \]
+
+\noindent dove
+\begin{myenumerate}
+\item ${\sf Struc}_{\cal T}$ è
+la struttura di tipo di ${\cal T}$;
+\item ${\sf Sig}_{\cal T}$ è
+la firma di ${\cal T}$;
+\item ${\sf Axioms}_{\cal T}$ è
+l'insieme di assiomi di ${\cal T}$;
+\item ${\sf Theorems}_{\cal T}$ è l'insieme di 
+teoremi di ${\cal T}$.
+\end{myenumerate}
+
+Nell'implementazione di \HOL, le teorie sono strutturate in modo gerarchico 
+per rappresentare sequenze di estensioni chiamate 
+\emph{segmenti}
+%
+\index{segmenti di teoria}
+%
+di una teoria iniziale chiamata \ml{min}\index{min@\ml{min}}. Un segmento di 
+teoria non è realmente un concetto logico, ma piuttosto un mezzo per 
+rappresentare teorie nel sistema \HOL{}. Ciascun segmento registra 
+alcuni tipi, costanti, assiomi e teoremi, insieme con dei puntatori ad 
+altri segmenti chiamati i suoi \emph{genitori}
+%
+\index{genitori, di teorie HOL@genitori, di teorie \HOL{}}
+%
+La teoria rappresentata da un segmento è ottenuta prendendo l'unione di 
+tutti i tipi, le costanti, gli assiomi e i teoremi nel segmento, insieme 
+con i tipi, le costanti, gli assiomi e i teoremi in tutti i segmenti 
+raggiungibili seguendo i puntatori ai genitori. Questa collezione di 
+segmenti raggiungibili è chiamata la \emph{stirpe}
+%
+\index{stirpe, delle teorie del sistema HOL@stirpe, delle teorie del sistema \HOL{}}
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!gerarchie di}
+%
+del segmento.
+
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!rappresentazione di|)}
+
+\subsection{Funzioni ML per le operazioni sulle teorie}
+\label{theoryprims}
+
+Un tipico\index{sistema HOL@sistema \HOL{}!lavoro tipico in} pezzo di lavoro 
+con il sistema \HOL{} consiste in un numero di sessioni\index{sessioni
+con il sistema HOL@sessioni, con il sistema \HOL{}}. Nella prima di queste, è creata 
+una nuova teoria, diciamo ${\cal T}$, importando qualche segmento di teoria 
+esistente, facendo una serie di definizioni, e magari dimostrando e 
+archiviando alcuni teoremi nell'attuale segmento. Poi il segmento corrente 
+(nominato $name$ diciamo) è esportato. Il risultato concreto sarà un modulo \ML\ 
+$name$\ml{Theory} il cui contenuto è il segmento di teoria attuale 
+creato durante la sessione e la cui stirpe rappresenta la teoria logica 
+desiderata ${\cal T}$. Le sessioni di lavoro successive possono accedere alle 
+definizioni e ai teoremi di ${\cal T}$ importando $name$\ml{Theory};
+questo evita di dover caricare gli strumenti e rieseguire 
+le dimostrazioni che $name$\ml{Theory} ha creato in precedenza.
+
+Il nome dato ai dati nelle teorie è basato sul nome dato ai segmenti. 
+In modo specifico si accede\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!nomina delle} a un assioma, 
+una definizione, una specifica o a un teorema 
+attraverso un identificatore lungo \ML\ $thy${\small\verb+Theory.+}$name$, dove 
+$thy$ è il nome dell'attuale segmento di teoria quando l'elemento fu 
+dichiarato e $name$ è un nome specifico fornito dall'utente (si vedano le 
+funzioni \ml{new\_axiom}, \ml{new\_definition}, di sotto). Elementi differenti 
+possono avere lo stesso nome specifico se il segmento associato è differente.
+Così ciascun segmento di teoria fornisce un namespace separato di binding ML di 
+elementi \HOL{}.
+
+Vari pezzi aggiuntivi d'informazione sono archiviati in un segmento 
+di teoria, incluso lo status di parsing delle costanti (ad esempio se 
+esse sono degli infissi o dei binder).
+
+\paragraph {Determinare il contesto}
+
+C'è sempre una \emph{teoria attuale} che è la teoria 
+rappresentata dal segmento di teoria attuale insieme con la sua 
+stirpe. Il nome del segmento di teoria attuale è restituito dalla funzione 
+\ML:
+
+\begin{holboxed}\index{current_theory@\ml{current\_theory}|pin}
+\begin{verbatim}
+   current_theory : unit -> string
+\end{verbatim}
+\end{holboxed}
+
+  Quando una sessione interattiva \HOL{} inizia, alcune teorie saranno 
+	già nel contesto logico. L'insieme esatto di teorie nel 
+	contesto varierà. Se l'eseguibile usato è \texttt{hol.bare},
+	allora saranno caricate solo \theoryimp{min} e \theoryimp{bool}. Quando 
+	è usato l'eseguibile \texttt{hol}, è caricato un conteso logico più ricco.
+
+L'esatto insieme di teorie caricate può essere determinato con il 
+comando \ml{ancestry}.
+%
+\begin{holboxed}
+\index{ancestry@\ml{ancestry}|pin}
+\begin{verbatim}
+  ancestry : string -> string list
+\end{verbatim}
+\end{holboxed}
+
+Questa funzione fornisce un meccanismo generale per esaminare la struttura 
+della gerarchia delle teorie. L'argomento è il nome di una teoria (o 
+\texttt{"-"} come abbreviazione per la teoria attuale), al quale 
+\texttt{ancestry} risponderà con una lista degli antenati dell'argomento 
+nella gerarchia delle teorie.
+
+\begin{holboxed}
+{\small
+\begin{verbatim}
+   - ancestry "-";
+   > val it =
+      ["num", "prim_rec", "normalForms", "relation", "pair",
+        "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
+        "bool", "marker", "one", "option", "ind_type", "list"] : string list
+\end{verbatim}
+}
+\end{holboxed}
+
+
+\paragraph{Creare un segmento di teoria}
+
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!creazione di|(}
+%
+Nuovi segmenti di teoria sono creati con una chiamata a \ml{new\_theory}.
+%
+\begin{holboxed}
+\index{new_theory@\ml{new\_theory}|pin}
+\begin{verbatim}
+   new_theory : string -> unit
+\end{verbatim}
+\end{holboxed}
+%
+Questo alloca una nuova `area' dove le successive operazioni 
+di teoria hanno effetto. Se la teoria attuale (diciamo $thy_1$) al momento 
+di una chiamata a {\small\verb+new_theory +}$thy_2$ non è vuota, cioè, è stato 
+archiviato in essa un assioma, una definizione, o un teorema, allora $thy_1$ è 
+esportata prima che $thy_2$ sia allocata. Inoltre, $thy_2$ otterrà 
+$thy_1$ come genitore. Se {\small\verb+new_theory +}$thy$ è chiamato quando 
+il segmento attuale di teoria è già chiamato $thy$, allora questo è 
+interpretato semplicemente come una richiesta di ripulire l'attuale segmento di teoria 
+(nulla sarà esportato).
+
+Una chiamata a \ml{new\_theory "$\mathit{name}$"} fallisce se:
+\begin{itemize}
+\item $name$ non è un alfanumerico che inizia con una lettera.
+
+\item c'è già una teoria chiamata $name$ nella stirpe del 
+segmento attuale.
+
+\item se è necessario esportare il segmento attuale prima di creare 
+il nuovo e il tentativo di export fallisce.
+\end{itemize}
+
+All'avvio, il segmento di teoria attuale di \HOL{} è chiamato \ml{scratch}, 
+che è una teoria vuota, che ha un'utile collezione di teorie nella 
+sua stirpe. Tipicamente, un utente inizierebbe caricando qualunque contesto 
+logico extra sia richiesto per il lavoro da fare.
+
+Il segmento attuale di teoria agisce come una sorta di blocco di appunti. Gli elementi archiviati 
+nel segmento attuale possono essere sovrascritti da aggiunte successive, o 
+cancellati completamente. Ogni elemento di teoria che fosse stato sovrascritto 
+o cancellato sarebbe quindi considerato {\it scaduto}, e non sarebbe 
+incluso nella teoria nel momento cui essa fosse in fine esportata. Le costanti
+e i tipi scaduti sono individuati dal printer \HOL{}, che li stamperà 
+inclusi in una sintassi strana-alla-vista per avvertire l'utente.
+
+Contrariamente al segmento attuale, i segmenti antenati (propri) non possono 
+essere alterati.
+%
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!creazione di|)}
+
+
+\paragraph{Caricare teorie pre-costruite}
+
+Dal momento che le teorie \HOL{} sono rappresentate da moduli \ML, si importa 
+un segmento di teoria esistente semplicemente importando il modulo corrispondente.
+
+\begin{holboxed}
+\index{load (funzione ML)@\ml{load} (funzione \ML{})|pin}
+\begin{verbatim}
+   load : string -> unit
+\end{verbatim}\end{holboxed}
+
+\noindent
+Eseguire {\small\verb+load +}$name${\small\verb+Theory+} importa nella sessione il 
+primo file chiamato $name${\small\verb+Theory.uo+} trovato lungo il 
+{\small\verb+loadPath+}. Qualunque antenato di 
+$name$ sarà caricato prima che il caricamento di $name${\small\verb+Theory+} 
+continui. Si noti che {\small\verb+load+} non può essere usato in file ML 
+che non sono stati compilati; può essere usato solo nel sistema 
+interattivo.
+
+\paragraph{Aggiungere alla teoria attuale}
+
+Le seguenti funzioni \ML{} aggiungono tipi e termini al segmento di teoria 
+attuale. Nell'uso tipico, queste funzioni non saranno 
+necessarie dal momento che funzionalità di definizione di più alto livello invocheranno queste 
+in caso di necessità. Tuttavia, queste funzioni possono essere utili per coloro che scrivono 
+strumenti di dimostrazione e principi derivati di definizione.
+
+\begin{holboxed}
+\index{new_type@\ml{new\_type}|pin}
+\begin{verbatim}
+   new_type : int -> string -> unit
+\end{verbatim}
+\end{holboxed}
+
+
+\noindent Eseguire \ml{new\_type}$\ n\ \ml{"\ty{op}"}$ rende \ty{op} 
+un nuovo operatore di tipo\index{operatori di tipo, nella logica HOL@operatori di 
+tipo, nella logica \HOL{}!dichiarazione di} $n$-ario nella teoria attuale. Se 
+\ty{op} non è un nome permesso per un tipo, sarà emesso un warning.
+
+
+\begin{holboxed}
+\index{new_constant@\ml{new\_constant}|pin}
+\begin{verbatim}
+   new_constant : (string * type) -> unit
+\end{verbatim}
+\end{holboxed}
+
+\noindent Eseguire {\small\verb+new_constant("+}$c${\small\verb+",+}$\sigma${\small\verb+)+} rende
+$c_{\sigma'}$ una nuova costante\index{costanti, nella logica HOL@costanti, nella logica \HOL{}!dichiarazione di} della teoria attuale, 
+per ogni $c_{\sigma'}$ dove $\sigma'$ è un'istanza di $\sigma$.
+Il tipo $\sigma$ è 
+chiamato il {\it tipo generico\/}\index{tipi generici, nella logica
+  HOL@tipi generici, nella logica \HOL{}} di $c$.
+Se $c$ non è un nome permesso per una costante, sarà emesso un warning.
+
+\begin{holboxed}
+\index{new_axiom@\ml{new\_axiom}|pin}
+\begin{verbatim}
+   new_axiom : (string * term) -> thm
+\end{verbatim}
+\end{holboxed}
+
+\noindent Eseguire \ml{new\_axiom("}$name$\ml{",}$t$\ml{)}  dichiara il 
+sequente 
+\ml{(\lb\rb{},$t$)} essere un assioma\index{assiomi!dichiarazione di, nella logica HOL@dichiarazione di, nella logica \HOL{}} della teoria attuale con nome $name$.
+Fallisce se:
+\begin{myenumerate}
+\item il tipo di $t$ non è \verb+bool+.
+
+\item $t$ contiene costanti o tipi scaduti, cioè, costanti o 
+	tipi che sono stati ri-dichiarati dopo che è stato eseguito il build di $t$.
+\end{myenumerate}
+
+Una volta che un teorema è stato dimostrato, esso può essere salvato con la funzione
+
+\begin{holboxed}
+\index{save_thm@\ml{save\_thm}|pin}
+\begin{verbatim}
+   save_thm : (string * thm) -> thm
+\end{verbatim}
+\end{holboxed}
+
+\noindent
+Valutare \ml{save\_thm("}$\mathit{name}$\ml{",}$\mathit{th}$\ml{)}
+salverà il teorema
+%
+\index{teoremi, nella logica HOL@teoremi, nella logica \HOL{}!salvataggio di}
+\index{salvare teoremi}
+%
+$\mathit{th}$ con nome $\mathit{name}$ nel segmento di teoria 
+attuale.
+
+\paragraph{Esportare una teoria}
+
+Una volta che un segmento di teoria è stato costruito, può essere scritto su un 
+file, che, dopo la compilazione, può essere importato in sessioni future.
+
+\begin{holboxed}
+\index{export_theory@\ml{export\_theory}|pin}
+\begin{verbatim}
+    export_theory : unit -> unit
+\end{verbatim}
+\end{holboxed}
+
+Quando è chiamato {\small\verb+export_theory+}, tutte le entità scadute 
+sono rimosse dal segmento attuale. Inoltre, è calcolata la paternità della 
+teoria. Il segmento di teoria attuale è scritto sul file 
+$name${\small{\tt Theory.sml}} nell'attuale directory di lavoro. Anche il 
+file $name${\small{\tt Theory.sig}}, che documenta il contenuto di 
+$name$, è scritto nell'attuale directory di lavoro. Si noti che 
+la teoria esportata non è compilata da \HOL. Questo è lasciato a uno 
+strumento esterno, \holmake{} (si veda la sezione~\ref{Holmake}), che mantiene 
+le dipendenze tra collezioni di segmenti di teoria \HOL{}.
+
+
+\subsection{Funzioni ML per accedere alle teorie}
+
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!funzioni per accedere alle|(}
+\index{assiomi!recupero degli, nel sistema HOL@recupero degli, nel sistema \HOL{}|(}
+%
+Gli argomenti di tipo \ML{} \ml{string} a \ml{new\_axiom}, 
+\ml{new\_definition}, ecc., sono i nomi degli assiomi e delle 
+definizioni corrispondenti. Questi nomi sono usati quando si accede alle teorie con le 
+funzioni \ml{axiom}, \ml{definition}, ecc., descritte di sotto.
+
+La teoria attuale
+%
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!gerarchia delle}
+%
+può essere estesa aggiungendo nuovi genitori, tipi, costanti, assiomi e 
+definizioni. Le teorie che sono nella stirpe della teoria attuale 
+non possono essere estese in questo modo; esse possono essere pensate come 
+\emph{congelate}.
+
+Ci sono varie funzioni per caricare il contenuto dei file di teoria:
+
+\begin{holboxed}
+\index{genitori@\ml{genitori}|pin}
+\index{tipi@\ml{tipi}|pin}
+\index{costanti@\ml{costanti}|pin}
+\begin{verbatim}
+   parents     : string -> string list
+   types       : string -> (int * string) list
+   constants   : string -> term list
+\end{verbatim}
+\end{holboxed}
+
+\noindent Il primo argomento è il nome di una teoria (che deve essere nella 
+stirpe dell'attuale segmento di teoria); il risultato è una lista delle 
+componenti della teoria. Il nome della teoria attuale può essere 
+abbreviato da \ml{"-"}.
+%
+\index{ abbreviazione, di parte dei nomi di teoria HOL@\ml{-} (abbreviazione, di parte dei nomi di teoria \HOL{})}
+%
+Per esempio, \ml{parents "-"} restituisce i genitori della teoria 
+attuale.
+
+Nel caso di \ml{types} è restituita una lista di coppie arietà-nome. 
+Gli assiomi, le definizioni e i teoremi individuali possono essere letti dalla 
+teoria attuale usando le seguenti funzioni \ML:
+
+\begin{holboxed}
+\index{assioma@\ml{assioma}|pin}
+\index{definizione@\ml{definizione}|pin}
+\index{teorema@\ml{teorema}|pin}
+\begin{verbatim}
+   axiom      : string -> thm
+   definition : string -> thm
+   theorem    : string -> thm
+\end{verbatim}
+\end{holboxed}
+
+\noindent Il primo argomento è il nome dell'assioma, definizione o teorema 
+fornito dall'utente nella teoria attuale. Inoltre, può essere estratta 
+una lista di tutti gli assiomi, definizioni e teoremi della teoria con 
+le funzioni \ML{}:
+
+\begin{holboxed}
+\index{assiomi@\ml{assiomi}|pin}
+\index{teoremi@\ml{teoremi}|pin}
+\index{definizioni@\ml{definizioni}|pin}
+\begin{verbatim}
+   axioms      : string -> (string * thm) list
+   definitions : string -> (string * thm) list
+   theorems    : string -> (string * thm) list
+\end{verbatim}
+\end{holboxed}
+
+Il contenuto della teoria attuale può essere stampato in un formato leggibile 
+usando la funzione \ml{print\_theory}.
+%
+\index{stampa, nella logica HOL@stampa, nella logica \HOL{}!di teorie}
+\index{print_theory@\ml{print\_theory}}
+\index{assiomi!estrazione degli, nel sistema HOL@estrazione degli, nel sistema \HOL{}|)}
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!funzioni per accedere alle|)}
+
+\subsection{Funzioni per creare estensioni definizionali}
+\index{estensione, della logica HOL@estensione, della logica \HOL{}!definzionale}
+\index{estensione definizionale, della logica HOL@estensione definizionale, della logica \HOL{}}
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!estensione di|(}
+\label{avra_definitional}
+
+Ci sono tre specie di estensioni definizionali:
+definizioni di costante, specifiche di costane e definizioni di tipo.
+
+\subsubsection{Definizioni di costante}
+\label{sec:constant-definitions}
+
+In \LOGIC{} una definizione di costante 
+%
+\index{estensione, della logica HOL@estensione, della logica \HOL{}!per definizione di costante}
+\index{estensione per definizione di costante, della logica HOL@estensione per definizione di costante, della logica \HOL{}!funzione ML per@funzione \ML\ per}
+%
+su una firma $\Sigma_{\Omega}$ è definita essere un'equazione, cioè 
+una formula della forma $c_{\sigma}=t_{\sigma}$, tale che:
+\begin{myenumerate}
+\item $c$ non è il nome di alcuna costante in $\Sigma_{\Omega}$;
+\item $t_{\sigma}$ è un termine chiuso in ${\sf Terms}_{\Sigma_{\Omega}}$;
+\item tutte le variabili di tipo che occorrono in $t_{\sigma}$ occorrono in $\sigma$.
+\end{myenumerate}
+
+In \HOL, le definizioni possono essere leggermente più generali di questo, nel senso che 
+è permesso che un'equazione:
+
+\[ c\ v_1\ \cdots\ v_n\ =\ t \]
+
+\noindent sia una definizione dove  $v_1$, $\dots$, $v_n$ sono
+strutture variabili (cioè tuple di variabili distinte). Una tale equazione è 
+logicamente equivalente a:
+
+\[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]
+
+\noindent che è una definizione nel senso di \LOGIC{} se valgono (i),
+(ii) e (iii).
+
+La seguente funzione \ML\ crea\index{meccanismi di definizione, per la logica HOL@meccanismi di definizione, per la logica \HOL{}} una nuova definizione nella 
+teoria attuale.
+
+\begin{holboxed}
+\index{new_definition@\ml{new\_definition}|pin}
+\begin{verbatim}
+   new_definition : (string * term) -> thm
+\end{verbatim}
+\end{holboxed}
+
+
+\noindent Valutare
+ \ml{new\_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
+dichiara il sequente\linebreak
+\ml{(\lb\rb{},$c = \lambda v_1\ \cdots\ v_n.\  t$)} essere una definizione di costante 
+\index{definizioni, aggiungere ... alla logica HOLc@definizioni, aggiungere ... alla logica \HOL{}}
+della teoria attuale. Il nome associato con la definizione in 
+questa teoria è $name$.
+Si verifica un fallimento se:
+\begin{myenumerate}
+\item $t$ contiene delle variabili libere che non sono in nessuna delle 
+strutture variabili $v_1$, $\dots$, $v_n$ (questo equivale 
+a richiedere che $\lambda v_1\ \cdots\ v_n.\  t$ sia un termine chiuso);
+\item c'è una variabile di tipo in $v_1$, $\dots$, $v_n$ o $t$ 
+che non occorre nel tipo di $c$.
+\end{myenumerate}
+
+\subsubsection{Specifiche di costante}
+\label{conspec}
+
+\index{specifica di costanti, nella logica HOL@specifica di costanti, nella logica \HOL{}|(}
+%
+\index{estensione, della logica HOL@estensione, della logica \HOL{}!per specifica di costante}
+%
+In \LOGIC{} una specifica di costante\index{estensione per specifica di costante, della logica HOL@estensione per specifica di costante, della logica \HOL{}!funzione ML per@funzione \ML\ per} per una teoria ${\cal T}$ 
+è definita essere una coppia:
+
+\[
+\langle(c_1,\ldots,c_n),\ \lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\rangle
+\]
+tale che:
+
+\begin{myenumerate}
+\item $c_1$, $\dots$, $c_n$ sono nomi distinti.
+\item $\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}}\ \in\ {\sf Terms}_{\cal T}$.
+\item $tyvars(\lquant{{x_1}_{\sigma_1}
+\cdots {x_n}_{\sigma_n}}t_{\ty{bool}})\ \subseteq\ tyvars(\sigma_i)$ per
+$1\leq i\leq n$.
+\item $\equant{{x_1}_{\sigma_1}\ \cdots\ {x_n}_{\sigma_n}}t
+\ \in\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+La seguente funzione \ML\ è usata per fare specifiche di costante nel 
+sistema \HOL{}.
+
+\begin{holboxed}
+\index{new_specification@\ml{new\_specification}|pin}
+\begin{verbatim}
+   new_specification : string * string list * thm -> thm
+\end{verbatim}
+\end{holboxed}
+%
+Valutando:
+{
+\newcommand{\cone}{\ensuremath{c_1}}
+\newcommand{\cn}{\ensuremath{c_n}}
+\newcommand{\xone}{\ensuremath{x_1}}
+\newcommand{\xn}{\ensuremath{x_n}}
+\begin{alltt}
+   new_specification("\(\mathit{name}\)", ["\cone", ..., "\cn"],
+                     |- ?\xone ... \xn. \(t\)[\xone, ..., \xn])
+\end{alltt}
+}
+sono introdotte simultaneamente nuove costanti chiamate $c_1$, $\dots$,
+$c_n$ che soddisfano la proprietà:
+
+\[ \ml{|- }t\ml{[}c_1\ml{,}\ \ldots\ \ml{,}c_n\ml{]} \]
+
+\noindent Questo teorema è archiviato, 
+con nome $name$, come una definizione nell'attuale segmento di teoria. Una chiamata a 
+\ml{new\_specification} fallisce se:
+
+\begin{myenumerate}
+\item il teorema argomento non ha una lista vuota di assunzioni;
+\item ci sono variabili libere nel teorema argomento;
+\item $c_1$, $\dots$, $c_n$ non sono variabili distinte;
+\item il tipo di qualche $c_i$ non contiene tutte le variabili 
+di tipo che occorrono nel termine
+\holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]}.
+\end{myenumerate}
+%
+\index{specifica di costanti, nella logica HOL@specifica di costanti, nella logica \HOL{}|)}
+
+\subsubsection{Definizioni di tipo}
+\label{type-defs}
+
+\index{estensione, della logica HOL@estensione, della logica \HOL{}!per definizione di tipo|(}
+%
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}|(}
+%
+In \LOGIC{} è spiegato che 
+definire 
+%
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!introduzione di}
+\index{estensione per definizione di tipo, nella logica HOL@estensione per definizione di tipo, nella logica \HOL{}!funzione ML per@funzione \ML\ per|(}
+%
+un nuovo tipo $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in una teoria ${\cal T}$
+consiste nell'introdurre $\ty{op}$ come un nuovo operatore di tipo $n$-ario e 
+
+\[\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f\]
+
+\noindent come un nuovo assioma, dove $p$ è un predicato 
+che caratterizza\index{predicato caratteristico, di definizioni di tipo} un 
+sottoinsieme non vuoto di un tipo esistente $\sigma$. Formalmente, una definizione di tipo 
+per una teoria ${\cal T}$ è una tripla
+
+\[ \langle \sigma,\ (\alpha_1,\ldots,\alpha_n)\ty{op},
+    \ p_{\sigma\fun\ty{bool}}\rangle \]
+
+\noindent dove:
+
+\begin{myenumerate}
+\item $\sigma\in{\sf Types}_{\cal T}$  e
+$tyvars(\sigma)\in\{\alpha_1, \ldots , \alpha_n\}$.
+\item \ty{op} è il nome di una costante di tipo in ${\sf Struc}_{\cal T}$.
+\item $p\in{\sf Terms}_{\cal T}$ è un termine chiuso di 
+tipo $\sigma\fun\ty{bool}$  e
+$tyvars(p)\subseteq\{\alpha_1, \ldots , \alpha_n\}$.
+\item $\equant{x_{\sigma}}p\ x \ \subseteq\ {\sf Theorems}_{\cal T}$.
+\end{myenumerate}
+
+La seguente funzione \ML\ esegue una definizione di tipo nel sistema \HOL{}.
+
+\begin{holboxed}
+\index{new_type_definition@\ml{new\_type\_definition}|pin}
+\begin{verbatim}
+   new_type_definition : (string * thm) -> thm
+\end{verbatim}\end{holboxed}
+
+\noindent Se $t$ è un termine di tipo
+$\sigma$\ml{->bool} contenente $n$ distinte variabili di tipo, allora
+valutare:
+
+{\def\op{{\normalsize\sl op}}
+\begin{hol}
+\begin{alltt}
+   new_type_definition("{\op}", |- ?\(x\). \(t\) \(x\))
+\end{alltt}
+\end{hol}}
+
+\noindent risulta nella dichiarazione di \ty{op} come un nuovo operatore di tipo $n$-ario 
+caratterizzato dall'assioma 
+definizionale\index{operatori di tipo, nella logica HOL@operatori di tipo, nella logica \HOL{}!assiomi definizionali per}:
+\begin{hol}
+\begin{alltt}
+   |- ?rep. TYPE\_DEFINITION \m{t} rep
+\end{alltt}
+\end{hol}
+
+\noindent che è archiviato come una definizione con il nome generato 
+automaticamente 
+\ty{op}\ml{\_TY\_DEF}.\index{TY_DEF@$\ldots$\ml{\_TY\_DEF}}. La costante
+\ml{TYPE\_DEFINITION}\index{TYPE_DEFINITION@\ml{TYPE\_DEFINITION}}
+è definita nella teoria \ml{bool} da:
+
+\begin{hol}
+\begin{verbatim}
+   |- TYPE_DEFINITION (P:'a->bool) (rep:'b->'a) =
+       (!x' x''. (rep x' = rep x'') ==> (x' = x'')) /\
+       (!x. P x = (?x'. x = rep x'))
+\end{verbatim}
+\end{hol}
+
+\noindent Eseguire \ml{new\_type\_definition("\ty{op}", |- ?}$x$\ml{.}\ $t\ x$\ml{)} fallisce se:
+\begin{myenumerate}
+\item $t$ non ha un tipo della forma $\sigma$\ml{->bool}.
+\end{myenumerate}
+\index{estensione, della logica HOL@estensione, della logica \HOL{}!per definizione di tipo|)}
+\index{teorie, nella logica HOL@teorie, nella logica \HOL{}!estensione di|)}
+\index{estensione per definizione di tipo, nella logica HOL@estensione per definizione di tipo, nella logica \HOL{}!funzione ML per@funzione \ML\ per|)}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}|)}
+
+\paragraph{Definire le biezioni}
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!definire le biezioni per|(}
+
+Il risultato di una definizione di tipo usando \ml{new\_type\_definition} è un teorema 
+che asserisce solo l'{\it esistenza\/} di una 
+biezione\index{biezione di tipi, nella logica HOL@biezione di tipi, nella logica \HOL{}} 
+dal tipo che esso definisce al corrispondente sottoinsieme di un tipo esistente. Per 
+introdurre costanti che di fatto denotano una tale biezione e la sua inversa, è 
+fornita la seguente funzione \ML:
+
+\begin{holboxed}
+\index{define_new_type_bijections@\ml{define\_new\_type\_bijections}|pin}
+\begin{verbatim}
+   define_new_type_bijections
+      : {name:string, ABS:string, REP:string, tyax:thm} -> thm
+\end{verbatim}\end{holboxed}
+
+\noindent Questa funzione prende un record {\small\verb+{ABS, REP, name, tyax}+}. 
+L'argomento {\verb+tyax+} deve essere un assioma definizionale della forma restituita da 
+\ml{new\_type\_definition}.\linebreak L'argomento {\verb+name+} è il nome sotto cui 
+la definizione di costante (di fatto, una specifica di costante) fatta da 
+{\small\verb!define_new_type_bijections!} sarà archiviata nel segmento di teoria 
+attuale, e gli argomenti {\small\verb+ABS+} e {\small\verb+REP+} 
+sono nomi specificati dall'utente per le due costanti che devono essere 
+definite. Queste costanti sono definite in modo da denotare biezioni mutuamente 
+inverse tra il tipo definito, la cui definizione è data dal 
+teorema fornito, e il tipo rappresentante di questo tipo 
+definito.
+
+Valutare:
+
+\medskip
+{\def\op{{\normalsize\sl op}}
+\begin{hol}\begin{alltt}
+  define\_new\_type\_bijections
+       \lb{}name="\m{name}", ABS="\m{abs}", REP="\m{rep}",
+        tyax = |- ?rep:newty->ty. TYPE\_DEFINITION \m{P} rep\rb{}
+\end{alltt}\end{hol}}
+
+\medskip
+
+\noindent definisce automaticamente due nuove costanti
+\m{abs}{\small\verb!:ty->newty!} e \m{rep}{\small\verb!:ty->newty!}
+tali che:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
+\end{alltt}\end{hol}}
+
+\noindent Questo teorema, che è la proprietà di definizione per le costanti 
+\m{abs} e \m{rep}, è archiviato sotto il nome "\m{name}" nell'attuale segmento 
+di teoria. Esso è anche il valore restituito da \ml{define\_new\_type\_bijections}.
+Il teorema dichiara che \m{abs} è l'inversa sinistra di \m{rep} e---per 
+valori che soddisfano \ml{P}---che \ml{rep} è l'inversa sinistra di \m{abs}.
+
+Una chiamata a
+\ml{define\_new\_type\_bijections \m{name} \m{abs} \m{rep} \m{th}}
+fallisce se:
+
+\begin{myenumerate}
+\item $th$ non è un teorema della forma restituita da
+\ml{new\_type\_definition}.
+\end{myenumerate}%
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!definire biezioni per|)}
+
+\paragraph{Proprietà delle biezioni di tipo}
+
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!proprietà delle biezioni per|(}
+
+Le seguenti funzioni \ML\ sono fornite per dimostrare che le biezioni 
+introdotte da \ml{define\_new\_type\_bijections} sono iniettive\linebreak \ml{define\_new\_type\_bijections} 
+e suriettive (onto):
+
+\begin{holboxed}
+\index{prove_rep_fn_one_one@\ml{prove\_rep\_fn\_one\_one}|pin}
+\index{prove_rep_fn_onto@\ml{prove\_rep\_fn\_onto}|pin}
+\index{prove_abs_fn_one_one@\ml{prove\_abs\_fn\_one\_one}|pin}
+\index{prove_abs_fn_onto@\ml{prove\_abs\_fn\_onto}|pin}
+\begin{verbatim}
+   prove_rep_fn_one_one : thm -> thm
+   prove_rep_fn_onto    : thm -> thm
+   prove_abs_fn_one_one : thm -> thm
+   prove_abs_fn_onto    : thm -> thm
+\end{verbatim}\end{holboxed}
+
+\noindent Il teorema argomento a ciascuna di queste funzioni deve essere un teorema 
+della forma restituita da \ml{define\_new\_type\_bijections}:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- (!a. \m{abs}(\m{rep} a) = a) /\bk (!r. \m{P} r = (\m{rep}(\m{abs} r) = r))
+\end{alltt}\end{hol}}
+
+\noindent Se \m{th} è un teorema di questa forma, allora valutare 
+\ml{prove\_rep\_fn\_one\_one \m{th}} dimostra che la funzione \m{rep} è 
+uno-a-uno, e restituisce il teorema:
+
+\begin{hol}\begin{alltt}
+   |- !a a'. (\m{rep} a = \m{rep} a') = (a = a')
+\end{alltt}\end{hol}
+
+\noindent Allo stesso modo, \ml{prove\_rep\_fn\_onto \m{th}} dimostra che \m{rep} è
+sopra (onto [n.d.t]) l'insieme di valori che soddisfano \m{P}:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- !r. \m{P} r = (?a. r = \m{rep} a)
+\end{alltt}\end{hol}}
+
+\noindent Valutare \ml{prove\_abs\_fn\_one\_one \m{th}} dimostra che \m{abs}
+è uno-a-uno per valori che soddisfano \m{P}, e restituisce il teorema:
+
+{\def\bk{\char'134}
+\begin{hol}\begin{alltt}
+   |- !r r'. \m{P} r ==> \m{P} r' ==> ((\m{abs} r = \m{abs} r') = (r = r'))
+\end{alltt}\end{hol}}
+
+\noindent E valutare \ml{prove\_abs\_fn\_onto \m{th}} dimostra che \m{abs}
+è suriettiva, restituendo il teorema:
+
+{\def\bk{\char'134}
+\begin{hol}
+\begin{alltt}
+   |- !a. ?r. (a = \m{abs} r) /\bk \m{P} r
+\end{alltt}
+\end{hol}}
+
+\noindent Tutte e quattro le funzioni falliranno se applicate a qualunque teorema che non 
+abbia la forma di un teorema restituito da \ml{define\_new\_type\_bijections}.
+Nessuna di queste funzioni salva alcunché nella teoria attuale.
+
+\index{definizioni di tipo, nella logica HOL@definizioni di tipo, nella logica \HOL{}!proprietà delle biezioni per|)}
+
+
+%\subsection{Type abbreviations}\label{typeabbrev}\index{types, nella logica HOL@types, nella logica \HOL{}!abbreviation of}\index{type abbreviations!nella logica HOL@nella logica \HOL{}}\index{abbreviation of types, nella logica HOL@abbreviation of types, nella logica \HOL{}|(}
+%It is possible to introduce an abbreviation for a monomorphic type using the
+%function:
+%
+%\begin{holboxed}\index{new_type_abbrev@\ml{new\_type\_abbrev}|pin}
+%\begin{verbatim}
+%   new_type_abbrev : (string * type) -> unit
+%\end{verbatim}\end{holboxed}
+%
+%\noindent Evaluating \ml{new\_type\_abbrev(`}$name$\ml{`,":}$\sigma$\ml{")}
+%enables $name$ to be used in quotations instead of $\sigma$. The evaluation
+%fails
+%if $\sigma$ is polymorphic. Type abbreviations
+%are recorded in theory files, so that
+%when a theory is loaded, any type abbreviations made are
+%activated. The list of currently active abbreviations in a theory
+%is given by the function:
+%
+%\begin{holboxed}\index{type_abbrevs@\ml{type\_abbrevs}|pin}
+%\begin{verbatim}
+%   type_abbrevs : string -> (string * type) list
+%\end{verbatim}\end{holboxed}
+%
+%
+%Note that abbreviation can also be made using antiquotation\index{antiquotation, nella logica HOL terms@antiquotation, nella logica \HOL{} terms}, without the
+%restriction to monomorphic types. Such \ML\ abbreviations are not, of course,
+%stored in theory files and so do not persist beyond a single session.
+%The following session illustrates various ways of
+%abbreviating types:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%*new_theory `numpair`;;
+%() : unit
+%
+%#new_type_abbrev(`numpair`, ":num*num");;
+%() : unit
+%
+%#let t1 = "x:numpair";;
+%t1 = "x" : term
+%
+%#type_of t1;;
+%":num * num" : type
+%
+%#":numpair" = ":num*num";;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\noindent The alternative to introducing a type abbreviation is
+%to give an \ML\ name to the type, and then to use this name via antiquotation.
+%Continuing the session:\index{abbreviation of types, nella logica HOL@abbreviation of types, nella logica \HOL{}|)}
+%
+%\begin{session}\begin{verbatim}
+%#let ty = ":num*num";;
+%ty = ":num * num" : type
+%
+%#let t2 = "x:^ty";;
+%t2 = "x" : term
+%
+%#t1 = t2;;
+%true : bool
+%\end{verbatim}\end{session}
+%
+%\pagebreak[2]
+%
+%\noindent The type abbreviation is stored in the theory file and so
+%persists across sessions. This can be seen by the result of printing
+%the theory \ml{numpair}:
+%
+%\begin{session}\begin{verbatim}
+%#print_theory`numpair`;;
+%The Theory numpair
+%Parents --  HOL
+%Type Abbreviations --  numpair ":num * num"
+%******************** numpair ********************
+%
+%() : unit
+%\end{verbatim}\end{session}
+%
+%\noindent If the session is then ended:
+%
+%\begin{session}\begin{verbatim}
+%#close_theory();;
+%() : unit
+%
+%#quit();;
+%\end{verbatim}\end{session}
+%
+%\noindent and a new session is started in which the theory \ml{numpair} is
+%loaded:
+%
+%\setcounter{sessioncount}{1}
+%\begin{session}\begin{verbatim}
+%#load_theory`numpair`;;
+%Theory numpair loaded
+%() : unit
+%
+%#"x:numpair";;
+%"x" : term
+%
+%#type_abbrevs `-`;;
+%[(`numpair`, ":num * num")] : (string * type) list
+%\end{verbatim}\end{session}
+%
+%\noindent then the type abbreviation persists.
+%
+%Type abbreviations tend to be little used in practice; the antiquotation
+%method is usually sufficient.
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

@@ -3,6 +3,8 @@ struct
 
 open Abbrev HolKernel patriciaTheory;
 
+val ERR = Feedback.mk_HOL_ERR "patriciaSyntax"
+
 (* ------------------------------------------------------------------------- *)
 
 fun mk_ptree_type pty =

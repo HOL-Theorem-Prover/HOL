@@ -116,7 +116,7 @@ If MiniSat failed to build when \HOL{} was built, or proof replay fails for some
 
 For details, see the source file \t{src/taut/tautLib.sml} which contains comprehensive comments. Note however that the extra functionality in {{\tt tautLib}} was not engineered for very large problems and can become a performance bottleneck.
 
-\subsection{Support for other SAT solvers}\label{subsec:hs_zchaff}
+\subsection{Support for other SAT solvers}\label{subsec:hs-zchaff}
 
 The ZChaff SAT solver has a proof production mode and is supported by {\tt{HolSatLib}}. However, the ZChaff end user license is not compatible with the \HOL{} license, so we are unable to distribute it with \HOL{}. If you wish to use ZChaff, download and unpack it in the directory {\tt src/HolSat/sat\_solvers/} under the main \HOL{} directory, and compile it with proof production mode enabled (which is not the default). This should create a binary {\tt zchaff} in the directory {\tt src/HolSat/sat\_solvers/zchaff/}. ZChaff can now be used as the external proof engine instead of MiniSat, by using the HolSatLib functions described above, prefixed with a ``{\tt Z}'', e.g., {\tt ZSAT\_PROVE}.
 
@@ -134,10 +134,10 @@ The functions described above are wrappers for the function \texttt{GEN\_SAT}, w
 The input term.
 \item{\texttt{solver : SatSolvers.sat\_solver}}
 
-The external SAT solver to use. The default is \texttt{SatSolvers.minisatp}. If ZChaff is installed (see \S\ref{subsec:hs_zchaff}), then \texttt{SatSolvers.zchaff} may also be used.
+The external SAT solver to use. The default is \texttt{SatSolvers.minisatp}. If ZChaff is installed (see \S\ref{subsec:hs-zchaff}), then \texttt{SatSolvers.zchaff} may also be used.
 \item{\texttt{infile : string option}}
 
-The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}}. Overrides \texttt{term} if set. The input term is instead read from the file.
+The name of a file in DIMACS format.\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}} Overrides \texttt{term} if set. The input term is instead read from the file.
 \item{\texttt{proof : string option}}
 
 The name of a proof trace file. Overrides \texttt{solver} if set. The file must be in the native format of {\tt{HolSatLib}}, and must correspond to a proof for \texttt{infile}, which must also be set. The included version of MiniSat has been modified to produce proofs in the native format, and ZChaff proofs are translated to this format using the included proof translator \texttt{src/HolSat/sat\_solvers/zc2hs} (type \texttt{zc2hs -h} for usage help). \texttt{zc2hs} is used internally by \texttt{ZSAT\_PROVE} etc.

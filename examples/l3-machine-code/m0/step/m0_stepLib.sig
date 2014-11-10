@@ -2,6 +2,7 @@ signature m0_stepLib =
 sig
    val thumb_instruction: Term.term -> string
    val thumb_step: bool * bool -> string -> Thm.thm list
+   val thumb_step_code: bool * bool -> string quotation -> Thm.thm list list
    val thumb_step_hex: bool * bool -> string -> Thm.thm list
    val thumb_decode: bool -> Term.term -> Thm.thm list
    val thumb_decode_hex: bool -> string -> Thm.thm list

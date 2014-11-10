@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib
 open ListConv1
 
+open testutils
+
 fun test nm cmp pr f (x, expected) = let
   val _ = print (StringCvt.padRight #" " 20 nm)
   val _ = print (StringCvt.padRight #" " 40 (pr x))
@@ -15,6 +17,13 @@ in
   else
     (print "OK\n"; true)
 end handle HOL_ERR _ => (print "FAILED - EXN\n"; false)
+
+val _ = set_trace "Unicode" 0
+
+val _ = app tpp ["MEM a l", "~MEM a l", "x NOTIN {1; 2; 3}"]
+
+val _ = tpp_expected {input = "SINGL 3", output = "[3]",
+                      testf = standard_tpp_message}
 
 val _ =
     if List.all (test "FIRSTN_CONV" Term.compare term_to_string FIRSTN_CONV)

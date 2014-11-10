@@ -515,13 +515,13 @@ fun pat_match1 (pat,exp) given_pat =
 fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
                                     handle HOL_ERR _ => ([],[])
 
-fun distinguish pat_tm_mats =
+fun distinguish fvs pat_tm_mats =
     snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
                          let val residue' = variant vs residue
                              val vs' = Lib.insert residue' vs
                          in (vs', {redex=redex, residue=residue'} :: done)
                          end)
-                    ([],[]) pat_tm_mats)
+                    (fvs,[]) pat_tm_mats)
 
 fun reduce_mats pat_tm_mats =
     snd (List.foldl (fn (mat as {redex,residue}, (vs,done)) =>
@@ -533,8 +533,8 @@ fun purge_wildcards term_sub = filter (fn {redex,residue} =>
         not (String.sub (fst (dest_var residue), 0) = #"_")
         handle _ => false) term_sub
 
-fun pat_match3 pat_exps given_pats =
-     ((distinguish o reduce_mats o purge_wildcards o flatten) ## flatten)
+fun pat_match3 fvs pat_exps given_pats =
+     (((distinguish fvs) o reduce_mats o purge_wildcards o flatten) ## flatten)
            (unzip (map (pat_match2 pat_exps) given_pats))
 
 
@@ -766,7 +766,8 @@ fun mk_functional thy eqs =
      val (a',case_tm') =
          let val (_,pat_exps) = strip_case thy case_tm
              val pat_exps = if null pat_exps then [(a,a)] else pat_exps
-             val sub = pat_match3 pat_exps pats (* better pats than givens patts3 *)
+             val fvs = free_vars case_tm
+             val sub = pat_match3 fvs pat_exps pats (* better pats than givens patts3 *)
          in (subst_inst sub a, rename_case thy sub case_tm)
          end handle HOL_ERR _ => (a,case_tm)
      (* Ensure that the case test variable is fresh for the rest of the case *)

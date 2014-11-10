@@ -21,6 +21,12 @@ BARE_THYS = ../instruction-set-models/arm/prog_armLib \
             ../garbage-collectors/lisp_gcTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
 endif

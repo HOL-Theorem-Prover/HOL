@@ -52,7 +52,7 @@ val it = |- ptree2 \\ 6 \\ 5 = ptree3: thm
 Here, the conversion is not smart enough to work out that {ptree3} is the same as {ptree1}.
 {
 > (DEPTH_CONV PTREE_DEFN_CONV THENC EVAL) ``ptree1 = ptree3``;
-val it = |- (ptree1 = ptree3) ⇔ T: thm
+val it = |- (ptree1 = ptree3) <=> T: thm
 }
 
 Look-up behaves as expected:

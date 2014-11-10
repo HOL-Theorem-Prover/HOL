@@ -1,8 +1,10 @@
 signature arm_stepLib =
 sig
    val BIT_THMS_CONV: Conv.conv
+   val arm_eval: string -> bool list * Term.term -> Thm.thm
    val arm_instruction: Term.term list -> string list
    val arm_step: string -> string -> Thm.thm list
+   val arm_step_code: string -> string quotation -> Thm.thm list list
    val arm_step_hex: string -> string -> Thm.thm list
    val arm_decode: Term.term list -> bool list * Term.term -> Thm.thm list
    val arm_decode_hex: string -> string -> Thm.thm list

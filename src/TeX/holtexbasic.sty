@@ -23,19 +23,28 @@
 
 \newcommand{\HOLinline}[1]{\mbox{\textup{\texttt{#1}}}}
 \newenvironment{HOLblock}{\begin{alltt}}{\end{alltt}}
+\newenvironment{HOLmath}{\begin{displaymath}\begin{array}{l}}{\end{array}\end{displaymath}\ignorespacesafterend}
+\newenvironment{HOLarray}{\begin{array}[t]{l}}{\end{array}}
 
 \newcommand{\HOLKeyword}[1]{{\bfseries{\textsf{#1}}}}
 \newcommand{\HOLBoundVar}[1]{\ensuremath{\mathit{#1}}}
 \newcommand{\HOLFreeVar}[1]{\ensuremath{\mathit{#1}}}
 \newcommand{\HOLConst}[1]{\texttt{#1}}
+\newcommand{\HOLSymConst}[1]{#1}
 \newcommand{\HOLTyOp}[1]{\texttt{#1}}
+\newcommand{\HOLStringLit}[1]{\textrm{``#1''}}
+\newcommand{\HOLNumLit}[1]{\ensuremath{#1}}
+\newcommand{\HOLCharLit}[1]{\textrm{\#``#1''}}
+\newcommand{\HOLFieldName}[1]{\textsf{#1}}
 \newcommand{\HOLBeginSup}{\begin{math}{}\sp\bgroup\tt}
 \newcommand{\HOLBeginSub}{\begin{math}{}\sb\bgroup\tt}
 \newcommand{\HOLEndSup}{\egroup\end{math}}
 \newcommand{\HOLEndSub}{\egroup\end{math}}
+\newcommand{\HOLRuleName}[1]{\textsf{#1}}
 
 \newcommand{\HOLTokenDot}{\ensuremath{.}}
 \newcommand{\HOLTokenBackslash}{\texttt{\char'134}}
+\newcommand{\HOLTokenTilde}{\texttt{\char'176}}
 \newcommand{\HOLTokenDoubleQuote}{\texttt{\char'42}}
 \newcommand{\HOLTokenUnderscore}{\texttt{\_}}
 \newcommand{\HOLTokenIn}{\ensuremath{\in}}

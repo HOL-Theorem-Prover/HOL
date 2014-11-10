@@ -134,7 +134,7 @@ in
 end
 
 local
-   val pc_tm = Term.mk_var ("pc", word)
+   val pc_tm = ``m0$Align (pc + 4w: word32, 4)``
    fun is_pc_relative tm =
       case Lib.total dest_m0_MEM tm of
          SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
@@ -300,125 +300,18 @@ in
 end
 
 local
-   fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
-   val regs = List.mapPartial (Lib.total dest_m0_REG)
-   fun instantiate (a, b) =
-      if Term.is_var a then SOME (a |-> b)
-      else if a = b then NONE
-           else raise ERR "instantiate" "bad constant match"
-   fun bits i =
-      List.map bitstringSyntax.mk_b
-         (utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist i))
-   fun dest_reg r =
-      let
-         val t = Term.rand r
-         val l = case Lib.total bitstringSyntax.dest_v2w t of
-                    SOME (l, _) => fst (listSyntax.dest_list l)
-                  | NONE => bits (wordsSyntax.uint_of_word t)
-      in
-         List.length l = 4 orelse raise ERR "dest_reg" "assertion failed"
-         ; l
-      end
-      handle HOL_ERR {message = s, ...} => raise ERR "dest_reg" s
-   fun match_register (tm1, v1, _) (tm2, v2, v3) =
-      let
-         val _ = v3 = v2 orelse raise ERR "match_register" "changed"
-         val l = case Lib.total reg_index tm1 of
-                    SOME i => bits i
-                  | NONE => dest_reg tm1
-      in
-         ((v2 |-> v1) ::
-          List.mapPartial instantiate (ListPair.zip (dest_reg tm2, l)),
-          [tm2])
-      end
-   fun exists_free l =
-      List.exists (fn (t, _, _) => not (List.null (Term.free_vars t))) l
-   fun groupings ok rs =
-     rs |> utilsLib.partitions
-        |> List.map
-              (List.mapPartial
-                  (fn l =>
-                     let
-                        val (unchanged, changed) =
-                           List.partition (fn (_, a, b) => a = b) l
-                     in
-                        if 1 < List.length l andalso List.length changed < 2
-                           andalso exists_free l
-                           then SOME (changed @ unchanged)
-                        else NONE
-                     end))
-        |> Lib.mk_set
-        |> Lib.mapfilter
-             (fn p =>
-                concat_unzip
-                  (List.map
-                     (fn l =>
-                        let
-                           val (h, t) =
-                              Lib.pluck
-                                 (fn (tm, _, _) =>
-                                    List.null (Term.free_vars tm)) l
-                              handle
-                                 HOL_ERR
-                                   {message = "predicate not satisfied", ...} =>
-                                   (hd l, tl l)
-                           fun mtch x =
-                              let
-                                 val s = match_register h x
-                              in
-                                 Lib.assert ok (fst s); s
-                              end
-                        in
-                           concat_unzip (List.map mtch t)
-                        end) p))
-   (* check that the pre-condition predictate (from "cond P" terms) is not
-      violated *)
-   fun assign_ok p =
-      let
-         val l = List.mapPartial (Lib.total progSyntax.dest_cond) p
-         val c = boolSyntax.list_mk_conj l
-      in
-         fn s => utilsLib.rhsc (REG_CONV (Term.subst s c)) <> boolSyntax.F
-      end
+   val dest_reg = dest_m0_REG
+   val reg_width = 4
+   val proj_reg = SOME reg_index
+   val reg_conv = REG_CONV
+   val ok_conv = ALL_CONV
    val r15 = wordsSyntax.mk_wordii (15, 4)
-   fun assume_not_pc r =
-      Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (r, r15)))
-   fun star_subst s = List.map (utilsLib.rhsc o REG_CONV o Term.subst s)
-   fun mk_assign f (p, q) =
-      List.map
-         (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
-         (ListPair.zip (f p, f q))
-   val mk = temporal_stateSyntax.mk_spec_or_temporal_next ``M0_MODEL``
+   fun asm tm = Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (tm, r15)))
+   val model_tm = ``M0_MODEL``
 in
-   fun combinations (thm, t) =
-      let
-         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
-         val pl = progSyntax.strip_star p
-         val ql = progSyntax.strip_star q
-         val rs = mk_assign regs (pl, ql)
-         val groups = groupings (assign_ok pl) rs
-      in
-         List.map
-            (fn (s, d) =>
-                let
-                   val do_reg =
-                      star_subst s o
-                      List.filter
-                         (fn tm => case Lib.total dest_m0_REG tm of
-                                      SOME (a, _) => not (Lib.mem a d)
-                                    | NONE => true)
-                   val pl' = do_reg pl
-                   val p' = progSyntax.list_mk_star pl'
-                   val q' = progSyntax.list_mk_star (do_reg ql)
-                   val rwts =
-                      Lib.mapfilter (assume_not_pc o Term.rand o fst) (regs pl')
-                   val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
-                in
-                   (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    mk (stateLib.generate_temporal())
-                       (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
-                end) groups
-      end
+   val combinations =
+      stateLib.register_combinations
+         (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
 end
 
 (* ------------------------------------------------------------------------ *)
@@ -779,17 +672,21 @@ in
               end
           | NONE => loop looped opc "failed to add suitable spec" s
       end
-    and loop looped opc e s =
-       if looped orelse
-          not (addInstructionClass (m0_stepLib.thumb_instruction opc))
-          then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
-       else m0_spec_hex true s
-    val m0_spec_hex = m0_spec_hex false
+   and loop looped opc e s =
+      if looped orelse
+         not (addInstructionClass (m0_stepLib.thumb_instruction opc))
+         then raise ERR "m0_spec_hex" (e ^ ": " ^ s)
+      else m0_spec_hex true s
+   val m0_spec_hex = m0_spec_hex false
+   val m0_spec_code = List.map m0_spec_hex o
+                      (m0AssemblerLib.m0_code: string quotation -> string list)
 end
 
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
+
+open m0_progLib
 
 m0_config false "flat"
 m0_config false "array"

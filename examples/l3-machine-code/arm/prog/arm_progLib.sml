@@ -28,9 +28,7 @@ in
       HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
    val arm_2 =
       HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
-   val word2 = wordsSyntax.mk_int_word_type 2
    val word5 = wordsSyntax.mk_int_word_type 5
-   val byte = wordsSyntax.mk_int_word_type 8
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
    val (_, _, dest_arm_instr, _) = arm_1 "arm_instr"
@@ -85,6 +83,18 @@ val arm_frame =
        (`K arm_c_CPSR_V`,
         `\s:arm_state a w. s with CPSR := cpsr with V := w`,
         `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_Q`,
+        `\s:arm_state a w. s with CPSR := cpsr with Q := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_A`,
+        `\s:arm_state a w. s with CPSR := cpsr with A := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_I`,
+        `\s:arm_state a w. s with CPSR := cpsr with I := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_F`,
+        `\s:arm_state a w. s with CPSR := cpsr with F := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_J`,
         `\s:arm_state a w. s with CPSR := cpsr with J := w`,
         `\s:arm_state. s with CPSR := cpsr`),
@@ -93,6 +103,18 @@ val arm_frame =
         `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_CPSR_E`,
         `\s:arm_state a w. s with CPSR := cpsr with E := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_M`,
+        `\s:arm_state a w. s with CPSR := cpsr with M := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_GE`,
+        `\s:arm_state a w. s with CPSR := cpsr with GE := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_IT`,
+        `\s:arm_state a w. s with CPSR := cpsr with IT := w`,
+        `\s:arm_state. s with CPSR := cpsr`),
+       (`K arm_c_CPSR_psr'rst`,
+        `\s:arm_state a w. s with CPSR := cpsr with psr'rst := w`,
         `\s:arm_state. s with CPSR := cpsr`),
        (`K arm_c_FP_FPSCR_N`,
         `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with N := w`,
@@ -242,18 +264,25 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "arm_exception" => 1
-       | "arm_CPSR_J" => 5
-       | "arm_CPSR_E" => 6
-       | "arm_CPSR_T" => 7
-       | "arm_CPSR_M" => 8
-       | "arm_CPSR_N" => 9
-       | "arm_CPSR_Z" => 10
-       | "arm_CPSR_C" => 11
-       | "arm_CPSR_V" => 12
-       | "arm_FP_FPSCR_N" => 13
-       | "arm_FP_FPSCR_Z" => 14
-       | "arm_FP_FPSCR_C" => 15
-       | "arm_FP_FPSCR_V" => 16
+       | "arm_CPSR_A" => 2
+       | "arm_CPSR_I" => 3
+       | "arm_CPSR_F" => 4
+       | "arm_CPSR_psr'rst" => 5
+       | "arm_CPSR_IT" => 6
+       | "arm_CPSR_J" => 10
+       | "arm_CPSR_E" => 11
+       | "arm_CPSR_T" => 12
+       | "arm_CPSR_M" => 13
+       | "arm_CPSR_N" => 14
+       | "arm_CPSR_Z" => 15
+       | "arm_CPSR_C" => 16
+       | "arm_CPSR_V" => 17
+       | "arm_CPSR_Q" => 18
+       | "arm_CPSR_GE" => 19
+       | "arm_FP_FPSCR_N" => 20
+       | "arm_FP_FPSCR_Z" => 21
+       | "arm_FP_FPSCR_C" => 22
+       | "arm_FP_FPSCR_V" => 23
        | _ => ~1
    val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
@@ -308,7 +337,15 @@ local
          ("arm$PSR_Q_fupd", "arm_CPSR_Q"),
          ("arm$PSR_J_fupd", "arm_CPSR_J"),
          ("arm$PSR_T_fupd", "arm_CPSR_T"),
-         ("arm$PSR_E_fupd", "arm_CPSR_E")] [] []
+         ("arm$PSR_E_fupd", "arm_CPSR_E"),
+         ("arm$PSR_A_fupd", "arm_CPSR_A"),
+         ("arm$PSR_I_fupd", "arm_CPSR_I"),
+         ("arm$PSR_F_fupd", "arm_CPSR_F"),
+         ("arm$PSR_M_fupd", "arm_CPSR_M"),
+         ("arm$PSR_IT_fupd", "arm_CPSR_IT"),
+         ("arm$PSR_GE_fupd", "arm_CPSR_GE"),
+         ("arm$PSR_psr'rst_fupd", "arm_CPSR_psr'rst")
+         ] [] []
         (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
@@ -352,147 +389,38 @@ val REG_CONV =
 val REG_RULE = Conv.CONV_RULE REG_CONV o utilsLib.ALL_HYP_CONV_RULE REG_CONV
 
 local
-   fun concat_unzip l = (List.concat ## List.concat) (ListPair.unzip l)
-   val regs = List.mapPartial (Lib.total dest_arm_REG)
-   val fp_regs = List.mapPartial (Lib.total dest_arm_FP_REG)
-   fun instantiate (a, b) =
-      if Term.is_var a then SOME (a |-> b)
-      else if a = b then NONE
-           else raise ERR "instantiate" "bad constant match"
-   fun bits n i =
-      List.map bitstringSyntax.mk_b
-         (utilsLib.padLeft false n (bitstringSyntax.int_to_bitlist i))
-   fun dest_reg n r =
-      let
-         val t = if n = 4 then Term.rand r else r
-         val l = case Lib.total bitstringSyntax.dest_v2w t of
-                    SOME (l, _) => fst (listSyntax.dest_list l)
-                  | NONE => bits n (wordsSyntax.uint_of_word t)
-      in
-         List.length l = n orelse raise ERR "dest_reg" "assertion failed"
-         ; l
-      end
-      handle HOL_ERR {message = s, ...} => raise ERR "dest_reg" s
-   fun match_register n (tm1, v1, _) (tm2, v2, _) =
-      let
-         val l = case Lib.total reg_index tm1 of
-                    SOME i => bits n i
-                  | NONE => dest_reg n tm1
-      in
-         ((v2 |-> v1) ::
-          List.mapPartial instantiate (ListPair.zip (dest_reg n tm2, l)),
-          [tm2])
-      end
-   fun groupings n ok rs =
-      let
-         fun frees t =
-            if n = 4
-               then Term.free_vars (Term.rand t handle HOL_ERR _ => t)
-            else Term.free_vars t
-         val no_free = List.null o frees
-         fun exists_free l = List.exists (fn (t, _, _) => not (no_free t)) l
-         val (cs, vs) = List.partition (fn (t, _, _) => no_free t) rs
-         fun add_c l =
-            List.map
-              (fn x =>
-                 [x] @ List.map (fn c => List.map (fn y => c :: y) x) cs) l
-            |> List.concat
-      in
-        if List.null vs
-           then [([], [])]
-        else
-        vs
-        |> utilsLib.partitions
-        |> add_c
-        |> List.map
-              (List.mapPartial
-                  (fn l =>
-                     let
-                        val (unchanged, changed) =
-                           List.partition (fn (_, a, b) => a = b) l
-                     in
-                        if 1 < List.length l andalso List.length changed < 2
-                           andalso exists_free l
-                           then SOME (changed @ unchanged)
-                        else NONE
-                     end))
-        |> Lib.mk_set
-        |> Lib.mapfilter
-             (fn p =>
-                concat_unzip
-                  (List.map
-                     (fn l =>
-                        let
-                           val (h, t) =
-                              Lib.pluck (fn (tm, _, _) => no_free tm) l
-                              handle
-                                 HOL_ERR
-                                   {message = "predicate not satisfied", ...} =>
-                                   (hd l, tl l)
-                           fun mtch x =
-                              let
-                                 val s = match_register n h x
-                              in
-                                 Lib.assert ok (fst s); s
-                              end
-                        in
-                           concat_unzip (List.map mtch t)
-                        end) p))
-      end
-   (* check that the pre-condition predictate (from "cond P" terms) is not
-      violated *)
-   fun assign_ok p =
-      let
-         val l = List.mapPartial (Lib.total progSyntax.dest_cond) p
-         val c = boolSyntax.list_mk_conj l
-      in
-         fn s => utilsLib.rhsc (REG_CONV (Term.subst s c)) <> boolSyntax.F
-      end
+   val dest_reg = dest_arm_REG
+   val reg_width = 4
+   val proj_reg = SOME reg_index
+   val reg_conv = REG_CONV
+   val ok_conv = ALL_CONV
    val r15 = wordsSyntax.mk_wordii (15, 4)
-   fun assume_not_pc r =
-      Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (r, r15)))
-   fun star_subst s = List.map (utilsLib.rhsc o REG_CONV o Term.subst s)
-   fun mk_assign f (p, q) =
-      List.map
-         (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
-         (ListPair.zip (f p, f q))
-   val mk_arm_model =
-      temporal_stateSyntax.mk_spec_or_temporal_next ``ARM_MODEL``
+   fun asm tm = Thm.ASSUME (boolSyntax.mk_neg (boolSyntax.mk_eq (tm, r15)))
+   val model_tm = ``ARM_MODEL``
 in
-   fun combinations (thm, t) =
-      let
-         val (_, p, c, q) = temporal_stateSyntax.dest_spec' t
-         val mk = mk_arm_model (stateLib.generate_temporal())
-         val pl = progSyntax.strip_star p
-         val ql = progSyntax.strip_star q
-         val ds = mk_assign fp_regs (pl, ql)
-         val (n, dst, rs) =
-            if List.length ds < 2
-               then (4, dest_arm_REG, mk_assign regs (pl, ql))
-            else (5, dest_arm_FP_REG, ds)
-         val groups = groupings n (assign_ok pl) rs
-      in
-         List.map
-            (fn (s, d) =>
-                let
-                   val do_reg =
-                      star_subst s o
-                      List.filter
-                         (fn tm => case Lib.total dst tm of
-                                      SOME (a, _) => not (Lib.mem a d)
-                                    | NONE => true)
-                   val pl' = do_reg pl
-                   val p' = progSyntax.list_mk_star pl'
-                   val q' = progSyntax.list_mk_star (do_reg ql)
-                   val rwts =
-                      Lib.mapfilter (assume_not_pc o Term.rand o fst) (regs pl')
-                   val NPC_CONV = Conv.QCONV (REWRITE_CONV rwts)
-                in
-                   (Conv.CONV_RULE NPC_CONV (REG_RULE (Thm.INST s thm)),
-                    mk (p', Term.subst s c, utilsLib.rhsc (NPC_CONV q')))
-                end) groups
-      end
+   val reg_combinations =
+      stateLib.register_combinations
+         (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
 end
+
+local
+   val dest_reg = dest_arm_FP_REG
+   val reg_width = 5
+   val proj_reg = NONE
+   val reg_conv = REG_CONV
+   val ok_conv = ALL_CONV
+   fun asm (tm: term) = (raise ERR "" ""): thm
+   val model_tm = ``ARM_MODEL``
+in
+   val fp_combinations =
+      stateLib.register_combinations
+         (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm)
+end
+
+fun combinations thm_t =
+   case fp_combinations thm_t of
+      [_] => reg_combinations thm_t
+    | l => l
 
 (* ------------------------------------------------------------------------ *)
 
@@ -503,12 +431,20 @@ local
           | "arm_prog$arm_CPSR_Z" => "z"
           | "arm_prog$arm_CPSR_C" => "c"
           | "arm_prog$arm_CPSR_V" => "v"
+          | "arm_prog$arm_CPSR_Q" => "q"
+          | "arm_prog$arm_CPSR_A" => "a"
+          | "arm_prog$arm_CPSR_F" => "f"
+          | "arm_prog$arm_CPSR_I" => "i"
+          | "arm_prog$arm_CPSR_GE" => "ge"
+          | "arm_prog$arm_CPSR_IT" => "it"
           | "arm_prog$arm_CPSR_M" => "mode"
+          | "arm_prog$arm_CPSR_psr'rst" => "psr_other"
           | "arm_prog$arm_FP_FPSCR_N" => "fp_n"
           | "arm_prog$arm_FP_FPSCR_Z" => "fp_z"
           | "arm_prog$arm_FP_FPSCR_C" => "fp_c"
           | "arm_prog$arm_FP_FPSCR_V" => "fp_v"
           | "arm_prog$arm_FP_FPSCR_RMode" => "rmode"
+          | "arm_prog$arm_CP15" => "cp15"
           | _ => fail())
    val arm_rename2 =
       Lib.total
@@ -541,7 +477,9 @@ local
       PURE_REWRITE_RULE arm_CPSR_T_F
    val addr_eq_conv =
       SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
-   val reg_eq_conv = REWRITE_CONV [arm_stepTheory.R_mode_11]
+   val reg_eq_conv = PURE_REWRITE_CONV [arm_stepTheory.R_mode_11]
+                     THENC Conv.DEPTH_CONV wordsLib.word_EQ_CONV
+                     THENC REWRITE_CONV []
    val arm_PC_INTRO0 =
       arm_PC_INTRO |> Q.INST [`p1`|->`emp`, `p2`|->`emp`]
                    |> PURE_REWRITE_RULE [set_sepTheory.SEP_CLAUSES]
@@ -596,6 +534,10 @@ in
       stateLib.pick_endian_rule
         (is_big_end, be_sep_array_introduction, le_sep_array_introduction)
    val word_memory_introduction =
+      Conv.CONV_RULE
+         (stateLib.PRE_COND_CONV
+            (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
+                [arm_stepTheory.Aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -608,19 +550,26 @@ in
       arm_rename
 end
 
-(*
-
-val dst = dest_arm_MEM
-val n = 4
-val be = false
-
-val m_def = arm_progTheory.arm_WORD_def
-val rwts = [arm_stepTheory.concat_bytes]
-
-val be = true
-val m_def = arm_progTheory.arm_BE_WORD_def
-
-*)
+local
+   fun is_mode tm =
+      case Lib.total wordsSyntax.dest_word_extract tm of
+         SOME (_, _, _, ty) => ty = fcpSyntax.mk_int_numeric_type 5
+       | NONE => false
+   val config0 = GSYM (SPEC_ALL arm_CONFIG_def)
+   val mode0 = ``mode: word5``
+   val (_, mk_goodmode, _, _) = step_1 "GoodMode"
+in
+   fun change_config_rule thm =
+      let
+         val mode = HolKernel.find_term is_mode (Thm.concl thm)
+         val config = Thm.INST [mode0 |-> mode] config0
+      in
+        thm
+        |> stateLib.MOVE_COND_RULE (mk_goodmode mode)
+        |> MATCH_MP progTheory.SPEC_DUPLICATE_COND
+        |> CONV_RULE (RAND_CONV (helperLib.STAR_REWRITE_CONV config))
+      end
+end
 
 local
    val RName_PC_tm = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
@@ -646,11 +595,6 @@ local
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
-   fun DEPTH_COND_CONV cnv =
-      Conv.ONCE_DEPTH_CONV
-         (fn tm => if progSyntax.is_cond tm
-                      then Conv.RAND_CONV cnv tm
-                   else raise ERR "DEPTH_COND_CONV" "")
    exception FalseTerm
    fun NOT_F_CONV tm =
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
@@ -659,18 +603,14 @@ local
       THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
       THENC utilsLib.WALPHA_CONV
-   val PRE_COND_CONV =
-      helperLib.PRE_CONV
-         (DEPTH_COND_CONV
-             (DEPTH_CONV DISJOINT_CONV
-              THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
-              THENC NOT_F_CONV)
-          THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
       THENC WGROUND_RW_CONV
-      THENC PRE_COND_CONV
+      THENC stateLib.PRE_COND_CONV
+               (DEPTH_CONV DISJOINT_CONV
+                THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
+                THENC NOT_F_CONV)
       THENC helperLib.POST_CONV
               (PURE_REWRITE_CONV spec_rwts
                THENC stateLib.PC_CONV "arm_prog$arm_PC")
@@ -946,12 +886,15 @@ in
               end
           | NONE => loop looped i "failed to add suitable spec" s
       end
-    and loop looped i e s =
-       if looped
-          then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
-       else ( List.app addInstructionClass (arm_stepLib.arm_instruction i)
-            ; arm_spec_hex true s)
-    val arm_spec_hex = arm_spec_hex false
+   and loop looped i e s =
+      if looped
+         then raise ERR "arm_spec_hex" (e ^ ": " ^ s)
+      else ( List.app addInstructionClass (arm_stepLib.arm_instruction i)
+           ; arm_spec_hex true s)
+   val arm_spec_hex = arm_spec_hex false
+   val arm_spec_code =
+      List.map arm_spec_hex o
+      (armAssemblerLib.arm_code: string quotation -> string list)
 end
 
 (* ------------------------------------------------------------------------ *)
@@ -1009,9 +952,32 @@ val thm = arm_intro (last (arm_spec "STMIA;3,2,1"))
 
 val arm_spec = Count.apply arm_spec
 val arm_spec_hex = Count.apply arm_spec_hex
+val arm_spec_code = Count.apply arm_spec_code
 
-arm_spec_hex "eeb65a00"
 set_trace "stateLib.spec" 1
+
+  arm_spec_code `mrs r1, cpsr`
+  arm_spec_code `msr cpsr, r1` (* forces user mode *)
+  arm_spec_code `msr cpsr_f, r1`
+  arm_spec_code `msr cpsr_x, #0x0000ff00`
+  arm_spec_code `msr cpsr_s, #0x00ff0000`
+  arm_spec_code `msr cpsr_f, #0xf0000000`
+
+  (* The following RFE instructions change the operating mode.
+     As such, arm_CONFIG is not automatically introduced in the post-condition.
+     This is achieved with some post-processing.
+  *)
+
+  val f = List.map (List.map change_config_rule)
+
+  (f o arm_spec_code) `rfeia r1!`
+  (f o arm_spec_code) `rfeia r1`
+
+  (*
+
+  val thm = arm_spec_code `rfeia r1` |> hd |> hd
+
+  *)
 
   arm_spec_hex "E79F2003"  (* ldr r2, [pc, r3] *)
   arm_spec_hex "E18F20D4"  (* ldrd r2, r3, [pc, r4] *)

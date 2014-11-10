@@ -129,7 +129,7 @@ $(\Gamma_1,t_1)$, $\ldots$ , $(\Gamma_n,t_n)$ such that:
 \item either
 $(\Gamma_i,t_i)\in \Delta$ or
 \item $(L_i,(\Gamma_i,t_i))\in{\cal D}$ for some list $L_i$ of members of
-$\Delta\cup\{(\Gamma_1,t_1),\ldots,(\Gamma_{i-1},t_{i-1})\}$ .
+$\Delta\cup\{(\Gamma_1,t_1),\ldots,(\Gamma_{i-1},t_{i-1})\}$.
 \end{enumerate}
 \end{enumerate}
 The sequence $(\Gamma_1,t_1),\cdots,(\Gamma_n,t_n)$
@@ -296,7 +296,7 @@ Q}_0$, and then to derive more complex rules from it.
 \label{soundness}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!formal semantics of}
-\emph{The rules of the the \HOL{} deductive system are {\em sound} for
+\emph{The rules of the \HOL{} deductive system are {\em sound} for
   the notion of satisfaction defined in Section~\ref{sequents}: for
   any instance of the rules of inference, if a (standard) model
   satisfies the hypotheses of the rule it also satisfies the
@@ -766,10 +766,10 @@ $\con{c}_{\sigma} = t_{\sigma}$, such that:
 $\con{c}$ is not the name of any constant in $\Sigma_{\Omega}$;
 
 \item
-$t_{\sigma}$ a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$.
+$t_{\sigma}$ a closed term in ${\sf Terms}_{\Sigma_{\Omega}}$;
 
 \item
-all the type variables occurring in $t_\sigma$ also occur in $\sigma$
+all the type variables occurring in $t_\sigma$ also occur in $\sigma$.
 
 \end{myenumerate}
 
@@ -1459,10 +1459,10 @@ There is no loss of generality in assuming that $\Gamma$ consists of a
 single formula $\gamma$. (Just replace $\Gamma$ by the conjunction of
 the formulas it contains, with the convention that this conjunction is
 $\T$ if $\Gamma$ is empty.) By assumption on $\alpha\!s'$ and by
-Condition~(iv), $\alpha\!s,\alpha\!s',.\gamma$ is a term-in-context.
+Condition~(iv), $\alpha\!s,\alpha\!s',.\gamma$ is a term-in-context.\footnote{Note the two commas in $\alpha\!s,\alpha\!s',.\gamma$. The first separates the two lists of type variables; the second splits type variables from term variables.}
 Interpreting it in $M$ yields
 \[
-\den{\alpha\!s,\alpha\!s'.\gamma}_{M}
+\den{\alpha\!s,\alpha\!s',.\gamma}_{M}
 \in \prod_{(X\!s,X\!s')\in
 {\cal U}^{n+m}}\den{\alpha\!s,\alpha\!s'.\ty{bool}}_M(X\!s,X\!s')
 ={\cal U}^{n+m}\fun\two
@@ -1473,7 +1473,7 @@ and hence by the Soundness Theorem~\ref{soundness} this sequent is
 satisfied by $M$. Using the semantics of $\exists$ given in
 Section~\ref{LOG} and the definition of satisfaction of a sequent from
 Section~\ref{sequents}, this means that for all $(X\!s,X\!s')\in{\cal U}^{n+m}$
-if $\den{\alpha\!s,\alpha\!s'.\gamma}_M(X\!s,X\!s')=1$, then
+if $\den{\alpha\!s,\alpha\!s',.\gamma}_M(X\!s,X\!s')=1$, then
 the set
 \[
 \{y\in\den{\alpha\!s.\sigma}_{M}\: :\: \den{\alpha\!s,.p}(X\!s)(y)=1\}
@@ -1481,7 +1481,7 @@ the set
 is non-empty. (This uses the fact that $p$ does not involve
 the type variables $\alpha\!s'$, so that by Lemma~4 in
 Section~\ref{term-substitution}
-$\den{\alpha\!s,\alpha\!s'.p}_M(X\!s,X\!s')=\den{\alpha\!s,.p}_M(X\!s)$.)
+$\den{\alpha\!s,\alpha\!s',.p}_M(X\!s,X\!s')=\den{\alpha\!s,.p}_M(X\!s)$.)
 Since it is also a subset of a set in $\cal U$, it
 follows by property {\bf Sub} of the universe that this set is an element of
 $\cal U$. So defining
@@ -1503,7 +1503,7 @@ involve the new type constant $\ty{op}$.
 
 For each $X\!s\in{\cal U}^{n}$ define $i_{X\!s}$ to be the inclusion
 function for the subset $S(X\!s)\subseteq\den{\alpha\!s.\sigma}_{M}$
-if $\den{\alpha\!s,\alpha\!s'.\gamma}_M(X\!s,X\!s')=1$ for some
+if $\den{\alpha\!s,\alpha\!s',.\gamma}_M(X\!s,X\!s')=1$ for some
 $X\!s'$, and otherwise to be the function
 $1\fun\den{\alpha\!s.\sigma}_{M}$ sending $0\in 1$ to
 $\ch(\den{\alpha\!s.\sigma}_{M})$. Then
@@ -1511,7 +1511,7 @@ $i_{X\!s}\in(S(X\!s)\fun\den{\alpha\!s.\sigma}_{M'}(X\!s))$ because
 $\den{\alpha\!s.\sigma}_{M'}=\den{\alpha\!s.\sigma}_M$. Using the
 semantics of $\TyDef$ given in Section~\ref{LOG}, one has that for any
 $(X\!s,X\!s')\in{\cal U}^{n+m}$, if
-$\den{\alpha\!s,\alpha\!s'.\gamma}_{M'}(X\!s,X\!s')=1$ then
+$\den{\alpha\!s,\alpha\!s',.\gamma}_{M'}(X\!s,X\!s')=1$ then
 \[
 \den{\TyDef}_{M'}(\den{\alpha\!s.\sigma}_{M'} ,
    S(X\!s))(\den{\alpha\!s,.p}_{M'})(i_{X\!s}) = 1.

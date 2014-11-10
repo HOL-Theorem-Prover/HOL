@@ -302,6 +302,11 @@ val NOT_ZERO_LT_ZERO = store_thm ("NOT_ZERO_LT_ZERO",
    GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `n` num_CASES) THEN
    REWRITE_TAC [NOT_LESS_0, LESS_0, NOT_SUC]);
 
+val NOT_LT_ZERO_EQ_ZERO = store_thm(
+  "NOT_LT_ZERO_EQ_ZERO[simp]",
+  ``!n. ~(0 < n) <=> (n = 0)``,
+  REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO]);
+
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
 (* --------------------------------------------------------------------- *)
@@ -327,6 +332,12 @@ val LESS_TRANS = store_thm ("LESS_TRANS",
     THEN RES_TAC
     THENL [SUBST_TAC[SYM(ASSUME (``n:num = p``))], ALL_TAC]
     THEN ASM_REWRITE_TAC[]);
+
+val transitive_LESS = store_thm(
+  "transitive_LESS[simp]",
+  ``transitive $<``,
+  REWRITE_TAC [relationTheory.transitive_def] THEN
+  MATCH_ACCEPT_TAC LESS_TRANS);
 
 val LESS_ANTISYM = store_thm ("LESS_ANTISYM",
    ``!m n. ~((m < n) /\ (n < m))``,
@@ -4289,6 +4300,11 @@ val _ = adjoin_to_theory
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC}];"
  end)};
+
+val datatype_num = store_thm(
+  "datatype_num",
+  ``DATATYPE (num 0 SUC)``,
+  REWRITE_TAC[DATATYPE_TAG_THM]);
 
 val _ = export_theory()
 

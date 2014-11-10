@@ -15,7 +15,7 @@ ps: logic.ps
 pdf: logic.pdf
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log logic.{ps,pdf}
+	rm -f *.dvi *.aux *.toc *.log *.bbl *.blg logic.pdf logic.ps
 
 logic.pdf: logic.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX} logic

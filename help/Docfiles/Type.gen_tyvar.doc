@@ -3,7 +3,7 @@
 \TYPE {gen_tyvar : unit -> hol_type}
 
 \SYNOPSIS
-Generate a fresh type variable
+Generate a fresh type variable.
 
 \KEYWORDS
 variable, type.

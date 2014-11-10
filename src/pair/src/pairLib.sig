@@ -2,6 +2,8 @@ signature pairLib =
 sig
  include Abbrev
 
+ val add_pair_compset : computeLib.compset -> unit
+
  (* from pairSyntax *)
 
  val mk_prod          : hol_type * hol_type -> hol_type

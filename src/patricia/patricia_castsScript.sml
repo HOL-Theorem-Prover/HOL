@@ -68,7 +68,7 @@ val PTREE_OF_STRINGSET_def = Define`
 
 (* ......................................................................... *)
 
-val _ = Hol_datatype `word_ptree = Word_ptree of ('a -> unit) => 'b ptree`;
+val _ = Datatype `word_ptree = Word_ptree ('a -> unit) ('b ptree)`;
 
 val _ = type_abbrev("word_ptreeset", ``:('a, unit) word_ptree``);
 

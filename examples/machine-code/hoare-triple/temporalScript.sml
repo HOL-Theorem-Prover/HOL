@@ -8,26 +8,36 @@ infix \\ val op \\ = op THEN;
 (* --- definitions --- *)
 
 val TEMPORAL_def = Define `
-  TEMPORAL ((to_set,next,instr,less): ('a,'b,'c) processor) c exp =
+  TEMPORAL ((to_set,next,instr,less,allow): ('a,'b,'c) processor) c exp =
    !state seq r.
      rel_sequence next seq state ==>
-     let f p state = SEP_REFINE (p * CODE_POOL instr c * r) less to_set state in
+     let f p state = SEP_REFINE (p * CODE_POOL instr c * r) less to_set state
+                     \/ allow state in
         exp f seq`
 
 val f = ``f: 'a set set -> 'b set``
 val seq = ``seq: num -> 'b``
 
-val NOW_def        = Define `NOW p ^f seq       = f p (seq 0)`
-val NEXT_def       = Define `NEXT p ^f seq      = p f (\n. seq (n + 1:num))`
-val EVENTUALLY_def = Define`EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))`
-val ALWAYS_def     = Define`ALWAYS p ^f seq     = !k. p f (\n. seq (n + k:num))`
+val NOW_def        = Define `NOW p ^f seq        = f p (seq 0)`
+val NEXT_def       = Define `NEXT p ^f seq       = p f (\n. seq (n + 1:num))`
+val EVENTUALLY_def = Define `EVENTUALLY p ^f seq = ?k. p f (\n. seq (n + k:num))`
+val ALWAYS_def     = Define `ALWAYS p ^f seq      = !k. p f (\n. seq (n + k:num))`
 
-val T_AND_def     = Define `T_AND p q ^f ^seq = p f seq /\ q f seq`
+val T_AND_def     = Define `T_AND p q ^f ^seq = p ^f ^seq /\ q ^f ^seq`
 val T_IMPLIES_def = Define `T_IMPLIES p q ^f ^seq = p f seq ==> q f seq`
+
+val T_OR_F_def    = Define `T_OR_F p post ^f ^seq = p ^f ^seq \/
+                                (EVENTUALLY (NOW post)) ^f ^seq`
+
+val SPEC_1_def = Define `
+  SPEC_1 model pre code post err <=>
+    TEMPORAL model code
+      (T_IMPLIES (NOW pre)
+                 (T_OR_F (NEXT (EVENTUALLY (NOW post))) err))`;
 
 (* --- theorems --- *)
 
-val INIT = `?to_set next instr less. model = (to_set,next,instr,less)`
+val INIT = `?to_set next instr less allow. model = (to_set,next,instr,less,allow)`
            by METIS_TAC [PAIR]
 
 val SPEC_EQ_TEMPORAL = Q.store_thm("SPEC_EQ_TEMPORAL",
@@ -39,7 +49,7 @@ val SPEC_EQ_TEMPORAL = Q.store_thm("SPEC_EQ_TEMPORAL",
          NOW_def, EVENTUALLY_def, rel_sequence_def]
    \\ SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM, GSYM rel_sequence_def]
    \\ METIS_TAC []
-   )
+   );
 
 val TEMPORAL_ALWAYS = Q.store_thm("TEMPORAL_ALWAYS",
    `TEMPORAL model code (ALWAYS p) <=> TEMPORAL model code p`,
@@ -70,5 +80,82 @@ val TEMPORAL_NEXT_IMP_EVENTUALLY = Q.store_thm("TEMPORAL_NEXT_IMP_EVENTUALLY",
          [TEMPORAL_def, LET_DEF, T_IMPLIES_def, NEXT_def, EVENTUALLY_def]
    \\ METIS_TAC []
    )
+
+val SPEC_1_IMP_SPEC = store_thm("SPEC_1_IMP_SPEC",
+  ``SPEC_1 model pre code post err ==>
+    SPEC model pre code (post \/ err)``,
+  INIT
+  \\ FULL_SIMP_TAC std_ss [SPEC_1_def,SPEC_EQ_TEMPORAL,TEMPORAL_def,LET_DEF]
+  \\ REPEAT STRIP_TAC \\ RES_TAC
+  \\ FULL_SIMP_TAC std_ss [T_IMPLIES_def] \\ REPEAT STRIP_TAC \\ RES_TAC
+  \\ FULL_SIMP_TAC std_ss [T_OR_F_def]
+  \\ FULL_SIMP_TAC std_ss [NEXT_def,EVENTUALLY_def]
+  THEN1 (Q.EXISTS_TAC `k+1` \\ FULL_SIMP_TAC std_ss [ADD_ASSOC]
+    \\ POP_ASSUM MP_TAC
+    \\ SIMP_TAC std_ss [NOW_def,SEP_REFINE_def,SEP_CLAUSES]
+    \\ SIMP_TAC std_ss [SEP_DISJ_def] \\ METIS_TAC [])
+  THEN1 (Q.EXISTS_TAC `k` \\ FULL_SIMP_TAC std_ss [ADD_ASSOC]
+    \\ POP_ASSUM MP_TAC
+    \\ SIMP_TAC std_ss [NOW_def,SEP_REFINE_def,SEP_CLAUSES]
+    \\ SIMP_TAC std_ss [SEP_DISJ_def] \\ METIS_TAC []));
+
+val SPEC_IMP_SPEC_1 = store_thm("SPEC_IMP_SPEC_1",
+  ``SPEC model pre code (post \/ err) ==>
+    let to_set = FST model in
+    let instr = FST (SND (SND model)) in
+    let less = FST (SND (SND (SND model))) in
+      (!s r. SEP_REFINE (pre * CODE_POOL instr code * r) less to_set s ==>
+             ~SEP_REFINE (post * CODE_POOL instr code * r) less to_set s) ==>
+    SPEC_1 model pre code post err``,
+  INIT \\ FULL_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [SPEC_EQ_TEMPORAL,SPEC_1_def]
+  \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,T_IMPLIES_def]
+  \\ REVERSE (REPEAT STRIP_TAC \\ RES_TAC
+    \\ FULL_SIMP_TAC std_ss [EVENTUALLY_def,NOW_def,T_OR_F_def,NEXT_def])
+  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
+  \\ FULL_SIMP_TAC std_ss [SEP_REFINE_def,SEP_F_def]
+  \\ FULL_SIMP_TAC std_ss [GSYM STAR_ASSOC]
+  THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC []
+  \\ Cases_on `k` \\ FULL_SIMP_TAC std_ss [ADD1,SEP_DISJ_def]
+  \\ METIS_TAC []);
+
+val SPEC_1_STRENGTHEN = store_thm("SPEC_1_STRENGTHEN",
+  ``!model p c q err.
+       SPEC_1 model p c q err ==> !r. SEP_IMP r p ==>
+       SPEC_1 model r c q err``,
+  STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss []
+  \\ SIMP_TAC bool_ss [SPEC_1_def,TEMPORAL_def,GSYM STAR_ASSOC,
+       SEP_REFINE_def,LET_DEF,T_IMPLIES_def,NOW_def,PULL_EXISTS]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
+  THEN1
+   (`(p * (CODE_POOL instr c * r')) (to_set s)` by
+         METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR]
+    \\ METIS_TAC [])
+  \\ FIRST_X_ASSUM MATCH_MP_TAC
+  \\ Q.EXISTS_TAC `state` \\ FULL_SIMP_TAC std_ss []);
+
+val SPEC_1_WEAKEN = store_thm("SPEC_1_WEAKEN",
+  ``!model p c r err.
+       SPEC_1 model p c r err ==> !q. SEP_IMP r q ==>
+       SPEC_1 model p c q err``,
+  STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss []
+  \\ SIMP_TAC bool_ss [SPEC_1_def,TEMPORAL_def,GSYM STAR_ASSOC,T_OR_F_def,
+       SEP_REFINE_def,LET_DEF,T_IMPLIES_def,NOW_def,PULL_EXISTS]
+  \\ REVERSE (REPEAT STRIP_TAC) \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
+  THEN1
+   (FIRST_X_ASSUM (MP_TAC o Q.SPECL [`state`,`seq`,`r'`])
+    \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ DISJ2_TAC
+    \\ SIMP_TAC std_ss [EVENTUALLY_def,NOW_def] \\ METIS_TAC [])
+  \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`state`,`seq`,`r'`])
+  \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
+  THEN1 (FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
+  \\ SIMP_TAC std_ss [EVENTUALLY_def,NOW_def,NEXT_def,PULL_EXISTS]
+  \\ REVERSE (REPEAT STRIP_TAC)
+  THEN1 METIS_TAC []
+  THEN1 METIS_TAC []
+  THEN1 METIS_TAC []
+  \\ `(q * (CODE_POOL instr c * r')) (to_set s')` by
+         METIS_TAC [SEP_IMP_def,SEP_IMP_REFL,SEP_IMP_STAR]
+  \\ METIS_TAC []);
 
 val _ = export_theory()

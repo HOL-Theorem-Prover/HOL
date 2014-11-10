@@ -36,7 +36,7 @@ val x64_mem64_def = Define`
 
 val X64_MODEL_def = Define`
   X64_MODEL = (STATE x64_proj, NEXT_REL (=) NextStateX64, x64_instr,
-               ($= :x64_state -> x64_state -> bool))`
+               ($= :x64_state -> x64_state -> bool), K F : x64_state -> bool)`
 
 val X64_IMP_SPEC = Theory.save_thm ("X64_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -46,7 +46,9 @@ val X64_IMP_SPEC = Theory.save_thm ("X64_IMP_SPEC",
 
 val X64_IMP_TEMPORAL = Theory.save_thm ("X64_IMP_TEMPORAL",
    temporal_stateTheory.IMP_TEMPORAL
-   |> Q.ISPECL [`x64_proj`, `NextStateX64`, `x64_instr`]
+   |> Q.ISPECL [`x64_proj`, `NextStateX64`, `x64_instr`,
+                `(=) : x64_state -> x64_state -> bool`,
+                `K F : x64_state -> bool`]
    |> REWRITE_RULE [GSYM X64_MODEL_def]
    )
 

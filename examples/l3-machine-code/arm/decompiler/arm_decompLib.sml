@@ -11,11 +11,12 @@ val ERR = Feedback.mk_HOL_ERR "arm_decompLib"
 (* automation *)
 
 local
-   val w0_var = mk_var ("w0", ``:word32``)
+   fun w_var i = Term.mk_var ("w" ^ Int.toString i, ``:word32``)
+   fun word32 w = wordsSyntax.mk_wordi (Arbnum.fromHexString w, 32)
    val ok_rule = PURE_ONCE_REWRITE_RULE [GSYM arm_OK_def]
    val sbst =
       [``vfp:bool`` |-> boolSyntax.T, ``arch:Architecture`` |-> ``ARMv7_A``]
-   fun arm_OK_intro w0 = ok_rule o Thm.INST ((w0_var |-> w0) :: sbst)
+   fun arm_OK_intro l = ok_rule o Thm.INST (l @ sbst)
    fun format_thm th =
       (th, 4,
        stateLib.get_pc_delta
@@ -23,13 +24,17 @@ local
 in
    val set_opt = arm_progLib.arm_config "vfp"
    fun l3_arm_triples hex =
-      let
-         val hs = String.tokens (fn c => c = #" ") hex
-         val xs = stateLib.fix_precond (arm_progLib.arm_spec_hex (hd hs))
-         val w0 = wordsSyntax.mk_wordi (Arbnum.fromHexString (last hs), 32)
-     in
-        List.map (arm_OK_intro w0) xs
-     end
+      case String.tokens (fn c => c = #" ") hex of
+         h :: r =>
+           let
+              val ws = List.tabulate (List.length r, w_var)
+              val l =
+                List.map (fn (v, hx) => v |-> word32 hx) (ListPair.zip (ws, r))
+           in
+              List.map (arm_OK_intro l)
+                 (stateLib.fix_precond (arm_progLib.arm_spec_hex h))
+           end
+       | _ => raise ERR "l3_arm_triples" "empty string"
    fun l3_arm_spec hex =
       case List.map format_thm (l3_arm_triples hex) of
          [x] => (x, NONE)
@@ -53,46 +58,53 @@ val l3_arm_tools_mapped_no_status = arm_tools_opt "mapped" TRUTH
 val l3_arm_tools_mapped32 = arm_tools_opt "mapped32" arm_progTheory.aS_HIDE
 val l3_arm_tools_mapped32_no_status = arm_tools_opt "mapped32" TRUTH
 
-fun arm_decompile opt f =
-   fn name => fn qcode =>
-      ( set_opt opt
-      ; arm_progLib.set_newline ""
-      ; (UNABBREV_CODE_RULE ## I) (decompile f name qcode)
-      )
+fun arm_decompile iscode tools opt name (qcode: string quotation) =
+   let
+      val q = if iscode then armAssemblerLib.arm_code
+              else helperLib.quote_to_strings
+      val decomp = decompilerLib.decompile_with q tools
+   in
+      set_opt opt
+    ; arm_progLib.set_newline ""
+    ; (decompilerLib.UNABBREV_CODE_RULE ## I) (decomp name qcode)
+   end
 
-val l3_arm_decompile = arm_decompile "mapped" l3_arm_tools
-val l3_arm_decompile_no_status = arm_decompile  "mapped" l3_arm_tools_no_status
+val l3_arm_decompile = arm_decompile false l3_arm_tools "mapped"
+val arm_decompile_code = arm_decompile true l3_arm_tools "mapped"
 
-val l3_arm_decompile32 = arm_decompile "mapped32" l3_arm_tools
-val l3_arm_decompile32_no_status =
-   arm_decompile  "mapped32" l3_arm_tools_no_status
+val l3_arm_decompile_no_status =
+   arm_decompile false l3_arm_tools_no_status "mapped"
+
+val arm_decompile_code_no_status =
+   arm_decompile true l3_arm_tools_no_status "mapped"
+
+val arm_decompile32 = arm_decompile false l3_arm_tools "mapped32"
+val arm_decompile32_code = arm_decompile true l3_arm_tools "mapped32"
+
+val arm_decompile32_no_status =
+   arm_decompile false l3_arm_tools_no_status "mapped32"
+
+val arm_decompile32_code_no_status =
+   arm_decompile true l3_arm_tools_no_status "mapped32"
 
 (* testing
 
-open rel_decompilerLib
+open arm_decompLib
 
-val hex = "B0821003"
-val hex = "07921003"
+val q =
+   `movs r1, #0        ; accumulator
+    mov  r3, r0        ; first address
+    adds r3, #40       ; last address (10 loads)
+label:
+    ldr  r2, [r0, #4]  ; load data
+    adds r0, #4        ; increment address
+    add  r1, r2        ; add to accumulator
+    cmp  r0, r3        ; test if done
+    blt  label         ; loop if not done`
 
-val l3_arm_spec = Count.apply l3_arm_spec
+val () = armAssemblerLib.print_arm_code q
 
-  l3_arm_spec "07921003";
-  l3_arm_spec "17921003";
-  l3_arm_spec "27921003";
-  l3_arm_spec "37921003";
-  l3_arm_spec "47921003";
-  l3_arm_spec "57921003";
-  l3_arm_spec "67921003";
-  l3_arm_spec "77921003";
-  l3_arm_spec "87921003";
-  l3_arm_spec "97921003";
-  l3_arm_spec "A7921003";
-  l3_arm_spec "B7921003";
-  l3_arm_spec "C7921003";
-  l3_arm_spec "D7921003";
-  l3_arm_spec "E7921003";
-
-fast_decompile "test" `e59f322c  00012f94`
+val (test_cert, test_def) = arm_decompile_code "test" q
 
 *)
 

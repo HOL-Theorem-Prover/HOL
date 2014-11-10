@@ -31,6 +31,11 @@ val FOR_def = TotalDefn.tDefine "FOR"
         BIND (a i) (\u. FOR (if i < j then i + 1 else i - 1, j, a))`
   (TotalDefn.WF_REL_TAC `measure (\(i, j, a). if i < j then j - i else i - j)`)
 
+val FOREACH_def = TotalDefn.Define`
+   ((FOREACH : 'a list # ('a -> (unit, 'state) M) -> (unit, 'state) M) ([], a) =
+       UNIT ()) /\
+   (FOREACH (h :: t, a) = BIND (a h) (\u. FOREACH (t, a)))`
+
 val READ_def = TotalDefn.Define`
    (READ : ('state -> 'a) -> ('a, 'state) M) f = \s. (f s, s)`;
 

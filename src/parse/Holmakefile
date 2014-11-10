@@ -2,9 +2,13 @@ EXTRA_CLEANS = base_lexer.sml
 
 SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
                 PPBackEnd.uo $(dprot $(SIGOBJ)/Overlay.uo) base_tokens.uo \
-	        qbuf.uo term_tokens.uo
+	        qbuf.uo term_tokens.uo MLstring.uo CharSet.uo
 
-all: base_lexer.sml selftest.exe
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: base_lexer.sml selftest.exe $(UOFILES)
+
+.PHONY: all
 
 base_lexer.sml: base_lexer
 	$(protect $(HOLDIR)/tools/mllex/mllex.exe) base_lexer

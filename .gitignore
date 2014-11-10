@@ -89,8 +89,10 @@ help/theorygraph/theories.jpg
 help/theorygraph/theories.pdf
 
 src/bool/SharingTables.*
-src/emit/ML/*
-src/emit/Caml/*
+src/emit/ML/*.sml
+src/emit/ML/*.sig
+src/emit/Caml/*.ml
+src/emit/Caml/*.mli
 src/quotient/Manual/quotient.pdf
 src/quotient/src/*.html
 src/quotient/src/*.lst
@@ -98,6 +100,8 @@ src/HolSat/sat_solvers/zc2hs/*.h
 src/HolSat/sat_solvers/zc2hs/zc2hs
 src/HolSat/sat_solvers/minisat/minisat
 src/HolSat/sat_solvers/minisat/depend.mak
+src/num/arith/Manual/arith.pdf
+src/num/arith/Manual/arith.ps
 src/num/termination/numheap
 src/num/termination/numheap.o
 src/pair/help
@@ -114,6 +118,7 @@ src/TeX/holindex-demo.ps
 Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex
+Manual/Translations/*/*/*.pdf
 
 examples/dev/*.vl
 
@@ -135,3 +140,4 @@ examples/miniML/hol2miniml/*.txt
 examples/miniML/hol2miniml/miniml-heap
 
 local-hol-heap
+examples/l3-machine-code/**/*-heap

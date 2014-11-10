@@ -240,13 +240,13 @@ val _ = map (qh_test_num hard_fail quiet) qh_testCases_num;
 val qh_test_list = test_conv "QUANT_INSTANTIATE_CONV [list_qp]" (QUANT_INSTANTIATE_CONV [list_qp])
 
 val qh_testCases_list =
-  [(``!l:'a list. ~(NULL l) ==> P l``, SOME ``!l_t l_h. P (l_h::l_t)``),
+  [(``!l:'a list. ~(NULL l) ==> P l``, SOME ``!l_h l_t. P (l_h::l_t)``),
    (``!x. x = y::ys``, SOME F),
    (``!x. x = []``, SOME F),
    (``?l. ~(NULL l)``, SOME T),
    (``?x:'a xs. QQ /\ (x::xs = y::ys) /\ P /\ Q xs``, SOME ``QQ /\ P /\ Q (ys:'a list)``),
    (``?x. PP ==> ~(x = []) /\ P x``,
-    SOME ``?x_t:'a list x_h. PP ==> P (x_h::x_t)``)];
+    SOME ``?x_h x_t:'a list. PP ==> P (x_h::x_t)``)];
 val _ = map (qh_test_list hard_fail quiet) qh_testCases_list;
 
 
@@ -308,8 +308,8 @@ val _ = map (qh_test_context hard_fail quiet) qh_testCases_context;
 val qh_test_context2 = test_conv "SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) []" (SIMP_CONV (bool_ss++QUANT_INST_ss[std_qp]) [])
 
 val qh_testCases_context2 =
-  [(``(~(P [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
-   (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_t x_h. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+  [(``(~(P [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
+   (``(!x. P x ==> ~(x = [])) ==> (!x. P x ==> Q x)``, SOME ``¬P [] ⇒ ∀x_h x_t. P (x_h::x_t) ⇒ Q (x_h::x_t)``),
    (``(!x. P x ==> ISR x) ==> (!x. P x ==> Q x)``, SOME ``(!l. ~((P:('a + 'b)-> bool) (INL l))) ==> (!r. P (INR r) ==> (Q:('a + 'b)-> bool) (INR r))``),
    (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``, SOME ``(!r. ~((P:('a + 'b)-> bool) (INR r))) ==> (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
 

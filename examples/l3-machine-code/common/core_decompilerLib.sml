@@ -25,11 +25,17 @@ val pc = ref boolSyntax.F
 val pc_size = ref 0
 val at_pc_conv = ref (Lib.I: conv -> conv)
 val swap_primes = ref (Lib.I: term -> term)
+val code_parser = ref (NONE: (string quotation -> string list) option)
 
 fun add_prime v = Term.mk_var (fst (Term.dest_var v) ^ "'", Term.type_of v)
 
 fun configure
-   {triple_fn = f, init_fn = i, pc_tm = p, pc_conv = c, component_vars = vs} =
+   {triple_fn = f,
+    init_fn = i,
+    pc_tm = p,
+    pc_conv = c,
+    component_vars = vs
+    } =
    ( get_triple := f
      ; initialise := i
      ; pc := p
@@ -243,11 +249,10 @@ end
 
 fun stage_1 name qcode =
    let
-      val () = (!initialise) ()
-      val code = helperLib.quote_to_strings qcode
-      val thms = derive_specs name code
+      val p = Option.getOpt (!code_parser, helperLib.quote_to_strings)
    in
-      abbreviate_code name thms
+      (!initialise) ()
+    ; abbreviate_code name (derive_specs name (p qcode))
    end
 
 (* Testing

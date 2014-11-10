@@ -380,7 +380,7 @@ fun isize0 acc f [] = acc
   | isize0 acc f ({redex,residue} :: rest) = isize0 (acc + f residue + 1) f rest
 fun isize f x = isize0 0 f x
 
-fun strip_comb ((_, prmap): overload_info) t = let
+fun strip_comb ((_, prmap): overload_info) namePred t = let
   val matches = PrintMap.match(prmap, t)
   val cmp0 = pair_compare (measure_cmp (isize term_size),
                            pair_compare (measure_cmp (isize type_size),
@@ -388,6 +388,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val cmp = inv_img_cmp (fn (a,b,c,d) => (a,(b,c))) cmp0
 
   fun test ((fvs, pat), (orig, nm, tstamp)) = let
+    val _ = assert namePred nm
     val tyvs = tmlist_tyvs fvs
     val tmset = HOLset.addList(empty_tmset, fvs)
     val ((tmi0,tmeq),(tyi0,tyeq)) = raw_match tyvs tmset pat t ([],[])
@@ -406,7 +407,7 @@ fun strip_comb ((_, prmap): overload_info) t = let
   val inst_data = List.mapPartial test matches
   val sorted = Listsort.sort cmp inst_data
   fun rearrange (tmi, _, _, (orig, nm)) = let
-    val (bvs,_) = strip_abs orig
+    val (bvs,basepat) = strip_abs orig
     fun findarg v =
         case List.find (fn {redex,residue} => redex = v) tmi of
           NONE => mk_const("ARB", type_of v)
@@ -415,17 +416,31 @@ fun strip_comb ((_, prmap): overload_info) t = let
     val fconst_ty = List.foldr (fn (arg,acc) => type_of arg --> acc)
                                (type_of t)
                                args
+    val origopt = let
+      val (hd, args) = HolKernel.strip_comb basepat
+    in
+      if ListPair.all (uncurry aconv) (bvs, args) then
+        let
+          val {Name,Thy,...} = dest_thy_const hd
+        in
+          SOME {Thy=Thy,Name=Name}
+        end handle HOL_ERR _ => NONE
+      else NONE
+    end
   in
-    (mk_var(GrammarSpecials.fakeconst_special ^ nm, fconst_ty), args)
+    (mk_var(GrammarSpecials.mk_fakeconst_name {fake = nm, original = origopt},
+            fconst_ty),
+     args)
   end
 in
   case sorted of
     [] => NONE
-  | m :: _ => SOME (rearrange m)
+  | (m as (_, _, _, (_, nm))) :: _ => if nm = "" then NONE
+                                      else SOME (rearrange m)
 end
-fun oi_strip_comb oinfo t = let
+fun oi_strip_combP oinfo P t = let
   fun recurse acc t =
-      case strip_comb oinfo t of
+      case strip_comb oinfo P t of
         NONE => let
         in
           case Lib.total dest_comb t of
@@ -442,12 +457,16 @@ in
   else recurse [] t
 end
 
+fun oi_strip_comb oinfo t = oi_strip_combP oinfo (fn _ => true) t
 
-fun overloading_of_term (oinfo as (_, prmap) : overload_info) t =
-    case strip_comb oinfo t of
-      SOME (f, []) => SOME (unprefix GrammarSpecials.fakeconst_special
-                                     (#1 (dest_var f)))
+
+fun overloading_of_termP (oinfo as (_, prmap) : overload_info) P t =
+    case strip_comb oinfo P t of
+      SOME (f, []) => f |> dest_var |> #1 |> GrammarSpecials.dest_fakeconst_name
+                        |> Option.map #fake
     | _ => NONE
+
+fun overloading_of_term oinfo t = overloading_of_termP oinfo (fn _ => true) t
 
 fun overloading_of_nametype (oinfo:overload_info) r =
     case Lib.total prim_mk_const r of

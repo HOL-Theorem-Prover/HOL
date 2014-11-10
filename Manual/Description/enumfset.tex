@@ -1,0 +1,482 @@
+\newcommand{\headingthree}[1]{\smallskip\noindent\textbf{#1}\ \ }
+%%
+\begin{SaveVerbatim}{notinnt}
+\HOLTokenTurnstile{} \HOLTokenForall{}\HOLBoundVar{cmp} \HOLBoundVar{y}. \HOLBoundVar{y} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} nt \HOLTokenEquiv{} F
+\end{SaveVerbatim}
+\begin{SaveVerbatim}{innode}
+\HOLTokenTurnstile{} \HOLTokenForall{}\HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{l} \HOLBoundVar{y} \HOLBoundVar{r}.
+     \HOLBoundVar{x} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} (node \HOLBoundVar{l} \HOLBoundVar{y} \HOLBoundVar{r}) \HOLTokenEquiv{}
+     \HOLKeyword{case} apto \HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{y} \HOLKeyword{of}
+       LESS \HOLTokenImp{} \HOLBoundVar{x} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} \HOLBoundVar{l}
+     \HOLTokenBar{} EQUAL \HOLTokenImp{} T
+     \HOLTokenBar{} GREATER \HOLTokenImp{} \HOLBoundVar{x} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} \HOLBoundVar{r}
+\end{SaveVerbatim}
+\begin{SaveVerbatim}{enumeraldef}
+\HOLTokenTurnstile{} (\HOLTokenForall{}\HOLBoundVar{cmp}. ENUMERAL \HOLBoundVar{cmp} nt = \HOLTokenLeftbrace{}\HOLTokenRightbrace{}) \HOLTokenConj{}
+   \HOLTokenForall{}\HOLBoundVar{cmp} \HOLBoundVar{l} \HOLBoundVar{x} \HOLBoundVar{r}.
+     ENUMERAL \HOLBoundVar{cmp} (node \HOLBoundVar{l} \HOLBoundVar{x} \HOLBoundVar{r}) =
+     \HOLTokenLeftbrace{}\HOLBoundVar{y} \HOLTokenBar{} \HOLBoundVar{y} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} \HOLBoundVar{l} \HOLTokenConj{} (apto \HOLBoundVar{cmp} \HOLBoundVar{y} \HOLBoundVar{x} = LESS)\HOLTokenRightbrace{} \HOLTokenUnion{} \HOLTokenLeftbrace{}\HOLBoundVar{x}\HOLTokenRightbrace{} \HOLTokenUnion{}
+     \HOLTokenLeftbrace{}\HOLBoundVar{z} \HOLTokenBar{} \HOLBoundVar{z} \HOLTokenIn{} ENUMERAL \HOLBoundVar{cmp} \HOLBoundVar{r} \HOLTokenConj{} (apto \HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{z} = LESS)\HOLTokenRightbrace{} .
+\end{SaveVerbatim}
+\begin{SaveVerbatim}{fapplynt}
+\HOLTokenTurnstile{} \HOLTokenForall{}\HOLBoundVar{cmp} \HOLBoundVar{x}. FMAPAL \HOLBoundVar{cmp} nt ' \HOLBoundVar{x} = FEMPTY ' \HOLBoundVar{x}
+\end{SaveVerbatim}
+\begin{SaveVerbatim}{fapplynode}
+\HOLTokenTurnstile{} \HOLTokenForall{}\HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{l} \HOLBoundVar{a} \HOLBoundVar{b} \HOLBoundVar{r}.
+     FMAPAL \HOLBoundVar{cmp} (node \HOLBoundVar{l} (\HOLBoundVar{a},\HOLBoundVar{b}) \HOLBoundVar{r}) ' \HOLBoundVar{x} =
+     \HOLKeyword{case} apto \HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{a} \HOLKeyword{of}
+       LESS \HOLTokenImp{} FMAPAL \HOLBoundVar{cmp} \HOLBoundVar{l} ' \HOLBoundVar{x}
+     \HOLTokenBar{} EQUAL \HOLTokenImp{} \HOLBoundVar{b}
+     \HOLTokenBar{} GREATER \HOLTokenImp{} FMAPAL \HOLBoundVar{cmp} \HOLBoundVar{r} ' \HOLBoundVar{x} ,
+\end{SaveVerbatim}
+\begin{SaveVerbatim}{fmapaldef}
+\HOLTokenTurnstile{} (\HOLTokenForall{}\HOLBoundVar{cmp}. FMAPAL \HOLBoundVar{cmp} nt = FEMPTY) \HOLTokenConj{}
+   \HOLTokenForall{}\HOLBoundVar{x} \HOLBoundVar{v} \HOLBoundVar{r} \HOLBoundVar{l} \HOLBoundVar{cmp}.
+     FMAPAL \HOLBoundVar{cmp} (node \HOLBoundVar{l} (\HOLBoundVar{x},\HOLBoundVar{v}) \HOLBoundVar{r}) =
+     DRESTRICT (FMAPAL \HOLBoundVar{cmp} \HOLBoundVar{l}) \HOLTokenLeftbrace{}\HOLBoundVar{y} \HOLTokenBar{} apto \HOLBoundVar{cmp} \HOLBoundVar{y} \HOLBoundVar{x} = LESS\HOLTokenRightbrace{} FUNION
+     FEMPTY |+ (\HOLBoundVar{x},\HOLBoundVar{v}) FUNION
+     DRESTRICT (FMAPAL \HOLBoundVar{cmp} \HOLBoundVar{r}) \HOLTokenLeftbrace{}\HOLBoundVar{z} \HOLTokenBar{} apto \HOLBoundVar{cmp} \HOLBoundVar{x} \HOLBoundVar{z} = LESS\HOLTokenRightbrace{} .
+\end{SaveVerbatim}
+%%
+%%
+\newcommand{\bt}{{\tt bt}}
+\newcommand{\bl}{{\tt bl}}
+\newcommand{\lty}{{\tt ty}}
+\newcommand{\typrime}{{\tt ty'}}
+\newcommand{\cpn}{{\tt cpn}}
+\newcommand{\cmp}{{\tt cmp}}
+\newcommand{\toto}{{\tt toto}}
+\newcommand{\set}{{\tt set}}
+\newcommand{\fmap}{\mbox{\tt fmap}}
+\newcommand{\thm}{\mathtt{thm}}
+\newcommand{\conv}{\mathtt{conv}}
+\newcommand{\ra}{\rightarrow}
+%
+%%\title{A Data Structure for Finite Sets and Maps in \HOL}
+%%\author{F.~Lockwood Morris}
+%%\institute{Syracuse University, Syracuse 13244-4100 NY USA \\
+%%           \email{flmorris@syr.edu}}
+%%\maketitle
+%
+%%\begin{abstract}%70-150 words
+%%A representation of finite sets and finite maps in \HOL\
+%
+%\keywords{finite sets, finite maps, rightist balanced trees,
+%type definition, subtypes.}
+%
+[The current source files are {\tt wotScript.sml,
+totoScript.sml, totoTacs.sml} and {\tt.sig}, {\tt enumeralScript.sml,
+enumTacs.sml} and {\tt.sig, fmapalScript.sml, fmapalTacs.sml} and
+{\tt.sig, tcScript.sml}, and {\tt tcTacs.sml} and {\tt.sig}.
+F.~L.~Morris, flmorris@syr.edu, October 2013]
+
+For any type \lty\ that has been equipped with a total order and a
+conversion for evaluating it, new terms of type \lty\ \set\ are provided
+which embody minimum-depth binary search trees. The primary
+objective has been to supply an \verb$IN_CONV$ for such terms with
+running time logarithmic in the cost of a single order comparison together
+with additional set operations which have reasonable running times.
+
+Similarly, for \lty\ as above and any type \typrime, new terms of type
+\verb$ty |-> ty'$ embody binary search trees, and enable a logarithmic-time
+\verb$FAPPLY_CONV$ and various other operations on finite maps.
+
+\headingthree{Total orders: the type {\tt 'a toto}} The use of binary
+search trees naturally requires that a total order be supplied for
+whatever type \lty\ of elements [arguments] the sets [finite maps] are to have.
+Rather than the relation type \verb$ty -> ty -> bool$, it is found
+computationally advantageous to use the type \verb$ty -> ty -> cpn$,
+where \cpn\ is the \HOL\ datatype of three elements {\tt LESS},
+{\tt EQUAL}, {\tt GREATER}. A polymorphic defined type, \verb$'a toto$, has
+been created isomorphic to the class of functions \verb$: 'a -> 'a -> cpn$
+satisfying a predicate \verb$totoTheory.TotOrd$ which axiomatizes total
+order-hood. The representation function for the type is called {\tt apto}
+(for ``apply total order''). Specifically what is needed in order to use
+\lty\ as an element [argument] type is (the name of) an element of type
+\lty\ \toto, say {\tt tyto}, and a conversion, say {\tt tyto_CONV}, that
+will reduce terms of the form \verb$apto tyto x y$ to one of {\tt LESS},
+{\tt EQUAL}, {\tt GREATER}.
+
+Provided in {\tt totoTheory} are orders {\tt numto}, {\tt intto}, {\tt charto},
+{\tt stringto}, and {\tt qk_numto} (the last is an unnatural order on type
+\num\ that should in principle be quicker to compute on {\tt NUMERAL}
+terms than the usual order) with corresponding conversions
+{\tt numto_CONV}, etc. Also, for lexicographic order on pairs, there are the
+object language function {\tt lextoto : 'a toto -> 'b toto -> ('a\#'b)toto}
+and the \ml\ function {\tt lextoto_CONV : conv -> conv -> conv}; if
+{\tt cva} and {\tt cvb} are conversions for evaluating terms that start
+{\tt apto toa} \dots\ and {\tt apto tob} \dots\ respectively,
+{\tt lextoto_CONV cva cvb} is a conversion for evaluating terms
+starting {\tt apto (toa lextoto tob)} \dots\  . Similarly,
+there are {\tt listoto : 'a toto -> 'a list toto} and
+{\tt listoto_CONV : conv -> conv}. Inspection of {\tt listoto} and
+{\tt listoto_CONV}, possibly also of {\tt qk_numto} and
+{\tt qk_numto_CONV}, should make it feasible to define orders directly as
+{\tt toto}'s and corresponding conversions as needed for other \HOL\ datatypes.
+
+Additionally, given any linear order {\tt R : ty -> ty -> bool}, if one
+supplies the theorem and definition
+\begin{verbatim}
+        lin_ord_thm:  |- LinearOrder $R
+        toto_of_dfn:  |- cmp = toto_of_LinearOrder $R
+\end{verbatim}
+and two conversions, say {\tt eq_conv} for reducing equations of ground
+terms (of {\tt R}'s argument type) to {\tt T} or to {\tt F}, and {\tt
+  lo_conv} for reducing terms {\tt t R t'} to {\tt T} or to {\tt F}, then
+\begin{verbatim}
+        toto_CONV lin_ord_thm toto_of_dfn eq_conv lo_conv
+\end{verbatim}
+is a corresponding conversion for evaluating terms of the form
+{\tt apto cmp c c'}.
+
+\headingthree{Interpretation of binary trees as sets; {\tt IN_CONV}}
+The datatype
+\begin{verbatim}
+        bt = nt | node of 'a bt => 'a => 'a bt
+\end{verbatim}
+is defined with the objective of forming terms \verb$ENUMERAL cmp b$,
+where \cmp\ is a \verb$ty toto$ and {\tt b} is a \verb$ty bt$. These should
+justify the pair of theorems
+\UseVerbatim{notinnt}
+and
+\UseVerbatim{innode}
+To make these theorems come out true requires the following definition of
+{\tt ENUMERAL}:
+\UseVerbatim{enumeraldef}
+%%This definition captures the observation that top-down tree search,
+%%applied to any binary tree whatever, will be able to discover a certain
+%%subset of its items.
+Invoking {\tt IN_CONV keyconv ``x IN ENUMERAL cmp b``}, where {\tt keyconv}
+is a conversion for evaluating applications of {\tt cmp}, will convert
+the term to whichever truth value the definition of {\tt ENUMERAL} compels;
+that is, to {\tt T} if and only if top-down tree search discovers {\tt x}
+in {\tt b}. Operations that create {\tt ENUMERAL} terms, discussed below,
+will ensure that {\tt b} is a well-formed binary search tree of minimal depth.
+(The new {\tt IN_CONV}, if it is given an equality-deciding conversion and
+a set built with {\tt INSERT} rather than a {\tt toto}-evaluating
+conversion and an {\tt ENUMERAL} set, will revert to {\tt pred_setLib.IN_CONV}.)
+
+\headingthree{Translating between set representations}
+\HOL\ offers two notations for explicit finite sets: the display notation
+{\tt\{x1; ...~; xn\}}, which is short for
+{\tt x1 INSERT ... INSERT xn INSERT \{\}}, and notation with an explicit list:
+{\tt set [x1; ...~; xn]}. We provide here conversions back and forth
+between these:
+\begin{verbatim}
+        DISPLAY_TO_set_CONV: conv
+        set_TO_DISPLAY_CONV: conv
+\end{verbatim}
+and to create {\tt ENUMERAL} sets from either:
+\begin{verbatim}
+        set_TO_ENUMERAL_CONV: conv -> term -> conv
+        DISPLAY_TO_ENUMERAL_CONV:conv -> term -> conv
+\end{verbatim}
+(these demanding a {\tt toto} order on the element type and a conversion
+for evaluating it),
+and to recover either from an {\tt ENUMERAL}:
+\begin{verbatim}
+        ENUMERAL_TO_set_CONV: conv -> conv
+        ENUMERAL_TO_DISPLAY_CONV: conv -> conv
+\end{verbatim}
+requiring only the order-evaluating conversion. Additionally,
+\begin{verbatim}
+        TO_set_CONV: conv -> conv
+\end{verbatim}
+will normalize any of the three forms to the {\tt set [ ... ]} form.
+({\tt NO_CONV} will suffice as the conversion argument if it is not an
+{\tt ENUMERAL} that is to be normalized.)
+The conversions from the {\tt ENUMERAL} form have to execute, for a
+well-formed $n$-element binary search tree, $n-1$ comparisons to verify
+that all the tree elements belong to the represented set; they will also
+succeed, in conformance with the definition of {\tt ENUMERAL}, for
+ill-formed trees, if such are ever created, at the cost of between $2n$
+and $3n$ comparisons.
+
+Creation of an {\tt ENUMERAL} form from either of the others entails
+sorting, performed by an $n\log n$ list-merging algorithm, followed by
+a detour through another datatype, {\tt 'a bl}, which could as well have been
+{\tt ('a \# 'a bt) option list}, where the list element of index $k$, if
+present, consists of a full binary tree of $2^k - 1$ set elements and one
+more, which may be thought of as a root of which the full tree is the
+right subtree. A sorted linear list is copied into a {\tt bl} by successive
+``{\tt BL_CONS}`` operations imitating the incrementation of a binary counter;
+when the copy is complete, it is collapsed into a single {\tt bt} of
+which the biggest constituent full {\tt bt} is indeed the right subtree.
+The upshot is that going from an ordered linear list to the
+{\tt ENUMERAL} form is a linear-time operation, and that the {\tt bt} in
+any {\tt ENUMERAL} set has a unique shape for its size: that of a
+minimal-depth tree with all right subtrees full as one proceeds down the
+left spine.
+
+\headingthree{Binary operations on sets} The functions
+\begin{verbatim}
+        UNION_CONV: conv -> conv
+        INTER_CONV: conv -> conv
+        SET_DIFF_CONV: conv -> conv
+\end{verbatim}
+will work out applications of {\tt UNION}, {\tt INTER}, {\tt DIFF}
+respectively to two {\tt ENUMERAL} sets, given a conversion to evaluate
+the relevant order. {\tt UNION_CONV} will revert to {\tt pred_setLib.UNION_CONV}
+if that is what fits its arguments.
+
+These operations work by list merging, hence with a linear number of
+comparisons. The strategy is to convert each input, say
+{\tt ENUMERAL cmp b}, to a theorem,
+\begin{verbatim}
+        |- OWL cmp (ENUMERAL cmp b) l
+\end{verbatim}
+asserting that it could have been created with {\tt set_TO_ENUMERAL_CONV}
+from a certain list, which moreover is in strict ascending order:
+\begin{verbatim}
+      OWL
+        |- !cmp s l. OWL cmp s l <=> (s = set l) /\ OL cmp l
+      OL
+        |- (!cmp. OL cmp [] <=> T) /\
+           !cmp a l. OL cmp (a::l) <=>
+                     OL cmp l /\ !p. MEM p l ==> (apto cmp a p = LESS) .
+\end{verbatim}
+Underlying conversions {\tt OWL_UNION}, {\tt OWL_INTER}, {\tt OWL_DIFF},
+each of type {\tt conv -> thm -> thm -> thm}, combine two such theorems
+to produce a third; the result, known to be ordered, is retransformed
+into an {\tt ENUMERAL} term without further comparisons, as in the
+post-sorting steps of {\tt set_TO_ENUMERAL_CONV}.
+
+Explicit translations
+\begin{verbatim}
+        OWL_TO_ENUMERAL: thm -> thm
+        ENUMERAL_TO_OWL: conv -> term -> thm
+        set_TO_OWL: conv -> term -> term -> thm
+\end{verbatim}
+between {\tt ENUMERAL} terms and {\tt OWL} theorems permit {\tt OWL_UNION},
+etc.~to be invoked directly. ({\tt set_TO_OWL} allows to create an {\tt OWL}
+theorem from either a {\tt set [ ...\ ]} term or a \{ \dots \} term
+without first making an {\tt ENUMERAL}.)
+
+In addition, there is
+\begin{verbatim}
+        SET_EXPR_CONV: conv -> conv
+\end{verbatim}
+which, given a conversion to evaluate the order {\tt cmp}, will work out
+the value of any set expression built up with {\tt UNION}, {\tt INTER},
+and {\tt DIFF} from {\tt ENUMERAL} terms, avoiding intermediate
+translations.
+
+\headingthree{Interpretation of binary trees as finite maps; {\tt FAPPLY_CONV}}
+The treatment of finite maps parallels that of sets: the new terms
+denoting maps of type {\tt ty |-> ty'} are terms {\tt FMAPAL cmp b}, where
+{\tt cmp} is a {\tt ty toto} and {\tt b} is a {\tt(ty\#ty') bt}. The
+theorems supporting tree search are
+\UseVerbatim{fapplynt}
+and
+\UseVerbatim{fapplynode}
+and the definition of {\tt FMAPAL} is
+\UseVerbatim{fmapaldef}
+An invocation {\tt FAPPLY_CONV keyconv ``(FMAPAL cmp b) ' x``}, where
+{\tt keyconv} is a conversion to evaluate applications of {\tt cmp},
+will yield the value paired with {\tt x} if {\tt x} is in the domain of
+{\tt FMAPAL cmp b}, or {\tt``FEMPTY ' x``} if {\tt x} is not to be found.
+If {\tt FAPPLY_CONV} is instead given an equality-deciding conversion and
+a term {\tt fmap [ ...\ ] ' x}, it will produce the first value paired with
+{\tt x} in the list if any, {\tt``FEMPTY ' x``} if none.
+
+\headingthree{Translating between finite map representations}
+A compact list representation for finite maps is defined:
+\begin{verbatim}
+      fmap
+        |- !l. fmap l = FEMPTY |++ REVERSE l
+\end{verbatim}
+The point of the reversal is that {\tt l} is now treated as an
+association list---in case of duplicated arguments, the pair nearest the
+front of the list will take precedence. Translating between
+{\tt fmap [ ...\ ]} and {\tt FMAPAL cmp ...} terms for finite maps we have
+\begin{verbatim}
+        fmap_TO_FMAPAL_CONV: conv -> term -> conv
+        FMAPAL_TO_fmap_CONV: conv -> conv
+\end{verbatim}
+the first of which demands the name of a {\tt toto}-evaluating function as
+well as a conversion for computing its value.
+
+Given a term {\tt FUN_FMAP f (set [ ...\ ])} and a conversion {\tt f_conv} for
+working out applications of f,
+\begin{verbatim}
+        FUN_fmap_CONV: conv -> conv
+\end{verbatim}
+will convert the term to the form {\tt fmap [ ...\ ]}, and
+\begin{verbatim}
+        FUN_FMAPAL_CONV: conv -> term -> conv -> conv,
+\end{verbatim}
+which expects the conversion and term arguments to {\tt fmap_TO_FMAPAL_CONV}
+followed by the conversion argument for {\tt FUN_fmap_CONV}, will apply the
+latter and then the former to yield a {\tt FMAPAL} term.
+
+\headingthree{Binary operations involving finite maps}
+Parallel to the treatment of sets, a theorem representation of a finite
+map {\tt FMAPAL cmp b}, namely
+\begin{verbatim}
+        ORWL cmp (FMAPAL cmp b) l,
+\end{verbatim}
+asserting that it corresponds to a certain ordered list, is used for
+operations involving merging:
+\begin{verbatim}
+      ORWL
+        |- !cmp f l. ORWL cmp f l <=> (f = fmap l) /\ ORL cmp l
+      ORL
+        |- (!cmp. ORL cmp [] <=> T) /\
+           !l cmp b a. ORL cmp ((a,b)::l) <=>
+                 ORL cmp l /\ !p q. MEM (p,q) l ==> (apto cmp a p = LESS) .
+\end{verbatim}
+Functions
+\begin{verbatim}
+        FMAPAL_TO_ORWL: conv -> term -> thm
+        ORWL_TO_FMAPAL: thm -> thm
+\end{verbatim}
+translate between {\tt FMAPAL} terms and {\tt ORWL} theorems, and the
+latter can be produced directly from {\tt fmap [ ...\ ]} terms by
+\begin{verbatim}
+        fmap_TO_ORWL: conv -> term -> term -> thm
+\end{verbatim}
+which might find use, independent of finite maps, as a list sorting routine.
+
+The only binary operation on {\tt FMAPAL} terms is
+\begin{verbatim}
+        FUNION_CONV: conv -> conv
+\end{verbatim}
+which will convert a term {\tt``FUNION cmp (FMAPAL cmp b) (FMAPAL cmp b')``}
+to a {\tt FMAPAL} term denoting a map defined on the union of the two
+domains, with the first argument map taking precedence where these overlap.
+But there are also two forms of domain restriction:
+\begin{verbatim}
+        DRESTRICT f s
+        DRESTRICT f (COMP s)
+\end{verbatim}
+for {\tt f} a {\tt FMAPAL} term and {\tt s} an {\tt ENUMERAL} term with
+the same order as {\tt f}. A single conversion
+\begin{verbatim}
+        DRESTRICT_CONV: conv -> conv
+\end{verbatim}
+will work out either of these forms to a {\tt FMAPAL} result.
+
+Like {\tt UNION_CONV}, {\tt INTER_CONV}, {\tt SET_DIFF_CONV}, both
+{\tt FUNION_CONV} and {\tt DRESTRICT_CONV} entail two preliminary
+computations of {\tt FMAPAL_TO_ORWL} or {\tt ENUMERAL_TO_OWL}, a list-merging
+working part, one of
+\begin{verbatim}
+        ORWL_FUNION: conv -> thm -> thm -> thm
+        ORWL_DRESTRICT: conv -> thm -> thm -> thm
+        ORWL_DRESTRICT_COMPL: conv -> thm -> thm -> thm,
+\end{verbatim}
+and a final use of {\tt ORWL_TO_FMAPAL}. As with sets, the working parts
+may be used directly. Alternatively, translations between terms and
+theorems may be held to a minimum by the use of
+\begin{verbatim}
+        FMAP_EXPR_CONV: conv -> conv
+\end{verbatim}
+on any expression built up with {\tt FUNION}, {\tt DRESTRICT}, and {\tt COMP}
+from compatible {\tt FMAPAL} and {\tt ENUMERAL} terms.
+
+\headingthree{Other operations on finite maps}
+The following operations on {\tt FMAPAL} terms have no need to translate
+to the {\tt ORWL} theorem form; two of them are unconcerned with the
+total ordering.
+
+The conversion
+\begin{verbatim}
+        FDOM_CONV: conv
+\end{verbatim}
+will reduce any term {\tt FDOM (FMAPAL ...\ )} to the isomorphic
+{\tt ENUMERAL ...\ }, also any term {\tt FDOM (fmap [ ...\ ])} to
+{\tt set [ ...\ ]}.
+
+The conversion-valued functon
+\begin{verbatim}
+        IN_FDOM_CONV: conv -> conv,
+\end{verbatim}
+given a conversion to evaluate the applications of {\tt cmp}, will reduce any
+term {\tt x IN FDOM (FMAPAL cmp b)} to a truth value, or if given an
+equality-deciding conversion, it will reduce a term
+{\tt x IN FDOM (fmap [ ...\ ])} to a truth value.
+
+The conversion-valued function
+\begin{verbatim}
+        o_f_CONV: conv -> conv,
+\end{verbatim}
+given a conversion for working out applications of the function {\tt f},
+will reduce a term {\tt f o_f (FMAPAL ...\ )} to an isomorphic {\tt FMAPAL}
+term, alternatively a term {\tt f o_f fmap [ ...\ ]} to an isomorphic
+{\tt fmap} term.
+
+Similarly,
+\begin{verbatim}
+        FUPDATE_CONV: conv -> conv
+\end{verbatim}
+expects either a {\tt cmp}-evaluating conversion and a term
+{\tt FMAPAL cmp b |+ (x, y)} or an equality-deciding conversion and a term
+{\tt fmap [ ...\ ] |+ (x, y)}, and if {\tt x} is already in the domain of
+the finite map, will produce an isomorphic structure in which the value
+paired with {\tt x} has been replaced by {\tt y}. If {\tt x} is not in the
+domain of the finite map, an error is reported.
+
+It may be noted that {\tt FUN_FMAPAL_CONV}, {\tt FAPPLY_CONV}, and
+{\tt FUPDATE_CONV} combine to provide a functional array facility
+with logarithmic number of index comparisons for both reading and writing.
+
+\headingthree{An application: transitive closure}
+The idea of Warshall's algorithm for transitive closure of a relation, to
+build up an approximation to the answer by repeatedly allowing one
+fresh element as an intermediate stop in building a path between any two
+elements, is captured by the definition
+
+\begin{Verbatim}
+subTC \HOLFreeVar{R} \HOLFreeVar{s} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenEquiv{}
+  \HOLFreeVar{R} \HOLFreeVar{x} \HOLFreeVar{y} \HOLTokenDisj{} \HOLTokenExists{}\HOLBoundVar{a} \HOLBoundVar{b}. (\HOLFreeVar{R} ^|^ \HOLFreeVar{s})\HOLTokenSupStar{} \HOLBoundVar{a} \HOLBoundVar{b} \HOLTokenConj{} \HOLBoundVar{a} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLBoundVar{b} \HOLTokenIn{} \HOLFreeVar{s} \HOLTokenConj{} \HOLFreeVar{R} \HOLFreeVar{x} \HOLBoundVar{a} \HOLTokenConj{} \HOLFreeVar{R} \HOLBoundVar{b} \HOLFreeVar{y}
+\end{Verbatim}
+where $\left(R\right.$ \verb8^|^8 $\left.s\right)^*$
+denotes the reflexive transitive closure of the relation $R$ restricted
+fore and aft to the set $s$, and by the theorem (note that it is a set
+equation, as the Curried relations have been given only one argument)
+
+\begin{Verbatim}
+\HOLTokenTurnstile{} \HOLTokenForall{}\HOLBoundVar{R} \HOLBoundVar{s} \HOLBoundVar{x} \HOLBoundVar{a}. subTC \HOLBoundVar{R} (\HOLBoundVar{x} INSERT \HOLBoundVar{s}) \HOLBoundVar{a} =
+     \HOLKeyword{if} \HOLBoundVar{x} \HOLTokenIn{} subTC \HOLBoundVar{R} \HOLBoundVar{s} \HOLBoundVar{a} \HOLKeyword{then} subTC \HOLBoundVar{R} \HOLBoundVar{s} \HOLBoundVar{a} \HOLTokenUnion{} subTC \HOLBoundVar{R} \HOLBoundVar{s} \HOLBoundVar{x} \HOLKeyword{else} subTC \HOLBoundVar{R} \HOLBoundVar{s} \HOLBoundVar{a} .
+\end{Verbatim}
+
+A representation of finite relations by set-valued finite maps is defined by
+\begin{verbatim}
+      FMAP_TO_RELN (f:'a |-> 'a set) x = if x IN FDOM f then f ' x else {}.
+\end{verbatim}
+The conversion-valued function
+\begin{verbatim}
+        TC_CONV: conv -> conv,
+\end{verbatim}
+given a conversion for evaluating {\tt cmp}, will transform a term
+\begin{verbatim}
+        (FMAP_TO_RELN (FMAPAL cmp ... ))^+,
+\end{verbatim}
+where the {\tt bt} ``{\tt...}''
+stores (element, {\tt ENUMERAL}) pairs, to the form
+{\tt FMAP_TO_RELN (FMAPAL cmp ......\ )}, or given an equality-deciding
+conversion, will turn
+\begin{verbatim}
+        (FMAP_TO_RELN (fmap [ ... ]))^+,
+\end{verbatim}
+where now ``{\tt...}''
+is a list of elements paired with \{ \dots \} sets, into
+{\tt FMAP_TO_RELN (fmap [ .......\ ])}. It is because {\tt TC_CONV} uses
+only the operations {\tt TO_set_CONV}, {\tt IN_CONV}, {\tt UNION_CONV},
+{\tt FDOM_CONV}, and {\tt o_f_CONV} that it is insensitive to which pair of
+representations is chosen for finite maps and sets.
+
+As a convenience in preparing the tree-structured
+representation of a finite relation, the conversion
+\begin{verbatim}
+        ENUF_CONV: conv -> term -> conv,
+\end{verbatim}
+given a conversion for evaluating a {\tt toto} and its name, will convert
+a term {\tt fmap [ ...\ ]} whose list members pair elements with
+either \{ \dots \} sets or {\tt set [ ...\ ]} sets into a {\tt FMAPAL} term
+with {\tt ENUMERAL} values.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

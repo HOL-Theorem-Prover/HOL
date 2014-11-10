@@ -25,6 +25,7 @@ sig
    val bit_count_tm : term
    val bit_count_upto_tm : term
    val bit_field_insert_tm : term
+   val bit_set_tm : term
    val concat_word_list_tm : term
    val dimindex_tm : term
    val dimword_tm : term
@@ -133,6 +134,7 @@ sig
    val dest_bit_count : term -> term
    val dest_bit_count_upto : term -> term * term
    val dest_bit_field_insert : term -> term * term * term * term
+   val dest_bit_set : term -> term * term
    val dest_concat_word_list : term -> term * hol_type
    val dest_dimindex : term -> hol_type
    val dest_dimword : term -> hol_type
@@ -241,6 +243,7 @@ sig
    val is_bit_count : term -> bool
    val is_bit_count_upto : term -> bool
    val is_bit_field_insert : term -> bool
+   val is_bit_set : term -> bool
    val is_concat_word_list : term -> bool
    val is_dimindex : term -> bool
    val is_dimword : term -> bool
@@ -349,6 +352,7 @@ sig
    val mk_bit_count_upto : term * term -> term
    val mk_bit_count : term -> term
    val mk_bit_field_insert : term * term * term * term -> term
+   val mk_bit_set : term * term -> term
    val mk_concat_word_list : term * hol_type -> term
    val mk_dimindex : hol_type -> term
    val mk_dimword : hol_type -> term
@@ -428,6 +432,7 @@ sig
    val mk_word_or : term * term -> term
    val mk_word_reduce : term * term -> term
    val mk_word_replicate : term * term -> term
+   val mk_word_replicate_ty : term * term * hol_type -> term
    val mk_word_reverse : term -> term
    val mk_word_rol : term * term -> term
    val mk_word_rol_bv : term * term -> term

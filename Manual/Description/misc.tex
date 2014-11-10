@@ -1,4 +1,4 @@
-\chapter{Miscellaneous Features}\label{avramisc}
+\chapter{Miscellaneous Features}
 
 This section describes some of the features
 that exist for managing the interface
@@ -257,12 +257,13 @@ In this way, one can get a staged application of \holmake{} across multiple dire
     Harmful} by Peter Miller for why this is not ideal.}
 
 \subsection{\holmake{}'s command-line arguments}
+\index{Holmake@\holmake!command-line arguments}
+Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
+If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
+If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
+If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build that target (only).
 
-Like {\tt make}, \holmake{} takes command-line arguments corresponding
-to the targets that the user desires to build.  If there are none,
-then \holmake{} will attempt to build all ML modules and HOL theories
-it can detect in the current directory.  In addition, there are three
-special targets that can be used:
+In addition, there are three special targets that can be used:
 \begin{description}
 \item[{\tt clean}] Removes all compiled files (unless over-ridden by a
   make-file target of the same name, see
@@ -432,7 +433,7 @@ variable, presumably giving rise to some useful string (such as
 \texttt{unix}), and then have the resulting variable
 (\texttt{FOO\_unix}, say) expanded.  This effectively allows the
 construction of functions by cases (define variables
-\texttt{FOO\_unix}, \texttt{FOO\_macos} etc; then use the nested
+\texttt{FOO\_unix}, \texttt{FOO\_macos} etc.; then use the nested
 variable reference above).  If the internal variable expands to
 something containing spaces, this will not turn a normal variable
 reference into a function call (see below).  On the other hand,
@@ -526,7 +527,7 @@ whose value are commas instead), but can otherwise be arbitrary text.
   of file-names that include spaces or other shell-significant
   characters like less-than and greater-than.  Those make-file
   variables that point directly at executables (\texttt{MOSMLC},
-  \texttt{MOSMLLEX} etc) are automatically protected in this way.
+  \texttt{MOSMLLEX} etc.) are automatically protected in this way.
   Others, which might be used in concatenation with other elements,
   are not so protected.  Thus, if \texttt{DIR} might include spaces,
   one should write
@@ -536,6 +537,8 @@ whose value are commas instead), but can otherwise be arbitrary text.
   so that the above will be read as one unit by the underlying shell.
 \item[\texttt{\$(subst arg1,arg2,text)}] replaces every occurrence
   of \texttt{arg1} in \texttt{text} with \texttt{arg2}.
+\item[\texttt{\$(wildcard pattern)}] expands the shell ``glob'' pattern (\eg, \texttt{*Script.sml}) into the list of matching filenames.
+If the pattern doesn't match any files, then the function returns \texttt{pattern} unchanged.
 \end{description}
 
 \paragraph{Special and pre-defined variables}
@@ -779,6 +782,11 @@ Poly/ML 5.4.1 Release
 Finally, note that when using the \texttt{HOLHEAP} variable, heaps are required to be built before everything else in a directory, and that such heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
 Thus, if one wanted to package up a heap embodying the standard theories for the real numbers, and to do it in \texttt{src/real} (which feels natural), this heap could be built using the method described here, but could only be referred to as a \texttt{HOLHEAP} in the directories that used it, \emph{not} in \texttt{src/real}'s \texttt{Holmakefile}.
 
+More realistically, such a ``real-embodying'' heap could be built in \texttt{src/real}, and \emph{subsequent} developments in other directories could use it by specifying\[
+  \texttt{\$(HOLDIR)/src/real/myheap}
+\]
+as the value for their \texttt{HOLHEAP} variables.
+
 \index{heaps (in Poly/ML)|)}
 \section{Timing and Counting Theorems}
 
@@ -969,10 +977,10 @@ For example, \verb|\HOLthm{bool.AND_CLAUSES}|.
 %
 This prints the specified theorem with a leading turnstile.
 %
-\index{Hol_datatype@\ml{Hol\_datatype}!printing in LaTeX@printing in \LaTeX{}}
-However, as a special case, if the theorem specified is a ``datatype theorem'' (with a name of the form \texttt{datatype\_}$\langle$\textit{type-name}$\rangle$), a BNF-style description of the given type (one that has been defined with \ml{Hol\_datatype}) will be printed.
+\index{Datatype@\ml{Datatype}!printing in LaTeX@printing in \LaTeX{}}
+However, as a special case, if the theorem specified is a ``datatype theorem'' (with a name of the form \texttt{datatype\_}$\langle$\textit{type-name}$\rangle$), a BNF-style description of the given type (one that has been defined with \ml{Datatype}) will be printed.
 %
-Datatype theorems with these names are automatically generated when \ml{Hol\_datatype} is run.
+Datatype theorems with these names are automatically generated when \ml{Datatype} is run.
 
 By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it best suited for inclusion in an environment such as \texttt{alltt}.
 (The important characteristics of the \texttt{alltt} environment are that it respects layout in terms of newlines, while also allowing the insertion of \LaTeX{} commands.
@@ -1023,6 +1031,9 @@ into
    FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
 
+\item[\texttt{depth}=$n$]
+Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.
+
 \item[\texttt{K}] (Only for use with \holtm.)
 %
 The argument must be the name of a theorem (as per the \holthm{} command), and the theorem should be of the form
@@ -1033,11 +1044,30 @@ for some term $t$.
 %
 The command prints the term $t$.
 %
-\index{combinators, in HOL logic@combinators, in \HOL{} logic}
-\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}%
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}%
 The expectation is that $f$ will be the combinator \holtxt{K} from \theoryimp{combin} (see Section~\ref{sec:combinTheory}), and that $x$ will be truth~(\holtxt{T}), allowing $t$ to be anything at all.
 %
 In this way, large complicated terms that are not themselves theorems (or even of boolean type), can be stored in \HOL{} theories, and then printed in \LaTeX{} documents.
+
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
+\item[\texttt{m}$\mathit{space}$,\texttt{nomath}] The \texttt{m} option makes \HOL{} material be typeset in ``math-mode''.
+In particular, the output of the pretty-printer will be modified so that newline characters are replaced by \texttt{\bs\bs} commands.
+This then requires that the surrounding \LaTeX{} environment be array-like, so that the \texttt{\bs\bs} command will have the desired effect.
+
+In addition, because raw spaces have minimal effect in math-mode (something like \texttt{f\textvisiblespace{}x} will be typeset as $f x$), math-mode munging also replaces spaces with math-mode macros.
+By default, the command \texttt{\bs;\bs;} is used, but if the \texttt{m} option is followed by some characters, each is interpreted as a single-letter macro name, with each macro concatenated together to provide the space command that will be used.
+
+For example, if the option is \texttt{m;}, then the spacing command will be \texttt{\bs;}.
+If the option is \texttt{m;!}, then the spacing command will be \texttt{\bs;\bs!}.
+The comma character cannot be used because it conflicts with parsing the list of options, but one can use \texttt{c} instead, so that the option \texttt{mc} will make the spacing command be \texttt{\bs,}.
+
+The \texttt{m} option can be installed globally with the \texttt{-m} command-line option.
+If this option is enabled globally, it can be cancelled on a case-by-case basis by using the \texttt{nomath} option.
+The \texttt{nomath} option also takes precedence over any \texttt{m} options that might occur.
+
+See also the discussion about math-mode munging in Section~\ref{sec:math-mode-munging} below.
 
 \item[\texttt{merge}, \texttt{nomerge}] (For use with \holtm{} and \holthm.)
 By default, the HOL pretty-printer is paranoid about token-merging, and will insert spaces between the tokens it emits to try to ensure that what is output can be read in again without error.
@@ -1053,7 +1083,7 @@ If this has been made the default, it may be useful to occasionally turn the mer
 
 \item[\texttt{nodollarparens}] (For use with \holtm{} and \holthm.) Causes the default escaping of syntactic sugar to be suppressed.
 \index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
-\index{tokens!suppressing parsing behaviour of}
+\index{tokens!suppressing parsing behaviour of}%
 The default behaviour is to use parentheses, so that
 % encode all the special characters below so that emacs font-locking has a reasonable chance of working
 \begin{alltt}
@@ -1104,9 +1134,18 @@ In this situation, the \texttt{stackedrule} option is appropriate.
 
 The term or theorem must be within a \LaTeX{} math-environment (it is typeset as if inline, with the \texttt{tt} option).
 
-\item[\texttt{showtypes}] (For use with \holthm{} and \holtm.)
+For adding a name to the rule, see the \texttt{rulename} option below.
+
+\item[\texttt{rulename=}$\mathit{name}$] (Only has an effect with \texttt{rule} or \texttt{stackedrule}.)
+Adds \textit{name} as the optional argument to the \texttt{\bs{}infer} command when typesetting the rule.
+The name is wrapped with \texttt{\bs{}HOLRuleName}, which by default is the same as \texttt{\bs{}textsf}.
+For ease of parsing options, \textit{name} should not contain braces, brackets, or commas.
+(A name including such special characters could be typeset by renewing the \texttt{\bs{}HOLRuleName} command.)
+
+\item[\texttt{showtypes}$n$] (For use with \holthm{} and \holtm.)
 %
-Causes the term or theorem to be printed with the \texttt{types} trace set to level~1 (equivalent to having the \ml{show\_types} reference set to \ml{true}).
+Causes the term or theorem to be printed with the \texttt{types} trace set to level~$n$.
+The $n$ is optional and defaults to $1$ if omitted (equivalent to having the \ml{show\_types} reference set to \ml{true}).
 
 \item[\texttt{stackedrule}] (For use with \holthm{} and \holtm.)
 This is similar to the \texttt{rule} option, but causes implication hypotheses to be presented as a ``stack'', centered in a \LaTeX{} array on top of one another.
@@ -1119,6 +1158,8 @@ will print as
 \infer{r}{\begin{array}{c}p \lor q \\ p \Rightarrow r \\ q \Rightarrow r\end{array}}
 \]
 For this purely propositional example with single-letter variable names, the result looks a little odd, but if the hypotheses are textually larger, this option is indispensable.
+
+For adding a name to the rule, see the \texttt{rulename} option.
 
 \item[\texttt{tt}] %
 Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
@@ -1143,8 +1184,8 @@ run (see Section~\ref{sec:running-munger} below).
 \item[\texttt{-}$\mathit{name}$]
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!overloading}
-(Only for use with \holthm{} and \holtm.)
 This option causes the printing of the term or theorem to be done with respect to a grammar that has all overloading for $\mathit{name}$ removed.
+When used with \holty, prints the type with all type abbreviations for $\mathit{name}$ removed.
 For example, the command \texttt{\holtm[-+]\lb{}x + y\rb} will print as
 \[
 \texttt{arithmetic\dol+}\;x\;y
@@ -1193,6 +1234,45 @@ Because it uses instantiation, free variables in theorem hypotheses will get ren
 
 If $\mathit{nm}_1$ and $\mathit{nm}_2$ both begin with the colon character then they are parsed as types, and type instantiation is performed on the term or theorem argument instead of variable substitution.
 \end{description}
+
+\subsection{Math-Mode Munging}
+\label{sec:math-mode-munging}
+\index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
+\index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
+
+There are a few steps needed to make math-mode munging a relatively painless affair.
+First, there are two \LaTeX{} macros from \texttt{holtexbasic.sty} that should probably be overridden:
+\begin{description}
+\item[\texttt{\bs{}HOLConst}] By default this will print names in typewriter font.
+In math mode, this will probably look better in sans serif, suggesting
+\begin{verbatim}
+   \renewcommand{\HOLConst}[1]{\textsf{#1}}
+\end{verbatim}
+Depending on personal taste, the \texttt{\bs{}HOLKeyword} macro might be redefined similarly.
+This macro is used for keywords such as \texttt{if}.
+\item[\texttt{\bs{}HOLinline}] This macro, used to wrap standard \texttt{\holtm} arguments, puts text into typewriter font.
+One possibility for its redefinition would be
+\begin{verbatim}
+   \renewcommand{\HOLinline}[1]{\ensuremath{#1}}
+\end{verbatim}
+Note that if the term being typeset causes the pretty-printer to break over multiple lines, \LaTeX{} will complain because of the appearance of \texttt{\bs\bs} commands.
+If necessary, this can be avoided on a case-by-case basis by setting the \texttt{width} option to a larger than normal width.
+\end{description}
+
+When using math-mode munging, one also has to be aware of how larger pieces of text will appear.
+In non-math-mode munging, material is usually put into \texttt{alltt} environments.
+The recommended alternative for math-mode is to use the \texttt{\bs{}HOLmath} environment:
+\begin{alltt}
+   \textit{article text}
+
+   \bs{}begin\lb{}HOLmath\rb
+   \holthm\lb{}bool.AND_CLAUSES\rb
+   \bs{}end\lb{}HOLmath\rb
+\end{alltt}
+This uses a standard \texttt{array} environment within a \texttt{displaymath}.
+
+Occasionally, one will want to arrange blocks of \HOL{} material within a larger math context.
+The \texttt{HOLarray} environment is a simple alias for a single-column left-aligned array that one can use in these situations.
 
 
 \subsection{Creating a Munger}
@@ -1288,6 +1368,14 @@ document.
 
 \smallskip \noindent The \texttt{-w}, \texttt{--nomergeanalysis} and
 overrides file options can be given in any order.
+
+\paragraph{Setting Math-mode Spacing} If one expects to include all of the various \texttt{\bs{}HOL} commands in \LaTeX{} math contexts (as described above), then the \texttt{-m} option both sets the default width for math-mode spaces, and also
+enables math-mode typesetting by default.
+
+The specification of spacing is with a string of characters, as already described.
+Note that if the command-line option includes any semi-colons or exclamation marks (\eg, \texttt{-mc;}), then they need to be quoted to prevent the shell from getting confused.
+If the \texttt{-m} option appears without any additional characters, the default math-mode spacing will be \texttt{\bs;\bs;}.
+
 
 \subsection{Holindex}
 
