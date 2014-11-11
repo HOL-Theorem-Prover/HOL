@@ -201,8 +201,8 @@ val _ = temp_overload_on (monad_unitbind, mkc "IGNORE_BIND")
 val _ = temp_overload_on ("return", mkc "UNIT")
 
 val _ = TexTokenMap.temp_TeX_notation
-            {hol = "<-", TeX = ("\\HOLTokenLeftmap", 1)}
-val _ = TexTokenMap.temp_TeX_notation {hol = "do", TeX = (" \\HOLKeyword{do}", 2)}
-val _ = TexTokenMap.temp_TeX_notation {hol = "od", TeX = (" \\HOLKeyword{od}", 2)}
+            {hol = "<-", TeX = ("\\HOLTokenLeftmap{}", 1)}
+val _ = TexTokenMap.temp_TeX_notation {hol = "do", TeX = ("\\HOLKeyword{do}", 2)}
+val _ = TexTokenMap.temp_TeX_notation {hol = "od", TeX = ("\\HOLKeyword{od}", 2)}
 
 end (* struct *)
