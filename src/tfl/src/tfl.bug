@@ -1,0 +1,199 @@
+(*
+DefnBase.read_congs();
+val it =
+   [|- ∀cmp v1 v2 cmp' v1' v2'.
+     v1 = v1' ∧ v2 = v2' ∧
+     (∀x x'. v1' = SOME x ∧ v2' = SOME x' ⇒ cmp x x' = cmp' x x') ⇒
+     option_cmp cmp v1 v2 = option_cmp cmp' v1' v2',
+    |- ∀cmp v1 v2 cmp' v1' v2'.
+     v1 = v1' ∧ v2 = v2' ∧
+     (∀x x'. v1' = SOME x ∧ v2' = SOME x' ⇒ cmp x x' = cmp' x x') ⇒
+     option_cmp2 cmp v1 v2 = option_cmp2 cmp' v1' v2',
+    |- ∀cmp1 cmp2 v1 v2 cmp1' cmp2' v1' v2'.
+     v1 = v1' ∧ v2 = v2' ∧
+     (∀a b c d. v1' = (a,b) ∧ v2' = (c,d) ⇒ cmp1 a c = cmp1' a c) ∧
+     (∀a b c d. v1' = (a,b) ∧ v2' = (c,d) ⇒ cmp2 b d = cmp2' b d) ⇒
+     pair_cmp cmp1 cmp2 v1 v2 = pair_cmp cmp1' cmp2' v1' v2',
+    |- ∀cmp l1 l2 cmp' l1' l2'.
+     l1 = l1' ∧ l2 = l2' ∧
+     (∀x x'. MEM x l1' ∧ MEM x' l2' ⇒ cmp x x' = cmp' x x') ⇒
+     list_cmp cmp l1 l2 = list_cmp cmp' l1' l2’,
+
+*)
+
+load "stringLib";
+
+val _ = Hol_datatype `comparison = Less | Greater | Equal`;
+
+val option_cmp_def = Define `
+(option_cmp cmp NONE NONE = Equal) ∧
+(option_cmp cmp NONE (SOME x) = Less) ∧
+(option_cmp cmp (SOME x) NONE = Greater) ∧
+(option_cmp cmp (SOME x) (SOME y) = cmp x y)`;
+
+val list_cmp_def = Define `
+(list_cmp cmp [] [] = Equal) ∧
+(list_cmp cmp [] (x::y) = Less) ∧
+(list_cmp cmp (x::y) [] = Greater) ∧
+(list_cmp cmp (x1::y1) (x2::y2) =
+  case cmp x1 x2 of
+     | Equal => list_cmp cmp y1 y2
+     | Less => Less
+     | Greater => Greater)`;
+
+val pair_cmp_def = 
+ Define
+  `pair_cmp cmp1 cmp2 (x1,y1) (x2,y2) = 
+    case cmp1 x1 x2
+     of Equal => cmp2 y1 y2
+      | otherwise => otherwise`;
+
+val option_cmp_cong = Q.prove
+(`!cmp cmp' opt1 opt1' opt2 opt2'.
+     (opt1 = opt1') /\ (opt2 = opt2') /\
+     (!x y. (opt1' = SOME x) /\ (opt2' = SOME y) ==> (cmp x y = cmp' x y))
+      ==> (option_cmp cmp opt1 opt2 = option_cmp cmp' opt1' opt2')`,
+ NTAC 2 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [option_cmp_def]);
+
+val list_cmp_cong = Q.prove
+(`!cmp cmp' l1 l1' l2 l2'.
+     (l1 = l1') /\ (l2 = l2') /\
+     (!x y. MEM x l1' /\ MEM y l2' ==> (cmp x y = cmp' x y))
+      ==> (list_cmp cmp l1 l2 = list_cmp cmp' l1' l2')`,
+ NTAC 2 GEN_TAC THEN 
+ Induct THEN GEN_TAC THENL [ALL_TAC, GEN_TAC] THEN Induct THENL
+ [NTAC 2 (RW_TAC list_ss [list_cmp_def]),
+  NTAC 2 (RW_TAC list_ss [list_cmp_def]),
+  NTAC 2 (RW_TAC list_ss [list_cmp_def]),
+  RW_TAC bool_ss [] THEN RW_TAC list_ss [list_cmp_def] THEN 
+  BasicProvers.EVERY_CASE_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC list_ss []]);
+
+val pair_cmp_cong = Q.prove
+(`!cmp1 cmp1' cmp2 cmp2' p1 p2 p1' p2'.
+    (p1 = p1') /\ (p2 = p2') /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) ==> (cmp1 a c = cmp1' a c)) /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) ==> (cmp2 b d = cmp2' b d))
+    ==> 
+     (pair_cmp cmp1 cmp2 p1 p2 = pair_cmp cmp1' cmp2' p1' p2')`,
+ NTAC 4 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [pair_cmp_def]);
+
+(* Alternative *)
+
+val pair_cmp_cong_alt = Q.prove
+(`!cmp1 cmp1' cmp2 cmp2' p1 p2 p1' p2'.
+    (p1 = p1') /\ (p2 = p2') /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) 
+               ==> (cmp1 a c = cmp1' a c) /\ (cmp2 b d = cmp2' b d))
+    ==> 
+     (pair_cmp cmp1 cmp2 p1 p2 = pair_cmp cmp1' cmp2' p1' p2')`,
+ NTAC 4 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [pair_cmp_def]);
+
+val char_cmp_def = 
+ Define
+  `char_cmp c1 c2 = if c1=c2 then Equal else if ORD(c1) < ORD(c2) then Less else Greater`;
+
+val string_cmp_def = 
+ Define
+  `string_cmp s1 s2 = list_cmp char_cmp s1 s2`;
+
+val _ = List.app DefnBase.add_cong [option_cmp_cong,list_cmp_cong,pair_cmp_cong];
+
+val _ = Hol_datatype
+  `type = 
+     Tyvar of string
+   | Tyapp of string => type list`;
+
+
+
+(*
+val stem = "typeorder"
+
+val eqns =
+ ``typeorder (Tyapp x1 ts1) (Tyapp x2 ts2) = 
+      pair_cmp string_cmp (list_cmp typeorder) (x1,ts1) (x2,ts2)``;
+
+val tup_eqs = 
+  ``typeorder_tupled (Tyapp x1 ts1,Tyapp x2 ts2) =
+     pair_cmp string_cmp (list_cmp (λa' a. typeorder_tupled (a',a)))
+              (x1,ts1) (x2,ts2)``;
+
+val facts = TypeBase.theTypeBase();
+
+wfrec_eqns facts tup_eqs;
+
+val {functional,pats} = mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
+
+     val SV = free_vars functional    (* schematic variables *)
+     val _ = checkSV pats SV
+     val (f, Body) = dest_abs functional
+     val (x,_) = dest_abs Body
+     val (Name, fty) = dest_var f
+     val (f_dty, f_rty) = Type.dom_rng fty
+     val WFREC_THM0 = ISPEC functional relationTheory.WFREC_COROLLARY
+     val R = variant (free_vars tup_eqs) (fst(dest_forall(concl WFREC_THM0)))
+     val WFREC_THM = ISPECL [R, f] WFREC_THM0
+     val tmp = fst(wfrecUtils.strip_imp(concl WFREC_THM))
+     val proto_def = Lib.trye hd tmp
+     val WFR = Lib.trye (hd o tl) tmp
+     val R1 = rand WFR
+     val corollary' = funpow 2 UNDISCH WFREC_THM
+     val given_pats = givens pats
+     val corollaries = map (C SPEC corollary') given_pats
+     val eqns_consts = mk_set(find_terms is_const functional)
+     val (case_rewrites,congs) = extraction_thms eqns_consts facts
+     val RWcnv = REWRITES_CONV (add_rewrites empty_rewrites
+                                (literal_case_THM::case_rewrites))
+     val rule = unprotect_thm o
+                RIGHT_CONV_RULE
+                   (LIST_BETA_CONV
+                    THENC REPEATC ((RWcnv THENC LIST_BETA_CONV) ORELSEC
+                                   elim_triv_literal_CONV))
+     val corollaries' = map rule corollaries
+
+val (p,th) = hd (zip given_pats corollaries')
+
+extract [R1] congs f (proto_def,WFR) (p,th);
+
+val FV = [R1]
+val R = rand WFR
+val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
+val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
+fun mk_restr p = mk_comb(restr_fR, p)
+val nested_ref = ref false
+val FV' = FV@free_vars(concl th)
+
+(* load RW.sml code: note that you want to restore "ambient_grammars" *)
+
+val _ = Parse.temp_set_grammars ambient_grammars;
+
+val rwArgs = (Pure [CUT_LEM],
+              Context ([],DONT_ADD),
+              Congs congs,
+              Solver (solver (mk_restr p, f, FV', nested_ref)))
+val tm = concl th;
+Rewrite Fully rwArgs tm;
+
+hyp it;
+
+
+
+
+val defn = Hol_defn
+ "typeorder"
+ `(typeorder (Tyvar x1) (Tyvar x2) = string_cmp x1 x2) ∧
+  (typeorder (Tyvar _) (Tyapp _ _) = Less) ∧
+  (typeorder (Tyapp _ _) (Tyvar _) = Greater) ∧
+  (typeorder (Tyapp x1 ts1) (Tyapp x2 ts2) = 
+      pair_cmp string_cmp (list_cmp typeorder) (x1,ts1) (x2,ts2))`
+
+Defn.tgoal defn;
+
+val defn1 = Hol_defn
+ "tyord"
+ `(tyord (Tyvar x1) (Tyvar x2) = string_cmp x1 x2) ∧
+  (tyord (Tyvar _) (Tyapp _ _) = Less) ∧
+  (tyord (Tyapp _ _) (Tyvar _) = Greater) ∧
+  (tyord (Tyapp x1 ts1) (Tyapp x2 ts2) = list_cmp tyord ts1 ts2)`

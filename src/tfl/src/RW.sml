@@ -636,6 +636,7 @@ end;
  * isolate the free variables.
  *---------------------------------------------------------------------------*)
 
+(*
 fun try_cong cnv (cps as {context,prover,simpls}) tm = 
  let 
  fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = 
@@ -741,12 +742,14 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
      then raise UNCHANGED
      else MATCH_MP th (LIST_CONJ (map mk_ant outcomes))
  end
+*)
 
 
 fun SUB_QCONV cnv cps tm =
  case dest_term tm
   of COMB(Rator,Rand) =>
-      (try_cong cnv cps tm
+(*       (try_cong cnv cps tm *)
+      (do_cong cnv cps tm
        handle UNCHANGED => raise UNCHANGED
           | HOL_ERR _ =>
               let val th = cnv cps Rator
