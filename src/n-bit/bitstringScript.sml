@@ -74,7 +74,7 @@ val rotate_def = Define`
     let l = LENGTH v in
     let x = m MOD l
     in
-      if x = 0 then v else field (x - 1) 0 v ++ field (l - 1) x v`;
+      if (l = 0) \/ (x = 0) then v else field (x - 1) 0 v ++ field (l - 1) x v`;
 
 val testbit_def = zDefine`
   testbit b v = (field b b v = [T])`;
@@ -226,6 +226,15 @@ val length_rev_count_list = Q.store_thm("length_rev_count_list",
 val length_w2v = Q.store_thm("length_w2v",
   `!w:'a word. LENGTH (w2v w) = dimindex(:'a)`,
   lrw [w2v_def]);
+
+val length_rotate = Q.store_thm("length_rotate",
+  `!v n. LENGTH (rotate v n) = LENGTH v`,
+  simp [rotate_def]
+  \\ rw [length_field]
+  \\ fs [DECIDE ``n <> 0n ==> (SUC (n - 1) = n)``,
+         DECIDE ``n:num < l ==> (n + (l - n) = l)``,
+         arithmeticTheory.NOT_ZERO_LT_ZERO, arithmeticTheory.MOD_LESS]
+  )
 
 val el_rev_count_list = Q.store_thm("el_rev_count_list",
   `!n i. i < n ==> (EL i (rev_count_list n) = n - 1 - i)`,
@@ -943,7 +952,7 @@ val ops_to_n2w = Q.store_thm("ops_to_n2w",
 
 val () = bossLib.export_rewrites
    ["length_w2v", "length_fixwidth", "length_field",
-    "length_bitify", "length_shiftr",
+    "length_bitify", "length_shiftr", "length_rotate",
     "v2w_w2v", "v2n_n2v", "v2w_n2v",
     "fixwidth_fixwidth", "fixwidth_id_imp"]
 
