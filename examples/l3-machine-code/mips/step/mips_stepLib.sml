@@ -900,7 +900,12 @@ local
          (REWRITE_CONV [ASSUME ``^st.BranchDelay = SOME d``,
                         optionTheory.NOT_SOME_NONE])
    val NO_BRANCH_DELAY_RULE =
-      PURE_REWRITE_RULE [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]
+      CONV_RULE
+        (Lib.funpow 4 RAND_CONV
+           (LAND_CONV
+              (RAND_CONV
+                 (PURE_REWRITE_CONV
+                    [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]))))
    val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV STATE_CONV)
    val exc_rule = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule
    val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay o
