@@ -4,6 +4,7 @@ sig
 
    type footprint_extra = (term * term) * (term -> term) * (term -> term)
    val chunks_intro: bool -> thm -> rule
+   val chunks_intro_pre_process: thm -> rule
    val define_map_component: string * string * thm -> thm * thm
    val dest_code_access: term -> int * term
    val fix_precond: thm list -> thm list
@@ -29,6 +30,9 @@ sig
    val read_footprint:
       thm -> thm list -> (thm -> term * term * term) -> footprint_extra list ->
       thm -> term list * term * term * term
+   val register_combinations:
+      (term -> term * term) * int * (term -> int) option * conv * conv * conv *
+      term -> thm * term -> (thm * term) list
    val rename_vars:
       (string -> string option) * (string -> (term -> string) option) *
       string list -> thm -> thm
@@ -56,5 +60,7 @@ sig
      (string * term list -> bool) ->
      term list * term list * term -> term list * term list
    val MOVE_COND_CONV: conv
+   val MOVE_COND_RULE: term -> rule
    val PC_CONV: string -> conv
+   val PRE_COND_CONV: conv -> conv
 end

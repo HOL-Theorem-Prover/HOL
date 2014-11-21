@@ -1,2 +1,6 @@
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES) selftest.exe
+
 selftest.exe: selftest.uo Defn.uo wfrecUtils.uo
 	$(HOLMOSMLC) -o $@ $<

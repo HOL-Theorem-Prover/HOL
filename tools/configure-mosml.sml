@@ -107,18 +107,25 @@ end
 
 fun mosml_from_loadpath () = let
   val libdir = hd (!Meta.loadPath)
+  val () = print ("\nMosml library directory (from loadPath) is "^libdir)
   val {arcs, isAbs, vol} = Path.fromString libdir
   val _ = isAbs orelse
           (print "\n\n*** ML library directory not specified with absolute";
            print "filename --- aborting\n";
            Process.exit Process.failure)
-  val (arcs', lib) = frontlast arcs
-  val _ =
-      if lib <> "lib" then
-        print "\nMosml library directory (from loadPath) not .../lib -- weird!\n"
-      else ()
+  val arcs = case frontlast arcs of
+                 (arcs,  "lib") => arcs
+               | ([],  ult)     => [ult]
+               | (arcs,"mosml") => (* default since 2.10 *)
+                 let val (arcs', pen) = frontlast arcs in
+                     (if pen = "lib" then arcs' else arcs)
+                 end
+               | (arcs, _)      =>
+                 (print "\nMosml library directory (from loadPath) not .../lib -- weird!\n";
+                  arcs)
   val candidate =
-      Path.toString {arcs = arcs' @ ["bin"], isAbs = true, vol = vol}
+      Path.toString {arcs = arcs @ ["bin"], isAbs = true, vol = vol}
+  val _ = print ("\nUsing "^candidate^" for mosml directory (from loadPath)\n")
 in
   if check_mosml candidate then candidate
   else (print "\nCan't find mosml -- hope you have it in a \

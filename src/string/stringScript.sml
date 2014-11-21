@@ -166,6 +166,7 @@ val _ = overload_on ("CONCAT", ``FLAT : string list -> string``);
 
 val SUB_def = Define `SUB (s:string, n) = EL n s`;
 val STR_def = Define `STR (c:char) = [c]`;
+val TOCHAR_def = Define `TOCHAR [c] = c: char`;
 
 val SUBSTRING_def = Define `SUBSTRING (s:string,i,n) = SEG n i s`;
 
@@ -484,7 +485,8 @@ val string_lt_trans = store_thm("string_lt_trans",
     Exportation
  ---------------------------------------------------------------------------*)
 
-val _ = computeLib.add_persistent_funs ["ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
+val _ = computeLib.add_persistent_funs
+          ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn ppstrm =>

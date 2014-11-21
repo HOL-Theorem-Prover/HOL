@@ -2,6 +2,8 @@ signature bitstringLib =
 sig
     include Abbrev
 
+    val add_bitstring_compset : computeLib.compset -> unit
+
     val Cases_on_v2w : term frag list -> tactic
 
     type bitify_boolify =

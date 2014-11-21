@@ -22,7 +22,7 @@ sig
 (*---------------------------------------------------------------------------
   Grammar we're parsing is:
 
-      G            ::=  id "=" <form>
+      G            ::=  id "=" <form> (";" id "=" <form>)*
       form         ::=  <phrase> ( "|" <phrase> ) *  |  <record_defn>
       phrase       ::=  id  | id "of" <ptype> ( "=>" <ptype> ) *
       record_defn  ::=  "<|"  <idtype_pairs> "|>"
@@ -33,5 +33,18 @@ sig
   the standard HOL distribution.  In the event that => is an infix, this
   code will still work as long as the input puts the types in parentheses.
  ---------------------------------------------------------------------------*)
+
+val hparse : Type.hol_type Portable.quotation -> AST list
+
+(* The grammar for hparse is:
+
+   G        ::= id "=" <form> (";" id "=" <form>)*
+   form     ::= "|"? <phrase> ( "|" <phrase> )* | <record_defn>
+   phrase   ::= id <typarg>*
+   typarg   ::= atomic-typ | "(" <type> ")"
+
+  where record_defn is as above, and an atomic-typ is either a type variable,
+  or a type-constant of arity 0, or one of the types being defined.
+*)
 
 end

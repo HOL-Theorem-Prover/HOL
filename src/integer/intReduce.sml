@@ -14,15 +14,16 @@ val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
                  INT_LT_REDUCE, INT_LE_REDUCE, INT_EQ_REDUCE,
                  INT_GT_REDUCE, INT_GE_REDUCE, INT_DIVIDES_REDUCE,
                  INT_ABS_NUM, INT_ABS_NEG, INT_QUOT_REDUCE, INT_REM_REDUCE,
-                 INT_MAX, INT_MIN]
+                 INT_MAX, INT_MIN, NUM_OF_INT]
+
+fun add_int_compset cmp = computeLib.add_thms elim_thms cmp
 
 fun int_compset () =
- let open computeLib
-     val compset = reduceLib.num_compset()
-     val _ = add_thms elim_thms compset
- in
-  compset
- end;
+   let
+       val cmp = reduceLib.num_compset()
+   in
+      add_int_compset cmp; cmp
+   end
 
 (*---------------------------------------------------------------------------*)
 (* Reducer for ground integer expressions                                    *)

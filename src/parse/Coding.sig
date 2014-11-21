@@ -40,4 +40,23 @@ sig
     val reader : bool reader
   end
 
+  structure OptionData : sig
+    val encode : ('a -> string) -> 'a option -> string
+    val decode : 'a reader -> string -> 'a option option
+    val reader : 'a reader -> 'a option reader
+  end
+
+  structure PairData : sig
+    val encode : ('a -> string) * ('b -> string) -> 'a * 'b -> string
+    val decode : 'a reader * 'b reader-> string -> ('a * 'b) option
+    val reader : 'a reader * 'b reader -> ('a * 'b) reader
+  end
+
+  structure KernelNameData : sig
+    val encode : KernelSig.kernelname -> string
+    val decode : string -> KernelSig.kernelname option
+    val reader : KernelSig.kernelname reader
+  end
+
+
 end

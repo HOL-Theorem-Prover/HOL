@@ -3,7 +3,7 @@
 \TYPE {polymorphic : hol_type -> bool}
 
 \SYNOPSIS
-Checks if there is a type variable in a type
+Checks if there is a type variable in a type.
 
 \KEYWORDS
 variable, type.

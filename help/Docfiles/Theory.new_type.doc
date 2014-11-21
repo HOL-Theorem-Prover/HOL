@@ -19,17 +19,17 @@ the current theory.
 A non-definitional version of ZF set theory might declare a new type {set} and 
 start using it as follows:
 {
-   - new_theory"ZF";
+   - new_theory "ZF";
    <<HOL message: Created theory "ZF">>
    > val it = () : unit
 
-   - new_type("set", 0);;
+   - new_type ("set", 0);
    > val it = () : unit
 
    - new_constant ("mem", Type`:set->set->bool`);
    > val it = () : unit
 
-   - new_axiom("EXT", Term`(!z. mem z x = mem z y) ==> (x = y)`);
+   - new_axiom ("EXT", Term`(!z. mem z x = mem z y) ==> (x = y)`);
    > val it = |- (!z. mem z x = mem z y) ==> (x = y) : thm
 }
 

@@ -46,6 +46,8 @@ sig
     val WORD_DECIDE         : conv
     val WORD_DECIDE_TAC     : tactic
 
+    val add_words_compset   : bool -> computeLib.compset -> unit
+
     val WORD_GROUND_CONV    : bool -> conv
     val WORD_EVAL_CONV      : conv
     val WORD_EVAL_RULE      : rule

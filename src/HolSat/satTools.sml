@@ -132,4 +132,3 @@ fun satCheck model t =
 
 end
 end
-

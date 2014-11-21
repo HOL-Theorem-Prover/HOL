@@ -39,6 +39,7 @@ sig
   val qexists_tac : term quotation -> tactic
   val qsuff_tac : term quotation -> tactic
   val qid_spec_tac : term quotation -> tactic
+  val qspec_tac : term quotation * term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
@@ -77,6 +78,8 @@ sig
   val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
 
   val simp : thm list -> tactic
+  val csimp : thm list -> tactic
+  val dsimp : thm list -> tactic
   val lrw : thm list -> tactic
   val lfs : thm list -> tactic
   val lrfs : thm list -> tactic
@@ -85,6 +88,7 @@ sig
   val rfs : thm list -> tactic
 
   val >> : tactic * tactic -> tactic
+  val \\ : tactic * tactic -> tactic
   val >| : tactic * tactic list -> tactic
   val >- : tactic * tactic -> tactic
 

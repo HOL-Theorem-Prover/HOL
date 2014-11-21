@@ -82,7 +82,7 @@ exception PrecConflict of stack_terminal * stack_terminal
 
 val complained_already = ref false;
 
-fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+fun first_tok [] = raise Fail "Shouldn't happen: parse_term.first_tok"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 

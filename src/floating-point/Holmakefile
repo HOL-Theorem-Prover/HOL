@@ -1,0 +1,23 @@
+EXTRA_CLEANS = selftest.exe
+OPTIONS=QUIT_ON_FAILURE
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+fp-sig.uo: fp-sig.sml
+	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.sml
+
+fp-functor.uo: fp-functor.sml fp-sig.uo machine_ieeeTheory.uo
+	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-functor.sml fp-sig.uo machine_ieeeTheory.uo
+
+machine_ieeeSyntax.ui: machine_ieeeSyntax.sig fp-sig.uo
+	$(HOLMOSMLC) -c -toplevel Overlay.ui machine_ieeeSyntax.sig fp-sig.uo
+
+machine_ieeeSyntax.uo: machine_ieeeSyntax.sml machine_ieeeSyntax.ui fp-functor.uo
+	$(HOLMOSMLC) -c -toplevel Overlay.ui machine_ieeeSyntax.sml machine_ieeeSyntax.ui fp-functor.uo

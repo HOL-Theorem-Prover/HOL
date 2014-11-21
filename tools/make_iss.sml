@@ -11,6 +11,8 @@ val holdir = Globals.HOLDIR
 val systeml = Systeml.systeml
 
 val sysname = Globals.release ^ " " ^ Int.toString Globals.version
+val sysname_lchyphen =
+    String.translate (fn #" " => "-" | c => str (Char.toLower c)) sysname
 val _ = print "Changing to hol directory\n"
 val _ = FileSys.chDir holdir
 
@@ -56,7 +58,7 @@ val header = "\
 \DefaultGroupName   = HOL\n\
 \Compression        = lzma/ultra\n\
 \SolidCompression   = true\n\
-\OutputBaseFilename = HOL-install\n";
+\OutputBaseFilename = "^sysname_lchyphen^"-install\n";
 
 fun mem s [] = false | mem s (h::t) = s = h orelse mem s t
 

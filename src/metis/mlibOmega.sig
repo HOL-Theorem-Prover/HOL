@@ -49,4 +49,3 @@ end
    ---------------------------------------------------------------------- *)
 
 (* a derivation represents a proof of a factoid *)
-

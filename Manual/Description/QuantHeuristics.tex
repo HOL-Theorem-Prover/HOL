@@ -6,7 +6,7 @@
 \subsection{Motivation}
 
 Often interactive proofs can be simplified by instantiating
-quantifiers. The \ml{Unwind} library\index{Unwind}, which is part of the simplifier allows
+quantifiers. The \ml{Unwind} library\index{Unwind}, which is part of the simplifier, allows
 instantiations of ``trivial'' quantifiers:
 
 \[ \forall x_1\ \ldots x_i \ldots x_n.\ P_1 \wedge \ldots \wedge x_i = c \wedge \ldots \wedge P_n \Longrightarrow Q \]
@@ -28,7 +28,7 @@ handy, but still rather limited.
 The quantifier heuristics library (\ml{quantHeuristicsLib}) provides more power
 and flexibility. A few simple examples of what it can do
 are shown in Table~\ref{table-qh-examples}. Besides the power demonstrated
-by these examples, the library is highly flexible as well.  At it's
+by these examples, the library is highly flexible as well.  At its
 core, there is a modular, syntax driven search for instantiation.
 This search consists of a collection of interleaved heuristics.  Users
 can easily configure existing heuristics and add own ones. Thereby, it

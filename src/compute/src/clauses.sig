@@ -45,6 +45,7 @@ sig
   val from_list : thm list -> comp_rws
   val add_extern : term * int * (term -> thm * db fterm) -> comp_rws -> unit
   val add_thms : thm list -> comp_rws -> unit
+  val add_thmset : string -> comp_rws -> unit
 
   val scrub_const : comp_rws -> term -> unit
   val scrub_thms : thm list -> comp_rws -> unit

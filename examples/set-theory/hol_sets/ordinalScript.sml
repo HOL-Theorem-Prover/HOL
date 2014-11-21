@@ -1064,6 +1064,51 @@ val generic_continuity = store_thm(
     metis_tac [mklesup sup_thm]
   ])
 
+val ord_CASES = store_thm(
+  "ord_CASES",
+  ``∀a. (a = 0) ∨ (∃a0. a = a0⁺) ∨ (0 < a ∧ islimit a)``,
+  gen_tac >> Cases_on `a = 0` >- simp[] >>
+  `0 < a` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
+  Cases_on `omax (preds a)` >> simp[] >>
+  fs[preds_omax_SOME_SUC]);
+
+val islimit_0 = store_thm("islimit_0", ``islimit 0``, simp[])
+
+(* An intermediate value theorem of sorts.
+
+   Thanks to Martin Ward for the theorem and some related discussion.
+   For the moment, we don't have a proof without the weakly increasing
+   side condition, which is annoying.
+*)
+
+val ordinal_IVT = store_thm(
+  "ordinal_IVT",
+  ``(∀a:α ordinal.
+       0 < a ∧ islimit a ⇒ f a : α ordinal = sup (IMAGE f (preds a))) ∧
+    (∀x y. x ≤ y ⇒ f x ≤ f y) ∧ α₁ < α₂ ∧ f α₁ ≤ γ ∧ γ < f α₂ ⇒
+    ∃β. α₁ ≤ β ∧ β < α₂ ∧ f β ≤ γ ∧ γ < f β⁺``,
+  strip_tac >>
+  qabbrev_tac `μ = oleast a. γ < f a ∧ α₁ < a` >>
+  `γ < f μ ∧ α₁ < μ ∧ (∀α. α < μ ⇒ f α ≤ γ ∨ α ≤ α₁)`
+    by (simp[Abbr`μ`] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+        >- (qexists_tac `α₂` >> simp[ordle_lteq]) >> simp[]) >>
+  markerLib.RM_ALL_ABBREVS_TAC >>
+  `¬islimit μ`
+    by (strip_tac >> `sup (preds μ)= μ` by fs[sup_preds_omax_NONE] >>
+        `0 < μ` by (spose_not_then assume_tac >> fs[]) >>
+        `f μ = sup (IMAGE f (preds μ))` by metis_tac[] >>
+        `∃δ. δ < μ ∧ γ < f δ` by metis_tac[predimage_sup_thm] >>
+        `δ ≤ α₁` by metis_tac[] >>
+        `f δ ≤ f α₁` by metis_tac[] >>
+        metis_tac [ordlte_TRANS, ordle_TRANS]) >>
+  `∃δ. μ = δ⁺` by metis_tac[ord_CASES, islimit_0] >>
+  `δ < μ` by simp[] >>
+  qexists_tac `δ` >>
+  `α₁ ≤ δ` by metis_tac[ordlt_SUC_DISCRETE, ordle_lteq] >>
+  `f δ ≤ γ` by metis_tac[ordle_ANTISYM] >>
+  `δ < α₂` suffices_by metis_tac[] >>
+  metis_tac[ordle_TRANS, ordle_TRANS]);
+
 val ordADD_continuous = save_thm(
   "ordADD_continuous",
   generic_continuity |> Q.INST [`f` |-> `$+ a`] |> SIMP_RULE (srw_ss()) [])
@@ -1148,14 +1193,6 @@ val ordMULT_2R = store_thm(
   "ordMULT_2R",
   ``(a:'a ordinal) * 2 = a + a``,
   `2 = 1⁺` by simp[] >> pop_assum SUBST1_TAC >> simp[]);
-
-val ord_CASES = store_thm(
-  "ord_CASES",
-  ``∀a. (a = 0) ∨ (∃a0. a = a0⁺) ∨ (0 < a ∧ islimit a)``,
-  gen_tac >> Cases_on `a = 0` >- simp[] >>
-  `0 < a` by metis_tac [ordlt_trichotomy, ordlt_ZERO] >>
-  Cases_on `omax (preds a)` >> simp[] >>
-  fs[preds_omax_SOME_SUC]);
 
 val islimit_SUC_lt = store_thm(
   "islimit_SUC_lt",

@@ -30,6 +30,7 @@ val dword = wordsSyntax.mk_int_word_type 64
 val (_, mk_mips_PC, _, _) = mips_1 "mips_PC"
 val (_, mk_mips_MEM, dest_mips_MEM, is_mips_MEM) = mips_2 "mips_MEM"
 val (_, mk_mips_gpr, dest_mips_gpr, is_mips_gpr) = mips_2 "mips_gpr"
+val st = Term.mk_var ("s", ``:mips_state``)
 
 (* -- *)
 
@@ -64,7 +65,7 @@ in
          val pc = stateLib.gvar "pc" dword
          val pc_a = mk_mips_PC pc
          val (a, tm) = Thm.dest_thm thm
-         val pc_subst = Term.subst [``s.PC`` |-> pc]
+         val pc_subst = Term.subst [``^st.PC`` |-> pc]
          val a = List.map pc_subst a
          val (m, a) = List.partition (is_mem_access pc) a
          val m = List.map dest_code_access m
@@ -82,13 +83,18 @@ end
 val state_id =
    utilsLib.mk_state_id_thm mipsTheory.mips_state_component_equality
       [["CP0", "PC", "gpr"],
+       ["CP0", "PC", "exceptionSignalled", "gpr"],
+       ["CP0", "PC", "exceptionSignalled"],
+       ["CP0", "PC", "exceptionSignalled", "hi", "lo"],
        ["CP0", "LLbit", "PC"],
+       ["CP0", "LLbit", "PC", "exceptionSignalled"],
        ["CP0", "LLbit", "PC", "gpr"],
        ["CP0", "PC"],
        ["CP0", "PC", "lo"],
        ["CP0", "PC", "hi"],
        ["CP0", "PC", "hi", "lo"],
        ["CP0", "PC", "gpr", "hi", "lo"],
+       ["CP0", "LLbit", "MEM", "PC"],
        ["CP0", "MEM", "PC"],
        ["MEM", "PC"],
        ["gpr", "hi", "lo"],
@@ -115,6 +121,9 @@ val mips_frame =
        (`K mips_c_CP0_ErrCtl`,
         `\s:mips_state a w. s with CP0 := cp0 with ErrCtl := w`,
         `\s:mips_state. s with CP0 := cp0`),
+       (`K mips_c_CP0_LLAddr`,
+        `\s:mips_state a w. s with CP0 := cp0 with LLAddr := w`,
+        `\s:mips_state. s with CP0 := cp0`),
        (`K mips_c_CP0_Status_ERL`,
         `\s:mips_state a w.
             s with CP0 := cp0 with Status := status with ERL := w`,
@@ -126,8 +135,14 @@ val mips_frame =
        (`K mips_c_PC`,
         `\s:mips_state a w. s with PC := w`,
         `I: mips_state -> mips_state`),
-       (`K mips_c_BranchStatus`,
-        `\s:mips_state a w. s with BranchStatus := w`,
+       (`K mips_c_BranchDelay`,
+        `\s:mips_state a w. s with BranchDelay := w`,
+        `I: mips_state -> mips_state`),
+       (`K mips_c_BranchTo`,
+        `\s:mips_state a w. s with BranchTo := w`,
+        `I: mips_state -> mips_state`),
+       (`K mips_c_exceptionSignalled`,
+        `\s:mips_state a w. s with exceptionSignalled := w`,
         `I: mips_state -> mips_state`),
        (`K mips_c_LLbit`,
         `\s:mips_state a w. s with LLbit := w`,
@@ -151,21 +166,23 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "mips_exception" => 1
-       | "mips_CP0_Status_RE" => 2
-       | "mips_CP0_Status_ERL" => 3
-       | "mips_CP0_Status_EXL" => 4
-       | "mips_CP0_Status_BEV" => 5
-       | "mips_CP0_Config_BE" => 6
-       | "mips_CP0_Count" => 7
-       | "mips_CP0_Cause" => 8
-       | "mips_CP0_EPC" => 9
-       | "mips_CP0_Debug" => 10
-       | "mips_CP0_ErrCtl" => 11
-       | "mips_BranchStatus" => 12
-       | "mips_LLbit" => 13
-       | "mips_hi" => 14
-       | "mips_lo" => 15
-       | "mips_PC" => 16
+       | "mips_exceptionSignalled" => 2
+       | "mips_CP0_Status_RE" => 3
+       | "mips_CP0_Status_ERL" => 4
+       | "mips_CP0_Status_EXL" => 5
+       | "mips_CP0_Status_BEV" => 6
+       | "mips_CP0_Config_BE" => 7
+       | "mips_CP0_Count" => 8
+       | "mips_CP0_Cause" => 9
+       | "mips_CP0_EPC" => 10
+       | "mips_CP0_Debug" => 11
+       | "mips_CP0_ErrCtl" => 12
+       | "mips_BranchDelay" => 13
+       | "mips_BranchTo" => 14
+       | "mips_LLbit" => 15
+       | "mips_hi" => 16
+       | "mips_lo" => 17
+       | "mips_PC" => 18
        | _ => ~1
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
@@ -190,7 +207,6 @@ in
 end
 
 local
-   val st = Term.mk_var ("s", ``:mips_state``)
    val cp0_status_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
          [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
@@ -202,6 +218,7 @@ local
          [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
           ("mips$CP0_EPC_fupd", "mips_CP0_EPC"),
           ("mips$CP0_Debug_fupd", "mips_CP0_Debug"),
+          ("mips$CP0_LLAddr_fupd", "mips_CP0_LLAddr"),
           ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
          [("mips$CP0_Count_fupd", "mips_CP0_Count")]
          [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
@@ -209,15 +226,17 @@ local
 in
    val mips_write_footprint =
       stateLib.write_footprint mips_1 mips_2
-         [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
-          ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``)]
-         [("mips$mips_state_hi_fupd", "mips_hi"),
-          ("mips$mips_state_lo_fupd", "mips_lo"),
-          ("mips$mips_state_LLbit_fupd", "mips_LLbit")]
-         [("mips$mips_state_PC_fupd", "mips_PC"),
-          ("mips$mips_state_BranchStatus_fupd", "mips_BranchStatus")]
-         [("mips$mips_state_CP0_fupd", cp0_write_footprint)]
-         (K false)
+        [("mips$mips_state_MEM_fupd", "mips_MEM", ``^st.MEM``),
+         ("mips$mips_state_gpr_fupd", "mips_gpr", ``^st.gpr``)]
+        [("mips$mips_state_hi_fupd", "mips_hi"),
+         ("mips$mips_state_lo_fupd", "mips_lo"),
+         ("mips$mips_state_exceptionSignalled_fupd", "mips_exceptionSignalled"),
+         ("mips$mips_state_LLbit_fupd", "mips_LLbit"),
+         ("mips$mips_state_BranchTo_fupd", "mips_BranchTo")]
+        [("mips$mips_state_PC_fupd", "mips_PC"),
+         ("mips$mips_state_BranchDelay_fupd", "mips_BranchDelay")]
+        [("mips$mips_state_CP0_fupd", cp0_write_footprint)]
+        (K false)
 end
 
 val mips_mk_pre_post =
@@ -390,7 +409,7 @@ in
                   end
              | _ => []
       in
-         List.map
+         List.mapPartial
             (fn (s, ds) =>
                let
                   val sbst = Term.subst s
@@ -399,13 +418,17 @@ in
                   val f = utilsLib.rhsc o cnv o sbst
                   val p' = subst_delete f ds pl
                   val q' = subst_delete f ds ql
+                  val th = thm |> Thm.INST s
+                               |> Drule.DISCH_ALL
+                               |> Conv.CONV_RULE cnv
+                               |> Drule.UNDISCH_ALL
                in
-                  (thm |> Thm.INST s
-                       |> Drule.DISCH_ALL
-                       |> Conv.CONV_RULE cnv
-                       |> Drule.UNDISCH_ALL,
-                   temporal_stateSyntax.mk_spec_or_temporal_next m
-                     (stateLib.generate_temporal()) (p', sbst c, q'))
+                  if utilsLib.vacuous th
+                     then NONE
+                  else SOME
+                         (th,
+                          temporal_stateSyntax.mk_spec_or_temporal_next m
+                            (stateLib.generate_temporal()) (p', sbst c, q'))
                end) groups
       end
 end
@@ -450,6 +473,12 @@ in
             end
       end
 end
+
+(*
+val l = (List.concat thm_ts)
+val x as (thm, t) = List.nth (l, 0)
+spec x
+*)
 
 local
    val get_opcode =
@@ -509,14 +538,18 @@ in
                       | _ => err "more than two specs" s)
                 | NONE => loop "failed to add suitable spec"
             end)
-    val mips_spec_hex = mips_spec_hex ()
+   val mips_spec_hex = mips_spec_hex ()
+   val mips_spec_code = mips_spec_hex o mips.encodeInstruction
 end
 
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
 
+open mips_progLib
+
 val imp_spec = MIPS_IMP_SPEC
+val imp_temp = mips_progTheory.MIPS_IMP_TEMPORAL
 val read_thms = [mips_stepTheory.get_bytes]
 val write_thms = []: thm list
 val select_state_thms = (mips_select_state_pool_thm :: mips_select_state_thms)
@@ -541,13 +574,16 @@ in
       in
          bitstringSyntax.hexstring_of_term (Term.subst s tm)
       end
+   fun hex s =
+      mips_spec_hex s
+      handle e as HOL_ERR _ => (print ("\n\n" ^ s ^ "\n\n"); raise e)
 end
 
 val () = mips_config false
 val be = false
 val tst = mips_spec
-val tst = Count.apply mips_spec_hex o random_hex
-val tst = mips_spec_hex o random_hex
+val tst = Count.apply hex o random_hex
+val tst = hex o random_hex
 val dec = Conv.CONV_RULE (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV) o
           mips_stepLib.mips_decode_hex
 
@@ -556,7 +592,12 @@ val d = List.filter (fn (s, _) => not (Lib.mem s ["MFC0", "MTC0"]))
 
 val l = List.map (I ## tst) d
 
-mips_stepLib.mips_find_opc (mips_stepLib.hex_to_padded_opcode "9FA0AED9")
+mips_stepLib.mips_find_opc (mips_stepLib.hex_to_padded_opcode "000C001E")
+
+val s = random_hex (Redblackmap.find (mips_stepLib.mips_dict, "ERET"))
+mips_spec (Redblackmap.find (mips_stepLib.mips_dict, "ERET"))
+
+mips_spec_hex s
 
 dec "9FA0AED9"
 

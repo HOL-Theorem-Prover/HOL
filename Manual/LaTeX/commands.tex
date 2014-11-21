@@ -32,8 +32,8 @@
                  % macro names is a bit of a pain; deciding to do away
                  % with hol98 nomenclature means that we just want to
                  % write HOL for hol98.
-\def\holnversion{Kananaskis-9}
-\def\holnsversion{Kananaskis~9} % version with space rather than hyphen
+\def\holnversion{Kananaskis-10}
+\def\holnsversion{Kananaskis~10} % version with space rather than hyphen
 \def\LCF{{\small LCF}}
 \def\LCFLSM{{\small LCF{\kern-.2em}{\normalsize\_}{\kern0.1em}LSM}}
 \def\PPL{{\small PP}{\kern-.095em}$\lambda$}
@@ -41,12 +41,14 @@
 \def\ML{{\small ML}}
 \def\holmake{\texttt{Holmake}}
 
-\newcommand\ie{\mbox{i{.}e{.}}}
-\newcommand\eg{\mbox{e{.}g{.}}}
+\newcommand\ie{\mbox{\textit{i{.}e{.}}}}
+\newcommand\eg{\mbox{\textit{e{.}g{.}}}}
 \newcommand\viz{\mbox{viz{.}}}
 \newcommand\adhoc{\mbox{\it ad hoc}}
 \newcommand\etal{{\it et al.\/}}
-\newcommand\etc{\mbox{etc{.}}}
+% NOTE: \etc produces wrong spacing if used between sentences, that is
+% like here \etc End such sentences with non-macro etc.
+\newcommand\etc{\mbox{\textit{etc{.}}}}
 
 % ---------------------------------------------------------------------
 % Simple abbreviations and macros for mathematical typesetting
@@ -61,7 +63,7 @@
 \newcommand\eqv{\ \equiv\ }
 \newcommand\cond{\rightarrow}
 \newcommand\vbar{\mid}
-\newcommand\turn{\ \vdash\ }
+\newcommand\turn{\ \vdash\ } % FIXME: "\ " results in extra space
 \newcommand\hilbert{\varepsilon}
 \newcommand\eqdef{\ \equiv\ }
 
@@ -104,6 +106,7 @@
 \newcommand{\s}[1]{{\small #1}}
 
 \newcommand{\pin}[1]{{\bf #1}}
+% FIXME: for multichar symbols \mathit should be used.
 \def\m#1{\mbox{\normalsize$#1$}}
 
 % ---------------------------------------------------------------------

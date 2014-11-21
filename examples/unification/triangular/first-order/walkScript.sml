@@ -241,7 +241,7 @@ Q.MATCH_ABBREV_TAC `vwalk_al s x = Const c` >>
 `wfs (alist_to_fmap s)` by (
   srw_tac [][wfs_no_cycles] >>
   SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
-  imp_res_tac TC_CASES1 >>
+  imp_res_tac TC_CASES1_E >>
   full_simp_tac (srw_ss()) [vR_def] >>
   full_simp_tac std_ss [GSYM (CONJUNCT1 ALOOKUP_EQ_FLOOKUP)] >>
   full_simp_tac (srw_ss()) [Abbr`s`] >- (
@@ -249,7 +249,7 @@ Q.MATCH_ABBREV_TAC `vwalk_al s x = Const c` >>
     Cases_on `x = v` >> full_simp_tac (srw_ss()) [] ) >>
   Cases_on `y = y'` >> full_simp_tac (srw_ss()) [] >> srw_tac [][] >- (
     POP_ASSUM (K ALL_TAC) >>
-    imp_res_tac TC_CASES2 >>
+    imp_res_tac TC_CASES2_E >>
     full_simp_tac (srw_ss()) [vR_def] >>
     fsrw_tac [][FLOOKUP_UPDATE] >> pop_assum mp_tac >> srw_tac [][] ) >>
   Cases_on `x = y'` >> full_simp_tac (srw_ss()) [] ) >>

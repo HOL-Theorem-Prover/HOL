@@ -86,4 +86,3 @@ val _ = export_rewrites ["gcdset_INSERT"]
 
 
 val _ = export_theory()
-

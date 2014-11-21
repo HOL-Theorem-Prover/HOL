@@ -226,7 +226,7 @@ because the {block_style} is {INCONSISTENT}.
 The pretty-printer prefers later rules over earlier rules by
 default (though this choice can be changed with {prefer_form_with_tok}
 (q.v.)), so conditional expressions print using the {if-then-else}
-syntax rather than the {_ => _  | _} syntax.
+syntax rather than the {_ => _ | _} syntax.
 
 \USES
 For making pretty concrete syntax possible.

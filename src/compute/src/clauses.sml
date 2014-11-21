@@ -256,6 +256,13 @@ end
 fun add_thms lthm rws =
   List.app (List.app (enter_thm rws) o BODY_CONJUNCTS) lthm;
 
+fun add_thmset setname rws = let
+  open ThmSetData
+  val data = all_data setname
+in
+  app (fn (s, namedths) => add_thms (map #2 namedths) rws) data
+end
+
 fun add_extern (cst,arity,fconv) rws =
   let val {Name,Thy,...} = dest_thy_const cst in
   add_in_db_upd rws ((Name,Thy),arity,cst) (Conv fconv)

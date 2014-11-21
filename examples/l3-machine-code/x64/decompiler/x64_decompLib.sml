@@ -38,8 +38,8 @@ in
          val (th1, th2) =
             let
                val m = match_pc_cond (find_term (can match_pc_cond) (concl th))
-               fun fix l = finalise o DISCH_ALL o
-                           REWRITE_RULE [UNDISCH (INST m l), lemma3]
+               fun fix l = finalise o REWRITE_RULE [lemma3] o
+                           DISCH_ALL o REWRITE_RULE [UNDISCH (INST m l)]
             in
                (fix lemma1 th, SOME (fix lemma2 th))
             end
@@ -54,8 +54,13 @@ val (x64_tools:decompiler_tools) =
 
 val x64_decompile = decompilerLib.decompile x64_tools
 
+val x64_decompile_code =
+   decompilerLib.decompile_with x64AssemblerLib.x64_code_no_spaces x64_tools
+
 
 (* Testing:
+
+val (text_cert, test_def) = x64_decompile_code "test" `add rax, rbx`
 
 val x64_triples = Count.apply x64_triples
 

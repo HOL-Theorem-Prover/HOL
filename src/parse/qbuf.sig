@@ -16,4 +16,3 @@ signature qbuf = sig
   val toString : 'a qbuf -> string
 
 end;
-

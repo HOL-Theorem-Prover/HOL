@@ -3,7 +3,7 @@
 \TYPE {mk_thm : term list * term -> thm}
 
 \SYNOPSIS
-Creates an arbitrary theorem (dangerous!)
+Creates an arbitrary theorem (dangerous!).
 
 \DESCRIBE
 The function {mk_thm} can be used to construct an arbitrary theorem. It is

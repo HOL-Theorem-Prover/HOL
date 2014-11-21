@@ -292,7 +292,9 @@ end
 
 (* ------------------------------------------------------------------------- *)
 
-(* Simplify expressions of the form ``word_bit i (v2w [...])``.
+(* Simplify expressions of the form
+
+   ``word_bit i (v2w [...])`` and ``v2w [...] ' i``.
 
    For example:
 
@@ -314,7 +316,11 @@ local
 in
    fun word_bit_CONV tm =
       let
-         val (i, t) = wordsSyntax.dest_word_bit tm
+         val ((i, t), c) =
+            case Lib.total wordsSyntax.dest_word_bit tm of
+               SOME x => (x, ALL_CONV)
+             | NONE => (Lib.swap (fcpSyntax.dest_fcp_index tm),
+                        wordsLib.WORD_BIT_INDEX_CONV false)
          val ty = wordsSyntax.dim_of t
          val lt_thm =
                numSyntax.mk_less (i, fcpSyntax.mk_dimindex ty)
@@ -323,7 +329,7 @@ in
                  |> Drule.EQT_ELIM
          val thm = Drule.MATCH_MP word_bit_last_shiftr lt_thm
       in
-         (Conv.REWR_CONV thm THENC cnv) tm
+         (c THENC Conv.REWR_CONV thm THENC cnv) tm
       end
       handle HOL_ERR {message = m, ...} => raise ERR "word_bit_CONV" m
 end
@@ -509,6 +515,29 @@ in
            is_boolify = is_boolify } : bitify_boolify
       end
 end
+
+(* ------------------------------------------------------------------------- *)
+
+val add_bitstring_compset =
+   let
+      open bitstringTheory
+   in
+      computeLib.add_thms
+       [
+        numLib.SUC_RULE extend_def, boolify_def, bitify_def, n2v_def, v2n_def,
+        s2v_def, v2s_def, shiftl_def, shiftr_def, field_def, rotate_def,
+        w2v_def, rev_count_list_def, modify_def, field_insert_def, add_def,
+        bitwise_def, bnot_def, bor_def, band_def, bxor_def, bnor_def,
+        bxnor_def, bnand_def, replicate_def, testbit, ops_to_v2w, ops_to_n2w,
+        fixwidth, extend, v2w_11, bit_v2w, w2n_v2w, w2v_v2w, w2w_v2w,
+        sw2sw_v2w, word_index_v2w, word_lsl_v2w, word_lsr_v2w, word_asr_v2w,
+        word_ror_v2w, word_1comp_v2w, word_and_v2w, word_or_v2w, word_xor_v2w,
+        word_nand_v2w, word_nor_v2w, word_xnor_v2w, word_lsb_v2w, word_msb_v2w,
+        word_reverse_v2w, word_modify_v2w, word_bits_v2w, word_extract_v2w,
+        word_slice_v2w, word_join_v2w, word_concat_v2w_rwt, word_reduce_v2w,
+        reduce_and_v2w, reduce_or_v2w
+       ]
+   end
 
 (* ------------------------------------------------------------------------- *)
 

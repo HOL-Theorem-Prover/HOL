@@ -317,12 +317,26 @@ fun IMP_EQ_CANON (thm,bnd) = let
       else if conc = truth_tm then
         (trace(2,IGNORE ("pointless rewrite",thm)); [])
       else if conc = false_tm then [(MP x_eq_false undisch_thm, bnd)]
-      else if is_comb conc andalso same_const (rator conc) Abbrev_tm then
-        if is_eq (rand conc) then
-          undisch_thm |> CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
-                      |> SYM
-                      |> IMP_EQ_CANONb
-        else []
+      else if is_comb conc andalso same_const (rator conc) Abbrev_tm then let
+          val rnd = rand conc
+          fun funeqconv t =
+              if is_abs (rhs t) then
+                (REWR_CONV FUN_EQ_THM THENC
+                 BINDER_CONV (RAND_CONV BETA_CONV THENC funeqconv)) t
+              else REWR_CONV EQ_SYM_EQ t
+        in
+          if is_eq rnd then let
+              val bth = undisch_thm
+                          |> CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
+              val base_eqns = bth |> SYM |> IMP_EQ_CANONb
+            in
+              if is_abs (rhs rnd) then
+                base_eqns @ (bth |> CONV_RULE funeqconv |> IMP_EQ_CANONb)
+              else
+                base_eqns
+            end
+          else []
+        end
       else [(EQT_INTRO undisch_thm, bnd)]
 in
   map (fn (th,bnd) => (CONJ_DISCH conditions th, bnd)) undisch_rewrites

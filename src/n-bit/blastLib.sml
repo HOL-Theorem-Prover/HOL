@@ -1242,6 +1242,8 @@ val FULL_BBLAST_TAC =
               (Lib.can (HolKernel.find_term full_is_blastable)) MP_TAC)
    THEN BBLAST_TAC
 
+fun BBLAST_PROVE_TAC (asl, w) = ACCEPT_TAC (BBLAST_PROVE w) (asl, w)
+
 (* ------------------------------------------------------------------------ *)
 
 end

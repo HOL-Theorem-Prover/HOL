@@ -224,6 +224,13 @@ val LEAST_EQ = store_thm(
   SIMP_TAC (srw_ss()) []);
 val _ = export_rewrites ["LEAST_EQ"]
 
+val LEAST_T = store_thm(
+  "LEAST_T[simp]",
+  ``(LEAST x. T) = 0``,
+  DEEP_INTRO_TAC LEAST_ELIM THEN SIMP_TAC (srw_ss()) [] THEN
+  Q.X_GEN_TAC `n` THEN STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_ZERO_LT_ZERO] THEN METIS_TAC[]);
+
 (* ----------------------------------------------------------------------
     OLEAST ("option LEAST") returns NONE if the argument is a predicate
     that is everywhere false.  Otherwise it returns SOME n, where n is the

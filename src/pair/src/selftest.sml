@@ -95,6 +95,15 @@ val (single_rules, single_ind, single_cases) = Hol_reln`
 `;
 val _ = checkhyps single_rules
 
+val _ = print "*** Overloading case constant (pairs)\n"
+val _ = overload_on ("foo", ``\p. case p of (x,y) => x /\ y``)
+val _ = tpp "foo z"
+val _ = set_trace "types" 1
+val _ = trace ("types", 1) tpp  "case (p :'a # 'b) of (x,y) => x"
 
+val _ = print "*** Overloading case constant (booleans)\n"
+val _ = overload_on ("bar", ``\b. if b then T else F``)
+val _ = tpp "bar T"
+val _ = trace ("types", 1) tpp "if (b :bool) then (x :'a) else (y :'a)"
 
 val _ = Process.exit Process.success

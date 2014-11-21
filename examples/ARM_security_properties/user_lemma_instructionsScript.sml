@@ -11,7 +11,10 @@ open wordsTheory wordsLib;
 val _ =  new_theory("user_lemma_instructions");
 
 val _ = temp_overload_on ("return", ``constT``);
+val _ = diminish_srw_ss ["one"]
+val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
+val _ = goalStack.chatting := !Globals.interactive
 
 (* import simplist *)
 val _ = simp_thms_list := (CONJUNCTS simplist_export_thm);
@@ -65,7 +68,7 @@ val branch_instruction_comb_thm = save_comb_thm("branch_instruction_comb_thm", t
 (************************************************************)
 
 
-val _ = g `preserve_relation_mmu 
+val _ = g `preserve_relation_mmu
   ((current_mode_is_user_or_system <|proc := 0|>
       ||| current_instr_set <|proc := 0|>) >>=
    (λ(is_user_or_system,iset).
@@ -105,7 +108,7 @@ val store_return_state_instr_help_let_thm = save_thm ("store_return_state_instr_
 
 
 val store_return_state_instr_help_let_comb_thm = store_thm ("store_return_state_instr_help_let_comb_thm",
-    ``preserve_relation_mmu 
+    ``preserve_relation_mmu
      ((current_mode_is_user_or_system <|proc := 0|>
       ||| current_instr_set <|proc := 0|>) >>=
    (λ(is_user_or_system,iset).
@@ -144,7 +147,7 @@ val store_return_state_instr_help_let_comb_thm = store_thm ("store_return_state_
         THEN ASSUME_TAC (SPECL [``16w:word5``, ``27w:word5``] comb_mode_thm)
         THEN ASSUME_TAC (SPECL [``(assert_mode 16w):(arm_state->bool)``,
                      ``(assert_mode 27w):(arm_state->bool)``,
-                     ``(comb_mode 16w 27w):(arm_state->bool)``, 
+                     ``(comb_mode 16w 27w):(arm_state->bool)``,
                      ``(assert_mode 16w):(arm_state->bool)``] (INST_TYPE [alpha |-> type_of(``()``)] preserve_relation_comb_v2_thm))
         THEN RES_TAC);
 val _ =  add_to_simplist store_return_state_instr_help_let_comb_thm;
@@ -366,7 +369,7 @@ val _ = add_to_simplist store_multiple_part_thm_13;
 val _ = add_to_simplist store_multiple_part_thm_15;
 
 
-val load_multiple_part = 
+val load_multiple_part =
       ``(λ(base,cpsr).
            forT 0 14
              (λi.
@@ -443,7 +446,7 @@ val _ = add_to_simplist load_multiple_part_thm;
 val _ = add_to_simplist load_multiple_part_thm_13;
 val _ = add_to_simplist load_multiple_part_thm_15;
 
-  
+
 
 
 val _ = g `preserve_relation_mmu (load_store_instruction <|proc:=0|> (enc,inst))(assert_mode 16w) (comb_mode 16w 27w) priv_mode_constraints priv_mode_similar`;
@@ -618,12 +621,12 @@ val _ = add_to_simplist multiply_long_instr_part_thm;
 val _ = g `preserve_relation_mmu (data_processing_instruction <|proc := 0|> (enc,inst)) (assert_mode 16w) (comb_mode 16w 27w) priv_mode_constraints priv_mode_similar`;
 val _ = e (Cases_on `inst` THEN FULL_SIMP_TAC (srw_ss()) []);
 (*30 subgoals *)
-(* data processing *) 
+(* data processing *)
 val _ = e(FULL_SIMP_TAC (srw_ss()) [data_processing_instruction_def, data_processing_instr, LET_DEF] THEN PairedLambda.GEN_BETA_TAC);
 val _ = e(Q.ABBREV_TAC `xx = (shifted, C_shift)`);
 val _ = go_on_p 1;
 (* add sub *)
-val _ = go_on_p 1; 
+val _ = go_on_p 1;
 (* move halfword  *)
 val _ = e(Cases_on `enc` THEN FULL_SIMP_TAC (srw_ss()) []);
 val _ = go_on_p 4;
@@ -755,8 +758,8 @@ val _ = go_on_p 2;
 (* breakpoint *)
 val _ = e(MODE_MIX_TAC ``little_mode_mix``);
 val _ = e(FULL_SIMP_TAC (srw_ss()) [breakpoint_instr]);
-val _ = e(SUBGOAL_THEN ``!info. preserve_relation_mmu (if version_number info.arch < 5 then take_undef_instr_exception <|proc := 0|> else take_prefetch_abort_exception <|proc := 0|>) (assert_mode 16w) little_mode_mix priv_mode_constraints_v1 priv_mode_similar`` 
-  (fn th => ASSUME_TAC th 
+val _ = e(SUBGOAL_THEN ``!info. preserve_relation_mmu (if version_number info.arch < 5 then take_undef_instr_exception <|proc := 0|> else take_prefetch_abort_exception <|proc := 0|>) (assert_mode 16w) little_mode_mix priv_mode_constraints_v1 priv_mode_similar``
+  (fn th => ASSUME_TAC th
        THEN ASSUME_TAC (SPEC ``(λinfo. if version_number info.arch < 5 then take_undef_instr_exception <|proc := 0|> else take_prefetch_abort_exception <|proc := 0|>)`` (INST_TYPE [alpha |-> Type `:ARMinfo`, beta |-> Type `:unit`]  second_abs_lemma))
        THEN ASSUME_TAC trans_priv_mode_constraints_thm
        THEN ASSUME_TAC (SPECL [``(read_info <|proc:=0|>):(ARMinfo M)``, ``( \info. (if version_number info.arch < 5 then take_undef_instr_exception <|proc := 0|> else take_prefetch_abort_exception <|proc := 0|>))``, ``16w:word5``, ``little_mode_mix``, ``little_mode_mix``, ``priv_mode_constraints_v1``, ``priv_mode_similar``] (INST_TYPE [alpha |-> Type `:ARMinfo`, beta |-> Type `:unit`] seqT_preserves_relation_comb_thm))
@@ -820,7 +823,7 @@ val IT_advance_constlem = store_thm(
                 THEN FULL_SIMP_TAC (srw_ss()) [],
              ALL_TAC,
              ALL_TAC]
-      THEN UNDISCH_ALL_TAC 
+      THEN UNDISCH_ALL_TAC
       THEN EVAL_TAC
       THEN RW_TAC (srw_ss()) []
       THEN Cases_on `s`
@@ -930,25 +933,25 @@ val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
     RW_TAC (srw_ss()) [arm_instr_alternative_def, preserve_relation_mmu_def, seqT_def, condT_def]
        THEN (ASSUME_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``cond:word4``] condition_passed_similar_lem)
                 THEN NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [untouched_refl])
-                THEN ASSUME_TAC reflex_priv_mode_constraints_v2a_thm 
-                THEN IMP_RES_TAC reflexive_comp_def 
-                THEN UNDISCH_ALL_TAC 
+                THEN ASSUME_TAC reflex_priv_mode_constraints_v2a_thm
+                THEN IMP_RES_TAC reflexive_comp_def
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) []
                 THENL [FULL_SIMP_TAC (srw_ss()) [mode_mix_def, assert_mode_def],
                        FULL_SIMP_TAC (srw_ss()) [mode_mix_def, assert_mode_def],
-                       IMP_RES_TAC similarity_implies_equal_av_thm, 
-                       IMP_RES_TAC similarity_implies_equal_av_thm, 
+                       IMP_RES_TAC similarity_implies_equal_av_thm,
+                       IMP_RES_TAC similarity_implies_equal_av_thm,
                        ALL_TAC]
                 THEN Cases_on `arm_instr_core <|proc := 0|> pass enc cond inst s2`
                 THEN ASSUME_TAC arm_instr_core_comb_thm
                 THEN FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def]
-                THEN UNDISCH_ALL_TAC 
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) []
                 THEN SPEC_ASSUM_TAC (``!g s1 s2. X``, [``g:word32``, ``s1:arm_state``, ``s2:arm_state``])
-                THEN UNDISCH_ALL_TAC 
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) [constT_def]
                 THEN IMP_RES_TAC  similarity_implies_equal_av_thm
-                THEN UNDISCH_ALL_TAC 
+                THEN UNDISCH_ALL_TAC
                 THEN RW_TAC (srw_ss()) []
                 THEN Cases_on `ARM_MODE s1' = 16w`
                 THEN IMP_RES_TAC similarity_implies_equal_av_thm
@@ -960,7 +963,7 @@ val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
                 THEN IMP_RES_TAC untouched_mmu_setup_lem
                 THEN (NTAC 2 ((`(ARM_MODE s1' = 16w) /\ (ARM_MODE b = 16w)` by FULL_SIMP_TAC (srw_ss())  [])
                                   THEN FULL_SIMP_TAC (srw_ss()) []
-                                  THEN RES_TAC 
+                                  THEN RES_TAC
                                   THEN FULL_SIMP_TAC (srw_ss()) []))
                 THEN METIS_TAC [untouched_trans, trans_priv_mode_constraints_thm, trans_fun_def, mode_mix_def],
               `((s1'.psrs (0,CPSR)).IT = 0w) /\ ((b.psrs (0,CPSR)).IT = 0w)` by FULL_SIMP_TAC (srw_ss())  [priv_mode_constraints_v2a_def, priv_mode_constraints_v1_def, LET_DEF]
@@ -969,13 +972,4 @@ val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
 
 
 
-
-
 val _ = export_theory();
-
-
- 
-
-
-
-

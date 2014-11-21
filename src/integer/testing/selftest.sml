@@ -30,4 +30,3 @@ val cooper_result =
 val _ = Process.exit (if cooper_result andalso omega_result then
                         Process.success
                       else Process.failure)
-

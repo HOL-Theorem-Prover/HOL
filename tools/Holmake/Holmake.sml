@@ -37,58 +37,6 @@ val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
-val spacify = String.concatWith " "
-
-fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
-
-fun collapse_bslash_lines s = let
-  val charlist = explode s
-  fun trans [] = []
-    | trans (#"\\"::(#"\n"::rest)) = trans rest
-    | trans (x::xs) = x :: trans xs
-in
-  implode (trans charlist)
-end
-
-fun realspace_delimited_fields s = let
-  open Substring
-  fun inword cword words ss =
-      case getc ss of
-        NONE => List.rev (implode (List.rev cword) :: words)
-      | SOME (c,ss') => let
-        in
-          case c of
-            #" " => outword (implode (List.rev cword) :: words) ss'
-          | #"\\" => let
-            in
-              case getc ss' of
-                NONE => List.rev (implode (List.rev (c::cword)) :: words)
-              | SOME (c',ss'') => inword (c'::cword) words ss''
-            end
-          | _ => inword (c::cword) words ss'
-        end
-  and outword words ss =
-      case getc ss of
-        NONE => List.rev words
-      | SOME(c, ss') => let
-        in
-          case c of
-            #" " => outword words ss'
-          | _ => inword [] words ss
-        end
-in
-  outword [] (full s)
-end
-
-
-local val expand_backslash =
-        String.translate (fn #"\\" => "\\\\" | ch => Char.toString ch)
-in
-fun quote s = String.concat["\"", expand_backslash s, "\""]
-end
-
-fun exists_readable s = FileSys.access(s, [FileSys.A_READ])
-
 (*---------------------------------------------------------------------------
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
@@ -418,14 +366,6 @@ fun compile debug args = let
 in
   SYSTEML (MOSMLCOMP::args)
 end;
-
-fun die_with message = let
-  open TextIO
-in
-  output(stdErr, message ^ "\n");
-  flushOut stdErr;
-  Process.exit Process.failure
-end
 
 (* turn a variable name into a list *)
 fun envlist env id = let
@@ -1139,34 +1079,6 @@ in
   else true
 end
 
-fun generate_all_plausible_targets () = let
-  val extra_targets = case first_target of NONE => [] | SOME s => [toFile s]
-  fun find_files ds P =
-    case FileSys.readDir ds of
-      NONE => (FileSys.closeDir ds; [])
-    | SOME fname => if P fname then fname::find_files ds P
-                               else find_files ds P
-  val cds = FileSys.openDir "."
-  fun not_a_dot f = not (String.isPrefix "." f)
-  fun ok_file f =
-    case (toFile f) of
-      SIG _ => true
-    | SML _ => true
-    | _ => false
-  val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
-  fun src_to_target (SIG (Script s)) = UO (Theory s)
-    | src_to_target (SML (Script s)) = UO (Theory s)
-    | src_to_target (SML s) = (UO s)
-    | src_to_target (SIG s) = (UI s)
-    | src_to_target _ = raise Fail "Can't happen"
-  val initially = map (src_to_target o toFile) src_files @ extra_targets
-  fun remove_sorted_dups [] = []
-    | remove_sorted_dups [x] = [x]
-    | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
-                                     else x :: remove_sorted_dups (y::z)
-in
-  remove_sorted_dups (Listsort.sort file_compare initially)
-end
 
 
 fun stop_on_failure tgts =
@@ -1198,7 +1110,7 @@ fun hm_recur ctgt k =
 in
   case targets of
     [] => let
-      val targets = generate_all_plausible_targets ()
+      val targets = generate_all_plausible_targets first_target
       val targets = map fromFile targets
       val _ =
         if debug then let

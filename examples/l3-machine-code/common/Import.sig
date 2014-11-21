@@ -3,11 +3,14 @@ sig
 
    datatype monop =
        Abs
-     | Bin
      | BNot
+     | Bin
+     | Cardinality
      | Cast of ParseDatatype.pretype
      | Dec
-     | Flat
+     | Difference
+     | Drop
+     | Element
      | FPAbs of int
      | FPAdd of int
      | FPEqual of int
@@ -16,16 +19,21 @@ sig
      | FPMul of int
      | FPNeg of int
      | FPSub of int
+     | Flat
      | Fst
      | Head
      | Hex
+     | IndexOf
+     | Intersect
      | IsAlpha
      | IsAlphaNum
      | IsDigit
      | IsHexDigit
      | IsLower
+     | IsMember
      | IsSome
      | IsSpace
+     | IsSubset
      | IsUpper
      | K1 of ParseDatatype.pretype
      | Length
@@ -35,8 +43,12 @@ sig
      | Msb
      | Neg
      | Not
+     | Nub
      | PadLeft
      | PadRight
+     | Remove
+     | RemoveExcept
+     | RemoveDuplicates
      | Rev
      | SE of ParseDatatype.pretype
      | Size
@@ -46,8 +58,10 @@ sig
      | SofL
      | Some
      | Tail
+     | Take
      | ToLower
      | ToUpper
+     | Union
      | ValOf
 
    datatype binop =
@@ -93,7 +107,8 @@ sig
    val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit
    val Def : string * Term.term * Term.term -> Theory.thm
-   val tDef : string * Term.term * Term.term * Term.term -> Theory.thm
+   val tDef :
+      string * Term.term * Term.term * Term.term * Tactic.tactic -> Theory.thm
    val Def0 : string * Term.term -> Theory.thm
 
    val bTy : ParseDatatype.pretype
@@ -167,6 +182,7 @@ sig
    val EX : Term.term * Term.term * Term.term * ParseDatatype.pretype ->
             Term.term
    val BFI : Term.term * Term.term * Term.term * Term.term -> Term.term
+   val REP : Term.term * Term.term * ParseDatatype.pretype -> Term.term
    val CC : Term.term list -> Term.term
    val EQ : Term.term * Term.term -> Term.term
    val MU : Term.term * ParseDatatype.pretype -> Term.term
@@ -176,6 +192,7 @@ sig
    val MN : Term.term * Term.term -> Term.term
    val MD : Term.term * ParseDatatype.pretype -> Term.term
    val For : Term.term -> Term.term
+   val Foreach : Term.term -> Term.term
    val Mop : monop * Term.term -> Term.term
    val Bop : binop * Term.term * Term.term -> Term.term
 

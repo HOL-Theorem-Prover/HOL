@@ -1,6 +1,12 @@
 EXTRA_CLEANS = selftest.exe
-BOOLLIB = $(dprot $(HOLDIR)/src/1/boolLib.ui)
-NUMTHY = $(dprot $(HOLDIR)/src/num/theories/numeralTheory.uo)
+BOOLLIB = $(dprot $(SIGOBJ)/boolLib.ui)
+NUMTHY = $(dprot $(SIGOBJ)/numeralTheory.uo)
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
 
 selftest.exe : selftest.uo numSimps.uo
 	HOLMOSMLC -o $@ $<
@@ -11,4 +17,3 @@ GenRelNorm.uo: GenRelNorm.sml $(BOOLLIB)
 NumRelNorms.uo: NumRelNorms.sml NumRelNorms.ui GenRelNorm.uo \
                 GenPolyCanon.uo $(BOOLLIB) $(NUMTHY)
 	HOLMOSMLC -c Overlay.ui GenRelNorm.ui $<
-

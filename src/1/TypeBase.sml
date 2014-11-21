@@ -170,6 +170,89 @@ fun is_record_type x = TypeBasePure.is_record_type (theTypeBase()) x;
     Initialise the case-split munger in the pretty-printer
    ---------------------------------------------------------------------- *)
 
-val _ = term_pp.init_casesplit_munger strip_case
+(*
+  This is broken because it can re-order rows in the case expression in a semantically significant way
+local
+  fun group_by f =
+    let
+      fun i x [] = [[x]]
+        | i x (y::ys) =
+          if f x (hd y)
+          then ((x::y)::ys)
+          else y::(i x ys)
+      fun g acc [] = acc
+        | g acc (x::xs) =
+          g (i x acc) xs
+    in
+      g []
+    end
+  fun aconv_snd x y = aconv (snd x) (snd y)
+  fun max x y = if x < y then y else x
+  fun lengths [] n acc = (n,acc)
+    | lengths (l::ls) n acc =
+      let
+        val m = length l
+      in
+        lengths ls (max n m) ((m,l)::acc)
+      end
+in
+  fun pp_strip_case tm =
+    let
+      val (split_on, splits) = strip_case tm
+      val reduced_splits =
+        let
+          val groups = group_by aconv_snd splits
+          (* groups are in order, but each group is reversed *)
+          val (maxl,lgs) = lengths groups 0 []
+          (* lgs are now reversed *)
+        in
+          case total (pluck (equal maxl o fst)) lgs of
+            SOME ((_,(p,v)::_),lgs) =>
+              rev ((mk_var("_",type_of p),v)::flatten (map snd lgs))
+          | _ => splits
+        end
+    in
+      (split_on, reduced_splits)
+    end
+end
+*)
+
+(* Less ambitious version, which only fires if all (>1) but one row have
+   the same right-hand-side and it doesn't depend on any pattern variables.*)
+local
+  val disjoint = HOLset.isEmpty o HOLset.intersection
+  fun FV tm = FVL [tm] empty_varset
+in
+  fun pp_strip_case tm =
+    let
+      val (split_on, splits) = strip_case tm
+      fun sole_exception (p,v) =
+        let
+          val (l1,l2) = partition (aconv v o snd) splits
+          val v_rest = snd (hd l2)
+          fun good (p,v) = aconv v_rest v andalso disjoint (FV p, FV v)
+        in
+          if length l1 = 1 andalso all good l2
+          then (hd l1, v_rest)
+          else raise Match
+        end
+      val reduced_splits =
+        case splits of
+          [] => splits
+        | [_] => splits
+        | [_,_] => splits
+        | _ =>
+          let
+            val (u as (p,_),v_rest) = tryfind sole_exception splits
+          in
+            [u,(mk_var("_",type_of p),v_rest)]
+          end
+          handle HOL_ERR _ => splits
+    in
+      (split_on, reduced_splits)
+    end
+end
+
+val _ = term_pp.init_casesplit_munger pp_strip_case
 
 end

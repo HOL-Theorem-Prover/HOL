@@ -17,7 +17,7 @@ end
 
 open Parse
 
-val ERR = Feedback.mk_HOL_ERR "arm_evalLib"
+val ERR = Feedback.mk_HOL_ERR "arm_configLib"
 
 (* ----------------------------------------------------------------------- *)
 

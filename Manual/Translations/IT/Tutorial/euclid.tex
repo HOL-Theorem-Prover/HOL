@@ -25,8 +25,8 @@ il problema in modo chiaro.
 
 Si `guida' \holn{} interagendo con il loop interattivo ML. In questo 
 stile interattivo, si eseguono chiamate a funzioni ML per richiamare 
-un contesto logico già stabilito, \eg, attraverso \ml{load}; per definire 
-nuovi concetti, \eg, attraverso \ml{Hol\_datatype},  \ml{Define}, e \ml{Hol\_reln};
+un contesto logico già stabilito, ad esempio, attraverso \ml{load}; per definire 
+nuovi concetti, ad esempio, attraverso \ml{Hol\_datatype},  \ml{Define}, e \ml{Hol\_reln};
 e per eseguire dimostrazioni usando l'interfaccia goalstack, e 
 gli strumenti di dimostrazione da \ml{bossLib} (o se essi falliscono, dalle 
 librerie di basso livello).
@@ -94,7 +94,7 @@ decisamente più semplice di spiegare come dimostrare i teoremi richiesti.
 
 \paragraph{Strumenti di dimostrazione}
 Lo sviluppo illustrerà che c'è spesso più di un modo di 
-affrontare una dimostrazione HOL, persino quando uno ha in mente un'unica dimostrazione 
+affrontare una dimostrazione HOL, persino quando si ha in mente un'unica dimostrazione 
 (informale). In questo esempio, spesso \emph{troviamo} dimostrazioni usando 
 la tattica di riscrittura \ml{RW\_TAC} per espandere le definizioni ed eseguire semplificazioni 
 di base, riducendo spesso un goal alla sua essenza.
@@ -126,7 +126,7 @@ essere invocata con essi, con la speranza che essa individuerà le istanziazioni
 corrette necessarie per concludere la dimostrazione. Si noti che queste due operazioni, 
 la semplificazione e la ricerca automatica di una dimostrazione nello stile della risoluzione, non saranno sufficienti per 
 eseguire tutte le dimostrazioni in questo esempio: in particolare, il nostro sviluppo, avrà 
-anche bisogno dell'analisi di casi e dell'induzione.
+anche bisogno dell'analisi dei casi e dell'induzione.
 
 \paragraph{Trovare i teoremi}
 Questo fa sorgere la seguente domanda: come si trovano i giusti lemmi e 
@@ -171,7 +171,7 @@ ragionatore in una situazione particolare è una questione di esperienza. La
 ragione principale per cui \ml{METIS\_TAC} funziona così bene è che \verb+divides+ 
 è definita per mezzo di un quantificatore esistenziale, e \ml{METIS\_TAC} 
 è piuttosto buono per istanziare in modo automatico gli esistenziali nel 
-corso di una dimostrazione. Per un semplice esempio, si consideri la la dimostrazione di $\forall x.\
+corso di una dimostrazione. Per un semplice esempio, si consideri la dimostrazione di $\forall x.\
 x\; \mathtt{divides}\; 0$. Si inserisce una nuova proposizione da dimostrare 
 attraverso ``\ml{g}'', che avvia un nuovo goalstack.
 

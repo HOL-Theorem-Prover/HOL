@@ -27,7 +27,7 @@ default:
 # ---------------------------------------------------------------------
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
-              entries.tex theorems.tex *.ind pair.{ps,pdf}
+              entries.tex theorems.tex *.ind pair.ps pair.pdf
 
 tex: ids theorems
 	@echo "TeX files made"

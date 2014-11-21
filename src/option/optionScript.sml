@@ -191,6 +191,8 @@ val OPTION_MAP2_THM = Q.store_thm("OPTION_MAP2_THM",
    (OPTION_MAP2 f NONE NONE = NONE)`,
   REWRITE_TAC (OPTION_MAP2_DEF::option_rws));
 val _ = export_rewrites ["OPTION_MAP2_THM"];
+val _ = overload_on("lift2", ``OPTION_MAP2``)
+val _ = overload_on("OPTION_MAP2", ``OPTION_MAP2``)
 
 val option_rws = OPTION_MAP2_THM::option_rws;
 
@@ -495,6 +497,50 @@ val OPTION_CHOICE_EQ_NONE = store_thm(
   OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC[][]);
 
 (* ----------------------------------------------------------------------
+    OPTION_APPLY
+   ---------------------------------------------------------------------- *)
+
+val OPTION_APPLY_def = Prim_rec.new_recursive_definition
+  {name = "OPTION_APPLY_def",
+   rec_axiom = option_Axiom,
+   def = ``(OPTION_APPLY NONE x = NONE) /\
+           (OPTION_APPLY (SOME f) x = OPTION_MAP f x)``}
+val _ = export_rewrites ["OPTION_APPLY_def"]
+
+val _ = set_mapped_fixity { fixity = Infixl 500,
+                            term_name = "APPLICATIVE_FAPPLY",
+                            tok = "<*>" }
+val _ = overload_on ("APPLICATIVE_FAPPLY", ``OPTION_APPLY``)
+
+(* this could be the definition of OPTION_MAP2/lift2 *)
+val OPTION_APPLY_MAP2 = store_thm(
+  "OPTION_APPLY_MAP2",
+  ``OPTION_MAP f (x:'a option) <*> (y:'b option) = OPTION_MAP2 f x y``,
+  OPTION_CASES_TAC ``x:'a option`` THEN SRW_TAC[][] THEN
+  OPTION_CASES_TAC ``y:'b option`` THEN SRW_TAC[][]);
+
+(* monadic "laws" - first is clause 2 of definition above, so omitted below *)
+val SOME_SOME_APPLY = store_thm(
+  "SOME_SOME_APPLY",
+  ``SOME f <*> SOME x = SOME (f x)``,
+  SRW_TAC[][]);
+
+val SOME_APPLY_PERMUTE = store_thm(
+  "SOME_APPLY_PERMUTE",
+  ``(f:('a -> 'b) option)  <*> (SOME x) = SOME (\f. f x) <*> f``,
+  OPTION_CASES_TAC ``f:('a -> 'b) option`` THEN SRW_TAC[][]);
+
+val OPTION_APPLY_o = store_thm(
+  "OPTION_APPLY_o",
+  ``SOME $o <*> (f:('b->'c)option) <*> (g:('a->'b) option) <*> (x:'a option) =
+    f <*> (g <*> x)``,
+  OPTION_CASES_TAC ``f:('b->'c)option`` THEN SRW_TAC[][] THEN
+  OPTION_CASES_TAC ``g:('a->'b)option`` THEN SRW_TAC[][] THEN
+  OPTION_CASES_TAC ``x:'a option`` THEN SRW_TAC[][]);
+
+
+
+(* ----------------------------------------------------------------------
     OPTREL - lift a relation on 'a, 'b to 'a option, 'b option
    ---------------------------------------------------------------------- *)
 
@@ -608,6 +654,11 @@ val _ = adjoin_to_theory
     S "                OPTION_JOIN_DEF])";                      NL();
     S "        end;"
   end)};
+
+val datatype_option = store_thm(
+  "datatype_option",
+  ``DATATYPE (option (NONE:'a option) (SOME:'a -> 'a option))``,
+  REWRITE_TAC [DATATYPE_TAG_THM])
 
 val _ = TypeBase.write
   [TypeBasePure.mk_datatype_info

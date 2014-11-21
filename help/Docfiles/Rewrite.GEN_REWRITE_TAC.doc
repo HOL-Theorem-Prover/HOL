@@ -78,8 +78,8 @@ As another example, one can write a tactic which will behave similarly
 to {REWRITE_TAC} but will also include {ADD_CLAUSES} in the set of
 theorems to use always:
 {
-   let ADD_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV
-                             (ADD_CLAUSES . basic_rewrites) ;;
+   val ADD_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV
+                             (ADD_CLAUSES :: implicit_rewrites())
 }
 
 

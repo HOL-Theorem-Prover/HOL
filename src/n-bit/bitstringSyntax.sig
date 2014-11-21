@@ -56,6 +56,7 @@ sig
    val modify_tm : term
    val n2v_tm : term
    val replicate_tm : term
+   val rotate_tm : term
    val s2v_tm : term
    val shiftl_tm : term
    val shiftr_tm : term
@@ -81,6 +82,7 @@ sig
    val dest_modify : term -> term * term
    val dest_n2v : term -> term
    val dest_replicate : term -> term * term
+   val dest_rotate : term -> term * term
    val dest_s2v : term -> term
    val dest_shiftl : term -> term * term
    val dest_shiftr : term -> term * term
@@ -106,6 +108,7 @@ sig
    val is_modify : term -> bool
    val is_n2v : term -> bool
    val is_replicate : term -> bool
+   val is_rotate : term -> bool
    val is_s2v : term -> bool
    val is_shiftl : term -> bool
    val is_shiftr : term -> bool
@@ -131,6 +134,7 @@ sig
    val mk_modify : term * term -> term
    val mk_n2v : term -> term
    val mk_replicate : term * term -> term
+   val mk_rotate : term * term -> term
    val mk_s2v : term -> term
    val mk_shiftl : term * term -> term
    val mk_shiftr : term * term -> term

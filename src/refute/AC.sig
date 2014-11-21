@@ -13,4 +13,3 @@ sig
   val ASSOC_CONV        : thm -> conv
   val DISTRIB_CONV      : thm * thm -> conv
 end
-

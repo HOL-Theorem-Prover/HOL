@@ -160,7 +160,7 @@ For example, in the following case, the \HOL{} type checker used the known type 
 In the next two cases, the type of \ml{x} and \ml{y} cannot be
 deduced.
 (The default `scope' of type information for type checking is a single quotation, so a type in one quotation cannot affect the type-checking of another.
-Thus \ml{x} is not constrained to have the the type \ml{bool} in the second quotation.)
+Thus \ml{x} is not constrained to have the type \ml{bool} in the second quotation.)
 
 \begin{session}
 \begin{verbatim}
@@ -740,7 +740,7 @@ This can then be rewritten using another pre-proved theorem
 \end{session}
 
 \ml{REWRITE\_RULE} is not a primitive in \HOL, but is a derived rule.
-It is inherited from Cambridge \LCF\ and was implemented by Larry Paulson (see his paper \cite{lcp_rewrite} for details).
+It is inherited from Cambridge \LCF\ and was implemented by Larry Paulson (see his paper \cite{lcp-rewrite} for details).
 In addition to the supplied equations, \ml{REWRITE\_RULE} has some built in standard simplifications:
 
 \begin{session}

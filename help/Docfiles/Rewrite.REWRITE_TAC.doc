@@ -19,7 +19,7 @@ to advance or to complete the decomposition of subgoals.
 {REWRITE_TAC} transforms (or solves) a goal by using as rewrite rules
 (i.e. as left-to-right replacement rules) the conclusions of the given
 list of (equational) theorems, as well as a set of built-in theorems
-(common tautologies) held in the ML variable {basic_rewrites}.
+(common tautologies) held in the ML variable {implicit_rewrites}.
 Recognition of a tautology often terminates the subgoaling process
 (i.e. solves the goal).
 

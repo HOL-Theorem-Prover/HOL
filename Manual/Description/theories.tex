@@ -40,8 +40,8 @@ In this theory, the type constant {\small\verb+bool+} of booleans,
 the binary type operator $(\alpha,\beta)${\small\verb+fun+} of functions, and the type
 constant {\small\verb+ind+} of individuals are declared. Building on
 these types, three primitive constants
-\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}
-\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}
+\index{constants, in HOL logic@constants, in \HOL{} logic!primitive logical}%
+\index{primitive constants, of HOL logic@primitive constants, of \HOL{} logic}%
 are declared: equality, implication, and a choice operator:
 \index{ equality, in HOL logic@\ml{=} (equality, in \HOL{} logic)}
 \index{equality, in HOL logic@equality, in \HOL{} logic}
@@ -65,8 +65,8 @@ characteristic\index{characteristic predicate, of type definitions}
 {\small\verb+@x.+}$t${\small\verb+ x+} denotes an arbitrary member of the
 set denoted by $\sigma$. The constant {\small\verb+@+} is a higher order
 version of Hilbert's
-\index{Hilbert, D.}
-\index{epsilon operator}
+\index{Hilbert, D.}%
+\index{epsilon operator}%
  $\hilbert$-operator; it is related to the constant
 $\iota$ in Church's formulation of higher order logic. For more details,
 see Church's
@@ -274,8 +274,8 @@ together, sufficient for developing all of standard mathematics. Thus,
 in principle, the user of the \HOL{} system should never need to make a
 non-definitional
 %
-\index{axioms!dispensibility of adding}
-\index{definitional theories}
+\index{axioms!dispensibility of adding}%
+\index{definitional theories}%
 %
 theory. In practice, it is often very tempting to take the risk of
 introducing new axioms because deriving them from definitions can be
@@ -408,9 +408,9 @@ infix
 \ml{arithmeticTheory} has been loaded, then \ml{``x+1``} is
 translated to \ml{``\$+~x~1``}. The escape character \ml{\$}
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}
-\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}
-\index{infixes, in HOL logic@infixes, in \HOL{} logic}
+\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{declared constants, in HOL logic@declared constants, in \HOL{} logic}%
+\index{infixes, in HOL logic@infixes, in \HOL{} logic}%
 %
 suppresses the infix behaviour of \ml{+} and prevents the quotation
 parser getting confused.  In general, \ml{\$} can be used to suppress
@@ -583,7 +583,7 @@ $t\ t_1 \cdots t_n$ &
 \ml{list\_mk\_disj}\index{list_mk_disj@\ml{list\_mk\_disj}},
 \ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} and
 for conjunctions, disjunctions, and implications respectively.
-The corresponding destructor functions are called \ml{strip\_comb}, \etc,
+The corresponding destructor functions are called \ml{strip\_comb} \etc
 %
 \index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
 %
@@ -638,8 +638,8 @@ proved. Many other theorems may be found in \theoryimp{bool} theory.
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|(}
 
 The theory \theoryimp{combin}
-\index{combin@\theoryimp{combin}}
-\index{combinators, in HOL logic@combinators, in \HOL{} logic}
+\index{combin@\theoryimp{combin}}%
+\index{combinators, in HOL logic@combinators, in \HOL{} logic}%
 contains the definitions of function composition (infixed \ml{o}),
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
 a reversed function application operator,
@@ -801,7 +801,10 @@ required by the type definition principle.}
 \end{verbatim}
 \end{hol}
 %
-The type operator {\small\verb%prod%} is defined by invoking \ml{new\_type\_definition}\index{new_type_definition@\ml{new\_type\_definition}} with this theorem which results in the definitional axiom \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for products} \index{axioms!in bool theory@in \ml{bool} theory} \ml{prod\_TY\_DEF} shown below being asserted in the theory \ml{pair}.
+The type operator {\small\verb%prod%} is defined by invoking \ml{new\_type\_definition}\index{new_type_definition@\ml{new\_type\_definition}} with this theorem which results in the definitional axiom
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for products}%
+\index{axioms!in bool theory@in \ml{bool} theory}%
+\ml{prod\_TY\_DEF} shown below being asserted in the theory \ml{pair}.
 %
 \begin{hol}
 \begin{verbatim}
@@ -963,7 +966,7 @@ The transformation is done recursively so that, for example,
 %
 \begin{hol}
 \begin{alltt}
-   UNCURRY \bs\m{x\sb{1}}. UNCURRY(\bs\m{x\sb{2}} \m{x\sb{3}}.\m{t}))
+   UNCURRY (\bs\m{x\sb{1}}. UNCURRY(\bs\m{x\sb{2}} \m{x\sb{3}}.\m{t}))
 \end{alltt}
 \end{hol}
 %
@@ -997,8 +1000,8 @@ transformation:
 \ml{\bs(x,y).x+y}, is not a subterm of the abstraction
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!subterms of}
 in which it occurs; it disappears on parsing.
-\index{binders, in HOL logic@binders, in \HOL{} logic!parsing of}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!of binders}
+\index{binders, in HOL logic@binders, in \HOL{} logic!parsing of}%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of binders}%
 This can lead to unexpected errors (accompanied by obscure error
 messages).  For example, antiquoting a pair into the bound variable
 position of a lambda abstraction fails:
@@ -1038,8 +1041,8 @@ The quotation parser
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of let-terms@of \holtxt{let}-terms}
 %
 accepts \ml{let}-terms
-\index{terms, in HOL logic@terms, in \HOL{} logic!let-@\holtxt{let}-}
-\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!as abbreviations}
+\index{terms, in HOL logic@terms, in \HOL{} logic!let-@\holtxt{let}-}%
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!as abbreviations}%
 similar to those in \ML. For example, the following terms are allowed:
 
 \begin{hol}
@@ -1205,7 +1208,7 @@ theorems in the theory \ml{one} are:
 \begin{hol}
 \index{one_Axiom@\ml{one\_Axiom}}
 \begin{verbatim}
-   one_axiom   |- !(f:'a->one) (g:'a -> one). f = g
+   one_axiom   |- !(f:'a->one) (g:'a->one). f = g
    one         |- !(v:one). v = one
    one_Axiom   |- !(e:'a). ?!(fn:one->'a). fn one = e
 \end{verbatim}
@@ -1339,9 +1342,9 @@ theory, the constants \ml{0}
 \index{ zero, in HOL logic@\ml{0} (zero, in \HOL{} logic)}
 and \ml{SUC} (the successor function) are defined
 and Peano's axioms
-\index{axioms!in num theory@in \ml{num} theory}
-\index{Peano's axioms}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}
+\index{axioms!in num theory@in \ml{num} theory}%
+\index{Peano's axioms}%
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numbers}%
 pre-proved in the form:
 
 \begin{hol}
@@ -1419,8 +1422,8 @@ the primitive recursive definition whose form is determined by \ml{x} and
 \paragraph{The less-than relation}
 
 The less-than relation `\holtxt{<}'
-\index{ less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}
-\index{less than, in HOL logic@less than, in \HOL{} logic}
+\index{ less than, in HOL logic@\ml{<} (less than, in \HOL{} logic)}%
+\index{less than, in HOL logic@less than, in \HOL{} logic}%
 is most naturally defined by primitive recursion. However, in our
 development it is needed for the proof of the
   primitive recursion theorem, so it must be defined before definition
@@ -1758,7 +1761,7 @@ Operator & Strength & Associativity \\ \hline
 The type \ml{num}
 \index{num, the type in \HOL{} logic@\ml{num}, the type in \HOL{} logic}
 is usually thought of as being supplied with an infinite collection of
-numerals: \ml{1}, \ml{2}, \ml{3}, \etc.  However, the \HOL{} logic has
+numerals: \ml{1}, \ml{2}, \ml{3}, etc. However, the \HOL{} logic has
 no way to define such infinite families of constants; instead, all
 numerals other than $0$ are actually built up from the constants
 introduced by the following definitions:
@@ -1807,7 +1810,7 @@ following session shows how \HOL{} numerals are constructed from elements of
 type \verb+num+ and how numerals are destructed. The structure
 {\small\verb+Arbnum+} provides a full collection of arithmetic
 operations, using the usual names for the operations, \eg \verb|+|,
-\verb|*|, \verb|-|, \etc.
+\verb|*|, \verb|-|, \etc
 
 \begin{session}
 \begin{verbatim}
@@ -2081,7 +2084,7 @@ sequences.
 \item [seq] Sequences and series of real numbers.
 \item [lim] Limits, continuity and differentiation.
 \item [powser] Power series.
-\item [transc] Transcendental functions, \emph{e.g.}, exp, sin,
+\item [transc] Transcendental functions, e.g., exp, sin,
 cos, ln, root, sqrt, pi, tan, asn, acs, atn. Also the Kurzweil-Henstock
 gauge integral the fundamental theorem of calculus, and McLaurin's
 theorem.
@@ -2191,7 +2194,7 @@ provides a flexible means for defining words -- one can supply a function
 \subsubsection{Bit theory}
 
 The theory \theoryimp{bit} defines some bit operations over the natural numbers,
-e.g. \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
+e.g.\ \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} and
 \holtxt{BIT\_MODIFY}. In this context, natural numbers are treated as binary words of
 unbounded length.  The operations in \theoryimp{bit} are primarily defined using \holtxt{DIV}, \holtxt{MOD} and \holtxt{EXP}.  For example, from the definition of \holtxt{BIT}, the following theorem holds:
 \begin{hol}
@@ -2796,6 +2799,16 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 \end{verbatim}
 \end{hol}
 
+\paragraph {Removal of duplicates}
+The \holtxt{nub} function removes all duplicate entries from a list.
+\begin{hol}
+\begin{verbatim}
+   nub_DEF
+     |- (nub [] = []) /\
+        (!x l. nub (x::l) = if MEM x l then nub l else x::nub l)
+\end{verbatim}
+\end{hol}
+
 \paragraph {Conversion to sets}
 
 Lists can be converted to sets (\ml{LIST\_TO\_SET}) by partial
@@ -2891,7 +2904,9 @@ theory can be found in \theoryimp{rich\_list}.
 
 The \theoryimp{sorting} theory defines a notion of two lists being
 permutations of each other, then defines a general notion of sorting,
-then shows that Quicksort is a sorting function.
+then shows that Quicksort is a sorting function. The 
+\theoryimp{mergesort} theory defines Merge sort and shows that it is a stable
+sorting function.
 
 \paragraph{List permutation}
 
@@ -3136,9 +3151,9 @@ used.
 
 The theory \theoryimp{path}
 %
-\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}
-\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}
-\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}
+\index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}%
+\index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}%
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}%
 %
 defines a binary type operator $(\alpha,\beta)\ml{path}$, which
 stands for possibly infinite paths of the following form
@@ -4271,7 +4286,7 @@ From these definitions, one can recover the initial rules.
 %
 Notice that {\small\verb+RTC_RULES+}, in keeping with the definition
 of {\small\verb+RTC+}, extends an \verb+R+-step from \verb+x+ to
-\verb+y+ with a a sequence of \verb+R+-steps from \verb+y+ to \verb+z+
+\verb+y+ with a sequence of \verb+R+-steps from \verb+y+ to \verb+z+
 to construct \verb+RTC x z+. The theorem
 {\small\verb+RTC_RULES_RIGHT1+} first makes a sequence of \verb+R+
 steps and then a single \verb+R+ step to form \verb+RTC x z+. Similar
@@ -4483,7 +4498,7 @@ main notions in the theory.
 \end{hol}
 
 The \HOL{} parser and printer will treat the syntax \holtxt{f\,'\,x} as
-the application of finite map \verb+f+ to argument \verb+x+, ie, as
+the application of finite map \verb+f+ to argument \verb+x+, \ie, as
 \holtxt{FAPPLY\,f\,x}. The notation \holtxt{f\,|+\,(x,y)} represents
 \holtxt{FUPDATE\,f\,(x,y)}, \ie, the updating of finite map
 \verb+f+ by the pair \verb+(x,y)+.

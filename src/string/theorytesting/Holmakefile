@@ -1,0 +1,16 @@
+CMPDIR = $(protect $(HOLDIR)/tools/cmp)
+
+INCLUDES = $(CMPDIR)
+
+.PHONY: all
+
+all: stringlit_output otherTheory.uo sampleTheory.uo
+
+stringlit_output: stringlit_input munge.exe expected-stringlit
+	./munge.exe < $< > $@
+	$(CMPDIR)/cmp.exe stringlit_output expected-stringlit
+
+munge.exe: $(dprot $(SIGOBJ)/stringLib.uo) $(dprot $(HOLDIR)/bin/mkmunge.exe)
+	$(protect $(HOLDIR)/bin/mkmunge.exe) stringLib
+
+EXTRA_CLEANS = stringlit_output munge.exe munger.o

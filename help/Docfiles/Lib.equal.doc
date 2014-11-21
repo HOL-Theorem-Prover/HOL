@@ -3,7 +3,7 @@
 \TYPE {equal : ''a -> ''a -> bool}
 
 \SYNOPSIS
-Curried form of ML equality
+Curried form of ML equality.
 
 \KEYWORDS
 Curry

@@ -3,14 +3,31 @@ sig
 
     include helperLib
 
+    val decompile_with :
+       ('a -> string list) -> decompiler_tools -> string -> 'a -> thm * thm
     val decompile : decompiler_tools -> string -> term quotation -> thm * thm
-    val decompile_strings : decompiler_tools -> string -> string list -> thm * thm
+    val decompile_strings :
+       decompiler_tools -> string -> string list -> thm * thm
 
-    val decompile_io : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
-    val decompile_io_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
+    val decompile_io_with :
+       ('a -> string list) -> decompiler_tools -> string ->
+       (term * term) option -> 'a -> thm * thm
+    val decompile_io :
+       decompiler_tools -> string -> (term * term) option -> term quotation ->
+       thm * thm
+    val decompile_io_strings :
+       decompiler_tools -> string -> (term * term) option -> string list ->
+       thm * thm
 
-    val basic_decompile : decompiler_tools -> string -> (term * term) option -> term quotation -> thm * thm
-    val basic_decompile_strings : decompiler_tools -> string -> (term * term) option -> string list -> thm * thm
+    val basic_decompile_with :
+       ('a -> string list) -> decompiler_tools -> string ->
+       (term * term) option -> 'a -> thm * thm
+    val basic_decompile :
+       decompiler_tools -> string -> (term * term) option -> term quotation ->
+       thm * thm
+    val basic_decompile_strings :
+       decompiler_tools -> string -> (term * term) option -> string list ->
+       thm * thm
 
     (* some internals exposed *)
 

@@ -3,7 +3,7 @@
 \TYPE {exn_to_string : exn -> string}
 
 \SYNOPSIS
-Map an exception into a string
+Map an exception into a string.
 
 \KEYWORDS
 exception, formatting

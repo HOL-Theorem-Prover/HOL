@@ -89,9 +89,9 @@ val write_ea_def = Define `
   (write_ea ii (Zea_i s i) x = failureT) /\  (* one cannot store into a constant *)
   (* 32-bit write clears top 32-bits, the others just update a subset of the bits *)
   (write_ea ii (Zea_r Z8 r) x = seqT (read_reg ii r)
-                                 (\w. write_reg ii r (((64--8)w) !! ((7--0)x)))) /\
+                                 (\w. write_reg ii r (((64--8)w) << 8 !! ((7--0)x)))) /\
   (write_ea ii (Zea_r Z16 r) x = seqT (read_reg ii r)
-                                  (\w. write_reg ii r (((64--16)w) !! ((15--0)x)))) /\
+                                  (\w. write_reg ii r (((64--16)w) << 16 !! ((15--0)x)))) /\
   (write_ea ii (Zea_r Z32 r) x = write_reg ii r (w2w ((w2w x):word32))) /\
   (write_ea ii (Zea_r Z64 r) x = write_reg ii r x) /\
   (write_ea ii (Zea_m Z8 a) x = write_m8 ii a (w2w x)) /\

@@ -3,7 +3,7 @@
 \TYPE {ONCE_REWRITE_TAC : thm list -> tactic}
 
 \SYNOPSIS
-Rewrites a goal only once with {basic_rewrites} and the supplied list
+Rewrites a goal only once with {implicit_rewrites} and the supplied list
 of theorems.
 
 \KEYWORDS

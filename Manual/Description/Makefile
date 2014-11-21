@@ -8,7 +8,7 @@ MAKEINDEX=makeindex
 BIBTEX=bibtex
 
 CHAPTERS = conv.tex drules.tex HolQbf.tex HolSat.tex HolSmt.tex		\
-           libraries.tex misc.tex preface.tex \
+           libraries.tex misc.tex preface.tex QuantHeuristics.tex	\
            tactics.tex theories.tex title.tex system.tex definitions.tex \
            enumfset.tex
 OTHER = ../LaTeX/commands.tex ../LaTeX/layout.sty ../LaTeX/ack.tex
@@ -18,7 +18,7 @@ pdf: description.pdf HolBdd.pdf holCheck.pdf
 
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind description.pdf \
-            *.bbl *.blg HolBdd.pdf holCheck.pdf
+            *.bbl *.blg *.out HolBdd.pdf holCheck.pdf
 
 description.pdf: description.tex $(CHAPTERS) $(OTHER)
 	${PDFLATEX}  description

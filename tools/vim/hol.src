@@ -2,7 +2,12 @@ if exists("b:did_hol")
   finish
 endif
 
-let s:holpipe =
+let s:defaultholpipe =
+if empty($VIMHOL_FIFO)
+  let s:holpipe = s:defaultholpipe
+else
+  let s:holpipe = $VIMHOL_FIFO
+endif
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
 new

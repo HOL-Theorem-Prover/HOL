@@ -10,7 +10,7 @@ Tests a term to see if it is a paired universal quantification.
 
 \DESCRIBE
 {is_pforall "!pair. t"} returns {true}.
-If the term is not a a paired universal quantification the result is {false}.
+If the term is not a paired universal quantification the result is {false}.
 
 \FAILURE
 Never fails.

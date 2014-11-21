@@ -105,6 +105,10 @@ val release = ""
 val DOT_PATH = ""
 
 val isUnix = true
+local val cast : 'a -> int = Obj.magic
+in
+  fun pointer_eq (x:'a, y:'a) = (cast x = cast y)
+end
 
 val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]

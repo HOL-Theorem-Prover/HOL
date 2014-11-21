@@ -35,7 +35,8 @@ in
     val flags = if staticp then POLY_LDFLAGS_STATIC else POLY_LDFLAGS
     val res = systeml ([CC, "-o", exe, "munger.o"] @ flags)
   in
-    if OS.Process.isSuccess res then ()
+    if OS.Process.isSuccess res
+    then OS.FileSys.remove "munger.o"
     else die "Linking of Poly/ML object code failed"
   end
 end

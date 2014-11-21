@@ -1,1 +1,1 @@
-INCLUDES = ../../common ../../common/fp ../../base
+INCLUDES = ../../common ../../base ../../lib

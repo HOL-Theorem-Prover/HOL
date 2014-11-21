@@ -3,7 +3,7 @@
 \TYPE {MESG_outstream : TextIO.outstream ref}
 
 \SYNOPSIS
-Reference to output stream used when printing {HOL_MESG}
+Reference to output stream used when printing {HOL_MESG}.
 
 \KEYWORDS
 I/O, messages, output

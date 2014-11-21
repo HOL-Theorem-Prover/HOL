@@ -770,4 +770,3 @@ val _ = export_theory();
 val _ = print_theory_to_file "-" "more_set.lst";
 
 val _ = html_theory "more_set";
-

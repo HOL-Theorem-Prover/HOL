@@ -48,5 +48,6 @@ sig
 
  val astHol_datatype  : AST list -> unit
  val Hol_datatype  : hol_type quotation -> unit
+ val Datatype : hol_type quotation -> unit
 
 end

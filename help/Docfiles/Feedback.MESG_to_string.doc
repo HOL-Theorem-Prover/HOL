@@ -3,7 +3,7 @@
 \TYPE {MESG_to_string : (string -> string) ref}
 
 \SYNOPSIS
-Alterable function for formatting {HOL_MESG}
+Alterable function for formatting {HOL_MESG}.
 
 \KEYWORDS
 message, formatting

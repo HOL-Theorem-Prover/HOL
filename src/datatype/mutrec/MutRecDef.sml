@@ -789,7 +789,7 @@ fun joint_select_x ty_name =
  are all the variable arguments to the operators of the joint type.  The
  abs_args are the abstractions from the joint type to the specific new types
  and the proj_args are the projections from the sum_type to the individual
- result types the the mutually recursive functions being defined.
+ result types the mutually recursive functions being defined.
  exists_specl is the set of specializations for the conjuncts.
 *)
 
@@ -1477,4 +1477,3 @@ end
 val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* MutRecDef *)
-

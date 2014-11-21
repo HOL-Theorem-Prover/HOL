@@ -1177,7 +1177,10 @@ val recbnf_of_correct = Store_thm(
     FULL_SIMP_TAC (srw_ss()) [minimise_def, pr_steps_pred_EQ0] THEN
     Q.EXISTS_TAC `steps n (toTerm (numdB t))` THEN CONJ_TAC THENL [
       METIS_TAC [bnf_steps],
-      Tactical.REVERSE (SRW_TAC [][]) THEN1 METIS_TAC [] THEN
+      Tactical.REVERSE (SRW_TAC [][])
+         THEN1 (`∃i. i < n ∧ ¬(0 < pr_steps_pred [i; t])` by METIS_TAC[] THEN
+                FULL_SIMP_TAC (srw_ss()) [pr_steps_pred_EQ0] THEN
+                METIS_TAC[]) THEN
       SELECT_ELIM_TAC THEN CONJ_TAC THEN1 METIS_TAC [] THEN
       Q.X_GEN_TAC `N` THEN REPEAT STRIP_TAC THEN
       SRW_TAC [][pr_steps_correct, fromTerm_11] THEN
@@ -1573,7 +1576,7 @@ val crecCn_succeeds1 = store_thm(
                                              MAP (λg. THE (Phi g x)) gs))))))))
   ` THEN1 (Q.UNABBREV_TAC `RHS` THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
            FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `gs`, `x`, `[]`] MP_TAC) THEN
-           SRW_TAC [][]) THEN
+           SRW_TAC [][Abbr`LL`]) THEN
   markerLib.UNABBREV_ALL_TAC THEN BETA_TAC THEN Induct_on `gs` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def, cnlist_of_behaviour, cchurch_behaviour] THEN
   SRW_TAC [][] THEN

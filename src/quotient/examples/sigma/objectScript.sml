@@ -32,7 +32,7 @@ open more_listTheory;
 open more_setTheory;
 open variableTheory;
 open bossLib;
-open MutualIndThen;
+open Mutual;
 
 
 open tactics;

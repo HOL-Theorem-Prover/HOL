@@ -41,6 +41,7 @@ sig
   val strlen_tm : term
   val sub_tm : term
   val substring_tm : term
+  val tochar_tm : term
   val tokens_tm : term
   val tolower_tm : term
   val toupper_tm : term
@@ -81,6 +82,7 @@ sig
   val mk_strlen : term -> term
   val mk_sub : term -> term
   val mk_substring : term -> term
+  val mk_tochar : term -> term
   val mk_tokens : term * term -> term
   val mk_tolower : term -> term
   val mk_toupper : term -> term
@@ -122,6 +124,7 @@ sig
   val dest_strlen : term -> term
   val dest_sub : term -> term
   val dest_substring : term -> term
+  val dest_tochar : term -> term
   val dest_tokens : term -> term * term
   val dest_tolower : term -> term
   val dest_toupper : term -> term
@@ -163,6 +166,7 @@ sig
   val is_strlen : term -> bool
   val is_sub : term -> bool
   val is_substring : term -> bool
+  val is_tochar : term -> bool
   val is_tokens : term -> bool
   val is_tolower : term -> bool
   val is_toupper : term -> bool
@@ -180,4 +184,3 @@ sig
   val lift_string       : hol_type -> string -> term
 
 end
-

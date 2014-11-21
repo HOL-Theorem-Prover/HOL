@@ -506,23 +506,10 @@ val Aligned_LoadStore = Q.store_thm("Aligned_LoadStore",
    \\ blastLib.FULL_BBLAST_TAC
    )
 
-val Aligned4_base_pc_plus = ustore_thm("Aligned4_base_pc_plus",
-   `Aligned (pc: word32, 4) ==>
-    (Aligned (pc + (x + 4w), 4) = Aligned (x, 4))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Align4_base_pc_plus = ustore_thm("Align4_base_pc_plus",
-   `Aligned (pc: word32, 4) ==>
-    (Align (pc + 4w, 4) + x = pc + (x + 4w))`,
-   lrw [Aligned, Align]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-
-val Aligned_base_pc_lit = Q.store_thm("Aligned_base_pc_lit",
+val Aligned4_base_pc = Q.store_thm("Aligned4_base_pc",
    `Aligned
-       (w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
+       (Align (pc, 4) +
+        w2w (v2w [b7; b6; b5; b4; b3; b2; b1; b0; F; F] : word10): word32, 4)`,
    simp [Aligned, Align]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -573,10 +560,10 @@ val Aligned_numeric = Q.store_thm("Aligned_numeric",
            Aligned (y, 4)) /\
     (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 x))): word32, 4) =
            Aligned (y - 2w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT1 x)): word32, 2) =
-           Aligned (y + 1w, 2)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT1 x)): word32, 2) =
-           Aligned (y - 1w, 2)) /\
+    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (f x))): word32, 2) =
+             Aligned (y + 1w, 2)) /\
+    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (f x))): word32, 2) =
+             Aligned (y - 1w, 2)) /\
     (!x y. Aligned (y + n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2)) /\
     (!x y. Aligned (y - n2w (NUMERAL (BIT2 x)): word32, 2) = Aligned (y, 2))`,
    REPEAT strip_tac
@@ -842,6 +829,29 @@ val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
          s)`,
    lrw [Shift_C_def, LSL_C_def, bitstringTheory.shiftl_replicate_F])
 
+local
+   val lem =
+    (SIMP_RULE (srw_ss()) [] o Q.SPECL [`v`, `32`] o
+     Thm.INST_TYPE [Type.alpha |-> ``:33``]) bitstringTheory.word_index_v2w
+in
+   val shift32 = Q.prove(
+      `!w:word32 imm.
+         ((w2w w : 33 word) << imm) ' 32 = testbit 32 (shiftl (w2v w) imm)`,
+      strip_tac
+      \\ bitstringLib.Cases_on_v2w `w`
+      \\ fs [bitstringTheory.w2v_v2w, bitstringTheory.w2w_v2w,
+             bitstringTheory.word_lsl_v2w, bitstringTheory.word_index_v2w,
+             lem, markerTheory.Abbrev_def])
+end
+
+val Shift_C_LSL_rwt = Q.store_thm("Shift_C_LSL_rwt",
+   `!imm2 w C s.
+        Shift_C (w: word32, SRType_LSL, imm2, C) s =
+        ((w << imm2, if imm2 = 0 then C else ((w2w w : 33 word) << imm2) ' 32),
+         s)`,
+   lrw [Shift_C_def, LSL_C_def, bitstringTheory.shiftl_replicate_F, shift32]
+   )
+
 val Shift_C_DecodeImmShift_rwt = Q.prove(
    `!typ imm5 w C s.
        Shift_C (w: word32,
@@ -852,7 +862,7 @@ val Shift_C_DecodeImmShift_rwt = Q.prove(
        (if typ = 0w
            then if imm5 = 0w
                    then (w, C)
-                else (w << amount, testbit 32 (shiftl (w2v w) amount))
+                else (w << amount, ((w2w w : 33 word) << amount) ' 32)
         else if typ = 1w
            then if imm5 = 0w
                    then (0w, word_msb w)
@@ -867,7 +877,7 @@ val Shift_C_DecodeImmShift_rwt = Q.prove(
    strip_tac
    \\ wordsLib.Cases_on_word_value `typ`
    \\ simp [Shift_C_def, LSL_C_def, LSR_C_def, ASR_C_def, ROR_C_def, RRX_C_def,
-            DecodeImmShift_def, pairTheory.SWAP_def]
+            DecodeImmShift_def, pairTheory.SWAP_def, shift32]
    \\ lrw [wordsTheory.word_rrx_def, wordsTheory.word_bit_def,
            wordsTheory.word_msb_def, wordsTheory.word_lsb_def,
            bitstringTheory.shiftl_replicate_F]
@@ -889,7 +899,7 @@ val Shift_C_DecodeRegShift_rwt = Q.prove(
        Shift_C (w: word32, DecodeRegShift typ, amount, C) s =
        (if typ = 0w
            then (w << amount,
-                 if amount = 0 then C else testbit 32 (shiftl (w2v w) amount))
+                 if amount = 0 then C else ((w2w w : 33 word) << amount) ' 32)
         else if typ = 1w
            then (w >>> amount,
                  if amount = 0 then C
@@ -902,7 +912,7 @@ val Shift_C_DecodeRegShift_rwt = Q.prove(
    strip_tac
    \\ wordsLib.Cases_on_word_value `typ`
    \\ simp [Shift_C_def, LSL_C_def, LSR_C_def, ASR_C_def, ROR_C_def, RRX_C_def,
-            DecodeRegShift_def]
+            DecodeRegShift_def, shift32]
    \\ lrw [wordsTheory.word_bit_def, bitstringTheory.shiftl_replicate_F,
            wordsTheory.word_msb_def, wordsTheory.word_lsb_def]
    \\ fs [])

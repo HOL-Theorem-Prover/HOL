@@ -32,6 +32,7 @@ sig
   val DOT_PATH : string
 
   val isUnix : bool
+  val pointer_eq : 'a * 'a -> bool
 
   (* other system-wide constants, shared between build tools and the
      running hol *)

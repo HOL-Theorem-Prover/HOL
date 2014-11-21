@@ -8,6 +8,10 @@ sig
   val let_special : string
   val and_special : string
   val fakeconst_special : string
+  val mk_fakeconst_name :
+      {original : KernelSig.kernelname option, fake : string} -> string
+  val dest_fakeconst_name :
+      string -> {original : KernelSig.kernelname option, fake : string} option
   val decimal_fraction_special : string
 
   (* special strings for records *)

@@ -38,6 +38,7 @@ struct
   val qx_choose_then = Q.X_CHOOSE_THEN
   val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
   val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
+  val qspec_tac = Q.SPEC_TAC
   val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
@@ -93,6 +94,8 @@ struct
 
   val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
   val simp = stateful asm_simp_tac let_arith_list
+  val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
+  val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
   val lrw = srw_tac let_arith_list
   val lfs = fsrw_tac let_arith_list
   val lrfs = rfsrw_tac let_arith_list
@@ -102,6 +105,7 @@ struct
   val rfs = rfsrw_tac []
 
   val op>> = op Tactical.THEN
+  val op\\ = op Tactical.THEN
   val op>- = op Tactical.THEN1
   val op>| = op Tactical.THENL
 

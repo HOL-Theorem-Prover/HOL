@@ -174,7 +174,8 @@ val _ = let
     use (nm ^ ".sml")
   end
 in
-  app appthis ["internal_functions", "Holmake_types", "ReadHMF"]
+  app appthis ["regexpMatch", "parse_glob", "internal_functions",
+               "Holmake_types", "ReadHMF"]
 end;
 
 use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));

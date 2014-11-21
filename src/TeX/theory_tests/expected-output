@@ -1,15 +1,27 @@
 \HOLTyOp{term} =
-    \HOLConst{Var} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type}
-  \HOLTokenBar{} \HOLConst{Const} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type} \HOLTokenImp{} \HOLTyOp{const_tag}
-  \HOLTokenBar{} \HOLConst{Comb} \HOLKeyword{of} \HOLTyOp{term} \HOLTokenImp{} \HOLTyOp{term}
-  \HOLTokenBar{} \HOLConst{Abs} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{type} \HOLTokenImp{} \HOLTyOp{term} ;
+    \HOLConst{Var} \HOLTyOp{string} \HOLTyOp{type}
+  \HOLTokenBar{} \HOLConst{Const} \HOLTyOp{string} \HOLTyOp{type} \HOLTyOp{const_tag}
+  \HOLTokenBar{} \HOLConst{Comb} \HOLTyOp{term} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Abs} \HOLTyOp{string} \HOLTyOp{type} \HOLTyOp{term} ;
 
-\HOLTyOp{type} = \HOLConst{Tyvar} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenBar{} \HOLConst{Tyapp} \HOLKeyword{of} \HOLTyOp{type_op} \HOLTokenImp{} \HOLTyOp{type} \HOLTyOp{list} ;
+\HOLTyOp{type} = \HOLConst{Tyvar} \HOLTyOp{string} \HOLTokenBar{} \HOLConst{Tyapp} \HOLTyOp{type_op} (\HOLTyOp{type} \HOLTyOp{list}) ;
 
-\HOLTyOp{type_op} = \HOLConst{Typrim} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{num} \HOLTokenBar{} \HOLConst{Tydefined} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term} ;
+\HOLTyOp{type_op} = \HOLConst{Typrim} \HOLTyOp{string} \HOLTyOp{num} \HOLTokenBar{} \HOLConst{Tydefined} \HOLTyOp{string} \HOLTyOp{term} ;
 
 \HOLTyOp{const_tag} =
     \HOLConst{Prim}
-  \HOLTokenBar{} \HOLConst{Defined} \HOLKeyword{of} \HOLTyOp{num} \HOLTokenImp{} (\HOLTyOp{string} \HOLTokenProd{} \HOLTyOp{term}) \HOLTyOp{list} \HOLTokenImp{} \HOLTyOp{term}
-  \HOLTokenBar{} \HOLConst{Tyabs} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term}
-  \HOLTokenBar{} \HOLConst{Tyrep} \HOLKeyword{of} \HOLTyOp{string} \HOLTokenImp{} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Defined} \HOLTyOp{num} ((\HOLTyOp{string} \HOLTokenProd{} \HOLTyOp{term}) \HOLTyOp{list}) \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Tyabs} \HOLTyOp{string} \HOLTyOp{term}
+  \HOLTokenBar{} \HOLConst{Tyrep} \HOLTyOp{string} \HOLTyOp{term}
+
+\HOLinline{\HOLFreeVar{x}.\HOLFieldName{fld1}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} := \HOLConst{T}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLTokenLeftrec{}\HOLFieldName{fld1} := \HOLConst{T}; \HOLFieldName{fld2} := \HOLConst{K} \HOLNumLit{3}\HOLTokenRightrec{}}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld1} updated_by (\HOLSymConst{\HOLTokenNeg{}})}
+
+\HOLinline{\HOLFreeVar{x} with \HOLFieldName{fld2} updated_by \HOLFreeVar{g}}
+
+\HOLinline{\HOLFreeVar{x} \HOLConst{INSERT} \HOLFreeVar{s}}

@@ -320,7 +320,7 @@ fun EVERY_CONJ_CONV c tm =
   (if is_conj tm
       then LAND_CONV (EVERY_CONJ_CONV c) THENC
            (REWR_CONV F_and ORELSEC
-              (REWR_CONV T_and THENC EVERY_DISJ_CONV c) ORELSEC
+              (REWR_CONV T_and THENC EVERY_CONJ_CONV c) ORELSEC
                  (RAND_CONV (EVERY_CONJ_CONV c) THENC
                   TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV or_T)))
    else c) tm

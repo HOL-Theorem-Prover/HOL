@@ -13,6 +13,7 @@ sig
 
   val add_thms        : thm list -> compset -> unit
   val add_conv        : term * int * conv -> compset -> unit
+  val add_thmset      : string -> compset -> unit
   val set_skip        : compset -> term -> int option -> unit
 
   val scrub_const     : compset -> term -> unit
@@ -39,6 +40,7 @@ sig
   val RESTR_EVAL_RULE : term list -> thm -> thm
   val RESTR_EVAL_TAC  : term list -> tactic
 
+  val add_datatype_info : compset -> TypeBasePure.tyinfo -> unit
   val write_datatype_info : TypeBasePure.tyinfo -> unit
 
   val add_persistent_funs : string list -> unit

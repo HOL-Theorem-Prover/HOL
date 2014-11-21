@@ -132,7 +132,7 @@ val _ = eSML "update"
     :: DATATYPE (`formats = SignedByte | UnsignedByte
                           | SignedHalfWord | UnsignedHalfWord
                           | UnsignedWord`)
-    :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
+    :: DATATYPE (`data = Byte word8 | Half word16 | Word word32`)
     :: map DEFN [LUPDATE_def, mem_read_def, mem_write_def, mem_write_block_def]
      @ map (DEFN o mem_rule)
         [empty_memory_def, mem_items_def, addr30_def, GET_HALF_def,
@@ -166,8 +166,8 @@ val _ = eSML "arm"
     :: MLSIG "type mem = updateML.mem"
     :: MLSIG "type data = updateML.data"
     :: DATATYPE (`regs = <| reg : registers; psr : psrs |>`)
-    :: DATATYPE (`memop = MemRead of word32 | MemWrite of word32=>data |
-                          CPWrite of word32`)
+    :: DATATYPE (`memop = MemRead word32 | MemWrite word32 data |
+                          CPWrite word32`)
     :: DATATYPE (`arm_state = <| regs : regs; ireg : word32;
                                  exception : exceptions |>`)
     :: DATATYPE (`arm_output = <| transfers : memop list;
@@ -177,8 +177,8 @@ val _ = eSML "arm"
                            cp_state : 'a |>`)
     :: DATATYPE (`arm_sys_state = <| registers : registers; psrs : psrs;
                         memory : mem; undefined : bool; cp_state : 'a |>`)
-    :: DATATYPE (`interrupt = Reset of regs | Undef | Prefetch |
-                              Dabort of num | Fiq | Irq`)
+    :: DATATYPE (`interrupt = Reset regs | Undef | Prefetch |
+                              Dabort num | Fiq | Irq`)
     :: DATATYPE (`arm_input = <| ireg : word32; data : word32 list;
                                  interrupt : interrupt option; no_cp : bool |>`)
     :: DATATYPE (`coproc =

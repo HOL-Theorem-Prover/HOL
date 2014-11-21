@@ -770,7 +770,7 @@ add_temporal_abstractions[XOR32_at];
 (* create an instance with a given size as a string (XOR32vInst), an         *)
 (* instance counter (XOR32vInst_count -- used to create unique names for     *)
 (* instances) and a function to print a HOL term ``XOR32(in1,in2,out)`` as   *)
-(* an instance, using the the type of ``out`` to compute the word width      *)
+(* an instance, using the type of ``out`` to compute the word width          *)
 (* needed to set parameter "size" in XOR32vDef (termToVerilog_XOR32).        *)
 (* These functions are added to a couple of global lists.                    *)
 (*****************************************************************************)

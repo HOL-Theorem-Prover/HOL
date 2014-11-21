@@ -15,11 +15,11 @@ Never fails.
 
 \EXAMPLE
 {
-#is_prenex "!x. ?y. x \/ y";;
-true : bool
+- is_prenex ``!x. ?y. x \/ y``;
+> val it = true : bool
 
-#is_prenex "!x. x ==> (?y. x /\ y)";;
-false : bool
+- is_prenex ``!x. x ==> (?y. x /\ y)``;
+> val it = false : bool
 }
 \USES
 Useful for determining whether it is necessary to apply a prenex normaliser to

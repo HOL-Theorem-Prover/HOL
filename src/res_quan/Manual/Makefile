@@ -26,7 +26,7 @@ default: all
 # ---------------------------------------------------------------------
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
-          entries.tex theorems.tex res_quan.{ps,pdf}
+          entries.tex theorems.tex res_quan.ps res_quan.pdf
 
 tex: theorems functions
 	@echo "TeX files made"

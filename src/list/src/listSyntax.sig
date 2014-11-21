@@ -30,6 +30,7 @@ sig
   val map2_tm         : term
   val map_tm          : term
   val nil_tm          : term
+  val nub_tm          : term
   val null_tm         : term
   val pad_left_tm     : term
   val pad_right_tm    : term
@@ -66,6 +67,7 @@ sig
   val mk_map2         : term * term * term -> term
   val mk_mem          : term * term -> term
   val mk_nil          : hol_type -> term
+  val mk_nub          : term -> term
   val mk_null         : term -> term
   val mk_pad_left     : term * term * term -> term
   val mk_pad_right    : term * term * term -> term
@@ -101,6 +103,7 @@ sig
   val dest_map2         : term -> term * term * term
   val dest_mem          : term -> term * term
   val dest_nil          : term -> hol_type
+  val dest_nub          : term -> term
   val dest_null         : term -> term
   val dest_pad_left     : term -> term * term * term
   val dest_pad_right    : term -> term * term * term
@@ -138,6 +141,7 @@ sig
   val is_map2         : term -> bool
   val is_mem          : term -> bool
   val is_nil          : term -> bool
+  val is_nub          : term -> bool
   val is_null         : term -> bool
   val is_pad_left     : term -> bool
   val is_pad_right    : term -> bool

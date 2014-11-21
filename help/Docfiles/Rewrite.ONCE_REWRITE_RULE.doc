@@ -13,7 +13,7 @@ rule.
 rewrites once at each subterm, in the manner specified for
 {ONCE_DEPTH_CONV}. The rewrites which are used are obtained from the
 given list of theorems and the set of tautologies stored in
-{basic_rewrites}. See {GEN_REWRITE_RULE} for the general method of
+{implicit_rewrites}. See {GEN_REWRITE_RULE} for the general method of
 using theorems to rewrite an object theorem.
 
 \FAILURE

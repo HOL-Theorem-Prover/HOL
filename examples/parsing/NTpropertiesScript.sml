@@ -1,9 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
+open listTheory
 open grammarTheory
 open lcsymtacs
 open pred_setTheory
-open listTheory
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC
 fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q []
@@ -67,17 +67,15 @@ val derives_TOK = store_thm(
   match_mp_tac RTC_R_I >> simp[derive_def] >> metis_tac[])
 
 val nullable_CONS_TOK = store_thm(
-  "nullable_CONS_TOK",
+  "nullable_CONS_TOK[simp]",
   ``nullable G (TOK t :: rest) = F``,
   simp[nullable_def] >> strip_tac >>
   qspecl_then [`G`, `[]`, `rest`, `t`, `[]`] mp_tac derives_TOK >> simp[])
-val _ = export_rewrites ["nullable_CONS_TOK"]
 
 val nullable_NIL = store_thm(
-  "nullable_NIL",
+  "nullable_NIL[simp]",
   ``nullable G [] = T``,
   simp[nullable_def])
-val _ = export_rewrites ["nullable_NIL"]
 
 val nullable_CONS_NT = store_thm(
   "nullable_CONS_NT",
@@ -179,10 +177,7 @@ val ptree_nullableML = store_thm(
   qx_gen_tac `subs` >> strip_tac >> dsimp[] >>
   dsimp[FLAT_EQ_NIL, listTheory.MEM_MAP] >> map_every qx_gen_tac [`N`, `sn`] >>
   strip_tac >> simp[EXTENSION] >> qexists_tac `MAP ptree_head subs` >> simp[] >>
-  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP] >>
-  `∀p. MEM p subs ⇒ DISJOINT (ptree_NTs p) (N INSERT sn)`
-    suffices_by simp[] >>
-  simp[Once DISJOINT_SYM, DISJOINT_INSERT] >> simp[Once DISJOINT_SYM]);
+  simp[Once nullableML_by_singletons] >> dsimp[listTheory.MEM_MAP]);
 
 val rptfree_subtree = store_thm(
   "rptfree_subtree",
@@ -195,7 +190,7 @@ val rptfree_subtree = store_thm(
   dsimp[listTheory.MEM_MAP, FLAT_EQ_NIL] >> conj_tac
   >- (strip_tac >> qexists_tac `Nd N subs` >>
       dsimp[ptree_rptfree_def, FLAT_EQ_NIL, listTheory.MEM_MAP]) >>
-  map_every qx_gen_tac [`N'`, `pt`] >> strip_tac >> metis_tac[]);
+  metis_tac[]);
 
 val rptfree_nullable_ptrees_possible = store_thm(
   "rptfree_nullable_ptrees_possible",
@@ -292,14 +287,12 @@ val firstSet_NIL = Store_thm(
   simp[grammarTheory.derive_def]);
 
 val firstSet_TOK = store_thm(
-  "firstSet_TOK",
+  "firstSet_TOK[simp]",
   ``firstSet G (TOK t::rest) = {t}``,
   simp[firstSet_def, EXTENSION, EQ_IMP_THM] >> rw[]
   >- (qspecl_then [`G`, `[t]`, `rest`] mp_tac derives_preserves_leading_toks >>
       simp[] >> strip_tac >> fs[]) >>
   metis_tac[relationTheory.RTC_REFL]);
-val _ = export_rewrites ["firstSet_TOK"]
-
 
 val firstSet_NT = store_thm(
   "firstSet_NT",

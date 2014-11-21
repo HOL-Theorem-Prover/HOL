@@ -411,14 +411,16 @@ end
 
 fun genFromString rdx = let
   open StringCvt
-  val (base, chunksize, chunkshift) =
+  val (base, chunksize, chunkshift, s_rdx) =
       case rdx of
-        BIN => (2, 10, fromInt 1024)
-      | OCT => (8, 5, fromInt 32768)
-      | DEC => (10, 5, fromInt 100000)
-      | HEX => (16, 5, fromInt 1048576)
-  val scanner = Int.scan rdx
-  fun readchunk s = StringCvt.scanString scanner s
+        BIN => (2, 10, fromInt 1024, "BIN")
+      | OCT => (8, 5, fromInt 32768, "OCT")
+      | DEC => (10, 5, fromInt 100000, "DEC")
+      | HEX => (16, 5, fromInt 1048576, "HEX")
+  fun readchunk s =
+     case Int.scan rdx Substring.getc (Substring.full s) of
+        SOME (i, r) => if Substring.size r = 0 then SOME i else NONE
+      | _ => NONE
   fun recurse acc s = let
     val sz = size s
   in
@@ -433,8 +435,8 @@ fun genFromString rdx = let
       end
   end
 in
-  recurse zero
-end handle Option => raise Fail "String not numeric"
+  fn s => recurse zero s handle Option => raise Fail ("String not " ^ s_rdx)
+end
 val fromHexString = genFromString StringCvt.HEX
 val fromOctString = genFromString StringCvt.OCT
 val fromBinString = genFromString StringCvt.BIN

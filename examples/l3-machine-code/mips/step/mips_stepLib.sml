@@ -8,6 +8,8 @@ struct
 open HolKernel boolLib bossLib
 open lcsymtacs blastLib mipsTheory mips_stepTheory
 
+local open mips in end
+
 structure Parse =
 struct
    open Parse
@@ -17,10 +19,9 @@ struct
       mipsTheory.mips_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
-
 open Parse
 
-val ERR = Feedback.mk_HOL_ERR "mips_evalLib"
+val ERR = Feedback.mk_HOL_ERR "mips_stepLib"
 
 val () = show_assums := true
 
@@ -39,7 +40,8 @@ val cond_thms = Q.prove(
 local
    val state_fns = utilsLib.accessor_fns ``:mips_state``
    val other_fns =
-      [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm] @
+      [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm,
+       optionSyntax.is_some_tm] @
       utilsLib.update_fns ``:mips_state``
    val extra_fns =
       [wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
@@ -118,14 +120,16 @@ val EVC = EVR COND_UPDATE_RULE
 val () = utilsLib.setStepConv utilsLib.WGROUND_CONV
 
 val SignalException =
-   ev [SignalException_def, extra_cond_rand_thms] [[``~^st.CP0.Status.EXL``]] []
+   ev [SignalException_def, extra_cond_rand_thms, ExceptionCode_def]
+      [[``~^st.CP0.Status.EXL``]] []
       ``SignalException (ExceptionType)``
    |> hd
 
 val rule =
    utilsLib.ALL_HYP_CONV_RULE (SIMP_CONV std_ss (mips_thms [])) o
    REWRITE_RULE [] o
-   utilsLib.INST_REWRITE_RULE [ASSUME ``~^st.CP0.Status.EXL``]
+   utilsLib.INST_REWRITE_RULE
+      [ASSUME ``~^st.CP0.Status.EXL``, ASSUME ``^st.exceptionSignalled = F``]
 
 val () = utilsLib.resetStepConv ()
 
@@ -142,7 +146,7 @@ fun all_comb l =
 
 val oEV =
    EVR (rule o COND_UPDATE_RULE)
-      [dfn'ADDI_def, dfn'DADDI_def,
+      [dfn'ADDI_def, dfn'DADDI_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``]]
@@ -164,7 +168,7 @@ val lEV =
 val pEV =
    EVR (rule o COND_UPDATE_RULE)
       [dfn'ADD_def, dfn'SUB_def, dfn'DADD_def, dfn'DSUB_def,
-       dfn'MOVN_def, dfn'MOVZ_def,
+       dfn'MOVN_def, dfn'MOVZ_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
@@ -212,6 +216,14 @@ val dEV =
       [[``rt <> 0w: word5``, ``^st.gpr (rt) <> 0w``, ``rs <> 0w: word5``,
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
       [[], [`rs` |-> r0]]
+
+val bEV =
+   EVC [dfn'BEQ_def, dfn'BEQ_def, dfn'BNE_def, dfn'BLEZ_def, dfn'BGTZ_def,
+        dfn'BLTZ_def, dfn'BGEZ_def, dfn'BLTZAL_def, dfn'BGEZAL_def,
+        dfn'BEQL_def, dfn'BNEL_def, dfn'BLEZL_def, dfn'BGTZL_def,
+        dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
+        ConditionalBranch_def, ConditionalBranchLikely_def]
+       [[``^st.BranchDelay = NONE``]] []
 
 (* ------------------------------------------------------------------------- *)
 
@@ -296,24 +308,29 @@ val J = EV [dfn'J_def] [] [] ``dfn'J (instr_index)``
 val JAL = EV [dfn'JAL_def] [] [] ``dfn'JAL (instr_index)``
 val JR = EV [dfn'JR_def] [] [] ``dfn'JR (instr_index)``
 val JALR = hEV ``dfn'JALR (rs, rd)``
-val BEQ = EVC [dfn'BEQ_def] [] [] ``dfn'BEQ (rs, rt, offset)``
-val BNE = EVC [dfn'BNE_def] [] [] ``dfn'BNE (rs, rt, offset)``
-val BLEZ = EVC [dfn'BLEZ_def] [] [] ``dfn'BLEZ (rs, offset)``
-val BGTZ = EVC [dfn'BGTZ_def] [] [] ``dfn'BGTZ (rs, offset)``
-val BLTZ = EVC [dfn'BLTZ_def] [] [] ``dfn'BLTZ (rs, offset)``
-val BGEZ = EVC [dfn'BGEZ_def] [] [] ``dfn'BGEZ (rs, offset)``
-val BLTZAL = EVC [dfn'BLTZAL_def] [] [] ``dfn'BLTZAL (rs, offset)``
-val BGEZAL = EVC [dfn'BGEZAL_def] [] [] ``dfn'BGEZAL (rs, offset)``
-val BEQL = EVC [dfn'BEQL_def] [] [] ``dfn'BEQL (rs, rt, offset)``
-val BNEL = EVC [dfn'BNEL_def] [] [] ``dfn'BNEL (rs, rt, offset)``
-val BLEZL = EVC [dfn'BLEZL_def] [] [] ``dfn'BLEZL (rs, offset)``
-val BGTZL = EVC [dfn'BGTZL_def] [] [] ``dfn'BGTZL (rs, offset)``
-val BLTZL = EVC [dfn'BLTZL_def] [] [] ``dfn'BLTZL (rs, offset)``
-val BGEZL = EVC [dfn'BGEZL_def] [] [] ``dfn'BGEZL (rs, offset)``
-val BLTZALL = EVC [dfn'BLTZALL_def] [] [] ``dfn'BLTZALL (rs, offset)``
-val BGEZALL = EVC [dfn'BGEZALL_def] [] [] ``dfn'BGEZALL (rs, offset)``
-val ERET = EVR (REWRITE_RULE [satTheory.AND_INV] o COND_UPDATE_RULE)
-   [dfn'ERET_def] [] [] ``dfn'ERET``
+val BEQ = bEV ``dfn'BEQ (rs, rt, offset)``
+val BNE = bEV ``dfn'BNE (rs, rt, offset)``
+val BLEZ = bEV ``dfn'BLEZ (rs, offset)``
+val BGTZ = bEV ``dfn'BGTZ (rs, offset)``
+val BLTZ = bEV ``dfn'BLTZ (rs, offset)``
+val BGEZ = bEV ``dfn'BGEZ (rs, offset)``
+val BLTZAL = bEV ``dfn'BLTZAL (rs, offset)``
+val BGEZAL = bEV ``dfn'BGEZAL (rs, offset)``
+val BEQL = bEV ``dfn'BEQL (rs, rt, offset)``
+val BNEL = bEV ``dfn'BNEL (rs, rt, offset)``
+val BLEZL = bEV ``dfn'BLEZL (rs, offset)``
+val BGTZL = bEV ``dfn'BGTZL (rs, offset)``
+val BLTZL = bEV ``dfn'BLTZL (rs, offset)``
+val BGEZL = bEV ``dfn'BGEZL (rs, offset)``
+val BLTZALL = bEV ``dfn'BLTZALL (rs, offset)``
+val BGEZALL = bEV ``dfn'BGEZALL (rs, offset)``
+
+(* Assumes EXL is high, which permits return from exception *)
+val ERET =
+   EVR (SIMP_RULE std_ss [ASSUME ``^st.CP0.Status.EXL``, satTheory.AND_INV] o
+        COND_UPDATE_RULE)
+     [dfn'ERET_def, KernelMode_def]
+     [[``^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] [] ``dfn'ERET``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -326,8 +343,8 @@ val mem_thms =
     Drule.UNDISCH StoreMemory_doubleword,
     PSIZE_def, ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
-    address_align, cond_sign_extend, byte_address, extract_byte,
-    wordsTheory.word_concat_0_0,
+    address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
+    wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
     EVAL ``(word_replicate 2 (0w:word1) : word2 @@ (0w:word1)) : word3``,
     EVAL ``(word_replicate 2 (1w:word1) : word2 @@ (0w:word1)) : word3``,
@@ -344,14 +361,18 @@ val select_rule =
        select_pc_le, select_pc_be]
 
 val memcntxts =
+  [[``~^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
+   [``~^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``]]
+
+(*
+val memcntxts =
   [[``FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [``~FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [``~^st.CP0.Status.RE``, ``^st.CP0.Config.BE``],
    [ ``FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``],
    [``~FST (UserMode ^st)``, ``^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``],
    [``~^st.CP0.Status.RE``, ``~^st.CP0.Config.BE``]]
-
-val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
+*)
 
 val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
 
@@ -360,6 +381,7 @@ val memcntxts =
       (fn l =>
          [``rt <> 0w:word5``,
           ``~word_bit 0 ^addr``,
+          ``~^st.exceptionSignalled``,
           ``(1 >< 0) ^addr = 0w: word2``,
           ``(1 >< 0) ^st.PC = 0w: word2``] @ l)
       memcntxts
@@ -367,6 +389,7 @@ val memcntxts =
 val dmemcntxts =
    List.map (fn l => ``(2 >< 0) ^addr = 0w: word3`` :: l) memcntxts
 
+(*
 fun merge_cases thms =
    let
       fun thm i = List.nth (thms, i)
@@ -378,6 +401,14 @@ fun merge_cases thms =
         (utilsLib.MERGE_CASES ``^st.CP0.Status.RE``
             (utilsLib.MERGE_CASES ``FST (UserMode ^st)`` (thm 3) (thm 4))
             (thm 5))
+   end
+*)
+
+fun merge_cases thms =
+   let
+      fun thm i = List.nth (thms, i)
+   in
+      utilsLib.MERGE_CASES ``^st.CP0.Config.BE`` (thm 0) (thm 1)
    end
 
 fun EVL l tm =
@@ -393,7 +424,15 @@ fun EVL l tm =
    end
 
 fun store_rule thms =
-   utilsLib.ALL_HYP_CONV_RULE (SIMP_CONV std_ss (cond_rand_thms :: thms))
+   utilsLib.ALL_HYP_CONV_RULE
+     (SIMP_CONV std_ss (cond_rand_thms :: mem_thms @ thms))
+
+(*
+val UserMode_rule =
+   List.map
+     (utilsLib.ALL_HYP_CONV_RULE
+       (REWRITE_CONV [UserMode_def, boolTheory.DE_MORGAN_THM]))
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -410,11 +449,11 @@ val loadHalf =
 
 val loadWord =
    evr select_rule (loadWord_def :: mem_thms) memcntxts []
-      ``loadWord (base, rt, offset, unsigned)``
+      ``loadWord (link, base, rt, offset, unsigned)``
 
 val loadDoubleword =
    ev ([loadDoubleword_def, double_aligned] @ mem_thms) dmemcntxts []
-      ``loadDoubleword (base, rt, offset)``
+      ``loadDoubleword (link, base, rt, offset)``
 
 val LB  = EVL [loadByte] ``dfn'LB (base, rt, offset) ^st``
 val LBU = EVL [loadByte] ``dfn'LBU (base, rt, offset) ^st``
@@ -501,8 +540,8 @@ local
             ``^st.MEM (s.PC + 3w) = ^(mk_byte 24)``
            ])
    fun fetch_thm i = rule (List.nth (Fetch, i))
-   val Fetch_be = fetch_thm 2
-   val Fetch_le = fetch_thm 5
+   val Fetch_be = fetch_thm 0
+   val Fetch_le = fetch_thm 1
 in
    fun pad_opcode v =
       let
@@ -534,12 +573,6 @@ end
 (* Decoder *)
 
 local
-   val boolify_conv =
-      Conv.RAND_CONV
-         (Conv.CHANGED_CONV
-            (REWRITE_CONV [mipsTheory.boolify5_v2w, mipsTheory.boolify6_v2w,
-                           mipsTheory.boolify26_v2w]))
-      THENC PairedLambda.let_CONV
    val Decode =
       Decode_def
       |> Thm.SPEC (bitstringSyntax.mk_vec 32 0)
@@ -548,9 +581,20 @@ local
               REWRITE_CONV [mipsTheory.boolify32_v2w]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
-              THENC Conv.DEPTH_CONV boolify_conv
              )
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
+   val unpredictable_tm = ``mips$Unpredictable``
+   fun fix_unpredictable thm =
+      let
+         val thm = REWRITE_RULE [not31] thm
+      in
+         case Lib.total (boolSyntax.dest_cond o utilsLib.rhsc) thm of
+            SOME (b, t, _) =>
+               if t = unpredictable_tm
+                  then REWRITE_RULE [ASSUME (boolSyntax.mk_neg b)] thm
+               else thm
+          | _ => thm
+      end
 in
    fun DecodeMIPS pat =
       let
@@ -559,38 +603,11 @@ in
          Decode |> Thm.INST s
                 |> REWRITE_RULE []
                 |> Conv.RIGHT_CONV_RULE (Conv.REPEATC PairedLambda.let_CONV)
+                |> fix_unpredictable
       end
 end
 
-local
-   fun rename b v =
-      case Lib.total Term.dest_var v of
-        SOME (s, ty) =>
-          if String.sub (s, 0) = #"_"
-             then SOME (v |-> Term.mk_var (b ^ String.extract (s, 1, NONE), ty))
-          else NONE
-      | NONE => NONE
-   fun mk_pat_term s =
-      let
-         val p = s |> utilsLib.uppercase
-                   |> String.explode
-                   |> Lib.separate #";"
-                   |> String.implode
-      in
-         Parse.Term [HOLPP.QUOTE ("[" ^ p ^ "]")]
-      end
-in
-   fun pattern s =
-      let
-         val tm = mk_pat_term s
-         val vs = Term.free_vars tm
-         val s = List.mapPartial (rename "x") vs
-      in
-         Term.subst s tm
-      end
-end
-
-val mips_ipatterns = List.map (I ## pattern)
+val mips_ipatterns = List.map (I ## utilsLib.pattern)
    [
     ("ADDI",   "FFTFFF__________________________"),
     ("ADDIU",  "FFTFFT__________________________"),
@@ -612,12 +629,12 @@ val mips_ipatterns = List.map (I ## pattern)
     ("MUL",    "FTTTFF_______________FFFFFFFFFTF")
    ]
 
-val mips_dpatterns = List.map (I ## pattern)
+val mips_dpatterns = List.map (I ## utilsLib.pattern)
    [
     ("JALR",   "FFFFFF_____FFFFF__________FFTFFT")
    ]
 
-val mips_rpatterns = List.map (I ## pattern)
+val mips_rpatterns = List.map (I ## utilsLib.pattern)
    [
     ("SLLV",   "FFFFFF_______________FFFFFFFFTFF"),
     ("SRLV",   "FFFFFF_______________FFFFFFFFTTF"),
@@ -643,7 +660,7 @@ val mips_rpatterns = List.map (I ## pattern)
     ("DSUBU",  "FFFFFF_______________FFFFFTFTTTT")
    ]
 
-val mips_jpatterns = List.map (I ## pattern)
+val mips_jpatterns = List.map (I ## utilsLib.pattern)
    [
     ("SLL",    "FFFFFFFFFFF_______________FFFFFF"),
     ("SRL",    "FFFFFFFFFFF_______________FFFFTF"),
@@ -656,7 +673,7 @@ val mips_jpatterns = List.map (I ## pattern)
     ("DSRA32", "FFFFFFFFFFF_______________TTTTTT")
    ]
 
-val mips_patterns0 = List.map (I ## pattern)
+val mips_patterns0 = List.map (I ## utilsLib.pattern)
    [
     ("LUI",    "FFTTTTFFFFF_____________________"),
     ("DIV",    "FFFFFF__________FFFFFFFFFFFTTFTF"),
@@ -669,13 +686,13 @@ val mips_patterns0 = List.map (I ## pattern)
     ("MFLO",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF")
    ]
 
-val mips_cpatterns = List.map (I ## pattern)
+val mips_cpatterns = List.map (I ## utilsLib.pattern)
    [
     ("MFC0",    "FTFFFFFFFFF__________FFFFFFFF___"),
     ("MTC0",    "FTFFFFFFTFF__________FFFFFFFF___")
    ]
 
-val mips_patterns = List.map (I ## pattern)
+val mips_patterns = List.map (I ## utilsLib.pattern)
    [
     ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
     ("BLTZ",    "FFFFFT_____FFFFF________________"),
@@ -805,7 +822,6 @@ end
   List.map (mips_decode o snd) (Redblackmap.listItems mips_dict)
 *)
 
-
 (* ------------------------------------------------------------------------- *)
 
 (* Evaluator *)
@@ -855,27 +871,48 @@ local
    val get_state = snd o pairSyntax.dest_pair o rhsc
    fun mk_mips_const n = Term.prim_mk_const {Thy = "mips", Name = n}
    val state_exception_tm = mk_mips_const "mips_state_exception"
-   val state_BranchStatus_tm = mk_mips_const "mips_state_BranchStatus"
+   val state_exceptionSignalled_tm =
+      mk_mips_const "mips_state_exceptionSignalled"
+   val state_BranchDelay_tm = mk_mips_const "mips_state_BranchDelay"
+   val state_BranchTo_tm = mk_mips_const "mips_state_BranchTo"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
-   fun mk_proj_BranchStatus r = Term.mk_comb (state_BranchStatus_tm, r)
+   fun mk_proj_exceptionSignalled r =
+      Term.mk_comb (state_exceptionSignalled_tm, r)
+   fun mk_proj_BranchDelay r = Term.mk_comb (state_BranchDelay_tm, r)
+   fun mk_proj_BranchTo r = Term.mk_comb (state_BranchTo_tm, r)
+   val st_BranchDelay_tm = mk_proj_BranchDelay st
    val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
    val snd_conv = Conv.REWR_CONV pairTheory.SND
    val STATE_CONV =
       Conv.QCONV
         (REWRITE_CONV
             (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
-             [boolTheory.COND_ID, cond_rand_thms]))
-   val BranchNone_RULE =
-      utilsLib.FULL_CONV_RULE STATE_CONV o
-      Thm.INST [st |-> ``^st with BranchStatus := NONE``]
-   val Branch_tm = mk_mips_const "Branch"
-   fun is_branch thm =
-      case Lib.total (fst o Term.dest_comb o utilsLib.rhsc) thm of
-         SOME t => t = Branch_tm
-       | NONE => false
+             [boolTheory.COND_ID, cond_rand_thms,
+              ASSUME ``^st.BranchTo = NONE``]))
+      THENC REPEATC
+               (Conv.DEPTH_CONV Thm.BETA_CONV
+                THENC
+                  REWRITE_CONV
+                  [boolTheory.COND_ID, wordsTheory.WORD_SUB_ADD, branch_delay,
+                   pairTheory.pair_case_def])
+   val BRANCH_DELAY_RULE =
+      utilsLib.ALL_HYP_CONV_RULE
+         (REWRITE_CONV [ASSUME ``^st.BranchDelay = SOME d``,
+                        optionTheory.NOT_SOME_NONE])
+   val NO_BRANCH_DELAY_RULE =
+      CONV_RULE
+        (Lib.funpow 4 RAND_CONV
+           (LAND_CONV
+              (RAND_CONV
+                 (PURE_REWRITE_CONV
+                    [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]))))
    val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV STATE_CONV)
-   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nobranch
-   val MP_NextB = state_rule o Drule.MATCH_MP NextStateMIPS_branch
+   val exc_rule = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule
+   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay o
+                  NO_BRANCH_DELAY_RULE
+   val MP_NextB = state_rule o BRANCH_DELAY_RULE o
+                  Drule.MATCH_MP NextStateMIPS_delay
+   val MP_NextE = state_rule o Drule.MATCH_MP NextStateMIPS_exception
    val Run_CONV = utilsLib.Run_CONV ("mips", st) o utilsLib.rhsc
 in
    fun mips_eval be =
@@ -893,28 +930,63 @@ in
                                |> Conv.RIGHT_CONV_RULE
                                     (Conv.RAND_CONV (Conv.REWR_CONV ethm)
                                      THENC snd_conv)
-               val thm4 = STATE_CONV (mk_proj_exception (rhsc thm3))
-               val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4]
+               val tm = rhsc thm3
+               val thms = List.map (fn f => STATE_CONV (f tm))
+                             [mk_proj_exception,
+                              mk_proj_BranchDelay,
+                              mk_proj_BranchTo]
+               val thm = Drule.LIST_CONJ ([thm1, thm2, thm3] @ thms)
             in
-               MP_Next thm ::
-               (if is_branch thm2
-                   then []
-                else let
-                        val thm3b = BranchNone_RULE thm3
-                        val tm = rhsc thm3b
-                        val thm4b = STATE_CONV (mk_proj_exception tm)
-                        val thm5b = STATE_CONV (mk_proj_BranchStatus tm)
-                        val thm =
-                           Drule.LIST_CONJ [thm1, thm2, thm3b, thm4b, thm5b]
-                     in
-                        [MP_NextB thm]
-                     end)
+               [MP_Next thm] @
+               ([MP_NextB thm] handle HOL_ERR _ => []) @
+               ([MP_NextE thm] handle HOL_ERR _ => [])
             end
       end
 end
 
 fun mips_eval_hex be = mips_eval be o bitstringSyntax.bitstring_of_hexstring
 
+fun ishex s =
+   String.size s = 8 andalso List.all Char.isHexDigit (String.explode s)
+
+fun mips_step_code be =
+   let
+      val ev = mips_eval_hex be
+   in
+      fn s =>
+         let
+            val h = mips.encodeInstruction s
+         in
+            if ishex h then ev h else raise ERR "mips_step_code" h
+         end
+   end
+
 (* ========================================================================= *)
+
+(* Testing
+
+open mips_stepLib
+
+val step = mips_eval false
+fun test s = step (Redblackmap.find (mips_dict, s))
+fun test s = (Redblackmap.find (mips_dict, s))
+
+val v = test "ADDI";
+val v = test "ADDU";
+val v = test "J";
+val v = test "BEQ";
+val v = test "BEQL";
+val v = test "BLTZAL";
+val v = test "BLTZALL";
+val v = test "ERET"
+
+val be = false
+val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"
+val v = bitstringSyntax.bitstring_of_hexstring "00c72820"
+val v = bitstringSyntax.bitstring_of_hexstring "07d00000"
+
+val ths = mips_step_code true "addi $1, $2, 3"
+
+*)
 
 end

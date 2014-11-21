@@ -14,6 +14,10 @@ datatype single_rule
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
+val avoid_unicode = ref (Systeml.OS = "winNT")
+val _ = register_btrace("PP.avoid_unicode", avoid_unicode)
+
+
 val pp_num_types = ref true
 val _ = register_btrace("pp_num_types", pp_num_types)
 
@@ -104,7 +108,10 @@ fun pp_type0 (G:grammar) backend = let
     fun pbegin b = if b then add_string "(" else ()
     fun pend b = if b then add_string ")" else ()
     fun uniconvert s =
-        if get_tracefn "Greek tyvars" () = 1 andalso size s = 2 then let
+        if not (!avoid_unicode) andalso get_tracefn "Greek tyvars" () = 1
+           andalso size s = 2
+        then
+          let
             val i = Char.ord (String.sub(s, 1)) - Char.ord #"a" + 0x3B1
           in
             if 0x3B1 <= i andalso i <= 0x3C9 andalso i <> 0x3BB then UTF8.chr i
@@ -164,7 +171,7 @@ fun pp_type0 (G:grammar) backend = let
           in
             add_string "(";
             begin_block INCONSISTENT 0;
-            if not (null Args) then (print_args Top Args; add_break(1,0))
+            if not (null Args) then (print_args Sfx Args; add_break(1,0))
             else ();
             add_string (Thy ^ "$" ^ Tyop);
             end_block();

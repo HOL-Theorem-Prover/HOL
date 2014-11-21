@@ -7,6 +7,19 @@ struct
 
 local open finite_mapTheory finite_mapSyntax pred_setTheory simpLib in
 
+val add_finite_map_compset = computeLib.add_thms
+  [o_f_FEMPTY
+  ,FLOOKUP_EMPTY
+  ,FLOOKUP_UPDATE
+  ,FLOOKUP_FUNION
+  ,DOMSUB_FLOOKUP_THM
+  ,FUNION_FEMPTY_1
+  ,FUNION_FEMPTY_2
+  ,FUNION_FUPDATE_1
+  ,FUPDATE_LIST_THM
+  ,FDOM_FUPDATE
+  ,FDOM_FEMPTY
+  ]
 
 val FEVERY_cs = computeLib.bool_compset ()
 val _         = computeLib.add_thms

@@ -12,7 +12,8 @@
 
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
-          "Defn", "TotalDefn", "metisLib"];
+          "Defn", "TotalDefn", "metisLib", "OpenTheoryMap",
+          "numpairTheory"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
      pairTheory numTheory prim_recTheory arithmeticTheory whileTheory
@@ -23,10 +24,13 @@ val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
 
 fun store_thm(r as(n,t,tac)) = let
-  val th = Tactical.store_thm r
+  val th = boolLib.store_thm r
 in
   if String.isPrefix "IN_" n then let
-      val stem = String.extract(n,3,NONE)
+      val stem0 = String.extract(n,3,NONE)
+      val stem = Substring.full stem0
+                    |> Substring.position "["
+                    |> #1 |> Substring.string
     in
       if isSome (CharVector.find (equal #"_") stem) then th
       else
@@ -145,6 +149,10 @@ val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
+
+val GSPECIFICATION_applied = save_thm(
+  "GSPECIFICATION_applied[simp]",
+  REWRITE_RULE [SPECIFICATION] GSPECIFICATION);
 
 (* --------------------------------------------------------------------- *)
 (* load generalized specification code.					 *)
@@ -906,7 +914,7 @@ val INSERT_INTER =
       STRIP_TAC THEN ASM_REWRITE_TAC [],
       STRIP_TAC THEN ASM_REWRITE_TAC []]);
 
-val DISJOINT_INSERT = store_thm("DISJOINT_INSERT",
+val DISJOINT_INSERT = store_thm("DISJOINT_INSERT[simp]",
 (--`!(x:'a) s t. DISJOINT (x INSERT s) t = (DISJOINT s t) /\ ~(x IN t)`--),
      REWRITE_TAC [IN_DISJOINT,IN_INSERT] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
@@ -920,6 +928,10 @@ val DISJOINT_INSERT = store_thm("DISJOINT_INSERT",
       end,
       REPEAT STRIP_TAC THEN ASM_CASES_TAC (--`x':'a = x`--) THENL
       [ASM_REWRITE_TAC[], ASM_REWRITE_TAC[]]]);
+
+val DISJOINT_INSERT' = save_thm(
+  "DISJOINT_INSERT'[simp]",
+  ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_INSERT);
 
 val INSERT_SUBSET =
     store_thm
@@ -995,6 +1007,11 @@ val DELETE_NON_ELEMENT =
       FIRST_ASSUM (fn th => fn g => SUBST_ALL_TAC th g handle _ => NO_TAC g)
       THEN RES_TAC,
       RES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN REFL_TAC]);
+
+val DELETE_NON_ELEMENT_RWT = save_thm(
+  "DELETE_NON_ELEMENT_RWT",
+  DELETE_NON_ELEMENT |> SPEC_ALL |> EQ_IMP_RULE |> #1
+                     |> Q.GENL [`s`, `x`])
 
 val IN_DELETE_EQ =
     store_thm
@@ -1511,7 +1528,7 @@ val INJ_COMPOSE =
 
 val INJ_EMPTY =
     store_thm
-    ("INJ_EMPTY",
+    ("INJ_EMPTY[simp]",
      (--`!f:'a->'b. (!s. INJ f {} s) /\ (!s. INJ f s {} = (s = {}))`--),
      REWRITE_TAC [INJ_DEF,NOT_IN_EMPTY,EXTENSION] THEN
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
@@ -1624,6 +1641,7 @@ val BIJ_ID =
 val BIJ_EMPTY = store_thm("BIJ_EMPTY",
 (--`!f:'a->'b. (!s. BIJ f {} s = (s = {})) /\ (!s. BIJ f s {} = (s = {}))`--),
      REWRITE_TAC [BIJ_DEF,INJ_EMPTY,SURJ_EMPTY]);
+val _ = export_rewrites ["BIJ_EMPTY"]
 
 val BIJ_COMPOSE =
     store_thm
@@ -3369,6 +3387,12 @@ val CROSS_EMPTY = store_thm(
   SIMP_TAC bool_ss [EXTENSION, IN_CROSS, NOT_IN_EMPTY]);
 val _ = export_rewrites ["CROSS_EMPTY"]
 
+val CROSS_EMPTY_EQN = store_thm("CROSS_EMPTY_EQN",
+  ``(s CROSS t = {}) <=> (s = {}) \/ (t = {})``,
+  SRW_TAC[][EQ_IMP_THM] THEN SRW_TAC[][CROSS_EMPTY] THEN
+  FULL_SIMP_TAC(srw_ss())[EXTENSION,pairTheory.FORALL_PROD] THEN
+  METIS_TAC[])
+
 val CROSS_INSERT_LEFT = store_thm(
   "CROSS_INSERT_LEFT",
   ``!P Q x. (x INSERT P) CROSS Q = ({x} CROSS Q) UNION (P CROSS Q)``,
@@ -4148,7 +4172,8 @@ val PROD_SET_IMAGE_REDUCTION = store_thm(
 (* every finite, non-empty set of natural numbers has a maximum element *)
 
 val max_lemma = prove(
-  ``!s. FINITE s ==> ~(s = {}) ==> ?x. x IN s /\ !y. y IN s ==> y <= x``,
+  ``!s. FINITE s ==> ?x. (s <> {} ==> x IN s /\ !y. y IN s ==> y <= x) /\
+                         ((s = {}) ==> (x = 0))``,
   HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [NOT_INSERT_EMPTY, IN_INSERT] THEN
   REPEAT STRIP_TAC THEN
@@ -4165,37 +4190,40 @@ val max_lemma = prove(
 
 val MAX_SET_DEF = new_specification (
   "MAX_SET_DEF", ["MAX_SET"],
-  SIMP_RULE bool_ss [AND_IMP_INTRO, GSYM RIGHT_EXISTS_IMP_THM,
-                     SKOLEM_THM] max_lemma);
+  CONV_RULE (BINDER_CONV RIGHT_IMP_EXISTS_CONV THENC
+             SKOLEM_CONV) max_lemma);
 
 val MAX_SET_THM = store_thm(
   "MAX_SET_THM",
-  ``(!e. MAX_SET {e} = e) /\
-    (!s. FINITE s ==> !e1 e2. MAX_SET (e1 INSERT e2 INSERT s) =
-                              MAX e1 (MAX_SET (e2 INSERT s)))``,
+  ``(MAX_SET {} = 0) /\
+    (!e s. FINITE s ==> (MAX_SET (e INSERT s) = MAX e (MAX_SET s)))``,
   CONJ_TAC THENL [
-    GEN_TAC THEN
-    STRIP_ASSUME_TAC (SIMP_RULE bool_ss [FINITE_SING, NOT_INSERT_EMPTY,
-                                         IN_SING]
-                                (Q.SPEC `{e}` MAX_SET_DEF)),
+    STRIP_ASSUME_TAC (SIMP_RULE bool_ss [FINITE_EMPTY]
+                                (Q.SPEC `{}` MAX_SET_DEF)),
     REPEAT STRIP_TAC THEN
-    Q.ISPEC_THEN `e1 INSERT e2 INSERT s` MP_TAC MAX_SET_DEF THEN
+    Q.ISPEC_THEN `e INSERT s` MP_TAC MAX_SET_DEF THEN
     ASM_SIMP_TAC bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY,
                           IN_INSERT, FORALL_AND_THM, DISJ_IMP_THM] THEN
     STRIP_TAC THEN
-    Q.ISPEC_THEN `e2 INSERT s` MP_TAC MAX_SET_DEF THEN
-    ASM_SIMP_TAC bool_ss [FINITE_INSERT, NOT_INSERT_EMPTY,
-                          IN_INSERT, FORALL_AND_THM, DISJ_IMP_THM] THEN
+    Q.ISPEC_THEN `s` MP_TAC MAX_SET_DEF THEN
+    ASM_REWRITE_TAC [] THEN
     STRIP_TAC THEN
-    Q.ABBREV_TAC `m1 = MAX_SET (e1 INSERT e2 INSERT s)` THEN
-    Q.ABBREV_TAC `m2 = MAX_SET (e2 INSERT s)` THEN
-    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN RES_TAC THEN
-    ASM_SIMP_TAC arith_ss [MAX_DEF]
+    Q.ABBREV_TAC `m1 = MAX_SET (e INSERT s)` THEN
+    Q.ABBREV_TAC `m2 = MAX_SET s` THEN
+    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
+    Q.ASM_CASES_TAC `s = {}` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    RES_TAC THEN ASM_SIMP_TAC arith_ss [MAX_DEF]
   ]);
+
+val MAX_SET_REWRITES = store_thm(
+  "MAX_SET_REWRITES",
+  ``(MAX_SET {} = 0) /\ (MAX_SET {e} = e)``,
+  SRW_TAC[][MAX_SET_THM]);
+val _ = export_rewrites ["MAX_SET_REWRITES"]
 
 val MAX_SET_ELIM = store_thm(
   "MAX_SET_ELIM",
-  ``!P Q. FINITE P /\ ~(P = {}) /\ (!x. (!y. y IN P ==> y <= x) /\ x IN P ==> Q x) ==>
+  ``!P Q. FINITE P /\ ((P = {}) ==> Q 0) /\ (!x. (!y. y IN P ==> y <= x) /\ x IN P ==> Q x) ==>
           Q (MAX_SET P)``,
   PROVE_TAC [MAX_SET_DEF]);
 
@@ -4253,8 +4281,11 @@ val SUBSET_MIN_SET = Q.store_thm
 
 val SUBSET_MAX_SET = Q.store_thm
 ("SUBSET_MAX_SET",
- `!I J n. FINITE I /\ FINITE J /\
-          ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MAX_SET I <= MAX_SET J`,
+ `!I J n. FINITE I /\ FINITE J /\ I SUBSET J ==> MAX_SET I <= MAX_SET J`,
+ CONV_TAC (RENAME_VARS_CONV ["s1", "s2"]) THEN
+ REPEAT GEN_TAC THEN REPEAT STRIP_TAC THEN
+ Q.ASM_CASES_TAC `s1 = {}` THEN1 ASM_SIMP_TAC (srw_ss()) [] THEN
+ Q.ASM_CASES_TAC `s2 = {}` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
  METIS_TAC [SUBSET_DEF,MAX_SET_DEF]);
 
 val MIN_SET_LEQ_MAX_SET = Q.store_thm
@@ -4295,33 +4326,20 @@ val MIN_SET_UNION = Q.store_thm
 
 val MAX_SET_UNION = Q.store_thm
 ("MAX_SET_UNION",
- `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={})
+ `!A B. FINITE A /\ FINITE B
          ==>
       (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
- let val lem = Q.prove
- (`!A. FINITE A ==>
-   !B. FINITE B /\ ~(A={}) /\ ~(B={})
-       ==> (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
-  SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
-   THEN `?b t. (B = b INSERT t) /\ ~(b IN t)` by METIS_TAC [SET_CASES]
-   THEN RW_TAC (srw_ss()) []
+ Q_TAC SUFF_TAC `
+   !A. FINITE A ==> !B. FINITE B ==>
+       (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))
+ ` THEN1 METIS_TAC[] THEN
+ SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
+   THEN `(B = {}) \/ ?b t. (B = b INSERT t) /\ ~(b IN t)`
+           by METIS_TAC [SET_CASES]
+   THEN SRW_TAC [][]
    THEN `(e INSERT s) UNION (b INSERT t) = e INSERT b INSERT (s UNION t)`
-        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
-   THEN POP_ASSUM SUBST_ALL_TAC
-   THEN `FINITE (s UNION t)` by METIS_TAC [FINITE_INSERT,FINITE_UNION]
-   THEN RW_TAC (srw_ss()) [MAX_SET_THM]
-   THEN Cases_on `s={}` THEN RW_TAC (srw_ss()) [MAX_SET_THM]
-   THEN `b INSERT (s UNION t) = s UNION (b INSERT t)`
-        by METIS_TAC [INSERT_UNION,INSERT_UNION_EQ, UNION_COMM, UNION_ASSOC]
-   THEN POP_ASSUM SUBST_ALL_TAC
-   THEN `MAX_SET (s UNION (b INSERT t)) = MAX (MAX_SET s) (MAX_SET (b INSERT t))`
-        by METIS_TAC [] THEN POP_ASSUM SUBST_ALL_TAC
-   THEN `MAX_SET (e INSERT s) = MAX (MAX_SET s) (MAX_SET {e})`
-        by METIS_TAC [FINITE_SING,NOT_EMPTY_INSERT,
-                      UNION_COMM,INSERT_UNION_EQ,UNION_EMPTY]
-   THEN RW_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC])
- in METIS_TAC [lem]
- end);;
+        by SRW_TAC[][EXTENSION,AC DISJ_COMM DISJ_ASSOC]
+   THEN FULL_SIMP_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC]);
 
 val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
@@ -4360,6 +4378,12 @@ val SUBSET_DELETE_BOTH = Q.store_thm
 ("SUBSET_DELETE_BOTH",
  `!s1 s2 x. s1 SUBSET s2 ==> (s1 DELETE x) SUBSET (s2 DELETE x)`,
  RW_TAC set_ss [SUBSET_DEF,SUBSET_DELETE,IN_DELETE]);
+
+val POW_EMPTY = store_thm("POW_EMPTY",
+  ``!s. POW s <> {}``,
+  SRW_TAC[][EXTENSION,IN_POW] THEN
+  METIS_TAC[EMPTY_SUBSET])
+val _ = export_rewrites["POW_EMPTY"]
 
 (*---------------------------------------------------------------------------*)
 (* Recursion equations for POW                                               *)
@@ -4994,12 +5018,10 @@ METIS_TAC []);
 
 val infinite_pow_uncountable = Q.store_thm ("infinite_pow_uncountable",
 `!s. INFINITE s ==> ~countable (POW s)`,
-RWTAC [countable_surj, infinite_num_inj] THENL
-[RWTAC [POW_DEF, EXTENSION, SUBSET_DEF] THEN
-     METIS_TAC [],
- IMP_RES_TAC inj_surj THEN
-     FSTAC [UNIV_NOT_EMPTY] THEN
-     METIS_TAC [pow_no_surj, SURJ_COMPOSE]]);
+RWTAC [countable_surj, infinite_num_inj] THEN
+IMP_RES_TAC inj_surj THEN
+FSTAC [UNIV_NOT_EMPTY] THEN
+METIS_TAC [pow_no_surj, SURJ_COMPOSE]);
 
 val countable_Usum = store_thm(
   "countable_Usum",
@@ -5155,10 +5177,73 @@ REPEAT GEN_TAC THEN
    SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
 ) THEN
 METIS_TAC[SUBSET_FINITE]);
-
-
 (* END misc thms *)
 
+(*---------------------------------------------------------------------------*)
+(* Various lemmas from the CakeML project https://cakeml.org                 *)
+(*---------------------------------------------------------------------------*)
+
+val INSERT_EQ_SING = store_thm("INSERT_EQ_SING",
+  ``!s x y. (x INSERT s = {y}) <=> ((x = y) /\ s SUBSET {y})``,
+  SRW_TAC [] [SUBSET_DEF,EXTENSION] THEN METIS_TAC []);
+
+val CARD_UNION_LE = store_thm("CARD_UNION_LE",
+  ``FINITE s /\ FINITE t ==> CARD (s UNION t) <= CARD s + CARD t``,
+  SRW_TAC [][] THEN IMP_RES_TAC CARD_UNION THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [])
+
+val IMAGE_SUBSET_gen = store_thm("IMAGE_SUBSET_gen",
+  ``!f s u t. s SUBSET u /\ (IMAGE f u SUBSET t) ==> IMAGE f s SUBSET t``,
+  SIMP_TAC (srw_ss())[SUBSET_DEF] THEN METIS_TAC[])
+
+val CARD_REST = store_thm("CARD_REST",
+  ``!s. FINITE s /\ s <> {} ==> (CARD (REST s) = CARD s - 1)``,
+  SRW_TAC[][] THEN
+  IMP_RES_TAC CHOICE_INSERT_REST THEN
+  POP_ASSUM (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [Once(SYM th)]))) THEN
+  Q.SPEC_THEN`REST s`MP_TAC CARD_INSERT THEN SRW_TAC[][] THEN
+  FULL_SIMP_TAC(srw_ss())[REST_DEF])
+
+val SUBSET_DIFF_EMPTY = store_thm("SUBSET_DIFF_EMPTY",
+  ``!s t. (s DIFF t = {}) = (s SUBSET t)``,
+  SRW_TAC[][EXTENSION,SUBSET_DEF] THEN PROVE_TAC[])
+
+val DIFF_INTER_SUBSET = store_thm("DIFF_INTER_SUBSET",
+  ``!r s t. r SUBSET s ==> (r DIFF s INTER t = r DIFF t)``,
+  SRW_TAC[][EXTENSION,SUBSET_DEF] THEN PROVE_TAC[])
+
+val UNION_DIFF_2 = store_thm("UNION_DIFF_2",
+  ``!s t. (s UNION (s DIFF t) = s)``,
+  SRW_TAC[][EXTENSION] THEN PROVE_TAC[])
+
+val count_add = store_thm("count_add",
+  ``!n m. count (n + m) = count n UNION IMAGE ($+ n) (count m)``,
+  SRW_TAC[ARITH_ss][EXTENSION,EQ_IMP_THM] THEN
+  Cases_on `x < n` THEN SRW_TAC[ARITH_ss][] THEN
+  Q.EXISTS_TAC `x - n` THEN
+  SRW_TAC[ARITH_ss][])
+
+val IMAGE_EQ_SING = store_thm("IMAGE_EQ_SING",
+  ``(IMAGE f s = {z}) <=> (s <> {}) /\ !x. x IN s ==> (f x = z)``,
+  EQ_TAC THEN
+  SRW_TAC[DNF_ss][EXTENSION] THEN
+  PROVE_TAC[])
+
+val count_add1 = Q.store_thm ("count_add1",
+`!n. count (n + 1) = n INSERT count n`,
+METIS_TAC [COUNT_SUC, arithmeticTheory.ADD1]);
+
+val compl_insert = Q.store_thm ("compl_insert",
+`!s x. COMPL (x INSERT s) = COMPL s DELETE x`,
+ SRW_TAC [] [EXTENSION, IN_COMPL] THEN
+ METIS_TAC []);
+
+val in_max_set = Q.store_thm ("in_max_set",
+`!s. FINITE s ==> !x. x IN s ==> x <= MAX_SET s`,
+ HO_MATCH_MP_TAC FINITE_INDUCT THEN
+ SRW_TAC [] [MAX_SET_THM] THEN
+ SRW_TAC [] []);
+
+(* end CakeML lemmas *)
 
 val _ = export_rewrites
     [
@@ -5177,7 +5262,7 @@ val _ = export_rewrites
      "DIFF_DIFF", "DIFF_EMPTY", "DIFF_EQ_EMPTY", "DIFF_UNIV",
      "DIFF_SUBSET",
      (* "DISJOINT" theorems *)
-     "DISJOINT_EMPTY", "DISJOINT_INSERT", "DISJOINT_UNION_BOTH",
+     "DISJOINT_EMPTY", "DISJOINT_UNION_BOTH",
      "DISJOINT_EMPTY_REFL_RWT",
      (* "IMAGE" theorems *)
      "IMAGE_DELETE", "IMAGE_FINITE", "IMAGE_ID", "IMAGE_IN",

@@ -1965,7 +1965,7 @@ by IMP_RES_TAC inter_merge_ORL THEN
 IMP_RES_THEN SUBST1_TAC bt_to_orl_ID_IMP THEN
 IMP_RES_TAC inter_merge_fmap);
 
-(* ********* Do the the corresponding stuff for diff_merge ******* *)
+(* ********* Do the corresponding stuff for diff_merge ******* *)
 
 val diff_merge = Define
 `(diff_merge cmp [] [] = []) /\

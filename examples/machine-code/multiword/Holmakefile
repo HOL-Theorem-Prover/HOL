@@ -14,6 +14,12 @@ BARE_THYS = $(HOLDIR)/examples/machine-code/decompiler/decompilerLib \
             ../x64_compiler/x64_compilerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
 endif

@@ -8,6 +8,7 @@ sig
 
   (* new types *)
   val Hol_datatype : hol_type quotation -> unit
+  val Datatype : hol_type quotation -> unit
 
   (* new functions *)
   val Define       : term quotation -> thm

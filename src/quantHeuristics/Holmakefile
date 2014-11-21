@@ -2,5 +2,11 @@ ifdef POLY
 HOLHEAP = ../num/termination/numheap
 endif
 
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<

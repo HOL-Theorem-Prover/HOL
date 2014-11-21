@@ -3,7 +3,7 @@
 \TYPE {ERR_to_string : (error_record -> string) ref}
 
 \SYNOPSIS
-Alterable function for formatting {HOL_ERR}
+Alterable function for formatting {HOL_ERR}.
 
 \KEYWORDS
 exception, error, formatting

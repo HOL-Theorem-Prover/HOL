@@ -432,6 +432,7 @@ sig
    val mk_word_or : term * term -> term
    val mk_word_reduce : term * term -> term
    val mk_word_replicate : term * term -> term
+   val mk_word_replicate_ty : term * term * hol_type -> term
    val mk_word_reverse : term -> term
    val mk_word_rol : term * term -> term
    val mk_word_rol_bv : term * term -> term

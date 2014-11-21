@@ -16,9 +16,58 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => OS.Path.concat (chunk,path)) slist);
 
+val spacify = String.concatWith " "
+fun nspaces f n = if n <= 0 then () else (f " "; nspaces f (n - 1))
+fun collapse_bslash_lines s = let
+  val charlist = explode s
+  fun trans [] = []
+    | trans (#"\\"::(#"\n"::rest)) = trans rest
+    | trans (x::xs) = x :: trans xs
+in
+  implode (trans charlist)
+end
+
+fun realspace_delimited_fields s = let
+  open Substring
+  fun inword cword words ss =
+      case getc ss of
+        NONE => List.rev (implode (List.rev cword) :: words)
+      | SOME (c,ss') => let
+        in
+          case c of
+            #" " => outword (implode (List.rev cword) :: words) ss'
+          | #"\\" => let
+            in
+              case getc ss' of
+                NONE => List.rev (implode (List.rev (c::cword)) :: words)
+              | SOME (c',ss'') => inword (c'::cword) words ss''
+            end
+          | _ => inword (c::cword) words ss'
+        end
+  and outword words ss =
+      case getc ss of
+        NONE => List.rev words
+      | SOME(c, ss') => let
+        in
+          case c of
+            #" " => outword words ss'
+          | _ => inword [] words ss
+        end
+in
+  outword [] (full s)
+end
+
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
+
+fun die_with message = let
+  open TextIO
+in
+  output(stdErr, message ^ "\n");
+  flushOut stdErr;
+  OS.Process.exit OS.Process.failure
+end
 
 fun output_functions {quiet_flag: bool, debug:bool} = let
   val execname = CommandLine.name()
@@ -32,6 +81,8 @@ fun output_functions {quiet_flag: bool, debug:bool} = let
 in
   {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info}
 end
+
+fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
@@ -288,5 +339,38 @@ in
       do_em visited (Binarymap.listItems possible_calls)
     end
 end
+
+fun find_files ds P =
+    case OS.FileSys.readDir ds of
+        NONE => (OS.FileSys.closeDir ds; [])
+      | SOME fname => if P fname then fname::find_files ds P
+                      else find_files ds P
+
+fun generate_all_plausible_targets first_target =
+    case first_target of
+        SOME s => [toFile s]
+      | NONE =>
+        let
+          val cds = OS.FileSys.openDir "."
+          fun not_a_dot f = not (String.isPrefix "." f)
+          fun ok_file f =
+              case (toFile f) of
+                  SIG _ => true
+                | SML _ => true
+                | _ => false
+          val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
+          fun src_to_target (SIG (Script s)) = UO (Theory s)
+            | src_to_target (SML (Script s)) = UO (Theory s)
+            | src_to_target (SML s) = (UO s)
+            | src_to_target (SIG s) = (UI s)
+            | src_to_target _ = raise Fail "Can't happen"
+          val initially = map (src_to_target o toFile) src_files
+          fun remove_sorted_dups [] = []
+            | remove_sorted_dups [x] = [x]
+            | remove_sorted_dups (x::y::z) = if x = y then remove_sorted_dups (y::z)
+                                             else x :: remove_sorted_dups (y::z)
+        in
+          remove_sorted_dups (Listsort.sort file_compare initially)
+        end
 
 end (* struct *)

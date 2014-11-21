@@ -1,4 +1,9 @@
 EXTRA_CLEANS = selftest.exe
 
+UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+
+all: $(UOFILES) selftest.exe
+.PHONY: all
+
 selftest.exe: selftest.uo boolSimps.uo Cond_rewr.uo simpLib.uo
 	$(HOLMOSMLC) -o $@ $<

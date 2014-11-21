@@ -51,9 +51,10 @@ val reverse_tm   = prim_mk_const {Name = "REVERSE", Thy = "list"}
 val list_case_tm = prim_mk_const {Name = "list_CASE", Thy = "list"}
 val last_tm      = prim_mk_const {Name = "LAST",    Thy = "list"}
 val front_tm     = prim_mk_const {Name = "FRONT",   Thy = "list"}
+val nub_tm       = prim_mk_const {Name = "nub",     Thy = "list"}
 val all_distinct_tm = prim_mk_const {Name = "ALL_DISTINCT", Thy = "list"}
 val list_to_set_tm  = prim_mk_const {Name = "LIST_TO_SET",  Thy = "list"}
-val genlist_tm    = prim_mk_const {Name =  "GENLIST", Thy = "list"}
+val genlist_tm    = prim_mk_const {Name = "GENLIST", Thy = "list"}
 
 fun eltype l = dest_list_type (type_of l);
 
@@ -107,6 +108,8 @@ fun mk_all_distinct l = mk_comb(inst[alpha |-> eltype l] all_distinct_tm,l);
 fun mk_list_to_set l = mk_comb(inst[alpha |-> eltype l] list_to_set_tm,l);
 fun mk_mem(x,l)     = pred_setSyntax.mk_in(x,mk_list_to_set l)
 
+fun mk_nub l = mk_comb(inst[alpha |-> eltype l] nub_tm,l)
+
 fun mk_genlist (f,n) =
   list_mk_comb (inst [alpha |-> (f |> Term.type_of
                                    |> Type.dom_rng
@@ -156,6 +159,7 @@ val dest_sum      = dest_monop sum_tm      (ERR "dest_sum"      "not SUM")
 val dest_reverse  = dest_monop reverse_tm  (ERR "dest_reverse"  "not REVERSE")
 val dest_last     = dest_monop last_tm     (ERR "dest_last"     "not LAST")
 val dest_front    = dest_monop front_tm    (ERR "dest_front"    "not FRONT")
+val dest_nub      = dest_monop nub_tm      (ERR "dest_nub"      "not nub")
 val dest_all_distinct = dest_monop all_distinct_tm
                           (ERR "dest_all_distinct" "not ALL_DISTINCT")
 val dest_list_to_set = dest_monop list_to_set_tm
@@ -210,7 +214,8 @@ val is_all_distinct = can dest_all_distinct
 val is_list_to_set  = can dest_list_to_set
 val is_reverse      = can dest_reverse
 val is_list_case    = can dest_list_case
-val is_genlist    = can dest_genlist
+val is_genlist      = can dest_genlist
+val is_nub          = can dest_nub
 
 val s3 = HolKernel.syntax_fns "list" 3 HolKernel.dest_triop HolKernel.mk_triop
 

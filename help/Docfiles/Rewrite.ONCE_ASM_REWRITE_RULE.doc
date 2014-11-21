@@ -23,7 +23,7 @@ Never fails.
 
 \USES
 This tactic is used when rewriting with the hypotheses of a theorem
-(as well as a given list of theorems and {basic_rewrites}), when more
+(as well as a given list of theorems and {implicit_rewrites}), when more
 than one pass is not required or would result in divergence.
 
 \SEEALSO

@@ -10,7 +10,7 @@ conversion.
 
 \DESCRIBE
 Rewriting a term using {REWRITE_CONV} utilizes as rewrites two sets
-of theorems: the tautologies in the ML list {basic_rewrites} and the
+of theorems: the tautologies in the ML list {implicit_rewrites} and the
 ones supplied by the user. The rule searches top-down and recursively
 for subterms which match the left-hand side of any of the possible
 rewrites, until none of the transformations are applicable. There is no
@@ -18,7 +18,7 @@ ordering specified among the set of rewrites.
 
 Variants of this conversion allow changes in the set of equations used:
 {PURE_REWRITE_CONV} and others in its family do not rewrite with the
-theorems in {basic_rewrites}. 
+theorems in {implicit_rewrites}. 
 
 The top-down recursive search for matches may not be desirable, as
 this may increase the number of inferences being made or may result in

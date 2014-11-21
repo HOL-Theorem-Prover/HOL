@@ -28,4 +28,3 @@ val option_size_def =
     rec_axiom = optionTheory.option_Axiom};
 
 val _ = export_theory();
-

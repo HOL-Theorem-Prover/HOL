@@ -17,7 +17,7 @@ sig
   * however is able to handle arbitrary congruences.
   *
   * This lib tries to provide this ability of the traverser to handle arbitrary
-  * congruences (or in fact preorders) to the the end user. Therefore, an
+  * congruences (or in fact preorders) to the end user. Therefore, an
   * interface similar to the interface of SimpLib is provided.
   *)
 
@@ -130,4 +130,3 @@ sig
 
 
 end
-

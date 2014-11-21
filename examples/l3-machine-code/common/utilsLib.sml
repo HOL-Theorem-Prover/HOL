@@ -183,6 +183,23 @@ in
    fun mk_negation tm = rhsc (cnv (boolSyntax.mk_neg tm))
 end
 
+local
+   fun mk_x (s, ty) = Term.mk_var ("x" ^ String.extract (s, 1, NONE), ty)
+   fun rename v =
+      case Lib.total Term.dest_var v of
+         SOME (s_ty as (s, _)) =>
+           if String.sub (s, 0) = #"_" then SOME (v |-> mk_x s_ty) else NONE
+       | NONE => NONE
+   val mk_l = String.implode o Lib.separate #";" o String.explode o uppercase
+in
+   fun pattern s =
+      let
+         val tm = Parse.Term [HOLPP.QUOTE ("[" ^ mk_l s ^ "]")]
+      in
+         Term.subst (List.mapPartial rename (Term.free_vars tm)) tm
+      end
+end
+
 val strip_add_or_sub =
    let
       fun iter a t =
@@ -569,7 +586,7 @@ in
       let
          val mtch = Term.match_term (boolSyntax.lhs (Thm.concl thm))
       in
-         fn tm => PURE_REWRITE_CONV [Drule.INST_TY_TERM (mtch tm) thm] tm
+         fn tm => PURE_ONCE_REWRITE_CONV [Drule.INST_TY_TERM (mtch tm) thm] tm
                   handle HOL_ERR _ => raise ERR "INST_REWRITE_CONV1" ""
       end
    fun INST_REWRITE_CONV l =
@@ -823,47 +840,47 @@ local
        | NONE => []
    val err = ERR "enum_eq_CONV" "Equality not between constants"
    fun add_datatype cmp ty =
-      let
-         val (thy, name) = case Type.dest_thy_type ty of
-                              {Thy = thy, Args = [], Tyop = name} => (thy, name)
-                            | _ => raise ERR "add_datatype" "Not 0-ary type"
-         val ftch = fetch1 thy
-         val ty2num = ftch (name ^ "2num_thm")
-         val num2ty = ftch ("num2" ^ name ^ "_thm")
-         val fupds = TypeBase.updates_of ty
-         fun add r = computeLib.add_thms (r @ ty2num @ num2ty @ fupds) cmp
-      in
-         (case Lib.total TypeBase.case_const_of ty of
-             SOME tm => computeLib.set_skip cmp tm NONE
-           | NONE => ())
-         ; case TypeBase.simpls_of ty of
-              {convs = [], rewrs = r} => add r
-            | {convs = {name = n, ...} :: _, rewrs = r} =>
-              (add r
-               ; if String.isSuffix "const_eq_CONV" n (* enumerated *)
-                    then case (ftch (name ^ "_EQ_" ^ name), ty2num) of
-                            ([eq_elim_thm], [_]) =>
-                            let
-                               val cnv =
-                                  Conv.REWR_CONV eq_elim_thm
-                                  THENC PURE_REWRITE_CONV ty2num
-                                  THENC reduceLib.REDUCE_CONV
-                               fun ecnv tm =
-                                  let
-                                     val (l, r) = boolSyntax.dest_eq tm
-                                     val _ =
-                                        Term.is_const l andalso Term.is_const r
-                                        orelse raise err
-                                  in
-                                     cnv tm
-                                  end
-                            in
-                               computeLib.add_conv
-                                  (boolSyntax.equality, 2, ecnv) cmp
-                            end
-                          | _ => ()
-                 else ())
-      end
+      case Type.dest_thy_type ty of
+         {Thy = thy, Args = [], Tyop = name} =>
+         let
+            val ftch = fetch1 thy
+            val ty2num = ftch (name ^ "2num_thm")
+            val num2ty = ftch ("num2" ^ name ^ "_thm")
+            val fupds = TypeBase.updates_of ty
+            fun add r = computeLib.add_thms (r @ ty2num @ num2ty @ fupds) cmp
+         in
+            (case Lib.total TypeBase.case_const_of ty of
+                SOME tm => computeLib.set_skip cmp tm NONE
+              | NONE => ())
+            ; case TypeBase.simpls_of ty of
+                 {convs = [], rewrs = r} => add r
+               | {convs = {name = n, ...} :: _, rewrs = r} =>
+                 ( add r
+                 ; if String.isSuffix "const_eq_CONV" n (* enumerated *)
+                      then case (ftch (name ^ "_EQ_" ^ name), ty2num) of
+                              ([eq_elim_thm], [_]) =>
+                              let
+                                 val cnv =
+                                    Conv.REWR_CONV eq_elim_thm
+                                    THENC PURE_REWRITE_CONV ty2num
+                                    THENC reduceLib.REDUCE_CONV
+                                 fun ecnv tm =
+                                    let
+                                       val (l, r) = boolSyntax.dest_eq tm
+                                       val _ = Term.is_const l
+                                               andalso Term.is_const r
+                                               orelse raise err
+                                    in
+                                       cnv tm
+                                    end
+                              in
+                                 computeLib.add_conv
+                                    (boolSyntax.equality, 2, ecnv) cmp
+                              end
+                            | _ => ()
+                   else ())
+         end
+       | _ => computeLib.add_thms (#rewrs (TypeBase.simpls_of ty)) cmp
 in
    fun add_datatypes l cmp = List.app (add_datatype cmp) l
 end
@@ -1030,17 +1047,21 @@ local
    val dr = Type.dom_rng o Term.type_of
    val dom = fst o dr
    val rng = snd o dr
-   fun is_def thy tm =
+   fun mk_def thy tm =
       let
          val name = fst (Term.dest_const tm)
+         val (l, r) = splitAtChar (Lib.equal #"@") name
       in
-         Lib.can Term.prim_mk_const {Thy = thy, Name = "dfn'" ^ name}
+         if r = "" orelse
+            Option.isSome (Int.fromString (String.extract (r, 1, NONE)))
+            then Term.prim_mk_const {Thy = thy, Name = "dfn'" ^ l}
+         else raise ERR "mk_def" ""
       end
    fun buildAst thy ty =
       let
          val cs = TypeBase.constructors_of ty
          val (t0, n) = List.partition (Lib.equal ty o Term.type_of) cs
-         val (t1, n) = List.partition (is_def thy) n
+         val (t1, n) = List.partition (Lib.can (mk_def thy)) n
          val t1 =
             List.map (fn t => Term.mk_comb (t, Term.mk_var ("x", dom t))) t1
          val n =
@@ -1067,8 +1088,7 @@ local
    fun run_thm0 pv thy ast =
       let
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         val f = Term.prim_mk_const
-                   {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const (leaf ast))}
+         val f = mk_def thy (leaf ast)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
                 then `!s. Run ^ast s = (^f, s)`
@@ -1079,12 +1099,11 @@ local
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
          val x = hd (Term.free_vars ast)
          val tm = Term.rator (HolKernel.find_term (is_call x) ast)
-         val f = Term.prim_mk_const
-                   {Thy = thy, Name = "dfn'" ^ fst (Term.dest_const tm)}
+         val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
-         pv (if rng f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f ^x, s)`
-             else `!s. Run ^ast s = ^f ^x s`) : thm
+         pv (if Term.type_of f = oneSyntax.one_ty
+                then `!s. Run ^ast s = (^f, s)`
+             else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_rwts thy =
       let
@@ -1092,7 +1111,7 @@ local
          val (arg0, args) =
             List.partition (List.null o Term.free_vars) (buildAst thy ty)
          val tac = SIMP_TAC (srw_ss()) [DB.fetch thy "Run_def"]
-         fun pv q = Q.prove(q, tac)
+         fun pv q = Q.prove (q, tac)
       in
          List.map (run_thm0 pv thy) arg0 @ List.map (run_thm pv thy) args
       end
@@ -1140,7 +1159,7 @@ in
                      THENC REWRITE_CONV (datatype_thms (rwt @ h))
                      THENC (!step_conv)
                      THENC c)
-               val stm = Term.mk_comb (tm, st)
+               val stm = Term.mk_comb (tm, st) handle HOL_ERR _ => tm
                val sbst = context_subst stm s
                fun cnvs rwt =
                   if List.null sbst

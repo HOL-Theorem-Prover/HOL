@@ -568,6 +568,27 @@ fun elim_triv_literal_CONV tm =
        cnv tm
    end
 
+fun checkSV pats SV =
+ let fun get_pat (GIVEN(p,_)) = p
+       | get_pat (OMITTED(p,_)) = p
+     fun strings_of vlist = 
+         Lib.commafy (List.map (Lib.quote o #1 o dest_var) 
+                               (Listsort.sort Term.compare vlist))
+ in
+   if null SV then ()
+   else HOL_MESG (String.concat
+     ["Definition is schematic in the following variables:\n    ",
+      String.concat (strings_of SV)])
+   ;
+   case intersect (free_varsl (map get_pat pats)) SV
+    of [] => ()
+     | probs =>
+       raise ERR "wfrec_eqns"
+         (String.concat 
+             (["the following variables occur both free (schematic) ",
+               "and bound in the definition: \n   "] @ strings_of probs))
+ end
+
 (*---------------------------------------------------------------------------*)
 (* Instantiate the recursion theorem and extract termination conditions,     *)
 (* but do not define the constant yet.                                       *)
@@ -578,6 +599,7 @@ fun wfrec_eqns facts tup_eqs =
      val {functional,pats} =
         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
+     val _ = checkSV pats SV
      val (f, Body) = dest_abs functional
      val (x,_) = dest_abs Body
      val (Name, fty) = dest_var f

@@ -1,0 +1,3 @@
+\HOLinline{\HOLFreeVar{s} \HOLSymConst{=} \HOLStringLit{foo}}
+
+\HOLinline{\HOLFreeVar{c} \HOLSymConst{=} \HOLCharLit{a}}

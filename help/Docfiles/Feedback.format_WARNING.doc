@@ -3,7 +3,7 @@
 \TYPE {format_WARNING : string -> string -> string -> string}
 
 \SYNOPSIS
-Maps arguments of {HOL_WARNING} to a string
+Maps arguments of {HOL_WARNING} to a string.
 
 \KEYWORDS
 message, warning, formatting

@@ -6,7 +6,7 @@ default:  quick.pdf
 all: quick.ps quick.pdf
 
 clean:
-	rm -f *.aux *.log *.out quick.{ps,pdf}
+	rm -f *.aux *.log *.out quick.dvi quick.ps quick.pdf
 
 quick.ps: quick.tex
 	latex quick.tex; dvips -Ppdf -G0 -t landscape quick -o

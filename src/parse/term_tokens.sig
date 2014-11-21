@@ -25,4 +25,3 @@ sig
   val lextest : string list -> string -> 'a term_token list
 
 end
-

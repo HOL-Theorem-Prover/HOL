@@ -1,8 +1,9 @@
 signature parse_term =
 sig
   type 'a PStack
-  type 'a qbuf= 'a qbuf.qbuf
+  type 'a qbuf = 'a qbuf.qbuf
   type stack_terminal = term_grammar.stack_terminal
+
   val initial_pstack : 'a PStack
   val is_final_pstack : 'a PStack -> bool
   val top_nonterminal : Term.term PStack -> Absyn.absyn
@@ -26,6 +27,4 @@ sig
       term_grammar.grammar ->
       ((stack_terminal * bool) * stack_terminal, mx_order) Binarymap.dict ref
 
-
 end
-

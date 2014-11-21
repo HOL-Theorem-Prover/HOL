@@ -171,11 +171,10 @@ val RTC_RTC = store_thm(
   GEN_TAC THEN HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN MESON_TAC [RTC_RULES]);
 
 val RTC_TRANSITIVE = store_thm(
-  "RTC_TRANSITIVE",
+  "RTC_TRANSITIVE[simp]",
   ``!R:'a->'a->bool. transitive (RTC R)``,
   REWRITE_TAC [transitive_def] THEN MESON_TAC [RTC_RTC]);
 val transitive_RTC = save_thm("transitive_RTC", RTC_TRANSITIVE);
-val _ = export_rewrites ["transitive_RTC"]
 
 val RTC_REFLEXIVE = store_thm(
   "RTC_REFLEXIVE",
@@ -197,11 +196,10 @@ val RC_lifts_monotonicities = store_thm(
   METIS_TAC [RC_DEF]);
 
 val RC_MONOTONE = store_thm(
-  "RC_MONOTONE",
+  "RC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> RC R x y ==> RC Q x y``,
   STRIP_TAC THEN REWRITE_TAC [RC_DEF] THEN STRIP_TAC THEN
   ASM_REWRITE_TAC [] THEN RES_TAC THEN ASM_REWRITE_TAC [])
-val _ = IndDefLib.export_mono "RC_MONOTONE"
 
 val RC_lifts_invariants = store_thm(
   "RC_lifts_invariants",
@@ -224,11 +222,10 @@ val SC_lifts_equalities = store_thm(
   METIS_TAC [SC_DEF]);
 
 val SC_MONOTONE = store_thm(
-  "SC_MONOTONE",
+  "SC_MONOTONE[mono]",
   ``(!x:'a y. R x y ==> Q x y) ==> SC R x y ==> SC Q x y``,
   STRIP_TAC THEN REWRITE_TAC [SC_DEF] THEN STRIP_TAC THEN RES_TAC THEN
   ASM_REWRITE_TAC [])
-val _ = IndDefLib.export_mono "SC_MONOTONE"
 
 val symmetric_RC = store_thm(
   "symmetric_RC",
@@ -637,35 +634,43 @@ val RTC_CASES_RTC_TWICE = store_thm(
     MESON_TAC [RTC_RULES, RTC_SUBSET, RTC_RTC]
   ]);
 
-val TC_CASES1 =
+val TC_CASES1_E =
 Q.store_thm
-("TC_CASES1",
+("TC_CASES1_E",
   `!R x z. TC R x z ==> R x z \/ ?y:'a. R x y /\ TC R y z`,
 GEN_TAC
  THEN TC_INDUCT_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
 
-val TC_CASES2 =
+val TC_CASES1 = store_thm(
+  "TC_CASES1",
+  ``TC R x z <=> R x z \/ ?y:'a. R x y /\ TC R y z``,
+  MESON_TAC[TC_RULES, TC_CASES1_E])
+
+val TC_CASES2_E =
 Q.store_thm
-("TC_CASES2",
+("TC_CASES2_E",
     `!R x z. TC R x z ==> R x z \/ ?y:'a. TC R x y /\ R y z`,
 GEN_TAC
  THEN TC_INDUCT_TAC
  THEN MESON_TAC [REWRITE_RULE[transitive_def] TC_TRANSITIVE, TC_SUBSET]);
 
+val TC_CASES2 = store_thm(
+  "TC_CASES2",
+  ``TC R x z <=> R x z \/ ?y:'a. TC R x y /\ R y z``,
+  MESON_TAC [TC_RULES, TC_CASES2_E]);
+
 val TC_MONOTONE = store_thm(
-  "TC_MONOTONE",
+  "TC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> TC R x y ==> TC Q x y``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   TC_INDUCT_TAC THEN ASM_MESON_TAC [TC_RULES]);
-val _ = IndDefLib.export_mono "TC_MONOTONE"
 
 val RTC_MONOTONE = store_thm(
-  "RTC_MONOTONE",
+  "RTC_MONOTONE[mono]",
   ``(!x y. R x y ==> Q x y) ==> RTC R x y ==> RTC Q x y``,
   REPEAT GEN_TAC THEN STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN ASM_MESON_TAC [RTC_RULES]);
-val _ = IndDefLib.export_mono "RTC_MONOTONE"
 
 val EQC_INDUCTION = store_thm(
   "EQC_INDUCTION",
@@ -766,12 +771,11 @@ val ALT_equivalence = store_thm(
   MESON_TAC []);
 
 val EQC_MONOTONE = store_thm(
-  "EQC_MONOTONE",
+  "EQC_MONOTONE[mono]",
   ``(!x y. R x y ==> R' x y) ==> EQC R x y ==> EQC R' x y``,
   STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC STRONG_EQC_INDUCTION THEN
   METIS_TAC [EQC_R, EQC_TRANS, EQC_SYM, EQC_REFL]);
-val _ = IndDefLib.export_mono "EQC_MONOTONE"
 
 val RTC_EQC = store_thm(
   "RTC_EQC",
@@ -986,7 +990,7 @@ GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[WF_DEF]
    THEN ASM_REWRITE_TAC[],
   Q.X_GEN_TAC`m` THEN STRIP_TAC THEN Q.UNDISCH_TAC`TC R (a:'a) m`
    THEN DISCH_THEN(fn th => STRIP_ASSUME_TAC
-              (CONJ th (MATCH_MP TC_CASES2 th)))
+              (CONJ th (MATCH_MP TC_CASES2_E th)))
    THENL
    [ Q.EXISTS_TAC`a` THEN ASM_REWRITE_TAC[] THEN RES_TAC
      THEN MAP_EVERY Q.EXISTS_TAC [`b'`, `z`] THEN ASM_REWRITE_TAC[],
@@ -1035,6 +1039,10 @@ Q.new_definition
 ("inv_image_def",
    `inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool`);
 
+val inv_image_thm = save_thm(
+  "inv_image_thm",
+  SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def)
+val _ = export_rewrites ["inv_image_thm"]
 
 val WF_inv_image = Q.store_thm("WF_inv_image",
 `!R (f:'a->'b). WF R ==> WF (inv_image R f)`,
@@ -1055,6 +1063,29 @@ REPEAT GEN_TAC
      THEN DISCH_THEN (ANTE_RES_THEN (MP_TAC o Q.SPEC`b`))
      THEN REWRITE_TAC[]]);
 
+val total_inv_image = store_thm(
+  "total_inv_image",
+  ``!R f. total R ==> total (inv_image R f)``,
+  SRW_TAC[][total_def, inv_image_def]);
+val _ = export_rewrites ["total_inv_image"]
+
+val reflexive_inv_image = store_thm(
+  "reflexive_inv_image",
+  ``!R f. reflexive R ==> reflexive (inv_image R f)``,
+  SRW_TAC[][reflexive_def, inv_image_def]);
+val _ = export_rewrites ["reflexive_inv_image"]
+
+val symmetric_inv_image = store_thm(
+  "symmetric_inv_image",
+  ``!R f. symmetric R ==> symmetric (inv_image R f)``,
+  SRW_TAC[][symmetric_def, inv_image_def]);
+val _ = export_rewrites ["symmetric_inv_image"]
+
+val transitive_inv_image = store_thm(
+  "transitive_inv_image",
+  ``!R f. transitive R ==> transitive (inv_image R f)``,
+  SRW_TAC[][transitive_def, inv_image_def] THEN METIS_TAC[]);
+val _ = export_rewrites ["transitive_inv_image"]
 
 (*---------------------------------------------------------------------------
  * Now the WF recursion theorem. Based on Tobias Nipkow's Isabelle development

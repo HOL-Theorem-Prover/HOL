@@ -4,7 +4,7 @@
 
 \SYNOPSIS
 A simpset fragment that does aggressive propositional and quantifier
-normalisation
+normalisation.
 
 \KEYWORDS
 Simplification, normalisation, quantifiers.

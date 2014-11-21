@@ -92,5 +92,3 @@ signature Opening = sig
    val EQ_CONGPROC : congproc
 
 end (* sig *)
-
-

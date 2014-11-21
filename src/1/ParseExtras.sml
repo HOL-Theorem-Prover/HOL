@@ -12,6 +12,13 @@ fun temp_loose_equality () = temp_set_fixity "=" (Infix(NONASSOC, 100))
 fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
   open term_pp_types smpp
   infix >>
+  val _ =
+      case Overload.oi_strip_comb (term_grammar.overload_info tmg) tm of
+          SOME(f, _) =>
+            if term_grammar.grammar_name tmg f = SOME "case"
+            then ()
+            else raise UserPP_Failed
+        | NONE => raise UserPP_Failed
   val {add_string, ublock, add_break, ...} = ppfns:ppstream_funs
   val paren_required =
       (case rgr of

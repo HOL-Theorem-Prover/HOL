@@ -10,7 +10,7 @@ rule.
 
 \DESCRIBE
 {PURE_ONCE_ASM_REWRITE_RULE} excludes the basic tautologies in
-{basic_rewrites} from the theorems used for rewriting. It searches for
+{implicit_rewrites} from the theorems used for rewriting. It searches for
 matching subterms once only, without recursing over already rewritten
 subterms. For a general introduction to rewriting tools see
 {GEN_REWRITE_RULE}.

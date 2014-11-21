@@ -64,6 +64,8 @@ val (narrow_tm, mk_narrow, dest_narrow, is_narrow) = s2 "NARROW"
 val (bind_tm, mk_bind, dest_bind, is_bind) = s2 "BIND"
 val (mmap_tm, mk_mmap, dest_mmap, is_mmap) = s2 "MMAP"
 
+val get_state_ty = fst o Type.dom_rng o snd o Type.dom_rng o Term.type_of
+
 val (for_tm, mk_for, dest_for, is_for) =
    syntax 2
       (fn tm1 => fn e => fn tm2 =>
@@ -75,14 +77,22 @@ val (for_tm, mk_for, dest_for, is_for) =
               | _ => raise e
           end)
       (fn tm => fn (i, j, b) =>
-         let
-            val ty = b |> Term.type_of
-                       |> Type.dom_rng |> snd
-                       |> Type.dom_rng |> fst
-         in
-            Term.mk_comb (Term.inst [state_ty |-> ty] tm,
-                          pairSyntax.list_mk_pair [i, j, b])
-         end)
+         Term.mk_comb (Term.inst [state_ty |-> get_state_ty b] tm,
+                       pairSyntax.list_mk_pair [i, j, b]))
       "FOR"
+
+val (foreach_tm, mk_foreach, dest_foreach, is_foreach) =
+   syntax 2
+      (fn tm1 => fn e => fn tm2 =>
+          Lib.with_exn pairSyntax.dest_pair (HolKernel.dest_monop tm1 e tm2) e)
+      (fn tm => fn (i, b) =>
+         let
+            val ity = listSyntax.dest_list_type (Term.type_of i)
+            val ty = get_state_ty b
+         in
+            Term.mk_comb (Term.inst [Type.alpha |-> ity, state_ty |-> ty] tm,
+                          pairSyntax.mk_pair (i, b))
+         end)
+      "FOREACH"
 
 end

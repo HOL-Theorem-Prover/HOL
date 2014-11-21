@@ -103,6 +103,8 @@ val DOT_PATH = ""
 
 val isUnix = true
 
+val pointer_eq = PolyML.pointerEq
+
 fun exec (x as (comm,args)) =
     (* macos execv fails if the calling process is multi-threaded. *)
     (* Can't lift the check out of the function body because of the value

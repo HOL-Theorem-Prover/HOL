@@ -42,7 +42,7 @@ val IS_GCD_0R = store_thm("IS_GCD_0R",
 			Term `!a. is_gcd a 0 a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
-val IS_GCD_0L = store_thm("IS_GCD_0R",
+val IS_GCD_0L = store_thm("IS_GCD_0L",
 			Term `!a. is_gcd 0 a a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 

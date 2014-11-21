@@ -54,7 +54,7 @@ of inference.
    - val SimonThm = mk_oracle_thm tag;
    > val SimonThm = fn : term list * term -> thm
 
-   - val th = SimonThm ([], Term `!x. x`);;
+   - val th = SimonThm ([], Term `!x. x`);
    > val th = |- !x. x : thm
 
    - val th1 = SPEC F th;
@@ -74,7 +74,6 @@ Tags accumulate in a manner similar to logical hypotheses.
    - CONJ th1 (SerenaThm ([],T));
    > val it = [oracles: Serena, SimonSays] [axioms: ] [] |- F /\ T : thm
 }
-
 
 \COMMENTS
 It is impossible to detach a tag from a theorem.

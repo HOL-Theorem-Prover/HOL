@@ -336,4 +336,3 @@ val INT_LT_ADD_NEG = store_thm("INT_LT_ADD_NEG", ``!x y. x < 0i /\ y < 0i ==> x 
 
 
 val _ = export_theory();
-
