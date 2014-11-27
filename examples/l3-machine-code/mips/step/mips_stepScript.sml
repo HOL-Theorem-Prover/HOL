@@ -542,6 +542,55 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
 
 (* ------------------------------------------------------------------------ *)
 
+val cond_update_memory = Q.store_thm("cond_update_memory",
+   `(!a: word64 b x0 x1 x2 x3 m.
+       (if b then
+          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3) m)))
+        else m) =
+       (a =+ (if b then x0 else m a))
+         ((a + 1w =+ (if b then x1 else m (a + 1w)))
+           ((a + 2w =+ (if b then x2 else m (a + 2w)))
+             ((a + 3w =+ (if b then x3 else m (a + 3w))) m)))) /\
+    (!a: word64 b x0 x1 x2 x3 m.
+       (if b then
+          (a + 3w =+ x0) ((a + 2w =+ x1) ((a + 1w =+ x2) ((a =+ x3) m)))
+        else m) =
+       (a + 3w =+ (if b then x0 else m (a + 3w)))
+         ((a + 2w =+ (if b then x1 else m (a + 2w)))
+           ((a + 1w =+ (if b then x2 else m (a + 1w)))
+             ((a =+ (if b then x3 else m a)) m)))) /\
+    (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
+       (if b then
+          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3)
+            ((a + 4w =+ x4) ((a + 5w =+ x5) ((a + 6w =+ x6)
+              ((a + 7w =+ x7) m)))))))
+        else m) =
+       (a =+ (if b then x0 else m a))
+         ((a + 1w =+ (if b then x1 else m (a + 1w)))
+           ((a + 2w =+ (if b then x2 else m (a + 2w)))
+             ((a + 3w =+ (if b then x3 else m (a + 3w)))
+               ((a + 4w =+ (if b then x4 else m (a + 4w)))
+                 ((a + 5w =+ (if b then x5 else m (a + 5w)))
+                   ((a + 6w =+ (if b then x6 else m (a + 6w)))
+                     ((a + 7w =+ (if b then x7 else m (a + 7w))) m)))))))) /\
+    (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
+       (if b then
+          (a + 7w =+ x0) ((a + 6w =+ x1) ((a + 5w =+ x2) ((a + 4w =+ x3)
+            ((a + 3w =+ x4) ((a + 2w =+ x5) ((a + 1w =+ x6) ((a =+ x7) m)))))))
+        else m) =
+       (a + 7w =+ (if b then x0 else m (a + 7w)))
+         ((a + 6w =+ (if b then x1 else m (a + 6w)))
+           ((a + 5w =+ (if b then x2 else m (a + 5w)))
+             ((a + 4w =+ (if b then x3 else m (a + 4w)))
+               ((a + 3w =+ (if b then x4 else m (a + 3w)))
+                 ((a + 2w =+ (if b then x5 else m (a + 2w)))
+                   ((a + 1w =+ (if b then x6 else m (a + 1w)))
+                     ((a =+ (if b then x7 else m a)) m))))))))`,
+   rw [combinTheory.UPDATE_def, FUN_EQ_THM]
+   )
+
+(* ------------------------------------------------------------------------ *)
+
 val branch_delay = Q.store_thm("branch_delay",
    `(!b x y.
        (case (if b then (F, x) else (T, y)) of

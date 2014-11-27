@@ -96,6 +96,8 @@ val state_id =
        ["CP0", "PC", "gpr", "hi", "lo"],
        ["CP0", "LLbit", "MEM", "PC"],
        ["CP0", "MEM", "PC"],
+       ["CP0", "MEM", "PC", "exceptionSignalled", "gpr"],
+       ["MEM", "PC", "exceptionSignalled", "gpr"],
        ["MEM", "PC"],
        ["gpr", "hi", "lo"],
        ["gpr"]]

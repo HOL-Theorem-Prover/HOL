@@ -95,7 +95,7 @@ fun mips_thms thms =
 val COND_UPDATE_CONV =
    REWRITE_CONV (utilsLib.mk_cond_update_thms
                     [``:mips_state``, ``:CP0``, ``:StatusRegister``])
-   THENC REWRITE_CONV (mips_thms [])
+   THENC REWRITE_CONV (mips_stepTheory.cond_update_memory :: mips_thms [])
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
@@ -491,6 +491,18 @@ val SD =
    EVR (store_rule []) (dfn'SD_def :: mem_thms) dmemcntxts []
       ``dfn'SD (base, rt, offset)``
 
+val sc = List.map (fn l => ``^st.LLbit = SOME llbit`` :: l)
+
+val SC =
+   EVR (COND_UPDATE_RULE o store_rule [bit_1_0_2_0, bit_1_0_2_0_4])
+       ([dfn'SC_def, extract_word] @ mem_thms) (sc memcntxts) []
+      ``dfn'SC (base, rt, offset)``
+
+val SCD =
+   EVR (COND_UPDATE_RULE o store_rule [])
+       ([dfn'SCD_def, extract_word] @ mem_thms) (sc dmemcntxts) []
+      ``dfn'SCD (base, rt, offset)``
+
 (* ------------------------------------------------------------------------- *)
 
 (* Coprocessor instructions *)
@@ -725,6 +737,8 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("LL",      "TTFFFF__________________________"),
     ("LLD",     "TTFTFF__________________________"),
     ("LD",      "TTFTTT__________________________"),
+    ("SC",      "TTTFFF__________________________"),
+    ("SCD",     "TTTTFF__________________________"),
     ("SD",      "TTTTTT__________________________"),
     ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
    ]
