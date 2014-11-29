@@ -285,7 +285,8 @@ fun HEADGOAL tac gl1 = NTH_GOAL tac 1 gl1 ;
    first n goals, and ltacb to the rest 
  *---------------------------------------------------------------------------*)
 fun SPLIT_LT n (ltaca, ltacb) gl = 
-  let val (gla, glb) = Lib.split_after n gl ;
+  let val fixn = if n >= 0 then n else length gl + n ;
+    val (gla, glb) = Lib.split_after fixn gl ;
     val (glra, vfa) = ltaca gla ;
     val (glrb, vfb) = ltacb glb ;
     fun vf ths = 
