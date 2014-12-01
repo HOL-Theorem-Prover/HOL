@@ -16,6 +16,7 @@ sig
   val THEN_LT        : list_tactic * list_tactic -> list_tactic
   *)
   val TACS_TO_LT     : tactic list -> list_tactic
+  val NULL_OK_LT     : list_tactic -> list_tactic
   val ALLGOALS       : tactic -> list_tactic
   val NTH_GOAL       : tactic -> int -> list_tactic
   val LASTGOAL       : tactic -> list_tactic

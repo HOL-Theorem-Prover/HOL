@@ -43,13 +43,14 @@ Where {tac1} and {tac2} are tactics,
 {tac1 THEN_LT ALLGOALS tac2} is equivalent to {tac1 THEN tac2}
 
 Where {tac1} is a tactic and {tacs2} is a list of tactics,
-{tac1 THEN_LT TACS_TO_LT tacs2} is equivalent to {tac1 THENL tacs2}
+{tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2)} is equivalent to
+{tac1 THENL tacs2}
 
 Where {tac} is a tactic,
 {tac THEN_LT REVERSE_LT} is equivalent to {REVERSE tac}
 
 \SEEALSO
 Tactical.ALLGOALS, Tactical.THEN, Tactical.TACS_TO_LT, Tactical.THENL,
-Tactical.NTH_GOAL, Tactical.REVERSE_LT, Tactical.REVERSE
+Tactical.NULL_OK_LT, Tactical.NTH_GOAL, Tactical.REVERSE_LT, Tactical.REVERSE
 \ENDDOC
 
