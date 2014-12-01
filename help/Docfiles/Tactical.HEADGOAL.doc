@@ -3,19 +3,19 @@
 \TYPE {HEADGOAL : tactic -> list_tactic}
 
 \SYNOPSIS
-The list_tactic which applies a tactic to the first member of a list of goals.
+The list-tactic which applies a tactic to the first member of a list of goals.
 
 \KEYWORDS
 tactical.
 
 \DESCRIBE
 If {tac} is a tactic, {HEADGOAL tac} is a 
-list_tactic which applies the tactic {tac} to the
+list-tactic which applies the tactic {tac} to the
 first member of a list of goals.
 
 \FAILURE
 The application of {HEADGOAL} to a tactic never fails.
-The resulting list_tactic fails the goal list is empty or
+The resulting list-tactic fails the goal list is empty or
 or finally if {tac} fails when applied to the first member of the goal list.
 
 \USES

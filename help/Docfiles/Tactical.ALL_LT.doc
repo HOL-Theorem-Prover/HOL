@@ -6,7 +6,7 @@
 Passes on a goal list unchanged.
 
 \KEYWORDS
-list_tactic, identity.
+list-tactic, identity.
 
 \DESCRIBE
 {ALL_LT} applied to a goal list {gl} 

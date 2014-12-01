@@ -6,10 +6,10 @@
 Reverses the order of a list of subgoals.
 
 \KEYWORDS
-list_tactic.
+list-tactic.
 
 \DESCRIBE
-The list_tactic {REVERSE_LT} reverses
+The list-tactic {REVERSE_LT} reverses
 the order of a list of subgoals.
 
 \FAILURE

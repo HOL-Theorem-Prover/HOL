@@ -6,7 +6,7 @@
 Rotates a list of goals
 
 \KEYWORDS
-list_tactic.
+list-tactic.
 
 \DESCRIBE
 {ROTATE_LT n gl} rotates a goal list {gl} by {n} places. 
