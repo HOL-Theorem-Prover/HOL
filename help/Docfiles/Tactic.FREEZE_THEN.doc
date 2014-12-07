@@ -35,7 +35,7 @@ tactic arises if the hypotheses of the theorem are not
 alpha-convertible to assumptions of the goal.
 
 \EXAMPLE
-Given the goal {([ "b < c"; "a < b" ], "(SUC a) <= c")}, and the
+Given the goal {([ ``b < c``, ``a < b`` ], ``SUC a <= c``)}, and the
 specialized variant of the theorem {LESS_TRANS}:
 {
    th = |- !p. a < b /\ b < p ==> a < p
@@ -43,7 +43,7 @@ specialized variant of the theorem {LESS_TRANS}:
 {IMP_RES_TAC th} will generate several unneeded assumptions:
 {
    {b < c, a < b, a < c, !p. c < p ==> b < p, !a'. a' < a ==> a' < b}
-       ?- (SUC a) <= c
+       ?- SUC a <= c
 }
 which can be avoided by first `freezing' the theorem, using
 the tactic
@@ -52,7 +52,7 @@ the tactic
 }
 This prevents the variables {a} and {b} from being instantiated.
 {
-   {b < c, a < b, a < c} ?- (SUC a) <= c
+   {b < c, a < b, a < c} ?- SUC a <= c
 }
 
 
