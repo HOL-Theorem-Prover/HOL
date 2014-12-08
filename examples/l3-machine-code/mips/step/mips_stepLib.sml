@@ -336,6 +336,46 @@ val ERET =
 
 (* Load/Store thms and tools *)
 
+val cond_0_1 = Q.prove(
+   `!w: word1 a b c.
+       (if w = 0w then a else if w = 1w then b else c) =
+       (if w = 0w then a else b)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_3 = Q.prove(
+   `!w: word2 a b c d e.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else e) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else d)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_7 = Q.prove(
+   `!w: word3 a b c d e f g h i.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else if w = 7w then h
+        else i) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else h)`,
+   wordsLib.Cases_word_value \\ simp [])
+
 val mem_thms =
    [AddressTranslation_def, LoadMemory_def,
     StoreMemory_byte, storeWord_def, storeDoubleword_def,
@@ -345,6 +385,9 @@ val mem_thms =
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
+    cond_0_1, cond_0_3, cond_0_7,
+    EVAL ``word_replicate 2 (0w: word1) : word2``,
+    EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
     EVAL ``(word_replicate 2 (0w:word1) : word2 @@ (0w:word1)) : word3``,
     EVAL ``(word_replicate 2 (1w:word1) : word2 @@ (0w:word1)) : word3``,
@@ -353,8 +396,9 @@ val mem_thms =
 
 val select_rule =
    REWRITE_RULE
-     [select_byte_le, select_byte_be, byte_address,
-      wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
+      [select_byte_le, select_byte_be, byte_address,
+       SIMP_RULE (bool_ss++boolSimps.LET_ss) [] select_parts,
+       wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
    utilsLib.INST_REWRITE_RULE
       [select_half_le, select_half_be,
        select_word_le, select_word_be,
@@ -375,6 +419,10 @@ val memcntxts =
 *)
 
 val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
+
+val unaligned_memcntxts =
+   List.map (fn l => [``rt <> 0w:word5``, ``~^st.exceptionSignalled``] @ l)
+      memcntxts
 
 val memcntxts =
    List.map
@@ -467,6 +515,22 @@ val LL  = EVL loadWord ``dfn'LL (base, rt, offset) ^st``
 
 val LD  = EVL loadDoubleword ``dfn'LD (base, rt, offset) ^st``
 val LLD = EVL loadDoubleword ``dfn'LLD (base, rt, offset) ^st``
+
+val LWL =
+   EVR select_rule (dfn'LWL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWL (base, rt, offset)``
+
+val LWR =
+   EVR select_rule (dfn'LWR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWR (base, rt, offset)``
+
+val LDL =
+   EVR select_rule (dfn'LDL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDL (base, rt, offset)``
+
+val LDR =
+   EVR select_rule (dfn'LDR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDR (base, rt, offset)``
 
 (* Store instructions *)
 
@@ -725,11 +789,15 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("BNEL",    "FTFTFT__________________________"),
     ("BLEZL",   "FTFTTF_____FFFFF________________"),
     ("BGTZL",   "FTFTTT_____FFFFF________________"),
+    ("LDL",     "FTTFTF__________________________"),
+    ("LDR",     "FTTFTT__________________________"),
     ("LB",      "TFFFFF__________________________"),
     ("LH",      "TFFFFT__________________________"),
+    ("LWL",     "TFFFTF__________________________"),
     ("LW",      "TFFFTT__________________________"),
     ("LBU",     "TFFTFF__________________________"),
     ("LHU",     "TFFTFT__________________________"),
+    ("LWR",     "TFFTTF__________________________"),
     ("LWU",     "TFFTTT__________________________"),
     ("SB",      "TFTFFF__________________________"),
     ("SH",      "TFTFFT__________________________"),

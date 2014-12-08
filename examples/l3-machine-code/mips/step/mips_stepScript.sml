@@ -277,6 +277,36 @@ val select_word_be = Q.prove(
    tac
    )
 
+val select_parts = Q.store_thm("select_parts",
+   `!a0: word8 a1: word8 a2: word8 a3: word8 a4: word8 a5: word8 a6: word8
+     a7: word8.
+     let w = a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0
+     in
+     ((7 >< 0) w = a0) /\
+     ((15 >< 0) w = (a1 @@ a0) : word16) /\
+     ((23 >< 0) w = (a2 @@ a1 @@ a0) : word24) /\
+     ((31 >< 0) w = (a3 @@ a2 @@ a1 @@ a0) : word32) /\
+     ((39 >< 0) w = (a4 @@ a3 @@ a2 @@ a1 @@ a0) : 40 word) /\
+     ((47 >< 0) w = (a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0) : word48) /\
+     ((55 >< 0) w = (a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0) : 56 word) /\
+     ((63 >< 0) w = w) /\
+     ((39 >< 32) w = a4) /\
+     ((47 >< 32) w = (a5 @@ a4) : word16) /\
+     ((55 >< 32) w = (a6 @@ a5 @@ a4) : word24) /\
+     ((63 >< 32) w = (a7 @@ a6 @@ a5 @@ a4) : word32) /\
+     ((31 >< 8) w = (a3 @@ a2 @@ a1) : word24) /\
+     ((31 >< 16) w = (a3 @@ a2) : word16) /\
+     ((31 >< 24) w = a3) /\
+     ((63 >< 8) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1) : 56 word) /\
+     ((63 >< 16) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2) : word48) /\
+     ((63 >< 24) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3) : 40 word) /\
+     ((63 >< 32) w = (a7 @@ a6 @@ a5 @@ a4) : word32) /\
+     ((63 >< 40) w = (a7 @@ a6 @@ a5) : word24) /\
+     ((63 >< 48) w = (a7 @@ a6) : word16) /\
+     ((63 >< 56) w = a7 : word8)`,
+   SIMP_TAC (srw_ss()++boolSimps.LET_ss++wordsLib.WORD_EXTRACT_ss) []
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 val bit_0_2_0 = Theory.save_thm("bit_0_2_0",
