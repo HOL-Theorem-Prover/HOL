@@ -3,6 +3,27 @@ sig
   include Abbrev
 
   (********************************)
+  (* eliminating select           *)
+  (********************************)
+
+  (* PMATCH leads to selects consisting of
+     conjunctions that determine the value of one
+     component of the variable. An example is
+
+     @x. SND (SND x = ..) /\ (FST x = ..) /\ (FST (SND x) = ..)
+
+     by resorting these conjunctions, one can 
+     easily derive a form
+
+     @x. x = ..
+
+     and therefore eliminate the select operator.
+     This is done by the following conversion + ssfrag. *)
+  val ELIM_FST_SND_SELECT_CONV : conv  
+  val elim_fst_snd_select_ss : ssfrag
+
+
+  (********************************)
   (* turn shallow case-terms into *)
   (* deeply embedded ones         *)
   (********************************)
@@ -27,6 +48,9 @@ sig
      not known by the default methods. *)
   val PMATCH_SIMP_CONV_GEN : ssfrag list -> conv
 
+  (* corresponding ssfrags *)
+  val PMATCH_SIMP_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_SIMP_ss : ssfrag
 
   (* PMATCH_SIMP_CONV consists of various
      component conversions. These can be used 

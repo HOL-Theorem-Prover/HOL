@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 open quantHeuristicsLib
+open optionTheory
 
 val _ = new_theory "deepMatches"
 
@@ -8,15 +9,15 @@ val _ = new_theory "deepMatches"
 (***************************************************)
 
 (* rows of a pattern match are pairs of a pattern to match 
-   against p and a result r. The result and pattern are linked
-   with free variables [v] bound in both. So it looks like
-   (\v. (p v, r v)) *)
-val PMATCH_ROW_def = Define `PMATCH_ROW row i =
-  (if ?x. FST (row x) = i then
-   SOME (SND (row (@x. FST (row x) = i)))
-   else NONE)`
+   against pat, a guard and a result value. *)
+val PMATCH_ROW_COND_def = Define `PMATCH_ROW_COND pat guard i x =
+  (pat x = i) /\ (guard x)`
 
-(* We defined semantics or single rows. Let's extend  
+val PMATCH_ROW_def = Define `PMATCH_ROW pat guard res i =
+  (OPTION_MAP res (some x. PMATCH_ROW_COND pat guard i x))`
+
+
+(* We defined semantics of single rows. Let's extend  
    it to multiple ones, i.e. full pattern matches now *)
 val PMATCH_INCOMPLETE_def = Define `PMATCH_INCOMPLETE = ARB`
 val PMATCH_def = Define `
@@ -38,57 +39,144 @@ val PMATCH_REDUNDANT_ROWS_def = Define `
   PMATCH_REDUNDANT_ROWS rs = {i | (PMATCH_ROW_REDUNDANT rs i)}`
 
 
+
+(***************************************************)
+(* Congruences                                     *)
+(***************************************************)
+
+val some_eq_SOME = store_thm ("some_eq_SOME", 
+  ``!P x. ((some x. P x) = SOME x) ==> (P x)``,
+SIMP_TAC std_ss [some_def] THEN
+REPEAT STRIP_TAC THEN
+SELECT_ELIM_TAC THEN
+PROVE_TAC[])
+
+val some_eq_NONE = store_thm ("some_eq_NONE", 
+  ``!P. ((some x. P x) = NONE) <=> (!x. ~(P x))``,
+SIMP_TAC std_ss [some_def])
+
+val some_IS_SOME = store_thm ("some_IS_SOME", 
+  ``!P. (IS_SOME (some x. P x)) <=> (?x. P x)``,
+SIMP_TAC (std_ss++boolSimps.LIFT_COND_ss) [some_def])
+
+val some_IS_SOME_EXISTS = store_thm ("some_IS_SOME_EXISTS", 
+  ``!P. (IS_SOME (some x. P x)) <=> (?x. P x /\ ((some x. P x) = SOME x))``,
+GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN (
+  ASM_SIMP_TAC std_ss []
+) THEN
+Cases_on `some x. P x` THEN FULL_SIMP_TAC std_ss [] THEN
+MATCH_MP_TAC some_eq_SOME THEN
+ASM_REWRITE_TAC[])
+
+
+val OPTION_MAP_EQ_OPTION_MAP = store_thm ("OPTION_MAP_EQ_OPTION_MAP",
+``(OPTION_MAP f x = OPTION_MAP f' x') =
+  (((x = NONE) /\ (x' = NONE)) \/
+   (?y y'. (x = SOME y) /\ (x' = SOME y') /\ (f y = f' y')))``,
+
+Cases_on `x` THEN Cases_on `x'` THEN (
+  SIMP_TAC std_ss []
+))
+
+val PMATCH_ROW_CONG = store_thm ("PMATCH_ROW_CONG",
+``!p p' g g' r r' v v'. 
+     (p = p') /\ (v = v') /\
+     (!x. (v = (p x)) ==> (g x = g' x)) /\
+     (!x. ((v = (p x)) /\ (g x)) ==>
+          (r x = r' x)) ==>
+  (PMATCH_ROW p g r v = PMATCH_ROW p' g' r' v')``,
+
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [PMATCH_ROW_def,
+  PMATCH_ROW_COND_def] THEN
+Cases_on `some x. (p' x = v') /\ (g' x)` THEN (
+  ASM_SIMP_TAC std_ss []
+) THEN
+POP_ASSUM (fn thm => MP_TAC (HO_MATCH_MP (SPEC_ALL some_eq_SOME) thm)) THEN
+ASM_SIMP_TAC std_ss [])
+
+val PMATCH_CONG = store_thm ("PMATCH_CONG",
+``!v v' rows rows'. ((v = v') /\ (r v' = r' v') /\ 
+        (PMATCH v' rows = PMATCH v' rows')) ==>
+  (PMATCH v (r :: rows) = PMATCH v' (r' :: rows'))``,
+SIMP_TAC std_ss [PMATCH_def])
+
+val _ = DefnBase.export_cong "PMATCH_ROW_CONG";
+val _ = DefnBase.export_cong "PMATCH_CONG";
+
+
 (***************************************************)
 (* Rewrites                                        *)
 (***************************************************)
 
 val PMATCH_ROW_EQ_AUX = store_thm ("PMATCH_ROW_EQ_AUX",
-  ``((!i. (?x. (g x = i)) = (?x'. (g' x' = i))) /\
-     (!x x'. (g x = g' x') ==> (f x = f' x'))) ==>
-    (PMATCH_ROW (\x:'a. (g x, f x)) = 
-     PMATCH_ROW (\x':'b. (g' x', f' x')))``,
+  ``((!i. (?x. PMATCH_ROW_COND p  g  i x) = 
+          (?x'. PMATCH_ROW_COND p' g' i x')) /\
+     (!x x'. ((p x = p' x') /\ g x /\ g' x') ==> (r x = r' x'))) ==>
+    (PMATCH_ROW p  g  r  = PMATCH_ROW p' g' r')``,
 REPEAT STRIP_TAC THEN
-SIMP_TAC std_ss [PMATCH_ROW_def, FUN_EQ_THM] THEN
+SIMP_TAC std_ss [FUN_EQ_THM, PMATCH_ROW_def,
+  OPTION_MAP_EQ_OPTION_MAP] THEN
 CONV_TAC (RENAME_VARS_CONV ["i"]) THEN
 GEN_TAC THEN
 Q.PAT_ASSUM `!i. (_ = _)` (fn thm => ASSUME_TAC (Q.SPEC `i` thm))  THEN
-Cases_on `?x'. g' x' = i` THEN (
-  ASM_REWRITE_TAC[]
+Tactical.REVERSE (Cases_on `?x. PMATCH_ROW_COND p g i x`) THEN (
+  FULL_SIMP_TAC std_ss []
 ) THEN
-FULL_SIMP_TAC std_ss [] THEN
-SELECT_ELIM_TAC THEN
-REPEAT STRIP_TAC THEN1 PROVE_TAC[] THEN
-SELECT_ELIM_TAC THEN
-REPEAT STRIP_TAC THEN1 PROVE_TAC[] THEN
-PROVE_TAC[])
+DISJ2_TAC THEN
+`IS_SOME (some x. PMATCH_ROW_COND p g i x) /\
+ IS_SOME (some x. PMATCH_ROW_COND p' g' i x)` by ALL_TAC THEN1 (
+  ASM_SIMP_TAC std_ss [some_IS_SOME] THEN
+  PROVE_TAC[]
+) THEN
+FULL_SIMP_TAC std_ss [some_IS_SOME_EXISTS] THEN
+FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def])
 
 val PMATCH_ROW_EQ_NONE = store_thm ("PMATCH_ROW_EQ_NONE",
-  ``(PMATCH_ROW (\x. (g x, f x)) v = NONE) <=>
-    (!x. ~(g x = v))``,
-SIMP_TAC std_ss [PMATCH_ROW_def]);
+  ``(PMATCH_ROW p g r i = NONE) <=>
+    (!x. ~(PMATCH_ROW_COND p g i x))``,
+SIMP_TAC std_ss [PMATCH_ROW_def, some_eq_NONE]);
+
+
+val PMATCH_ROW_EQ_SOME = store_thm ("PMATCH_ROW_EQ_SOME",
+  ``(PMATCH_ROW p g r i = SOME y) ==>
+    (?x. (PMATCH_ROW_COND p g i x) /\ (y = r x))``,
+SIMP_TAC std_ss [PMATCH_ROW_def] THEN
+REPEAT STRIP_TAC THEN 
+Q.EXISTS_TAC `z` THEN
+IMP_RES_TAC some_eq_SOME THEN
+ASM_SIMP_TAC std_ss []);
+
 
 val PMATCH_EVAL = store_thm ("PMATCH_EVAL",
  ``(PMATCH v [] = PMATCH_INCOMPLETE) /\
-   (PMATCH v ((PMATCH_ROW (\x. (g x, f x))) :: rs) =
-      if (?x. (g x = v)) then 
-         (f (@x. g x = v)) else PMATCH v rs)``,
+   (PMATCH v ((PMATCH_ROW p g r) :: rs) =
+      if (?x. (PMATCH_ROW_COND p g v x)) then 
+         (r (@x. PMATCH_ROW_COND p g v x)) else PMATCH v rs)``,
 
 SIMP_TAC std_ss [PMATCH_def] THEN
-Cases_on `PMATCH_ROW (\x. (g x,f x)) v` THEN (
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
+Cases_on `PMATCH_ROW p g r v` THENL [  
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_def, some_eq_NONE],
+
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_def, some_def] THEN
   METIS_TAC[]
-))
+])
 
 val PMATCH_EVAL_MATCH = store_thm ("PMATCH_EVAL_MATCH",
- ``~(PMATCH_ROW (\x. (g x, f x)) v = NONE) ==>
-   (PMATCH v ((PMATCH_ROW (\x. (g x, f x))) :: rs) =
-      (f (@x. g x = v)))``,
+ ``~(PMATCH_ROW p g r v = NONE) ==>
+   (PMATCH v ((PMATCH_ROW p g r) :: rs) =
+      (r (@x.PMATCH_ROW_COND p g v x)))``,
 
-SIMP_TAC std_ss [PMATCH_def] THEN
-Cases_on `PMATCH_ROW (\x. (g x,f x)) v` THEN (
-  FULL_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
-  METIS_TAC[]
-))
+SIMP_TAC std_ss [PMATCH_EVAL,
+ PMATCH_ROW_EQ_NONE])
+
+val PMATCH_EVAL_MATCH = store_thm ("PMATCH_EVAL_MATCH",
+ ``~(PMATCH_ROW p g r v = NONE) ==>
+   (PMATCH v ((PMATCH_ROW p g r) :: rs) =
+      (r (@x.PMATCH_ROW_COND p g v x)))``,
+
+SIMP_TAC std_ss [PMATCH_EVAL,
+ PMATCH_ROW_EQ_NONE])
 
 
 (***************************************************)
@@ -212,24 +300,22 @@ ASM_REWRITE_TAC[])
 
 
 val PMATCH_REMOVE_ARB = store_thm ("PMATCH_REMOVE_ARB",
-``(PMATCH v (SNOC (PMATCH_ROW (\x. (f x, ARB))) rows) = 
+``(!x. r x = ARB) ==>
+  (PMATCH v (SNOC (PMATCH_ROW p g r) rows) = 
    PMATCH v rows)``,
 
 Induct_on `rows` THENL [
-  SIMP_TAC list_ss [PMATCH_def, PMATCH_ROW_def] THEN
-  Cases_on `?x. f x = v` THEN (
-    ASM_SIMP_TAC std_ss [PMATCH_INCOMPLETE_def]
-  ),
-
+  SIMP_TAC list_ss [PMATCH_EVAL, PMATCH_INCOMPLETE_def],
   ASM_SIMP_TAC list_ss [PMATCH_def]
 ])
 
 (* ARB rows can be removed, since a match failiure is the same 
    as ARB *)
 val PMATCH_REMOVE_ARB_NO_OVERLAP = store_thm ("PMATCH_REMOVE_ARB_NO_OVERLAP",
-``!v ff rows1 rows2.
-  (!x. (v = ff x) ==> EVERY (\r. (r (ff x) = NONE)) rows2) ==>
-  (PMATCH v (rows1 ++ ((PMATCH_ROW (\x. (ff x, ARB))) :: rows2)) = 
+``!v p g r rows1 rows2.
+  ((!x. (r x = ARB)) /\
+   (!x. ((v = p x) /\ (g x)) ==> EVERY (\row. (row (p x) = NONE)) rows2)) ==>
+  (PMATCH v (rows1 ++ ((PMATCH_ROW p g r) :: rows2)) = 
    PMATCH v (rows1 ++ rows2))``,
 
 REPEAT STRIP_TAC THEN
@@ -237,14 +323,14 @@ Tactical.REVERSE (Induct_on `rows1`) THEN (
   ASM_SIMP_TAC list_ss [PMATCH_def]
 ) THEN
 
-ASM_SIMP_TAC list_ss [PMATCH_def, PMATCH_ROW_def] THEN
-Cases_on `?x. ff x = v` THEN (
-  ASM_SIMP_TAC std_ss [PMATCH_INCOMPLETE_def]
+Cases_on `PMATCH_ROW p g r v` THEN (
+  ASM_SIMP_TAC std_ss []
 ) THEN
-FULL_SIMP_TAC std_ss [] THEN
-Q.PAT_ASSUM `_ = v` (ASSUME_TAC o GSYM) THEN
+IMP_RES_TAC PMATCH_ROW_EQ_SOME THEN
+Q.PAT_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `x'`) THEN
+FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
 Induct_on `rows2` THEN (
-  FULL_SIMP_TAC list_ss [PMATCH_def, PMATCH_INCOMPLETE_def]
+  ASM_SIMP_TAC list_ss [PMATCH_def, PMATCH_INCOMPLETE_def]
 ))
 
 
@@ -252,16 +338,16 @@ Induct_on `rows2` THEN (
 (* Add an injective function to the pattern and the value.
    This can be used to eliminate constructors. *)   
 val PMATCH_ROW_REMOVE_FUN = store_thm ("PMATCH_ROW_REMOVE_FUN",
-``!ff v f g. (!x y. (ff x = ff y) ==> (x = y)) ==>
+``!ff v p g r. (!x y. (ff x = ff y) ==> (x = y)) ==>
 
-  (PMATCH_ROW (\x. (ff (f x), g x)) (ff v) =
-   PMATCH_ROW (\x. (f x, g x)) v)``,
+  (PMATCH_ROW (\x. (ff (p x))) g r (ff v) =
+   PMATCH_ROW (\x. (p x)) g r v)``,
 
 REPEAT STRIP_TAC THEN
 `!x y. (ff x = ff y) = (x = y)` by PROVE_TAC[] THEN
-ASM_SIMP_TAC std_ss [PMATCH_ROW_def])
+ASM_SIMP_TAC std_ss [PMATCH_ROW_def, PMATCH_ROW_COND_def])
 
-
+(*
 val PMATCH_ROW_REMOVE_FUN_EXT = store_thm ("PMATCH_ROW_REMOVE_FUN_EXT",
 ``!ff v f f' g g'. 
 
@@ -284,7 +370,7 @@ ASM_REWRITE_TAC [] THEN
 REPEAT STRIP_TAC THEN
 PROVE_TAC[])
 
-
+*)
 
 (* The following lemma looks rather complicated. It is
    intended to work together with PMATCH_ROW_REMOVE_FUN to
@@ -293,15 +379,15 @@ PROVE_TAC[])
    as an example consider
 
    val t = ``PMATCH (SOME x, y) [
-     PMATCH_ROW (\ x. ((SOME x, 0), SOME (x + y)));
-     PMATCH_ROW (\ (x', y). ((x', y), x'))
+     PMATCH_ROW (\x. (SOME x, 0)) (K T) (\x. (SOME (x + y)));
+     PMATCH_ROW (\(x', y). (x', y)) (K T) (\(x', y). x')
    ]``
 
    We want to simplify this to 
 
-   val t' = ``PMATCH (x, y) [
-     PMATCH_ROW (\ x. ((x, 0), SOME (x + y)));
-     PMATCH_ROW (\ (x'', y). ((x'', y), SOME x''))
+   val t = ``PMATCH (x, y) [
+     PMATCH_ROW (\x. (x, 0)) (K T) (\x. (SOME (x + y)));
+     PMATCH_ROW (\(x'', y). (x'', y)) (K T) (\(x'', y). SOME x'')
    ]``
    
    This is done via PMATCH_ROWS_SIMP and PMATCH_ROWS_SIMP_SOUNDNESS.
@@ -312,45 +398,48 @@ PROVE_TAC[])
    v := (x, y)
    ff (x, y) := (SOME x, y)
    
-   f x := (x, 0)
-   g x := SOME (x + y)
+   p x := (x, 0)
+   r x := SOME (x + y)
 
 
    For the second row, PMATCH_ROW_REMOVE_FUN is used with
 
    v := (SOME x, y)
    v' := (x, y)
-   f (x', y) := (x', y)
-   g (x', y) := x' 
-   f' (x'', y) = (x'', y)
-   g' (x'', y) := (SOME x'', y)
+   p (x', y) := (x', y)
+   r (x', y) := x' 
+   p' (x'', y) = (x'', y)
+   f (x'', y) := (SOME x'', y)
 *)
 
 val PMATCH_ROW_REMOVE_FUN_VAR = store_thm ("PMATCH_ROW_REMOVE_FUN_VAR",
-``!v v' f g f' g'.
-  ((!x'. (f' x' = v') = (f (g' x') = v)) /\
-  ((!x. (f x = v) ==> ?x'. g' x' = x)) /\
-  ((!x y. (f x = f y) ==> (x = y)))) ==>
-  (PMATCH_ROW (\x. (f x, g x)) v =
-   PMATCH_ROW (\x'. (f' x'), g (g' x')) v')``,
+``!v v' f p g r p' .
+  ((!x'. (p' x' = v') = (p (f x') = v)) /\
+  ((!x. (p x = v) ==> ?x'. f x' = x)) /\
+  ((!x y. (p x = p y) ==> (x = y)))) ==>
+  (PMATCH_ROW p g r v =
+   PMATCH_ROW p' (\x. g (f x)) (\x. r (f x)) v')``,
 
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
-`(?x'. f (g' x') = v) = (?x. f x = v)` by ALL_TAC THEN1 (
-  METIS_TAC[]
+`IS_SOME (some x. PMATCH_ROW_COND p' (\x. g (f x)) v' x) =
+ IS_SOME (some x. PMATCH_ROW_COND p g v x)` by ALL_TAC THEN1 (
+   ASM_SIMP_TAC std_ss [some_IS_SOME, PMATCH_ROW_COND_def] THEN
+   EQ_TAC THEN1 PROVE_TAC[] THEN
+   REPEAT STRIP_TAC THEN
+   `?x'. f x' = x` by PROVE_TAC[] THEN
+   Q.EXISTS_TAC `x'` THEN
+   ASM_REWRITE_TAC[]
 ) THEN
-Cases_on `?x. f x = v` THEN (
-  ASM_SIMP_TAC std_ss []
+Tactical.REVERSE (Cases_on `IS_SOME (some x. PMATCH_ROW_COND p g v x)`) THEN (
+  FULL_SIMP_TAC std_ss []
 ) THEN
-
-SELECT_ELIM_TAC THEN
-ASM_SIMP_TAC std_ss [] THEN
-SELECT_ELIM_TAC THEN
-REPEAT STRIP_TAC THEN (
-  METIS_TAC[]
-));
+FULL_SIMP_TAC std_ss [some_IS_SOME_EXISTS] THEN
+FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+METIS_TAC[]);
 
 
+(*
 
 (***************************************************)
 (* THEOREMS ABOUT FLATTENING                       *)
@@ -400,6 +489,6 @@ FULL_SIMP_TAC std_ss [] THEN
 ASM_SIMP_TAC std_ss [] THEN
 METIS_TAC[])
 
-
+*)
 val _ = export_theory()
 

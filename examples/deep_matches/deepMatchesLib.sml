@@ -11,8 +11,39 @@ open constrFamiliesLib
 (***********************************************)
 
 val PAIR_EQ_COLLAPSE = prove (
-``((FST x = a) /\ (SND x = b)) = (x = (a, b))``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
+Cases_on `x` THEN SIMP_TAC std_ss [] THEN METIS_TAC[])
+
+
+fun is_FST_eq x t = let
+  val (l, r) = dest_eq t
+  val pred = aconv (pairSyntax.mk_fst x)
+in
+  pred l
+end
+
+fun FST_SND_CONJUNCT_COLLAPSE v conj = let
+  val conj'_thm = markerLib.move_conj_left (is_FST_eq v) conj
+
+  val v' = pairSyntax.mk_snd v
+
+  val thm_coll = (TRY_CONV (RAND_CONV (FST_SND_CONJUNCT_COLLAPSE v')) THENC
+   (REWR_CONV PAIR_EQ_COLLAPSE))
+    (rhs (concl conj'_thm))
+in
+  TRANS conj'_thm thm_coll
+end handle HOL_ERR _ => raise UNCHANGED
+
+fun ELIM_FST_SND_SELECT_CONV t = let
+  val (v, conj) = boolSyntax.dest_select t  
+  val thm0 = FST_SND_CONJUNCT_COLLAPSE v conj
+
+  val thm1 = RAND_CONV (ABS_CONV (K thm0)) t
+  val thm2 = CONV_RULE (RHS_CONV (REWR_CONV SELECT_REFL)) thm1
+in
+  thm2
+end handle HOL_ERR _ => raise UNCHANGED
+
 
 (*
 val rc = DEPTH_CONV pairTools.PABS_ELIM_CONV THENC SIMP_CONV list_ss [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD, PMATCH_ROW_EQ_NONE, PAIR_EQ_COLLAPSE, oneTheory.one]
@@ -25,18 +56,46 @@ val pabs_elim_ss =
        key   = SOME ([],``UNCURRY (f:'a -> 'b -> bool)``),
        conv  = K (K pairTools.PABS_ELIM_CONV)}
 
+val elim_fst_snd_select_ss =
+    simpLib.conv_ss
+      {name  = "ELIM_FST_SND_SELECT_CONV",
+       trace = 2,
+       key   = SOME ([],``$@ (f:'a -> bool)``),
+       conv  = K (K ELIM_FST_SND_SELECT_CONV)}
+
 fun rc_ss gl = list_ss ++ simpLib.merge_ss 
  (gl @ 
   [pabs_elim_ss,
    pairSimps.paired_forall_ss,
    pairSimps.paired_exists_ss,
    pairSimps.gen_beta_ss,
+   elim_fst_snd_select_ss,
    simpLib.rewrites [
      pairTheory.EXISTS_PROD, 
      pairTheory.FORALL_PROD,
      PMATCH_ROW_EQ_NONE, 
+     PMATCH_ROW_COND_def,
      PAIR_EQ_COLLAPSE, 
      oneTheory.one]])
+
+fun callback_CONV cb_opt t = (case cb_opt of
+    NONE => raise UNCHANGED
+  | SOME cb => (
+    if (aconv t T) orelse (aconv t F) then (raise UNCHANGED) else
+    (EQT_INTRO (cb t)
+     handle HOL_ERR _ => EQF_INTRO (cb (mk_neg t)))))
+  
+fun rc_conv (gl, callback_opt) = 
+  SIMP_CONV (rc_ss gl) [] THENC
+  TRY_CONV (callback_CONV callback_opt)
+
+fun rc_tac (gl, callback_opt) =
+  CONV_TAC (rc_conv (gl, callback_opt))
+
+fun PMATCH_ROW_ARGS_CONV c = 
+   RATOR_CONV (RAND_CONV (TRY_CONV c)) THENC
+   RATOR_CONV (RATOR_CONV (RAND_CONV (TRY_CONV c))) THENC
+   RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (TRY_CONV c))))
 
 
 (***********************************************)
@@ -143,7 +202,7 @@ fun convert_case t = let
   fun process_pattern (p, rh) = let
     val fvs = List.rev (free_vars p)
   in
-    mk_PMATCH_ROW fvs p rh
+    mk_PMATCH_ROW_PABS fvs (p, T, rh)
   end
   val rows = List.map process_pattern ps
   val rows_tm = listSyntax.mk_list (rows, type_of (hd rows))
@@ -161,12 +220,12 @@ fun PMATCH_INTRO_CONV t = let
      TODO: change implementation to get more runtime-speed *)
   val my_tac = (
     CASE_TAC THEN
-    FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL]
+    FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def]
   )
 in 
   (* set_goal ([], tm) *)
   prove (tm, REPEAT my_tac)
-end handle HOL_ERR _ => NO_CONV t;
+end handle HOL_ERR _ => raise UNCHANGED
 
 
 (***********************************************)
@@ -179,25 +238,24 @@ end handle HOL_ERR _ => NO_CONV t;
    not needed for PMATCH and can be removed. *)
 
 (* 
-val ssl = []
-val t = ``PMATCH x
-    [PMATCH_ROW (\_ . (NONE,0));
-     PMATCH_ROW (\v. (SOME v,ARB))]`` 
+val rc_arg = []
 
-val t =
-   ``PMATCH x
-    [PMATCH_ROW (\_. ((NONE,[]),0));
-     PMATCH_ROW (\(v4,v5). ((NONE,v4::v5),ARB));
-     PMATCH_ROW (\(v2,v1). ((SOME v2,v1),ARB))]``
+set_trace "parse deep cases" 0
+val t = convert_case ``case x of NONE => 0``
+
+val t = convert_case ``case (x, y, z) of
+   (0, y, z) => 2
+ | (x, NONE, []) => x
+ | (x, SOME y, l) => x+y``
 
 *)
 
-fun PMATCH_REMOVE_ARB_CONV_GEN_SINGLE ssl t = let
+fun PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg t = let
   val (v, rows) = dest_PMATCH t
   val rows_rev = List.rev rows
 
   val i_rev = index (fn row => (
-    is_arb (#3(dest_PMATCH_ROW row)))
+    is_arb (#4(dest_PMATCH_ROW_ABS row)))
     handle HOL_ERR _ => false) rows_rev
   val i = length rows - (i_rev + 1)
 
@@ -215,13 +273,13 @@ fun PMATCH_REMOVE_ARB_CONV_GEN_SINGLE ssl t = let
     listSyntax.mk_append (rows1_tm, 
       listSyntax.mk_cons (rhs (concl r_thm), rows2_tm))
  
-  val thm0 = HO_PART_MATCH (rand o lhs o snd o dest_imp o #2 o strip_forall) (
+  val thm0 = PART_MATCH (rand o lhs o snd o dest_imp o #2 o strip_forall) (
     ISPEC v (FRESH_TY_VARS_RULE PMATCH_REMOVE_ARB_NO_OVERLAP)
   ) input_rows
 
 
   val pre = rand (rator (concl thm0))
-  val pre_thm = prove (pre, SIMP_TAC (rc_ss ssl) [])
+  val pre_thm = prove (pre, rc_tac rc_arg)
   val thm1 = MP thm0 pre_thm
   val thm2 = CONV_RULE 
     ((RHS_CONV o RAND_CONV) listLib.APPEND_CONV)
@@ -229,14 +287,16 @@ fun PMATCH_REMOVE_ARB_CONV_GEN_SINGLE ssl t = let
 
   val thm2_lhs_tm = mk_eq (t, lhs (concl thm2))
   val thm2_lhs = prove (thm2_lhs_tm,
-    MP_TAC r_thm THEN SIMP_TAC (rc_ss []) [])
+    MP_TAC r_thm THEN 
+    rc_tac rc_arg)
 
   val thm3 = TRANS thm2_lhs thm2
 in
   thm3
 end handle HOL_ERR _ => raise UNCHANGED
 
-fun PMATCH_REMOVE_ARB_CONV_GEN ssl = REPEATC (PMATCH_REMOVE_ARB_CONV_GEN_SINGLE ssl)
+fun PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg = REPEATC (PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg)
+fun PMATCH_REMOVE_ARB_CONV_GEN ssl = PMATCH_REMOVE_ARB_CONV_GENCALL (ssl, NONE)
 val PMATCH_REMOVE_ARB_CONV = PMATCH_REMOVE_ARB_CONV_GEN []
 
 
@@ -246,13 +306,11 @@ val PMATCH_REMOVE_ARB_CONV = PMATCH_REMOVE_ARB_CONV_GEN []
 
 (*val t = ``
 PMATCH (SOME x, xz)
-     [PMATCH_ROW (\x. ((SOME 2,x,[]),x));
-      PMATCH_ROW (\y:'a. ((SOME 2,3,[]),x));
-      PMATCH_ROW (\(z,x,yy). ((z,x,[2]),x));
-      PMATCH_ROW (\(z,yy,xs). ((SOME z,xs),3+z));
-      PMATCH_ROW (\(z,xs). ((SOME z,xs),3+z));
-      PMATCH_ROW (\(yy,x,xs). ((NONE,xs),3))]``
+     [PMATCH_ROW (\x. (SOME 2,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\y:'a. ((SOME 2,3,[]))) (\y. T) (\y. x);
+      PMATCH_ROW (\(z,x,yy). (z,x,[2])) (\(z,x,yy). T) (\(z,x,yy). x)]``
 *)
+
 
 (* Many simps depend on patterns being injective. This means
    in particular that no extra, unused vars occur in the patterns.
@@ -262,7 +320,7 @@ fun PMATCH_CLEANUP_PVARS_CONV t = let
   val _ = if is_PMATCH t then () else raise UNCHANGED
 
   fun row_conv row = let
-     val (vars_tm, pt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
      val _ = if (type_of vars_tm = ``:unit``) then raise UNCHANGED else ()
      val vars = pairSyntax.strip_pair vars_tm
      val used_vars = FVL [pt, rh] empty_tmset
@@ -272,21 +330,20 @@ fun PMATCH_CLEANUP_PVARS_CONV t = let
      val _ = if (length vars = length filtered_vars) then
        raise UNCHANGED else ()
 
-     val row' = mk_PMATCH_ROW filtered_vars pt rh 
+     val row' = mk_PMATCH_ROW_PABS filtered_vars (pt, gt, rh)
 
      val eq_tm = mk_eq (row, row') 
      (* set_goal ([], eq_tm) *)
      val eq_thm = prove (eq_tm,
-        CONV_TAC (DEPTH_CONV pairTools.PABS_ELIM_CONV) THEN
-        HO_MATCH_MP_TAC PMATCH_ROW_EQ_AUX THEN
-        SIMP_TAC (rc_ss []) []
+        MATCH_MP_TAC PMATCH_ROW_EQ_AUX THEN
+        rc_tac ([], NONE)
      )
   in
      eq_thm
   end
 in
-  DEPTH_CONV row_conv t
-end 
+  CHANGED_CONV (DEPTH_CONV (PMATCH_ROW_FORCE_SAME_VARS_CONV THENC row_conv)) t
+end handle HOL_ERR _ => raise UNCHANGED
 
 
 (***********************************************)
@@ -296,6 +353,22 @@ end
 (* row matches                                 *)
 (***********************************************)
 
+(*
+val t = ``
+PMATCH (NONE,x,l)
+     [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\x. (NONE,x,[2])) (\x. F) (\x. x);
+      PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
+      PMATCH_ROW (\(x,y). (y,x,[2])) (\(x, y). T) (\(x, y). x);
+      PMATCH_ROW (\x. (SOME 3,x,[])) (\x. T) (\x. x)
+   ]``
+
+val t = ``PMATCH y [PMATCH_ROW (\_0_1. _0_1) (\_0_1. T) (\_0_1. F)]``
+val rc_arg = []
+
+val t' = rhs (concl (PMATCH_CLEANUP_CONV t))
+*)
+
 fun map_filter f l = case l of
     [] => []
   | x::xs => (case f x of
@@ -303,12 +376,11 @@ fun map_filter f l = case l of
      | SOME y => y :: (map_filter f xs));
 
 (* remove redundant rows *)
-fun PMATCH_CLEANUP_CONV_GEN ssl t = let
+fun PMATCH_CLEANUP_CONV_GENCALL rc_arg t = let
   val (v, rows) = dest_PMATCH t
-  val rc_conv = SIMP_CONV (rc_ss ssl) [] 
 
   fun check_row r = let
-    val r_tm = mk_eq (mk_comb (r, v), optionSyntax.mk_none (type_of t))     val r_thm = rc_conv r_tm
+    val r_tm = mk_eq (mk_comb (r, v), optionSyntax.mk_none (type_of t))     val r_thm = rc_conv rc_arg r_tm
     val res_tm = rhs (concl r_thm)
   in
     if (same_const res_tm T) then SOME (true, r_thm) else
@@ -331,7 +403,7 @@ fun PMATCH_CLEANUP_CONV_GEN ssl t = let
   fun check_row_exists v rows =
      exists (fn x => case x of (_, SOME (v', _)) => v = v' | _ => false) rows
 
-  val _ = if ((check_row_exists true rows_checked_rev) orelse (check_row_exists false (tl rows_checked_rev))) then () else raise UNCHANGED
+  val _ = if ((check_row_exists true rows_checked_rev) orelse (check_row_exists false rows_checked_rev)) then () else raise UNCHANGED
 
   val row_ty = type_of (hd rows)
 
@@ -391,23 +463,15 @@ fun PMATCH_CLEANUP_CONV_GEN ssl t = let
   val thm2 = let
      val _ = if (not (List.null rows_checked1) andalso
                  (case hd rows_checked1 of (_, (SOME (false, _))) => true | _ => false)) then () else failwith "nothing to do"
- 
+      
      val thm1_tm = rhs (concl thm1)
-     val thm2a = DEPTH_CONV pairTools.PABS_ELIM_CONV thm1_tm handle UNCHANGED => REFL thm1_tm
-     val (vars,_) = pairLib.dest_pabs (rand (rand (rator (rand (thm1_tm)))))
+     val thm2a = PART_MATCH (lhs o rand) PMATCH_EVAL_MATCH thm1_tm
+     val pre_thm = EQF_ELIM (snd (valOf(snd (hd rows_checked1))))
+     val thm2b = MP thm2a pre_thm
 
-     val thm2a0 = HO_PART_MATCH (lhs o rand) PMATCH_EVAL_MATCH (rhs (concl thm2a))
-
-     val pre_tm = fst (dest_imp (concl thm2a0))
-     val pre_thm0 = snd (valOf(snd (hd rows_checked1)))
-     val pre_thm = prove (pre_tm,
-       MP_TAC pre_thm0 THEN
-       SIMP_TAC (rc_ss ssl) [])
-
-     val thm2a1 = MP thm2a0 pre_thm
-
-     val thm2b = TRANS thm2a thm2a1
-     val thm2c = CONV_RULE (RHS_CONV (RAND_CONV rc_conv)) thm2b handle HOL_ERR _ => thm2b
+     val thm2c = CONV_RULE (RHS_CONV 
+        (RAND_CONV (rc_conv rc_arg) THENC
+         pairLib.GEN_BETA_CONV)) thm2b handle HOL_ERR _ => thm2b
    in
      thm2c
    end handle HOL_ERR _ => let
@@ -420,7 +484,8 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 
-fun PMATCH_CLEANUP_CONV t = PMATCH_CLEANUP_CONV_GEN [] t
+fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
+val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN []
 
 
 
@@ -444,24 +509,53 @@ end;
 (* drop a column  *)
 (*----------------*)
 
-fun PMATCH_REMOVE_COL_AUX ssl col t = let
+(*
+val t = ``
+PMATCH (NONE,x,l)
+     [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\z. (NONE,z,[2])) (\z. F) (\z. z);
+      PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
+      PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
+   ]``
+
+
+val t = ``
+  PMATCH (x + y,ys)
+    [PMATCH_ROW (λx. (x,[])) (λx. T) (λx. x);
+     PMATCH_ROW (λ(x,y,ys). (x,y::ys)) (λ(x,y,ys). T)
+       (λ(x,y,ys). my_d (x + y,ys))]``
+
+
+val t = ``PMATCH (x,y)
+    [PMATCH_ROW (λx. (x,x)) (λx. T) (λx. T);
+     PMATCH_ROW (λ (z, y). (z, y)) (λ (z, y). T) (λ (z, y). F)]``
+
+
+val rc_arg = []
+val col = 0
+*)
+
+fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
   val (v, rows) = dest_PMATCH t
   val (v', c_v) = pair_get_col col v
+  val vs = free_vars c_v
 
   fun PMATCH_ROW_REMOVE_FUN_VAR_COL_AUX row = let
-     val (vars_tm, pt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS_VARIANT vs row
      val vars = pairSyntax.strip_pair vars_tm
+     val avoid = free_varsl [pt, gt, rh]
 
-     val (pt', pv) = pair_get_col col pt
+     val (pt0', pv) = pair_get_col col pt
+     val pt' = subst [pv |-> c_v] pt0'
 
      val pv_i_opt = SOME (index (aconv pv) vars) handle HOL_ERR _ => NONE
-     val (vars'_tm, g') = case pv_i_opt of
+     val (vars'_tm, f) = case pv_i_opt of
          (SOME pv_i) => (let
            (* we eliminate a variabe column *)
            val vars' = let
              val vars' = List.take (vars, pv_i) @ List.drop (vars, pv_i+1)
            in
-             if (List.null vars') then [genvar ``:unit``] else vars'
+             if (List.null vars') then [variant avoid ``uv:unit``] else vars'
            end
 
            val vars'_tm = pairSyntax.list_mk_pair vars'     
@@ -488,29 +582,36 @@ fun PMATCH_REMOVE_COL_AUX ssl col t = let
            (vars'_tm, g')
          end)
 
-     val f = pairSyntax.mk_pabs (vars_tm, pt)
+(*   val f = pairSyntax.mk_pabs (vars_tm, pt)
      val f' = pairSyntax.mk_pabs (vars'_tm, pt')
      val g = pairSyntax.mk_pabs (vars_tm, rh)
+
+*)
+     val p = pairSyntax.mk_pabs (vars_tm, pt)
+     val p' = pairSyntax.mk_pabs (vars'_tm, pt')
+     val g = pairSyntax.mk_pabs (vars_tm, gt)
+     val r = pairSyntax.mk_pabs (vars_tm, rh)
 
      val thm0 = let
        val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
        val thm = ISPEC v thm
        val thm = ISPEC v' thm
        val thm = ISPEC f thm
+       val thm = ISPEC p thm
        val thm = ISPEC g thm
-       val thm = ISPEC f' thm
-       val thm = ISPEC g' thm
+       val thm = ISPEC r thm
+       val thm = ISPEC p' thm
 
-       fun elim_conv vs = RATOR_CONV (RAND_CONV (
+       fun elim_conv_aux vs = (
          (pairTools.PABS_INTRO_CONV vs) THENC
          (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))
-       ))
+       ) 
 
-       val thm = CONV_RULE ((RAND_CONV o LHS_CONV) (elim_conv vars_tm)) thm
+       fun elim_conv vs = PMATCH_ROW_ARGS_CONV (elim_conv_aux vs)
        val thm = CONV_RULE ((RAND_CONV o RHS_CONV) (elim_conv vars'_tm)) thm
 
        val tm_eq = mk_eq(lhs (rand (concl thm)), mk_comb (row, v))
-       val eq_thm = prove (tm_eq, SIMP_TAC (rc_ss ssl) [])
+       val eq_thm = prove (tm_eq, rc_tac rc_arg)
 
        val thm = CONV_RULE (RAND_CONV (LHS_CONV (K eq_thm))) thm
      in
@@ -519,7 +620,7 @@ fun PMATCH_REMOVE_COL_AUX ssl col t = let
 
      val pre_tm = fst (dest_imp (concl thm0))
 (* set_goal ([], pre_tm) *)
-     val pre_thm = prove (pre_tm, SIMP_TAC (rc_ss ssl) [])    
+     val pre_thm = prove (pre_tm, rc_tac rc_arg)    
      val thm1 = MP thm0 pre_thm
   in
      thm1
@@ -541,12 +642,25 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 
-
 (*------------------------------------*)
 (* remove a constructor from a column *)
 (*------------------------------------*)
 
-fun PMATCH_REMOVE_FUN_AUX ssl col t = let
+(*
+val t = ``
+PMATCH (SOME y,x,l)
+     [PMATCH_ROW (\x. (SOME 0,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\z. (SOME 1,z,[2])) (\z. F) (\z. z);
+      PMATCH_ROW (\x. (SOME 3,x,[2])) (\x. T) (\x. x);
+      PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
+   ]``
+
+val rc_arg = []
+val col = 0
+*)
+
+
+fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
   val (v, rows) = dest_PMATCH t
 
   val (ff_tm, ff_inv, ff_inv_var, c) = let
@@ -603,46 +717,49 @@ fun PMATCH_REMOVE_FUN_AUX ssl col t = let
   end
 
   val ff_thm_tm = ``!x y. (^ff_tm x = ^ff_tm y) ==> (x = y)``
-  val ff_thm = prove (ff_thm_tm, SIMP_TAC (rc_ss ssl) [])
+  val ff_thm = prove (ff_thm_tm, rc_tac rc_arg)
 
   val v' = ff_inv v
 
   val PMATCH_ROW_REMOVE_FUN' = let
-    val thm0 = (HO_MATCH_MP PMATCH_ROW_REMOVE_FUN ff_thm)
-    val thm1 = ISPEC v'  thm0
+    val thm0 =  FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN
+    val thm1 = ISPEC ff_tm  thm0
+    val thm2 = ISPEC v'  thm1
+    val thm3 = MATCH_MP thm2 ff_thm
 
-    val thm_v' = prove (``^ff_tm ^v' = ^v``, SIMP_TAC (rc_ss ssl) [])
-    val thm2 = CONV_RULE (STRIP_QUANT_CONV (LHS_CONV (RAND_CONV (K thm_v')))) thm1
+    val thm_v' = prove (``^ff_tm ^v' = ^v``, rc_tac rc_arg)
+    val thm4 = CONV_RULE (STRIP_QUANT_CONV (LHS_CONV (RAND_CONV (K thm_v')))) thm3
   in
-    thm2
+    thm4
   end
 
   fun PMATCH_ROW_REMOVE_FUN_COL_AUX row = let
-     val (vars_tm, pt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
 
      val pt' = ff_inv pt
-     val f = pairSyntax.mk_pabs (vars_tm, pt')
-     val g = pairSyntax.mk_pabs (vars_tm, rh)
+     val vpt' = pairSyntax.mk_pabs (vars_tm, pt')
+     val vgt = pairSyntax.mk_pabs (vars_tm, gt)
+     val vrh = pairSyntax.mk_pabs (vars_tm, rh)
 
-     val thm0 = ISPEC g (ISPEC f PMATCH_ROW_REMOVE_FUN')
+     val thm0 = ISPECL [vpt', vgt, vrh] PMATCH_ROW_REMOVE_FUN'
      val eq_thm_tm = mk_eq (lhs (concl thm0), mk_comb (row, v))
-     val eq_thm = prove (eq_thm_tm, SIMP_TAC (rc_ss ssl) [])
+     val eq_thm = prove (eq_thm_tm, rc_tac rc_arg)
 
      val thm1 = CONV_RULE (LHS_CONV (K eq_thm)) thm0
 
      val vi_conv = (pairTools.PABS_INTRO_CONV vars_tm) THENC
          (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))
 
-     val thm2 = CONV_RULE (RHS_CONV (RATOR_CONV (RAND_CONV vi_conv))) thm1
+     val thm2 = CONV_RULE (RHS_CONV (PMATCH_ROW_ARGS_CONV vi_conv)) thm1
   in
      thm2
   end
 
   fun PMATCH_ROW_REMOVE_VAR_COL_AUX row = let
-     val (vars_tm, pt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
      val vars = pairSyntax.strip_pair vars_tm
 
-     val avoid = vars @ free_vars pt @ free_vars rh
+     val avoid = vars @ free_vars pt @ free_vars rh @ free_vars gt
      val (pt', pv, new_vars) = ff_inv_var avoid pt
 
      val pv_i = index (aconv pv) vars 
@@ -650,11 +767,11 @@ fun PMATCH_REMOVE_FUN_AUX ssl col t = let
      val vars' = let
        val vars' = List.take (vars, pv_i) @ new_vars @ List.drop (vars, pv_i+1)
      in
-       if (List.null vars') then [genvar ``:unit``] else vars'
+       if (List.null vars') then [variant avoid ``uv:unit``] else vars'
      end
 
      val vars'_tm = pairSyntax.list_mk_pair vars'     
-     val g' = let
+     val f_tm = let
         val c_v = list_mk_comb (c, new_vars)
         val vs = List.take (vars, pv_i) @ (c_v :: List.drop (vars, pv_i+1)) 
         val vs_tm = pairSyntax.list_mk_pair vs
@@ -662,30 +779,30 @@ fun PMATCH_REMOVE_FUN_AUX ssl col t = let
         pairSyntax.mk_pabs (vars'_tm, vs_tm)
      end
 
-     val f = pairSyntax.mk_pabs (vars_tm, pt)
-     val f' = pairSyntax.mk_pabs (vars'_tm, pt')
-     val g = pairSyntax.mk_pabs (vars_tm, rh)
+     val vpt = pairSyntax.mk_pabs (vars_tm, pt)
+     val vpt' = pairSyntax.mk_pabs (vars'_tm, pt')
+     val vrh = pairSyntax.mk_pabs (vars_tm, rh)
+     val vgt = pairSyntax.mk_pabs (vars_tm, gt)
 
      val thm0 = let
        val thm = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_FUN_VAR
        val thm = ISPEC v thm
        val thm = ISPEC v' thm
-       val thm = ISPEC f thm
-       val thm = ISPEC g thm
-       val thm = ISPEC f' thm
-       val thm = ISPEC g' thm
+       val thm = ISPEC f_tm thm
+       val thm = ISPEC vpt thm
+       val thm = ISPEC vgt thm
+       val thm = ISPEC vrh thm
+       val thm = ISPEC vpt' thm
 
-       fun elim_conv vs = RATOR_CONV (RAND_CONV (
+       fun elim_conv vs = PMATCH_ROW_ARGS_CONV (
          (pairTools.PABS_INTRO_CONV vs) THENC
          (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))
-       ))
+       )
 
-       val thm = CONV_RULE ((RAND_CONV o LHS_CONV) (elim_conv vars_tm)) thm
        val thm = CONV_RULE ((RAND_CONV o RHS_CONV) (elim_conv vars'_tm)) thm
 
        val tm_eq = mk_eq(lhs (rand (concl thm)), mk_comb (row, v))
-       val eq_thm = prove (tm_eq,
-         SIMP_TAC (rc_ss ssl) [])
+       val eq_thm = prove (tm_eq, rc_tac rc_arg)
 
        val thm = CONV_RULE (RAND_CONV (LHS_CONV (K eq_thm))) thm
      in
@@ -693,7 +810,7 @@ fun PMATCH_REMOVE_FUN_AUX ssl col t = let
      end
 
      val pre_tm = fst (dest_imp (concl thm0))
-     val pre_thm = prove (pre_tm, SIMP_TAC (rc_ss ssl) [])
+     val pre_thm = prove (pre_tm, rc_tac rc_arg)
     
      val thm1 = MP thm0 pre_thm
   in
@@ -728,7 +845,18 @@ end handle HOL_ERR _ => raise UNCHANGED
 (* Combine auxiliary funs *)
 (*------------------------*)
 
-fun PMATCH_SIMP_COLS_CONV_GEN ssl t = let
+(*
+val t = ``
+PMATCH (SOME y,x,l)
+     [PMATCH_ROW (\x. (SOME 0,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\z. z) (\z. F) (\z. (FST (SND z)));
+      PMATCH_ROW (\x. (SOME 3,x)) (\x. T) (\x. (FST x));
+      PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
+   ]``
+val rc_arg = []
+*)
+
+fun PMATCH_SIMP_COLS_CONV_GENCALL rc_arg t = let
   val cols = dest_PMATCH_COLS t
 (*
   val (col_v, col) = el 1 cols
@@ -756,9 +884,9 @@ fun PMATCH_SIMP_COLS_CONV_GEN ssl t = let
   end handle HOL_ERR _ => false
 
   fun process_col i col = if (elim_col_ok col) then
-    SOME (PMATCH_REMOVE_COL_AUX ssl i t)
+    SOME (PMATCH_REMOVE_COL_AUX rc_arg i t)
   else if (simp_col_ok col) then
-    SOME (PMATCH_REMOVE_FUN_AUX ssl i t)
+    SOME (PMATCH_REMOVE_FUN_AUX rc_arg i t)
   else NONE
 
   val thm_opt = first_opt process_col cols
@@ -767,6 +895,7 @@ in
                 | SOME thm => thm
 end
 
+fun PMATCH_SIMP_COLS_CONV_GEN ssl = PMATCH_SIMP_COLS_CONV_GENCALL (ssl, NONE)
 val PMATCH_SIMP_COLS_CONV = PMATCH_SIMP_COLS_CONV_GEN []
 
 
@@ -778,6 +907,17 @@ val PMATCH_SIMP_COLS_CONV = PMATCH_SIMP_COLS_CONV_GEN []
    explicit columns. This can happen, if some patterns are
    explicit pairs, while others are not. The following tries
    to expand columns into explicit ones. *)
+
+(*
+val t = ``
+PMATCH (SOME y,x,l)
+     [PMATCH_ROW (\x. (SOME 0,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\z. z) (\z. F) (\z. (FST (SND z)));
+      PMATCH_ROW (\x. (SOME 3,x)) (\x. T) (\x. (FST x));
+      PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
+   ]``
+*)
+
 
 fun PMATCH_EXPAND_COLS_CONV t = let
   val (v, rows) = dest_PMATCH t
@@ -812,7 +952,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
   end
 
   fun PMATCH_ROW_EXPAND_COLS row = let
-     val (vars_tm, pt, rh) = dest_PMATCH_ROW row
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS row
 
      val vars = pairSyntax.strip_pair vars_tm
      val pts = pairSyntax.strip_pair pt
@@ -823,19 +963,20 @@ fun PMATCH_EXPAND_COLS_CONV t = let
 
      val _ = if (List.exists (aconv l) vars) then () else failwith "nothing to do"
 
-     val avoids = vars @ free_vars pt @ free_vars rh
+     val avoids = vars @ free_vars pt @ free_vars gt @ free_vars rh
      val new_vars = split_var avoids cols l
 
      val sub = [l |-> pairSyntax.list_mk_pair new_vars]
      val pt' = Term.subst sub pt
+     val gt' = Term.subst sub gt
      val rh' = Term.subst sub rh
-     val vars_tm' = Term.subst sub vars_tm
-     val new_f = pairSyntax.mk_pabs(vars_tm', pairSyntax.mk_pair (pt', rh'))
+     val vars' = pairSyntax.strip_pair (Term.subst sub vars_tm)
 
-     val eq_tm = mk_eq(rand row, new_f)
-     val eq_thm = prove (eq_tm, SIMP_TAC (rc_ss []) [])
+     val row' = mk_PMATCH_ROW_PABS vars' (pt', gt', rh')
 
-     val thm = RATOR_CONV (RAND_CONV (K eq_thm)) (mk_comb (row, v))
+     val eq_tm = mk_eq(row, row')
+     val eq_thm = prove (eq_tm, rc_tac ([], NONE))
+     val thm = AP_THM eq_thm v    
   in
      thm
   end handle HOL_ERR _ => REFL (mk_comb (row, v))
@@ -878,19 +1019,73 @@ end handle HOL_ERR _ => raise UNCHANGED
 (***********************************************)
 (* PMATCH_SIMP_CONV                            *)
 (***********************************************)
-fun PMATCH_SIMP_CONV_GEN rc = REPEATC (FIRST_CONV [
+
+(*
+val t = ``
+PMATCH (SOME y,x,l)
+     [PMATCH_ROW (\x. (SOME 0,x,[])) (\y. T) (\x. x);
+      PMATCH_ROW (\z. z) (\z. F) (\z. (FST (SND z)));
+      PMATCH_ROW (\x. (SOME 3,x)) (\x. T) (\x. (FST x));
+      PMATCH_ROW (\(z,y). (y,z,[2])) (\(z, y). IS_SOME y) (\(z, y). y)
+   ]``
+*)
+
+fun PMATCH_SIMP_CONV_GENCALL rc_arg = REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
-  CHANGED_CONV (PMATCH_CLEANUP_CONV_GEN rc),
-  CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GEN rc),
-  CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GEN rc)])
+  CHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
+  CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg),
+  CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
+  CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
+  CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV
+])
+
+fun PMATCH_SIMP_CONV_GEN ssl = PMATCH_SIMP_CONV_GENCALL (ssl, NONE)
 
 val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN []
+
+fun PMATCH_SIMP_convdata_conv ssl callback back = 
+  PMATCH_SIMP_CONV_GENCALL (ssl, SOME (callback back))
+
+
+fun PMATCH_SIMP_GEN_ss ssl = simpLib.conv_ss
+  { name = "PMATCH_SIMP_CONV",
+    key = SOME ([], ``(PMATCH (v:'a) rows):'b``),
+    trace = 1,
+    conv = PMATCH_SIMP_convdata_conv ssl
+  }
+
+val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
+
 
 
 (***********************************************)
 (* Case_splits                                 *)
 (* This is work in progress                    *)
 (***********************************************)
+
+(*
+val t = ``
+PMATCH (a,x,xs)
+     [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
+      PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
+      PMATCH_ROW (\ (x,v18). (NONE,x,[v18])) (\ (x, v18). T) (\ (x, v18). 3);
+      PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17)) 
+                 (\ (x,v12,v16,v17). T)
+                 (\ (x,v12,v16,v17). 3);
+      PMATCH_ROW (\ (y,x,z,zs). (SOME y,x,[z]))
+                 (\ (y,x,z,zs). T)
+                 (\ (y,x,z,zs). x+5+z);
+      PMATCH_ROW (\ (y,v23,v24). (SOME y,0,v23::v24))
+                 (\ (y,v23,v24). T)
+                 (\ (y,v23,v24). v23+y);
+      PMATCH_ROW (\ (y,z,v23). (SOME y,SUC z,[v23]))
+                 (\ (y,z,v23). y > 5)
+                 (\ (y,z,v23). 3);
+      PMATCH_ROW (\ (y,z). (SOME y,SUC z,[1; 2]))
+                 (\ (y,z). T)
+                 (\ (y,z). y + z)
+   ]``
+*)
 
 fun STRIP_ABS_CONV conv t =
   if (is_abs t) then ABS_CONV (STRIP_ABS_CONV conv) t else
@@ -926,23 +1121,18 @@ in
   thm2
 end
 
-fun PMATCH_CASE_SPLIT_CONV_GEN ssl col t = let
+
+fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg col_no t = let
   val thm0 = QCHANGED_CONV (
-    PMATCH_SIMP_CONV_GEN ssl) t handle HOL_ERR _ => REFL t
+      PMATCH_SIMP_CONV_GENCALL rc_arg) t handle HOL_ERR _ => REFL t
 
   val t' = rhs (concl thm0)
-  val (v, _) = dest_PMATCH t'
-  val vs = pairSyntax.strip_pair v
-  val ty = type_of (el (col+1) vs)
 
-  val expand_thm = let
-    val case_def_thm  = TypeBase.case_def_of ty
-    val nchotomy_thm = TypeBase.nchotomy_of ty
-  in
-    constrFamiliesLib.gen_case_expand_thm case_def_thm nchotomy_thm
-  end
+  val (v, col) = el (col_no+1) (dest_PMATCH_COLS t')
 
-  val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX col expand_thm (PMATCH_SIMP_CONV_GEN ssl)) t' handle HOL_ERR _ => (REFL t')
+  val expand_thm = get_case_expand_thm (v, col) 
+
+  val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX col_no expand_thm (PMATCH_SIMP_CONV_GENCALL rc_arg)) t' handle HOL_ERR _ => (REFL t')
 in
   TRANS thm0 thm1
 end

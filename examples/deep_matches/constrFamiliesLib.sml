@@ -69,6 +69,13 @@ in
   res_thm
 end
 
+fun get_case_expand_thm (v, _) = let 
+  val ty = type_of v
+  val case_def_thm  = TypeBase.case_def_of ty
+  val nchotomy_thm = TypeBase.nchotomy_of ty
+in
+  gen_case_expand_thm case_def_thm nchotomy_thm
+end
 
 
 
