@@ -248,7 +248,7 @@ val ORL_single_valued = prove (Term`!cmp l. ORL cmp l ==>
  !x:'a y:'b z. MEM (x,y) l /\ MEM (x,z) l ==> (z = y)`,
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
-,P_PGEN_TAC (Term`p:'a,q:'b`) THEN 
+,P_PGEN_TAC (Term`p:'a,q:'b`) THEN
  DISCH_TAC THEN IMP_RES_TAC ORL THEN REPEAT GEN_TAC THEN
  Cases_on `apto cmp x p` THEN
  IMP_RES_TAC toto_glneq THEN IMP_RES_TAC toto_equal_imp_eq THEN
@@ -382,7 +382,7 @@ MATCH_MP_TAC assocv_merge THEN AR);
 val incr_merge = Define`
    (incr_merge cmp (l:('a#'b)list) [] = [SOME l])
 /\ (incr_merge cmp (l:('a#'b)list) (NONE :: lol) = SOME l :: lol)
-/\ (incr_merge cmp (l:('a#'b)list) (SOME m :: lol) = 
+/\ (incr_merge cmp (l:('a#'b)list) (SOME m :: lol) =
                  NONE :: incr_merge cmp (merge cmp l m) lol)`;
 
 val ORL_sublists = Define`(ORL_sublists cmp ([]:('a#'b)list option list) = T)
@@ -676,7 +676,7 @@ SRW_TAC [] [assocv_APPEND, incr_build, merge_out] THENL
 val incr_sort_fun = maybe_thm ("incr_sort_fun",
 ``!cmp: 'a toto l:('a#'b)list. assocv (incr_sort cmp l) = assocv l``,
 REPEAT GEN_TAC THEN REWRITE_TAC [incr_sort, incr_flat] THEN
-Q.SUBGOAL_THEN `assocv l = assocv ([] ++ l)` SUBST1_TAC 
+Q.SUBGOAL_THEN `assocv l = assocv ([] ++ l)` SUBST1_TAC
 THEN1 REWRITE_TAC [APPEND] THEN
 MATCH_MP_TAC assocv_incr_build THEN REWRITE_TAC [ORL]);
 
@@ -1402,7 +1402,7 @@ val MEM_IN_DOM_fmap = maybe_thm ("MEM_IN_DOM_fmap",
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [FDOM_FEMPTY, fmap_rec, NOT_IN_EMPTY, MEM]
 ,P_PGEN_TAC ``x:'a,y:'b`` THEN
- DISCH_THEN (fn orlc => 
+ DISCH_THEN (fn orlc =>
   STRIP_ASSUME_TAC (MATCH_MP (CONJUNCT1 ORL_NOT_MEM) orlc) THEN
   STRIP_ASSUME_TAC (REWRITE_RULE [ORL] orlc)) THEN
  SRW_TAC [] [fmap_rec, FAPPLY_FUPDATE_THM, FDOM_FUPDATE] THEN
@@ -1564,8 +1564,8 @@ val bl_to_bt_fmap = maybe_thm ("bl_to_bt_fmap",
 ``!cmp b:('a#'b)bl. FMAPAL cmp (bl_to_bt b) = bl_to_fmap cmp b``,
 REWRITE_TAC [bl_to_bt, bl_rev_fmap_lem, bt_to_fmap, FEMPTY_OFU]);
 
-(* Imitating enumeralTheory as usual, we next aim to show that building a 
-   bl from a list does the same, and to begin with that 
+(* Imitating enumeralTheory as usual, we next aim to show that building a
+   bl from a list does the same, and to begin with that
 
     LESS_ALL cmp x (FDOM (bl_to_fmap cmp b)) ==>
     (bl_to_fmap cmp (BL_CONS (x,y) b) = bl_to_fmap cmp b |+ (x,y),
@@ -1703,7 +1703,7 @@ REWRITE_TAC [combinTheory.o_THM] THEN Induct THENL
 
 val FDOM_assocv = maybe_thm ("FDOM_assocv",
 ``!l:('a#'b)list. FDOM (unlookup (assocv l)) = set (MAP FST l)``,
-GEN_TAC THEN 
+GEN_TAC THEN
 MP_TAC (ISPEC ``MAP FST (l:('a#'b)list)`` FINITE_LIST_TO_SET) THEN
 REWRITE_TAC [GSYM IS_SOME_assocv] THEN
 MATCH_ACCEPT_TAC unlookup_FDOM);
@@ -1726,7 +1726,7 @@ val fmap_ALT = maybe_thm ("fmap_ALT",
 ``!l:('a#'b)list. fmap l = unlookup (assocv l)``,
 REWRITE_TAC [FUPDATE_ALT, fmap_EXT] THEN GEN_TAC THEN CONJ_TAC THENL
 [REWRITE_TAC [fmap_FDOM, FDOM_assocv]
-,GEN_TAC THEN 
+,GEN_TAC THEN
  REWRITE_TAC [fmap_FDOM, fmap, SPECIFICATION] THEN
  Induct_on `l` THENL
  [REWRITE_TAC [MAP, LIST_TO_SET_THM, rrs NOT_IN_EMPTY]
@@ -2516,6 +2516,5 @@ val fmap_ORWL_thm = store_thm ("fmap_ORWL_thm",
 REWRITE_TAC [ORWL, incr_sort_fmap, incr_sort_ORL]);
 
 val _ = export_theory ();
-val _ = print_theory "-";
 
 end;

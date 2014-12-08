@@ -102,7 +102,7 @@ val K2 = Define`K2 (a:'a) = 2`;
 
 val bt_rev_size = maybe_thm ("bt_rev_size", Term
 `!ft bl:'a bl. bl_size K2 (bt_rev ft bl) = bt_size K2 ft + bl_size K2 bl`,
-Induct THEN 
+Induct THEN
 ASM_REWRITE_TAC [bl_size_def, bt_size_def, K2,bt_rev,arithmeticTheory.ADD] THEN
 SIMP_TAC arith_ss []);
 
@@ -167,7 +167,7 @@ val smerge_set = maybe_thm ("smerge_set",
 ``!cmp:'a toto l m. (set (smerge cmp l m) = set l UNION set m)``,
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [smerge, smerge_nil] THEN
-Induct_on `m` THEN 
+Induct_on `m` THEN
 SRW_TAC [] [smerge, smerge_nil] THEN
 Cases_on `apto cmp h h'` THENL
 [ALL_TAC, `h = h'` by IMP_RES_TAC toto_equal_eq, ALL_TAC] THEN
@@ -179,7 +179,7 @@ val smerge_OL = store_thm ("smerge_OL",
 ``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> OL cmp (smerge cmp l m)``,
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [smerge, OL, smerge_nil] THEN
-Induct_on `m` THEN 
+Induct_on `m` THEN
 SRW_TAC [] [smerge, OL, smerge_nil] THEN
 Cases_on `apto cmp h h'` THEN SRW_TAC [] [OL] THENL
 [`MEM p l \/ MEM p (h' :: m)`
@@ -212,7 +212,7 @@ val OL_sublists = Define
 
 val OL_sublists_ind = theorem "OL_sublists_ind";
 
-(* OL_sublists_ind = |- !P. (!cmp. P cmp []) /\ 
+(* OL_sublists_ind = |- !P. (!cmp. P cmp []) /\
           (!cmp lol. P cmp lol ==> P cmp (NONE::lol)) /\
           (!cmp m lol. P cmp lol ==> P cmp (SOME m::lol)) ==> !v v1. P v v1 *)
 
@@ -663,7 +663,7 @@ val OU_EMPTY = store_thm ("OU_EMPTY",
 ``!cmp:'a toto t:'a set. OU cmp t {} = t``,
 REWRITE_TAC [OU, NOT_IN_EMPTY, UNION_EMPTY, GSPEC_ID]);
 
-val sing_UO = maybe_thm ("sing_UO",``!cmp:'a toto x:'a t:'a set. 
+val sing_UO = maybe_thm ("sing_UO",``!cmp:'a toto x:'a t:'a set.
         {x} UNION {y | y IN t /\ (apto cmp x y = LESS)} = UO cmp {x} t``,
 RW_TAC bool_ss [UO, IN_SING]);
 
@@ -673,7 +673,7 @@ val LESS_UO_LEM = store_thm ("LESS_UO_LEM",
 RW_TAC bool_ss [GSYM sing_UO] THEN EQ_TAC THEN
 REWRITE_TAC [IN_UNION, IN_SING] THEN
 CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THENL
-[CONV_TAC LEFT_IMP_FORALL_CONV THEN 
+[CONV_TAC LEFT_IMP_FORALL_CONV THEN
  Q.EXISTS_TAC `x` THEN RW_TAC bool_ss []
 ,REPEAT STRIP_TAC THENL [AR, IMP_RES_TAC toto_trans_less]
 ]);
@@ -1167,6 +1167,5 @@ val set_OWL_thm = store_thm ("set_OWL_thm",
 REWRITE_TAC [OWL, incr_ssort_set, incr_ssort_OL]);
 
 val _ = export_theory ();
-val _ = print_theory "-";
 
 end;

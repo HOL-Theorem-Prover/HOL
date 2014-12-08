@@ -1000,6 +1000,5 @@ IMP_RES_THEN SUBST1_TAC TO_apto_TO_IMP THEN REWRITE_TAC [oneOrd]);
 (* intto moved to inttoTheory, to avoid always loading intLib *)
 
 val _ = export_theory ();
-val _ = print_theory "-";
 
 end;
