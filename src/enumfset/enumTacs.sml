@@ -1,6 +1,6 @@
 (* File: enumTacs.sml. Author: F. Lockwood Morris. Begun 6 Aug 2013.    *)
 
-(* Basic conversions and conversionals, and inference rules for         *)    
+(* Basic conversions and conversionals, and inference rules for         *)
 (* sorting lists, building ENUMERALS, look-up and converting them to    *)
 (* OWL's, performing merge-based opns. on OWL's, recovering ENUMERALS.  *)
 
@@ -214,7 +214,7 @@ val [blr_nbl, blr_zer, blr_one] = CONJUNCTS bl_rev;
    blr_zer = |- !ft b. bl_rev ft (zerbl b) = bl_rev ft b
    blr_one = |- !ft a f b. bl_rev ft (onebl a f b) = bl_rev (node ft a f) b *)
 
-fun bl_rev_CONV t = 
+fun bl_rev_CONV t =
 ((REWR_CONV blr_one THENC bl_rev_CONV) ORELSEC
  (REWR_CONV blr_zer THENC bl_rev_CONV) ORELSEC
  REWR_CONV blr_nbl) t;
@@ -250,7 +250,7 @@ let val (s, ty) = dest_const t;
     val ety = hd (snd (dest_type ty))
 in INST_TYPE [alpha |-> ety] LIST_TO_SET_NIL end
 else
-let val (elem, st) = dest_binop (Term`($INSERT):'a->('a->bool)->'a->bool`) 
+let val (elem, st) = dest_binop (Term`($INSERT):'a->('a->bool)->'a->bool`)
              (ERR "DISPLAY_TO_set_CONV" "not a finite set extension") t;
     val ety = type_of elem
 in SPEC elem (MATCH_MP (INST_TYPE [alpha |-> ety] LIST_TO_SET_CONS)
@@ -368,7 +368,7 @@ let fun olc t =
    ORELSEC olc))) t
 in olc end;
 
-(* Top-level conversion works on a bt_to_ol, not a bt_to_ol_ac, term. 
+(* Top-level conversion works on a bt_to_ol, not a bt_to_ol_ac, term.
    Improved to check OL_bt first, and if this comes out T, as it always
    should, to use bt_to_list_CONV in place of bt_to_ol_lb/ub_CONV. *)
 
@@ -376,7 +376,7 @@ val [aTT, aTF, aFT, aFF] = CONJUNCTS (prove (
 ``(T/\T=T) /\ (T/\F=F) /\ (F/\T=F) /\ (F/\F=F)``,
 REWRITE_TAC [AND_CLAUSES]));
 
-val AND_CONV = REWR_CONV aTT ORELSEC REWR_CONV aTF ORELSEC 
+val AND_CONV = REWR_CONV aTT ORELSEC REWR_CONV aTF ORELSEC
                REWR_CONV aFT ORELSEC REWR_CONV aFF;
 
 val [OL_lu_nt, OL_lu_node] = CONJUNCTS OL_bt_lb_ub;
@@ -387,7 +387,7 @@ val [OL_lu_nt, OL_lu_node] = CONJUNCTS OL_bt_lb_ub;
      OL_bt_lb_ub cmp lb (node l x r) ub <=>
      OL_bt_lb_ub cmp lb l x /\ OL_bt_lb_ub cmp x r ub *)
 
-fun OL_bt_lb_ub_CONV keyconv = 
+fun OL_bt_lb_ub_CONV keyconv =
 let fun olu t =
 ((REWR_CONV OL_lu_nt THENC LAND_CONV keyconv THENC EQ_LESS_CONV) ORELSEC
  (REWR_CONV OL_lu_node THENC
@@ -401,7 +401,7 @@ val [OL_l_nt, OL_l_node] = CONJUNCTS OL_bt_lb;
    |- !cmp lb l x r. OL_bt_lb cmp lb (node l x r) <=>
      OL_bt_lb_ub cmp lb l x /\ OL_bt_lb cmp x r *)
 
-fun OL_bt_lb_CONV keyconv = 
+fun OL_bt_lb_CONV keyconv =
 let fun ol t =
 ((REWR_CONV OL_l_node THENC
   LAND_CONV (OL_bt_lb_ub_CONV keyconv) THENC RAND_CONV ol THENC AND_CONV)
@@ -415,7 +415,7 @@ val [OL_u_nt, OL_u_node] = CONJUNCTS OL_bt_ub;
      OL_bt_ub cmp (node l x r) ub <=>
      OL_bt_ub cmp l x /\ OL_bt_lb_ub cmp x r ub *)
 
-fun OL_bt_ub_CONV keyconv = 
+fun OL_bt_ub_CONV keyconv =
 let fun ou t =
 ((REWR_CONV OL_u_node THENC
   LAND_CONV ou THENC RAND_CONV (OL_bt_lb_ub_CONV keyconv) THENC AND_CONV)
@@ -645,7 +645,7 @@ incr_smerge_CONV numto_CONV imz;
 
 val ibl = Term`incr_sbuild numto [3; 1; 3; 4; 2; 1]`;
 incr_sbuild_CONV numto_CONV ibl;
-                
+
 val mo5 = Term`smerge_out numto [5]
       [NONE; SOME [1; 3]; SOME [1; 2; 3; 4]]`;
 smerge_out_CONV numto_CONV mo5;
@@ -773,7 +773,7 @@ SET_DIFF_CONV numto_CONV itwet';
 val ta = rand (concl (DISPLAY_TO_ENUMERAL_CONV
                       numto_CONV ``numto`` ``{4;1;3;5;2}``));
 val tb = rand (concl (DISPLAY_TO_ENUMERAL_CONV
-                      numto_CONV ``numto`` ``{3; 4; 6; 7; 3}``)); 
+                      numto_CONV ``numto`` ``{3; 4; 6; 7; 3}``));
 val tc = rand (concl (DISPLAY_TO_ENUMERAL_CONV
                       numto_CONV ``numto``
                                                ``{5; 6; 4; 8; 3; 1}``));

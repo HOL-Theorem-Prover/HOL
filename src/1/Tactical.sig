@@ -11,7 +11,7 @@ sig
   val THEN1          : tactic * tactic -> tactic
   val THEN_LT : ('a -> goal list * (thm list -> 'b)) * list_tactic ->
         'a -> goal list * (thm list -> 'b)
-  (* could be used as 
+  (* could be used as
   val THEN_LT        : tactic * list_tactic -> tactic
   val THEN_LT        : list_tactic * list_tactic -> list_tactic
   *)
@@ -24,7 +24,7 @@ sig
   val SPLIT_LT       : int -> list_tactic * list_tactic -> list_tactic
   val ROTATE_LT      : int -> list_tactic
   val REVERSE        : tactic -> tactic
-  val REVERSE_LT     : list_tactic 
+  val REVERSE_LT     : list_tactic
   val FAIL_TAC       : string -> tactic
   val NO_TAC         : tactic
   val ALL_TAC        : tactic

@@ -78,7 +78,7 @@ fun store_thm (name, tm, tac) =
 infix THEN THENL THEN1 ORELSE THEN_LT
 
 (*---------------------------------------------------------------------------
- * tac1 THEN_LT ltac2: 
+ * tac1 THEN_LT ltac2:
  * A tactical that applies ltac2 to the list of subgoals resulting from tac1
  * tac1 may be a tactic or a list_tactic
  *---------------------------------------------------------------------------*)
@@ -87,17 +87,17 @@ fun op THEN_LT (tac1, ltac2 : list_tactic) =
       let
          val (gl1, vf1) = tac1 g
          val (gl2, vf2) = ltac2 gl1 ;
-      in 
-         (gl2, vf1 o vf2) 
-      end 
+      in
+         (gl2, vf1 o vf2)
+      end
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN_LT : tactic * list_tactic -> tactic ;
 val _ = op THEN_LT : list_tactic * list_tactic -> list_tactic ;
-  
+
 (*---------------------------------------------------------------------------
  * fun ALLGOALS (tac2:tactic) : list_tactic = fn gl =>
- *    let 
+ *    let
  *        val (gll,pl) = unzip(map tac2 gl)
  *    in
  *       (flatten gll, mapshape(map length gll)pl)
@@ -134,13 +134,13 @@ fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
 
 (*---------------------------------------------------------------------------
  * fun TACS_TO_LT (tac2l: tactic list) : list_tactic = fn gl =>
- *    let 
+ *    let
  *        val tac2gl = zip tac2l gl
  *        val (gll,pl) = unzip (map (fn (tac2,g) => tac2 g) tac2gl)
  *    in
  *       (flatten gll, mapshape(map length gll) pl)
  *    end
- * Converts a list of tactics to a single list_tactic  
+ * Converts a list of tactics to a single list_tactic
  *---------------------------------------------------------------------------*)
 
 fun TACS_TO_LT (tacl: tactic list) : list_tactic =
@@ -210,50 +210,50 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
 
 (*---------------------------------------------------------------------------
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
-   (counting goals from 1) 
+   (counting goals from 1)
  *---------------------------------------------------------------------------*)
-fun NTH_GOAL tac n gl1 = 
-  let val (gl_before, g :: gl_after) = Lib.split_after (n-1) gl1 ; 
+fun NTH_GOAL tac n gl1 =
+  let val (gl_before, g :: gl_after) = Lib.split_after (n-1) gl1 ;
     val (gl2, vf2) = tac g ;
     val gl_result = gl_before @ gl2 @ gl_after ;
-    fun vf thl = 
+    fun vf thl =
       let val (th_before, th_rest) = Lib.split_after (n-1) thl ;
         val (th2, th_after) = Lib.split_after (length gl2) th_rest ;
-        val th_result = th_before @ vf2 th2 :: th_after ; 
+        val th_result = th_before @ vf2 th2 :: th_after ;
       in th_result end ;
-  in (gl_result, vf) end 
+  in (gl_result, vf) end
   handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
 
 fun LASTGOAL tac gl1 = NTH_GOAL tac (length gl1) gl1 ;
 fun HEADGOAL tac gl1 = NTH_GOAL tac 1 gl1 ;
 
 (*---------------------------------------------------------------------------
- * SPLIT_LT n (ltaca, ltacb) : A list_tactic that applies ltaca to the 
-   first n goals, and ltacb to the rest 
+ * SPLIT_LT n (ltaca, ltacb) : A list_tactic that applies ltaca to the
+   first n goals, and ltacb to the rest
  *---------------------------------------------------------------------------*)
-fun SPLIT_LT n (ltaca, ltacb) gl = 
+fun SPLIT_LT n (ltaca, ltacb) gl =
   let val fixn = if n >= 0 then n else length gl + n ;
     val (gla, glb) = Lib.split_after fixn gl ;
     val (glra, vfa) = ltaca gla ;
     val (glrb, vfb) = ltacb glb ;
-    fun vf ths = 
+    fun vf ths =
       let val (thsa, thsb) = Lib.split_after (length glra) ths ;
-      in vfa thsa @ vfb thsb end ; 
+      in vfa thsa @ vfb thsb end ;
   in (glra @ glrb, vf) end ;
 
 (*---------------------------------------------------------------------------
- * ROTATE_LT n : 
+ * ROTATE_LT n :
  * A list_tactic that moves the first n goals to the end of the goal list
  * first n goals
  *---------------------------------------------------------------------------*)
-fun ROTATE_LT n [] = ([], Lib.I) 
-  | ROTATE_LT n gl = 
+fun ROTATE_LT n [] = ([], Lib.I)
+  | ROTATE_LT n gl =
     let val lgl = length gl ;
       val fixn = Int.mod (n, lgl) ;
       val (gla, glb) = Lib.split_after fixn gl ;
-      fun vf ths = 
+      fun vf ths =
 	let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
-	in thsa @ thsb end ; 
+	in thsa @ thsb end ;
     in (glb @ gla, vf) end ;
 
 (*---------------------------------------------------------------------------
@@ -278,7 +278,7 @@ fun REVERSE tac g =
 
 fun REVERSE_LT gl = (rev gl, rev) ;
 
-(* for testing, redefine REVERSE 
+(* for testing, redefine REVERSE
 fun REVERSE tac = tac THEN_LT REVERSE_LT ;
 *)
 
@@ -299,7 +299,7 @@ fun NO_TAC g = FAIL_TAC "NO_TAC" g
 
 (* for testing, redefine THEN1
 fun tac1 THEN1 tac2 = tac1 THEN_LT NTH_GOAL (tac2 THEN NO_TAC) 1 ;
-fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT 
+fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT
   LASTGOAL (tac2 THEN NO_TAC) THEN_LT REVERSE_LT ;
 *)
 

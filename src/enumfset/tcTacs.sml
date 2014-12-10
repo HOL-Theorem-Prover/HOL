@@ -1,6 +1,6 @@
 (* File: tcTacs.sml. Author: F. Lockwood Morris. Begun 6 Aug 2013.    *)
 
-(* Conversions culminating in TC_CONV, applicable to a term of the    *)    
+(* Conversions culminating in TC_CONV, applicable to a term of the    *)
 (* form  (FMAP_TO_RELN (FMAPAL ... ))^+  (with  ENUMERAL-sets as      *)
 (* the map values), which it proves equal to one of the form          *)
 (* (FMAP_TO_RELN (FMAPAL ......... )), alternatively applicable to a  *)
@@ -93,17 +93,17 @@ val cormenex = ``[(2, {4; 3}); (3, {2}); (4, {3; 1}); (1, {})]``;
 val corfmap = rand (concl (ENUF_CONV numto_CONV ``numto`` ``fmap ^cormenex``));
 
    val Aplus = ``(FMAP_TO_RELN ^corfmap)^+``;
-   val keyconv = numto_CONV; 
+   val keyconv = numto_CONV;
 
-   PRE_TC_CONV keyconv ``(FMAP_TO_RELN ^corfmap)^+``; 
-   PRE_TC_CONV NO_CONV ``(FMAP_TO_RELN (fmap ^cormenex))^+``; 
+   PRE_TC_CONV keyconv ``(FMAP_TO_RELN ^corfmap)^+``;
+   PRE_TC_CONV NO_CONV ``(FMAP_TO_RELN (fmap ^cormenex))^+``;
 
    val s123 = rand (concl (DISPLAY_TO_ENUMERAL_CONV
                            numto_CONV ``numto`` ``{1; 2; 3}``));
    val s345 = rand (concl (DISPLAY_TO_ENUMERAL_CONV
                            numto_CONV ``numto`` ``{5; 4; 3}``));
    TC_MOD_CONV numto_CONV ``TC_MOD 5 ^s123 ^s345``;
-   TC_MOD_CONV numto_CONV ``TC_MOD 5 ^s345 ^s123``; 
+   TC_MOD_CONV numto_CONV ``TC_MOD 5 ^s345 ^s123``;
    val t123 = ``{1; 2; 3}``;
    val t345 = ``{5; 4; 3}``;
    TC_MOD_CONV REDUCE_CONV ``TC_MOD 5 ^t123 ^t345``;

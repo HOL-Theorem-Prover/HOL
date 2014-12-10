@@ -60,7 +60,7 @@ end;
   ``intOrd 2i 3i``, ``intOrd 2i (-3i)``, ``intOrd 3i (-3i)``,
   ``intOrd 0i (-2i)``, ``intOrd (0i) (-3i)``, ``intOrd 0i (-0i)``]; *)
 
-val intto_CONV = 
+val intto_CONV =
 RATOR_CONV (RATOR_CONV (REWR_CONV apintto_thm)) THENC
                  intOrd_CONV;
 
