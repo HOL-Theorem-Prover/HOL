@@ -75,22 +75,37 @@ fun store_thm (name, tm, tac) =
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
-infix THEN THENL THEN1 ORELSE
+infix THEN THENL THEN1 ORELSE THEN_LT
 
 (*---------------------------------------------------------------------------
- * fun (tac1:tactic) THEN (tac2:tactic) : tactic = fn g =>
- *    let val (gl,p) = tac1 g
- *        val (gll,pl) = unzip(map tac2 gl)
- *    in
- *    (flatten gll, (p o mapshape(map length gll)pl))
- *    end;
+ * tac1 THEN_LT ltac2: 
+ * A tactical that applies ltac2 to the list of subgoals resulting from tac1
+ * tac1 may be a tactic or a list_tactic
  *---------------------------------------------------------------------------*)
-
-fun tac1 THEN tac2 =
+fun op THEN_LT (tac1, ltac2 : list_tactic) =
    fn g =>
       let
-         val (gl, vf) = tac1 g
-      in
+         val (gl1, vf1) = tac1 g
+         val (gl2, vf2) = ltac2 gl1 ;
+      in 
+         (gl2, vf1 o vf2) 
+      end 
+
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN_LT : tactic * list_tactic -> tactic ;
+val _ = op THEN_LT : list_tactic * list_tactic -> list_tactic ;
+  
+(*---------------------------------------------------------------------------
+ * fun ALLGOALS (tac2:tactic) : list_tactic = fn gl =>
+ *    let 
+ *        val (gll,pl) = unzip(map tac2 gl)
+ *    in
+ *       (flatten gll, mapshape(map length gll)pl)
+ *    end;
+ * A list_tactic which applies a given tactic to all goals
+ *---------------------------------------------------------------------------*)
+
+fun ALLGOALS tac2 gl =
          case itlist
                 (fn goal => fn (G, V, lengths) =>
                   case tac2 goal of
@@ -103,24 +118,34 @@ fun tac1 THEN tac2 =
                         (goals @ G, vfun :: V, length goals :: lengths))
                 gl ([], [], []) of
             ([], V, _) =>
-                ([], let val th = vf (map (fn f => f []) V) in empty th end)
-          | (G, V, lengths) => (G, (vf o mapshape lengths V))
-      end
+                ([], let val ths = map (fn f => f []) V in empty ths end)
+          | (G, V, lengths) => (G, mapshape lengths V)
 
 (*---------------------------------------------------------------------------
- * fun (tac1:tactic) THENL (tac2l: tactic list) : tactic = fn g =>
+ * fun (tac1:tactic) THEN (tac2:tactic) : tactic = fn g =>
  *    let val (gl,p) = tac1 g
+ *        val (gll,pl) = unzip(map tac2 gl)
+ *    in
+ *       (flatten gll, (p o mapshape(map length gll)pl))
+ *    end;
+ *---------------------------------------------------------------------------*)
+
+fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
+
+(*---------------------------------------------------------------------------
+ * fun TACS_TO_LT (tac2l: tactic list) : list_tactic = fn gl =>
+ *    let 
  *        val tac2gl = zip tac2l gl
  *        val (gll,pl) = unzip (map (fn (tac2,g) => tac2 g) tac2gl)
  *    in
- *    (flatten gll, p o mapshape(map length gll) pl)
+ *       (flatten gll, mapshape(map length gll) pl)
  *    end
+ * Converts a list of tactics to a single list_tactic  
  *---------------------------------------------------------------------------*)
 
-fun (tac1: tactic) THENL (tacl: tactic list) : tactic =
-   fn g =>
+fun TACS_TO_LT (tacl: tactic list) : list_tactic =
+   fn gl =>
       let
-         val (gl, vf) = tac1 g
          val (G, V, lengths) =
             itlist2
                (fn goal => fn tac => fn (G, V, lengths) =>
@@ -135,9 +160,30 @@ fun (tac1: tactic) THENL (tacl: tactic list) : tactic =
                gl tacl ([], [], [])
       in
          case G of
-            [] => ([], let val th = vf (map (fn f => f []) V) in empty th end)
-          | _  => (G, vf o mapshape lengths V)
+            [] => ([], let val ths = map (fn f => f []) V in empty ths end)
+          | _  => (G, mapshape lengths V)
       end
+
+(*---------------------------------------------------------------------------
+ * NULL_OK_LT ltac: A list-tactical like ltac but succeeds with no effect
+ *                  when applied to an ampty goal list
+ *---------------------------------------------------------------------------*)
+
+fun NULL_OK_LT ltac [] = ([], Lib.I)
+  | NULL_OK_LT ltac gl = ltac gl ;
+
+(*---------------------------------------------------------------------------
+ * fun (tac1:tactic) THENL (tac2l: tactic list) : tactic = fn g =>
+ *    let val (gl,p) = tac1 g
+ *        val tac2gl = zip tac2l gl
+ *        val (gll,pl) = unzip (map (fn (tac2,g) => tac2 g) tac2gl)
+ *    in
+ *       (flatten gll, p o mapshape(map length gll) pl)
+ *    end
+ * BUT - if gl is empty, just return (gl, p)
+ *---------------------------------------------------------------------------*)
+
+fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
 
@@ -163,6 +209,54 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       end
 
 (*---------------------------------------------------------------------------
+ * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
+   (counting goals from 1) 
+ *---------------------------------------------------------------------------*)
+fun NTH_GOAL tac n gl1 = 
+  let val (gl_before, g :: gl_after) = Lib.split_after (n-1) gl1 ; 
+    val (gl2, vf2) = tac g ;
+    val gl_result = gl_before @ gl2 @ gl_after ;
+    fun vf thl = 
+      let val (th_before, th_rest) = Lib.split_after (n-1) thl ;
+        val (th2, th_after) = Lib.split_after (length gl2) th_rest ;
+        val th_result = th_before @ vf2 th2 :: th_after ; 
+      in th_result end ;
+  in (gl_result, vf) end 
+  handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
+
+fun LASTGOAL tac gl1 = NTH_GOAL tac (length gl1) gl1 ;
+fun HEADGOAL tac gl1 = NTH_GOAL tac 1 gl1 ;
+
+(*---------------------------------------------------------------------------
+ * SPLIT_LT n (ltaca, ltacb) : A list_tactic that applies ltaca to the 
+   first n goals, and ltacb to the rest 
+ *---------------------------------------------------------------------------*)
+fun SPLIT_LT n (ltaca, ltacb) gl = 
+  let val fixn = if n >= 0 then n else length gl + n ;
+    val (gla, glb) = Lib.split_after fixn gl ;
+    val (glra, vfa) = ltaca gla ;
+    val (glrb, vfb) = ltacb glb ;
+    fun vf ths = 
+      let val (thsa, thsb) = Lib.split_after (length glra) ths ;
+      in vfa thsa @ vfb thsb end ; 
+  in (glra @ glrb, vf) end ;
+
+(*---------------------------------------------------------------------------
+ * ROTATE_LT n : 
+ * A list_tactic that moves the first n goals to the end of the goal list
+ * first n goals
+ *---------------------------------------------------------------------------*)
+fun ROTATE_LT n [] = ([], Lib.I) 
+  | ROTATE_LT n gl = 
+    let val lgl = length gl ;
+      val fixn = Int.mod (n, lgl) ;
+      val (gla, glb) = Lib.split_after fixn gl ;
+      fun vf ths = 
+	let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
+	in thsa @ thsb end ; 
+    in (glb @ gla, vf) end ;
+
+(*---------------------------------------------------------------------------
  * REVERSE tac: A tactical that reverses the list of subgoals of tac.
  *              Intended for use with THEN1 to pick the `easy' subgoal, e.g.:
  *              - CONJ_TAC THEN1 SIMP_TAC
@@ -179,6 +273,16 @@ fun REVERSE tac g =
    end
 
 (*---------------------------------------------------------------------------
+ * REVERSE_LT: A list_tactic that reverses a list of subgoals
+ *---------------------------------------------------------------------------*)
+
+fun REVERSE_LT gl = (rev gl, rev) ;
+
+(* for testing, redefine REVERSE 
+fun REVERSE tac = tac THEN_LT REVERSE_LT ;
+*)
+
+(*---------------------------------------------------------------------------
  * Fail with the given token.  Useful in tactic programs to check that a
  * tactic produces no subgoals.  Write
  *
@@ -193,11 +297,18 @@ fun FAIL_TAC tok (g: goal) = raise ERR "FAIL_TAC" tok
 
 fun NO_TAC g = FAIL_TAC "NO_TAC" g
 
+(* for testing, redefine THEN1
+fun tac1 THEN1 tac2 = tac1 THEN_LT NTH_GOAL (tac2 THEN NO_TAC) 1 ;
+fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT 
+  LASTGOAL (tac2 THEN NO_TAC) THEN_LT REVERSE_LT ;
+*)
+
 (*---------------------------------------------------------------------------
  * Tactic that succeeds on all goals;  identity for THEN
  *---------------------------------------------------------------------------*)
 
 val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
+val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
 
 fun TRY tac = tac ORELSE ALL_TAC
 
