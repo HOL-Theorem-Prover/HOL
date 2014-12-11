@@ -87,6 +87,16 @@ fun expandf tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expandf tac) s)
 fun expand tac (GOALSTACK s) = GOALSTACK (apply (goalStack.expand tac) s)
   | expand tac (GOALTREE t) = GOALTREE (apply (goalTree.expand("",tac)) t);
 
+fun expand_listf ltac (GOALSTACK s) =
+    GOALSTACK (apply (goalStack.expand_listf ltac) s)
+  | expand_listf _ _ = 
+    raise ERR "expand_listf" "not implemented for goal trees";
+
+fun expand_list ltac (GOALSTACK s) =
+    GOALSTACK (apply (goalStack.expand_list ltac) s)
+  | expand_list _ _ = 
+    raise ERR "expand_list" "not implemented for goal trees";
+
 fun expandv (s,tac) (GOALTREE t) =
      GOALTREE (apply (goalTree.expand (s,tac)) t)
    | expandv _ _ = raise ERR "expandv" "not implemented for goal stacks";

@@ -75,7 +75,7 @@ fun store_thm (name, tm, tac) =
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
-infix THEN THENL THEN1 ORELSE THEN_LT
+infix THEN THENL THEN1 ORELSE ORELSE_LT THEN_LT
 
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
@@ -186,6 +186,7 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
+fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
 
 (*---------------------------------------------------------------------------
  * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
@@ -290,12 +291,14 @@ fun REVERSE tac = tac THEN_LT REVERSE_LT ;
  *---------------------------------------------------------------------------*)
 
 fun FAIL_TAC tok (g: goal) = raise ERR "FAIL_TAC" tok
+fun FAIL_LT tok (gl: goal list) = raise ERR "FAIL_LT" tok
 
 (*---------------------------------------------------------------------------
  * Tactic that succeeds on no goals;  identity for ORELSE.
  *---------------------------------------------------------------------------*)
 
 fun NO_TAC g = FAIL_TAC "NO_TAC" g
+fun NO_LT gl = FAIL_LT "NO_LT" gl
 
 (* for testing, redefine THEN1
 fun tac1 THEN1 tac2 = tac1 THEN_LT NTH_GOAL (tac2 THEN NO_TAC) 1 ;
@@ -311,6 +314,8 @@ val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
 
 fun TRY tac = tac ORELSE ALL_TAC
+fun TRY_LT ltac = ltac ORELSE_LT ALL_LT
+fun TRYALL tac = ALLGOALS (TRY tac) ;
 
 (*---------------------------------------------------------------------------
  * The abstraction around g is essential to avoid looping, due to applicative
@@ -318,13 +323,19 @@ fun TRY tac = tac ORELSE ALL_TAC
  *---------------------------------------------------------------------------*)
 
 fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
+fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
 
 (*---------------------------------------------------------------------------
- * Tactical to make any tactic valid.
+ * Tacticals to make any tactic or list_tactic valid.
  *
  *    VALID tac
  *
  * is the same as "tac", except it will fail in the cases where "tac"
+ * returns an invalid proof.
+ *
+ *    VALID_LT ltac
+ *
+ * is the same as "ltac", except it will fail in the cases where "ltac"
  * returns an invalid proof.
  *---------------------------------------------------------------------------*)
 
@@ -343,6 +354,16 @@ in
             if achieves (prf (map masquerade glist)) g
                then result
             else raise ERR "VALID" "Invalid tactic"
+         end
+
+   fun VALID_LT (ltac: list_tactic) : list_tactic =
+      fn gl: goal list =>
+         let
+            val (result as (glist, prf)) = ltac gl
+         in
+            if Lib.all2 achieves (prf (map masquerade glist)) gl
+               then result
+            else raise ERR "VALID_LT" "Invalid list-tactic"
          end
 end
 
