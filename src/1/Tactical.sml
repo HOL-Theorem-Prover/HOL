@@ -368,6 +368,74 @@ in
 end
 
 (*---------------------------------------------------------------------------
+ * Tacticals to include proofs of necessary hypotheses for an invalid
+ * tactic or list_tactic valid.
+ *
+ *    VALIDATE tac
+ *
+ * is the same as "tac", except that where "tac" returns a proof which is 
+ * because if proves a theorem with extra hypotheses, it returns those 
+ * hypotheses as extra goals
+ *
+ *    VALIDATE_LT ltac
+ *
+ * is the same as "ltac", except it will return extra goals where this is
+ * necessary to make a valid list-tactic
+ *---------------------------------------------------------------------------*)
+local val validity_tag = "ValidityCheck"
+      fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
+      fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
+      fun hyps_not_in_goal th (asl, w) = 
+        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
+      fun extra_goals_tbp th (asl, w) = 
+        List.map (fn eg => (asl, eg)) (hyps_not_in_goal th (asl, w)) ;
+in
+fun VALIDATE (tac : tactic) (g as (asl, w) : goal) = 
+  let val (glist, prf) = tac g ;
+    (* pretend new goals are theorems, and apply validation to them *)
+    val thprf = (prf (map masquerade glist)) ;
+    val _ = if achieves_concl thprf g then ()
+      else raise ERR "VALIDATE" "Invalid tactic - wrong conclusion" ;
+    val extra_goals = extra_goals_tbp thprf g ;
+    val nextra = length extra_goals ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorem proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thms, thlist) = split_after nextra ethlist ;
+      in itlist PROVE_HYP extra_thms (prf thlist) end ;
+  in (extra_goals @ glist, eprf) end ;
+
+(* split_lists : int list -> 'a list -> 'a list list * 'a list *)
+fun split_lists (n :: ns) ths = 
+    let val (nths, rest) = split_after n ths ;
+      val (nsths, left) = split_lists ns rest ;
+    in (nths :: nsths, left) end 
+  | split_lists [] ths = ([], ths) ;
+  
+(* VALIDATE_LT : list_tactic -> list_tactic *)
+fun VALIDATE_LT (ltac : list_tactic) (gl : goal list) = 
+  let val (glist, prf) = ltac gl ;
+    (* pretend new goals are theorems, and apply validation to them *)
+    val thsprf = (prf (map masquerade glist)) ;
+    val _ = if Lib.all2 achieves_concl thsprf gl then ()
+      else raise ERR "VALIDATE_LT" 
+          "Invalid list-tactic - some wrong conclusion" ;
+    val extra_goal_lists = Lib.map2 extra_goals_tbp thsprf gl ; 
+    val nextras = map length extra_goal_lists ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorems proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thm_lists, thlist) = split_lists nextras ethlist ;
+      in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end ;
+  in (List.concat extra_goal_lists @ glist, eprf) end ;
+
+end;
+
+(* could avoid duplication of code in the above by the following
+fun VALIDATE tac = ALL_TAC THEN_LT VALIDATE_LT (TACS_TO_LT [tac]) ;
+*)
+
+(*---------------------------------------------------------------------------
  * Provide a function (tactic) with the current assumption list.
  *---------------------------------------------------------------------------*)
 

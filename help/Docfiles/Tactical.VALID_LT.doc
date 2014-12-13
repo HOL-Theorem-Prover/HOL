@@ -1,13 +1,13 @@
 \DOC VALID_LT 
 
-\TYPE {VALID_LT : tactic -> tactic}
+\TYPE {VALID_LT : list_tactic -> list_tactic}
 
 \SYNOPSIS
 Makes a list-tactic fail if it would otherwise return an invalid proof.
 
 \DESCRIBE
 When list-tactic {ltac} is applied to a goal list {gl}
-it produces new goal list {gl'} and a justification.
+it produces a new goal list {gl'} and a justification.
 When the justification is applied to a list {thl'} of theorems
 which are the new goals {gl'}, proved, it should produce a list {thl}
 of theorems which are the goals {gl}, proved.
@@ -24,8 +24,8 @@ justification which do not prove the given goals {gl}.
 Also fails if its {ltac gl} fails.
 
 \SEEALSO
-Tactical.VALID, 
-proofManagerLib.expand_list.
+Tactical.VALID, Tactical.VALIDATE_LT, 
+proofManagerLib.elt, proofManagerLib.expand_list.
 
 \ENDDOC
 
