@@ -21,6 +21,7 @@ src/opentheory
 !!examples/computability/lambda
 !!examples/computability/register
 !!examples/balanced_bst
+!examples/deep_matches
 src/Boolify/src
 src/float
 [poly]src/floating-point
