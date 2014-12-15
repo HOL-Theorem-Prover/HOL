@@ -1,7 +1,7 @@
 structure constrFamiliesLib :> constrFamiliesLib =
 struct
 
-open Abbrev
+open HolKernel boolLib simpLib bossLib
 
 (* Contructor families are lists of constructors.
    Constructors are functions that are injective and
