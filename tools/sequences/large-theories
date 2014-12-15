@@ -20,6 +20,7 @@ src/opentheory
 !!examples/lambda/typing
 !!examples/computability/lambda
 !!examples/computability/register
+!!examples/balanced_bst
 src/Boolify/src
 src/float
 [poly]src/floating-point
