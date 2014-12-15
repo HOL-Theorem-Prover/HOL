@@ -8,6 +8,7 @@ sig
   val THEN           : tactic * tactic -> tactic
   val THENL          : tactic * tactic list -> tactic
   val ORELSE         : tactic * tactic -> tactic
+  val ORELSE_LT      : list_tactic * list_tactic -> list_tactic
   val THEN1          : tactic * tactic -> tactic
   val THEN_LT : ('a -> goal list * (thm list -> 'b)) * list_tactic ->
         'a -> goal list * (thm list -> 'b)
@@ -18,6 +19,7 @@ sig
   val TACS_TO_LT     : tactic list -> list_tactic
   val NULL_OK_LT     : list_tactic -> list_tactic
   val ALLGOALS       : tactic -> list_tactic
+  val TRYALL         : tactic -> list_tactic
   val NTH_GOAL       : tactic -> int -> list_tactic
   val LASTGOAL       : tactic -> list_tactic
   val HEADGOAL       : tactic -> list_tactic
@@ -27,11 +29,18 @@ sig
   val REVERSE_LT     : list_tactic
   val FAIL_TAC       : string -> tactic
   val NO_TAC         : tactic
+  val FAIL_LT        : string -> list_tactic
+  val NO_LT          : list_tactic
   val ALL_TAC        : tactic
   val ALL_LT         : list_tactic
   val TRY            : tactic -> tactic
+  val TRY_LT         : list_tactic -> list_tactic
   val REPEAT         : tactic -> tactic
+  val REPEAT_LT      : list_tactic -> list_tactic
   val VALID          : tactic -> tactic
+  val VALID_LT       : list_tactic -> list_tactic
+  val VALIDATE       : tactic -> tactic
+  val VALIDATE_LT    : list_tactic -> list_tactic
   val EVERY          : tactic list -> tactic
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic

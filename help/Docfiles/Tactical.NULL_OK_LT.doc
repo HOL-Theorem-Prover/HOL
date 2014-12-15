@@ -16,7 +16,7 @@ effect.
 
 \FAILURE
 The application of {NULL_OK_LT} to a list-tactic {ltac} never fails.
-The resulting list-tactic fails if applies to a non-empty goal list on which
+The resulting list-tactic fails if applied to a non-empty goal list on which
 {ltac} fails.
 
 \SEEALSO

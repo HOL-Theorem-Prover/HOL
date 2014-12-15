@@ -75,7 +75,7 @@ fun store_thm (name, tm, tac) =
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
-infix THEN THENL THEN1 ORELSE THEN_LT
+infix THEN THENL THEN1 ORELSE ORELSE_LT THEN_LT
 
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
@@ -186,6 +186,7 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
+fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
 
 (*---------------------------------------------------------------------------
  * tac1 THEN1 tac2: A tactical like THEN that applies tac2 only to the
@@ -290,12 +291,14 @@ fun REVERSE tac = tac THEN_LT REVERSE_LT ;
  *---------------------------------------------------------------------------*)
 
 fun FAIL_TAC tok (g: goal) = raise ERR "FAIL_TAC" tok
+fun FAIL_LT tok (gl: goal list) = raise ERR "FAIL_LT" tok
 
 (*---------------------------------------------------------------------------
  * Tactic that succeeds on no goals;  identity for ORELSE.
  *---------------------------------------------------------------------------*)
 
 fun NO_TAC g = FAIL_TAC "NO_TAC" g
+fun NO_LT gl = FAIL_LT "NO_LT" gl
 
 (* for testing, redefine THEN1
 fun tac1 THEN1 tac2 = tac1 THEN_LT NTH_GOAL (tac2 THEN NO_TAC) 1 ;
@@ -311,6 +314,8 @@ val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
 
 fun TRY tac = tac ORELSE ALL_TAC
+fun TRY_LT ltac = ltac ORELSE_LT ALL_LT
+fun TRYALL tac = ALLGOALS (TRY tac) ;
 
 (*---------------------------------------------------------------------------
  * The abstraction around g is essential to avoid looping, due to applicative
@@ -318,13 +323,19 @@ fun TRY tac = tac ORELSE ALL_TAC
  *---------------------------------------------------------------------------*)
 
 fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
+fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
 
 (*---------------------------------------------------------------------------
- * Tactical to make any tactic valid.
+ * Tacticals to make any tactic or list_tactic valid.
  *
  *    VALID tac
  *
  * is the same as "tac", except it will fail in the cases where "tac"
+ * returns an invalid proof.
+ *
+ *    VALID_LT ltac
+ *
+ * is the same as "ltac", except it will fail in the cases where "ltac"
  * returns an invalid proof.
  *---------------------------------------------------------------------------*)
 
@@ -344,7 +355,85 @@ in
                then result
             else raise ERR "VALID" "Invalid tactic"
          end
+
+   fun VALID_LT (ltac: list_tactic) : list_tactic =
+      fn gl: goal list =>
+         let
+            val (result as (glist, prf)) = ltac gl
+         in
+            if Lib.all2 achieves (prf (map masquerade glist)) gl
+               then result
+            else raise ERR "VALID_LT" "Invalid list-tactic"
+         end
 end
+
+(*---------------------------------------------------------------------------
+ * Tacticals to include proofs of necessary hypotheses for an invalid
+ * tactic or list_tactic valid.
+ *
+ *    VALIDATE tac
+ *
+ * is the same as "tac", except that where "tac" returns a proof which is 
+ * because if proves a theorem with extra hypotheses, it returns those 
+ * hypotheses as extra goals
+ *
+ *    VALIDATE_LT ltac
+ *
+ * is the same as "ltac", except it will return extra goals where this is
+ * necessary to make a valid list-tactic
+ *---------------------------------------------------------------------------*)
+local val validity_tag = "ValidityCheck"
+      fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
+      fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
+      fun hyps_not_in_goal th (asl, w) = 
+        Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
+      fun extra_goals_tbp th (asl, w) = 
+        List.map (fn eg => (asl, eg)) (hyps_not_in_goal th (asl, w)) ;
+in
+fun VALIDATE (tac : tactic) (g as (asl, w) : goal) = 
+  let val (glist, prf) = tac g ;
+    (* pretend new goals are theorems, and apply validation to them *)
+    val thprf = (prf (map masquerade glist)) ;
+    val _ = if achieves_concl thprf g then ()
+      else raise ERR "VALIDATE" "Invalid tactic - wrong conclusion" ;
+    val extra_goals = extra_goals_tbp thprf g ;
+    val nextra = length extra_goals ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorem proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thms, thlist) = split_after nextra ethlist ;
+      in itlist PROVE_HYP extra_thms (prf thlist) end ;
+  in (extra_goals @ glist, eprf) end ;
+
+(* split_lists : int list -> 'a list -> 'a list list * 'a list *)
+fun split_lists (n :: ns) ths = 
+    let val (nths, rest) = split_after n ths ;
+      val (nsths, left) = split_lists ns rest ;
+    in (nths :: nsths, left) end 
+  | split_lists [] ths = ([], ths) ;
+  
+(* VALIDATE_LT : list_tactic -> list_tactic *)
+fun VALIDATE_LT (ltac : list_tactic) (gl : goal list) = 
+  let val (glist, prf) = ltac gl ;
+    (* pretend new goals are theorems, and apply validation to them *)
+    val thsprf = (prf (map masquerade glist)) ;
+    val _ = if Lib.all2 achieves_concl thsprf gl then ()
+      else raise ERR "VALIDATE_LT" 
+          "Invalid list-tactic - some wrong conclusion" ;
+    val extra_goal_lists = Lib.map2 extra_goals_tbp thsprf gl ; 
+    val nextras = map length extra_goal_lists ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorems proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thm_lists, thlist) = split_lists nextras ethlist ;
+      in Lib.map2 (itlist PROVE_HYP) extra_thm_lists (prf thlist) end ;
+  in (List.concat extra_goal_lists @ glist, eprf) end ;
+
+end;
+
+(* could avoid duplication of code in the above by the following
+fun VALIDATE tac = ALL_TAC THEN_LT VALIDATE_LT (TACS_TO_LT [tac]) ;
+*)
 
 (*---------------------------------------------------------------------------
  * Provide a function (tactic) with the current assumption list.

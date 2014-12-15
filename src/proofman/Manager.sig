@@ -27,6 +27,8 @@ sig
   (* Applying a tactic to a goal *)
   val expand         : tactic -> proof -> proof
   val expandf        : tactic -> proof -> proof
+  val expand_list    : list_tactic -> proof -> proof
+  val expand_listf   : list_tactic -> proof -> proof
   val expandv        : string * tactic -> proof -> proof
 
   (* Seeing what the state of the proof manager is *)

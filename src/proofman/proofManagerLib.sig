@@ -31,9 +31,15 @@ sig
     (* Applying a tactic to the current goal *)
 
     val e             : tactic -> proof
+    val elt           : list_tactic -> proof
+    val eall          : tactic -> proof
+    val eta           : tactic -> proof
+    val enth          : tactic -> int -> proof
     val et            : string * tactic -> proof
     val expand        : tactic -> proof
     val expandf       : tactic -> proof
+    val expand_list   : list_tactic -> proof
+    val expand_listf  : list_tactic -> proof
     val expandv       : string * tactic -> proof
 
     (* Seeing what the state of the proof manager is *)
