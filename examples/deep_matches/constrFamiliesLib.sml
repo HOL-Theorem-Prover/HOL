@@ -3,8 +3,8 @@ struct
 
 open Abbrev
 
-(* Contructor families are lists of constructors. 
-   Constructors are functions that are injective and 
+(* Contructor families are lists of constructors.
+   Constructors are functions that are injective and
    pairwise distinct. Moreover, a case-expansion theorem needs to be provided.
 
    Let's assume we have a datatype t with
@@ -60,7 +60,7 @@ fun gen_case_expand_thm case_def_thm nchotomy_thm = let
   val t_lhs = mk_comb (ff_tm, a)
   val t = list_mk_forall([ff_tm, a], mk_eq (t_lhs, t_rhs))
 
-  val res_thm = prove (t, 
+  val res_thm = prove (t,
     REPEAT GEN_TAC THEN
     MP_TAC (ISPEC a nchotomy_thm) THEN
     SIMP_TAC std_ss [DISJ_IMP_THM, case_def_thm,
@@ -69,7 +69,7 @@ in
   res_thm
 end
 
-fun get_case_expand_thm (v, _) = let 
+fun get_case_expand_thm (v, _) = let
   val ty = type_of v
   val case_def_thm  = TypeBase.case_def_of ty
   val nchotomy_thm = TypeBase.nchotomy_of ty
