@@ -1,7 +1,7 @@
 structure deepMatchesSyntax :> deepMatchesSyntax =
 struct
 
-open deepMatchesTheory bossLib 
+open deepMatchesTheory bossLib
 
 
 
@@ -32,7 +32,7 @@ end;
 
 val ty_var_subst = [alpha |-> gen_tyvar (),
              beta |-> gen_tyvar (),
-             gamma |-> gen_tyvar (), 
+             gamma |-> gen_tyvar (),
              delta |-> gen_tyvar (),
              ``:'e`` |-> gen_tyvar (),
              ``:'f`` |-> gen_tyvar (),
@@ -48,7 +48,7 @@ val PMATCH_ROW_gtm = inst ty_var_subst PMATCH_ROW_tm
 val PMATCH_tm = ``PMATCH``
 val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 
-fun FRESH_TY_VARS_RULE thm = 
+fun FRESH_TY_VARS_RULE thm =
   INST_TYPE ty_var_subst thm
 
 
@@ -65,7 +65,7 @@ end
 
 fun is_PMATCH_ROW t = can dest_PMATCH_ROW t
 
-fun mk_PMATCH_ROW (p_t, g_t, r_t) = 
+fun mk_PMATCH_ROW (p_t, g_t, r_t) =
   list_mk_icomb (PMATCH_ROW_gtm, [p_t, g_t, r_t])
 
 fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
@@ -80,7 +80,7 @@ fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
   in
     mk_PMATCH_ROW (mk_pabs p_t, mk_pabs g_t, mk_pabs r_t)
   end
-					 
+
 fun dest_PMATCH_ROW_ABS row = let
   val (p_t, g_t, r_t) = dest_PMATCH_ROW row
 
@@ -88,7 +88,7 @@ fun dest_PMATCH_ROW_ABS row = let
   val (g_vars, g_body) = pairSyntax.dest_pabs g_t
   val (r_vars, r_body) = pairSyntax.dest_pabs r_t
 
-  val _ = if (aconv p_vars g_vars) andalso (aconv g_vars r_vars) then 
+  val _ = if (aconv p_vars g_vars) andalso (aconv g_vars r_vars) then
     () else failwith "dest_PMATCH_ROW_ABS"
 in
   (p_vars, p_body, g_body, r_body)
@@ -107,9 +107,9 @@ fun PMATCH_ROW_PABS_ELIM_CONV row = let
   val (p, _, _) = dest_PMATCH_ROW row
   val (vars, _) = pairSyntax.dest_pabs p
 
-  val c = TRY_CONV pairTools.PABS_ELIM_CONV 
-  val thm = ((RAND_CONV c) THENC 
-             (RATOR_CONV (RAND_CONV c)) THENC 
+  val c = TRY_CONV pairTools.PABS_ELIM_CONV
+  val thm = ((RAND_CONV c) THENC
+             (RATOR_CONV (RAND_CONV c)) THENC
              (RATOR_CONV (RATOR_CONV (RAND_CONV c)))) row
             handle UNCHANGED => REFL row
 in
@@ -122,8 +122,8 @@ fun PMATCH_ROW_PABS_INTRO_CONV vars row = let
 
   val (vars', _) = variant_of_term (free_vars row) vars
   val c = pairTools.PABS_INTRO_CONV vars'
-  val thm = ((RAND_CONV c) THENC 
-             (RATOR_CONV (RAND_CONV c)) THENC 
+  val thm = ((RAND_CONV c) THENC
+             (RATOR_CONV (RAND_CONV c)) THENC
              (RATOR_CONV (RATOR_CONV (RAND_CONV c)))) row
 in
   thm
@@ -135,7 +135,7 @@ fun PMATCH_ROW_FORCE_SAME_VARS_CONV row = let
 
   val (vars, thm0) = PMATCH_ROW_PABS_ELIM_CONV row
   val thm1 = PMATCH_ROW_PABS_INTRO_CONV vars (rhs (concl thm0))
-in  
+in
   TRANS thm0 thm1
 end handle HOL_ERR _ => raise UNCHANGED
 
@@ -160,7 +160,7 @@ fun mk_PMATCH v rows = let
     val (arg_tys, _) = wfrecUtils.strip_fun_type  ty0
   in el 2 arg_tys end
 
-  val ty_subst = match_type rows_ty (type_of rows) 
+  val ty_subst = match_type rows_ty (type_of rows)
   val b_tm = inst ty_subst PMATCH_tm
   val t1 = mk_comb (b_tm, v)
   val t2 = mk_comb (t1, rows)
@@ -227,17 +227,17 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
 
     val rows' = map dest_PMATCH_ROW_ABS rows
 
-    fun pp_row (vars, pat, guard, rh) = (   
+    fun pp_row (vars, pat, guard, rh) = (
       term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
       ublock PP.CONSISTENT 0 (
         add_string "|" >> add_break (1, 0) >>
         sys (Top, Top, Top) (d - 1) pat >>
         (if (aconv guard T) then nothing else (
           add_break (1, 0) >> add_string "when" >> add_break (1, 0) >>
-          sys (Top, Top, Top) (d - 1) guard 
+          sys (Top, Top, Top) (d - 1) guard
         )) >>
         add_break (1, 0) >> add_string "=>" >> add_break (1, 0) >>
-        sys (Top, Top, Top) (d - 1) rh 
+        sys (Top, Top, Top) (d - 1) rh
       ))
     )
   in
@@ -265,7 +265,7 @@ fun case_magic_to_deep_case t = let
   fun process_row row = let
     val (l,r) = dest_eq row
     val p = rand l
-   
+
     val vars = free_vars_lr p
   in
     mk_PMATCH_ROW_PABS vars (p, T, r)

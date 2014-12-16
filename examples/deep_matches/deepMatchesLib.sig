@@ -12,14 +12,14 @@ sig
 
      @x. SND (SND x = ..) /\ (FST x = ..) /\ (FST (SND x) = ..)
 
-     by resorting these conjunctions, one can 
+     by resorting these conjunctions, one can
      easily derive a form
 
      @x. x = ..
 
      and therefore eliminate the select operator.
      This is done by the following conversion + ssfrag. *)
-  val ELIM_FST_SND_SELECT_CONV : conv  
+  val ELIM_FST_SND_SELECT_CONV : conv
   val elim_fst_snd_select_ss : ssfrag
 
 
@@ -39,7 +39,7 @@ sig
   (* There are various ways of simplifying
      PMATCH. One can e.g. remove redundant rows
      or partially evaluate it. The conversion
-     PMATCH_SIMP_CONV does this. *)  
+     PMATCH_SIMP_CONV does this. *)
   val PMATCH_SIMP_CONV : conv
 
   (* There is also a more generic version that
@@ -53,7 +53,7 @@ sig
   val PMATCH_SIMP_ss : ssfrag
 
   (* PMATCH_SIMP_CONV consists of various
-     component conversions. These can be used 
+     component conversions. These can be used
      independently as well. *)
   val PMATCH_REMOVE_ARB_CONV : conv
   val PMATCH_REMOVE_ARB_CONV_GEN : ssfrag list -> conv
@@ -65,7 +65,7 @@ sig
 
   val PMATCH_SIMP_COLS_CONV : conv
   val PMATCH_SIMP_COLS_CONV_GEN : ssfrag list -> conv
- 
+
   val PMATCH_EXPAND_COLS_CONV : conv
 
 

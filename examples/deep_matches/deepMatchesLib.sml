@@ -1,7 +1,7 @@
 structure deepMatchesLib :> deepMatchesLib =
 struct
 
-open deepMatchesTheory bossLib 
+open deepMatchesTheory bossLib
 open quantHeuristicsLib
 open deepMatchesSyntax
 open constrFamiliesLib
@@ -35,7 +35,7 @@ in
 end handle HOL_ERR _ => raise UNCHANGED
 
 fun ELIM_FST_SND_SELECT_CONV t = let
-  val (v, conj) = boolSyntax.dest_select t  
+  val (v, conj) = boolSyntax.dest_select t
   val thm0 = FST_SND_CONJUNCT_COLLAPSE v conj
 
   val thm1 = RAND_CONV (ABS_CONV (K thm0)) t
@@ -63,19 +63,19 @@ val elim_fst_snd_select_ss =
        key   = SOME ([],``$@ (f:'a -> bool)``),
        conv  = K (K ELIM_FST_SND_SELECT_CONV)}
 
-fun rc_ss gl = list_ss ++ simpLib.merge_ss 
- (gl @ 
+fun rc_ss gl = list_ss ++ simpLib.merge_ss
+ (gl @
   [pabs_elim_ss,
    pairSimps.paired_forall_ss,
    pairSimps.paired_exists_ss,
    pairSimps.gen_beta_ss,
    elim_fst_snd_select_ss,
    simpLib.rewrites [
-     pairTheory.EXISTS_PROD, 
+     pairTheory.EXISTS_PROD,
      pairTheory.FORALL_PROD,
-     PMATCH_ROW_EQ_NONE, 
+     PMATCH_ROW_EQ_NONE,
      PMATCH_ROW_COND_def,
-     PAIR_EQ_COLLAPSE, 
+     PAIR_EQ_COLLAPSE,
      oneTheory.one]])
 
 fun callback_CONV cb_opt t = (case cb_opt of
@@ -84,15 +84,15 @@ fun callback_CONV cb_opt t = (case cb_opt of
     if (aconv t T) orelse (aconv t F) then (raise UNCHANGED) else
     (EQT_INTRO (cb t)
      handle HOL_ERR _ => EQF_INTRO (cb (mk_neg t)))))
-  
-fun rc_conv (gl, callback_opt) = 
+
+fun rc_conv (gl, callback_opt) =
   SIMP_CONV (rc_ss gl) [] THENC
   TRY_CONV (callback_CONV callback_opt)
 
 fun rc_tac (gl, callback_opt) =
   CONV_TAC (rc_conv (gl, callback_opt))
 
-fun PMATCH_ROW_ARGS_CONV c = 
+fun PMATCH_ROW_ARGS_CONV c =
    RATOR_CONV (RAND_CONV (TRY_CONV c)) THENC
    RATOR_CONV (RATOR_CONV (RAND_CONV (TRY_CONV c))) THENC
    RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV (TRY_CONV c))))
@@ -102,7 +102,7 @@ fun PMATCH_ROW_ARGS_CONV c =
 (* converting case-splits to PMATCH            *)
 (***********************************************)
 
-(* 
+(*
 val t = ``case x of
   (NONE, []) => 0`` *)
 
@@ -125,7 +125,7 @@ fun dest_case_fun_aux1 t = let
     | SOME ti => ti
 
   val _ = if (same_const (TypeBasePure.case_const_of ti) f) then
-    () else  failwith "dest_case_fun"		      
+    () else  failwith "dest_case_fun"
 
   val ty_s = match_type (type_of (TypeBasePure.case_const_of ti)) (type_of f)
   val constrs = List.map (inst ty_s) (TypeBasePure.constructors_of ti)
@@ -136,7 +136,7 @@ fun dest_case_fun_aux1 t = let
     (list_mk_comb (c, vars), res) end) constrs (tl args)
 in
   (a, ps)
-end 
+end
 
 (* destruct literal cases, see dest_case_fun *)
 fun dest_case_fun_aux2 t = let
@@ -149,9 +149,9 @@ fun dest_case_fun_aux2 t = let
 
   fun strip_cond acc b = let
     val (c, t_t, t_f) = dest_cond b
-    val (c_l, c_r) = dest_eq c 
+    val (c_l, c_r) = dest_eq c
     val _ = if (aconv c_l v') then () else failwith "dest_case_fun"
-  in 
+  in
     strip_cond ((c_r, t_t)::acc) t_f
   end handle HOL_ERR _ => (acc, b)
 
@@ -159,7 +159,7 @@ fun dest_case_fun_aux2 t = let
   val ps = List.rev ((v', c_else) :: ps_rev)
 in
   (v, ps)
-end 
+end
 
 
 (* destruct a case-function.
@@ -222,7 +222,7 @@ fun PMATCH_INTRO_CONV t = let
     CASE_TAC THEN
     FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def]
   )
-in 
+in
   (* set_goal ([], tm) *)
   prove (tm, REPEAT my_tac)
 end handle HOL_ERR _ => raise UNCHANGED
@@ -237,7 +237,7 @@ end handle HOL_ERR _ => raise UNCHANGED
    covered cases. These ARB rows are
    not needed for PMATCH and can be removed. *)
 
-(* 
+(*
 val rc_arg = []
 
 set_trace "parse deep cases" 0
@@ -269,10 +269,10 @@ fun PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg t = let
   val r_thm = (snd (PMATCH_ROW_PABS_ELIM_CONV r)) handle
      UNCHANGED => REFL r
 
-  val input_rows = 
-    listSyntax.mk_append (rows1_tm, 
+  val input_rows =
+    listSyntax.mk_append (rows1_tm,
       listSyntax.mk_cons (rhs (concl r_thm), rows2_tm))
- 
+
   val thm0 = PART_MATCH (rand o lhs o snd o dest_imp o #2 o strip_forall) (
     ISPEC v (FRESH_TY_VARS_RULE PMATCH_REMOVE_ARB_NO_OVERLAP)
   ) input_rows
@@ -281,13 +281,13 @@ fun PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg t = let
   val pre = rand (rator (concl thm0))
   val pre_thm = prove (pre, rc_tac rc_arg)
   val thm1 = MP thm0 pre_thm
-  val thm2 = CONV_RULE 
+  val thm2 = CONV_RULE
     ((RHS_CONV o RAND_CONV) listLib.APPEND_CONV)
-    thm1 
+    thm1
 
   val thm2_lhs_tm = mk_eq (t, lhs (concl thm2))
   val thm2_lhs = prove (thm2_lhs_tm,
-    MP_TAC r_thm THEN 
+    MP_TAC r_thm THEN
     rc_tac rc_arg)
 
   val thm3 = TRANS thm2_lhs thm2
@@ -332,7 +332,7 @@ fun PMATCH_CLEANUP_PVARS_CONV t = let
 
      val row' = mk_PMATCH_ROW_PABS filtered_vars (pt, gt, rh)
 
-     val eq_tm = mk_eq (row, row') 
+     val eq_tm = mk_eq (row, row')
      (* set_goal ([], eq_tm) *)
      val eq_thm = prove (eq_tm,
         MATCH_MP_TAC PMATCH_ROW_EQ_AUX THEN
@@ -387,10 +387,10 @@ fun PMATCH_CLEANUP_CONV_GENCALL rc_arg t = let
     (if (same_const res_tm F) then SOME (false, r_thm) else NONE)
   end handle HOL_ERR _ => NONE
 
-  val (rows_checked_rev, _) = foldl (fn (r, (acc, abort)) => 
+  val (rows_checked_rev, _) = foldl (fn (r, (acc, abort)) =>
     if abort then ((r, NONE)::acc, true) else (
     let
-      val res = check_row r 
+      val res = check_row r
       val abort = (case res of
          (SOME (false, _)) => true
        | _ => false)
@@ -412,14 +412,14 @@ fun PMATCH_CLEANUP_CONV_GENCALL rc_arg t = let
     val n = index (fn x => case x of (_, SOME (false, _)) => true | _ => false) rows_checked
     val n_tm = numSyntax.term_of_int n
 
-    val thma = ISPECL [v, listSyntax.mk_list (rows, row_ty), n_tm] 
+    val thma = ISPECL [v, listSyntax.mk_list (rows, row_ty), n_tm]
       (FRESH_TY_VARS_RULE PMATCH_ROWS_DROP_REDUNDANT_TRIVIAL_SOUNDNESS)
 
     val precond = fst (dest_imp (concl thma))
-    val precond_thm = prove (precond, 
+    val precond_thm = prove (precond,
       MP_TAC (snd(valOf (snd (el (n+1) rows_checked)))) THEN
       SIMP_TAC list_ss [quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE])
-    
+
     val thmb = MP thma precond_thm
 
     val take_conv = RATOR_CONV (RAND_CONV reduceLib.SUC_CONV) THENC
@@ -463,20 +463,20 @@ fun PMATCH_CLEANUP_CONV_GENCALL rc_arg t = let
   val thm2 = let
      val _ = if (not (List.null rows_checked1) andalso
                  (case hd rows_checked1 of (_, (SOME (false, _))) => true | _ => false)) then () else failwith "nothing to do"
-      
+
      val thm1_tm = rhs (concl thm1)
      val thm2a = PART_MATCH (lhs o rand) PMATCH_EVAL_MATCH thm1_tm
      val pre_thm = EQF_ELIM (snd (valOf(snd (hd rows_checked1))))
      val thm2b = MP thm2a pre_thm
 
-     val thm2c = CONV_RULE (RHS_CONV 
+     val thm2c = CONV_RULE (RHS_CONV
         (RAND_CONV (rc_conv rc_arg) THENC
          pairLib.GEN_BETA_CONV)) thm2b handle HOL_ERR _ => thm2b
    in
      thm2c
    end handle HOL_ERR _ => let
      val _ = if (List.null rows_checked1) then () else failwith "nothing to do"
-   in 
+   in
      (REWR_CONV (CONJUNCT1 PMATCH_def)) (rhs (concl thm1))
    end handle HOL_ERR _ => REFL (rhs (concl thm1))
 in
@@ -558,27 +558,27 @@ fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
              if (List.null vars') then [variant avoid ``uv:unit``] else vars'
            end
 
-           val vars'_tm = pairSyntax.list_mk_pair vars'     
+           val vars'_tm = pairSyntax.list_mk_pair vars'
            val g' = let
-             val vs = List.take (vars, pv_i) @ (c_v :: List.drop (vars, pv_i+1)) 
+             val vs = List.take (vars, pv_i) @ (c_v :: List.drop (vars, pv_i+1))
              val vs_tm = pairSyntax.list_mk_pair vs
            in
              pairSyntax.mk_pabs (vars'_tm, vs_tm)
            end
-         in 
+         in
            (vars'_tm, g')
          end)
        | NONE => (let
-           (* we eliminate a costant columns *)           
+           (* we eliminate a costant columns *)
            val (sub, _) = match_term pv c_v
            val _ = if List.all (fn x => List.exists (aconv (#redex x)) vars) sub then () else failwith "not a constant-col after all"
 
            val vars' = filter (fn v => not (List.exists (fn x => (aconv v (#redex x))) sub)) vars
            val vars' = if (List.null vars') then [genvar ``:unit``] else vars'
-           val vars'_tm = pairSyntax.list_mk_pair vars'     
+           val vars'_tm = pairSyntax.list_mk_pair vars'
 
            val g' = pairSyntax.mk_pabs (vars'_tm, Term.subst sub vars_tm)
-         in 
+         in
            (vars'_tm, g')
          end)
 
@@ -605,7 +605,7 @@ fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
        fun elim_conv_aux vs = (
          (pairTools.PABS_INTRO_CONV vs) THENC
          (DEPTH_CONV (pairLib.PAIRED_BETA_CONV ORELSEC BETA_CONV))
-       ) 
+       )
 
        fun elim_conv vs = PMATCH_ROW_ARGS_CONV (elim_conv_aux vs)
        val thm = CONV_RULE ((RAND_CONV o RHS_CONV) (elim_conv vars'_tm)) thm
@@ -620,7 +620,7 @@ fun PMATCH_REMOVE_COL_AUX rc_arg col t = let
 
      val pre_tm = fst (dest_imp (concl thm0))
 (* set_goal ([], pre_tm) *)
-     val pre_thm = prove (pre_tm, rc_tac rc_arg)    
+     val pre_thm = prove (pre_tm, rc_tac rc_arg)
      val thm1 = MP thm0 pre_thm
   in
      thm1
@@ -683,7 +683,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
 
       val (c', args') = strip_comb tt_args
       val _ = if (aconv c c') then () else failwith "different constr"
-      
+
       val vars = List.take (tts, col) @ args' @
                  List.drop (tts, col+1)
     in
@@ -762,7 +762,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
      val avoid = vars @ free_vars pt @ free_vars rh @ free_vars gt
      val (pt', pv, new_vars) = ff_inv_var avoid pt
 
-     val pv_i = index (aconv pv) vars 
+     val pv_i = index (aconv pv) vars
 
      val vars' = let
        val vars' = List.take (vars, pv_i) @ new_vars @ List.drop (vars, pv_i+1)
@@ -770,10 +770,10 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
        if (List.null vars') then [variant avoid ``uv:unit``] else vars'
      end
 
-     val vars'_tm = pairSyntax.list_mk_pair vars'     
+     val vars'_tm = pairSyntax.list_mk_pair vars'
      val f_tm = let
         val c_v = list_mk_comb (c, new_vars)
-        val vs = List.take (vars, pv_i) @ (c_v :: List.drop (vars, pv_i+1)) 
+        val vs = List.take (vars, pv_i) @ (c_v :: List.drop (vars, pv_i+1))
         val vs_tm = pairSyntax.list_mk_pair vs
      in
         pairSyntax.mk_pabs (vars'_tm, vs_tm)
@@ -811,7 +811,7 @@ fun PMATCH_REMOVE_FUN_AUX rc_arg col t = let
 
      val pre_tm = fst (dest_imp (concl thm0))
      val pre_thm = prove (pre_tm, rc_tac rc_arg)
-    
+
      val thm1 = MP thm0 pre_thm
   in
      thm1
@@ -903,7 +903,7 @@ val PMATCH_SIMP_COLS_CONV = PMATCH_SIMP_COLS_CONV_GEN []
 (* Expand columns                              *)
 (***********************************************)
 
-(* Sometimes not all rows of a PMATCH have the same number of 
+(* Sometimes not all rows of a PMATCH have the same number of
    explicit columns. This can happen, if some patterns are
    explicit pairs, while others are not. The following tries
    to expand columns into explicit ones. *)
@@ -926,7 +926,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
   val col_no = foldl (fn (r, m) => let
     val (_, pt, _) = dest_PMATCH_ROW r
     val m' = length (pairSyntax.strip_pair pt)
-    val m'' = if m' > m then m' else m 
+    val m'' = if m' > m then m' else m
   in m'' end) col_no_v rows
 
   fun split_var avoid cols l = let
@@ -938,7 +938,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
     end
 
     val types = splits [] (col_no - cols) (type_of l)
- 
+
     val var_basename = fst (dest_var l) handle HOL_ERR _ => "v"
     fun gen_var i ty = let
        val n = var_basename ^ "_"^int_to_string i
@@ -976,7 +976,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
 
      val eq_tm = mk_eq(row, row')
      val eq_thm = prove (eq_tm, rc_tac ([], NONE))
-     val thm = AP_THM eq_thm v    
+     val thm = AP_THM eq_thm v
   in
      thm
   end handle HOL_ERR _ => REFL (mk_comb (row, v))
@@ -1043,7 +1043,7 @@ fun PMATCH_SIMP_CONV_GEN ssl = PMATCH_SIMP_CONV_GENCALL (ssl, NONE)
 
 val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN []
 
-fun PMATCH_SIMP_convdata_conv ssl callback back = 
+fun PMATCH_SIMP_convdata_conv ssl callback back =
   PMATCH_SIMP_CONV_GENCALL (ssl, SOME (callback back))
 
 
@@ -1069,7 +1069,7 @@ PMATCH (a,x,xs)
      [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
       PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
       PMATCH_ROW (\ (x,v18). (NONE,x,[v18])) (\ (x, v18). T) (\ (x, v18). 3);
-      PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17)) 
+      PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17))
                  (\ (x,v12,v16,v17). T)
                  (\ (x,v12,v16,v17). 3);
       PMATCH_ROW (\ (y,x,z,zs). (SOME y,x,[z]))
@@ -1112,7 +1112,7 @@ fun PMATCH_CASE_SPLIT_AUX col expand_thm conv t = let
   fun is_case_conv_end t =
     is_comb (fst (dest_comb t)) handle HOL_ERR _ => false
 
-  fun case_conv conv t = 
+  fun case_conv conv t =
     if not (is_case_conv_end t) then REFL t else
     (RAND_CONV (STRIP_ABS_CONV conv) THENC RATOR_CONV (case_conv conv)) t
 
@@ -1130,7 +1130,7 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg col_no t = let
 
   val (v, col) = el (col_no+1) (dest_PMATCH_COLS t')
 
-  val expand_thm = get_case_expand_thm (v, col) 
+  val expand_thm = get_case_expand_thm (v, col)
 
   val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX col_no expand_thm (PMATCH_SIMP_CONV_GENCALL rc_arg)) t' handle HOL_ERR _ => (REFL t')
 in
@@ -1138,5 +1138,3 @@ in
 end
 
 end
-
-
