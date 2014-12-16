@@ -1,7 +1,8 @@
 structure deepMatchesSyntax :> deepMatchesSyntax =
 struct
 
-open deepMatchesTheory bossLib
+open HolKernel Parse boolLib bossLib
+open deepMatchesTheory
 
 
 

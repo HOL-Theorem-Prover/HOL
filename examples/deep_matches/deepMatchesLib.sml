@@ -1,7 +1,8 @@
 structure deepMatchesLib :> deepMatchesLib =
 struct
 
-open deepMatchesTheory bossLib
+open HolKernel boolLib bossLib
+open deepMatchesTheory
 open quantHeuristicsLib
 open deepMatchesSyntax
 open constrFamiliesLib

@@ -1,7 +1,7 @@
 signature deepMatchesLib =
 sig
   include Abbrev
-
+  type ssfrag = simpLib.ssfrag
   (********************************)
   (* eliminating select           *)
   (********************************)
