@@ -18,7 +18,7 @@ fun usage() =
 val cooper_result =
     case CommandLine.arguments() of
       [] => if Systeml.ML_SYSNAME = "poly" then cooper() else (usage(); true)
-      | [x] => let
+    | [x] => let
       in
         case Int.fromString x of
           SOME n => if n >= 2 then cooper()
