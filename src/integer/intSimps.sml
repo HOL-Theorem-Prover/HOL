@@ -260,7 +260,9 @@ fun mkSS DPname DP = let
     exception CTXT of thm list
     fun get_ctxt e = (raise e) handle CTXT c => c
     fun add_ctxt(ctxt, newthms) = let
-      val addthese = filter is_arith_thm (flatten (map CONJUNCTS newthms))
+      val addthese = filter (fn th => is_arith_thm th andalso
+                                      concl th <> boolSyntax.F)
+                            (flatten (map CONJUNCTS newthms))
     in
       CTXT (addthese @ get_ctxt ctxt)
     end

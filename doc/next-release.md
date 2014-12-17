@@ -23,6 +23,8 @@ New features:
 Bugs fixed:
 -----------
 
+- An embarrassing infinite loop bug in the integration of the integer decision procedures (the Omega test, Cooper’s algorithm) into the simplifier was fixed.
+
 New theories:
 -------------
 
