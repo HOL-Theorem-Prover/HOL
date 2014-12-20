@@ -41,6 +41,7 @@ sig
 
   (* Switch focus to a different subgoal (or proof attempt) *)
   val rotate         : int -> proof -> proof
+  val flatn          : int -> proof -> proof
   val rotate_proofs  : int -> proofs -> proofs
 
   (* Operations on proof attempts *)

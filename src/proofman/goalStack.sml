@@ -177,6 +177,21 @@ end ;
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
 fun expand_list ltac gs = expand_listf (Tactical.VALID_LT ltac) gs;
 
+fun flat (GSTK{prop, stack as {goals,validation} :: 
+      {goals = g2 :: goals2, validation = validation2} :: rst, final}) = 
+  let fun v thl = 
+      let val (thl1, thl2) = Lib.split_after (length goals) thl ;
+      in validation2 (validation thl1 :: thl2) end ;
+    val newgv = {goals = goals @ goals2, validation = v} ;
+  in GSTK {prop = prop, stack = newgv :: rst, final = final} end ;
+    
+fun flatn (GSTK{prop=PROVED _, ...}) n =
+        raise ERR "flatn" "goal has already been proved"
+  | flatn gstk 0 = gstk
+  | flatn (gstk as GSTK{prop, stack = [], final}) n = gstk
+  | flatn (gstk as GSTK{prop, stack as [_], final}) n = gstk 
+  | flatn (gstk as GSTK{prop, stack, final}) n = flatn (flat gstk) (n-1) ;
+  
 fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
 

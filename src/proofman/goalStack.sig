@@ -17,6 +17,7 @@ sig
    val is_initial   : gstk -> bool
    val new_goal     : goal -> (thm -> thm) -> gstk
    val rotate       : gstk -> int -> gstk
+   val flatn        : gstk -> int -> gstk
    val top_goal     : gstk -> goal
    val top_goals    : gstk -> goal list
    val depth        : gstk -> int
