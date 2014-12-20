@@ -41,6 +41,8 @@ sig
   val VALID_LT       : list_tactic -> list_tactic
   val VALIDATE       : tactic -> tactic
   val VALIDATE_LT    : list_tactic -> list_tactic
+  val GEN_VALIDATE       : bool -> tactic -> tactic
+  val GEN_VALIDATE_LT    : bool -> list_tactic -> list_tactic
   val EVERY          : tactic list -> tactic
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic

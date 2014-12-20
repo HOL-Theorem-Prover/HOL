@@ -372,31 +372,40 @@ end
  * tactic or list_tactic valid.
  *
  *    VALIDATE tac
+ *    GEN_VALIDATE true tac
  *
  * is the same as "tac", except that where "tac" returns a proof which is 
  * because if proves a theorem with extra hypotheses, it returns those 
  * hypotheses as extra goals
  *
  *    VALIDATE_LT ltac
+ *    GEN_VALIDATE_LT true ltac
  *
  * is the same as "ltac", except it will return extra goals where this is
  * necessary to make a valid list-tactic
+ *
+ *    GEN_VALIDATE(_LT) false always returns extra goals corresponding
+ * to the hypotheses of the theorem proved 
+ *
  *---------------------------------------------------------------------------*)
 local val validity_tag = "ValidityCheck"
       fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
       fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
       fun hyps_not_in_goal th (asl, w) = 
         Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
-      fun extra_goals_tbp th (asl, w) = 
-        List.map (fn eg => (asl, eg)) (hyps_not_in_goal th (asl, w)) ;
+      fun extra_goals_tbp flag th (asl, w) = 
+        List.map (fn eg => (asl, eg)) 
+	  (case flag of true => hyps_not_in_goal th (asl, w)
+	    | false => hyp th) ;
 in
-fun VALIDATE (tac : tactic) (g as (asl, w) : goal) = 
+(* GEN_VALIDATE : bool -> tactic -> tactic *)
+fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) = 
   let val (glist, prf) = tac g ;
     (* pretend new goals are theorems, and apply validation to them *)
     val thprf = (prf (map masquerade glist)) ;
     val _ = if achieves_concl thprf g then ()
-      else raise ERR "VALIDATE" "Invalid tactic - wrong conclusion" ;
-    val extra_goals = extra_goals_tbp thprf g ;
+      else raise ERR "GEN_VALIDATE" "Invalid tactic - wrong conclusion" ;
+    val extra_goals = extra_goals_tbp flag thprf g ;
     val nextra = length extra_goals ;
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorem proved by the given validation *)
@@ -412,15 +421,15 @@ fun split_lists (n :: ns) ths =
     in (nths :: nsths, left) end 
   | split_lists [] ths = ([], ths) ;
   
-(* VALIDATE_LT : list_tactic -> list_tactic *)
-fun VALIDATE_LT (ltac : list_tactic) (gl : goal list) = 
+(* GEN_VALIDATE_LT : bool -> list_tactic -> list_tactic *)
+fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) = 
   let val (glist, prf) = ltac gl ;
     (* pretend new goals are theorems, and apply validation to them *)
     val thsprf = (prf (map masquerade glist)) ;
     val _ = if Lib.all2 achieves_concl thsprf gl then ()
-      else raise ERR "VALIDATE_LT" 
+      else raise ERR "GEN_VALIDATE_LT" 
           "Invalid list-tactic - some wrong conclusion" ;
-    val extra_goal_lists = Lib.map2 extra_goals_tbp thsprf gl ; 
+    val extra_goal_lists = Lib.map2 (extra_goals_tbp flag) thsprf gl ; 
     val nextras = map length extra_goal_lists ;
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorems proved by the given validation *)
@@ -431,8 +440,12 @@ fun VALIDATE_LT (ltac : list_tactic) (gl : goal list) =
 
 end;
 
+val VALIDATE = GEN_VALIDATE true ;
+val VALIDATE_LT = GEN_VALIDATE_LT true ;
+
 (* could avoid duplication of code in the above by the following
-fun VALIDATE tac = ALL_TAC THEN_LT VALIDATE_LT (TACS_TO_LT [tac]) ;
+fun GEN_VALIDATE flag tac = 
+  ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
 *)
 
 (*---------------------------------------------------------------------------
