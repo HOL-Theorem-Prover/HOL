@@ -35,6 +35,10 @@ val good_cmp_thm = Q.store_thm ("good_cmp_thm",
  rw [good_cmp_def] >>
  metis_tac [comparison_distinct, comparison_nchotomy]);
 
+val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
+  ``∀cmp. TotOrd cmp ⇒ good_cmp cmp``,
+  rw[TotOrd,good_cmp_thm] >> metis_tac[])
+
 val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
 
 val option_cmp_def = Define `
