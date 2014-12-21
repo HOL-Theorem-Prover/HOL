@@ -11,6 +11,13 @@ val _ = new_theory "balanced_map";
 val _ = temp_tight_equality ();
 val _ = numLib.prefer_num();
 
+val _ = Parse.temp_overload_on("Less",``LESS``)
+val _ = Parse.temp_overload_on("Equal",``EQUAL``)
+val _ = Parse.temp_overload_on("Greater",``GREATER``)
+val comparison_distinct = totoTheory.cpn_distinct
+val comparison_case_def = totoTheory.cpn_case_def
+val comparison_nchotomy = totoTheory.cpn_nchotomy
+
 val list_rel_lem1 = Q.prove (
 `!f l l'. 
   ~LIST_REL f l l' 
@@ -1304,6 +1311,10 @@ val insert_thm = Q.store_thm ("insert_thm",
      rw [] >>
      `key_set cmp k ≠ key_set cmp k'` by metis_tac [key_set_eq, cmp_thms] >>
      metis_tac [FUPDATE_COMMUTES])
+ >- (fs [invariant_def] >>
+     rfs [key_ordered_to_fmap] >>
+     metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms])
+ >- metis_tac [key_set_eq, FUPDATE_EQ]
  >- (rfs [key_ordered_to_fmap] >>
      rw [] >>
      imp_res_tac to_fmap_key_set >>
@@ -1316,11 +1327,7 @@ val insert_thm = Q.store_thm ("insert_thm",
  >- (rw [FUNION_FUPDATE_2, to_fmap_def] >>
      rfs [key_ordered_to_fmap] >>
      rw [] >>
-     metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm])
- >- (fs [invariant_def] >>
-     rfs [key_ordered_to_fmap] >>
-     metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms])
- >- metis_tac [key_set_eq, FUPDATE_EQ]);
+     metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm]));
 
 val insertR_thm = Q.store_thm ("insertR_thm",
 `∀t.
@@ -1354,6 +1361,9 @@ val insertR_thm = Q.store_thm ("insertR_thm",
      imp_res_tac balanceL_thm >>
      rw [FUNION_FUPDATE_1] >>
      metis_tac [FUPDATE_COMMUTES, good_cmp_def, comparison_distinct])
+ >- (fs [invariant_def] >>
+     rfs [key_ordered_to_fmap] >>
+     metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms,key_set_eq, FUPDATE_EQ])
  >- (`almost_balancedR (size t) (size (insertR cmp k v t'))` 
              by (imp_res_tac size_thm >>
                  rw [FCARD_FUPDATE] >>
@@ -1369,10 +1379,7 @@ val insertR_thm = Q.store_thm ("insertR_thm",
      imp_res_tac balanceR_thm >>
      rw [FUNION_FUPDATE_2] >>
      rfs [key_ordered_to_fmap] >>
-     metis_tac [FUPDATE_COMMUTES, good_cmp_def, comparison_distinct])
- >- (fs [invariant_def] >>
-     rfs [key_ordered_to_fmap] >>
-     metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms,key_set_eq, FUPDATE_EQ]));
+     metis_tac [FUPDATE_COMMUTES, good_cmp_def, comparison_distinct]));
 
 val insertMax_thm = Q.store_thm ("insertMax_thm",
 `∀t.
@@ -1815,6 +1822,11 @@ val delete_thm = Q.store_thm ("delete_thm",
          imp_res_tac almost_balancedR_thm >>
          metis_tac [FCARD_DEF])
      >- to_fmap_tac)
+ >- (inv_mp_tac glue_thm >>
+     rw [] >>
+     rfs [key_ordered_to_fmap]
+     >- metis_tac [key_set_cmp2_thm, to_fmap_key_set, key_set_cmp_thm, cmp_thms]
+     >- to_fmap_tac)
  >- (inv_mp_tac balanceL_thm >>
      simp [] >>
      rw [] 
@@ -1826,11 +1838,6 @@ val delete_thm = Q.store_thm ("delete_thm",
          rw [FCARD_DRESTRICT, DELETE_INTER2] >>
          imp_res_tac almost_balancedL_thm >>
          metis_tac [FCARD_DEF])
-     >- to_fmap_tac)
- >- (inv_mp_tac glue_thm >>
-     rw [] >>
-     rfs [key_ordered_to_fmap]
-     >- metis_tac [key_set_cmp2_thm, to_fmap_key_set, key_set_cmp_thm, cmp_thms]
      >- to_fmap_tac));     
 
 val restrict_set_def = Define `
@@ -2059,11 +2066,11 @@ val filter_lt_help_thm = Q.prove (
          rw [restrict_domain_def]) >>
      rw [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def] >>
      to_fmap_tac)
- >- (first_x_assum inv_mp_tac >>
-     fs [invariant_eq] >>
+ >- (fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac)
- >- (fs [invariant_eq] >>
+ >- (first_x_assum inv_mp_tac >>
+     fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
 
@@ -2107,11 +2114,11 @@ val filter_gt_help_thm = Q.prove (
          rw [restrict_domain_def]) >>
      rw [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def] >>
      to_fmap_tac)
- >- (first_x_assum inv_mp_tac >>
-     fs [invariant_eq] >>
+ >- (fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac)
- >- (fs [invariant_eq] >>
+ >- (first_x_assum inv_mp_tac >>
+     fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
 
@@ -2901,6 +2908,17 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
      rfs [key_ordered_to_fmap, flookup_thm] >>
      res_tac >>
      metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm])
+ >- (fs [invariant_eq] >>
+     fmrw [key_set_eq] >>
+     rfs [key_ordered_to_fmap] >>
+     res_tac >>
+     fs [key_set_cmp_def] >>
+     fmrw [fmap_eq_flookup] >>
+     every_case_tac >>
+     fs [] >>
+     rw [] >>
+     rfs [key_set_eq] >>
+     metis_tac [cmp_thms])
  >- (`?lt v gt. splitLookup cmp k t' = (lt,v,gt)` by metis_tac [pair_CASES] >>
      fs [] >>
      fs [invariant_eq] >>
@@ -2924,18 +2942,7 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
      rfs [key_ordered_to_fmap, flookup_thm] >>
      fs [key_ordered_to_fmap, flookup_thm] >>
      res_tac >>
-     metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm])
- >- (fs [invariant_eq] >>
-     fmrw [key_set_eq] >>
-     rfs [key_ordered_to_fmap] >>
-     res_tac >>
-     fs [key_set_cmp_def] >>
-     fmrw [fmap_eq_flookup] >>
-     every_case_tac >>
-     fs [] >>
-     rw [] >>
-     rfs [key_set_eq] >>
-     metis_tac [cmp_thms]));
+     metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm]));
 
 val submap'_thm = Q.prove (
 `!cmp f t1 t2.
@@ -3000,6 +3007,7 @@ val submap'_thm = Q.prove (
          res_tac
          >- (qexists_tac `v''` >>
              rw [])
+         >- metis_tac [cmp_thms]
          >- (rfs [key_ordered_to_fmap] >>
              `FLOOKUP (to_fmap cmp lt) (key_set cmp k) = NONE`
                        by (fs [FLOOKUP_DEF] >>
@@ -3008,18 +3016,17 @@ val submap'_thm = Q.prove (
                            res_tac >>
                            fs [key_set_cmp_def, key_set_def] >>
                            metis_tac [cmp_thms]) >>
-             rw [])
-         >- metis_tac [cmp_thms]) >>
+             rw [])) >>
      rw []
      >- (first_assum (qspecl_then [`kx`, `x`] assume_tac) >>
          every_case_tac >>
          fs []
          >- metis_tac [cmp_thms]
-         >- metis_tac [cmp_thms] >>
-         imp_res_tac lookup_thm >>
-         fs [] >>
-         rfs [] >>
-         rw [])
+         >- (imp_res_tac lookup_thm >>
+             fs [] >>
+             rfs [] >>
+             rw [])
+         >- metis_tac [cmp_thms])
      >- (imp_res_tac lookup_thm >>
          fs [] >>
          rfs [FLOOKUP_UPDATE] >>
@@ -3036,13 +3043,13 @@ val submap'_thm = Q.prove (
              res_tac >>
              fs [key_set_cmp_def, key_set_def] >>
              metis_tac [cmp_thms])
-         >- (`cmp kx k ≠ Equal` by metis_tac [cmp_thms] >>
+         >- (`cmp kx k = Equal` by metis_tac [cmp_thms] >>
              fs [FLOOKUP_DEF] >>
              rfs [key_ordered_to_fmap] >>
              res_tac >>
              fs [key_set_cmp_def, key_set_def] >>
              metis_tac [cmp_thms])
-         >- (`cmp kx k = Equal` by metis_tac [cmp_thms] >>
+         >- (`cmp kx k ≠ Equal` by metis_tac [cmp_thms] >>
              fs [FLOOKUP_DEF] >>
              rfs [key_ordered_to_fmap] >>
              res_tac >>
@@ -3062,15 +3069,15 @@ val submap'_thm = Q.prove (
              res_tac >>
              fs [key_set_cmp_def, key_set_def] >>
              metis_tac [cmp_thms])
-         >- (`cmp kx k ≠ Equal` by metis_tac [cmp_thms] >>
-             fs [FLOOKUP_FUNION] >>
-             Cases_on `FLOOKUP (to_fmap cmp lt) (key_set cmp k)` >>
+         >- (`cmp kx k = Equal` by metis_tac [cmp_thms] >>
              fs [FLOOKUP_DEF] >>
              rfs [key_ordered_to_fmap] >>
              res_tac >>
              fs [key_set_cmp_def, key_set_def] >>
              metis_tac [cmp_thms])
-         >- (`cmp kx k = Equal` by metis_tac [cmp_thms] >>
+         >- (`cmp kx k ≠ Equal` by metis_tac [cmp_thms] >>
+             fs [FLOOKUP_FUNION] >>
+             Cases_on `FLOOKUP (to_fmap cmp lt) (key_set cmp k)` >>
              fs [FLOOKUP_DEF] >>
              rfs [key_ordered_to_fmap] >>
              res_tac >>

@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib BasicProvers;
-open optionTheory pairTheory stringTheory listTheory arithmeticTheory;
+open optionTheory pairTheory stringTheory listTheory arithmeticTheory totoTheory;
 open lcsymtacs;
 
 val _ = new_theory "comparison";
@@ -7,11 +7,12 @@ val _ = new_theory "comparison";
 val _ = temp_tight_equality ();
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val _ = Datatype `comparison = Less | Greater | Equal`;
-
-val comparison_distinct = fetch "-" "comparison_distinct";
-val comparison_case_def = fetch "-" "comparison_case_def";
-val comparison_nchotomy = fetch "-" "comparison_nchotomy";
+val comparison_distinct = cpn_distinct
+val comparison_case_def = cpn_case_def
+val comparison_nchotomy = cpn_nchotomy
+val _ = Parse.temp_overload_on("Less",``LESS``)
+val _ = Parse.temp_overload_on("Equal",``EQUAL``)
+val _ = Parse.temp_overload_on("Greater",``GREATER``)
 
 val good_cmp_def = Define `
 good_cmp cmp ⇔
