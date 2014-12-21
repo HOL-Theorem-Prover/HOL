@@ -19,9 +19,9 @@ val comparison_case_def = totoTheory.cpn_case_def
 val comparison_nchotomy = totoTheory.cpn_nchotomy
 
 val list_rel_lem1 = Q.prove (
-`!f l l'. 
-  ~LIST_REL f l l' 
-  ⇒ 
+`!f l l'.
+  ~LIST_REL f l l'
+  ⇒
   ∃n. n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') ∧
     ((n = LENGTH l ∧ n ≠ LENGTH l') ∨
      (n ≠ LENGTH l ∧ n = LENGTH l') ∨
@@ -56,18 +56,18 @@ val list_rel_lem1 = Q.prove (
      CCONTR_TAC >>
      fs [] >>
      `LIST_REL f (TAKE (max_nset + 1) l) (TAKE (max_nset + 1) l')`
-            by (fs [rich_listTheory.TAKE_EL_SNOC, SNOC_APPEND, 
+            by (fs [rich_listTheory.TAKE_EL_SNOC, SNOC_APPEND,
                     rich_listTheory.LIST_REL_APPEND_SING]) >>
-     `max_nset + 1 ∈ {n | (n < LENGTH l ∨ n = LENGTH l) ∧ (n < LENGTH l' ∨ n = LENGTH l') ∧ LIST_REL f (TAKE n l) (TAKE n l')}` 
+     `max_nset + 1 ∈ {n | (n < LENGTH l ∨ n = LENGTH l) ∧ (n < LENGTH l' ∨ n = LENGTH l') ∧ LIST_REL f (TAKE n l) (TAKE n l')}`
             by srw_tac [ARITH_ss] [] >>
      imp_res_tac in_max_set >>
      unabbrev_all_tac >>
      decide_tac));
 
 val list_rel_lem2 = Q.prove (
-`!l l'. 
-  LIST_REL f l l' 
-  ⇒ 
+`!l l'.
+  LIST_REL f l l'
+  ⇒
   ¬∃n. n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') ∧
     ((n = LENGTH l ∧ n ≠ LENGTH l') ∨
      (n ≠ LENGTH l ∧ n = LENGTH l') ∨
@@ -101,7 +101,7 @@ val list_rel_thm = Q.prove (
   LIST_REL f l l' ⇔
   !n.
     ¬(n ≤ LENGTH l) ∨ ¬(n ≤ LENGTH l') ∨ ¬LIST_REL f (TAKE n l) (TAKE n l') ∨
-    (n ≠ LENGTH l ∨ n = LENGTH l') ∧ 
+    (n ≠ LENGTH l ∨ n = LENGTH l') ∧
     (n = LENGTH l ∨ n ≠ LENGTH l') ∧
     (n = LENGTH l ∨ n = LENGTH l' ∨ f (EL n l) (EL n l'))`,
  rw [] >>
@@ -120,7 +120,7 @@ val list_rel_thm = Q.prove (
     (n ≠ LENGTH l ∧ n ≠ LENGTH l' ∧ f (EL n l) (EL n l'))`,
  metis_tac [list_rel_thm]);
 
-val _ = bossLib.augment_srw_ss [rewrites 
+val _ = bossLib.augment_srw_ss [rewrites
   [FUNION_FUPDATE_1,FUNION_ASSOC,FUNION_FEMPTY_2,FUNION_FEMPTY_1,FDOM_DRESTRICT,
    DRESTRICT_UNIV]]
 
@@ -140,7 +140,7 @@ in
   ONCE_REWRITE_TAC [thm] g
 end
 
-val inv_mp_tac = let 
+val inv_mp_tac = let
   val lemma = PROVE [] ``!A B C D. (A ⇒ B ∧ C) ⇒ (A ∧ (B ∧ C ⇒  D)) ⇒ (B ∧ D)``
 in
   fn th => fn (g as (asl,w)) => let
@@ -151,9 +151,9 @@ in
     val s = fst (match_term tm tm2)
     val th2 = SPECL (map (Term.subst s) xs) th
     val th3 = MATCH_MP lemma th2
-  in 
+  in
     MATCH_MP_TAC (GEN_ALL th3) g
-  end 
+  end
 end
 
 val fdom_eq = PROVE [] ``m1 = m2 ⇒ FDOM m1 = FDOM m2``;
@@ -209,7 +209,7 @@ key_set cmp k = { k' | cmp k k' = Equal }`;
 
 val key_set_equiv = Q.store_thm ("key_set_equiv",
 `!cmp.
-  good_cmp cmp 
+  good_cmp cmp
   ⇒
   (!k. k ∈ key_set cmp k) ∧
   (!k1 k2. k1 ∈ key_set cmp k2 ⇒ k2 ∈ key_set cmp k1) ∧
@@ -220,8 +220,8 @@ val key_set_equiv = Q.store_thm ("key_set_equiv",
 val key_set_partition = Q.store_thm ("key_set_partition",
 `!cmp k1 k2.
   good_cmp cmp ∧
-  key_set cmp k1 ≠ key_set cmp k2 
-  ⇒ 
+  key_set cmp k1 ≠ key_set cmp k2
+  ⇒
   DISJOINT (key_set cmp k1) (key_set cmp k2)`,
  rw [DISJOINT_DEF, EXTENSION] >>
  metis_tac [key_set_equiv]);
@@ -239,7 +239,7 @@ key_set_cmp cmp k ks res ⇔
   !k'. k' ∈ ks ⇒ cmp k k' = res`;
 
 val key_set_cmp_thm = Q.store_thm ("key_set_cmp_thm",
-`!cmp k k' res. 
+`!cmp k k' res.
   good_cmp cmp
   ⇒
   (key_set_cmp cmp k (key_set cmp k') res ⇔ cmp k k' = res)`,
@@ -251,7 +251,7 @@ key_set_cmp2 cmp ks1 ks2 res ⇔
   !k1 k2. k1 ∈ ks1 ∧ k2 ∈ ks2 ⇒ cmp k1 k2 = res`;
 
 val key_set_cmp2_thm = Q.store_thm ("key_set_cmp2_thm",
-`!cmp k k' res. 
+`!cmp k k' res.
   good_cmp cmp
   ⇒
   (key_set_cmp2 cmp (key_set cmp k) (key_set cmp k') res ⇔ cmp k k' = res)`,
@@ -260,7 +260,7 @@ val key_set_cmp2_thm = Q.store_thm ("key_set_cmp2_thm",
 
 (* Maps based on balanced binary trees. Copied from ghc-7.8.3
  * libraries/containers/Data/Map/Base.hs. It starts with the following comment:
- 
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Map.Base
@@ -298,7 +298,7 @@ val key_set_cmp2_thm = Q.store_thm ("key_set_cmp2_thm",
 -- the Big-O notation <http://en.wikipedia.org/wiki/Big_O_notation>.
 -----------------------------------------------------------------------------
 
-*) 
+*)
 
 val _ = Datatype `
 balanced_map = Tip | Bin num 'k 'v balanced_map balanced_map`;
@@ -344,9 +344,9 @@ singleton k x = Bin 1 k x Tip Tip`;
 
 (* Just like the Haskell, but w/o @ patterns *)
 val balanceL'_def = Define `
-balanceL' k x l r = 
+balanceL' k x l r =
   case r of
-     | Tip => 
+     | Tip =>
          (case l of
             | Tip => Bin 1 k x Tip Tip
             | (Bin _ _ _ Tip Tip) => Bin 2 k x l Tip
@@ -355,7 +355,7 @@ balanceL' k x l r =
             | (Bin ls lk lx (Bin lls k' v' l' r') (Bin lrs lrk lrx lrl lrr)) =>
                 if lrs < ratio*lls then Bin (1+ls) lk lx (Bin lls k' v' l' r') (Bin (1+lrs) k x (Bin lrs lrk lrx lrl lrr) Tip)
                 else  Bin (1+ls) lrk lrx (Bin (1+lls+size lrl) lk lx (Bin lls k' v' l' r') lrl) (Bin (1+size lrr) k x lrr Tip))
-     | (Bin rs _ _ _ _) => 
+     | (Bin rs _ _ _ _) =>
          case l of
             | Tip => Bin (1+rs) k x Tip r
             | (Bin ls lk lx ll lr) =>
@@ -368,7 +368,7 @@ balanceL' k x l r =
                          else Bin (1+ls+rs) k x l r`;
 
 val balanceR'_def = Define `
-balanceR' k x l r = 
+balanceR' k x l r =
   case l of
     | Tip =>
         (case r of
@@ -379,7 +379,7 @@ balanceR' k x l r =
            | (Bin rs rk rx (Bin rls rlk rlx rll rlr) (Bin rrs k' v' l' r')) =>
                if rls < ratio*rrs then Bin (1+rs) rk rx (Bin (1+rls) k x Tip (Bin rls rlk rlx rll rlr)) (Bin rrs k' v' l' r')
                else Bin (1+rs) rlk rlx (Bin (1+size rll) k x Tip rll) (Bin (1+rrs+size rlr) rk rx rlr (Bin rrs k' v' l' r')))
-   | (Bin ls _ _ _ _) => 
+   | (Bin ls _ _ _ _) =>
        case r of
           | Tip => Bin (1+ls) k x l Tip
           | (Bin rs rk rx rl rr) =>
@@ -392,38 +392,38 @@ balanceR' k x l r =
               else Bin (1+ls+rs) k x l r`;
 
 val balanceL_def = Define `
-(balanceL k x Tip Tip = 
+(balanceL k x Tip Tip =
   Bin 1 k x Tip Tip) ∧
-(balanceL k x (Bin s' k' v' Tip Tip) Tip = 
+(balanceL k x (Bin s' k' v' Tip Tip) Tip =
   Bin 2 k x (Bin s' k' v' Tip Tip) Tip) ∧
 (balanceL k x (Bin _ lk lx Tip (Bin _ lrk lrx _ _)) Tip =
   Bin 3 lrk lrx (Bin 1 lk lx Tip Tip) (Bin 1 k x Tip Tip)) ∧
 (balanceL k x  (Bin _ lk lx (Bin s' k' v' l' r') Tip) Tip =
   Bin 3 lk lx (Bin s' k' v' l' r') (Bin 1 k x Tip Tip)) ∧
 (balanceL k x (Bin ls lk lx (Bin lls k' v' l' r') (Bin lrs lrk lrx lrl lrr)) Tip =
-  if lrs < ratio*lls then 
-    Bin (1+ls) lk lx (Bin lls k' v' l' r') 
+  if lrs < ratio*lls then
+    Bin (1+ls) lk lx (Bin lls k' v' l' r')
                      (Bin (1+lrs) k x (Bin lrs lrk lrx lrl lrr) Tip)
-  else  
-    Bin (1+ls) lrk lrx (Bin (1+lls+size lrl) lk lx (Bin lls k' v' l' r') lrl) 
+  else
+    Bin (1+ls) lrk lrx (Bin (1+lls+size lrl) lk lx (Bin lls k' v' l' r') lrl)
                        (Bin (1+size lrr) k x lrr Tip)) ∧
-(balanceL k x Tip (Bin rs k' v' l' r') = 
+(balanceL k x Tip (Bin rs k' v' l' r') =
   Bin (1+rs) k x Tip (Bin rs k' v' l' r')) ∧
 (balanceL k x (Bin ls lk lx ll lr) (Bin rs k' v' l' r') =
   if ls > delta*rs  then
     case (ll, lr) of
        | (Bin lls _ _ _ _, Bin lrs lrk lrx lrl lrr) =>
-           if lrs < ratio*lls then 
+           if lrs < ratio*lls then
              Bin (1+ls+rs) lk lx ll (Bin (1+rs+lrs) k x lr (Bin rs k' v' l' r'))
-           else 
-             Bin (1+ls+rs) lrk lrx (Bin (1+lls+size lrl) lk lx ll lrl) 
+           else
+             Bin (1+ls+rs) lrk lrx (Bin (1+lls+size lrl) lk lx ll lrl)
                                    (Bin (1+rs+size lrr) k x lrr (Bin rs k' v' l' r'))
        | (_, _) => Tip (* error "Failure in Data.Map.balanceL" *)
-  else 
+  else
     Bin (1+ls+rs) k x (Bin ls lk lx ll lr) (Bin rs k' v' l' r'))`;
 
 val balanceR_def = Define `
-(balanceR k x Tip Tip = 
+(balanceR k x Tip Tip =
   Bin 1 k x Tip Tip) ∧
 (balanceR k x Tip (Bin s' k' v' Tip Tip) =
   Bin 2 k x Tip (Bin s' k' v' Tip Tip)) ∧
@@ -432,10 +432,10 @@ val balanceR_def = Define `
 (balanceR k x Tip (Bin _ rk rx (Bin _ rlk rlx _ _) Tip) =
   Bin 3 rlk rlx (Bin 1 k x Tip Tip) (Bin 1 rk rx Tip Tip)) ∧
 (balanceR k x Tip (Bin rs rk rx (Bin rls rlk rlx rll rlr) (Bin rrs k' v' l' r')) =
-  if rls < ratio*rrs then 
+  if rls < ratio*rrs then
     Bin (1+rs) rk rx (Bin (1+rls) k x Tip (Bin rls rlk rlx rll rlr)) (Bin rrs k' v' l' r')
-  else 
-    Bin (1+rs) rlk rlx (Bin (1+size rll) k x Tip rll) 
+  else
+    Bin (1+rs) rlk rlx (Bin (1+size rll) k x Tip rll)
                        (Bin (1+rrs+size rlr) rk rx rlr (Bin rrs k' v' l' r'))) ∧
 (balanceR k x (Bin ls k' v' l' r') Tip =
   Bin (1+ls) k x (Bin ls k' v' l' r') Tip) ∧
@@ -443,10 +443,10 @@ val balanceR_def = Define `
   if rs > delta*ls then
     case (rl, rr) of
        | (Bin rls rlk rlx rll rlr, Bin rrs _ _ _ _) =>
-           if rls < ratio*rrs then 
+           if rls < ratio*rrs then
              Bin (1+ls+rs) rk rx (Bin (1+ls+rls) k x (Bin ls k' v' l' r') rl) rr
-           else 
-             Bin (1+ls+rs) rlk rlx (Bin (1+ls+size rll) k x (Bin ls k' v' l' r') rll) 
+           else
+             Bin (1+ls+rs) rlk rlx (Bin (1+ls+size rll) k x (Bin ls k' v' l' r') rll)
                                    (Bin (1+rrs+size rlr) rk rx rlr rr)
        | (_, _) => Tip (* error "Failure in Data.Map.balanceR" *)
   else
@@ -479,7 +479,7 @@ val insertMin_def = Define `
 val deleteFindMax_def = Define `
 (deleteFindMax (Bin s k x l Tip) = ((k,x),l)) ∧
 (deleteFindMax (Bin s k x l r) =
-  let (km,r') = deleteFindMax r in 
+  let (km,r') = deleteFindMax r in
     (km,balanceL k x l r')) ∧
 (deleteFindMax Tip =
   (ARB,Tip))`; (*(error "Map.deleteFindMax: can not return the maximal element of an empty map", Tip)*)
@@ -487,7 +487,7 @@ val deleteFindMax_def = Define `
 val deleteFindMin_def = Define `
 (deleteFindMin (Bin s k x Tip r) = ((k,x),r)) ∧
 (deleteFindMin (Bin s k x l r) =
-  let (km,l') = deleteFindMin l in 
+  let (km,l') = deleteFindMin l in
     (km,balanceR k x l' r)) ∧
 (deleteFindMin Tip =
   (ARB,Tip))`; (*(error "Map.deleteFindMin: can not return the maximal element of an empty map", Tip)*)
@@ -497,10 +497,10 @@ val glue_def = Define `
 (glue l Tip = l) ∧
 (glue l r =
   if size l > size r then
-    let ((km,m),l') = deleteFindMax l in 
+    let ((km,m),l') = deleteFindMax l in
       balanceR km m l' r
   else
-    let ((km,m),r') = deleteFindMin r in 
+    let ((km,m),r') = deleteFindMin r in
       balanceL km m l r')`;
 
 val delete_def = Define `
@@ -512,7 +512,7 @@ val delete_def = Define `
      | Eq => glue l r)`;
 
 val trim_help_greater_def = Define `
-(trim_help_greater cmp lo (Bin s' k v' l' r) = 
+(trim_help_greater cmp lo (Bin s' k v' l' r) =
   if cmp k lo = Less ∨ cmp k lo = Equal then
     trim_help_greater cmp lo r
   else
@@ -520,7 +520,7 @@ val trim_help_greater_def = Define `
 (trim_help_greater cmp lo Tip = Tip)`;
 
 val trim_help_lesser_def = Define `
-(trim_help_lesser cmp hi (Bin s' k v' l r') = 
+(trim_help_lesser cmp hi (Bin s' k v' l r') =
   if cmp k hi = Greater ∨ cmp k hi = Equal then
     trim_help_lesser cmp hi l
   else
@@ -528,7 +528,7 @@ val trim_help_lesser_def = Define `
 (trim_help_lesser cmp lo Tip = Tip)`;
 
 val trim_help_middle_def = Define `
-(trim_help_middle cmp lo hi (Bin s' k v' l r) = 
+(trim_help_middle cmp lo hi (Bin s' k v' l r) =
   if cmp k lo = Less ∨ cmp k lo = Equal then
     trim_help_middle cmp lo hi r
   else if cmp k hi = Greater ∨ cmp k hi = Equal then
@@ -580,7 +580,7 @@ val filterGt_def = Define `
 
 val hedgeUnion_def = Define `
 (hedgeUnion cmp blo bhi t1 Tip = t1) ∧
-(hedgeUnion cmp blo bhi Tip (Bin _ kx x l r) = 
+(hedgeUnion cmp blo bhi Tip (Bin _ kx x l r) =
   link kx x (filterGt cmp blo l) (filterLt cmp bhi r)) ∧
 (hedgeUnion cmp blo bhi t1 (Bin _ kx x Tip Tip) = insertR cmp kx x t1) ∧
 (hedgeUnion cmp blo bhi (Bin s kx x l r) t2 =
@@ -594,7 +594,7 @@ val union_def = Define `
 
 val foldrWithKey_def = Define `
 (foldrWithKey f z' Tip = z') ∧
-(foldrWithKey f z' (Bin _ kx x l r) = 
+(foldrWithKey f z' (Bin _ kx x l r) =
   foldrWithKey f (f kx x (foldrWithKey f z' r)) l)`;
 
 val toAscList_def = Define `
@@ -611,21 +611,21 @@ val splitLookup_def = Define `
 (splitLookup cmp k Tip = (Tip,NONE,Tip)) ∧
 (splitLookup cmp k (Bin _ kx x l r) =
   case cmp k kx of
-     | Less => 
+     | Less =>
          let (lt,z,gt) = splitLookup cmp k l in
          let gt' = link kx x gt r in
            (lt,z,gt')
-     | Greater => 
+     | Greater =>
          let (lt,z,gt) = splitLookup cmp k r in
          let lt' = link kx x l lt in
            (lt',z,gt)
-     | Equal => 
+     | Equal =>
          (l,SOME x,r))`;
 
 val submap'_def = Define `
 (submap' cmp _ Tip _ = T) ∧
 (submap' cmp _ _ Tip = F) ∧
-(submap' cmp f (Bin _ kx x l r) t = 
+(submap' cmp f (Bin _ kx x l r) t =
   case splitLookup cmp kx t of
      | (lt,NONE,gt) => F
      | (lt,SOME y,gt) => f x y ∧ submap' cmp f l lt ∧ submap' cmp f r gt)`;
@@ -677,7 +677,7 @@ val structure_size_def = Define `
 
 val key_ordered_def = Define `
 (key_ordered cmp k Tip res ⇔ T) ∧
-(key_ordered cmp k (Bin n k' v l r) res ⇔ 
+(key_ordered cmp k (Bin n k' v l r) res ⇔
   cmp k k' = res ∧
   key_ordered cmp k l res ∧
   key_ordered cmp k r res)`;
@@ -775,7 +775,7 @@ val lookup_thm = Q.store_thm ("lookup_thm",
  fs [] >>
  rw [] >>
  rfs [key_set_eq] >>
- fs [FLOOKUP_DEF] >> 
+ fs [FLOOKUP_DEF] >>
  metis_tac [cmp_thms]);
 
 val member_thm = Q.store_thm ("member_thm",
@@ -814,11 +814,11 @@ val singleR_def = Define `
 singleR k1 x1 (Bin _ k2 x2 t1 t2) t3  = bin k2 x2 t1 (bin k1 x1 t2 t3)`;
 
 val doubleL_def = Define `
-doubleL k1 x1 t1 (Bin _ k2 x2 (Bin _ k3 x3 t2 t3) t4) = 
+doubleL k1 x1 t1 (Bin _ k2 x2 (Bin _ k3 x3 t2 t3) t4) =
   bin k3 x3 (bin k1 x1 t1 t2) (bin k2 x2 t3 t4)`;
 
 val doubleR_def = Define `
-doubleR k1 x1 (Bin _ k2 x2 t1 (Bin _ k3 x3 t2 t3)) t4 = 
+doubleR k1 x1 (Bin _ k2 x2 t1 (Bin _ k3 x3 t2 t3)) t4 =
   bin k3 x3 (bin k2 x2 t1 t2) (bin k1 x1 t3 t4)`;
 
 val rotateL_def = Define `
@@ -827,7 +827,7 @@ val rotateL_def = Define `
     singleL k x l (Bin s' k' x' ly ry)
   else
     doubleL k x l (Bin s' k' x' ly ry)) ∧
-(rotateL k x l Tip = 
+(rotateL k x l Tip =
   doubleL k x l Tip)`;
 
 val rotateR_def = Define `
@@ -836,7 +836,7 @@ val rotateR_def = Define `
     singleR k x (Bin s' k' x' ly ry) r
   else
     doubleR k x (Bin s' k' x' ly ry) r) ∧
-(rotateR k x Tip r = 
+(rotateR k x Tip r =
   doubleR k x Tip r)`;
 
 val bal_def = Define `
@@ -849,7 +849,7 @@ bal k x l r =
     rotateR k x l r
   else
     Bin (size l + size r + 1) k x l r`;
-    
+
 val balL_def = Define `
 balL k x l r =
   if size l + size r ≤ 1 then
@@ -868,7 +868,7 @@ balR k x l r =
   else
     Bin (size l + size r + 1) k x l r`;
 
-(* We want a formula that states how unbalanced two trees can be 
+(* We want a formula that states how unbalanced two trees can be
  * and still be re-balanced by the balancer. It also has to allow the
  * trees to be as unbalanced as the link, insert and delete functions need. The
  * formula below is the result of guesswork. *)
@@ -899,7 +899,7 @@ val balanced_lem1 = Q.prove (
  rw [balanced_def]);
 
 val balanced_lem2 = Q.prove (
-`!l r. 
+`!l r.
   ¬(l > delta * r) ∧
   almost_balancedL l r ∧
   ¬(l + r ≤ 1)
@@ -914,7 +914,7 @@ val balanced_lem3 = Q.prove (
  b0 < ratio * b ∧
  balanced b b0
  ⇒
- balanced b (b0 + r + 1) ∧ 
+ balanced b (b0 + r + 1) ∧
  balanced b0 r`,
  rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def] >>
  fs [MIN_DEF]);
@@ -934,7 +934,7 @@ val balanced_lem4 = Q.prove (
  fs [MIN_DEF]);
 
 val balanced_lem5 = Q.prove (
-`!l r. 
+`!l r.
   ¬(r > delta * l) ∧
   almost_balancedR l r
   ⇒
@@ -979,7 +979,7 @@ val singleR_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (singleR k v (Bin n k' v' b b0) r) ∧
-  to_fmap cmp (singleR k v (Bin n k' v' b b0) r) = 
+  to_fmap cmp (singleR k v (Bin n k' v' b b0) r) =
     (FUNION (to_fmap cmp (Bin n k' v' b b0)) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  rw [singleR_def] >>
  imp_res_tac inv_props
@@ -1006,12 +1006,12 @@ val doubleR_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (doubleR k v (Bin n k' v' b b0) r) ∧
-  to_fmap cmp (doubleR k v (Bin n k' v' b b0) r) = 
+  to_fmap cmp (doubleR k v (Bin n k' v' b b0) r) =
     (FUNION (to_fmap cmp (Bin n k' v' b b0)) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  rw [] >>
- `structure_size b0 ≠ 0` 
-          by (fs [delta_def, ratio_def, invariant_def, size_def, 
-                  NOT_LESS_EQUAL, NOT_LESS, NOT_GREATER] >> 
+ `structure_size b0 ≠ 0`
+          by (fs [delta_def, ratio_def, invariant_def, size_def,
+                  NOT_LESS_EQUAL, NOT_LESS, NOT_GREATER] >>
               imp_res_tac structure_size_thm >>
               fs []) >>
  Cases_on `b0` >>
@@ -1036,9 +1036,9 @@ val doubleR_thm = Q.prove (
      rfs [key_ordered_to_fmap]
      >- metis_tac [cmp_thms]
      >- metis_tac [cmp_thms] >>
-     `key_set cmp k' ≠ key_set cmp k'' ∧ 
-      key_set cmp k ≠ key_set cmp k' ∧ 
-      key_set cmp k ≠ key_set cmp k''` 
+     `key_set cmp k' ≠ key_set cmp k'' ∧
+      key_set cmp k ≠ key_set cmp k' ∧
+      key_set cmp k ≠ key_set cmp k''`
                    by metis_tac [key_set_eq, cmp_thms] >>
      metis_tac [FUPDATE_COMMUTES, FUNION_ASSOC]));
 
@@ -1054,7 +1054,7 @@ val rotateR_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (rotateR k v l r) ∧
-  to_fmap cmp (rotateR k v l r) = 
+  to_fmap cmp (rotateR k v l r) =
     (FUNION (to_fmap cmp l) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
   Cases_on `l`
   >- fs [size_def] >>
@@ -1065,7 +1065,7 @@ val balanceL_balL = Q.prove (
 `!k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
-  invariant cmp r 
+  invariant cmp r
   ⇒
   balanceL k v l r = balL k v l r`,
  ho_match_mp_tac balanceL_ind >>
@@ -1095,7 +1095,7 @@ val balanceL_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (balanceL k v l r) ∧
-  to_fmap cmp (balanceL k v l r) = 
+  to_fmap cmp (balanceL k v l r) =
     (FUNION (to_fmap cmp l) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  rw [] >>
  `balanceL k v l r = balL k v l r` by metis_tac [balanceL_balL] >>
@@ -1118,7 +1118,7 @@ val singleL_thm = Q.prove (
   invariant cmp l
   ⇒
   invariant cmp (singleL k v l (Bin n k' v' b b0)) ∧
-  to_fmap cmp (singleL k v l (Bin n k' v' b b0)) = 
+  to_fmap cmp (singleL k v l (Bin n k' v' b b0)) =
     (FUNION (to_fmap cmp l) (to_fmap cmp (Bin n k' v' b b0))) |+ (key_set cmp k,v)`,
  rw [singleL_def] >>
  imp_res_tac inv_props
@@ -1146,12 +1146,12 @@ val doubleL_thm = Q.prove (
   invariant cmp l
   ⇒
   invariant cmp (doubleL k v l (Bin n k' v' b b0)) ∧
-  to_fmap cmp (doubleL k v l (Bin n k' v' b b0)) = 
+  to_fmap cmp (doubleL k v l (Bin n k' v' b b0)) =
     (FUNION (to_fmap cmp l) (to_fmap cmp (Bin n k' v' b b0))) |+ (key_set cmp k,v)`,
  rw [] >>
- `structure_size b ≠ 0` 
-          by (fs [delta_def, ratio_def, invariant_def, size_def, 
-                  NOT_LESS_EQUAL, NOT_LESS, NOT_GREATER] >> 
+ `structure_size b ≠ 0`
+          by (fs [delta_def, ratio_def, invariant_def, size_def,
+                  NOT_LESS_EQUAL, NOT_LESS, NOT_GREATER] >>
               imp_res_tac structure_size_thm >>
               fs []) >>
  Cases_on `b` >>
@@ -1181,9 +1181,9 @@ val doubleL_thm = Q.prove (
      >- metis_tac [cmp_thms]
      >- metis_tac [cmp_thms]
      >- metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms]
-     >- (`key_set cmp k' ≠ key_set cmp k'' ∧ 
-          key_set cmp k ≠ key_set cmp k' ∧ 
-          key_set cmp k ≠ key_set cmp k''` 
+     >- (`key_set cmp k' ≠ key_set cmp k'' ∧
+          key_set cmp k ≠ key_set cmp k' ∧
+          key_set cmp k ≠ key_set cmp k''`
                    by metis_tac [key_set_eq, cmp_thms] >>
          metis_tac [FUPDATE_COMMUTES, FUNION_ASSOC])));
 
@@ -1199,7 +1199,7 @@ val rotateL_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (rotateL k v l r) ∧
-  to_fmap cmp (rotateL k v l r) = 
+  to_fmap cmp (rotateL k v l r) =
     (FUNION (to_fmap cmp l) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  Cases_on `r`
  >- fs [size_def] >>
@@ -1210,7 +1210,7 @@ val balanceR_balR = Q.prove (
 `!k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
-  invariant cmp r 
+  invariant cmp r
   ⇒
   balanceR k v l r = balR k v l r`,
  ho_match_mp_tac balanceR_ind >>
@@ -1241,7 +1241,7 @@ val balanceR_thm = Q.prove (
   invariant cmp r
   ⇒
   invariant cmp (balanceR k v l r) ∧
-  to_fmap cmp (balanceR k v l r) = 
+  to_fmap cmp (balanceR k v l r) =
     (FUNION (to_fmap cmp l) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  rw [] >>
  `balanceR k v l r = balR k v l r` by metis_tac [balanceR_balR] >>
@@ -1251,8 +1251,8 @@ val balanceR_thm = Q.prove (
  metis_tac [rotateL_thm]);
 
 val almost_balancedL_thm = Q.prove (
-`!l r. 
-  balanced l r ⇒ 
+`!l r.
+  balanced l r ⇒
   almost_balancedL l r ∧ almost_balancedL (l + 1) r ∧ almost_balancedL l (r - 1)`,
  rw [almost_balancedL_def] >>
  fs [balanced_def, NOT_LESS_EQUAL, TIMES_MIN] >>
@@ -1263,8 +1263,8 @@ val almost_balancedL_thm = Q.prove (
  fs [delta_def, MIN_DEF]);
 
 val almost_balancedR_thm = Q.prove (
-`!l r. 
-  balanced l r ⇒ 
+`!l r.
+  balanced l r ⇒
   almost_balancedR l r ∧ almost_balancedR l (r + 1) ∧ almost_balancedR (l - 1) r`,
  rw [almost_balancedR_def] >>
  fs [balanced_def, NOT_LESS_EQUAL, TIMES_MIN] >>
@@ -1285,7 +1285,7 @@ val insert_thm = Q.store_thm ("insert_thm",
   invariant cmp (insert cmp k v t) ∧
   to_fmap cmp (insert cmp k v t) = to_fmap cmp t |+ (key_set cmp k,v)`,
  Induct_on `t`
- >- fs [insert_def, singleton_def, to_fmap_def, invariant_eq, 
+ >- fs [insert_def, singleton_def, to_fmap_def, invariant_eq,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
  simp [invariant_eq] >>
  rpt gen_tac >>
@@ -1335,10 +1335,10 @@ val insertR_thm = Q.store_thm ("insertR_thm",
   invariant cmp t
   ⇒
   invariant cmp (insertR cmp k v t) ∧
-  to_fmap cmp (insertR cmp k v t) = 
+  to_fmap cmp (insertR cmp k v t) =
     if key_set cmp k ∈ FDOM (to_fmap cmp t) then to_fmap cmp t else to_fmap cmp t |+ (key_set cmp k,v)`,
  Induct_on `t`
- >- fs [insertR_def, singleton_def, to_fmap_def, invariant_def, 
+ >- fs [insertR_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
  rpt gen_tac >>
  strip_tac >>
@@ -1347,12 +1347,12 @@ val insertR_thm = Q.store_thm ("insertR_thm",
  Cases_on `cmp k k'` >>
  fs [] >>
  simp [to_fmap_def]
- >- (`almost_balancedL (size (insertR cmp k v t)) (size t')` 
+ >- (`almost_balancedL (size (insertR cmp k v t)) (size t')`
              by (imp_res_tac size_thm >>
                  rw [FCARD_FUPDATE] >>
                  fs [key_ordered_to_fmap] >>
                  metis_tac [almost_balancedL_thm]) >>
-     `key_ordered cmp k' (insertR cmp k v t) Greater` 
+     `key_ordered cmp k' (insertR cmp k v t) Greater`
               by (rfs [key_ordered_to_fmap] >>
                   rw [] >>
                   rw [key_set_cmp_thm] >>
@@ -1364,12 +1364,12 @@ val insertR_thm = Q.store_thm ("insertR_thm",
  >- (fs [invariant_def] >>
      rfs [key_ordered_to_fmap] >>
      metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms,key_set_eq, FUPDATE_EQ])
- >- (`almost_balancedR (size t) (size (insertR cmp k v t'))` 
+ >- (`almost_balancedR (size t) (size (insertR cmp k v t'))`
              by (imp_res_tac size_thm >>
                  rw [FCARD_FUPDATE] >>
                  fs [key_ordered_to_fmap] >>
                  metis_tac [almost_balancedR_thm]) >>
-     `key_ordered cmp k' (insertR cmp k v t') Less` 
+     `key_ordered cmp k' (insertR cmp k v t') Less`
               by (fs [key_ordered_to_fmap] >>
                   rw [] >>
                   imp_res_tac to_fmap_key_set >>
@@ -1390,7 +1390,7 @@ val insertMax_thm = Q.store_thm ("insertMax_thm",
   invariant cmp (insertMax k v t) ∧
   to_fmap cmp (insertMax k v t) = to_fmap cmp t |+ (key_set cmp k,v)`,
  Induct_on `t`
- >- fs [insertMax_def, singleton_def, to_fmap_def, invariant_def, 
+ >- fs [insertMax_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
  rpt gen_tac >>
  strip_tac >>
@@ -1416,18 +1416,18 @@ val insertMin_thm = Q.store_thm ("insertMin_thm",
   invariant cmp (insertMin k v t) ∧
   to_fmap cmp (insertMin k v t) = to_fmap cmp t |+ (key_set cmp k,v)`,
  Induct_on `t`
- >- fs [insertMin_def, singleton_def, to_fmap_def, invariant_def, 
+ >- fs [insertMin_def, singleton_def, to_fmap_def, invariant_def,
         structure_size_def, balanced_def, size_def, key_ordered_def] >>
  rpt gen_tac >>
  strip_tac >>
  fs [insertMin_def, invariant_def, to_fmap_def] >>
  simp [] >>
- `almost_balancedL (size (insertMin k v t)) (size t')` 
+ `almost_balancedL (size (insertMin k v t)) (size t')`
          by (imp_res_tac size_thm >>
              rw [FCARD_FUPDATE] >>
              fs [key_ordered_to_fmap] >>
              metis_tac [almost_balancedL_thm]) >>
- `key_ordered cmp k' (insertMin k v t) Greater` 
+ `key_ordered cmp k' (insertMin k v t) Greater`
               by (rfs [key_ordered_to_fmap] >>
                   rw [] >>
                   imp_res_tac to_fmap_key_set >>
@@ -1448,7 +1448,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
   invariant cmp t' ∧
   key_ordered cmp k t' Less ∧
   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v ∧
-  to_fmap cmp t' = 
+  to_fmap cmp t' =
     DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
  ho_match_mp_tac (fetch "-" "deleteFindMin_ind") >>
  rpt conj_tac >>
@@ -1468,7 +1468,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
      metis_tac [comparison_distinct, good_cmp_def]) >>
  `?km l. deleteFindMin (Bin (structure_size v8 + (structure_size v9 + 1)) v6 v7 v8 v9) = (km,l)`
             by metis_tac [pairTheory.pair_CASES] >>
- fs [] >>            
+ fs [] >>
  rpt BasicProvers.VAR_EQ_TAC >>
  inv_mp_tac balanceR_thm >>
  simp [] >>
@@ -1508,7 +1508,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
      rfs [key_ordered_to_fmap] >>
      rw [] >>
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
- >- (`key_set cmp k' ∈ FDOM (to_fmap cmp v8 ⊌ to_fmap cmp v9)` 
+ >- (`key_set cmp k' ∈ FDOM (to_fmap cmp v8 ⊌ to_fmap cmp v9)`
            by (every_case_tac >>
                fs [FLOOKUP_DEF]) >>
      `key_set cmp k ≠ key_set cmp k' ∧ cmp k' k = Less`
@@ -1530,19 +1530,19 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
          >- (imp_res_tac size_thm >>
              rw [FCARD_FUPDATE, FDOM_DRESTRICT] >>
              rw [FCARD_DRESTRICT, DELETE_INSERT] >>
-             `(FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9)) ∩ 
+             `(FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9)) ∩
               (key_set cmp v6 INSERT FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9) DELETE key_set cmp k')
               =
               FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9) DELETE key_set cmp k'`
-                       by (rw [EXTENSION] >> 
+                       by (rw [EXTENSION] >>
                            metis_tac [key_set_eq, EXTENSION]) >>
              simp [CARD_UNION_EQN] >>
              fs [DISJOINT_DEF] >|
-             [`CARD (FDOM (to_fmap cmp v8)) ≠ 0` 
+             [`CARD (FDOM (to_fmap cmp v8)) ≠ 0`
                         by (rw [CARD_EQ_0, EXTENSION] >>
                             metis_tac []) >>
                   `0 < CARD (FDOM (to_fmap cmp v8))` by decide_tac,
-              `CARD (FDOM (to_fmap cmp v9)) ≠ 0` 
+              `CARD (FDOM (to_fmap cmp v9)) ≠ 0`
                         by (rw [CARD_EQ_0, EXTENSION] >>
                             metis_tac []) >>
                   `0 < CARD (FDOM (to_fmap cmp v9))` by decide_tac] >>
@@ -1575,7 +1575,7 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
   invariant cmp t' ∧
   key_ordered cmp k t' Greater ∧
   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v ∧
-  to_fmap cmp t' = 
+  to_fmap cmp t' =
     DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
  ho_match_mp_tac (fetch "-" "deleteFindMax_ind") >>
  rpt conj_tac >>
@@ -1595,7 +1595,7 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
      metis_tac [comparison_distinct, good_cmp_def]) >>
  `?km l. deleteFindMax (Bin (structure_size v8 + (structure_size v9 + 1)) v6 v7 v8 v9) = (km,l)`
             by metis_tac [pairTheory.pair_CASES] >>
- fs [] >>            
+ fs [] >>
  rpt BasicProvers.VAR_EQ_TAC >>
  inv_mp_tac balanceL_thm >>
  simp [] >>
@@ -1635,7 +1635,7 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
      rfs [key_ordered_to_fmap] >>
      rw [] >>
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
- >- (`key_set cmp k' ∈ FDOM (to_fmap cmp v8 ⊌ to_fmap cmp v9)` 
+ >- (`key_set cmp k' ∈ FDOM (to_fmap cmp v8 ⊌ to_fmap cmp v9)`
              by (every_case_tac >>
                  fs [FLOOKUP_DEF]) >>
      `key_set cmp k' ≠ key_set cmp k ∧ cmp k' k = Greater`
@@ -1656,19 +1656,19 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
          >- (imp_res_tac size_thm >>
              rw [FCARD_FUPDATE, FDOM_DRESTRICT] >>
              rw [FCARD_DRESTRICT, DELETE_INSERT] >>
-             `(FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9)) ∩ 
+             `(FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9)) ∩
               (key_set cmp v6 INSERT FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9) DELETE key_set cmp k')
               =
               FDOM (to_fmap cmp v8) ∪ FDOM (to_fmap cmp v9) DELETE key_set cmp k'`
-                       by (rw [EXTENSION] >> 
+                       by (rw [EXTENSION] >>
                            metis_tac [key_set_eq, EXTENSION]) >>
              simp [CARD_UNION_EQN] >>
              fs [DISJOINT_DEF] >|
-             [`CARD (FDOM (to_fmap cmp v8)) ≠ 0` 
+             [`CARD (FDOM (to_fmap cmp v8)) ≠ 0`
                         by (rw [CARD_EQ_0, EXTENSION] >>
                             metis_tac []) >>
                   `0 < CARD (FDOM (to_fmap cmp v8))` by decide_tac,
-              `CARD (FDOM (to_fmap cmp v9)) ≠ 0` 
+              `CARD (FDOM (to_fmap cmp v9)) ≠ 0`
                         by (rw [CARD_EQ_0, EXTENSION] >>
                             metis_tac []) >>
                   `0 < CARD (FDOM (to_fmap cmp v9))` by decide_tac] >>
@@ -1800,7 +1800,7 @@ val delete_thm = Q.store_thm ("delete_thm",
   invariant cmp t
   ⇒
   invariant cmp (delete cmp k t) ∧
-  to_fmap cmp (delete cmp k t) = 
+  to_fmap cmp (delete cmp k t) =
     DRESTRICT (to_fmap cmp t) (FDOM (to_fmap cmp t) DELETE key_set cmp k)`,
  Induct_on `t`
  >- rw [delete_def, to_fmap_def] >>
@@ -1812,7 +1812,7 @@ val delete_thm = Q.store_thm ("delete_thm",
  simp []
  >- (inv_mp_tac balanceR_thm >>
      simp [] >>
-     rw [] 
+     rw []
      >- (fs [key_ordered_to_fmap] >>
          rfs [key_ordered_to_fmap] >>
          rw [FDOM_DRESTRICT] >>
@@ -1829,7 +1829,7 @@ val delete_thm = Q.store_thm ("delete_thm",
      >- to_fmap_tac)
  >- (inv_mp_tac balanceL_thm >>
      simp [] >>
-     rw [] 
+     rw []
      >- (fs [key_ordered_to_fmap] >>
          rfs [key_ordered_to_fmap] >>
          rw [FDOM_DRESTRICT] >>
@@ -1838,7 +1838,7 @@ val delete_thm = Q.store_thm ("delete_thm",
          rw [FCARD_DRESTRICT, DELETE_INTER2] >>
          imp_res_tac almost_balancedL_thm >>
          metis_tac [FCARD_DEF])
-     >- to_fmap_tac));     
+     >- to_fmap_tac));
 
 val restrict_set_def = Define `
 restrict_set cmp lo hi =
@@ -1859,7 +1859,7 @@ val restrict_domain_update = Q.prove (
 `good_cmp cmp
  ⇒
  restrict_domain cmp lo hi (m1 |+ (key_set cmp k,v)) =
-   if k ∈ restrict_set cmp lo hi then 
+   if k ∈ restrict_set cmp lo hi then
      restrict_domain cmp lo hi m1 |+ (key_set cmp k,v)
    else
      restrict_domain cmp lo hi m1`,
@@ -1883,10 +1883,10 @@ val trim_thm = Q.prove (
   invariant cmp (trim cmp lk hk t) ∧
   bounded_root cmp lk hk (trim cmp lk hk t) ∧
   to_fmap cmp (trim cmp lk hk t) SUBMAP to_fmap cmp t ∧
-  restrict_domain cmp lk hk (to_fmap cmp (trim cmp lk hk t)) = 
+  restrict_domain cmp lk hk (to_fmap cmp (trim cmp lk hk t)) =
      restrict_domain cmp lk hk (to_fmap cmp t)`,
- Cases_on `lk` >> 
- Cases_on `hk` >> 
+ Cases_on `lk` >>
+ Cases_on `hk` >>
  simp [bounded_root_def, trim_def, restrict_set_def, option_cmp_def, option_cmp2_def] >>
  Induct_on `t` >>
  simp [trim_help_lesser_def, trim_help_greater_def, trim_help_middle_def, key_ordered_def] >>
@@ -1898,7 +1898,7 @@ val trim_thm = Q.prove (
  simp [to_fmap_def] >>
  fs [SUBMAP_DEF, restrict_domain_def, DRESTRICTED_FUNION, DRESTRICT_FUPDATE] >>
  rw [invariant_def] >>
- rw [FAPPLY_FUPDATE_THM, FUNION_DEF, fmap_eq_flookup, FLOOKUP_DRESTRICT, 
+ rw [FAPPLY_FUPDATE_THM, FUNION_DEF, fmap_eq_flookup, FLOOKUP_DRESTRICT,
      FLOOKUP_FUNION, FLOOKUP_UPDATE] >>
  rw [] >>
  every_case_tac >>
@@ -1954,7 +1954,7 @@ val link_thm = Q.prove (
   key_ordered cmp k r Less
   ⇒
   invariant cmp (link k v l r) ∧
-  to_fmap cmp (link k v l r) = 
+  to_fmap cmp (link k v l r) =
     (FUNION (to_fmap cmp l) (to_fmap cmp r)) |+ (key_set cmp k,v)`,
  ho_match_mp_tac (fetch "-" "link_ind") >>
  rpt conj_tac >>
@@ -1995,7 +1995,7 @@ val link_thm = Q.prove (
          simp [FCARD_DEF] >>
          `DISJOINT (FDOM (to_fmap cmp ly) ∪ FDOM (to_fmap cmp l)) (FDOM (to_fmap cmp r))`
                        by (rw [DISJOINT_UNION] >>
-                           rw [DISJOINT_DEF, EXTENSION] >> 
+                           rw [DISJOINT_DEF, EXTENSION] >>
                            metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set]) >>
          rw [CARD_DISJOINT_UNION] >>
          imp_res_tac structure_size_to_fmap >>
@@ -2027,11 +2027,11 @@ val link_thm = Q.prove (
          simp [FCARD_DEF] >>
          `DISJOINT (FDOM (to_fmap cmp l) ∪ FDOM (to_fmap cmp r)) (FDOM (to_fmap cmp rz))`
                        by (rw [DISJOINT_UNION] >>
-                           rw [DISJOINT_DEF, EXTENSION] >> 
+                           rw [DISJOINT_DEF, EXTENSION] >>
                            metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set]) >>
          `DISJOINT (FDOM (to_fmap cmp l)) (FDOM (to_fmap cmp r))`
                        by (rw [DISJOINT_UNION] >>
-                           rw [DISJOINT_DEF, EXTENSION] >> 
+                           rw [DISJOINT_DEF, EXTENSION] >>
                            metis_tac [cmp_thms, key_set_cmp_thm, to_fmap_key_set]) >>
          rw [CARD_DISJOINT_UNION] >>
          imp_res_tac structure_size_to_fmap >>
@@ -2085,7 +2085,7 @@ val filterLt_thm = Q.prove (
  simp [to_fmap_def, filterLt_def, restrict_domain_union, restrict_domain_update] >>
  simp [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
  rw [] >>
- imp_res_tac filter_lt_help_thm 
+ imp_res_tac filter_lt_help_thm
  >- (rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
      rw [] >>
      fs [FLOOKUP_DEF] >>
@@ -2133,7 +2133,7 @@ val filterGt_thm = Q.prove (
  simp [to_fmap_def, filterGt_def, restrict_domain_union, restrict_domain_update] >>
  simp [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
  rw [] >>
- imp_res_tac filter_gt_help_thm 
+ imp_res_tac filter_gt_help_thm
  >- (rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
      rw [] >>
      fs [FLOOKUP_DEF] >>
@@ -2148,7 +2148,7 @@ val restrict_domain_partition = Q.prove (
   restrict_domain cmp (SOME x) h t1 SUBMAP t2 ∧
   key_set cmp x ∉ FDOM t1 ∧
   key_set cmp x ∉ FDOM t2
-  ⇒ 
+  ⇒
   FUNION (restrict_domain cmp l h t1) (restrict_domain cmp l h t2) =
     FUNION (restrict_domain cmp l (SOME x) t1) (restrict_domain cmp (SOME x) h t2)`,
  rw [restrict_domain_def, fmap_eq_flookup] >>
@@ -2164,7 +2164,7 @@ val restrict_domain_partition = Q.prove (
 
 val restrict_domain_union_swap = Q.prove (
 ` good_cmp cmp
-  ⇒ 
+  ⇒
   a ⊌
   restrict_domain cmp blo (SOME kx) (to_fmap cmp r2) ⊌
   restrict_domain cmp (SOME kx) bhi (to_fmap cmp t1')
@@ -2186,7 +2186,7 @@ val restrict_domain_extend = Q.prove (
 ` good_cmp cmp ∧
   invariant cmp (Bin s kx x t1 t1') ∧
   kx ∈ restrict_set cmp blo bhi
-  ⇒ 
+  ⇒
   restrict_domain cmp blo (SOME kx) (to_fmap cmp t1) =
   restrict_domain cmp blo bhi (to_fmap cmp t1) ∧
   restrict_domain cmp (SOME kx) bhi (to_fmap cmp t1') =
@@ -2257,7 +2257,7 @@ val bounded_restrict_id = Q.prove (
 `!t.
   good_cmp cmp ∧
   bounded_all cmp blo bhi t
-  ⇒ 
+  ⇒
   restrict_domain cmp blo bhi (to_fmap cmp t) = to_fmap cmp t`,
  Induct_on `t` >>
  rw [bounded_all_def, to_fmap_def, restrict_domain_union, restrict_domain_update] >>
@@ -2266,7 +2266,7 @@ val bounded_restrict_id = Q.prove (
  fs [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def]);
 
 val restrict_domain_empty = Q.prove (
-`good_cmp cmp ⇒ 
+`good_cmp cmp ⇒
   restrict_domain cmp blo (SOME kx) (restrict_domain cmp (SOME kx) bhi t) = FEMPTY ∧
   restrict_domain cmp (SOME kx) bhi (restrict_domain cmp blo (SOME kx) t) = FEMPTY`,
  Cases_on `blo` >>
@@ -2283,14 +2283,14 @@ val hedgeUnion_thm = Q.prove (
   bounded_root cmp blo bhi t2
   ⇒
   invariant cmp (hedgeUnion cmp blo bhi t1 t2) ∧
-  to_fmap cmp (hedgeUnion cmp blo bhi t1 t2) = 
+  to_fmap cmp (hedgeUnion cmp blo bhi t1 t2) =
      restrict_domain cmp blo bhi (to_fmap cmp t1 ⊌ to_fmap cmp t2)`,
  ho_match_mp_tac (fetch "-" "hedgeUnion_ind") >>
  rpt conj_tac >>
  simp [hedgeUnion_def] >>
  rpt conj_tac >>
  rpt gen_tac >>
- strip_tac 
+ strip_tac
  >- rw [to_fmap_def, FUNION_FEMPTY_2, bounded_restrict_id]
  >- (inv_mp_tac link_thm >>
      simp [GSYM CONJ_ASSOC] >>
@@ -2367,7 +2367,7 @@ val hedgeUnion_thm = Q.prove (
      fs [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def] >>
      metis_tac [good_cmp_def, comparison_distinct, key_set_cmp_thm]) >>
  rw [restrict_domain_union, restrict_domain_update] >>
- `key_set cmp kx ∉ FDOM (to_fmap cmp m1) ∧ key_set cmp kx ∉ FDOM (to_fmap cmp m2)` 
+ `key_set cmp kx ∉ FDOM (to_fmap cmp m1) ∧ key_set cmp kx ∉ FDOM (to_fmap cmp m2)`
              by metis_tac [key_ordered_to_fmap, cmp_thms, to_fmap_key_set, key_set_cmp_thm] >>
  `restrict_domain cmp blo (SOME kx) (to_fmap cmp m2) SUBMAP (to_fmap cmp m1) ∧
   restrict_domain cmp (SOME kx) bhi (to_fmap cmp m1) SUBMAP (to_fmap cmp m2)`
@@ -2439,7 +2439,7 @@ val toAscList_helper = Q.prove (
   (!k1 v1 k2 v2. MEM (k1,v1) l ∧ FLOOKUP (to_fmap cmp t) (key_set cmp k2) = SOME v2 ⇒ cmp k2 k1 = Less)
   ⇒
   SORTED (\(x,y) (x',y'). cmp x x' = Less) (foldrWithKey (λk x xs. (k,x)::xs) l t) ∧
-  lift_key cmp (set (foldrWithKey (λk x xs. (k,x)::xs) l t)) = 
+  lift_key cmp (set (foldrWithKey (λk x xs. (k,x)::xs) l t)) =
     set (fmap_to_alist (to_fmap cmp t)) ∪ lift_key cmp (set l)`,
  Induct_on `t` >>
  simp [foldrWithKey_def, to_fmap_def] >>
@@ -2529,13 +2529,13 @@ val compare_good_cmp = Q.store_thm ("compare_good_cmp",
  metis_tac []);
 
 val compare_thm1 = Q.prove (
-`!cmp1 cmp2 t1 t2. 
-  good_cmp cmp1 ∧ 
-  good_cmp cmp2 ∧ 
+`!cmp1 cmp2 t1 t2.
+  good_cmp cmp1 ∧
+  good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
   invariant cmp1 t2 ∧
-  compare cmp1 cmp2 t1 t2 = Equal 
-  ⇒ 
+  compare cmp1 cmp2 t1 t2 = Equal
+  ⇒
   fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2)`,
  rw [compare_def, fmap_rel_OPTREL_FLOOKUP, OPTREL_def] >>
  imp_res_tac toAscList_thm >>
@@ -2661,7 +2661,7 @@ val compare_lem2 = Q.prove (
   SORTED (λ(x,y) (x',y'). cmp1 x x' = Less) l1 ∧
   n ≤ LENGTH l1 ∧
   n ≤ LENGTH l2 ∧
-  LIST_REL (λ(p1,p2) (p1',p2'). pair_cmp cmp1 cmp2 (p1,p2) (p1',p2') = Equal) 
+  LIST_REL (λ(p1,p2) (p1',p2'). pair_cmp cmp1 cmp2 (p1,p2) (p1',p2') = Equal)
     (TAKE n l1) (TAKE n l2) ∧
   n ≠ LENGTH l1
   ⇒
@@ -2679,7 +2679,7 @@ val compare_lem2 = Q.prove (
             fs [] >>
             rfs [key_set_eq]
             >- metis_tac [PAIR, cmp_thms] >>
-            `p_1' = kn1 ∧ x = vn1` 
+            `p_1' = kn1 ∧ x = vn1`
                        by (match_mp_tac strict_sorted_unique >>
                            rw [] >>
                            metis_tac [cmp_thms]) >>
@@ -2717,7 +2717,7 @@ val compare_lem2 = Q.prove (
             `n < LENGTH l1` by decide_tac
             >- metis_tac [PAIR, cmp_thms] >>
             rw [] >>
-            `p_1'' = kn3 ∧ y = vn3` 
+            `p_1'' = kn3 ∧ y = vn3`
                        by (match_mp_tac strict_sorted_unique >>
                            rw [] >>
                            metis_tac [rich_listTheory.EL_MEM, cmp_thms]) >>
@@ -2767,9 +2767,9 @@ val compare_lem2 = Q.prove (
          metis_tac [cmp_thms])));
 
 val compare_thm2 = Q.prove (
-`!cmp1 cmp2 t1 t2. 
-  good_cmp cmp1 ∧ 
-  good_cmp cmp2 ∧ 
+`!cmp1 cmp2 t1 t2.
+  good_cmp cmp1 ∧
+  good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
   invariant cmp1 t2 ∧
   fmap_rel (\x y. cmp2 x y = Equal) (to_fmap cmp1 t1) (to_fmap cmp1 t2)
@@ -2820,9 +2820,9 @@ val compare_thm2 = Q.prove (
      metis_tac [good_cmp_def, pair_cmp_good]));
 
 val compare_thm = Q.store_thm ("compare_thm",
-`!cmp1 cmp2 t1 t2. 
-  good_cmp cmp1 ∧ 
-  good_cmp cmp2 ∧ 
+`!cmp1 cmp2 t1 t2.
+  good_cmp cmp1 ∧
+  good_cmp cmp2 ∧
   invariant cmp1 t1 ∧
   invariant cmp1 t2
   ⇒
@@ -2872,7 +2872,7 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
   FLOOKUP (to_fmap cmp t) (key_set cmp k) = v ∧
   key_ordered cmp k lt Greater ∧
   key_ordered cmp k gt Less ∧
-  to_fmap cmp t = 
+  to_fmap cmp t =
     case v of
        | NONE => FUNION (to_fmap cmp lt) (to_fmap cmp gt)
        | SOME v => (FUNION (to_fmap cmp lt) (to_fmap cmp gt)) |+ (key_set cmp k, v)`,
@@ -3164,9 +3164,9 @@ val alookup_unit_lem = Q.prove (
 `!cmp1 cmp2 f k l x.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
-  resp_equiv2 cmp1 cmp2 f 
+  resp_equiv2 cmp1 cmp2 f
   ⇒
-  (ALOOKUP (MAP (\(k,v). (key_set cmp1 k, ())) l) (key_set cmp1 x') = 
+  (ALOOKUP (MAP (\(k,v). (key_set cmp1 k, ())) l) (key_set cmp1 x') =
    ALOOKUP (MAP (\(k,v). (key_set cmp2 (f k), ())) l) (key_set cmp2 (f x')))`,
 
  Induct_on `l` >>
@@ -3245,16 +3245,16 @@ val bigunion_key_sets = Q.prove (
  fs [key_set_def] >>
  eq_tac >>
  rw [] >>
- rfs [resp_equiv2_def] 
+ rfs [resp_equiv2_def]
  >- metis_tac [cmp_thms] >>
  qexists_tac `key_set cmp2 (f x)` >>
  rw [key_set_def] >>
  metis_tac [cmp_thms]);
 
 val image_lem = Q.prove (
-`good_cmp cmp1 
+`good_cmp cmp1
  ⇒
- IMAGE (λx. key_set cmp2 (f x)) (key_set cmp1 k'') = 
+ IMAGE (λx. key_set cmp2 (f x)) (key_set cmp1 k'') =
  { key_set cmp2 (f x) | x | cmp1 x k'' = Equal }`,
  rw [EXTENSION,key_set_def] >>
  metis_tac [cmp_thms]);
@@ -3306,7 +3306,7 @@ val map_keys_thm = Q.store_thm ("map_keys_thm",
 
               rw [key_set_def]
               fs [key_set_def]
-              CCONTR_TAC 
+              CCONTR_TAC
               Cases_on `cmp1 k' k'' = Equal` >>
               fs []
               `cmp2 (f k') (f k'') ≠ Equal` by metis_tac [cmp_thms]
@@ -3318,7 +3318,7 @@ metis_tac [cmp_thms]
  Cases_on `?x. k = key_set cmp2 x` >>
  fs []
  >- (Cases_on `?x'. x = f x'` >>
-     fs [] 
+     fs []
      >- (first_x_assum (qspecl_then [`key_set cmp1 x'`] mp_tac) >>
          rw []
 
@@ -3356,7 +3356,7 @@ val key_set_map = Q.prove (
 
 val flookup_lem = Q.prove (
 `!cmp1 cmp2 m k v f.
-  (FLOOKUP m k = 
+  (FLOOKUP m k =
    FLOOKUP (MAP_KEYS (BIGUNION o IMAGE (λx. key_set cmp2 (f x))) m) (BIGUNION o IMAGE (λx. key_set cmp2 (f k))))`,
 
  rw [FLOOKUP_DEF, MAP_KEYS_def] >>
@@ -3411,7 +3411,7 @@ val map_keys_thm = Q.store_thm ("map_keys_thm",
 
 val every_def = Define `
 (every f Tip = T) ∧
-(every f (Bin _ kx x l r) = 
+(every f (Bin _ kx x l r) =
   if f kx x then
     if every f l then
       if every f r then T else F
@@ -3419,11 +3419,11 @@ val every_def = Define `
   else F)`;
 
 val every_thm = Q.store_thm ("every_thm",
-`!f t cmp. 
+`!f t cmp.
   good_cmp cmp ∧
   invariant cmp t ∧
   resp_equiv cmp f
-  ⇒ 
+  ⇒
   (every f t ⇔ (!k v. lookup cmp k t = SOME v ⇒ f k v))`,
  Induct_on `t` >>
  rw [every_def, lookup_def] >>
@@ -3460,7 +3460,7 @@ val every_thm = Q.store_thm ("every_thm",
 
 val exists_def = Define `
 (exists f Tip = F) ∧
-(exists f (Bin _ kx x l r) = 
+(exists f (Bin _ kx x l r) =
   if f kx x then
     T
   else if exists f l then
@@ -3471,11 +3471,11 @@ val exists_def = Define `
     F)`;
 
 val exists_thm = Q.store_thm ("exists_thm",
-`!f t cmp. 
+`!f t cmp.
   good_cmp cmp ∧
   invariant cmp t ∧
   resp_equiv cmp f
-  ⇒ 
+  ⇒
   (exists f t ⇔ (?k v. lookup cmp k t = SOME v ∧ f k v))`,
  Induct_on `t` >>
  rw [exists_def, lookup_def] >>

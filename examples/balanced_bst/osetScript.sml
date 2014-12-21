@@ -90,7 +90,7 @@ val good_oset_oimage = Q.store_thm ("good_oset_oimage",
 val good_cmp_ocompare = Q.store_thm ("good_cmp_ocompare",
 `!cmp f s. good_cmp cmp ⇒ good_cmp (ocompare cmp)`,
  rw [] >>
- `good_cmp (\(x:unit) (y:unit). Equal)` 
+ `good_cmp (\(x:unit) (y:unit). Equal)`
             by (rw [good_cmp_def, LAMBDA_PROD, FORALL_PROD] >>
                 metis_tac [good_cmp_def]) >>
  imp_res_tac compare_good_cmp >>
@@ -113,7 +113,7 @@ val good_oset_oset = Q.store_thm ("good_oset_oset",
 
 val oin_oempty = Q.store_thm ("oin_oinsert[simp]",
 `!cmp x. oin cmp x oempty = F`,
- rw [oin_def, oempty_def, empty_def, member_def]); 
+ rw [oin_def, oempty_def, empty_def, member_def]);
 
 val oimage_oempty = Q.store_thm ("oimage_oempty[simp]",
 `!cmp f. oimage cmp f oempty = oempty`,
@@ -136,7 +136,7 @@ val ounion_oempty = Q.store_thm ("ounion_oempty[simp]",
 
 val oempty_subset = Q.store_thm ("oempty_subset[simp]",
 `!cmp s. (osubset cmp oempty s ⇔ T) ∧ (osubset cmp s oempty ⇔ s = oempty)`,
- rw [osubset_def, oempty_def, isSubmapOf_def, isSubmapOfBy_def, empty_def, 
+ rw [osubset_def, oempty_def, isSubmapOf_def, isSubmapOfBy_def, empty_def,
      submap'_def, size_def] >>
  Cases_on `s` >>
  rw [submap'_def, size_def]);
@@ -232,12 +232,12 @@ val osubset_thm = Q.store_thm ("osubset_thm",
  rw []);
 
 val oextension = Q.store_thm ("oextension",
-`!cmp s1 s2. 
+`!cmp s1 s2.
   good_oset cmp s1 ∧ good_oset cmp s2
-  ⇒ 
+  ⇒
   (ocompare cmp s1 s2 = Equal ⇔ (!x. oin cmp x s1 ⇔ oin cmp x s2))`,
  rw [good_oset_def, ocompare_def] >>
- `good_cmp (\(x:unit) (y:unit). Equal)` 
+ `good_cmp (\(x:unit) (y:unit). Equal)`
             by (rw [good_cmp_def, LAMBDA_PROD, FORALL_PROD] >>
                 metis_tac [good_cmp_def]) >>
  rw [compare_thm] >>
@@ -252,31 +252,31 @@ val oextension = Q.store_thm ("oextension",
  metis_tac []);
 
 val oevery_oin = Q.store_thm ("oevery_oin",
-`!cmp f s. 
+`!cmp f s.
   good_oset cmp s ∧
   oresp_equiv cmp f
-  ⇒ 
+  ⇒
   (oevery f s ⇔ (!x. oin cmp x s ⇒ f x))`,
  rw [good_oset_def, oevery_def, oin_def, oresp_equiv_def] >>
  imp_res_tac every_thm >>
  rw [lookup_thm, flookup_thm, member_thm]);
 
 val oexists_oin = Q.store_thm ("oexists_oin",
-`!cmp f s. 
+`!cmp f s.
   good_oset cmp s ∧
   oresp_equiv cmp f
-  ⇒ 
+  ⇒
   (oexists f s ⇔ (?x. oin cmp x s ∧ f x))`,
  rw [oresp_equiv_def, good_oset_def, oexists_def, oin_def] >>
  imp_res_tac exists_thm >>
  rw [lookup_thm, flookup_thm, member_thm]);
 
 val oin_oset_help = Q.prove (
-`!cmp l x s. 
+`!cmp l x s.
   good_oset cmp s
   ⇒
-  (oin cmp x (FOLDR (λx t. oinsert cmp x t) s l) 
-   ⇔ 
+  (oin cmp x (FOLDR (λx t. oinsert cmp x t) s l)
+   ⇔
    oin cmp x s ∨ ?y. MEM y l ∧ cmp x y = Equal)`,
  Induct_on `l` >>
  rw [] >>

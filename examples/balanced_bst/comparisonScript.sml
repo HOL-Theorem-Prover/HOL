@@ -25,7 +25,7 @@ good_cmp cmp ⇔
   (!x y z. cmp x y = Less ∧ cmp y z = Less ⇒ cmp x z = Less)`;
 
 val good_cmp_thm = Q.store_thm ("good_cmp_thm",
-`!cmp. 
+`!cmp.
   good_cmp cmp ⇔
   (!x. cmp x x = Equal) ∧
   (!x y z.
@@ -266,10 +266,10 @@ val string_cmp_antisym = Q.store_thm ("string_cmp_antisym[simp]",
  metis_tac [string_cmp_def, char_cmp_antisym, list_cmp_antisym]);
 
 val pair_cmp_antisym = Q.store_thm ("pair_cmp_antisym",
-`!cmp1 cmp2 x y. 
+`!cmp1 cmp2 x y.
   (!x y. cmp1 x y = Equal ⇔ x = y) ∧
-  (!x y. cmp2 x y = Equal ⇔ x = y) 
-  ⇒ 
+  (!x y. cmp2 x y = Equal ⇔ x = y)
+  ⇒
   (pair_cmp cmp1 cmp2 x y = Equal ⇔ x = y)`,
  Cases_on `x` >>
  Cases_on `y` >>
@@ -279,9 +279,9 @@ val pair_cmp_antisym = Q.store_thm ("pair_cmp_antisym",
  metis_tac [comparison_distinct]);
 
 val option_cmp_antisym = Q.store_thm ("option_cmp_antisym",
-`!cmp x y. 
-  (!x y. cmp x y = Equal ⇔ x = y) 
-  ⇒ 
+`!cmp x y.
+  (!x y. cmp x y = Equal ⇔ x = y)
+  ⇒
   (option_cmp cmp x y = Equal ⇔ x = y)`,
  Cases_on `x` >>
  Cases_on `y` >>
@@ -291,9 +291,9 @@ val option_cmp_antisym = Q.store_thm ("option_cmp_antisym",
  metis_tac [comparison_distinct]);
 
 val option_cmp2_antisym = Q.store_thm ("option_cmp2_antisym",
-`!cmp x y. 
-  (!x y. cmp x y = Equal ⇔ x = y) 
-  ⇒ 
+`!cmp x y.
+  (!x y. cmp x y = Equal ⇔ x = y)
+  ⇒
   (option_cmp2 cmp x y = Equal ⇔ x = y)`,
  Cases_on `x` >>
  Cases_on `y` >>
@@ -312,9 +312,9 @@ val equiv_inj_def = Define `
 equiv_inj cmp cmp2 f ⇔ (!k1 k2. cmp2 (f k1) (f k2) = Equal ⇒ cmp k1 k2 = Equal)`;
 
 val antisym_resp_equiv = Q.store_thm ("antisym_resp_equiv",
-`!cmp f. 
-  (!x y. cmp x y = Equal ⇒ x = y) 
-  ⇒ 
+`!cmp f.
+  (!x y. cmp x y = Equal ⇒ x = y)
+  ⇒
   resp_equiv cmp f ∧ !cmp2. good_cmp cmp2 ⇒ resp_equiv2 cmp cmp2 f`,
  rw [resp_equiv_def, resp_equiv2_def] >>
  metis_tac [cmp_thms]);
