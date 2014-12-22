@@ -541,6 +541,8 @@ val StrongWellOrderExists = store_thm ("StrongWellOrderExists",
 Q.EXISTS_TAC `$mex_less` THEN
 REWRITE_TAC [WellOrd_mex_less, GSYM StrongWellOrder]);
 
+val _ = delete_const"t0";
+
 val _ = export_theory ();
 
 end;
