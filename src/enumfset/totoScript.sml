@@ -38,7 +38,7 @@ val _ = Defn.def_suffix := ""; (* replacing default "_def" *)
 (* from print_theory and the stuff known to DB.match, DB.find        *)
 (* ***************************************************************** *)
 
-val BigSig = false;
+val BigSig = true;
 
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);

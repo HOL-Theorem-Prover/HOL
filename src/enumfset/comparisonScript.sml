@@ -7,12 +7,12 @@ val _ = new_theory "comparison";
 val _ = temp_tight_equality ();
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val comparison_distinct = cpn_distinct
-val comparison_case_def = cpn_case_def
-val comparison_nchotomy = cpn_nchotomy
-val _ = Parse.temp_overload_on("Less",``LESS``)
-val _ = Parse.temp_overload_on("Equal",``EQUAL``)
-val _ = Parse.temp_overload_on("Greater",``GREATER``)
+val comparison_distinct = save_thm("comparison_distinct",cpn_distinct)
+val comparison_case_def = save_thm("comparison_case_def",cpn_case_def)
+val comparison_nchotomy = save_thm("comparison_nchotomy",cpn_nchotomy)
+val _ = Parse.overload_on("Less",``LESS``)
+val _ = Parse.overload_on("Equal",``EQUAL``)
+val _ = Parse.overload_on("Greater",``GREATER``)
 
 val good_cmp_def = Define `
 good_cmp cmp ⇔
@@ -35,10 +35,6 @@ val good_cmp_thm = Q.store_thm ("good_cmp_thm",
  rw [good_cmp_def] >>
  metis_tac [comparison_distinct, comparison_nchotomy]);
 
-val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
-  ``∀cmp. TotOrd cmp ⇒ good_cmp cmp``,
-  rw[TotOrd,good_cmp_thm] >> metis_tac[])
-
 val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
 
 val option_cmp_def = Define `
@@ -47,13 +43,13 @@ val option_cmp_def = Define `
 (option_cmp cmp (SOME x) NONE = Greater) ∧
 (option_cmp cmp (SOME x) (SOME y) = cmp x y)`;
 
-val option_cmp2_def = Define `
-(option_cmp2 cmp NONE NONE = Equal) ∧
-(option_cmp2 cmp NONE (SOME x) = Greater) ∧
-(option_cmp2 cmp (SOME x) NONE = Less) ∧
-(option_cmp2 cmp (SOME x) (SOME y) = cmp x y)`;
+val option_cmp2_def = Define`
+  (option_cmp2 cmp NONE NONE = Equal) ∧
+  (option_cmp2 cmp NONE (SOME x) = Greater) ∧
+  (option_cmp2 cmp (SOME x) NONE = Less) ∧
+  (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)`
 
-val list_cmp_def = Define `
+val list_cmp_def = Define`
 (list_cmp cmp [] [] = Equal) ∧
 (list_cmp cmp [] (x::y) = Less) ∧
 (list_cmp cmp (x::y) [] = Greater) ∧
@@ -61,11 +57,11 @@ val list_cmp_def = Define `
   case cmp x1 x2 of
      | Equal => list_cmp cmp y1 y2
      | Less => Less
-     | Greater => Greater)`;
+     | Greater => Greater)`
 
 val list_cmp_ind = fetch "-" "list_cmp_ind";
 
-val pair_cmp_def = Define `
+val pair_cmp_def = Define`
 pair_cmp cmp1 cmp2 x y =
   case cmp1 (FST x) (FST y)  of
      | Equal => cmp2 (SND x) (SND y)
@@ -92,6 +88,72 @@ char_cmp c1 c2 = num_cmp (ORD c1) (ORD c2)`;
 
 val string_cmp_def = Define `
 string_cmp = list_cmp char_cmp`;
+
+(* relationship to toto *)
+
+val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
+  ``∀cmp. TotOrd cmp ⇒ good_cmp cmp``,
+  rw[TotOrd,good_cmp_thm] >> metis_tac[])
+
+val invert_def = Define`
+  invert GREATER = LESS ∧
+  invert LESS = GREATER ∧
+  invert EQUAL = EQUAL`
+val _ = export_rewrites["invert_def"]
+
+val invert_eq_EQUAL = store_thm("invert_eq_EQUAL[simp]",
+  ``∀x. invert x = EQUAL ⇔ x = EQUAL``,
+  Cases >> simp[])
+
+val TO_inv_invert = store_thm("TO_inv_invert",
+  ``∀c. TotOrd c ⇒ TO_inv c = CURRY (invert o UNCURRY c)``,
+  simp[FUN_EQ_THM,TO_inv] >> gen_tac >> strip_tac >>
+  map_every qx_gen_tac[`x`,`y`] >>
+  Cases_on`c x y`>>simp[]>>
+  fs[TotOrd] >> metis_tac[])
+
+val option_cmp2_TO_inv = store_thm("option_cmp2_TO_inv",
+  ``∀c. option_cmp2 c = TO_inv (option_cmp (TO_inv c))``,
+  simp[FUN_EQ_THM,TO_inv] >>
+  gen_tac >> Cases >> Cases >>
+  simp[option_cmp2_def,option_cmp_def,TO_inv]);
+
+val list_cmp_ListOrd = store_thm("list_cmp_ListOrd",
+  ``∀c. TotOrd c ⇒ list_cmp c = ListOrd (TO c)``,
+  simp[FUN_EQ_THM,PULL_FORALL] >>
+  ho_match_mp_tac list_cmp_ind >>
+  simp[list_cmp_def,ListOrd,TO_of_LinearOrder,
+       StrongLinearOrder_of_TO,TO_apto_TO_ID,listorder] >>
+  rw[] >>
+  fs[GSYM TO_apto_TO_ID,TotOrd] >>
+  BasicProvers.CASE_TAC >>
+  metis_tac[cmp_thms])
+
+val pair_cmp_lexTO = store_thm("pair_cmp_lexTO",
+  ``∀R V. TotOrd R ∧ TotOrd V ⇒ pair_cmp R V = R lexTO V``,
+  simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def])
+
+val num_cmp_numOrd = store_thm("num_cmp_numOrd",
+  ``num_cmp = numOrd``,
+  simp[FUN_EQ_THM,num_cmp_def,numOrd,TO_of_LinearOrder])
+
+val char_cmp_charOrd = store_thm("char_cmp_charOrd",
+  ``char_cmp = charOrd``,
+  simp[FUN_EQ_THM,char_cmp_def,charOrd,num_cmp_numOrd])
+
+val string_cmp_stringto = store_thm("string_cmp_stringto",
+  ``string_cmp = apto stringto``,
+  simp[FUN_EQ_THM,stringto] >>
+  Induct >- ( Cases >> simp[aplistoto,string_cmp_def,list_cmp_def] ) >>
+  gen_tac >> Cases >>
+  simp[aplistoto,string_cmp_def,list_cmp_def,apcharto_thm,char_cmp_charOrd] >>
+  BasicProvers.CASE_TAC >>
+  simp[MATCH_MP list_cmp_ListOrd TO_charOrd,listoto,charto] >>
+  rpt AP_THM_TAC >>
+  match_mp_tac (GSYM TO_apto_TO_IMP) >>
+  simp[TO_ListOrd])
+
+(* cmps are good *)
 
 val option_cmp_good = Q.store_thm ("option_cmp_good",
 `!cmp. good_cmp cmp ⇒ good_cmp (option_cmp cmp)`,

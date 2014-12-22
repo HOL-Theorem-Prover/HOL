@@ -8,8 +8,6 @@ val _ = new_theory "oset";
 
 val _ = temp_tight_equality ();
 
-val _ = Parse.temp_overload_on("Equal",``EQUAL``)
-
 (* oset for ordered set *)
 val _ = type_abbrev ("oset", ``:('a,unit) balanced_map``);
 

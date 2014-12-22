@@ -11,13 +11,6 @@ val _ = new_theory "balanced_map";
 val _ = temp_tight_equality ();
 val _ = numLib.prefer_num();
 
-val _ = Parse.temp_overload_on("Less",``LESS``)
-val _ = Parse.temp_overload_on("Equal",``EQUAL``)
-val _ = Parse.temp_overload_on("Greater",``GREATER``)
-val comparison_distinct = totoTheory.cpn_distinct
-val comparison_case_def = totoTheory.cpn_case_def
-val comparison_nchotomy = totoTheory.cpn_nchotomy
-
 val list_rel_lem1 = Q.prove (
 `!f l l'.
   ~LIST_REL f l l'
