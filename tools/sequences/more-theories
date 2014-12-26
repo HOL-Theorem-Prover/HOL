@@ -1,3 +1,5 @@
+src/opentheory
+(otknl)src/opentheory/logging
 !src/boss/theory_tests
 !src/tfl/src/test
 src/TeX
