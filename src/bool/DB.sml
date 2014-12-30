@@ -207,6 +207,19 @@ fun matcher f thyl pat =
 val match = matcher (ho_match_term [] empty_tmset);
 val apropos = match [];
 
+(* matches : term -> thm -> bool
+  tests whether theorem matches pattern *)
+fun matches pat th = 
+  can (find_term (can (ho_match_term [] empty_tmset pat))) (concl th) ;
+
+fun apropos_in pat dbdata =
+  List.filter (fn (_, (th, _)) => matches pat th) dbdata ;
+
+fun find_in s = 
+  let val lows = toLower s ;
+    fun finds dbdata = 
+      List.filter (fn ((_, name), _) => occurs lows (toLower name)) dbdata ;
+  in finds end ;
 
 fun listDB () =
     let fun subfold (k,v,acc) = v @ acc
