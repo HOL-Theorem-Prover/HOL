@@ -70,6 +70,7 @@ sig
   val PAT_ASSUM      : term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : term -> thm_tactic -> tactic
+  val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
   val Q_TAC          : (term -> tactic) -> term frag list -> tactic
 

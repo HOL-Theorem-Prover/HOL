@@ -611,6 +611,37 @@ fun SUBGOAL_THEN wa ttac (asl, w) =
    end
 
 (*---------------------------------------------------------------------------
+ * Use another subgoal, providing it as a theorem to a tactic
+ *
+ *     USE_SG_THEN ttac nu np
+ *
+ * assumes subgoal number nu for proving subgoal number np
+ *---------------------------------------------------------------------------*)
+
+(* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
+  apply a function to the nth member of a list *)
+fun apnth f 0 (y :: ys) = f y :: ys
+  | apnth f n (y :: ys) = y :: apnth f (n-1) ys ;
+
+(* USE_SG_VAL : int -> int -> list_validation *)
+fun USE_SG_VAL nu np thl =
+  let val thu = List.nth (thl, nu - 1) ;
+  in apnth (PROVE_HYP thu) (np - 1) thl end ;
+
+(* USE_SG_THEN : thm_tactic -> int -> int -> list_tactic *)
+fun USE_SG_THEN ttac nu np gl =
+  let
+    val (_, wu) = List.nth (gl, nu - 1) ;
+    val ltac = NTH_GOAL (ttac (ASSUME wu)) np ;
+    val (glr, v) = ltac gl ;
+    val vp = USE_SG_VAL nu np ;
+  in (glr, vp o v) end ;
+
+(* USE_SG_TAC : int -> int -> list_tactic
+val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
+*) 
+
+(*---------------------------------------------------------------------------
  * A tactical that makes a tactic fail if it has no effect.
  *---------------------------------------------------------------------------*)
 
