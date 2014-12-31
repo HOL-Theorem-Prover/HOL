@@ -132,6 +132,10 @@ fun ALLGOALS tac2 gl =
 
 fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
 
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN : tactic * tactic -> tactic ;
+val _ = op THEN : list_tactic * tactic -> list_tactic ;
+
 (*---------------------------------------------------------------------------
  * fun TACS_TO_LT (tac2l: tactic list) : list_tactic = fn gl =>
  *    let
@@ -184,6 +188,10 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
  *---------------------------------------------------------------------------*)
 
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
+
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THENL : tactic * tactic list -> tactic ;
+val _ = op THENL : list_tactic * tactic list -> list_tactic ;
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
 fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
@@ -511,11 +519,12 @@ end
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
 (*---------------------------------------------------------------------------
- * Uses every tactic.
+ * Uses every tactic (similarly EVERY_LT for list_tactics) 
  *    EVERY [TAC1;...;TACn] =  TAC1  THEN  ...  THEN  TACn
  *---------------------------------------------------------------------------*)
 
 fun EVERY tacl = List.foldr (op THEN) ALL_TAC tacl
+fun EVERY_LT ltacl = List.foldr (op THEN_LT) ALL_LT ltacl
 
 (*---------------------------------------------------------------------------
  * Uses first tactic that succeeds.
