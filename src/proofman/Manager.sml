@@ -120,6 +120,10 @@ fun rotate i (GOALSTACK s) = GOALSTACK(apply (C goalStack.rotate i) s)
   | rotate i (GOALTREE t) = raise ERR "rotate"
                                "not implemented for goal trees";
 
+fun flatn i (GOALSTACK s) = GOALSTACK(apply (C goalStack.flatn i) s)
+  | flatn i (GOALTREE t) = raise ERR "flatn"
+                               "not implemented for goal trees";
+
 fun restart (GOALSTACK s) = GOALSTACK (new_history_default (initialValue s))
   | restart (GOALTREE t) = GOALTREE (new_history_default (initialValue t));
 

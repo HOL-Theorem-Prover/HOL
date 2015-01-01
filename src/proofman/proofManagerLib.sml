@@ -121,6 +121,10 @@ fun p () = Manager.hd_proj I (proofs())
 
 val status = proofs;
 
+fun flatn i =
+  (the_proofs := Manager.hd_opr (Manager.flatn i) (proofs());
+   top_proof());
+
 fun rotate i =
   (the_proofs := Manager.hd_opr (Manager.rotate i) (proofs());
    top_proof());

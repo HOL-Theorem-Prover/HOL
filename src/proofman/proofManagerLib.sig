@@ -56,6 +56,7 @@ sig
     val r             : int -> proof
     val R             : int -> proofs
     val rotate        : int -> proof
+    val flatn         : int -> proof
     val rotate_proofs : int -> proofs
 
     (* Switch to a different prettyprinter for all goals *)
