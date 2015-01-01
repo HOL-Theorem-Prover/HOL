@@ -39,7 +39,7 @@ help prove the other.
 \EXAMPLE
 Here subgoal 1 is assumed, so as to help in proving subgoal 2.
 {
-r ∨ s
+r \/ s
 ------------------------------------
   0.  p
   1.  q
@@ -59,7 +59,7 @@ OK..
 2 subgoals:
 val it =
    
-r ∨ s
+r \/ s
 ------------------------------------
   0.  p
   1.  q
@@ -76,9 +76,9 @@ r
    proof
 }
 Here is an example where the assumptions differ.
-Subgoal 2 is used to solve subgoal 1, but the assumption {p') of 
-subgoal 2 remains to be proved.  Without {VALIDATE_LT}, the list-tactic would
-be invalid.
+Subgoal 2 is used to solve subgoal 1,
+but the assumption {p'} of subgoal 2 remains to be proved.
+Without {VALIDATE_LT}, the list-tactic would be invalid.
 {
 r
 ------------------------------------
@@ -115,7 +115,6 @@ p'
 :
    proof
 }
-
 
 \COMMENTS
 Some users may expect the generated tactic to be {ttac (A |- u)}, rather
