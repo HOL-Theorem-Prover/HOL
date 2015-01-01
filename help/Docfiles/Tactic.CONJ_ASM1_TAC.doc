@@ -23,5 +23,5 @@ to two subgoals corresponding to the first conjunct then the second conjunct.
 Fails unless the conclusion of the goal is a conjunction.
 
 \SEEALSO
-Tactic.CONJ_ASM2_TAC, Tactic.CONJ_TAC.
+Tactic.CONJ_ASM2_TAC, Tactic.CONJ_TAC, Tactical.USE_SG_THEN.
 \ENDDOC
