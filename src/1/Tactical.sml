@@ -132,6 +132,10 @@ fun ALLGOALS tac2 gl =
 
 fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
 
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN : tactic * tactic -> tactic ;
+val _ = op THEN : list_tactic * tactic -> list_tactic ;
+
 (*---------------------------------------------------------------------------
  * fun TACS_TO_LT (tac2l: tactic list) : list_tactic = fn gl =>
  *    let
@@ -184,6 +188,10 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
  *---------------------------------------------------------------------------*)
 
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
+
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THENL : tactic * tactic list -> tactic ;
+val _ = op THENL : list_tactic * tactic list -> list_tactic ;
 
 fun (tac1 ORELSE tac2) g = tac1 g handle HOL_ERR _ => tac2 g
 fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
@@ -511,11 +519,12 @@ end
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
 (*---------------------------------------------------------------------------
- * Uses every tactic.
+ * Uses every tactic (similarly EVERY_LT for list_tactics) 
  *    EVERY [TAC1;...;TACn] =  TAC1  THEN  ...  THEN  TACn
  *---------------------------------------------------------------------------*)
 
 fun EVERY tacl = List.foldr (op THEN) ALL_TAC tacl
+fun EVERY_LT ltacl = List.foldr (op THEN_LT) ALL_LT ltacl
 
 (*---------------------------------------------------------------------------
  * Uses first tactic that succeeds.
@@ -600,6 +609,37 @@ fun SUBGOAL_THEN wa ttac (asl, w) =
       ((asl, wa) :: gl,
        (fn (tha :: thl) => PROVE_HYP tha (p thl) | _ => raise Match))
    end
+
+(*---------------------------------------------------------------------------
+ * Use another subgoal, providing it as a theorem to a tactic
+ *
+ *     USE_SG_THEN ttac nu np
+ *
+ * assumes subgoal number nu for proving subgoal number np
+ *---------------------------------------------------------------------------*)
+
+(* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
+  apply a function to the nth member of a list *)
+fun apnth f 0 (y :: ys) = f y :: ys
+  | apnth f n (y :: ys) = y :: apnth f (n-1) ys ;
+
+(* USE_SG_VAL : int -> int -> list_validation *)
+fun USE_SG_VAL nu np thl =
+  let val thu = List.nth (thl, nu - 1) ;
+  in apnth (PROVE_HYP thu) (np - 1) thl end ;
+
+(* USE_SG_THEN : thm_tactic -> int -> int -> list_tactic *)
+fun USE_SG_THEN ttac nu np gl =
+  let
+    val (_, wu) = List.nth (gl, nu - 1) ;
+    val ltac = NTH_GOAL (ttac (ASSUME wu)) np ;
+    val (glr, v) = ltac gl ;
+    val vp = USE_SG_VAL nu np ;
+  in (glr, vp o v) end ;
+
+(* USE_SG_TAC : int -> int -> list_tactic
+val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
+*) 
 
 (*---------------------------------------------------------------------------
  * A tactical that makes a tactic fail if it has no effect.

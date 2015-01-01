@@ -14,6 +14,9 @@ If {tac} is a tactic, {NTH_GOAL n tac} is a
 list-tactic which applies the tactic {tac} to the
 {n}'th member of a list of goals.
 
+Note that in the interactive system,
+subgoals are printed in reverse order of their numbering.
+
 \FAILURE
 The application of {NTH_GOAL} to a tactic and integer never fails.
 The resulting list-tactic fails if {n} is less than 1 or greater than the

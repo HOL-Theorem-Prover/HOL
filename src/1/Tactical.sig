@@ -5,8 +5,18 @@ sig
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
   val store_thm      : string * term * tactic -> thm
+  val THEN           : ('a -> goal list * (thm list -> 'b)) * tactic ->
+       'a -> goal list * (thm list -> 'b)
+  (* could be used as
   val THEN           : tactic * tactic -> tactic
+  val THEN           : list_tactic * tactic -> list_tactic
+  *)
+  val THENL          : ('a -> goal list * (thm list -> 'b)) * tactic list ->
+       'a -> goal list * (thm list -> 'b)
+  (* could be used as
   val THENL          : tactic * tactic list -> tactic
+  val THENL          : list_tactic * tactic list -> list_tactic
+  *)
   val ORELSE         : tactic * tactic -> tactic
   val ORELSE_LT      : list_tactic * list_tactic -> list_tactic
   val THEN1          : tactic * tactic -> tactic
@@ -44,6 +54,7 @@ sig
   val GEN_VALIDATE       : bool -> tactic -> tactic
   val GEN_VALIDATE_LT    : bool -> list_tactic -> list_tactic
   val EVERY          : tactic list -> tactic
+  val EVERY_LT       : list_tactic list -> list_tactic
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
@@ -59,6 +70,7 @@ sig
   val PAT_ASSUM      : term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : term -> thm_tactic -> tactic
+  val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
   val Q_TAC          : (term -> tactic) -> term frag list -> tactic
 
