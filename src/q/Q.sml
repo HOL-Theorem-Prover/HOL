@@ -361,6 +361,8 @@ let val (sf,sb) = partition (fn {redex=l,residue=r} => mem l fvs) s in
        (filter (fn {redex=l,residue=r} => not (mem (fst(dest_var l)) except)) sb)
 end
 
+(* these functions should probably be using raw_match_term in order to
+   handle the variables that are only allowed to be bound to themselves *)
 fun MATCH_RENAME_TAC q except (g as (asl,t)) = let
   val fvs = free_varsl(t::asl)
   val pat = Parse.parse_in_context fvs q
@@ -380,5 +382,28 @@ fun MATCH_ASSUM_RENAME_TAC q except (g as (asl,t)) = let
         | SOME (s,_) => make_rename_tac s fvs except ERR
                       handle HOL_ERR e => find tl
 in find asl end g
+
+fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) = let
+  val ERR = ERR "MATCH_GOALSUB_RENAME_TAC"
+  val fvs = free_varsl (t::asl)
+  val pat = Parse.parse_in_context fvs q
+  val fvs_set = HOLset.fromList Term.compare fvs
+  fun test (bvs, subt) =
+      case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
+          SOME ((theta0, _), _) =>
+          let
+            fun filt1 {redex,...} = not (mem (#1 (dest_var redex)) except)
+            fun filt2 {residue, ...} =
+                List.all (fn bv => not (free_in bv residue)) bvs
+            val theta = filter (fn s => filt1 s andalso filt2 s) theta0
+          in
+            if null theta then NONE else SOME theta
+          end
+        | NONE => NONE
+in
+  case gen_find_term test t of
+      SOME theta => make_rename_tac theta fvs except ERR g
+    | NONE => raise ERR "No matching sub-term found in goal term"
+end
 
 end (* Q *)
