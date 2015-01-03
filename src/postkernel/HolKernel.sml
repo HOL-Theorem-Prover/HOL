@@ -268,6 +268,48 @@ fun find_term P =
       find_tm
    end
 
+
+local
+   datatype action = SEARCH of term | POP
+in
+   fun gen_find_term f t =
+      let
+        fun search bvs actions =
+           case actions of
+              [] => NONE
+            | POP :: alist => search (tl bvs) alist
+            | SEARCH t :: alist => (case f (bvs, t) of
+                                        NONE => subterm bvs alist t
+                                      | x => x)
+        and subterm bvs alist t =
+           case dest_term t of
+              COMB (t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
+            | LAMB (bv, t) => search (bv :: bvs) (SEARCH t :: POP :: alist)
+            | _ => search bvs alist
+   in
+      search [] [SEARCH t]
+   end
+   fun gen_find_terms f t =
+       let
+         fun search bvs actions acc =
+             case actions of
+                 [] => acc
+               | POP :: alist => search (tl bvs) alist acc
+               | SEARCH t :: alist =>
+                 (case f (bvs, t) of
+                      NONE => subterm bvs alist acc t
+                    | SOME x => subterm bvs alist (x::acc) t)
+         and subterm bvs alist acc t =
+             case dest_term t of
+                 COMB(t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
+                                        acc
+               | LAMB (bv, t) => search (bv::bvs) (SEARCH t :: POP :: alist) acc
+               | _ => search bvs alist acc
+       in
+         search [] [SEARCH t] []
+       end
+end (* local *)
+
 (* ----------------------------------------------------------------------
     bvk_find_term :
      (term list * term -> bool) -> (term -> 'a) -> term -> 'a option
@@ -290,28 +332,9 @@ fun find_term P =
     bound variables appearing earlier in the list.
    ---------------------------------------------------------------------- *)
 
-local
-   datatype action = SEARCH of term | POP
-in
-   fun bvk_find_term P k t =
-      let
-        fun search bvs actions =
-           case actions of
-              [] => NONE
-            | POP :: alist => search (tl bvs) alist
-            | SEARCH t :: alist =>
-               (if P (bvs, t)
-                   then SOME (k t) handle HOL_ERR _ => subterm bvs alist t
-                else subterm bvs alist t)
-        and subterm bvs alist t =
-           case dest_term t of
-              COMB (t1, t2) => search bvs (SEARCH t1 :: SEARCH t2 :: alist)
-            | LAMB (bv, t) => search (bv :: bvs) (SEARCH t :: POP :: alist)
-            | _ => search bvs alist
-   in
-      search [] [SEARCH t]
-   end
-end (* local *)
+fun bvk_find_term P k =
+    gen_find_term (fn x => if P x then SOME (k (#2 x)) handle HOL_ERR _ => NONE
+                           else NONE)
 
 (*---------------------------------------------------------------------------
  * find_terms: (term -> bool) -> term -> term list

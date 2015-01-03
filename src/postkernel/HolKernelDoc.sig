@@ -14,6 +14,8 @@ sig
     | COMB of term * term
     | LAMB of term * term
 
+  val gen_find_term: (term list * term -> 'a option) -> term -> 'a option
+  val gen_find_terms: (term list * term -> 'a option) -> term -> 'a list
   val bvk_find_term:
      (term list * term -> bool) -> (term -> 'a) -> term -> 'a option
   val dest_binder: term -> exn -> term -> term * term
