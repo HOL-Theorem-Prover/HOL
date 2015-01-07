@@ -613,6 +613,16 @@ val domain_empty = store_thm("domain_empty",
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
+val foldi_FOLDR_toAList_lemma = prove(
+  ``∀t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
+               FOLDR (UNCURRY f) a (foldi (λk v a. (k,v)::a) n ls t)``,
+  Induct >> simp[foldi_def] >>
+  rw[] >> pop_assum(assume_tac o GSYM) >> simp[])
+
+val foldi_FOLDR_toAList = store_thm("foldi_FOLDR_toAList",
+  ``∀f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)``,
+  simp[toAList_def,GSYM foldi_FOLDR_toAList_lemma])
+
 val toListA_def = Define`
   (toListA acc LN = acc) /\
   (toListA acc (LS a) = a::acc) /\
