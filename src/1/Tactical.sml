@@ -222,7 +222,9 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
    (counting goals from 1)
  *---------------------------------------------------------------------------*)
 fun NTH_GOAL tac n gl1 =
-  let val (gl_before, g :: gl_after) = Lib.split_after (n-1) gl1 ;
+  let
+    val (gl_before, ggl_after) = Lib.split_after (n-1) gl1
+    val (g, gl_after) = valOf (List.getItem ggl_after)
     val (gl2, vf2) = tac g ;
     val gl_result = gl_before @ gl2 @ gl_after ;
     fun vf thl =
