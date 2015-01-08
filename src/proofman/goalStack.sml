@@ -111,8 +111,8 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
                      stack={goals=funpow n rotl goals,
                             validation=validation o funpow n rotr} :: rst};
 
-local 
-  fun imp_err s = 
+local
+  fun imp_err s =
     raise ERR "expandf or expand_listf" ("implementation error: "^s)
 
   fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
@@ -165,7 +165,7 @@ fun expand_listf ltac (GSTK{prop=PROVED _, ...}) =
         raise ERR "expand_listf" "goal has already been proved"
   | expand_listf ltac (GSTK{prop as POSED g, stack = [], final}) =
     expand_listf ltac (GSTK{prop = POSED g,
-      stack = [{goals = [g], validation = hd}], final = final}) 
+      stack = [{goals = [g], validation = hd}], final = final})
   | expand_listf ltac (GSTK{prop, stack as {goals,validation}::rst, final}) =
     let val (new_goals, new_vf) = ltac goals
       val dpth = length stack - 1 (* because we don't augment the stack *)
@@ -177,21 +177,21 @@ end ;
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
 fun expand_list ltac gs = expand_listf (Tactical.VALID_LT ltac) gs;
 
-fun flat (GSTK{prop, stack as {goals,validation} :: 
-      {goals = g2 :: goals2, validation = validation2} :: rst, final}) = 
-  let fun v thl = 
+fun flat (GSTK{prop, stack as {goals,validation} ::
+      {goals = g2 :: goals2, validation = validation2} :: rst, final}) =
+  let fun v thl =
       let val (thl1, thl2) = Lib.split_after (length goals) thl ;
       in validation2 (validation thl1 :: thl2) end ;
     val newgv = {goals = goals @ goals2, validation = v} ;
   in GSTK {prop = prop, stack = newgv :: rst, final = final} end ;
-    
+
 fun flatn (GSTK{prop=PROVED _, ...}) n =
         raise ERR "flatn" "goal has already been proved"
   | flatn gstk 0 = gstk
   | flatn (gstk as GSTK{prop, stack = [], final}) n = gstk
-  | flatn (gstk as GSTK{prop, stack as [_], final}) n = gstk 
+  | flatn (gstk as GSTK{prop, stack as [_], final}) n = gstk
   | flatn (gstk as GSTK{prop, stack, final}) n = flatn (flat gstk) (n-1) ;
-  
+
 fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";
 
