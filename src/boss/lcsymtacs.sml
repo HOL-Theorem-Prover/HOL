@@ -53,6 +53,9 @@ struct
      Q.MATCH_ASSUM_ABBREV_TAC
   val qmatch_assum_rename_tac : term quotation -> string list -> tactic =
      Q.MATCH_ASSUM_RENAME_TAC
+  val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
+  val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
+  val qcase_tac = Q.FIND_CASE_TAC
 
   val rule_assum_tac : (thm -> thm) -> tactic = Tactic.RULE_ASSUM_TAC
   val assume_tac : thm_tactic = Tactic.ASSUME_TAC
