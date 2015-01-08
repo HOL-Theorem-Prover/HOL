@@ -58,4 +58,20 @@ val _ = case sgs of
                          else die "FAILED!"
           | _ => die "FAILED!"
 
+val _ = tprint "Q.MATCH_ASMSUB_RENAME_TAC 1"
+val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
+           ``x + y < SUC (SUC zero)``);
+val expected_a1 = ``P (x:num) : bool``
+val expected_a2 = ``Q (x < n) : bool``
+val expected_c = ``x + y < SUC (SUC zero)``
+val (sgs, _) = Q.MATCH_ASMSUB_RENAME_TAC `x < n` [] gl3
+val _ = case sgs of
+            [([a1, a2], c)] => if aconv a1 expected_a1 andalso
+                                  aconv a2 expected_a2 andalso
+                                  aconv c expected_c
+                               then
+                                 print "OK\n"
+                               else die "FAILED!"
+          | _ => die "FAILED!"
+
 val _ = Process.exit Process.success;

@@ -383,11 +383,10 @@ fun MATCH_ASSUM_RENAME_TAC q except (g as (asl,t)) = let
                       handle HOL_ERR e => find tl
 in find asl end g
 
-fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) = let
-  val ERR = ERR "MATCH_GOALSUB_RENAME_TAC"
-  val fvs = free_varsl (t::asl)
-  val pat = Parse.parse_in_context fvs q
-  val fvs_set = HOLset.fromList Term.compare fvs
+(* needs to be eta-expanded so that the possible HOL_ERRs are raised
+   when applied to a goal, not before, thereby letting FIRST_ASSUM catch
+   the exception *)
+fun subterm_rename_helper except ERR pat fvs fvs_set t g = let
   fun test (bvs, subt) =
       case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
           SOME ((theta0, _), _) =>
@@ -402,8 +401,26 @@ fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) = let
         | NONE => NONE
 in
   case gen_find_term test t of
-      SOME theta => make_rename_tac theta fvs except ERR g
-    | NONE => raise ERR "No matching sub-term found in goal term"
+      SOME theta => make_rename_tac theta fvs except ERR
+    | NONE => raise ERR "No matching sub-term found"
+end g
+
+fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) = let
+  val ERR = ERR "MATCH_GOALSUB_RENAME_TAC"
+  val fvs = free_varsl (t::asl)
+  val pat = Parse.parse_in_context fvs q
+  val fvs_set = HOLset.fromList Term.compare fvs
+in
+  subterm_rename_helper except ERR pat fvs fvs_set t g
+end
+
+fun MATCH_ASMSUB_RENAME_TAC q except (g as (asl, t)) = let
+  val ERR = ERR "MATCH_ASMSUB_RENAME_TAC"
+  val fvs = free_varsl (t::asl)
+  val fvs_set = HOLset.fromList Term.compare fvs
+  val pat = Parse.parse_in_context fvs q
+in
+  FIRST_ASSUM (subterm_rename_helper except ERR pat fvs fvs_set o concl) g
 end
 
 end (* Q *)
