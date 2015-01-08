@@ -177,13 +177,24 @@ end ;
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
 fun expand_list ltac gs = expand_listf (Tactical.VALID_LT ltac) gs;
 
-fun flat (GSTK{prop, stack as {goals,validation} ::
-      {goals = g2 :: goals2, validation = validation2} :: rst, final}) =
-  let fun v thl =
-      let val (thl1, thl2) = Lib.split_after (length goals) thl ;
-      in validation2 (validation thl1 :: thl2) end ;
-    val newgv = {goals = goals @ goals2, validation = v} ;
-  in GSTK {prop = prop, stack = newgv :: rst, final = final} end ;
+fun flat gstk =
+    case gstk of
+        GSTK{prop,
+             stack as {goals,validation} ::
+                      {goals = g2 :: goals2, validation = validation2} ::
+                      rst,
+             final} =>
+        let
+          fun v thl = let
+            val (thl1, thl2) = Lib.split_after (length goals) thl
+          in
+            validation2 (validation thl1 :: thl2)
+          end
+          val newgv = {goals = goals @ goals2, validation = v}
+        in
+          GSTK {prop = prop, stack = newgv :: rst, final = final}
+        end
+    | _ => raise ERR "flat" "goalstack in wrong shape"
 
 fun flatn (GSTK{prop=PROVED _, ...}) n =
         raise ERR "flatn" "goal has already been proved"
