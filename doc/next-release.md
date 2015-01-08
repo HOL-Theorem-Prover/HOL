@@ -39,6 +39,8 @@ New examples:
 Incompatibilities:
 ------------------
 
+- The function `optionSyntax.dest_none` will now unwrap the type of its result, *e.g.*, returning `:α` rather than `:α option` when applied to `NONE : α option`.  This brings it into line with the behaviour of `listSyntax.dest_nil`.  See [this github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/215).
+
 * * * * *
 
 <div class="footer">

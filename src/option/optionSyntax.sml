@@ -77,7 +77,9 @@ fun mk_option_case (n,s,p) =
  ---------------------------------------------------------------------------*)
 
 fun dest_none tm =
- if same_const none_tm tm then type_of tm else raise ERR "dest_none" "";
+ if same_const none_tm tm then
+   hd (#2 (dest_type (type_of tm)))
+ else raise ERR "dest_none" "";
 
 val dest_some    = dest_monop some_tm    (ERR "dest_some" "")
 val dest_the     = dest_monop the_tm     (ERR "dest_the" "")
