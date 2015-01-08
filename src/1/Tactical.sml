@@ -620,11 +620,6 @@ fun SUBGOAL_THEN wa ttac (asl, w) =
  * assumes subgoal number nu for proving subgoal number np
  *---------------------------------------------------------------------------*)
 
-(* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
-  apply a function to the nth member of a list *)
-fun apnth f 0 (y :: ys) = f y :: ys
-  | apnth f n (y :: ys) = y :: apnth f (n-1) ys ;
-
 (* USE_SG_VAL : int -> int -> list_validation *)
 fun USE_SG_VAL nu np thl =
   let val thu = List.nth (thl, nu - 1) ;
