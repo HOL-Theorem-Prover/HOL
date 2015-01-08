@@ -423,4 +423,8 @@ in
   FIRST_ASSUM (subterm_rename_helper except ERR pat fvs fvs_set o concl) g
 end
 
+fun FIND_CASE_TAC q sl =
+    MATCH_RENAME_TAC q sl ORELSE MATCH_ASSUM_RENAME_TAC q sl ORELSE
+    MATCH_GOALSUB_RENAME_TAC q sl ORELSE MATCH_ASMSUB_RENAME_TAC q sl
+
 end (* Q *)

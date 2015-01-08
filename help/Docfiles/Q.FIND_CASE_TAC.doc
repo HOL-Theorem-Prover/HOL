@@ -1,0 +1,38 @@
+\DOC
+
+\TYPE {FIND_CASE_TAC : term quotation -> string list -> tactic}
+
+\SYNOPSIS
+Finds an instance of a pattern in a goal, and renames to use names from the pattern
+
+\KEYWORDS
+
+\DESCRIBE
+The tactic {Q.FIND_CASE_TAC pat sl} is defined to be
+{
+   MATCH_RENAME_TAC q sl ORELSE MATCH_ASSUM_RENAME_TAC q sl ORELSE
+   MATCH_GOALSUB_RENAME_TAC q sl ORELSE MATCH_ASMSUB_RENAME_TAC q sl
+}
+
+
+\FAILURE
+Fails if all of the constituent tactics fail.
+
+
+\COMMENTS
+This tactic can be used to force a particular set of names on a goal,
+hopefully making the resulting tactic more robust in the face of
+underlying implementation changes. Note though that successful use of
+this tactic requires that the ``new'' names in the provided pattern
+really be fresh for the goal. If one is really uncertain about what
+names might be appearing in a goal, this condition may be difficult to
+ensure.
+
+The name is derived from the fact that this tactic can be used to
+ensure that it is being applied to a particular case in a proof that
+has branched.
+
+\SEEALSO
+Q.MATCH_ASMSUB_RENAME_TAC, Q.MATCH_ASSUM_RENAME_TAC, Q.MATCH_GOALSUB_RENAME_TAC, Q.MATCH_RENAME_TAC.
+
+\ENDDOC
