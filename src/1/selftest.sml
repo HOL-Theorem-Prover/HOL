@@ -496,5 +496,9 @@ in
   else die "FAILED"
 end
 
+val _ = tprint "Testing (foo THENL [...]) when foo solves"
+val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
+val _ = print "OK\n"
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
