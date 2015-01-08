@@ -384,8 +384,8 @@ end
  *    VALIDATE tac
  *    GEN_VALIDATE true tac
  *
- * is the same as "tac", except that where "tac" returns a proof which is 
- * because if proves a theorem with extra hypotheses, it returns those 
+ * is the same as "tac", except that where "tac" returns a proof which is
+ * because if proves a theorem with extra hypotheses, it returns those
  * hypotheses as extra goals
  *
  *    VALIDATE_LT ltac
@@ -395,21 +395,21 @@ end
  * necessary to make a valid list-tactic
  *
  *    GEN_VALIDATE(_LT) false always returns extra goals corresponding
- * to the hypotheses of the theorem proved 
+ * to the hypotheses of the theorem proved
  *
  *---------------------------------------------------------------------------*)
 local val validity_tag = "ValidityCheck"
       fun masquerade goal = Thm.mk_oracle_thm validity_tag goal ;
       fun achieves_concl th (asl, w) = Term.aconv (concl th) w ;
-      fun hyps_not_in_goal th (asl, w) = 
+      fun hyps_not_in_goal th (asl, w) =
         Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
-      fun extra_goals_tbp flag th (asl, w) = 
-        List.map (fn eg => (asl, eg)) 
+      fun extra_goals_tbp flag th (asl, w) =
+        List.map (fn eg => (asl, eg))
 	  (case flag of true => hyps_not_in_goal th (asl, w)
 	    | false => hyp th) ;
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
-fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) = 
+fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
   let val (glist, prf) = tac g ;
     (* pretend new goals are theorems, and apply validation to them *)
     val thprf = (prf (map masquerade glist)) ;
@@ -425,21 +425,21 @@ fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
   in (extra_goals @ glist, eprf) end ;
 
 (* split_lists : int list -> 'a list -> 'a list list * 'a list *)
-fun split_lists (n :: ns) ths = 
+fun split_lists (n :: ns) ths =
     let val (nths, rest) = split_after n ths ;
       val (nsths, left) = split_lists ns rest ;
-    in (nths :: nsths, left) end 
+    in (nths :: nsths, left) end
   | split_lists [] ths = ([], ths) ;
-  
+
 (* GEN_VALIDATE_LT : bool -> list_tactic -> list_tactic *)
-fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) = 
+fun GEN_VALIDATE_LT (flag : bool) (ltac : list_tactic) (gl : goal list) =
   let val (glist, prf) = ltac gl ;
     (* pretend new goals are theorems, and apply validation to them *)
     val thsprf = (prf (map masquerade glist)) ;
     val _ = if Lib.all2 achieves_concl thsprf gl then ()
-      else raise ERR "GEN_VALIDATE_LT" 
+      else raise ERR "GEN_VALIDATE_LT"
           "Invalid list-tactic - some wrong conclusion" ;
-    val extra_goal_lists = Lib.map2 (extra_goals_tbp flag) thsprf gl ; 
+    val extra_goal_lists = Lib.map2 (extra_goals_tbp flag) thsprf gl ;
     val nextras = map length extra_goal_lists ;
     (* new validation: apply the theorems proving the additional goals to
       eliminate the extra hyps in the theorems proved by the given validation *)
@@ -454,7 +454,7 @@ val VALIDATE = GEN_VALIDATE true ;
 val VALIDATE_LT = GEN_VALIDATE_LT true ;
 
 (* could avoid duplication of code in the above by the following
-fun GEN_VALIDATE flag tac = 
+fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
 *)
 
@@ -521,7 +521,7 @@ end
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
 (*---------------------------------------------------------------------------
- * Uses every tactic (similarly EVERY_LT for list_tactics) 
+ * Uses every tactic (similarly EVERY_LT for list_tactics)
  *    EVERY [TAC1;...;TACn] =  TAC1  THEN  ...  THEN  TACn
  *---------------------------------------------------------------------------*)
 
@@ -641,7 +641,7 @@ fun USE_SG_THEN ttac nu np gl =
 
 (* USE_SG_TAC : int -> int -> list_tactic
 val USE_SG_TAC = USE_SG_THEN ASSUME_TAC ;
-*) 
+*)
 
 (*---------------------------------------------------------------------------
  * A tactical that makes a tactic fail if it has no effect.
