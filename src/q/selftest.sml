@@ -58,6 +58,16 @@ val _ = case sgs of
                          else die "FAILED!"
           | _ => die "FAILED!"
 
+val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 3"
+val gl2a = ([] : term list, ``!x. x * SUC zero < z``)
+val expected_result2a = #2 gl2a
+val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `SUC` [] gl2a
+val _ = case sgs of
+            [([], t)] => if aconv t expected_result2a then print "OK\n"
+                         else die "FAILED!"
+          | _ => die "FAILED!"
+
+
 val _ = tprint "Q.MATCH_ASMSUB_RENAME_TAC 1"
 val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
            ``x + y < SUC (SUC zero)``);
@@ -73,5 +83,6 @@ val _ = case sgs of
                                  print "OK\n"
                                else die "FAILED!"
           | _ => die "FAILED!"
+
 
 val _ = Process.exit Process.success;

@@ -386,7 +386,7 @@ in find asl end g
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_rename_helper except ERR pat fvs fvs_set t g = let
+fun subterm_rename_helper {except,thetasz,ERR,pat,fvs,fvs_set} t g = let
   fun test (bvs, subt) =
       case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
           SOME ((theta0, _), _) =>
@@ -396,7 +396,7 @@ fun subterm_rename_helper except ERR pat fvs fvs_set t g = let
                 List.all (fn bv => not (free_in bv residue)) bvs
             val theta = filter (fn s => filt1 s andalso filt2 s) theta0
           in
-            if null theta then NONE else SOME theta
+            if length theta <> thetasz then NONE else SOME theta
           end
         | NONE => NONE
 in
@@ -405,22 +405,27 @@ in
     | NONE => raise ERR "No matching sub-term found"
 end g
 
-fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) = let
-  val ERR = ERR "MATCH_GOALSUB_RENAME_TAC"
+fun prep_rename q except nm (asl, t) = let
+  val ERR = ERR nm
   val fvs = free_varsl (t::asl)
   val pat = Parse.parse_in_context fvs q
   val fvs_set = HOLset.fromList Term.compare fvs
+  val patfvs = free_vars pat
+  val pat_binds =
+      filter (fn v => not (mem v fvs) andalso not (mem (#1 (dest_var v)) except))
+             patfvs
 in
-  subterm_rename_helper except ERR pat fvs fvs_set t g
+  {ERR = ERR, fvs = fvs, pat = pat, fvs_set = fvs_set, thetasz = length pat_binds,
+   except = except}
 end
 
+fun MATCH_GOALSUB_RENAME_TAC q except (g as (asl, t)) =
+    subterm_rename_helper (prep_rename q except "MATCH_GOALSUB_RENAME_TAC" g) t g
+
 fun MATCH_ASMSUB_RENAME_TAC q except (g as (asl, t)) = let
-  val ERR = ERR "MATCH_ASMSUB_RENAME_TAC"
-  val fvs = free_varsl (t::asl)
-  val fvs_set = HOLset.fromList Term.compare fvs
-  val pat = Parse.parse_in_context fvs q
+  val args = prep_rename q except "MATCH_ASMSUB_RENAME_TAC" g
 in
-  FIRST_ASSUM (subterm_rename_helper except ERR pat fvs fvs_set o concl) g
+  FIRST_ASSUM (subterm_rename_helper args o concl) g
 end
 
 fun FIND_CASE_TAC q sl =
