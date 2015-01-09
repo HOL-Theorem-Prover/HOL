@@ -112,7 +112,7 @@ srw_tac [][nat_trans_axioms_def] >- (
   metis_tac [maps_to_morf,id_mor,morf_id,maps_to_def,
              is_functor_is_category,id_dom_cod] ) >>
 imp_res_tac is_functor_is_category >>
-qmatch_assum_rename_tac `g :- x → y -:f.dom` [] >>
+qmatch_assum_rename_tac `g :- x → y -:f.dom` >>
 `id (f@@y) -:f.cod = f##(id y -:f.dom)` by (
   match_mp_tac (GSYM morf_id) >> srw_tac [][] >>
   imp_res_tac maps_to_obj ) >>
@@ -703,7 +703,7 @@ imp_res_tac is_functor_is_category >>
 conj_tac >> match_mp_tac functor_eq_thm >>
 fsrw_tac [][] >>
 qx_gen_tac `n` >> strip_tac >>
-qmatch_rename_tac `postcomp_functor b j##(functor_nt k n) = n` [] >>
+qmatch_rename_tac `postcomp_functor b j##(functor_nt k n) = n` >>
 `n.dom ≈> k` by (
   fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] ) >>
 srw_tac [][GSYM functor_nt_functor_comp]);
@@ -1111,9 +1111,9 @@ val equivalence_full_faithful_ess_surj = Q.store_thm(
 gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
   fsrw_tac [][equivalence_def,equivalence_pair_def] >>
   fsrw_tac [][iso_objs_def,iso_pair_between_objs_def] >>
-  qmatch_assum_rename_tac `n1.dom = g ◎ f` [] >>
+  qmatch_assum_rename_tac `n1.dom = g ◎ f` >>
   qmatch_assum_abbrev_tac `X = g ◎ f` >>
-  qmatch_assum_rename_tac `n2.dom = f ◎ g` [] >>
+  qmatch_assum_rename_tac `n2.dom = f ◎ g` >>
   qunabbrev_tac `X` >>
   `∀h x y. h :- x → y -:f.dom ⇒ (n1 @+ y o (g ◎ f)##h -:f.dom = ((id_functor f.dom)##h) o n1 @+ x -:f.dom)` by (
     rpt gen_tac >> strip_tac >>

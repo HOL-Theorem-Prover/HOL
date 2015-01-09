@@ -46,7 +46,7 @@ first_x_assum (qspec_then `g@@y` mp_tac) >>
 srw_tac [][] >>
 imp_res_tac is_functor_is_category >>
 fsrw_tac [][EXISTS_UNIQUE_THM] >>
-qmatch_assum_rename_tac `h :- g@@y → x -:f.dom` [] >>
+qmatch_assum_rename_tac `h :- g@@y → x -:f.dom` >>
 `f##h :- f@@(g@@y) → f@@x -:f.cod` by metis_tac [morf_maps_to,maps_to_def] >>
 conj_tac >- metis_tac [functor_comp_objf,cat_iso_pair_def,id_functor_objf,composable_def] >>
 qx_gen_tac `h1` >> qx_gen_tac `h2` >> strip_tac >>
@@ -419,7 +419,7 @@ EQ_TAC >- (
       pop_assum (qspec_then `1` mp_tac),
       pop_assum (qspec_then `2` mp_tac)] >>
     srw_tac [][] ) >>
-  qmatch_rename_tac `ma = mb` [] >>
+  qmatch_rename_tac `ma = mb` >>
   qabbrev_tac `mma = mk_cone_mor co l ma` >>
   qabbrev_tac `mmb = mk_cone_mor co l mb` >>
   `mma :- co → l -:cone_cat d` by (
@@ -452,7 +452,7 @@ srw_tac [][EXISTS_UNIQUE_THM] >- (
   qexists_tac `mk_cone_mor c2 co m` >>
   srw_tac [][cone_cat_maps_to,Abbr`co`,mk_cone_proj_ext,restrict_def] >>
   srw_tac [][] >> fsrw_tac [][maps_to_in_def] ) >>
-qmatch_rename_tac `f1 = f2` [] >>
+qmatch_rename_tac `f1 = f2` >>
 first_x_assum (qspecl_then [`FST f1.map`,`FST f2.map`] assume_tac) >>
 qsuff_tac `FST f1.map = FST f2.map` >- (
   simp_tac std_ss [morphism_component_equality] >>
@@ -706,7 +706,7 @@ srw_tac [][functor_axioms_def] >- (
   qspecl_then [`c`,`f.dom`,`y`] mp_tac pi_maps_to >>
   fsrw_tac [][] >>
   strip_tac >>
-  qmatch_assum_rename_tac `f :- x → w -:c` [] >>
+  qmatch_assum_rename_tac `f :- x → w -:c` >>
   qspecl_then [`c`,`π1 x×y -:c`,`f`,`x × y-:c`,`x`,`w`] mp_tac maps_to_comp >>
   fsrw_tac [][] >> strip_tac >>
   imp_res_tac maps_to_in_def >>
