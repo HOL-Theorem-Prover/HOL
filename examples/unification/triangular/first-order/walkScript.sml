@@ -105,7 +105,7 @@ Cases_on `t` THENL [
   `vwalk s v = Pair t' t0` by (SRW_TAC [][Once vwalk_def]) THEN
   MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][vR_def] THEN FULL_SIMP_TAC (srw_ss()) [],
-  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` THEN
   `vwalk s v = Const c` by (SRW_TAC [] [Once vwalk_def]) THEN
   FULL_SIMP_TAC (srw_ss()) []
 ]);
@@ -149,7 +149,7 @@ Cases_on `x` THEN SRW_TAC [][] THENL [
   METIS_TAC [],
   `FLOOKUP sx v = SOME (Pair t t0)` by METIS_TAC [FLOOKUP_SUBMAP] THEN
   SRW_TAC [][Once (DISCH_ALL vwalk_def)],
-  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` THEN
   `FLOOKUP sx v = SOME (Const c)` by METIS_TAC [FLOOKUP_SUBMAP] THEN
   SRW_TAC [][Once (DISCH_ALL vwalk_def)]
 ]);

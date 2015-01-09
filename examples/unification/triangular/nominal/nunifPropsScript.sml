@@ -324,8 +324,8 @@ STRIP_TAC THEN1 (
     `equiv fe ([(a1,a2)] · t2) ([(a1,a2)] · ([(a2,a1)] · t2'))`
       by ( MATCH_MP_TAC equiv_apply_pi THEN SRW_TAC [][]) THEN
     FULL_SIMP_TAC (srw_ss()) [pmact_flip_args]) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `a2 ≠ a3` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `fresh fe a2 t3` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `a2 ≠ a3` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `fresh fe a2 t3` THEN
   CONJ1_TAC THEN1 (
     `equiv fe (apply_pi (REVERSE [(a2,a3)]) t2) (apply_pi (REVERSE [(a2,a3)]) (apply_pi [(a2,a3)] t3))`
     by METIS_TAC [equiv_apply_pi] THEN
@@ -561,7 +561,7 @@ Cases_on `nvwalk s [] v` THEN FULL_SIMP_TAC (psrw_ss()) [] THENL [
   SRW_TAC [][] THEN
   IMP_RES_TAC unify_eq_vars_fresh THEN
   POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (psrw_ss()) [],
-  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s [] v = Tie s' C` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s [] v = Tie s' C` THEN
   (fresh_ds_equiv |> GEN_ALL |> Q.SPECL [`nwalkstar s (Tie s' C)`,`pi2`,`pi1`] |>
    SIMP_RULE (srw_ss()) [] |> MP_TAC) THEN
   SRW_TAC [][nwalkstar_apply_pi] THEN
@@ -570,7 +570,7 @@ Cases_on `nvwalk s [] v` THEN FULL_SIMP_TAC (psrw_ss()) [] THENL [
   SRW_TAC [][] THEN
   IMP_RES_TAC unify_eq_vars_fresh THEN
   POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (psrw_ss()) [],
-  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s [] v = nPair C1 C2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s [] v = nPair C1 C2` THEN
   (fresh_ds_equiv |> GEN_ALL |> Q.SPECL [`nwalkstar s (nPair C1 C2)`,`pi2`,`pi1`] |>
    SIMP_RULE (srw_ss()) [] |> MP_TAC) THEN
   SRW_TAC [][nwalkstar_apply_pi] THEN
@@ -1192,7 +1192,7 @@ Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 `nwfs q` by METIS_TAC [nunify_uP,uP_def] THEN
 Q.PAT_ASSUM `nunify (q,r) Y Z = X` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) C2 C2' = SOME (q,r)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) C2 C2' = SOME (q,r)` THEN
 `∃r'. nunify (s,fe') C2 C2' = SOME (q,r')` by METIS_TAC [] THEN
 SRW_TAC [][]);
 
@@ -1237,8 +1237,8 @@ THEN1 ( Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 ( Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 ( Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie s1 C1` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie s2 C2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie s1 C1` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie s2 C2` THEN
   Cases_on `s1 = s2` THEN SRW_TAC [][] THEN
   Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -1248,8 +1248,8 @@ THEN1 (
   METIS_TAC [UNION_ASSOC,UNION_COMM] )
 THEN1 (Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` THEN
   Cases_on `nunify (s,fe) t1a t2a` THEN
   Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN1 (
@@ -1330,8 +1330,8 @@ SRW_TAC [][] THEN1 (
   IMP_RES_TAC NOT_FDOM_nvwalk THEN
   Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s p1 u1 = Sus l n` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s p2 u2 = Sus l' n'` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s p1 u1 = Sus l n` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nvwalk s p2 u2 = Sus l' n'` THEN
   MP_TAC (Q.SPECL [`p1`,`u1`,`s`] (Q.INST [`pu`|->`l`,`u`|->`n`] (UNDISCH nvwalk_SUBMAP_var))) THEN
   MP_TAC (Q.SPECL [`p2`,`u2`,`s`] (Q.INST [`pu`|->`l'`,`u`|->`n'`] (UNDISCH nvwalk_SUBMAP_var))) THEN
   SRW_TAC [][] THEN
@@ -1412,7 +1412,7 @@ SRW_TAC [][] THEN1 (
   NTAC 2 (POP_ASSUM MP_TAC) THEN SRW_TAC [][] THEN
   REVERSE (SRW_TAC [][Once equiv_cases]) THEN1
     METIS_TAC [nwalkstar_apply_pi] THEN
-  Q.MATCH_RENAME_TAC `fresh fex a (nwalk* sx c)` [] THEN
+  Q.MATCH_RENAME_TAC `fresh fex a (nwalk* sx c)` THEN
   Q_TAC SUFF_TAC `fresh fex a (nwalk* sx (nwalk* s c))`
   THEN1 METIS_TAC [nwalkstar_SUBMAP] THEN
   MATCH_MP_TAC (GEN_ALL fresh_verify_fcs) THEN
@@ -1442,10 +1442,10 @@ SRW_TAC [][] THEN1 (
   Q.PAT_ASSUM `nunify X Y Z = SOME (sx,fx0)` ASSUME_TAC THEN
   Q.PAT_ASSUM `verify_fcs X Y = Z` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa, fea)` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fea) t1d t2d = SOME (sd, fed)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa, fea)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fea) t1d t2d = SOME (sd, fed)` THEN
   `nwfs sa ∧ sa SUBMAP sd` by METIS_TAC [nunify_uP,uP_def] THEN
   `FINITE fea ∧ fea SUBSET fed ∧ FINITE fed`
     by METIS_TAC [nunify_FINITE_fe,nunify_extends_fe] THEN
@@ -1701,7 +1701,7 @@ val nomunify_COMPAT = Q.store_thm(
 SRW_TAC [][nomunify_def] THEN
 Cases_on `x` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fu0 su = SOME fu` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fu0 su = SOME fu` THEN
 `s SUBMAP su ∧ nwfs su` by METIS_TAC [nunify_uP,uP_def] THEN
 `fe SUBSET fu0` by METIS_TAC [nunify_extends_fe] THEN
 `FINITE fu0` by METIS_TAC [nunify_FINITE_fe] THEN
@@ -1952,7 +1952,7 @@ val fresh_FINITE = Q.store_thm(
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `x ∈ fe` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `x ∈ fe` THEN
   Q.EXISTS_TAC `{x}` THEN SRW_TAC [][] )
 THEN1 (
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
@@ -2025,8 +2025,8 @@ Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN
 ASM_SIMP_TAC (psrw_ss()) [Once nunify_def,LET_THM] THEN
 SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Nom a` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Nom a` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`Nom a`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
@@ -2034,8 +2034,8 @@ THEN1 (
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] THEN
   METIS_TAC [equiv_sym] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Nom a` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Nom a` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`Nom a`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
@@ -2047,40 +2047,40 @@ THEN1 (
   IMP_RES_TAC unify_eq_vars_preserves_s THEN
   FULL_SIMP_TAC (srw_ss()) [] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Sus pi1 vx` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Sus pi2 v2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Sus pi1 vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Sus pi2 v2` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi1`,`Sus pi2 v2`] |> SIMP_RULE (psrw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
    (nwalk* s t2 = nwalk* s (nwalk s t2))` by METIS_TAC [nwalkstar_nwalk] THEN
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Tie a c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Tie a c` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`Tie a c`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
    (nwalk* s t2 = nwalk* s (nwalk s t2))` by METIS_TAC [nwalkstar_nwalk] THEN
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = nPair c1 c2` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`nPair c1 c2`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
    (nwalk* s t2 = nwalk* s (nwalk s t2))` by METIS_TAC [nwalkstar_nwalk] THEN
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = nConst c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nConst c` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`nConst c`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
    (nwalk* s t2 = nwalk* s (nwalk s t2))` by METIS_TAC [nwalkstar_nwalk] THEN
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Tie a c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Tie a c` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`Tie a c`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
@@ -2102,8 +2102,8 @@ THEN1 (
   Q.PAT_ASSUM `equiv fe2 X Y` MP_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [Once equiv_cases,nwalkstar_apply_pi] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = nPair c1 c2` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`nPair c1 c2`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
@@ -2113,8 +2113,8 @@ THEN1 (
 THEN1 (
   Cases_on `x` THEN Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fa) t1d t2d = SOME (sd,fd)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fa) t1d t2d = SOME (sd,fd)` THEN
   `nwfs sa ∧ FINITE fa ∧ fa ⊆ fd ∧ FINITE fd ∧ sa SUBMAP sd ∧ nwfs sd`
   by METIS_TAC [nunify_uP,uP_def,nunify_FINITE_fe,nunify_extends_fe] THEN
   `∃fad. (verify_fcs fa sd = SOME fad)` by METIS_TAC [verify_fcs_SUBSET] THEN
@@ -2128,8 +2128,8 @@ THEN1 (
   SRW_TAC [][Once equiv_cases] THEN
   METIS_TAC [equiv_trans,equiv_refl,equiv_sym] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = Sus pi vx` ["X"] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s X = nConst c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Sus pi vx` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nConst c` THEN
   MATCH_MP_TAC (ee |> Q.SPECL [`pi`,`nConst c`] |> SIMP_RULE (srw_ss()) []) THEN
   `vx ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
@@ -2222,7 +2222,7 @@ Q.PAT_ASSUM `nwfs sx` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (psrw_ss()) [] THEN
 Cases_on `nvwalk sx l' n'` THEN FULL_SIMP_TAC (psrw_ss()) [] THEN
 IMP_RES_TAC nvwalk_to_var THEN
-Q.MATCH_ASSUM_RENAME_TAC `v ∉ FDOM sx` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `v ∉ FDOM sx` THEN
 `v ∉ FDOM s` by METIS_TAC [SUBMAP_DEF,SUBSET_DEF] THEN
 SRW_TAC [][] THEN
 FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_nvwalk]);
@@ -2272,7 +2272,7 @@ THEN1 (
   FULL_SIMP_TAC (srw_ss()) [] ) THEN
 NTAC 2 (POP_ASSUM MP_TAC) THEN
 Cases_on `x` THEN SRW_TAC [][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` THEN
 Cases_on `(a,v) ∈ fa` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 `nwfs sa ∧ FINITE fa ∧ s SUBMAP sa` by METIS_TAC [nunify_uP,uP_def,nunify_FINITE_fe] THEN
 METIS_TAC [SUBMAP_DEF,SUBSET_DEF]);
@@ -2367,7 +2367,7 @@ val equiv_fcs_nwalkstar = Q.store_thm(
 MAP_EVERY Q.ID_SPEC_TAC [`fe2`,`fe1`,`t2`,`t1`] THEN
 Induct THEN Cases_on `t2` THEN FULL_SIMP_TAC (psrw_ss()) [] THEN1 (
   SRW_TAC [][] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `equiv_fcs (nwalk* s (Sus p1 v)) (nwalk* s (Sus p2 v)) = SOME fe2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `equiv_fcs (nwalk* s (Sus p1 v)) (nwalk* s (Sus p2 v)) = SOME fe2` THEN
   `equiv fe2 (apply_pi p1 (nwalk* s (Sus [] v))) (apply_pi p2 (nwalk* s (Sus [] v)))` by (
     IMP_RES_TAC equiv_fcs_equiv THEN
     POP_ASSUM MP_TAC THEN
@@ -2404,7 +2404,7 @@ REPEAT STRIP_TAC THEN
 IMP_RES_TAC term_fcs_fresh THEN
 IMP_RES_TAC fresh_SUBMAP THEN
 IMP_RES_TAC fresh_term_fcs THEN
-Q.MATCH_ASSUM_RENAME_TAC `term_fcs a t = SOME fe0` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `term_fcs a t = SOME fe0` THEN
 Q.EXISTS_TAC `fe0` THEN CONJ_TAC THEN1 SRW_TAC [][] THEN
 REPEAT STRIP_TAC THEN
 `(b,w) ∈ fe` by FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
@@ -2496,7 +2496,7 @@ Q_TAC SUFF_TAC
   NTAC 3 (Q.PAT_ASSUM `!X.Y` (K ALL_TAC)) THEN
   IMP_RES_TAC equiv_fcs_minimal THEN
   FULL_SIMP_TAC (srw_ss()) [nomunify_def,EXISTS_PROD] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1 t2 = SOME (sx,fx)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1 t2 = SOME (sx,fx)` THEN
   `FINITE fx` by IMP_RES_TAC nunify_FINITE_fe THEN
   `∃b w fcs. (b,w) ∈ fx ∧ (term_fcs b (nwalk* sx (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs`
   by (MATCH_MP_TAC (GEN_ALL verify_fcs_minimal) THEN SRW_TAC [][]) THEN
@@ -2549,8 +2549,8 @@ THEN1 (
     MAP_EVERY Q.EXISTS_TAC [`sxx`,`b`,`w`] THEN
     SRW_TAC [][]) THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie a1 c1` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie a2 c2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie a1 c1` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie a2 c2` THEN
   `nwfs sx ∧ s SUBMAP sx` by METIS_TAC [nunify_uP,uP_def] THEN
   `(nwalk* sxx t1 = nwalk* sxx (nwalk s t1)) ∧
    (nwalk* sxx t2 = nwalk* sxx (nwalk s t2))`
@@ -2575,8 +2575,8 @@ THEN1 (
  SRW_TAC [][nwalkstar_apply_pi])
 THEN1 (
   Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fa) t1d t2d = SOME (sd,fd)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,fa) t1d t2d = SOME (sd,fd)` THEN
   `nwfs sa ∧ FINITE fa ∧ fa ⊆ fd ∧ FINITE fd ∧ s SUBMAP sa ∧ sa SUBMAP sd ∧ nwfs sd`
   by METIS_TAC [nunify_uP,uP_def,nunify_FINITE_fe,nunify_extends_fe] THEN
   `(nwalk* sxx t1 = nwalk* sxx (nwalk s t1)) ∧
@@ -2662,8 +2662,8 @@ THEN1 (
 THEN1 (
   IMP_RES_TAC nwalkstar_subterm_exists THEN
   SRW_TAC [][] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = Tie a (nwalk* s c1)`[] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2 = Tie a (nwalk* s c2)`[] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = Tie a (nwalk* s c1)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2 = Tie a (nwalk* s c2)` THEN
   NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`c1`,`c2`,`s`] MP_TAC) THEN
   SRW_TAC [][] THEN
@@ -2673,8 +2673,8 @@ THEN1 (
   IMP_RES_TAC nwalkstar_subterm_exists THEN
   SRW_TAC [][] THEN
   NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = Tie a1 (nwalk* s c1)`[] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2' = Tie a2 (nwalk* s c2)`[] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = Tie a1 (nwalk* s c1)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2' = Tie a2 (nwalk* s c2)` THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`c1`,`apply_pi [(a1,a2)] c2`,`s`] MP_TAC) THEN
   SRW_TAC [][nwalkstar_apply_pi] THEN
   SRW_TAC [][Once equiv_cases] THEN
@@ -2696,8 +2696,8 @@ THEN1 (
   IMP_RES_TAC nwalkstar_subterm_exists THEN
   SRW_TAC [][] THEN
   POP_ASSUM (K ALL_TAC) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = nPair (nwalk* s t1a) (nwalk* s t1d)` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2 = nPair (nwalk* s t2a) (nwalk* s t2d)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t1 = nPair (nwalk* s t1a) (nwalk* s t1d)` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk* s t2 = nPair (nwalk* s t2a) (nwalk* s t2d)` THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`t1d`,`t2d`,`s`] MP_TAC) THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`t1a`,`t2a`,`s`] MP_TAC) THEN
   SRW_TAC [][] THEN
@@ -2780,7 +2780,7 @@ THEN1 (
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     ASM_SIMP_TAC (srw_ss()) [nwalk_apply_pi] THEN
-    Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie X (apply_pi Y t)` ["X","Y"] THEN
+    Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie _ (apply_pi _ t)` THEN
     MAP_EVERY Q.EXISTS_TAC [`q1`,`q2`,`nwalk s t`] THEN
     SRW_TAC [][] THEN
     Q.PAT_ASSUM `!X.Y` MP_TAC THEN
@@ -2789,7 +2789,7 @@ THEN1 (
     FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][nwalkstar_nwalk] ) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie (lswapstr q1 a) (apply_pi q1 t)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie (lswapstr q1 a) (apply_pi q1 t)` THEN
   `lswapstr (REVERSE q2) (lswapstr q1 a) ∈ dis_set q1 q2` by (
     ASM_SIMP_TAC (srw_ss()) [dis_set_def] THEN
     FULL_SIMP_TAC (srw_ss())[pmact_eql] ) THEN
@@ -2836,14 +2836,14 @@ THEN1 (
 THEN1 (
   SRW_TAC [][EXISTS_PROD] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   FULL_SIMP_TAC (srw_ss()) [nwalk_apply_pi] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair (apply_pi q1 ta) (apply_pi q1 td)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair (apply_pi q1 ta) (apply_pi q1 td)` THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`q1`,`q2`,`nwalk s ta`] MP_TAC) THEN
   SRW_TAC [][] THEN
   Q.PAT_ASSUM `!X.Y` MP_TAC THEN
   SRW_TAC [][Once term_fcs_def] THEN
   Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [nwalkstar_nwalk] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) X Y = SOME (s,fu)` ["X","Y"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) _ _ = SOME (s,fu)` THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`s`,`fu`] MP_TAC) THEN
   SRW_TAC [][] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
@@ -2858,7 +2858,7 @@ val nvars_measure = Q.store_thm(
 `v ∈ nvars t ∧ ¬ is_Sus t ∧ nwfs s ⇒
  measure (npair_count o (nwalk* s)) (Sus [] v) t`,
 Induct_on `t` THEN SRW_TAC [][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `v ∈ nvars tt` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `v ∈ nvars tt` THEN
 Cases_on `tt` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm] THEN
 (npair_count_nwalkstar_ignores_pi |>
@@ -3066,32 +3066,32 @@ THEN1 (
   MATCH_MP_TAC (GEN_ALL unify_eq_vars_verify_fcs) THEN
   METIS_TAC [FINITE_dis_set,FINITE_EMPTY,verify_fcs_empty])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = Tie a t` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Tie a t` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`Tie a t`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = nPair c1 c2` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`nPair c1 c2`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = nPair c1 c2` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`nPair c1 c2`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = Tie a t` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = Tie a t` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`Tie a t`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi,equiv_sym])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie a1 c1` [] THEN
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie a2 c2` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = Tie a1 c1` THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = Tie a2 c2` THEN
   Cases_on `a1 = a2` THEN SRW_TAC [][] THEN1 (
     POP_ASSUM MATCH_MP_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [Once equiv_cases] ) THEN
@@ -3131,20 +3131,20 @@ THEN1 (
     by METIS_TAC [verify_fcs_NONE] THEN
     METIS_TAC [term_fcs_nwalkstar,optionTheory.NOT_SOME_NONE] )
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = nPair c1 c2` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`nPair c1 c2`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi,equiv_sym])
 THEN1 (
-  Q.MATCH_ASSUM_RENAME_TAC `nwalk s Z = nPair c1 c2` ["Z"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `nwalk s _ = nPair c1 c2` THEN
   (noc_subterm_nequiv |> CONTRAPOS |>
    Q.INST [`v`|->`n`,`t`|->`nPair c1 c2`,`pi`|->`l`,`fe`|->`fe2`] |>
    MP_TAC) THEN
   FULL_SIMP_TAC (srw_ss()) [noc_ignores_pi,equiv_sym]) THEN
 SRW_TAC [][EXISTS_PROD] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `nwalk s t1 = nPair t1a t1d` THEN
+Q.MATCH_ASSUM_RENAME_TAC `nwalk s t2 = nPair t2a t2d` THEN
 Q.PAT_ASSUM `equiv fe2 X Y` MP_TAC THEN
 SRW_TAC [][Once equiv_cases] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -3164,10 +3164,10 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
 by METIS_TAC [equiv_trans,equiv_sym] THEN
 `nwfs sx ∧ FINITE fu` by METIS_TAC [nunify_uP,uP_def,nunify_FINITE_fe,FINITE_EMPTY] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nunify (s,{}) t1a t2a = SOME (sa,fa)` [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,{}) t1d t2d = SOME (sd,fd)` [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fa sa = SOME faa` [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fd sd = SOME fdd` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `nunify (s,{}) t1a t2a = SOME (sa,fa)` THEN
+Q.MATCH_ASSUM_RENAME_TAC `nunify (sa,{}) t1d t2d = SOME (sd,fd)` THEN
+Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fa sa = SOME faa` THEN
+Q.MATCH_ASSUM_RENAME_TAC `verify_fcs fd sd = SOME fdd` THEN
 `∃fe1. nunify (sa,fa) t1d t2d = SOME (sd,fe1)`
 by METIS_TAC [nunify_ignores_fe] THEN
 `fe1 = fa ∪ fd` by (

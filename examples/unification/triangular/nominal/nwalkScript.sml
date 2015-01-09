@@ -106,12 +106,12 @@ Cases_on `t` THENL [
   `u IN nvars t` by METIS_TAC [nvars_apply_pi] THEN
   MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][nvR_def],
-  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (nPair t1 t2)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (nPair t1 t2)` THEN
   `∃pi. nvwalk s p v = apply_pi pi (nPair t1 t2)` by (SRW_TAC [][Once nvwalk_def] THEN METIS_TAC []) THEN
   `u IN nvars (nPair t1 t2)` by METIS_TAC [nvars_apply_pi] THEN
   MATCH_MP_TAC TC_SUBSET THEN
   SRW_TAC [][nvR_def] THEN FULL_SIMP_TAC (srw_ss()) [],
-  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (nConst c)` [] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (nConst c)` THEN
   `nvwalk s p v = nConst c` by (SRW_TAC [] [Once nvwalk_def]) THEN
   FULL_SIMP_TAC (srw_ss()) []
 ]);
