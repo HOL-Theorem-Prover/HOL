@@ -109,6 +109,8 @@ val _ = Hol_datatype
 
 
 (*
+... load Defn code ...
+
 val stem = "typeorder"
 
 val eqns =
@@ -152,8 +154,8 @@ val {functional,pats} = mk_functional (TypeBasePure.toPmatchThry facts) (protect
                     THENC REPEATC ((RWcnv THENC LIST_BETA_CONV) ORELSEC
                                    elim_triv_literal_CONV))
      val corollaries' = map rule corollaries
-
-val (p,th) = hd (zip given_pats corollaries')
+;
+val (p,th) = hd (zip given_pats corollaries');
 
 extract [R1] congs f (proto_def,WFR) (p,th);
 
@@ -177,6 +179,98 @@ val tm = concl th;
 Rewrite Fully rwArgs tm;
 
 hyp it;
+
+val t = rhs tm;
+
+Rewrite Fully rwArgs t;
+
+val (Pure thl,Context context,Congs congs,Solver prover) = rwArgs;
+
+val simpls = add_congs(add_rws empty_simpls thl) congs;
+
+val cps = {context = context, prover = prover, simpls = simpls};
+
+TOP_DEPTH_QCONV RW_STEP cps t;
+REPEATQC RW_STEP cps t;    (* ---> UNCHANGED *)
+val cnv = TOP_DEPTH_QCONV RW_STEP;
+SUB_QCONV cnv cps t;
+
+(* load code for try_cong(simple,complex) *)
+
+val icong = CONG_STEP simpls t;
+val (a,_) = dest_imp (concl icong)
+val ants = strip_conj a;
+
+(* first antecedent *)
+val (ant::rst) = ants;
+val (outcome1,rst') = simple cnv cps (ant,rst);
+
+(* second *)
+val (ant::rst) = rst';
+val (outcome2,rst') = simple cnv cps (ant,rst);
+
+(* third ... complex case, but not recursive *)
+val (ant::rst) = rst';
+val (outcome3,rst') = complex cnv cps (ant,rst);
+
+(* fourth ... complex case, recursive *)
+val (ant::rst) = rst';
+val (outcome4,rst') = complex cnv cps (ant,rst); (* fails *)
+
+(*
+val (ant::rst) = rst';
+val {context as (cntxt,b),simpls,...} = cps;
+val ant_frees = free_vars ant
+    val context_frees = free_varsl (map concl cntxt)
+    val (vlist,ceqn) = strip_forall ant
+    val (L0,eq) = strip_imp_only ceqn
+    val (lhs,rhs) = dest_eq eq
+    val nvars = length (snd (strip_comb rhs))  (* guessing ... *)
+    val (f,args) = (I##rev) (dest_combn lhs nvars)
+    val (rhsv,_) = dest_combn rhs nvars
+    val vstrl = #1(strip_pabs f)
+    val vstructs = vstrl_variants (union ant_frees context_frees) vstrl
+    val ceqn' = if null vstrl then ceqn else subst (map (op|->) (zip args vstructs)) ceqn
+    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
+
+    val lhs_beta_maybe = Conv.QCONV (Conv.DEPTH_CONV GEN_BETA_CONV) lhs
+    val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
+val cps = {context = (map ASSUME L @ cntxt,b), prover = prover, 
+           simpls  = add_cntxt b simpls (map ASSUME L)}
+
+val tm = lhs';
+
+TOP_DEPTH_QCONV RW_STEP cps tm;   (* UNCHANGED *)
+
+REPEATQC RW_STEP cps tm;
+SUB_QCONV (TOP_DEPTH_QCONV RW_STEP) cps tm;
+val cnv = (TOP_DEPTH_QCONV RW_STEP);
+try_cong cnv cps tm;  (* fails *)
+val {context as (cntxt,b),simpls,...} = cps;
+val icong = CONG_STEP simpls tm;
+val (a,_) = dest_imp (concl icong)
+val ants = strip_conj a;
+
+(* first antecedent *)
+val (ant::rst) = ants;
+val (outcome1,rst') = simple cnv cps (ant,rst);
+
+(* second *)
+val (ant::rst) = rst';
+val (outcome2,rst') = simple cnv cps (ant,rst);
+
+(* third ... complex case, but not recursive *)
+val (ant::rst) = rst';
+val (outcome3,rst') = complex cnv cps (ant,rst);
+
+val outcomes = [outcome1,outcome2,outcome3];
+
+fun mk_ant (NO_CHANGE th) = th
+  | mk_ant (CHANGE th) = th
+
+MATCH_MP icong (LIST_CONJ (map mk_ant outcomes))
+
+*)
 
 
 
