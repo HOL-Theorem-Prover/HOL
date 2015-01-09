@@ -13,22 +13,20 @@ val _ = new_theory "grammar"
 val _ = ParseExtras.tight_equality()
 
 val _ = type_abbrev("inf", ``:'a + num``)
-val _ = Hol_datatype `
-  symbol = TOK of 'a | NT of 'b inf
-`;
+val _ = Datatype `symbol = TOK 'a | NT ('b inf)`;
 
 val isTOK_def = Define`(isTOK (TOK tok) = T) ∧ (isTOK (NT n) = F)`
 val _ = export_rewrites ["isTOK_def"]
 
-val _ = Hol_datatype`
+val _ = Datatype`
   grammar = <|
    start : 'b inf;
    rules : 'b inf |-> ('a,'b)symbol list set
 |> `;
 
-val _ = Hol_datatype`
-  parsetree = Lf of ('a,'b) symbol
-            | Nd of 'b inf => parsetree list
+val _ = Datatype`
+  parsetree = Lf (('a,'b) symbol)
+            | Nd ('b inf) (parsetree list)
 `;
 
 val ptree_size_def = tDefine "ptree_size" `
