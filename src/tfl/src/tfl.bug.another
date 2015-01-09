@@ -1,0 +1,140 @@
+(*
+load "state_optionTheory";
+
+val bar_defn = 
+ Hol_defn 
+  "bar"
+  `bar s = STATE_OPTION_BIND
+            STATE_OPTION_GET
+            (\s1. STATE_OPTION_BIND
+                    STATE_OPTION_GET
+                    (\s2. STATE_OPTION_IGNORE_BIND
+                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
+                            (STATE_OPTION_UNIT ())))
+            s`;
+*)
+val stem = "bar";
+val q =
+`bar s = STATE_OPTION_BIND
+            STATE_OPTION_GET
+            (\s1. STATE_OPTION_BIND
+                    STATE_OPTION_GET
+                    (\s2. STATE_OPTION_IGNORE_BIND
+                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
+                            (STATE_OPTION_UNIT ())))
+            s`;
+val [eqns] = parse_quote q;
+val facts = TypeBase.theTypeBase();
+val tup_eqs = eqns;
+val thy = facts;
+val [(p,th)] = (zip given_pats corollaries'')
+extract [R1] congs f (proto_def,WFR) (pat,corr)
+val FV = [R1]
+val tma = boolSyntax.rhs(concl th);
+
+val R = rand WFR
+val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
+val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
+fun mk_restr p = mk_comb(restr_fR, p)
+
+Given (p,th) from Defn.sml::extract:
+
+ val tma = boolSyntax.rhs(concl th)
+ val tmb = rator tma;
+ val tmc = body (rand tmb);
+ val tmd = body (rand tmc);
+ val tme = ``^tmd q``;
+
+ val nested_ref = ref false;
+ val (Pure thl,Context cntxt,Congs congs,Solver solver) = (* rwArgs *)
+     (Pure [CUT_LEM],
+      Context ([],DONT_ADD),
+      Congs congs,
+      Solver (solver (mk_restr p, f, FV@free_vars(concl th), nested_ref)));
+
+(*
+ val thl = [CUT_LEM]
+ val cntxt = ([],DONT_ADD)
+ val solver = solver (mk_restr p, f, FV@free_vars(concl th), nested_ref);
+*)
+
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tma;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmb;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmc;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmd;  (* d.n.work *)
+RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tme;  (* works *)
+
+val simpls' = add_congs(add_rws empty_simpls thl) congs;
+
+TOP_DEPTH_QCONV RW_STEP {context=cntxt, prover=solver, simpls=simpls'} tmb;
+val cnv = RW_STEP;
+val cps = {context=cntxt, prover=solver, simpls=simpls'};
+val tm = tmb;
+(* SUB_QCONV is where cong rule applied *)
+val cnv = TOP_DEPTH_QCONV cnv;
+SUB_QCONV cnv cps tmb;
+val (cps as {context,prover,simpls}) = cps;
+val COMB(Rator,Rand) = dest_term tmb;
+val th = CONG_STEP simpls tmb;
+do_cong cnv cps th;
+val (ant1::rst) = strip_conj (fst(dest_imp (concl th)))
+val (outcome1,[ant2]) = simple cnv cps (ant1,rst)
+val (outcome2 as CHANGE chthm,[]) = complex cnv cps (ant2,[]);
+(* note: chthm is actually unchanged, no? the lhs & rhs are aconv ... *)
+
+val ant = ant2;
+val rst = [];
+val {context as (cntxt,b),prover,simpls} = cps;
+
+val ant_frees = free_vars ant
+    val context_frees = free_varsl (map concl (fst context))
+    val (vlist,ceqn) = strip_forall ant
+    val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
+    val (f,args) = (I##rev) (dest_combn lhs (length vlist))
+    val _ = assert is_pabs f
+    val (rhsv,_) = dest_combn rhs (length vlist)
+    val vstrl = #1(strip_pabs f)
+    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
+    val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
+    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn');
+aconv lhs rhs; (* false *)
+val lhs_beta_maybe =
+               Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
+val lhs' = boolSyntax.rhs(concl lhs_beta_maybe);
+val cps' = {context = (map ASSUME L @ cntxt,b),
+            prover  = prover,
+            simpls  = add_cntxt b simpls (map ASSUME L)};
+TOP_DEPTH_QCONV RW_STEP cps' lhs';
+val cnv = TOP_DEPTH_QCONV RW_STEP;
+SUB_QCONV cnv cps' lhs';
+val (cps as {context,prover,simpls}) = cps';
+val tm = lhs';
+val COMB(Rator,Rand) = dest_term tm;
+val cong_thm = CONG_STEP simpls tm;
+do_cong cnv cps cong_thm;
+val th = cong_thm;
+val ants = strip_conj (fst(dest_imp (concl th)))
+val (ant::rst) = ants;
+val (outcome1,rst') =
+     if not(is_forall ant)
+        then simple cnv cps (ant,rst)
+        else complex cnv cps (ant,rst);
+val (ant::rst) = rst';
+val (outcome2,rst') = simple cnv cps (ant,rst);
+val {context as (cntxt,b),prover,simpls} = cps;
+val SOME (L,(lhs,rhs)) = total ((I##dest_eq) o strip_imp_only) ant;
+val cps' = {context = (map ASSUME L @ cntxt,b),
+            prover  = prover,
+            simpls  = add_cntxt b simpls (map ASSUME L)};
+TOP_DEPTH_QCONV RW_STEP cps' lhs;
+REPEATQC RW_STEP cps' lhs;
+RW_STEP cps' lhs;
+val {context=(cntxt,_),prover,simpls as RW{rw_net,...}} = cps';
+val tm = lhs;
+val [matchf] = Net.match tm rw_net;
+val COND th = matchf tm;
+val condition = fst(dest_imp(concl th));
+val cond_thm = prover simpls cntxt condition; (* fails *)
+val tm = condition;
+val rcontext = rev cntxt;
+val antl = [list_mk_conj(map concl rcontext)];

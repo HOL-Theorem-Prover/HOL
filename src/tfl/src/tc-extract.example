@@ -1,0 +1,156 @@
+load "stringLib";
+
+(*---------------------------------------------------------------------------*)
+(* Datatype encoding comparisons                                             *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype `comparison = Less | Greater | Equal`;
+
+(*---------------------------------------------------------------------------*)
+(* Comparison combinators for pairs, options, and lists                      *)
+(*---------------------------------------------------------------------------*)
+
+val pair_cmp_def = 
+ Define
+  `pair_cmp cmp1 cmp2 (x1,y1) (x2,y2) = 
+    case cmp1 x1 x2
+     of Equal => cmp2 y1 y2
+      | otherwise => otherwise`;
+
+val option_cmp_def = 
+ Define 
+  `(option_cmp cmp NONE NONE = Equal) ∧
+   (option_cmp cmp NONE (SOME x) = Less) ∧
+   (option_cmp cmp (SOME x) NONE = Greater) ∧
+   (option_cmp cmp (SOME x) (SOME y) = cmp x y)`;
+
+val list_cmp_def = 
+ Define 
+  `(list_cmp cmp [] [] = Equal) ∧
+   (list_cmp cmp [] (x::y) = Less) ∧
+   (list_cmp cmp (x::y) [] = Greater) ∧
+   (list_cmp cmp (x1::y1) (x2::y2) =
+      case cmp x1 x2 of
+      | Equal => list_cmp cmp y1 y2
+      | Less => Less
+      | Greater => Greater)`;
+
+val list_cmp_ind = fetch "-" "list_cmp_ind";
+
+(*---------------------------------------------------------------------------*)
+(* Congruence rules for termination condition extraction for the comparison  *)
+(* combinators. The one for pairs is slightly unusual, in order to handle    *)
+(* the way that the elements of the two pairs get compared.                  *)
+(*---------------------------------------------------------------------------*)
+
+val pair_cmp_cong = Q.prove
+(`!cmp1 cmp1' cmp2 cmp2' p1 p2 p1' p2'.
+    (p1 = p1') /\ (p2 = p2') /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) ==> (cmp1 a c = cmp1' a c)) /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) ==> (cmp2 b d = cmp2' b d))
+    ==> 
+     (pair_cmp cmp1 cmp2 p1 p2 = pair_cmp cmp1' cmp2' p1' p2')`,
+ NTAC 4 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [pair_cmp_def]);
+
+val option_cmp_cong = Q.prove
+(`!cmp cmp' opt1 opt1' opt2 opt2'.
+     (opt1 = opt1') /\ (opt2 = opt2') /\
+     (!x y. (opt1' = SOME x) /\ (opt2' = SOME y) ==> (cmp x y = cmp' x y))
+      ==> (option_cmp cmp opt1 opt2 = option_cmp cmp' opt1' opt2')`,
+ NTAC 2 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [option_cmp_def]);
+
+val list_cmp_cong = Q.prove
+(`!cmp l1 l2 cmp' l1' l2'.
+     (l1 = l1') /\ (l2 = l2') /\
+     (!x y. MEM x l1' /\ MEM y l2' ==> (cmp x y = cmp' x y))
+      ==> (list_cmp cmp l1 l2 = list_cmp cmp' l1' l2')`,
+recInduct list_cmp_ind THEN 
+ NTAC 2 (RW_TAC list_ss [list_cmp_def]) THEN
+ BasicProvers.EVERY_CASE_TAC THEN FULL_SIMP_TAC list_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* The following is a possible alternative congruence rule for pair          *)
+(* comparison, but the TC-extraction mechanism won't be able to work with it *)
+(* because the third antecedent has an unexpected shape: two conjuncts       *)
+(* instead of just a single equation.                                        *)
+(*---------------------------------------------------------------------------*)
+
+val pair_cmp_cong_alt = Q.prove
+(`!cmp1 cmp1' cmp2 cmp2' p1 p2 p1' p2'.
+    (p1 = p1') /\ (p2 = p2') /\
+    (!a b c d. (p1' = (a,b)) /\ (p2' = (c,d)) 
+               ==> (cmp1 a c = cmp1' a c) /\ (cmp2 b d = cmp2' b d))
+    ==> 
+     (pair_cmp cmp1 cmp2 p1 p2 = pair_cmp cmp1' cmp2' p1' p2')`,
+ NTAC 4 GEN_TAC THEN REPEAT Cases THEN
+ RW_TAC list_ss [pair_cmp_def]);
+
+(*---------------------------------------------------------------------------*)
+(* Comparisons on characters and strings (represented as lists of chars).    *)
+(*---------------------------------------------------------------------------*)
+
+val char_cmp_def = 
+ Define
+  `char_cmp c1 c2 = 
+       if c1=c2 then Equal else 
+       if ORD(c1) < ORD(c2) then Less else Greater`;
+
+val string_cmp_def = 
+ Define
+  `string_cmp s1 s2 = list_cmp char_cmp s1 s2`;
+
+(*---------------------------------------------------------------------------*)
+(* Install congruence rules for the combinators. Notice that string_cmp is   *)
+(* not given a congruence rule.                                              *)
+(*---------------------------------------------------------------------------*)
+
+val _ = List.app DefnBase.add_cong 
+                 [option_cmp_cong,list_cmp_cong,pair_cmp_cong];
+
+(*---------------------------------------------------------------------------*)
+(* Example: define an order on a type of first-order terms.                  *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype
+  `term = 
+     Var of string
+   | App of string => term list`;
+
+val term_size_def = fetch "-" "term_size_def";
+
+val termorder_def = 
+ tDefine
+ "termorder"
+ `(termorder (Var x1) (Var x2) = string_cmp x1 x2) ∧
+  (termorder (Var _) (App _ _) = Less) ∧
+  (termorder (App _ _) (Var _) = Greater) ∧
+  (termorder (App x1 ts1) (App x2 ts2) = 
+      pair_cmp string_cmp (list_cmp termorder) (x1,ts1) (x2,ts2))
+ `
+ (RW_TAC list_ss [] THEN
+  WF_REL_TAC `measure (term_size o FST)` THEN
+  Induct_on `ts1` THEN RW_TAC list_ss [term_size_def] THENL
+  [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)] THEN DECIDE_TAC);
+
+val termorder_ind = fetch "-" "termorder_ind";
+
+(*---------------------------------------------------------------------------*)
+(* The induction theorem can be simplified. Note that the IH involves a      *)
+(* hypothesis ``MEM a' ts1 /\ MEM a ts2`` which may be hard to satisfy. In   *)
+(* that case, the congruence rule for list_cmp above may need to be revised. *)
+(*                                                                           *)
+(* val termorder_ind =                                                       *)
+(*   |- ∀P.                                                                  *)
+(*     (∀x1 x2. P (Var x1) (Var x2)) ∧                                       *)
+(*     (∀v0 v1 v2. P (Var v0) (App v1 v2)) ∧                                 *)
+(*     (∀v3 v4 v5. P (App v3 v4) (Var v5)) ∧                                 *)
+(*     (∀x1 ts1 x2 ts2.                                                      *)
+(*        (∀a' a. MEM a' ts1 ∧ MEM a ts2 ==> P a' a)                         *)
+(*        ==> P (App x1 ts1) (App x2 ts2))                                   *)
+(*     ==>                                                                   *)
+(*     ∀v v1. P v v1                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val termorder_ind = SIMP_RULE list_ss [] termorder_ind;

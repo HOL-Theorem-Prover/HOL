@@ -324,9 +324,6 @@ end
 
 fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
 
-fun has_cong_rule simpls tm = Lib.can (CONG_STEP simpls) tm;
-
-
 (*----------------------------------------------------------------------------
  *                          Prettyprinting
  *---------------------------------------------------------------------------*)
@@ -432,10 +429,7 @@ end;
 
 fun TRY_QCONV cnv = ORELSEQC cnv ALL_QCONV;
 
-datatype delta 
-   = CHANGE of thm 
-   | NO_CHANGE of thm; (* previously: NO_CHANGE of term list * term *)
-
+datatype delta = CHANGE of thm | NO_CHANGE of thm; 
 
 fun unchanged (NO_CHANGE _) = true | unchanged _ = false;
 
@@ -489,147 +483,6 @@ fun dest_combn tm 0 = (tm,[])
 
 fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 
-
-(*---------------------------------------------------------------------------*)
-(* Handler for simple cong. rule antecedents: ones without quantification.   *)
-(*---------------------------------------------------------------------------*)
-(*
-fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = 
- let val _ = lztrace(5, "simple", (fn () => "ant: " ^ ppstring pp_term ant))
- in case total ((I##dest_eq) o strip_imp_only) ant 
-    of NONE => (CHANGE(ASSUME ant), rst)    (* Not an equality, so just assume *)
-    | SOME (L,(lhs,rhs)) => 
-      let val outcome =
-         if aconv lhs rhs then NOT_CHANGED (L,lhs)
-         else let val cps' = if null L then cps else
-                   {context = (map ASSUME L @ cntxt,b),
-                    prover  = prover,
-                    simpls  = add_cntxt b simpls (map ASSUME L)}
-              in CHANGE(cnv cps' lhs) handle HOL_ERR _ => NOT_CHANGED (L,lhs)
-                                           | UNCHANGED => NOT_CHANGED (L,lhs)
-              end
-      in
-      case outcome 
-       of CHANGE th => 
-          let val Mnew = boolSyntax.rhs(concl th)
-              val _ = lztrace(5, "simple", (fn () => "outcome: " ^ ppstring pp_term Mnew))
-          in
-           (CHANGE (itlist DISCH L th), map (subst [rhs |-> Mnew]) rst)
-          end
-        | otherwise => 
-          let val _ = lztrace(5, "simple", (fn () => "unchanged outcome "^ppstring pp_term lhs))
-          in (outcome, map (subst [rhs |-> lhs]) rst)
-          end
-      end
- end
-
-
-(*---------------------------------------------------------------------------*)
-(* Handler for cong. rule antecedents dealing with functions, i.e., of form  *)
-(*                                                                           *)
-(*  !x1 ... xn. P x1 .... xn ==> (f x1 ... xn = f' x1 ... xn)                *)
-(*                                                                           *)
-(* It can happen that "f" above also has a congruence rule for it, e.g., if  *)
-(* f is a higher order function. Then we have to recursively prove the       *)
-(* congruence rule instance for f, thus accumulating any termination         *)
-(* conditions that might lurk underneath.                                    *)
-(*---------------------------------------------------------------------------*)
-
-fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
-let val ant_frees = free_vars ant
-    val context_frees = free_varsl (map concl (fst context))
-    val (vlist,ceqn) = strip_forall ant
-    val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
-    val (f,args) = (I##rev) (dest_combn lhs (length vlist))
-    val _ = assert is_pabs f
-    val (rhsv,_) = dest_combn rhs (length vlist)
-    val vstrl = #1(strip_pabs f)
-    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
-    val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
-    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
-    val outcome =
-     if aconv lhs rhs then NOT_CHANGED (L,lhs) else
-     let val lhs_beta_maybe =
-               Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
-         val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
-         val cps' = case L of [] => cps
-                    | otherwise =>
-                       {context = (map ASSUME L @ cntxt,b),
-                        prover  = prover,
-                        simpls  = add_cntxt b simpls (map ASSUME L)}
-     in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
-        handle HOL_ERR _ => if aconv lhs lhs' then NOT_CHANGED (L,lhs)
-                            else CHANGE lhs_beta_maybe
-             | UNCHANGED => if aconv lhs lhs' then NOT_CHANGED (L,lhs)
-                            else CHANGE lhs_beta_maybe
-     end
-in
- case outcome of
-   CHANGE th => let
-     val Mnew = boolSyntax.rhs(concl th)
-     val g = list_mk_pabs(vstrl1,Mnew)
-     val gvstrl1 = list_mk_comb(g,vstrl1)
-     val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
-                  handle HOL_ERR _ => REFL gvstrl1)
-     val th1 = TRANS th eq (* f vstrl1 = g vstrl1 *)
-     val pairs = zip args vstrl1
-     fun generalize v thm =
-         case assoc1 v pairs
-          of SOME (_,tup) => pairTools.PGEN v tup thm
-           | NONE => raise RW_ERR "complex" "generalize"
-     val result = itlist generalize vlist (itlist DISCH L th1)
-   in
-     (CHANGE result, map (subst [rhsv |-> g]) rst)
-   end
- | otherwise => let
-   in
-      (outcome, map (subst [rhsv |-> f]) rst)
-   end
-end;
-
-
-(*---------------------------------------------------------------------------
- * Note.
- * When doing rewriting of quantified antecedents to congruence rules, as
- * in the one for "let" statements
- *
- *     |- (M = M') /\ (!x. (x = M') ==> (f x = g x)) ==> LET f M = LET g M',
- *                    |----------------------------|
- *
- * the temptation is there to only rewrite (in context) f to g, and
- * use MK_COMB to get f x = g x. (Assume that f is a lambda term.) However,
- * the free variables in the context (i.e., x) map to bound variables in
- * f and the attempt to abstract on the way out of the rewrite will fail, or
- * isolate the free variables.
- *---------------------------------------------------------------------------*)
-
-fun do_cong cnv (cps as {context,prover,simpls}) tm = 
- let val th = CONG_STEP simpls tm
-     val (a,c) = dest_imp (concl th)
-     val _ = lztrace(6, "do_cong",(fn () => "th concl: "^ppstring pp_term c))
-     val ants = strip_conj a
-     val _ = lztrace(6, "do_cong",
-                    (fn () => String.concatWith "\n"
-                           ("ants: " :: map (ppstring pp_term) ants)))
-  fun loop [] = []    (* loop proves each antecedent in turn. *)
-    | loop (ant::rst) =
-      let val (outcome,rst') =
-           if is_forall ant
-             then complex cnv cps (ant,rst)
-             else simple cnv cps (ant,rst)
-      in
-        outcome::loop rst'
-      end
-  val outcomes = loop ants
-  fun mk_ant (NOT_CHANGED (L,tm)) = itlist DISCH L (REFL tm)
-    | mk_ant (CHANGE th) = th
-in
-  if Lib.all unchanged outcomes
-    then raise UNCHANGED
-    else MATCH_MP th (LIST_CONJ (map mk_ant outcomes))
-end;
-*)
-
 (*---------------------------------------------------------------------------*)
 (* A congruence rule can have two kinds of antecedent: universally           *)
 (* quantified or unquantified. A bare antecedent is fairly simple to deal    *)
@@ -658,7 +511,11 @@ end;
 (*                                                                           *)
 (* In the second antecedent, f is a function that may be a constant, a       *)
 (* lambda term, a paired lambda term, or even the application of a higher-   *)
-(* order function.                                                           *)
+(* order function. In order to extract termination conditions from f x,      *)
+(* a (paired) beta reduction will be done, which can completely transform    *)
+(* the term structure. After extraction, a corresponding function g is       *)
+(* obtained from the rhs of the equality theorem returned. This may not look *)
+(* like a function, so there is a step of "un-beta-expansion" on g.          *)
 (*                                                                           *)
 (* Note.                                                                     *)
 (* When doing rewriting of quantified antecedents to congruence rules, as    *)
@@ -744,9 +601,9 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
           (* or paired-lambda term f. In that case, the extraction has  *)
           (* first done a beta-reduction and then extraction, so the    *)
           (* derived rhs needs to be "un-beta-expanded" in order that   *)
-          (* the existential var on the rhs be filled in with a         *)
-          (* function. This will allow the final MATCH_MP icong ... to  *)
-          (* succeed.                                                   *)
+          (* the existential var on the rhs be filled in with a thingb  *)
+          (* that has function syntax. This will allow the final        *)
+          (* MATCH_MP icong ... to  succeed.                            *)
           (*------------------------------------------------------------*)
          fun eta_rhs th =  
            let val r = boolSyntax.rhs(concl th)
@@ -776,9 +633,10 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
   end (* complex *)
 
   val icong = CONG_STEP simpls tm
-  val (a,_) = dest_imp (concl icong)
-  val ants = strip_conj a
-  fun loop [] = []    (* loop proves each antecedent in turn. *)
+  val ants = strip_conj (fst(dest_imp (concl icong)))
+  (* loop proves each antecedent in turn and propagates 
+     instantiations to the remainder. *)
+  fun loop [] = []    
     | loop (ant::rst) =
       let val (outcome,rst') =
            if is_forall ant
@@ -800,14 +658,14 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
 fun SUB_QCONV cnv cps tm =
  case dest_term tm
   of COMB(Rator,Rand) =>
-       (try_cong cnv cps tm 
-(*     (do_cong cnv cps tm *)
+      (try_cong cnv cps tm 
        handle UNCHANGED => raise UNCHANGED
           | HOL_ERR _ =>
               let val th = cnv cps Rator
               in MK_COMB (th, cnv cps Rand) handle UNCHANGED => AP_THM th Rand
               end
-              handle UNCHANGED => AP_TERM Rator (cnv cps Rand))
+              handle UNCHANGED => AP_TERM Rator (cnv cps Rand)
+      )
    | LAMB(Bvar,Body) =>
       let val Bth = cnv cps Body
       in ABS Bvar Bth
@@ -898,7 +756,6 @@ fun RW_STEPS traverser (simpls,context,congs,prover) thl =
    in
       traverser RW_STEP {context=context, prover=prover, simpls=simpls'}
    end;
-
 
 (*---------------------------------------------------------------------------*
  * Define an implicit set of rewrites, so that common rewrite rules don't    *
@@ -1178,143 +1035,3 @@ fun Simpl tac std_thms thl =
 val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* structure RW *)
-
-(*
-(*
-val bar_defn = Hol_defn "bar"
-`bar s = STATE_OPTION_BIND
-            STATE_OPTION_GET
-            (\s1. STATE_OPTION_BIND
-                    STATE_OPTION_GET
-                    (\s2. STATE_OPTION_IGNORE_BIND
-                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
-                            (STATE_OPTION_UNIT ())))
-            s`;
-*)
-val stem = "bar";
-val q =
-`bar s = STATE_OPTION_BIND
-            STATE_OPTION_GET
-            (\s1. STATE_OPTION_BIND
-                    STATE_OPTION_GET
-                    (\s2. STATE_OPTION_IGNORE_BIND
-                            (if s1=s2 then STATE_OPTION_UNIT () else (\b. bar b))
-                            (STATE_OPTION_UNIT ())))
-            s`;
-val [eqns] = parse_quote q;
-val facts = TypeBase.theTypeBase();
-val tup_eqs = eqns;
-val thy = facts;
-val [(p,th)] = (zip given_pats corollaries'')
-extract [R1] congs f (proto_def,WFR) (pat,corr)
-val FV = [R1]
-val tma = boolSyntax.rhs(concl th);
-
-val R = rand WFR
-val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
-val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
-fun mk_restr p = mk_comb(restr_fR, p)
-
-Given (p,th) from Defn.sml::extract:
-
- val tma = boolSyntax.rhs(concl th)
- val tmb = rator tma;
- val tmc = body (rand tmb);
- val tmd = body (rand tmc);
- val tme = ``^tmd q``;
-
- val nested_ref = ref false;
- val (Pure thl,Context cntxt,Congs congs,Solver solver) = (* rwArgs *)
-     (Pure [CUT_LEM],
-      Context ([],DONT_ADD),
-      Congs congs,
-      Solver (solver (mk_restr p, f, FV@free_vars(concl th), nested_ref)));
-
-(*
- val thl = [CUT_LEM]
- val cntxt = ([],DONT_ADD)
- val solver = solver (mk_restr p, f, FV@free_vars(concl th), nested_ref);
-*)
-
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tma;  (* d.n.work *)
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmb;  (* d.n.work *)
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmc;  (* d.n.work *)
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tmd;  (* d.n.work *)
-RW_STEPS TOP_DEPTH (empty_simpls,cntxt,congs,solver) thl tme;  (* works *)
-
-val simpls' = add_congs(add_rws empty_simpls thl) congs;
-
-TOP_DEPTH_QCONV RW_STEP {context=cntxt, prover=solver, simpls=simpls'} tmb;
-val cnv = RW_STEP;
-val cps = {context=cntxt, prover=solver, simpls=simpls'};
-val tm = tmb;
-(* SUB_QCONV is where cong rule applied *)
-val cnv = TOP_DEPTH_QCONV cnv;
-SUB_QCONV cnv cps tmb;
-val (cps as {context,prover,simpls}) = cps;
-val COMB(Rator,Rand) = dest_term tmb;
-val th = CONG_STEP simpls tmb;
-do_cong cnv cps th;
-val (ant1::rst) = strip_conj (fst(dest_imp (concl th)))
-val (outcome1,[ant2]) = simple cnv cps (ant1,rst)
-val (outcome2 as CHANGE chthm,[]) = complex cnv cps (ant2,[]);
-(* note: chthm is actually unchanged, no? the lhs & rhs are aconv ... *)
-
-val ant = ant2;
-val rst = [];
-val {context as (cntxt,b),prover,simpls} = cps;
-
-val ant_frees = free_vars ant
-    val context_frees = free_varsl (map concl (fst context))
-    val (vlist,ceqn) = strip_forall ant
-    val (lhs,rhs) = dest_eq(snd(strip_imp_only ceqn))
-    val (f,args) = (I##rev) (dest_combn lhs (length vlist))
-    val _ = assert is_pabs f
-    val (rhsv,_) = dest_combn rhs (length vlist)
-    val vstrl = #1(strip_pabs f)
-    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
-    val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
-    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn');
-aconv lhs rhs; (* false *)
-val lhs_beta_maybe =
-               Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
-val lhs' = boolSyntax.rhs(concl lhs_beta_maybe);
-val cps' = {context = (map ASSUME L @ cntxt,b),
-            prover  = prover,
-            simpls  = add_cntxt b simpls (map ASSUME L)};
-TOP_DEPTH_QCONV RW_STEP cps' lhs';
-val cnv = TOP_DEPTH_QCONV RW_STEP;
-SUB_QCONV cnv cps' lhs';
-val (cps as {context,prover,simpls}) = cps';
-val tm = lhs';
-val COMB(Rator,Rand) = dest_term tm;
-val cong_thm = CONG_STEP simpls tm;
-do_cong cnv cps cong_thm;
-val th = cong_thm;
-val ants = strip_conj (fst(dest_imp (concl th)))
-val (ant::rst) = ants;
-val (outcome1,rst') =
-     if not(is_forall ant)
-        then simple cnv cps (ant,rst)
-        else complex cnv cps (ant,rst);
-val (ant::rst) = rst';
-val (outcome2,rst') = simple cnv cps (ant,rst);
-val {context as (cntxt,b),prover,simpls} = cps;
-val SOME (L,(lhs,rhs)) = total ((I##dest_eq) o strip_imp_only) ant;
-val cps' = {context = (map ASSUME L @ cntxt,b),
-            prover  = prover,
-            simpls  = add_cntxt b simpls (map ASSUME L)};
-TOP_DEPTH_QCONV RW_STEP cps' lhs;
-REPEATQC RW_STEP cps' lhs;
-RW_STEP cps' lhs;
-val {context=(cntxt,_),prover,simpls as RW{rw_net,...}} = cps';
-val tm = lhs;
-val [matchf] = Net.match tm rw_net;
-val COND th = matchf tm;
-val condition = fst(dest_imp(concl th));
-val cond_thm = prover simpls cntxt condition; (* fails *)
-val tm = condition;
-val rcontext = rev cntxt;
-val antl = [list_mk_conj(map concl rcontext)];
-
-*)
