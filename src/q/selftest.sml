@@ -37,12 +37,25 @@ val _ = set_fixity "+" (Infixl 500)
 val _ = set_fixity "*" (Infixl 600)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 
+val _ = tprint "Q.MATCH_RENAME_TAC 1"
+val gl0 = ([``x < y``], ``x = z:num``)
+val expected_a0 = ``a < y``
+val expected_c0 = ``a = b:num``
+val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` gl0
+val _ = case sgs of
+            [([a], c)] => if aconv a expected_a0 andalso
+                             aconv c expected_c0
+                          then
+                            print "OK\n"
+                          else die "FAILED!"
+          | _ => die "FAILED!"
+
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 1"
 val gl1 = ([] : term list,
           ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + a)``)
 val expected_result1 =
     ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + c)``
-val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `y + c` [] gl1
+val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `y + c` gl1
 val _ = case sgs of
             [([], t)] => if aconv t expected_result1 then print "OK\n"
                          else die "FAILED!"
@@ -52,7 +65,7 @@ val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 2"
 val gl2 = ([] : term list,
            ``!x. x * SUC zero < y * (z + SUC zero) * (z + SUC (SUC zero))``)
 val expected_result2 = ``!x. x * c < y * (a + c) * (a + SUC c)``
-val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `a + c` [] gl2
+val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `a + c` gl2
 val _ = case sgs of
             [([], t)] => if aconv t expected_result2 then print "OK\n"
                          else die "FAILED!"
@@ -61,7 +74,7 @@ val _ = case sgs of
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 3"
 val gl2a = ([] : term list, ``!x. x * SUC zero < z``)
 val expected_result2a = #2 gl2a
-val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `SUC` [] gl2a
+val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `SUC` gl2a
 val _ = case sgs of
             [([], t)] => if aconv t expected_result2a then print "OK\n"
                          else die "FAILED!"
@@ -74,7 +87,7 @@ val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
 val expected_a1 = ``P (x:num) : bool``
 val expected_a2 = ``Q (x < n) : bool``
 val expected_c = ``x + y < SUC (SUC zero)``
-val (sgs, _) = Q.MATCH_ASMSUB_RENAME_TAC `x < n` [] gl3
+val (sgs, _) = Q.MATCH_ASMSUB_RENAME_TAC `x < n` gl3
 val _ = case sgs of
             [([a1, a2], c)] => if aconv a1 expected_a1 andalso
                                   aconv a2 expected_a2 andalso

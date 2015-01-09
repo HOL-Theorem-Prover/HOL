@@ -401,7 +401,7 @@ val lookup_fromList = store_thm(
   full_simp_tac (srw_ss() ++ ARITH_ss) [] >>
   `0 < n - i` by simp[] >>
   Cases_on `n - i` >> fs[] >>
-  qmatch_assum_rename_tac `n - i = SUC nn` [] >>
+  qmatch_assum_rename_tac `n - i = SUC nn` >>
   `nn = n - (i + 1)` by decide_tac >> simp[]);
 
 val bit_cases = prove(
@@ -465,7 +465,7 @@ val domain_fromList = store_thm(
     suffices_by (simp[] >> strip_tac >> simp[pred_setTheory.EXTENSION]) >>
   Induct_on `l` >> simp[pred_setTheory.EXTENSION, EQ_IMP_THM] >>
   rpt strip_tac >> simp[DECIDE ``(x = x + y) <=> (y = 0)``] >>
-  qmatch_assum_rename_tac `nn < SUC (LENGTH l)` [] >>
+  qmatch_assum_rename_tac `nn < SUC (LENGTH l)` >>
   Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
 
 val ODD_IMP_NOT_ODD = prove(
@@ -845,7 +845,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       qspec_then`x`strip_assume_tac div2_odd_lemma >>
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
-    qmatch_assum_rename_tac`wf (BN s1 s2)`[] >>
+    qmatch_assum_rename_tac`wf (BN s1 s2)` >>
     `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>
@@ -870,7 +870,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       qspec_then`x`strip_assume_tac div2_odd_lemma >>
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
-    qmatch_assum_rename_tac`wf (BS s1 z s2)`[] >>
+    qmatch_assum_rename_tac`wf (BS s1 z s2)` >>
     `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>

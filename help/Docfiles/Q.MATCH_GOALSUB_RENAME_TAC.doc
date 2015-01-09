@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {MATCH_GOALSUB_RENAME_TAC : term quotation -> string list -> tactic}
+\TYPE {MATCH_GOALSUB_RENAME_TAC : term quotation -> tactic}
 
 \SYNOPSIS
 Renames a goal in accordance with a pattern matched against a subterm
@@ -11,13 +11,14 @@ Renaming
 
 \DESCRIBE
 
-A call to {MATCH_GOALSUB_RENAME_TAC pat excs} attempts to find a match
-for the pattern {pat} in the current goal (using {gen_find_term} to
-find a sub-term of the goal that matches). If a match is found, the
-goal is adjusted so that the variables occurring in the pattern now
-also appear in the goal. This may rename variables in the goal, or
-even cause larger sub-terms to be replaced by variables (as with
-{SPEC_TAC}).
+A call to {MATCH_GOALSUB_RENAME_TAC pat} attempts to find a match for
+the pattern {pat} in the current goal (using {gen_find_term} to find a
+sub-term of the goal that matches). If a match is found, the goal is
+adjusted so that the variables occurring in the pattern now also
+appear in the goal. This may rename variables in the goal, or even
+cause larger sub-terms to be replaced by variables (as with
+{SPEC_TAC}). Underscores may be used in {pat} to indicate ``don't
+care'' bindings, where no renaming or instantiation will take place.
 
 \FAILURE
 
@@ -31,7 +32,7 @@ If the goal is
 {
     ?- !x. x * 2 < y * (z + 1) * (y + a)
 }
-then applying {Q.MATCH_GOALSUB_RENAME_TAC `y + c` []} will match the
+then applying {Q.MATCH_GOALSUB_RENAME_TAC `y + c`} will match the
 pattern {y + c} against the various subterms within the goal. The
 first obvious match, with {z + 1} will be rejected because the
 variable {y} is free in the goal, and is treated as if it were a local

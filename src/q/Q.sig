@@ -59,10 +59,10 @@ sig
   val UNABBREV_TAC           : tmquote -> tactic
   val RM_ABBREV_TAC          : tmquote -> tactic
 
-  val MATCH_RENAME_TAC       : tmquote -> string list -> tactic
-  val MATCH_ASSUM_RENAME_TAC : tmquote -> string list -> tactic
-  val MATCH_GOALSUB_RENAME_TAC : tmquote -> string list -> tactic
-  val MATCH_ASMSUB_RENAME_TAC : tmquote -> string list -> tactic
-  val FIND_CASE_TAC           : tmquote -> string list -> tactic
+  val MATCH_RENAME_TAC       : tmquote -> tactic
+  val MATCH_ASSUM_RENAME_TAC : tmquote -> tactic
+  val MATCH_GOALSUB_RENAME_TAC : tmquote -> tactic
+  val MATCH_ASMSUB_RENAME_TAC : tmquote -> tactic
+  val FIND_CASE_TAC           : tmquote -> tactic
 
 end

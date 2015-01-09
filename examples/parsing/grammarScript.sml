@@ -6,7 +6,7 @@ open listTheory pred_setTheory finite_mapTheory
 
 val FLAT_APPEND = rich_listTheory.FLAT_APPEND
 val rveq = rpt BasicProvers.VAR_EQ_TAC
-fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q []
+fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
 
 val _ = new_theory "grammar"
 

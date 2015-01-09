@@ -1,6 +1,6 @@
 \DOC MATCH_ASSUM_RENAME_TAC
 
-\TYPE {Q.MATCH_ASSUM_RENAME_TAC : term quotation -> string list -> tactic}
+\TYPE {Q.MATCH_ASSUM_RENAME_TAC : term quotation -> tactic}
 
 \SYNOPSIS
 Replaces selected terms with new variables by matching a pattern
@@ -9,10 +9,10 @@ against an assumption.
 \DESCRIBE
 
 When applied to the goal {(asl, w)}, the tactic
-{Q.MATCH_ASSUM_RENAME_TAC q ls} parses the quotation {q} in the
-context of the goal, producing a term to use as a pattern. The tactic
-then attempts a (first order) match of the pattern against each term
-in {asl}, stopping on the first matching assumption {a}.
+{Q.MATCH_ASSUM_RENAME_TAC q} parses the quotation {q} in the context
+of the goal, producing a term to use as a pattern. The tactic then
+attempts a (first order) match of the pattern against each term in
+{asl}, stopping on the first matching assumption {a}.
 
 For each variable {v} in the pattern, there will be an instantiation
 term {t}, such that the substitution
@@ -20,9 +20,9 @@ term {t}, such that the substitution
    pattern[v1 |-> t1, v2 |-> t2, ...]
 }
 produces {a}. The effect of the tactic is to then replace each {t}
-with the corresponding {v}, yielding a new goal. The list {ls} is of
-exceptions: if a variable {v}'s name appears in {ls}, then no
-replacement of {v} for {t} is made.
+with the corresponding {v}, yielding a new goal. Note that underscores
+within a pattern, though strictly speaking variables, are not included
+in this reverse instantiation.
 
 \FAILURE
 {MATCH_ASSUM_RENAME_TAC} fails if the pattern provided does not match
@@ -34,7 +34,7 @@ If the current goal is
 {
   (f x = Pair C'' C0') ?- (f C'' = f C0')
 }
-then applying the tactic {Q.MATCH_ASSUM_RENAME_TAC `X = Pair c1 c2` ["X"]}
+then applying the tactic {Q.MATCH_ASSUM_RENAME_TAC `_ = Pair c1 c2`}
 results in the goal
 {
   (f x = Pair c1 c2) ?- (f c1 = f c2)

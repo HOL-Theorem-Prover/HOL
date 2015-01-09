@@ -1,17 +1,18 @@
 \DOC
 
-\TYPE {FIND_CASE_TAC : term quotation -> string list -> tactic}
+\TYPE {FIND_CASE_TAC : term quotation -> tactic}
 
 \SYNOPSIS
-Finds an instance of a pattern in a goal, and renames to use names from the pattern
+Finds an instance of a pattern in a goal, and renames to use names
+from the pattern
 
 \KEYWORDS
 
 \DESCRIBE
-The tactic {Q.FIND_CASE_TAC pat sl} is defined to be
+The tactic {Q.FIND_CASE_TAC pat} is defined to be
 {
-   MATCH_RENAME_TAC q sl ORELSE MATCH_ASSUM_RENAME_TAC q sl ORELSE
-   MATCH_GOALSUB_RENAME_TAC q sl ORELSE MATCH_ASMSUB_RENAME_TAC q sl
+   MATCH_RENAME_TAC q ORELSE MATCH_ASSUM_RENAME_TAC q ORELSE
+   MATCH_GOALSUB_RENAME_TAC q ORELSE MATCH_ASMSUB_RENAME_TAC q
 }
 
 
