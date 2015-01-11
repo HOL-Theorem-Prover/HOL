@@ -1663,7 +1663,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
        ++ PROVE_TAC [ALGEBRA_INTER])
    ++ RW_TAC std_ss [GSPECIFICATION, SUBSET_DEF, closed_cdi_def] <<
    [PROVE_TAC [closed_cdi_def, SMALLEST_CLOSED_CDI],
-    Q.MATCH_ASSUM_RENAME_TAC `s1 ∩ s2 ∈ smallest_closed_cdi a` [] ++
+    Q.MATCH_ASSUM_RENAME_TAC `s1 ∩ s2 ∈ smallest_closed_cdi a` ++
     Know `s1 INTER COMPL s2 = COMPL (COMPL s1 UNION (s1 INTER s2))`
     >> (PSET_TAC [EXTENSION]
         ++ PROVE_TAC [])
