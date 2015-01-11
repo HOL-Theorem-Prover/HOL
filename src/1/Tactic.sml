@@ -142,7 +142,6 @@ val CONJ_TAC: tactic =
 
 (* ASM1 & ASM2 variants assume the given conjunct when proving the other one *)
 
-infix THEN_LT ; (* why do we need this? Not needed for THEN, below! *)
 val CONJ_ASM1_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2 ;
 val CONJ_ASM2_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 2 1 ;
 
