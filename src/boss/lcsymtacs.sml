@@ -111,5 +111,6 @@ struct
   val op\\ = op Tactical.THEN
   val op>- = op Tactical.THEN1
   val op>| = op Tactical.THENL
+  val op>>> = op Tactical.THEN_LT
 
 end

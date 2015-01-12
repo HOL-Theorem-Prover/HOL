@@ -90,9 +90,22 @@ sig
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
 
-  val >> : tactic * tactic -> tactic
-  val \\ : tactic * tactic -> tactic
-  val >| : tactic * tactic list -> tactic
+  val >> : ('a -> goal list * (thm list -> 'b)) * tactic ->
+         'a -> goal list * (thm list -> 'b)
+  val \\ : ('a -> goal list * (thm list -> 'b)) * tactic ->
+         'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * tactic -> tactic OR list_tactic * tactic -> list_tactic *)
+
+  val >| : ('a -> goal list * (thm list -> 'b)) * tactic list ->
+         'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * tactic list -> tactic OR 
+    list_tactic * tactic list -> list_tactic *)
+
   val >- : tactic * tactic -> tactic
+
+  val >>> : ('a -> goal list * (thm list -> 'b)) * list_tactic ->
+        'a -> goal list * (thm list -> 'b)
+  (* ie, tactic * list_tactic -> tactic OR
+    list_tactic * list_tactic -> list_tactic *)
 
 end
