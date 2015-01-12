@@ -82,7 +82,7 @@ in fn tys => fn ttac => let
   val th = prove(list_mk_conj concls,
     ho_match_mp_tac induction >>
     srw_tac[boolSimps.ETA_ss][] >>
-    qmatch_rename_tac `(X = Y z) ⇔ Z` ["X","Y","Z"] >>
+    qmatch_rename_tac `(_ = _ z) ⇔ _` >>
     Cases_on `z` >> rw[])
   val (_,ths) = foldr
     (fn (ty,(all,ths)) => let
