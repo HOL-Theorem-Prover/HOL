@@ -6,7 +6,7 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs sptreeTheory arm8Theory arm8_stepTheory arm8AssemblerLib
+open lcsymtacs arm8Theory arm8_stepTheory arm8AssemblerLib
 open blastLib
 
 structure Parse =

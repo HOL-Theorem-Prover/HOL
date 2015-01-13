@@ -2,7 +2,6 @@ structure arm8AssemblerLib :> arm8AssemblerLib =
 struct
 
 open HolKernel boolLib bossLib
-open sptreeSyntax wordsSyntax
 
 local
    open MutableMap arm8 assemblerLib
@@ -11,64 +10,48 @@ end
 
 val ERR = Feedback.mk_HOL_ERR "arm8AssemblerLib"
 
-(*
-
-val () = sptreeSyntax.temp_add_sptree_printer()
-val () = Globals.max_print_depth := 10
-
-*)
-
-(*
-   Compute inverse for the function arm8.DecodeBitMasks.
-*)
+(* Validity check for EncodeBitMask
 
 local
    val b0 = BitsN.B (0, 1)
    val b1 = BitsN.B (1, 1)
-   type dtype = BitsN.nbit * int * int
-   val mkDict =
-      List.foldl (fn ((SOME k, d: dtype), m) => Redblackmap.insert (m, k, d)
-                   | ((NONE, _), m) => m)
-         (Redblackmap.mkDict BitsN.compare) o Lib.mk_set o List.concat
    fun mask (m, n) (s, r) =
       Option.map fst
          (arm8.DecodeBitMasks m
             (BitsN.fromNat (n, 1),
              (BitsN.fromNat (s, 6), (BitsN.fromNat (r, 6), true))))
-   val mask32 = mask (32, 0)
-   val mask64_0 = mask (64, 0)
-   val mask64_1 = mask (64, 1)
+   fun checkMask (m, n) (s, r) =
+      case mask (m, n) (s, r) of
+         SOME imm => Option.isSome (arm8.EncodeBitMask m imm)
+       | NONE => false
+   val mask32 = checkMask (32, 0)
+   val mask64_0 = checkMask (64, 0)
+   val mask64_1 = checkMask (64, 1)
    val d64 =
      (List.tabulate
-        (64, fn i => List.tabulate (64, fn j => (mask64_1 (i, j), (b1, i, j))))
+        (64,
+         fn i => List.tabulate (64, fn j => (mask64_1 (i, j), (b1, i, j))))
       @
       List.tabulate
-        (62, fn i => List.tabulate (64, fn j => (mask64_0 (i, j), (b0, i, j)))))
-     |> mkDict
+        (62,
+         fn i => List.tabulate (64, fn j => (mask64_0 (i, j), (b0, i, j)))))
+     |> List.concat
    val d32 =
-     List.tabulate
-        (62, fn i => List.tabulate (64, fn j => (mask32 (i, j), (b0, i, j))))
-     |> mkDict
-   val imm6 =
-      Option.map (fn (a, b, c): dtype => (a, (BitsN.B (b, 6), BitsN.B (c, 6))))
-   val bits2num = Arbnum.fromHexString o BitsN.toHexString
-   val sptree =
-      sptreeSyntax.fromAList o
-      List.map
-         (fn (k, (a, b, c): dtype) =>
-            (bits2num k,
-             pairSyntax.list_mk_pair
-                [wordsSyntax.mk_wordi (bits2num a, 1),
-                 wordsSyntax.mk_wordii (b, 6),
-                 wordsSyntax.mk_wordii (c, 6)])) o Redblackmap.listItems
-   val EncodeBitMask =
-      fn arm8.Imm32 i => imm6 (Redblackmap.peek (d32, i))
-       | arm8.Imm64 i => imm6 (Redblackmap.peek (d64, i))
+     (List.tabulate
+        (62, fn i => List.tabulate (64, fn j => (mask32 (i, j), (b0, i, j)))))
+     |> List.concat
 in
-   fun instructionEncode ast = arm8.Encode (EncodeBitMask, ast)
-   val m32 = sptree d32
-   val m64 = sptree d64
+   val fail64 =
+      List.filter (not o fst) d64
+      |> List.map (fn (_, (n, s, r)) => mask (64, BitsN.toNat n) (s, r))
+      |> List.filter Option.isSome
+   val fail32 =
+      List.filter (not o fst) d32
+      |> List.map (fn (_, (n, s, r)) => mask (32, BitsN.toNat n) (s, r))
+      |> List.filter Option.isSome
 end
+
+*)
 
 fun arm_syntax_pass1 q =
    let
@@ -106,7 +89,7 @@ fun arm_syntax_pass1 q =
                   then p1
                else case instructionFromString s1 of
                        OK ast =>
-                         (case instructionEncode ast of
+                         (case arm8.Encode ast of
                              ARM8 w =>
                                 let
                                    val ast' = Decode w
@@ -131,7 +114,7 @@ fun encode (line, ast) =
       fun err s = raise assemblerLib.Assembler
                           [{string = "Encode failed" ^ s, line = line}]
    in
-      case instructionEncode ast of
+      case arm8.Encode ast of
          arm8.ARM8 w =>
             let
                val ast' = arm8.Decode w
@@ -254,7 +237,7 @@ in
    val print_arm8_disassemble = List.app printn o arm8_disassemble
 end
 
-(* Testing
+(* Testing - round-trip
 
 open MutableMap arm8AssemblerLib
 
@@ -319,7 +302,7 @@ local
               in
                case arm8.instructionFromString s of
                   arm8.OK i' =>
-                    (case arm8AssemblerLib.instructionEncode i' of
+                    (case arm8.Encode i' of
                         arm8.ARM8 w' =>
                           if w = w' orelse astEquiv i i'
                              then (* (print (s ^ "\n"); NONE) *) NONE
