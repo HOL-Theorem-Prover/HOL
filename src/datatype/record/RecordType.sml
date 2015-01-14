@@ -25,6 +25,7 @@ val K_tm = combinSyntax.K_tm
 
 
 val ERR = mk_HOL_ERR "RecordType";
+fun mk_recordtype_constructor s = "recordtype." ^ s
 
 (* ----------------------------------------------------------------------
     General utilities
@@ -515,7 +516,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
              syntax, and we want this to be preferred where
              possible. *)
            ListPair.app do_fupdfn (fields, fupdfn_terms);
-           ListPair.app add_record_fupdate (fields, fupdfn_terms)
+           ListPair.app add_record_fupdate (fields, fupdfn_terms);
+           Parse.overload_on(typename, constructor)
         end
 
   val thm_str_list =

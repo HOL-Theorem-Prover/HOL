@@ -179,8 +179,10 @@ in
                     Args = List.tabulate (arity, fn n => Type.alpha)}
 end
 
+val mk_recordtype_constructor = RecordType.mk_recordtype_constructor
+
 fun check_constrs_unique_in_theory asts = let
-  fun cnames (s, Record _) = [(s,s)]
+  fun cnames (s, Record _) = [(s,mk_recordtype_constructor s)]
     | cnames (s, Constructors l) = map (fn s' => (s, #1 s')) l
   val newtypes = map #1 asts
   val constrs = List.concat (map cnames asts)
@@ -218,7 +220,8 @@ end
 
 local fun tyname_as_tyvar n = mk_vartype ("'" ^ n)
       fun stage1 (s,Constructors l) = (s,l)
-        | stage1 (s,Record fields)  = (s,[(s,map snd fields)])
+        | stage1 (s,Record fields)  = (s,[(mk_recordtype_constructor s,
+                                           map snd fields)])
       fun check_fields (s,Record fields) =
           (case duplicate_names (map fst fields)
            of NONE => ()
