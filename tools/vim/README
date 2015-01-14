@@ -61,6 +61,7 @@ hl          Same as above, but also send the region as a command afterwards.
 hg          Send region (should be a quotation) to g, to start a new proof.
 he          Send region (should be a tactic) to e, to expand a tactic.
 hS          Send region (should be a quotation) as a new subgoal.
+hF          Send region (should be a quotation) to be proved sufficient then proved.
 
 If a visual mode command above is given in normal mode, the region will be the
 line containing the cursor.
@@ -94,6 +95,7 @@ hL and hl don't "load" these words: local open in end.
 hg strips commas from the end of the region.
 
 hS strips everything including and after the first "by" in the region, if any.
+hF strips everything including and after the first "suffices_by" in the region, if any.
 
 he strips these tokens from the ends of the region
   start: ) ] [

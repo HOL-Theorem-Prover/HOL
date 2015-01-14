@@ -129,6 +129,15 @@ fu! HOLSubgoal()
   silent keepjumps normal G$a by ALL_TAC)
 endf
 
+fu! HOLSuffices()
+  keepjumps normal iproofManagerLib.expand(
+  silent normal p
+  if search(s:delim.'suffices_by'.s:delim.'\_.*','cW')
+    silent keepjumps normal vG$"_d
+  en
+  silent keepjumps normal G$a suffices_by ALL_TAC)
+endf
+
 fu! HOLF(f)
   exe "normal i" . a:f
 endf
@@ -187,6 +196,7 @@ vn <silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR
 vn <silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
 vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
+vn <silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
 nm <silent><expr> <LocalLeader>l "V".maplocalleader."l"
 nm <silent><expr> <LocalLeader>L "V".maplocalleader."L"
 nm <silent><expr> <LocalLeader>s "V".maplocalleader."s"
@@ -194,6 +204,7 @@ nm <silent><expr> <LocalLeader>u "V".maplocalleader."u"
 nm <silent><expr> <LocalLeader>g "V".maplocalleader."g"
 nm <silent><expr> <LocalLeader>e "V".maplocalleader."e"
 nm <silent><expr> <LocalLeader>S "V".maplocalleader."S"
+nm <silent><expr> <LocalLeader>F "V".maplocalleader."F"
 nn <silent> <LocalLeader>R :<C-U>call HOLRotate()<CR>
 nn <silent> <LocalLeader>b :<C-U>call HOLRepeat("proofManagerLib.backup();")<CR>
 nn <silent> <LocalLeader>B :<C-U>call HOLRepeat("proofManagerLib.restore();")<CR>
