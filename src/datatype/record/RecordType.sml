@@ -497,10 +497,6 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       if List.exists (is_substring brss) (typename :: fields) then
         ()
       else let
-          fun do_updfn (name0, tm) = let val name = name0 ^ "_update"
-                                     in
-                                       Parse.overload_on(name, tm)
-                                     end
           fun do_fupdfn (name0, tm) = let val name = name0 ^ "_fupd"
                                       in
                                         Parse.overload_on(name, tm)
