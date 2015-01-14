@@ -515,9 +515,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
              "artificial" constant for special printing of record
              syntax, and we want this to be preferred where
              possible. *)
-           ListPair.app do_fupdfn (fields, fupdfn_terms);
-           ListPair.app add_record_fupdate (fields, fupdfn_terms);
-           Parse.overload_on(typename, constructor)
+          ListPair.app do_fupdfn (fields, fupdfn_terms);
+          ListPair.app add_record_fupdate (fields, fupdfn_terms);
+          Parse.overload_on(typename, constructor)
         end
 
   val thm_str_list =
