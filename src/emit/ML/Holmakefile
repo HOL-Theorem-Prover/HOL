@@ -1,5 +1,6 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = selftest.exe selftest.sml
+EXTRA_CLEANS = selftest.exe selftest.sml $(wildcard *ML.sig) $(wildcard *ML.sml)
+INCLUDES = ..
 
 # testing SELFTESTLEVEL like this only works in Poly/ML for the moment.
 # when/if github issue 100 (http://github.com/mn200/HOL/issues/100) is
