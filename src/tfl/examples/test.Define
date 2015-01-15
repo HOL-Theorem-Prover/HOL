@@ -155,8 +155,8 @@ val Swap_def' =
 val Flag_defn = Hol_defn 
    "Flag" 
    `Flag list = case Swap list
-                 of NONE -> list
-                 || SOME slist -> Flag slist`;
+                 of NONE => list
+                 | SOME slist => Flag slist`;
 
 
 (*---------------------------------------------------------------------------
@@ -458,7 +458,8 @@ TypeBasePure.type_size (TypeBase.theTypeBase()) (Type`:'a Btree list`);
  *---------------------------------------------------------------------------*)
 
 val Lin_def = 
-Define`(Lin (Leaf x) = Leaf x) 
+ Define
+      `(Lin (Leaf x) = Leaf x) 
   /\   (Lin (Brh a (Leaf x) bt)        = Brh a (Leaf x) (Lin bt))
   /\   (Lin (Brh a (Brh x bt1 bt2) bt) = Lin (Brh x bt1 (Brh a bt2 bt)))`;
 
@@ -660,26 +661,46 @@ val nS_defn = Hol_defn
  "nS"
  `nS ms =
    case SPLIT (\x. ?r l w. x = (Repeat r::l, w, SOME (Repeat r::l))) ms [] 
-    of NONE -> ms
-    || SOME (l1, (bad_r, bad_w, bad_s), z) ->
+    of NONE => ms
+    | SOME (l1, (bad_r, bad_w, bad_s), z) =>
          case SPLIT (\x. ?s. x = (bad_r, bad_w, s)) l1 []
-          of NONE -> []
-          || SOME (x1, (rl,w1,s1), y) -> nS (x1 ++ [(rl, w1, s1)] ++ csp z s1)`;
+          of NONE => []
+          | SOME (x1, (rl,w1,s1), y) => nS (x1 ++ [(rl, w1, s1)] ++ csp z s1)`;
 
-Hol_defn "foo" 
-  `foo L = case SPLIT ($= 3) L []
-            of NONE -> L
-            || SOME(L1,x,L2) ->
-                case SPLIT ($=2) L1 []
-                 of NONE -> []
-                 || SOME (L1a,y, L1b) -> foo (L1a ++ [y] ++ L2)`;
+val defn = 
+ Hol_defn 
+  "foo" 
+  `foo L = 
+     case SPLIT ($= 3) L []
+      of NONE => L
+       | SOME(L1,x,L2) =>
+          case SPLIT ($=2) L1 []
+           of NONE => []
+            | SOME (L1a, y, L1b) => foo (L1a ++ [y] ++ L2)`;
 
-Hol_defn "foo" 
+Defn.tgoal defn;
+e (RW_TAC list_ss []);
+
+
+val defn = 
+ Hol_defn 
+  "foo1" 
+  `foo1 L = 
+     case SPLIT ($= 3) L []
+      of NONE => L
+       | SOME(L1,_,L2) =>
+          case SPLIT ($=2) L1 []
+           of NONE => []
+            | SOME (L1a, y, _) => foo1 (L1a ++ [y] ++ L2)`;
+
+val defn = 
+ Hol_defn 
+  "bar" 
   `bar L = case L 
-            of [] -> 1
-            || h::t -> case t
-                        of [] -> 2
-                        || h1::t1 -> bar t1`;
+            of [] => 1
+            | h::t => case t
+                        of [] => 2
+                        | h1::t1 => bar t1`;
 
 
 (*---------------------------------------------------------------------------*)
@@ -839,8 +860,8 @@ val ZIP_DELTA_def =
      if v1 = v2
       then (v1,x1) :: ZIP_DELTA b d1 d2
       else case LOOKUP d2 v1 of
-           SOME(v,x) -> (v1, if b then x1 else x) :: ZIP_DELTA b d1 d2
-        || NONE      -> (v1,x1) :: ZIP_DELTA b d1 ((v2,x2)::d2))`;
+           SOME(v,x) => (v1, if b then x1 else x) :: ZIP_DELTA b d1 d2
+        | NONE      => (v1,x1) :: ZIP_DELTA b d1 ((v2,x2)::d2))`;
 
 val test_def =
  Define
@@ -848,8 +869,8 @@ val test_def =
    (test [] d2 = d2)  /\
    (test (p1::d1) (p2::d2)  =
       case LOOKUP d2 (FST p1) of
-        NONE      -> p1 :: test d1 (p2::d2)
-     || SOME(v,x) -> (FST p1,x) :: test d1 d2)`;
+        NONE      => p1 :: test d1 (p2::d2)
+     | SOME(v,x) => (FST p1,x) :: test d1 d2)`;
 
 
 (*---------------------------------------------------------------------------*)
@@ -875,17 +896,17 @@ val code_eval_defn = Hol_defn "code_eval" `
   (code_eval v [] = v) /\
   (code_eval v (cod :: rest) =
      case cod of
-        Assign b -> code_eval (SOME b) rest
-     || PosCond c ->
+        Assign b => code_eval (SOME b) rest
+     | PosCond c =>
           (case v of
-             NONE -> NONE
-          || SOME T -> code_eval (code_eval v c) rest
-          || SOME F -> code_eval v rest)
-     || NegCond c ->
+             NONE => NONE
+          | SOME T => code_eval (code_eval v c) rest
+          | SOME F => code_eval v rest)
+     | NegCond c =>
           (case v of
-              NONE -> NONE
-           || SOME F -> code_eval (code_eval v c) rest
-           || SOME T -> code_eval v rest))
+              NONE => NONE
+           | SOME F => code_eval (code_eval v c) rest
+           | SOME T => code_eval v rest))
 `;
 
 val code1_size = prove(``code1_size = list_size code_size``,

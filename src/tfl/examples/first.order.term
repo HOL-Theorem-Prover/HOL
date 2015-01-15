@@ -1,0 +1,154 @@
+load "stringLib";
+
+(* May have to first invoke Holmake in 
+   HOLDIR/examples/balanced_bst 
+*)
+
+load (HOLDIR^"/examples/balanced_bst/balanced_mapTheory");  
+
+(*---------------------------------------------------------------------------*)
+(* Datatype of first-order terms.                                            *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Hol_datatype
+  `term 
+     = Var of string
+     | App of string => term list`;
+
+val term_size_def = fetch "-" "term_size_def";
+
+(*---------------------------------------------------------------------------*)
+(* Comparison function on terms.                                             *)
+(*---------------------------------------------------------------------------*)
+
+val term_cmp_def = 
+ tDefine
+ "term_cmp"
+ `(term_cmp (Var x1) (Var x2) = string_cmp x1 x2) ∧
+  (term_cmp (Var _) (App _ _) = Less) ∧
+  (term_cmp (App _ _) (Var _) = Greater) ∧
+  (term_cmp (App x1 ts1) (App x2 ts2) = 
+     pair_cmp string_cmp (list_cmp term_cmp) (x1,ts1) (x2,ts2))
+ `
+ (RW_TAC list_ss [] THEN
+  WF_REL_TAC `measure (term_size o FST)` THEN
+  Induct_on `ts1` THEN RW_TAC list_ss [term_size_def] THENL
+  [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)] THEN DECIDE_TAC);
+
+val term_cmp_ind = fetch "-" "term_cmp_ind";
+
+(*---------------------------------------------------------------------------*)
+(* The induction theorem can be simplified. Note that the IH involves a      *)
+(* hypothesis ``MEM a' ts1 /\ MEM a ts2`` which may be hard to satisfy. In   *)
+(* that case, the congruence rule for list_cmp above may need to be revised. *)
+(*                                                                           *)
+(* val term_cmp_ind =                                                       *)
+(*   |- ∀P.                                                                  *)
+(*     (∀x1 x2. P (Var x1) (Var x2)) ∧                                       *)
+(*     (∀v0 v1 v2. P (Var v0) (App v1 v2)) ∧                                 *)
+(*     (∀v3 v4 v5. P (App v3 v4) (Var v5)) ∧                                 *)
+(*     (∀x1 ts1 x2 ts2.                                                      *)
+(*        (∀a' a. MEM a' ts1 ∧ MEM a ts2 ==> P a' a)                         *)
+(*        ==> P (App x1 ts1) (App x2 ts2))                                   *)
+(*     ==>                                                                   *)
+(*     ∀v v1. P v v1                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val term_cmp_ind = SIMP_RULE list_ss [] term_cmp_ind;
+
+open comparisonTheory;
+
+val term_cmp_id = Q.prove
+(`!x y. (x=y) ==> (term_cmp x y = Equal)`,
+ recInduct term_cmp_ind THEN RW_TAC list_ss [] THENL
+[RW_TAC list_ss [term_cmp_def] THEN METIS_TAC [string_cmp_antisym],
+ RW_TAC list_ss [term_cmp_def,list_cmp_def,pair_cmp_def] THEN
+ `string_cmp x1 x1 = Equal` by METIS_TAC [string_cmp_antisym] THEN 
+  RW_TAC list_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
+  POP_ASSUM MP_TAC THEN SIMP_TAC list_ss [] THEN
+  Q.ID_SPEC_TAC `ts1` THEN Induct THEN RW_TAC list_ss [list_cmp_def]]);
+
+val term_cmp_refl = Q.prove
+(`!x. term_cmp x x = Equal`,
+ METIS_TAC[term_cmp_id]);
+
+STOP;
+val term_cmp_sym = Q.prove
+(`!x y. (term_cmp x y = Equal) ==> (term_cmp y x = Equal)`,
+recInduct term_cmp_ind THEN RW_TAC list_ss [term_cmp_def] THENL
+[METIS_TAC [string_cmp_good,good_cmp_def],
+ pair_cmp_good,
+
+val term_cmp_inv = Q.prove
+(`!x y. (term_cmp x y = Less) = (term_cmp y x = Greater)`,
+
+val term_cmp_trans = Q.prove
+(
+
+
+val term_cmp_good = Q.prove
+(`good_cmp term_cmp`,
+  RW_TAC list_ss [good_cmp_def] THEN 
+  METIS_TAC [term_cmp_refl,term_cmp_sym,term_cmp_inv,term_cmp_trans]
+
+(*---------------------------------------------------------------------------*)
+(* Occurs check: does a given variable appear in an App term                 *)
+(*---------------------------------------------------------------------------*)
+
+val occurs_def = 
+ tDefine
+  "occurs"
+  `(occurs (Var s) (App _ tl) = MEM (Var s) tl \/ EXISTS (occurs (Var s)) tl) /\
+   (occurs t1 t2 = F)
+  `
+ (WF_REL_TAC `measure (term_size o SND)` THEN
+  Induct_on `tl` THEN RW_TAC list_ss [term_size_def] 
+  THENL [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)]
+  THEN DECIDE_TAC);
+
+val occurs_ind = fetch "-" "occurs_ind";
+
+(*---------------------------------------------------------------------------*)
+(* Substitution                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val subst_def = 
+ tDefine
+  "subst"
+  `(subst theta (Var s) = 
+      (case lookup string_cmp s theta 
+        of NONE => Var s
+         | SOME t => t))
+   /\
+   (subst theta (App fname tl) = App fname (MAP (subst theta) tl))`
+ (WF_REL_TAC `measure (term_size o SND)` THEN
+  Induct_on `tl` THEN RW_TAC list_ss [term_size_def] 
+  THENL [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)]
+  THEN DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Unification                                                               *)
+(*---------------------------------------------------------------------------*)
+(*
+val unify_defn = 
+ Hol_defn
+  "unify"
+  `unify dpairs theta = 
+    case dpairs
+     of [] => theta
+      | (Var s1, Var s2)::t =>
+          if s1 = s2 then unify t theta
+          else 
+      | (App f l1,App g l2)::t =>
+          if f = g 
+           then unify (ZIP l1 l2 ++ t) theta
+            else NONE
+      | (Var s, tm)::t =>
+         if occurs (Var s) tm
+          then NONE
+          else let theta' = subst_in_subst (Var s, tm) theta in
+               let t' = MAP (subst theta' ## subst theta') t
+               in unify t' theta'
+      | (tm,Var s)::t => unify ((Var s,tm)::t) theta`
+
+*)
