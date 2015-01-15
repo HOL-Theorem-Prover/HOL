@@ -1,6 +1,6 @@
 \DOC GEN_REWRITE_RULE
 
-\TYPE {GEN_REWRITE_RULE : ((conv -> conv) -> thm list -> thm list -> thm -> thm)}
+\TYPE {GEN_REWRITE_RULE : ((conv -> conv) -> rewrites -> thm list -> thm -> thm)}
 
 \SYNOPSIS
 Rewrites a theorem, selecting terms according to a user-specified strategy.
@@ -60,7 +60,7 @@ and we would like to rewrite the left-hand side with the
 theorem {ADD_SYM} without changing the right hand side. This can be
 done by using:
 {
-   GEN_REWRITE_RULE (RATOR_CONV o ONCE_DEPTH_CONV) []  [ADD_SYM] mythm
+   GEN_REWRITE_RULE (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [ADD_SYM] mythm
 }
 Other rules, such as {ONCE_REWRITE_RULE}, would match and
 substitute on both sides, which would not be the desirable result.
