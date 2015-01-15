@@ -34,6 +34,8 @@ src/emit
 !!examples/ARM/v4
 !!examples/ARM/v7
 !!src/emit/ML
+!src/emit/theory_tests
+!src/emit/theory_tests1
 src/hol88
 !examples/dev
 !src/quotient/examples/lambda
