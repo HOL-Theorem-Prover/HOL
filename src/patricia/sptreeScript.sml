@@ -775,6 +775,41 @@ val isEmpty_toList = store_thm("isEmpty_toList",
   ``!t. wf t ==> ((t = LN) <=> (toList t = []))``,
   rw[toList_def,isEmpty_toListA])
 
+val lem2 =
+  SIMP_RULE (srw_ss()) [] (Q.SPECL[`2`,`1`]DIV_MULT)
+
+fun tac () = (
+  (disj2_tac >> qexists_tac`0` >> simp[] >> NO_TAC) ORELSE
+  (disj2_tac >>
+   qexists_tac`2*k+1` >> simp[] >>
+   REWRITE_TAC[Once MULT_COMM] >> simp[MULT_DIV] >>
+   rw[] >> `F` suffices_by rw[] >> pop_assum mp_tac >>
+   simp[lemmas,GSYM ODD_EVEN] >> NO_TAC) ORELSE
+  (disj2_tac >>
+   qexists_tac`2*k+2` >> simp[] >>
+   REWRITE_TAC[Once MULT_COMM] >> simp[lem2] >>
+   rw[] >> `F` suffices_by rw[] >> pop_assum mp_tac >>
+   simp[lemmas] >> NO_TAC) ORELSE
+  (metis_tac[]))
+
+val MEM_toListA = prove(
+  ``∀t acc x. MEM x (toListA acc t) ⇔ (MEM x acc ∨ ∃k. lookup k t = SOME x)``,
+  Induct >> simp[toListA_def,lookup_def] >- metis_tac[] >>
+  rw[EQ_IMP_THM] >> rw[] >> pop_assum mp_tac >> rw[]
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac()))
+
+val MEM_toList = store_thm("MEM_toList",
+  ``∀x t. MEM x (toList t) ⇔ ∃k. lookup k t = SOME x``,
+  rw[toList_def,MEM_toListA])
+
 val div2_even_lemma = prove(
   ``!x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n``,
   Induct >- ( qexists_tac`2` >> simp[] ) >> fs[] >>
