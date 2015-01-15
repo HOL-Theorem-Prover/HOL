@@ -269,14 +269,29 @@ fun introduce_zM64 th = if
   val th = RW [STAR_ASSOC,LOAD64] th
   in th end handle HOL_ERR _ => th;
 
-fun introduce_zMEMORY64 th =
+val is_spec_1 = true
+val is_spec_1 = false
+
+val SPEC_1_pat = temporalTheory.SPEC_1_def |> SPEC_ALL |> concl |> dest_eq |> fst
+fun dest_spec_1 tm =
+  if can (match_term SPEC_1_pat) tm then let
+    val (x1234,x5) = dest_comb tm
+    val (x123,x4) = dest_comb x1234
+    val (x12,x3) = dest_comb x123
+    val (x1,x2) = dest_comb x12
+    val (x0,x1) = dest_comb x1
+    in (x1,x2,x3,x4) end
+  else failwith("not a SPEC_1")
+
+fun introduce_zMEMORY64_spec_or_spec_1 th is_spec_1 =
   let val th = introduce_zM64 th in
   if not (can (find_term (can (match_term ``zM64``))) (concl th))
   then th else let
-  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
+  val pre_conv = if is_spec_1 then RATOR_CONV o PRE_CONV else PRE_CONV
+  val th = CONV_RULE (pre_conv STAR_REVERSE_CONV) th
   val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
-  val th = CONV_RULE (PRE_CONV STAR_REVERSE_CONV) th
-  val (_,p,_,q) = dest_spec(concl th)
+  val th = CONV_RULE (pre_conv STAR_REVERSE_CONV) th
+  val (_,p,_,q) = dest_spec(concl th) handle HOL_ERR _ => dest_spec_1(concl th)
   val xs = (rev o list_dest dest_star) p
   val tm = ``zM64 a x``
   val xs = filter (can (match_term tm)) xs
@@ -284,7 +299,7 @@ fun introduce_zMEMORY64 th =
                mk_comb(mk_var("f",``:word64->word64``),(cdr o car) tm)
   val th = INST (map foo xs) th
   in if xs = [] then th else let
-    val (_,p,_,q) = dest_spec(concl th)
+    val (_,p,_,q) = dest_spec(concl th) handle HOL_ERR _ => dest_spec_1(concl th)
     val xs = (rev o list_dest dest_star) p
     val tm = ``zM64 a x``
     val xs = filter (can (match_term tm)) xs
@@ -293,7 +308,9 @@ fun introduce_zMEMORY64 th =
       | foo (v::vs) = pred_setSyntax.mk_delete(foo vs,v)
     val frame = mk_comb(mk_comb(``zMEMORY64``,foo ys),mk_var("f",``:word64->word64``))
     val th = SPEC frame (MATCH_MP progTheory.SPEC_FRAME th)
-    val th = RW [GSYM STAR_ASSOC] th
+             handle HOL_ERR _ =>
+             SPEC frame (MATCH_MP temporalTheory.SPEC_1_FRAME th)
+    val th = RW [GSYM STAR_ASSOC,SEP_CLAUSES] th
     val fff = (fst o dest_eq o concl o UNDISCH_ALL o SPEC_ALL o GSYM) zMEMORY64_INSERT
     fun compact th = let
       val x = find_term (can (match_term fff)) ((car o car o concl o UNDISCH_ALL) th)
@@ -325,11 +342,15 @@ fun introduce_zMEMORY64 th =
       THEN FULL_SIMP_TAC std_ss []
       THEN FULL_SIMP_TAC std_ss [])
     val th = DISCH_ALL (MATCH_MP th (UNDISCH imp))
-    val th = RW [GSYM progTheory.SPEC_MOVE_COND] th
+    val th = RW [GSYM progTheory.SPEC_MOVE_COND,
+                 GSYM temporalTheory.SPEC_MOVE_1_COND] th
     val th = remove_primes th
     val th = REWRITE_RULE [SING_SUBSET] th
     val th = SIMP_RULE (bool_ss++sep_cond_ss) [] th
     in th end end end
+
+fun introduce_zMEMORY64 th = introduce_zMEMORY64_spec_or_spec_1 th false;
+fun introduce_zMEMORY64_1 th = introduce_zMEMORY64_spec_or_spec_1 th true;
 
 (*
 fun introduce_zSTACK th =
@@ -397,12 +418,14 @@ fun calc_code th = let
   val code = map snd (sort (fn (x,_) => fn (y,_) => x <= y) tms)
   in listSyntax.mk_list (code, ``:word8``) end;
 
-fun x64_prove_one_spec th c = let
+fun x64_prove_one_spec_or_spec_1 th c is_spec_1 = let
   val g = concl th
   val s = find_term (can (match_term ``X64_NEXT x = SOME y``)) g
   val s = (snd o dest_comb o snd o dest_comb) s
   val (pre,post) = x64_pre_post g s
-  val tm = ``SPEC X64_MODEL pre {(rip,c)} post``
+  val tm = if is_spec_1
+           then ``SPEC_1 X64_MODEL pre {(rip,c)} post SEP_F``
+           else ``SPEC X64_MODEL pre {(rip,c)} post``
   val tm = subst [mk_var("pre",type_of pre) |-> pre,
                   mk_var("post",type_of post) |-> post,
                   mk_var("c",type_of c) |-> c] tm
@@ -416,7 +439,8 @@ fun x64_prove_one_spec th c = let
 (*
     set_goal([],tm)
 *)
-    MATCH_MP_TAC IMP_X64_SPEC \\ REPEAT STRIP_TAC
+    MATCH_MP_TAC (if is_spec_1 then IMP_X64_SPEC_1 else IMP_X64_SPEC)
+    \\ REPEAT STRIP_TAC
     \\ EXISTS_TAC ((cdr o cdr o concl o UNDISCH) th1)
     \\ STRIP_TAC \\ REWRITE_TAC [X64_ICACHE_UPDATE_def]
     THENL [MATCH_MP_TAC th1,ALL_TAC]
@@ -460,6 +484,12 @@ fun x64_prove_one_spec th c = let
     \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11,INSERT_SUBSET,IN_INSERT,EMPTY_SUBSET])
   val th = INST [``w:bool``|-> (if !x64_code_write_perm then T else F)] th
   in RW [STAR_ASSOC,SEP_CLAUSES,markerTheory.Abbrev_def] th end;
+
+fun x64_prove_one_spec th c =
+  x64_prove_one_spec_or_spec_1 th c false;
+
+fun x64_prove_one_spec_1 th c =
+  x64_prove_one_spec_or_spec_1 th c true;
 
 fun x64_prove_specs mpred no_status s = let
   val th = x64_step s

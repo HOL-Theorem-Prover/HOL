@@ -4,7 +4,7 @@ open HolKernel Parse boolLib bossLib;
 val _ = new_theory "prog_x64_extra";
 
 open prog_x64Theory prog_x64Lib x64_encodeLib;
-open helperLib progTheory set_sepTheory addressTheory;
+open helperLib progTheory set_sepTheory addressTheory temporalTheory;
 
 open wordsTheory wordsLib listTheory arithmeticTheory;
 open whileTheory pairTheory relationTheory combinTheory optionTheory;
@@ -315,7 +315,7 @@ val X64_SPEC_WEAKEN = prove(
   \\ `?r e s m i. seq k = (r,e,s,m,i)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [STAR_x64_2set,GSYM STAR_ASSOC]
   \\ FULL_SIMP_TAC std_ss [X64_STACK_FULL_def,x64_icacheTheory.X64_ICACHE_def]
-  \\ METIS_TAC []) |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO];
+  \\ SRW_TAC [] []) |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO];
 
 val X64_SPEC_WEAKEN = prove(
   ``!p c q. SPEC X64_MODEL p c q ==>
@@ -324,6 +324,42 @@ val X64_SPEC_WEAKEN = prove(
                 SPEC X64_MODEL p c r``,
   ONCE_REWRITE_TAC [GSYM X64_SPEC_CODE] \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC X64_SPEC_WEAKEN
+  \\ Q.EXISTS_TAC `zCODE c * q` \\ FULL_SIMP_TAC std_ss []
+  \\ IMP_RES_TAC SEP_IMP_FRAME
+  \\ POP_ASSUM (MP_TAC o Q.SPEC `zCODE c`)
+  \\ SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES]
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def,SEP_EXISTS_THM]
+  \\ REPEAT STRIP_TAC \\ RES_TAC THEN1 (METIS_TAC [])
+  \\ METIS_TAC [STAR_ASSOC,STAR_COMM]);
+
+val X64_SPEC_1_WEAKEN = prove(
+  ``!p c q. SPEC_1 X64_MODEL p EMPTY q SEP_F ==>
+            !r. SEP_IMP q (r \/ SEP_EXISTS x frame.
+                   zR1 RSP x * zR1 zGhost_stack_top x * frame) ==>
+                SPEC_1 X64_MODEL p EMPTY r SEP_F``,
+  SIMP_TAC std_ss [X64_SPEC_1_SEMANTICS] \\ REPEAT STRIP_TAC
+  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`y`,`s`,`t1`,`seq`])
+  \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC THEN1 (METIS_TAC [])
+  \\ Cases_on `X64_STACK_FULL (seq (k+1))` THEN1 METIS_TAC []
+  \\ Cases_on `X64_STACK_FULL (seq k)` THEN1 METIS_TAC []
+  \\ Q.LIST_EXISTS_TAC [`k`,`t2`] \\ FULL_SIMP_TAC std_ss []
+  \\ FULL_SIMP_TAC std_ss [SEP_IMP_def,SEP_DISJ_def,SEP_EXISTS_THM]
+  \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ `?rs st ei ms. y = (rs,st,ei,ms)` by METIS_TAC [PAIR]
+  \\ `?r e s m i. t2 = (r,e,s,m,i)` by METIS_TAC [PAIR]
+  \\ `?r e s m i. seq (k+1) = (r,e,s,m,i)` by METIS_TAC [PAIR]
+  \\ FULL_SIMP_TAC std_ss [STAR_x64_2set,GSYM STAR_ASSOC]
+  \\ FULL_SIMP_TAC std_ss [X64_STACK_FULL_def,x64_icacheTheory.X64_ICACHE_def]
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [])
+  |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO];
+
+val X64_SPEC_1_WEAKEN = prove(
+  ``!p c q. SPEC_1 X64_MODEL p c q SEP_F ==>
+            !r. SEP_IMP q (r \/ SEP_EXISTS x frame.
+                   zR1 RSP x * zR1 zGhost_stack_top x * frame) ==>
+                SPEC_1 X64_MODEL p c r SEP_F``,
+  ONCE_REWRITE_TAC [GSYM X64_SPEC_1_CODE] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC X64_SPEC_1_WEAKEN
   \\ Q.EXISTS_TAC `zCODE c * q` \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC SEP_IMP_FRAME
   \\ POP_ASSUM (MP_TAC o Q.SPEC `zCODE c`)
@@ -374,6 +410,55 @@ val sw2sw_64_32 =
   sw2sw_def |> INST_TYPE [``:'b``|->``:64``,``:'a``|->``:32``]
             |> SIMP_RULE std_ss [EVAL ``dimindex (:64)``,EVAL ``dimindex (:32)``]
             |> GSYM
+
+fun SPEC_1_FRAME_RULE th tm =
+  SPEC tm (MATCH_MP temporalTheory.SPEC_1_FRAME th) |> RW [SEP_CLAUSES]
+
+val x64_call_imm_raw_spec_1 = let
+  val th = x64_Lib.x64_step "48E8"
+  val c = calc_code th
+  val th = pre_process_thm th
+  val th = RW [w2n_MOD] th
+  val th = x64_prove_one_spec_1 th c
+  val th = introduce_zMEMORY64 th
+  in th end
+
+val x64_call_imm_spec_1 = save_thm("x64_call_imm_spec_1",let
+  val th = x64_call_imm_raw_spec_1
+  val th = th |> RW [sw2sw_64_32,GSYM word_add_n2w,WORD_ADD_ASSOC]
+  val th = th |> Q.INST [`r4`|->`rsp`,`df`|->`dm`,`f`|->`m`,`rip`|->`p`]
+  val th = SPEC_1_FRAME_RULE th ``
+             zR1 zGhost_stack_top top * zR1 zGhost_stack_bottom base *
+             cond (stack_ok rsp top base stack dm m)``
+  val new_p = ``(p + 6w + sw2sw (imm32:word32)):word64``
+  val th = MATCH_MP X64_SPEC_1_WEAKEN th
+             |> Q.SPEC `zPC ^new_p * zSTACK (base,p+6w::stack)`
+  val goal = th |> concl |> dest_imp |> fst
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [SEP_IMP_def,zSTACK_def,SEP_CLAUSES,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.LIST_EXISTS_TAC [`top`,
+         `zPC ^new_p *
+          zR1 zGhost_stack_bottom base * zMEMORY64 dm ((rsp - 0x8w =+ p+6w) m)`,
+         `rsp-8w`,`top`,`dm`,
+         `((rsp - 0x8w =+ p+6w) m)`]
+    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR,SEP_DISJ_def]
+    \\ IMP_RES_TAC stack_ok_PUSH
+    \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `p+6w`)
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
+  val th = MP th lemma
+  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+              |> SIMP_RULE std_ss [SPEC_1_PRE_EXISTS]
+  val (th,goal) = SPEC_STRENGTHEN_RULE th
+    ``zPC p * zSTACK (base,stack)``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [SEP_IMP_def,zSTACK_def,SEP_CLAUSES,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.LIST_EXISTS_TAC [`rsp`,`top`,`dm`,`m`]
+    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
+    \\ IMP_RES_TAC stack_ok_PUSH
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
+  val th = MP th lemma
+  val th = RW [GSYM IMM32_def,GSYM word_add_n2w,WORD_ADD_ASSOC] th
+  in th |> stack_ss end);
 
 val x64_call_imm = save_thm("x64_call_imm",let
   val ((th,_,_),_) = x64_spec_memory64 "48E8"
@@ -541,6 +626,43 @@ val x64_pops = save_thm("x64_pops",let
 
 (* ret *)
 
+val x64_ret_raw_spec_1 = let
+  val th = x64_Lib.x64_step (x64_encode "ret")
+  val c = calc_code th
+  val th = pre_process_thm th
+  val th = RW [w2n_MOD] th
+  val th = x64_prove_one_spec_1 th c
+  val th = introduce_zMEMORY64 th
+  in th end
+
+val x64_ret_spec_1 = save_thm("x64_ret_spec_1",let
+  val th = x64_ret_raw_spec_1
+  val th = th |> Q.INST [`r4`|->`rsp`,`df`|->`dm`,`f`|->`m`,`rip`|->`p`]
+  val th = SPEC_1_FRAME_RULE th ``
+             zR1 zGhost_stack_top top * zR1 zGhost_stack_bottom base *
+             cond (stack_ok rsp top base stack dm m /\ stack <> [])``
+  val (th,goal) = SPEC_WEAKEN_RULE th
+    ``zPC (HD stack) * zSTACK (base,TL stack)``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [SEP_IMP_def,zSTACK_def,SEP_CLAUSES,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.LIST_EXISTS_TAC [`rsp+8w`,`top`,`dm`,`m`]
+    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
+    \\ IMP_RES_TAC stack_ok_POP
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
+  val th = MP th lemma
+  val th = th |> Q.GENL (rev [`rsp`,`top`,`dm`,`m`])
+              |> SIMP_RULE std_ss [SPEC_1_PRE_EXISTS]
+  val (th,goal) = SPEC_STRENGTHEN_RULE th
+    ``zPC p * zSTACK (base,stack) * cond (stack <> [])``
+  val lemma = prove(goal,
+    SIMP_TAC std_ss [SEP_IMP_def,zSTACK_def,SEP_CLAUSES,SEP_EXISTS_THM]
+    \\ REPEAT STRIP_TAC \\ Q.LIST_EXISTS_TAC [`rsp`,`top`,`dm`,`m`]
+    \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
+    \\ IMP_RES_TAC stack_ok_POP
+    \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
+  val th = MP th lemma
+  in th |> stack_ss end);
+
 val x64_ret = save_thm("x64_ret",let
   val ((th,_,_),_) = x64_spec_memory64 (x64_encode "ret")
   val th = th |> Q.INST [`r4`|->`rsp`,`df`|->`dm`,`f`|->`m`,`rip`|->`p`]
@@ -568,6 +690,16 @@ val x64_ret = save_thm("x64_ret",let
     \\ FULL_SIMP_TAC (std_ss++star_ss) [zR_def])
   val th = MP th lemma
   in th |> stack_ss end);
+
+(* SPEC_1 jmp imm *)
+
+val x64_ret_raw_spec_1 = save_thm("x64_ret_raw_spec_1",let
+  val th = x64_Lib.x64_step "48E9"
+  val c = calc_code th
+  val th = pre_process_thm th
+  val th = RW [w2n_MOD] th
+  val th = x64_prove_one_spec_1 th c
+  in th end);
 
 (* read/write stack *)
 

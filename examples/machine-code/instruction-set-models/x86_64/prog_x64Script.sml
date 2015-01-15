@@ -225,6 +225,11 @@ val lemma =
   METIS_PROVE [SPLIT_x64_2set]
   ``p (x64_2set' y s) ==> (?u v. SPLIT (x64_2set s) (u,v) /\ p u /\ (\v. v = x64_2set'' y s) v)``;
 
+val CODE_POOL_EMPTY = prove(
+  ``CODE_POOL m EMPTY = emp``,
+  FULL_SIMP_TAC std_ss [Once FUN_EQ_THM,emp_def,CODE_POOL_def]
+  \\ FULL_SIMP_TAC (srw_ss()) []);
+
 val X64_SPEC_SEMANTICS = store_thm("X64_SPEC_SEMANTICS",
   ``SPEC X64_MODEL p {} q =
     !y s t1 seq.
@@ -254,6 +259,42 @@ val X64_SPEC_SEMANTICS = store_thm("X64_SPEC_SEMANTICS",
     \\ IMP_RES_TAC x64_2set''_11
     \\ FULL_SIMP_TAC std_ss []));
 
+val X64_SPEC_1_SEMANTICS = store_thm("X64_SPEC_1_SEMANTICS",
+  ``SPEC_1 X64_MODEL p {} q SEP_F =
+    !y s t1 seq.
+      p (x64_2set' y t1) /\ X64_ICACHE t1 s /\ rel_sequence X64_NEXT_REL seq s /\
+      ~(X64_STACK_FULL s) ==>
+      ?k t2. q (x64_2set' y t2) /\ X64_ICACHE t2 (seq (k + 1)) /\
+             (x64_2set'' y t1 = x64_2set'' y t2) \/ X64_STACK_FULL (seq k)``,
+  SIMP_TAC bool_ss [GSYM RUN_EQ_SPEC,RUN_thm,X64_MODEL_def,
+    SEP_REFINE_def,PULL_EXISTS,SPEC_1_def,TEMPORAL_def,T_IMPLIES_def,
+    T_OR_F_def,NEXT_def,EVENTUALLY_def,NOW_def,SEP_F_def,LET_DEF,
+    CODE_POOL_EMPTY,SEP_CLAUSES] \\ SIMP_TAC std_ss [STAR_def]
+  \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THEN1
+   (FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS] \\ SRW_TAC [] []
+    \\ REPEAT STRIP_TAC
+    \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`y`,`state`,`s`,`seq`])
+    \\ FULL_SIMP_TAC std_ss []
+    \\ Cases_on `X64_STACK_FULL state` \\ FULL_SIMP_TAC std_ss []
+    THEN1 (FULL_SIMP_TAC std_ss [rel_sequence_def] \\ METIS_TAC [])
+    \\ `state = seq 0` by FULL_SIMP_TAC std_ss [rel_sequence_def]
+    \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
+    \\ FULL_SIMP_TAC std_ss [PULL_EXISTS] \\ METIS_TAC [])
+  \\ IMP_RES_TAC lemma \\ FULL_SIMP_TAC std_ss [PULL_FORALL]
+  \\ FULL_SIMP_TAC bool_ss [SPLIT_x64_2set_EXISTS]
+  \\ IMP_RES_TAC x64_2set''_11
+  \\ FULL_SIMP_TAC std_ss [PULL_EXISTS]
+  THEN1 (METIS_TAC [])
+  \\ SRW_TAC [] []
+  \\ Q.PAT_ASSUM `!y.bbb` (MP_TAC o Q.SPECL [`s`,`seq`,`\s. s = x64_2set'' y t1`])
+  \\ FULL_SIMP_TAC std_ss []
+  \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
+  THEN1 METIS_TAC [rel_sequence_def]
+  \\ REVERSE (REPEAT STRIP_TAC)
+  THEN1 METIS_TAC []
+  THEN1 METIS_TAC []
+  \\ IMP_RES_TAC x64_2set''_11
+  \\ Q.LIST_EXISTS_TAC [`k`,`s'`] \\ FULL_SIMP_TAC std_ss [])
 
 (* ----------------------------------------------------------------------------- *)
 (* Theorems for construction of |- SPEC X64_MODEL ...                            *)
@@ -414,9 +455,22 @@ val UPDATE_x64_2set'' = store_thm("UPDATE_x64_2set''",
   \\ ASM_SIMP_TAC std_ss [] \\ SRW_TAC [] [X64_ACCURATE_UPDATE]
   \\ METIS_TAC [X64_ACCURATE_UPDATE]);
 
+val SPEC_1_CODE = prove(
+  ``!x p c q.
+      SPEC_1 x (CODE_POOL (FST (SND (SND x))) c * p) {}
+               (CODE_POOL (FST (SND (SND x))) c * q) SEP_F <=>
+      SPEC_1 x p c q SEP_F``,
+  FULL_SIMP_TAC std_ss [SPEC_1_def,FORALL_PROD,TEMPORAL_def,T_IMPLIES_def,
+    EVENTUALLY_def,T_OR_F_def,NOW_def,NEXT_def,LET_DEF,CODE_POOL_EMPTY,
+    SEP_CLAUSES,AC STAR_ASSOC STAR_COMM]);
+
 val X64_SPEC_CODE = save_thm("X64_SPEC_CODE",
   RW [GSYM X64_MODEL_def,GSYM zCODE_def]
   (SIMP_RULE std_ss [X64_MODEL_def] (Q.ISPEC `X64_MODEL` SPEC_CODE)));
+
+val X64_SPEC_1_CODE = save_thm("X64_SPEC_1_CODE",
+  RW [GSYM X64_MODEL_def,GSYM zCODE_def]
+  (SIMP_RULE std_ss [X64_MODEL_def] (Q.ISPEC `X64_MODEL` SPEC_1_CODE)));
 
 val IMP_X64_SPEC_LEMMA = prove(
   ``!p q.
@@ -426,8 +480,8 @@ val IMP_X64_SPEC_LEMMA = prove(
            p (x64_2set' y s) /\
            (X64_NEXT s = SOME v) /\ q (x64_2set' y t2) /\ X64_ICACHE t2 v /\
            (x64_2set'' y t1 = x64_2set'' y t2)) ==>
-      SPEC X64_MODEL p {} q``,
-  REWRITE_TAC [X64_SPEC_SEMANTICS] \\ REPEAT STRIP_TAC
+      SPEC_1 X64_MODEL p {} q SEP_F``,
+  REWRITE_TAC [X64_SPEC_1_SEMANTICS] \\ REPEAT STRIP_TAC
   \\ `p (x64_2set' y s)` by METIS_TAC []
   \\ `X64_NEXT_REL (seq 0) (seq (SUC 0))` by ALL_TAC THEN1
    (`?x. X64_NEXT_REL (seq 0) x` by ALL_TAC THEN1
@@ -438,7 +492,7 @@ val IMP_X64_SPEC_LEMMA = prove(
     \\ METIS_TAC [rel_sequence_def])
   \\ FULL_SIMP_TAC std_ss [X64_NEXT_REL_def]
   \\ `seq 0 = s` by FULL_SIMP_TAC std_ss [rel_sequence_def]
-  \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `1`
+  \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `0`
   \\ Q.PAT_ASSUM `!y s t1. bbb` (MP_TAC o
        RW [GSYM AND_IMP_INTRO] o Q.SPECL [`y`,`u`,`t1`])
   \\ IMP_RES_TAC X64_ICACHE_TRANS
@@ -554,7 +608,7 @@ val IMP_X64_SPEC_LEMMA2 = prove(
            q (x64_2set' (rs,st,ei,ms) (X64_ICACHE_REVERT v (r,e,t,m,i))) /\
            (x64_2set'' (rs,st,ei,ms) (r,e,t,m,i) =
             x64_2set'' (rs,st,ei,ms) (X64_ICACHE_REVERT v (r,e,t,m,i)))) ==>
-      SPEC X64_MODEL p {} q``,
+      SPEC_1 X64_MODEL p {} q SEP_F``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_X64_SPEC_LEMMA
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC X64_ICACHE_THM2
@@ -570,8 +624,22 @@ val IMP_X64_SPEC_LEMMA2 = prove(
   \\ MATCH_MP_TAC X64_ICACHE_X64_ICACHE_REVERT
   \\ Q.EXISTS_TAC `(X64_ICACHE_UPDATE z (r,e,t,m,i))` \\ ASM_SIMP_TAC std_ss []);
 
+val SPEC_1_SEP_F_IMP_SPEC = store_thm("SPEC_1_SEP_F_IMP_SPEC",
+  ``SPEC_1 model pre code post SEP_F ==> SPEC model pre code post``,
+  REPEAT STRIP_TAC \\ IMP_RES_TAC SPEC_1_IMP_SPEC
+  \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]);
+
 val IMP_X64_SPEC = save_thm("IMP_X64_SPEC",
-  (RW1 [STAR_COMM] o RW [X64_SPEC_CODE,GSYM zCODE_def] o
+  (SPECL [``p * CODE_POOL X64_INSTR {(rip,c)}``,
+          ``q * CODE_POOL X64_INSTR {(rip,c)}``]) IMP_X64_SPEC_LEMMA2
+   |> UNDISCH |> MATCH_MP SPEC_1_IMP_SPEC |> RW [SEP_CLAUSES]
+   |> RW [X64_SPEC_CODE,GSYM zCODE_def]
+   |> RW1 [STAR_COMM]
+   |> DISCH_ALL
+   |> RW [X64_SPEC_CODE,GSYM zCODE_def]);
+
+val IMP_X64_SPEC_1 = save_thm("IMP_X64_SPEC_1",
+  (RW1 [STAR_COMM] o RW [X64_SPEC_1_CODE,GSYM zCODE_def] o
    SPECL [``CODE_POOL X64_INSTR {(rip,c)} * p``,
           ``CODE_POOL X64_INSTR {(rip,c)} * q``]) IMP_X64_SPEC_LEMMA2);
 
@@ -1018,7 +1086,7 @@ val IMP_X64_SPEC_LEMMA3 = prove(
            q (x64_2set' (rs,st,ei,ms) ((\(r,e,t,m,i). (r,e,t,m,X64_ICACHE_EMPTY)) v)) /\
            (x64_2set'' (rs,st,ei,ms) (r,e,t,m,i) =
             x64_2set'' (rs,st,ei,ms) ((\(r,e,t,m,i2). (r,e,t,m,i)) v))) ==>
-      SPEC X64_MODEL p {} q``,
+      SPEC_1 X64_MODEL p {} q SEP_F``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC IMP_X64_SPEC_LEMMA
   \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC X64_ICACHE_THM2
@@ -1037,15 +1105,20 @@ val IMP_X64_SPEC_LEMMA3 = prove(
   \\ Q.EXISTS_TAC `{}` \\ Q.EXISTS_TAC `UNIV` \\ SRW_TAC [] [] \\ EVAL_TAC);
 
 val IMP_X64_SPEC2 = save_thm("IMP_X64_SPEC2",
-  (RW1 [STAR_COMM] o RW [X64_SPEC_CODE,GSYM zCODE_def] o
-   SPECL [``CODE_POOL X64_INSTR c * p``,
-          ``CODE_POOL X64_INSTR c * q``]) IMP_X64_SPEC_LEMMA3);
+  SPECL [``p * CODE_POOL X64_INSTR c``,
+         ``q * CODE_POOL X64_INSTR c``] IMP_X64_SPEC_LEMMA3
+  |> UNDISCH_ALL
+  |> MATCH_MP SPEC_1_SEP_F_IMP_SPEC
+  |> RW1 [STAR_COMM]
+  |> DISCH_ALL
+  |> RW [X64_SPEC_CODE,GSYM zCODE_def]);
 
 val cpuid_thm = let
   val th = x64_step "0FA2" (* cpuid *)
   val th = Q.INST [`s`|->`X64_ICACHE_UPDATE x (r,e,t,m,i)`] th
   val th = RW [ZREAD_CLAUSES] th
-  val th = RW [ZREAD_REG_def,X64_ICACHE_UPDATE_def,ZWRITE_RIP_def,ZCLEAR_ICACHE_def] th
+  val th = RW [ZREAD_REG_def,X64_ICACHE_UPDATE_def,
+               ZWRITE_RIP_def,ZCLEAR_ICACHE_def] th
   in th end
 
 val zBYTE_MEMORY_Z_x64_2set = prove(
