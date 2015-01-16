@@ -351,11 +351,11 @@ fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
 (*---------------------------------------------------------------------------*)
 
 fun make_rename_tac s =
-    MAP_EVERY
+  MAP_EVERY
       (fn {redex=l,residue=r} =>
           CHOOSE_THEN SUBST_ALL_TAC
             (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r)))
-      s
+      (Listsort.sort markerLib.safe_inst_cmp s)
 
 fun isnt_uscore_var v = let
   val (s, _) = dest_var v

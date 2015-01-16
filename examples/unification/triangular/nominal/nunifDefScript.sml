@@ -68,7 +68,7 @@ val term_fcs_monadic_thm = Q.store_thm("term_fcs_monadic_thm",
    | nPair t1 t2 => do fe1 <- term_fcs a t1; fe2 <- term_fcs a t2; SOME (fe1 ∪ fe2) od
    | nConst _ => SOME {}`,
 Cases_on `t` THEN SRW_TAC [][Once term_fcs_def] THEN
-Q.MATCH_ABBREV_TAC `OPTION_MAP2 $UNION x1 x2 = y` THEN
+Q.MATCH_RENAME_TAC `OPTION_MAP2 $UNION x1 x2 = _` THEN
 Cases_on `x1` THEN SRW_TAC [][] THEN
 Cases_on `x2` THEN SRW_TAC [][]);
 

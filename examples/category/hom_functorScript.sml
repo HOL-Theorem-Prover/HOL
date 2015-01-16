@@ -171,7 +171,7 @@ qmatch_abbrev_tac `inclusion_functor u1 u2##z = X` >>
   fsrw_tac [][hom_def] >>
   match_mp_tac maps_to_comp >>
   metis_tac [maps_to_in_def,maps_to_def] ) >>
-srw_tac [][]);
+srw_tac [][Abbr`X`]);
 
 val _ = export_rewrites["hom_functor_objf","hom_functor_morf"];
 

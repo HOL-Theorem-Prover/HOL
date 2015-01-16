@@ -37,18 +37,69 @@ val _ = set_fixity "+" (Infixl 500)
 val _ = set_fixity "*" (Infixl 600)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 
+fun aconvdie m t1 t2 = aconv t1 t2 orelse die ("FAILED! (" ^ m ^ " wrong)")
+
 val _ = tprint "Q.MATCH_RENAME_TAC 1"
 val gl0 = ([``x < y``], ``x = z:num``)
 val expected_a0 = ``a < y``
 val expected_c0 = ``a = b:num``
 val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` gl0
 val _ = case sgs of
-            [([a], c)] => if aconv a expected_a0 andalso
-                             aconv c expected_c0
-                          then
-                            print "OK\n"
-                          else die "FAILED!"
+            [([a], c)] => (aconvdie "assumption" a expected_a0;
+                           aconvdie "goal" c expected_c0;
+                           print "OK\n")
           | _ => die "FAILED!"
+
+val _ = tprint "Q.MATCH_RENAME_TAC 2"
+val glmrt2 = ([] : term list, ``f ((h : 'a -> 'b) s) = s``)
+val expected_mrt2 = ``(f : 'b -> 'a) z = v``
+val (sgs, _) = Q.MATCH_RENAME_TAC `f z = v` glmrt2
+val _ = case sgs of
+            [([], c)] => (aconvdie "conclusion" c expected_mrt2; print "OK\n")
+          | _ => die "FAILED!"
+
+val _ = tprint "Q.MATCH_RENAME_TAC 3"
+val glmrt3 = ([] : term list, ``f zero zero = (z:'a)``)
+val expected_mrt3 = ``f (a:num) a = (u:'a)``
+val (sgs, _) = Q.MATCH_RENAME_TAC `f b a = u` glmrt3
+val _ = case sgs of
+            [([], c)] => (aconvdie "conclusion" c expected_mrt3; print "OK\n")
+          | _ => die "FAILED!"
+
+val _ = tprint "Q.MATCH_ABBREV_TAC 1"
+val expected_mat1c = ``f (a:num) a = (u:'a)``
+val expected_mat1a1 = ``Abbrev (b = zero)``
+val expected_mat1a2 = ``Abbrev (a:num = b)``
+val expected_mat1a3 = ``Abbrev (u:'a = z)``
+val (sgs, _) = Q.MATCH_ABBREV_TAC `f b a = u` glmrt3
+val _ = case sgs of
+            [([a1,a2,a3], c)] =>
+            let
+              val _ = aconvdie "assumption #1" a1 expected_mat1a1
+              val _ = aconvdie "assumption #2" a2 expected_mat1a2
+              val _ = aconvdie "assumption #3" a3 expected_mat1a3
+              val _ = aconvdie "goal conclusion" c expected_mat1c
+            in
+              print "OK\n"
+            end
+          | _ => die "FAILED! (new goal of wrong shape)"
+
+val _ = tprint "Q.MATCH_ABBREV_TAC 2"
+val expected_mat2c = ``(f : 'b -> 'a) z = v``
+(* first assumption is most recently created *)
+val expected_mat2a1 = ``Abbrev(v : 'a = s)``
+val expected_mat2a2 = ``Abbrev(z :'b = h (v:'a))``
+val (sgs, _) = Q.MATCH_ABBREV_TAC `f z = v` glmrt2
+val _ = case sgs of
+            [([a1, a2], c)] =>
+            let
+              val _ = aconvdie "goal conclusion" c expected_mat2c
+              val _ = aconvdie "assumption #1" a1 expected_mat2a1
+              val _ = aconvdie "assumption #2" a2 expected_mat2a2
+            in
+              print "OK\n"
+            end
+          | _ => die "FAILED! (new goal of wrong shape)"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 1"
 val gl1 = ([] : term list,
@@ -57,8 +108,7 @@ val expected_result1 =
     ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + c)``
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `y + c` gl1
 val _ = case sgs of
-            [([], t)] => if aconv t expected_result1 then print "OK\n"
-                         else die "FAILED!"
+            [([], t)] => (aconvdie "goal" t expected_result1; print "OK\n")
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 2"
@@ -67,8 +117,8 @@ val gl2 = ([] : term list,
 val expected_result2 = ``!x. x * c < y * (a + c) * (a + SUC c)``
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `a + c` gl2
 val _ = case sgs of
-            [([], t)] => if aconv t expected_result2 then print "OK\n"
-                         else die "FAILED!"
+            [([], t)] =>
+              (aconvdie "goal conclusion" t expected_result2; print "OK\n")
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 3"
@@ -76,8 +126,8 @@ val gl2a = ([] : term list, ``!x. x * SUC zero < z``)
 val expected_result2a = #2 gl2a
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `SUC` gl2a
 val _ = case sgs of
-            [([], t)] => if aconv t expected_result2a then print "OK\n"
-                         else die "FAILED!"
+            [([], t)] =>
+              (aconvdie "goal conclusion" t expected_result2a; print "OK\n")
           | _ => die "FAILED!"
 
 
@@ -89,12 +139,10 @@ val expected_a2 = ``Q (x < n) : bool``
 val expected_c = ``x + y < SUC (SUC zero)``
 val (sgs, _) = Q.MATCH_ASMSUB_RENAME_TAC `x < n` gl3
 val _ = case sgs of
-            [([a1, a2], c)] => if aconv a1 expected_a1 andalso
-                                  aconv a2 expected_a2 andalso
-                                  aconv c expected_c
-                               then
-                                 print "OK\n"
-                               else die "FAILED!"
+            [([a1, a2], c)] => (aconvdie "assumption #1" a1 expected_a1;
+                                aconvdie "assumption #2" a2 expected_a2;
+                                aconvdie "goal conclusion" c expected_c;
+                                print "OK\n")
           | _ => die "FAILED!"
 
 
