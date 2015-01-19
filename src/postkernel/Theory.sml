@@ -512,7 +512,12 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
-local fun check_name (fname,s) = ()
+local fun check_name (fname,s) =
+          if Lexis.ok_sml_identifier s andalso
+             not (Lib.mem s ["ref", "true", "false", "::", "nil", "="])
+          then ()
+          else raise ERR fname ("Can't use name "^Lib.mlquote s^
+                                " as a theory-binding")
       fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
       val save_thm_reporting = ref 1
       val _ = Feedback.register_trace ("Theory.save_thm_reporting",
