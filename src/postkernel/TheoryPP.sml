@@ -344,7 +344,9 @@ fun pp_struct info_record = let
     val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
   in
     block INCONSISTENT 2
-      (add_string "val">>
+      (add_string "fun" >> add_break (1,0) >> add_string ("op "^s) >>
+       add_break(1,0) >> add_string ("x = x") >> add_newline >>
+       add_string "val">>
        add_break(1,0)>> add_string ("op "^s) >> add_break(1,0)>>
        add_string "=">> add_break(1,0)>>
        add_string "DT(">>
