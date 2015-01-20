@@ -241,7 +241,7 @@ fun define_enum_type(name,clist,ABS,REP) =
      val ABSconst = mk_const(ABS, NUM --> TYPE)
      val REPconst = mk_const(REP, TYPE --> NUM)
      val nclist   = enumerate 0 clist
-     fun def(n,s) = (s ^ "_def",
+     fun def(n,s) = (temp_binding (s ^ "_def"),
                      mk_eq(mk_var(s,TYPE),
                            mk_comb(ABSconst,term_of_int n)))
      val defs     = map (new_definition o def) nclist

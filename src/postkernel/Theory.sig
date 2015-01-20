@@ -15,6 +15,8 @@ sig
 
 (* Add to the current theory segment *)
 
+  val temp_binding       : string -> string
+  val is_temp_binding    : string -> bool
   val new_type           : string * int -> unit
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
