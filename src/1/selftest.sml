@@ -500,6 +500,12 @@ val _ = tprint "Testing (foo THENL [...]) when foo solves"
 val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
 val _ = print "OK\n"
 
+val _ = tprint "Testing save_thm rejecting names"
+val badnames = ["::", "nil", "true", "false", "ref", "="]
+fun test s = (save_thm(s, TRUTH); die "FAILED!") handle HOL_ERR _ => ()
+val _ = List.app test badnames
+val _ = print "OK\n"
+
 val _ = let 
   val _ = tprint "Testing USE_SG_THEN"
   val tac = REPEAT DISCH_TAC THEN CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2
@@ -522,7 +528,6 @@ val _ = let
   val th = prove (g, tac) ;
 in if hyp th = [] then print "OK\n" else die "FAILED"
 end handle _ => die "FAILED!"
-
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

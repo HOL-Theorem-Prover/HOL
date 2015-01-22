@@ -299,7 +299,8 @@ val safepfx = " @ind_type"
 local
   val count = ref 0
   fun vary_to_avoid_constants () = let
-    val nm = safepfx ^ current_theory() ^ Int.toString (!count)
+    val nm =
+        temp_binding (safepfx ^ current_theory() ^ Int.toString (!count))
   in
     if (not (null (decls nm))) then (count := !count + 100;
                                      vary_to_avoid_constants())
@@ -356,7 +357,7 @@ fun define_inductive_type_constructor defs consindex th = let
   val expth = valOf (List.find (fn th => lhand(concl th) = oldcon) defs)
   val rexpth = SUBS_CONV [expth] defrt
   val deflf = mk_var(fst(dest_var oldcon),type_of defrt)
-  val defth = new_definition(fst (dest_var oldcon) ^ "_def",
+  val defth = new_definition(temp_binding (fst (dest_var oldcon) ^ "_def"),
                              mk_eq(deflf,rand(concl rexpth)))
 in
   TRANS defth (SYM rexpth)
@@ -1401,7 +1402,7 @@ local
     val mtys = itlist (insert o type_of) cjs' []
     val pcons = map (fn ty => filter (fn t => type_of t = ty) cjs') mtys
     val cls' = zip mtys (map (map (recover_clause id)) pcons)
-    val tyal = map (fn ty => ty |-> mk_vartype("'"^fst(dest_type ty)^id)) mtys
+    val tyal = map (fn ty => ty |-> mk_vartype("'"^id^fst(dest_type ty))) mtys
     val cls'' = map (modify_type tyal ## map (modify_item tyal)) cls'
   in
     (k,tyal,cls'',Thm.INST_TYPE tyins ith, Thm.INST_TYPE tyins rth)
@@ -1519,9 +1520,12 @@ val define_type_nested = fn def =>
      val allcls = conjuncts(snd(strip_exists etm))
      val relcls = fst(chop_list (length truecons) allcls)
      val gencons = map(repeat rator o rand o lhand o snd o strip_forall) relcls
-     val cdefs = map2 (fn s => fn r =>
-                        SYM(new_definition (s, mk_eq(mk_var(s,type_of r),r))))
-                      truecons gencons
+     val cdefs =
+         map2 (fn s => fn r =>
+                  SYM(new_definition (temp_binding s,
+                                      mk_eq(mk_var(s,type_of r),r))))
+              truecons
+              gencons
      val tavs = make_args "f" [] (map type_of avs)
      val ith1 = SUBS cdefs ith0
      and rth1 = GENL tavs (SUBS cdefs (SPECL tavs rth0))
@@ -1551,7 +1555,7 @@ fun define_type d =
    val def = [(Type`:'bar`, [("D1", [Type`:num`]), ("D2", [Type`:'bar`])])];
    define_type_nested def;
 
-   val def = [(Type`:'qux`, [("F1", []), ("F2", [Type`:'qux option`])])];
+   val def = [(Type`:'qux`, [("F1", []), ("##", [Type`:'qux option`])])];
    (* HOL Light equivalent :
        let def =
          let qux = mk_vartype "qux" in

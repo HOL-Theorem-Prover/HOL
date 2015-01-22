@@ -51,12 +51,13 @@ struct
 
 open Feedback Lib Type Term Thm ;
 
+open TheoryPP
+
+
 type ppstream = Portable.ppstream
 type pp_type  = ppstream -> hol_type -> unit
 type pp_thm   = ppstream -> thm -> unit
 type num = Arbnum.num
-
-infix ##;
 
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
@@ -512,15 +513,24 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
-local fun check_name (fname,s) = ()
-      fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
-      val save_thm_reporting = ref 1
-      val _ = Feedback.register_trace ("Theory.save_thm_reporting",
-                                       save_thm_reporting, 2)
-      val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
+local
+  val temp_binding_pfx = "@temp"
+  val is_temp_binding = String.isPrefix temp_binding_pfx
+  fun check_name tempok (fname,s) =
+      if Lexis.ok_sml_identifier s andalso
+         not (Lib.mem s ["ref", "true", "false", "::", "nil", "="]) orelse
+         tempok andalso is_temp_binding s
+      then ()
+      else raise ERR fname ("Can't use name "^Lib.mlquote s^
+                            " as a theory-binding")
+  fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
+  val save_thm_reporting = ref 1
+  val _ = Feedback.register_trace ("Theory.save_thm_reporting",
+                                   save_thm_reporting, 2)
+  val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 in
 fun save_thm (name,th) =
-      (check_name ("save_thm",name)
+      (check_name true ("save_thm",name)
        ; if uptodate_thm th then add_thmCT(name,th)
          else raise DATED_ERR "save_thm" name
        ; if !save_thm_reporting = 0 then ()
@@ -536,17 +546,17 @@ fun save_thm (name,th) =
 fun new_axiom (name,tm) =
    let val rname = Nonce.mk name
        val axiom = Thm.mk_axiom_thm (rname,tm)
-       val  _ = check_name ("new_axiom",name)
+       val  _ = check_name false ("new_axiom",name)
    in if uptodate_term tm then add_axiomCT(rname,axiom)
       else raise DATED_ERR "new_axiom" name
       ; axiom
    end
 
 fun store_definition(name, def) =
-    let val ()  = check_name ("store_type_definition",name)
+    let val ()  = check_name true ("store_definition",name)
     in
       if uptodate_thm def then ()
-      else raise DATED_ERR "store_type_definition" name
+      else raise DATED_ERR "store_definition" name
       ; add_defnCT(name,def)
       ; def
   end
@@ -866,8 +876,10 @@ fun export_theory () = let
         StringCvt.padLeft #"0" 3 (Int.toString msecs) ^ "s"
       end
   end
+  fun filtP s = not (Lexis.ok_sml_identifier s) andalso
+                not (is_temp_binding s)
  in
-   case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T)) of
+   case filter filtP (map fst (A@D@T)) of
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
