@@ -500,5 +500,29 @@ val _ = tprint "Testing (foo THENL [...]) when foo solves"
 val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
 val _ = print "OK\n"
 
+val _ = let 
+  val _ = tprint "Testing USE_SG_THEN"
+  val tac = REPEAT DISCH_TAC THEN CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2
+    THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
+    THEN (FIRST_ASSUM ACCEPT_TAC)
+  val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let 
+  val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
+  val tac = CONJ_TAC THEN REPEAT DISCH_TAC
+      THEN_LT EVERY_LT [VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 1 2),
+	NTH_GOAL (REPEAT STRIP_TAC) 1 ]
+      THEN (POP_ASSUM MATCH_MP_TAC)
+      THEN_LT NTH_GOAL CONJ_TAC 2
+      THEN (FIRST_ASSUM ACCEPT_TAC)
+  val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
+    (p ==> q ==> (p ==> r) ==> r)`` 
+  val th = prove (g, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
