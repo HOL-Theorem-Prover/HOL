@@ -8,7 +8,7 @@ TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
 
 DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        proofManagerLib.uo History.uo \
-       goalStack.uo goalTree.uo Manager.uo \
+       goalStack.uo goalTree.uo Manager.uo selftest.exe \
        $(dprot $(HOLDIR)/tools-poly/builder0.ML) \
        $(dprot $(HOLDIR)/tools-poly/poly/poly-init2.ML) \
        $(dprot $(SIGOBJ)/UnicodeChars.uo) \
@@ -20,6 +20,9 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
        $(dprot $(SIGOBJ)/ParseExtras.uo) \
        $(dprot $(SIGOBJ)/TheoryPP.uo)
+
+selftest.exe: selftest.uo 
+	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = $(TARGET)
 
