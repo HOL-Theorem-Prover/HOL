@@ -595,8 +595,7 @@ fun checkSV pats SV =
 (*---------------------------------------------------------------------------*)
 
 fun wfrec_eqns facts tup_eqs =
-  let
-     val {functional,pats} =
+ let val {functional,pats} =
         mk_functional (TypeBasePure.toPmatchThry facts) (protect tup_eqs)
      val SV = free_vars functional    (* schematic variables *)
      val _ = checkSV pats SV
