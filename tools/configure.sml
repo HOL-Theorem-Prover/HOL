@@ -342,21 +342,34 @@ val _ =
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
      val _         = FileSys.chDir hmakedir
      val bin       = fullPath [holdir,   "bin/Holmake"]
+     val mllex     = fullPath [holdir, "tools", "mllex", "mllex.exe"]
      val lexer     = fullPath [mosmldir, "mosmllex"]
      val yaccer    = fullPath [mosmldir, "mosmlyac"]
      val systeml   = fn clist => if not (Process.isSuccess (systeml clist)) then
                                    die "Holmake compilation failed."
                                  else ()
-     fun link () = let
-       val pfx = if OS <> "winNT" then [compiler, "-standalone", "-o", bin]
-                 else [compiler, "-o", bin]
+     fun link {extras,srcobj,tgt} = let
+       val pfx = if OS <> "winNT" then [compiler, "-standalone", "-o", tgt]
+                 else [compiler, "-o", tgt]
        val b2002comp = if have_basis2002 then [] else ["basis2002.ui"]
      in
-       systeml (pfx @ b2002comp @ ["Holmake.sml"])
+       systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
     systeml [yaccer, "Parser.grm"];
     systeml [lexer, "Lexer.lex"];
+    systeml [mllex, "Holdep_tokens.lex"];
+    compile [] "SourcePos.sig";
+    compile [] "SourcePos.sml";
+    compile [] "SourceFile.sig";
+    compile [] "SourceFile.sml";
+    compile [] "Region.sig";
+    compile [] "Region.sml";
+    compile ["-toplevel"] "Holdep_tokens.lex.sml";
+    compile ["Holdep_tokens.lex.ui"] "holdeptool.sml";
+    compile [] "mosml_holdeptool.sml";
+    link{extras = ["Holdep_tokens.lex.ui"], srcobj = "mosml_holdeptool.uo",
+         tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "Parser.sig";
     compile [] "Parser.sml";
     compile [] "Lexer.sml";
@@ -374,7 +387,8 @@ val _ =
     compile [] "Holmake_tools.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    link();
+    compile [] "Holmake.sml";
+    link{extras = [], tgt = bin, srcobj = "Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
