@@ -2759,7 +2759,7 @@ val ONE_MOD_IFF = Q.store_thm ("ONE_MOD_IFF",
    SIMP_TAC bool_ss [ONE] THEN
    STRIP_TAC THEN
    MATCH_MP_TAC LESS_MONO THEN
-   Q.MATCH_RENAME_TAC `0 < m` [] THEN
+   Q.MATCH_RENAME_TAC `0 < m` THEN
    FULL_STRUCT_CASES_TAC (SPEC ``m:num`` num_CASES) THEN1 (
      FULL_SIMP_TAC bool_ss [MOD_ONE,SUC_NOT] ) THEN
    SIMP_TAC bool_ss [LESS_0])
@@ -3079,7 +3079,7 @@ val X_LT_EXP_X_IFF = Q.store_thm ("X_LT_EXP_X_IFF",
      Cases_on `b` THEN1 (
        Cases_on `x` THEN
        SIMP_TAC bool_ss [ZERO_EXP,SUC_NOT,NOT_LESS_0] ) THEN
-     Q.MATCH_RENAME_TAC `x < SUC b ** x ==> 1 < SUC b \/ (x = 0)` [] THEN
+     Q.MATCH_RENAME_TAC `x < SUC b ** x ==> 1 < SUC b \/ (x = 0)` THEN
      Cases_on `b` THEN1 (
        SIMP_TAC bool_ss [EXP_1,SYM ONE] THEN
        SIMP_TAC bool_ss [ONE,LESS_THM,NOT_LESS_0] ) THEN

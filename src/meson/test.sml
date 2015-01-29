@@ -3418,5 +3418,3 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!X U Y. subset_collections(X,Y) /\ element_of_collection(U,X) ==> element_of_collection(U,Y)) /\
    (subset_collections(g,top_of_basis(f))) /\
    (~element_of_collection(union_of_members(g),top_of_basis(f))) ==> F`;
-
-

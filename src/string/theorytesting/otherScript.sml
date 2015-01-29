@@ -11,4 +11,3 @@ val _ = print "Successfully opened sampleTheory\n"
 
 
 val _ = export_theory();
-

@@ -3,8 +3,6 @@ src/complex
 !!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt
-src/opentheory
-(otknl)src/opentheory/logging
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
@@ -20,6 +18,8 @@ src/opentheory
 !!examples/lambda/typing
 !!examples/computability/lambda
 !!examples/computability/register
+!!examples/balanced_bst
+!examples/deep_matches
 src/Boolify/src
 src/float
 [poly]src/floating-point

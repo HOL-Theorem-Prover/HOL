@@ -40,4 +40,3 @@ val reader : ThyUpdateInfo Coding.reader
 
 
 end
-

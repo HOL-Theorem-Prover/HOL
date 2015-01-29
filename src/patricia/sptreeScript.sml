@@ -401,7 +401,7 @@ val lookup_fromList = store_thm(
   full_simp_tac (srw_ss() ++ ARITH_ss) [] >>
   `0 < n - i` by simp[] >>
   Cases_on `n - i` >> fs[] >>
-  qmatch_assum_rename_tac `n - i = SUC nn` [] >>
+  qmatch_assum_rename_tac `n - i = SUC nn` >>
   `nn = n - (i + 1)` by decide_tac >> simp[]);
 
 val bit_cases = prove(
@@ -465,7 +465,7 @@ val domain_fromList = store_thm(
     suffices_by (simp[] >> strip_tac >> simp[pred_setTheory.EXTENSION]) >>
   Induct_on `l` >> simp[pred_setTheory.EXTENSION, EQ_IMP_THM] >>
   rpt strip_tac >> simp[DECIDE ``(x = x + y) <=> (y = 0)``] >>
-  qmatch_assum_rename_tac `nn < SUC (LENGTH l)` [] >>
+  qmatch_assum_rename_tac `nn < SUC (LENGTH l)` >>
   Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
 
 val ODD_IMP_NOT_ODD = prove(
@@ -611,7 +611,142 @@ val domain_empty = store_thm("domain_empty",
   ``!t. wf t ==> ((t = LN) <=> (domain t = EMPTY))``,
   simp[] >> Induct >> simp[wf_def] >> metis_tac[])
 
+val toAList_append = prove(
+  ``∀t n ls.
+      foldi (λk v a. (k,v)::a) n ls t =
+      foldi (λk v a. (k,v)::a) n [] t ++ ls``,
+  Induct
+  >- simp[foldi_def]
+  >- simp[foldi_def]
+  >- (
+    simp_tac std_ss [foldi_def,LET_THM] >> rpt gen_tac >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(RATOR_CONV(RAND_CONV(REWR_CONV th))))) >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(REWR_CONV th))) >>
+    first_assum(fn th =>
+      CONV_TAC(RAND_CONV(LAND_CONV(REWR_CONV th)))) >>
+    metis_tac[APPEND_ASSOC] ) >>
+  simp_tac std_ss [foldi_def,LET_THM] >> rpt gen_tac >>
+  first_assum(fn th =>
+    CONV_TAC(LAND_CONV(RATOR_CONV(RAND_CONV(RAND_CONV(REWR_CONV th)))))) >>
+  first_assum(fn th =>
+    CONV_TAC(LAND_CONV(REWR_CONV th))) >>
+  first_assum(fn th =>
+    CONV_TAC(RAND_CONV(LAND_CONV(REWR_CONV th)))) >>
+  metis_tac[APPEND_ASSOC,APPEND] )
+
+val toAList_inc = prove(
+  ``∀t n.
+      foldi (λk v a. (k,v)::a) n [] t =
+      MAP (λ(k,v). (n + lrnext n * k,v)) (foldi (λk v a. (k,v)::a) 0 [] t)``,
+  Induct
+  >- simp[foldi_def]
+  >- simp[foldi_def]
+  >- (
+    simp_tac std_ss [foldi_def,LET_THM] >> rpt gen_tac >>
+    CONV_TAC(LAND_CONV(REWR_CONV toAList_append)) >>
+    CONV_TAC(RAND_CONV(RAND_CONV(REWR_CONV toAList_append))) >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(LAND_CONV(REWR_CONV th)))) >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(RAND_CONV(REWR_CONV th)))) >>
+    first_assum(fn th =>
+      CONV_TAC(RAND_CONV(RAND_CONV(LAND_CONV(REWR_CONV th))))) >>
+    first_assum(fn th =>
+      CONV_TAC(RAND_CONV(RAND_CONV(RAND_CONV(REWR_CONV th))))) >>
+    rpt(pop_assum kall_tac) >>
+    simp[MAP_MAP_o,combinTheory.o_DEF,APPEND_11_LENGTH] >>
+    simp[MAP_EQ_f] >>
+    simp[lrnext_thm,pairTheory.UNCURRY,pairTheory.FORALL_PROD] >>
+    simp[lrlemma1,lrlemma2] )
+  >- (
+    simp_tac std_ss [foldi_def,LET_THM] >> rpt gen_tac >>
+    CONV_TAC(LAND_CONV(REWR_CONV toAList_append)) >>
+    CONV_TAC(RAND_CONV(RAND_CONV(REWR_CONV toAList_append))) >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(LAND_CONV(REWR_CONV th)))) >>
+    first_assum(fn th =>
+      CONV_TAC(LAND_CONV(RAND_CONV(RAND_CONV(REWR_CONV th))))) >>
+    first_assum(fn th =>
+      CONV_TAC(RAND_CONV(RAND_CONV(LAND_CONV(REWR_CONV th))))) >>
+    first_assum(fn th =>
+      CONV_TAC(RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(REWR_CONV th)))))) >>
+    rpt(pop_assum kall_tac) >>
+    simp[MAP_MAP_o,combinTheory.o_DEF,APPEND_11_LENGTH] >>
+    simp[MAP_EQ_f] >>
+    simp[lrnext_thm,pairTheory.UNCURRY,pairTheory.FORALL_PROD] >>
+    simp[lrlemma1,lrlemma2] ))
+
+val lemmas = prove(
+    ``(∀x. EVEN (2 * x + 2)) ∧
+      (∀x. ODD (2 * x + 1))``,
+    conj_tac >- (
+      simp[EVEN_EXISTS] >> rw[] >>
+      qexists_tac`SUC x` >> simp[] ) >>
+    simp[ODD_EXISTS,ADD1] >>
+    metis_tac[] )
+
+val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
+  ``∀t. ALL_DISTINCT (MAP FST (toAList t))``,
+  simp[toAList_def] >>
+  Induct >> simp[foldi_def] >- (
+    CONV_TAC(RAND_CONV(RAND_CONV(RATOR_CONV(RAND_CONV(REWR_CONV toAList_inc))))) >>
+    CONV_TAC(RAND_CONV(RAND_CONV(REWR_CONV toAList_append))) >>
+    CONV_TAC(RAND_CONV(RAND_CONV(LAND_CONV(REWR_CONV toAList_inc)))) >>
+    simp[MAP_MAP_o,combinTheory.o_DEF,pairTheory.UNCURRY,lrnext_thm] >>
+    simp[ALL_DISTINCT_APPEND] >>
+    rpt conj_tac >- (
+      qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
+      `MAP f ls = MAP (λx. 2 * x + 1) (MAP FST ls)` by (
+        simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
+      pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
+      match_mp_tac ALL_DISTINCT_MAP_INJ >>
+      simp[] )
+    >- (
+      qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
+      `MAP f ls = MAP (λx. 2 * x + 2) (MAP FST ls)` by (
+        simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
+      pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
+      match_mp_tac ALL_DISTINCT_MAP_INJ >>
+      simp[] ) >>
+    simp[MEM_MAP,PULL_EXISTS,pairTheory.EXISTS_PROD] >>
+    metis_tac[ODD_EVEN,lemmas] ) >>
+  gen_tac >>
+  CONV_TAC(RAND_CONV(RAND_CONV(RATOR_CONV(RAND_CONV(RAND_CONV(REWR_CONV toAList_inc)))))) >>
+  CONV_TAC(RAND_CONV(RAND_CONV(REWR_CONV toAList_append))) >>
+  CONV_TAC(RAND_CONV(RAND_CONV(LAND_CONV(REWR_CONV toAList_inc)))) >>
+  simp[MAP_MAP_o,combinTheory.o_DEF,pairTheory.UNCURRY,lrnext_thm] >>
+  simp[ALL_DISTINCT_APPEND] >>
+  rpt conj_tac >- (
+    qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
+    `MAP f ls = MAP (λx. 2 * x + 1) (MAP FST ls)` by (
+      simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
+    pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
+    match_mp_tac ALL_DISTINCT_MAP_INJ >>
+    simp[] )
+  >- ( simp[MEM_MAP] )
+  >- (
+    qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
+    `MAP f ls = MAP (λx. 2 * x + 2) (MAP FST ls)` by (
+      simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
+    pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
+    match_mp_tac ALL_DISTINCT_MAP_INJ >>
+    simp[] ) >>
+  simp[MEM_MAP,PULL_EXISTS,pairTheory.EXISTS_PROD] >>
+  metis_tac[ODD_EVEN,lemmas] )
+
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
+
+val foldi_FOLDR_toAList_lemma = prove(
+  ``∀t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
+               FOLDR (UNCURRY f) a (foldi (λk v a. (k,v)::a) n ls t)``,
+  Induct >> simp[foldi_def] >>
+  rw[] >> pop_assum(assume_tac o GSYM) >> simp[])
+
+val foldi_FOLDR_toAList = store_thm("foldi_FOLDR_toAList",
+  ``∀f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)``,
+  simp[toAList_def,GSYM foldi_FOLDR_toAList_lemma])
 
 val toListA_def = Define`
   (toListA acc LN = acc) /\
@@ -639,6 +774,41 @@ val toList_def = Define`toList m = toListA [] m`
 val isEmpty_toList = store_thm("isEmpty_toList",
   ``!t. wf t ==> ((t = LN) <=> (toList t = []))``,
   rw[toList_def,isEmpty_toListA])
+
+val lem2 =
+  SIMP_RULE (srw_ss()) [] (Q.SPECL[`2`,`1`]DIV_MULT)
+
+fun tac () = (
+  (disj2_tac >> qexists_tac`0` >> simp[] >> NO_TAC) ORELSE
+  (disj2_tac >>
+   qexists_tac`2*k+1` >> simp[] >>
+   REWRITE_TAC[Once MULT_COMM] >> simp[MULT_DIV] >>
+   rw[] >> `F` suffices_by rw[] >> pop_assum mp_tac >>
+   simp[lemmas,GSYM ODD_EVEN] >> NO_TAC) ORELSE
+  (disj2_tac >>
+   qexists_tac`2*k+2` >> simp[] >>
+   REWRITE_TAC[Once MULT_COMM] >> simp[lem2] >>
+   rw[] >> `F` suffices_by rw[] >> pop_assum mp_tac >>
+   simp[lemmas] >> NO_TAC) ORELSE
+  (metis_tac[]))
+
+val MEM_toListA = prove(
+  ``∀t acc x. MEM x (toListA acc t) ⇔ (MEM x acc ∨ ∃k. lookup k t = SOME x)``,
+  Induct >> simp[toListA_def,lookup_def] >- metis_tac[] >>
+  rw[EQ_IMP_THM] >> rw[] >> pop_assum mp_tac >> rw[]
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac())
+  >- (tac()))
+
+val MEM_toList = store_thm("MEM_toList",
+  ``∀x t. MEM x (toList t) ⇔ ∃k. lookup k t = SOME x``,
+  rw[toList_def,MEM_toListA])
 
 val div2_even_lemma = prove(
   ``!x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n``,
@@ -710,7 +880,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       qspec_then`x`strip_assume_tac div2_odd_lemma >>
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
-    qmatch_assum_rename_tac`wf (BN s1 s2)`[] >>
+    qmatch_assum_rename_tac`wf (BN s1 s2)` >>
     `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>
@@ -735,7 +905,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
       qspec_then`x`strip_assume_tac div2_odd_lemma >>
       first_x_assum(qspec_then`n`mp_tac) >> fs[ODD_EVEN] >>
       simp[lookup_def] >> NO_TAC) >>
-    qmatch_assum_rename_tac`wf (BS s1 z s2)`[] >>
+    qmatch_assum_rename_tac`wf (BS s1 z s2)` >>
     `wf s1 /\ wf s2` by fs[wf_def] >>
     first_x_assum(qspec_then`s2`mp_tac) >>
     first_x_assum(qspec_then`s1`mp_tac) >>

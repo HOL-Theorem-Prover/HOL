@@ -40,7 +40,8 @@ val cond_thms = Q.prove(
 local
    val state_fns = utilsLib.accessor_fns ``:mips_state``
    val other_fns =
-      [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm] @
+      [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm,
+       optionSyntax.is_some_tm] @
       utilsLib.update_fns ``:mips_state``
    val extra_fns =
       [wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
@@ -94,7 +95,7 @@ fun mips_thms thms =
 val COND_UPDATE_CONV =
    REWRITE_CONV (utilsLib.mk_cond_update_thms
                     [``:mips_state``, ``:CP0``, ``:StatusRegister``])
-   THENC REWRITE_CONV (mips_thms [])
+   THENC REWRITE_CONV (mips_stepTheory.cond_update_memory :: mips_thms [])
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
@@ -221,7 +222,8 @@ val bEV =
         dfn'BLTZ_def, dfn'BGEZ_def, dfn'BLTZAL_def, dfn'BGEZAL_def,
         dfn'BEQL_def, dfn'BNEL_def, dfn'BLEZL_def, dfn'BGTZL_def,
         dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
-        CheckBranch_def] [[``^st.BranchDelay = NONE``]] []
+        ConditionalBranch_def, ConditionalBranchLikely_def]
+       [[``^st.BranchDelay = NONE``]] []
 
 (* ------------------------------------------------------------------------- *)
 
@@ -325,12 +327,54 @@ val BGEZALL = bEV ``dfn'BGEZALL (rs, offset)``
 
 (* Assumes EXL is high, which permits return from exception *)
 val ERET =
-   EVR COND_UPDATE_RULE [dfn'ERET_def, KernelMode_def, CheckBranch_def]
+   EVR (SIMP_RULE std_ss [ASSUME ``^st.CP0.Status.EXL``, satTheory.AND_INV] o
+        COND_UPDATE_RULE)
+     [dfn'ERET_def, KernelMode_def]
      [[``^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] [] ``dfn'ERET``
 
 (* ------------------------------------------------------------------------- *)
 
 (* Load/Store thms and tools *)
+
+val cond_0_1 = Q.prove(
+   `!w: word1 a b c.
+       (if w = 0w then a else if w = 1w then b else c) =
+       (if w = 0w then a else b)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_3 = Q.prove(
+   `!w: word2 a b c d e.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else e) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else d)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_7 = Q.prove(
+   `!w: word3 a b c d e f g h i.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else if w = 7w then h
+        else i) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else h)`,
+   wordsLib.Cases_word_value \\ simp [])
 
 val mem_thms =
    [AddressTranslation_def, LoadMemory_def,
@@ -341,6 +385,9 @@ val mem_thms =
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
+    cond_0_1, cond_0_3, cond_0_7,
+    EVAL ``word_replicate 2 (0w: word1) : word2``,
+    EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
     EVAL ``(word_replicate 2 (0w:word1) : word2 @@ (0w:word1)) : word3``,
     EVAL ``(word_replicate 2 (1w:word1) : word2 @@ (0w:word1)) : word3``,
@@ -349,8 +396,9 @@ val mem_thms =
 
 val select_rule =
    REWRITE_RULE
-     [select_byte_le, select_byte_be, byte_address,
-      wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
+      [select_byte_le, select_byte_be, byte_address,
+       SIMP_RULE (bool_ss++boolSimps.LET_ss) [] select_parts,
+       wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
    utilsLib.INST_REWRITE_RULE
       [select_half_le, select_half_be,
        select_word_le, select_word_be,
@@ -371,6 +419,10 @@ val memcntxts =
 *)
 
 val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
+
+val unaligned_memcntxts =
+   List.map (fn l => [``rt <> 0w:word5``, ``~^st.exceptionSignalled``] @ l)
+      memcntxts
 
 val memcntxts =
    List.map
@@ -464,6 +516,22 @@ val LL  = EVL loadWord ``dfn'LL (base, rt, offset) ^st``
 val LD  = EVL loadDoubleword ``dfn'LD (base, rt, offset) ^st``
 val LLD = EVL loadDoubleword ``dfn'LLD (base, rt, offset) ^st``
 
+val LWL =
+   EVR select_rule (dfn'LWL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWL (base, rt, offset)``
+
+val LWR =
+   EVR select_rule (dfn'LWR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWR (base, rt, offset)``
+
+val LDL =
+   EVR select_rule (dfn'LDL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDL (base, rt, offset)``
+
+val LDR =
+   EVR select_rule (dfn'LDR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDR (base, rt, offset)``
+
 (* Store instructions *)
 
 val SB =
@@ -486,6 +554,18 @@ val SW =
 val SD =
    EVR (store_rule []) (dfn'SD_def :: mem_thms) dmemcntxts []
       ``dfn'SD (base, rt, offset)``
+
+val sc = List.map (fn l => ``^st.LLbit = SOME llbit`` :: l)
+
+val SC =
+   EVR (COND_UPDATE_RULE o store_rule [bit_1_0_2_0, bit_1_0_2_0_4])
+       ([dfn'SC_def, extract_word] @ mem_thms) (sc memcntxts) []
+      ``dfn'SC (base, rt, offset)``
+
+val SCD =
+   EVR (COND_UPDATE_RULE o store_rule [])
+       ([dfn'SCD_def, extract_word] @ mem_thms) (sc dmemcntxts) []
+      ``dfn'SCD (base, rt, offset)``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -581,12 +661,16 @@ local
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
    val unpredictable_tm = ``mips$Unpredictable``
    fun fix_unpredictable thm =
-      case Lib.total (boolSyntax.dest_cond o utilsLib.rhsc) thm of
-         SOME (b, t, _) =>
-            if t = unpredictable_tm
-               then REWRITE_RULE [ASSUME (boolSyntax.mk_neg b)] thm
-            else thm
-       | _ => thm
+      let
+         val thm = REWRITE_RULE [not31] thm
+      in
+         case Lib.total (boolSyntax.dest_cond o utilsLib.rhsc) thm of
+            SOME (b, t, _) =>
+               if t = unpredictable_tm
+                  then REWRITE_RULE [ASSUME (boolSyntax.mk_neg b)] thm
+               else thm
+          | _ => thm
+      end
 in
    fun DecodeMIPS pat =
       let
@@ -705,11 +789,15 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("BNEL",    "FTFTFT__________________________"),
     ("BLEZL",   "FTFTTF_____FFFFF________________"),
     ("BGTZL",   "FTFTTT_____FFFFF________________"),
+    ("LDL",     "FTTFTF__________________________"),
+    ("LDR",     "FTTFTT__________________________"),
     ("LB",      "TFFFFF__________________________"),
     ("LH",      "TFFFFT__________________________"),
+    ("LWL",     "TFFFTF__________________________"),
     ("LW",      "TFFFTT__________________________"),
     ("LBU",     "TFFTFF__________________________"),
     ("LHU",     "TFFTFT__________________________"),
+    ("LWR",     "TFFTTF__________________________"),
     ("LWU",     "TFFTTT__________________________"),
     ("SB",      "TFTFFF__________________________"),
     ("SH",      "TFTFFT__________________________"),
@@ -717,6 +805,8 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("LL",      "TTFFFF__________________________"),
     ("LLD",     "TTFTFF__________________________"),
     ("LD",      "TTFTTT__________________________"),
+    ("SC",      "TTTFFF__________________________"),
+    ("SCD",     "TTTTFF__________________________"),
     ("SD",      "TTTTTT__________________________"),
     ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
    ]
@@ -875,26 +965,36 @@ local
    val st_BranchDelay_tm = mk_proj_BranchDelay st
    val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
    val snd_conv = Conv.REWR_CONV pairTheory.SND
-   val delay_none_tm = ``^st.BranchDelay = NONE``
-   val delay_ok = not o List.exists (Lib.equal delay_none_tm) o Thm.hyp
    val STATE_CONV =
       Conv.QCONV
         (REWRITE_CONV
             (utilsLib.datatype_rewrites true "mips" ["mips_state", "CP0"] @
              [boolTheory.COND_ID, cond_rand_thms,
               ASSUME ``^st.BranchTo = NONE``]))
+      THENC REPEATC
+               (Conv.DEPTH_CONV Thm.BETA_CONV
+                THENC
+                  REWRITE_CONV
+                  [boolTheory.COND_ID, wordsTheory.WORD_SUB_ADD, branch_delay,
+                   pairTheory.pair_case_def])
    val BRANCH_DELAY_RULE =
-      PURE_REWRITE_RULE [ASSUME ``^st.BranchDelay = SOME a``]
+      utilsLib.ALL_HYP_CONV_RULE
+         (REWRITE_CONV [ASSUME ``^st.BranchDelay = SOME d``,
+                        optionTheory.NOT_SOME_NONE])
    val NO_BRANCH_DELAY_RULE =
-      PURE_REWRITE_RULE [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]
+      CONV_RULE
+        (Lib.funpow 4 RAND_CONV
+           (LAND_CONV
+              (RAND_CONV
+                 (PURE_REWRITE_CONV
+                    [boolTheory.COND_ID, ASSUME ``^st.BranchDelay = NONE``]))))
    val state_rule = Conv.RIGHT_CONV_RULE (Conv.RAND_CONV STATE_CONV)
    val exc_rule = SIMP_RULE bool_ss [] o COND_UPDATE_RULE o state_rule
-   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay
-   val MP_NextB = state_rule o Drule.MATCH_MP NextStateMIPS_delay
-   val MP_NextE = exc_rule o Drule.MATCH_MP NextStateMIPS_exception o
+   val MP_Next  = state_rule o Drule.MATCH_MP NextStateMIPS_nodelay o
                   NO_BRANCH_DELAY_RULE
-   val MP_NextF = exc_rule o Drule.MATCH_MP NextStateMIPS_exception_delay o
-                  BRANCH_DELAY_RULE
+   val MP_NextB = state_rule o BRANCH_DELAY_RULE o
+                  Drule.MATCH_MP NextStateMIPS_delay
+   val MP_NextE = state_rule o Drule.MATCH_MP NextStateMIPS_exception
    val Run_CONV = utilsLib.Run_CONV ("mips", st) o utilsLib.rhsc
 in
    fun mips_eval be =
@@ -915,18 +1015,13 @@ in
                val tm = rhsc thm3
                val thms = List.map (fn f => STATE_CONV (f tm))
                              [mk_proj_exception,
-                              mk_proj_exceptionSignalled,
                               mk_proj_BranchDelay,
                               mk_proj_BranchTo]
                val thm = Drule.LIST_CONJ ([thm1, thm2, thm3] @ thms)
             in
-               if rhsc (List.nth (thms, 2)) = st_BranchDelay_tm
-                  then MP_Next thm ::
-                       (if delay_ok thm andalso
-                           optionSyntax.is_none (rhsc (Lib.last thms))
-                           then [MP_NextB thm]
-                        else [])
-               else [MP_NextE thm, MP_NextF thm]
+               [MP_Next thm] @
+               ([MP_NextB thm] handle HOL_ERR _ => []) @
+               ([MP_NextE thm] handle HOL_ERR _ => [])
             end
       end
 end
@@ -956,14 +1051,16 @@ open mips_stepLib
 
 val step = mips_eval false
 fun test s = step (Redblackmap.find (mips_dict, s))
+fun test s = (Redblackmap.find (mips_dict, s))
 
-test "ADDI";
-test "ADDU";
-test "J";
-test "BEQ";
-test "BEQL";
-test "BLTZAL";
-test "ERET"
+val v = test "ADDI";
+val v = test "ADDU";
+val v = test "J";
+val v = test "BEQ";
+val v = test "BEQL";
+val v = test "BLTZAL";
+val v = test "BLTZALL";
+val v = test "ERET"
 
 val be = false
 val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"

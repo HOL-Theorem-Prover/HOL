@@ -49,7 +49,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 9
+val version_number = 10
 val release_string = "Kananaskis"
 
 
@@ -360,6 +360,7 @@ val _ =
     compile [] "Parser.sig";
     compile [] "Parser.sml";
     compile [] "Lexer.sml";
+    compile [] "Holdep.sig";
     compile [] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";

@@ -1407,7 +1407,7 @@ val BAG_IN_BAG_FILTER = store_thm(
 
 val BAG_FILTER_FILTER = store_thm(
   "BAG_FILTER_FILTER",
-  ``BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (λa. P a ∧ Q a) b``,
+  ``BAG_FILTER P (BAG_FILTER Q b) = BAG_FILTER (\a. P a /\ Q a) b``,
   simp[BAG_FILTER_DEF] >> simp[FUN_EQ_THM] >> rw[] >> fs[]);
 
 val BAG_FILTER_SUB_BAG = store_thm(
@@ -2470,11 +2470,11 @@ val mlt_dominates_thm1 = store_thm(
           strip_tac >> map_every qexists_tac [`{|e|}`, `rep`] >>
           simp[COMM_BAG_UNION]) >>
       rpt strip_tac >>
-      qmatch_assum_rename_tac `mlt1 R B0 B1` [] >>
-      qmatch_assum_rename_tac `mlt R B1 B2` [] >>
+      qmatch_assum_rename_tac `mlt1 R B0 B1` >>
+      qmatch_assum_rename_tac `mlt R B1 B2` >>
       fs[mlt1_def] >>
-      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` [] >>
-      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` []>>
+      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` >>
+      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` >>
       Cases_on `BAG_IN E Y`
       >- (map_every qexists_tac [`X`, `Y - {| E |} + Rep`] >>
           simp[] >> reverse conj_tac

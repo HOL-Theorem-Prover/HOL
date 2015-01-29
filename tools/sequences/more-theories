@@ -7,6 +7,8 @@ src/TeX
 src/sort
 src/string
 !src/string/theorytesting
+src/opentheory
+(otknl)src/opentheory/logging
 !examples/STE
 src/res_quan/src
 src/quotient/src
@@ -32,6 +34,8 @@ src/emit
 !!examples/ARM/v4
 !!examples/ARM/v7
 !!src/emit/ML
+!src/emit/theory_tests
+!src/emit/theory_tests1
 src/hol88
 !examples/dev
 !src/quotient/examples/lambda

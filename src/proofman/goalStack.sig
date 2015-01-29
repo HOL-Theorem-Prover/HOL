@@ -8,6 +8,8 @@ sig
 
    val expand       : tactic -> gstk -> gstk
    val expandf      : tactic -> gstk -> gstk
+   val expand_list  : list_tactic -> gstk -> gstk
+   val expand_listf : list_tactic -> gstk -> gstk
    val print_tac    : string -> tactic
    val extract_thm  : gstk -> thm
    val initial_goal : gstk -> goal
@@ -15,6 +17,7 @@ sig
    val is_initial   : gstk -> bool
    val new_goal     : goal -> (thm -> thm) -> gstk
    val rotate       : gstk -> int -> gstk
+   val flatn        : gstk -> int -> gstk
    val top_goal     : gstk -> goal
    val top_goals    : gstk -> goal list
    val depth        : gstk -> int
@@ -24,4 +27,4 @@ sig
    val pp_gstk      : ppstream -> gstk -> unit
    val set_goal_pp  : (ppstream -> goal -> unit) -> (ppstream -> goal -> unit)
 
- end
+end

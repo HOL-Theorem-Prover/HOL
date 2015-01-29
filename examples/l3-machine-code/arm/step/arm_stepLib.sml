@@ -2710,11 +2710,17 @@ val DataProcessingPC_nsetflags_rwt =
           AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
           ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms] []
          (mapl (`opc`, utilsLib.tab_fixedwidth 16 4))
-         ``DataProcessingPC (opc, F, n, imm32, c)``) reg_rwts
+         ``DataProcessingPC (opc, F, n, imm32)``) reg_rwts
       |> List.concat
 *)
 
 local
+   val x = ``x: word32 # bool``
+   val DataProcessing =
+      DataProcessing_def
+      |> Q.SPECL [`opc`, `setflags`, `d`, `n`, `FST ^x`, `SND ^x`]
+      |> REWRITE_RULE [pairTheory.PAIR]
+      |> utilsLib.SET_RULE
    val DataProcessing_rwts =
       List.map
          (fn opc =>
@@ -2723,12 +2729,11 @@ local
                val wr = if i < 8 orelse 11 < i then [write'R_rwt] else []
             in
                EV ([R_rwt, arm_stepTheory.R_x_not_pc,
-                   utilsLib.SET_RULE DataProcessing_def,
-                   DataProcessingALU_def,
+                   DataProcessing, DataProcessingALU_def,
                    AddWithCarry, wordsTheory.FST_ADD_WITH_CARRY,
                    ArithmeticOpcode_def, PC_rwt, IncPC_rwt, cond_rand_thms,
                    unit_state_cond] @ wr) [] [[`opc` |-> opc]]
-                  ``DataProcessing (opc, setflags, d, n, imm32, c)``
+                  ``DataProcessing (opc, setflags, d, n, imm32_c)``
             end
             |> List.map
                  (utilsLib.ALL_HYP_CONV_RULE

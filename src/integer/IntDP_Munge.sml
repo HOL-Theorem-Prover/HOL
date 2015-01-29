@@ -363,10 +363,13 @@ in
       NO_CONV tm
   end
 
+val nat_rewrites =
+    [arithmeticTheory.LEFT_ADD_DISTRIB, arithmeticTheory.RIGHT_ADD_DISTRIB,
+     arithmeticTheory.MAX_DEF, arithmeticTheory.MIN_DEF]
+
 val dealwith_nats = let
   val phase1 =
-      tacCONV (PURE_REWRITE_CONV [arithmeticTheory.LEFT_ADD_DISTRIB,
-                                  arithmeticTheory.RIGHT_ADD_DISTRIB] THENC
+      tacCONV (PURE_REWRITE_CONV nat_rewrites THENC
                ONCE_DEPTH_CONV normalise_mult THENC
                elim_div_mod THENC
                (* eliminate nasty subtractions *)
@@ -445,9 +448,12 @@ in
        Parse.term_to_string (hd subterms)^"...) but it was false")
 end
 
+val int_rewrites =
+  [INT_LDISTRIB, INT_RDISTRIB, INT_MAX, INT_MIN]
+
 fun BASIC_CONV DPname DP tm = let
   val (natgoal, natvalidation) = dealwith_nats tm
-  val stage1 = PURE_REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB] THENC
+  val stage1 = PURE_REWRITE_CONV int_rewrites THENC
                ONCE_DEPTH_CONV normalise_mult
   fun stage2 tm =
     case non_presburger_subterms0 [] tm of

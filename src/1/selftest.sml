@@ -4,7 +4,7 @@ val _ = set_trace "Unicode" 0
 
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
+val tprint = testutils.tprint
 
 fun substtest (M, x, N, result) = let
 in
@@ -321,6 +321,21 @@ val _ = add_rule {term_name = "=",
                   pp_elements = [HardSpace 1, TOK "=", BreakSpace(1,2)]}
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\n  yyyyyy"
 
+val _ = print "** Tests with Unicode on PP.avoid_unicode both on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) (trace ("PP.avoid_unicode", 1) f)
+  fun texp (i,out) = md tpp_expected
+                        {testf = standard_tpp_message, input = i, output = out}
+  val _ = temp_overload_on ("⊤", ``T``)
+in
+  app (md tpp) ["!x. p x /\\ q x", "\\x. x", "\\x::p. x /\\ y",
+                "!x::p. q x \\/ r x", "!x. x /\\ T <=> x"];
+  app texp [("∀x. p x", "!x. p x"), ("x ∧ y", "x /\\ y"),
+            ("λx. x", "\\x. x")];
+  temp_clear_overloads_on "⊤"
+end
+
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
@@ -480,6 +495,51 @@ in
   if aconv (rhs (concl result)) expected then print "OK\n"
   else die "FAILED"
 end
+
+val _ = tprint "Testing (foo THENL [...]) when foo solves"
+val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
+val _ = print "OK\n"
+
+val _ = tprint "Testing save_thm rejecting names"
+val badnames = ["::", "nil", "true", "false", "ref", "="]
+fun test s = (save_thm(s, TRUTH); die "FAILED!") handle HOL_ERR _ => ()
+val _ = List.app test badnames
+val _ = print "OK\n"
+
+val _ = let 
+  val _ = tprint "Testing structural list-tactics"
+  val tac = REPEAT DISCH_TAC THEN REPEAT CONJ_TAC THEN_LT
+    EVERY_LT [ (ROTATE_LT 2),
+      (SPLIT_LT 2 (REVERSE_LT, ROTATE_LT 1)),
+      (HEADGOAL (POP_ASSUM ACCEPT_TAC)),
+      (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
+	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
+  val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let 
+  val _ = tprint "Testing USE_SG_THEN"
+  val tac = REPEAT DISCH_TAC THEN CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2
+    THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
+    THEN (FIRST_ASSUM ACCEPT_TAC)
+  val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let 
+  val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
+  val tac = CONJ_TAC THEN REPEAT DISCH_TAC
+      THEN_LT EVERY_LT [VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 1 2),
+	NTH_GOAL (REPEAT STRIP_TAC) 1 ]
+      THEN (POP_ASSUM MATCH_MP_TAC)
+      THEN_LT NTH_GOAL CONJ_TAC 2
+      THEN (FIRST_ASSUM ACCEPT_TAC)
+  val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
+    (p ==> q ==> (p ==> r) ==> r)`` 
+  val th = prove (g, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

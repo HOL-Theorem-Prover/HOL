@@ -1,0 +1,9 @@
+test: selftest.exe
+	./$<
+
+.PHONY: test
+
+selftest.exe: selftest.uo deepMatchesSyntax.uo deepMatchesTheory.uo deepMatchesLib.uo constrFamiliesLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

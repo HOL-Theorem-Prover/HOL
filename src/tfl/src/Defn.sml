@@ -571,8 +571,8 @@ fun elim_triv_literal_CONV tm =
 fun checkSV pats SV =
  let fun get_pat (GIVEN(p,_)) = p
        | get_pat (OMITTED(p,_)) = p
-     fun strings_of vlist = 
-         Lib.commafy (List.map (Lib.quote o #1 o dest_var) 
+     fun strings_of vlist =
+         Lib.commafy (List.map (Lib.quote o #1 o dest_var)
                                (Listsort.sort Term.compare vlist))
  in
    if null SV then ()
@@ -584,7 +584,7 @@ fun checkSV pats SV =
     of [] => ()
      | probs =>
        raise ERR "wfrec_eqns"
-         (String.concat 
+         (String.concat
              (["the following variables occur both free (schematic) ",
                "and bound in the definition: \n   "] @ strings_of probs))
  end

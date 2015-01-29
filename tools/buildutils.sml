@@ -153,7 +153,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
               open FileSys
             in
               if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
-                 (knl = "" orelse knl = kernelname) then
+                 (knl = "" orelse ("-"^knl) = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc)

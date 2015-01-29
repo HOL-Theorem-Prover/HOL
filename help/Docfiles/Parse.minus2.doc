@@ -3,7 +3,7 @@
 \TYPE {-- : term quotation -> 'a -> term}
 
 \SYNOPSIS
-Parses a quotation into a term value
+Parses a quotation into a term value.
 
 \KEYWORDS
 Parsing

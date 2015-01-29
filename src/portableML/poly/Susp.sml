@@ -14,4 +14,3 @@ fun force (su : 'a susp) : 'a =
     | THUNK f => let val v = f () in su := VAL v; v end
 
 end (* struct *)
-

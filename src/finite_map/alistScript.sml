@@ -211,7 +211,7 @@ val alist_to_fmap_to_alist = store_thm(
 ``!al. fmap_to_alist (alist_to_fmap al) =
        MAP (\k. (k, THE (ALOOKUP al k))) (SET_TO_LIST (set (MAP FST al)))``,
 SRW_TAC[][fmap_to_alist_def,MAP_EQ_f,MEM_MAP] THEN
-Q.MATCH_ASSUM_RENAME_TAC `MEM p al` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `MEM p al` THEN
 PairCases_on `p` THEN SRW_TAC[][] THEN
 Cases_on `ALOOKUP al p0` THEN
 IMP_RES_TAC ALOOKUP_FAILS THEN
@@ -262,20 +262,20 @@ SRW_TAC[][] THEN1 (
   SRW_TAC[][EL_MAP] ) THEN
 numLib.LEAST_ELIM_TAC THEN
 SRW_TAC[][] THEN
-Q.MATCH_ASSUM_RENAME_TAC `EL m (MAP FST ls) = FST (EL n ls)`[] THEN1 (
+Q.MATCH_ASSUM_RENAME_TAC `EL m (MAP FST ls) = FST (EL n ls)` THEN1 (
   Q.EXISTS_TAC `SUC m` THEN
   SRW_TAC[][] ) THEN
 Cases_on `n < m` THEN1 METIS_TAC[EL_MAP] THEN
 `m < LENGTH ls` by DECIDE_TAC THEN
 FULL_SIMP_TAC(srw_ss())[EL_MAP] THEN
-Q.MATCH_ASSUM_RENAME_TAC `EL z (h::MAP FST ls) = FST (EL n ls)`[] THEN
+Q.MATCH_ASSUM_RENAME_TAC `EL z (h::MAP FST ls) = FST (EL n ls)` THEN
 Cases_on `SUC n < z` THEN1 (
   RES_TAC THEN
   FULL_SIMP_TAC(srw_ss())[] THEN
   METIS_TAC[EL_MAP]) THEN
 `z < SUC (LENGTH ls)` by DECIDE_TAC THEN
 Cases_on `z` THEN FULL_SIMP_TAC (srw_ss()) [EL_MAP] THEN
-Q.MATCH_RENAME_TAC `SND (EL m ls) = SND (EL z ls)`[] THEN
+Q.MATCH_RENAME_TAC `SND (EL m ls) = SND (EL z ls)` THEN
 Cases_on `m < z` THEN1 (
   `SUC m < SUC z` by DECIDE_TAC THEN
   RES_TAC THEN
@@ -302,7 +302,7 @@ numLib.LEAST_ELIM_TAC >>
 conj_tac >- (
   qexists_tac `n` >> rw[] ) >>
 rw[] >>
-qmatch_rename_tac `EL m (MAP SND al) = v`[] >>
+qmatch_rename_tac `EL m (MAP SND al) = v` >>
 `~(n < m)` by PROVE_TAC[] >>
 `m < LENGTH al` by DECIDE_TAC >>
 fs[EL_ALL_DISTINCT_EL_EQ] >>
@@ -384,9 +384,9 @@ imp_res_tac MEM_PERM >>
   by rw[ALL_DISTINCT_fmap_to_alist_keys,Abbr`af1`,Abbr`af2`] >>
 fs[EL_ALL_DISTINCT_EL_EQ,MEM_EL,EL_MAP] >>
 rw[] >>
-qmatch_rename_tac `r1 = r2`[] >>
-qmatch_assum_rename_tac `(q,r1) = EL n1 afx`[] >>
-qmatch_assum_rename_tac `(q,r2) = EL n2 afy`[] >>
+qmatch_rename_tac `r1 = r2` >>
+qmatch_assum_rename_tac `(q,r1) = EL n1 afx` >>
+qmatch_assum_rename_tac `(q,r2) = EL n2 afy` >>
 rpt (qpat_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
 `LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
 metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
@@ -440,7 +440,7 @@ val FRANGE_alist_to_fmap_SUBSET = store_thm(
 "FRANGE_alist_to_fmap_SUBSET",
 ``FRANGE (alist_to_fmap ls) SUBSET IMAGE SND (set ls)``,
 srw_tac[DNF_ss][FRANGE_DEF,SUBSET_DEF,pairTheory.EXISTS_PROD] >>
-qmatch_assum_rename_tac `MEM z (MAP FST ls)`[] >>
+qmatch_assum_rename_tac `MEM z (MAP FST ls)` >>
 qexists_tac `z` >>
 match_mp_tac alist_to_fmap_FAPPLY_MEM >>
 rw[])
@@ -595,7 +595,7 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
     imp_res_tac MEM_PERM >>
     fs[FORALL_PROD,MEM_MAP,EXISTS_PROD] >>
     metis_tac[ALOOKUP_FAILS] ) >>
-  qmatch_assum_rename_tac`ALOOKUP l2 x = SOME p`[] >>
+  qmatch_assum_rename_tac`ALOOKUP l2 x = SOME p` >>
   imp_res_tac ALOOKUP_MEM >>
   `ALL_DISTINCT (MAP FST l2)` by (
     metis_tac[ALL_DISTINCT_PERM]) >>

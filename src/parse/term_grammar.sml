@@ -468,7 +468,7 @@ val stdhol : grammar =
    absyn_postprocessors = []
    }
 
-fun first_tok [] = raise Fail "Shouldn't happen parse_term 133"
+fun first_tok [] = raise Fail "Shouldn't happen: term_grammar.first_tok"
   | first_tok (RE (TOK s)::_) = s
   | first_tok (_ :: t) = first_tok t
 
@@ -731,7 +731,7 @@ end
 fun remove_form s rule = let
   fun rr_ok (r:rule_record) = #term_name r <> s
   fun lr_ok (ls:listspec) = #cons ls <> s andalso #nilstr ls <> s
-  fun stringbinder LAMBDA = false
+  fun stringbinder LAMBDA = true
     | stringbinder (BinderString r) = #term_name r <> s
 in
   case rule of
@@ -739,8 +739,7 @@ in
   | INFIX (STD_infix(slist, assoc)) =>
       INFIX(STD_infix (List.filter rr_ok slist, assoc))
   | PREFIX (STD_prefix slist) => PREFIX (STD_prefix (List.filter rr_ok slist))
-  | PREFIX (BINDER slist) =>
-      PREFIX (BINDER (List.filter (not o stringbinder) slist))
+  | PREFIX (BINDER slist) => PREFIX (BINDER (List.filter stringbinder slist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_ok slist)
   | LISTRULE rlist => LISTRULE (List.filter lr_ok rlist)
   | _ => rule

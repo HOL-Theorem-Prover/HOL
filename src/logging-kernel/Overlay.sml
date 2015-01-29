@@ -6,13 +6,14 @@
     between the two.
    ---------------------------------------------------------------------- *)
 
-infix ++ && |-> THEN THEN1 THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ?> |>
+infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSEC
+  THEN_TCL ORELSE_TCL ?> |>
 infixr ##
 infixr 3 -->;
 infix 8 via by suffices_by
 
 (* infixes for THEN shorthands *)
-infix >> >- >| \\
+infix >> >- >| \\ >>>
 
 structure Tag = Tag :> FinalTag where type tag = Tag.tag
 structure Type = Type :> FinalType where type hol_type = Type.hol_type

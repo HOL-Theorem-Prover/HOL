@@ -22,4 +22,3 @@ sig
    val restrict_tmenv :(term -> bool) -> (term,term)subst -> (term,term)subst
 
 end
-

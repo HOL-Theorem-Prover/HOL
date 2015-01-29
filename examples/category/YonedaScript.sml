@@ -53,7 +53,7 @@ srw_tac [][nat_trans_axioms_def] >- (
   fsrw_tac [][hom_def] >>
   match_mp_tac maps_to_comp >>
   metis_tac [maps_to_in_def,maps_to_def] ) >>
-qmatch_assum_rename_tac `g° :- y → x -:c` [] >>
+qmatch_assum_rename_tac `g° :- y → x -:c` >>
 imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >> srw_tac [][] >>
 imp_res_tac mor_obj >> srw_tac [][] >>
@@ -272,7 +272,7 @@ srw_tac [][YMapInv_def] >>
 srw_tac [][nat_trans_axioms_def]
 >- metis_tac [objf_in_obj,op_cat_obj,ens_cat_obj]
 >- (
-  qmatch_assum_rename_tac `g ∈ c|u→x|` [] >>
+  qmatch_assum_rename_tac `g ∈ c|u→x|` >>
   `g° :- x → u -:(c°)` by fsrw_tac [][hom_def] >>
   `f##g° :- (f@@x) → (f@@u) -:ens_cat (homs c)` by (
     match_mp_tac morf_maps_to >>
@@ -280,7 +280,7 @@ srw_tac [][nat_trans_axioms_def]
     srw_tac [][] ) >>
   fsrw_tac [][IsTypedFun_def,HasFunType_def] >>
   fsrw_tac [][]) >>
-qmatch_assum_rename_tac `g° :- u → v -:c` [] >>
+qmatch_assum_rename_tac `g° :- u → v -:c` >>
 imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >>
 qmatch_abbrev_tac
@@ -359,7 +359,7 @@ imp_res_tac is_nat_trans_YMapInv >>
 srw_tac [][]
 >- fsrw_tac [][YMapInv_def]
 >- fsrw_tac [][YMapInv_def] >>
-qmatch_rename_tac `X = n @+ z` ["X"] >>
+qmatch_rename_tac `_ = n @+ z` >>
 `z ∈ c.obj` by (
   pop_assum mp_tac >> srw_tac [][YMapInv_def] ) >>
 srw_tac [][] >>
@@ -376,7 +376,7 @@ srw_tac [][restrict_def] >>
 srw_tac [][FUN_EQ_THM] >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def,extensional_def] >>
 srw_tac [][YMap_def] >>
-qmatch_assum_rename_tac `f ∈ c|z→x|` [] >>
+qmatch_assum_rename_tac `f ∈ c|z→x|` >>
 Q.ISPECL_THEN [`n`,`c|_→x|`,`n.cod` ,`n.cod.cod` ,`f°`,`x`,`z`]
   mp_tac naturality >>
 fsrw_tac [][hom_def] >>

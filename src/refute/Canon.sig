@@ -35,4 +35,3 @@ sig
     val latest :  (thm * thm * term) option ref;
 
 end (* sig *)
-

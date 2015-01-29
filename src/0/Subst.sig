@@ -11,6 +11,3 @@ sig
   val comp    : ('a subs * 'a -> 'a) -> 'a subs * 'a subs -> 'a subs;
 
 end;
-
-
-

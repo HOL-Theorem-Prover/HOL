@@ -129,7 +129,7 @@ val etw_monop =
             boolSyntax.mk_icomb (tm1, pairSyntax.mk_pair (t1, t2))
          end)
 
-val tw_binop = 
+val tw_binop =
    HolKernel.syntax_fns "binary_ieee" 2
       (fn tm1 => fn e => fn tm2 =>
          let
@@ -304,7 +304,7 @@ val (float_mul_add_tm, mk_float_mul_add, dest_float_mul_add, is_float_mul_add) =
 
 val (round_tm, mk_round, dest_round, is_round) = tw_binop "round"
 
-val (float_round_tm, mk_float_round, dest_float_round, is_float_round) = 
+val (float_round_tm, mk_float_round, dest_float_round, is_float_round) =
    tw_triop "float_round"
 
 (* ------------------------------------------------------------------------- *)

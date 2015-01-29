@@ -11,7 +11,7 @@ sig
  type 'a net
  type term = Term.term
 
- val empty_net  : 'a net
+ val empty      : 'a net
  val enter      : term list * term * 'a -> 'a net -> 'a net
  val lookup     : term -> 'a net -> 'a list
  val merge_nets : 'a net * 'a net -> 'a net

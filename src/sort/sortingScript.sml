@@ -917,7 +917,7 @@ UNABBREV_ALL_TAC THEN SRW_TAC[][] THEN1 SRW_TAC[][] THEN
 EQ_TAC THEN1 METIS_TAC[] THEN
 STRIP_TAC THEN Q.X_GEN_TAC `x` THEN
 REVERSE (Cases_on `MEM x L2`) THEN1 METIS_TAC[] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R (LAST (y::t)) (HD L2)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `R (LAST (y::t)) (HD L2)` THEN
 `R h (LAST (y::t))` by (
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   Cases_on `t` THEN1 SRW_TAC[][] THEN
@@ -1346,7 +1346,7 @@ val QSORT3_STABLE =
 local open lcsymtacs rich_listTheory in
 
 val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
-`∀R L x. MEM x (QSORT3 R L) ⇔ MEM x L`,
+`!R L x. MEM x (QSORT3 R L) <=> MEM x L`,
  ho_match_mp_tac (fetch "-" "QSORT3_IND") >>
  rw [QSORT3_DEF] >>
  fs [] >>
@@ -1358,7 +1358,7 @@ val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
  metis_tac []);
 
 val QSORT3_SORTED = Q.store_thm ("QSORT3_SORTED",
-`∀R L. transitive R ∧ total R ⇒ SORTED R (QSORT3 R L)`,
+`!R L. transitive R /\ total R ==> SORTED R (QSORT3 R L)`,
  rw [] >>
  imp_res_tac QSORT3_SORTS >>
  fs [SORTS_DEF]);
@@ -1373,7 +1373,7 @@ val sorted_count_list = Q.store_thm ("sorted_count_list",
  decide_tac);
 
 val sorted_map = Q.store_thm ("sorted_map",
-`!R f l. transitive R ⇒ (SORTED R (MAP f l) ⇔ SORTED (inv_image R f) l)`,
+`!R f l. transitive R ==> (SORTED R (MAP f l) <=> SORTED (inv_image R f) l)`,
  Induct_on `l` >>
  rw [SORTED_EQ] >>
  eq_tac >>
@@ -1383,17 +1383,17 @@ val sorted_map = Q.store_thm ("sorted_map",
 
 val sorted_perm_count_list = Q.store_thm ("sorted_perm_count_list",
 `!y f l n.
-  SORTED (inv_image $<= f) l ∧
+  SORTED (inv_image $<= f) l /\
   PERM (MAP f l) (COUNT_LIST n)
-  ⇒
+  ==>
   (MAP f l = COUNT_LIST n)`,
  rw [] >>
- `transitive $<= ∧ antisymmetric $<=`
+ `transitive $<= /\ antisymmetric $<=`
           by srw_tac [ARITH_ss] [transitive_def,antisymmetric_def] >>
  metis_tac [sorted_map, SORTED_PERM_EQ, sorted_count_list]);
 
 val SORTED_weaken = store_thm("SORTED_weaken",
-  ``∀R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
+  ``!R R' ls. SORTED R ls /\ (!x y. MEM x ls /\ MEM y ls /\ R x y ==> R' x y)
       ==> SORTED R' ls``,
   NTAC 2 GEN_TAC THEN
   Induct THEN SRW_TAC[][] THEN

@@ -16,5 +16,3 @@ sig
   val get_gspec : (term_pp_types.printing_info,bool) smpp.t
 
 end
-
-

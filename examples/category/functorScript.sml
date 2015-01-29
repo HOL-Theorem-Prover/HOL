@@ -398,7 +398,7 @@ srw_tac [][] >- (
   imp_res_tac id_mor >>
   srw_tac [][] >>
   metis_tac [morf_id,objf_in_obj,maps_to_def] ) >>
-qmatch_assum_rename_tac `x ≈> y -:f.dom` [] >>
+qmatch_assum_rename_tac `x ≈> y -:f.dom` >>
 Q.ISPECL_THEN [`f`,`f.dom`,`f.cod`,`x`,`y`] mp_tac morf_comp >>
 imp_res_tac comp_mor_dom_cod >>
 srw_tac [][] >>
@@ -438,7 +438,7 @@ srw_tac [][] >>
 match_mp_tac functor_eq_thm >>
 srw_tac [][] >>
 match_mp_tac (GSYM functor_comp_morf) >>
-qmatch_assum_rename_tac `x ∈ h.dom.mor` [] >>
+qmatch_assum_rename_tac `x ∈ h.dom.mor` >>
 Q.ISPECL_THEN [`h`,`h.dom`,`h.cod`,`x`,`x.dom`,`x.cod`,`h@@x.dom`,`h@@x.cod`] mp_tac morf_maps_to >>
 srw_tac [][maps_to_in_def]);
 
@@ -523,8 +523,8 @@ fsrw_tac [][full_def,faithful_def] >>
 first_assum (qspecl_then [`id (f@@a) -:f.cod`,`a`,`b`] mp_tac) >>
 first_x_assum (qspecl_then [`id (f@@b) -:f.cod`,`b`,`a`] mp_tac) >>
 srw_tac [][is_functor_is_category,id_maps_to,objf_in_obj] >>
-qmatch_assum_rename_tac `ba :- b → a -:f.dom` [] >>
-qmatch_assum_rename_tac `ab :- a → b -:f.dom` [] >>
+qmatch_assum_rename_tac `ba :- b → a -:f.dom` >>
+qmatch_assum_rename_tac `ab :- a → b -:f.dom` >>
 map_every qexists_tac [`ab`,`ba`] >>
 `ab ≈> ba -:f.dom` by metis_tac [maps_to_composable] >>
 `ba ≈> ab -:f.dom` by metis_tac [maps_to_composable] >>
@@ -562,7 +562,7 @@ val faithful_functor_comp = Q.store_thm(
 "faithful_functor_comp",
 `∀f g. is_functor f ∧ is_functor g ∧ (f ≈> g) ∧ faithful f ∧ faithful g ⇒ faithful (g ◎ f)`,
 srw_tac [][faithful_def] >>
-qmatch_rename_tac `h1 = h2` [] >>
+qmatch_rename_tac `h1 = h2` >>
 pop_assum mp_tac >> fsrw_tac [][maps_to_in_def] >> strip_tac >>
 first_x_assum match_mp_tac >> fsrw_tac [][] >>
 first_x_assum match_mp_tac >> fsrw_tac [][] >>
@@ -750,7 +750,7 @@ fsrw_tac [][cat_iso_def] >>
 fsrw_tac [][BIJ_IFF_INV] >>
 fsrw_tac [][GSYM RIGHT_EXISTS_IMP_THM, GSYM RIGHT_EXISTS_AND_THM] >>
 fsrw_tac [][SKOLEM_THM] >>
-qmatch_assum_rename_tac `∀x. x ∈ f.cod.obj ⇒ gob x ∈ f.dom.obj` [] >>
+qmatch_assum_rename_tac `∀x. x ∈ f.cod.obj ⇒ gob x ∈ f.dom.obj` >>
 pop_assum mp_tac >>
 qho_match_abbrev_tac `(∀a b. P1 a b ⇒ P2 a b ∧ P3 a b ∧ (∀x. x ∈ (f.dom|a→b|) ⇒ (gmo a b (f##x) = x)) ∧ P4 a b) ⇒ P5` >>
 qpat_assum `Abbrev (gmo = X)` (K ALL_TAC) >>
@@ -812,7 +812,7 @@ imp_res_tac is_functor_is_category >>
     imp_res_tac maps_to_in_def >>
     fsrw_tac [][] )
   >- ( qexists_tac `gob x` >> fsrw_tac [][] ) >>
-  qmatch_assum_rename_tac `k ≈> j -:f.cod` [] >>
+  qmatch_assum_rename_tac `k ≈> j -:f.cod` >>
   `(g##k) ≈> (g##j) -:f.dom` by (
     match_mp_tac maps_to_composable >>
     metis_tac [composable_in_def,composable_def,maps_to_in_def,maps_to_def] ) >>

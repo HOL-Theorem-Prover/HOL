@@ -3,7 +3,7 @@ struct
 
 open HolKernel boolLib bossLib;
 open wordsLib stringLib addressTheory set_sepTheory progTheory wordsTheory;
-open pairSyntax progSyntax;
+open pairSyntax progSyntax temporalTheory;
 
 structure Parse =
 struct
@@ -877,10 +877,16 @@ fun HIDE_PRE_STATUS_RULE hide_th th = HIDE_STATUS_RULE false hide_th th
 fun SPEC_STRENGTHEN_RULE th pre = let
   val th = SPEC pre (MATCH_MP progTheory.SPEC_STRENGTHEN th)
   val goal = (fst o dest_imp o concl) th
+  in (th,goal) end handle HOL_ERR _ => let
+  val th = SPEC pre (MATCH_MP temporalTheory.SPEC_1_STRENGTHEN th)
+  val goal = (fst o dest_imp o concl) th
   in (th,goal) end;
 
 fun SPEC_WEAKEN_RULE th post = let
   val th = SPEC post (MATCH_MP progTheory.SPEC_WEAKEN th)
+  val goal = (fst o dest_imp o concl) th
+  in (th,goal) end handle HOL_ERR _ => let
+  val th = SPEC post (MATCH_MP temporalTheory.SPEC_1_WEAKEN th)
   val goal = (fst o dest_imp o concl) th
   in (th,goal) end;
 

@@ -76,13 +76,13 @@ THEN1 ( SRW_TAC [][] THEN RES_TAC THEN
 HO_MATCH_MP_TAC RTC_INDUCT THEN
 SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `SND x` THEN SRW_TAC [][] ) THEN
-Q.MATCH_ASSUM_RENAME_TAC `tstep a b` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `tstep a b` THEN
 MAP_EVERY Cases_on [`a`,`b`] THEN
-Q.MATCH_ASSUM_RENAME_TAC `tstep (sl,bl) (si,bi)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `tstep (sl,bl) (si,bi)` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 IMP_RES_TAC wfs_tstep THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `istep^* (si,bi) (FST sr,br)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `istep^* (si,bi) (FST sr,br)` THEN
 
 FULL_SIMP_TAC (srw_ss()) [tstep_def] THEN
 SRW_TAC [][] THEN1 (
@@ -109,10 +109,10 @@ THEN1 ( SRW_TAC [][] THEN RES_TAC THEN
 HO_MATCH_MP_TAC RTC_INDUCT THEN
 SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `SND x` THEN SRW_TAC [][] ) THEN
-Q.MATCH_ASSUM_RENAME_TAC `istep a b` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `istep a b` THEN
 MAP_EVERY Cases_on [`a`,`b`] THEN
-Q.MATCH_ASSUM_RENAME_TAC `istep (sl,bl) (si,bi)` [] THEN
-Q.MATCH_ASSUM_RENAME_TAC `tstep^* (si,bi) (FST sr,br)` [] THEN
+Q.MATCH_ASSUM_RENAME_TAC `istep (sl,bl) (si,bi)` THEN
+Q.MATCH_ASSUM_RENAME_TAC `tstep^* (si,bi) (FST sr,br)` THEN
 FULL_SIMP_TAC (srw_ss()) [istep_def] THEN
 SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `br` THEN

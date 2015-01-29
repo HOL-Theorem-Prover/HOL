@@ -1,0 +1,10 @@
+EXTRA_CLEANS = selftest.exe
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo optionSyntax.uo optionTheory.uo $(dprot $(SIGOBJ)/testutils.uo)
+	$(HOLMOSMLC) -o $@ $<

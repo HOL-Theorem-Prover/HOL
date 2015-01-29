@@ -31,4 +31,3 @@ val foldr         : ((string, term) maplet -> 'a -> 'a) -> 'a -> subst -> 'a
 val pp_subst      : subst pp
 
 end
-

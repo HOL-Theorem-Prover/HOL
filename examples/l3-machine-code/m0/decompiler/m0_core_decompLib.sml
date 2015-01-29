@@ -187,6 +187,9 @@ in
          [x] => (x, NONE)
        | [x1, x2] => (x1, SOME x2)
        | _ => raise ERR "m0_triple" ""
+    val m0_triple_code =
+       List.map m0_triple o
+       (m0AssemblerLib.m0_code: string quotation -> string list)
 end
 
 val vars = Term.mk_var ("cond", Type.bool) ::

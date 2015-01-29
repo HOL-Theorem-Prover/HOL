@@ -299,6 +299,53 @@ fun bv2term (Simple t) = t
   | bv2term (Restricted {Bvar,...}) = Bvar
 
 
+fun str_unicode_ok s = CharVector.all Char.isPrint s
+
+fun oi_strip_comb' oinfo t =
+    if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
+    else Overload.oi_strip_combP oinfo str_unicode_ok t
+
+fun overloading_of_term' oinfo t =
+    if current_trace "PP.avoid_unicode" = 0 then
+      Overload.overloading_of_term oinfo t
+    else
+      Overload.overloading_of_termP oinfo str_unicode_ok t
+
+fun pp_unicode_free ppel =
+    case ppel of
+        PPBlock(ppels, _) => List.all pp_unicode_free ppels
+      | RE (TOK s) => str_unicode_ok s
+      | _ => true
+
+fun is_unicode_ok_rule r =
+    current_trace "PP.avoid_unicode" = 0 orelse
+    (case r of
+         LISTRULE ls => List.all (fn {separator,leftdelim,rightdelim,...} =>
+                                     List.all pp_unicode_free separator andalso
+                                     List.all pp_unicode_free leftdelim andalso
+                                     List.all pp_unicode_free rightdelim)
+                                 ls
+       | PREFIX (STD_prefix rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | PREFIX (BINDER bs) =>
+         List.all (fn LAMBDA => true | BinderString {tok,...} => str_unicode_ok tok)
+                  bs
+       | SUFFIX TYPE_annotation => true
+       | SUFFIX (STD_suffix rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX (STD_infix (rrs, _)) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX (FNAPP rrs) =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs
+       | INFIX VSCONS => true
+       | INFIX RESQUAN_OP => true
+       | CLOSEFIX rrs =>
+           List.all (fn {elements,...} => List.all pp_unicode_free elements)
+                    rrs)
 
 fun rule_to_rr rule =
   case rule of
@@ -320,10 +367,6 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
 val prettyprint_bigrecs = ref true;
 
 val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
-
-fun first_tok [] = raise Fail "Shouldn't happen term_pp 133"
-  | first_tok (RE (TOK s)::_) = s
-  | first_tok (_ :: t) = first_tok t
 
 fun decdepth n = if n < 0 then n else n - 1
 
@@ -765,7 +808,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun tm nmight_print str = let
       val {Name,...} = dest_thy_const tm
       val actual_name0 =
-        case Overload.overloading_of_term overload_info tm of
+        case overloading_of_term' overload_info tm of
           NONE => Name
         | SOME s => s
       fun testit s = if isPrefix s actual_name0 then SOME s else NONE
@@ -834,10 +877,16 @@ fun pp_term (G : grammar) TyG backend = let
                        restr_binders
       val (bvars, body) = strip_vstructs NONE restr_binder tm
       val bvars_seen_here = List.concat (map (free_vars o bv2term) bvars)
+      val lambda' = if current_trace "PP.avoid_unicode" > 0 then
+                      List.filter str_unicode_ok lambda
+                    else lambda
+      val tok = case lambda' of
+                    [] => raise PP_ERR "pr_abs" "No token for lambda abstraction"
+                  | h::_ => h
     in
       pbegin addparens >>
       block CONSISTENT 2
-            (add_string (hd lambda) >>
+            (add_string tok >>
              record_bvars bvars_seen_here
                (pr_vstructl bvars >>
                 add_string endbinding >> add_break (1,0) >>
@@ -1035,7 +1084,7 @@ fun pp_term (G : grammar) TyG backend = let
                string, and a boolean, which is true iff the update is a value
                update (not a "fupd") *)
             val (fld, value) = dest_comb t
-            val rname = valOf (Overload.overloading_of_term overload_info fld)
+            val rname = valOf (overloading_of_term' overload_info fld)
           in
             if isPrefix recfupd_special rname then let
                 val (f, x) = dest_comb value
@@ -1134,7 +1183,7 @@ fun pp_term (G : grammar) TyG backend = let
             #base_type (valOf (Overload.info_for_name overload_info nm))
           end
         else
-          case Overload.overloading_of_term overload_info f of
+          case overloading_of_term' overload_info f of
             NONE => let
               val {Thy,Name,Ty} = dest_thy_const f
             in
@@ -1354,11 +1403,13 @@ fun pp_term (G : grammar) TyG backend = let
               Prec(n, _) => n > fprec
             | _ => false
           val addparens = addparens orelse combpos = RandCP
+          val print_tok = if is_constish f then constann f tok
+                          else var_ann f tok
         in
           ptype_block
             (pbegin (addparens orelse comb_show_type) >>
              block INCONSISTENT 2
-               (add_string tok >>
+               (print_tok >>
                 record_bvars bvars_seen_here
                   (pr_vstructl bvs >>
                    add_string endbinding >> spacep true >>
@@ -1503,7 +1554,7 @@ fun pp_term (G : grammar) TyG backend = let
         else false
 
     fun const_has_multi_ovl tm =
-      case Overload.overloading_of_term overload_info tm of
+      case overloading_of_term' overload_info tm of
         NONE => (* no printing form *) true
       | SOME s =>
           case Overload.info_for_name overload_info s of
@@ -1563,7 +1614,9 @@ fun pp_term (G : grammar) TyG backend = let
           val r = {Name = Name, Thy = Thy}
           fun normal_const () = let
             fun cope_with_rules s = let
-              val crules = lookup_term s
+              val crules =
+                  Option.map (List.filter (is_unicode_ok_rule o #3))
+                             (lookup_term s)
               open PPBackEnd
             in
               if isSome crules then
@@ -1584,7 +1637,7 @@ fun pp_term (G : grammar) TyG backend = let
                 add_string ")"
               end
             else
-              case Overload.overloading_of_term overload_info tm of
+              case overloading_of_term' overload_info tm of
                 NONE => add_prim_name()
               | SOME s =>
                 (* term is overloaded *)
@@ -1627,7 +1680,7 @@ fun pp_term (G : grammar) TyG backend = let
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
           val (oif, oiargs, overloadedp) =
-              case Overload.oi_strip_comb overload_info tm of
+              case oi_strip_comb' overload_info tm of
                 NONE => (f, args @ [Rand], false)
               | SOME (f, args) => (f, args, true)
 
@@ -1683,7 +1736,9 @@ fun pp_term (G : grammar) TyG backend = let
             val tm = list_mk_comb (f, args)
             val Rator = rator tm
             val (args,Rand) = front_last args
-            val candidate_rules = lookup_term fname
+            val candidate_rules =
+                Option.map (List.filter (is_unicode_ok_rule o #3))
+                           (lookup_term fname)
             fun is_list (r as {nilstr, cons, ...}:listspec) tm =
                 has_name_by_parser G nilstr tm orelse
                 (is_comb tm andalso
@@ -1703,7 +1758,8 @@ fun pp_term (G : grammar) TyG backend = let
                     val bindex = case valOf restr_binder of
                                    NONE => binder_to_string G LAMBDA
                                  | SOME s => s
-                    val optrule = lookup_term bindex
+                    val optrule = Option.map (List.filter (is_unicode_ok_rule o #3))
+                                             (lookup_term bindex)
                     fun ok_rule (_, _, r) =
                         case r of
                           PREFIX(BINDER b) => true

@@ -11,4 +11,3 @@ val _ =
     | _ => Profile.print_profile_results (Profile.results())
 
 val _ = Process.exit (if result then Process.success else Process.failure)
-

@@ -1104,14 +1104,14 @@ val category_eq_thm = Q.store_thm(
 ⇒ (c1 = c2)`,
 srw_tac [][category_component_equality] >>
 srw_tac [][FUN_EQ_THM] >- (
-  qmatch_rename_tac `c1.id_map x = c2.id_map x` [] >>
+  qmatch_rename_tac `c1.id_map x = c2.id_map x` >>
   Cases_on `x ∈ c1.obj` >- (
     first_x_assum (qspec_then `x` mp_tac) >>
     srw_tac [][id_in_def,restrict_def] >>
     metis_tac [] ) >>
   fsrw_tac [][is_category_def,extensional_category_def,extensional_def] >>
   metis_tac [] ) >>
-qmatch_rename_tac `c1.comp f g = c2.comp f g` [] >>
+qmatch_rename_tac `c1.comp f g = c2.comp f g` >>
 Cases_on `f ≈> g-:c1` >- (
   first_x_assum (qspecl_then [`f`,`g`] mp_tac) >>
   srw_tac [][compose_in_def,restrict_def,compose_def,composable_in_def] >>

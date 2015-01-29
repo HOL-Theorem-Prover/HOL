@@ -1078,4 +1078,3 @@ val calculational_nightmare = store_thm(
   PROVE_TAC []);
 
 val _ = export_theory();
-

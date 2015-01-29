@@ -54,7 +54,7 @@ val cpn_REWR_CONV = REWR_CONV LESS_REWR ORELSEC REWR_CONV EQUAL_REWR ORELSEC
 (* ****             Getting to toto-deciding conversions.             **** *)
 (* *********************************************************************** *)
 
-(* Given 
+(* Given
     lin_ord_thm: |- LinearOrder phi;
     toto_of_thm: |- cmp = toto_of_LinearOrder phi;
     eq_conv: reduces equations of ground terms (of phi's arg. type) to T/F;
@@ -78,7 +78,7 @@ in fn (t:term) => (* supposed to have the form apto cmp t1 t2 *)
      let val (t1, t2) = (rand (rator t), rand t);
          val eq_verdict = eq_conv (mk_eq (t1, t2))
      in PURE_MATCH_MP eq_thm eq_verdict
-        handle _ => 
+        handle _ =>
         let val cond = PURE_MATCH_MP uneq_thm eq_verdict;
         (* cond = `if phi x y then ... = LESS else ... = GREATER` *)
             val (phi12, arm1, arm2) = dest_cond (concl cond);
@@ -121,7 +121,7 @@ fun numOrd_CONV t =
             Raise (ERR "numOrd_CONV" "not a numOrd test")
  end end;
 
-val numto_CONV = 
+val numto_CONV =
 RATOR_CONV (RATOR_CONV (REWR_CONV apnumto_thm)) THENC
                  numOrd_CONV;
 
@@ -163,7 +163,7 @@ fun qk_numOrd_CONV t =
             Raise (ERR "qk_numOrd_CONV" "not a qk_numOrd test")
  end end;
 
-val qk_numto_CONV = 
+val qk_numto_CONV =
 RATOR_CONV (RATOR_CONV (REWR_CONV ap_qk_numto_thm)) THENC
                  qk_numOrd_CONV;
 
@@ -198,8 +198,8 @@ val [lsnn, lsnc, lscn, lscc] = map GEN_ALL (CONJUNCTS (SPEC_ALL aplistoto));
 
 fun listoto_CONV elem_conv =
  let fun lis_c t =
- ((REWR_CONV lscc THENC 
-   RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV elem_conv))) THENC 
+ ((REWR_CONV lscc THENC
+   RATOR_CONV (RATOR_CONV (RATOR_CONV (RAND_CONV elem_conv))) THENC
    ((REWR_CONV EQUAL_REWR THENC lis_c) ORELSEC
     REWR_CONV LESS_REWR ORELSEC REWR_CONV GREATER_REWR)) ORELSEC
   REWR_CONV lsnn ORELSEC REWR_CONV lsnc ORELSEC REWR_CONV lscn) t
@@ -210,7 +210,7 @@ fun listoto_CONV elem_conv =
 val refl_clause_string = MATCH_MP TO_refl
                          (ISPEC (Term`stringto`) TotOrd_apto);
 
-fun stringto_CONV t = 
+fun stringto_CONV t =
 if rand (rator t) = rand t then SPEC (rand t) refl_clause_string else
  (RATOR_CONV (RATOR_CONV (RAND_CONV (REWR_CONV stringto))) THENC
   listoto_CONV charto_CONV) t;
@@ -233,7 +233,7 @@ charto_CONV (Term`apto charto #"8" #"7"`);
 val testn = Count.apply (numto_CONV o Term);
 
 testn`apto numto 5 7`;
-testn`apto numto 0 0`; 
+testn`apto numto 0 0`;
 
 val testc = Count.apply (charOrd_CONV o Term);
 

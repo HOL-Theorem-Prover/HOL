@@ -36,4 +36,3 @@ end;
 val _ = temp_overload_on("mult",--`$* : num->num->num`--);
 
 val _ = export_theory();
-

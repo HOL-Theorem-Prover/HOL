@@ -6,5 +6,3 @@ sig
   val dest : 'a t -> 'a
 
 end
-
-

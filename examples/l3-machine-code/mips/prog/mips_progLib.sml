@@ -85,7 +85,10 @@ val state_id =
       [["CP0", "PC", "gpr"],
        ["CP0", "PC", "exceptionSignalled", "gpr"],
        ["CP0", "PC", "exceptionSignalled"],
+       ["CP0", "PC", "exceptionSignalled", "hi", "lo"],
        ["CP0", "LLbit", "PC"],
+       ["CP0", "LLbit", "PC", "exceptionSignalled"],
+       ["CP0", "LLbit", "PC", "exceptionSignalled", "gpr"],
        ["CP0", "LLbit", "PC", "gpr"],
        ["CP0", "PC"],
        ["CP0", "PC", "lo"],
@@ -94,6 +97,8 @@ val state_id =
        ["CP0", "PC", "gpr", "hi", "lo"],
        ["CP0", "LLbit", "MEM", "PC"],
        ["CP0", "MEM", "PC"],
+       ["CP0", "MEM", "PC", "exceptionSignalled", "gpr"],
+       ["MEM", "PC", "exceptionSignalled", "gpr"],
        ["MEM", "PC"],
        ["gpr", "hi", "lo"],
        ["gpr"]]
@@ -164,22 +169,23 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "mips_exception" => 1
-       | "mips_CP0_Status_RE" => 2
-       | "mips_CP0_Status_ERL" => 3
-       | "mips_CP0_Status_EXL" => 4
-       | "mips_CP0_Status_BEV" => 5
-       | "mips_CP0_Config_BE" => 6
-       | "mips_CP0_Count" => 7
-       | "mips_CP0_Cause" => 8
-       | "mips_CP0_EPC" => 9
-       | "mips_CP0_Debug" => 10
-       | "mips_CP0_ErrCtl" => 11
-       | "mips_BranchDelay" => 12
-       | "mips_BranchTo" => 13
-       | "mips_LLbit" => 14
-       | "mips_hi" => 15
-       | "mips_lo" => 16
-       | "mips_PC" => 17
+       | "mips_exceptionSignalled" => 2
+       | "mips_CP0_Status_RE" => 3
+       | "mips_CP0_Status_ERL" => 4
+       | "mips_CP0_Status_EXL" => 5
+       | "mips_CP0_Status_BEV" => 6
+       | "mips_CP0_Config_BE" => 7
+       | "mips_CP0_Count" => 8
+       | "mips_CP0_Cause" => 9
+       | "mips_CP0_EPC" => 10
+       | "mips_CP0_Debug" => 11
+       | "mips_CP0_ErrCtl" => 12
+       | "mips_BranchDelay" => 13
+       | "mips_BranchTo" => 14
+       | "mips_LLbit" => 15
+       | "mips_hi" => 16
+       | "mips_lo" => 17
+       | "mips_PC" => 18
        | _ => ~1
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
@@ -406,7 +412,7 @@ in
                   end
              | _ => []
       in
-         List.map
+         List.mapPartial
             (fn (s, ds) =>
                let
                   val sbst = Term.subst s
@@ -415,13 +421,17 @@ in
                   val f = utilsLib.rhsc o cnv o sbst
                   val p' = subst_delete f ds pl
                   val q' = subst_delete f ds ql
+                  val th = thm |> Thm.INST s
+                               |> Drule.DISCH_ALL
+                               |> Conv.CONV_RULE cnv
+                               |> Drule.UNDISCH_ALL
                in
-                  (thm |> Thm.INST s
-                       |> Drule.DISCH_ALL
-                       |> Conv.CONV_RULE cnv
-                       |> Drule.UNDISCH_ALL,
-                   temporal_stateSyntax.mk_spec_or_temporal_next m
-                     (stateLib.generate_temporal()) (p', sbst c, q'))
+                  if utilsLib.vacuous th
+                     then NONE
+                  else SOME
+                         (th,
+                          temporal_stateSyntax.mk_spec_or_temporal_next m
+                            (stateLib.generate_temporal()) (p', sbst c, q'))
                end) groups
       end
 end
@@ -466,6 +476,12 @@ in
             end
       end
 end
+
+(*
+val l = (List.concat thm_ts)
+val x as (thm, t) = List.nth (l, 0)
+spec x
+*)
 
 local
    val get_opcode =
@@ -533,6 +549,8 @@ end
 
 (* Testing...
 
+open mips_progLib
+
 val imp_spec = MIPS_IMP_SPEC
 val imp_temp = mips_progTheory.MIPS_IMP_TEMPORAL
 val read_thms = [mips_stepTheory.get_bytes]
@@ -559,13 +577,16 @@ in
       in
          bitstringSyntax.hexstring_of_term (Term.subst s tm)
       end
+   fun hex s =
+      mips_spec_hex s
+      handle e as HOL_ERR _ => (print ("\n\n" ^ s ^ "\n\n"); raise e)
 end
 
 val () = mips_config false
 val be = false
 val tst = mips_spec
-val tst = Count.apply mips_spec_hex o random_hex
-val tst = mips_spec_hex o random_hex
+val tst = Count.apply hex o random_hex
+val tst = hex o random_hex
 val dec = Conv.CONV_RULE (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV) o
           mips_stepLib.mips_decode_hex
 
@@ -574,7 +595,12 @@ val d = List.filter (fn (s, _) => not (Lib.mem s ["MFC0", "MTC0"]))
 
 val l = List.map (I ## tst) d
 
-mips_stepLib.mips_find_opc (mips_stepLib.hex_to_padded_opcode "9FA0AED9")
+mips_stepLib.mips_find_opc (mips_stepLib.hex_to_padded_opcode "000C001E")
+
+val s = random_hex (Redblackmap.find (mips_stepLib.mips_dict, "ERET"))
+mips_spec (Redblackmap.find (mips_stepLib.mips_dict, "ERET"))
+
+mips_spec_hex s
 
 dec "9FA0AED9"
 

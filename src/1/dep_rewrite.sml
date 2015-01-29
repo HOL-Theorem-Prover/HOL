@@ -813,4 +813,3 @@ e(DEP_ONCE_REWRITE_TAC[RIGHT_FORALL_IMP_THM]);
 drop();
 
 *)
-

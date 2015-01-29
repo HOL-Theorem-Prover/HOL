@@ -19,7 +19,7 @@ let
     val _ = print ("``\n   ");
     val ct = Timer.startCPUTimer();
     val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
-                                     | _ => NONE;	
+                                     | _ => NONE;
 
     val ok = if not (isSome r_opt) then not (isSome thm_opt) else
              isSome thm_opt andalso
@@ -317,4 +317,3 @@ val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
 
 
 val _ = Process.exit Process.success;
-

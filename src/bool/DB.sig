@@ -21,10 +21,13 @@ sig
   val theorems    : string -> (string * thm) list
   val definitions : string -> (string * thm) list
   val find        : string -> data list
+  val find_in     : string -> data list -> data list
   val matchp      : (thm -> bool) -> string list -> data list
   val matcher     : (term -> term -> 'a) -> string list -> term -> data list
   val match       : string list -> term -> data list
+  val matches     : term -> thm -> bool
   val apropos     : term -> data list
+  val apropos_in  : term -> data list -> data list
   val listDB      : unit -> data list
 
   val data_list_to_string : data list -> string
@@ -46,6 +49,8 @@ sig
 
   val bindl : string -> (string * thm * class) list -> unit
 
+  val CT : unit -> (string, (string, data list) Redblackmap.dict * 
+    (string, data list) Redblackmap.dict) Redblackmap.dict 
 
 
 end

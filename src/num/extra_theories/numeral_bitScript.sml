@@ -509,7 +509,7 @@ val MOD_2EXP_MAX = Q.store_thm("MOD_2EXP_MAX",
           [GSYM BITS_ZERO3, SYM BIT0_ODD, GSYM BIT_BITS_THM, BIT_DIV2, DIV2_def]
     \\ EQ_TAC
     \\ RW_TAC arith_ss [BIT_EXP_SUB1]
-    \\ Cases_on `x` 
+    \\ Cases_on `x`
     \\ RW_TAC arith_ss [])
 
 (* ------------------------------------------------------------------------- *)

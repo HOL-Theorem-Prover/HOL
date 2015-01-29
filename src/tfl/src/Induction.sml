@@ -165,18 +165,18 @@ val mk = mk_case ty_info FV thy
 mk in_1
 val in
 
-hm = mk_case ty_info FV thy {path=[z], rows=rows} 
+hm = mk_case ty_info FV thy {path=[z], rows=rows}
 
-val arg0 = {path=[z], rows=rows} 
+val arg0 = {path=[z], rows=rows}
 val {path=rstp0, rows = rows0} = el 1 news
 *)
 
 
-fun mk_case_choose_column i rows = 
+fun mk_case_choose_column i rows =
 let
   val col_i = map (fn (l, _) => el (i+1) l) rows
 
-  val col_i_ok = 
+  val col_i_ok =
     (all is_var col_i) orelse
     (all (fn p => Literal.is_literal p orelse is_var p) col_i) orelse
     (all (fn p => not (Literal.is_pure_literal p) andalso not (is_var p)) col_i)
@@ -198,9 +198,9 @@ fun mk_case ty_info FV thy =
      let val col_index = mk_case_choose_column 0 rows0
          val rows = map (fn (pL, rhs) => (bring_to_front_list col_index pL, rhs)) rows0
          val (pat_rectangle,rights) = unzip rows
-         val u_rstp = bring_to_front_list col_index rstp0 
+         val u_rstp = bring_to_front_list col_index rstp0
          val (u, rstp) = (hd u_rstp, tl u_rstp)
-         val p = hd (fst (hd rows)) 
+         val p = hd (fst (hd rows))
          val col0 = map (Lib.trye hd) pat_rectangle
          val pat_rectangle' = map (Lib.trye tl) pat_rectangle
      in
@@ -305,7 +305,7 @@ fun complete_cases thy =
          val th0    = ASSUME a_eq_z
          val rows:row list = map (fn x => ([x], (th0,[]))) pats
 
-         val cases_thm0 = mk_case ty_info FV thy {path=[z], rows=rows} 
+         val cases_thm0 = mk_case ty_info FV thy {path=[z], rows=rows}
 
          fun mk_pat_pred p = list_mk_exists (free_vars_lr p, mk_eq(a, p))
          val cases_tm = list_mk_disj (map mk_pat_pred pats)

@@ -235,7 +235,7 @@ val int_bit_equiv = store_thm("int_bit_equiv",
          \\ first_x_assum (mp_tac o Q.SPEC `x`)
          \\ fs [])
   \\ CCONTR_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH bs2 <> LENGTH bs1` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH bs2 <> LENGTH bs1`
   \\ `LENGTH bs1 < LENGTH bs2 \/ LENGTH bs2 < LENGTH bs1` by DECIDE_TAC
   \\ IMP_RES_TAC bits_of_int_LAST
   THEN1 (Cases_on `bs2 = []` \\ fs [LENGTH]

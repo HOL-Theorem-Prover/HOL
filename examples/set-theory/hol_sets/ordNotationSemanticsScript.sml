@@ -121,8 +121,7 @@ val oless_total = store_thm(
       `(∃j. n = End j) ∨ (∃e2 c2 t2. n = Plus e2 c2 t2)`
         by (Cases_on `n` >> simp[]) >> simp[]) >>
   map_every qx_gen_tac [`i`, `n`] >>
-  qmatch_abbrev_tac `oless (Plus e1 i t1) n ∨ FOO` >>
-  markerLib.RM_ALL_ABBREVS_TAC >>
+  qmatch_rename_tac `oless (Plus e1 i t1) n ∨ _` >>
   `(∃j. n = End j) ∨ (∃e2 j t2. n = Plus e2 j t2)`
     by (Cases_on `n` >> simp[]) >> simp[] >>
   `oless e1 e2 ∨ oless e2 e1 ∨ (e2 = e1)` by metis_tac[] >> rw[] >>

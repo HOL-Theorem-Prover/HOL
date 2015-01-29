@@ -382,4 +382,3 @@ val _ = export_theory();
 val _ = print_theory_to_file "-" "quotient_pair.lst";
 
 val _ = html_theory "quotient_pair";
-

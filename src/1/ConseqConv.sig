@@ -243,4 +243,3 @@ val EXT_CONTEXT_CONSEQ_HO_REWRITE_TAC   : CONSEQ_CONV_context -> (thm list -> co
 
 
 end
-

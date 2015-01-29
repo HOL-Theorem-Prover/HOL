@@ -41,7 +41,7 @@ variables {vsi}.
 
 If {tm} is a conjunction of clauses, as described above, then evaluating:
 {
-   new_recursive_definition{name=name, rec_axiom=th,def=tm}
+   new_recursive_definition{name=name, rec_axiom=th, def=tm}
 }
 automatically proves the existence of a function {fn} that satisfies
 the defining equations supplied as the fourth argument, and then declares a new
@@ -116,7 +116,7 @@ of a function {Label} which extracts the label from a leaf node.  The value of
    - val Label = new_recursive_definition
                    {name = "Label",
                     rec_axiom = th,
-                     def = --`Label (LEAF (x:'a)) = x`--};
+                    def = --`Label (LEAF (x:'a)) = x`--};
    > val Label = |- !x. Label (LEAF x) = x : thm
 }
 Curried functions can also be defined, and the recursion can be on

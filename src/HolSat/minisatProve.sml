@@ -138,5 +138,3 @@ fun ZSAT_ORACLE tm = GEN_SAT ((set_term tm o set_flag_is_proved false) zchaff_co
 
 end
 end
-
-

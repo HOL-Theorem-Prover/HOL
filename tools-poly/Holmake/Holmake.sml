@@ -344,10 +344,6 @@ val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
-val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
-fun has_unquoter() = OS.FileSys.access(UNQUOTER, [OS.FileSys.A_EXEC])
-fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
-
   (*
 fun compile debug args = let
   val _ = if debug then print ("  with command "^

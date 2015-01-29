@@ -2412,7 +2412,7 @@ SRW_TAC [] [EQ_IMP_THM] THEN1 (
     SRW_TAC [] [] ) THEN
   NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m1` MP_TAC)) THEN
   SRW_TAC [] [] ) THEN1 (
-  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` [] THEN
+  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` THEN
   Cases_on `m < n` THEN SRW_TAC [] [] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`m`,`n`] MP_TAC) THEN
   SRW_TAC [] [LESS_SUC] THEN
@@ -2632,11 +2632,11 @@ val APPEND_EQ_CONS = store_thm(
 
 (* could just use APPEND_EQ_APPEND and APPEND_EQ_SING, but this gives you
    four possibilities
-      |- (x ++ [e] ++ y = a ++ b) ⇔
-           (∃l'. (x = a ++ l') ∧ (b = l' ++ [e] ++ y)) ∨
-           (a = x ++ [e]) ∧ (b = y) ∨
-           (a = x) ∧ (b = e::y) ∨
-           ∃l. (a = x ++ [e] ++ l) ∧ (y = l ++ b)
+      |- (x ++ [e] ++ y = a ++ b) <=>
+           (?l'. (x = a ++ l') /\ (b = l' ++ [e] ++ y)) \/
+           (a = x ++ [e]) /\ (b = y) \/
+           (a = x) /\ (b = e::y) \/
+           ?l. (a = x ++ [e] ++ l) /\ (y = l ++ b)
    Note that the middle two are instances of the outer two with the
    existentially quantified l set to []
 *)

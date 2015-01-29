@@ -185,7 +185,7 @@ datatype simpset =
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
                     ssfrags = [], limit = NONE,
-                    initial_net=empty_net,
+                    initial_net=empty,
                     dprocs=[],travrules=EQ_tr};
 
  fun ssfrags_of (SS x) = #ssfrags x;

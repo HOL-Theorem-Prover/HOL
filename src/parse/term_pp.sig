@@ -13,4 +13,3 @@ sig
   val init_casesplit_munger : (term -> term * (term * term) list) -> unit
 
 end
-

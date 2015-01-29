@@ -1,1 +1,7 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+.PHONY: all
+
 intExtensionTheory.sml: $(dprot $(SIGOBJ)/int_arithTheory.uo)

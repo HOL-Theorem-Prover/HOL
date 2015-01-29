@@ -37,9 +37,9 @@ val mk_case_cong_thm_tyinfo : tyinfo -> thm
 val mk_type_rewrites_tyinfo : tyinfo -> thm list
 
 (* mk_case_cong_thm_tyinfo generates an elimination theorem
-   that fires if all inputs give the same result. 
- 
-   |- !M c. (case M of C1 => c | C2 x0 => c) = c  
+   that fires if all inputs give the same result.
+
+   |- !M c. (case M of C1 => c | C2 x0 => c) = c
 *)
 val mk_case_elim_thm_tyinfo : tyinfo -> thm
 
@@ -58,7 +58,7 @@ val mk_type_quant_thms_tyinfo : tyinfo -> thm * thm
 (* mk_case_rand_thm_tyinfo, mk_case_rand_thm_tyinfo and
    mk_case_abs_thm_tyinfo provide theorems that are used for
    lifting case constants. Use carefully, since their application
-   easily loops. 
+   easily loops.
 
    |- !M f f0 f1.
         f (case M of C1 => f0 | C2 x0 => f1 x0) =
@@ -76,7 +76,7 @@ val mk_type_quant_thms_tyinfo : tyinfo -> thm * thm
 val mk_case_rand_thm_tyinfo  : tyinfo -> thm
 val mk_case_rator_thm_tyinfo : tyinfo -> thm
 val mk_case_abs_thm_tyinfo   : tyinfo -> thm
-  
+
 (*---------------------------------------------------------------------------*)
 (* Simpsets                                                                  *)
 (*---------------------------------------------------------------------------*)
@@ -117,4 +117,3 @@ val expand_type_quants_stateful_ss : unit -> ssfrag
 val cases_to_top_RULE : rule
 
 end
-

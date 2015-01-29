@@ -19,4 +19,3 @@ val BOOL_NEG_PAIR_convdata : simpfrag.convdata;
 
 
 end
-
