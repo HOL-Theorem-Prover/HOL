@@ -42,7 +42,7 @@ val term_cmp_ind = fetch "-" "term_cmp_ind";
 (* hypothesis ``MEM a' ts1 /\ MEM a ts2`` which may be hard to satisfy. In   *)
 (* that case, the congruence rule for list_cmp above may need to be revised. *)
 (*                                                                           *)
-(* val term_cmp_ind =                                                       *)
+(* val term_cmp_ind =                                                        *)
 (*   |- ∀P.                                                                  *)
 (*     (∀x1 x2. P (Var x1) (Var x2)) ∧                                       *)
 (*     (∀v0 v1 v2. P (Var v0) (App v1 v2)) ∧                                 *)
@@ -127,6 +127,10 @@ val subst_def =
   THEN DECIDE_TAC);
 
 (*---------------------------------------------------------------------------*)
+(* Composition of substitutions                                              *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
 (* Unification                                                               *)
 (*---------------------------------------------------------------------------*)
 (*
@@ -135,10 +139,10 @@ val unify_defn =
   "unify"
   `unify dpairs theta = 
     case dpairs
-     of [] => theta
+     of [] => SOME theta
       | (Var s1, Var s2)::t =>
           if s1 = s2 then unify t theta
-          else 
+          else case unify 
       | (App f l1,App g l2)::t =>
           if f = g 
            then unify (ZIP l1 l2 ++ t) theta
