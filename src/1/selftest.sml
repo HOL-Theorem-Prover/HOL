@@ -507,6 +507,18 @@ val _ = List.app test badnames
 val _ = print "OK\n"
 
 val _ = let 
+  val _ = tprint "Testing structural list-tactics"
+  val tac = REPEAT DISCH_TAC THEN REPEAT CONJ_TAC THEN_LT
+    EVERY_LT [ (ROTATE_LT 2),
+      (SPLIT_LT 2 (REVERSE_LT, ROTATE_LT 1)),
+      (HEADGOAL (POP_ASSUM ACCEPT_TAC)),
+      (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
+	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
+  val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let 
   val _ = tprint "Testing USE_SG_THEN"
   val tac = REPEAT DISCH_TAC THEN CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2
     THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
