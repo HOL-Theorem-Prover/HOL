@@ -507,6 +507,37 @@ val _ = List.app test badnames
 val _ = print "OK\n"
 
 val _ = let 
+  val _ = tprint "Testing VALIDATE (1)"
+  val th' = Thm.mk_oracle_thm "Testing" ([], ``p' ==> q``) ;
+  val th = Thm.mk_oracle_thm "Testing" ([], ``p ==> q``) ;
+  val uth' = UNDISCH_ALL th' ;
+  val uth = UNDISCH_ALL th ;
+
+  val g = ([], ``p ==> q``) : goal ; 
+  val ([g'], _) = STRIP_TAC g ;
+  val ([], _) = (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) g' ;
+  val ([_], _) = (VALIDATE (FIRST (map ACCEPT_TAC [uth', uth]))) g' ;
+  val true = (VALID (FIRST (map ACCEPT_TAC [uth', uth])) g' ; false)
+    handle HOL_ERR _ => true ;
+in print "OK\n" 
+end handle _ => die "FAILED!"
+
+val _ = let 
+  val _ = tprint "Testing VALIDATE (2)"
+  val g = ([], ``(p ==> q) ==> r``) : goal ;
+  val tac = STRIP_TAC THEN VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH)) ;
+  val (ngs, vf) = VALID tac g ;
+
+  val tac1 = (VALIDATE (ASSUME_TAC (ASSUME ``x /\ y``))) ;
+  val tac2 = (SUBGOAL_THEN ``x /\ y`` ASSUME_TAC ) ;
+
+  val (ngs1, _) = VALID tac1 g ;
+  val (ngs2, _) = VALID tac2 g ;
+  val true = ngs1 = ngs2 ;
+in print "OK\n" 
+end handle _ => die "FAILED!"
+
+val _ = let 
   val _ = tprint "Testing structural list-tactics"
   val tac = REPEAT DISCH_TAC THEN REPEAT CONJ_TAC THEN_LT
     EVERY_LT [ (ROTATE_LT 2),
