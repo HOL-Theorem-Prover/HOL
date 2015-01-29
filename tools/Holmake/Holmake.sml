@@ -465,9 +465,9 @@ val envlist = envlist hmakefile_env
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
 val additional_includes =
-  includify (remove_duplicates (cline_additional_includes @ hmake_includes))
+  remove_duplicates (cline_additional_includes @ hmake_includes)
 
-val hmake_preincludes = includify (envlist "PRE_INCLUDES")
+val hmake_preincludes = envlist "PRE_INCLUDES"
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_basis2002 = member "NO_BASIS2002" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
@@ -498,7 +498,7 @@ val actual_overlay =
       NONE => SOME DEFAULT_OVERLAY
     | SOME _ => user_overlay
 
-val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
+val std_include_flags = if no_sigobj then [] else [SIGOBJ]
 
 
 fun extra_deps t =
@@ -641,10 +641,15 @@ fun runholdep arg destination_file = let
     map fromFile files
   end
   val buildable_extras = List.concat (map buildables extra_targets)
+  val includes = hmake_preincludes @ std_include_flags @ additional_includes
+  val _ = diag ("Running Holdep on "^fromFile arg^" with debug = "^
+                Bool.toString debug ^ ", includes = " ^
+                String.concatWith "," includes)
   val result =
-    Success(Holdep.main buildable_extras debug
-                        (hmake_preincludes @ std_include_flags @
-                         additional_includes @ [fromFile arg]))
+    Success(Holdep.main {assumes = buildable_extras, debug = debug,
+                         includes = hmake_preincludes @ std_include_flags @
+                                    additional_includes,
+                         fname = fromFile arg})
     handle _ => (print "Holdep failed.\n"; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
@@ -789,8 +794,8 @@ datatype buildcmds = MOSMLC
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun build_command c arg = let
-  val include_flags = hmake_preincludes @ std_include_flags @
-                      additional_includes
+  val include_flags = includify (hmake_preincludes @ std_include_flags @
+                                 additional_includes)
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl =
       case actual_overlay of
@@ -1104,7 +1109,7 @@ fun hm_recur ctgt k =
         {warn = warn, no_prereqs = no_prereqs, hm = Holmake,
          visited = visiteddirs,
          includes =
-         cline_additional_includes @ envlist "PRE_INCLUDES" @ hmake_includes,
+         cline_additional_includes @ hmake_preincludes @ hmake_includes,
          dir = {abspath = dir, relpath = dirnm},
          local_build = k, cleantgt = ctgt}
 in

@@ -360,6 +360,7 @@ val _ =
     compile [] "Parser.sig";
     compile [] "Parser.sml";
     compile [] "Lexer.sml";
+    compile [] "Holdep.sig";
     compile [] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
