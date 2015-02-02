@@ -68,8 +68,6 @@ in
     | NONE     => NONE
 end
 
-local val res = ref [];
-in
 fun isTheory s =
   case List.rev(String.explode s) of
     #"y" :: #"r" :: #"o" :: #"e" :: #"h" :: #"T" :: n::ame =>
@@ -77,26 +75,26 @@ fun isTheory s =
   | _ => NONE
 
 fun addThExt s s' ext = addExt (addDir (Path.dir s') s) ext
-fun outname (rcd as {assumes,includes}) cdir s =
+fun outname (rcd as {assumes,includes}) cdir (s, res) =
   case isTheory s of
     SOME n => let
     in
       (* allow a dependency on a theory if we can see a script.sml file *)
       case access rcd cdir (n^"Script") "sml" of
-        SOME s' => res := addThExt s s' "ui" :: !res
+        SOME s' => addThExt s s' "ui" :: res
       | NONE => let
         in
           (* or, if we can see the theory.ui file already; which might
              happen if the theory file is in sigobj *)
           case access rcd cdir (n^"Theory") "ui" of
-            SOME s' => res := addThExt s s' "ui" :: !res
-          | NONE => ()
+            SOME s' => addThExt s s' "ui" :: res
+          | NONE => res
         end
     end
   | _ => let
     in
       case access rcd cdir s "sig" of
-        SOME s' => res := addExt s' "ui" :: !res
+        SOME s' => addExt s' "ui" :: res
       | _       => let
         in
           case access rcd cdir s "sml" of
@@ -105,7 +103,7 @@ fun outname (rcd as {assumes,includes}) cdir s =
                the .ui file too.  We have to say that we're dependent
                on the .uo file because the automatic logic will then
                correctly hunt back to the .sml file *)
-            SOME s' => res := addExt s' "uo" :: !res
+            SOME s' => addExt s' "uo" :: res
           | _       => let
             in
               (* this case added to cover the situations where we think we
@@ -118,8 +116,8 @@ fun outname (rcd as {assumes,includes}) cdir s =
                  this possibility by looking to see if we can see a .ui
                  file; if so, we can retain the dependency *)
               case access rcd cdir s "ui" of
-                SOME s' => res := addExt s' "ui" :: !res
-              | NONE => ()
+                SOME s' => addExt s' "ui" :: res
+              | NONE => res
             end
         end
     end
@@ -127,10 +125,10 @@ fun outname (rcd as {assumes,includes}) cdir s =
 fun beginentry objext target = let
   val targetname = addExt target objext
 in
-  res := [targetname ^ ":"];
-  if objext = "uo" andalso FileSys.access(addExt target "sig", []) then
-    res := addExt target "ui" :: !res
-  else ()
+  (targetname,
+   if objext = "uo" andalso FileSys.access(addExt target "sig", []) then
+     [addExt target "ui"]
+   else [])
 end;
 
 val escape_spaces = let
@@ -142,12 +140,11 @@ in
   map escape_space
 end
 
-fun endentry() = (* for non-file-based Holdep *)
-  if length (!res) > 1 then (* the first entry is the name of the file for
-                               which we are computing dependencies *)
-    String.concat (spacify (rev ("\n" :: escape_spaces (!res))))
-  else ""
-end;
+fun endentry tgtname s =
+    if null s then ""
+    else
+      hd (escape_spaces [tgtname]) ^ ": " ^
+      String.concat (spacify (rev ("\n" :: escape_spaces s)))
 
 fun read {assumes, includes, srcext, objext, filename} = let
   open OS.FileSys Systeml
@@ -165,20 +162,21 @@ fun read {assumes, includes, srcext, objext, filename} = let
       else file0
   val is       = BasicIO.open_in actualfile
   val lexbuf   = createLexerStream is
-  val mentions = Polyhash.mkPolyTable (37, Subscript)
-  fun insert s = Polyhash.insert mentions (s,())
   val names    = parseFile (filename, is) lexbuf
+  val mentions = Binaryset.addList (Binaryset.empty String.compare, names)
   val _        = BasicIO.close_in is
   val _        = if actualfile <> file0 then
                    FileSys.remove actualfile handle _ => ()
                  else ()
   val curr_dir = Path.dir filename
   val outrcd = {assumes = assumes, includes = includes}
+  val (targetname, res0) = beginentry objext (manglefilename filename);
+  val res = Binaryset.foldl
+              (fn (s, acc) => outname outrcd curr_dir (manglefilename s, acc))
+              res0
+              mentions
 in
-  beginentry objext (manglefilename filename);
-  app insert names;
-  Polyhash.apply (outname outrcd curr_dir o manglefilename o #1) mentions;
-  endentry ()
+  endentry targetname res
 end
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
 
