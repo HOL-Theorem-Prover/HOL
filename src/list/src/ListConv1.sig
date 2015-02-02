@@ -42,4 +42,4 @@ sig
   val SCANR_CONV : conv -> conv
   val REPLICATE_CONV : conv
   val GENLIST_CONV : conv -> conv
-end;
+end

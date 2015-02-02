@@ -74,4 +74,4 @@ sig
 
   val SELECT_ELIM_TAC       : tactic
   val HINT_EXISTS_TAC       : tactic
-end;
+end

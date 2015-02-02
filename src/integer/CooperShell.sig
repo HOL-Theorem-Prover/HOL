@@ -5,4 +5,4 @@ signature CooperShell = sig
 
   val pure_goal : conv
   val decide_pure_presburger_term : conv
-end;
+end

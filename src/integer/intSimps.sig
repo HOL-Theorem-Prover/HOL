@@ -40,4 +40,4 @@ sig
     (* collects up all terms, summing coefficients.  Does more than
        collect_additive_consts therefore.  Right-associates. *)
 
-end;
+end

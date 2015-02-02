@@ -11,4 +11,4 @@ sig
                   mutual_cases : thm,
                   argument_extraction_definitions : (string * thm) list}
 
-end;
+end

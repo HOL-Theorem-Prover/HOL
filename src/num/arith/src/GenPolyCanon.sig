@@ -26,7 +26,7 @@ val gencanon : gci -> term -> thm
 val derive_l_asscomm : thm -> thm -> thm
 val derive_r_asscomm : thm -> thm -> thm
 
-end;
+end
 
 (*
 

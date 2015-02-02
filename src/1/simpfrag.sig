@@ -12,4 +12,4 @@ sig
   val empty_simpfrag : simpfrag
   val add_rwts : simpfrag -> thm list -> simpfrag
 
-end;
+end

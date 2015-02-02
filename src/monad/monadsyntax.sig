@@ -1,4 +1,4 @@
 signature monadsyntax =
 sig
 
-end;
+end

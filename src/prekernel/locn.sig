@@ -48,4 +48,4 @@ signature locn = sig
 
   type 'a located = 'a * locn
 
-end;
+end

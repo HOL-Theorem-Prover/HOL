@@ -84,4 +84,4 @@ sig
   val Q_RESQ_ISPEC           : term quotation -> rule
   val Q_RESQ_ISPECL          : term quotation list -> rule
 
-end;
+end

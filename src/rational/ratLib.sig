@@ -39,9 +39,9 @@ sig
 	val RAT_BASIC_ARITH_TAC : tactic
 	val RAT_ELIMINATE_MINV_TAC : tactic
 
-	val int_rewrites : thm list;
-	val rat_basic_rewrites : thm list;
-	val rat_rewrites : thm list;
-	val rat_num_rewrites : thm list;
+	val int_rewrites : thm list
+	val rat_basic_rewrites : thm list
+	val rat_rewrites : thm list
+	val rat_num_rewrites : thm list
 
-end;
+end

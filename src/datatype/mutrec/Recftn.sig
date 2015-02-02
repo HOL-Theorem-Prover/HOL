@@ -9,4 +9,4 @@ sig
          def : term,
          fixities : fixity list option,
          rec_axiom: thm} -> thm
-end;
+end

@@ -78,4 +78,4 @@ sig
   val set_prover     : (term * tactic -> thm) -> unit
   val restore_prover : unit -> unit
 
-end;
+end

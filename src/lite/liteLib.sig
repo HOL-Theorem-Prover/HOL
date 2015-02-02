@@ -150,4 +150,4 @@ sig
     val SIMPLE_DISJ_CASES : thm -> thm -> thm
     val SIMPLE_CHOOSE : term -> thm -> thm
 
-end;
+end

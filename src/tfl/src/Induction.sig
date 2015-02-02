@@ -10,4 +10,4 @@ sig
 
    val recInduct : thm -> tactic
 
-end;
+end

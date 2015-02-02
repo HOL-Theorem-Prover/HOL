@@ -31,4 +31,4 @@ sig
 
   val work               : 'b cstdb -> ('b result -> 'a) -> 'a
 
-end;
+end

@@ -13,4 +13,4 @@ sig
 	val extract_rat_equations : term -> term list
 	val extract_rat_minv : term -> term list
 
-end;
+end

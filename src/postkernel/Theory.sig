@@ -112,7 +112,4 @@ sig
      TheoryDelta event to be sent to all registered listeners *)
   val load_complete : string -> unit
 
-
-
-
 end

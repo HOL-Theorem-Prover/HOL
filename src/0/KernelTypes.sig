@@ -15,7 +15,7 @@ type id = KernelSig.kernelid
 type tyconst = id * int
 
 datatype hol_type = Tyv of string
-                  | Tyapp of tyconst * hol_type list;
+                  | Tyapp of tyconst * hol_type list
 
 
 (*---------------------------------------------------------------------------*
@@ -36,7 +36,7 @@ datatype term = Fv of string * hol_type
               | Const of tmconst
               | Comb  of term * term
               | Abs   of term * term
-              | Clos  of term Subst.subs * term;
+              | Clos  of term Subst.subs * term
 
 
 (*---------------------------------------------------------------------------
