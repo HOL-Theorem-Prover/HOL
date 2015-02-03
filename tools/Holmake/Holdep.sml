@@ -12,11 +12,13 @@ structure Holdep :> Holdep =
 struct
 
 structure Process = OS.Process
+structure Path = OS.Path
+structure FileSys = OS.FileSys
 exception Holdep_Error of string
 
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s
-fun errMsg str = BasicIO.output(BasicIO.std_err, str ^ "\n\n")
+fun errMsg str = TextIO.output(TextIO.stdErr, str ^ "\n\n")
 fun fail()     = Process.exit Process.failure
 
 fun addExt s ""  = normPath s
@@ -162,7 +164,7 @@ in
   {tgt = targetname, deps = res}
 end
 
-fun processfile {assumes, includes, fname = filename, debug} =
+fun processfile {assumes, includes, fname = filename, diag} =
     let
 	val {base, ext} = Path.splitBaseExt filename
     in
@@ -176,14 +178,12 @@ fun processfile {assumes, includes, fname = filename, debug} =
 
 (* assumes parameter is a list of files that we assume can be built in this
    directory *)
-fun main (r as {assumes, debug, includes, fname}) =
+fun main (r as {assumes, diag, includes, fname}) =
   let
     val results = processfile r
   in
-    if debug then
-      print ("Holdep: " ^ #tgt results ^ ": " ^
-             String.concatWith ", " (#deps results) ^ "\n")
-    else ();
+    diag ("Holdep: " ^ #tgt results ^ ": " ^
+          String.concatWith ", " (#deps results) ^ "\n");
     results
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)

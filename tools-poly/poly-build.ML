@@ -2,20 +2,24 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 val _ = use "poly/poly-init.ML";
+exception Interrupt = SML90.Interrupt
 val _ = use "../tools/Holmake/Systeml.sig";
+fun useC f =
+    (use ("../tools/Holmake/" ^ f ^ ".sig");
+     use ("../tools/Holmake/" ^ f ^ ".sml"))
+
 val _ = use "Holmake/Systeml.sml";
-val _ = use "../tools/Holmake/Holmake_tools.sig"
-val _ = use "../tools/Holmake/Holmake_tools.sml"
-val _ = use "../tools/Holmake/regexpMatch.sig"
-val _ = use "../tools/Holmake/regexpMatch.sml"
-val _ = use "../tools/Holmake/parse_glob.sig"
-val _ = use "../tools/Holmake/parse_glob.sml"
-val _ = use "../tools/Holmake/internal_functions.sig"
-val _ = use "../tools/Holmake/internal_functions.sml"
-val _ = use "../tools/Holmake/Holmake_types.sig"
-val _ = use "../tools/Holmake/Holmake_types.sml"
-val _ = use "../tools/Holmake/ReadHMF.sig"
-val _ = use "../tools/Holmake/ReadHMF.sml"
+val _ = useC "SourcePos";
+val _ = useC "SourceFile";
+val _ = useC "Region"
+val _ = use "../tools/Holmake/Holdep_tokens.lex.sml";
+val _ = useC "Holdep";
+val _ = useC "Holmake_tools"
+val _ = useC "regexpMatch"
+val _ = useC "parse_glob"
+val _ = useC "internal_functions"
+val _ = useC "Holmake_types"
+val _ = useC "ReadHMF"
 val _ = use "../tools/buildutils.sig";
 val _ = use "../tools/buildutils.sml";
 val _ = use "build.sml";

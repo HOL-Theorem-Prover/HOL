@@ -33,6 +33,12 @@ sig
                           {no_lastmakercheck : bool} ->
                           unit
 
+  (* dependency analysis *)
+  exception HolDepFailed
+  val runholdep :
+      {ofs : output_functions, includes : string list, extras : string list,
+       arg : File, destination : string} -> unit
+
   (* File IO *)
   val string_part : File -> string
   val toCodeType : string -> CodeType

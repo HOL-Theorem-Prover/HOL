@@ -447,9 +447,9 @@ val envlist = envlist hmakefile_env
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
 val additional_includes =
-  includify (remove_duplicates (cline_additional_includes @ hmake_includes))
+  remove_duplicates (cline_additional_includes @ hmake_includes)
 
-val hmake_preincludes = includify (envlist "PRE_INCLUDES")
+val hmake_preincludes = envlist "PRE_INCLUDES"
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
@@ -501,7 +501,7 @@ val actual_overlay =
       NONE => SOME DEFAULT_OVERLAY
     | SOME _ => user_overlay
 
-val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
+val std_include_flags = if no_sigobj then [] else [SIGOBJ]
 
 fun extra_deps t =
     Option.map #dependencies
@@ -787,61 +787,6 @@ end else ()
 
 *)
 
-(**** runholdep *)
-(* The primary dependency chain does not depend on anything in the
-   file-system; it always looks the same.  However, additional
-   dependencies depend on what holdep tells us.  This function that
-   runs holdep, and puts the output into specified file, which will live
-   in DEPDIR somewhere. *)
-
-exception HolDepFailed
-fun runholdep arg destination_file = let
-  open Mosml
-  val _ = print ("Analysing "^fromFile arg^"\n")
-  fun buildables s = let
-    val f = toFile s
-    val files =
-        case f of
-          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
-                                   SIG (Theory t), UI (Theory t),
-                                   UO (Theory t), f]
-        | SML ss => [UI ss, UO ss, f]
-        | SIG ss => [UI ss, f]
-        | x => [x]
-  in
-    map fromFile files
-  end
-  val buildable_extras = List.concat (map buildables extra_targets)
-  val result =
-    Success(Holdep.main buildable_extras debug
-                        (hmake_preincludes @ std_include_flags @
-                         additional_includes @ [fromFile arg]))
-    handle _ => (print "Holdep failed.\n"; Failure "")
-  fun myopen s =
-    if OS.FileSys.access(DEPDIR, []) then
-      if OS.FileSys.isDir DEPDIR then TextIO.openOut s
-      else die_with ("Want to put dependency information in directory "^
-                     DEPDIR^", but it already exists as a file")
-    else
-     (print ("Trying to create directory "^DEPDIR^" for dependency files\n");
-      OS.FileSys.mkDir DEPDIR;
-      TextIO.openOut s
-     )
-  fun write_result_to_file s = let
-    open TextIO
-    val destin = normPath destination_file
-    (* val _ = print ("destination: "^quote destin^"\n") *)
-    val outstr = myopen destin
-  in
-    output(outstr, s);
-    closeOut outstr
-  end
-in
-  case result of
-    Success s => write_result_to_file s
-  | Failure s => raise HolDepFailed
-end
-
 fun get_direct_dependencies (f : File) : File list = let
   val fname = fromFile f
   val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
@@ -852,7 +797,10 @@ in
     val depfile = mk_depfile_name argname
     val _ =
       if argname forces_update_of depfile then
-        runholdep arg depfile
+        runholdep {ofs = outputfunctions, extras = extra_targets,
+                   includes = hmake_preincludes @ std_include_flags @
+                              additional_includes, arg = arg,
+                   destination = depfile}
       else ()
     val phase1 =
       (* circumstances can arise in which the dependency file won't be
@@ -967,10 +915,9 @@ datatype buildcmds = Compile of File list
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun build_command c arg = let
-  val include_flags = hmake_preincludes @ std_include_flags @
-                      additional_includes
+  val include_flags = includify (hmake_preincludes @ std_include_flags @
+                                 additional_includes)
   val include_flags = List.filter (fn x => not (x = "-I")) include_flags
- (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   exception CompileFailed
   exception FileNotFound

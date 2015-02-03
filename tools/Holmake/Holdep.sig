@@ -4,7 +4,7 @@ sig
 exception Holdep_Error of string
 val main : { assumes : string list,
              includes : string list,
-             debug : bool,
+             diag : string -> unit,
              fname : string } ->
            {tgt : string, deps : string list}
 

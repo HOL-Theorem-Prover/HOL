@@ -623,55 +623,6 @@ end else ()
    runs holdep, and puts the output into specified file, which will live
    in DEPDIR somewhere. *)
 
-exception HolDepFailed
-fun runholdep arg destination_file = let
-  datatype res = Success of string list | Failure of string
-  val _ = print ("Analysing "^fromFile arg^"\n")
-  fun buildables s = let
-    val f = toFile s
-    val files =
-        case f of
-          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
-                                   SIG (Theory t), UI (Theory t),
-                                   UO (Theory t), f]
-        | SML ss => [UI ss, UO ss, f]
-        | SIG ss => [UI ss, f]
-        | x => [x]
-  in
-    map fromFile files
-  end
-  val buildable_extras = List.concat (map buildables extra_targets)
-  val includes = hmake_preincludes @ std_include_flags @ additional_includes
-  val _ = diag ("Running Holdep on "^fromFile arg^" with debug = "^
-                Bool.toString debug ^ ", includes = [" ^
-                String.concatWith ", " includes ^ "]")
-  val holdep_result =
-    Holdep.main {assumes = buildable_extras, debug = debug,
-                 includes = hmake_preincludes @ std_include_flags @
-                            additional_includes,
-                 fname = fromFile arg}
-    handle Holdep.Holdep_Error s =>
-             (info "Holdep failed: s"; raise HolDepFailed)
-         | Interrupt => raise Interrupt
-         | e => (info ("Holdep exception: "^General.exnMessage e);
-                 raise HolDepFailed)
-  fun myopen s =
-    if FileSys.access(DEPDIR, []) then
-      if FileSys.isDir DEPDIR then TextIO.openOut s
-      else die_with ("Want to put dependency information in directory "^
-                     DEPDIR^", but it already exists as a file")
-    else
-     (info ("Trying to create directory "^DEPDIR^" for dependency files");
-      FileSys.mkDir DEPDIR;
-      TextIO.openOut s
-     )
-  open TextIO
-  val destin = normPath destination_file
-  val outstr = myopen destin
-in
-  output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
-  closeOut outstr
-end
 
 fun get_direct_dependencies (f : File) : File list = let
   val fname = fromFile f
@@ -683,7 +634,10 @@ in
     val depfile = mk_depfile_name argname
     val _ =
       if argname forces_update_of depfile then
-        runholdep arg depfile
+        runholdep {ofs = output_functions, extras = extra_targets,
+                   includes = hmake_preincludes @ std_include_flags @
+                              additional_includes, arg = arg,
+                   destination = depfile}
       else ()
     val phase1 =
       (* circumstances can arise in which the dependency file won't be

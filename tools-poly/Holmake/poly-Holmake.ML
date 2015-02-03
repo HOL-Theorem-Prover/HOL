@@ -4,6 +4,7 @@ val _ = PolyML.print_depth 0;
 val _ = use "poly/poly-init.ML";
 
 structure BasicIO = SML90;
+exception Interrupt = SML90.Interrupt
 
 fun useH f =
   (use ("Holmake/" ^ f ^ ".sig");
@@ -15,6 +16,13 @@ fun useC f =
 
 val _ = use "../tools/Holmake/Systeml.sig"
 val _ = use "Holmake/Systeml.sml";
+
+val _ = useC "SourcePos";
+val _ = useC "SourceFile";
+val _ = useC "Region"
+val _ = use "../tools/Holmake/Holdep_tokens.lex.sml";
+val _ = useC "Holdep";
+
 val _ = useC "regexpMatch";
 val _ = useC "parse_glob";
 val _ = useC "internal_functions";
@@ -22,17 +30,6 @@ val _ = useC "Holmake_types";
 val _ = useC "Holmake_tools";
 val _ = useC "ReadHMF";
 
-fun u f = use ("../tools/mlyacc/mlyacclib/" ^ f ^ ".sml");
-val _ = u "MLY_base-sig";
-val _ = u "MLY_join";
-val _ = u "MLY_lrtable";
-val _ = u "MLY_stream";
-val _ = u "MLY_parser2";
-
-val _ = useH "Parser.grm";
-val _ = use "Holmake/Lexer.lex.sml";
-
-val _ = use "Holmake/Holdep.sml";
 val _ = use "Holmake/Holmake.sml";
 
 val _ = PolyML.shareCommonData Holmake.main;

@@ -373,4 +373,51 @@ fun generate_all_plausible_targets first_target =
           remove_sorted_dups (Listsort.sort file_compare initially)
         end
 
+(* dependency analysis *)
+exception HolDepFailed
+fun runholdep {ofs, extras, includes, arg, destination} = let
+  val {info, diag, ...} : output_functions = ofs
+  val _ = info ("Analysing "^fromFile arg)
+  fun buildables s = let
+    val f = toFile s
+    val files =
+        case f of
+          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
+                                   SIG (Theory t), UI (Theory t),
+                                   UO (Theory t), f]
+        | SML ss => [UI ss, UO ss, f]
+        | SIG ss => [UI ss, f]
+        | x => [x]
+  in
+    map fromFile files
+  end
+  val buildable_extras = List.concat (map buildables extras)
+  val _ = diag ("Running Holdep on "^fromFile arg^" with includes = [" ^
+                String.concatWith ", " includes ^ "], assumes = [" ^
+                String.concatWith ", " buildable_extras ^"]")
+  val holdep_result =
+    Holdep.main {assumes = buildable_extras, diag = diag,
+                 includes = includes, fname = fromFile arg}
+    handle Holdep.Holdep_Error s =>
+             (info "Holdep failed: s"; raise HolDepFailed)
+         | Interrupt => raise Interrupt
+         | e => (info ("Holdep exception: "^General.exnMessage e);
+                 raise HolDepFailed)
+  fun myopen s =
+    if FileSys.access(DEPDIR, []) then
+      if FileSys.isDir DEPDIR then TextIO.openOut s
+      else die_with ("Want to put dependency information in directory "^
+                     DEPDIR^", but it already exists as a file")
+    else
+     (info ("Trying to create directory "^DEPDIR^" for dependency files");
+      FileSys.mkDir DEPDIR;
+      TextIO.openOut s
+     )
+  open TextIO
+  val outstr = myopen (normPath destination)
+in
+  output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
+  closeOut outstr
+end
+
 end (* struct *)
