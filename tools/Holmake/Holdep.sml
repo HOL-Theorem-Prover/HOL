@@ -140,11 +140,11 @@ in
   map escape_space
 end
 
-fun endentry tgtname s =
-    if null s then ""
+fun encode_for_HOLMKfile {tgt, deps} =
+    if null deps then ""
     else
-      hd (escape_spaces [tgtname]) ^ ": " ^
-      String.concat (spacify (rev ("\n" :: escape_spaces s)))
+      hd (escape_spaces [tgt]) ^ ": " ^
+      String.concat (spacify (rev ("\n" :: escape_spaces deps)))
 
 fun read {assumes, includes, srcext, objext, filename} = let
   open OS.FileSys Systeml
@@ -176,7 +176,7 @@ fun read {assumes, includes, srcext, objext, filename} = let
               res0
               mentions
 in
-  endentry targetname res
+  res
 end
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
 
@@ -190,7 +190,7 @@ fun processfile {assumes, includes, fname = filename, debug} =
                                 filename = base, includes = includes}
 	  | SOME "sml" => read {assumes = assumes, srcext = "sml", objext = "uo",
                                 filename = base, includes = includes}
-	  | _          => ""
+	  | _          => []
     end
 
 (* assumes parameter is a list of files that we assume can be built in this
@@ -199,7 +199,9 @@ fun main (r as {assumes, debug, includes, fname}) =
   let
     val results = processfile r
   in
-    if debug then print ("Holdep: "^results^"\n") else ();
+    if debug then
+      print ("Holdep: "^fname ^ ": " ^ String.concatWith ", " results^"\n")
+    else ();
     results
   end
    handle e as OS.SysErr (str, _) => (errMsg str; raise e)

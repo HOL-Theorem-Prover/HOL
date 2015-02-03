@@ -625,7 +625,7 @@ end else ()
 
 exception HolDepFailed
 fun runholdep arg destination_file = let
-  open Mosml
+  datatype res = Success of string list | Failure of string
   val _ = print ("Analysing "^fromFile arg^"\n")
   fun buildables s = let
     val f = toFile s
@@ -643,13 +643,14 @@ fun runholdep arg destination_file = let
   val buildable_extras = List.concat (map buildables extra_targets)
   val includes = hmake_preincludes @ std_include_flags @ additional_includes
   val _ = diag ("Running Holdep on "^fromFile arg^" with debug = "^
-                Bool.toString debug ^ ", includes = " ^
-                String.concatWith "," includes)
+                Bool.toString debug ^ ", includes = [" ^
+                String.concatWith ", " includes ^ "]")
+  val target = fromFile arg
   val result =
     Success(Holdep.main {assumes = buildable_extras, debug = debug,
                          includes = hmake_preincludes @ std_include_flags @
                                     additional_includes,
-                         fname = fromFile arg})
+                         fname = target})
     handle _ => (print "Holdep failed.\n"; Failure "")
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
@@ -657,22 +658,21 @@ fun runholdep arg destination_file = let
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
-     (print ("Trying to create directory "^DEPDIR^" for dependency files\n");
+     (info ("Trying to create directory "^DEPDIR^" for dependency files\n");
       FileSys.mkDir DEPDIR;
       TextIO.openOut s
      )
-  fun write_result_to_file s = let
+  fun write_result_to_file deps = let
     open TextIO
     val destin = normPath destination_file
-    (* val _ = print ("destination: "^quote destin^"\n") *)
     val outstr = myopen destin
   in
-    output(outstr, s);
+    output(outstr, Holdep.encode_for_HOLMKfile{tgt = target, deps = deps});
     closeOut outstr
   end
 in
   case result of
-    Success s => write_result_to_file s
+    Success deps => write_result_to_file deps
   | Failure s => raise HolDepFailed
 end
 
