@@ -12,6 +12,7 @@ structure Holdep :> Holdep =
 struct
 
 structure Process = OS.Process
+exception Holdep_Error of string
 
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s
@@ -27,35 +28,6 @@ val space = " ";
 fun spacify [] = []
   | spacify [x] = [x]
   | spacify (h::t) = h::space::spacify t;
-
-fun createLexerStream (is : BasicIO.instream) =
-  Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
-
-fun parsePhraseAndClear (file, stream) parsingFun lexingFun lexbuf = let
-  val phr = parsingFun lexingFun lexbuf handle
-    Parsing.ParseError f => let
-      val pos1 = Lexing.getLexemeStart lexbuf
-      val pos2 = Lexing.getLexemeEnd lexbuf
-    in
-      Location.errMsg (file, stream, lexbuf) (Location.Loc(pos1, pos2))
-      "Syntax error."
-    end
-  | Lexer.LexicalError(msg, pos1, pos2) =>
-    if pos1 >= 0 andalso pos2 >= 0 then
-      Location.errMsg (file, stream, lexbuf)
-      (Location.Loc(pos1, pos2))
-      ("Lexical error: " ^ msg)
-    else
-      (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
-       raise Fail "Lexical error")
-  | x => (Parsing.clearParser(); raise x)
-in
-  Parsing.clearParser();
-  phr
-end;
-
-fun parseFile (f, strm) =
-  parsePhraseAndClear (f, strm) Parser.MLtext Lexer.Token;
 
 fun access {assumes, includes} cdir s ext = let
   val sext = addExt s ext
@@ -146,6 +118,21 @@ fun encode_for_HOLMKfile {tgt, deps} =
       hd (escape_spaces [tgt]) ^ ": " ^
       String.concat (spacify (rev ("\n" :: escape_spaces deps)))
 
+fun scanFile {fname,actualfname} = let
+  open Holdep_tokens
+  val is = TextIO.openIn actualfname
+  val arg = UserDeclarations.new_state fname
+  val lexer = makeLexer (fn _ => UserDeclarations.inputLine is) arg
+               handle UserDeclarations.LEX_ERROR s =>
+                raise Holdep_Error ("Lexical error: "^s)
+  fun recurse acc =
+      case lexer() of
+          NONE => (TextIO.closeIn is; acc)
+        | SOME s => recurse (Binaryset.add(acc, s))
+in
+  recurse (Binaryset.empty String.compare)
+end
+
 fun read {assumes, includes, srcext, objext, filename} = let
   open OS.FileSys Systeml
   val op ^ = Path.concat
@@ -160,11 +147,7 @@ fun read {assumes, includes, srcext, objext, filename} = let
           else file0
         end
       else file0
-  val is       = BasicIO.open_in actualfile
-  val lexbuf   = createLexerStream is
-  val names    = parseFile (filename, is) lexbuf
-  val mentions = Binaryset.addList (Binaryset.empty String.compare, names)
-  val _        = BasicIO.close_in is
+  val mentions = scanFile {actualfname = actualfile, fname = file0}
   val _        = if actualfile <> file0 then
                    FileSys.remove actualfile handle _ => ()
                  else ()
@@ -176,13 +159,11 @@ fun read {assumes, includes, srcext, objext, filename} = let
               res0
               mentions
 in
-  res
+  {tgt = targetname, deps = res}
 end
-  handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
-
 
 fun processfile {assumes, includes, fname = filename, debug} =
-    let (* val _ = output(std_err, "Processing " ^ filename ^ "\n"); *)
+    let
 	val {base, ext} = Path.splitBaseExt filename
     in
 	case ext of
@@ -190,7 +171,7 @@ fun processfile {assumes, includes, fname = filename, debug} =
                                 filename = base, includes = includes}
 	  | SOME "sml" => read {assumes = assumes, srcext = "sml", objext = "uo",
                                 filename = base, includes = includes}
-	  | _          => []
+	  | _          => {tgt = filename, deps = []}
     end
 
 (* assumes parameter is a list of files that we assume can be built in this
@@ -200,7 +181,8 @@ fun main (r as {assumes, debug, includes, fname}) =
     val results = processfile r
   in
     if debug then
-      print ("Holdep: "^fname ^ ": " ^ String.concatWith ", " results^"\n")
+      print ("Holdep: " ^ #tgt results ^ ": " ^
+             String.concatWith ", " (#deps results) ^ "\n")
     else ();
     results
   end

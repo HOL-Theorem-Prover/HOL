@@ -1,15 +1,18 @@
 (* though strictly an mllex file, -*- sml -*- mode works OK *)
+datatype retstate = SOPEN | SINITIAL | SINCLUDE;
 type lexstate = {
   commentdepth : int ref,
   commentstart : SourcePos.t ref,
   in_string : bool ref,
   stringstart : SourcePos.t ref,
+  return : retstate ref,
   source : SourceFile.t
 }
 fun new_state fname = {commentdepth = ref 0,
                        commentstart = ref SourcePos.bogus,
                        stringstart = ref SourcePos.bogus,
                        in_string = ref false,
+                       return = ref SINITIAL,
                        source = SourceFile.new fname}
 
 fun inputLine strm =
@@ -43,7 +46,8 @@ fun eof ({commentdepth,source,commentstart,in_string,stringstart,...} : lexstate
 fun getQual s =
   let
     fun parse n =
-        if String.sub(s, n) = #"." then
+        if n >= size s then s
+        else if String.sub(s, n) = #"." then
             String.extract(s, 0, SOME n)
         else
             parse (n+1)
@@ -55,9 +59,9 @@ fun getQual s =
 id = [A-Za-z][A-Za-z0-9_']* | [-!%&$#+/:<=>?@~^|*`\\]+;
 ws = [\ \013\t];
 newline = "\n" | "\013\n";
-openterminator = "val" | "fun" | "in" | "infix[lr]?" | "local" | "type" | "datatype" | "nonfix" | "exception" | "end" | "structure" | "signature";
+openterminator = "val" | "fun" | "in" | "infix"[lr]? | "local" | "type" | "datatype" | "nonfix" | "exception" | "end" | "structure" | "signature" | "prim_val" | ";" ;
 %s OPEN STRING COMMENT INCLUDE STRINGCONT;
-%arg ({source, commentdepth, commentstart, in_string, stringstart, ...}:UserDeclarations.lexstate);
+%arg ({source, commentdepth, commentstart, in_string, stringstart, return, ...}:UserDeclarations.lexstate);
 %structure Holdep_tokens
 %%
 <INITIAL,OPEN,INCLUDE>{ws} => (continue());
@@ -67,6 +71,7 @@ openterminator = "val" | "fun" | "in" | "infix[lr]?" | "local" | "type" | "datat
   YYBEGIN COMMENT;
   commentstart := SourceFile.getPos(source, yypos);
   commentdepth := 1;
+  return := SINITIAL;
   continue());
 <INITIAL>"*)" => (
   lexErrorP(source, yypos, "Unmatched comment bracket")
@@ -83,16 +88,31 @@ openterminator = "val" | "fun" | "in" | "infix[lr]?" | "local" | "type" | "datat
 <INITIAL>"open" => (YYBEGIN OPEN; continue());
 <INITIAL>"include" => (YYBEGIN INCLUDE; continue());
 <INITIAL>{id} => (continue());
+<INITIAL>. => (
+  lexErrorP(source, yypos, "Unexpected character >" ^ yytext ^ "< in INITIAL")
+);
 
 <COMMENT>"(*" => (commentdepth := !commentdepth + 1; continue());
 <COMMENT>"*)" => (commentdepth := !commentdepth - 1;
-                  YYBEGIN (if !commentdepth = 0 then INITIAL else COMMENT);
+                  YYBEGIN (if !commentdepth = 0 then
+                             if !return = SINITIAL then INITIAL
+                             else OPEN
+                           else COMMENT);
                   continue());
 <COMMENT>. => (continue());
 
 <OPEN>{openterminator} => (YYBEGIN INITIAL; continue());
 <OPEN>"open" => (continue());
-<OPEN>{id} => (SOME yytext);
+<OPEN>({id}\.)*{id} => (SOME (getQual yytext));
+<OPEN>"(*" => (
+  YYBEGIN COMMENT;
+  commentstart := SourceFile.getPos(source,yypos);
+  commentdepth := 1;
+  return := SOPEN;
+  continue());
+<OPEN>. => (
+  lexErrorP(source, yypos, "Unexpected character >" ^ yytext ^ "< in OPEN")
+);
 
 <STRING>"\\\"" => (continue());
 <STRING>"\\" {newline} => (SourceFile.newline(source,yypos+size yytext);
@@ -108,3 +128,13 @@ openterminator = "val" | "fun" | "in" | "infix[lr]?" | "local" | "type" | "datat
 <STRINGCONT>{newline} => (SourceFile.newline(source,yypos+size yytext); continue());
 <STRINGCONT>"\\" => (YYBEGIN STRING; continue());
 <STRINGCONT> . => (lexErrorP(source, yypos, "Invalid character in \\ ... \\"));
+
+<INCLUDE>{id} => (YYBEGIN INITIAL; SOME yytext);
+<INCLUDE>"(*" => (
+  YYBEGIN COMMENT;
+  commentstart := SourceFile.getPos(source,yypos);
+  commentdepth := 1;
+  return := SINCLUDE;
+  continue());
+<INCLUDE>. => (
+  lexErrorP(source, yypos, "Invalid character >" ^ yytext ^ "< after include"));

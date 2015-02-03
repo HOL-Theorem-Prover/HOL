@@ -343,8 +343,6 @@ val _ =
      val _         = FileSys.chDir hmakedir
      val bin       = fullPath [holdir,   "bin/Holmake"]
      val mllex     = fullPath [holdir, "tools", "mllex", "mllex.exe"]
-     val lexer     = fullPath [mosmldir, "mosmllex"]
-     val yaccer    = fullPath [mosmldir, "mosmlyac"]
      val systeml   = fn clist => if not (Process.isSuccess (systeml clist)) then
                                    die "Holmake compilation failed."
                                  else ()
@@ -356,8 +354,6 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
-    systeml [yaccer, "Parser.grm"];
-    systeml [lexer, "Lexer.lex"];
     systeml [mllex, "Holdep_tokens.lex"];
     compile [] "SourcePos.sig";
     compile [] "SourcePos.sml";
@@ -370,11 +366,8 @@ val _ =
     compile [] "mosml_holdeptool.sml";
     link{extras = ["Holdep_tokens.lex.ui"], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile [] "Parser.sig";
-    compile [] "Parser.sml";
-    compile [] "Lexer.sml";
     compile [] "Holdep.sig";
-    compile [] "Holdep.sml";
+    compile ["Holdep_tokens.lex.ui"] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";

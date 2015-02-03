@@ -645,35 +645,32 @@ fun runholdep arg destination_file = let
   val _ = diag ("Running Holdep on "^fromFile arg^" with debug = "^
                 Bool.toString debug ^ ", includes = [" ^
                 String.concatWith ", " includes ^ "]")
-  val target = fromFile arg
-  val result =
-    Success(Holdep.main {assumes = buildable_extras, debug = debug,
-                         includes = hmake_preincludes @ std_include_flags @
-                                    additional_includes,
-                         fname = target})
-    handle _ => (print "Holdep failed.\n"; Failure "")
+  val holdep_result =
+    Holdep.main {assumes = buildable_extras, debug = debug,
+                 includes = hmake_preincludes @ std_include_flags @
+                            additional_includes,
+                 fname = fromFile arg}
+    handle Holdep.Holdep_Error s =>
+             (info "Holdep failed: s"; raise HolDepFailed)
+         | Interrupt => raise Interrupt
+         | e => (info ("Holdep exception: "^General.exnMessage e);
+                 raise HolDepFailed)
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
       if FileSys.isDir DEPDIR then TextIO.openOut s
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
-     (info ("Trying to create directory "^DEPDIR^" for dependency files\n");
+     (info ("Trying to create directory "^DEPDIR^" for dependency files");
       FileSys.mkDir DEPDIR;
       TextIO.openOut s
      )
-  fun write_result_to_file deps = let
-    open TextIO
-    val destin = normPath destination_file
-    val outstr = myopen destin
-  in
-    output(outstr, Holdep.encode_for_HOLMKfile{tgt = target, deps = deps});
-    closeOut outstr
-  end
+  open TextIO
+  val destin = normPath destination_file
+  val outstr = myopen destin
 in
-  case result of
-    Success deps => write_result_to_file deps
-  | Failure s => raise HolDepFailed
+  output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
+  closeOut outstr
 end
 
 fun get_direct_dependencies (f : File) : File list = let
