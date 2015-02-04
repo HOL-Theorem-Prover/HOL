@@ -15,11 +15,6 @@ fun new_state fname = {commentdepth = ref 0,
                        return = ref SINITIAL,
                        source = SourceFile.new fname}
 
-fun inputLine strm =
-    case TextIO.inputLine strm of
-        SOME s => s
-      | NONE => ""
-
 type lexresult = string option
 exception LEX_ERROR of string
 fun regionError (r, s) = Region.toString r ^ ": " ^ s

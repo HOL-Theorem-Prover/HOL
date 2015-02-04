@@ -27,7 +27,7 @@ fun main() = let
         | ["-n", fname] => (unsorted := true; file fname)
         | _ => usage die
   val arg = UserDeclarations.new_state fname
-  val lexer = makeLexer (fn _ => UserDeclarations.inputLine strm) arg
+  val lexer = makeLexer (fn n => TextIO.inputN(strm, n)) arg
   fun safelex () =
       lexer() handle UserDeclarations.LEX_ERROR s => diewith ("Lexical error: "^ s)
   fun unsortedf () =

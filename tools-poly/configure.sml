@@ -410,6 +410,11 @@ val _ =
    FileSys.chDir toolsdir;
    system_ps (POLY ^ " < " ^ fullPath ["Holmake", "poly-Holmake.ML"]);
    compile systeml hmakebin (fullPath ["Holmake", "Holmake.o"]);
+   FileSys.chDir (fullPath [HOLDIR, "tools", "Holmake"]);
+   system_ps (POLY ^ " < poly-holdeptool.ML");
+   compile systeml
+           (fullPath [HOLDIR, "bin", "holdeptool.exe"])
+           (fullPath [HOLDIR, "tools", "Holmake", "holdeptool.o"]);
    FileSys.chDir cdir)
    handle _ => die "Failed to build Holmake.";
 
