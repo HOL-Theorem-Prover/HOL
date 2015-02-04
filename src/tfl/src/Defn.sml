@@ -1663,7 +1663,10 @@ end
 fun ptdefn_freevars pt = let
   open Preterm
   val (uvars, body) = strip_pforall pt
-  val (l,r) = pdest_eq body
+  val (l,r) = case strip_pcomb body of
+                  (_, [l,r]) => (l,r)
+                | _ => raise ERRloc "ptdefn_freevars" (locn body)
+                             "Couldn't see preterm as equality"
   val (f0, args) = strip_pcomb l
   val f = head_var f0
   val lfs = op_U eq (map ptfvs args)
