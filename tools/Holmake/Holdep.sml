@@ -124,7 +124,7 @@ fun scanFile {fname,actualfname} = let
   open Holdep_tokens
   val is = TextIO.openIn actualfname
   val arg = UserDeclarations.new_state fname
-  val lexer = makeLexer (fn _ => UserDeclarations.inputLine is) arg
+  val lexer = makeLexer (fn n => TextIO.inputN(is,n)) arg
                handle UserDeclarations.LEX_ERROR s =>
                 raise Holdep_Error ("Lexical error: "^s)
   fun recurse acc =
