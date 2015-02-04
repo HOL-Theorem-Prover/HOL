@@ -100,7 +100,7 @@ sig
 (* For internal use *)
 
   val pp_thm             : (ppstream -> thm -> unit) ref
-  val link_parents       : string*num*num -> (string*num*num)list -> unit
+  val link_parents       : string*num*num -> (string*num*num) list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
 
 

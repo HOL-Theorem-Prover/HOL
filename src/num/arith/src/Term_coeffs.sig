@@ -15,7 +15,7 @@ sig
   val var_of_prod : Term.term -> string
   val coeffs_of_arith : Term.term -> (int * (string * int) list)
   val coeffs_of_leq : Term.term -> (int * (string * int) list)
-  val coeffs_of_leq_set : Term.term -> (int * (string * int)list) list
+  val coeffs_of_leq_set : Term.term -> (int * (string * int) list) list
   val build_arith : int * (string * int) list -> Term.term
   val build_leq : (int * (string * int) list) -> Term.term
 end
