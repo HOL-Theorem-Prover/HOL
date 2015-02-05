@@ -2,10 +2,6 @@
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
-structure Substring = struct
-  open Substring
-  val all = full
-end;
 
 use "filter.sml";
 open OS.Process
@@ -44,21 +40,12 @@ fun main() = let
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open filter.UserDeclarations
-  val state as QFS args =
-      QFS {output_stream=outstream, comdepth=ref 0, pardepth=ref 0,
-           antiquote=ref false, row=ref 0, rowstart=ref 0};
+  val state as QFS args = newstate outstream
 
   fun loop() = let
     val lexer = filter.makeLexer (read_from_stream instream) state
   in
-    lexer()
-    handle Interrupt => (let open filter.UserDeclarations
-                         in
-                           #comdepth args := 0;
-                           #pardepth args := 0;
-                           #antiquote args := false;
-                           loop()
-                         end)
+    lexer() handle Interrupt => (resetstate state; loop())
   end
 in
   loop();
