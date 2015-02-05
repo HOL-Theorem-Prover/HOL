@@ -19,12 +19,10 @@ exception Holdep_Error of string
 fun normPath s = Path.toString(Path.fromString s)
 fun manglefilename s = normPath s
 fun errMsg str = TextIO.output(TextIO.stdErr, str ^ "\n\n")
-fun fail()     = Process.exit Process.failure
 
 fun addExt s ""  = normPath s
   | addExt s ext = normPath s^"."^ext;
 fun addDir dir s = Path.joinDirFile{dir=normPath dir,file=s}
-val srev = String.implode o List.rev o String.explode
 
 val space = " ";
 fun spacify [] = []
@@ -105,19 +103,20 @@ in
    else [])
 end;
 
-val escape_spaces = let
+val escape_space = let
   fun translation c = if c = #" " then "\\ "
                       else if c = #"\\" then "\\\\"
                       else str c
-  val escape_space = String.translate translation
 in
-  map escape_space
+  String.translate translation
 end
+val escape_spaces = map escape_space
+
 
 fun encode_for_HOLMKfile {tgt, deps} =
     if null deps then ""
     else
-      hd (escape_spaces [tgt]) ^ ": " ^
+      escape_space tgt ^ ": " ^
       String.concat (spacify (rev ("\n" :: escape_spaces deps)))
 
 fun scanFile {fname,actualfname} = let
