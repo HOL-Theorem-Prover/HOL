@@ -168,6 +168,9 @@ end
 val lowercase = String.map Char.toLower
 val uppercase = String.map Char.toUpper
 
+val removeSpaces =
+   String.translate (fn c => if Char.isSpace c then "" else String.str c)
+
 val long_term_to_string =
    Lib.with_flag (Globals.linewidth, 1000) Hol_pp.term_to_string
 
@@ -373,7 +376,7 @@ local
          wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
          wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
          wordsTheory.WORD_XOR_CLAUSES, wordsTheory.WORD_EXTRACT_ZERO2,
-         wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL]
+         wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL, wordsTheory.SHIFT_ZERO]
 in
    val WALPHA_CONV = REWRITE_CONV alpha_rwts
    val WGROUND_CONV =

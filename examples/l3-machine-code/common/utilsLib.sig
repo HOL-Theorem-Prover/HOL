@@ -82,6 +82,7 @@ sig
       'c * 'a list
    val qm: thm list -> term -> thm
    val qm_tac: thm list -> tactic
+   val removeSpaces: string -> string
    val resetStepConv: unit -> unit
    val rhsc: thm -> term
    val rng: hol_type -> hol_type

@@ -610,6 +610,7 @@ local
       THENC stateLib.PRE_COND_CONV
                (DEPTH_CONV DISJOINT_CONV
                 THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
+                THENC numLib.REDUCE_CONV
                 THENC NOT_F_CONV)
       THENC helperLib.POST_CONV
               (PURE_REWRITE_CONV spec_rwts
@@ -839,9 +840,9 @@ local
             else let
                     val thms = step s
                     val ts = List.map arm_mk_pre_post thms
-                    val thms_ts =
-                       List.concat
-                          (List.map combinations (ListPair.zip (thms, ts)))
+                    val thms_ts = (thms, ts) |> ListPair.zip
+                                             |> List.map combinations
+                                             |> List.concat
                  in
                     List.app (fn x => (print "."; add1_pending x)) thms_ts
                     ; thms_ts

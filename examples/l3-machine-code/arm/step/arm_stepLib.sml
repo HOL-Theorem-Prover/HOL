@@ -66,6 +66,9 @@ local
       u_of "arm_state"
    val exc = ``SND (raise'exception e s : 'a # arm_state)``
 in
+   val cond_thms =
+      [SIMP_CONV std_ss [] ``if a then b else if a then c else d : 'a``,
+       boolTheory.COND_ID]
    val cond_rand_thms = utilsLib.mk_cond_rand_thms (other_fns @ state_fns)
    val snd_exception_thms =
       utilsLib.map_conv
@@ -79,7 +82,7 @@ end
 (* ARM datatype theorems/conversions *)
 
 fun datatype_thms thms =
-   thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
+   thms @ cond_thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
    utilsLib.datatype_rewrites true "arm"
      ["arm_state", "Architecture", "RName", "InstrSet", "SRType", "Encoding",
       "PSR", "VFPNegMul"]
@@ -1684,6 +1687,10 @@ val arm_patterns = List.map (I ## epattern)
    ("Signed16x32Multiply32Result",          "FFFTFFTF____________T_TF"),
    ("Signed16Multiply64Accumulate",         "FFFTFTFF____________T__F"),
    ("Signed16Multiply32Result",             "FFFTFTTF____________T__F"),
+   ("BitFieldClearOrInsert",                "FTTTTTF______________FFT"),
+   ("BitFieldExtract",                      "FTTTT_T______________TFT"),
+   ("ExtendByte16",                         "FTTFT_FF__________FFFTTT"),
+   ("ByteReverse",                          "FTTFTFTTTTTT____TTTTFFTT"),
    ("Register",                             "FFFF___________________F"),
    ("Register ORR/BIC",                     "FFFTT_F________________F"),
    ("ShiftImmediate",                       "FFFTT_T________________F"),
@@ -1766,6 +1773,7 @@ val arm_patterns = List.map (I ## epattern)
 val arm_patterns15 = List.map (I ## epattern)
   [("Setend",                                 "FFFTFFFF___T________FFFF"),
    ("ChangeProcessorState",                   "FFFTFFFF___F__________F_"),
+   ("DataMemoryBarrier",                      "FTFTFTTTTTTTTTTTFFFFFTFT"),
    ("ReturnFromException",                    "TFF__F_T________________"),
    ("BranchLinkExchangeImmediate (to Thumb)", "TFT_____________________")
   ]
@@ -1916,6 +1924,7 @@ local
      ("BLX (imm)", ("BranchLinkExchangeImmediate (to Thumb)", [])),
      ("BLX (reg)", ("BranchLinkExchangeRegister", [])),
      ("CLZ", ("CountLeadingZeroes", [])),
+     ("DMB", ("DataMemoryBarrier", [])),
      ("MOVT", ("MoveHalfword", [xT 0])),
      ("MOVW", ("MoveHalfword", [xF 0])),
      ("MOV (imm)", ("Move", [xF 0, xF 1])),
@@ -2008,16 +2017,25 @@ local
      ("SMULL", ("MultiplyLong", [xT 0, xF 1, xF 2])),
      ("UMLAL", ("MultiplyLong", [xF 0, xT 1, xF 2])),
      ("SMLAL", ("MultiplyLong", [xT 0, xT 1, xF 2])),
-     ("MULS", ("Multiply32", [xT 0])),
-     ("MLAS", ("MultiplyAccumulate", [xT 0])),
-     ("UXTAB", ("ExtendByte", [xT 0])),
-     ("SXTAB", ("ExtendByte", [xF 0])),
-     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
-     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
      ("UMULLS", ("MultiplyLong", [xF 0, xF 1, xT 2])),
      ("SMULLS", ("MultiplyLong", [xT 0, xF 1, xT 2])),
      ("UMLALS", ("MultiplyLong", [xF 0, xT 1, xT 2])),
      ("SMLALS", ("MultiplyLong", [xT 0, xT 1, xT 2])),
+     ("MULS", ("Multiply32", [xT 0])),
+     ("MLAS", ("MultiplyAccumulate", [xT 0])),
+     ("SMLA<XY>", ("Signed16Multiply32Accumulate", [])),
+     ("BFC", ("BitFieldClearOrInsert", [])),
+     ("REV", ("ByteReverse", [])),
+     ("UXTAB", ("ExtendByte", [xT 0])),
+     ("SXTAB", ("ExtendByte", [xF 0])),
+     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
+     ("UXTAB16", ("ExtendByte16", [xT 0])),
+     ("SXTAB16", ("ExtendByte16", [xF 0])),
+     ("UXTB16", ("ExtendByte16", [xT 0, xT 1, xT 2, xT 3, xT 4])),
+     ("SXTB16", ("ExtendByte16", [xF 0, xT 1, xT 2, xT 3, xT 4])),
+     ("UBFX", ("BitFieldExtract", [xT 0])),
+     ("SBFX", ("BitFieldExtract", [xF 0])),
      ("LDR (+imm,pre,wb)", ("LoadWord (imm,pre)", [xT 0, xT 1])),
      ("LDR (-imm,pre,wb)", ("LoadWord (imm,pre)", [xF 0, xT 1])),
      ("LDR (+imm,pre)", ("LoadWord (imm,pre)", [xT 0, xF 1])),
@@ -2095,6 +2113,10 @@ local
      ("LDRSB (-reg,pre,pc)",
         ("LoadSignedByte (reg,pre)", [xF 0, xF 1, xT 2, xT 3, xT 4, xT 5])),
      ("LDRSB (reg,post)", ("LoadSignedByte (reg,post)", [])),
+     ("LDRBT (+imm)", ("LoadByteUnprivileged (imm)", [xT 0])),
+     ("LDRBT (-imm)", ("LoadByteUnprivileged (imm)", [xF 0])),
+     ("LDRBT (+reg)", ("LoadByteUnprivileged (reg)", [xT 0])),
+     ("LDRBT (-reg)", ("LoadByteUnprivileged (reg)", [xF 0])),
      ("LDRH (+imm,pre,wb)", ("LoadHalf (imm,pre)", [xT 0, xT 1, xF 13])),
      ("LDRH (-imm,pre,wb)", ("LoadHalf (imm,pre)", [xF 0, xT 1, xF 13])),
      ("LDRH (+imm,pre)", ("LoadHalf (imm,pre)", [xT 0, xF 1, xF 13])),
@@ -2533,6 +2555,7 @@ in
       in
          fn s =>
             let
+               val s = utilsLib.removeSpaces s
                val v = bitstringSyntax.bitstring_of_hexstring s
                val x = if String.size s = 8 andalso uncond (String.sub (s, 0))
                           then [true]
@@ -2550,6 +2573,11 @@ end
 val NoOperation_rwt =
    EV [dfn'NoOperation_def, IncPC_rwt] [] []
       ``dfn'NoOperation``
+   |> addThms
+
+val DataMemoryBarrier_rwt =
+   EV [dfn'DataMemoryBarrier_def, IncPC_rwt] [] []
+      ``dfn'DataMemoryBarrier opt``
    |> addThms
 
 (* ---------------------------- *)
@@ -2904,6 +2932,15 @@ val MultiplyLong_rwt =
         ``n <> 15w: word4``, ``m <> 15w: word4``]] (TF `signed`)
       ``dfn'MultiplyLong (accumulate, signed, setflags, dhi, dlo, n, m)``
 
+val Signed16Multiply32Accumulate_rwt =
+   EV ([dfn'Signed16Multiply32Accumulate_def, IncPC_rwt, R_rwt, write'R_rwt] @
+       npc_thm [`d`])
+      [[``d <> 15w: word4``, ``n <> 15w: word4``,
+        ``m <> 15w: word4``, ``a <> 15w: word4``]] []
+      ``dfn'Signed16Multiply32Accumulate (m_high, n_high, d, n, m, a)``
+   |> List.map (FULL_DATATYPE_RULE o COND_UPDATE_RULE)
+   |> addThms
+
 (* ---------------------------- *)
 
 val ExtendByte_rwt =
@@ -2957,6 +2994,7 @@ in
    val bpc_addr1 = immediate1 List.tl bpc_addr
    val bpc_addr2 = immediate2 List.tl bpc_addr
    val bpc_addr3 = immediate3 List.tl bpc_addr
+   val plain_addr1 = immediate1 Lib.I [[`a` |-> ``T``], [`a` |-> ``F``]]
 end
 
 (* ---------------------------- *)
@@ -3120,6 +3158,12 @@ val LoadSignedByte_base_pc_rwts =
      [[``t <> 15w: word4``, ``r <> 15w: word4``]] bpc_addr
      ``dfn'LoadByte
          (F, a, idx, wb, t, 15w, register_form1 (r, SRType_LSL, imm2))``
+
+val LoadByteUnprivileged_rwts =
+   memEV (rule_npc false) MemU_unpriv_1_rwt [dfn'LoadByteUnprivileged_def]
+     [[``t <> 15w: word4``, ``n <> 15w: word4``, ``r <> 15w: word4``]]
+     plain_addr1
+     ``dfn'LoadByteUnprivileged (a, T, t, n, m)``
 
 (* ---------------------------- *)
 
@@ -3458,6 +3502,29 @@ val vstr_npc_rwt =
    |> addThms
 
 val () = resetEvConv ()
+
+(* ---------------------------- *)
+
+(* Media *)
+
+val BitFieldClearOrInsert_rwt =
+   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
+      ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
+
+val BitFieldExtract_rwt =
+   regEV [`d`] [dfn'BitFieldExtract_def]
+      [[``d <> 15w: word4``, ``n <> 15w: word4``]] []
+      ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
+
+val ExtendByte16_rwt =
+   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt, wordsTheory.WORD_EXTRACT_ZERO2]
+      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
+      ``dfn'ExtendByte16 (U, d, n, m, rot)``
+
+val ByteReverse_rwt =
+   regEV [`d`] [dfn'ByteReverse_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ByteReverse (d, m)``
 
 (* ---------------------------- *)
 
@@ -3842,6 +3909,7 @@ in
       in
          fn s =>
             let
+               val s = utilsLib.removeSpaces s
                val v = bitstringSyntax.bitstring_of_hexstring s
             in
                if String.size s = 8 andalso uncond (String.sub (s, 0))

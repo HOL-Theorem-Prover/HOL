@@ -1462,6 +1462,13 @@ local
       List.map
          (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
+   fun takeWhile P =
+      let
+         fun iter [] = []
+           | iter (h :: t) = if P h then h :: iter t else []
+      in
+         iter
+      end
 in
    fun register_combinations
          (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm) =
@@ -1499,21 +1506,16 @@ in
                ((v2 |-> v1) :: List.mapPartial instantiate l, [tm2])
             end
          val frees = List.filter Term.is_var o explode_reg
-         val no_free = List.null o frees
-         fun exists_free l = List.exists (fn (t, _, _) => not (no_free t)) l
+         fun no_free (t, _: term, _: term) = List.null (frees t)
+         val exists_free = List.exists (not o no_free)
+         fun no_good l = List.length (takeWhile no_free l) > 1
          fun groupings ok rs =
             let
-               val (cs, vs) = List.partition (fn (t, _, _) => no_free t) rs
-               fun add_c l =
-                  List.concat
-                    (List.map
-                        (fn x =>
-                           x ::
-                           List.map (fn c => List.map (fn y => c :: y) x) cs) l)
+               val (cs, vs) = List.partition no_free rs
             in
-               vs
+               (cs @ vs)
                |> utilsLib.partitions
-               |> add_c
+               |> List.filter (not o Lib.exists no_good)
                |> List.map
                      (List.mapPartial
                          (fn l =>
@@ -1535,7 +1537,7 @@ in
                             (fn l =>
                                let
                                   val (h, t) =
-                                     Lib.pluck (fn (tm, _, _) => no_free tm) l
+                                     Lib.pluck no_free l
                                      handle
                                         HOL_ERR
                                            {message = "predicate not satisfied",
