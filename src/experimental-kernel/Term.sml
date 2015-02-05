@@ -1058,138 +1058,68 @@ fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
  *  Raw syntax prettyprinter for terms.                                      *
  *---------------------------------------------------------------------------*)
 
-val dot     = "."
-val percent = "%";
+val app     = "@"
+val lam     = "|"
+val percent = "%"
 
-fun pp_raw_term index pps tm =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
-     fun pp (Abs(Bvar,Body)) =
-          ( add_string "\\\\(";
-            pp Bvar; add_string ","; add_break(1,0);
-            pp Body; add_string ")" )
-      | pp (App(Rator,Rand)) =
-         ( add_string "("; pp Rator; add_break(1,0);
-                           add_string "& ";
-                           pp Rand; add_string ")")
-      | pp a      = add_string (percent^Lib.int_to_string (index a))
- in
-   begin_block INCONSISTENT 0;
-   pp tm;
-   end_block()
- end;
-
+datatype pptask = ppTM of term | ppLAM | ppAPP
+fun pp_raw_term index tm = let
+  fun pp acc tasklist =
+      case tasklist of
+          [] => String.concat (List.rev acc)
+        | ppTM (Abs(Bvar, Body)) :: rest =>
+            pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
+        | ppTM (App(Rator, Rand)) :: rest =>
+            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+        | ppTM vc :: rest =>
+            pp (percent ^ Int.toString (index vc) :: acc) rest
+        | ppLAM :: rest => pp ("|" :: acc) rest
+        | ppAPP :: rest => pp ("@" :: acc) rest
+in
+  pp [] [ppTM tm]
+end
+val write_raw = pp_raw_term
 
 local
-datatype tok = bslash | id of int | lparen | rparen
+datatype tok = lam | id of int | app
 open StringCvt
 
-fun readtok (c : (char, cs) reader) cs0 = let
-  val cs = skipWS c cs0
+fun readtok (c : (char, cs) reader) cs = let
   val intread = Int.scan DEC c
 in
   case c cs of
     NONE => NONE
-  | SOME (#"|",cs') => SOME (bslash,cs')
-  | SOME (#"(",cs') => SOME (lparen,cs')
-  | SOME (#")",cs') => SOME (rparen,cs')
-  | SOME c => (case intread cs of
-                 NONE => NONE
-               | SOME (i,cs') => SOME(id i, cs'))
+  | SOME (#"|",cs') => SOME (lam,cs')
+  | SOME (#"@",cs') => SOME (app,cs')
+  | SOME (c,cs') => (case intread cs' of
+                         NONE => NONE
+                       | SOME (i,cs'') => SOME(id i, cs''))
 end
-
-(* SLR parser for grammar
-
-     T   ::= tm $
-     tm  ::= '|' [id] tm
-     tm  ::= tmc
-     tmc ::= tmc tmb
-     tmc ::= tmb
-     tmb ::= [id]
-     tmb ::= '(' tm ')'
-*)
-
-datatype stk_item = LAM of term | C of term | BK | Start
 
 fun parse tmv c cs0 = let
   fun adv cs = case readtok c cs of NONE => (NONE, cs)
                                   | SOME (t, cs') => (SOME t, cs')
-  fun new_bv i stk = LAM (Vector.sub(tmv,i)) :: stk
   fun parse_term stk cur =
-      case cur of
-        (NONE,_) => NONE
-      | (SOME bslash, cs') => let
-        in
-          case readtok c cs' of
-            NONE => NONE
-          | SOME (id i, cs'') => parse_term (new_bv i stk) (adv cs'')
-          | _ => NONE
-        end
-      | (SOME lparen, cs') => parse_term (BK :: stk) (adv cs')
-      | (SOME (id i), cs') => reduce_tmb stk (Vector.sub(tmv,i)) (adv cs')
-      | _ => raise Fail "parse failure 1 in RawParse.parse"
-  and reduce_tmb stk tm cur =
-      case stk of
-        [] => NONE
-      | C t :: rest => parse_tmc (C (mk_comb(t,tm)) :: rest) cur
-      | _ => parse_tmc (C tm :: stk) cur
-  and parse_tmc stk cur =
-      case cur of
-        (NONE, _) => reduce_tm stk cur
-      | (SOME(id i), cs') => reduce_tmb stk (Vector.sub(tmv,i)) (adv cs')
-      | (SOME lparen, cs') => parse_term (BK :: stk) (adv cs')
-      | (SOME rparen, cs') => reduce_tm stk (adv cs')
-      | _ => raise Fail "parse failure 2 in RawParse.parse"
-  and reduce_tm stk cur =
-      case stk of
-        C t :: BK :: rest => reduce_tmb rest t cur
-      | C t :: Start :: rest => SOME (t, #2 cur)
-      | C t :: LAM bv :: rest => reduce_tm (C (mk_abs(bv,t)) :: rest) cur
-      | _ => raise Fail "parse failure 3 (reduce) in RawParse.parse"
+      case (stk, cur) of
+          ([t], (NONE,cs)) => SOME (t, cs)
+        | ([], (NONE, _)) => raise Fail "raw_parse.eof: empty stack"
+        | (_, (NONE, _)) => raise Fail "raw_parse.eof: large stack"
+        | (body :: bvar :: stk, (SOME lam, cs')) =>
+            parse_term (Abs(bvar,body) :: stk) (adv cs')
+        | (_, (SOME lam, _)) => raise Fail "raw_parse.abs: short stack"
+        | (x :: f :: stk, (SOME app, cs')) =>
+            parse_term (App(f,x) :: stk) (adv cs')
+        | (_, (SOME app, _)) => raise Fail "raw_parse.app: short stack"
+        | (stk, (SOME (id i), cs')) =>
+            parse_term (Vector.sub(tmv, i) :: stk) (adv cs')
 in
-  parse_term [Start] (adv cs0)
+  parse_term [] (adv cs0)
 end
 
-
-datatype grav = Top | CombL | CombR
-datatype ppaction = Brk | Tm of term * grav | Stg of string
 
 in
 
 fun read_raw tmv s = valOf (scanString (parse tmv) s)
-fun write_raw map t = let
-  fun doit acc actlist =
-      case actlist of
-        [] => String.concat (List.rev acc)
-      | Brk :: rest => doit (" "::acc) rest
-      | Stg s :: rest => doit (s::acc) rest
-      | Tm (t,g) :: rest => let
-        in
-          if is_var t orelse is_const t then
-             doit (Int.toString (map t)::acc) rest
-          else if is_comb t then let
-              val (Rator,Rand) = dest_comb t
-            in
-              if g = CombR then
-                doit acc
-                     (Stg "(" :: Tm(Rator,CombL) :: Brk :: Tm(Rand,CombR) ::
-                      Stg ")" :: rest)
-              else
-                doit acc (Tm(Rator,CombL) :: Brk :: Tm(Rand,CombR) :: rest)
-            end
-          else let
-              val (bv, body) = dest_abs t
-              val core = [Stg "|", Tm(bv, Top), Brk, Tm(body, Top)]
-            in
-              if g <> Top then
-                doit acc ((Stg "(" :: core) @ (Stg ")" :: rest))
-              else
-                doit acc (core @ rest)
-            end
-        end
-in
-  doit [] [Tm(t,Top)]
-end
 
 end (* local *)
 

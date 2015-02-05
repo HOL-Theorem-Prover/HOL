@@ -14,7 +14,6 @@ sig
   val break_const    : term -> KernelTypes.id * hol_type
   val break_abs      : term -> term
   val trav           : (term -> unit) -> term -> unit
-  val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
   val is_bvar        : term -> bool
 
 end;
