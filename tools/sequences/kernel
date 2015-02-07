@@ -1,3 +1,4 @@
+!tools/Holmake/tests/holdep
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly

@@ -122,16 +122,8 @@ fun encode_for_HOLMKfile {tgt, deps} =
 fun scanFile {fname,actualfname} = let
   open Holdep_tokens
   val is = TextIO.openIn actualfname
-  val arg = UserDeclarations.new_state fname
-  val lexer = makeLexer (fn n => TextIO.inputN(is,n)) arg
-               handle UserDeclarations.LEX_ERROR s =>
-                raise Holdep_Error ("Lexical error: "^s)
-  fun recurse acc =
-      case lexer() of
-          NONE => (TextIO.closeIn is; acc)
-        | SOME s => recurse (Binaryset.add(acc, s))
 in
-  recurse (Binaryset.empty String.compare)
+  stream_deps (fname, is) before TextIO.closeIn is
 end
 
 fun read {assumes, includes, srcext, objext, filename} = let

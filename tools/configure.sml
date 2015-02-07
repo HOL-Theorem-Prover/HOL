@@ -354,20 +354,14 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
-    systeml [mllex, "Holdep_tokens.lex"];
-    compile [] "SourcePos.sig";
-    compile [] "SourcePos.sml";
-    compile [] "SourceFile.sig";
-    compile [] "SourceFile.sml";
-    compile [] "Region.sig";
-    compile [] "Region.sml";
-    compile ["-toplevel"] "Holdep_tokens.lex.sml";
-    compile ["Holdep_tokens.lex.ui"] "holdeptool.sml";
+    compile [] "Holdep_tokens.sig";
+    compile [] "Holdep_tokens.sml";
+    compile [] "holdeptool.sml";
     compile [] "mosml_holdeptool.sml";
-    link{extras = ["Holdep_tokens.lex.ui"], srcobj = "mosml_holdeptool.uo",
+    link{extras = [], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "Holdep.sig";
-    compile ["Holdep_tokens.lex.ui"] "Holdep.sml";
+    compile [] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";

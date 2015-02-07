@@ -17,10 +17,7 @@ fun useC f =
 val _ = use "../tools/Holmake/Systeml.sig"
 val _ = use "Holmake/Systeml.sml";
 
-val _ = useC "SourcePos";
-val _ = useC "SourceFile";
-val _ = useC "Region"
-val _ = use "../tools/Holmake/Holdep_tokens.lex.sml";
+val _ = useC "Holdep_tokens";
 val _ = useC "Holdep";
 
 val _ = useC "regexpMatch";

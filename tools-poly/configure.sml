@@ -405,8 +405,6 @@ val _ =
  ---------------------------------------------------------------------------*)
 val _ =
   (echo "Making bin/Holmake";
-   FileSys.chDir hmakedir;
-   systeml [lexer, fullPath [HOLDIR, "tools", "Holmake", "Holdep_tokens.lex"]];
    FileSys.chDir toolsdir;
    system_ps (POLY ^ " < " ^ fullPath ["Holmake", "poly-Holmake.ML"]);
    compile systeml hmakebin (fullPath ["Holmake", "Holmake.o"]);
