@@ -25,6 +25,8 @@ Bugs fixed:
 
 - An embarrassing infinite loop bug in the integration of the integer decision procedures (the Omega test, Cooper’s algorithm) into the simplifier was fixed.
 
+- Theorems can now have names that are the same as SML constructor names (*e.g.*, `Empty`).  ([Github issue](http://github.com/HOL-Theorem-Prover/HOL/issues/225))
+
 New theories:
 -------------
 
