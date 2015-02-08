@@ -51,7 +51,7 @@ Incompatibilities:
 
            ?- (f x = Pair c1 c2) ⇒ (f c1 = f c2)
 
-    where the `X` in the pattern was ignored.  The interface now achieves the same end by simply allowing the user to write underscores in the pattern.  Thus, the tactic would become `Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ⇒ _`.  Multiple underscores can be used to ignore multiple sub-terms.
+    where the `X` in the pattern was ignored.  The interface now achieves the same end by simply allowing the user to write underscores in the pattern.  Thus, the tactic would become ``Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ⇒ _` ``.  Multiple underscores can be used to ignore multiple sub-terms.
 
     Of course, the `qmatch_rename_tac` and `qmatch_assum_rename_tac` names for these tactics in `lcsymtacs` have changed types as well.  The new `Q.MATCH_GOALSUB_RENAME_TAC` and `Q.MATCH_ASMSUB_RENAME_TAC` (and their lower-case versions) have similar types, without explicit lists of variable names to ignore.
 
