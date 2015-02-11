@@ -47,57 +47,34 @@ fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
 datatype SCR = SCR of {linenum : int,
                        filename : string,
                        colnum : int,
-                       currentID : string list option,
                        ids : string Binaryset.set,
                        cr : char_reader}
 fun makeSCR fname = let
   val cr = fromFile fname
 in
   SCR {linenum = 1, colnum = 0, filename = fname,
-       currentID = NONE, ids = Binaryset.empty String.compare,
-       cr = cr}
+       ids = Binaryset.empty String.compare, cr = cr}
 end
 
 fun SCRfromStream (name, is) = let
   val cr = fromStream is
 in
   SCR {linenum = 1, colnum = 0, filename = name,
-       currentID = NONE, ids = Binaryset.empty String.compare,
-       cr = cr}
+       ids = Binaryset.empty String.compare, cr = cr}
 end
 
 fun currentChar (SCR{cr,...}) = current cr
 fun closeSCR (SCR{cr,...}) = closeCR cr
 fun getIDs (SCR{ids,...}) = ids
-fun inc (SCR {linenum, filename, colnum, currentID, ids, cr}) =
+fun inc (SCR {linenum, filename, colnum, ids, cr}) =
     SCR{linenum = linenum, filename = filename, colnum = colnum + 1,
-        currentID = currentID, ids = ids, cr = advance cr}
-fun newline (SCR{linenum, filename, colnum, currentID, ids, cr}) =
+        ids = ids, cr = advance cr}
+fun newline (SCR{linenum, filename, colnum, ids, cr}) =
     SCR{linenum = linenum + 1, filename = filename, colnum = 0,
-        currentID = NONE, ids = ids, cr = advance cr}
-fun newID s (SCR{linenum, filename, colnum, currentID, ids, cr}) =
+        ids = ids, cr = advance cr}
+fun completeID s (SCR{linenum, filename, colnum, ids, cr}) =
     SCR{linenum = linenum, filename = filename, colnum = colnum,
-        currentID = SOME [s], ids = ids, cr = cr}
-fun extendID c (SCR{linenum, filename, colnum, currentID, ids, cr}) =
-    case currentID of
-        SOME strs =>
-          SCR{linenum = linenum, filename = filename, colnum = colnum,
-              currentID = SOME (str c :: strs), ids = ids, cr = cr}
-      | NONE =>
-          raise Fail "Invariant failure: extendID with no ID current"
-fun completeID s (SCR{linenum, filename, colnum, currentID, ids, cr}) =
-    SCR{linenum = linenum, filename = filename, colnum = colnum,
-        currentID = NONE, ids = Binaryset.add(ids, s), cr = cr}
-fun finishID (SCR{linenum, filename, colnum, currentID, ids, cr}) =
-    case currentID of
-        NONE => raise Fail "Invariant failure: finishID with no ID current"
-      | SOME strs =>
-        let
-          val s = String.concat (List.rev strs)
-        in
-          SCR{linenum = linenum, filename = filename, colnum = colnum,
-              currentID = NONE, ids = Binaryset.add(ids, s), cr = cr}
-        end
+        ids = Binaryset.add(ids, s), cr = cr}
 
 fun mem x [] = false
   | mem x (y::ys) = x = y orelse mem x ys
@@ -118,36 +95,35 @@ fun Error(SCR {filename,colnum,linenum,...}, msg) =
 fun clean_open scr =
     case currentChar scr of
         NONE => scr
-      | SOME #"d" => openTerminatorPFX "datatype" 1 (inc scr) (* datatype *)
+      | SOME #"d" => openTermPFX "datatype" 1 (inc scr)
       | SOME #"e" => opene (inc scr) (* exception, end *)
-      | SOME #"f" => openTerminatorPFX "fun" 1 (inc scr)
+      | SOME #"f" => openTermPFX "fun" 1 (inc scr)
       | SOME #"i" => openi (inc scr) (* in, infixl, infix, infixr *)
-      | SOME #"l" => openTerminatorPFX "local" 1 (inc scr)
-      | SOME #"n" => openTerminatorPFX "nonfix" 1 (inc scr)
-      | SOME #"o" => openAlphaKWordPFX "open" 1 clean_open (inc scr)
-      | SOME #"p" => openTerminatorPFX "prim_val" 1 (inc scr)
+      | SOME #"l" => openTermPFX "local" 1 (inc scr)
+      | SOME #"n" => openTermPFX "nonfix" 1 (inc scr)
+      | SOME #"o" => modTermPFX true "open" 1 (clean_open, clean_open) (inc scr)
+      | SOME #"p" => openTermPFX "prim_val" 1 (inc scr)
       | SOME #"s" => opens (inc scr) (* structure, signature *)
-      | SOME #"t" => openTerminatorPFX "type" 1 (inc scr)
-      | SOME #"v" => openTerminatorPFX "val" 1 (inc scr)
+      | SOME #"t" => openTermPFX "type" 1 (inc scr)
+      | SOME #"v" => openTermPFX "val" 1 (inc scr)
       | SOME #";" => clean_initial (inc scr)
       | SOME #"(" => openLPAREN (inc scr)
       | SOME #"#" => openHASH (inc scr)
       | SOME #"\n" => clean_open (newline scr)
       | SOME c => if Char.isSpace c then clean_open (inc scr)
                   else if Char.isAlpha c then
-                    openAlphaID (scr |> inc |> newID (str c))
+                    modAlphaID true clean_open ("", [c]) (scr |> inc)
                   else if isSMLSym c then
-                    openSymID (scr |> inc |> newID (str c))
+                    modSymID true clean_open [c] (scr |> inc)
                   else Error(scr, "Bad character >"^str c^"< after open")
-and openTerminatorPFX kword cnt scr =
-    openAlphaKWordPFX kword cnt clean_initial scr
-and openOnTerminator kword scr =
-    openOnKWord kword clean_initial scr
+and openTermPFX kstr c scr =
+    modTermPFX true kstr c (clean_initial, clean_open) scr
+and openOnKWord kstr scr = OnKWord true kstr (clean_initial, clean_open) scr
 and opene scr =
     case currentChar scr of
         NONE => scr |> completeID "e"
-      | SOME #"n" => openTerminatorPFX "end" 2 (inc scr)
-      | SOME #"x" => openTerminatorPFX "exception" 2 (inc scr)
+      | SOME #"n" => openTermPFX "end" 2 (inc scr)
+      | SOME #"x" => openTermPFX "exception" 2 (inc scr)
       | SOME c => extend_openAlpha "e" c scr
 and openi scr =
     case currentChar scr of
@@ -158,7 +134,7 @@ and openin scr =
     case currentChar scr of
         NONE => Error(scr, "Don't expect to see 'in'-EOF")
       | SOME #"f" => scr |> inc |> openinf
-      | SOME c => openOnTerminator "in" scr
+      | SOME c => openOnKWord "in" scr
 and openinf scr =
     case currentChar scr of
         NONE => scr |> completeID "inf"
@@ -172,15 +148,22 @@ and openinfi scr =
 and openinfix scr =
     case currentChar scr of
         NONE => Error(scr, "Don't expect to see 'infix'-EOF")
-      | SOME #"l" => openOnTerminator "infixl" (inc scr)
-      | SOME #"r" => openOnTerminator "infixr" (inc scr)
-      | SOME c => openOnTerminator "infix" scr
+      | SOME #"l" => openOnKWord "infixl" (inc scr)
+      | SOME #"r" => openOnKWord "infixr" (inc scr)
+      | SOME c => openOnKWord "infix" scr
 and opens scr =
     case currentChar scr of
         NONE => scr |> completeID "s"
-      | SOME #"i" => openTerminatorPFX "signature" 2 (inc scr)
-      | SOME #"t" => openTerminatorPFX "structure" 2 (inc scr)
+      | SOME #"i" => openTermPFX "signature" 2 (inc scr)
+      | SOME #"t" => openTermPFX "structure" 2 (inc scr)
       | SOME c => extend_openAlpha "s" c scr
+and extend_openAlpha pfx c scr =
+    if Char.isSpace c then clean_open (scr |> inc |> completeID pfx)
+    else if isSMLAlphaCont c then
+      modAlphaID true clean_open (pfx, [c]) (scr |> inc)
+    else if isSMLSym c then
+      modSymID true clean_open [c] (scr |> inc |> completeID pfx)
+    else Error(scr, "Bad character >"^str c^"< after 'open'")
 and openLPAREN scr =
     case currentChar scr of
         NONE => Error(scr, "Don't expect to see '('-EOF")
@@ -190,22 +173,8 @@ and openHASH scr =
     case currentChar scr of
         NONE => Error(scr, "Don't expect to see 'open'-'#'")
       | SOME c => if isSMLSym c then
-                    openSymID (scr |> inc |> newID ("#" ^ str c))
+                    modSymID true clean_open [c,#"#"] (scr |> inc)
                   else Error(scr, "Don't expect to see 'open'-'#'")
-and openAlphaID scr =
-    case currentChar scr of
-        NONE => scr |> finishID
-      | SOME #"." => openQID0 (scr |> inc |> finishID)
-      | SOME c => if isSMLAlphaCont c then
-                    openAlphaID (scr |> inc |> extendID c)
-                  else
-                    clean_open (scr |> finishID)
-and openSymID scr =
-    case currentChar scr of
-        NONE => scr |> finishID
-      | SOME #"." => openQID0 (scr |> inc |> finishID)
-      | SOME c => if isSMLSym c then openSymID (scr |> inc |> extendID c)
-                  else clean_open (scr |> finishID)
 and openQID0 scr = (* seen the dot *)
     case currentChar scr of
         NONE => Error(scr, "'.'-EOF unexpected")
@@ -224,55 +193,45 @@ and openQIDsym scr =
       | SOME #"." => openQID0 (inc scr)
       | SOME c => if isSMLSym c then openQIDsym (inc scr)
                   else clean_open scr
-and openAlphaKWordPFX kword numseen k scr = let
+and modTermPFX dotok kword numseen (seenk, notk) scr = let
   fun get() = String.extract(kword, 0, SOME numseen)
 in
   case currentChar scr of
-      NONE => scr |> completeID (get())
+      NONE => notk (scr |> completeID (get()))
     | SOME c => if c = String.sub(kword, numseen) then
                   if numseen + 1 = size kword then
-                    openOnKWord kword k (inc scr)
-                  else openAlphaKWordPFX kword (numseen + 1) k (inc scr)
+                    OnKWord dotok kword (seenk,notk) (inc scr)
+                  else
+                    modTermPFX dotok kword (numseen + 1) (seenk,notk) (inc scr)
                 else if isSMLAlphaCont c then
-                  extend_openAlpha (get()) c scr
-                else clean_open (scr |> completeID (get()))
+                  modAlphaID dotok notk (get(), [c]) (inc scr)
+                else notk (scr |> completeID (get()))
 end
-and openOnKWord kword k scr =
+and OnKWord dotok kword (seenk,notseenk) scr =
     case currentChar scr of
-        NONE => k scr
+        NONE => seenk scr
       | SOME c => if isSMLAlphaCont c then
-                    extend_openAlpha kword c scr
-                  else k scr
-and extend_openAlpha pfx c scr =
-    if Char.isSpace c then clean_open (scr |> inc |> completeID pfx)
-    else if isSMLAlphaCont c then
-      openAlphaID (scr |> inc |> newID (pfx ^ str c))
-    else if isSMLSym c then
-      openSymID (scr |> inc |> completeID pfx |> newID (str c))
-    else Error(scr, "Bad character >"^str c^"< after 'open'")
-and extend_openKeyword kword c scr =
-    if Char.isSpace c then Error(scr, "Don't expect to see '"^kword^"' after 'open'")
-    else if Char.isAlpha c then
-      openAlphaID (scr |> inc |> newID (kword ^ str c))
-    else if isSMLSym c then
-      Error(scr, "Don't expect to see '"^kword^"' after 'open'")
-    else Error(scr, "Bad character >"^str c^"< after 'open'")
-and extend_openTerminator kword c scr =
-    if c = #"\n" then clean_initial (scr |> newline)
-    else if Char.isSpace c then clean_initial (scr |> inc)
-    else if Char.isAlpha c then
-      openAlphaID (scr |> inc |> newID (kword ^ str c))
-    else clean_initial (scr |> inc)
-and includeALPHA cs scr =
+                    modAlphaID dotok notseenk (kword, [c]) (inc scr)
+                  else seenk scr
+and modAlphaID dotok k (base,cs) scr =
+    case currentChar scr of
+        NONE => scr |> completeID (base ^ implode (List.rev cs))
+      | SOME #"." =>
+          if dotok then
+            openQID0 (scr |> inc |> completeID (base ^ implode (List.rev cs)))
+          else Error(scr, "Didn't expect to see qualified ident here")
+      | SOME c =>
+          if isSMLAlphaCont c then modAlphaID dotok k (base,c::cs) (inc scr)
+          else k (scr |> completeID (base ^ implode (List.rev cs)))
+and modSymID dotok k cs scr =
     case currentChar scr of
         NONE => scr |> completeID (implode (List.rev cs))
-      | SOME c => if isSMLAlphaCont c then includeALPHA (c::cs) (inc scr)
-                  else clean_initial (scr |> completeID (implode (List.rev cs)))
-and includeSYM cs scr =
-    case currentChar scr of
-        NONE => scr |> completeID (implode (List.rev cs))
-      | SOME c => if isSMLSym c then includeSYM (c::cs) (inc scr)
-                  else clean_initial (scr |> completeID (implode (List.rev cs)))
+      | SOME #"." =>
+          if dotok then
+            openQID0 (scr |> inc |> completeID (implode (List.rev cs)))
+          else Error(scr, "Didn't expect to see qualified ident here")
+      | SOME c => if isSMLSym c then modSymID dotok k (c::cs) (inc scr)
+                  else k (scr |> completeID (implode (List.rev cs)))
 and includeLPAR scr =
     case currentChar scr of
         NONE => Error(scr, "Don't expect 'include'-'('-EOF")
@@ -280,12 +239,40 @@ and includeLPAR scr =
       | SOME c => Error(scr, "Don't expect 'include'-'('-'"^str c^"'")
 and clean_include scr =
     case currentChar scr of
-        NONE => Error(scr, "Don't expect to see 'include'-EOF")
+        NONE => scr
+      | SOME #"d" =>
+          modTermPFX false "datatype" 1 (clean_initial, clean_include) (inc scr)
+      | SOME #"e" => includee (inc scr)
+      | SOME #"s" =>
+          modTermPFX false "structure" 1 (clean_initial, clean_include) (inc scr)
+      | SOME #"t" =>
+          modTermPFX false "type" 1 (clean_initial, clean_include) (inc scr)
+      | SOME #"v" =>
+          modTermPFX false "val" 1 (clean_initial, clean_include) (inc scr)
+      | SOME #"w" =>
+          modTermPFX false "where" 1 (clean_initial, clean_include) (inc scr)
       | SOME #"\n" => clean_include (newline scr)
       | SOME #"(" => includeLPAR (inc scr)
+      | SOME #";" => clean_initial (inc scr)
       | SOME c => if Char.isSpace c then clean_include (inc scr)
-                  else if Char.isAlpha c then includeALPHA [c] (inc scr)
-                  else if isSMLSym c then includeSYM [c] (inc scr)
+                  else if Char.isAlpha c then
+                    modAlphaID false clean_include ("", [c]) (inc scr)
+                  else if isSMLSym c then
+                    modSymID false clean_include [c] (inc scr)
+                  else Error(scr, "Bad character >"^str c^"< after 'include'")
+and includee scr =
+    case currentChar scr of
+        NONE => scr |> completeID "e"
+      | SOME #"\n" => clean_include (scr |> newline |> completeID "e")
+      | SOME #"n" =>
+          modTermPFX false "end" 2 (clean_initial, clean_include) (inc scr)
+      | SOME #"x" =>
+          modTermPFX false "exception" 2 (clean_initial, clean_include) (inc scr)
+      | SOME c => if Char.isSpace c then clean_include (scr |> inc |> completeID "e")
+                  else if isSMLSym c then
+                    modSymID false clean_include [c] (scr |> inc |> completeID "e")
+                  else if isSMLAlphaCont c then
+                    modAlphaID false clean_include ("e", [c]) (inc scr)
                   else Error(scr, "Bad character >"^str c^"< after 'include'")
 and clean_initial scr =
     case currentChar scr of

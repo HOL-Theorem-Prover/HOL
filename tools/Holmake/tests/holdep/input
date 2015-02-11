@@ -23,3 +23,14 @@ fun f x = Opopen.x + qidcolon.::>
 
 include included_module'
 type extrastate = base_lexer.UserDecs.extrastate
+
+include included1 included2
+val x : int
+
+include included3 ;
+val y : int
+
+include included4
+datatype datafoo
+
+include included5 where type t = int
