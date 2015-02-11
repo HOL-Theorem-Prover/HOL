@@ -354,13 +354,25 @@ val lookup_difference = store_thm(
   rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
   fs [lookup_def, lookup_mk_BS, lookup_mk_BN])
 
-val lrnext_def = new_specification(
-  "lrnext_def", ["lrnext"],
-  numeralTheory.bit_initiality
-      |> INST_TYPE [alpha |-> ``:num``]
-      |> Q.SPECL [`1`, `\n r. 2 * r`,
-                  `\n r. 2 * r`]
-      |> SIMP_RULE bool_ss []);
+val lrnext_real_def = tzDefine "lrnext" `
+  lrnext n = if n = 0 then 1 else 2 * lrnext ((n - 1) DIV 2)`
+  (WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC) ;
+
+val lrnext_def = prove(
+  ``(lrnext ZERO = 1) /\
+    (!n. lrnext (BIT1 n) = 2 * lrnext n) /\
+    (!n. lrnext (BIT2 n) = 2 * lrnext n)``,
+  REPEAT STRIP_TAC
+  THEN1 (fs [Once ALT_ZERO,Once lrnext_real_def])
+  THEN1
+   (fs [Once BIT1,Once lrnext_real_def]
+    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ fs [Once BIT1]
+    \\ fs [ADD_ASSOC,DECIDE ``n+n=n*2``,MULT_DIV])
+  THEN1
+   (fs [Once BIT2,Once lrnext_real_def]
+    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ fs [Once BIT2]
+    \\ `n + (n + 2) - 1 = n * 2 + 1` by DECIDE_TAC
+    \\ fs [DIV_MULT]))
 val lrnext' = prove(
   ``(!a. lrnext 0 = 1) /\ (!n a. lrnext (NUMERAL n) = lrnext n)``,
   simp[NUMERAL_DEF, GSYM ALT_ZERO, lrnext_def])

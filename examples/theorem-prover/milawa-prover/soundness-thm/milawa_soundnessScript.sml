@@ -1,7 +1,7 @@
 
 open HolKernel Parse boolLib bossLib; val _ = new_theory "milawa_soundness";
 
-open prog_armTheory prog_ppcTheory prog_x86Theory;
+(* open prog_armTheory prog_ppcTheory prog_x86Theory; *)
 
 open helperLib set_sepTheory progTheory;
 open lisp_correctnessTheory milawa_proofpTheory lisp_semanticsTheory;
