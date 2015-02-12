@@ -221,11 +221,13 @@ val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
 fun minprint t = let
   fun default t = let
     val (_, baseprinter) =
-        Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                      print_from_grammars
-                      min_grammars
+        with_flag (current_backend, PPBackEnd.raw_terminal)
+                  print_from_grammars
+                  min_grammars
     fun printer pps =
-        baseprinter pps |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+        baseprinter pps
+                    |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+                    |> with_flag (max_print_depth, ~1)
     val t_str =
         String.toString (PP.pp_to_string 1000000 printer t)
   in
