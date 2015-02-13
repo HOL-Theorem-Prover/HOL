@@ -53,16 +53,19 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
 
+  type holmake_result = {visited : string Binaryset.set } option
+
   val maybe_recurse :
       {warn: string -> unit,
        no_prereqs : bool,
-       hm: {relpath:string option,abspath:string} -> string Binaryset.set ->
-           string list -> string list -> string Binaryset.set option,
+       hm: {relpath : string option, abspath : string,
+            visited : string Binaryset.set} ->
+           string list -> string list -> holmake_result,
        visited: string Binaryset.set,
        includes : string list,
        dir : {abspath: string, relpath: string option},
        local_build : unit -> bool,
        cleantgt : string option} ->
-      string Binaryset.set option
+      holmake_result
 
 end

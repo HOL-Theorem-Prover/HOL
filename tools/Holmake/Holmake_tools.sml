@@ -288,6 +288,7 @@ val terminal_log =
     if Systeml.isUnix then xterm_log
     else (fn s => ())
 
+type holmake_result = {visited : string Binaryset.set } option
 
 fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k,
                    cleantgt} =
@@ -296,7 +297,7 @@ let
   val k = fn () => (terminal_log ("Holmake: "^nice_dir dir); k())
   val tgts = case cleantgt of SOME s => [s] | NONE => []
   fun recurse visited (newdir,nm) =
-      if Binaryset.member(visited, newdir) then SOME visited
+      if Binaryset.member(visited, newdir) then SOME {visited = visited}
       else let
           val newrelpath =
               if Path.isAbsolute nm then NONE
@@ -308,23 +309,23 @@ let
           val _ = warn ("Recursively calling Holmake in "^nm)
           val _ = terminal_log ("Holmake: "^nice_dir nm)
         in
-          hm {relpath=newrelpath,abspath=newdir} visited [] tgts
+          hm {relpath=newrelpath,abspath=newdir,visited=visited} [] tgts
           before
           (warn ("Finished recursive invocation in "^nm);
            terminal_log ("Holmake: "^nice_dir dir);
            FileSys.chDir dir)
         end
-  fun do_em accg [] = if k() then SOME accg else NONE
+  fun do_em accg [] = if k() then SOME {visited = accg} else NONE
     | do_em accg (x::xs) = let
       in
         case recurse accg x of
-          SOME g' => do_em g' xs
+          SOME {visited} => do_em visited xs
         | NONE => NONE
       end
   val visited = Binaryset.add(visited, dir)
 in
   if no_prereqs then
-    if k() then SOME visited else NONE
+    if k() then SOME {visited = visited} else NONE
   else let
       fun foldthis (dir, m) =
           Binarymap.insert(m, FileSys.fullPath dir, dir)

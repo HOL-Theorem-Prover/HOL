@@ -380,8 +380,8 @@ end
 
 
 (* directory specific stuff here *)
-fun Holmake dirinfo visiteddirs cline_additional_includes targets = let
-  val {abspath=dir, relpath=dirnm} = dirinfo
+fun Holmake dirinfo cline_additional_includes targets : holmake_result = let
+  val {abspath=dir, relpath=dirnm, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir dir
 
 
@@ -1232,7 +1232,7 @@ in
                       x in_target ".PHONY"
     in
       if List.all isPhony xs andalso not cline_recursive then
-        if finish_logging (strategy xs) then SOME visiteddirs else NONE
+        if finish_logging (strategy xs) then SOME {visited = visiteddirs} else NONE
       else
         let
           val ctgt =
@@ -1280,8 +1280,8 @@ in
       open OS.Process
       val result =
           Holmake {relpath = SOME (OS.Path.currentArc),
-                   abspath = OS.FileSys.getDir()}
-                  (Binaryset.empty String.compare)
+                   abspath = OS.FileSys.getDir(),
+                   visited = Binaryset.empty String.compare}
                   cline_additional_includes
                   targets
                   handle Fail s => (print ("Fail exception: "^s^"\n");
