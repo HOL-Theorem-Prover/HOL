@@ -26,4 +26,4 @@ sig
 	val list_merge : ''a list -> ''a list -> ''a list
 	val list_xmerge : ''a list list -> ''a list
 	val dest_binop_triple : term -> term * term * term
-end;
+end

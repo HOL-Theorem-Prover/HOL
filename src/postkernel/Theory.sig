@@ -100,7 +100,7 @@ sig
 (* For internal use *)
 
   val pp_thm             : (ppstream -> thm -> unit) ref
-  val link_parents       : string*num*num -> (string*num*num)list -> unit
+  val link_parents       : string*num*num -> (string*num*num) list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
 
 
@@ -111,8 +111,5 @@ sig
      the last thing done when they load.  This will in turn cause a
      TheoryDelta event to be sent to all registered listeners *)
   val load_complete : string -> unit
-
-
-
 
 end

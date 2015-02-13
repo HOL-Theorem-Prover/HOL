@@ -48,4 +48,4 @@ sig
 	val is_frac_mul	: term -> bool
 	val is_frac_div	: term -> bool
 
-end;
+end

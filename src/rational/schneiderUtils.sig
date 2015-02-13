@@ -51,4 +51,4 @@ signature schneiderUtils =
     val delete : int -> 'a list -> 'a list
     val elem : int -> 'a list -> 'a
     val prove_thm : string * term * tactic -> thm
-  end;
+  end

@@ -50,4 +50,4 @@ sig
      | LAMB  of term * term
 
   val dest_term : term -> lambda
-end;
+end

@@ -44,4 +44,4 @@ sig
   val release : string
   val version : int
 
-end;
+end

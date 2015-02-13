@@ -77,4 +77,4 @@ sig
 	val strip_rat_add : term -> term list
 	val strip_rat_mul : term -> term list
 
-end;
+end

@@ -13,7 +13,7 @@ sig
   val verify_gcd_check : thm -> thm
   val verify_combination : term -> thm -> thm -> thm
 
-end;
+end
 
 (*
    This file turns the "external proofs" returned by the OmegaMLShadow

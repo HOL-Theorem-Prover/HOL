@@ -508,4 +508,4 @@ val define_subset_types_rule :
         Thm.thm                (* new lifted theorem *)
 
 
-end;  (* of signature quotient *)
+end  (* of signature quotient *)

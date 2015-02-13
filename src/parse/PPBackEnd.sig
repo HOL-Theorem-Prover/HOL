@@ -21,7 +21,7 @@ sig
     | Blue
     | PinkPurple
     | LightBlue
-    | White;
+    | White
 
   datatype pp_style =
       FG of pp_color

@@ -13,4 +13,4 @@
 signature Num_conv =
 sig
    val num_CONV : Term.term -> Thm.thm
-end;
+end

@@ -90,7 +90,7 @@ sig
   val lensel : string
   val lenser : string
 
-  (*stars*)
+  (* stars *)
   val blackstar      : string
   val whitestar      : string
   val bigasterisk    : string
@@ -152,6 +152,5 @@ sig
   val isAlphaNum : string -> bool
   val isSymbolic : string -> bool
   val isMLIdent : string -> bool
-
 
 end
