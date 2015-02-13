@@ -26,6 +26,7 @@ val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="fun"},name=([],"->")}
 val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="bool"},name=([],"bool")}
 val _ = OpenTheory_const_name {const={Thy="min",Name="="},name=([],"=")}
 val _ = OpenTheory_const_name {const={Thy="min",Name="@"},name=([],"select")}
+val _ = OpenTheory_tyop_name {tyop={Thy="min",Tyop="ind"},name=([],"ind")}
 
 val ns = ["Data","Bool"]
 
@@ -155,12 +156,14 @@ val ONE_ONE_DEF =
                                          (f x1 = f x2) ==> (x1 = x2)`);
 
 val _ = add_const "ONE_ONE";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="ONE_ONE"},name=(["Function"],"injective")}
 
 val ONTO_DEF =
  Definition.new_definition
    ("ONTO_DEF",       Term `ONTO = \f:'a->'b. !y. ?x. y = f x`);
 
 val _ = add_const "ONTO";
+val _ = OpenTheory_const_name {const={Thy="bool",Name="ONTO"},name=(["Function"],"surjective")}
 
 val TYPE_DEFINITION =
  Definition.new_definition
