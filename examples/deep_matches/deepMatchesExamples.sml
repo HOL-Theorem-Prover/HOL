@@ -12,6 +12,7 @@ val thm_t = PMATCH_INTRO_CONV t
 (* check that SIMP works *)
 val thm_t' = PMATCH_REMOVE_ARB_CONV t'
 val thm_t' = PMATCH_SIMP_CONV t'
+
 		    
 (* more fancy *)
 val t = ``case x of 
@@ -25,31 +26,19 @@ val thm_t = PMATCH_INTRO_CONV t
 val thm_t' = PMATCH_REMOVE_ARB_CONV t'
 val thm_t' = PMATCH_SIMP_CONV t'
 
-
 (* Playing around with some examples *)
 
 val example1 = ``
-PMATCH (a,x,xs)
-     [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
-      PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
-      PMATCH_ROW (\ (x,v18). (NONE,x,[v18])) (\ (x, v18). T) (\ (x, v18). 3);
-      PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17)) 
-                 (\ (x,v12,v16,v17). T)
-                 (\ (x,v12,v16,v17). 3);
-      PMATCH_ROW (\ (y,x,z,zs). (SOME y,x,[z]))
-                 (\ (y,x,z,zs). T)
-                 (\ (y,x,z,zs). x+5+z);
-      PMATCH_ROW (\ (y,v23,v24). (SOME y,0,v23::v24))
-                 (\ (y,v23,v24). T)
-                 (\ (y,v23,v24). v23+y);
-      PMATCH_ROW (\ (y,z,v23). (SOME y,SUC z,[v23]))
-                 (\ (y,z,v23). y > 5)
-                 (\ (y,z,v23). 3);
-      PMATCH_ROW (\ (y,z). (SOME y,SUC z,[1; 2]))
-                 (\ (y,z). T)
-                 (\ (y,z). y + z)
-   ]``
-
+  CASE (a,x,xs) OF [
+    || x. (NONE,x,[]) ~> x;
+    || x. (NONE,x,[2]) ~> x;
+    || (x,v18). (NONE,x,[v18]) ~> 3;
+    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
+    || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
+    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
+    || (y,z,v23). (SOME y,SUC z,[v23]) when y > 5 ~> 3;
+    || (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
+  ]``;
 
 val example2 = ``PMATCH (h::t)
   [PMATCH_ROW (\_ . []) (\_. T) (\_. x);
@@ -60,17 +49,14 @@ val example2 = ``PMATCH (h::t)
               (\ (v12,v16,v17). 3);
    PMATCH_ROW (\_. [2; 4; 3]) (\_. T) (\_. 3 + x)]``
 
-val example3 = 
-  ``PMATCH (NONE,x,xs)
-          [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
-           PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
-           PMATCH_ROW (\ (x,v18). (NONE,x,[v18])) (\ (x,v18). T) (\ (x,v18). 3);
-           PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17))
-                      (\ (x,v12,v16,v17). T)
-                      (\ (x,v12,v16,v17). 3);
-           PMATCH_ROW (\ (y,x). (y,x,[2; 4; 3]))
-                      (\ (y,x). x > 5)
-                      (\ (y,x). 3 + x)]``;
+val example3 = ``
+  CASE (NONE,x,xs) OF [
+    || x. (NONE,x,[]) ~> x;
+    || x. (NONE,x,[2]) ~> x;
+    || (x,v18). (NONE,x,[v18]) ~> 3;
+    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
+    || (y,x). (y,x,[2; 4; 3]) when (x > 5) ~> (3 + x)
+  ]``;
 
 
 (* turn off pretty printer *)
@@ -128,9 +114,10 @@ val ex2 = ``case (x, y) of
     (x, x) => T
   | _ => F``
 
+
 (* let's prove that this really behaves as expected.
    Notice that here the simpset-fragments for
-   PMATCH pick out information from the context to
+   PMATCH picks out information from the context to
    simplify the PMATCH. *)
 
 val ex2_thm = prove (``^ex2 = (x = y)``,
@@ -146,19 +133,21 @@ Cases_on `x=y` THEN (
 (* theorems to use for recursive defs *)
 (**************************************)
 
-val _ = set_trace "parse deep cases" 1;
-
 val my_d_def = Define
-  `my_d xx = case xx of
-      (x, []) => x
-    | (x, y::ys) => my_d (x + y, ys)`
+  `my_d xx = CASE xx OF [
+    || x.  (x, []) when x > 3 ~> x;
+    || x.  (x, []) ~> 0;
+    || (x, y, ys). (x, y::ys) ~> my_d (x + y, ys)]`
 
 val my_d_thms = store_thm ("my_d_thms",
-``(!x. my_d (x, []) = x) /\ 
+``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
+  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\ 
   (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
 
 REPEAT STRIP_TAC THENL [
-  SIMP_TAC (std_ss++PMATCH_SIMP_ss) [my_d_def],
+  ASM_SIMP_TAC (std_ss++PMATCH_SIMP_ss) [my_d_def],
+
+  ASM_SIMP_TAC (arith_ss++PMATCH_SIMP_ss) [my_d_def],
 
   CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [my_d_def])) THEN
   SIMP_TAC (std_ss ++ PMATCH_SIMP_ss) []

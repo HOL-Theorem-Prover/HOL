@@ -1,2 +1,33 @@
 This directory contains a deep embedding of pattern matching.
+
+*************************************************
 It is work in progress and still far from stable.
+*************************************************
+
+Normally, pattern matches are removed from the input by the parser of
+HOL4. An implementation of a pattern-match compilation algorithm
+replaces them with decision trees using primitive case-split functions
+for each involved type. The pretty printer prints the resulting decision
+trees in the form of pattern matches again. Both the pattern-compilation
+and the pretty printer are long, complicated ML-programs. As such, we
+are not sure, whether we can really trust them.
+
+Usually this is not a big issue. One can use simple pattern matches in
+a definition and then prove theorems expressing the semantics of the new
+definition not using pattern matching. This is advisable anyhow, since
+the command `Define` can behave unexpectedly anyhow. However, as soon as
+pattern matching is used extensively, this becomes infeasible. For
+example consider the ARM disassembler function `arm_decode` in
+`examples/ARM/v7/arm_decoderScript.sml`. Why should we trust the result
+of the pattern match compilation in such definitions?
+
+This pattern matching library tries to solve this problem. It provides
+a deep embedding of pattern matches. The parsing and pretty printing
+of these deeply embedded matches is much simpler and therefore more
+trustworthy. The complicated, untrusted pattern match compilation can
+then be performed inside the logic. Therefore, the need to trust the
+implementation of the pattern match compilation is removed. Moreover,
+the deep embedding provides some additional features like guards,
+views, free variables in patterns or multiple occurrences of a bound
+variable inside a pattern. There is also tool support for working with
+deeply embedded pattern matches inside the logic.

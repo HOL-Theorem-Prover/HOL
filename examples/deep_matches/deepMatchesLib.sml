@@ -3,6 +3,7 @@ struct
 
 open HolKernel boolLib bossLib
 open deepMatchesTheory
+open simpLib
 open quantHeuristicsLib
 open deepMatchesSyntax
 open constrFamiliesLib
@@ -64,12 +65,20 @@ val elim_fst_snd_select_ss =
        key   = SOME ([],``$@ (f:'a -> bool)``),
        conv  = K (K ELIM_FST_SND_SELECT_CONV)}
 
+val select_conj_ss =
+    simpLib.conv_ss
+      {name  = "SELECT_CONJ_SS_CONV",
+       trace = 2,
+       key   = SOME ([],``$@ (f:'a -> bool)``),
+       conv  = K (K (SIMP_CONV (std_ss++boolSimps.CONJ_ss) []))};
+
 fun rc_ss gl = list_ss ++ simpLib.merge_ss
  (gl @
   [pabs_elim_ss,
    pairSimps.paired_forall_ss,
    pairSimps.paired_exists_ss,
    pairSimps.gen_beta_ss,
+   select_conj_ss,
    elim_fst_snd_select_ss,
    simpLib.rewrites [
      pairTheory.EXISTS_PROD,
@@ -1122,7 +1131,7 @@ in
   thm2
 end
 
-
+(*
 fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg col_no t = let
   val thm0 = QCHANGED_CONV (
       PMATCH_SIMP_CONV_GENCALL rc_arg) t handle HOL_ERR _ => REFL t
@@ -1137,5 +1146,6 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg col_no t = let
 in
   TRANS thm0 thm1
 end
+*)
 
 end
