@@ -53,6 +53,11 @@ sig
     *      The current side condition stack, which grows as nested calls
     *      to the solver are made.
     *
+    * conv:
+    *   A continuation function, to be used if the reducer 
+    *   wants to continue traversing. The continuation invokes traversal
+    *   under equality. Similar to solver, but does not call EQT_ELIM.
+    *
     * addcontext: routine is invoked every time more context is added
     *   to the current environment by virtue of congruence routines.
     *
@@ -64,6 +69,7 @@ sig
          initial: context,
          addcontext : context * thm list -> context,
          apply: {solver:term list -> term -> thm,
+                 conv: term list -> term -> thm,
                  context: context,
                  stack:term list,
                  relation : (term * (term -> thm))} -> conv
@@ -74,6 +80,7 @@ sig
          initial: context,
          addcontext : context * thm list -> context,
          apply: {solver:term list -> term -> thm,
+                 conv: term list -> term -> thm,
                  context: context,
                  stack:term list,
                  relation : (term * (term -> thm))} -> conv}

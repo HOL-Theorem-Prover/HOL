@@ -414,7 +414,7 @@ datatype simpset =
      mk_comb(Term.inst theta f, x)
    end
 
-   fun apply {solver,context,stack,relation = (relation,_)} t = let
+   fun apply {solver,conv,context,stack,relation = (relation,_)} t = let
      val _ = can (match_term rel_t) relation orelse
              raise ERR ("mk_reducer.apply", "Wrong relation")
      val n = case context of redExn n => n
@@ -518,10 +518,10 @@ fun remove_ssfrags ss names =
    in
      CONVNET (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
    end
-   fun apply {solver,context,stack,relation} tm = let
+   fun apply {solver,conv,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
    in
-     tryfind (fn conv => conv solver stack tm) (lookup tm net)
+     tryfind (fn conv' => conv' solver stack tm) (lookup tm net)
    end
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,
