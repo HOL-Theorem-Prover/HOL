@@ -30,7 +30,8 @@ val thm_t' = PMATCH_SIMP_CONV t'
 
 val example1 = ``
   CASE (a,x,xs) OF [
-    || x. (NONE,x,[]) ~> x;
+    ||. (NONE,4,[]) ~> 0;
+    || x. (NONE,x,[]) when x < 10 ~> x;
     || x. (NONE,x,[2]) ~> x;
     || (x,v18). (NONE,x,[v18]) ~> 3;
     || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;

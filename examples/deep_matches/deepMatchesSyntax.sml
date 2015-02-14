@@ -230,25 +230,26 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
 
     fun pp_row (vars, pat, guard, rh) = (
       term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
-      ublock PP.CONSISTENT 0 (
+      ublock PP.INCONSISTENT 5 (
         (if ((type_of vars = oneSyntax.one_ty) andalso
             not (free_in vars pat) andalso
             not (free_in vars guard) andalso
             not (free_in vars rh)) then (
           add_string "||." >> add_break (1, 0)
         ) else (          
-          add_string "||" >> add_break (1, 0) >>
+          add_string "||" >>
+          add_break (1, 0) >>
           sys (Top, Top, Top) (d - 1) vars >>
           add_string "." >>
           add_break (1, 0)
-        )) >>
+        )) >> 
         sys (Top, Top, Top) (d - 1) pat >>
         (if (aconv guard T) then nothing else (
-          add_break (1, 0) >> add_string "when" >> add_break (1, 0) >>
+          add_string " when" >> add_break (1, 0) >>
           sys (Top, Prec (2000, ""), Top) (d - 1) guard
         )) >>
-        add_break (1, 0) >> add_string "~>" >> add_break (1, 0) >>
-        sys (Top, Prec (2000, ""), Top) (d - 1) rh
+        add_string " ~>" >> add_break (1, 0) >>
+        sys (Top, Prec (2000, ""), Top) (d - 1) rh        
       ))
     )
   in

@@ -5,6 +5,7 @@ open HolKernel boolLib bossLib
 open deepMatchesTheory
 open simpLib
 open quantHeuristicsLib
+open DatatypeSimps
 open deepMatchesSyntax
 open constrFamiliesLib
 
@@ -72,6 +73,7 @@ val select_conj_ss =
        key   = SOME ([],``$@ (f:'a -> bool)``),
        conv  = K (K (SIMP_CONV (std_ss++boolSimps.CONJ_ss) []))};
 
+
 fun rc_ss gl = list_ss ++ simpLib.merge_ss
  (gl @
   [pabs_elim_ss,
@@ -80,6 +82,8 @@ fun rc_ss gl = list_ss ++ simpLib.merge_ss
    pairSimps.gen_beta_ss,
    select_conj_ss,
    elim_fst_snd_select_ss,
+   boolSimps.EQUIV_EXTRACT_ss,
+   type_rewrites_stateful_ss (),
    simpLib.rewrites [
      pairTheory.EXISTS_PROD,
      pairTheory.FORALL_PROD,
