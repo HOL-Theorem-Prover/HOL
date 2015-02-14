@@ -262,7 +262,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
      add_string "]"
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
+val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
 
 
 (***********************************************)
@@ -318,55 +318,44 @@ val _ =
   end;
 
 
+val PMATCH_magic_1_tm = mk_const ("PMATCH_magic_1", ``:'a -> ('a -> 'b option) list -> 'b``);
+val PMATCH_ROW_magic_0_tm = mk_const ("PMATCH_ROW_magic_0",
+  ``:'a # bool # 'b -> 'a -> 'b option``);
+val PMATCH_ROW_magic_1_tm = mk_const ("PMATCH_ROW_magic_1",
+  ``:('a -> 'b # bool # 'c) -> 'b -> 'c option``);
+val PMATCH_ROW_magic_2_tm = mk_const("PMATCH_ROW_magic_2",
+  ``:'a -> bool -> 'b -> 'a # bool # 'b``);
+val PMATCH_ROW_magic_3_tm = mk_const("PMATCH_ROW_magic_3",
+  ``:'a -> 'b -> 'a # bool # 'b``);
 
-
-val _ = new_constant ("PMATCH_magic_1", type_of ``PMATCH``)
-val _ = new_constant ("PMATCH_ROW_magic_1", type_of 
-   ``\abc. PMATCH_ROW (\x. FST (abc x)) (\x. FST (SND (abc x))) (\x. SND (SND ((abc x))))``)
-
-val _ = new_constant ("PMATCH_ROW_magic_0", type_of 
-   ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
-
-val _ = new_constant ("PMATCH_ROW_magic_2", type_of 
-   ``\(pat:'a) (g:bool) (res:'b). (pat,g,res)``)
-
-val _ = new_constant ("PMATCH_ROW_magic_3", type_of 
-   ``\(pat:'a) (res:'b). (pat,T,res)``)
-
-val PMATCH_magic_1_tm = ``PMATCH_magic_1``;
-val PMATCH_ROW_magic_0_tm = ``PMATCH_ROW_magic_0``;
-val PMATCH_ROW_magic_1_tm = ``PMATCH_ROW_magic_1``;
-val PMATCH_ROW_magic_2_tm = ``PMATCH_ROW_magic_2``;
-val PMATCH_ROW_magic_3_tm = ``PMATCH_ROW_magic_3``;
-
-val _ = add_rule{pp_elements = [TOK "~>"],
+val _ = temp_add_rule{pp_elements = [TOK "~>"],
                  fixity = Infix (NONASSOC, 3),
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = "PMATCH_ROW_magic_3"}
 
-val _ = add_rule{term_name = "PMATCH_ROW_magic_2",
+val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_2",
       fixity = Infix (HOLgrammars.NONASSOC, 3),
       pp_elements = [TOK "when", TM, TOK "~>"],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
 
-val _ = add_rule{term_name = "PMATCH_ROW_magic_1",
+val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
       fixity = Binder,
       pp_elements = [TOK "||"],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
 
-val _ = add_rule{term_name = "PMATCH_ROW_magic_0",
+val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_0",
       fixity = Prefix 2,
       pp_elements = [TOK "||."],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
 
-val _ = add_rule{term_name = "PMATCH_magic_1",
+val _ = temp_add_rule{term_name = "PMATCH_magic_1",
       fixity = Closefix,
       pp_elements = [TOK "CASE", TM, TOK "OF"],
       paren_style = OnlyIfNecessary,

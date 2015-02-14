@@ -79,6 +79,22 @@ val PMATCH_ROW_REDUNDANT_def = Define `
     (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))`
 
 
+(***************************************************)
+(* Constants for parsing magic                     *)
+(***************************************************)
+
+val _ = new_constant ("PMATCH_magic_1", type_of ``PMATCH``)
+val _ = new_constant ("PMATCH_ROW_magic_1", type_of 
+   ``\abc. PMATCH_ROW (\x. FST (abc x)) (\x. FST (SND (abc x))) (\x. SND (SND ((abc x))))``)
+
+val _ = new_constant ("PMATCH_ROW_magic_0", type_of 
+   ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
+
+val _ = new_constant ("PMATCH_ROW_magic_2", type_of 
+   ``\(pat:'a) (g:bool) (res:'b). (pat,g,res)``)
+
+val _ = new_constant ("PMATCH_ROW_magic_3", type_of 
+   ``\(pat:'a) (res:'b). (pat,T,res)``)
 
 (***************************************************)
 (* Congruences                                     *)
@@ -792,4 +808,6 @@ Q.PAT_ASSUM `_ = SOME x'` (fn thm =>
 ASM_SIMP_TAC std_ss [])
 
 
-val _ = export_theory()
+val _ = export_theory();;
+
+
