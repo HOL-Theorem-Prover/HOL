@@ -8,6 +8,7 @@ open quantHeuristicsLib
 open DatatypeSimps
 open deepMatchesSyntax
 open constrFamiliesLib
+open Traverse
 
 (***********************************************)
 (* Simpset to evaluate PMATCH_ROWS             *)
@@ -74,8 +75,7 @@ val select_conj_ss =
        conv  = K (K (SIMP_CONV (std_ss++boolSimps.CONJ_ss) []))};
 
 
-fun rc_ss gl = list_ss ++ simpLib.merge_ss
- (gl @
+val static_ss = simpLib.merge_ss
   [pabs_elim_ss,
    pairSimps.paired_forall_ss,
    pairSimps.paired_exists_ss,
@@ -83,25 +83,23 @@ fun rc_ss gl = list_ss ++ simpLib.merge_ss
    select_conj_ss,
    elim_fst_snd_select_ss,
    boolSimps.EQUIV_EXTRACT_ss,
-   type_rewrites_stateful_ss (),
    simpLib.rewrites [
      pairTheory.EXISTS_PROD,
      pairTheory.FORALL_PROD,
      PMATCH_ROW_EQ_NONE,
      PMATCH_ROW_COND_def,
      PAIR_EQ_COLLAPSE,
-     oneTheory.one]])
+     oneTheory.one]];
+
+fun rc_ss gl = srw_ss() ++ simpLib.merge_ss (static_ss :: gl)
 
 fun callback_CONV cb_opt t = (case cb_opt of
-    NONE => raise UNCHANGED
-  | SOME cb => (
-    if (aconv t T) orelse (aconv t F) then (raise UNCHANGED) else
-    (EQT_INTRO (cb t)
-     handle HOL_ERR _ => EQF_INTRO (cb (mk_neg t)))))
+    NONE => NO_CONV t
+  | SOME cb => cb t)
 
-fun rc_conv (gl, callback_opt) =
+fun rc_conv (gl, callback_opt) = REPEATC (
   SIMP_CONV (rc_ss gl) [] THENC
-  TRY_CONV (callback_CONV callback_opt)
+  TRY_CONV (callback_CONV callback_opt))
 
 fun rc_tac (gl, callback_opt) =
   CONV_TAC (rc_conv (gl, callback_opt))
@@ -499,7 +497,7 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 
 fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
-val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN []
+val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
 
 
 
@@ -1027,7 +1025,7 @@ fun PMATCH_EXPAND_COLS_CONV t = let
   end
 in
   thm1
-end handle HOL_ERR _ => raise UNCHANGED
+end handle HOL_ERR _ => raise UNCHANGED;
 
 
 (***********************************************)
@@ -1044,29 +1042,31 @@ PMATCH (SOME y,x,l)
    ]``
 *)
 
-fun PMATCH_SIMP_CONV_GENCALL rc_arg = REPEATC (FIRST_CONV [
+fun PMATCH_SIMP_CONV_GENCALL rc_arg = 
+REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
   CHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
   CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV
-])
+]);
 
 fun PMATCH_SIMP_CONV_GEN ssl = PMATCH_SIMP_CONV_GENCALL (ssl, NONE)
 
-val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN []
+val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN [];
 
-fun PMATCH_SIMP_convdata_conv ssl callback back =
-  PMATCH_SIMP_CONV_GENCALL (ssl, SOME (callback back))
-
-
-fun PMATCH_SIMP_GEN_ss ssl = simpLib.conv_ss
-  { name = "PMATCH_SIMP_CONV",
-    key = SOME ([], ``(PMATCH (v:'a) rows):'b``),
-    trace = 1,
-    conv = PMATCH_SIMP_convdata_conv ssl
-  }
+fun PMATCH_SIMP_GEN_ss ssl = let
+   exception pmatch_simp_reducer_exn
+   fun addcontext (context,thms) = context
+   fun apply {solver,conv,context,stack,relation} tm = (
+     if not (is_PMATCH tm) then failwith "not a PMATCH" else
+     QCHANGED_CONV (PMATCH_SIMP_CONV_GENCALL (ssl, SOME (conv stack))) tm
+   )
+   in simpLib.dproc_ss (REDUCER {name=SOME"PMATCH_SIMP_REDUCER",
+               addcontext=addcontext, apply=apply,
+               initial=pmatch_simp_reducer_exn})
+   end;
 
 val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
 
