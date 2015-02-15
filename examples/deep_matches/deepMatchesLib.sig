@@ -69,4 +69,34 @@ sig
   val PMATCH_EXPAND_COLS_CONV : conv
 
 
+  (********************************)
+  (* removing PMATCH-terms        *)
+  (* via lifting it to the nearest*)
+  (* boolean term and then        *)
+  (* unfolding                    *)
+  (********************************)
+
+  (* One can eliminate PMATCHs by unfolding all
+     cases explicitly. This is often handy to
+     prove properties about functions defined
+     via pattern matches without the need to
+     do the case-splits manually. 
+
+     This tactic looks for the smallest wrapper
+     around a PMATCH such that the term is of type
+     bool. This term is then expanded into a big
+     conjunction. For each case of the pattern match,
+     one conjunct is created. *)
+  val PMATCH_LIFT_BOOL_CONV : conv
+
+  (* There is also a more generic version that
+     allows to provide extra ssfrags. This might
+     be handy, if the PMATCH contains functions
+     not known by the default methods. *)
+  val PMATCH_LIFT_BOOL_CONV_GEN : ssfrag list -> conv
+
+  (* corresponding ssfrags *)
+  val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_LIFT_BOOL_ss : ssfrag
+
 end

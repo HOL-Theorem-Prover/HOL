@@ -252,14 +252,17 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
         sys (Top, Prec (2000, ""), Top) (d - 1) rh        
       ))
     )
-  in
+  in ublock PP.CONSISTENT 0 (
      (ublock PP.CONSISTENT 2 (add_string "CASE" >> add_break(1,2) >>
        sys (Top, Top, Top) (d - 1) v >>
        add_break(1,0) >> add_string "OF [")) >>
      add_break (1, 2) >>
-     smpp.pr_list pp_row (add_string ";" >> add_break (1, 2)) rows' >>
+     ublock PP.CONSISTENT 0 (
+       smpp.pr_list pp_row (add_string ";" >> add_break (1, 0)) rows'
+     ) >>
      add_break (1, 0) >>
      add_string "]"
+  )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);

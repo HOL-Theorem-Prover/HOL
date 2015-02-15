@@ -808,6 +808,39 @@ Q.PAT_ASSUM `_ = SOME x'` (fn thm =>
 ASM_SIMP_TAC std_ss [])
 
 
+
+(***************************************************)
+(* UNROLLING PREDICATES                            *)
+(***************************************************)
+
+(* trivial case added only for completeness *)
+
+val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
+  ``!P v. P (PMATCH v []) = P ARB``,
+  SIMP_TAC std_ss [PMATCH_def, PMATCH_INCOMPLETE_def]);
+
+val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
+``!P v p g r rows. 
+     (!x1 x2. (p x1 = p x2) ==> (x1 = x2)) ==>
+
+     (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
+       (!x. (v = p x) ==> g x ==> P (r x)) /\
+       ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def] THEN
+Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+  `!x'. (p x' = v) = (x' = x)` by METIS_TAC[] THEN
+  `!x'. (v = p x') = (x' = x)` by METIS_TAC[] THEN
+  ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [],
+
+  FULL_SIMP_TAC std_ss [] THEN
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+  METIS_TAC[]
+])
+
+
 val _ = export_theory();;
 
 

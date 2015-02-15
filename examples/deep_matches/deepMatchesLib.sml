@@ -1071,6 +1071,167 @@ fun PMATCH_SIMP_GEN_ss ssl = let
 val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
 
 
+(***********************************************)
+(* Lifting to lowest boolean level             *)
+(***********************************************)
+
+(* 
+
+
+
+val tm = ``P (
+  CASE xx OF [
+    ]):bool``
+
+val tm = ``P (
+  CASE xx OF [
+    || (x, y, ys). (x, y::ys) ~> (x + y);
+    ||.  (0, []) ~> 9;
+    || x.  (x, []) when x > 3 ~> x;
+    || x.  (x, []) ~> 0]):bool``
+*)
+
+fun PMATCH_LIFT_BOOL_CONV_AUX rc_arg tm = let
+  val (p_tm, m_tm) = dest_comb tm
+  val (v, rows) = dest_PMATCH m_tm
+in
+  case rows of
+     [] =>
+     REWRITE_CONV [PMATCH_PRED_UNROLL_NIL] tm
+   | row::rows' => let
+      val (pt, gt, rh) = dest_PMATCH_ROW row
+      (* instantiate base thm *)
+      val thm0 = let
+         val thm00 = ISPEC p_tm (FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS)
+         val thm01 = ISPEC v thm00
+         val thm02 = ISPEC pt thm01
+         val thm03 = ISPEC gt thm02
+         val thm04 = ISPEC rh thm03
+         val thm05 = ISPEC (listSyntax.mk_list (rows', type_of row)) thm04 in
+        thm05
+      end
+
+      (* elem precond *)
+      val thm1 = let 
+        val pre = fst (dest_imp (concl thm0))
+        val pre_thm = prove (pre, rc_tac rc_arg)
+      in
+        MP thm0 pre_thm
+      end
+
+      (* Use right variable names *)
+      val thm2 = let
+        val vars_tm = fst (pairSyntax.dest_pabs pt)
+
+        val c = (RAND_CONV (pairTools.PABS_INTRO_CONV vars_tm)) THENC
+                TRY_CONV (pairTools.ELIM_TUPLED_QUANT_CONV) THENC
+                SIMP_CONV std_ss []
+        val thm2a = CONV_RULE (RHS_CONV (RATOR_CONV (RAND_CONV c))) thm1
+        val thm2b = CONV_RULE (RHS_CONV (RAND_CONV (RATOR_CONV (RAND_CONV c)))) thm2a
+      in
+        thm2b
+      end
+
+      (* recursive call *)
+      val thm3 = let
+        val c = PMATCH_LIFT_BOOL_CONV_AUX rc_arg
+        val thm3 = CONV_RULE (RHS_CONV (RAND_CONV (RAND_CONV c))) thm2
+      in 
+        thm3 
+      end
+    in
+      thm3
+    end
+end
+
+(*
+val tm = ``(P2 /\ Q ==> (
+  CASE xx OF [
+    || (x, y, ys). (x, y::ys) ~> (x + y);
+    ||.  (0, []) ~> 9;
+    || x.  (x, []) when x > 3 ~> x;
+    || x.  (x, []) ~> 0] = 5))``
+
+val tm = ``
+  CASE xx OF [
+    || (x, y, ys). (x, y::ys) ~> (x + y);
+    ||.  (0, []) ~> 9;
+    || x.  (x, []) when x > 3 ~> x;
+    || x.  (x, []) ~> 0] = 5``
+*)
+
+
+val PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM = prove (
+ ``(P1 ==> (X1 /\ (P2 ==> X2)) =
+   (P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
+PROVE_TAC[])
+
+fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
+  (* check whether we should really process tm *)
+  val _ = if type_of tm = bool then () else raise UNCHANGED
+  val p_tm = find_term is_PMATCH tm
+  fun has_subterm p t = (find_term p t; true) handle HOL_ERR _ => false
+
+  val is_minimal = not (has_subterm (fn t =>
+    (not (aconv t tm)) andalso
+    (type_of t = bool) andalso
+    (has_subterm is_PMATCH t)) tm)
+  val _ = if is_minimal then () else raise UNCHANGED
+
+  (* prepare tm *)
+  val v = genvar (type_of p_tm)
+  val P_tm = mk_abs (v, subst [p_tm |-> v] tm)
+  val P_v = genvar (type_of P_tm)
+
+  (* do real work *)
+  val thm0 = PMATCH_LIFT_BOOL_CONV_AUX rc_arg (mk_comb (P_v, p_tm))
+ 
+  (* create conjuncts *)
+  val thm1 = let
+     fun c t = (REWR_CONV PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM THENC
+               TRY_CONV (RAND_CONV c)) t
+     val thm1a = CONV_RULE (RHS_CONV (RAND_CONV c)) thm0
+
+     val c = SIMP_CONV (std_ss++boolSimps.CONJ_ss) [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM, GSYM CONJ_ASSOC]
+     val thm1b = CONV_RULE (RHS_CONV (EVERY_CONJ_CONV c)) thm1a
+
+     val c = rc_conv rc_arg
+     val thm1c = CONV_RULE (RHS_CONV (EVERY_CONJ_CONV c)) thm1b
+  in
+     thm1c
+  end
+  
+  (* restore original predicate *)
+  val thm2 = let
+    val thm2a = INST [P_v |-> P_tm] thm1
+    val thm2b = CONV_RULE (LHS_CONV BETA_CONV) thm2a
+    val thm2c = CONV_RULE (RHS_CONV (DEPTH_CONV BETA_CONV)) thm2b
+    val _ = assert (fn thm => aconv (lhs (concl thm)) tm) thm2c
+  in
+    thm2c
+  end   
+in
+  thm2
+end
+
+fun PMATCH_LIFT_BOOL_CONV_GEN ssl = PMATCH_LIFT_BOOL_CONV_GENCALL (ssl, NONE)
+
+val PMATCH_LIFT_BOOL_CONV = PMATCH_LIFT_BOOL_CONV_GEN [];
+
+fun PMATCH_LIFT_BOOL_GEN_ss ssl = let
+   exception pmatch_simp_reducer_exn
+   fun addcontext (context,thms) = context
+   fun apply {solver,conv,context,stack,relation} tm = (
+     QCHANGED_CONV (PMATCH_LIFT_BOOL_CONV_GENCALL (ssl, SOME (conv stack))) tm
+   )
+   in simpLib.dproc_ss (REDUCER {name=SOME"PMATCH_LIFT_BOOL_REDUCER",
+               addcontext=addcontext, apply=apply,
+               initial=pmatch_simp_reducer_exn})
+   end;
+
+val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
+
+
 
 (***********************************************)
 (* Case_splits                                 *)

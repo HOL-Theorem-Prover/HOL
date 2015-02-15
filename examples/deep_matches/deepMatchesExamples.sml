@@ -154,4 +154,14 @@ REPEAT STRIP_TAC THENL [
   SIMP_TAC (std_ss ++ PMATCH_SIMP_ss) []
 ])
 
+(* Let's prove it via lifting *)
+val my_d_thms2 = store_thm ("my_d_thms2",
+``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
+  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\ 
+  (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
+
+REPEAT STRIP_TAC THEN (
+  CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [my_d_def])) THEN
+  ASM_SIMP_TAC (arith_ss++PMATCH_LIFT_BOOL_ss) []
+))
 
