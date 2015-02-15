@@ -400,7 +400,7 @@ local
       else if !ORACLE then ORACLE_solver goal
       else
         let
-          val {context, solver = _, relation = _, stack = _} = dproc_context
+          val {context, solver = _, conv = _, relation = _, stack = _} = dproc_context
           val {assumptions,reductions,judgements} =
               case context of
                 State state => state

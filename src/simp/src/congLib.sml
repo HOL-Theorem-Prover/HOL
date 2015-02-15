@@ -152,7 +152,7 @@ val cong_reducer =
         in
           CONVNET (insertThms net thms)
         end
-      fun apply {solver,context,stack,relation} tm =
+      fun apply {solver,conv,context,stack,relation} tm =
         let
             val net = ((raise context) handle CONVNET net => net)
             val thm = cong_rewrite net relation tm
@@ -174,9 +174,10 @@ fun eq_reducer_wrapper (eq_reducer as REDUCER data)= let
   val initial = #initial data
   val addcontext = #addcontext data
 
-  fun apply {solver,context,stack,relation as (_, refl)} tm = let
+  fun apply {solver,conv,context,stack,relation as (_, refl)} tm = let
     val eqthm = #apply data
-                       {solver=solver,context=context,stack=stack,
+                       {solver=solver,conv=conv,
+                        context=context,stack=stack,
                         relation=relation}
                        tm
     val congThm = refl tm
