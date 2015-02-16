@@ -145,14 +145,9 @@ val my_d_thms = store_thm ("my_d_thms",
   (!x. x <= 3 ==> (my_d (x, []) = 0)) /\ 
   (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
 
-REPEAT STRIP_TAC THENL [
-  ASM_SIMP_TAC (std_ss++PMATCH_SIMP_ss) [my_d_def],
-
-  ASM_SIMP_TAC (arith_ss++PMATCH_SIMP_ss) [my_d_def],
-
-  CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [my_d_def])) THEN
-  SIMP_TAC (std_ss ++ PMATCH_SIMP_ss) []
-])
+REPEAT STRIP_TAC THEN (
+  ASM_SIMP_TAC (arith_ss++PMATCH_SIMP_ss) [Once my_d_def]
+));
 
 (* Let's prove it via lifting *)
 val my_d_thms2 = store_thm ("my_d_thms2",
@@ -161,7 +156,18 @@ val my_d_thms2 = store_thm ("my_d_thms2",
   (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
 
 REPEAT STRIP_TAC THEN (
-  CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [my_d_def])) THEN
-  ASM_SIMP_TAC (arith_ss++PMATCH_LIFT_BOOL_ss) []
+  ASM_SIMP_TAC (arith_ss++PMATCH_LIFT_BOOL_ss) [Once my_d_def]
 ))
 
+(* This lifting is also automated as a rule*)
+val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
+
+(* The result is not as nice, but often useful
+
+ val my_d_thms3 =
+   |- (∀x. x > 3 ⇒ (my_d (x,[]) = x)) ∧
+   (∀x. ¬(x > 3) ⇒ (my_d (x,[]) = 0)) ∧
+   (∀x y ys. my_d (x,y::ys) = my_d (x + y,ys)) ∧
+   ∀xx. (∀x. xx ≠ (x,[])) ∧ (∀x y ys. xx ≠ (x,y::ys)) ⇒ (my_d xx = ARB):
+   thm
+*)

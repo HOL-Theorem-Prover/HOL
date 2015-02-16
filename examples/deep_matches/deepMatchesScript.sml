@@ -821,7 +821,7 @@ val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
 
 val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
 ``!P v p g r rows. 
-     (!x1 x2. (p x1 = p x2) ==> (x1 = x2)) ==>
+     (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
 
      (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
        (!x. (v = p x) ==> g x ==> P (r x)) /\
@@ -831,11 +831,37 @@ REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def] THEN
 Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
   FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-  `!x'. (p x' = v) = (x' = x)` by METIS_TAC[] THEN
-  `!x'. (v = p x') = (x' = x)` by METIS_TAC[] THEN
-  ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [],
+  `!x'. ((p x' = v) /\ g x') = (x' = x)` by METIS_TAC[] THEN
+  ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
+  METIS_TAC[],
 
   FULL_SIMP_TAC std_ss [] THEN
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+  METIS_TAC[]
+])
+
+val PMATCH_PRED_UNROLL_CONS_NO_INJ = store_thm ("PMATCH_PRED_UNROLL_CONS_NO_INJ",
+``!P v p g r rows.      
+     (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
+       (!x. (v = p x) ==> g x ==> P (r (@x. PMATCH_ROW_COND p g v x))) /\
+       ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC std_ss [PMATCH_def, PMATCH_ROW_def] THEN
+Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
+  ASM_SIMP_TAC std_ss [some_def] THEN
+  FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    Q.PAT_ASSUM `v = p x'` (ASSUME_TAC o GSYM) THEN
+    ASM_SIMP_TAC std_ss [],
+
+    PROVE_TAC[],
+
+    Q.PAT_ASSUM `!x'. _ ==> _` (MP_TAC o Q.SPEC `x`) THEN
+    ASM_SIMP_TAC std_ss []
+  ],
+
+  ASM_SIMP_TAC std_ss [some_def] THEN
   FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
   METIS_TAC[]
 ])

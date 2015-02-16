@@ -99,4 +99,14 @@ sig
   val PMATCH_LIFT_BOOL_GEN_ss : ssfrag list -> ssfrag
   val PMATCH_LIFT_BOOL_ss : ssfrag
 
+  (* A special case of lifting are function definitons,
+     which use PMATCH. In order to use such definitions
+     with the rewritig tools, it is often handy to
+     move the PMATCH to the toplevel and introduce
+     multiple cases, one case for each row of the
+     PMATCH. This is automated by the following rules. *)
+
+  val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
+  val PMATCH_TO_TOP_RULE : rule
+
 end

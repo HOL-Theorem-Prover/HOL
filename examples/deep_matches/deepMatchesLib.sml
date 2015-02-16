@@ -1099,24 +1099,24 @@ in
      [] =>
      REWRITE_CONV [PMATCH_PRED_UNROLL_NIL] tm
    | row::rows' => let
+(*    val (row::rows') = rows *)
       val (pt, gt, rh) = dest_PMATCH_ROW row
-      (* instantiate base thm *)
-      val thm0 = let
-         val thm00 = ISPEC p_tm (FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS)
-         val thm01 = ISPEC v thm00
-         val thm02 = ISPEC pt thm01
-         val thm03 = ISPEC gt thm02
-         val thm04 = ISPEC rh thm03
-         val thm05 = ISPEC (listSyntax.mk_list (rows', type_of row)) thm04 in
-        thm05
-      end
+      val rows'_tm = listSyntax.mk_list (rows', type_of row)
 
-      (* elem precond *)
-      val thm1 = let 
-        val pre = fst (dest_imp (concl thm0))
+      (* instantiate base thm and try to prove precond *)
+      val thm1 = let
+        val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS
+        val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
+        val pre = fst (dest_imp (concl thm01))
         val pre_thm = prove (pre, rc_tac rc_arg)
       in
-        MP thm0 pre_thm
+        MP thm01 pre_thm
+      end handle HOL_ERR _ => let
+         (* proving precond failed, try fallback theorem *)
+        val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS_NO_INJ
+        val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
+      in
+        thm01
       end
 
       (* Use right variable names *)
@@ -1145,6 +1145,7 @@ in
 end
 
 (*
+
 val tm = ``(P2 /\ Q ==> (
   CASE xx OF [
     || (x, y, ys). (x, y::ys) ~> (x + y);
@@ -1165,6 +1166,7 @@ val PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM = prove (
  ``(P1 ==> (X1 /\ (P2 ==> X2)) =
    (P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
 PROVE_TAC[])
+
 
 fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
   (* check whether we should really process tm *)
@@ -1231,6 +1233,29 @@ fun PMATCH_LIFT_BOOL_GEN_ss ssl = let
 
 val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
 
+
+fun PMATCH_TO_TOP_RULE_SINGLE ssl thm = let
+  val thm0 = GEN_ALL thm
+  val thm1 = CONV_RULE (DEPTH_CONV (PMATCH_LIFT_BOOL_CONV_GEN ssl)) thm0
+  val thm2 = CONV_RULE (STRIP_QUANT_CONV (
+     EVERY_CONJ_CONV (STRIP_QUANT_CONV (TRY_CONV (RAND_CONV markerLib.stmark_term))))) thm1
+  val thm3 = SIMP_RULE std_ss [FORALL_AND_THM, 
+   Cong (REFL ``stmarker (t:'a)``)] thm2
+  val thm4 = PURE_REWRITE_RULE [markerTheory.stmarker_def] thm3
+in 
+  thm4
+end
+
+fun PMATCH_TO_TOP_RULE_GEN ssl thm = let
+  val thms = BODY_CONJUNCTS thm
+  val thms' = List.map (PMATCH_TO_TOP_RULE_SINGLE ssl) thms
+  val thm0 = LIST_CONJ thms'
+  val thm1 = CONV_RULE unwindLib.FLATTEN_CONJ_CONV thm0
+in
+  thm1
+end
+
+fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
 
 
 (***********************************************)
