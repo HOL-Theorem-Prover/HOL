@@ -33,11 +33,6 @@ sig
                           {no_lastmakercheck : bool} ->
                           unit
 
-  (* dependency analysis *)
-  exception HolDepFailed
-  val runholdep :
-      {ofs : output_functions, includes : string list, extras : string list,
-       arg : File, destination : string} -> unit
 
   (* File IO *)
   val string_part : File -> string
@@ -53,19 +48,38 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
 
-  type holmake_result = {visited : string Binaryset.set } option
+  val make_best_relative :
+      {relpath : string option, absdir : string} -> string -> string
+
+  type include_info = {includes : string list, preincludes : string list}
+  type holmake_dirinfo = {visited : string Binaryset.set,
+                          includes : string list,
+                          preincludes : string list }
+  type holmake_result = holmake_dirinfo option
 
   val maybe_recurse :
       {warn: string -> unit,
+       diag : string -> unit,
        no_prereqs : bool,
        hm: {relpath : string option, abspath : string,
             visited : string Binaryset.set} ->
            string list -> string list -> holmake_result,
-       visited: string Binaryset.set,
-       includes : string list,
+       dirinfo : holmake_dirinfo,
        dir : {abspath: string, relpath: string option},
-       local_build : unit -> bool,
+       local_build : include_info -> bool,
        cleantgt : string option} ->
       holmake_result
+
+  val holdep_arg : File -> File option
+
+  val get_direct_dependencies :
+      {incinfo : include_info, DEPDIR : string,
+       output_functions : output_functions,
+       extra_targets : string list } ->
+      File -> File list
+  exception HolDepFailed
+
+  val forces_update_of : string * string -> bool
+
 
 end
