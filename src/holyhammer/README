@@ -27,6 +27,3 @@ Examples: rlwrap bin/hol
   holyhammer ``0 < 1``;
   load "complexTheory";
   holyhammer ``0 <> 1``;
-
-
-

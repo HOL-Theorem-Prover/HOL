@@ -129,7 +129,7 @@ fun number_address a =
 fun quote_of_address a = Lib.quote (number_address a)
 
 (* Changing the representation of the tree to a list of leafs with addresses.
-   The list should be sorted so that the tree can be rebuild later. *)
+   The list is sorted so that the tree can be rebuild later. *)
 
 fun flatten_deptree a dt = 
  let 
