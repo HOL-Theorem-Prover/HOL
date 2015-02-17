@@ -36,6 +36,11 @@ Adding more provers (optional):
   Please be aware that the name of the binary for Z3 should be z3 and 
   for Vampire it should be vampire.
 
+Removing provers:
+  Delete the associating binaries (eprover,z3 or vampire), 
+  holyhammer will check that the file doesn't exists anymore and won't perform 
+  premise selection and translation for this prover.
+
 Examples: rlwrap bin/hol
   load "holyHammer";
   open holyHammer;

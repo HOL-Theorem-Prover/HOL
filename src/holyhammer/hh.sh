@@ -1,17 +1,20 @@
 # Holyhammer (performs premise selection and translation)
-VAMPIRE="provers/vampire/vampire_2.6"
-Z3="provers/z3/z3-4.0"
+EPROVER="provers/eprover/eprover"
+VAMPIRE="provers/vampire/vampire"
+Z3="provers/z3/z3"
 Theorem="Theorem"
 
-# Run eprover with 128 premises (default prover)
-cd hh
-./hh_h4 128 ../theories ../theories/conjecture conjecture \
-../provers/eprover/eprover_files > /dev/null
-cd ../provers
-echo "Running Eprover ..."
-sh eprover.sh
-EPROVER_STATUS=$(head -n 1 eprover/eprover_files/eprover_status)
+# Run eprover with 128 premises 
+if [ -f $EPROVER ]; then
+  cd hh
+  ./hh_h4 128 ../theories ../theories/conjecture conjecture \
+  ../provers/eprover/eprover_files > /dev/null
+  cd ../provers
+  echo "Running Eprover ..."
+  sh eprover.sh
+  EPROVER_STATUS=$(head -n 1 eprover/eprover_files/eprover_status)
 cd ..
+fi
 
 # Run vampire on 96 premises
 if [ "$EPROVER_STATUS" != "$Theorem" ] && [ -f $VAMPIRE ]; then
