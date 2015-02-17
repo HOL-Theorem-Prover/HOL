@@ -7,7 +7,7 @@ OUT2="$DIR/z3_out2"
 OUT="$DIR/z3_out" 
 STATUS="$DIR/z3_status" 
 
-# Running Z3 (Executable name to be changed if you use a different version)
+# Running Z3 (4.0)
 cd z3
 ./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
 -T:$TIM $IN > $OUT1 2> /dev/null

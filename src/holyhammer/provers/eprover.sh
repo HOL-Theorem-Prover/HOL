@@ -7,7 +7,7 @@ OUT2="$DIR/eprover_out2"
 OUT="$DIR/eprover_out" 
 STATUS="$DIR/eprover_status" 
 
-# Running eprover with best strategy
+# Running eprover with best strategy (1.8)
 cd eprover
 perl runepar2.pl $TIM 0 $IN 2 1 1 new_mzt_small \
  | grep "file[(]'\| SZS" > $OUT1

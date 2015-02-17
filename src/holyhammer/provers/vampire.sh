@@ -7,7 +7,7 @@ OUT1="$DIR/vampire_out1"
 OUT2="$DIR/vampire_out2"
 STATUS="$DIR/vampire_status" 
 
-# Running Vampire (Executable name to be changed if you use a different version)
+# Running Vampire (2.6)
 cd vampire
 ./vampire --mode casc -t $TIM --proof tptp --output_axiom_names on $IN \
  | grep "file[(]'\| SZS" > $OUT1
