@@ -283,7 +283,7 @@ fun INST_TYPE [] th = th
 fun DISCH w (THM(ocl,asl,c)) =
   (Assert (is_bool w) "DISCH" "not a proposition";
    make_thm Count.Disch
-      (ocl,
+      (Tag.merge_dep ocl, (* Tracking dependencies *)
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
        Term.prim_mk_imp w c));
 
@@ -656,7 +656,7 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   in make_thm Count.Exists (tag th, hypset th, w)
+   in make_thm Count.Exists (Tag.merge_dep (tag th), hypset th, w) (* Tracking dependencies *)
    end
 end;
 
@@ -726,9 +726,9 @@ fun CHOOSE (v,xth) bth =
  *                      th2;
  *---------------------------------------------------------------------------*)
 
-fun CONJ th1 th2 =
+fun CONJ th1 th2 = (* Tracking dependencies *)
    make_thm Count.Conj
-        (Tag.merge (tag th1) (tag th2),
+        (Tag.merge_conj (tag th1) (tag th2), 
          union_hyp (hypset th1) (hypset th2),
          Susp.force mk_conj(concl th1, concl th2))
    handle HOL_ERR _ => ERR "CONJ" "";
@@ -758,8 +758,8 @@ fun conj1 tm =
   end
 
 
-fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th))
+fun CONJUNCT1 th = (* Tracking dependencies *)
+  make_thm Count.Conjunct1 (Tag.merge_conjunct1 (tag th), hypset th, conj1 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -785,8 +785,8 @@ fun conj2 tm =
      if Name="/\\" andalso Thy="bool" then M else ERR "" ""
   end
 
-fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
+fun CONJUNCT2 th = (* Tracking dependencies *)
+ make_thm Count.Conjunct2 (Tag.merge_conjunct2 (tag th), hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -800,9 +800,9 @@ fun CONJUNCT2 th =
  * fun DISJ1 th t2 = MP (SPEC t2 (SPEC (concl th) OR_INTRO_THM1)) th
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
-
+(* Tracking dependencies *)
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w))
+ (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj (concl th, w)) 
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -816,9 +816,9 @@ fun DISJ1 th w = make_thm Count.Disj1
  * fun DISJ2 t1 th = MP (SPEC (concl th) (SPEC t1 OR_INTRO_THM2)) th
  *          handle _ => ERR{function = "DISJ2",message = ""};
  *---------------------------------------------------------------------------*)
-
+(* Tracking dependencies *)
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th))
+ (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -1222,16 +1222,32 @@ end
 
 
 
-
+(* Tracking dependencies *)
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Tracking dependencies. Giving a dependency identifier when calling 
+    Theory.save_thm.
+   ---------------------------------------------------------------------- *)
+
+val thm_order = ref 0
+
+fun give_depid_thm thy th = 
+  let 
+    fun f (thy,n) (THM(t,h,c)) = 
+      THM(Tag.give_depid_tag (thy,n) t,h,c) 
+    val th' = f (thy,!thm_order) th 
+  in
+    (thm_order := (!thm_order) + 1; th')
+  end
 
 end (* Thm *)

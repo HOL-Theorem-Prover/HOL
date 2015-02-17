@@ -116,4 +116,9 @@ sig
   (* Fetching theorems from disk *)
 
   val disk_thm      : string list * term list -> thm
+
+  (* Tracking dependencies *)
+  
+  val give_depid_thm : string -> thm -> thm (* on Theory.save_thm *)
+
 end;
