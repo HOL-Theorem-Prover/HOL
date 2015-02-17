@@ -113,12 +113,13 @@ sig
   val prim_constant_definition : string -> term -> thm
   val prim_specification : string -> string list -> thm -> thm
 
-  (* Fetching theorems from disk *)
+  (* Fetching theorems from disk (Tracking dependencies) *)
 
-  val disk_thm      : string list * term list -> thm
+  val disk_thm      : (Dep.depdisk * string list) * term list -> thm
 
   (* Tracking dependencies *)
   
   val give_depid_thm : string -> thm -> thm (* on Theory.save_thm *)
+
 
 end;
