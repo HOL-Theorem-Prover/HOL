@@ -28,10 +28,10 @@ top: $(FILES_CMO) Makefile
 	ocamllex $<
 
 %.cmx: %.ml
-	ocamlopt -c -I hh1 -I xml-light $<
+	ocamlopt -c -I hh1 $<
 
 %.cmo: %.ml
-	ocamlc -c -I hh1 -I xml-light $<
+	ocamlc -c -I hh1 $<
 
 clean:
 	rm hhthf0 hhall top *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o
