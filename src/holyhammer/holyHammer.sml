@@ -27,6 +27,7 @@ val all_status  = [eprover_dir ^ "/eprover_status",
                    vampire_dir ^ "/vampire_status",
                    z3_dir ^ "/z3_status"]
 
+(* Try every provers if they exists in the order: eprover, vampire and z3. *)
 fun holyhammer cj =
   let 
     val ct   = current_theory ()
@@ -42,5 +43,28 @@ fun holyhammer cj =
     (* try to rebuild the proof found using metis *)
     replay_atpfilel all_status all_out cj
   end
+
+(* Let you chose the specific prover you want to use either 
+   (eprover, vampire or z3) *)
+fun hh_prover prover cj =
+  let 
+    val ct   = current_theory ()
+    val thyl = ct :: Theory.ancestry ct  
+  in
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh"); 
+    (* write loaded theories *)
+    write_thf_thyl thy_dir thyl;
+    (* write the conjecture in thf format *)
+    write_conjecture (thy_dir ^ "/conjecture") cj;
+    (* call holyhammer and one external prover *)
+    case prover of 
+      "eprover" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_eprover.sh")
+    | "vampire" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_vampire.sh")
+    | "z3"      => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_z3.sh")
+    ; 
+    (* try to rebuild the proof found using metis *)
+    replay_atpfilel all_status all_out cj
+  end
+
 
 end
