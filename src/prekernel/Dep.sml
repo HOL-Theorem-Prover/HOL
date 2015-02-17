@@ -139,7 +139,7 @@ fun flatten_deptree a dt =
    | DEP_NODE(dt1,dt2) => (loop (DEP_RIGHT :: a) dt2; loop (DEP_LEFT :: a) dt1)
                           
  in
-   !l
+   (loop a dt; !l)
  end
 
 (* Sorting the dependencies by theory and sort *)
