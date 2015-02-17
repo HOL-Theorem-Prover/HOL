@@ -15,6 +15,7 @@ struct
 
 open thfWriter
 
+val ERR = mk_HOL_ERR "holyHammer"
 val hh_dir = HOLDIR ^ "/src/holyhammer"
 val thy_dir = hh_dir ^ "/theories"
 val eprover_dir = hh_dir ^ "/provers/eprover/eprover_files"
@@ -61,7 +62,7 @@ fun hh_prover prover cj =
       "eprover" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_eprover.sh")
     | "vampire" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_vampire.sh")
     | "z3"      => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_z3.sh")
-    ; 
+    | _         => raise ERR "hh_prover" "unknown prover"; 
     (* try to rebuild the proof found using metis *)
     replay_atpfilel all_status all_out cj
   end
