@@ -1,4 +1,3 @@
-# Holyhammer (performs premise selection and translation)
 EPROVER="provers/eprover/eprover"
 VAMPIRE="provers/vampire/vampire"
 Z3="provers/z3/z3"
