@@ -55,7 +55,7 @@
 #include sequences/core-theories
 #include sequences/more-theories
 #include sequences/large-theories
-
+#include sequences/holyhammer
 #
 # Examples only from here on
 #
