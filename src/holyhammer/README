@@ -1,6 +1,9 @@
 HOLyHammer is a machine learning for theorem proving framework.
 
-Requirements: Linux 64 bit.
+Requires:
+* OCaml >= 3.12 (tested also with 4.01.0)
+* g++ (recent version with C++11 support)
+* perl
 
 Install: See INSTALL file in the main directory. 
   Here is a short version:
@@ -14,12 +17,21 @@ Install: See INSTALL file in the main directory.
     poly < tools/smart-configure.sml
     bin/build
 
-Adding more provers (optional):
-  Eprover with some strategy is given by default. 
+Fixing the binaries and adding more provers (optional):
+  
+  Eprover with some strategy is given by default (linux 64 bit). 
+  Please replace the binaries (provers/eprover/eprover) and 
+  (provers/eprover/epclextract) with a version adapted to your system if needed.
+  Alternatively, you can modify eprover.sh to directly call eprover/eprover losing the
+  benefit of startegy scheduling done by the perl script.
+ 
   You can add the provers Z3 (4.0) and Vampire (2.6) 
   in their respective directory provers/z3 and provers/vampire. 
   You may use different versions but parsing may need to be fixed in 
-  provers/prover.sh .
+  provers/prover.sh . 
+
+  Please be aware that the name of the binary for Z3 should be z3 and 
+  for Vampire it should be vampire.
 
 Examples: rlwrap bin/hol
   load "holyHammer";

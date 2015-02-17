@@ -9,7 +9,7 @@ STATUS="$DIR/eprover_status"
 
 # Running eprover with best strategy
 cd eprover
-./runepar2 $TIM 0 $IN 2 1 1 new_mzt_small \
+perl runepar2.pl $TIM 0 $IN 2 1 1 new_mzt_small \
  | grep "file[(]'\| SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS

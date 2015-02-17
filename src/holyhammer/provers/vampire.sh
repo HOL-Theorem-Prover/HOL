@@ -9,7 +9,7 @@ STATUS="$DIR/vampire_status"
 
 # Running Vampire (Executable name to be changed if you use a different version)
 cd vampire
-./vampire_2.6 --mode casc -t $TIM --proof tptp --output_axiom_names on $IN \
+./vampire --mode casc -t $TIM --proof tptp --output_axiom_names on $IN \
  | grep "file[(]'\| SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS

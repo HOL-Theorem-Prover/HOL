@@ -9,7 +9,7 @@ STATUS="$DIR/z3_status"
 
 # Running Z3 (Executable name to be changed if you use a different version)
 cd z3
-./z3-4.0 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
+./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
 -T:$TIM $IN > $OUT1 2> /dev/null
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS
