@@ -1,0 +1,10 @@
+This is HH / THF0 batch processor.
+
+Requires:
+* OCaml >= 3.12 (tested also with 4.01.0)
+* g++ (recent version with C++11 support)
+
+To compile:
+* run make in hh1 subdir
+* run make in ../predict
+* run make

@@ -1,0 +1,58 @@
+lib.cmo:
+lib.cmx:
+fusion.cmo: lib.cmo
+fusion.cmx: lib.cmx
+basics.cmo: lib.cmo fusion.cmo
+basics.cmx: lib.cmx fusion.cmx
+printer.cmo: lib.cmo fusion.cmo basics.cmo
+printer.cmx: lib.cmx fusion.cmx basics.cmx
+preterm.cmo: printer.cmo lib.cmo fusion.cmo basics.cmo
+preterm.cmx: printer.cmx lib.cmx fusion.cmx basics.cmx
+hl_parser.cmo: printer.cmo preterm.cmo lib.cmo fusion.cmo
+hl_parser.cmx: printer.cmx preterm.cmx lib.cmx fusion.cmx
+equal.cmo: preterm.cmo lib.cmo fusion.cmo basics.cmo
+equal.cmx: preterm.cmx lib.cmx fusion.cmx basics.cmx
+bool.cmo: printer.cmo preterm.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo \
+    basics.cmo
+bool.cmx: printer.cmx preterm.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx \
+    basics.cmx
+drule.cmo: lib.cmo hl_parser.cmo fusion.cmo equal.cmo bool.cmo basics.cmo
+drule.cmx: lib.cmx hl_parser.cmx fusion.cmx equal.cmx bool.cmx basics.cmx
+tactics.cmo: printer.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo drule.cmo \
+    bool.cmo basics.cmo
+tactics.cmx: printer.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx drule.cmx \
+    bool.cmx basics.cmx
+simp.cmo: tactics.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo drule.cmo \
+    bool.cmo basics.cmo
+simp.cmx: tactics.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx drule.cmx \
+    bool.cmx basics.cmx
+theorems.cmo: simp.cmo hl_parser.cmo fusion.cmo equal.cmo bool.cmo
+theorems.cmx: simp.cmx hl_parser.cmx fusion.cmx equal.cmx bool.cmx
+canon.cmo: theorems.cmo tactics.cmo simp.cmo lib.cmo hl_parser.cmo fusion.cmo \
+    equal.cmo drule.cmo bool.cmo basics.cmo
+canon.cmx: theorems.cmx tactics.cmx simp.cmx lib.cmx hl_parser.cmx fusion.cmx \
+    equal.cmx drule.cmx bool.cmx basics.cmx
+fol.cmo: simp.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo drule.cmo \
+    bool.cmo basics.cmo
+fol.cmx: simp.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx drule.cmx \
+    bool.cmx basics.cmx
+follist.cmo: simp.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo drule.cmo \
+    bool.cmo basics.cmo
+follist.cmx: simp.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx drule.cmx \
+    bool.cmx basics.cmx
+meson.cmo: theorems.cmo tactics.cmo simp.cmo lib.cmo hl_parser.cmo fusion.cmo \
+    follist.cmo equal.cmo drule.cmo canon.cmo bool.cmo basics.cmo
+meson.cmx: theorems.cmx tactics.cmx simp.cmx lib.cmx hl_parser.cmx fusion.cmx \
+    follist.cmx equal.cmx drule.cmx canon.cmx bool.cmx basics.cmx
+hh_symbols.cmo: printer.cmo lib.cmo fusion.cmo bool.cmo basics.cmo
+hh_symbols.cmx: printer.cmx lib.cmx fusion.cmx bool.cmx basics.cmx
+features_dt.cmo: lib.cmo fusion.cmo basics.cmo
+features_dt.cmx: lib.cmx fusion.cmx basics.cmx
+hh_tac.cmo: tactics.cmo simp.cmo lib.cmo hl_parser.cmo fusion.cmo equal.cmo \
+    drule.cmo bool.cmo basics.cmo
+hh_tac.cmx: tactics.cmx simp.cmx lib.cmx hl_parser.cmx fusion.cmx equal.cmx \
+    drule.cmx bool.cmx basics.cmx
+hh_write.cmo: tactics.cmo simp.cmo lib.cmo hl_parser.cmo hh_tac.cmo \
+    hh_symbols.cmo fusion.cmo equal.cmo bool.cmo basics.cmo
+hh_write.cmx: tactics.cmx simp.cmx lib.cmx hl_parser.cmx hh_tac.cmx \
+    hh_symbols.cmx fusion.cmx equal.cmx bool.cmx basics.cmx
