@@ -31,7 +31,7 @@ let write_fof (fname : filepath) (cj_name, axioms) =
 let init_interactive (thy_dir : filepath) (cj_file : filepath) (cj_name : string) =
   let ((tyl,cl,thml),(thmh,roleh,thmlo)) = Init.init_dir thy_dir in
   let cj = Read.read_conjecture cj_file in
-  let _ = init_depenv None None (thmh,roleh,thmlo) in
+  let _ = init_depenv (Some (thy_dir ^ "/thydep")) None (thmh,roleh,thmlo) in
   Thf1hh1.parse (tyl,cl,(cj_name,cj) :: thml)
 
 

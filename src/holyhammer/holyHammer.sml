@@ -39,6 +39,8 @@ fun holyhammer cj =
     write_thf_thyl thy_dir thyl; 
     (* write the conjecture in thf format *)
     write_conjecture (thy_dir ^ "/conjecture") cj;
+    (* write the dependencies between theories *)
+    write_thydep (thy_dir ^ "/thydep") thyl;
     (* call holyhammer and the external provers *)
     OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh"); 
     (* try to rebuild the proof found using metis *)
@@ -57,6 +59,8 @@ fun hh_prover prover cj =
     write_thf_thyl thy_dir thyl;
     (* write the conjecture in thf format *)
     write_conjecture (thy_dir ^ "/conjecture") cj;
+    (* write the dependencies between theories *)
+    write_thydep (thy_dir ^ "/thydep") thyl;
     (* call holyhammer and one external prover *)
     case prover of 
       "eprover" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_eprover.sh")
