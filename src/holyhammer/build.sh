@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd src/holyhammer/hh/hh1
+cd hh/hh1
 make
 cd ..
 make

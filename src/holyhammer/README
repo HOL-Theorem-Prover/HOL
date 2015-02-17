@@ -5,6 +5,9 @@ Requires:
 * g++ (recent version with C++11 support)
 * perl
 
+Install holyhammer: 
+  sh build.sh (in this directory)
+
 Install: See INSTALL file in the main directory. 
   Here is a short version:
   Getting polyml:
@@ -17,7 +20,7 @@ Install: See INSTALL file in the main directory.
     poly < tools/smart-configure.sml
     bin/build
 
-Fixing the binaries and adding more provers (optional):
+Adding more provers (optional):
   
   Eprover with some strategy is given by default (linux 64 bit). 
   Please replace the binaries (provers/eprover/eprover) and 

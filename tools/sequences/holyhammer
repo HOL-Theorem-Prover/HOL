@@ -1,4 +1,1 @@
 src/holyhammer
-#How do you specify a bash script to be launched during build sequence?
-[poly]src/holyhammer/build.bare
-[mosml]src/holyhammer/build.bare
