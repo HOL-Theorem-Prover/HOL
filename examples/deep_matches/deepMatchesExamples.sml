@@ -2,6 +2,7 @@ open bossLib
 open deepMatchesLib
 open deepMatchesTheory
 open deepMatchesSyntax
+open pred_setTheory
 
 (* Introducing case expressions *)
 
@@ -171,3 +172,132 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
    ∀xx. (∀x. xx ≠ (x,[])) ∧ (∀x y ys. xx ≠ (x,y::ys)) ⇒ (my_d xx = ARB):
    thm
 *)
+
+(*********************************)
+(* Using non-injective patterns  *)
+(*********************************)
+
+(* Normally patterns should be injective.
+   However, the tools even work, if they are not.
+   The following definition defines cardinality
+   of sets in a simple case and more advanced. *)
+
+val simple_card_def = Define `
+  simple_card s = CASE s OF [
+    ||. {} ~> SOME 0;
+    || x. {x} ~> SOME 1;
+    || (x, y). {x; y} ~> SOME 2;
+    || s. s ~> NONE
+  ]`;
+
+val simple_card_THM_AUX = PMATCH_TO_TOP_RULE simple_card_def;
+
+val simple_card_ALT_DEF = prove (``simple_card s =
+  if (INFINITE s \/ CARD s > 2) then NONE else SOME (CARD s)``,
+
+Tactical.REVERSE (Cases_on `FINITE s`) THEN1 (
+  MP_TAC (Q.SPEC `s` (el 4 (CONJUNCTS simple_card_THM_AUX))) THEN
+  MATCH_MP_TAC (prove (``(A /\ (B ==> C)) ==> ((A ==> B) ==> C)``, PROVE_TAC[])) THEN
+  CONJ_TAC THEN1 (
+    CCONTR_TAC THEN
+    FULL_SIMP_TAC std_ss [] THEN
+    FULL_SIMP_TAC std_ss [FINITE_INSERT, FINITE_EMPTY]
+  ) THEN
+  ASM_SIMP_TAC std_ss []
+) THEN
+
+Cases_on `s` THEN1 (
+  SIMP_TAC std_ss [CARD_EMPTY, simple_card_THM_AUX, FINITE_EMPTY]
+) THEN
+Cases_on `t` THEN1 (
+  SIMP_TAC std_ss [CARD_SING, simple_card_THM_AUX, FINITE_SING]
+) THEN
+Cases_on `t'` THEN1 (
+  MP_TAC (Q.SPEC `{x;x'}` (el 3 (CONJUNCTS simple_card_THM_AUX))) THEN
+  MATCH_MP_TAC (prove (``(A /\ (B ==> C)) ==> ((A ==> B) ==> C)``, PROVE_TAC[])) THEN
+  CONJ_TAC THEN1 (
+    FULL_SIMP_TAC std_ss [EXTENSION, IN_INSERT, NOT_IN_EMPTY] THEN
+    METIS_TAC[]
+  ) THEN
+  REPEAT STRIP_TAC THEN
+  Q.PAT_ASSUM `{x;x'} = _` (K ALL_TAC) THEN
+  FULL_SIMP_TAC std_ss [FINITE_SING, CARD_INSERT, IN_INSERT,
+    NOT_IN_EMPTY, CARD_SING]
+) THEN1 (
+  FULL_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [IN_INSERT, CARD_INSERT, FINITE_INSERT] THEN
+  MP_TAC (Q.SPEC `x INSERT x' INSERT x'' INSERT t` (el 4 (CONJUNCTS simple_card_THM_AUX))) THEN
+  MATCH_MP_TAC (prove (``(A /\ (B ==> C)) ==> ((A ==> B) ==> C)``, PROVE_TAC[])) THEN
+  CONJ_TAC THEN1 (
+    FULL_SIMP_TAC std_ss [EXTENSION, IN_INSERT, NOT_IN_EMPTY, IN_UNION] THEN
+    METIS_TAC[]
+  ) THEN
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [] THEN
+  Cases_on `FINITE t` THEN ASM_REWRITE_TAC[] THEN
+  ASM_SIMP_TAC arith_ss [CARD_INSERT, FINITE_INSERT, IN_INSERT]
+));
+
+
+
+val CARD2_defn = Defn.Hol_defn "CARD2" `
+  CARD2 s = CASE s OF [
+    ||. {} ~> 0;
+    || (x, s'). x INSERT s' when (FINITE s' /\ ~(x IN s')) ~>
+        SUC (CARD2 s');
+    || s'. s' ~> 0
+  ]`
+
+val (CARD2_def, _) = Defn.tprove (CARD2_defn,
+  Q.EXISTS_TAC `measure CARD` THEN
+  SIMP_TAC std_ss [prim_recTheory.WF_measure,
+    pred_setTheory.FINITE_INSERT] THEN
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [prim_recTheory.measure_thm,
+    pred_setTheory.CARD_INSERT]
+)
+
+val CARD2_AUX_DEFS = PMATCH_TO_TOP_RULE CARD2_def
+
+val CARD2_EMPTY = store_thm ("CARD2_EMPTY",
+  ``CARD2 {} = 0``,
+REWRITE_TAC [CARD2_AUX_DEFS])
+
+val CARD2_INFINITE = store_thm ("CARD2_INFINITE",
+  ``!s. INFINITE s ==> (CARD2 s = 0)``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC (el 3 (BODY_CONJUNCTS CARD2_AUX_DEFS)) THEN
+Cases_on `s = {}` THEN (
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) []
+));
+
+val CARD2_EQ = store_thm ("CARD2_EQ",
+  ``!s. FINITE s ==> (CARD2 s = CARD s)``,
+
+Induct_on `CARD s` THEN1 (
+  REPEAT STRIP_TAC THEN
+  `s = {}` by PROVE_TAC [CARD_EQ_0] THEN
+  Q.PAT_ASSUM `0 = _` (K ALL_TAC) THEN
+  ASM_REWRITE_TAC [CARD_EMPTY, CARD2_EMPTY]
+) THEN
+REPEAT STRIP_TAC THEN
+Cases_on `s` THEN1 (
+  FULL_SIMP_TAC arith_ss [CARD_EMPTY]
+) THEN
+Q.PAT_ASSUM `v = X` (ASSUME_TAC o GSYM) THEN
+FULL_SIMP_TAC std_ss [FINITE_INSERT, CARD_INSERT] THEN
+
+MP_TAC (Q.ISPEC `x INSERT t` (el 2 (CONJUNCTS CARD2_AUX_DEFS))) THEN
+MATCH_MP_TAC (prove (``(A /\ (B ==> C)) ==> ((A ==> B) ==> C)``, PROVE_TAC[])) THEN
+CONJ_TAC THEN1 (
+  ASM_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [] THEN
+  PROVE_TAC[]
+) THEN
+STRIP_TAC THEN
+`CARD (x' INSERT s') = CARD (x INSERT t)` by PROVE_TAC[] THEN
+POP_ASSUM MP_TAC THEN
+Q.PAT_ASSUM `x INSERT t = _` (K ALL_TAC) THEN
+ASM_SIMP_TAC std_ss [CARD_INSERT])
+
+

@@ -2,6 +2,7 @@ open HolKernel Parse boolLib bossLib;
 open quantHeuristicsLib
 open optionTheory
 open listTheory
+open ConseqConv
 
 val _ = new_theory "deepMatches"
 
@@ -824,7 +825,7 @@ val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
      (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
 
      (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
-       (!x. (v = p x) ==> g x ==> P (r x)) /\
+       (!x. ((v = p x) /\ g x) ==> P (r x)) /\
        ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
 
 REPEAT STRIP_TAC THEN
@@ -843,7 +844,9 @@ Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
 val PMATCH_PRED_UNROLL_CONS_NO_INJ = store_thm ("PMATCH_PRED_UNROLL_CONS_NO_INJ",
 ``!P v p g r rows.      
      (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
-       (!x. (v = p x) ==> g x ==> P (r (@x. PMATCH_ROW_COND p g v x))) /\
+       ((?x. (p x = v) /\ g x) ==> ?x. (
+         (v = p x) /\ g x /\ ((@x. PMATCH_ROW_COND p g v x) = x) /\
+         P (r x))) /\
        ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
 
 REPEAT STRIP_TAC THEN
@@ -852,19 +855,39 @@ Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
   ASM_SIMP_TAC std_ss [some_def] THEN
   FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
-    Q.PAT_ASSUM `v = p x'` (ASSUME_TAC o GSYM) THEN
-    ASM_SIMP_TAC std_ss [],
-
+    SELECT_ELIM_TAC THEN PROVE_TAC [],
+    SELECT_ELIM_TAC THEN PROVE_TAC [],
+    ASM_REWRITE_TAC[],
     PROVE_TAC[],
-
-    Q.PAT_ASSUM `!x'. _ ==> _` (MP_TAC o Q.SPEC `x`) THEN
-    ASM_SIMP_TAC std_ss []
+    PROVE_TAC[]
   ],
 
   ASM_SIMP_TAC std_ss [some_def] THEN
   FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
   METIS_TAC[]
 ])
+
+
+val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
+``!P v p g r rows. 
+     (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
+
+     (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
+       (!x. ((v = p x) /\ g x) ==> P (r x)) /\
+       ((!x. (v = p x) ==> ~(g x)) ==> P (PMATCH v rows)))``,
+
+SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [PMATCH_PRED_UNROLL_CONS_NO_INJ, GSYM LEFT_FORALL_IMP_THM] THEN
+REPEAT STRIP_TAC THEN
+CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
+SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [] THEN
+REPEAT STRIP_TAC THEN
+Tactical.REVERSE (`(@x'. PMATCH_ROW_COND p g v x') = x` by ALL_TAC) THEN1 (
+  POP_ASSUM MP_TAC THEN
+  ASM_SIMP_TAC std_ss []
+) THEN
+SELECT_ELIM_TAC THEN
+SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
+METIS_TAC[]);
 
 
 val _ = export_theory();;

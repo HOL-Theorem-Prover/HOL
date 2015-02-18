@@ -7,8 +7,8 @@ open simpLib
 open quantHeuristicsLib
 open DatatypeSimps
 open deepMatchesSyntax
-open constrFamiliesLib
 open Traverse
+open constrFamiliesLib
 
 (***********************************************)
 (* Simpset to evaluate PMATCH_ROWS             *)
@@ -1089,6 +1089,9 @@ val tm = ``P (
     ||.  (0, []) ~> 9;
     || x.  (x, []) when x > 3 ~> x;
     || x.  (x, []) ~> 0]):bool``
+
+val tm = mk_comb (P_v, p_tm)
+val rc_arg = ([], NONE)
 *)
 
 fun PMATCH_LIFT_BOOL_CONV_AUX rc_arg tm = let
@@ -1104,19 +1107,19 @@ in
       val rows'_tm = listSyntax.mk_list (rows', type_of row)
 
       (* instantiate base thm and try to prove precond *)
-      val thm1 = let
+      val (thm1, is_inj) = let
         val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS
         val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
         val pre = fst (dest_imp (concl thm01))
-        val pre_thm = prove (pre, rc_tac rc_arg)
+        val pre_thm = Lib.with_flag (Feedback.emit_MESG, false) prove (pre, rc_tac rc_arg)
       in
-        MP thm01 pre_thm
+        (MP thm01 pre_thm, true)
       end handle HOL_ERR _ => let
          (* proving precond failed, try fallback theorem *)
         val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS_NO_INJ
         val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
       in
-        thm01
+        (thm01, false)
       end
 
       (* Use right variable names *)
@@ -1126,7 +1129,11 @@ in
         val c = (RAND_CONV (pairTools.PABS_INTRO_CONV vars_tm)) THENC
                 TRY_CONV (pairTools.ELIM_TUPLED_QUANT_CONV) THENC
                 SIMP_CONV std_ss []
-        val thm2a = CONV_RULE (RHS_CONV (RATOR_CONV (RAND_CONV c))) thm1
+        val c2a_inj = RHS_CONV (RATOR_CONV (RAND_CONV c)) 
+        val c2a_no_inj = RHS_CONV (RATOR_CONV (RAND_CONV 
+           (BINOP_CONV c))) 
+        val c2a = if is_inj then c2a_inj else c2a_no_inj
+        val thm2a = CONV_RULE c2a thm1
         val thm2b = CONV_RULE (RHS_CONV (RAND_CONV (RATOR_CONV (RAND_CONV c)))) thm2a
       in
         thm2b
@@ -1163,9 +1170,9 @@ val tm = ``
 
 
 val PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM = prove (
- ``(P1 ==> (X1 /\ (P2 ==> X2)) =
-   (P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
-PROVE_TAC[])
+ ``(P1 ==> (X1 /\ (P2 ==> X2))) =
+   ((P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
+REWRITE_TAC [IMP_CONJ_THM, AND_IMP_INTRO]);
 
 
 fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
