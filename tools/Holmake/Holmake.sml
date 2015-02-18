@@ -641,9 +641,8 @@ datatype buildcmds = MOSMLC
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
-fun build_command c arg = let
-  val include_flags = includify (hmake_preincludes @ std_include_flags @
-                                 additional_includes)
+fun build_command (ii as {preincludes,includes}) c arg = let
+  val include_flags = includify (preincludes @ includes)
  (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
   val overlay_stringl =
       case actual_overlay of
@@ -707,7 +706,7 @@ in
       val scriptui = script^".ui"
       open Process
       (* first thing to do is to create the Script.uo file *)
-      val b = build_command MOSMLC scriptsml_file
+      val b = build_command ii MOSMLC scriptsml_file
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
@@ -750,11 +749,12 @@ in
              | FileNotFound => false
 end
 
-fun do_a_build_command target pdep secondaries =
+fun do_a_build_command incinfo target pdep secondaries =
   case (extra_commands (fromFile target)) of
     SOME (cs as _ :: _) =>
       Process.isSuccess (run_extra_commands (fromFile target) cs)
   | _ (* i.e., NONE or SOME [] *) => let
+      val build_command = build_command incinfo
     in
       case target of
          UO c           => build_command MOSMLC pdep
@@ -833,8 +833,9 @@ in
                   in
                     print ("Dependency: "^fromFile d^" forces rebuild\n");
                     done_some_work := true;
-                    cache_insert (target,
-                                  do_a_build_command target pdep secondaries)
+                    cache_insert
+                        (target,
+                         do_a_build_command incinfo target pdep secondaries)
                   end
               end
             else
