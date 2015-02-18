@@ -102,7 +102,7 @@ fun merge_deptree deptree =
       DEP_LEAF dsl      => l := dsl :: (!l)
     | DEP_NODE(dt1,dt2) => (loop dt1; loop dt2)
   in 
-    DEP_LEAF (mk_set (List.concat (!l)))
+    (loop deptree; DEP_LEAF (mk_set (List.concat (!l))))
   end
 
 fun passed_deptree (depsort,deptree) = case depsort of 
@@ -134,10 +134,9 @@ fun quote_of_address a = Lib.quote (number_address a)
 fun flatten_deptree a dt = 
  let 
    val l = ref [] 
-   fun loop a dt = case dt of
-     DEP_LEAF dsl      => l := (a,dsl) :: (!l)
-   | DEP_NODE(dt1,dt2) => (loop (DEP_RIGHT :: a) dt2; loop (DEP_LEFT :: a) dt1)
-                          
+   fun loop a' dt' = case dt' of
+     DEP_LEAF dsl      => l := (a',dsl) :: (!l)
+   | DEP_NODE(dt1,dt2) => (loop (DEP_RIGHT :: a') dt2; loop (DEP_LEFT :: a') dt1) 
  in
    (loop a dt; !l)
  end
