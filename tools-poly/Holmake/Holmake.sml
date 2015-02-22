@@ -107,10 +107,6 @@ fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 fun alltrue [] = true
   | alltrue (x::xs) = x andalso alltrue xs
-fun print_list0 [] = "]"
-  | print_list0 [x] = x^"]"
-  | print_list0 (x::xs) = x^", "^print_list0 xs
-fun print_list l = "["^print_list0 l
 fun I x = x
 
 (*** parse command line *)
@@ -693,8 +689,9 @@ val _ = if (debug) then let
 in
   print ("HOLDIR = "^HOLDIR^"\n");
   print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n");
-  print ("Targets = "^print_list targets^"\n");
-  print ("Additional includes = "^print_list additional_includes^"\n");
+  print ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
+  print ("Additional includes = " ^ String.concatWith ", " additional_includes ^
+         "]\n");
   print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
 end else ()
 
@@ -979,9 +976,9 @@ in
                 set_union (get_implicit_dependencies incinfo target)
                           (get_explicit_dependencies target)
             val _ =
-                (print ("Secondary dependencies for "^fromFile target^
-                        " are: ");
-                 print (print_list (map fromFile secondaries) ^ "\n"))
+                print ("Secondary dependencies for "^fromFile target^
+                       " are: [" ^
+                       String.concatWith ", " (map fromFile secondaries) ^ "\n")
           in
             if List.all (make_up_to_date (target::ctxt)) secondaries then let
                 fun testthis dep =
@@ -1025,8 +1022,8 @@ in
                     end
         | SOME {dependencies, commands, ...} => let
             val _ =
-                (print ("Secondary dependencies for "^tgt_str^" are: ");
-                 print (print_list dependencies ^ "\n"))
+                print ("Secondary dependencies for "^tgt_str^" are: [" ^
+                       String.concatWith ", " dependencies ^ "]\n")
             val depfiles = map toFile dependencies
           in
             if List.all (make_up_to_date (target::ctxt)) depfiles
@@ -1157,7 +1154,8 @@ in
                 map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
                     targets
           in
-            print("Generated targets are: "^print_list tgtstrings ^ "\n")
+            print("Generated targets are: [" ^
+                  String.concatWith ", " tgtstrings ^ "]\n")
           end
         else ()
     in
