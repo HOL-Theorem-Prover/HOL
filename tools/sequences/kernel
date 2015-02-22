@@ -10,8 +10,9 @@ src/postkernel
 src/parse
 src/bool
 src/1
-!src/1/theory_tests
 !tools/Holmake/tests/depchain1/dir3
+!tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1/
+!src/1/theory_tests
 src/proofman
 [poly]bin/hol.bare
