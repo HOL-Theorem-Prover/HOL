@@ -330,10 +330,9 @@ end
 
 
 (* directory specific stuff here *)
-fun Holmake dirinfo cline_additional_includes targets : holmake_result = let
-  val {abspath=dir, relpath=dirnm, visited = visiteddirs} = dirinfo
-  val _ = OS.FileSys.chDir dir
-
+fun Holmake dirinfo cline_additional_includes targets = let
+  val {dir, visited = visiteddirs} = dirinfo
+  val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
 (* prepare to do logging *)
 val () = if do_logging_flag then
@@ -690,8 +689,8 @@ in
   print ("HOLDIR = "^HOLDIR^"\n");
   print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n");
   print ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
-  print ("Additional includes = " ^ String.concatWith ", " additional_includes ^
-         "]\n");
+  print ("Additional includes = [" ^
+         String.concatWith ", " additional_includes ^ "]\n");
   print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
 end else ()
 
@@ -1121,25 +1120,26 @@ fun add_sigobj {includes,preincludes} =
     {includes = std_include_flags @ includes,
      preincludes = preincludes}
 
-val dirinfo = let
-  val f = make_best_relative{relpath=dirnm,absdir=dir}
-in
+val dirinfo =
   {visited = visiteddirs,
-   includes = map f allincludes,
-   preincludes = map f hmake_preincludes}
-end
+   includes = allincludes,
+   preincludes = hmake_preincludes}
 
 val purelocal_incinfo =
     add_sigobj {includes = allincludes, preincludes = hmake_preincludes}
 
-fun hm_recur ctgt k =
-    maybe_recurse
-        {warn = warn,
-         diag = diag,
-         no_prereqs = no_prereqs, hm = Holmake,
-         dirinfo = dirinfo,
-         dir = {abspath = dir, relpath = dirnm},
-         local_build = k, cleantgt = ctgt}
+fun hm_recur ctgt k = let
+  fun hm {dir, visited, targets} =
+      Holmake {dir = dir, visited = visited} [] targets
+in
+  maybe_recurse
+      {warn = warn,
+       diag = diag,
+       no_prereqs = no_prereqs, hm = hm,
+       dirinfo = dirinfo,
+       dir = dir,
+       local_build = k, cleantgt = ctgt}
+end
 
 fun stdcont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
 
@@ -1164,10 +1164,13 @@ in
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
                       x in_target ".PHONY"
+      fun canon i = hmdir.extendp {base = dir, extension = i}
     in
       if List.all isPhony xs andalso not cline_recursive then
         if finish_logging (strategy purelocal_incinfo xs) then
-          SOME dirinfo
+          SOME {visited = visiteddirs,
+                includes = map canon allincludes,
+                preincludes = map canon hmake_preincludes}
         else NONE
       else
         let
@@ -1215,9 +1218,8 @@ in
   else let
       open OS.Process
       val result =
-          Holmake {relpath = SOME (OS.Path.currentArc),
-                   abspath = OS.FileSys.getDir(),
-                   visited = Binaryset.empty String.compare}
+          Holmake {dir = hmdir.curdir(),
+                   visited = Binaryset.empty hmdir.compare}
                   cline_additional_includes
                   targets
                   handle Fail s => (print ("Fail exception: "^s^"\n");

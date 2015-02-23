@@ -319,9 +319,9 @@ in
 end
 
 (* directory specific stuff here *)
-fun Holmake dirinfo cline_additional_includes targets : holmake_result = let
-  val {abspath=dir,relpath=dirnm, visited = visiteddirs} = dirinfo
-  val _ = OS.FileSys.chDir dir
+fun Holmake dirinfo cline_additional_includes targets : hmdir.t holmake_result = let
+  val {dir,visited = visiteddirs} = dirinfo
+  val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
 
 (* prepare to do logging *)
@@ -961,22 +961,21 @@ fun add_sigobj {includes,preincludes} =
     {includes = std_include_flags @ includes,
      preincludes = preincludes}
 
-val dirinfo = let
-  val f = make_best_relative{relpath=dirnm,absdir=dir}
-in
+val dirinfo =
   {visited = visiteddirs,
-   includes = map f allincludes,
-   preincludes = map f hmake_preincludes}
-end
+   includes = allincludes,
+   preincludes = hmake_preincludes}
 
-fun hm_recur ctgt k : holmake_result =
-    maybe_recurse
-        {warn = warn,
-         diag = diag,
-         no_prereqs = no_prereqs, hm = Holmake,
-         dirinfo = dirinfo,
-         dir = {abspath = dir, relpath = dirnm},
-         local_build = k, cleantgt = ctgt}
+fun hm_recur ctgt k : hmdir.t holmake_result = let
+  fun hm {dir, visited, targets} =
+      Holmake {dir = dir, visited = visited} [] targets
+in
+  maybe_recurse
+      {warn = warn, diag = diag,
+       no_prereqs = no_prereqs, hm = hm,
+       dirinfo = dirinfo, dir = dir,
+       local_build = k, cleantgt = ctgt}
+end
 
 fun stdcont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
 
@@ -1005,9 +1004,13 @@ in
   | xs => let
       fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
                       x in_target ".PHONY"
+      fun canon i = hmdir.extendp {base = dir, extension = i}
     in
       if List.all isPhony xs andalso not cline_recursive then
-        if finish_logging (strategy purelocal_includes xs) then SOME dirinfo
+        if finish_logging (strategy purelocal_includes xs) then
+          SOME {visited = visiteddirs,
+                includes = map canon allincludes,
+                preincludes = map canon hmake_preincludes}
         else NONE
       else
         let
@@ -1053,13 +1056,13 @@ val _ =
   else let
       open Process
       val result =
-          Holmake {relpath = SOME (OS.Path.currentArc),
-                   abspath = OS.FileSys.getDir(),
-                   visited = Binaryset.empty String.compare}
-                  cline_additional_includes
-                  targets
-                  handle Fail s => (print ("Fail exception: "^s^"\n");
-                                    exit failure)
+          Holmake
+              {dir = hmdir.curdir(),
+               visited = Binaryset.empty hmdir.compare}
+              cline_additional_includes
+              targets
+          handle Fail s => (print ("Fail exception: "^s^"\n");
+                            exit failure)
     in
       if isSome result then exit success
       else exit failure

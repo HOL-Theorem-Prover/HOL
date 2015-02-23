@@ -48,27 +48,37 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
 
-  val make_best_relative :
-      {relpath : string option, absdir : string} -> string -> string
+  structure hmdir : sig
+    type t
+    val extendp : {base : t, extension : string} -> t
+    val extend : {base : t, extension : t} -> t
+    val toString : t -> string
+    val toAbsPath : t -> string
+    val fromPath : {origin: string, path : string} -> t
+    val sort : t list -> t list
+    val curdir : unit -> t
+    val compare : t * t -> order
+  end
 
   type include_info = {includes : string list, preincludes : string list}
-  type holmake_dirinfo = {visited : string Binaryset.set,
-                          includes : string list,
-                          preincludes : string list }
-  type holmake_result = holmake_dirinfo option
+  type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set,
+                               includes : 'dir list,
+                               preincludes : 'dir list}
+  type 'dir holmake_result = 'dir holmake_dirinfo option
 
   val maybe_recurse :
       {warn: string -> unit,
        diag : string -> unit,
        no_prereqs : bool,
-       hm: {relpath : string option, abspath : string,
-            visited : string Binaryset.set} ->
-           string list -> string list -> holmake_result,
-       dirinfo : holmake_dirinfo,
-       dir : {abspath: string, relpath: string option},
+       hm: {dir : hmdir.t,
+            visited : hmdir.t Binaryset.set,
+            targets : string list} ->
+           hmdir.t holmake_result,
+       dirinfo : string holmake_dirinfo,
+       dir : hmdir.t,
        local_build : include_info -> bool,
        cleantgt : string option} ->
-      holmake_result
+      hmdir.t holmake_result
 
   val holdep_arg : File -> File option
 

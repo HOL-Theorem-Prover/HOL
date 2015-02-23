@@ -288,92 +288,166 @@ val terminal_log =
     if Systeml.isUnix then xterm_log
     else (fn s => ())
 
-fun make_best_relative {relpath, absdir} extension =
-    if Path.isAbsolute extension then extension
+structure hmdir =
+struct
+
+type t = {absdir : string, relpath : string option}
+
+fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
+
+fun curdir () = {relpath = SOME (OS.Path.currentArc),
+                 absdir = OS.FileSys.getDir()}
+
+fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
+    String.compare (d1, d2)
+
+fun toString {relpath,absdir} =
+    case relpath of
+        NONE => absdir
+      | SOME p => p
+
+fun toAbsPath {relpath,absdir} = absdir
+
+fun fromPath {origin,path} =
+    if Path.isAbsolute path then {relpath = NONE, absdir = path}
     else
+      {relpath = SOME path, absdir = origin + path}
+
+fun extendp {base = {relpath, absdir}, extension} = let
+  val relpath_str = case relpath of NONE => "NONE"
+                                  | SOME s => "SOME("^s^")"
+in
+  if Path.isAbsolute extension then {relpath = NONE, absdir = extension}
+  else
       case relpath of
-          NONE => Path.mkCanonical (Path.concat(absdir, extension))
-        | SOME p => Path.mkCanonical (Path.concat(p, extension))
+          NONE => {absdir = absdir + extension, relpath = NONE}
+        | SOME p => {relpath = SOME (p + extension),
+                     absdir = absdir + extension}
+end
+
+fun extend {base, extension} =
+    extendp {base = base, extension = toString extension}
+
+fun sort l = let
+  fun foldthis1 ({absdir,relpath}, acc) =
+      case Binarymap.peek (acc, absdir) of
+          NONE => Binarymap.insert(acc, absdir, relpath)
+        | SOME NONE => Binarymap.insert(acc, absdir, relpath)
+        | _ => acc
+  val m = foldl foldthis1 (Binarymap.mkDict String.compare) l
+  fun foldthis2 (abs,rel,acc) = {absdir = abs, relpath = rel} :: acc
+in
+  Binarymap.foldr foldthis2 [] m
+end
+
+end (* hmdir struct *)
 
 type include_info = {includes : string list, preincludes : string list }
-type holmake_dirinfo = {visited : string Binaryset.set, includes : string list,
-                        preincludes : string list }
-type holmake_result = holmake_dirinfo option
+type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
+                             preincludes : 'dir list}
+type 'dir holmake_result = 'dir holmake_dirinfo option
 
-(* this function doesn't handle all recursion, just one level's worth.  In
-   other words, the master Holmake calls this function, and this then arranges the
-   recursive calls into the various include directories that need to happen.
-   The holmake that gets called in those directories will in turn call this function for
-   recursion at that level in the "tree"
-*)
+(* ----------------------------------------------------------------------
+
+    maybe_recurse
+
+    this function doesn't handle all recursion, just one level's
+    worth. In other words, the master Holmake calls this function, and
+    this then arranges the recursive calls into the various include
+    directories that need to happen. The holmake that gets called in
+    those directories (via the hm parameter) will in turn call this
+    function for recursion at that level in the "tree".
+
+    The local_build/k parameter is how the maybe_recurse function
+    finishes off; this parameter is called when all of the necessary
+    recursion has been performed and work should be done in the
+    current ("local") directory.
+
+    Finally, what of the dirinfo?
+
+    This record includes
+          origin: the absolute path to the very first directory
+        includes: the includes that the local directory knows about
+                  (which will have come from the command-line or
+                  INCLUDES lines in the local Holmakefile
+     preincludes: similarly
+         visited: a set of visited directories (with directories
+                  expressed as absolute paths)
+
+    The includes and preincludes are clearly useful when it comes time to
+    do any local work, but also specify how the recursion is to happen.
+
+    Now, the recursion into those directories may result in extra
+    includes and preincludes.
+   ---------------------------------------------------------------------- *)
 fun maybe_recurse {warn,diag,no_prereqs,hm,dirinfo,dir,local_build=k,cleantgt} =
 let
-  val {abspath=dir,relpath} = dir
   val {includes,preincludes,visited} = dirinfo
-  val k = fn ii => (terminal_log ("Holmake: "^nice_dir dir); k ii)
+  val _ = diag ("maybe_recurse: includes = [" ^
+                String.concatWith ", " includes ^ "]")
+  val _ = diag ("maybe_recurse: preincludes = [" ^
+                String.concatWith ", " preincludes ^ "]")
+  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+                    k ii)
   val tgts = case cleantgt of SOME s => [s] | NONE => []
-  fun recurse acc (newdir,nm) = let
-    val {visited, includes, preincludes} = acc
+  fun recurse (acc as {visited,includes,preincludes}) newdir = let
   in
     if Binaryset.member(visited, newdir) then SOME acc
     else let
-      val newrelpath =
-          if Path.isAbsolute nm then NONE
-          else
-            case relpath of
-                NONE => NONE
-              | SOME d => SOME (Path.mkCanonical (Path.concat(d, nm)))
-      val nm = case newrelpath of NONE => newdir | SOME d => d
-      val _ = warn ("Recursively calling Holmake in "^nm)
-      val _ = terminal_log ("Holmake: "^nice_dir nm)
+      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
+      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
       val result =
-          case hm {relpath=newrelpath,abspath=newdir,visited=visited} [] tgts
-           of
+          case hm {dir = newdir, visited = visited, targets = tgts} of
               NONE => NONE
             | SOME {visited,includes = inc0, preincludes = pre0} =>
-              SOME{visited = visited, includes = includes @ inc0,
-                   preincludes = preincludes @ pre0}
+              SOME {visited = visited,
+                    includes = hmdir.sort (includes @ inc0),
+                    preincludes = hmdir.sort (preincludes @ pre0)}
     in
-      warn ("Finished recursive invocation in "^nm);
-      terminal_log ("Holmake: "^nice_dir dir);
-      FileSys.chDir dir;
+      warn ("Finished recursive invocation in "^hmdir.toString newdir);
+      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+      FileSys.chDir (hmdir.toAbsPath dir);
       case result of
           SOME{includes=incs,preincludes=pre,...} =>
           (diag ("Recursively computed includes = " ^
-                 String.concatWith ", " incs);
+                 String.concatWith ", " (map hmdir.toString incs));
            diag ("Recursively computed pre-includes = " ^
-                 String.concatWith ", " pre))
+                 String.concatWith ", " (map hmdir.toString pre)))
         | NONE => ();
       result
     end
   end
-  fun do_em (accg as {includes,preincludes,...}) [] =
-        if k {includes=includes,preincludes=preincludes} then SOME accg
-        else NONE
-    | do_em accg (x::xs) = let
-      in
-        case recurse accg x of
-          SOME result => do_em result xs
-        | NONE => NONE
-      end
+  fun do_em (accg as {includes,preincludes,...}) dirs =
+      case dirs of
+          [] =>
+          let
+            val f = map hmdir.toAbsPath
+          in
+            if k {includes=f includes,preincludes=f preincludes} then SOME accg
+            else NONE
+          end
+        | x::xs =>
+          let
+          in
+            case recurse accg x of
+                SOME result => do_em result xs
+              | NONE => NONE
+          end
   val visited = Binaryset.add(visited, dir)
+  fun canon i = hmdir.extendp {base = dir, extension = i}
+  val canonl = map canon
 in
   if no_prereqs then
     if k {includes = #includes dirinfo, preincludes = #preincludes dirinfo} then
-      SOME dirinfo
+      SOME {visited = visited, includes = map canon includes,
+            preincludes = map canon preincludes}
     else NONE
   else let
-      fun foldthis (dir, m) =
-          Binarymap.insert(m, FileSys.fullPath dir, dir)
-          handle OS.SysErr _ =>
-                 (warn ("Includes path "^dir^" looks bogus");
-                  m)
-      val possible_calls = List.foldr foldthis
-                                      (Binarymap.mkDict String.compare)
-                                      (preincludes @ includes)
+      fun f idirs = map canon idirs
+      val possible_calls = hmdir.sort (f (preincludes @ includes))
     in
-      do_em {visited = visited, includes = includes, preincludes = preincludes}
-            (Binarymap.listItems possible_calls)
+      do_em {visited = visited, includes = f includes, preincludes = f preincludes}
+            possible_calls
     end
 end
 
