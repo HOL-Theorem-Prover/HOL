@@ -35,17 +35,6 @@ val SYSTEML = Systeml.systeml
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-fun variant str =  (* get an unused file name in the current directory *)
- if OS.FileSys.access(str,[])
- then let fun vary i =
-           let val s = str^Int.toString i
-           in if OS.FileSys.access(s,[])  then vary (i+1) else s
-           end
-      in vary 0
-      end
- else str;
-
-
 fun fromFileNoSuf f =
   case f of
     UO c  => codeToString c
@@ -85,11 +74,6 @@ end
 (** Command line parsing *)
 
 (*** list functions *)
-fun butlast0 _ [] = raise Fail "butlast - empty list"
-  | butlast0 acc [x] = List.rev acc
-  | butlast0 acc (h::t) = butlast0 (h::acc) t
-fun butlast l = butlast0 [] l
-
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
 fun set_union s1 s2 =
@@ -105,14 +89,9 @@ fun delete m [] = []
 fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
-fun alltrue [] = true
-  | alltrue (x::xs) = x andalso alltrue xs
 fun I x = x
 
 (*** parse command line *)
-fun includify [] = []
-  | includify (h::t) = "-I" :: h :: includify t
-
 fun parse_command_line list = let
   fun find_pairs0 tag rem inc [] = (List.rev rem, List.rev inc)
     | find_pairs0 tag rem inc [x] = (List.rev (x::rem), List.rev inc)
