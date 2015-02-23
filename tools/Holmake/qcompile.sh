@@ -25,3 +25,4 @@ mosmlc -c ReadHMF.sig
 mosmlc -c basis2002.ui ReadHMF.sml
 mosmlc -c basis2002.ui Holmake.sml
 mosmlc -o Holmake Holmake.uo
+cp Holmake ../../bin
