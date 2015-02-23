@@ -28,6 +28,12 @@ val _ = DefnBase.write_congs (DefnBase.read_congs() @
  ---------------------------------------------------------------------------*)
 
 local open HolKernel Ho_Rewrite  (* signature control *)
+      structure Parse =
+      struct
+        open Parse
+        val (Type,Term) = parse_from_grammars bool_grammars
+      end
+      open Parse
 in
 (*---------------------------------------------------------------------------*)
 (* The first canjunct is useful when rewriting assumptions, but not when     *)
