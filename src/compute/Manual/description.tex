@@ -11,7 +11,7 @@ $\beta$-reduce any term, using a call by value strategy.
 The \ml{CBV\_CONV} conversion rewrites the equations in a call-by-value
 strategy, that is completely evaluates the arguments before the
 ``function call'' (the application of a rewrite which left-hand side
-has this constant in his head). The reduction is weak, which means
+has this constant in its head). The reduction is weak, which means
 that reduction under abstractions are delayed as long as
 possible. However, when we know that an abstraction will never be
 applied, reductions are performed under it, so that we can actually
@@ -51,7 +51,7 @@ primitive notion in \HOL, and is slower.
 
 The \ml{compute} library has its own type of simplification sets, that
 can be as usual built from a list of theorems. These theorems must be
-conjunctions of possibly quantified equations, whose left-hand side
+conjunctions of possibly quantified equations, whose left-hand sides
 satisfy some condition to be defined below. Conjuncts not in the
 requested form are not used.
 
