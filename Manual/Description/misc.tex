@@ -331,11 +331,10 @@ with the following command-line options:
   configured to use by default.
 \item[\tt --holmakefile <file>] Use the given file as a make-file.
   See section~\ref{sec:using-Holmakefiles} below for more on this.
-\item[\tt -I <directory>] Look in specified directory for additional
-  Moscow~ML object files, including other HOL theories.  This option
-  can be repeated, with multiple {\tt -I}'s to allow for multiple
-  directories to be referenced.  As above, directories specified in
-  this way will also be rebuilt before the current targets are built.
+\item[\tt -I <directory>]
+  Look in specified directory for additional object files, including other HOL theories.
+  This option can be repeated, with multiple {\tt -I}'s to allow for multiple directories to be referenced.
+  As above, directories specified in this way will also be rebuilt before the current targets are built.
 \item[\texttt{--interactive} or \texttt{-i}] Causes the HOL code that
   runs when a theory building file is executed to have the flag
   \texttt{Globals.interactive} set to true.  This will alter the diagnostic
@@ -363,13 +362,11 @@ with the following command-line options:
 \item[\texttt{--no\_prereqs}]%
 \index{Holmake@\holmake!recursive invocation}%
 Do not recursively attempt to build ``include'' directories before working in the current directory.
-\item[\texttt{--no\_sigobj}] Do not link against HOL system's
-  directory of HOL system files.  Use of this option goes some way
-  towards turning
-  \holmake{} into a general Moscow~ML \textsf{make} system.  However,
-  it will still attempt to do ``HOL things'' with files whose names
-  end in \texttt{Script} and \texttt{Theory}.  This option implies
-  \texttt{--no\_overlay}.
+\item[\texttt{--no\_sigobj}]
+  Do not link against \HOL{} system's directory of \HOL{} system files.
+  Use of this option goes some way towards turning \holmake{} into a general \ML{} \textsf{make} system.
+  However, it will still attempt to do ``\HOL{} things'' with files whose names end in \texttt{Script} and \texttt{Theory}.
+  This option implies \texttt{--no\_overlay}.
 \item[\texttt{--overlay <file>}] Use the given file as the overlay
   rather than the default.
 \item[\texttt{--qof}] Standing for ``quit on failure''.  If a tactic
