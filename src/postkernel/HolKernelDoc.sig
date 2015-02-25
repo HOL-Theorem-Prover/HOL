@@ -53,6 +53,10 @@ sig
   val strip_binop: ('a -> ('a * 'a) option) -> 'a -> 'a list
   val strip_comb: term -> term * term list
   val strip_fun: hol_type -> hol_type list * hol_type
+  val strip_gen_right_opt : ('a -> ('a * 'b) option) -> 'a -> 'a * 'b list
+  val strip_gen_right : ('a -> 'a * 'b) -> 'a -> 'a * 'b list
+  val strip_gen_left_opt : ('a -> ('b * 'a) option) -> 'a -> 'b list * 'a
+  val strip_gen_left : ('a -> 'b * 'a) -> 'a -> 'b list * 'a
   val subst_occs:
      int list list -> {redex: term, residue: term} list -> term -> term
   val syntax_fns:

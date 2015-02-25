@@ -120,29 +120,43 @@ fun strip_binop dest =
       strip [] o Lib.list_of_singleton
    end
 
-(* For right-associative binary operators. Tail recursive. *)
+(* For right-associative binary operators, 
+  or such as dest_abs, SPEC_VAR, dom_rng, dest_imp. Tail recursive. *)
 
-fun spine_binop dest =
+local 
+fun spine_binop' dest =
    let
       fun strip A tm =
          case dest tm of
-            NONE => rev (tm :: A)
+            NONE => (tm, A)
           | SOME (l, r) => strip (l :: A) r
    in
       strip []
    end
+in
+fun spine_binop dest tm = rev ((op ::) (spine_binop' dest tm)) ;
+
+fun strip_gen_left_opt dest t = 
+  let val (tm, A) = spine_binop' dest t in (rev A, tm) end ;
+end (* local fun spine_binop' *)
+
+fun strip_gen_left dest = strip_gen_left_opt (total dest) ;
 
 (* For left-associative binary operators.  Tail recursive *)
 
-fun lspine_binop dest =
+fun strip_gen_right_opt dest =
    let
      fun strip A tm =
          case dest tm of
-           NONE => tm :: A
+           NONE => (tm, A)
          | SOME (l, r) => strip (r :: A) l
    in
       strip []
    end
+
+fun lspine_binop dest tm = (op ::) (strip_gen_right_opt dest tm) ;
+
+fun strip_gen_right dest = strip_gen_right_opt (total dest) ;
 
 (* For right-associative binary operators. Tail recursive. *)
 
