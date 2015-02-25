@@ -1002,23 +1002,18 @@ in
       hm_recur NONE (stdcont targets)
     end
   | xs => let
-      fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
-                      x in_target ".PHONY"
+      val cleanTarget_opt =
+          List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
       fun canon i = hmdir.extendp {base = dir, extension = i}
     in
-      if List.all isPhony xs andalso not cline_recursive then
+      if isSome cleanTarget_opt andalso not cline_recursive then
         if finish_logging (strategy purelocal_includes xs) then
           SOME {visited = visiteddirs,
                 includes = map canon allincludes,
                 preincludes = map canon hmake_preincludes}
         else NONE
       else
-        let
-          val ctgt =
-              List.find (fn s => member s ["clean", "cleanDeps", "cleanAll"]) xs
-        in
-          hm_recur ctgt (stdcont xs)
-        end
+          hm_recur cleanTarget_opt (stdcont xs)
     end
 end
 
