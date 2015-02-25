@@ -18,58 +18,55 @@ open thfWriter
 val ERR = mk_HOL_ERR "holyHammer"
 val hh_dir = HOLDIR ^ "/src/holyhammer"
 val thy_dir = hh_dir ^ "/theories"
-val eprover_dir = hh_dir ^ "/provers/eprover/eprover_files"
-val vampire_dir = hh_dir ^ "/provers/vampire/vampire_files"
-val z3_dir      = hh_dir ^ "/provers/z3/z3_files"
-val all_out     = [eprover_dir ^ "/eprover_out",
-                   vampire_dir ^ "/vampire_out",
-                   z3_dir ^ "/z3_out"]
-val all_status  = [eprover_dir ^ "/eprover_status",
-                   vampire_dir ^ "/vampire_status",
-                   z3_dir ^ "/z3_status"]
+fun dir_of_prover prover = 
+  hh_dir ^ "/provers/" ^ prover ^ "/" ^ prover ^ "_files"
+fun out_of_prover prover = 
+  dir_of_prover prover ^ "/" ^ prover ^ "_out"
+fun status_of_prover prover = 
+  dir_of_prover prover ^ "/" ^ prover ^ "_status"
+fun hh_of_prover prover = "hh_" ^ prover ^ ".sh"
+val list_of_provers = ["eprover","vampire","z3"]
 
-(* Try every provers if they exists in the order: eprover, vampire and z3. *)
-fun holyhammer cj =
+(* Export object from the loaded theories *)
+fun export cj =
   let 
     val ct   = current_theory ()
     val thyl = ct :: Theory.ancestry ct  
   in
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh"); 
-    (* write loaded theories *)
-    write_thf_thyl thy_dir thyl; 
-    (* write the conjecture in thf format *)
-    write_conjecture (thy_dir ^ "/conjecture") cj;
-    (* write the dependencies between theories *)
-    write_thydep (thy_dir ^ "/thydep") thyl;
-    (* call holyhammer and the external provers *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh"); 
-    (* try to rebuild the proof found using metis *)
-    replay_atpfilel all_status all_out cj
-  end
-
-(* Let you chose the specific prover you want to use either 
-   (eprover, vampire or z3) *)
-fun hh_prover prover cj =
-  let 
-    val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct  
-  in
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh"); 
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh");
     (* write loaded theories *)
     write_thf_thyl thy_dir thyl;
     (* write the conjecture in thf format *)
     write_conjecture (thy_dir ^ "/conjecture") cj;
     (* write the dependencies between theories *)
-    write_thydep (thy_dir ^ "/thydep") thyl;
-    (* call holyhammer and one external prover *)
-    case prover of 
-      "eprover" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_eprover.sh")
-    | "vampire" => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_vampire.sh")
-    | "z3"      => OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_z3.sh")
-    | _         => raise ERR "hh_prover" "unknown prover"; 
-    (* try to rebuild the proof found using metis *)
-    replay_atpfilel all_status all_out cj
+    write_thydep (thy_dir ^ "/thydep") thyl
   end
 
+(* Try every provers in parallel: eprover, vampire and z3. *)
+fun holyhammer cj =
+  let 
+    val atpfiles = map (fn x => (status_of_prover x, out_of_prover x))
+                   list_of_provers
+  in
+    export cj;
+    (* call holyhammer and the external provers *)
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh"); 
+    (* try to rebuild the proof found using metis *)
+    replay_atpfilel atpfiles cj
+  end
+
+(* Let you chose the specific prover you want to use either 
+   (eprover, vampire or z3) *)
+fun hh prover cj =
+  if not (mem prover list_of_provers) 
+  then raise ERR "hh_prover" "not supported prover"
+  else
+    (
+    export cj;
+    (* call holyhammer and one external prover *)
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh " ^ hh_of_prover prover); 
+    (* try to rebuild the proof found using metis *)
+    replay_atpfile (status_of_prover prover, out_of_prover prover) cj
+    )
 
 end

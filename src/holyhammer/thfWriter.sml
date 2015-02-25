@@ -527,16 +527,20 @@ fun get_status path = hd (readl path) handle _ => "Unknown"
    Proving the conjecture.
  ----------------------------------------------------------------------------*)
 
+(* Tools *)
 fun time_metis thml conjecture time =
-  (
-  mlibMetis.limit := {time = SOME time, infs = NONE};
   let 
     val oldlimit = !mlibMetis.limit
-    val thm = METIS_PROVE thml conjecture 
+    val oldtracelevel = !mlibUseful.trace_level
+    val thm = 
+      (
+      mlibMetis.limit := {time = SOME time, infs = NONE};
+      mlibUseful.trace_level := 0;
+      METIS_PROVE thml conjecture 
+      )
   in
-    (mlibMetis.limit := oldlimit; thm)
+    (mlibMetis.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
   end
-  )
 
 local fun fetch_conj_helper (thm,a) = case a of
     []             => thm
@@ -556,35 +560,68 @@ fun ostring_of_conjunct ({Thy,Name},a) =
   else "thfWriter.fetch_conj (" ^ Thy ^ "Theory." ^ Name ^ 
        "," ^ quote (number_address a) ^ ")"
 
-fun reconstruct atp_out conjecture =
+(* Minimization *)
+val minimize_flag = ref true
+
+fun minimize_loop axl1 axl2 cj =
+  if null axl2 then axl1 else
+    let val axl = axl1 @ (tl axl2) in
+      if can (time_metis (map fetch_conj_internal axl) cj) 2.0
+      then minimize_loop axl1 (tl axl2) cj
+      else minimize_loop (hd axl2 :: axl1) (tl axl2) cj
+    end
+
+fun minimize axl cj =
+  if can (time_metis (map fetch_conj_internal axl) cj) 2.0 
+  then minimize_loop [] axl cj
+  else axl
+
+(* Parsing and reconstruction *) 
+(* Wierd: we need to minimization to get the good result *)
+fun reconstruct axl cj =
   let 
-    val axl1 = readl atp_out
-    val axl2 = filter (fn x => not (mem x reserved_names)) axl1
-    val axl3 = map (fn x => dfind x (!readthf_names)) axl2
-    val s = String.concatWith "," (map ostring_of_conjunct axl3)
-    val axl4 = map fetch_conj_internal axl3
+    val axl1 = filter (fn x => not (mem x reserved_names)) axl
+    val axl2 = map (fn x => dfind x (!readthf_names)) axl1
+    val axl3 = if !minimize_flag then minimize axl2 cj else axl2
+    val s    = String.concatWith "," (map ostring_of_conjunct axl3)
   in
     print ("val lemmas = [" ^ s ^ "]\n");
-    time_metis axl4 conjecture 30.0
+    time_metis (map fetch_conj_internal axl3) cj 30.0
   end
 
-(* To be improved: 
-- Should reconstruct the proof from 
-  a different prove when it fails.
-- Should minimize the proof by repetitive call of the prover.
- *)
+fun replay_atpfile (atp_status,atp_out) conjecture =
+  let val s = get_status atp_status in
+    if s = "Theorem" 
+    then reconstruct (readl atp_out) conjecture
+    else raise ERR "replay_atpfile" ("Status: " ^ s)
+  end
 
-fun replay_atpfilel atp_statusl atp_outl conjecture =
+fun replay_atpfilel atpfilel conjecture =
   let 
-    val sl = map get_status atp_statusl 
-    val s  = if all (fn x => x = "Unknown") sl then "Unknown"
-             else hd (List.filter (fn x => x <> "Unknown") sl)
-    val l  = combine (sl,atp_outl)
+    fun process (atp_status,atp_out) =
+      let val s = get_status atp_status in
+        if s = "Theorem" then (s, readl atp_out) else (s, [])
+      end
+    val processedl = map process atpfilel 
+    val newl = filter (fn (x,_) => x = "Theorem") processedl
   in
-    if all (fn x => x <> "Theorem") sl 
-    then raise ERR "replay_atpfilel" ("Status: " ^ s)
-    else reconstruct (assoc "Theorem" l) conjecture
+    if null newl
+    then 
+      let  
+        val status_list = map fst processedl
+        val s = if all (fn x => x = "Unknown") status_list 
+                then "Unknown"
+                else hd (filter (fn x => x <> "Unknown") status_list)
+      in
+        raise ERR "replay_atpfilel" ("Status: " ^ s)
+      end
+    else 
+      let 
+        fun compare_list l1 l2 = length l1 > length l2
+        val axl = hd (sort compare_list (map snd newl))
+      in
+        reconstruct axl conjecture
+      end
   end
 
 end
-
