@@ -18,6 +18,9 @@ struct
 open Feedback Lib Term KernelTypes Tag
 
 type 'a set = 'a HOLset.set;
+type depdisk =        
+    (string * int) * 
+    (string * (string * int list * (int * string) list) list) list
 
 val --> = Type.-->;
 infixr 3 -->;

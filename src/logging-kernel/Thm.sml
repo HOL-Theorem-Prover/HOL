@@ -18,6 +18,9 @@ struct
 open Feedback Lib Term
 
 type 'a set = 'a HOLset.set;
+type depdisk =        
+    (string * int) * 
+    (string * (string * int list * (int * string) list) list) list
 type tag = Tag.tag
 
 val --> = Type.-->;
@@ -1262,16 +1265,33 @@ in
 end
 
 
+(* Tracking dependencies *)
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c,Axiom_prf)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Tracking dependencies. Giving a dependency identifier when calling 
+    Theory.save_thm.
+   ---------------------------------------------------------------------- *)
+
+val thm_order = ref 0
+
+fun give_depid_thm thy th = 
+  let 
+    fun f (thy,n) (THM(t,h,c)) = 
+      THM(Tag.give_depid_tag (thy,n) t,h,c) 
+    val th' = f (thy,!thm_order) th 
+  in
+    (thm_order := (!thm_order) + 1; th')
+  end
 
 (* Some OpenTheory kernel rules *)
 fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let

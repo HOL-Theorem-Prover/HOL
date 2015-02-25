@@ -43,7 +43,7 @@ fun export cj =
   end
 
 (* Try every provers in parallel: eprover, vampire and z3. *)
-fun holyhammer cj =
+fun hh cj =
   let 
     val atpfiles = map (fn x => (status_of_prover x, out_of_prover x))
                    list_of_provers
@@ -57,7 +57,7 @@ fun holyhammer cj =
 
 (* Let you chose the specific prover you want to use either 
    (eprover, vampire or z3) *)
-fun hh prover cj =
+fun hhp prover cj =
   if not (mem prover list_of_provers) 
   then raise ERR "hh_prover" "not supported prover"
   else

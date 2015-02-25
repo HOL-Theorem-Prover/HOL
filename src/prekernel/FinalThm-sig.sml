@@ -5,6 +5,9 @@ sig
   type term
   type hol_type
   type 'a set   = 'a HOLset.set
+  type depdisk =        
+    (string * int) * 
+    (string * (string * int list * (int * string) list) list) list
 
   val kernelid : string
 
@@ -115,7 +118,7 @@ sig
 
   (* Fetching theorems from disk (Tracking dependencies) *)
 
-  val disk_thm      : (Dep.depdisk * string list) * term list -> thm
+  val disk_thm      : (depdisk * string list) * term list -> thm
 
   (* Tracking dependencies *)
   
