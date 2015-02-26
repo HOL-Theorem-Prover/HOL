@@ -1249,7 +1249,7 @@ Rather the first line of \HOL{} output will be indented, and the subsequent line
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
 
 
-\item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
+\item[$\mathit{nm}_1\mathtt{/}\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
 %
 Causes name $\mathit{nm}_1$ to be substituted for name $\mathit{nm}_2$ in the term or theorem.
@@ -1261,6 +1261,12 @@ Because it uses instantiation, free variables in theorem hypotheses will get ren
 (Hypotheses are not printed by default anyway of course.)
 
 If $\mathit{nm}_1$ and $\mathit{nm}_2$ both begin with the colon character then they are parsed as types, and type instantiation is performed on the term or theorem argument instead of variable substitution.
+
+\item[$s\mathtt{//}t$] (For use with \holtm{}, \holthm, and \holty) Causes \LaTeX{} string $s$ to be substituted for token $t$.
+This allows one-off manipulation of the override map (see Section~\ref{sec:running-munger} below).
+The difference between this operation and the ``normal substitution'' done with a single slash (as above) is that it happens as the \HOL{} entity is printed, whereas normal substitution happens before pretty-printing is done.
+If printing depends on particular variable name choices, the ``last minute'' manipulations possible with this form of substitution may be preferable.
+The width of the \LaTeX{} string is taken to be the width of the original token $t$.
 \end{description}
 
 \subsection{Math-Mode Munging}

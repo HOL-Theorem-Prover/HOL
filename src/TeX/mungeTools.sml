@@ -7,6 +7,7 @@ datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
+             | OverrideUpd of (string * int) * string
              | NoTurnstile | Width of int
              | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
@@ -117,7 +118,10 @@ fun stringOpt pos s =
                 (warn (pos, s ^ " is not a valid option"); NONE)
             else
               (warn (pos, s ^ " is not a valid option"); NONE)
-          else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
+          else if size sfx > 2 andalso sub(sfx,1) = #"/" then
+            SOME(OverrideUpd((rmws pfx, size sfx - 2), rmws (slice(sfx,2,NONE))))
+          else
+            SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
         end
     end
 
@@ -214,7 +218,8 @@ val optset_unoverloads =
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
 
-
+fun diag s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+              TextIO.flushOut TextIO.stdErr)
 fun overrides s = Binarymap.peek (!user_overrides, s)
 
 fun isChar x y = x = y
@@ -269,6 +274,8 @@ end
 
 fun depth1_conv c t =
     (TRY_CONV c THENC TRY_CONV (SUB_CONV (depth1_conv c))) t
+
+fun updatef ((k, v), f) x = if x = k then SOME v else f x
 
 fun do_thminsts loc opts th = let
   val (insts, tytheta, theta) = mkinst loc opts (concl th)
@@ -382,6 +389,14 @@ in
                       [] => (fn f => f)
                     | slist => clear_overloads slist)
 
+    val overrides = let
+      fun foldthis (opt, acc) =
+          case opt of
+              OverrideUpd (newsz,old) => updatef ((old,newsz), acc)
+            | _ => acc
+    in
+      OptSet.fold foldthis overrides opts
+    end
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
     fun clear_abbrevs slist f = let
