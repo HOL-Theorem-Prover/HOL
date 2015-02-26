@@ -270,6 +270,11 @@ fun UNDISCH th =
    MP th (ASSUME (fst (dest_imp (concl th))))
    handle HOL_ERR _ => raise ERR "UNDISCH" ""
 
+fun UNDISCH_TM th =
+   let val (ant, conseq) = dest_imp (concl th) ;
+   in (ant, MP th (ASSUME ant)) end 
+   handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
+
 (*---------------------------------------------------------------------------*
  * =T elimination                                                            *
  *                                                                           *

@@ -19,6 +19,7 @@ sig
   val IMP_ANTISYM_RULE : thm -> thm -> thm
   val CONTR            : term -> thm -> thm
   val UNDISCH          : thm -> thm
+  val UNDISCH_TM       : thm -> term * thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
