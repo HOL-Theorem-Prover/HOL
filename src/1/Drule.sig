@@ -10,6 +10,8 @@ sig
   val LIST_MK_EXISTS   : term list -> thm -> thm
   val SIMPLE_EXISTS    : term -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
+  val EXISTS_LEFT      : term list -> thm -> thm
+  val EXISTS_LEFT1     : term -> thm -> thm
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm

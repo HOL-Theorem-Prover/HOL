@@ -1230,6 +1230,74 @@ fun PART_MATCH partfn th =
    end
 
 (* --------------------------------------------------------------------------*
+    EXISTS_LEFT, EXISTS_LEFT1  
+    existentially quantifying variables which appear only in the hypotheses
+    
+			[x = y, y = z] |- x = z
+	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
+	       [∃y. (x = y) ∧ (y = z)] |- x = z
+
+ * --------------------------------------------------------------------------*)
+
+(* EXISTS_LEFT' : bool ->
+   term list -> {fvs: term list, hyp: term} list -> term list -> thm -> thm
+   used below, saves hyps, their free vars, and free vars of conclusion,
+   across recursive calls 
+   arg1 - whether to ignore errors, ie, free vars which are either in the 
+     conclusion or not in any hypothesis
+   arg2 - list of free vars in the conclusion
+   arg3 - list of assumptions of the theorem, each with the list of free vars
+     which it contains
+   arg4 - list of free vars to become existentially quantified 
+*)
+
+fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
+  | EXISTS_LEFT' strict fvs_c hfvs (fv :: fvs) th =
+    let
+      val _ = if is_var fv then ()
+        else raise mk_HOL_ERR "Drule" "EXISTS_LEFT'" "not free variable" ;
+      (* following raises Bind if fv in conclusion *)
+      val false = List.exists (Lib.equal fv) fvs_c ;
+      fun hyp_ctns_fv {hyp, fvs} = List.exists (Lib.equal fv) fvs ;
+      (* following raises Bind if fv not in any hypothesis *)
+      val (hyps_ctg_fv as _ :: _, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
+      val conj_tm = list_mk_conj (map #hyp hyps_ctg_fv) ;
+      val conj_th = ASSUME conj_tm ;
+      (* CONJ_LIST gives original hyps, even if they are conjunctions *)
+      val sep_ths = CONJ_LIST (length hyps_ctg_fv) conj_th ;
+      val th2 = Lib.itlist PROVE_HYP sep_ths th ;
+      val ex_conj_tm = mk_exists (fv, conj_tm) ;
+      val ex_conj_th = ASSUME ex_conj_tm ;
+      val the = CHOOSE (fv, ex_conj_th) th2 ;
+      val thex = EXISTS_LEFT' strict fvs_c
+        ({hyp = ex_conj_tm, fvs = free_vars ex_conj_tm} :: hyps_nc) fvs the ;
+    in thex end
+    handle exn => if strict then raise
+          raise mk_HOL_ERR "Drule" "EXISTS_LEFT'"
+            "free variable in conclusion or not in any hypothesis"
+        else EXISTS_LEFT' strict fvs_c hfvs fvs th ;
+
+(* EXISTS_LEFT : term list -> thm -> thm
+  for each free var in turn, do the following:
+  replace hyps containing the free var by their conjunction,
+  existentially quantified over the free var;
+  ignore free vars for which this can't be done *)
+fun EXISTS_LEFT [] th = th
+  | EXISTS_LEFT fvs th =
+    let val hfvs = map (fn h => {hyp = h, fvs = free_vars h}) (Thm.hyp th) ;
+      val fvs_c = free_vars (concl th) ;
+    in EXISTS_LEFT' false fvs_c hfvs fvs th end ;
+
+(* EXISTS_LEFT1 : term -> thm -> thm
+  for the free var argument, replace hyps containing the free var
+  by their conjunction, existentially quantified over the free var;
+  error if this can't be done for a free var *)
+fun EXISTS_LEFT1 fv th =
+    let val hfvs = map (fn h => {hyp = h, fvs = free_vars h}) (Thm.hyp th) ;
+      val fvs_c = free_vars (concl th) ;
+    in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
+
+(* --------------------------------------------------------------------------*
  * MATCH_MP: Matching Modus Ponens for implications.                         *
  *                                                                           *
  *    |- !x1 ... xn. P ==> Q     |- P'                                       *
