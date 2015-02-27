@@ -16,10 +16,6 @@ all: hh_h4
 hh_h4: main_h4.ml $(FILES_CMX) Makefile
 	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(FILES_CMX) $<
 
-# Run "rlwrap ./top -I hh1"
-top: $(FILES_CMO) Makefile
-	ocamlmktop nums.cma str.cma unix.cma -o $@ -I hh1 $(FILES_CMO)
-
 %.ml: %.mly
 	ocamlyacc $< # -v
 	rm $(<:y=i)
@@ -34,7 +30,7 @@ top: $(FILES_CMO) Makefile
 	ocamlc -c -I hh1 $<
 
 clean:
-	rm hhthf0 hhall top *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o
+	rm hh4 *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o
 
 .depend: $(addsuffix .ml,$(FILES))
 	ocamldep $^ main.ml > $@
