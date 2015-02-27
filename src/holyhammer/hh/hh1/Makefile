@@ -19,7 +19,7 @@ top: $(FILES_CMO) Makefile
 	ocamlc -c $<
 
 clean:
-	rm main top *cmx *cmo *cmi *.o *~
+	rm *cmx *cmo *cmi *.o *~
 
 .depend:
 	ocamldep $(addsuffix .ml,$(FILES)) > $@

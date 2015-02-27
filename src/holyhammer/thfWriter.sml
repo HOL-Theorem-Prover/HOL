@@ -451,35 +451,6 @@ fun write_thf_thy folder thy =
   thf_thy_end ()
   )
 
-(* For experiments *)
-fun write_thf_thy_depid folder (thy,n) =
-  (
-  thf_thy_start folder thy;
-  let val l = dest_theory thy in 
-    case l of THEORY(_,t) => 
-    (
-    app (thf_tydef thy) (#types t);
-    app (thf_constdef thy) (#consts t);
-    let 
-      val axl = map (fn x => (x,"ax")) (DB.theorems thy)
-      val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
-      fun filt ((_,th1),_) =
-        let val f = depnumber_of o depid_of o depsort_of o dep_of o Thm.tag in
-          f th1 < n
-        end
-      fun compare ((_,th1),_) ((_,th2),_) =
-        let val f = depnumber_of o depid_of o depsort_of o dep_of o Thm.tag in
-          f th1 < f th2 
-        end
-      val name_thm_role_list = sort compare (List.filter filt (axl @ defl))
-    in
-      app print_conjuncts name_thm_role_list
-    end
-    )
-  end;              
-  thf_thy_end ()
-  )
-
 fun sort_thyl thyl = case thyl of
     [] => []
   | thy :: m => let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
