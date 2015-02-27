@@ -51,14 +51,14 @@ fun export cj =
 (* Try every provers in parallel: eprover, vampire and z3. *)
 fun hh cj =
   let 
-    val atpfiles = map (fn x => (status_of_prover x, out_of_prover x))
+    val atpfilel = map (fn x => (status_of_prover x, out_of_prover x))
                    list_of_provers
   in
     export cj;
     (* call holyhammer and the external provers *)
     OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh"); 
     (* try to rebuild the proof found using metis *)
-    replay_atpfilel atpfiles cj
+    replay_atpfilel atpfilel cj
   end
 
 (* Let you chose the specific prover you want to use either 
