@@ -19,6 +19,16 @@ sig
    val pheu_first_col : pmatch_heuristic
    val pheu_last_col : pmatch_heuristic
 
+   (* A manual heuristic. For each decision, it prints the columns and
+      takes the column-number from the provided list of explicit
+      choices. If the list is too short, the first column is
+      chosen. One should run this heuristic first with an empty list
+      as argument. Then look at the choices and add 0s for all the
+      initial choices you liked to be 0 an then a different choice you
+      prefer. Rerun again (because the following choices will change)
+      and iterate. This provided very fine control, but is tedious. *) 
+   val pheu_manual : int list -> pmatch_heuristic
+
    (* A heuristic based on column ranks. Given a pattern match matrix like
 
       p_11 ... p_1n
@@ -61,6 +71,7 @@ sig
       Only usable for very small examples! *)
    val exhaustive_heuristic_fun : pmatch_heuristic_res_compare -> pmatch_heuristic_fun
 
+
    (* custom pmatch_heuristic_fun can be easiest constructed by an explicit list of heuristics and
       a compare function *)
    val pmatch_heuristic_list : pmatch_heuristic_res_compare -> pmatch_heuristic list -> pmatch_heuristic_fun
@@ -81,5 +92,6 @@ sig
 
    val with_classic_heuristic : ('a -> 'b) -> ('a -> 'b)
    val with_heuristic : pmatch_heuristic -> ('a -> 'b) -> ('a -> 'b)
+   val with_manual_heuristic : int list -> ('a -> 'b) -> ('a -> 'b)
    val is_classic : unit -> bool
 end
