@@ -56,14 +56,14 @@ fun hh cj =
   in
     export cj;
     (* call holyhammer and the external provers *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh"); 
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh");                           
     (* try to rebuild the proof found using metis *)
     replay_atpfilel atpfilel cj
   end
 
 (* Let you chose the specific prover you want to use either 
    (eprover, vampire or z3) *)
-fun hhp prover cj =
+fun hh_atp prover cj =
   if not (mem prover list_of_provers) 
   then raise ERR "hh_prover" "not supported prover"
   else

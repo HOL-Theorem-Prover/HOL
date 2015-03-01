@@ -6,9 +6,9 @@ Requires:
 * perl
 
 Install holyhammer: 
-  sh build.sh (in this directory)
+  Run make in this directory.
 
-Install: See INSTALL file in the main directory. 
+Install HOL4: See INSTALL file in the main directory. 
   Here is a short version:
   Getting polyml:
     Download the latest version of polyml (http://www.polyml.org/). 
@@ -37,6 +37,7 @@ Adding more provers (optional):
   for Vampire it should be vampire.
 
 Removing provers:
+
   Delete the associating binaries (eprover,z3 or vampire), 
   holyhammer will check that the file doesn't exists anymore and won't perform 
   premise selection and translation for this prover.
@@ -44,6 +45,6 @@ Removing provers:
 Examples: rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
-  holyhammer ``0 < 1``;
+  hh ``0 < 1``;
   load "complexTheory";
-  holyhammer ``0 <> 1``;
+  hhp "eprover" ``0 <> 1``;

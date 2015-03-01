@@ -9,7 +9,8 @@ cd hh
 clean $EPROVER_DIR
 # Premise selection and translation
 ./hh_h4 128 ../theories ../theories/conjecture conjecture \
-$EPROVER_DIR > /dev/null
+$EPROVER_DIR > /dev/null || \
+(echo "Holyhammer binaries not found. Please run make in src/holyhammer"; exit)
 # Run eprover with 128 premises
 cd ../provers
 sh eprover.sh
