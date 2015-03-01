@@ -56,7 +56,7 @@ fun hh cj =
   in
     export cj;
     (* call holyhammer and the external provers *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh");                           
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh");        
     (* try to rebuild the proof found using metis *)
     replay_atpfilel atpfilel cj
   end
@@ -70,7 +70,7 @@ fun hh_atp prover cj =
     (
     export cj;
     (* call holyhammer and one external prover *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh " ^ hh_of_prover prover); 
+    OS.Process.system ("cd " ^ hh_dir ^ "; sh " ^ hh_of_prover prover);
     (* try to rebuild the proof found using metis *)
     replay_atpfile (status_of_prover prover, out_of_prover prover) cj
     )
