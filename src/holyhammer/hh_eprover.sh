@@ -10,7 +10,7 @@ clean $EPROVER_DIR
 # Premise selection and translation
 ./hh_h4 128 ../theories ../theories/conjecture conjecture \
 $EPROVER_DIR > /dev/null || \
-(echo "Please run make in src/holyhammer."; exit)
+(echo "See README in src/holyhammer."; exit)
 # Run eprover with 128 premises
 cd ../provers
 sh eprover.sh

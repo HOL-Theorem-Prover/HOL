@@ -8,19 +8,7 @@ Requires:
 Install holyhammer: 
   Run make in this directory.
 
-Install HOL4: See INSTALL file in the main directory. 
-  Here is a short version:
-  Getting polyml:
-    Download the latest version of polyml (http://www.polyml.org/). 
-    ./configure --enable-shared (instead of ./configure)
-    make
-    make install
-    Add polyml to your .bashrc path. (example: PATH=$PATH:$HOME/polyml.5.5.2)
-  In the HOL directory:
-    poly < tools/smart-configure.sml
-    bin/build
-
-Adding more provers (optional):
+Adding provers:
   
   Eprover with some strategy is given by default (linux 64 bit). 
   Please replace the binaries (provers/eprover/eprover) and 
