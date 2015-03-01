@@ -14,7 +14,7 @@ Adding provers:
   Please replace the binaries (provers/eprover/eprover) and 
   (provers/eprover/epclextract) with a version adapted to your system if needed.
   Alternatively, you can modify eprover.sh to directly call eprover/eprover losing the
-  benefit of startegy scheduling done by the perl script.
+  benefit of strategy scheduling done by the perl script.
  
   You can add the provers Z3 (4.0) and Vampire (2.6) 
   in their respective directory provers/z3 and provers/vampire. 
