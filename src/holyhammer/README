@@ -1,11 +1,13 @@
 HOLyHammer is a machine learning for theorem proving framework.
 
 Requires:
+
 * OCaml >= 3.12 (tested also with 4.01.0)
 * g++ (recent version with C++11 support)
 * perl
 
-Install holyhammer: 
+Install holyhammer:
+ 
   Run make in this directory.
 
 Adding provers:
@@ -15,13 +17,11 @@ Adding provers:
   (provers/eprover/epclextract) with a version adapted to your system if needed.
   Alternatively, you can modify eprover.sh to directly call eprover/eprover losing the
   benefit of strategy scheduling done by the perl script.
- 
-  You can add the provers Z3 (4.0) and Vampire (2.6) 
+    You can add the provers Z3 (4.0) and Vampire (2.6) 
   in their respective directory provers/z3 and provers/vampire. 
   You may use different versions but parsing may need to be fixed in 
   provers/prover.sh . 
-
-  Please be aware that the name of the binary for Z3 should be z3 and 
+    Please be aware that the name of the binary for Z3 should be z3 and 
   for Vampire it should be vampire.
 
 Removing provers:
@@ -30,7 +30,9 @@ Removing provers:
   holyhammer will check that the file doesn't exists anymore and won't perform 
   premise selection and translation for this prover.
 
-Examples: rlwrap bin/hol
+Example: 
+
+  rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
   hh ``0 < 1``;
