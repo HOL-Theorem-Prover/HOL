@@ -35,4 +35,4 @@ Examples: rlwrap bin/hol
   open holyHammer;
   hh ``0 < 1``;
   load "complexTheory";
-  hhp "eprover" ``0 <> 1``;
+  hh_atp "eprover" ``0 <> 1``;
