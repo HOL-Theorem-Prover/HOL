@@ -10,6 +10,6 @@ predict:
 	cd predict; $(MAKE)
 
 clean: 
-	cd hh/hh1; $(MAKE) -i clean
-	cd hh; $(MAKE) -i clean
-	cd predict; $(MAKE) -i clean
+	cd hh/hh1; $(MAKE) clean
+	cd hh; $(MAKE) clean
+	cd predict; $(MAKE) clean

@@ -30,7 +30,7 @@ hh_h4: main_h4.ml $(FILES_CMX) Makefile
 	ocamlc -c -I hh1 $<
 
 clean:
-	rm hh_h4 *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o
+	rm -f hh_h4 *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o
 
 .depend: $(addsuffix .ml,$(FILES))
 	ocamldep $^ main.ml > $@

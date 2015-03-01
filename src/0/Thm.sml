@@ -659,7 +659,8 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   in make_thm Count.Exists (Tag.merge_dep (tag th), hypset th, w) (* Tracking dependencies *)
+   (* Tracking dependencies *)
+   in make_thm Count.Exists (Tag.merge_dep (tag th), hypset th, w) 
    end
 end;
 
@@ -762,7 +763,8 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th = (* Tracking dependencies *)
-  make_thm Count.Conjunct1 (Tag.merge_conjunct1 (tag th), hypset th, conj1 (concl th))
+  make_thm Count.Conjunct1 (Tag.merge_conjunct1 (tag th), 
+                            hypset th, conj1 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -789,7 +791,8 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th = (* Tracking dependencies *)
- make_thm Count.Conjunct2 (Tag.merge_conjunct2 (tag th), hypset th, conj2 (concl th))
+ make_thm Count.Conjunct2 (Tag.merge_conjunct2 (tag th), 
+                           hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -803,8 +806,8 @@ fun CONJUNCT2 th = (* Tracking dependencies *)
  * fun DISJ1 th t2 = MP (SPEC t2 (SPEC (concl th) OR_INTRO_THM1)) th
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
-(* Tracking dependencies *)
-fun DISJ1 th w = make_thm Count.Disj1
+
+fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
  (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj (concl th, w)) 
  handle HOL_ERR _ => ERR "DISJ1" "";
 
@@ -819,8 +822,8 @@ fun DISJ1 th w = make_thm Count.Disj1
  * fun DISJ2 t1 th = MP (SPEC (concl th) (SPEC t1 OR_INTRO_THM2)) th
  *          handle _ => ERR{function = "DISJ2",message = ""};
  *---------------------------------------------------------------------------*)
-(* Tracking dependencies *)
-fun DISJ2 w th = make_thm Count.Disj2
+
+fun DISJ2 w th = make_thm Count.Disj2 (* Tracking dependencies *)
  (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
@@ -1225,7 +1228,7 @@ end
 
 
 
-(* Tracking dependencies *)
+
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
@@ -1233,6 +1236,7 @@ fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
+  (* Tracking dependencies *)
   mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
@@ -1242,6 +1246,8 @@ end; (* local *)
     Theory.save_thm.
    ---------------------------------------------------------------------- *)
 
+(* Magic : this reference is automatically reset to 0 each time you create 
+   a theory which is convenient *)
 val thm_order = ref 0
 
 fun give_depid_thm thy th = 
