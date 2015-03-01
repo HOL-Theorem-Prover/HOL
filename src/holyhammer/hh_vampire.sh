@@ -10,7 +10,7 @@ clean $VAMPIRE_DIR
 # Premise selection and translation
 ./hh_h4 96 ../theories ../theories/conjecture conjecture \
 $VAMPIRE_DIR > /dev/null || \
-(echo "Holyhammer binaries not found. Please run make in src/holyhammer"; exit)
+(echo "Please run make in src/holyhammer."; exit)
 # Run vampire on 96 premises
 cd ../provers
 sh vampire.sh
