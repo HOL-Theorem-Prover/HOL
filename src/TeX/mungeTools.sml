@@ -8,6 +8,7 @@ datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
              | OverrideUpd of (string * int) * string
+             | TraceSet of string * int
              | NoTurnstile | Width of int
              | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
@@ -64,6 +65,15 @@ fun stringOpt pos s =
         case Int.fromString numpart_s of
           NONE => (warn(pos, s ^ " is not a valid option"); NONE)
         | SOME i => SOME (ShowTypes i)
+      end
+      else if String.isPrefix "tr'" s then let
+        val sfx = String.extract(s, 3, NONE)
+        val (pfx,eqsfx) = Substring.position "'=" (Substring.full sfx)
+        val numpart_s = String.extract (Substring.string eqsfx, 2, NONE)
+      in
+        case Int.fromString numpart_s of
+            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+          | SOME i => SOME(TraceSet(Substring.string pfx, i))
       end
       else if String.isPrefix ">>" s then let
           val numpart_s = String.extract(s,2,NONE)
@@ -214,6 +224,9 @@ fun optset_nomath s = OptSet.has NoMath s
 
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
+
+fun optset_traces opts f =
+    OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
 
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
@@ -388,6 +401,7 @@ in
               |> (case optset_unoverloads opts of
                       [] => (fn f => f)
                     | slist => clear_overloads slist)
+              |> optset_traces opts
 
     val overrides = let
       fun foldthis (opt, acc) =
