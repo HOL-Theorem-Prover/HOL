@@ -3,6 +3,9 @@ open deepMatchesLib
 open deepMatchesTheory
 open deepMatchesSyntax
 open pred_setTheory
+open constrFamiliesLib
+open stringTheory 
+open pred_setLib
 
 (* Introducing case expressions *)
 
@@ -172,6 +175,82 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
    ∀xx. (∀x. xx ≠ (x,[])) ∧ (∀x y ys. xx ≠ (x,y::ys)) ⇒ (my_d xx = ARB):
    thm
 *)
+
+(*********************************)
+(* Compiling                     *)
+(*********************************)
+
+val _ = Datatype `
+  tree = Empty
+       | Red tree 'a tree
+       | Black tree 'a tree`;
+
+val balance_black_def = Define `balance_black a n b =
+   CASE (a,b) OF [
+       || (a,x,b,y,c,d). (Red (Red a x b) y c,d) ~>
+            (Red (Black a x b) y (Black c n d));
+       || (a,x,b,y,c,d). (Red a x (Red b y c),d) ~>
+            (Red (Black a x b) y (Black c n d));
+       || (a,b,y,c,z,d). (a,Red (Red b y c) z d) ~>
+            (Red (Black a n b) y (Black c z d));
+       || (a,b,y,c,z,d). (a,Red b y (Red c z d)) ~>
+            (Red (Black a n b) y (Black c z d));
+       || other. other ~> (Black a n b)
+     ]`
+
+(* try to compile to a tree inside the logic *)
+val balance_black_dectree_def = CONV_RULE
+  (TOP_SWEEP_CONV (PMATCH_CASE_SPLIT_CONV (fn _ => 0))) 
+  balance_black_def
+
+open stringTheory
+val string_match_def = Define `string_match s x =
+   CASE (s, x) OF [
+       || x. ("SUC", x) ~> SUC x;
+       || x. ("DOUBLE", x) ~> (x * 2);
+       || (s, x). (s, x) ~> x
+     ]`
+
+val string_match_dectree_def = CONV_RULE
+  (TOP_SWEEP_CONV (PMATCH_CASE_SPLIT_CONV (fn _ => 0))) 
+  string_match_def
+
+
+(*********************************)
+(* Constructor families          *)
+(*********************************)
+
+val list_REVCASE_def = Define `
+  list_REVCASE l c_nil c_snoc =
+    (if l = [] then c_nil else (
+     c_snoc (LAST l) (BUTLAST l)))`
+
+val list_REVCASE_THM = prove (``
+  ((list_REVCASE [] c_nil c_snoc) = c_nil) /\
+  ((list_REVCASE (SNOC x xs) c_nil c_snoc) = c_snoc x xs)``,
+SIMP_TAC list_ss [list_REVCASE_def, rich_listTheory.NOT_SNOC_NIL])
+
+val c_nil = mk_constructor ``[]:'a list`` []
+val c_snoc = mk_constructor ``SNOC: 'a -> 'a list -> 'a list`` 
+   ["x", "xs"]
+
+val cl = mk_constructorList true [c_nil, c_snoc]
+
+val cf = mk_constructorFamily (cl, ``list_REVCASE``,
+  SIMP_TAC list_ss [rich_listTheory.NOT_SNOC_NIL] THEN
+  REPEAT STRIP_TAC THENL [
+    ASSUME_TAC (Q.SPEC `x` listTheory.SNOC_CASES) THEN
+    FULL_SIMP_TAC std_ss [list_REVCASE_THM],
+
+    PROVE_TAC [listTheory.SNOC_CASES]
+  ]
+)
+
+val t = ``CASE l OF [
+  ||. [] ~> 0;
+  || (x, xs). SNOC x xs ~> x
+  ]``
+
 
 (*********************************)
 (* Using non-injective patterns  *)

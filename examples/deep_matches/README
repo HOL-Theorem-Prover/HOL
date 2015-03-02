@@ -1,9 +1,5 @@
 This directory contains a deep embedding of pattern matching.
 
-*************************************************
-It is work in progress and still far from stable.
-*************************************************
-
 Normally, pattern matches are removed from the input by the parser of
 HOL4. An implementation of a pattern-match compilation algorithm
 replaces them with decision trees using primitive case-split functions
@@ -22,12 +18,15 @@ example consider the ARM disassembler function `arm_decode` in
 of the pattern match compilation in such definitions?
 
 This pattern matching library tries to solve this problem. It provides
-a deep embedding of pattern matches. The parsing and pretty printing
-of these deeply embedded matches is much simpler and therefore more
-trustworthy. The complicated, untrusted pattern match compilation can
-then be performed inside the logic. Therefore, the need to trust the
-implementation of the pattern match compilation is removed. Moreover,
-the deep embedding provides some additional features like guards,
-views, free variables in patterns or multiple occurrences of a bound
-variable inside a pattern. There is also tool support for working with
-deeply embedded pattern matches inside the logic.
+an internal representation of case-expressions that closely follows
+the input synatx. The parsing and pretty printing of these deeply
+case-expressions is much simpler and therefore more trustworthy. The
+complicated, untrusted pattern match compilation can then be performed
+inside the logic. Therefore, the need to trust the implementation of
+the pattern match compilation is removed. In some sense, we have a
+deep pattern compilation now.
+
+Moreover, the new case-expressions provide additional features like
+guards, views, free variables in patterns or multiple occurrences of a
+bound variable inside a pattern. There is also tool support for
+working with the new case-expressions inside the logic.

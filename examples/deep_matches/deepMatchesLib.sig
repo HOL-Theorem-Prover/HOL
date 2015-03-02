@@ -109,4 +109,22 @@ sig
   val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
   val PMATCH_TO_TOP_RULE : rule
 
+
+  (********************************)
+  (* CASE SPLIT (pattern compile) *)
+  (********************************)
+
+  val PMATCH_CASE_SPLIT_CONV :
+     ((term * (term list * term) list) list -> int) -> term -> thm
+
+  val PMATCH_CASE_SPLIT_CONV_GEN :
+     ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db ->
+     ((term * (term list * term) list) list -> int) -> term -> thm
+
+  val PMATCH_CASE_SPLIT_CONV_GENCALL :
+     ssfrag list * (term -> thm) option ->
+     constrFamiliesLib.pmatch_compile_db ->
+     ((term * (term list * term) list) list -> int) -> term -> thm
+
 end

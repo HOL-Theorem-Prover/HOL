@@ -52,6 +52,28 @@ val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 fun FRESH_TY_VARS_RULE thm =
   INST_TYPE ty_var_subst thm
 
+val t = ``\x. P (\x. ss x) x``
+
+fun REMOVE_REBIND_CONV_AUX avoid t = let
+  val (v, t') = dest_abs t
+  val v' = variant avoid v
+  val t'' = subst [v |-> v'] t'
+  val (t''', avoid') = REMOVE_REBIND_CONV_AUX (v'::avoid) t''
+in
+  (mk_abs (v', t'''), avoid')
+end handle HOL_ERR _ => let
+  val (t1, t2) = dest_comb t
+  val (t1', avoid1) = REMOVE_REBIND_CONV_AUX avoid t1
+  val (t2', avoid2) = REMOVE_REBIND_CONV_AUX avoid t2
+in
+  (mk_comb (t1', t2'), avoid2)
+end handle HOL_ERR _ => (t, avoid)
+
+fun REMOVE_REBIND_CONV t = let
+  val (t', _) = REMOVE_REBIND_CONV_AUX [] t
+in
+  ALPHA t t'  
+end
 
 (***********************************************)
 (* PMATCH_ROW                                  *)
@@ -181,7 +203,6 @@ fun is_PMATCH t = can dest_PMATCH t
 
 fun dest_PMATCH_COLS t = let
   val (v, rows) = dest_PMATCH t
-  val vs = pairSyntax.strip_pair v
 
   fun split_row r = let
     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS r
@@ -192,6 +213,18 @@ fun dest_PMATCH_COLS t = let
   end
   val rows' = map split_row rows
 
+  val col_no = length (hd rows')
+  fun aux acc v col_no = if (col_no <= 1) then List.rev (v::acc) else (
+    let 
+       val (v1, v2) = pairSyntax.dest_pair v handle HOL_ERR _ =>
+          (pairSyntax.mk_fst v,  pairSyntax.mk_snd v)
+    in
+       aux (v1::acc) v2 (col_no-1)
+    end
+  )
+
+  val vs = aux [] v col_no
+  
   fun get_cols acc vs rows = case vs of
       [] => List.rev acc
     | (v::vs') => let

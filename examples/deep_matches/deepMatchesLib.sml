@@ -10,6 +10,7 @@ open deepMatchesSyntax
 open Traverse
 open constrFamiliesLib
 
+
 (***********************************************)
 (* Simpset to evaluate PMATCH_ROWS             *)
 (***********************************************)
@@ -17,7 +18,6 @@ open constrFamiliesLib
 val PAIR_EQ_COLLAPSE = prove (
 ``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
 Cases_on `x` THEN SIMP_TAC std_ss [] THEN METIS_TAC[])
-
 
 fun is_FST_eq x t = let
   val (l, r) = dest_eq t
@@ -1271,40 +1271,29 @@ fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
 (***********************************************)
 
 (*
-val t = ``
-PMATCH (a,x,xs)
-     [PMATCH_ROW (\x. (NONE,x,[])) (\x. T) (\x. x);
-      PMATCH_ROW (\x. (NONE,x,[2])) (\x. T) (\x. x);
-      PMATCH_ROW (\ (x,v18). (NONE,x,[v18])) (\ (x, v18). T) (\ (x, v18). 3);
-      PMATCH_ROW (\ (x,v12,v16,v17). (NONE,x,v12::v16::v17))
-                 (\ (x,v12,v16,v17). T)
-                 (\ (x,v12,v16,v17). 3);
-      PMATCH_ROW (\ (y,x,z,zs). (SOME y,x,[z]))
-                 (\ (y,x,z,zs). T)
-                 (\ (y,x,z,zs). x+5+z);
-      PMATCH_ROW (\ (y,v23,v24). (SOME y,0,v23::v24))
-                 (\ (y,v23,v24). T)
-                 (\ (y,v23,v24). v23+y);
-      PMATCH_ROW (\ (y,z,v23). (SOME y,SUC z,[v23]))
-                 (\ (y,z,v23). y > 5)
-                 (\ (y,z,v23). 3);
-      PMATCH_ROW (\ (y,z). (SOME y,SUC z,[1; 2]))
-                 (\ (y,z). T)
-                 (\ (y,z). y + z)
-   ]``
+val t = ``CASE (a,x,xs) OF [
+    || x. (NONE,x,[]) ~> x;
+    || x. (NONE,x,[2]) ~> x;
+    || (x,v18). (NONE,x,[v18]) ~> 3;
+    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
+    || (y,x,z,zs). (SOME y,x,[z]) ~> (x + 5 + z);
+    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
+    || (y,z,v23). (SOME y,SUC z,[v23]) when (y > 5) ~> 3;
+    || (y,z). (SOME y,SUC z,[1; 2]) ~> (y + z)
+  ]``
 *)
 
 fun STRIP_ABS_CONV conv t =
   if (is_abs t) then ABS_CONV (STRIP_ABS_CONV conv) t else
   conv t
 
-fun PMATCH_CASE_SPLIT_AUX col expand_thm conv t = let
+fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val (v, rows) = dest_PMATCH t
   val vs = pairSyntax.strip_pair v
 
-  val arg = el (col+1) vs
+  val arg = el (col_no+1) vs
   val arg_v = genvar (type_of arg)
-  val vs' = pairSyntax.list_mk_pair (List.take (vs, col) @ (arg_v :: (List.drop (vs, col+1))))
+  val vs' = pairSyntax.list_mk_pair (List.take (vs, col_no) @ (arg_v :: (List.drop (vs, col_no+1))))
 
   val ff = let
     val (x, xs) = strip_comb t
@@ -1316,33 +1305,112 @@ fun PMATCH_CASE_SPLIT_AUX col expand_thm conv t = let
   val thm0 = ISPEC arg (ISPEC ff expand_thm)
   val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm0
 
-  fun is_case_conv_end t =
-    is_comb (fst (dest_comb t)) handle HOL_ERR _ => false
 
-  fun case_conv conv t =
-    if not (is_case_conv_end t) then REFL t else
-    (RAND_CONV (STRIP_ABS_CONV conv) THENC RATOR_CONV (case_conv conv)) t
+  val c = SIMP_CONV
+    (std_ss++PMATCH_SIMP_GEN_ss (fst rc_arg)) []
+  val thm2 = CONV_RULE (RHS_CONV c) thm1
 
-  val thm2 = CONV_RULE (RHS_CONV (case_conv (BETA_CONV THENC TRY_CONV conv))) thm1
+  (* check whether it got simpler *)
+  val _ = let
+    val r = rhs (concl thm2)
+    val i = ((find_term (aconv t) r; true) handle HOL_ERR _ => false)
+  in
+    if i then raise UNCHANGED else ()
+  end
 in
   thm2
 end
 
 (*
-fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg col_no t = let
-  val thm0 = QCHANGED_CONV (
-      PMATCH_SIMP_CONV_GENCALL rc_arg) t handle HOL_ERR _ => REFL t
+val t = t'
+val col_no = 1
+val rc_arg = ([], NONE)
+val db = !thePmatchCompileDB
+fun col_heu _ = 0
+*)
 
+fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (gl, callback_opt) db col_heu t = let
+  val _ = if (is_PMATCH t) then () else raise UNCHANGED
+
+  fun find_col cols = if (List.null cols) then raise UNCHANGED else let
+    val col_no = col_heu cols
+    val (v, col) = el (col_no+1) cols
+    val res = pmatch_compile_db_compile db col    
+  in
+    case res of
+        SOME (expand_thm, expand_ss) => (col_no, expand_thm, expand_ss)
+      | NONE => let
+             val cols' = List.take (cols, col_no) @ List.drop (cols, col_no+1)
+             val (col_no', expand_thm, expand_ss) = find_col cols'
+             val col_no'' = if (col_no' < col_no) then col_no' else col_no'+1
+          in
+             (col_no'', expand_thm, expand_ss)
+          end
+  end
+
+  val (col_no, expand_thm, expand_ss) = find_col (dest_PMATCH_COLS t)
+  val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX 
+    (expand_ss::gl, callback_opt) col_no expand_thm) t
+in
+  thm1
+end
+
+
+val pair_CASE_tm = mk_const ("pair_CASE", ``:'a # 'b -> ('a -> 'b -> 'c) -> 'c``)
+
+fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
+  val thm0 = PMATCH_SIMP_CONV_GENCALL rc_arg t handle 
+        HOL_ERR _ => REFL t
+      | UNCHANGED => REFL t
   val t' = rhs (concl thm0)
 
-  val (v, col) = el (col_no+1) (dest_PMATCH_COLS t')
+  val cols = dest_PMATCH_COLS t'
+  val col_no = length cols
+  val (v, rows) = dest_PMATCH t'
 
-  val expand_thm = get_case_expand_thm (v, col)
+  fun mk_pair avoid acc col_no v = if (col_no <= 1) then (
+      let
+        val vs = List.rev (v::acc)
+        val p = pairSyntax.list_mk_pair vs 
+        val rows_tm = listSyntax.mk_list (rows, type_of (hd rows))
+      in
+        mk_PMATCH p rows_tm
+      end
+    ) else (
+      let
+         val (ty1, ty2) = pairSyntax.dest_prod (type_of v)
+         val v1 = variant avoid (mk_var ("v", ty1))
+         val v2 = variant (v1::avoid) (mk_var ("v", ty2))
 
-  val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX col_no expand_thm (PMATCH_SIMP_CONV_GENCALL rc_arg)) t' handle HOL_ERR _ => (REFL t')
+         val t0 = inst [alpha |-> ty1, beta |-> ty2, gamma |-> type_of t] pair_CASE_tm
+         val t1 = mk_comb (t0, v)
+         val t2a = mk_pair (v1::v2::avoid) (v1::acc) (col_no-1) v2
+         val t2b = list_mk_abs ([v1, v2], t2a)
+         val t2c = mk_comb (t1, t2b)         
+      in
+        t2c
+      end
+    )
+
+
+  val t'' = mk_pair (free_vars t') [] col_no v
+  val thm1_tm = mk_eq (t', t'')
+  val thm1 = prove (thm1_tm, SIMP_TAC std_ss [pairTheory.pair_case_def])
+
+  val thm2 = CONV_RULE (RHS_CONV (
+    (TOP_SWEEP_CONV (
+      CHANGED_CONV (PMATCH_CASE_SPLIT_CONV_GENCALL_STEP rc_arg db col_heu) 
+    )))) thm1
+
+  val thm3 = TRANS thm0 thm2
+  val thm4 = CONV_RULE (RHS_CONV REMOVE_REBIND_CONV) thm3
 in
-  TRANS thm0 thm1
+  thm4
 end
-*)
+
+fun PMATCH_CASE_SPLIT_CONV_GEN ssl = PMATCH_CASE_SPLIT_CONV_GENCALL (ssl, NONE)                                      
+
+fun PMATCH_CASE_SPLIT_CONV colHeu t = 
+  PMATCH_CASE_SPLIT_CONV_GEN [] (!thePmatchCompileDB) colHeu t
 
 end

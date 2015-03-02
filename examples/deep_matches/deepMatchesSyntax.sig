@@ -10,6 +10,11 @@ sig
      free vars of a thm *)
   val FRESH_TY_VARS_RULE : rule
 
+  (* transforms a term to a alpha-equivalent
+     one that does not use the same variable name in
+     different bindings in the term. *)
+  val REMOVE_REBIND_CONV : conv
+
   (******************)
   (* PMATCH_ROW     *)
   (******************)

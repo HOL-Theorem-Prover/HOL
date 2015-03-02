@@ -3,6 +3,11 @@ struct
 
 open HolKernel boolLib simpLib bossLib
 
+(***************************************************)
+(* Auxiliary definitions                           *)
+(***************************************************)
+
+
 fun failwith f x = 
  raise (mk_HOL_ERR "constrFamiliesLib" f x)
 
@@ -14,7 +19,7 @@ in
   List.rev vs'
 end
 
-
+(* list_mk_comb with build-in beta reduction *)
 fun list_mk_comb_subst (c, args) = (case args of
     [] => c
   | (a::args') => let
@@ -25,9 +30,12 @@ fun list_mk_comb_subst (c, args) = (case args of
       list_mk_comb_subst (mk_comb (c, a), args')
 )
 
+(*-----------------------------------------*)
+(* normalise free type variables in a type *)
+(* in order to use it as a map key         *)
+(*-----------------------------------------*)
 
 fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty));
-
 
 fun normalise_ty ty = let
   fun recurse (acc as (dict,usethis)) tylist =
@@ -56,11 +64,18 @@ in
 end
 
 
-(***************************************************)
-(* Encoding theorem lists                          *)
-(***************************************************)
+fun base_ty ty = let
+  val (tn, targs) = dest_type ty
+  val targs' = List.rev (snd (List.foldl (fn (_, (v, l)) => (next_ty v, v::l)) (Type.alpha, []) targs)) 
+in
+  mk_type (tn, targs')
+end
 
-     
+
+(*------------------------*)
+(* Encoding theorem lists *)
+(*------------------------*)
+
 fun encode_term_opt_list tl = let
   val tl' = List.map (fn t => markerSyntax.mk_label ("THM_PART", Option.getOpt (t, T))) tl
   val t = list_mk_conj tl'
@@ -85,7 +100,7 @@ end
 fun set_goal_list tl = let
   val thm = encode_term_opt_list tl 
 in
-  Manager.set_goal ([], rhs (concl thm))
+  proofManagerLib.set_goal ([], rhs (concl thm))
 end
 
 
@@ -107,8 +122,9 @@ end
    a list of names for all it's arguments *)
 datatype constructor = CONSTR of term * (string list)
 
-fun constructor_is_const (CONSTR (_, sl)) =
-  null sl
+fun mk_constructor t args = CONSTR (t, args)
+
+fun constructor_is_const (CONSTR (_, sl)) = null sl
 
 fun mk_constructor_term vs (CONSTR (c, args)) = let
   val (arg_tys, b_ty) = strip_fun (type_of c)
@@ -123,9 +139,6 @@ in
   (t, arg_vars')
 end
 
-
-
-
 (* Multiple constructors for a single type are usually
    grouped. These can be exhaustive or not. *)
 type constructorList = {
@@ -134,8 +147,7 @@ type constructorList = {
   cl_is_exhaustive : bool
 }
 
-fun make_constructorList is_exhaustive constrs' = let
-  val constrs = List.map CONSTR constrs'
+fun mk_constructorList is_exhaustive constrs = let
   val ts = List.map (fst o (mk_constructor_term [])) constrs
   val _ = if null ts then failwith "make_constructorList" "no constructors given" else ()
   val ty = type_of (hd ts)
@@ -313,8 +325,6 @@ in
 end
 
 
-
-
 (***************************************************)
 (* Connection to typebase                          *)
 (***************************************************)
@@ -351,8 +361,7 @@ fun constructorFamily_of_typebase ty = let
   val thm_one_one = TypeBase.one_one_of ty
   val thm_case = TypeBase.case_def_of ty
 
-
-(*  set_constructorFamily (crL, case_split_tm) *)
+  (*  set_constructorFamily (crL, case_split_tm) *)
   val cf = mk_constructorFamily (crL, case_split_tm, 
     SIMP_TAC std_ss [thm_distinct, thm_one_one] THEN
     REPEAT STRIP_TAC THEN (
@@ -366,9 +375,162 @@ end
 
 
 (***************************************************)
-(* Build a on to typebase                          *)
+(* Collections of constructorFamilies +            *)
+(* extra matching info                             *)
 (***************************************************)
 
+type pmatch_compile_fun = (term list * term) list -> (thm * simpLib.ssfrag) option
 
+val typeConstrFamsDB = ref (TypeNet.empty : constructorFamily TypeNet.typenet)
+
+type pmatch_compile_db = {
+  pcdb_compile_funs  : pmatch_compile_fun list,
+  pcdb_constrFams    : (constructorFamily list) TypeNet.typenet,
+  pcdb_ss            : simpLib.ssfrag
+}
+
+val empty : pmatch_compile_db = {
+  pcdb_compile_funs = [],
+  pcdb_constrFams = TypeNet.empty,
+  pcdb_ss = (simpLib.rewrites [])
+}
+
+val thePmatchCompileDB = ref empty
+
+fun lookup_typeBase_constructorFamily ty = let
+  val b_ty = base_ty ty  
+in
+  SOME (b_ty, TypeNet.find (!typeConstrFamsDB, b_ty)) handle 
+     NotFound => let
+       val cf = constructorFamily_of_typebase b_ty
+       val net = !typeConstrFamsDB
+       val net'= TypeNet.insert (net, b_ty, cf)
+       val _ = typeConstrFamsDB := net'
+     in
+       SOME (b_ty, cf)
+     end    
+end handle HOL_ERR _ => NONE
+
+fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
+  val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
+  val ty = type_of (snd (hd col))
+
+  val cts_fams = let
+    val cts_fams = TypeNet.match (#pcdb_constrFams db, ty)
+    val cts_fams' = Lib.flatten (List.map (fn (ty, l) =>
+       List.map (fn cf => (ty, cf)) l) cts_fams)
+    val cty_opt = lookup_typeBase_constructorFamily ty  
+    val cty_l = case cty_opt of
+         NONE => []
+       | SOME (ty, cf) => [(ty, cf)]
+  in cts_fams' @ cty_l end
+in
+  case cts_fams of
+      [] => NONE
+    | cs::_ => SOME cs
+end;
+
+
+fun pmatch_compile_db_compile db col = (
+  if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else
+  case (get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)) of
+    SOME r => SOME r | NONE => (
+  case lookup_constructorFamilies db col of
+    NONE => NONE | SOME (ty, cf) => (
+    let
+      val ty_s = match_type ty (type_of (snd (hd col)))
+      val thm = constructorFamily_get_case_split cf
+      val thm' = INST_TYPE ty_s thm
+    in
+      SOME (thm', merge_ss [(#pcdb_ss db), simpLib.rewrites [
+        (constructorFamily_get_rewrites cf)]])
+    end
+  )));
+
+fun pmatch_compile_db_add_ssfrag (db : pmatch_compile_db) ss = {
+  pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_constrFams = #pcdb_constrFams db,
+  pcdb_ss = (simpLib.merge_ss [#pcdb_ss db, ss])
+} : pmatch_compile_db
+
+fun pmatch_compile_db_register_ssfrag ss =
+  thePmatchCompileDB := pmatch_compile_db_add_ssfrag (!thePmatchCompileDB) ss
+
+fun pmatch_compile_db_add_compile_fun (db : pmatch_compile_db) cf = {
+  pcdb_compile_funs = cf::(#pcdb_compile_funs db),
+  pcdb_constrFams = #pcdb_constrFams db,
+  pcdb_ss = #pcdb_ss db
+} : pmatch_compile_db
+
+fun pmatch_compile_db_register_compile_fun cf =
+  thePmatchCompileDB := pmatch_compile_db_add_compile_fun (!thePmatchCompileDB) cf
+
+fun pmatch_compile_db_add_constrFam (db : pmatch_compile_db) cf = {
+  pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_constrFams = let
+    val cl = (#constructors cf)
+    val ty = #cl_type cl
+    val net = #pcdb_constrFams db
+    val cfs = TypeNet.find (net, ty) handle NotFound => []
+    val net' = TypeNet.insert (net, ty, cf::cfs)
+  in
+    net'
+  end,
+  pcdb_ss = #pcdb_ss db
+} : pmatch_compile_db
+
+fun pmatch_compile_db_register_constrFam cf =
+  thePmatchCompileDB := pmatch_compile_db_add_constrFam (!thePmatchCompileDB) cf
+
+
+
+(***************************************************)
+(* complilation funs                               *)
+(***************************************************)
+
+val COND_CONG_APPLY = prove (``(if (x:'a) = c then (ff x):'b else ff x) =
+  (if x = c then ff c else ff x)``,
+Cases_on `x = c` THEN ASM_REWRITE_TAC[])
+
+fun literals_compile_fun (col:(term list * term) list) = let
+
+  fun extract_literal ((vs, c), ts) = let
+     val vars = FVL [c] empty_tmset
+     val is_lit = not (List.exists (fn v => HOLset.member (vars, v)) vs)
+  in 
+    if is_lit then HOLset.add(ts,c) else 
+      (if is_var c then ts else failwith "" "extract_literal")
+  end
+
+  val ts = List.foldl extract_literal empty_tmset col
+  val lits = HOLset.listItems ts
+  val _ = if (List.null lits) then (failwith "" "no lits") else ()
+
+  val rty = gen_tyvar ()
+  val lit_ty = type_of (snd (List.hd col))
+  val split_arg = mk_var ("x", lit_ty)
+  val split_fun = mk_var ("ff", lit_ty --> rty)
+  val arg = mk_comb (split_fun, split_arg)
+
+
+  fun mk_expand_thm lits = case lits of
+      [] => REFL arg
+    | (l :: lits') => let
+         val b = mk_eq (split_arg, l)
+         val thm0 = GSYM (ISPEC arg (SPEC b COND_ID))
+         val thm1 = CONV_RULE (RHS_CONV (REWR_CONV COND_CONG_APPLY)) thm0
+         val thm2a = mk_expand_thm lits'
+         val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (K thm2a))) thm1
+      in
+         thm2
+      end
+    
+  val thm0 = mk_expand_thm lits
+  val thm1 = GEN split_fun (GEN split_arg thm0)
+in
+  SOME (thm1, simpLib.rewrites [Cong boolTheory.COND_CONG])
+end
+
+val _ = pmatch_compile_db_register_compile_fun literals_compile_fun
 
 end
