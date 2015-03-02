@@ -69,11 +69,17 @@ fun stringOpt pos s =
       else if String.isPrefix "tr'" s then let
         val sfx = String.extract(s, 3, NONE)
         val (pfx,eqsfx) = Substring.position "'=" (Substring.full sfx)
-        val numpart_s = String.extract (Substring.string eqsfx, 2, NONE)
       in
-        case Int.fromString numpart_s of
-            NONE => (warn(pos, s ^ " is not a valid option"); NONE)
-          | SOME i => SOME(TraceSet(Substring.string pfx, i))
+        if Substring.size eqsfx = 0 then
+          (warn(pos, s ^ " is not a valid option"); NONE)
+        else
+          let
+            val numpart_s = String.extract (Substring.string eqsfx, 2, NONE)
+          in
+            case Int.fromString numpart_s of
+                NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+              | SOME i => SOME(TraceSet(Substring.string pfx, i))
+          end
       end
       else if String.isPrefix ">>" s then let
           val numpart_s = String.extract(s,2,NONE)
