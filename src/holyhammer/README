@@ -35,6 +35,6 @@ Example:
   rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
-  hh ``0 < 1``;
+  hh ``7 + 5 = 12``;
   load "complexTheory";
   hh_atp "eprover" ``0 <> 1``;
