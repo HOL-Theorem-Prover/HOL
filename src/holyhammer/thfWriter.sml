@@ -110,16 +110,17 @@ fun declare_perm dict {Thy,Name} =
   end
 
 (* theorems *)
-fun declare_perm_thm (thm,name) =
+fun declare_perm_thm thy (thm,name) =
   let 
     fun address_of_conj conj = address_of (depsort_of (dep_of (tag conj)))  
     fun string_of_conj (conj,name) = case depsort_of (dep_of (tag conj)) of
-        DEP_NAMED _ => name ^ "_"
-      | _           => name ^ "_" ^ number_address (address_of_conj conj)
+        DEP_NAMED _ => thf_escape name ^ "/" ^ thf_escape thy ^ "/" 
+      | _           => thf_escape name ^ "/" ^ thf_escape thy ^ "/" ^ 
+                       number_address (address_of_conj conj)
     val ds = depsort_of (dep_of (tag thm)) 
     val thy = depthy_of (depid_of ds)
     val (s, new) = 
-      variant_name_dict (thf_escape (string_of_conj (thm,name))) (!used_names) 
+      variant_name_dict (string_of_conj (thm,name)) (!used_names) 
   in
     conj_names := dadd (depid_of ds, address_of ds) s (!conj_names); 
     readthf_names := 
@@ -391,7 +392,7 @@ fun BODY_CONJUNCTS thm =
     then (BODY_CONJUNCTS(CONJUNCT1 thm) @ BODY_CONJUNCTS (CONJUNCT2 thm))
   else [thm]
 
-fun split_thm ((name,thm),role) = 
+fun split_thm thy ((name,thm),role) = 
   let 
     val depid = depid_of (depsort_of (dep_of (tag thm)))
     val conjl = BODY_CONJUNCTS thm
@@ -400,12 +401,12 @@ fun split_thm ((name,thm),role) =
     (* Remember how the theorem is split *)
     depid_maxsplit := dadd depid al (!depid_maxsplit);
     (* Remember how the conjuncts are named. *)
-    map (fn x => (declare_perm_thm (x, name), role, thm)) conjl
+    map (fn x => (declare_perm_thm thy (x, name), role, thm)) conjl
   end
 
-fun print_conjuncts ((name,thm),role) =
+fun print_conjuncts thy ((name,thm),role) =
   (
-  let val l = split_thm ((name,thm),role) in
+  let val l = split_thm thy ((name,thm),role) in
     app othm_theorem l; 
     app odep l
   end
@@ -444,7 +445,7 @@ fun write_thf_thy folder thy =
         end
       val name_thm_role_list = sort compare (axl @ defl)
     in
-      app print_conjuncts name_thm_role_list
+      app (print_conjuncts thy) name_thm_role_list
     end
     )
   end;              
