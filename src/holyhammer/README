@@ -4,7 +4,7 @@ Requires:
 
 * OCaml >= 3.12 (tested also with 4.01.0)
 * g++ (recent version with C++11 support)
-* perl
+* perl (only if you use strategy scheduling for eprover)
 
 Install holyhammer:
  
