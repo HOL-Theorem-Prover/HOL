@@ -114,9 +114,9 @@ fun declare_perm_thm thy (thm,name) =
   let 
     fun address_of_conj conj = address_of (depsort_of (dep_of (tag conj)))  
     fun string_of_conj (conj,name) = case depsort_of (dep_of (tag conj)) of
-        DEP_NAMED _ => thf_escape name ^ "/" ^ thf_escape thy ^ "/" 
-      | _           => thf_escape name ^ "/" ^ thf_escape thy ^ "/" ^ 
-                       number_address (address_of_conj conj)
+        DEP_NAMED _ => thf_escape thy ^ "/" ^ thf_escape (name ^ "_")
+      | _           => thf_escape thy ^ "/" ^ 
+                       thf_escape (name ^ "_" ^ number_address (address_of_conj conj))
     val ds = depsort_of (dep_of (tag thm)) 
     val thy = depthy_of (depid_of ds)
     val (s, new) = 
@@ -506,12 +506,12 @@ fun time_metis thml conjecture time =
     val oldtracelevel = !mlibUseful.trace_level
     val thm = 
       (
-      mlibMetis.limit := {time = SOME time, infs = NONE};
+      metisTools.limit := {time = SOME time, infs = NONE};
       mlibUseful.trace_level := 0;
-      METIS_PROVE thml conjecture 
+      metisTools.METIS_PROVE thml conjecture 
       )
   in
-    (mlibMetis.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
+    (metisTools.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
   end
 
 local fun fetch_conj_helper (thm,a) = case a of
@@ -533,6 +533,7 @@ fun ostring_of_conjunct ({Thy,Name},a) =
        "," ^ quote (number_address a) ^ ")"
 
 (* Minimization *)
+(* Can be turned off if it takes too much time *)
 val minimize_flag = ref true
 
 fun minimize_loop axl1 axl2 cj =
@@ -549,16 +550,19 @@ fun minimize axl cj =
   else axl
 
 (* Parsing and reconstruction *) 
-(* Wierd: we need to minimization to get the good result *)
 fun reconstruct axl cj =
   let 
     val axl1 = filter (fn x => not (mem x reserved_names)) axl
     val axl2 = map (fn x => dfind x (!readthf_names)) axl1
-    val axl3 = if !minimize_flag then minimize axl2 cj else axl2
+    val axl3 = if !minimize_flag 
+               then (print "Minimizing...\n\n"; minimize axl2 cj) 
+               else axl2
     val s    = String.concatWith "," (map ostring_of_conjunct axl3)
+    val axl4 = map fetch_conj_internal axl3
   in
     print ("val lemmas = [" ^ s ^ "]\n");
-    time_metis (map fetch_conj_internal axl3) cj 30.0
+    ignore (time_metis axl4 cj 30.0 handle _ => 
+              raise ERR "reconstruct" "Metis can't reconstruct the proof.")
   end
 
 fun replay_atpfile (atp_status,atp_out) conjecture =
