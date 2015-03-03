@@ -114,7 +114,7 @@ fun declare_perm_thm (thm,name) =
   let 
     fun address_of_conj conj = address_of (depsort_of (dep_of (tag conj)))  
     fun string_of_conj (conj,name) = case depsort_of (dep_of (tag conj)) of
-        DEP_NAMED _ => name
+        DEP_NAMED _ => name ^ "_"
       | _           => name ^ "_" ^ number_address (address_of_conj conj)
     val ds = depsort_of (dep_of (tag thm)) 
     val thy = depthy_of (depid_of ds)
