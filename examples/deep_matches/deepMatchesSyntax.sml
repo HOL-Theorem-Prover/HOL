@@ -26,6 +26,12 @@ in
   (t', sub)
 end;
 
+fun varname_starts_with_uscore v = let
+  val (s, _) = dest_var v
+in
+  String.sub(s, 0) = #"_"
+end handle HOL_ERR _ => false
+
 
 (***********************************************)
 (* Terms                                       *)
@@ -251,6 +257,29 @@ end
 val use_pmatch_pp = ref true
 val _ = Feedback.register_btrace ("use pmatch_pp", use_pmatch_pp);
 
+fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
+  val var_l = pairSyntax.strip_pair vars
+  val (wc_l, var_l') = partition varname_starts_with_uscore var_l
+
+  fun mk_fake wc = mk_var (GrammarSpecials.mk_fakeconst_name {fake = "_", original = NONE}, type_of wc) 
+
+  val fake_subst = map (fn wc => (wc |-> mk_fake wc)) wc_l
+
+  val vars' = 
+    if (List.null var_l') then
+      variant (free_varsl [pat, guard, rh]) ``uv:unit``
+    else
+      pairSyntax.list_mk_pair var_l'
+
+  val pat' = Term.subst fake_subst pat
+  val guard' = Term.subst fake_subst guard
+  val rh' = Term.subst fake_subst rh
+in
+  (vars', pat', guard', rh')  
+end handle HOL_ERR _ => (vars, pat, guard, rh)
+
+
+
 fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
   let
     open Portable term_pp_types smpp
@@ -258,8 +287,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     val _ = if (!use_pmatch_pp) then () else raise term_pp_types.UserPP_Failed
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
     val (v,rows) = dest_PMATCH t;
-
-    val rows' = map dest_PMATCH_ROW_ABS rows
+    val rows' = map (fn t => pmatch_printer_fix_wildcards (dest_PMATCH_ROW_ABS t)) rows
 
     fun pp_row (vars, pat, guard, rh) = (
       term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
@@ -438,6 +466,10 @@ fun fix_CASE tm = let
           else if (same_const b_c PMATCH_ROW_magic_3_tm) then
             (el 1 b_args, T, el 2 b_args) 
           else failwith "unexpected constant";
+       val wildcards = List.filter varname_starts_with_uscore (
+          free_vars p
+       )
+       val vars = vars @ wildcards
      in
        mk_PMATCH_ROW_PABS vars (p, g, r)
      end
