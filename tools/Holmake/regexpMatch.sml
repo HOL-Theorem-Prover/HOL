@@ -38,22 +38,13 @@ val univ_cset = allchars
 
 fun charset_compare(cset1,cset2) =
  let open Binaryset
-     fun maxlist m [] = (m,[])
-       | maxlist m (h::t) =
-          let val n = Char.ord h
-          in if m < n then maxlist n t else maxlist m t
-          end
      fun compare [] [] = EQUAL
        | compare [] _  = LESS
        | compare _ []  = GREATER
        | compare (h1::t1) (h2::t2) =
-          let val (max1,rst1) = maxlist (Char.ord h1) t1
-              val (max2,rst2) = maxlist (Char.ord h2) t2
-          in
-           if max1 < max2 then LESS else
-           if max2 < max1 then GREATER
-           else compare rst1 rst2
-          end
+           if h1 < h2 then LESS else
+           if h1 > h2 then GREATER
+           else compare t1 t2
  in
     if Systeml.pointer_eq(cset1,cset2) then EQUAL
     else compare (listItems cset1) (listItems cset2)
