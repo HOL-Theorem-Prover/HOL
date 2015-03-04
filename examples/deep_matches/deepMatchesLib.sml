@@ -111,7 +111,7 @@ fun PMATCH_ROW_ARGS_CONV c =
 
 
 (***********************************************)
-(* converting case-splits to PMATCH            *)
+(* converting between case-splits to PMATCH    *)
 (***********************************************)
 
 (*
@@ -180,14 +180,14 @@ end
 fun dest_case_fun t = dest_case_fun_aux1 t handle HOL_ERR _ => dest_case_fun_aux2 t
 
 
-fun convert_case_aux x t = let
+fun case2pmatch_aux x t = let
   val (a, ps) = dest_case_fun t
 
   fun process_arg (p, rh) = let
     val x' = subst [a |-> p] x
   in
     (* recursive call *)
-    case convert_case_aux x' rh of
+    case case2pmatch_aux x' rh of
         NONE => [(x', rh)]
       | SOME resl => resl
   end
@@ -198,7 +198,7 @@ in
 end handle HOL_ERR _ => NONE;
 
 (* convert a case-term into a PMATCH-term, without any proofs *)
-fun convert_case t = let
+fun case2pmatch t = let
   val (f, args) = strip_comb t
   val _ = if (List.null args) then failwith "not a case-split" else ()
 
@@ -207,7 +207,7 @@ fun convert_case t = let
   val v = genvar (type_of p)
 
   val t0 = if is_literal_case t then list_mk_comb (f, patterns @ [v]) else list_mk_comb (f, v::patterns)
-  val ps = case convert_case_aux v t0 of
+  val ps = case case2pmatch_aux v t0 of
       NONE => failwith "not a case-split"
     | SOME ps => ps
 
@@ -224,20 +224,71 @@ in
   mk_PMATCH p rows_tm_p
 end
 
-fun PMATCH_INTRO_CONV t = let
-  val t' = convert_case t
+fun case_pmatch_eq_prove t t' = let
   val tm = mk_eq (t, t')
 
   (* very slow, simple approach. Just brute force.
      TODO: change implementation to get more runtime-speed *)
   val my_tac = (
     CASE_TAC THEN
-    FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def]
+    FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def,
+      PMATCH_INCOMPLETE_def]
   )
 in
   (* set_goal ([], tm) *)
   prove (tm, REPEAT my_tac)
 end handle HOL_ERR _ => raise UNCHANGED
+
+
+fun PMATCH_INTRO_CONV t = 
+  case_pmatch_eq_prove t (case2pmatch t)
+
+
+(* convert a case-term into a PMATCH-term, without any proofs *)
+val t = ``CASE x OF [
+  ||. ([], NONE) ~> 0;
+  || (x,xs,z). (x::xs, SOME z) ~> (x+z);
+  || (x,xs). (x::xs, NONE) ~> x
+]``
+
+fun pmatch2case t = let
+  val (v, rows) = dest_PMATCH t 
+  val fv = genvar (type_of v --> type_of t)
+
+  fun process_row r = let
+     val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS r
+     val _ = if (aconv gt T) then () else
+       failwith ("guard present in row " ^
+           (term_to_string r))
+
+     val vars = FVL [vars_tm] empty_tmset
+     val used_vars = FVL [pt] empty_tmset
+     val free_vars = HOLset.difference (used_vars, vars)
+     val _ = if (HOLset.isEmpty free_vars) then () else
+       failwith ("free variables in pattern " ^ (term_to_string pt))
+  in
+     mk_eq (mk_comb (fv, pt), rh)
+  end
+
+  val row_eqs = map process_row rows
+  val rows_tm = list_mk_conj row_eqs
+
+  (* compile patterns with parse deep cases turned off *)
+  val parse_pp = Feedback.current_trace "parse deep cases"
+  val _ = Feedback.set_trace "parse deep cases" 0
+  val case_tm0 = GrammarSpecials.compile_pattern_match rows_tm
+  val _ = Feedback.set_trace "parse deep cases" parse_pp
+
+
+  (* nearly there, now remove lambda's *)
+  val (vs, case_tm1) = strip_abs case_tm0
+  val case_tm = subst [el 2 vs |-> v] case_tm1
+in
+  case_tm
+end
+
+fun PMATCH_ELIM_CONV t = 
+  case_pmatch_eq_prove t (pmatch2case t)
 
 
 (***********************************************)
@@ -1174,7 +1225,6 @@ val PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM = prove (
    ((P1 ==> X1) /\ ((P1 /\ P2) ==> X2))``,
 REWRITE_TAC [IMP_CONJ_THM, AND_IMP_INTRO]);
 
-
 fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
   (* check whether we should really process tm *)
   val _ = if type_of tm = bool then () else raise UNCHANGED
@@ -1194,12 +1244,12 @@ fun PMATCH_LIFT_BOOL_CONV_GENCALL rc_arg tm = let
 
   (* do real work *)
   val thm0 = PMATCH_LIFT_BOOL_CONV_AUX rc_arg (mk_comb (P_v, p_tm))
- 
+
   (* create conjuncts *)
   val thm1 = let
      fun c t = (REWR_CONV PMATCH_LIFT_BOOL_CONV_GENCALL_AUX_THM THENC
                TRY_CONV (RAND_CONV c)) t
-     val thm1a = CONV_RULE (RHS_CONV (RAND_CONV c)) thm0
+     val thm1a = CONV_RULE (RHS_CONV (RAND_CONV c)) thm0 handle HOL_ERR _ => thm0
 
      val c = SIMP_CONV (std_ss++boolSimps.CONJ_ss) [AND_IMP_INTRO, GSYM RIGHT_FORALL_IMP_THM, GSYM CONJ_ASSOC]
      val thm1b = CONV_RULE (RHS_CONV (EVERY_CONJ_CONV c)) thm1a

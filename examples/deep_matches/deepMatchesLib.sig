@@ -24,12 +24,15 @@ sig
 
 
   (********************************)
-  (* turn shallow case-terms into *)
-  (* deeply embedded ones         *)
+  (* convert between              *)
+  (* case and pmatch              *)
   (********************************)
 
-  val convert_case : term -> term
+  val case2pmatch : term -> term
+  val pmatch2case : term -> term
+
   val PMATCH_INTRO_CONV : conv
+  val PMATCH_ELIM_CONV : conv
 
 
   (********************************)

@@ -10,12 +10,18 @@ open pred_setLib
 (* Introducing case expressions *)
 
 val t = ``case x of (NONE, []) => 0``
-val t' = convert_case t 
+val t' = case2pmatch t 
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
 val thm_t' = PMATCH_REMOVE_ARB_CONV t'
 val thm_t' = PMATCH_SIMP_CONV t'
+val t2' = rhs (concl thm_t')
+
+(* and turn it back *)
+val t'' = pmatch2case t'
+val thm_t'' = PMATCH_ELIM_CONV t'
+val thm_t2'' = PMATCH_ELIM_CONV t2'
 
 		    
 (* more fancy *)
@@ -24,7 +30,7 @@ val t = ``case x of
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
  | (SOME _, (x :: xs)) => x``
-val t' = convert_case t 
+val t' = case2pmatch t 
 val thm_t = PMATCH_INTRO_CONV t
 
 val thm_t' = PMATCH_REMOVE_ARB_CONV t'
@@ -45,6 +51,9 @@ val example1 = ``
     || (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
   ]``;
 
+(* due to guards, the following fails *)
+val _ = pmatch2case example1
+
 val example2 = ``PMATCH (h::t)
   [PMATCH_ROW (\_ . []) (\_. T) (\_. x);
    PMATCH_ROW (\_. [2]) (\_. T) (\_. x); 
@@ -53,6 +62,8 @@ val example2 = ``PMATCH (h::t)
               (\ (v12,v16,v17). T)
               (\ (v12,v16,v17). 3);
    PMATCH_ROW (\_. [2; 4; 3]) (\_. T) (\_. 3 + x)]``
+
+val _ = pmatch2case example2
 
 val example3 = ``
   CASE (NONE,x,xs) OF [
@@ -250,6 +261,30 @@ val t = ``CASE l OF [
   ||. [] ~> 0;
   || (x, xs). SNOC x xs ~> x
   ]``
+
+
+(*********************************)
+(* DIV / MOD                     *)
+(*********************************)
+
+val my_divmod_def = Define `my_divmod (n:num) c =
+    CASE n OF [
+      || (q, r). q * c + r when r < c ~> (q,r)
+    ]`
+
+val my_divmod_THM_AUX = PMATCH_TO_TOP_RULE my_divmod_def
+
+val my_divmod_THM = store_thm ("my_divmod_THM", 
+``0 < c ==> (my_divmod n c = (n DIV c, n MOD c))``,
+
+REPEAT STRIP_TAC THEN
+MP_TAC (SPECL [``n:num``, ``c:num``] (CONJUNCT1 my_divmod_THM_AUX)) THEN
+Tactical.REVERSE (Cases_on `?q r. (q:num) * c + r = n /\ r < c`) THEN1 (
+  METIS_TAC [arithmeticTheory.DIVISION]
+) THEN
+ASM_REWRITE_TAC[] THEN
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [arithmeticTheory.DIV_MULT, arithmeticTheory.MOD_MULT])
 
 
 (*********************************)
