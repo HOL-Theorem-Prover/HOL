@@ -69,6 +69,27 @@ val code =
     10200001 00000000
     00000000`
 
+val MIPS_PC_SIMP = prove(
+  ``(r * MIPS_PC pc * cond ((1 >< 0) pc = 0w:word2) = r * MIPS_PC pc) /\
+    (MIPS_PC pc * cond ((1 >< 0) pc = 0w:word2) = MIPS_PC pc)``,
+  FULL_SIMP_TAC (std_ss++sep_cond_ss) [mips_progTheory.MIPS_PC_def]);
+
+local
+  val f = #1 mips_tools
+  fun map_inst r ((th1,x1,x2),NONE) = ((r th1,x1,x2),NONE)
+    | map_inst r ((th1,x1,x2),SOME (th2,y1,y2)) =
+        ((r th1,x1,x2),SOME (r th2,y1,y2))
+in
+  val new_mips_tools =
+    (map_inst (REWRITE_RULE [MIPS_PC_SIMP]) o f,
+     #2 mips_tools, #3 mips_tools, #4 mips_tools)
+end
+
+val res = decompilerLib.decompile new_mips_tools "test"
+   `3401000A
+    10200001 00000000
+    00000000`
+
 *)
 
 end
