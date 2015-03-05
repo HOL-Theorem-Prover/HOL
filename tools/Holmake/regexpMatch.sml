@@ -41,7 +41,7 @@ fun charset_compare(cset1,cset2) =
      fun compare [] [] = EQUAL
        | compare [] _  = LESS
        | compare _ []  = GREATER
-       | compare (h1::t1) (h2::t2) =
+       | compare ((h1:char)::t1) (h2::t2) =
            if h1 < h2 then LESS else
            if h1 > h2 then GREATER
            else compare t1 t2
