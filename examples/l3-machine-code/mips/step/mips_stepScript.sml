@@ -652,6 +652,60 @@ val branch_delay = Q.store_thm("branch_delay",
     (!x. x + 4w + 4w = x + 8w)`,
    rw [] \\ fs [])
 
+val BIT_lem = Q.prove(
+   `(!x. NUMERAL (BIT2 x) = 2 * (x + 1)) /\
+    (!x. NUMERAL (BIT1 x) = 2 * x + 1) /\
+    (!x. NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3) /\
+    (!x. NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
+    (!x. NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
+    (!x. NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2)`,
+   REPEAT strip_tac
+   \\ CONV_TAC (Conv.LHS_CONV
+         (REWRITE_CONV [arithmeticTheory.BIT1, arithmeticTheory.BIT2,
+                        arithmeticTheory.NUMERAL_DEF]))
+   \\ DECIDE_TAC
+   )
+
+val Aligned_eq = Q.prove(
+   `!a b. (((1 >< 0) (a: word64) = 0w:word2) =
+           ((1 >< 0) (b: word64) = 0w:word2)) =
+          (~a ' 0 /\ ~a ' 1 = ~b ' 0 /\ ~b ' 1)`,
+   blastLib.BBLAST_TAC
+   )
+
+val Aligned_numeric = Q.store_thm("Aligned_numeric",
+   `((1 >< 0) (0w: word64) = 0w:word2) /\
+    (!x. ((1 >< 0) (n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2)) /\
+    (!x y f.
+         ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
+         ((1 >< 0) (y + 3w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y + 1w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y + 2w) = 0w:word2)) /\
+    (!x y f.
+         ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
+         ((1 >< 0) (y - 3w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y - 1w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y - 2w) = 0w:word2))`,
+   Q.ABBREV_TAC `z = ((1 >< 0) : word64 -> word2)`
+   \\ REPEAT strip_tac
+   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [BIT_lem]))
+   \\ Q.UNABBREV_TAC `z`
+   \\ rewrite_tac [Aligned_eq, GSYM wordsTheory.word_mul_n2w,
+                   GSYM wordsTheory.word_add_n2w]
+   \\ TRY (markerLib.PAT_ABBREV_TAC (HOLset.empty Term.compare)
+              ``q = n2w x + 1w : word64``)
+   \\ TRY (Q.ABBREV_TAC `r = n2w (f x) : word64`)
+   \\ blastLib.BBLAST_TAC
+   )
+
 (* ------------------------------------------------------------------------ *)
 
 

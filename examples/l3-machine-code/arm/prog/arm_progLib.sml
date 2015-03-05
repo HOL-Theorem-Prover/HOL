@@ -780,12 +780,6 @@ local
       List.last o pred_setSyntax.strip_set o
       temporal_stateSyntax.dest_code' o
       Thm.concl
-   val reverse_endian =
-      fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
-          c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
-         [d1, d2, d3, d4, d5, d6, d7, d8, c1, c2, c3, c4, c5, c6, c7, c8,
-          b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
-       | _ => raise ERR "reverse_endian" ""
    val rev_endian = ref (Lib.I : term list -> term list)
    val is_be_tm = Term.aconv ``s.CPSR.E``
    fun set_endian opt =
@@ -793,7 +787,7 @@ local
          val l = arm_configLib.mk_config_terms opt
       in
          if List.exists is_be_tm l
-            then rev_endian := reverse_endian
+            then rev_endian := utilsLib.rev_endian
          else rev_endian := Lib.I
       end
    val (reset_db, set_current_opt, get_current_opt, add1_pending, find_spec,

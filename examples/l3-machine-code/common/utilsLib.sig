@@ -84,6 +84,7 @@ sig
    val qm_tac: thm list -> tactic
    val removeSpaces: string -> string
    val resetStepConv: unit -> unit
+   val rev_endian: 'a list -> 'a list
    val rhsc: thm -> term
    val rng: hol_type -> hol_type
    val save_as: string -> thm -> thm

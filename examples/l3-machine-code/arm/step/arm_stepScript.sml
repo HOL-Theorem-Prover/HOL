@@ -729,8 +729,8 @@ val Aligned_eq = Q.prove(
    )
 
 val Aligned_numeric = Q.store_thm("Aligned_numeric",
-   `(!x. Aligned (0w: word32, 4)) /\
-    (!x. Aligned (0w: word32, 2)) /\
+   `Aligned (0w: word32, 4) /\
+    Aligned (0w: word32, 2) /\
     (!x. Aligned (n2w (NUMERAL (BIT2 (BIT1 x))): word32, 4)) /\
     (!x. Aligned (n2w (NUMERAL (BIT2 x)): word32, 2)) /\
     (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word32, 4) =

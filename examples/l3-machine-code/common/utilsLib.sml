@@ -79,6 +79,18 @@ fun classes eq =
 (* ------------------------------------------------------------------------- *)
 
 local
+   fun loop a =
+      fn [] => a
+       | r => (case Lib.total (Lib.split_after 8) r of
+                  SOME (x, y) => loop (x :: a) y
+                | NONE => r :: a)
+in
+   fun rev_endian l = List.concat (loop [] l)
+end
+
+(* ------------------------------------------------------------------------- *)
+
+local
    fun find_pos P =
       let
          fun iter n [] = n

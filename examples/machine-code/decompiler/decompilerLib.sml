@@ -1856,7 +1856,7 @@ val decompile_io =
    decompile_io_with (helperLib.quote_to_strings: term quotation -> string list)
 
 val decompile =
-   decompile_with (helperLib.quote_to_strings: term quotation -> string list)
+   decompile_with (helperLib.quote_to_strings: string quotation -> string list)
 
 val decompile_io_strings = decompile_io_with I
 val decompile_strings = decompile_with I

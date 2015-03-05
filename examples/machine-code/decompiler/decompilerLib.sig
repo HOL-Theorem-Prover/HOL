@@ -5,7 +5,7 @@ sig
 
     val decompile_with :
        ('a -> string list) -> decompiler_tools -> string -> 'a -> thm * thm
-    val decompile : decompiler_tools -> string -> term quotation -> thm * thm
+    val decompile : decompiler_tools -> string -> string quotation -> thm * thm
     val decompile_strings :
        decompiler_tools -> string -> string list -> thm * thm
 

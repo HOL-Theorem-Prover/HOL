@@ -1163,13 +1163,19 @@ fun get_pc_delta is_pc =
 
 local
    val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun is_word_lit tm =
+      case Lib.total wordsSyntax.dest_mod_word_literal tm of
+         SOME (n, s) =>
+            n = wordsSyntax.dest_word_literal tm andalso
+            Lib.funpow (Arbnum.toInt s - 1) Arbnum.div2 n = Arbnum.zero
+       | NONE => false
    fun is_irreducible tm =
       Term.is_var tm orelse
       (case Lib.total wordsSyntax.dest_word_add tm of
-          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+          SOME (p, i) => Term.is_var p andalso is_word_lit i
         | NONE => false) orelse
       (case Lib.total wordsSyntax.dest_word_sub tm of
-          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+          SOME (p, i) => Term.is_var p andalso is_word_lit i
         | NONE => false) orelse
       (case Lib.total boolSyntax.dest_cond tm of
           SOME (_, x, y) => is_irreducible x andalso is_irreducible y
