@@ -58,8 +58,6 @@ val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 fun FRESH_TY_VARS_RULE thm =
   INST_TYPE ty_var_subst thm
 
-val t = ``\x. P (\x. ss x) x``
-
 fun REMOVE_REBIND_CONV_AUX avoid t = let
   val (v, t') = dest_abs t
   val v' = variant avoid v
@@ -70,7 +68,7 @@ in
 end handle HOL_ERR _ => let
   val (t1, t2) = dest_comb t
   val (t1', avoid1) = REMOVE_REBIND_CONV_AUX avoid t1
-  val (t2', avoid2) = REMOVE_REBIND_CONV_AUX avoid t2
+  val (t2', avoid2) = REMOVE_REBIND_CONV_AUX avoid1 t2
 in
   (mk_comb (t1', t2'), avoid2)
 end handle HOL_ERR _ => (t, avoid)

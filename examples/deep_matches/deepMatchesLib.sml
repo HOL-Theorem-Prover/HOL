@@ -1445,7 +1445,7 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
 
   val t'' = mk_pair (free_vars t') [] col_no v
   val thm1_tm = mk_eq (t', t'')
-  val thm1 = prove (thm1_tm, SIMP_TAC std_ss [pairTheory.pair_case_def])
+  val thm1 = prove (thm1_tm, SIMP_TAC std_ss [pairTheory.pair_CASE_def])
 
   val thm2 = CONV_RULE (RHS_CONV (
     (TOP_SWEEP_CONV (
@@ -1453,14 +1453,23 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
     )))) thm1
 
   val thm3 = TRANS thm0 thm2
-  val thm4 = CONV_RULE (RHS_CONV REMOVE_REBIND_CONV) thm3
+
+  (* check whether it got simpler *)
+  val _ = let
+    val r = rhs (concl thm3)
+    val i = ((find_term (aconv t) r; true) handle HOL_ERR _ => false)
+  in
+    if i then failwith "loop" else ()
+  end
+
+(*  val thm4 = CONV_RULE (RHS_CONV REMOVE_REBIND_CONV) thm3 *)
 in
-  thm4
+  thm3
 end
 
 fun PMATCH_CASE_SPLIT_CONV_GEN ssl = PMATCH_CASE_SPLIT_CONV_GENCALL (ssl, NONE)                                      
 
-fun PMATCH_CASE_SPLIT_CONV colHeu t = 
-  PMATCH_CASE_SPLIT_CONV_GEN [] (!thePmatchCompileDB) colHeu t
+fun PMATCH_CASE_SPLIT_CONV col_heu t = 
+  PMATCH_CASE_SPLIT_CONV_GEN [] (!thePmatchCompileDB) col_heu t
 
 end

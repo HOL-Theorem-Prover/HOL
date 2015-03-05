@@ -35,6 +35,10 @@ sig
      of the type can be constructed  via a constructor in this list *)
   val mk_constructorList : bool -> constructor list -> constructorList
 
+  (* [make_constructorList exh constrs] is a convenience functions
+     that maps [mk_constructor] over constrs before calling
+     [mk_constructorList]. *) 
+  val make_constructorList : bool -> (term * string list) list -> constructorList
 
   (************************)
   (* Constructor Families *)

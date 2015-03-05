@@ -240,13 +240,13 @@ val list_REVCASE_THM = prove (``
   ((list_REVCASE [] c_nil c_snoc) = c_nil) /\
   ((list_REVCASE (SNOC x xs) c_nil c_snoc) = c_snoc x xs)``,
 SIMP_TAC list_ss [list_REVCASE_def, rich_listTheory.NOT_SNOC_NIL])
+ 
+val cl = make_constructorList true [
+  (``[]:'a list``, []), 
+  (``SNOC: 'a -> 'a list -> 'a list``,  ["x", "xs"])
+]
 
-val c_nil = mk_constructor ``[]:'a list`` []
-val c_snoc = mk_constructor ``SNOC: 'a -> 'a list -> 'a list`` 
-   ["x", "xs"]
-
-val cl = mk_constructorList true [c_nil, c_snoc]
-
+(* set_constructorFamily (cl, ``list_REVCASE``) *)
 val cf = mk_constructorFamily (cl, ``list_REVCASE``,
   SIMP_TAC list_ss [rich_listTheory.NOT_SNOC_NIL] THEN
   REPEAT STRIP_TAC THENL [
@@ -257,10 +257,90 @@ val cf = mk_constructorFamily (cl, ``list_REVCASE``,
   ]
 )
 
+(* add this family *)
+val _ = pmatch_compile_db_register_constrFam cf
+
 val t = ``CASE l OF [
   ||. [] ~> 0;
-  || (x, xs). SNOC x xs ~> x
+  || x. SNOC x _ ~> x
   ]``
+
+val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t
+
+val t = ``CASE lx OF [
+  ||. ([], NONE) ~> 0;
+  || (x, y). (SNOC x _, SOME y) ~> x + y
+  ]``;
+
+val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t;
+
+val t = ``CASE lx OF [
+  ||. [] ~> 0;
+  || x. x::_ ~> x + y
+  ]``
+
+val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t;
+
+
+(* A nonexhaustive family *)
+
+val tree_case_def = DB.fetch "-" "tree_case_def";
+
+val tree_red_CASE_def = Define `
+ tree_red_CASE tr f_red f_else =
+ tree_CASE tr (f_else Empty) f_red
+   (\t1 n t2. f_else (Black t1 n t2))`
+
+val tree_red_CASE_THM = prove (``
+  (tree_red_CASE Empty f_red f_else = f_else Empty) /\
+  (tree_red_CASE (Red t1 n t2) f_red f_else = f_red t1 n t2) /\
+  (tree_red_CASE (Black t1 n t2) f_red f_else = f_else (Black t1 n t2))``,
+SIMP_TAC list_ss [tree_red_CASE_def, tree_case_def])
+ 
+(* for now the congurence needs to be set up manually,
+   this will be automated soon *)
+val tree_red_CASE_cong = store_thm ("tree_red_CASE_cong",
+``!M M' f f1 f' f1'.
+     (M = M') ==>
+     (!a0 a1 a2. (M' = Red a0 a1 a2) ==> (f a0 a1 a2 = f' a0 a1 a2)) ==>
+     (!x. (x = M') /\ (!a0 a1 a2. ~(M' = Red a0 a1 a2)) ==> (f1 x = f1' x)) ==>
+     (tree_red_CASE M f f1 = tree_red_CASE M' f' f1')``,
+
+SIMP_TAC std_ss [tree_red_CASE_def] THEN
+Cases_on `M'` THEN
+SIMP_TAC (srw_ss()) []);
+
+val cl = make_constructorList false [
+  (``Red``, ["t1", "n", "t2"])
+]
+
+(* set_constructorFamily (cl, ``tree_red_CASE``) *)
+val cf = mk_constructorFamily (cl, ``tree_red_CASE``,
+  SIMP_TAC (srw_ss()) [tree_red_CASE_def] THEN
+  Cases_on `x` THEN
+  SIMP_TAC (srw_ss()) [tree_red_CASE_def]);
+
+val _ = pmatch_compile_db_register_constrFam cf;
+
+val _ = pmatch_compile_db_register_ssfrag 
+  (simpLib.rewrites [Cong tree_red_CASE_cong]);
+
+val my_conv = (
+  (PMATCH_CASE_SPLIT_CONV (fn _ => 0)) THENC
+  (SIMP_CONV (std_ss++PMATCH_SIMP_ss) [Cong tree_red_CASE_cong]))
+
+val balance_black_dectree_def2 = CONV_RULE
+  ((TOP_SWEEP_CONV my_conv) THENC
+   (SIMP_CONV std_ss [pairTheory.pair_case_thm]))
+  balance_black_def
+
+val balance_black_dectree_def3 = CONV_RULE
+  (TOP_SWEEP_CONV PMATCH_ELIM_CONV)
+  balance_black_def
+
+val size_new = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def2))))
+val size_old = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def))))
+val size_classic = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def3))))
 
 
 (*********************************)

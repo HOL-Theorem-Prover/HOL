@@ -159,6 +159,9 @@ in
     cl_is_exhaustive = is_exhaustive }:constructorList
 end
 
+fun make_constructorList is_exhaustive constrs = 
+  mk_constructorList is_exhaustive (List.map 
+    (uncurry mk_constructor) constrs)
 
 (***************************************************)
 (* Constructor Families                            *)
@@ -411,6 +414,58 @@ in
      end    
 end handle HOL_ERR _ => NONE
 
+(* Datatype for representing how well a constructorFamily
+   matches a column. *)
+type constructorFamily_col_stats = {
+  cfcs_missed_rows : int,
+     (* how many rows of the col are not constructor applications
+        or bound vars? *)
+
+  cfcs_missed_constr : int 
+     (* how many constructors of the family do not appear in the column *)
+}
+
+fun measure_constructorFamily (cf : constructorFamily) col = let  
+  fun list_count p col = 
+    foldl (fn (r, c) => if (p r) then c+1 else c) 0 col
+
+  (* extract the constructors of the family *)
+  val crs = List.map (fn (CONSTR (c, _)) => c) (
+    #cl_constructors (#constructors cf))
+
+  fun row_is_missed (vs, p) = 
+    if (is_var p andalso mem p vs) then
+      (* bound variables are fine *)
+      false
+    else let
+      val (f, _) = strip_comb p
+    in
+      not (List.exists (same_const f) crs)
+    end handle HOL_ERR _ => true
+
+  fun constr_is_missed c =
+    not (List.exists (fn (vs, p) => let
+       val (f, _) = strip_comb p
+     in
+       same_const f c
+     end handle HOL_ERR _ => false) col)
+
+in 
+  {
+    cfcs_missed_rows = list_count row_is_missed col,
+    cfcs_missed_constr = list_count constr_is_missed crs
+  }
+end
+
+fun constructorFamily_col_stats_compare 
+  (st1:constructorFamily_col_stats) 
+  (st2 : constructorFamily_col_stats) =
+
+  (#cfcs_missed_rows st1 < #cfcs_missed_rows st2) orelse
+  ( (#cfcs_missed_rows st1 = #cfcs_missed_rows st2) andalso
+    (#cfcs_missed_constr st1 < #cfcs_missed_constr st2) )
+
+
 fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
   val ty = type_of (snd (hd col))
@@ -424,10 +479,15 @@ fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
          NONE => []
        | SOME (ty, cf) => [(ty, cf)]
   in cts_fams' @ cty_l end
+
+  val weighted_fams = List.map (fn (ty, cf) =>
+    ((ty, cf), measure_constructorFamily cf col)) cts_fams
+  val weighted_fams_sorted = sort (fn (_, w1) => fn (_, w2) =>
+    constructorFamily_col_stats_compare w1 w2) weighted_fams
 in
-  case cts_fams of
+  case weighted_fams_sorted of
       [] => NONE
-    | cs::_ => SOME cs
+    | (cs, _)::_ => SOME cs
 end;
 
 
