@@ -514,7 +514,9 @@ in
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
-                       then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
+                         then Parse.Term [QQ parse_start, QQ spec]
+                              |> do_tminsts pos opts
+                              |> Term.type_of
                     else Parse.Type [QQ parse_start, QQ spec]
         in
           add_string pps (optset_indent opts);
