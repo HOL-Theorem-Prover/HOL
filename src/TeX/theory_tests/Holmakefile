@@ -2,15 +2,38 @@ CMPDIR = $(protect $(HOLDIR)/tools/cmp)
 
 INCLUDES = $(CMPDIR)
 
-.PHONY: check_output
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: check_output check_utyabb_output check_tyabb_output $(TARGETS)
 
 check_output: output expected-output
 	$(CMPDIR)/cmp.exe output expected-output
 
+check_utyabb_output: utyabb_output utyabbexpected
+	$(CMPDIR)/cmp.exe utyabb_output utyabbexpected
+
+check_tyabb_output: tyabb_output tyabbexpected
+	$(CMPDIR)/cmp.exe tyabb_output tyabbexpected
+
 output: input munge.exe
 	./munge.exe < $< > $@
+
+tyabb_output: tyabb_input tymunge.exe
+	./tymunge.exe < $< > $@
+
+utyabb_output: tyabb_input utymunge.exe
+	./utymunge.exe < $< > $@
 
 munge.exe: mdtTheory.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
 
-EXTRA_CLEANS = output munge.exe
+tymunge.exe: tyabbrevTheory.uo
+	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ tyabbrevTheory
+
+utymunge.exe: untyabbrevTheory.uo
+	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ untyabbrevTheory
+
+.PHONY: all check_output check_utyabb_output check_tyabb_output
+
+EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output
