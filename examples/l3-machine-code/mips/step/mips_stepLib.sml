@@ -217,13 +217,19 @@ val dEV =
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
       [[], [`rs` |-> r0]]
 
+val bbEV =
+   EVC [dfn'BEQ_def, dfn'BNE_def, dfn'BEQL_def, dfn'BNEL_def,
+        ConditionalBranch_def, ConditionalBranchLikely_def]
+       [[``^st.BranchDelay = NONE``, ``rs <> 0w: word5``, ``rt <> 0w: word5``]]
+       (all_comb [`rt` |-> r0, `rs` |-> r0])
+
 val bEV =
-   EVC [dfn'BEQ_def, dfn'BEQ_def, dfn'BNE_def, dfn'BLEZ_def, dfn'BGTZ_def,
-        dfn'BLTZ_def, dfn'BGEZ_def, dfn'BLTZAL_def, dfn'BGEZAL_def,
-        dfn'BEQL_def, dfn'BNEL_def, dfn'BLEZL_def, dfn'BGTZL_def,
+   EVC [dfn'BLEZ_def, dfn'BGTZ_def, dfn'BLTZ_def, dfn'BGEZ_def,
+        dfn'BLTZAL_def, dfn'BGEZAL_def, dfn'BLEZL_def, dfn'BGTZL_def,
         dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
         ConditionalBranch_def, ConditionalBranchLikely_def]
-       [[``^st.BranchDelay = NONE``]] []
+       [[``^st.BranchDelay = NONE``, ``rs <> 0w: word5``]]
+       [[], [`rs` |-> r0]]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -308,16 +314,16 @@ val J = EV [dfn'J_def] [] [] ``dfn'J (instr_index)``
 val JAL = EV [dfn'JAL_def] [] [] ``dfn'JAL (instr_index)``
 val JR = EV [dfn'JR_def] [] [] ``dfn'JR (instr_index)``
 val JALR = hEV ``dfn'JALR (rs, rd)``
-val BEQ = bEV ``dfn'BEQ (rs, rt, offset)``
-val BNE = bEV ``dfn'BNE (rs, rt, offset)``
+val BEQ = bbEV ``dfn'BEQ (rs, rt, offset)``
+val BNE = bbEV ``dfn'BNE (rs, rt, offset)``
+val BEQL = bbEV ``dfn'BEQL (rs, rt, offset)``
+val BNEL = bbEV ``dfn'BNEL (rs, rt, offset)``
 val BLEZ = bEV ``dfn'BLEZ (rs, offset)``
 val BGTZ = bEV ``dfn'BGTZ (rs, offset)``
 val BLTZ = bEV ``dfn'BLTZ (rs, offset)``
 val BGEZ = bEV ``dfn'BGEZ (rs, offset)``
 val BLTZAL = bEV ``dfn'BLTZAL (rs, offset)``
 val BGEZAL = bEV ``dfn'BGEZAL (rs, offset)``
-val BEQL = bEV ``dfn'BEQL (rs, rt, offset)``
-val BNEL = bEV ``dfn'BNEL (rs, rt, offset)``
 val BLEZL = bEV ``dfn'BLEZL (rs, offset)``
 val BGTZL = bEV ``dfn'BGTZL (rs, offset)``
 val BLTZL = bEV ``dfn'BLTZL (rs, offset)``
@@ -702,7 +708,11 @@ val mips_ipatterns = List.map (I ## utilsLib.pattern)
     ("MADDU",  "FTTTFF__________FFFFFFFFFFFFFFFT"),
     ("MSUB",   "FTTTFF__________FFFFFFFFFFFFFTFF"),
     ("MSUBU",  "FTTTFF__________FFFFFFFFFFFFFTFT"),
-    ("MUL",    "FTTTFF_______________FFFFFFFFFTF")
+    ("MUL",    "FTTTFF_______________FFFFFFFFFTF"),
+    ("BEQ",    "FFFTFF__________________________"),
+    ("BNE",    "FFFTFT__________________________"),
+    ("BEQL",   "FTFTFF__________________________"),
+    ("BNEL",   "FTFTFT__________________________")
    ]
 
 val mips_dpatterns = List.map (I ## utilsLib.pattern)
@@ -751,15 +761,28 @@ val mips_jpatterns = List.map (I ## utilsLib.pattern)
 
 val mips_patterns0 = List.map (I ## utilsLib.pattern)
    [
-    ("LUI",    "FFTTTTFFFFF_____________________"),
-    ("DIV",    "FFFFFF__________FFFFFFFFFFFTTFTF"),
-    ("DIVU",   "FFFFFF__________FFFFFFFFFFFTTFTT"),
-    ("DDIV",   "FFFFFF__________FFFFFFFFFFFTTTTF"),
-    ("DDIVU",  "FFFFFF__________FFFFFFFFFFFTTTTT"),
-    ("MTHI",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFFT"),
-    ("MTLO",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFTT"),
-    ("MFHI",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFFF"),
-    ("MFLO",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF")
+    ("LUI",     "FFTTTTFFFFF_____________________"),
+    ("DIV",     "FFFFFF__________FFFFFFFFFFFTTFTF"),
+    ("DIVU",    "FFFFFF__________FFFFFFFFFFFTTFTT"),
+    ("DDIV",    "FFFFFF__________FFFFFFFFFFFTTTTF"),
+    ("DDIVU",   "FFFFFF__________FFFFFFFFFFFTTTTT"),
+    ("MTHI",    "FFFFFF_____FFFFFFFFFFFFFFFFTFFFT"),
+    ("MTLO",    "FFFFFF_____FFFFFFFFFFFFFFFFTFFTT"),
+    ("MFHI",    "FFFFFFFFFFFFFFFF_____FFFFFFTFFFF"),
+    ("MFLO",    "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF"),
+    ("BLTZ",    "FFFFFT_____FFFFF________________"),
+    ("BGEZ",    "FFFFFT_____FFFFT________________"),
+    ("BLTZL",   "FFFFFT_____FFFTF________________"),
+    ("BGEZL",   "FFFFFT_____FFFTT________________"),
+    ("BLTZAL",  "FFFFFT_____TFFFF________________"),
+    ("BGEZAL",  "FFFFFT_____TFFFT________________"),
+    ("BLTZALL", "FFFFFT_____TFFTF________________"),
+    ("BGEZALL", "FFFFFT_____TFFTT________________"),
+    ("BLEZ",    "FFFTTF_____FFFFF________________"),
+    ("BGTZ",    "FFFTTT_____FFFFF________________"),
+    ("BLEZL",   "FTFTTF_____FFFFF________________"),
+    ("BGTZL",   "FTFTTT_____FFFFF________________"),
+    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF")
    ]
 
 val mips_cpatterns = List.map (I ## utilsLib.pattern)
@@ -770,25 +793,8 @@ val mips_cpatterns = List.map (I ## utilsLib.pattern)
 
 val mips_patterns = List.map (I ## utilsLib.pattern)
    [
-    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
-    ("BLTZ",    "FFFFFT_____FFFFF________________"),
-    ("BGEZ",    "FFFFFT_____FFFFT________________"),
-    ("BLTZL",   "FFFFFT_____FFFTF________________"),
-    ("BGEZL",   "FFFFFT_____FFFTT________________"),
-    ("BLTZAL",  "FFFFFT_____TFFFF________________"),
-    ("BGEZAL",  "FFFFFT_____TFFFT________________"),
-    ("BLTZALL", "FFFFFT_____TFFTF________________"),
-    ("BGEZALL", "FFFFFT_____TFFTT________________"),
     ("J",       "FFFFTF__________________________"),
     ("JAL",     "FFFFTT__________________________"),
-    ("BEQ",     "FFFTFF__________________________"),
-    ("BNE",     "FFFTFT__________________________"),
-    ("BLEZ",    "FFFTTF_____FFFFF________________"),
-    ("BGTZ",    "FFFTTT_____FFFFF________________"),
-    ("BEQL",    "FTFTFF__________________________"),
-    ("BNEL",    "FTFTFT__________________________"),
-    ("BLEZL",   "FTFTTF_____FFFFF________________"),
-    ("BGTZL",   "FTFTTT_____FFFFF________________"),
     ("LDL",     "FTTFTF__________________________"),
     ("LDR",     "FTTFTT__________________________"),
     ("LB",      "TFFFFF__________________________"),

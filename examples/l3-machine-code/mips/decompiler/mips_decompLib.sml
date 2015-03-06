@@ -43,52 +43,27 @@ open mips_decompLib
 List.map mips.encodeInstruction
   [
    "ori $1, $0, 10",
-   "daddiu $1, $1, 10"
+   "bne $1, $0, 0xFFFF",
+   "daddiu $1, $1, 0xFFFF"
   ]
+
+val (text_cert, test_def) = mips_decompile "test"
+   `3401000A
+    1420FFFF 6421FFFF`
+
+val () = computeLib.add_funs [test_def]
+
+EVAL ``test 0w``
 
 List.map mips.encodeInstruction
   [
    "ori $1, $0, 10",
-   "beq $1, $0, 1",
-   "nop",
-   "nop"
+   "beq $1, $0, 1"
   ]
 
 val test_def = mips_decompile "test"
    `3401000A
-    10200001 00000000
-    00000000`
-
-
-val q = (helperLib.quote_to_strings: term quotation -> string list)
-val tools = mips_tools
-val name = "test"
-val fio = NONE: (term * term) option
-val code =
-   `3401000A
-    10200001 00000000
-    00000000`
-
-val MIPS_PC_SIMP = prove(
-  ``(r * MIPS_PC pc * cond ((1 >< 0) pc = 0w:word2) = r * MIPS_PC pc) /\
-    (MIPS_PC pc * cond ((1 >< 0) pc = 0w:word2) = MIPS_PC pc)``,
-  FULL_SIMP_TAC (std_ss++sep_cond_ss) [mips_progTheory.MIPS_PC_def]);
-
-local
-  val f = #1 mips_tools
-  fun map_inst r ((th1,x1,x2),NONE) = ((r th1,x1,x2),NONE)
-    | map_inst r ((th1,x1,x2),SOME (th2,y1,y2)) =
-        ((r th1,x1,x2),SOME (r th2,y1,y2))
-in
-  val new_mips_tools =
-    (map_inst (REWRITE_RULE [MIPS_PC_SIMP]) o f,
-     #2 mips_tools, #3 mips_tools, #4 mips_tools)
-end
-
-val res = decompilerLib.decompile new_mips_tools "test"
-   `3401000A
-    10200001 00000000
-    00000000`
+    10200001 00000000`
 
 *)
 

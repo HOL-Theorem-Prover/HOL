@@ -586,15 +586,11 @@ local
 in
    val mips_pc_intro_rule =
       Conv.CONV_RULE
-         (stateLib.PRE_COND_CONV
-             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss) [])
-          THENC helperLib.POST_CONV (stateLib.PC_CONV "mips_prog$MIPS_PC")) o
-      helperLib.MERGE_CONDS_RULE o
-      Conv.CONV_RULE
-         (PURE_REWRITE_CONV [mips_stepTheory.Aligned_numeric]
+         (Conv.LAND_CONV (REWRITE_CONV [mips_stepTheory.Aligned_numeric])
           THENC (Conv.REWR_CONV
                      (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
-                 ORELSEC MOVE_COND_CONV)) o
+                 ORELSEC MOVE_COND_CONV)
+          THENC helperLib.POST_CONV (stateLib.PC_CONV "mips_prog$MIPS_PC")) o
       MP_MIPS_PC_INTRO o
       Conv.CONV_RULE
          (helperLib.POST_CONV
@@ -602,6 +598,10 @@ in
               THENC helperLib.MOVE_OUT_CONV ``mips_PC``)) o
       stateLib.introduce_triple_definition
          (false, mips_progTheory.MIPS_PC_def) o
+      Conv.CONV_RULE
+        (stateLib.PRE_COND_CONV
+           (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
+              [mips_stepTheory.Aligned_numeric])) o
       helperLib.MERGE_CONDS_RULE
    val spec_join_rule = helperLib.SPEC_COMPOSE_RULE o Lib.list_of_pair
 end
