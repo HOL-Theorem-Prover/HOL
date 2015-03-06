@@ -34,7 +34,27 @@ val mips_pc = Term.prim_mk_const {Thy = "mips_prog", Name = "MIPS_PC"}
 val mips_tools =
    (format_mips_spec, fn _ => fail(), TRUTH, mips_pc): decompiler_tools
 
-val mips_decompile = decompilerLib.decompile mips_tools
+local
+   fun is_branch h =
+      case BitsN.fromHexString (h, 32) of
+         SOME opc =>
+            (case mips.Decode opc of mips.Branch _ => true | _ => false)
+       | NONE => false
+in
+   fun mips_parse (q: string quotation) =
+      let
+         fun fill_delay a =
+            fn x :: y :: r =>
+                 if is_branch x
+                    then fill_delay (x ^ " " ^ y :: a) r
+                 else fill_delay (x :: a) (y :: r)
+             | r => r @ a
+      in
+         List.rev (fill_delay [] (helperLib.quote_to_strings q))
+      end
+end
+
+val mips_decompile = decompilerLib.decompile_with mips_parse mips_tools
 
 (* testing and debugging
 
@@ -49,7 +69,8 @@ List.map mips.encodeInstruction
 
 val (text_cert, test_def) = mips_decompile "test"
    `3401000A
-    1420FFFF 6421FFFF`
+    1420FFFF
+    6421FFFF`
 
 val () = computeLib.add_funs [test_def]
 
@@ -63,7 +84,8 @@ List.map mips.encodeInstruction
 
 val test_def = mips_decompile "test"
    `3401000A
-    10200001 00000000`
+    10200001
+    00000000`
 
 *)
 
