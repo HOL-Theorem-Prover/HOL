@@ -117,17 +117,76 @@ sig
   (* CASE SPLIT (pattern compile) *)
   (********************************)
 
-  val PMATCH_CASE_SPLIT_CONV :
-     ((term * (term list * term) list) list -> int) -> term -> thm
+  (*------------*)
+  (* Heuristics *)
+  (*------------*)
 
+  (* A column heuristic is used to figure out, in
+     which order to process columns. It gets a list of columns
+     and returns, which one to pick. *)  
+  type column_heuristic = (term * (term list * term) list) list -> int
+
+  (* Many heuristics are build on ranking funs.
+     A ranking fun assigns an integer to a column. Larger
+     numbers are prefered. If two columns have the same
+     value, either another ranking fun is used to decide or
+     just the first one is used, if no ranking fun is available. *)
+  type column_ranking_fun = term * (term list * term) list -> int
+  val colHeu_rank : column_ranking_fun list -> column_heuristic
+
+  val colRank_first_row : column_ranking_fun
+  val colRank_first_row_constr : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
+  val colRank_arity : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
+  val colRank_constr_prefix : column_ranking_fun
+  val colRank_small_branching_factor : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
+
+  (* Some heuristics *)
+  val colHeu_first_col : column_heuristic
+  val colHeu_last_col : column_heuristic
+  val colHeu_first_row : column_heuristic
+  val colHeu_constr_prefix : column_heuristic
+  val colHeu_cqba : constrFamiliesLib.pmatch_compile_db -> column_heuristic
+  val colHeu_qba : constrFamiliesLib.pmatch_compile_db -> column_heuristic
+
+  (* the default heuristic, currently it is
+     colHeu_qba applied to the default db. However,
+     this might change. You can just rely on a decent heuristic,
+     that often works. No specific properties guarenteed. *)
+  val colHeu_default : column_heuristic
+
+  (*-------------*)
+  (* COMPILATION *)
+  (*-------------*)
+
+  (* [PMATCH_CASE_SPLIT_CONV_GEN ssl db col_heu]
+     is a conversion that tries to compile PMATCH expressions
+     to decision trees using database [db], column heuristic
+     [col_heu] and additional ssfrags [ssl]. *)
   val PMATCH_CASE_SPLIT_CONV_GEN :
      ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
-     ((term * (term list * term) list) list -> int) -> term -> thm
+     column_heuristic -> conv
 
-  val PMATCH_CASE_SPLIT_CONV_GENCALL :
-     ssfrag list * (term -> thm) option ->
+  (* A simplified version of PMATCH_CASE_SPLIT_CONV that
+     uses the default database and default column heuristic as
+     well as no extra ssfrags. *)
+  val PMATCH_CASE_SPLIT_CONV : conv
+
+  (* lets choose at least the heuristic *)
+  val PMATCH_CASE_SPLIT_CONV_HEU : column_heuristic -> conv
+
+  (* ssfrag corresponding to PMATCH_CASE_SPLIT_CONV_GEN *)
+  val PMATCH_CASE_SPLIT_GEN_ss :
+     ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
-     ((term * (term list * term) list) list -> int) -> term -> thm
+     column_heuristic -> ssfrag
+
+  (* ssfrag corresponding to PMATCH_CASE_SPLIT_CONV, since
+     it needs to get the current version of the default db,
+     it gets a unit argument. *)
+  val PMATCH_CASE_SPLIT_ss : unit -> ssfrag
+
+  (* lets choose at least the heuristic *)
+  val PMATCH_CASE_SPLIT_HEU_ss : column_heuristic -> ssfrag
 
 end

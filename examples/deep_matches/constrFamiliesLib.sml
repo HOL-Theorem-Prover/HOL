@@ -7,6 +7,14 @@ open HolKernel boolLib simpLib bossLib
 (* Auxiliary definitions                           *)
 (***************************************************)
 
+fun cong_ss thms = simpLib.SSFRAG {
+      name = NONE,
+     convs = [],
+     rewrs = [],
+        ac = [],
+    filter = NONE,
+    dprocs = [],
+     congs = thms}
 
 fun failwith f x = 
  raise (mk_HOL_ERR "constrFamiliesLib" f x)
@@ -177,6 +185,7 @@ type constructorFamily = {
   one_one_thm   : thm option,
   distinct_thm  : thm option,
   case_split_thm: thm,
+  case_cong_thm : thm,
   nchotomy_thm  : thm option
 }
 
@@ -187,8 +196,23 @@ fun constructorFamily_get_rewrites (cf : constructorFamily) =
     | (NONE, SOME thm2) => thm2
     | (SOME thm1, SOME thm2) => CONJ thm1 thm2
 
+fun constructorFamily_get_ssfrag (cf : constructorFamily) = 
+  simpLib.merge_ss [simpLib.rewrites [constructorFamily_get_rewrites cf],
+   cong_ss [#case_cong_thm cf]]
+
+fun constructorFamily_get_constructors (cf : constructorFamily) = let
+  val cl = #constructors cf
+  val cs = #cl_constructors cl
+  val ts = List.map (fn (CONSTR (a, b)) => (a, b)) cs
+in
+  (#cl_is_exhaustive cl, ts)
+end
+
 fun constructorFamily_get_case_split (cf: constructorFamily) =
   (#case_split_thm cf)
+
+fun constructorFamily_get_case_cong (cf: constructorFamily) =
+  (#case_cong_thm cf)
 
 fun constructorFamily_get_nchotomy_thm_opt (cf: constructorFamily) =
   (#nchotomy_thm cf)
@@ -277,6 +301,91 @@ in
   eq
 end
 
+
+fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
+  val (arg_tys, res_ty) = strip_fun (type_of case_const)
+
+  val (args_l, args_r) = let
+    fun mk_args avoid = let
+      fun mk_arg (a_ty, (i, avoid, vs)) =
+        let 
+          val v = variant avoid (mk_var ("f"^(int_to_string i), a_ty))
+        in
+          (i+1, v::avoid, v::vs)
+        end
+      val (_, _, vs_rev) = foldl mk_arg (1, avoid, []) (tl arg_tys)
+    in
+     List.rev vs_rev
+    end 
+
+    val r0 = mk_var ("x", hd arg_tys)
+    val l0 = variant [r0] r0
+    val args_l = mk_args [r0, l0]
+    val args_r = mk_args (r0::l0::args_l)
+  in
+    (l0::args_l, r0::args_r)
+  end
+
+  val cong_0 = mk_eq (hd args_l, hd args_r)
+  val base = mk_eq (
+               list_mk_comb (case_const, args_l),
+               list_mk_comb (case_const, args_r))
+
+  (*
+    fun extract n =
+      (el n (#cl_constructors constrL),
+       el (n+1) args_l,
+       el (n+1) args_r)
+
+    val (CONSTR (c, vns), al, ar) = extract 2
+   
+  *)
+  val congs_main = let
+    fun mk_arg_vars acc avoid (a_ty, vns) = case vns of
+        [] => List.rev acc
+      | (vn::vns') => let
+          val (_, atys) = dest_type a_ty
+          val v = variant avoid (mk_var (vn, hd atys))
+        in
+           mk_arg_vars (v::acc) (v::avoid) (el 2 atys, vns')
+        end
+
+   fun process_all acc neg_pres crs als ars = 
+     case (crs, als, ars) of
+        ([], [], []) => List.rev acc
+      | ([], [al], [ar]) => let
+          val arg_ts = mk_arg_vars [] [al, ar] (type_of al, ["x"])
+          val eq_t = mk_eq (list_mk_comb (al, arg_ts),
+                            list_mk_comb (ar, arg_ts))
+
+    
+          val pre_t = list_mk_conj neg_pres 
+          val t_full = list_mk_forall (arg_ts,  mk_imp (pre_t, eq_t))
+        in
+          List.rev (t_full :: acc)
+        end
+      | ((CONSTR (c, vns))::crs', al::als', ar::ars') => let
+          val arg_ts =  mk_arg_vars [] [al, ar] (type_of al, vns)
+          val eq_t = mk_eq (list_mk_comb (al, arg_ts),
+                            list_mk_comb (ar, arg_ts))
+
+          val pre_t = mk_eq (hd args_r, list_mk_comb (c, arg_ts))
+          val t_full = list_mk_forall (arg_ts,  mk_imp (pre_t, eq_t))
+          val t_exp = list_mk_forall (arg_ts,  mk_neg pre_t)
+        in
+          process_all (t_full::acc) (t_exp::neg_pres) crs' als' ars'
+        end
+       | _ => failwith "" "Something is wrong with the constructors/case constant. Wrong arity somewhere?"
+    in
+      process_all [] [] (#cl_constructors constrL) (tl args_l) (tl args_r)  
+    end
+
+in
+  list_mk_forall (args_l @ args_r, 
+     list_mk_imp (cong_0 :: congs_main, base))
+end
+
+
 fun mk_nchotomy_thm_term_opt (constrL : constructorList) = 
   if not (#cl_is_exhaustive constrL) then NONE else let
     val v = mk_var ("x", #cl_type constrL)
@@ -299,9 +408,10 @@ fun mk_constructorFamily_terms case_const constrL = let
   val t1 = mk_one_one_thm_term_opt constrL 
   val t2 = mk_distinct_thm_term_opt constrL
   val t3 = SOME (mk_case_expand_thm_term case_const constrL)
-  val t4 = mk_nchotomy_thm_term_opt constrL
+  val t4 = SOME (mk_case_const_cong_thm_term case_const constrL)
+  val t5 = mk_nchotomy_thm_term_opt constrL
 in
-  [t1, t2, t3, t4]
+  [t1, t2, t3, t4, t5]
 end
 
 fun get_constructorFamily_proofObligations (constrL, case_const) = let
@@ -323,7 +433,8 @@ in
     one_one_thm    = el 1 thms,
     distinct_thm   = el 2 thms,
     case_split_thm = valOf (el 3 thms),
-    nchotomy_thm   = el 4 thms
+    case_cong_thm = valOf (el 4 thms),
+    nchotomy_thm   = el 5 thms
   }:constructorFamily
 end
 
@@ -331,6 +442,7 @@ end
 (***************************************************)
 (* Connection to typebase                          *)
 (***************************************************)
+
 
 (* given a type try to extract the constructors of a type
    from typebase. Do not use the default type-base functions
@@ -363,10 +475,11 @@ fun constructorFamily_of_typebase ty = let
   val thm_distinct = TypeBase.distinct_of ty
   val thm_one_one = TypeBase.one_one_of ty
   val thm_case = TypeBase.case_def_of ty
+  val thm_case_cong = TypeBase.case_cong_of ty
 
   (*  set_constructorFamily (crL, case_split_tm) *)
   val cf = mk_constructorFamily (crL, case_split_tm, 
-    SIMP_TAC std_ss [thm_distinct, thm_one_one] THEN
+    SIMP_TAC std_ss [thm_distinct, thm_one_one, thm_case_cong] THEN
     REPEAT STRIP_TAC THEN (
       Cases_on `x` THEN
       SIMP_TAC std_ss [thm_distinct, thm_one_one, thm_case]
@@ -480,8 +593,21 @@ fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
        | SOME (ty, cf) => [(ty, cf)]
   in cts_fams' @ cty_l end
 
+  fun is_old_fam (ty, cf) = let
+     val (_, cl) = constructorFamily_get_constructors cf
+     fun is_old_const c = let
+       val (cn, _)  = dest_const c
+     in
+       String.isSuffix "<-old" cn
+     end handle HOL_ERR _ => false
+  in
+     (List.exists (fn (c, _) => is_old_const c) cl) orelse
+     (is_old_const (#case_const cf))
+  end
+
+  val cts_fams' = List.filter (fn cf => not (is_old_fam cf)) cts_fams
   val weighted_fams = List.map (fn (ty, cf) =>
-    ((ty, cf), measure_constructorFamily cf col)) cts_fams
+    ((ty, cf), measure_constructorFamily cf col)) cts_fams'
   val weighted_fams_sorted = sort (fn (_, w1) => fn (_, w2) =>
     constructorFamily_col_stats_compare w1 w2) weighted_fams
 in
@@ -507,14 +633,29 @@ fun pmatch_compile_db_compile db col = (
     end
   )));
 
+fun pmatch_compile_db_compile_cf db col = (
+  if (List.null col) then failwith "pmatch_compile_db_compile_cf" "col 0" else
+  case (get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)) of
+    SOME r => NONE | NONE => (
+      case (lookup_constructorFamilies db col) of
+          NONE => NONE
+        | SOME (_, cf) => SOME cf))
+
+
 fun pmatch_compile_db_add_ssfrag (db : pmatch_compile_db) ss = {
   pcdb_compile_funs = #pcdb_compile_funs db,
   pcdb_constrFams = #pcdb_constrFams db,
-  pcdb_ss = (simpLib.merge_ss [#pcdb_ss db, ss])
+  pcdb_ss = (simpLib.merge_ss [ss, #pcdb_ss db])
 } : pmatch_compile_db
 
+fun pmatch_compile_db_add_congs db thms =
+  pmatch_compile_db_add_ssfrag db (cong_ss thms);
+
 fun pmatch_compile_db_register_ssfrag ss =
-  thePmatchCompileDB := pmatch_compile_db_add_ssfrag (!thePmatchCompileDB) ss
+  thePmatchCompileDB := pmatch_compile_db_add_ssfrag (!thePmatchCompileDB) ss;
+
+fun pmatch_compile_db_register_congs thms =
+  pmatch_compile_db_register_ssfrag (cong_ss thms)
 
 fun pmatch_compile_db_add_compile_fun (db : pmatch_compile_db) cf = {
   pcdb_compile_funs = cf::(#pcdb_compile_funs db),
@@ -529,18 +670,33 @@ fun pmatch_compile_db_add_constrFam (db : pmatch_compile_db) cf = {
   pcdb_compile_funs = #pcdb_compile_funs db,
   pcdb_constrFams = let
     val cl = (#constructors cf)
-    val ty = #cl_type cl
+    val ty = normalise_ty (#cl_type cl)
     val net = #pcdb_constrFams db
     val cfs = TypeNet.find (net, ty) handle NotFound => []
     val net' = TypeNet.insert (net, ty, cf::cfs)
   in
     net'
   end,
-  pcdb_ss = #pcdb_ss db
+  pcdb_ss = merge_ss [constructorFamily_get_ssfrag cf, (#pcdb_ss db)]
 } : pmatch_compile_db
 
 fun pmatch_compile_db_register_constrFam cf =
   thePmatchCompileDB := pmatch_compile_db_add_constrFam (!thePmatchCompileDB) cf
+
+fun pmatch_compile_db_remove_type (db : pmatch_compile_db) ty = {
+  pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_constrFams = let
+    val ty = normalise_ty ty
+    val net = #pcdb_constrFams db
+    val net' = TypeNet.insert (net, ty, [])
+  in
+    net'
+  end,
+  pcdb_ss = #pcdb_ss db
+} : pmatch_compile_db
+
+fun pmatch_compile_db_clear_type ty =
+  thePmatchCompileDB := pmatch_compile_db_remove_type (!thePmatchCompileDB) ty
 
 
 

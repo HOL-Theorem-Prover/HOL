@@ -7,6 +7,8 @@ open constrFamiliesLib
 open stringTheory 
 open pred_setLib
 
+val _ = Globals.priming := SOME "_"
+
 (* Introducing case expressions *)
 
 val t = ``case x of (NONE, []) => 0``
@@ -211,7 +213,11 @@ val balance_black_def = Define `balance_black a n b =
 
 (* try to compile to a tree inside the logic *)
 val balance_black_dectree_def = CONV_RULE
-  (TOP_SWEEP_CONV (PMATCH_CASE_SPLIT_CONV (fn _ => 0))) 
+  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV)
+  balance_black_def
+
+val balance_black_dectree_def' = 
+  SIMP_RULE (std_ss++PMATCH_CASE_SPLIT_ss ()) []
   balance_black_def
 
 open stringTheory
@@ -223,8 +229,38 @@ val string_match_def = Define `string_match s x =
      ]`
 
 val string_match_dectree_def = CONV_RULE
-  (TOP_SWEEP_CONV (PMATCH_CASE_SPLIT_CONV (fn _ => 0))) 
+  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV) 
   string_match_def
+
+
+(*********************************)
+(* Heuristics                    *)
+(*********************************)
+
+val dummy_bool_tm = 
+    ``CASE (a,b,c) OF [
+       ||. (_, 0, _) ~> 1;
+       ||. (0, _, 0) ~> 1;
+       ||. (_, _, _) ~> 0
+     ]``
+
+(* try to compile to a tree inside the logic *)
+val dummy_bool_eq1 = 
+  PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col dummy_bool_tm
+
+val dummy_bool_eq2 = 
+  PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col dummy_bool_tm
+
+val dummy_bool_eq3 = 
+  PMATCH_CASE_SPLIT_CONV_HEU colHeu_default dummy_bool_tm
+
+
+val dummy_bool_tm =  Define `f a b c =
+    CASE (a,b,c) OF [
+       ||. (_, 0, _) ~> 1;
+       ||. (0, _, 0) ~> 1;
+       ||. (_, _, _) ~> 0
+     ]`
 
 
 (*********************************)
@@ -253,6 +289,8 @@ val cf = mk_constructorFamily (cl, ``list_REVCASE``,
     ASSUME_TAC (Q.SPEC `x` listTheory.SNOC_CASES) THEN
     FULL_SIMP_TAC std_ss [list_REVCASE_THM],
 
+    ASSUME_TAC (Q.SPEC `x` listTheory.SNOC_CASES) THEN
+    FULL_SIMP_TAC std_ss [list_REVCASE_THM],
     PROVE_TAC [listTheory.SNOC_CASES]
   ]
 )
@@ -265,21 +303,22 @@ val t = ``CASE l OF [
   || x. SNOC x _ ~> x
   ]``
 
-val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t
+val thm = PMATCH_CASE_SPLIT_CONV t
 
 val t = ``CASE lx OF [
   ||. ([], NONE) ~> 0;
   || (x, y). (SNOC x _, SOME y) ~> x + y
   ]``;
 
-val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t;
+val thm = PMATCH_CASE_SPLIT_CONV t;
+val thm2 = PMATCH_CASE_SPLIT_CONV t;
 
 val t = ``CASE lx OF [
   ||. [] ~> 0;
   || x. x::_ ~> x + y
   ]``
 
-val thm = PMATCH_CASE_SPLIT_CONV (fn _ => 0) t;
+val thm = PMATCH_CASE_SPLIT_CONV t;
 
 
 (* A nonexhaustive family *)
@@ -317,21 +356,15 @@ val cl = make_constructorList false [
 (* set_constructorFamily (cl, ``tree_red_CASE``) *)
 val cf = mk_constructorFamily (cl, ``tree_red_CASE``,
   SIMP_TAC (srw_ss()) [tree_red_CASE_def] THEN
-  Cases_on `x` THEN
-  SIMP_TAC (srw_ss()) [tree_red_CASE_def]);
+  CONJ_TAC THEN (
+    Cases_on `x` THEN
+    SIMP_TAC (srw_ss()) [tree_red_CASE_def]
+  ));
 
 val _ = pmatch_compile_db_register_constrFam cf;
 
-val _ = pmatch_compile_db_register_ssfrag 
-  (simpLib.rewrites [Cong tree_red_CASE_cong]);
-
-val my_conv = (
-  (PMATCH_CASE_SPLIT_CONV (fn _ => 0)) THENC
-  (SIMP_CONV (std_ss++PMATCH_SIMP_ss) [Cong tree_red_CASE_cong]))
-
 val balance_black_dectree_def2 = CONV_RULE
-  ((TOP_SWEEP_CONV my_conv) THENC
-   (SIMP_CONV std_ss [pairTheory.pair_case_thm]))
+  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV)
   balance_black_def
 
 val balance_black_dectree_def3 = CONV_RULE
@@ -341,6 +374,27 @@ val balance_black_dectree_def3 = CONV_RULE
 val size_new = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def2))))
 val size_old = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def))))
 val size_classic = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def3))))
+
+
+(* even with the family for red, the full cases are 
+   still available when needed (notice the added row above
+   the last one) *)
+val t = ``
+   CASE (a,b) OF [
+       || (a,x,b,y,c,d). (Red (Red a x b) y c,d) ~>
+            (Red (Black a x b) y (Black c n d));
+       || (a,x,b,y,c,d). (Red a x (Red b y c),d) ~>
+            (Red (Black a x b) y (Black c n d));
+       || (a,b,y,c,z,d). (a,Red (Black b y c) z d) ~>
+            (Red (Black a n b) y (Black c z d));
+       || (a,b,y,c,z,d). (a,Red b y (Red c z d)) ~>
+            (Red (Black a n b) y (Black c z d));
+       || (a, x, b, c). (Black a x b, c) ~> (Black a x b);
+       || other. other ~> (Black a n b)
+     ]``
+
+val thm = PMATCH_CASE_SPLIT_CONV t;
+
 
 
 (*********************************)
@@ -359,7 +413,7 @@ val my_divmod_THM = store_thm ("my_divmod_THM",
 
 REPEAT STRIP_TAC THEN
 MP_TAC (SPECL [``n:num``, ``c:num``] (CONJUNCT1 my_divmod_THM_AUX)) THEN
-Tactical.REVERSE (Cases_on `?q r. (q:num) * c + r = n /\ r < c`) THEN1 (
+Tactical.REVERSE (Cases_on `?q r. ((q:num) * c + r = n) /\ (r < c)`) THEN1 (
   METIS_TAC [arithmeticTheory.DIVISION]
 ) THEN
 ASM_REWRITE_TAC[] THEN

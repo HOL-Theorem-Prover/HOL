@@ -10,6 +10,42 @@ open deepMatchesSyntax
 open Traverse
 open constrFamiliesLib
 
+(***********************************************)
+(* Auxiliary stuff                             *)
+(***********************************************)
+
+fun make_gen_conv_ss c name ssl = let
+   exception genconv_reducer_exn
+   fun addcontext (context,thms) = context
+   fun apply {solver,conv,context,stack,relation} tm = (
+     QCHANGED_CONV (c (ssl, SOME (conv stack))) tm
+   )
+   in simpLib.dproc_ss (REDUCER {name=SOME name,
+               addcontext=addcontext, apply=apply,
+               initial=genconv_reducer_exn})
+   end;
+
+
+fun has_subterm p t = ((find_term p t; true) handle HOL_ERR _ => false)
+
+(* We have a problem with conversions that loop in a fancy way.
+   They add some pattern matching on the input variables and
+   in the body the original term with renamed variables. The
+   following function tries to detect this situation. *)
+fun does_conv_loop thm = let
+    val (l, r) = dest_eq (concl thm)
+    fun my_mk_abs t = list_mk_abs (free_vars_lr t, t)
+    val l' = my_mk_abs l
+    val const_check = let
+      val (l_c, _) = strip_comb l      
+    in
+      fn t => (same_const (fst (strip_comb t)) l_c)
+    end handle HOL_ERR _ => (fn t => true)
+    fun is_similar t = const_check t andalso (aconv l' (my_mk_abs t))
+    val i = ((find_term is_similar r; true) handle HOL_ERR _ => false)
+  in
+    i
+  end
 
 (***********************************************)
 (* Simpset to evaluate PMATCH_ROWS             *)
@@ -84,6 +120,8 @@ val static_ss = simpLib.merge_ss
    elim_fst_snd_select_ss,
    boolSimps.EQUIV_EXTRACT_ss,
    simpLib.rewrites [
+     some_var_bool_T, some_var_bool_F,
+     GSYM boolTheory.F_DEF,
      pairTheory.EXISTS_PROD,
      pairTheory.FORALL_PROD,
      PMATCH_ROW_EQ_NONE,
@@ -245,12 +283,6 @@ fun PMATCH_INTRO_CONV t =
 
 
 (* convert a case-term into a PMATCH-term, without any proofs *)
-val t = ``CASE x OF [
-  ||. ([], NONE) ~> 0;
-  || (x,xs,z). (x::xs, SOME z) ~> (x+z);
-  || (x,xs). (x::xs, NONE) ~> x
-]``
-
 fun pmatch2case t = let
   val (v, rows) = dest_PMATCH t 
   val fv = genvar (type_of v --> type_of t)
@@ -427,7 +459,7 @@ PMATCH (NONE,x,l)
    ]``
 
 val t = ``PMATCH y [PMATCH_ROW (\_0_1. _0_1) (\_0_1. T) (\_0_1. F)]``
-val rc_arg = []
+val rc_arg = ([], NONE)
 
 val t' = rhs (concl (PMATCH_CLEANUP_CONV t))
 *)
@@ -1093,7 +1125,7 @@ PMATCH (SOME y,x,l)
    ]``
 *)
 
-fun PMATCH_SIMP_CONV_GENCALL rc_arg = 
+fun PMATCH_SIMP_CONV_GENCALL_AUX rc_arg = 
 REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
   CHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
@@ -1103,21 +1135,16 @@ REPEATC (FIRST_CONV [
   CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV
 ]);
 
+fun PMATCH_SIMP_CONV_GENCALL rc_arg t = 
+  if (is_PMATCH t) then PMATCH_SIMP_CONV_GENCALL_AUX rc_arg t else 
+  raise UNCHANGED
+
 fun PMATCH_SIMP_CONV_GEN ssl = PMATCH_SIMP_CONV_GENCALL (ssl, NONE)
 
 val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN [];
 
-fun PMATCH_SIMP_GEN_ss ssl = let
-   exception pmatch_simp_reducer_exn
-   fun addcontext (context,thms) = context
-   fun apply {solver,conv,context,stack,relation} tm = (
-     if not (is_PMATCH tm) then failwith "not a PMATCH" else
-     QCHANGED_CONV (PMATCH_SIMP_CONV_GENCALL (ssl, SOME (conv stack))) tm
-   )
-   in simpLib.dproc_ss (REDUCER {name=SOME"PMATCH_SIMP_REDUCER",
-               addcontext=addcontext, apply=apply,
-               initial=pmatch_simp_reducer_exn})
-   end;
+fun PMATCH_SIMP_GEN_ss ssl = 
+  make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
 val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
 
@@ -1277,16 +1304,8 @@ fun PMATCH_LIFT_BOOL_CONV_GEN ssl = PMATCH_LIFT_BOOL_CONV_GENCALL (ssl, NONE)
 
 val PMATCH_LIFT_BOOL_CONV = PMATCH_LIFT_BOOL_CONV_GEN [];
 
-fun PMATCH_LIFT_BOOL_GEN_ss ssl = let
-   exception pmatch_simp_reducer_exn
-   fun addcontext (context,thms) = context
-   fun apply {solver,conv,context,stack,relation} tm = (
-     QCHANGED_CONV (PMATCH_LIFT_BOOL_CONV_GENCALL (ssl, SOME (conv stack))) tm
-   )
-   in simpLib.dproc_ss (REDUCER {name=SOME"PMATCH_LIFT_BOOL_REDUCER",
-               addcontext=addcontext, apply=apply,
-               initial=pmatch_simp_reducer_exn})
-   end;
+fun PMATCH_LIFT_BOOL_GEN_ss ssl = 
+  make_gen_conv_ss PMATCH_LIFT_BOOL_CONV_GENCALL "PMATCH_LIFT_BOOL_REDUCER" ssl
 
 val PMATCH_LIFT_BOOL_ss = PMATCH_LIFT_BOOL_GEN_ss []
 
@@ -1319,6 +1338,115 @@ fun PMATCH_TO_TOP_RULE thm = PMATCH_TO_TOP_RULE_GEN [] thm;
 (* Case_splits                                 *)
 (* This is work in progress                    *)
 (***********************************************)
+
+type column_heuristic = 
+   (term * (term list * term) list) list -> int
+
+(* one that uses always the first column *)
+val colHeu_first_col : column_heuristic = (fn _ => 0)
+
+(* one that uses always the last column *)
+val colHeu_last_col : column_heuristic = (fn cols => length cols - 1)
+
+(* A heuristic based on ranking functions *)
+type column_ranking_fun = (term * (term list * term) list) -> int
+
+fun colHeu_rank (rankL : column_ranking_fun list) = (fn colL => let
+   val ncolL = Lib.enumerate 0 colL
+   fun step rank ncolL = let
+     val ranked_cols = List.map (fn (i, c) => ((i, c), rank c)) ncolL
+     val max = List.foldl (fn ((_, r), m) => if r > m then r else m) (snd (hd ranked_cols)) (tl ranked_cols)
+     val ranked_cols' = List.filter (fn (_, r) => r = max) ranked_cols
+     val ncolL' = List.map fst ranked_cols'
+   in
+     ncolL'
+   end
+   fun steps [] ncolL = ncolL
+     | steps _ [] = []
+     | steps _ [e] = [e]
+     | steps (rf :: rankL) ncolL = steps rankL (step rf ncolL)
+   val ncolL' = steps rankL ncolL
+in
+   case ncolL' of
+      [] => 0 (* something went wrong, should not happen *)
+    | ((i, _) :: _) => i
+end) : column_heuristic
+
+     
+(* ranking functions *)
+fun colRank_first_row (_:term, rows) = (
+  case rows of
+    [] => 0
+  | (vs, p) :: _ => 
+      if (is_var p andalso mem p vs) then 0 else 1);
+
+fun colRank_first_row_constr db (_, rows) = case rows of
+    [] => 0
+  | ((vs, p) :: _) => if (is_var p andalso mem p vs) then 0 else
+      case pmatch_compile_db_compile_cf db rows of 
+        NONE => 0
+      | SOME cf => let
+          val (exh, constrL) = constructorFamily_get_constructors cf;
+          val p_c = fst (strip_comb p)
+          val cL_cf = List.map fst constrL;
+          val p_c_ok = op_mem same_const p_c cL_cf
+        in
+          (if p_c_ok then 1 else 0) 
+        end handle HOL_ERR _ => 0;
+
+val colRank_constr_prefix : column_ranking_fun = (fn (_, rows) =>
+  let fun aux n [] = n
+        | aux n ((vs, p) :: pL) = if (is_var p andalso mem p vs) 
+             then n else aux (n+1)  pL
+  in aux 0 rows end)
+
+
+fun col_get_constr_set db (_, rows) =
+  case pmatch_compile_db_compile_cf db rows of 
+    NONE => NONE
+  | SOME cf => let
+     val (exh, constrL) = constructorFamily_get_constructors cf;
+     val cL_rows = List.map (fn (_, p) => fst (strip_comb p)) rows;
+     val cL_cf = List.map fst constrL;
+
+     val cL_rows' = List.filter (fn c => op_mem same_const c cL_cf) cL_rows;
+     val cL_rows'' = Lib.mk_set cL_rows';
+  in
+    SOME (cL_rows'', cL_cf, exh)
+  end
+
+fun col_get_nonvar_set (_, rows) =
+  let
+     val cL' = List.filter (fn (vs, p) => 
+        not (is_var p andalso mem p vs)) rows;
+     val cL'' = Lib.mk_set cL';
+  in
+    cL''
+  end
+
+fun colRank_small_branching_factor db : column_ranking_fun = (fn col =>
+  case col_get_constr_set db col of
+      SOME (cL, full_constrL, exh) =>
+        (~(length cL + (if exh then 0 else 1) + (if length cL = length full_constrL then 0 else 1)))
+    | NONE => (~(length (col_get_nonvar_set col) + 2)))
+
+fun colRank_arity db : column_ranking_fun = (fn col =>
+  case col_get_constr_set db col of
+     SOME (cL, full_constrL, exh) =>
+       List.foldl (fn (c, s) => s + length (fst (strip_fun (type_of c)))) 0 cL
+   | NONE => 0)
+
+
+(* heuristics defined using ranking functions *)
+val colHeu_first_row = colHeu_rank [colRank_first_row]
+val colHeu_constr_prefix = colHeu_rank [colRank_constr_prefix]
+fun colHeu_qba db = colHeu_rank [colRank_constr_prefix, colRank_small_branching_factor db, colRank_arity db]
+fun colHeu_cqba db = colHeu_rank [colRank_first_row_constr db, 
+  colRank_constr_prefix, colRank_small_branching_factor db, colRank_arity db]
+
+(* A list of all the standard heuristics *)
+fun colHeu_default cols = colHeu_qba (!thePmatchCompileDB) cols
+
 
 (*
 val t = ``CASE (a,x,xs) OF [
@@ -1355,18 +1483,12 @@ fun PMATCH_CASE_SPLIT_AUX rc_arg col_no expand_thm t = let
   val thm0 = ISPEC arg (ISPEC ff expand_thm)
   val thm1 = CONV_RULE (LHS_CONV BETA_CONV) thm0
 
-
   val c = SIMP_CONV
-    (std_ss++PMATCH_SIMP_GEN_ss (fst rc_arg)) []
+    (std_ss++simpLib.merge_ss (fst rc_arg) ++ PMATCH_SIMP_GEN_ss (fst rc_arg)) []
   val thm2 = CONV_RULE (RHS_CONV c) thm1
 
   (* check whether it got simpler *)
-  val _ = let
-    val r = rhs (concl thm2)
-    val i = ((find_term (aconv t) r; true) handle HOL_ERR _ => false)
-  in
-    if i then raise UNCHANGED else ()
-  end
+  val _ = if (does_conv_loop thm2) then raise UNCHANGED else ()
 in
   thm2
 end
@@ -1401,6 +1523,9 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL_STEP (gl, callback_opt) db col_heu t = let
   val (col_no, expand_thm, expand_ss) = find_col (dest_PMATCH_COLS t)
   val thm1 = QCHANGED_CONV (PMATCH_CASE_SPLIT_AUX 
     (expand_ss::gl, callback_opt) col_no expand_thm) t
+
+  (* check whether it got simpler *)
+  val _ = if (does_conv_loop thm1) then raise UNCHANGED else ()
 in
   thm1
 end
@@ -1449,27 +1574,39 @@ fun PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu t = let
 
   val thm2 = CONV_RULE (RHS_CONV (
     (TOP_SWEEP_CONV (
-      CHANGED_CONV (PMATCH_CASE_SPLIT_CONV_GENCALL_STEP rc_arg db col_heu) 
+      PMATCH_CASE_SPLIT_CONV_GENCALL_STEP rc_arg db col_heu
     )))) thm1
 
   val thm3 = TRANS thm0 thm2
 
   (* check whether it got simpler *)
-  val _ = let
-    val r = rhs (concl thm3)
-    val i = ((find_term (aconv t) r; true) handle HOL_ERR _ => false)
-  in
-    if i then failwith "loop" else ()
-  end
+  val _ = if (does_conv_loop thm3) then raise UNCHANGED else ()
 
-(*  val thm4 = CONV_RULE (RHS_CONV REMOVE_REBIND_CONV) thm3 *)
+  val thm4 = if (has_subterm is_PMATCH (rhs (concl thm3))) then
+       thm3 
+     else
+       CONV_RULE (RHS_CONV REMOVE_REBIND_CONV) thm3
 in
-  thm3
+  thm4
 end
 
 fun PMATCH_CASE_SPLIT_CONV_GEN ssl = PMATCH_CASE_SPLIT_CONV_GENCALL (ssl, NONE)                                      
 
-fun PMATCH_CASE_SPLIT_CONV col_heu t = 
+fun PMATCH_CASE_SPLIT_CONV_HEU col_heu t = 
   PMATCH_CASE_SPLIT_CONV_GEN [] (!thePmatchCompileDB) col_heu t
+
+fun PMATCH_CASE_SPLIT_CONV t = 
+  PMATCH_CASE_SPLIT_CONV_HEU colHeu_default t
+
+fun PMATCH_CASE_SPLIT_GEN_ss ssl db col_heu = 
+  make_gen_conv_ss (fn rc_arg =>
+    PMATCH_CASE_SPLIT_CONV_GENCALL rc_arg db col_heu) 
+   "PMATCH_CASE_SPLIT_REDUCER" ssl
+
+fun PMATCH_CASE_SPLIT_HEU_ss col_heu =
+  PMATCH_CASE_SPLIT_GEN_ss [] (!thePmatchCompileDB) col_heu
+
+fun PMATCH_CASE_SPLIT_ss () =
+  PMATCH_CASE_SPLIT_HEU_ss colHeu_default
 
 end

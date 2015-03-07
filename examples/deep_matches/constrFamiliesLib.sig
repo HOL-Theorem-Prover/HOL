@@ -53,6 +53,13 @@ sig
      to each other and injective. *)
   val constructorFamily_get_rewrites : constructorFamily -> thm
 
+  (* Get the case-cong stored in a constructor family. *)
+  val constructorFamily_get_case_cong : constructorFamily -> thm
+
+  (* Get the ssfrag resulting form all the stuff 
+     in a constructor family. *)
+  val constructorFamily_get_ssfrag : constructorFamily -> simpLib.ssfrag
+
   (* Get the case-split theorem for the family. *)
   val constructorFamily_get_case_split : constructorFamily -> thm
 
@@ -60,6 +67,8 @@ sig
      this exhaustiveness. *)
   val constructorFamily_get_nchotomy_thm_opt : constructorFamily -> thm option
 
+  (* Get the constructors of the family. *)
+  val constructorFamily_get_constructors : constructorFamily -> bool * (term * string list) list
 
   (* [mk_constructorFamily (constrL, case_split_tm, tac)]
      make a new constructor family. It consists of the constructors
@@ -111,8 +120,15 @@ sig
 
   (* A database represents essentially a compile fun. 
      This functions combines all the contents of a db to
-     turn it into a compile fun. *)
+     turn it into a compile fun.  *)
   val pmatch_compile_db_compile : pmatch_compile_db -> pmatch_compile_fun
+  (* This tries to find the family used by a call to 
+     [pmatch_compile_db_compile]. If this call picks a
+     use a hand-written compile-fun, [NONE] is returned. Similarly,
+     if no constructor family is found for this column. *)
+  val pmatch_compile_db_compile_cf : pmatch_compile_db ->
+     (term list * term) list -> constructorFamily option
+
 
   (* add a compile fun to a db *)
   val pmatch_compile_db_add_compile_fun :
@@ -126,6 +142,12 @@ sig
   val pmatch_compile_db_add_ssfrag :
      pmatch_compile_db -> simpLib.ssfrag -> pmatch_compile_db
 
+  (* add a congruence rules to a db *)
+  val pmatch_compile_db_add_congs : pmatch_compile_db -> thm list -> pmatch_compile_db
+
+  (* removes all information for type from a db *)
+  val pmatch_compile_db_remove_type : pmatch_compile_db -> hol_type -> pmatch_compile_db
+
   (* add a compile_fun to default db *)
   val pmatch_compile_db_register_compile_fun : pmatch_compile_fun -> unit
   (* add a constructor family to default db *)
@@ -133,6 +155,12 @@ sig
 
   (* add a ssfrag to default db *)
   val pmatch_compile_db_register_ssfrag : simpLib.ssfrag -> unit
+
+  (* add a congruence rules to default db *)
+  val pmatch_compile_db_register_congs : thm list -> unit
+
+  (* removes all information for type from default db *)
+  val pmatch_compile_db_clear_type : hol_type -> unit
 
 
   (************************)

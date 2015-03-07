@@ -22,6 +22,22 @@ REPEAT STRIP_TAC THEN
 SELECT_ELIM_TAC THEN
 PROVE_TAC[])
 
+val some_var_bool_T = store_thm ("some_var_bool_T", 
+  ``(some x. x) = SOME T``,
+  `(some x. x) = (some x. (x = T))` by REWRITE_TAC[] THEN
+  ONCE_ASM_REWRITE_TAC[] THEN
+  PURE_REWRITE_TAC[optionTheory.some_EQ] THEN
+  REWRITE_TAC[]
+)
+
+val some_var_bool_F = store_thm ("some_var_bool_F", 
+  ``(some x. ~x) = SOME F``,
+  `(some x. ~x) = (some x. (x = F))` by REWRITE_TAC[] THEN
+  ONCE_ASM_REWRITE_TAC[] THEN
+  PURE_REWRITE_TAC[optionTheory.some_EQ] THEN
+  REWRITE_TAC[]
+)
+
 val some_eq_NONE = prove (
   ``!P. ((some x. P x) = NONE) <=> (!x. ~(P x))``,
 SIMP_TAC std_ss [some_def])
