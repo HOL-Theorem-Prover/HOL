@@ -200,8 +200,8 @@ end
     A flag controlling printing of set comprehensions
    ---------------------------------------------------------------------- *)
 
-val unamb_comp = ref false
-val _ = Feedback.register_btrace ("pp_unambiguous_comprehensions", unamb_comp)
+val unamb_comp = ref 0
+val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
 
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
@@ -1696,10 +1696,11 @@ fun pp_term (G : grammar) TyG backend = let
                   val rfrees = FVL [r] empty_tmset
                   open HOLset
                 in
-                  if (equal(intersection(lfrees,rfrees), vfrees) orelse
-                      (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
-                      (isEmpty rfrees andalso equal(lfrees, vfrees)))
-                     andalso not (!unamb_comp)
+                  if ((equal(intersection(lfrees,rfrees), vfrees) orelse
+                       (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
+                       (isEmpty rfrees andalso equal(lfrees, vfrees)))
+                      andalso !unamb_comp = 0) orelse
+                     !unamb_comp = 2
                   then
                     block CONSISTENT 0
                        (record_bvars bvars_seen_here
