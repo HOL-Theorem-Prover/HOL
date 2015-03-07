@@ -4,7 +4,7 @@ all: clean hh predict
 
 hh: 
 	cd hh/hh1; $(MAKE); \
-	cd ..; $(MAKE)
+	cd ..; $(MAKE) hh
 
 predict: 
 	cd predict; $(MAKE)

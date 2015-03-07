@@ -47,7 +47,7 @@ top: $(FILES_CMO) Makefile
 	ocamlc -c -I hh1 $<
 
 clean:
-	rm hhthf0 hhall hh top *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o *~
+	rm -f hhthf0 hhall hh top *cmx *cmo *cmi *_lexer.ml *_parse.ml *.o *~
 
 .depend: $(addsuffix .ml,$(FILES))
 	ocamldep $^ main.ml > $@
