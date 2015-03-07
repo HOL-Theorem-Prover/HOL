@@ -1,7 +1,9 @@
 open Dependency
 open Thf1hh1
 
-(* Interface between holyhammer and the predictors *)
+let tmp_file = "predictions/predict_hh_";;
+
+(* Predictor *)
 let os = output_string 
 
 let print_dep fname axl =
@@ -32,6 +34,24 @@ let print_csyms fname cj =
     os ocsym ("\"" ^ (String.concat "\", \"" csyms) ^ "\"\n");
     close_out ocsym
 
+let print_all fname axl conj =
+  let cj = term_of conj in
+  let axassoc = List.map (fun x -> (x,term_of x)) axl in
+    print_dep fname axl;
+    print_seq fname axl;
+    print_syms fname axassoc;
+    print_csyms fname cj
+
+type predictor = KNN | NaiveBayes;;
+
+let run_predictor = function
+  KNN        -> Predict.knn_advice2
+| NaiveBayes -> Predict.nb_advice2;;
+
+let predict predictor n conj axl =
+  print_all tmp_file axl conj;
+  run_predictor predictor tmp_file n
+
 let print_all_interactive fname axl cj =
   let axassoc = List.map (fun x -> (x,term_of x)) axl in
     print_dep fname axl;
@@ -39,6 +59,6 @@ let print_all_interactive fname axl cj =
     print_syms fname axassoc;
     print_csyms fname cj
   
-let predict_interactive file_prefix n conj axl =
+let predict_interactive predictor file_prefix n conj axl =
   print_all_interactive file_prefix axl conj;
-  Predict.knn_advice2 file_prefix n
+  run_predictor predictor file_prefix n

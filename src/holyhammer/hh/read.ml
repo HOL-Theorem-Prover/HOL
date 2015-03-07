@@ -29,6 +29,11 @@ let find_ext dir ext =
 
 let find_p dir            = find_ext dir ".p"
 let find_hd dir           = find_ext dir ".hd"
+let find_xml2 dir         = find_ext dir ".xml2"
+let find_con_xml dir      = find_ext dir ".con.xml"
+let find_ind_xml dir      = find_ext dir ".ind.xml"
+let find_con_body_xml dir = find_ext dir ".con.body.xml"
+
 
 let file_to_stringl file =
   let r = ref [] in

@@ -8,8 +8,8 @@ mkdir $1
 cd hh
 clean $Z3_DIR
 # Premise selection and translation
-./hh_h4 32 ../theories ../theories/conjecture conjecture \
-$Z3_DIR > /dev/null || \
+./hh 32 ../theories ../theories/conjecture conjecture \
+$Z3_DIR -thydep ../theories/thydep > /dev/null || \
 (echo "See README in src/holyhammer."; exit)
 # Run z3 on 32 premises
 cd ../provers

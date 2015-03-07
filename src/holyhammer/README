@@ -41,3 +41,7 @@ Example:
   METIS_PROVE lemmas ``7 + 5 = 12``; 
   load "complexTheory";
   hh_atp "eprover" ``0 <> 1``;
+
+Questions:
+
+  If you have any question, you can send an email to thibault_gauthier@hotmail.fr.

@@ -164,9 +164,9 @@ let init_seq_hash fname =
     List.iter add_thy_seq_hash thyl
 
 (* Environnement *)
-let init_depenv fname1 fname2 (thmh,roleh,thmlo) =
+let init_depenv fname1 fname2 (deph,roleh,thmlo) =
   print_string "Defining accessibility functions: \n";
-  dep_hash := thmh;
+  dep_hash := deph;
   role_hash := roleh;
   thm_lo := thmlo;
   init_thy_hash fname1;
@@ -177,8 +177,8 @@ let init_depenv fname1 fname2 (thmh,roleh,thmlo) =
   init_seq_hash fname2; (* initialize also thy_lo *)
   (!dep_hash, !role_hash, !thm_lo, !thy_hash, !thy_td_hash, !thm_td_hash, !seq_hash, !thy_lo)
 
-let set_depenv (thmh,roleh,thmlo,thyh,thytdh,thmtdh,seqh,thylo) =
-   dep_hash := thmh; role_hash := roleh; thm_lo := thmlo; 
+let set_depenv (deph,roleh,thmlo,thyh,thytdh,thmtdh,seqh,thylo) =
+   dep_hash := deph; role_hash := roleh; thm_lo := thmlo; 
    thy_hash := thyh; 
    thy_td_hash := thytdh;
    thm_td_hash := thmtdh;
