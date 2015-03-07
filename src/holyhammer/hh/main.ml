@@ -49,7 +49,7 @@ let predict (p : predictor) (out_dir : filepath) (n_preds : int) (cj_name : stri
 let parse_commandline () =
   (* Saving results into two references and a array. *)
   let anon_counter = ref 0 in
-  let anon_tab = Array.make 7 "" in
+  let anon_tab = Array.make 6 "" in
   let thydep_ref = ref "" in
   let thylo_ref = ref "" in
   let option_of_string s = if s = "" then None else Some s in
@@ -67,12 +67,12 @@ let parse_commandline () =
       "knn" -> KNN
     | "nbayes" -> NaiveBayes
     | _ -> failwith "Unknown predictor." in
-  let n_predictions = try int_of_string (anon_tab.(2))
+  let n_predictions = try int_of_string (anon_tab.(1))
     with _ -> failwith "Number of predictions have to be an integer." in
-  let theory_dir = anon_tab.(3) in
-  let cj_file = anon_tab.(4) in
-  let cj_name = anon_tab.(5) in
-  let out_dir = concat anon_tab.(6) "" in (* I don't understand why you need concat here *)
+  let theory_dir = anon_tab.(2) in
+  let cj_file = anon_tab.(3) in
+  let cj_name = anon_tab.(4) in
+  let out_dir = concat anon_tab.(5) "" in (* I don't understand why you need concat here *)
   let thydep_file = option_of_string !thydep_ref in
   let thylo_file = option_of_string !thylo_ref in
   (predictor, n_predictions, theory_dir, cj_file, cj_name, out_dir, thydep_file, thylo_file)
