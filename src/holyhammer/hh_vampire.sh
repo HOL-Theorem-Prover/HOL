@@ -8,7 +8,7 @@ mkdir $1
 cd hh
 clean $VAMPIRE_DIR 
 # Premise selection and translation
-./hh 96 ../theories ../theories/conjecture conjecture \
+./hh knn 96 ../theories ../theories/conjecture conjecture \
 $VAMPIRE_DIR -thydep ../theories/thydep > /dev/null || \
 (echo "See README in src/holyhammer."; exit)
 # Run vampire on 96 premises
