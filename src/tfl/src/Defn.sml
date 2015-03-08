@@ -1582,9 +1582,9 @@ in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = multi_dest_eq body
-     val   _          = if exists wildcard (names_of rhs []) then
+(*     val   _          = if exists wildcard (names_of rhs []) then
                          raise ERRloc "munge" (Absyn.locn_of_absyn rhs)
-                                      "wildcards on rhs" else ()
+                                      "wildcards on rhs" else () *)
      val (tys, lhs)   = strip_tyannote lhs0
      val (f,pats)     = Absyn.strip_app lhs
      val (pats',V')   = rev_itlist expand_wildcards pats
