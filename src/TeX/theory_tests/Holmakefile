@@ -5,7 +5,7 @@ INCLUDES = $(CMPDIR)
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: check_output check_utyabb_output check_tyabb_output $(TARGETS)
+all: check_output check_utyabb_output check_tyabb_output check_gh242 $(TARGETS)
 
 check_output: output expected-output
 	$(CMPDIR)/cmp.exe output expected-output
@@ -34,6 +34,10 @@ tymunge.exe: tyabbrevTheory.uo
 utymunge.exe: untyabbrevTheory.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ untyabbrevTheory
 
-.PHONY: all check_output check_utyabb_output check_tyabb_output
+check_gh242: gh242_input gh242_expected munge.exe
+	./munge.exe < $< > gh242_output
+	$(CMPDIR)/cmp.exe gh242_expected gh242_output
 
-EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output
+.PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242
+
+EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output gh242_output
