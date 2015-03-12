@@ -9,7 +9,7 @@ conversion, epsilon.
 pair
 
 \SYNOPSIS
-Eliminates a paired epsilon term by introducing a existential quantifier.
+Eliminates a paired epsilon term by introducing an existential quantifier.
 
 \DESCRIBE
 The conversion {PSELECT_CONV} expects a boolean term of the form
