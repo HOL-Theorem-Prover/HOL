@@ -1280,7 +1280,7 @@ fun pp_struct strm (s,elems,cnames) =
               (s::opens()) strm (concl thm)
       | pp_el (iDEFN_NOSIG thm) = pp_el (iDEFN thm)
       | pp_el (iMLSIG s) = ()
-      | pp_el (iMLSTRUCT s) = add_string s
+      | pp_el (iMLSTRUCT s) = (add_string s; add_newline ())
       | pp_el (iOPEN slist) = (openthys := union slist (!openthys);
                               begin_block CONSISTENT 0;
                               pr_list (add_string o curry String.^ "open " o ML)

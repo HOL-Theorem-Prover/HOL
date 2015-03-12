@@ -7,7 +7,7 @@ Introduces an abbreviation within the goal statement.
 
 \DESCRIBE
 When applied to the goal {(asl, w)}, the tactic {Q.PAT_ABBREV_TAC q} parses the
-quotation {q} in the context of the goal, producing a equality term {v = p}.
+quotation {q} in the context of the goal, producing an equality term {v = p}.
 The tactic then uses {HolKernel.find_term} to search for a sub-term of {w} that
 {p} matches against. If such a sub-term {t} is found then all occurrences of
 {t} (in {asl} and {w}) will be replaced by {v} and an assumption
