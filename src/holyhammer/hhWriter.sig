@@ -1,4 +1,4 @@
-signature thfWriter =
+signature hhWriter =
 sig
   
   val fetch_conj       : (thm * string) -> thm

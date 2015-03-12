@@ -2,19 +2,19 @@
 (* FILE          : thfWriter.sml                                         *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
 (*                 dependencies between conjuncts of theorems for        *)
-(*                 holyHammer.                                           *)                 
+(*                 holyHammer.                                           *)    
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 
 
-structure thfWriter :> thfWriter =
+structure hhWriter :> hhWriter =
 struct
 
 
 open HolKernel Abbrev boolLib TextIO Tag Dep
 
-val ERR = mk_HOL_ERR "thfWriter"
+val ERR = mk_HOL_ERR "hhWriter"
 
 (*---------------------------------------------------------------------------
    Dictionaries.

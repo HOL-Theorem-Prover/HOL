@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "Dep"
 (* A theorem is tagged DEP_NAMED when it is saved, its conjuncts are tagged  *)
 (* DEP_CONJ. Otherwise, theorems are tagged DEP_INTER. We store the          *)
 (* dependencies of a theorem as a tree. Each leaf is associated with a       *)
-(* conjunct of this theorem and contains the set of its dependencies.       *)
+(* conjunct of this theorem and contains the set of its dependencies.        *)
 (*---------------------------------------------------------------------------*)
 
 type depid       = string * int

@@ -13,7 +13,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open thfWriter
+open hhWriter
 
 val ERR = mk_HOL_ERR "holyHammer"
 val hh_dir = HOLDIR ^ "/src/holyhammer"
