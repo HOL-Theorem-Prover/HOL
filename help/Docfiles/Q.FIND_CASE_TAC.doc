@@ -4,7 +4,7 @@
 
 \SYNOPSIS
 Finds an instance of a pattern in a goal, and renames to use names
-from the pattern
+from the pattern.
 
 \KEYWORDS
 

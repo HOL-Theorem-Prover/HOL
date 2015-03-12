@@ -26,7 +26,7 @@ applied to the goal.
 \EXAMPLE
 The tactic
 {
-   FIRST_ASSUM (\asm. CONTR_TAC asm  ORELSE  ACCEPT_TAC asm)
+   FIRST_ASSUM (fn asm => CONTR_TAC asm  ORELSE  ACCEPT_TAC asm)
 }
 searches the assumptions for either a contradiction or the desired
 conclusion. The tactic
