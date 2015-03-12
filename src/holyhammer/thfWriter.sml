@@ -470,11 +470,15 @@ fun write_thf_thyl folder thyl =
    app (write_thf_thy folder) (sort_thyl thyl))
 
 fun write_conjecture file conjecture =
-  (
-  oc := openOut file; 
-  othm_conjecture conjecture; 
-  closeOut (!oc); oc := stdOut
-  )
+  if type_of conjecture = bool 
+  then
+    (
+    oc := openOut file; 
+    othm_conjecture conjecture; 
+    closeOut (!oc); oc := stdOut
+    )
+  else raise ERR "write_conjecture" "conjecture is not a boolean"
+
    
 (*---------------------------------------------------------------------------
    Reading a file.
@@ -555,7 +559,7 @@ fun reconstruct axl cj =
     val axl1 = filter (fn x => not (mem x reserved_names)) axl
     val axl2 = map (fn x => dfind x (!readthf_names)) axl1
     val axl3 = if !minimize_flag 
-               then (print "Minimizing...\n\n"; minimize axl2 cj) 
+               then (print "Minimizing...\n"; minimize axl2 cj) 
                else axl2
     val s    = String.concatWith "," (map ostring_of_conjunct axl3)
     val axl4 = map fetch_conj_internal axl3
