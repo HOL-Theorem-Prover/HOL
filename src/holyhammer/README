@@ -3,7 +3,7 @@ HOLyHammer is a machine learning for theorem proving framework.
 Requires:
 
 * OCaml >= 3.12 (tested also with 4.01.0)
-* g++ (recent version with C++11 support)
+* g++ >= 4.7 (recent version with C++11 support)
 * perl (only if you use strategy scheduling for eprover)
 
 Install holyhammer:
