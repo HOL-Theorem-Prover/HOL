@@ -33,6 +33,13 @@ sig
      ``PMATCH_ROW (\vars. p) (\vars. g) (\vars. rh)``. *)     
   val mk_PMATCH_ROW_PABS : term list -> term * term * term -> term
 
+  (* a wrapper for [mk_PMATCH_ROW_PABS] automatically renames
+     the used variables to mark them as wildcards. Moreover
+     it removes unused vars.
+     It returns the constructed term with a flag of whether 
+     the result differs from a naive call of [mk_PMATCH_ROW_PABS]. *)
+  val mk_PMATCH_ROW_PABS_WILDCARDS : term list -> term * term * term -> (bool * term)
+
   (* dest_PMATCH_ROW_ABS ``PMATCH_ROW (\(x,y). p x y) 
         (\(x,y). g x y) (\(x,y). r x y)``
      returns (``(x,y)``, ``p x y``, ``g x y``, ``r x y``). 
@@ -63,6 +70,13 @@ sig
      is required by many operations working on PMATCH_ROW *)
   val PMATCH_ROW_FORCE_SAME_VARS_CONV : conv
   val PMATCH_FORCE_SAME_VARS_CONV : conv
+
+  (* [PMATCH_ROW_INTRO_WILDCARDS_CONV] renames the
+     abstracted variables for the pattern, guard and right hand side
+     where appropriate to start with '_'. This is printed
+     as a wildcard. *)
+  val PMATCH_ROW_INTRO_WILDCARDS_CONV : conv
+  val PMATCH_INTRO_WILDCARDS_CONV : conv
 
   (******************)
   (* PMATCH         *)

@@ -28,10 +28,18 @@ sig
   (* case and pmatch              *)
   (********************************)
 
-  val case2pmatch : term -> term
+  (* without proof convert a case to a pmatch expression.
+     If the flag is set, optimise the result by
+     introducing wildcards reordering rows ... *)
+  val case2pmatch : bool -> term -> term
+
+  (* convert a pmatch expression to a case expression.
+     Fails, if the pmatch expression uses guards or
+     non-constructor patterns. *)
   val pmatch2case : term -> term
 
   val PMATCH_INTRO_CONV : conv
+  val PMATCH_INTRO_CONV_NO_OPTIMISE : conv
   val PMATCH_ELIM_CONV : conv
 
 

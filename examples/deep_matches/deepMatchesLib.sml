@@ -218,14 +218,52 @@ end
 fun dest_case_fun t = dest_case_fun_aux1 t handle HOL_ERR _ => dest_case_fun_aux2 t
 
 
-fun case2pmatch_aux x t = let
+(* try to collapse rows by introducing a catchall at end*)
+fun dest_case_fun_collapse (a, ps) = let
+  
+  (* find all possible catch-all clauses *)
+  fun check_collapsable (p, rh) = let
+     val p_vs = FVL [p] empty_tmset
+     val rh' = if HOLset.isEmpty p_vs then rh else
+        Term.subst [p |-> a] rh
+     val ok = HOLset.isEmpty (HOLset.intersection (FVL [rh'] empty_tmset, p_vs))
+  in
+    if ok then SOME rh' else NONE
+  end
+  
+  val catch_all_cands = List.foldl (fn (prh, cs) =>
+      case check_collapsable prh of
+         NONE => cs
+       | SOME rh => rh::cs) [] ps
+
+  (* really collapse *)
+  fun is_not_cought ca (p, rh) = 
+     not (aconv rh (Term.subst [a |-> p] ca))
+
+  val all_collapse_opts = List.map (fn ca => (ca, filter (is_not_cought ca) ps)) catch_all_cands
+
+  val all_collapse_opts_sorted = sort (fn (_, l1) => fn (_, l2) => List.length l1 < List.length l2) all_collapse_opts
+
+  (* could we collapse 2 cases? *)
+in
+  if (List.null all_collapse_opts) then (a, ps) else
+  let
+     val (ca', ps') = hd all_collapse_opts_sorted 
+  in if (List.length ps' + 1 < List.length ps) then
+        (a, (ps' @ [(a, ca')])) 
+      else (a, ps)
+  end
+end
+
+fun case2pmatch_aux optimise x t = let
   val (a, ps) = dest_case_fun t
+  val (a, ps) = if optimise then (dest_case_fun_collapse (a, ps)) else (a, ps)
 
   fun process_arg (p, rh) = let
     val x' = subst [a |-> p] x
   in
     (* recursive call *)
-    case case2pmatch_aux x' rh of
+    case case2pmatch_aux optimise x' rh of
         NONE => [(x', rh)]
       | SOME resl => resl
   end
@@ -235,8 +273,59 @@ in
   SOME ps
 end handle HOL_ERR _ => NONE;
 
+fun case2pmatch_remove_unnessary_rows ps = let
+  fun mk_distinct_rows (p1, _) (p2, rh2) = let
+     val avoid = free_vars p1
+     val (s, _) = List.foldl (fn (v, (s, av)) =>
+       let val v' = variant av v in
+       ((v |-> v')::s, v'::av) end) ([], avoid) (free_vars p2)
+     val p2' = Term.subst s p2
+     val rh2' = Term.subst s rh2
+  in
+     (p2', rh2')
+  end
+
+  fun pats_unify (p1, _) (p2, _) = (
+    (Unify.simp_unify_terms [] p1 p2; true) handle HOL_ERR _ => false
+  )
+
+  fun row_subsumed (p1, rh1) (p2, rh2) = let
+     val (s, _) = match_term p2 p1
+     val rh2' = Term.subst s rh2
+  in aconv rh2' rh1 end handle HOL_ERR _ => false
+
+  fun row_is_needed r1 rs = case rs of
+      [] => true
+    | r2::rs' => let
+         val r2' = mk_distinct_rows r1 r2
+      in
+         if pats_unify r1 r2' then ( 
+           not (row_subsumed r1 r2')
+         ) else row_is_needed r1 rs'
+      end
+
+   fun check_rows acc rs = case rs of
+       [] => List.rev acc
+     | [_] => (* drop last one *) List.rev acc
+     | r::rs' => check_rows (if row_is_needed r rs' then r::acc else acc)
+                  rs'
+
+   val ps' = case ps of
+                [] => []
+              | (p, rh)::_ => (ps @ [(genvar (type_of p), mk_arb (type_of rh))])
+             
+in  
+  check_rows [] ps'
+end
+
+(*
+val (p1, rh1) = el 5 ps
+val (p2, rh2) = mk_distinct_rows (p1, rh1) (el 6 ps)
+ps
+*)
+
 (* convert a case-term into a PMATCH-term, without any proofs *)
-fun case2pmatch t = let
+fun case2pmatch opt t = let
   val (f, args) = strip_comb t
   val _ = if (List.null args) then failwith "not a case-split" else ()
 
@@ -245,22 +334,31 @@ fun case2pmatch t = let
   val v = genvar (type_of p)
 
   val t0 = if is_literal_case t then list_mk_comb (f, patterns @ [v]) else list_mk_comb (f, v::patterns)
-  val ps = case case2pmatch_aux v t0 of
+  val ps = case case2pmatch_aux opt v t0 of
       NONE => failwith "not a case-split"
     | SOME ps => ps
+
+  val ps = if opt then case2pmatch_remove_unnessary_rows ps else ps
 
   fun process_pattern (p, rh) = let
     val fvs = List.rev (free_vars p)
   in
-    mk_PMATCH_ROW_PABS fvs (p, T, rh)
+    if opt then
+      snd (mk_PMATCH_ROW_PABS_WILDCARDS fvs (p, T, rh))
+    else
+      mk_PMATCH_ROW_PABS fvs (p, T, rh)
   end
   val rows = List.map process_pattern ps
   val rows_tm = listSyntax.mk_list (rows, type_of (hd rows))
 
-  val rows_tm_p = subst [v |-> p] rows_tm
+  val rows_tm_p = Term.subst [v |-> p] rows_tm
 in
   mk_PMATCH p rows_tm_p
 end
+
+val COND_CONG_STOP = prove (``
+  (c = c') ==> ((if c then x else y) = (if c' then x else y))``,
+SIMP_TAC std_ss [])
 
 fun case_pmatch_eq_prove t t' = let
   val tm = mk_eq (t, t')
@@ -268,7 +366,7 @@ fun case_pmatch_eq_prove t t' = let
   (* very slow, simple approach. Just brute force.
      TODO: change implementation to get more runtime-speed *)
   val my_tac = (
-    CASE_TAC THEN
+    BasicProvers.PURE_CASE_TAC THEN
     FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def,
       PMATCH_INCOMPLETE_def]
   )
@@ -279,8 +377,10 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 
 fun PMATCH_INTRO_CONV t = 
-  case_pmatch_eq_prove t (case2pmatch t)
+  case_pmatch_eq_prove t (case2pmatch true t)
 
+fun PMATCH_INTRO_CONV_NO_OPTIMISE t = 
+  case_pmatch_eq_prove t (case2pmatch false t)
 
 (* convert a case-term into a PMATCH-term, without any proofs *)
 fun pmatch2case t = let
@@ -1132,8 +1232,10 @@ REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
-  CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV
+  CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV,
+  CHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV
 ]);
+
 
 fun PMATCH_SIMP_CONV_GENCALL rc_arg t = 
   if (is_PMATCH t) then PMATCH_SIMP_CONV_GENCALL_AUX rc_arg t else 

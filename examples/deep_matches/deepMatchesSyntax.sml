@@ -32,6 +32,25 @@ in
   String.sub(s, 0) = #"_"
 end handle HOL_ERR _ => false
 
+fun mk_wildcard_gen avoid = let
+  val c = ref 0
+  val avoidL = List.map (fst o dest_var) avoid
+  fun next_name () = let
+    val vn = "_" ^ (int_to_string (!c))
+    val _ = c := !c + 1
+    val ok = not (mem vn avoidL)
+  in
+    if ok then vn else next_name ()
+  end
+in
+  fn ty => mk_var (next_name (), ty)
+end
+
+fun list_CONV c t = 
+  if not (listSyntax.is_cons t) then  raise UNCHANGED else (
+  (RATOR_CONV (RAND_CONV c) THENC
+   RAND_CONV (list_CONV c)) t)
+
 
 (***********************************************)
 (* Terms                                       *)
@@ -108,6 +127,33 @@ fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
     mk_PMATCH_ROW (mk_pabs p_t, mk_pabs g_t, mk_pabs r_t)
   end
 
+
+fun mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t) = let
+    val gr_s = FVL [g_t, r_t] empty_tmset
+    val p_s = FVL [p_t] empty_tmset
+
+    val mk_wc = mk_wildcard_gen (HOLset.listItems 
+      (HOLset.union (gr_s, p_s)))
+				
+    fun apply (v, (vars', subst)) = (
+      if (not (HOLset.member (gr_s, v)) andalso
+          not (varname_starts_with_uscore v)) then let
+        val v' = mk_wc (type_of v) 
+      in 
+        (v'::vars', (v |-> v')::subst)
+      end else
+         (v::vars', subst)
+    )
+
+    val (vars'_rev, subst) = List.foldl apply ([], []) vars
+    val vars' = List.rev vars'_rev
+    val p_t' = Term.subst subst p_t
+    val use_wc = not (List.null subst)
+  in
+    (use_wc, mk_PMATCH_ROW_PABS vars' (p_t', g_t, r_t))
+  end
+
+
 fun dest_PMATCH_ROW_ABS row = let
   val (p_t, g_t, r_t) = dest_PMATCH_ROW row
 
@@ -129,12 +175,15 @@ in
   (p_vars', subst sub p_body, subst sub g_body, subst sub r_body)
 end;
 
+val K_elim = prove (``K x = (\y. x)``, SIMP_TAC std_ss [
+  combinTheory.K_DEF])
 
 fun PMATCH_ROW_PABS_ELIM_CONV row = let
   val (p, _, _) = dest_PMATCH_ROW row
   val (vars, _) = pairSyntax.dest_pabs p
 
-  val c = TRY_CONV pairTools.PABS_ELIM_CONV
+  val c = TRY_CONV (REWR_CONV K_elim) THENC (TRY_CONV pairTools.PABS_ELIM_CONV)
+
   val thm = ((RAND_CONV c) THENC
              (RATOR_CONV (RAND_CONV c)) THENC
              (RATOR_CONV (RATOR_CONV (RAND_CONV c)))) row
@@ -159,11 +208,23 @@ end;
 fun PMATCH_ROW_FORCE_SAME_VARS_CONV row = let
   val _ = if not (is_PMATCH_ROW row) then raise UNCHANGED else ()
   val _ = if can dest_PMATCH_ROW_ABS row then raise UNCHANGED else ()
-
   val (vars, thm0) = PMATCH_ROW_PABS_ELIM_CONV row
   val thm1 = PMATCH_ROW_PABS_INTRO_CONV vars (rhs (concl thm0))
 in
   TRANS thm0 thm1
+end handle HOL_ERR _ => raise UNCHANGED
+
+val row = ``      PMATCH_ROW (\(v12,v16,v17). v12::v16::v17) (\(v12,v16,v17). T)
+        (\(v12,v16,v17). 3)
+``
+
+fun PMATCH_ROW_INTRO_WILDCARDS_CONV row = let
+  val (vars_tm, p_t, g_t, r_t) = dest_PMATCH_ROW_ABS row
+  val vars = pairSyntax.strip_pair vars_tm
+  val (ch, row') = mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t)
+  val _ = if ch then () else raise UNCHANGED 
+in
+  ALPHA row row'
 end handle HOL_ERR _ => raise UNCHANGED
 
 (*
@@ -245,8 +306,16 @@ end handle Empty => failwith "dest_PMATCH_COLS"
 fun PMATCH_FORCE_SAME_VARS_CONV t = let
   val _ = if not (is_PMATCH t) then raise UNCHANGED else ()
 in
-  DEPTH_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV t
+  RAND_CONV (list_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV) t
 end
+
+fun PMATCH_INTRO_WILDCARDS_CONV t = let
+  val _ = if not (is_PMATCH t) then raise UNCHANGED else ()
+in
+  RAND_CONV (list_CONV PMATCH_ROW_INTRO_WILDCARDS_CONV) t
+end
+
+
 
 (***********************************************)
 (* Pretty Printing                             *)

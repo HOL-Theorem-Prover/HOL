@@ -12,17 +12,19 @@ val _ = Globals.priming := SOME "_"
 (* Introducing case expressions *)
 
 val t = ``case x of (NONE, []) => 0``
-val t' = case2pmatch t 
+val t' = ``CASE x OF [ ||. (NONE, []) ~> 0 ]``
+val t'' = case2pmatch true t 
+val t''' = case2pmatch false t 
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
-val thm_t' = PMATCH_REMOVE_ARB_CONV t'
-val thm_t' = PMATCH_SIMP_CONV t'
+val thm_t' = PMATCH_REMOVE_ARB_CONV t'''
+val thm_t' = PMATCH_SIMP_CONV t'''
 val t2' = rhs (concl thm_t')
 
 (* and turn it back *)
-val t'' = pmatch2case t'
-val thm_t'' = PMATCH_ELIM_CONV t'
+val t'''' = pmatch2case t'''
+val thm_t'' = PMATCH_ELIM_CONV t'''
 val thm_t2'' = PMATCH_ELIM_CONV t2'
 
 		    
@@ -32,11 +34,8 @@ val t = ``case x of
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
  | (SOME _, (x :: xs)) => x``
-val t' = case2pmatch t 
+val t' = case2pmatch true t 
 val thm_t = PMATCH_INTRO_CONV t
-
-val thm_t' = PMATCH_REMOVE_ARB_CONV t'
-val thm_t' = PMATCH_SIMP_CONV t'
 
 (* Playing around with some examples *)
 
@@ -220,6 +219,14 @@ val balance_black_dectree_def' =
   SIMP_RULE (std_ss++PMATCH_CASE_SPLIT_ss ()) []
   balance_black_def
 
+val t = rhs (snd (strip_forall (concl balance_black_def)))
+
+val t_comp = PmatchHeuristics.with_heuristic
+   PmatchHeuristics.pheu_last_col
+   pmatch2case t
+
+val t2 = case2pmatch true t_comp
+
 open stringTheory
 val string_match_def = Define `string_match s x =
    CASE (s, x) OF [
@@ -243,6 +250,13 @@ val dummy_bool_tm =
        ||. (0, _, 0) ~> 1;
        ||. (_, _, _) ~> 0
      ]``
+
+val dummy_bool_def = Define `dummy_bool _ v0 a b c _ _ =
+    CASE (a,b,c) OF [
+       ||. (_, 0, _) ~> 1;
+       ||. (0, _, 0) ~> 1;
+       ||. (_, _, _) ~> v0
+     ]`
 
 (* try to compile to a tree inside the logic *)
 val dummy_bool_eq1 = 
