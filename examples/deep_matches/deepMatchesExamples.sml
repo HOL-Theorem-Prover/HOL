@@ -44,7 +44,8 @@ val example1 = ``
     ||. (NONE,_,[]) ~> 0;
     || x. (NONE,x,[]) when x < 10 ~> x;
     || x. (NONE,x,[2]) ~> x;
-    || (x,v18). (NONE,x,[v18]) ~> 3;
+    ||! (NONE,x,[v18]) ~> 3;
+    ||! (NONE,x,[_;_]) ~> 3;
     || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
     || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
     || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
@@ -58,13 +59,15 @@ val _ = pmatch2case example1
 val example2 = ``PMATCH (h::t)
   [PMATCH_ROW (\_ . []) (\_. T) (\_. x);
    PMATCH_ROW (\_. [2]) (\_. T) (\_. x); 
-   PMATCH_ROW (\v18. [v18]) (\v18. T) (\v18. 3);
+   PMATCH_ROW (\v18. [v18]) (\v19. T) (\v18. 3);
    PMATCH_ROW (\ (v12,v16,v17). (v12::v16::v17))
-              (\ (v12,v16,v17). T)
+              (K T)
               (\ (v12,v16,v17). 3);
    PMATCH_ROW (\_. [2; 4; 3]) (\_. T) (\_. 3 + x)]``
 
-val _ = pmatch2case example2
+val t = rhs (concl (PMATCH_FORCE_SAME_VARS_CONV example2))
+val example2_tm = pmatch2case example2
+PMATCH_INTRO_WILDCARDS_CONV t
 
 val example3 = ``
   CASE (NONE,x,xs) OF [

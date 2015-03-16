@@ -458,6 +458,8 @@ val PMATCH_ROW_magic_2_tm = mk_const("PMATCH_ROW_magic_2",
   ``:'a -> bool -> 'b -> 'a # bool # 'b``);
 val PMATCH_ROW_magic_3_tm = mk_const("PMATCH_ROW_magic_3",
   ``:'a -> 'b -> 'a # bool # 'b``);
+val PMATCH_ROW_magic_4_tm = mk_const ("PMATCH_ROW_magic_4",
+  ``:'a # bool # 'b -> 'a -> 'b option``);
 
 val _ = temp_add_rule{pp_elements = [TOK "~>"],
                  fixity = Infix (NONASSOC, 3),
@@ -482,6 +484,13 @@ val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
 val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_0",
       fixity = Prefix 2,
       pp_elements = [TOK "||."],
+      paren_style = OnlyIfNecessary,
+      block_style = (AroundEachPhrase,
+        (PP.INCONSISTENT, 0))};
+
+val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_4",
+      fixity = Prefix 2,
+      pp_elements = [TOK "||!"],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
@@ -514,19 +523,28 @@ fun fix_CASE tm = let
    in
    if (same_const c PMATCH_magic_1_tm) then
      let
-       val (arg_tys, base_ty) = strip_fun (type_of c)
-       val c' = inst [(alpha |-> hd arg_tys), (beta |-> base_ty)] PMATCH_tm;
+       val tys = match_type (type_of PMATCH_magic_1_tm) (type_of c)
+       val c' = inst tys PMATCH_tm;
        val args' = map (traverse fix_CASE) args     
      in
        list_mk_comb (c', args')
      end
-   else if (same_const c PMATCH_ROW_magic_1_tm) orelse (same_const c PMATCH_ROW_magic_0_tm) then
+   else if (same_const c PMATCH_ROW_magic_1_tm) orelse (same_const c PMATCH_ROW_magic_0_tm) orelse (same_const c PMATCH_ROW_magic_4_tm) then
      let
        val args' = map (traverse fix_CASE) args            
-       val (vars, b) = if (same_const c PMATCH_ROW_magic_1_tm) then let
+       val (vars, b) = 
+          if (same_const c PMATCH_ROW_magic_1_tm) then let
             val (p_var, b) = dest_pabs (hd args') 
             val vars = pairSyntax.strip_pair p_var
-          in (vars, b) end else ([], hd args');
+          in 
+            (vars, b) 
+          end else if (same_const c PMATCH_ROW_magic_4_tm) then let
+            val b = hd args'
+            val vars = List.filter (not o varname_starts_with_uscore)
+                          (free_vars_lr b)
+          in 
+            (vars, b) 
+          end else (* magic 0 *) ([], hd args');
        val (b_c, b_args) = strip_comb b;
        val (p, g, r) = if (same_const b_c PMATCH_ROW_magic_2_tm) then
             (el 1 b_args, el 2 b_args, el 3 b_args) 
@@ -547,6 +565,9 @@ end;
 Preterm.post_process_term := I *)
 val old_f = !Preterm.post_process_term;
 val _ = (Preterm.post_process_term := (fn tm => (traverse fix_CASE (old_f tm))));
+
+
+
 
 end
 

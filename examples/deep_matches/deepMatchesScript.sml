@@ -107,6 +107,9 @@ val _ = new_constant ("PMATCH_ROW_magic_1", type_of
 val _ = new_constant ("PMATCH_ROW_magic_0", type_of 
    ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
 
+val _ = new_constant ("PMATCH_ROW_magic_4", type_of 
+   ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
+
 val _ = new_constant ("PMATCH_ROW_magic_2", type_of 
    ``\(pat:'a) (g:bool) (res:'b). (pat,g,res)``)
 
