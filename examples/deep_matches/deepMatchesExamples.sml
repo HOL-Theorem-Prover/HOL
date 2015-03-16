@@ -45,7 +45,7 @@ val example1 = ``
     || x. (NONE,x,[]) when x < 10 ~> x;
     || x. (NONE,x,[2]) ~> x;
     ||! (NONE,x,[v18]) ~> 3;
-    ||! (NONE,x,[_;_]) ~> 3;
+    ||! (NONE,_,[_;_]) ~> x;
     || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
     || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
     || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);

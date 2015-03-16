@@ -540,8 +540,9 @@ fun fix_CASE tm = let
             (vars, b) 
           end else if (same_const c PMATCH_ROW_magic_4_tm) then let
             val b = hd args'
+            val (_, b_args) = strip_comb b;
             val vars = List.filter (not o varname_starts_with_uscore)
-                          (free_vars_lr b)
+                          (free_vars_lr (el 1 b_args))
           in 
             (vars, b) 
           end else (* magic 0 *) ([], hd args');
