@@ -286,7 +286,7 @@ fun INST_TYPE [] th = th
 fun DISCH w (THM(ocl,asl,c)) =
   (Assert (is_bool w) "DISCH" "not a proposition";
    make_thm Count.Disch
-      (Tag.merge_dep ocl, (* Tracking dependencies *)
+      (Tag.collapse_dep ocl, (* Tracking dependencies *)
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
        Term.prim_mk_imp w c));
 
@@ -660,7 +660,7 @@ fun EXISTS (w,t) th =
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
    (* Tracking dependencies *)
-   in make_thm Count.Exists (Tag.merge_dep (tag th), hypset th, w) 
+   in make_thm Count.Exists (Tag.collapse_dep (tag th), hypset th, w) 
    end
 end;
 
@@ -808,7 +808,7 @@ fun CONJUNCT2 th = (* Tracking dependencies *)
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
- (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj (concl th, w)) 
+ (Tag.collapse_dep (tag th), hypset th, Susp.force mk_disj (concl th, w)) 
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -824,7 +824,7 @@ fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2 (* Tracking dependencies *)
- (Tag.merge_dep (tag th), hypset th, Susp.force mk_disj(w,concl th))
+ (Tag.collapse_dep (tag th), hypset th, Susp.force mk_disj(w,concl th))
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -1241,22 +1241,50 @@ in
 end
 end; (* local *)
 
+
 (* ----------------------------------------------------------------------
     Tracking dependencies. Giving a dependency identifier when calling 
-    Theory.save_thm.
+    Theory.save_thm. Also split the dependencies so that they correspond
+    to the maximal level of splitting of the theorems.
    ---------------------------------------------------------------------- *)
+
+fun saved_deptree dt thm =
+  if is_forall (concl thm)
+    then maxsplit_deptree ((SPEC_ALL thm),dt)
+  else if is_conj (concl thm) then case dt of
+    | DEP_NODE(dt1,dt2) => DEP_NODE(
+                             saved_deptree dt1 (CONJUNCT1 thm), 
+                             saved_deptree dt2 (CONJUNCT2 thm)
+                              )
+    | DEP_LEAF _        => DEP_NODE(
+                             saved_deptree dt (CONJUNCT1 thm),
+                             saved_deptree dt (CONJUNCT2 thm)
+                           )
+  else dt
+
+fun new_deptree did al thm =
+  if is_forall (concl thm)
+    then new_deptree did (SPEC_ALL thm)
+  else if is_conj (concl thm) 
+       then DEP_NODE(
+              new_deptree did (DEP_LEFT :: al) (CONJUNCT1 thm),
+              new_deptree did (DEP_RIGHT :: al) (CONJUNCT2 thm)
+            )
+  else DEP_LEAF [DEP_SORT (did,al)]
 
 (* Magic : this reference is automatically reset to 0 each time you create 
    a theory which is convenient *)
 val thm_order = ref 0
 
-fun give_depid_thm thy th = 
+fun save_dep thy th = 
   let 
-    fun f (thy,n) (THM(t,h,c)) = 
-      THM(Tag.give_depid_tag (thy,n) t,h,c) 
-    val th' = f (thy,!thm_order) th 
+    val did = (thy,!thm_order) 
+    val dt1 = new_deptree did [] thm
+    val dt2 = saved_deptree ((deptree_of o dep_of o tag) thm) thm
+    val dep = DEP_SAVED(did,dt1,dt2)
   in
-    (thm_order := (!thm_order) + 1; th')
+    thm_order := (!thm_order) + 1; 
+    THM(Tag.give_dep dep t,h,c)
   end
 
 end (* Thm *)

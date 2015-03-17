@@ -50,10 +50,11 @@ fun read s =
  end;
 
 (*---------------------------------------------------------------------------
-   Tag a theorem with the flag DEP_NAMED when it is saved.
+   Tag a theorem with the flag DEP_NAMED when it is saved. 
+   Distinguish between saved and passed dependency trees.
  ----------------------------------------------------------------------------*)
 
-fun give_depid_tag depid (TAG((_,dt),O,A)) = TAG((DEP_NAMED depid,dt),O,A)
+fun give_dep d (TAG(_,O,A)) = TAG(d,O,A)
 
 (*---------------------------------------------------------------------------
    Merge two tags. 
@@ -73,31 +74,33 @@ local fun smerge t1 [] = t1
               | EQUAL   => s0::smerge rst0 rst1
 in
 
-fun merge_dep (TAG(D,O,A)) = 
-  TAG((DEP_INTER, merge_deptree (passed_deptree D)),O,A)
+fun collapse_dep (TAG(D,O,A)) = TAG(DEP_UNSAVED(collapse_deptree D),O,A)
 
 fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
-  let val (dt1,dt2) = (passed_deptree d1, passed_deptree d2) 
-      val d = (DEP_INTER, merge_deptree (mk_deptree (dt1,dt2))) in
+  let 
+    val (dt1,dt2) = (deptree_of d1, deptree_of d2) 
+    val dt = mk_deptree (dt1,dt2)
+    val d = DEP_UNSAVED(collapse_deptree dt) 
+  in
     TAG(d, smerge o1 o2, Lib.union ax1 ax2)
   end
 
 fun merge_conj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
-  let val (dt1,dt2) = (passed_deptree d1, passed_deptree d2) 
-      val d = (DEP_INTER, mk_deptree (dt1,dt2)) in
+  let 
+    val (dt1,dt2) = (deptree_of d1, deptree_of d2) 
+    val d = DEP_UNSAVED(mk_deptree (dt1,dt2)) 
+  in
     TAG(d, smerge o1 o2, Lib.union ax1 ax2)
   end
 
-fun merge_conjunct lr (TAG((ds,dt),O,A)) = 
-  case ds of
-    DEP_NAMED(s)  => TAG(self_dep (DEP_CONJ(s,[lr])),O,A)
-  | DEP_CONJ(s,a) => TAG(self_dep (DEP_CONJ(s,lr :: a)),O,A)
-  | DEP_INTER => 
-      ( 
-      case lr of
-        DEP_LEFT  => TAG((DEP_INTER,fst (dest_deptree dt) handle _ => dt),O,A)
-      | DEP_RIGHT => TAG((DEP_INTER,snd (dest_deptree dt) handle _ => dt),O,A)
-      )
+fun merge_conjunct lr (TAG(D,O,A)) = 
+  case (dt as deptree_of D) of
+    DEP_NODE(dt1,dt2) => (
+                         case lr of
+                           DEP_LEFT  => DEP_UNSAVED dt1
+                         | DEP_RIGHT => DEP_UNSAVED dt2
+                         )
+  | DEP_LEAF _        => DEP_UNSAVED dt
 
 fun merge_conjunct1 tg = merge_conjunct DEP_LEFT tg
 fun merge_conjunct2 tg = merge_conjunct DEP_RIGHT tg

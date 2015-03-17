@@ -528,11 +528,10 @@ local
   val _ = Feedback.register_trace ("Theory.save_thm_reporting",
                                    save_thm_reporting, 2)
   val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
-  (* Tracking dependencies *)
-  fun give_dep th = Thm.give_depid_thm (CTname()) th 
 in
+
 fun save_thm (name,th) =
-    let val th' = give_dep th in (* Tracking dependencies *)
+    let val th' = save_dep (CTname()) th in (* Tracking dependencies *)
        check_name true ("save_thm",name)
        ; if uptodate_thm th' then add_thmCT(name,th')
          else raise DATED_ERR "save_thm" name
@@ -550,7 +549,7 @@ fun save_thm (name,th) =
 fun new_axiom (name,tm) =
     let val rname  = Nonce.mk name
         val axiom  = Thm.mk_axiom_thm (rname,tm)
-        val axiom' = give_dep axiom (* Tracking dependencies *)
+        val axiom' = save_dep (CTname()) axiom (* Tracking dependencies *)
         val  _     = check_name false ("new_axiom",name)
     in if uptodate_term tm then add_axiomCT(rname,axiom')
        else raise DATED_ERR "new_axiom" name
@@ -559,7 +558,7 @@ fun new_axiom (name,tm) =
 
 fun store_definition(name, def) =
     let 
-      val def' = give_dep def (* Tracking dependencies *)
+      val def' = save_dep (CTname()) def (* Tracking dependencies *)
       val ()  = check_name true ("store_definition",name)
     in
       if uptodate_thm def' then ()

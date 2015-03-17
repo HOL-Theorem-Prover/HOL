@@ -23,13 +23,12 @@ val ERR = mk_HOL_ERR "Dep"
 type depid       = string * int
 datatype depchoice = DEP_LEFT | DEP_RIGHT
 type depaddress  = depchoice list
-datatype depsort = DEP_NAMED of depid
-                 | DEP_CONJ of depid * depaddress
-                 | DEP_INTER
+datatype depconj = depid * depaddress
 datatype deptree = DEP_NODE of deptree * deptree 
-                 | DEP_LEAF of depsort list
- 
-type dep         = depsort * deptree
+                 | DEP_LEAF of depconj list
+type dep         = DEP_SAVED of depid * deptree * deptree
+                 | DEP_UNSAVED of depid * deptree
+
 type depdisk     =  
   (string * int) * 
   (string * (string * int list * (int * string) list) list) list
@@ -39,45 +38,38 @@ val empty_dep     = (DEP_INTER,empty_deptree)
 
 fun depthy_of depid = fst depid
 fun depnumber_of depid = snd depid
+fun depid_of depconj  = fst depconj
+(* for efficiency, the list returned is in reverse order. *)
+fun depaddress_of depconj = snd depconj
 
-fun depid_of depsort  = case depsort of
-    DEP_NAMED depid    => depid
-  | DEP_CONJ (depid,a) => depid 
-  | _                  => raise ERR "depid_of" ""
+fun deptree_of dep = case dep of
+    DEP_SAVED (did,dt1,dt2) => dt1
+  | DEP_UNSAVED dt          => dt
 
-(* For efficiency, the list should be read in reverse order. *)
-fun address_of depsort = case depsort of
-    DEP_NAMED depid => []
-  | DEP_CONJ(depid,a) => a
-  | _                  => raise ERR "address_of" "" 
+fun saved_deptree_of dep = case dep of
+    DEP_SAVED (did,dt1,dt2) => dt2
+  | DEP_UNSAVED dt          => raise ERR "saved_deptree_of" "" 
 
-
-fun deptree_of dep = snd dep
-fun depsort_of dep = fst dep
+fun saved_depid_of dep = case dep of
+    DEP_SAVED (did,dt1,dt2) => did
+  | DEP_UNSAVED dt          => raise ERR "saved_depid_of" 
+   
 
 (* Comparisons functions *)
+fun couple_compare compare1 compare2 ((a1,a2),(b1,b2)) = 
+  case compare1 (a1,b1) of
+    EQUAL   => compare2 (a2,b2)
+  | LESS    => LESS
+  | GREATER => GREATER
 
 fun depchoice_compare (lr1,lr2) = case (lr1,lr2) of
     (DEP_LEFT,DEP_RIGHT) => LESS
   | (DEP_RIGHT,DEP_LESS) => GREATER
   | _                    => EQUAL
 
-fun depid_compare ((s1,n1),(s2,n2)) = case String.compare (s1,s2) of
-    LESS => LESS
-  | GREATER => GREATER
-  | EQUAL => Int.compare (n1,n2)
-
+val depid_compare = couple_compare String.compare Int.compare
 val depaddress_compare = list_compare depchoice_compare
-
-fun depsort_compare (ds1,ds2) = case (ds1,ds2) of
-    (DEP_INTER,DEP_INTER) => EQUAL
-  | (DEP_INTER,_)         => LESS
-  | (_,DEP_INTER)         => GREATER
-  | _                     => 
-      case depid_compare (depid_of ds1, depid_of ds2) of
-        EQUAL   => depaddress_compare (address_of ds1, address_of ds2)
-      | LESS    => LESS
-      | GREATER => GREATER 
+val depconj_compare = couple_compare depid_compare depaddress_compare 
 
 (*---------------------------------------------------------------------------
    Dependency tree constructors and destructors.
@@ -87,36 +79,30 @@ fun mk_deptree (dt1,dt2) = DEP_NODE(dt1,dt2)
 fun dest_deptree (DEP_NODE(dt1,dt2)) = (dt1,dt2)
   | dest_deptree _                    = raise ERR "dest_deptree" ""
  
-fun mk_depleaf dsl = DEP_LEAF dsl
-fun dest_depleaf (DEP_LEAF dsl) = dsl
+fun mk_depleaf dcl = DEP_LEAF dcl
+fun dest_depleaf (DEP_LEAF dcl) = dcl
   | dest_depleaf (DEP_NODE _)   = raise ERR "dest_leaf" ""
         
 (*---------------------------------------------------------------------------
    Transfering the dependency trees from parents to children of a rule.
  ----------------------------------------------------------------------------*)
 
-fun merge_deptree deptree = 
+(* used when a rule modifies the top-level structure of conjuncts as DISCH *)
+fun collapse_deptree deptree = 
   let 
     val l = ref [] 
     fun loop dt = case dt of
-      DEP_LEAF dsl      => l := dsl :: (!l)
+      DEP_LEAF dcl      => l := dcl :: (!l)
     | DEP_NODE(dt1,dt2) => (loop dt1; loop dt2)
   in 
     (loop deptree; DEP_LEAF (mk_set (List.concat (!l))))
   end
 
-fun passed_deptree (depsort,deptree) = case depsort of 
-    DEP_NAMED _ => DEP_LEAF [depsort]
-  | _           => deptree
-
-(* conjuncts of theorems depend on themselves *)
-fun self_dep depsort = (depsort, DEP_LEAF [depsort])
-
 (*---------------------------------------------------------------------------
    Printing dependencies to disk. 
  ----------------------------------------------------------------------------*)
 
-(* Numbering the conjuncts when possible *)
+(* Numbering the conjuncts when possible. *)
 
 fun number_address a = 
   if null a then "" 
@@ -135,41 +121,41 @@ fun flatten_deptree a dt =
  let 
    val l = ref [] 
    fun loop a' dt' = case dt' of
-     DEP_LEAF dsl      => l := (a',dsl) :: (!l)
+     DEP_LEAF dcl      => l := (a',dcl) :: (!l)
    | DEP_NODE(dt1,dt2) => (loop (DEP_RIGHT :: a') dt2; loop (DEP_LEFT :: a') dt1) 
  in
    (loop a dt; !l)
  end
 
-(* Sorting the dependencies by theory and sort *)
+(* Sorting the dependencies by theory. *)
+(* We don't print the addresses of the conjuncts if they are empty. *)
 
-fun insert_ds_named ((ds,thy),l) = case l of
-   []                => [(thy,[ds],[])] 
+fun insert_dc_empty ((dc,thy),l) = case l of
+   []                => [(thy,[dc],[])] 
  | (thy',l1,l2) :: m => 
      if thy' = thy 
-     then (thy',ds :: l1,l2) :: m 
-     else (thy',l1,l2) :: insert_ds_named ((ds,thy),m) 
+     then (thy',dc :: l1,l2) :: m 
+     else (thy',l1,l2) :: insert_dc_empty ((dc,thy),m) 
 
-fun insert_ds_conj ((ds,thy),l) = case l of
-   []                => [(thy,[],[ds])]
+fun insert_dc_conj ((dc,thy),l) = case l of
+   []                => [(thy,[],[dc])]
  | (thy',l1,l2) :: m => 
      if thy' = thy 
-     then (thy',l1,ds :: l2) :: m 
-     else (thy',l1,l2) :: insert_ds_conj ((ds,thy),m)
+     then (thy',l1,dc :: l2) :: m 
+     else (thy',l1,l2) :: insert_dc_conj ((dc,thy),m)
 
-fun insert_ds ((ds,thy),l) = case ds of 
-   DEP_NAMED _ => insert_ds_named ((ds,thy),l)
- | DEP_CONJ  _ => insert_ds_conj ((ds,thy),l)
- | _           => raise ERR "insert_ds" ""
+fun insert_dc ((dc,thy),l) = case dc of 
+ if null (depaddress_of dc)
+ then insert_dc_empty ((dc,thy),l)
+ else insert_dc_conj ((dc,thy),l)
 
-fun sort_dsl dsl = 
-  let fun f ds = (ds, depthy_of (depid_of ds)) in
-    List.foldl insert_ds [] (List.map f dsl)
+fun sort_dcl dcl = 
+  let fun f dc = (dc, depthy_of (depid_of dc)) in
+    List.foldl insert_dc [] (List.map f dcl)
   end
 
 (* Pretty-printing *)
-
-fun pp_dep ppstrm (ds,dt) =
+fun pp_dep_aux ppstrm (did,dt) =
   let 
     open Portable
     val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm	
@@ -197,31 +183,34 @@ fun pp_dep ppstrm (ds,dt) =
                           f2 a2; add_string ","; add_break(0,0);
                           f3 a3; add_string ")";
        end_block())
-    fun pp_ds ds = case ds of
-        DEP_NAMED(s,n) => pp_scouple (Lib.quote s, int_to_string n)
-      | _ => raise ERR "pp_dep" "pp_ds"
-    fun pp_nds ds = case ds of
-        DEP_NAMED(s,n)   => add_string (int_to_string n)
-      | DEP_CONJ((s,n),a) => pp_scouple (int_to_string n, quote_of_address a)
-      | _ => raise ERR "pp_dep" "pp_nds"
+    fun pp_did (s,n) = pp_scouple (Lib.quote s, int_to_string n)
+    fun pp_dc_empty ((s,n),a)) = add_string (int_to_string n)
+    fun pp_dc_conj ((s,n),a)) = 
+      pp_scouple (int_to_string n, quote_of_address a)
     fun pp_thyentry (thy,l1,l2) = 
-      pp_triple (add_string o Lib.quote, pp_l pp_nds, pp_l pp_nds) (thy,l1,l2)
-    fun pp_dsl l = pp_l pp_thyentry l 
+      pp_triple (add_string o Lib.quote, pp_l pp_dc_empty, pp_l pp_dc_conj) 
+                (thy,l1,l2)
+    fun pp_dcl l = pp_l pp_thyentry l 
     fun pp_dt dt = 
-      let fun pp_f (a,dsl) = 
-        pp_couple (add_string o quote_of_address, pp_dsl o sort_dsl) (a,dsl)
+      let fun pp_f (a,dcl) = 
+        pp_couple (add_string o quote_of_address, pp_dcl o sort_dcl) (a,dcl)
       in
         pp_l pp_f (flatten_deptree [] dt)
       end
   in
-    pp_couple (pp_ds,pp_dt) (ds,dt)
+    pp_couple (pp_did,pp_dt) (did,dt)
   end
+
+fun pp_dep ppstrm d = case d of
+    DEP_SAVED (did,dt1,dt2) => pp_dep_aux ppstrm (did,dt2) 
+  | DEP_UNSAVED dt          => raise ERR "pp_dep" ""
+
 
 (*---------------------------------------------------------------------------
    Reading dependencies from disk. 
  ----------------------------------------------------------------------------*)
 
-(* Decoding the address *)
+(* Decoding the address. *)
 
 fun read_address a = 
        if a = ""                then [] 
@@ -236,11 +225,12 @@ fun read_address a =
   else DEP_LEFT :: List.tabulate (string_to_int a,fn _ => DEP_RIGHT) 
 
 (* Rebuild the tree from its leafs and their addresses. *)
+
 fun build_tree leafl current_address = case leafl of
     []           => raise ERR "build_tree" "empty_tree"
-  | [(a,dsl)]    => (DEP_LEAF dsl, [])
-  | (a,dsl) :: m => 
-      if a = current_address then (DEP_LEAF dsl, m)
+  | [(a,dcl)]    => (DEP_LEAF dcl, [])
+  | (a,dcl) :: m => 
+      if a = current_address then (DEP_LEAF dcl, m)
       else
         let 
           val (t_left,leafl_right) = 
@@ -253,18 +243,27 @@ fun build_tree leafl current_address = case leafl of
 
 (* Reading *)
 
-fun read_depsort_named thy n = DEP_NAMED (thy,n)
-fun read_depsort_conj thy (n,a) = DEP_CONJ ((thy,n), read_address a)
+fun read_dc_empty thy n    = ((thy,n), [])
+fun read_dc_conj thy (n,a) = ((thy,n), read_address a)
 
 fun read_thyentry (thy,l1,l2) = 
-  map (read_depsort_named thy) l1 @ map (read_depsort_conj thy) l2
+  map (read_dc_named thy) l1 @ map (read_dc_empty thy) l2
 
 fun read_leaf (a,l) = 
   (read_address a, List.concat (map read_thyentry l))
 
 fun read_deptree dt = fst (build_tree (map read_leaf dt) [])
 
-fun read_depsort_thy (thy,n) = DEP_NAMED(thy,n)
-fun read_dep (ds,dt) = (read_depsort_thy ds,read_deptree dt) 
+(* creates a tree filled with references to its conjunctions *)
+(* instead of its dependencies *)
+fun new_deptree al (did,dt) = case dt of
+    DEP_NODE(dt1,dt2) => DEP_NODE(
+                           new_deptree (DEP_LEFT :: al) (did,dt1),
+                           new_deptree (DEP_RIGHT :: al) (did,dt2)
+                         )
+  | DEP_LEAF _        => DEP_LEAF [(did,al)]
+
+
+fun read_dep (did,dt) = DEP_SAVED(did, new_deptree [] (did,al), read_deptree dt) 
 
 end
