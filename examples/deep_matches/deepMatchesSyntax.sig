@@ -95,6 +95,9 @@ sig
      for each row. *)
   val dest_PMATCH_COLS : term -> (term * (term list * term) list) list
 
+  (* applies a conversion to all rows of a pmatch *)
+  val PMATCH_ROWS_CONV : conv -> conv
+
 
   (******************)
   (* Pretty printer *)

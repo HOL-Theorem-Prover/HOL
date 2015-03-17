@@ -155,9 +155,9 @@ Cases_on `x=y` THEN (
 
 val my_d_def = Define
   `my_d xx = CASE xx OF [
-    || x.  (x, []) when x > 3 ~> x;
-    || x.  (x, []) ~> 0;
-    || (x, y, ys). (x, y::ys) ~> my_d (x + y, ys)]`
+    ||! (x, []) when x > 3 ~> x;
+    ||! (x, []) ~> 0;
+    ||! (x, y::ys) ~> my_d (x + y, ys)]`
 
 val my_d_thms = store_thm ("my_d_thms",
 ``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
@@ -191,6 +191,42 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
    thm
 *)
 
+
+(*********************************)
+(* Removing DOUBLE-binds         *)
+(*********************************)
+
+val t =
+   ``CASE l OF [
+    ||. [] ~> 0;
+    ||! x::y::x::y::_ ~> x+y;
+    ||! x::x::x::y::_ ~> x+x+x;
+    ||! x::_ ~> 1
+  ]``
+
+val thm0 = PMATCH_REMOVE_DOUBLE_BIND_CONV t
+
+
+(*********************************)
+(* Removing Guards               *)
+(*********************************)
+
+val thm1 = PMATCH_REMOVE_GUARDS_CONV (rhs (concl thm0))
+val thm1b = SIMP_CONV (std_ss++PMATCH_REMOVE_GUARDS_ss) [] (rhs (concl thm0))
+
+val t =
+   ``CASE (y,x,l) OF [
+    || x. (SOME 0,x,[]) ~> x;
+    || z. (SOME 1,z,[2]) when F ~> z;
+    || x. (SOME 3,x,[2]) when (IS_SOME x) ~> x;
+    || (z,y). (y,z,[2]) when (IS_SOME y) ~> y;
+    || z. (SOME 1,z,[2]) when F ~> z;
+    || x. (SOME 3,x,[2]) when (IS_SOME x) ~> x
+  ]``
+
+val thm0 = PMATCH_REMOVE_GUARDS_CONV t
+
+
 (*********************************)
 (* Compiling                     *)
 (*********************************)
@@ -202,15 +238,15 @@ val _ = Datatype `
 
 val balance_black_def = Define `balance_black a n b =
    CASE (a,b) OF [
-       || (a,x,b,y,c,d). (Red (Red a x b) y c,d) ~>
+       ||! (Red (Red a x b) y c,d) ~>
             (Red (Black a x b) y (Black c n d));
-       || (a,x,b,y,c,d). (Red a x (Red b y c),d) ~>
+       ||! (Red a x (Red b y c),d) ~>
             (Red (Black a x b) y (Black c n d));
-       || (a,b,y,c,z,d). (a,Red (Red b y c) z d) ~>
+       ||! (a,Red (Red b y c) z d) ~>
             (Red (Black a n b) y (Black c z d));
-       || (a,b,y,c,z,d). (a,Red b y (Red c z d)) ~>
+       ||! (a,Red b y (Red c z d)) ~>
             (Red (Black a n b) y (Black c z d));
-       || other. other ~> (Black a n b)
+       ||! other ~> (Black a n b)
      ]`
 
 (* try to compile to a tree inside the logic *)
@@ -317,7 +353,7 @@ val _ = pmatch_compile_db_register_constrFam cf
 
 val t = ``CASE l OF [
   ||. [] ~> 0;
-  || x. SNOC x _ ~> x
+  ||! SNOC x _ ~> x
   ]``
 
 val thm = PMATCH_CASE_SPLIT_CONV t
@@ -450,9 +486,9 @@ ASM_SIMP_TAC std_ss [arithmeticTheory.DIV_MULT, arithmeticTheory.MOD_MULT])
 val simple_card_def = Define `
   simple_card s = CASE s OF [
     ||. {} ~> SOME 0;
-    || x. {x} ~> SOME 1;
-    || (x, y). {x; y} ~> SOME 2;
-    || s. s ~> NONE
+    ||! {x} ~> SOME 1;
+    ||! {x; y} ~> SOME 2;
+    ||! s ~> NONE
   ]`;
 
 val simple_card_THM_AUX = PMATCH_TO_TOP_RULE simple_card_def;
@@ -507,9 +543,9 @@ Cases_on `t'` THEN1 (
 val CARD2_defn = Defn.Hol_defn "CARD2" `
   CARD2 s = CASE s OF [
     ||. {} ~> 0;
-    || (x, s'). x INSERT s' when (FINITE s' /\ ~(x IN s')) ~>
+    ||! x INSERT s' when (FINITE s' /\ ~(x IN s')) ~>
         SUC (CARD2 s');
-    || s'. s' ~> 0
+    ||! s' ~> 0
   ]`
 
 val (CARD2_def, _) = Defn.tprove (CARD2_defn,

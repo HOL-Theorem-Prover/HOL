@@ -81,6 +81,29 @@ sig
 
 
   (********************************)
+  (* removing double variable     *)
+  (* bindings                     *)
+  (********************************)
+
+  val PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_DOUBLE_BIND_CONV : conv
+  val PMATCH_REMOVE_DOUBLE_BIND_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_REMOVE_DOUBLE_BIND_ss : ssfrag
+
+
+  (********************************)
+  (* removing GUARDS              *)
+  (********************************)
+
+  val PMATCH_REMOVE_GUARDS_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_GUARDS_CONV : conv
+  val PMATCH_REMOVE_GUARDS_GEN_ss : ssfrag list -> ssfrag
+  val PMATCH_REMOVE_GUARDS_ss : ssfrag
+
+
+
+
+  (********************************)
   (* removing PMATCH-terms        *)
   (* via lifting it to the nearest*)
   (* boolean term and then        *)

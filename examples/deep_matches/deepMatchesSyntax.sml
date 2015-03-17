@@ -46,11 +46,6 @@ in
   fn ty => mk_var (next_name (), ty)
 end
 
-fun list_CONV c t = 
-  if not (listSyntax.is_cons t) then  raise UNCHANGED else (
-  (RATOR_CONV (RAND_CONV c) THENC
-   RAND_CONV (list_CONV c)) t)
-
 
 (***********************************************)
 (* Terms                                       *)
@@ -97,6 +92,7 @@ fun REMOVE_REBIND_CONV t = let
 in
   ALPHA t t'  
 end
+
 
 (***********************************************)
 (* PMATCH_ROW                                  *)
@@ -214,9 +210,6 @@ in
   TRANS thm0 thm1
 end handle HOL_ERR _ => raise UNCHANGED
 
-val row = ``      PMATCH_ROW (\(v12,v16,v17). v12::v16::v17) (\(v12,v16,v17). T)
-        (\(v12,v16,v17). 3)
-``
 
 fun PMATCH_ROW_INTRO_WILDCARDS_CONV row = let
   val (vars_tm, p_t, g_t, r_t) = dest_PMATCH_ROW_ABS row
@@ -303,17 +296,22 @@ in
   cols
 end handle Empty => failwith "dest_PMATCH_COLS"
 
-fun PMATCH_FORCE_SAME_VARS_CONV t = let
+fun list_CONV c t = 
+  if not (listSyntax.is_cons t) then  raise UNCHANGED else (
+  (RATOR_CONV (RAND_CONV c) THENC
+   RAND_CONV (list_CONV c)) t)
+
+fun PMATCH_ROWS_CONV c t = let
   val _ = if not (is_PMATCH t) then raise UNCHANGED else ()
 in
-  RAND_CONV (list_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV) t
+  RAND_CONV (list_CONV c) t
 end
 
-fun PMATCH_INTRO_WILDCARDS_CONV t = let
-  val _ = if not (is_PMATCH t) then raise UNCHANGED else ()
-in
-  RAND_CONV (list_CONV PMATCH_ROW_INTRO_WILDCARDS_CONV) t
-end
+val PMATCH_FORCE_SAME_VARS_CONV = 
+  PMATCH_ROWS_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV
+
+val PMATCH_INTRO_WILDCARDS_CONV =
+  PMATCH_ROWS_CONV PMATCH_ROW_INTRO_WILDCARDS_CONV
 
 
 

@@ -433,7 +433,7 @@ fun PMATCH_ELIM_CONV t =
    not needed for PMATCH and can be removed. *)
 
 (*
-val rc_arg = []
+val rc_arg = ([], NONE)
 
 set_trace "parse deep cases" 0
 val t = convert_case ``case x of NONE => 0``
@@ -1233,7 +1233,8 @@ REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
   CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV,
-  CHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV
+  CHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV,
+  REWR_CONV (CONJUNCT1 PMATCH_def)
 ]);
 
 
@@ -1249,6 +1250,196 @@ fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
 val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
+
+
+(***********************************************)
+(* Remove double var bindings                  *)
+(***********************************************)
+
+fun force_unique_vars s no_change avoid t = 
+  case Psyntax.dest_term t of
+      Psyntax.VAR (_, _) => 
+      if (mem t no_change) then (s, avoid, t) else
+      let
+         val v' = variant avoid t
+         val avoid' = v'::avoid 
+         val s' = if (v' = t) then s else ((v', t)::s)
+      in (s', avoid', v') end
+    | Psyntax.CONST _ => (s, avoid, t)
+    | Psyntax.LAMB (v, t') => let
+         val (s', avoid', t'') = force_unique_vars s (v::no_change)
+           (v::avoid) t'
+      in
+         (s', avoid', mk_abs (v, t''))
+      end
+    | Psyntax.COMB (t1, t2) => let
+         val (s', avoid', t1') = force_unique_vars s no_change avoid t1
+         val (s'', avoid'', t2') = force_unique_vars s' no_change avoid' t2
+      in
+         (s'', avoid'', mk_comb (t1', t2'))
+      end;
+
+(*
+val row = ``PMATCH_ROW (\ (x,y). (x, SOME y, SOME x, SOME z, (x+z)))
+              (\ (x, y). P x y) (\ (x, y). f x y)``
+
+val row = ``PMATCH_ROW (\ (x,y). (x, SOME y, SOME z, SOME z, (z+z)))
+              (\ (x, y). P x y) (\ (x, y). f x y)``
+*)
+
+fun PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL rc_arg row = let
+  val _ = if not (is_PMATCH_ROW row) then raise UNCHANGED else ()
+  val (p_t, g_t, r_t) = dest_PMATCH_ROW row
+  val (vars_tm, p_tb) = pairSyntax.dest_pabs p_t
+  val vars = pairSyntax.strip_pair vars_tm
+ 
+  val (new_binds, _, p_tb') = force_unique_vars [] (free_vars p_t) [] p_tb
+  val _ = if List.null new_binds then raise UNCHANGED else ()
+
+  val vars' = vars @ (List.map fst new_binds)
+  val g_v = genvar (type_of g_t)
+  val r_v = genvar (type_of r_t)
+   
+
+  val g_t' = list_mk_conj ((List.map mk_eq new_binds)@[mk_comb (g_v, vars_tm)])
+  val r_t' = mk_comb (r_v, vars_tm)
+  
+  val row' = mk_PMATCH_ROW_PABS vars' (p_tb', g_t', r_t')
+  val row0 = mk_PMATCH_ROW (p_t, g_v, r_v)
+
+  val thm0_tm = mk_eq (row0, row')
+  val thm0 = let
+    val thm0 = FRESH_TY_VARS_RULE PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM
+    val g_tm = pairSyntax.mk_pabs (vars_tm, 
+      subst (List.map (fn (v, v') => (v |-> v')) new_binds)
+        (pairSyntax.list_mk_pair vars'))
+    val thm1 = ISPEC g_tm thm0
+    val thm2 = PART_MATCH rand thm1 thm0_tm
+
+    val pre = rand (rator (concl thm2))
+    val pre_thm = prove (pre, rc_tac rc_arg)
+    val thm3 = MP thm2 pre_thm
+  in
+    thm3
+  end
+  
+  val thm1 = INST [(g_v |-> g_t), (r_v |-> r_t)] thm0
+
+  val thm1a_tm = mk_eq (row, lhs (concl thm1))
+  val thm1a = prove (thm1a_tm, rc_tac rc_arg)
+
+  val thm2 = TRANS thm1a thm1
+
+  val thm3 = CONV_RULE (RHS_CONV (DEPTH_CONV pairLib.GEN_BETA_CONV))
+    thm2
+in
+  thm3
+end handle HOL_ERR _ => raise UNCHANGED
+
+fun PMATCH_REMOVE_DOUBLE_BIND_CONV_GENCALL rc_arg t = 
+  PMATCH_ROWS_CONV (PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL
+    rc_arg) t
+
+fun PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN ssl = 
+  PMATCH_REMOVE_DOUBLE_BIND_CONV_GENCALL (ssl, NONE)
+
+val PMATCH_REMOVE_DOUBLE_BIND_CONV = PMATCH_REMOVE_DOUBLE_BIND_CONV_GEN [];
+
+fun PMATCH_REMOVE_DOUBLE_BIND_GEN_ss ssl = 
+  make_gen_conv_ss PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL "PMATCH_REMOVE_DOUBLE_BIND_REDUCER" ssl
+
+val PMATCH_REMOVE_DOUBLE_BIND_ss = PMATCH_REMOVE_DOUBLE_BIND_GEN_ss []
+
+
+(***********************************************)
+(* Remove a GUARD                              *)
+(***********************************************)
+
+(*
+val t = ``
+PMATCH (y,x,l)
+     [PMATCH_ROW (\x. (SOME 0,x,[]))  (\x. T) (\x. x);
+      PMATCH_ROW (\z. (SOME 1,z,[2])) (\z. F) (\z. z);
+      PMATCH_ROW (\x. (SOME 3,x,[2])) (\x. IS_SOME x) (\x. x);
+      PMATCH_ROW (\(z,y). (y,z,[2]))  (\(z, y). IS_SOME y) (\(z, y). y);
+      PMATCH_ROW (\z. (SOME 1,z,[2])) (\z. F) (\z. z);
+      PMATCH_ROW (\x. (SOME 3,x,[2])) (\x. IS_SOME x) (\x. x)
+   ]``
+
+val rc_arg = ([], NONE)
+val rows = 0
+*)
+
+
+fun PMATCH_REMOVE_GUARD_AUX rc_arg t = let
+  val (v, rows) = dest_PMATCH t
+
+  fun find_row_to_split rs1 rs = case rs of
+     [] => raise UNCHANGED (* nothing found *)
+   | (r:: rs') => let
+        val (_, _, g, _) = dest_PMATCH_ROW_ABS r
+        val g_simple = ((g = T) orelse (g = F))
+     in
+        if g_simple then
+           find_row_to_split (r::rs1) rs'
+        else let
+          val r_ty = type_of r
+          val rs1_tm = listSyntax.mk_list (List.rev rs1, r_ty)
+          val rs2_tm = listSyntax.mk_list (rs', r_ty)
+        in
+           (rs1_tm, r, rs2_tm)
+        end
+     end
+
+  val (rs1, r, rs2) = find_row_to_split [] rows
+
+  val thm = let
+    val thm0 = FRESH_TY_VARS_RULE GUARDS_ELIM_THM
+    val (p_tm, g_tm, r_tm) = dest_PMATCH_ROW r
+    val thm1 = ISPECL [v, rs1, rs2, p_tm, g_tm, r_tm] thm0
+
+    val pre = rand (rator (concl thm1))
+    val pre_thm = prove (pre, rc_tac rc_arg)
+    val thm2 = MP thm1  pre_thm 
+
+    val t_eq_thm = prove (mk_eq (t, lhs (concl thm2)),
+       CONV_TAC (DEPTH_CONV listLib.APPEND_CONV) THEN
+       REWRITE_TAC [])
+
+    val thm3 = TRANS t_eq_thm thm2
+  in
+    thm3
+  end
+
+  val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (RAND_CONV (RATOR_CONV (RAND_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV))))) thm
+
+  val thm3 = CONV_RULE (RHS_CONV (RAND_CONV listLib.APPEND_CONV)) thm2
+
+in 
+  thm3
+end handle HOL_ERR _ => raise UNCHANGED
+
+
+
+fun PMATCH_REMOVE_GUARDS_CONV_GENCALL rc_arg t = let
+  val thm0 = REPEATC (PMATCH_REMOVE_GUARD_AUX rc_arg) t
+  val m_ss = simpLib.merge_ss (fst rc_arg)
+  val c = SIMP_CONV (std_ss ++ m_ss ++
+    PMATCH_SIMP_GEN_ss (fst rc_arg)) []
+  val thm1 = CONV_RULE (RHS_CONV c) thm0
+in
+  thm1
+end handle HOL_ERR _ => raise UNCHANGED
+
+
+fun PMATCH_REMOVE_GUARDS_CONV_GEN ssl = PMATCH_REMOVE_GUARDS_CONV_GENCALL (ssl, NONE)
+
+val PMATCH_REMOVE_GUARDS_CONV = PMATCH_REMOVE_GUARDS_CONV_GEN [];
+
+fun PMATCH_REMOVE_GUARDS_GEN_ss ssl = 
+  make_gen_conv_ss PMATCH_REMOVE_GUARDS_CONV_GENCALL "PMATCH_REMOVE_GUARDS_REDUCER" ssl
+
+val PMATCH_REMOVE_GUARDS_ss = PMATCH_REMOVE_GUARDS_GEN_ss []
 
 
 (***********************************************)

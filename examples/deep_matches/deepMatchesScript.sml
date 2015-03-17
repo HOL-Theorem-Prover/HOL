@@ -139,7 +139,7 @@ ASM_SIMP_TAC std_ss [])
 
 
 val PMATCH_CONG = store_thm ("PMATCH_CONG",
-``!v v' rows rows'. ((v = v') /\ (r v' = r' v') /\
+``!v v' rows rows'. ((v = v') /\ (!x. x = v' ==> (r x = r' x)) /\
         (PMATCH v' rows = PMATCH v' rows')) ==>
   (PMATCH v (r :: rows) = PMATCH v' (r' :: rows'))``,
 SIMP_TAC std_ss [PMATCH_def])
@@ -751,6 +751,35 @@ METIS_TAC[]);
 
 
 (***************************************************)
+(* ELIMINATE DOUBLE VAR-BINDS                      *)
+(***************************************************)
+
+val PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM = 
+  store_thm ("PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM",
+``!g p1 g1 r1 p2 g2 r2.
+   ((!x y. (p1 x = p1 y) ==> (x = y)) /\
+   (!x. (p2 (g x) = p1 x)) /\
+   (!x'. g2 x' = (?x. (x' = g x) /\ g1 x)) /\ 
+   (!x. r2 (g x) = r1 x)) ==>
+
+  (PMATCH_ROW p1 g1 r1 = PMATCH_ROW p2 g2 r2)``,
+
+SIMP_TAC (std_ss++boolSimps.CONJ_ss) [PMATCH_ROW_def, FUN_EQ_THM,
+  optionTheory.some_def, PMATCH_ROW_COND_def,
+  GSYM RIGHT_EXISTS_AND_THM] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `?x'. (p1 x' = x) ∧ g1 x'` THEN (
+  ASM_REWRITE_TAC[optionTheory.OPTION_MAP_DEF]
+) THEN
+SELECT_ELIM_TAC THEN ASM_REWRITE_TAC[] THEN
+SELECT_ELIM_TAC THEN 
+REPEAT STRIP_TAC THEN (
+  METIS_TAC[]
+))
+
+
+
+(***************************************************)
 (* ELIMINATE GUARDS                                *)
 (***************************************************)
 
@@ -773,6 +802,7 @@ Tactical.REVERSE (Cases_on `?x. p x = v`) THEN (
 ) THEN
 `!x'. (p x' = v) <=> (x' = x)` by METIS_TAC[] THEN
 ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) []);
+
 
 
 (***************************************************)
