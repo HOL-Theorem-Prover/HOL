@@ -139,7 +139,7 @@ ASM_SIMP_TAC std_ss [])
 
 
 val PMATCH_CONG = store_thm ("PMATCH_CONG",
-``!v v' rows rows'. ((v = v') /\ (!x. x = v' ==> (r x = r' x)) /\
+``!v v' rows rows' r r'. ((v = v') /\ (r v' = r' v') /\
         (PMATCH v' rows = PMATCH v' rows')) ==>
   (PMATCH v (r :: rows) = PMATCH v' (r' :: rows'))``,
 SIMP_TAC std_ss [PMATCH_def])
