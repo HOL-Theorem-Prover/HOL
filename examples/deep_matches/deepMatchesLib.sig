@@ -69,6 +69,9 @@ sig
   val PMATCH_REMOVE_ARB_CONV : conv
   val PMATCH_REMOVE_ARB_CONV_GEN : ssfrag list -> conv
 
+  val PMATCH_REMOVE_REDUNDANT_CONV : conv
+  val PMATCH_REMOVE_REDUNDANT_CONV_GEN : ssfrag list -> conv
+
   val PMATCH_CLEANUP_PVARS_CONV : conv
 
   val PMATCH_CLEANUP_CONV : conv

@@ -117,7 +117,7 @@ val _ = new_constant ("PMATCH_ROW_magic_3", type_of
    ``\(pat:'a) (res:'b). (pat,T,res)``)
 
 (***************************************************)
-(* Congruences                                     *)
+(* Congruences for termination                     *)
 (***************************************************)
 
 val PMATCH_ROW_CONG = store_thm ("PMATCH_ROW_CONG",
@@ -610,6 +610,108 @@ MATCH_MP_TAC PMATCH_ROWS_DROP_REDUNDANT_TRIVIAL_SOUNDNESS_EQUIV THEN
 ASM_REWRITE_TAC[])
 
 
+val PMATCH_ROWS_DROP_REDUNDANT = store_thm (
+  "PMATCH_ROWS_DROP_REDUNDANT",
+``!r1 r2 rows1 rows2 rows3 v.
+  (IS_SOME (r2 v) ==> IS_SOME (r1 v)) ==>
+  (PMATCH v (rows1 ++ (r1 :: rows2) ++ (r2 :: rows3)) =
+   PMATCH v (rows1 ++ (r1 :: rows2) ++ rows3))``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_APPEND_SEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM] THEN
+
+Cases_on `?r. MEM r rows1 ∧ IS_SOME (r v)` THEN (
+  ASM_REWRITE_TAC []
+) THEN
+Cases_on `IS_SOME (r1 v)` THEN ASM_REWRITE_TAC[] THEN
+Cases_on `?r. MEM r rows2 ∧ IS_SOME (r v)` THEN (
+  ASM_REWRITE_TAC []
+) THEN
+FULL_SIMP_TAC std_ss [PMATCH_def]);
+
+
+val PMATCH_ROWS_DROP_REDUNDANT_PMATCH_ROWS = store_thm (
+  "PMATCH_ROWS_DROP_REDUNDANT_PMATCH_ROWS",
+``!p g r p' g' r' rows1 rows2 rows3 v.
+  (!x'. (v = p' x') /\ (g' x') ==> (?x. (p' x' = p x) /\ (g x))) ==>
+  (PMATCH v (rows1 ++ (PMATCH_ROW p g r :: rows2) ++ (PMATCH_ROW p' g' r' :: rows3)) =
+   PMATCH v (rows1 ++ (PMATCH_ROW p g r :: rows2) ++ rows3))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC PMATCH_ROWS_DROP_REDUNDANT THEN
+SIMP_TAC std_ss [PMATCH_ROW_def, optionTheory.some_def,
+  PMATCH_ROW_COND_def, IS_SOME_OPTION_MAP] THEN
+Cases_on `?x'. (p' x' = v) ∧ g' x'` THEN (
+  ASM_SIMP_TAC std_ss []
+) THEN
+METIS_TAC[IS_SOME_DEF]);
+
+(* Some rows are not redundant in the classical sense, but can
+   safely be dropped nevertheless. A redundant row never matches,
+   because it is shaddowed by a previous row. One can also also
+   drop rows, if a later row matches if they match and return the
+   same value. I will call such rows subsumed. *)
+val PMATCH_ROWS_DROP_SUBSUMED = store_thm (
+  "PMATCH_ROWS_DROP_SUBSUMED",
+``!r1 r2 rows1 rows2 rows3 v.
+  ((!x. (r1 v = SOME x) ==> (r2 v = SOME x)) /\
+   (IS_SOME (r1 v) ==> EVERY (\row. (row v = NONE)) rows2)) ==>
+  (PMATCH v (rows1 ++ (r1 :: rows2) ++ (r2 :: rows3)) =
+   PMATCH v (rows1 ++ rows2 ++ (r2 :: rows3)))``,
+
+REPEAT STRIP_TAC THEN
+SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_APPEND_SEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM] THEN
+
+Cases_on `?r. MEM r rows1 ∧ IS_SOME (r v)` THEN (
+  ASM_REWRITE_TAC []
+) THEN
+Cases_on `?r. MEM r rows2 ∧ IS_SOME (r v)` THEN (
+  ASM_REWRITE_TAC []
+) THENL [
+  SIMP_TAC std_ss [PMATCH_def] THEN
+  Cases_on `r1 v` THEN (
+    FULL_SIMP_TAC std_ss [EVERY_MEM]
+  ) THEN
+  RES_TAC THEN 
+  FULL_SIMP_TAC std_ss [],
+
+  Cases_on `r1 v` THEN (
+    ASM_SIMP_TAC std_ss []
+  ) THEN
+  FULL_SIMP_TAC std_ss [PMATCH_def]
+]);
+
+val PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS = store_thm (
+  "PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS",
+``!p g r p' g' r' rows1 rows2 rows3 v.
+  ((!x. (v = p x) /\ (g x) ==> (?x'. (p x = p' x') /\ (g' x'))) /\
+   (!x x'. ((v = p x) /\ (p x = p' x') /\ g x /\ g' x') ==>
+           (r x = r' x')) /\
+   (!x. ((v = p x) /\ (g x)) ==> EVERY (\row. (row (p x) = NONE)) rows2)) ==>
+  (PMATCH v (rows1 ++ (PMATCH_ROW p g r :: rows2) ++ (PMATCH_ROW p' g' r' :: rows3)) =
+   PMATCH v (rows1 ++ rows2 ++ (PMATCH_ROW p' g' r' :: rows3)))``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED THEN
+SIMP_TAC std_ss [PMATCH_ROW_def, optionTheory.some_def,
+  PMATCH_ROW_COND_def, IS_SOME_OPTION_MAP] THEN
+Cases_on `?x. (p x = v) ∧ g x` THEN (
+  ASM_SIMP_TAC std_ss []
+) THEN
+REPEAT STRIP_TAC THENL [
+  PROVE_TAC[],
+
+  SELECT_ELIM_TAC THEN
+  CONJ_TAC THEN1 PROVE_TAC[] THEN
+  REPEAT STRIP_TAC THEN
+  SELECT_ELIM_TAC THEN
+  PROVE_TAC[],
+
+  FULL_SIMP_TAC std_ss [] THEN
+  METIS_TAC[]
+]);
+
+
 val PMATCH_REMOVE_ARB = store_thm ("PMATCH_REMOVE_ARB",
 ``(!x. r x = ARB) ==>
   (PMATCH v (SNOC (PMATCH_ROW p g r) rows) =
@@ -620,8 +722,12 @@ Induct_on `rows` THENL [
   ASM_SIMP_TAC list_ss [PMATCH_def]
 ])
 
-(* ARB rows can be removed, since a match failiure is the same
-   as ARB *)
+(* Introduce explicit catch-all at end *)
+val PMATCH_INTRO_CATCHALL = store_thm ("PMATCH_INTRO_CATCHALL",
+``PMATCH v rows = PMATCH v (SNOC (PMATCH_ROW (\_0. _0) (\_0. T) (\_0. ARB)) rows)``,
+SIMP_TAC std_ss [PMATCH_REMOVE_ARB]);
+
+
 val PMATCH_REMOVE_ARB_NO_OVERLAP = store_thm ("PMATCH_REMOVE_ARB_NO_OVERLAP",
 ``!v p g r rows1 rows2.
   ((!x. (r x = ARB)) /\
@@ -630,19 +736,10 @@ val PMATCH_REMOVE_ARB_NO_OVERLAP = store_thm ("PMATCH_REMOVE_ARB_NO_OVERLAP",
    PMATCH v (rows1 ++ rows2))``,
 
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE (Induct_on `rows1`) THEN (
-  ASM_SIMP_TAC list_ss [PMATCH_def]
-) THEN
-
-Cases_on `PMATCH_ROW p g r v` THEN (
-  ASM_SIMP_TAC std_ss []
-) THEN
-IMP_RES_TAC PMATCH_ROW_EQ_SOME THEN
-Q.PAT_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `x'`) THEN
-FULL_SIMP_TAC std_ss [PMATCH_ROW_COND_def] THEN
-Induct_on `rows2` THEN (
-  ASM_SIMP_TAC list_ss [PMATCH_def, PMATCH_INCOMPLETE_def]
-))
+ONCE_REWRITE_TAC [PMATCH_INTRO_CATCHALL] THEN
+SIMP_TAC list_ss [SNOC_APPEND] THEN
+MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS THEN
+ASM_SIMP_TAC std_ss [])
 
 
 

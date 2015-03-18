@@ -28,6 +28,9 @@ fun make_gen_conv_ss c name ssl = let
 
 fun has_subterm p t = ((find_term p t; true) handle HOL_ERR _ => false)
 
+(* like proof, but less verbose, since we expect that it might fail *)
+val prove_attempt = Lib.with_flag (Feedback.emit_MESG, false) prove
+
 (* We have a problem with conversions that loop in a fancy way.
    They add some pattern matching on the input variables and
    in the body the original term with renamed variables. The
@@ -421,6 +424,111 @@ end
 
 fun PMATCH_ELIM_CONV t = 
   case_pmatch_eq_prove t (pmatch2case t)
+
+
+(***********************************************)
+(* removing redundant rows                     *)
+(***********************************************)
+
+(*
+val rc_arg = ([], NONE)
+
+set_trace "parse deep cases" 0
+
+val t = ``
+   CASE l OF [
+     ||. [] ~> 0;
+     || (x,y). x::y::x::y::_ ~> (x + y);
+     ||! x::x::x::x::_ when (x > 10) ~> x;
+     ||! x::x::x::x::x::_ ~> 9;
+     ||. [] ~> 1;
+     ||! x::x::x::y::_ ~> (x + x + x);
+     || x. x::_ ~> 1;
+     ||! x::y::z::_ ~> (x + x + x)
+   ]``
+
+*)
+
+fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
+  val (v, rows) = dest_PMATCH t
+
+  (* get pats with fresh vars to do a quick prefiltering *)
+  val pats_unique = Lib.enumerate 0 (Lib.mapfilter (fn r => let
+    val (p, _, _) = dest_PMATCH_ROW r 
+    val (vars_tm, pb) = pairSyntax.dest_pabs p
+    val vars = pairSyntax.strip_pair vars_tm
+    val s = List.map (fn v => (v |-> genvar (type_of v))) vars
+    val pb' = subst s pb
+  in
+    pb'
+  end) rows)
+
+  (* get all pairs, first component always appears before second *)
+  val candidates = let
+    fun aux acc l = case l of
+       [] => acc
+     | (x::xs) => aux ((List.map (fn y => (x, y)) xs) @ acc) xs
+  in
+    aux [] pats_unique
+  end
+
+  (* quick filter on matching *)
+  val candidates_match = let
+     fun does_match ((_, p1), (_, p2)) =
+        can (match_term p1) p2
+  in
+     List.filter does_match candidates
+  end
+
+  (* filtering finished, now try it for real *)
+  val cands = List.map (fn ((p1, _), (p2, _)) => (p1, p2)) candidates_match
+  (* val (r_no1, r_no2) = el 1 cands *)
+  fun try_pair (r_no1, r_no2) = let
+    val tm0 = let
+      val rows1 = List.take (rows, r_no1)
+      val r1 = List.nth (rows, r_no1)
+      val rows_rest = List.drop (rows, r_no1+1)
+      val rows2 = List.take (rows_rest, (r_no2 - r_no1 - 1))
+      val r2 = List.nth (rows, r_no2)
+      val rows3 = List.drop (rows_rest, r_no2 - r_no1)
+
+      val rows1_tm = listSyntax.mk_list (rows1, type_of r1)
+      val rows2_tm = listSyntax.mk_list (rows2, type_of r1)
+      val r1rows2_tm = listSyntax.mk_cons (r1, rows2_tm) 
+      val rows3_tm = listSyntax.mk_list (rows3, type_of r1)
+      val r2rows3_tm = listSyntax.mk_cons (r2, rows3_tm) 
+ 
+      val arg = listSyntax.list_mk_append [rows1_tm, r1rows2_tm, r2rows3_tm]
+    in
+      mk_PMATCH v arg
+    end
+
+    val thm0 = FRESH_TY_VARS_RULE PMATCH_ROWS_DROP_REDUNDANT_PMATCH_ROWS
+    val thm1 = PART_MATCH (lhs o rand) thm0 tm0
+
+    val pre = rand (rator (concl thm1))
+    val pre_thm = prove_attempt (pre, rc_tac rc_arg)
+    val thm2 = MP thm1 pre_thm
+
+    val t_eq_thm = prove (mk_eq (t, lhs (concl thm2)),
+       CONV_TAC (DEPTH_CONV listLib.APPEND_CONV) THEN
+       rc_tac rc_arg)
+
+    val thm3 = TRANS t_eq_thm thm2
+    val c = RATOR_CONV (RAND_CONV listLib.APPEND_CONV) THENC
+            listLib.APPEND_CONV
+    val thm4 = CONV_RULE (RHS_CONV (RAND_CONV 
+      c)) thm3
+  in
+    thm4
+  end  
+in
+  Lib.tryfind try_pair ((2, 3)::cands)
+end handle HOL_ERR _ => raise UNCHANGED
+
+fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL rc_arg = REPEATC (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg)
+fun PMATCH_REMOVE_REDUNDANT_CONV_GEN ssl = PMATCH_REMOVE_REDUNDANT_CONV_GENCALL (ssl, NONE)
+val PMATCH_REMOVE_REDUNDANT_CONV = PMATCH_REMOVE_REDUNDANT_CONV_GEN []
 
 
 (***********************************************)
@@ -1229,6 +1337,7 @@ fun PMATCH_SIMP_CONV_GENCALL_AUX rc_arg =
 REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
   CHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
+  CHANGED_CONV (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
@@ -1482,7 +1591,7 @@ in
         val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS
         val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
         val pre = fst (dest_imp (concl thm01))
-        val pre_thm = Lib.with_flag (Feedback.emit_MESG, false) prove (pre, rc_tac rc_arg)
+        val pre_thm = prove_attempt (pre, rc_tac rc_arg)
       in
         (MP thm01 pre_thm, true)
       end handle HOL_ERR _ => let
