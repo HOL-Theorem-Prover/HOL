@@ -1241,7 +1241,6 @@ in
 end
 end; (* local *)
 
-
 (* ----------------------------------------------------------------------
     Save dependencies in a theorem:
     - Give it a dependency identifier.
@@ -1317,5 +1316,6 @@ fun save_dep thy (th as (THM(t,h,c))) =
     thm_order := (!thm_order) + 1; 
     THM(Tag.set_dep dep t,h,c)
   end
+
 
 end (* Thm *)
