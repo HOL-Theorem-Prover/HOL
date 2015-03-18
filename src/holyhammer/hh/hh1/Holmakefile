@@ -44,4 +44,4 @@ hh_write.cmx: hh_write.ml
 	ocamlopt -c $<
 
 clean:
-	rm -f *cmx *cmi *.o *~
+	rm -f *cmx *cmi *.o

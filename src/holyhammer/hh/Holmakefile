@@ -43,4 +43,4 @@ predict_knn.cmx: predict_knn.ml
 	ocamlopt -c -I hh1 $<
 
 clean:
-	rm -f hh *cmx *cmi *_lexer.ml *_parse.ml *.o *~ *.mli
+	rm -f hh *cmx *cmi *_lexer.ml *_parse.ml *.o *.mli
