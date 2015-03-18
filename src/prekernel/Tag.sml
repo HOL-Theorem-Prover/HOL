@@ -28,6 +28,7 @@ fun dest_tag (TAG(D,O,A)) = (O, map Nonce.dest A)
 fun oracles_of (TAG(_,O,_)) = O
 fun axioms_of  (TAG(_,_,A)) = A
 fun dep_of (TAG(D,_,_)) = D
+fun set_dep d (TAG(_,O,A)) = TAG(d,O,A)
 
 val empty_tag = TAG (empty_dep,[],[])
 val disk_only_tag  = TAG (empty_dep,["DISK_THM"],[])
@@ -50,65 +51,66 @@ fun read s =
  end;
 
 (*---------------------------------------------------------------------------
-   Tag a theorem with the flag DEP_NAMED when it is saved. 
-   Distinguish between saved and passed dependency trees.
- ----------------------------------------------------------------------------*)
-
-fun give_dep d (TAG(_,O,A)) = TAG(d,O,A)
-
-(*---------------------------------------------------------------------------
-   Merge two tags. 
-   Tracking conjuncts' dependencies require to treat specially CONJ and 
-   CONJUNCT. Dependencies are not flattened in SPEC, GEN and Spec as we will 
-   track conjuncts also under the quantifiers.
+   Tracks the extra information passed through the inference rules.
    Read tags from disk.
  ----------------------------------------------------------------------------*)
 
-local fun smerge t1 [] = t1
-        | smerge [] t2 = t2
-        | smerge (t as ["DISK_THM"]) ["DISK_THM"] = t
-        | smerge (l0 as s0::rst0) (l1 as s1::rst1) =
-            case String.compare (s0,s1)
-             of LESS    => s0::smerge rst0 l1
-              | GREATER => s1::smerge l0 rst1
-              | EQUAL   => s0::smerge rst0 rst1
-in
+local 
 
-fun collapse_dep (TAG(D,O,A)) = TAG(DEP_UNSAVED(collapse_deptree D),O,A)
+val merge_axiom = Lib.union
 
-fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
+fun merge_oracle t1 [] = t1
+  | merge_oracle [] t2 = t2
+  | merge_oracle (t as ["DISK_THM"]) ["DISK_THM"] = t
+  | merge_oracle (l0 as s0::rst0) (l1 as s1::rst1) =
+      case String.compare (s0,s1) of 
+        LESS    => s0::merge_oracle rst0 l1
+      | GREATER => s1::merge_oracle l0 rst1
+      | EQUAL   => s0::merge_oracle rst0 rst1
+
+fun collapse_dep d = case d of
+    DEP_SAVED(did,dt1,dt2) => DEP_UNSAVED(collapse_deptree dt1) 
+  | DEP_UNSAVED dt         => DEP_UNSAVED(collapse_deptree dt)
+
+fun merge_dep d1 d2 =
   let 
     val (dt1,dt2) = (deptree_of d1, deptree_of d2) 
     val dt = mk_deptree (dt1,dt2)
-    val d = DEP_UNSAVED(collapse_deptree dt) 
   in
-    TAG(d, smerge o1 o2, Lib.union ax1 ax2)
+    DEP_UNSAVED(collapse_deptree dt) 
   end
 
-fun merge_conj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
-  let 
-    val (dt1,dt2) = (deptree_of d1, deptree_of d2) 
-    val d = DEP_UNSAVED(mk_deptree (dt1,dt2)) 
-  in
-    TAG(d, smerge o1 o2, Lib.union ax1 ax2)
-  end
+fun trackconj_dep d1 d2 = 
+  DEP_UNSAVED(mk_deptree (deptree_of d1, deptree_of d2))
 
-fun merge_conjunct lr (TAG(D,O,A)) = 
-  case (dt as deptree_of D) of
+fun trackconjunct_dep lr D =
+  case deptree_of D of
     DEP_NODE(dt1,dt2) => (
                          case lr of
                            DEP_LEFT  => DEP_UNSAVED dt1
                          | DEP_RIGHT => DEP_UNSAVED dt2
                          )
-  | DEP_LEAF _        => DEP_UNSAVED dt
+  | dt                => DEP_UNSAVED dt (* DEP_LEAF case *)
 
-fun merge_conjunct1 tg = merge_conjunct DEP_LEFT tg
-fun merge_conjunct2 tg = merge_conjunct DEP_RIGHT tg
+in (* in local *)
+
+fun collapse (TAG(D,O,A)) = TAG(collapse_dep D,O,A)
+
+fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
+ TAG(merge_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
+
+fun trackconj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
+  TAG(trackconj_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
+
+fun trackconjunct lr (TAG(D,O,A)) = TAG(trackconjunct_dep lr D, O, A)
+
+fun trackconjunct1 tg = trackconjunct DEP_LEFT tg
+fun trackconjunct2 tg = trackconjunct DEP_RIGHT tg
 
 fun read_disk_tag (d,[]) = TAG (read_dep d, ["DISK_THM"], [])
-  | read_disk_tag (d,sl) = TAG (read_dep d, smerge ["DISK_THM"] sl, [])
+  | read_disk_tag (d,sl) = TAG (read_dep d, merge_oracle ["DISK_THM"] sl, [])
 
-end;
+end; (* end local *)
 
 
 (*---------------------------------------------------------------------------

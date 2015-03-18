@@ -1251,8 +1251,9 @@ end; (* local *)
 fun saved_deptree dt thm =
   if is_forall (concl thm)
     then maxsplit_deptree ((SPEC_ALL thm),dt)
-  else if is_conj (concl thm) then case dt of
-    | DEP_NODE(dt1,dt2) => DEP_NODE(
+  else if is_conj (concl thm) then 
+    case dt of
+      DEP_NODE(dt1,dt2) => DEP_NODE(
                              saved_deptree dt1 (CONJUNCT1 thm), 
                              saved_deptree dt2 (CONJUNCT2 thm)
                               )
@@ -1262,18 +1263,8 @@ fun saved_deptree dt thm =
                            )
   else dt
 
-fun new_deptree did al thm =
-  if is_forall (concl thm)
-    then new_deptree did (SPEC_ALL thm)
-  else if is_conj (concl thm) 
-       then DEP_NODE(
-              new_deptree did (DEP_LEFT :: al) (CONJUNCT1 thm),
-              new_deptree did (DEP_RIGHT :: al) (CONJUNCT2 thm)
-            )
-  else DEP_LEAF [DEP_SORT (did,al)]
-
 (* Magic : this reference is automatically reset to 0 each time you create 
-   a theory which is convenient *)
+   a theory, which is convenient. *)
 val thm_order = ref 0
 
 fun save_dep thy th = 
