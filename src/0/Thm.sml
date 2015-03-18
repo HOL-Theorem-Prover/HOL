@@ -1250,7 +1250,6 @@ end; (* local *)
     - Create dependencies that will be given to its children.
    ---------------------------------------------------------------------- *)
 
-(* TODO:  find a way to reuse is_forall and is_conj, SPEC_ALL *)
 local 
 
 fun dep_is_forall tm =
