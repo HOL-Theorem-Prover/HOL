@@ -19,10 +19,8 @@ sig
      val trackconjunct1 : tag -> tag
      val trackconjunct2 : tag -> tag
 
-     (* Reading *)
+     (* Reading and printing *)
      val read_disk_tag : Dep.depdisk * string list -> tag
-
-     (* Printing *)
      val pp_tag     : Portable.ppstream -> tag -> unit
      val pp_to_disk : Portable.ppstream -> tag -> unit
 

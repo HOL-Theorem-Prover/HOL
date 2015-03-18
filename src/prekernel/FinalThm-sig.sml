@@ -120,9 +120,10 @@ sig
 
   val disk_thm      : (depdisk * string list) * term list -> thm
 
-  (* Tracking dependencies *)
+  (* Saving dependencies between conjuncts *)
   
-  val give_depid_thm : string -> thm -> thm (* on Theory.save_thm *)
+
+  val save_dep : string -> thm -> thm 
 
 
 end;

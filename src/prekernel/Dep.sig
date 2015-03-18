@@ -39,6 +39,8 @@ sig
 
      (* Tracking dependencies in inference rules *)
      val collapse_deptree : deptree -> deptree
+     (* When saving a theorem *)      
+     val starting_deptree : depid * deptree -> deptree
 
      (* Printing and reading *)
      val number_depaddress : depaddress -> string

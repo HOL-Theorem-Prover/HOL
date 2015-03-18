@@ -253,17 +253,18 @@ fun read_leaf (a,l) =
 fun read_deptree dt = fst (build_tree (map read_leaf dt) [])
 
 (* Replace dependencies by conjuncts identifiers (dep_conj) *)
-fun new_deptree a (did,dt) = case dt of
+fun starting_deptree_aux a (did,dt) = case dt of
     DEP_NODE(dt1,dt2) => DEP_NODE(
-                           new_deptree (DEP_LEFT :: a) (did,dt1),
-                           new_deptree (DEP_RIGHT :: a) (did,dt2)
+                           starting_deptree_aux (DEP_LEFT :: a) (did,dt1),
+                           starting_deptree_aux (DEP_RIGHT :: a) (did,dt2)
                          )
   | DEP_LEAF _        => DEP_LEAF [(did,a)]
 
+fun starting_deptree (did,dt) = starting_deptree_aux [] (did,dt) 
 
 fun read_dep (did,dt) = 
   let val dt' = read_deptree dt in
-    DEP_SAVED(did, new_deptree [] (did,dt'), dt')
+    DEP_SAVED(did, starting_deptree (did,dt'), dt')
   end
 
 end
