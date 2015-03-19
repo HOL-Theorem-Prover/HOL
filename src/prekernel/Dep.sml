@@ -88,14 +88,17 @@ fun dest_depleaf (DEP_LEAF dcl) = dcl
 
 (* used when a rule modifies the top-level structure of conjuncts *)
 fun collapse_deptree deptree = 
-  let 
-    val l = ref [] 
-    fun loop dt = case dt of
-      DEP_LEAF dcl      => l := dcl :: (!l)
-    | DEP_NODE(dt1,dt2) => (loop dt1; loop dt2)
-  in 
-    (loop deptree; DEP_LEAF (mk_set (List.concat (!l))))
-  end
+  case deptree of
+    DEP_LEAF _ => deptree (* shortcut: leaf dependencies are already a set *)  
+  | DEP_NODE _ =>
+      let 
+        val l = ref [] 
+        fun loop dt = case dt of
+          DEP_LEAF dcl      => l := dcl :: (!l)
+        | DEP_NODE(dt1,dt2) => (loop dt1; loop dt2)
+      in 
+        (loop deptree; DEP_LEAF (mk_set (List.concat (!l))))
+      end
 
 (*---------------------------------------------------------------------------
    Printing dependencies to disk. 
