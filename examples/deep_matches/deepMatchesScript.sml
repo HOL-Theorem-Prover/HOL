@@ -886,13 +886,13 @@ val GUARDS_ELIM_THM = store_thm ("GUARDS_ELIM_THM",
   PMATCH v (rs1++(PMATCH_ROW p g r)::rs2) =
   PMATCH v (rs1++(PMATCH_ROW p (\x. T) (\x.
    if g x then r x else
-   PMATCH v rs2))::rs2))``,
+   PMATCH (p x) rs2))::rs2))``,
 
+REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [PMATCH_APPEND_SEM] THEN
 Cases_on `?r. MEM r rs1 /\ IS_SOME (r v)` THEN (
   ASM_REWRITE_TAC[]
 ) THEN
-REPEAT STRIP_TAC THEN 
 SIMP_TAC std_ss [PMATCH_EVAL, PMATCH_ROW_COND_def] THEN
 Tactical.REVERSE (Cases_on `?x. p x = v`) THEN (
   FULL_SIMP_TAC std_ss []
