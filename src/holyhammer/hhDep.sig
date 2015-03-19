@@ -7,10 +7,11 @@ sig
   val exists_depid    : Dep.depid -> bool
   val exists_depconj  : Dep.depconj -> bool
  
-  val hh_fetch_conj   : (Thm.thm * string) -> Thm.thm
   val dcl_of_thm      : Thm.thm -> Dep.depconj list
   val deptree_of_thm  : Thm.thm -> Dep.deptree
-  val string_of_depconj  : Dep.depconj -> string
+  
+  (* specific to holyhammer *)
+  val hh_fetch_conj      : (Thm.thm * string) -> Thm.thm
   val string_of_depconjl : Dep.depconj list -> string
 
 end

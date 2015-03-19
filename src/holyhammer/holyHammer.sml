@@ -35,7 +35,7 @@ fun export cj =
   in
     OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh");
     (* write loaded theories *)
-    write_thf_thyl thy_dir thyl;
+    write_hh_thyl thy_dir thyl;
     (* write the conjecture in thf format *)
     write_conjecture (thy_dir ^ "/conjecture") cj;
     (* write the dependencies between theories *)

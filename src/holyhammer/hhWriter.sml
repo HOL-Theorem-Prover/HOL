@@ -12,7 +12,7 @@ structure hhWriter :> hhWriter =
 struct
 
 
-open HolKernel Abbrev boolLib TextIO Tag HhDep
+open HolKernel Abbrev boolLib TextIO Tag hhDep Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
@@ -32,8 +32,8 @@ val const_names = ref (dempty KernelSig.name_compare)
 val var_names = ref (dempty Term.compare)
 val tyvar_names = ref (dempty Type.compare)
 
-val writeconj_names = ref (dempty depconj_compare) (* symmetric dictionaries *)
-val readconj_names = ref (dempty String.compare)
+val writehh_names = ref (dempty depconj_compare) (* symmetric dictionaries *)
+val readhh_names = ref (dempty String.compare)
 
 (* Keeping track of which names are already used to prevent clashes. *)
 val used_names = ref (dempty String.compare)
@@ -100,23 +100,24 @@ fun declare_perm dict {Thy,Name} =
   end
 
 (* theorems *)
-
-fun declare_perm_thm (thy,n) thmname (conj,a) =
+fun declare_perm_thm ((thy,n),a) name  =
   let 
     val conjname = 
-      hh_escape thy ^ "/" ^ hh_escape (thmname ^ "_" ^ number_address a)
-    val (s, new) = 
-      variant_name_dict conjname (!used_names) 
+      hh_escape thy ^ "/" ^ hh_escape (name ^ "_" ^ number_depaddress a)
+    val (s, new) = variant_name_dict conjname (!used_names) 
   in
     writehh_names := dadd ((thy,n),a) s (!writehh_names); 
     readhh_names  := dadd s ((thy,n),a) (!readhh_names);
-    used_names := new; (thm,s)
+    used_names := new; 
+    s
   end
 
 fun declare_fixed dict {Thy,Name} s =
-  (dict := dadd {Thy=Thy,Name=Name} s (!dict); 
-   used_names := dadd s 0 (!used_names);
-   s)
+  (
+  dict := dadd {Thy=Thy,Name=Name} s (!dict); 
+  used_names := dadd s 0 (!used_names);
+  s
+  )
 
 fun declare_temp_list get_name dict l =
   let 
@@ -278,8 +279,8 @@ fun othm (name,role,tm) =
     ) 
   end
 
-fun othm_theorem ((name,conj),role) = 
-  othm (name,role,concl (GEN_ALL (DISCH_ALL conj)))
+fun othm_theorem (name,role,thm) = 
+  othm (name,role,concl (GEN_ALL (DISCH_ALL thm)))
 
 (* conjecture *)
 fun othm_conjecture conjecture = 
@@ -288,10 +289,13 @@ fun othm_conjecture conjecture =
 
 
 (* Dependencies *)
-fun odep ((name,conj),role) = 
-  let fun os_deps s = output (!oc_deps,s) in 
+fun odep (name,dcl) = 
+  let 
+    fun os_deps s = output (!oc_deps,s) 
+    fun name_dc dc = dfind dc (!writehh_names)
+  in 
     os_deps (name ^ " ");
-    oiter_deps " " os_deps (dcl_of_thm conj);
+    oiter_deps " " os_deps (mapfilter name_dc dcl); (* A dependency may be erased *)
     os_deps "\n"
   end
 
@@ -300,30 +304,30 @@ fun odep ((name,conj),role) =
  ----------------------------------------------------------------------------*)
 local
 
-fun conjuncts a thm =
-  if is_forall (concl thm)
-    then conjuncts a (SPEC_ALL thm)
-  else if is_conj (concl thm)
-    then (conjuncts (DEP_LEFT :: a) (CONJUNCT1 thm) @ 
-          conjuncts (DEP_RIGHT :: a) (CONJUNCT2 thm))
-  else [(thm,a)]
+fun conjuncts a dt thm = case dt of
+    DEP_NODE(dt1,dt2) => 
+      conjuncts (DEP_LEFT  :: a) dt1 (CONJUNCT1 (SPEC_ALL thm)) @ 
+      conjuncts (DEP_RIGHT :: a) dt2 (CONJUNCT2 (SPEC_ALL thm))
+  | DEP_LEAF dcl      => [(thm,a,dcl)] 
 
 in
 
-fun export_thm thy ((name,thm),role) =
-  (
-  let 
-    val l = conjuncts thm 
-    val f (conj,a) = 
-      let val conjname = declare_perm_thm (thy,n) name (conj,a) in
-        ((conjname,conj),role)
-      end
-    val thml = map f l 
+fun export_thm ((name,thm),role) =
+  let
+    val d = (dep_of o tag) thm
+    val did = depid_of_dep d
+    val dt = saveddeptree_of d
+    val conjl1 = conjuncts [] dt thm
+    fun f (conj,a,dcl) = (declare_perm_thm (did,a) name, role, conj, dcl)
+    val conjl2 = map f conjl1
+    fun f_thm (s,r,c,dcl) = (s,r,c)
+    fun f_dep (s,r,c,dcl) = (s,dcl)
+    val conjl_thm = map f_thm conjl2
+    val conjl_dep = map f_dep conjl2
   in
-    app othm_theorem thml; 
-    app odep thml
+    app othm_theorem conjl_thm;
+    app odep conjl_dep
   end
-  )
 
 end
 (*---------------------------------------------------------------------------
@@ -354,12 +358,12 @@ fun write_hh_thy folder thy =
       val axl = map (fn x => (x,"ax")) (DB.theorems thy)
       val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
       fun compare ((_,th1),_) ((_,th2),_) =
-        let val f = depnumber_of o depid_of o depsort_of o dep_of o Thm.tag in
+        let val f = depnumber_of o depid_of_dep o dep_of o Thm.tag in
           f th1 < f th2 
         end
       val thml = sort compare (axl @ defl)
     in
-      app (export_thm thy) thml
+      app export_thm thml
     end
     )
   end;              
@@ -440,16 +444,14 @@ val minimize_flag = ref true
 
 fun minimize_loop l1 l2 cj =
   if null l2 then l1 else
-    let val l = l1 @ (tl l2) in
-      if can (time_metis  cj) 2.0
-      then minimize_loop axl1 (tl axl2) cj
-      else minimize_loop (hd axl2 :: axl1) (tl axl2) cj
-    end
+    if can (time_metis (map fst (l1 @ tl l2)) cj) 2.0
+    then minimize_loop l1 (tl l2) cj
+    else minimize_loop (hd l2 :: l1) (tl l2) cj
 
-fun minimize axl cj =
-  if can (time_metis (map fetch_conj_internal axl) cj) 2.0 
-  then minimize_loop [] axl cj
-  else axl
+fun minimize l cj =
+  if can (time_metis (map fst l) cj) 2.0 
+  then (print "Minimizing...\n"; minimize_loop [] l cj)
+  else l
 
 (* Parsing and reconstruction *) 
 fun reconstruct axl cj =
@@ -457,17 +459,12 @@ fun reconstruct axl cj =
     (* reserved theorems are not interesting to Metis *)
     val axl1 = filter (fn x => not (mem x reserved_names)) axl 
     val dcl1 = map (fn x => dfind x (!readhh_names)) axl1
-    val axl_dcl1 = map (fn x => (thm_of_depconj x, x)) dcl1
-    val axl_dcl2 = 
-      if !minimize_flag 
-      then (print "Minimizing...\n"; minimize axl_dcl cj) 
-      else axl_dcl dcl1
-    val s    = String.concatWith "," (name_depconjl axl3)
-    val axl4 = map fetch_conj_internal axl3
+    val l1 = map (fn x => (thm_of_depconj x, x)) dcl1
+    val l2 = if !minimize_flag then minimize l1 cj else l1
   in
-    print ("val lemmas = " ^ print_depconjl depconjl ^ "\n");
-    ignore (time_metis axl4 cj 30.0 handle _ => 
-              raise ERR "reconstruct" "Metis can't reconstruct the proof.")
+    print ("val lemmas = " ^ string_of_depconjl (map snd l2) ^ "\n");
+    ignore (time_metis (map fst l2) cj 30.0)
+      handle _ => raise ERR "reconstruct" "Metis timed out."
   end
 
 fun replay_atpfile (atp_status,atp_out) conjecture =
