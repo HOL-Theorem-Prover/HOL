@@ -15,7 +15,7 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term Tag
+open Feedback Lib Term Tag Dep
 
 type 'a set = 'a HOLset.set;
 type depdisk =        
