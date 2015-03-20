@@ -557,7 +557,7 @@ fun new_axiom (name,tm) =
     end
 
 fun store_definition(name, def) =
-    let 
+    let
       val def' = save_dep (CTname()) def (* Tracking dependencies *)
       val ()  = check_name true ("store_definition",name)
     in
