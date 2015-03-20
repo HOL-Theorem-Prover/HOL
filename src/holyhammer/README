@@ -3,8 +3,11 @@ HOLyHammer is a machine learning for theorem proving framework.
 Requires:
 
 * OCaml >= 3.12 (tested also with 4.01.0)
+    sudo apt-get install ocaml 
 * g++ >= 4.8 (recent version with C++11 support) 
-    Please change the name of g++ in predict/Holmake according to your version
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt-get update
+    sudo apt-get install g++-4.8
 * perl (only if you use strategy scheduling for eprover)
 
 Install holyhammer:
