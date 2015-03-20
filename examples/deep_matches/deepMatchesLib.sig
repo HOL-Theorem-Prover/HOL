@@ -66,11 +66,11 @@ sig
   (* PMATCH_SIMP_CONV consists of various
      component conversions. These can be used
      independently as well. *)
-  val PMATCH_REMOVE_ARB_CONV : conv
-  val PMATCH_REMOVE_ARB_CONV_GEN : ssfrag list -> conv
-
   val PMATCH_REMOVE_REDUNDANT_CONV : conv
   val PMATCH_REMOVE_REDUNDANT_CONV_GEN : ssfrag list -> conv
+
+  val PMATCH_REMOVE_SUBSUMED_CONV : bool -> conv
+  val PMATCH_REMOVE_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
 
   val PMATCH_CLEANUP_PVARS_CONV : conv
 

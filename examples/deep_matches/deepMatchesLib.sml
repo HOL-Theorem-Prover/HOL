@@ -145,6 +145,37 @@ fun rc_conv (gl, callback_opt) = REPEATC (
 fun rc_tac (gl, callback_opt) =
   CONV_TAC (rc_conv (gl, callback_opt))
 
+fun rc_elim_precond rc_arg thm = let
+  val pre = rand (rator (concl thm))
+  val pre_thm = prove_attempt (pre, rc_tac rc_arg)
+  val thm2 = MP thm pre_thm
+in
+  thm2
+end
+
+(* evaluate APPEND on both sides to get the theorem back in shape *)
+
+fun fix_appends rc_arg l thm = let
+  val t_eq_thm = prove (mk_eq (l, lhs (concl thm)),
+     CONV_TAC (DEPTH_CONV listLib.APPEND_CONV) THEN
+     rc_tac rc_arg)
+
+  val thm2 = TRANS t_eq_thm thm
+
+  fun my_append_conv t = let
+    val _ = if listSyntax.is_append t then () else raise UNCHANGED
+  in
+    (BINOP_CONV (TRY_CONV my_append_conv) THENC
+     listLib.APPEND_CONV) t
+  end
+
+  val thm3 = CONV_RULE (RHS_CONV (RAND_CONV my_append_conv)) thm2
+    handle HOL_ERR _ => thm2
+         | UNCHANGED => thm2
+in
+  thm3
+end
+
 fun PMATCH_ROW_ARGS_CONV c =
    RATOR_CONV (RAND_CONV (TRY_CONV c)) THENC
    RATOR_CONV (RATOR_CONV (RAND_CONV (TRY_CONV c))) THENC
@@ -450,9 +481,7 @@ val t = ``
 
 *)
 
-fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
-  val (v, rows) = dest_PMATCH t
-
+fun compute_row_pat_pairs rows = let
   (* get pats with fresh vars to do a quick prefiltering *)
   val pats_unique = Lib.enumerate 0 (Lib.mapfilter (fn r => let
     val (p, _, _) = dest_PMATCH_ROW r 
@@ -472,6 +501,14 @@ fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
   in
     aux [] pats_unique
   end
+in
+  candidates
+end
+
+
+fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
+  val (v, rows) = dest_PMATCH t
+  val candidates = compute_row_pat_pairs rows
 
   (* quick filter on matching *)
   val candidates_match = let
@@ -507,24 +544,13 @@ fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg t = let
     val thm0 = FRESH_TY_VARS_RULE PMATCH_ROWS_DROP_REDUNDANT_PMATCH_ROWS
     val thm1 = PART_MATCH (lhs o rand) thm0 tm0
 
-    val pre = rand (rator (concl thm1))
-    val pre_thm = prove_attempt (pre, rc_tac rc_arg)
-    val thm2 = MP thm1 pre_thm
-
-    val t_eq_thm = prove (mk_eq (t, lhs (concl thm2)),
-       CONV_TAC (DEPTH_CONV listLib.APPEND_CONV) THEN
-       rc_tac rc_arg)
-
-    val thm3 = TRANS t_eq_thm thm2
-    val c = RATOR_CONV (RAND_CONV listLib.APPEND_CONV) THENC
-            listLib.APPEND_CONV
-    val thm4 = CONV_RULE (RHS_CONV (RAND_CONV 
-      c)) thm3
+    val thm2 = rc_elim_precond rc_arg thm1
+    val thm3 = fix_appends rc_arg t thm2
   in
-    thm4
+    thm3
   end  
 in
-  Lib.tryfind try_pair ((2, 3)::cands)
+  Lib.tryfind try_pair cands
 end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_REMOVE_REDUNDANT_CONV_GENCALL rc_arg = REPEATC (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL_SINGLE rc_arg)
@@ -533,75 +559,112 @@ val PMATCH_REMOVE_REDUNDANT_CONV = PMATCH_REMOVE_REDUNDANT_CONV_GEN []
 
 
 (***********************************************)
-(* removing ARB rows                           *)
+(* removing subsumed rows                       *)
 (***********************************************)
-
-(* when converting CASE expressions into PMATCH,
-   often ARB rows are introduced for the not
-   covered cases. These ARB rows are
-   not needed for PMATCH and can be removed. *)
 
 (*
 val rc_arg = ([], NONE)
 
 set_trace "parse deep cases" 0
-val t = convert_case ``case x of NONE => 0``
+val t = case2pmatch false ``case x of NONE => 0``
 
-val t = convert_case ``case (x, y, z) of
+val t = case2pmatch false ``case (x, y, z) of
    (0, y, z) => 2
  | (x, NONE, []) => x
  | (x, SOME y, l) => x+y``
 
+val t =
+   ``CASE (x,y,z) OF [
+    || v1. (0,v1) ~> 2;
+    || v4. (SUC v4,NONE,[]) ~> (SUC v4);
+    || (v4,v10,v11). (SUC v4,NONE,v10::v11) ~> ARB;
+    || v4. (v4,NONE,_) ~> v4;
+    || (v4,v10,v11). (0,SOME _ ,_) ~> ARB;
+    || (v4,v9,v8). (SUC v4,SOME v9,v8) ~> (SUC v4 + v9)
+  ]``
+
 *)
 
-fun PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg t = let
+(* When removing subsumed rows, i.e. rows that can be dropped,
+   because a following rule covers them, we can sometimes drop rows with
+   right-hand-side ARB, because PMATCH v [] evalutates to ARB.
+   This is semantically fine, but changes the users-view. The resulting
+   case expression might e.g. not be exhaustive any more. This can
+   also cause trouble for code generation. Therefore the parameter
+   [exploit_match_exp] determines, whether this optimisation is performed. *)
+fun PMATCH_REMOVE_SUBSUMED_CONV_GENCALL_SINGLE 
+  exploit_match_exp rc_arg t = let
   val (v, rows) = dest_PMATCH t
-  val rows_rev = List.rev rows
+  val candidates = compute_row_pat_pairs rows
 
-  val i_rev = index (fn row => (
-    is_arb (#4(dest_PMATCH_ROW_ABS row)))
-    handle HOL_ERR _ => false) rows_rev
-  val i = length rows - (i_rev + 1)
+  (* quick filter on matching *)
+  val candidates_match = let
+     fun does_match ((_, p1), (_, p2)) =
+        can (match_term p2) p1
+  in
+     List.filter does_match candidates
+  end
 
-  val rows1 = List.take (rows, i)
-  val r = List.nth (rows, i)
-  val rows2 = List.drop (rows, i+1)
+  (* filtering finished, now try it for real *)
+  val cands_sub = List.map (fn ((p1, _), (p2, _)) => (p1, SOME p2)) candidates_match
 
-  val r_ty = type_of r
-  val rows1_tm = listSyntax.mk_list (rows1, r_ty)
-  val rows2_tm = listSyntax.mk_list (rows2, r_ty)
-  val r_thm = (snd (PMATCH_ROW_PABS_ELIM_CONV r)) handle
-     UNCHANGED => REFL r
+  val cands_arb = Lib.mapfilter (fn (i, r) => let
+     val (_, _, _, r) = dest_PMATCH_ROW_ABS r in
+   (dest_arb r; (i, (NONE : int option))) end) (Lib.enumerate 0 rows)
 
-  val input_rows =
-    listSyntax.mk_append (rows1_tm,
-      listSyntax.mk_cons (rhs (concl r_thm), rows2_tm))
+  val cands = if exploit_match_exp then (cands_sub @ cands_arb) else
+    cands_sub 
 
-  val thm0 = PART_MATCH (rand o lhs o snd o dest_imp o #2 o strip_forall) (
-    ISPEC v (FRESH_TY_VARS_RULE PMATCH_REMOVE_ARB_NO_OVERLAP)
-  ) input_rows
+  (* val (r_no1, r_no2_opt) = el 2 cands_arb *)
+  fun try_pair (r_no1, r_no2_opt) = let
+    fun mk_row_list rs = listSyntax.mk_list (rs, type_of (hd rows))
 
+    fun extract_el_n n rs = let
+      val rows1 = List.take (rs, n)
+      val r1 = List.nth (rs, r_no1)
+      val rows_rest = List.drop (rs, r_no1+1)
+      val rows1_tm = mk_row_list rows1
 
-  val pre = rand (rator (concl thm0))
-  val pre_thm = prove (pre, rc_tac rc_arg)
-  val thm1 = MP thm0 pre_thm
-  val thm2 = CONV_RULE
-    ((RHS_CONV o RAND_CONV) listLib.APPEND_CONV)
-    thm1
+      fun build_tm rest_tm = 
+        listSyntax.mk_append (rows1_tm,
+          (listSyntax.mk_cons (r1, rest_tm)))
+    in
+      (rows_rest, build_tm)
+    end
 
-  val thm2_lhs_tm = mk_eq (t, lhs (concl thm2))
-  val thm2_lhs = prove (thm2_lhs_tm,
-    MP_TAC r_thm THEN
-    rc_tac rc_arg)
+    val tm0 = let
+       val (rs_rest, bf_1) = extract_el_n r_no1 rows
 
-  val thm3 = TRANS thm2_lhs thm2
+       val rs2 = case r_no2_opt of
+           NONE => mk_row_list rs_rest
+         | SOME n => let
+             val n' = n - r_no1 - 1
+             val (rs_rest', bf_2) = extract_el_n n' rs_rest
+           in
+             bf_2 (mk_row_list rs_rest')
+           end
+    in
+      mk_PMATCH v (bf_1 rs2)
+    end
+
+    val thm_base = case r_no2_opt of
+        NONE => PMATCH_REMOVE_ARB_NO_OVERLAP
+      | SOME _ => PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS
+    val thm0 = FRESH_TY_VARS_RULE thm_base
+    val thm1 = PART_MATCH (lhs o rand) thm0 tm0
+
+    val thm2 = rc_elim_precond rc_arg thm1
+    val thm3 = fix_appends rc_arg t thm2
+  in
+    thm3
+  end  
 in
-  thm3
+  Lib.tryfind try_pair cands
 end handle HOL_ERR _ => raise UNCHANGED
 
-fun PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg = REPEATC (PMATCH_REMOVE_ARB_CONV_GENCALL_SINGLE rc_arg)
-fun PMATCH_REMOVE_ARB_CONV_GEN ssl = PMATCH_REMOVE_ARB_CONV_GENCALL (ssl, NONE)
-val PMATCH_REMOVE_ARB_CONV = PMATCH_REMOVE_ARB_CONV_GEN []
+fun PMATCH_REMOVE_SUBSUMED_CONV_GENCALL eme rc_arg = REPEATC (PMATCH_REMOVE_SUBSUMED_CONV_GENCALL_SINGLE eme rc_arg)
+fun PMATCH_REMOVE_SUBSUMED_CONV_GEN eme ssl = PMATCH_REMOVE_SUBSUMED_CONV_GENCALL eme (ssl, NONE)
+fun PMATCH_REMOVE_SUBSUMED_CONV eme = PMATCH_REMOVE_SUBSUMED_CONV_GEN eme []
 
 
 (***********************************************)
@@ -1339,7 +1402,7 @@ REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_CLEANUP_PVARS_CONV),
   CHANGED_CONV (PMATCH_CLEANUP_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL rc_arg),
-  CHANGED_CONV (PMATCH_REMOVE_ARB_CONV_GENCALL rc_arg),
+  CHANGED_CONV (PMATCH_REMOVE_SUBSUMED_CONV_GENCALL true rc_arg),
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
   CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV,
@@ -1425,10 +1488,7 @@ fun PMATCH_ROW_REMOVE_DOUBLE_BIND_CONV_GENCALL rc_arg row = let
         (pairSyntax.list_mk_pair vars'))
     val thm1 = ISPEC g_tm thm0
     val thm2 = PART_MATCH rand thm1 thm0_tm
-
-    val pre = rand (rator (concl thm2))
-    val pre_thm = prove (pre, rc_tac rc_arg)
-    val thm3 = MP thm2 pre_thm
+    val thm3 = rc_elim_precond rc_arg thm2
   in
     thm3
   end
@@ -1508,25 +1568,16 @@ fun PMATCH_REMOVE_GUARD_AUX rc_arg t = let
     val (p_tm, g_tm, r_tm) = dest_PMATCH_ROW r
     val thm1 = ISPECL [v, rs1, rs2, p_tm, g_tm, r_tm] thm0
 
-    val pre = rand (rator (concl thm1))
-    val pre_thm = prove (pre, rc_tac rc_arg)
-    val thm2 = MP thm1  pre_thm 
-
-    val t_eq_thm = prove (mk_eq (t, lhs (concl thm2)),
-       CONV_TAC (DEPTH_CONV listLib.APPEND_CONV) THEN
-       REWRITE_TAC [])
-
-    val thm3 = TRANS t_eq_thm thm2
+    val thm2 = rc_elim_precond rc_arg thm1
+    val thm3 = fix_appends rc_arg t thm2
   in
     thm3
   end
 
   val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (RAND_CONV (RATOR_CONV (RAND_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV))))) thm
 
-  val thm3 = CONV_RULE (RHS_CONV (RAND_CONV listLib.APPEND_CONV)) thm2
-
 in 
-  thm3
+  thm2
 end handle HOL_ERR _ => raise UNCHANGED
 
 
@@ -1591,10 +1642,9 @@ in
       val (thm1, is_inj) = let
         val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS
         val thm01 = ISPECL [p_tm, v, pt, gt, rh, rows'_tm] thm00
-        val pre = fst (dest_imp (concl thm01))
-        val pre_thm = prove_attempt (pre, rc_tac rc_arg)
+        val thm02 = rc_elim_precond rc_arg thm01
       in
-        (MP thm01 pre_thm, true)
+        (thm02, true)
       end handle HOL_ERR _ => let
          (* proving precond failed, try fallback theorem *)
         val thm00 = FRESH_TY_VARS_RULE PMATCH_PRED_UNROLL_CONS_NO_INJ

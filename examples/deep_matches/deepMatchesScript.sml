@@ -656,10 +656,11 @@ val PMATCH_ROWS_DROP_SUBSUMED = store_thm (
 ``!r1 r2 rows1 rows2 rows3 v.
   ((!x. (r1 v = SOME x) ==> (r2 v = SOME x)) /\
    (IS_SOME (r1 v) ==> EVERY (\row. (row v = NONE)) rows2)) ==>
-  (PMATCH v (rows1 ++ (r1 :: rows2) ++ (r2 :: rows3)) =
+  (PMATCH v (rows1 ++ (r1 :: (rows2 ++ (r2 :: rows3)))) =
    PMATCH v (rows1 ++ rows2 ++ (r2 :: rows3)))``,
 
 REPEAT STRIP_TAC THEN
+REWRITE_TAC [GSYM rich_listTheory.APPEND_ASSOC_CONS] THEN
 SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_APPEND_SEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM] THEN
 
 Cases_on `?r. MEM r rows1 ∧ IS_SOME (r v)` THEN (
@@ -688,7 +689,7 @@ val PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS = store_thm (
    (!x x'. ((v = p x) /\ (p x = p' x') /\ g x /\ g' x') ==>
            (r x = r' x')) /\
    (!x. ((v = p x) /\ (g x)) ==> EVERY (\row. (row (p x) = NONE)) rows2)) ==>
-  (PMATCH v (rows1 ++ (PMATCH_ROW p g r :: rows2) ++ (PMATCH_ROW p' g' r' :: rows3)) =
+  (PMATCH v (rows1 ++ (PMATCH_ROW p g r :: (rows2 ++ (PMATCH_ROW p' g' r' :: rows3)))) =
    PMATCH v (rows1 ++ rows2 ++ (PMATCH_ROW p' g' r' :: rows3)))``,
 
 REPEAT STRIP_TAC THEN
@@ -737,7 +738,8 @@ val PMATCH_REMOVE_ARB_NO_OVERLAP = store_thm ("PMATCH_REMOVE_ARB_NO_OVERLAP",
 
 REPEAT STRIP_TAC THEN
 ONCE_REWRITE_TAC [PMATCH_INTRO_CATCHALL] THEN
-SIMP_TAC list_ss [SNOC_APPEND] THEN
+SIMP_TAC list_ss [SNOC_APPEND,
+  rich_listTheory.APPEND_ASSOC_CONS] THEN
 MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED_PMATCH_ROWS THEN
 ASM_SIMP_TAC std_ss [])
 
