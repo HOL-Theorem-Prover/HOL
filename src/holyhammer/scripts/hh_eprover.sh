@@ -5,7 +5,7 @@ if [ -d $1 ]; then rm -r $1; fi
 mkdir $1
 }
  
-cd hh
+cd ../hh
 clean $EPROVER_DIR
 # Premise selection and translation
 ./hh knn 128 ../theories ../theories/conjecture conjecture \

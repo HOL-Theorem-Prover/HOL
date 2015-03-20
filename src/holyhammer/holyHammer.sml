@@ -17,7 +17,9 @@ open hhWriter
 
 val ERR = mk_HOL_ERR "holyHammer"
 val hh_dir = HOLDIR ^ "/src/holyhammer"
+val scripts_dir = hh_dir ^ "/scripts"
 val thy_dir = hh_dir ^ "/theories"
+
 fun dir_of_prover prover = 
   hh_dir ^ "/provers/" ^ prover ^ "/" ^ prover ^ "_files"
 fun out_of_prover prover = 
@@ -33,7 +35,7 @@ fun export cj =
     val ct   = current_theory ()
     val thyl = ct :: Theory.ancestry ct  
   in
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh_clean.sh");
+    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh_clean.sh");
     (* write loaded theories *)
     write_hh_thyl thy_dir thyl;
     (* write the conjecture in thf format *)
@@ -50,7 +52,7 @@ fun hh cj =
   in
     export cj;
     (* call holyhammer and the external provers *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh hh.sh");        
+    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh.sh");        
     (* try to rebuild the proof found using metis *)
     replay_atpfilel atpfilel cj
   end
@@ -64,7 +66,7 @@ fun hh_atp prover cj =
     (
     export cj;
     (* call holyhammer and one external prover *)
-    OS.Process.system ("cd " ^ hh_dir ^ "; sh " ^ hh_of_prover prover);
+    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh " ^ hh_of_prover prover);
     (* try to rebuild the proof found using metis *)
     replay_atpfile (status_of_prover prover, out_of_prover prover) cj
     )

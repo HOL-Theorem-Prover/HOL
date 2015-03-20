@@ -1,4 +1,4 @@
-THEORY_DIR="theories"
+THEORY_DIR="../theories"
 
 clean(){
 if [ -d $1 ]; then rm -r $1; fi
