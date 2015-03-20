@@ -34,3 +34,11 @@ make compiler
 make install
 
 fi
+
+# installing ocaml
+echo "*** Installing Ocaml ***"
+sudo apt-get install ocaml
+
+# updating g++
+echo "*** Installing and/or updating g++ ***"
+sudo apt-get install g++-4.8
