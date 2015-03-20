@@ -369,7 +369,8 @@ fun case_pmatch_eq_prove t t' = let
   (* very slow, simple approach. Just brute force.
      TODO: change implementation to get more runtime-speed *)
   val my_tac = (
-    BasicProvers.PURE_CASE_TAC THEN
+    REPEAT (BasicProvers.TOP_CASE_TAC THEN
+            ASM_REWRITE_TAC[]) THEN
     FULL_SIMP_TAC (rc_ss []) [PMATCH_EVAL, PMATCH_ROW_COND_def,
       PMATCH_INCOMPLETE_def]
   )
@@ -1342,7 +1343,7 @@ REPEATC (FIRST_CONV [
   CHANGED_CONV (PMATCH_SIMP_COLS_CONV_GENCALL rc_arg),
   CHANGED_CONV (PMATCH_EXPAND_COLS_CONV),
   CHANGED_CONV PMATCH_FORCE_SAME_VARS_CONV,
-  CHANGED_CONV PMATCH_INTRO_WILDCARDS_CONV,
+  PMATCH_INTRO_WILDCARDS_CONV,
   REWR_CONV (CONJUNCT1 PMATCH_def)
 ]);
 

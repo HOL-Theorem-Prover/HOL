@@ -35,7 +35,7 @@ val t = ``case x of
  | (SOME 3, (x :: xs)) => 3 + x
  | (SOME _, (x :: xs)) => x``
 val t' = case2pmatch true t 
-val thm_t = PMATCH_INTRO_CONV t
+val thm_t = PMATCH_INTRO_CONV t;
 
 (* Playing around with some examples *)
 
@@ -54,7 +54,7 @@ val example1 = ``
   ]``;
 
 (* due to guards, the following fails *)
-val _ = pmatch2case example1
+val _ = pmatch2case example1;
 
 val example2 = ``PMATCH (h::t)
   [PMATCH_ROW (\_ . []) (\_. T) (\_. x);
@@ -65,9 +65,8 @@ val example2 = ``PMATCH (h::t)
               (\ (v12,v16,v17). 3);
    PMATCH_ROW (\_. [2; 4; 3]) (\_. T) (\_. 3 + x)]``
 
-val t = rhs (concl (PMATCH_FORCE_SAME_VARS_CONV example2))
-val example2_tm = pmatch2case example2
-PMATCH_INTRO_WILDCARDS_CONV t
+val thm0 = PMATCH_FORCE_SAME_VARS_CONV example2
+val thm1 = CONV_RULE (RHS_CONV PMATCH_INTRO_WILDCARDS_CONV) thm0
 
 val example3 = ``
   CASE (NONE,x,xs) OF [
@@ -87,9 +86,9 @@ set_trace "use pmatch_pp" 1;
 example1;
 
 
-PMATCH_SIMP_CONV example1 
-PMATCH_SIMP_CONV example2
-PMATCH_SIMP_CONV example3
+val thm1 = PMATCH_SIMP_CONV example1 
+val thm2 = PMATCH_SIMP_CONV example2
+val thm3 = PMATCH_SIMP_CONV example3
 
 set_goal ([], ``^example1 = XXX``);
 
@@ -100,7 +99,8 @@ e (CONV_TAC (DEPTH_CONV PMATCH_SIMP_CONV))
 
 proofManagerLib.restart ()
 
-e (Cases_on `xs`)
+e (SIMP_TAC (std_ss++PMATCH_SIMP_ss) [])
+e (Cases_on `xs`);
 e (CONV_TAC (DEPTH_CONV PMATCH_SIMP_CONV))
 
 proofManagerLib.restart ()
@@ -127,6 +127,19 @@ val ex1 = ``case (x, y, z) of
   | (x, [], SOME y) => x+y
   | (_, z::zs, _) => z``
 
+(* or directly *)
+val ex1' = ``CASE (x, y, z) OF [
+  || x. (x, [], NONE) ~> x;
+  || (x, y). (x, [], SOME y) ~> x+y;
+  || (z, zs). (_, z::zs, _) ~> z]``
+
+(* They are not alpha-equivalent though because order of
+   wildcards differs. check via
+
+set_trace "use pmatch_pp" 0
+set_trace "use pmatch_pp" 1
+*)
+
 (* there are new features as well. Multiple
    occurences of the same variable in a pattern are fine *)
 
@@ -141,11 +154,15 @@ val ex2 = ``case (x, y) of
    simplify the PMATCH. *)
 
 val ex2_thm = prove (``^ex2 = (x = y)``,
-
 SIMP_TAC (std_ss++PMATCH_SIMP_ss) [] THEN
 Cases_on `x=y` THEN (
   ASM_SIMP_TAC (std_ss++PMATCH_SIMP_ss) []
 ))
+
+(* Or use specialised tools *)
+val ex2_thm' = prove (``^ex2 = (x = y)``,
+SIMP_TAC (std_ss++PMATCH_REMOVE_DOUBLE_BIND_ss++PMATCH_REMOVE_GUARDS_ss) [] THEN
+PROVE_TAC[])
 
 
 (**************************************)
@@ -155,9 +172,9 @@ Cases_on `x=y` THEN (
 
 val my_d_def = Define
   `my_d xx = CASE xx OF [
-    ||! (x, []) when x > 3 ~> x;
-    ||! (x, []) ~> 0;
-    ||! (x, y::ys) ~> my_d (x + y, ys)]`
+       || x. (x,[]) when (x > 3) ~> x;
+       || x. (x,[]) ~> 0;
+       || (x,y,ys). (x,y::ys) ~> (my_d (x + y,ys))]`
 
 val my_d_thms = store_thm ("my_d_thms",
 ``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
@@ -199,9 +216,9 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
 val t =
    ``CASE l OF [
     ||. [] ~> 0;
-    ||! x::y::x::y::_ ~> x+y;
-    ||! x::x::x::y::_ ~> x+x+x;
-    ||! x::_ ~> 1
+    ||(x,y). x::y::x::y::_ ~> x+y;
+    ||(x,y). x::x::x::y::_ ~> x+x+x;
+    || x. x::_ ~> 1
   ]``
 
 val thm0 = PMATCH_REMOVE_DOUBLE_BIND_CONV t
@@ -211,8 +228,8 @@ val thm0 = PMATCH_REMOVE_DOUBLE_BIND_CONV t
 (* Removing Guards               *)
 (*********************************)
 
-val thm1 = PMATCH_REMOVE_GUARDS_CONV (rhs (concl thm0))
-val thm1b = SIMP_CONV (std_ss++PMATCH_REMOVE_GUARDS_ss) [] (rhs (concl thm0))
+val thm1 = CONV_RULE (RHS_CONV PMATCH_REMOVE_GUARDS_CONV) thm0
+val thm2 = CONV_RULE (RHS_CONV (SIMP_CONV (std_ss++PMATCH_REMOVE_GUARDS_ss) [])) thm0
 
 val t =
    ``CASE (y,x,l) OF [
@@ -283,19 +300,14 @@ val string_match_dectree_def = CONV_RULE
 (* Heuristics                    *)
 (*********************************)
 
-val dummy_bool_tm = 
-    ``CASE (a,b,c) OF [
-       ||. (_, 0, _) ~> 1;
-       ||. (0, _, 0) ~> 1;
-       ||. (_, _, _) ~> 0
-     ]``
-
-val dummy_bool_def = Define `dummy_bool _ v0 a b c _ _ =
+val dummy_bool_def = Define `dummy_bool a b c =
     CASE (a,b,c) OF [
        ||. (_, 0, _) ~> 1;
        ||. (0, _, 0) ~> 1;
-       ||. (_, _, _) ~> v0
+       ||. (_, _, _) ~> c
      ]`
+
+val dummy_bool_tm = rhs (concl (SPEC_ALL dummy_bool_def))
 
 (* try to compile to a tree inside the logic *)
 val dummy_bool_eq1 = 
@@ -307,13 +319,6 @@ val dummy_bool_eq2 =
 val dummy_bool_eq3 = 
   PMATCH_CASE_SPLIT_CONV_HEU colHeu_default dummy_bool_tm
 
-
-val dummy_bool_tm =  Define `f a b c =
-    CASE (a,b,c) OF [
-       ||. (_, 0, _) ~> 1;
-       ||. (0, _, 0) ~> 1;
-       ||. (_, _, _) ~> 0
-     ]`
 
 
 (*********************************)
@@ -363,7 +368,6 @@ val t = ``CASE lx OF [
   || (x, y). (SNOC x _, SOME y) ~> x + y
   ]``;
 
-val thm = PMATCH_CASE_SPLIT_CONV t;
 val thm2 = PMATCH_CASE_SPLIT_CONV t;
 
 val t = ``CASE lx OF [
@@ -389,19 +393,6 @@ val tree_red_CASE_THM = prove (``
   (tree_red_CASE (Black t1 n t2) f_red f_else = f_else (Black t1 n t2))``,
 SIMP_TAC list_ss [tree_red_CASE_def, tree_case_def])
  
-(* for now the congurence needs to be set up manually,
-   this will be automated soon *)
-val tree_red_CASE_cong = store_thm ("tree_red_CASE_cong",
-``!M M' f f1 f' f1'.
-     (M = M') ==>
-     (!a0 a1 a2. (M' = Red a0 a1 a2) ==> (f a0 a1 a2 = f' a0 a1 a2)) ==>
-     (!x. (x = M') /\ (!a0 a1 a2. ~(M' = Red a0 a1 a2)) ==> (f1 x = f1' x)) ==>
-     (tree_red_CASE M f f1 = tree_red_CASE M' f' f1')``,
-
-SIMP_TAC std_ss [tree_red_CASE_def] THEN
-Cases_on `M'` THEN
-SIMP_TAC (srw_ss()) []);
-
 val cl = make_constructorList false [
   (``Red``, ["t1", "n", "t2"])
 ]
@@ -421,8 +412,8 @@ val balance_black_dectree_def2 = CONV_RULE
   balance_black_def
 
 val balance_black_dectree_def3 = CONV_RULE
-  (TOP_SWEEP_CONV PMATCH_ELIM_CONV)
-  balance_black_def
+  (RHS_CONV PMATCH_ELIM_CONV)
+  (SPEC_ALL balance_black_def)
 
 val size_new = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def2))))
 val size_old = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def))))
@@ -493,6 +484,7 @@ val simple_card_def = Define `
 
 val simple_card_THM_AUX = PMATCH_TO_TOP_RULE simple_card_def;
 
+val _ = Globals.priming := NONE
 val simple_card_ALT_DEF = prove (``simple_card s =
   if (INFINITE s \/ CARD s > 2) then NONE else SOME (CARD s)``,
 
