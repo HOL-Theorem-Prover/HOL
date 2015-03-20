@@ -15,10 +15,10 @@ val ERR = mk_HOL_ERR "hhDep"
 
 (* Fetching theorem *)
 
-fun thm_of_depid (thy,n) = 
-  let 
+fun thm_of_depid (thy,n) =
+  let
     val thml = DB.thms thy
-    fun find_number x = 
+    fun find_number x =
       if (depnumber_of o depid_of_dep o dep_of o tag o snd) x = n
       then x
       else raise ERR "find_number" ""
@@ -31,7 +31,7 @@ fun exists_depconj (did,a) = exists_depid did
 
 (* Fetching conjuncts *)
 
-local 
+local
 
 fun fetch_conj_helper (thm,a) = case a of
     []             => thm
@@ -43,14 +43,14 @@ in
 fun thm_of_depconj (did,a) =
   GEN_ALL (fetch_conj_helper (snd (thm_of_depid did), rev a))
 
-fun hh_fetch_conj (thm,a) = 
+fun hh_fetch_conj (thm,a) =
   GEN_ALL (fetch_conj_helper (thm, rev (read_depaddress a)))
 
 end
-  
+
 (* Fetching dependencies and removing erased dependencies *)
 
-local 
+local
 
 fun dtree_of thm = case (dep_of o tag) thm of
     DEP_SAVED (did,dt1,dt2) => dt2
@@ -58,10 +58,10 @@ fun dtree_of thm = case (dep_of o tag) thm of
 
 in
 
-fun dcl_of_thm thm = 
-  let 
-    val dt = dtree_of thm 
-    val l = dest_depleaf (collapse_deptree dt) 
+fun dcl_of_thm thm =
+  let
+    val dt = dtree_of thm
+    val l = dest_depleaf (collapse_deptree dt)
   in
     filter exists_depconj l
   end
@@ -79,14 +79,14 @@ end
 
 (* Print conjuncts returned by holyhammer *)
 
-fun string_of_depconj ((thy,n),a) = 
+fun string_of_depconj ((thy,n),a) =
   let val s = thy ^ "Theory." ^ fst (thm_of_depid (thy,n)) in
-    if null a 
+    if null a
     then s
     else "hhDep.hh_fetch_conj (" ^ s ^ ",\"" ^ number_depaddress a ^ "\")"
   end
 
-fun string_of_depconjl depconjl = 
+fun string_of_depconjl depconjl =
   "[" ^ String.concatWith "," (map string_of_depconj depconjl) ^ "]"
 
 end

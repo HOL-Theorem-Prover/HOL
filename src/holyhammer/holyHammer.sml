@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Export types, constants, theorems and dependencies to *)
 (*                 the holyHammer framework which performs premise       *)
 (*                 selection and calls to external provers. The lemmas   *)
-(*                 found by the provers is reconstructed with Metis.     *)                 
+(*                 found by the provers is reconstructed with Metis.     *)
 (*                                                                       *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
@@ -20,20 +20,20 @@ val hh_dir = HOLDIR ^ "/src/holyhammer"
 val scripts_dir = hh_dir ^ "/scripts"
 val thy_dir = hh_dir ^ "/theories"
 
-fun dir_of_prover prover = 
+fun dir_of_prover prover =
   hh_dir ^ "/provers/" ^ prover ^ "/" ^ prover ^ "_files"
-fun out_of_prover prover = 
+fun out_of_prover prover =
   dir_of_prover prover ^ "/" ^ prover ^ "_out"
-fun status_of_prover prover = 
+fun status_of_prover prover =
   dir_of_prover prover ^ "/" ^ prover ^ "_status"
 fun hh_of_prover prover = "hh_" ^ prover ^ ".sh"
 val list_of_provers = ["eprover","vampire","z3"]
 
 (* Export object from the loaded theories *)
 fun export cj =
-  let 
+  let
     val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct  
+    val thyl = ct :: Theory.ancestry ct
   in
     OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh_clean.sh");
     (* write loaded theories *)
@@ -46,21 +46,21 @@ fun export cj =
 
 (* Try every provers in parallel: eprover, vampire and z3. *)
 fun hh cj =
-  let 
+  let
     val atpfilel = map (fn x => (status_of_prover x, out_of_prover x))
                    list_of_provers
   in
     export cj;
     (* call holyhammer and the external provers *)
-    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh.sh");        
+    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh.sh");
     (* try to rebuild the proof found using metis *)
     replay_atpfilel atpfilel cj
   end
 
-(* Let you chose the specific prover you want to use either 
+(* Let you chose the specific prover you want to use either
    (eprover, vampire or z3) *)
 fun hh_atp prover cj =
-  if not (mem prover list_of_provers) 
+  if not (mem prover list_of_provers)
   then raise ERR "hh_prover" "not supported prover"
   else
     (

@@ -2,7 +2,7 @@
 (* FILE          : hhWriter.sml                                         *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
 (*                 dependencies between conjuncts of theorems for        *)
-(*                 holyHammer.                                           *)    
+(*                 holyHammer.                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -21,7 +21,7 @@ val ERR = mk_HOL_ERR "hhWriter"
  ----------------------------------------------------------------------------*)
 
 (* Shorter accessors and constructors *)
-fun dfind k m = 
+fun dfind k m =
   (Redblackmap.find (m,k) handle NotFound => raise ERR "dfind" "")
 fun dmem k m = Lib.can (dfind k) m
 fun dadd i v m = Redblackmap.insert (m,i,v)
@@ -65,8 +65,8 @@ fun reset_dicts () =
 (* Escaping *)
 fun hh_escape s =
   let fun hh_escape_aux l = case l of
-      []      => "" 
-    | a :: m  =>          
+      []      => ""
+    | a :: m  =>
              if Char.isAlphaNum a then String.str a ^ hh_escape_aux m
         else if Char.ord a = 95   then "__" ^ hh_escape_aux m
         else "_" ^ Int.fmt StringCvt.HEX (Char.ord a) ^ hh_escape_aux m
@@ -80,16 +80,16 @@ fun hh_escape s =
 
 (* renaming *)
 fun variant_name_dict s used =
-  let 
-    val i = dfind s used 
+  let
+    val i = dfind s used
     fun new_name s i =
       let val si = s ^ Int.toString i in
-        if dmem si used 
+        if dmem si used
         then new_name s (i + 1)
         else (si, dadd s (i + 1) (dadd si 0 used))
       end
-  in 
-    new_name s i 
+  in
+    new_name s i
   end
   handle NotFound => (s, dadd s 0 used)
 
@@ -101,51 +101,51 @@ fun declare_perm dict {Thy,Name} =
 
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
-  let 
-    val conjname = 
+  let
+    val conjname =
       hh_escape thy ^ "/" ^ hh_escape (name ^ "_" ^ number_depaddress a)
-    val (s, new) = variant_name_dict conjname (!used_names) 
+    val (s, new) = variant_name_dict conjname (!used_names)
   in
-    writehh_names := dadd ((thy,n),a) s (!writehh_names); 
+    writehh_names := dadd ((thy,n),a) s (!writehh_names);
     readhh_names  := dadd s ((thy,n),a) (!readhh_names);
-    used_names := new; 
+    used_names := new;
     s
   end
 
 fun declare_fixed dict {Thy,Name} s =
   (
-  dict := dadd {Thy=Thy,Name=Name} s (!dict); 
+  dict := dadd {Thy=Thy,Name=Name} s (!dict);
   used_names := dadd s 0 (!used_names);
   s
   )
 
 fun declare_temp_list get_name dict l =
-  let 
-    val olddict = !dict 
-    val oldused = !used_names 
+  let
+    val olddict = !dict
+    val oldused = !used_names
     fun fold_fun (s,sl) =
-      let val (news, newused) = 
-        variant_name_dict (hh_escape (get_name s)) (!used_names) 
+      let val (news, newused) =
+        variant_name_dict (hh_escape (get_name s)) (!used_names)
       in
         (dict := dadd s news (!dict);
          used_names := newused;
          news :: sl)
       end
-    val sl = foldl fold_fun [] l 
+    val sl = foldl fold_fun [] l
   in
     (List.rev sl, fn () => (dict := olddict; used_names := oldused))
   end
 
 (*---------------------------------------------------------------------------
-   Streams. Objects and dependencies are written in different files. 
+   Streams. Objects and dependencies are written in different files.
  ----------------------------------------------------------------------------*)
 
 val oc = ref stdOut
 val oc_deps = ref stdOut
 fun os s = output (!oc,s)
-fun oiter_aux oc sep f = 
- fn [] => () 
-  | [e] => f e 
+fun oiter_aux oc sep f =
+ fn [] => ()
+  | [e] => f e
   | h :: t => (f h; output (oc,sep); oiter_aux oc sep f t)
 fun oiter_deps sep f l = oiter_aux (!oc_deps) sep f l
 fun oiter sep f l = oiter_aux (!oc) sep f l
@@ -155,13 +155,13 @@ fun oiter sep f l = oiter_aux (!oc) sep f l
  ----------------------------------------------------------------------------*)
 
 (* type *)
-fun oty ty = 
-  if is_vartype ty then os (dfind ty (!tyvar_names)) 
+fun oty ty =
+  if is_vartype ty then os (dfind ty (!tyvar_names))
   else
     let val {Args,Thy,Tyop} = dest_thy_type ty in
     let val s = dfind {Thy=Thy,Name=Tyop} (!ty_names) in
-      if null Args then os s else 
-        if (Thy ="min" andalso Tyop = "fun") 
+      if null Args then os s else
+        if (Thy ="min" andalso Tyop = "fun")
         then (os "("; oty (hd Args); os " > "; oty (hd (tl Args)); os ")")
         else (os ("(" ^ s ^ " "); oiter " " oty Args; os ")")
     end end
@@ -170,48 +170,48 @@ val less_ty = fn a => (fn b => Type.compare (a,b) = LESS)
 fun less_red a b = less_ty (#redex a) (#redex b)
 
 fun id_subst a = {redex = a, residue = a}
-fun full_match_type t1 t2 = 
-  let 
+fun full_match_type t1 t2 =
+  let
     val (subst1,al) = raw_match_type t1 t2 ([],[])
-    val subst2 = map id_subst al 
-  in  
+    val subst2 = map id_subst al
+  in
     sort less_red (subst1 @ subst2)
   end
- 
+
 (* term *)
 fun otm tm =
   if is_var tm        then os (dfind tm (!var_names))
-  else if is_const tm then 
+  else if is_const tm then
     let val {Thy, Name, Ty} = dest_thy_const tm in
     let val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name}) in
     let val subst = full_match_type mgty Ty in
     let val resl = map #residue subst in
       if null resl then os (dfind {Thy=Thy,Name=Name} (!const_names))
-      else (os "("; os (dfind {Thy=Thy,Name=Name} (!const_names)); os " "; 
+      else (os "("; os (dfind {Thy=Thy,Name=Name} (!const_names)); os " ";
             oiter " " oty resl; os ")")
     end end end end
-  else if is_eq tm       then 
+  else if is_eq tm       then
     (os "("; otm (lhs tm);   os " = ";  otm (rhs tm);  os ")")
-  else if is_conj tm     then 
+  else if is_conj tm     then
     (os "("; otm (lhand tm); os " & ";  otm (rand tm); os ")")
-  else if is_disj tm     then 
+  else if is_disj tm     then
     (os "("; otm (lhand tm); os " | ";  otm (rand tm); os ")")
-  else if is_imp_only tm then 
+  else if is_imp_only tm then
     (os "("; otm (lhand tm); os " => "; otm (rand tm); os ")")
   else if is_neg tm      then (os "(~ "; otm (rand tm); os ")")
   else if is_forall tm   then hh_binder "!" (strip_forall tm)
   else if is_exists tm   then hh_binder "?" (strip_exists tm)
   else if is_abs tm      then hh_binder "^" (strip_abs tm)
-  else if is_comb tm then 
-    let val (v,l) = strip_comb tm in 
+  else if is_comb tm then
+    let val (v,l) = strip_comb tm in
       (os "("; otm v; app (fn x => (os " "; otm x)) l; os ")")
     end
   else raise ERR "otm" ""
 and hh_binder s (l,tm) =
   let val (vl,undeclare) = declare_temp_list (fst o dest_var) var_names l in
     (
-    os ("(" ^ s ^ "["); 
-    oiter ", " 
+    os ("(" ^ s ^ "[");
+    oiter ", "
       (fn x => (os (dfind x (!var_names)); os " : "; oty (type_of x))) l;
     os "]: "; otm tm; os ")";
     undeclare ()
@@ -220,7 +220,7 @@ and hh_binder s (l,tm) =
 
 (* type definition *)
 fun hh_tydef thy (s,arity) =
-  case (thy,s) of 
+  case (thy,s) of
     ("min","bool") => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$o")
   | ("min","fun")  => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$fun")
   | _  =>
@@ -236,13 +236,13 @@ fun hh_tydef thy (s,arity) =
     )
   end
 
-fun quant_tyvarl l = 
-  if null l then () 
+fun quant_tyvarl l =
+  if null l then ()
   else (os "!["; oiter ", " (fn x => (os x; os " : $t")) l; os "]: ")
 
 (* constant definition *)
-fun hh_constdef thy (s,ty) = 
-  let 
+fun hh_constdef thy (s,ty) =
+  let
     val fix = declare_fixed const_names {Thy=thy,Name=s}
     val news = case (thy,s) of
     ("min","=")     => fix "$equals"
@@ -253,7 +253,7 @@ fun hh_constdef thy (s,ty) =
   | ("min","==>")   => fix "$imply"
   | ("bool","~")    => fix "$not"
   | ("bool","T")    => fix "$true"
-  | ("bool","F")    => fix "$false" 
+  | ("bool","F")    => fix "$false"
   | _               => declare_perm const_names {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
     val (newtvs, undeclare) = declare_temp_list dest_vartype tyvar_names tv
@@ -269,31 +269,31 @@ fun hh_constdef thy (s,ty) =
 fun othm (name,role,tm) =
   let
     fun f x = is_var x orelse is_const x
-    val l1 = type_varsl (map type_of (find_terms f tm)) 
-    val (l2,undeclare) = declare_temp_list dest_vartype tyvar_names l1 
+    val l1 = type_varsl (map type_of (find_terms f tm))
+    val (l2,undeclare) = declare_temp_list dest_vartype tyvar_names l1
   in
     (
     os "tt("; os name;
-    os (", " ^ role ^ ", "); quant_tyvarl l2; otm tm; os ").\n"; 
+    os (", " ^ role ^ ", "); quant_tyvarl l2; otm tm; os ").\n";
     undeclare ()
-    ) 
+    )
   end
 
-fun othm_theorem (name,role,thm) = 
+fun othm_theorem (name,role,thm) =
   othm (name,role,concl (GEN_ALL (DISCH_ALL thm)))
 
 (* conjecture *)
-fun othm_conjecture conjecture = 
-  othm (conjecture_name, conjecture_name, 
+fun othm_conjecture conjecture =
+  othm (conjecture_name, conjecture_name,
         list_mk_forall (free_vars_lr conjecture,conjecture))
 
 
 (* Dependencies *)
-fun odep (name,dcl) = 
-  let 
-    fun os_deps s = output (!oc_deps,s) 
+fun odep (name,dcl) =
+  let
+    fun os_deps s = output (!oc_deps,s)
     fun name_dc dc = dfind dc (!writehh_names)
-  in 
+  in
     os_deps (name ^ " ");
     oiter_deps " " os_deps (mapfilter name_dc dcl); (* A dependency may be erased *)
     os_deps "\n"
@@ -305,10 +305,10 @@ fun odep (name,dcl) =
 local
 
 fun conjuncts a dt thm = case dt of
-    DEP_NODE(dt1,dt2) => 
-      conjuncts (DEP_LEFT  :: a) dt1 (CONJUNCT1 (SPEC_ALL thm)) @ 
+    DEP_NODE(dt1,dt2) =>
+      conjuncts (DEP_LEFT  :: a) dt1 (CONJUNCT1 (SPEC_ALL thm)) @
       conjuncts (DEP_RIGHT :: a) dt2 (CONJUNCT2 (SPEC_ALL thm))
-  | DEP_LEAF dcl      => [(thm,a,dcl)] 
+  | DEP_LEAF dcl      => [(thm,a,dcl)]
 
 in
 
@@ -334,13 +334,13 @@ end
    Printing theories.
  ----------------------------------------------------------------------------*)
 
-fun hh_thy_start folder thy = 
+fun hh_thy_start folder thy =
   (
-  oc := openOut (folder ^ "/" ^ thy ^ ".p"); 
+  oc := openOut (folder ^ "/" ^ thy ^ ".p");
   oc_deps := openOut (folder ^ "/" ^ thy  ^ ".hd")
   )
 
-fun hh_thy_end () = 
+fun hh_thy_end () =
   (
   closeOut (!oc); oc := stdOut;
   closeOut (!oc_deps); oc_deps := stdOut
@@ -349,24 +349,24 @@ fun hh_thy_end () =
 fun write_hh_thy folder thy =
   (
   hh_thy_start folder thy;
-  let val l = dest_theory thy in 
-    case l of THEORY(_,t) => 
+  let val l = dest_theory thy in
+    case l of THEORY(_,t) =>
     (
     app (hh_tydef thy) (#types t);
     app (hh_constdef thy) (#consts t);
-    let 
+    let
       val axl = map (fn x => (x,"ax")) (DB.theorems thy)
       val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
       fun compare ((_,th1),_) ((_,th2),_) =
         let val f = depnumber_of o depid_of_dep o dep_of o Thm.tag in
-          f th1 < f th2 
+          f th1 < f th2
         end
       val thml = sort compare (axl @ defl)
     in
       app export_thm thml
     end
     )
-  end;              
+  end;
   hh_thy_end ()
   )
 
@@ -375,45 +375,45 @@ fun sort_thyl thyl = case thyl of
   | thy :: m => let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
                   (sort_thyl l1) @ [thy] @ (sort_thyl l2)
                 end
-     
+
 fun write_thydep file thyl =
   (
-  oc := openOut file; 
+  oc := openOut file;
   app (fn x => (os x; os " "; oiter " " os (parents x); os "\n")) thyl;
   closeOut (!oc); oc := stdOut
   )
 
 fun write_hh_thyl folder thyl =
-  (reset_dicts(); 
+  (reset_dicts();
    app (write_hh_thy folder) (sort_thyl thyl))
 
 fun write_conjecture file conjecture =
-  if type_of conjecture = bool 
+  if type_of conjecture = bool
   then
     (
-    oc := openOut file; 
-    othm_conjecture conjecture; 
+    oc := openOut file;
+    othm_conjecture conjecture;
     closeOut (!oc); oc := stdOut
     )
   else raise ERR "write_conjecture" "conjecture is not a boolean"
 
-   
+
 (*---------------------------------------------------------------------------
    Reading a file.
  ----------------------------------------------------------------------------*)
 
 fun readl path =
-  let 
+  let
     val file = TextIO.openIn path
     fun loop file = case TextIO.inputLine file of
         SOME line => line :: loop file
       | NONE => []
-    val l1 = loop file 
+    val l1 = loop file
     fun rm_last_char s = String.substring (s,0,String.size s - 1)
-    val l2 = List.map rm_last_char l1 (* removing end line *) 
-  in 
+    val l2 = List.map rm_last_char l1 (* removing end line *)
+  in
     (TextIO.closeIn file; l2)
-  end 
+  end
 
 fun get_status path = hd (readl path) handle _ => "Unknown"
 
@@ -423,14 +423,14 @@ fun get_status path = hd (readl path) handle _ => "Unknown"
 
 (* Tools *)
 fun time_metis thml conjecture time =
-  let 
+  let
     val oldlimit = !mlibMetis.limit
     val oldtracelevel = !mlibUseful.trace_level
-    val thm = 
+    val thm =
       (
       metisTools.limit := {time = SOME time, infs = NONE};
       mlibUseful.trace_level := 0;
-      metisTools.METIS_PROVE thml conjecture 
+      metisTools.METIS_PROVE thml conjecture
       )
   in
     (metisTools.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
@@ -449,15 +449,15 @@ fun minimize_loop l1 l2 cj =
     else minimize_loop (hd l2 :: l1) (tl l2) cj
 
 fun minimize l cj =
-  if can (time_metis (map fst l) cj) 2.0 
+  if can (time_metis (map fst l) cj) 2.0
   then (print "Minimizing...\n"; minimize_loop [] l cj)
   else l
 
-(* Parsing and reconstruction *) 
+(* Parsing and reconstruction *)
 fun reconstruct axl cj =
-  let 
+  let
     (* reserved theorems are not interesting to Metis *)
-    val axl1 = filter (fn x => not (mem x reserved_names)) axl 
+    val axl1 = filter (fn x => not (mem x reserved_names)) axl
     val dcl1 = map (fn x => dfind x (!readhh_names)) axl1
     val l1 = map (fn x => (thm_of_depconj x, x)) dcl1
     val l2 = if !minimize_flag then minimize l1 cj else l1
@@ -469,32 +469,32 @@ fun reconstruct axl cj =
 
 fun replay_atpfile (atp_status,atp_out) conjecture =
   let val s = get_status atp_status in
-    if s = "Theorem" 
+    if s = "Theorem"
     then reconstruct (readl atp_out) conjecture
     else raise ERR "replay_atpfile" ("Status: " ^ s)
   end
 
 fun replay_atpfilel atpfilel conjecture =
-  let 
+  let
     fun process (atp_status,atp_out) =
       let val s = get_status atp_status in
         if s = "Theorem" then (s, readl atp_out) else (s, [])
       end
-    val processedl = map process atpfilel 
+    val processedl = map process atpfilel
     val newl = filter (fn (x,_) => x = "Theorem") processedl
   in
     if null newl
-    then 
-      let  
+    then
+      let
         val status_list = map fst processedl
-        val s = if all (fn x => x = "Unknown") status_list 
+        val s = if all (fn x => x = "Unknown") status_list
                 then "Unknown"
                 else hd (filter (fn x => x <> "Unknown") status_list)
       in
         raise ERR "replay_atpfilel" ("Status: " ^ s)
       end
-    else 
-      let 
+    else
+      let
         fun compare_list l1 l2 = length l1 > length l2
         val axl = hd (sort compare_list (map snd newl))
       in
