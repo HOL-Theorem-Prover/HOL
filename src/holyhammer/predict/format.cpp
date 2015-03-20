@@ -32,7 +32,7 @@ void read_order(const string &fname, SLMap &th_no, SVec &no_th) {
       no_th.push_back(line);
     }
     else
-      exit_error("Duplicate `" + line + 
+      exit_error("Duplicate `" + line +
                  "' detected upon reading file `" + fname + ".");
   }
 }

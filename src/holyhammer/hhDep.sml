@@ -79,14 +79,14 @@ end
 
 (* Print conjuncts returned by holyhammer *)
 
-fun string_of_depconj ((thy,n),a) =
+fun string_of_dc ((thy,n),a) =
   let val s = thy ^ "Theory." ^ fst (thm_of_depid (thy,n)) in
     if null a
     then s
     else "hhDep.hh_fetch_conj (" ^ s ^ ",\"" ^ number_depaddress a ^ "\")"
   end
 
-fun string_of_depconjl depconjl =
-  "[" ^ String.concatWith "," (map string_of_depconj depconjl) ^ "]"
+fun string_of_dcl dcl =
+  "[" ^ String.concatWith "," (map string_of_dc dcl) ^ "]"
 
 end

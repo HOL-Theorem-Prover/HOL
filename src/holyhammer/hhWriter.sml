@@ -462,7 +462,7 @@ fun reconstruct axl cj =
     val l1 = map (fn x => (thm_of_depconj x, x)) dcl1
     val l2 = if !minimize_flag then minimize l1 cj else l1
   in
-    print ("val lemmas = " ^ string_of_depconjl (map snd l2) ^ "\n");
+    print ("val lemmas = " ^ string_of_dcl (map snd l2) ^ "\n");
     ignore (time_metis (map fst l2) cj 30.0)
       handle _ => raise ERR "reconstruct" "Metis timed out."
   end
