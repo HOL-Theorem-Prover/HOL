@@ -35,10 +35,13 @@ make install
 
 fi
 
+cd
+
 # installing ocaml
 echo "*** Installing Ocaml ***"
 sudo apt-get install ocaml
-
-# updating g++
-echo "*** Installing and/or updating g++ ***"
+# installing g++-4.8
+echo "*** Installing g++-4.8 ***"
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt-get update
 sudo apt-get install g++-4.8
