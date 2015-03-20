@@ -2,10 +2,10 @@
 TIM=10
 DIR="z3_files"
 IN="$DIR/atp_in"
-OUT1="$DIR/z3_out1" 
-OUT2="$DIR/z3_out2" 
-OUT="$DIR/z3_out" 
-STATUS="$DIR/z3_status" 
+OUT1="$DIR/z3_out1"
+OUT2="$DIR/z3_out2"
+OUT="$DIR/z3_out"
+STATUS="$DIR/z3_status"
 
 # Running Z3 (4.0)
 cd z3
@@ -18,8 +18,8 @@ sed -i 's/ //g' $STATUS
 # Extracting axioms
 grep "^core" $OUT1 > $OUT2
 sed -e 's/^core[(].*\[\(.*\)\][)].*/\1/' $OUT2 > $OUT1
-tr "," "\n" < $OUT1 > $OUT2 
-tr -d " " < $OUT2 > $OUT1 
+tr "," "\n" < $OUT1 > $OUT2
+tr -d " " < $OUT2 > $OUT1
 # Unescaping
 grep "^a" $OUT1 > $OUT2
 sed -e 's/^a\(.*\)/\1/' $OUT2 > $OUT1

@@ -6,7 +6,7 @@ mkdir $1
 }
 
 cd ../hh
-clean $VAMPIRE_DIR 
+clean $VAMPIRE_DIR
 # Premise selection and translation
 ./hh knn 96 ../theories ../theories/conjecture conjecture \
 $VAMPIRE_DIR -thydep ../theories/thydep > /dev/null || \

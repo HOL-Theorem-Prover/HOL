@@ -4,8 +4,8 @@ DIR="eprover_files"
 IN="$DIR/atp_in"
 OUT1="$DIR/eprover_out1"
 OUT2="$DIR/eprover_out2"
-OUT="$DIR/eprover_out" 
-STATUS="$DIR/eprover_status" 
+OUT="$DIR/eprover_out"
+STATUS="$DIR/eprover_status"
 
 # Running eprover with best strategy (1.8)
 cd eprover

@@ -5,7 +5,7 @@ IN="$DIR/atp_in"
 OUT="$DIR/vampire_out"
 OUT1="$DIR/vampire_out1"
 OUT2="$DIR/vampire_out2"
-STATUS="$DIR/vampire_status" 
+STATUS="$DIR/vampire_status"
 
 # Running Vampire (2.6)
 cd vampire
@@ -16,7 +16,7 @@ grep "SZS status" $OUT1 > $STATUS
 sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS
 sed -i 's/ //g' $STATUS
 # Extracting axioms
-grep "file[(]" $OUT1 > $OUT2 
+grep "file[(]" $OUT1 > $OUT2
 sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT1
 # Unescaping
 grep "^a" $OUT1 > $OUT2

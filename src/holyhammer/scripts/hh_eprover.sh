@@ -4,7 +4,7 @@ clean(){
 if [ -d $1 ]; then rm -r $1; fi
 mkdir $1
 }
- 
+
 cd ../hh
 clean $EPROVER_DIR
 # Premise selection and translation
