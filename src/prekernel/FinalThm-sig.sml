@@ -5,8 +5,8 @@ sig
   type term
   type hol_type
   type 'a set   = 'a HOLset.set
-  type depdisk =        
-    (string * int) * 
+  type depdisk =
+    (string * int) *
     (string * (string * int list * (int * string) list) list) list
 
   val kernelid : string
@@ -121,9 +121,9 @@ sig
   val disk_thm      : (depdisk * string list) * term list -> thm
 
   (* Saving dependencies between conjuncts *)
-  
 
-  val save_dep : string -> thm -> thm 
+
+  val save_dep : string -> thm -> thm
 
 
 end;

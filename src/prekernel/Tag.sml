@@ -38,8 +38,8 @@ fun isEmpty tg = null (oracles_of tg) andalso null (axioms_of tg)
 fun isDisk tg = oracles_of tg = ["DISK_THM"] andalso null (axioms_of tg)
 
 (*---------------------------------------------------------------------------
-   Create a tag. A tag is a string with only printable characters (as        
-   defined by Char.isPrint) and without spaces.                              
+   Create a tag. A tag is a string with only printable characters (as
+   defined by Char.isPrint) and without spaces.
  ----------------------------------------------------------------------------*)
 
 fun read s =
@@ -55,7 +55,7 @@ fun read s =
    Read tags from disk.
  ----------------------------------------------------------------------------*)
 
-local 
+local
 
 val merge_axiom = Lib.union
 
@@ -63,24 +63,24 @@ fun merge_oracle t1 [] = t1
   | merge_oracle [] t2 = t2
   | merge_oracle (t as ["DISK_THM"]) ["DISK_THM"] = t
   | merge_oracle (l0 as s0::rst0) (l1 as s1::rst1) =
-      case String.compare (s0,s1) of 
+      case String.compare (s0,s1) of
         LESS    => s0::merge_oracle rst0 l1
       | GREATER => s1::merge_oracle l0 rst1
       | EQUAL   => s0::merge_oracle rst0 rst1
 
 fun collapse_dep d = case d of
-    DEP_SAVED(did,dt1,dt2) => DEP_UNSAVED(collapse_deptree dt1) 
+    DEP_SAVED(did,dt1,dt2) => DEP_UNSAVED(collapse_deptree dt1)
   | DEP_UNSAVED dt         => DEP_UNSAVED(collapse_deptree dt)
 
 fun merge_dep d1 d2 =
-  let 
-    val (dt1,dt2) = (deptree_of d1, deptree_of d2) 
+  let
+    val (dt1,dt2) = (deptree_of d1, deptree_of d2)
     val dt = mk_deptree (dt1,dt2)
   in
-    DEP_UNSAVED(collapse_deptree dt) 
+    DEP_UNSAVED(collapse_deptree dt)
   end
 
-fun trackconj_dep d1 d2 = 
+fun trackconj_dep d1 d2 =
   DEP_UNSAVED(mk_deptree (deptree_of d1, deptree_of d2))
 
 fun trackconjunct_dep lr D =
@@ -96,10 +96,10 @@ in (* in local *)
 
 fun collapse (TAG(D,O,A)) = TAG(collapse_dep D,O,A)
 
-fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
+fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) =
  TAG(merge_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
 
-fun trackconj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) = 
+fun trackconj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) =
   TAG(trackconj_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
 
 fun trackconjunct lr (TAG(D,O,A)) = TAG(trackconjunct_dep lr D, O, A)
@@ -114,19 +114,19 @@ end; (* end local *)
 
 
 (*---------------------------------------------------------------------------
-   In a theory file, the list of oracles gets dumped out as a list of        
-   strings. The axioms are not currently dumped, since they are being used 
-   only for ensuring that no out-of-date objects in the current theory       
-   become persistent. Concrening dependencies, we only print the dependency  
-   number inside the tag. Other informations are retrieved from the dependency 
-   graph.                                                        
+   In a theory file, the list of oracles gets dumped out as a list of
+   strings. The axioms are not currently dumped, since they are being used
+   only for ensuring that no out-of-date objects in the current theory
+   become persistent. Concrening dependencies, we only print the dependency
+   number inside the tag. Other informations are retrieved from the dependency
+   graph.
  ----------------------------------------------------------------------------*)
 
 fun pp_to_disk ppstrm (TAG (d,olist,_)) =
-  let 
+  let
     open Portable
     val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
-    fun pp_sl l =   
+    fun pp_sl l =
       (
       begin_block CONSISTENT 0;
       add_string "[";
@@ -146,7 +146,7 @@ fun pp_to_disk ppstrm (TAG (d,olist,_)) =
       pp_sl (map Lib.mlquote olist);
       add_string ")";
     end_block()
-    ) 
+    )
   end
 
 (*---------------------------------------------------------------------------
