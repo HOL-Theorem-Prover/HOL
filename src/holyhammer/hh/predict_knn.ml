@@ -4,28 +4,28 @@ open Thf1hh1
 let tmp_file = "predictions/predict_hh_";;
 
 (* Predictor *)
-let os = output_string 
+let os = output_string
 
 let print_dep fname axl =
   let ocdep = open_out (fname ^ "dep") in
-  let f x   = os ocdep (x ^ ":" ^ String.concat " " (dep_of x) ^ "\n") in 
+  let f x   = os ocdep (x ^ ":" ^ String.concat " " (dep_of x) ^ "\n") in
     List.iter f axl; close_out ocdep
 
 let print_seq fname axl =
   let ocseq = open_out (fname ^ "seq") in
-  let f x   = os ocseq (x ^ "\n") in 
-    List.iter f axl; close_out ocseq 
+  let f x   = os ocseq (x ^ "\n") in
+    List.iter f axl; close_out ocseq
 
 let print_syms fname axassoc =
   let ocsym = open_out (fname ^ "syms") in
   let axsym = List.map (fun (a,b) -> (a, Hh_symbols.get_symbols b)) axassoc in
-  let f (x,ths) =  
+  let f (x,ths) =
     let s = match ths with
       [] -> "\n"
     | _ -> "\"" ^ String.concat "\", \"" ths ^ "\"\n"
     in
-      os ocsym (x ^ ":" ^ s) 
-  in    
+      os ocsym (x ^ ":" ^ s)
+  in
     List.iter f axsym; close_out ocsym
 
 let print_csyms fname cj =
@@ -58,7 +58,7 @@ let print_all_interactive fname axl cj =
     print_seq fname axl;
     print_syms fname axassoc;
     print_csyms fname cj
-  
+
 let predict_interactive predictor file_prefix n conj axl =
   print_all_interactive file_prefix axl conj;
   run_predictor predictor file_prefix n

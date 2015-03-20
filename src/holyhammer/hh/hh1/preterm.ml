@@ -109,9 +109,9 @@ let hide_constant,unhide_constant,is_hidden =
 
 
 
-type pretype = Utv of string                   
-             | Ptycon of string * pretype list 
-             | Stv of int;;                    
+type pretype = Utv of string
+             | Ptycon of string * pretype list
+             | Stv of int;;
 
 
 
@@ -132,11 +132,11 @@ let rec pretype_of_type ty =
 
 
 
-type preterm = Varp of string * pretype       
-             | Constp of string * pretype     
-             | Combp of preterm * preterm     
-             | Absp of preterm * preterm      
-             | Typing of preterm * pretype;;  
+type preterm = Varp of string * pretype
+             | Constp of string * pretype
+             | Combp of preterm * preterm
+             | Absp of preterm * preterm
+             | Typing of preterm * pretype;;
 
 
 
@@ -180,9 +180,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
       Combp(op,pmk_numeral(m)) in
     fun n -> Combp(nUMERAL,pmk_numeral n) in
 
-  
-  
-  
+
+
+
 
   let rec pretype_subst th ty =
     match ty with
@@ -190,9 +190,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Utv v -> rev_assocd ty th ty
     | _ -> failwith "pretype_subst: Unexpected form of pretype" in
 
-  
-  
-  
+
+
+
 
   let pretype_instance ty =
     let gty = pretype_of_type ty
@@ -200,9 +200,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
     let subs = map (fun tv -> new_type_var(),tv) tyvs in
     pretype_subst subs gty in
 
-  
-  
-  
+
+
+
 
   let get_generic_type cname =
     match filter (o ((=) cname) fst) (!the_interface) with
@@ -210,16 +210,16 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | _::_::_ -> assoc cname (!the_overload_skeletons)
     | [] -> get_const_type cname in
 
-  
-  
-  
+
+
+
 
   let get_var_type vname =
     assoc vname !the_implicit_types in
 
-  
-  
-  
+
+
+
 
   let rec solve env pty =
     match pty with
@@ -227,10 +227,10 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Stv(i) -> if defined env i then solve env (apply env i) else pty
     | _ -> pty in
 
-  
-  
-  
-  
+
+
+
+
 
   let free_stvs =
     let rec free_stvs = function
@@ -281,9 +281,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
         |t -> default_msg (string_of_preterm t)
   in
 
-  
-  
-  
+
+
+
 
   let rec istrivial ptm env x = function
     |Stv y as t ->
@@ -310,9 +310,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
     unify env [ty1,ty2,match ptm with None -> None | Some t -> Some(t,ty1,ty2)]
   in
 
-  
-  
-  
+
+
+
 
   let rec typify ty (ptm,venv,uenv) =
     match ptm with
@@ -362,9 +362,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
     |_ -> failwith "typify: unexpected constant at this stage"
   in
 
-  
-  
-  
+
+
+
 
   let rec resolve_interface ptm cont env =
     match ptm with
@@ -379,9 +379,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
             cont(unify (Some ptm) env ty' ty)) maps
   in
 
-  
-  
-  
+
+
+
 
   let rec solve_preterm env ptm =
     match ptm with
@@ -397,15 +397,15 @@ let type_of_pretype,term_of_preterm,retypecheck =
           with Failure _ -> Constp(s,tys)
   in
 
-  
-  
-  
+
+
+
 
   let stvs_translated = ref false in
 
-  
-  
-  
+
+
+
 
   let rec type_of_pretype ty =
     match ty with
@@ -415,9 +415,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Utv(v) -> mk_vartype(v)
     | Ptycon(con,args) -> mk_type(con,map type_of_pretype args) in
 
-  
-  
-  
+
+
+
 
   let term_of_preterm =
     let rec term_of_preterm ptm =
@@ -436,9 +436,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
                let tm = term_of_preterm ptm in
                report_type_invention (); tm in
 
-  
-  
-  
+
+
+
 
   let retypecheck venv ptm =
     let ty = new_type_var() in

@@ -207,7 +207,7 @@ let rec sPEC_ALL th =
   if is_forall(concl th) then sPEC_ALL(snd(sPEC_VAR th)) else th;;
 
 let gEN =
-  let pth = sYM(cONV_RULE (rAND_CONV bETA_CONV) 
+  let pth = sYM(cONV_RULE (rAND_CONV bETA_CONV)
                           (aP_THM fORALL_DEF (parse_term "P:A->bool"))) in
   fun x ->
     let qth = iNST_TYPE[snd(dest_var x),aty] pth in

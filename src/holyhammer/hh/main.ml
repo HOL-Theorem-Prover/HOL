@@ -56,9 +56,9 @@ let parse_commandline () =
   let parse_anon anon = anon_tab.(!anon_counter) <- anon; incr anon_counter in
   let speclist =
     [("-thydep", Arg.Set_string thydep_ref, "Provides dependencies between theories");
-     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories")] 
+     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories")]
   in
-  let usage_msg = "HOL(y) Hammer. Usage: " ^ 
+  let usage_msg = "HOL(y) Hammer. Usage: " ^
     Sys.argv.(0) ^ " <knn|nbayes> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
   in
   Arg.parse speclist parse_anon usage_msg;
@@ -80,7 +80,7 @@ let parse_commandline () =
 
 (* Main function. *)
 let _ =
-  let (predictor, n_predictions, theory_dir, cj_file, 
+  let (predictor, n_predictions, theory_dir, cj_file,
        cj_name, out_dir, thydep_file, thylo_file) = parse_commandline () in
 
   print_endline ("Loading theories from " ^ theory_dir);

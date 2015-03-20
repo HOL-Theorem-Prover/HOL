@@ -18,9 +18,9 @@ let rec rdirents isok prefix acc d =
 
 let find_ext dir ext =
   let n_ext = String.length ext in
-  let isok s = 
-    let l = String.length s in 
-    l > n_ext && String.sub s (l - n_ext) n_ext = ext 
+  let isok s =
+    let l = String.length s in
+    l > n_ext && String.sub s (l - n_ext) n_ext = ext
   in
   let l = rdirents isok "" [] dir in
   let len = String.length dir in
@@ -70,7 +70,7 @@ let read_prf filel =
     let l = read_prf_aux fname in
     List.iter add l
   in
-  List.iter read1 filel; 
+  List.iter read1 filel;
 	hash
 ;;
 
@@ -92,21 +92,21 @@ let read_dir dir =
 ;;
 
 (* Alternative format used in thf1hh1.ml and generate.ml *)
-(* Different reading fonction for hol_light 
+(* Different reading fonction for hol_light
   let s1 = List.hd (List.rev (Str.split (Str.regexp "[/]") s)) in
   let s2 = List.hd (Str.split (Str.regexp "[.]") s1) in
-*)						
+*)
 let read_thy_graph fname =
   let hash = Hashtbl.create 1000 in
   let add _ s = let (h :: t) = Str.split rxpspace s in Hashtbl.add hash h t in
-    file_iter fname add; hash	
+    file_iter fname add; hash
 
 let read_thy_lo fname =
   let ll = ref [] in
   let add _ s = ll := (Str.split rxpspace s) :: !ll in
     file_iter fname add; List.hd(List.rev !ll)
 
-let alt_read_prf dir filel = 
+let alt_read_prf dir filel =
   List.map (fun fname -> (Filename.chop_extension fname, read_prf_aux (dir ^ "/" ^ fname))) filel
 
 let alt_read_deps dir filel =
@@ -124,7 +124,7 @@ let alt_read_dir dir =
   (alt_read_deps dir hds, alt_read_prf dir ps)
 
 (* holyhammer for hol4 *)
-let read_conjecture fname = 
+let read_conjecture fname =
   let fourth (_,_,_,t) = t in
   fourth (List.hd (read_prf_aux fname))
 

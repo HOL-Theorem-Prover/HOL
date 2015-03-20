@@ -206,8 +206,8 @@ let escaped_aux s =
     s'
   end;;
 
-let escaped s = 
-  if Char.code s.[0] >= Char.code '0' && Char.code s.[0] <= Char.code '9' 
+let escaped s =
+  if Char.code s.[0] >= Char.code '0' && Char.code s.[0] <= Char.code '9'
   then "n" ^ escaped_aux s
   else if Char.code s.[0] = Char.code '_' then "u" ^ escaped_aux s
   else escaped_aux s

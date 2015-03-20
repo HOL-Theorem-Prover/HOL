@@ -209,8 +209,8 @@ open Lib;;
     function (Var(s,ty)) -> s,ty | _ -> failwith "dest_var: not a variable"
 
   let dest_const =
-    function (Const(s,ty)) -> 
-      (try 
+    function (Const(s,ty)) ->
+      (try
         Hashtbl.find hash_const_name s,ty
       with Not_found -> failwith ("No const: " ^ string_of_int s))
     | _ -> failwith "dest_const: not a constant"

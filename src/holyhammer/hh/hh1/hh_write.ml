@@ -42,7 +42,7 @@ let print_vartype t =
     if s.[i] = '?'  then s.[i] <- 'Q' else ();
     if s.[i] = '\'' then s.[i] <- 'P' else ()
   done;
-    "TV_" ^ escaped_aux s     
+    "TV_" ^ escaped_aux s
 ;;
 
 let os = output_string;;
