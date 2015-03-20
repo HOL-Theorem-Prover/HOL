@@ -18,8 +18,8 @@ struct
 open Feedback Lib Term KernelTypes Tag Dep
 
 type 'a set = 'a HOLset.set;
-type depdisk =        
-    (string * int) * 
+type depdisk =
+    (string * int) *
     (string * (string * int list * (int * string) list) list) list
 
 val --> = Type.-->;
@@ -660,7 +660,7 @@ fun EXISTS (w,t) th =
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
    (* Tracking dependencies *)
-   in make_thm Count.Exists (Tag.collapse (tag th), hypset th, w) 
+   in make_thm Count.Exists (Tag.collapse (tag th), hypset th, w)
    end
 end;
 
@@ -732,7 +732,7 @@ fun CHOOSE (v,xth) bth =
 
 fun CONJ th1 th2 = (* Tracking dependencies *)
    make_thm Count.Conj
-        (Tag.trackconj (tag th1) (tag th2), 
+        (Tag.trackconj (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
          Susp.force mk_conj(concl th1, concl th2))
    handle HOL_ERR _ => ERR "CONJ" "";
@@ -763,7 +763,7 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th = (* Tracking dependencies *)
-  make_thm Count.Conjunct1 (Tag.trackconjunct1 (tag th), 
+  make_thm Count.Conjunct1 (Tag.trackconjunct1 (tag th),
                             hypset th, conj1 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
@@ -791,7 +791,7 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th = (* Tracking dependencies *)
- make_thm Count.Conjunct2 (Tag.trackconjunct2 (tag th), 
+ make_thm Count.Conjunct2 (Tag.trackconjunct2 (tag th),
                            hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
@@ -808,7 +808,7 @@ fun CONJUNCT2 th = (* Tracking dependencies *)
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
- (Tag.collapse (tag th), hypset th, Susp.force mk_disj (concl th, w)) 
+ (Tag.collapse (tag th), hypset th, Susp.force mk_disj (concl th, w))
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -1244,32 +1244,32 @@ end; (* local *)
 (* ----------------------------------------------------------------------
     Save dependencies in a theorem:
     - Give it a dependency identifier.
-    - Split dependencies so that they correspond to the maximal level 
+    - Split dependencies so that they correspond to the maximal level
       of splitting.
     - Create dependencies that will be given to its children.
    ---------------------------------------------------------------------- *)
 
-local 
+local
 
 fun dep_is_forall tm =
-  let 
+  let
     val (Rator,Rand) = dest_comb tm
-    val {Thy,Name,...} = dest_thy_const Rator 
+    val {Thy,Name,...} = dest_thy_const Rator
   in
     (Name="!" andalso Thy="bool") andalso can dest_abs Rand
   end
-  handle _ => false  
- 
+  handle _ => false
+
 fun dep_inst_var tm =
-  let 
+  let
     val (Rator,Rand) = dest_comb tm
     val v = fst (dest_abs Rand)
   in
     prim_variant (free_vars tm) v
-  end 
+  end
 
 fun dep_is_conj tm =
-  let 
+  let
     val (Rator, Rand) = dest_comb tm
     val (Rator1, Rand1) = dest_comb Rator
     val {Thy,Name,...} = dest_thy_const Rator
@@ -1283,13 +1283,13 @@ in (* in local *)
 (* Associate dependencies to each of the maximally split conjuncts *)
 fun save_deptree dt th =
   let val t = concl th in
-    if dep_is_forall t 
+    if dep_is_forall t
       then save_deptree dt (SPEC (dep_inst_var t) th)
-    else if dep_is_conj (concl th) 
-      then 
+    else if dep_is_conj (concl th)
+      then
         case dt of
           DEP_NODE(dt1,dt2) => DEP_NODE(
-                               save_deptree dt1 (CONJUNCT1 th), 
+                               save_deptree dt1 (CONJUNCT1 th),
                                save_deptree dt2 (CONJUNCT2 th)
                                )
         | DEP_LEAF _        => DEP_NODE(
@@ -1301,19 +1301,19 @@ fun save_deptree dt th =
 
 end (* end local *)
 
-(* Magic : this reference is automatically reset to 0 each time you create 
+(* Magic : this reference is automatically reset to 0 each time you create
    a theory, which is convenient. *)
 val thm_order = ref 0
 
-fun save_dep thy (th as (THM(t,h,c))) = 
-  let 
-    val did = (thy,!thm_order) 
+fun save_dep thy (th as (THM(t,h,c))) =
+  let
+    val did = (thy,!thm_order)
     val dt  = (deptree_of o dep_of o tag) th
     val dt2 = save_deptree dt th
     val dt1 = starting_deptree (did,dt2)
     val dep = DEP_SAVED(did,dt1,dt2)
   in
-    thm_order := (!thm_order) + 1; 
+    thm_order := (!thm_order) + 1;
     THM(Tag.set_dep dep t,h,c)
   end
 
