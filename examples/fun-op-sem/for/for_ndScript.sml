@@ -1,11 +1,21 @@
-(* Define the syntax of a simple imperative language of For loops with IO and
- * non-determinism. A simple type system ensures that all breaks are inside of
- * for loops, and that no undeclared variables are accessed 
- *)
-
 open HolKernel Parse boolLib bossLib;
 
-val _ = new_theory "lang";
+val _ = new_theory "for_nd";
+
+(*
+
+This file defines a FOR language that's very similar to the language
+used by Arthur Charguéraud in his ESOP'13 paper:
+
+  Pretty-Big-Step Semantics
+  http://www.chargueraud.org/research/2012/pretty/
+
+In this non-deterministic (nd) version of Charguéraud's FOR language,
+we add basic I/O and non-deterministic evaluation order.
+
+A simpler version of this language can be found in forScript.sml.
+
+*)
 
 open pred_setTheory optionTheory stringTheory llistTheory integerTheory;
 open lcsymtacs;
@@ -13,11 +23,14 @@ open lcsymtacs;
 val _ = temp_tight_equality ();
 val ect = BasicProvers.EVERY_CASE_TAC;
 
-(* Expressions
- * Evaluation order of Add is unspecified, but one subexpression must be
- * completely evaluated before the other.
- * Getchar returns -1 to signal the end of file.
- *)
+
+(* === Syntax === *)
+
+(* Expressions:
+   - Evaluation order of Add is unspecified, but one subexpression
+     must be completely evaluated before the other.
+   - Getchar returns -1 to signal the end of file. *)
+
 val _ = Datatype `
 e = Var string
   | Num int
@@ -26,7 +39,7 @@ e = Var string
   | Getchar
   | Putchar e`;
 
-(* Statements *)
+(* Statements: *)
 val _ = Datatype `
 t =
   | Dec string t
@@ -36,12 +49,15 @@ t =
   | If e t t
   | For e e t`;
 
-(* What is observable about program behaviour. It can terminate after doing a
- * finite amount of I/O; it can diverge doing a potentially infinite amount of IO
- * (llist is the lazy list type constructor of lists that can be either finite or
- * infinite); or it can crash. We don't bother with the pre-crash IO because
- * well-typed programs won't crash.
- *)
+
+(* === Types used in semantics (given in for_nd_semScript.sml) === *)
+
+(* What is observable about program behaviour. A program can terminate
+   after doing a finite amount of I/O; it can diverge doing a
+   potentially infinite amount of IO (llist is the lazy list type
+   constructor of lists that can be either finite or infinite); or it
+   can crash. We don't bother with the pre-crash IO because well-typed
+   programs won't crash. *)
 
 val _ = Datatype `
   io_tag = Itag int | Otag int`;
@@ -57,7 +73,10 @@ getchar stream =
          let v = &(ORD (THE (LHD stream))) in
            (v, rest)`;
 
-(* A simple type system to check for Break statements and variable accesses *)
+
+(* === A simple type system === *)
+
+(* This type system checks for Break statements and variable accesses. *)
 val type_e_def = Define `
 (type_e s (Var x) ⇔ x ∈ s) ∧
 (type_e s (Num num) ⇔ T) ∧

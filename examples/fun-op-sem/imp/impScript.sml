@@ -6,6 +6,15 @@ val ect = BasicProvers.EVERY_CASE_TAC;
 
 val _ = new_theory "imp";
 
+(*
+
+This file defines a funcional big-step semantics for the IMP languages
+of Nipkow and Klein's book Concrete Semantics.
+
+http://www.concrete-semantics.org/
+
+*)
+
 val _ = temp_type_abbrev("vname",``:string``);
 
 val _ = Datatype `
@@ -33,6 +42,15 @@ val bval_def = Define `
   (bval (Less a1 a2) s = aval a1 s < aval a2 s)`;
 
 val STOP_def = Define `STOP x = x`;
+
+(* The following function defines the semantics of statement evaluation.
+   The clock decreases when entering the body of the While loop.
+
+   NB: the definition mechanism in HOL4 is not smart enough to notice
+   that the clock doesn't increase. In order to make the termination
+   simple, we insert an extra `if t < t2 then t else t2` in the Seq
+   case. In cval_def_with_stop below, we remove this redundant
+   if-statement. *)
 
 val cval_def = tDefine "cval" `
   (cval SKIP s (t:num) = SOME (s,t)) /\
@@ -77,6 +95,8 @@ val cval_def_with_stop = store_thm("cval_def_with_stop",
 
 val cval_def =
   save_thm("cval_def",REWRITE_RULE [STOP_def] cval_def_with_stop);
+
+(* We also remove the redundant if-statement from the induction theorem. *)
 
 val cval_ind = store_thm("cval_ind",
   ``!P.

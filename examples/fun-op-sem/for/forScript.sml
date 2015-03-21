@@ -2,19 +2,31 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "for";
 
+(*
+
+This file defines a simple FOR language that's very similar to the FOR
+language used by Arthur Charguéraud in his ESOP'13 paper:
+
+  Pretty-Big-Step Semantics
+  http://www.chargueraud.org/research/2012/pretty/
+
+This file defines:
+ - the syntax of the language,
+ - a functional big-step semantics (an interpreter with a clock),
+ - a conventional relational big-step semantics, and
+ - a very simple type checker (that is proved sound)
+
+*)
+
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
-open integerTheory;
-open lcsymtacs;
+open integerTheory lcsymtacs;
 
 val _ = temp_tight_equality ();
 
 val ect = BasicProvers.EVERY_CASE_TAC;
 
-val OMIT_def = Define `OMIT x = x`;
 
-val OMIT_INTRO = prove(
-  ``(P1 ==> P2 ==> Q) ==> (P1 /\ OMIT P2 ==> Q)``,
-  fs [OMIT_def]);
+(* === Syntax === *)
 
 val _ = Datatype `
 e = Var string
@@ -40,6 +52,9 @@ r = Rval int
 val r_distinct = fetch "-" "r_distinct";
 val r_11 = fetch "-" "r_11";
 
+
+(* === Functional big-step semantics === *)
+
 val _ = Datatype `
 state = <| store : string |-> int; clock : num |>`;
 
@@ -54,6 +69,8 @@ val state_rw = Q.prove (
 `(!s c. <| store := s; clock := c |>.store = s) ∧
  (!s. <| store := s.store; clock := s.clock |> = s)`,
  rw [state_component_equality]);
+
+(* Expression evaluation *)
 
 val sem_e_def = Define `
 (sem_e s (Var x) =
@@ -76,32 +93,26 @@ val sem_e_def = Define `
          (Rval n1, store_var x n1 s1)
      | r => r)`;
 
+(* HOL4's definition requires a little help with the definition. In
+   particular, we need to help it see that the clock does not
+   decrease. To do this, we add a few redundant checks (check_clock)
+   to the definition of the sem_t function. These redundant checks are
+   removed later in the script. *)
+
 val sem_e_clock = Q.store_thm ("sem_e_clock",
 `!s e r s'. sem_e s e = (r, s') ⇒ s.clock = s'.clock`,
- Induct_on `e` >>
- rw [sem_e_def] >>
- ect >>
- fs [] >>
- rw [] >>
- metis_tac []);
+ Induct_on `e` >> rw [sem_e_def] >> ect >>
+ fs [] >> rw [] >> metis_tac []);
 
 val sem_e_store = Q.prove (
 `!s e r s'. sem_e s e = (r, s') ⇒ FDOM s.store ⊆ FDOM s'.store`,
- Induct_on `e` >>
- rw [sem_e_def] >>
- ect >>
- fs [SUBSET_DEF] >>
- rw [] >>
- metis_tac []);
+ Induct_on `e` >> rw [sem_e_def] >> ect >>
+ fs [SUBSET_DEF] >> rw [] >> metis_tac []);
 
 val sem_e_res = Q.prove (
 `!s e r s'. sem_e s e = (r, s') ⇒ r ≠ Rbreak ∧ r ≠ Rtimeout`,
- Induct_on `e` >>
- rw [sem_e_def] >>
- ect >>
- fs [] >>
- rw [] >>
- metis_tac []);
+ Induct_on `e` >> rw [sem_e_def] >> ect >>
+ fs [] >> rw [] >> metis_tac []);
 
 val check_clock_def = Define `
 check_clock s' s =
@@ -113,6 +124,8 @@ dec_clock s = s with clock := s.clock - 1`;
 val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
 `!s. (dec_clock s).store = s.store`,
  rw [dec_clock_def]);
+
+(* Statement evaluation -- with redundant check_clock *)
 
 val sem_t_def = tDefine "sem_t" `
 (sem_t s (Exp e) = sem_e s e) ∧
@@ -177,6 +190,8 @@ val check_clock_id = Q.prove (
 val STOP_def = Define `
   STOP x = x`;
 
+(* Statement evaluation -- without any redundant checks *)
+
 val sem_t_def_with_stop = Q.store_thm ("sem_t_def_with_stop",
 `(sem_t s (Exp e) = sem_e s e) ∧
  (sem_t s (Dec x t) = sem_t (store_var x 0 s) t) ∧
@@ -224,6 +239,8 @@ val sem_t_def_with_stop = Q.store_thm ("sem_t_def_with_stop",
 
 val sem_t_def =
   save_thm("sem_t_def",REWRITE_RULE [STOP_def] sem_t_def_with_stop);
+
+(* We also remove the redundant checks from the induction theorem. *)
 
 val sem_t_ind = Q.store_thm("sem_t_ind",
   `!P.
@@ -299,6 +316,27 @@ val sem_t_store = Q.prove (
          metis_tac [sem_e_store, SUBSET_TRANS]) >>
      metis_tac [sem_e_store, SUBSET_TRANS]));
 
+(* The top-level semantics defines what is externally observable *)
+
+val _ = Datatype `
+  observation = Terminate | Diverge | Crash`;
+
+val s_with_clock_def = Define `
+  s_with_clock c = <| store := FEMPTY; clock := c |>`;
+
+val semantics_def = Define `
+  semantics t =
+      if (?c v s. sem_t (s_with_clock c) t = (Rval v,s)) then
+        Terminate
+      else if (!c. ?s. sem_t (s_with_clock c) t = (Rtimeout,s)) then
+        Diverge
+      else Crash`
+
+val semantics_thm = save_thm("semantics_thm",semantics_def);
+
+
+(* === A simple type checker === *)
+
 val type_e_def = Define `
 (type_e s (Var x) ⇔ x ∈ s) ∧
 (type_e s (Num num) ⇔ T) ∧
@@ -365,7 +403,7 @@ val type_weakening_t = Q.prove (
  metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]);
 
 (* Have to use sem_t_ind, and not type_t_ind or t_induction. This is different
- * than small-step-based type soundness *)
+ * from small-step-based type soundness *)
 val type_sound_t = Q.prove (
 `!s1 t in_for s.
   type_t in_for s t ∧ s ⊆ FDOM s1.store
@@ -444,23 +482,8 @@ val type_sound_t = Q.prove (
          metis_tac [SUBSET_TRANS]) >>
      metis_tac [sem_e_res]));
 
-val _ = Datatype `
-  observation = Terminate | Diverge | Crash`;
+(* A type checked program does not Crash. *)
 
-val s_with_clock_def = Define `
-  s_with_clock c = <| store := FEMPTY; clock := c |>`;
-
-val semantics_def = Define `
-  semantics t =
-      if (?c v s. sem_t (s_with_clock c) t = (Rval v,s)) then
-        Terminate
-      else if (!c. ?s. sem_t (s_with_clock c) t = (Rtimeout,s)) then
-        Diverge
-      else Crash`
-
-val semantics_thm = save_thm("semantics_thm",semantics_def);
-
-(* This proof is disgusting *)
 val type_soundness = Q.store_thm("type_soundness",
 `!t. type_t F {} t ⇒ semantics t ≠ Crash`,
  rw [semantics_def] >>
@@ -472,6 +495,9 @@ val type_soundness = Q.store_thm("type_soundness",
  \\ fs []
  \\ Cases_on `r` \\ fs[]
  \\ METIS_TAC []);
+
+
+(* === A relational big-step semantics === *)
 
 val is_rval_def = Define `
 (is_rval (Rval _) = T) ∧
@@ -514,6 +540,7 @@ val (sem_e_reln_rules, sem_e_reln_ind, sem_e_reln_cases) = Hol_reln `
   ⇒
   sem_e_reln s (Assign x e) (r, s1))`;
 
+(* The first argument indicates whether this is a clocked semantics or not *)
 val (sem_t_reln_rules, sem_t_reln_ind, sem_t_reln_cases) = Hol_reln `
 (!s e r.
   sem_e_reln s e r
@@ -679,6 +706,12 @@ val (simple_sem_t_reln_rules, simple_sem_t_reln_ind, simple_sem_t_reln_cases) =
   ⇒
   simple_sem_t_reln s (For e1 e2 t) (r, s2))`;
 
+val OMIT_def = Define `OMIT x = x`;
+
+val OMIT_INTRO = prove(
+  ``(P1 ==> P2 ==> Q) ==> (P1 /\ OMIT P2 ==> Q)``,
+  fs [OMIT_def]);
+
 val _ = Parse.add_infix("DOWNARROWe",450,Parse.NONASSOC)
 val _ = Parse.add_infix("DOWNARROWt",450,Parse.NONASSOC)
 
@@ -813,6 +846,8 @@ semantics_reln t =
      | SOME (Rval _, _) => Terminate
      | _ => Crash`;
 
+(* Some proofs relating the relational and functional semantics *)
+
 val big_sem_correct_lem1 = Q.prove (
 `∀s e r.
   sem_e_reln s e r
@@ -931,88 +966,5 @@ val big_sem_correct_lem5 = Q.prove (
  imp_res_tac sem_e_clock >>
  fs [] >>
  metis_tac [big_sem_correct_lem1, big_sem_correct_lem2, sem_e_ignores_clock, FST, SND, sem_e_res]);
- (*
-
-val big_sem_correct_lem6 = Q.prove (
-`∀s t r.
-  sem_t_reln F (s with clock := (SND r).clock) t r
-  ⇔
-  (?c. FST r ≠ Rtimeout ∧ sem_t (s with clock := c) t = r)`,
- ho_match_mp_tac sem_t_ind >>
- rpt conj_tac
- >- (rw [sem_t_def, Once sem_t_reln_cases] >>
-     metis_tac [big_sem_correct_lem5])
- >- (rw [sem_t_def] >>
-     rw [Once sem_t_reln_cases])
- >- (rw [sem_t_def] >>
-     rw [Once sem_t_reln_cases] >>
-     PairCases_on `r` >>
-     fs [] >>
-     eq_tac >>
-     rw [] >>
-     rw [] >>
-     metis_tac [])
- >- (rw [sem_t_def] >>
-     rw [Once sem_t_reln_cases] >>
-     PairCases_on `r` >>
-     fs [] >>
-     eq_tac >>
-     rw [] >>
-     ect >>
-     fs [] >>
-     metis_tac [is_rval_def, big_sem_correct_lem1, PAIR_EQ, r_distinct, r_11,
-     SND]
-
- >- (rw [sem_t_def] >>
-     rw [Once sem_t_reln_cases] >>
-     ect >>
-     fs [] >>
-     eq_tac >>
-     rw [] >>
-     imp_res_tac big_sem_correct_lem1 >>
-     fs [] >>
-     rw [] >>
-     rfs []
-     >- metis_tac [is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES]
-     >- (disj1_tac >>
-         imp_res_tac big_sem_correct_lem2 >>
-         qexists_tac `r'` >>
-         rw [])
-     >- metis_tac [is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES]
-     >- (disj2_tac >>
-         disj1_tac >>
-         imp_res_tac big_sem_correct_lem2 >>
-         qexists_tac `r'` >>
-         qexists_tac `i` >>
-         rw []) >>
-     metis_tac [is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES])
- >- (rw [] >>
-     rw [Once sem_t_reln_cases, Once sem_t_def] >>
-     Cases_on `sem_e s e1` >>
-     rw [] >>
-     Cases_on `q` >>
-     rw [] >>
-     PairCases_on `r` >>
-     fs [big_sem_correct_lem3] >>
-     rw []
-     >- metis_tac [is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES, PAIR_EQ]
-     >- (ect >>
-         rw [] >>
-         rfs [] >>
-         metis_tac [dec_clock_def, is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES]) >>
-     metis_tac [is_rval_def, big_sem_correct_lem1, big_sem_correct_lem2, PAIR_EQ, r_distinct, r_11, pair_CASES, PAIR_EQ]));
-
-val big_sem_correct = Q.prove (
-`!t. semantics_reln t = semantics t`,
- rw [semantics_def, semantics_reln_def, big_sem_correct_lem4]
- \\ ect \\ fs []);
-
-val semantics_reln_no_clock_def = Define `
-semantics_reln_no_clock t =
-  case some (r,s). sem_t_reln F <| store := FEMPTY; clock := 0 |> t (r, s)  of
-     | NONE => Diverge
-     | SOME (Rval _, _) => Terminate
-     | _ => Crash`;
-     *)
 
 val _ = export_theory ();

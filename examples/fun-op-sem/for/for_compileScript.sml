@@ -2,6 +2,20 @@ open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "for_compile";
 
+(*
+
+This file proves correctness of a compiler for the FOR language
+defined in forScript.sml. The compiler targets a simple assembly-like
+language. We prove that the compiler preserves the top-level
+observable semantics.
+
+The compiler consists of three passes:
+ - the first pass simplifies For loops and removes Dec
+ - the second pass compiles expressions into very simple assignments
+ - the third pass maps the FOR language into assmembly code
+
+*)
+
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
 open lcsymtacs forTheory listTheory arithmeticTheory;
 
@@ -11,7 +25,21 @@ val ect = BasicProvers.EVERY_CASE_TAC;
 
 val IMP_IMP = METIS_PROVE [] ``b /\ (b1 ==> b2) ==> ((b ==> b1) ==> b2)``
 
-(* verification of PASS 1, which reduces complexity of For and removes Dec *)
+
+(* === PASS 1 : simplifies For loops and removes Dec === *)
+
+val Loop_def = Define `
+  Loop t = For (Num 1) (Num 1) t`;
+
+val pass1_def = Define `
+  (pass1 (Exp e) = Exp e) /\
+  (pass1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (pass1 t)) /\
+  (pass1 (Break) = Break) /\
+  (pass1 (Seq t1 t2) = Seq (pass1 t1) (pass1 t2)) /\
+  (pass1 (If e t1 t2) = If e (pass1 t1) (pass1 t2)) /\
+  (pass1 (For e1 e2 t) = Loop (If e1 (Seq (pass1 t) (Exp e2)) Break))`;
+
+(* Verification of pass 1 *)
 
 val sem_t_Dec = store_thm("sem_t_Dec",
   ``sem_t s (Dec v t) =
@@ -26,9 +54,6 @@ val sem_t_pull_if = prove(
 val sem_t_eval = save_thm("sem_t_eval",
   (EVAL THENC REWRITE_CONV [sem_t_pull_if] THENC EVAL)
     ``sem_t s (If b (Exp (Num 0)) Break)``);
-
-val Loop_def = Define `
-  Loop t = For (Num 1) (Num 1) t`;
 
 val sem_t_Loop = save_thm("sem_t_Loop",
   ``sem_t s (Loop t)``
@@ -76,14 +101,6 @@ val sem_t_For = store_thm("sem_t_For",
   \\ imp_res_tac sem_t_clock
   \\ decide_tac);
 
-val pass1_def = Define `
-  (pass1 (Exp e) = Exp e) /\
-  (pass1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (pass1 t)) /\
-  (pass1 (Break) = Break) /\
-  (pass1 (Seq t1 t2) = Seq (pass1 t1) (pass1 t2)) /\
-  (pass1 (If e t1 t2) = If e (pass1 t1) (pass1 t2)) /\
-  (pass1 (For e1 e2 t) = Loop (If e1 (Seq (pass1 t) (Exp e2)) Break))`;
-
 val pass1_correct = store_thm("pass1_correct",
   ``!t s. sem_t s (pass1 t) = sem_t s t``,
   Induct \\ fs [pass1_def,sem_t_def_with_stop,GSYM sem_t_For,GSYM sem_t_Dec]
@@ -95,7 +112,7 @@ val pass1_pres = store_thm("pass1_pres",
   fs [semantics_def,pass1_correct]);
 
 
-(* verification of PASS 2, which flattens all expressions *)
+(* === PASS 2 : compiles expressions into very simple assignments === *)
 
 val comp_exp_def = Define `
   (comp_exp (Var v) s = Exp (Assign s (Var v))) /\
@@ -134,6 +151,8 @@ val t_max_def = Define `
 
 val pass2_def = Define `
   pass2 t = flatten_t t ("temp" ++ REPLICATE (t_max t - 3) #"'")`;
+
+(* Verification of pass 2 *)
 
 val possible_var_name_def = Define `
   possible_var_name v s = !n. ~(v ++ REPLICATE n #"'" IN FDOM s)`;
@@ -382,6 +401,11 @@ val lemma = prove(
   ``((if b then x1 else x2) <> x2) <=> (x1 <> x2) /\ b``,
   Cases_on `b` \\ fs [])
 
+(* We prove that pass 2 preserves semantics if the source semantics
+   does not Crash (implied by successful type check) and if the syntax
+   of the compiler program fits with pass2_subset (i.e. syntax
+   produced by pass1) *)
+
 val pass2_pres = store_thm("pass2_pres",
   ``!t. semantics t <> Crash /\ pass2_subset t ==>
         semantics (pass2 t) = semantics t``,
@@ -392,7 +416,9 @@ val pass2_pres = store_thm("pass2_pres",
   \\ MP_TAC pass2_correct_FST \\ fs []);
 
 
-(* verification of PASS 3, which generates assmebly programs *)
+(* === PASS 3 : maps the FOR language into assmembly code === *)
+
+(* We define the tagert assembly language *)
 
 val _ = Datatype `
 reg = Reg string`
@@ -480,6 +506,8 @@ val asm_semantics_def = Define `
     else if (!c. ?s. sem_a (a_state code c) = (Rtimeout,s)) then Diverge
     else Crash`;
 
+(* Definition of pass3 *)
+
 val pass3_aux_def = Define `
   (pass3_aux n (Dec v t) b = []) /\
   (pass3_aux n (Exp e) b =
@@ -507,6 +535,8 @@ val pass3_aux_def = Define `
 
 val pass3_def = Define `
   pass3 t = pass3_aux 0 t 0 ++ [Halt]`;
+
+(* Verification of pass3 *)
 
 val LENGTH_pass3_aux = prove(
   ``!t n b. LENGTH (pass3_aux n t b) = LENGTH (pass3_aux 0 t 0)``,
@@ -771,6 +801,10 @@ val pass3_correct = store_thm("pass3_correct",
   \\ SIMP_TAC std_ss [Once sem_a_def]
   \\ fs [rich_listTheory.EL_LENGTH_APPEND]);
 
+(* We prove that pass3 preserves semantics if the source does not
+   crash and if the syntax fits within the subset defined by
+   pass3_subset. *)
+
 val pass3_pres = store_thm("pass3_pres",
   ``!t. semantics t <> Crash /\ pass3_subset t ==>
         asm_semantics (pass3 t) = semantics t``,
@@ -796,10 +830,13 @@ val pass3_pres = store_thm("pass3_pres",
   \\ POP_ASSUM (MP_TAC o Q.SPEC `a_state (pass3 t) c`)
   \\ fs [a_state_def] \\ REPEAT STRIP_TAC \\ fs []);
 
-(* the entire compiler *)
+
+(* === The end-to-end compiler === *)
 
 val compile_def = Define `
   compile t = pass3 (pass2 (pass1 t))`;
+
+(* Verification of the compile function *)
 
 val pass2_subset_pass1 = prove(
   ``!t. pass2_subset (pass1 t)``,
@@ -820,6 +857,10 @@ val pass3_subset_pass2_pass1 = prove(
   \\ MATCH_MP_TAC pass3_subset_flatten_t
   \\ fs [pass2_subset_pass1]);
 
+(* The compile function produces code that has observable behaviour
+   that is identical to the source program, if the course program does
+   not Crash. *)
+
 val compile_pres = store_thm("compile_pres",
   ``!t. semantics t <> Crash ==>
         (asm_semantics (compile t) = semantics t)``,
@@ -831,6 +872,10 @@ val compile_pres = store_thm("compile_pres",
   \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
   \\ MATCH_MP_TAC pass3_pres
   \\ fs [pass2_pres,pass2_subset_pass1,pass3_subset_pass2_pass1]);
+
+(* The simple type checker (defined in forScript.sml) ensures that the
+   source program cannot Crash. This leads to a cleaner top-level
+   correctness theorem for compile. *)
 
 val syntax_ok_def = Define `
   syntax_ok t = type_t F {} t`;
