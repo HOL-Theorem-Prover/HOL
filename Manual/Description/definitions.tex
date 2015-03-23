@@ -2122,7 +2122,8 @@ The low-level approach to goals of this form is to apply
    HO_MATCH_MP_TAC R_ind
 \end{verbatim}
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
-A slightly more high-level approach is use the \ml{Induct\_on} tactic.
+A slightly more high-level approach is use the \ml{Induct\_on} tactic, which will actually use the automatically generated ``strong'' induction principle.%
+\footnote{Thus, to get the equivalent of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~(theorem "R_strongind")}.}
 (This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
 When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
 For the sake of aesthetics, the constant may also be applied to arguments.
