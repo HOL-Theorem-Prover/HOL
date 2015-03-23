@@ -55,6 +55,13 @@ fun isCont_char c = let val i = Char.ord c in 128 <= i andalso i < 192 end
 fun pow2 i = Word.toInt (Word.<<(0w1, Word.fromInt i))
 
 fun getChar s = let
+  fun rangeCheck cnt (res as ((_, i), _)) =
+    if case cnt of 2 => 0x80 <= i
+                 | 3 => 0x800 <= i
+                 | 4 => 0x10000 <= i andalso i <= Umax
+                 | _ => false
+    then res
+    else raise BadUTF8 s
   open Substring
   fun ucontinue acc pos limit ss =
       if pos = limit then let
@@ -81,7 +88,10 @@ fun getChar s = let
               val cnt = byte1_count c
             in
               if cnt = 1 then raise BadUTF8 (str c)
-              else ucontinue (i + pow2 (8 - cnt) - 256) 1 cnt ss
+              else
+                Option.map
+                    (rangeCheck cnt)
+                    (ucontinue (i + pow2 (8 - cnt) - 256) 1 cnt ss)
             end
         end
 in
