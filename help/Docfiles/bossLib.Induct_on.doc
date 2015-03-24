@@ -28,7 +28,7 @@ and quantifies all free variables of {M} before universally quantifying
 {v} and then finally inducting on {v}.  
 
 {Induct_on} may also be used to apply an induction theorem coming from 
-declaration of a mutually recursive datattype.
+declaration of a mutually recursive datatype.
 
 
 \FAILURE
