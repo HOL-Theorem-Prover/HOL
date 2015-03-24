@@ -101,13 +101,20 @@ sig
   (* A compilation fun gets a column, i.e. a list of
      terms together with a list of free variables in this term.
      For this column a expansion theorem of the form
-     ``!ff x. ff x = ...``
-     and an ssfrag should be returned. *)
-  type pmatch_compile_fun = (term list * term) list -> (thm * simpLib.ssfrag) option
+     ``!ff x. ff x = ...``, the number of  cases in this expansion
+     theorem and an ssfrag should be returned. *)
+  type pmatch_compile_fun = (term list * term) list -> (thm * int * simpLib.ssfrag) option
+
+  (* A compilation fun gets a column, i.e. a list of
+     terms together with a list of free variables in this term.
+     For this column an nchotomy theorem as well as the number of
+     entries in this nchotomy should be returned. *)
+  type pmatch_nchotomy_fun = (term list * term) list -> (thm * int) option
 
   (* A database for pattern compilation *)
   type pmatch_compile_db = {
     pcdb_compile_funs  : pmatch_compile_fun list,
+    pcdb_nchotomy_funs : pmatch_nchotomy_fun list,
     pcdb_constrFams    : (constructorFamily list) TypeNet.typenet,
     pcdb_ss            : simpLib.ssfrag
   }
@@ -129,10 +136,17 @@ sig
   val pmatch_compile_db_compile_cf : pmatch_compile_db ->
      (term list * term) list -> constructorFamily option
 
+  (* This tries to find an nchotony theorem for the given column. *)
+  val pmatch_compile_db_compile_nchotomy : pmatch_compile_db ->
+     (term list * term) list -> thm option
 
   (* add a compile fun to a db *)
   val pmatch_compile_db_add_compile_fun :
      pmatch_compile_db -> pmatch_compile_fun -> pmatch_compile_db
+
+  (* add an nchotomy fun to a db *)
+  val pmatch_compile_db_add_nchotomy_fun :
+     pmatch_compile_db -> pmatch_nchotomy_fun -> pmatch_compile_db
 
   (* add a constructorFamily to a db *)
   val pmatch_compile_db_add_constrFam :
@@ -150,6 +164,10 @@ sig
 
   (* add a compile_fun to default db *)
   val pmatch_compile_db_register_compile_fun : pmatch_compile_fun -> unit
+
+  (* add a nchotomy_fun to default db *)
+  val pmatch_compile_db_register_nchotomy_fun : pmatch_nchotomy_fun -> unit
+
   (* add a constructor family to default db *)
   val pmatch_compile_db_register_constrFam : constructorFamily -> unit
 

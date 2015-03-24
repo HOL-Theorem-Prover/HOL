@@ -18,7 +18,6 @@ val t''' = case2pmatch false t
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
-val thm_t' = PMATCH_REMOVE_ARB_CONV t'''
 val thm_t' = PMATCH_SIMP_CONV t'''
 val t2' = rhs (concl thm_t')
 
@@ -593,4 +592,51 @@ POP_ASSUM MP_TAC THEN
 Q.PAT_ASSUM `x INSERT t = _` (K ALL_TAC) THEN
 ASM_SIMP_TAC std_ss [CARD_INSERT])
 
+
+
+
+
+(*********************************)
+(* Fancy redundancy removal      *)
+(*********************************)
+
+val t = ``CASE (x, z) OF [
+  ||. (NONE, NONE) ~> 0;
+  ||. (SOME _, _) ~> 1;
+  ||. (_, NONE) ~> 2
+]``
+
+(* The last row is redundant, but it needs both first 
+   rows to show this. Therefore, the fast test,
+   which only considers single rows, fails. *)
+
+val _ = PMATCH_REMOVE_FAST_REDUNDANT_CONV t
+val thm = PMATCH_SIMP_CONV t
+
+(* but the full tests catch it *)
+val thm = PMATCH_REMOVE_REDUNDANT_CONV t
+
+
+(* Let's consider something more fancy *)
+
+val t = ``CASE x OF [
+    || x. x when EVEN x ~> "EVEN";
+    ||. 2 ~> "2";
+    || x. x when ODD x ~> "ODD";
+    ||. _ ~> "???"
+  ]``
+
+(* Here both the fast and full test catch
+   only the 2nd row. *)
+val thm = PMATCH_REMOVE_FAST_REDUNDANT_CONV t
+val thm = PMATCH_REMOVE_REDUNDANT_CONV t
+
+(* So let's prove the redundancy of the 4th row
+   with some manual help *)
+
+val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH  t
+val info_thm' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info_thm 3 (
+  SIMP_TAC std_ss [LEFT_FORALL_IMP_THM] THEN
+  METIS_TAC [arithmeticTheory.EVEN_OR_ODD]
+)
 

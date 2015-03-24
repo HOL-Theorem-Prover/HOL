@@ -4,7 +4,12 @@ struct
 open HolKernel Parse boolLib bossLib
 open deepMatchesTheory
 open pairSyntax
+open ConseqConv
 
+
+(***********************************************)
+(* Auxiliary stuff                             *)
+(***********************************************)
 
 (* Stolen from pairTools. TODO:
    add it to interface there. *)
@@ -32,11 +37,22 @@ in
   String.sub(s, 0) = #"_"
 end handle HOL_ERR _ => false
 
-fun mk_wildcard_gen avoid = let
+fun mk_new_label_gen prefix = let
+  val c = ref 0 
+in
+  fn () => let
+    val l = prefix ^ int_to_string (!c)
+    val _ = c := !c + 1
+  in
+     l
+  end
+end
+
+fun mk_var_gen prefix avoid = let
   val c = ref 0
   val avoidL = List.map (fst o dest_var) avoid
   fun next_name () = let
-    val vn = "_" ^ (int_to_string (!c))
+    val vn = prefix ^ (int_to_string (!c))
     val _ = c := !c + 1
     val ok = not (mem vn avoidL)
   in
@@ -44,6 +60,137 @@ fun mk_wildcard_gen avoid = let
   end
 in
   fn ty => mk_var (next_name (), ty)
+end
+
+fun mk_wildcard_gen avoid = mk_var_gen "_" avoid
+
+
+(* Get the first element of l that satisfies p and
+   move it to the first position. *)
+fun pick_element p l = let
+ fun aux acc l =
+   case l of
+       [] => failwith "no element found"
+     | e::l => (if p e then (e, List.rev acc @ l)
+                else aux (e::acc) l)
+ in
+   aux [] l
+ end
+
+fun strip_comb_bounded_aux acc n t = if (n > 0) then (let
+  val (t', a) = dest_comb t
+  in
+  strip_comb_bounded_aux (a::acc) (n - 1) t'
+end handle HOL_ERR _ => (t, acc)) else (t, acc)
+
+fun strip_comb_bounded n t = strip_comb_bounded_aux [] n t
+
+fun ALL_DISJ_CONV c t = if (is_disj t) then (
+  (BINOP_CONV (ALL_DISJ_CONV c)) t
+) else (TRY_CONV c) t
+
+fun ALL_DISJ_TF_ELIM_CONV c t = let
+  val (t1, t2) = dest_disj t
+in
+  if (aconv t1 T) then
+    SPEC t2 (ConseqConvTheory.OR_CLAUSES_TX)
+  else if (aconv t2 T) then
+    SPEC t1 (ConseqConvTheory.OR_CLAUSES_XT)
+  else let
+    val thm1_opt = SOME (ALL_DISJ_TF_ELIM_CONV c t1) handle UNCHANGED => NONE
+    val thm1_opt_eq_T = case thm1_opt of
+        NONE => false
+      | SOME thm1 => (aconv (rhs (concl thm1)) T)
+    val thm2_opt = if thm1_opt_eq_T then NONE else SOME (ALL_DISJ_TF_ELIM_CONV c t2) handle UNCHANGED => NONE
+
+    val thm0 = case (thm1_opt, thm2_opt) of
+        (NONE, NONE) => raise UNCHANGED
+      | (SOME thm1, NONE) => RATOR_CONV (RAND_CONV (K thm1)) t
+      | (NONE, SOME thm2) => RAND_CONV (K thm2) t
+      | (SOME thm1, SOME thm2) => (
+           (RATOR_CONV (RAND_CONV (K thm1))) THENC
+           (RAND_CONV (K thm2))) t
+
+    val (t1', t2') = dest_disj (rhs (concl thm0))
+
+    val rewr_thm_opt = if (aconv t1' T) then
+        SOME (ConseqConvTheory.OR_CLAUSES_TX)
+      else if (aconv t1' F) then
+        SOME (ConseqConvTheory.OR_CLAUSES_FX)
+      else if (aconv t2' T) then
+        SOME (ConseqConvTheory.OR_CLAUSES_XT)
+      else if (aconv t2' F) then
+        SOME (ConseqConvTheory.OR_CLAUSES_XF)
+      else NONE
+
+   val thm1 = case rewr_thm_opt of
+      NONE => thm0
+    | SOME thm_rw => RIGHT_CONV_RULE (REWR_CONV thm_rw) thm0
+  in
+    thm1
+  end
+end handle HOL_ERR _ => (TRY_CONV c) t
+
+
+
+
+fun ALL_CONJ_CONV c t = if (is_conj t) then (
+  (BINOP_CONV (ALL_CONJ_CONV c)) t
+) else (TRY_CONV c) t
+
+fun DECEND_CONV c_desc c t =
+  (c THENC TRY_CONV (c_desc (DECEND_CONV c_desc c))) t
+
+fun STRIP_ABS_CONV conv t =
+  if (is_abs t) then ABS_CONV (STRIP_ABS_CONV conv) t else
+  conv t
+
+fun has_subterm p t = ((find_term p t; true) handle HOL_ERR _ => false)
+
+(* like proof, but less verbose, since we expect that it might fail *)
+val prove_attempt = Lib.with_flag (Feedback.emit_MESG, false) prove
+
+(***********************************************)
+(* Labels from markerLib                       *)
+(***********************************************)
+
+fun add_labels_CONV lbls t = let
+  val lbl_tm = List.foldl markerSyntax.mk_label t lbls
+in
+  GSYM ((REPEATC markerLib.DEST_LABEL_CONV) lbl_tm)
+end
+
+(*
+  val mk_new_label = mk_new_label_generator "disj"
+  val lbl_tm = markerSyntax.mk_label (mk_new_label (), lbl_tm)
+  val t = lbl_tm
+*)
+
+fun strip_labels t = let
+  fun aux acc t = let
+    val (l, t') = markerSyntax.dest_label t
+  in 
+    aux (l::acc) t'
+  end handle HOL_ERR _ => (List.rev acc, t)
+in
+  aux [] t
+end
+
+(* conversion underneath a list of labels *)
+fun strip_labels_CONV c t =
+  if (markerSyntax.is_label t) then
+    RAND_CONV (strip_labels_CONV c) t
+  else
+    c t
+
+(* conversion underneath a list of labels containing at least
+   one label from list [lbls]. *)
+fun guarded_strip_labels_CONV lbls c t = let
+  val (lbls_found, _) = strip_labels t
+  val found = List.exists (fn l1 => List.exists (fn l2 => (l1 = l2)) lbls) lbls_found
+in
+  if not found then raise UNCHANGED else
+     strip_labels_CONV c t
 end
 
 
@@ -65,6 +212,12 @@ val ty_var_subst = [alpha |-> gen_tyvar (),
 
 val PMATCH_ROW_tm = ``PMATCH_ROW``
 val PMATCH_ROW_gtm = inst ty_var_subst PMATCH_ROW_tm;
+
+val PMATCH_ROW_COND_tm = ``PMATCH_ROW_COND``
+val PMATCH_ROW_COND_gtm = inst ty_var_subst PMATCH_ROW_COND_tm;
+
+val PMATCH_ROW_COND_EX_tm = ``PMATCH_ROW_COND_EX``
+val PMATCH_ROW_COND_EX_gtm = inst ty_var_subst PMATCH_ROW_COND_EX_tm;
 
 val PMATCH_tm = ``PMATCH``
 val PMATCH_gtm = inst ty_var_subst PMATCH_tm
@@ -110,15 +263,17 @@ fun is_PMATCH_ROW t = can dest_PMATCH_ROW t
 fun mk_PMATCH_ROW (p_t, g_t, r_t) =
   list_mk_icomb (PMATCH_ROW_gtm, [p_t, g_t, r_t])
 
-fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
-  val mk_pabs = case vars of
+fun mk_pabs_from_vars vars tl = case vars of
       []  => let
-               val uv = variant (free_varsl [p_t, g_t, r_t]) ``uv:unit``
+               val uv = variant (free_varsl tl) ``uv:unit``
              in
                fn t => mk_abs (uv, t)
              end
     | [v] => (fn t => mk_abs (v, t))
     | _   => (fn t => pairSyntax.mk_pabs (pairSyntax.list_mk_pair vars, t))
+
+fun mk_PMATCH_ROW_PABS vars (p_t, g_t, r_t) = let
+    val mk_pabs = mk_pabs_from_vars vars [p_t, g_t, r_t]
   in
     mk_PMATCH_ROW (mk_pabs p_t, mk_pabs g_t, mk_pabs r_t)
   end
@@ -259,17 +414,15 @@ end
 
 fun is_PMATCH t = can dest_PMATCH t
 
-fun dest_PMATCH_COLS t = let
-  val (v, rows) = dest_PMATCH t
-
-  fun split_row r = let
-    val (vars_tm, pt, gt, rh) = dest_PMATCH_ROW_ABS r
+fun dest_PATLIST_COLS v ps = let
+  fun split_pat p = let
+    val (vars_tm, pt) = pairSyntax.dest_pabs p
     val vars = pairSyntax.strip_pair vars_tm
     val pts = pairSyntax.strip_pair pt
   in
     List.map (fn x => (vars, x)) pts
   end
-  val rows' = map split_row rows
+  val rows' = map split_pat ps
 
   val col_no = length (hd rows')
   fun aux acc v col_no = if (col_no <= 1) then List.rev (v::acc) else (
@@ -294,12 +447,26 @@ fun dest_PMATCH_COLS t = let
   val cols = get_cols [] vs rows'
 in
   cols
-end handle Empty => failwith "dest_PMATCH_COLS"
+end handle Empty => failwith "dest_PATLIST_COLS"
+
+
+fun dest_PMATCH_COLS t = let
+  val (v, rows) = dest_PMATCH t
+  val ps = List.map (#1 o dest_PMATCH_ROW) rows
+in
+  dest_PATLIST_COLS v ps
+end 
 
 fun list_CONV c t = 
   if not (listSyntax.is_cons t) then  raise UNCHANGED else (
   (RATOR_CONV (RAND_CONV c) THENC
    RAND_CONV (list_CONV c)) t)
+
+fun list_nth_CONV n c t = 
+  if not (listSyntax.is_cons t) then  raise UNCHANGED else 
+  if (n < 0) then raise UNCHANGED else
+  if (n = 0) then RATOR_CONV (RAND_CONV c) t else
+  (RAND_CONV (list_nth_CONV (n-1) c)) t
 
 fun PMATCH_ROWS_CONV c t = let
   val _ = if not (is_PMATCH t) then raise UNCHANGED else ()
@@ -312,6 +479,136 @@ val PMATCH_FORCE_SAME_VARS_CONV =
 
 val PMATCH_INTRO_WILDCARDS_CONV =
   PMATCH_ROWS_CONV PMATCH_ROW_INTRO_WILDCARDS_CONV
+
+
+(***********************************************)
+(* PMATCH_ROW_COND                             *)
+(***********************************************)
+
+fun dest_PMATCH_ROW_COND rc = let
+  val (f, args) = strip_comb rc
+  val _ = if (same_const f PMATCH_ROW_COND_tm) andalso (List.length args = 4) then () else failwith "dest_PMATCH_ROW_COND"
+in
+  (el 1 args, el 2 args, el 3 args, el 4 args)
+end
+
+fun is_PMATCH_ROW_COND t = can dest_PMATCH_ROW_COND t
+
+fun mk_PMATCH_ROW_COND (p_t, g_t, i, x) =
+  list_mk_icomb (PMATCH_ROW_COND_gtm, [p_t, g_t, i, x])
+
+fun mk_PMATCH_ROW_COND_PABS vars (p_t, g_t, i, x) = let
+    val mk_pabs = mk_pabs_from_vars vars [p_t, g_t, x]
+  in
+    mk_PMATCH_ROW_COND (mk_pabs p_t, mk_pabs g_t, i, x)
+  end
+
+fun dest_PMATCH_ROW_COND_ABS rc = let
+  val (p_t, g_t, i_t, x_t) = dest_PMATCH_ROW_COND rc
+
+  val (p_vars, p_body) = pairSyntax.dest_pabs p_t
+  val (g_vars, g_body) = pairSyntax.dest_pabs g_t
+
+  val _ = if (aconv p_vars g_vars) then
+    () else failwith "dest_PMATCH_ROW_COND_ABS"
+in
+  (p_vars, p_body, g_body, i_t, x_t)
+end
+
+
+(***********************************************)
+(* PMATCH_ROW_COND_EX                          *)
+(***********************************************)
+
+fun dest_PMATCH_ROW_COND_EX rc = let
+  val (f, args) = strip_comb rc
+  val _ = if (same_const f PMATCH_ROW_COND_EX_tm) andalso (List.length args = 3) then () else failwith "dest_PMATCH_ROW_COND_EX"
+in
+  (el 1 args, el 2 args, el 3 args)
+end
+
+fun is_PMATCH_ROW_COND_EX t = can dest_PMATCH_ROW_COND_EX t
+
+fun mk_PMATCH_ROW_COND_EX (i, p_t, g_t) =
+  list_mk_icomb (PMATCH_ROW_COND_EX_gtm, [i, p_t, g_t])
+
+fun mk_PMATCH_ROW_COND_EX_PABS vars (i, p_t, g_t) = let
+    val mk_pabs = mk_pabs_from_vars vars [p_t, g_t]
+  in
+    mk_PMATCH_ROW_COND_EX (i, mk_pabs p_t, mk_pabs g_t)
+  end
+
+fun mk_PMATCH_ROW_COND_EX_pat i p = let
+    val (vars, _) = pairSyntax.dest_pabs p
+    val g = pairSyntax.mk_pabs (vars, T)
+  in
+    mk_PMATCH_ROW_COND_EX (i, p, g)
+  end
+
+fun mk_PMATCH_ROW_COND_EX_ROW i r = let
+    val (p, g, _) = dest_PMATCH_ROW r
+  in
+    mk_PMATCH_ROW_COND_EX (i, p, g)
+  end
+
+fun dest_PMATCH_ROW_COND_EX_ABS rc = let
+  val (i_t, p_t, g_t) = dest_PMATCH_ROW_COND_EX rc
+
+  val (p_vars, p_body) = pairSyntax.dest_pabs p_t
+  val (g_vars, g_body) = pairSyntax.dest_pabs g_t
+
+  val _ = if (aconv p_vars g_vars) then
+    () else failwith "dest_PMATCH_ROW_COND_EX_ABS"
+in
+  (i_t, p_vars, p_body, g_body)
+end
+
+
+(*
+val t = (el 4 o strip_disj o snd o strip_forall o concl) thm
+val v = (fst o dest_forall o concl) thm
+*)
+
+fun PMATCH_ROW_COND_EX_INTRO_CONV v t = let
+  val (vs, b) = strip_exists t
+  val b_conjs = strip_conj b
+  val (peq_t, guards) = pick_element (fn c => (aconv (lhs c) v handle HOL_ERR _ => false)) b_conjs
+
+  val p_t = rhs peq_t
+  val g_t = if List.null guards then T else list_mk_conj guards
+
+  val rc = mk_PMATCH_ROW_COND_EX_PABS vs (v, p_t, g_t)
+
+  val rc_eq_tm = mk_eq (t, rc)
+  (* set_goal ([], rc_eq_tm) *)
+  val rc_eq_thm = prove (rc_eq_tm,
+    SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def, pairTheory.EXISTS_PROD] THEN
+    TRY (REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV)) THEN
+    SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) []
+  )
+in
+  rc_eq_thm
+end
+
+
+fun nchotomy2PMATCH_ROW_COND_EX_CONV t = let
+  val (v, _) = dest_forall t
+in
+  (QUANT_CONV (ALL_DISJ_CONV (PMATCH_ROW_COND_EX_INTRO_CONV v))) t
+end
+
+fun PMATCH_ROW_COND_EX_ELIM_CONV t = let
+  val (_, p_t, _) = dest_PMATCH_ROW_COND_EX t
+  val (vars, _) = pairSyntax.dest_pabs p_t
+
+  val thm0 = REWR_CONV PMATCH_ROW_COND_EX_FULL_DEF t
+  val thm1 = RIGHT_CONV_RULE (RAND_CONV (pairTools.PABS_INTRO_CONV vars)) thm0
+  val thm2 = RIGHT_CONV_RULE pairTools.ELIM_TUPLED_QUANT_CONV thm1 handle HOL_ERR _ => thm1
+  val thm3 = RIGHT_CONV_RULE (STRIP_QUANT_CONV (DEPTH_CONV pairLib.GEN_BETA_CONV)) thm2
+  val thm4 = RIGHT_CONV_RULE (PURE_REWRITE_CONV [AND_CLAUSES]) thm3
+in
+  thm4
+end
 
 
 
@@ -392,7 +689,6 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
-
 
 (***********************************************)
 (* Parser                                      *)

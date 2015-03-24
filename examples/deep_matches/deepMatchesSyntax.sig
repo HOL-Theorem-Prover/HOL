@@ -2,22 +2,12 @@ signature deepMatchesSyntax =
 sig
   include Abbrev
 
-  val PMATCH_tm       : term
-  val PMATCH_ROW_tm   : term
-
-  (* auxiliary function that introduces fresh 
-     typevars for all type-vars used by 
-     free vars of a thm *)
-  val FRESH_TY_VARS_RULE : rule
-
-  (* transforms a term to a alpha-equivalent
-     one that does not use the same variable name in
-     different bindings in the term. *)
-  val REMOVE_REBIND_CONV : conv
 
   (******************)
   (* PMATCH_ROW     *)
   (******************)
+
+  val PMATCH_ROW_tm   : term
   
   (* dest_PMATCH_ROW ``PMATCH_ROW p g r``
      returns (``p``, ``g``, ``r``). *)
@@ -29,7 +19,7 @@ sig
      ``PMATCH_ROW p g rh``. *)     
   val mk_PMATCH_ROW : term * term * term -> term
 
-  (* [mk_PMATCH_ROW vars (p, g, rh)] constructs the term
+  (* [mk_PMATCH_ROW_PABS vars (p, g, rh)] constructs the term
      ``PMATCH_ROW (\vars. p) (\vars. g) (\vars. rh)``. *)     
   val mk_PMATCH_ROW_PABS : term list -> term * term * term -> term
 
@@ -78,9 +68,12 @@ sig
   val PMATCH_ROW_INTRO_WILDCARDS_CONV : conv
   val PMATCH_INTRO_WILDCARDS_CONV : conv
 
+
   (******************)
   (* PMATCH         *)
   (******************)
+
+  val PMATCH_tm       : term
 
   (* [dest_PMATCH ``PMATCH v rows``] returns (``v``, ``rows``). *)  
   val dest_PMATCH     : term -> (term * term list)
@@ -94,10 +87,38 @@ sig
      the free variables in the pattern and the column of the pattern 
      for each row. *)
   val dest_PMATCH_COLS : term -> (term * (term list * term) list) list
+  
+  (* internally, the columns come from a list of atterns. Sometimes
+     this interface is useful as well. *)
+  val dest_PATLIST_COLS : term -> term list -> (term * (term list * term) list) list
 
   (* applies a conversion to all rows of a pmatch *)
   val PMATCH_ROWS_CONV : conv -> conv
 
+
+  (*******************)
+  (* PMATCH_ROW_COND *)
+  (*******************)
+
+  val PMATCH_ROW_COND_tm   : term
+  val dest_PMATCH_ROW_COND : term -> (term * term * term * term)
+  val is_PMATCH_ROW_COND   : term -> bool
+  val mk_PMATCH_ROW_COND : term * term * term * term -> term
+  val mk_PMATCH_ROW_COND_PABS : term list -> term * term * term * term -> term
+  val dest_PMATCH_ROW_COND_ABS : term -> (term * term * term * term * term)
+
+  val PMATCH_ROW_COND_EX_tm : term
+  val dest_PMATCH_ROW_COND_EX : term -> term * term * term
+  val dest_PMATCH_ROW_COND_EX_ABS : term -> term * term * term * term
+  val is_PMATCH_ROW_COND_EX : term -> bool
+  val mk_PMATCH_ROW_COND_EX : term * term * term -> term
+  val mk_PMATCH_ROW_COND_EX_PABS : term list -> term * term * term -> term
+  val mk_PMATCH_ROW_COND_EX_pat : term -> term -> term
+  val mk_PMATCH_ROW_COND_EX_ROW : term -> term -> term
+
+  val PMATCH_ROW_COND_EX_INTRO_CONV : term -> conv
+  val nchotomy2PMATCH_ROW_COND_EX_CONV : conv
+  val PMATCH_ROW_COND_EX_ELIM_CONV : conv 
 
   (******************)
   (* Pretty printer *)
@@ -118,4 +139,101 @@ sig
      one can be used however. If the trace "parse deep cases"
      is set to true, standard case-expressions are parsed
      to deep-matches, otherwise the default state-expressions. *)
+
+
+  (**************************)
+  (* Labels (see markerLib) *)
+  (**************************)
+
+  (* strips multiple applications of labels *)
+  val strip_labels : term -> string list * term
+
+  (* add a list of labels to a term *)
+  val add_labels_CONV : string list -> conv
+
+  (* apply a conversion under a sequence 
+     of labels *)
+  val strip_labels_CONV : conv -> conv
+
+  (* similar to [strip_labels_CONV] but fails if not at least
+     one of the stripped labels has a lbl in the given list *)
+  val guarded_strip_labels_CONV :
+    string list -> conv -> conv
+
+
+  (*******************)
+  (* Auxiliary stuff *)
+  (*******************)
+
+  (* [pick_element p l] gets the first element of l that satisfies p
+     and removes this occurence from the list. 
+     If no such element exists, the function fails. *)
+  val pick_element : ('a -> bool) -> ('a list) -> 'a * 'a list
+
+  (* [has_subterm p t] checks whether [t] has a subterm satisfying
+     predicate [p]. *)
+  val has_subterm : (term -> bool) -> term -> bool  
+
+  (* Like [prove], but quiet in case it fails. This is useful,
+     when trying to prove things and are not sure, whether they
+     hold. *)
+  val prove_attempt : term * tactic -> thm
+
+  (* List strip_comb, but with a maximum bound. *)
+  val strip_comb_bounded : int -> term -> term * term list
+
+  (* auxiliary function that introduces fresh 
+     typevars for all type-vars used by 
+     free vars of a thm *)
+  val FRESH_TY_VARS_RULE : rule
+
+  (* transforms a term to a alpha-equivalent
+     one that does not use the same variable name in
+     different bindings in the term. *)
+  val REMOVE_REBIND_CONV : conv
+
+  (* strips lambda abstractions *)
+  val STRIP_ABS_CONV : conv -> conv
+
+  (* strip a large disjunction and apply a conversion to all
+     leafs. *)
+  val ALL_DISJ_CONV : conv -> conv
+
+  (* strip a large disjunction and apply a conversion to all
+     leafs. Eliminate T and F from the resulting term by
+     applying rewrites. This might be more efficient than 
+     ALL_DISJ_CONV, since it stops, once a T-disjunct is found. *)
+  val ALL_DISJ_TF_ELIM_CONV : conv -> conv
+
+  (* strip a large conjunction and apply a conversion to all
+     leafs. *)
+  val ALL_CONJ_CONV : conv -> conv
+
+  (* [DECEND_CONV c_desc c] applies [c] and then uses
+     [c_desc] to descend into the result via [c_desc] and
+     repeat. *) 
+  val DECEND_CONV : (conv -> conv) -> conv -> conv
+
+  (* Apply a conversion to all elements of a list (build
+     only by cons and nil) *)
+  val list_CONV : conv -> conv
+
+  (* Apply a conversion to the nth elements of a list.
+     Counting starts with 0. *)
+  val list_nth_CONV : int -> conv -> conv
+
+  (* Given a prefix [pr] and a list of variables to avoid [avoid],
+     [mk_var_gen pr avoid] generates a variable generator that
+     generates variable, whose name starts with [pr] and who
+     are all distinct to each other and the vars in list [avoid]. *)
+  val mk_var_gen : string -> term list -> (hol_type -> term)
+
+  (* Given a prefix [pr], [mk_new_label_gen pr] generate a string
+     generator for strings starting with [pr], which are all distinct
+     from each other *)
+  val mk_new_label_gen : string -> (unit -> string)
+
+
+
+
 end

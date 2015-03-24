@@ -66,8 +66,8 @@ sig
   (* PMATCH_SIMP_CONV consists of various
      component conversions. These can be used
      independently as well. *)
-  val PMATCH_REMOVE_REDUNDANT_CONV : conv
-  val PMATCH_REMOVE_REDUNDANT_CONV_GEN : ssfrag list -> conv
+  val PMATCH_REMOVE_FAST_REDUNDANT_CONV : conv
+  val PMATCH_REMOVE_FAST_REDUNDANT_CONV_GEN : ssfrag list -> conv
 
   val PMATCH_REMOVE_SUBSUMED_CONV : bool -> conv
   val PMATCH_REMOVE_SUBSUMED_CONV_GEN : bool -> ssfrag list -> conv
@@ -188,6 +188,7 @@ sig
      that often works. No specific properties guarenteed. *)
   val colHeu_default : column_heuristic
 
+
   (*-------------*)
   (* COMPILATION *)
   (*-------------*)
@@ -222,5 +223,52 @@ sig
 
   (* lets choose at least the heuristic *)
   val PMATCH_CASE_SPLIT_HEU_ss : column_heuristic -> ssfrag
+
+
+  (* Pattern compilation builds for a list of patterns, implicitly
+     a nchotomy theorem, i.e. a list of patterns that cover all the
+     original ones and are exhaustive. Moreover these patterns useually
+     have some nice properties like e.g. not overlapping with each other.
+     Such a nchotomy theorem is often handy. We use it to check for
+     exhaustiveness for example. The interface is exponsed here as well. *)
+
+  (* [nchotomy_of_pats_GEN db colHeu pats] computes an nchotomy-theorem
+     for a list of patterns. A pattern is written as for PMATCH, i.e. in the form ``\(v1, ..., vn). p v1 ... vn``. *)
+  val nchotomy_of_pats_GEN : constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term list -> thm
+  val nchotomy_of_pats : term list -> thm
+
+
+  (*-----------------------*)
+  (* Remove redundant rows *)
+  (*-----------------------*)
+
+  (* fancy, slow conversion for decting and removing
+     redundant rows. Internally this uses [nchotomy_of_pats] and
+     therefore requires a pmatch-compile db and a column-heuristic. *)
+  val PMATCH_REMOVE_REDUNDANT_CONV_GEN :
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list -> conv
+  val PMATCH_REMOVE_REDUNDANT_CONV : conv
+
+  val PMATCH_REMOVE_REDUNDANT_GEN_ss :
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list -> ssfrag
+  val PMATCH_REMOVE_REDUNDANT_ss : unit -> ssfrag
+
+
+  (* The redundancy removal conversion works by
+     first creating a is-redundant-rows-info theorem and
+     then turning it into a PMATCH equation. One can 
+     separate these steps, this allows using interactive proofs
+     for showing that a row is redundant. *)
+  val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN :
+    ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term -> thm
+  val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH : term -> thm
+  val IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM : thm -> thm
+
+
+  (* prove redundancy of given row given an info-thm *)
+  val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT :
+    thm -> int -> tactic -> thm
+  val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal :
+    thm -> int -> Manager.proof
 
 end

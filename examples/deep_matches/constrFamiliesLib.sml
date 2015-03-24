@@ -495,18 +495,50 @@ end
 (* extra matching info                             *)
 (***************************************************)
 
-type pmatch_compile_fun = (term list * term) list -> (thm * simpLib.ssfrag) option
+(* Datatype for representing how well a constructorFamily or
+   a hand-written function matches a column. *)
+type matchcol_stats = {
+  colstat_missed_rows : int,
+     (* how many rows of the col are not constructor applications
+        or bound vars? *)
+
+  colstat_cases : int,
+     (* how many cases are covered ? *)
+
+  colstat_missed_constr : int 
+     (* how many constructors of the family do not appear in the column *)
+}
+
+fun matchcol_stats_compare 
+  (st1 : matchcol_stats) 
+  (st2 : matchcol_stats) = let
+  fun lex_ord (i1, i2) b =
+     (i1 < i2) orelse ((i1 = i2) andalso b)
+in
+  lex_ord (#colstat_missed_rows st1, #colstat_missed_rows st2) (
+    lex_ord (#colstat_cases st1, #colstat_cases st2) (
+       op> (#colstat_missed_constr st1, #colstat_missed_constr st2)
+    )
+  )
+end
+
+
+type pmatch_compile_fun = (term list * term) list -> (thm * int * simpLib.ssfrag) option
+
+type pmatch_nchotomy_fun = (term list * term) list -> (thm * int) option
 
 val typeConstrFamsDB = ref (TypeNet.empty : constructorFamily TypeNet.typenet)
 
 type pmatch_compile_db = {
   pcdb_compile_funs  : pmatch_compile_fun list,
+  pcdb_nchotomy_funs : pmatch_nchotomy_fun list,
   pcdb_constrFams    : (constructorFamily list) TypeNet.typenet,
   pcdb_ss            : simpLib.ssfrag
 }
 
 val empty : pmatch_compile_db = {
   pcdb_compile_funs = [],
+  pcdb_nchotomy_funs = [],
   pcdb_constrFams = TypeNet.empty,
   pcdb_ss = (simpLib.rewrites [])
 }
@@ -527,16 +559,6 @@ in
      end    
 end handle HOL_ERR _ => NONE
 
-(* Datatype for representing how well a constructorFamily
-   matches a column. *)
-type constructorFamily_col_stats = {
-  cfcs_missed_rows : int,
-     (* how many rows of the col are not constructor applications
-        or bound vars? *)
-
-  cfcs_missed_constr : int 
-     (* how many constructors of the family do not appear in the column *)
-}
 
 fun measure_constructorFamily (cf : constructorFamily) col = let  
   fun list_count p col = 
@@ -563,23 +585,18 @@ fun measure_constructorFamily (cf : constructorFamily) col = let
        same_const f c
      end handle HOL_ERR _ => false) col)
 
-in 
+  val cases_no = List.length (#cl_constructors (#constructors cf))
+  val cases_no' = if (#cl_is_exhaustive (#constructors cf)) then cases_no else (cases_no+1)
+in
   {
-    cfcs_missed_rows = list_count row_is_missed col,
-    cfcs_missed_constr = list_count constr_is_missed crs
+    colstat_missed_rows = list_count row_is_missed col,
+    colstat_missed_constr = list_count constr_is_missed crs,
+    colstat_cases = cases_no'
   }
 end
 
-fun constructorFamily_col_stats_compare 
-  (st1:constructorFamily_col_stats) 
-  (st2 : constructorFamily_col_stats) =
 
-  (#cfcs_missed_rows st1 < #cfcs_missed_rows st2) orelse
-  ( (#cfcs_missed_rows st1 = #cfcs_missed_rows st2) andalso
-    (#cfcs_missed_constr st1 < #cfcs_missed_constr st2) )
-
-
-fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
+fun lookup_constructorFamilies force_exh (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
   val ty = type_of (snd (hd col))
 
@@ -606,44 +623,83 @@ fun lookup_constructorFamilies (db : pmatch_compile_db) col = let
   end
 
   val cts_fams' = List.filter (fn cf => not (is_old_fam cf)) cts_fams
+
+  val cts_fams' = if not force_exh then 
+     cts_fams'
+  else 
+     List.filter (fn (_, cf) => isSome (#nchotomy_thm cf)) cts_fams
+
   val weighted_fams = List.map (fn (ty, cf) =>
     ((ty, cf), measure_constructorFamily cf col)) cts_fams'
   val weighted_fams_sorted = sort (fn (_, w1) => fn (_, w2) =>
-    constructorFamily_col_stats_compare w1 w2) weighted_fams
+    matchcol_stats_compare w1 w2) weighted_fams
 in
   case weighted_fams_sorted of
-      [] => NONE
-    | (cs, _)::_ => SOME cs
+     [] => NONE
+   | wcf::_ => SOME wcf
 end;
 
 
-fun pmatch_compile_db_compile db col = (
-  if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else
-  case (get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)) of
-    SOME r => SOME r | NONE => (
-  case lookup_constructorFamilies db col of
-    NONE => NONE | SOME (ty, cf) => (
-    let
+fun pmatch_compile_db_compile_aux db col = (
+  if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else let    
+    val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)
+    val cf_res = lookup_constructorFamilies false db col
+
+    fun process_cf_res (ty, cf) w = let
       val ty_s = match_type ty (type_of (snd (hd col)))
       val thm = constructorFamily_get_case_split cf
       val thm' = INST_TYPE ty_s thm
     in
-      SOME (thm', merge_ss [(#pcdb_ss db), simpLib.rewrites [
+      (thm',#colstat_cases w, merge_ss [(#pcdb_ss db), simpLib.rewrites [
         (constructorFamily_get_rewrites cf)]])
     end
-  )));
+  in case (fun_res, cf_res) of
+      (NONE, NONE) => (NONE, NONE)
+    | (NONE, SOME (tycf, w)) => (SOME (process_cf_res tycf w), SOME tycf)
+    | (SOME (thm, c_no, ss), NONE) => (SOME (thm, c_no, ss), NONE)
+    | (SOME (thm, c_no, ss), SOME (tycf, w)) => if (c_no < #colstat_cases w) then 
+        (SOME (thm, c_no, ss), NONE) else (SOME (process_cf_res tycf w), SOME tycf)
+  end
+);
+
+fun pmatch_compile_db_compile db col = (
+  fst (pmatch_compile_db_compile_aux db col))
 
 fun pmatch_compile_db_compile_cf db col = (
-  if (List.null col) then failwith "pmatch_compile_db_compile_cf" "col 0" else
-  case (get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)) of
-    SOME r => NONE | NONE => (
-      case (lookup_constructorFamilies db col) of
-          NONE => NONE
-        | SOME (_, cf) => SOME cf))
+  case (snd (pmatch_compile_db_compile_aux db col)) of
+     NONE => NONE
+   | SOME (_, cf) => SOME cf
+)
 
+(*
+fun pmatch_compile_db_compile_nchotomy db col = (
+  if (List.null col) then failwith "pmatch_compile_db_compile_cf" "col 0" else
+  case (get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_nchotomy_funs db)) of
+    SOME r => r | NONE => (
+      case (lookup_constructorFamilies true db col) of
+          NONE => NONE
+        | SOME (_, cf) => #nchotomy_thm cf))
+*)
+
+fun pmatch_compile_db_compile_nchotomy db col = (
+  if (List.null col) then failwith "pmatch_compile_db_compile_nchotomy" "col 0" else let    
+    val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_nchotomy_funs db)
+    val cf_res = lookup_constructorFamilies true db col
+
+    fun process_cf_res (_, cf) = #nchotomy_thm cf
+
+  in case (fun_res, cf_res) of
+      (NONE, NONE) => NONE
+    | (NONE, SOME (tycf, _)) => process_cf_res tycf
+    | (SOME (thm, _), NONE) => SOME thm
+    | (SOME (thm, _), SOME (tycf, w)) => if (0 < #colstat_missed_rows w) then 
+        (SOME thm) else (process_cf_res tycf)
+  end
+);
 
 fun pmatch_compile_db_add_ssfrag (db : pmatch_compile_db) ss = {
   pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_nchotomy_funs = #pcdb_nchotomy_funs db,
   pcdb_constrFams = #pcdb_constrFams db,
   pcdb_ss = (simpLib.merge_ss [ss, #pcdb_ss db])
 } : pmatch_compile_db
@@ -659,6 +715,7 @@ fun pmatch_compile_db_register_congs thms =
 
 fun pmatch_compile_db_add_compile_fun (db : pmatch_compile_db) cf = {
   pcdb_compile_funs = cf::(#pcdb_compile_funs db),
+  pcdb_nchotomy_funs = #pcdb_nchotomy_funs db,
   pcdb_constrFams = #pcdb_constrFams db,
   pcdb_ss = #pcdb_ss db
 } : pmatch_compile_db
@@ -666,8 +723,19 @@ fun pmatch_compile_db_add_compile_fun (db : pmatch_compile_db) cf = {
 fun pmatch_compile_db_register_compile_fun cf =
   thePmatchCompileDB := pmatch_compile_db_add_compile_fun (!thePmatchCompileDB) cf
 
+fun pmatch_compile_db_add_nchotomy_fun (db : pmatch_compile_db) cf = {
+  pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_nchotomy_funs = cf::(#pcdb_nchotomy_funs db),
+  pcdb_constrFams = #pcdb_constrFams db,
+  pcdb_ss = #pcdb_ss db
+} : pmatch_compile_db
+
+fun pmatch_compile_db_register_nchotomy_fun f =
+  thePmatchCompileDB := pmatch_compile_db_add_nchotomy_fun (!thePmatchCompileDB) f
+
 fun pmatch_compile_db_add_constrFam (db : pmatch_compile_db) cf = {
   pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_nchotomy_funs = #pcdb_nchotomy_funs db,
   pcdb_constrFams = let
     val cl = (#constructors cf)
     val ty = normalise_ty (#cl_type cl)
@@ -685,6 +753,7 @@ fun pmatch_compile_db_register_constrFam cf =
 
 fun pmatch_compile_db_remove_type (db : pmatch_compile_db) ty = {
   pcdb_compile_funs = #pcdb_compile_funs db,
+  pcdb_nchotomy_funs = #pcdb_nchotomy_funs db,
   pcdb_constrFams = let
     val ty = normalise_ty ty
     val net = #pcdb_constrFams db
@@ -720,6 +789,7 @@ fun literals_compile_fun (col:(term list * term) list) = let
 
   val ts = List.foldl extract_literal empty_tmset col
   val lits = HOLset.listItems ts
+  val cases_no = List.length lits + 1
   val _ = if (List.null lits) then (failwith "" "no lits") else ()
 
   val rty = gen_tyvar ()
@@ -744,9 +814,56 @@ fun literals_compile_fun (col:(term list * term) list) = let
   val thm0 = mk_expand_thm lits
   val thm1 = GEN split_fun (GEN split_arg thm0)
 in
-  SOME (thm1, simpLib.rewrites [Cong boolTheory.COND_CONG])
+  SOME (thm1, cases_no, simpLib.rewrites [Cong boolTheory.COND_CONG])
 end
 
 val _ = pmatch_compile_db_register_compile_fun literals_compile_fun
+
+
+(***************************************************)
+(* nchotomy funs                                   *)
+(***************************************************)
+
+fun literals_nchotomy_fun (col:(term list * term) list) = let
+  fun extract_literal ((vs, c), ts) = let
+     val vars = FVL [c] empty_tmset
+     val is_lit = not (List.exists (fn v => HOLset.member (vars, v)) vs)
+  in 
+    if is_lit then HOLset.add(ts,c) else 
+      (if is_var c then ts else failwith "" "extract_literal")
+  end
+
+  val ts = List.foldl extract_literal empty_tmset col
+  val lits = HOLset.listItems ts
+  val cases_no = List.length lits + 1
+  val _ = if (List.null lits) then (failwith "" "no lits") else ()
+
+  val lit_ty = type_of (snd (List.hd col))
+  val split_arg = mk_var ("x", lit_ty)
+  val wc_arg = mk_var ("y", lit_ty)
+
+  val lit_tms = List.map (fn l => mk_eq (split_arg, l)) lits
+  val wc_tm = let
+    val not_tms =
+        List.map (fn l => mk_neg (mk_eq (wc_arg, l))) lits
+    val eq_tm = mk_eq (split_arg, wc_arg)
+    val b_tm = mk_conj (eq_tm, list_mk_conj not_tms)
+  in
+    mk_exists (wc_arg, b_tm)
+  end
+
+  val nchot_tm = list_mk_disj (lit_tms @ [wc_tm])
+  val nchot_thm = prove(nchot_tm,
+    SIMP_TAC std_ss [] THEN 
+    EVERY (List.map (fn t => 
+       (BOOL_CASES_TAC t THEN REWRITE_TAC[])) lit_tms))
+  val nchot_thm' = GEN split_arg nchot_thm
+in
+  SOME (nchot_thm', cases_no)
+end handle HOL_ERR _ => NONE
+
+val _ = pmatch_compile_db_register_nchotomy_fun literals_nchotomy_fun
+
+
 
 end
