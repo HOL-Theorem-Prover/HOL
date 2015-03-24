@@ -774,9 +774,9 @@ This means that \holtxt{f\,univ(:'a)} is parsed as \holtxt{f(univ(:'a))}, not \h
 
 \paragraph{Suffixes}
 
-Suffixes appear after their arguments.  There are no suffixes
-introduced into the standard theories available in \HOL{}, but users
-are always able to introduce their own if they choose.  Suffixes are
+Suffixes appear after their arguments.
+There are suffixes \holtxt{\^{}+}, \holtxt{\^{}*} and \holtxt{\^{}=} corresponding to the transitive, the reflexive and transitive, and the ``equivalence'' closure used in \ml{relationTheory} (Section~\ref{relation}).
+Suffixes are
 associated with a precedence just as infixes and prefixes are.
 If \holtxt{p} is a prefix, \holtxt{i} an infix, and \holtxt{s} a
 suffix, then there are six possible orderings for the three different
@@ -2826,7 +2826,7 @@ handled; they may even be ignored entirely.)
 When an embedded reducer is applied to a term, the provided \ml{apply}
 function is called.  As well as the term to be transformed, the
 \ml{apply} function is also passed a record containing a
-side-condition solver, a more general call-back to the simplifier, 
+side-condition solver, a more general call-back to the simplifier,
 the decision procedure's current context, and the
 stack of side-conditions attempted so far.  The stack and solver are
 the same as the additional arguments provided to user-supplied
