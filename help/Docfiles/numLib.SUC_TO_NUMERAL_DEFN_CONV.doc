@@ -15,12 +15,10 @@ the argument term is a numeral.
 This procedure uses the following theorem:
 {
   |- !f g. (!n. f (SUC n) = g n (SUC n)) =
-           (!n. f (NUMERAL (NUMERAL_BIT1 n)) =
-                g (NUMERAL (NUMERAL_BIT1 n))
-                  (NUMERAL (NUMERAL_BIT1 n) - 1)) /\
-           (!n. f (NUMERAL (NUMERAL_BIT2 n)) =
-                g (NUMERAL (NUMERAL_BIT2 n))
-                  (NUMERAL (NUMERAL_BIT1 n)))
+           (!n. f (NUMERAL (BIT1 n)) =
+                g (NUMERAL (BIT1 n)) (NUMERAL (BIT1 n) - 1)) /\
+           (!n. f (NUMERAL (BIT2 n)) =
+                g (NUMERAL (BIT2 n)) (NUMERAL (BIT1 n)))
 }
 
 \EXAMPLE
@@ -29,13 +27,11 @@ This procedure uses the following theorem:
 > val it =
     |- (FACT 0 = 1) /\
        (!n.
-          FACT (NUMERAL (NUMERAL_BIT1 n)) =
-            NUMERAL (NUMERAL_BIT1 n) *
-            FACT (NUMERAL (NUMERAL_BIT1 n) - 1)) /\
+          FACT (NUMERAL (BIT1 n)) =
+            NUMERAL (BIT1 n) * FACT (NUMERAL (BIT1 n) - 1)) /\
        !n.
-         FACT (NUMERAL (NUMERAL_BIT2 n)) =
-           NUMERAL (NUMERAL_BIT2 n) *
-           FACT (NUMERAL (NUMERAL_BIT1 n)) : thm
+         FACT (NUMERAL (BIT2 n)) =
+           NUMERAL (BIT2 n) * FACT (NUMERAL (BIT1 n)) : thm
 }
 
 \FAILURE
@@ -53,5 +49,3 @@ easily.
 numLib.num_CONV.
 
 \ENDDOC
-
-
