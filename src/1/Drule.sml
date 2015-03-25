@@ -1315,7 +1315,7 @@ fun EXISTS_LEFT1 fv th =
 fun SPEC_UNDISCH_EXL thm =
   let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
     val th2 = UNDISCH_ALL th1 ;
-    val th3 = EXISTS_LEFT fvs th2 ;
+    val th3 = EXISTS_LEFT (rev fvs) th2 ;
   in th3 end ;
 
 (* --------------------------------------------------------------------------*
