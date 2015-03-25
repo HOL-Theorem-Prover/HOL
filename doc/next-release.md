@@ -40,6 +40,30 @@ New examples:
 
 - A theory of balanced binary trees (`examples/balanced_bst`), based on Haskell code by Leijen and Palamarchuk, and mechanised by Scott Owens.  The type supports operations such as `insert`, `union`, `delete`, filters and folds.  Operations are parameterised by comparison operators for comparing keys.  Balanced trees can themselves be compared.
 
+- A formalisation of pattern matches (`examples/deep_matches`).
+  Pattern matching it is not directly supported by higher-order logic.
+  HOL4's parser therefore compiles case-expressions (`case x of ...`)
+  to decision trees based on case constants are used. For non-trivial
+  case expressions, there is a big discrepancy between the user's view
+  and this internal representation.  The `deep_matches` example
+  defines a new general-purpose representation for case expressions
+  that mirrors the input syntax in the internal representation
+  closely.  Because of this close connection, the new representation
+  is more intuitive and often much more compact.  Complicated parsers
+  and pretty-printers are no longer required.  Proofs can more closely
+  follow the user's intentions, and code generators (like CakeML) can
+  produce better code.  Moreover, the new representation is strictly
+  more general than the currently used representation. The new
+  representation allows for guards, Haskell-style views, patterns with
+  multiple occurrences of the same bound variable, unbound variables,
+  arithmetic expressions in patterns, and more. The example provides
+  the definitions as well as tools to work with the new
+  case-expressions. These tools include support for evaluating and
+  simplifying them, a highly configurable pattern compilation
+  algorithm inside the logic and optimisation like detecting redundant
+  rows and eliminating them.
+
+
 Incompatibilities:
 ------------------
 
