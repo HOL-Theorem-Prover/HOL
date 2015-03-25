@@ -36,6 +36,7 @@ sig
   val RIGHT_BETA       : thm -> thm
   val LIST_BETA_CONV   : term -> thm
   val RIGHT_LIST_BETA  : thm -> thm
+  val ASSUME_CONJS     : term -> thm
   val CONJUNCTS_AC     : term * term -> thm
   val DISJUNCTS_AC     : term * term -> thm
   val CONJ_DISCH       : term -> thm -> thm

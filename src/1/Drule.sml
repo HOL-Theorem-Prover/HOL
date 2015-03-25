@@ -451,6 +451,17 @@ val CONJUNCTS =
    end
 
 (*---------------------------------------------------------------------------*
+ * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
+ *                                                                           *
+ *  constructs a theorem proving conjunction from individual conjuncts       *
+ *---------------------------------------------------------------------------*)
+
+fun ASSUME_CONJS tm =
+  let val (tm1, tm2) = dest_conj tm ;
+  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
+  handle _ => ASSUME tm ; 
+
+(*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
  *                associativity of /\.                                       *
  *---------------------------------------------------------------------------*)
