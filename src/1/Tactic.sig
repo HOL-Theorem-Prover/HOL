@@ -58,6 +58,8 @@ sig
   val WEAKEN_TAC            : (term -> bool) -> tactic
   val MATCH_ACCEPT_TAC      : thm -> tactic
   val MATCH_MP_TAC          : thm -> tactic
+  val prim_irule_tac        : thm -> tactic
+  val irule                 : thm -> tactic
   val HO_MATCH_ACCEPT_TAC   : thm -> tactic
   val HO_BACKCHAIN_TAC      : thm -> tactic
   val HO_MATCH_MP_TAC       : thm -> tactic

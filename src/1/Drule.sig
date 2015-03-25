@@ -28,6 +28,7 @@ sig
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
   val SPEC_VAR         : thm -> term * thm
+  val SPEC_UNDISCH_EXL : thm -> thm
   val FORALL_EQ        : term -> thm -> thm
   val EXISTS_EQ        : term -> thm -> thm
   val SELECT_EQ        : term -> thm -> thm

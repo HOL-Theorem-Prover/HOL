@@ -1309,6 +1309,16 @@ fun EXISTS_LEFT1 fv th =
     in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
 
 (* --------------------------------------------------------------------------*
+ * SPEC_UNDISCH_EXL: strips !x, ant ==>, then EXISTS_LEFT for stripped vars  *
+ * --------------------------------------------------------------------------*)
+
+fun SPEC_UNDISCH_EXL thm =
+  let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
+    val th2 = UNDISCH_ALL th1 ;
+    val th3 = EXISTS_LEFT fvs th2 ;
+  in th3 end ;
+
+(* --------------------------------------------------------------------------*
  * MATCH_MP: Matching Modus Ponens for implications.                         *
  *                                                                           *
  *    |- !x1 ... xn. P ==> Q     |- P'                                       *
