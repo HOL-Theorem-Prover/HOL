@@ -1268,10 +1268,11 @@ fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
       val _ = if is_var fv then ()
         else raise mk_HOL_ERR "Drule" "EXISTS_LEFT'" "not free variable" ;
       (* following raises Bind if fv in conclusion *)
-      val false = List.exists (Lib.equal fv) fvs_c ;
+      val _ = List.all (not o aconv fv) fvs_c orelse raise Bind
       fun hyp_ctns_fv {hyp, fvs} = List.exists (Lib.equal fv) fvs ;
+      val (hyps_ctg_fv, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
       (* following raises Bind if fv not in any hypothesis *)
-      val (hyps_ctg_fv as _ :: _, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
+      val _ = not (null hyps_ctg_fv) orelse raise Bind
       val conj_tm = list_mk_conj (map #hyp hyps_ctg_fv) ;
       val conj_th = ASSUME conj_tm ;
       (* CONJ_LIST gives original hyps, even if they are conjunctions *)
@@ -1283,10 +1284,11 @@ fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
       val thex = EXISTS_LEFT' strict fvs_c
         ({hyp = ex_conj_tm, fvs = free_vars ex_conj_tm} :: hyps_nc) fvs the ;
     in thex end
-    handle exn => if strict then raise
-          raise mk_HOL_ERR "Drule" "EXISTS_LEFT'"
-            "free variable in conclusion or not in any hypothesis"
-        else EXISTS_LEFT' strict fvs_c hfvs fvs th ;
+    handle Bind =>
+           if strict then
+             raise mk_HOL_ERR "Drule" "EXISTS_LEFT'"
+                   "free variable in conclusion or not in any hypothesis"
+           else EXISTS_LEFT' strict fvs_c hfvs fvs th ;
 
 (* EXISTS_LEFT : term list -> thm -> thm
   for each free var in turn, do the following:
