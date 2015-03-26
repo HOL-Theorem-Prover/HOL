@@ -19,6 +19,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
        $(dprot $(SIGOBJ)/ParseExtras.uo) \
+       $(dprot $(SIGOBJ)/Drule.uo) \
        $(dprot $(SIGOBJ)/TheoryPP.uo)
 
 EXTRA_CLEANS = $(TARGET)
@@ -32,7 +33,7 @@ $(TARGET): $(DEPS)
 all: selftest.exe $(TARGET)
 .PHONY: all
 
-selftest.exe: selftest.uo 
+selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 endif
