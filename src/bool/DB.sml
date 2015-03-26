@@ -209,15 +209,15 @@ val apropos = match [];
 
 (* matches : term -> thm -> bool
   tests whether theorem matches pattern *)
-fun matches pat th = 
+fun matches pat th =
   can (find_term (can (ho_match_term [] empty_tmset pat))) (concl th) ;
 
 fun apropos_in pat dbdata =
   List.filter (fn (_, (th, _)) => matches pat th) dbdata ;
 
-fun find_in s = 
+fun find_in s =
   let val lows = toLower s ;
-    fun finds dbdata = 
+    fun finds dbdata =
       List.filter (fn ((_, name), _) => occurs lows (toLower name)) dbdata ;
   in finds end ;
 

@@ -37,7 +37,7 @@ datatype reducer =
   REDUCER of {name : string option,
               initial: context,
               addcontext : context * Thm.thm list -> context,
-              apply: {solver:term list -> term -> thm, 
+              apply: {solver:term list -> term -> thm,
                       conv: term list -> term -> thm,
                       context: context,
                       stack: term list, relation : term * (term -> thm)} -> conv

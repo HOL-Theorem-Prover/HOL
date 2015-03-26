@@ -49,8 +49,8 @@ sig
 
   val bindl : string -> (string * thm * class) list -> unit
 
-  val CT : unit -> (string, (string, data list) Redblackmap.dict * 
-    (string, data list) Redblackmap.dict) Redblackmap.dict 
+  val CT : unit -> (string, (string, data list) Redblackmap.dict *
+    (string, data list) Redblackmap.dict) Redblackmap.dict
 
 
 end

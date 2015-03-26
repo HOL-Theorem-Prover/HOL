@@ -98,7 +98,7 @@ sig
 
   val >| : ('a -> goal list * (thm list -> 'b)) * tactic list ->
          'a -> goal list * (thm list -> 'b)
-  (* ie, tactic * tactic list -> tactic OR 
+  (* ie, tactic * tactic list -> tactic OR
     list_tactic * tactic list -> list_tactic *)
 
   val >- : tactic * tactic -> tactic

@@ -210,13 +210,13 @@ let
     fun colfun_print thry rowL =
       case (!remaining_prefix) of
           (i :: is) => (remaining_prefix := is; i)
-        | [] => 
+        | [] =>
             let
-              fun all_vars n = List.all is_var (List.map 
+              fun all_vars n = List.all is_var (List.map
                  (fn r => List.nth (r, n)) rowL)
               fun col_fun n _ = if (all_vars n orelse
                    (List.null rowL) orelse
-                   (List.length (List.hd rowL) < 2)) then 
+                   (List.length (List.hd rowL) < 2)) then
                 SOME n else NONE
             in
                case (Lib.first_opt col_fun rowL) of
@@ -226,7 +226,7 @@ let
                    (false, r, 1)
                  end
                | NONE => let
-                   val l = List.length (hd rowL) 
+                   val l = List.length (hd rowL)
                    val _ = Lib.appi (fn i => fn _ =>  add_heu (heu ((!current_prefix) @ [(true, i+1, l)]))) (tl (hd rowL))
                    val _ = current_prefix := (!current_prefix) @ [(true, 0, l)]
                  in
@@ -235,7 +235,7 @@ let
             end
 
      fun colfun thry rowL = let
-       val (do_it, r, l) = colfun_print thry rowL 
+       val (do_it, r, l) = colfun_print thry rowL
        val _ = if do_it then (print (int_to_string (r+1)); print "/"; print (int_to_string l); print " ") else ()
      in
        r
@@ -271,9 +271,9 @@ end
 fun pheu_manual (res_input : int list) : pmatch_heuristic =
 let
   fun pr ts = let
-    val ts_sl = List.map (fn t => "``" ^ (Hol_pp.term_to_string t) ^ "``") ts 
+    val ts_sl = List.map (fn t => "``" ^ (Hol_pp.term_to_string t) ^ "``") ts
     val ts_s = String.concatWith ", " ts_sl
-  in 
+  in
     print ts_s;
     print "\n"
   end
@@ -281,12 +281,12 @@ let
   fun man_choice rowL =
     let
       val r = case (!res) of
-          [] => 0    
-        | (i::is) => 
+          [] => 0
+        | (i::is) =>
               let
                 val _ = res := is
               in
-                if (i < List.length (List.hd rowL)) then i else 
+                if (i < List.length (List.hd rowL)) then i else
                    (print ("Error, can't use "^(int_to_string i)^"\n");0)
               end
       val _ = List.map pr rowL
@@ -295,10 +295,10 @@ let
       r
     end
 
-  fun colfun thry rowL =      
+  fun colfun thry rowL =
     if ((null rowL) orelse (length (hd rowL) < 2)) then 0 else
     let
-      fun all_vars n = List.all is_var (List.map 
+      fun all_vars n = List.all is_var (List.map
           (fn r => List.nth (r, n)) rowL)
       fun col_fun n _ = if all_vars n then SOME n else NONE
     in

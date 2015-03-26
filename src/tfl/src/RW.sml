@@ -429,7 +429,7 @@ end;
 
 fun TRY_QCONV cnv = ORELSEQC cnv ALL_QCONV;
 
-datatype delta = CHANGE of thm | NO_CHANGE of thm; 
+datatype delta = CHANGE of thm | NO_CHANGE of thm;
 
 fun unchanged (NO_CHANGE _) = true | unchanged _ = false;
 
@@ -527,31 +527,31 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 (* with this causes some clutter in the code.                                *)
 (*---------------------------------------------------------------------------*)
 
-fun no_change V L tm = 
+fun no_change V L tm =
   NO_CHANGE (itlist GEN V (itlist DISCH L (REFL tm)))
 
-fun try_cong cnv (cps as {context,prover,simpls}) tm = 
- let 
- fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) = 
-   case total ((I##dest_eq) o strip_imp_only) ant 
+fun try_cong cnv (cps as {context,prover,simpls}) tm =
+ let
+ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
+   case total ((I##dest_eq) o strip_imp_only) ant
     of NONE (* Not an equality, so just assume *)
          => (CHANGE(ASSUME ant), rst)
-     | SOME (L,(lhs,rhs)) 
+     | SOME (L,(lhs,rhs))
         => let val outcome =
              if aconv lhs rhs then no_change [] L lhs
              else let val cps' = if null L then cps else
                           {context = (map ASSUME L @ cntxt,b),
                            prover  = prover,
                            simpls  = add_cntxt b simpls (map ASSUME L)}
-                  in CHANGE(cnv cps' lhs) 
+                  in CHANGE(cnv cps' lhs)
                      handle HOL_ERR _ => no_change [] L lhs
                           | UNCHANGED => no_change [] L lhs
                   end
            in
-        case outcome 
-         of CHANGE th => 
+        case outcome
+         of CHANGE th =>
               let val Mnew = boolSyntax.rhs(concl th)
-              in (CHANGE (itlist DISCH L th), 
+              in (CHANGE (itlist DISCH L th),
                   map (subst [rhs |-> Mnew]) rst)
               end
           | NO_CHANGE _ => (outcome, map (subst [rhs |-> lhs]) rst)
@@ -570,31 +570,31 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
     val vstructs = vstrl_variants (union ant_frees context_frees) vstrl
     val ceqn' = if null vstrl then ceqn else subst (map (op|->) (zip args vstructs)) ceqn
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
-    val outcome = 
-       if aconv lhs rhs 
+    val outcome =
+       if aconv lhs rhs
         then no_change vlist L lhs
        else
        let val lhs_beta_maybe = Conv.QCONV (Conv.DEPTH_CONV GEN_BETA_CONV) lhs
            val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
-           val cps' = case L 
+           val cps' = case L
                        of [] => cps
                         | otherwise =>
-                            {context = (map ASSUME L @ cntxt,b), 
-                             prover = prover, 
+                            {context = (map ASSUME L @ cntxt,b),
+                             prover = prover,
                              simpls  = add_cntxt b simpls (map ASSUME L)}
        in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
-          handle HOL_ERR _ => 
-                  if aconv lhs lhs' 
-                    then no_change vlist L lhs 
+          handle HOL_ERR _ =>
+                  if aconv lhs lhs'
+                    then no_change vlist L lhs
                     else CHANGE lhs_beta_maybe
-               | UNCHANGED => if aconv lhs lhs' 
-                              then no_change vlist L lhs 
+               | UNCHANGED => if aconv lhs lhs'
+                              then no_change vlist L lhs
                               else CHANGE lhs_beta_maybe
        end
   in
-  case outcome 
+  case outcome
    of NO_CHANGE _ => (outcome, map (subst [rhsv |-> f]) rst)
-    | CHANGE th => 
+    | CHANGE th =>
       let (*------------------------------------------------------------*)
           (* Function eta_rhs packages up the new rhs, eta-expanding it *)
           (* if need be, i.e. if the lhs is an application of a lambda  *)
@@ -605,7 +605,7 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
           (* that has function syntax. This will allow the final        *)
           (* MATCH_MP icong ... to  succeed.                            *)
           (*------------------------------------------------------------*)
-         fun eta_rhs th =  
+         fun eta_rhs th =
            let val r = boolSyntax.rhs(concl th)
                val not_lambda_app = null vstrl
                val rcore = if not_lambda_app
@@ -634,9 +634,9 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
 
   val icong = CONG_STEP simpls tm
   val ants = strip_conj (fst(dest_imp (concl icong)))
-  (* loop proves each antecedent in turn and propagates 
+  (* loop proves each antecedent in turn and propagates
      instantiations to the remainder. *)
-  fun loop [] = []    
+  fun loop [] = []
     | loop (ant::rst) =
       let val (outcome,rst') =
            if is_forall ant
@@ -658,7 +658,7 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
 fun SUB_QCONV cnv cps tm =
  case dest_term tm
   of COMB(Rator,Rand) =>
-      (try_cong cnv cps tm 
+      (try_cong cnv cps tm
        handle UNCHANGED => raise UNCHANGED
           | HOL_ERR _ =>
               let val th = cnv cps Rator

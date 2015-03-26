@@ -1,5 +1,5 @@
 
-open HolKernel Parse DB 
+open HolKernel Parse DB
 (* open testutils NOT YET BUILT - therefore need following lines *)
 
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
@@ -11,7 +11,7 @@ val _ = set_trace "Unicode" 0
 
 val _ = tprint "test of apropos_in, find_in"
 
-val _ = let 
+val _ = let
   val str = "THM" ;
   val tm = ``$/\`` ;
   val find1 = find str ;

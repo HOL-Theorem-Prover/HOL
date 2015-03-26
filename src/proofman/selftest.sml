@@ -8,7 +8,7 @@ val _ = set_trace "Unicode" 0
 
 val _ = tprint "test of flatn"
 
-val _ = let 
+val _ = let
     val g = ([], ``a ==> b ==> c ==> d ==> e ==> a /\ b /\ c /\ d /\ e``) : goal
     val gstk = new_goal g Lib.I ;
     val gstk = expand (REPEAT DISCH_TAC) gstk ;

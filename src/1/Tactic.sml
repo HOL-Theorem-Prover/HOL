@@ -787,7 +787,7 @@ end
  * (3) hypotheses of the theorem provided also become new subgoals           *
  * --------------------------------------------------------------------------*)
 
-fun irule thm = prim_irule (SPEC_UNDISCH_EXL thm) ; 
+fun irule thm = prim_irule (SPEC_UNDISCH_EXL thm) ;
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

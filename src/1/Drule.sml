@@ -272,7 +272,7 @@ fun UNDISCH th =
 
 fun UNDISCH_TM th =
    let val (ant, conseq) = dest_imp (concl th) ;
-   in (ant, MP th (ASSUME ant)) end 
+   in (ant, MP th (ASSUME ant)) end
    handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
 
 (*---------------------------------------------------------------------------*
@@ -459,7 +459,7 @@ val CONJUNCTS =
 fun ASSUME_CONJS tm =
   let val (tm1, tm2) = dest_conj tm ;
   in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
-  handle _ => ASSUME tm ; 
+  handle _ => ASSUME tm ;
 
 (*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
@@ -1241,9 +1241,9 @@ fun PART_MATCH partfn th =
    end
 
 (* --------------------------------------------------------------------------*
-    EXISTS_LEFT, EXISTS_LEFT1  
+    EXISTS_LEFT, EXISTS_LEFT1
     existentially quantifying variables which appear only in the hypotheses
-    
+
 			[x = y, y = z] |- x = z
 	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
 	       [∃y. (x = y) ∧ (y = z)] |- x = z
@@ -1253,13 +1253,13 @@ fun PART_MATCH partfn th =
 (* EXISTS_LEFT' : bool ->
    term list -> {fvs: term list, hyp: term} list -> term list -> thm -> thm
    used below, saves hyps, their free vars, and free vars of conclusion,
-   across recursive calls 
-   arg1 - whether to ignore errors, ie, free vars which are either in the 
+   across recursive calls
+   arg1 - whether to ignore errors, ie, free vars which are either in the
      conclusion or not in any hypothesis
    arg2 - list of free vars in the conclusion
    arg3 - list of assumptions of the theorem, each with the list of free vars
      which it contains
-   arg4 - list of free vars to become existentially quantified 
+   arg4 - list of free vars to become existentially quantified
 *)
 
 fun EXISTS_LEFT' strict fvs_c hfvs [] th = th

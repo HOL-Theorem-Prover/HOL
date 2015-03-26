@@ -26,7 +26,7 @@ sig
       as argument. Then look at the choices and add 0s for all the
       initial choices you liked to be 0 an then a different choice you
       prefer. Rerun again (because the following choices will change)
-      and iterate. This provided very fine control, but is tedious. *) 
+      and iterate. This provided very fine control, but is tedious. *)
    val pheu_manual : int list -> pmatch_heuristic
 
    (* A heuristic based on column ranks. Given a pattern match matrix like

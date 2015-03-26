@@ -54,7 +54,7 @@ sig
     *      to the solver are made.
     *
     * conv:
-    *   A continuation function, to be used if the reducer 
+    *   A continuation function, to be used if the reducer
     *   wants to continue traversing. The continuation invokes traversal
     *   under equality. Similar to solver, but does not call EQT_ELIM.
     *
