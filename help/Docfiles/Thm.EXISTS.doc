@@ -37,5 +37,5 @@ things from the same theorem:
 
 
 \SEEALSO
-Thm.CHOOSE, Tactic.EXISTS_TAC.
+Thm.CHOOSE, Drule.SIMPLE_EXISTS, Tactic.EXISTS_TAC.
 \ENDDOC
