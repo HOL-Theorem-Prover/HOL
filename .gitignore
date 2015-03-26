@@ -29,6 +29,7 @@
 *.tix
 *.hix
 *.fdb_latexmk
+*.synctex.gz
 
 #Generated Verilog from Iyoda/Gordon hw compilation
 *.vl
