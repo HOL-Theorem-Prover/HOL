@@ -1,6 +1,6 @@
-\DOC prim_irule_tac
+\DOC prim_irule
 
-\TYPE {prim_irule_tac : thm_tactic}
+\TYPE {prim_irule : thm_tactic}
 
 \SYNOPSIS
 For a goal which is an instance of the conclusion of the supplied theorem,
@@ -13,7 +13,7 @@ tactic.
 When given a theorem {A' |- t} and a goal {A ?- t'} where {t} can be matched
 to {t'} by instantiating free variables,
 including appropriate type instantiation,
-{prim_irule_tac} replaces the goal by new subgoals which are the hypotheses
+{prim_irule} replaces the goal by new subgoals which are the hypotheses
 {A'}, instantiated
 
 \FAILURE
@@ -23,7 +23,7 @@ of the goal.
 \COMMENTS
 {irule} also pre-processes the supplied theorem, which will normally be useful
 
-{irule} differs from {MATCH_ACCEPT_TAC} in that hypotheses of the supplied
+{prim_irule} differs from {MATCH_ACCEPT_TAC} in that hypotheses of the supplied
 theorem may also be substituted, and will appear as new subgoals
 
 \SEEALSO

@@ -709,12 +709,12 @@ fun MATCH_ACCEPT_TAC thm : tactic =
    handle HOL_ERR _ => raise ERR "MATCH_ACCEPT_TAC" ""
 
 (* ---------------------------------------------------------------------*
- * prim_irule_tac : Similar to MATCH_ACCEPT_TAC but                     *
+ * prim_irule : Similar to MATCH_ACCEPT_TAC but                         *
  * (1) allows substitution in hypotheses of the supplied theorem        *
  * (2) adds new subgoals for those hypotheses                           *
  * ---------------------------------------------------------------------*)
 
-fun prim_irule_tac thm (asl, w) =
+fun prim_irule thm (asl, w) =
   let val matchsub = match_terml [] empty_tmset (concl thm) w ;
     val subthm = INST_TY_TERM matchsub thm ;
   in GEN_VALIDATE false (ACCEPT_TAC subthm) (asl, w) end ;
@@ -787,8 +787,7 @@ end
  * (3) hypotheses of the theorem provided also become new subgoals           *
  * --------------------------------------------------------------------------*)
 
-fun irule thm = prim_irule_tac (SPEC_UNDISCH_EXL thm) ;
-
+fun irule thm = prim_irule (SPEC_UNDISCH_EXL thm) ; 
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

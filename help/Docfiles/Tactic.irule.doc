@@ -44,8 +44,8 @@ existentially quantifies variables which were instantiated but appeared
 only in the antecedents of implications.
 See {SPEC_UNDISCH_EXL} for details.
 
-Then {prim_irule_tac} is applied.  To avoid this preprocessing
-just use {prim_irule_tac}
+Then {prim_irule} is applied.  To avoid this preprocessing
+just use {prim_irule}
 
 \EXAMPLE 
 With goal {R a (f b)} and theorem
@@ -59,7 +59,7 @@ the proof step {e (irule trans)} gives
 new goal {?y. (a = y) /\ (y = b)}
 
 \SEEALSO
-Tactic.MATCH_MP_TAC, Tactic.prim_irule_tac, Drule.SPEC_UNDISCH_EXL,
+Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.SPEC_UNDISCH_EXL,
 Drule.EXISTS_LEFT
 \ENDDOC
 
