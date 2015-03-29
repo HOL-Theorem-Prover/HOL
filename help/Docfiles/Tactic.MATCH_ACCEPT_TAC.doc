@@ -39,7 +39,8 @@ simply by:
    MATCH_ACCEPT_TAC HD
 }
 
+\COMMENTS {prim_irule} is similar, with differences in the details
 
 \SEEALSO
-Tactic.ACCEPT_TAC.
+Tactic.ACCEPT_TAC, Tactic.prim_irule
 \ENDDOC

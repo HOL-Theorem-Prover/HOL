@@ -24,7 +24,8 @@ No failure.  Can leave the supplied theorem unchanged.
 \COMMENTS
 See {EXISTS_LEFT} for more on the existential quantification aspect.
 Note that the existential quantification happens only for variables
-which were universally quantified in the supplied theorem.
+which were universally quantified in the supplied theorem
+(to get around this limitation, first apply {GEN_ALL} to the supplied theorem).
 
 \EXAMPLE
 Where {trans_thm} is {[] |- !x y z. (x = y) ==> (y = z) ==> (x = z)}
