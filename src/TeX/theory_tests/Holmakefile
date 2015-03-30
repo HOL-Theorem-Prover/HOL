@@ -42,7 +42,7 @@ check_gh242: gh242_input gh242_expected munge.exe
 	$(CMPDIR)/cmp.exe gh242_expected gh242_output
 
 check_gh248: gh248_input gh248_expected munge248.exe
-	./munge248.exe overrides248 < $< > gh248_output
+	./munge248.exe < $< > gh248_output
 	$(CMPDIR)/cmp.exe gh248_expected gh248_output
 
 .PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242

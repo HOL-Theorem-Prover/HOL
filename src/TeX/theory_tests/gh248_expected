@@ -1,1 +1,2 @@
-\HOLinline{\HOLFreeVar{a} \ensuremath{\lessdot} \HOLFreeVar{b}}
+\HOLinline{\HOLFreeVar{a} \HOLSymConst{\ensuremath{\le}} \HOLFreeVar{b}}
+\HOLinline{\HOLFreeVar{a} \HOLSymConst{\ensuremath{\lessdot}} \HOLFreeVar{b}}
