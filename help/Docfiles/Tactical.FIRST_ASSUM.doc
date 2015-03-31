@@ -38,5 +38,6 @@ matches the goal, reducing the goal to the antecedent of the corresponding
 instance of this implication.
 
 \SEEALSO
-Tactical.ASSUM_LIST, Tactical.EVERY, Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST.
+Tactical.FIRST_X_ASSUM, Tactical.ASSUM_LIST, Tactical.EVERY,
+Tactical.EVERY_ASSUM, Tactical.FIRST, Tactical.MAP_EVERY, Tactical.MAP_FIRST.
 \ENDDOC
