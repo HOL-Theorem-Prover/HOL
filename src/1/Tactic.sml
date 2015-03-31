@@ -374,6 +374,10 @@ fun RULE_ASSUM_TAC rule : tactic =
    POP_ASSUM_LIST
       (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []))
 
+fun RULE_L_ASSUM_TAC rule : tactic =
+   POP_ASSUM_LIST
+      (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (append o rule) asl []))
+
 (*---------------------------------------------------------------------------*
  * Substitute throughout the goal and its assumptions.                       *
  *---------------------------------------------------------------------------*)
