@@ -17,5 +17,6 @@ val _ = systeml
              (if Systeml.isUnix andalso staticp then ["-standalone"] else []) @
              ["-o", exe, "-I", HOLDIR ++ "sigobj",
               "-I", HOLDIR ++ "src" ++ "TeX"] @
+             ["warning_stream.uo"] @
              toload @
              [HOLDIR ++ "src" ++ "TeX" ++ "mosmlmunge.uo"])
