@@ -719,7 +719,7 @@ fun MATCH_ACCEPT_TAC thm : tactic =
  * ---------------------------------------------------------------------*)
 
 fun prim_irule thm (asl, w) =
-  let val matchsub = match_terml [] empty_tmset (concl thm) w ;
+  let val matchsub = match_term (concl thm) w ;
     val subthm = INST_TY_TERM matchsub thm ;
   in GEN_VALIDATE false (ACCEPT_TAC subthm) (asl, w) end ;
 
