@@ -5,7 +5,7 @@
 
 let white = [' ' '\t']
 let newline = ['\r' '\n']
-let letter = ['a'-'z' 'A'-'Z' '0'-'9' '_' '/']
+let letter = ['a'-'z' 'A'-'Z' '0'-'9' '_' '/' '\\' '\'']
 
 rule hh2lex = parse
 | '%' [^'\n' '\r']*  {hh2lex lexbuf}
