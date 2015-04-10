@@ -59,22 +59,6 @@ fun reset_dicts () =
 )
 
 (*---------------------------------------------------------------------------
-   Printing and reading names of objects.
- ----------------------------------------------------------------------------*)
-
-(* Escaping *)
-fun hh_escape s =
-  let fun hh_escape_aux l = case l of
-      []      => ""
-    | a :: m  =>
-             if Char.isAlphaNum a then String.str a ^ hh_escape_aux m
-        else if Char.ord a = 95   then "__" ^ hh_escape_aux m
-        else "_" ^ Int.fmt StringCvt.HEX (Char.ord a) ^ hh_escape_aux m
-  in
-    hh_escape_aux (String.explode s)
-  end
-
-(*---------------------------------------------------------------------------
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
 
@@ -93,30 +77,52 @@ fun variant_name_dict s used =
   end
   handle NotFound => (s, dadd s 0 used)
 
+fun store_name name =
+  if dmem name (!used_names)
+  then () 
+  else used_names := dadd name 0 (!used_names)
+
+fun is_alphanum_or_underscore s = 
+ all (fn x => Char.isAlphaNum x orelse x = #"_") (String.explode s)
+
+fun escape_quote s =
+  let 
+    val l1 = String.explode s
+    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1 
+  in
+    String.implode (List.concat l2)
+  end
+
+fun tptp_escape name = 
+  if is_alphanum_or_underscore name 
+  then name 
+  else "'" ^ escape_quote name ^ "'"
+
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
-  let val (s, new) = variant_name_dict (hh_escape Name) (!used_names) in
-    (dict := dadd {Thy=Thy,Name=Name} s (!dict); used_names := new; s)
+  let val name = (tptp_escape Thy) ^ "/" ^ (tptp_escape Name) in
+    store_name name;
+    dict := dadd {Thy=Thy,Name=Name} name (!dict); 
+    name
   end
 
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
   let
-    val conjname =
-      hh_escape thy ^ "/" ^ hh_escape (name ^ "_" ^ number_depaddress a)
-    val (s, new) = variant_name_dict conjname (!used_names)
+    val name = (tptp_escape thy) ^ "/" ^ 
+               (tptp_escape name) ^ "_" ^ number_depaddress a
   in
-    writehh_names := dadd ((thy,n),a) s (!writehh_names);
-    readhh_names  := dadd s ((thy,n),a) (!readhh_names);
-    used_names := new;
-    s
+    store_name name;
+    writehh_names := dadd ((thy,n),a) name (!writehh_names);
+    readhh_names  := dadd name ((thy,n),a) (!readhh_names);
+    name
   end
 
-fun declare_fixed dict {Thy,Name} s =
+fun declare_fixed dict {Thy,Name} name =
   (
-  dict := dadd {Thy=Thy,Name=Name} s (!dict);
-  used_names := dadd s 0 (!used_names);
-  s
+  store_name name;
+  dict := dadd {Thy=Thy,Name=Name} name (!dict);
+  name
   )
 
 fun declare_temp_list get_name dict l =
@@ -125,7 +131,7 @@ fun declare_temp_list get_name dict l =
     val oldused = !used_names
     fun fold_fun (s,sl) =
       let val (news, newused) =
-        variant_name_dict (hh_escape (get_name s)) (!used_names)
+        variant_name_dict (tptp_escape (get_name s)) (!used_names)
       in
         (dict := dadd s news (!dict);
          used_names := newused;
