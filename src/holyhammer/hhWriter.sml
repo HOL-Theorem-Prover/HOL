@@ -21,8 +21,7 @@ val ERR = mk_HOL_ERR "hhWriter"
  ----------------------------------------------------------------------------*)
 
 (* Shorter accessors and constructors *)
-fun dfind k m =
-  (Redblackmap.find (m,k) handle NotFound => raise ERR "dfind" "")
+fun dfind k m = Redblackmap.find (m,k)
 fun dmem k m = Lib.can (dfind k) m
 fun dadd i v m = Redblackmap.insert (m,i,v)
 val dempty = Redblackmap.mkDict
@@ -52,7 +51,7 @@ fun reset_dicts () =
   const_names := dempty KernelSig.name_compare;
   var_names := dempty Term.compare;
   tyvar_names := dempty Type.compare;
-  used_names := dempty String.compare;
+  used_names := dempty String.compare; (* non escaped names *)
   app reserve reserved_names;
   writehh_names := dempty depconj_compare;
   readhh_names := dempty String.compare
@@ -61,29 +60,11 @@ fun reset_dicts () =
 (*---------------------------------------------------------------------------
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
-
-(* renaming *)
-fun variant_name_dict s used =
-  let
-    val i = dfind s used
-    fun new_name s i =
-      let val si = s ^ Int.toString i in
-        if dmem si used
-        then new_name s (i + 1)
-        else (si, dadd s (i + 1) (dadd si 0 used))
-      end
-  in
-    new_name s i
-  end
-  handle NotFound => (s, dadd s 0 used)
-
-fun store_name name =
-  if dmem name (!used_names)
-  then () 
-  else used_names := dadd name 0 (!used_names)
-
-fun is_alphanum_or_underscore s = 
- all (fn x => Char.isAlphaNum x orelse x = #"_") (String.explode s)
+(* escaping *)
+fun is_alphanumeric s = 
+ let val l = String.explode s in
+   all (fn x => Char.isAlphaNum x orelse x = #"_") l 
+ end
 
 fun escape_quote s =
   let 
@@ -93,29 +74,53 @@ fun escape_quote s =
     String.implode (List.concat l2)
   end
 
-fun tptp_escape name = 
-  if is_alphanum_or_underscore name 
+fun escape name = 
+  if is_alphanumeric name
   then name 
   else "'" ^ escape_quote name ^ "'"
 
+(* renaming *)
+(* only used for variables *)
+fun variant_name_dict s used =
+  let
+    val i = dfind s used
+    fun new_name s i =
+      let val si = s ^ Int.toString i in
+        if dmem si used
+        then new_name s (i + 1)
+        else (escape si, dadd s (i + 1) (dadd si 0 used))
+      end
+  in
+    new_name s i
+  end
+  handle NotFound => (escape s, dadd s 0 used)
+
+fun store_name name =
+  if dmem name (!used_names)
+  then () 
+  else used_names := dadd name 0 (!used_names)
+
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
-  let val name = (tptp_escape Thy) ^ "/" ^ (tptp_escape Name) in
-    store_name name;
-    dict := dadd {Thy=Thy,Name=Name} name (!dict); 
-    name
+  let 
+    val name1 = (Thy ^ "/" ^ Name) 
+    val name2 = escape name1
+  in
+    store_name name1;
+    dict := dadd {Thy=Thy,Name=Name} name2 (!dict); 
+    name2
   end
 
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
   let
-    val name = (tptp_escape thy) ^ "/" ^ 
-               (tptp_escape name) ^ "_" ^ number_depaddress a
+    val name1 = (thy ^ "/" ^ name ^ "_" ^ number_depaddress a)
+    val name2 = escape name1
   in
-    store_name name;
-    writehh_names := dadd ((thy,n),a) name (!writehh_names);
-    readhh_names  := dadd name ((thy,n),a) (!readhh_names);
-    name
+    store_name name1;
+    writehh_names := dadd ((thy,n),a) name2 (!writehh_names);
+    readhh_names  := dadd name2 ((thy,n),a) (!readhh_names);
+    name2
   end
 
 fun declare_fixed dict {Thy,Name} name =
@@ -131,7 +136,7 @@ fun declare_temp_list get_name dict l =
     val oldused = !used_names
     fun fold_fun (s,sl) =
       let val (news, newused) =
-        variant_name_dict (tptp_escape (get_name s)) (!used_names)
+        variant_name_dict (get_name s) (!used_names)
       in
         (dict := dadd s news (!dict);
          used_names := newused;
@@ -162,7 +167,8 @@ fun oiter sep f l = oiter_aux (!oc) sep f l
 
 (* type *)
 fun oty ty =
-  if is_vartype ty then os (dfind ty (!tyvar_names))
+  if is_vartype ty then os (dfind ty (!tyvar_names) 
+                            handle _ => raise ERR "dfind" "type")
   else
     let val {Args,Thy,Tyop} = dest_thy_type ty in
     let val s = dfind {Thy=Thy,Name=Tyop} (!ty_names) in
@@ -186,7 +192,8 @@ fun full_match_type t1 t2 =
 
 (* term *)
 fun otm tm =
-  if is_var tm        then os (dfind tm (!var_names))
+  if is_var tm        then os (dfind tm (!var_names)
+                               handle _ => raise ERR "dfind" "var")
   else if is_const tm then
     let val {Thy, Name, Ty} = dest_thy_const tm in
     let val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name}) in
@@ -215,13 +222,12 @@ fun otm tm =
   else raise ERR "otm" ""
 and hh_binder s (l,tm) =
   let val (vl,undeclare) = declare_temp_list (fst o dest_var) var_names l in
-    (
     os ("(" ^ s ^ "[");
     oiter ", "
-      (fn x => (os (dfind x (!var_names)); os " : "; oty (type_of x))) l;
+      (fn x => (os (dfind x (!var_names) handle _ => raise ERR "dfind" "var"); 
+    os " : "; oty (type_of x))) l;
     os "]: "; otm tm; os ")";
     undeclare ()
-    )
   end
 
 (* type definition *)
@@ -392,6 +398,33 @@ fun write_thydep file thyl =
 fun write_hh_thyl folder thyl =
   (reset_dicts();
    app (write_hh_thy folder) (sort_thyl thyl))
+
+(* Experiments 
+val full_thyl = String.tokens Char.isSpace 
+("bool ConseqConv sat marker combin normalForms " ^ 
+"relation one pair poset sum option state_option " ^ 
+"num prim_rec arithmetic numeral basicSize while " ^
+"logroot bit numeral_bit divides gcd numpair pred_set " ^
+"fixedPoint gcdset set_relation ind_type operator list " ^
+"rich_list listRange numposrep state_transformer quantHeuristics " ^
+"defCNF sorting string ASCIInumbers string_num res_quan quotient " ^
+"quotient_list quotient_option quotient_pair quotient_sum " ^
+"quotient_pred_set finite_map alist fmaptree bag container primeFactor " ^
+"sum_num fcp words bitstring blast prelim quote semi_ring canonical ring " ^
+"ringNorm numRing integer int_arith DeepSyntax Omega int_bitwise " ^ 
+"integerRing integer_word wot toto enumeral fmapal intto tc llist " ^
+"lbtree path patricia patricia_casts sptree update basis_emit " ^ 
+"intExtension frac rat ratRing inftree hrat hreal " ^ 
+"realax real topology nets seq lim powser transc integral intreal " ^ 
+"poly real_sigma complex HolSmt Encode Decode Coder EncodeVar ieee " ^ 
+"float binary_ieee machine_ieee util_prob extreal measure lebesgue " ^ 
+"probability Temporal_Logic Past_Temporal_Logic Omega_Automata");
+val load_thyl = map (fn x => x ^ "Theory") full_thyl;
+app load load_thyl;;
+val thyl = mk_set (List.concat (map ancestry full_thyl));
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;;
+*)
+
 
 fun write_conjecture file conjecture =
   if type_of conjecture = bool

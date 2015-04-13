@@ -22,7 +22,8 @@ sed -e 's/^fof[(].*,file[(].*,[ ]*\(.*\)[)][)]\..*$/\1/' $OUT2 > $OUT1
 grep "^a" $OUT1 > $OUT2
 sed -e 's/^a\(.*\)/\1/' $OUT2 > $OUT1
 sed -e 's/u_/_/g' $OUT1 > $OUT2
-sed -e 's#s_#/#g' $OUT2 > $OUT
+sed -e "s/i_/'/g" $OUT2 > $OUT1
+sed -e 's#s_#/#g' $OUT1 > $OUT
 # Cleaning
 rm $OUT1
 rm $OUT2
