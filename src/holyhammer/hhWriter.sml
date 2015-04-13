@@ -92,6 +92,14 @@ fun escape name =
   then name 
   else "'" ^ escape_prime name ^ "'"
 
+(* nice printing *)
+fun nice_dest_vartype v =
+  let 
+    val s = dest_vartype v 
+    val l = String.explode s
+  in
+    if hd l = #"'" then String.implode (map Char.toUpper (tl l)) else s
+  end
 
 (* renaming *)
 (* only used for variables *)
@@ -304,7 +312,8 @@ fun hh_constdef thy (s,ty) =
   | ("bool","F")    => fix "$false"
   | _               => declare_perm const_names {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
-    val (newtvs, undeclare) = declare_temp_list dest_vartype tyvar_names tv
+    val (newtvs, undeclare) = 
+      declare_temp_list nice_dest_vartype tyvar_names tv
   in
     (
     os "tt("; os news; os ", ty, ";
@@ -318,7 +327,7 @@ fun othm (name,role,tm) =
   let
     fun f x = is_var x orelse is_const x
     val l1 = type_varsl (map type_of (find_terms f tm))
-    val (l2,undeclare) = declare_temp_list dest_vartype tyvar_names l1
+    val (l2,undeclare) = declare_temp_list nice_dest_vartype tyvar_names l1
   in
     (
     os "tt("; os name;
@@ -457,10 +466,10 @@ val full_thyl = String.tokens Char.isSpace
 "float binary_ieee machine_ieee util_prob extreal measure lebesgue " ^ 
 "probability Temporal_Logic Past_Temporal_Logic Omega_Automata");
 val load_thyl = map (fn x => x ^ "Theory") full_thyl;
-app load load_thyl;;
+app load load_thyl;
 val thyl = mk_set (List.concat (map ancestry full_thyl));
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;;
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/info/theory_dep" thyl;;
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/info/theory_dep" thyl;
 *)
 
 

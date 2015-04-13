@@ -1,4 +1,4 @@
-(* hh_tac module: Tactics useful in transforming a problem to TPTP format *)
+(* Tactics to transform a problem to TPTP format. *)
 
 open Lib;;
 open Hl_parser;;
@@ -169,51 +169,61 @@ let fOL_TAC2 ((ps,gl) as gs) =
 (* Combined fOLification *)
 let fOL_IT_TAC = cONV_TAC pRED_ARG_CONV ++++ rULE_ASSUM_TAC(cONV_RULE pRED_ARG_CONV) ++++ fOL_TAC2;;
 
-(* Escapes characters not accepted by the tPTP format *)
-let escaped_aux s =
+(* Escape characters not accepted by the TPTP format. *)
+let escape_to_hex s =
   let n = ref 0 in
   for i = 0 to String.length s - 1 do
     n := !n + (match String.unsafe_get s i with
-    | '_' | '+' | '-' | '*' | '/' | '\\' | '!' | '?' | ',' | '@'
-    | '<' | '>' | '$' | '%' | '\'' | '=' | '.' | '~' | '|' -> 2 | c -> 1)
+     'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'
+    |'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'
+    |'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9' -> 1
+    |'_' -> 2 | _ -> 3)
   done;
   if !n = String.length s then s else begin
     let s' = String.create !n in
     n := 0;
     for i = 0 to String.length s - 1 do begin
       match String.unsafe_get s i with
-      | '_' -> String.unsafe_set s' !n 'u'; incr n; String.unsafe_set s' !n '_'
-      | '+' -> String.unsafe_set s' !n 'p'; incr n; String.unsafe_set s' !n '_'
-      | '-' -> String.unsafe_set s' !n 'm'; incr n; String.unsafe_set s' !n '_'
-      | '*' -> String.unsafe_set s' !n 't'; incr n; String.unsafe_set s' !n '_'
-      | '/' -> String.unsafe_set s' !n 's'; incr n; String.unsafe_set s' !n '_'
-      | '\\'-> String.unsafe_set s' !n 'b'; incr n; String.unsafe_set s' !n '_'
-      | '!' -> String.unsafe_set s' !n 'e'; incr n; String.unsafe_set s' !n '_'
-      | '?' -> String.unsafe_set s' !n 'q'; incr n; String.unsafe_set s' !n '_'
-      | ',' -> String.unsafe_set s' !n 'c'; incr n; String.unsafe_set s' !n '_'
-      | '@' -> String.unsafe_set s' !n 'h'; incr n; String.unsafe_set s' !n '_'
-      | '<' -> String.unsafe_set s' !n 'l'; incr n; String.unsafe_set s' !n '_'
-      | '>' -> String.unsafe_set s' !n 'g'; incr n; String.unsafe_set s' !n '_'
-      | '$' -> String.unsafe_set s' !n 'd'; incr n; String.unsafe_set s' !n '_'
-      | '%' -> String.unsafe_set s' !n 'r'; incr n; String.unsafe_set s' !n '_'
-      | '=' -> String.unsafe_set s' !n 'a'; incr n; String.unsafe_set s' !n '_'
-      | '\''-> String.unsafe_set s' !n 'i'; incr n; String.unsafe_set s' !n '_'
-      | '.' -> String.unsafe_set s' !n 'o'; incr n; String.unsafe_set s' !n '_'
-      | '~' -> String.unsafe_set s' !n 'w'; incr n; String.unsafe_set s' !n '_'
-      | '|' -> String.unsafe_set s' !n 'v'; incr n; String.unsafe_set s' !n '_'
-      | c -> String.unsafe_set s' !n c
+      ('a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'
+    |'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'
+    |'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9' as c) -> String.unsafe_set s' !n c
+      | '_' -> String.unsafe_set s' !n '_'; incr n; String.unsafe_set s' !n '_'
+      | c -> let c = Char.code c in
+             String.unsafe_set s' !n '_'; incr n;
+             String.unsafe_set s' !n (Printf.sprintf "%x" (c / 16)).[0]; incr n;
+             String.unsafe_set s' !n (Printf.sprintf "%x" (c mod 16)).[0]
     end; incr n; done;
     s'
-  end;;
-
-let escaped s =
-  if Char.code s.[0] >= Char.code '0' && Char.code s.[0] <= Char.code '9'
-  then "n" ^ escaped_aux s
-  else if Char.code s.[0] = Char.code '_' then "u" ^ escaped_aux s
-  else escaped_aux s
+  end
 ;;
 
+let remove_prime s =
+  let n = String.length s in
+  if s.[0] = '\'' 
+  then Str.last_chars (Str.first_chars s (n - 1)) (n- 2) 
+  else s
 
+let add_prime s = "\'" ^ s ^ "\'"  
+
+let is_lowercase c = 
+  let i = Char.code c in i >= Char.code 'a' && i <= Char.code 'z' 
+let is_uppercase c = 
+  let i = Char.code c in i >= Char.code 'A' && i <= Char.code 'Z'
+let is_letter c =
+  (is_lowercase c) or (is_uppercase c)
+
+
+let escape_var s = 
+  let s1 = if s.[0] = '\'' then escape_to_hex (remove_prime s) else s in
+  if is_letter s1.[0]
+  then String.capitalize s1
+  else "V_" ^ s1
+
+let escape_obj s = 
+  if (s.[0] = '\'') or (is_lowercase s.[0]) then s else add_prime s
+
+
+ 
 (* Less explosive version of pOLY_ASSUME_TAC *)
 let rec fold_cs fn tm sofar =
   try let l,r = try dest_forall tm with Failure _ ->
@@ -288,10 +298,10 @@ let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let ths3 = List.map map_fun ths2 in
   let ths4 = List.concat ths3 in
 (*  let names, ths' = List.split ths4 in*)
-  mAP_EVERY (fun (n, th) -> lABEL_TAC (escaped n) th) ths4 gl;;
+  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_obj n) th) ths4 gl;;
 
 let lABEL_ASSUME_TAC names ths =
-  mAP_EVERY (fun (n, th) -> lABEL_TAC (escaped n) th) (zip names ths);;
+  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_obj n) th) (zip names ths);;
 
 (* lAMBDA_ELIM_CONV2 does less explosive lambda-lifting than lAMBDA_ELIM_CONV
    for universally quantified theorems; all the quantified variables do not

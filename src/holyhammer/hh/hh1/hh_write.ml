@@ -34,16 +34,9 @@ let variant_name_map s used =
     in new_name s i
   with Not_found -> (s, Sm.add s 0 used)
 
-let escape_type s = "t_" ^ escaped_aux s
-
 let print_vartype t =
   let s = String.copy (dest_vartype t) in
-  for i = 0 to String.length s - 1 do
-    if s.[i] = '?'  then s.[i] <- 'Q' else ();
-    if s.[i] = '\'' then s.[i] <- 'P' else ()
-  done;
-    "TV_" ^ escaped_aux s
-;;
+    escape_var s
 
 let os = output_string;;
 let rec oiter oc fn sep = function
@@ -85,14 +78,14 @@ let name_tscs_mono_fold ho (tys, cs, used) tm () =
       if is_type ty then
         let s, stys = dest_type ty in
         List.iter name_ty stys;
-        String.concat "" (escape_type s :: (map (fun x -> Hashtbl.find tys x) stys))
-      else String.lowercase (print_vartype ty) in
+        String.concat "" (escape_obj s :: (map (fun x -> Hashtbl.find tys x) stys))
+      else print_vartype ty in
     let n = variant_name_hash n used in Hashtbl.replace tys ty n
   in
   List.iter name_ty ctys;
   if Hashtbl.mem cs tm or is_var tm then () else
-  let n = String.lowercase (fst (dest_const tm)) in
-  let n = variant_name_hash (escaped n) used in
+  let n = escape_obj (fst (dest_const tm)) in
+  let n = variant_name_hash n used in
   Hashtbl.replace cs tm n
 ;;
 
@@ -101,7 +94,7 @@ let name_tscs_poly_fold (tys, cs, used) tm () =
     if is_type ty then
       let s, stys = dest_type ty in
       (if Hashtbl.mem tys s then () else
-      Hashtbl.replace tys s (variant_name_hash (escape_type s) used));
+      Hashtbl.replace tys s (variant_name_hash (escape_obj s) used));
       List.iter name_ty stys;
     else
       let s = dest_vartype ty in
@@ -111,13 +104,13 @@ let name_tscs_poly_fold (tys, cs, used) tm () =
   name_ty (type_of tm);
   if is_var tm then
     let s = fst (dest_var tm) in
-    if Hashtbl.mem cs ("`" ^ s) then () else
-    let n = variant_name_hash (String.lowercase (escaped s)) used in
+    if Hashtbl.mem cs ("`" ^ s) then () else 
+    let n = variant_name_hash (escape_var s) used in
     Hashtbl.replace cs ("`" ^ s) n
   else
   let s, _ = dest_const tm in
   if Hashtbl.mem cs s then () else
-  let n = variant_name_hash (String.lowercase (escaped s)) used in
+  let n = variant_name_hash (escape_obj s) used in
   Hashtbl.replace cs s n
 ;;
 
@@ -215,7 +208,7 @@ let rec tff_tm oc (bnd, used) cs ts tm =
 
 let bindv v (bnd, used) =
   if Tmm.mem v bnd then (bnd, used) else
-  let n = "V_" ^ (escaped (fst (dest_var v))) in
+  let n = escape_var (fst (dest_var v)) in
   let (n, used) = variant_name_map n used in
   (Tmm.add v n bnd, used)
 ;;
@@ -309,15 +302,15 @@ let thf_gl oc ls asms gl n =
   let otl () = os oc ").\n" in
   os oc "%  TYPES\n";
   Hashtbl.remove ts (parse_type "bool");
-  Hashtbl.iter (fun _ ty -> ohdr ("t" ^ ty) "type"; os oc ty; os oc " : $tType"; otl ()) ts;
+  Hashtbl.iter (fun _ ty -> ohdr ty "type"; os oc ty; os oc " : $tType"; otl ()) ts;
   Hashtbl.add ts (parse_type "bool") "$o";
   os oc "%  CONSTS\n";
   Hashtbl.remove cs (parse_term "T"); Hashtbl.remove cs (parse_term "F");
-  Hashtbl.iter (fun t s -> ohdr ("c" ^ s) "type"; os oc s; os oc " : "; oty_mono ts (-1) oc (type_of t); otl ()) cs;
+  Hashtbl.iter (fun t s -> ohdr s "type"; os oc s; os oc " : "; oty_mono ts (-1) oc (type_of t); otl ()) cs;
   Hashtbl.add cs (parse_term "T") "$true"; Hashtbl.add cs (parse_term "F") "$false";
   os oc "%  AXIOMS\n";
-  List.iter2 (fun n t -> ohdr ("a" ^ n) "axiom"; thf_tm oc (Tmm.empty, Sm.empty) cs ts t; otl ()) ls asms;
-  ohdr ("c" ^ n) "conjecture"; thf_tm oc (Tmm.empty, Sm.empty) cs ts gl; otl ()
+  List.iter2 (fun n t -> ohdr n "axiom"; thf_tm oc (Tmm.empty, Sm.empty) cs ts t; otl ()) ls asms;
+  ohdr n "conjecture"; thf_tm oc (Tmm.empty, Sm.empty) cs ts gl; otl ()
 ;;
 
 let rec thff_tm oc (bnd, used) cs ts tm =
@@ -381,14 +374,15 @@ let thff_gl oc ls asms gl =
   Hashtbl.iter (fun t s ->
     try
       let ar = get_type_arity t in
-      ohdr ("t" ^ t) "type"; os oc s; os oc ":";
+      ohdr t "type"; os oc s; os oc ":";
       let rec prty n = if n = 0 then os oc "$tType" else (os oc "$tType > "; prty (n - 1)) in
       prty ar; otl ()
     with Failure _ -> ()) ts; (* Failure in get_type_arity for ` *)
   Hashtbl.add ts "bool" "$o";
   os oc "%  CONSTS\n";
   Hashtbl.remove cs "T"; Hashtbl.remove cs "F";
-  Hashtbl.iter (fun t s -> if t.[0] <> '`' then (ohdr ("c" ^ s) "type"; os oc s; os oc " : ";
+  (* only print constants and not types *)
+  Hashtbl.iter (fun t s -> if t.[0] <> '`' then (ohdr s "type"; os oc s; os oc " : ";
     let ty = get_const_type t in
     let tvs = tyvars ty in
     otyquant oc ts tvs;
@@ -396,7 +390,8 @@ let thff_gl oc ls asms gl =
   Hashtbl.add cs "T" "$true"; Hashtbl.add cs "F" "$false";
   os oc "%  AXIOMS\n";
   let used_map = used_to_map used in
-  List.iter2 (fun n t -> ohdr ("a" ^ n) "axiom"; thff_pred oc used_map cs ts t; otl ()) ls asms;
+  List.iter2 (fun n t -> ohdr n "axiom"; thff_pred oc used_map cs ts t; otl ()) ls asms;
+  (* Something is wrong here (I may have erased something) *)
   ohdr ("c") "conjecture"; thff_pred oc used_map cs ts gl; otl ()
 ;;
 
@@ -528,7 +523,7 @@ let tff_gl_hash oc names name asms gl (ts,cs,used) =
   os oc "%   TYPES\n";
   List.iter (fun t ->
     let s = Hashtbl.find ts t in
-    ohdr ("t" ^ t) "type"; os oc s; os oc ":";
+    ohdr t "type"; os oc s; os oc ":";
     begin match get_type_arity t with
       0 -> os oc "$tType"
     | 1 -> os oc "$tType > $tType"
@@ -538,13 +533,13 @@ let tff_gl_hash oc names name asms gl (ts,cs,used) =
   ohdr "cp" "type"; os oc "p : (bool > $o)"; otl ();
   let output_const (c, argno) =
     let ty = get_const_type c in let tvs = tyvars ty in
-    ohdr ("c" ^ c) "type"; os oc (Hashtbl.find cs c); os oc ":";
+    ohdr c "type"; os oc (Hashtbl.find cs c); os oc ":";
     otyquant oc ts tvs; otff_funtype oc ts ty argno; otl ()
   in
   List.iter output_const (fst (get_mindata (asms, gl)));
   os oc "%   AXIOMS\n";
-  List.iter2 (fun n t -> ohdr ("a" ^ n) "axiom"; tff_pred oc cs ts used t; otl ()) names asms;
-  ohdr ("c" ^ escaped name) "conjecture"; tff_pred oc cs ts used gl; otl ();
+  List.iter2 (fun n t -> ohdr n "axiom"; tff_pred oc cs ts used t; otl ()) names asms;
+  ohdr (escape_obj name) "conjecture"; tff_pred oc cs ts used gl; otl ();
 ;;
 
 let tff_gl oc names name asms gl =
@@ -619,8 +614,8 @@ let fof_pred oc cs ts used_map t =
 let fof_gl_hash oc names name asms gl (ts,cs,used) =
   let ohdr s1 s2 = os oc "fof("; os oc s1; os oc ", "; os oc s2; os oc ", " in
   let otl () = os oc ").\n" in
-  List.iter2 (fun n t -> ohdr ("a" ^ n) "axiom"; fof_pred oc cs ts used t; otl ()) names asms;
-  ohdr ("c" ^ escaped name) "conjecture"; fof_pred oc cs ts used gl; otl ();
+  List.iter2 (fun n t -> ohdr n "axiom"; fof_pred oc cs ts used t; otl ()) names asms;
+  ohdr (escape_obj name) "conjecture"; fof_pred oc cs ts used gl; otl ();
 ;;
 
 let fof_gl_mk_hash terms =
