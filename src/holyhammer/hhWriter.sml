@@ -438,6 +438,7 @@ val load_thyl = map (fn x => x ^ "Theory") full_thyl;
 app load load_thyl;;
 val thyl = mk_set (List.concat (map ancestry full_thyl));
 write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/info/theory_dep" thyl;;
 *)
 
 
