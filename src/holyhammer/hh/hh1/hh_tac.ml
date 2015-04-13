@@ -197,12 +197,6 @@ let escape_to_hex s =
   end
 ;;
 
-let remove_prime s =
-  let n = String.length s in
-  if s.[0] = '\'' 
-  then Str.last_chars (Str.first_chars s (n - 1)) (n- 2) 
-  else s
-
 let add_prime s = "\'" ^ s ^ "\'"  
 
 let is_lowercase c = 
@@ -214,10 +208,10 @@ let is_letter c =
 
 
 let escape_var s = 
-  let s1 = if s.[0] = '\'' then escape_to_hex (remove_prime s) else s in
+  let s1 = escape_to_hex s in
   if is_letter s1.[0]
   then String.capitalize s1
-  else "V_" ^ s1
+  else "V" ^ s1
 
 let escape_obj s = 
   if (s.[0] = '\'') or (is_lowercase s.[0]) then s else add_prime s

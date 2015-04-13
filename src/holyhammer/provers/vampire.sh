@@ -17,13 +17,7 @@ sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS
 sed -i 's/ //g' $STATUS
 # Extracting axioms
 grep "file[(]" $OUT1 > $OUT2
-sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT1
-# Unescaping
-grep "^a" $OUT1 > $OUT2
-sed -e 's/^a\(.*\)/\1/' $OUT2 > $OUT1
-sed -e 's/u_/_/g' $OUT1 > $OUT2
-sed -e "s/i_/'/g" $OUT2 > $OUT1
-sed -e 's#s_#/#g' $OUT1 > $OUT
+sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT
 # Cleaning
 rm $OUT1
 rm $OUT2
