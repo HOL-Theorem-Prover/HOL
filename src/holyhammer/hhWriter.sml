@@ -66,7 +66,20 @@ fun is_alphanumeric s =
    all (fn x => Char.isAlphaNum x orelse x = #"_") l 
  end
 
-fun escape_quote s =
+fun escape_slash s =
+  let 
+    val l1 = String.explode s
+    fun image x = 
+      case x of
+        #"#" => String.explode "#hash#"
+      | #"/" => String.explode "#slash#"
+      | _    => [x]
+    val l2 = map image l1
+  in
+    String.implode (List.concat l2)
+  end
+
+fun escape_prime s =
   let 
     val l1 = String.explode s
     val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1 
@@ -77,7 +90,7 @@ fun escape_quote s =
 fun escape name = 
   if is_alphanumeric name
   then name 
-  else "'" ^ escape_quote name ^ "'"
+  else "'" ^ escape_prime name ^ "'"
 
 (* renaming *)
 (* only used for variables *)
@@ -103,7 +116,7 @@ fun store_name name =
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
   let 
-    val name1 = (Thy ^ "/" ^ Name) 
+    val name1 = (escape_slash Thy) ^ "/" ^ (escape_slash Name) 
     val name2 = escape name1
   in
     store_name name1;
@@ -114,7 +127,8 @@ fun declare_perm dict {Thy,Name} =
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
   let
-    val name1 = (thy ^ "/" ^ name ^ "_" ^ number_depaddress a)
+    val name1 = (escape_slash thy) ^ "/" ^ (escape_slash name) ^ 
+                "_" ^ number_depaddress a
     val name2 = escape name1
   in
     store_name name1;
@@ -307,7 +321,8 @@ fun odep (name,dcl) =
     fun name_dc dc = dfind dc (!writehh_names)
   in
     os_deps (name ^ " ");
-    oiter_deps " " os_deps (mapfilter name_dc dcl); (* A dependency may be erased *)
+    (* A dependency may be erased during recording *)
+    oiter_deps " " os_deps (mapfilter name_dc dcl); 
     os_deps "\n"
   end
 
