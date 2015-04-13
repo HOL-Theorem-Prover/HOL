@@ -10,5 +10,6 @@ sig
   val replay_atpfilel  : (string * string) list -> term -> unit
 
   val writehh_names    : (Dep.depconj, string) Redblackmap.dict ref
+  val readhh_names     : (string, Dep.depconj) Redblackmap.dict ref
 
 end
