@@ -92,6 +92,7 @@ fun escape name =
   then name 
   else "'" ^ escape_prime name ^ "'"
 
+
 (* renaming *)
 (* only used for variables *)
 fun variant_name_dict s used =
@@ -112,6 +113,27 @@ fun store_name name =
   if dmem name (!used_names)
   then () 
   else used_names := dadd name 0 (!used_names)
+
+fun store_name name =
+  if dmem name (!used_names)
+  then () 
+  else used_names := dadd name 0 (!used_names)
+
+fun is_alphanum_or_underscore s = 
+ all (fn x => Char.isAlphaNum x orelse x = #"_") (String.explode s)
+
+fun escape_quote s =
+  let 
+    val l1 = String.explode s
+    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1 
+  in
+    String.implode (List.concat l2)
+  end
+
+fun tptp_escape name = 
+  if is_alphanum_or_underscore name 
+  then name 
+  else "'" ^ escape_quote name ^ "'"
 
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
