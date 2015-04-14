@@ -92,6 +92,8 @@ fun escape name =
   then name 
   else "'" ^ escape_prime name ^ "'"
 
+val reserved_names_escaped = map escape reserved_names
+
 (* nice printing *)
 fun nice_dest_vartype v =
   let 
@@ -543,7 +545,7 @@ fun minimize l cj =
 fun reconstruct axl cj =
   let
     (* reserved theorems are not interesting to Metis *)
-    val axl1 = filter (fn x => not (mem x reserved_names)) axl
+    val axl1 = filter (fn x => not (mem x reserved_names_escaped)) axl
     val dcl1 = map (fn x => dfind x (!readhh_names)) axl1
     val l1 = map (fn x => (thm_of_depconj x, x)) dcl1
     val l2 = if !minimize_flag then minimize l1 cj else l1
