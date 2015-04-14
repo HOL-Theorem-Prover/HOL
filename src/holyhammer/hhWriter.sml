@@ -503,9 +503,11 @@ fun readl path =
       | NONE => []
     val l1 = loop file
     fun rm_last_char s = String.substring (s,0,String.size s - 1)
-    val l2 = List.map rm_last_char l1 (* removing end line *)
+    fun is_empty s = s = ""
+    val l2 = map rm_last_char l1 (* removing end line *)
+    val l3 = filter (not o is_empty) l2 
   in
-    (TextIO.closeIn file; l2)
+    (TextIO.closeIn file; l3)
   end
 
 fun get_status path = hd (readl path) handle _ => "Unknown"
