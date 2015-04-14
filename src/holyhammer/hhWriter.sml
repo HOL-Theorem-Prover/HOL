@@ -92,7 +92,12 @@ fun escape name =
   then name 
   else "'" ^ escape_prime name ^ "'"
 
-val reserved_names_escaped = map escape reserved_names
+fun fof_escape name =
+  if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
+  then name
+  else "'" ^ escape_prime name ^ "'"
+
+val reserved_names_escaped = map fof_escape reserved_names
 
 (* nice printing *)
 fun nice_dest_vartype v =
