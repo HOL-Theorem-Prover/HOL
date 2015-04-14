@@ -105,7 +105,7 @@ let name_tscs_poly_fold (tys, cs, used) tm () =
   if is_var tm then
     let s = fst (dest_var tm) in
     if Hashtbl.mem cs ("`" ^ s) then () else 
-    let n = variant_name_hash (escape_var s) used in
+    let n = variant_name_hash (escape_obj s) used in
     Hashtbl.replace cs ("`" ^ s) n
   else
   let s, _ = dest_const tm in

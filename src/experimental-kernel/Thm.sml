@@ -1257,7 +1257,7 @@ fun dep_is_conj tm =
   let
     val (Rator, Rand) = dest_comb tm
     val (Rator1, Rand1) = dest_comb Rator
-    val {Thy,Name,...} = dest_thy_const Rator
+    val {Thy,Name,...} = dest_thy_const Rator1
   in
     (Name="/\\" andalso Thy="bool")
   end

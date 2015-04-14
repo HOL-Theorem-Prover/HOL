@@ -6,11 +6,12 @@ OUT1="$DIR/eprover_out1"
 OUT2="$DIR/eprover_out2"
 OUT="$DIR/eprover_out"
 STATUS="$DIR/eprover_status"
+ERROR="$DIR/eprover_error"
 
 # Running eprover with best strategy (1.8)
 cd eprover
 perl runepar2.pl $TIM 0 $IN 2 1 1 new_mzt_small \
- | grep "file[(]'\| SZS" > $OUT1
+ | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS
 sed -i -e 's/^.*SZS status\(.*\).*/\1/' $STATUS

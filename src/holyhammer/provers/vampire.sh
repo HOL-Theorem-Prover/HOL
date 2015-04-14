@@ -6,11 +6,12 @@ OUT="$DIR/vampire_out"
 OUT1="$DIR/vampire_out1"
 OUT2="$DIR/vampire_out2"
 STATUS="$DIR/vampire_status"
+ERROR="$DIR/vampire_error"
 
 # Running Vampire (2.6)
 cd vampire
 ./vampire --mode casc -t $TIM --proof tptp --output_axiom_names on $IN \
- | grep "file[(]'\| SZS" > $OUT1
+ | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS
 sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS

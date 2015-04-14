@@ -206,7 +206,8 @@ let is_uppercase c =
 let is_letter c =
   (is_lowercase c) or (is_uppercase c)
 
-
+(* We don't have complete control over the names of 
+   the type variables so we escape them completely *)
 let escape_var s = 
   let s1 = escape_to_hex s in
   if is_letter s1.[0]
