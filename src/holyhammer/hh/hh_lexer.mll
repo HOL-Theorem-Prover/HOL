@@ -6,7 +6,6 @@
 let white = [' ' '\t']
 let newline = ['\r' '\n']
 let letter = ['a'-'z' 'A'-'Z' '0'-'9' '_']
-let any = [^' ' '\t' '\r' '\n']
 
 rule hh2lex = parse
 | '%' [^'\n' '\r']*  {hh2lex lexbuf}
@@ -38,10 +37,15 @@ rule hh2lex = parse
 | ':'                {TokColon}
 | '>'                {TokFun}
 | '@'                {TokAt}
-| '\'' any* '\''     {TokWord (Lexing.lexeme lexbuf)}
-| letter+            {TokWord (Lexing.lexeme lexbuf)}
-| '$' letter+        {TokWord (Lexing.lexeme lexbuf)}
+| '\''               {TokWord ("'" ^ lex_squot lexbuf ^ "'")}
+| letter+             {TokWord (Lexing.lexeme lexbuf)}
+| '$' letter+         {TokWord (Lexing.lexeme lexbuf)}
 (*| [^'\n' '\r']+     {TokUnknown (Lexing.lexeme lexbuf)}*)
+
+and lex_squot = parse
+| '\''               {""}
+| '\\' '\''          {"\\'" ^ lex_squot lexbuf}
+| [^ '\'' '\\']+     {let s = Lexing.lexeme lexbuf in s ^ lex_squot lexbuf}
 
 {
 }
