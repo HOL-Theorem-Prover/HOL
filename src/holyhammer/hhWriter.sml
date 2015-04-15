@@ -153,7 +153,7 @@ fun tptp_escape name =
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
   let 
-    val name1 = (escape_slash Thy) ^ "/" ^ (escape_slash Name) 
+    val name1 = Thy ^ "/" ^ (escape_slash Name) 
     val name2 = escape name1
   in
     store_name name1;
@@ -164,7 +164,7 @@ fun declare_perm dict {Thy,Name} =
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
   let
-    val name1 = (escape_slash thy) ^ "/" ^ (escape_slash name) ^ 
+    val name1 = thy ^ "/" ^ (escape_slash name) ^ 
                 "_" ^ number_depaddress a
     val name2 = escape name1
   in
