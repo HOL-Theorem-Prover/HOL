@@ -41,7 +41,7 @@ val OS :string            =
 
 val _ = PolyML.print_depth 0;
 
-val CC:string       = "gcc";      (* C compiler                       *)
+val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 

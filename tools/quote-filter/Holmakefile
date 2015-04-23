@@ -7,7 +7,7 @@ all: quote-filter selftest
 quote-filter: $(DEPS)
 	$(if $(MOSMLC), $(HOLMOSMLC) -o quote-filter quote-filter.uo,\
            poly < poly-unquote.ML && \
-           gcc -o quote-filter unquote.o $(POLYLIBS) -lpolymain -lpolyml)
+           cc -o quote-filter unquote.o $(POLYLIBS) -lpolymain -lpolyml)
 
 filter.sml : filter
 	$(if $(MOSMLC),$(protect $(HOLDIR)/tools/mllex/mllex.exe),../mllex/mllex.exe) filter
