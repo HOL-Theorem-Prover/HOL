@@ -1,5 +1,5 @@
 HH2_CMX=hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
-dependency.cmx thf1hh1.cmx predict_knn.cmx
+dependency.cmx thf1hh1.cmx predict_knn.cmx write.cmx
 
 HL_CMX=hh1/lib.cmx hh1/fusion.cmx hh1/basics.cmx hh1/printer.cmx \
 hh1/preterm.cmx hh1/hl_parser.cmx hh1/equal.cmx hh1/bool.cmx \
@@ -29,7 +29,7 @@ read.cmx: read.ml
 	ocamlopt -c -I hh1 $<
 predict.cmx: predict.ml
 	ocamlopt -c -I hh1 $<
-preprocess.cmx = preprocess.ml
+preprocess.cmx: preprocess.ml
 	ocamlopt -c -I hh1 $<
 init.cmx: init.ml
 	ocamlopt -c -I hh1 $<
@@ -38,6 +38,8 @@ dependency.cmx: dependency.ml
 thf1hh1.cmx: thf1hh1.ml
 	ocamlopt -c -I hh1 $<
 predict_knn.cmx: predict_knn.ml
+	ocamlopt -c -I hh1 $<
+write.cmx: write.ml
 	ocamlopt -c -I hh1 $<
 
 clean:
