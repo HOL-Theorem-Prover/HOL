@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 case $REQUEST_METHOD in
 'POST')
 export PATH="$HOME/bin:$PATH"

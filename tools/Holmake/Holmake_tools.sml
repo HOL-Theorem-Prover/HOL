@@ -282,7 +282,7 @@ val nice_dir =
       | NONE => (fn s => s)
 
 fun xterm_log s =
-    ignore (OS.Process.system ("/bin/bash -c 'echo -ne \"\\033]0;" ^ s ^ "\\007\"'"))
+    ignore (OS.Process.system ("/bin/sh -c 'echo -ne \"\\033]0;" ^ s ^ "\\007\"'"))
 
 val terminal_log =
     if Systeml.isUnix then xterm_log

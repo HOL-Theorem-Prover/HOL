@@ -10,7 +10,7 @@ OBJ_DEPS = $(if $(MOSMLC),mllex.uo mosmlmain.uo,mllex.sml poly-mllex.ML)
 $(OBJ): $(OBJ_DEPS)
 	$(if $(MOSMLC),$(MOSMLC) -o $@ $(OBJ_DEPS),\
              poly < poly-mllex.ML && \
-             gcc -o $@ mllex.o $(POLYLIBS) -lpolymain -lpolyml)
+             cc -o $@ mllex.o $(POLYLIBS) -lpolymain -lpolyml)
 
 mosmlmain.uo mosmlmain.ui: mosmlmain.sml mllex.ui
 	$(MOSMLC) -c mllex.ui $<
