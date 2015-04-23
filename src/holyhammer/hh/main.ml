@@ -1,51 +1,28 @@
-(* Example usage: echo "conjecture" | ./hh_h4 128 ../theories *)
+(* Example usage: echo "conjecture" | ./hh 128 ../theories *)
 
 open Hh_parse
 open Thf1hh1
 open Dependency
 open Predict_knn
+open Write
 open Filename
 
 type filepath = string
 
-(* Do we only need these additional theorems for HOL4 or also in
-   HOL Light, Thibault? Also in HOL Light *)
-let additional_theorems () =
-  let falsity = Fusion.Sequent([],Hl_parser.parse_term "~F") in
-  let ext = Fusion.Sequent([],Hl_parser.parse_term "!f g. (!x. f x = g x) ==> f = g") in
-  [Bool.tRUTH; falsity; Bool.bOOL_CASES_AX; ext],
-  ["HL_TRUTH"; "HL_FALSITY"; "HL_BOOL_CASES"; "HL_EXT"]
-
-(* Make a theorem without premises (?) from a theorem name. *)
-let mk_thm (thm_name : string) = Fusion.Sequent ([], term_of thm_name)
-
-(* Write a FOF file from given conjecture and axioms for use with an ATP. *)
-let write_fof (fname : filepath) (cj_name, axioms) =
-  let (ath, a) = additional_theorems () in
-  let (pth, p) = (ath @ List.map mk_thm axioms, a @ axioms) in
-  Hh_write.write_atp_proof fname (pth,p) cj_name (term_of cj_name)
-
-
-
 (* Load theories and conjecture. *)
-let init_interactive (thy_dir : filepath) (cj_file : filepath) (cj_name : string)
-                     thydep_file thylo_file =
+let init_proving_env thy_dir cj_file cj_name thydep_file thylo_file =
   let ((tyl,cl,thml),(thmh,roleh,thmlo)) = Init.init_dir thy_dir in
   let cj = Read.read_conjecture cj_file in
-  let _ = init_depenv thydep_file thylo_file (thmh,roleh,thmlo) in
-  Thf1hh1.parse (tyl,cl,(cj_name,cj) :: thml)
-
+  let _ = init_dep_env thydep_file thylo_file (thmh,roleh,thmlo) in
+  Thf1hh1.parse (tyl,cl,(cj_name,cj) :: thml) (* creating the term hash *)
 
 (* Predict n premises for a conjecture, saving results to directory. *)
 let predict (p : predictor) (out_dir : filepath) (n_preds : int) (cj_name : string) =
   let cj = term_of cj_name in
   predict_interactive p out_dir n_preds cj (gen_all ())
 
-
 (* Parse command-line arguments, exiting with help if not valid.
    TODO: Read a conjecture itself, not its name. *)
-
-
 let parse_commandline () =
   (* Saving results into two references and a array. *)
   let anon_counter = ref 0 in
@@ -56,9 +33,10 @@ let parse_commandline () =
   let parse_anon anon = anon_tab.(!anon_counter) <- anon; incr anon_counter in
   let speclist =
     [("-thydep", Arg.Set_string thydep_ref, "Provides dependencies between theories");
-     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories")]
+     ("-thylo",  Arg.Set_string thylo_ref,  "Provides a linear order for the theories.\n" ^ 
+      "Warning: all theories that do not belong to this order are ignored.")] 
   in
-  let usage_msg = "HOL(y) Hammer. Usage: " ^
+  let usage_msg = "HOL(y) Hammer. Usage: " ^ 
     Sys.argv.(0) ^ " <knn|nbayes> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
   in
   Arg.parse speclist parse_anon usage_msg;
@@ -79,12 +57,13 @@ let parse_commandline () =
 
 
 (* Main function. *)
+(* TO DO: read the conjecture from the file *)
 let _ =
-  let (predictor, n_predictions, theory_dir, cj_file,
+  let (predictor, n_predictions, theory_dir, cj_file, 
        cj_name, out_dir, thydep_file, thylo_file) = parse_commandline () in
 
   print_endline ("Loading theories from " ^ theory_dir);
-  init_interactive theory_dir cj_file cj_name thydep_file thylo_file;
+  init_proving_env theory_dir cj_file cj_name thydep_file thylo_file;
 
   print_endline ("Predicting " ^ (string_of_int n_predictions) ^ " lemmata");
   let axioms = predict predictor out_dir n_predictions cj_name in

@@ -51,7 +51,7 @@ fun reset_dicts () =
   const_names := dempty KernelSig.name_compare;
   var_names := dempty Term.compare;
   tyvar_names := dempty Type.compare;
-  used_names := dempty String.compare; (* non escaped names *)
+  used_names := dempty String.compare; (* contains non escaped names *)
   app reserve reserved_names;
   writehh_names := dempty depconj_compare;
   readhh_names := dempty String.compare
@@ -87,11 +87,12 @@ fun escape_prime s =
     String.implode (List.concat l2)
   end
 
-fun escape name = 
+fun tptp_escape name = 
   if is_alphanumeric name
   then name 
   else "'" ^ escape_prime name ^ "'"
 
+(* use a similar escaping than the holyhammer fof writer *)
 fun fof_escape name =
   if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
   then name
@@ -117,12 +118,12 @@ fun variant_name_dict s used =
       let val si = s ^ Int.toString i in
         if dmem si used
         then new_name s (i + 1)
-        else (escape si, dadd s (i + 1) (dadd si 0 used))
+        else (tptp_escape si, dadd s (i + 1) (dadd si 0 used))
       end
   in
     new_name s i
   end
-  handle NotFound => (escape s, dadd s 0 used)
+  handle NotFound => (tptp_escape s, dadd s 0 used)
 
 fun store_name name =
   if dmem name (!used_names)
@@ -134,27 +135,12 @@ fun store_name name =
   then () 
   else used_names := dadd name 0 (!used_names)
 
-fun is_alphanum_or_underscore s = 
- all (fn x => Char.isAlphaNum x orelse x = #"_") (String.explode s)
-
-fun escape_quote s =
-  let 
-    val l1 = String.explode s
-    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1 
-  in
-    String.implode (List.concat l2)
-  end
-
-fun tptp_escape name = 
-  if is_alphanum_or_underscore name 
-  then name 
-  else "'" ^ escape_quote name ^ "'"
-
+(* Warning: do not remove the slash (in the next two functions) *)
 (* constants and types *)
 fun declare_perm dict {Thy,Name} =
   let 
     val name1 = Thy ^ "/" ^ (escape_slash Name) 
-    val name2 = escape name1
+    val name2 = tptp_escape name1
   in
     store_name name1;
     dict := dadd {Thy=Thy,Name=Name} name2 (!dict); 
@@ -166,7 +152,7 @@ fun declare_perm_thm ((thy,n),a) name  =
   let
     val name1 = thy ^ "/" ^ (escape_slash name) ^ 
                 "_" ^ number_depaddress a
-    val name2 = escape name1
+    val name2 = tptp_escape name1
   in
     store_name name1;
     writehh_names := dadd ((thy,n),a) name2 (!writehh_names);
@@ -476,7 +462,12 @@ val load_thyl = map (fn x => x ^ "Theory") full_thyl;
 app load load_thyl;
 val thyl = mk_set (List.concat (map ancestry full_thyl));
 write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;
+(* standard library *)
 write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/info/theory_dep" thyl;
+(* core *)
+val thyl = ancestry (current_theory ());;
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9/core_library" thyl;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/core_library/info/theory_dep" thyl;
 *)
 
 

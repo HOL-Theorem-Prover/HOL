@@ -68,6 +68,17 @@ let nb_advice2 fname limit =
   cpp_advice2 fname cmd
 ;;
 
+let nb_advice3 fname limit =
+  let cmd s = Printf.sprintf "../../predict/predict %ssyms %sdep %sseq -n %i -p nbayes < %scsyms > %sout 2> %serror"  s s s limit s s s in
+  cpp_advice2 fname cmd
+;;
+
+let knn_advice3 fname limit =
+  let cmd s = Printf.sprintf "../../predict/predict %ssyms %sdep %sseq -n %i -p knn < %scsyms > %sout 2> %serror"  s s s limit s s s in
+  cpp_advice2 fname cmd
+;;
+
+
 (* BUG: predict_h4 does not exist ATM, so don't call this function for now *)
 let knn_advice_interactive fname limit =
   let cmd s = Printf.sprintf "./predict_h4 %ssyms %sdep %sseq -n %i -p knn < %scsyms > %sout 2> %serror"  s s s limit s s s in

@@ -1,5 +1,5 @@
 open Hh_parse
-(* Global references *)
+(* Global references *)                                
 let const_tyvarl = ref [];;
 let init_type = ("$i", 0) :: !Fusion.the_type_constants;;
 Fusion.new_constant ("$equals",List.assoc "=" (Fusion.constants ()));;
@@ -11,7 +11,7 @@ let term_of n = Hashtbl.find (!term_hash) n
 let rec hh_to_string hhterm = match hhterm with
     Abs (a,x,y) -> "Abs " ^ a ^ ":" ^ hh_to_string x ^ "," ^ hh_to_string y
   | Comb (x,y)  -> "(" ^ hh_to_string x ^ " " ^ hh_to_string y ^ ")"
-	| Id a        -> a
+	| Id a        -> a				
 
 let rec strip_comb acc = function
   | Comb (x, y) -> strip_comb (y :: acc) x
@@ -22,18 +22,18 @@ let rec isNtType sf = function
   | Comb (Comb (Id ">", Id "$t"), x) -> isNtType (sf + 1) x
   | _ -> if sf = 0 then None else failwith "isNtType"
 
-let hash_of_alist l =
+let hash_of_alist l = 
   let hash = Hashtbl.create 20000 in
     List.iter (fun (a,b) -> Hashtbl.add hash a b) l;
     hash
 
-let alist_of_hash hash =
+let alist_of_hash hash = 
     Hashtbl.fold (fun k v l -> (k,v) :: l) hash  []
 
 (* Parse type *)
 let quantl = ref [];;
 let rec ptypea tvl hht = match hht with
-    Comb (Id "!", Abs (n,Id "$t", tm)) ->
+    Comb (Id "!", Abs (n,Id "$t", tm)) -> 
 			quantl := (Fusion.mk_vartype n) :: (!quantl); ptypea (n :: tvl) tm
   | Comb (Comb (Id ">", x), y) -> Fusion.mk_type ("fun", [ptypea tvl x; ptypea tvl y])
   | Id "$o" -> Fusion.bool_ty
@@ -72,10 +72,10 @@ let rec pterm tvl vl t = match t with
   | Id x -> try let ty = List.assoc x vl in Fusion.mk_var (x, ty) with Not_found -> Fusion.mk_const (x, [])
   | _ -> pterm_comb tvl vl t
 and pterm_comb tvl vl t = match strip_comb [] t with
-    (Id x, rl) -> begin
-        try let ty = List.assoc x vl in
+    (Id x, rl) -> begin 
+        try let ty = List.assoc x vl in 
           Basics.list_mk_comb (Fusion.mk_var (x,ty), List.map (pterm tvl vl) rl)
-	with Not_found ->
+	with Not_found -> 
           let itvl = try List.assoc x !const_tyvarl with _ -> failwith ("undeclared constant: " ^ x) in
           let (tyl,tml) = Lib.chop_list (List.length itvl) rl in
           let tyl = List.map (ptype tvl) tyl in
@@ -85,17 +85,17 @@ and pterm_comb tvl vl t = match strip_comb [] t with
 		 end
   | (lt, rl) -> Basics.list_mk_comb (pterm tvl vl lt,List.map (pterm tvl vl) rl)
 
-let pterm t = try pterm [] [] t
-  with | Failure s -> failwith ("pterm: " ^ s ^ " in: " ^ hh_to_string t)
-       | _         -> failwith ("pterm: " ^ hh_to_string t)
+let pterm t = try pterm [] [] t 
+  with | Failure s -> failwith ("pterm: " ^ s ^ " in: " ^ hh_to_string t) 
+       | _         -> failwith ("pterm: " ^ hh_to_string t) 
 
 
 (* Parse and initialize types and constants *)
-let rm_used_id l1 l2 =
+let rm_used_id l1 l2 = 
   List.filter (fun (id,_) -> not (List.mem id (List.map fst l2))) l1
 
 let parse_type (ty_name,ty) = match isNtType 0 ty with
-  | None -> failwith "parse_type"
+  | None -> failwith ("parse_type: " ^ ty_name ^ ": " ^ hh_to_string ty)
   | Some n -> (ty_name,n)
 
 let parse_init_tyc (tyl,cl) =
@@ -109,26 +109,26 @@ let parse_init_tyc (tyl,cl) =
   let lc = init_const @ rm_used_id cs1 init_const in
     Fusion.set_term_constants lc;
     print_string ("- constants: "  ^ string_of_int (List.length lc) ^ " \n");
-    const_tyvarl := ("$equals",[Fusion.aty]) :: cs2
+    const_tyvarl := ("$equals",[Fusion.aty]) :: cs2 
 ;;
 
-let parse_axdef thml =
+let parse_axdef thml = 
   let f (s,t) = (s,pterm t) in List.map f thml
 
 (* Main function *)
-let parse (tyl,cl,thml) =
+let parse (tyl,cl,thml) = 
   print_string ("Parsing objects \n");
   parse_init_tyc (tyl,cl);
   let thml = parse_axdef thml in
   let tmh = hash_of_alist thml in
-   print_string ("- theorems: "^ string_of_int (List.length thml) ^ "\n\n");
+   print_string ("- theorems: "^ string_of_int (List.length thml) ^ "\n\n"); 
    (term_hash := tmh)
 ;;
 
 
 
 
-
+         
 
 
 

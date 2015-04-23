@@ -77,12 +77,14 @@ LDPairVec kNN::predict(const LVec& csyms, long maxth, long no_adv) const {
     LVec ds = deps[nn];
     double ol = 2.7 * o / ds.size();
     for (const auto& d : ds) {
-      if (ans[d].second <= 0) {
-        no_recommends++;
-        ans[d].second = age(k) + ol;
+      if (d < maxth) { // in case of future dependencies, do not predict them
+        if (ans[d].second <= 0) {
+          no_recommends++;
+          ans[d].second = age(k) + ol;
+        }
+        else
+          ans[d].second += ol;
       }
-      else
-        ans[d].second += ol;
     }
   }
 

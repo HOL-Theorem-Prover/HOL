@@ -32,7 +32,7 @@ void read_order(const string &fname, SLMap &th_no, SVec &no_th) {
       no_th.push_back(line);
     }
     else
-      exit_error("Duplicate `" + line +
+      exit_error("Duplicate `" + line + 
                  "' detected upon reading file `" + fname + ".");
   }
 }
@@ -44,17 +44,25 @@ void read_deps(const string &fname, SLMap &th_no, LVecVec &deps) {
   while (getline (ic, line)) {
     const long colon_pos = line.find(":", 0);
     const string thn = line.substr (0, colon_pos);
-    long th = th_no[thn];
-    size_t start = colon_pos + 1, end = 0;
-    const string delim = " ";
-    if (line.size() > start)
-    while (end != string::npos) {
-      end = line.find(delim, start);
-      auto t = line.substr(start, (end == string::npos) ? string::npos : end - start);
-      start = ((end > (string::npos - delim.size())) ? string::npos : end + delim.size());
-      long d=th_no[t];
-      if (d < th) deps[th].push_back(d);
-      else cerr << "future dep (ignored): " << thn << " " << t << endl;
+    if (th_no.find (thn) == th_no.end ())
+      cerr << "dep item missing in seq: " << thn << endl;
+    else {
+      long th = th_no[thn];
+      size_t start = colon_pos + 1, end = 0;
+      const string delim = " ";
+      if (line.size() > start)
+        while (end != string::npos) {
+          end = line.find(delim, start);
+          auto t = line.substr(start, (end == string::npos) ? string::npos : end - start);
+          start = ((end > (string::npos - delim.size())) ? string::npos : end + delim.size());
+          if (th_no.find (t) == th_no.end ())
+            cerr << "dependency missing in seq: " << t << endl;
+          else {
+            long d=th_no[t];
+            if (d < th) deps[th].push_back(d);
+            else cerr << "future dep (ignored): " << thn << "(" << th << ") " << t << "(" << d << ")" << endl;
+          }
+        }
     }
   }
 }

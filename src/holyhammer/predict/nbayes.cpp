@@ -3,6 +3,9 @@
 #include <set>
 #include "predictor.cpp"
 
+typedef long feature_t;
+typedef long sample_t;
+
 class NaiveBayes : public Predictor {
   public:
     NaiveBayes(LVecVec deps, LVecVec syms, LVecVec sym_ths, long sym_num);
@@ -11,13 +14,15 @@ class NaiveBayes : public Predictor {
     LDPairVec predict(const LVec& csyms, long maxth, long no_adv) const;
 
   private:
-    void learn(const LVec& csyms, long i, const LVec& cdeps);
+    double score(sample_t i, set<feature_t> symsh) const;
 
-    long afreq = 0;
-    // Number of times a theorem appeared as a dependency
-    vector<double> tfreq;
-    // Number of times a feature was present when a theorem appeared as a dep
-    vector<unordered_map <long, long> > sfreq;
+    void learn(const LVec& csyms, sample_t i, const LVec& cdeps);
+    void add_sample_freqs(const LVec& csyms, sample_t i, long weight);
+
+    // tfreq[t] = number of theorems having t as dependency
+    vector<long> tfreq;
+    // sfreq[t][f] = number of theorems having f and having t as dependency
+    vector<unordered_map <feature_t, long> > sfreq;
 
     Tfidf tfidf;
 };
@@ -25,59 +30,74 @@ class NaiveBayes : public Predictor {
 NaiveBayes::NaiveBayes(LVecVec deps, LVecVec syms, LVecVec sym_ths, long sym_num)
 : Predictor(deps, syms, sym_ths, sym_num), tfidf(sym_num) {
   tfreq.resize(deps.size());
-  sfreq.resize(deps.size(), unordered_map <long,long> (100));
+  sfreq.resize(deps.size(), unordered_map <feature_t, long> (100));
 }
 
-void NaiveBayes::learn(long from, long to) {
+void NaiveBayes::learn(sample_t from, sample_t to) {
   for (unsigned i = from; i < to; ++i)
     tfidf.add(syms[i]);
 
-  for (long i = from; i < to; i++)
+  for (sample_t i = from; i < to; i++)
     learn(syms[i], i, deps[i]);
 }
 
-LDPairVec NaiveBayes::predict(const LVec &csyms, long maxth, long no_adv) const {
+LDPairVec NaiveBayes::predict(const LVec &csyms, sample_t maxth, long no_adv) const {
   LDPairVec ans = LDPairVec(maxth, make_pair(0, 0));
-  set<long> symh;
+
+  // set of query features
+  set<long> symh(csyms.begin(), csyms.end());
 
   for(long i = 0; i < maxth; ++i) {
-    ans[i].first=i;
-    symh.clear();
-    for (const auto s : csyms) symh.insert(s);
-    const long n = tfreq[i]; const auto sfreqh = sfreq[i];
-    double sofar = 30 * log(n);
-    for (const auto sv : sfreqh) {
-      double sfreqv = sv.second;
-      if (symh.erase(sv.first) == 1)
-        sofar += tfidf.get(sv.first) * log (5 * sfreqv / n);
-      else
-        sofar += tfidf.get(sv.first) * 0.2 * log (1 + (1 - sfreqv) / n);
-    }
-    for (const auto s : symh) sofar -= tfidf.get(s) * 18;
-    ans[i].second=sofar;
+    ans[i].first  = i;
+    ans[i].second = score(i, symh);
   }
 
   sort_prediction(ans, no_adv);
   return ans;
 }
 
-void add_sym(unordered_map <long, long> &hash, const long &sym, const long& weight) {
-  auto got = hash.find(sym);
-  if (got != hash.end ())
-    hash[sym] += weight;
-  else
-    hash[sym]  = weight;
+double NaiveBayes::score(sample_t i, set<feature_t> symh) const {
+  // number of times current theorem was used as dependency
+  const long n      = tfreq[i];
+  const auto sfreqh = sfreq[i];
+
+  double s = 30 * log(n);
+
+  /*
+  for (const auto sv : sfreqh) {
+    // sv.first ranges over all features of theorems depending on i
+    // sv.second is the number of times sv.first appears among theorems
+    // depending on i
+    double sfreqv = sv.second;
+
+    // if sv.first exists in query features
+    if (symh.erase(sv.first) == 1)
+      s += tfidf.get(sv.first) * log (5 * sfreqv / n);
+    else
+      s += tfidf.get(sv.first) * 0.2 * log (1 + (1 - sfreqv) / n);
+  }
+
+  // for all query features that did not appear in features of dependencies
+  // of current theorem
+  for (const auto f : symh) s -= tfidf.get(f) * 18;
+  */
+
+  return s;
 }
 
-void NaiveBayes::learn(const LVec& csyms, long i, const LVec& cdeps) {
-  afreq++;
-  tfreq[i] = tfreq[i] + 1000;
-  for (const auto s : csyms) add_sym(sfreq[i], s, 1000);
-  for (const auto t : cdeps) {
-    const long scaled_weight = 1;//pow(cdeps.size(),-0.2);
-    tfreq[t] = tfreq[t] + scaled_weight;
-    for (const auto s : csyms)
-      add_sym(sfreq[t], s, scaled_weight);
-  }
+void add_sym(unordered_map <feature_t, long> &m, feature_t sym, long w) {
+  auto itr = m.find(sym);
+  if (itr == m.end()) m[sym]  = w;
+  else         (itr->second) += w;
+}
+
+void NaiveBayes::add_sample_freqs(const LVec& csyms, sample_t i, long w) {
+  tfreq[i] += w;
+  for (const auto s : csyms) add_sym(sfreq[i], s, w);
+}
+
+void NaiveBayes::learn(const LVec& csyms, sample_t i, const LVec& cdeps) {
+  add_sample_freqs(csyms, i, 1000);
+  for (const auto d : cdeps) add_sample_freqs(csyms, d, 1);
 }
 

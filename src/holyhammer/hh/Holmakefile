@@ -1,15 +1,11 @@
-# HOL Light files
-# HL=hh1/lib hh1/fusion hh1/basics hh1/printer hh1/preterm hh1/hl_parser hh1/equal \
-#    hh1/bool hh1/drule hh1/tactics hh1/simp hh1/theorems hh1/canon hh1/fol hh1/follist hh1/meson
-# HH1 (old files)
-# HH1=hh1/hh_symbols hh1/features_dt hh1/hh_tac hh1/hh_write
-# HH2 (new files)
-# FILES=hh_parse hh_lexer read predict init dependency thf1hh1 predict_knn proto
-# ALLFILES=$(HL) $(HH1) $(FILES)
+HH2_CMX=hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
+dependency.cmx thf1hh1.cmx predict_knn.cmx
 
-HH2_CMX=hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx init.cmx dependency.cmx thf1hh1.cmx predict_knn.cmx
-
-HL_CMX=hh1/lib.cmx hh1/fusion.cmx hh1/basics.cmx hh1/printer.cmx hh1/preterm.cmx hh1/hl_parser.cmx hh1/equal.cmx hh1/bool.cmx hh1/drule.cmx hh1/tactics.cmx hh1/simp.cmx hh1/theorems.cmx hh1/canon.cmx hh1/fol.cmx hh1/follist.cmx hh1/meson.cmx hh1/hh_symbols.cmx hh1/features_dt.cmx hh1/hh_tac.cmx hh1/hh_write.cmx 
+HL_CMX=hh1/lib.cmx hh1/fusion.cmx hh1/basics.cmx hh1/printer.cmx \
+hh1/preterm.cmx hh1/hl_parser.cmx hh1/equal.cmx hh1/bool.cmx \
+hh1/drule.cmx hh1/tactics.cmx hh1/simp.cmx hh1/theorems.cmx \
+hh1/canon.cmx hh1/fol.cmx hh1/follist.cmx hh1/meson.cmx \
+hh1/hh_symbols.cmx hh1/features_dt.cmx hh1/hh_tac.cmx hh1/hh_write.cmx 
 
 ALL_CMX=$(HL_CMX) $(HH2_CMX)
 
@@ -32,6 +28,8 @@ hh_lexer.cmx: hh_lexer.ml
 read.cmx: read.ml
 	ocamlopt -c -I hh1 $<
 predict.cmx: predict.ml
+	ocamlopt -c -I hh1 $<
+preprocess.cmx = preprocess.ml
 	ocamlopt -c -I hh1 $<
 init.cmx: init.ml
 	ocamlopt -c -I hh1 $<
