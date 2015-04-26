@@ -135,11 +135,21 @@ fun store_name name =
   then () 
   else used_names := dadd name 0 (!used_names)
 
-(* Warning: do not remove the slash (in the next two functions) *)
-(* constants and types *)
-fun declare_perm dict {Thy,Name} =
+(* types *)
+fun declare_perm_type dict {Thy,Name} =
   let 
-    val name1 = Thy ^ "/" ^ (escape_slash Name) 
+    val name1 = "type/" ^ Thy ^ "/" ^ (escape_slash Name) 
+    val name2 = tptp_escape name1
+  in
+    store_name name1;
+    dict := dadd {Thy=Thy,Name=Name} name2 (!dict); 
+    name2
+  end
+
+(* constant *)
+fun declare_perm_const dict {Thy,Name} =
+  let 
+    val name1 = "const/" ^ Thy ^ "/" ^ (escape_slash Name) 
     val name2 = tptp_escape name1
   in
     store_name name1;
@@ -150,7 +160,7 @@ fun declare_perm dict {Thy,Name} =
 (* theorems *)
 fun declare_perm_thm ((thy,n),a) name  =
   let
-    val name1 = thy ^ "/" ^ (escape_slash name) ^ 
+    val name1 = "thm/" ^ thy ^ "/" ^ (escape_slash name) ^ 
                 "_" ^ number_depaddress a
     val name2 = tptp_escape name1
   in
@@ -273,7 +283,7 @@ fun hh_tydef thy (s,arity) =
     ("min","bool") => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$o")
   | ("min","fun")  => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$fun")
   | _  =>
-  let val news = declare_perm ty_names {Thy=thy,Name=s} in
+  let val news = declare_perm_type ty_names {Thy=thy,Name=s} in
     (
     os "tt("; os news; os ", ty, ";
     let fun tyd i = case i of
@@ -303,7 +313,7 @@ fun hh_constdef thy (s,ty) =
   | ("bool","~")    => fix "$not"
   | ("bool","T")    => fix "$true"
   | ("bool","F")    => fix "$false"
-  | _               => declare_perm const_names {Thy=thy,Name=s}
+  | _               => declare_perm_const const_names {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
     val (newtvs, undeclare) = 
       declare_temp_list nice_dest_vartype tyvar_names tv
@@ -458,16 +468,16 @@ val full_thyl = String.tokens Char.isSpace
 "poly real_sigma complex HolSmt Encode Decode Coder EncodeVar ieee " ^ 
 "float binary_ieee machine_ieee util_prob extreal measure lebesgue " ^ 
 "probability Temporal_Logic Past_Temporal_Logic Omega_Automata");
+(* standard library *)
 val load_thyl = map (fn x => x ^ "Theory") full_thyl;
 app load load_thyl;
-val thyl = mk_set (List.concat (map ancestry full_thyl));
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9" thyl;
-(* standard library *)
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/info/theory_dep" thyl;
+val thyl = mk_set ((List.concat (map ancestry full_thyl)) @ full_thyl);
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/standard_library" thyl;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/standard_library/info/theory_dep" thyl;
 (* core *)
 val thyl = ancestry (current_theory ());;
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis9/core_library" thyl;
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis9/core_library/info/theory_dep" thyl;
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library" thyl;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library/info/theory_dep" thyl;
 *)
 
 
