@@ -33,6 +33,7 @@ The simple goal {x < y ?- x + y < y + y} can be proved by using
 
 \SEEALSO
 bossLib.++, bossLib.bool_ss, bossLib.FULL_SIMP_TAC, 
-simpLib.mk_simpset, bossLib.SIMP_CONV, bossLib.SIMP_TAC.
+simpLib.mk_simpset, bossLib.SIMP_CONV, bossLib.SIMP_TAC,
+Rewrite.ASM_REWRITE_TAC, BasicProvers.VAR_EQ_TAC
 
 \ENDDOC
