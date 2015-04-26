@@ -166,6 +166,31 @@ RW_TAC bool_ss [o_DEF]
  THEN PROVE_TAC [APPEND,PERM_MONO,CONS_PERM]);
 
 (* ----------------------------------------------------------------------
+    Alternative definition of PERM
+   ---------------------------------------------------------------------- *)
+
+val FILTER_EQ_REP = 
+  prove (``FILTER ($= x) l = REPLICATE (LENGTH (FILTER ($= x) l)) x``,
+  EVERY [(Induct_on `l`),
+    (SIMP_TAC list_ss [rich_listTheory.REPLICATE]), GEN_TAC,
+    COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
+    (ASM_SIMP_TAC list_ss [rich_listTheory.REPLICATE]) ]) ;
+
+val FILTER_EQ_LENGTHS_EQ = store_thm ("FILTER_EQ_LENGTHS_EQ",   
+  ``(LENGTH (FILTER ($= x) l1) = LENGTH (FILTER ($= x) l2)) ==> 
+    (FILTER ($= x) l1 = FILTER ($= x) l2)``,
+  EVERY [ DISCH_TAC, ONCE_REWRITE_TAC [FILTER_EQ_REP],
+    (ASM_SIMP_TAC bool_ss []) ]) ;
+
+val PERM_alt = store_thm ("PERM_alt",
+  ``!L1 L2. PERM L1 L2 = 
+    !x. LENGTH (FILTER ($= x) L1) = LENGTH (FILTER ($= x) L2)``,
+  EVERY [(REWRITE_TAC [PERM_DEF]), (REPEAT GEN_TAC),
+    (irule IMP_ANTISYM_AX), (REPEAT STRIP_TAC) ] THENL [
+    (ASM_SIMP_TAC bool_ss []),
+    (irule FILTER_EQ_LENGTHS_EQ) THEN (ASM_REWRITE_TAC []) ]) ;
+
+(* ----------------------------------------------------------------------
     Inductive characterisation of PERM
    ---------------------------------------------------------------------- *)
 
