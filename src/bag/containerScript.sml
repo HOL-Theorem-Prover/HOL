@@ -58,6 +58,13 @@ val LIST_TO_BAG_def =
  /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))`;
 val _ = export_rewrites ["LIST_TO_BAG_def"]
 
+val LIST_TO_BAG_alt = store_thm ("LIST_TO_BAG_alt",
+  ``!l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)``,
+  EVERY [ REPEAT GEN_TAC, (Induct_on `l`),
+    (SIMP_TAC list_ss [LIST_TO_BAG_def, EMPTY_BAG_alt, BAG_INSERT]),
+    GEN_TAC, COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
+    (ASM_SIMP_TAC arith_ss [LENGTH]) ]) ;
+
 val BAG_TO_LIST = Hol_defn "BAG_TO_LIST"
     `BAG_TO_LIST bag =
        if FINITE_BAG bag
@@ -87,20 +94,6 @@ val BAG_TO_LIST_INV = Q.store_thm("BAG_TO_LIST_INV",
    THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
    THEN RW_TAC bool_ss [LIST_TO_BAG_def]
    THEN PROVE_TAC [BAG_INSERT_CHOICE_REST,FINITE_SUB_BAG,SUB_BAG_REST]);
-
-
-val BAG_TO_LIST_CARD = Q.store_thm("BAG_TO_LIST_CARD",
-`!b. FINITE_BAG b ==> (LENGTH (BAG_TO_LIST b) = BAG_CARD b)`,
- recInduct BAG_TO_LIST_IND
-   THEN RW_TAC bool_ss []
-   THEN ONCE_REWRITE_TAC [UNDISCH BAG_TO_LIST_THM]
-   THEN RW_TAC bool_ss [listTheory.LENGTH,CONJUNCT1 BAG_CARD_THM]
-   THEN `FINITE_BAG (BAG_REST bag)` by PROVE_TAC [FINITE_SUB_BAG,SUB_BAG_REST]
-   THEN RW_TAC bool_ss []
-   THEN `BAG_CARD bag = BAG_CARD (BAG_REST bag) + 1` by
-        PROVE_TAC [BAG_INSERT_CHOICE_REST, BAG_CARD_THM]
-   THEN RW_TAC bool_ss [arithmeticTheory.ADD1]);
-
 
 val BAG_IN_MEM = Q.store_thm("BAG_IN_MEM",
 `!b. FINITE_BAG b ==> !x. BAG_IN x b = MEM x (BAG_TO_LIST b)`,
@@ -143,6 +136,20 @@ Induct_on `l1` THENL [
   ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_UNION_INSERT]
 ]);
 
+val LIST_TO_BAG_MAP = store_thm ("LIST_TO_BAG_MAP",
+  ``LIST_TO_BAG (MAP f b) = BAG_IMAGE f (LIST_TO_BAG b)``,
+  EVERY [ (Induct_on `b`),
+    (ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IMAGE_EMPTY]),
+    GEN_TAC, (irule (GSYM BAG_IMAGE_FINITE_INSERT)),
+    (irule FINITE_LIST_TO_BAG)] ) ;
+
+val LIST_TO_BAG_FILTER = store_thm ("LIST_TO_BAG_FILTER",
+  ``LIST_TO_BAG (FILTER f b) = BAG_FILTER f (LIST_TO_BAG b)``,
+  EVERY [ (Induct_on `b`),
+    (ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_EMPTY]),
+    GEN_TAC, COND_CASES_TAC,
+    (ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_BAG_INSERT]) ] ) ;
+
 
 val INN_LIST_TO_BAG = store_thm ("IN_LIST_TO_BAG",
 ``!n h l. BAG_INN h n (LIST_TO_BAG l) = (LENGTH (FILTER ($= h) l) >= n)``,
@@ -159,6 +166,11 @@ Induct_on `l` THENL [
   ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_IN_BAG_INSERT]
 ]);
 
+val LIST_TO_BAG_DISTINCT = store_thm ("LIST_TO_BAG_DISTINCT",
+  ``BAG_ALL_DISTINCT (LIST_TO_BAG b) = ALL_DISTINCT b``,
+  (Induct_on `b`) THEN 
+    (ASM_SIMP_TAC (srw_ss ()) [LIST_TO_BAG_def, IN_LIST_TO_BAG])) ;
+
 val LIST_TO_BAG_EQ_EMPTY = store_thm ("LIST_TO_BAG_EQ_EMPTY",
 ``!l. (LIST_TO_BAG l = EMPTY_BAG) = (l = [])``,
 Cases_on `l` THEN
@@ -166,33 +178,28 @@ SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INSERT_NOT_EMPTY]);
 
 
 val PERM_LIST_TO_BAG = store_thm ("PERM_LIST_TO_BAG",
-``!l1 l2. (LIST_TO_BAG l1 = LIST_TO_BAG l2) = PERM l1 l2``,
-SIMP_TAC std_ss [BAG_EXTENSION, INN_LIST_TO_BAG, PERM_DEF] THEN
-REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [] THEN
-REWRITE_TAC[LIST_EQ_REWRITE] THEN
-STRIP_TAC THEN GEN_TAC THEN
-
-POP_ASSUM (ASSUME_TAC o Q.GEN `m` o Q.SPECL [`m`, `x`]) THEN
-Q.ABBREV_TAC `m1 = LENGTH (FILTER ($= x) l1)` THEN
-Q.ABBREV_TAC `m2 = LENGTH (FILTER ($= x) l2)` THEN
-Q.PAT_ASSUM `!m. X` (fn thm =>
-			ASSUME_TAC (Q.SPEC `m1` thm) THEN
-			ASSUME_TAC (Q.SPEC `m2` thm)) THEN
-FULL_SIMP_TAC arith_ss [] THEN
-REPEAT STRIP_TAC THEN
-`MEM (EL x' (FILTER ($= x) l1)) (FILTER ($= x) l1) /\
- MEM (EL x' (FILTER ($= x) l2)) (FILTER ($= x) l2)` by ALL_TAC THEN1 (
-   `x' < m2` by bossLib.DECIDE_TAC THEN
-   METIS_TAC[MEM_EL]
-) THEN
-FULL_SIMP_TAC list_ss [MEM_FILTER] THEN
-METIS_TAC[]);
+  ``!l1 l2. (LIST_TO_BAG l1 = LIST_TO_BAG l2) = PERM l1 l2``,
+  (REPEAT GEN_TAC THEN SIMP_TAC std_ss [PERM_DEF]) THEN 
+  (irule IMP_ANTISYM_AX) THENL [
+    DISCH_TAC THEN irule EQ_EXT THEN (ASM_SIMP_TAC std_ss [LIST_TO_BAG_alt]),
+    EVERY [ REPEAT STRIP_TAC,
+      (POP_ASSUM (fn th => ASSUME_TAC (Q.AP_THM th `x`))),
+      (FULL_SIMP_TAC std_ss [LIST_TO_BAG_alt]),
+      (ONCE_REWRITE_TAC [FILTER_EQ_REP]), (ASM_SIMP_TAC std_ss []) ]]) ;
 
 val CARD_LIST_TO_BAG = Q.store_thm(
 "CARD_LIST_TO_BAG",
 `BAG_CARD (LIST_TO_BAG ls) = LENGTH ls`,
 Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1])
 before export_rewrites ["CARD_LIST_TO_BAG"];
+
+val EQ_TRANS' = REWRITE_RULE [GSYM AND_IMP_INTRO] EQ_TRANS ;
+val th = MATCH_MP EQ_TRANS' (SYM CARD_LIST_TO_BAG) ;
+
+val BAG_TO_LIST_CARD = store_thm ("BAG_TO_LIST_CARD",
+  ``!b. FINITE_BAG b ⇒ (LENGTH (BAG_TO_LIST b) = BAG_CARD b)``,
+  EVERY [(REPEAT STRIP_TAC), (irule th),
+    (ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV]) ]) ;
 
 val BAG_TO_LIST_EQ_NIL = Q.store_thm(
 "BAG_TO_LIST_EQ_NIL",

@@ -169,8 +169,8 @@ RW_TAC bool_ss [o_DEF]
     Alternative definition of PERM
    ---------------------------------------------------------------------- *)
 
-val FILTER_EQ_REP = 
-  prove (``FILTER ($= x) l = REPLICATE (LENGTH (FILTER ($= x) l)) x``,
+val FILTER_EQ_REP = store_thm ("FILTER_EQ_REP", 
+  ``FILTER ($= x) l = REPLICATE (LENGTH (FILTER ($= x) l)) x``,
   EVERY [(Induct_on `l`),
     (SIMP_TAC list_ss [rich_listTheory.REPLICATE]), GEN_TAC,
     COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
