@@ -1003,8 +1003,9 @@ PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
 (*Perm theorems for the simplication*)
 
-val PERM_FUN_APPEND = store_thm (
-"PERM_FUN_APPEND",
+(* was PERM_FUN_APPEND but this name is used again lower down *)
+val PERM_FUN_APPEND_C = store_thm (
+"PERM_FUN_APPEND_C",
 ``!l1 l1' l2 l2'.
 (PERM l1 = PERM l1') ==>
 (PERM l2 = PERM l2') ==>
