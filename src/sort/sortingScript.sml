@@ -171,24 +171,24 @@ RW_TAC bool_ss [o_DEF]
 
 val FILTER_EQ_REP = store_thm ("FILTER_EQ_REP", 
   ``FILTER ($= x) l = REPLICATE (LENGTH (FILTER ($= x) l)) x``,
-  EVERY [(Induct_on `l`),
-    (SIMP_TAC list_ss [rich_listTheory.REPLICATE]), GEN_TAC,
+  EVERY [Induct_on `l`,
+    SIMP_TAC list_ss [rich_listTheory.REPLICATE], GEN_TAC,
     COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
-    (ASM_SIMP_TAC list_ss [rich_listTheory.REPLICATE]) ]) ;
+    ASM_SIMP_TAC list_ss [rich_listTheory.REPLICATE] ]) ;
 
 val FILTER_EQ_LENGTHS_EQ = store_thm ("FILTER_EQ_LENGTHS_EQ",   
   ``(LENGTH (FILTER ($= x) l1) = LENGTH (FILTER ($= x) l2)) ==> 
     (FILTER ($= x) l1 = FILTER ($= x) l2)``,
   EVERY [ DISCH_TAC, ONCE_REWRITE_TAC [FILTER_EQ_REP],
-    (ASM_SIMP_TAC bool_ss []) ]) ;
+    ASM_SIMP_TAC bool_ss [] ]) ;
 
 val PERM_alt = store_thm ("PERM_alt",
   ``!L1 L2. PERM L1 L2 = 
     !x. LENGTH (FILTER ($= x) L1) = LENGTH (FILTER ($= x) L2)``,
-  EVERY [(REWRITE_TAC [PERM_DEF]), (REPEAT GEN_TAC),
-    (irule IMP_ANTISYM_AX), (REPEAT STRIP_TAC) ] THENL [
-    (ASM_SIMP_TAC bool_ss []),
-    (irule FILTER_EQ_LENGTHS_EQ) THEN (ASM_REWRITE_TAC []) ]) ;
+  EVERY [REWRITE_TAC [PERM_DEF], REPEAT GEN_TAC,
+    EQ_TAC, REPEAT STRIP_TAC ] THENL [
+    ASM_SIMP_TAC bool_ss [],
+    irule FILTER_EQ_LENGTHS_EQ THEN ASM_REWRITE_TAC [] ]) ;
 
 (* ----------------------------------------------------------------------
     Inductive characterisation of PERM
@@ -329,8 +329,7 @@ val PERM_SWAP_AT_FRONT = store_thm(
 val PERM_SWAP_L_AT_FRONT = store_thm(
   "PERM_SWAP_L_AT_FRONT",
   ``!x y. PERM (x++y++l1) (y++x++l2) = PERM l1 l2``,
-  SIMP_TAC list_ss
-    [PERM_alt, FILTER_APPEND_DISTRIB]) ;
+  SIMP_TAC list_ss [PERM_alt, FILTER_APPEND_DISTRIB]) ;
 
 (* alternative proof of PERM_SWAP_AT_FRONT
 val PERM_SWAP_AT_FRONT' = SPECL [``[x]``, ``[y]``] PERM_SWAP_L_AT_FRONT ;
@@ -1010,9 +1009,7 @@ val PERM_FUN_APPEND_C = store_thm (
 (PERM l1 = PERM l1') ==>
 (PERM l2 = PERM l2') ==>
 (PERM (l1 ++ l2) = PERM (l1' ++ l2'))``,
-
-SIMP_TAC std_ss [GSYM PERM_EQUIVALENCE_ALT_DEF,
-                 PERM_CONG]);
+SIMP_TAC std_ss [GSYM PERM_EQUIVALENCE_ALT_DEF, PERM_CONG]);
 
 
 val PERM_FUN_CONS = store_thm (
@@ -1020,9 +1017,7 @@ val PERM_FUN_CONS = store_thm (
 ``!x l1 l1'.
 (PERM l1 = PERM l1') ==>
 (PERM (x::l1) = PERM (x::l1'))``,
-
-SIMP_TAC std_ss [GSYM PERM_EQUIVALENCE_ALT_DEF,
-                 PERM_CONS_IFF]);
+SIMP_TAC std_ss [GSYM PERM_EQUIVALENCE_ALT_DEF, PERM_CONS_IFF]);
 
 
 val PERM_FUN_APPEND_CONS = store_thm (
@@ -1057,7 +1052,7 @@ val PERM_FUN_CONS_11_APPEND = store_thm (
 (PERM (y::l1) = PERM (l2++(y::l3)))``,
 EVERY [SIMP_TAC list_ss
     [GSYM PERM_EQUIVALENCE_ALT_DEF, PERM_alt, FILTER_APPEND_DISTRIB],
-  REPEAT STRIP_TAC, COND_CASES_TAC, (ASM_SIMP_TAC list_ss []) ]) ;
+  REPEAT STRIP_TAC, COND_CASES_TAC, ASM_SIMP_TAC list_ss [] ]) ;
 
 val PERM_FUN_CONS_APPEND_1 = store_thm (
 "PERM_FUN_CONS_APPEND_1",
@@ -1066,7 +1061,7 @@ val PERM_FUN_CONS_APPEND_1 = store_thm (
 (PERM (l1 ++ l) = PERM (x::(l2++l)))``,
 EVERY [SIMP_TAC list_ss
     [GSYM PERM_EQUIVALENCE_ALT_DEF, PERM_alt, FILTER_APPEND_DISTRIB],
-  REPEAT STRIP_TAC, COND_CASES_TAC, (ASM_SIMP_TAC list_ss []) ]) ;
+  REPEAT STRIP_TAC, COND_CASES_TAC, ASM_SIMP_TAC list_ss [] ]) ;
 
 val PERM_FUN_CONS_APPEND_2 = store_thm (
 "PERM_FUN_CONS_APPEND_2",
@@ -1075,7 +1070,7 @@ val PERM_FUN_CONS_APPEND_2 = store_thm (
 (PERM (l ++ l1) = PERM (x::(l ++ l2)))``,
 EVERY [SIMP_TAC list_ss
     [GSYM PERM_EQUIVALENCE_ALT_DEF, PERM_alt, FILTER_APPEND_DISTRIB],
-  REPEAT STRIP_TAC, COND_CASES_TAC, (ASM_SIMP_TAC list_ss []) ]) ;
+  REPEAT STRIP_TAC, COND_CASES_TAC, ASM_SIMP_TAC list_ss [] ]) ;
 
 val PERM_FUN_APPEND_APPEND_1 = store_thm (
 "PERM_FUN_APPEND_APPEND_1",
