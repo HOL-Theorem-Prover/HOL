@@ -385,8 +385,8 @@ end
  *    GEN_VALIDATE true tac
  *
  * is the same as "tac", except that where "tac" returns a proof which is
- * invalid because it proves a theorem with extra hypotheses, it returns those
- * hypotheses as extra goals
+ * invalid because it proves a theorem with extra hypotheses, 
+ * it returns those hypotheses as extra goals
  *
  *    VALIDATE_LT ltac
  *    GEN_VALIDATE_LT true ltac
