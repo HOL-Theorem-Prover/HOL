@@ -1207,7 +1207,15 @@ fun EXISTS_IMP x th =
  * it makes two full traversals of the theorem.                              *
  *---------------------------------------------------------------------------*)
 
+(*
 fun INST_TY_TERM (Stm, Sty) th = INST Stm (INST_TYPE Sty th)
+*)
+fun INST_TY_TERM (Stm, Sty) th =
+  let val (sth', _) = (Thm.INST_TT_HYPS (Stm, Sty) th) ;
+    val sth = INST Stm (INST_TYPE Sty th) ;
+    val check = if (hyp sth, concl sth) = (hyp sth', concl sth') then ()
+            else raise ERR "INST_TY_TERM" "INST_TT_HYPS check failed" ;
+  in sth' end ;
 
 (*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
