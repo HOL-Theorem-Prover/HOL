@@ -2113,6 +2113,20 @@ val EXISTS_SEG = Q.store_thm ("EXISTS_SEG",
         SUBST1_TAC (numLib.DECIDE ``m + SUC k = SUC m + k``)
         THEN REPEAT STRIP_TAC THEN DISJ2_TAC THEN RES_TAC]);
 
+val EXISTS_TAKE_IMP = Q.store_thm ("EXISTS_TAKE_IMP",
+   `!l m P. EXISTS P (TAKE m l) ==> EXISTS P l`,
+   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+     REPEAT GEN_TAC, COND_CASES_TAC,
+     ASM_SIMP_TAC list_ss [EXISTS_DEF],
+     PROVE_TAC [EXISTS_DEF] ]) ;
+
+val EXISTS_DROP_IMP = Q.store_thm ("EXISTS_DROP_IMP",
+   `!l m P. EXISTS P (DROP m l) ==> EXISTS P l`,
+   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+     REPEAT GEN_TAC, COND_CASES_TAC,
+     ASM_SIMP_TAC list_ss [EXISTS_DEF],
+     PROVE_TAC [EXISTS_DEF] ]) ;
+
 val EXISTS_TAKE = Q.store_thm ("EXISTS_TAKE",
    `!m l. m <= LENGTH l ==> !P. EXISTS P (TAKE m l) ==> EXISTS P l`,
    REPEAT GEN_TAC
@@ -2167,6 +2181,18 @@ val MEM_SEG = Q.store_thm ("MEM_SEG",
         THEN REPEAT STRIP_TAC
         THEN DISJ2_TAC
         THEN RES_TAC]);
+
+val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
+   `!l m x.  MEM x (TAKE m l) ==> MEM x l`,
+   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+     REPEAT GEN_TAC, COND_CASES_TAC,
+     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
+
+val MEM_DROP_IMP = Q.store_thm ("MEM_DROP_IMP",
+   `!l m x.  MEM x (DROP m l) ==> MEM x l`,
+   EVERY [Induct, ASM_SIMP_TAC list_ss [],
+     REPEAT GEN_TAC, COND_CASES_TAC,
+     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
 val MEM_TAKE = Q.store_thm ("MEM_TAKE",
    `!m l. m <= LENGTH l ==> !x.  MEM x (TAKE m l) ==> MEM x l`,
