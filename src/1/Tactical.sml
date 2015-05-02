@@ -337,6 +337,21 @@ fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
 fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
 
 (*---------------------------------------------------------------------------
+ * Add extra subgoals, which may be needed to make a tactic valid;
+ * similar to VALIDATE, but you can control the order of the extra goals
+ *---------------------------------------------------------------------------*)
+fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) = 
+  let val (glist, prf) = tac g ;
+    val extra_goals = map (fn tm => (asl, tm)) tms ;
+    val nextra = length extra_goals ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorem proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thms, thlist) = split_after nextra ethlist ;
+      in itlist PROVE_HYP extra_thms (prf thlist) end ;
+  in (extra_goals @ glist, eprf) end ;
+  
+(*---------------------------------------------------------------------------
  * Tacticals to make any tactic or list_tactic valid.
  *
  *    VALID tac
