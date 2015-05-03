@@ -98,6 +98,6 @@ assumptions.
 
 \SEEALSO
 proofManagerLib.expand, Tactical.VALID, Tactical.GEN_VALIDATE,
-Tactical.SUBGOAL_THEN.
+Tactical.ADD_SGS_TAC, Tactical.SUBGOAL_THEN.
 
 \ENDDOC
