@@ -991,29 +991,6 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
-(*---------------------------------------------------------------------------*
- * Instantiate terms and types of a theorem, also returning a list of        *
- * substituted hypotheses in the same order as in hyp th                     *
- *---------------------------------------------------------------------------*)
-
-fun INST_TT_HYPS (Stm, Sty) (th as THM (ocl, asl, c, _)) = 
-  let 
-    val _ = if List.all (is_var o #redex) Stm then ()
-      else raise ERR "INST" "can only instantiate variables" ;
-    val hyps = HOLset.listItems asl ;
-    (* instantiate types *)
-    val hyps_sty = map (inst Sty) hyps ;
-    val c_sty = inst Sty c ;
-    val thm_sty = make_thm Count.InstType
-      (ocl, HOLset.addList (empty_hyp, hyps_sty), c_sty,
-        INST_TYPE_prf(Sty,th)) ;
-    (* instantiate terms *)
-    val hyps_stt = map (subst Stm) hyps_sty ;
-    val c_stt = subst Stm c_sty ;
-    val thm_stt = make_thm Count.Inst
-      (ocl, HOLset.addList (empty_hyp, hyps_stt), c_stt,
-        INST_prf(Stm,thm_sty)) ;
-  in (thm_stt, hyps_stt) end ; 
 
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
