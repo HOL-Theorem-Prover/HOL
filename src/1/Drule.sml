@@ -1210,6 +1210,22 @@ fun EXISTS_IMP x th =
 fun INST_TY_TERM (Stm, Sty) th = INST Stm (INST_TYPE Sty th)
 
 (*---------------------------------------------------------------------------*
+ * Instantiate terms and types of a theorem, also returning a list of        *
+ * substituted hypotheses in the same order as in hyp th                     *
+ * (required for predictability of order of new subgoals from (prim_)irule)  *
+ *---------------------------------------------------------------------------*)
+
+fun INST_TT_HYPS subs th =
+  let val nhyps = HOLset.numItems (hypset th) ;
+    val thd = DISCH_ALL th ;
+    val thdsub = INST_TY_TERM subs thd ;
+    (* UNDISCH_TM nhyps times only *)
+    fun UNDISCH_TM_L (th, tms) = 
+      let val (tm, th') = UNDISCH_TM th ;
+      in (th', tm :: tms) end ;
+  in Lib.funpow nhyps UNDISCH_TM_L (thdsub, []) end ;
+  
+(*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
  *---------------------------------------------------------------------------*)
 

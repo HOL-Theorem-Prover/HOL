@@ -54,8 +54,6 @@ sig
   (* Free variable instantiation *)
 
   val INST          : (term,term)Lib.subst -> thm -> thm
-  val INST_TT_HYPS  : (term,term)Lib.subst * (hol_type,hol_type)Lib.subst ->
-      thm -> thm * term list
 
 
   (* Universal quantification *)

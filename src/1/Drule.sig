@@ -75,6 +75,8 @@ sig
   val EXISTS_IMP       : term -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
+  val INST_TT_HYPS     : (term,term)subst * (hol_type,hol_type)subst
+                          -> thm -> thm * term list
   val GSPEC            : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm
