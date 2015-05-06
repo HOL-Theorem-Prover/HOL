@@ -29,7 +29,7 @@ val word = wordsSyntax.mk_int_word_type 32
 val dword = wordsSyntax.mk_int_word_type 64
 val (_, _, dest_BranchTo, _) = mips_1 "mips_BranchTo"
 val (_, _, dest_BranchDelay, _) = mips_1 "mips_BranchDelay"
-val (_, mk_mips_PC, _, _) = mips_1 "mips_PC"
+val (_, mk_mips_PC, dest_mips_PC, _) = mips_1 "mips_PC"
 val (_, mk_mips_MEM, dest_mips_MEM, is_mips_MEM) = mips_2 "mips_MEM"
 val (_, mk_mips_gpr, dest_mips_gpr, is_mips_gpr) = mips_2 "mips_gpr"
 val st = Term.mk_var ("s", ``:mips_state``)
@@ -88,6 +88,7 @@ val state_id =
        ["CP0", "PC", "exceptionSignalled", "gpr"],
        ["CP0", "PC", "exceptionSignalled"],
        ["CP0", "PC", "exceptionSignalled", "hi", "lo"],
+       ["CP0", "PC", "exceptionSignalled", "gpr", "hi", "lo"],
        ["CP0", "LLbit", "PC"],
        ["CP0", "LLbit", "PC", "exceptionSignalled"],
        ["CP0", "LLbit", "PC", "exceptionSignalled", "gpr"],
@@ -310,6 +311,7 @@ local
             else raise ERR "COND_CONV" "")
    val POST_CONV = Conv.RAND_CONV
    val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
+   val OPT_CONV = REWRITE_CONV [optionTheory.IS_SOME_DEF]
    val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
    exception FalseTerm
    fun NOT_F_CONV tm =
@@ -330,7 +332,7 @@ local
       THENC PRE_COND_CONV
       THENC PRE_CONV WGROUND_RW_CONV
       THENC OPC_CONV bitstringLib.v2w_n2w_CONV
-      THENC POST_CONV WGROUND_RW_CONV
+      THENC POST_CONV (WGROUND_RW_CONV THENC OPT_CONV)
 in
    fun simp_triple_rule thm =
       mips_rename (Conv.CONV_RULE cnv thm)
@@ -498,12 +500,6 @@ in
       end
 end
 
-(*
-val l = (List.concat thm_ts)
-val x as (thm, t) = List.nth (l, 0)
-spec x
-*)
-
 local
    val get_opcode =
       fst o bitstringSyntax.dest_v2w o
@@ -511,7 +507,7 @@ local
       hd o pred_setSyntax.strip_set o
       temporal_stateSyntax.dest_code' o
       Thm.concl
-   val the_spec = ref (mips_spec_opt false)
+   val the_spec = ref (mips_spec_opt true)
    val spec_label_set = ref (Redblackset.empty String.compare)
    val init_net = utilsLib.mk_rw_net (fn _ => raise ERR "" "") []
    val spec_rwts = ref init_net
@@ -532,7 +528,7 @@ local
       in
          listSyntax.mk_list (utilsLib.rev_endian l, ty)
       end
-   val rev_endian = ref (Lib.I: term -> term)
+   val rev_endian = ref reverse_endian
 in
    fun mips_config be =
       ( the_spec := mips_spec_opt be
@@ -586,7 +582,11 @@ local
 in
    val mips_pc_intro_rule =
       Conv.CONV_RULE
-         (Conv.LAND_CONV (REWRITE_CONV [mips_stepTheory.Aligned_numeric])
+         (Conv.LAND_CONV
+             (REWRITE_CONV [mips_stepTheory.Aligned_numeric]
+          (*                mips_stepTheory.Aligned_cond]
+              THENC utilsLib.WGROUND_CONV
+              THENC REWRITE_CONV [boolTheory.EXCLUDED_MIDDLE] *))
           THENC (Conv.REWR_CONV
                      (Thm.CONJUNCT1 (Drule.SPEC_ALL boolTheory.IMP_CLAUSES))
                  ORELSEC MOVE_COND_CONV)
@@ -607,13 +607,15 @@ in
 end
 
 local
-   val rule =
+   val move_cond = GSYM progTheory.SPEC_MOVE_COND
+   val move_precond = REWRITE_RULE [GSYM set_sepTheory.precond_def] move_cond
+   fun rule pre =
       Conv.CONV_RULE
         (Conv.REWR_CONV
-           (GSYM (REWRITE_RULE [GSYM set_sepTheory.precond_def]
-                     progTheory.SPEC_MOVE_COND))) o Lib.uncurry Thm.DISCH
-   fun spec_cases b th =
+           (if pre then move_precond else move_cond)) o Lib.uncurry Thm.DISCH
+   fun spec_cases pre b th =
       let
+         val r = (if pre then Lib.I else helperLib.MERGE_CONDS_RULE) o rule pre
          val nb = boolSyntax.mk_neg b
          val pt = Drule.EQT_INTRO (Thm.ASSUME b)
          val nt = Drule.EQF_INTRO (Thm.ASSUME nb)
@@ -621,19 +623,21 @@ local
          val _ = Thm.hyp pth = [b] orelse raise ERR "spec_cases" ""
          val nth = PURE_REWRITE_RULE [nt, boolTheory.COND_CLAUSES] th
       in
-         [rule (b, pth), rule (nb, nth)]
+         [r (b, pth), r (nb, nth)]
       end
-in
-   fun split_BranchDelay th =
+   fun split pre f th =
       let
          val p = progSyntax.strip_star (progSyntax.dest_post (Thm.concl th))
       in
-         case List.mapPartial (Lib.total dest_BranchDelay) p of
+         case List.mapPartial (Lib.total f) p of
             [t] => (case Lib.total boolSyntax.dest_cond t of
-                       SOME (b, _, _) => spec_cases b th
+                       SOME (b, _, _) => spec_cases pre b th
                      | NONE => [th])
           | _ => [th]
       end
+in
+   val split_BranchDelay = split true dest_BranchDelay
+   val split_exception = split false dest_mips_PC
 end
 
 fun mips_spec_hex2 s =
@@ -641,7 +645,7 @@ fun mips_spec_hex2 s =
    (case String.tokens Char.isSpace s of
       [s1] =>
         (case mips_spec_hex s1 of
-            [th, _] => [th]
+            [th, _] => [List.last (split_exception th)]
           | l => raise ERR "mips_spec2_hex" ("Expecting two theorems: " ^ s1))
      | [s1, s2] =>
         (case (mips_spec_hex s1, mips_spec_hex s2) of

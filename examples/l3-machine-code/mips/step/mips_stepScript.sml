@@ -706,6 +706,16 @@ val Aligned_numeric = Q.store_thm("Aligned_numeric",
    \\ blastLib.BBLAST_TAC
    )
 
+(* Simplify alignment condition for exception calls
+
+val Aligned_cond = Q.store_thm("Aligned_cond",
+   `!a: 34 word b:word30 c d.
+       ((1 >< 0) ((a @@ if d then b else c): word64) = 0w: word2) =
+       d /\ ((1 >< 0) b = 0w: word2) \/ ~d /\ ((1 >< 0) c = 0w: word2)`,
+   rw [] \\ blastLib.BBLAST_TAC
+   )
+*)
+
 (* ------------------------------------------------------------------------ *)
 
 

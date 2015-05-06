@@ -87,6 +87,18 @@ val test_def = mips_decompile "test"
     10200001
     00000000`
 
+(* These decompile under the assumption that arithmetic exceptions do not
+   occur *)
+List.map mips.encodeInstruction
+  [
+   "dadd $1, $2, $3",
+   "dmult $1, $3"
+  ]
+
+val test_def = mips_decompile "test"
+   `0043082C
+    0023001C`
+
 *)
 
 end
