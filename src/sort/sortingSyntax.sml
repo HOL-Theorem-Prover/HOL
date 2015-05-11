@@ -3,14 +3,9 @@ struct
 
 open Abbrev HolKernel sortingTheory
 
-val binop =
-   HolKernel.syntax_fns "sorting" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "sorting" 3 HolKernel.dest_triop HolKernel.mk_triop
-
-val quadop =
-   HolKernel.syntax_fns "sorting" 4 HolKernel.dest_quadop HolKernel.mk_quadop
+val binop = HolKernel.syntax_fns2 "sorting"
+val triop = HolKernel.syntax_fns3 "sorting"
+val quadop = HolKernel.syntax_fns4 "sorting"
 
 val (perm_tm, mk_perm, dest_perm, is_perm) = binop "PERM"
 val (sorted_tm, mk_sorted, dest_sorted, is_sorted) = binop "SORTED"

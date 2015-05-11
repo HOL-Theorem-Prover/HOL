@@ -22,12 +22,15 @@ val arm_comp_defs = arm_progTheory.component_defs
 local
    val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
 in
-   val step_1 =
-      HolKernel.syntax_fns "arm_step" 1 HolKernel.dest_monop HolKernel.mk_monop
+   val step_1 = HolKernel.syntax_fns1 "arm_step"
    val arm_1 =
-      HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
+      HolKernel.syntax_fns
+         {n = 2, dest = HolKernel.dest_monop, make = HolKernel.mk_monop}
+         "arm_prog"
    val arm_2 =
-      HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+      HolKernel.syntax_fns
+         {n = 3, dest = HolKernel.dest_binop, make = HolKernel.mk_binop}
+         "arm_prog"
    val word5 = wordsSyntax.mk_int_word_type 5
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64

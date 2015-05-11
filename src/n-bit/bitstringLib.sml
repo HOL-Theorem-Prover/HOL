@@ -477,8 +477,6 @@ local
              |> fst of
         [((thy, _), (thm, _))] => SOME (thy, thm)
       | _ => NONE
-   fun syntax_monop thy =
-      HolKernel.syntax_fns thy 1 HolKernel.dest_monop HolKernel.mk_monop
 in
    fun bitify_boolify i =
       let
@@ -499,9 +497,9 @@ in
                  ((thy, thm1), (thy, thm2))
               end
          val (bitify_tm, mk_bitify, dest_bitify, is_bitify) =
-            syntax_monop thy1 bitify
+            HolKernel.syntax_fns1 thy1 bitify
          val (boolify_tm, mk_boolify, dest_boolify, is_boolify) =
-            syntax_monop thy2 boolify
+            HolKernel.syntax_fns1 thy2 boolify
       in
          { bitify_def = bitify_def,
            bitify_tm = bitify_tm,

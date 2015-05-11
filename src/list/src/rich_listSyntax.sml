@@ -8,14 +8,9 @@ struct
     Syntax functions for rich_list
  ---------------------------------------------------------------------------*)
 
-val monop =
-   HolKernel.syntax_fns "rich_list" 1 HolKernel.dest_monop HolKernel.mk_monop
-
-val binop =
-   HolKernel.syntax_fns "rich_list" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "rich_list" 3 HolKernel.dest_triop HolKernel.mk_triop
+val monop = HolKernel.syntax_fns1 "rich_list"
+val binop = HolKernel.syntax_fns2 "rich_list"
+val triop = HolKernel.syntax_fns3 "rich_list"
 
 val (and_el_tm, mk_and_el, dest_and_el, is_and_el) = monop "AND_EL"
 val (count_list_tm, mk_count_list, dest_count_list, is_count_list) =

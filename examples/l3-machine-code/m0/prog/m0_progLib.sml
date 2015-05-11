@@ -21,15 +21,12 @@ val m0_comp_defs = m0_progTheory.component_defs
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
-   val step_1 =
-      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
-   val m0_0 =
-      HolKernel.syntax_fns "m0_prog" 1 HolKernel.dest_monop HolKernel.mk_monop
+   val step_1 = HolKernel.syntax_fns1 "m0_step"
+   fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "m0_prog"
+   val m0_0 = syn 1 HolKernel.dest_monop HolKernel.mk_monop
 in
-   val m0_1 =
-      HolKernel.syntax_fns "m0_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-   val m0_2 =
-      HolKernel.syntax_fns "m0_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+   val m0_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
+   val m0_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
    val byte = wordsSyntax.mk_int_word_type 8
    val half = wordsSyntax.mk_int_word_type 16
    val word = wordsSyntax.mk_int_word_type 32

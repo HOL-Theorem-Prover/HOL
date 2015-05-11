@@ -75,42 +75,40 @@ fun is_ground_real tm =
 
 (* ------------------------------------------------------------------------- *)
 
-val monop =
-   HolKernel.syntax_fns "binary_ieee" 1 HolKernel.dest_monop
-      (Lib.curry boolSyntax.mk_icomb)
+val monop = HolKernel.syntax_fns1 "binary_ieee"
+val binop = HolKernel.syntax_fns2 "binary_ieee"
+val triop = HolKernel.syntax_fns3 "binary_ieee"
+val quadop = HolKernel.syntax_fns4 "binary_ieee"
 
-val binop =
-   HolKernel.syntax_fns "binary_ieee" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "binary_ieee" 3 HolKernel.dest_triop HolKernel.mk_triop
-
-val quadop =
-   HolKernel.syntax_fns
-     "binary_ieee" 4 HolKernel.dest_quadop HolKernel.mk_quadop
+fun syntax_fns x = HolKernel.syntax_fns x "binary_ieee"
 
 val tw_monop =
-   HolKernel.syntax_fns "binary_ieee" 1
-      (fn tm1 => fn e => fn tm2 =>
+   syntax_fns
+   {n = 1,
+    dest =
+       fn tm1 => fn e => fn tm2 =>
           let
              val ty = boolSyntax.dest_itself (HolKernel.dest_monop tm1 e tm2)
              val (t, w) = pairSyntax.dest_prod ty
           in
              (fcpSyntax.dest_int_numeric_type t,
               fcpSyntax.dest_int_numeric_type w)
-          end)
-      (fn tm1 => fn (t, w) =>
+          end,
+    make =
+       fn tm1 => fn (t, w) =>
          let
             val t_ty = fcpSyntax.mk_int_numeric_type t
             val w_ty = fcpSyntax.mk_int_numeric_type w
             val p_ty = pairSyntax.mk_prod (t_ty, w_ty)
          in
             boolSyntax.mk_icomb (tm1, boolSyntax.mk_itself p_ty)
-         end)
+         end}
 
 val etw_monop =
-   HolKernel.syntax_fns "binary_ieee" 1
-      (fn tm1 => fn e => fn tm2 =>
+   syntax_fns
+   {n = 1,
+    dest =
+       fn tm1 => fn e => fn tm2 =>
           let
              val (t1, t2) =
                 pairSyntax.dest_pair (HolKernel.dest_monop tm1 e tm2)
@@ -120,40 +118,47 @@ val etw_monop =
              (wordsSyntax.uint_of_word t1,
               fcpSyntax.dest_int_numeric_type t,
               Arbnum.toInt w)
-          end)
-      (fn tm1 => fn (i, t, w) =>
+          end,
+    make =
+       fn tm1 => fn (i, t, w) =>
          let
             val t1 = wordsSyntax.mk_wordii (i, w)
             val t2 = boolSyntax.mk_itself (fcpSyntax.mk_int_numeric_type t)
          in
             boolSyntax.mk_icomb (tm1, pairSyntax.mk_pair (t1, t2))
-         end)
+         end}
 
 val tw_binop =
-   HolKernel.syntax_fns "binary_ieee" 2
-      (fn tm1 => fn e => fn tm2 =>
+   syntax_fns
+   {n = 2,
+    dest =
+       fn tm1 => fn e => fn tm2 =>
          let
             val (a, b) = HolKernel.dest_binop tm1 e tm2
             val (ty1, ty2) = dest_float_ty (Term.type_of tm2)
          in
             (a, b, ty1, ty2)
-         end)
-      (fn tm1 => fn (tm2, tm3, t, w) =>
+         end,
+    make =
+       fn tm1 => fn (tm2, tm3, t, w) =>
           Term.inst [``:'w`` |-> w, ``:'t`` |-> t]
-             (HolKernel.mk_binop tm1 (tm2, tm3)))
+             (HolKernel.mk_binop tm1 (tm2, tm3))}
 
 val tw_triop =
-   HolKernel.syntax_fns "binary_ieee" 3
-      (fn tm1 => fn e => fn tm2 =>
+   syntax_fns
+   {n = 3,
+    dest =
+       fn tm1 => fn e => fn tm2 =>
          let
             val (a, b, c) = HolKernel.dest_triop tm1 e tm2
             val (ty1, ty2) = dest_float_ty (Term.type_of tm2)
          in
             (a, b, c, ty1, ty2)
-         end)
-      (fn tm1 => fn (tm2, tm3, tm4, t, w) =>
+         end,
+    make =
+       fn tm1 => fn (tm2, tm3, tm4, t, w) =>
           Term.inst [``:'w`` |-> w, ``:'t`` |-> t]
-             (HolKernel.mk_triop tm1 (tm2, tm3, tm4)))
+             (HolKernel.mk_triop tm1 (tm2, tm3, tm4))}
 
 (* ------------------------------------------------------------------------- *)
 

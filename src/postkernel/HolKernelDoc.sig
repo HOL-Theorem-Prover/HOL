@@ -60,8 +60,8 @@ sig
   val subst_occs:
      int list list -> {redex: term, residue: term} list -> term -> term
   val syntax_fns:
-     string -> int -> (term -> exn -> term -> 'a) -> (term * 'b -> term) ->
-     string -> term * ('b -> term) * (term -> 'a) * (term -> bool)
+     {n: int, make: term -> 'a -> term, dest: term -> exn -> term -> 'b} ->
+     string -> string -> term * ('b -> term) * (term -> 'a) * (term -> bool)
   val term_size: term -> int
 
 end

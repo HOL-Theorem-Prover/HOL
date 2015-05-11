@@ -218,27 +218,33 @@ in
       end
       handle HOL_ERR {message, ...} => raise ERR "list_mk_icomb" message
 
-   fun syntax_fns thy n dest make =
-      fn name =>
-         let
-            val ERR = Feedback.mk_HOL_ERR (thy ^ "Syntax")
-            val tm = Term.prim_mk_const {Name = name, Thy = thy}
-            val () =
-               ignore (List.length (args tm) = n
-                       orelse raise ERR "systax_fns" "bad number of arguments")
-            val d = dest tm (ERR ("dest_" ^ name) "")
-         in
-            (tm,
-             fn v => Lib.with_exn (make tm) v (ERR ("mk_" ^ name) ""): term,
-             d: term -> 'a,
-             can d)
-         end
+   fun syntax_fns
+      {n: int, make: term -> 'a -> term, dest: term -> exn -> term -> 'b}
+      thy name =
+      let
+         val ERR = Feedback.mk_HOL_ERR (thy ^ "Syntax")
+         val tm = Term.prim_mk_const {Name = name, Thy = thy}
+         val () =
+            ignore (List.length (args tm) = n
+                    orelse raise ERR "systax_fns" "bad number of arguments")
+         val d = dest tm (ERR ("dest_" ^ name) "")
+      in
+         (tm,
+          fn v => Lib.with_exn (make tm) v (ERR ("mk_" ^ name) ""): term,
+          d: term -> 'b,
+          can d)
+      end
 end
 
 fun mk_monop tm = list_mk_icomb tm o Lib.list_of_singleton
 fun mk_binop tm = list_mk_icomb tm o Lib.list_of_pair
 fun mk_triop tm = list_mk_icomb tm o Lib.list_of_triple
 fun mk_quadop tm = list_mk_icomb tm o Lib.list_of_quadruple
+
+val syntax_fns1 = syntax_fns {n = 1, make = mk_monop, dest = dest_monop}
+val syntax_fns2 = syntax_fns {n = 2, make = mk_binop, dest = dest_binop}
+val syntax_fns3 = syntax_fns {n = 3, make = mk_triop, dest = dest_triop}
+val syntax_fns4 = syntax_fns {n = 4, make = mk_quadop, dest = dest_quadop}
 
 datatype lambda =
      VAR of string * hol_type

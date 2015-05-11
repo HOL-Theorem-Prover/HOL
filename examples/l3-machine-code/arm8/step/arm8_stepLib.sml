@@ -39,8 +39,7 @@ fun reg_var v = Term.mk_var (v, reg_ty)
 val r31 = wordsSyntax.mk_wordii (31, 5)
 fun NetFromList l = List.foldl (Lib.uncurry Net.insert) Net.empty l
 
-val arm8_monop =
-   HolKernel.syntax_fns "arm8" 1 HolKernel.dest_monop HolKernel.mk_monop
+val arm8_monop = HolKernel.syntax_fns1 "arm8"
 
 (* ---------------------------- *)
 

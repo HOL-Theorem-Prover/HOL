@@ -6,8 +6,7 @@ open Abbrev HolKernel progSyntax temporal_stateTheory
 (* ----------------------------------------------------------------------- *)
 
 val (temporal_next_tm, mk_temporal_next, dest_temporal_next, is_temporal_next) =
-   HolKernel.syntax_fns "temporal_state" 4
-      HolKernel.dest_quadop HolKernel.mk_quadop "TEMPORAL_NEXT"
+   HolKernel.syntax_fns4 "temporal_state" "TEMPORAL_NEXT"
 
 fun dest_pre tm = let val (_, p, _, _) = dest_temporal_next tm in p end
 fun dest_code tm = let val (_, _, c, _) = dest_temporal_next tm in c end

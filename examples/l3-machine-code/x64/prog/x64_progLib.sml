@@ -19,10 +19,9 @@ val ERR = Feedback.mk_HOL_ERR "x64_progLib"
 val x64_proj_def = x64_progTheory.x64_proj_def
 val x64_comp_defs = x64_progTheory.component_defs
 
-val x64_1 =
-   HolKernel.syntax_fns "x64_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-val x64_2 =
-   HolKernel.syntax_fns "x64_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "x64_prog"
+val x64_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
+val x64_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
 val byte = wordsSyntax.mk_int_word_type 8
 val word = wordsSyntax.mk_int_word_type 16
 val dword = wordsSyntax.mk_int_word_type 32

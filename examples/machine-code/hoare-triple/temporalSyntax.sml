@@ -7,16 +7,14 @@ val ERR = Feedback.mk_HOL_ERR "tripleSyntax"
 
 (* ----------------------------------------------------------------------- *)
 
-val s1 =
-   HolKernel.syntax_fns "temporal" 3 HolKernel.dest_monop HolKernel.mk_monop
+fun syntax_fns n d m =
+   HolKernel.syntax_fns {n = n, dest = d, make = m} "temporal"
 
-val s2 =
-   HolKernel.syntax_fns "temporal" 4 HolKernel.dest_binop HolKernel.mk_binop
+val s1 = syntax_fns 3 HolKernel.dest_monop HolKernel.mk_monop
+val s2 = syntax_fns 4 HolKernel.dest_binop HolKernel.mk_binop
 
-val s3 =
-   HolKernel.syntax_fns "temporal" 3 HolKernel.dest_triop HolKernel.mk_triop
-
-val (temporal_tm, mk_temporal, dest_temporal, is_temporal) = s3 "TEMPORAL"
+val (temporal_tm, mk_temporal, dest_temporal, is_temporal) =
+   HolKernel.syntax_fns3 "temporal" "TEMPORAL"
 val (now_tm, mk_now, dest_now, is_now) = s1 "NOW"
 val (next_tm, mk_next, dest_next, is_next) = s1 "NEXT"
 val (eventually_tm, mk_eventually, dest_eventually, is_eventually) =

@@ -7,7 +7,8 @@ val ERR = Feedback.mk_HOL_ERR "state_transformerSyntax"
 
 (*---------------------------------------------------------------------------*)
 
-fun syntax n m d = HolKernel.syntax_fns "state_transformer" n m d
+fun syntax n d m =
+   HolKernel.syntax_fns {n = n, dest = d, make = m} "state_transformer"
 
 val s1 = syntax 2 HolKernel.dest_monop HolKernel.mk_monop
 val s2 = syntax 3 HolKernel.dest_binop HolKernel.mk_binop

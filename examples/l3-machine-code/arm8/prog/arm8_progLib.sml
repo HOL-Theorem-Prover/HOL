@@ -18,12 +18,10 @@ val ERR = Feedback.mk_HOL_ERR "arm8_progLib"
 val arm_proj_def = arm8_progTheory.arm8_proj_def
 val arm_comp_defs = arm8_progTheory.component_defs
 
-val step_1 =
-   HolKernel.syntax_fns "arm8_step" 1 HolKernel.dest_monop HolKernel.mk_monop
-val arm_1 =
-   HolKernel.syntax_fns "arm8_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-val arm_2 =
-   HolKernel.syntax_fns "arm8_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+val step_1 = HolKernel.syntax_fns1 "arm8_step"
+fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "arm8_prog"
+val arm_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
+val arm_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
 val word5 = wordsSyntax.mk_int_word_type 5
 val word = wordsSyntax.mk_int_word_type 32
 val dword = wordsSyntax.mk_int_word_type 64

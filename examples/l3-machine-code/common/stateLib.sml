@@ -1361,8 +1361,9 @@ fun chunks_intro be m_def =
 
 local
    val (sep_array_tm, mk_sep_array, dest_sep_array, _) =
-      HolKernel.syntax_fns "set_sep" 5 HolKernel.dest_quadop HolKernel.mk_quadop
-         "SEP_ARRAY"
+      HolKernel.syntax_fns
+         {n = 5, dest = HolKernel.dest_quadop, make = HolKernel.mk_quadop}
+         "set_sep" "SEP_ARRAY"
    val list_mk_concat =
       HolKernel.list_mk_rbinop (Lib.curry wordsSyntax.mk_word_concat)
    val list_mk_add =
