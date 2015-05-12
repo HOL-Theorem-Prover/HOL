@@ -511,6 +511,7 @@ datatype monop =
    | ToLower
    | ToUpper
    | Union
+   | Update
    | ValOf
 
 datatype binop =
@@ -639,6 +640,7 @@ local
    val mk_ismember  = mk_uncurry ``\(x:'a, l). x IN list$LIST_TO_SET l``
    val mk_take      = mk_uncurry ``\(x, l:'a list). list$TAKE x l``
    val mk_drop      = mk_uncurry ``\(x, l:'a list). list$DROP x l``
+   val mk_update    = mk_uncurry ``\(e, x, l:'a list). list$LUPDATE e x l``
    val mk_element   = mk_uncurry ``\(x, l:'a list). list$EL x l``
    val mk_remove    = mk_uncurry ``\(l1, l2). list$FILTER (\x. ~MEM x l1) l2``
    val mk_remove_e  = mk_uncurry ``\(l1, l2). list$FILTER (\x. MEM x l1) l2``
@@ -980,6 +982,7 @@ in
        | ToLower => mk_lower
        | ToUpper => mk_upper
        | Union => mk_union
+       | Update => mk_update
        | ValOf => optionSyntax.mk_the
        | _ => mk_fp_triop m
       ) x

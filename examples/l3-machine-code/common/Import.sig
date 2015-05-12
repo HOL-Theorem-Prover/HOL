@@ -62,6 +62,7 @@ sig
      | ToLower
      | ToUpper
      | Union
+     | Update
      | ValOf
 
    datatype binop =
