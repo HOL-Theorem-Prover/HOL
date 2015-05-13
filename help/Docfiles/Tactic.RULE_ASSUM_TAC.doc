@@ -28,5 +28,6 @@ It does not matter if the goal has no assumptions, but in this case
 {RULE_ASSUM_TAC} has no effect.
 
 \SEEALSO
-Tactical.ASSUM_LIST, Tactical.MAP_EVERY, Tactical.MAP_FIRST, Tactical.POP_ASSUM_LIST.
+Tactic.RULE_L_ASSUM_TAC, Tactical.ASSUM_LIST, Tactical.MAP_EVERY,
+Tactical.MAP_FIRST, Tactical.POP_ASSUM_LIST.
 \ENDDOC

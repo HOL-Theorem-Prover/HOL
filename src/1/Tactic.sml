@@ -374,6 +374,10 @@ fun RULE_ASSUM_TAC rule : tactic =
    POP_ASSUM_LIST
       (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []))
 
+fun RULE_L_ASSUM_TAC rule : tactic =
+   POP_ASSUM_LIST
+      (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (append o rule) asl []))
+
 (*---------------------------------------------------------------------------*
  * Substitute throughout the goal and its assumptions.                       *
  *---------------------------------------------------------------------------*)
@@ -715,9 +719,9 @@ fun MATCH_ACCEPT_TAC thm : tactic =
  * ---------------------------------------------------------------------*)
 
 fun prim_irule thm (asl, w) =
-  let val matchsub = match_terml [] empty_tmset (concl thm) w ;
-    val subthm = INST_TY_TERM matchsub thm ;
-  in GEN_VALIDATE false (ACCEPT_TAC subthm) (asl, w) end ;
+  let val matchsub = match_term (concl thm) w ;
+    val (subthm, subhyps) = INST_TT_HYPS matchsub thm ;
+  in ADD_SGS_TAC subhyps (ACCEPT_TAC subthm) (asl, w) end ;
 
 (* --------------------------------------------------------------------------*
  * MATCH_MP_TAC: Takes a theorem of the form                                 *

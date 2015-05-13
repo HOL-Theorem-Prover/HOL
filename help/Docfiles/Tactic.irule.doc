@@ -45,6 +45,10 @@ implications. See {SPEC_UNDISCH_EXL} for details.
 Then {prim_irule} is applied. To avoid this preprocessing just use
 {prim_irule}.
 
+The order of the new subgoals depends on the order in which the hypotheses of
+the pre-processed theorem (before the substitution) are stored. 
+See {prim_irule}.
+
 \EXAMPLE
 With goal {R a (f b)} and theorem {thm} being
 {

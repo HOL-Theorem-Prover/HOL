@@ -27,5 +27,5 @@ original ones. Use {norm_subst} to achieve this.
 
 \SEEALSO
 Thm.INST, Thm.INST_TYPE, Drule.ISPEC, Thm.SPEC, Drule.SUBS, Thm.SUBST,
-Term.norm_subst
+Term.norm_subst, Drule.INST_TT_HYPS
 \ENDDOC

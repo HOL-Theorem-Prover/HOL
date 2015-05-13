@@ -224,7 +224,9 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
 fun NTH_GOAL tac n gl1 =
   let
     val (gl_before, ggl_after) = Lib.split_after (n-1) gl1
+      handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
     val (g, gl_after) = valOf (List.getItem ggl_after)
+      handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
     val (gl2, vf2) = tac g ;
     val gl_result = gl_before @ gl2 @ gl_after ;
     fun vf thl =
@@ -232,8 +234,7 @@ fun NTH_GOAL tac n gl1 =
         val (th2, th_after) = Lib.split_after (length gl2) th_rest ;
         val th_result = th_before @ vf2 th2 :: th_after ;
       in th_result end ;
-  in (gl_result, vf) end
-  handle _ => raise ERR "NTH_GOAL" "no nth subgoal in list" ;
+  in (gl_result, vf) end ;
 
 fun LASTGOAL tac gl1 = NTH_GOAL tac (length gl1) gl1 ;
 fun HEADGOAL tac gl1 = NTH_GOAL tac 1 gl1 ;
@@ -336,6 +337,21 @@ fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
 fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
 
 (*---------------------------------------------------------------------------
+ * Add extra subgoals, which may be needed to make a tactic valid;
+ * similar to VALIDATE, but you can control the order of the extra goals
+ *---------------------------------------------------------------------------*)
+fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) = 
+  let val (glist, prf) = tac g ;
+    val extra_goals = map (fn tm => (asl, tm)) tms ;
+    val nextra = length extra_goals ;
+    (* new validation: apply the theorems proving the additional goals to
+      eliminate the extra hyps in the theorem proved by the given validation *)
+    fun eprf ethlist =
+      let val (extra_thms, thlist) = split_after nextra ethlist ;
+      in itlist PROVE_HYP extra_thms (prf thlist) end ;
+  in (extra_goals @ glist, eprf) end ;
+  
+(*---------------------------------------------------------------------------
  * Tacticals to make any tactic or list_tactic valid.
  *
  *    VALID tac
@@ -385,8 +401,8 @@ end
  *    GEN_VALIDATE true tac
  *
  * is the same as "tac", except that where "tac" returns a proof which is
- * because if proves a theorem with extra hypotheses, it returns those
- * hypotheses as extra goals
+ * invalid because it proves a theorem with extra hypotheses, 
+ * it returns those hypotheses as extra goals
  *
  *    VALIDATE_LT ltac
  *    GEN_VALIDATE_LT true ltac

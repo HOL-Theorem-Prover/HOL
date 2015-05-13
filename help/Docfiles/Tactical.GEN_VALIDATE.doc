@@ -70,6 +70,6 @@ what the resulting subgoals will be,
  regardless of what the assumptions of the goal are.
 
 \SEEALSO
-Tactical.VALID, Tactical.VALIDATE
+Tactical.VALID, Tactical.VALIDATE, Tactical.ADD_SGS_TAC
 
 \ENDDOC

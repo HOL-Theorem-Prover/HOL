@@ -26,6 +26,7 @@ sig
   val SUBST_OCCS_TAC        : (int list * thm) list -> tactic
   val SUBST1_TAC            : thm -> tactic
   val RULE_ASSUM_TAC        : (thm -> thm) -> tactic
+  val RULE_L_ASSUM_TAC      : (thm -> thm list) -> tactic
   val SUBST_ALL_TAC         : thm -> tactic
   val CHECK_ASSUME_TAC      : thm_tactic
   val STRIP_ASSUME_TAC      : thm_tactic
