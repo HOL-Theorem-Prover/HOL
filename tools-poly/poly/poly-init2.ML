@@ -44,7 +44,9 @@ fun quse s = let
       else
         FS.mkDir ".HOLMK"
         handle OS.SysErr (msg, _) =>
-               die ("Couldn't make .HOLMK directory: "^msg)
+               die ("While using " ^ s ^
+                    ", couldn't make .HOLMK directory in " ^
+                    FS.getDir() ^ ": " ^ msg)
   fun holtemp s = (mkHOLMK(); OS.Path.concat(".HOLMK", OS.Path.file s))
 
   val _ = if FS.access (s, [FS.A_READ]) then ()
