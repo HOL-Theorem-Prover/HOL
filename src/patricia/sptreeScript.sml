@@ -1120,4 +1120,25 @@ val fromAList_toAList = store_thm("fromAList_toAList",
   ``!t. wf t ==> (fromAList (toAList t) = t)``,
   metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
 
+val map_def = Define`
+  (map f LN = LN) /\
+  (map f (LS a) = (LS (f a))) /\
+  (map f (BN t1 t2) = BN (map f t1) (map f t2)) /\
+  (map f (BS t1 a t2) = BS (map f t1) (f a) (map f t2))`
+
+val toList_map = store_thm("toList_map",
+  ``∀s. toList (map f s) = MAP f (toList s)``,
+  Induct >>
+  fs[toList_def,map_def,toListA_def] >>
+  simp[Once toListA_append] >>
+  simp[Once toListA_append,SimpRHS])
+
+val domain_map = store_thm("domain_map",
+  ``∀s. domain (map f s) = domain s``,
+  Induct >> simp[map_def])
+
+val lookup_map = store_thm("lookup_map",
+  ``∀s x. lookup x (map f s) = OPTION_MAP f (lookup x s)``,
+  Induct >> simp[map_def,lookup_def] >> rw[])
+
 val _ = export_theory();
