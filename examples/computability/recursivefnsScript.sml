@@ -3,6 +3,8 @@ open HolKernel Parse boolLib bossLib
 open listTheory rich_listTheory
 open primrecfnsTheory
 
+open lcsymtacs
+
 val _ = new_theory "recursivefns"
 
 val minimise_def = Define`
@@ -71,11 +73,16 @@ val totalrec_def = Define`
   totalrec f n = recfn f n ∧ ∀l. (LENGTH l = n) ⇒ ∃m. f l = SOME m
 `;
 
+val rec2_def = Define`
+  (rec2 f [] = f 0 0 : num option) ∧
+  (rec2 f [x] = f x 0) ∧
+  (rec2 f (x::y::t) = f x y)
+`;
+val _ = export_rewrites ["rec2_def"]
 
-
-
-
-
-
+val recfn_K = store_thm(
+  "recfn_K[simp]",
+  ``recfn (K (SOME i)) 1``,
+  `recfn (SOME o K i) 1` by simp[primrec_recfn] >> fs[]);
 
 val _ = export_theory()
