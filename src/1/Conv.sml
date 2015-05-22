@@ -265,17 +265,19 @@ fun REPEATC conv tm =
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV
 
-fun COMB_CONV conv tm =
+fun COMB2_CONV (c1,c2) tm =
    let
       val {Rator, Rand} = dest_comb tm
    in
       let
-         val th = conv Rator
+         val th = c1 Rator
       in
-         MK_COMB (th, conv Rand) handle UNCHANGED => AP_THM th Rand
+         MK_COMB (th, c2 Rand) handle UNCHANGED => AP_THM th Rand
       end
-      handle UNCHANGED => AP_TERM Rator (conv Rand)
+      handle UNCHANGED => AP_TERM Rator (c2 Rand)
    end
+
+fun COMB_CONV c = COMB2_CONV(c,c)
 
 fun SUB_CONV conv = TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv)
 
