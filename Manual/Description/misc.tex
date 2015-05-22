@@ -505,6 +505,15 @@ In particular, this means that hash-characters do \emph{not} start
 comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
+\paragraph{Special Targets}
+Some target names for rules are handled specially by \holmake{}:
+\begin{itemize}
+\item Dependencies associated with the target name \texttt{.PHONY} are taken to be list of other targets in the make-file that are not actually the name of files to be built.
+For example, targets naming conceptual collections of files such as \texttt{all} should be marked as ``phony''.
+If a target is phony, then its dependencies will be built even if a file of that name exists and is newer than the dependencies.
+\item The special way that command-line arguments \texttt{clean}, \texttt{cleanAll} and \texttt{cleanDeps} are handled means that targets of those names will not work.
+In order to extend cleaning behaviour, use the \texttt{EXTRA\_CLEANS} variable (see below).
+\end{itemize}
 \paragraph{Functions}
 \index{Holmake@\holmake!functions for text-manipulation}
 \holmake{} supports some simple functions for manipulating text.  All
