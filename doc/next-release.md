@@ -20,6 +20,8 @@ Contents
 New features:
 -------------
 
+- We have ported HOL Light’s `PAT_CONV` and `PATH_CONV` “conversionals”, providing nice machinery for applying conversions to specific sub-terms.
+
 Bugs fixed:
 -----------
 
