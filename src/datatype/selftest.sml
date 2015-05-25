@@ -263,4 +263,9 @@ val (d,r) = dom_rng (type_of ``C12``)
 val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
 val _ = print "OK\n"
 
+val _ = tprint "Datatype and antiquote (should be quick)"
+val num = numSyntax.num
+val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
+val _ = print "OK\n"
+
 val _ = Process.exit Process.success;

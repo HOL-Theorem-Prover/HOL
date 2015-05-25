@@ -239,7 +239,7 @@ fun parse_harg qb =
       in
         qbuf.advance qb; parse_type qb'
       end
-    | (base_tokens.BT_AQ ty, _) => dAQ ty
+    | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"
 
