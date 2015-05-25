@@ -188,7 +188,7 @@ val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
 val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
 
-fun tprint s = print (StringCvt.padRight #" " 70 s)
+open testutils
 
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
@@ -201,7 +201,7 @@ val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
 val _ = set_trace "Unicode" 0
 
 fun pptest (nm, t, expected) = let
-  val _ = tprint ("Testing pretty-printing of "^nm)
+  val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
 in
   if s = expected then print "OK\n"
@@ -240,13 +240,17 @@ val _ = List.app pptest
          ("overloaded var.fld with args", ``inv x``, "inv x")
          ]
 
+val _ = Feedback.emit_MESG := false
+
 (* a test for Hol_defn that requires a datatype: *)
 (* mutrec defs with sums *)
+val _ = tprint "Mutrec defn with sums"
 val _ = Hol_datatype `foo = F1 of unit | F2 of foo + num`
 val _ = Defn.Hol_defn "foo"`
 (foo1 (F1 ()) = F1 ()) /\
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
 (foo2 (INR n) = INL (F1 ())) /\
-(foo2 (INL f) = INL (foo1 f))`
+(foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
+val _ = print "OK\n"
 
 val _ = Process.exit Process.success;
