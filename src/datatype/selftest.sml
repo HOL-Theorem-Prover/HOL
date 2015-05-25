@@ -253,4 +253,14 @@ val _ = Defn.Hol_defn "foo"`
 (foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
 val _ = print "OK\n"
 
+val _ = tprint "Non-recursive num"
+val _ = Datatype.Datatype `num = C10 num$num | C11 num | C12 scratch$num`;
+val (d,r) = dom_rng (type_of ``C10``)
+val _ = Type.compare(d, numSyntax.num) = EQUAL orelse die "FAILED!"
+val (d,r) = dom_rng (type_of ``C11``)
+val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val (d,r) = dom_rng (type_of ``C12``)
+val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
+val _ = print "OK\n"
+
 val _ = Process.exit Process.success;

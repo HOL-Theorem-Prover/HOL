@@ -244,7 +244,8 @@ fun to_tyspecs ASTs =
      fun mk_hol_ty (dAQ ty) = ty
        | mk_hol_ty (dVartype s) = mk_vartype s
        | mk_hol_ty (dTyop{Tyop=s, Args, Thy}) =
-            if Lib.mem s new_type_names
+            if Lib.mem s new_type_names andalso
+               (Thy = NONE orelse Thy = SOME (current_theory()))
             then if null Args then tyname_as_tyvar s
                  else raise ERR "to_tyspecs"
                      ("Omit arguments to new type:"^Lib.quote s)
