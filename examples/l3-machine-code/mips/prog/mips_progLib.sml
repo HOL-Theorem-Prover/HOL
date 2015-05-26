@@ -109,60 +109,12 @@ val CP0_id =
    utilsLib.mk_state_id_thm mipsTheory.CP0_component_equality [["Status"]]
 
 val mips_frame =
-   update_frame_state_thm mips_proj_def
-      [
-       (`K mips_c_CP0_Count`,
-        `\s:mips_state a w. s with CP0 := cp0 with Count := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_Cause`,
-        `\s:mips_state a w. s with CP0 := cp0 with Cause := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_EPC`,
-        `\s:mips_state a w. s with CP0 := cp0 with EPC := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_Debug`,
-        `\s:mips_state a w. s with CP0 := cp0 with Debug := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_ErrCtl`,
-        `\s:mips_state a w. s with CP0 := cp0 with ErrCtl := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_LLAddr`,
-        `\s:mips_state a w. s with CP0 := cp0 with LLAddr := w`,
-        `\s:mips_state. s with CP0 := cp0`),
-       (`K mips_c_CP0_Status_ERL`,
-        `\s:mips_state a w.
-            s with CP0 := cp0 with Status := status with ERL := w`,
-        `\s:mips_state. s with CP0 := cp0 with Status := status`),
-       (`K mips_c_CP0_Status_EXL`,
-        `\s:mips_state a w.
-            s with CP0 := cp0 with Status := status with EXL := w`,
-        `\s:mips_state. s with CP0 := cp0 with Status := status`),
-       (`K mips_c_PC`,
-        `\s:mips_state a w. s with PC := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_BranchDelay`,
-        `\s:mips_state a w. s with BranchDelay := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_BranchTo`,
-        `\s:mips_state a w. s with BranchTo := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_exceptionSignalled`,
-        `\s:mips_state a w. s with exceptionSignalled := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_LLbit`,
-        `\s:mips_state a w. s with LLbit := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_hi`,
-        `\s:mips_state a w. s with hi := w`,
-        `I: mips_state -> mips_state`),
-       (`K mips_c_lo`,
-        `\s:mips_state a w. s with lo := w`,
-        `I: mips_state -> mips_state`),
-       (`mips_c_gpr`, `\s:mips_state a w. s with gpr := (a =+ w) r`,
-        `\s:mips_state. s with gpr := r`),
-       (`mips_c_MEM`, `\s:mips_state a w. s with MEM := (a =+ w) r`,
-        `\s:mips_state. s with MEM := r`)
-      ]
+   stateLib.update_frame_state_thm mips_proj_def
+     (List.map (fn s => "CP0." ^ s)
+         ["Count", "Cause", "EPC", "Debug", "ErrCtl", "LLAddr",
+          "Status.ERL", "Status.EXL"] @
+      ["PC", "BranchDelay", "BranchTo", "exceptionSignalled", "LLbit",
+       "hi", "lo", "gpr", "MEM"])
 
 (* -- *)
 

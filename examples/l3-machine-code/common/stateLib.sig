@@ -44,8 +44,7 @@ sig
       thm -> thm -> thm list -> thm list -> thm list -> thm list -> thm list ->
       hol_type list -> tactic -> tactic -> thm * term -> thm
    val star_select_state_thm: thm -> thm list -> term list * thm -> thm
-   val update_frame_state_thm:
-      thm -> (Q.tmquote * Q.tmquote * Q.tmquote) list -> thm
+   val update_frame_state_thm: thm -> string list -> thm
    val update_hidden_frame_state_thm: thm -> term list -> thm
    val vvar: hol_type -> term
    val varReset: unit -> unit

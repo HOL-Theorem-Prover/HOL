@@ -59,29 +59,8 @@ val state_id =
 
 val arm_frame =
    stateLib.update_frame_state_thm arm_proj_def
-      [(`K arm8_c_PSTATE_N`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with N := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_Z`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with Z := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_C`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with C := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_V`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with V := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_SP_EL0`,
-        `\s:arm8_state a w. s with SP_EL0 := w`,
-        `\s:arm8_state. s`),
-       (`K arm8_c_PC`,
-        `\s:arm8_state a w. s with PC := w`,
-        `\s:arm8_state. s`),
-       (`arm8_c_REG`, `\s:arm8_state a w. s with REG := (a =+ w) r`,
-        `\s:arm8_state. s with REG := r`),
-       (`arm8_c_MEM`, `\s:arm8_state a w. s with MEM := (a =+ w) r`,
-        `\s:arm8_state. s with MEM := r`)
-      ]
+      ["PSTATE.N", "PSTATE.Z", "PSTATE.C", "PSTATE.V", "SP_EL0", "PC", "REG",
+       "MEM"]
 
 val arm_frame_hidden =
    stateLib.update_hidden_frame_state_thm arm_proj_def

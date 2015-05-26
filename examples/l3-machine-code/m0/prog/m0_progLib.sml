@@ -64,26 +64,7 @@ val state_id =
 
 val m0_frame =
    stateLib.update_frame_state_thm m0_proj_def
-      [(`K m0_c_PSR_N`,
-        `\s:m0_state a w. s with PSR := psr with N := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_Z`,
-        `\s:m0_state a w. s with PSR := psr with Z := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_C`,
-        `\s:m0_state a w. s with PSR := psr with C := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_V`,
-        `\s:m0_state a w. s with PSR := psr with V := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_count`,
-        `\s:m0_state a w. s with count := c`,
-        `\s:m0_state. s`),
-       (`m0_c_REG`, `\s:m0_state a w. s with REG := (a =+ w) r`,
-        `\s:m0_state. s with REG := r`),
-       (`m0_c_MEM`, `\s:m0_state a w. s with MEM := (a =+ w) r`,
-        `\s:m0_state. s with MEM := r`)
-      ]
+      ["PSR.N", "PSR.Z", "PSR.C", "PSR.V", "count", "REG", "MEM"]
 
 val m0_frame_hidden =
    stateLib.update_hidden_frame_state_thm m0_proj_def

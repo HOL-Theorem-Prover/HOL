@@ -88,25 +88,70 @@ fun mk_state_pred x =
    ------------------------------------------------------------------------ *)
 
 local
-   fun tac t = Cases THEN SRW_TAC [] [t, combinTheory.APPLY_UPDATE_THM]
-   fun frame_state_thm def (f, u, r) =
-      let
-         val n = utilsLib.get_function def
-         val thm =
-            UPDATE_FRAME_STATE
-            |> Drule.ISPEC n
-            |> Q.ISPECL [f, u, r]
-            |> SIMP_RULE (srw_ss()) []
-         val p = fst (boolSyntax.dest_imp (Thm.concl thm))
-         val p_thm = Tactical.prove (p, tac def)
-      in
-         Drule.GEN_ALL (MATCH_MP thm p_thm)
-      end
+   val concat_ = String.concat o Lib.separate "_"
+   val dom_of = utilsLib.dom o Term.type_of
+   val rng_of = utilsLib.rng o Term.type_of
+   val ty_name = #Tyop o Type.dest_thy_type o Term.type_of
 in
    fun update_frame_state_thm proj_def =
-      Drule.LIST_CONJ o
-      List.map (Feedback.trace ("notify type variable guesses", 0)
-                  (frame_state_thm proj_def))
+      let
+         val tac =
+            Cases THEN SRW_TAC [] [proj_def, combinTheory.APPLY_UPDATE_THM]
+         val proj = utilsLib.get_function proj_def
+         val th = Drule.ISPEC proj stateTheory.UPDATE_FRAME_STATE
+         val {Thy = p_thy, Name = n, Ty = ty, ...} = Term.dest_thy_const proj
+         val isa = if String.isSuffix "_proj" n
+                      then String.extract (n, 0, SOME (String.size n - 5))
+                   else raise ERR "update_frame_state_thm"
+                                  "unexpected proj name"
+         val state_ty = fst (Type.dom_rng ty)
+         val {Thy = thy, ...} = Type.dest_thy_type state_ty
+         val s = Term.mk_var ("s", state_ty)
+         fun frame_state_thm component =
+            let
+               val l = String.tokens (Lib.equal #".") component
+               val c_name = concat_ (isa :: "c" :: l)
+               val c = Term.prim_mk_const {Name = c_name, Thy = p_thy}
+               val (f, aty, not_map) =
+                  case Lib.total dom_of c of
+                     SOME ty => (c, ty, false)
+                   | NONE =>
+                       (combinSyntax.mk_K_1 (c, Type.alpha), Type.alpha, true)
+               val a = Term.mk_var ("a", aty)
+               val w = ref boolSyntax.T
+               fun iter rest tm =
+                  fn [] => if rest
+                              then tm
+                           else if not_map
+                              then (w := Term.mk_var ("w", Term.type_of tm); !w)
+                           else ( w := Term.mk_var ("w", rng_of tm)
+                                ; Term.mk_comb
+                                     (combinSyntax.mk_update (a, !w), tm)
+                                )
+                   | h :: t =>
+                       let
+                          val fupd_name = concat_ [ty_name tm, h, "fupd"]
+                          val fupd =
+                             Term.prim_mk_const {Name = fupd_name, Thy = thy}
+                          val d = utilsLib.dom (dom_of fupd)
+                          val v = Term.mk_var (utilsLib.lowercase h, d)
+                       in
+                          Term.list_mk_comb
+                            (fupd, [combinSyntax.mk_K_1 (iter rest v t, d), tm])
+                       end
+               val u = iter false s l
+               val u = Term.list_mk_abs ([s, a, !w], u)
+               val l = if not_map then Lib.butlast l else l
+               val r = Term.mk_abs (s, iter true s l)
+               val thm = th |> Drule.ISPECL [f, u, r] |> SIMP_RULE (srw_ss()) []
+               val p = fst (boolSyntax.dest_imp (Thm.concl thm))
+               val p_thm = Tactical.prove (p, tac)
+            in
+               Drule.GEN_ALL (MATCH_MP thm p_thm)
+            end
+      in
+         Drule.LIST_CONJ o List.map frame_state_thm
+      end
 end
 
 (* ------------------------------------------------------------------------

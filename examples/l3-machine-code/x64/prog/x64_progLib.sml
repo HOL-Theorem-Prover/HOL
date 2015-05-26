@@ -71,17 +71,7 @@ val state_id =
 
 val x64_frame =
    stateLib.update_frame_state_thm x64_proj_def
-      [(`K x64_c_RIP`,
-        `\s:x64_state a w. s with RIP := w`,
-        `I : x64_state -> x64_state`),
-       (`x64_c_REG`, `\s:x64_state a w. s with REG := (a =+ w) r`,
-        `\s:x64_state. s with REG := r`),
-       (`x64_c_MEM`, `\s:x64_state a w. s with MEM := (a =+ w) r`,
-        `\s:x64_state. s with MEM := r`),
-       (`x64_c_ICACHE`, `\s:x64_state a w. s with ICACHE := (a =+ w) r`,
-        `\s:x64_state. s with ICACHE := r`),
-       (`x64_c_EFLAGS`, `\s:x64_state a w. s with EFLAGS := (a =+ w) r`,
-        `\s:x64_state. s with EFLAGS := r`)]
+      ["RIP", "REG", "MEM", "ICACHE", "EFLAGS"]
 
 (* -- *)
 
