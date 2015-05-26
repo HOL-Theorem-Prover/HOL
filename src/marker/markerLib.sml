@@ -103,14 +103,18 @@ in
       let
          val (l, r) = dest_eq eq
          val l' = variant (HOLset.listItems (FVL [r] fv_set)) l
-         fun matchr t = raw_match [] fv_set r t ([],[])
-         fun finder t =
-            (!match_var_or_const orelse not (is_var t orelse is_const t))
-            andalso can matchr t
+         fun matchr t = raw_match [] fv_set r t ([],[]) |> #2 |> #1
+         fun finder (_, t) =
+           if (is_var t orelse is_const t) andalso
+              not (!match_var_or_const)
+           then
+             NONE
+           else
+             Lib.total (fn st => (st, matchr st)) t
       in
-         case Lib.total (find_term finder) w of
+         case gen_find_term finder w of
             NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"
-          | SOME t => ABB l' t g
+          | SOME (t, tysub) => ABB (Term.inst tysub l') t g
       end
 end
 

@@ -26,6 +26,9 @@ val _ = if aconv (concl result) goal then
            | _ => die "FAILED!"
         else die "FAILED!"
 
+(* combinator *)
+val _ = new_definition("I_DEF", ``I = \x:'a. x``);
+
 (* fake arithmetic *)
 val _ = new_type ("num", 0)
 val _ = new_constant ("*", ``:num -> num -> num``)
@@ -144,6 +147,11 @@ val _ = case sgs of
                                 aconvdie "goal conclusion" c expected_c;
                                 print "OK\n")
           | _ => die "FAILED!"
+
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh252)"
+val (sgs, _) = Q.PAT_ABBREV_TAC `v = I x` ([], ``I p /\ v``)
+val _ = print "OK\n"
 
 
 val _ = Process.exit Process.success;

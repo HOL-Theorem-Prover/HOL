@@ -22,6 +22,8 @@ New features:
 
 - We have ported HOL Light’s `PAT_CONV` and `PATH_CONV` “conversionals”, providing nice machinery for applying conversions to specific sub-terms.
 
+- The tactic `PAT_ABBREV_TAC` (also available in the `Q` module) can now use patterns that are more polymorphic than the sub-term in the goal that is ultimately matched. ([Github issue](http://github.com/HOL-Theorem-Prover/HOL/issues/252))
+
 Bugs fixed:
 -----------
 
