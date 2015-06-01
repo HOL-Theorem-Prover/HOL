@@ -13,31 +13,66 @@ fun (m1 >>-* m2) = m1 >-* (fn _ => m2)
 fun (m1 <- m2) = m1 >- (fn v => m2 >> return v)
 fun get s = (s, Some s)
 
-type 'a tt = (term frag list, 'a, string) t
+type posn = int * int
+type posnmsg = posn * (posn * string) option
+type 'a tt = (posnmsg * term frag list, 'a, string) t
+
+fun ((m1 : 'a tt) ++ (m2 : 'a tt)) : 'a tt =
+  fn (s0 as ((p0, m0), qb0)) =>
+     case m1 s0 of
+         (((p, m), qb), Error e) => m2 ((p0, m), qb0)
+       | x => x
+
+fun repeat (m : 'a tt) s = ((m >> repeat m) ++ ok) s
 
 datatype stringt = S of string | TMnm of string
 datatype sym = NT of string | TOK of stringt
 datatype clause = Syms of sym list | TmAQ of term
 type t = (string * clause list) list
 
-fun aq0 error frags =
-    case frags of
-      [] => (frags, Error error)
-    | QUOTE s :: rest => if s = "" then aq0 error rest
-                         else (frags, Error error)
-    | ANTIQUOTE t :: rest => (rest, Some t)
+fun newline ((col, line), msg) = ((0, line + 1), msg)
+fun add1col ((col, line), msg) = ((col + 1, line), msg)
+fun advance c p = if c = #"\n" then newline p else add1col p
+fun posn_toString (col, line) = Int.toString line ^ "." ^ Int.toString col
+fun posn_compare(p1 : posn, p2 : posn) =
+  case Int.compare (#2 p1, #2 p2) of
+      EQUAL => Int.compare(#1 p1, #1 p2)
+    | x => x
+val startposn :posnmsg = ((0, 1), NONE)
 
-fun getc error frags =
-  case frags of
-    [] => (frags, Error error)
+fun fail s ((p0,m0), i) =
+  let
+    val msg0 = posn_toString p0 ^ ": " ^ s
+    fun finish m = errormonad.fail msg0 ((p0, SOME m), i)
+  in
+    case m0 of
+        NONE => finish (p0,s)
+      | SOME(m as (p2, _)) =>
+        if posn_compare(p0,p2) <> LESS then finish (p0,msg0) else finish m
+  end
+
+fun setPosn (line,col) ((_, m), i) = ((((col,line), m), i), Some ())
+
+fun aq0 error (st as (posn:posnmsg, frags)) =
+    case frags of
+      [] => (st, Error error)
+    | QUOTE s :: rest => if s = "" then aq0 error (posn, rest)
+                         else (st, Error error)
+    | ANTIQUOTE t :: rest => ((posn, rest), Some t)
+
+fun getc error (st as (posn, i0)) =
+  case i0 of
+    [] => fail error st
   | QUOTE s :: rest =>
-    if s = "" then getc error rest
+    if s = "" then getc error (posn, rest)
     else let val i' = if size s = 1 then rest
                       else QUOTE (String.extract(s,1,NONE)) :: rest
+             val c = String.sub(s,0)
+             val posn' = advance c posn
          in
-           (i', Some (String.sub(s,0)))
+           ((posn', i'), Some (String.sub(s,0)))
          end
-  | ANTIQUOTE _ :: _ => (frags, Error error)
+  | ANTIQUOTE _ :: _ => fail error st
 
 fun dropP P = repeat (getc "" >- (fn c => if P c then ok
                                           else fail ""))
@@ -53,7 +88,7 @@ fun token0 s = let
       else let
         val c = String.sub(s,i)
       in
-        getc "" >-
+        getc ("EOF while looking for "^str c^" of "^s) >-
         (fn c' => if c' = c then recurse (i + 1)
                   else fail ("token: didn't find "^str c^" of "^s))
       end
@@ -69,21 +104,38 @@ in
   | Error _ => ok s
 end
 
-fun comment s =
-    (token0 "(*" >> repeat (mnot (token0 "*)") >> getc "") >>
-     token0 "*)") s
+(* needs to be eta-expanded to make it suitably polymorphic
+    (ware the value restriction!)
+*)
+fun barecomment s =
+    (token0 "(*" >> repeat (mnot (token0 "*)") >> getc "") >> token0 "*)") s
+
+fun mrpt m =
+  let
+    fun recurse acc =
+      (m >- (fn v => recurse (v::acc))) ++ return (List.rev acc)
+  in
+    recurse []
+  end
+
+fun mrpt1 m =
+  (m >>-* mrpt m) >- (fn (x,xs) => return (x::xs))
+
+val int = mrpt1 (getP Char.isDigit) >-
+          (fn clist =>
+              return (valOf (Int.fromString (String.implode clist))))
+
+val posn_comment =
+    token0 "(*#loc " >> (int >>-* (getP Char.isSpace >> int)) >- setPosn >>
+    token0 "*)"
+
+val comment = posn_comment ++ barecomment
+
 
 fun lex m = repeat ((getP Char.isSpace >> ok) ++ comment) >> m
 fun complete m = m <- repeat ((getP Char.isSpace >> ok) ++ comment)
 fun token s = lex (token0 s)
 fun aq s = lex (aq0 s)
-
-fun mrpt m = let
-  fun recurse acc = (m >- (fn v => recurse (v::acc))) ++
-                    return (List.rev acc)
-in
-  recurse []
-end
 
 fun ident_constituent c =
     Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
@@ -141,8 +193,10 @@ val grammar0 =
       fail "Couldn't make sense of remaining input")
 
 fun grammar fs =
-    case grammar0 fs of
-        (_, Error s) => raise Fail s
+    case grammar0 (startposn, fs) of
+        (((_,SOME(p,m)), _), Error _) => raise Fail m
+      | (((_, NONE), _), Error s) =>
+          raise Fail ("Invariant failure, (and "^s^")")
       | (_, Some v) => v
 
 fun allnts f (g: t) : string HOLset.set = let
