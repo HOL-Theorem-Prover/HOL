@@ -2904,7 +2904,7 @@ theory can be found in \theoryimp{rich\_list}.
 
 The \theoryimp{sorting} theory defines a notion of two lists being
 permutations of each other, then defines a general notion of sorting,
-then shows that Quicksort is a sorting function. The 
+then shows that Quicksort is a sorting function. The
 \theoryimp{mergesort} theory defines Merge sort and shows that it is a stable
 sorting function.
 
@@ -3487,7 +3487,7 @@ In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), 
 The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
 The Unicode symbol for $\mathbb{U}$ is U+1D54C, and may not exist in many fonts.
 
-One of these forms will be used to print \holtxt{UNIV} by default.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!universal sets}One of these forms will be used to print \holtxt{UNIV} by default.
 The user trace (see Section~\ref{sec:traces}) \ml{"Univ~pretty-printing"} can be set to zero to cancel this behaviour.
 Additionally, the trace \ml{"Unicode Univ printing"} can be used to stop the U+1D54C syntax from being used, even if the Unicode trace is set.
 
@@ -3742,7 +3742,7 @@ proved:
 \end{hol}
 
 
-\subsubsection{Syntax for sets}\index{set theory notation}
+\subsubsection{Syntax for sets}\index{set theory notation}\label{sec:set-syntax}
 
 The special purpose set-theoretic notations
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} and
@@ -3892,8 +3892,9 @@ pairs in the \holtxt{vs} position can be omitted.)
 The unambiguous notation is printed by the pretty-printer whenever the
 set to be printed can not be expressed with the default notation, or
 if the trace variable with name \ml{pp\_unambiguous\_comprehensions}
-is set to \ml{true}.
-
+is set to \ml{1}.
+(If the same trace is set to \ml{2}, then the unambiguous notation will never be used.)
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 
