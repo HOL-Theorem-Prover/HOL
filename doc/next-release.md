@@ -33,7 +33,7 @@ Bugs fixed:
 
 - `Holmake` will now follow `INCLUDES` specifications from `Holmakefiles` when given “phony” targets to build on the command-line.  (A typical phony target is `all`.) As in the past, it will still act only locally if given just a clean target (`clean`, `cleanDeps` or `cleanAll`).  To clean recursively, you must also pass the `-r` flag to `Holmake`.  ([Github issue](http://github.com/HOL-Theorem-Prover/HOL/issues/145))
 
--   We fixed two problems with `Datatype`. Thanks to Ramana Kumar for both reports.
+-   We fixed three problems with `Datatype`. Thanks to Ramana Kumar for the reports.
     [First](http://github.com/HOL-Theorem-Prover/HOL/issues/257), `Datatype` will no longer create a recursive type if the recursive instance  is qualified with a theory name other than the current one.
     In other words,
 
@@ -43,6 +43,8 @@ Bugs fixed:
     (`Hol_datatype` had the same problem.)
 
     [Second](http://github.com/HOL-Theorem-Prover/HOL/issues/257), `Datatype` will handle antiquotations in its input properly (`Hol_datatype` already did).
+
+    [Third](http://github.com/HOL-Theorem-Prover/HOL/issues/260), `Datatype` (and `Hol_datatype`) allows the definition of identical record types in different theories.
 
 New theories:
 -------------
