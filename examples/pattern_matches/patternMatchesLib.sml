@@ -1,12 +1,12 @@
-structure deepMatchesLib :> deepMatchesLib =
+structure patternMatchesLib :> patternMatchesLib =
 struct
 
 open HolKernel boolLib bossLib
-open deepMatchesTheory
+open patternMatchesTheory
 open simpLib
 open quantHeuristicsLib
 open DatatypeSimps
-open deepMatchesSyntax
+open patternMatchesSyntax
 open Traverse
 open constrFamiliesLib
 

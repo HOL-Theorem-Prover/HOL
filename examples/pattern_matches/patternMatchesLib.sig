@@ -1,4 +1,4 @@
-signature deepMatchesLib =
+signature patternMatchesLib =
 sig
   include Abbrev
   type ssfrag = simpLib.ssfrag

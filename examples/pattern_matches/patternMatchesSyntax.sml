@@ -1,8 +1,8 @@
-structure deepMatchesSyntax :> deepMatchesSyntax =
+structure patternMatchesSyntax :> patternMatchesSyntax =
 struct
 
 open HolKernel Parse boolLib bossLib
-open deepMatchesTheory
+open patternMatchesTheory
 open pairSyntax
 open ConseqConv
 

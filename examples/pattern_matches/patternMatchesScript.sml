@@ -4,7 +4,7 @@ open optionTheory
 open listTheory
 open ConseqConv
 
-val _ = new_theory "deepMatches"
+val _ = new_theory "patternMatches"
 
 (***************************************************)
 (* Auxiliary stuff                                 *)

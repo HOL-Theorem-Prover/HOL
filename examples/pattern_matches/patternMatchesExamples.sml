@@ -4,9 +4,9 @@
 (**************************************)
 
 open bossLib 
-open deepMatchesLib
-open deepMatchesTheory
-open deepMatchesSyntax
+open patternMatchesLib
+open patternMatchesTheory
+open patternMatchesSyntax
 open pred_setTheory
 open constrFamiliesLib
 open stringTheory 

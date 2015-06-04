@@ -1,4 +1,4 @@
-signature deepMatchesSyntax =
+signature patternMatchesSyntax =
 sig
   include Abbrev
 

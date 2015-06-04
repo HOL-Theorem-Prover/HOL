@@ -28,5 +28,11 @@ deep pattern compilation now.
 
 Moreover, the new case-expressions provide additional features like
 guards, views, free variables in patterns or multiple occurrences of a
-bound variable inside a pattern. There is also tool support for
-working with the new case-expressions inside the logic.
+bound variable inside a pattern. 
+
+Most of the example consists of tool support for working with the new
+case-expressions inside the logic. There are simplification and
+(partial) evaluation tools, tools that convert between the classical
+and new representation. A tool for exhaustiveness checks.  Tools that
+remove redundant rows or eliminate guards to double variable bindings
+and much more.
