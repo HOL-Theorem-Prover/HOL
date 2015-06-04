@@ -25,6 +25,10 @@ sig
      The resulting term as well the used argument vars are
      returned. *)
   val mk_constructor_term : term list -> constructor -> (term * term list)
+  (* [match_constructor constr t] tries destruct [t] as a constructor
+     of [constr]. It returns NONE, if there is no match. Otherwise
+     the main constructor functions + labelled args. *)
+  val match_constructor : constructor -> term -> (term * (string * term) list) option
 
   (* We usually consider lists of constructors. It is an abstract
      type that should only be used via [make_constructorList]. *)
@@ -139,6 +143,12 @@ sig
   (* This tries to find an nchotony theorem for the given column. *)
   val pmatch_compile_db_compile_nchotomy : pmatch_compile_db ->
      (term list * term) list -> thm option
+
+  (* This tries to destruct a term as a destructor. It looks
+     up in the given DB all possible constructors and tries to
+     apply match_constructor. *)
+  val pmatch_compile_db_dest_constr_term : pmatch_compile_db ->
+     term -> (term * (string * term) list) option
 
   (* add a compile fun to a db *)
   val pmatch_compile_db_add_compile_fun :

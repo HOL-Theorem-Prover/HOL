@@ -38,6 +38,10 @@ sig
      non-constructor patterns. *)
   val pmatch2case : term -> term
 
+  (* The following conversions call 
+     case2pmatch and pmatch2case and
+     afterwards prove the equivalence of 
+     the result. *)
   val PMATCH_INTRO_CONV : conv
   val PMATCH_INTRO_CONV_NO_OPTIMISE : conv
   val PMATCH_ELIM_CONV : conv
@@ -138,11 +142,10 @@ sig
 
   (* A special case of lifting are function definitons,
      which use PMATCH. In order to use such definitions
-     with the rewritig tools, it is often handy to
+     with the rewriting tools, it is often handy to
      move the PMATCH to the toplevel and introduce
      multiple cases, one case for each row of the
      PMATCH. This is automated by the following rules. *)
-
   val PMATCH_TO_TOP_RULE_GEN : ssfrag list -> rule
   val PMATCH_TO_TOP_RULE : rule
 
@@ -189,9 +192,9 @@ sig
   val colHeu_default : column_heuristic
 
 
-  (*-------------*)
-  (* COMPILATION *)
-  (*-------------*)
+  (*---------------------*)
+  (* PATTERN COMPILATION *)
+  (*---------------------*)
 
   (* [PMATCH_CASE_SPLIT_CONV_GEN ssl db col_heu]
      is a conversion that tries to compile PMATCH expressions
@@ -227,10 +230,11 @@ sig
 
   (* Pattern compilation builds for a list of patterns, implicitly
      a nchotomy theorem, i.e. a list of patterns that cover all the
-     original ones and are exhaustive. Moreover these patterns useually
+     original ones and are exhaustive. Moreover these patterns usually
      have some nice properties like e.g. not overlapping with each other.
      Such a nchotomy theorem is often handy. We use it to check for
-     exhaustiveness for example. The interface is exponsed here as well. *)
+     exhaustiveness for example. The interface 
+     to compute such an nchotomy is exponsed here as well. *)
 
   (* [nchotomy_of_pats_GEN db colHeu pats] computes an nchotomy-theorem
      for a list of patterns. A pattern is written as for PMATCH, i.e. in the form ``\(v1, ..., vn). p v1 ... vn``. *)
@@ -262,13 +266,77 @@ sig
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN :
     ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term -> thm
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH : term -> thm
+
+  (* Apply the resulting redundant rows-info *) 
   val IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM : thm -> thm
 
 
   (* prove redundancy of given row given an info-thm *)
   val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT :
     thm -> int -> tactic -> thm
+
   val IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal :
     thm -> int -> Manager.proof
+
+
+  (*-----------------------*)
+  (* Exhaustiveness        *)
+  (*-----------------------*)
+
+  (* One can easily use a redundant rows info to
+     show that a pattern match is exhaustive. This
+     is done in the form of a consequence conversion.
+     So the user has to take care of a precondition (which is
+     ideally true) *)
+
+  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV : ConseqConv.conseq_conv;
+
+  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN : 
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+     ssfrag list -> ConseqConv.conseq_conv;
+
+
+   (* More interesting than just computing whether a PMATCH
+      expression is exhaustive might be adding at the end
+      additional rows that explicitly list the missing pats
+      and return ARB for them. This is achieved by the following
+      functions. 
+
+      The additional patterns can use guards or not. If not
+      guards are used, the added patterns are more coarse, but
+      simpler. *)
+
+   val PMATCH_COMPLETE_CONV : bool -> conv
+   val PMATCH_COMPLETE_ss : bool -> ssfrag
+
+   (* and as usual more general versions that allows using
+      own pattern compilation settings *)
+   val PMATCH_COMPLETE_CONV_GEN : ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic -> 
+     bool -> conv
+								 	   val PMATCH_COMPLETE_GEN_ss :
+     ssfrag list ->
+     constrFamiliesLib.pmatch_compile_db ->
+     column_heuristic -> bool -> ssfrag
+
+
+  (*-----------------------*)
+  (* Show nchotomy         *)
+  (*-----------------------*)
+
+  (* [show_nchotomy t] tries to prove an nchotomy-theorem.
+     Given an nchotomy theorem of the form
+     ``!x. (?xs1. v = p1 xs1 /\ g1 xs1) \/ ... \/ 
+           (?xsn. v = pn xsn /\ gn xsn)``. 
+     It returns a theorem that is an implication with
+     the input as conclusion. *)
+  val SHOW_NCHOTOMY_CONSEQ_CONV : ConseqConv.conseq_conv
+
+  (* A generalised version that allows specifying additional
+     parameters. *)
+  val SHOW_NCHOTOMY_CONSEQ_CONV_GEN :
+    ssfrag list -> constrFamiliesLib.pmatch_compile_db ->
+    column_heuristic -> ConseqConv.conseq_conv
+
 
 end

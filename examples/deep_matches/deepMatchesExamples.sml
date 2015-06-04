@@ -1,3 +1,8 @@
+(**************************************)
+(* Examples for interactively playing *)
+(* around with the pattern match lib  *)
+(**************************************)
+
 open bossLib 
 open deepMatchesLib
 open deepMatchesTheory
@@ -9,7 +14,11 @@ open pred_setLib
 
 val _ = Globals.priming := SOME "_"
 
-(* Introducing case expressions *)
+
+(********************************)
+(* Parsing / Pretty Printing    *)
+(* Conversions                  *)
+(********************************)
 
 val t = ``case x of (NONE, []) => 0``
 val t' = ``CASE x OF [ ||. (NONE, []) ~> 0 ]``
@@ -618,7 +627,6 @@ val thm = PMATCH_REMOVE_REDUNDANT_CONV t
 
 
 (* Let's consider something more fancy *)
-
 val t = ``CASE x OF [
     || x. x when EVEN x ~> "EVEN";
     ||. 2 ~> "2";
@@ -635,8 +643,69 @@ val thm = PMATCH_REMOVE_REDUNDANT_CONV t
    with some manual help *)
 
 val info_thm = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH  t
+
+(* IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT_set_goal info_thm 3 *)
 val info_thm' = IS_REDUNDANT_ROWS_INFO_SHOW_ROW_IS_REDUNDANT info_thm 3 (
   SIMP_TAC std_ss [LEFT_FORALL_IMP_THM] THEN
   METIS_TAC [arithmeticTheory.EVEN_OR_ODD]
 )
 
+val thm = IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM info_thm'
+
+
+
+(*********************************)
+(* The same techniques can be    *)
+(* used to show exhaustiveness   *)
+(*********************************)
+
+val t = ``CASE (x, z) OF [
+  ||. (NONE, NONE) ~> 0;
+  ||. (SOME _, _) ~> 1;
+  ||. (_, SOME _) ~> 2
+]``
+
+val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
+
+(* Now a case of a non-exhaustive match *)
+val t = ``CASE (x, z) OF [
+  ||. (NONE, NONE) ~> 0;
+  ||. (SOME _, _) ~> 1;
+  ||. (_, NONE) ~> 2
+]``
+
+val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
+
+(* We can automatically add the missing rows *)
+val thm = PMATCH_COMPLETE_CONV true t
+
+
+(* Let's consider something more fancy *)
+val t = ``CASE x OF [
+    || x. x when EVEN x ~> "EVEN";
+    ||. 2 ~> "2";
+    || x. x when ODD x ~> "ODD";
+    ||. _ ~> "???"
+  ]``
+
+(* The last row saves us :-) *)
+val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
+
+(* So without it, we need some manual effort *)
+val t = ``CASE x OF [
+    || x. x when EVEN x ~> "EVEN";
+    || x. x when ODD x ~> "ODD"
+  ]``
+
+val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
+
+(* More interestingly, adding missing patterns works with
+   guards. *)
+
+val t = ``CASE x OF [
+    || x. x when EVEN x ~> "EVEN"
+  ]``
+
+val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
+val thm = PMATCH_COMPLETE_CONV true t
+val thm = PMATCH_COMPLETE_CONV false t

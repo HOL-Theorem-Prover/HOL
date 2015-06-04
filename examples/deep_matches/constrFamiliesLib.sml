@@ -1,7 +1,7 @@
 structure constrFamiliesLib :> constrFamiliesLib =
 struct
 
-open HolKernel boolLib simpLib bossLib
+open HolKernel boolLib simpLib bossLib deepMatchesSyntax
 
 (***************************************************)
 (* Auxiliary definitions                           *)
@@ -146,6 +146,15 @@ fun mk_constructor_term vs (CONSTR (c, args)) = let
 in
   (t, arg_vars')
 end
+
+fun match_constructor (CONSTR (cr, args)) t = let
+  val (t', args') = strip_comb_bounded (List.length args) t
+in
+  if (same_const t' cr) then 
+    SOME (t', zip args args')
+  else NONE
+end
+
 
 (* Multiple constructors for a single type are usually
    grouped. These can be exhaustive or not. *)
@@ -594,12 +603,8 @@ in
     colstat_cases = cases_no'
   }
 end
-
-
-fun lookup_constructorFamilies force_exh (db : pmatch_compile_db) col = let
-  val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
-  val ty = type_of (snd (hd col))
-
+ 
+fun lookup_constructorFamilies_for_type (db : pmatch_compile_db) ty = let
   val cts_fams = let
     val cts_fams = TypeNet.match (#pcdb_constrFams db, ty)
     val cts_fams' = Lib.flatten (List.map (fn (ty, l) =>
@@ -623,9 +628,17 @@ fun lookup_constructorFamilies force_exh (db : pmatch_compile_db) col = let
   end
 
   val cts_fams' = List.filter (fn cf => not (is_old_fam cf)) cts_fams
+in
+  cts_fams'
+end
 
+fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
+  val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
+  val ty = type_of (snd (hd col))
+
+  val cts_fams = lookup_constructorFamilies_for_type db ty 
   val cts_fams' = if not force_exh then 
-     cts_fams'
+     cts_fams
   else 
      List.filter (fn (_, cf) => isSome (#nchotomy_thm cf)) cts_fams
 
@@ -643,7 +656,7 @@ end;
 fun pmatch_compile_db_compile_aux db col = (
   if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else let    
     val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)
-    val cf_res = lookup_constructorFamilies false db col
+    val cf_res = lookup_constructorFamily false db col
 
     fun process_cf_res (ty, cf) w = let
       val ty_s = match_type ty (type_of (snd (hd col)))
@@ -669,7 +682,7 @@ fun pmatch_compile_db_compile_cf db col = (
   case (snd (pmatch_compile_db_compile_aux db col)) of
      NONE => NONE
    | SOME (_, cf) => SOME cf
-)
+);
 
 (*
 fun pmatch_compile_db_compile_nchotomy db col = (
@@ -684,7 +697,7 @@ fun pmatch_compile_db_compile_nchotomy db col = (
 fun pmatch_compile_db_compile_nchotomy db col = (
   if (List.null col) then failwith "pmatch_compile_db_compile_nchotomy" "col 0" else let    
     val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_nchotomy_funs db)
-    val cf_res = lookup_constructorFamilies true db col
+    val cf_res = lookup_constructorFamily true db col
 
     fun process_cf_res (_, cf) = #nchotomy_thm cf
 
@@ -696,6 +709,19 @@ fun pmatch_compile_db_compile_nchotomy db col = (
         (SOME thm) else (process_cf_res tycf)
   end
 );
+
+fun pmatch_compile_db_dest_constr_term (db : pmatch_compile_db) t = let
+  val ty = type_of t
+  val cfs = lookup_constructorFamilies_for_type db ty
+  val cstrs = flatten (List.map (#cl_constructors o #constructors o snd) cfs)
+in
+  first_opt (fn _ => fn cr => match_constructor cr t) cstrs
+end
+
+
+(***************************************************)
+(* updating dbs                                    *)
+(***************************************************)
 
 fun pmatch_compile_db_add_ssfrag (db : pmatch_compile_db) ss = {
   pcdb_compile_funs = #pcdb_compile_funs db,

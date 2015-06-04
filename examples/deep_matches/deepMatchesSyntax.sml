@@ -37,16 +37,6 @@ in
   String.sub(s, 0) = #"_"
 end handle HOL_ERR _ => false
 
-fun mk_new_label_gen prefix = let
-  val c = ref 0 
-in
-  fn () => let
-    val l = prefix ^ int_to_string (!c)
-    val _ = c := !c + 1
-  in
-     l
-  end
-end
 
 fun mk_var_gen prefix avoid = let
   val c = ref 0
@@ -66,7 +56,7 @@ fun mk_wildcard_gen avoid = mk_var_gen "_" avoid
 
 
 (* Get the first element of l that satisfies p and
-   move it to the first position. *)
+   remove it from the list.. *)
 fun pick_element p l = let
  fun aux acc l =
    case l of
@@ -77,6 +67,7 @@ fun pick_element p l = let
    aux [] l
  end
 
+(* strip_comb with a maximum number of splits *)
 fun strip_comb_bounded_aux acc n t = if (n > 0) then (let
   val (t', a) = dest_comb t
   in
@@ -85,10 +76,13 @@ end handle HOL_ERR _ => (t, acc)) else (t, acc)
 
 fun strip_comb_bounded n t = strip_comb_bounded_aux [] n t
 
+(* apply a conversion to all leafs of a disjunct *)
 fun ALL_DISJ_CONV c t = if (is_disj t) then (
   (BINOP_CONV (ALL_DISJ_CONV c)) t
 ) else (TRY_CONV c) t
 
+(* apply a conversion to all leafs of a disjunct 
+   and simplify the result by removing T and F. *)
 fun ALL_DISJ_TF_ELIM_CONV c t = let
   val (t1, t2) = dest_disj t
 in
@@ -132,14 +126,15 @@ in
 end handle HOL_ERR _ => (TRY_CONV c) t
 
 
-
-
+(* apply a conversion to all leafs of a conjunct. *)
 fun ALL_CONJ_CONV c t = if (is_conj t) then (
   (BINOP_CONV (ALL_CONJ_CONV c)) t
 ) else (TRY_CONV c) t
 
+
 fun DECEND_CONV c_desc c t =
   (c THENC TRY_CONV (c_desc (DECEND_CONV c_desc c))) t
+
 
 fun STRIP_ABS_CONV conv t =
   if (is_abs t) then ABS_CONV (STRIP_ABS_CONV conv) t else
@@ -150,9 +145,23 @@ fun has_subterm p t = ((find_term p t; true) handle HOL_ERR _ => false)
 (* like proof, but less verbose, since we expect that it might fail *)
 val prove_attempt = Lib.with_flag (Feedback.emit_MESG, false) prove
 
+
 (***********************************************)
 (* Labels from markerLib                       *)
 (***********************************************)
+
+(* generating fresh labels and vars using 
+   a counter *)
+fun mk_new_label_gen prefix = let
+  val c = ref 0 
+in
+  fn () => let
+    val l = prefix ^ int_to_string (!c)
+    val _ = c := !c + 1
+  in
+     l
+  end
+end
 
 fun add_labels_CONV lbls t = let
   val lbl_tm = List.foldl markerSyntax.mk_label t lbls
@@ -538,6 +547,28 @@ fun mk_PMATCH_ROW_COND_EX_PABS vars (i, p_t, g_t) = let
     mk_PMATCH_ROW_COND_EX (i, mk_pabs p_t, mk_pabs g_t)
   end
 
+fun mk_PMATCH_ROW_COND_EX_PABS_MOVE_TO_GUARDS find vars (i, p_t, g_t) = let
+  val fr_vs = free_vars i @ free_vars p_t @ free_vars g_t 
+  fun move_to_guard (vars, p_t, g_t) = let
+    val (p: term) = case find vars p_t of
+                NONE => failwith "not found"
+              | SOME p => p
+    val _ = if (mem p vars) then failwith "loop" else ()
+    val x = mk_var ("x", type_of p)
+    val x = variant (fr_vs @ vars) x 
+    val p_t' = Term.subst [p |-> x] p_t
+    val g_t' = mk_conj (mk_eq (x, p), g_t)
+    val vars' = x :: vars
+  in
+    move_to_guard (vars', p_t', g_t')
+  end handle HOL_ERR _ => (vars, p_t, g_t)
+
+  val (vars', p_t', g_t') = move_to_guard (vars, p_t, g_t)
+in
+  mk_PMATCH_ROW_COND_EX_PABS vars' (i, p_t', g_t')
+end
+
+
 fun mk_PMATCH_ROW_COND_EX_pat i p = let
     val (vars, _) = pairSyntax.dest_pabs p
     val g = pairSyntax.mk_pabs (vars, T)
@@ -567,9 +598,12 @@ end
 (*
 val t = (el 4 o strip_disj o snd o strip_forall o concl) thm
 val v = (fst o dest_forall o concl) thm
+val t = ``x = (NONE,c)``
+val v = lhs t
+fun P vs x = NONE
 *)
 
-fun PMATCH_ROW_COND_EX_INTRO_CONV v t = let
+fun PMATCH_ROW_COND_EX_INTRO_CONV_GEN P v t = let
   val (vs, b) = strip_exists t
   val b_conjs = strip_conj b
   val (peq_t, guards) = pick_element (fn c => (aconv (lhs c) v handle HOL_ERR _ => false)) b_conjs
@@ -590,12 +624,17 @@ in
   rc_eq_thm
 end
 
+fun PMATCH_ROW_COND_EX_INTRO_CONV v t = 
+  PMATCH_ROW_COND_EX_INTRO_CONV_GEN (fn _ => fn _ => NONE) v t;
 
-fun nchotomy2PMATCH_ROW_COND_EX_CONV t = let
+fun nchotomy2PMATCH_ROW_COND_EX_CONV_GEN P t = let
   val (v, _) = dest_forall t
 in
-  (QUANT_CONV (ALL_DISJ_CONV (PMATCH_ROW_COND_EX_INTRO_CONV v))) t
-end
+  (QUANT_CONV (ALL_DISJ_CONV (PMATCH_ROW_COND_EX_INTRO_CONV_GEN P v))) t
+end;
+
+fun nchotomy2PMATCH_ROW_COND_EX_CONV t = 
+  nchotomy2PMATCH_ROW_COND_EX_CONV_GEN (fn _ => fn _ => NONE) t;
 
 fun PMATCH_ROW_COND_EX_ELIM_CONV t = let
   val (_, p_t, _) = dest_PMATCH_ROW_COND_EX t
@@ -606,10 +645,10 @@ fun PMATCH_ROW_COND_EX_ELIM_CONV t = let
   val thm2 = RIGHT_CONV_RULE pairTools.ELIM_TUPLED_QUANT_CONV thm1 handle HOL_ERR _ => thm1
   val thm3 = RIGHT_CONV_RULE (STRIP_QUANT_CONV (DEPTH_CONV pairLib.GEN_BETA_CONV)) thm2
   val thm4 = RIGHT_CONV_RULE (PURE_REWRITE_CONV [AND_CLAUSES]) thm3
+  val thm5 = RIGHT_CONV_RULE (REWR_CONV boolTheory.EXISTS_SIMP) thm4 handle HOL_ERR _ => thm4
 in
-  thm4
+  thm5
 end
-
 
 
 (***********************************************)

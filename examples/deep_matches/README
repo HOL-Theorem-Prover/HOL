@@ -1,4 +1,4 @@
-This directory contains a deep embedding of pattern matching.
+This directory contains a formalisation of pattern matching.
 
 Normally, pattern matches are removed from the input by the parser of
 HOL4. An implementation of a pattern-match compilation algorithm
@@ -18,8 +18,8 @@ example consider the ARM disassembler function `arm_decode` in
 of the pattern match compilation in such definitions?
 
 This pattern matching library tries to solve this problem. It provides
-an internal representation of case-expressions that closely follows
-the input synatx. The parsing and pretty printing of these deeply
+a representation of case-expressions that closely follows
+the input syntax. The parsing and pretty printing of these 
 case-expressions is much simpler and therefore more trustworthy. The
 complicated, untrusted pattern match compilation can then be performed
 inside the logic. Therefore, the need to trust the implementation of

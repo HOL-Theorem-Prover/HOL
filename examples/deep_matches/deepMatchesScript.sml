@@ -69,38 +69,40 @@ Cases_on `x` THEN Cases_on `x'` THEN (
 (* Main Definitions                                *)
 (***************************************************)
 
-(* rows of a pattern match are pairs of a pattern to match
-   against pat, a guard and a result value. *)
-val PMATCH_ROW_COND_def = Define `PMATCH_ROW_COND pat guard i x =
-  (pat x = i) /\ (guard x)`
+(* rows of a case-expression consist of a 
+   - pattern p
+   - guard g
+   - rhs r
 
-val PMATCH_ROW_def = Define `PMATCH_ROW pat guard res i =
-  (OPTION_MAP res (some x. PMATCH_ROW_COND pat guard i x))`
+   A row matches an input value i with a variable
+   binding v, iff the following
+   predicate holds. *)
+val PMATCH_ROW_COND_def = Define `PMATCH_ROW_COND pat guard inp v =
+  (pat v = inp) /\ (guard v)`
+
+(* With this we can easily define the semantics of a row *)
+val PMATCH_ROW_def = Define `PMATCH_ROW pat guard rhs i =
+  (OPTION_MAP rhs (some v. PMATCH_ROW_COND pat guard i v))`
 
 
 (* We defined semantics of single rows. Let's extend
-   it to multiple ones, i.e. full pattern matches now *)
+   it to multiple ones, i.e. full pattern matches now. *)
 val PMATCH_INCOMPLETE_def = Define `PMATCH_INCOMPLETE = ARB`
 val PMATCH_def = Define `
   (PMATCH v [] = PMATCH_INCOMPLETE) /\
   (PMATCH v (r::rs) = option_CASE (r v) (PMATCH v rs) I)`
 
 
-val PMATCH_IS_EXHAUSTIVE_def = Define `
-   PMATCH_IS_EXHAUSTIVE v rs = (
-   EXISTS (\r. IS_SOME (r v)) rs)`
-
-val PMATCH_ROW_REDUNDANT_def = Define `
-  PMATCH_ROW_REDUNDANT v rs i = (
-  (i < LENGTH rs /\ (IS_SOME ((EL i rs) v) ==>
-    (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))`
-
-
 (***************************************************)
 (* Constants for parsing magic                     *)
 (***************************************************)
 
+(* We need some dummy constant without any semnatic meaning
+   for setting up some parser magic. It is HOL 4 specific
+   and boring technical stuff. You can safely ignore the following. *)
+
 val _ = new_constant ("PMATCH_magic_1", type_of ``PMATCH``)
+
 val _ = new_constant ("PMATCH_ROW_magic_1", type_of 
    ``\abc. PMATCH_ROW (\x. FST (abc x)) (\x. FST (SND (abc x))) (\x. SND (SND ((abc x))))``)
 
@@ -116,9 +118,17 @@ val _ = new_constant ("PMATCH_ROW_magic_2", type_of
 val _ = new_constant ("PMATCH_ROW_magic_3", type_of 
    ``\(pat:'a) (res:'b). (pat,T,res)``)
 
+
+
 (***************************************************)
 (* Congruences for termination                     *)
 (***************************************************)
+
+(* Pattern matches expressed via PMATCH should
+   be usable in recursive function defintions. In  order
+   to be able to do this, we need to set up some
+   congruence theorems that guide the automatic
+   wellfoundedness (termination) checker. *)
 
 val PMATCH_ROW_CONG = store_thm ("PMATCH_ROW_CONG",
 ``!p p' g g' r r' v v'.
@@ -220,10 +230,15 @@ SIMP_TAC std_ss [PMATCH_EVAL,
 (* Changing rows and removing redundant ones       *)
 (***************************************************)
 
-(* An easy way is to start with an empty list of rows
-   and then step by step add rows to either one or both
-   sides till the desired correspondance is shown. This
-   is achieved by the following theorems. *)
+(* For many of automatic methods, we need to show
+   that two PMATCH expressions which are derived from
+   each other by modifying or dropping rows are equivalent.
+   We want to perform these proofs in an a way that can be
+   automated nicely. In the following, we provide lemmata that
+   given an established equivalence, allow adding 
+   a row to both or a single side. 
+   By starting with an empty list and iterating, one can
+   use this method to construct the desired correspondance. *)
 val PMATCH_EXTEND_BASE = store_thm ("PMATCH_EXTEND_BASE",
 ``!v_old v_new. (PMATCH v_old [] = PMATCH v_new [])``,
 SIMP_TAC std_ss [PMATCH_def])
@@ -254,6 +269,10 @@ SIMP_TAC std_ss [PMATCH_def])
 (* Simplifying case expressions                    *)
 (***************************************************)
 
+(* We can now construct equivalences of case expressions, provided
+   we can reason about the semantics of single rows. So,
+   let's now consider useful theorems for single rows. *)
+
 (* Add an injective function to the pattern and the value.
    This can be used to eliminate constructors. *)
 val PMATCH_ROW_REMOVE_FUN = store_thm ("PMATCH_ROW_REMOVE_FUN",
@@ -266,30 +285,6 @@ REPEAT STRIP_TAC THEN
 `!x y. (ff x = ff y) = (x = y)` by PROVE_TAC[] THEN
 ASM_SIMP_TAC std_ss [PMATCH_ROW_def, PMATCH_ROW_COND_def])
 
-(*
-val PMATCH_ROW_REMOVE_FUN_EXT = store_thm ("PMATCH_ROW_REMOVE_FUN_EXT",
-``!ff v f f' g g'.
-
-  ((?x. f' x = ff v) = (?x. f x = v)) ==>
-  (!x x'. (f' x = ff v) ==> (f x' = v) ==> (g x v = g' x')) ==>
-
-  (PMATCH_ROW (\x. (f' x, g x v)) (ff v) =
-   PMATCH_ROW (\x. (f x, g' x)) v)``,
-
-REPEAT STRIP_TAC THEN
-ASM_SIMP_TAC std_ss [PMATCH_ROW_def] THEN
-Cases_on `?x. f x = v` THEN (
-  ASM_REWRITE_TAC[]
-) THEN
-SELECT_ELIM_TAC THEN
-ASM_REWRITE_TAC [] THEN
-REPEAT STRIP_TAC THEN
-SELECT_ELIM_TAC THEN
-ASM_REWRITE_TAC [] THEN
-REPEAT STRIP_TAC THEN
-PROVE_TAC[])
-
-*)
 
 (* The following lemma looks rather complicated. It is
    intended to work together with PMATCH_ROW_REMOVE_FUN to
@@ -469,9 +464,10 @@ ASM_REWRITE_TAC[])
 
 
 
-(* A row is redundant, if it is made redundant by exactly one
+(* A row is redundant, if (but not(!) only if) it is made 
+   redundant by exactly one
    row above. This is simple to test and often already very 
-   helful. More fancy tests involving multiple rows follow below *)
+   helful. More fancy tests involving multiple rows follow below. *)
 val PMATCH_ROWS_DROP_REDUNDANT = store_thm (
   "PMATCH_ROWS_DROP_REDUNDANT",
 ``!r1 r2 rows1 rows2 rows3 v.
@@ -516,9 +512,10 @@ METIS_TAC[IS_SOME_DEF]);
 
 (* Some rows are not redundant in the classical sense, but can
    safely be dropped nevertheless. A redundant row never matches,
-   because it is shaddowed by a previous row. One can also also
-   drop rows, if a later row matches if they match and return the
+   because it is shaddowed by a previous row. One can also
+   drop rows, if a later row matches if they match and returns the
    same value. I will call such rows subsumed. *)
+
 val PMATCH_ROWS_DROP_SUBSUMED = store_thm (
   "PMATCH_ROWS_DROP_SUBSUMED",
 ``!r1 r2 rows1 rows2 rows3 v.
@@ -581,8 +578,12 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
+(* A common case for removing subsumed rows 
+   is removing ARB rows that are introduced by
+   translating a classical case-expression naively. *)
 val PMATCH_REMOVE_ARB = store_thm ("PMATCH_REMOVE_ARB",
-``(!x. r x = ARB) ==>
+``!p g r v rows.
+  (!x. r x = ARB) ==>
   (PMATCH v (SNOC (PMATCH_ROW p g r) rows) =
    PMATCH v rows)``,
 
@@ -617,15 +618,24 @@ ASM_SIMP_TAC std_ss [])
 (* Fancy redundancy check                          *)
 (***************************************************)
 
-val PMATCH_ROW_COND_EX_def = Define `PMATCH_ROW_COND_EX i p g =
-?x. PMATCH_ROW_COND p g i x`
+(* Let's first define when a row is redundant.
+   The predicate PMATCH_ROW_REDUNDANT v rs i holds,
+   iff row number i is redundant for input v in the
+   list of rows rs. *)
+val PMATCH_ROW_REDUNDANT_def = Define `
+  PMATCH_ROW_REDUNDANT v rs i = (
+  (i < LENGTH rs /\ (IS_SOME ((EL i rs) v) ==>
+    (?j. ((j < i) /\ IS_SOME ((EL j rs) v))))))`;
 
-val PMATCH_ROW_COND_EX_FULL_DEF = store_thm ("PMATCH_ROW_COND_EX_FULL_DEF", 
- ``PMATCH_ROW_COND_EX i p g =
-   ?x. (i = p x) /\ g x``,
-SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def] THEN
-METIS_TAC[])
+(* We can accumulate redundancy information for all rows.
+   This is done via IS_REDUNDANT_ROWS_INFO v rows c infos.
+   If the n-th entry of list infos is true, then the n-th
+   row of rows is redundant for input v. If it is not true,
+   it may or may not be redundant. 
 
+   The parameter c is used for accumulating information
+   of all rows already in the info. If none of the rows
+   in rows matches, c holds. *) 
 val IS_REDUNDANT_ROWS_INFO_def = Define `
   IS_REDUNDANT_ROWS_INFO v rows c infos <=> (
   (LENGTH rows = LENGTH infos) /\
@@ -634,6 +644,9 @@ val IS_REDUNDANT_ROWS_INFO_def = Define `
   (EVERY (\r. r v = NONE) rows ==> c))`
 
 
+(* This setup allows to build up such an info
+   row by row. We start with a list of empty rows
+   and add new rows at the end using the information in c. *)
 val IS_REDUNDANT_ROWS_INFO_NIL = store_thm (
   "IS_REDUNDANT_ROWS_INFO_NIL",
 ``!v. IS_REDUNDANT_ROWS_INFO v [] T []``,
@@ -673,6 +686,12 @@ Cases_on `r' v` THEN (
 ))
 
 
+(* However, we still need to specialise this for
+   rows of the from PMATCH_ROW. For this case, it is handy
+   to use an auxiliary definition. *)
+val PMATCH_ROW_COND_EX_def = Define `PMATCH_ROW_COND_EX i p g =
+?x. PMATCH_ROW_COND p g i x`
+
 
 val IS_REDUNDANT_ROWS_INFO_SNOC_PMATCH_ROW = store_thm (
   "IS_REDUNDANT_ROWS_INFO_SNOC_PMATCH_ROW",
@@ -687,7 +706,8 @@ MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] IS_REDUNDANT_ROWS_INFO_SNOC) THEN
 Q.EXISTS_TAC `c` THEN
 FULL_SIMP_TAC std_ss [PMATCH_ROW_EQ_NONE, PMATCH_ROW_COND_EX_def] THEN
 METIS_TAC[])
- 
+
+(* A rewrite rule useful for proofs. *)
 val IS_REDUNDANT_ROWS_INFO_CONS = store_thm (
   "IS_REDUNDANT_ROWS_INFO_CONS",
 ``
@@ -732,6 +752,9 @@ REPEAT STRIP_TAC THENL [
   ASM_SIMP_TAC list_ss []
 ])
 
+
+(* We can use such a REDUNDANT_ROWS_INFO to prune
+   the a pattern match *)
 
 val APPLY_REDUNDANT_ROWS_INFO_def = Define `
   (APPLY_REDUNDANT_ROWS_INFO is xs = MAP SND (
@@ -792,7 +815,29 @@ MATCH_MP_TAC PMATCH_ROWS_DROP_REDUNDANT_ROWS_INFO_EQUIV THEN
 PROVE_TAC[])
 
 
-(* One can easily mark rows as not redundant without proof *)
+(* We get exhautiveness information for free using
+   the accumulated information in c *)
+val PMATCH_IS_EXHAUSTIVE_def = Define `
+   PMATCH_IS_EXHAUSTIVE v rs = (
+   EXISTS (\r. IS_SOME (r v)) rs)`
+
+val IS_REDUNDANT_ROWS_INFO_EXTRACT_IS_EXHAUSTIVE =
+  store_thm ("IS_REDUNDANT_ROWS_INFO_EXTRACT_IS_EXHAUSTIVE",
+  ``!v rows c infos.
+    IS_REDUNDANT_ROWS_INFO v rows c infos ==>
+    ~c ==> PMATCH_IS_EXHAUSTIVE v rows``,
+
+SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def,
+  PMATCH_IS_EXHAUSTIVE_def, combinTheory.o_DEF,
+  quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE
+])
+
+
+(* One can easily mark rows as not redundant without proof.
+   This is handy for avoiding complicated procedures to check,
+   whether some element of infos is true or false. If in doub
+   replace it with false. Technically this is done by
+   building a pairwise conjunction with a given list.  *)
 val REDUNDANT_ROWS_INFOS_CONJ_def = Define `
   REDUNDANT_ROWS_INFOS_CONJ ip1 ip2 =
      (MAP2 (\i1 i2. i1 /\ i2) ip1 ip2)`;
@@ -804,7 +849,7 @@ val REDUNDANT_ROWS_INFOS_CONJ_REWRITE = store_thm (
   (i1 /\ i2) :: (REDUNDANT_ROWS_INFOS_CONJ is1 is2))``,
 SIMP_TAC list_ss [REDUNDANT_ROWS_INFOS_CONJ_def])
 
-
+(* So, we can weaken an existing REDUNDANT_ROWS_INFOS *)
 val REDUNDANT_ROWS_INFOS_CONJ_THM = store_thm ("REDUNDANT_ROWS_INFOS_CONJ_THM",
 ``!v rows c infos c' infos'.
     IS_REDUNDANT_ROWS_INFO v rows c infos ==>
@@ -829,6 +874,7 @@ val REDUNDANT_ROWS_INFOS_DISJ_THM = store_thm ("REDUNDANT_ROWS_INFOS_DISJ_THM",
 SIMP_TAC list_ss [IS_REDUNDANT_ROWS_INFO_def,
   REDUNDANT_ROWS_INFOS_DISJ_def, MAP2_MAP, EL_MAP, EL_ZIP] THEN
 METIS_TAC[])
+
 
 (* One can use the always correct, but usually much too complicated
    strongest redundant_rows_info for strengthening *)
@@ -956,7 +1002,14 @@ ASM_SIMP_TAC (list_ss++boolSimps.CONJ_ss) [MEM_EL,rich_listTheory.EL_TAKE] THEN
 PROVE_TAC[])
 
 
+(* IN order to automate this procedure, we need a few
+   simple, additional lemmata  *)
 
+val PMATCH_ROW_COND_EX_FULL_DEF = store_thm ("PMATCH_ROW_COND_EX_FULL_DEF", 
+ ``PMATCH_ROW_COND_EX i p g =
+   ?x. (i = p x) /\ g x``,
+SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def] THEN
+METIS_TAC[])
 
 val PMATCH_ROW_COND_EX_WEAKEN = store_thm ("PMATCH_ROW_COND_EX_WEAKEN",
 ``!f v p g p' g'.
@@ -970,7 +1023,7 @@ SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def] THEN
 REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [] THEN
-METIS_TAC[])
+METIS_TAC[]);
 
 val PMATCH_ROW_COND_EX_FALSE = store_thm ("PMATCH_ROW_COND_EX_FALSE",
 ``!v p g.
@@ -986,13 +1039,30 @@ val PMATCH_ROW_COND_EX_IMP_REWRITE = store_thm ("PMATCH_ROW_COND_EX_IMP_REWRITE"
   (PMATCH_ROW_COND_EX v p' g' = RES)``,
 
 SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def,
-  GSYM LEFT_FORALL_IMP_THM])
+  GSYM LEFT_FORALL_IMP_THM]);
+
+(* Use this simple contradiction to bring 
+   PMATCH_IS_EXHAUSTIVE in the form we need for 
+   automation *)   
+val PMATCH_IS_EXHAUSTIVE_CONTRADICT = store_thm (
+  "PMATCH_IS_EXHAUSTIVE_CONTRADICT",
+``!v rs. 
+  (EVERY (\r. r v = NONE) rs ==> F) ==>
+  (PMATCH_IS_EXHAUSTIVE v rs)``,
+
+REPEAT STRIP_TAC THEN 
+FULL_SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def,
+  combinTheory.o_DEF, quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE])
 
 
 (***************************************************)
 (* ELIMINATE DOUBLE VAR-BINDS                      *)
 (***************************************************)
 
+(* If a variable is used multiple times in a pattern,
+   we can via the following theorem introduce a fresh variable
+   and add the connection between the old and the newly created
+   var to the guard. *)
 val PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM = 
   store_thm ("PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM",
 ``!g p1 g1 r1 p2 g2 r2.
@@ -1022,6 +1092,12 @@ REPEAT STRIP_TAC THEN (
 (* ELIMINATE GUARDS                                *)
 (***************************************************)
 
+(* We can eliminate guards by replacing them with true
+   and add the guard in form of a conditional. 
+   Notice that all the rows after the guard are
+   duplicated. We heavily rely on simplification
+   of PMATCH to avoid a huge blowup of term-size,
+   when applying the following rule. *)
 val GUARDS_ELIM_THM = store_thm ("GUARDS_ELIM_THM",
 ``!v rs1 rs2 p g r.
   (!x1 x2. (p x1 = p x2) ==> (x1 = x2)) ==> (
@@ -1048,6 +1124,8 @@ ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) []);
 (* THEOREMS ABOUT FLATTENING                       *)
 (***************************************************)
 
+(* The content of this section is still experimental.
+   It is likely to chnage quite a bit still. *)
 val PMATCH_FLATTEN_FUN_def = Define `
   PMATCH_FLATTEN_FUN p g row v = (
     option_CASE (some x. PMATCH_ROW_COND p g v x)

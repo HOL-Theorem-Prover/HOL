@@ -116,9 +116,28 @@ sig
   val mk_PMATCH_ROW_COND_EX_pat : term -> term -> term
   val mk_PMATCH_ROW_COND_EX_ROW : term -> term -> term
 
-  val PMATCH_ROW_COND_EX_INTRO_CONV : term -> conv
-  val nchotomy2PMATCH_ROW_COND_EX_CONV : conv
   val PMATCH_ROW_COND_EX_ELIM_CONV : conv 
+
+  (* [PMATCH_ROW_COND_EX_INTRO_CONV_GEN find_guard_term v t] tries
+     to introduce [PMATCH_ROW_COND_EX] terms. For 
+     t of the form ``?x1 ... xn. v = f x1 ... xn /\ g1 x1 ... xn /\ ...``
+     it extracts the pattern [f x1 ... xn] and guard [g1 x1 ... xn /\ ...]. 
+     
+     The function [find_guard_term] is used to find subterms of [f x1
+     ... xn] that should be abbreviated by a new variable and moved to
+     the guard. It gets the list of free variables and the pattern.
+  *)
+  val PMATCH_ROW_COND_EX_INTRO_CONV_GEN : (term list -> term -> term option) -> term -> conv
+  val PMATCH_ROW_COND_EX_INTRO_CONV : term -> conv
+
+  (* apply PMATCH_ROW_COND_EX_INTRO_CONV to all disjuncts of an nchotomy theorem. *)
+  val nchotomy2PMATCH_ROW_COND_EX_CONV_GEN : (term list -> term -> term option) -> conv
+  val nchotomy2PMATCH_ROW_COND_EX_CONV : conv
+
+  (* A version of making PMATCH_ROW_COND_EX that does the move to guards. *)
+  val mk_PMATCH_ROW_COND_EX_PABS_MOVE_TO_GUARDS : 
+     (term list -> term -> term option) ->
+     term list -> term * term * term -> term
 
   (******************)
   (* Pretty printer *)
@@ -232,8 +251,5 @@ sig
      generator for strings starting with [pr], which are all distinct
      from each other *)
   val mk_new_label_gen : string -> (unit -> string)
-
-
-
 
 end
