@@ -2907,6 +2907,7 @@ local
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
+  val rfs = REV_FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   open pred_setTheory open listTheory pairTheory;
 in
@@ -3004,14 +3005,6 @@ val TAKE_EL_SNOC = Q.store_thm("TAKE_EL_SNOC",
    THEN rw[TAKE_SNOC,TAKE_APPEND1,EL_APPEND1]
    THEN FULL_SIMP_TAC arith_ss [ADD1, LENGTH_SNOC, TAKE_APPEND1, SNOC_APPEND])
 
-val EVERY2_DROP = Q.store_thm("EVERY2_DROP",
-   `!R l1 l2 n.
-      EVERY2 R l1 l2 /\ n <= LENGTH l1 ==> EVERY2 R (DROP n l1) (DROP n l2)`,
-   rw[EVERY2_EVERY,ZIP_DROP]
-   >> MATCH_MP_TAC (MP_CANON EVERY_DROP)
-   >> rw[]
-   >> PROVE_TAC[])
-
 val REVERSE_DROP = Q.store_thm("REVERSE_DROP",
    `!ls n. n <= LENGTH ls ==>
            (REVERSE (DROP n ls) = REVERSE (LASTN (LENGTH ls - n) ls))`,
@@ -3041,6 +3034,19 @@ val EVERY2_APPEND = Q.store_thm("EVERY2_APPEND",
 val EVERY2_APPEND_suff = Q.store_thm("EVERY2_APPEND_suff",
    `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`,
    metis_tac[EVERY2_APPEND])
+
+val EVERY2_DROP = Q.store_thm("EVERY2_DROP",
+   `!R l1 l2 n.
+      EVERY2 R l1 l2 ==> EVERY2 R (DROP n l1) (DROP n l2)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC LIST_REL_LENGTH
+  THEN Q.PAT_ASSUM `LIST_REL P xs ys` MP_TAC
+  THEN ONCE_REWRITE_TAC [GSYM TAKE_DROP] THEN REPEAT STRIP_TAC
+  THEN ONCE_REWRITE_TAC [TAKE_DROP]
+  THEN Cases_on `n <= LENGTH l1`
+  THEN1 (METIS_TAC [EVERY2_APPEND,LENGTH_DROP,LENGTH_TAKE])
+  THEN fs [GSYM NOT_LESS] THEN `LENGTH l1 <= n` by numLib.DECIDE_TAC
+  THEN fs [DROP_LENGTH_TOO_LONG]
+  THEN rfs [DROP_LENGTH_TOO_LONG]);
 
 val LIST_REL_APPEND_SING = Q.store_thm("LIST_REL_APPEND_SING",
    `LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2`,
