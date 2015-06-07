@@ -921,41 +921,26 @@ FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
 FIRST_X_ASSUM (Q.SPECL_THEN [`0`,`SUC n`] MP_TAC) THEN
 SRW_TAC [][])
 
+val SORTED_APPEND_IFF = Q.store_thm ("SORTED_APPEND_IFF",
+  `!R. !L1 L2. SORTED R (L1 ++ L2) =
+    SORTED R L1 /\ SORTED R L2 /\
+      ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))`,
+  EVERY [ REPEAT STRIP_TAC, Induct_on `L1`,
+    ASM_SIMP_TAC list_ss [SORTED_DEF], GEN_TAC,
+    Cases_on `L1`, Cases_on `L2`,
+    FULL_SIMP_TAC list_ss [SORTED_DEF] ] THENL [
+      SIMP_TAC bool_ss [CONJ_COMM],
+      SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
+
+(* note, assumption transitive R not needed, see SORTED_APPEND_IFF *)
 val SORTED_transitive_APPEND_IFF = store_thm(
 "SORTED_transitive_APPEND_IFF",
 ``!R. transitive R ==>
   !L1 L2. SORTED R (L1 ++ L2) =
           SORTED R L1 /\ SORTED R L2 /\
           ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))``,
-GEN_TAC THEN STRIP_TAC THEN
-Induct THEN SRW_TAC[][] THEN
-SRW_TAC[][SORTED_EQ] THEN
-Cases_on `L1` THEN SRW_TAC[][] THEN1 (
-  SRW_TAC[][EQ_IMP_THM] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN1 (
-    Cases_on `L2` THEN FULL_SIMP_TAC (srw_ss()) [] ) THEN
-  Q.PAT_ASSUM `SORTED R L2` MP_TAC THEN
-  SRW_TAC[][SORTED_EL_LESS] THEN
-  FULL_SIMP_TAC (srw_ss()) [MEM_EL,transitive_def] THEN
-  Cases_on `n` THEN1 SRW_TAC[][] THEN
-  METIS_TAC[prim_recTheory.LESS_0,EL] ) THEN
-SRW_TAC[][GSYM CONJ_ASSOC] THEN
-Q.MATCH_ABBREV_TAC `P1 /\ P2 /\ P3 /\ P4 = P1 /\ P6 /\ P2 /\ P3` THEN
-Q_TAC SUFF_TAC `P1 /\ P2 /\ P3 ==> (P4 = P6)` THEN1 SRW_TAC[][EQ_IMP_THM] THEN
-UNABBREV_ALL_TAC THEN SRW_TAC[][] THEN1 SRW_TAC[][] THEN
-EQ_TAC THEN1 METIS_TAC[] THEN
-STRIP_TAC THEN Q.X_GEN_TAC `x` THEN
-REVERSE (Cases_on `MEM x L2`) THEN1 METIS_TAC[] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R (LAST (y::t)) (HD L2)` THEN
-`R h (LAST (y::t))` by (
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  Cases_on `t` THEN1 SRW_TAC[][] THEN
-  SIMP_TAC bool_ss [LAST_CONS,rich_listTheory.MEM_LAST] ) THEN
-`R h (EL 0 L2)` by METIS_TAC [transitive_def,EL] THEN
-Q.PAT_ASSUM `MEM x L2` MP_TAC THEN
-SRW_TAC[][MEM_EL] THEN
-Cases_on `n` THEN1 SRW_TAC[][] THEN
-METIS_TAC [prim_recTheory.LESS_0,SORTED_EL_LESS,transitive_def])
+  EVERY [ GEN_TAC, DISCH_TAC, MATCH_ACCEPT_TAC SORTED_APPEND_IFF ]) ;
+
 
 val MEM_PERM =
   store_thm(
