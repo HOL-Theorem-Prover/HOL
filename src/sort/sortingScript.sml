@@ -885,6 +885,10 @@ val SORTED_SING = store_thm(
 SRW_TAC[][SORTED_DEF])
 val _ = export_rewrites["SORTED_SING"]
 
+val SORTED_TL = store_thm ("SORTED_TL",
+  ``SORTED R (x :: xs) ==> SORTED R xs``,
+    Cases_on `xs` THEN (SIMP_TAC list_ss [SORTED_DEF])) ;
+
 val SORTED_EL_SUC = store_thm(
 "SORTED_EL_SUC",
 ``!R ls. SORTED R ls =
@@ -948,36 +952,22 @@ val MEM_PERM =
     ``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
     METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
 
-val SORTED_PERM_EQ = store_thm(
-"SORTED_PERM_EQ",
-``!R. transitive R /\ antisymmetric R ==>
-  !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)``,
-GEN_TAC THEN STRIP_TAC THEN
-Induct THEN1 SRW_TAC[][] THEN
-SRW_TAC[][SORTED_EQ,PERM_CONS_EQ_APPEND] THEN
-`!x. MEM x M ==> (x = h)` by (
-  Q.PAT_ASSUM `SORTED R (aa++bb)` MP_TAC THEN
-  SRW_TAC[][SORTED_transitive_APPEND_IFF] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  `R h x` by METIS_TAC [MEM_PERM,MEM_APPEND] THEN
-  Cases_on `M = []` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  FULL_SIMP_TAC (srw_ss()) [LAST_EL,MEM_EL] THEN
-  `R x h` by (
-    Cases_on `n = PRE (LENGTH M)` THEN1 SRW_TAC[][] THEN
-    `n < PRE (LENGTH M)` by DECIDE_TAC THEN
-    `PRE (LENGTH M) < LENGTH M` by DECIDE_TAC THEN
-    METIS_TAC [SORTED_EL_LESS,transitive_def] ) THEN
-  METIS_TAC [antisymmetric_def] ) THEN
-`M ++ [h] = h::M` by (
-  POP_ASSUM MP_TAC THEN
-  Q.ID_SPEC_TAC `h` THEN
-  REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-  Induct_on `M` THEN SRW_TAC[][] ) THEN
-SRW_TAC[][] THEN
-FIRST_X_ASSUM MATCH_MP_TAC THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.PAT_ASSUM `SORTED R (h::N)` MP_TAC THEN
-SRW_TAC[][SORTED_EQ])
+
+val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
+  `!R. transitive R /\ antisymmetric R ==>
+    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)`, 
+  EVERY [ GEN_TAC, STRIP_TAC,
+    Induct THEN1 SIMP_TAC list_ss [PERM_NIL],
+    REPEAT STRIP_TAC,
+    Cases_on `l2` THEN1 FULL_SIMP_TAC list_ss [PERM_NIL],
+    SIMP_TAC list_ss [], CONJ_ASM1_TAC ] THENL [
+    EVERY [ IMP_RES_TAC SORTED_EQ, IMP_RES_TAC MEM_PERM,
+      POP_ASSUM (ASSUME_TAC o Q.SPEC `h'`),
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `h`),
+      FULL_SIMP_TAC list_ss [relationTheory.antisymmetric_def] ],
+    EVERY [ FIRST_X_ASSUM MATCH_MP_TAC,
+      BasicProvers.VAR_EQ_TAC, IMP_RES_TAC SORTED_TL,
+      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ] ]) ;
 
 val QSORT_eq_if_PERM = store_thm(
 "QSORT_eq_if_PERM",
