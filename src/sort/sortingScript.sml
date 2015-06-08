@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
-     markerLib metisLib BasicProvers;
+     markerLib metisLib BasicProvers lcsymtacs ;
 
 val _ = new_theory "sorting";
 
@@ -929,12 +929,13 @@ val SORTED_APPEND_IFF = Q.store_thm ("SORTED_APPEND_IFF",
   `!R. !L1 L2. SORTED R (L1 ++ L2) =
     SORTED R L1 /\ SORTED R L2 /\
       ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))`,
-  EVERY [ REPEAT STRIP_TAC, Induct_on `L1`,
-    ASM_SIMP_TAC list_ss [SORTED_DEF], GEN_TAC,
-    Cases_on `L1`, Cases_on `L2`,
-    FULL_SIMP_TAC list_ss [SORTED_DEF] ] THENL [
-      SIMP_TAC bool_ss [CONJ_COMM],
-      SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
+  REPEAT STRIP_TAC >> Induct_on `L1` >>
+    ASM_SIMP_TAC list_ss [SORTED_DEF] >> GEN_TAC >>
+    Cases_on `L1` >> Cases_on `L2` >>
+    FULL_SIMP_TAC list_ss [SORTED_DEF]
+  THENL [
+    SIMP_TAC bool_ss [CONJ_COMM],
+    SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
 
 (* note, assumption transitive R not needed, see SORTED_APPEND_IFF *)
 val SORTED_transitive_APPEND_IFF = store_thm(
@@ -943,7 +944,7 @@ val SORTED_transitive_APPEND_IFF = store_thm(
   !L1 L2. SORTED R (L1 ++ L2) =
           SORTED R L1 /\ SORTED R L2 /\
           ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))``,
-  EVERY [ GEN_TAC, DISCH_TAC, MATCH_ACCEPT_TAC SORTED_APPEND_IFF ]) ;
+  GEN_TAC >> DISCH_TAC >> MATCH_ACCEPT_TAC SORTED_APPEND_IFF ) ;
 
 
 val MEM_PERM =
@@ -956,18 +957,19 @@ val MEM_PERM =
 val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
   `!R. transitive R /\ antisymmetric R ==>
     !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)`, 
-  EVERY [ GEN_TAC, STRIP_TAC,
-    Induct THEN1 SIMP_TAC list_ss [PERM_NIL],
-    REPEAT STRIP_TAC,
-    Cases_on `l2` THEN1 FULL_SIMP_TAC list_ss [PERM_NIL],
-    SIMP_TAC list_ss [], CONJ_ASM1_TAC ] THENL [
-    EVERY [ IMP_RES_TAC SORTED_EQ, IMP_RES_TAC MEM_PERM,
-      POP_ASSUM (ASSUME_TAC o Q.SPEC `h'`),
-      FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `h`),
-      FULL_SIMP_TAC list_ss [relationTheory.antisymmetric_def] ],
-    EVERY [ FIRST_X_ASSUM MATCH_MP_TAC,
-      BasicProvers.VAR_EQ_TAC, IMP_RES_TAC SORTED_TL,
-      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ] ]) ;
+  GEN_TAC >> STRIP_TAC >>
+    Induct THEN1 SIMP_TAC list_ss [PERM_NIL] >>
+    REPEAT STRIP_TAC >>
+    Cases_on `l2` THEN1 FULL_SIMP_TAC list_ss [PERM_NIL] >>
+    SIMP_TAC list_ss [] >> CONJ_ASM1_TAC
+  THENL [
+    IMP_RES_TAC SORTED_EQ >> IMP_RES_TAC MEM_PERM >>
+      POP_ASSUM (ASSUME_TAC o Q.SPEC `h'`) >>
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `h`) >>
+      FULL_SIMP_TAC list_ss [relationTheory.antisymmetric_def],
+    FIRST_X_ASSUM MATCH_MP_TAC >>
+      BasicProvers.VAR_EQ_TAC >> IMP_RES_TAC SORTED_TL >>
+      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ]) ;
 
 val QSORT_eq_if_PERM = store_thm(
 "QSORT_eq_if_PERM",
