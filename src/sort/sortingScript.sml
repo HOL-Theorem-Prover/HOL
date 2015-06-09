@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
-     markerLib metisLib BasicProvers;
+     markerLib metisLib BasicProvers lcsymtacs ;
 
 val _ = new_theory "sorting";
 
@@ -885,6 +885,10 @@ val SORTED_SING = store_thm(
 SRW_TAC[][SORTED_DEF])
 val _ = export_rewrites["SORTED_SING"]
 
+val SORTED_TL = store_thm ("SORTED_TL",
+  ``SORTED R (x :: xs) ==> SORTED R xs``,
+    Cases_on `xs` THEN (SIMP_TAC list_ss [SORTED_DEF])) ;
+
 val SORTED_EL_SUC = store_thm(
 "SORTED_EL_SUC",
 ``!R ls. SORTED R ls =
@@ -921,41 +925,27 @@ FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
 FIRST_X_ASSUM (Q.SPECL_THEN [`0`,`SUC n`] MP_TAC) THEN
 SRW_TAC [][])
 
+val SORTED_APPEND_IFF = Q.store_thm ("SORTED_APPEND_IFF",
+  `!R. !L1 L2. SORTED R (L1 ++ L2) =
+    SORTED R L1 /\ SORTED R L2 /\
+      ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))`,
+  REPEAT STRIP_TAC >> Induct_on `L1` >>
+    ASM_SIMP_TAC list_ss [SORTED_DEF] >> GEN_TAC >>
+    Cases_on `L1` >> Cases_on `L2` >>
+    FULL_SIMP_TAC list_ss [SORTED_DEF]
+  THENL [
+    SIMP_TAC bool_ss [CONJ_COMM],
+    SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
+
+(* note, assumption transitive R not needed, see SORTED_APPEND_IFF *)
 val SORTED_transitive_APPEND_IFF = store_thm(
 "SORTED_transitive_APPEND_IFF",
 ``!R. transitive R ==>
   !L1 L2. SORTED R (L1 ++ L2) =
           SORTED R L1 /\ SORTED R L2 /\
           ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))``,
-GEN_TAC THEN STRIP_TAC THEN
-Induct THEN SRW_TAC[][] THEN
-SRW_TAC[][SORTED_EQ] THEN
-Cases_on `L1` THEN SRW_TAC[][] THEN1 (
-  SRW_TAC[][EQ_IMP_THM] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN1 (
-    Cases_on `L2` THEN FULL_SIMP_TAC (srw_ss()) [] ) THEN
-  Q.PAT_ASSUM `SORTED R L2` MP_TAC THEN
-  SRW_TAC[][SORTED_EL_LESS] THEN
-  FULL_SIMP_TAC (srw_ss()) [MEM_EL,transitive_def] THEN
-  Cases_on `n` THEN1 SRW_TAC[][] THEN
-  METIS_TAC[prim_recTheory.LESS_0,EL] ) THEN
-SRW_TAC[][GSYM CONJ_ASSOC] THEN
-Q.MATCH_ABBREV_TAC `P1 /\ P2 /\ P3 /\ P4 = P1 /\ P6 /\ P2 /\ P3` THEN
-Q_TAC SUFF_TAC `P1 /\ P2 /\ P3 ==> (P4 = P6)` THEN1 SRW_TAC[][EQ_IMP_THM] THEN
-UNABBREV_ALL_TAC THEN SRW_TAC[][] THEN1 SRW_TAC[][] THEN
-EQ_TAC THEN1 METIS_TAC[] THEN
-STRIP_TAC THEN Q.X_GEN_TAC `x` THEN
-REVERSE (Cases_on `MEM x L2`) THEN1 METIS_TAC[] THEN
-Q.MATCH_ASSUM_RENAME_TAC `R (LAST (y::t)) (HD L2)` THEN
-`R h (LAST (y::t))` by (
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  Cases_on `t` THEN1 SRW_TAC[][] THEN
-  SIMP_TAC bool_ss [LAST_CONS,rich_listTheory.MEM_LAST] ) THEN
-`R h (EL 0 L2)` by METIS_TAC [transitive_def,EL] THEN
-Q.PAT_ASSUM `MEM x L2` MP_TAC THEN
-SRW_TAC[][MEM_EL] THEN
-Cases_on `n` THEN1 SRW_TAC[][] THEN
-METIS_TAC [prim_recTheory.LESS_0,SORTED_EL_LESS,transitive_def])
+  GEN_TAC >> DISCH_TAC >> MATCH_ACCEPT_TAC SORTED_APPEND_IFF ) ;
+
 
 val MEM_PERM =
   store_thm(
@@ -963,36 +953,23 @@ val MEM_PERM =
     ``!l1 l2. PERM l1 l2 ==> (!a. MEM a l1 = MEM a l2)``,
     METIS_TAC [Q.SPEC `$= a` MEM_FILTER, PERM_DEF]);
 
-val SORTED_PERM_EQ = store_thm(
-"SORTED_PERM_EQ",
-``!R. transitive R /\ antisymmetric R ==>
-  !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)``,
-GEN_TAC THEN STRIP_TAC THEN
-Induct THEN1 SRW_TAC[][] THEN
-SRW_TAC[][SORTED_EQ,PERM_CONS_EQ_APPEND] THEN
-`!x. MEM x M ==> (x = h)` by (
-  Q.PAT_ASSUM `SORTED R (aa++bb)` MP_TAC THEN
-  SRW_TAC[][SORTED_transitive_APPEND_IFF] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  `R h x` by METIS_TAC [MEM_PERM,MEM_APPEND] THEN
-  Cases_on `M = []` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  FULL_SIMP_TAC (srw_ss()) [LAST_EL,MEM_EL] THEN
-  `R x h` by (
-    Cases_on `n = PRE (LENGTH M)` THEN1 SRW_TAC[][] THEN
-    `n < PRE (LENGTH M)` by DECIDE_TAC THEN
-    `PRE (LENGTH M) < LENGTH M` by DECIDE_TAC THEN
-    METIS_TAC [SORTED_EL_LESS,transitive_def] ) THEN
-  METIS_TAC [antisymmetric_def] ) THEN
-`M ++ [h] = h::M` by (
-  POP_ASSUM MP_TAC THEN
-  Q.ID_SPEC_TAC `h` THEN
-  REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-  Induct_on `M` THEN SRW_TAC[][] ) THEN
-SRW_TAC[][] THEN
-FIRST_X_ASSUM MATCH_MP_TAC THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.PAT_ASSUM `SORTED R (h::N)` MP_TAC THEN
-SRW_TAC[][SORTED_EQ])
+
+val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
+  `!R. transitive R /\ antisymmetric R ==>
+    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)`, 
+  GEN_TAC >> STRIP_TAC >>
+    Induct THEN1 SIMP_TAC list_ss [PERM_NIL] >>
+    REPEAT STRIP_TAC >>
+    Cases_on `l2` THEN1 FULL_SIMP_TAC list_ss [PERM_NIL] >>
+    SIMP_TAC list_ss [] >> CONJ_ASM1_TAC
+  THENL [
+    IMP_RES_TAC SORTED_EQ >> IMP_RES_TAC MEM_PERM >>
+      POP_ASSUM (ASSUME_TAC o Q.SPEC `h'`) >>
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `h`) >>
+      FULL_SIMP_TAC list_ss [relationTheory.antisymmetric_def],
+    FIRST_X_ASSUM MATCH_MP_TAC >>
+      BasicProvers.VAR_EQ_TAC >> IMP_RES_TAC SORTED_TL >>
+      FULL_SIMP_TAC list_ss [PERM_CONS_IFF] ]) ;
 
 val QSORT_eq_if_PERM = store_thm(
 "QSORT_eq_if_PERM",
