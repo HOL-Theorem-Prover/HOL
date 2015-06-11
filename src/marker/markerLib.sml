@@ -101,16 +101,34 @@ in
 
    fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
       let
+         open HOLset
          val (l, r) = dest_eq eq
-         val l' = variant (HOLset.listItems (FVL [r] fv_set)) l
-         fun matchr t = raw_match [] fv_set r t ([],[]) |> #2 |> #1
-         fun finder (_, t) =
-           if (is_var t orelse is_const t) andalso
-              not (!match_var_or_const)
-           then
-             NONE
-           else
-             Lib.total (fn st => (st, matchr st)) t
+         val rvs = FVL [r] empty_tmset
+         val l' = variant (listItems(union(fv_set, rvs))) l
+         fun matchr t =
+           case raw_match [] fv_set r t ([],[]) of
+               ((tmsub, _), (tysub, _)) => (tmsub, tysub)
+         fun finder (bvs, t) =
+           case List.find (fn v => HOLset.member(rvs, v)) bvs of
+               SOME _ => NONE
+             | NONE =>
+               if (is_var t orelse is_const t) andalso not (!match_var_or_const)
+               then NONE
+               else
+                 case Lib.total matchr t of
+                     NONE => NONE
+                   | SOME (tmsub, tysub) =>
+                     let
+                       open HOLset
+                       val bv_set = addList(empty_tmset, bvs)
+                       fun badt t =
+                         not (isEmpty (intersection (FVL [t] empty_tmset,
+                                                     bv_set)))
+                     in
+                       case List.find (fn {redex,residue=t} => badt t) tmsub of
+                           NONE => SOME(t, tysub)
+                         | SOME _ => NONE
+                     end
       in
          case gen_find_term finder w of
             NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"

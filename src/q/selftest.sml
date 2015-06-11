@@ -153,5 +153,52 @@ val _ = tprint "Q.PAT_ABBREV_TAC (gh252)"
 val (sgs, _) = Q.PAT_ABBREV_TAC `v = I x` ([], ``I p /\ v``)
 val _ = print "OK\n"
 
+fun shouldfail f x =
+  (f x ; die "FAILED!") handle HOL_ERR _ => print "OK\n"
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 1"
+val (sgs, _) =
+    Q.PAT_ABBREV_TAC `v = (x < SUC w)` ([], ``y < SUC zero ==> y < z``)
+val _ = case sgs of
+            [([abb], sg)] =>
+            if Term.aconv abb ``Abbrev(v = y < SUC zero)`` andalso
+               Term.aconv sg ``v ==> y < z``
+            then print "OK\n"
+            else die "FAILED!"
+          | _ => die "FAILED!"
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 2"
+val _ = shouldfail (Q.PAT_ABBREV_TAC `v = (x < SUC z)`)
+                   ([], ``!x. x < SUC zero``)
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 3"
+val _ = shouldfail (Q.PAT_ABBREV_TAC `v = (x < SUC z)`)
+                   ([], ``!y. y < SUC zero``)
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 4"
+val _ = shouldfail (Q.PAT_ABBREV_TAC `v = (x < SUC z)`)
+                   ([], ``(!y. y < SUC zero) /\ y < zero``)
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 5"
+val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
+                  ([], ``(!y. y < SUC zero) /\ u < SUC (SUC zero)``)
+val _ = case sgs of
+            [([abb], sg)] =>
+            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+               Term.aconv sg ``(!y. y < SUC zero) /\ v``
+            then print "OK\n"
+            else die "FAILED!"
+          | _ => die "FAILED!"
+
+val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 6"
+val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
+                  ([], ``(!x. x < SUC zero) /\ u < SUC (SUC zero)``)
+val _ = case sgs of
+            [([abb], sg)] =>
+            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+               Term.aconv sg ``(!y. y < SUC zero) /\ v``
+            then print "OK\n"
+            else die "FAILED!"
+          | _ => die "FAILED!"
 
 val _ = Process.exit Process.success;
