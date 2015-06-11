@@ -127,6 +127,11 @@ val COUNT_LIST_AUX_def = TotalDefn.Define`
    (COUNT_LIST_AUX 0 l = l) /\
    (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))`;
 
+(* total version of TL *)
+val TL_T_def = TotalDefn.Define`
+   (TL_T [] = []) /\
+   (TL_T (h::t) = t)`;
+
 (* ------------------------------------------------------------------------ *)
 
 val TAKE = Q.store_thm("TAKE",
@@ -138,6 +143,16 @@ val DROP = Q.store_thm("DROP",
    `(!l:'a list. DROP 0 l = l) /\
     (!n x l:'a list. DROP (SUC n) (CONS x l) = DROP n l)`,
   SRW_TAC [] []);
+
+val tlt_lem = Q.prove (
+  `FUNPOW TL_T n [] = []`,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [FUNPOW, TL_T_def]) ;
+
+val DROP_FUNPOW_TL = Q.store_thm("DROP_FUNPOW_TL",
+  `(!n l. DROP n l = FUNPOW TL_T n l)`,
+  Induct THEN1 SIMP_TAC list_ss [DROP, FUNPOW]
+  THEN Cases_on `l` THEN1 SIMP_TAC list_ss [listTheory.DROP_def, tlt_lem]
+  THEN ASM_SIMP_TAC list_ss [DROP, FUNPOW, TL_T_def]) ;
 
 val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
    `!x l. ~NULL (SNOC x l)`,
@@ -1467,12 +1482,13 @@ val DROP_APPEND2 = Q.store_thm ("DROP_APPEND2",
    THEN BasicProvers.Induct
    THEN ASM_REWRITE_TAC [NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, SUB_MONO_EQ, DROP])
 
+val DROP_DROP_T = Q.store_thm ("DROP_DROP_T",
+   `!n m l. DROP n (DROP m l) = DROP (n + m) l`,
+   SIMP_TAC list_ss [DROP_FUNPOW_TL, GSYM FUNPOW_ADD]) ;
+
 val DROP_DROP = Q.store_thm ("DROP_DROP",
    `!n m l. n + m <= LENGTH l ==> (DROP n (DROP m l) = DROP (n + m) l)`,
-   REPEAT BasicProvers.Induct
-   THEN REWRITE_TAC [LENGTH, DROP, NOT_SUC_LESS_EQ_0, NOT_LESS_0, ADD, ADD_0]
-   THEN REWRITE_TAC [ADD_SUC_lem, LESS_EQ_MONO]
-   THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
+   SIMP_TAC list_ss [DROP_DROP_T]) ;
 
 val LASTN_SEG = Q.store_thm ("LASTN_SEG",
    `!n l. n <= LENGTH l ==> (LASTN n l = SEG n (LENGTH l - n) l)`,
