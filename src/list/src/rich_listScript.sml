@@ -1436,26 +1436,16 @@ val EVERY_BUTLASTN = Q.store_thm ("EVERY_BUTLASTN",
          THEN RES_TAC
          THEN ASM_REWRITE_TAC []]]);
 
+val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE",
+   `!m l n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
+  Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN ASM_SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]) ;
+
 val TAKE_TAKE = Q.store_thm ("TAKE_TAKE",
    `!m l. m <= LENGTH l ==> !n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC [LENGTH, TAKE]
-   THENL [
-      GEN_TAC
-      THEN DISCH_TAC
-      THEN INDUCT_TAC
-      THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, TAKE],
-      REWRITE_TAC [NOT_SUC_LESS_EQ_0],
-      GEN_TAC
-      THEN REWRITE_TAC [LESS_EQ_MONO]
-      THEN DISCH_TAC
-      THEN INDUCT_TAC
-      THEN REWRITE_TAC [TAKE]
-      THEN REWRITE_TAC [LESS_EQ_MONO]
-      THEN DISCH_TAC
-      THEN RES_TAC
-      THEN ASM_REWRITE_TAC []]);
+   SIMP_TAC bool_ss [TAKE_TAKE_T]) ;
 
 val DROP_LENGTH_NIL = Q.store_thm ("DROP_LENGTH_NIL",
    `!l. DROP (LENGTH l) l = []`,
