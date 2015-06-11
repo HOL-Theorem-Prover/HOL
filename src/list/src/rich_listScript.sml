@@ -127,6 +127,11 @@ val COUNT_LIST_AUX_def = TotalDefn.Define`
    (COUNT_LIST_AUX 0 l = l) /\
    (COUNT_LIST_AUX (SUC n) l = COUNT_LIST_AUX n (n::l))`;
 
+(* total version of TL *)
+val TL_T_def = TotalDefn.Define`
+   (TL_T [] = []) /\
+   (TL_T (h::t) = t)`;
+
 (* ------------------------------------------------------------------------ *)
 
 val TAKE = Q.store_thm("TAKE",
@@ -138,6 +143,16 @@ val DROP = Q.store_thm("DROP",
    `(!l:'a list. DROP 0 l = l) /\
     (!n x l:'a list. DROP (SUC n) (CONS x l) = DROP n l)`,
   SRW_TAC [] []);
+
+val tlt_lem = Q.prove (
+  `FUNPOW TL_T n [] = []`,
+  Induct_on `n` THEN ASM_SIMP_TAC list_ss [FUNPOW, TL_T_def]) ;
+
+val DROP_FUNPOW_TL = Q.store_thm("DROP_FUNPOW_TL",
+  `(!n l. DROP n l = FUNPOW TL_T n l)`,
+  Induct THEN1 SIMP_TAC list_ss [DROP, FUNPOW]
+  THEN Cases_on `l` THEN1 SIMP_TAC list_ss [listTheory.DROP_def, tlt_lem]
+  THEN ASM_SIMP_TAC list_ss [DROP, FUNPOW, TL_T_def]) ;
 
 val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
    `!x l. ~NULL (SNOC x l)`,
@@ -1421,26 +1436,16 @@ val EVERY_BUTLASTN = Q.store_thm ("EVERY_BUTLASTN",
          THEN RES_TAC
          THEN ASM_REWRITE_TAC []]]);
 
+val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE",
+   `!m l n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
+  Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+  THEN ASM_SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]) ;
+
 val TAKE_TAKE = Q.store_thm ("TAKE_TAKE",
    `!m l. m <= LENGTH l ==> !n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN REWRITE_TAC [LENGTH, TAKE]
-   THENL [
-      GEN_TAC
-      THEN DISCH_TAC
-      THEN INDUCT_TAC
-      THEN REWRITE_TAC [NOT_SUC_LESS_EQ_0, TAKE],
-      REWRITE_TAC [NOT_SUC_LESS_EQ_0],
-      GEN_TAC
-      THEN REWRITE_TAC [LESS_EQ_MONO]
-      THEN DISCH_TAC
-      THEN INDUCT_TAC
-      THEN REWRITE_TAC [TAKE]
-      THEN REWRITE_TAC [LESS_EQ_MONO]
-      THEN DISCH_TAC
-      THEN RES_TAC
-      THEN ASM_REWRITE_TAC []]);
+   SIMP_TAC bool_ss [TAKE_TAKE_T]) ;
 
 val DROP_LENGTH_NIL = Q.store_thm ("DROP_LENGTH_NIL",
    `!l. DROP (LENGTH l) l = []`,
@@ -1450,6 +1455,12 @@ val BUTLASTN_LENGTH_NIL = Q.store_thm ("BUTLASTN_LENGTH_NIL",
    `!l. BUTLASTN (LENGTH l) l = []`,
    SNOC_INDUCT_TAC
    THEN ASM_REWRITE_TAC [LENGTH, LENGTH_SNOC, BUTLASTN]);
+
+val DROP_APPEND = Q.store_thm ("DROP_APPEND",
+   `!n l1 l2. DROP n (APPEND l1 l2) = DROP n l1 ++ DROP (n - LENGTH l1) l2`,
+   Induct THEN1 SIMP_TAC list_ss [DROP, listTheory.DROP_def]
+   THEN Cases THEN1 SIMP_TAC list_ss [DROP, listTheory.DROP_def]
+   THEN ASM_SIMP_TAC list_ss [DROP, listTheory.DROP_def]) ;
 
 val DROP_APPEND1 = Q.store_thm ("DROP_APPEND1",
    `!n l1.
@@ -1467,12 +1478,13 @@ val DROP_APPEND2 = Q.store_thm ("DROP_APPEND2",
    THEN BasicProvers.Induct
    THEN ASM_REWRITE_TAC [NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, SUB_MONO_EQ, DROP])
 
+val DROP_DROP_T = Q.store_thm ("DROP_DROP_T",
+   `!n m l. DROP n (DROP m l) = DROP (n + m) l`,
+   SIMP_TAC list_ss [DROP_FUNPOW_TL, GSYM FUNPOW_ADD]) ;
+
 val DROP_DROP = Q.store_thm ("DROP_DROP",
    `!n m l. n + m <= LENGTH l ==> (DROP n (DROP m l) = DROP (n + m) l)`,
-   REPEAT BasicProvers.Induct
-   THEN REWRITE_TAC [LENGTH, DROP, NOT_SUC_LESS_EQ_0, NOT_LESS_0, ADD, ADD_0]
-   THEN REWRITE_TAC [ADD_SUC_lem, LESS_EQ_MONO]
-   THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
+   SIMP_TAC list_ss [DROP_DROP_T]) ;
 
 val LASTN_SEG = Q.store_thm ("LASTN_SEG",
    `!n l. n <= LENGTH l ==> (LASTN n l = SEG n (LENGTH l - n) l)`,
@@ -1989,6 +2001,12 @@ val LENGTH_FRONT = Q.store_thm ("LENGTH_FRONT",
 val DROP_LENGTH_APPEND = Q.store_thm ("DROP_LENGTH_APPEND",
    `!l1 l2. DROP (LENGTH l1) (APPEND l1 l2) = l2`,
    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, DROP, APPEND]);
+
+val TAKE_APPEND = Q.store_thm ("TAKE_APPEND",
+   `!n l1 l2. TAKE n (APPEND l1 l2) = TAKE n l1 ++ TAKE (n - LENGTH l1) l2`,
+   Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+   THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+   THEN ASM_SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]) ;
 
 val TAKE_APPEND1 = Q.store_thm ("TAKE_APPEND1",
    `!n l1. n <= LENGTH l1 ==> !l2. TAKE n (APPEND l1 l2) = TAKE n l1`,
