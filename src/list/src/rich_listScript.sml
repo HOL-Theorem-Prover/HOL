@@ -2002,6 +2002,12 @@ val DROP_LENGTH_APPEND = Q.store_thm ("DROP_LENGTH_APPEND",
    `!l1 l2. DROP (LENGTH l1) (APPEND l1 l2) = l2`,
    LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [LENGTH, DROP, APPEND]);
 
+val TAKE_APPEND = Q.store_thm ("TAKE_APPEND",
+   `!n l1 l2. TAKE n (APPEND l1 l2) = TAKE n l1 ++ TAKE (n - LENGTH l1) l2`,
+   Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+   THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
+   THEN ASM_SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]) ;
+
 val TAKE_APPEND1 = Q.store_thm ("TAKE_APPEND1",
    `!n l1. n <= LENGTH l1 ==> !l2. TAKE n (APPEND l1 l2) = TAKE n l1`,
    INDUCT_TAC
