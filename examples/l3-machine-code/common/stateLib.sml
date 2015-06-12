@@ -1702,7 +1702,7 @@ local
       Conv.REDEPTH_CONV (Conv.REWR_CONV (GSYM set_sepTheory.STAR_ASSOC))
    val cond_STAR1_I =
       utilsLib.qm [cond_STAR1, combinTheory.I_THM]
-         ``(cond c * p) (s:'a set) = I c /\ p s``
+         ``(set_sep$cond c * p) (s:'a set) = I c /\ p s``
 in
    fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =

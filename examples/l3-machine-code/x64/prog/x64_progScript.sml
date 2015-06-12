@@ -13,13 +13,9 @@ val _ = stateLib.sep_definitions "x64" [] [] x64_stepTheory.NextStateX64_def
 val x64_mem_def = Define`
    x64_mem a (l: word8 list) =
    set (GENLIST (\i. (x64_c_MEM (a + n2w i),
-                      x64_d_word8_option (SOME (EL i l)))) (LENGTH l))`
+                      x64_d_word8 (EL i l))) (LENGTH l))`
 
-val x64_instr_def = Define`
-   x64_instr (a, i) =
-   x64_mem a i UNION
-   set (GENLIST (\x. (x64_c_ICACHE (a + n2w x),
-                      x64_d_word8_option (SOME (EL x i)))) (LENGTH i))`
+val x64_instr_def = Define`x64_instr (a, i) = x64_mem a i`
 
 val x64_mem16_def = Define`
    x64_mem16 a (v: word16) = { x64_mem a [(7 >< 0) v; (15 >< 8) v] }`
@@ -63,8 +59,7 @@ val x64_MEMORY_def = Define`
   x64_MEMORY dmem mem =
   { BIGUNION { BIGUNION (x64_mem64 a (mem a)) | a IN dmem /\ (a && 7w = 0w)} }`
 
-val x64_PC_def = Define`
-   x64_PC pc = x64_RIP pc * x64_exception NoException`
+val x64_PC_def = Define `x64_PC pc = x64_RIP pc * x64_exception NoException`
 
 val x64_ALL_EFLAGS_def = Define `
   x64_ALL_EFLAGS =
@@ -82,7 +77,7 @@ val thm =
      (stateTheory.MAPPED_COMPONENT_INSERT
       |> Q.ISPECL
             [`\a:word64. a && 7w = 0w`, `8`, `\a i. x64_c_MEM (a + n2w i)`,
-             `\v:word64 i.  x64_d_word8_option (SOME (EL i ^v8))`, `x64_mem64`,
+             `\v:word64 i.  x64_d_word8 (EL i ^v8)`, `x64_mem64`,
              `x64_MEMORY`]
       |> Conv.CONV_RULE (Conv.LAND_CONV (SIMP_CONV std_ss [])))
      (REWRITE_RULE [x64_mem_def, EVAL ``LENGTH [a; b; c; d; e; f; g; h]``]

@@ -70,8 +70,7 @@ val state_id =
       ]
 
 val x64_frame =
-   stateLib.update_frame_state_thm x64_proj_def
-      ["RIP", "REG", "MEM", "ICACHE", "EFLAGS"]
+   stateLib.update_frame_state_thm x64_proj_def ["RIP", "REG", "MEM", "EFLAGS"]
 
 (* -- *)
 
@@ -90,15 +89,7 @@ local
       case Lib.total boolSyntax.dest_eq tm of
          SOME (l, r) =>
             stateLib.is_code_access ("x64$x64_state_MEM", v) l andalso
-            (case Lib.total optionSyntax.dest_some r of
-                SOME w => is_opc_byte w
-              | NONE => false)
-       | NONE => false
-   fun is_icache_access v tm =
-      case Lib.total boolSyntax.dest_eq tm of
-         SOME (l, r) =>
-            stateLib.is_code_access ("x64$x64_state_ICACHE", v) l andalso
-            stateLib.is_code_access ("x64$x64_state_MEM", v) r
+            is_opc_byte r
        | NONE => false
 in
    fun mk_x64_code_pool thm =
@@ -109,9 +100,6 @@ in
          val rip_subst = Term.subst [``s.RIP`` |-> rip]
          val a = List.map rip_subst a
          val (m, a) = List.partition (is_mem_access rip) a
-         val (i, a) = List.partition (is_icache_access rip) a
-         val _ = List.length m = List.length i orelse
-                 raise ERR "mk_x64_code_pool" "icache mismatch"
          val m = List.map dest_code_access m
          val m = mlibUseful.sort_map fst Int.compare m
       in
@@ -168,9 +156,9 @@ in
 end
 
 val x64_extras =
-   [((``x64_mem16 v``, ``read_mem16 s.MEM v``), I, optionSyntax.mk_some),
-    ((``x64_mem32 v``, ``read_mem32 s.MEM v``), I, optionSyntax.mk_some),
-    ((``x64_mem64 v``, ``read_mem64 s.MEM v``), I, optionSyntax.mk_some)]
+   [((``x64_mem16 v``, ``read_mem16 s.MEM v``), I, I),
+    ((``x64_mem32 v``, ``read_mem32 s.MEM v``), I, I),
+    ((``x64_mem64 v``, ``read_mem64 s.MEM v``), I, I)]
    : footprint_extra list
 
 val x64_mk_pre_post =
@@ -223,10 +211,7 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val component_11 =
-      case Drule.CONJUNCTS x64_progTheory.x64_component_11 of
-        [r, m, _, e] => [r, m, e]
-      | _ => raise ERR "component_11" ""
+   val component_11 = Drule.CONJUNCTS x64_progTheory.x64_component_11
    val x64_rwts =
       Thm.INST_TYPE [Type.alpha |-> ``:Zreg``] boolTheory.COND_RATOR ::
       List.drop (utilsLib.datatype_rewrites true "x64" ["x64_state"], 1)
@@ -288,6 +273,8 @@ val thms = x64_spec_code
    mov r15, [rdi-0xF0]          ; 4c 8b bf 10 ff ff ff
    mov ecx, [rsi+rax*4+0x4]     ; 8b 4c 86 04`
 
+x64AssemblerLib.print_x64_code `mov [rsp+rax], ax`
+
 x64AssemblerLib.print_x64_disassemble
   `48C3
    440F42C1
@@ -331,12 +318,15 @@ val () =
 val next_def = x64_stepTheory.NextStateX64_def
 val instr_def = x64_instr_def
 val proj_def = x64_proj_def
+val model_def = x64_progTheory.X64_MODEL_def
 val comp_defs = x64_comp_defs
 val cpool = mk_x64_code_pool
 val extras = x64_extras
+val write_fn = x64_write_footprint
 val q = [] : term list
 
 val imp_spec = X64_IMP_SPEC
+val imp_temp = x64_progTheory.X64_IMP_TEMPORAL
 val read_thms =
    [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
     x64_stepTheory.read_mem64, combinTheory.I_THM]
