@@ -1806,6 +1806,34 @@ val expbound_add = store_thm(
   `y < ω ** b` by metis_tac [ordlte_TRANS] >>
   metis_tac[])
 
+val downduct = prove(
+  ``(∀n. n ≤ m ∧ P (SUC n) ⇒ P n) ∧ P m ⇒
+    (∀n. n ≤ m ⇒ P n)``,
+  strip_tac >> fs[arithmeticTheory.LESS_EQ_EXISTS] >>
+  full_simp_tac (srw_ss() ++ DNF_ss) [] >> CONV_TAC SWAP_FORALL_CONV >>
+  Induct >> rw[] >> simp[]);
+
+val addL_fixpoint_iff = store_thm(
+  "addL_fixpoint_iff",
+  ``α + β = β ⇔ α * ω ≤ β``,
+  eq_tac
+  >- (simp[omega_islimit, ordMULT_def, EQ_IMP_THM, sup_thm, IMAGE_cardleq_rwt,
+           preds_inj_univ, lt_omega] >> strip_tac >>
+      qx_gen_tac `γ` >> Cases_on `β < γ` >> simp[] >>
+      qx_gen_tac `δ` >> Cases_on `γ = α * δ` >> simp[] >> qx_gen_tac `m` >>
+      strip_tac >> rw[] >>
+      `∀n. n ≤ m ⇒ β < α * &n` suffices_by
+         (disch_then (qspec_then `0` mp_tac) >> simp[]) >>
+      ho_match_mp_tac downduct >> simp[] >>
+      qx_gen_tac `n`>>
+      `α * &n + α = α + α * &n` suffices_by metis_tac[ordlt_CANCEL] >>
+      Induct_on `n` >> simp[] >> metis_tac[ordADD_ASSOC])
+  >- (simp[ordle_EXISTS_ADD] >>
+      disch_then (qx_choose_then `c` SUBST_ALL_TAC) >>
+      simp[ordADD_ASSOC] >>
+      `α + α * ω = α * (1 + ω)` by simp[ordMULT_LDISTRIB] >>
+      simp[ordADD_fromNat_omega, omega_islimit]))
+
 (* And so, arithmetic (addition, multiplication and exponentiation) is
    closed under ε₀ *)
 val ordADD_under_epsilon0 = store_thm(
