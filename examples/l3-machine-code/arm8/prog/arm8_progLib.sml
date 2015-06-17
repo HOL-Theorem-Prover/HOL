@@ -454,7 +454,7 @@ local
                          CONJUNCT1 arm8_stepTheory.Aligned,
                          optionTheory.NOT_NONE_SOME]
                 THENC NOT_F_CONV)
-      THENC helperLib.POST_CONV (stateLib.PC_CONV "arm8_prog$arm_PC")
+      THENC helperLib.POST_CONV (stateLib.PC_CONV "arm8_prog$arm8_pc")
 in
    fun simp_triple_rule thm =
       arm_rename (DecodeBitMasks_RULE (Conv.CONV_RULE cnv thm))
