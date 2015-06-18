@@ -270,28 +270,24 @@ val perm_PERM = UNDISCH perm_PERM
 
 val _ = print "Proving perm has primitive recursive characterisation\n"
 
+val perm_cons_append' = Q.prove
+  (`^perm_t ==> !M. perm (h::M ++ N) (M ++ [h] ++ N)`,
+  STRIP_TAC >> ASSUME_TAC perm_rules >> ASSUME_TAC perm_refl >>
+    RULE_L_ASSUM_TAC CONJUNCTS >>
+    Induct >> ASM_SIMP_TAC list_ss [] >> GEN_TAC >>
+    MATCH_MP_TAC perm_trans >> Q.EXISTS_TAC `h'::h::(M ++ N)` >>
+    RES_TAC >> ASM_SIMP_TAC list_ss []) ;
+
 val perm_cons_append = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==>
                         !M N. (l2 = M ++ N) ==>
                               !h. perm (h::l1) (M ++ [h] ++ N)``,
-  STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
-    SRW_TAC [][perm_rules],
-    Cases_on `M` THEN SRW_TAC [][] THENL [
-      FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-      METIS_TAC [perm_rules, APPEND],
-      FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-      METIS_TAC [perm_rules, perm_refl]
-    ],
-    `(M = []) \/ (?m1 ms. M = m1::ms)` by (Cases_on `M` THEN SRW_TAC [][]) THEN
-    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THENL [
-      METIS_TAC [perm_rules, APPEND, perm_refl],
-      `(ms = []) \/ (?m2 mss. ms = m2::mss)`
-          by (Cases_on `ms` THEN SRW_TAC [][]) THEN
-      SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
-      METIS_TAC [perm_rules, APPEND, perm_refl]
-    ],
-    METIS_TAC [perm_trans, APPEND]
-  ])
+  REPEAT STRIP_TAC >> MATCH_MP_TAC perm_trans >> 
+    Q.EXISTS_TAC `h :: l2` >> CONJ_TAC
+  THENL [ ASSUME_TAC perm_rules >> ASM_SIMP_TAC list_ss [],
+    BasicProvers.VAR_EQ_TAC >>
+    MATCH_ACCEPT_TAC (REWRITE_RULE [APPEND] (UNDISCH perm_cons_append')) ]) ;
+
 val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
 
