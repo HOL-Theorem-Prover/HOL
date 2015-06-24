@@ -98,8 +98,7 @@ val DIVMOD_2EXP = save_thm("DIVMOD_2EXP",
    REWRITE_RULE [GSYM DIV_2EXP_def, GSYM MOD_2EXP_def] DIVMOD_2EXP_def)
 
 (* |- !a. SUC a - a = 1 *)
-val SUC_SUB = save_thm("SUC_SUB",
-   GEN_ALL (SIMP_CONV arith_ss [ADD1] ``SUC a - a``))
+val SUC_SUB = save_thm("SUC_SUB", arithmeticTheory.SUC_SUB);
 
 (* |- !n r. r < n ==> ((n + r) DIV n = 1) *)
 val DIV_MULT_1 = save_thm("DIV_MULT_1",

@@ -1020,6 +1020,14 @@ val SUB_MONO_EQ = store_thm ("SUB_MONO_EQ",
     PURE_ONCE_REWRITE_TAC[LESS_MONO_EQ] THEN
     ASM_REWRITE_TAC[]]);
 
+val SUC_SUB = store_thm(
+  "SUC_SUB[simp]",
+  ``!a. SUC a - a = 1``,
+  INDUCT_TAC THENL [
+    REWRITE_TAC [SUB, LESS_REFL, ONE],
+    ASM_REWRITE_TAC [SUB_MONO_EQ]
+  ]);
+
 val SUB_PLUS = store_thm ("SUB_PLUS",
    ``!a b c. a - (b + c) = (a - b) - c``,
    REPEAT INDUCT_TAC THEN
