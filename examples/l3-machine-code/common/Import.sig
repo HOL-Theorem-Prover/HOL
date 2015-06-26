@@ -46,6 +46,7 @@ sig
      | Nub
      | PadLeft
      | PadRight
+     | QuotRem
      | Remove
      | RemoveExcept
      | RemoveDuplicates

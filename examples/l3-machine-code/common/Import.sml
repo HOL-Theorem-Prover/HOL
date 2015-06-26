@@ -495,6 +495,7 @@ datatype monop =
    | Nub
    | PadLeft
    | PadRight
+   | QuotRem
    | Remove
    | RemoveExcept
    | RemoveDuplicates
@@ -660,6 +661,9 @@ local
    val mk_intersect  = mk_uncurry ``\(s1:'a set, s2). pred_set$INTER s1 s2``
    val mk_difference = mk_uncurry ``\(s1:'a set, s2). pred_set$DIFF s1 s2``
    val mk_issubset   = mk_uncurry ``\(s1:'a set, s2). pred_set$SUBSET s1 s2``
+
+   val mk_quot_rem =
+      mk_uncurry ``\(m, n). (integer$int_quot m n, integer$int_rem m n)``
 
    fun mk_rev tm =
       (if Lib.can wordsSyntax.dim_of tm
@@ -966,6 +970,7 @@ in
        | Not => boolSyntax.mk_neg
        | PadLeft => mk_pad_left
        | PadRight => mk_pad_right
+       | QuotRem => mk_quot_rem
        | Remove => mk_remove
        | RemoveExcept => mk_remove_e
        | RemoveDuplicates => listSyntax.mk_nub
