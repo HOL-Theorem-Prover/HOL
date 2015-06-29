@@ -39,10 +39,12 @@ in
             HOLPP.add_string pps "<Redblackmap>"
       fun pp_redblackset pps (_:'a Redblackset.set) =
             HOLPP.add_string pps "<Redblackset>"
+      fun pp_seq pps (_ : 'a seq.seq) = HOLPP.add_string pps "<seq>"
     in
       install_pp (pp2polypp (with_pp HOLset.pp_holset));
       install_pp (pp2polypp (with_pp pp_redblackmap));
-      install_pp (pp2polypp (with_pp pp_redblackset))
+      install_pp (pp2polypp (with_pp pp_redblackset));
+      install_pp (pp2polypp (with_pp pp_seq))
     end
   else ();
   install_pp (pp2polypp
