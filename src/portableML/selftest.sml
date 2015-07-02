@@ -27,7 +27,7 @@ val _ = List.app assert [
      (fn () => listItems em13 = [13])),
     ("UTF8.getChar \"\" = NONE", gcSucceeds "" NONE),
     ("UTF8.getChar 0x41 = #\"A\"", gcSucceeds "A" (SOME(("A", 65), ""))),
-    ("UTF8.getChar A\000 = #\"A\"",
+    ("UTF8.getChar A\\000 = #\"A\"",
      gcSucceeds "A\000" (SOME(("A", 65), "\000"))),
     ("UTF8.getChar 0x2200 = #\"\226\136\128\"",
      gcSucceeds "\226\136\128" (SOME(("\226\136\128", 8704), ""))),
