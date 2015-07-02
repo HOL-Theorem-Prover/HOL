@@ -329,4 +329,28 @@ val peg_eval_total = store_thm(
   `LENGTH s' < LENGTH s` by metis_tac [peg_eval_suffix'] >>
   metis_tac [peg_eval_rules, reducing_peg_eval_makes_list])
 
+(* derived and useful PEG forms *)
+val pegf_def = Define`pegf sym f = seq sym (empty ARB) (λl1 l2. f l1)`
+
+val ignoreL_def = Define`
+  ignoreL s1 s2 = seq s1 s2 (λa b. b)
+`;
+val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreL",
+                          tok = ">>"}
+
+val ignoreR_def = Define`
+  ignoreR s1 s2 = seq s1 s2 (λa b. a)
+`;
+val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreR",
+                          tok = "<<"}
+
+val choicel_def = Define`
+  (choicel [] = not (empty ARB) ARB) ∧
+  (choicel (h::t) = choice h (choicel t) (λs. sum_CASE s I I))
+`;
+
+val checkAhead_def = Define`
+  checkAhead P s = not (not (tok P ARB) ARB) ARB >> s
+`;
+
 val _ = export_theory()

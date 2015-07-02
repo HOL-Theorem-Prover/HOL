@@ -18,6 +18,12 @@ val _ = Datatype `symbol = TOK 'a | NT ('b inf)`;
 val isTOK_def = Define`(isTOK (TOK tok) = T) ∧ (isTOK (NT n) = F)`
 val _ = export_rewrites ["isTOK_def"]
 
+val destTOK_def = Define`
+  (destTOK (TOK tk) = SOME tk) ∧
+  (destTOK _ = NONE)
+`;
+val _ = export_rewrites ["destTOK_def"]
+
 val _ = Datatype`
   grammar = <|
    start : 'b inf;
