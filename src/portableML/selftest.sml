@@ -4,9 +4,8 @@ val _ =print "\n"
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 fun assert (s, b) =
-    (print (StringCvt.padRight #" " 65 s);
-     if b() then print "OK\n"
-     else die "FAILED!")
+    (print (UTF8.padRight #" " 65 s);
+     if b() then print "OK\n" else die "FAILED!")
 
 
 open Redblackset
@@ -41,7 +40,9 @@ val _ = List.app assert [
     ("UTF8.getChar \"\\192\\128\" fails", gcFails "\192\168"),
     ("UTF8.getChar \"\\252\\129\\129\\129\\129\\129\" fails",
      gcFails "\252\129\129\129\129\129"),
-    ("UF8.getChar \"\\244\\129\" fails", gcFails "\244\129")
+    ("UF8.getChar \"\\244\\129\" fails", gcFails "\244\129"),
+    ("padRight #\" \" on ∀", fn () => UTF8.padRight #" " 5 "∀" = "∀    "),
+    ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa")
     ]
 
 val _ = OS.Process.exit OS.Process.success

@@ -175,4 +175,12 @@ in
   recurse 0 false [] s
 end
 
+fun padRight c len s =
+  let
+    val slen = size s
+  in
+    if slen > len then s
+    else s ^ CharVector.tabulate(len - slen, fn _ => c)
+  end
+
 end (* struct *)
