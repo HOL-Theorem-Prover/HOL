@@ -8,7 +8,8 @@ Breaks terms into a type with SML constructors for pattern-matching.
 \KEYWORDS
 
 \DESCRIBE
-A call to {dest_term t} returns a value of type {lambda}, which has SML definition
+A call to {dest_term t} returns a value of type {lambda}, which has
+SML definition
 {
    datatype lambda =
       VAR of string * term
