@@ -2967,6 +2967,14 @@ val word_lsl_n2w = store_thm("word_lsl_n2w",
     \\ ASM_SIMP_TAC (std_ss++numSimps.ARITH_AC_ss) [GSYM EXP,SUB1_SUC,
          MOD_EQ_0,ZERO_MOD,ZERO_LT_TWOEXP,DIMINDEX_GT_0,dimword_def]);
 
+val word_1_lsl = Q.store_thm("word_1_lsl",
+   `!n. 1w << n = n2w (2 ** n)`,
+   lrw [word_lsl_n2w, dimword_def]
+   \\ `dimindex (:'a) <= n` by decide_tac
+   \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
+   \\ simp [arithmeticTheory.EXP_ADD, arithmeticTheory.MOD_EQ_0]
+   )
+
 val word_lsr_n2w = store_thm("word_lsr_n2w",
   `!w:'a word n. w >>> n = (^HB -- n) w`,
   SIMP_TAC arith_ss [word_lsr_def,word_bits_def,MIN_IDEM,DIMINDEX_GT_0,
