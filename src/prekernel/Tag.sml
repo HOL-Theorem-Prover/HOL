@@ -18,8 +18,8 @@ val ERR = mk_HOL_ERR "Tag";
 (* A tag is represented by a pair (D,O,A) where O is a list of oracles       *)
 (* (represented by strings) and A is a list of axioms (a list of references  *)
 (* to strings). The axioms are used to track the use of axioms in proofs in  *)
-(* the current theory. D represents a list of dependencies for each conjuncts*)
-(* of the theorem.                                                           *)
+(* the current theory. D represents a list of proof dependencies of the      *)
+(* theorem.                                                                  *)
 (*---------------------------------------------------------------------------*)
 
 datatype tag = TAG of dep * string list * string Nonce.t list
@@ -68,44 +68,10 @@ fun merge_oracle t1 [] = t1
       | GREATER => s1::merge_oracle l0 rst1
       | EQUAL   => s0::merge_oracle rst0 rst1
 
-fun collapse_dep d = case d of
-    DEP_SAVED(did,dt1,dt2) => DEP_UNSAVED(collapse_deptree dt1)
-  | DEP_UNSAVED dt         => DEP_UNSAVED(collapse_deptree dt)
-
-fun merge_dep d1 d2 =
-  let
-    val (dt1,dt2) = (deptree_of d1, deptree_of d2)
-    val dt = mk_deptree (dt1,dt2)
-  in
-    DEP_UNSAVED(collapse_deptree dt)
-  end
-
-fun trackconj_dep d1 d2 =
-  DEP_UNSAVED(mk_deptree (deptree_of d1, deptree_of d2))
-
-fun trackconjunct_dep lr D =
-  case deptree_of D of
-    DEP_NODE(dt1,dt2) => (
-                         case lr of
-                           DEP_LEFT  => DEP_UNSAVED dt1
-                         | DEP_RIGHT => DEP_UNSAVED dt2
-                         )
-  | dt                => DEP_UNSAVED dt (* DEP_LEAF case *)
-
 in (* in local *)
 
-fun collapse (TAG(D,O,A)) = TAG(collapse_dep D,O,A)
-
 fun merge (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) =
- TAG(merge_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
-
-fun trackconj (TAG(d1,o1,ax1)) (TAG(d2,o2,ax2)) =
-  TAG(trackconj_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
-
-fun trackconjunct lr (TAG(D,O,A)) = TAG(trackconjunct_dep lr D, O, A)
-
-fun trackconjunct1 tg = trackconjunct DEP_LEFT tg
-fun trackconjunct2 tg = trackconjunct DEP_RIGHT tg
+  TAG(merge_dep d1 d2, merge_oracle o1 o2, merge_axiom ax1 ax2)
 
 fun read_disk_tag (d,[]) = TAG (read_dep d, ["DISK_THM"], [])
   | read_disk_tag (d,sl) = TAG (read_dep d, merge_oracle ["DISK_THM"] sl, [])
