@@ -9,7 +9,7 @@ sig
   val replay_atpfile   : (string * string) -> term -> unit
   val replay_atpfilel  : (string * string) list -> term -> unit
 
-  val writehh_names    : (Dep.depconj, string) Redblackmap.dict ref
-  val readhh_names     : (string, Dep.depconj) Redblackmap.dict ref
+  val writehh_names    : (Dep.depid, string) Redblackmap.dict ref
+  val readhh_names     : (string, Dep.depid) Redblackmap.dict ref
 
 end

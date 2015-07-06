@@ -31,7 +31,7 @@ val const_names = ref (dempty KernelSig.name_compare)
 val var_names = ref (dempty Term.compare)
 val tyvar_names = ref (dempty Type.compare)
 
-val writehh_names = ref (dempty depconj_compare) (* symmetric dictionaries *)
+val writehh_names = ref (dempty depid_compare) (* symmetric dictionaries *)
 val readhh_names = ref (dempty String.compare)
 
 (* Keeping track of which names are already used to prevent clashes. *)
@@ -53,7 +53,7 @@ fun reset_dicts () =
   tyvar_names := dempty Type.compare;
   used_names := dempty String.compare; (* contains non escaped names *)
   app reserve reserved_names;
-  writehh_names := dempty depconj_compare;
+  writehh_names := dempty depid_compare;
   readhh_names := dempty String.compare
 )
 
@@ -158,15 +158,14 @@ fun declare_perm_const dict {Thy,Name} =
   end
 
 (* theorems *)
-fun declare_perm_thm ((thy,n),a) name  =
+fun declare_perm_thm (thy,n) name  =
   let
-    val name1 = "thm/" ^ thy ^ "/" ^ (escape_slash name) ^ 
-                "_" ^ number_depaddress a
+    val name1 = "thm/" ^ thy ^ "/" ^ (escape_slash name)
     val name2 = tptp_escape name1
   in
     store_name name1;
-    writehh_names := dadd ((thy,n),a) name2 (!writehh_names);
-    readhh_names  := dadd name2 ((thy,n),a) (!readhh_names);
+    writehh_names := dadd (thy,n) name2 (!writehh_names);
+    readhh_names  := dadd name2 (thy,n) (!readhh_names);
     name2
   end
 
@@ -325,7 +324,7 @@ fun hh_constdef thy (s,ty) =
     )
   end
 
-(* theorems' conjunct *)
+(* theorems *)
 fun othm (name,role,tm) =
   let
     fun f x = is_var x orelse is_const x
@@ -348,49 +347,32 @@ fun othm_conjecture conjecture =
         list_mk_forall (free_vars_lr conjecture,conjecture))
 
 
-(* Dependencies *)
-fun odep (name,dcl) =
+(* dependencies *)
+fun odep (name,dl) =
   let
     fun os_deps s = output (!oc_deps,s)
-    fun name_dc dc = dfind dc (!writehh_names)
+    fun name_did did = dfind did (!writehh_names)
   in
     os_deps (name ^ " ");
-    (* A dependency may be erased during recording *)
-    oiter_deps " " os_deps (mapfilter name_dc dcl); 
+    oiter_deps " " os_deps (mapfilter name_did dl); 
     os_deps "\n"
   end
 
 (*---------------------------------------------------------------------------
-   Splitting the theorem and exporting data from each conjunct.
+   Exporting theorem
  ----------------------------------------------------------------------------*)
-local
-
-fun conjuncts a dt thm = case dt of
-    DEP_NODE(dt1,dt2) =>
-      conjuncts (DEP_LEFT  :: a) dt1 (CONJUNCT1 (SPEC_ALL thm)) @
-      conjuncts (DEP_RIGHT :: a) dt2 (CONJUNCT2 (SPEC_ALL thm))
-  | DEP_LEAF dcl      => [(thm,a,dcl)]
-
-in
 
 fun export_thm ((name,thm),role) =
   let
     val d = (dep_of o tag) thm
-    val did = depid_of_dep d
-    val dt = saveddeptree_of d
-    val conjl1 = conjuncts [] dt thm
-    fun f (conj,a,dcl) = (declare_perm_thm (did,a) name, role, conj, dcl)
-    val conjl2 = map f conjl1
-    fun f_thm (s,r,c,dcl) = (s,r,c)
-    fun f_dep (s,r,c,dcl) = (s,dcl)
-    val conjl_thm = map f_thm conjl2
-    val conjl_dep = map f_dep conjl2
+    val did = depid_of d
+    val dl = filter exists_depid (depidl_of d)
+    val name' = declare_perm_thm did name
   in
-    app othm_theorem conjl_thm;
-    app odep conjl_dep
+    othm_theorem (name',role,thm);
+    odep (name',dl)
   end
 
-end
 (*---------------------------------------------------------------------------
    Printing theories.
  ----------------------------------------------------------------------------*)
@@ -419,7 +401,7 @@ fun write_hh_thy folder thy =
       val axl = map (fn x => (x,"ax")) (DB.theorems thy)
       val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
       fun compare ((_,th1),_) ((_,th2),_) =
-        let val f = depnumber_of o depid_of_dep o dep_of o Thm.tag in
+        let val f = depnumber_of o depid_of o dep_of o Thm.tag in
           f th1 < f th2
         end
       val thml = sort compare (axl @ defl)
@@ -433,9 +415,10 @@ fun write_hh_thy folder thy =
 
 fun sort_thyl thyl = case thyl of
     [] => []
-  | thy :: m => let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
-                  (sort_thyl l1) @ [thy] @ (sort_thyl l2)
-                end
+  | thy :: m => 
+      let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
+        (sort_thyl l1) @ [thy] @ (sort_thyl l2)
+       end
 
 fun write_thydep file thyl =
   (
@@ -447,52 +430,6 @@ fun write_thydep file thyl =
 fun write_hh_thyl folder thyl =
   (reset_dicts();
    app (write_hh_thy folder) (sort_thyl thyl))
-
-(* Experiments 
-val full_thyl = String.tokens Char.isSpace 
-("bool ConseqConv sat marker combin normalForms " ^ 
-"relation one pair poset sum option state_option " ^ 
-"num prim_rec arithmetic numeral basicSize while " ^
-"logroot bit numeral_bit divides gcd numpair pred_set " ^
-"fixedPoint gcdset set_relation ind_type operator list " ^
-"rich_list listRange numposrep state_transformer quantHeuristics " ^
-"defCNF sorting string ASCIInumbers string_num res_quan quotient " ^
-"quotient_list quotient_option quotient_pair quotient_sum " ^
-"quotient_pred_set finite_map alist fmaptree bag container primeFactor " ^
-"sum_num fcp words bitstring blast prelim quote semi_ring canonical ring " ^
-"ringNorm numRing integer int_arith DeepSyntax Omega int_bitwise " ^ 
-"integerRing integer_word wot toto enumeral fmapal intto tc llist " ^
-"lbtree path patricia patricia_casts sptree update basis_emit " ^ 
-"intExtension frac rat ratRing inftree hrat hreal " ^ 
-"realax real topology nets seq lim powser transc integral intreal " ^ 
-"poly real_sigma complex HolSmt Encode Decode Coder EncodeVar ieee " ^ 
-"float binary_ieee machine_ieee util_prob extreal measure lebesgue " ^ 
-"probability Temporal_Logic Past_Temporal_Logic Omega_Automata");
-(* standard library *)
-val load_thyl = map (fn x => x ^ "Theory") full_thyl;
-app load load_thyl;
-val thyl = mk_set ((List.concat (map ancestry full_thyl)) @ full_thyl);
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/standard_library" thyl;
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/standard_library/info/theory_dep" thyl;
-(* core *)
-val thyl = ancestry (current_theory ());;
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library" thyl;
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library/info/theory_dep" thyl;
-(* experiments *)
-val exp_thyl = 
-  String.tokens Char.isSpace 
-  ("num realax real realax pair transc prim_rec list poly lim integral seq topology " ^ 
-  "arithmetic pred_set");
-val load_thyl = map (fn x => x ^ "Theory") exp_thyl;
-app load load_thyl;
-val thyl = mk_set ((List.concat (map ancestry exp_thyl)) @ exp_thyl);
-write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/exp_library" thyl;
-write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/exp_library/info/theory_dep" thyl;
-
-
-
-*)
-
 
 fun write_conjecture file conjecture =
   if type_of conjecture = bool
@@ -553,26 +490,33 @@ val minimize_flag = ref true
 
 fun minimize_loop l1 l2 cj =
   if null l2 then l1 else
-    if can (time_metis (map fst (l1 @ tl l2)) cj) 2.0
+    if can (time_metis (map snd (l1 @ tl l2)) cj) 2.0
     then minimize_loop l1 (tl l2) cj
     else minimize_loop (hd l2 :: l1) (tl l2) cj
 
 fun minimize l cj =
-  if can (time_metis (map fst l) cj) 2.0
+  if can (time_metis (map snd l) cj) 2.0
   then (print "Minimizing...\n"; minimize_loop [] l cj)
   else l
 
 (* Parsing and reconstruction *)
+fun string_of_lemma (name,thm) =
+  let val (thy,_) = depid_of (dep_of (tag thm)) in
+    thy ^ "Theory." ^ name
+  end
+
 fun reconstruct axl cj =
   let
     (* reserved theorems are not interesting to Metis *)
     val axl1 = filter (fn x => not (mem x reserved_names_escaped)) axl
-    val dcl1 = map (fn x => dfind x (!readhh_names)) axl1
-    val l1 = map (fn x => (thm_of_depconj x, x)) dcl1
-    val l2 = if !minimize_flag then minimize l1 cj else l1
+    val didl = map (fn x => dfind x (!readhh_names)) axl1
+    val l1   = map thm_of_depid didl
+    val l2   = if !minimize_flag then minimize l1 cj else l1
   in
-    print ("val lemmas = " ^ string_of_dcl (map snd l2) ^ "\n");
-    ignore (time_metis (map fst l2) cj 30.0)
+    print 
+      ("val lemmas = [" ^ 
+       String.concatWith ","  (map string_of_lemma l2) ^ "]\n");
+    ignore (time_metis (map snd l2) cj 30.0)
       handle _ => raise ERR "reconstruct" "Metis timed out."
   end
 

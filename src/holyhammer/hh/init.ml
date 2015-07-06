@@ -49,7 +49,8 @@ let print_info (dir,tyl,cl,thml,thmlo) =
 let init_dir dir =
   let (deph,tmll) = Read.read_dir dir in
   let tmll = drop_tt tmll in (* remove the TPTP "tt" prefix *)
-  let (deph,tmll) = split_lib (deph,tmll) in
+  (* disabled for hol4 
+  let (deph,tmll) = split_lib (deph,tmll) in  *)
   let (tyl,cl,thml) = get_tyl_cl_thml (flatten_tmll tmll) in
   let tmll = foreach_filter (is_thm) tmll in
   let thmlo = foreach_map (fun (s,r,t) -> s) tmll in 
