@@ -478,6 +478,19 @@ write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/standard_library/info/th
 val thyl = ancestry (current_theory ());;
 write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library" thyl;
 write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/core_library/info/theory_dep" thyl;
+(* experiments *)
+val exp_thyl = 
+  String.tokens Char.isSpace 
+  ("num realax real realax pair transc prim_rec list poly lim integral seq topology " ^ 
+  "arithmetic pred_set");
+val load_thyl = map (fn x => x ^ "Theory") exp_thyl;
+app load load_thyl;
+val thyl = mk_set ((List.concat (map ancestry exp_thyl)) @ exp_thyl);
+write_hh_thyl "/home/gauthier/hh2/palibs/h4-kananaskis10/exp_library" thyl;
+write_thydep "/home/gauthier/hh2/palibs/h4-kananaskis10/exp_library/info/theory_dep" thyl;
+
+
+
 *)
 
 

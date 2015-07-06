@@ -41,10 +41,10 @@ Example:
   rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
-  hh ``7 + 5 = 12``;
+  hh ``1 + 1 = 2``;
   (* copy and paste the line starting with "val lemmas" *)
   (* and call metis on these lemmas           *)
-  METIS_PROVE lemmas ``7 + 5 = 12``; 
+  METIS_PROVE lemmas ``1 + 1 = 2``; 
   load "complexTheory";
   hh_atp "eprover" ``0 <> 1``;
 
