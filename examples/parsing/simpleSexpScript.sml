@@ -54,6 +54,27 @@ val destSXSYM_def = Define`
   destSXSYM (SX_SYM s) = s
 `;
 
+val strip_sxcons_def = Define`
+  strip_sxcons s =
+    case s of
+        SX_CONS h t => OPTION_MAP (CONS h) (strip_sxcons t)
+      | SX_SYM s => if s = "nil" then SOME []
+                    else NONE
+      | _ => NONE
+`;
+
+val sxMEM_def = Define`
+  sxMEM e s ⇔ ∃l. strip_sxcons s = SOME l ∧ MEM e l
+`;
+
+val dstrip_sexp_def = Define`
+  (dstrip_sexp (SX_CONS sym args) =
+     case sym of
+         SX_SYM s => OPTION_MAP (λt. (s, t)) (strip_sxcons args)
+       | _ => NONE) ∧
+  (dstrip_sexp _ = NONE)
+`;
+
 val tokmap = List.foldl (fn ((s,t), acc) => Binarymap.insert(acc, s, t))
                         (Binarymap.mkDict String.compare)
   [("(", ``#"("``), (")", ``#")"``), ("'", ``#"'"``),
