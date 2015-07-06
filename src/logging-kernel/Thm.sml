@@ -332,7 +332,7 @@ fun INST_TYPE [] th = th
 fun DISCH w (th as THM(ocl,asl,c,_)) =
   (Assert (is_bool w) "DISCH" "not a proposition";
    make_thm Count.Disch
-      (Tag.collapse ocl, (* Tracking dependencies *)
+      (ocl,
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
        mk_imp_nocheck(w, c),
        DISCH_prf(w,th)))
@@ -695,9 +695,7 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   (* Tracking dependencies *)
-   in make_thm Count.Exists (Tag.collapse (tag th),
-                             hypset th, w, EXISTS_prf(w,t,th))
+   in make_thm Count.Exists (tag th, hypset th, w, EXISTS_prf(w,t,th))
    end
 end;
 
@@ -767,9 +765,9 @@ fun CHOOSE (v,xth) bth =
  *                      th2;
  *---------------------------------------------------------------------------*)
 
-fun CONJ th1 th2 = (* Tracking dependencies *)
+fun CONJ th1 th2 = 
    make_thm Count.Conj
-        (Tag.trackconj (tag th1) (tag th2),
+        (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
          Susp.force mk_conj(concl th1, concl th2), CONJ_prf(th1,th2))
    handle HOL_ERR _ => ERR "CONJ" "";
@@ -799,9 +797,9 @@ fun conj1 tm =
   end
 
 
-fun CONJUNCT1 th = (* Tracking dependencies *)
-  make_thm Count.Conjunct1 (Tag.trackconjunct1 (tag th),
-                            hypset th, conj1 (concl th), CONJUNCT1_prf th)
+fun CONJUNCT1 th = 
+  make_thm Count.Conjunct1 
+    (tag th, hypset th, conj1 (concl th), CONJUNCT1_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -827,9 +825,9 @@ fun conj2 tm =
      if Name="/\\" andalso Thy="bool" then M else ERR "" ""
   end
 
-fun CONJUNCT2 th = (* Tracking dependencies *)
- make_thm Count.Conjunct2 (Tag.trackconjunct2 (tag th),
-                           hypset th, conj2 (concl th), CONJUNCT2_prf th)
+fun CONJUNCT2 th = 
+  make_thm Count.Conjunct2 
+    (tag th, hypset th, conj2 (concl th), CONJUNCT2_prf th)
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -844,10 +842,9 @@ fun CONJUNCT2 th = (* Tracking dependencies *)
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
- (Tag.collapse (tag th), hypset th,
-  Susp.force mk_disj (concl th, w), DISJ1_prf(th,w))
- handle HOL_ERR _ => ERR "DISJ1" "";
+fun DISJ1 th w = make_thm Count.Disj1
+  (tag th, hypset th, Susp.force mk_disj (concl th, w), DISJ1_prf(th,w))
+  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
 (*---------------------------------------------------------------------------
@@ -861,10 +858,9 @@ fun DISJ1 th w = make_thm Count.Disj1 (* Tracking dependencies *)
  *          handle _ => ERR{function = "DISJ2",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ2 w th = make_thm Count.Disj2 (* Tracking dependencies *)
- (Tag.collapse (tag th), hypset th,
-  Susp.force mk_disj(w,concl th), DISJ2_prf(w,th))
- handle HOL_ERR _ => ERR "DISJ2" "";
+fun DISJ2 w th = make_thm Count.Disj2 
+  (tag th, hypset th, Susp.force mk_disj(w,concl th), DISJ2_prf(w,th))
+  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
 (*---------------------------------------------------------------------------
@@ -1270,7 +1266,9 @@ in
   mk_defn_thm (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
 end
 
-
+(* ----------------------------------------------------------------------
+    Creating a theorem from disk
+   ---------------------------------------------------------------------- *)
 
 local
   val mk_disk_thm  = make_thm Count.Disk
@@ -1279,94 +1277,27 @@ fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  (* Tracking dependencies *)
   mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
 
-
-(* Some OpenTheory kernel rules *)
-fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
-  val a1' = disch (c2,a1)
-  val a2' = disch (c1,a2)
-in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
-
 (* ----------------------------------------------------------------------
-    Save dependencies in a theorem:
-    - Give it a dependency identifier.
-    - Split dependencies so that they correspond to the maximal level
-      of splitting.
-    - Create dependencies that will be given to its children.
+    Saving dependencies of a theorem
    ---------------------------------------------------------------------- *)
 
-local
-
-fun dep_is_forall tm =
-  let
-    val (Rator,Rand) = dest_comb tm
-    val {Thy,Name,...} = dest_thy_const Rator
-  in
-    (Name="!" andalso Thy="bool") andalso can dest_abs Rand
-  end
-  handle _ => false
-
-fun dep_inst_var tm =
-  let
-    val (Rator,Rand) = dest_comb tm
-    val v = fst (dest_abs Rand)
-  in
-    prim_variant (free_vars tm) v
-  end
-
-fun dep_is_conj tm =
-  let
-    val (Rator, Rand) = dest_comb tm
-    val (Rator1, Rand1) = dest_comb Rator
-    val {Thy,Name,...} = dest_thy_const Rator1
-  in
-    (Name="/\\" andalso Thy="bool")
-  end
-  handle _ => false
-
-in (* in local *)
-
-(* Associate dependencies to each of the maximally split conjuncts *)
-fun save_deptree dt th =
-  let val t = concl th in
-    if dep_is_forall t
-      then save_deptree dt (SPEC (dep_inst_var t) th)
-    else if dep_is_conj (concl th)
-      then
-        case dt of
-          DEP_NODE(dt1,dt2) => DEP_NODE(
-                               save_deptree dt1 (CONJUNCT1 th),
-                               save_deptree dt2 (CONJUNCT2 th)
-                               )
-        | DEP_LEAF _        => DEP_NODE(
-                               save_deptree dt (CONJUNCT1 th),
-                               save_deptree dt (CONJUNCT2 th)
-                               )
-     else dt
-  end
-
-end (* end local *)
-
-(* Magic : this reference is automatically reset to 0 each time you create
-   a theory, which is convenient. *)
+(* Warning: This reference is automatically reset to 0 each time you create
+   a theory. *)
 val thm_order = ref 0
 
 fun save_dep thy (th as (THM(t,h,c))) =
   let
     val did = (thy,!thm_order)
-    val dt  = (deptree_of o dep_of o tag) th
-    val dt2 = save_deptree dt th
-    val dt1 = starting_deptree (did,dt2)
-    val dep = DEP_SAVED(did,dt1,dt2)
+    val dl  = (transfer_didlist o dep_of o tag) th
+    val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
     THM(Tag.set_dep dep t,h,c)
   end
-
 
 
 end (* Thm *)
