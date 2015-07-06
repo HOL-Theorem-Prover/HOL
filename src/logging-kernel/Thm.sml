@@ -18,9 +18,7 @@ struct
 open Feedback Lib Term Dep
 
 type 'a set = 'a HOLset.set;
-type depdisk =
-    (string * int) *
-    (string * (string * int list * (int * string) list) list) list
+type depdisk = (string * int) * ((string * int list) list) 
 type tag = Tag.tag
 
 val --> = Type.-->;
@@ -1292,7 +1290,7 @@ val thm_order = ref 0
 fun save_dep thy (th as (THM(t,h,c))) =
   let
     val did = (thy,!thm_order)
-    val dl  = (transfer_didlist o dep_of o tag) th
+    val dl  = (transfer_depidl o dep_of o tag) th
     val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
