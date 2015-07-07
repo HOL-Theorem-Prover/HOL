@@ -17,7 +17,7 @@ open HolKernel Abbrev boolLib TextIO Tag hhDep Dep
 val ERR = mk_HOL_ERR "hhWriter"
 
 (*---------------------------------------------------------------------------
-   Dictionaries.
+   Dictionaries
  ----------------------------------------------------------------------------*)
 
 (* Shorter accessors and constructors *)
@@ -481,8 +481,6 @@ fun time_metis thml conjecture time =
   in
     (metisTools.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
   end
-
-
 
 (* Minimization *)
 (* Can be turned off if it takes too much time *)
