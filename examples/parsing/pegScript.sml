@@ -336,13 +336,13 @@ val ignoreL_def = Define`
   ignoreL s1 s2 = seq s1 s2 (λa b. b)
 `;
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreL",
-                          tok = ">>"}
+                          tok = "~>"}
 
 val ignoreR_def = Define`
   ignoreR s1 s2 = seq s1 s2 (λa b. a)
 `;
 val _ = set_mapped_fixity{fixity = Infixl 500, term_name = "ignoreR",
-                          tok = "<<"}
+                          tok = "<~"}
 
 val choicel_def = Define`
   (choicel [] = not (empty ARB) ARB) ∧
@@ -350,7 +350,7 @@ val choicel_def = Define`
 `;
 
 val checkAhead_def = Define`
-  checkAhead P s = not (not (tok P ARB) ARB) ARB >> s
+  checkAhead P s = not (not (tok P ARB) ARB) ARB ~> s
 `;
 
 val _ = export_theory()

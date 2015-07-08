@@ -6,7 +6,7 @@ val _ = new_theory "simpleSexpPEG";
 
 val tokeq_def = Define`tokeq t = tok ((=) t) (K (SX_SYM [t]))`
 val grabWS_def = Define`
-  grabWS s = rpt (tok isSpace ARB) (K ARB) >> s
+  grabWS s = rpt (tok isSpace ARB) (K ARB) ~> s
 `;
 
 val pnt_def = Define`pnt ntsym = nt (mkNT ntsym) I`
@@ -20,23 +20,23 @@ val sexpPEG_def = zDefine`
     start := pnt sxnt_sexp ;
     rules :=
     FEMPTY |++
-    [(mkNT sxnt_sexp, pnt sxnt_WSsexp << rpt (tok isSpace ARB) (K ARB));
+    [(mkNT sxnt_sexp, pnt sxnt_WSsexp <~ rpt (tok isSpace ARB) (K ARB));
      (mkNT sxnt_sexp0,
       choicel [
         pnt sxnt_sexpnum ;
-        tokeq #"(" >> pnt sxnt_sexpseq << grabWS (tokeq #")") ;
-        seq (tokeq #"(" >> pnt sxnt_WSsexp)
-            (grabWS (tokeq #".") >> pnt sxnt_WSsexp << grabWS (tokeq #")"))
+        tokeq #"(" ~> pnt sxnt_sexpseq <~ grabWS (tokeq #")") ;
+        seq (tokeq #"(" ~> pnt sxnt_WSsexp)
+            (grabWS (tokeq #".") ~> pnt sxnt_WSsexp <~ grabWS (tokeq #")"))
             SX_CONS ;
-        tokeq #"\"" >> pnt sxnt_strcontents << tokeq #"\"" ;
-        pegf (tokeq #"'" >> grabWS (pnt sxnt_sexp0))
+        tokeq #"\"" ~> pnt sxnt_strcontents <~ tokeq #"\"" ;
+        pegf (tokeq #"'" ~> grabWS (pnt sxnt_sexp0))
              (λs. ⦇ SX_SYM "quote"; s⦈) ;
         pnt sxnt_sexpsym
       ]);
      (mkNT sxnt_sexpseq,
       rpt (pnt sxnt_WSsexp) (FOLDR SX_CONS (SX_SYM "nil")));
      (mkNT sxnt_WSsexp,
-      rpt (tok isSpace ARB) (K ARB) >> pnt sxnt_sexp0);
+      rpt (tok isSpace ARB) (K ARB) ~> pnt sxnt_sexp0);
      (mkNT sxnt_sexpnum,
       checkAhead isDigit
           (rpt (pnt sxnt_digit)
@@ -51,7 +51,7 @@ val sexpPEG_def = zDefine`
       rpt (pnt sxnt_strchar) (SX_STR o FOLDR (λs a. destSXSYM s ++ a) []));
      (mkNT sxnt_strchar,
       choicel [
-        tokeq #"\\" >> pnt sxnt_escapedstrchar ;
+        tokeq #"\\" ~> pnt sxnt_escapedstrchar ;
         pnt sxnt_normstrchar
       ]);
      (mkNT sxnt_escapedstrchar, choicel [tokeq #"\\"; tokeq #"\""]);
