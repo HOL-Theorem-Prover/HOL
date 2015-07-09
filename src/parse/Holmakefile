@@ -1,8 +1,8 @@
 EXTRA_CLEANS = base_lexer.sml
 
 SELFTEST_DEPS = $(dprot $(SIGOBJ)/Lib.uo) $(dprot $(SIGOBJ)/Type.uo) \
-                PPBackEnd.uo $(dprot $(SIGOBJ)/Overlay.uo) base_tokens.uo \
-	        qbuf.uo term_tokens.uo MLstring.uo CharSet.uo term_grammar.uo
+                $(dprot $(SIGOBJ)/Overlay.uo) \
+                $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
