@@ -61,15 +61,15 @@ fun reset_dicts () =
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
 (* escaping *)
-fun is_alphanumeric s = 
+fun is_alphanumeric s =
  let val l = String.explode s in
-   all (fn x => Char.isAlphaNum x orelse x = #"_") l 
+   all (fn x => Char.isAlphaNum x orelse x = #"_") l
  end
 
 fun escape_slash s =
-  let 
+  let
     val l1 = String.explode s
-    fun image x = 
+    fun image x =
       case x of
         #"#" => String.explode "#hash#"
       | #"/" => String.explode "#slash#"
@@ -80,16 +80,16 @@ fun escape_slash s =
   end
 
 fun escape_prime s =
-  let 
+  let
     val l1 = String.explode s
-    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1 
+    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1
   in
     String.implode (List.concat l2)
   end
 
-fun tptp_escape name = 
+fun tptp_escape name =
   if is_alphanumeric name
-  then name 
+  then name
   else "'" ^ escape_prime name ^ "'"
 
 (* use a similar escaping than the holyhammer fof writer *)
@@ -102,8 +102,8 @@ val reserved_names_escaped = map fof_escape reserved_names
 
 (* nice printing *)
 fun nice_dest_vartype v =
-  let 
-    val s = dest_vartype v 
+  let
+    val s = dest_vartype v
     val l = String.explode s
   in
     if hd l = #"'" then String.implode (map Char.toUpper (tl l)) else s
@@ -127,33 +127,33 @@ fun variant_name_dict s used =
 
 fun store_name name =
   if dmem name (!used_names)
-  then () 
+  then ()
   else used_names := dadd name 0 (!used_names)
 
 fun store_name name =
   if dmem name (!used_names)
-  then () 
+  then ()
   else used_names := dadd name 0 (!used_names)
 
 (* types *)
 fun declare_perm_type dict {Thy,Name} =
-  let 
-    val name1 = "type/" ^ Thy ^ "/" ^ (escape_slash Name) 
+  let
+    val name1 = "type/" ^ Thy ^ "/" ^ (escape_slash Name)
     val name2 = tptp_escape name1
   in
     store_name name1;
-    dict := dadd {Thy=Thy,Name=Name} name2 (!dict); 
+    dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
     name2
   end
 
 (* constant *)
 fun declare_perm_const dict {Thy,Name} =
-  let 
-    val name1 = "const/" ^ Thy ^ "/" ^ (escape_slash Name) 
+  let
+    val name1 = "const/" ^ Thy ^ "/" ^ (escape_slash Name)
     val name2 = tptp_escape name1
   in
     store_name name1;
-    dict := dadd {Thy=Thy,Name=Name} name2 (!dict); 
+    dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
     name2
   end
 
@@ -213,7 +213,7 @@ fun oiter sep f l = oiter_aux (!oc) sep f l
 
 (* type *)
 fun oty ty =
-  if is_vartype ty then os (dfind ty (!tyvar_names) 
+  if is_vartype ty then os (dfind ty (!tyvar_names)
                             handle _ => raise ERR "dfind" "type")
   else
     let val {Args,Thy,Tyop} = dest_thy_type ty in
@@ -270,7 +270,7 @@ and hh_binder s (l,tm) =
   let val (vl,undeclare) = declare_temp_list (fst o dest_var) var_names l in
     os ("(" ^ s ^ "[");
     oiter ", "
-      (fn x => (os (dfind x (!var_names) handle _ => raise ERR "dfind" "var"); 
+      (fn x => (os (dfind x (!var_names) handle _ => raise ERR "dfind" "var");
     os " : "; oty (type_of x))) l;
     os "]: "; otm tm; os ")";
     undeclare ()
@@ -314,7 +314,7 @@ fun hh_constdef thy (s,ty) =
   | ("bool","F")    => fix "$false"
   | _               => declare_perm_const const_names {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
-    val (newtvs, undeclare) = 
+    val (newtvs, undeclare) =
       declare_temp_list nice_dest_vartype tyvar_names tv
   in
     (
@@ -359,7 +359,7 @@ fun thm_of_depid (thy,n) =
       then x
       else raise ERR "find_number" ""
   in
-    tryfind find_number thml 
+    tryfind find_number thml
     handle _ => raise ERR "thm_of_depid" "Not found"
   end
 
@@ -372,7 +372,7 @@ fun odep (name,dl) =
     fun name_did did = dfind did (!writehh_names)
   in
     os_deps (name ^ " ");
-    oiter_deps " " os_deps (mapfilter name_did dl); 
+    oiter_deps " " os_deps (mapfilter name_did dl);
     os_deps "\n"
   end
 
@@ -433,7 +433,7 @@ fun write_hh_thy folder thy =
 
 fun sort_thyl thyl = case thyl of
     [] => []
-  | thy :: m => 
+  | thy :: m =>
       let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
         (sort_thyl l1) @ [thy] @ (sort_thyl l2)
        end
@@ -458,8 +458,6 @@ fun write_conjecture file conjecture =
     closeOut (!oc); oc := stdOut
     )
   else raise ERR "write_conjecture" "conjecture is not a boolean"
-
-
 
 
 end

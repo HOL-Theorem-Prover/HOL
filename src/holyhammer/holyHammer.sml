@@ -71,4 +71,5 @@ fun hh_atp prover cj =
     reconstruct (status_of_prover prover, out_of_prover prover) cj
     )
 
+
 end

@@ -2,7 +2,7 @@
 (* FILE          : hhReconstruct.sml                                     *)
 (* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
 (*                 and minimize them.  Can only be used after a call of  *)
-(*                 hhWriter.write_hh_thyl that initialize the dictionary *)                 
+(*                 hhWriter.write_hh_thyl that initialize the dictionary *)
 (*                 of theorems' names readhh_names.                      *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
@@ -29,7 +29,7 @@ fun readl path =
     fun rm_last_char s = String.substring (s,0,String.size s - 1)
     fun is_empty s = s = ""
     val l2 = map rm_last_char l1 (* removing end line *)
-    val l3 = filter (not o is_empty) l2 
+    val l3 = filter (not o is_empty) l2
   in
     (TextIO.closeIn file; l3)
   end
@@ -57,6 +57,7 @@ fun time_metis thml conjecture time =
 (*---------------------------------------------------------------------------
    Minimization. Can be turned off by minimize_flag if it takes too much time.
  ----------------------------------------------------------------------------*)
+
 val minimize_flag = ref true
 
 fun minimize_loop l1 l2 cj =
@@ -73,8 +74,8 @@ fun minimize l cj =
 (*---------------------------------------------------------------------------
    Reconstruction and printing
  ----------------------------------------------------------------------------*)
-exception Status of string
 
+exception Status of string
 
 fun string_of_lemma (name,thm) =
   let val (thy,_) = depid_of (dep_of (tag thm)) in
@@ -88,9 +89,9 @@ fun reprove axl cj =
     val didl = map (fn x => Redblackmap.find (!readhh_names,x)) axl1
     val l1   = map thm_of_depid didl
     val l2   = if !minimize_flag then minimize l1 cj else l1
-  in
-    print 
-      ("METIS_PROVE [" ^ 
+  invh
+    print
+      ("METIS_PROVE [" ^
        String.concatWith "," (map string_of_lemma l2) ^ "] " ^ " ``" ^
        with_flag (show_types, true) term_to_string cj ^ "``\n");
     ignore (time_metis (map snd l2) cj 30.0)
@@ -113,7 +114,7 @@ fun reconstructl atpfilel conjecture =
     val processedl = map process atpfilel
     val proofl = filter (fn (x,_) => x = "Theorem") processedl
   in
-   (* If no proof is found, *) 
+   (* If no proof is found, *)
    if null proofl
     then
       let
@@ -124,7 +125,7 @@ fun reconstructl atpfilel conjecture =
       in
         raise Status s
       end
-   (* else take the one that use the less lemmas. *) 
+   (* else take the one that use the less lemmas. *)
    else
       let
         fun compare_list l1 l2 = length l1 > length l2
