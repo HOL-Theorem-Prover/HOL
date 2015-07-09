@@ -1,5 +1,5 @@
 # Time limit and I/O files
-TIM=10
+TIM=5
 DIR="eprover_files"
 IN="$DIR/atp_in"
 OUT1="$DIR/eprover_out1"
@@ -8,17 +8,18 @@ OUT="$DIR/eprover_out"
 STATUS="$DIR/eprover_status"
 ERROR="$DIR/eprover_error"
 
-# Running eprover with best strategy (1.8)
+# Running eprover (1.8)
 cd eprover
-perl runepar2.pl $TIM 0 $IN 2 1 1 new_mzt_small \
- | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
+timeout $TIM ./eprover -s --cpu-limit=$TIM --auto-schedule --tptp3-in \
+-R --print-statistics -p --tstp-format $IN  | grep "file[(]'\|# SZS" > $OUT1 2> $ERROR
 # Extracting status
-grep "SZS status" $OUT1 > $STATUS
-sed -i -e 's/^.*SZS status\(.*\).*/\1/' $STATUS
-sed -i 's/ //g' $STATUS
+grep "SZS status" $OUT1 > $STATUS 2> $ERROR
+sed -i -e 's/^.*SZS status\(.*\).*/\1/' $STATUS 2> $ERROR
+sed -i 's/ //g' $STATUS 2> $ERROR
 # Extracting axioms
-grep "file[(]" $OUT1 > $OUT2
-sed -e 's/^fof[(].*,file[(].*,[ ]*\(.*\)[)][)]\..*$/\1/' $OUT2 > $OUT
+grep "file[(]" $OUT1 > $OUT2 2> $ERROR
+sed -e 's/^fof[(].*file(.*,\(.*\)[)][)]\..*$/\1/' $OUT2 > $OUT1 2> $ERROR
+tr -d " " < $OUT1 > $OUT 2> $ERROR
 # Cleaning
-rm $OUT1
-rm $OUT2
+rm -f $OUT1
+rm -f $OUT2

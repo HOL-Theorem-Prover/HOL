@@ -1,2 +1,2 @@
-This directory is initially empty. You may add Z3(4.0) here.
-Please give name z3 to this binary. 
+The current executable works for linux 64bit. 
+You may replace Z3(4.0) here, if you don't want to use it you can remove it.

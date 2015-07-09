@@ -12,7 +12,7 @@ structure hhWriter :> hhWriter =
 struct
 
 
-open HolKernel Abbrev boolLib TextIO Tag hhDep Dep
+open HolKernel Abbrev boolLib TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
@@ -208,7 +208,7 @@ fun oiter_deps sep f l = oiter_aux (!oc_deps) sep f l
 fun oiter sep f l = oiter_aux (!oc) sep f l
 
 (*---------------------------------------------------------------------------
-   Printing objects (types, constants, theorems' conjuncts) and dependencies.
+   Printing objects (types, constants, theorems' conjuncts).
  ----------------------------------------------------------------------------*)
 
 (* type *)
@@ -347,7 +347,25 @@ fun othm_conjecture conjecture =
         list_mk_forall (free_vars_lr conjecture,conjecture))
 
 
-(* dependencies *)
+(*---------------------------------------------------------------------------
+   Printing dependencies.
+ ----------------------------------------------------------------------------*)
+
+fun thm_of_depid (thy,n) =
+  let
+    val thml = DB.thms thy
+    fun find_number x =
+      if (depnumber_of o depid_of o dep_of o tag o snd) x = n
+      then x
+      else raise ERR "find_number" ""
+  in
+    tryfind find_number thml 
+    handle _ => raise ERR "thm_of_depid" "Not found"
+  end
+
+fun exists_depid did = can thm_of_depid did
+
+
 fun odep (name,dl) =
   let
     fun os_deps s = output (!oc_deps,s)
@@ -359,7 +377,7 @@ fun odep (name,dl) =
   end
 
 (*---------------------------------------------------------------------------
-   Exporting theorem
+   Exporting a theorem and its dependencies
  ----------------------------------------------------------------------------*)
 
 fun export_thm ((name,thm),role) =
@@ -442,115 +460,6 @@ fun write_conjecture file conjecture =
   else raise ERR "write_conjecture" "conjecture is not a boolean"
 
 
-(*---------------------------------------------------------------------------
-   Reading a file.
- ----------------------------------------------------------------------------*)
 
-fun readl path =
-  let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
-        SOME line => line :: loop file
-      | NONE => []
-    val l1 = loop file
-    fun rm_last_char s = String.substring (s,0,String.size s - 1)
-    fun is_empty s = s = ""
-    val l2 = map rm_last_char l1 (* removing end line *)
-    val l3 = filter (not o is_empty) l2 
-  in
-    (TextIO.closeIn file; l3)
-  end
-
-fun get_status path = hd (readl path) handle _ => "Unknown"
-
-(*---------------------------------------------------------------------------
-   Proving the conjecture.
- ----------------------------------------------------------------------------*)
-
-(* Tools *)
-fun time_metis thml conjecture time =
-  let
-    val oldlimit = !mlibMetis.limit
-    val oldtracelevel = !mlibUseful.trace_level
-    val thm =
-      (
-      metisTools.limit := {time = SOME time, infs = NONE};
-      mlibUseful.trace_level := 0;
-      metisTools.METIS_PROVE thml conjecture
-      )
-  in
-    (metisTools.limit := oldlimit; mlibUseful.trace_level := oldtracelevel; thm)
-  end
-
-(* Minimization *)
-(* Can be turned off if it takes too much time *)
-val minimize_flag = ref true
-
-fun minimize_loop l1 l2 cj =
-  if null l2 then l1 else
-    if can (time_metis (map snd (l1 @ tl l2)) cj) 2.0
-    then minimize_loop l1 (tl l2) cj
-    else minimize_loop (hd l2 :: l1) (tl l2) cj
-
-fun minimize l cj =
-  if can (time_metis (map snd l) cj) 2.0
-  then (print "Minimizing...\n"; minimize_loop [] l cj)
-  else l
-
-(* Parsing and reconstruction *)
-fun string_of_lemma (name,thm) =
-  let val (thy,_) = depid_of (dep_of (tag thm)) in
-    thy ^ "Theory." ^ name
-  end
-
-fun reconstruct axl cj =
-  let
-    (* reserved theorems are not interesting to Metis *)
-    val axl1 = filter (fn x => not (mem x reserved_names_escaped)) axl
-    val didl = map (fn x => dfind x (!readhh_names)) axl1
-    val l1   = map thm_of_depid didl
-    val l2   = if !minimize_flag then minimize l1 cj else l1
-  in
-    print 
-      ("val lemmas = [" ^ 
-       String.concatWith ","  (map string_of_lemma l2) ^ "]\n");
-    ignore (time_metis (map snd l2) cj 30.0)
-      handle _ => raise ERR "reconstruct" "Metis timed out."
-  end
-
-fun replay_atpfile (atp_status,atp_out) conjecture =
-  let val s = get_status atp_status in
-    if s = "Theorem"
-    then reconstruct (readl atp_out) conjecture
-    else raise ERR "replay_atpfile" ("Status: " ^ s)
-  end
-
-fun replay_atpfilel atpfilel conjecture =
-  let
-    fun process (atp_status,atp_out) =
-      let val s = get_status atp_status in
-        if s = "Theorem" then (s, readl atp_out) else (s, [])
-      end
-    val processedl = map process atpfilel
-    val newl = filter (fn (x,_) => x = "Theorem") processedl
-  in
-    if null newl
-    then
-      let
-        val status_list = map fst processedl
-        val s = if all (fn x => x = "Unknown") status_list
-                then "Unknown"
-                else hd (filter (fn x => x <> "Unknown") status_list)
-      in
-        raise ERR "replay_atpfilel" ("Status: " ^ s)
-      end
-    else
-      let
-        fun compare_list l1 l2 = length l1 > length l2
-        val axl = hd (sort compare_list (map snd newl))
-      in
-        reconstruct axl conjecture
-      end
-  end
 
 end

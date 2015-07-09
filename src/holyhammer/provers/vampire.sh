@@ -1,5 +1,5 @@
 # Time limit and I/O files
-TIM=10
+TIM=5
 DIR="vampire_files"
 IN="$DIR/atp_in"
 OUT="$DIR/vampire_out"
@@ -13,12 +13,12 @@ cd vampire
 ./vampire --mode casc -t $TIM --proof tptp --output_axiom_names on $IN \
  | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
 # Extracting status
-grep "SZS status" $OUT1 > $STATUS
-sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS
-sed -i 's/ //g' $STATUS
+grep "SZS status" $OUT1 > $STATUS 2> $ERROR
+sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS 2> $ERROR
+sed -i 's/ //g' $STATUS 2> $ERROR
 # Extracting axioms
-grep "file[(]" $OUT1 > $OUT2
-sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT
+grep "file[(]" $OUT1 > $OUT2 2> $ERROR
+sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT 2> $ERROR
 # Cleaning
-rm $OUT1
-rm $OUT2
+rm -f $OUT1
+rm -f $OUT2

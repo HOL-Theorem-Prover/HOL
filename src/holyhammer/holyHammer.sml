@@ -13,7 +13,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open hhWriter
+open hhWriter hhReconstruct
 
 val ERR = mk_HOL_ERR "holyHammer"
 val hh_dir = HOLDIR ^ "/src/holyhammer"
@@ -54,11 +54,11 @@ fun hh cj =
     (* call holyhammer and the external provers *)
     OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh.sh");
     (* try to rebuild the proof found using metis *)
-    replay_atpfilel atpfilel cj
+    reconstructl atpfilel cj
   end
 
 (* Let you chose the specific prover you want to use either
-   (eprover, vampire or z3) *)
+   ("eprover", "vampire" or "z3") *)
 fun hh_atp prover cj =
   if not (mem prover list_of_provers)
   then raise ERR "hh_prover" "not supported prover"
@@ -68,7 +68,7 @@ fun hh_atp prover cj =
     (* call holyhammer and one external prover *)
     OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh " ^ hh_of_prover prover);
     (* try to rebuild the proof found using metis *)
-    replay_atpfile (status_of_prover prover, out_of_prover prover) cj
+    reconstruct (status_of_prover prover, out_of_prover prover) cj
     )
 
 end
