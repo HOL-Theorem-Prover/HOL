@@ -89,7 +89,7 @@ fun reprove axl cj =
     val didl = map (fn x => Redblackmap.find (!readhh_names,x)) axl1
     val l1   = map thm_of_depid didl
     val l2   = if !minimize_flag then minimize l1 cj else l1
-  invh
+  in
     print
       ("METIS_PROVE [" ^
        String.concatWith "," (map string_of_lemma l2) ^ "] " ^ " ``" ^
