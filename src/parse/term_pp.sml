@@ -389,6 +389,8 @@ end handle HOL_ERR _ => false
 fun is_constish tm = is_const tm orelse is_fakeconst tm
 
 fun pp_term (G : grammar) TyG backend = let
+  val G = #tm_grammar_upd backend G
+  val TyG = #ty_grammar_upd backend TyG
   fun block x = backend_block backend x
   fun tystr ty =
       PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty

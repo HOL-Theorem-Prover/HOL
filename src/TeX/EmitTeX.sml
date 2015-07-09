@@ -386,6 +386,8 @@ in
      end_block = PP.end_block,
      begin_style = fn pps => fn sty => () ,
      end_style = fn pps => () ,
+     tm_grammar_upd = (fn g => g),
+     ty_grammar_upd = (fn g => g),
      name = "emit_latex"}
 end;
 
