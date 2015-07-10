@@ -383,6 +383,8 @@ and STRINGslash scr =
       | SOME #"v" => STRING (inc scr)
       | SOME c => if Char.isDigit c then
                     STRINGslashdigit 1 (inc scr)
+                  else if Char.isSpace c then
+                    STRINGelidews (inc scr)
                   else Error(scr, "Illegal backslash escape >" ^ str c ^
                                   "< in string literal")
 and STRINGelidews scr =
