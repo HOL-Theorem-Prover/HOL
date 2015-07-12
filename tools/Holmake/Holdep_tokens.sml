@@ -97,7 +97,7 @@ fun clean_open scr =
         NONE => scr
       | SOME #"d" => openTermPFX "datatype" 1 (inc scr)
       | SOME #"e" => opene (inc scr) (* exception, end *)
-      | SOME #"f" => openTermPFX "fun" 1 (inc scr)
+      | SOME #"f" => openf (inc scr) (* fun, functor *)
       | SOME #"i" => openi (inc scr) (* in, infixl, infix, infixr *)
       | SOME #"l" => openTermPFX "local" 1 (inc scr)
       | SOME #"n" => openTermPFX "nonfix" 1 (inc scr)
@@ -125,6 +125,21 @@ and opene scr =
       | SOME #"n" => openTermPFX "end" 2 (inc scr)
       | SOME #"x" => openTermPFX "exception" 2 (inc scr)
       | SOME c => extend_openAlpha "e" c scr
+and openf scr =
+    case currentChar scr of
+        NONE => scr |> completeID "f"
+      | SOME #"u" => openfu (inc scr)
+      | SOME c => extend_openAlpha "f" c scr
+and openfu scr =
+    case currentChar scr of
+        NONE => scr |> completeID "fu"
+      | SOME #"n" => openfun (inc scr)
+      | SOME c => extend_openAlpha "fu" c scr
+and openfun scr =
+    case currentChar scr of
+        NONE => scr
+      | SOME #"c" => openTermPFX "functor" 4 (inc scr)
+      | SOME c => openOnKWord "fun" scr
 and openi scr =
     case currentChar scr of
         NONE => scr |> completeID "i"
