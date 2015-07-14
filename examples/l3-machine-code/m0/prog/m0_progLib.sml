@@ -112,7 +112,7 @@ in
 end
 
 local
-   val pc_tm = ``m0$Align (pc + 4w: word32, 4)``
+   val pc_tm = ``alignment$align 2 (pc + 4w: word32)``
    fun is_pc_relative tm =
       case Lib.total dest_m0_MEM tm of
          SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
@@ -343,7 +343,7 @@ local
          [m0_PC_INTRO, m0_TEMPORAL_PC_INTRO,
           m0_PC_INTRO0, m0_TEMPORAL_PC_INTRO0]
    val cnv =
-      REWRITE_CONV [m0_stepTheory.Aligned_numeric,
+      REWRITE_CONV [alignmentTheory.aligned_numeric,
                     m0_stepTheory.Aligned_Branch,
                     m0_stepTheory.Aligned_LoadStore]
    val m0_PC_bump_intro =
@@ -414,7 +414,7 @@ local
    val PRE_COND_CONV =
       helperLib.PRE_CONV
          (DEPTH_COND_CONV
-             (REWRITE_CONV [m0_stepTheory.Aligned_numeric]
+             (REWRITE_CONV [alignmentTheory.aligned_numeric]
               THENC NOT_F_CONV)
           THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =

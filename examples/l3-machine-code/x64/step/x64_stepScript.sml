@@ -12,12 +12,8 @@ val _ = new_theory "x64_step"
 
 (* ------------------------------------------------------------------------ *)
 
-val () = (numLib.prefer_num ()
-          ; wordsLib.prefer_word ()
-          ; wordsLib.guess_lengths ())
-
-infix \\
-val op \\ = op THEN;
+val () =
+   (numLib.prefer_num (); wordsLib.prefer_word (); wordsLib.guess_lengths ())
 
 (* ------------------------------------------------------------------------ *)
 

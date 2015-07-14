@@ -433,7 +433,8 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
           arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [arm_stepTheory.Aligned_numeric, Aligned_Branch]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           arm_progTheory.Aligned_Branch]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -480,7 +481,7 @@ in
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                [arm_stepTheory.Aligned_numeric])) o
+                [alignmentTheory.aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -552,7 +553,7 @@ local
       THENC WGROUND_RW_CONV
       THENC stateLib.PRE_COND_CONV
                (DEPTH_CONV DISJOINT_CONV
-                THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
+                THENC REWRITE_CONV [alignmentTheory.aligned_numeric]
                 THENC numLib.REDUCE_CONV
                 THENC NOT_F_CONV)
       THENC helperLib.POST_CONV

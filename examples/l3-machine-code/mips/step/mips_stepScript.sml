@@ -15,9 +15,6 @@ val _ = new_theory "mips_step"
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 
-infix \\
-val op \\ = op THEN;
-
 (* ------------------------------------------------------------------------ *)
 
 val NextStateMIPS_def = Define`

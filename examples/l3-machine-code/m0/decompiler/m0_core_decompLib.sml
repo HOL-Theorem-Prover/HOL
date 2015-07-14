@@ -47,7 +47,7 @@ local
       THENC utilsLib.WALPHA_CONV
    val cnv1 = m0_progLib.REG_CONV
               THENC WGROUND_RW_CONV
-              THENC REWRITE_CONV [m0_stepTheory.Aligned_numeric]
+              THENC REWRITE_CONV [alignmentTheory.aligned_numeric]
    val cnv2 =
       tripleLib.CODE_CONV (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV)
       THENC tripleLib.POST_CONV (Conv.RAND_CONV PC_CONV)
@@ -245,7 +245,7 @@ l1: ldr  r2, [r0, #4]  ; load data
 
 val () = utilsLib.add_datatypes [``:RName``] computeLib.the_compset
 val () = computeLib.add_funs
-           [test_def, m0Theory.Aligned_def, m0Theory.Align_def]
+           [test_def, alignmentTheory.aligned_def, alignmentTheory.align_def]
 val eval =
    EVAL THENC ONCE_DEPTH_CONV (updateLib.SORT_ENUM_UPDATES_CONV ``:RName``)
 

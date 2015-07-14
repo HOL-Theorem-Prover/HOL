@@ -60,7 +60,7 @@ val arm8_WORD_def = Define`
 
 val arm8_WORD_MEMORY_def = Define`
   arm8_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm8_WORD a (mem a)) | a IN dmem /\ Aligned (a, 4)}}`
+  {BIGUNION { BIGUNION (arm8_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
 
 val arm8_DWORD_def = Define`
    arm8_DWORD a (i: word64) =
@@ -75,13 +75,13 @@ val arm8_DWORD_def = Define`
 
 val arm8_DWORD_MEMORY_def = Define`
   arm8_DWORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm8_DWORD a (mem a)) | a IN dmem /\ Aligned (a, 8)}}`
+  {BIGUNION { BIGUNION (arm8_DWORD a (mem a)) | a IN dmem /\ aligned 3 a}}`
 
 val arm8_pc_def = Define`
    arm8_pc pc =
    arm8_PC pc * arm8_exception NoException * arm8_PSTATE_EL 0w *
    arm8_SCTLR_EL1_E0E F * arm8_TCR_EL1_TBI0 F * arm8_TCR_EL1_TBI1 F *
-   arm8_SCTLR_EL1_SA0 F * set_sep$cond (Aligned (pc,4))`;
+   arm8_SCTLR_EL1_SA0 F * set_sep$cond (aligned 2 pc)`;
 
 val aS_def = Define `
    aS (n,z,c,v) =
@@ -115,7 +115,7 @@ val arm8_PC_INTRO = Q.store_thm("arm8_PC_INTRO",
        (p2 * arm8_PC pc' * arm8_exception NoException * arm8_PSTATE_EL 0w *
         arm8_SCTLR_EL1_E0E F * arm8_TCR_EL1_TBI0 F * arm8_TCR_EL1_TBI1 F *
         arm8_SCTLR_EL1_SA0 F) ==>
-    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     SPEC m (p1 * arm8_pc pc) code (p2 * arm8_pc pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
@@ -127,31 +127,12 @@ val arm8_TEMPORAL_PC_INTRO = Q.store_thm("arm8_TEMPORAL_PC_INTRO",
        (p2 * arm8_PC pc' * arm8_exception NoException * arm8_PSTATE_EL 0w *
         arm8_SCTLR_EL1_E0E F * arm8_TCR_EL1_TBI0 F * arm8_TCR_EL1_TBI1 F *
         arm8_SCTLR_EL1_SA0 F) ==>
-    (Aligned (pc,4) ==> Aligned (pc',4)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     TEMPORAL_NEXT m (p1 * arm8_pc pc) code (p2 * arm8_pc pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
          [arm8_pc_def, TEMPORAL_NEXT_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
    )
-
-(*
-fun mk_addr (b, s) =
-   List.tabulate
-      (25, fn i => if i < 2 then b
-                   else Term.mk_var (s ^ Int.toString i, Type.bool))
-   |> (fn l => bitstringSyntax.mk_v2w
-                  (listSyntax.mk_list (List.rev l, Type.bool), ``:32``))
-
-val x = mk_addr (boolSyntax.T, "x")
-val y = mk_addr (boolSyntax.F, "y")
-
-val Aligned_Branch = Q.store_thm("Aligned_Branch",
-   `(Aligned (pc:word32, 4) ==>
-     Aligned ((if b then pc - (^x + 1w) else pc + ^y), 4)) = T`,
-   rw [Aligned]
-   \\ blastLib.FULL_BBLAST_TAC
-   )
-*)
 
 (* ------------------------------------------------------------------------ *)
 
@@ -167,7 +148,7 @@ val lem = Q.prove(
 fun thm v n x y =
    stateTheory.MAPPED_COMPONENT_INSERT
    |> Q.ISPECL
-        [`\a:word64. Aligned (a, ^n)`, `^n`, `\a i. arm8_c_MEM (a + n2w i)`,
+        [`\a:word64. aligned ^n a`, `2n ** ^n`, `\a i. arm8_c_MEM (a + n2w i)`,
          `\v i. arm8_d_word8 (EL i ^v)`, x, y]
    |> Conv.CONV_RULE
         (Conv.LAND_CONV
@@ -185,9 +166,9 @@ val lem1 = Q.prove(
    simp [wordsTheory.word_lo_n2w])
 
 val lem2 = Q.prove(
-   `Aligned (a: word64, 4) /\ Aligned (b, 4) /\ x <+ 4w /\ y <+ 4w ==>
+   `aligned 2 (a: word64) /\ aligned 2 b /\ x <+ 4w /\ y <+ 4w ==>
     ((a + x = b + y) = (a = b) /\ (x = y))`,
-   simp [arm8_stepTheory.Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
@@ -198,10 +179,10 @@ val v4 = ``[( 7 ><  0) v; (15 ><  8) v;
 (* Need ``(\a. ..) c`` below for automation to work *)
 val arm8_WORD_MEMORY_INSERT = Q.store_thm("arm8_WORD_MEMORY_INSERT",
    `!f df c d.
-     c IN df /\ (\a. Aligned (a, 4)) c ==>
+     c IN df /\ (\a. aligned 2 a) c ==>
      (arm8_WORD c d * arm8_WORD_MEMORY (df DELETE c) f =
       arm8_WORD_MEMORY df ((c =+ d) f))`,
-   match_mp_tac (thm v4 ``4n`` `arm8_WORD` `arm8_WORD_MEMORY`)
+   match_mp_tac (thm v4 ``2n`` `arm8_WORD` `arm8_WORD_MEMORY`)
    \\ rw [arm8_WORD_MEMORY_def]
    \\ `(i = j) = (n2w i = n2w j: word64)` by simp []
    \\ asm_rewrite_tac []
@@ -214,9 +195,9 @@ val lem1 = Q.prove(
    simp [wordsTheory.word_lo_n2w])
 
 val lem2 = Q.prove(
-   `Aligned (a: word64, 8) /\ Aligned (b, 8) /\ x <+ 8w /\ y <+ 8w ==>
+   `aligned 3 (a: word64) /\ aligned 3 b /\ x <+ 8w /\ y <+ 8w ==>
     ((a + x = b + y) = (a = b) /\ (x = y))`,
-   simp [arm8_stepTheory.Aligned]
+   simp [alignmentTheory.aligned_extract]
    \\ blastLib.BBLAST_TAC
    )
 
@@ -227,10 +208,10 @@ val v8 = ``[( 7 ><  0) v; (15 ><  8) v;
 
 val arm8_DWORD_MEMORY_INSERT = Q.store_thm("arm8_DWORD_MEMORY_INSERT",
    `!f df c d.
-     c IN df /\ (\a. Aligned (a, 8)) c ==>
+     c IN df /\ (\a. aligned 3 a) c ==>
      (arm8_DWORD c d * arm8_DWORD_MEMORY (df DELETE c) f =
       arm8_DWORD_MEMORY df ((c =+ d) f))`,
-   match_mp_tac (thm v8 ``8n`` `arm8_DWORD` `arm8_DWORD_MEMORY`)
+   match_mp_tac (thm v8 ``3n`` `arm8_DWORD` `arm8_DWORD_MEMORY`)
    \\ rw [arm8_DWORD_MEMORY_def]
    \\ `(i = j) = (n2w i = n2w j: word64)` by simp []
    \\ asm_rewrite_tac []

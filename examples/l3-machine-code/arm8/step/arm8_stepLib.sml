@@ -344,7 +344,9 @@ val LoadLiteral_rwt =
 val map_sp_rule =
    List.map
       (utilsLib.ALL_HYP_CONV_RULE
-         (DATATYPE_CONV THENC SIMP_CONV std_ss [Aligned_plus]) o sp_rule)
+         (DATATYPE_CONV
+          THENC SIMP_CONV std_ss [alignmentTheory.aligned_numeric]) o
+       sp_rule)
 
 val LoadStorePair_rwt =
    List.map

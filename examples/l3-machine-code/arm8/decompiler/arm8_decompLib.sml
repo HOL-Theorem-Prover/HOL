@@ -86,6 +86,7 @@ val (test_cert, test_def) = arm8_decompile_code_no_status "test"
     add x2, x3, x4
     str x2, [x1, #8]!
     `
+
 val (ex_cert, ex_def) = arm8_decompLib.arm8_decompile_code "ex"
   `loop: mul  x1, x1, x2
          subs x0, x0, #1

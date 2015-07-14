@@ -300,8 +300,8 @@ local
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
              (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                 [arm8_stepTheory.Aligned_numeric,
-                  arm8_stepTheory.Aligned_8_4])) o
+                 [alignmentTheory.aligned_numeric,
+                  alignmentTheory.aligned_imp, DECIDE ``2 < 3n``])) o
       PURE_REWRITE_RULE [arm8_stepTheory.concat_bytes]
    val chunk64 = chunks_intro_pre_process arm8_progTheory.arm8_DWORD_def
 in
@@ -353,7 +353,7 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm8_PC_INTRO, arm8_TEMPORAL_PC_INTRO,
           arm8_PC_INTRO0, arm8_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [arm8_stepTheory.Aligned_numeric]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -450,8 +450,8 @@ local
       THENC stateLib.PRE_COND_CONV
                (Conv.DEPTH_CONV DISJOINT_CONV
                 THENC REWRITE_CONV
-                        [arm8_stepTheory.Aligned_numeric,
-                         CONJUNCT1 arm8_stepTheory.Aligned,
+                        [alignmentTheory.aligned_numeric,
+                         alignmentTheory.aligned_0,
                          optionTheory.NOT_NONE_SOME]
                 THENC NOT_F_CONV)
       THENC helperLib.POST_CONV (stateLib.PC_CONV "arm8_prog$arm8_pc")
