@@ -41,6 +41,11 @@ val aligned_align = Q.store_thm ("aligned_align",
    rewrite_tac [aligned_def, align_align]
    )
 
+val align_aligned = Q.store_thm ("align_aligned",
+   `!p w. aligned p w ==> (align p w = w)`,
+   rewrite_tac [aligned_def]
+   )
+
 val align_bitwise_and = Q.store_thm("align_bitwise_and",
    `!p w. align p w = w && UINT_MAXw << p`,
    srw_tac [wordsLib.WORD_BIT_EQ_ss] [align_def]
@@ -203,6 +208,16 @@ val aligned_add_sub_prod = Q.store_thm("aligned_add_sub_prod",
       (aligned p (w + (1w << p) * x) = aligned p w) /\
       (aligned p (w - (1w << p) * x) = aligned p w)`,
    metis_tac [aligned_add_sub, aligned_mul_shift_1, wordsTheory.WORD_ADD_COMM]
+   )
+
+val aligned_imp = Q.store_thm("aligned_imp",
+   `!p q w. p < q /\ aligned q w ==> aligned p w`,
+   srw_tac [wordsLib.WORD_BIT_EQ_ss] [aligned_extract]
+   >- fs []
+   \\ Cases_on `p`
+   \\ lrw []
+   \\ res_tac
+   \\ simp []
    )
 
 (* -------------------------------------------------------------------------
