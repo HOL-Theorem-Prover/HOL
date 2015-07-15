@@ -46,6 +46,11 @@ Bugs fixed:
 
     [Third](http://github.com/HOL-Theorem-Prover/HOL/issues/260), `Datatype` (and `Hol_datatype`) allows the definition of identical record types in different theories.
 
+-   Attempts to define constants or types with invalid names are now caught much earlier.
+    An invalid name is one that contains “non-graphical” characters (as *per* SML’s `Char.isGraph`) or parentheses.
+    This means that Unicode cannot be used in the kernel’s name for a constant, but certainly doesn’t prevent Unicode being used in overloaded notation.
+    Functions such as `overload_on`, `add_rule` and `set_mapped_fixity` can still be used to create pretty notation with as many Unicode characters included as desired.
+
 New theories:
 -------------
 

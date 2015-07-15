@@ -513,9 +513,13 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
-local
+val is_temp_binding = let
   val temp_binding_pfx = "@temp"
-  val is_temp_binding = String.isPrefix temp_binding_pfx
+in
+  String.isPrefix temp_binding_pfx
+end
+
+local
   fun check_name tempok (fname,s) =
       if Lexis.ok_sml_identifier s andalso
          not (Lib.mem s ["ref", "true", "false", "::", "nil", "="]) orelse
@@ -1070,12 +1074,21 @@ val new_definition_hook = ref
        if null V then th
        else raise ERR "new_definition" "bare post-processing phase"));
 
+fun okChar c = Char.isGraph c andalso c <> #"(" andalso c <> #")"
+
+fun check_name princ_name name =
+  if CharVector.all okChar name then true
+  else raise ERR
+             princ_name
+             ("Entity name >"^name^"< includes non-printable/bad character")
+
 (*---------------------------------------------------------------------------*)
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
 
 fun new_type_definition (name,thm) = let
   val Thy = current_theory()
+  val _ = is_temp_binding name orelse check_name "new_type_definition" name
   val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
  in
    store_definition (name^"_TY_DEF", tydef) before
@@ -1087,6 +1100,12 @@ fun new_type_definition (name,thm) = let
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
+     val (nm, _)     = eq |> dest_eq |> #1 |> dest_atom
+                          handle HOL_ERR _ =>
+                                 raise ERR "Definition.new_definition"
+                                       "Definition not an equality"
+     val _           = is_temp_binding name orelse
+                       check_name "new_definition" nm
      val def_th      = Thm.prim_constant_definition (current_theory()) eq
      val {Name,Thy,...} = dest_thy_const (rand (rator (concl def_th)))
  in
@@ -1097,6 +1116,8 @@ fun new_definition(name,M) =
 
 fun new_specification (name, cnames, th) = let
   val thy   = current_theory()
+  val _     = is_temp_binding name orelse
+              List.all (check_name "new_specification") cnames
   val def   = Thm.prim_specification thy cnames th
   val final = store_definition (name, def)
  in

@@ -1,8 +1,7 @@
 open HolKernel Parse boolLib IndDefLib
 
-fun die s = (if !Globals.interactive then
-               raise Fail s
-             else print (s^"\n"); OS.Process.exit OS.Process.failure)
+open testutils
+
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
 
@@ -87,5 +86,14 @@ val _ = checkhyps rules
 val _ = Hol_reln
 `(foo p x x) /\
  ((if p y then foo p y x else foo p y y) ==> foo p x y)`
+
+
+val _ = tprint "With Unicode should fail"
+val _ = if (xHol_reln "tr" `
+                      (!x. ▷ x Z) /\
+                      (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)
+           ` ; false) handle HOL_ERR _ => true then print "OK\n"
+        else die "FAILED"
+
 
 val _ = OS.Process.exit OS.Process.success

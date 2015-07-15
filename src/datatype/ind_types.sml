@@ -139,8 +139,10 @@ fun new_basic_type_definition tyname (mkname, destname) thm =
       val x = mk_var("x", dom_ty)
       val witness_exists = EXISTS(mk_exists(x, mk_comb(pred,x)),witness) thm
       val tyax = new_type_definition(tyname,witness_exists)
-      val (mk_dest, dest_mk) = CONJ_PAIR(define_new_type_bijections
-              {name=(tyname^"_repfns"), ABS=mkname, REP=destname, tyax=tyax})
+      val (mk_dest, dest_mk) =
+          CONJ_PAIR(define_new_type_bijections
+                        {name=temp_binding (tyname^"_repfns"),
+                         ABS=mkname, REP=destname, tyax=tyax})
   in
       (SPEC_ALL mk_dest, SPEC_ALL dest_mk)
   end;
