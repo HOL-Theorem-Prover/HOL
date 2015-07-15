@@ -63,8 +63,8 @@ sig
    val UINT_MAX: Nat.nat -> nbit
    val abs: nbit -> nbit
    val bit: nbit * Nat.nat -> bool
-   val bitFieldInsert: nbit * nbit * Nat.nat * Nat.nat -> nbit
-   val bits: nbit * Nat.nat * Nat.nat -> nbit
+   val bitFieldInsert: Nat.nat * Nat.nat -> nbit * nbit -> nbit
+   val bits: Nat.nat * Nat.nat -> nbit -> nbit
    val concat: nbit list -> nbit
    val div: nbit * nbit -> nbit
    val fromList: bool list -> nbit
