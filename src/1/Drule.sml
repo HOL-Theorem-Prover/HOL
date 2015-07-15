@@ -2064,7 +2064,10 @@ fun define_new_type_bijections {name, ABS, REP, tyax} =
            consts = [{const_name = REP, fixity = NONE},
                      {const_name = ABS, fixity = NONE}]}
       end
-      handle e => raise (wrap_exn "Drule" "define_new_type_bijections" e)
+      handle e =>
+       raise (wrap_exn "Drule"
+                       ("define_new_type_bijections {name=\""^name^"\"...}")
+                       e)
 
 (* --------------------------------------------------------------------------*
  * NAME: prove_rep_fn_one_one                                                *
