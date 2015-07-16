@@ -1436,46 +1436,66 @@ second is to show the new term.
   (holpp-quiet-reset)
   (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
 
+; this filter function is complicated by the fact that comint chunks
+; output (in 1024 character chunks in my tests) and so doesn't
+; necessarily give complete (in the sense of containing matching
+; comment-blocks) strings to the filter. This means that a solution
+; with with-temp-buffer won't work. Instead, there is a persistent
+; working space buffer, and if the code finds a non-matching comment
+; start (a "(*(*(*" substring), it just leaves that in the working
+; space so that the next piece of output can be appended and processed
+; properly.
 (defun holpp-output-filter (s)
   "Converts a munged emacs_terminal string into a pretty one with text properties."
   (interactive "sinput: ")
-  (with-temp-buffer
-    (insert s)
-    (let (end)
-      (goto-char (point-min))
-      (while (and (not end) (search-forward "(*(*(*" nil t))
-        (let ((uptoann (- (point) 6))
-              (start (point)))
-          (if (not (holpp-find-comment-end 1))
-              (progn
-                (goto-char uptoann)
-                (setq end t))
-            (delete-region uptoann start)
-            (let*
-                ((start (- start 6))
-                 (code (buffer-substring start (+ start 2)))
-                 (argument
-                  (save-excursion
-                    (goto-char (+ start 2))
-                    (if (equal (following-char) 0)
-                        (progn
-                          (goto-char (+ (point) 1))
-                          (skip-chars-forward "^\^@")
-                          (prog1
-                              (if (equal (+ start 3) (point)) nil
-                                (buffer-substring (+ start 3)
-                                                  (point)))
-                            (delete-region (+ start 2) (1+ (point)))))
-                      nil))))
-              (holpp-execute-code code argument (+ start 2) (- (point) 6))
-              (delete-region start (+ start 2))
-              (delete-region (- (point) 6) (point))
-              (goto-char start)))))
-      (if (not end)
+  (let* ((tmpbuf (or temp-hol-output-buf
+                     (generate-new-buffer " *HOL output filter*)")))
+         end)
+    (setq temp-hol-output-buf tmpbuf)
+    (save-excursion
+      (set-buffer tmpbuf)
+      (unwind-protect
           (progn
             (goto-char (point-max))
-            (skip-chars-backward "(*"))))
-    (buffer-string)))
+            (insert s)
+            (goto-char (point-min))
+            (while (and (not end) (search-forward "(*(*(*" nil t))
+              (let ((uptoann (- (point) 6))
+                    (start (point)))
+                (if (not (holpp-find-comment-end 1))
+                    (progn
+                      (goto-char uptoann)
+                      (setq end t))
+                  (delete-region uptoann start)
+                  (let*
+                      ((start (- start 6))
+                       (code (buffer-substring start (+ start 2)))
+                       (argument
+                        (save-excursion
+                          (goto-char (+ start 2))
+                          (if (equal (following-char) 0)
+                              (progn
+                                (goto-char (+ (point) 1))
+                                (skip-chars-forward "^\^@")
+                                (prog1
+                                    (if (equal (+ start 3) (point)) nil
+                                    (buffer-substring (+ start 3)
+                                                            (point)))
+                                  (delete-region (+ start 2) (1+ (point)))))
+                            nil))))
+                       (holpp-execute-code code argument
+                        (+ start 2)
+                        (- (point) 6))
+                       (delete-region start (+ start 2))
+                       (delete-region (- (point) 6) (point))
+                       (goto-char start)))))
+            (if (not end)
+                (progn
+                  (goto-char (point-max))
+                  (skip-chars-backward "(*")))
+            (prog1
+                (buffer-substring (point-min) (point))
+              (delete-region (point-min) (point))))))))
 
 (defun holmakepp-mark-error (start end)
    (add-text-properties start end '(face holmake-error)))
