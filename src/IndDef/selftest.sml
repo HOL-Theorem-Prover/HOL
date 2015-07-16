@@ -95,5 +95,15 @@ val _ = if (xHol_reln "tr" `
            ` ; false) handle HOL_ERR _ => true then print "OK\n"
         else die "FAILED"
 
+val _ = tprint "Vacuous clause failure"
+val _ = if (with_flag (Feedback.emit_ERR, false)
+              Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
+               handle HOL_ERR {message,...} =>
+                      String.isSuffix
+                          "Vacuous clause trivialises whole definition"
+                          message
+        then print "OK\n"
+        else die "FAILED"
+
 
 val _ = OS.Process.exit OS.Process.success
