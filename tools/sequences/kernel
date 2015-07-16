@@ -14,6 +14,7 @@ src/1
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1
 !tools/Holmake/tests/brokenstrings
+!tools/Holmake/tests/holdep
 !src/1/theory_tests
 src/proofman
 [poly]bin/hol.bare

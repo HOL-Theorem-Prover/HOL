@@ -34,3 +34,6 @@ include included4
 datatype datafoo
 
 include included5 where type t = int
+
+open functortest
+functor funct(val x : int) =
