@@ -7,7 +7,6 @@
 open Hh_parse
 open Thf1hh1
 open Dependency
-open Predict_knn
 
 (* Required theorems for the ATPs. *)
 let additional_theorems () =

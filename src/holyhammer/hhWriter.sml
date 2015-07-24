@@ -66,14 +66,16 @@ fun is_alphanumeric s =
    all (fn x => Char.isAlphaNum x orelse x = #"_") l
  end
 
+(* now additonnally escape quotes *)
 fun escape_slash s =
   let
     val l1 = String.explode s
     fun image x =
       case x of
-        #"#" => String.explode "#hash#"
-      | #"/" => String.explode "#slash#"
-      | _    => [x]
+        #"#"  => String.explode "#hash#"
+      | #"/"  => String.explode "#slash#"
+      | #"\"" => String.explode "#quote#"
+      | _     => [x]
     val l2 = map image l1
   in
     String.implode (List.concat l2)
@@ -146,7 +148,7 @@ fun declare_perm_type dict {Thy,Name} =
     name2
   end
 
-(* constant *)
+(* constants *)
 fun declare_perm_const dict {Thy,Name} =
   let
     val name1 = "const/" ^ Thy ^ "/" ^ (escape_slash Name)
@@ -169,6 +171,7 @@ fun declare_perm_thm (thy,n) name  =
     name2
   end
 
+(* special constants *)
 fun declare_fixed dict {Thy,Name} name =
   (
   store_name name;
@@ -176,6 +179,7 @@ fun declare_fixed dict {Thy,Name} name =
   name
   )
 
+(* temporary variables and type variables *)
 fun declare_temp_list get_name dict l =
   let
     val olddict = !dict

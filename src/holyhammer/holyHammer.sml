@@ -3,8 +3,8 @@
 (* DESCRIPTION   : Export types, constants, theorems and dependencies to *)
 (*                 the holyHammer framework which performs premise       *)
 (*                 selection and calls to external provers. The lemmas   *)
-(*                 found by the provers is reconstructed with Metis.     *)
-(*                                                                       *)
+(*                 found by the provers help Metis to reconstruct the    *)
+(*                 proof.                                                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -45,31 +45,38 @@ fun export cj =
   end
 
 (* Try every provers in parallel: eprover, vampire and z3. *)
-fun hh cj =
+fun hh thml cj =
   let
     val atpfilel = map (fn x => (status_of_prover x, out_of_prover x))
                    list_of_provers
+    val new_cj = 
+      if null thml then cj 
+      else mk_imp (list_mk_conj (map (concl o GEN_ALL o DISCH_ALL) thml),cj)
   in
-    export cj;
+    export new_cj;
     (* call holyhammer and the external provers *)
     OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh hh.sh");
     (* try to rebuild the proof found using metis *)
-    reconstructl atpfilel cj
+    reconstructl thml atpfilel cj
   end
 
 (* Let you chose the specific prover you want to use either
    ("eprover", "vampire" or "z3") *)
-fun hh_atp prover cj =
+fun hh_atp prover thml cj =
   if not (mem prover list_of_provers)
   then raise ERR "hh_prover" "not supported prover"
   else
-    (
-    export cj;
-    (* call holyhammer and one external prover *)
-    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh " ^ hh_of_prover prover);
-    (* try to rebuild the proof found using metis *)
-    reconstruct (status_of_prover prover, out_of_prover prover) cj
-    )
+    let 
+      val new_cj = 
+      if null thml then cj 
+      else mk_imp (list_mk_conj (map (concl o GEN_ALL o DISCH_ALL) thml),cj)
+    in
+      export new_cj;
+      (* call holyhammer and one external prover *)
+      OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ "sh " ^ hh_of_prover prover);
+      (* try to rebuild the proof found using metis *)
+      reconstruct thml (status_of_prover prover, out_of_prover prover) cj
+    end
 
 
 end

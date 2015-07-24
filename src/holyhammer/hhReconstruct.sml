@@ -1,9 +1,9 @@
 (* ===================================================================== *)
 (* FILE          : hhReconstruct.sml                                     *)
 (* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
-(*                 and minimize them.  Can only be used after a call of  *)
-(*                 hhWriter.write_hh_thyl that initialize the dictionary *)
-(*                 of theorems' names readhh_names.                      *)
+(*                 and minimize them. Can only be used after a call of   *)
+(*                 write_hh_thyl that initializes the dictionary         *)
+(*                 of theorems' names.                                   *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -68,44 +68,78 @@ fun minimize_loop l1 l2 cj =
 
 fun minimize l cj =
   if can (time_metis (map snd l) cj) 2.0
-  then (print "Minimizing...\n"; minimize_loop [] l cj)
+  then minimize_loop [] l cj
   else l
 
 (*---------------------------------------------------------------------------
-   Reconstruction and printing
+   Reconstruction and printing (depends on DB.fetch)
  ----------------------------------------------------------------------------*)
 
 exception Status of string
 
-fun string_of_lemma (name,thm) =
-  let val (thy,_) = depid_of (dep_of (tag thm)) in
-    thy ^ "Theory." ^ name
+val ppstrm_stdout = 
+  PP.mk_ppstream {consumer = fn s => TextIO.output(TextIO.stdOut, s),
+                  linewidth = 80,
+                  flush = fn () => TextIO.flushOut TextIO.stdOut}
+
+
+fun depid_of_thm thm = depid_of (dep_of (tag thm))
+fun has_depid (name,thm) = can depid_of_thm thm
+
+fun pp_lemmas ppstrm lemmas = 
+  let
+    open Portable
+    val {add_string,add_break,begin_block,
+         end_block,add_newline,flush_ppstream,...} = 
+        with_ppstream ppstrm
+    fun pp_l_aux g L = case L of
+        []     => ()
+      | [a]    => g a
+      | a :: m => (g a; add_string ","; add_break(1,0); pp_l_aux g m)
+    fun pp_l f l =
+      (begin_block INCONSISTENT 0;
+         add_string "[";
+         begin_block INCONSISTENT 0;
+           pp_l_aux f l;
+         end_block();
+         add_string "]";
+       end_block())
+    fun pp_lemma (name,thm) =
+      let val (thy,_) = depid_of (dep_of (tag thm)) in
+        add_string (String.concatWith " " ["fetch", quote thy, quote name])
+      end
+  in 
+    begin_block INCONSISTENT 0;
+    add_string "val lemmas = ";
+    pp_l pp_lemma lemmas;
+    add_string ";";
+    end_block();
+    flush_ppstream()
   end
 
-fun reprove axl cj =
+fun reprove thml axl cj =
   let
     (* reserved theorems are not required by Metis *)
     val axl1 = filter (fn x => not (mem x reserved_names_escaped)) axl
     val didl = map (fn x => Redblackmap.find (!readhh_names,x)) axl1
-    val l1   = map thm_of_depid didl
+    val l1   = map (fn x => ("",x)) thml @ map thm_of_depid didl
     val l2   = if !minimize_flag then minimize l1 cj else l1
+    (* hacky way of removing user given theorems *)
+    val l3   = filter (fn (name,_) => name <> "") l2
   in
-    print
-      ("METIS_PROVE [" ^
-       String.concatWith "," (map string_of_lemma l2) ^ "] " ^ " ``" ^
-       with_flag (show_types, true) term_to_string cj ^ "``\n");
+    pp_lemmas ppstrm_stdout l3;
+    print "\n";
     ignore (time_metis (map snd l2) cj 30.0)
-      handle _ => raise ERR "reconstruct" "Metis timed out."
   end
 
-fun reconstruct (atp_status,atp_out) conjecture =
+fun reconstruct thml (atp_status,atp_out) conjecture =
   let val s = read_status atp_status in
     if s = "Theorem"
-    then reprove (readl atp_out) conjecture
+    then reprove thml (readl atp_out) conjecture
     else raise Status s
   end
 
-fun reconstructl atpfilel conjecture =
+fun reconstructl thml atpfilel conjecture =
   let
     fun process (atp_status,atp_out) =
       let val s = read_status atp_status in
@@ -131,7 +165,7 @@ fun reconstructl atpfilel conjecture =
         fun compare_list l1 l2 = length l1 > length l2
         val axl = hd (sort compare_list (map snd proofl))
       in
-        reprove axl conjecture
+        reprove thml axl conjecture
       end
   end
 

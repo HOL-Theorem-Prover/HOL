@@ -1,7 +1,7 @@
 signature holyHammer =
 sig
 
-  val hh: Term.term -> unit
-  val hh_atp: string -> Term.term -> unit
+  val hh: Thm.thm list -> Term.term -> unit
+  val hh_atp: string -> Thm.thm list -> Term.term -> unit
 
 end

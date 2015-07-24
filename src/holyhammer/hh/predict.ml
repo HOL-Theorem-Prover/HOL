@@ -53,20 +53,34 @@ let cpp_advice2 fname cmd =
   print_endline ("Running predictor: " ^ cmd fname);
   ignore (Sys.command (cmd fname));
   let ic = open_in (fname ^ "out") in
-  let predict = Str.split (Str.regexp " ") (try input_line ic with End_of_file -> failwith "predictor did not return advice") in
+  let predict = Str.split (Str.regexp " ") 
+    (try input_line ic with End_of_file -> failwith "predictor did not return advice") in
   close_in ic;
   predict
-;;
 
 let knn_advice2 fname limit =
-  let cmd s = Printf.sprintf "../predict/predict %ssyms %sdep %sseq -n %i -p knn < %scsyms > %sout 2> %serror"  s s s limit s s s in
+  let cmd s = Printf.sprintf 
+    "../predict/predict %ssyms %sdep %sseq -n %i -p knn < %scsyms > %sout 2> %serror" 
+    s s s limit s s s in
   cpp_advice2 fname cmd
-;;
 
 let nb_advice2 fname limit =
-  let cmd s = Printf.sprintf "../predict/predict %ssyms %sdep %sseq -n %i -p nbayes < %scsyms > %sout 2> %serror"  s s s limit s s s in
+  let cmd s = Printf.sprintf 
+    "../predict/predict %ssyms %sdep %sseq -n %i -p nbayes < %scsyms > %sout 2> %serror"
+    s s s limit s s s in
   cpp_advice2 fname cmd
-;;
+
+let mepo_incr = 30
+
+let mepo_advice2 fname limit =
+  let cmd s = Printf.sprintf 
+     "../predict/mepo/mepo3 %i %ssyms %sdep %i %sseq < %scsyms > %sout 2> %serror"
+     mepo_incr s s limit s s s s in
+  cpp_advice2 fname cmd
+
+
+
+(* Matching experiments *)
 
 let nb_advice3 fname limit =
   let cmd s = Printf.sprintf "../../predict/predict %ssyms %sdep %sseq -n %i -p nbayes < %scsyms > %sout 2> %serror"  s s s limit s s s in
@@ -78,12 +92,6 @@ let knn_advice3 fname limit =
   cpp_advice2 fname cmd
 ;;
 
-
-(* BUG: predict_h4 does not exist ATM, so don't call this function for now *)
-let knn_advice_interactive fname limit =
-  let cmd s = Printf.sprintf "./predict_h4 %ssyms %sdep %sseq -n %i -p knn < %scsyms > %sout 2> %serror"  s s s limit s s s in
-  cpp_advice2 fname cmd
-;;
 
 
 
