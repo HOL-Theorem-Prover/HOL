@@ -616,6 +616,9 @@ useful information:
   expands to \texttt{/bin/cp}; under Windows, it expands to
   \texttt{copy}.)
 \item[\texttt{HOLDIR}] The root of the HOL installation.
+\item[\texttt{HOLHEAP}]
+Under Poly/ML, this variable expands to the name of the heap that should be used to build this directory (to be used instead of the heap that underlies the \texttt{hol} executable).
+See Section~\ref{sec:polyml-heaps} below for more on using custom heaps with Poly/ML.
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -818,9 +821,8 @@ Poly/ML 5.4.1 Release
 
 Finally, note that when using the \texttt{HOLHEAP} variable, heaps are required to be built before everything else in a directory, and that such heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
 Thus, if one wanted to package up a heap embodying the standard theories for the real numbers, and to do it in \texttt{src/real} (which feels natural), this heap could be built using the method described here, but could only be referred to as a \texttt{HOLHEAP} in the directories that used it, \emph{not} in \texttt{src/real}'s \texttt{Holmakefile}.
-
-More realistically, such a ``real-embodying'' heap could be built in \texttt{src/real}, and \emph{subsequent} developments in other directories could use it by specifying\[
-  \texttt{\$(HOLDIR)/src/real/myheap}
+Subsequently, developments in other directories could use this heap by specifying\[
+  \texttt{\$(HOLDIR)/src/real/realheap}
 \]
 as the value for their \texttt{HOLHEAP} variables.
 
