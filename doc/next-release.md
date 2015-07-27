@@ -42,7 +42,7 @@ Bugs fixed:
     won’t create a recursive type (assuming this is not called in theory `num`).
     (`Hol_datatype` had the same problem.)
 
-    [Second](http://github.com/HOL-Theorem-Prover/HOL/issues/257), `Datatype` will handle antiquotations in its input properly (`Hol_datatype` already did).
+    [Second](http://github.com/HOL-Theorem-Prover/HOL/issues/258), `Datatype` will handle antiquotations in its input properly (`Hol_datatype` already did).
 
     [Third](http://github.com/HOL-Theorem-Prover/HOL/issues/260), `Datatype` (and `Hol_datatype`) allows the definition of identical record types in different theories.
 
