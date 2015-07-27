@@ -51,6 +51,10 @@ Bugs fixed:
     This means that Unicode cannot be used in the kernel’s name for a constant, but certainly doesn’t prevent Unicode being used in overloaded notation.
     Functions such as `overload_on`, `add_rule` and `set_mapped_fixity` can still be used to create pretty notation with as many Unicode characters included as desired.
 
+-   Loading theories under Poly/ML would fail unnecessarily if the current directory was unwritable.
+    Working in such directories will likely cause problems when and if an `export_theory` call is made, so there is a warning emitted in this situation, but the `load` now succeeds.
+    Thanks for Narges Khakpour for the bug report.
+
 New theories:
 -------------
 
