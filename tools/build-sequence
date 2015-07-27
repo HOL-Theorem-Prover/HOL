@@ -52,10 +52,11 @@
 # (the directory containing this file).
 
 #include sequences/kernel
+#include sequences/holyhammer
 #include sequences/core-theories
 #include sequences/more-theories
 #include sequences/large-theories
-#include sequences/holyhammer
+
 #
 # Examples only from here on
 #
