@@ -53,7 +53,7 @@ Bugs fixed:
 
 -   Loading theories under Poly/ML would fail unnecessarily if the current directory was unwritable.
     Working in such directories will likely cause problems when and if an `export_theory` call is made, so there is a warning emitted in this situation, but the `load` now succeeds.
-    Thanks for Narges Khakpour for the bug report.
+    Thanks to Narges Khakpour for the bug report.
 
 New theories:
 -------------
