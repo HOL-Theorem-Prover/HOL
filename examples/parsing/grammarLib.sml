@@ -30,6 +30,63 @@ datatype sym = NT of string | TOK of stringt
 datatype clause = Syms of sym list | TmAQ of term
 type t = (string * clause list) list
 
+datatype NTproblem = Unreachable of string | Undefined of string
+val emptyNTset = HOLset.empty String.compare
+fun clausesNTs (cs, acc) = let
+  fun symcase (NT s, acc) = HOLset.add(acc, s)
+    | symcase (TOK _, acc) = acc
+  fun clausecase (Syms syms, acc) = List.foldl symcase acc syms
+    | clausecase (TmAQ _, acc) = acc
+in
+  List.foldl clausecase acc cs
+end
+fun usedNTs (g:t) =
+  List.foldl (fn ((_,cs), acc) => clausesNTs(cs,acc)) emptyNTset g
+fun reachableNTs start (clauses : t) =
+  let
+    fun foldthis (c as (nt, cs), m) =
+      Binarymap.insert(m,nt,clausesNTs(cs, emptyNTset))
+    val ntmap = List.foldl foldthis (Binarymap.mkDict String.compare) clauses
+    fun dfs visited tovisit =
+      case tovisit of
+          [] => visited
+        | nt::rest => let
+          val visited' = HOLset.add(visited, nt)
+          val neighbours = case Binarymap.peek(ntmap, nt) of
+                               NONE => emptyNTset
+                             | SOME s => s
+          fun foldthis (nt, acc) =
+            if HOLset.member(visited', nt) then acc
+            else nt::acc
+          val tovisit' = HOLset.foldl foldthis rest neighbours
+        in
+          dfs visited' tovisit'
+        end
+  in
+    dfs emptyNTset [start]
+  end
+fun definedNTs (clauses : t) =
+  let
+    fun clausescase ((nt, _), acc) = HOLset.add(acc, nt)
+  in
+    List.foldl clausescase emptyNTset clauses
+  end
+
+fun NTproblems start g =
+  let
+    val used = usedNTs g
+    val reachable = reachableNTs start g
+    val defined = definedNTs g
+    val defined_less_reachable = HOLset.difference(defined, reachable)
+    val used_less_defined = HOLset.difference(used, defined)
+  in
+    HOLset.foldl (fn (s, acc) => Unreachable s :: acc)
+                 (HOLset.foldl (fn (s, acc) => Undefined s :: acc)
+                               []
+                               used_less_defined)
+                 defined_less_reachable
+  end
+
 fun newline ((col, line), msg) = ((0, line + 1), msg)
 fun add1col ((col, line), msg) = ((col + 1, line), msg)
 fun advance c p = if c = #"\n" then newline p else add1col p
@@ -320,8 +377,15 @@ in
       end
 end
 
+
+val warn = HOL_WARNING "grammarLib" "grammar"
+fun NTproblem_warn (Unreachable s) = warn ("Unused non-terminal: " ^ s)
+  | NTproblem_warn (Undefined s) = warn ("Undefined non-terminal: " ^ s)
+fun reportNTproblems top g = List.app NTproblem_warn (NTproblems top g)
+
 fun mk_grammar_def0 (gi:ginfo) (g:t) = let
   val {tokmap,nt_tyname,mkntname,tokty,start,gname,...} = gi
+  val _ = reportNTproblems start g
   val nt_names = allnts mkntname g
   val constructors =
       ParseDatatype.Constructors
