@@ -6,44 +6,7 @@
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 
-(* Tools to fetch and unfold definitions *)
 
-fun is_def_of c (s,thm) =
-  let  
-    val thml = CONJUNCTS thm 
-    val th1 = SPEC_ALL (hd thml)
-    val tm1 = concl th1
-    val (c1,_) = strip_comb (lhs tm1) 
-  in
-    same_const c c1 
-  end
-  handle _ => false
-
-fun fetch_def c = 
-  let 
-    val {Name,Thy,Ty} = dest_thy_const c
-    val thml = DB.thms Thy
-    val thml1 = filter (is_def_of c) thml
-  in
-    (List.hd thml1)
-  end
-
-fun all_def term =
-  let 
-    val cl = filter (not o (same_const equality)) (find_terms is_const term) 
-    val cl = mk_set cl
-    val thml = map fetch_def cl;
-  in
-    thml
-  end
-
-fun all_rec_def term = 
-  List.concat (map (all_def o concl o snd) (all_def cj)) 
-
-fun unfold thml cj = 
-  let val eqthm = REWRITE_CONV thml cj in
-    (rhs (concl eqthm), eqthm)
-  end
 
 (* Formalizing a simple zero knowledge proof *)
 (* 
@@ -138,23 +101,6 @@ val th_imp = METIS_PROVE
    Authenticate Bob Alice``;
 
 
-
-
-
-(* Simple probabilities *)
-
-val Max_def = new_definition ("Max_def",``Max = @(x:num). x >= 1``);
-val th0 = INST_TYPE [alpha |-> ``:num``] SELECT_AX;
-val th1 = save_thm ("hh0",SPECL [``\x.x>=(1:num)``,``1:num``] th0);
-
-
-val cj = ``Max>=1``;
-(* hh [th0,th1] cj; *)
-val lemmas = [fetch "numeral" "numeral_lte", fetch "zerok" "Max_def",
-              fetch "arithmetic" "GREATER_EQ",
-              fetch "arithmetic" "NUMERAL_DEF"];
-val th = save_thm ("MAX_THM",METIS_PROVE ([th0,th1] @ lemmas) cj);
-
 val Check_def = new_definition ("Check_def",
   ``Check x y = !z. (x + z - y) MOD Max = z MOD Max``);
 
@@ -203,27 +149,119 @@ val conjecture = ``!x. Alice_number + x - Bob_number = x mod Max_size <==> Alice
 (* Here is an interactive proof of knowledge of a discrete logarithm.[5]
 
     Alice want to prove to Bob that she knows x: the discrete logarithm of y = g^x to the base g.
-    She picks a random v\in \Z_q, computes t = g^v and sends t to Bob.
-    Bob picks a random c\in \Z^*_q and sends it to Alice.
+    She picks a random v in Z/qZ, computes t = g^v and sends t to Bob.
+    Bob picks a random c in (Z/qZ)* and sends it to Alice.
     Alice computes r = v - cx and returns r to Bob.
-    He checks if t \equiv g^ry^c (it holds, because g^ry^c = g^{v - cx}g^{xc} = g^v = t).
+    He checks if t = g^r * y^c (it holds, because g^r * y^c = g^{v - cx} * g^{xc} = g^v = t).
 
 Fiat-Shamir heuristic allows to replace the interactive step 3 with a non-interactive random oracle access. In practice, we can use a cryptographic hash function instead.[6]
 
 *)
 
+new_theory "zerok";
+load "holyHammer";
+open holyHammer;
+
+(* Fixing the reasoning modulo a number strictly greater than 1 *)
+val BASE_DEF = new_definition ("BASE_DEF",``BASE = @(x:num). x >= 2``);
+val th0 = INST_TYPE [alpha |-> ``:num``] SELECT_AX;
+val th1 = save_thm ("hh0",SPECL [``\x.x>=(2:num)``,``2:num``] th0);
+val cj = ``BASE>=2``;
+
+(* hh [th0,th1] cj; *)
+val lemmas = [fetch "zerok" "BASE_DEF", fetch "numeral" "numeral_lte",
+              fetch "arithmetic" "GREATER_EQ",
+              fetch "arithmetic" "NUMERAL_DEF"];
+
+val th = save_thm ("MAX_THM",METIS_PROVE ([th0,th1] @ lemmas) cj);
+
+
 (* Completeness *)
-val goal = ``!y x. (y = pow g x) ==> (!v c. c <> 0 ==>  
+val DISCRETE_LOG_DEF = Define `DISCRETE_LOG y g x = (MODEQ BASE y (g ** x))`;
+
+val GENERATOR_DEF = Define 
+  `GENERATOR g = !z. (MODEQ BASE z 0) ==> ?e. (MODEQ BASE (g ** e) z)`;
+
+val ALICE_EXP_DEF = Define `ALICE_EXP g v = g ** v`;
+
+val ALICE_DIFF_DEF = Define `ALICE_DIFF v c x = v - c * x`;
+
+val BOB_CHECKS_DEF = Define 
+  `BOB_CHECKS t g r y c = (MODEQ BASE t ((g ** r) * (y ** c)) )`;
+
+val cj = ``(GENERATOR g /\ DISCRETE_LOG y g x) ==> !v c. BOB_CHECKS (ALICE_EXP g v) g (ALICE_DIFF v c x) y c``;
+
+g `(DISCRETE_LOG y g x) ==> 
+   !v c. BOB_CHECKS (ALICE_EXP g v) g (ALICE_DIFF v c x) y c`;
+
+
+e (REWRITE_TAC 
+  ([DISCRETE_LOG_DEF,GENERATOR_DEF,ALICE_EXP_DEF] @
+  [ALICE_DIFF_DEF,BOB_CHECKS_DEF,arithmeticTheory.MODEQ_DEF]));
+
+e (REPEAT DISCH_TAC);
+e (REPEAT STRIP_TAC);
+e (ASM_REWRITE_TAC []);
+
+e (CONV_TAC (DEPTH_CONV ADDR_CANON_CONV));
+e (CONV_TAC (DEPTH_CONV MUL_CANON_CONV));
+e (REPEAT (EXISTS_TAC ``0``));
+e (METIS_TAC []);
+
+all_def ``x MOD y ``;
+(* Soundness : g generates Z_q* ==> unique solution *)
+
+
+(* Zero-knowledge : unsolved *)
+
+val cj = ``∃a b. (a * BASE + y = b * BASE + g ** x) ==> ∃a b. (a * BASE + g ** v = b * BASE + g ** (v − c * x) * y ** c)``;
+``∃a b. y = b * BASE + g ** x − a * BASE``;
+
+b * BASE + g ** x − a * BASE
+
+(``a * BASE + y = b * BASE + g ** x``, y = (b-a) * BASE - a * BASE + g ** x
+
+
+val cj = ``g ** v =  g ** (v − c * x) * (g ** x) ** c``;
 
 
 
-(* Soundness : if g = 1 and y = 1 then it is not sound *)
+(* Tools to fetch and unfold definitions *)
 
+fun is_def_of c (s,thm) =
+  let  
+    val thml = CONJUNCTS thm 
+    val th1 = SPEC_ALL (hd thml)
+    val tm1 = concl th1
+    val (c1,_) = strip_comb (lhs tm1) 
+  in
+    same_const c c1 
+  end
+  handle _ => false
 
-pow ^
+fun fetch_def c = 
+  let 
+    val {Name,Thy,Ty} = dest_thy_const c
+    val thml = DB.thms Thy
+    val thml1 = filter (is_def_of c) thml
+  in
+    (List.hd thml1)
+  end
 
-! v:num. pow g v = g 
+fun all_def term =
+  let 
+    val cl = filter (not o (same_const equality)) (find_terms is_const term) 
+    val cl = mk_set cl
+    val thml = map fetch_def cl;
+  in
+    thml
+  end
 
-  
+fun all_rec_def term = 
+  List.concat (map (all_def o concl o snd) (all_def cj)) 
 
+fun unfold thml cj = 
+  let val eqthm = REWRITE_CONV thml cj in
+    (rhs (concl eqthm), eqthm)
+  end
 
