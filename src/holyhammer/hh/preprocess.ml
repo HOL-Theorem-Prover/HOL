@@ -6,17 +6,71 @@
 open Hh_parse
 
 (*--------------------------------------------------------------------------- 
-  Prefixing objects (necessary for matching between different libraries).
+  Prefixing tools.
   --------------------------------------------------------------------------- *)
-(* Warning: only prefix quoted names *)
-let remove_prime s =
-  let n = String.length s in
-  Str.last_chars (Str.first_chars s (n - 1)) (n- 2) 
+let fixed_constants = 
+  ["$o"; "$t"; ">"; "!";"?";"&";"|";"=>";"~";"=";"<=>";
+   "$forall";"$exists";"$and";"$or";"$imply";"$not";"$equals";
+   "$true";"$false";"$i"]
 
-let give_prefix prefix name =
+let is_lowercase c = 
+  let i = Char.code c in i >= Char.code 'a' && i <= Char.code 'z' 
+let is_uppercase c = 
+  let i = Char.code c in i >= Char.code 'A' && i <= Char.code 'Z'
+let is_alphanumeric c =
+  (is_lowercase c) or (is_uppercase c) or (Char.code c == Char.code '_')
+
+let can f s = try (f s; true) with _ -> false
+
+let is_tptp s =
+  let f c = if is_alphanumeric c then () else raise Exit in
+  can (String.iter f) s
+
+let remove_prime name =
+  try 
   if name.[0] = '\'' && name.[String.length name - 1] = '\''
-    then "\'" ^ prefix ^ remove_prime name ^ "\'"
-    else name
+  then 
+    let n = String.length name in
+    Str.last_chars (Str.first_chars name (n - 1)) (n- 2) 
+  else name
+  with _ -> name
+
+let add_prime name = 
+  if List.mem name fixed_constants || is_tptp name 
+  then name
+  else "\'" ^ name ^ "\'"
+  
+let give_prefix prefix name =
+  if List.mem name fixed_constants 
+  then name
+  else add_prime (prefix ^ remove_prime name)
+
+
+(*--------------------------------------------------------------------------- 
+  Removing really big theorems.
+  --------------------------------------------------------------------------- *)
+
+let rec size_of t = match t with
+  | Abs (n,ty,tm) -> size_of ty + size_of tm
+  | Comb (x,y)    -> size_of x + size_of y
+  | Id x          -> 1
+
+let remove_deph big_thml deph =
+  let h = Hashtbl.create 20000 in
+  let f thm (thy,depl) =
+    if List.mem thm big_thml then ()
+    else
+      let new_depl = List.filter (fun x -> not (List.mem x big_thml)) depl in
+      Hashtbl.add h thm (thy,new_depl)
+  in
+  Hashtbl.iter f deph;
+  h
+;;
+
+(*--------------------------------------------------------------------------- 
+  Prefixing objects by provers
+  (necessary for matching between different libraries).
+  --------------------------------------------------------------------------- *)
 
 let rec bv_of t = match t with
   | Abs (n,ty,tm) -> n :: (bv_of ty @ bv_of tm)
@@ -43,9 +97,8 @@ let prefix_deph prefix h =
     Hashtbl.iter f h;
     h_res
 
-
 (*--------------------------------------------------------------------------- 
-  Splitting conjunctions under the quantifiers. (not necessary for hol4)
+  Splitting conjunctions under the quantifiers. (used only for matching now)
   --------------------------------------------------------------------------- *)
 
 (* Hashtable used by hollight, hol4 and mizar. 

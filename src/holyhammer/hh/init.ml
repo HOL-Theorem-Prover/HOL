@@ -49,14 +49,16 @@ let print_info (dir,tyl,cl,thml,thmlo) =
 let init_dir dir =
   let (deph,tmll) = Read.read_dir dir in
   let tmll = drop_tt tmll in (* remove the TPTP "tt" prefix *)
-  (* disabled for hol4 
-  let (deph,tmll) = split_lib (deph,tmll) in  *)
+  (* let (deph,tmll) = split_lib (deph,tmll) in *) (* splits under quantifiers removed *)
   let (tyl,cl,thml) = get_tyl_cl_thml (flatten_tmll tmll) in
-  let tmll = foreach_filter (is_thm) tmll in
+  let big_thml = List.map fst (List.filter (fun (_,t) -> size_of t >= 2000) thml) in
+  let tmll = foreach_filter (fun (s,r,t) -> is_thm (s,r,t) && not (List.mem s big_thml)) tmll in
+  let short_thml = List.filter (fun (s,_) -> not (List.mem s big_thml)) thml in
+  let deph = remove_deph big_thml deph in
   let thmlo = foreach_map (fun (s,r,t) -> s) tmll in 
   let roleh = hash_of_alist (List.map (fun (s,r,t) -> (s,r)) (flatten_tmll tmll)) in
   print_info (dir,tyl,cl,thml,thmlo);
-  ((tyl,cl,thml),(deph,roleh,thmlo))
+  ((tyl,cl,short_thml),(deph,roleh,thmlo))
 
 (* Experiments : matching *)
 let init_dir_prefix prefix dir =
