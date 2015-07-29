@@ -85,14 +85,36 @@ val th1 = EQ_MP (SYM eqthm) th;
 
 
 (*-------------------------------------------------------------------------- 
-  Example 4
+  Example 4 (turning off minimization)
   -------------------------------------------------------------------------- *)
 
 load "complexTheory";
 val cj = ``(1:complex) + 1 = 2``;
 hh [] cj;
-all_rwthm cj;
-hh [complexTheory.complex_add] cj; (* minimization takes a long time *)
+hh [complexTheory.complex_add] cj;
+
+val lemmas = [fetch "real" "REAL_MUL_RZERO", fetch "real" "REAL_MUL_RID",
+              fetch "complex" "complex_scalar_lmul",
+              fetch "complex" "COMPLEX_DOUBLE",
+              fetch "complex" "complex_of_num", fetch "complex" "IM",
+              fetch "pair" "SND", fetch "complex" "RE",
+              fetch "complex" "complex_of_real", fetch "pair" "FST"];
+
+
+val th = METIS_PROVE (complexTheory.complex_add :: lemmas) cj;
+
+load "hhReconstruct";
+open hhReconstruct;
+minimize_flag:= false;
+
+hh [complexTheory.complex_add] cj;
+val lemmas = [fetch "pair" "FST", fetch "complex" "complex_of_real",
+              fetch "complex" "RE", fetch "pair" "SND", fetch "complex" "IM",
+              fetch "complex" "complex_of_num",
+              fetch "complex" "COMPLEX_DOUBLE",
+              fetch "complex" "complex_scalar_lmul",
+              fetch "complex" "complex_pow_def_compute",
+              fetch "real" "REAL_MUL_RID", fetch "real" "REAL_MUL_RZERO"];
 
 
 
