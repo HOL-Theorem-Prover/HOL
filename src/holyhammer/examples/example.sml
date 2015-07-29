@@ -31,6 +31,68 @@ val th = save_thm ("BASE_THM",METIS_PROVE ([th0,th1] @ lemmas) cj);
   Example 3
   -------------------------------------------------------------------------- *)
 
-load "complexTheory";
+(* Tools to fetch rewrite theorems (could be programmed using DB.match) *)
 
-val cj = ``IM (i*i) = - 1``;
+fun is_rwthm_of c (s,thm) =
+  let  
+    val thml = CONJUNCTS thm 
+    val th1 = SPEC_ALL (hd thml)
+    val tm1 = concl th1
+    val (c1,_) = strip_comb (lhs tm1) 
+  in
+    same_const c c1 
+  end
+  handle _ => false
+
+fun fetch_rwthm c = 
+  let 
+    val {Name,Thy,Ty} = dest_thy_const c
+    val thml = DB.thms Thy
+    val thml1 = filter (is_rwthm_of c) thml
+  in
+    (List.hd thml1)
+  end
+
+fun all_rwthm term =
+  let 
+    val cl = filter (not o (same_const equality)) (find_terms is_const term) 
+    val cl = mk_set cl
+    val thml = map fetch_rwthm cl;
+  in
+    thml
+  end
+
+(* Starting Proof *)
+
+load "complexTheory";
+val cj = ``i * i = -1``;
+(* all_rwthm cj; *)
+(* hh [complexTheory.complex_mul] cj; *)
+val eqthm = REWRITE_CONV [complexTheory.complex_mul] cj;
+val new_cj = rhs (concl eqthm);
+(* hh [complexTheory.complex_mul] cj; *)
+(* hh [] new_cj; *)
+val lemmas = [fetch "complex" "complex_neg", fetch "real" "REAL_MUL_RZERO",
+              fetch "real" "REAL_ADD_LID", fetch "real" "REAL_MUL_RID",
+              fetch "complex" "RE", fetch "pair" "FST",
+              fetch "complex" "complex_of_num",
+              fetch "complex" "complex_of_real", fetch "complex" "IM",
+              fetch "pair" "SND", fetch "real" "real_sub",
+              fetch "real" "REAL_ADD_RINV", fetch "complex" "i"];
+
+val th = METIS_PROVE lemmas new_cj;
+val th1 = EQ_MP (SYM eqthm) th;
+
+
+(*-------------------------------------------------------------------------- 
+  Example 4
+  -------------------------------------------------------------------------- *)
+
+load "complexTheory";
+val cj = ``(1:complex) + 1 = 2``;
+hh [] cj;
+all_rwthm cj;
+hh [complexTheory.complex_add] cj; (* minimization takes a long time *)
+
+
+

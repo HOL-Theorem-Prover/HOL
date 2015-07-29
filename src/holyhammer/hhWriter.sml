@@ -369,7 +369,6 @@ fun thm_of_depid (thy,n) =
 
 fun exists_depid did = can thm_of_depid did
 
-
 fun odep (name,dl) =
   let
     fun os_deps s = output (!oc_deps,s)
