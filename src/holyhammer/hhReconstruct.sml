@@ -67,9 +67,12 @@ fun minimize_loop l1 l2 cj =
     else minimize_loop (hd l2 :: l1) (tl l2) cj
 
 fun minimize l cj =
+  (
+  print "Minimization ...\n";
   if can (time_metis (map snd l) cj) 2.0
   then minimize_loop [] l cj
   else l
+  )  
 
 (*---------------------------------------------------------------------------
    Reconstruction and printing (depends on DB.fetch)
