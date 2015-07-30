@@ -4,13 +4,17 @@ Requires:
 
 * OCaml >= 3.12 (tested also with 4.01.0)
     sudo apt-get install ocaml 
-* g++ >= 4.8 (recent version with C++11 support) 
+* g++ >= 4.8 (recent version with C++11 support)  
+  First solution (Ubuntu):
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
     sudo apt-get install g++-4.8
-* perl (only if you use strategy scheduling for eprover)
+  Second solution (Linux 64 bit)
+    A binary is provided in src/holyhammer/predict, 
+    you can simply remove the Holmake file
+    from src/holyhammer/predict and relaunch the build.
 
-Install holyhammer:
+Install holyhammer: (done during the build)
  
   run Holmake in src/holyhammer/hh/hh1
   run Holmake in src/holyhammer/hh
@@ -18,35 +22,34 @@ Install holyhammer:
 
 Adding provers:
   
-  Eprover with some strategy is given by default (linux 64 bit). 
-  Please replace the binaries (provers/eprover/eprover) and 
-  (provers/eprover/epclextract) with a version adapted to your system if needed.
-  Alternatively, you can modify eprover.sh to directly call eprover/eprover losing the
-  benefit of strategy scheduling done by the perl script.
-    You can add the provers Z3 (4.0) and Vampire (2.6) 
-  in their respective directory provers/z3 and provers/vampire. 
+  Eprover and Z3 are given by default for linux 64 bit. 
+  Please replace the binary provers/eprover/eprover
+  You can add the provers Z3 (4.0) and Vampire (2.6) 
+  in their respective directory. 
   You may use different versions but parsing may need to be fixed in 
-  provers/prover.sh . 
-    Please be aware that the name of the binary for Z3 should be z3 and 
+  provers/"prover".sh . 
+  The name of the binary for Z3 should be z3 and 
   for Vampire it should be vampire.
+
+Modifying the time out and other ATP specific parameters: 
+  
+  Change the scripts provers/"prover".sh.
+  You do not need to restart hol4.
 
 Removing provers:
 
-  Delete the associating binaries (eprover,z3 or vampire), 
-  holyhammer will check that the file doesn't exists anymore and won't perform 
-  premise selection and translation for this prover.
+  Delete the binaries (eprover,z3 or vampire) in
+  their respective directory provers/"prover".
 
 Example: 
 
   rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
-  hh ``1 + 1 = 2``;
-  (* copy and paste the line starting with "val lemmas" *)
-  (* and call metis on these lemmas           *)
+  hh [] ``1 + 1 = 2``;
   METIS_PROVE lemmas ``1 + 1 = 2``; 
   load "complexTheory";
-  hh_atp "eprover" ``0 <> 1``;
+  hh_atp [] "eprover" ``0 <> 1``;
 
 Questions:
 
