@@ -56,6 +56,29 @@ fun reset_dicts () =
   writehh_names := dempty depid_compare;
   readhh_names := dempty String.compare
 )
+(*---------------------------------------------------------------------------
+   Absolute limit on the size of theorems (here to improve speed 
+   and efficiency)
+ ----------------------------------------------------------------------------*)
+val size_limit = 200
+fun size_of_term t = 
+       if is_abs t 
+    then let val (v,t') = dest_abs t in 1 + size_of_term t' end
+  else if is_comb t 
+    then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
+  else if is_var t orelse is_const t
+    then 1
+  else raise ERR "size_of_term" ""
+
+fun is_oversized_term t = size_of_term t > size_limit
+   
+fun is_oversized_thm thm =
+  let 
+    val thml = BODY_CONJUNCTS thm
+    val terml = map (concl o GEN_ALL o DISCH_ALL) thml
+  in
+    exists is_oversized_term terml
+  end
 
 (*---------------------------------------------------------------------------
    Save new objects in the dictionnaries.
@@ -425,7 +448,8 @@ fun write_hh_thy folder thy =
         let val f = depnumber_of o depid_of o dep_of o Thm.tag in
           f th1 < f th2
         end
-      val thml = sort compare (axl @ defl)
+      val thml = filter (fn ((_,x),_) => not (is_oversized_thm x)) (axl @ defl)
+      val thml = sort compare thml
     in
       app export_thm thml
     end
@@ -453,8 +477,10 @@ fun write_hh_thyl folder thyl =
    app (write_hh_thy folder) (sort_thyl thyl))
 
 fun write_conjecture file conjecture =
-  if type_of conjecture = bool
-  then
+  if is_oversized_term conjecture 
+    then raise ERR "write_conjecture" "too large conjecture"
+  else if type_of conjecture = bool
+    then
     (
     oc := openOut file;
     othm_conjecture conjecture;
