@@ -476,6 +476,7 @@ fun write_hh_thyl folder thyl =
   (reset_dicts();
    app (write_hh_thy folder) (sort_thyl thyl))
 
+
 fun write_conjecture file conjecture =
   if is_oversized_term conjecture 
     then raise ERR "write_conjecture" "too large conjecture"
