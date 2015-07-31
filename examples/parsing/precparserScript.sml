@@ -1,7 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
 open optionTheory listTheory
-open finite_mapTheory
 
 open lcsymtacs
 
@@ -40,7 +39,6 @@ val list_case_eq = prove_case_eq_thm{
 };
 
 
-
 val _ = Datatype`tokrel = Reduce | Shift`
 
 val tokrel_case_eq = prove_case_eq_thm {
@@ -49,7 +47,7 @@ val tokrel_case_eq = prove_case_eq_thm {
 };
 
 val _ = Datatype`
-  pMachine = <| rules : 'tok # 'tok |-> tokrel ; (* stk tok # strm tok *)
+  pMachine = <| rules : 'tok # 'tok -> tokrel option ; (* stk tok , strm tok *)
                 reduce : 'trm -> 'tok -> 'trm -> 'trm ;
                 lift : 'tok -> 'trm ;
                 isOp : 'tok -> bool ;
@@ -70,10 +68,8 @@ val precparse1_def = Define`
          if pM.isOp tok then
            case stk of
                INR tm2 :: INL opn :: INR tm1 :: stk_rest =>
-               (case FLOOKUP pM.rules (opn, tok) of
-                    SOME Shift =>
-                    SOME(INL tok :: INR tm2 :: INL opn :: INR tm1 :: stk_rest,
-                         strm_rest)
+               (case pM.rules (opn, tok) of
+                    SOME Shift => SOME(INL tok :: stk, strm_rest)
                   | SOME Reduce =>
                     SOME(INR (pM.reduce tm1 opn tm2) :: stk_rest,
                          tok :: strm_rest)
@@ -156,10 +152,10 @@ val precparse_def = tDefine "precparse" `
    metis_tac[precparse1_reduces]);
 
 (* test case
-local open stringTheory in end
+local open stringTheory finite_mapTheory in end
 val _ = Datatype`ast = Plus ast ast | Times ast ast | App ast ast | C char`
-val fm = ``FEMPTY |+ ((#"+",#"*"), Shift) |+ ((#"*",#"+"), Reduce)
-                  |+ ((#"+",#"+"), Reduce) |+ ((#"*",#"*"), Reduce)``
+val fm = ``FLOOKUP (FEMPTY |+ ((#"+",#"*"), Shift) |+ ((#"*",#"+"), Reduce)
+                      |+ ((#"+",#"+"), Reduce) |+ ((#"*",#"*"), Reduce))``
 
 val isOp = ``λc. c = #"*" ∨ c = #"+"``
 val reduce = ``λtm1 c tm2. if c = #"*" then Times tm1 tm2 else Plus tm1 tm2``
@@ -173,6 +169,8 @@ val m = ``<| rules :=  ^fm ;
 
 EVAL ``precparse ^m ([],"3*fx*7+9")``;
 EVAL ``precparse ^m ([],"3+fx*7+9")``;
+EVAL ``precparse ^m ([],"fxy")``;
+EVAL ``precparse ^m ([],"x*2")``;
 EVAL ``precparse ^m ([],"3++7")`` (* fails *);
 *)
 
