@@ -56,9 +56,10 @@ fun reset_dicts () =
   writehh_names := dempty depid_compare;
   readhh_names := dempty String.compare
 )
+
 (*---------------------------------------------------------------------------
-   Absolute limit on the size of theorems (here to improve speed 
-   and efficiency)
+   Absolute limit on the size of theorems (to be included in the incremental
+   export)
  ----------------------------------------------------------------------------*)
 val size_limit = 200
 fun size_of_term t = 
@@ -448,8 +449,8 @@ fun write_hh_thy folder thy =
         let val f = depnumber_of o depid_of o dep_of o Thm.tag in
           f th1 < f th2
         end
-      val thml = filter (fn ((_,x),_) => not (is_oversized_thm x)) (axl @ defl)
-      val thml = sort compare thml
+      (* val thml = filter (fn ((_,x),_) => not (is_oversized_thm x)) *)
+      val thml = sort compare (axl @ defl)
     in
       app export_thm thml
     end
@@ -478,9 +479,10 @@ fun write_hh_thyl folder thyl =
 
 
 fun write_conjecture file conjecture =
-  if is_oversized_term conjecture 
+  (* if is_oversized_term conjecture 
     then raise ERR "write_conjecture" "too large conjecture"
-  else if type_of conjecture = bool
+  else *)
+  if type_of conjecture = bool
     then
     (
     oc := openOut file;

@@ -7,4 +7,3 @@ mkdir $1
 }
 
 clean $THEORY_DIR
-clean $CT_DIR
