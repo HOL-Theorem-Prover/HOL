@@ -2,10 +2,10 @@ HOLyHammer is a machine learning for theorem proving framework.
 
 Requires:
 
-* OCaml >= 3.12 (tested also with 4.01.0)
+* OCaml >= 3.12
     sudo apt-get install ocaml 
 * g++ >= 4.8 (recent version with C++11 support)  
-  First solution (Ubuntu):
+  First solution (Ubuntu 12.04):
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
     sudo apt-get install g++-4.8
@@ -16,26 +16,20 @@ Requires:
 
 Install holyhammer: (done during the build)
  
+  run Holmake in src/holyhammer
   run Holmake in src/holyhammer/hh/hh1
   run Holmake in src/holyhammer/hh
   run Holmake in src/holyhammer/predict
+  run Holmake in src/holyhammer/predict/mepo
 
 Adding provers:
   
-  Eprover and Z3 are given by default for linux 64 bit. 
-  Please replace the binary provers/eprover/eprover
-  You can add the provers Z3 (4.0) and Vampire (2.6) 
-  in their respective directory. 
+  Eprover and Z3 are given by default are for linux 64 bit. 
+  Please replace the binary in provers/eprover/eprover if necessary.
   You may use different versions but parsing may need to be fixed in 
   provers/"prover".sh . 
-  The name of the binary for Z3 should be z3 and 
-  for Vampire it should be vampire.
-
-Modifying the time out and other ATP specific parameters: 
-  
-  Change the scripts provers/"prover".sh.
-  You do not need to restart hol4.
-
+  The name of the binary for Vampire has to be vampire.
+    
 Removing provers:
 
   Delete the binaries (eprover,z3 or vampire) in
@@ -49,7 +43,7 @@ Example:
   hh [] ``1 + 1 = 2``;
   METIS_PROVE lemmas ``1 + 1 = 2``; 
   load "complexTheory";
-  hh_atp [] "eprover" ``0 <> 1``;
+  hh_atp "eprover" [] ``0 <> 1``;
 
 Questions:
 

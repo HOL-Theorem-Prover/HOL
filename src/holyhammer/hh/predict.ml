@@ -70,15 +70,17 @@ let nb_advice2 fname limit =
     s s s limit s s s in
   cpp_advice2 fname cmd
 
-let mepo_incr = 30
-
 let mepo_advice2 fname limit =
   let cmd s = Printf.sprintf 
      "../predict/mepo/mepo3 %i %ssyms %sdep %i %sseq < %scsyms > %sout 2> %serror"
-     mepo_incr s s limit s s s s in
+     0 s s limit s s s s in
   cpp_advice2 fname cmd
 
-
+let geo_advice2 fname limit =
+  let cmd s = Printf.sprintf 
+     "../predict/mepo/geo %i %f %ssyms %sdep %i %sseq < %scsyms > %sout 2> %serror"
+     1 0.99 s s limit s s s s in
+  cpp_advice2 fname cmd
 
 (* Matching experiments *)
 

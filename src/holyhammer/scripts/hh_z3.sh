@@ -8,9 +8,9 @@ mkdir $1
 cd ../hh
 clean $Z3_DIR
 # Premise selection and translation
-./hh knn 32 ../theories ../theories/conjecture conjecture \
+./hh $1 $2 ../theories ../theories/conjecture conjecture \
 $Z3_DIR -thydep ../theories/thydep > /dev/null || \
 (echo "See README in src/holyhammer."; exit)
-# Run z3 on 32 premises
+# Run z3
 cd ../provers
-sh z3.sh
+sh z3.sh $3

@@ -17,9 +17,8 @@ let init_proving_env thy_dir cj_file cj_name thydep_file thylo_file =
   Thf1hh1.parse (tyl,cl,(cj_name,cj) :: thml) (* creating the term hash *)
 
 (* Predict n premises for a conjecture, saving results to directory. *)
-let predict (p : predictor) (out_dir : filepath) (n_preds : int) (cj_name : string) =
-  let cj = term_of cj_name in
-  predict_interactive p out_dir n_preds cj (gen_all ())
+let predict (p : predictor) (out_dir : filepath) (n_preds : int) (cj : string) =
+  predict_wrap p out_dir n_preds cj (gen_all ())
 
 (* Parse command-line arguments, exiting with help if not valid.
    TODO: Read a conjecture itself, not its name. *)

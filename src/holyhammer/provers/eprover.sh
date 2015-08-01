@@ -1,5 +1,4 @@
 # Time limit and I/O files
-TIM=5
 DIR="eprover_files"
 IN="$DIR/atp_in"
 OUT1="$DIR/eprover_out1"
@@ -10,7 +9,7 @@ ERROR="$DIR/eprover_error"
 
 # Running eprover (1.8)
 cd eprover
-timeout $TIM ./eprover -s --cpu-limit=$TIM --auto-schedule --tptp3-in \
+timeout $1 ./eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
 -R --print-statistics -p --tstp-format $IN  | grep "file[(]'\|# SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR

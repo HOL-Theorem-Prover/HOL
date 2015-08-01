@@ -8,9 +8,9 @@ mkdir $1
 cd ../hh
 clean $EPROVER_DIR
 # Premise selection and translation
-./hh knn 128 ../theories ../theories/conjecture conjecture \
+./hh $1 $2 ../theories ../theories/conjecture conjecture \
 $EPROVER_DIR -thydep ../theories/thydep > /dev/null || \
 (echo "See README in src/holyhammer."; exit)
-# Run eprover with 128 premises
+# Run eprover
 cd ../provers
-sh eprover.sh
+sh eprover.sh $3
