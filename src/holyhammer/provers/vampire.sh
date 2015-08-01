@@ -1,5 +1,4 @@
-# Time limit and I/O files
-TIM=5
+# I/O files
 DIR="vampire_files"
 IN="$DIR/atp_in"
 OUT="$DIR/vampire_out"

@@ -1,5 +1,4 @@
 # Time limit and I/O files
-TIM=5
 DIR="z3_files"
 IN="$DIR/atp_in"
 OUT1="$DIR/z3_out1"
@@ -10,8 +9,8 @@ ERROR="$DIR/z3_error"
 
 # Running Z3 (4.0)
 cd z3
-timeout $TIM ./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
--T:$TIM $IN > $OUT1 2> $ERROR
+timeout $1 ./z3 -tptp DISPLAY_UNSAT_CORE=true ELIM_QUANTIFIERS=true PULL_NESTED_QUANTIFIERS=true \
+-T:$1 $IN > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS 2> $ERROR

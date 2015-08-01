@@ -44,6 +44,7 @@ let parse_commandline () =
       "knn" -> KNN
     | "nbayes" -> NaiveBayes
     | "mepo" -> Mepo
+    | "geo" -> Geo
     | _ -> failwith "Unknown predictor." in
   let n_predictions = try int_of_string (anon_tab.(1))
     with _ -> failwith "Number of predictions have to be an integer." in

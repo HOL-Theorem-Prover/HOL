@@ -13,5 +13,6 @@ sig
   val reset_hh         : unit -> unit
   val set_prediction   : ATP -> int -> unit 
   val set_predictor    : ATP -> PREDICTOR -> unit 
+  val atp_settings     : ATP -> (PREDICTOR * int * int)
 
 end
