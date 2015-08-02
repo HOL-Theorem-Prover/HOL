@@ -48,10 +48,10 @@ val tokrel_case_eq = prove_case_eq_thm {
 
 val _ = Datatype`
   pMachine = <| rules : 'tok # 'tok -> tokrel option ; (* stk tok , strm tok *)
-                reduce : 'trm -> 'tok -> 'trm -> 'trm ;
+                reduce : 'trm -> 'tok -> 'trm -> 'trm option ;
                 lift : 'tok -> 'trm ;
                 isOp : 'tok -> bool ;
-                mkApp : 'trm -> 'trm -> 'trm |>
+                mkApp : 'trm -> 'trm -> 'trm option |>
 `;
 
 
@@ -60,10 +60,10 @@ val precparse1_def = Define`
   precparse1 pM (stk, strm) =
      case strm of
          [] =>
-         (case stk of
-              INR tm2 :: INL opn :: INR tm1 :: rest =>
-                SOME(INR (pM.reduce tm1 opn tm2) :: rest, [])
-            | _ => NONE)
+           (case stk of
+               INR tm2 :: INL opn :: INR tm1 :: rest =>
+                 OPTION_MAP (λr. (INR r :: rest, [])) (pM.reduce tm1 opn tm2)
+             | _ => NONE)
        | tok :: strm_rest =>
          if pM.isOp tok then
            case stk of
@@ -71,8 +71,8 @@ val precparse1_def = Define`
                (case pM.rules (opn, tok) of
                     SOME Shift => SOME(INL tok :: stk, strm_rest)
                   | SOME Reduce =>
-                    SOME(INR (pM.reduce tm1 opn tm2) :: stk_rest,
-                         tok :: strm_rest)
+                      OPTION_MAP (λr. (INR r :: stk_rest, tok :: strm_rest))
+                                 (pM.reduce tm1 opn tm2)
                   | NONE => NONE)
              | [INR tm] => SOME([INL tok; INR tm], strm_rest)
              | _ => NONE
@@ -80,7 +80,8 @@ val precparse1_def = Define`
            case stk of
                [] => SOME([INR (pM.lift tok)], strm_rest)
              | INR ftm :: stk_rest =>
-               SOME(INR (pM.mkApp ftm (pM.lift tok)) :: stk_rest, strm_rest)
+                 OPTION_MAP (λr. (INR r :: stk_rest, strm_rest))
+                            (pM.mkApp ftm (pM.lift tok))
              | INL _ :: _ => SOME(INR (pM.lift tok) :: stk, strm_rest)
 `;
 
@@ -158,14 +159,15 @@ val fm = ``FLOOKUP (FEMPTY |+ ((#"+",#"*"), Shift) |+ ((#"*",#"+"), Reduce)
                       |+ ((#"+",#"+"), Reduce) |+ ((#"*",#"*"), Reduce))``
 
 val isOp = ``λc. c = #"*" ∨ c = #"+"``
-val reduce = ``λtm1 c tm2. if c = #"*" then Times tm1 tm2 else Plus tm1 tm2``
+val reduce = ``λtm1 c tm2. if c = #"*" then SOME (Times tm1 tm2)
+                           else SOME (Plus tm1 tm2)``
 val lift = ``C``
 
 val m = ``<| rules :=  ^fm ;
              reduce := ^reduce ;
              lift := C;
              isOp := ^isOp;
-             mkApp := App |>``
+             mkApp := λt1 t2. SOME (App t1 t2) |>``
 
 EVAL ``precparse ^m ([],"3*fx*7+9")``;
 EVAL ``precparse ^m ([],"3+fx*7+9")``;
