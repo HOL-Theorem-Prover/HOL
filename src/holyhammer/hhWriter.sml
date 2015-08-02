@@ -419,7 +419,7 @@ fun export_thm ((name,thm),role) =
   end
 
 (*---------------------------------------------------------------------------
-   Printing theories.
+   Printing theories
  ----------------------------------------------------------------------------*)
 
 fun hh_thy_start folder thy =

@@ -8,7 +8,7 @@ Requires:
   First solution (Ubuntu 12.04):
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
-    sudo apt-get install g++-4.8
+    sudo apt-get install g++
   Second solution (Linux 64 bit):
     A binary is provided in src/holyhammer/predict, 
     you can simply remove the Holmake file
@@ -35,6 +35,14 @@ Removing provers:
   Delete the binaries (eprover,z3 or vampire) in
   their respective directory provers/"prover".
 
+Predictors:
+  The two best predictors are KNN and Mepo. 
+  Mepo works best for a definition based proof with small theorems
+  KNN learns from previous proofs so it is useful on a well developped theories.
+  The default predictors is KNN.
+  Please switch between them by using 
+  set_predictors Mepo; and set_predictors Knn;
+   
 Example: 
 
   rlwrap bin/hol

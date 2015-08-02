@@ -16,11 +16,10 @@ struct
 open hhWriter hhReconstruct
 
 val ERR = mk_HOL_ERR "holyHammer"
-val hh_dir = HOLDIR ^ "/src/holyhammer"
-val scripts_dir = hh_dir ^ "/scripts"
-val thy_dir = hh_dir ^ "/theories"
 
-(* Settings *)
+(*---------------------------------------------------------------------------
+   Settings
+ ----------------------------------------------------------------------------*)
 
 datatype PREDICTOR = KNN | Mepo | NBayes | Geo
 datatype ATP = Eprover | Vampire | Z3
@@ -87,7 +86,14 @@ fun set_predictor atp pred = case atp of
   | Vampire => change_pred vampire_settings pred
   | Z3      => change_pred z3_settings pred
  
-(* Prover dependent names *)
+(*---------------------------------------------------------------------------
+   Directories
+ ----------------------------------------------------------------------------*)
+
+val hh_dir = HOLDIR ^ "/src/holyhammer"
+val scripts_dir = hh_dir ^ "/scripts"
+val thy_dir = hh_dir ^ "/theories"
+
 fun dir_of_prover atp =
   let val atp_name = name_of_atp atp in
     hh_dir ^ "/provers/" ^ atp_name ^ "/" ^ atp_name ^ "_files"
@@ -105,7 +111,10 @@ fun status_of_prover atp =
 
 fun hh_of_prover atp = "hh_" ^ name_of_atp atp ^ ".sh"
   
-(* Export object from the loaded theories *)
+(*---------------------------------------------------------------------------
+   Export
+ ----------------------------------------------------------------------------*)
+
 fun export cj =
   let
     val ct   = current_theory ()
@@ -118,6 +127,10 @@ fun export cj =
     (* write the dependencies between theories *)
     write_thydep (thy_dir ^ "/thydep") thyl
   end
+
+(*---------------------------------------------------------------------------
+   Main helpers
+ ----------------------------------------------------------------------------*)
 
 fun mk_argl () =
   let 
@@ -136,6 +149,13 @@ fun prepare_cj thml cj =
   then cj 
   else mk_imp (list_mk_conj (map (concl o GEN_ALL o DISCH_ALL) thml),cj)
  
+fun cmd_in_dir dir cmd =
+  OS.Process.system ("cd " ^ dir ^ "; " ^ cmd);
+
+(*---------------------------------------------------------------------------
+   Main functions
+ ----------------------------------------------------------------------------*)
+
 (* Try every provers in parallel: eprover, vampire and z3. *)
 fun hh thml cj =
   let
@@ -143,11 +163,9 @@ fun hh thml cj =
                    [Eprover,Vampire,Z3]
     val new_cj = prepare_cj thml cj
   in
+    cmd_in_dir scripts_dir "sh hh_clean.sh";
     export new_cj;
-    OS.Process.system 
-      ("cd " ^ scripts_dir ^ "; " ^
-       "sh hh_clean.sh; " ^
-       "sh hh.sh " ^ mk_argl());
+    cmd_in_dir scripts_dir ("sh hh.sh " ^ mk_argl());
     reconstructl thml atpfilel cj
   end
 
@@ -161,12 +179,12 @@ fun hh_atp atp thml cj =
     val argl = name_of_predictor p ^ " " ^ int_to_string n ^ " " ^ 
                int_to_string t
   in
+    cmd_in_dir scripts_dir "sh hh_clean.sh";
     export new_cj;
-    OS.Process.system ("cd " ^ scripts_dir ^ "; " ^ 
-                       "sh hh_clean.sh; " ^
-                       "sh " ^ hh_of_prover atp ^ " " ^ argl);
+    cmd_in_dir scripts_dir ("sh " ^ hh_of_prover atp ^ " " ^ argl);
     reconstruct thml (status_of_prover atp, out_of_prover atp) cj
   end
 
+fun hh_goal thml (goal as (tml,tm)) = hh thml (list_mk_imp (tml,tm))
 
 end
