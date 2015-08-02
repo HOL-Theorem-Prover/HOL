@@ -62,19 +62,19 @@ fun reset_dicts () =
    export)
  ----------------------------------------------------------------------------*)
 val size_limit = 200
-fun size_of_term t = 
-       if is_abs t 
+fun size_of_term t =
+       if is_abs t
     then let val (v,t') = dest_abs t in 1 + size_of_term t' end
-  else if is_comb t 
+  else if is_comb t
     then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
   else if is_var t orelse is_const t
     then 1
   else raise ERR "size_of_term" ""
 
 fun is_oversized_term t = size_of_term t > size_limit
-   
+
 fun is_oversized_thm thm =
-  let 
+  let
     val thml = BODY_CONJUNCTS thm
     val terml = map (concl o GEN_ALL o DISCH_ALL) thml
   in
@@ -479,7 +479,7 @@ fun write_hh_thyl folder thyl =
 
 
 fun write_conjecture file conjecture =
-  (* if is_oversized_term conjecture 
+  (* if is_oversized_term conjecture
     then raise ERR "write_conjecture" "too large conjecture"
   else *)
   if type_of conjecture = bool

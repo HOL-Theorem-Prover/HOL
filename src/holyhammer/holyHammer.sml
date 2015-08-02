@@ -35,7 +35,7 @@ fun name_of_predictor predictor = case predictor of
   | NBayes  => "nbayes"
   | Geo     => "geo"
 
-val eprover_settings = ref (KNN,128,5) 
+val eprover_settings = ref (KNN,128,5)
 val vampire_settings = ref (KNN,96,5)
 val z3_settings  = ref (KNN,32,5)
 
@@ -55,20 +55,20 @@ fun atp_settings atp = case atp of
 
 fun set_minimization b = minimize_flag := b
 
-fun set_timeout time = 
+fun set_timeout time =
   (
   change_time eprover_settings time;
   change_time vampire_settings time;
   change_time z3_settings time
   )
 
-fun set_predictors pred = 
+fun set_predictors pred =
   (
   change_pred eprover_settings pred;
   change_pred vampire_settings pred;
   change_pred z3_settings pred
   )
- 
+
 fun reset_hh () =
   (
    eprover_settings := (KNN,128,5);
@@ -85,7 +85,7 @@ fun set_predictor atp pred = case atp of
     Eprover => change_pred eprover_settings pred
   | Vampire => change_pred vampire_settings pred
   | Z3      => change_pred z3_settings pred
- 
+
 (*---------------------------------------------------------------------------
    Directories
  ----------------------------------------------------------------------------*)
@@ -110,7 +110,7 @@ fun status_of_prover atp =
   end
 
 fun hh_of_prover atp = "hh_" ^ name_of_atp atp ^ ".sh"
-  
+
 (*---------------------------------------------------------------------------
    Export
  ----------------------------------------------------------------------------*)
@@ -133,7 +133,7 @@ fun export cj =
  ----------------------------------------------------------------------------*)
 
 fun mk_argl () =
-  let 
+  let
     val (p1,n1,t1) = !eprover_settings
     val (p2,n2,t2) = !vampire_settings
     val (p3,n3,t3) = !z3_settings
@@ -145,10 +145,10 @@ fun mk_argl () =
   end
 
 fun prepare_cj thml cj =
-  if null thml 
-  then cj 
+  if null thml
+  then cj
   else mk_imp (list_mk_conj (map (concl o GEN_ALL o DISCH_ALL) thml),cj)
- 
+
 fun cmd_in_dir dir cmd =
   OS.Process.system ("cd " ^ dir ^ "; " ^ cmd);
 
@@ -173,10 +173,10 @@ fun hh thml cj =
    ("eprover", "vampire" or "z3") *)
 
 fun hh_atp atp thml cj =
-  let 
+  let
     val new_cj = prepare_cj thml cj
     val (p,n,t) = atp_settings atp
-    val argl = name_of_predictor p ^ " " ^ int_to_string n ^ " " ^ 
+    val argl = name_of_predictor p ^ " " ^ int_to_string n ^ " " ^
                int_to_string t
   in
     cmd_in_dir scripts_dir "sh hh_clean.sh";

@@ -72,7 +72,7 @@ fun minimize l cj =
   if can (time_metis (map snd l) cj) 2.0
   then minimize_loop [] l cj
   else l
-  )  
+  )
 
 (*---------------------------------------------------------------------------
    Reconstruction and printing (depends on DB.fetch)
@@ -80,7 +80,7 @@ fun minimize l cj =
 
 exception Status of string
 
-val ppstrm_stdout = 
+val ppstrm_stdout =
   PP.mk_ppstream {consumer = fn s => TextIO.output(TextIO.stdOut, s),
                   linewidth = 80,
                   flush = fn () => TextIO.flushOut TextIO.stdOut}
@@ -89,11 +89,11 @@ val ppstrm_stdout =
 fun depid_of_thm thm = depid_of (dep_of (tag thm))
 fun has_depid (name,thm) = can depid_of_thm thm
 
-fun pp_lemmas ppstrm lemmas = 
+fun pp_lemmas ppstrm lemmas =
   let
     open Portable
     val {add_string,add_break,begin_block,
-         end_block,add_newline,flush_ppstream,...} = 
+         end_block,add_newline,flush_ppstream,...} =
         with_ppstream ppstrm
     fun pp_l_aux g L = case L of
         []     => ()
@@ -111,7 +111,7 @@ fun pp_lemmas ppstrm lemmas =
       let val (thy,_) = depid_of (dep_of (tag thm)) in
         add_string (String.concatWith " " ["fetch", quote thy, quote name])
       end
-  in 
+  in
     begin_block INCONSISTENT 0;
     add_string "val lemmas = ";
     pp_l pp_lemma lemmas;
