@@ -15,9 +15,10 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term
+open Feedback Lib Term Tag Dep
 
 type 'a set = 'a HOLset.set;
+type depdisk = (string * int) * ((string * int list) list) 
 type tag = Tag.tag
 
 val --> = Type.-->;
@@ -715,7 +716,7 @@ fun CHOOSE (v,xth) bth =
  *                      th2;
  *---------------------------------------------------------------------------*)
 
-fun CONJ th1 th2 =
+fun CONJ th1 th2 = 
    make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
@@ -775,7 +776,7 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
+  make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -790,12 +791,12 @@ fun CONJUNCT2 th =
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w))
- handle HOL_ERR _ => ERR "DISJ1" "";
+fun DISJ1 th w = make_thm Count.Disj1 
+  (tag th, hypset th, Susp.force mk_disj (concl th, w))
+  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
-(*---------------------------------------------------------------------------
+(*------------------------  ---------------------------------------------------
  * Right disjunction introduction
  *
  *      A |- t2
@@ -807,8 +808,8 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th))
- handle HOL_ERR _ => ERR "DISJ2" "";
+  (tag th, hypset th, Susp.force mk_disj(w,concl th))
+  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
 (*---------------------------------------------------------------------------
@@ -1207,16 +1208,38 @@ in
   mk_defn_thm (tag th, subst (map2 addc V cnames) body)
 end
 
+(* ----------------------------------------------------------------------
+    Creating a theorem from disk
+   ---------------------------------------------------------------------- *)
 
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Saving dependencies of a theorem
+   ---------------------------------------------------------------------- *)
+
+(* Warning: This reference is automatically reset to 0 each time you create
+   a theory. *)
+val thm_order = ref 0
+
+fun save_dep thy (th as (THM(t,h,c))) =
+  let
+    val did = (thy,!thm_order)
+    val dl  = (transfer_depidl o dep_of o tag) th
+    val dep = DEP_SAVED(did,dl)
+  in
+    thm_order := (!thm_order) + 1;
+    THM(Tag.set_dep dep t,h,c)
+  end
+
 
 end (* Thm *)

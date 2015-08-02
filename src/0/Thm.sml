@@ -15,9 +15,10 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term KernelTypes Tag
+open Feedback Lib Term KernelTypes Tag Dep
 
 type 'a set = 'a HOLset.set;
+type depdisk     = (string * int) * ((string * int list) list) 
 
 val --> = Type.-->;
 infixr 3 -->;
@@ -757,7 +758,6 @@ fun conj1 tm =
     if Name="/\\" andalso Thy="bool" then M else ERR "" ""
   end
 
-
 fun CONJUNCT1 th =
   make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
@@ -786,7 +786,7 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
+  make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -802,8 +802,8 @@ fun CONJUNCT2 th =
  *---------------------------------------------------------------------------*)
 
 fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w))
- handle HOL_ERR _ => ERR "DISJ1" "";
+  (tag th, hypset th, Susp.force mk_disj (concl th, w))
+  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
 (*---------------------------------------------------------------------------
@@ -818,8 +818,8 @@ fun DISJ1 th w = make_thm Count.Disj1
  *---------------------------------------------------------------------------*)
 
 fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th))
- handle HOL_ERR _ => ERR "DISJ2" "";
+  (tag th, hypset th, Susp.force mk_disj(w,concl th))
+  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
 (*---------------------------------------------------------------------------
@@ -1216,21 +1216,38 @@ in
   mk_defn_thm (tag th, subst (map2 addc V cnames) body)
 end
 
-
-
-
-
-
+(* ----------------------------------------------------------------------
+    Creating a theorem from disk
+   ---------------------------------------------------------------------- *)
 
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Saving dependencies of a theorem
+   ---------------------------------------------------------------------- *)
+
+(* Warning: This reference is automatically reset to 0 each time you create
+   a theory. *)
+val thm_order = ref 0
+
+fun save_dep thy (th as (THM(t,h,c))) =
+  let
+    val did = (thy,!thm_order)
+    val dl  = (transfer_depidl o dep_of o tag) th
+    val dep = DEP_SAVED(did,dl)
+  in
+    thm_order := (!thm_order) + 1;
+    THM(Tag.set_dep dep t,h,c)
+  end
+
 
 end (* Thm *)

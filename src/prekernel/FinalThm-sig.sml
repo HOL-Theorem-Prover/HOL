@@ -5,7 +5,8 @@ sig
   type term
   type hol_type
   type 'a set   = 'a HOLset.set
-
+  type depdisk  = (string * int) * ((string * int list) list) 
+    
   val kernelid : string
 
   (* Simple operations on the type of theorems *)
@@ -115,5 +116,11 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : string list * term list -> thm
+  val disk_thm      : (depdisk * string list) * term list -> thm
+
+  (* Saving proof dependencies *)
+
+  val save_dep : string -> thm -> thm
+
+
 end;

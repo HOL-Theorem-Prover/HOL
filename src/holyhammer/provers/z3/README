@@ -1,0 +1,2 @@
+The current executable works for linux 64bit. 
+You may replace Z3(4.0) here, if you don't want to use it you can remove it.
