@@ -18,6 +18,7 @@ struct
 open Feedback Lib Term
 
 type 'a set = 'a HOLset.set;
+type depdisk = (string * int) * ((string * int list) list);
 type tag = Tag.tag
 
 val --> = Type.-->;
@@ -1262,16 +1263,38 @@ in
 end
 
 
+(* ----------------------------------------------------------------------
+    Creating a theorem from disk
+   ---------------------------------------------------------------------- *)
+
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm (s, termlist) = let
+fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in
-  mk_disk_thm(Tag.read_disk_tag s,list_hyp asl,c,Axiom_prf)
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 end
 end; (* local *)
+
+(* ----------------------------------------------------------------------
+    Saving dependencies of a theorem
+   ---------------------------------------------------------------------- *)
+
+(* This reference is automatically reset to 0 each time you create
+   a theory. *)
+val thm_order = ref 0
+
+fun save_dep thy (th as (THM(t,h,c))) =
+  let
+    val did = (thy,!thm_order)
+    val dl  = (transfer_depidl o dep_of o tag) th
+    val dep = DEP_SAVED(did,dl)
+  in
+    thm_order := (!thm_order) + 1;
+    THM(Tag.set_dep dep t,h,c)
+  end
 
 (* Some OpenTheory kernel rules *)
 fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let

@@ -534,8 +534,9 @@ local
   val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 in
 fun save_thm (name,th) =
-      (check_name true ("save_thm",name)
-       ; if uptodate_thm th then add_thmCT(name,th)
+    let val th' = save_dep (CTname()) th in
+       check_name true ("save_thm",name)
+       ; if uptodate_thm th' then add_thmCT(name,th')
          else raise DATED_ERR "save_thm" name
        ; if !save_thm_reporting = 0 then ()
          else if !Globals.interactive then
@@ -545,25 +546,29 @@ fun save_thm (name,th) =
              ()
          else
            mesg ("Saved theorem _____ " ^ Lib.quote name ^ "\n")
-       ; th)
+       ; th'
+    end
 
 fun new_axiom (name,tm) =
-   let val rname = Nonce.mk name
-       val axiom = Thm.mk_axiom_thm (rname,tm)
-       val  _ = check_name false ("new_axiom",name)
-   in if uptodate_term tm then add_axiomCT(rname,axiom)
-      else raise DATED_ERR "new_axiom" name
-      ; axiom
-   end
+    let val rname  = Nonce.mk name
+        val axiom  = Thm.mk_axiom_thm (rname,tm)
+        val axiom' = save_dep (CTname()) axiom
+        val  _     = check_name false ("new_axiom",name)
+    in if uptodate_term tm then add_axiomCT(rname,axiom')
+       else raise DATED_ERR "new_axiom" name
+       ; axiom'
+    end
 
 fun store_definition(name, def) =
-    let val ()  = check_name true ("store_definition",name)
+    let
+      val def' = save_dep (CTname()) def
+      val ()  = check_name true ("store_definition",name)
     in
-      if uptodate_thm def then ()
+      if uptodate_thm def' then ()
       else raise DATED_ERR "store_definition" name
-      ; add_defnCT(name,def)
-      ; def
-  end
+      ; add_defnCT(name,def')
+      ; def'
+    end
 
 
 end;
