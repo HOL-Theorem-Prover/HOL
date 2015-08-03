@@ -15,7 +15,7 @@ struct
 
    fun dim s = IntInf.<< (1, Word.fromInt s)
    fun pdim s = dim s - 1
-   fun modDim s n = IntInf.andb (n, pdim s)
+   fun BV (n, s) = B (IntInf.andb (n, pdim s), s)
 
    fun UINT_MAX s = B (pdim s, s)
    fun INT_MIN s = B (dim (s - 1), s)
@@ -23,7 +23,7 @@ struct
    fun zero s = B (0, s)
    fun one s = B (1, s)
 
-   fun fromInt (n, s) = B (modDim s n, s)
+   val fromInt = BV
    fun fromNat (n, s) = fromInt (Nat.toInt n, s)
    fun toNat (B (i, _)) = Nat.fromInt i
    val toUInt = Nat.toInt o toNat
@@ -75,7 +75,7 @@ struct
    fun lsb (B (a, _)) = Int.rem (a, 2) = 1
    fun msb a = bit (a, Nat.- (size a, Nat.one))
 
-   fun neg (B (a, s)) = B (modDim s (Int.- (dim s, a)), s)
+   fun neg (B (a, s)) = BV (Int.- (dim s, a), s)
 
    fun toInt a = if msb a then Int.~ (toUInt (neg a)) else toUInt a
 
@@ -212,7 +212,7 @@ struct
    fun smax (w1, w2 as B (_, s)) = fromInt (Int.max (toInt w1, toInt w2), s)
 
    fun op << (B (v, s), n) =
-      B (modDim s (IntInf.<< (v, Word.fromInt (Int.min (n, s)))), s)
+      BV (IntInf.<< (v, Word.fromInt (Int.min (n, s))), s)
 
    fun op >>+ (B (v, s), n) = B (IntInf.~>> (v, Word.fromInt n), s)
 
@@ -237,12 +237,12 @@ struct
    fun op #>>^ (w, v) = w #>> toNat v
    fun op #<<^ (w, v) = w #<< toNat v
 
-   fun op * (B (v1, _), B (v2, s)) = B (modDim s (Int.* (v1, v2)), s)
-   fun op + (B (v1, _), B (v2, s)) = B (modDim s (Int.+ (v1, v2)), s)
+   fun op * (B (v1, _), B (v2, s)) = BV (Int.* (v1, v2), s)
+   fun op + (B (v1, _), B (v2, s)) = BV (Int.+ (v1, v2), s)
 
-   fun op ~ (B (a, s)) = B (modDim s (IntInf.notb a), s)
+   fun op ~ (B (a, s)) = BV (IntInf.notb a, s)
 
-   fun abs a = if a < B (0, size a) then neg a else a
+   fun abs a = if msb a then neg a else a
 
    fun op - (a, b) = a + neg b
 
