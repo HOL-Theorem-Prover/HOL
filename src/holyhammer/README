@@ -38,8 +38,8 @@ Removing provers:
 Predictors:
   The two best predictors are KNN and Mepo. 
   Mepo works best for a definition based proof with small theorems
-  KNN learns from previous proofs so it is useful on well developped theories.
-  The default predictors is KNN.
+  KNN learns from previous proofs so it is useful on well developed theories.
+  The default predictor is KNN.
   Please switch between them if the proof fails by using
   "set_predictors Mepo;" and "set_predictors Knn;"
    
