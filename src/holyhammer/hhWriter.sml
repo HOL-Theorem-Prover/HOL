@@ -12,7 +12,7 @@ structure hhWriter :> hhWriter =
 struct
 
 
-open HolKernel Abbrev boolLib TextIO Tag Dep
+open HolKernel boolLib TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 

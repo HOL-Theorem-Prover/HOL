@@ -11,7 +11,7 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel Abbrev boolLib Dep Tag hhWriter
+open HolKernel boolLib Dep Tag hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
