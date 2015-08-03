@@ -1247,7 +1247,7 @@ in
             then ground_mul_rule o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_LDM1_CONV)
          else if String.isPrefix "STM" s'
-            then stm_rule2 o stm_rule1 o rule o
+            then ground_mul_rule o stm_rule2 o stm_rule1 o rule o
                  Conv.CONV_RULE (Conv.DEPTH_CONV FOLDL_STM1_CONV)
          else Lib.I
       end
