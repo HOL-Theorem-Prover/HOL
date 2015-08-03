@@ -5,14 +5,10 @@ Requires:
 * OCaml >= 3.12
     sudo apt-get install ocaml 
 * g++ >= 4.8 (recent version with C++11 support)  
-  First solution (Ubuntu 12.04):
+  Solution Ubuntu 12.04:
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
     sudo apt-get install g++
-  Second solution (Linux 64 bit):
-    A binary is provided in src/holyhammer/predict, 
-    you can simply remove the Holmake file
-    from src/holyhammer/predict and relaunch the build.
 
 Install holyhammer: (done during the build)
  
