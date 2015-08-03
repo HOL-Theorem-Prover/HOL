@@ -15,7 +15,7 @@
 structure Thm :> Thm =
 struct
 
-open Feedback Lib Term
+open Feedback Lib Term Dep
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
