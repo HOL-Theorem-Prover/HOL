@@ -45,7 +45,6 @@ Predictors:
    
 Example: 
 
-  rlwrap bin/hol
   load "holyHammer";
   open holyHammer;
   hh [] ``1 + 1 = 2``;
