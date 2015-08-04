@@ -7,7 +7,7 @@ sig
   val sym_normalise : conv
   val findelim_deep_existential : conv
 
-end;
+end
 
 (*
     [eliminate_an_existential t] with t of the form

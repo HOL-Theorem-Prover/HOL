@@ -15,7 +15,7 @@ end
 val ERR = Feedback.mk_HOL_ERR "m0AssemblerLib"
 
 val hex = assemblerLib.hex
-fun hex32 w = hex (BitsN.bits (w, 31, 16)) ^ " " ^ hex (BitsN.bits (w, 15, 0))
+fun hex32 w = hex (BitsN.bits (31, 16) w) ^ " " ^ hex (BitsN.bits (15, 0) w)
 val w16 = assemblerLib.word 16
 
 fun isBranchLink (m0.Branch (m0.BranchLinkImmediate _)) = true
@@ -193,9 +193,9 @@ local
    fun pad16 s = StringCvt.padLeft #"0" 4 (L3.lowercase s)
 in
    fun thumbCondition opc =
-      if BitsN.toNat (BitsN.bits (opc, 15, 12)) = 13
+      if BitsN.toNat (BitsN.bits (15, 12) opc) = 13
          then let
-                 val code = BitsN.bits (opc, 11, 8)
+                 val code = BitsN.bits (11, 8) opc
               in
                  m0.SetPassCondition code
                ; code

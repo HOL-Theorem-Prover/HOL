@@ -6,7 +6,7 @@
 signature mesonLib =
 sig
 type thm = Thm.thm
-type tactic = Abbrev.tactic;
+type tactic = Abbrev.tactic
 
    val depth     : bool ref
    val prefine   : bool ref

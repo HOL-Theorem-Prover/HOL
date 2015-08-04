@@ -127,7 +127,7 @@ val uR_RSUBSET_uR_lex = Q.store_thm(
 `uR RSUBSET uR_lex`,
 srw_tac [][RSUBSET] >>
 PairCases_on`x` >> PairCases_on`y` >>
-Q.MATCH_RENAME_TAC `uR_lex (sx,c1,c2) (s,t1,t2)` [] >>
+Q.MATCH_RENAME_TAC `uR_lex (sx,c1,c2) (s,t1,t2)` >>
 FULL_SIMP_TAC (srw_ss()) [uR_def,uR_lex_def,measure_thm,inv_image_def,LEX_DEF] >>
 Cases_on `sx = s` >> srw_tac [][PSUBSET_DEF])
 
@@ -497,7 +497,7 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
     by (IMP_RES_TAC walk_var_vwalk THEN
         IMP_RES_TAC vwalk_to_var THEN
         IMP_RES_TAC NOT_FDOM_vwalk) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `walk s X = Const c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s _ = Const c` THEN
   `n NOTIN vars (walkstar s (Const c))`
     by (SRW_TAC [][walkstar_thm]) THEN
   METIS_TAC [uP_FUPDATE,walkstar_walk],
@@ -531,7 +531,7 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
     by (IMP_RES_TAC walk_var_vwalk THEN
         IMP_RES_TAC vwalk_to_var THEN
         IMP_RES_TAC NOT_FDOM_vwalk) THEN
-  Q.MATCH_ASSUM_RENAME_TAC `walk s X = Const c` ["X"] THEN
+  Q.MATCH_ASSUM_RENAME_TAC `walk s _ = Const c` THEN
   `n NOTIN vars (walkstar s (Const c))`
     by (SRW_TAC [][walkstar_thm]) THEN
   METIS_TAC [uP_FUPDATE,walkstar_walk,uP_sym],

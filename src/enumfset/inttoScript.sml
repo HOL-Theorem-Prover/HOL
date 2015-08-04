@@ -124,6 +124,5 @@ val ZERO_eq_neg_ZERO_thm = store_thm ("ZERO_eq_neg_ZERO_thm",
 SRW_TAC [] [TO_of_LinearOrder, intOrd, GSYM arithmeticTheory.ALT_ZERO]);
 
 val _ = export_theory ();
-val _ = print_theory "-";
 
 end;

@@ -2904,7 +2904,7 @@ theory can be found in \theoryimp{rich\_list}.
 
 The \theoryimp{sorting} theory defines a notion of two lists being
 permutations of each other, then defines a general notion of sorting,
-then shows that Quicksort is a sorting function. The 
+then shows that Quicksort is a sorting function. The
 \theoryimp{mergesort} theory defines Merge sort and shows that it is a stable
 sorting function.
 
@@ -3487,7 +3487,7 @@ In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), 
 The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
 The Unicode symbol for $\mathbb{U}$ is U+1D54C, and may not exist in many fonts.
 
-One of these forms will be used to print \holtxt{UNIV} by default.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!universal sets}One of these forms will be used to print \holtxt{UNIV} by default.
 The user trace (see Section~\ref{sec:traces}) \ml{"Univ~pretty-printing"} can be set to zero to cancel this behaviour.
 Additionally, the trace \ml{"Unicode Univ printing"} can be used to stop the U+1D54C syntax from being used, even if the Unicode trace is set.
 
@@ -3742,7 +3742,7 @@ proved:
 \end{hol}
 
 
-\subsubsection{Syntax for sets}\index{set theory notation}
+\subsubsection{Syntax for sets}\index{set theory notation}\label{sec:set-syntax}
 
 The special purpose set-theoretic notations
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} and
@@ -3892,8 +3892,9 @@ pairs in the \holtxt{vs} position can be omitted.)
 The unambiguous notation is printed by the pretty-printer whenever the
 set to be printed can not be expressed with the default notation, or
 if the trace variable with name \ml{pp\_unambiguous\_comprehensions}
-is set to \ml{true}.
-
+is set to \ml{1}.
+(If the same trace is set to \ml{2}, then the unambiguous notation will never be used.)
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!set comprehensions}
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 
@@ -4250,18 +4251,22 @@ in \theoryimp{relation}.
 
 The transitive closure (\holtxt{TC}) of a relation $R : \alpha
 \to\alpha\to\konst{bool}$ is defined inductively, as the least
-relation including $R$ and closed under transitivity. Similarly, the
+relation including $R$ and closed under transitivity.
+Similarly, the
 reflexive-transitive closure (\holtxt{RTC}) is defined to be the least
 relation closed under transitivity and reflexivity.
+The ASCII syntax for the transitive closure \holtxt{R\^{}+} is meant to suggest the prettier \holtxt{R${}^+$}.
+Similarly, \holtxt{R\^{}*} is meant to suggest \holtxt{R${}^*$}.
+Indeed, with Unicode enabled, transitive closure will print with a superscript \texttt{+}.
 %
 \begin{hol}
 \begin{verbatim}
    TC_DEF
-     |- TC R a b =
+     |- R^+ a b =
           !P. (!x y. R x y ==> P x y) /\
               (!x y z. P x y /\ P y z ==> P x z) ==> P a b
    RTC_DEF
-     |- RTC R a b =
+     |- R^* a b =
           !P. (!x. P x x) /\
               (!x y z. R x y /\ P y z ==> P x z) ==> P a b
 \end{verbatim}
@@ -4273,47 +4278,47 @@ From these definitions, one can recover the initial rules.
 \begin{hol}
 \begin{verbatim}
    TC_RULES
-     |- !R. (!x y. R x y ==> TC R x y) /\
-            (!x y z. TC R x y /\ TC R y z ==> TC R x z)
+     |- !R. (!x y. R x y ==> R^+ x y) /\
+            (!x y z. R^+ x y /\ R^+ y z ==> R^+ x z)
    RTC_RULES
-     |- !R. (!x. RTC R x x) /\
-            (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+     |- !R. (!x. R^* x x) /\
+            (!x y z. R x y /\ R^* y z ==> R^* x z)
    RTC_RULES_RIGHT1
-     |- !R. (!x. RTC R x x) /\
-            (!x y z. RTC R x y /\ R y z ==> RTC R x z)
+     |- !R. (!x. R^* x x) /\
+            (!x y z. R^* x y /\ R y z ==> R^* x z)
 \end{verbatim}
 \end{hol}
 %
 Notice that {\small\verb+RTC_RULES+}, in keeping with the definition
 of {\small\verb+RTC+}, extends an \verb+R+-step from \verb+x+ to
 \verb+y+ with a sequence of \verb+R+-steps from \verb+y+ to \verb+z+
-to construct \verb+RTC x z+. The theorem
+to construct \verb+R^* x z+. The theorem
 {\small\verb+RTC_RULES_RIGHT1+} first makes a sequence of \verb+R+
-steps and then a single \verb+R+ step to form \verb+RTC x z+. Similar
+steps and then a single \verb+R+ step to form \verb+R^* x z+. Similar
 alternative theorems are proved for case analysis and induction.
 
 For example, {\small\verb+TC_CASES1+} and {\small\verb+TC_CASES2+} in the
-following decompose {\small\verb+RTC R x z+} to either
-{\small\verb+R x y+} followed by {\small\verb+RTC R y z+}
+following decompose {\small\verb!R^+ x z!} to either
+{\small\verb+R x y+} followed by {\small\verb!R^+ y z!}
 ({\small\verb+TC_CASES1+})
 or
-{\small\verb+RTC R x y+} followed by {\small\verb+R y z+}
+{\small\verb!R^+ x y!} followed by {\small\verb+R y z+}
 ({\small\verb+TC_CASES2+}).
 
 %
 \begin{hol}
 \begin{verbatim}
    TC_CASES1
-     |- !R x z. TC R x z ==> R x z \/ ?y. R x y /\ TC R y z
+     |- !R x z. R^+ x z ==> R x z \/ ?y. R x y /\ R^+ y z
    TC_CASES2
-     |- !R x z. TC R x z ==> R x z \/ ?y. TC R x y /\ R y z
+     |- !R x z. R^+ x z ==> R x z \/ ?y. R^+ x y /\ R y z
 
    RTC_CASES1
-     |- !R x y. RTC R x y = (x = y) \/ ?u. R x u /\ RTC R u y
+     |- !R x y. R^* x y = (x = y) \/ ?u. R x u /\ R^* u y
    RTC_CASES2
-     |- !R x y. RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y
+     |- !R x y. R^* x y = (x = y) \/ ?u. R^* x u /\ R u y
    RTC_CASES_RTC_TWICE
-     |- !R x y. RTC R x y = ?u. RTC R x u /\ RTC R u y
+     |- !R x y. R^* x y = ?u. R^* x u /\ R^* u y
 \end{verbatim}
 \end{hol}
 
@@ -4326,19 +4331,19 @@ theorems, which have stronger induction hypotheses.
    TC_INDUCT
      |- !R P. (!x y. R x y ==> P x y) /\
               (!x y z. P x y /\ P y z ==> P x z)
-              ==> !u v. TC R u v ==> P u v
+              ==> !u v. R^+ u v ==> P u v
    RTC_INDUCT
      |- ! R P. (!x. P x x) /\
                (!x y z. R x y /\ P y z ==> P x z) ==>
-               (!x y. RTC R x y ==> P x y)
+               (!x y. R^* x y ==> P x y)
    TC_STRONG_INDUCT
      |- !R P. (!x y. R x y ==> P x y) /\
-              (!x y z. P x y /\ P y z /\ TC R x y /\ TC R y z ==> P x z) ==>
-              (!u v. TC R u v ==> P u v)
+              (!x y z. P x y /\ P y z /\ R^+ x y /\ R^+ y z ==> P x z) ==>
+              (!u v. R^+ u v ==> P u v)
    RTC_STRONG_INDUCT
      |- !R P. (!x. P x x) /\
-              (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
-              (!x y. RTC R x y ==> P x y)
+              (!x y z. R x y /\ R^* y z /\ P y z ==> P x z) ==>
+              (!x y. R^* x y ==> P x y)
 \end{verbatim}
 \end{hol}
 Variants of these induction theorems are also available which break
@@ -4350,12 +4355,14 @@ The reflexive~(\holtxt{RC}) and symmetric closures~(\holtxt{SC}) are
 straightforward to define. The equivalence closure
 ({\small\verb+EQC+}) is the symmetric then transitive then reflexive
 closure of $R$.
+When applied to an argument, as in \holtxt{EQC~R}, \holtxt{EQC} is written with the suffix \holtxt{\^{}=}.
+Note how the suffix binds more tightly than function application, so that in \ml{EQC_DEF}, \holtxt{RC} really is applied to the transitive closure of the symmetric closure of \holtxt{R}.
 %
 \begin{hol}
 \begin{verbatim}
    RC_DEF   |- RC R x y = (x = y) \/ R x y
    SC_DEF   |- SC R x y = R x y \/ R y x
-   EQC_DEF  |- EQC R = RC (TC (SC R))
+   EQC_DEF  |- R^= = RC (SC R)^+
 \end{verbatim}
 \end{hol}
 

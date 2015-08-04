@@ -496,5 +496,81 @@ in
   else die "FAILED"
 end
 
+val _ = tprint "Testing (foo THENL [...]) when foo solves"
+val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
+val _ = print "OK\n"
+
+val _ = tprint "Testing save_thm rejecting names"
+val badnames = ["::", "nil", "true", "false", "ref", "="]
+fun test s = (save_thm(s, TRUTH); die "FAILED!") handle HOL_ERR _ => ()
+val _ = List.app test badnames
+val _ = print "OK\n"
+
+val _ = let
+  val _ = tprint "Testing VALIDATE (1)"
+  val th' = Thm.mk_oracle_thm "Testing" ([], ``p' ==> q``) ;
+  val th = Thm.mk_oracle_thm "Testing" ([], ``p ==> q``) ;
+  val uth' = UNDISCH_ALL th' ;
+  val uth = UNDISCH_ALL th ;
+
+  val g = ([], ``p ==> q``) : goal ;
+  val ([g'], _) = STRIP_TAC g ;
+  val ([], _) = (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) g' ;
+  val ([_], _) = (VALIDATE (FIRST (map ACCEPT_TAC [uth', uth]))) g' ;
+  val true = (VALID (FIRST (map ACCEPT_TAC [uth', uth])) g' ; false)
+    handle HOL_ERR _ => true ;
+in print "OK\n"
+end handle _ => die "FAILED!"
+
+val _ = let
+  val _ = tprint "Testing VALIDATE (2)"
+  val g = ([], ``(p ==> q) ==> r``) : goal ;
+  val tac = STRIP_TAC THEN VALIDATE (POP_ASSUM (ASSUME_TAC o UNDISCH)) ;
+  val (ngs, vf) = VALID tac g ;
+
+  val tac1 = (VALIDATE (ASSUME_TAC (ASSUME ``x /\ y``))) ;
+  val tac2 = (SUBGOAL_THEN ``x /\ y`` ASSUME_TAC ) ;
+
+  val (ngs1, _) = VALID tac1 g ;
+  val (ngs2, _) = VALID tac2 g ;
+  val true = ngs1 = ngs2 ;
+in print "OK\n"
+end handle _ => die "FAILED!"
+
+val _ = let
+  val _ = tprint "Testing structural list-tactics"
+  val tac = REPEAT DISCH_TAC THEN REPEAT CONJ_TAC THEN_LT
+    EVERY_LT [ (ROTATE_LT 2),
+      (SPLIT_LT 2 (REVERSE_LT, ROTATE_LT 1)),
+      (HEADGOAL (POP_ASSUM ACCEPT_TAC)),
+      (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
+	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
+  val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let
+  val _ = tprint "Testing USE_SG_THEN"
+  val tac = REPEAT DISCH_TAC THEN CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2
+    THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
+    THEN (FIRST_ASSUM ACCEPT_TAC)
+  val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
+val _ = let
+  val _ = tprint "Testing USE_SG_THEN and VALIDATE_LT"
+  val tac = CONJ_TAC THEN REPEAT DISCH_TAC
+      THEN_LT EVERY_LT [VALIDATE_LT (USE_SG_THEN ACCEPT_TAC 1 2),
+	NTH_GOAL (REPEAT STRIP_TAC) 1 ]
+      THEN (POP_ASSUM MATCH_MP_TAC)
+      THEN_LT NTH_GOAL CONJ_TAC 2
+      THEN (FIRST_ASSUM ACCEPT_TAC)
+  val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
+    (p ==> q ==> (p ==> r) ==> r)``
+  val th = prove (g, tac) ;
+in if hyp th = [] then print "OK\n" else die "FAILED"
+end handle _ => die "FAILED!"
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

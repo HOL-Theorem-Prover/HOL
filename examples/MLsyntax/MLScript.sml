@@ -70,36 +70,36 @@ val _ = new_theory "ML";
     Define the type of variables.
  ---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `var = VAR of string`;
+val _ = Datatype `var = VAR string`;
 
 
 (*---------------------------------------------------------------------------
     Define the datatype of ML syntax trees.
  ---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-        `atexp = var_exp of var
-               | let_exp of dec => exp ;
+val _ = Datatype
+        `atexp = var_exp var
+               | let_exp dec exp ;
 
-           exp = aexp    of atexp
-               | app_exp of exp => atexp
-               | fn_exp  of match ;
+           exp = aexp    atexp
+               | app_exp exp atexp
+               | fn_exp  match ;
 
-         match = match  of rule
-               | matchl of rule => match ;
+         match = match  rule
+               | matchl rule match ;
 
-          rule = rule of pat => exp ;
+          rule = rule pat exp ;
 
-           dec = val_dec   of valbind
-               | local_dec of dec => dec
-               | seq_dec   of dec => dec ;
+           dec = val_dec   valbind
+               | local_dec dec dec
+               | seq_dec   dec dec ;
 
-       valbind = bind  of pat => exp
-               | bindl of pat => exp => valbind
-               | rec_bind of valbind ;
+       valbind = bind  pat exp
+               | bindl pat exp valbind
+               | rec_bind valbind ;
 
            pat = wild_pat
-               | var_pat of var`;
+               | var_pat var`;
 
 
 (*---------------------------------------------------------------------------

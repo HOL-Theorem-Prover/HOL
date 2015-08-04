@@ -1,7 +1,7 @@
 signature smpp =
 sig
 
-  type ('a,'b) t = ('a * HOLPP.ppstream) -> ('b * ('a * HOLPP.ppstream)) option
+  type ('a,'b) t = ('a,'b) term_pp_types.smppt
 
   val add_string : string -> ('a,unit) t
   val add_newline : ('a,unit) t

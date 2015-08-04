@@ -955,7 +955,6 @@ fun INST [] th = th
       else
         raise ERR "INST" "can only instantiate variables"
 
-
 (*---------------------------------------------------------------------------*
  * Now some derived rules optimized for computations, avoiding most          *
  * of useless type-checking, using pointer equality and delayed              *

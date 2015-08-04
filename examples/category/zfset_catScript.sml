@@ -41,7 +41,7 @@ val IsSmall_IMAGE = Q.store_thm(
 "IsSmall_IMAGE",
 `∀s f. IsSmall s ⇒ IsSmall (IMAGE f s)`,
 srw_tac [][IsSmall_def] >>
-qmatch_assum_rename_tac `INJ g s (explode z)` [] >>
+qmatch_assum_rename_tac `INJ g s (explode z)` >>
 map_every qexists_tac [`λx. g (@y. y ∈ s ∧ (f y = x))`,`z`] >>
 fsrw_tac [DNF_ss][INJ_DEF] >>
 srw_tac [][] >- (
@@ -60,7 +60,7 @@ val IsSmall_IMAGE_iff = Q.store_thm(
 `∀s t f. INJ f s t ⇒ (IsSmall (IMAGE f s) ⇔ IsSmall s)`,
 srw_tac [][EQ_IMP_THM] >>
 fsrw_tac [][IsSmall_def] >>
-qmatch_assum_rename_tac `INJ g (IMAGE f s) (explode z)` [] >>
+qmatch_assum_rename_tac `INJ g (IMAGE f s) (explode z)` >>
 map_every qexists_tac [`g o f`,`z`] >>
 fsrw_tac [DNF_ss][INJ_DEF]);
 
@@ -162,7 +162,7 @@ EQ_TAC >- (
   strip_tac >> res_tac >>
   qexists_tac `y` >> srw_tac [][] ) >>
 srw_tac [][] >>
-qmatch_rename_tac `THE (b x) In z` [] >>
+qmatch_rename_tac `THE (b x) In z` >>
 Cases_on `b x` >>
 res_tac >> fsrw_tac [][] >> srw_tac [][]);
 
@@ -372,7 +372,7 @@ conj_tac >- (
   unabbrev_all_tac >>
   srw_tac [][morphism_component_equality] >>
   fsrw_tac [][ComposeGraphFns] >>
-  qmatch_rename_tac `X = p.map` ["X"] >>
+  qmatch_rename_tac `_ = p.map` >>
   match_mp_tac FnEqThm >>
   map_every qexists_tac [`p.dom`,`p.cod`] >>
   fsrw_tac [][GraphFnAp,HasFnType_def] >>
@@ -382,7 +382,7 @@ conj_tac >- (
   fsrw_tac [][IsTypedFn_def] >>
   fsrw_tac [][Fst,Snd] )) >>
 srw_tac [][] >>
-qmatch_rename_tac `m1 = m2` [] >>
+qmatch_rename_tac `m1 = m2` >>
 first_assum (qspec_then `m1` mp_tac) >>
 first_x_assum (qspec_then `m2` mp_tac) >>
 ntac 2 strip_tac >>
@@ -397,7 +397,7 @@ srw_tac [][] >>
 `m1.map ' x In (p1.cod # p2.cod)` by metis_tac [InFn] >>
 `m2.map ' x In (p1.cod # p2.cod)` by metis_tac [InFn] >>
 fsrw_tac [][InProdEq] >>
-qmatch_rename_tac `Pair x11 x21 = Pair x12 x22` [] >>
+qmatch_rename_tac `Pair x11 x21 = Pair x12 x22` >>
 qmatch_assum_abbrev_tac `ComposeFn (X,Y,Z) (GraphFn (a#b) P) Q = R` >>
 map_every qunabbrev_tac [`P`,`Q`,`R`,`Z`] >>
 `(ComposeFn (X,Y,a) (GraphFn Y Fst) m1.map) ' x = p1.map ' x` by srw_tac [][] >>
@@ -1154,7 +1154,7 @@ srw_tac [][restrict_def] >>
 `g ∈ (ens_cat (homs c)).mor` by srw_tac [][] >>
 `h ∈ (ens_cat (homs c)).mor` by srw_tac [][] >>
 fsrw_tac [][morphism_component_equality] >>
-qmatch_rename_tac `zfel g.cod (g.map z) = zfel g.cod (h.map z)` [] >>
+qmatch_rename_tac `zfel g.cod (g.map z) = zfel g.cod (h.map z)` >>
 `GraphFn (tagged_homset c g.dom) (tag_fun c g) ' (Pair (the_hom_tag c g.dom) (zfel g.dom z)) =
  GraphFn (tagged_homset c h.dom) (tag_fun c h) ' (Pair (the_hom_tag c h.dom) (zfel h.dom z))`
 by metis_tac [] >>
@@ -1247,7 +1247,7 @@ fsrw_tac [][hom_tag_def] >>
 srw_tac [][] >>
 fsrw_tac [][is_self_hom_def] >>
 fsrw_tac [][hom_def,EXTENSION] >>
-qmatch_assum_rename_tac `!x. x :- a → b -:c = x :- z → z -:c` [] >>
+qmatch_assum_rename_tac `!x. x :- a → b -:c = x :- z → z -:c` >>
 `id z -: c :- z → z -:c` by metis_tac [id_maps_to] >>
 `id z -: c :- a → b -:c` by metis_tac [] >>
 fsrw_tac [][maps_to_in_def]);

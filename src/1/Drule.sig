@@ -10,6 +10,8 @@ sig
   val LIST_MK_EXISTS   : term list -> thm -> thm
   val SIMPLE_EXISTS    : term -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
+  val EXISTS_LEFT      : term list -> thm -> thm
+  val EXISTS_LEFT1     : term -> thm -> thm
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
@@ -19,12 +21,14 @@ sig
   val IMP_ANTISYM_RULE : thm -> thm -> thm
   val CONTR            : term -> thm -> thm
   val UNDISCH          : thm -> thm
+  val UNDISCH_TM       : thm -> term * thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm
   val SPEC_VAR         : thm -> term * thm
+  val SPEC_UNDISCH_EXL : thm -> thm
   val FORALL_EQ        : term -> thm -> thm
   val EXISTS_EQ        : term -> thm -> thm
   val SELECT_EQ        : term -> thm -> thm
@@ -33,6 +37,7 @@ sig
   val RIGHT_BETA       : thm -> thm
   val LIST_BETA_CONV   : term -> thm
   val RIGHT_LIST_BETA  : thm -> thm
+  val ASSUME_CONJS     : term -> thm
   val CONJUNCTS_AC     : term * term -> thm
   val DISJUNCTS_AC     : term * term -> thm
   val CONJ_DISCH       : term -> thm -> thm
@@ -70,6 +75,8 @@ sig
   val EXISTS_IMP       : term -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
                           -> thm -> thm
+  val INST_TT_HYPS     : (term,term)subst * (hol_type,hol_type)subst
+                          -> thm -> thm * term list
   val GSPEC            : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm

@@ -450,9 +450,7 @@ fun is_rec (Repeat _) = true
   | is_rec (ConsMerge (_, _, _, t)) = is_rec t
 
 local
-   val (_, _, _, is_abbrev) =
-      HolKernel.syntax_fns "marker" 1 HolKernel.dest_monop HolKernel.mk_monop
-         "Abbrev"
+   val (_, _, _, is_abbrev) = HolKernel.syntax_fns1 "marker" "Abbrev"
    fun get_Abbrev th =
       case Thm.hyp th of
          [h] => Lib.with_exn (Term.rand o HolKernel.find_term is_abbrev) h

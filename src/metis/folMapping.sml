@@ -444,6 +444,23 @@ end;
 (* Translate a HOL type to FOL, and back again.                              *)
 (* ------------------------------------------------------------------------- *)
 
+local
+  fun dest_type ty =
+    let
+      val {Args, Thy, Tyop} = dest_thy_type ty
+    in
+      (Thy ^ "$" ^ Tyop, Args)
+    end
+  fun mk_type (nm, args) =
+    let
+      val (ss1, ss2) = Substring.position "$" (Substring.full nm)
+      val thy = Substring.string ss1
+      val nm = Substring.slice(ss2, 1, NONE) |> Substring.string
+    in
+      mk_thy_type {Tyop = nm, Thy = thy, Args = args}
+    end
+in
+
 fun hol_type_to_fol tyV =
   let
     fun ty_to_fol hol_ty =
@@ -462,6 +479,7 @@ fun fol_type_to_hol (mlibTerm.Var v) = fake_new_tyvar (possibly dest_prime v)
   | fol_type_to_hol (mlibTerm.Fn (f, a)) =
   if not (is_prime f) then mk_type (f, map fol_type_to_hol a)
   else (assert (null a) (ERR "fol_type_to_hol" "bad prime"); mk_vartype f);
+end (* local *)
 
 val fol_bool = hol_type_to_fol [] bool;
 

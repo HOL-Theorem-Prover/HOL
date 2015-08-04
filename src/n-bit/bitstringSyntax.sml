@@ -5,11 +5,9 @@ open Abbrev HolKernel wordsSyntax bitstringTheory
 
 val ERR = mk_HOL_ERR "bitstringSyntax"
 
-fun syntax_fns n d m = HolKernel.syntax_fns "bitstring" n d m
-
 (* ----------------------------------------------------------------------- *)
 
-val s = syntax_fns 1 HolKernel.dest_monop HolKernel.mk_monop
+val s = HolKernel.syntax_fns1 "bitstring"
 
 val (n2v_tm, mk_n2v, dest_n2v, is_n2v) = s "n2v"
 val (v2n_tm, mk_v2n, dest_v2n, is_v2n) = s "v2n"
@@ -20,15 +18,17 @@ val (w2v_tm, mk_w2v, dest_w2v, is_w2v) = s "w2v"
 
 (* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . *)
 
-val s = syntax_fns 1
-   (fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w))
-   (fn tm => fn (v, ty) => Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, v))
-
-val (v2w_tm, mk_v2w, dest_v2w, is_v2w) = s "v2w"
+val (v2w_tm, mk_v2w, dest_v2w, is_v2w) =
+   HolKernel.syntax_fns
+   {n = 1,
+    dest = fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w),
+    make = fn tm => fn (v, ty) =>
+              Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, v)}
+   "bitstring" "v2w"
 
 (* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . *)
 
-val s = syntax_fns 2 HolKernel.dest_binop HolKernel.mk_binop
+val s = HolKernel.syntax_fns2 "bitstring"
 
 val (zero_extend_tm, mk_zero_extend, dest_zero_extend, is_zero_extend) =
   s "zero_extend"
@@ -52,14 +52,14 @@ val (replicate_tm, mk_replicate, dest_replicate, is_replicate) = s "replicate"
 
 (* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . *)
 
-val s = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
+val s = HolKernel.syntax_fns3 "bitstring"
 
 val (field_tm, mk_field, dest_field, is_field) = s "field"
 val (bitwise_tm, mk_bitwise, dest_bitwise, is_bitwise) = s "bitwise"
 
 (* . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . *)
 
-val s = syntax_fns 4 HolKernel.dest_quadop HolKernel.mk_quadop
+val s = HolKernel.syntax_fns4 "bitstring"
 
 val (field_insert_tm, mk_field_insert, dest_field_insert, is_field_insert) =
    s "field_insert"

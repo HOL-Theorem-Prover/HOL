@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib
 
 open lcsymtacs utilsLib
 open wordsLib blastLib
-open state_transformerTheory updateTheory arm8Theory
+open state_transformerTheory updateTheory alignmentTheory arm8Theory
 
 val _ = new_theory "arm8_step"
 
@@ -363,160 +363,24 @@ val CountLeadingZeroBits32 = Q.store_thm("CountLeadingZeroBits32",
 
 (* ------------------------------------------------------------------------ *)
 
-val Align_slice = Q.prove(
-   `!n a : 'a word. Align (a, 2 ** n) = (dimindex(:'a) - 1 '' n) a`,
-   strip_tac
-     \\ Cases
-     \\ lrw [Align_def, wordsTheory.word_slice_n2w,
-              bitTheory.SLICE_THM, bitTheory.BITS_THM2,
-             DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-     \\ lfs [wordsTheory.dimword_def]
-     )
+val Align = Q.store_thm("Align",
+   `(!w. Align (w, 1) = align 0 w) /\
+    (!w. Align (w, 2) = align 1 w) /\
+    (!w. Align (w, 4) = align 2 w) /\
+    (!w. Align (w, 8) = align 3 w) /\
+    (!w. Align (w, 16) = align 4 w)`,
+    simp [arm8Theory.Align_def, alignmentTheory.align_w2n]
+    )
 
-val slice_all = Q.prove(
-   `!a:'a word. (dimindex(:'a) - 1 '' 0) a = a`,
-   simp [wordsTheory.WORD_SLICE_BITS_THM, wordsTheory.WORD_ALL_BITS])
-
-val Align = Theory.save_thm ("Align",
-   (REWRITE_RULE [slice_all] o numLib.REDUCE_RULE o Drule.LIST_CONJ)
-     (List.map (fn t => Q.SPEC t Align_slice) [`0`,`1`,`2`,`3`]))
-
-val Aligned = Q.store_thm ("Aligned",
-   `(!a : word64. Aligned (a, 1)) /\
-    (!a : word64. Aligned (a, 2) = ~word_lsb a) /\
-    (!a : word64. Aligned (a, 4) = ((1 >< 0) a = 0w:word2)) /\
-    (!a : word64. Aligned (a, 8) = ((2 >< 0) a = 0w:word3))`,
-   lrw [Aligned_def, Align] \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_plus = Q.store_thm("Aligned_plus",
-   `(!w: word64. Aligned (w + 4w, 4) = Aligned (w, 4)) /\
-    (!w: word64. Aligned (w + 8w, 8) = Aligned (w, 8))`,
-   rw [Aligned] \\ blastLib.BBLAST_TAC
-   )
-
-(*
-val AlignAlign = Q.store_thm ("AlignAlign",
-   `(!v : word64. Align (Align (v,2),2) = Align (v,2)) /\
-    (!v : word64. Align (Align (v,4),4) = Align (v,4)) /\
-    (!v : word64. Align (Align (v,8),8) = Align (v,8))`,
-   srw_tac [wordsLib.WORD_EXTRACT_ss] [Align]
-   )
-*)
-
-(* ------------------------------------------------------------------------ *)
-
-val BIT_lem = Q.prove(
-   `(!x. NUMERAL (BIT2 x) = 2 * (x + 1)) /\
-    (!x. NUMERAL (BIT1 x) = 2 * x + 1) /\
-    (!x. NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3) /\
-    (!x. NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
-    (!x. NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
-    (!x. NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2) /\
-    (!x. NUMERAL (BIT1 (BIT1 (BIT1 x))) = 8 * x + 7) /\
-    (!x. NUMERAL (BIT1 (BIT1 (BIT2 x))) = 8 * (x + 1) + 3) /\
-    (!x. NUMERAL (BIT1 (BIT2 (BIT1 x))) = 8 * (x + 1) + 1) /\
-    (!x. NUMERAL (BIT1 (BIT2 (BIT2 x))) = 8 * (x + 1) + 5) /\
-    (!x. NUMERAL (BIT2 (BIT1 (BIT1 x))) = 8 * (x + 1)) /\
-    (!x. NUMERAL (BIT2 (BIT1 (BIT2 x))) = 8 * (x + 1) + 4) /\
-    (!x. NUMERAL (BIT2 (BIT2 (BIT1 x))) = 8 * (x + 1) + 2) /\
-    (!x. NUMERAL (BIT2 (BIT2 (BIT2 x))) = 8 * (x + 1) + 6)`,
-   REPEAT strip_tac
-   \\ CONV_TAC (Conv.LHS_CONV
-         (REWRITE_CONV [arithmeticTheory.BIT1, arithmeticTheory.BIT2,
-                        arithmeticTheory.NUMERAL_DEF]))
-   \\ DECIDE_TAC
-   )
-
-val Aligned_eq = Q.prove(
-   `(!a b. (Aligned (a: word64, 8) = Aligned (b: word64, 8)) =
-           (~a ' 0 /\ ~a ' 1 /\ ~a ' 2 = ~b ' 0 /\ ~b ' 1 /\ ~b ' 2)) /\
-    (!a b. (Aligned (a: word64, 4) = Aligned (b: word64, 4)) =
-           (~a ' 0 /\ ~a ' 1 = ~b ' 0 /\ ~b ' 1)) /\
-    (!a b. (Aligned (a: word64, 2) = Aligned (b: word64, 2)) =
-           (a ' 0 = b ' 0))`,
-   lrw [Aligned]
-   \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_numeric = Q.store_thm("Aligned_numeric",
-   `(!x. Aligned (0w: word64, 8)) /\
-    (!x. Aligned (0w: word64, 4)) /\
-    (!x. Aligned (0w: word64, 2)) /\
-    (!x. Aligned (n2w (NUMERAL (BIT2 (BIT1 (BIT1 x)))): word64, 8)) /\
-    (!x. Aligned (n2w (NUMERAL (BIT2 (BIT1 x))): word64, 4)) /\
-    (!x. Aligned (n2w (NUMERAL (BIT2 x)): word64, 2)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT1 (BIT1 (f x))))): word64, 8) =
-             Aligned (y + 7w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT1 (BIT2 x)))): word64, 8) =
-             Aligned (y + 3w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT2 (BIT1 x)))): word64, 8) =
-             Aligned (y + 1w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT2 (BIT2 x)))): word64, 8) =
-             Aligned (y + 5w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT2 (BIT1 (BIT1 x)))): word64, 8) =
-             Aligned (y, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT2 (BIT1 (BIT2 x)))): word64, 8) =
-             Aligned (y + 4w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT2 (BIT2 (BIT1 x)))): word64, 8) =
-             Aligned (y + 2w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT2 (BIT2 (BIT2 x)))): word64, 8) =
-             Aligned (y + 6w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT1 (BIT1 (f x))))): word64, 8) =
-             Aligned (y - 7w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT1 (BIT2 x)))): word64, 8) =
-             Aligned (y - 3w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT2 (BIT1 x)))): word64, 8) =
-             Aligned (y - 1w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT2 (BIT2 x)))): word64, 8) =
-             Aligned (y - 5w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT2 (BIT1 (BIT1 x)))): word64, 8) =
-             Aligned (y, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT2 (BIT1 (BIT2 x)))): word64, 8) =
-             Aligned (y - 4w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 (BIT1 x)))): word64, 8) =
-             Aligned (y - 2w, 8)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 (BIT2 x)))): word64, 8) =
-             Aligned (y - 6w, 8)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64, 4) =
-             Aligned (y + 3w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT1 (BIT2 x))): word64, 4) =
-           Aligned (y + 1w, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 (BIT1 x))): word64, 4) =
-           Aligned (y, 4)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 (BIT2 x))): word64, 4) =
-           Aligned (y + 2w, 4)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64, 4) =
-             Aligned (y - 3w, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT1 (BIT2 x))): word64, 4) =
-           Aligned (y - 1w, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT1 x))): word64, 4) =
-           Aligned (y, 4)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 (BIT2 x))): word64, 4) =
-           Aligned (y - 2w, 4)) /\
-    (!x y f. Aligned (y + n2w (NUMERAL (BIT1 (f x))): word64, 2) =
-             Aligned (y + 1w, 2)) /\
-    (!x y f. Aligned (y - n2w (NUMERAL (BIT1 (f x))): word64, 2) =
-             Aligned (y - 1w, 2)) /\
-    (!x y. Aligned (y + n2w (NUMERAL (BIT2 x)): word64, 2) = Aligned (y, 2)) /\
-    (!x y. Aligned (y - n2w (NUMERAL (BIT2 x)): word64, 2) = Aligned (y, 2))`,
-   REPEAT strip_tac
-   \\ (CONV_TAC (LHS_CONV (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [BIT_lem]))))
-       ORELSE CONV_TAC (RAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [BIT_lem]))))
-   \\ rewrite_tac [Aligned_eq, GSYM wordsTheory.word_mul_n2w,
-                   GSYM wordsTheory.word_add_n2w]
-   \\ rewrite_tac [Aligned]
-   \\ TRY (markerLib.PAT_ABBREV_TAC (HOLset.empty Term.compare)
-              ``q = n2w x + 1w : word64``)
-   \\ TRY (Q.ABBREV_TAC `r = n2w (f x) : word64`)
-   \\ blastLib.BBLAST_TAC
-   )
-
-val Aligned_8_4 = Q.store_thm("Aligned_8_4",
-   `!w: word64. Aligned (w, 8) ==> Aligned (w, 4)`,
-   simp [Aligned]
-   \\ blastLib.BBLAST_TAC
-   )
+val Aligned = Q.store_thm("Aligned",
+   `(!w. Aligned (w, 1) = aligned 0 w) /\
+    (!w. Aligned (w, 2) = aligned 1 w) /\
+    (!w. Aligned (w, 4) = aligned 2 w) /\
+    (!w. Aligned (w, 8) = aligned 3 w) /\
+    (!w. Aligned (w, 16) = aligned 4 w)`,
+    simp [arm8Theory.Aligned_def, Align, alignmentTheory.aligned_def,
+          boolTheory.EQ_SYM_EQ]
+    )
 
 (* ------------------------------------------------------------------------ *)
 
@@ -613,10 +477,13 @@ val BigEndian_rwt =
 
 (* read mem *)
 
-fun mem_ev s =
-   utilsLib.save_as ("mem" ^ s) o
+val align_rule =
    utilsLib.ALL_HYP_CONV_RULE
-      (SIMP_CONV std_ss [CONJUNCT1 Aligned]) o HYP_DATATYPE_RULE o hd o
+      (SIMP_CONV std_ss [Aligned, alignmentTheory.aligned_0]) o
+   HYP_DATATYPE_RULE o hd
+
+fun mem_ev s =
+   utilsLib.save_as ("mem" ^ s) o align_rule o
    EV0 [Mem_def, BigEndian_rwt, CheckAlignment_rwt, wordsTheory.WORD_ADD_0,
         state_transformerTheory.FOR_def, state_transformerTheory.BIND_DEF,
         listTheory.APPEND_NIL, bitstringTheory.v2w_w2v,
@@ -639,7 +506,7 @@ val mem8 = mem_ev "8"
 (* write mem *)
 
 fun mem_ev s =
-  utilsLib.save_as ("write'mem" ^ s) o HYP_DATATYPE_RULE o hd o
+  utilsLib.save_as ("write'mem" ^ s) o align_rule o
   EV0 [write'Mem_def, BigEndian_rwt, CheckAlignment_rwt, fields,
        state_transformerTheory.FOR_def, state_transformerTheory.BIND_DEF] [] []
 

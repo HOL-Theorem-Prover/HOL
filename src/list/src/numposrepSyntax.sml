@@ -3,14 +3,9 @@ struct
 
 open Abbrev HolKernel numposrepTheory
 
-val monop =
-   HolKernel.syntax_fns "numposrep" 1 HolKernel.dest_monop HolKernel.mk_monop
-
-val binop =
-   HolKernel.syntax_fns "numposrep" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val triop =
-   HolKernel.syntax_fns "numposrep" 3 HolKernel.dest_triop HolKernel.mk_triop
+val monop = HolKernel.syntax_fns1 "numposrep"
+val binop = HolKernel.syntax_fns2 "numposrep"
+val triop = HolKernel.syntax_fns3 "numposrep"
 
 val (num_from_bin_list_tm,mk_num_from_bin_list,
      dest_num_from_bin_list,is_num_from_bin_list) = monop "num_from_bin_list"

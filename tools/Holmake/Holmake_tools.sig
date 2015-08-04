@@ -33,6 +33,7 @@ sig
                           {no_lastmakercheck : bool} ->
                           unit
 
+
   (* File IO *)
   val string_part : File -> string
   val toCodeType : string -> CodeType
@@ -47,16 +48,48 @@ sig
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
 
+  structure hmdir : sig
+    type t
+    val extendp : {base : t, extension : string} -> t
+    val extend : {base : t, extension : t} -> t
+    val toString : t -> string
+    val toAbsPath : t -> string
+    val fromPath : {origin: string, path : string} -> t
+    val sort : t list -> t list
+    val curdir : unit -> t
+    val compare : t * t -> order
+  end
+
+  type include_info = {includes : string list, preincludes : string list}
+  type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set,
+                               includes : 'dir list,
+                               preincludes : 'dir list}
+  type 'dir holmake_result = 'dir holmake_dirinfo option
+
   val maybe_recurse :
       {warn: string -> unit,
+       diag : string -> unit,
        no_prereqs : bool,
-       hm: {relpath:string option,abspath:string} -> string Binaryset.set ->
-           string list -> string list -> string Binaryset.set option,
-       visited: string Binaryset.set,
-       includes : string list,
-       dir : {abspath: string, relpath: string option},
-       local_build : unit -> bool,
+       hm: {dir : hmdir.t,
+            visited : hmdir.t Binaryset.set,
+            targets : string list} ->
+           hmdir.t holmake_result,
+       dirinfo : string holmake_dirinfo,
+       dir : hmdir.t,
+       local_build : include_info -> bool,
        cleantgt : string option} ->
-      string Binaryset.set option
+      hmdir.t holmake_result
+
+  val holdep_arg : File -> File option
+
+  val get_direct_dependencies :
+      {incinfo : include_info, DEPDIR : string,
+       output_functions : output_functions,
+       extra_targets : string list } ->
+      File -> File list
+  exception HolDepFailed
+
+  val forces_update_of : string * string -> bool
+
 
 end

@@ -51,12 +51,13 @@ struct
 
 open Feedback Lib Type Term Thm ;
 
+open TheoryPP
+
+
 type ppstream = Portable.ppstream
 type pp_type  = ppstream -> hol_type -> unit
 type pp_thm   = ppstream -> thm -> unit
 type num = Arbnum.num
-
-infix ##;
 
 val ERR  = mk_HOL_ERR "Theory";
 val WARN = HOL_WARNING "Theory";
@@ -512,15 +513,28 @@ fun scrubCT() = (scrub(); theCT());
  *   WRITING AXIOMS, DEFINITIONS, AND THEOREMS INTO THE CURRENT SEGMENT      *
  *---------------------------------------------------------------------------*)
 
-local fun check_name (fname,s) = ()
-      fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
-      val save_thm_reporting = ref 1
-      val _ = Feedback.register_trace ("Theory.save_thm_reporting",
-                                       save_thm_reporting, 2)
-      val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
+val is_temp_binding = let
+  val temp_binding_pfx = "@temp"
+in
+  String.isPrefix temp_binding_pfx
+end
+
+local
+  fun check_name tempok (fname,s) =
+      if Lexis.ok_sml_identifier s andalso
+         not (Lib.mem s ["ref", "true", "false", "::", "nil", "="]) orelse
+         tempok andalso is_temp_binding s
+      then ()
+      else raise ERR fname ("Can't use name "^Lib.mlquote s^
+                            " as a theory-binding")
+  fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
+  val save_thm_reporting = ref 1
+  val _ = Feedback.register_trace ("Theory.save_thm_reporting",
+                                   save_thm_reporting, 2)
+  val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 in
 fun save_thm (name,th) =
-      (check_name ("save_thm",name)
+      (check_name true ("save_thm",name)
        ; if uptodate_thm th then add_thmCT(name,th)
          else raise DATED_ERR "save_thm" name
        ; if !save_thm_reporting = 0 then ()
@@ -536,17 +550,17 @@ fun save_thm (name,th) =
 fun new_axiom (name,tm) =
    let val rname = Nonce.mk name
        val axiom = Thm.mk_axiom_thm (rname,tm)
-       val  _ = check_name ("new_axiom",name)
+       val  _ = check_name false ("new_axiom",name)
    in if uptodate_term tm then add_axiomCT(rname,axiom)
       else raise DATED_ERR "new_axiom" name
       ; axiom
    end
 
 fun store_definition(name, def) =
-    let val ()  = check_name ("store_type_definition",name)
+    let val ()  = check_name true ("store_definition",name)
     in
       if uptodate_thm def then ()
-      else raise DATED_ERR "store_type_definition" name
+      else raise DATED_ERR "store_definition" name
       ; add_defnCT(name,def)
       ; def
   end
@@ -866,8 +880,10 @@ fun export_theory () = let
         StringCvt.padLeft #"0" 3 (Int.toString msecs) ^ "s"
       end
   end
+  fun filtP s = not (Lexis.ok_sml_identifier s) andalso
+                not (is_temp_binding s)
  in
-   case filter (not o Lexis.ok_sml_identifier) (map fst (A@D@T)) of
+   case filter filtP (map fst (A@D@T)) of
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
@@ -1058,12 +1074,21 @@ val new_definition_hook = ref
        if null V then th
        else raise ERR "new_definition" "bare post-processing phase"));
 
+fun okChar c = Char.isGraph c andalso c <> #"(" andalso c <> #")"
+
+fun check_name princ_name name =
+  if CharVector.all okChar name then true
+  else raise ERR
+             princ_name
+             ("Entity name >"^name^"< includes non-printable/bad character")
+
 (*---------------------------------------------------------------------------*)
 (*                DEFINITION PRINCIPLES                                      *)
 (*---------------------------------------------------------------------------*)
 
 fun new_type_definition (name,thm) = let
   val Thy = current_theory()
+  val _ = is_temp_binding name orelse check_name "new_type_definition" name
   val tydef = Thm.prim_type_definition({Thy = Thy, Tyop = name}, thm)
  in
    store_definition (name^"_TY_DEF", tydef) before
@@ -1083,10 +1108,16 @@ fun gen_new_specification(name, th) = let
 
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
-     val (V,eq)          = dest M
-     val Thy             = current_theory()
-     val (cnames,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
-     val Name            = case cnames of [Name] => Name | _ => raise Match
+     val (V,eq)      = dest M
+     val (nm, _)     = eq |> dest_eq |> #1 |> dest_atom
+                          handle HOL_ERR _ =>
+                                 raise ERR "Definition.new_definition"
+                                       "Definition not an equality"
+     val _           = is_temp_binding name orelse
+                       check_name "new_definition" nm
+     val Thy         = current_theory()
+     val (cn,def_th) = Thm.gen_prim_specification Thy (Thm.ASSUME eq)
+     val Name        = case cn of [Name] => Name | _ => raise Match
  in
    store_definition (name, post(V,def_th)) before
    call_hooks (TheoryDelta.NewConstant{Name=Name, Thy=Thy})
@@ -1095,6 +1126,8 @@ fun new_definition(name,M) =
 
 fun new_specification (name, cnames, th) = let
   val thy   = current_theory()
+  val _     = is_temp_binding name orelse
+              List.all (check_name "new_specification") cnames
   val def   = Thm.prim_specification thy cnames th
   val final = store_definition (name, def)
  in

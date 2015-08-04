@@ -1,3 +1,4 @@
+!tools/Holmake/tests/holdep
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
@@ -9,6 +10,11 @@ src/postkernel
 src/parse
 src/bool
 src/1
+!tools/Holmake/tests/depchain1/dir3
+!tools/Holmake/tests/depchain2/dir1
+!tools/Holmake/tests/altquote1
+!tools/Holmake/tests/brokenstrings
+!tools/Holmake/tests/holdep
 !src/1/theory_tests
 src/proofman
 [poly]bin/hol.bare

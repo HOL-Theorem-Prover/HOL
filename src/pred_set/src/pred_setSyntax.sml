@@ -33,16 +33,15 @@ fun eltype tm = dest_set_type (type_of tm)
 (* Set constants. Note that "IN" is alredy defined in boolTheory.            *)
 (*---------------------------------------------------------------------------*)
 
-fun syntax_fns n d m = HolKernel.syntax_fns "pred_set" n d m
-val t1 = syntax_fns 1 HolKernel.dest_monop HolKernel.mk_monop
-val t2 = syntax_fns 2 HolKernel.dest_binop HolKernel.mk_binop
-val s1 = syntax_fns 2 HolKernel.dest_monop HolKernel.mk_monop
-val s2 = syntax_fns 3 HolKernel.dest_binop HolKernel.mk_binop
-val t3 = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
+val t1 = HolKernel.syntax_fns1 "pred_set"
+val t2 = HolKernel.syntax_fns2 "pred_set"
+val t3 = HolKernel.syntax_fns3 "pred_set"
 
-val (in_tm, mk_in, dest_in, is_in) =
-   HolKernel.syntax_fns "bool" 2 HolKernel.dest_binop HolKernel.mk_binop "IN"
+fun syn s = HolKernel.syntax_fns s "pred_set"
+val s1 = syn {n = 2, dest = HolKernel.dest_monop, make = HolKernel.mk_monop}
+val s2 = syn {n = 3, dest = HolKernel.dest_binop, make = HolKernel.mk_binop}
 
+val (in_tm, mk_in, dest_in, is_in) = HolKernel.syntax_fns2 "bool" "IN"
 val (insert_tm, mk_insert, dest_insert, is_insert) = s2 "INSERT"
 val (inter_tm, mk_inter, dest_inter, is_inter) = s2 "INTER"
 val (union_tm, mk_union, dest_union, is_union) = s2 "UNION"

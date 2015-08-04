@@ -19,6 +19,10 @@ val l3_triple =
    (* utilsLib.cache 10000 String.compare *)
       (helperLib.instruction_apply rule o spec)
 
+val l3_triple_code =
+   List.map l3_triple o
+   (armAssemblerLib.arm_code: string quotation -> string list)
+
 val vars = Term.mk_var ("cond", Type.bool) ::
            fst (boolSyntax.strip_forall (Thm.concl ARM_ASSERT_def))
 

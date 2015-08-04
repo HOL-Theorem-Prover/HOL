@@ -102,7 +102,7 @@ Provided in {\tt totoTheory} are orders {\tt numto}, {\tt intto}, {\tt charto},
 \num\ that should in principle be quicker to compute on {\tt NUMERAL}
 terms than the usual order) with corresponding conversions
 {\tt numto_CONV}, etc. Also, for lexicographic order on pairs, there are the
-object language function {\tt lextoto : 'a toto -> 'b toto -> ('a\#'b)toto}
+object language function {\tt lextoto~:~'a toto -> 'b toto -> ('a\#'b)toto}
 and the \ml\ function {\tt lextoto_CONV : conv -> conv -> conv}; if
 {\tt cva} and {\tt cvb} are conversions for evaluating terms that start
 {\tt apto toa} \dots\ and {\tt apto tob} \dots\ respectively,
@@ -159,7 +159,7 @@ conversion and an {\tt ENUMERAL} set, will revert to {\tt pred_setLib.IN_CONV}.)
 \headingthree{Translating between set representations}
 \HOL\ offers two notations for explicit finite sets: the display notation
 {\tt\{x1; ...~; xn\}}, which is short for
-{\tt x1 INSERT ... INSERT xn INSERT \{\}}, and notation with an explicit list:
+{\tt x1 INSERT~...~INSERT xn INSERT \{\}}, and notation with an explicit list:
 {\tt set [x1; ...~; xn]}. We provide here conversions back and forth
 between these:
 \begin{verbatim}
@@ -169,7 +169,7 @@ between these:
 and to create {\tt ENUMERAL} sets from either:
 \begin{verbatim}
         set_TO_ENUMERAL_CONV: conv -> term -> conv
-        DISPLAY_TO_ENUMERAL_CONV:conv -> term -> conv
+        DISPLAY_TO_ENUMERAL_CONV: conv -> term -> conv
 \end{verbatim}
 (these demanding a {\tt toto} order on the element type and a conversion
 for evaluating it),
@@ -182,7 +182,7 @@ requiring only the order-evaluating conversion. Additionally,
 \begin{verbatim}
         TO_set_CONV: conv -> conv
 \end{verbatim}
-will normalize any of the three forms to the {\tt set [ ... ]} form.
+will normalize any of the three forms to the {\tt set [~...~]} form.
 ({\tt NO_CONV} will suffice as the conversion argument if it is not an
 {\tt ENUMERAL} that is to be normalized.)
 The conversions from the {\tt ENUMERAL} form have to execute, for a

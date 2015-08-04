@@ -22,12 +22,15 @@ val arm_comp_defs = arm_progTheory.component_defs
 local
    val pc = Term.prim_mk_const {Thy = "arm", Name = "RName_PC"}
 in
-   val step_1 =
-      HolKernel.syntax_fns "arm_step" 1 HolKernel.dest_monop HolKernel.mk_monop
+   val step_1 = HolKernel.syntax_fns1 "arm_step"
    val arm_1 =
-      HolKernel.syntax_fns "arm_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
+      HolKernel.syntax_fns
+         {n = 2, dest = HolKernel.dest_monop, make = HolKernel.mk_monop}
+         "arm_prog"
    val arm_2 =
-      HolKernel.syntax_fns "arm_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+      HolKernel.syntax_fns
+         {n = 3, dest = HolKernel.dest_binop, make = HolKernel.mk_binop}
+         "arm_prog"
    val word5 = wordsSyntax.mk_int_word_type 5
    val word = wordsSyntax.mk_int_word_type 32
    val dword = wordsSyntax.mk_int_word_type 64
@@ -67,75 +70,15 @@ val state_id =
 
 val fp_id =
    utilsLib.mk_state_id_thm armTheory.FP_component_equality
-      [["FPSCR"]]
+      [["REG"], ["FPSCR"]]
 
 val arm_frame =
    stateLib.update_frame_state_thm arm_proj_def
-      [(`K arm_c_CPSR_N`,
-        `\s:arm_state a w. s with CPSR := cpsr with N := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_Z`,
-        `\s:arm_state a w. s with CPSR := cpsr with Z := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_C`,
-        `\s:arm_state a w. s with CPSR := cpsr with C := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_V`,
-        `\s:arm_state a w. s with CPSR := cpsr with V := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_Q`,
-        `\s:arm_state a w. s with CPSR := cpsr with Q := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_A`,
-        `\s:arm_state a w. s with CPSR := cpsr with A := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_I`,
-        `\s:arm_state a w. s with CPSR := cpsr with I := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_F`,
-        `\s:arm_state a w. s with CPSR := cpsr with F := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_J`,
-        `\s:arm_state a w. s with CPSR := cpsr with J := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_T`,
-        `\s:arm_state a w. s with CPSR := cpsr with T := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_E`,
-        `\s:arm_state a w. s with CPSR := cpsr with E := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_M`,
-        `\s:arm_state a w. s with CPSR := cpsr with M := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_GE`,
-        `\s:arm_state a w. s with CPSR := cpsr with GE := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_IT`,
-        `\s:arm_state a w. s with CPSR := cpsr with IT := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_CPSR_psr'rst`,
-        `\s:arm_state a w. s with CPSR := cpsr with psr'rst := w`,
-        `\s:arm_state. s with CPSR := cpsr`),
-       (`K arm_c_FP_FPSCR_N`,
-        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with N := w`,
-        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
-       (`K arm_c_FP_FPSCR_Z`,
-        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with Z := w`,
-        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
-       (`K arm_c_FP_FPSCR_C`,
-        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with C := w`,
-        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
-       (`K arm_c_FP_FPSCR_V`,
-        `\s:arm_state a w. s with FP := fp with FPSCR := fpscr with V := w`,
-        `\s:arm_state. s with FP := fp with FPSCR := fpscr`),
-       (`arm_c_REG`, `\s:arm_state a w. s with REG := (a =+ w) r`,
-        `\s:arm_state. s with REG := r`),
-       (`arm_c_MEM`, `\s:arm_state a w. s with MEM := (a =+ w) r`,
-        `\s:arm_state. s with MEM := r`),
-       (`arm_c_FP_REG`,
-        `\s:arm_state a w. s with FP := fp with REG := (a =+ w) fp.REG`,
-        `\s:arm_state. s with FP := fp`)
-      ]
+     (List.map (fn s => "CPSR." ^ s)
+         ["N", "Z", "C", "V", "Q", "A", "I", "F", "J", "T", "E", "M", "GE",
+          "IT", "psr'rst"] @
+      List.map (fn s => "FP.FPSCR." ^ s) ["N", "Z", "C", "V"] @
+      ["REG", "MEM", "FP.REG"])
 
 val arm_frame_hidden =
    stateLib.update_hidden_frame_state_thm arm_proj_def
@@ -490,7 +433,8 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
           arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [arm_stepTheory.Aligned_numeric, Aligned_Branch]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
+                           arm_progTheory.Aligned_Branch]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -537,7 +481,7 @@ in
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                [arm_stepTheory.Aligned_numeric])) o
+                [alignmentTheory.aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -609,7 +553,8 @@ local
       THENC WGROUND_RW_CONV
       THENC stateLib.PRE_COND_CONV
                (DEPTH_CONV DISJOINT_CONV
-                THENC REWRITE_CONV [arm_stepTheory.Aligned_numeric]
+                THENC REWRITE_CONV [alignmentTheory.aligned_numeric]
+                THENC numLib.REDUCE_CONV
                 THENC NOT_F_CONV)
       THENC helperLib.POST_CONV
               (PURE_REWRITE_CONV spec_rwts
@@ -779,12 +724,6 @@ local
       List.last o pred_setSyntax.strip_set o
       temporal_stateSyntax.dest_code' o
       Thm.concl
-   val reverse_endian =
-      fn [a1, a2, a3, a4, a5, a6, a7, a8, b1, b2, b3, b4, b5, b6, b7, b8,
-          c1, c2, c3, c4, c5, c6, c7, c8, d1, d2, d3, d4, d5, d6, d7, d8] =>
-         [d1, d2, d3, d4, d5, d6, d7, d8, c1, c2, c3, c4, c5, c6, c7, c8,
-          b1, b2, b3, b4, b5, b6, b7, b8, a1, a2, a3, a4, a5, a6, a7, a8]
-       | _ => raise ERR "reverse_endian" ""
    val rev_endian = ref (Lib.I : term list -> term list)
    val is_be_tm = Term.aconv ``s.CPSR.E``
    fun set_endian opt =
@@ -792,7 +731,7 @@ local
          val l = arm_configLib.mk_config_terms opt
       in
          if List.exists is_be_tm l
-            then rev_endian := reverse_endian
+            then rev_endian := utilsLib.rev_endian
          else rev_endian := Lib.I
       end
    val (reset_db, set_current_opt, get_current_opt, add1_pending, find_spec,
@@ -839,9 +778,9 @@ local
             else let
                     val thms = step s
                     val ts = List.map arm_mk_pre_post thms
-                    val thms_ts =
-                       List.concat
-                          (List.map combinations (ListPair.zip (thms, ts)))
+                    val thms_ts = (thms, ts) |> ListPair.zip
+                                             |> List.map combinations
+                                             |> List.concat
                  in
                     List.app (fn x => (print "."; add1_pending x)) thms_ts
                     ; thms_ts

@@ -3400,8 +3400,18 @@ val _ = adjoin_to_theory {sig_ps = NONE,
    ["val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info",
     "  (``:int``, {nchotomy = SOME INT_NUM_CASES,",
     "              induction = NONE,",
-    "              encode = NONE, size = NONE})];"])}
+    "              encode = NONE, size = NONE})];",
+    "",
+    "val () = Literal.add_literal",
+    "   (fn tm =>",
+    "      case Lib.total boolSyntax.dest_strip_comb tm of",
+    "         SOME (\"integer$int_of_num\", [n]) => numSyntax.is_numeral n",
+    "       | SOME (\"integer$int_neg\", [n]) =>",
+    "           (case Lib.total boolSyntax.dest_strip_comb n of",
+    "               SOME (\"integer$int_of_num\", [n]) => numSyntax.is_numeral n",
+    "             | _ => false)",
+    "       | _ => false)"])}
 
-val _ = export_theory();
+val _ = export_theory()
 
 end

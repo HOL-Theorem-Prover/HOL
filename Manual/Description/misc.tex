@@ -160,76 +160,107 @@ a theory, the user should
   the theory file is available for use.
 \end{enumerate}
 
-\subsection{Making the script separately compilable}
+\subsection{Source Conventions for Script and SML Files}
 
-First, the invocation
-\begin{verbatim}
-    val _ = export_theory();
-\end{verbatim}
-should be added at the end of the file. When the script is finally
-executed, this call writes the theory to disk.
-
+\paragraph{Script and Theory Files}
+The file that generates the \HOL{} theory \textit{my}\texttt{Theory} must be called \textit{my}\texttt{Script.sml}.
+After the theory has been successfully generated, it can be \texttt{open}-ed at the head of other developments:
+\begin{alltt}
+    open myTheory
+\end{alltt}
 \index{load (ML function)@\ml{load} (\ML{} function)}
-Second, we address a crucial environmental issue: if a theory script
-has been constructed using\verb+ <holdir>/bin/hol+, then it has been
-developed in an environment where some commonly used structures, \eg,
-\verb+Tactic+, have already been loaded and opened for the user's
-convenience. When we wish to apply \holmake{} to a script developed
-in this way, we have to take some extra steps to ensure that the
-compilation environment also provides these structures.  In the common
-case, this is simple; one must only add, at the head of the theory
-script, the following ``boilerplate'':
-\begin{verbatim}
-   open HolKernel Parse boolLib;
-\end{verbatim}
-This will duplicate the starting environment that one obtains with
-\verb+hol.bare+ and \linebreak \verb+hol.bare.noquote+.  If the script was
-developed interactively with \texttt{hol} or \texttt{hol.noquote},
-then one must also add
-\begin{verbatim}
-   open bossLib
-\end{verbatim}
-Now the script should be separately compilable. Invoke \holmake{}
-to check; the \ML{} compiler will flag any unaccounted-for identifiers it finds.
-The user has to resolve these, either by using the `dot' notation to
-locate the identifier for the compiler, or by \verb+open+-ing the
-relevant module. This ``compile/resolve-identifier'' loop should
-continue until \holmake{} succeeds in compiling the module.
+and it can be loaded interactively:
+\begin{alltt}
+    load "myTheory";
+\end{alltt}
+The file \texttt{myScript.sml} should begin with the standard boilerplate:
+\begin{alltt}
+    open HolKernel Parse boolLib bossLib
 
-The following notes may be of some further help.
+    val _ = new_theory "my"
+\end{alltt}
+This ``boilerplate'' ensures that the standard tactics and SML commands will be in the namespace when the script file is compiled.
+Interactively, these modules have already been loaded and \texttt{open}-ed, so what can be typed directly at \texttt{hol} cannot necessarily be included as-is in a script file.
+In addition, if \texttt{myTheory} depends on other \HOL{} theories, this ancestry should also be recorded in the script file.
+The easiest way to achieve this is simply to \texttt{open} the relevant theories.
+Conventionally, the \texttt{open} declarations for such theories appear just before the call to \texttt{new_theory}.
+For example:
+\begin{alltt}
+    open HolKernel Parse boolLib bossLib
 
-\begin{enumerate}
-\item The filenames of theory scripts must follow the following
-  convention: a HOL theory script for theory ``x'' should be named
-  \texttt{xScript.sml}.  When \verb+export_theory+ is called during an
-  invocation of \holmake, the files \texttt{xTheory.sig} and
-  \texttt{xTheory.sml} will be generated and then compiled.
+    open myfirstAncestorTheory OtherAncestorTheory
 
-\item In \ML{}, modules are not allowed to include unbound top-level expressions.
-  Hence, something like the following is not allowed:
-\begin{verbatim}
-   new_theory "ted";
-\end{verbatim}
-To make \ML{} happy, one must instead write something like
-\begin{verbatim}
-   val _ = new_theory "ted";
-\end{verbatim}
-\noindent
-This is because (due to restrictions imposed by Moscow~ML\index{Moscow ML}) the script file is required to be an ML structure, and the contents of a structure must be \emph{declarations}, not expressions.
-Indeed, one is allowed to (and often will) omit the bracketing \texttt{structure~foo~=~struct} - \texttt{end} lines, but the contents of the file are still interpreted as if belonging to a structure.
-
+    val _ = new_theory "my"
+\end{alltt}
 \index{load (ML function)@\ml{load} (\ML{} function)}
-\item In the interactive system, one has to explicitly \ml{load} modules; on the other hand, the batch compiler will load modules automatically.
+Interactively, these may well be the names of theories that have been explicitly loaded into the context with the \texttt{load} function.
+In the interactive system, one has to explicitly \ml{load} modules; on the other hand, the batch compiler will load modules automatically.
 For example, in order to execute \ml{open Foo} (or refer to values in structure \ml{Foo}) in the interactive system, one must first have executed \ml{load "Foo"}.
 (This is on the assumption that structure \ml{Foo} is defined in a file \texttt{Foo.sml}.)
 Contrarily, the batch compiler will reject files having occurrences of \ml{load}, since \ml{load} is only defined for the interactive system.
 
-\item Take care not to have the string ``Theory'' embedded in the name of any of your files.
+In addition, simply referring to a theory's theorems using the `dot-notation' will make that theory an ancestor.
+For example,
+\begin{alltt}
+    val mytheorem = store_thm(
+      "mytheorem",
+      ``...``,
+      SIMP_TAC (srw_ss()) [ThirdAncestorTheory.important_lemma] ...);
+\end{alltt}
+will record a dependency on \texttt{ThirdAncestoryTheory}, making it just as much an ancestor as the theories that have been explicitly \texttt{open}-ed elsewhere.
+
+Finally, all script files should also end with the invocation:
+\begin{verbatim}
+    val _ = export_theory()
+\end{verbatim}
+When the script is finally executed, this call writes the theory to disk.
+
+The calls to \texttt{new_theory} and \texttt{export_theory} must bracket a sequence of SML declarations.
+A declaration will typically be a \texttt{val}-binding, but might also be a function definition (\emph{via} \texttt{fun}), an \texttt{open}, or even a \texttt{structure} declaration.
+Declarations are \emph{not} expressions.
+This means that script files should \emph{not} include bare calls to \HOL{} functions like \texttt{Datatype}.
+Instead, declarations such as the following need to be used:
+\begin{alltt}
+    val _ = Datatype`tree = Lf | Nd num tree tree`
+\end{alltt}
+This is because (due to restrictions imposed by Moscow~ML\index{Moscow ML}) the script file is required to be an ML structure, and the contents of a structure must be \emph{declarations}, not expressions.
+Indeed, one is allowed to (and generally should) omit the bracketing
+\begin{alltt}
+  structure myScript = struct
+  ...
+  end
+\end{alltt}
+lines, but the contents of the file are still interpreted as if belonging to a structure.
+
+Finally, take care not to have the string ``\texttt{Theory}'' appear at the end of the name of any of your files.
 \HOL{} generates files containing this string, and when it cleans up after itself, it removes such files using a regular expression.
-This will also remove other files with names containing ``Theory''.
+This will also remove other files with names containing ``\texttt{Theory.sml}'' or ``\texttt{Theory.sig}''.
 For example, if, in your development directory, you had a file of \ML{} code named \texttt{MyTheory.sml} and you were also managing a \HOL{} development there with \holmake, then \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean} were invoked.
 
-\end{enumerate}
+\paragraph{Other SML Code}
+When developing \HOL{} libraries, one should again attempt to follow Moscow~ML's conventions.
+Most importantly, file names should match \texttt{signature} and \texttt{structure} names.
+If this can be done, the automatic dependency analysis done by \holmake{} will work ``out of the box''.
+A signature for module \texttt{foo} should always appear in file \texttt{foo.sig}, and should have the form
+\begin{alltt}
+    signature foo =
+    sig
+      ...
+    end
+\end{alltt}
+The accompanying implementation of \texttt{foo} should appear in file \texttt{foo.sml}, and should have the form
+\begin{alltt}
+    structure foo :> foo =
+    struct
+    ...
+    end
+\end{alltt}
+As with theory files, the contents of a \texttt{structure} must be a sequence of declarations only.
+Neither sort of file should have any other declarations within it (before or after the \texttt{signature} or \texttt{structure}).
+
+Deviations from this general pattern are possible, but life is much simpler if such deviations can be avoided.
+The \HOL{} distribution\footnote{See, for example, the kernel implementation in \texttt{src/0}.} contains some examples of trickier situations where the guidelines need to be ignored.
+Ignoring the guidelines will generally result in the need for quite involved \texttt{Holmakefile}s (see Section~\ref{sec:using-Holmakefiles} below).
 
 \subsection{Summary}
 
@@ -261,7 +292,7 @@ In this way, one can get a staged application of \holmake{} across multiple dire
 Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
 If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
 If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
-If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build that target (only).
+If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build the first such target (only).
 
 In addition, there are three special targets that can be used:
 \begin{description}
@@ -279,11 +310,6 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
-\item[\tt -I <directory>] Look in specified directory for additional
-  Moscow~ML object files, including other HOL theories.  This option
-  can be repeated, with multiple {\tt -I}'s to allow for multiple
-  directories to be referenced.  As above, directories specified in
-  this way will also be rebuilt before the current targets are built.
 \item[\tt -d <file>] Ignore the given file and don't try to build it.
   The file may be rebuilt anyway if other files you have specified
   depend on it.  This is useful to stop Holmake from attempting to
@@ -296,9 +322,6 @@ with the following command-line options:
   \texttt{fast\_proof} oracle tag.  This tag will appear on all
   theorems proved in this way and all subsequent theorems that depend
   on such theorems.  \holmake's default is not to build in fast mode.
-\item[\texttt{-r}]%
-\index{Holmake@\holmake!recursive invocation}%
-Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
 \item[\texttt{--fast}] Makes \holmake's default be to build in fast
   mode (see above).
 \item[{\tt --help} or {\tt -h}] Prints out a useful option summary and
@@ -308,6 +331,10 @@ Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} o
   configured to use by default.
 \item[\tt --holmakefile <file>] Use the given file as a make-file.
   See section~\ref{sec:using-Holmakefiles} below for more on this.
+\item[\tt -I <directory>]
+  Look in specified directory for additional object files, including other HOL theories.
+  This option can be repeated, with multiple {\tt -I}'s to allow for multiple directories to be referenced.
+  As above, directories specified in this way will also be rebuilt before the current targets are built.
 \item[\texttt{--interactive} or \texttt{-i}] Causes the HOL code that
   runs when a theory building file is executed to have the flag
   \texttt{Globals.interactive} set to true.  This will alter the diagnostic
@@ -335,13 +362,11 @@ Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} o
 \item[\texttt{--no\_prereqs}]%
 \index{Holmake@\holmake!recursive invocation}%
 Do not recursively attempt to build ``include'' directories before working in the current directory.
-\item[\texttt{--no\_sigobj}] Do not link against HOL system's
-  directory of HOL system files.  Use of this option goes some way
-  towards turning
-  \holmake{} into a general Moscow~ML \textsf{make} system.  However,
-  it will still attempt to do ``HOL things'' with files whose names
-  end in \texttt{Script} and \texttt{Theory}.  This option implies
-  \texttt{--no\_overlay}.
+\item[\texttt{--no\_sigobj}]
+  Do not link against \HOL{} system's directory of \HOL{} system files.
+  Use of this option goes some way towards turning \holmake{} into a general \ML{} \textsf{make} system.
+  However, it will still attempt to do ``\HOL{} things'' with files whose names end in \texttt{Script} and \texttt{Theory}.
+  This option implies \texttt{--no\_overlay}.
 \item[\texttt{--overlay <file>}] Use the given file as the overlay
   rather than the default.
 \item[\texttt{--qof}] Standing for ``quit on failure''.  If a tactic
@@ -352,6 +377,9 @@ Do not recursively attempt to build ``include'' directories before working in th
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Note that other programs called by \holmake{} will not
   be affected.
+\item[\texttt{-r}]%
+\index{Holmake@\holmake!recursive invocation}%
+Forces \holmake{} to behave recursively, overriding the \texttt{--no\_prereqs} option, and also causing \holmake{} to clean recursively in the ``includes'' directories (which is not done otherwise).
 \item[{\tt --rebuild\_deps}] Forces \holmake{} to always
   rebuild the dependency information for files it examines, whether or
   not it thinks it needs to.  This option is implemented by having
@@ -359,7 +387,7 @@ Do not recursively attempt to build ``include'' directories before working in th
   \texttt{cleanDeps} option above) before proceeding with the build.
 \end{description}
 
-\noindent \holmake{} should never exit with the Moscow~ML message ``Uncaught
+\noindent \holmake{} should never exit with error messages such as ``Uncaught
 exception''.  Such behaviour is a bug, please report it!
 
 
@@ -477,6 +505,15 @@ In particular, this means that hash-characters do \emph{not} start
 comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
+\paragraph{Special Targets}
+Some target names for rules are handled specially by \holmake{}:
+\begin{itemize}
+\item Dependencies associated with the target name \texttt{.PHONY} are taken to be list of other targets in the make-file that are not actually the name of files to be built.
+For example, targets naming conceptual collections of files such as \texttt{all} should be marked as ``phony''.
+If a target is phony, then its dependencies will be built even if a file of that name exists and is newer than the dependencies.
+\item The special way that command-line arguments \texttt{clean}, \texttt{cleanAll} and \texttt{cleanDeps} are handled means that targets of those names will not work.
+In order to extend cleaning behaviour, use the \texttt{EXTRA\_CLEANS} variable (see below).
+\end{itemize}
 \paragraph{Functions}
 \index{Holmake@\holmake!functions for text-manipulation}
 \holmake{} supports some simple functions for manipulating text.  All
@@ -579,6 +616,9 @@ useful information:
   expands to \texttt{/bin/cp}; under Windows, it expands to
   \texttt{copy}.)
 \item[\texttt{HOLDIR}] The root of the HOL installation.
+\item[\texttt{HOLHEAP}]
+Under Poly/ML, this variable expands to the name of the heap that should be used to build this directory (to be used instead of the heap that underlies the \texttt{hol} executable).
+See Section~\ref{sec:polyml-heaps} below for more on using custom heaps with Poly/ML.
 \item[\texttt{HOLMOSMLC}] This variable is replaced by an invocation
   of the Moscow ML compiler along with the \texttt{-q} flag (necessary
   for handling quotations), and the usual \texttt{-I} include
@@ -764,6 +804,7 @@ It is obviously important to be able to use heaps interactively.
 If the standard \texttt{hol} executable is invoked in a directory where there is a \texttt{Holmakefile} specifying a heap, the default heap will not be used and the given heap will be used instead.
 The fact that this is happening is mentioned as the interactive session begins.
 For example:
+
 \begin{samepage}
 \begin{alltt}
 ---------------------------------------------------------------------
@@ -781,9 +822,8 @@ Poly/ML 5.4.1 Release
 
 Finally, note that when using the \texttt{HOLHEAP} variable, heaps are required to be built before everything else in a directory, and that such heaps embody theories or \ML{} sources that are \emph{ancestral} to the directory in which the heap occurs.
 Thus, if one wanted to package up a heap embodying the standard theories for the real numbers, and to do it in \texttt{src/real} (which feels natural), this heap could be built using the method described here, but could only be referred to as a \texttt{HOLHEAP} in the directories that used it, \emph{not} in \texttt{src/real}'s \texttt{Holmakefile}.
-
-More realistically, such a ``real-embodying'' heap could be built in \texttt{src/real}, and \emph{subsequent} developments in other directories could use it by specifying\[
-  \texttt{\$(HOLDIR)/src/real/myheap}
+Subsequently, developments in other directories could use this heap by specifying\[
+  \texttt{\$(HOLDIR)/src/real/realheap}
 \]
 as the value for their \texttt{HOLHEAP} variables.
 
@@ -1161,6 +1201,12 @@ For this purely propositional example with single-letter variable names, the res
 
 For adding a name to the rule, see the \texttt{rulename} option.
 
+\item[\texttt{tr\apost}$\mathit{tracename}$\texttt{\apost=}$n$]
+This option allows the temporary setting of the provided trace to the integer value $n$.
+For example, one can set \texttt{pp\_unambiguous\_comprehensions} to $1$ to ensure that set comprehensions are printed with bound variables explicitly identified.
+See Section~\ref{sec:set-syntax} for more on set comprehensions, and Section~\ref{sec:traces} for more on traces.
+\index{traces, controlling HOL feedback@traces, controlling \HOL{} feedback!when munging to LaTeX@when munging to \LaTeX{}}
+
 \item[\texttt{tt}] %
 Causes the term to be type-set as the argument to a \LaTeX{} command \texttt{\bs{}HOLinline}.
 %
@@ -1221,7 +1267,7 @@ Rather the first line of \HOL{} output will be indented, and the subsequent line
 The \texttt{\indentoption} option lets the pretty-printer know that it is printing with a given indentation, affecting all lines of its output.
 
 
-\item[$\mathit{nm}_1$\texttt{/}$\mathit{nm}_2$] (For use with \holtm{}
+\item[$\mathit{nm}_1\mathtt{/}\mathit{nm}_2$] (For use with \holtm{}
   and \holthm{}.)
 %
 Causes name $\mathit{nm}_1$ to be substituted for name $\mathit{nm}_2$ in the term or theorem.
@@ -1233,6 +1279,12 @@ Because it uses instantiation, free variables in theorem hypotheses will get ren
 (Hypotheses are not printed by default anyway of course.)
 
 If $\mathit{nm}_1$ and $\mathit{nm}_2$ both begin with the colon character then they are parsed as types, and type instantiation is performed on the term or theorem argument instead of variable substitution.
+
+\item[$s\mathtt{//}t$] (For use with \holtm{}, \holthm, and \holty) Causes \LaTeX{} string $s$ to be substituted for token $t$.
+This allows one-off manipulation of the override map (see Section~\ref{sec:running-munger} below).
+The difference between this operation and the ``normal substitution'' done with a single slash (as above) is that it happens as the \HOL{} entity is printed, whereas normal substitution happens before pretty-printing is done.
+If printing depends on particular variable name choices, the ``last minute'' manipulations possible with this form of substitution may be preferable.
+The width of the \LaTeX{} string is taken to be the width of the original token $t$.
 \end{description}
 
 \subsection{Math-Mode Munging}
@@ -1465,15 +1517,15 @@ you to run Holindex using AUCTeX.
 \end{description}
 
 
-\paragraph{Defining and formating Terms, Types and Theorems}
+\paragraph{Defining and Formatting Terms, Types and Theorems}
 
   Most of the Holindex commands require an identifier of a theorem,
   term or type as arguments. Theorem identifiers of the form
   \texttt{theory.theorem} are predefined. All other identifiers need
   defining. Additionally one might want to change the default
-  formating options for these new identifiers as well as the old ones.
+  formatting options for these new identifiers as well as the old ones.
   \HOL{} definition files can be used for defining and
-  setting the formating options of identifiers. They are used by
+  setting the formatting options of identifiers. They are used by
   putting the command \texttt{\bs{}useHOLfile\{\textit{filename.hdf}\}} in
   the header of your latex source file. These file use a syntax similar to
   BibTex. They consist of a list of entries of the form
@@ -1498,13 +1550,14 @@ There are the following entry types
     used to define and format a term.
   \item[\texttt{Type}]
     used to define and format a type.
-  \item[\texttt{Thms}, \texttt{Theorems}] used to set formating options for
+  \item[\texttt{Thms}, \texttt{Theorems}] used to set formatting options for
     a list of theorems. For example one might want to print long index entries
     for all theorems in a specific theory. For the \texttt{Theorems} entry
     the \texttt{id} part of the entry is given in the form
     \texttt{ids = [id,id,...]}. These \texttt{ids} may be theorem ids or special
-    ids of the form \texttt{theorem.thmprefix*}. The id
-    \texttt{arithmetic.LESS\_EQ*} for example represents all theorem in
+    ids of the form \texttt{theorem.thmprefix*}.
+    For example, the id
+    \texttt{arithmetic.LESS\_EQ*} represents all theorems in
     theory \texttt{arithmetic} whose name starts with \texttt{LESS\_EQ}.
 \end{description}
 Options are name/value pairs. The value has to be quoted using
@@ -1512,23 +1565,23 @@ quotation marks or \HOL{}'s quotation syntax. There are the following
 option names available:
 \begin{description}
   \item[\texttt{content}]
-    the content. For a term or type that's it's \HOL{}\ definition.
+    the content. For a term or type that's its \HOL{}\ definition.
     For theorems it is of the form \texttt{theory.theorem}.
   \item[\texttt{options}]
-    formating options for the munger as described in section~\ref{sec:munging-commands}.
+    formatting options for the munger as described in section~\ref{sec:munging-commands}.
     Please use the Holindex commands for typsetting inline or as a block instead
     of the options \texttt{tt} or \texttt{alltt}.
   \item[\texttt{label}] the label that will appear in the index. For
-    theorems the label is by default it's name and the label given here
+    theorems the label is by default its name and the label given here
     will be added after the name.
-  \item[\texttt{comment}] latex code that gets typeset as a comment / description
+  \item[\texttt{comment}] \LaTeX{} code that gets typeset as a comment / description
     for long index entries.
-  \item[\texttt{latex}] the latex code for the item. There are very rare cases,
+  \item[\texttt{latex}] the \LaTeX{} code for the item. There are very rare cases,
     when it might be useful to provide handwritten \LaTeX{} code instead of the one
     generated by the munger. This option overrides the \LaTeX{} produced by the munger.
     It is recommended to use it very carefully.
 \end{description}
-Besides options, there are also boolean flags that change the formating of entries:
+Besides options, there are also boolean flags that change the formatting of entries:
 \begin{description}
   \item[\texttt{force-index}]
     adds the entry to the index, even if it is not cited in the document.

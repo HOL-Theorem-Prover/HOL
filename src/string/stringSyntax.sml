@@ -14,11 +14,8 @@ val ERR = Feedback.mk_HOL_ERR "stringSyntax";
 val char_ty = Type.mk_thy_type {Tyop = "char", Thy = "string", Args = []}
 val string_ty = Type.mk_thy_type {Tyop = "list", Thy = "list", Args = [char_ty]}
 
-val monop =
-   HolKernel.syntax_fns "string" 1 HolKernel.dest_monop (Lib.curry Term.mk_comb)
-
-val binop =
-   HolKernel.syntax_fns "string" 2 HolKernel.dest_binop HolKernel.mk_binop
+val monop = HolKernel.syntax_fns1 "string"
+val binop = HolKernel.syntax_fns2 "string"
 
 val (chr_tm,mk_chr,dest_chr,is_chr) = monop "CHR"
 val (ord_tm,mk_ord,dest_ord,is_ord) = monop "ORD"

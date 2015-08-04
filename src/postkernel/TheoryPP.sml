@@ -15,6 +15,10 @@ open Feedback Lib Portable;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
+val temp_binding_pfx = "@temp"
+val is_temp_binding = String.isPrefix temp_binding_pfx
+fun temp_binding s = temp_binding_pfx ^ s
+
 val pp_sig_hook = ref (fn () => ());
 
 val concat = String.concat;
@@ -90,9 +94,10 @@ fun pp_sig pp_thm info_record ppstrm = let
        add_newline,flush_ppstream,...} = Portable.with_ppstream ppstrm
   val pp_thm       = pp_thm ppstrm
   val parents'     = sort parents
-  val axioms'      = psort axioms
-  val definitions' = psort definitions
-  val theorems'    = psort theorems
+  val rm_temp      = List.filter (fn (s, _) => not (is_temp_binding s))
+  val axioms'      = psort axioms |> rm_temp
+  val definitions' = psort definitions |> rm_temp
+  val theorems'    = psort theorems |> rm_temp
   val thml         = axioms@definitions@theorems
   fun vblock(header, ob_pr, obs) =
     (begin_block CONSISTENT 2;
@@ -158,9 +163,11 @@ fun pp_sig pp_thm info_record ppstrm = let
       else ()
   fun pthms (heading, ths) =
     vblock(heading,
-           (fn (s,th) => (begin_block CONSISTENT 0;
-                          add_string(concat["val ",s, " : thm"]);
-                          end_block())),  ths)
+           (fn (s,th) => (if is_temp_binding s then ()
+                          else
+                            (begin_block CONSISTENT 0;
+                             add_string(concat["val ",s, " : thm"]);
+                             end_block()))),  ths)
 in
   begin_block CONSISTENT 0;
   add_string ("signature "^ThrySig name^" ="); add_newline();
@@ -343,16 +350,20 @@ fun pp_struct info_record = let
   fun pr_bind(s, th) = let
     val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
   in
-    block INCONSISTENT 2
-      (add_string "val">>
-       add_break(1,0)>> add_string ("op "^s) >> add_break(1,0)>>
-       add_string "=">> add_break(1,0)>>
-       add_string "DT(">>
-       block INCONSISTENT 0
-          (C Tag.pp_to_disk tg>>
-           add_string ",">> add_break(1,0)>>
-           pp_sml_list pp_tm (w::asl))>>
-       add_string")")
+    if is_temp_binding s then fn _ => ()
+    else
+      block INCONSISTENT 2
+        (add_string "fun" >> add_break (1,0) >> add_string ("op "^s) >>
+         add_break(1,0) >> add_string ("x = x") >> add_newline >>
+         add_string "val">>
+         add_break(1,0)>> add_string ("op "^s) >> add_break(1,0)>>
+         add_string "=">> add_break(1,0)>>
+         add_string "DT(">>
+         block INCONSISTENT 0
+            (C Tag.pp_to_disk tg>>
+             add_string ",">> add_break(1,0)>>
+             pp_sml_list pp_tm (w::asl))>>
+         add_string")")
   end
 
   fun stringbrk s = (add_string s >> add_break(1,0))
@@ -372,15 +383,19 @@ fun pp_struct info_record = let
             add_string"end")
 
   fun pr_dbtriple (class,th) =
-     block CONSISTENT 1
-        (add_string"(" >> add_string (stringify th) >> add_string"," >>
-         add_break (0,0) >> add_string th >> add_string"," >>
-         add_break(0,0) >> add_string class >> add_string ")")
+      block CONSISTENT 1
+            (add_string"(" >> add_string (stringify th) >> add_string"," >>
+             add_break (0,0) >> add_string th >> add_string"," >>
+             add_break(0,0) >> add_string class >> add_string ")")
 
   fun dblist () =
-     let val axl  = map (fn (s,_) => ("DB.Axm",s)) axioms
-         val defl = map (fn (s,_) => ("DB.Def",s)) definitions
-         val thml = map (fn (s,_) => ("DB.Thm",s)) theorems
+     let
+       fun check tys =
+           List.mapPartial (fn (s, _) => if is_temp_binding s then NONE
+                                         else SOME (tys, s))
+       val axl  = check "DB.Axm" axioms
+       val defl = check "DB.Def" definitions
+       val thml = check "DB.Thm" theorems
      in
         block INCONSISTENT 0
           (add_string "val _ = DB.bindl" >> add_break(1,0) >>

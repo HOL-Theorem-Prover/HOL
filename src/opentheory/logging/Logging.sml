@@ -481,13 +481,13 @@ val (log_term, log_thm, log_clear,
       val _ = log_thm (EQ_MP (MK_COMB (REFL t, REFL t2)) (REFL t1))
       in () end
     | TRANS_prf (th1,th2) => let
-      val t = rator(concl th1)
-      val _ = log_thm (EQ_MP (MK_COMB (REFL t, th2)) th1)
+      val _ = log_thm th1
+      val _ = log_thm th2
+      val _ = log_command "trans"
       in () end
     | SYM_prf th => let
-      val (eq,l) = dest_comb(fst(dest_comb(concl th)))
-      val ll = REFL l
-      val _ = log_thm (EQ_MP (MK_COMB (MK_COMB (REFL eq, th), ll)) ll)
+      val _ = log_thm th
+      val _ = log_command "sym"
       in () end
     | AP_TERM_prf (tm,th) => log_thm (MK_COMB(REFL tm, th))
     | AP_THM_prf  (th,tm) => log_thm (MK_COMB(th, REFL tm))
@@ -725,8 +725,11 @@ fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=n
 fun raw_start_logging out =
   case !log_state of
     Not_logging => let
-      val _    = Thm.set_definition_callback log_thm
-    in log_state := Active_logging out end
+      val _ = Thm.set_definition_callback log_thm
+      val _ = log_state := Active_logging out
+      val _ = log_num 6
+      val _ = log_command "version"
+    in () end
   | Active_logging _ => ()
 
 fun start_logging() =

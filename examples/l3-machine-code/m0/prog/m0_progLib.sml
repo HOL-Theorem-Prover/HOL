@@ -21,15 +21,12 @@ val m0_comp_defs = m0_progTheory.component_defs
 
 local
    val pc = Term.prim_mk_const {Thy = "m0", Name = "RName_PC"}
-   val step_1 =
-      HolKernel.syntax_fns "m0_step" 1 HolKernel.dest_monop HolKernel.mk_monop
-   val m0_0 =
-      HolKernel.syntax_fns "m0_prog" 1 HolKernel.dest_monop HolKernel.mk_monop
+   val step_1 = HolKernel.syntax_fns1 "m0_step"
+   fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "m0_prog"
+   val m0_0 = syn 1 HolKernel.dest_monop HolKernel.mk_monop
 in
-   val m0_1 =
-      HolKernel.syntax_fns "m0_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-   val m0_2 =
-      HolKernel.syntax_fns "m0_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+   val m0_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
+   val m0_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
    val byte = wordsSyntax.mk_int_word_type 8
    val half = wordsSyntax.mk_int_word_type 16
    val word = wordsSyntax.mk_int_word_type 32
@@ -67,26 +64,7 @@ val state_id =
 
 val m0_frame =
    stateLib.update_frame_state_thm m0_proj_def
-      [(`K m0_c_PSR_N`,
-        `\s:m0_state a w. s with PSR := psr with N := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_Z`,
-        `\s:m0_state a w. s with PSR := psr with Z := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_C`,
-        `\s:m0_state a w. s with PSR := psr with C := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_PSR_V`,
-        `\s:m0_state a w. s with PSR := psr with V := w`,
-        `\s:m0_state. s with PSR := psr`),
-       (`K m0_c_count`,
-        `\s:m0_state a w. s with count := c`,
-        `\s:m0_state. s`),
-       (`m0_c_REG`, `\s:m0_state a w. s with REG := (a =+ w) r`,
-        `\s:m0_state. s with REG := r`),
-       (`m0_c_MEM`, `\s:m0_state a w. s with MEM := (a =+ w) r`,
-        `\s:m0_state. s with MEM := r`)
-      ]
+      ["PSR.N", "PSR.Z", "PSR.C", "PSR.V", "count", "REG", "MEM"]
 
 val m0_frame_hidden =
    stateLib.update_hidden_frame_state_thm m0_proj_def
@@ -134,7 +112,7 @@ in
 end
 
 local
-   val pc_tm = ``m0$Align (pc + 4w: word32, 4)``
+   val pc_tm = ``alignment$align 2 (pc + 4w: word32)``
    fun is_pc_relative tm =
       case Lib.total dest_m0_MEM tm of
          SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
@@ -365,7 +343,7 @@ local
          [m0_PC_INTRO, m0_TEMPORAL_PC_INTRO,
           m0_PC_INTRO0, m0_TEMPORAL_PC_INTRO0]
    val cnv =
-      REWRITE_CONV [m0_stepTheory.Aligned_numeric,
+      REWRITE_CONV [alignmentTheory.aligned_numeric,
                     m0_stepTheory.Aligned_Branch,
                     m0_stepTheory.Aligned_LoadStore]
    val m0_PC_bump_intro =
@@ -436,7 +414,7 @@ local
    val PRE_COND_CONV =
       helperLib.PRE_CONV
          (DEPTH_COND_CONV
-             (REWRITE_CONV [m0_stepTheory.Aligned_numeric]
+             (REWRITE_CONV [alignmentTheory.aligned_numeric]
               THENC NOT_F_CONV)
           THENC PURE_ONCE_REWRITE_CONV [stateTheory.cond_true_elim])
    val cnv =

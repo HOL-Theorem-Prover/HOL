@@ -2,6 +2,8 @@ signature RecordType =
 sig
   include Abbrev
 
+  val mk_recordtype_constructor : string -> string
+
   val prove_recordtype_thms
     : TypeBasePure.tyinfo * string list -> TypeBasePure.tyinfo * string
 

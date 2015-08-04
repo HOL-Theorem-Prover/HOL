@@ -35,17 +35,6 @@ val SYSTEML = Systeml.systeml
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-fun variant str =  (* get an unused file name in the current directory *)
- if OS.FileSys.access(str,[])
- then let fun vary i =
-           let val s = str^Int.toString i
-           in if OS.FileSys.access(s,[])  then vary (i+1) else s
-           end
-      in vary 0
-      end
- else str;
-
-
 fun fromFileNoSuf f =
   case f of
     UO c  => codeToString c
@@ -59,42 +48,6 @@ fun fromFileNoSuf f =
 
 fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
 
-
-(* pull out a list of files that target depends on from depfile.  *)
-(* All files on the right of a colon are assumed to be dependencies.
-   This is despite the fact that holdep produces two entries when run
-   on fooScript.sml files, one for fooScript.uo, and another for fooScript
-   itself, we actually want all of those dependencies in one big chunk
-   because the production of fooTheory.{sig,sml} is done as one
-   atomic step from fooScript.sml. *)
-fun first f [] = NONE
-  | first f (x::xs) = case f x of NONE => first f xs | res => res
-
-fun get_dependencies_from_file depfile = let
-  fun get_whole_file s = let
-    open TextIO
-    val instr = openIn (normPath s)
-  in
-    inputAll instr before closeIn instr
-  end
-  fun parse_result s = let
-    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
-    fun process_line line = let
-      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
-                                          (Substring.full line)
-      val lhs = Substring.string lhs0
-      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
-        handle Subscript => ""
-    in
-      realspace_delimited_fields rhs
-    end
-    val result = List.concat (map process_line lines)
-  in
-    List.map toFile result
-  end
-in
-  parse_result (get_whole_file depfile)
-end
 
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
@@ -114,16 +67,6 @@ in
   (not (OS.FileSys.access(f2, [])) orelse OS.FileSys.modTime f1 > OS.FileSys.modTime f2)
 end
 
-(* a function that given a product file, figures out the argument that
-   should be passed to runholdep in order to get back secondary
-   dependencies. *)
-
-fun holdep_arg (UO c) = SOME (SML c)
-  | holdep_arg (UI c) = SOME (SIG c)
-  | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
-  | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
-  | holdep_arg _ = NONE
-
 (**** get dependencies from file *)
 
 
@@ -131,11 +74,6 @@ fun holdep_arg (UO c) = SOME (SML c)
 (** Command line parsing *)
 
 (*** list functions *)
-fun butlast0 _ [] = raise Fail "butlast - empty list"
-  | butlast0 acc [x] = List.rev acc
-  | butlast0 acc (h::t) = butlast0 (h::acc) t
-fun butlast l = butlast0 [] l
-
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
 fun set_union s1 s2 =
@@ -151,18 +89,9 @@ fun delete m [] = []
 fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
-fun alltrue [] = true
-  | alltrue (x::xs) = x andalso alltrue xs
-fun print_list0 [] = "]"
-  | print_list0 [x] = x^"]"
-  | print_list0 (x::xs) = x^", "^print_list0 xs
-fun print_list l = "["^print_list0 l
 fun I x = x
 
 (*** parse command line *)
-fun includify [] = []
-  | includify (h::t) = "-I" :: h :: includify t
-
 fun parse_command_line list = let
   fun find_pairs0 tag rem inc [] = (List.rev rem, List.rev inc)
     | find_pairs0 tag rem inc [x] = (List.rev (x::rem), List.rev inc)
@@ -344,10 +273,6 @@ val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
 
-val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
-fun has_unquoter() = OS.FileSys.access(UNQUOTER, [OS.FileSys.A_EXEC])
-fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
-
   (*
 fun compile debug args = let
   val _ = if debug then print ("  with command "^
@@ -384,10 +309,9 @@ end
 
 
 (* directory specific stuff here *)
-fun Holmake dirinfo visiteddirs cline_additional_includes targets = let
-  val {abspath=dir, relpath=dirnm} = dirinfo
-  val _ = OS.FileSys.chDir dir
-
+fun Holmake dirinfo cline_additional_includes targets = let
+  val {dir, visited = visiteddirs} = dirinfo
+  val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
 (* prepare to do logging *)
 val () = if do_logging_flag then
@@ -451,9 +375,9 @@ val envlist = envlist hmakefile_env
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
 val additional_includes =
-  includify (remove_duplicates (cline_additional_includes @ hmake_includes))
+  remove_duplicates (cline_additional_includes @ hmake_includes)
 
-val hmake_preincludes = includify (envlist "PRE_INCLUDES")
+val hmake_preincludes = envlist "PRE_INCLUDES"
 val hmake_no_overlay = member "NO_OVERLAY" hmake_options
 val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
 val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
@@ -505,7 +429,7 @@ val actual_overlay =
       NONE => SOME DEFAULT_OVERLAY
     | SOME _ => user_overlay
 
-val std_include_flags = if no_sigobj then [] else ["-I", SIGOBJ]
+val std_include_flags = if no_sigobj then [] else [SIGOBJ]
 
 fun extra_deps t =
     Option.map #dependencies
@@ -743,8 +667,9 @@ val _ = if (debug) then let
 in
   print ("HOLDIR = "^HOLDIR^"\n");
   print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n");
-  print ("Targets = "^print_list targets^"\n");
-  print ("Additional includes = "^print_list additional_includes^"\n");
+  print ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
+  print ("Additional includes = [" ^
+         String.concatWith ", " additional_includes ^ "]\n");
   print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
 end else ()
 
@@ -783,107 +708,11 @@ end else ()
    were themselves out of date.
 *)
 
-(** Construction of the dependency graph
-    ------------------------------------
-
-   The first thing to do is to define a type that will store our
-   dependency graph:
-
-*)
-
-(**** runholdep *)
-(* The primary dependency chain does not depend on anything in the
-   file-system; it always looks the same.  However, additional
-   dependencies depend on what holdep tells us.  This function that
-   runs holdep, and puts the output into specified file, which will live
-   in DEPDIR somewhere. *)
-
-exception HolDepFailed
-fun runholdep arg destination_file = let
-  open Mosml
-  val _ = print ("Analysing "^fromFile arg^"\n")
-  fun buildables s = let
-    val f = toFile s
-    val files =
-        case f of
-          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
-                                   SIG (Theory t), UI (Theory t),
-                                   UO (Theory t), f]
-        | SML ss => [UI ss, UO ss, f]
-        | SIG ss => [UI ss, f]
-        | x => [x]
-  in
-    map fromFile files
-  end
-  val buildable_extras = List.concat (map buildables extra_targets)
-  val result =
-    Success(Holdep.main buildable_extras debug
-                        (hmake_preincludes @ std_include_flags @
-                         additional_includes @ [fromFile arg]))
-    handle _ => (print "Holdep failed.\n"; Failure "")
-  fun myopen s =
-    if OS.FileSys.access(DEPDIR, []) then
-      if OS.FileSys.isDir DEPDIR then TextIO.openOut s
-      else die_with ("Want to put dependency information in directory "^
-                     DEPDIR^", but it already exists as a file")
-    else
-     (print ("Trying to create directory "^DEPDIR^" for dependency files\n");
-      OS.FileSys.mkDir DEPDIR;
-      TextIO.openOut s
-     )
-  fun write_result_to_file s = let
-    open TextIO
-    val destin = normPath destination_file
-    (* val _ = print ("destination: "^quote destin^"\n") *)
-    val outstr = myopen destin
-  in
-    output(outstr, s);
-    closeOut outstr
-  end
-in
-  case result of
-    Success s => write_result_to_file s
-  | Failure s => raise HolDepFailed
-end
-
-fun get_direct_dependencies (f : File) : File list = let
-  val fname = fromFile f
-  val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
-in
-  if isSome arg then let
-    val arg = valOf arg
-    val argname = fromFile arg
-    val depfile = mk_depfile_name argname
-    val _ =
-      if argname forces_update_of depfile then
-        runholdep arg depfile
-      else ()
-    val phase1 =
-      (* circumstances can arise in which the dependency file won't be
-         built, and won't exist; mainly because the file we're trying to
-         compute dependencies for doesn't exist either.  In this case, we
-         can only return the empty list *)
-      if exists_readable depfile then
-        get_dependencies_from_file depfile
-      else
-        []
-  in
-    case f of
-      UO x =>
-        if OS.FileSys.access(fromFile (SIG x), []) andalso
-           List.all (fn f => f <> SIG x) phase1
-        then
-          UI x :: phase1
-        else
-          phase1
-    | _ => phase1
-  end
-  else
-    []
-end
-
-fun get_implicit_dependencies (f: File) : File list = let
-  val file_dependencies0 = get_direct_dependencies f
+fun get_implicit_dependencies incinfo (f: File) : File list = let
+  val file_dependencies0 =
+      get_direct_dependencies {incinfo=incinfo, extra_targets = extra_targets,
+                               output_functions = outputfunctions,
+                               DEPDIR=DEPDIR} f
   val file_dependencies =
       case actual_overlay of
         NONE => file_dependencies0
@@ -900,6 +729,10 @@ in
          theory, this build depends on all of the dependencies
          (meaning the transitive closure of the direct dependency
          relation) in their .UO form, not just .UI *)
+      val get_direct_dependencies =
+          get_direct_dependencies {incinfo=incinfo, extra_targets = extra_targets,
+                                   output_functions = outputfunctions,
+                                   DEPDIR=DEPDIR}
       fun collect_all_dependencies sofar tovisit =
           case tovisit of
             [] => sofar
@@ -933,7 +766,7 @@ in
               if exists_readable (fromFile f) then
                 List.mapPartial
                   (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-                  (get_implicit_dependencies (UO x))
+                  (get_implicit_dependencies incinfo (UO x))
               else []
         in
           set_union alldeps additional_theories
@@ -970,11 +803,8 @@ datatype buildcmds = Compile of File list
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
-fun build_command c arg = let
-  val include_flags = hmake_preincludes @ std_include_flags @
-                      additional_includes
-  val include_flags = List.filter (fn x => not (x = "-I")) include_flags
- (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
+fun build_command (ii as {preincludes,includes}) c arg = let
+  val include_flags = preincludes @ includes
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   exception CompileFailed
   exception FileNotFound
@@ -1000,7 +830,7 @@ in
       val scriptui = script^".ui"
       open OS.Process
       (* first thing to do is to create the Script.uo file *)
-      val b = build_command (Compile deps) scriptsml_file
+      val b = build_command ii (Compile deps) scriptsml_file
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
@@ -1049,11 +879,12 @@ in
              | FileNotFound => false
 end
 
-fun do_a_build_command target pdep secondaries =
+fun do_a_build_command incinfo target pdep secondaries =
   case (extra_commands (fromFile target)) of
     SOME (cs as _ :: _) =>
       OS.Process.isSuccess (run_extra_commands (fromFile target) cs secondaries)
   | _ (* i.e., NONE or SOME [] *) => let
+      val build_command = build_command incinfo
     in
       case target of
          UO c           => build_command (Compile secondaries) pdep
@@ -1083,7 +914,8 @@ val up_to_date_cache:(File, bool)Binarymap.dict ref =
 fun cache_insert(f, b) =
   ((up_to_date_cache := Binarymap.insert (!up_to_date_cache, f, b));
    b)
-fun make_up_to_date ctxt target = let
+fun make_up_to_date incinfo ctxt target = let
+  val make_up_to_date = make_up_to_date incinfo
   fun print s =
     if debug then (nspaces TextIO.print (length ctxt);
                    TextIO.print s)
@@ -1118,12 +950,13 @@ in
         val pdep = valOf pdep
       in
         if make_up_to_date (target::ctxt) pdep then let
-            val secondaries = set_union (get_implicit_dependencies target)
-                                        (get_explicit_dependencies target)
+            val secondaries =
+                set_union (get_implicit_dependencies incinfo target)
+                          (get_explicit_dependencies target)
             val _ =
-                (print ("Secondary dependencies for "^fromFile target^
-                        " are: ");
-                 print (print_list (map fromFile secondaries) ^ "\n"))
+                print ("Secondary dependencies for "^fromFile target^
+                       " are: [" ^
+                       String.concatWith ", " (map fromFile secondaries) ^ "\n")
           in
             if List.all (make_up_to_date (target::ctxt)) secondaries then let
                 fun testthis dep =
@@ -1135,8 +968,9 @@ in
                   in
                     print ("Dependency: "^fromFile d^" forces rebuild\n");
                     done_some_work := true;
-                    cache_insert (target,
-                                  do_a_build_command target pdep secondaries)
+                    cache_insert
+                        (target,
+                         do_a_build_command incinfo target pdep secondaries)
                   end
               end
             else
@@ -1166,8 +1000,8 @@ in
                     end
         | SOME {dependencies, commands, ...} => let
             val _ =
-                (print ("Secondary dependencies for "^tgt_str^" are: ");
-                 print (print_list dependencies ^ "\n"))
+                print ("Secondary dependencies for "^tgt_str^" are: [" ^
+                       String.concatWith ", " dependencies ^ "]\n")
             val depfiles = map toFile dependencies
           in
             if List.all (make_up_to_date (target::ctxt)) depfiles
@@ -1217,7 +1051,7 @@ end handle CircularDependency => cache_insert (target, false)
                             exnMessage x^"> in make_up_to_date")
 
 (** Dealing with the command-line *)
-fun do_target x = let
+fun do_target incinfo x = let
 
   fun clean_action () =
       (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
@@ -1234,38 +1068,59 @@ in
                        true) handle _ => false)
         | "cleanDeps" => clean_deps()
         | "cleanAll" => clean_action() andalso clean_deps()
-        | _ => make_up_to_date [] (toFile x)
+        | _ => make_up_to_date incinfo [] (toFile x)
       end
-    | SOME _ => make_up_to_date [] (toFile x)
+    | SOME _ => make_up_to_date incinfo [] (toFile x)
   else true
 end
 
-fun stop_on_failure tgts =
+fun stop_on_failure incinfo tgts =
     case tgts of
       [] => true
-    | (t::ts) => do_target t andalso stop_on_failure ts
-fun keep_going tgts = let
+    | (t::ts) => do_target incinfo t andalso stop_on_failure incinfo ts
+fun keep_going incinfo tgts = let
   fun recurse acc tgts =
       case tgts of
         [] => acc
-      | (t::ts) => recurse (do_target t andalso acc) ts
+      | (t::ts) => recurse (do_target incinfo t andalso acc) ts
 in
   recurse true tgts
 end
-fun strategy tgts = let
+fun strategy incinfo tgts = let
   val tgts = if always_rebuild_deps then "cleanDeps" :: tgts else tgts
 in
-  if keep_going_flag then keep_going tgts else stop_on_failure tgts
+  if keep_going_flag then keep_going incinfo tgts else stop_on_failure incinfo tgts
 end
 
-fun hm_recur ctgt k =
-    maybe_recurse
-        {warn = warn, no_prereqs = no_prereqs, hm = Holmake,
-         visited = visiteddirs,
-         includes =
-         cline_additional_includes @ envlist "PRE_INCLUDES" @ hmake_includes,
-         dir = {abspath = dir, relpath = dirnm},
-         local_build = k, cleantgt = ctgt}
+val allincludes =
+    cline_additional_includes @ hmake_includes
+
+fun add_sigobj {includes,preincludes} =
+    {includes = std_include_flags @ includes,
+     preincludes = preincludes}
+
+val dirinfo =
+  {visited = visiteddirs,
+   includes = allincludes,
+   preincludes = hmake_preincludes}
+
+val purelocal_incinfo =
+    add_sigobj {includes = allincludes, preincludes = hmake_preincludes}
+
+fun hm_recur ctgt k = let
+  fun hm {dir, visited, targets} =
+      Holmake {dir = dir, visited = visited} [] targets
+in
+  maybe_recurse
+      {warn = warn,
+       diag = diag,
+       no_prereqs = no_prereqs, hm = hm,
+       dirinfo = dirinfo,
+       dir = dir,
+       local_build = k, cleantgt = ctgt}
+end
+
+fun stdcont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
 
 in
   case targets of
@@ -1278,25 +1133,26 @@ in
                 map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
                     targets
           in
-            print("Generated targets are: "^print_list tgtstrings ^ "\n")
+            print("Generated targets are: [" ^
+                  String.concatWith ", " tgtstrings ^ "]\n")
           end
         else ()
     in
-      hm_recur NONE (fn () => finish_logging (strategy  targets))
+      hm_recur NONE (stdcont targets)
     end
   | xs => let
-      fun isPhony x = member x ["clean", "cleanDeps", "cleanAll"] orelse
-                      x in_target ".PHONY"
+      val cleanTarget_opt =
+          List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
+      fun canon i = hmdir.extendp {base = dir, extension = i}
     in
-      if List.all isPhony xs andalso not cline_recursive then
-        if finish_logging (strategy xs) then SOME visiteddirs else NONE
+      if isSome cleanTarget_opt andalso not cline_recursive then
+        if finish_logging (strategy purelocal_incinfo xs) then
+          SOME {visited = visiteddirs,
+                includes = map canon allincludes,
+                preincludes = map canon hmake_preincludes}
+        else NONE
       else
-        let
-          val ctgt =
-              List.find (fn s => member s ["clean", "cleanDeps", "cleanAll"]) xs
-        in
-          hm_recur ctgt (fn () => finish_logging (strategy xs))
-        end
+          hm_recur cleanTarget_opt (stdcont xs)
     end
 end
 
@@ -1336,9 +1192,8 @@ in
   else let
       open OS.Process
       val result =
-          Holmake {relpath = SOME (OS.Path.currentArc),
-                   abspath = OS.FileSys.getDir()}
-                  (Binaryset.empty String.compare)
+          Holmake {dir = hmdir.curdir(),
+                   visited = Binaryset.empty hmdir.compare}
                   cline_additional_includes
                   targets
                   handle Fail s => (print ("Fail exception: "^s^"\n");

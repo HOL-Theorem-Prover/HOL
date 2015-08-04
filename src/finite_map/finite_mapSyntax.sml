@@ -116,9 +116,7 @@ val is_fevery = same_const fevery_t
 val dest_fevery = dest_binop fevery_t "fevery"
 val is_fevery = can dest_fevery
 
-val bop =
-   HolKernel.syntax_fns "finite_map" 2 HolKernel.dest_binop HolKernel.mk_binop
-
-val (flookup_t, mk_flookup, dest_flookup, is_flookup) = bop "FLOOKUP"
+val (flookup_t, mk_flookup, dest_flookup, is_flookup) =
+   HolKernel.syntax_fns2 "finite_map" "FLOOKUP"
 
 end

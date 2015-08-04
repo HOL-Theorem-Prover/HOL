@@ -563,6 +563,7 @@ val swap_RECURSION = store_thm(
                 REVERSE (SRW_TAC [][]) THEN1 SRW_TAC [][] THEN
                 Q.MATCH_ABBREV_TAC
                   `lam (rswap a z Y) a (tpm [(a,z)] M') = R` THEN
+                Q.UNABBREV_TAC `R` THEN
                 `lam (rswap a z Y) a (tpm [(a,z)] M') =
                    lam (rswap a z Y) (swapstr a z z) (tpm [(a,z)] M')`
                   by SRW_TAC [][] THEN
@@ -648,8 +649,3 @@ val swap_RECURSION_nosideset = save_thm(
 
 
 val _ = export_theory();
-
-
-
-
-

@@ -5,11 +5,8 @@ struct
    open Abbrev HolKernel
    open machine_ieeeTheory
 
-   val monop = HolKernel.syntax_fns thy 1 HolKernel.dest_monop
-                  (Lib.curry boolSyntax.mk_icomb)
-
-   val binop =
-      HolKernel.syntax_fns thy 2 HolKernel.dest_binop HolKernel.mk_binop
+   val monop = HolKernel.syntax_fns1 thy
+   val binop = HolKernel.syntax_fns2 thy
 
    val (float_to_fp_tm, mk_float_to_fp, dest_float_to_fp, is_float_to_fp) =
       monop ("float_to_" ^ fp)
@@ -22,8 +19,7 @@ struct
    fun const name = Term.mk_thy_const {Ty = ty, Thy = thy, Name = pre name}
    val monop = monop o pre
    val binop = binop o pre
-   val triop =
-      HolKernel.syntax_fns thy 3 HolKernel.dest_triop HolKernel.mk_triop o pre
+   val triop = HolKernel.syntax_fns3 thy o pre
 
    val (fp_abs_tm, mk_fp_abs, dest_fp_abs, is_fp_abs) = monop "abs"
    val (fp_add_tm, mk_fp_add, dest_fp_add, is_fp_add) = triop "add"

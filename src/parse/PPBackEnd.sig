@@ -5,55 +5,14 @@ sig
   type ppstream = PP.ppstream
   type break_style = PP.break_style
 
-  datatype pp_color =
-      Black
-    | RedBrown
-    | Green
-    | BrownGreen
-    | DarkBlue
-    | Purple
-    | BlueGreen
-    | DarkGrey
-    | LightGrey
-    | OrangeRed
-    | VividGreen
-    | Yellow
-    | Blue
-    | PinkPurple
-    | LightBlue
-    | White;
 
-  datatype pp_style =
-      FG of pp_color
-    | BG of pp_color
-    | Bold
-    | Underline
-    | UserStyle of string
+  datatype lit_type = datatype term_pp_types.lit_type
+  datatype pp_color = datatype term_pp_types.pp_color
+  datatype pp_style = datatype term_pp_types.pp_style
+  datatype annotation = datatype term_pp_types.annotation
 
-  datatype lit_type = FldName | StringLit | NumLit | CharLit
-
-  datatype annotation =
-    BV of hol_type * (unit -> string)
-  | FV of hol_type * (unit -> string)
-  | TyV
-  | TyOp of (unit -> string)
-  | TySyn of (unit -> string)
-  | Const of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
-  | SymConst of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
-  | Note of string
-  | Literal of lit_type
-
-  type xstring = {s:string,sz:int option,ann:annotation option}
-
-  type t = {add_string     : ppstream -> string -> unit,
-            add_xstring    : ppstream -> xstring -> unit,
-            begin_block    : ppstream -> PP.break_style -> int -> unit,
-            end_block      : ppstream -> unit,
-            add_break      : ppstream -> int * int -> unit,
-            add_newline    : ppstream -> unit,
-            begin_style    : ppstream -> pp_style list -> unit,
-            end_style      : ppstream -> unit,
-            name : string}
+  type xstring = term_pp_types.xstring
+  type t = term_grammar.grammar term_pp_types.ppbackend
 
   val with_ppstream : t -> ppstream ->
                       {add_break      : int * int -> unit,

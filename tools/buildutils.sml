@@ -153,7 +153,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
               open FileSys
             in
               if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
-                 (knl = "" orelse knl = kernelname) then
+                 (knl = "" orelse ("-"^knl) = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc)
@@ -662,8 +662,17 @@ fun write_theory_graph () = let
   val dotexec = Systeml.DOT_PATH
 in
   if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
-    (* of course, this will always be the case on Windows *)
-    warn ("*** Can't see dot executable at "^dotexec^"; not generating theory-graph\n")
+    (* of course, this will likely be the case on Windows *)
+    warn ("*** Can't see dot executable at "^dotexec^"; not generating \
+          \theory-graph\n\
+          \*** You can try reconfiguring and providing an explicit path \n\
+          \*** (val DOT_PATH = \"....\") in\n\
+          \***    tools-poly/poly-includes.ML (Poly/ML)\n\
+          \***  or\n\
+          \***    config-override           (Moscow ML)\n\
+          \***\n\
+          \*** (Under Poly/ML you will have to delete bin/hol.builder0 as \
+          \well)\n")
   else let
       val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
       val _ = print "  (Use build's -nograph option to skip this step.)\n"

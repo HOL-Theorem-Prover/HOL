@@ -61,6 +61,7 @@ print "\nHOL smart configuration.\n\n";
 
 val poly = ""
 val polymllibdir = "";
+val DOT_PATH = "";
 
 val _ = let
   val override = "tools-poly/poly-includes.ML"
@@ -121,7 +122,7 @@ in
 end
 
 val polyinstruction =
-    "Please write file tools-poly/poly-includes.ML to specify it\
+    "Please write file tools-poly/poly-includes.ML to specify it \
     \properly.\n\
     \This file should include a line of the form\n\n\
     \  val poly = \"path-to-poly\";"
@@ -206,13 +207,13 @@ val polymllibdir =
       | NONE => die ("\n\nYour overrides file specifies bogus location '"
                      ^polymllibdir ^
                      "'\nas the location of libpolymain.a\n" ^
-                     polylibinstruction)
+                     polylibinstruction);
+
+val DOT_PATH = if DOT_PATH = "" then "/usr/bin/dot" else DOT_PATH;
 
 val dynlib_available = false;
 
 print "\n";
-
-val DOT_PATH = "/usr/bin/dot"
 
 fun verdict (prompt, value) =
     if value = "" then

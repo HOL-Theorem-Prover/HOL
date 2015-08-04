@@ -23,4 +23,4 @@ sig
   val derive_nonschematic_inductive_relations : term -> thm
   val prove_monotonicity_hyps : monoset -> thm -> thm
 
-end;
+end

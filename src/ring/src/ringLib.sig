@@ -36,5 +36,4 @@ sig
   val RING_CONV      : conv
   val reify          : term list -> {Metamap : term, Poly : term list}
 
-
-end;
+end

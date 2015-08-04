@@ -6,7 +6,7 @@ open bitSyntax fcpSyntax fcpLib wordsTheory
 
 val ERR = mk_HOL_ERR "wordsSyntax"
 
-fun syntax_fns n d m = HolKernel.syntax_fns "words" n d m
+fun syntax_fns n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "words"
 
 (*---------------------------------------------------------------------------*)
 (* Word types                                                                *)
@@ -75,7 +75,7 @@ val (int_max_tm, mk_int_max, dest_int_max, is_int_max) = s "INT_MAX"
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns 1 HolKernel.dest_monop HolKernel.mk_monop
+val s = HolKernel.syntax_fns1 "words"
 
 val (w2n_tm, mk_w2n, dest_w2n, is_w2n) = s "w2n"
 val (word_abs_tm, mk_word_abs, dest_word_abs, is_word_abs) = s "word_abs"
@@ -230,7 +230,7 @@ val (concat_word_list_tm, mk_concat_word_list,
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns 2 HolKernel.dest_binop HolKernel.mk_binop
+val s = HolKernel.syntax_fns2 "words"
 
 val (w2l_tm, mk_w2l, dest_w2l, is_w2l) = s "w2l"
 val (nzcv_tm, mk_nzcv, dest_nzcv, is_nzcv) = s "nzcv"
@@ -367,7 +367,7 @@ val (bit_set_tm, mk_bit_set, dest_bit_set, is_bit_set) =
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns 3 HolKernel.dest_triop HolKernel.mk_triop
+val s = HolKernel.syntax_fns3 "words"
 
 val (word_bits_tm, mk_word_bits, dest_word_bits, is_word_bits) = s "word_bits"
 
@@ -409,7 +409,7 @@ val (word_extract_tm, mk_word_extract, dest_word_extract, is_word_extract) =
 
 (* - - - - - - - - - - - - - - - - - - - - - - *)
 
-val s = syntax_fns 4 HolKernel.dest_quadop HolKernel.mk_quadop
+val s = HolKernel.syntax_fns4 "words"
 
 val (bit_field_insert_tm, mk_bit_field_insert,
      dest_bit_field_insert, is_bit_field_insert) = s "bit_field_insert"

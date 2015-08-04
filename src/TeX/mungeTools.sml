@@ -7,6 +7,8 @@ datatype command = Theorem | Term | Type
 datatype opt = Turnstile | Case | TT | Def | SpacedDef | TypeOf | TermThm
              | Indent of int | NoSpec
              | Inst of string * string
+             | OverrideUpd of (string * int) * string
+             | TraceSet of string * int
              | NoTurnstile | Width of int
              | Mathmode of string | NoMath
              | AllTT | ShowTypes of int
@@ -64,6 +66,21 @@ fun stringOpt pos s =
           NONE => (warn(pos, s ^ " is not a valid option"); NONE)
         | SOME i => SOME (ShowTypes i)
       end
+      else if String.isPrefix "tr'" s then let
+        val sfx = String.extract(s, 3, NONE)
+        val (pfx,eqsfx) = Substring.position "'=" (Substring.full sfx)
+      in
+        if Substring.size eqsfx = 0 then
+          (warn(pos, s ^ " is not a valid option"); NONE)
+        else
+          let
+            val numpart_s = String.extract (Substring.string eqsfx, 2, NONE)
+          in
+            case Int.fromString numpart_s of
+                NONE => (warn(pos, s ^ " is not a valid option"); NONE)
+              | SOME i => SOME(TraceSet(Substring.string pfx, i))
+          end
+      end
       else if String.isPrefix ">>" s then let
           val numpart_s = String.extract(s,2,NONE)
         in
@@ -117,7 +134,10 @@ fun stringOpt pos s =
                 (warn (pos, s ^ " is not a valid option"); NONE)
             else
               (warn (pos, s ^ " is not a valid option"); NONE)
-          else SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
+          else if size sfx > 2 andalso sub(sfx,1) = #"/" then
+            SOME(OverrideUpd((rmws pfx, size sfx - 2), rmws (slice(sfx,2,NONE))))
+          else
+            SOME (Inst (rmws pfx, rmws (slice(sfx,1,NONE))))
         end
     end
 
@@ -211,10 +231,14 @@ fun optset_nomath s = OptSet.has NoMath s
 val optset_unoverloads =
     OptSet.fold (fn (e,l) => case e of Unoverload s => s :: l | _ => l) []
 
+fun optset_traces opts f =
+    OptSet.fold (fn (e, f) => case e of TraceSet p => trace p f | _ => f) f opts
+
 val HOL = !EmitTeX.texPrefix
 val user_overrides = ref (Binarymap.mkDict String.compare)
 
-
+fun diag s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+              TextIO.flushOut TextIO.stdErr)
 fun overrides s = Binarymap.peek (!user_overrides, s)
 
 fun isChar x y = x = y
@@ -269,6 +293,8 @@ end
 
 fun depth1_conv c t =
     (TRY_CONV c THENC TRY_CONV (SUB_CONV (depth1_conv c))) t
+
+fun updatef ((k, v), f) x = if x = k then SOME v else f x
 
 fun do_thminsts loc opts th = let
   val (insts, tytheta, theta) = mkinst loc opts (concl th)
@@ -381,7 +407,16 @@ in
               |> (case optset_unoverloads opts of
                       [] => (fn f => f)
                     | slist => clear_overloads slist)
+              |> optset_traces opts
 
+    val overrides = let
+      fun foldthis (opt, acc) =
+          case opt of
+              OverrideUpd (newsz,old) => updatef ((old,newsz), acc)
+            | _ => acc
+    in
+      OptSet.fold foldthis overrides opts
+    end
     fun stdtermprint pps t = optprintermod (raw_pp_term_as_tex overrides) pps t
 
     fun clear_abbrevs slist f = let
@@ -479,7 +514,9 @@ in
         end
       | Type => let
           val typ = if OptSet.has TypeOf opts
-                       then Term.type_of (Parse.Term [QQ parse_start, QQ spec])
+                         then Parse.Term [QQ parse_start, QQ spec]
+                              |> do_tminsts pos opts
+                              |> Term.type_of
                     else Parse.Type [QQ parse_start, QQ spec]
         in
           add_string pps (optset_indent opts);

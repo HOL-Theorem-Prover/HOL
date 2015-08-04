@@ -5,6 +5,8 @@ open enumerationsTheory primrecfnsTheory
 open rich_listTheory arithmeticTheory
 open reductionEval churchnumTheory churchboolTheory
 
+open lcsymtacs
+
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
 val _ = new_theory "prterm"
@@ -1407,12 +1409,30 @@ val recfn_recPhi = Store_thm(
   SRW_TAC [][primrec_recfn] THEN intro primrec_recfn THEN
   SRW_TAC [][primrec_rules]);
 
-val recPhi_correct = Store_thm(
+val recfn_recPhi_applied = Store_thm(
+  "recfn_recPhi_applied",
+  ``recfn (recPhi o CONS i) 1``,
+  `recPhi o CONS i = recCn recPhi [K (SOME i); SOME o proj 0]`
+     suffices_by (simp[] >> strip_tac >>
+                  FIRST (map irule (CONJUNCTS recfn_rules)) >>
+                  simp[recfn_recPhi, recfn_rules]) >>
+  simp[FUN_EQ_THM, recCn_def] >> simp[recPhi_def, recCn_def]);
+
+
+val recPhi_correct = store_thm(
   "recPhi_correct",
   ``recPhi [i; n] = Phi i n``,
   SRW_TAC [][Phi_def, recPhi_def, recCn_def, LET_THM] THEN
   Cases_on `bnf_of (toTerm (numdB i) @@ church n)` THEN
   FULL_SIMP_TAC (srw_ss()) []);
+
+val recPhi_rec2Phi = store_thm(
+  "recPhi_rec2Phi[simp]",
+  ``recPhi = rec2 Phi``,
+  simp[FUN_EQ_THM] >> Cases
+  >- simp[recPhi_def, recCn_def, GSYM recPhi_correct] >>
+  qcase_tac `recPhi (h::rest)` >> Cases_on `rest` >>
+  simp[recPhi_def, recCn_def, GSYM recPhi_correct])
 
 (* the other way - every recursive function can be emulated in the λ-calculus *)
 val cnel_def = Define`
@@ -1737,7 +1757,6 @@ val crecPr_cons0 = store_thm(
                         cnhd_behaviour, cntl_behaviour, natrec_behaviour,
                         cchurch_behaviour]);
 
-open lcsymtacs
 val crecPr_consSUC = store_thm(
   "crecPr_consSUC",
   ``bnf_of (crecPr @@ church b @@ church s @@ church (nlist_of (SUC n::t))) =
@@ -2099,5 +2118,14 @@ val recfns_in_Phi = store_thm(
     MATCH_MP_TAC (GEN_ALL cminimise_fail2) >> srw_tac [][] >>
     first_x_assum (Q.SPEC_THEN `n` MP_TAC) >> srw_tac [ARITH_ss][]
   ]);
+
+(* "universal machine index" *)
+val UMi_def = new_specification(
+  "UMi_def", ["UMi"],
+  MATCH_MP recfns_in_Phi recfn_recPhi |> SIMP_RULE (srw_ss()) [])
+
+val UMi_works = save_thm(
+  "UMi_works",
+  UMi_def |> Q.SPEC `[m;n]` |> SIMP_RULE (srw_ss()) [SimpRHS]);
 
 val _ = export_theory()

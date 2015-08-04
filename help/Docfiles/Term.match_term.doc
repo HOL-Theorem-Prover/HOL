@@ -41,5 +41,5 @@ conclusion of a theorem to a term.
 For instantiating theorems {PART_MATCH} is usually easier to use.
 
 \SEEALSO
-Type.match_type, Drule.INST_TY_TERM, Drule.PART_MATCH.
+Term.match_terml, Type.match_type, Drule.INST_TY_TERM, Drule.PART_MATCH.
 \ENDDOC

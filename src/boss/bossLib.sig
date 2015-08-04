@@ -86,6 +86,9 @@ sig
   val RW_TAC            : simpset -> thm list -> tactic
   val SRW_TAC           : ssfrag list -> thm list -> tactic
 
+  val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
   (* Call-by-value evaluation *)
   val EVAL           : term -> thm
   val EVAL_RULE      : thm -> thm

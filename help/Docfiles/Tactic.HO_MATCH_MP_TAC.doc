@@ -19,7 +19,7 @@ instance of {s}. Any variables free in {s} but not in {t} will be existentially
 quantified in the resulting subgoal:
 {
      A ?- t'
-  ======================  MATCH_MP_TAC (A' |- !x1...xn. s ==> t)
+  ======================  HO_MATCH_MP_TAC (A' |- !x1...xn. s ==> t)
      A ?- ?z1...zp. s'
 }
 where {z1}, ..., {zp} are (type instances of) those variables among

@@ -43,12 +43,7 @@ fun is_uintmax t =
 (* Tell the function definition mechanism about words.                       *)
 (*---------------------------------------------------------------------------*)
 
-val () =
-   let
-      val others = !Literal.other_literals
-   in
-      Literal.other_literals := (fn x => others x orelse is_word_literal x)
-   end
+val () = Literal.add_literal is_word_literal
 
 (* ------------------------------------------------------------------------- *)
 

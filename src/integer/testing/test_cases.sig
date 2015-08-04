@@ -13,4 +13,4 @@ sig
   val perform_omega_tests : conv -> bool
   val perform_cooper_tests : conv -> bool
 
-end;
+end

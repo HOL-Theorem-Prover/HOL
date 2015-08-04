@@ -14,7 +14,7 @@ Variables that occur in both the pattern and the goal are treated as ``local
 constants'', and will not acquire instantiations.
 
 For each variable {v} in the pattern that has not been treated as a local
-constant, there will be a instantiation term {t}, such that the substitution
+constant, there will be an instantiation term {t}, such that the substitution
 {pattern[v1 |-> t1, v2 |-> t2, ...]} produces {a}. The effect of the tactic is
 to then perform abbreviations in the goal, replacing each {t} with the
 corresponding {v}, and adding assumptions of the form {Abbrev(v = t)} to the

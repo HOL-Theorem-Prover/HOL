@@ -2412,7 +2412,7 @@ SRW_TAC [] [EQ_IMP_THM] THEN1 (
     SRW_TAC [] [] ) THEN
   NTAC 2 (FIRST_X_ASSUM (Q.SPEC_THEN `m1` MP_TAC)) THEN
   SRW_TAC [] [] ) THEN1 (
-  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` [] THEN
+  Q.MATCH_RENAME_TAC `~(m < n) \/ f n <> EL m (GENLIST f n)` THEN
   Cases_on `m < n` THEN SRW_TAC [] [] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`m`,`n`] MP_TAC) THEN
   SRW_TAC [] [LESS_SUC] THEN

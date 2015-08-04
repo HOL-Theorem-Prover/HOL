@@ -37,3 +37,6 @@ val def7 = test "Case expression with underscores of different types"
 val def8 = test "Case expression with variables of different types"
                 (Hol_defn "f3")
                 `f3 x = case x of (f,T,_) => ~f | (_,F,f) => f F`;
+
+val _ = overload_on ("=", ``T``)
+val _ = test "Definition with overloaded =" (Hol_defn "f4") `f4 x y = x /\ y`

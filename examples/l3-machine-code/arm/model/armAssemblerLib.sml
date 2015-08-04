@@ -226,7 +226,7 @@ local
    fun code3 s =
       let
          val w = assemblerLib.word 32 s
-         val c = BitsN.bits (w, 31, 28)
+         val c = BitsN.bits (31, 28) w
          val () = arm.SetPassCondition c
          val h = StringCvt.padLeft #"0" 8 (L3.lowercase s)
          val (m, a) = arm.instructionToString (c, arm.DecodeARM w)
@@ -345,7 +345,7 @@ local
           arm.Data (arm.RegisterShiftedRegister
                       (opc', (setflags', (d', (n', (m', (shift_t', s')))))))) =>
             opc = opc' andalso setflags = setflags' andalso
-            (BitsN.bits (opc, 3, 2) = BitsN.fromNat (2, 2) orelse d = d')
+            (BitsN.bits (3, 2) opc = BitsN.fromNat (2, 2) orelse d = d')
             andalso n = n' andalso m = m' andalso shift_t = shift_t' andalso
             s = s'
        | _ => false
@@ -354,7 +354,7 @@ local
    fun test1 () =
       let
          val w = random32 ()
-         val c = BitsN.bits (w, 31, 28)
+         val c = BitsN.bits (31, 28) w
          val i = arm.DecodeARM w
          val (m, a) = arm.instructionToString (c, i)
          val c = if c = BitsN.fromNat (15, 4) then BitsN.fromNat (14, 4) else c

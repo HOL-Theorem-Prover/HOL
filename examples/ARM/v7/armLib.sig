@@ -4,7 +4,9 @@ sig
   include arm_parserLib where
     type arm_code = arm_parserLib.arm_code
 
-  include arm_encoderLib arm_disassemblerLib arm_stepLib
+  include arm_encoderLib
+  include arm_disassemblerLib
+  include arm_stepLib
 
   val arm_decode     : string -> arm_code
   val thumb_decode   : int -> string -> arm_code

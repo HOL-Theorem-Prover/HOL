@@ -101,16 +101,38 @@ in
 
    fun PAT_ABBREV_TAC fv_set eq (g as (asl, w)) =
       let
+         open HOLset
          val (l, r) = dest_eq eq
-         val l' = variant (HOLset.listItems (FVL [r] fv_set)) l
-         fun matchr t = raw_match [] fv_set r t ([],[])
-         fun finder t =
-            (!match_var_or_const orelse not (is_var t orelse is_const t))
-            andalso can matchr t
+         val rvs = FVL [r] empty_tmset
+         val l' = variant (listItems(union(fv_set, rvs))) l
+         fun matchr t =
+           case raw_match [] fv_set r t ([],[]) of
+               ((tmsub, _), (tysub, _)) => (tmsub, tysub)
+         fun finder (bvs, t) =
+           case List.find (fn v => HOLset.member(rvs, v)) bvs of
+               SOME _ => NONE
+             | NONE =>
+               if (is_var t orelse is_const t) andalso not (!match_var_or_const)
+               then NONE
+               else
+                 case Lib.total matchr t of
+                     NONE => NONE
+                   | SOME (tmsub, tysub) =>
+                     let
+                       open HOLset
+                       val bv_set = addList(empty_tmset, bvs)
+                       fun badt t =
+                         not (isEmpty (intersection (FVL [t] empty_tmset,
+                                                     bv_set)))
+                     in
+                       case List.find (fn {redex,residue=t} => badt t) tmsub of
+                           NONE => SOME(t, tysub)
+                         | SOME _ => NONE
+                     end
       in
-         case Lib.total (find_term finder) w of
+         case gen_find_term finder w of
             NONE => raise ERR "PAT_ABBREV_TAC" "No matching term found"
-          | SOME t => ABB l' t g
+          | SOME (t, tysub) => ABB (Term.inst tysub l') t g
       end
 end
 
@@ -119,11 +141,21 @@ fun fixed_tyvars ctxt pattern =
 
 fun ABB' {redex=l,residue=r} = ABB l r
 
+val safe_inst_cmp = let
+  fun img {redex,residue} =
+      (term_size residue, (residue, #1 (dest_var redex) handle HOL_ERR _ => ""))
+  val cmp = pair_compare
+             (flip_cmp Int.compare, pair_compare (Term.compare, String.compare))
+in
+  inv_img_cmp img cmp
+end
+val safe_inst_sort = Listsort.sort safe_inst_cmp
+
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
   val ctxt = HOLset.listItems fv_set
   val (tminst,_) = match_terml (fixed_tyvars ctxt pattern) fv_set pattern w
 in
-  MAP_EVERY ABB' tminst g
+  MAP_EVERY ABB' (safe_inst_sort tminst) g
 end
 
 fun MATCH_ASSUM_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
@@ -133,7 +165,7 @@ fun MATCH_ASSUM_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
     | find (asm::tl) =
       case total (match_terml fixed fv_set pattern) asm of
         NONE => find tl
-      | SOME (tminst,_) => MAP_EVERY ABB' tminst g
+      | SOME (tminst,_) => MAP_EVERY ABB' (safe_inst_sort tminst) g
                            handle HOL_ERR e => find tl
 in find asl end
 
@@ -144,7 +176,7 @@ fun HO_MATCH_ABBREV_TAC fv_set pattern (gl as (asl,w)) =
         Tactical.default_prover(mk_eq(w, subst tminst (inst tyinst pattern)),
                                 BETA_TAC THEN REFL_TAC)
 in
-  CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
+  CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' (safe_inst_sort tminst)
 end gl;
 
 fun UNABBREV_TAC s =

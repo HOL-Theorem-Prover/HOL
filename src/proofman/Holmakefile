@@ -18,7 +18,11 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
-       $(dprot $(SIGOBJ)/ParseExtras.uo)
+       $(dprot $(SIGOBJ)/ParseExtras.uo) \
+       $(dprot $(SIGOBJ)/Drule.uo) \
+       $(dprot $(SIGOBJ)/TheoryPP.uo) \
+       $(dprot $(SIGOBJ)/Conv.uo) \
+       $(dprot $(SIGOBJ)/ParseDatatype.uo)
 
 EXTRA_CLEANS = $(TARGET)
 
@@ -27,4 +31,11 @@ $(TARGET): $(DEPS)
         $(POLY) < builder0.ML && \
         cc -o $(protect $@) hol.builder0.o $(POLY_LDFLAGS) && \
         rm hol.builder0.o
+
+all: selftest.exe $(TARGET)
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
 endif

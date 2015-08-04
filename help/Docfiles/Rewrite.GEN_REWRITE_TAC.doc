@@ -1,6 +1,6 @@
 \DOC GEN_REWRITE_TAC
 
-\TYPE {GEN_REWRITE_TAC : ((conv -> conv) -> thm list -> thm list -> tactic)}
+\TYPE {GEN_REWRITE_TAC : ((conv -> conv) -> rewrites -> thm list -> tactic)}
 
 \SYNOPSIS
 Rewrites a goal, selecting terms according to a user-specified strategy.
@@ -67,7 +67,7 @@ sides to produce the following goal:
 as {ADD_SYM} matches at two positions. To rewrite on
 only one side of the equation, the following tactic can be used:
 {
-   GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [] [ADD_SYM]
+   GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [ADD_SYM]
 }
 which produces the desired goal:
 {
@@ -79,7 +79,8 @@ to {REWRITE_TAC} but will also include {ADD_CLAUSES} in the set of
 theorems to use always:
 {
    val ADD_REWRITE_TAC = GEN_REWRITE_TAC TOP_DEPTH_CONV
-                             (ADD_CLAUSES :: implicit_rewrites())
+                             (add_rewrites (implicit_rewrites ())
+                                           [ADD_CLAUSES])
 }
 
 

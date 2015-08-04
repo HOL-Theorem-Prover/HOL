@@ -17,9 +17,9 @@ HOLHEAP = local-hol-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../parse/lisp_sexpTheory \
+            $(HOLDIR)/examples/machine-code/compiler/compilerLib \
             ../garbage-collector/lisp_consTheory \
-            ../bytecode/lisp_compilerTheory \
-            $(HOLDIR)/examples/machine-code/compiler/compilerLib
+            ../bytecode/lisp_compilerTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))

@@ -43,7 +43,10 @@ Then the goal can be solved by the application of:
      THEN MATCH_ACCEPT_TAC th2
 }
 
+\COMMENTS
+To do similarly with several existentially quantified variables, use
+{REPEAT_TCL CHOOSE_THEN ASSUME_TAC} in place of {CHOOSE_TAC}
 
 \SEEALSO
-Thm_cont.CHOOSE_THEN, Tactic.X_CHOOSE_TAC.
+Thm_cont.CHOOSE_THEN, Tactic.X_CHOOSE_TAC, Thm_cont.REPEAT_TCL.
 \ENDDOC

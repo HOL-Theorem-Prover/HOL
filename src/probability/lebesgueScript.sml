@@ -2293,7 +2293,7 @@ val lemma_fn_in_psfis = store_thm
 val integral_sequence = store_thm
   ("integral_sequence",``!m f.  (!x. 0 <= f x) /\ measure_space m /\
                         f IN measurable (m_space m,measurable_sets m) Borel
-	==> (pos_fn_integral m f = sup (IMAGE (\i. pos_fn_integral m (fn_seq m f i)) UNIV))``,	
+	==> (pos_fn_integral m f = sup (IMAGE (\i. pos_fn_integral m (fn_seq m f i)) UNIV))``,
   RW_TAC std_ss []
   ++ MATCH_MP_TAC lebesgue_monotone_convergence
   ++ RW_TAC std_ss [lemma_fn_sup,lemma_fn_mono_increasing,lemma_fn_upper_bounded,lemma_fn_5]
@@ -2301,7 +2301,7 @@ val integral_sequence = store_thm
 
 
 val measurable_sequence = store_thm
-("measurable_sequence",``!m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel ==> 	
+("measurable_sequence",``!m f. measure_space m /\ f IN measurable (m_space m,measurable_sets m) Borel ==>
 	(?fi ri. (!x. mono_increasing (\i. fi i x)) /\
 	(!x. x IN m_space m ==> (sup (IMAGE (\i. fi i x) UNIV) = fn_plus f x)) /\
 	(!i. ri i IN psfis m (fi i)) /\
@@ -2948,7 +2948,7 @@ val integrable_not_infty_alt3 = store_thm
       by (RW_TAC std_ss [fn_plus_def,FUN_EQ_THM]
 	  ++ Cases_on `f x` ++ METIS_TAC [lt_infty])
   ++ `fn_minus (\x. if (f x = NegInf) \/ (f x = PosInf) then 0 else f x) =
-      (\x. if fn_minus f x = PosInf then 0 else fn_minus f x)`	
+      (\x. if fn_minus f x = PosInf then 0 else fn_minus f x)`
       by (RW_TAC std_ss [fn_minus_def,FUN_EQ_THM]
           ++ Cases_on `f x`
 	  ++ METIS_TAC [lt_infty, lt_refl, extreal_ainv_def, extreal_not_infty])
@@ -3123,7 +3123,7 @@ val integral_mspace = store_thm
 val integral_mono = store_thm
   ("integral_mono",
    ``!m f1 f2. measure_space m /\ (!t. t IN m_space m ==> f1 t <= f2 t) ==>
-   	       (integral m f1 <= integral m f2)``, 	
+   	       (integral m f1 <= integral m f2)``,
   RW_TAC std_ss []
   ++ ONCE_REWRITE_TAC [(UNDISCH o Q.SPECL [`m`,`f`]) integral_mspace]
   ++ RW_TAC std_ss [integral_def]

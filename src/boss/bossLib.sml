@@ -24,7 +24,7 @@ open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
 
 local open listTheory optionTheory
            combinSyntax listSyntax optionSyntax numSyntax oneSyntax sumSyntax
-           EvalRef Lift;
+           (* EvalRef Lift; *)
 in end;
 
 val ERR = mk_HOL_ERR "bossLib";

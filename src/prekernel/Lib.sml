@@ -354,6 +354,12 @@ fun appi f =
       recurse 0
    end
 
+(* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
+  apply a function to the nth member of a list *)
+fun apnth f 0 (y :: ys) = f y :: ys
+  | apnth f n (y :: ys) = y :: apnth f (n-1) ys
+  | apnth f n [] = raise ERR "apnth" "list too short (or -ve index)"
+
 fun mapi f lst =
    let
       fun recurse n acc lst =

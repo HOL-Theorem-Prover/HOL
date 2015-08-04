@@ -25,6 +25,7 @@ val K_tm = combinSyntax.K_tm
 
 
 val ERR = mk_HOL_ERR "RecordType";
+fun mk_recordtype_constructor s = "recordtype." ^ s
 
 (* ----------------------------------------------------------------------
     General utilities
@@ -177,6 +178,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     (access_fn_names, access_defn_terms)
   val accessor_thm =
     save_thm(typename^"_accessors", LIST_CONJ access_defns)
+  fun mk_const(n,ty) = mk_thy_const{Thy=current_theory(), Name = n, Ty = ty}
   val accfn_terms = ListPair.map mk_const (access_fn_names, accfn_types)
 
   (* generate functional update functions *)
@@ -496,10 +498,6 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       if List.exists (is_substring brss) (typename :: fields) then
         ()
       else let
-          fun do_updfn (name0, tm) = let val name = name0 ^ "_update"
-                                     in
-                                       Parse.overload_on(name, tm)
-                                     end
           fun do_fupdfn (name0, tm) = let val name = name0 ^ "_fupd"
                                       in
                                         Parse.overload_on(name, tm)
@@ -514,8 +512,9 @@ fun prove_recordtype_thms (tyinfo, fields) = let
              "artificial" constant for special printing of record
              syntax, and we want this to be preferred where
              possible. *)
-           ListPair.app do_fupdfn (fields, fupdfn_terms);
-           ListPair.app add_record_fupdate (fields, fupdfn_terms)
+          ListPair.app do_fupdfn (fields, fupdfn_terms);
+          ListPair.app add_record_fupdate (fields, fupdfn_terms);
+          Parse.overload_on(typename, constructor)
         end
 
   val thm_str_list =

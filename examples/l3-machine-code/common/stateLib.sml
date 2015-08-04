@@ -88,25 +88,70 @@ fun mk_state_pred x =
    ------------------------------------------------------------------------ *)
 
 local
-   fun tac t = Cases THEN SRW_TAC [] [t, combinTheory.APPLY_UPDATE_THM]
-   fun frame_state_thm def (f, u, r) =
-      let
-         val n = utilsLib.get_function def
-         val thm =
-            UPDATE_FRAME_STATE
-            |> Drule.ISPEC n
-            |> Q.ISPECL [f, u, r]
-            |> SIMP_RULE (srw_ss()) []
-         val p = fst (boolSyntax.dest_imp (Thm.concl thm))
-         val p_thm = Tactical.prove (p, tac def)
-      in
-         Drule.GEN_ALL (MATCH_MP thm p_thm)
-      end
+   val concat_ = String.concat o Lib.separate "_"
+   val dom_of = utilsLib.dom o Term.type_of
+   val rng_of = utilsLib.rng o Term.type_of
+   val ty_name = #Tyop o Type.dest_thy_type o Term.type_of
 in
    fun update_frame_state_thm proj_def =
-      Drule.LIST_CONJ o
-      List.map (Feedback.trace ("notify type variable guesses", 0)
-                  (frame_state_thm proj_def))
+      let
+         val tac =
+            Cases THEN SRW_TAC [] [proj_def, combinTheory.APPLY_UPDATE_THM]
+         val proj = utilsLib.get_function proj_def
+         val th = Drule.ISPEC proj stateTheory.UPDATE_FRAME_STATE
+         val {Thy = p_thy, Name = n, Ty = ty, ...} = Term.dest_thy_const proj
+         val isa = if String.isSuffix "_proj" n
+                      then String.extract (n, 0, SOME (String.size n - 5))
+                   else raise ERR "update_frame_state_thm"
+                                  "unexpected proj name"
+         val state_ty = fst (Type.dom_rng ty)
+         val {Thy = thy, ...} = Type.dest_thy_type state_ty
+         val s = Term.mk_var ("s", state_ty)
+         fun frame_state_thm component =
+            let
+               val l = String.tokens (Lib.equal #".") component
+               val c_name = concat_ (isa :: "c" :: l)
+               val c = Term.prim_mk_const {Name = c_name, Thy = p_thy}
+               val (f, aty, not_map) =
+                  case Lib.total dom_of c of
+                     SOME ty => (c, ty, false)
+                   | NONE =>
+                       (combinSyntax.mk_K_1 (c, Type.alpha), Type.alpha, true)
+               val a = Term.mk_var ("a", aty)
+               val w = ref boolSyntax.T
+               fun iter rest tm =
+                  fn [] => if rest
+                              then tm
+                           else if not_map
+                              then (w := Term.mk_var ("w", Term.type_of tm); !w)
+                           else ( w := Term.mk_var ("w", rng_of tm)
+                                ; Term.mk_comb
+                                     (combinSyntax.mk_update (a, !w), tm)
+                                )
+                   | h :: t =>
+                       let
+                          val fupd_name = concat_ [ty_name tm, h, "fupd"]
+                          val fupd =
+                             Term.prim_mk_const {Name = fupd_name, Thy = thy}
+                          val d = utilsLib.dom (dom_of fupd)
+                          val v = Term.mk_var (utilsLib.lowercase h, d)
+                       in
+                          Term.list_mk_comb
+                            (fupd, [combinSyntax.mk_K_1 (iter rest v t, d), tm])
+                       end
+               val u = iter false s l
+               val u = Term.list_mk_abs ([s, a, !w], u)
+               val l = if not_map then Lib.butlast l else l
+               val r = Term.mk_abs (s, iter true s l)
+               val thm = th |> Drule.ISPECL [f, u, r] |> SIMP_RULE (srw_ss()) []
+               val p = fst (boolSyntax.dest_imp (Thm.concl thm))
+               val p_thm = Tactical.prove (p, tac)
+            in
+               Drule.GEN_ALL (MATCH_MP thm p_thm)
+            end
+      in
+         Drule.LIST_CONJ o List.map frame_state_thm
+      end
 end
 
 (* ------------------------------------------------------------------------
@@ -1163,13 +1208,19 @@ fun get_pc_delta is_pc =
 
 local
    val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun is_word_lit tm =
+      case Lib.total wordsSyntax.dest_mod_word_literal tm of
+         SOME (n, s) =>
+            n = wordsSyntax.dest_word_literal tm andalso
+            Lib.funpow (Arbnum.toInt s - 1) Arbnum.div2 n = Arbnum.zero
+       | NONE => false
    fun is_irreducible tm =
       Term.is_var tm orelse
       (case Lib.total wordsSyntax.dest_word_add tm of
-          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+          SOME (p, i) => Term.is_var p andalso is_word_lit i
         | NONE => false) orelse
       (case Lib.total wordsSyntax.dest_word_sub tm of
-          SOME (p, i) => Term.is_var p andalso wordsSyntax.is_word_literal i
+          SOME (p, i) => Term.is_var p andalso is_word_lit i
         | NONE => false) orelse
       (case Lib.total boolSyntax.dest_cond tm of
           SOME (_, x, y) => is_irreducible x andalso is_irreducible y
@@ -1355,8 +1406,9 @@ fun chunks_intro be m_def =
 
 local
    val (sep_array_tm, mk_sep_array, dest_sep_array, _) =
-      HolKernel.syntax_fns "set_sep" 5 HolKernel.dest_quadop HolKernel.mk_quadop
-         "SEP_ARRAY"
+      HolKernel.syntax_fns
+         {n = 5, dest = HolKernel.dest_quadop, make = HolKernel.mk_quadop}
+         "set_sep" "SEP_ARRAY"
    val list_mk_concat =
       HolKernel.list_mk_rbinop (Lib.curry wordsSyntax.mk_word_concat)
    val list_mk_add =
@@ -1462,6 +1514,13 @@ local
       List.map
          (fn ((r1, a), (r2, b)) => (Lib.assert (op =) (r1, r2); (r1, a, b)))
          (ListPair.zip (f p, f q))
+   fun takeWhile P =
+      let
+         fun iter [] = []
+           | iter (h :: t) = if P h then h :: iter t else []
+      in
+         iter
+      end
 in
    fun register_combinations
          (dest_reg, reg_width, proj_reg, reg_conv, ok_conv, asm, model_tm) =
@@ -1499,21 +1558,16 @@ in
                ((v2 |-> v1) :: List.mapPartial instantiate l, [tm2])
             end
          val frees = List.filter Term.is_var o explode_reg
-         val no_free = List.null o frees
-         fun exists_free l = List.exists (fn (t, _, _) => not (no_free t)) l
+         fun no_free (t, _: term, _: term) = List.null (frees t)
+         val exists_free = List.exists (not o no_free)
+         fun no_good l = List.length (takeWhile no_free l) > 1
          fun groupings ok rs =
             let
-               val (cs, vs) = List.partition (fn (t, _, _) => no_free t) rs
-               fun add_c l =
-                  List.concat
-                    (List.map
-                        (fn x =>
-                           x ::
-                           List.map (fn c => List.map (fn y => c :: y) x) cs) l)
+               val (cs, vs) = List.partition no_free rs
             in
-               vs
+               (cs @ vs)
                |> utilsLib.partitions
-               |> add_c
+               |> List.filter (not o Lib.exists no_good)
                |> List.map
                      (List.mapPartial
                          (fn l =>
@@ -1535,7 +1589,7 @@ in
                             (fn l =>
                                let
                                   val (h, t) =
-                                     Lib.pluck (fn (tm, _, _) => no_free tm) l
+                                     Lib.pluck no_free l
                                      handle
                                         HOL_ERR
                                            {message = "predicate not satisfied",
@@ -1648,7 +1702,7 @@ local
       Conv.REDEPTH_CONV (Conv.REWR_CONV (GSYM set_sepTheory.STAR_ASSOC))
    val cond_STAR1_I =
       utilsLib.qm [cond_STAR1, combinTheory.I_THM]
-         ``(cond c * p) (s:'a set) = I c /\ p s``
+         ``(set_sep$cond c * p) (s:'a set) = I c /\ p s``
 in
    fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =

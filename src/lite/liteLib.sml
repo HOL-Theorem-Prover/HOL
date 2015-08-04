@@ -17,7 +17,7 @@ infix THENC ORELSEC |->;
  *               Exceptions
  *--------------------------------------------------------------------*)
 
-val ERR = mk_HOL_ERR "liteLib";
+val ERR = mk_HOL_ERR "liteLib"
 
 fun STRUCT_ERR s (func,mesg) = raise Feedback.mk_HOL_ERR s func mesg
 fun STRUCT_WRAP s (func,exn) = raise Feedback.wrap_exn s func exn
@@ -33,13 +33,13 @@ fun is_some (SOME x) = true
   | is_some NONE = false
 
 fun is_none NONE = true
-  | is_none _ = false;
+  | is_none _ = false
 
 fun option_cases f e (SOME x) = f x
   | option_cases f e NONE = e
 
 fun option_app f (SOME x) = SOME (f x)
-  | option_app f NONE = NONE;
+  | option_app f NONE = NONE
 
 
 infix 3 |> thenf orelsef;

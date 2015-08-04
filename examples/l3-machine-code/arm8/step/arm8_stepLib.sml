@@ -6,7 +6,7 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs sptreeTheory arm8Theory arm8_stepTheory arm8AssemblerLib
+open lcsymtacs arm8Theory arm8_stepTheory arm8AssemblerLib
 open blastLib
 
 structure Parse =
@@ -39,8 +39,7 @@ fun reg_var v = Term.mk_var (v, reg_ty)
 val r31 = wordsSyntax.mk_wordii (31, 5)
 fun NetFromList l = List.foldl (Lib.uncurry Net.insert) Net.empty l
 
-val arm8_monop =
-   HolKernel.syntax_fns "arm8" 1 HolKernel.dest_monop HolKernel.mk_monop
+val arm8_monop = HolKernel.syntax_fns1 "arm8"
 
 (* ---------------------------- *)
 
@@ -345,7 +344,9 @@ val LoadLiteral_rwt =
 val map_sp_rule =
    List.map
       (utilsLib.ALL_HYP_CONV_RULE
-         (DATATYPE_CONV THENC SIMP_CONV std_ss [Aligned_plus]) o sp_rule)
+         (DATATYPE_CONV
+          THENC SIMP_CONV std_ss [alignmentTheory.aligned_numeric]) o
+       sp_rule)
 
 val LoadStorePair_rwt =
    List.map

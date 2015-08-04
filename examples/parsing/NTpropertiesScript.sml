@@ -6,7 +6,7 @@ open lcsymtacs
 open pred_setTheory
 
 val rveq = rpt BasicProvers.VAR_EQ_TAC
-fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q []
+fun asm_match q = Q.MATCH_ASSUM_RENAME_TAC q
 
 val MAP_EQ_CONS = prove(
   ``(MAP f l = h::t) ⇔ ∃e es. l = e::es ∧ f e = h ∧ MAP f es = t``,

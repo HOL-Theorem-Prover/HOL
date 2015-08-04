@@ -6,6 +6,7 @@ structure m0_stepLib :> m0_stepLib =
 struct
 
 open HolKernel boolLib bossLib
+
 open lcsymtacs m0Theory m0_stepTheory
 open state_transformerSyntax blastLib
 
@@ -15,9 +16,6 @@ struct
    val (Type, Term) = parse_from_grammars m0_stepTheory.m0_step_grammars
 end
 open Parse
-
-infix \\
-val op \\ = op THEN
 
 val ERR = Feedback.mk_HOL_ERR "m0_stepLib"
 val WARN = Feedback.HOL_WARNING "m0_stepLib"
@@ -66,7 +64,8 @@ end
 (* ARM datatype theorems/conversions *)
 
 fun datatype_thms thms =
-   thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP] @
+   thms @ [cond_rand_thms, snd_exception_thms, FST_SWAP,
+           m0_stepTheory.Align, m0_stepTheory.Aligned] @
    utilsLib.datatype_rewrites true "m0" ["m0_state", "RName", "SRType", "PSR"]
 
 val DATATYPE_CONV = REWRITE_CONV (datatype_thms [])
@@ -224,26 +223,22 @@ val BigEndianReverse_rwt =
 
 local
    val rwts =
-     [MemA_def, cond_rand_thms, snd_exception_thms,
+     [MemA_def, cond_rand_thms, snd_exception_thms, alignmentTheory.aligned_0,
       wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v] @
      mem_rwt @ BigEndianReverse_rwt
 in
    val MemA_1_rwt =
-     EV (rwts @ [Thm.CONJUNCT1 Aligned, bitstringTheory.field_fixwidth,
-                 fixwidth_for ``:8``])
-        [] []
+     EV (rwts @ [bitstringTheory.field_fixwidth, fixwidth_for ``:8``]) [] []
        ``MemA (v, 1) : m0_state -> word8 # m0_state``
        |> hd
 
    val MemA_2_rwt =
-     EV (extract16 :: rwts)
-        [[``Aligned (v:word32,2)``]] []
+     EV (extract16 :: rwts) [[``aligned 1 (v:word32)``]] []
        ``MemA (v, 2) : m0_state -> word16 # m0_state``
        |> hd
 
    val MemA_4_rwt =
-     EV (extract32 :: rwts)
-        [[``Aligned (v:word32,4)``]] []
+     EV (extract32 :: rwts) [[``aligned 2 (v:word32)``]] []
        ``MemA (v, 4) : m0_state -> word32 # m0_state``
        |> hd
 
@@ -275,8 +270,9 @@ local
    val field_cond_rand = Drule.ISPEC ``field h l`` boolTheory.COND_RAND
    val rwts =
      [write'MemA_def, cond_rand_thms, snd_exception_thms,
-      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v, Thm.CONJUNCT1 Aligned,
-      field_cond_rand] @ write'mem_rwt @ BigEndianReverse_rwt
+      wordsTheory.WORD_ADD_0, bitstringTheory.v2w_w2v,
+      alignmentTheory.aligned_0, field_cond_rand] @
+     write'mem_rwt @ BigEndianReverse_rwt
 in
    val write'MemA_1_rwt =
      EV (rwts @ [fixwidth_for ``:8``, bitstringTheory.field_fixwidth]) [] []
@@ -284,12 +280,12 @@ in
        |> hd
 
    val write'MemA_2_rwt =
-     EV (field16 :: rwts) [[``Aligned (v:word32,2)``]] []
+     EV (field16 :: rwts) [[``aligned 1 (v:word32)``]] []
        ``write'MemA (w:word16, v, 2)``
        |> hd
 
    val write'MemA_4_rwt =
-     EV (field32 :: rwts) [[``Aligned (v:word32,4)``]] []
+     EV (field32 :: rwts) [[``aligned 2 (v:word32)``]] []
        ``write'MemA (w:word32, v, 4)``
        |> hd
 
@@ -433,7 +429,8 @@ local
       |> utilsLib.ALL_HYP_CONV_RULE
             (utilsLib.WGROUND_CONV
              THENC REWRITE_CONV
-                      [Aligned_plus, Aligned_concat4, LDM_UPTO_components]
+                      [alignmentTheory.aligned_add_sub_123, Aligned_concat4,
+                       LDM_UPTO_components]
              THENC numLib.REDUCE_CONV)
 
    val lem = Q.prove(
@@ -453,8 +450,8 @@ in
                      utilsLib.ALL_HYP_CONV_RULE
                         (DATATYPE_CONV
                          THENC SIMP_CONV std_ss
-                                  [Aligned_plus, word_bit_0_of_load,
-                                   wordsTheory.word_mul_n2w]
+                                  [alignmentTheory.aligned_add_sub_123,
+                                   word_bit_0_of_load, wordsTheory.word_mul_n2w]
                          THENC DATATYPE_CONV))
         |> addThms
    val LoadMultiple_rwt =
@@ -537,7 +534,8 @@ local
       |> utilsLib.ALL_HYP_CONV_RULE
             (numLib.REDUCE_CONV
              THENC REWRITE_CONV
-                     [Aligned_plus, Aligned_concat4, STM_UPTO_components]
+                     [alignmentTheory.aligned_add_sub_123, Aligned_concat4,
+                      STM_UPTO_components]
              THENC wordsLib.WORD_EVAL_CONV)
 
    val STM  = rule STM_thm
@@ -555,7 +553,8 @@ in
          ``dfn'Push (registers)``
          |> List.map
              (utilsLib.ALL_HYP_CONV_RULE
-                 (REWRITE_CONV [Aligned_plus] THENC wordsLib.WORD_EVAL_CONV) o
+                 (REWRITE_CONV [alignmentTheory.aligned_add_sub_123]
+                  THENC wordsLib.WORD_EVAL_CONV) o
               SIMP_RULE bool_ss
                  [wordsTheory.WORD_MULT_CLAUSES, wordsTheory.word_mul_n2w,
                   bit_count_9_m_8] o
@@ -967,7 +966,9 @@ local
          bitstringTheory.word_extract_v2w, bitstringTheory.word_bits_v2w]
 
    val ALIGNED_PLUS_RULE =
-      MATCH_HYP_RW [Aligned_plus] ``Aligned (a + b : 'a word, c)``
+      MATCH_HYP_RW [alignmentTheory.aligned_add_sub_123,
+                    alignmentTheory.aligned_numeric]
+        ``aligned c (a + b : 'a word)``
 
    val thumb2_test_tm =
       fix_datatype
@@ -1552,7 +1553,9 @@ val NoOperation_rwt =
 
 local
    val f = rand o rand o rand o rator o utilsLib.lhsc
-in
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_add_sub_123,
+                           alignmentTheory.aligned_numeric]
+ in
    val BranchTarget_rwt =
       EV [dfn'BranchTarget_def, PC_rwt, BranchWritePC_rwt,
           Aligned_Branch9, Aligned_Branch12, Aligned_Branch_Wide6,
@@ -1562,7 +1565,7 @@ in
           [`imm32` |-> f Aligned_Branch_Wide6],
           [`imm32` |-> f Aligned_Branch_Wide10]]
          ``dfn'BranchTarget imm32``
-      |> List.map (utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [Aligned_plus]))
+      |> List.map (utilsLib.ALL_HYP_CONV_RULE cnv)
       |> addThms
    val BranchLinkImmediate_rwt =
       EV [dfn'BranchLinkImmediate_def, BranchWritePC_rwt, R_name_rwt,
@@ -1574,7 +1577,7 @@ in
                       (EVAL_DATATYPE_CONV
                        THENC REWRITE_CONV [R_x_pc]
                        THENC utilsLib.WGROUND_CONV
-                       THENC REWRITE_CONV [Aligned_plus]) o
+                       THENC cnv) o
                    utilsLib.MATCH_HYP_CONV_RULE wordsLib.WORD_EVAL_CONV
                       ``~(n2w a = b: word4)``)
       |> addThms
@@ -1812,7 +1815,7 @@ fun memEV ctxt tm =
        PC_rwt, IncPC_rwt, write'R_name_rwt, R_name_rwt,
        m0_stepTheory.R_x_not_pc, m0Theory.offset_case_def,
        pairTheory.pair_case_thm, Shift_C_DecodeImmShift_rwt, Shift_C_LSL_rwt,
-       Aligned_plus, Shift_def, Extend_rwt, Extract_rwt]
+       alignmentTheory.aligned_add_sub_123, Shift_def, Extend_rwt, Extract_rwt]
       [[``t <> 13w:word4``]] ctxt tm
     |> List.map (utilsLib.ALL_HYP_CONV_RULE
                    (REWRITE_CONV []

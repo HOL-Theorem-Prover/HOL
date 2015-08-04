@@ -6,36 +6,187 @@ val _ = new_theory "state"
 infix \\
 val op \\ = op THEN;
 
-(* ------------------------------------------------------------------------ *)
+(* ------------------------------------------------------------------------
+   We use Hoare triples defined in examples/machine-code/hoare-triple/progTheory
+   These are of the form:
 
-val NEXT_REL_def = Define `NEXT_REL r next s t = ?u. r s u /\ (next u = SOME t)`
+      SPEC (to_set,next,instr,less,allow) p c q
 
-val SELECT_STATE_def = Define `SELECT_STATE m d s = fun2set (m s, d)`
+   'a        the state type
+   'b set    the "set view" of states
+   'c        the code-pool type
 
-val STATE_def = Define `STATE m = SELECT_STATE m UNIV`
+   to_set : 'a -> 'b set         maps states to a set view.
+                                 (This will be specialized to ``STATE m`` for
+                                  a map ``m: 'a -> ('name # 'value) set``.
+                                  The tool stateLib.sep_definitions helps
+                                  automatically define m, 'name and 'value for
+                                  L3 specifications.)
 
-val FRAME_STATE_def = Define `FRAME_STATE m d = SELECT_STATE m (COMPL d)`
+   next : 'a -> 'a -> bool       next-state relation.
+                                 (This will be specialized to
+                                  ``NEXT_REL (=) next`` for some next-state
+                                  function "next".)
 
-(* ------------------------------------------------------------------------ *)
+   instr : 'c -> 'b set          maps the code pool to a set view.
+
+   less : 'a -> 'a -> bool       ordering on states.
+                                 (This will be specialized to ``(=)``.)
+
+   allow : 'a -> bool            "always valid" states.
+                                 (This will be specialized to ``K F``, i.e.
+                                  "Just use the supplied pre-condition and
+                                   post-condition predicates".)
+
+   p : 'b set -> bool            pre-condition.
+
+   c : 'c -> bool                code-pool.
+
+   q : 'b set -> bool            post-condition.
+   ------------------------------------------------------------------------ *)
+
+(* ------------------------------------------------------------------------
+   NEXT_REL is used to capture valid sequences of states, as determined by a
+   next-state function "next" (and state relation "r"). The next-state relation
+   supplied to SPEC is ``NEXT_REL r next : 'a -> 'a -> bool``.
+
+   We are only really interested in cases where "r" is pre-order on states.
+   The tools (in stateLib) go further and assume "r" is "=". Thus, the
+   specified sequence of states for
+
+     seq_relation (NEXT_REL (=) next) seq s
+
+   is
+
+    seq 0 = s,
+    seq 1 = THE (next s),
+    seq 2 = THE (next (THE (next s))), ...
+
+   If ``next (seq n) = NONE`` for some "n" then this final state is repeated
+   ad infinitum.
+   ------------------------------------------------------------------------ *)
+
+val NEXT_REL_def = Define`
+   NEXT_REL (r: 's -> 's -> bool) (next: 's -> 's option) s t =
+   ?u. r s u /\ (next u = SOME t)`
 
 val NEXT_REL_EQ = Q.store_thm ("NEXT_REL_EQ",
    `!next. NEXT_REL (=) next = \s t. next s = SOME t`,
    rw [NEXT_REL_def, FUN_EQ_THM])
 
-val PreOrder_EQ = Q.store_thm ("PreOrder_EQ",
-   `PreOrder (=)`,
-   rw [relationTheory.PreOrder, relationTheory.reflexive_def,
-       relationTheory.transitive_def])
+(* ------------------------------------------------------------------------
+   SELECT_STATE is used to construct a "set view" of states.
 
-val FRAME_SET_EQ = Q.store_thm ("FRAME_SET_EQ",
-   `!m x y s t. (FRAME_STATE m x s = FRAME_STATE m y t) ==> (x = y)`,
-   simp [pred_setTheory.EXTENSION, FRAME_STATE_def, SELECT_STATE_def,
-         fun2set_def]
-   \\ metis_tac [pairTheory.FST])
+   'a               the state type
+   'b               state component name type
+   'c               state component value type
+   ('b # 'c) set    the type for the set view of states
 
-val SEP_EQ_SINGLETON = Q.store_thm ("SEP_EQ_SINGLETON",
-   `!x. SEP_EQ x = { x }`,
-   rw [SEP_EQ_def, pred_setTheory.EXTENSION, boolTheory.IN_DEF])
+     m : 'a -> 'b -> 'c    converts a state into a map from names to values
+     d : 'b set            the domain (component names) of interest
+
+   The set view is the graph of the map "m", i.e.
+
+     { (name, m s name) | name IN d }
+
+   Thus, ``SELECT_STATE m UNIV : 'a -> ('b # 'c) set`` is a suitable "to_set"
+   map in instances of SPEC.
+
+   For example, for ARM we have
+
+     'a is arm_state
+     'b is arm_component
+     'c is arm_data
+      m is arm_proj
+
+    The term ``SELECT_STATE arm_proj {arm_c_CPSR_Z} s`` then represents the set
+
+       {(arm_c_CPSR_Z, arm_proj s arm_c_CPSR_Z)}
+
+    which is defined to be
+
+       {(arm_c_CPSR_Z, arm_d_bool s.CPSR.Z)}
+
+    Thus, component ``arm_c_CPSR_Z`` is associated with the value ``s.CPSR.Z``.
+
+    A predicate arm_CPSR_Z is defined as follows
+
+       !d. arm_CPSR_Z d = {{(arm_c_CPSR_Z,arm_d_bool d)}}
+
+   ------------------------------------------------------------------------ *)
+
+val SELECT_STATE_def = Define `SELECT_STATE m d s = fun2set (m s, d)`
+
+(* The "universal" to-set map *)
+
+val STATE_def = Define `STATE m = SELECT_STATE m UNIV`
+
+(* The "complement" to-set map *)
+
+val FRAME_STATE_def = Define `FRAME_STATE m d = SELECT_STATE m (COMPL d)`
+
+(* ------------------------------------------------------------------------
+   We now show that
+
+     PreOrder r ==>
+     (!y s t1.
+        p (SELECT_STATE m y t1) /\ r t1 s ==>
+        ?v t2.
+          p (SELECT_STATE m y s) /\
+          (next s = SOME v) /\
+          q (SELECT_STATE m y t2) /\ r t2 v /\
+          (FRAME_STATE m y t1 = FRAME_STATE m y t2)) ==>
+     SPEC (STATE m, NEXT_REL r next, instr, r, K F) p {} q`,
+
+   and this is then used to show that
+
+     (!y s.
+        (p * CODE_POOL instr c) (SELECT_STATE m y s) ==>
+        ?v.
+          (next s = SOME v) /\
+          (q * CODE_POOL instr c) (SELECT_STATE m y v) /\
+          (FRAME_STATE m y s = FRAME_STATE m y v)) ==>
+     SPEC (STATE m,NEXT_REL $= next,instr,$=,K F) p c q
+
+   This theorem is used to derive SPEC theorems for machine-code instructions.
+   Given a next-state theorem of the form
+
+     p1 /\ ... /\ pn ==> (next s = SOME v),
+
+   the procedure is as follows:
+
+     - Use MATCH_MP and proceed to show the antecedent is true.
+
+     - Use GEN_TAC and STIP_TAC, so that we assume assertions for "s" from
+       pre-condition "p" and "CODE_POOL instr c".
+
+       Assertion "p" will normally consist of a starred collection of
+       state component assertions. These are expanded using the theorem
+       STAR_SELECT_STATE below. The definition of "m" is also used.
+       For example, if we have
+
+       (arm_CPSR_Z v * p) (SELECT_STATE arm_proj y s)
+
+       then this can be used to deduce ``arm_c_CPSR_Z IN y`` and
+       ``s.CPSR.Z = v``. We then iterate on the remaining "p".
+
+     - We now have three sub-goals.
+
+       1. Prove the existance of a next-state for "s". The witness comes
+          from the RHS of the supplied next-state theorem. The main task
+          is to verify that each condition "p1, ..., pn" is satisfied by
+          the assumptions (pre-condition assertions).
+
+       2. Show that state "v" satisfies the post-condition assertions in "q".
+          Again, this uses the STAR_SELECT_STATE. This time extra rewrites
+          are needed to reason about state (record and map) updates.
+
+       3. Show that the "s" and "v" do not differ for components that are not
+          mentioned in "y". This is based on using theorem UPDATE_FRAME_STATE
+          below. The tool stateLib.update_frame_state_thm can be used to
+          generate appropriate theorem instances for an L3 specification
+
+   ------------------------------------------------------------------------ *)
 
 val SPLIT_STATE = Q.store_thm ("SPLIT_STATE",
    `!m s u v.
@@ -57,7 +208,11 @@ val SPLIT_STATE_cor = METIS_PROVE [SPLIT_STATE]
    ``p (SELECT_STATE m y s) ==>
      ?u v. SPLIT (STATE m s) (u, v) /\ p u /\ (\v. v = FRAME_STATE m y s) v``
 
-(* ........................................................................ *)
+val FRAME_SET_EQ = Q.store_thm ("FRAME_SET_EQ",
+   `!m x y s t. (FRAME_STATE m x s = FRAME_STATE m y t) ==> (x = y)`,
+   simp [pred_setTheory.EXTENSION, FRAME_STATE_def, SELECT_STATE_def,
+         fun2set_def]
+   \\ metis_tac [pairTheory.FST])
 
 val R_STATE_SEMANTICS = Q.store_thm ("R_STATE_SEMANTICS",
    `!m next instr r p q.
@@ -129,6 +284,11 @@ val IMP_R_SPEC = Q.prove(
    \\ metis_tac [optionTheory.SOME_11]
    )
 
+val PreOrder_EQ = Q.store_thm ("PreOrder_EQ",
+   `PreOrder (=)`,
+   rw [relationTheory.PreOrder, relationTheory.reflexive_def,
+       relationTheory.transitive_def])
+
 val IMP_SPEC = Q.prove(
    `!m next instr p q.
        (!y s.
@@ -173,6 +333,10 @@ val IMP_SPEC = Theory.save_thm ("IMP_SPEC",
    |> ONCE_REWRITE_RULE [STAR_COMM]
    |> Q.GENL [`q`, `p`, `c`, `instr`, `next`, `m`]
    )
+
+val SEP_EQ_SINGLETON = Q.store_thm ("SEP_EQ_SINGLETON",
+   `!x. SEP_EQ x = { x }`,
+   rw [SEP_EQ_def, pred_setTheory.EXTENSION, boolTheory.IN_DEF])
 
 val CODE_POOL = Theory.save_thm ("CODE_POOL",
    REWRITE_RULE [GSYM SEP_EQ_def, SEP_EQ_SINGLETON] CODE_POOL_def)
@@ -264,13 +428,6 @@ val emp_SELECT_STATE = Q.store_thm ("emp_SELECT_STATE",
 
 (* ........................................................................ *)
 
-val cond_true_elim = Theory.save_thm("cond_true_elim",
-   simpLib.SIMP_PROVE bool_ss [set_sepTheory.SEP_CLAUSES]
-      ``(!p:'a set set. p * cond T = p) /\
-        (!p:'a set set. cond T * p = p)``)
-
-(* ........................................................................ *)
-
 val UPDATE_FRAME_STATE = Q.store_thm ("UPDATE_FRAME_STATE",
    `!m f u r.
       (!b s a w. b <> f a ==> (m (u s a w) b = m (r s) b)) ==>
@@ -280,7 +437,12 @@ val UPDATE_FRAME_STATE = Q.store_thm ("UPDATE_FRAME_STATE",
    \\ metis_tac []
    )
 
-(* ........................................................................ *)
+(* ------------------------------------------------------------------------ *)
+
+val cond_true_elim = Theory.save_thm("cond_true_elim",
+   simpLib.SIMP_PROVE bool_ss [set_sepTheory.SEP_CLAUSES]
+      ``(!p:'a set set. p * cond T = p) /\
+        (!p:'a set set. cond T * p = p)``)
 
 val UNION_STAR = Q.store_thm("UNION_STAR",
    `!a b c. DISJOINT a b ==> ({a UNION b} * c = {a} * {b} * c)`,

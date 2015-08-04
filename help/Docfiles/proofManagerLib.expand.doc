@@ -111,6 +111,33 @@ Invalid tactic
 ! HOL_ERR
 }
 
+Note that an invalid tactic may "succeed".
+Thus, where {tac1} is invalid, and {tac2} is valid (and both succeed),
+{FIRST [tac1, tac2]} is invalid.  For example, where
+theorem {uth} is {[p] |- q} and {uth'} is {[p'] |- q} 
+
+{
+1 subgoal:
+val it =
+   
+q
+------------------------------------
+  p
+:
+   proof
+
+> e (FIRST (map ACCEPT_TAC [uth', uth])) ;
+OK..
+
+Exception raised at Tactical.VALID:
+Invalid tactic [...]
+
+> e (FIRST (map (VALID o ACCEPT_TAC) [uth', uth])) ;
+OK..
+
+Goal proved.
+ [p] |- q
+} 
 
 \USES
 Doing a step in an interactive goal-directed proof.
@@ -119,6 +146,7 @@ Doing a step in an interactive goal-directed proof.
 proofManagerLib.set_goal, proofManagerLib.restart,
 proofManagerLib.backup,proofManagerLib.restore, proofManagerLib.save,
 proofManagerLib.set_backup,proofManagerLib.expand, proofManagerLib.expandf,
-proofManagerLib.p,proofManagerLib.top_thm, proofManagerLib.top_goal.
+proofManagerLib.flatn,proofManagerLib.p,proofManagerLib.top_thm,
+proofManagerLib.top_goal, Tactical.VALID, Tactical.VALIDATE
 
 \ENDDOC

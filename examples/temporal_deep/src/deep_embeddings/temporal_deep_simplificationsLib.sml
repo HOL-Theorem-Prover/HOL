@@ -93,10 +93,10 @@ fun prop_logic_equivalent_or_conv t =
 
 
 exception reducer_empty_context;
-fun simple_conv_reducer conv =
+fun simple_conv_reducer conv' =
   let
       fun addcontext (context,thms) = reducer_empty_context
-      fun apply {solver,context,stack,relation} tm = conv tm;
+      fun apply {solver,conv, context,stack,relation} tm = conv' tm;
   in REDUCER {addcontext=addcontext, apply=apply,
               initial=reducer_empty_context}
   end;

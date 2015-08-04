@@ -15,9 +15,6 @@ val _ = new_theory "mips_step"
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 
-infix \\
-val op \\ = op THEN;
-
 (* ------------------------------------------------------------------------ *)
 
 val NextStateMIPS_def = Define`
@@ -275,6 +272,36 @@ val select_word_be = Q.prove(
      (f (a + w2w (b ?? 4w)) @@ f (a + w2w (b ?? 4w) + 1w) @@
       f (a + w2w (b ?? 4w) + 2w) @@ f (a + w2w (b ?? 4w) + 3w)) : word32)`,
    tac
+   )
+
+val select_parts = Q.store_thm("select_parts",
+   `!a0: word8 a1: word8 a2: word8 a3: word8 a4: word8 a5: word8 a6: word8
+     a7: word8.
+     let w = a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0
+     in
+     ((7 >< 0) w = a0) /\
+     ((15 >< 0) w = (a1 @@ a0) : word16) /\
+     ((23 >< 0) w = (a2 @@ a1 @@ a0) : word24) /\
+     ((31 >< 0) w = (a3 @@ a2 @@ a1 @@ a0) : word32) /\
+     ((39 >< 0) w = (a4 @@ a3 @@ a2 @@ a1 @@ a0) : 40 word) /\
+     ((47 >< 0) w = (a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0) : word48) /\
+     ((55 >< 0) w = (a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0) : 56 word) /\
+     ((63 >< 0) w = w) /\
+     ((39 >< 32) w = a4) /\
+     ((47 >< 32) w = (a5 @@ a4) : word16) /\
+     ((55 >< 32) w = (a6 @@ a5 @@ a4) : word24) /\
+     ((63 >< 32) w = (a7 @@ a6 @@ a5 @@ a4) : word32) /\
+     ((31 >< 8) w = (a3 @@ a2 @@ a1) : word24) /\
+     ((31 >< 16) w = (a3 @@ a2) : word16) /\
+     ((31 >< 24) w = a3) /\
+     ((63 >< 8) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1) : 56 word) /\
+     ((63 >< 16) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2) : word48) /\
+     ((63 >< 24) w = (a7 @@ a6 @@ a5 @@ a4 @@ a3) : 40 word) /\
+     ((63 >< 32) w = (a7 @@ a6 @@ a5 @@ a4) : word32) /\
+     ((63 >< 40) w = (a7 @@ a6 @@ a5) : word24) /\
+     ((63 >< 48) w = (a7 @@ a6) : word16) /\
+     ((63 >< 56) w = a7 : word8)`,
+   SIMP_TAC (srw_ss()++boolSimps.LET_ss++wordsLib.WORD_EXTRACT_ss) []
    )
 
 (* ------------------------------------------------------------------------ *)
@@ -542,6 +569,55 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
 
 (* ------------------------------------------------------------------------ *)
 
+val cond_update_memory = Q.store_thm("cond_update_memory",
+   `(!a: word64 b x0 x1 x2 x3 m.
+       (if b then
+          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3) m)))
+        else m) =
+       (a =+ (if b then x0 else m a))
+         ((a + 1w =+ (if b then x1 else m (a + 1w)))
+           ((a + 2w =+ (if b then x2 else m (a + 2w)))
+             ((a + 3w =+ (if b then x3 else m (a + 3w))) m)))) /\
+    (!a: word64 b x0 x1 x2 x3 m.
+       (if b then
+          (a + 3w =+ x0) ((a + 2w =+ x1) ((a + 1w =+ x2) ((a =+ x3) m)))
+        else m) =
+       (a + 3w =+ (if b then x0 else m (a + 3w)))
+         ((a + 2w =+ (if b then x1 else m (a + 2w)))
+           ((a + 1w =+ (if b then x2 else m (a + 1w)))
+             ((a =+ (if b then x3 else m a)) m)))) /\
+    (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
+       (if b then
+          (a =+ x0) ((a + 1w =+ x1) ((a + 2w =+ x2) ((a + 3w =+ x3)
+            ((a + 4w =+ x4) ((a + 5w =+ x5) ((a + 6w =+ x6)
+              ((a + 7w =+ x7) m)))))))
+        else m) =
+       (a =+ (if b then x0 else m a))
+         ((a + 1w =+ (if b then x1 else m (a + 1w)))
+           ((a + 2w =+ (if b then x2 else m (a + 2w)))
+             ((a + 3w =+ (if b then x3 else m (a + 3w)))
+               ((a + 4w =+ (if b then x4 else m (a + 4w)))
+                 ((a + 5w =+ (if b then x5 else m (a + 5w)))
+                   ((a + 6w =+ (if b then x6 else m (a + 6w)))
+                     ((a + 7w =+ (if b then x7 else m (a + 7w))) m)))))))) /\
+    (!a: word64 b x0 x1 x2 x3 x4 x5 x6 x7 m.
+       (if b then
+          (a + 7w =+ x0) ((a + 6w =+ x1) ((a + 5w =+ x2) ((a + 4w =+ x3)
+            ((a + 3w =+ x4) ((a + 2w =+ x5) ((a + 1w =+ x6) ((a =+ x7) m)))))))
+        else m) =
+       (a + 7w =+ (if b then x0 else m (a + 7w)))
+         ((a + 6w =+ (if b then x1 else m (a + 6w)))
+           ((a + 5w =+ (if b then x2 else m (a + 5w)))
+             ((a + 4w =+ (if b then x3 else m (a + 4w)))
+               ((a + 3w =+ (if b then x4 else m (a + 3w)))
+                 ((a + 2w =+ (if b then x5 else m (a + 2w)))
+                   ((a + 1w =+ (if b then x6 else m (a + 1w)))
+                     ((a =+ (if b then x7 else m a)) m))))))))`,
+   rw [combinTheory.UPDATE_def, FUN_EQ_THM]
+   )
+
+(* ------------------------------------------------------------------------ *)
+
 val branch_delay = Q.store_thm("branch_delay",
    `(!b x y.
        (case (if b then (F, x) else (T, y)) of
@@ -572,6 +648,70 @@ val branch_delay = Q.store_thm("branch_delay",
         (if b then x else y) + 4w = (if b then x + 4w else y + 4w)) /\
     (!x. x + 4w + 4w = x + 8w)`,
    rw [] \\ fs [])
+
+val BIT_lem = Q.prove(
+   `(!x. NUMERAL (BIT2 x) = 2 * (x + 1)) /\
+    (!x. NUMERAL (BIT1 x) = 2 * x + 1) /\
+    (!x. NUMERAL (BIT1 (BIT1 x)) = 4 * x + 3) /\
+    (!x. NUMERAL (BIT1 (BIT2 x)) = 4 * (x + 1) + 1) /\
+    (!x. NUMERAL (BIT2 (BIT1 x)) = 4 * (x + 1)) /\
+    (!x. NUMERAL (BIT2 (BIT2 x)) = 4 * (x + 1) + 2)`,
+   REPEAT strip_tac
+   \\ CONV_TAC (Conv.LHS_CONV
+         (REWRITE_CONV [arithmeticTheory.BIT1, arithmeticTheory.BIT2,
+                        arithmeticTheory.NUMERAL_DEF]))
+   \\ DECIDE_TAC
+   )
+
+val Aligned_eq = Q.prove(
+   `!a b. (((1 >< 0) (a: word64) = 0w:word2) =
+           ((1 >< 0) (b: word64) = 0w:word2)) =
+          (~a ' 0 /\ ~a ' 1 = ~b ' 0 /\ ~b ' 1)`,
+   blastLib.BBLAST_TAC
+   )
+
+val Aligned_numeric = Q.store_thm("Aligned_numeric",
+   `((1 >< 0) (0w: word64) = 0w:word2) /\
+    (!x. ((1 >< 0) (n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2)) /\
+    (!x y f.
+         ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
+         ((1 >< 0) (y + 3w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y + 1w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y + n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y + 2w) = 0w:word2)) /\
+    (!x y f.
+         ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT1 (f x)))): word64) = 0w:word2) =
+         ((1 >< 0) (y - 3w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT1 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y - 1w) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT1 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y) = 0w:word2)) /\
+    (!x y. ((1 >< 0) (y - n2w (NUMERAL (BIT2 (BIT2 x))): word64) = 0w:word2) =
+           ((1 >< 0) (y - 2w) = 0w:word2))`,
+   Q.ABBREV_TAC `z = ((1 >< 0) : word64 -> word2)`
+   \\ REPEAT strip_tac
+   \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [BIT_lem]))
+   \\ Q.UNABBREV_TAC `z`
+   \\ rewrite_tac [Aligned_eq, GSYM wordsTheory.word_mul_n2w,
+                   GSYM wordsTheory.word_add_n2w]
+   \\ TRY (markerLib.PAT_ABBREV_TAC (HOLset.empty Term.compare)
+              ``q = n2w x + 1w : word64``)
+   \\ TRY (Q.ABBREV_TAC `r = n2w (f x) : word64`)
+   \\ blastLib.BBLAST_TAC
+   )
+
+(* Simplify alignment condition for exception calls
+
+val Aligned_cond = Q.store_thm("Aligned_cond",
+   `!a: 34 word b:word30 c d.
+       ((1 >< 0) ((a @@ if d then b else c): word64) = 0w: word2) =
+       d /\ ((1 >< 0) b = 0w: word2) \/ ~d /\ ((1 >< 0) c = 0w: word2)`,
+   rw [] \\ blastLib.BBLAST_TAC
+   )
+*)
 
 (* ------------------------------------------------------------------------ *)
 

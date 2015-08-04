@@ -1436,6 +1436,15 @@ second is to show the new term.
   (holpp-quiet-reset)
   (send-raw-string-to-hol "print \"\\n\\n*** hol-mode reset ***\\n\";" nil nil))
 
+; this filter function is complicated by the fact that comint chunks
+; output (in 1024 character chunks in my tests) and so doesn't
+; necessarily give complete (in the sense of containing matching
+; comment-blocks) strings to the filter. This means that a solution
+; with with-temp-buffer won't work. Instead, there is a persistent
+; working space buffer, and if the code finds a non-matching comment
+; start (a "(*(*(*" substring), it just leaves that in the working
+; space so that the next piece of output can be appended and processed
+; properly.
 (defun holpp-output-filter (s)
   "Converts a munged emacs_terminal string into a pretty one with text properties."
   (interactive "sinput: ")

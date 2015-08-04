@@ -265,17 +265,19 @@ fun REPEATC conv tm =
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV
 
-fun COMB_CONV conv tm =
+fun COMB2_CONV (c1,c2) tm =
    let
       val {Rator, Rand} = dest_comb tm
    in
       let
-         val th = conv Rator
+         val th = c1 Rator
       in
-         MK_COMB (th, conv Rand) handle UNCHANGED => AP_THM th Rand
+         MK_COMB (th, c2 Rand) handle UNCHANGED => AP_THM th Rand
       end
-      handle UNCHANGED => AP_TERM Rator (conv Rand)
+      handle UNCHANGED => AP_TERM Rator (c2 Rand)
    end
+
+fun COMB_CONV c = COMB2_CONV(c,c)
 
 fun SUB_CONV conv = TRY_CONV (COMB_CONV conv ORELSEC ABS_CONV conv)
 
@@ -2443,5 +2445,35 @@ in
       end
       handle HOL_ERR _ => raise ERR "MAP_THM" ""
 end
+
+val PAT_CONV = let
+  fun PCONV (xs, pat) conv =
+    if mem pat xs then conv
+    else if not(exists (fn x => free_in x pat) xs) then ALL_CONV
+    else if is_comb pat then
+      COMB2_CONV (PCONV (xs, rator pat) conv, PCONV (xs, rand pat) conv)
+    else
+      ABS_CONV (PCONV (xs, body pat) conv)
+in
+  fn pat => PCONV (strip_abs pat)
+end
+
+fun PATH_CONV path c =
+  let
+    val limit = size path
+    fun recurse i =
+      if i = limit then c
+      else
+        case String.sub(path, i) of
+            #"a" => ABS_CONV (recurse (i + 1))
+          | #"b" => BINDER_CONV (recurse (i + 1))
+          | #"l" => RATOR_CONV (recurse (i + 1))
+          | #"r" => RAND_CONV (recurse (i + 1))
+          | c => raise ERR
+                       "PATH_CONV"
+                       ("Illegal character '"^str c^ "' in path")
+  in
+    recurse 0
+  end
 
 end (* Conv *)

@@ -1731,7 +1731,7 @@ val x64_div_test_thm = prove(
   \\ Cases_on `single_mul_add (n2w (w2n q - 1)) v1 0x0w 0x0w`
   \\ FULL_SIMP_TAC std_ss [LET_DEF,x64_cmp2_thm]
   \\ Q.MATCH_ASSUM_RENAME_TAC
-       `single_mul_add (n2w (w2n q - 1)) v1 0x0w 0x0w = (q1,q2)` []
+       `single_mul_add (n2w (w2n q - 1)) v1 0x0w 0x0w = (q1,q2)`
   \\ FULL_SIMP_TAC std_ss [mw_add_0_1]
   \\ Cases_on `mw_cmp [u2; u1] [q1; q2 + 0x1w] = SOME T`
   \\ FULL_SIMP_TAC std_ss [EVAL ``0w = 1w:word64``]);
@@ -1893,9 +1893,9 @@ val x64_adjust_aux_thm = prove(
     \\ DECIDE_TAC)
   \\ ONCE_REWRITE_TAC [x64_adjust_aux_def,x64_adjust_aux_pre_def]
   \\ Cases_on `zs` \\ SIMP_TAC std_ss [LENGTH,ADD1] \\ NTAC 8 STRIP_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (zs1 ++ z::zs) < dimword (:64)` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (zs1 ++ z::zs) < dimword (:64)`
   \\ POP_ASSUM MP_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (ys1 ++ y::ys) < dimword (:64)` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (ys1 ++ y::ys) < dimword (:64)`
   \\ STRIP_TAC
   \\ `n2w (LENGTH (ys1 ++ y::ys)) <> n2w (LENGTH ys1):word64` by ALL_TAC THEN1
    (FULL_SIMP_TAC std_ss [LENGTH_APPEND]
@@ -2042,9 +2042,9 @@ val x64_div_sub_loop_thm = prove(
     \\ FULL_SIMP_TAC std_ss [LET_DEF,SNOC_INTRO,APPEND_NIL] \\ DECIDE_TAC)
   \\ ONCE_REWRITE_TAC [x64_div_sub_loop_def,x64_div_sub_loop_pre_def]
   \\ Cases_on `zs` \\ SIMP_TAC std_ss [LENGTH,ADD1] \\ NTAC 8 STRIP_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (zs1 ++ z::zs) < dimword (:64)` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (zs1 ++ z::zs) < dimword (:64)`
   \\ POP_ASSUM MP_TAC
-  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (ys1 ++ y::ys) < dimword (:64)` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `LENGTH (ys1 ++ y::ys) < dimword (:64)`
   \\ STRIP_TAC
   \\ `n2w (LENGTH (ys1 ++ y::ys)) <> n2w (LENGTH ys1):word64` by
    (FULL_SIMP_TAC std_ss [LENGTH_APPEND]
@@ -2432,7 +2432,7 @@ val x64_copy_down_thm = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_SUB,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [word_add_n2w]
   \\ Cases_on `zs1` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.MATCH_ASSUM_RENAME_TAC `z::zs <> []` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `z::zs <> []`
   \\ FULL_SIMP_TAC std_ss []
   \\ `(LENGTH (zs0 ++ z::zs) + 1 = LENGTH (SNOC h zs0 ++ SNOC h zs)) /\
       (LENGTH zs0 + 1 = LENGTH (SNOC h zs0))`
@@ -2700,7 +2700,7 @@ val x64_div_thm = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
   \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND]
   THEN1 (`F` by DECIDE_TAC)
-  \\ Q.MATCH_ASSUM_RENAME_TAC `zs = zs1 ++ z1::z2::zs2` []
+  \\ Q.MATCH_ASSUM_RENAME_TAC `zs = zs1 ++ z1::z2::zs2`
   \\ FULL_SIMP_TAC std_ss [LENGTH_mw_mul_by_single]
   \\ `LENGTH xs + 1 < dimword (:64)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss [w2n_n2w]
   \\ `LUPDATE 0x0w (LENGTH xs + 1) (mw_mul_by_single d xs ++ z2::zs2) =

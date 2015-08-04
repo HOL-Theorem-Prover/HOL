@@ -6,4 +6,4 @@ sig
   val decide_strategy          : conv
   val decide_closed_presburger : conv
 
-end;
+end

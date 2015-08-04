@@ -17,4 +17,4 @@ sig
 
   val add_pred_set_compset : computeLib.compset -> unit
 
-end;
+end

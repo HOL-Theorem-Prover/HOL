@@ -1,0 +1,22 @@
+INCLUDES = ../../common ../prog \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler
+OPTIONS = QUIT_ON_FAILURE
+
+ifdef POLY
+HOLHEAP = local-hol-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../prog/mips_progLib $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../prog/mips-step-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif

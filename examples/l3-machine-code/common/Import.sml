@@ -495,6 +495,7 @@ datatype monop =
    | Nub
    | PadLeft
    | PadRight
+   | QuotRem
    | Remove
    | RemoveExcept
    | RemoveDuplicates
@@ -511,6 +512,7 @@ datatype monop =
    | ToLower
    | ToUpper
    | Union
+   | Update
    | ValOf
 
 datatype binop =
@@ -639,6 +641,7 @@ local
    val mk_ismember  = mk_uncurry ``\(x:'a, l). x IN list$LIST_TO_SET l``
    val mk_take      = mk_uncurry ``\(x, l:'a list). list$TAKE x l``
    val mk_drop      = mk_uncurry ``\(x, l:'a list). list$DROP x l``
+   val mk_update    = mk_uncurry ``\(e, x, l:'a list). list$LUPDATE e x l``
    val mk_element   = mk_uncurry ``\(x, l:'a list). list$EL x l``
    val mk_remove    = mk_uncurry ``\(l1, l2). list$FILTER (\x. ~MEM x l1) l2``
    val mk_remove_e  = mk_uncurry ``\(l1, l2). list$FILTER (\x. MEM x l1) l2``
@@ -658,6 +661,9 @@ local
    val mk_intersect  = mk_uncurry ``\(s1:'a set, s2). pred_set$INTER s1 s2``
    val mk_difference = mk_uncurry ``\(s1:'a set, s2). pred_set$DIFF s1 s2``
    val mk_issubset   = mk_uncurry ``\(s1:'a set, s2). pred_set$SUBSET s1 s2``
+
+   val mk_quot_rem =
+      mk_uncurry ``\(m, n). (integer$int_quot m n, integer$int_rem m n)``
 
    fun mk_rev tm =
       (if Lib.can wordsSyntax.dim_of tm
@@ -964,6 +970,7 @@ in
        | Not => boolSyntax.mk_neg
        | PadLeft => mk_pad_left
        | PadRight => mk_pad_right
+       | QuotRem => mk_quot_rem
        | Remove => mk_remove
        | RemoveExcept => mk_remove_e
        | RemoveDuplicates => listSyntax.mk_nub
@@ -980,6 +987,7 @@ in
        | ToLower => mk_lower
        | ToUpper => mk_upper
        | Union => mk_union
+       | Update => mk_update
        | ValOf => optionSyntax.mk_the
        | _ => mk_fp_triop m
       ) x

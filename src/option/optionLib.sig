@@ -45,4 +45,4 @@ sig
 
    val option_rws : thm
    val OPTION_rws : computeLib.compset -> unit
-end;
+end

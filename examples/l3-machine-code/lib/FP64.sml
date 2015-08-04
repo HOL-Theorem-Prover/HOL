@@ -5,14 +5,14 @@
 structure FP64 :> FP64 =
 struct
 
-   val byte = Word8.fromInt o BitsN.toNat o BitsN.bits
+   val byte = Word8.fromInt o BitsN.toNat o L3.uncurry BitsN.bits
    fun unbyte b = BitsN.fromNat (Word8.toInt b, 8)
 
    fun bitsToReal w =
       ( BitsN.size w = 64 orelse raise Fail "bitsToReal: not 64-bit word"
       ; (PackRealBig.fromBytes o Word8Vector.fromList o List.rev)
           (List.tabulate
-             (8, fn i => let val j = 8 * i in byte (w, j + 7, j) end))
+             (8, fn i => let val j = 8 * i in byte ((j + 7, j), w) end))
       )
 
    fun realToBits r =

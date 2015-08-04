@@ -10,6 +10,9 @@ local
                TextIO.flushOut TextIO.stdErr;
                raise Fail s)
 
+  fun warn s = (TextIO.output(TextIO.stdErr, "WARNING: " ^ s ^ "\n");
+                TextIO.flushOut TextIO.stdErr)
+
   val redirected_files = ["mlibOmegaint.sml"];
 
   (* used to stand for "has double quote", but the same analysis is necessary
@@ -24,7 +27,7 @@ local
             case TextIO.input1 istrm of
               NONE => false
             | SOME #"`" => true
-            | SOME _ => loop()
+            | SOME c => Char.ord c > 127 orelse loop()
       in
         loop() before TextIO.closeIn istrm
       end handle IO.Io _ => false
@@ -40,12 +43,16 @@ structure FS = OS.FileSys
 fun quse s = let
   fun mkHOLMK () =
       if FS.access (".HOLMK", [FS.A_READ, FS.A_EXEC]) andalso FS.isDir ".HOLMK"
-      then ()
+      then true
       else
-        FS.mkDir ".HOLMK"
+        (FS.mkDir ".HOLMK"; true)
         handle OS.SysErr (msg, _) =>
-               die ("Couldn't make .HOLMK directory: "^msg)
-  fun holtemp s = (mkHOLMK(); OS.Path.concat(".HOLMK", OS.Path.file s))
+               (warn ("Couldn't make .HOLMK directory in " ^
+                      FS.getDir() ^ ": " ^ msg);
+                false)
+  fun holtemp s =
+    if mkHOLMK() then OS.Path.concat(".HOLMK", OS.Path.file s)
+    else OS.FileSys.tmpName()
 
   val _ = if FS.access (s, [FS.A_READ]) then ()
           else die ("Use: non-existent file "^s)

@@ -41,7 +41,7 @@ val OS :string            =
 
 val _ = PolyML.print_depth 0;
 
-val CC:string       = "gcc";      (* C compiler                       *)
+val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
@@ -405,12 +405,14 @@ val _ =
  ---------------------------------------------------------------------------*)
 val _ =
   (echo "Making bin/Holmake";
-   FileSys.chDir hmakedir;
-   systeml [lexer, "Lexer.lex"];
-   systeml [yaccer, "Parser.grm"];
    FileSys.chDir toolsdir;
    system_ps (POLY ^ " < " ^ fullPath ["Holmake", "poly-Holmake.ML"]);
    compile systeml hmakebin (fullPath ["Holmake", "Holmake.o"]);
+   FileSys.chDir (fullPath [HOLDIR, "tools", "Holmake"]);
+   system_ps (POLY ^ " < poly-holdeptool.ML");
+   compile systeml
+           (fullPath [HOLDIR, "bin", "holdeptool.exe"])
+           (fullPath [HOLDIR, "tools", "Holmake", "holdeptool.o"]);
    FileSys.chDir cdir)
    handle _ => die "Failed to build Holmake.";
 

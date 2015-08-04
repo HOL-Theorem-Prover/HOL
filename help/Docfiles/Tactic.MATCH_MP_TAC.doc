@@ -32,6 +32,9 @@ whose consequent can be instantiated to match the goal. The generalized
 variables {v1}, ..., {vi} must occur in {s'} in order for the conclusion {t} of
 the supplied theorem to match {t'}.
 
+\COMMENTS {irule} is similar, with differences in the details
+
 \SEEALSO
-Thm.EQ_MP, Drule.MATCH_MP, Thm.MP, Tactic.MP_TAC, ConseqConv.CONSEQ_CONV_TAC.
+Tactic.irule, Thm.EQ_MP, Drule.MATCH_MP, Thm.MP, Tactic.MP_TAC,
+ConseqConv.CONSEQ_CONV_TAC.
 \ENDDOC

@@ -47,12 +47,15 @@ struct
   val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
   val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC
   val qho_match_abbrev_tac : term quotation -> tactic = Q.HO_MATCH_ABBREV_TAC
-  val qmatch_rename_tac : term quotation -> string list -> tactic =
+  val qmatch_rename_tac : term quotation -> tactic =
      Q.MATCH_RENAME_TAC
   val qmatch_assum_abbrev_tac : term quotation -> tactic =
      Q.MATCH_ASSUM_ABBREV_TAC
-  val qmatch_assum_rename_tac : term quotation -> string list -> tactic =
+  val qmatch_assum_rename_tac : term quotation -> tactic =
      Q.MATCH_ASSUM_RENAME_TAC
+  val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
+  val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
+  val qcase_tac = Q.FIND_CASE_TAC
 
   val rule_assum_tac : (thm -> thm) -> tactic = Tactic.RULE_ASSUM_TAC
   val assume_tac : thm_tactic = Tactic.ASSUME_TAC
@@ -108,5 +111,6 @@ struct
   val op\\ = op Tactical.THEN
   val op>- = op Tactical.THEN1
   val op>| = op Tactical.THENL
+  val op>>> = op Tactical.THEN_LT
 
 end

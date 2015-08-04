@@ -3,16 +3,12 @@ struct
 
 open Abbrev HolKernel updateTheory
 
-val monop =
-   HolKernel.syntax_fns "update" 1 HolKernel.dest_monop
-      (Lib.curry boolSyntax.mk_icomb)
+val monop = HolKernel.syntax_fns1 "update"
+val binop = HolKernel.syntax_fns2 "update"
 
 val monop3 =
-   HolKernel.syntax_fns "update" 3 HolKernel.dest_monop
-      (Lib.curry boolSyntax.mk_icomb)
-
-val binop =
-   HolKernel.syntax_fns "update" 2 HolKernel.dest_binop HolKernel.mk_binop
+   HolKernel.syntax_fns {n = 3, dest = HolKernel.dest_monop,
+      make = Lib.curry boolSyntax.mk_icomb} "update"
 
 val (find_tm, mk_find, dest_find, is_find) = binop "FIND"
 

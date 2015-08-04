@@ -18,12 +18,10 @@ val ERR = Feedback.mk_HOL_ERR "arm8_progLib"
 val arm_proj_def = arm8_progTheory.arm8_proj_def
 val arm_comp_defs = arm8_progTheory.component_defs
 
-val step_1 =
-   HolKernel.syntax_fns "arm8_step" 1 HolKernel.dest_monop HolKernel.mk_monop
-val arm_1 =
-   HolKernel.syntax_fns "arm8_prog" 2 HolKernel.dest_monop HolKernel.mk_monop
-val arm_2 =
-   HolKernel.syntax_fns "arm8_prog" 3 HolKernel.dest_binop HolKernel.mk_binop
+val step_1 = HolKernel.syntax_fns1 "arm8_step"
+fun syn n d m = HolKernel.syntax_fns {n = n, dest = d, make = m} "arm8_prog"
+val arm_1 = syn 2 HolKernel.dest_monop HolKernel.mk_monop
+val arm_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
 val word5 = wordsSyntax.mk_int_word_type 5
 val word = wordsSyntax.mk_int_word_type 32
 val dword = wordsSyntax.mk_int_word_type 64
@@ -61,29 +59,8 @@ val state_id =
 
 val arm_frame =
    stateLib.update_frame_state_thm arm_proj_def
-      [(`K arm8_c_PSTATE_N`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with N := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_Z`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with Z := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_C`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with C := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_PSTATE_V`,
-        `\s:arm8_state a w. s with PSTATE := cpsr with V := w`,
-        `\s:arm8_state. s with PSTATE := cpsr`),
-       (`K arm8_c_SP_EL0`,
-        `\s:arm8_state a w. s with SP_EL0 := w`,
-        `\s:arm8_state. s`),
-       (`K arm8_c_PC`,
-        `\s:arm8_state a w. s with PC := w`,
-        `\s:arm8_state. s`),
-       (`arm8_c_REG`, `\s:arm8_state a w. s with REG := (a =+ w) r`,
-        `\s:arm8_state. s with REG := r`),
-       (`arm8_c_MEM`, `\s:arm8_state a w. s with MEM := (a =+ w) r`,
-        `\s:arm8_state. s with MEM := r`)
-      ]
+      ["PSTATE.N", "PSTATE.Z", "PSTATE.C", "PSTATE.V", "SP_EL0", "PC", "REG",
+       "MEM"]
 
 val arm_frame_hidden =
    stateLib.update_hidden_frame_state_thm arm_proj_def
@@ -323,8 +300,8 @@ local
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
              (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                 [arm8_stepTheory.Aligned_numeric,
-                  arm8_stepTheory.Aligned_8_4])) o
+                 [alignmentTheory.aligned_numeric,
+                  alignmentTheory.aligned_imp, DECIDE ``2 < 3n``])) o
       PURE_REWRITE_RULE [arm8_stepTheory.concat_bytes]
    val chunk64 = chunks_intro_pre_process arm8_progTheory.arm8_DWORD_def
 in
@@ -376,7 +353,7 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm8_PC_INTRO, arm8_TEMPORAL_PC_INTRO,
           arm8_PC_INTRO0, arm8_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [arm8_stepTheory.Aligned_numeric]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -473,11 +450,11 @@ local
       THENC stateLib.PRE_COND_CONV
                (Conv.DEPTH_CONV DISJOINT_CONV
                 THENC REWRITE_CONV
-                        [arm8_stepTheory.Aligned_numeric,
-                         CONJUNCT1 arm8_stepTheory.Aligned,
+                        [alignmentTheory.aligned_numeric,
+                         alignmentTheory.aligned_0,
                          optionTheory.NOT_NONE_SOME]
                 THENC NOT_F_CONV)
-      THENC helperLib.POST_CONV (stateLib.PC_CONV "arm8_prog$arm_PC")
+      THENC helperLib.POST_CONV (stateLib.PC_CONV "arm8_prog$arm8_pc")
 in
    fun simp_triple_rule thm =
       arm_rename (DecodeBitMasks_RULE (Conv.CONV_RULE cnv thm))

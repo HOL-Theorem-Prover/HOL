@@ -11,19 +11,19 @@ struct
 
    datatype nbit = B of (int * Nat.nat)
 
-   fun checkSize s = if s = Nat.zero then raise Fail "Size must be >= 1." else s
    fun size (B (_, s)) = s
 
    fun dim s = IntInf.<< (1, Word.fromInt s)
-   fun modDim s n = IntInf.andb (n, dim s - 1)
+   fun pdim s = dim s - 1
+   fun BV (n, s) = B (IntInf.andb (n, pdim s), s)
 
-   fun UINT_MAX s = B (dim s - 1, checkSize s)
-   fun INT_MIN s = B (dim (s - 1), checkSize s)
-   fun INT_MAX s = B (dim (s - 1) - 1, checkSize s)
-   fun zero s = B (0, checkSize s)
-   fun one s = B (1, checkSize s)
+   fun UINT_MAX s = B (pdim s, s)
+   fun INT_MIN s = B (dim (s - 1), s)
+   fun INT_MAX s = B (pdim (s - 1), s)
+   fun zero s = B (0, s)
+   fun one s = B (1, s)
 
-   fun fromInt (n, s) = B (modDim s n, checkSize s)
+   val fromInt = BV
    fun fromNat (n, s) = fromInt (Nat.toInt n, s)
    fun toNat (B (i, _)) = Nat.fromInt i
    val toUInt = Nat.toInt o toNat
@@ -62,21 +62,20 @@ struct
                ; w
             end) (Nat.fromLit s)
 
-   fun bits (B (i, s), h, l) =
+   fun bits (h,l) =
       let
          val w = h + 1 - l
+         val l =  Word.fromInt l
+         val mask = pdim w
       in
-         0 < w andalso 0 <= l andalso h < s orelse
-         raise Fail ("bits invalid: (" ^ Nat.toString s ^ "-bit)<" ^
-                     Nat.toString h ^ ":" ^ Nat.toString l ^ ">")
-         ; B (modDim w (IntInf.~>> (i, Word.fromInt l)), w)
+         fn B (i, _) => B (IntInf.andb (mask,IntInf.~>> (i, l)), w)
       end
 
-   fun bit (a, n) = bits (a, n, n) = B (1, 1)
-   fun lsb (B (a, _)) = IntInf.andb (a, 1) = 1
+   fun bit (B (a, _), n) = Int.rem (IntInf.~>> (a, Word.fromInt n), 2) = 1
+   fun lsb (B (a, _)) = Int.rem (a, 2) = 1
    fun msb a = bit (a, Nat.- (size a, Nat.one))
 
-   fun neg (B (a, s)) = B (modDim s (Int.- (dim s, a)), s)
+   fun neg (B (a, s)) = BV (Int.- (dim s, a), s)
 
    fun toInt a = if msb a then Int.~ (toUInt (neg a)) else toUInt a
 
@@ -109,40 +108,32 @@ struct
    val fromHexString =
       fromBaseString (IntExtra.fromHexString, Nat.fromHexString)
 
-   fun toList (B (a, s)) =
-      let
-         fun iter (l, n, b) =
-            if b <= 0 orelse n = 0
-               then List.tabulate (b, fn _ => false) @ l
-            else let
-                    val (r, v) = IntInf.divMod (n, 2)
-                 in
-                    iter ((v = 1) :: l, r, b - 1)
-                 end
-      in
-         iter ([], a, Nat.toInt s)
-      end
+   local
+      fun iter (l, n, b) =
+         if n = 0 orelse b <= 0
+            then Bitstring.zero b @ l
+         else let
+                 val (r, v) = IntInf.quotRem (n, 2)
+              in
+                 iter ((v = 1) :: l, r, b - 1)
+              end
+   in
+      fun toList (B (a, s)) = iter ([], a, Nat.toInt s)
+   end
 
-   fun fromList l =
-      let
-         val s = List.length l
-         val _ = 0 < s orelse raise Fail ("List must be non-empty")
-         fun iter a =
-            fn [] => a
-             | (h::t) => iter (2 * a + (if h then 1 else 0)) t
-      in
-         B (iter 0 l, Nat.fromInt s)
-      end
+   local
+      fun iter a =
+         fn [] => a
+          | (false::t) => iter (IntInf.<< (a, 0w1)) t
+          | (true::t) => iter (IntInf.orb (IntInf.<< (a, 0w1), 1)) t
+   in
+      fun fromList l = B (iter 0 l, Nat.fromInt (List.length l))
+   end
 
    fun modify (f: Nat.nat * bool -> bool, a) =
-      let
-         val s = Nat.toInt (size a)
-         val l = toList a
-         val n = List.tabulate (s, fn i => Nat.fromInt (s - 1 - i))
-         val z = ListPair.zip (n, l)
-      in
-         fromList (List.map f z)
-      end
+      fromList
+         (#1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0)
+                (toList a)))
 
    fun tabulate (s, f: Nat.nat -> bool) =
       let
@@ -156,17 +147,10 @@ struct
 
    fun log2 (B (a, s)) = B (IntInf.log2 a, s)
 
-   fun zeroExtend s2 (B (n, s1)) =
-      if Nat.<= (s1, s2)
-         then B (n, s2)
-      else raise Fail ("Bad zeroExtend: `" ^ Nat.toString s1 ^ " -> `" ^
-                       Nat.toString s2)
+   fun zeroExtend s (B (n, _)) = B (n, s)
 
    fun signExtend s2 (a as B (n, s1)) =
-      if Nat.<= (s1, s2)
-         then B (Int.+ (if msb a then (Int.- (dim s2, dim s1)) else 0, n), s2)
-      else raise Fail ("Bad signExtend: `" ^ Nat.toString s1 ^ " -> `" ^
-                       Nat.toString s2)
+      B (Int.+ (if msb a then (Int.- (dim s2, dim s1)) else 0, n), s2)
 
    fun op @@ (a as B (v1, s1), b as B (v2, s2)) =
       B (IntInf.orb (IntInf.<< (v1, Word.fromInt s2), v2), Int.+ (s1, s2))
@@ -186,88 +170,49 @@ struct
 
    fun resize_replicate i = resize i o replicate
 
-   fun bitFieldInsert (x, y, h, l) =
-      modify (fn (i, b) =>
-                 if Nat.<= (l, i) andalso Nat.<= (i, h)
-                    then bit (y, Nat.- (i, l))
-                 else b, x)
-
-   fun checkSameSize opn =
+   fun bitFieldInsert (h,l) =
       let
-         val err = opn ^ " : Bit widths do not match: "
+         val dl = dim l
+         val dh = dim (h + 1)
+         val wl = Word.fromInt l
       in
-         fn (s1, s2) =>
-           s1 = s2 orelse
-           raise Fail (err ^ Nat.toString s1 ^ " <> " ^ Nat.toString s2)
+         fn (B (v, s), B (w, _)) =>
+            let
+               val mask = Int.max (Int.min (dim s, dh) - dl, 0)
+               val w' = IntInf.<< (w, wl)
+            in
+               B (IntInf.orb (IntInf.andb (IntInf.notb mask, v),
+                              IntInf.andb (mask, w')), s)
+            end
       end
 
-   fun op <+ (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "<+" (s1, s2); Int.< (v1, v2) )
+   fun op <+  (B (v1, _), B (v2, _)) = Int.< (v1, v2)
+   fun op <=+ (B (v1, _), B (v2, _)) = Int.<= (v1, v2)
+   fun op >+  (B (v1, _), B (v2, _)) = Int.> (v1, v2)
+   fun op >=+ (B (v1, _), B (v2, _)) = Int.>= (v1, v2)
 
-   fun op <=+ (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "<=+" (s1, s2); Int.<= (v1, v2) )
+   fun op <  (w1, w2) = Int.< (toInt w1, toInt w2)
+   fun op <= (w1, w2) = Int.<= (toInt w1, toInt w2)
+   fun op >  (w1, w2) = Int.> (toInt w1, toInt w2)
+   fun op >= (w1, w2) = Int.>= (toInt w1, toInt w2)
 
-   fun op >+ (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize ">+" (s1, s2); Int.> (v1, v2) )
+   fun op && (B (v1, _), B (v2, s)) = B (IntInf.andb (v1, v2), s)
+   fun op || (B (v1, _), B (v2, s)) = B (IntInf.orb (v1, v2), s)
+   fun op ?? (B (v1, _), B (v2, s)) = B (IntInf.xorb (v1, v2), s)
+   fun op div (B (v1, _), B (v2, s)) = B (Int.div (v1, v2), s)
+   fun op mod (B (v1, _), B (v2, s)) = B (Int.mod (v1, v2), s)
 
-   fun op >=+ (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize ">=+" (s1, s2); Int.>= (v1, v2) )
+   fun op quot (a, b as B (_, s)) = fromInt (Int.quot (toInt a, toInt b), s)
+   fun op rem (a, b as B (_, s)) = fromInt (Int.rem (toInt a, toInt b), s)
 
-   fun op < (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize "<" (s1, s2); Int.< (toInt w1, toInt w2) )
+   fun min (B (v1, _), B (v2, s)) = B (Int.min (v1, v2), s)
+   fun max (B (v1, _), B (v2, s)) = B (Int.max (v1, v2), s)
 
-   fun op <= (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize "<=" (s1, s2); Int.<= (toInt w1, toInt w2) )
-
-   fun op > (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize ">" (s1, s2); Int.> (toInt w1, toInt w2) )
-
-   fun op >= (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize ">=" (s1, s2); Int.>= (toInt w1, toInt w2) )
-
-   fun op && (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "&&" (s1, s2); B (IntInf.andb (v1, v2), s1) )
-
-   fun op || (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "||" (s1, s2); B (IntInf.orb (v1, v2), s1) )
-
-   fun op ?? (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "??" (s1, s2); B (IntInf.xorb (v1, v2), s1) )
-
-   fun op div (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "div" (s1, s2); B (Int.div (v1, v2), s1) )
-
-   fun op mod (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "mod" (s1, s2); B (Int.mod (v1, v2), s1) )
-
-   fun op quot (a as B (_, s1), b as B (_, s2)) =
-      ( checkSameSize "quot" (s1, s2)
-      ; fromInt (Int.quot (toInt a, toInt b), s1)
-      )
-
-   fun op rem (a as B (_, s1), b as B (_, s2)) =
-      ( checkSameSize "quot" (s1, s2)
-      ; fromInt (Int.rem (toInt a, toInt b), s1)
-      )
-
-   fun min (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "min" (s1, s2); B (Int.min (v1, v2), s1) )
-
-   fun max (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "max" (s1, s2); B (Int.max (v1, v2), s1) )
-
-   fun smin (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize "smin" (s1, s2)
-      ; fromInt (Int.min (toInt w1, toInt w2), s1)
-      )
-
-   fun smax (w1 as B (_, s1), w2 as B (_, s2)) =
-      ( checkSameSize "smax" (s1, s2)
-      ; fromInt (Int.max (toInt w1, toInt w2), s1)
-      )
+   fun smin (w1, w2 as B (_, s)) = fromInt (Int.min (toInt w1, toInt w2), s)
+   fun smax (w1, w2 as B (_, s)) = fromInt (Int.max (toInt w1, toInt w2), s)
 
    fun op << (B (v, s), n) =
-      B (modDim s (IntInf.<< (v, Word.fromInt (Int.min (n, s)))), s)
+      BV (IntInf.<< (v, Word.fromInt (Int.min (n, s))), s)
 
    fun op >>+ (B (v, s), n) = B (IntInf.~>> (v, Word.fromInt n), s)
 
@@ -281,35 +226,23 @@ struct
          open Nat
          val x = n mod s
       in
-         if x = 0 then a else bits (a, pred x, zero) @@ bits (a, pred s, x)
+         if x = 0 then a else bits (pred x, zero) a @@ bits (pred s, x) a
       end
 
    fun op #<< (a as B (_, s), n) = let open Nat in a #>> (s - n mod s) end
 
-   fun op <<^ (w as B (_, s1), v as B (_, s2)) =
-      ( checkSameSize "<<^" (s1, s2); w << toNat v )
+   fun op <<^ (w, v) = w << toNat v
+   fun op >>^ (w, v) = w >> toNat v
+   fun op >>+^ (w, v) = w >>+ toNat v
+   fun op #>>^ (w, v) = w #>> toNat v
+   fun op #<<^ (w, v) = w #<< toNat v
 
-   fun op >>^ (w as B (_, s1), v as B (_, s2)) =
-      ( checkSameSize ">>^" (s1, s2); w >> toNat v )
+   fun op * (B (v1, _), B (v2, s)) = BV (Int.* (v1, v2), s)
+   fun op + (B (v1, _), B (v2, s)) = BV (Int.+ (v1, v2), s)
 
-   fun op >>+^ (w as B (_, s1), v as B (_, s2)) =
-      ( checkSameSize ">>+^" (s1, s2); w >>+ toNat v )
+   fun op ~ (B (a, s)) = BV (IntInf.notb a, s)
 
-   fun op #>>^ (w as B (_, s1), v as B (_, s2)) =
-      ( checkSameSize "#>>^" (s1, s2); w #>> toNat v )
-
-   fun op #<<^ (w as B (_, s1), v as B (_, s2)) =
-      ( checkSameSize "#<<^" (s1, s2); w #<< toNat v )
-
-   fun op * (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "*" (s1, s2); B (modDim s1 (Int.* (v1, v2)), s1) )
-
-   fun op + (B (v1, s1), B (v2, s2)) =
-      ( checkSameSize "+" (s1, s2); B (modDim s1 (Int.+ (v1, v2)), s1) )
-
-   fun op ~ (B (a, s)) = B (modDim s (IntInf.notb a), s)
-
-   fun abs a = if a < B (0, size a) then neg a else a
+   fun abs a = if msb a then neg a else a
 
    fun op - (a, b) = a + neg b
 

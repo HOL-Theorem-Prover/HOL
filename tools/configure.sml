@@ -41,7 +41,7 @@ val OS :string      =
 *)
 
 
-val CC:string       = "gcc";      (* C compiler                       *)
+val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
@@ -342,24 +342,25 @@ val _ =
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
      val _         = FileSys.chDir hmakedir
      val bin       = fullPath [holdir,   "bin/Holmake"]
-     val lexer     = fullPath [mosmldir, "mosmllex"]
-     val yaccer    = fullPath [mosmldir, "mosmlyac"]
+     val mllex     = fullPath [holdir, "tools", "mllex", "mllex.exe"]
      val systeml   = fn clist => if not (Process.isSuccess (systeml clist)) then
                                    die "Holmake compilation failed."
                                  else ()
-     fun link () = let
-       val pfx = if OS <> "winNT" then [compiler, "-standalone", "-o", bin]
-                 else [compiler, "-o", bin]
+     fun link {extras,srcobj,tgt} = let
+       val pfx = if OS <> "winNT" then [compiler, "-standalone", "-o", tgt]
+                 else [compiler, "-o", tgt]
        val b2002comp = if have_basis2002 then [] else ["basis2002.ui"]
      in
-       systeml (pfx @ b2002comp @ ["Holmake.sml"])
+       systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
-    systeml [yaccer, "Parser.grm"];
-    systeml [lexer, "Lexer.lex"];
-    compile [] "Parser.sig";
-    compile [] "Parser.sml";
-    compile [] "Lexer.sml";
+    compile [] "Holdep_tokens.sig";
+    compile [] "Holdep_tokens.sml";
+    compile [] "holdeptool.sml";
+    compile [] "mosml_holdeptool.sml";
+    link{extras = [], srcobj = "mosml_holdeptool.uo",
+         tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
+    compile [] "Holdep.sig";
     compile [] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
@@ -373,7 +374,8 @@ val _ =
     compile [] "Holmake_tools.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    link();
+    compile [] "Holmake.sml";
+    link{extras = [], tgt = bin, srcobj = "Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end

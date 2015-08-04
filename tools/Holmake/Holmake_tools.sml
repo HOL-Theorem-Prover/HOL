@@ -282,61 +282,172 @@ val nice_dir =
       | NONE => (fn s => s)
 
 fun xterm_log s =
-    ignore (OS.Process.system ("/bin/bash -c 'echo -ne \"\\033]0;" ^ s ^ "\\007\"'"))
+  ignore (OS.Process.system ("/bin/sh -c 'printf \"\\033]0;" ^ s ^ "\\007\"'"))
 
 val terminal_log =
     if Systeml.isUnix then xterm_log
     else (fn s => ())
 
+structure hmdir =
+struct
 
-fun maybe_recurse {warn,no_prereqs,hm,visited,includes,dir,local_build=k,
-                   cleantgt} =
+type t = {absdir : string, relpath : string option}
+
+fun op+ (d, e) = Path.mkCanonical (Path.concat(d, e))
+
+fun curdir () = {relpath = SOME (OS.Path.currentArc),
+                 absdir = OS.FileSys.getDir()}
+
+fun compare ({absdir = d1, ...} : t, {absdir = d2, ...} : t) =
+    String.compare (d1, d2)
+
+fun toString {relpath,absdir} =
+    case relpath of
+        NONE => absdir
+      | SOME p => p
+
+fun toAbsPath {relpath,absdir} = absdir
+
+fun fromPath {origin,path} =
+    if Path.isAbsolute path then {relpath = NONE, absdir = path}
+    else
+      {relpath = SOME path, absdir = origin + path}
+
+fun extendp {base = {relpath, absdir}, extension} = let
+  val relpath_str = case relpath of NONE => "NONE"
+                                  | SOME s => "SOME("^s^")"
+in
+  if Path.isAbsolute extension then {relpath = NONE, absdir = extension}
+  else
+      case relpath of
+          NONE => {absdir = absdir + extension, relpath = NONE}
+        | SOME p => {relpath = SOME (p + extension),
+                     absdir = absdir + extension}
+end
+
+fun extend {base, extension} =
+    extendp {base = base, extension = toString extension}
+
+fun sort l = let
+  fun foldthis1 ({absdir,relpath}, acc) =
+      case Binarymap.peek (acc, absdir) of
+          NONE => Binarymap.insert(acc, absdir, relpath)
+        | SOME NONE => Binarymap.insert(acc, absdir, relpath)
+        | _ => acc
+  val m = foldl foldthis1 (Binarymap.mkDict String.compare) l
+  fun foldthis2 (abs,rel,acc) = {absdir = abs, relpath = rel} :: acc
+in
+  Binarymap.foldr foldthis2 [] m
+end
+
+end (* hmdir struct *)
+
+type include_info = {includes : string list, preincludes : string list }
+type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
+                             preincludes : 'dir list}
+type 'dir holmake_result = 'dir holmake_dirinfo option
+
+(* ----------------------------------------------------------------------
+
+    maybe_recurse
+
+    this function doesn't handle all recursion, just one level's
+    worth. In other words, the master Holmake calls this function, and
+    this then arranges the recursive calls into the various include
+    directories that need to happen. The holmake that gets called in
+    those directories (via the hm parameter) will in turn call this
+    function for recursion at that level in the "tree".
+
+    The local_build/k parameter is how the maybe_recurse function
+    finishes off; this parameter is called when all of the necessary
+    recursion has been performed and work should be done in the
+    current ("local") directory.
+
+    Finally, what of the dirinfo?
+
+    This record includes
+          origin: the absolute path to the very first directory
+        includes: the includes that the local directory knows about
+                  (which will have come from the command-line or
+                  INCLUDES lines in the local Holmakefile
+     preincludes: similarly
+         visited: a set of visited directories (with directories
+                  expressed as absolute paths)
+
+    The includes and preincludes are clearly useful when it comes time to
+    do any local work, but also specify how the recursion is to happen.
+
+    Now, the recursion into those directories may result in extra
+    includes and preincludes.
+   ---------------------------------------------------------------------- *)
+fun maybe_recurse {warn,diag,no_prereqs,hm,dirinfo,dir,local_build=k,cleantgt} =
 let
-  val {abspath=dir,relpath} = dir
-  val k = fn () => (terminal_log ("Holmake: "^nice_dir dir); k())
+  val {includes,preincludes,visited} = dirinfo
+  val _ = diag ("maybe_recurse: includes = [" ^
+                String.concatWith ", " includes ^ "]")
+  val _ = diag ("maybe_recurse: preincludes = [" ^
+                String.concatWith ", " preincludes ^ "]")
+  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+                    k ii)
   val tgts = case cleantgt of SOME s => [s] | NONE => []
-  fun recurse visited (newdir,nm) =
-      if Binaryset.member(visited, newdir) then SOME visited
-      else let
-          val newrelpath =
-              if Path.isAbsolute nm then NONE
-              else
-                case relpath of
-                  NONE => NONE
-                | SOME d => SOME (Path.mkCanonical (Path.concat(d, nm)))
-          val nm = case newrelpath of NONE => newdir | SOME d => d
-          val _ = warn ("Recursively calling Holmake in "^nm)
-          val _ = terminal_log ("Holmake: "^nice_dir nm)
-        in
-          hm {relpath=newrelpath,abspath=newdir} visited [] tgts
-          before
-          (warn ("Finished recursive invocation in "^nm);
-           terminal_log ("Holmake: "^nice_dir dir);
-           FileSys.chDir dir)
-        end
-  fun do_em accg [] = if k() then SOME accg else NONE
-    | do_em accg (x::xs) = let
-      in
-        case recurse accg x of
-          SOME g' => do_em g' xs
-        | NONE => NONE
-      end
+  fun recurse (acc as {visited,includes,preincludes}) newdir = let
+  in
+    if Binaryset.member(visited, newdir) then SOME acc
+    else let
+      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
+      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
+      val result =
+          case hm {dir = newdir, visited = visited, targets = tgts} of
+              NONE => NONE
+            | SOME {visited,includes = inc0, preincludes = pre0} =>
+              SOME {visited = visited,
+                    includes = hmdir.sort (includes @ inc0),
+                    preincludes = hmdir.sort (preincludes @ pre0)}
+    in
+      warn ("Finished recursive invocation in "^hmdir.toString newdir);
+      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
+      FileSys.chDir (hmdir.toAbsPath dir);
+      case result of
+          SOME{includes=incs,preincludes=pre,...} =>
+          (diag ("Recursively computed includes = " ^
+                 String.concatWith ", " (map hmdir.toString incs));
+           diag ("Recursively computed pre-includes = " ^
+                 String.concatWith ", " (map hmdir.toString pre)))
+        | NONE => ();
+      result
+    end
+  end
+  fun do_em (accg as {includes,preincludes,...}) dirs =
+      case dirs of
+          [] =>
+          let
+            val f = map hmdir.toAbsPath
+          in
+            if k {includes=f includes,preincludes=f preincludes} then SOME accg
+            else NONE
+          end
+        | x::xs =>
+          let
+          in
+            case recurse accg x of
+                SOME result => do_em result xs
+              | NONE => NONE
+          end
   val visited = Binaryset.add(visited, dir)
+  fun canon i = hmdir.extendp {base = dir, extension = i}
+  val canonl = map canon
 in
   if no_prereqs then
-    if k() then SOME visited else NONE
+    if k {includes = #includes dirinfo, preincludes = #preincludes dirinfo} then
+      SOME {visited = visited, includes = map canon includes,
+            preincludes = map canon preincludes}
+    else NONE
   else let
-      fun foldthis (dir, m) =
-          Binarymap.insert(m, FileSys.fullPath dir, dir)
-          handle OS.SysErr _ =>
-                 (warn ("Includes path "^dir^" looks bogus");
-                  m)
-      val possible_calls = List.foldr foldthis
-                                      (Binarymap.mkDict String.compare)
-                                      includes
-
+      fun f idirs = map canon idirs
+      val possible_calls = hmdir.sort (f (preincludes @ includes))
     in
-      do_em visited (Binarymap.listItems possible_calls)
+      do_em {visited = visited, includes = f includes, preincludes = f preincludes}
+            possible_calls
     end
 end
 
@@ -372,5 +483,151 @@ fun generate_all_plausible_targets first_target =
         in
           remove_sorted_dups (Listsort.sort file_compare initially)
         end
+
+(* dependency analysis *)
+exception HolDepFailed
+fun runholdep {ofs, extras, includes, arg, destination} = let
+  val {info, diag, ...} : output_functions = ofs
+  val _ = info ("Analysing "^fromFile arg)
+  fun buildables s = let
+    val f = toFile s
+    val files =
+        case f of
+          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
+                                   SIG (Theory t), UI (Theory t),
+                                   UO (Theory t), f]
+        | SML ss => [UI ss, UO ss, f]
+        | SIG ss => [UI ss, f]
+        | x => [x]
+  in
+    map fromFile files
+  end
+  val buildable_extras = List.concat (map buildables extras)
+  val _ = diag ("Running Holdep on "^fromFile arg^" with includes = [" ^
+                String.concatWith ", " includes ^ "], assumes = [" ^
+                String.concatWith ", " buildable_extras ^"]")
+  val holdep_result =
+    Holdep.main {assumes = buildable_extras, diag = diag,
+                 includes = includes, fname = fromFile arg}
+    handle Holdep.Holdep_Error s =>
+             (info "Holdep failed: s"; raise HolDepFailed)
+         | Interrupt => raise Interrupt
+         | e => (info ("Holdep exception: "^General.exnMessage e);
+                 raise HolDepFailed)
+  fun myopen s =
+    if FileSys.access(DEPDIR, []) then
+      if FileSys.isDir DEPDIR then TextIO.openOut s
+      else die_with ("Want to put dependency information in directory "^
+                     DEPDIR^", but it already exists as a file")
+    else
+     (info ("Trying to create directory "^DEPDIR^" for dependency files");
+      FileSys.mkDir DEPDIR;
+      TextIO.openOut s
+     )
+  open TextIO
+  val outstr = myopen (normPath destination)
+in
+  output(outstr, Holdep.encode_for_HOLMKfile holdep_result);
+  closeOut outstr
+end
+
+(* pull out a list of files that target depends on from depfile.  *)
+(* All files on the right of a colon are assumed to be dependencies.
+   This is despite the fact that holdep produces two entries when run
+   on fooScript.sml files, one for fooScript.uo, and another for fooScript
+   itself, we actually want all of those dependencies in one big chunk
+   because the production of fooTheory.{sig,sml} is done as one
+   atomic step from fooScript.sml. *)
+fun first f [] = NONE
+  | first f (x::xs) = case f x of NONE => first f xs | res => res
+
+fun get_dependencies_from_file depfile = let
+  fun get_whole_file s = let
+    open TextIO
+    val instr = openIn (normPath s)
+  in
+    inputAll instr before closeIn instr
+  end
+  fun parse_result s = let
+    val lines = String.fields (fn c => c = #"\n") (collapse_bslash_lines s)
+    fun process_line line = let
+      val (lhs0, rhs0) = Substring.splitl (fn c => c <> #":")
+                                          (Substring.full line)
+      val lhs = Substring.string lhs0
+      val rhs = Substring.string (Substring.slice(rhs0, 1, NONE))
+        handle Subscript => ""
+    in
+      realspace_delimited_fields rhs
+    end
+    val result = List.concat (map process_line lines)
+  in
+    List.map toFile result
+  end
+in
+  parse_result (get_whole_file depfile)
+end
+
+(* a function that given a product file, figures out the argument that
+   should be passed to runholdep in order to get back secondary
+   dependencies. *)
+
+fun holdep_arg (UO c) = SOME (SML c)
+  | holdep_arg (UI c) = SOME (SIG c)
+  | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
+  | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
+  | holdep_arg _ = NONE
+
+fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
+
+infix forces_update_of
+fun (f1 forces_update_of f2) = let
+  open Time
+in
+  FileSys.access(f1, []) andalso
+  (not (FileSys.access(f2, [])) orelse FileSys.modTime f1 > FileSys.modTime f2)
+end
+
+
+fun get_direct_dependencies {incinfo,DEPDIR,output_functions,extra_targets} f =
+let
+  val fname = fromFile f
+  val arg = holdep_arg f  (* arg is file to analyse for dependencies *)
+  val {includes,preincludes} = incinfo
+in
+  if isSome arg then let
+    val arg = valOf arg
+    val argname = fromFile arg
+    val depfile = mk_depfile_name DEPDIR argname
+    val _ =
+      if argname forces_update_of depfile then
+        runholdep {ofs = output_functions, extras = extra_targets,
+                   includes = preincludes @ includes, arg = arg,
+                   destination = depfile}
+      else ()
+    val phase1 =
+      (* circumstances can arise in which the dependency file won't be
+         built, and won't exist; mainly because the file we're trying to
+         compute dependencies for doesn't exist either.  In this case, we
+         can only return the empty list *)
+      if exists_readable depfile then
+        get_dependencies_from_file depfile
+      else
+        []
+  in
+    case f of
+      UO x =>
+        if FileSys.access(fromFile (SIG x), []) andalso
+           List.all (fn f => f <> SIG x) phase1
+        then
+          UI x :: phase1
+        else
+          phase1
+    | _ => phase1
+  end
+  else
+    []
+end
+
+
 
 end (* struct *)

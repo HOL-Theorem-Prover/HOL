@@ -2470,11 +2470,11 @@ val mlt_dominates_thm1 = store_thm(
           strip_tac >> map_every qexists_tac [`{|e|}`, `rep`] >>
           simp[COMM_BAG_UNION]) >>
       rpt strip_tac >>
-      qmatch_assum_rename_tac `mlt1 R B0 B1` [] >>
-      qmatch_assum_rename_tac `mlt R B1 B2` [] >>
+      qmatch_assum_rename_tac `mlt1 R B0 B1` >>
+      qmatch_assum_rename_tac `mlt R B1 B2` >>
       fs[mlt1_def] >>
-      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` [] >>
-      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` []>>
+      qmatch_assum_rename_tac `!e'. BAG_IN e' Rep ==> R e' E` >>
+      qmatch_assum_rename_tac `(B2 - X) + Y = Res + {|E|}` >>
       Cases_on `BAG_IN E Y`
       >- (map_every qexists_tac [`X`, `Y - {| E |} + Rep`] >>
           simp[] >> reverse conj_tac

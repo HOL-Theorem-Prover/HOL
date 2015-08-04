@@ -15,6 +15,7 @@ sig
    val indexOfString : char * string -> int option
    val fst : 'a * 'b -> 'a
    val listCompare : ('a * 'a -> order) -> 'a list * 'a list -> order
+   val listUpdate : 'a * (int * 'a list) -> 'a list
    val lowercase : string -> string
    val memString : char * string -> bool
    val padLeft : 'a * (int * 'a list) -> 'a list
@@ -36,6 +37,7 @@ sig
    val strHd : string -> char
    val strTl : string -> string
    val stringToChar : string -> char
+   val stringUpdate : char * (int * string) -> string
    val swap : 'a * 'b -> 'b * 'a
    val take : int * 'a list -> 'a list
    val takeString : int * string -> string

@@ -10,4 +10,4 @@ sig
 	(* tactics *)
 	val INT_SGN_CASES_TAC: term -> tactic
 	val INT_CALCEQ_TAC: tactic
-end;
+end

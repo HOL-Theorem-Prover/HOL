@@ -217,7 +217,7 @@ val is_list_case    = can dest_list_case
 val is_genlist      = can dest_genlist
 val is_nub          = can dest_nub
 
-val s3 = HolKernel.syntax_fns "list" 3 HolKernel.dest_triop HolKernel.mk_triop
+val s3 = HolKernel.syntax_fns3 "list"
 
 val (pad_left_tm, mk_pad_left, dest_pad_left, is_pad_left) = s3 "PAD_LEFT"
 val (pad_right_tm, mk_pad_right, dest_pad_right, is_pad_right) = s3 "PAD_RIGHT"

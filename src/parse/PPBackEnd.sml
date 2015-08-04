@@ -4,52 +4,14 @@ struct
 type hol_type = Type.hol_type
 open Portable
 
-
+open term_pp_types
 
 
 (* ========================================================================== *)
 (* Datatypes used by the backends                                             *)
 (* ========================================================================== *)
 
-  datatype lit_type = FldName | StringLit | NumLit | CharLit
-
-  datatype annotation =
-    BV of hol_type * (unit -> string)
-  | FV of hol_type * (unit -> string)
-  | TyV
-  | TyOp of (unit -> string)
-  | TySyn of (unit -> string)
-  | Const of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
-  | SymConst of {Thy:string,Name:string,Ty:hol_type * (unit -> string)}
-  | Note of string
-  | Literal of lit_type
-
-(* The default 16 color palette *)
-datatype pp_color =
-    Black     | RedBrown   | Green      | BrownGreen
-  | DarkBlue  | Purple     | BlueGreen  | DarkGrey
-  | LightGrey | OrangeRed  | VividGreen | Yellow
-  | Blue      | PinkPurple | LightBlue  | White;
-
-datatype pp_style =
-    FG of pp_color
-  | BG of pp_color
-  | Bold
-  | Underline
-  | UserStyle of string;
-
-type xstring = {s:string,sz:int option,ann:annotation option}
-
-type t = {add_string : ppstream -> string -> unit,
-          add_xstring : ppstream -> xstring -> unit,
-          begin_block : ppstream -> PP.break_style -> int -> unit,
-          end_block : ppstream -> unit,
-          add_break : ppstream -> int * int -> unit,
-          add_newline : ppstream -> unit,
-          begin_style : ppstream -> pp_style list -> unit,
-          end_style : ppstream -> unit,
-          name : string}
-
+type t = term_grammar.grammar term_pp_types.ppbackend
 
 (* ========================================================================== *)
 (* with_pp_stream                                                             *)
@@ -196,6 +158,8 @@ fun add_ssz pps (s,sz) =
 
 val raw_terminal : t = {
    name = "raw_terminal",
+   tm_grammar_upd = (fn g => g),
+   ty_grammar_upd = (fn g => g),
    add_break      = PP.add_break,
    add_string     = PP.add_string,
    add_xstring    = (fn pps => fn {s,sz,...} => add_ssz pps (s,sz)),
@@ -287,6 +251,8 @@ let
       | _ => add_ssz pps (s,sz)
 in
   {name           = name,
+   tm_grammar_upd = (fn g => g),
+   ty_grammar_upd = (fn g => g),
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
    begin_block    = #begin_block raw_terminal,
@@ -387,6 +353,8 @@ val emacs_terminal = let
 
 in
   {name           = name,
+   tm_grammar_upd = (fn g => g),
+   ty_grammar_upd = (fn g => g),
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
    begin_block    = #begin_block raw_terminal,
@@ -525,6 +493,8 @@ let
           else add_ann_string___simple) pps ((s,sz), valOf ann)
 in
   {name           = name,
+   tm_grammar_upd = (fn g => g),
+   ty_grammar_upd = (fn g => g),
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
    begin_block    = #begin_block raw_terminal,
@@ -540,6 +510,8 @@ val debug_blocks_terminal : t = let
     | sty_to_string (PP.INCONSISTENT, n) = "I" ^ Int.toString n
 in
   {name = "debug_blocks",
+   tm_grammar_upd = (fn g => g),
+   ty_grammar_upd = (fn g => g),
    add_break      = PP.add_break,
    add_string     = PP.add_string,
    add_xstring    = (fn pps => fn {s,sz,...} => add_ssz pps (s,sz)),

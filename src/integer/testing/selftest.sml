@@ -18,7 +18,7 @@ fun usage() =
 val cooper_result =
     case CommandLine.arguments() of
       [] => if Systeml.ML_SYSNAME = "poly" then cooper() else (usage(); true)
-      | [x] => let
+    | [x] => let
       in
         case Int.fromString x of
           SOME n => if n >= 2 then cooper()
@@ -26,6 +26,15 @@ val cooper_result =
         | NONE => (usage(); true)
       end
     | _ => (usage(); true)
+
+val _ = print "Testing simplifier integration\n"
+
+open testutils simpLib boolSimps
+
+val _ = tprint "F ==> F equivalent shouldn't loop"
+val th = SIMP_CONV (bool_ss ++ intSimps.OMEGA_ss) [] ``x > 2n /\ F ==> x > 1``
+         handle e => die (General.exnMessage e)
+val _ = print "OK\n"
 
 val _ = Process.exit (if cooper_result andalso omega_result then
                         Process.success

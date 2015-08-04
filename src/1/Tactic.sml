@@ -142,25 +142,8 @@ val CONJ_TAC: tactic =
 
 (* ASM1 & ASM2 variants assume the given conjunct when proving the other one *)
 
-val CONJ_ASM1_TAC: tactic =
-   fn (asl, w) =>
-      let
-         val (conj1, conj2) = dest_conj w
-      in
-         ([(asl, conj1), (conj1 :: asl, conj2)],
-          pairths (fn th1 => fn th2 => CONJ th1 (PROVE_HYP th1 th2)))
-      end
-      handle HOL_ERR _ => raise ERR "CONJ_ASM1_TAC" ""
-
-val CONJ_ASM2_TAC: tactic =
-   fn (asl, w) =>
-      let
-         val (conj1, conj2) = dest_conj w
-      in
-         ([(conj2 :: asl, conj1), (asl, conj2)],
-          pairths (fn th1 => fn th2 => CONJ (PROVE_HYP th2 th1) th2))
-      end
-      handle HOL_ERR _ => raise ERR "CONJ_ASM2_TAC" ""
+val CONJ_ASM1_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2 ;
+val CONJ_ASM2_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 2 1 ;
 
 (*---------------------------------------------------------------------------*
  * Disjunction introduction                                                  *
@@ -390,6 +373,10 @@ fun SUBST1_TAC rthm = SUBST_TAC [rthm]
 fun RULE_ASSUM_TAC rule : tactic =
    POP_ASSUM_LIST
       (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []))
+
+fun RULE_L_ASSUM_TAC rule : tactic =
+   POP_ASSUM_LIST
+      (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (append o rule) asl []))
 
 (*---------------------------------------------------------------------------*
  * Substitute throughout the goal and its assumptions.                       *
@@ -725,6 +712,17 @@ fun MATCH_ACCEPT_TAC thm : tactic =
    end
    handle HOL_ERR _ => raise ERR "MATCH_ACCEPT_TAC" ""
 
+(* ---------------------------------------------------------------------*
+ * prim_irule : Similar to MATCH_ACCEPT_TAC but                         *
+ * (1) allows substitution in hypotheses of the supplied theorem        *
+ * (2) adds new subgoals for those hypotheses                           *
+ * ---------------------------------------------------------------------*)
+
+fun prim_irule thm (asl, w) =
+  let val matchsub = match_term (concl thm) w ;
+    val (subthm, subhyps) = INST_TT_HYPS matchsub thm ;
+  in ADD_SGS_TAC subhyps (ACCEPT_TAC subthm) (asl, w) end ;
+
 (* --------------------------------------------------------------------------*
  * MATCH_MP_TAC: Takes a theorem of the form                                 *
  *                                                                           *
@@ -783,6 +781,17 @@ in
             end
       end
 end
+
+(* --------------------------------------------------------------------------*
+ * irule: similar to MATCH_MP_TAC, but                                       *
+ * (1) uses conclusion following more than one ==>                           *
+ * (2) where multiple assumptions involve the same variable that is not in   *
+ *     the conclusion (as y in x = y ==> y = z ==> x = z), collects them     *
+ *     and existentially quantifies                                          *
+ * (3) hypotheses of the theorem provided also become new subgoals           *
+ * --------------------------------------------------------------------------*)
+
+fun irule thm = prim_irule (SPEC_UNDISCH_EXL (GEN_ALL thm)) ;
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

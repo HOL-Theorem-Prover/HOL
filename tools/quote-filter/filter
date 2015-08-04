@@ -11,6 +11,17 @@ datatype qfs = QFS of {output_stream : TextIO.outstream,
                        row      : int ref,
                        rowstart : int ref}
 
+fun newstate os = QFS {output_stream = os,
+                       comdepth = ref 0,
+                       pardepth = ref 0,
+                       antiquote = ref false,
+                       row = ref 0,
+                       rowstart = ref 0}
+
+fun resetstate (QFS{comdepth, pardepth, antiquote,...}) =
+    (comdepth := 0; pardepth := 0; antiquote := false)
+
+
 fun ECHO (QFS {output_stream , ...}) s = TextIO.output(output_stream, s)
 fun print (QFS {output_stream, ...}) s = TextIO.output(output_stream, s)
 

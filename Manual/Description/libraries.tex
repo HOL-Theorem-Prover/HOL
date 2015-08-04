@@ -774,9 +774,9 @@ This means that \holtxt{f\,univ(:'a)} is parsed as \holtxt{f(univ(:'a))}, not \h
 
 \paragraph{Suffixes}
 
-Suffixes appear after their arguments.  There are no suffixes
-introduced into the standard theories available in \HOL{}, but users
-are always able to introduce their own if they choose.  Suffixes are
+Suffixes appear after their arguments.
+There are suffixes \holtxt{\^{}+}, \holtxt{\^{}*} and \holtxt{\^{}=} corresponding to the transitive, the reflexive and transitive, and the ``equivalence'' closure used in \ml{relationTheory} (Section~\ref{relation}).
+Suffixes are
 associated with a precedence just as infixes and prefixes are.
 If \holtxt{p} is a prefix, \holtxt{i} an infix, and \holtxt{s} a
 suffix, then there are six possible orderings for the three different
@@ -1444,7 +1444,7 @@ inductions:
 \begin{description}
 \item [\ml{completeInduct\_on}] performs complete induction on the
   term denoted by the given quotation. Complete induction allows a
-  seemingly \footnote{Complete induction and ordinary mathematical
+  seemingly\footnote{Complete induction and ordinary mathematical
     induction are each derivable from the other.} stronger induction
   hypothesis than ordinary mathematical induction: to wit, when
   inducting on $n$, one is allowed to assume the property holds for
@@ -2756,9 +2756,9 @@ first enables the user's code to call back to the simplifier, passing
 the stack of side-conditions, and a new side-condition to solve.  The
 \ml{term} argument must be of type \holtxt{:bool}, and the recursive
 call will simplify it to true (and call \ml{EQT\_ELIM} to turn a term
-$t$ into the theorem $\vdash t$).  This restriction may be lifted in a
-future version of \HOL{} but as it stands, the recursive call can
-\emph{only} be used for side-condition discharge.  Note also that it
+$t$ into the theorem $\vdash t$).  This restriction is lifted for
+decision procedures (see below), but for conversions the recursive call can
+\emph{only} be used for side-condition discharge. Note also that it
 is the user's responsibility to pass an appropriately updated stack of
 side-conditions to the recursive invocation of the simplifier.
 
@@ -2766,6 +2766,8 @@ A user-supplied conversion should never return the reflexive identity
 (an instance of $\vdash t = t$).  This will cause the simplifier to
 loop.  Rather than return such a result, raise a \ml{HOL\_ERR} or
 \ml{Conv.UNCHANGED} exception.  (Both are treated the same by the simplifier.)
+
+
 
 \paragraph{Context-aware decision procedures}
 Another, more involved, method for embedding user code into the
@@ -2782,6 +2784,7 @@ constructor \ml{REDUCER}:
    REDUCER : {initial : context,
               addcontext : context * thm list -> context,
               apply : {solver : term list -> term -> thm,
+                       conv : term list -> term -> thm,
                        context : context,
                        stack : term list} -> term -> thm}
           -> reducer
@@ -2823,11 +2826,16 @@ handled; they may even be ignored entirely.)
 When an embedded reducer is applied to a term, the provided \ml{apply}
 function is called.  As well as the term to be transformed, the
 \ml{apply} function is also passed a record containing a
-side-condition solver, the decision procedure's current context, and
-the stack of side-conditions attempted so far.  The stack and solver
-are the same as the additional arguments provided to user-supplied
-conversions.  The power of the reducer abstraction is having access to
-a context that can be built appropriately for each decision procedure.
+side-condition solver, a more general call-back to the simplifier,
+the decision procedure's current context, and the
+stack of side-conditions attempted so far.  The stack and solver are
+the same as the additional arguments provided to user-supplied
+conversions. The \ml{conv} argument is call-back to the simplifier,
+which given a term $t$ returns a theorem of the form $\vdash t = t'$
+or fails. In contrast, the \ml{solver} either returns the theorem
+$\vdash t$ or fails. The power of the reducer abstraction is having
+access to a context that can be built appropriately for each decision
+procedure.
 
 Decision procedures are applied last when a term is encountered by the
 simplifier.  More, they are applied \emph{after} the simplifier has

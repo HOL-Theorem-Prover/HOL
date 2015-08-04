@@ -1,2 +1,8 @@
-INCLUDES = .. ../../lisp-runtime/implementation $(HOLDIR)/examples/machine-code/hoare-triple
+INCLUDES = .. ../../lisp-runtime/implementation \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64 \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/x86 \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/ppc \
+           $(HOLDIR)/examples/machine-code/instruction-set-models/arm
 OPTIONS=QUIT_ON_FAILURE

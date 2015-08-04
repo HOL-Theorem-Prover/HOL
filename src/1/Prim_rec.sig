@@ -52,4 +52,4 @@ sig
    (* A utility function *)
    val EXISTS_EQUATION             : term -> thm -> thm
 
-end;
+end

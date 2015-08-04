@@ -148,7 +148,7 @@ Cases_on `t` THEN SRW_TAC [][] THENL [
   SRW_TAC [][mlt1_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t2`,`{||}`] THEN
   SRW_TAC [][],
-  Q.MATCH_RENAME_TAC `X ∨ Y ∧ 0 < 1 + npair_count t1` ["X","Y"] THEN
+  Q.MATCH_RENAME_TAC `_ ∨ _ ∧ 0 < 1 + npair_count t1` THEN
   Cases_on `nvarb t1 = {||}` THEN1
     SRW_TAC [ARITH_ss][] THEN
   DISJ1_TAC THEN Q.MATCH_ABBREV_TAC `(mlt1 R)^+ b2 (b1 + b2)` THEN
@@ -170,8 +170,7 @@ Cases_on `t` THEN SRW_TAC [][] THENL [
   MAP_EVERY Q.EXISTS_TAC [`n`,`nvarb t1`,`{||}`] THEN
   SRW_TAC [][],
   Q.MATCH_RENAME_TAC
-    `X ∨ Y ∧ npair_count t1 < 1 + npair_count t1 + npair_count t2`
-    ["X","Y"] THEN
+    `_ ∨ _ ∧ npair_count t1 < 1 + npair_count t1 + npair_count t2` THEN
   Cases_on `nvarb t2 = {||}` THEN1
     SRW_TAC [ARITH_ss][] THEN
   DISJ1_TAC THEN MATCH_MP_TAC TC_mlt1_UNION2_I THEN
@@ -405,7 +404,7 @@ val TC_nvR_nvars_nwalkstar = Q.store_thm(
     by METIS_TAC [EXTEND_RTC_TC_EQN,RTC_CASES1] THEN
     FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_nwalkstar] THEN
     METIS_TAC [],
-    Q.MATCH_RENAME_TAC `v IN nvars (nwalkstar s t1) ∨ v IN nvars (nwalkstar s t2)` [] THEN
+    Q.MATCH_RENAME_TAC `v IN nvars (nwalkstar s t1) ∨ v IN nvars (nwalkstar s t2)` THEN
     `?u. u IN nvars (nPair t1 t2) /\ (nvR s)^* v u`
        by (SRW_TAC [][] THEN METIS_TAC [nvwalk_EQ_pair_nvR]) THEN
     `(u = v) \/ (nvR s)^+ v u`

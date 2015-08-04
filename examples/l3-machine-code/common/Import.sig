@@ -46,6 +46,7 @@ sig
      | Nub
      | PadLeft
      | PadRight
+     | QuotRem
      | Remove
      | RemoveExcept
      | RemoveDuplicates
@@ -62,6 +63,7 @@ sig
      | ToLower
      | ToUpper
      | Union
+     | Update
      | ValOf
 
    datatype binop =

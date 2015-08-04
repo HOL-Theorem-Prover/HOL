@@ -19,7 +19,7 @@ let
     val _ = print ("``\n   ");
     val ct = Timer.startCPUTimer();
     val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
-                                     | _ => NONE;	
+                                     | _ => NONE;
 
     val ok = if not (isSome r_opt) then not (isSome thm_opt) else
              isSome thm_opt andalso

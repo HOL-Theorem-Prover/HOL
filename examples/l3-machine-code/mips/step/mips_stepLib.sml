@@ -95,7 +95,7 @@ fun mips_thms thms =
 val COND_UPDATE_CONV =
    REWRITE_CONV (utilsLib.mk_cond_update_thms
                     [``:mips_state``, ``:CP0``, ``:StatusRegister``])
-   THENC REWRITE_CONV (mips_thms [])
+   THENC REWRITE_CONV (mips_stepTheory.cond_update_memory :: mips_thms [])
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
 
@@ -217,13 +217,19 @@ val dEV =
         ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
       [[], [`rs` |-> r0]]
 
+val bbEV =
+   EVC [dfn'BEQ_def, dfn'BNE_def, dfn'BEQL_def, dfn'BNEL_def,
+        ConditionalBranch_def, ConditionalBranchLikely_def]
+       [[``^st.BranchDelay = NONE``, ``rs <> 0w: word5``, ``rt <> 0w: word5``]]
+       (all_comb [`rt` |-> r0, `rs` |-> r0])
+
 val bEV =
-   EVC [dfn'BEQ_def, dfn'BEQ_def, dfn'BNE_def, dfn'BLEZ_def, dfn'BGTZ_def,
-        dfn'BLTZ_def, dfn'BGEZ_def, dfn'BLTZAL_def, dfn'BGEZAL_def,
-        dfn'BEQL_def, dfn'BNEL_def, dfn'BLEZL_def, dfn'BGTZL_def,
+   EVC [dfn'BLEZ_def, dfn'BGTZ_def, dfn'BLTZ_def, dfn'BGEZ_def,
+        dfn'BLTZAL_def, dfn'BGEZAL_def, dfn'BLEZL_def, dfn'BGTZL_def,
         dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
         ConditionalBranch_def, ConditionalBranchLikely_def]
-       [[``^st.BranchDelay = NONE``]] []
+       [[``^st.BranchDelay = NONE``, ``rs <> 0w: word5``]]
+       [[], [`rs` |-> r0]]
 
 (* ------------------------------------------------------------------------- *)
 
@@ -308,16 +314,16 @@ val J = EV [dfn'J_def] [] [] ``dfn'J (instr_index)``
 val JAL = EV [dfn'JAL_def] [] [] ``dfn'JAL (instr_index)``
 val JR = EV [dfn'JR_def] [] [] ``dfn'JR (instr_index)``
 val JALR = hEV ``dfn'JALR (rs, rd)``
-val BEQ = bEV ``dfn'BEQ (rs, rt, offset)``
-val BNE = bEV ``dfn'BNE (rs, rt, offset)``
+val BEQ = bbEV ``dfn'BEQ (rs, rt, offset)``
+val BNE = bbEV ``dfn'BNE (rs, rt, offset)``
+val BEQL = bbEV ``dfn'BEQL (rs, rt, offset)``
+val BNEL = bbEV ``dfn'BNEL (rs, rt, offset)``
 val BLEZ = bEV ``dfn'BLEZ (rs, offset)``
 val BGTZ = bEV ``dfn'BGTZ (rs, offset)``
 val BLTZ = bEV ``dfn'BLTZ (rs, offset)``
 val BGEZ = bEV ``dfn'BGEZ (rs, offset)``
 val BLTZAL = bEV ``dfn'BLTZAL (rs, offset)``
 val BGEZAL = bEV ``dfn'BGEZAL (rs, offset)``
-val BEQL = bEV ``dfn'BEQL (rs, rt, offset)``
-val BNEL = bEV ``dfn'BNEL (rs, rt, offset)``
 val BLEZL = bEV ``dfn'BLEZL (rs, offset)``
 val BGTZL = bEV ``dfn'BGTZL (rs, offset)``
 val BLTZL = bEV ``dfn'BLTZL (rs, offset)``
@@ -336,6 +342,46 @@ val ERET =
 
 (* Load/Store thms and tools *)
 
+val cond_0_1 = Q.prove(
+   `!w: word1 a b c.
+       (if w = 0w then a else if w = 1w then b else c) =
+       (if w = 0w then a else b)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_3 = Q.prove(
+   `!w: word2 a b c d e.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else e) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else d)`,
+   wordsLib.Cases_word_value \\ simp [])
+
+val cond_0_7 = Q.prove(
+   `!w: word3 a b c d e f g h i.
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else if w = 7w then h
+        else i) =
+       (if w = 0w then a
+        else if w = 1w then b
+        else if w = 2w then c
+        else if w = 3w then d
+        else if w = 4w then e
+        else if w = 5w then f
+        else if w = 6w then g
+        else h)`,
+   wordsLib.Cases_word_value \\ simp [])
+
 val mem_thms =
    [AddressTranslation_def, LoadMemory_def,
     StoreMemory_byte, storeWord_def, storeDoubleword_def,
@@ -345,6 +391,9 @@ val mem_thms =
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
+    cond_0_1, cond_0_3, cond_0_7,
+    EVAL ``word_replicate 2 (0w: word1) : word2``,
+    EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
     EVAL ``(word_replicate 2 (0w:word1) : word2 @@ (0w:word1)) : word3``,
     EVAL ``(word_replicate 2 (1w:word1) : word2 @@ (0w:word1)) : word3``,
@@ -353,8 +402,9 @@ val mem_thms =
 
 val select_rule =
    REWRITE_RULE
-     [select_byte_le, select_byte_be, byte_address,
-      wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
+      [select_byte_le, select_byte_be, byte_address,
+       SIMP_RULE (bool_ss++boolSimps.LET_ss) [] select_parts,
+       wordsTheory.WORD_XOR_ASSOC, wordsTheory.WORD_XOR_CLAUSES] o
    utilsLib.INST_REWRITE_RULE
       [select_half_le, select_half_be,
        select_word_le, select_word_be,
@@ -375,6 +425,10 @@ val memcntxts =
 *)
 
 val addr = ``sw2sw (offset:word16) + if base = 0w then 0w else ^st.gpr base``
+
+val unaligned_memcntxts =
+   List.map (fn l => [``rt <> 0w:word5``, ``~^st.exceptionSignalled``] @ l)
+      memcntxts
 
 val memcntxts =
    List.map
@@ -468,6 +522,22 @@ val LL  = EVL loadWord ``dfn'LL (base, rt, offset) ^st``
 val LD  = EVL loadDoubleword ``dfn'LD (base, rt, offset) ^st``
 val LLD = EVL loadDoubleword ``dfn'LLD (base, rt, offset) ^st``
 
+val LWL =
+   EVR select_rule (dfn'LWL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWL (base, rt, offset)``
+
+val LWR =
+   EVR select_rule (dfn'LWR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LWR (base, rt, offset)``
+
+val LDL =
+   EVR select_rule (dfn'LDL_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDL (base, rt, offset)``
+
+val LDR =
+   EVR select_rule (dfn'LDR_def :: mem_thms) unaligned_memcntxts []
+      ``dfn'LDR (base, rt, offset)``
+
 (* Store instructions *)
 
 val SB =
@@ -490,6 +560,18 @@ val SW =
 val SD =
    EVR (store_rule []) (dfn'SD_def :: mem_thms) dmemcntxts []
       ``dfn'SD (base, rt, offset)``
+
+val sc = List.map (fn l => ``^st.LLbit = SOME llbit`` :: l)
+
+val SC =
+   EVR (COND_UPDATE_RULE o store_rule [bit_1_0_2_0, bit_1_0_2_0_4])
+       ([dfn'SC_def, extract_word] @ mem_thms) (sc memcntxts) []
+      ``dfn'SC (base, rt, offset)``
+
+val SCD =
+   EVR (COND_UPDATE_RULE o store_rule [])
+       ([dfn'SCD_def, extract_word] @ mem_thms) (sc dmemcntxts) []
+      ``dfn'SCD (base, rt, offset)``
 
 (* ------------------------------------------------------------------------- *)
 
@@ -626,7 +708,11 @@ val mips_ipatterns = List.map (I ## utilsLib.pattern)
     ("MADDU",  "FTTTFF__________FFFFFFFFFFFFFFFT"),
     ("MSUB",   "FTTTFF__________FFFFFFFFFFFFFTFF"),
     ("MSUBU",  "FTTTFF__________FFFFFFFFFFFFFTFT"),
-    ("MUL",    "FTTTFF_______________FFFFFFFFFTF")
+    ("MUL",    "FTTTFF_______________FFFFFFFFFTF"),
+    ("BEQ",    "FFFTFF__________________________"),
+    ("BNE",    "FFFTFT__________________________"),
+    ("BEQL",   "FTFTFF__________________________"),
+    ("BNEL",   "FTFTFT__________________________")
    ]
 
 val mips_dpatterns = List.map (I ## utilsLib.pattern)
@@ -675,15 +761,28 @@ val mips_jpatterns = List.map (I ## utilsLib.pattern)
 
 val mips_patterns0 = List.map (I ## utilsLib.pattern)
    [
-    ("LUI",    "FFTTTTFFFFF_____________________"),
-    ("DIV",    "FFFFFF__________FFFFFFFFFFFTTFTF"),
-    ("DIVU",   "FFFFFF__________FFFFFFFFFFFTTFTT"),
-    ("DDIV",   "FFFFFF__________FFFFFFFFFFFTTTTF"),
-    ("DDIVU",  "FFFFFF__________FFFFFFFFFFFTTTTT"),
-    ("MTHI",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFFT"),
-    ("MTLO",   "FFFFFF_____FFFFFFFFFFFFFFFFTFFTT"),
-    ("MFHI",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFFF"),
-    ("MFLO",   "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF")
+    ("LUI",     "FFTTTTFFFFF_____________________"),
+    ("DIV",     "FFFFFF__________FFFFFFFFFFFTTFTF"),
+    ("DIVU",    "FFFFFF__________FFFFFFFFFFFTTFTT"),
+    ("DDIV",    "FFFFFF__________FFFFFFFFFFFTTTTF"),
+    ("DDIVU",   "FFFFFF__________FFFFFFFFFFFTTTTT"),
+    ("MTHI",    "FFFFFF_____FFFFFFFFFFFFFFFFTFFFT"),
+    ("MTLO",    "FFFFFF_____FFFFFFFFFFFFFFFFTFFTT"),
+    ("MFHI",    "FFFFFFFFFFFFFFFF_____FFFFFFTFFFF"),
+    ("MFLO",    "FFFFFFFFFFFFFFFF_____FFFFFFTFFTF"),
+    ("BLTZ",    "FFFFFT_____FFFFF________________"),
+    ("BGEZ",    "FFFFFT_____FFFFT________________"),
+    ("BLTZL",   "FFFFFT_____FFFTF________________"),
+    ("BGEZL",   "FFFFFT_____FFFTT________________"),
+    ("BLTZAL",  "FFFFFT_____TFFFF________________"),
+    ("BGEZAL",  "FFFFFT_____TFFFT________________"),
+    ("BLTZALL", "FFFFFT_____TFFTF________________"),
+    ("BGEZALL", "FFFFFT_____TFFTT________________"),
+    ("BLEZ",    "FFFTTF_____FFFFF________________"),
+    ("BGTZ",    "FFFTTT_____FFFFF________________"),
+    ("BLEZL",   "FTFTTF_____FFFFF________________"),
+    ("BGTZL",   "FTFTTT_____FFFFF________________"),
+    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF")
    ]
 
 val mips_cpatterns = List.map (I ## utilsLib.pattern)
@@ -694,30 +793,17 @@ val mips_cpatterns = List.map (I ## utilsLib.pattern)
 
 val mips_patterns = List.map (I ## utilsLib.pattern)
    [
-    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
-    ("BLTZ",    "FFFFFT_____FFFFF________________"),
-    ("BGEZ",    "FFFFFT_____FFFFT________________"),
-    ("BLTZL",   "FFFFFT_____FFFTF________________"),
-    ("BGEZL",   "FFFFFT_____FFFTT________________"),
-    ("BLTZAL",  "FFFFFT_____TFFFF________________"),
-    ("BGEZAL",  "FFFFFT_____TFFFT________________"),
-    ("BLTZALL", "FFFFFT_____TFFTF________________"),
-    ("BGEZALL", "FFFFFT_____TFFTT________________"),
     ("J",       "FFFFTF__________________________"),
     ("JAL",     "FFFFTT__________________________"),
-    ("BEQ",     "FFFTFF__________________________"),
-    ("BNE",     "FFFTFT__________________________"),
-    ("BLEZ",    "FFFTTF_____FFFFF________________"),
-    ("BGTZ",    "FFFTTT_____FFFFF________________"),
-    ("BEQL",    "FTFTFF__________________________"),
-    ("BNEL",    "FTFTFT__________________________"),
-    ("BLEZL",   "FTFTTF_____FFFFF________________"),
-    ("BGTZL",   "FTFTTT_____FFFFF________________"),
+    ("LDL",     "FTTFTF__________________________"),
+    ("LDR",     "FTTFTT__________________________"),
     ("LB",      "TFFFFF__________________________"),
     ("LH",      "TFFFFT__________________________"),
+    ("LWL",     "TFFFTF__________________________"),
     ("LW",      "TFFFTT__________________________"),
     ("LBU",     "TFFTFF__________________________"),
     ("LHU",     "TFFTFT__________________________"),
+    ("LWR",     "TFFTTF__________________________"),
     ("LWU",     "TFFTTT__________________________"),
     ("SB",      "TFTFFF__________________________"),
     ("SH",      "TFTFFT__________________________"),
@@ -725,6 +811,8 @@ val mips_patterns = List.map (I ## utilsLib.pattern)
     ("LL",      "TTFFFF__________________________"),
     ("LLD",     "TTFTFF__________________________"),
     ("LD",      "TTFTTT__________________________"),
+    ("SC",      "TTTFFF__________________________"),
+    ("SCD",     "TTTTFF__________________________"),
     ("SD",      "TTTTTT__________________________"),
     ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
    ]

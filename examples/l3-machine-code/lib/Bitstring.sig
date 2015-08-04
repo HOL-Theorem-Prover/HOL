@@ -25,7 +25,7 @@ sig
    val toList: bitstring -> bool list
    val fromList: bool list -> bitstring
 
-   val bitFieldInsert: bitstring * bitstring * Nat.nat * Nat.nat -> bitstring
+   val bitFieldInsert: Nat.nat * Nat.nat -> bitstring * bitstring -> bitstring
    val modify: (Nat.nat * bool -> bool) -> bitstring -> bitstring
 
    val zero: Nat.nat -> bitstring
@@ -35,7 +35,7 @@ sig
    val setSize: int -> bitstring -> bitstring
 
    val replicate: bitstring * Nat.nat -> bitstring
-   val bits: bitstring * Nat.nat * Nat.nat -> bitstring
+   val bits: Nat.nat * Nat.nat -> bitstring -> bitstring
    val bit: bitstring * Nat.nat -> bool
 
    val << : bitstring * Nat.nat -> bitstring

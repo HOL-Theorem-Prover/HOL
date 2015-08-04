@@ -62,6 +62,7 @@ val int_of_term_hook = ref
 
 val is_pair_type = Lib.can pairSyntax.dest_prod;
 val is_num_literal = Lib.can Literal.relaxed_dest_numeral;
+fun nameOfC t = #Name (dest_thy_const t)
 
 (*---------------------------------------------------------------------------*)
 (* Version of dest_string that doesn't care if characters look like          *)
@@ -596,26 +597,30 @@ fun term_to_ML openthys side ppstrm =
   and pp_one tm = add_string "()"
   and pp_nil tm = add_string "[]"
   and pp_open_comb i (f,args) =
-       let val is_constr = case Lib.total ConstMapML.apply f
-                             of SOME (true,_,_,_) => true
-                              | _ => false
+       let val constrname =
+               case Lib.total ConstMapML.apply f of
+                   SOME (true,_,nm,_) => SOME nm
+                 | _ => NONE
        in begin_block CONSISTENT 0
         ; lparen i maxprec
-        ; if TypeBase.is_constructor f andalso is_constr
+        ; if TypeBase.is_constructor f andalso isSome constrname
                orelse is_fake_constructor f
             then
-              (let val fname = fst(dest_const f) handle HOL_ERR _ =>
-                               fst(dest_record_vconstr f)
-               in add_string (fix_name ("", true, fname))
-               end;   (* pp maxprec f; *)
-               add_string "(";
-               begin_block INCONSISTENT 0;
-               pr_list (pp minprec)
-                       (fn () => add_string ",")
-                       (fn () => add_break(0,0)) args;
-               end_block();
-               add_string ")"
-              )
+              let
+                val fname = case constrname of
+                                SOME s => s
+                              | _ => fst(dest_record_vconstr f)
+              in
+                (* instead of: pp maxprec f; *)
+                add_string (fix_name ("", true, fname));
+                add_string "(";
+                begin_block INCONSISTENT 0;
+                pr_list (pp minprec)
+                        (fn () => add_string ",")
+                        (fn () => add_break(0,0)) args;
+                end_block();
+                add_string ")"
+              end
             else (begin_block INCONSISTENT 2;
                   pr_list (pp maxprec) (fn () => ())
                           (fn () => add_break(1,0)) (f::args);
@@ -845,21 +850,6 @@ datatype elem
     | MLSTRUCT of string;
 
 (*---------------------------------------------------------------------------*)
-(* Fetch the constructors out of a datatype declaration                      *)
-(*---------------------------------------------------------------------------*)
-
-local open ParseDatatype
-in
-fun constructors [] = []
-  | constructors ((s,Constructors clist)::rst) = clist@constructors rst
-  | constructors ((s,Record flds)::rst) = [(s, map snd flds)]@constructors rst
-
-fun constrl [] = []
-  | constrl ((s,Constructors clist)::rst) = (s,clist)::constrl rst
-  | constrl ((s,Record flds)::rst) = (s, [(s,map snd flds)])::constrl rst
-end;
-
-(*---------------------------------------------------------------------------*)
 (* Internal version of elem (nearly identical, except that datatype          *)
 (* declarations have been parsed) and some standard definitions from         *)
 (* datatypes (e.g. size functions) and record types (accessor and field      *)
@@ -994,6 +984,28 @@ in
   else
     ()
 end;
+
+local
+  open ParseDatatype
+  fun cmk s = {name = s, terms = Term.decls s}
+  fun rmk s =
+    {name = s, terms = Term.decls (RecordType.mk_recordtype_constructor s)}
+in
+fun constructors decls =
+    case decls of
+        [] => []
+      | (s, Constructors clist) :: rst => map (cmk o #1) clist @ constructors rst
+      | (s,Record flds)::rst => rmk s :: constructors rst
+
+fun constrl [] = []
+  | constrl ((s,Constructors clist)::rst) = (s,clist)::constrl rst
+  | constrl ((s,Record flds)::rst) =
+      (s, [(RecordType.mk_recordtype_constructor s,map snd flds)])::constrl rst
+end;
+
+
+
+
 
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
@@ -1268,7 +1280,7 @@ fun pp_struct strm (s,elems,cnames) =
               (s::opens()) strm (concl thm)
       | pp_el (iDEFN_NOSIG thm) = pp_el (iDEFN thm)
       | pp_el (iMLSIG s) = ()
-      | pp_el (iMLSTRUCT s) = add_string s
+      | pp_el (iMLSTRUCT s) = (add_string s; add_newline ())
       | pp_el (iOPEN slist) = (openthys := union slist (!openthys);
                               begin_block CONSISTENT 0;
                               pr_list (add_string o curry String.^ "open " o ML)
@@ -1381,18 +1393,18 @@ fun munge_def_type def =
 (* been defined in an ancestor theory.                                       *)
 (*---------------------------------------------------------------------------*)
 
-fun add (is_constr, s) c =
+fun add (is_constr, s) {name, terms} = let
+  fun perterm c =
     case ConstMapML.exact_peek c of
-      NONE => let
-        val {Name,Thy,Ty} = dest_thy_const c
-      in
-        ConstMapML.prim_insert(c,(is_constr,s,Name,Ty))
-      end
-    | SOME _ => ()
+        NONE => ConstMapML.prim_insert(c, (is_constr, s, name, type_of c))
+      | SOME _ => ()
+in
+  List.app perterm terms
+end
 
-fun install_consts _ [] = []
-  | install_consts s (iDEFN_NOSIG thm::rst) = install_consts s (iDEFN thm::rst)
-  | install_consts s (iDEFN thm::rst) =
+fun install_consts _ [] k = k ([], [])
+  | install_consts s (iDEFN_NOSIG thm::rst) k = install_consts s (iDEFN thm::rst) k
+  | install_consts s (iDEFN thm::rst) k =
        let val clist0 = munge_def_type thm
            val clist =
                (* IN is only allowed to be defined in the setML module/structure;
@@ -1400,22 +1412,34 @@ fun install_consts _ [] = []
                 *)
                if s <> "set" then filter (not o same_const IN_tm) clist0
                else clist0
-           val _ = List.app (add (false, s)) clist
-       in map (pair false) clist @ install_consts s rst
+           val _ = List.app
+                     (fn c => add (false, s) {name = nameOfC c, terms = [c]})
+                     clist
+       in
+         install_consts s rst
+                        (fn (cs, nms) => k (clist @ cs, map nameOfC clist @ nms))
        end
-  | install_consts s (iDATATYPE ty::rst) =
-      let val consts = U (map (Term.decls o fst) (constructors ty))
-          val _ = List.app (add (true, s)) consts
-      in map (pair true) consts @ install_consts s rst
+  | install_consts s (iDATATYPE ty::rst) k =
+      let
+        val constrs = constructors ty
+        val allterms = U (map #terms constrs)
+        val _ = List.app (add (true, s)) constrs
+      in
+        install_consts s rst
+          (fn (cs,nms) => k (allterms @ cs, map #name constrs @ nms))
       end
-  | install_consts s (iEQDATATYPE (tyvars,ty)::rst) =
-      let val consts = U (map (Term.decls o fst) (constructors ty))
-          val _ = List.app (add (true, s)) consts
-      in map (pair true) consts @ install_consts s rst
+  | install_consts s (iEQDATATYPE (tyvars,ty)::rst) k =
+      let
+        val constrs = constructors ty
+        val allterms = U (map #terms constrs)
+        val _ = List.app (add (true, s)) constrs
+      in
+        install_consts s rst
+          (fn (cs,nms) => k (allterms @ cs, map #name constrs @ nms))
       end
-  | install_consts s (iABSDATATYPE (tyvars,ty)::rst) =
-     install_consts s (iEQDATATYPE (tyvars,ty)::rst)
-  | install_consts s (other::rst) = install_consts s rst;
+  | install_consts s (iABSDATATYPE (tyvars,ty)::rst) k =
+      install_consts s (iEQDATATYPE (tyvars,ty)::rst) k
+  | install_consts s (other::rst) k = install_consts s rst k;
 
 
 (*---------------------------------------------------------------------------*)
@@ -1501,8 +1525,7 @@ fun emit_adjoin_call thy (consts,pcs) = let
      S "       ";
      begin_block ppstrm INCONSISTENT 0;
      Portable.pr_list (pr3 ppstrm) (fn () => S",") (fn () => BR(1,0))
-                      (map (fn (_, c) => (dest_thy_const c, getdata c))
-                           consts);
+                      (map (fn c => (dest_thy_const c, getdata c)) consts);
      end_block ppstrm; NL();
      S "     ]"; NL();
      S "   end"; NL(); NL();
@@ -1541,10 +1564,10 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
  in
    let val (sigStrm,sigPPstrm) = mk_file_ppstream sigfile
        val (structStrm,structPPstrm) = mk_file_ppstream structfile
-       val consts = install_consts s elems
+       val (consts, usednames) = install_consts s elems (fn x => x)
    in
    (pp_sig sigPPstrm (s,elems);
-    pp_struct structPPstrm (s,elems,map (fst o dest_const o snd) consts);
+    pp_struct structPPstrm (s,elems,usednames);
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
     HOL_MESG ("emitML: " ^ s ^ "{" ^ sigSuffix ^ "," ^ structSuffix ^ "}\n\

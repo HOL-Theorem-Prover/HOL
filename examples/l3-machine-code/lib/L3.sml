@@ -61,6 +61,10 @@ struct
       fun splitr (p, s) = liftSubstring (Substring.splitr p, s)
    end
 
+   fun listUpdate (e, (i, [])) = []
+     | listUpdate (e, (0, _::l)) = e::l
+     | listUpdate (e, (n, h::l)) = h :: listUpdate (e, (n - 1, l))
+
    fun padLeft (e, (n, l)) =
       List.tabulate (Nat.- (n, List.length l), fn _ => e) @ l
    fun padRight (e, (n, l)) =
@@ -74,6 +78,8 @@ struct
    fun stringToChar s =
       if String.size s = 1 then String.sub (s, 0) else raise Domain
    fun memString (c, s) = String.isSubstring (String.str c) s
+   fun stringUpdate (e, (i, s)) =
+      String.implode (listUpdate (e, (i, String.explode s)))
 
    local
       fun trans P (s, r) =

@@ -44,7 +44,7 @@ existentially quantified in the new goal:
 
 
 \USES
-{Q.REFINE_EXISTS_TAC} is useful if it is clear that a existential goal
+{Q.REFINE_EXISTS_TAC} is useful if it is clear that an existential goal
 will be solved by a term of particular form, while it is not yet clear
 precisely what term this will be.  Further proof activity should be
 able to exploit the additional structure that has appeared in the

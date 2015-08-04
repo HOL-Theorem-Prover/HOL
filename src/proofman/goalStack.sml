@@ -111,9 +111,10 @@ fun rotate(GSTK{prop=PROVED _, ...}) _ =
                      stack={goals=funpow n rotl goals,
                             validation=validation o funpow n rotr} :: rst};
 
-
 local
-  fun imp_err s = raise ERR "expandf" ("implementation error: "^s)
+  fun imp_err s =
+    raise ERR "expandf or expand_listf" ("implementation error: "^s)
+
   fun return(GSTK{stack={goals=[],validation}::rst, prop as POSED g,final}) =
       let val th = validation []
       in case rst
@@ -133,6 +134,21 @@ local
           | otherwise => imp_err (quote "return")
       end
     | return gstk = gstk
+
+  fun expand_msg dpth (GSTK{prop = PROVED _, ...}) = ()
+    | expand_msg dpth (GSTK{prop, final, stack as {goals, ...}::_}) =
+       let val dpth' = length stack
+       in if dpth' > dpth
+	  then if (dpth+1 = dpth')
+	       then add_string_cr
+		     (case (length goals)
+		       of 0 => imp_err "1"
+			| 1 => "1 subgoal:"
+			| n => (int_to_string n)^" subgoals:")
+	       else imp_err "2"
+	  else cr_add_string_cr "Remaining subgoals:"
+	       end
+    | expand_msg _ _ = imp_err "3" ;
 in
 fun expandf _ (GSTK{prop=PROVED _, ...}) =
        raise ERR "expandf" "goal has already been proved"
@@ -142,27 +158,50 @@ fun expandf _ (GSTK{prop=PROVED _, ...}) =
          val dpth = length stack
          val gs = return(GSTK{prop=prop,final=final,
                               stack={goals=glist, validation=vf} :: stack})
-     in case gs
-        of GSTK{prop = PROVED _, ...} => ()
-         | GSTK{prop, final, stack as {goals, ...}::_} =>
-             let val dpth' = length stack
-             in if dpth' > dpth
-                then if (dpth+1 = dpth')
-                     then add_string_cr
-                           (case (length goals)
-                             of 0 => imp_err "1"
-                              | 1 => "1 subgoal:"
-                              | n => (int_to_string n)^" subgoals:")
-                     else imp_err "2"
-                else cr_add_string_cr "Remaining subgoals:"
-             end
-         | _ => imp_err "3"
-         ;
-         gs
-     end
-end;
+     in expand_msg dpth gs ; gs end
+
+(* note - expand_listf, unlike expandf, replaces the top member of the stack *)
+fun expand_listf ltac (GSTK{prop=PROVED _, ...}) =
+        raise ERR "expand_listf" "goal has already been proved"
+  | expand_listf ltac (GSTK{prop as POSED g, stack = [], final}) =
+    expand_listf ltac (GSTK{prop = POSED g,
+      stack = [{goals = [g], validation = hd}], final = final})
+  | expand_listf ltac (GSTK{prop, stack as {goals,validation}::rst, final}) =
+    let val (new_goals, new_vf) = ltac goals
+      val dpth = length stack - 1 (* because we don't augment the stack *)
+      val new_gs = return (GSTK{prop=prop, final=final,
+        stack={goals=new_goals, validation=validation o new_vf} :: rst})
+    in expand_msg dpth new_gs ; new_gs end ;
+end ;
 
 fun expand tac gs = expandf (Tactical.VALID tac) gs;
+fun expand_list ltac gs = expand_listf (Tactical.VALID_LT ltac) gs;
+
+fun flat gstk =
+    case gstk of
+        GSTK{prop,
+             stack as {goals,validation} ::
+                      {goals = g2 :: goals2, validation = validation2} ::
+                      rst,
+             final} =>
+        let
+          fun v thl = let
+            val (thl1, thl2) = Lib.split_after (length goals) thl
+          in
+            validation2 (validation thl1 :: thl2)
+          end
+          val newgv = {goals = goals @ goals2, validation = v}
+        in
+          GSTK {prop = prop, stack = newgv :: rst, final = final}
+        end
+    | _ => raise ERR "flat" "goalstack in wrong shape"
+
+fun flatn (GSTK{prop=PROVED _, ...}) n =
+        raise ERR "flatn" "goal has already been proved"
+  | flatn gstk 0 = gstk
+  | flatn (gstk as GSTK{prop, stack = [], final}) n = gstk
+  | flatn (gstk as GSTK{prop, stack as [_], final}) n = gstk
+  | flatn (gstk as GSTK{prop, stack, final}) n = flatn (flat gstk) (n-1) ;
 
 fun extract_thm (GSTK{prop=PROVED(th,_), ...}) = th
   | extract_thm _ = raise ERR "extract_thm" "no theorem proved";

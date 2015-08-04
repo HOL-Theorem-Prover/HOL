@@ -205,7 +205,7 @@ function.
 For example, suppose we define a higher-order function {SIGMA} for
 summing the results of a function in a list. We then use {SIGMA} in 
 the definition of a function for summing the results of a function 
-in a arbitrarily (finitely) branching tree.
+in an arbitrarily (finitely) branching tree.
 {
    - Define `(SIGMA f [] = 0) /\
              (SIGMA f (h::t) = f h + SIGMA f t)`;

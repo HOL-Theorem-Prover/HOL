@@ -39,4 +39,7 @@ sig
    -> ppstream
    -> unit
 
+ val temp_binding : string -> string
+ val is_temp_binding : string -> bool
+
 end
