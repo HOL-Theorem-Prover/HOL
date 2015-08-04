@@ -1,5 +1,11 @@
+.PHONY: all
+
 FILES_CMX=lib.cmx fusion.cmx basics.cmx printer.cmx preterm.cmx hl_parser.cmx equal.cmx bool.cmx drule.cmx tactics.cmx simp.cmx theorems.cmx canon.cmx fol.cmx follist.cmx meson.cmx hh_symbols.cmx features_dt.cmx hh_tac.cmx hh_write.cmx
-          
+
+EXTRA_CLEANS = $(FILES_CMX) $(patsubst %.cmx,%.cmi,$(FILES_CMX)) $(patsubst %.cmx,%.o,$(FILES_CMX))
+
+ifneq($(which ocamlopt),)
+
 all: $(FILES_CMX)
 
 lib.cmx: lib.ml
@@ -43,5 +49,9 @@ hh_tac.cmx: hh_tac.ml
 hh_write.cmx: hh_write.ml
 	ocamlopt -c $<
 
-clean:
-	rm -f *cmx *cmi *.o
+else
+
+all:
+	@echo "No OCaml detected -- giving up"
+
+endif
