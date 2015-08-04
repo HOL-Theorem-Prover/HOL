@@ -34,3 +34,14 @@ make compiler
 make install
 
 fi
+
+cd
+# installing ocaml
+echo "*** Installing Ocaml ***"
+sudo apt-get install ocaml
+# installing newer g++
+echo "*** Installing newer g++ version ***"
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt-get update
+sudo apt-get install g++-4.8
+

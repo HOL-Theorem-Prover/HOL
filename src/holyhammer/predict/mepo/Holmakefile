@@ -1,0 +1,10 @@
+all: geo mepo3
+
+mepo3:
+	g++ -std=c++0x mepo3.cpp -o mepo3
+
+geo:
+	g++ -std=c++0x geo.cpp -o geo
+
+clean:
+	rm -f mepo3 geo

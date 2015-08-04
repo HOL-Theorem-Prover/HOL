@@ -1,0 +1,7 @@
+all: predict
+
+predict: main.cpp predictor.cpp format.cpp knn.cpp nbayes.cpp rforest.cpp tfidf.cpp dtree.cpp
+	g++-4.8 -std=c++11 -g -Wall $< -o $@
+
+clean:
+	rm -f predict

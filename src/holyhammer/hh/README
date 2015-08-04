@@ -1,0 +1,15 @@
+This is HH / THF0 batch processor.
+
+Requires:
+* OCaml >= 3.12 (tested also with 4.01.0)
+* g++ (recent version with C++11 support)
+* eproof (the eprover proof-reconstruction script); needs to be in PATH
+
+To compile:
+* run make in hh1 subdir
+* run make in predict subdir
+* run make
+
+To test fun for example:
+./hhthf0 30 example/test_theorem.p
+./hhthf0 3  example/test_timeout.p
