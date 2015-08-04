@@ -1,0 +1,10 @@
+The format of machine learning data is as follows:
+
+"seq" gives the order of all the named facts, one by line.
+"eval" gives the facts to find predictions for (no definitions or basic tautologies), one per line.
+"deps" gives the dependencies used in a proof. Only available for some (provable) facts. Each line is:
+  theorema: lemmab lemmab lemmac
+"syms" gives the features present in each fact. If not present assumed empty. Each line is:
+  lemmad:"featurebla", "feature asd, asd", "a,d,eff "
+
+However we would like to change the "seq" in the long run to give an accessibility relation.

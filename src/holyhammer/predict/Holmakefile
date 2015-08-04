@@ -1,0 +1,36 @@
+
+GPP48=$(which g++-4.8)
+EXTRA_CLEANS = predict
+
+# prefer g++-4.8 if it's available
+ifeq($(GPP48),)
+
+# otherwise just try g++
+GPP=$(which g++)
+
+else
+
+GPP=$(GPP48)
+
+endif
+
+.PHONY: all
+
+ifneq($(GPP),)
+
+all: predict
+
+# allow for compilation to fail even if there is a compiler to hand
+
+predict: main.cpp predictor.cpp format.cpp knn.cpp nbayes.cpp rforest.cpp tfidf.cpp dtree.cpp
+	-$(GPP) -std=c++11 -Wall $< -o $@
+
+predict.debug: main.cpp predictor.cpp format.cpp knn.cpp nbayes.cpp rforest.cpp tfidf.cpp dtree.cpp
+	-$(GPP) -std=c++11 -Wall -g $< -o $@
+
+else
+
+all:
+	@echo "*** Holyhammer does not build -- no C++ compiler"
+
+endif
