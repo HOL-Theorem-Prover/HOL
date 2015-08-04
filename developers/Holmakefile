@@ -8,8 +8,18 @@ mosml-comparelogs : mosmlTextIO.ui comparelogs.sml
 mosmlTextIO.ui mosmlTextIO.uo: mosmlTextIO.sml
 	$(MOSMLC) -toplevel $<
 
-comparelogs: comparelogs.sml $(MLTON_SRCS)
-	mlton comparelogs.mlb
+ifdef POLY
+
+comparelogs: poly-comparelogs.ML comparelogs.sml
+	poly < $<
+	gcc -o $@ comparelogs.o $(POLY_LDFLAGS)
+
+else
+
+comparelogs: comparelogs.uo
+	$(MOSML) -o $< $@
+
+endif
 
 poly_gbsdep = generateBuildSummary.o
 mosml_gbsdep = mosmlgbs.uo generateBuildSummary.uo
