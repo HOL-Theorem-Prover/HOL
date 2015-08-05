@@ -29,6 +29,8 @@ in end;
 
 val ERR = mk_HOL_ERR "bossLib";
 
+val new_specification = pairLib.new_specification;
+
 (*---------------------------------------------------------------------------*
             Datatype definition
  *---------------------------------------------------------------------------*)

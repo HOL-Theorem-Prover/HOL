@@ -1143,6 +1143,14 @@ fun check_free_vars tm f =
             ("Free variables in rhs of definition: "
              :: commafy (map (Lib.quote o fst o dest_var) V)));
 
+fun check_vars tm vars f =
+ case Lib.set_diff (free_vars tm) vars
+  of [] => ()
+   | extras =>
+      raise f (String.concat
+         ("Unbound variable(s) in definition: "
+           :: commafy (map (Lib.quote o fst o dest_var) extras)));
+
 fun check_tyvars body_tyvars ty f =
  case Lib.set_diff body_tyvars (Type.type_vars ty)
   of [] => ()
@@ -1174,6 +1182,7 @@ in
   mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
 end
 
+(* subsumed by gen_prim_specification
 fun prim_constant_definition Thy M = let
   val (lhs, rhs) = with_exn dest_eq M DEF_FORM_ERR
   val {Name, Thy, Ty} =
@@ -1196,6 +1205,7 @@ fun prim_constant_definition Thy M = let
 in
   mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
 end
+*)
 
 fun bind thy s ty =
     Term.prim_new_const {Name = s, Thy = thy} ty
@@ -1215,6 +1225,35 @@ fun prim_specification thyname cnames th = let
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
 in
   mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+end
+
+fun gen_prim_specification thyname th = let
+  val hyps        = hypset th
+  val stys        =
+    let
+      fun foldthis (tm,stys) =
+        let
+          val (l,r)   =
+              with_exn dest_eq tm (SPEC_ERR "non-equational hypothesis")
+          val (s,ty)  =
+              with_exn dest_var l (SPEC_ERR "lhs of hyp not a variable")
+          val checked = check_free_vars r SPEC_ERR
+          val checked = check_tyvars (type_vars_in_term r) ty SPEC_ERR
+        in
+          (s,ty)::stys
+        end
+    in
+      HOLset.foldl foldthis [] hyps
+    end
+  val cnames      = List.map fst stys
+  val checked     =
+      assert_exn (op=) (length(mk_set cnames),length cnames)
+                 (SPEC_ERR "duplicate constant names in specification")
+  val body        = concl th
+  val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
+  fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
+in
+  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body))
 end
 
 

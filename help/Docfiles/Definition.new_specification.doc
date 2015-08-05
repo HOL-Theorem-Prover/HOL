@@ -51,6 +51,7 @@ use {set_fixity}. Typical fixity values are {Prefix}, {Binder},
 {Infixl n}, {Infixr n}, {Suffix n}, {TruePrefix n} or {Closefix}.
 
 \SEEALSO
+Definition.gen_new_specification,
 Definition.new_definition, 
 boolSyntax.new_binder_definition, boolSyntax.new_infixl_definition, 
 boolSyntax.new_infixr_definition, TotalDefn.Define, Parse.set_fixity.

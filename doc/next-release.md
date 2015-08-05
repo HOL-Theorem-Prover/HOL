@@ -24,6 +24,11 @@ New features:
 
 - The tactic `PAT_ABBREV_TAC` (also available in the `Q` module) can now use patterns that are more polymorphic than the sub-term in the goal that is ultimately matched. ([Github issue](http://github.com/HOL-Theorem-Prover/HOL/issues/252))
 
+- We have implemented the rule for constant specification described by Rob Arthan in [HOL Constant Definition Done Right](http://www.lemma-one.com/papers/hcddr.pdf).
+  The new primitive `gen_prim_specification` in the kernel is used to implement the new rule, `gen_new_specification`, and is also used to re-implement `new_definition` and `new_specification`.
+  We removed `prim_constant_definition` from the kernel, but kept `prim_specification` because the new derivation of `new_specification` uses pairs.
+  ([Github pull-req](https://github.com/HOL-Theorem-Prover/HOL/pull/201))
+
 Bugs fixed:
 -----------
 
