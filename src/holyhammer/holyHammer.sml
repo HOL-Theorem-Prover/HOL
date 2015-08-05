@@ -13,7 +13,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open hhWriter hhReconstruct
+open HolKernel boolLib hhWriter hhReconstruct
 
 val ERR = mk_HOL_ERR "holyHammer"
 

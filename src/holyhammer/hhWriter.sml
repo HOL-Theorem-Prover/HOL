@@ -252,8 +252,10 @@ fun oty ty =
         else (os ("(" ^ s ^ " "); oiter " " oty Args; os ")")
     end end
 
+type ('a,'b)substp = {redex : 'a, residue : 'b}
 val less_ty = fn a => (fn b => Type.compare (a,b) = LESS)
-fun less_red a b = less_ty (#redex a) (#redex b)
+fun less_red (a:(hol_type,'a)substp) (b:(hol_type,'b)substp) =
+  less_ty (#redex a) (#redex b)
 
 fun id_subst a = {redex = a, residue = a}
 fun full_match_type t1 t2 =
