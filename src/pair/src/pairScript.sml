@@ -810,6 +810,7 @@ NL();
 S "fun dest t = "; NL();
 S "  let val (lhs,rhs) = dest_eq (snd(strip_forall t))"; NL();
 S "      val (f,args) = strip_comb lhs"; NL();
+S "      val f = mk_var(dest_const f) handle HOL_ERR _ => f"; NL();
 S "  in "; NL();
 S "  case filter (not o is_vstruct) args "; NL();
 S "   of [] => (case joint_vars (map free_vars args)"; NL();

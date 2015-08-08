@@ -269,6 +269,7 @@ fun dest t =
    let
       val (lhs, rhs) = dest_eq (snd (strip_forall t))
       val (f, args) = strip_comb lhs
+      val f = mk_var(dest_const f) handle HOL_ERR _ => f
    in
       if all is_var args
          then (args, mk_eq (f, list_mk_abs (args, rhs)))

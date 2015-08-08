@@ -1020,8 +1020,6 @@ val DEF_FORM_ERR   = DEF_ERR   "expected a term of the form \"v = M\"";
       operations until after boolTheory is built.
  ---------------------------------------------------------------------------*)
 
-fun dest_atom tm = (dest_var tm handle HOL_ERR _ => dest_const tm)
-
 fun mk_exists (absrec as (Bvar,_)) =
   mk_comb(mk_thy_const{Name="?",Thy="bool", Ty= (type_of Bvar-->bool)-->bool},
           mk_abs absrec)
@@ -1114,7 +1112,7 @@ fun gen_new_specification(name, th) = let
 fun new_definition(name,M) =
  let val (dest,post) = !new_definition_hook
      val (V,eq)      = dest M
-     val (nm, _)     = eq |> dest_eq |> #1 |> dest_atom
+     val (nm, _)     = eq |> dest_eq |> #1 |> dest_var
                           handle HOL_ERR _ =>
                                  raise ERR "Definition.new_definition"
                                        "Definition not an equality"
