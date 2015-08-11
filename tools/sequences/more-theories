@@ -42,3 +42,4 @@ src/hol88
 !src/quotient/examples/sigma
 src/rational
 src/datatype/inftree
+!examples/hfs
