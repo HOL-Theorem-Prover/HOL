@@ -39,18 +39,37 @@ local
       f tm []
     end
 
-  open Lib PairRules
+  val strip_n_exists =
+    let
+      fun f a n tm =
+        if n = 0 then (List.rev a,tm)
+        else let
+          val (x,tm) = dest_exists tm
+        in
+          f (x::a) (n-1) tm
+        end
+    in f [] end
+
+  fun nconv 0 c = ALL_CONV
+    | nconv 1 c = c
+    | nconv n c = c THENC (nconv (n-1) c)
+
+  open Lib PairRules pairSyntax
 
   in
 
   fun new_specification (name,cnames,th) = let
+    val n = List.length cnames in if n = 0 then
+      Theory.Definition.gen_new_specification (name,th)
+    else let
     val th1 =
-      (* this is not good enough since it doesn't guarantee the cnames will be used
+      (* CONV_RULE (RENAME_VARS_CONV cnames) th
+         is not good enough since it doesn't guarantee the cnames will be used
         - primed variants could be used if they clash with existing constant names
-      CONV_RULE (RENAME_VARS_CONV cnames) th *)
+      *)
       let
         val tm1 = concl th
-        val (vs1,body1) = strip_exists tm1
+        val (vs1,body1) = strip_n_exists n tm1
         val tys = map type_of vs1
         val vs2 = map2 (curry mk_var) cnames tys
         val body2 = Term.subst (map2 (curry op |->) vs1 vs2) body1
@@ -58,9 +77,8 @@ local
         val th2 = ALPHA tm1 tm2
       in EQ_MP th2 th end
     (* turn it into a single paired existential *)
-    val th2 = CONV_RULE (REPEATC UNCURRY_EXISTS_CONV) th1
-    val (vs,body) = strip_pexists (concl th2)
-    val vs = case vs of [vs] => vs | _ => raise Match
+    val th2 = CONV_RULE (nconv (n-1) UNCURRY_EXISTS_CONV) th1
+    val (vs,body) = dest_pexists (concl th2)
     val witness = mk_pselect (vs,body)
     val eqs = varstruct_to_eqs witness vs
     val th3 = CONV_RULE PEXISTS_CONV th2
@@ -69,7 +87,7 @@ local
     val th5 = List.foldl (Lib.uncurry ADD_ASSUM) th4 eqs
     in
       Theory.Definition.gen_new_specification (name,th5)
-    end
+    end end
 
 end
 
