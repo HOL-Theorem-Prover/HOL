@@ -1,7 +1,7 @@
 structure llistScript =
 struct
 
-open HolKernel boolLib Parse bossLib
+open HolKernel boolLib Parse bossLib lcsymtacs
 
 open BasicProvers boolSimps markerLib;
 
@@ -1050,6 +1050,16 @@ val LTAKE_DROP = store_thm(
     `z = THE (LTAKE n t)` by ASM_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
   ]);
 
+val LDROP_ADD = store_thm("LDROP_ADD",
+  ``!k1 k2 x.
+      LDROP (k1 + k2) x = case LDROP k1 x of
+                          | NONE => NONE
+                          | SOME ll => LDROP k2 ll``,
+  Induct \\ fs [arithmeticTheory.ADD_CLAUSES]
+  \\ fs [LDROP] \\ REPEAT STRIP_TAC
+  \\ Cases_on `LTL x` \\ fs []
+  \\ Cases_on `LDROP k1 x'` \\ fs []);
+
 (* ----------------------------------------------------------------------
     exists : ('a -> bool) -> 'a llist -> bool
 
@@ -1849,6 +1859,15 @@ linear_order_to_list_lem2] THENL
  METIS_TAC [linear_order_to_list_lem4]]);
 
 end
+
+val LPREFIX_def = Define `
+  LPREFIX l1 l2 =
+    case toList l1 of
+    | NONE => (l1 = l2)
+    | SOME xs =>
+        case toList l2 of
+        | NONE => LTAKE (LENGTH xs) l2 = SOME xs
+        | SOME ys => isPREFIX xs ys`
 
 val _ = export_theory();
 
