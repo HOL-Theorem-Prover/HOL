@@ -2,7 +2,7 @@
 
 (* Unit tests for HolSmtLib *)
 
-val _ = print "Testing HolSmtLib "
+val _ = print "Testing HolSmtLib\n"
 
 (*****************************************************************************)
 (* tracing/pretty-printing options useful for debugging                      *)
@@ -25,10 +25,10 @@ val _ = Feedback.set_trace "HolSmtLib" 4
 (*****************************************************************************)
 
 val _ = if Yices.is_configured () then () else
-  print "(Yices not configured, some tests will be skipped.) "
+  print "(Yices not configured, some tests will be skipped.)\n"
 
 val _ = if Z3.is_configured () then () else
-  print "(Z3 not configured, some tests will be skipped.) "
+  print "(Z3 not configured, some tests will be skipped.)\n"
 
 (*****************************************************************************)
 (* utility functions                                                         *)
@@ -745,8 +745,10 @@ in
       [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
     (``x:word8 < 0w /\ y >= 0w ==> (word_smod x y = -word_mod (-x) y + y)``,
       [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
+(* this is false: consider x = 99, y = 255
     (``x:word8 >= 0w /\ y < 0w ==> (word_smod x y = word_mod x (-y) + y)``,
       [(*thm_AUTO, thm_YO,*)thm_Z3(*, thm_Z3p*)]),
+*)
     (``x:word8 >= 0w /\ y >= 0w ==> (word_smod x y = word_mod x y)``,
       [(*thm_AUTO, thm_YO, thm_Z3, thm_Z3p*)]),
 
