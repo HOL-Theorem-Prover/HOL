@@ -3152,6 +3152,26 @@ val map_replicate = Q.store_thm ("map_replicate",
    `!f n x. MAP f (REPLICATE n x) = REPLICATE n (f x)`,
    Induct_on `n` >> rw [REPLICATE]);
 
+val REPLICATE_NIL = Q.store_thm("REPLICATE_NIL",
+  `(REPLICATE x y = []) ⇔ (x = 0)`,
+  Cases_on`x`>>rw[REPLICATE]);
+
+val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
+  `REPLICATE n a ++ REPLICATE m a = REPLICATE (n+m) a`,
+  simp[LIST_EQ_REWRITE,LENGTH_REPLICATE] >> rw[] >>
+  Cases_on`x < n` >> simp[EL_APPEND1,LENGTH_REPLICATE,EL_REPLICATE,EL_APPEND2])
+
+val DROP_REPLICATE = Q.store_thm("DROP_REPLICATE",
+  `DROP n (REPLICATE m a) = REPLICATE (m-n) a`,
+  simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP])
+
+val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
+  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) ⇔ (n > 0 ⇒ P x y)``,
+  simp[LIST_REL_EL_EQN,REPLICATE_GENLIST] >>
+  Cases_on`n`>>simp[EQ_IMP_THM] >> rw[] >>
+  FIRST_X_ASSUM MATCH_MP_TAC >>
+  Q.EXISTS_TAC`0`>>simp[])
+
 val take_drop_partition = Q.store_thm ("take_drop_partition",
    `!n m l. m <= n ==> (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)`,
    Induct_on `m`
