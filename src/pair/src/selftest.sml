@@ -106,4 +106,21 @@ val _ = overload_on ("bar", ``\b. if b then T else F``)
 val _ = tpp "bar T"
 val _ = trace ("types", 1) tpp "if (b :bool) then (x :'a) else (y :'a)"
 
+local open pairLib in
+val _ = print "*** new_specification with existential definition\n"
+val th = metisLib.METIS_PROVE[]``?x y z. x ==> z /\ z ==> y``;
+val _ = tprint "Testing 0 constants"
+val nothing_def = new_specification("nothing_def",[],th);
+val _ = print "OK\n"
+val _ = tprint "Testing 1 constant"
+val a_def = new_specification("a_def",["a"],th);
+val _ = print "OK\n"
+val _ = tprint "Testing 2 constants"
+val pq_def = new_specification("pq_def",["p","q"],th);
+val _ = print "OK\n"
+val _ = tprint "Testing 3 constants"
+val rst_def = new_specification("rst_def",["r","s","t"],th);
+val _ = print "OK\n"
+end
+
 val _ = Process.exit Process.success
