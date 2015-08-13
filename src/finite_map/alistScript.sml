@@ -472,7 +472,7 @@ val INJ_I = prove (
 SRW_TAC[][INJ_DEF,SUBSET_DEF])
 
 val MAP_KEYS_I = store_thm(
-"MAP_KEYS_I",
+"MAP_KEYS_I[simp]",
 ``!fm. MAP_KEYS I fm = fm``,
 rw[GSYM fmap_EQ_THM,MAP_KEYS_def,EXTENSION] >>
 metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM])
@@ -485,7 +485,7 @@ Q.ISPECL_THEN [`I:'c->'c`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
 SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I])
 
 val set_MAP_FST_fmap_to_alist = store_thm(
-"set_MAP_FST_fmap_to_alist",
+"set_MAP_FST_fmap_to_alist[simp]",
 ``set (MAP FST (fmap_to_alist fm)) = FDOM fm``,
 METIS_TAC[fmap_to_alist_to_fmap,FDOM_alist_to_fmap])
 

@@ -777,12 +777,12 @@ val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
 val _ = export_rewrites ["FDOM_FUNION"]
 
 val FUNION_FEMPTY_1 = Q.store_thm
-("FUNION_FEMPTY_1",
+("FUNION_FEMPTY_1[simp]",
  `!g. FUNION FEMPTY g = g`,
  SRW_TAC [][GSYM fmap_EQ_THM, FUNION_DEF, FDOM_FEMPTY]);
 
 val FUNION_FEMPTY_2 = Q.store_thm
-("FUNION_FEMPTY_2",
+("FUNION_FEMPTY_2[simp]",
  `!f. FUNION f FEMPTY = f`,
  SRW_TAC [][GSYM fmap_EQ_THM, FUNION_DEF, FDOM_FEMPTY]);
 

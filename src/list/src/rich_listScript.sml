@@ -3078,7 +3078,7 @@ val EVERY2_TAKE = store_thm("EVERY2_TAKE",
   THEN fs [TAKE_LENGTH_TOO_LONG]
   THEN rfs [TAKE_LENGTH_TOO_LONG]);
 
-val LIST_REL_APPEND_SING = Q.store_thm("LIST_REL_APPEND_SING",
+val LIST_REL_APPEND_SING = Q.store_thm("LIST_REL_APPEND_SING[simp]",
    `LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2`,
    rw[EQ_IMP_THM]
    >> TRY (MATCH_MP_TAC EVERY2_APPEND_suff >> simp[])

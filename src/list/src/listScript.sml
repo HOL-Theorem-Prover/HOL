@@ -3175,7 +3175,7 @@ val EVERY2_refl = Q.store_thm("EVERY2_refl",
    `(!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)`,
    Induct_on`ls` >> rw [])
 
-val EVERY2_THM = Q.store_thm("EVERY2_THM",
+val EVERY2_THM = Q.store_thm("EVERY2_THM[simp]",
    `(!P ys. EVERY2 P [] ys = (ys = [])) /\
     (!P yys x xs. EVERY2 P (x::xs) yys =
        ?y ys. (yys = y::ys) /\ (P x y) /\ (EVERY2 P xs ys)) /\
