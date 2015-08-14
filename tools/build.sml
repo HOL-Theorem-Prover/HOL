@@ -7,8 +7,6 @@ struct
 
 structure Process = OS.Process
 
-open buildutils
-
 (* utilities *)
 
 (* ----------------------------------------------------------------------
