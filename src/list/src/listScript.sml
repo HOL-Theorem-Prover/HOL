@@ -3451,6 +3451,37 @@ val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
    >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1])
 end
 
+val LENGTH_TAKE_EQ = store_thm("LENGTH_TAKE_EQ",
+  ``LENGTH (TAKE n xs) = if n <= LENGTH xs then n else LENGTH xs``,
+  SRW_TAC [] [] THEN fs [GSYM NOT_LESS] THEN AP_TERM_TAC
+  THEN MATCH_MP_TAC TAKE_LENGTH_TOO_LONG THEN numLib.DECIDE_TAC);
+
+val IMP_EVERY_LUPDATE = store_thm("IMP_EVERY_LUPDATE",
+  ``!xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)``,
+  Induct THEN fs [LUPDATE_def] THEN REPEAT STRIP_TAC
+  THEN Cases_on `i` THEN fs [LUPDATE_def]);
+
+val MAP_APPEND_MAP_EQ = store_thm("MAP_APPEND_MAP_EQ",
+  ``!xs ys.
+      ((MAP f1 xs ++ MAP g1 ys) = (MAP f2 xs ++ MAP g2 ys)) <=>
+      (MAP f1 xs = MAP f2 xs) /\ (MAP g1 ys = MAP g2 ys)``,
+  Induct THEN fs [] THEN METIS_TAC []);
+
+val LUPDATE_SOME_MAP = store_thm("LUPDATE_SOME_MAP",
+  ``!xs n f h.
+      LUPDATE (SOME (f h)) n (MAP (OPTION_MAP f) xs) =
+      MAP (OPTION_MAP f) (LUPDATE (SOME h) n xs)``,
+  Induct THEN1 (fs [LUPDATE_def]) THEN
+  Cases_on `n` THEN fs [LUPDATE_def]);
+
+val ZIP_EQ_NIL = store_thm("ZIP_EQ_NIL",
+  ``∀l1 l2. (LENGTH l1 = LENGTH l2) ⇒ ((ZIP (l1,l2) = []) ⇔ ((l1 = []) ∧ (l2 = [])))``,
+  REPEAT GEN_TAC >> Cases_on`l1`>>rw[LENGTH_NIL_SYM,ZIP]>> Cases_on`l2`>>fs[ZIP])
+
+val LUPDATE_SAME = store_thm("LUPDATE_SAME",
+  ``∀n ls. n < LENGTH ls ⇒ (LUPDATE (EL n ls) n ls = ls)``,
+  rw[LIST_EQ_REWRITE,EL_LUPDATE]>>rw[])
+
 end;
 (* end CakeML lemmas *)
 

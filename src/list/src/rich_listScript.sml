@@ -2922,11 +2922,15 @@ val LIST_ELEM_COUNT_MEM = Q.store_thm ("LIST_ELEM_COUNT_MEM",
 
 local
   val op>> = op Tactical.THEN
+  val op>- = op Tactical.THEN1
   val rw = SRW_TAC []
   val metis_tac = METIS_TAC
   val fs = FULL_SIMP_TAC (srw_ss())
   val rfs = REV_FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
+  val decide_tac = numLib.DECIDE_TAC
+  val imp_res_tac = IMP_RES_TAC
+  val res_tac = RES_TAC
   open pred_setTheory open listTheory pairTheory;
 in
 
@@ -3049,6 +3053,12 @@ val EVERY2_APPEND = Q.store_thm("EVERY2_APPEND",
     (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)`,
    rw[EVERY2_EVERY,EVERY_MEM] >> metis_tac[ZIP_APPEND,MEM_APPEND])
 
+val LIST_REL_APPEND_IMP = store_thm("LIST_REL_APPEND_IMP",
+  ``!xs ys xs1 ys1.
+      LIST_REL P (xs ++ xs1) (ys ++ ys1) /\ (LENGTH xs = LENGTH ys) ==>
+      LIST_REL P xs ys /\ LIST_REL P xs1 ys1``,
+  Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []);
+
 val EVERY2_APPEND_suff = Q.store_thm("EVERY2_APPEND_suff",
    `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`,
    metis_tac[EVERY2_APPEND])
@@ -3084,6 +3094,13 @@ val LIST_REL_APPEND_SING = Q.store_thm("LIST_REL_APPEND_SING[simp]",
    >> TRY (MATCH_MP_TAC EVERY2_APPEND_suff >> simp[])
    >> IMP_RES_TAC EVERY2_APPEND
    >> fs[])
+
+val LIST_REL_GENLIST = store_thm("LIST_REL_GENLIST",
+  ``EVERY2 P (GENLIST f l) (GENLIST g l) <=>
+    !i. i < l ==> P (f i) (g i)``,
+  Induct_on `l`
+  >> fs [GENLIST,LIST_REL_APPEND_SING,SNOC_APPEND]
+  >> fs [DECIDE ``i < SUC n <=> i < n \/ (i = n)``] >> METIS_TAC []);
 
 val ALL_DISTINCT_MEM_ZIP_MAP = Q.store_thm("ALL_DISTINCT_MEM_ZIP_MAP",
    `!f x ls.
@@ -3189,6 +3206,36 @@ val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
    >> rw [COUNT_LIST_def, MEM_MAP]
    >> MATCH_MP_TAC ALL_DISTINCT_MAP_INJ
    >> rw []);
+
+val list_rel_lastn = Q.store_thm("list_rel_lastn",
+  `!f l1 l2 n.
+    n ≤ LENGTH l1 ∧
+    LIST_REL f l1 l2 ⇒
+    LIST_REL f (LASTN n l1) (LASTN n l2)`,
+  Induct_on `l1` >>
+  rw [LASTN] >>
+  imp_res_tac EVERY2_LENGTH >>
+  Cases_on `n = LENGTH l1 + 1`
+  >- metis_tac [LASTN_LENGTH_ID, ADD1, LENGTH, LIST_REL_def] >>
+  `n ≤ LENGTH l1` by decide_tac >>
+  `n ≤ LENGTH ys` by decide_tac >>
+  res_tac >>
+  fs [LASTN_CONS]);
+
+val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
+  `!f l1 l2 n.
+    n ≤ LENGTH l1 ∧
+    LIST_REL f l1 l2 ⇒
+    LIST_REL f (BUTLASTN n l1) (BUTLASTN n l2)`,
+  Induct_on `l1` >>
+  rw [BUTLASTN] >>
+  imp_res_tac EVERY2_LENGTH >>
+  Cases_on `n = LENGTH l1 + 1`
+  >- metis_tac [BUTLASTN_LENGTH_NIL, ADD1, LENGTH, LIST_REL_def] >>
+  `n ≤ LENGTH l1` by decide_tac >>
+  `n ≤ LENGTH ys` by decide_tac >>
+  res_tac >>
+  fs [BUTLASTN_CONS]);
 
 end
 (* end CakeML lemmas *)
