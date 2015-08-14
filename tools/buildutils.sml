@@ -540,13 +540,31 @@ fun full_clean (SRCDIRS:(string*int) list)  f =
                 fullPath [HOLDIR, "src", "logging-kernel"] ::
                 map #1 SRCDIRS)
 
-fun check_against s = let
+fun app_sml_files f {dirname} =
+  let
+    open OS.FileSys OS.Path
+    val dstrm = openDir dirname
+    fun recurse () =
+      case readDir dstrm of
+          NONE => closeDir dstrm
+        | SOME p => ((case ext p of
+                          SOME "sml" => f (concat(dirname,p))
+                        | SOME "sig" => f (concat(dirname,p))
+                        | _ => ());
+                     recurse())
+  in
+    recurse ()
+  end
+
+fun check_against executable s = let
   open Time
-  val cfgtime = FileSys.modTime (fullPath [HOLDIR, s])
+  val p = if OS.Path.isRelative s then fullPath [HOLDIR, s]
+          else s
+  val cfgtime = FileSys.modTime p
 in
-  if FileSys.modTime EXECUTABLE < cfgtime then
+  if FileSys.modTime executable < cfgtime then
     (warn ("WARNING! WARNING!");
-     warn ("  The build file is older than " ^ s ^ ";");
+     warn ("  The executable "^executable^" is older than " ^ s ^ ";");
      warn ("  this suggests you should reconfigure the system.");
      warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
      warn ("WARNING! WARNING!");

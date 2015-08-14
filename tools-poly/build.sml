@@ -159,10 +159,26 @@ end
        Get rid of compiled code and dependency information.
  ---------------------------------------------------------------------------*)
 
-val _ = check_against "tools-poly/smart-configure.sml"
-val _ = check_against "tools-poly/configure.sml"
-val _ = check_against "tools-poly/build.sml"
-val _ = check_against "tools/Holmake/Systeml.sig"
+val check_againstB = check_against EXECUTABLE
+val _ = check_againstB "tools-poly/smart-configure.sml"
+val _ = check_againstB "tools-poly/configure.sml"
+val _ = check_againstB "tools-poly/build.sml"
+val _ = check_againstB "tools/Holmake/Systeml.sig"
+
+val _ = let
+  val fP = fullPath
+  open OS.FileSys
+  val hmake = fP [HOLDIR,"bin",xable_string "Holmake"]
+in
+  if access(hmake, [A_READ, A_EXEC]) then
+    (app_sml_files (check_against hmake)
+                   {dirname = fP [HOLDIR, "tools-poly", "Holmake"]};
+     app_sml_files (check_against hmake)
+                   {dirname = fP [HOLDIR, "tools", "Holmake"]})
+  else
+    die ("No Holmake executable in " ^ fP [HOLDIR, "bin"])
+end
+
 
 
 
