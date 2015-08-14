@@ -345,6 +345,18 @@ val lookup_inter_eq = store_thm(
   rw[optcase_lemma] >> REPEAT BasicProvers.CASE_TAC >>
   fs [lookup_def, lookup_mk_BS, lookup_mk_BN]);
 
+val lookup_inter_EQ = store_thm("lookup_inter_EQ",
+  ``((lookup x (inter t1 t2) = SOME y) <=>
+       (lookup x t1 = SOME y) /\ lookup x t2 <> NONE) /\
+    ((lookup x (inter t1 t2) = NONE) <=>
+       (lookup x t1 = NONE) \/ (lookup x t2 = NONE))``,
+  fs [lookup_inter] \\ BasicProvers.EVERY_CASE_TAC);
+
+val lookup_inter_assoc = store_thm("lookup_inter_assoc",
+  ``lookup x (inter t1 (inter t2 t3)) =
+    lookup x (inter (inter t1 t2) t3)``,
+  fs [lookup_inter] \\ BasicProvers.EVERY_CASE_TAC)
+
 val lookup_difference = store_thm(
   "lookup_difference",
   ``!m1 m2 k. lookup k (difference m1 m2) =
@@ -439,6 +451,12 @@ val domain_lookup = store_thm(
   qspec_then `k` STRUCT_CASES_TAC bit_cases >>
   simp[oddevenlemma, EVEN_ADD, EVEN_MULT,
        EQ_MULT_LCANCEL, MULT2_DIV']);
+
+val lookup_inter_alt = store_thm("lookup_inter_alt",
+  ``lookup x (inter t1 t2) =
+      if x IN domain t2 then lookup x t1 else NONE``,
+  fs [lookup_inter,domain_lookup]
+  \\ Cases_on `lookup x t2` \\ fs [] \\ Cases_on `lookup x t1` \\ fs []);
 
 val lookup_NONE_domain = store_thm(
   "lookup_NONE_domain",
@@ -1140,5 +1158,13 @@ val domain_map = store_thm("domain_map",
 val lookup_map = store_thm("lookup_map",
   ``∀s x. lookup x (map f s) = OPTION_MAP f (lookup x s)``,
   Induct >> simp[map_def,lookup_def] >> rw[])
+
+val map_LN = store_thm("map_LN[simp]",
+  ``!t. (map f t = LN) <=> (t = LN)``,
+  Cases \\ EVAL_TAC);
+
+val wf_map = store_thm("wf_map[simp]",
+  ``!t f. wf (map f t) = wf t``,
+  Induct \\ fs [wf_def,map_def]);
 
 val _ = export_theory();
