@@ -1370,6 +1370,23 @@ val SORTED_weaken = store_thm("SORTED_weaken",
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   METIS_TAC[])
 
+val less_sorted_eq = MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
+  |> curry save_thm"less_sorted_eq";
+
+val SORTED_GENLIST_PLUS = store_thm("SORTED_GENLIST_PLUS",
+  ``∀n k. SORTED $< (GENLIST ($+ k) n)``,
+  Induct >> simp[GENLIST_CONS,less_sorted_eq,MEM_GENLIST] >> gen_tac >>
+  `$+ k o SUC = $+ (k+1)` by (
+    simp[FUN_EQ_THM] ) >>
+  metis_tac[])
+
+val SORTED_ALL_DISTINCT = store_thm("SORTED_ALL_DISTINCT",
+  ``irreflexive R /\ transitive R ==> !ls. SORTED R ls ==> ALL_DISTINCT ls``,
+  STRIP_TAC THEN Induct THEN SRW_TAC[][] THEN
+  IMP_RES_TAC SORTED_EQ THEN
+  FULL_SIMP_TAC (srw_ss()) [SORTED_DEF] THEN
+  METIS_TAC[relationTheory.irreflexive_def])
+
 end
 
 val _ = export_theory();
