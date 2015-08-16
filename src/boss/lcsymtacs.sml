@@ -18,6 +18,7 @@ struct
   val rpt = Tactical.REPEAT
   val reverse = Tactical.REVERSE
   val ntac = Tactic.NTAC
+  val var_eq_tac = BasicProvers.VAR_EQ_TAC
 
   val rewrite_tac : thm list -> tactic = Rewrite.REWRITE_TAC
   val once_rewrite_tac : thm list -> tactic = Rewrite.ONCE_REWRITE_TAC
@@ -56,6 +57,9 @@ struct
   val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
   val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
   val qcase_tac = Q.FIND_CASE_TAC
+
+  val every_case_tac = BasicProvers.EVERY_CASE_TAC
+  val full_case_tac = BasicProvers.FULL_CASE_TAC
 
   val rule_assum_tac : (thm -> thm) -> tactic = Tactic.RULE_ASSUM_TAC
   val assume_tac : thm_tactic = Tactic.ASSUME_TAC

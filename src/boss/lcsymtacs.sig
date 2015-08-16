@@ -12,6 +12,7 @@ sig
   val disj1_tac : tactic
   val disj2_tac : tactic
   val gen_tac : tactic
+  val var_eq_tac : tactic
   val rpt : tactic -> tactic
   val ntac : int -> tactic -> tactic
   val reverse : tactic -> tactic
@@ -25,6 +26,9 @@ sig
   val ho_match_mp_tac : thm_tactic
   val mp_tac : thm_tactic
   val match_mp_tac : thm_tactic
+
+  val every_case_tac : tactic
+  val full_case_tac : tactic
 
   val rule_assum_tac : (thm -> thm) -> tactic
   val pop_assum : thm_tactic -> tactic
