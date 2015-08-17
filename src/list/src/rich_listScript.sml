@@ -2816,7 +2816,7 @@ val ZIP_TAKE = Q.store_thm ("ZIP_TAKE",
   SIMP_TAC arith_ss [ZIP_TAKE_LEQ, listTheory.TAKE_LENGTH_ID]);
 
 val EL_TAKE = Q.store_thm ("EL_TAKE",
-   `!n x l. x < n /\ n <= LENGTH l ==> (EL x (TAKE n l) = EL x l)`,
+   `!n x l. x < n ==> (EL x (TAKE n l) = EL x l)`,
    Induct_on `n`
    THEN ASM_SIMP_TAC list_ss [TAKE]
    THEN Cases_on `x`
