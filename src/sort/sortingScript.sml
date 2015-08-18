@@ -376,6 +376,8 @@ val SORTED_DEF =
    (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
+val SORTED_IND = theorem"SORTED_IND";
+
 val SORTS_DEF =
  Define
     `SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
@@ -1386,6 +1388,13 @@ val SORTED_ALL_DISTINCT = store_thm("SORTED_ALL_DISTINCT",
   IMP_RES_TAC SORTED_EQ THEN
   FULL_SIMP_TAC (srw_ss()) [SORTED_DEF] THEN
   METIS_TAC[relationTheory.irreflexive_def])
+
+val sorted_filter = Q.store_thm("sorted_filter",
+  `∀R ls. transitive R ⇒ SORTED R ls ⇒ SORTED R (FILTER P ls)`,
+  HO_MATCH_MP_TAC SORTED_IND >>
+  rw[SORTED_DEF] >> fs[] >>
+  rfs[SORTED_EQ,MEM_FILTER] >>
+  rw[] >> metis_tac[transitive_def])
 
 end
 
