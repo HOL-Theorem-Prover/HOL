@@ -7,7 +7,8 @@
 structure CoIndDefLib :> CoIndDefLib =
 struct
 
-open HolKernel boolLib
+open HolKernel boolLib liteLib InductiveDefinition IndDefLib
+
 
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 
@@ -88,44 +89,42 @@ fun derive_canon_coinductive_relations pclauses =
             end
         val ruvalhms = map2 prove_rule monothms (zip closthms defthms)
         val ruvalhm = end_itlist CONJ ruvalhms
-	(*
-        val dtms = map2 (curry list_mk_abs) vargs ants
+
+        val dtms = map2 (curry list_mk_abs) vargs concs
         val double_fn = subst (map2 (curry op |->) rels dtms)
         fun mk_unbetas tm dtm =
             let val (avs,bod) = strip_forall tm
                 val (il,r) = dest_comb bod
                 val (i,l) = dest_comb il
                 val bth = RIGHT_BETAS avs (REFL dtm)
-                val munb = AP_THM (AP_TERM i bth) r
-                val iunb = AP_TERM (mk_comb(i,double_fn l)) bth
-                val junb = AP_TERM (mk_comb(i,r)) bth
+                val munb = AP_THM (AP_TERM i bth) l
+		val iunb = AP_THM (AP_TERM i bth) (double_fn r)
+                val junb = AP_TERM (mk_comb(i,l)) bth
                 val quantify = itlist MK_FORALL avs
-            in (quantify munb,(quantify iunb,quantify junb))
+            in (quantify junb,(quantify iunb,quantify munb))
             end
         val unths = map2 mk_unbetas pclauses dtms
         val irthm = EQ_MP (SYM(end_itlist MK_CONJ (map fst unths))) ruvalhm
         val mrthm = MP (SPECL rels (SPECL dtms monothm)) irthm
         val imrth = EQ_MP
           (SYM(end_itlist MK_CONJ (map (fst o snd) unths))) mrthm
-        val ifthm = MP (SPECL dtms indthm) imrth
+        val ifthm = MP (SPECL dtms coindthm) imrth
         val fthm = EQ_MP (end_itlist MK_CONJ (map (snd o snd) unths)) ifthm
         fun mk_case th1 th2 =
             let val avs = fst(strip_forall(concl th1))
-            in GENL avs (IMP_ANTISYM_RULE (SPEC_ALL th1) (SPEC_ALL th2))
+            in GENL avs (IMP_ANTISYM_RULE (SPEC_ALL th2) (SPEC_ALL th1))
             end
         val casethm = end_itlist CONJ
                (map2 mk_case (CONJUNCTS fthm) (CONJUNCTS ruvalhm))
-	*)
-	val todo = hd defthms
-    in (*CONJ ruvalhm (CONJ indthm casethm)*)
-       CONJ ruvalhm (CONJ coindthm todo)
+    in CONJ fthm (CONJ coindthm casethm)
     end
-    handle e => raise (wrap_exn "co_InductiveDefinition"
+    handle e => raise (wrap_exn "CoIndDefLib"
                          "derive_canon_coinductive_relations"e);
 
 
 
 (* General case for nonschematic relations; monotonicity & defn hyps.        *)
+
 fun derive_nonschematic_coinductive_relations tm =
   let val clauses   = strip_conj tm
       val canonthm  = canonicalize_clauses clauses
@@ -135,12 +134,11 @@ fun derive_nonschematic_coinductive_relations tm =
       val rawthm    = derive_canon_coinductive_relations pclauses
       val (ruvalhm,otherthms) = CONJ_PAIR rawthm
       val (indthm,casethm)    = CONJ_PAIR otherthms
-      (* TODO
       val ruvalhm' = EQ_MP canonthm' ruvalhm
-      and indthm'  = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm *)
-  in (* TODO CONJ ruvalhm' (CONJ indthm' casethm) *) rawthm
+      and indthm'  = CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV canonthm')) indthm
+  in CONJ ruvalhm' (CONJ indthm' casethm)
   end
-  handle e => raise (wrap_exn "co_InductiveDefinition"
+  handle e => raise (wrap_exn "CoIndDefLib"
                        "derive_nonschematic_coinductive_relations" e);
 
 
@@ -158,102 +156,51 @@ fun new_coinductive_definition monoset stem (tm,clocs) =
      val (i,c)  = CONJ_PAIR ic
  in (GENL avs r, GENL avs i, GENL avs c)
  end
- handle e => raise wrap_exn "co_InductiveDefinition" "new_coinductive_definition" e;
+ handle e => raise wrap_exn "CoIndDefLib" "new_coinductive_definition" e;
 
 
 (* ------------------------------------------------------------------------- *)
 
-fun save_theorems name (rules, indn, strong_ind, cases) = let
+fun save_theorems name (rules, coind, strong_ind, cases) = let
 in
-  (* save_thm(name^"_rules", rules);
-  save_thm(name^"_ind", indn);
-  save_thm(name^"_strongind", strong_ind);
+  save_thm(name^"_rules", rules);
+  save_thm(name^"_coind", coind);
+  (*save_thm(name^"_strongind", strong_ind);*)
   save_thm(name^"_cases", cases);
-  export_rule_induction (name ^ "_strongind") *)
+  (*export_rule_induction (name ^ "_strongind") *)
   ()
 end
 
-(* ------------------------------------------------------------------------- *)
-(* entrypoints: *)
+fun derive_strong_coinduction (rules, coind) = ((* TODO *))
+
+(* -------------------------------------------------------------------------  )
+(  Entrypoints:                                                              *)
 
 fun Hol_mono_coreln name monoset tm = let
   val _ = Lexis.ok_sml_identifier (name ^ !boolLib.def_suffix) orelse
           raise ERR "Hol_mono_coreln"
                     ("Bad name for definition: "^ Lib.mlquote name^
                      " (use xHol_coreln to specify a better)")
-  val (rules, indn, cases) = new_coinductive_definition monoset name tm
-      (* not! InductiveDefinition.bool_monoset tm *)
-  val strong_ind = (*derive_strong_induction (rules, indn)*) ()
+  val (rules, coind, cases) = new_coinductive_definition monoset name tm
+  val strong_ind = derive_strong_coinduction (rules, coind)
 in
-  save_theorems name (rules, indn, strong_ind, cases);
-  (rules, indn, cases)
+  save_theorems name (rules, coind, strong_ind, cases);
+  (rules, coind, cases)
 end
 handle e => raise (wrap_exn "CoIndDefLib" "Hol_mono_coreln" e);
 
-fun xHol_coreln name q = Hol_mono_coreln name (!IndDefLib.the_monoset) (IndDefLib.term_of q)
+fun xHol_coreln name q =
+    Hol_mono_coreln name (!IndDefLib.the_monoset) (IndDefLib.term_of q)
 
 fun Hol_coreln q = let
-  val parse = IndDefLib.term_of |> trace ("syntax_error", 0)
+  val parse = IndDefLib.term_of
+                      |> trace ("syntax_error", 0)
                       |> trace ("show_typecheck_errors", 0)
-              (* turn off verbiage because the Raise below will redisplay any
-                 exceptions *)
-  val def as (def_t,_) = parse q
+  val def as (def_t, _) = parse q
   val name = IndDefLib.name_from_def def_t
 in
   Hol_mono_coreln name (!IndDefLib.the_monoset) def
-end handle e => Raise (wrap_exn "IndDefLib" "Hol_coreln" e);
-
-
-
-(* DEBUGGING CODE *)
-
-fun coreln q = let
-  (* *)
-  val parse = IndDefLib.term_of |> trace ("syntax_error", 0)
-                      |> trace ("show_typecheck_errors", 0)
-              (* turn off verbiage because the Raise below will redisplay any
-                 exceptions *)
-  val tm as (def_t,_) = parse q
-  val name = name_from_def def_t
-  val monoset = (!IndDefLib.the_monoset)
-
-  (* *)
-  val _ = Lexis.ok_sml_identifier (name ^ !boolLib.def_suffix) orelse
-          raise ERR "Hol_mono_coreln"
-                    ("Bad name for definition: "^ Lib.mlquote name^
-                     " (use xHol_reln to specify a better)")
-
-  (* new_coinductive_definition monoset stem (tm,clocs) *)
-  val stem = name
-  val (tm, clocs) = tm
-  val clauses = strip_conj tm
-  val (clauses',fvs) = unschematize_clauses clauses
-  val _ = check_definition fvs clocs (list_mk_conj clauses')
-  val check = check_definition fvs clocs (list_mk_conj clauses')
-
-  (* derive_nonschematic_coinductive_relations *)
-  val tm = check
-  val clauses   = strip_conj tm
-  val canonthm  = canonicalize_clauses clauses
-  val canonthm' = SYM canonthm
-  val pclosed   = rand(concl canonthm)
-  val pclauses  = strip_conj pclosed
-  (* val rawthm    = derive_canon_coinductive_relations pclauses *)
-
-  in pclauses
-end;
-
-
-
-(* simple test cases
-
-val pclauses = coreln`(N 0) /\ (N n ==> N (f n))`;
-
-val q = `
-  (lrep_ok (\n. NONE))
-  /\ lrep_ok (\n. if n = 0 then SOME h else t(n - 1))
-`;
-*)
+end handle e => Raise (wrap_exn "CoIndDefLib" "Hol_coreln" e);
 
 
 end (* CoIndDefLib *)

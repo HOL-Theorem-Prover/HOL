@@ -24,12 +24,10 @@ open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
 
 local open listTheory optionTheory
            combinSyntax listSyntax optionSyntax numSyntax oneSyntax sumSyntax
-           (* EvalRef Lift; *)
+           EvalRef Lift;
 in end;
 
 val ERR = mk_HOL_ERR "bossLib";
-
-val new_specification = pairLib.new_specification;
 
 (*---------------------------------------------------------------------------*
             Datatype definition
@@ -45,15 +43,17 @@ val Datatype = Datatype.Datatype
             Function definition
  ---------------------------------------------------------------------------*)
 
-val xDefine    = TotalDefn.xDefine
-val tDefine    = TotalDefn.tDefine
-val Define     = TotalDefn.Define
-val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
-val Hol_defn   = Defn.Hol_defn
-val Hol_reln   = IndDefLib.Hol_reln
+val xDefine = TotalDefn.xDefine
+val tDefine = TotalDefn.tDefine
+val Define  = TotalDefn.Define
+val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
+val Hol_defn    = Defn.Hol_defn
+val Hol_reln    = IndDefLib.Hol_reln
 val xHol_reln   = IndDefLib.xHol_reln
+val Hol_coreln  = CoIndDefLib.Hol_coreln
+val xHol_coreln = CoIndDefLib.xHol_coreln
 val export_mono = IndDefLib.export_mono
-val WF_REL_TAC = TotalDefn.WF_REL_TAC
+val WF_REL_TAC  = TotalDefn.WF_REL_TAC
 
 
 (*---------------------------------------------------------------------------

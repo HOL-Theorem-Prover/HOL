@@ -18,14 +18,12 @@ sig
   val WF_REL_TAC   : term quotation -> tactic
   val Hol_defn     : string -> term quotation -> defn
 
-  (* new (inductive) relations *)
+  (* new (co-inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
+  val Hol_coreln   : term quotation -> thm * thm * thm
   val xHol_reln    : string -> term quotation -> thm * thm * thm
+  val xHol_coreln  : string -> term quotation -> thm * thm * thm
   val export_mono  : string -> unit
-
-  (* Derived rule for specifying new constants.
-    (Should have the same effect as Thm.new_specification.) *)
-  val new_specification : string * string list * thm -> thm
 
   (* Case-splitting and induction operations *)
 
@@ -85,9 +83,6 @@ sig
   val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
   val RW_TAC            : simpset -> thm list -> tactic
   val SRW_TAC           : ssfrag list -> thm list -> tactic
-
-  val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
-  val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
 
   (* Call-by-value evaluation *)
   val EVAL           : term -> thm
