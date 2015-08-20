@@ -13,20 +13,19 @@ open HolKernel boolLib liteLib InductiveDefinition IndDefLib
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 
 fun derive_canon_coinductive_relations pclauses =
-    let val closed = list_mk_conj pclauses
-        val pclauses = strip_conj closed
-    	val (vargs,bodies) = split(map strip_forall pclauses)
-    	val swap = fn (x, y) => (y, x)
-    	val bodies = map mk_imp (map swap (map dest_imp bodies))
+    let val (vargs, bodies) = split(map strip_forall pclauses)
+    	val swap_fn = fn (x, y) => (y, x)
+    	val bodies = map mk_imp (map swap_fn (map dest_imp bodies))
     	val pclauses = map list_mk_forall (zip vargs bodies)
     	val closed = list_mk_conj pclauses
-    	val (ants,concs) = split(map dest_imp bodies)
+    	val (ants, concs) = split (map dest_imp bodies)
     	val rels = map (repeat rator) ants
     	val avoids = all_vars closed
     	val rels' = variants avoids rels
     	val prime_fn = subst (map2 (curry op |->) rels rels' )
     	val closed' = prime_fn closed
 
+	(* definition theorems *)
 	fun mk_def arg ant =
 	    mk_eq(repeat rator ant,
 		  list_mk_abs(arg,list_mk_exists(rels',
@@ -34,55 +33,53 @@ fun derive_canon_coinductive_relations pclauses =
 	val deftms = map2 mk_def vargs ants
 	val defthms = map2 HALF_BETA_EXPAND vargs (map ASSUME deftms)
 
-	fun rm_exists th rels' = (* fix the dest_exists with rels' *)
-	    let val ant = hd (hyp th)
-		val (var, conj) = dest_exists ant
-		val (a, b) = dest_conj conj
-		val ex = EXISTS(ant, var) (ASSUME conj)
-		val th1 = PROVE_HYP ex th
-		val th2 = CONJ (ASSUME a) (ASSUME b)
-	    in PROVE_HYP th2 th1
+	(* coinductive theorems *)
+	fun rm_exists_left th =
+	    let val ant = fst (dest_imp (concl th))
+		val (vars, conj) = strip_exists ant
+		val ex_fn = fn (v, t) => EXISTS(mk_exists(v, concl t), v) t
+		val ex = foldl ex_fn (ASSUME conj) (rev vars)
+		val th1 = PROVE_HYP ex (UNDISCH th)
+		val (c1, c2) = dest_conj conj
+		val th2 = CONJ (ASSUME c1) (ASSUME c2)
+	    in DISCH c1 (PROVE_HYP th2 th1)
 	    end
 
 	fun mk_coind args th =
-	    let val th1 = snd(EQ_IMP_RULE(SPEC_ALL th))
-		val th2 = rm_exists (UNDISCH th1) rels'
-		val ant = hd (hyp th2)
-	    in GENL args (DISCH ant (th2))
+	    let val th = snd(EQ_IMP_RULE(SPEC_ALL th))
+	    in GENL args (rm_exists_left th)
 	    end
 	val coindthms = map2 mk_coind vargs defthms
 	val coindthmr = end_itlist CONJ coindthms
-	val my_closed_why = (hd (hyp coindthmr))
-	val coindthm = GENL rels'(DISCH my_closed_why coindthmr)
+	val coindthm = GENL rels'(DISCH closed' coindthmr)
 
+	(* mono theorems *)
         val mants = map2 (fn a => fn t =>
           list_mk_forall(a,mk_imp(prime_fn t, t))) vargs concs
         val monotm = mk_imp(concl coindthmr, list_mk_conj mants)
         val monothm = ASSUME(list_mk_forall(rels,list_mk_forall(rels',monotm)))
-
-	val closthm = ASSUME my_closed_why
-
+	val closthm = ASSUME closed'
         val monothms = CONJUNCTS
             (MP (SPEC_ALL monothm) (MP (SPECL rels' coindthm) closthm))
         val closthms = CONJUNCTS closthm
 
-	fun reverse_mess th rel =
-	    let val a = hd (hyp th) (* FIXME *)
-	    	val b = my_closed_why
-		val conj = mk_conj(a, b)
+	(* rules *)
+	fun intro_exists_left th =
+	    let val conj1 = fst (dest_imp (concl th))
+		val conj = mk_conj(conj1, closed')
 		val A = CONJUNCT1(ASSUME conj);
 		val B = CONJUNCT2(ASSUME conj);
-		val step1 = PROVE_HYP A th;
+		val step1 = PROVE_HYP A (UNDISCH th);
 		val step2 = PROVE_HYP B step1;
-		val ex = mk_exists(rel, conj)
-	    in (ex, CHOOSE(rel, ASSUME ex) step2)
+		val ex_fn = fn (v, (t1, t2)) => 
+		    (mk_exists(v, t1), CHOOSE(v, ASSUME (mk_exists(v, t1))) t2)
+	    in foldl ex_fn (conj, step2) (rev rels')
 	    end
 
         fun prove_rule mth (cth,dth) =
-            let val (avs,bod) = strip_forall(concl mth)
+            let val (avs, bod) = strip_forall(concl mth)
                 val th1 = IMP_TRANS (SPECL avs cth) (SPECL avs mth)
-		val (ex, th1') = reverse_mess (UNDISCH th1) (hd rels')
-		(* FIXME: insted of GENL rels', I should exists all, not hd *)
+		val (ex, th1') = intro_exists_left th1
                 val th2 = DISCH ex th1'
                 val th3 = IMP_TRANS (fst(EQ_IMP_RULE(SPECL avs dth))) th2
             in GENL avs th3
@@ -90,6 +87,7 @@ fun derive_canon_coinductive_relations pclauses =
         val ruvalhms = map2 prove_rule monothms (zip closthms defthms)
         val ruvalhm = end_itlist CONJ ruvalhms
 
+	(* cases *)
         val dtms = map2 (curry list_mk_abs) vargs concs
         val double_fn = subst (map2 (curry op |->) rels dtms)
         fun mk_unbetas tm dtm =
@@ -165,9 +163,9 @@ fun save_theorems name (rules, coind, strong_ind, cases) = let
 in
   save_thm(name^"_rules", rules);
   save_thm(name^"_coind", coind);
-  (*save_thm(name^"_strongind", strong_ind);*)
+  (* save_thm(name^"_strongind", strong_ind);*)
   save_thm(name^"_cases", cases);
-  (*export_rule_induction (name ^ "_strongind") *)
+  (* export_rule_induction (name ^ "_strongind") *)
   ()
 end
 

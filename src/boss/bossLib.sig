@@ -18,7 +18,7 @@ sig
   val WF_REL_TAC   : term quotation -> tactic
   val Hol_defn     : string -> term quotation -> defn
 
-  (* new (co-inductive) relations *)
+  (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
   val Hol_coreln   : term quotation -> thm * thm * thm
   val xHol_reln    : string -> term quotation -> thm * thm * thm
