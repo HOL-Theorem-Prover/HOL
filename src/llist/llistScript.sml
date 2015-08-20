@@ -352,21 +352,6 @@ val LUNFOLD = new_specification
     bisimulation
    ---------------------------------------------------------------------- *)
 
-(* STUB: Hol_coreln version
-
-val (x, llbis_coind, y) = Hol_coreln`(LLBIS LNIL LNIL)
-               /\ (LLBIS t1 t2 ==> LLBIS (h:::t1) (h:::t2))`;
-
-val LLIST_BISIMULATION0 = store_thm(
-  "LLIST_BISIMULATION0",
-  ``!ll1 ll2. (ll1 = ll2) = LLBIS ll1 ll2``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [
-      Induct
-  ]
-);
-
-*)
-
 val LLIST_BISIMULATION0 = store_thm(
   "LLIST_BISIMULATION0",
   ``!ll1 ll2. (ll1 = ll2) =
