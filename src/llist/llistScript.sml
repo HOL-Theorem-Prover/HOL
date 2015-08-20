@@ -12,18 +12,15 @@ val _ = new_theory "llist";
     The representing type is :num -> 'a option
    ---------------------------------------------------------------------- *)
 
-val lrep_ok_def = Define`
-  lrep_ok f =
-     ?P. (!g. P g ==>
-              (g = (\n. NONE)) \/
-              ?h t. P t /\ (g = (\n. if n = 0 then SOME h else t(n - 1)))) /\
-         P f
+val (lrep_ok_rules, lrep_ok_coinduction, lrep_ok_cases) = Hol_coreln`
+   (lrep_ok (\n. NONE))
+/\ (lrep_ok t ==> lrep_ok (\n. if n = 0 then SOME h else t(n - 1)))
 `;
 
 val type_inhabited = prove(
   ``?f. lrep_ok f``,
-  Q.EXISTS_TAC `\n. NONE` THEN SRW_TAC [][lrep_ok_def] THEN
-  Q.EXISTS_TAC `(=) (\n.NONE)` THEN SRW_TAC [][]);
+  Q.EXISTS_TAC `\n. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
+);
 
 val llist_tydef =
   new_type_definition ("llist", type_inhabited);
@@ -59,32 +56,6 @@ val LCONS = new_definition(
   ``LCONS h t = llist_abs (\n. if n = 0 then SOME h
                                else llist_rep t (n - 1))``
 );
-
-val lrep_ok_rules = prove(
-  ``lrep_ok (\n. NONE) /\
-    (lrep_ok f ==> lrep_ok (\n. if n = 0 then SOME h else f (n - 1)))``,
-  SRW_TAC [][lrep_ok_def] THENL [
-    Q.EXISTS_TAC `(=) (\n. NONE)` THEN SRW_TAC [][],
-    Q.EXISTS_TAC
-      `\f'. P f' \/ (f' = (\n. (if n = 0 then SOME h else f (n - 1))))` THEN
-    SRW_TAC [][] THEN METIS_TAC []
-  ]);
-
-val lrep_ok_coinduction = prove(
-  ``(!f. P f ==>
-         (f = (\n. NONE)) \/
-         ?h t. P t /\ (f = (\n. if n = 0 then SOME h else t(n - 1)))) ==>
-    !f. P f ==> lrep_ok f``,
-  SRW_TAC [][lrep_ok_def] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]);
-
-val lrep_ok_cases = prove(
-  ``lrep_ok f =
-       (f = \n. NONE) \/
-       (?h t. lrep_ok t /\ (f = \n. if n = 0 then SOME h else t (n - 1)))``,
-  SIMP_TAC (srw_ss() ++ DNF_ss)[EQ_IMP_THM, lrep_ok_rules] THEN
-  SRW_TAC [][lrep_ok_def] THEN RES_TAC THEN SRW_TAC [][] THEN
-  DISJ2_TAC THEN MAP_EVERY Q.EXISTS_TAC [`h`,`t`] THEN SRW_TAC [][] THEN
-  Q.EXISTS_TAC `P` THEN SRW_TAC [][]);
 
 val llist_rep_LCONS = store_thm(
   "llist_rep_LCONS",
@@ -134,13 +105,10 @@ val LHDTL_CONS_THM = store_thm(
 
 val lrep_inversion = prove(
   ``lrep_ok f ==> (f = \n. NONE) \/
-                  (?h t. lrep_ok t /\ (f = \n. if n = 0 then SOME h
-                                               else t (n - 1)))``,
-  SRW_TAC [][lrep_ok_def] THEN RES_TAC THENL [
-    SRW_TAC [][],
-    DISJ2_TAC THEN MAP_EVERY Q.EXISTS_TAC [`h`, `t`] THEN
-    SRW_TAC [][] THEN Q.EXISTS_TAC `P` THEN SRW_TAC [][]
-  ]);
+	    (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
+		/\ lrep_ok t)``,
+   MATCH_ACCEPT_TAC (fst (EQ_IMP_RULE (SPEC_ALL lrep_ok_cases)))
+);
 
 val forall_llist = prove(
   ``(!l. P l) = (!r. lrep_ok r ==> P (llist_abs r))``,
@@ -267,9 +235,9 @@ val llist_ue_Axiom = store_thm(
            DISJ2_TAC THEN
            MAP_EVERY Q.EXISTS_TAC [`SND x'`, `\n. h f n (FST x')`] THEN
            CONJ_TAC THENL [
-             Q.EXISTS_TAC `FST x'` THEN SRW_TAC [][],
              SRW_TAC [][FUN_EQ_THM] THEN Cases_on `n` THEN
-             SRW_TAC [][]
+             SRW_TAC [][],
+	     Q.EXISTS_TAC `FST x'` THEN SRW_TAC [][]
            ]
          ]) THEN
   SRW_TAC [][EXISTS_UNIQUE_THM] THENL [
@@ -383,6 +351,21 @@ val LUNFOLD = new_specification
     Another consequence of the finality theorem is the principle of
     bisimulation
    ---------------------------------------------------------------------- *)
+
+(* STUB: Hol_coreln version
+
+val (x, llbis_coind, y) = Hol_coreln`(LLBIS LNIL LNIL)
+               /\ (LLBIS t1 t2 ==> LLBIS (h:::t1) (h:::t2))`;
+
+val LLIST_BISIMULATION0 = store_thm(
+  "LLIST_BISIMULATION0",
+  ``!ll1 ll2. (ll1 = ll2) = LLBIS ll1 ll2``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+      Induct
+  ]
+);
+
+*)
 
 val LLIST_BISIMULATION0 = store_thm(
   "LLIST_BISIMULATION0",
