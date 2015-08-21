@@ -52,6 +52,8 @@ val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 val Hol_defn   = Defn.Hol_defn
 val Hol_reln   = IndDefLib.Hol_reln
 val xHol_reln   = IndDefLib.xHol_reln
+val Hol_coreln  = CoIndDefLib.Hol_coreln
+val xHol_coreln = CoIndDefLib.xHol_coreln
 val export_mono = IndDefLib.export_mono
 val WF_REL_TAC = TotalDefn.WF_REL_TAC
 

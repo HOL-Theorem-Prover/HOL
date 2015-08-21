@@ -20,7 +20,9 @@ sig
 
   (* new (inductive) relations *)
   val Hol_reln     : term quotation -> thm * thm * thm
+  val Hol_coreln   : term quotation -> thm * thm * thm
   val xHol_reln    : string -> term quotation -> thm * thm * thm
+  val xHol_coreln  : string -> term quotation -> thm * thm * thm
   val export_mono  : string -> unit
 
   (* Derived rule for specifying new constants.
