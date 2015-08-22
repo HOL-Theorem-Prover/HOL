@@ -11,7 +11,6 @@
 structure hhWriter :> hhWriter =
 struct
 
-
 open HolKernel boolLib TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"

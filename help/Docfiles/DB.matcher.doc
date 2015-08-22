@@ -60,5 +60,5 @@ Never fails, but may return an empty list.
 Usually, {pm} will be a pattern-matcher, but it need not be.
 
 \SEEALSO
-DB.match, DB.apropos, DB.matchp, DB.find.
+DB.match, DB.apropos, DB.matchp, DB.find, holyHammer.hh.
 \ENDDOC
