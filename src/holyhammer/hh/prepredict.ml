@@ -3,13 +3,13 @@
 (* and features.                                                             *)
 (*-------------------------------------------------------------------------- *)
 
+open Features
 open Dependency
 open Thf1hh1
 
 (*-------------------------------------------------------------------------- 
   Preparing files for the predictor
   -------------------------------------------------------------------------- *)
-let feature_of thm = Hh_symbols.get_symbols (term_of thm)
 
 let os = output_string 
 
@@ -58,14 +58,20 @@ let predict_print_all fname axl cjname =
   Running the predictor
   -------------------------------------------------------------------------- *)
 
-type predictor = KNN | NaiveBayes | Mepo | Geo
+type predictor = KNN | NaiveBayes | Mepo | Geo | Kepo
 
-let run_predictor = function
-  KNN        -> Predict.knn_advice2
-| NaiveBayes -> Predict.nb_advice2
-| Mepo       -> Predict.mepo_advice2
-| Geo        -> Predict.geo_advice2
-
+let run_predictor p fname limit = 
+  if limit <= 0 
+  then [] 
+  else 
+    begin
+    match p with
+      KNN        -> Predict.knn_advice2 fname limit
+    | NaiveBayes -> Predict.nb_advice2 fname limit
+    | Mepo       -> Predict.mepo_advice2 fname limit
+    | Geo        -> Predict.geo_advice2 fname limit
+    | Kepo       -> Predict.kepo_advice2 fname limit
+    end
 
 let predict_wrap predictor file_prefix n cj axl =
   predict_print_all file_prefix axl cj;

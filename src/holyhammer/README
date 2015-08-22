@@ -5,7 +5,7 @@ Requires:
 * OCaml >= 3.12
     sudo apt-get install ocaml 
 * g++ >= 4.8 (recent version with C++11 support)  
-  Ubuntu 12.04:
+    Ubuntu 12.04:
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     sudo apt-get update
     sudo apt-get install g++-4.8
@@ -18,26 +18,30 @@ Install holyhammer: (done during the build)
   run Holmake in src/holyhammer/predict
   run Holmake in src/holyhammer/predict/mepo
 
-Adding provers:
+Supported provers: Eprover, Vampire and Z3 
   
-  Eprover and Z3 are given by default are for linux 64 bit. 
-  Please replace the binary in provers/eprover/eprover if necessary.
-  You may use different versions but parsing may need to be fixed in 
-  provers/"prover".sh . 
-  The name of the binary for Vampire has to be vampire.
-    
-Removing provers:
-
-  Delete the binaries (eprover,z3 or vampire) in
-  their respective directory provers/"prover".
-
+  Eprover: 
+    Tested with 1.8 and 1.9.
+  Vampire: 
+    Tested with version 2.6. Parsing may need changing for higher versions
+  Z3: 
+    Tested with 4.0. The newest version of z3 does not support 
+    tptp input. Can be fetch from http://isabelle.in.tum.de/components/.
+  CVC4: 
+    Waiting for a good minimization algorithm to be implemented
+    as it does not output have unsatisfiable cores.
+  
 Predictors:
-  The two best predictors are KNN and Mepo. 
-  Mepo works best for a definition based proof with small theorems
-  KNN learns from previous proofs so it is useful on well developed theories.
-  The default predictor is KNN.
-  Please switch between them if the proof fails by using
-  "set_predictors Mepo;" and "set_predictors Knn;"
+
+  The two best predictors are KNN and Mepo. The default predictor is KNN. 
+  - Mepo works best when your conjecture has rare symbols.
+  - KNN learns from previous proofs.
+  - Kepo is a combination of the previous two.
+  They have different strength so please switch between predictors:
+  - "set_predictors KNN;"
+  - "set_predictors Mepo;" 
+  - "set_predictors Kepo;"
+  Alternatively, you can call hh_try which tries all of them sequentially.
    
 Example: 
 
@@ -45,8 +49,6 @@ Example:
   open holyHammer;
   hh [] ``1 + 1 = 2``;
   METIS_PROVE lemmas ``1 + 1 = 2``; 
-  load "complexTheory";
-  hh_atp "eprover" [] ``0 <> 1``;
 
 Questions:
 

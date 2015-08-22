@@ -82,6 +82,11 @@ let geo_advice2 fname limit =
      1 0.99 s s limit s s s s in
   cpp_advice2 fname cmd
 
+let kepo_advice2 fname limit =
+  let l1 = mepo_advice2 fname limit in
+  let l2 = knn_advice2 fname limit in
+  Toolbox.mk_set (l1 @ l2)
+
 (* Matching experiments *)
 
 let nb_advice3 fname limit =

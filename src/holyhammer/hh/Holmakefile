@@ -2,8 +2,8 @@
 
 ifneq ($(which ocamlopt),)
 
-HH2_CMX=hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
-dependency.cmx thf1hh1.cmx prepredict.cmx write.cmx
+HH2_CMX=toolbox.cmx hh_parse.cmx hh_lexer.cmx read.cmx predict.cmx preprocess.cmx init.cmx \
+dependency.cmx thf1hh1.cmx features.cmx prepredict.cmx write.cmx
 
 HL_CMX=hh1/lib.cmx hh1/fusion.cmx hh1/basics.cmx hh1/printer.cmx \
 hh1/preterm.cmx hh1/hl_parser.cmx hh1/equal.cmx hh1/bool.cmx \
@@ -29,6 +29,8 @@ hh_parse.ml: hh_parse.mly
 hh_lexer.ml: hh_lexer.mll hh_parse.ml
 	ocamllex $<
 
+toolbox.cmx: toolbox.ml
+	ocamlopt -c -I hh1 $<
 hh_parse.cmx: hh_parse.ml
 	ocamlopt -c $<
 hh_lexer.cmx: hh_lexer.ml
@@ -44,6 +46,8 @@ init.cmx: init.ml
 dependency.cmx: dependency.ml
 	ocamlopt -c -I hh1 $<
 thf1hh1.cmx: thf1hh1.ml
+	ocamlopt -c -I hh1 $<
+features.cmx: features.ml
 	ocamlopt -c -I hh1 $<
 prepredict.cmx: prepredict.ml
 	ocamlopt -c -I hh1 $<

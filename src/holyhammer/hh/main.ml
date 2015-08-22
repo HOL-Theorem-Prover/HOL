@@ -36,7 +36,7 @@ let parse_commandline () =
       "Warning: all theories that do not belong to this order are ignored.")] 
   in
   let usage_msg = "HOL(y) Hammer. Usage: " ^ 
-    Sys.argv.(0) ^ " <knn|nbayes|mepo> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
+    Sys.argv.(0) ^ " <knn|nbayes|mepo|geo|kepo> <n_preds> <theory_dir> <cj_file> <cj_name> <out_dir>"
   in
   Arg.parse speclist parse_anon usage_msg;
   (* Processing the parsed objects. *)
@@ -45,6 +45,7 @@ let parse_commandline () =
     | "nbayes" -> NaiveBayes
     | "mepo" -> Mepo
     | "geo" -> Geo
+    | "kepo" -> Kepo
     | _ -> failwith "Unknown predictor." in
   let n_predictions = try int_of_string (anon_tab.(1))
     with _ -> failwith "Number of predictions have to be an integer." in

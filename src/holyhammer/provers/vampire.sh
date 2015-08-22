@@ -1,5 +1,5 @@
 # I/O files
-DIR="vampire_files"
+DIR="vampire"
 IN="$DIR/atp_in"
 OUT="$DIR/vampire_out"
 OUT1="$DIR/vampire_out1"
@@ -8,8 +8,7 @@ STATUS="$DIR/vampire_status"
 ERROR="$DIR/vampire_error"
 
 # Running Vampire (2.6)
-cd vampire
-timeout $1 ./vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN \
+timeout $1 vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN \
  | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR

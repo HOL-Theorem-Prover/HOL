@@ -10,10 +10,12 @@
 
 let lib_dir = "../palibs"
 let dir_of_itp p = match p with
-    "h4"     -> lib_dir ^ "/h4-kananaskis9/standard_library"
-  | "hl"     -> lib_dir ^ "/hl-225/complex_multivariate"
-  | "h4core" -> lib_dir ^ "/h4-kananaskis9/core_library"
+    "h4"     -> lib_dir ^ "/h4-kananaskis10/standard_library"
+  | "hl"     -> lib_dir ^ "/hl-225/standard_library"
+  | "h4core" -> lib_dir ^ "/h4-kananaskis10/core_library"
   | "hlcore" -> lib_dir ^ "/hl-225/core_library"
+  | "h4exp" -> lib_dir ^ "/h4-kananaskis10/exp_library"
+  | "hlexp" -> lib_dir ^ "/hl-225/exp_library"
   | _        -> failwith "dir_of_prover"
 let thydep_of_itp p = dir_of_itp p ^ "/info/theory_dep"
 let thyorder_of_itp p = dir_of_itp p ^ "/info/theory_order"
@@ -64,16 +66,17 @@ let find_ext dir ext =
 
 let find_p dir            = find_ext dir ".p"
 let find_hd dir           = find_ext dir ".hd"
+let find_fea dir          = find_ext dir ".fea"
 
-(* To be moved to mizar and coq export 
+(* TODO: To be moved to mizar and coq export *)
 let find_xml2 dir         = find_ext dir ".xml2"
 let find_con_xml dir      = find_ext dir ".con.xml"
 let find_ind_xml dir      = find_ext dir ".ind.xml"
 let find_con_body_xml dir = find_ext dir ".con.body.xml"
-*)
+
 
 (*-------------------------------------------------------------------------- 
-  Parsing statements (.p) and dependencies (.hd).
+  Parsing statements (.p) and dependencies (.hd) and features (.fea)
   -------------------------------------------------------------------------- *)
 
 (* Parsing statements *)
@@ -127,9 +130,24 @@ let read_deps dir filel =
   List.iter (fun f -> file_iter (dir ^ "/" ^ f) (add f)) filel;
   hash
 
+(* Parsing features *)
+let read_features dir filel =
+  let hash = Hashtbl.create 20000 in
+  let add fname _ line = 
+    match Str.split rxpspace line with
+      []     -> failwith ("empty .fea file line: " ^ fname)
+    | h :: t -> Hashtbl.add hash h t
+  in
+  List.iter (fun f -> file_iter (dir ^ "/" ^ f) (add f)) filel;
+  (hash, List.map Filename.chop_extension filel)
+
 (*-------------------------------------------------------------------------- 
   Main reading functions
   -------------------------------------------------------------------------- *)
+
+(* Features *) 
+let read_features_dir dir =
+  let fea = find_fea dir in read_features dir fea
 
 (* Statements + Dependencies *) 
 let read_dir dir =

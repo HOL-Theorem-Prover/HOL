@@ -45,13 +45,16 @@ let print_info (dir,tyl,cl,thml,thmlo) =
   print_string ("- theorems: " ^ string_of_int (List.length thml) ^ "\n");
   print_string ("- theories: "^ string_of_int (List.length thmlo) ^ "\n\n")
 
-(* HOL-Light and HOL4 *)
+let really_big_theorems = ref [] (* only used for information *)
+
 let init_dir dir =
   let (deph,tmll) = Read.read_dir dir in
   let tmll = drop_tt tmll in (* remove the TPTP "tt" prefix *)
   (* let (deph,tmll) = split_lib (deph,tmll) in *) (* splits under quantifiers removed *)
   let (tyl,cl,thml) = get_tyl_cl_thml (flatten_tmll tmll) in
-  let big_thml = List.map fst (List.filter (fun (_,t) -> size_of t >= 2000) thml) in
+  really_big_theorems := 
+  List.map fst (List.filter (fun (_,t) -> size_of t >= 2000) thml);
+  let big_thml = !really_big_theorems in
   let tmll = foreach_filter (fun (s,r,t) -> is_thm (s,r,t) && not (List.mem s big_thml)) tmll in
   let short_thml = List.filter (fun (s,_) -> not (List.mem s big_thml)) thml in
   let deph = remove_deph big_thml deph in
@@ -60,7 +63,14 @@ let init_dir dir =
   print_info (dir,tyl,cl,thml,thmlo);
   ((tyl,cl,short_thml),(deph,roleh,thmlo))
 
-(* Experiments : matching *)
+let init_dir_features dir =
+  let ((tyl,cl,thml),(deph,roleh,thmlo)) = init_dir dir in
+  let (feah,fea_thyl) = Read.read_features_dir dir in
+  ((tyl,cl,thml),(deph,roleh,thmlo),(feah,fea_thyl))
+
+(* Gives an additional prefix to all the objects in the directory 
+   (useful for matching different libraries)
+*)
 let init_dir_prefix prefix dir =
   let (deph,tmll) = Read.read_dir dir in
   let tmll = drop_tt tmll in (* remove the TPTP "tt" prefix *)
@@ -77,29 +87,3 @@ let init_dir_prefix prefix dir =
   print_info (dir,tyl,cl,thml,thmlo);
   ((tyl,cl,thml),(deph,roleh,thmlo))
 
-(* TO BE UPDATED:
-(* Mizar *)
-let init_dir_miz dir =
-  let tmll = Read.read_dir_nodep dir in
-  let tmll = miz_split_fc (drop_tt tmll) in
-  let thml = List.map (fun (x,y,z) -> (x,z)) (flatten_tmll tmll) in
-  let thmlo = foreach_map (fun (x,y,z) -> x) tmll in 
-    print_info_miz (dir,thml,thmlo);
-    (thml,thmlo)
-
-(*
-   let h = Read.read_thy_graph (dir ^ "/thygraph") in
-  let 
-*)
-
-(* Matita and Coq *)
-let init_dir_mat dir =
-  let thylo = Read.read_thy_lo (dir ^ "/thyorder") in
-  let tmll = Read.read_dir_nodep dir in
-  let tmll = List.map (fun x -> (x, List.assoc x tmll)) thylo in
-  let tmll = miz_split_fc (drop_tt tmll) in
-  let (tyl,cl,thml) = get_tyl_cl_thml (flatten_tmll tmll) in
-  let thmlo = foreach_map (fun (x,y,z) -> x) tmll in 
-    print_info (dir,tyl,cl,thml,thmlo);
-    (tyl,cl,thml,thmlo)
-*)

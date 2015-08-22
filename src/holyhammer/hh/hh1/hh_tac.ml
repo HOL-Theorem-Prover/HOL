@@ -127,10 +127,13 @@ let get_minarg tm sofar =
 (*let happ_def = new_definition (parse_term "(happ : ((A -> B) -> A -> B)) = I");;*)
 let happ_conv_th = Sequent ([],parse_term "!(f:A->B) x. f x = happ f x");;
 
+(* For ATP learning: Thibault and Josef *)
 let happ_conv = rEWR_CONV happ_conv_th;;
 let rec happ_n_conv n tm =
   if n = 1 then happ_conv tm
   else (tHENC (rATOR_CONV (happ_n_conv (n - 1))) happ_conv) tm;;
+
+
 let fol_conv_assoc op (cmin,vmin) =
   if is_const op then assoc (fst (dest_const op)) cmin else
   if is_var op then try assoc (fst (dest_var op)) vmin with _ -> 0 else failwith "fol_conv_assoc";;
@@ -185,8 +188,8 @@ let escape_to_hex s =
     for i = 0 to String.length s - 1 do begin
       match String.unsafe_get s i with
       ('a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'|'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'
-    |'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'
-    |'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9' as c) -> String.unsafe_set s' !n c
+      |'A'|'B'|'C'|'D'|'E'|'F'|'G'|'H'|'I'|'J'|'K'|'L'|'M'|'N'|'O'|'P'|'Q'|'R'|'S'|'T'|'U'|'V'|'W'|'X'|'Y'|'Z'
+      |'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9' as c) -> String.unsafe_set s' !n c
       | '_' -> String.unsafe_set s' !n '_'; incr n; String.unsafe_set s' !n '_'
       | c -> let c = Char.code c in
              String.unsafe_set s' !n '_'; incr n;
@@ -207,17 +210,17 @@ let is_letter c =
   (is_lowercase c) or (is_uppercase c)
 
 (* We don't have complete control over the names of 
-   the type variables so we escape them completely *)
+   the type variables so we escape them completely 
+   (for example the sytem may name them "'a" which clash with our
+    escaping method'word')
+*)
 let escape_var s = 
-  let s1 = escape_to_hex s in
-  if is_letter s1.[0]
-  then String.capitalize s1
-  else "V" ^ s1
+  let s1 = escape_to_hex s in "V" ^ s1
 
-let escape_obj s = 
+let escape_const s = let s1 = escape_to_hex s in "c" ^ s1
+
+let escape_thm s = 
   if (s.[0] = '\'') or (is_lowercase s.[0]) then s else add_prime s
-
-
  
 (* Less explosive version of pOLY_ASSUME_TAC *)
 let rec fold_cs fn tm sofar =
@@ -293,10 +296,10 @@ let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let ths3 = List.map map_fun ths2 in
   let ths4 = List.concat ths3 in
 (*  let names, ths' = List.split ths4 in*)
-  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_obj n) th) ths4 gl;;
+  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_thm n) th) ths4 gl;;
 
 let lABEL_ASSUME_TAC names ths =
-  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_obj n) th) (zip names ths);;
+  mAP_EVERY (fun (n, th) -> lABEL_TAC (escape_thm n) th) (zip names ths);;
 
 (* lAMBDA_ELIM_CONV2 does less explosive lambda-lifting than lAMBDA_ELIM_CONV
    for universally quantified theorems; all the quantified variables do not

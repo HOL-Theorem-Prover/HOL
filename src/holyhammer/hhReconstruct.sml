@@ -1,8 +1,7 @@
 (* ===================================================================== *)
 (* FILE          : hhReconstruct.sml                                     *)
 (* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
-(*                 and minimize them. Can only be used after a call of   *)
-(*                 write_hh_thyl that initializes the dictionary         *)
+(*                 and minimize them.                                    *)
 (*                 of theorems' names.                                   *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
@@ -14,6 +13,41 @@ struct
 open HolKernel boolLib Dep Tag hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
+
+(*---------------------------------------------------------------------------
+   Unescaping and extracting theorem and theory name.
+ ----------------------------------------------------------------------------*)
+
+(* Assumes the term was single quoted before *)
+fun unsquotify s = 
+  if String.size s >= 2
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "unsquotify" ""
+
+fun map_half b f l = case l of
+    [] => []
+  | a :: m => if b then f a :: map_half false f m
+              else a :: map_half true f m
+ 
+fun hh_unescape s =
+  let 
+    val sl = String.fields (fn c => c = #"#") s
+    fun f s = case s of
+       "hash"   => "#"
+      |"slash"  => "/"
+      |"quote"  => "\""
+      |"squote" => "'"
+      | _       => raise ERR "hh_unescape" ""
+  in  
+    String.concat (map_half false f sl)
+  end
+
+fun split_name s = case String.fields (fn c => c = #"/") s of
+    [_,thy,name] => (thy,name) 
+  | _       => raise ERR "split_name" ""
+
+fun fetchl l = 
+  List.map (fn (thy,name) => ((thy,name),DB.fetch thy name)) l
 
 (*---------------------------------------------------------------------------
    Reading the ATP file.
@@ -58,21 +92,37 @@ fun time_metis thml conjecture time =
    Minimization. Can be turned off by minimize_flag if it takes too much time.
  ----------------------------------------------------------------------------*)
 
+(* internal use *)
+fun third (a,b,c) = c
+
 val minimize_flag = ref true
 
 fun minimize_loop l1 l2 cj =
   if null l2 then l1 else
-    if can (time_metis (map snd (l1 @ tl l2)) cj) 2.0
+    if can (time_metis (map third (l1 @ tl l2)) cj) 2.0
     then minimize_loop l1 (tl l2) cj
     else minimize_loop (hd l2 :: l1) (tl l2) cj
 
 fun minimize l cj =
   (
   print "Minimization ...\n";
-  if can (time_metis (map snd l) cj) 2.0
+  if can (time_metis (map third l) cj) 2.0
   then minimize_loop [] l cj
   else l
   )
+
+(* external use *)
+fun hh_minimize_loop l1 l2 cj =
+  if null l2 then l1 else
+    if can (time_metis (l1 @ tl l2) cj) 2.0
+    then hh_minimize_loop l1 (tl l2) cj
+    else hh_minimize_loop (hd l2 :: l1) (tl l2) cj
+
+fun hh_minimize l cj =
+  if can (time_metis l cj) 2.0
+  then hh_minimize_loop [] l cj
+  else l
+
 
 (*---------------------------------------------------------------------------
    Reconstruction and printing (depends on DB.fetch)
@@ -107,10 +157,8 @@ fun pp_lemmas ppstrm lemmas =
          end_block();
          add_string "]";
        end_block())
-    fun pp_lemma (name,thm) =
-      let val (thy,_) = depid_of (dep_of (tag thm)) in
-        add_string (String.concatWith " " ["fetch", quote thy, quote name])
-      end
+    fun pp_lemma (_,(thy,name),thm) =
+      add_string (String.concatWith " " ["fetch", quote thy, quote name])
   in
     begin_block INCONSISTENT 0;
     add_string "val lemmas = ";
@@ -124,15 +172,17 @@ fun reprove thml axl cj =
   let
     (* reserved theorems are not required by Metis *)
     val axl1 = filter (fn x => not (mem x reserved_names_escaped)) axl
-    val didl = map (fn x => Redblackmap.find (!readhh_names,x)) axl1
-    val l1   = map (fn x => ("",x)) thml @ map thm_of_depid didl
+    val sl   = map (hh_unescape o unsquotify) axl1
+    val axl2 = fetchl (map split_name sl)
+    val l1   = map (fn thm => (false,("",""),thm)) thml @ 
+               map (fn (name,thm) => (true,name,thm)) axl2
     val l2   = if !minimize_flag then minimize l1 cj else l1
-    (* hacky way of removing user given theorems *)
-    val l3   = filter (fn (name,_) => name <> "") l2
+    (* TO DO: external reconstruction *)
+    val l3   = filter (fn (b,_,_) => b) l2
   in
     pp_lemmas ppstrm_stdout l3;
     print "\n";
-    ignore (time_metis (map snd l2) cj 30.0)
+    ignore (time_metis (map third l2) cj 30.0)
   end
 
 fun reconstruct thml (atp_status,atp_out) conjecture =
@@ -162,7 +212,7 @@ fun reconstructl thml atpfilel conjecture =
       in
         raise Status s
       end
-   (* else take the one that use the less lemmas. *)
+   (* else take the one that uses the less lemmas. *)
    else
       let
         fun compare_list l1 l2 = length l1 > length l2

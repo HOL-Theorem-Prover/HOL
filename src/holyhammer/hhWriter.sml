@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : hhWriter.sml                                         *)
+(* FILE          : hhWriter.sml                                          *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
 (*                 dependencies between conjuncts of theorems for        *)
 (*                 holyHammer.                                           *)
@@ -31,8 +31,7 @@ val const_names = ref (dempty KernelSig.name_compare)
 val var_names = ref (dempty Term.compare)
 val tyvar_names = ref (dempty Type.compare)
 
-val writehh_names = ref (dempty depid_compare) (* symmetric dictionaries *)
-val readhh_names = ref (dempty String.compare)
+val writehh_names = ref (dempty depid_compare)
 
 (* Keeping track of which names are already used to prevent clashes. *)
 val used_names = ref (dempty String.compare)
@@ -53,13 +52,11 @@ fun reset_dicts () =
   tyvar_names := dempty Type.compare;
   used_names := dempty String.compare; (* contains non escaped names *)
   app reserve reserved_names;
-  writehh_names := dempty depid_compare;
-  readhh_names := dempty String.compare
+  writehh_names := dempty depid_compare
 )
 
 (*---------------------------------------------------------------------------
-   Absolute limit on the size of theorems (to be included in the incremental
-   export)
+   Absolute limit on the size of theorems (to be removed)
  ----------------------------------------------------------------------------*)
 val size_limit = 200
 fun size_of_term t =
@@ -90,8 +87,8 @@ fun is_alphanumeric s =
    all (fn x => Char.isAlphaNum x orelse x = #"_") l
  end
 
-(* now additonnally escape quotes *)
-fun escape_slash s =
+(* now additonnally escape quotes for the feature generation algorithm *)
+fun hh_escape s =
   let
     val l1 = String.explode s
     fun image x =
@@ -99,32 +96,26 @@ fun escape_slash s =
         #"#"  => String.explode "#hash#"
       | #"/"  => String.explode "#slash#"
       | #"\"" => String.explode "#quote#"
+      | #"'" => String.explode "#squote#"
       | _     => [x]
     val l2 = map image l1
   in
     String.implode (List.concat l2)
   end
 
-fun escape_prime s =
-  let
-    val l1 = String.explode s
-    val l2 = map (fn x => if x = #"'" then [#"\\",#"'"] else [x]) l1
-  in
-    String.implode (List.concat l2)
-  end
+fun squotify name = "'" ^ name ^ "'"
+fun full_escape name = "'" ^ hh_escape name ^ "'"
 
-fun tptp_escape name =
-  if is_alphanumeric name
-  then name
-  else "'" ^ escape_prime name ^ "'"
 
+(* TO BE MOVED *)
 (* use a similar escaping than the holyhammer fof writer *)
-fun fof_escape name =
+fun reserved_escape name =
   if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
   then name
-  else "'" ^ escape_prime name ^ "'"
+  else "'" ^ name ^ "'"
 
-val reserved_names_escaped = map fof_escape reserved_names
+val reserved_names_escaped = map reserved_escape reserved_names
+
 
 (* nice printing *)
 fun nice_dest_vartype v =
@@ -144,12 +135,12 @@ fun variant_name_dict s used =
       let val si = s ^ Int.toString i in
         if dmem si used
         then new_name s (i + 1)
-        else (tptp_escape si, dadd s (i + 1) (dadd si 0 used))
+        else (full_escape si, dadd s (i + 1) (dadd si 0 used))
       end
   in
     new_name s i
   end
-  handle NotFound => (tptp_escape s, dadd s 0 used)
+  handle NotFound => (full_escape s, dadd s 0 used)
 
 fun store_name name =
   if dmem name (!used_names)
@@ -164,8 +155,8 @@ fun store_name name =
 (* types *)
 fun declare_perm_type dict {Thy,Name} =
   let
-    val name1 = "type/" ^ Thy ^ "/" ^ (escape_slash Name)
-    val name2 = tptp_escape name1
+    val name1 = "type/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name2 = squotify name1
   in
     store_name name1;
     dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
@@ -175,8 +166,8 @@ fun declare_perm_type dict {Thy,Name} =
 (* constants *)
 fun declare_perm_const dict {Thy,Name} =
   let
-    val name1 = "const/" ^ Thy ^ "/" ^ (escape_slash Name)
-    val name2 = tptp_escape name1
+    val name1 = "const/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name2 = squotify name1
   in
     store_name name1;
     dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
@@ -186,12 +177,11 @@ fun declare_perm_const dict {Thy,Name} =
 (* theorems *)
 fun declare_perm_thm (thy,n) name  =
   let
-    val name1 = "thm/" ^ thy ^ "/" ^ (escape_slash name)
-    val name2 = tptp_escape name1
+    val name1 = "thm/" ^ thy ^ "/" ^ (hh_escape name)
+    val name2 = squotify name1
   in
     store_name name1;
     writehh_names := dadd (thy,n) name2 (!writehh_names);
-    readhh_names  := dadd name2 (thy,n) (!readhh_names);
     name2
   end
 
@@ -252,10 +242,8 @@ fun oty ty =
         else (os ("(" ^ s ^ " "); oiter " " oty Args; os ")")
     end end
 
-type ('a,'b)substp = {redex : 'a, residue : 'b}
 val less_ty = fn a => (fn b => Type.compare (a,b) = LESS)
-fun less_red (a:(hol_type,'a)substp) (b:(hol_type,'b)substp) =
-  less_ty (#redex a) (#redex b)
+fun less_red a b = less_ty (#redex a) (#redex b)
 
 fun id_subst a = {redex = a, residue = a}
 fun full_match_type t1 t2 =
@@ -480,7 +468,7 @@ fun write_hh_thyl folder thyl =
    app (write_hh_thy folder) (sort_thyl thyl))
 
 
-fun write_conjecture file conjecture =
+fun write_conjecture file conjecture = (* TO DO: put it in a subdirectory *)
   (* if is_oversized_term conjecture
     then raise ERR "write_conjecture" "too large conjecture"
   else *)
@@ -492,6 +480,42 @@ fun write_conjecture file conjecture =
     closeOut (!oc); oc := stdOut
     )
   else raise ERR "write_conjecture" "conjecture is not a boolean"
+
+(*---------------------------------------------------------------------------
+   Print only selected theorems.
+ ----------------------------------------------------------------------------*)
+
+fun write_hh_thy_const folder thy =
+  (
+  hh_thy_start folder thy;
+  let val l = dest_theory thy in
+    case l of THEORY(_,t) =>
+    (
+    app (hh_tydef thy) (#types t);
+    app (hh_constdef thy) (#consts t)
+    )
+  end;
+  hh_thy_end ()
+  )
+
+fun write_hh_thyl_const folder thyl =
+  (
+  reset_dicts();
+  app (write_hh_thy_const folder) (sort_thyl thyl)
+  )
+
+fun write_hh_thml_aux file thmnamel = (* TO DO: put it in a subdirectory *)
+  let val thml = map (fn x => (x,"ax")) thmnamel in
+    oc := openOut file;
+    app export_thm thml;
+    closeOut (!oc); oc := stdOut
+  end
+
+fun write_hh_thml folder file thyl namethml =
+  (
+  write_hh_thyl_const folder thyl;
+  write_hh_thml_aux file namethml
+  )
 
 
 end

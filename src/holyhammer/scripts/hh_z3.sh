@@ -1,4 +1,4 @@
-Z3_DIR="../provers/z3/z3_files"
+Z3_DIR="../provers/z3"
 
 clean(){
 if [ -d $1 ]; then rm -r $1; fi

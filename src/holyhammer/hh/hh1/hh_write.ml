@@ -78,13 +78,13 @@ let name_tscs_mono_fold ho (tys, cs, used) tm () =
       if is_type ty then
         let s, stys = dest_type ty in
         List.iter name_ty stys;
-        String.concat "" (escape_obj s :: (map (fun x -> Hashtbl.find tys x) stys))
+        String.concat "" (escape_const s :: (map (fun x -> Hashtbl.find tys x) stys))
       else print_vartype ty in
     let n = variant_name_hash n used in Hashtbl.replace tys ty n
   in
   List.iter name_ty ctys;
   if Hashtbl.mem cs tm or is_var tm then () else
-  let n = escape_obj (fst (dest_const tm)) in
+  let n = escape_const (fst (dest_const tm)) in
   let n = variant_name_hash n used in
   Hashtbl.replace cs tm n
 ;;
@@ -94,7 +94,7 @@ let name_tscs_poly_fold (tys, cs, used) tm () =
     if is_type ty then
       let s, stys = dest_type ty in
       (if Hashtbl.mem tys s then () else
-      Hashtbl.replace tys s (variant_name_hash (escape_obj s) used));
+      Hashtbl.replace tys s (variant_name_hash (escape_const s) used));
       List.iter name_ty stys;
     else
       let s = dest_vartype ty in
@@ -105,12 +105,12 @@ let name_tscs_poly_fold (tys, cs, used) tm () =
   if is_var tm then
     let s = fst (dest_var tm) in
     if Hashtbl.mem cs ("`" ^ s) then () else 
-    let n = variant_name_hash (escape_obj s) used in
+    let n = variant_name_hash (escape_const s) used in
     Hashtbl.replace cs ("`" ^ s) n
   else
   let s, _ = dest_const tm in
   if Hashtbl.mem cs s then () else
-  let n = variant_name_hash (escape_obj s) used in
+  let n = variant_name_hash (escape_const s) used in
   Hashtbl.replace cs s n
 ;;
 
@@ -539,7 +539,7 @@ let tff_gl_hash oc names name asms gl (ts,cs,used) =
   List.iter output_const (fst (get_mindata (asms, gl)));
   os oc "%   AXIOMS\n";
   List.iter2 (fun n t -> ohdr n "axiom"; tff_pred oc cs ts used t; otl ()) names asms;
-  ohdr (escape_obj name) "conjecture"; tff_pred oc cs ts used gl; otl ();
+  ohdr (escape_thm name) "conjecture"; tff_pred oc cs ts used gl; otl ();
 ;;
 
 let tff_gl oc names name asms gl =
@@ -615,7 +615,7 @@ let fof_gl_hash oc names name asms gl (ts,cs,used) =
   let ohdr s1 s2 = os oc "fof("; os oc s1; os oc ", "; os oc s2; os oc ", " in
   let otl () = os oc ").\n" in
   List.iter2 (fun n t -> ohdr n "axiom"; fof_pred oc cs ts used t; otl ()) names asms;
-  ohdr (escape_obj name) "conjecture"; fof_pred oc cs ts used gl; otl ();
+  ohdr (escape_thm name) "conjecture"; fof_pred oc cs ts used gl; otl ();
 ;;
 
 let fof_gl_mk_hash terms =
