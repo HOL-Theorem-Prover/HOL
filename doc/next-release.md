@@ -66,6 +66,10 @@ New theories:
 New tools:
 ----------
 
+- Holyhammer: A method for automatically finding relevant theorems for Metis. Given a term, the procedure selects a large number of lemmas through different predictors such as KNN or Mepo. These lemmas are given to the external provers E-prover, Vampire or Z3. The necessary lemmas  in the provers' proofs are then returned to the user.
+  Modifications to the kernels to track dependencies between theorems allow predictors to learn from the induced relation improving future predictions.
+  The build of the source directory `src/holyhammer` needs ocaml (> 3.12.1) installed as well as a recent version of g++ that supports the c++11 standard. The three ATPs have to be installed independently. At least one of them should be present, preferably E-prover.
+
 New examples:
 ---------
 
