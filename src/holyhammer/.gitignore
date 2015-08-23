@@ -1,0 +1,7 @@
+theories/*
+provers/eprover/eprover
+provers/eprover/eprover_files/*
+provers/z3/z3
+provers/z3/z3_files/*
+provers/vampire/vampire
+provers/vampire/vampire_files/*
