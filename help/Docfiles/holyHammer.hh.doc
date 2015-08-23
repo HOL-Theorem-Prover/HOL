@@ -40,7 +40,8 @@ the proof from the selected lemmas in less than 30 seconds.
 }
 
 \COMMENTS
-See more examples in src/holyHammer/examples.
+See src/holyhammer/README for more information on how to install the provers.
+See more examples in src/holyhammer/examples.
 
 \SEEALSO
 DB.match, DB.matchp, DB.matcher.
