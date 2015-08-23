@@ -8,8 +8,8 @@ STATUS="$DIR/vampire_status"
 ERROR="$DIR/vampire_error"
 
 # Running Vampire (2.6)
-vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN \
- | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
+vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN 2> $ERROR \
+ | grep "file[(]'\| SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS 2> $ERROR
