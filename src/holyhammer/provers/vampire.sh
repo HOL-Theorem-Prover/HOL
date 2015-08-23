@@ -8,7 +8,7 @@ STATUS="$DIR/vampire_status"
 ERROR="$DIR/vampire_error"
 
 # Running Vampire (2.6)
-timeout $1 vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN \
+vampire --mode casc -t $1 --proof tptp --output_axiom_names on $IN \
  | grep "file[(]'\| SZS" > $OUT1 2> $ERROR
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR
