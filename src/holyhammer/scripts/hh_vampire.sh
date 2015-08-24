@@ -1,4 +1,4 @@
-VAMPIRE_DIR="../provers/vampire"
+VAMPIRE_DIR="../provers/vampire_files"
 
 clean(){
 if [ -d $1 ]; then rm -r $1; fi

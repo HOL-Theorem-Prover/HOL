@@ -1,5 +1,5 @@
 # I/O files
-DIR="eprover"
+DIR="eprover_files"
 IN="$DIR/atp_in"
 OUT1="$DIR/eprover_out1"
 OUT2="$DIR/eprover_out2"
@@ -8,7 +8,7 @@ STATUS="$DIR/eprover_status"
 ERROR="$DIR/eprover_error"
 
 # Running eprover (1.8 or 1.9)
-eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
+./eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
 -R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1
 # Extracting status
 grep "SZS status" $OUT1 > $STATUS 2> $ERROR

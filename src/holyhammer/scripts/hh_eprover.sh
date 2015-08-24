@@ -1,4 +1,4 @@
-EPROVER_DIR="../provers/eprover"
+EPROVER_DIR="../provers/eprover_files"
 
 clean(){
 if [ -d $1 ]; then rm -r $1; fi

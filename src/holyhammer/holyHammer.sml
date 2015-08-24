@@ -97,7 +97,7 @@ val hh_dir = HOLDIR ^ "/src/holyhammer"
 val scripts_dir = hh_dir ^ "/scripts"
 val thy_dir = hh_dir ^ "/theories"
 
-fun dir_of_prover atp = hh_dir ^ "/provers/" ^ name_of_atp atp
+fun dir_of_prover atp = hh_dir ^ "/provers/" ^ name_of_atp atp ^ "_files"
 
 fun out_of_prover atp = 
   dir_of_prover atp ^ "/" ^ name_of_atp atp ^ "_out"

@@ -18,11 +18,12 @@ Install holyhammer: (done during the build)
   run Holmake in src/holyhammer/predict
   run Holmake in src/holyhammer/predict/mepo
 
-Supported provers: Eprover, Z3 and (Vampire) 
+Supported provers: Eprover, Z3 (4.0) and (Vampire) 
   
-  They need to be installed manually, a binary of each prover with the appropriate
-version should be copied to src/holyhammer/provers. At least 
-one of them should be installed for holyHammer to work.
+  They need to be installed manually. Binaries with the appropriate version
+  have to be fetched from the location cited below. They should be copied 
+  or linked in the directory src/provers. Their names should be respectively
+  eprover, z3 and vampire.
 
   Eprover: 
     Tested with 1.8 and 1.9. Can be fetched from 
