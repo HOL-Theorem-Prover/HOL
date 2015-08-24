@@ -7,7 +7,7 @@ OUT="$DIR/eprover_out"
 STATUS="$DIR/eprover_status"
 ERROR="$DIR/eprover_error"
 
-# Running eprover (1.8)
+# Running eprover (1.8 or 1.9)
 eprover -s --cpu-limit=$1 --auto-schedule --tptp3-in \
 -R --print-statistics -p --tstp-format $IN 2> $ERROR | grep "file[(]'\|# SZS" > $OUT1
 # Extracting status

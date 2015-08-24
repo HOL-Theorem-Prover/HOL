@@ -18,6 +18,14 @@ val ERR = mk_HOL_ERR "hhReconstruct"
    Unescaping and extracting theorem and theory name.
  ----------------------------------------------------------------------------*)
 
+fun remove_white_spaces s =
+  let
+    val cl = String.explode s
+    val cl' = filter (not o Char.isSpace) cl
+  in
+    String.implode cl'
+  end
+
 (* Assumes the term was single quoted before *)
 fun unsquotify s = 
   if String.size s >= 2
@@ -68,7 +76,8 @@ fun readl path =
     (TextIO.closeIn file; l3)
   end
 
-fun read_status path = hd (readl path) handle _ => "Unknown"
+fun read_status path = 
+  remove_white_spaces (hd (readl path)) handle _ => "Unknown"
 
 (*---------------------------------------------------------------------------
    Timed Metis

@@ -20,10 +20,9 @@ Install holyhammer: (done during the build)
 
 Supported provers: Eprover, Z3 and (Vampire) 
   
-  They need to be installed manually so that they be called from the command 
-line using the respective commands eprover, vampire and z3. 
-  At least one of these provers
-should be installed for holyHammer to work.
+  They need to be installed manually, a binary of each prover with the appropriate
+version should be copied to src/holyhammer/provers. At least 
+one of them should be installed for holyHammer to work.
 
   Eprover: 
     Tested with 1.8 and 1.9. Can be fetched from 
@@ -33,7 +32,7 @@ should be installed for holyHammer to work.
     Waiting for 3.0 to be released at http://www.vprover.org/download.cgi
     before adapting the parsing.
   Z3: 
-    Tested with 4.0. The newest version of z3 does not support 
+    Tested with 4.0. Higher versions of z3 does not support 
     tptp input. Can be fetch from http://isabelle.in.tum.de/components/.
   CVC4: 
     Waiting for a good minimization algorithm to be implemented
