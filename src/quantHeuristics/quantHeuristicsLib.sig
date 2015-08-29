@@ -69,6 +69,10 @@ sig
   val stateful_qp___add_combine_arguments :
      quantHeuristicsLibBase.quant_param list -> unit;
 
+  (* Context *)
+  val direct_context_qp  : quant_param; (* use the context, but don't recurse *)
+  val context_qp         : quant_param; (* use the context *)
+
   (*pair type*)
   val split_pair___PABS___pred    : Abbrev.term -> Abbrev.term -> Abbrev.term option
   val split_pair___FST_SND___pred : bool -> Abbrev.term -> Abbrev.term -> Abbrev.term option
