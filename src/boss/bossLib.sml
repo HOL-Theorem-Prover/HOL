@@ -15,7 +15,7 @@ structure bossLib :> bossLib =
 struct
 
 open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
-     boolSimps
+     boolSimps quantHeuristicsLib
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
@@ -77,6 +77,10 @@ val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
 val EVAL_TAC       = computeLib.EVAL_TAC
 
+val QI_TAC = quantHeuristicsLib.QUANT_INSTANTIATE_TAC [std_qp]
+val ASM_QI_TAC = quantHeuristicsLib.ASM_QUANT_INSTANTIATE_TAC [std_qp]
+fun GEN_EXISTS_TAC v i = quantHeuristicsLib.QUANT_TAC [(v, i, [])]
+
 val op && = simpLib.&&;
 
 (*---------------------------------------------------------------------------
@@ -94,6 +98,8 @@ val op && = simpLib.&&;
 local open sumTheory pred_setTheory
       infix ++
 in
+
+val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
 val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
 val std_ss = numLib.std_ss
