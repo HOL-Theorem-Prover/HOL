@@ -67,7 +67,7 @@ in
 end;
 
 val GUESS_PAIR_THM = prove (
-``!P. GUESS_EXISTS_GAP (\x:'a. x) P /\ GUESS_FORALL_GAP (\x. x) P``,
+``!P i. (!v. ?x. v = i x) ==>
 simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
 
 
@@ -81,7 +81,15 @@ let
                             | some => valOf some;
    val fvL = rev (free_vars vars)
 
-   val gthmL = CONJUNCTS (ISPEC (mk_abs (v, t)) GUESS_PAIR_THM)
+   val ip = pairLib.mk_pabs (pairLib.list_mk_pair fvL, vars);
+   val ip' = rhs (concl ((pairTools.PABS_ELIM_CONV ip) handle UNCHANGED => REFL ip));
+
+   val gthm = ISPECL[mk_abs (v, t), ip'] GUESS_PAIR_THM
+   val pre = rand (rator (concl gthm))
+   val pre_thm = prove (pre,
+     simpLib.SIMP_TAC numLib.std_ss [
+       pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD])
+   val gthmL = BODY_CONJUNCTS (MP gthm pre_thm)
 in
   {rewrites     = [],
    general      = [],
