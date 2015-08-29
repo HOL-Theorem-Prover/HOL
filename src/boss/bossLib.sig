@@ -61,6 +61,7 @@ sig
   val old_arith_ss    : simpset
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
+  val QI_ss           : ssfrag
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
   val type_rws        : hol_type -> thm list
@@ -90,6 +91,10 @@ sig
 
   val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
   val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+
+  val QI_TAC     : tactic
+  val ASM_QI_TAC : tactic
+  val GEN_EXISTS_TAC : string -> Parse.term Lib.frag list -> tactic
 
   (* Call-by-value evaluation *)
   val EVAL           : term -> thm
