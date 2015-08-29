@@ -104,7 +104,9 @@ sig
   val list_ty_filter       : term -> term -> bool
 
   (* combination of all except the stateful ones *)
-  val std_qp  : quantHeuristicsLibBase.quant_param;
+  val std_qp             : quantHeuristicsLibBase.quant_param;
+  val no_ctxt_std_qp     : quantHeuristicsLibBase.quant_param (* ignore context *);
+  val direct_ctxt_std_qp : quantHeuristicsLibBase.quant_param (* don't use context for weaken / strengthen *);
 
   (* A heuristic that considers just the conclusion of implications. This may lead to wrong guesses, but
      if used carefully, is a handy heuristic. *)

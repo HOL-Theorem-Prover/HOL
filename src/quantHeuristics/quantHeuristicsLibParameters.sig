@@ -44,7 +44,9 @@ sig
 
 
   (* combination of all except the stateful ones *)
-  val std_qp  : quantHeuristicsLibBase.quant_param;
+  val no_ctxt_std_qp     : quantHeuristicsLibBase.quant_param;
+  val direct_ctxt_std_qp : quantHeuristicsLibBase.quant_param;
+  val std_qp             : quantHeuristicsLibBase.quant_param;
 
   (* A heuristic that considers just the conclusion of implications. This may lead to wrong guesses, but
      if used carefully, is a handy heuristic. *)

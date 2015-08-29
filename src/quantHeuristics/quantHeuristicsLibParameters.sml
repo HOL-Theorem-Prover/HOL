@@ -68,6 +68,7 @@ end;
 
 val GUESS_PAIR_THM = prove (
 ``!P i. (!v. ?x. v = i x) ==>
+  (GUESS_EXISTS_GAP i P /\ GUESS_FORALL_GAP i P)``,
 simpLib.SIMP_TAC numLib.std_ss [GUESS_REWRITES])
 
 
@@ -223,6 +224,7 @@ val sum_qp = combine_qps [
 ]
 
 val sum_ty_filter = type_match_filter [``:('a + 'b)``]
+
 
 (*******************************************************************
  * Nums
@@ -403,7 +405,12 @@ val conj_lift_qp = dest_lift_qp (fn t => (let val (t1,t2) = dest_conj t in [t1, 
  * Combinations
  *******************************************************************)
 
-val std_qp = combine_qps [num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
+val std_qps = [num_qp, option_qp, pair_default_qp, list_qp, sum_qp, record_default_qp]
+
+val no_ctxt_std_qp     = combine_qps std_qps
+val direct_ctxt_std_qp = combine_qps (std_qps @ [direct_context_qp])
+val std_qp             = combine_qps (std_qps @ [context_qp])
+
 
 
 end
