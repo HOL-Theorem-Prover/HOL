@@ -1,7 +1,6 @@
 ---
 title: HOL Developers’ Manual
 author: HOL4 Developers
-date:
 numbersections: yes
 ---
 
@@ -61,7 +60,7 @@ We might attempt to create a shell-script containing the calls to `mosmlc`, but 
 
 # Build
 
-The standard options to build are described in its help documentation, which is accessible by invoking `build\ –help` (but not `build\ help` because this builds the HOL documentation).
+The standard options to build are described in its help documentation, which is accessible by invoking `build –help` (but not `build help` because this builds the HOL documentation).
 The file containing this information about options is located at `tools/buildhelp.txt`.
 
 The most frequently used options to build are those to do with “selftest” level, and the selection of kernel.
