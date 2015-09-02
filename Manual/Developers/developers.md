@@ -92,7 +92,60 @@ There are two standard ways to the install a test that can be run by `build`:
 
 # Sources and Their Organisation {#sources}
 
-# Appropriate Idioms
+HOL comes with two `tools` directories, `tools` and `tools-poly`, as well as a `developers` directory.
+The `tools-poly` directory is for sources that are specific to the Poly/ML implementation.
+The `tools` directory is for general sources, and for sources specific to the Moscow\ ML implementation.
+Apart from sources for tools that are genuine command-line executables, the `tools` directory also includes some configuration files and editor “modes”.
+
+## Tool Executables
+
+The tools distributed with HOL are described below.
+Unless otherwise noted, they are built by the configuration process.
+
+`build`
+:   Described [above](#build).
+    The top-level driver code is in files called `build.sml` in `tools` and `tools-poly`.
+    Shared code is in `tools/buildutils.sml`.
+
+`cmp`
+:   A simple-minded tool for comparing two files, returning (*via* exit code) 0 (success) if the two command-line arguments are byte-for-byte identical.
+    Useful in regression testing of other tools.
+    Built on demand *via* a Holmakefile.
+
+`Holmake`
+:   The user-facing tool for building HOL developments.
+    Use of this tool is described in the Description manual.
+    The `tools/Holmake` directory contains most of the sources, but the Poly/ML version has sources in `tools-poly/Holmake` as well.
+    Sharing between the two code-bases is entirely done at the leaf level; the top-level drivers are different, implemented in files called `Holmake.sml` in the respective directories.
+
+`mllex`
+:   The tool from SML/NJ.
+
+`mllyacc`
+:   The tool from SML/NJ.
+
+`quote-filter`
+:   The quotation filter that runs over sources before they are seen by SML implementations.
+    This is used interactively (*via* a Unix filter that preprocesses all user-input), and non-interactively (by being applied to source files).
+
+## Other Tools Directories
+
+`tools/build-logs` and `tools-poly/build-logs`
+:   As each build proceeds, log files recording execution times *per* theory are generated and stored in these directories.
+
+`tools-poly/poly`
+:   Implementations of `Binarymap`, `Binaryset`, `Listsort` and `Help` (from the Moscow\ ML library) so that these libraries can be used in Poly/ML.
+    Also a definition of `load` in `poly-init2.ML`, so that “object code” and its dependencies can be automatically loaded into running sessions.
+
+`tools/sequences`
+:   Build sequence files.
+    These are “modularised” so that, in principle, custom build sequences can be constructed more easily.
+
+`tools/vim`
+:   Implementation of the vim editor mode.
+
+
+<!-- # Appropriate Idioms  -->
 
 
 
