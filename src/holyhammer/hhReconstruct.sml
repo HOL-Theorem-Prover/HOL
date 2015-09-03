@@ -224,7 +224,7 @@ fun reconstructl thml atpfilel conjecture =
    (* else take the one that uses the less lemmas. *)
    else
       let
-        fun compare_list l1 l2 = length l1 > length l2
+        fun compare_list l1 l2 = length l1 < length l2
         val axl = hd (sort compare_list (map snd proofl))
       in
         reprove thml axl conjecture
