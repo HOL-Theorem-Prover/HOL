@@ -13,7 +13,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open hhWriter hhReconstruct
+open HolKernel boolLib hhWriter hhReconstruct
 
 val ERR = mk_HOL_ERR "holyHammer"
 
@@ -99,10 +99,10 @@ val thy_dir = hh_dir ^ "/theories"
 
 fun dir_of_prover atp = hh_dir ^ "/provers/" ^ name_of_atp atp ^ "_files"
 
-fun out_of_prover atp = 
+fun out_of_prover atp =
   dir_of_prover atp ^ "/" ^ name_of_atp atp ^ "_out"
 
-fun status_of_prover atp = 
+fun status_of_prover atp =
   dir_of_prover atp ^ "/" ^ name_of_atp atp ^ "_status"
 
 fun hh_of_prover atp = "hh_" ^ name_of_atp atp ^ ".sh"
@@ -135,7 +135,7 @@ fun export_namethml cj namethml =
     write_conjecture (thy_dir ^ "/conjecture") cj;
     (* write the dependencies between theories *)
     write_thydep (thy_dir ^ "/thydep") thyl
-  end  
+  end
 
 
 (* TO DO: Incremental export
@@ -189,22 +189,22 @@ fun hh_argl thml cj argl =
     reconstructl thml atpfilel cj
   end
 
-fun hh thml cj = 
-  hh_argl thml cj 
+fun hh thml cj =
+  hh_argl thml cj
     (mk_argl (!eprover_settings,!vampire_settings,!z3_settings))
 
 (* Try best strategies sequentially *)
 fun hh_try thml cj =
-  let 
+  let
     val strat1 = ((KNN,128,5),(KNN,96,5),(KNN,32,5))
     val strat2 = ((Mepo,128,5),(Mepo,96,5),(Mepo,32,5))
     val strat3 = ((Kepo,128,5),(Kepo,96,5),(Kepo,32,5))
   in
-    (hh_argl thml cj (mk_argl strat1) handle _ => 
-     hh_argl thml cj (mk_argl strat2)) handle _ => 
+    (hh_argl thml cj (mk_argl strat1) handle _ =>
+     hh_argl thml cj (mk_argl strat2)) handle _ =>
      hh_argl thml cj (mk_argl strat3)
   end
-  
+
 (* Let you chose the specific prover you want to use either
    ("eprover", "vampire" or "z3") *)
 fun hh_atp atp thml cj =

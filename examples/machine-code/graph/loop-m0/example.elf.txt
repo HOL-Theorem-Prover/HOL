@@ -1,0 +1,32 @@
+
+example.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <g>:
+   0:	230f      	movs	r3, #15
+   2:	4003      	ands	r3, r0
+   4:	00c0      	lsls	r0, r0, #3
+   6:	1818      	adds	r0, r3, r0
+   8:	4770      	bx	lr
+   a:	46c0      	nop			; (mov r8, r8)
+
+0000000c <f>:
+   c:	b538      	push	{r3, r4, r5, lr}
+   e:	2963      	cmp	r1, #99	; 0x63
+  10:	dc09      	bgt.n	26 <f+0x1a>
+  12:	008d      	lsls	r5, r1, #2
+  14:	1945      	adds	r5, r0, r5
+  16:	1c0c      	adds	r4, r1, #0
+  18:	1c20      	adds	r0, r4, #0
+  1a:	f7ff fffe 	bl	0 <g>
+  1e:	c501      	stmia	r5!, {r0}
+  20:	3401      	adds	r4, #1
+  22:	2c64      	cmp	r4, #100	; 0x64
+  24:	d1f8      	bne.n	18 <f+0xc>
+  26:	bd38      	pop	{r3, r4, r5, pc}
+
+00000028 <main>:
+  28:	2000      	movs	r0, #0
+  2a:	4770      	bx	lr

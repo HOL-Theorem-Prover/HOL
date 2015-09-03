@@ -857,8 +857,8 @@ the following high level entry points exists:
 
 All these functions get a list of \emph{quantifier heuristic parameters} as arguments. These
 parameters essentially configure, which heuristics are used during the guess-search. If
-an empty list is provided, the tools know about the standard Boolean combinators, equations and context.
-\texttt{std\_qp} adds support for common datatypes like pairs or lists.
+an empty list is provided, the tools know about the standard Boolean combinators and equations.
+\texttt{std\_qp} adds support for context and common datatypes like pairs or lists.
 Quantifier heuristic parameters are explained in more detail in
 Section~\ref{sec_qps}.
 
@@ -1027,7 +1027,7 @@ an highly configurable conversion and a corresponding consequence conversion.
   \item[\texttt{ctx\ :\ thm list}]  a list of theorems that come from the context (e.\,g.\ collected by the simplifier).
 
   \item[\texttt{base\_arg\ :\ quant\_param}]  a parameter that should always be used. This is by default
-   \texttt{basic\_qp}, which can handle the standard Boolean connectives, equations and context. In special circumstances,
+   \texttt{basic\_qp}, which can handle the standard Boolean connectives and equations. In special circumstances,
      it might be beneficial to use \texttt{empty\_qp}, though.
 
   \item[\texttt{args\ :\ quant\_param list}]  list of quantifier heuristic parameters to use.

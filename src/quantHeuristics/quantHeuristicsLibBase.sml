@@ -1221,7 +1221,7 @@ local
    val u_icL     = col (GUESS_RULES_EXISTS_UNIQUE, TRUTH, TRUTH);
 in
 
-fun QUANT_INSTANTIATE_HEURISTIC___QUANT sys (v:term) t =
+fun QUANT_INSTANTIATE_HEURISTIC___QUANT allow_new_fv sys (v:term) t =
 let
    val ((ic, ic_fv, ic_fv_1), (v2, b)) =
        (f_icL, dest_forall t) handle HOL_ERR _ =>
@@ -1235,6 +1235,7 @@ let
        val (_, i, fvL, gthm0, was_thm) = guess_extract_thm guess;
        val gthm = GEN_ASSUM v2 gthm0;
        val new_fv = free_in v2 i
+       val _ = if new_fv andalso not allow_new_fv then Feedback.fail() else ();
        val use_ic = if new_fv then (if null fvL then ic_fv_1 else ic_fv) else ic;
        val inf_thm = hd (inf use_ic) handle Empty => Feedback.fail();
        val xthm2 = HO_MATCH_MP inf_thm gthm
@@ -2006,7 +2007,7 @@ local
                 forall_gap   = []}:guess_collection
    in gc end;
 
-   fun try_single_thm sys vset v t v' t' thm =
+   fun try_single_thm try_imps sys vset v t v' t' thm =
    let
       val (vs, _) = strip_forall (concl thm);
       val vs' = map (fn v => genvar (type_of v)) vs
@@ -2020,12 +2021,16 @@ local
       val i = Unify.deref_tmenv s v';
       val P = mk_abs (v, t)
       val thm'' = INST s thm';
-      val gc1 = get_direct_matches_gc neg dneg i P thm'';
-      val gc2 = get_implication_gc sys v t neg dneg i P thm'';
-   in SOME (guess_collection_append gc1 gc2) end handle HOL_ERR _ => NONE;
+      val gc = get_direct_matches_gc neg dneg i P thm'';
+      val gc' = if try_imps then let
+         val gc'' = get_implication_gc sys v t neg dneg i P thm'';
+      in
+         guess_collection_append gc gc''
+      end else gc 
+   in SOME gc' end handle HOL_ERR _ => NONE;
 in
 
-fun QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION thms sys (v:term) t =
+fun QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION try_imps thms sys (v:term) t =
 let
    val v' = genvar (type_of v);
    val t' = subst [v |-> v'] t;
@@ -2033,7 +2038,7 @@ let
    val vset = HOLset.delete (FVL [t] empty_tmset, v) handle HOLset.NotFound =>
                 raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
-   val gc = guess_collection_flatten (map (try_single_thm sys vset v t v' t') thmL)
+   val gc = guess_collection_flatten (map (try_single_thm try_imps sys vset v t v' t') thmL)
 in
    gc
 end handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
@@ -2557,16 +2562,16 @@ local
      QUANT_INSTANTIATE_HEURISTIC___BOOL,
      QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple,
      QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex,
-     QUANT_INSTANTIATE_HEURISTIC___QUANT,
+     QUANT_INSTANTIATE_HEURISTIC___QUANT true,
      QUANT_INSTANTIATE_HEURISTIC___CONV (markerLib.DEST_LABEL_CONV),
      QUANT_INSTANTIATE_HEURISTIC___CONV (asm_marker_ELIM_CONV)
    ]
 in
 
   (* The most basic heuristics that should always be turned on *)
-  val basic_qp = combine_qps [
-        heuristics_qp BASIC_QUANT_INSTANTIATE_HEURISTICS,
-        context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]]
+  val basic_qp = heuristics_qp BASIC_QUANT_INSTANTIATE_HEURISTICS
+  val direct_context_qp = context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION false]
+  val context_qp = context_heuristics_qp[QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION true, QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN]
 end;
 
 fun qp_to_heuristic
@@ -2598,7 +2603,7 @@ fun qp_to_heuristic
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple,
                            QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_COMPLEX guesses_net_complex,
                            QUANT_INSTANTIATE_HEURISTIC___STRENGTHEN_WEAKEN (imp_thmL @ extra_imp_thms),
-                           QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION instantiation_thmL]
+                           QUANT_INSTANTIATE_HEURISTIC___GIVEN_INSTANTIATION true instantiation_thmL]
        val heuristicL_2 = map QUANT_INSTANTIATE_HEURISTIC___CONV ((map (fn thm => TOP_ONCE_REWRITE_CONV [thm]) rewrite_thmL)@convL)
        val heuristicL_final = flatten [heuristicL_1, heuristicL_2, hcL2, heuristicL]
     in
@@ -3168,7 +3173,6 @@ fun QUANT_TAC L (asm,t) =
          false (K (QUANT_INSTANTIATE_HEURISTIC___LIST ctxt false L)) [] [])
     (asm,t)
   end;
-
 
 fun INST_QUANT_CONV L t =
   let

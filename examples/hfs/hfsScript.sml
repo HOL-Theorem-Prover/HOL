@@ -1,4 +1,4 @@
-(* Define the type of hierarchically finite sets.
+(* Define the type of hereditarily finite sets.
 
    Single (recursive) constructor is
 
