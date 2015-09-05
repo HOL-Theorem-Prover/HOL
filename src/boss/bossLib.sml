@@ -15,7 +15,7 @@ structure bossLib :> bossLib =
 struct
 
 open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
-     boolSimps quantHeuristicsLib
+     boolSimps quantHeuristicsLib patternMatchesLib
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
@@ -102,9 +102,9 @@ in
 val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
 val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
-val std_ss = numLib.std_ss
-val arith_ss = numLib.arith_ss
-val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
+val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+val arith_ss = numLib.arith_ss ++ PMATCH_SIMP_ss
+val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss

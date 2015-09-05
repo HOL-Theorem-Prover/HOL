@@ -1490,7 +1490,7 @@ val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN [];
 fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
-val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
+val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
 
 
 (***********************************************)
