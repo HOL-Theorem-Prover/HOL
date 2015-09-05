@@ -19,7 +19,6 @@ src/HolSmt
 !!examples/computability/lambda
 !!examples/computability/register
 !!examples/balanced_bst
-!examples/pattern_matches
 src/Boolify/src
 src/float
 [poly]src/floating-point

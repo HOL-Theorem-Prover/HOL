@@ -3,17 +3,18 @@
 (* around with the pattern match lib  *)
 (**************************************)
 
-open bossLib
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib numLib metisLib TotalDefn Datatype
 open patternMatchesLib
 open patternMatchesTheory
 open patternMatchesSyntax
 open pred_setTheory
 open constrFamiliesLib
-open stringTheory
 open pred_setLib
 
 val _ = Globals.priming := SOME "_"
 
+val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (********************************)
 (* Parsing / Pretty Printing    *)
@@ -290,18 +291,6 @@ val t_comp = PmatchHeuristics.with_heuristic
    pmatch2case t
 
 val t2 = case2pmatch true t_comp
-
-open stringTheory
-val string_match_def = Define `string_match s x =
-   CASE (s, x) OF [
-       || x. ("SUC", x) ~> SUC x;
-       || x. ("DOUBLE", x) ~> (x * 2);
-       || (s, x). (s, x) ~> x
-     ]`
-
-val string_match_dectree_def = CONV_RULE
-  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV)
-  string_match_def
 
 
 (*********************************)
@@ -628,10 +617,10 @@ val thm = PMATCH_REMOVE_REDUNDANT_CONV t
 
 (* Let's consider something more fancy *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> "EVEN";
-    ||. 2 ~> "2";
-    || x. x when ODD x ~> "ODD";
-    ||. _ ~> "???"
+    || x. x when EVEN x ~> 0;
+    ||. 2 ~> 1;
+    || x. x when ODD x ~> 2;
+    ||. _ ~> 3
   ]``
 
 (* Here both the fast and full test catch
@@ -682,10 +671,10 @@ val thm = PMATCH_COMPLETE_CONV true t
 
 (* Let's consider something more fancy *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> "EVEN";
-    ||. 2 ~> "2";
-    || x. x when ODD x ~> "ODD";
-    ||. _ ~> "???"
+    || x. x when EVEN x ~> 1;
+    ||. 2 ~> 2;
+    || x. x when ODD x ~> 3;
+    ||. _ ~> 4
   ]``
 
 (* The last row saves us :-) *)
@@ -693,8 +682,8 @@ val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
 
 (* So without it, we need some manual effort *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> "EVEN";
-    || x. x when ODD x ~> "ODD"
+    || x. x when EVEN x ~> 1;
+    || x. x when ODD x ~> 2
   ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
@@ -703,7 +692,7 @@ val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
    guards. *)
 
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> "EVEN"
+    || x. x when EVEN x ~> 1
   ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t

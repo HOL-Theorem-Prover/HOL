@@ -1,5 +1,9 @@
 .PHONY: test
 
+ifdef POLY
+HOLHEAP = ../num/termination/numheap
+endif
+
 selftest.exe: selftest.uo patternMatchesSyntax.uo patternMatchesTheory.uo patternMatchesLib.uo constrFamiliesLib.uo
 	$(HOLMOSMLC) -o $@ $<
 

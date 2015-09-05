@@ -1,7 +1,8 @@
 structure patternMatchesSyntax :> patternMatchesSyntax =
 struct
 
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib numLib
 open patternMatchesTheory
 open pairSyntax
 open ConseqConv

@@ -1,10 +1,14 @@
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib TotalDefn ConseqConv numLib
 open quantHeuristicsLib
 open optionTheory
 open listTheory
-open ConseqConv
+open metisLib
 
 val _ = new_theory "patternMatches"
+
+val std_ss = numLib.std_ss
+val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (***************************************************)
 (* Auxiliary stuff                                 *)

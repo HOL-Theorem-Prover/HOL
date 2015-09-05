@@ -1,14 +1,17 @@
 structure patternMatchesLib :> patternMatchesLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib numLib metisLib
 open patternMatchesTheory
-open simpLib
 open quantHeuristicsLib
 open DatatypeSimps
 open patternMatchesSyntax
 open Traverse
 open constrFamiliesLib
+open unwindLib 
+
+val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (***********************************************)
 (* Auxiliary stuff                             *)
