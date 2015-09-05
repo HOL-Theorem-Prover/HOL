@@ -9,6 +9,7 @@ val _ = new_theory "patternMatches"
 
 val std_ss = numLib.std_ss
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
+val zDefine    = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
 (***************************************************)
 (* Auxiliary stuff                                 *)
@@ -81,18 +82,18 @@ Cases_on `x` THEN Cases_on `x'` THEN (
    A row matches an input value i with a variable
    binding v, iff the following
    predicate holds. *)
-val PMATCH_ROW_COND_def = Define `PMATCH_ROW_COND pat guard inp v =
+val PMATCH_ROW_COND_def = zDefine `PMATCH_ROW_COND pat guard inp v =
   (pat v = inp) /\ (guard v)`
 
 (* With this we can easily define the semantics of a row *)
-val PMATCH_ROW_def = Define `PMATCH_ROW pat guard rhs i =
+val PMATCH_ROW_def = zDefine `PMATCH_ROW pat guard rhs i =
   (OPTION_MAP rhs (some v. PMATCH_ROW_COND pat guard i v))`
 
 
 (* We defined semantics of single rows. Let's extend
    it to multiple ones, i.e. full pattern matches now. *)
 val PMATCH_INCOMPLETE_def = Define `PMATCH_INCOMPLETE = ARB`
-val PMATCH_def = Define `
+val PMATCH_def = zDefine `
   (PMATCH v [] = PMATCH_INCOMPLETE) /\
   (PMATCH v (r::rs) = option_CASE (r v) (PMATCH v rs) I)`
 

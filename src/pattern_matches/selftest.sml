@@ -1,19 +1,19 @@
 open HolKernel Parse boolTheory boolLib pairTheory
-open constrFamiliesLib patternMatchesLib
+open constrFamiliesLib patternMatchesLib computeLib
 open quantHeuristicsLib simpLib boolSimps
 
 val hard_fail = true;
 val quiet = false;
+val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
 (* For manual
 
+set_trace "use pmatch_pp" 0
 val hard_fail = false;
 val quiet = false;
 val _ = Parse.current_backend := PPBackEnd.emacs_terminal;
 
 *)
-
-val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 
 fun test_conv_gen dest s conv (t, r_opt) =
 let
@@ -543,5 +543,42 @@ val t' = ``PMATCH (x,z)
 
 val _ = test_precond "PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV" PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV (t, SOME p)
 val _ = test_conv "PMATCH_COMPLETE_CONV true" (PMATCH_COMPLETE_CONV true) (t, SOME t')
+
+(*********************************)
+(* Exhaustiveness                *)
+(*********************************)
+
+fun mk_t t  = ``PMATCH (^t :num list)
+    [PMATCH_ROW (\((y :num),(_0 :num)). [_0; y])
+       (\((y :num),(_0 :num)). T) (\((y :num),(_0 :num)). y);
+     PMATCH_ROW (\((x :num),(_2 :num),(_1 :num)). [x; _1; _2])
+       (\((x :num),(_2 :num),(_1 :num)). T)
+       (\((x :num),(_2 :num),(_1 :num)). x);
+     PMATCH_ROW (\((x :num),(y :num),(_3 :num list)). x::y::_3)
+       (\((x :num),(y :num),(_3 :num list)). T)
+       (\((x :num),(y :num),(_3 :num list)). x + y);
+     PMATCH_ROW (\(uv :unit). ([] :num list)) (\(uv :unit). T)
+       (\(uv :unit). (0 :num));
+     PMATCH_ROW (\(_4 :num list). _4) (\(_4 :num list). T)
+       (\(_4 :num list). (1 :num))]``;
+
+fun run_test (t, r) =
+  test_conv "EVAL_CONV" EVAL_CONV (mk_t t, SOME r);
+
+val _ = run_test (``[] : num list``, ``0``);
+val _ = run_test (``[2;3] : num list``, ``3``);
+val _ = run_test (``[2;30] : num list``, ``30``);
+val _ = run_test (``[2;3;4] : num list``, ``2``);
+val _ = run_test (``[4;3;4] : num list``, ``4``);
+val _ = run_test (``[4;3;4;3] : num list``, ``7``);
+val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
+     [PMATCH_ROW (\((y :num),(_0 :num)). [_0; y])
+        (\((y :num),(_0 :num)). T) (\((y :num),(_0 :num)). y);
+      PMATCH_ROW (\((x :num),(_2 :num),(_1 :num)). [x; _1; _2])
+        (\((x :num),(_2 :num),(_1 :num)). T)
+        (\((x :num),(_2 :num),(_1 :num)). x);
+      PMATCH_ROW (\((x :num),(y :num),(_3 :num list)). x::y::_3)
+        (\((x :num),(y :num),(_3 :num list)). T)
+        (\((x :num),(y :num),(_3 :num list)). x + y)]``);
 
 

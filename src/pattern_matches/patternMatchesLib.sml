@@ -919,7 +919,7 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
 val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
-
+val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, CHANGED_CONV PMATCH_CLEANUP_CONV)];
 
 
 (***********************************************)
