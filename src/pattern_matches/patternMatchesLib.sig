@@ -150,6 +150,102 @@ sig
   val PMATCH_TO_TOP_RULE : rule
 
 
+  (*************************************)
+  (* Analyse PMATCH expressions to     *)
+  (* check whether they can be         *)
+  (* translated to ML or OCAML         *)
+  (*************************************)
+
+  (* Record storing detailed information about a PMATCH *)
+  type pmatch_info = {
+    (* Is it a well formed PMATCH, i.e. is it of
+       the from PMATCH input row_list, where
+       every row is given explicitly via PMATCH_MATCH_ROW
+       and is wellformed itself? *)
+    pmi_is_well_formed            : bool, 
+
+    (* List of all rows that are not well-formed. 
+       If this list is non-empty, pmi_is_well_formed is false. *)
+    pmi_ill_formed_rows           : int list,
+
+    (* List of rows that have guards *)
+    pmi_has_guards                : int list,
+
+    (* List of rows that contain variables in a pattern that
+       are not bound by the pattern. These free vars are
+       returned explicitly. *)
+    pmi_has_free_pat_vars         : (int * term list) list,
+
+    (* List of rows whose patterns bind variables that they 
+       do not use. These unused vars are returned explicitly. *)
+    pmi_has_unused_pat_vars       : (int * term list) list,
+
+    (* List of rows whose patterns use a bound variable
+       multiple times. These vars are returned explicitly. *)
+    pmi_has_double_bound_pat_vars : (int * term list) list,
+
+    (* List of rows that uses constants that are neither
+       literals nor datatype-constructors in
+       patterns. These constants are returned. *)
+    pmi_has_non_contr_in_pat      : (int * term list) list,
+
+    (* List of rows that use lambda-abstractions in patterns. *)
+    pmi_has_lambda_in_pat         : int list,
+
+    (* Optional information about exhaustiveness. 
+       Checking exhaustiveness is expensive, therefore it
+       can be skipped. However, if a theorem is stored here, 
+       it is of the form `|- ~(cond) -> exhaustive`. 
+       There are no other guarentees. We don't guarentee that
+       if the condition holds, the pattern match is inexhaustive.
+       This is usually the case, put we don't guarentee it.
+       To check, whether the match is exhaustive, check whether
+       the guard is T. See below for functions using this
+       field.
+     *)
+    pmi_exhaustiveness_cond       : thm option
+  }
+
+  (* Analyse a PMATCH term and return the result. If
+     the flag is set to true, an exhaustiveness check is
+     attempted, if no syntactic checks indicate that this
+     one would most likely fail. *)
+  val analyse_pmatch : bool -> term -> pmatch_info
+
+  (* Check whether the PMATCH is syntactically well-formed. *)
+  val is_well_formed_pmatch : pmatch_info -> bool
+
+  (* Check whethe the PMATCH is falling into the subset
+     supported by OCAML *)
+  val is_ocaml_pmatch : pmatch_info -> bool
+
+  (* Check whether the PMATCH is falling into the subset
+     supported by SML. *)
+  val is_sml_pmatch : pmatch_info -> bool;
+
+  (* Was it proved that the PMATCH is exhaustive? If
+     the answer is no, we don't know much. *)
+  val is_proven_exhaustive_pmatch : pmatch_info -> bool
+
+  (* Get the list of patterns that are possibly missing.
+     If no exhaustiveness information is available, NONE
+     is returned. The missing patterns are returns as a list
+     of triples (`bound-vars`, `pattern`, `guard`) *)
+  val get_possibly_missing_patterns : pmatch_info ->
+    (term * term * term) list option
+
+  (** extend_possibly_missing_patterns t pmi
+      tries to extend the original pattern match t with
+      rows derived from the exhaustiveness information
+      from its info. It fails, if no exhaustiveness 
+      information is available. The result should
+      be an exhaustive match, which is equivalent to
+      the input `t`. If you need a prove, use
+      PMATCH_COMPLETE_CONV and similar functions instead
+      of this syntactic one. *)    
+  val extend_possibly_missing_patterns : term -> pmatch_info -> term
+
+
   (********************************)
   (* CASE SPLIT (pattern compile) *)
   (********************************)
