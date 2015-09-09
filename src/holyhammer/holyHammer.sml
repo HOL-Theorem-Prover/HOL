@@ -170,19 +170,24 @@ fun hh thml cj =
     (mk_argl (!eprover_settings,!vampire_settings,!z3_settings))
 
 (* Try best strategies sequentially *)
-fun hh_try thml cj =
+fun hh_try thml cj time =
   let
-    val strat1 = ((KNN,128,5),(KNN,96,5),(KNN,32,5))
-    val strat2 = ((Mepo,128,5),(Mepo,96,5),(Mepo,32,5))
-    val strat3 = ((Kepo,128,5),(Kepo,96,5),(Kepo,32,5))
+    val negcj  = mk_neg cj
+    val strat1 = ((KNN,128,time),(KNN,96,time),(KNN,32,time))
+    val strat2 = ((Mepo,128,time),(Mepo,96,time),(Mepo,32,time))
+    val strat3 = ((KNN,128*2,time),(KNN,96*2,time),(KNN,32*2,time))
+    val strat4 = ((Mepo,128*2,time),(Mepo,96*2,time),(Mepo,32*2,time))
   in
-    (hh_argl thml cj (mk_argl strat1) handle _ =>
-     hh_argl thml cj (mk_argl strat2)) handle _ =>
-     hh_argl thml cj (mk_argl strat3)
+    (print "Try KNN ...\n"; hh_argl thml cj (mk_argl strat1)) handle _ =>
+    (print "Try Mepo ...\n"; hh_argl thml cj (mk_argl strat2)) handle _ =>
+    (print "Doubling the number of predictions\n";
+     print "Try KNN ...\n"; hh_argl thml cj (mk_argl strat3)) handle _ =>
+    (print "Try Mepo ...\n"; hh_argl thml cj (mk_argl strat4)) handle _ =>
+    (print "Proving the negation ...\n"; 
+     hh_argl thml (mk_neg cj) (mk_argl strat1)) 
   end
 
-(* Let you chose the specific prover you want to use either
-   ("eprover", "vampire" or "z3") *)
+(* Let you chose the specific prover you want to use either *)
 fun hh_atp atp thml cj =
   let
     val new_cj = prepare_cj thml cj
