@@ -700,9 +700,9 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
             not (free_in vars pat) andalso
             not (free_in vars guard) andalso
             not (free_in vars rh)) then (
-          add_string "||." >> add_break (1, 0)
-        ) else (
-          add_string "||" >>
+          add_string "|||." >> add_break (1, 0)
+        ) else (          
+          add_string "|||" >>
           add_break (1, 0) >>
           sys (Top, Top, Top) (d - 1) vars >>
           add_string "." >>
@@ -812,21 +812,21 @@ val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_2",
 
 val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
       fixity = Binder,
-      pp_elements = [TOK "||"],
+      pp_elements = [TOK "|||"],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
 
 val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_0",
       fixity = Prefix 2,
-      pp_elements = [TOK "||."],
+      pp_elements = [TOK "|||."],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
 
 val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_4",
       fixity = Prefix 2,
-      pp_elements = [TOK "||!"],
+      pp_elements = [TOK "|||!"],
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};

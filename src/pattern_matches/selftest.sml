@@ -107,8 +107,8 @@ end;
 (******************************************************************************)
 
 val q = `CASE ((x : bool list)) OF [
-    ||. [] ~> F;
-    || (x, xs). x :: xs ~> x
+    |||. [] ~> F;
+    ||| (x, xs). x :: xs ~> x
   ]`;
 
 val t =   ``PMATCH (x :bool list)
@@ -121,14 +121,14 @@ val t =   ``PMATCH (x :bool list)
 val _ = test_parse q t;
 
 val q = `CASE ((y : bool option), (x : bool list)) OF [
-    ||. (NONE,[]) ~> 0;
-    ||. (NONE,[T]) ~> 1;
-    ||. (SOME T,[]) ~> 2;
-    ||. (SOME _, _) ~> 3;
-    || z. (SOME _, z) ~> 4;
-    || (z1, z2:'a). (SOME _, z1) ~> 5;
-    || z. (SOME T, z) when (LENGTH x > 5) ~> 6;
-    || (z1, z2, z3:'b list). (SOME z1, z2) when (LENGTH z3 > 5) ~> 7
+    |||. (NONE,[]) ~> 0;
+    |||. (NONE,[T]) ~> 1;
+    |||. (SOME T,[]) ~> 2;
+    |||. (SOME _, _) ~> 3;
+    ||| z. (SOME _, z) ~> 4;
+    ||| (z1, z2:'a). (SOME _, z1) ~> 5;
+    ||| z. (SOME T, z) when (LENGTH x > 5) ~> 6;
+    ||| (z1, z2, z3:'b list). (SOME z1, z2) when (LENGTH z3 > 5) ~> 7
   ]`;
 
 val t =
@@ -168,7 +168,9 @@ val _ = test_parse q t
 val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV 
 
 val t = ``case x of (NONE, []) => 0``;
-val r_thm = SOME ``CASE x OF [ ||. (NONE, []) ~> 0 ]``;
+val r_thm = SOME ``PMATCH (x :'a option # 'b list)
+    [PMATCH_ROW (\(uv :unit). ((NONE :'a option),([] :'b list)))
+       (\(uv :unit). T) (\(uv :unit). (0 :num))]``
 val _ = tc (t, r_thm);
 
 val t = ``case x of 

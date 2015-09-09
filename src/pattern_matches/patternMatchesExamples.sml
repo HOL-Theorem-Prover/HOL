@@ -22,9 +22,9 @@ val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 (********************************)
 
 val t = ``case x of (NONE, []) => 0``
-val t' = ``CASE x OF [ ||. (NONE, []) ~> 0 ]``
-val t'' = case2pmatch true t
-val t''' = case2pmatch false t
+val t' = ``CASE x OF [ |||. (NONE, []) ~> 0 ]``
+val t'' = case2pmatch true t 
+val t''' = case2pmatch false t 
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
@@ -50,16 +50,16 @@ val thm_t = PMATCH_INTRO_CONV t;
 
 val example1 = ``
   CASE (a,x,xs) OF [
-    ||. (NONE,_,[]) ~> 0;
-    || x. (NONE,x,[]) when x < 10 ~> x;
-    || x. (NONE,x,[2]) ~> x;
-    ||! (NONE,x,[v18]) ~> 3;
-    ||! (NONE,_,[_;_]) ~> x;
-    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
-    || (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
-    || (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
-    || (y,z,v23). (SOME y,SUC z,[v23]) when y > 5 ~> 3;
-    || (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
+    |||. (NONE,_,[]) ~> 0;
+    ||| x. (NONE,x,[]) when x < 10 ~> x;
+    ||| x. (NONE,x,[2]) ~> x;
+    |||! (NONE,x,[v18]) ~> 3;
+    |||! (NONE,_,[_;_]) ~> x;
+    ||| (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
+    ||| (y,x,z,zs). (SOME y,x,[z]) ~> x + 5 + z;
+    ||| (y,v23,v24). (SOME y,0,v23::v24) ~> (v23 + y);
+    ||| (y,z,v23). (SOME y,SUC z,[v23]) when y > 5 ~> 3;
+    ||| (y,z). (SOME y,SUC z,[1; 2]) ~> y + z
   ]``;
 
 (* due to guards, the following fails *)
@@ -79,11 +79,11 @@ val thm1 = CONV_RULE (RHS_CONV PMATCH_INTRO_WILDCARDS_CONV) thm0
 
 val example3 = ``
   CASE (NONE,x,xs) OF [
-    || x. (NONE,x,[]) ~> x;
-    || x. (NONE,x,[2]) ~> x;
-    || (x,v18). (NONE,x,[v18]) ~> 3;
-    || (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
-    || (y,x). (y,x,[2; 4; 3]) when (x > 5) ~> (3 + x)
+    ||| x. (NONE,x,[]) ~> x;
+    ||| x. (NONE,x,[2]) ~> x;
+    ||| (x,v18). (NONE,x,[v18]) ~> 3;
+    ||| (x,v12,v16,v17). (NONE,x,v12::v16::v17) ~> 3;
+    ||| (y,x). (y,x,[2; 4; 3]) when (x > 5) ~> (3 + x)
   ]``;
 
 
@@ -138,9 +138,9 @@ val ex1 = ``case (x, y, z) of
 
 (* or directly *)
 val ex1' = ``CASE (x, y, z) OF [
-  || x. (x, [], NONE) ~> x;
-  || (x, y). (x, [], SOME y) ~> x+y;
-  || (z, zs). (_, z::zs, _) ~> z]``
+  ||| x. (x, [], NONE) ~> x;
+  ||| (x, y). (x, [], SOME y) ~> x+y;
+  ||| (z, zs). (_, z::zs, _) ~> z]``
 
 (* They are not alpha-equivalent though because order of
    wildcards differs. check via
@@ -181,9 +181,9 @@ PROVE_TAC[])
 
 val my_d_def = Define
   `my_d xx = CASE xx OF [
-       || x. (x,[]) when (x > 3) ~> x;
-       || x. (x,[]) ~> 0;
-       || (x,y,ys). (x,y::ys) ~> (my_d (x + y,ys))]`
+       ||| x. (x,[]) when (x > 3) ~> x;
+       ||| x. (x,[]) ~> 0;
+       ||| (x,y,ys). (x,y::ys) ~> (my_d (x + y,ys))]`
 
 val my_d_thms = store_thm ("my_d_thms",
 ``(!x. x > 3 ==> (my_d (x, []) = x)) /\
@@ -224,10 +224,10 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
 
 val t =
    ``CASE l OF [
-    ||. [] ~> 0;
-    ||(x,y). x::y::x::y::_ ~> x+y;
-    ||(x,y). x::x::x::y::_ ~> x+x+x;
-    || x. x::_ ~> 1
+    |||. [] ~> 0;
+    |||(x,y). x::y::x::y::_ ~> x+y;
+    |||(x,y). x::x::x::y::_ ~> x+x+x;
+    ||| x. x::_ ~> 1
   ]``
 
 val thm0 = PMATCH_REMOVE_DOUBLE_BIND_CONV t
@@ -242,12 +242,12 @@ val thm2 = CONV_RULE (RHS_CONV (SIMP_CONV (std_ss++PMATCH_REMOVE_GUARDS_ss) []))
 
 val t =
    ``CASE (y,x,l) OF [
-    || x. (SOME 0,x,[]) ~> x;
-    || z. (SOME 1,z,[2]) when F ~> z;
-    || x. (SOME 3,x,[2]) when (IS_SOME x) ~> x;
-    || (z,y). (y,z,[2]) when (IS_SOME y) ~> y;
-    || z. (SOME 1,z,[2]) when F ~> z;
-    || x. (SOME 3,x,[2]) when (IS_SOME x) ~> x
+    ||| x. (SOME 0,x,[]) ~> x;
+    ||| z. (SOME 1,z,[2]) when F ~> z;
+    ||| x. (SOME 3,x,[2]) when (IS_SOME x) ~> x;
+    ||| (z,y). (y,z,[2]) when (IS_SOME y) ~> y;
+    ||| z. (SOME 1,z,[2]) when F ~> z;
+    ||| x. (SOME 3,x,[2]) when (IS_SOME x) ~> x
   ]``
 
 val thm0 = PMATCH_REMOVE_GUARDS_CONV t
@@ -264,15 +264,15 @@ val _ = Datatype `
 
 val balance_black_def = Define `balance_black a n b =
    CASE (a,b) OF [
-       ||! (Red (Red a x b) y c,d) ~>
+       |||! (Red (Red a x b) y c,d) ~>
             (Red (Black a x b) y (Black c n d));
-       ||! (Red a x (Red b y c),d) ~>
+       |||! (Red a x (Red b y c),d) ~>
             (Red (Black a x b) y (Black c n d));
-       ||! (a,Red (Red b y c) z d) ~>
+       |||! (a,Red (Red b y c) z d) ~>
             (Red (Black a n b) y (Black c z d));
-       ||! (a,Red b y (Red c z d)) ~>
+       |||! (a,Red b y (Red c z d)) ~>
             (Red (Black a n b) y (Black c z d));
-       ||! other ~> (Black a n b)
+       |||! other ~> (Black a n b)
      ]`
 
 (* try to compile to a tree inside the logic *)
@@ -299,9 +299,9 @@ val t2 = case2pmatch true t_comp
 
 val dummy_bool_def = Define `dummy_bool a b c =
     CASE (a,b,c) OF [
-       ||. (_, 0, _) ~> 1;
-       ||. (0, _, 0) ~> 1;
-       ||. (_, _, _) ~> c
+       |||. (_, 0, _) ~> 1;
+       |||. (0, _, 0) ~> 1;
+       |||. (_, _, _) ~> c
      ]`
 
 val dummy_bool_tm = rhs (concl (SPEC_ALL dummy_bool_def))
@@ -354,22 +354,22 @@ val cf = mk_constructorFamily (cl, ``list_REVCASE``,
 val _ = pmatch_compile_db_register_constrFam cf
 
 val t = ``CASE l OF [
-  ||. [] ~> 0;
-  ||! SNOC x _ ~> x
+  |||. [] ~> 0;
+  |||! SNOC x _ ~> x
   ]``
 
 val thm = PMATCH_CASE_SPLIT_CONV t
 
 val t = ``CASE lx OF [
-  ||. ([], NONE) ~> 0;
-  || (x, y). (SNOC x _, SOME y) ~> x + y
+  |||. ([], NONE) ~> 0;
+  ||| (x, y). (SNOC x _, SOME y) ~> x + y
   ]``;
 
 val thm2 = PMATCH_CASE_SPLIT_CONV t;
 
 val t = ``CASE lx OF [
-  ||. [] ~> 0;
-  || x. x::_ ~> x + y
+  |||. [] ~> 0;
+  ||| x. x::_ ~> x + y
   ]``
 
 val thm = PMATCH_CASE_SPLIT_CONV t;
@@ -422,16 +422,16 @@ val size_classic = term_size (rhs (snd (strip_forall (concl balance_black_dectre
    the last one) *)
 val t = ``
    CASE (a,b) OF [
-       || (a,x,b,y,c,d). (Red (Red a x b) y c,d) ~>
+       ||| (a,x,b,y,c,d). (Red (Red a x b) y c,d) ~>
             (Red (Black a x b) y (Black c n d));
-       || (a,x,b,y,c,d). (Red a x (Red b y c),d) ~>
+       ||| (a,x,b,y,c,d). (Red a x (Red b y c),d) ~>
             (Red (Black a x b) y (Black c n d));
-       || (a,b,y,c,z,d). (a,Red (Black b y c) z d) ~>
+       ||| (a,b,y,c,z,d). (a,Red (Black b y c) z d) ~>
             (Red (Black a n b) y (Black c z d));
-       || (a,b,y,c,z,d). (a,Red b y (Red c z d)) ~>
+       ||| (a,b,y,c,z,d). (a,Red b y (Red c z d)) ~>
             (Red (Black a n b) y (Black c z d));
-       || (a, x, b, c). (Black a x b, c) ~> (Black a x b);
-       || other. other ~> (Black a n b)
+       ||| (a, x, b, c). (Black a x b, c) ~> (Black a x b);
+       ||| other. other ~> (Black a n b)
      ]``
 
 val thm = PMATCH_CASE_SPLIT_CONV t;
@@ -444,7 +444,7 @@ val thm = PMATCH_CASE_SPLIT_CONV t;
 
 val my_divmod_def = Define `my_divmod (n:num) c =
     CASE n OF [
-      || (q, r). q * c + r when r < c ~> (q,r)
+      ||| (q, r). q * c + r when r < c ~> (q,r)
     ]`
 
 val my_divmod_THM_AUX = PMATCH_TO_TOP_RULE my_divmod_def
@@ -473,10 +473,10 @@ ASM_SIMP_TAC std_ss [arithmeticTheory.DIV_MULT, arithmeticTheory.MOD_MULT])
 
 val simple_card_def = Define `
   simple_card s = CASE s OF [
-    ||. {} ~> SOME 0;
-    ||! {x} ~> SOME 1;
-    ||! {x; y} ~> SOME 2;
-    ||! s ~> NONE
+    |||. {} ~> SOME 0;
+    |||! {x} ~> SOME 1;
+    |||! {x; y} ~> SOME 2;
+    |||! s ~> NONE
   ]`;
 
 val simple_card_THM_AUX = PMATCH_TO_TOP_RULE simple_card_def;
@@ -531,10 +531,10 @@ Cases_on `t'` THEN1 (
 
 val CARD2_defn = Defn.Hol_defn "CARD2" `
   CARD2 s = CASE s OF [
-    ||. {} ~> 0;
-    ||! x INSERT s' when (FINITE s' /\ ~(x IN s')) ~>
+    |||. {} ~> 0;
+    |||! x INSERT s' when (FINITE s' /\ ~(x IN s')) ~>
         SUC (CARD2 s');
-    ||! s' ~> 0
+    |||! s' ~> 0
   ]`
 
 val (CARD2_def, _) = Defn.tprove (CARD2_defn,
@@ -599,9 +599,9 @@ ASM_SIMP_TAC std_ss [CARD_INSERT])
 (*********************************)
 
 val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, NONE) ~> 2
+  |||. (NONE, NONE) ~> 0;
+  |||. (SOME _, _) ~> 1;
+  |||. (_, NONE) ~> 2
 ]``
 
 (* The last row is redundant, but it needs both first
@@ -617,10 +617,10 @@ val thm = PMATCH_REMOVE_REDUNDANT_CONV t
 
 (* Let's consider something more fancy *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> 0;
-    ||. 2 ~> 1;
-    || x. x when ODD x ~> 2;
-    ||. _ ~> 3
+    ||| x. x when EVEN x ~> 0;
+    |||. 2 ~> 1;
+    ||| x. x when ODD x ~> 2;
+    |||. _ ~> 3
   ]``
 
 (* Here both the fast and full test catch
@@ -649,18 +649,18 @@ val thm = IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM info_thm'
 (*********************************)
 
 val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, SOME _) ~> 2
+  |||. (NONE, NONE) ~> 0;
+  |||. (SOME _, _) ~> 1;
+  |||. (_, SOME _) ~> 2
 ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
 
 (* Now a case of a non-exhaustive match *)
 val t = ``CASE (x, z) OF [
-  ||. (NONE, NONE) ~> 0;
-  ||. (SOME _, _) ~> 1;
-  ||. (_, NONE) ~> 2
+  |||. (NONE, NONE) ~> 0;
+  |||. (SOME _, _) ~> 1;
+  |||. (_, NONE) ~> 2
 ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
@@ -671,10 +671,10 @@ val thm = PMATCH_COMPLETE_CONV true t
 
 (* Let's consider something more fancy *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> 1;
-    ||. 2 ~> 2;
-    || x. x when ODD x ~> 3;
-    ||. _ ~> 4
+    ||| x. x when EVEN x ~> 1;
+    |||. 2 ~> 2;
+    ||| x. x when ODD x ~> 3;
+    |||. _ ~> 4
   ]``
 
 (* The last row saves us :-) *)
@@ -682,8 +682,8 @@ val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
 
 (* So without it, we need some manual effort *)
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> 1;
-    || x. x when ODD x ~> 2
+    ||| x. x when EVEN x ~> 1;
+    ||| x. x when ODD x ~> 2
   ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
@@ -692,7 +692,7 @@ val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
    guards. *)
 
 val t = ``CASE x OF [
-    || x. x when EVEN x ~> 1
+    ||| x. x when EVEN x ~> 1
   ]``
 
 val thm = PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t
