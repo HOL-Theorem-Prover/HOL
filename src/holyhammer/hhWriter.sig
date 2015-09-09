@@ -7,7 +7,6 @@ sig
   val write_hh_thyl    : string -> string list -> unit
   val write_conjecture : string -> term -> unit
   val write_thydep     : string -> string list -> unit
-  val write_hh_thml    : string -> string -> string list -> (string * Thm.thm) list -> unit
 
   val reserved_names_escaped : string list
 

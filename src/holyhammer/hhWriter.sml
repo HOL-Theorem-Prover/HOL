@@ -482,41 +482,4 @@ fun write_conjecture file conjecture = (* TO DO: put it in a subdirectory *)
     )
   else raise ERR "write_conjecture" "conjecture is not a boolean"
 
-(*---------------------------------------------------------------------------
-   Print only selected theorems.
- ----------------------------------------------------------------------------*)
-
-fun write_hh_thy_const folder thy =
-  (
-  hh_thy_start folder thy;
-  let val l = dest_theory thy in
-    case l of THEORY(_,t) =>
-    (
-    app (hh_tydef thy) (#types t);
-    app (hh_constdef thy) (#consts t)
-    )
-  end;
-  hh_thy_end ()
-  )
-
-fun write_hh_thyl_const folder thyl =
-  (
-  reset_dicts();
-  app (write_hh_thy_const folder) (sort_thyl thyl)
-  )
-
-fun write_hh_thml_aux file thmnamel = (* TO DO: put it in a subdirectory *)
-  let val thml = map (fn x => (x,"ax")) thmnamel in
-    oc := openOut file;
-    app export_thm thml;
-    closeOut (!oc); oc := stdOut
-  end
-
-fun write_hh_thml folder file thyl namethml =
-  (
-  write_hh_thyl_const folder thyl;
-  write_hh_thml_aux file namethml
-  )
-
-
 end

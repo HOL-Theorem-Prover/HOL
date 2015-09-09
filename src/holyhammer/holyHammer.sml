@@ -124,30 +124,6 @@ fun export cj =
     write_thydep (thy_dir ^ "/thydep") thyl
   end
 
-fun export_namethml cj namethml =
-  let
-    val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct
-  in
-    (* write constants of loaded theories and some theorems *)
-    write_hh_thml thy_dir (thy_dir ^ "/problem") thyl namethml;
-    (* write the conjecture in thf format *)
-    write_conjecture (thy_dir ^ "/conjecture") cj;
-    (* write the dependencies between theories *)
-    write_thydep (thy_dir ^ "/thydep") thyl
-  end
-
-
-(* TO DO: Incremental export
-fun export_thyl thy_dir thyl =
-  let val thyl' = List.filter (fn x => not (mem x (!exported_thyl))) thyl in
-  write_hh_thyl thy_dir thyl;
-
-fun export_ct ct_dir ct =
-  clean_dir ct_dir;
-  write_hh_thy ct
-*)
-
 (*---------------------------------------------------------------------------
    Main helpers
  ----------------------------------------------------------------------------*)
