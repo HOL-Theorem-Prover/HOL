@@ -162,7 +162,7 @@ fun hh_argl thml cj argl =
     cmd_in_dir scripts_dir "sh hh_clean.sh";
     export new_cj;
     cmd_in_dir scripts_dir ("sh hh.sh " ^ argl);
-    reconstructl thml atpfilel cj
+    reconstructl atpfilel new_cj
   end
 
 fun hh thml cj =
@@ -193,7 +193,7 @@ fun hh_atp atp thml cj =
     cmd_in_dir scripts_dir "sh hh_clean.sh";
     export new_cj;
     cmd_in_dir scripts_dir ("sh " ^ hh_of_prover atp ^ " " ^ argl);
-    reconstruct thml (status_of_prover atp, out_of_prover atp) cj
+    reconstruct (status_of_prover atp, out_of_prover atp) new_cj
   end
 
 (* Derived function *)

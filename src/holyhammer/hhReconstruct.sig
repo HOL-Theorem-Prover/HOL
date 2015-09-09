@@ -3,7 +3,7 @@ sig
 
   include Abbrev
   val minimize_flag : bool ref
-  val reconstruct   : thm list -> (string * string) -> term -> unit
-  val reconstructl  : thm list -> (string * string) list -> term -> unit
+  val reconstruct   : (string * string) -> term -> unit
+  val reconstructl  : (string * string) list -> term -> unit
 
 end
