@@ -151,8 +151,33 @@ in
 end
 
 val abb_tstamp = ref 0
+fun remove_abbreviation g s = let
+  val (dict,st) = Binarymap.remove(abbreviations g,s)
+  fun doprint pmap0 = #1 (TypeNet.delete(pmap0, structure_to_type st))
+                     handle Binarymap.NotFound => pmap0
+in
+  g |> fupdate_abbparse (K dict) |> fupdate_abbprint doprint
+end handle Binarymap.NotFound => g
+
 fun new_abbreviation tyg (s, st) = let
   val _ = check_structure st
+  val tyg = case Binarymap.peek(abbreviations tyg, s) of
+                NONE => tyg
+              | SOME st' =>
+                if st = st' then tyg
+                else
+                  let
+                    val tyg' = remove_abbreviation tyg s
+                  in
+                    Feedback.HOL_WARNING
+                      "type_grammar"
+                      "new_abbreviation"
+                      ("Replacing old mapping from " ^ s ^ " to "^
+                       PP.pp_to_string (!Globals.linewidth)
+                                       (pp_type tyg')
+                                       (structure_to_type st'));
+                    tyg'
+                  end
   val _ = case st of PARAM _ =>
                      raise GrammarError
                                "Abbreviation can't be to a type variable"
@@ -168,13 +193,6 @@ in
   result
 end
 
-fun remove_abbreviation g s = let
-  val (dict,st) = Binarymap.remove(abbreviations g,s)
-  fun doprint pmap0 = #1 (TypeNet.delete(pmap0, structure_to_type st))
-                     handle Binarymap.NotFound => pmap0
-in
-  g |> fupdate_abbparse (K dict) |> fupdate_abbprint doprint
-end handle Binarymap.NotFound => g
 
 fun rev_append [] acc = acc
   | rev_append (x::xs) acc = rev_append xs (x::acc)
