@@ -1,0 +1,42 @@
+\DOC
+
+\TYPE {remove_type_abbrev : string -> unit}
+
+\SYNOPSIS
+Remove a type abbreviation from the type grammar.
+
+\KEYWORDS
+parsing, pretty-printing.
+
+\DESCRIBE
+A call to {remove_type_abbrev s} removes the type abbreviation keyed
+on string {s}. As with other functions affecting the global grammar,
+there is a companion function, {temp_remove_type_abbrev}, which
+affects the grammar but does not cause the effect to be replayed in
+descendant theories.
+
+\FAILURE
+Never fails. If the specified string is not a current abbreviation,
+the call has no effect on the grammar.
+
+\EXAMPLE
+The standard theory context (where {pred_set} is loaded), includes an
+abbreviation mapping {``:'a set``} to {``:'a -> bool``}. It doesn't
+print the abbreviated form back to the user, because its printing has
+been disabled with {disable_tyabbrev_printing}.
+
+{
+   > ``:'a set``;
+   val it = ``:'a -> bool`` : hol_type
+
+   > remove_type_abbrev "set";
+   val it = (): unit
+
+   > ``:'a set``;
+   Exception- HOL_ERR ...
+}
+
+\SEEALSO
+Parse.disable_tyabbrev_printing, Parse.type_abbrev.
+
+\ENDDOC

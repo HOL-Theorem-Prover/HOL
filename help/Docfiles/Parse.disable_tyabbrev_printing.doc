@@ -56,6 +56,6 @@ this function, {temp_disable_tyabbrev_printing} that does not cause
 its effect to persist with an exported theory.
 
 \SEEALSO
-Parse.type_abbrev.
+Parse.remove_type_abbrev, Parse.type_abbrev.
 
 \ENDDOC

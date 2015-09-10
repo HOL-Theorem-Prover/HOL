@@ -572,5 +572,16 @@ val _ = let
 in if hyp th = [] then print "OK\n" else die "FAILED"
 end handle _ => die "FAILED!"
 
+val _ = let
+  val _ = tprint "Removing type abbreviation"
+  val _ = temp_type_abbrev ("foo", ``:'a -> bool``)
+  val s1 = type_to_string ``:bool -> bool``
+  val _ = s1 = ":bool foo" orelse die "FAILED!"
+  val _ = temp_remove_type_abbrev "foo"
+  val s2 = type_to_string ``:bool -> bool``
+in
+  if s2 = ":bool -> bool" then print "OK\n" else die "FAILED!"
+end
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

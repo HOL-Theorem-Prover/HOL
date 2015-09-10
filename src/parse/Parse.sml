@@ -751,6 +751,20 @@ in
               ("temp_disable_tyabbrev_printing", mlquote s)
 end
 
+fun temp_remove_type_abbrev s = let
+  val tyg = the_type_grammar
+in
+  tyg := type_grammar.remove_abbreviation (!tyg) s;
+  type_grammar_changed := true;
+  term_grammar_changed := true
+end
+
+fun remove_type_abbrev s = let
+in
+  temp_remove_type_abbrev s;
+  update_grms "remove_type_abbrev" ("temp_remove_type_abbrev", mlquote s)
+end
+
 
 (* Not persistent? *)
 fun temp_set_associativity (i,a) = let in
