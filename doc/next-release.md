@@ -106,6 +106,9 @@ Incompatibilities:
 
     Of course, the `qmatch_rename_tac` and `qmatch_assum_rename_tac` names for these tactics in `lcsymtacs` have changed types as well.  The new `Q.MATCH_GOALSUB_RENAME_TAC` and `Q.MATCH_ASMSUB_RENAME_TAC` (and their lower-case versions) have similar types, without explicit lists of variable names to ignore.
 
+-   The theory `state_option` was removed.
+    The better-developed `errorStateMonad` theory should be used instead.
+
 * * * * *
 
 <div class="footer">
