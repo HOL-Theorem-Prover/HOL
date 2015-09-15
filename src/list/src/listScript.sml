@@ -22,7 +22,10 @@
  * are "arithmetic" and "pair".                                              *
  *---------------------------------------------------------------------------*)
 
-local open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype OpenTheoryMap in end;
+local
+  open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype
+       OpenTheoryMap
+in end;
 
 
 (*---------------------------------------------------------------------------
@@ -30,7 +33,8 @@ local open arithmeticTheory pairTheory pred_setTheory operatorTheory Datatype Op
  *---------------------------------------------------------------------------*)
 
 open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
-     simpLib boolSimps pairTheory TotalDefn metisLib;;
+     simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
+     relationTheory
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 
@@ -459,7 +463,6 @@ val EVERY_CONJ = store_thm("EVERY_CONJ",
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
      FIRST_ASSUM ACCEPT_TAC);
 
-open pred_setTheory
 val EVERY_MEM = store_thm(
   "EVERY_MEM",
   ``!P l:'a list. EVERY P l = !e. MEM e l ==> P e``,
@@ -2981,7 +2984,6 @@ val LLEX_NIL2 = store_thm(
   ``~LLEX R l []``,
   Cases_on `l` THEN SIMP_TAC (srw_ss()) [LLEX_def]);
 
-open relationTheory
 val LLEX_transitive = store_thm(
   "LLEX_transitive",
   ``transitive R ==> transitive (LLEX R)``,
