@@ -411,11 +411,23 @@ val LENGTH_MAP = store_thm ("LENGTH_MAP",
      LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]);
 
 val MAP_EQ_NIL = store_thm(
-  "MAP_EQ_NIL",
+  "MAP_EQ_NIL[simp]",
   --`!(l:'a list) (f:'a->'b).
          ((MAP f l = []) = (l = [])) /\
          (([] = MAP f l) = (l = []))`--,
   LIST_INDUCT_TAC THEN REWRITE_TAC [MAP, NOT_CONS_NIL, NOT_NIL_CONS]);
+
+val MAP_EQ_CONS = store_thm(
+  "MAP_EQ_CONS",
+  ``(MAP (f:'a -> 'b) l = h::t) <=>
+      ?x0 t0. (l = x0::t0) /\ (h = f x0) /\ (t = MAP f t0)``,
+  Q.ISPEC_THEN `l` STRUCT_CASES_TAC list_CASES THEN SIMP_TAC (srw_ss()) [] THEN
+  METIS_TAC[]);
+
+val MAP_EQ_SING = store_thm(
+  "MAP_EQ_SING[simp]",
+  ``(MAP (f:'a -> 'b) l = [x]) <=> ?x0. (l = [x0]) /\ (x = f x0)``,
+  SIMP_TAC (srw_ss()) [MAP_EQ_CONS])
 
 val MAP_EQ_f = store_thm ("MAP_EQ_f",
   ``!f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))``,
@@ -673,6 +685,16 @@ CONJ_TAC THEN
    THEN REWRITE_TAC [CONS_11, NOT_NIL_CONS, NOT_CONS_NIL, APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 val _ = export_rewrites ["APPEND_eq_NIL"]
+
+val MAP_EQ_APPEND = store_thm(
+  "MAP_EQ_APPEND",
+  ``(MAP (f:'a -> 'b) l = l1 ++ l2) <=>
+      ?l10 l20. (l = l10 ++ l20) /\ (l1 = MAP f l10) /\ (l2 = MAP f l20)``,
+  REVERSE EQ_TAC THEN1 SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [MAP_APPEND] THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`l1`, `l2`, `l`] THEN LIST_INDUCT_TAC THEN
+  SIMP_TAC (srw_ss()) [] THEN MAP_EVERY Q.X_GEN_TAC [`h`, `l2`, `l1`] THEN
+  Cases_on `l1` THEN SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [MAP_EQ_CONS] THEN
+  METIS_TAC[]);
 
 val APPEND_EQ_SING = store_thm(
   "APPEND_EQ_SING",
@@ -1687,7 +1709,7 @@ val MAP_EQ_EVERY2 = store_thm(
                 (LENGTH l1 = LENGTH l2) /\
                 (EVERY2 (\x y. f1 x = f2 y) l1 l2)``,
 NTAC 2 GEN_TAC THEN
-Induct THEN SRW_TAC [] [LENGTH_NIL_SYM, MAP, MAP_EQ_NIL] THEN
+Induct THEN SRW_TAC [] [LENGTH_NIL_SYM, MAP] THEN
 Cases_on `l2` THEN SRW_TAC [] [MAP] THEN
 PROVE_TAC[])
 
@@ -1904,7 +1926,7 @@ FULL_SIMP_TAC(srw_ss()++numSimps.ARITH_ss)[MEM, MAP, SUM])
 val INJ_MAP_EQ = store_thm(
 "INJ_MAP_EQ",
 ``!f l1 l2. (INJ f (set l1 UNION set l2) UNIV) /\ (MAP f l1 = MAP f l2) ==> (l1 = l2)``,
-GEN_TAC THEN Induct THEN1 SRW_TAC[] [MAP, MAP_EQ_NIL] THEN
+GEN_TAC THEN Induct THEN1 SRW_TAC[] [MAP] THEN
 GEN_TAC THEN Cases THEN SRW_TAC[] [MAP] THEN1 (
   IMP_RES_TAC INJ_DEF THEN
   FIRST_X_ASSUM (MATCH_MP_TAC o MP_CANON) THEN
@@ -3093,7 +3115,6 @@ val EXISTS_LIST_EQ_MAP = Q.store_thm("EXISTS_LIST_EQ_MAP",
    Induct
    >> ASM_SIMP_TAC (srw_ss()) []
    >> rw []
-   THEN1 (Q.EXISTS_TAC `[]` >> rw [])
    >> RES_TAC
    >> Q.EXISTS_TAC`y::l`
    >> ASM_SIMP_TAC (srw_ss()) [])
@@ -3547,7 +3568,7 @@ val _ = export_rewrites
            "MAP2", "NULL_DEF",
            "SUM", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_MAP", "MAP_APPEND",
-           "NOT_CONS_NIL", "NOT_NIL_CONS", "MAP_EQ_NIL",
+           "NOT_CONS_NIL", "NOT_NIL_CONS",
            "CONS_ACYCLIC", "list_case_def",
            "ZIP", "UNZIP", "ZIP_UNZIP", "UNZIP_ZIP",
            "LENGTH_ZIP", "LENGTH_UNZIP",
