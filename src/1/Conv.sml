@@ -61,6 +61,7 @@ fun REWR_CONV0 (part_matcher, fn_name) th =
 
 val REWR_CONV    = REWR_CONV0 (PART_MATCH,    "REWR_CONV")
 val HO_REWR_CONV = REWR_CONV0 (HO_PART_MATCH, "HO_REWR_CONV")
+val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
 
 (*----------------------------------------------------------------------*
  * RAND_CONV conv "t1 t2" applies conv to t2                            *
