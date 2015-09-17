@@ -304,6 +304,30 @@ val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
 
 val EQUIV_EXTRACT_ss = simpLib.conv_ss BoolExtractShared.BOOL_EQ_IMP_convdata;
 
+val NORMEQ_CONV = let
+  fun c (cf : term list -> term -> thm) (tl : term list) t =
+    let
+      val (l,r) = dest_eq t
+    in
+      if null (free_vars l) andalso not (null (free_vars r)) then
+        REWR_CONV EQ_SYM_EQ
+      else NO_CONV
+    end t
+in
+  { name = "NORMEQ_CONV",
+    key = SOME ([] : term list, ``x:'a = y``),
+    trace = 2,
+    conv = c }
+end
+
+val NORMEQ_ss = simpLib.SSFRAG {
+  ac = [],
+  congs = [],
+  convs = [NORMEQ_CONV],
+  dprocs = [],
+  filter = NONE,
+  name = SOME "NORMEQ_ss", rewrs = []}
+
 (* ----------------------------------------------------------------------
     Congruence rules for rewriting on one side or the other of a goal's
     central binary operator
