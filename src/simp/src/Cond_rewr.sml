@@ -274,6 +274,10 @@ val truth_tm = boolSyntax.T
 val false_tm = boolSyntax.F
 val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
 val x_eq_false = SPEC (mk_eq(genvar bool, false_tm)) FALSITY
+val TF_EQ_F = PROVE_HYP (UNDISCH_ALL (NOT_ELIM (CONJUNCT1 BOOL_EQ_DISTINCT)))
+                        (UNDISCH_ALL x_eq_false)
+val FT_EQ_F = PROVE_HYP (UNDISCH_ALL (NOT_ELIM (CONJUNCT2 BOOL_EQ_DISTINCT)))
+                        (UNDISCH_ALL x_eq_false)
 
 fun IMP_EQ_CANON (thm,bnd) = let
   val conditions = #1 (strip_imp (concl thm))
@@ -285,24 +289,35 @@ fun IMP_EQ_CANON (thm,bnd) = let
         if loops undisch_thm andalso bnd = BoundedRewrites.UNBOUNDED then
           (trace(1,IGNORE("looping rewrite (but adding EQT versions)",thm));
            [(EQT_INTRO undisch_thm, bnd), (EQT_INTRO (SYM undisch_thm), bnd)])
-        else let
-            val base =
-                if null (subtract (free_vars (rhs conc))
-                                  (free_varsl (lhs conc::hyp thm)))
-		then undisch_thm
-		else
-                  (trace(1,IGNORE("rewrite with existential vars (adding \
-                                  \EQT version(s))",thm));
-                   EQT_INTRO undisch_thm)
-            val flip_eqp = let val (l,r) = dest_eq (concl base)
-                           in
-                             is_eq l andalso not (is_eq r)
-                           end
+        else
+          let
+            val (l,r) = dest_eq conc
           in
-            if flip_eqp then
-              [(base, bnd),
-               (CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base, bnd)]
-            else [(base,bnd)]
+            if l = truth_tm then
+              if r = false_tm then [(PROVE_HYP thm TF_EQ_F, bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+            else if l = false_tm then
+              if r = truth_tm then [(PROVE_HYP thm FT_EQ_F,bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+            else
+              let
+                val base =
+                    if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
+		    then undisch_thm
+		    else
+                      (trace(1,IGNORE("rewrite with existential vars (adding \
+                                      \EQT version(s))",thm));
+                       EQT_INTRO undisch_thm)
+                val flip_eqp = let val (l,r) = dest_eq (concl base)
+                               in
+                                 is_eq l andalso not (is_eq r)
+                               end
+              in
+                if flip_eqp then
+                  [(base, bnd),
+                   (CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ)) base, bnd)]
+                else [(base,bnd)]
+              end
           end
       else if is_conj conc then
         undisch_thm |> CONJ_PAIR

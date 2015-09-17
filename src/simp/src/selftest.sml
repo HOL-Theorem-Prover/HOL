@@ -190,6 +190,28 @@ in
   infloop_protect "Abbrev-simplification with abstraction" check doit g
 end
 
+(* rewrites on F and T *)
+val TF = mk_eq(T,F)
+val FT = mk_eq(F,T)
+
+val _ = let
+  val t = TF
+  val doit = QCONV (SIMP_CONV bool_ss [ASSUME TF, ASSUME FT])
+  fun check th = th |> concl |> rhs |> aconv F
+in
+  infloop_protect "assume T=F and F=T (if hangs, it's failed)" check doit t
+end
+
+
+(* conjunction congruence *)
+val _ = let
+  val t = list_mk_conj [TF,FT,TF]
+  val doit = QCONV (SIMP_CONV (bool_ss ++ CONJ_ss) [])
+  fun check th = th |> concl |> rhs |> aconv F
+in
+  infloop_protect "CONJ_ss with T=F and F=T assumptions (if hangs, it's failed)" check doit t
+end
+
 (* ---------------------------------------------------------------------- *)
 
 val _ = Process.exit Process.success
