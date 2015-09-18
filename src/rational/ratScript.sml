@@ -127,9 +127,10 @@ val RAT_EQUIV = store_thm("RAT_EQUIV",
  *  alternative representation of equivalence relation
  *--------------------------------------------------------------------------*)
 
-val FRAC_EQ' = UNDISCH_ALL (SPEC_ALL FRAC_EQ) ;
-val feqconv = DEPTH_CONV (REWR_CONV_A FRAC_EQ') ;
-val feqtac = VALIDATE (POP_ASSUM (ASSUME_TAC o CONV_RULE feqconv)) ;
+fun feqconv thm = let val thm' = UNDISCH_ALL (SPEC_ALL thm) ;
+  in DEPTH_CONV (REWR_CONV_A thm') end ;
+fun feqtac thm = VALIDATE (POP_ASSUM (ASSUME_TAC o CONV_RULE (feqconv thm))) ;
+
 fun msprod th = let val [thbc, thab] = CONJUNCTS th 
   in MK_COMB (AP_TERM ``int_mul`` (MATCH_MP EQ_SYM thab), thbc) end ;
 
@@ -141,12 +142,12 @@ val RAT_EQUIV_ALT = store_thm("RAT_EQUIV_ALT",
   THENL [ DISCH_TAC THEN 
     EXISTS_TAC ``frac_dnm x`` THEN EXISTS_TAC ``frac_dnm a`` THEN
       ASM_SIMP_TAC bool_ss [FRAC_DNMPOS, NMR, DNM] THEN
-      VALIDATE (CONV_TAC feqconv) THEN
+      VALIDATE (CONV_TAC (feqconv FRAC_EQ)) THEN
       TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN CONJ_TAC
       (* ASM_SIMP_TAC bool_ss [] does nothing - why ??? *)
       THENL [ POP_ASSUM ACCEPT_TAC, ASM_SIMP_TAC bool_ss [INT_MUL_COMM] ],
       REPEAT STRIP_TAC THEN 
-	REV_FULL_SIMP_TAC bool_ss [NMR, DNM] THEN feqtac THEN 
+	REV_FULL_SIMP_TAC bool_ss [NMR, DNM] THEN feqtac FRAC_EQ THEN 
 	TRY (irule INT_MUL_POS_SIGN THEN
 	  ASM_SIMP_TAC bool_ss [FRAC_DNMPOS]) THEN
 	POP_ASSUM (ASSUME_TAC o msprod) THEN
@@ -161,10 +162,12 @@ val RAT_EQUIV_ALT = store_thm("RAT_EQUIV_ALT",
  * type definition
  *--------------------------------------------------------------------------*)
 
-val _ = save_thm("rat_def", define_quotient_type "rat" "abs_rat" "rep_rat" RAT_EQUIV);
+(* following also stored as rat_QUOTIENT *)
+val rat_def = save_thm("rat_def",
+  define_quotient_type "rat" "abs_rat" "rep_rat" RAT_EQUIV);
 
 val QUOTIENT_def = DB.fetch "quotient" "QUOTIENT_def";
-val rat_def = REWRITE_RULE[QUOTIENT_def] (DB.fetch "-" "rat_QUOTIENT");
+val rat_thm = REWRITE_RULE[QUOTIENT_def] rat_def ; (* was rat_def *)
 
 (*--------------------------------------------------------------------------*
  * operations
@@ -243,17 +246,17 @@ val _ = add_user_printer
 
 val RAT = store_thm("RAT", ``!r. abs_rat ( rep_rat r ) = r``,
 	GEN_TAC THEN
-	PROVE_TAC[rat_def]);
+	PROVE_TAC[rat_thm]);
 
 (*--------------------------------------------------------------------------
  *  some lemmas
  *--------------------------------------------------------------------------*)
 
 val RAT_ABS_EQUIV = store_thm("RAT_ABS_EQUIV", ``!f1 f2. (abs_rat f1 = abs_rat f2) = rat_equiv f1 f2``,
-	PROVE_TAC[rat_def, rat_equiv_def] );
+	PROVE_TAC[rat_thm, rat_equiv_def] );
 
 val REP_ABS_EQUIV = prove(``!a. rat_equiv a (rep_rat (abs_rat a))``,
-	PROVE_TAC[rat_equiv_def, rat_def]);
+	PROVE_TAC[rat_equiv_def, rat_thm]);
 
 val RAT_ABS_EQUIV' = GSYM RAT_ABS_EQUIV ;
 val REP_ABS_EQUIV' = ONCE_REWRITE_RULE [RAT_EQUIV_SYM] REP_ABS_EQUIV ;
@@ -293,7 +296,7 @@ val RAT_EQ_ALT = store_thm("RAT_EQ_ALT", ``! r1 r2. (r1=r2) = (rat_nmr r1 * rat_
 	REPEAT GEN_TAC THEN
 	REWRITE_TAC[rat_nmr_def, rat_dnm_def] THEN
 	REWRITE_TAC[GSYM rat_equiv_def] THEN
-	PROVE_TAC[rat_def] );
+	PROVE_TAC[rat_thm] );
 
 (*==========================================================================
  *  congruence theorems
@@ -359,48 +362,26 @@ val RAT_AINV_CONG = store_thm("RAT_AINV_CONG", ``!x. abs_rat (frac_ainv (rep_rat
  *     (abs_rat (frac_minv (rep_rat (abs_rat x))) = abs_rat (frac_minv x))
  *--------------------------------------------------------------------------*)
 
-val RAT_MINV_CONG =
-let
-	val lemmaX = prove(``0 < ABS (frac_nmr x) ==> 0 < ABS (frac_nmr (rep_rat (abs_rat x)))``,
-		REWRITE_TAC[INT_ABS] THEN
-		REWRITE_TAC[RAT_NMRLT0_CONG] THEN
-		RW_TAC int_ss[] THENL
-		[
-			PROVE_TAC[RAT_NMRLT0_CONG]
-		,
-			UNDISCH_TAC ``0 < frac_nmr x`` THEN
-			REWRITE_TAC[GSYM int_gt] THEN
-			PROVE_TAC[RAT_NMRGT0_CONG]
-		] );
-	val lemmaY = prove(``!x:int. 0<x ==> (ABS x = x)``,
-		GEN_TAC THEN
-		REWRITE_TAC[INT_ABS] THEN
-		RW_TAC int_ss[] THEN
-		PROVE_TAC[INT_LT_ANTISYM] );
-in
+val FRAC_MINV_EQUIV = store_thm ("FRAC_MINV_EQUIV",
+  ``~(frac_nmr y=0) ==> rat_equiv x y ==> 
+    rat_equiv (frac_minv x) (frac_minv y)``,
+  DISCH_TAC THEN DISCH_THEN (fn th => MP_TAC th THEN ASSUME_TAC th) THEN 
+  POP_ASSUM (ASSUME_TAC o MATCH_MP RAT_EQUIV_NMR_Z_IFF) THEN 
+  REWRITE_TAC[frac_minv_def, rat_equiv_def, frac_sgn_def] THEN
+  VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
+  (TRY (irule INT_ABS_NOT0POS THEN ASM_SIMP_TAC bool_ss [])) THEN
+  REWRITE_TAC[SGN_def] THEN REPEAT IF_CASES_TAC THEN
+  ASM_SIMP_TAC int_ss [INT_ABS, 
+    GSYM INT_NEG_MINUS1, GSYM INT_NEG_LMUL, GSYM INT_NEG_RMUL] THEN
+  SIMP_TAC bool_ss [INT_MUL_COMM]) ;
 
-
-	store_thm("RAT_MINV_CONG",``!x. ~(frac_nmr x=0) ==> (abs_rat (frac_minv (rep_rat (abs_rat x))) = abs_rat (frac_minv x))``,
-
-		REPEAT STRIP_TAC THEN
-		REWRITE_TAC[frac_minv_def] THEN
-		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr x`` INT_ABS_NOT0POS)) THEN
-		ASSUME_TAC (UNDISCH_ALL lemmaX) THEN
-		REWRITE_TAC[RAT_ABS_EQUIV] THEN
-		REWRITE_TAC[rat_equiv_def] THEN
-		RW_TAC int_ss[NMR,DNM] THEN
-		FRAC_POS_TAC ``frac_dnm x`` THEN
-		FRAC_POS_TAC ``frac_dnm (rep_rat (abs_rat x))`` THEN
-		ONCE_REWRITE_TAC[UNDISCH_ALL (GSYM (SPEC ``frac_dnm x`` lemmaY)),UNDISCH_ALL (GSYM (SPEC ``frac_dnm (rep_rat (abs_rat x))`` lemmaY))] THEN
-		REWRITE_TAC[RAT_SGN_CONG] THEN
-		REWRITE_TAC[EQT_ELIM (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM) ``frac_sgn x * ABS (frac_dnm (rep_rat (abs_rat x))) * ABS (frac_nmr x) = frac_sgn x * (ABS (frac_dnm (rep_rat (abs_rat x))) * ABS (frac_nmr x))``)] THEN
-		REWRITE_TAC[EQT_ELIM (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM) ``frac_sgn x * ABS (frac_dnm x) * ABS (frac_nmr (rep_rat (abs_rat x))) = frac_sgn x * (ABS (frac_dnm x) * ABS (frac_nmr (rep_rat (abs_rat x))))``)] THEN
-		REWRITE_TAC[INT_ABS_MUL] THEN
-		REWRITE_TAC[INT_EQ_LMUL] THEN
-		DISJ2_TAC THEN
-		ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
-		REWRITE_TAC[REP_ABS_DFN_EQUIV] )
-end;
+val RAT_MINV_CONG = store_thm("RAT_MINV_CONG",
+  ``!x. ~(frac_nmr x=0) ==>
+    (abs_rat (frac_minv (rep_rat (abs_rat x))) = abs_rat (frac_minv x))``,
+    REPEAT STRIP_TAC THEN
+    IMP_RES_TAC FRAC_MINV_EQUIV THEN
+    ASSUME_TAC (Q.SPEC `x` REP_ABS_EQUIV') THEN
+    RES_TAC THEN ASM_SIMP_TAC bool_ss [RAT_ABS_EQUIV]) ;
 
 (*--------------------------------------------------------------------------
  *  RAT_ADD_CONG1: thm
@@ -964,7 +945,7 @@ val RAT_ADD_RID = store_thm("RAT_ADD_RID", ``!a. rat_add a 0q = a``,
 	REWRITE_TAC[rat_add_def,rat_0] THEN
 	REWRITE_TAC[RAT_ADD_CONG] THEN
 	REWRITE_TAC[FRAC_ADD_RID] THEN
-	RW_TAC int_ss[CONJUNCT1 rat_def]);
+	RW_TAC int_ss[CONJUNCT1 rat_thm]);
 
 val RAT_ADD_LID = store_thm("RAT_ADD_LID", ``!a. rat_add 0q a = a``,
 	ONCE_REWRITE_TAC[RAT_ADD_COMM] THEN
@@ -974,7 +955,7 @@ val RAT_MUL_RID = store_thm("RAT_MUL_RID", ``!a. rat_mul a 1q = a``,
 	REWRITE_TAC[rat_mul_def,rat_1] THEN
 	REWRITE_TAC[RAT_MUL_CONG] THEN
 	REWRITE_TAC[FRAC_MUL_RID] THEN
-	RW_TAC int_ss[CONJUNCT1 rat_def]);
+	RW_TAC int_ss[CONJUNCT1 rat_thm]);
 
 val RAT_MUL_LID = store_thm("RAT_MUL_LID", ``!a. rat_mul 1q a = a``,
 	ONCE_REWRITE_TAC[RAT_MUL_COMM] THEN
@@ -1026,9 +1007,9 @@ let
 			REWRITE_TAC[rat_0, frac_0_def] THEN
 			ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
 			ASM_REWRITE_TAC[] THEN
-			SUBST_TAC[GSYM (SPEC ``a:rat`` (CONJUNCT1 rat_def))] THEN
+			SUBST_TAC[GSYM (SPEC ``a:rat`` (CONJUNCT1 rat_thm))] THEN
 			REWRITE_TAC[rat_equiv_def, RAT_ABS_EQUIV] THEN
-			RW_TAC int_ss[rat_def] THEN
+			RW_TAC int_ss[rat_thm] THEN
 			FRAC_POS_TAC ``1i`` THEN
 			RW_TAC int_ss[NMR,DNM] THEN
 			UNDISCH_TAC ``0 = frac_nmr (rep_rat a)`` THEN
@@ -1170,7 +1151,7 @@ val RAT_AINV_0 = store_thm("RAT_AINV_0", ``rat_ainv 0q = 0q``,
 val RAT_AINV_AINV = store_thm("RAT_AINV_AINV", ``!r1. rat_ainv (rat_ainv r1) = r1``,
 	GEN_TAC THEN
 	REWRITE_TAC[rat_ainv_def] THEN
-	RW_TAC int_ss[RAT_AINV_CONG, FRAC_AINV_AINV, rat_def] );
+	RW_TAC int_ss[RAT_AINV_CONG, FRAC_AINV_AINV, rat_thm] );
 
 val RAT_AINV_ADD = store_thm("RAT_AINV_ADD", ``! r1 r2. rat_ainv (rat_add r1 r2) = rat_add (rat_ainv r1) (rat_ainv r2)``,
 	REPEAT GEN_TAC THEN
@@ -1210,7 +1191,7 @@ val lemma01 = prove(``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
 	REWRITE_TAC[INT_EQ_NEG] THEN
 	REWRITE_TAC[GSYM rat_equiv_def] THEN
 	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
-	RW_TAC int_ss[rat_def] );
+	RW_TAC int_ss[rat_thm] );
 val lemma02 = prove(``!r1 r2. (rat_ainv r1 = r2) = (r1 = rat_ainv r2)``,
 	REPEAT GEN_TAC THEN
 	EQ_TAC THEN
@@ -1768,7 +1749,7 @@ val RAT_EQ_AINV = store_thm("RAT_EQ_AINV", ``!r1 r2. (rat_ainv r1 = rat_ainv r2)
 	REWRITE_TAC[INT_EQ_NEG] THEN
 	REWRITE_TAC[GSYM rat_equiv_def] THEN
 	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
-	RW_TAC int_ss[rat_def] );
+	RW_TAC int_ss[rat_thm] );
 
 (*--------------------------------------------------------------------------
    RAT_EQ_LADD, RAT_EQ_RADD
