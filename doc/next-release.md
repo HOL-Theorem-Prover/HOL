@@ -60,6 +60,8 @@ Bugs fixed:
     Working in such directories will likely cause problems when and if an `export_theory` call is made, so there is a warning emitted in this situation, but the `load` now succeeds.
     Thanks to Narges Khakpour for the bug report.
 
+-   The function `thm_to_string` was creating ugly strings full of special codes (encoding type information) rather than using the “raw” backend.
+
 New theories:
 -------------
 

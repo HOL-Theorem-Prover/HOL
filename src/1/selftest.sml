@@ -411,6 +411,14 @@ val _ = app test [
                 \else F"}
 ]
 
+val _ = let
+  open testutils
+  val _ = tprint (standard_tpp_message "|- p")
+  val res = thm_to_string (ASSUME (mk_var("p", Type.bool)))
+in
+  if res = " [.] |- p" then print "OK\n" else die "FAILED!"
+end
+
 val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
                         block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
                         pp_elements = [TOK "/"], term_name = "div" };

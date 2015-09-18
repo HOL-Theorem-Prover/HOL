@@ -465,7 +465,7 @@ fun pp_thm ppstrm th =
     end_block()
  end;
 
-val thm_to_string = ppstring (rawterm_pp pp_thm)
+val thm_to_string = rawterm_pp (ppstring pp_thm)
 val print_thm = print o thm_to_string
 
 (*---------------------------------------------------------------------------
