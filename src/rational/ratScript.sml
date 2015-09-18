@@ -432,28 +432,20 @@ val RAT_ADD_CONG = save_thm("RAT_ADD_CONG", CONJ RAT_ADD_CONG1 RAT_ADD_CONG2);
  *     !x y. abs_rat (frac_mul x (rep_rat (abs_rat y))) = abs_rat (frac_mul x y)
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_CONG1 = store_thm("RAT_MUL_CONG1", ``!x y. abs_rat (frac_mul (rep_rat (abs_rat x)) y) = abs_rat (frac_mul x y)``,
+val FRAC_MUL_EQUIV1 = store_thm ("FRAC_MUL_EQUIV1",
+  ``rat_equiv x x' ==> rat_equiv (frac_mul x y) (frac_mul x' y)``,
+  REWRITE_TAC[frac_mul_def, rat_equiv_def] THEN
+  VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
+  TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN DISCH_TAC THEN 
+  RULE_ASSUM_TAC (AP_TERM ``int_mul (frac_nmr y * frac_dnm y)``) THEN
+  POP_ASSUM (fn th => MATCH_MP_TAC (MATCH_MP box_equals th)) THEN 
+  CONJ_TAC THEN CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM)) ) ;
 
-	REPEAT GEN_TAC THEN
-	REWRITE_TAC[RAT_ABS_EQUIV] THEN
-	REWRITE_TAC[rat_equiv_def,frac_mul_def] THEN
-	FRAC_POS_TAC ``frac_dnm x * frac_dnm y`` THEN
-	FRAC_POS_TAC ``frac_dnm (rep_rat (abs_rat x)) * frac_dnm y`` THEN
-	RW_TAC int_ss[NMR,DNM] THEN
-	REWRITE_TAC[EQT_ELIM (RING_CONV ``frac_nmr (rep_rat (abs_rat x)) * frac_nmr y * (frac_dnm x * frac_dnm y) = frac_nmr (rep_rat (abs_rat x)) *frac_dnm x * frac_nmr y * frac_dnm y``)] THEN
-	REWRITE_TAC[EQT_ELIM (RING_CONV ``frac_nmr x * frac_nmr y * (frac_dnm (rep_rat (abs_rat x)) * frac_dnm y) = frac_nmr x * frac_dnm (rep_rat (abs_rat x)) * frac_nmr y * frac_dnm y``)] THEN
-	FRAC_POS_TAC ``frac_dnm y`` THEN
-	REWRITE_TAC[INT_EQ_RMUL] THEN
-	RW_TAC int_ss[LESS_IMP_NOT_0] THEN
-	ASM_CASES_TAC ``frac_nmr y=0`` THENL
-	[
-		RW_TAC int_ss[]
-	,
-		RW_TAC int_ss[] THEN
-		REWRITE_TAC[GSYM rat_equiv_def] THEN
-		ONCE_REWRITE_TAC[RAT_EQUIV_SYM] THEN
-		RW_TAC int_ss[REP_ABS_EQUIV]
-	] );
+val RAT_MUL_CONG1 = store_thm("RAT_MUL_CONG1",
+  ``!x y. abs_rat (frac_mul (rep_rat (abs_rat x)) y) = abs_rat (frac_mul x y)``,
+  REPEAT STRIP_TAC THEN 
+  SIMP_TAC bool_ss [RAT_ABS_EQUIV] THEN
+  irule FRAC_MUL_EQUIV1 THEN irule REP_ABS_EQUIV') ;
 
 val RAT_MUL_CONG2 = store_thm("RAT_MUL_CONG2", ``!x y. abs_rat (frac_mul x (rep_rat (abs_rat y))) = abs_rat (frac_mul x y)``,
 	ONCE_REWRITE_TAC[FRAC_MUL_COMM] THEN
