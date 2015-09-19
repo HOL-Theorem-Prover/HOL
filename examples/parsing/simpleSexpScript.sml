@@ -152,5 +152,196 @@ val ptree_sexpnum_def = Define`
 `;
 
 
+val ptree_WS_def = Define`
+  (ptree_WS (Lf _) = NONE) ∧
+  (ptree_WS (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_WS then NONE
+   else
+     case args of
+       [c] => return ()
+     | _ => NONE)`;
+
+val ptree_grabWS_def = Define`
+  (ptree_grabWS (Lf _) = NONE) ∧
+  (ptree_grabWS (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_grabWS then NONE
+   else
+     case args of
+       [w; g] =>
+         do
+           ptree_WS w;
+           ptree_grabWS g;
+           return ()
+         od
+     | _ => NONE)`;
+
+val ptree_normstrchar_def = Define`
+  (ptree_normstrchar (Lf _) = NONE) ∧
+  (ptree_normstrchar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_normstrchar then NONE
+   else
+     case args of
+       [Lf(TK c)] => return c
+     | _ => NONE)`;
+
+val ptree_escapablechar_def = Define`
+  (ptree_escapablechar (Lf _) = NONE) ∧
+  (ptree_escapablechar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_escapablechar then NONE
+   else
+     case args of
+       [Lf(TK c)] => return c
+     | _ => NONE)`;
+
+val ptree_escapedstrchar_def = Define`
+  (ptree_escapedstrchar (Lf _) = NONE) ∧
+  (ptree_escapedstrchar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_escapedstrchar then NONE
+   else
+     case args of
+       [b; c] =>
+         if b = Lf(TK#"\\") then
+           ptree_escapablechar c
+         else NONE
+     | _      => NONE)`;
+
+val ptree_strchar_def = Define`
+  (ptree_strchar (Lf _) = NONE) ∧
+  (ptree_strchar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_strchar then NONE
+   else
+     case args of
+       [c] => ptree_normstrchar c ++ ptree_escapedstrchar c
+     | _   => NONE)`;
+
+val ptree_strcontents_def = Define`
+  (ptree_strcontents (Lf _) = NONE) ∧
+  (ptree_strcontents (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_strcontents then NONE
+   else
+     case args of
+       [] => return ""
+     | [sc; ss] =>
+       do
+         c <- ptree_strchar sc;
+         s <- ptree_strcontents ss;
+         return (c::s)
+       od
+     | _ => NONE)`;
+
+val ptree_sexpstr_def = Define`
+  (ptree_sexpstr (Lf _) = NONE) ∧
+  (ptree_sexpstr (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_sexpstr then NONE
+   else
+     case args of
+       [lq; s; rq] =>
+       if (lq = Lf(TK#"\"") ∧ rq = Lf(TK#"\"")) then
+         ptree_strcontents s
+       else NONE
+     | _ => NONE)`;
+
+val ptree_first_symchar_def = Define`
+  (ptree_first_symchar (Lf _) = NONE) ∧
+  (ptree_first_symchar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_first_symchar then NONE
+   else
+     case args of
+       [Lf(TK c)] => return c
+     | _ => NONE)`;
+
+val ptree_symchar_def = Define`
+  (ptree_symchar (Lf _) = NONE) ∧
+  (ptree_symchar (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_symchar then NONE
+   else
+     case args of
+       [Lf(TK c)] => return c
+     | _ => NONE)`;
+
+val ptree_symchars_def = Define`
+  (ptree_symchars (Lf _) = NONE) ∧
+  (ptree_symchars (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_symchars then NONE
+   else
+     case args of
+       [f;s] =>
+         do
+           c <- ptree_symchar f;
+           cs <- ptree_symchars s;
+           return (c::cs)
+         od
+     | _ => NONE)`;
+
+val ptree_sexpsym_def = Define`
+  (ptree_sexpsym (Lf _) = NONE) ∧
+  (ptree_sexpsym (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_sexpsym then NONE
+   else
+     case args of
+       [f;s] =>
+         do
+           c <- ptree_first_symchar f;
+           cs <- ptree_symchars s;
+           return (c::cs)
+         od
+     | _ => NONE)`;
+
+val ptree_sexp_def = Define`
+  (ptree_sexp (Lf _) = NONE) ∧
+  (ptree_sexp (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_sexp then NONE
+   else
+     case args of
+         [w; g] => do ptree_grabWS g; ptree_WSsexp w od
+     |   _      => NONE) ∧
+  (ptree_WSsexp (Lf _) = NONE) ∧
+  (ptree_WSsexp (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_WSsexp then NONE
+   else
+     case args of
+       [g; s] => do ptree_grabWS g; ptree_sexp0 s od
+     | _      => NONE) ∧
+  (ptree_sexp0 (Lf _) = NONE) ∧
+  (ptree_sexp0 (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_sexp0 then NONE
+   else
+     case args of
+       [s] =>
+         do x <- ptree_sexpsym s; return (SX_SYM x) od ++
+         do x <- ptree_sexpnum s; return (SX_NUM x) od ++
+         do x <- ptree_sexpstr s; return (SX_STR x) od
+     | [q;w] =>
+       if q = Lf (TK#"'") then ptree_WSsexp w else NONE
+     | [lp; s; g; rp] =>
+       if lp = Lf (TK#"(") ∧ rp = Lf (TK#")") then
+         do
+           ptree_grabWS g;
+           ptree_sexpseq s
+         od
+       else NONE
+     | [lp; sa; dot; sd; rp] =>
+       if lp = Lf (TK#"(") ∧ dot = Lf (TK#".") ∧ rp = Lf (TK#")") then
+         do
+           a <- ptree_sexp sa;
+           d <- ptree_sexp sd;
+           return (SX_CONS a d)
+         od
+       else NONE
+     | _ => NONE) ∧
+  (ptree_sexpseq (Lf _) = NONE) ∧
+  (ptree_sexpseq (Nd ntm args) =
+   if ntm ≠ mkNT sxnt_sexpseq then NONE
+   else
+     case args of
+       [] => return nil
+     | [w; s] =>
+         do
+           x <- ptree_WSsexp w;
+           r <- ptree_sexpseq s;
+           return (SX_CONS x r)
+         od
+     | _ => NONE)`;
+
 
 val _ = export_theory()
