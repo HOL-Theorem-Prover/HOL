@@ -3001,6 +3001,18 @@ val LLEX_THM = save_thm(
        (def' |> Q.INST [`l2` |-> `h2::t2`]
              |> SIMP_RULE (srw_ss()) []))
 
+val LLEX_MONO = store_thm("LLEX_MONO",
+  ``(!x y. R1 x y ==> R2 x y)
+    ==>
+    LLEX R1 x y ==> LLEX R2 x y``,
+  STRIP_TAC THEN
+  Q.ID_SPEC_TAC`y` THEN
+  Induct_on`x` THEN
+  Cases_on`y` THEN
+  SRW_TAC[][LLEX_THM] THEN
+  PROVE_TAC[])
+val () = IndDefLib.export_mono"LLEX_MONO";
+
 val LLEX_NIL2 = store_thm(
   "LLEX_NIL2[simp]",
   ``~LLEX R l []``,
