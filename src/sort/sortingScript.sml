@@ -923,16 +923,6 @@ val SORTED_APPEND_IFF = Q.store_thm ("SORTED_APPEND_IFF",
     SIMP_TAC bool_ss [CONJ_COMM],
     SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
 
-(* note, assumption transitive R not needed, see SORTED_APPEND_IFF *)
-val SORTED_transitive_APPEND_IFF = store_thm(
-"SORTED_transitive_APPEND_IFF",
-``!R. transitive R ==>
-  !L1 L2. SORTED R (L1 ++ L2) =
-          SORTED R L1 /\ SORTED R L2 /\
-          ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))``,
-  GEN_TAC >> DISCH_TAC >> MATCH_ACCEPT_TAC SORTED_APPEND_IFF ) ;
-
-
 val MEM_PERM =
   store_thm(
     "MEM_PERM",
