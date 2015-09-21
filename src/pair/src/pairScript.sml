@@ -596,6 +596,18 @@ val LEX_DEF_THM = Q.store_thm
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
+val LEX_MONO = store_thm("LEX_MONO",
+  ``(!x y. R1 x y ==> R2 x y) /\
+    (!x y. R3 x y ==> R4 x y)
+    ==>
+    (R1 LEX R3) x y ==> (R2 LEX R4) x y``,
+  STRIP_TAC THEN
+  Q.SPEC_THEN`x`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  Q.SPEC_THEN`y`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  SRW_TAC[][LEX_DEF_THM] THEN
+  PROVE_TAC[])
+val () = IndDefLib.export_mono"LEX_MONO";
+
 val WF_LEX = Q.store_thm("WF_LEX",
  `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)`,
 REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
