@@ -109,7 +109,7 @@ fun mk_lex_reln argvars sizedlist arrangement =
 
 
 (*---------------------------------------------------------------------------*)
-(* proper_subterm t1 t2 iff t1 is a proper subterm of t2. A recod projection *)
+(* proper_subterm t1 t2 iff t1 is a proper subterm of t2. A record projn     *)
 (* x.fld is a proper subterm of x.                                           *)
 (*---------------------------------------------------------------------------*)
 

@@ -755,7 +755,7 @@ val APPEND_11_LENGTH = save_thm ("APPEND_11_LENGTH",
      ) THEN PROVE_TAC[APPEND_LENGTH_EQ])))
 
 
-val APPEND_eq_ID = store_thm(
+val APPEND_EQ_SELF = store_thm(
 "APPEND_EQ_SELF",
 ``(!l1 l2:'a list. ((l1 ++ l2 = l1) = (l2 = []))) /\
   (!l1 l2:'a list. ((l1 ++ l2 = l2) = (l1 = []))) /\
