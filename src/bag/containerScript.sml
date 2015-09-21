@@ -112,8 +112,6 @@ val MEM_BAG_TO_LIST = Q.store_thm
 
 val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-
-
 val FINITE_LIST_TO_BAG = Q.store_thm(
 "FINITE_LIST_TO_BAG",
 `FINITE_BAG (LIST_TO_BAG ls)`,
@@ -217,6 +215,53 @@ local open rich_listTheory arithmeticTheory in
     Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]);
 end
 
+(*---------------------------------------------------------------------------*)
+(* Following packaging of multiset order applied to lists is easier to use   *)
+(* in some termination proofs, typically those of worklist algorithms, where *)
+(* the head of the list is replaced by a list of smaller elements.           *)
+(*---------------------------------------------------------------------------*)
+
+val mlt_list_def = 
+ Define
+   `mlt_list R = 
+     \l1 l2.
+       ?h t list. 
+         (l1 = list ++ t) /\
+         (l2 = h::t) /\
+         (!e. MEM e list ==> R e h)`;
+
+val WF_mlt_list = Q.store_thm
+("WF_mlt_list",
+ `!R. WF(R) ==> WF (mlt_list R)`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET THEN
+  Q.EXISTS_TAC `inv_image (mlt1 R) LIST_TO_BAG` THEN
+  CONJ_TAC THENL
+  [METIS_TAC [relationTheory.WF_inv_image,bagTheory.WF_mlt1],
+   RW_TAC list_ss [mlt_list_def, relationTheory.inv_image_thm,bagTheory.mlt1_def] 
+   THENL
+   [METIS_TAC [FINITE_LIST_TO_BAG],
+    METIS_TAC [FINITE_LIST_TO_BAG],
+    MAP_EVERY Q.EXISTS_TAC [`h`, `LIST_TO_BAG list`, `LIST_TO_BAG t`] 
+     THEN RW_TAC std_ss [BAG_INSERT_UNION,LIST_TO_BAG_APPEND,LIST_TO_BAG_def] 
+      THENL [METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION,BAG_UNION_EMPTY],
+             METIS_TAC [IN_LIST_TO_BAG]]]]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Tell the termination proof infrastructure about mlt_list                  *)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);";
+   S "val _ = TotalDefn.termination_simps := (!TotalDefn.termination_simps @ [mlt_list_def]);"
+ end)};
+
+
 (*---------------------------------------------------------------------------
     finite maps and bags.
  ---------------------------------------------------------------------------*)
@@ -275,8 +320,6 @@ Cases_on `x = f k v` THENL [
    )
 ]);
 
-
-
 val BAG_IN_BAG_OF_FMAP = store_thm ("BAG_IN_BAG_OF_FMAP",
 ``!x f b. BAG_IN x (BAG_OF_FMAP f b) =
           ?k. k IN FDOM b /\ (x = f k (b ' k))``,
@@ -296,8 +339,6 @@ REPEAT GEN_TAC THEN
 ) THEN
 ASM_SIMP_TAC std_ss [CARD_EQ_0] THEN
 SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS]);
-
-
 
 val FINITE_BAG_OF_FMAP = store_thm ("FINITE_BAG_OF_FMAP",
 ``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,
