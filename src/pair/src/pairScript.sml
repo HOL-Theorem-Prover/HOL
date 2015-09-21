@@ -16,7 +16,7 @@ structure pairScript =
 struct
 
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"];
+ app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
  open Parse relationTheory mesonLib;
 *)
 
