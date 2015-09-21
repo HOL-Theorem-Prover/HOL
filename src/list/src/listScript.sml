@@ -3020,14 +3020,14 @@ val LLEX_CONG = store_thm
     (!a b. MEM a l1' /\ MEM b l2' ==> (R a b = R' a b))
     ==>
     (LLEX R l1 l2 = LLEX R' l1' l2')``,
- GEN_TAC THEN Induct 
-  THENL [ALL_TAC, GEN_TAC] 
-   THEN Induct 
+ GEN_TAC THEN Induct
+  THENL [ALL_TAC, GEN_TAC]
+   THEN Induct
    THEN SRW_TAC [] []
    THEN SRW_TAC [] [LLEX_THM]
    THEN METIS_TAC[MEM]);
 
-val _ = DefnBase.export_cong "LEX_CONG";
+val _ = DefnBase.export_cong "LLEX_CONG";
 
 val LLEX_NIL2 = store_thm(
   "LLEX_NIL2[simp]",
