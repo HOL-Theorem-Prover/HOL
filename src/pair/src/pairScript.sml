@@ -692,6 +692,20 @@ val symmetric_LEX = store_thm(
   METIS_TAC[]);
 val _ = export_rewrites ["symmetric_LEX"]
 
+val LEX_CONG = Q.store_thm
+("LEX_CONG",
+ `!R1 R2 v1 v2 R1' R2' v1' v2'.
+     (v1 = v1') /\ (v2 = v2') /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) ==> (R1 a c = R1' a c)) /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) /\ (a=c) ==> (R2 b d = R2' b d))
+   ==>
+    ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')`,
+ Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ] 
+   THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
+   THEN METIS_TAC[]);
+
+val _ = DefnBase.export_cong "LEX_CONG";
+
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.
     It adds relevant rewrites into the global compset.
