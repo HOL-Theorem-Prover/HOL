@@ -129,15 +129,14 @@ fun pp_type0 (G:grammar) backend = let
           add_string s
         end handle HOL_ERR _ =>
         let
-          val (Tyop, Args) = type_grammar.abb_dest_type G ty
+          fun realtype ty = let val {Thy,Tyop,...} = dest_thy_type ty
+                            in Thy ^ "$" ^ Tyop end
+          val {Tyop, Args, Thy = thyopt} = type_grammar.abb_dest_type G ty
           fun tooltip () =
-              case Binarymap.peek (type_grammar.abbreviations G, Tyop) of
-                NONE => let
-                  val {Thy,Tyop,...} = dest_thy_type ty
-                in
-                    Thy ^ "$" ^ Tyop
-                end
-              | SOME st => let
+            let
+              val abbs = type_grammar.abbreviations G
+              fun doabbrev st =
+                let
                   val numps = num_params st
                 in
                   if 0 < numps then let
@@ -155,6 +154,32 @@ fun pp_type0 (G:grammar) backend = let
                     end
                   else structure_to_string st
                 end
+            in
+              case thyopt of
+                SOME thy =>
+                let
+                  val knm = {Thy = thy, Name = Tyop}
+                in
+                  case Binarymap.peek (abbs, knm) of
+                      NONE => realtype ty
+                    | SOME st => doabbrev st
+                end
+              | NONE =>
+                let
+                  val privabbs = type_grammar.privileged_abbrevs G
+                in
+                  case Binarymap.peek (privabbs, Tyop) of
+                      NONE => realtype ty
+                    | SOME thy =>
+                      let
+                        val knm = {Thy = thy, Name = Tyop}
+                      in
+                        case Binarymap.peek (abbs, knm) of
+                            NONE => raise Fail "Very confused tyabbrev"
+                          | SOME st => doabbrev st
+                      end
+                end
+            end
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0

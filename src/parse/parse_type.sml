@@ -33,6 +33,7 @@ fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
 fun parse_type tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = abbreviations G
+  and privabbs = privileged_abbrevs G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
   fun structure_to_value0 (s,locn) args st =
       case st of
@@ -121,9 +122,14 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       in
         if is_numeric s then generate_fcpbit((s,locn), args)
         else
-          case Binarymap.peek(abbrevs, s) of
-            NONE => pType((s,locn),args)
-          | SOME st => structure_to_value (s,locn) args st
+          case Binarymap.peek(privabbs, s) of
+            NONE => pType((s,locn), args)
+          | SOME thy => let
+            in
+              case Binarymap.peek(abbrevs, {Name = s, Thy = thy}) of
+                  NONE => pType((s,locn),args)
+                | SOME st => structure_to_value (s,locn) args st
+            end
       end
     | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"

@@ -4,6 +4,7 @@ sig
   type kernelname = {Thy : string, Name : string}
   val name_compare : kernelname * kernelname -> order
   val name_toString : kernelname -> string
+  val name_toMLString : kernelname -> string
 
   eqtype kernelid
 

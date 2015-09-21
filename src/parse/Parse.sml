@@ -703,7 +703,7 @@ fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
                   ", Prec = ", Int.toString Prec, "}"])
  end
 
-fun temp_type_abbrev (s, ty) = let
+fun temp_thytype_abbrev(knm, ty) = let
   val params = Listsort.sort Type.compare (type_vars ty)
   val (num_vars, pset) =
       List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
@@ -718,16 +718,23 @@ fun temp_type_abbrev (s, ty) = let
         end
 in
   the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (s, mk_structure pset ty);
+                                                    (knm, mk_structure pset ty);
   type_grammar_changed := true;
   term_grammar_changed := true
 end handle GrammarError s => raise ERROR "type_abbrev" s
 
+fun temp_type_abbrev (s, ty) = let
+  val thy = Theory.current_theory()
+in
+  temp_thytype_abbrev({Thy = thy, Name = s}, ty)
+end
+
 fun type_abbrev (s, ty) = let
+  val knm = {Thy=Theory.current_theory(),Name=s}
 in
   temp_type_abbrev (s, ty);
-  full_update_grms ("temp_type_abbrev",
-                    String.concat ["(", mlquote s, ", ",
+  full_update_grms ("temp_thytype_abbrev",
+                    String.concat ["(", KernelSig.name_toMLString knm, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
                                                    (TheoryPP.pp_type "U" "T")
                                                    ty,
