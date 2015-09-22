@@ -1,10 +1,11 @@
 structure type_grammar :> type_grammar =
 struct
 
+open HOLgrammars
 open Lib
+
 datatype grammar_rule =
-         INFIX of {opname : string, parse_string : string} list *
-                  HOLgrammars.associativity
+         INFIX of {opname : string, parse_string : string} list * associativity
 
 datatype type_structure =
          TYOP of {Thy : string, Tyop : string, Args : type_structure list}
@@ -17,6 +18,14 @@ fun typstruct_uptodate ts =
                                 andalso List.all typstruct_uptodate Args
 
 type kernelname = KernelSig.kernelname
+
+fun break_qident s =
+  case String.fields (equal #"$") s of
+      [ _ ] => (NONE, s)
+    | [thy, nm] => (SOME thy, nm)
+    | _ => raise GrammarError ("String \""^s^
+                               "\" is not a valid type identifier")
+
 
 datatype grammar = TYG of {
   rules : (int * grammar_rule) list,
@@ -60,8 +69,6 @@ fun fupdate_privabbs f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
 fun fupdate_tstamp f (TYG{rules,suffixes,abbprint,abbparse,privabbs,tstamp}) =
   TYG{rules=rules,suffixes=suffixes,abbprint=abbprint,abbparse=abbparse,
       privabbs = privabbs, tstamp = f tstamp}
-
-open HOLgrammars
 
 fun default_typrinter (G:grammar) (pps:Portable.ppstream)
                       (ty:Type.hol_type) = PP.add_string pps "<a type>"
@@ -171,6 +178,7 @@ val empty_grammar = TYG { rules = [], suffixes = [],
 
 fun rules (TYG gr) = {infixes = #rules gr, suffixes = #suffixes gr}
 fun abbreviations (TYG gr) = #abbparse gr
+fun abbprintmap (TYG gr) = #abbprint gr
 fun privabbs (TYG gr) = #privabbs gr
 val privileged_abbrevs = privabbs
 fun tstamp (TYG gr) = #tstamp gr
@@ -207,10 +215,30 @@ in
 end
 
 fun remove_abbreviation g s =
-  case Binarymap.peek (privabbs g, s) of
-      NONE => raise GrammarError ("Name \""^s^
-                                  "\" doesn't map to a known type abbreviation")
-    | SOME thy => remove_knm_abbreviation g {Name = s, Thy = thy}
+  let
+    val (thyopt, nm) = break_qident s
+    fun parsemap nmcheck (knm,st,acc) =
+      if nmcheck knm then acc else Binarymap.insert(acc,knm,st)
+    fun printmap nmcheck (ty,v as (tstamp,knm),acc) =
+      if nmcheck knm then acc else TypeNet.insert(acc,ty,v)
+    fun thyprivrm thy m =
+      case Binarymap.peek (m, nm) of
+          NONE => m
+        | SOME thy' => if thy' = thy then #1 (Binarymap.remove(m,nm))
+                       else m
+    val (check,privrm) =
+        case thyopt of
+            NONE => ((fn knm => #Name knm = nm),
+                     (fn m => #1 (Binarymap.remove (m, nm))
+                              handle Binarymap.NotFound => m))
+          | SOME thy => (equal {Name = nm, Thy = thy}, thyprivrm thy)
+  in
+    g |> fupdate_privabbs privrm
+      |> fupdate_abbprint (TypeNet.fold (printmap check) TypeNet.empty)
+      |> fupdate_abbparse
+           (Binarymap.foldl (parsemap check)
+                            (Binarymap.mkDict KernelSig.name_compare))
+  end
 
 fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, st) = let
   val _ = check_structure st
@@ -497,25 +525,25 @@ end
 fun abb_dest_type G ty = if !print_abbrevs then abb_dest_type0 G ty
                          else dest_type' ty
 
-fun disable_abbrev_printing s (arg as TYG grm) = let
-  val {abbparse=abbs, abbprint=pmap, privabbs,...} = grm
+fun disable_abbrev_printing s (g as TYG grm) = let
+  val (thyopt, nm) = break_qident s
+  fun rmprints namecheck g =
+    let
+      val pmap' =
+          TypeNet.fold (fn (ty, (tstamp, knm), acc) =>
+                           if namecheck knm then acc
+                           else TypeNet.insert(acc,ty, (tstamp, knm)))
+                       TypeNet.empty
+                       (abbprintmap g)
+    in
+      fupdate_abbprint (K pmap') g
+    end
 in
-  case Binarymap.peek (privabbs, s) of
-      NONE => arg
-    | SOME thy => let
-        val knm = {Name = s, Thy = thy}
-      in
-        case Binarymap.peek(abbs, knm) of
-            NONE => arg
-          | SOME st => let
-              val ty = structure_to_type st
-              val (pmap', (_,knm')) = TypeNet.delete(pmap, ty)
-            in
-              if knm = knm' then fupdate_abbprint (K pmap') arg
-              else arg
-            end handle Binarymap.NotFound => arg
-      end
+  case thyopt of
+      NONE => rmprints (fn knm => #Name knm = nm) g
+    | SOME thy => rmprints (fn knm => knm = {Name = nm, Thy = thy}) g
 end
+
 (* ----------------------------------------------------------------------
     min grammar
 

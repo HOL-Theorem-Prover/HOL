@@ -131,7 +131,12 @@ fun pp_type0 (G:grammar) backend = let
         let
           fun realtype ty = let val {Thy,Tyop,...} = dest_thy_type ty
                             in Thy ^ "$" ^ Tyop end
-          val {Tyop, Args, Thy = thyopt} = type_grammar.abb_dest_type G ty
+          val {Tyop = abop, Args = abargs, Thy = thyopt} =
+              type_grammar.abb_dest_type G ty
+          val abop_s =
+              case thyopt of
+                  NONE => abop
+                | SOME thy => KernelSig.name_toString {Thy = thy, Name = abop}
           fun tooltip () =
             let
               val abbs = type_grammar.abbreviations G
@@ -156,23 +161,23 @@ fun pp_type0 (G:grammar) backend = let
                 end
             in
               case thyopt of
-                SOME thy =>
+                SOME thy => (* unprivileged abbrev *)
                 let
-                  val knm = {Thy = thy, Name = Tyop}
+                  val knm = {Thy = thy, Name = abop}
                 in
                   case Binarymap.peek (abbs, knm) of
-                      NONE => realtype ty
+                      NONE => realtype ty (* probably shouldn't happen *)
                     | SOME st => doabbrev st
                 end
               | NONE =>
                 let
                   val privabbs = type_grammar.privileged_abbrevs G
                 in
-                  case Binarymap.peek (privabbs, Tyop) of
+                  case Binarymap.peek (privabbs, abop) of
                       NONE => realtype ty
                     | SOME thy =>
                       let
-                        val knm = {Thy = thy, Name = Tyop}
+                        val knm = {Thy = thy, Name = abop}
                       in
                         case Binarymap.peek (abbs, knm) of
                             NONE => raise Fail "Very confused tyabbrev"
@@ -181,7 +186,7 @@ fun pp_type0 (G:grammar) backend = let
                 end
             end
           fun print_args grav0 args = let
-            val parens_needed = case Args of [_] => false | _ => true
+            val parens_needed = case args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0
           in
             pbegin parens_needed;
@@ -192,7 +197,7 @@ fun pp_type0 (G:grammar) backend = let
             pend parens_needed
           end
           fun print_ghastly () = let
-            val {Thy,Tyop,...} = dest_thy_type ty
+            val {Thy,Tyop,Args} = dest_thy_type ty
           in
             add_string "(";
             begin_block INCONSISTENT 0;
@@ -204,24 +209,24 @@ fun pp_type0 (G:grammar) backend = let
           end
           val {Thy, Tyop = realTyop, Args = realArgs} = dest_thy_type ty
         in
-          if Tyop = "cart" andalso length Args = 2 andalso
+          if abop = "cart" andalso length abargs = 2 andalso
              Thy = "fcp" andalso realTyop = "cart" andalso !pp_array_types
           then
-            (pr_ty pps (hd Args) Sfx (depth - 1);
+            (pr_ty pps (hd realArgs) Sfx (depth - 1);
              add_string "[";
-             pr_ty pps (hd (tl Args)) Top (depth - 1);
+             pr_ty pps (hd (tl realArgs)) Top (depth - 1);
              add_string "]")
           else
-            case Args of
+            case abargs of
               [] => let
               in
-                case lookup_tyop Tyop of
+                case lookup_tyop abop of
                   NONE => print_ghastly ()
-                | _ => add_ann_string (Tyop, TyOp tooltip)
+                | _ => add_ann_string (abop_s, TyOp tooltip)
 
               end
             | [arg1, arg2] => (let
-                val rule = valOf (lookup_tyop Tyop)
+                val rule = valOf (lookup_tyop abop)
               in
                 case rule of
                   SR => let
@@ -230,9 +235,9 @@ fun pp_type0 (G:grammar) backend = let
                     (* knowing that there are two args, we know that they will
                        be printed with parentheses, so the gravity we pass in
                        here makes no difference. *)
-                    print_args Top Args;
+                    print_args Top abargs;
                     add_break(1,0);
-                    add_ann_string (Tyop, TyOp tooltip);
+                    add_ann_string (abop_s, TyOp tooltip);
                     end_block()
                   end
                 | IR(prec, assoc, printthis) => let
@@ -258,14 +263,14 @@ fun pp_type0 (G:grammar) backend = let
               end handle Option => print_ghastly())
             | _ => let
               in
-                case lookup_tyop Tyop of
+                case lookup_tyop abop of
                   NONE => print_ghastly()
                 | SOME _ => let
                   in
                     begin_block INCONSISTENT 0;
-                    print_args Sfx Args;
+                    print_args Sfx abargs;
                     add_break(1,0);
-                    add_ann_string (Tyop, TyOp tooltip);
+                    add_ann_string (abop_s, TyOp tooltip);
                     end_block()
                   end
               end
