@@ -88,7 +88,29 @@ There are two standard ways to the install a test that can be run by `build`:
     As explained in the documentation at the head of `tools/build-sequence`, the name of this directory should be preceded by as many exclamation mark characters\ (`!`) as its desired selftest level.
     Using this approach is necessary if the tests need to examine behaviours to do with theory export and loading.
 
+## Kernel Selection
 
+There are currently three kernels that can be built to underlie a HOL installation.
+The *standard kernel* uses a de\ Bruijn representation for terms, with bound variables represented as numbers.
+Free variables are represented as a pair of name and type.
+This kernel also implements explicit substitutions internally, allowing for efficient call-by-value execution with tools such as `EVAL`.
+This kernel is the default choice, and can be explicitly selected by passing the `-stdknl` option to `build`.
+
+The *experimental kernel* uses name-type pairs for all sorts of variables.
+This means that the functions `mk_abs` and `dest_abs` operate in constant time.
+(In the standard kernel, these functions must switch between de\ Bruijn indices and free variables in the body when called, making them run in time linear in the size of the body.)
+The experimental kernel can be selected by passing the `-expk` option to `build`.
+
+The *OpenTheory kernel* is based on the experimental kernel, but adds proof-logging to the primitive inference rules so that OpenTheory theory packages can be exported from HOL.
+This kernel can be selected by passing the `-otknl` option to `build`.
+
+## Build Sequences
+
+When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
+By default this sequence is that specified in the file `tools/build-sequence`, which in turn refers to other files *via* `#include` directives.
+It is possible to provide a different sequence by using the `-seq` commandline option to `build`.
+Such sequences can be constructed more easily be referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
+The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
 
 # Sources and Their Organisation {#sources}
 
