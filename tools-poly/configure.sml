@@ -200,6 +200,9 @@ fun systeml x = (print "Systeml not correctly loaded.\n";
 val mk_xable = systeml;
 val xable_string = systeml;
 
+fun optquote NONE = "NONE"
+  | optquote (SOME p) = "SOME " ^ quote p
+
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
 val _ = let
@@ -214,6 +217,7 @@ in
   ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
+   "val POLYC =" --> ("val POLYC = "^optquote polyc^"\n"),
    "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
                              (String.concatWith
                                   ", "

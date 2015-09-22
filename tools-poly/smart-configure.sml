@@ -37,6 +37,9 @@ in
 end
 val check_poly = check_dir "poly" [OS.FileSys.A_EXEC]
 val check_libpoly = check_dir "libpolymain.a" [OS.FileSys.A_READ]
+fun check_polyc c =
+  Option.map (fn p => OS.Path.concat(p,"polyc"))
+             (check_dir "polyc" [OS.FileSys.A_EXEC] c)
 
 fun findpartial f [] = NONE
   | findpartial f (h::t) =
@@ -60,6 +63,7 @@ fun determining s =
 print "\nHOL smart configuration.\n\n";
 
 val poly = ""
+val polyc = NONE : string option
 val polymllibdir = "";
 val DOT_PATH = "";
 
@@ -126,7 +130,7 @@ val polyinstruction =
     \properly.\n\
     \This file should include a line of the form\n\n\
     \  val poly = \"path-to-poly\";"
-val poly =
+val (poly,polyc) =
     if poly = "" then let
         val _ = determining "poly"
         val nm = CommandLine.name()
@@ -155,7 +159,7 @@ val poly =
         | SOME c => let
           in
             case check_poly c of
-              SOME p => OS.Path.concat(p,"poly")
+              SOME p => (OS.Path.concat(p,"poly"), check_polyc p)
             | NONE =>
               die ("\n\nI tried to figure out where your poly executable is\
                    \n\by examining your command-line.\n\
@@ -171,7 +175,7 @@ val poly =
                      ^poly^
                      "'\nas the location of the poly executable.\n"^
                      polyinstruction)
-      | SOME p => OS.Path.concat(p, "poly")
+      | SOME p => (OS.Path.concat(p, "poly"), check_polyc p)
 
 val polylibsister = let
   val p as {arcs,isAbs,vol} = OS.Path.fromString poly
@@ -225,8 +229,14 @@ fun verdict (prompt, value) =
        print value;
        print "\n");
 
+fun optverdict (prompt, optvalue) =
+  (print (StringCvt.padRight #" " 20 (prompt ^ ":"));
+   print (case optvalue of NONE => "NONE" | SOME p => "SOME "^p);
+   print "\n");
+
 verdict ("OS", OS);
 verdict ("poly", poly);
+optverdict ("polyc", polyc);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 verdict ("DOT_PATH", DOT_PATH);

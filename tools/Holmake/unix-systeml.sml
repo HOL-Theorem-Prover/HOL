@@ -91,6 +91,7 @@ val MOSMLDIR = ""
 val HAVE_BASIS2002 = false
 val OS = ""
 val POLY = ""
+val POLYC = NONE
 val POLYMLLIBDIR = ""
 val POLY_LDFLAGS = []
 val POLY_LDFLAGS_STATIC = []
