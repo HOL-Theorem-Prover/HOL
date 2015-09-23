@@ -1,7 +1,7 @@
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
-fun u f = use ("mlyacclib/" ^ f ^ ".sml");
+fun u f = use ("../mlyacclib/" ^ f ^ ".sml");
 
 val _ = u "MLY_base-sig";
 val _ = u "MLY_join";
@@ -9,7 +9,7 @@ val _ = u "MLY_lrtable";
 val _ = u "MLY_stream";
 val _ = u "MLY_parser2";
 
-fun u f = use ("src/" ^ f ^ ".sml");
+fun u f = use (f ^ ".sml");
 
 val _ = u "utils-sig";
 val _ = u "utils";
@@ -33,11 +33,6 @@ val _ = u "absyn-sig";
 val _ = u "yacc";
 val _ = u "absyn";
 val _ = u "link";
-val _ = use "src/poly-main.ML";
+val _ = use "poly-main.ML";
 
 fun main () = main.main (CommandLine.arguments ());
-
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export ("mlyacc", main);
-
-

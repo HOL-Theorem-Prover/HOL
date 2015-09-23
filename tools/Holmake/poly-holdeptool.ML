@@ -7,5 +7,4 @@ use "Holdep_tokens.sig";
 use "Holdep_tokens.sml";
 use "holdeptool.sml";
 
-val _ = PolyML.shareCommonData holdeptool.main
-val _ = PolyML.export("holdeptool", holdeptool.main)
+val main = holdeptool.main
