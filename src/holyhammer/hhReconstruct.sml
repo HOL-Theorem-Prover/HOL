@@ -177,21 +177,17 @@ fun minimize_lemmas lemmas cj =
          print "Minimization ...\n";
          pp_lemmas (map fst (minimize_lemmas_loop [] l cj))
          )
-    else 
-      if can (time_metis (map snd l) cj) 30.0 
-      then pp_lemmas lemmas
-      else (
-           pp_lemmas lemmas;
-           raise ERR "minimize_lemmas" "Metis timed out after 30 seconds."
-           )
-   end
+    else pp_lemmas lemmas
+  end
 
 (*---------------------------------------------------------------------------
    Reconstruction.
  ----------------------------------------------------------------------------*)
 
 fun reconstruct (atp_status,atp_out) cj =
-  minimize_lemmas (atp_lemmas_exn (atp_status,atp_out)) cj
+  let val lemmas = atp_lemmas_exn (atp_status,atp_out) in
+    if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
+  end
 
 fun reconstructl atpfilel cj =
   let
@@ -213,7 +209,7 @@ fun reconstructl atpfilel cj =
         fun cmp l1 l2 = length l1 < length l2
         val lemmas = hd (sort cmp (map snd proofl))
       in
-        minimize_lemmas lemmas cj
+        if !minimize_flag then minimize_lemmas lemmas cj else pp_lemmas lemmas
       end
   end
 
