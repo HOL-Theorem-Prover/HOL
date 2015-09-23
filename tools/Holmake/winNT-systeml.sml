@@ -38,12 +38,12 @@ val protect = dquote
 fun system_ps s = Process.system ("call " ^ s)
 
 fun xable_string s = s^".exe"
-fun mk_xable file =   (* returns the name of the executable *)
+fun mk_xable file =
     let val exe = file^".exe"
         val _ = FileSys.remove exe handle _ => ()
     in
       FileSys.rename{old=file, new=exe};
-      exe
+      OS.Process.success
     end
 
 fun normPath s = Path.toString(Path.fromString s)
