@@ -5,7 +5,7 @@ val _ = new_theory"simpleSexpParse"
 
 val parse_sexp_def = Define`
   parse_sexp s =
-    OPTION_BIND (destResult (peg_exec sexpPEG (pnt sxnt_sexp) s [] done failed))
+    OPTION_BIND (pegparse sexpPEG s)
       (λ(rest,sx). OPTION_IGNORE_BIND (OPTION_GUARD (rest="")) (SOME sx))`;
 
 (* TODO: all this is taken from cakeml/parsing, and should be made more generic *)
