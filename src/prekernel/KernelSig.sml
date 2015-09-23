@@ -8,6 +8,8 @@ struct
       | x => x
 
   fun name_toString {Thy,Name} = Thy ^ "$" ^ Name
+  fun name_toMLString {Thy,Name} =
+    "{Thy=\"" ^ String.toString Thy ^ "\",Name=\"" ^ String.toString Name ^ "\"}"
 
   type kernelid = (kernelname * bool) ref (* bool is uptodate flag *)
 

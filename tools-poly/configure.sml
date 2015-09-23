@@ -83,10 +83,25 @@ in
        else []
 end;
 
+fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
+              TextIO.flushOut TextIO.stdOut);
+
+val verbose = false
+
+val echov = if verbose then echo else (fn _ => ())
+
 fun compile systeml exe obj =
-  (systeml ([CC, "-o", exe, obj, "-L" ^ polymllibdir,
-             "-lpolymain", "-lpolyml"] @ machine_flags);
-   OS.FileSys.remove obj);
+  let
+    val args = [CC, "-o", exe, obj, "-L" ^ polymllibdir,
+                "-lpolymain", "-lpolyml"] @ machine_flags
+  in
+    echov (String.concatWith " " args ^ "\n");
+    systeml args before OS.FileSys.remove obj
+  end
+
+fun liftstatus f x =
+  if OS.Process.isSuccess (f x) then ()
+  else raise Fail "Command failed"
 
 (*---------------------------------------------------------------------------
           END user-settable parameters
@@ -200,6 +215,9 @@ fun systeml x = (print "Systeml not correctly loaded.\n";
 val mk_xable = systeml;
 val xable_string = systeml;
 
+fun optquote NONE = "NONE"
+  | optquote (SOME p) = "SOME " ^ quote p
+
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
 val _ = let
@@ -214,6 +232,7 @@ in
   ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
+   "val POLYC =" --> ("val POLYC = "^optquote polyc^"\n"),
    "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
                              (String.concatWith
                                   ", "
@@ -290,15 +309,6 @@ in
   print "sml)\n"
 end;
 
-
-
-(*---------------------------------------------------------------------------
-          String and path operations.
- ---------------------------------------------------------------------------*)
-
-fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
-              TextIO.flushOut TextIO.stdOut);
-
 val _ = echo "Beginning configuration.";
 
 (* ----------------------------------------------------------------------
@@ -323,19 +333,18 @@ fun die s = (print s; print "\n"; Process.exit Process.failure)
 
 local
   val cdir = FileSys.getDir()
-  val systeml = fn clist => if not (Process.isSuccess (systeml clist)) then
-                              raise (Fail "")
-                            else ()
+  val systeml = liftstatus systeml
+  val system_ps = liftstatus system_ps
   val toolsdir = fullPath [holdir, "tools-poly"]
   val lexdir = fullPath [holdir, "tools", "mllex"]
-  val yaccdir = fullPath [holdir, "tools", "mlyacc"]
+  val yaccdir = fullPath [holdir, "tools", "mlyacc", "src"]
   val qfdir = fullPath [holdir, "tools", "quote-filter"]
   val hmakedir = fullPath [toolsdir, "Holmake"]
   val hmakebin = fullPath [holdir, "bin", "Holmake"]
   val buildbin = fullPath [holdir, "bin", "build"]
   val qfbin = fullPath [holdir, "bin", "unquote"]
   val lexer = fullPath [lexdir, "mllex.exe"]
-  val yaccer = fullPath [yaccdir, "src", "mlyacc.exe"]
+  val yaccer = fullPath [yaccdir, "mlyacc.exe"]
   fun copyfile from to =
     let val instrm = BinIO.openIn from
         val ostrm = BinIO.openOut to
@@ -360,98 +369,75 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
 val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
-(* ----------------------------------------------------------------------
-    Compile our local copy of mllex
-   ---------------------------------------------------------------------- *)
-val _ =
-  (echo "Making tools/mllex/mllex.exe.";
-   FileSys.chDir lexdir;
-   system_ps (POLY ^ " < poly-mllex.ML");
-   compile systeml "mllex.exe" "mllex.o";
-   mk_xable "../../tools/mllex/mllex.exe";
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build mllex.";
+fun fakepolyc src tgt =
+  let
+    val cline =
+        "echo 'use \"" ^ src ^ "\"; PolyML.export(\"" ^ tgt ^ "\", main);' | " ^
+        POLY ^ " -q --error-exit"
+  in
+    echov cline;
+    system_ps cline;
+    compile systeml tgt (tgt ^ ".o")
+  end
 
-(* ----------------------------------------------------------------------
-    Compile our local copy of mlyacc
-   ---------------------------------------------------------------------- *)
-val _ =
-  (echo "Making tools/mlyacc/mlyacc.exe.";
-   FileSys.chDir yaccdir;
-   FileSys.chDir "src";
-   systeml [lexer, "yacc.lex"];
-   FileSys.chDir yaccdir;
-   system_ps (POLY ^ " < poly-mlyacc.ML");
-   compile systeml yaccer "mlyacc.o";
-   mk_xable "../../tools/mlyacc/src/mlyacc.exe";
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build mlyacc.";
+val maybe_polyc_compile =
+    case POLYC of
+        NONE => fakepolyc
+      | SOME pc => (fn s => fn tgt =>
+                       let
+                         val cline = pc ^ " -o " ^ tgt ^ " " ^ s
+                       in
+                         echov cline;
+                         system_ps cline
+                       end)
 
-(* ----------------------------------------------------------------------
-    Compile quote-filter
-   ---------------------------------------------------------------------- *)
-val _ =
-  (echo "Making bin/unquote.";
-   FileSys.chDir qfdir;
-   systeml [lexer, "filter"];
-   system_ps (POLY ^  " < poly-unquote.ML");
-   compile systeml qfbin "unquote.o";
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build unquote.";
 
-(*---------------------------------------------------------------------------
-    Compile Holmake (bypassing the makefile in directory Holmake), then
-    put the executable bin/Holmake.
- ---------------------------------------------------------------------------*)
-val _ =
-  (echo "Making bin/Holmake";
-   FileSys.chDir toolsdir;
-   system_ps (POLY ^ " < " ^ fullPath ["Holmake", "poly-Holmake.ML"]);
-   compile systeml hmakebin (fullPath ["Holmake", "Holmake.o"]);
-   FileSys.chDir (fullPath [HOLDIR, "tools", "Holmake"]);
-   system_ps (POLY ^ " < poly-holdeptool.ML");
-   compile systeml
-           (fullPath [HOLDIR, "bin", "holdeptool.exe"])
-           (fullPath [HOLDIR, "tools", "Holmake", "holdeptool.o"]);
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build Holmake.";
+fun work_in_dir tgtname d f =
+  (echo ("Making " ^ tgtname); FileSys.chDir d; f(); FileSys.chDir cdir)
+    handle _ => die ("Failed to make "^tgtname)
 
-(*---------------------------------------------------------------------------
-    Compile build.sml, and put it in bin/build.
- ---------------------------------------------------------------------------*)
-val _ =
-  (echo "Making bin/build.";
-   FileSys.chDir toolsdir;
-   system_ps (POLY ^ " < poly-build.ML");
-   compile systeml buildbin "build.o";
-   FileSys.chDir cdir)
-   handle _ => die "Failed to build build.";
+(* mllex *)
+val _ = work_in_dir "mllex"
+          lexdir
+          (fn () => maybe_polyc_compile "poly-mllex.ML" "mllex.exe")
 
-(* ----------------------------------------------------------------------
-    Generate heapname executable
-   ---------------------------------------------------------------------- *)
+(* mlyacc *)
+val _ = work_in_dir
+          "mlyacc" yaccdir
+          (fn () => (systeml [lexer, "yacc.lex"];
+                     maybe_polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
 
-val _ = let
-in
-  echo "Making bin/heapname utility";
-  FileSys.chDir toolsdir;
-  system_ps (POLY ^ " < heapname.ML");
-  compile systeml (fullPath [HOLDIR,"bin","heapname"]) "heapname.o";
-  FileSys.chDir cdir
-end handle _ => die "Failed to build heapname."
+(* unquote - the quotation filter *)
+val _ = work_in_dir "unquote." qfdir
+                    (fn () => (systeml [lexer, "filter"];
+                               maybe_polyc_compile "poly-unquote.ML" qfbin))
 
-(* ----------------------------------------------------------------------
-    Generate buildheap executable
-   ---------------------------------------------------------------------- *)
-val _ = let
-in
-  echo "Making bin/buildheap utility";
-  FileSys.chDir toolsdir;
-  system_ps (POLY ^ " < buildheap.ML");
-  compile systeml (fullPath [HOLDIR, "bin", "buildheap"]) "buildheap.o";
-  FileSys.chDir cdir
-end handle _ => die "Failed to build buildheap."
+(* Holmake *)
+val _ = work_in_dir "Holmake" hmakedir
+                    (fn () => maybe_polyc_compile "poly-Holmake.ML" hmakebin)
 
+(* holdeptool *)
+val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
+                    (fn () =>
+                        maybe_polyc_compile
+                          "poly-holdeptool.ML"
+                          (fullPath [HOLDIR, "bin", "holdeptool.exe"]))
+
+(* build *)
+val _ = work_in_dir "build" toolsdir
+                    (fn () => maybe_polyc_compile "poly-build.ML" buildbin)
+
+(* heapname *)
+val _ = work_in_dir
+          "heapname" toolsdir
+          (fn () => maybe_polyc_compile "heapname.ML"
+                                        (fullPath [HOLDIR,"bin","heapname"]))
+
+(* buildheap *)
+val _ = work_in_dir
+          "buildheap" toolsdir
+          (fn () => maybe_polyc_compile "buildheap.ML"
+                                        (fullPath [HOLDIR, "bin", "buildheap"]))
 
 end (* local *)
 

@@ -719,7 +719,10 @@ in
       if
         isSuccess (compile debug (include_flags @ ["-o", script] @ objectfiles))
       then let
-        val script' = Systeml.mk_xable script
+        val status = Systeml.mk_xable script
+        val _ = OS.Process.isSuccess status orelse
+                die_with ("Couldn't make script "^script^" executable")
+        val script' = xable_string script
         val thysmlfile = s^"Theory.sml"
         val thysigfile = s^"Theory.sig"
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()

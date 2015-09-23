@@ -20,5 +20,4 @@ val _ = useC "ReadHMF"
 val _ = use "../tools/buildutils.sig";
 val _ = use "../tools/buildutils.sml";
 val _ = use "build.sml";
-val _ = PolyML.shareCommonData build.main;
-val _ = PolyML.export ("build", build.main);
+val main = build.main

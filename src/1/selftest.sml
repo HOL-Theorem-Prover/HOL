@@ -411,6 +411,14 @@ val _ = app test [
                 \else F"}
 ]
 
+val _ = let
+  open testutils
+  val _ = tprint (standard_tpp_message "|- p")
+  val res = thm_to_string (ASSUME (mk_var("p", Type.bool)))
+in
+  if res = " [.] |- p" then print "OK\n" else die "FAILED!"
+end
+
 val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
                         block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
                         pp_elements = [TOK "/"], term_name = "div" };
@@ -571,6 +579,17 @@ val _ = let
   val th = prove (g, tac) ;
 in if hyp th = [] then print "OK\n" else die "FAILED"
 end handle _ => die "FAILED!"
+
+val _ = let
+  val _ = tprint "Removing type abbreviation"
+  val _ = temp_type_abbrev ("foo", ``:'a -> bool``)
+  val s1 = type_to_string ``:bool -> bool``
+  val _ = s1 = ":bool foo" orelse die "FAILED!"
+  val _ = temp_remove_type_abbrev "foo"
+  val s2 = type_to_string ``:bool -> bool``
+in
+  if s2 = ":bool -> bool" then print "OK\n" else die "FAILED!"
+end
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

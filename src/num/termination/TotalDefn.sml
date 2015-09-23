@@ -109,7 +109,7 @@ fun mk_lex_reln argvars sizedlist arrangement =
 
 
 (*---------------------------------------------------------------------------*)
-(* proper_subterm t1 t2 iff t1 is a proper subterm of t2. A recod projection *)
+(* proper_subterm t1 t2 iff t1 is a proper subterm of t2. A record projn     *)
 (* x.fld is a proper subterm of x.                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -152,6 +152,7 @@ val termination_simps =
           prim_recTheory.measure_def,
           relationTheory.inv_image_def,
           pairTheory.LEX_DEF,
+          pairTheory.RPROD_DEF,
           SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
 
 (*---------------------------------------------------------------------------*)

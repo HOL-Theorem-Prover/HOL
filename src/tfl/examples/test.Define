@@ -994,3 +994,30 @@ Define `t4 (a,17w,18w,b,19w,c) = a /\ b /\ c`;
 Define `t5 (a,17w,18w,b,c,19w) = a /\ b /\ c`;
 Define `t6 (a,17w,18w,19w,b,c) = a /\ b /\ c`;
 
+
+(*---------------------------------------------------------------------------*)
+(* Comparison function on first order terms.                                 *)
+(*---------------------------------------------------------------------------*)
+
+load "stringLib";
+open comparisonTheory; (* source in HOLDIR/src/enumfset *)
+
+val _ = Hol_datatype
+  `term 
+     = Var of string
+     | App of string => term list`;
+
+val term_size_def = fetch "-" "term_size_def";
+
+val term_cmp_def = 
+ tDefine
+ "term_cmp"
+ `(term_cmp (Var x1) (Var x2) = string_cmp x1 x2) ∧
+  (term_cmp (Var _) (App _ _) = Less) ∧
+  (term_cmp (App _ _) (Var _) = Greater) ∧
+  (term_cmp (App x1 ts1) (App x2 ts2) = 
+     pair_cmp string_cmp (list_cmp term_cmp) (x1,ts1) (x2,ts2))`
+ (RW_TAC list_ss [] THEN
+  WF_REL_TAC `measure (term_size o FST)` THEN
+  Induct_on `ts1` THEN RW_TAC list_ss [term_size_def] THENL
+  [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)] THEN DECIDE_TAC);

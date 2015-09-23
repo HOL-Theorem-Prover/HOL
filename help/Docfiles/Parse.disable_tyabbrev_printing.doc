@@ -9,12 +9,19 @@ Disables the printing of a type abbreviation.
 Pretty-printing
 
 \DESCRIBE
-A call to {disable_tyabbrev_printing s} causes the type abbreviation
+A call to {disable_tyabbrev_printing s} causes type abbreviations
 mapping the string {s} to some type expansion not to be printed when
 an instance of the type expansion is seen.
 
+If the string {s} is not a qualified name (of the form {"thy$name"}),
+then all type abbreviations with base name {s} are disabled. If {s}
+does have a qualified name, then only a type abbreviation of that name
+and theory will be disabled (if such exists).
+
 \FAILURE
-Never fails.  If there is no abbreviation of the given name, a call to
+Fails if the given string is a malformed qualified identifier (e.g.,
+{foo$$}). If the given name is syntactically valid, but there are no
+abbreviations keyed to the given name, a call to
 {disable_tyabbrev_printing} will silently do nothing.
 
 \EXAMPLE
@@ -56,6 +63,6 @@ this function, {temp_disable_tyabbrev_printing} that does not cause
 its effect to persist with an exported theory.
 
 \SEEALSO
-Parse.type_abbrev.
+Parse.remove_type_abbrev, Parse.type_abbrev.
 
 \ENDDOC

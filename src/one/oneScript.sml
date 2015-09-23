@@ -24,7 +24,7 @@
 structure oneScript =
 struct
 
-open Lib HolKernel Parse boolLib;
+open Lib HolKernel Parse boolLib BasicProvers
 
 val _ = new_theory "one";
 
@@ -139,10 +139,9 @@ val one_induction = Q.store_thm
  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]);
 
 val FORALL_ONE = store_thm(
-  "FORALL_ONE",
+  "FORALL_ONE[simp]",
   ``(!x:unit. P x) <=> P ()``,
   simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
-val _ = BasicProvers.export_rewrites ["FORALL_ONE"]
 
 (*---------------------------------------------------------------------------
     Define the case constant

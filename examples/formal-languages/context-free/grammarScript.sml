@@ -200,20 +200,6 @@ val FLAT_EQ_SING = store_thm(
   Induct_on `l` >> simp[] >> simp[APPEND_EQ_CONS] >>
   simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]);
 
-val MAP_EQ_SING = store_thm(
-  "MAP_EQ_SING",
-  ``MAP f l = [x] ⇔ ∃x0. l = [x0] ∧ x = f x0``,
-  Induct_on `l` >> simp[] >> metis_tac[]);
-
-val MAP_EQ_APPEND = store_thm(
-  "MAP_EQ_APPEND",
-  ``MAP f l = x ++ y ⇔
-    ∃x0 y0. l = x0 ++ y0 ∧ x = MAP f x0 ∧ y = MAP f y0``,
-  reverse eq_tac >- (rw[]>>rw[]) >>
-  map_every qid_spec_tac [`y`,`x`, `l`] >> Induct >> simp[] >>
-  map_every qx_gen_tac [`h`, `x`, `y`] >> Cases_on `x` >> simp[] >>
-  strip_tac >> Q.REFINE_EXISTS_TAC `hh::tt` >> simp[]);
-
 val fringe_element = store_thm(
   "fringe_element",
   ``∀pt p x s.
@@ -244,7 +230,7 @@ val fringe_element = store_thm(
       `fsp1 ++ (nilps ++ [[x]] ++ nilss) ++ fss = fp ++ [[x]] ++ fs`
         by simp[] >>
       pop_assum SUBST_ALL_TAC >>
-      simp[MAP_EQ_APPEND, MAP_EQ_SING] >>
+      simp[MAP_EQ_APPEND] >>
       disch_then (fn th =>
         `∃ts1 ts2 xpt. ptl = ts1 ++ [xpt] ++ ts2 ∧
                        fp = MAP ptree_fringe ts1 ∧
@@ -264,7 +250,7 @@ val fringe_element = store_thm(
       rw[] >> qabbrev_tac `f2 = snils ++ fss` >>
       `MAP ptree_fringe ptl = f1 ++ [xp ++ [x]] ++ f2` by simp[Abbr`f2`] >>
       pop_assum mp_tac >>
-      simp_tac (srw_ss()) [MAP_EQ_APPEND, MAP_EQ_SING] >>
+      simp_tac (srw_ss()) [MAP_EQ_APPEND] >>
       disch_then (fn th =>
         `∃pt1 pt2 ptx. ptl = pt1 ++ [ptx] ++ pt2 ∧
                        f1 = MAP ptree_fringe pt1 ∧
@@ -283,7 +269,7 @@ val fringe_element = store_thm(
            simp[APPEND_EQ_APPEND, APPEND_EQ_CONS, DISJ_IMP_THM] >>
            metis_tac[]) >>
     qpat_assum `MAP ptree_fringe XX = YY` mp_tac >>
-    simp[MAP_EQ_APPEND, MAP_EQ_SING] >>
+    simp[MAP_EQ_APPEND] >>
     disch_then (fn th =>
       `∃pt1 pt2 ptx. ptl = pt1 ++ [ptx] ++ pt2 ∧
                      f1 = MAP ptree_fringe pt1 ∧

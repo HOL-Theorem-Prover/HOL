@@ -416,7 +416,7 @@ let val {add_string,add_break,begin_block,add_newline,end_block,add_xstring,...}
     val TP0 = type_pp.pp_type (Parse.type_grammar()) backend ostrm
     val adest_type = type_grammar.abb_dest_type (Parse.type_grammar())
     fun TP ty =
-        if is_vartype ty orelse null (#2 (adest_type ty)) then TP0 ty
+        if is_vartype ty orelse null (#Args (adest_type ty)) then TP0 ty
         else
           (S "("; BB PP.INCONSISTENT 0; TP0 ty; EB(); S")")
 

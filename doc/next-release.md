@@ -60,6 +60,8 @@ Bugs fixed:
     Working in such directories will likely cause problems when and if an `export_theory` call is made, so there is a warning emitted in this situation, but the `load` now succeeds.
     Thanks to Narges Khakpour for the bug report.
 
+-   The function `thm_to_string` was creating ugly strings full of special codes (encoding type information) rather than using the “raw” backend.
+
 New theories:
 -------------
 
@@ -105,6 +107,9 @@ Incompatibilities:
     where the `X` in the pattern was ignored.  The interface now achieves the same end by simply allowing the user to write underscores in the pattern.  Thus, the tactic would become ``Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ⇒ _` ``.  Multiple underscores can be used to ignore multiple sub-terms.
 
     Of course, the `qmatch_rename_tac` and `qmatch_assum_rename_tac` names for these tactics in `lcsymtacs` have changed types as well.  The new `Q.MATCH_GOALSUB_RENAME_TAC` and `Q.MATCH_ASMSUB_RENAME_TAC` (and their lower-case versions) have similar types, without explicit lists of variable names to ignore.
+
+-   The theory `state_option` was removed.
+    The better-developed `errorStateMonad` theory should be used instead.
 
 * * * * *
 

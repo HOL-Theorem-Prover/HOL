@@ -1,4 +1,3 @@
-(* this is an -*- sml -*- file *)
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
@@ -55,7 +54,3 @@ fun main() = let
 in
   TextIO.output(TextIO.stdOut, heap ^ "\n")
 end
-
-
-val _ = PolyML.shareCommonData main
-val _ = PolyML.export ("heapname", main);

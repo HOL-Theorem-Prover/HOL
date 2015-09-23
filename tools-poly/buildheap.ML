@@ -69,8 +69,8 @@ in
   system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^
              String.concatWith " " POLY_LDFLAGS);
   OS.FileSys.remove (outputheap^".o")
-    handle OS.SysErr(msg, _) =>
-           warn ("Couldn't remove "^outputheap^".o: "^msg)
+  handle OS.SysErr(msg, _) =>
+         warn ("Couldn't remove "^outputheap^".o: "^msg)
 end
 
 
@@ -87,5 +87,3 @@ fun main() = let
 in
   create_heap (objs, output, base)
 end
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export ("buildheap", ignore o main);

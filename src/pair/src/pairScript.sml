@@ -16,7 +16,7 @@ structure pairScript =
 struct
 
 (*  interactive use:
- app load ["Q", "relationTheory", "mesonLib"];
+ app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
  open Parse relationTheory mesonLib;
 *)
 
@@ -596,6 +596,18 @@ val LEX_DEF_THM = Q.store_thm
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
+val LEX_MONO = store_thm("LEX_MONO",
+  ``(!x y. R1 x y ==> R2 x y) /\
+    (!x y. R3 x y ==> R4 x y)
+    ==>
+    (R1 LEX R3) x y ==> (R2 LEX R4) x y``,
+  STRIP_TAC THEN
+  Q.SPEC_THEN`x`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  Q.SPEC_THEN`y`FULL_STRUCT_CASES_TAC pair_CASES THEN
+  SRW_TAC[][LEX_DEF_THM] THEN
+  PROVE_TAC[])
+val () = IndDefLib.export_mono"LEX_MONO";
+
 val WF_LEX = Q.store_thm("WF_LEX",
  `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)`,
 REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
@@ -679,6 +691,20 @@ val symmetric_LEX = store_thm(
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]);
 val _ = export_rewrites ["symmetric_LEX"]
+
+val LEX_CONG = Q.store_thm
+("LEX_CONG",
+ `!R1 R2 v1 v2 R1' R2' v1' v2'.
+     (v1 = v1') /\ (v2 = v2') /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) ==> (R1 a c = R1' a c)) /\
+     (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) /\ (a=c) ==> (R2 b d = R2' b d))
+   ==>
+    ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')`,
+ Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ] 
+   THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
+   THEN METIS_TAC[]);
+
+val _ = DefnBase.export_cong "LEX_CONG";
 
 (*---------------------------------------------------------------------------
     Generate some ML that gets evaluated at theory load time.

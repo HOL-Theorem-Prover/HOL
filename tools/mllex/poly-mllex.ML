@@ -1,4 +1,3 @@
-(* this is an -*- sml -*- file *)
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
@@ -12,7 +11,3 @@ in
            OS.Process.exit OS.Process.failure)
   | args => List.app LexGen.lexGen args
 end;
-
-val _ = PolyML.shareCommonData main;
-val _ = PolyML.export("mllex", main);
-
