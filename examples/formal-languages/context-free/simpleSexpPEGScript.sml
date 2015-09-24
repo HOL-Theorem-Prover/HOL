@@ -59,10 +59,6 @@ val peg0_tokeq = store_thm(
 
 val pnt_def = Define`pnt ntsym = nt (mkNT ntsym) I`
 
-val isFirstSymChar_def = Define`
-  isFirstSymChar c ⇔ isGraph c ∧ ¬isDigit c ∧ c ∉ {#"("; #"'"; #")"; #"."}
-`;
-
 val sexpPEG_def = zDefine`
   sexpPEG : (char, sexpNT, sexp) peg = <|
     start := pnt sxnt_sexp ;
@@ -94,8 +90,8 @@ val sexpPEG_def = zDefine`
                   o (destSXNUM ## destSXNUM) o destSXCONS)) ;
      (mkNT sxnt_digit, tok isDigit (λc. SX_NUM (ORD c - ORD #"0"))) ;
      (mkNT sxnt_sexpsym,
-      seq (tok isFirstSymChar (λc. SX_SYM [c]))
-          (rpt (tok (λc. isGraph c ∧ c ∉ {#"("; #")"; #"'"}) (λc. SX_SYM [c]))
+      seq (tok valid_first_symchar (λc. SX_SYM [c]))
+          (rpt (tok valid_symchar (λc. SX_SYM [c]))
                (SX_SYM o FOLDR (λs a. destSXSYM s ++ a) []))
           (λs1 s2. SX_SYM (destSXSYM s1 ++ destSXSYM s2)));
      (mkNT sxnt_strcontents,
