@@ -79,7 +79,7 @@ fun derive_lookup_ths {pegth, ntty, simp} =
                            (PURE_REWRITE_CONV (COND_CLAUSES :: fdoms @ fapps)))
                       (SPEC c nt_thm)
   in
-    map final cs
+    {lookups = map final cs, fdom_thm = fdom_thm, applieds = fapps}
   end
 
 

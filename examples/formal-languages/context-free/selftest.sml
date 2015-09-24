@@ -4,7 +4,7 @@ open testutils
 local
   open pegLib simpleSexpPEGTheory pegexecTheory
   val ds = derive_compset_distincts ``:sexpNT``
-  val lookups = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``,
+  val {lookups,...} = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``,
                                    simp = SIMP_CONV (srw_ss())}
   val _ = computeLib.add_funs (ds::lookups)
   val _ = let
