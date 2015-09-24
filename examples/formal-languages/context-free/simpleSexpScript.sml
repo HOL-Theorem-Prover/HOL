@@ -54,6 +54,10 @@ val destSXSYM_def = Define`
   destSXSYM (SX_SYM s) = s
 `;
 
+val destSXCONS_def = Define`
+  destSXCONS (SX_CONS a d) = (a,d)
+`;
+
 val strip_sxcons_def = Define`
   strip_sxcons s =
     case s of

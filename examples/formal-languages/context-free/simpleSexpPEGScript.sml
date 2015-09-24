@@ -86,9 +86,12 @@ val sexpPEG_def = zDefine`
      (mkNT sxnt_WSsexp,
       rpt (tok isSpace ARB) (K ARB) ~> pnt sxnt_sexp0);
      (mkNT sxnt_sexpnum,
-      checkAhead isDigit
-          (rpt (pnt sxnt_digit)
-               (SX_NUM o FOLDL (λa d. 10 * a + destSXNUM d) 0))) ;
+        seq (pnt sxnt_digit)
+            (rpt (pnt sxnt_digit)
+                 (UNCURRY SX_CONS o (SX_NUM ## SX_NUM) o
+                  FOLDL (λ(l,n) d. (10*l, 10*n + destSXNUM d)) (1,0)))
+            (λs1. (λ(l,n). SX_NUM (destSXNUM s1 * l + n))
+                  o (destSXNUM ## destSXNUM) o destSXCONS)) ;
      (mkNT sxnt_digit, tok isDigit (λc. SX_NUM (ORD c - ORD #"0"))) ;
      (mkNT sxnt_sexpsym,
       seq (tok isFirstSymChar (λc. SX_SYM [c]))
@@ -173,7 +176,7 @@ val pegnt_case_ths = peg0_cases
 fun pegnt(t,acc) = let
   val th =
       prove(``¬peg0 sexpPEG (pnt ^t)``,
-            simp (fdom_thm::choicel_def::ignoreL_def::pegnt_case_ths @ applieds @ peg0_rwts) >>
+            simp (fdom_thm::choicel_def::ignoreL_def::ignoreR_def::applieds @ pegnt_case_ths) >>
             simp(peg0_rwts @ acc))
   val nm = "peg0_" ^ term_to_string t
   val th' = save_thm(nm, SIMP_RULE bool_ss [pnt_def] th)
@@ -182,46 +185,27 @@ in
   th::acc
 end
 
-val peg0_sexpnum = prove(
-  ``peg0 sexpPEG (pnt sxnt_sexpnum)``,
-  rw[Once peg0_cases,pnt_def,fdom_thm] >>
-  rw applieds >>
-  rw[checkAhead_def] >>
-  rw[ignoreL_def] >>
-  rw[Once peg0_cases] >>
-  rw[Once peg0_cases] >>
-  rw[Once peg0_cases] >>
-  rw[Once peg0_cases,pnt_def] >>
-  rw[fdom_thm] >>
-  rw applieds >>
-  rw[Once peg0_cases])
-
-val peg0_sexp0 = prove(
-  ``peg0 sexpPEG (pnt sxnt_sexp0)``,
-  rw[Once peg0_cases,pnt_def,fdom_thm] >>
-  rw applieds >>
-  rw[peg0_sexpnum])
-
-val peg0_WSsexp = prove(
-  ``peg0 sexpPEG (pnt sxnt_WSsexp)``,
-      rw[Once peg0_cases,pnt_def,fdom_thm] >>
-      rw applieds >>
-      rw[ignoreL_def] >- (
-      rw[Once peg0_cases] >>
-      rw[Once peg0_cases] ) >>
-      rw[peg0_sexp0])
-
-val nwfpeg_sexpstr = Q.prove(
-  `¬wfpeg sexpPEG (pnt sxnt_sexpstr)`,
-  rw(applieds@[wfpeg_pnt,fdom_thm]))
-
 val npeg0_rwts =
     List.foldl pegnt []
    [``sxnt_symchars``, ``sxnt_symchar``,
     ``sxnt_strchar``, ``sxnt_sexpsym``, ``sxnt_sexpstr``,
-    (*``sxnt_sexpnum``, ``sxnt_sexp0``, ``sxnt_sexp``, *) ``sxnt_normstrchar``,
+    ``sxnt_sexpnum``,  ``sxnt_normstrchar``,
     ``sxnt_grabWS``, ``sxnt_first_symchar``, ``sxnt_escapedstrchar``,
-    ``sxnt_escapablechar``, ``sxnt_digit``(*, ``sxnt_WSsexp``*), ``sxnt_WS``]
+    ``sxnt_escapablechar``, ``sxnt_digit``,``sxnt_WS``]
+
+val npeg0_sexp0 = Q.prove(
+  `¬peg0 sexpPEG (pnt sxnt_sexp0)`,
+  simp pegnt_case_ths >> simp[fdom_thm] >>
+  simp applieds >> simp[ignoreL_def,ignoreR_def] >>
+  simp npeg0_rwts)
+
+val npeg0_WSsexp = Q.prove(
+  `¬peg0 sexpPEG (pnt sxnt_WSsexp)`,
+  simp pegnt_case_ths >> simp[fdom_thm] >>
+  simp applieds >> simp[ignoreL_def] >>
+  simp (npeg0_sexp0::peg0_rwts))
+
+val npeg0_rwts = npeg0_WSsexp::npeg0_sexp0::npeg0_rwts
 
 fun wfnt(t,acc) = let
   val th =
@@ -235,23 +219,16 @@ in
 end;
 
 val topo_nts =
-  [(*``sxnt_symchar``,
-   ``sxnt_symchars``,
-   ``sxnt_first_symchar``,*)
-   ``sxnt_sexpsym``,
-   (*``sxnt_escapablechar``,*)
+  [``sxnt_sexpsym``,
    ``sxnt_escapedstrchar``,
    ``sxnt_normstrchar``,
    ``sxnt_strchar``,
    ``sxnt_strcontents``,
-   (*``sxnt_sexpstr``,*)
    ``sxnt_digit``,
    ``sxnt_sexpnum``,
    ``sxnt_sexp0``,
-   (*``sxnt_WS``,
-   ``sxnt_grabWS``,*)
    ``sxnt_WSsexp``,
-   (*``sxnt_sexpseq``,*)
+   ``sxnt_sexpseq``,
    ``sxnt_sexp``]
 
 val wfpeg_thm = save_thm(
@@ -276,10 +253,9 @@ val PEG_exprs = save_thm(
 
 val PEG_wellformed = store_thm(
   "PEG_wellformed",
-  ``¬wfG sexpPEG``,
+  ``wfG sexpPEG``,
   rw[wfG_def,PEG_exprs] >>
   srw_tac[boolSimps.DNF_ss][] >>
-  simp(wfpeg_thm :: wfpeg_rwts @ npeg0_rwts) >>
-  rw[peg0_WSsexp])
+  simp(wfpeg_thm :: wfpeg_rwts @ npeg0_rwts));
 
 val _ = export_theory();
