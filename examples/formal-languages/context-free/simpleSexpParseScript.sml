@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib lcsymtacs finite_mapSyntax
 open ASCIInumbersTheory simpleSexpTheory
-open simpleSexpPEGTheory pegexecTheory
+open simpleSexpPEGTheory pegTheory pegexecTheory
 
 val _ = new_theory"simpleSexpParse"
 
@@ -36,5 +36,118 @@ val print_sexp_def = tDefine"print_sexp"`
    fs[Once strip_sxcons_def] >> rw[] >> simp[sexp_size_def] >>
    PROVE_TAC[sxMEM_def,sxMEM_sizelt,arithmeticTheory.LESS_IMP_LESS_ADD,listTheory.MEM,
              DECIDE``(a:num) + (b + c) = b + (a + c)``]);
+
+val FOLDR_STRCAT_destSXSYM = Q.prove(
+  `∀ls. FOLDR (λs a. STRCAT (destSXSYM s) a) "" (MAP (λc. SX_SYM (STRING c "")) ls) = ls`,
+  Induct >> simp[destSXSYM_def]);
+
+val peg_eval_list_valid_symchars = Q.prove(
+  `∀cs. EVERY valid_symchar cs ⇒
+        peg_eval_list sexpPEG (cs,tok valid_symchar (λc. SX_SYM [c])) ("",MAP (λc. SX_SYM [c]) cs)`,
+  Induct >> simp[Once peg_eval_cases] >> simp[Once peg_eval_cases])
+
+val peg_eval_valid_symchars = Q.prove(
+  `∀cs. EVERY valid_symchar cs ⇒
+       peg_eval sexpPEG (cs,rpt (tok valid_symchar (λc. SX_SYM (STRING c ""))) (SX_SYM o FOLDR (λs a. STRCAT (destSXSYM s) a) ""))
+       (SOME ("",SX_SYM cs))`,
+  rw[Once peg_eval_cases] >>
+  imp_res_tac peg_eval_list_valid_symchars >>
+  metis_tac[FOLDR_STRCAT_destSXSYM]);
+
+val peg_eval_valid_symbol = Q.prove(
+  `∀s. valid_symbol s ⇒
+       peg_eval sexpPEG (s,sexpPEG.start) (SOME ("",SX_SYM s))`,
+  Cases_on`s`>>simp[]>>rw[]>>
+  rw[Once peg_eval_cases,sexpPEG_exec_thm,pnt_def,FDOM_sexpPEG,sexpPEG_applied,ignoreR_def] >>
+  rw[Once peg_eval_cases] >>
+  rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreL_def] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  simp[GSYM PULL_EXISTS] >>
+  conj_tac >- fs[stringTheory.isGraph_def] >>
+  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied,choicel_def] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS,ignoreR_def,ignoreL_def] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS,tokeq_def] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS,pegf_def] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases,PULL_EXISTS,FDOM_sexpPEG,sexpPEG_applied] >>
+  rw[Once peg_eval_cases,PULL_EXISTS] >>
+  rw[Once peg_eval_cases,PULL_EXISTS,destSXSYM_def] >>
+  imp_res_tac peg_eval_valid_symchars >>
+  map_every qexists_tac[`""`,`ARB`,`SX_SYM t`] >>
+  simp[destSXSYM_def] >>
+  rw[Once peg_eval_cases] >>
+  rw[Once peg_eval_cases] >>
+  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
+  rw[Once peg_eval_cases]);
+(*
+val cs = listLib.list_compset()
+val () = pegLib.add_peg_compset cs
+val () = computeLib.add_thms[sexpPEG_exec_thm,pnt_def,ignoreR_def,ignoreL_def,tokeq_def,pegf_def]cs
+  simp[MATCH_MP peg_eval_executed
+       (CONJ wfG_sexpPEG (EQT_ELIM(SIMP_CONV(srw_ss())[sexpPEG_def,Gexprs_sexpPEG]``sexpPEG.start ∈ Gexprs sexpPEG``)))] >>
+  CONV_TAC(computeLib.CBV_CONV cs) >>
+  IF_CASES_TAC >- fs[stringTheory.isGraph_def] >>
+  simp[choicel_def] >>
+  CONV_TAC(computeLib.CBV_CONV cs) >> simp[] >>
+*)
+
+(*
+val peg_eval_print_sexp = Q.prove(
+  `∀s. valid_sexp s ⇒
+       peg_eval sexpPEG (print_sexp s,sexpPEG.start) (SOME ("",s))`,
+  ho_match_mp_tac(theorem"print_sexp_ind") >>
+  strip_tac >- (
+    rw[print_sexp_def]
+
+val parse_print = Q.store_thm("parse_print",
+  `parse_sexp (print_sexp s) = SOME s`,
+  rw[parse_sexp_def] >>
+  Cases_on`pegparse sexpPEG (print_sexp s)` >> simp[] >- (
+    imp_res_tac pegparse_eq_NONE >> fs[PEG_wellformed] >>
+    f"peg_eval"
+  reverse(Induct_on`s`)
+  >- (
+    rw[print_sexp_def] >>
+    rw[parse_sexp_def] >>
+    pegparse_eq_SOME
+*)
 
 val _ = export_theory()
