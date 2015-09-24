@@ -117,6 +117,8 @@ val ds = derive_compset_distincts ``:sexpNT``
 val {lookups,fdom_thm,applieds} = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``, simp = SIMP_CONV (srw_ss())}
 val sexpPEG_exec_thm = save_thm("sexpPEG_exec_thm",LIST_CONJ(sexpPEG_start::ds::lookups))
 val _ = computeLib.add_persistent_funs["sexpPEG_exec_thm"];
+val _ = save_thm("FDOM_sexpPEG", fdom_thm);
+val _ = save_thm("sexpPEG_applied", LIST_CONJ applieds);
 
 val frange_image = prove(
   ``FRANGE fm = IMAGE (FAPPLY fm) (FDOM fm)``,
@@ -231,16 +233,14 @@ val topo_nts =
    ``sxnt_sexpseq``,
    ``sxnt_sexp``]
 
-val wfpeg_thm = save_thm(
-  "wfpeg_thm",
-  LIST_CONJ (List.foldl wfnt [] topo_nts))
+val wfpeg_thm = LIST_CONJ (List.foldl wfnt [] topo_nts)
 
 val subexprs_pnt = prove(
   ``subexprs (pnt n) = {pnt n}``,
   simp[subexprs_def, pnt_def]);
 
-val PEG_exprs = save_thm(
-  "PEG_exprs",
+val Gexprs_sexpPEG = save_thm(
+  "Gexprs_sexpPEG",
   ``Gexprs sexpPEG``
     |> SIMP_CONV (srw_ss())
          [Gexprs_def, subexprs_def,
@@ -251,10 +251,10 @@ val PEG_exprs = save_thm(
           pred_setTheory.INSERT_UNION_EQ
          ])
 
-val PEG_wellformed = store_thm(
-  "PEG_wellformed",
+val wfG_sexpPEG = store_thm(
+  "wfG_sexpPEG",
   ``wfG sexpPEG``,
-  rw[wfG_def,PEG_exprs] >>
+  rw[wfG_def,Gexprs_sexpPEG] >>
   srw_tac[boolSimps.DNF_ss][] >>
   simp(wfpeg_thm :: wfpeg_rwts @ npeg0_rwts));
 
