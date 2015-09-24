@@ -47,7 +47,7 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
 val _ = overload_on ("’", ``λs. ⦇ SX_SYM "quote" ; s ⦈``)
 
 val valid_first_symchar_def = Define`
-  valid_first_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"} ∧ ¬isDigit c`;
+  valid_first_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c`;
 
 val valid_symchar_def =  Define`
   valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}`;

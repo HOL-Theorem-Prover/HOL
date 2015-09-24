@@ -51,5 +51,8 @@ val _ = print "\n" before app test [
   ("\"foo bar\"", ``SX_STR "foo bar"``),
   ("( \" foo \"  \"bar\" )", ``⦇ SX_STR " foo "; SX_STR "bar" ⦈``),
   ("\"foo\\\"\"", ``SX_STR "foo\""``),
-  ("\"foo\\\\\"", ``SX_STR "foo\\"``)
+  ("\"foo\\\\\"", ``SX_STR "foo\\"``),
+  ("(1sym)", ``⦇1; SX_SYM "sym"⦈``),
+  ("symq\"9", ``SX_SYM "symq\"9"``),
+  ("symd.9", ``SX_SYM "symd.9"``)
 ]
