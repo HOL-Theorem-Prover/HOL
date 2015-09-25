@@ -353,4 +353,80 @@ val checkAhead_def = Define`
   checkAhead P s = not (not (tok P ARB) ARB) ARB ~> s
 `;
 
+val peg_eval_seq_SOME = store_thm(
+  "peg_eval_seq_SOME",
+  ``peg_eval G (i0, seq s1 s2 f) (SOME (i,r)) ⇔
+    ∃i1 r1 r2. peg_eval G (i0, s1) (SOME (i1,r1)) ∧
+               peg_eval G (i1, s2) (SOME (i,r2)) ∧ (r = f r1 r2)``,
+  simp[Once peg_eval_cases] >> metis_tac[]);
+
+val peg_eval_seq_NONE = store_thm(
+  "peg_eval_seq_NONE",
+  ``peg_eval G (i0, seq s1 s2 f) NONE ⇔
+      peg_eval G (i0, s1) NONE ∨
+      ∃i r. peg_eval G (i0,s1) (SOME(i,r)) ∧
+            peg_eval G (i,s2) NONE``,
+  simp[Once peg_eval_cases] >> metis_tac[]);
+
+val peg_eval_tok_NONE = save_thm(
+  "peg_eval_tok_NONE",
+  ``peg_eval G (i, tok P f) NONE``
+    |> SIMP_CONV (srw_ss()) [Once peg_eval_cases])
+
+val peg_eval_tok_SOME = store_thm(
+  "peg_eval_tok_SOME",
+  ``peg_eval G (i0, tok P f) (SOME (i,r)) ⇔ ∃h. P h ∧ i0 = h::i ∧ r = f h``,
+  simp[Once peg_eval_cases] >> metis_tac[]);
+
+val peg_eval_empty = store_thm(
+  "peg_eval_empty[simp]",
+  ``peg_eval G (i, empty r) x ⇔ (x = SOME(i,r))``,
+  simp[Once peg_eval_cases])
+
+val peg_eval_NT_SOME = store_thm(
+  "peg_eval_NT_SOME",
+  ``peg_eval G (i0,nt N f) (SOME(i,r)) ⇔
+      ∃r0. r = f r0 ∧ N ∈ FDOM G.rules ∧
+           peg_eval G (i0,G.rules ' N) (SOME(i,r0))``,
+  simp[Once peg_eval_cases]);
+
+val peg_eval_choice = store_thm(
+  "peg_eval_choice",
+  ``∀x.
+     peg_eval G (i0, choice s1 s2 f) x ⇔
+      (∃i r. peg_eval G (i0, s1) (SOME(i, r)) ∧ x = SOME(i, f (INL r))) ∨
+      (∃i r. peg_eval G (i0, s1) NONE ∧
+             peg_eval G (i0, s2) (SOME(i, r)) ∧ x = SOME(i, f (INR r))) ∨
+      peg_eval G (i0, s1) NONE ∧ peg_eval G (i0,s2) NONE ∧ (x = NONE)``,
+  simp[Once peg_eval_cases, SimpLHS] >>
+  simp[optionTheory.FORALL_OPTION, pairTheory.FORALL_PROD] >> metis_tac[]);
+
+val peg_eval_choicel_NIL = store_thm(
+  "peg_eval_choicel_NIL[simp]",
+  ``peg_eval G (i0, choicel []) x = (x = NONE)``,
+  simp[choicel_def, Once peg_eval_cases]);
+
+val peg_eval_choicel_CONS = store_thm(
+  "peg_eval_choicel_CONS",
+  ``∀x. peg_eval G (i0, choicel (h::t)) x ⇔
+          peg_eval G (i0, h) x ∧ x <> NONE ∨
+          peg_eval G (i0,h) NONE ∧ peg_eval G (i0, choicel t) x``,
+  simp[choicel_def, SimpLHS, Once peg_eval_cases] >>
+  simp[pairTheory.FORALL_PROD, optionTheory.FORALL_OPTION]);
+
+val peg_eval_rpt = store_thm(
+  "peg_eval_rpt",
+  ``peg_eval G (i0, rpt s f) x ⇔
+      ∃i l. peg_eval_list G (i0,s) (i,l) ∧ x = SOME(i,f l)``,
+  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
+
+val peg_eval_list = Q.store_thm(
+  "peg_eval_list",
+  `peg_eval_list G (i0, e) (i, r) ⇔
+     peg_eval G (i0, e) NONE ∧ i = i0 ∧ r = [] ∨
+     (∃i1 rh rt.
+        peg_eval G (i0, e) (SOME (i1, rh)) ∧
+        peg_eval_list G (i1, e) (i, rt) ∧ r = rh::rt)`,
+  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
+
 val _ = export_theory()

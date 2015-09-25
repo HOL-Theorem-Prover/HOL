@@ -59,6 +59,13 @@ val peg0_tokeq = store_thm(
 
 val pnt_def = Define`pnt ntsym = nt (mkNT ntsym) I`
 
+val replace_nil_def= Define`
+  (replace_nil (SX_SYM s) z = if s = "nil" then z else SX_SYM s) ∧
+  (replace_nil (SX_CONS x y) z = SX_CONS x (replace_nil y z)) ∧
+  (replace_nil x y = x)
+`;
+
+
 val sexpPEG_def = zDefine`
   sexpPEG : (char, sexpNT, sexp) peg = <|
     start := pnt sxnt_sexp ;
@@ -68,17 +75,27 @@ val sexpPEG_def = zDefine`
      (mkNT sxnt_sexp0,
       choicel [
         pnt sxnt_sexpnum ;
-        tokeq #"(" ~> pnt sxnt_sexpseq <~ grabWS (tokeq #")") ;
-        seq (tokeq #"(" ~> pnt sxnt_WSsexp)
-            (grabWS (tokeq #".") ~> pnt sxnt_WSsexp <~ grabWS (tokeq #")"))
-            SX_CONS ;
+        tokeq #"(" ~> pnt sxnt_sexpseq ;
         tokeq #"\"" ~> pnt sxnt_strcontents <~ tokeq #"\"" ;
         pegf (tokeq #"'" ~> grabWS (pnt sxnt_sexp0))
              (λs. ⦇ SX_SYM "quote"; s⦈) ;
         pnt sxnt_sexpsym
       ]);
      (mkNT sxnt_sexpseq,
-      rpt (pnt sxnt_WSsexp) (FOLDR SX_CONS (SX_SYM "nil")));
+      choicel [
+        pegf (grabWS (tokeq #")")) (K (SX_SYM "nil"));
+        seq (grabWS (pnt sxnt_sexp0))
+            (seq (rpt (grabWS (pnt sxnt_sexp0))
+                      (FOLDR SX_CONS (SX_SYM "nil")))
+                 (choicel [
+                     pegf (grabWS (tokeq #")")) (K (SX_SYM "nil"));
+                     grabWS (tokeq #".") ~>
+                        grabWS (pnt sxnt_sexp0)
+                     <~ grabWS (tokeq #")")
+                     ])
+                 replace_nil)
+            SX_CONS
+     ]);
      (mkNT sxnt_WSsexp,
       rpt (tok isSpace ARB) (K ARB) ~> pnt sxnt_sexp0);
      (mkNT sxnt_sexpnum,
@@ -108,7 +125,9 @@ val sexpPEG_def = zDefine`
   |>
 `;
 
-val sexpPEG_start = SIMP_CONV(srw_ss())[sexpPEG_def]``sexpPEG.start``
+val sexpPEG_start = save_thm(
+  "sexpPEG_start[simp]",
+  SIMP_CONV(srw_ss())[sexpPEG_def]``sexpPEG.start``)
 val ds = derive_compset_distincts ``:sexpNT``
 val {lookups,fdom_thm,applieds} = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``, simp = SIMP_CONV (srw_ss())}
 val sexpPEG_exec_thm = save_thm("sexpPEG_exec_thm",LIST_CONJ(sexpPEG_start::ds::lookups))
@@ -135,8 +154,9 @@ val wfpeg_rwts = wfpeg_cases
                       ])
                    |> map (CONV_RULE
                              (RAND_CONV (SIMP_CONV (srw_ss())
-                                                   [choicel_def, tokeq_def,
-                                                    pegf_def])))
+                                [choicel_def, tokeq_def, ignoreL_def,
+                                 ignoreR_def, pegf_def, grabWS_def])))
+
 
 val wfpeg_pnt = wfpeg_cases
                   |> ISPEC ``sexpPEG``
@@ -152,6 +172,11 @@ val peg0_rwts = peg0_cases
                   |> map (CONV_RULE
                             (RAND_CONV (SIMP_CONV (srw_ss())
                                                   [tokeq_def])))
+
+val wfpeg_grabWS =
+  SIMP_CONV (srw_ss()) (grabWS_def::ignoreL_def::wfpeg_rwts @ peg0_rwts)
+                       ``wfpeg sexpPEG (grabWS e)``
+
 
 val pegfail_t = ``pegfail``
 val peg0_rwts = let
@@ -205,13 +230,19 @@ val npeg0_WSsexp = Q.prove(
 
 val npeg0_rwts = npeg0_WSsexp::npeg0_sexp0::npeg0_rwts
 
+val peg0_grabWS = Q.prove(
+  `peg0 sexpPEG (grabWS e) = peg0 sexpPEG e`,
+  simp(ignoreL_def::grabWS_def::peg0_rwts));
+
 fun wfnt(t,acc) = let
   val th =
     prove(``wfpeg sexpPEG (pnt ^t)``,
           SIMP_TAC (srw_ss())
                    (applieds @
-                    [wfpeg_pnt, fdom_thm, ignoreL_def, ignoreR_def, checkAhead_def]) THEN
-          fs(wfpeg_rwts @ npeg0_rwts @ peg0_rwts @ acc))
+                    [wfpeg_pnt, fdom_thm, ignoreL_def, ignoreR_def,
+                     checkAhead_def]) THEN
+          fs(peg0_grabWS :: wfpeg_grabWS :: wfpeg_rwts @ npeg0_rwts @
+             peg0_rwts @ acc))
 in
   th::acc
 end;

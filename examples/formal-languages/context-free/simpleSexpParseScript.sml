@@ -57,66 +57,27 @@ val peg_eval_valid_symchars = Q.prove(
 val peg_eval_valid_symbol = Q.prove(
   `∀s. valid_symbol s ⇒
        peg_eval sexpPEG (s,sexpPEG.start) (SOME ("",SX_SYM s))`,
-  Cases_on`s`>>simp[]>>rw[]>>
-  rw[Once peg_eval_cases,sexpPEG_exec_thm,pnt_def,FDOM_sexpPEG,sexpPEG_applied,ignoreR_def] >>
-  rw[Once peg_eval_cases] >>
-  rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreL_def] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  simp[GSYM PULL_EXISTS] >>
-  conj_tac >- fs[stringTheory.isGraph_def] >>
-  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied,choicel_def] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS,pnt_def,FDOM_sexpPEG,sexpPEG_applied] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS,ignoreR_def,ignoreL_def] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS,tokeq_def] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj2_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS,pegf_def] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases,PULL_EXISTS,FDOM_sexpPEG,sexpPEG_applied] >>
-  rw[Once peg_eval_cases,PULL_EXISTS] >>
-  rw[Once peg_eval_cases,PULL_EXISTS,destSXSYM_def] >>
-  imp_res_tac peg_eval_valid_symchars >>
-  map_every qexists_tac[`""`,`ARB`,`SX_SYM t`] >>
-  simp[destSXSYM_def] >>
-  rw[Once peg_eval_cases] >>
-  rw[Once peg_eval_cases] >>
-  srw_tac[boolSimps.DNF_ss][] >> disj1_tac >>
-  rw[Once peg_eval_cases]);
+  Cases_on`s`>>
+  simp[pnt_def, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied,
+       ignoreL_def, ignoreR_def, peg_eval_seq_SOME, peg_eval_rpt] >>
+  dsimp[] >> strip_tac >>
+  `¬isSpace h` by (strip_tac >> Cases_on `h` >> fs[stringTheory.isGraph_def]) >>
+  simp[Once peg_eval_list, SimpL ``$/\``] >>
+  simp[peg_eval_tok_SOME, peg_eval_tok_NONE] >>
+  simp[peg_eval_choicel_CONS, peg_eval_NT_SOME, FDOM_sexpPEG, sexpPEG_applied,
+       peg_eval_seq_SOME, peg_eval_tok_SOME, peg_eval_tok_NONE, tokeq_def,
+       peg_eval_seq_NONE, pegf_def, pnt_def, destSXSYM_def] >> dsimp[] >>
+  simp[Once peg_eval_cases, SimpL ``$/\``] >>
+  dsimp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_NONE, pnt_def,
+        peg_eval_rpt] >>
+  simp[Once peg_eval_cases, SimpL ``$/\``] >>
+  dsimp[FDOM_sexpPEG, sexpPEG_applied, peg_eval_seq_NONE, pnt_def,
+        peg_eval_rpt, peg_eval_tok_NONE] >>
+  IMP_RES_THEN mp_tac peg_eval_valid_symchars >>
+  dsimp[peg_eval_rpt] >> qx_gen_tac `l` >> strip_tac >>
+  map_every qexists_tac[`""`,`[]`,`l`] >>
+  simp[destSXSYM_def] >> rw[] >>
+  rw[Once peg_eval_cases] >> simp[peg_eval_tok_NONE]);
 (*
 val cs = listLib.list_compset()
 val () = pegLib.add_peg_compset cs
