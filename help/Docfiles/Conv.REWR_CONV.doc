@@ -100,6 +100,10 @@ can be obtained by instantiation of free type variables (i.e. type variables
 not occurring in the assumptions {A}) and substitution for the free variables
 {x1}, ..., {xn}.
 
+As noted, {REWR_CONV th} will fail rather than substitute for variables or type
+variables which appear in the hypotheses {A}.  To allow substitution in the
+hypotheses, use {REWR_CONV_A th}.
+
 \EXAMPLE
 The following example illustrates a straightforward use of {REWR_CONV}.
 The supplied rewrite rule is polymorphic, and both substitution for free
@@ -141,5 +145,5 @@ variable (in this case {n}) which is also free in the assumptions, but which
 must be instantiated in order to match the input term.
 
 \SEEALSO
-Rewrite.REWRITE_CONV.
+Conv.REWR_CONV_A, Rewrite.REWRITE_CONV.
 \ENDDOC

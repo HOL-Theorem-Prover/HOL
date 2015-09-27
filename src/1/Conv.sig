@@ -7,6 +7,7 @@ sig
    val QCONV                 : conv -> conv
    val REWR_CONV             : thm -> conv
    val HO_REWR_CONV          : thm -> conv
+   val REWR_CONV_A           : thm -> conv
    val LAND_CONV             : conv -> conv
    val RAND_CONV             : conv -> conv
    val RATOR_CONV            : conv -> conv

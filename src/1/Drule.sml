@@ -1256,6 +1256,16 @@ fun PART_MATCH partfn th =
       fn tm => INST_TY_TERM (matchfn tm) th
    end
 
+(*---------------------------------------------------------------------------*
+ * version of PART_MATCH which allows substituting in assumptions            *
+ *---------------------------------------------------------------------------*)
+fun PART_MATCH_A partfn th =
+   let
+      val pat = partfn (concl (SPEC_ALL th))
+   in
+      fn tm => INST_TY_TERM (match_term pat tm) th
+   end
+
 (* --------------------------------------------------------------------------*
     EXISTS_LEFT, EXISTS_LEFT1
     existentially quantifying variables which appear only in the hypotheses
