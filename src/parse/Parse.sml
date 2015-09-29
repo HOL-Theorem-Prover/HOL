@@ -703,7 +703,12 @@ fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
                   ", Prec = ", Int.toString Prec, "}"])
  end
 
-fun temp_thytype_abbrev(knm, ty) = let
+fun replace_exnfn fnm f x =
+  f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
+             raise HOL_ERR {message = m, origin_function = fnm,
+                            origin_structure = s}
+
+fun temp_thytype_abbrev (knm, ty) = let
   val params = Listsort.sort Type.compare (type_vars ty)
   val (num_vars, pset) =
       List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
@@ -721,18 +726,11 @@ in
                                                     (knm, mk_structure pset ty);
   type_grammar_changed := true;
   term_grammar_changed := true
-end handle GrammarError s => raise ERROR "type_abbrev" s
+end handle GrammarError s => raise ERR "temp_thytype_abbrev" s
 
-fun temp_type_abbrev (s, ty) = let
-  val thy = Theory.current_theory()
+fun thytype_abbrev(knm, ty) = let
 in
-  temp_thytype_abbrev({Thy = thy, Name = s}, ty)
-end
-
-fun type_abbrev (s, ty) = let
-  val knm = {Thy=Theory.current_theory(),Name=s}
-in
-  temp_type_abbrev (s, ty);
+  replace_exnfn "thytype_abbrev" temp_thytype_abbrev (knm, ty);
   full_update_grms ("temp_thytype_abbrev",
                     String.concat ["(", KernelSig.name_toMLString knm, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
@@ -741,7 +739,15 @@ in
                                    ")"],
                     SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
                    )
-end;
+end
+
+fun temp_type_abbrev (s, ty) =
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
+
+fun type_abbrev (s, ty) =
+  replace_exnfn "type_abbrev" thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
 
 fun temp_disable_tyabbrev_printing s = let
   val tyg = the_type_grammar
