@@ -1213,29 +1213,33 @@ in
 end
 
 
-fun temp_add_record_field (fldname, term) = let
+fun primadd_rcdfld f ovopn (fldname, t) = let
+  val (d,r) = dom_rng (type_of t)
+              handle HOL_ERR _ =>
+              raise ERROR f "field selection term must be of type t -> a"
+  val r = mk_var("rcd", d)
   val recfldname = recsel_special^fldname
 in
-  temp_overload_on(recfldname, term)
+  ovopn(recfldname, mk_abs(r, mk_comb(t, r)))
 end
 
-fun add_record_field (fldname, term) = let
-  val recfldname = recsel_special^fldname
+val temp_add_record_field =
+    primadd_rcdfld "temp_add_record_field" temp_overload_on
+val add_record_field = primadd_rcdfld "add_record_field" overload_on
+
+fun buildfupdt f ovopn (fnm, t) = let
+  val (argtys, rty) = strip_fun (type_of t)
+  val err = ERROR f "fupdate term must be of type (a -> a) -> t -> t"
+  val f = mk_var("f", hd argtys) handle Empty => raise err
+  val x = mk_var("x", hd (tl argtys)) handle Empty => raise err
+  val recfldname = recfupd_special ^ fnm
 in
-  overload_on(recfldname, term)
+  ovopn(recfldname, list_mk_abs([f,x], list_mk_comb(t, [f,x])))
 end
 
-fun temp_add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  temp_overload_on(recfldname, term)
-end
-
-fun add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  overload_on(recfldname, term)
-end
+val temp_add_record_fupdate =
+    buildfupdt "temp_add_record_fupdate" temp_overload_on
+val add_record_fupdate = buildfupdt "add_record_fupdate" overload_on
 
 fun temp_add_numeral_form (c, stropt) = let
   val _ =

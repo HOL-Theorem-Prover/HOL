@@ -62,6 +62,8 @@ Bugs fixed:
 
 -   The function `thm_to_string` was creating ugly strings full of special codes (encoding type information) rather than using the “raw” backend.
 
+-   Bare record operations (*e.g.*, `rcdtype_field`, the function that accesses `field` of type `rcdtype`) would occasionally pretty-print badly.  ([Github issue](http://github.com/HOL-Theorem-Prover/HOL/issues/150))
+
 New theories:
 -------------
 
