@@ -1659,7 +1659,7 @@ fun pp_term (G : grammar) TyG backend = let
                   case Overload.info_for_name overload_info Name of
                     NONE => add_prim_name()
                   | SOME {actual_ops,...} =>
-                    if List.exists (aconv tm) actual_ops then
+                    if List.exists (same_const tm) actual_ops then
                       cope_with_rules Name
                     else
                       add_prim_name()
