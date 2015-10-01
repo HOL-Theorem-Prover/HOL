@@ -261,7 +261,10 @@ val _ = List.app pptest
          ("bare ('c,'d) polyrcd_pfld1_fupd",
             ``polyrcd_pfld1_fupd :
                 ('c ms -> 'c ms) -> ('c,'d) polyrcd -> ('c,'d) polyrcd``,
-            "polyrcd_pfld1_fupd")
+            "polyrcd_pfld1_fupd"),
+         ("one-arg polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd f : ('a,'b) polyrcd -> ('a,'b) polyrcd``,
+            "polyrcd_pfld1_fupd f")
          ]
 
 val _ = Feedback.emit_MESG := false
