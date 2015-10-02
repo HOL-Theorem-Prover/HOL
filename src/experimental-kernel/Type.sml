@@ -42,28 +42,137 @@ val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
-datatype hol_type = Tyv of string
-                  | Tyapp of KernelSig.kernelid * hol_type list
+type 'a hconsed = { node: 'a, tag : int, hkey : int } ref
 
-fun uptodate_type (Tyv s) = true
-  | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
-                                        List.all uptodate_type args
+fun hccompare cmp (ref {node=n1,tag=_,hkey=_},ref {node=n2,tag=_,hkey=_}) =
+  cmp (n1, n2)
 
-fun dest_vartype (Tyv s) = s
-  | dest_vartype _ = raise ERR "dest_vartype" "Type not a vartype"
+datatype hol_type_node =
+         Tyv of string
+       | Tyapp of KernelSig.kernelid * hol_type_node hconsed list
 
-fun is_vartype (Tyv _) = true
-  | is_vartype _ = false
+type hol_type = hol_type_node hconsed
+
+fun hash (ref {hkey,...} : hol_type) = hkey
+fun tag (ref {tag,...} : hol_type) = tag
+
+fun htn_compare (ty1,ty2) =
+  case (ty1, ty2) of
+      (Tyv s1, Tyv s2) => String.compare(s1,s2)
+    | (Tyv _, Tyapp _) => LESS
+    | (Tyapp _, Tyv _) => GREATER
+    | (Tyapp p1, Tyapp p2) =>
+      pair_compare (KernelSig.id_compare, list_compare (hccompare htn_compare))
+                   (p1, p2)
+
+type 'a weakref = 'a option ref
+
+fun option_compare cmp (NONE, NONE) = EQUAL
+  | option_compare cmp (NONE, SOME _) = LESS
+  | option_compare cmp (SOME _, NONE) = GREATER
+  | option_compare cmp (SOME x, SOME y) = cmp(x,y)
+
+fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
+
+val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
+
+local
+  val tag = ref 0
+in
+fun next_tag () = (!tag before tag := !tag + 1)
+end
+
+fun node (ref {node,...}) = node
+
+fun uptodate_type ty =
+  case node ty of
+      Tyv _ => true
+    | Tyapp(info, args) => KernelSig.uptodate_id info andalso
+                           List.all uptodate_type args
+
+fun dest_vartype ty =
+  case node ty of
+      Tyv s => s
+    | _ => raise ERR "dest_vartype" "Type not a vartype"
+
+fun is_vartype ty =
+  case node ty of
+      Tyv _ => true
+    | _ => false
+
+fun pfind k pm =
+  SOME (PIntMap.find k pm) handle PIntMap.NotFound=> NONE
+
+fun hashstring s = if s = "" then 0
+                   else String.size s + Char.ord (String.sub(s,0))
+fun mk_vartype_nocheck s =
+  let
+    val hkey = hashstring s
+    fun mknew() =
+      let
+        val nr = ref {hkey = hkey, tag = next_tag(), node = Tyv s}
+        val wr = Weak.weak (SOME nr)
+      in
+        (wr, nr)
+      end
+    fun notthere() =
+      let
+        val (wr,nr) = mknew()
+      in
+        (HOLset.singleton (wr_compare (hccompare htn_compare)) wr, nr)
+      end
+    fun isthere set =
+      let
+        fun findP (ref (SOME (ref tyn))) = #node tyn = Tyv s
+          | findP _ = false
+      in
+        case HOLset.find findP set of
+            NONE =>
+              let
+                val (wr,nr) = mknew()
+                val set' = HOLset.add(set, wr)
+              in
+                (set', nr)
+              end
+            | SOME (ref (SOME nr)) => (set, nr)
+            | SOME (ref NONE) =>
+                (* how likely is this? *) raise Fail "Can't cope"
+        end
+    val (tt', r) = PIntMap.addfu isthere hkey notthere (!typetable)
+  in
+    typetable := tt'; r
+  end
+
+val alpha  = mk_vartype_nocheck "'a"
+val beta   = mk_vartype_nocheck "'b";
+val gamma  = mk_vartype_nocheck "'c"
+val delta  = mk_vartype_nocheck "'d"
+val etyvar = mk_vartype_nocheck "'e"
+val ftyvar = mk_vartype_nocheck "'f"
+
+
+
+val varcomplain = ref true
+val _ = register_btrace ("Vartype Format Complaint", varcomplain)
+
+
+fun mk_vartype s =
+  (if not (Lexis.allowed_user_type_var s) andalso !varcomplain then
+     WARN "mk_vartype" "non-standard syntax"
+   else ();
+   mk_vartype_nocheck s)
 
 val gen_tyvar_prefix = "%%gen_tyvar%%"
 
 fun num2name i = gen_tyvar_prefix ^ Lib.int_to_string i
 val nameStrm = Lib.mk_istream (fn x => x + 1) 0 num2name
 
-fun gen_tyvar () = Tyv (state(next nameStrm))
+fun gen_tyvar () = mk_vartype_nocheck (state(next nameStrm))
 
-fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
-  | is_gen_tyvar _ = false;
+fun is_gen_tyvar ty =
+  case node ty of
+      Tyv name => String.isPrefix gen_tyvar_prefix name
+    | _ => false;
 
 fun first_decl caller s = let
   val possibilities = KernelSig.listName operator_table s
@@ -74,39 +183,91 @@ in
   | x::xs => (WARN caller ("More than one possibility for "^s); #2 x)
 end
 
+fun kidhash kid =
+  let
+    val {Thy,Name} = KernelSig.name_of_id kid
+  in
+    hashstring Thy * hashstring Name
+  end
+
+fun hashopn kid args =
+  List.foldl (fn (ty,acc) => acc + hash ty) (kidhash kid) args
+
+fun mk_thy_type0 id args =
+    let
+      val hkey = hashopn id args
+      fun mknew() =
+        let
+          val nr = ref {hkey = hkey, tag = next_tag(), node = Tyapp(id,args)}
+          val wr = Weak.weak (SOME nr)
+        in
+          (wr, nr)
+        end
+    fun notthere() =
+      let
+        val (wr,nr) = mknew()
+      in
+        (HOLset.singleton (wr_compare (hccompare htn_compare)) wr, nr)
+      end
+    fun isthere set =
+      let
+        fun findP (ref (SOME (ref tyn))) = #node tyn = Tyapp(id,args)
+          | findP _ = false
+      in
+        case HOLset.find findP set of
+            NONE =>
+              let
+                val (wr,nr) = mknew()
+                val set' = HOLset.add(set, wr)
+              in
+                (set', nr)
+              end
+            | SOME (ref (SOME nr)) => (set, nr)
+            | SOME (ref NONE) =>
+                (* how likely is this? *) raise Fail "Can't cope"
+        end
+    val (tt', r) = PIntMap.addfu isthere hkey notthere (!typetable)
+  in
+    typetable := tt'; r
+  end
+
 fun mk_type (opname, args) = let
   val (id,aty) = first_decl "mk_type" opname
 in
-  if length args = aty then
-    Tyapp (id, args)
+  if length args = aty then mk_thy_type0 id args
   else
     raise ERR "mk_type"
               ("Expecting "^Int.toString aty^" arguments for "^opname)
 end
 
-val bool = mk_type("bool", [])
-val ind = mk_type("ind", [])
-
-fun dest_type (Tyv _) = raise ERR "dest_type" "Type a variable"
-  | dest_type (Tyapp(id, args)) = let
-      val {Thy, Name} = KernelSig.name_of_id id
-    in
-      (Name, args)
-    end
-
-fun is_type (Tyapp _) = true | is_type _ = false
-
 fun mk_thy_type {Thy, Tyop, Args} =
-    case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
+  case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
       NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
-    | SOME (i,arity) =>
-      if arity = length Args then Tyapp(i, Args)
+    | SOME (id,arity) =>
+      if arity = length Args then mk_thy_type0 id Args
       else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
                                     " arguments for "^Tyop)
 
-fun dest_thy_type (Tyv _) = raise ERR "dest_thy_type" "Type a variable"
-  | dest_thy_type (Tyapp(id, args)) =
-    {Thy = KernelSig.seg_of id, Tyop = KernelSig.name_of id, Args = args}
+val bool = mk_type("bool", [])
+val ind = mk_type("ind", [])
+
+fun dest_type ty =
+  case node ty of
+      Tyv _ => raise ERR "dest_type" "Type a variable"
+    | Tyapp(id, args) =>
+      let
+        val {Thy, Name} = KernelSig.name_of_id id
+      in
+        (Name, args)
+      end
+
+fun is_type ty = not (is_vartype ty)
+
+fun dest_thy_type ty =
+  case node ty of
+      Tyv _ => raise ERR "dest_thy_type" "Type a variable"
+    | Tyapp(id, args) =>
+      {Thy = KernelSig.seg_of id, Tyop = KernelSig.name_of id, Args = args}
 
 fun decls s = let
   fun foldthis ({Thy,Name},v,acc) = if Name = s then {Thy=Thy,Tyop=Name}::acc
@@ -118,24 +279,15 @@ end
 fun op_arity {Thy,Tyop} =
     Option.map (#2) (KernelSig.peek(operator_table, {Thy=Thy,Name=Tyop}))
 
-fun type_vars_set acc [] = acc
-  | type_vars_set acc ((t as Tyv s) :: rest) =
-      type_vars_set (HOLset.add(acc, t)) rest
-  | type_vars_set acc (Tyapp(_, args) :: rest) =
-      type_vars_set acc (args @ rest)
+fun type_vars_set acc tylist =
+  case tylist of
+      [] => acc
+    | ty::tys =>
+      case node ty of
+          Tyv _ => type_vars_set (HOLset.add(acc, ty)) tys
+        | Tyapp (_, args) => type_vars_set acc (args @ tys)
 
-fun compare0 (Tyv s1, Tyv s2) = String.compare(s1, s2)
-  | compare0 (Tyv _, _) = LESS
-  | compare0 (Tyapp _, Tyv _) = GREATER
-  | compare0 (Tyapp(i, iargs), Tyapp(j, jargs)) = let
-    in
-      case KernelSig.id_compare(i,j) of
-        EQUAL => Lib.list_compare compare0 (iargs, jargs)
-      | x => x
-    end
-
-fun compare p = if Portable.pointer_eq p then EQUAL
-                else compare0 p
+fun compare p = inv_img_cmp tag Int.compare p
 
 val empty_tyset = HOLset.empty compare
 
@@ -144,8 +296,10 @@ fun type_vars ty = HOLset.listItems (type_vars_set empty_tyset [ty])
 val type_varsl = HOLset.listItems o type_vars_set empty_tyset
 
 fun exists_tyvar P = let
-  fun occ (w as Tyv _) = P w
-    | occ (Tyapp(_, Args)) = List.exists occ Args
+  fun occ ty =
+    case node ty of
+        Tyv _ => P ty
+      | Tyapp(_, Args) => List.exists occ Args
 in
   occ
 end
@@ -156,40 +310,24 @@ fun type_var_in v =
 
 val polymorphic = exists_tyvar (fn _ => true)
 
-fun (ty1 --> ty2) = Tyapp(funref, [ty1, ty2])
+fun (ty1 --> ty2) = mk_thy_type0 funref [ty1, ty2]
 
-fun dom_rng (Tyv _)  = raise ERR "dom_rng" "Type a variable"
-  | dom_rng (Tyapp(i, args)) = if i = funref then (hd args, hd (tl args))
-                               else raise ERR "dom_rng"
-                                              "Type not a function type"
-
-val alpha  = Tyv "'a"
-val beta   = Tyv "'b";
-val gamma  = Tyv "'c"
-val delta  = Tyv "'d"
-val etyvar = Tyv "'e"
-val ftyvar = Tyv "'f"
-
-val varcomplain = ref true
-val _ = register_btrace ("Vartype Format Complaint", varcomplain)
-
-fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
-  | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
-  | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
-  | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else (if !varcomplain then
-                           WARN "mk_vartype" "non-standard syntax"
-                         else (); Tyv s)
+fun dom_rng ty =
+  case node ty of
+      Tyv _  => raise ERR "dom_rng" "Type a variable"
+    | Tyapp(i, args) => if i = funref then (hd args, hd (tl args))
+                        else raise ERR "dom_rng"
+                                   "Type not a function type"
 
 fun ty_sub [] _ = SAME
-  | ty_sub theta (Tyapp(tyc,Args))
-      = (case delta_map (ty_sub theta) Args
-          of SAME => SAME
-           | DIFF Args' => DIFF (Tyapp(tyc, Args')))
-  | ty_sub theta v =
-      case Lib.subst_assoc (equal v) theta
-       of NONE    => SAME
-        | SOME ty => DIFF ty
+  | ty_sub theta ty =
+    case node ty of
+        Tyapp(tyc,Args) => (case delta_map (ty_sub theta) Args of
+                                SAME => SAME
+                              | DIFF Args' => DIFF (mk_thy_type0 tyc Args'))
+      | _ => case Lib.subst_assoc (equal ty) theta of
+                 NONE    => SAME
+               | SOME ty => DIFF ty
 
 fun type_subst theta = delta_apply (ty_sub theta)
 
@@ -205,15 +343,18 @@ local
    in look end
 in
 fun tymatch [] [] Sids = Sids
-  | tymatch ((v as Tyv _)::ps) (ty::obs) (Sids as (S,ids)) =
-     tymatch ps obs
-       (case lookup v ids S
-         of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
-          | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
-  | tymatch (Tyapp(c1,A1)::ps) (Tyapp(c2,A2)::obs) Sids =
-      if c1=c2 then tymatch (A1@ps) (A2@obs) Sids
-               else MERR "different tyops"
-  | tymatch any other thing = MERR "different constructors"
+  | tymatch (v::ps) (ty::obs) (Sids as (S,ids)) =
+    (case (node v, node ty) of
+        (Tyv _,_) =>
+        tymatch ps obs
+          (case lookup v ids S of
+               NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
+             | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
+      | (Tyapp(c1,A1), Tyapp(c2,A2)) =>
+        if c1=c2 then tymatch (A1@ps) (A2@obs) Sids
+        else MERR "different tyops"
+      | (_, _) => MERR "different constructors")
+    | tymatch any other thing = MERR "different constructors"
 end
 (*
 fun raw_match_type (v as Tyv _) ty (Sids as (S,ids)) =
@@ -239,7 +380,7 @@ fun size acc tylist =
     | [] :: tys => size acc tys
     | (ty::tys1) :: tys2 => let
       in
-        case ty of
+        case node ty of
           Tyv _ => size (1 + acc) (tys1 :: tys2)
         | Tyapp(_, args) => size (1 + acc) (args :: tys1 :: tys2)
       end

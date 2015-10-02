@@ -30,6 +30,8 @@ val add : int -> 'a -> 'a t -> 'a t
 
 val addf : ('a -> 'a) -> int -> 'a -> 'a t -> ('a t * 'a)
 
+val addfu : ('a -> 'a * 'b) -> int -> (unit -> 'a * 'b) -> 'a t -> ('a t * 'b)
+
 val find : int -> 'a t -> 'a
 
 val remove : int -> 'a t -> 'a t

@@ -75,13 +75,15 @@ end
 
 fun match_prefix k p m = (mask k m) = p
 
-fun addf f k x t = let
+fun addfu f k x t = let
   fun ins t =
       case t of
-        Empty => (Leaf (k,x), x)
-      | Leaf (j,old) => if j = k then let val new = f old
-                                      in (Leaf (k,new), new) end
-                        else (join (k, Leaf (k,x), j, t), x)
+        Empty => let val (d,r) = x() in (Leaf (k,d), r) end
+      | Leaf (j,old) => if j = k then let val (new,r) = f old
+                                      in (Leaf (k,new), r) end
+                        else let val (d,r) = x() in
+                               (join (k, Leaf (k,d), j, t), r)
+                             end
       | Branch (p,m,t0,t1,sz) => if match_prefix k p m then
 	                           if zero_bit k m then let
                                        val (t0', new) = ins t0
@@ -94,10 +96,15 @@ fun addf f k x t = let
 	                            (Branch (p, m, t0, t1',sz+1), new)
                                   end
 	                      else
-	                        (join (k, Leaf (k,x), p, t), x)
+	                        let val (d,r) = x() in
+                                  (join (k, Leaf (k,d), p, t), r)
+                                end
 in
   ins t
 end
+
+fun addf f k x t = addfu (fn x => let val r = f x in (r,r) end) k
+                         (fn _ => (x,x)) t
 
 fun add k x t = #1 (addf (fn _ => x) k x t)
 
