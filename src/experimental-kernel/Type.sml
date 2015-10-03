@@ -88,8 +88,47 @@ fun hashkid kid =
     hashstring Thy * hashstring Name
   end
 
-fun hashopn kid args =
+fun hashopn (kid,args) =
   List.foldl (fn (ty,acc) => acc + hkey ty) (hashkid kid) args
+
+fun mk_hashconsed cmp table hash cons args =
+  let
+    val hk = hash args
+    fun mk_new() =
+      let
+        val nr = ref {hkey = hk, tag = next_tag(), node = cons args}
+        val wr = Weak.weak (SOME nr)
+      in
+        (wr,nr)
+      end
+    fun not_there() =
+      let
+        val (wr,nr) = mk_new()
+      in
+        (HOLset.singleton (wr_compare (hccompare cmp)) wr, nr)
+      end
+    fun is_there set =
+      let
+        fun findP (ref (SOME (ref hc))) = #node hc = cons args
+          | findP _ = false
+      in
+        case HOLset.find findP set of
+          NONE =>
+            let
+              val (wr,nr) = mk_new()
+              val set' = HOLset.add(set,wr)
+            in
+              (set',nr)
+            end
+        | SOME (ref (SOME nr)) => (set,nr)
+        | SOME (ref NONE) => raise Fail "Weak reference disappeared during pattern match"
+      end
+    val (t, r) = PIntMap.addfu is_there hk not_there (!table)
+  in
+    table := t; r
+  end
+
+fun mk_hctype x = mk_hashconsed htn_compare typetable x
 
 fun uptodate_type ty =
   case node ty of
@@ -110,50 +149,15 @@ fun is_vartype ty =
 fun pfind k pm =
   SOME (PIntMap.find k pm) handle PIntMap.NotFound=> NONE
 
-fun mk_vartype_nocheck s =
-  let
-    val hk = hashstring s
-    fun mknew() =
-      let
-        val nr = ref {hkey = hk, tag = next_tag(), node = Tyv s}
-        val wr = Weak.weak (SOME nr)
-      in
-        (wr, nr)
-      end
-    fun notthere() =
-      let
-        val (wr,nr) = mknew()
-      in
-        (HOLset.singleton (wr_compare (hccompare htn_compare)) wr, nr)
-      end
-    fun isthere set =
-      let
-        fun findP (ref (SOME (ref tyn))) = #node tyn = Tyv s
-          | findP _ = false
-      in
-        case HOLset.find findP set of
-            NONE =>
-              let
-                val (wr,nr) = mknew()
-                val set' = HOLset.add(set, wr)
-              in
-                (set', nr)
-              end
-            | SOME (ref (SOME nr)) => (set, nr)
-            | SOME (ref NONE) =>
-                (* how likely is this? *) raise Fail "Can't cope"
-        end
-    val (tt', r) = PIntMap.addfu isthere hk notthere (!typetable)
-  in
-    typetable := tt'; r
-  end
+val mk_Tyv = mk_hctype hashstring Tyv
+val mk_Tyapp = mk_hctype hashopn Tyapp
 
-val alpha  = mk_vartype_nocheck "'a"
-val beta   = mk_vartype_nocheck "'b";
-val gamma  = mk_vartype_nocheck "'c"
-val delta  = mk_vartype_nocheck "'d"
-val etyvar = mk_vartype_nocheck "'e"
-val ftyvar = mk_vartype_nocheck "'f"
+val alpha  = mk_Tyv "'a"
+val beta   = mk_Tyv "'b";
+val gamma  = mk_Tyv "'c"
+val delta  = mk_Tyv "'d"
+val etyvar = mk_Tyv "'e"
+val ftyvar = mk_Tyv "'f"
 
 
 val varcomplain = ref true
@@ -164,14 +168,14 @@ fun mk_vartype s =
   (if not (Lexis.allowed_user_type_var s) andalso !varcomplain then
      WARN "mk_vartype" "non-standard syntax"
    else ();
-   mk_vartype_nocheck s)
+   mk_Tyv s)
 
 val gen_tyvar_prefix = "%%gen_tyvar%%"
 
 fun num2name i = gen_tyvar_prefix ^ Lib.int_to_string i
 val nameStrm = Lib.mk_istream (fn x => x + 1) 0 num2name
 
-fun gen_tyvar () = mk_vartype_nocheck (state(next nameStrm))
+fun gen_tyvar () = mk_Tyv (state(next nameStrm))
 
 fun is_gen_tyvar ty =
   case node ty of
@@ -187,48 +191,10 @@ in
   | x::xs => (WARN caller ("More than one possibility for "^s); #2 x)
 end
 
-fun mk_thy_type0 id args =
-    let
-      val hk = hashopn id args
-      fun mknew() =
-        let
-          val nr = ref {hkey = hk, tag = next_tag(), node = Tyapp(id,args)}
-          val wr = Weak.weak (SOME nr)
-        in
-          (wr, nr)
-        end
-    fun notthere() =
-      let
-        val (wr,nr) = mknew()
-      in
-        (HOLset.singleton (wr_compare (hccompare htn_compare)) wr, nr)
-      end
-    fun isthere set =
-      let
-        fun findP (ref (SOME (ref tyn))) = #node tyn = Tyapp(id,args)
-          | findP _ = false
-      in
-        case HOLset.find findP set of
-            NONE =>
-              let
-                val (wr,nr) = mknew()
-                val set' = HOLset.add(set, wr)
-              in
-                (set', nr)
-              end
-            | SOME (ref (SOME nr)) => (set, nr)
-            | SOME (ref NONE) =>
-                (* how likely is this? *) raise Fail "Can't cope"
-        end
-    val (tt', r) = PIntMap.addfu isthere hk notthere (!typetable)
-  in
-    typetable := tt'; r
-  end
-
 fun mk_type (opname, args) = let
   val (id,aty) = first_decl "mk_type" opname
 in
-  if length args = aty then mk_thy_type0 id args
+  if length args = aty then mk_Tyapp (id,args)
   else
     raise ERR "mk_type"
               ("Expecting "^Int.toString aty^" arguments for "^opname)
@@ -238,7 +204,7 @@ fun mk_thy_type {Thy, Tyop, Args} =
   case KernelSig.peek(operator_table, {Thy = Thy, Name = Tyop}) of
       NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
     | SOME (id,arity) =>
-      if arity = length Args then mk_thy_type0 id Args
+      if arity = length Args then mk_Tyapp (id,Args)
       else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
                                     " arguments for "^Tyop)
 
@@ -304,7 +270,7 @@ fun type_var_in v =
 
 val polymorphic = exists_tyvar (fn _ => true)
 
-fun (ty1 --> ty2) = mk_thy_type0 funref [ty1, ty2]
+fun (ty1 --> ty2) = mk_Tyapp (funref,[ty1, ty2])
 
 fun dom_rng ty =
   case node ty of
@@ -318,7 +284,7 @@ fun ty_sub [] _ = SAME
     case node ty of
         Tyapp(tyc,Args) => (case delta_map (ty_sub theta) Args of
                                 SAME => SAME
-                              | DIFF Args' => DIFF (mk_thy_type0 tyc Args'))
+                              | DIFF Args' => DIFF (mk_Tyapp (tyc,Args')))
       | _ => case Lib.subst_assoc (equal ty) theta of
                  NONE    => SAME
                | SOME ty => DIFF ty
