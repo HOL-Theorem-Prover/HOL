@@ -90,6 +90,7 @@ sig
    val mlquote : string -> string
    val next : ('a, 'b) istream -> ('a, 'b) istream
    val null_intersection : ''a list -> ''a list -> bool
+   val option_compare : 'a cmp -> 'a option cmp
    val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
    val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
    val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list

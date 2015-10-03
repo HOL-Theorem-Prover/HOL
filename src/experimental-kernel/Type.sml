@@ -67,11 +67,6 @@ fun htn_compare (ty1,ty2) =
 
 type 'a weakref = 'a option ref
 
-fun option_compare cmp (NONE, NONE) = EQUAL
-  | option_compare cmp (NONE, SOME _) = LESS
-  | option_compare cmp (SOME _, NONE) = GREATER
-  | option_compare cmp (SOME x, SOME y) = cmp(x,y)
-
 fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
 
 val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
