@@ -46,7 +46,7 @@ type 'a weakref = 'a option ref
 
 fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
 
-type 'a hconsed = { node: 'a, tag : int, hkey : int } ref
+type 'a hconsed = { node: 'a, tag : int, hkey : word } ref
 
 local
   val tag = ref 0
@@ -78,18 +78,17 @@ fun htn_compare (ty1,ty2) =
 
 val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
 
-fun hashstring s = if s = "" then 0
-                   else String.size s + Char.ord (String.sub(s,0))
+val hashstring = CharVector.foldl (fn (c,h) => Word.fromInt(Char.ord c) + h * 0w31) 0w0
 
 fun hashkid kid =
   let
     val {Thy,Name} = KernelSig.name_of_id kid
   in
-    hashstring Thy * hashstring Name
+    Word.xorb(hashstring Thy,hashstring Name)
   end
 
 fun hashopn (kid,args) =
-  List.foldl (fn (ty,acc) => acc + hkey ty) (hashkid kid) args
+  List.foldl (Word.xorb o (Lib.##(hkey,I))) (hashkid kid) args
 
 fun mk_hashconsed cmp table hash cons args =
   let
@@ -123,7 +122,7 @@ fun mk_hashconsed cmp table hash cons args =
         | SOME (ref (SOME nr)) => (set,nr)
         | SOME (ref NONE) => raise Fail "Weak reference disappeared during pattern match"
       end
-    val (t, r) = PIntMap.addfu is_there hk not_there (!table)
+    val (t, r) = PIntMap.addfu is_there (Word.toInt hk) not_there (!table)
   in
     table := t; r
   end
