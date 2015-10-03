@@ -42,10 +42,20 @@ val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
+type 'a weakref = 'a option ref
+
+fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
+
 type 'a hconsed = { node: 'a, tag : int, hkey : int } ref
 
-fun hccompare cmp (ref {node=n1,tag=_,hkey=_},ref {node=n2,tag=_,hkey=_}) =
-  cmp (n1, n2)
+local
+  val tag = ref 0
+in
+fun next_tag () = (!tag before tag := !tag + 1)
+end
+
+fun hccompare cmp (ref {node=n1,tag=t1,hkey=_},ref {node=n2,tag=t2,hkey=_}) =
+  if t1 = t2 then EQUAL else cmp (n1, n2)
 
 datatype hol_type_node =
          Tyv of string
@@ -53,8 +63,9 @@ datatype hol_type_node =
 
 type hol_type = hol_type_node hconsed
 
-fun hash (ref {hkey,...} : hol_type) = hkey
+fun node (ref {node,...} : hol_type) = node
 fun tag (ref {tag,...} : hol_type) = tag
+fun hkey (ref {hkey,...} : hol_type) = hkey
 
 fun htn_compare (ty1,ty2) =
   case (ty1, ty2) of
@@ -65,19 +76,20 @@ fun htn_compare (ty1,ty2) =
       pair_compare (KernelSig.id_compare, list_compare (hccompare htn_compare))
                    (p1, p2)
 
-type 'a weakref = 'a option ref
-
-fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
-
 val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
 
-local
-  val tag = ref 0
-in
-fun next_tag () = (!tag before tag := !tag + 1)
-end
+fun hashstring s = if s = "" then 0
+                   else String.size s + Char.ord (String.sub(s,0))
 
-fun node (ref {node,...}) = node
+fun hashkid kid =
+  let
+    val {Thy,Name} = KernelSig.name_of_id kid
+  in
+    hashstring Thy * hashstring Name
+  end
+
+fun hashopn kid args =
+  List.foldl (fn (ty,acc) => acc + hkey ty) (hashkid kid) args
 
 fun uptodate_type ty =
   case node ty of
@@ -98,14 +110,12 @@ fun is_vartype ty =
 fun pfind k pm =
   SOME (PIntMap.find k pm) handle PIntMap.NotFound=> NONE
 
-fun hashstring s = if s = "" then 0
-                   else String.size s + Char.ord (String.sub(s,0))
 fun mk_vartype_nocheck s =
   let
-    val hkey = hashstring s
+    val hk = hashstring s
     fun mknew() =
       let
-        val nr = ref {hkey = hkey, tag = next_tag(), node = Tyv s}
+        val nr = ref {hkey = hk, tag = next_tag(), node = Tyv s}
         val wr = Weak.weak (SOME nr)
       in
         (wr, nr)
@@ -133,7 +143,7 @@ fun mk_vartype_nocheck s =
             | SOME (ref NONE) =>
                 (* how likely is this? *) raise Fail "Can't cope"
         end
-    val (tt', r) = PIntMap.addfu isthere hkey notthere (!typetable)
+    val (tt', r) = PIntMap.addfu isthere hk notthere (!typetable)
   in
     typetable := tt'; r
   end
@@ -144,7 +154,6 @@ val gamma  = mk_vartype_nocheck "'c"
 val delta  = mk_vartype_nocheck "'d"
 val etyvar = mk_vartype_nocheck "'e"
 val ftyvar = mk_vartype_nocheck "'f"
-
 
 
 val varcomplain = ref true
@@ -178,22 +187,12 @@ in
   | x::xs => (WARN caller ("More than one possibility for "^s); #2 x)
 end
 
-fun kidhash kid =
-  let
-    val {Thy,Name} = KernelSig.name_of_id kid
-  in
-    hashstring Thy * hashstring Name
-  end
-
-fun hashopn kid args =
-  List.foldl (fn (ty,acc) => acc + hash ty) (kidhash kid) args
-
 fun mk_thy_type0 id args =
     let
-      val hkey = hashopn id args
+      val hk = hashopn id args
       fun mknew() =
         let
-          val nr = ref {hkey = hkey, tag = next_tag(), node = Tyapp(id,args)}
+          val nr = ref {hkey = hk, tag = next_tag(), node = Tyapp(id,args)}
           val wr = Weak.weak (SOME nr)
         in
           (wr, nr)
@@ -221,7 +220,7 @@ fun mk_thy_type0 id args =
             | SOME (ref NONE) =>
                 (* how likely is this? *) raise Fail "Can't cope"
         end
-    val (tt', r) = PIntMap.addfu isthere hkey notthere (!typetable)
+    val (tt', r) = PIntMap.addfu isthere hk notthere (!typetable)
   in
     typetable := tt'; r
   end
