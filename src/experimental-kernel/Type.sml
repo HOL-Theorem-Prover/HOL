@@ -282,7 +282,7 @@ fun type_vars_set acc tylist =
           Tyv _ => type_vars_set (HOLset.add(acc, ty)) tys
         | Tyapp (_, args) => type_vars_set acc (args @ tys)
 
-fun compare p = inv_img_cmp tag Int.compare p
+val compare = hccompare htn_compare
 
 val empty_tyset = HOLset.empty compare
 
