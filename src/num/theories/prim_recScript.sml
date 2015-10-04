@@ -173,6 +173,46 @@ val LESS_MONO_IFF =
    REPEAT GEN_TAC THEN EQ_TAC
     THEN REWRITE_TAC [LESS_MONO, LESS_MONO_INV]) ;
 
+(* now show that < is the transitive closure of the successor relation *)
+
+val TC_LESS_0 = prove ( --`!n. TC (\x y. y = SUC x) 0 (SUC n)`--,
+  INDUCT_TAC 
+  THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
+    ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
+    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
+
+val TC_NOT_LESS_0 = prove ( --`!n. ~(TC (\x y. y = SUC x) n 0)`--,
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] 
+  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
+
+val TC_IM_RTC_SUC = prove (
+  ``!m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n``,
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC 
+    THEN REWRITE_TAC [relationTheory.RTC_CASES_TC, INV_SUC_EQ]
+    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) 
+    THEN ASM_REWRITE_TAC []
+    THEN DISJ2_TAC THEN EXISTS_TAC ``n : num``
+    THEN ASM_REWRITE_TAC []) ;
+
+val RTC_IM_TC = prove (
+  ``!m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n``,
+  REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN]
+   THEN BETA_TAC THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
+   THENL [Q.EXISTS_TAC `f m`, 
+     FIRST_X_ASSUM (ASSUME_TAC o SYM)]
+   THEN ASM_REWRITE_TAC []) ;
+
+val TC_LESS_MONO_IFF = prove (
+  ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
+  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
+
+val LESS_ALT = store_thm ("LESS_ALT",
+  ``!m n. (m < n) = TC (\x y. y = SUC x) m n``,
+  INDUCT_TAC THEN INDUCT_TAC THEN
+  REWRITE_TAC [NOT_LESS_0, TC_NOT_LESS_0, LESS_0, TC_LESS_0,
+    TC_LESS_MONO_IFF, LESS_MONO_IFF]
+  THEN FIRST_ASSUM MATCH_ACCEPT_TAC) ;
+
 val LESS_SUC_REFL =
  store_thm
   ("LESS_SUC_REFL",
