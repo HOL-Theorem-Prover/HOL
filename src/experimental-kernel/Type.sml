@@ -46,7 +46,7 @@ type 'a weakref = 'a option ref
 
 fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
 
-type 'a hconsed = { node: 'a, tag : int, hkey : word } ref
+type 'a hconsed = { node: 'a, tag : int } ref
 
 local
   val tag = ref 0
@@ -54,7 +54,7 @@ in
 fun next_tag () = (!tag before tag := !tag + 1)
 end
 
-fun hccompare cmp (ref {node=n1,tag=t1,hkey=_},ref {node=n2,tag=t2,hkey=_}) =
+fun hccompare cmp (ref {node=n1,tag=t1},ref {node=n2,tag=t2}) =
   if t1 = t2 then EQUAL else cmp (n1, n2)
 
 datatype hol_type_node =
@@ -65,7 +65,6 @@ type hol_type = hol_type_node hconsed
 
 fun node (ref {node,...} : hol_type) = node
 fun tag (ref {tag,...} : hol_type) = tag
-fun hkey (ref {hkey,...} : hol_type) = hkey
 
 fun htn_compare (ty1,ty2) =
   case (ty1, ty2) of
@@ -88,14 +87,14 @@ fun hashkid kid =
   end
 
 fun hashopn (kid,args) =
-  List.foldl (Word.xorb o (Lib.##(hkey,I))) (hashkid kid) args
+  List.foldl (Word.xorb o (Lib.##(Word.fromInt o tag,I))) (hashkid kid) args
 
 fun mk_hashconsed cmp table hash cons args =
   let
     val hk = hash args
     fun mk_new() =
       let
-        val nr = ref {hkey = hk, tag = next_tag(), node = cons args}
+        val nr = ref {tag = next_tag(), node = cons args}
         val wr = Weak.weak (SOME nr)
       in
         (wr,nr)
