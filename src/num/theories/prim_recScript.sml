@@ -89,6 +89,22 @@ val INV_SUC_EQ = save_thm("INV_SUC_EQ",
                     (AP_TERM (--`SUC`--)
                              (ASSUME (--`m:num = n`--))))));
 
+(*---------------------------------------------------------------------------
+ * First we define a partial inverse to SUC called PRE such that:
+ *
+ *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
+ *---------------------------------------------------------------------------*)
+val PRE_DEF = new_definition("PRE_DEF",
+    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
+
+val PRE =
+ store_thm
+  ("PRE",
+   --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
+   REPEAT STRIP_TAC
+    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
+
 val LESS_REFL = store_thm( "LESS_REFL", --`!n. ~(n < n)`--,
    GEN_TAC THEN
    REWRITE_TAC[LESS_DEF, NOT_AND]);
@@ -134,22 +150,11 @@ val LESS_MONO =
    --`!m n. (m < n) ==> (SUC m < SUC n)`--,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
-    THEN EXISTS_TAC (--`\x.(x = SUC m) \/ (P x)`--)
+    THEN EXISTS_TAC ``\n : num. P (PRE n) : bool``
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
-    THEN ASM_REWRITE_TAC[]
-    THEN IMP_RES_TAC
-          (DISCH_ALL
-           (CONTRAPOS(SPEC (--`(n:num)`--)
-                           (ASSUME (--`!n'. P(SUC n')  ==>  P n'`--)))))
-    THEN ASM_REWRITE_TAC[]
-    THEN REPEAT STRIP_TAC
-    THEN RES_TAC
-    THEN IMP_RES_TAC INV_SUC
-    THEN ASM_REWRITE_TAC[]
-    THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS [ASSUME (--`n:num = m`--)]
-                          (ASSUME (--`~(P (n:num))`--))))
-    THEN RES_TAC);
+    THEN ASM_REWRITE_TAC [PRE]
+    THEN INDUCT_TAC (* don't have num_CASES yet *)
+    THEN ASM_REWRITE_TAC [PRE]) ;
 
 val LESS_SUC_REFL =
  store_thm
@@ -387,22 +392,6 @@ val SIMP_REC_THM = store_thm (
  *       (PRIM_REC x f (SUC m) = f(PRIM_REC x f m)m)
  *---------------------------------------------------------------------------*)
 
-
-(*---------------------------------------------------------------------------
- * First we define a partial inverse to SUC called PRE such that:
- *
- *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
- *---------------------------------------------------------------------------*)
-val PRE_DEF = new_definition("PRE_DEF",
-    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
-
-val PRE =
- store_thm
-  ("PRE",
-   --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
-   REPEAT STRIP_TAC
-    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
 
 val PRIM_REC_FUN =
  new_definition
