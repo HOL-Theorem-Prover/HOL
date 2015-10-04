@@ -114,15 +114,19 @@ val NOT_LESS_0 =
             (SPECL[--`n:num`--, --`0`--] SUC_LESS))
     THEN ASM_REWRITE_TAC[]);
 
-val LESS_0_0 =
- store_thm
-  ("LESS_0_0",
-   --`0 < SUC 0`--,
-   REWRITE_TAC[LESS_DEF]
+val LESS_0 = store_thm("LESS_0",
+   --`!n. 0 < (SUC n)`--,
+   GEN_TAC 
+    THEN REWRITE_TAC[LESS_DEF]
     THEN EXISTS_TAC (--`\x.x = 0`--)
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
     THEN REWRITE_TAC[NOT_SUC]);
 
+val LESS_0_0 =
+ store_thm
+  ("LESS_0_0",
+   --`0 < SUC 0`--,
+   REWRITE_TAC[LESS_0]) ;
 
 val LESS_MONO =
  store_thm
@@ -209,13 +213,6 @@ val LESS_SUC_IMP =
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
-
-(* Move to conversion nets forces different tactic in this proof. kls. *)
-val LESS_0 = store_thm("LESS_0",
-   --`!n. 0 < (SUC n)`--,
-   INDUCT_TAC THEN
-   ONCE_REWRITE_TAC[LESS_THM] THEN
-   ASM_REWRITE_TAC[]);
 
 val EQ_LESS =
  store_thm
