@@ -156,6 +156,23 @@ val LESS_MONO =
     THEN INDUCT_TAC (* don't have num_CASES yet *)
     THEN ASM_REWRITE_TAC [PRE]) ;
 
+val LESS_MONO_INV =
+ store_thm
+  ("LESS_MONO_INV",
+   --`!m n. (SUC m < SUC n) ==> (m < n)`--,
+   REWRITE_TAC[LESS_DEF]
+    THEN REPEAT STRIP_TAC
+    THEN EXISTS_TAC ``\n : num. P (SUC n) : bool``
+    THEN CONV_TAC(DEPTH_CONV BETA_CONV)
+    THEN ASM_REWRITE_TAC []) ;
+
+val LESS_MONO_IFF =
+ store_thm
+  ("LESS_MONO_IFF",
+   --`!m n. (SUC m < SUC n) = (m < n)`--,
+   REPEAT GEN_TAC THEN EQ_TAC
+    THEN REWRITE_TAC [LESS_MONO, LESS_MONO_INV]) ;
+
 val LESS_SUC_REFL =
  store_thm
   ("LESS_SUC_REFL",
