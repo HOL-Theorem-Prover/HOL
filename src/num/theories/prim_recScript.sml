@@ -207,7 +207,8 @@ val TC_LESS_MONO_IFF = prove (
   REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
 
 val LESS_ALT = store_thm ("LESS_ALT",
-  ``!m n. (m < n) = TC (\x y. y = SUC x) m n``,
+  ``$< = TC (\x y. y = SUC x)``,
+  REWRITE_TAC [FUN_EQ_THM] THEN
   INDUCT_TAC THEN INDUCT_TAC THEN
   REWRITE_TAC [NOT_LESS_0, TC_NOT_LESS_0, LESS_0, TC_LESS_0,
     TC_LESS_MONO_IFF, LESS_MONO_IFF]
@@ -613,24 +614,13 @@ Q.store_thm
 
 
 (*----------------------------------------------------------------------------
- * This theorem would be a lot nicer if < was defined as the transitive
+ * This theorem is now a lot nicer as < can be defined as the transitive
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
 val WF_LESS = Q.store_thm("WF_LESS", `WF $<`,
-REWRITE_TAC[relationTheory.WF_DEF]
- THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
- THEN DISCH_THEN (fn th1 =>
-       SUBGOAL_THEN (--`^(concl th1) ==> !i j. j<i ==> ~B j`--)
-                    (fn th => MP_TAC (MP th th1)))
- THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN DISCH_TAC THENL
-  [INDUCT_TAC THEN GEN_TAC THEN
-    REWRITE_TAC[NOT_LESS_0,LESS_THM]
-    THEN DISCH_THEN (DISJ_CASES_THENL[SUBST1_TAC, ASSUME_TAC])
-    THEN STRIP_TAC THEN RES_TAC,
-   GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC
-    THEN Q.EXISTS_TAC`SUC w`
-    THEN MATCH_ACCEPT_TAC LESS_SUC_REFL]);
+  REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]) ;
+
 val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
