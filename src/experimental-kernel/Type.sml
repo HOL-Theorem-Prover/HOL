@@ -75,6 +75,15 @@ fun htn_compare (ty1,ty2) =
       pair_compare (KernelSig.id_compare, list_compare (hccompare htn_compare))
                    (p1, p2)
 
+fun htn_equal p =
+  case p of
+    (Tyv s1, Tyv s2) => s1 = s2
+  | (Tyapp (k1,a1), Tyapp (k2,a2)) =>
+      k1 = k2 andalso
+      (Lib.all2 (curry (op= o (W (curry Lib.##) (#tag o !)))) a1 a2
+       handle HOL_ERR _ => false)
+  | _ => false
+
 val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
 
 val hashstring = CharVector.foldl (fn (c,h) => Word.fromInt(Char.ord c) + h * 0w31) 0w0
@@ -107,7 +116,7 @@ fun mk_hashconsed cmp table hash cons args =
       end
     fun is_there set =
       let
-        fun findP (ref (SOME (ref hc))) = #node hc = cons args
+        fun findP (ref (SOME (ref {node,...}))) = htn_equal(node,cons args)
           | findP _ = false
       in
         case HOLset.find findP set of
