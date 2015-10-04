@@ -238,20 +238,7 @@ val LESS_LEMMA1 =
  store_thm
   ("LESS_LEMMA1",
    --`!m n. (m < SUC n) ==> (m = n) \/ (m < n)`--,
-   REWRITE_TAC[LESS_DEF]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_CASES_TAC (--`(m:num) = n`--)
-    THEN ASM_REWRITE_TAC[]
-    THEN EXISTS_TAC (--`\(x:num). ~(x = n) /\ (P x)`--)
-    THEN CONV_TAC(DEPTH_CONV BETA_CONV)
-    THEN REPEAT STRIP_TAC
-    THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS[ASSUME (--`(n':num) = n`--)]
-                         (ASSUME(--`P(SUC n'):bool`--))))
-    THEN ASSUME_TAC(REFL(--`n:num`--))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
-
+  REWRITE_TAC [LESS_ALT, TC_IM_RTC_SUC, relationTheory.RTC_CASES_TC]) ;
 
 val LESS_LEMMA2 =
  store_thm
