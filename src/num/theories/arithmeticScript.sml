@@ -58,7 +58,8 @@ and SUC_ID        = prim_recTheory.SUC_ID
 and NOT_LESS_EQ   = prim_recTheory.NOT_LESS_EQ
 and LESS_NOT_EQ   = prim_recTheory.LESS_NOT_EQ
 and LESS_SUC_SUC  = prim_recTheory.LESS_SUC_SUC
-and PRE           = prim_recTheory.PRE;
+and PRE           = prim_recTheory.PRE
+and LESS_ALT      = prim_recTheory.LESS_ALT;
 
 (*---------------------------------------------------------------------------*
  * The basic arithmetic operations.                                          *
@@ -320,24 +321,15 @@ val LESS_ADD = store_thm ("LESS_ADD",
     RES_THEN (STRIP_THM_THEN (SUBST1_TAC o SYM)) THEN
     EXISTS_TAC (``SUC p``) THEN REWRITE_TAC [ADD]]);
 
-val LESS_TRANS = store_thm ("LESS_TRANS",
-   ``!m n p. (m < n) /\ (n < p) ==> (m < p)``,
-   REPEAT GEN_TAC
-    THEN SPEC_TAC(``(n:num)``,``(n:num)``)
-    THEN SPEC_TAC(``(m:num)``,``(m:num)``)
-    THEN SPEC_TAC(``(p:num)``,``(p:num)``)
-    THEN INDUCT_TAC
-    THEN REWRITE_TAC[NOT_LESS_0, LESS_THM]
-    THEN REPEAT STRIP_TAC
-    THEN RES_TAC
-    THENL [SUBST_TAC[SYM(ASSUME (``n:num = p``))], ALL_TAC]
-    THEN ASM_REWRITE_TAC[]);
-
 val transitive_LESS = store_thm(
   "transitive_LESS[simp]",
   ``transitive $<``,
-  REWRITE_TAC [relationTheory.transitive_def] THEN
-  MATCH_ACCEPT_TAC LESS_TRANS);
+  REWRITE_TAC [relationTheory.TC_TRANSITIVE, LESS_ALT]);
+
+val LESS_TRANS = store_thm ("LESS_TRANS",
+   ``!m n p. (m < n) /\ (n < p) ==> (m < p)``,
+  MATCH_ACCEPT_TAC 
+    (REWRITE_RULE [relationTheory.transitive_def] transitive_LESS)) ;
 
 val LESS_ANTISYM = store_thm ("LESS_ANTISYM",
    ``!m n. ~((m < n) /\ (n < m))``,
