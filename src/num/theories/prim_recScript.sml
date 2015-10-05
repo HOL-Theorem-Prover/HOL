@@ -89,6 +89,22 @@ val INV_SUC_EQ = save_thm("INV_SUC_EQ",
                     (AP_TERM (--`SUC`--)
                              (ASSUME (--`m:num = n`--))))));
 
+(*---------------------------------------------------------------------------
+ * First we define a partial inverse to SUC called PRE such that:
+ *
+ *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
+ *---------------------------------------------------------------------------*)
+val PRE_DEF = new_definition("PRE_DEF",
+    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
+
+val PRE =
+ store_thm
+  ("PRE",
+   --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
+   REPEAT STRIP_TAC
+    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
+
 val LESS_REFL = store_thm( "LESS_REFL", --`!n. ~(n < n)`--,
    GEN_TAC THEN
    REWRITE_TAC[LESS_DEF, NOT_AND]);
@@ -114,15 +130,19 @@ val NOT_LESS_0 =
             (SPECL[--`n:num`--, --`0`--] SUC_LESS))
     THEN ASM_REWRITE_TAC[]);
 
-val LESS_0_0 =
- store_thm
-  ("LESS_0_0",
-   --`0 < SUC 0`--,
-   REWRITE_TAC[LESS_DEF]
+val LESS_0 = store_thm("LESS_0",
+   --`!n. 0 < (SUC n)`--,
+   GEN_TAC 
+    THEN REWRITE_TAC[LESS_DEF]
     THEN EXISTS_TAC (--`\x.x = 0`--)
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
     THEN REWRITE_TAC[NOT_SUC]);
 
+val LESS_0_0 =
+ store_thm
+  ("LESS_0_0",
+   --`0 < SUC 0`--,
+   REWRITE_TAC[LESS_0]) ;
 
 val LESS_MONO =
  store_thm
@@ -130,22 +150,69 @@ val LESS_MONO =
    --`!m n. (m < n) ==> (SUC m < SUC n)`--,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
-    THEN EXISTS_TAC (--`\x.(x = SUC m) \/ (P x)`--)
+    THEN EXISTS_TAC ``\n : num. P (PRE n) : bool``
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
-    THEN ASM_REWRITE_TAC[]
-    THEN IMP_RES_TAC
-          (DISCH_ALL
-           (CONTRAPOS(SPEC (--`(n:num)`--)
-                           (ASSUME (--`!n'. P(SUC n')  ==>  P n'`--)))))
-    THEN ASM_REWRITE_TAC[]
+    THEN ASM_REWRITE_TAC [PRE]
+    THEN INDUCT_TAC (* don't have num_CASES yet *)
+    THEN ASM_REWRITE_TAC [PRE]) ;
+
+val LESS_MONO_REV =
+ store_thm
+  ("LESS_MONO_REV",
+   --`!m n. (SUC m < SUC n) ==> (m < n)`--,
+   REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
-    THEN RES_TAC
-    THEN IMP_RES_TAC INV_SUC
-    THEN ASM_REWRITE_TAC[]
-    THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS [ASSUME (--`n:num = m`--)]
-                          (ASSUME (--`~(P (n:num))`--))))
-    THEN RES_TAC);
+    THEN EXISTS_TAC ``\n : num. P (SUC n) : bool``
+    THEN CONV_TAC(DEPTH_CONV BETA_CONV)
+    THEN ASM_REWRITE_TAC []) ;
+
+val LESS_MONO_EQ =
+ store_thm
+  ("LESS_MONO_EQ",
+   --`!m n. (SUC m < SUC n) = (m < n)`--,
+   REPEAT GEN_TAC THEN EQ_TAC
+    THEN REWRITE_TAC [LESS_MONO, LESS_MONO_REV]) ;
+
+(* now show that < is the transitive closure of the successor relation *)
+
+val TC_LESS_0 = prove ( --`!n. TC (\x y. y = SUC x) 0 (SUC n)`--,
+  INDUCT_TAC 
+  THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
+    ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
+    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
+
+val TC_NOT_LESS_0 = prove ( --`!n. ~(TC (\x y. y = SUC x) n 0)`--,
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] 
+  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
+
+val TC_IM_RTC_SUC = store_thm ("TC_IM_RTC_SUC",
+  ``!m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n``,
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC 
+    THEN REWRITE_TAC [relationTheory.RTC_CASES_TC, INV_SUC_EQ]
+    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) 
+    THEN ASM_REWRITE_TAC []
+    THEN DISJ2_TAC THEN EXISTS_TAC ``n : num``
+    THEN ASM_REWRITE_TAC []) ;
+
+val RTC_IM_TC = store_thm ("RTC_IM_TC",
+  ``!m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n``,
+  REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN]
+   THEN BETA_TAC THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
+   THENL [Q.EXISTS_TAC `f m`, 
+     FIRST_X_ASSUM (ASSUME_TAC o SYM)]
+   THEN ASM_REWRITE_TAC []) ;
+
+val TC_LESS_MONO_EQ = prove (
+  ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
+  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
+
+val LESS_ALT = store_thm ("LESS_ALT",
+  ``$< = TC (\x y. y = SUC x)``,
+  REWRITE_TAC [FUN_EQ_THM] THEN
+  INDUCT_TAC THEN INDUCT_TAC THEN
+  REWRITE_TAC [NOT_LESS_0, TC_NOT_LESS_0, LESS_0, TC_LESS_0,
+    TC_LESS_MONO_EQ, LESS_MONO_EQ]
+  THEN FIRST_ASSUM MATCH_ACCEPT_TAC) ;
 
 val LESS_SUC_REFL =
  store_thm
@@ -172,20 +239,7 @@ val LESS_LEMMA1 =
  store_thm
   ("LESS_LEMMA1",
    --`!m n. (m < SUC n) ==> (m = n) \/ (m < n)`--,
-   REWRITE_TAC[LESS_DEF]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_CASES_TAC (--`(m:num) = n`--)
-    THEN ASM_REWRITE_TAC[]
-    THEN EXISTS_TAC (--`\(x:num). ~(x = n) /\ (P x)`--)
-    THEN CONV_TAC(DEPTH_CONV BETA_CONV)
-    THEN REPEAT STRIP_TAC
-    THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS[ASSUME (--`(n':num) = n`--)]
-                         (ASSUME(--`P(SUC n'):bool`--))))
-    THEN ASSUME_TAC(REFL(--`n:num`--))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
-
+  REWRITE_TAC [LESS_ALT, TC_IM_RTC_SUC, relationTheory.RTC_CASES_TC]) ;
 
 val LESS_LEMMA2 =
  store_thm
@@ -209,13 +263,6 @@ val LESS_SUC_IMP =
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
-
-(* Move to conversion nets forces different tactic in this proof. kls. *)
-val LESS_0 = store_thm("LESS_0",
-   --`!n. 0 < (SUC n)`--,
-   INDUCT_TAC THEN
-   ONCE_REWRITE_TAC[LESS_THM] THEN
-   ASM_REWRITE_TAC[]);
 
 val EQ_LESS =
  store_thm
@@ -390,22 +437,6 @@ val SIMP_REC_THM = store_thm (
  *       (PRIM_REC x f (SUC m) = f(PRIM_REC x f m)m)
  *---------------------------------------------------------------------------*)
 
-
-(*---------------------------------------------------------------------------
- * First we define a partial inverse to SUC called PRE such that:
- *
- *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
- *---------------------------------------------------------------------------*)
-val PRE_DEF = new_definition("PRE_DEF",
-    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
-
-val PRE =
- store_thm
-  ("PRE",
-   --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
-   REPEAT STRIP_TAC
-    THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
 
 val PRIM_REC_FUN =
  new_definition
@@ -583,24 +614,13 @@ Q.store_thm
 
 
 (*----------------------------------------------------------------------------
- * This theorem would be a lot nicer if < was defined as the transitive
+ * This theorem is now a lot nicer as < can be defined as the transitive
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
 val WF_LESS = Q.store_thm("WF_LESS", `WF $<`,
-REWRITE_TAC[relationTheory.WF_DEF]
- THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
- THEN DISCH_THEN (fn th1 =>
-       SUBGOAL_THEN (--`^(concl th1) ==> !i j. j<i ==> ~B j`--)
-                    (fn th => MP_TAC (MP th th1)))
- THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN DISCH_TAC THENL
-  [INDUCT_TAC THEN GEN_TAC THEN
-    REWRITE_TAC[NOT_LESS_0,LESS_THM]
-    THEN DISCH_THEN (DISJ_CASES_THENL[SUBST1_TAC, ASSUME_TAC])
-    THEN STRIP_TAC THEN RES_TAC,
-   GEN_TAC THEN FIRST_ASSUM MATCH_MP_TAC
-    THEN Q.EXISTS_TAC`SUC w`
-    THEN MATCH_ACCEPT_TAC LESS_SUC_REFL]);
+  REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]) ;
+
 val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
