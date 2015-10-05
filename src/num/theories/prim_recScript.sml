@@ -156,9 +156,9 @@ val LESS_MONO =
     THEN INDUCT_TAC (* don't have num_CASES yet *)
     THEN ASM_REWRITE_TAC [PRE]) ;
 
-val LESS_MONO_INV =
+val LESS_MONO_REV =
  store_thm
-  ("LESS_MONO_INV",
+  ("LESS_MONO_REV",
    --`!m n. (SUC m < SUC n) ==> (m < n)`--,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
@@ -166,12 +166,12 @@ val LESS_MONO_INV =
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
     THEN ASM_REWRITE_TAC []) ;
 
-val LESS_MONO_IFF =
+val LESS_MONO_EQ =
  store_thm
-  ("LESS_MONO_IFF",
+  ("LESS_MONO_EQ",
    --`!m n. (SUC m < SUC n) = (m < n)`--,
    REPEAT GEN_TAC THEN EQ_TAC
-    THEN REWRITE_TAC [LESS_MONO, LESS_MONO_INV]) ;
+    THEN REWRITE_TAC [LESS_MONO, LESS_MONO_REV]) ;
 
 (* now show that < is the transitive closure of the successor relation *)
 
@@ -185,7 +185,7 @@ val TC_NOT_LESS_0 = prove ( --`!n. ~(TC (\x y. y = SUC x) n 0)`--,
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2] 
   THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
 
-val TC_IM_RTC_SUC = prove (
+val TC_IM_RTC_SUC = store_thm ("TC_IM_RTC_SUC",
   ``!m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n``,
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC 
     THEN REWRITE_TAC [relationTheory.RTC_CASES_TC, INV_SUC_EQ]
@@ -194,7 +194,7 @@ val TC_IM_RTC_SUC = prove (
     THEN DISJ2_TAC THEN EXISTS_TAC ``n : num``
     THEN ASM_REWRITE_TAC []) ;
 
-val RTC_IM_TC = prove (
+val RTC_IM_TC = store_thm ("RTC_IM_TC",
   ``!m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n``,
   REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN]
    THEN BETA_TAC THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
@@ -202,7 +202,7 @@ val RTC_IM_TC = prove (
      FIRST_X_ASSUM (ASSUME_TAC o SYM)]
    THEN ASM_REWRITE_TAC []) ;
 
-val TC_LESS_MONO_IFF = prove (
+val TC_LESS_MONO_EQ = prove (
   ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
   REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
 
@@ -211,7 +211,7 @@ val LESS_ALT = store_thm ("LESS_ALT",
   REWRITE_TAC [FUN_EQ_THM] THEN
   INDUCT_TAC THEN INDUCT_TAC THEN
   REWRITE_TAC [NOT_LESS_0, TC_NOT_LESS_0, LESS_0, TC_LESS_0,
-    TC_LESS_MONO_IFF, LESS_MONO_IFF]
+    TC_LESS_MONO_EQ, LESS_MONO_EQ]
   THEN FIRST_ASSUM MATCH_ACCEPT_TAC) ;
 
 val LESS_SUC_REFL =
