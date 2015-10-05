@@ -308,6 +308,13 @@ val NOT_LT_ZERO_EQ_ZERO = store_thm(
   ``!n. ~(0 < n) <=> (n = 0)``,
   REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO]);
 
+val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
+  ``$<= = RTC (λx y. y = SUC x)``,
+  REWRITE_TAC [FUN_EQ_THM, LESS_OR_EQ,
+    relationTheory.RTC_CASES_TC, prim_recTheory.LESS_ALT]
+    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) 
+    THEN ASM_REWRITE_TAC []) ;
+
 (* --------------------------------------------------------------------- *)
 (* LESS_ADD proof rewritten: TFM 90.O9.21                               *)
 (* --------------------------------------------------------------------- *)
@@ -775,12 +782,8 @@ val LESS_EQ_MONO_ADD_EQ = store_thm ("LESS_EQ_MONO_ADD_EQ",
 
 val LESS_EQ_TRANS = store_thm ("LESS_EQ_TRANS",
    ``!m n p. (m <= n) /\ (n <= p) ==> (m <= p)``,
-   REWRITE_TAC[LESS_OR_EQ]
-    THEN REPEAT STRIP_TAC
-    THEN IMP_RES_TAC LESS_TRANS
-    THEN ASM_REWRITE_TAC[]
-    THEN SUBST_TAC[SYM(ASSUME (``(n:num) = p``))]
-    THEN ASM_REWRITE_TAC[]);
+   REWRITE_TAC[LESS_OR_EQ_ALT, REWRITE_RULE
+     [relationTheory.transitive_def] relationTheory.transitive_RTC]) ;
 
 (* % Proof modified for new IMP_RES_TAC                 [TFM 90.04.25]  *)
 
