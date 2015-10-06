@@ -490,6 +490,10 @@ val LESS_EQ_ANTISYM = store_thm ("LESS_EQ_ANTISYM",
      ASM_REWRITE_TAC [LESS_MONO_EQ, LESS_EQ_MONO,
        ZERO_LESS_EQ, LESS_0, NOT_LESS_0, NOT_SUC_LESS_EQ_0]) ;
 
+val LESS_EQ_0 = store_thm ("LESS_EQ_0",
+  ``!n. (n <= 0) = (n = 0)``,
+  REWRITE_TAC [LESS_OR_EQ, NOT_LESS_0]) ;
+
 val _ = print "Now proving properties of subtraction\n"
 
 val SUB_0 = store_thm ("SUB_0",
@@ -497,25 +501,21 @@ val SUB_0 = store_thm ("SUB_0",
    INDUCT_TAC
     THEN ASM_REWRITE_TAC[SUB, NOT_LESS_0]);
 
-(* I was exhausted when I did the proof below - it can almostly certainly be
-  drastically shortened. *)
+(* Non-confluence problem between SUB (snd clause) and LESS_MONO_EQ     *)
+(*   requires a change from hol2 proof. kls.                            *)
+
+val SUB_MONO_EQ = store_thm ("SUB_MONO_EQ",
+   ``!n m. (SUC n) - (SUC m) = (n - m)``,
+   INDUCT_TAC THENL
+   [REWRITE_TAC [SUB,LESS_0],
+    ONCE_REWRITE_TAC[SUB] THEN
+    PURE_ONCE_REWRITE_TAC[LESS_MONO_EQ] THEN
+    ASM_REWRITE_TAC[]]);
+
 val SUB_EQ_0 = store_thm ("SUB_EQ_0",
-   ``!m n. (m - n = 0) = (m <= n)``,
-   INDUCT_TAC
-    THEN GEN_TAC
-    THEN REWRITE_TAC[SUB,LESS_OR_EQ]
-    THENL
-     [REWRITE_TAC[SPECL[``0 < n``, ``0 = n``]DISJ_SYM,LESS_0_CASES],
-      ALL_TAC]
-    THEN ASM_CASES_TAC (``m < n``)
-    THEN ASM_CASES_TAC (``SUC m = n``)
-    THEN IMP_RES_TAC EQ_LESS
-    THEN IMP_RES_TAC LESS_SUC_EQ_COR
-    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL NOT_LESS)))
-    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL LESS_OR_EQ)))
-    THEN ASM_REWRITE_TAC
-          [SPECL[``(n:num)=m``,``n<m``]DISJ_SYM,
-           NOT_SUC,NOT_LESS,LESS_OR_EQ,LESS_THM]);
+  ``!m n. (m - n = 0) = (m <= n)``,
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [SUB_0, LESS_EQ_MONO, SUB_MONO_EQ, LESS_EQ_0, ZERO_LESS_EQ]);
 
 val ADD1 = store_thm ("ADD1",
    ``!m. SUC m = m + 1``,
@@ -604,16 +604,9 @@ val MULT_ASSOC = store_thm ("MULT_ASSOC",
 
 val SUB_ADD = store_thm ("SUB_ADD",
    ``!m n. (n <= m) ==> ((m - n) + n = m)``,
-   INDUCT_TAC
-    THEN REWRITE_TAC[LESS_OR_EQ]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[SUB,ADD_CLAUSES,LESS_SUC_REFL]
-    THEN IMP_RES_TAC NOT_LESS_0
-    THEN ASM_CASES_TAC (``m < n``)
-    THEN IMP_RES_TAC LESS_LESS_SUC
-    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL NOT_LESS)))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[ADD_CLAUSES]);
+   REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC[ADD_CLAUSES, SUB_0, SUB_MONO_EQ, LESS_EQ_MONO,
+      INV_SUC_EQ, LESS_EQ_0]) ;
 
 val PRE_SUB = store_thm ("PRE_SUB",
    ``!m n. PRE(m - n) = (PRE m) - n``,
@@ -667,39 +660,11 @@ val LESS_SUC_NOT = store_thm ("LESS_SUC_NOT",
     THEN IMP_RES_TAC LESS_OR
     THEN ASM_REWRITE_TAC[]);
 
-(* About now I burned out and resorted to dreadful hacks. The name of the
-  next theorem speaks for itself. *)
-val TOTALLY_AD_HOC_LEMMA = prove(
-   ``!m n. (m + SUC n = n) = (SUC m = 0)``,
-   REPEAT GEN_TAC
-    THEN REWRITE_TAC
-          [NOT_SUC,SYM(SPECL [``m:num``,``n:num``] (CONJUNCT2 ADD)),
-           (fn [_, _, _, th] => th | _ => raise Match) (CONJUNCTS ADD_CLAUSES)]
-    THEN REWRITE_TAC[SPECL[``SUC m``,``n:num``]ADD_SYM]
-    THEN STRIP_TAC
-    THEN IMP_RES_TAC ADD_INV_0
-    THEN IMP_RES_TAC NOT_SUC);
-
-(* The next proof took me ages - there must be a better way! *)
 val ADD_EQ_SUB = store_thm ("ADD_EQ_SUB",
    ``!m n p. (n <= p) ==> (((m + n) = p) = (m = (p - n)))``,
-   INDUCT_TAC
-    THEN INDUCT_TAC
-    THEN INDUCT_TAC
-    THEN ASM_REWRITE_TAC
-          [LESS_OR_EQ,ADD_CLAUSES,NOT_LESS_0,INV_SUC_EQ,LESS_MONO_EQ,
-           NOT_SUC,NOT_EQ_SYM(SPEC_ALL NOT_SUC),LESS_0,SUB,SUB_0]
-    THEN STRIP_TAC
-    THEN IMP_RES_TAC LESS_NOT_EQ
-    THEN ASM_REWRITE_TAC[LESS_SUC_REFL]
-    THEN IMP_RES_TAC LESS_SUC_NOT
-    THEN ASM_REWRITE_TAC[NOT_EQ_SYM(SPEC_ALL NOT_SUC),INV_SUC_EQ]
-    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL NOT_LESS)))
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC
-          [SYM ((fn [_, _, _, th] => th | _ => raise Match)
-            (CONJUNCTS (SPEC_ALL ADD_CLAUSES))),
-           TOTALLY_AD_HOC_LEMMA]);
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES,SUB_MONO_EQ,INV_SUC_EQ,LESS_EQ_MONO,
+     SUB_0, NOT_SUC_LESS_EQ_0]) ;
 
 val LESS_MONO_ADD = store_thm ("LESS_MONO_ADD",
    ``!m n p. (m < n) ==> (m + p) < (n + p)``,
@@ -967,17 +932,6 @@ val FORALL_NUM_THM = Q.store_thm ("FORALL_NUM_THM",
 (* Some more theorems, mostly about subtraction.                        *)
 (* ---------------------------------------------------------------------*)
 
-(* Non-confluence problem between SUB (snd clause) and LESS_MONO_EQ     *)
-(*   requires a change from hol2 proof. kls.                            *)
-
-val SUB_MONO_EQ = store_thm ("SUB_MONO_EQ",
-   ``!n m. (SUC n) - (SUC m) = (n - m)``,
-   INDUCT_TAC THENL
-   [REWRITE_TAC [SUB,LESS_0],
-    ONCE_REWRITE_TAC[SUB] THEN
-    PURE_ONCE_REWRITE_TAC[LESS_MONO_EQ] THEN
-    ASM_REWRITE_TAC[]]);
-
 val SUC_SUB = store_thm(
   "SUC_SUB[simp]",
   ``!a. SUC a - a = 1``,
@@ -1127,31 +1081,15 @@ val EQ_MULT_LCANCEL = store_thm ("EQ_MULT_LCANCEL",
 
 val ADD_SUB = store_thm ("ADD_SUB",
  ``!a c. (a + c) - c = a``,
-   INDUCT_TAC THEN REWRITE_TAC [ADD_CLAUSES] THENL
-   [INDUCT_TAC THEN REWRITE_TAC [SUB,LESS_SUC_REFL],
-    ASSUME_TAC (REWRITE_RULE [SYM (SPEC_ALL NOT_LESS)] LESS_EQ_ADD) THEN
-    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-    ASM_REWRITE_TAC [SUB,INV_SUC_EQ] THEN
-    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-    FIRST_ASSUM ACCEPT_TAC]);
-
+   GEN_TAC THEN INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ]) ;
+   
 val LESS_EQ_ADD_SUB = store_thm ("LESS_EQ_ADD_SUB",
  ``!c b. (c <= b) ==> !a. (((a + b) - c) = (a + (b - c)))``,
-   PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
-   REPEAT GEN_TAC THEN
-   let fun tac th g = SUBST1_TAC th g
-                      handle _ => MP_TAC th g
-   in
-   DISCH_THEN (STRIP_THM_THEN tac)
-   end THENL
-   [DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
-    REWRITE_TAC [ONE] THEN
-    SUBST1_TAC (SPECL [``c:num``,``p + (SUC 0)``] ADD_SYM) THEN
-    REWRITE_TAC [ADD_ASSOC,ADD_SUB],
-    GEN_TAC THEN CONV_TAC SYM_CONV THEN
-    REWRITE_TAC [ADD_SUB,ADD_INV_0_EQ,SUB_EQ_0,LESS_EQ_REFL]
-   ]);
-
+   REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
+   
 (* ---------------------------------------------------------------------*)
 (* SUB_EQUAL_0 = |- !c. c - c = 0                                       *)
 (* ---------------------------------------------------------------------*)
@@ -1163,21 +1101,9 @@ val SUB_EQUAL_0 = save_thm ("SUB_EQUAL_0",
 
 val LESS_EQ_SUB_LESS = store_thm ("LESS_EQ_SUB_LESS",
  ``!a b. (b <= a) ==> !c. ((a - b) < c) = (a < (b + c))``,
-   PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
-   REPEAT GEN_TAC THEN
-   let fun tac th g = SUBST1_TAC th g
-                      handle _ => MP_TAC th g
-   in
-   DISCH_THEN (STRIP_THM_THEN tac)
-   end THENL
-   [DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
-    REWRITE_TAC [ONE] THEN GEN_TAC THEN
-    SUBST1_TAC (SPECL [``b:num``,``p + (SUC 0)``] ADD_SYM) THEN
-    SUBST1_TAC (SPECL [``b:num``,``c:num``] ADD_SYM) THEN
-    REWRITE_TAC [ADD_SUB,LESS_MONO_ADD_EQ],
-    REWRITE_TAC [SUB_EQUAL_0] THEN GEN_TAC THEN
-    REPEAT_TCL STRIP_THM_THEN SUBST1_TAC (SPEC (``c:num``) num_CASES) THEN
-    REWRITE_TAC [ADD_CLAUSES,LESS_REFL,LESS_0,LESS_ADD_SUC]]);
+   REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, LESS_MONO_EQ]) ;
 
 val NOT_SUC_LESS_EQ = store_thm ("NOT_SUC_LESS_EQ",
  ``!n m.~(SUC n <= m) = (m <= n)``,
@@ -1185,19 +1111,9 @@ val NOT_SUC_LESS_EQ = store_thm ("NOT_SUC_LESS_EQ",
 
 val SUB_SUB = store_thm ("SUB_SUB",
  ``!b c. (c <= b) ==> !a. ((a - (b - c)) = ((a + c) - b))``,
-   PURE_ONCE_REWRITE_TAC [LESS_OR_EQ] THEN
-   REPEAT GEN_TAC THEN
-   let fun tac th g = SUBST1_TAC th g
-                      handle _ => MP_TAC th g
-   in
-   DISCH_THEN (STRIP_THM_THEN tac)
-   end THENL
-   [DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
-    REWRITE_TAC [ONE] THEN
-    SUBST_OCCS_TAC [([1],SPECL [``c:num``,``p + (SUC 0)``] ADD_SYM)] THEN
-    REWRITE_TAC [ADD_SUB] THEN REWRITE_TAC [SUB_PLUS,ADD_SUB],
-    REWRITE_TAC [SUB_EQUAL_0] THEN
-    REWRITE_TAC [ADD_SUB,SUB_0]]);
+   REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
 
 val LESS_IMP_LESS_ADD = store_thm ("LESS_IMP_LESS_ADD",
  ``!n m. n < m ==> !p. n < (m + p)``,
@@ -1210,15 +1126,9 @@ val LESS_IMP_LESS_ADD = store_thm ("LESS_IMP_LESS_ADD",
 
 val SUB_LESS_EQ_ADD = store_thm ("SUB_LESS_EQ_ADD",
  ``!m p. (m <= p) ==> !n. (((p - m) <= n) = (p <= (m + n)))``,
-   REPEAT STRIP_TAC THEN
-   IMP_RES_TAC LESS_EQ_SUB_LESS THEN
-   IMP_RES_TAC (SPEC (``n:num``) ADD_EQ_SUB) THEN
-   ASM_REWRITE_TAC [LESS_OR_EQ] THEN
-   SUBST_OCCS_TAC [([3], SPECL [``m:num``,``n:num``] ADD_SYM)] THEN
-   CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV)) THEN
-   ASM_REWRITE_TAC [] THEN
-   CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV)) THEN
-   REFL_TAC);
+   REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
 
 val SUB_LESS_SUC = store_thm ("SUB_LESS_SUC",
   ``!p m. p - m < SUC p``,
@@ -1314,13 +1224,6 @@ val LESS_EQ_EXISTS = store_thm ("LESS_EQ_EXISTS",
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [MATCH_ACCEPT_TAC LESS_EQUAL_ADD,
     DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN MATCH_ACCEPT_TAC LESS_EQ_ADD]);
-
-val LESS_EQ_0 = store_thm ("LESS_EQ_0",
-  ``!n. (n <= 0) = (n = 0)``,
-  GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(MP_TAC o C CONJ (SPEC (``n:num``) ZERO_LESS_EQ)) THEN
-    MATCH_ACCEPT_TAC LESS_EQUAL_ANTISYM,
-    DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC LESS_EQ_REFL]);
 
 val MULT_EQ_0 = store_thm ("MULT_EQ_0",
   ``!m n. (m * n = 0) = (m = 0) \/ (n = 0)``,
@@ -1614,50 +1517,26 @@ val LE_MULT_CANCEL_RBARE = save_thm (
 
 val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
    ``!m n p. m + (n - p) = (if (n <= p) then m else (m + n) - p)``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC (``n <= p``) THENL
-   [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,ADD_CLAUSES])
-       (SYM (SPEC_ALL SUB_EQ_0)),
-    ASSUM_LIST
-       (MAP_EVERY
-           (ASSUME_TAC o
-            (PURE_REWRITE_RULE [SYM (SPEC_ALL NOT_LESS),NOT_CLAUSES]))) THEN
-    IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-    IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) LESS_EQ_ADD_SUB]);
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
 
 val SUB_RIGHT_ADD = store_thm ("SUB_RIGHT_ADD",
    ``!m n p. (m - n) + p = (if (m <= n) then p else (m + p) - n)``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC (``m <= n``) THENL
-   [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,ADD_CLAUSES])
-       (SYM (SPEC_ALL SUB_EQ_0)),
-    ASSUM_LIST
-       (MAP_EVERY
-           (ASSUME_TAC o
-            (PURE_REWRITE_RULE [SYM (SPEC_ALL NOT_LESS),NOT_CLAUSES]))) THEN
-    IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-    IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) LESS_EQ_ADD_SUB]);
+   INDUCT_TAC THEN INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
 
 val SUB_LEFT_SUB = store_thm ("SUB_LEFT_SUB",
    ``!m n p. m - (n - p) = (if (n <= p) then m else (m + p) - n)``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC (``n <= p``) THENL
-   [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,SUB_0])
-                                           (SYM (SPEC_ALL SUB_EQ_0)),
-    ASSUM_LIST
-       (MAP_EVERY
-           (ASSUME_TAC o
-            (PURE_REWRITE_RULE [SYM (SPEC_ALL NOT_LESS),NOT_CLAUSES]))) THEN
-    IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-    IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SUB_SUB]);
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
+     ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
 
 val SUB_RIGHT_SUB = store_thm ("SUB_RIGHT_SUB",
    ``!m n p. (m - n) - p = m - (n + p)``,
-   REPEAT INDUCT_TAC THEN
-   REWRITE_TAC [SUB_0,ADD_CLAUSES,SUB_MONO_EQ] THEN
-   PURE_ONCE_REWRITE_TAC [SYM (el 4 (CONJUNCTS ADD_CLAUSES))] THEN
-   PURE_ONCE_ASM_REWRITE_TAC [] THEN REFL_TAC);
+   INDUCT_TAC THEN INDUCT_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES,SUB_MONO_EQ]) ;
 
 val SUB_LEFT_SUC = store_thm ("SUB_LEFT_SUC",
    ``!m n. SUC (m - n) = (if (m <= n) then (SUC 0) else (SUC m) - n)``,
@@ -1668,46 +1547,22 @@ val SUB_LEFT_SUC = store_thm ("SUB_LEFT_SUC",
     ASSUM_LIST (MAP_EVERY (REWRITE_TAC o CONJUNCTS o
                            (PURE_REWRITE_RULE [LESS_OR_EQ,DE_MORGAN_THM])))]);
 
+val pls = prove (``p ≤ m ∨ p ≤ 0 = p <= m``,
+   REWRITE_TAC [LESS_EQ_0] THEN
+   EQ_TAC THEN REPEAT STRIP_TAC THEN
+   ASM_REWRITE_TAC [ZERO_LESS_EQ]) ;
+ 
 val SUB_LEFT_LESS_EQ = store_thm ("SUB_LEFT_LESS_EQ",
    ``!m n p. (m <= (n - p)) = ((m + p) <= n) \/ (m <= 0)``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC (``p <= n``) THENL
-   [SUBST_TAC [SYM (SPECL [(``m:num``),(``n - p``),(``p:num``)]
-                          LESS_EQ_MONO_ADD_EQ)] THEN
-    IMP_RES_THEN (fn th => PURE_ONCE_REWRITE_TAC [th]) SUB_ADD THEN
-    ASM_CASES_TAC (``m <= 0``) THENL
-    [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,ADD_CLAUSES,LESS_EQ_REFL])
-        (fst (EQ_IMP_RULE (REWRITE_RULE [NOT_LESS_0]
-                              (SPECL [(``m:num``),(``0``)] LESS_OR_EQ)))),
-     ASM_REWRITE_TAC []],
-    ASSUM_LIST
-       (MAP_EVERY
-           (ASSUME_TAC o
-            (PURE_REWRITE_RULE [SYM (SPEC_ALL NOT_LESS),NOT_CLAUSES]))) THEN
-    IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-    IMP_RES_THEN (fn th => PURE_ONCE_REWRITE_TAC [th])
-       (snd (EQ_IMP_RULE (SPEC_ALL SUB_EQ_0))) THEN
-    BOOL_CASES_TAC (``m <= 0``) THENL
-    [REWRITE_TAC [],
-     PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-     IMP_RES_THEN (fn th => REWRITE_TAC [th,SYM (SPEC_ALL NOT_LESS),
-                                         NOT_CLAUSES])
-        LESS_IMP_LESS_ADD]]);
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ, pls,
+     ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, NOT_SUC]) ;
 
 val SUB_RIGHT_LESS_EQ = store_thm ("SUB_RIGHT_LESS_EQ",
    ``!m n p. ((m - n) <= p) = (m <= (n + p))``,
-   REPEAT GEN_TAC THEN
-   ASM_CASES_TAC (``n <= m``) THENL
-   [IMP_RES_THEN (fn th => PURE_ONCE_REWRITE_TAC [th]) SUB_LESS_EQ_ADD THEN
-    REFL_TAC,
-    ASSUM_LIST
-       (MAP_EVERY
-           (ASSUME_TAC o
-            (PURE_REWRITE_RULE [SYM (SPEC_ALL NOT_LESS),NOT_CLAUSES]))) THEN
-    IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-    IMP_RES_THEN (fn th => PURE_REWRITE_TAC [th,ZERO_LESS_EQ])
-       (snd (EQ_IMP_RULE (SPEC_ALL SUB_EQ_0))) THEN
-    IMP_RES_THEN (fn th => REWRITE_TAC [th,LESS_OR_EQ]) LESS_IMP_LESS_ADD]);
+   INDUCT_TAC THEN INDUCT_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES,
+     SUB_MONO_EQ, LESS_EQ_MONO, ZERO_LESS_EQ]) ;
 
 val SUB_LEFT_LESS = store_thm ("SUB_LEFT_LESS",
    ``!m n p. (m < (n - p)) = ((m + p) < n)``,
@@ -1734,23 +1589,17 @@ val SUB_RIGHT_LESS =
 
 val SUB_LEFT_GREATER_EQ = store_thm ("SUB_LEFT_GREATER_EQ",
    ``!m n p. (m >= (n - p)) = ((m + p) >= n)``,
-   REPEAT GEN_TAC THEN
-   PURE_REWRITE_TAC [GREATER_OR_EQ,GREATER_DEF] THEN
-   CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV) THENC
-             RATOR_CONV (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV))) THEN
-   PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL LESS_OR_EQ)] THEN
-   SUBST1_TAC (SPECL [(``m:num``),(``p:num``)] ADD_SYM) THEN
-   REWRITE_TAC [SUB_RIGHT_LESS_EQ]);
+   REWRITE_TAC [GREATER_EQ] THEN
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES,
+     SUB_MONO_EQ, LESS_EQ_MONO, ZERO_LESS_EQ]) ;
 
 val SUB_RIGHT_GREATER_EQ = store_thm ("SUB_RIGHT_GREATER_EQ",
    ``!m n p. ((m - n) >= p) = ((m >= (n + p)) \/ (0 >= p))``,
-   REPEAT GEN_TAC THEN
-   PURE_REWRITE_TAC [GREATER_OR_EQ,GREATER_DEF] THEN
-   CONV_TAC (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV) THENC
-             RATOR_CONV (RAND_CONV (ONCE_DEPTH_CONV SYM_CONV))) THEN
-   PURE_ONCE_REWRITE_TAC [SYM (SPEC_ALL LESS_OR_EQ)] THEN
-   SUBST1_TAC (SPECL [(``n:num``),(``p:num``)] ADD_SYM) THEN
-   REWRITE_TAC [SUB_LEFT_LESS_EQ]);
+   REWRITE_TAC [GREATER_EQ] THEN
+   INDUCT_TAC THEN INDUCT_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES, SUB_MONO_EQ,
+     LESS_EQ_MONO, ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, pls]) ;
 
 val SUB_LEFT_GREATER = store_thm ("SUB_LEFT_GREATER",
    ``!m n p. (m > (n - p)) = (((m + p) > n) /\ (m > 0))``,
@@ -1768,41 +1617,24 @@ val SUB_RIGHT_GREATER = store_thm ("SUB_RIGHT_GREATER",
 
 val SUB_LEFT_EQ = store_thm ("SUB_LEFT_EQ",
    ``!m n p. (m = (n - p)) = ((m + p) = n) \/ ((m <= 0) /\ (n <= p))``,
-   REPEAT GEN_TAC THEN
-   PURE_REWRITE_TAC
-      [EQ_LESS_EQ,SUB_LEFT_LESS_EQ,SUB_RIGHT_LESS_EQ,RIGHT_AND_OVER_OR] THEN
-   SUBST1_TAC (SPECL [(``p:num``),(``m:num``)] ADD_SYM) THEN
-   ASM_CASES_TAC (``m = 0``) THENL
-   [ASM_REWRITE_TAC [ADD_CLAUSES],
-    IMP_RES_TAC (REWRITE_RULE [ADD_CLAUSES] (SPEC (``0``) LESS_ADD_NONZERO))
-    THEN ASM_REWRITE_TAC [SYM (SPECL [(``0``),(``m:num``)] NOT_LESS)]]);
+   GEN_TAC THEN REPEAT INDUCT_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES, INV_SUC_EQ,
+     SUB_MONO_EQ, LESS_EQ_MONO, ZERO_LESS_EQ, LESS_EQ_0, NOT_SUC]) ;
 
 val SUB_RIGHT_EQ = store_thm ("SUB_RIGHT_EQ",
    ``!m n p. ((m - n) = p) = (m = (n + p)) \/ ((m <= n) /\ (p <= 0))``,
-   REPEAT GEN_TAC THEN
-   PURE_REWRITE_TAC
-      [EQ_LESS_EQ,SUB_LEFT_LESS_EQ,SUB_RIGHT_LESS_EQ,LEFT_AND_OVER_OR] THEN
-   SUBST1_TAC (SPECL [(``p:num``),(``n:num``)] ADD_SYM) THEN
-   ASM_CASES_TAC (``p = 0``) THENL
-   [ASM_REWRITE_TAC [ADD_CLAUSES],
-    IMP_RES_TAC
-       (PURE_ONCE_REWRITE_RULE [ADD_CLAUSES] (SPEC (``0``) LESS_ADD_NONZERO))
-       THEN
-       ASM_REWRITE_TAC [SYM (SPECL [(``0``),(``p:num``)] NOT_LESS)]]);
-
+   INDUCT_TAC THEN INDUCT_TAC THEN GEN_TAC THEN
+   ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES, INV_SUC_EQ, SUB_EQ_0, SUB_MONO_EQ,
+     LESS_EQ_MONO, ZERO_LESS_EQ, LESS_EQ_0, NOT_SUC, GSYM NOT_SUC] THEN
+   EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
+     
 val LE = save_thm ("LE",
-         CONJ LESS_EQ_0
-              (prove(``(!m n. m <= SUC n = (m = SUC n) \/ m <= n)``,
-                REPEAT GEN_TAC
-                  THEN SUBST_TAC[SPEC (``SUC n``)
-                          (SPEC (``m:num``) LESS_OR_EQ)]
-                  THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
-                  THEN ASM_REWRITE_TAC[] THENL
-                  [DISJ2_TAC THEN REWRITE_TAC[LESS_OR_EQ]
-                    THEN IMP_RES_TAC prim_recTheory.LESS_LEMMA1
-                    THEN ASM_REWRITE_TAC[],
-                   DISJ1_TAC
-                     THEN IMP_RES_TAC LESS_EQ_IMP_LESS_SUC])));
+   CONJ LESS_EQ_0
+      (prove(``(!m n. m <= SUC n = (m = SUC n) \/ m <= n)``,
+	REPEAT GEN_TAC THEN
+	CONV_TAC (DEPTH_CONV (LHS_CONV (REWR_CONV LESS_OR_EQ))) THEN
+	REWRITE_TAC [GSYM LESS_EQ_IFF_LESS_SUC] THEN
+	MATCH_ACCEPT_TAC DISJ_COMM))) ;
 
 val _ = print "Proving division\n"
 
