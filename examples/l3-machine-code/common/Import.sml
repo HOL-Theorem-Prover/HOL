@@ -492,7 +492,6 @@ datatype monop =
    | Msb
    | Neg
    | Not
-   | Nub
    | PadLeft
    | PadRight
    | QuotRem
@@ -664,11 +663,6 @@ local
 
    val mk_quot_rem =
       mk_uncurry ``\(m, n). (integer$int_quot m n, integer$int_rem m n)``
-
-   fun mk_rev tm =
-      (if Lib.can wordsSyntax.dim_of tm
-          then wordsSyntax.mk_word_reverse
-       else listSyntax.mk_reverse) tm
 
    fun enum2num ty =
       Lib.with_exn mk_local_const
@@ -892,37 +886,24 @@ local
                         ("bad domain: " ^ typeName ty1 ^ " -> " ^ typeName ty2)
       end
 
-      fun pick (a, b, c) tm =
-         let
-            val ty = Term.type_of tm
-         in
-            Option.valOf
-              (if Option.isSome a andalso wordsSyntax.is_word_type ty
-                  then a
-               else if Option.isSome b andalso ty = bitstringSyntax.bitstring_ty
-                  then b
-               else if Option.isSome c andalso ty = intSyntax.int_ty
-                  then c
-               else raise ERR "Mop" "pick") tm
-         end
+   fun pick (a, b) tm = (if Lib.can wordsSyntax.dim_of tm then a else b) tm
 
-      fun pickMinMax (a, b, c) tm =
-         let
-            val ty = (fst o pairSyntax.dest_prod o Term.type_of) tm
-         in
-           (if wordsSyntax.is_word_type ty
-               then a
-            else if ty = numSyntax.num
-               then b
-            else if ty = intSyntax.int_ty
-               then c
-            else raise ERR "Mop" "pickMinMax") tm
-         end
+   fun pickMinMax (a, b, c) tm =
+      let
+         val ty = (fst o pairSyntax.dest_prod o Term.type_of) tm
+      in
+        (if wordsSyntax.is_word_type ty
+            then a
+         else if ty = numSyntax.num
+            then b
+         else if ty = intSyntax.int_ty
+            then c
+         else raise ERR "Mop" "pickMinMax") tm
+      end
 in
    fun Mop (m : monop, x) =
       (case m of
-         Abs =>
-           pick (SOME wordsSyntax.mk_word_abs, NONE, SOME intSyntax.mk_absval)
+         Abs => pick (wordsSyntax.mk_word_abs, intSyntax.mk_absval)
        | BNot => wordsSyntax.mk_word_1comp
        | Bin => ASCIInumbersSyntax.mk_fromBinString
        | Cardinality => pred_setSyntax.mk_card
@@ -960,13 +941,11 @@ in
        | IsUpper => stringSyntax.mk_isupper
        | K1 ty => (fn tm => combinSyntax.mk_K_1 (tm, Ty ty))
        | Length => listSyntax.mk_length
-       | Log =>
-         pick (SOME wordsSyntax.mk_word_log2, SOME bitSyntax.mk_log2, NONE)
+       | Log => pick (wordsSyntax.mk_word_log2, bitSyntax.mk_log2)
        | Max => pickMinMax (mk_word_max, mk_num_max, mk_int_max)
        | Min => pickMinMax (mk_word_min, mk_num_min, mk_int_min)
        | Msb => wordsSyntax.mk_word_msb
-       | Neg =>
-         pick (SOME wordsSyntax.mk_word_2comp, NONE, SOME intSyntax.mk_negated)
+       | Neg => pick (wordsSyntax.mk_word_2comp, intSyntax.mk_negated)
        | Not => boolSyntax.mk_neg
        | PadLeft => mk_pad_left
        | PadRight => mk_pad_right
@@ -974,7 +953,7 @@ in
        | Remove => mk_remove
        | RemoveExcept => mk_remove_e
        | RemoveDuplicates => listSyntax.mk_nub
-       | Rev => mk_rev
+       | Rev => pick (wordsSyntax.mk_word_reverse, listSyntax.mk_reverse)
        | SE ty => mk_sign_extend ty
        | Size => wordsSyntax.mk_word_len
        | Smax => mk_word_smax

@@ -43,7 +43,6 @@ sig
      | Msb
      | Neg
      | Not
-     | Nub
      | PadLeft
      | PadRight
      | QuotRem
