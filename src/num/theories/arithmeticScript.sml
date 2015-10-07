@@ -1139,6 +1139,7 @@ val SUB_LESS_SUC = store_thm ("SUB_LESS_SUC",
     MATCH_ACCEPT_TAC LESS_SUC_REFL]) ;
 
 val SUB_NE_SUC = MATCH_MP LESS_NOT_EQ (SPEC_ALL SUB_LESS_SUC) ;
+val SUB_LE_SUC = MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC_ALL SUB_LESS_SUC) ;
 
 val SUB_CANCEL = store_thm ("SUB_CANCEL",
  ``!p n m. ((n <= p) /\ (m <= p)) ==> (((p - n) = (p - m)) = (n = m))``,
@@ -3289,17 +3290,28 @@ val ABS_DIFF_ADD_SAME = Q.store_thm ("ABS_DIFF_ADD_SAME",
    GEN_TAC THEN GEN_TAC THEN INDUCT_TAC 
      THEN ASM_REWRITE_TAC [ADD_0, GSYM ADD_SUC, ABS_DIFF_SUC]) ;
 
-val LT_SUB_RCANCEL = Q.store_thm ("LT_SUB_RCANCEL",
-   `!m n p. n - m < p - m <=> n < p /\ m < p`,
-  REPEAT INDUCT_TAC THEN 
-  ASM_REWRITE_TAC [ LESS_REFL, LESS_MONO_EQ, LESS_0, NOT_LESS_0,
-    SUB_MONO_EQ, SUB_0, GSYM SUB_LESS_0]) ;
-
 val LE_SUB_RCANCEL = Q.store_thm ("LE_SUB_RCANCEL",
    `!m n p. n - m <= p - m <=> n <= m \/ n <= p`,
   REPEAT INDUCT_TAC THEN 
   ASM_REWRITE_TAC [ LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ,
     NOT_SUC_LESS_EQ_0, SUB_MONO_EQ, SUB_0, SUB_EQ_0, LESS_EQ_0]) ;
+
+val LT_SUB_RCANCEL = Q.store_thm ("LT_SUB_RCANCEL",
+   `!m n p. n - m < p - m <=> n < p /\ m < p`,
+  REPEAT GEN_TAC THEN 
+  REWRITE_TAC [GSYM NOT_LESS_EQUAL, LE_SUB_RCANCEL, DE_MORGAN_THM] THEN
+  MATCH_ACCEPT_TAC CONJ_COMM) ;
+
+val LE_SUB_LCANCEL = Q.store_thm ("LE_SUB_LCANCEL",
+  `!z y x. x − y <= x − z = z <= y \/ x <= y`,
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [ SUB_MONO_EQ, LESS_EQ_MONO, LESS_EQ_REFL,
+    SUB_0, NOT_SUC_LESS_EQ_0, ZERO_LESS_EQ, 
+    NOT_SUC_LESS_EQ, SUB_LESS_EQ, SUB_LE_SUC]) ;
+
+val LT_SUB_LCANCEL = Q.store_thm ("LT_SUB_LCANCEL",
+  `!z y x. x − y < x − z = z < y /\ z < x`,
+  REWRITE_TAC [GSYM NOT_LESS_EQUAL, LE_SUB_LCANCEL, DE_MORGAN_THM]) ;
 
 val ABS_DIFF_SUMS = Q.store_thm ("ABS_DIFF_SUMS",
 `!n1 n2 m1 m2. ABS_DIFF (n1 + n2) (m1 + m2) <= ABS_DIFF n1 m1 + ABS_DIFF n2 m2`,
