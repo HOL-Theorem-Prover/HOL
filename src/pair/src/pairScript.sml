@@ -12,9 +12,6 @@
 (* DATE          : August 7, 1997                                        *)
 (* ===================================================================== *)
 
-structure pairScript =
-struct
-
 (*  interactive use:
  app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
  open Parse relationTheory mesonLib;
@@ -917,5 +914,3 @@ val _ = adjoin_to_theory
 val _ = export_theory();
 
 val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
-
-end;

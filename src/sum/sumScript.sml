@@ -29,9 +29,6 @@
 (* ===================================================================== *)
 
 
-structure sumScript =
-struct
-
 open HolKernel Parse boolLib BasicProvers;
 
 (* done to keep Holmake happy - satTheory is an ancestor of BasicProvers *)
@@ -524,5 +521,3 @@ val datatype_sum = store_thm(
   REWRITE_TAC[DATATYPE_TAG_THM]);
 
 val _ = export_theory();
-
-end
