@@ -610,6 +610,28 @@ val option_case_cong =
   save_thm("option_case_cong",
       Prim_rec.case_cong_thm option_nchotomy option_case_def);
 
+val OPTION_ALL_def = Prim_rec.new_recursive_definition {
+  def = ``(OPTION_ALL P NONE <=> T) /\ (OPTION_ALL P (SOME (x:'a)) <=> P x)``,
+  name = "OPTION_ALL_def",
+  rec_axiom = option_Axiom };
+val _ = export_rewrites ["OPTION_ALL_def"]
+val _ = computeLib.add_persistent_funs ["OPTION_ALL_def"]
+
+val OPTION_ALL_MONO = store_thm(
+  "OPTION_ALL_MONO",
+  ``(!x:'a. P x ==> P' x) ==> OPTION_ALL P opt ==> OPTION_ALL P' opt``,
+  Q.SPEC_THEN `opt` STRUCT_CASES_TAC option_nchotomy THEN
+  REWRITE_TAC [OPTION_ALL_def] THEN REPEAT STRIP_TAC THEN RES_TAC);
+val _ = IndDefLib.export_mono "OPTION_ALL_MONO"
+
+val OPTION_ALL_CONG = store_thm(
+  "OPTION_ALL_CONG[defncong]",
+  ``!opt opt' P P'.
+       (opt = opt') /\ (!x. (opt' = SOME x) ==> (P x <=> P' x)) ==>
+       (OPTION_ALL P opt <=> OPTION_ALL P' opt')``,
+  simpLib.SIMP_TAC (srw_ss()) [FORALL_OPTION]);
+
+
 val _ = adjoin_to_theory
 {sig_ps = SOME (fn ppstrm =>
   let val S = PP.add_string ppstrm
