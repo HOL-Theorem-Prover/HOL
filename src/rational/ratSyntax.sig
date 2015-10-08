@@ -7,10 +7,12 @@ sig
 
 	val rat_0_tm	: term
 	val rat_1_tm	: term
+        val is_literal  : term -> bool
 
 	val rat_nmr_tm	: term
 	val rat_dnm_tm	: term
 	val rat_sgn_tm	: term
+        val rat_of_num_tm : term
 
 	val rat_ainv_tm	: term
 	val rat_minv_tm	: term
@@ -28,6 +30,7 @@ sig
 	val mk_rat_nmr	: term -> term
 	val mk_rat_dnm	: term -> term
 	val mk_rat_sgn	: term -> term
+        val mk_rat_of_num : term -> term
 
 	val mk_rat_ainv	: term -> term
 	val mk_rat_minv	: term -> term
@@ -40,6 +43,7 @@ sig
 	val dest_rat_nmr	: term -> term
 	val dest_rat_dnm	: term -> term
 	val dest_rat_sgn	: term -> term
+        val dest_rat_of_num : term -> term
 
 	val dest_rat_ainv	: term -> term
 	val dest_rat_minv	: term -> term
@@ -57,6 +61,7 @@ sig
 	val is_rat_nmr	: term -> bool
 	val is_rat_dnm	: term -> bool
 	val is_rat_sgn	: term -> bool
+        val is_rat_of_num : term -> bool
 
 	val is_rat_ainv	: term -> bool
 	val is_rat_minv	: term -> bool
