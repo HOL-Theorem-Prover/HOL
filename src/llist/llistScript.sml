@@ -835,6 +835,18 @@ val LFINITE_APPEND = store_thm(
     SIMP_TAC (srw_ss()) [LFINITE_THM, LAPPEND]
   ]);
 
+val LTAKE_LNTH_EL = Q.store_thm ("LTAKE_LNTH_EL",
+  `!n ll m l.
+    (LTAKE n ll = SOME l) ∧
+    m < n
+    ⇒
+    (LNTH m ll = SOME (EL m l))`,
+  Induct>>simp[]>>
+  (* "Cases" *)
+  (fn (g as(_,w)) => (gen_tac >>
+    FULL_STRUCT_CASES_TAC(ISPEC(#1(dest_forall w))llist_CASES))g) >>
+  simp[PULL_EXISTS] >> Cases>>simp[]);
+
 val NOT_LFINITE_APPEND = store_thm(
   "NOT_LFINITE_APPEND",
   ``!ll1 ll2. ~LFINITE ll1 ==> (LAPPEND ll1 ll2 = ll1)``,
@@ -930,12 +942,37 @@ val LFINITE_toList = store_thm(
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [toList_THM]);
 
+val LFINITE_toList_SOME = Q.store_thm("LFINITE_toList_SOME",
+  `LFINITE ll ⇔ IS_SOME (toList ll)`,
+  EQ_TAC >> simp[optionTheory.IS_SOME_EXISTS,LFINITE_toList] >>
+  rw[] >> fs[toList])
+
 val to_fromList = store_thm(
   "to_fromList",
   ``!ll. LFINITE ll ==> (fromList (THE (toList ll)) = ll)``,
   HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN
   SIMP_TAC (srw_ss()) [toList_THM] THEN REPEAT STRIP_TAC THEN
   IMP_RES_TAC LFINITE_toList THEN FULL_SIMP_TAC (srw_ss()) []);
+
+val LTAKE_LAPPEND2 = Q.store_thm("LTAKE_LAPPEND2",
+  `∀n l1 l2. (LTAKE n l1 = NONE) ⇒
+      (LTAKE n (LAPPEND l1 l2) =
+         OPTION_MAP (APPEND (THE(toList l1))) (LTAKE (n - THE(LLENGTH l1)) l2))`,
+  rpt gen_tac >> strip_tac >>
+  `LFINITE l1` by metis_tac[LFINITE] >>
+  qpat_assum`_ = _`mp_tac >>
+  map_every qid_spec_tac[`l2`,`n`] >>
+  pop_assum mp_tac >>
+  qid_spec_tac`l1` >>
+  ho_match_mp_tac LFINITE_INDUCTION >>
+  rw[toList_THM] >- (
+    Cases_on`LTAKE n l2`>>simp[] ) >>
+  Cases_on`n`>>fs[] >>
+  simp[optionTheory.OPTION_MAP_COMPOSE] >>
+  `LFINITE l1` by metis_tac[LFINITE] >>
+  imp_res_tac LFINITE_toList >> simp[] >>
+  imp_res_tac LFINITE_HAS_LENGTH >> simp[] >>
+  rpt (AP_THM_TAC ORELSE AP_TERM_TAC) >> simp[FUN_EQ_THM] )
 
 (* ----------------------------------------------------------------------
     LDROP : num -> 'a llist -> 'a llist option
@@ -965,7 +1002,6 @@ val LDROP1_THM = store_thm(
   SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``, LDROP] THEN
   GEN_TAC THEN Cases_on `LTL ll` THEN
   SIMP_TAC (srw_ss()) [LDROP]);
-
 
 val NOT_LFINITE_TAKE = store_thm(
   "NOT_LFINITE_TAKE",
@@ -1044,6 +1080,38 @@ val LDROP_ADD = store_thm("LDROP_ADD",
   \\ fs [LDROP] \\ REPEAT STRIP_TAC
   \\ Cases_on `LTL x` \\ fs []
   \\ Cases_on `LDROP k1 x'` \\ fs []);
+
+val LFINITE_LNTH_NONE = Q.store_thm("LFINITE_LNTH_NONE",
+  `LFINITE ll ⇔ ∃n. LNTH n ll = NONE`,
+  EQ_TAC >- (
+    qid_spec_tac`ll` >>
+    ho_match_mp_tac LFINITE_INDUCTION >>
+    rw[] >> qexists_tac`SUC n` >> simp[] ) >>
+  metis_tac[NOT_LFINITE_TAKE,LTAKE_LNTH_EL,
+            optionTheory.NOT_SOME_NONE,
+            prim_recTheory.LESS_SUC_REFL]);
+
+val LNTH_LAPPEND = Q.store_thm("LNTH_LAPPEND",
+  `LNTH n (LAPPEND l1 l2) =
+   case LLENGTH l1 of NONE => LNTH n l1
+   | SOME m => if n < m then LNTH n l1 else LNTH (n-m) l2`,
+  Cases_on`LFINITE l1` >- (
+    map_every qid_spec_tac[`l2`,`n`] >>
+    pop_assum mp_tac >> qid_spec_tac`l1` >>
+    ho_match_mp_tac LFINITE_STRONG_INDUCTION >> rw[] >>
+    imp_res_tac LFINITE_HAS_LENGTH >> fs[] >>
+    Cases_on`n`>>fs[] ) >>
+  BasicProvers.CASE_TAC >>
+  fs[LFINITE_LLENGTH] >>
+  `∀n. ∃x. LNTH n l1 = SOME x` by (
+    metis_tac[LFINITE_LNTH_NONE,LFINITE_LLENGTH,
+              optionTheory.option_CASES,optionTheory.NOT_SOME_NONE] ) >>
+  Cases_on`LTAKE (SUC n) l1` >- (
+    metis_tac[optionTheory.NOT_SOME_NONE,LTAKE_EQ_NONE_LNTH] ) >>
+  qspecl_then[`SUC n`,`l1`,`l2`]mp_tac LTAKE_LAPPEND1 >>
+  simp[] >> strip_tac >>
+  imp_res_tac LTAKE_LNTH_EL >>
+  rpt(pop_assum(qspec_then`n`mp_tac)) >> simp[])
 
 (* ----------------------------------------------------------------------
     exists : ('a -> bool) -> 'a llist -> bool
@@ -1597,18 +1665,6 @@ SRW_TAC [] [] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 METIS_TAC []);
 
-val LTAKE_LNTH_EL = Q.store_thm ("LTAKE_LNTH_EL",
-  `!n ll m l.
-    (LTAKE n ll = SOME l) ∧
-    m < n
-    ⇒
-    (LNTH m ll = SOME (EL m l))`,
-  Induct>>simp[]>>
-  (* "Cases" *)
-  (fn (g as(_,w)) => (gen_tac >>
-    FULL_STRUCT_CASES_TAC(ISPEC(#1(dest_forall w))llist_CASES))g) >>
-  simp[PULL_EXISTS] >> Cases>>simp[]);
-
 val LTAKE_TAKE_LESS = Q.store_thm("LTAKE_TAKE_LESS",
   `(LTAKE n ll = SOME l) ∧ m ≤ n ⇒
    (LTAKE m ll = SOME (TAKE m l))`,
@@ -1633,6 +1689,23 @@ val LTAKE_LLENGTH_NONE = Q.store_thm("LTAKE_LLENGTH_NONE",
   ho_match_mp_tac LFINITE_INDUCTION >> rw[] >>
   simp[LTAKE_CONS_EQ_NONE] >>
   Cases_on`m`>>fs[])
+
+val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
+  `(toList (LAPPEND l1 l2) = SOME x) ⇒
+    (x = (THE(toList l1)++THE(toList l2)))`,
+  Cases_on`l2=[||]`>>simp[toList_THM,LAPPEND_NIL_2ND] >>
+  strip_tac >> fs[toList,LFINITE_APPEND] >>
+  rfs[LLENGTH_APPEND] >>
+  qmatch_assum_abbrev_tac`LTAKE n (LAPPEND l1 l2) = SOME x` >>
+  `LTAKE n l1 = NONE` by (
+    match_mp_tac (GEN_ALL LTAKE_LLENGTH_NONE) >>
+    imp_res_tac LTAKE_LENGTH >>
+    imp_res_tac LFINITE_HAS_LENGTH >>
+    fs[Abbr`n`] >>
+    qspec_then`l2`FULL_STRUCT_CASES_TAC llist_CASES >> fs[] >>
+    decide_tac ) >>
+  fs[LTAKE_LAPPEND2,Abbr`n`] >>
+  simp[toList]);
 
 
 (* ------------------------------------------------------------------------ *)
@@ -1955,6 +2028,72 @@ val LPREFIX_fromList = Q.store_thm ("LPREFIX_fromList",
       | NONE => LTAKE (LENGTH l) ll = SOME l
       | SOME ys => isPREFIX l ys`,
   rw [LPREFIX_def, from_toList]);
+
+val prefixes_lprefix_total = Q.store_thm("prefixes_lprefix_total",
+  `∀ll. ∀l1 l2. LPREFIX l1 ll ∧ LPREFIX l2 ll ⇒
+    LPREFIX l1 l2 ∨ LPREFIX l2 l1`,
+  rw[LPREFIX_def] >> reverse every_case_tac >> fs[]
+  >- metis_tac[rich_listTheory.prefixes_is_prefix_total] >>
+  rpt(pop_assum mp_tac) >>
+  qho_match_abbrev_tac`P l1 l2 x x'` >>
+  `P l1 l2 x x' ⇔ P l2 l1 x' x` by (
+    simp[Abbr`P`] >> metis_tac[] ) >>
+  `∀ll1 ll2 l1 l2. LENGTH l1 ≤ LENGTH l2 ⇒ P ll1 ll2 l1 l2` suffices_by (
+    rw[] >> metis_tac[arithmeticTheory.LESS_EQ_CASES] ) >>
+  pop_assum kall_tac >> unabbrev_all_tac >> rw[] >>
+  `l1 = (TAKE (LENGTH l1) l2)` by (
+    metis_tac[LTAKE_TAKE_LESS,optionTheory.SOME_11] ) >>
+  simp[rich_listTheory.IS_PREFIX_APPEND] >>
+  metis_tac[listTheory.TAKE_DROP])
+
+val LPREFIX_LAPPEND1 = Q.prove(
+  `LPREFIX ll (LAPPEND ll l2)`,
+  rw[LPREFIX_def] >> every_case_tac >>
+  metis_tac[LFINITE_toList,NOT_LFINITE_APPEND,optionTheory.NOT_SOME_NONE,
+            optionTheory.IS_SOME_EXISTS,to_fromList,optionTheory.THE_DEF,LTAKE_LAPPEND1,
+            LTAKE_fromList,toList_LAPPEND_APPEND,rich_listTheory.IS_PREFIX_APPEND]);
+
+val LTAKE_IMP_LDROP = Q.store_thm("LTAKE_IMP_LDROP",
+  `∀n ll l1.
+    (LTAKE n ll = SOME l1) ⇒
+     ∃l2. (LDROP n ll = SOME l2) ∧
+          (LAPPEND (fromList l1) l2 = ll)`,
+  Induct >> simp[] >>
+  gen_tac >> qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES >> rw[] >>
+  first_x_assum(fn th => first_x_assum (strip_assume_tac o MATCH_MP th)) >>
+  rw[])
+
+val LPREFIX_APPEND = Q.store_thm("LPREFIX_APPEND",
+  `LPREFIX l1 l2 ⇔ ∃ll. l2 = LAPPEND l1 ll`,
+  reverse EQ_TAC >- metis_tac[LPREFIX_LAPPEND1] >>
+  simp[LPREFIX_def] >>
+  Cases_on`toList l1`>>fs[]
+  >- metis_tac[LAPPEND_NIL_2ND] >>
+  `LFINITE l1` by fs[toList] >>
+  imp_res_tac LFINITE_HAS_LENGTH >>
+  `LTAKE n l1 = SOME x` by fs[toList] >>
+  imp_res_tac LTAKE_LENGTH >> rw[] >>
+  qexists_tac`THE(LDROP (LENGTH x) l2)` >>
+  rw[LNTH_EQ] >>
+  simp[LNTH_LAPPEND] >>
+  rw[] >>
+  every_case_tac >> fs[toList] >>
+  imp_res_tac LTAKE_LNTH_EL >> simp[] >>
+  fs[rich_listTheory.IS_PREFIX_APPEND] >> rw[] >>
+  imp_res_tac LTAKE_LENGTH >> fs[] >>
+  TRY (
+    first_x_assum(qspec_then`n`mp_tac) >>
+    simp[rich_listTheory.EL_APPEND1] >> NO_TAC) >>
+  TRY (
+    imp_res_tac LTAKE_IMP_LDROP >> rw[] >>
+    simp[LNTH_LAPPEND,LLENGTH_fromList] >>
+    NO_TAC) >>
+  `LTAKE (LENGTH x) l2 = SOME x` by (
+    imp_res_tac LTAKE_TAKE_LESS >>
+    rpt(first_x_assum(qspec_then`LENGTH x`mp_tac)) >>
+    simp[rich_listTheory.TAKE_APPEND1] ) >>
+  pop_assum(strip_assume_tac o MATCH_MP LTAKE_IMP_LDROP) >>
+  rw[LNTH_LAPPEND,LLENGTH_fromList]);
 
 val _ = export_theory();
 

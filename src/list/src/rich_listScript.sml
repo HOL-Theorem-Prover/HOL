@@ -2725,6 +2725,11 @@ val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
                     |> Q.GENL [`c`, `a`])
 val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
+val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
+  `∀l. ∀l1 l2. IS_PREFIX l l1 ∧ IS_PREFIX l l2 ⇒ IS_PREFIX l2 l1 ∨ IS_PREFIX l1 l2`,
+  Induct THEN SIMP_TAC(srw_ss())[IS_PREFIX_NIL] THEN
+  GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
+  Cases THEN SRW_TAC[][])
 
 (*---------------------------------------------------------------------------
    A list of numbers
