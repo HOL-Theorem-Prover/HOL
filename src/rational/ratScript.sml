@@ -187,10 +187,10 @@ val rat_ainv_def = Define `rat_ainv r1 = abs_rat( frac_ainv (rep_rat r1))`;
 val rat_minv_def = Define `rat_minv r1 = abs_rat( frac_minv (rep_rat r1))`;
 
 (* basic arithmetics *)
-val rat_add_def = Define `rat_add r1 r2 = abs_rat( frac_add (rep_rat r1) (rep_rat r2) )`;
-val rat_sub_def = Define `rat_sub r1 r2 = abs_rat( frac_sub (rep_rat r1) (rep_rat r2) )`;
-val rat_mul_def = Define `rat_mul r1 r2 = abs_rat( frac_mul (rep_rat r1) (rep_rat r2) )`;
-val rat_div_def = Define `rat_div r1 r2 = abs_rat( frac_div (rep_rat r1) (rep_rat r2) )`;
+val rat_add_def = zDefine `rat_add r1 r2 = abs_rat( frac_add (rep_rat r1) (rep_rat r2) )`;
+val rat_sub_def = zDefine `rat_sub r1 r2 = abs_rat( frac_sub (rep_rat r1) (rep_rat r2) )`;
+val rat_mul_def = zDefine `rat_mul r1 r2 = abs_rat( frac_mul (rep_rat r1) (rep_rat r2) )`;
+val rat_div_def = zDefine `rat_div r1 r2 = abs_rat( frac_div (rep_rat r1) (rep_rat r2) )`;
 
 (* order relations *)
 val rat_les_def = Define `rat_les r1 r2 = (rat_sgn (rat_sub r2 r1) = 1)`;
