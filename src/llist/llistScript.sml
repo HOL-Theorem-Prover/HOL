@@ -1707,6 +1707,18 @@ val toList_LAPPEND_APPEND = Q.store_thm("toList_LAPPEND_APPEND",
   fs[LTAKE_LAPPEND2,Abbr`n`] >>
   simp[toList]);
 
+val LNTH_LLENGTH_NONE = Q.store_thm("LNTH_LLENGTH_NONE",
+  `(LLENGTH l = SOME x) ∧ x ≤ n ⇒ (LNTH n l = NONE)`,
+  rw[arithmeticTheory.LESS_OR_EQ] >- (
+    metis_tac[LTAKE_LLENGTH_NONE,LTAKE_EQ_NONE_LNTH] ) >>
+  `LFINITE l` by metis_tac[NOT_LFINITE_NO_LENGTH,optionTheory.NOT_NONE_SOME] >>
+  `n < SUC n` by simp[] >>
+  `LTAKE (SUC n) l = NONE` by metis_tac[LTAKE_LLENGTH_NONE] >>
+  qspecl_then[`n`,`l`]mp_tac LTAKE_SNOC_LNTH >>
+  simp[] >>
+  BasicProvers.CASE_TAC >> simp[] >>
+  BasicProvers.CASE_TAC >> simp[] >>
+  metis_tac[LTAKE_EQ_NONE_LNTH,optionTheory.NOT_NONE_SOME])
 
 (* ------------------------------------------------------------------------ *)
 (* Turning a stream-like linear order into a lazy list                      *)
