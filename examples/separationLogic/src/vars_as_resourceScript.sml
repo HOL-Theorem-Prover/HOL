@@ -12615,13 +12615,15 @@ FULL_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_repeat___asla_repeat, IS_SOME_EXIST
 SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_FORALL_IMP_THM,
   IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 CONJ_TAC THEN1 (
-   Q.EXISTS_TAC `y` THEN
    METIS_TAC[option_CLAUSES]
 ) THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 GEN_TAC THEN STRIP_TAC THEN
-`x'' IN P /\ VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST x'')` by METIS_TAC[] THEN
-Q.PAT_ASSUM `!x. x IN P ==> X x` (MP_TAC o Q.SPEC `x''`) THEN
+lcsymtacs.qcase_tac `asla_report _ n x = SOME s1` THEN
+lcsymtacs.qcase_tac `yy IN s1` THEN
+`yy IN P /\ VAR_RES_STACK___IS_EQUAL_UPTO_VALUES (FST x) (FST yy)`
+  by METIS_TAC[] THEN
+Q.PAT_ASSUM `!x. x IN P ==> X x` (MP_TAC o Q.SPEC `yy`) THEN
 ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 METIS_TAC[VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___TRANS]);
@@ -13177,12 +13179,12 @@ ASM_SIMP_TAC list_ss []);
 val ASL_INTUITIONISTIC_NEGATION___weak_prop_expression =
 store_thm ("ASL_INTUITIONISTIC_NEGATION___weak_prop_expression",
 ``!el f s p.
-(IS_SEPARATION_COMBINATOR f /\
- EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET (FDOM (FST s))) el) ==>
+    (IS_SEPARATION_COMBINATOR f /\
+     EVERY (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET (FDOM (FST s))) el) ==>
 
-(ASL_INTUITIONISTIC_NEGATION (VAR_RES_COMBINATOR f)
-   (var_res_prop_weak_expression p el) s =
-(var_res_prop_weak_expression (\l. ~(p l)) el) s)``,
+    (ASL_INTUITIONISTIC_NEGATION (VAR_RES_COMBINATOR f)
+       (var_res_prop_weak_expression p el) s =
+    (var_res_prop_weak_expression (\l. ~(p l)) el) s)``,
 
 
 SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_def, EXTENSION,
@@ -13209,8 +13211,10 @@ EQ_TAC THENL [
 
 
    REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
-   Tactical.REVERSE (`MAP (\e. e (FST y)) el =
-                      MAP (\e. e (FST s)) el` by ALL_TAC) THEN1 (
+   lcsymtacs.qcase_tac
+     `VAR_RES_COMBINATOR f (SOME ss1) (SOME ss2) = SOME xx` THEN
+   Tactical.REVERSE (`MAP (\e. e (FST xx)) el =
+                      MAP (\e. e (FST ss1)) el` by ALL_TAC) THEN1 (
        ASM_REWRITE_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def,
