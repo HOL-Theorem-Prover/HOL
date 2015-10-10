@@ -1,7 +1,7 @@
 structure Type :> Type =
 struct
 
-open Feedback Lib
+open Feedback Lib HashCons
 
 infix |->
 infixr -->
@@ -42,29 +42,11 @@ val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
 
-type 'a weakref = 'a option ref
-
-fun wr_compare cmp (ref wr1, ref wr2) = option_compare cmp (wr1, wr2)
-
-type 'a hconsed = { node: 'a, tag : int } ref
-
-local
-  val tag = ref 0
-in
-fun next_tag () = (!tag before tag := !tag + 1)
-end
-
-fun hccompare cmp (ref {node=n1,tag=t1},ref {node=n2,tag=t2}) =
-  if t1 = t2 then EQUAL else cmp (n1, n2)
-
 datatype hol_type_node =
          Tyv of string
        | Tyapp of KernelSig.kernelid * hol_type_node hconsed list
 
 type hol_type = hol_type_node hconsed
-
-fun node (ref {node,...} : hol_type) = node
-fun tag (ref {tag,...} : hol_type) = tag
 
 fun htn_compare (ty1,ty2) =
   case (ty1, ty2) of
@@ -72,7 +54,7 @@ fun htn_compare (ty1,ty2) =
     | (Tyv _, Tyapp _) => LESS
     | (Tyapp _, Tyv _) => GREATER
     | (Tyapp p1, Tyapp p2) =>
-      pair_compare (KernelSig.id_compare, list_compare (hccompare htn_compare))
+      pair_compare (KernelSig.id_compare, list_compare (hc_compare htn_compare))
                    (p1, p2)
 
 fun htn_equal p =
@@ -80,13 +62,14 @@ fun htn_equal p =
     (Tyv s1, Tyv s2) => s1 = s2
   | (Tyapp (k1,a1), Tyapp (k2,a2)) =>
       k1 = k2 andalso
-      (Lib.all2 (curry (op= o (W (curry Lib.##) (#tag o !)))) a1 a2
+      (Lib.all2 (curry (equal EQUAL o hc_tag_compare)) a1 a2
        handle HOL_ERR _ => false)
   | _ => false
 
-val typetable = ref (PIntMap.empty : hol_type weakref HOLset.set PIntMap.t)
-
-val hashstring = CharVector.foldl (fn (c,h) => Word.fromInt(Char.ord c) + h * 0w31) 0w0
+val typetag = mk_next_tag()
+val typetable = ref empty_table
+fun the_typetable() = !typetable
+fun clear_typetable() = typetable := empty_table
 
 fun hashkid kid =
   let
@@ -98,44 +81,7 @@ fun hashkid kid =
 fun hashopn (kid,args) =
   List.foldl (Word.xorb o (Lib.##(Word.fromInt o tag,I))) (hashkid kid) args
 
-fun mk_hashconsed cmp table hash cons args =
-  let
-    val hk = hash args
-    fun mk_new() =
-      let
-        val nr = ref {tag = next_tag(), node = cons args}
-        val wr = Weak.weak (SOME nr)
-      in
-        (wr,nr)
-      end
-    fun not_there() =
-      let
-        val (wr,nr) = mk_new()
-      in
-        (HOLset.singleton (wr_compare (hccompare cmp)) wr, nr)
-      end
-    fun is_there set =
-      let
-        fun findP (ref (SOME (ref {node,...}))) = htn_equal(node,cons args)
-          | findP _ = false
-      in
-        case HOLset.find findP set of
-          NONE =>
-            let
-              val (wr,nr) = mk_new()
-              val set' = HOLset.add(set,wr)
-            in
-              (set',nr)
-            end
-        | SOME (ref (SOME nr)) => (set,nr)
-        | SOME (ref NONE) => raise Fail "Weak reference disappeared during pattern match"
-      end
-    val (t, r) = PIntMap.addfu is_there (Word.toInt hk) not_there (!table)
-  in
-    table := t; r
-  end
-
-fun mk_hctype x = mk_hashconsed htn_compare typetable x
+fun mk_hctype x = mk_hashconsed htn_equal typetag typetable x
 
 fun uptodate_type ty =
   case node ty of
@@ -254,7 +200,7 @@ fun type_vars_set acc tylist =
           Tyv _ => type_vars_set (HOLset.add(acc, ty)) tys
         | Tyapp (_, args) => type_vars_set acc (args @ tys)
 
-val compare = hccompare htn_compare
+val compare = hc_compare htn_compare
 
 val empty_tyset = HOLset.empty compare
 
