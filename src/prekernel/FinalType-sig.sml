@@ -63,6 +63,15 @@ sig
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool
 
-
+ (* accessing the table of hashconsed types *)
+ datatype hol_type_node =
+     Tyv of string
+   | Tyapp of KernelSig.kernelid * hol_type_node HashCons.hconsed list
+ val htn_compare : hol_type_node Lib.cmp
+ val htn_equal : hol_type_node * hol_type_node -> bool
+ val hashkid : KernelSig.kernelid -> word
+ val hashopn : KernelSig.kernelid * hol_type_node HashCons.hconsed list -> word
+ val the_typetable : unit -> hol_type_node HashCons.htable
+ val clear_typetable : unit -> unit
 
 end

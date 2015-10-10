@@ -12,7 +12,7 @@ FinalTag-sig.uo: FinalTag-sig.sml Nonce.ui $(PORTABLED)
 FinalTerm-sig.uo: FinalTerm-sig.sml HOLset.ui Lib.uo KernelSig.ui
 	$(HOLMOSMLC) -c -toplevel $<
 
-FinalType-sig.uo: FinalType-sig.sml Lib.ui
+FinalType-sig.uo: FinalType-sig.sml Lib.ui HashCons.ui KernelSig.ui
 	$(HOLMOSMLC) -c -toplevel $<
 
 FinalThm-sig.uo: FinalThm-sig.sml Nonce.ui Lib.uo $(PORTABLED)
