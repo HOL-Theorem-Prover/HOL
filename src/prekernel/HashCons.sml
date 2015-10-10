@@ -29,7 +29,11 @@ fun mk_next_tag() =
     next_tag
   end
 
-fun mk_hashconsed eq next_tag table hash cons args =
+fun mk_hashconsed eq =
+  let
+    val dead = ref NONE
+    fun dd (p as (set,nr)) = (HOLset.delete(set,dead),nr) handle NotFound => p
+fun f next_tag table hash cons args =
   let
     val hk = hash args
     fun mk_new() =
@@ -61,9 +65,10 @@ fun mk_hashconsed eq next_tag table hash cons args =
         | SOME (ref (SOME nr)) => (set,nr)
         | SOME (ref NONE) => raise Fail "Weak reference disappeared during pattern match"
       end
-    val (t, r) = PIntMap.addfu is_there (Word.toInt hk) not_there (!table)
+    val (t, r) = PIntMap.addfu (dd o is_there) (Word.toInt hk) not_there (!table)
   in
     table := t; r
   end
+in f end
 
 end
