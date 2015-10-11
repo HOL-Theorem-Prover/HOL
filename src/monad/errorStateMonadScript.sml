@@ -27,6 +27,12 @@ val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
 val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
 
+val EXT_DEF = DEF `EXT g m = BIND m g` ;
+
+(* composition in the Kleisli category: 
+  can compose any monad with the state transformer monad in this way *)
+val MCOMP_DEF = DEF `MCOMP g f = CURRY (OPTION_MCOMP (UNCURRY g) (UNCURRY f))`;
+
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
      if i = j then
@@ -164,6 +170,32 @@ val pair_case_eq = prove_case_eq_thm{
   nchotomy = TypeBase.nchotomy_of ``:'a # 'b``
 };
 
+val MCOMP_THM = store_thm ("MCOMP_THM", 
+  ``MCOMP g f = EXT g o f``,
+  REWRITE_TAC [MCOMP_DEF, EXT_DEF, FUN_EQ_THM, o_THM,
+      OPTION_MCOMP_def, OPTION_EXT_def, CURRY_DEF, UNCURRY_DEF]
+    THEN REPEAT GEN_TAC 
+    THEN Cases_on `f x x'`
+    THEN ASM_SIMP_TAC bool_ss [ OPTION_BIND_def, BIND_DEF, UNCURRY_VAR,
+      option_case_def, pair_CASE_def]) ;
+
+val MCOMP_ASSOC = store_thm ("MCOMP_ASSOC", 
+   ``MCOMP f (MCOMP g h) = MCOMP (MCOMP f g) h``,
+  REWRITE_TAC [MCOMP_DEF, OPTION_MCOMP_ASSOC, UNCURRY_CURRY_THM]);
+
+val UNIT_CURRY = store_thm ("UNIT_CURRY", 
+  ``UNIT = CURRY OPTION_UNIT``,
+  REWRITE_TAC [FUN_EQ_THM, UNIT_DEF, OPTION_UNIT_def, CURRY_DEF]
+    THEN BETA_TAC THEN REPEAT GEN_TAC THEN REFL_TAC);
+
+val MCOMP_ID = store_thm 
+  ("MCOMP_ID",
+   ``(MCOMP g UNIT = g) /\ (MCOMP UNIT f = f)``,
+  REWRITE_TAC [MCOMP_DEF, UNIT_CURRY, OPTION_MCOMP_ID,
+    UNCURRY_CURRY_THM, CURRY_UNCURRY_THM]);
+
+(* could also derive following two theorems from MCOMP_ASSOC and MCOMP_ID,
+  using MCOMP_THM and EXT_DEF *)
 
 val BIND_RIGHT_UNIT = store_thm
   ("BIND_RIGHT_UNIT[simp]",
