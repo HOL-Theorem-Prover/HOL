@@ -13,6 +13,7 @@ val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
 
 val () = Parse.temp_type_abbrev ("M",``:'state -> 'a # 'state``)
 
+(* identity of the Kleisli category *)
 val UNIT_DEF = DEF `UNIT (x:'b) = \(s:'a). (x, s)`;
 
 val BIND_DEF = DEF `BIND (g: ('b, 'a) M) (f: 'b -> ('c, 'a) M) = UNCURRY f o g`;
@@ -22,6 +23,13 @@ val IGNORE_BIND_DEF = DEF `IGNORE_BIND f g = BIND f (\x. g)`;
 val MMAP_DEF = DEF `MMAP (f: 'c -> 'b) (m: ('c, 'a) M) = BIND m (UNIT o f)`;
 
 val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
+
+(* functor (on arrows) from the Kleisli category *)
+val EXT_DEF = DEF `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
+
+(* composition in the Kleisli category *)
+val MCOMP_DEF = 
+  DEF `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
 
 val FOR_def = TotalDefn.tDefine "FOR"
  `(FOR : num # num # (num -> (unit, 'state) M) -> (unit, 'state) M) (i, j, a) =
@@ -143,6 +151,73 @@ val Suff = Q_TAC SUFF_TAC
 val Know = Q_TAC KNOW_TAC
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
 
+(* UNIT and MCOMP are identity and composition of the Kleisli category *)
+val UNIT_CURRY = store_thm 
+  ("UNIT_CURRY",
+   ``UNIT = CURRY I``,
+   REWRITE_TAC [CURRY_DEF, UNIT_DEF, FUN_EQ_THM, combinTheory.I_THM]
+    ++ BETA_TAC ++ REWRITE_TAC []) ;
+
+val MCOMP_ALT = store_thm 
+  ("MCOMP_ALT",
+  ``MCOMP g f = CURRY (UNCURRY g o UNCURRY f)``,
+  REWRITE_TAC [MCOMP_DEF, CURRY_DEF, FUN_EQ_THM, o_THM, UNCURRY_DEF, EXT_DEF]);
+
+val MCOMP_ID = store_thm 
+  ("MCOMP_ID",
+   ``(MCOMP g UNIT = g) /\ (MCOMP UNIT f = f)``,
+  REWRITE_TAC [MCOMP_ALT, UNIT_CURRY, 
+    UNCURRY_CURRY_THM, CURRY_UNCURRY_THM, I_o_ID]);
+
+val MCOMP_ASSOC = store_thm 
+  ("MCOMP_ASSOC",
+   ``MCOMP f (MCOMP g h) = MCOMP (MCOMP f g) h``,
+  REWRITE_TAC [MCOMP_ALT, o_ASSOC, UNCURRY_CURRY_THM, CURRY_UNCURRY_THM]);
+
+(* EXT is a functor from the Kleisli category into the (I,o) category *)
+val EXT_UNIT = store_thm 
+  ("EXT_UNIT",
+  ``EXT UNIT = I``,
+  REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNIT_CURRY,
+    UNCURRY_CURRY_THM, o_THM, I_THM]);
+
+val EXT_MCOMP = store_thm 
+  ("EXT_MCOMP",
+  ``EXT (MCOMP g f) = EXT g o EXT f``,
+  REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNCURRY_CURRY_THM, o_THM, MCOMP_ALT]);
+
+val EXT_o_UNIT = store_thm 
+  ("EXT_o_UNIT",
+  ``EXT f o UNIT = f``,
+  REWRITE_TAC [GSYM MCOMP_DEF, MCOMP_ID]);
+
+(* UNIT o _ is the functor in the opposite direction *)
+val UNIT_o_MCOMP = store_thm 
+  ("UNIT_o_MCOMP",
+  ``MCOMP (UNIT o g) (UNIT o f) = UNIT o g o f``,
+  REWRITE_TAC [MCOMP_DEF, o_ASSOC, EXT_o_UNIT]) ;
+
+val BIND_EXT = store_thm
+  ("BIND_EXT",
+  ``BIND m f = EXT f m``,
+  REWRITE_TAC [BIND_DEF, EXT_DEF]) ;
+
+val MMAP_EXT = store_thm
+  ("MMAP_EXT",
+  ``MMAP f = EXT (UNIT o f)``,
+  REWRITE_TAC [FUN_EQ_THM, MMAP_DEF, BIND_EXT]) ;
+
+val JOIN_EXT = store_thm
+  ("JOIN_EXT",
+  ``JOIN = EXT I``,
+  REWRITE_TAC [FUN_EQ_THM, JOIN_DEF, BIND_EXT]) ;
+
+val EXT_JM = store_thm
+  ("EXT_JM",
+  ``EXT f = JOIN o MMAP f``,
+  REWRITE_TAC [JOIN_EXT, BIND_EXT, MMAP_EXT, GSYM EXT_MCOMP,
+    MCOMP_DEF, o_ASSOC, EXT_o_UNIT, I_o_ID]) ;
+
 val BIND_LEFT_UNIT = store_thm
   ("BIND_LEFT_UNIT",
    ``!(k:'a->'b->'c#'b) x. BIND (UNIT x) k = k x``,
@@ -179,87 +254,49 @@ val BIND_ASSOC = store_thm
 val MMAP_ID = store_thm
   ("MMAP_ID",
    ``MMAP I = (I:('a->'b#'a)->('a->'b#'a))``,
-   MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [MMAP_DEF, I_THM, o_DEF]
-   ++ CONV_TAC (DEPTH_CONV ETA_CONV)
-   ++ REWRITE_TAC [BIND_RIGHT_UNIT]);
+   REWRITE_TAC [MMAP_EXT, I_o_ID, EXT_UNIT]) ;
 
 val MMAP_COMP = store_thm
   ("MMAP_COMP",
    ``!f g. (MMAP (f o g):('a->'b#'a)->('a->'d#'a))
            = (MMAP f:('a->'c#'a)->('a->'d#'a)) o MMAP g``,
-   REPEAT STRIP_TAC
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [MMAP_DEF, o_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [GSYM BIND_ASSOC]
-   ++ Suff `(\x. UNIT (f (g x)))
-                  = (\a. BIND ((\x. UNIT (g x)) a) (\x. UNIT (f x)))`
-      >> (STRIP_TAC ++ ASM_REWRITE_TAC [])
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [BIND_LEFT_UNIT]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC []);
+   REWRITE_TAC [MMAP_EXT, o_THM, GSYM EXT_MCOMP, UNIT_o_MCOMP]) ;
 
 val MMAP_UNIT = store_thm
   ("MMAP_UNIT",
    ``!(f:'b->'c). MMAP f o UNIT = (UNIT:'c->'a->'c#'a) o f``,
-   REPEAT STRIP_TAC
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [MMAP_DEF, o_DEF, BIND_LEFT_UNIT]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC []);
+   REWRITE_TAC [MMAP_EXT, EXT_o_UNIT]) ;
+
+val EXT_o_JOIN = store_thm
+  ("EXT_JOIN",
+   ``!f. EXT f o JOIN = EXT (EXT f:('a->'b#'a)->('a->'c#'a))``,
+   REWRITE_TAC [JOIN_EXT, GSYM EXT_MCOMP, MCOMP_DEF, I_o_ID]) ;
 
 val MMAP_JOIN = store_thm
   ("MMAP_JOIN",
    ``!f. MMAP f o JOIN = JOIN o MMAP (MMAP f:('a->'b#'a)->('a->'c#'a))``,
-   REPEAT STRIP_TAC
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ REWRITE_TAC [MMAP_DEF, o_DEF, JOIN_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [GSYM BIND_ASSOC, I_THM]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [BIND_LEFT_UNIT, I_THM]);
+   REWRITE_TAC [GSYM EXT_JM] ++ REWRITE_TAC [MMAP_EXT, EXT_o_JOIN]) ;
 
 val JOIN_UNIT = store_thm
   ("JOIN_UNIT",
    ``JOIN o UNIT = (I:('a->'b#'a)->('a->'b#'a))``,
-   REWRITE_TAC [JOIN_DEF, o_DEF, BIND_LEFT_UNIT, I_DEF, S_DEF, K_DEF]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC []);
+   REWRITE_TAC [JOIN_EXT, EXT_o_UNIT]) ;
 
 val JOIN_MMAP_UNIT = store_thm
   ("JOIN_MMAP_UNIT",
    ``JOIN o MMAP UNIT = (I:('a->'b#'a)->('a->'b#'a))``,
-   REWRITE_TAC [JOIN_DEF, o_DEF, MMAP_DEF]
-   ++ REWRITE_TAC [GSYM BIND_ASSOC]
-   ++ CONV_TAC (DEPTH_CONV BETA_CONV)
-   ++ REWRITE_TAC [BIND_LEFT_UNIT, I_THM]
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
-   ++ REWRITE_TAC [BIND_RIGHT_UNIT, I_THM]);
+   REWRITE_TAC [GSYM EXT_JM, EXT_UNIT]) ;
 
 val JOIN_MAP_JOIN = store_thm
   ("JOIN_MAP_JOIN",
    ``JOIN o MMAP JOIN = ((JOIN o JOIN)
        :('a -> ('a -> ('a -> 'b # 'a) # 'a) # 'a) -> 'a -> 'b # 'a)``,
-   REWRITE_TAC [JOIN_DEF, o_DEF, MMAP_DEF]
-   ++ MATCH_MP_TAC EQ_EXT
-   ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
-   ++ REWRITE_TAC [GSYM BIND_ASSOC]
-   ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
-   ++ REWRITE_TAC [BIND_LEFT_UNIT, I_THM]);
+   REWRITE_TAC [GSYM EXT_JM] ++ REWRITE_TAC [JOIN_EXT, GSYM EXT_o_JOIN]) ;
 
 val JOIN_MAP = store_thm
   ("JOIN_MAP",
    ``!k (m:'b->'a->'c#'a). BIND k m = JOIN (MMAP m k)``,
-   REWRITE_TAC [JOIN_DEF, o_DEF, MMAP_DEF]
-   ++ REWRITE_TAC [GSYM BIND_ASSOC]
-   ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
-   ++ REWRITE_TAC [BIND_LEFT_UNIT, I_THM]
-   ++ CONV_TAC (DEPTH_CONV (ETA_CONV ORELSEC BETA_CONV))
-   ++ REWRITE_TAC []);
+   REWRITE_TAC [BIND_EXT, EXT_JM, o_THM]) ;
 
 val FST_o_UNIT = store_thm
   ("FST_o_UNIT",
