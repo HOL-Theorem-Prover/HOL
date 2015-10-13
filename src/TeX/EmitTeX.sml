@@ -564,7 +564,9 @@ fun raw_pp_theorem_as_tex overrides ostrm thm =
     in
       begin_block Portable.INCONSISTENT 0;
       if (!print_thm_turnstile) then
-        (PP.add_stringsz ostrm (token_string "Turnstile",2); add_string " ")
+        case overrides "$Turnstile$" of
+          NONE => (PP.add_stringsz ostrm (token_string "Turnstile",2); add_string " ")
+        | SOME p => PP.add_stringsz ostrm p
       else ();
       raw_pp_term_as_tex overrides ostrm (concl thm);
       end_block ()
