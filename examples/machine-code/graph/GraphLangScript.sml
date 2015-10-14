@@ -1733,6 +1733,9 @@ val ShiftLeft_def = Define `
 val ShiftRight_def = Define `
   ShiftRight (w:'a word) (y:'a word) = word_lsr w (w2n y)`;
 
+val SignedShiftRight_def = Define `
+  SignedShiftRight (w:'a word) (y:'a word) = word_asr w (w2n y)`;
+
 val w2w_carry_alt = prove(
   ``((w2w:word32 -> 33 word) (w1:word32) << w2n ((w2w (w2:word32)):word8)) ' 32 <=>
     (ShiftLeft ((w2w:word32 -> word64) (w1:word32))
@@ -1753,37 +1756,50 @@ val w2w_carry = prove(
   ``EVERY (\i. (((w2w (w:word32) << i):33 word) ' 32) <=>
                ((w && n2w (2 ** (32 - i))) <> 0w)) (GENLIST I 32)``,
   FULL_SIMP_TAC (srw_ss()) [EVAL ``GENLIST I 32``,EVERY_DEF,
-    ShiftLeft_def,ShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
-  |> SIMP_RULE std_ss [EVAL ``GENLIST I 32``,EVERY_DEF];
+    ShiftLeft_def,ShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC) |> SIMP_RULE std_ss [EVAL ``GENLIST I 32``,EVERY_DEF];
+
+val rw16 = prove(
+  ``EVERY (\i. ((w:word16) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
+               (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
+               (word_lsr w i = ShiftRight w ((n2w i):word16)) /\
+               (word_asr w i = SignedShiftRight w ((n2w i):word16)) /\
+               (word_lsl w i = ShiftLeft w ((n2w i):word16))) (GENLIST I 16) /\
+    (word_msb w = (w:word16) ' 15)``,
+  FULL_SIMP_TAC (srw_ss()) [EVAL ``GENLIST I 16``,EVERY_DEF,
+    ShiftLeft_def,ShiftRight_def,SignedShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
+  |> SIMP_RULE std_ss [EVAL ``GENLIST I 16``,EVERY_DEF]
 
 val rw64 = prove(
   ``EVERY (\i. ((w:word64) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_lsr w i = ShiftRight w ((n2w i):word64)) /\
+               (word_asr w i = SignedShiftRight w ((n2w i):word64)) /\
                (word_lsl w i = ShiftLeft w ((n2w i):word64))) (GENLIST I 64) /\
     (word_msb w = (w:word64) ' 63)``,
   FULL_SIMP_TAC (srw_ss()) [EVAL ``GENLIST I 64``,EVERY_DEF,
-    ShiftLeft_def,ShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
+    ShiftLeft_def,ShiftRight_def,SignedShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [EVAL ``GENLIST I 64``,EVERY_DEF]
 
 val rw8 = prove(
   ``EVERY (\i. ((w:word8) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_lsr w i = ShiftRight w ((n2w i):word8)) /\
+               (word_asr w i = SignedShiftRight w ((n2w i):word8)) /\
                (word_lsl w i = ShiftLeft w ((n2w i):word8))) (GENLIST I 8) /\
     (word_msb w = (w:word8) ' 7)``,
   FULL_SIMP_TAC (srw_ss()) [EVAL ``GENLIST I 8``,EVERY_DEF,
-    ShiftLeft_def,ShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
+    ShiftLeft_def,ShiftRight_def,SignedShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [EVAL ``GENLIST I 8``,EVERY_DEF]
 
 val rw = prove(
   ``EVERY (\i. ((w:word32) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_lsr w i = ShiftRight w ((n2w i):word32)) /\
+               (word_asr w i = SignedShiftRight w ((n2w i):word32)) /\
                (word_lsl w i = ShiftLeft w ((n2w i):word32))) (GENLIST I 32) /\
     (word_msb w = (w:word32) ' 31)``,
   FULL_SIMP_TAC (srw_ss()) [EVAL ``GENLIST I 32``,EVERY_DEF,
-    ShiftLeft_def,ShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
+    ShiftLeft_def,ShiftRight_def,SignedShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [EVAL ``GENLIST I 32``,EVERY_DEF]
 
 val word_add_with_carry_eq = prove(
@@ -1844,7 +1860,7 @@ val fix_align = blastLib.BBLAST_PROVE
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
-  |> CONJ rw |> CONJ rw3 |> CONJ rw64 |> CONJ rw8
+  |> CONJ rw |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
   |> CONJ carry_out_eq
   |> CONJ word_add_with_carry_eq
