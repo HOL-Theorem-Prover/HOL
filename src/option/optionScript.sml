@@ -501,6 +501,31 @@ val OPTION_CHOICE_EQ_NONE = store_thm(
   ``(OPTION_CHOICE (m1:'a option) m2 = NONE) <=> (m1 = NONE) /\ (m2 = NONE)``,
   OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC[][]);
 
+val OPTION_MCOMP_def = Q.new_definition ("OPTION_MCOMP_def",
+  `OPTION_MCOMP g f m = OPTION_BIND (f m) g`) ;
+
+val o_THM = combinTheory.o_THM ;
+
+(* OPTION_MCOMP is the composition operator in the 
+  Kleisli category of the option monad *)
+val OPTION_MCOMP_ASSOC = store_thm
+  ("OPTION_MCOMP_ASSOC",
+   ``OPTION_MCOMP f (OPTION_MCOMP g (h : 'a -> 'b option)) =
+     OPTION_MCOMP (OPTION_MCOMP f g) h``,
+   REWRITE_TAC [OPTION_MCOMP_def, FUN_EQ_THM, o_THM]
+     THEN GEN_TAC THEN OPTION_CASES_TAC ``h x : 'b option``
+     THEN REWRITE_TAC [OPTION_BIND_def, o_THM, OPTION_MCOMP_def]);
+
+(* SOME is the UNIT function of the option monad,
+  and the identity arrow in the Kleisli category *)
+val OPTION_MCOMP_ID = store_thm
+  ("OPTION_MCOMP_ID",
+   ``(OPTION_MCOMP g SOME = g) /\ (OPTION_MCOMP SOME f = f : 'a -> 'b option)``,
+   REWRITE_TAC [OPTION_MCOMP_def, OPTION_BIND_def, FUN_EQ_THM, o_THM]
+     THEN GEN_TAC THEN OPTION_CASES_TAC ``f x : 'b option``
+     THEN REWRITE_TAC [OPTION_BIND_def]);
+
+
 (* ----------------------------------------------------------------------
     OPTION_APPLY
    ---------------------------------------------------------------------- *)
