@@ -1791,6 +1791,47 @@ val rw8 = prove(
     ShiftLeft_def,ShiftRight_def,SignedShiftRight_def,w2n_n2w] \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [EVAL ``GENLIST I 8``,EVERY_DEF]
 
+val rw4 = let
+  val lemma = blastLib.BBLAST_PROVE
+    ``!v. ((w2w (v:word32)):word8 = w2w (v && 255w)) /\
+          (v && 255w) <+ 256w:word32``
+  val w2w_w2w_lemma = prove(
+    ``w2n (w2w (v:word32) :word8) = w2n (v && 255w:word32)``,
+    fs [w2n_11,Once lemma,w2w_def] \\ assume_tac lemma \\ fs [WORD_LO]);
+  val lemma1 = prove(
+    ``(w:word32) ' (w2n (w2w (v:word32) :word8) - (1 :num)) /\
+      w2n (w2w (v:word32) :word8) <= (32 :num)
+      <=>
+      (v && 255w) <+ 33w /\
+      if v && 255w = 0w then w ' 0 else ShiftRight w ((v && 255w) - 1w) ' 0``,
+    fs [w2w_w2w_lemma,ShiftRight_def]
+    \\ qspec_then `255w && v` mp_tac lemma
+    \\ rw []
+    \\ Cases_on `255w && v`
+    \\ fs [WORD_LO]
+    \\ rewrite_tac [GSYM word_sub_def]
+    \\ full_simp_tac std_ss [word_arith_lemma2]
+    \\ `~(n < 1) /\ (n - 1) < 4294967296 /\ (n <= 32 = n < 33)` by decide_tac
+    \\ fs [word_lsr_def,fcpTheory.FCP_BETA]
+    \\ Cases_on `n < 33` \\ fs [])
+  val lemma2 = prove(
+    ``(w:word32) ' (w2n (w2w (v:word32) :word8)) /\
+      w2n (w2w (v:word32) :word8) <= (31 :num)
+      <=>
+      (v && 255w) <+ 32w /\ ShiftRight w (v && 255w) ' 0``,
+    fs [w2w_w2w_lemma,ShiftRight_def]
+    \\ qspec_then `255w && v` mp_tac lemma
+    \\ rw []
+    \\ Cases_on `255w && v`
+    \\ fs [WORD_LO]
+    \\ `n < 4294967296 /\ (n <= 31 = n < 32)` by decide_tac
+    \\ fs [word_lsr_def,fcpTheory.FCP_BETA]
+    \\ Cases_on `n < 32` \\ fs [])
+  val lemma1 = CONJ lemma1 (lemma1 |> RW1 [CONJ_COMM])
+  val lemma2 = CONJ lemma2 (lemma2 |> RW1 [CONJ_COMM])
+  val lemma3 = CONJ lemma1 lemma2 |> RW [GSYM CONJ_ASSOC]
+  in lemma3 end;
+
 val rw = prove(
   ``EVERY (\i. ((w:word32) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
@@ -1860,7 +1901,7 @@ val fix_align = blastLib.BBLAST_PROVE
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
-  |> CONJ rw |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8
+  |> CONJ rw |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
   |> CONJ carry_out_eq
   |> CONJ word_add_with_carry_eq
