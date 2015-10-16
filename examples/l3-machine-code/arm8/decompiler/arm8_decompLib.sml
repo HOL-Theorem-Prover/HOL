@@ -51,7 +51,7 @@ val arm8_tools_map32_no_status = arm8_tools_opt "map32" TRUTH
 fun gen_arm8_decompile iscode tools opt name (qcode: string quotation) =
    let
       val q = if iscode then arm8AssemblerLib.arm8_code
-              else arm8AssemblerLib.arm8_code
+              else helperLib.quote_to_strings
       val decomp = decompilerLib.decompile_with q tools
    in
       arm8_progLib.arm8_config opt

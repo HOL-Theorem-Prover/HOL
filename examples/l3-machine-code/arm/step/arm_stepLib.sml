@@ -3767,9 +3767,6 @@ val ReturnFromException_le_rwts =
 val MoveToRegisterFromSpecial_cpsr_rwts =
    EV [dfn'MoveToRegisterFromSpecial_def, write'R_rwt,
        arm_stepTheory.R_x_not_pc, utilsLib.mk_reg_thm "arm" "PSR",
-       bitstringTheory.ops_to_v2w, EVAL ``n2v 0xF8FF03DF``,
-       EVAL ``^(bitstringSyntax.mk_vec 32 0) &&
-              ^(bitstringSyntax.mk_vec 32 32)``,
        CurrentModeIsUserOrSystem_def, BadMode, IncPC_rwt] [] []
       ``dfn'MoveToRegisterFromSpecial (F, d)``
    |> addThms
