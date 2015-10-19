@@ -14,6 +14,7 @@ A simpler version of this language can be found in forScript.sml.
 
 open optionTheory pairTheory pred_setTheory finite_mapTheory stringTheory;
 open llistTheory integerTheory;
+open lprefix_lubTheory;
 open for_ndTheory;
 open lcsymtacs;
 
@@ -44,7 +45,7 @@ oracle_get (f:'a oracle) = (f 0, f o ((+) 1))`;
    used to decide which subexpression of Add to evaluate first. *)
 
 val _ = Datatype `
-state = <| store : string |-> int; clock : num; io_trace : io_tag list;
+state = <| store : string |-> int; clock : num; io_trace : (io_tag + bool) list;
            input : char llist; non_det_o : bool oracle |>`;
 
 val state_component_equality = fetch "-" "state_component_equality";
@@ -78,7 +79,7 @@ val sem_e_def = tDefine "sem_e" `
   (Rval num, s)) ∧
 (sem_e s (Add e1 e2) =
   let ((fst_e, snd_e), nd_o, switch) = permute_pair s.non_det_o (e1, e2) in
-    case sem_e (s with non_det_o := nd_o) fst_e of
+    case sem_e (s with <| non_det_o := nd_o; io_trace := s.io_trace ++ [INR switch] |> ) fst_e of
        | (Rval fst_n, s1) =>
            (case sem_e s1 snd_e of
                | (Rval snd_n, s2) =>
@@ -93,10 +94,10 @@ val sem_e_def = tDefine "sem_e" `
      | r => r) ∧
 (sem_e s Getchar =
   let (v, rest) = getchar s.input in
-    (Rval v, s with <| input := rest; io_trace := s.io_trace ++ [Itag v] |>)) ∧
+    (Rval v, s with <| input := rest; io_trace := s.io_trace ++ [INL (Itag v)] |>)) ∧
 (sem_e s (Putchar e) =
   case sem_e s e of
-     | (Rval n1, s1) => (Rval n1, s1 with io_trace := s1.io_trace ++ [Otag n1])
+     | (Rval n1, s1) => (Rval n1, s1 with io_trace := s1.io_trace ++ [INL (Otag n1)])
      | r => r)`
  (WF_REL_TAC `measure (e_size o SND)` >>
   srw_tac [ARITH_ss] [] >>
@@ -209,44 +210,17 @@ val check_clock_id = Q.store_thm ("check_clock_id",
 val STOP_def = Define `
   STOP x = x`;
 
-(* Statement evaluation -- with redundant check_clock *)
+(* Statement evaluation -- without redundant check_clock *)
 
-val sem_t_def_with_stop = Q.store_thm ("sem_t_def_with_stop",
-`(sem_t s (Exp e) = sem_e s e) ∧
- (sem_t s (Dec x t) = sem_t (s with store := s.store |+ (x, 0)) t) ∧
- (sem_t s Break = (Rbreak, s)) ∧
- (sem_t s (Seq t1 t2) =
-   case sem_t s t1 of
-      | (Rval _, s1) =>
-          sem_t s1 t2
-      | r => r) ∧
- (sem_t s (If e t1 t2) =
-   case sem_e s e of
-      | (Rval n1, s1) =>
-          if n1 = 0 then
-            sem_t s1 t2
-          else
-            sem_t s1 t1
-      | r => r) ∧
- (sem_t s (For e1 e2 t) =
-   case sem_e s e1 of
-      | (Rval n1, s1) =>
-          if n1 = 0 then
-            (Rval 0, s1)
-          else
-            (case sem_t s1 t of
-               | (Rval _, s2) =>
-                   (case sem_e s2 e2 of
-                       | (Rval _, s3) =>
-                           if s3.clock ≠ 0 then
-                             sem_t (dec_clock s3) (STOP (For e1 e2 t))
-                           else
-                             (Rtimeout, s3)
-                       | r => r)
-               | (Rbreak, s2) =>
-                   (Rval 0, s2)
-               | r => r)
-      | r => r)`,
+fun term_rewrite tms = let
+  fun f tm = ASSUME (list_mk_forall(free_vars tm,tm))
+  in rand o concl o QCONV (REWRITE_CONV (map f tms)) end
+
+val sem_t_def_with_stop = store_thm ("sem_t_def_with_stop",
+  sem_t_def |> concl |> term_rewrite [``check_clock s3 s = s3``,
+    ``s.clock <> 0 /\ s3.clock <> 0 <=> s3.clock <> 0``,
+    ``sem_t (dec_clock s3) (For e1 e2 t) =
+      sem_t (dec_clock s3) (STOP (For e1 e2 t))``],
  rpt strip_tac >> rw [Once sem_t_def,STOP_def] >> ect >> fs [] >>
  imp_res_tac sem_t_clock >>
  fs [dec_clock_def, LET_THM, check_clock_id] >>
@@ -261,33 +235,10 @@ val sem_t_def =
 
 (* We also remove the redundant checks from the induction theorem. *)
 
-val sem_t_ind = Q.store_thm ("sem_t_ind",
-`∀P.
-     (∀s e. P s (Exp e)) ∧
-     (∀s x t. P (s with store := s.store |+ (x,0)) t ⇒ P s (Dec x t)) ∧
-     (∀s. P s Break) ∧
-     (∀s t1 t2.
-        (∀v2 s1 v5.
-           sem_t s t1 = (v2,s1) ∧ v2 = Rval v5 ⇒
-           P s1 t2) ∧ P s t1 ⇒
-        P s (Seq t1 t2)) ∧
-     (∀s e t1 t2.
-        (∀v2 s1 n1.
-           sem_e s e = (v2,s1) ∧ v2 = Rval n1 ∧ n1 = 0 ⇒ P s1 t2) ∧
-        (∀v2 s1 n1.
-           sem_e s e = (v2,s1) ∧ v2 = Rval n1 ∧ n1 ≠ 0 ⇒ P s1 t1) ⇒
-        P s (If e t1 t2)) ∧
-     (∀s e1 e2 t.
-        (∀v2 s1 n1 v2' s2 n1' v2'' s3 n1''.
-           sem_e s e1 = (v2,s1) ∧ v2 = Rval n1 ∧ n1 ≠ 0 ∧
-           sem_t s1 t = (v2',s2) ∧ v2' = Rval n1' ∧
-           sem_e s2 e2 = (v2'',s3) ∧ v2'' = Rval n1'' ∧
-           s3.clock ≠ 0 ⇒
-           P (dec_clock s3) (For e1 e2 t)) ∧
-        (∀v2 s1 n1.
-           sem_e s e1 = (v2,s1) ∧ v2 = Rval n1 ∧ n1 ≠ 0 ⇒ P s1 t) ⇒
-        P s (For e1 e2 t)) ⇒
-     ∀v v1. P v v1`,
+val sem_t_ind = store_thm ("sem_t_ind",
+  fetch "-" "sem_t_ind"
+    |> concl |> term_rewrite [``check_clock s3 s = s3``,
+    ``s.clock <> 0 /\ s3.clock <> 0 <=> s3.clock <> 0``],
  ntac 2 strip_tac >>
  ho_match_mp_tac (fetch "-" "sem_t_ind") >> rw [] >>
  first_x_assum match_mp_tac >>
@@ -307,13 +258,31 @@ init_st c nd i =
 (* There can be many observable behaviours because the semantics is
    non-deterministic. *)
 
+val semantics_with_nd_def = Define `
+(semantics_with_nd t input (Terminate io_trace) =
+  (* Terminate when there is a clock and some non-determinism oracle
+     that gives a value result *)
+  ?c nd i s.
+    sem_t (init_st c nd input) t = (Rval i, s) ∧
+    s.io_trace = io_trace) ∧
+(semantics_with_nd t input Crash =
+  (* Crash when there is a clock that gives a non-value, non-timeout
+     result. *)
+  ?c nd r s.
+    sem_t (init_st c nd input) t = (r, s) ∧
+    (r = Rbreak ∨ r = Rfail)) ∧
+(semantics_with_nd t input (Diverge io_trace) =
+  ?nd.
+    (!c. ?s. sem_t (init_st c nd input) t = (Rtimeout, s)) ∧
+    lprefix_lub {fromList (SND (sem_t (init_st c nd input) t)).io_trace | c | T} io_trace)`;
+
 val semantics_def = Define `
 (semantics t input (Terminate io_trace) =
   (* Terminate when there is a clock and some non-determinism oracle
      that gives a value result *)
   ?c nd i s.
     sem_t (init_st c nd input) t = (Rval i, s) ∧
-    s.io_trace = io_trace) ∧
+    FILTER ISL s.io_trace = io_trace) ∧
 (semantics t input Crash =
   (* Crash when there is a clock that gives a non-value, non-timeout
      result. *)
@@ -321,18 +290,9 @@ val semantics_def = Define `
     sem_t (init_st c nd input) t = (r, s) ∧
     (r = Rbreak ∨ r = Rfail)) ∧
 (semantics t input (Diverge io_trace) =
-  (* Diverge when all clocks give timeout results. Ensure that the IO
-     trace to the timeout point is a prefix of the whole trace. *)
   ?nd.
-    (!c. ?s.
-      sem_t (init_st c nd input) t = (Rtimeout, s) ∧
-      (!n. n < LENGTH s.io_trace ⇒ LNTH n io_trace = SOME (EL n s.io_trace))) ∧
-    (* Check that the whole IO trace is reachable, but maybe not for
-       just 1 clock value *)
-    (!n x.
-      LNTH n io_trace = SOME x ⇒
-      ?c s. sem_t (init_st c nd input) t = (Rtimeout, s) ∧
-            n < LENGTH s.io_trace ∧ EL n s.io_trace = x))`;
+    (!c. ?s. sem_t (init_st c nd input) t = (Rtimeout, s)) ∧
+    lprefix_lub {fromList (FILTER ISL (SND (sem_t (init_st c nd input) t)).io_trace) | c | T} io_trace)`;
 
 
 (* === Misc lemmas === *)
@@ -427,10 +387,16 @@ val type_sound_e = Q.prove (
      fs [] >>
      `type_e s fst_e ∧ type_e s snd_e` by metis_tac [type_permute_pair_lem] >>
      res_tac >>
-     `type_e (FDOM s1''.store) snd_e`
+     fs [] >>
+     rw [] >>
+     `type_e (FDOM s1'.store) snd_e`
               by (rw [] >>
                   match_mp_tac type_weakening_e >>
-                  metis_tac [sem_e_store, SUBSET_TRANS, state_rw]) >>
+                  qexists_tac `s` >>
+                  rw [] >>
+                  imp_res_tac sem_e_store >>
+                  fs [] >>
+                  metis_tac [SUBSET_TRANS]) >>
      fs [] >>
      Cases_on `r` >>
      fs [] >>
@@ -525,8 +491,8 @@ val type_sound_t = Q.prove (
      metis_tac [sem_e_res]));
 
 val type_soundness = Q.store_thm ("type_soundness",
-`!t input. type_t F {} t ⇒ Crash ∉ semantics t input`,
- rw [IN_DEF, semantics_def] >>
+`!t input. type_t F {} t ⇒ Crash ∉ semantics_with_nd t input`,
+ rw [IN_DEF, semantics_with_nd_def] >>
  imp_res_tac type_sound_t >>
  fs [] >>
  first_x_assum (qspec_then `init_st c nd input` assume_tac) >>
