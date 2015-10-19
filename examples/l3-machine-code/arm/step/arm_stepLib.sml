@@ -2802,6 +2802,8 @@ val AddSub_rwt =
 
 val Move_rwt =
    EV ([dfn'Move_def, ExpandImm_C_rwt, bitstringTheory.word_concat_v2w_rwt,
+        utilsLib.map_conv bitstringLib.v2w_n2w_CONV
+           [``v2w [T] : word1``, ``v2w [F] : word1``],
         wordsTheory.WORD_OR_CLAUSES] @ mov_mvn)
       [[``d <> 15w: word4``]] (TF `negate`)
       ``dfn'Move (setflags, negate, d, ^(bitstringSyntax.mk_vec 12 0))``
@@ -3573,19 +3575,19 @@ val PSR_FIELDS = Q.prove(
 
 val PSR_FLAGS = Q.prove(
    `(!b p v.
-       rec'PSR (bit_field_insert 9 9 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       rec'PSR (bit_field_insert 9 9 (v2w [b]: word1) (reg'PSR p)) =
        p with <|E := b|>) /\
     (!b p v.
-       rec'PSR (bit_field_insert 8 8 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       rec'PSR (bit_field_insert 8 8 (v2w [b]: word1) (reg'PSR p)) =
        p with <|A := b|>) /\
     (!b p v.
-       rec'PSR (bit_field_insert 7 7 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       rec'PSR (bit_field_insert 7 7 (v2w [b]: word1) (reg'PSR p)) =
        p with <|I := b|>) /\
     (!b p v.
-       rec'PSR (bit_field_insert 6 6 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       rec'PSR (bit_field_insert 6 6 (v2w [b]: word1) (reg'PSR p)) =
        p with <|F := b|>) /\
     (!b p v.
-       rec'PSR (bit_field_insert 5 5 (if b then 1w:word1 else 0w) (reg'PSR p)) =
+       rec'PSR (bit_field_insert 5 5 (v2w [b]: word1) (reg'PSR p)) =
        p with <|T := b|>)`,
    REPEAT CONJ_TAC \\ Cases \\ PSR_TAC `p`)
 

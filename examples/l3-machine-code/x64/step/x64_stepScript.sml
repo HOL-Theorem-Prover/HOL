@@ -4,7 +4,7 @@
 
 open HolKernel boolLib bossLib
 
-open wordsLib blastLib
+open bitstringLib wordsLib blastLib
 open x64Theory
 open lcsymtacs utilsLib
 
@@ -654,8 +654,11 @@ val readModRM_not_4_or_5 = Theory.save_thm("readModRM_not_4_or_5",
 
 val rbp = Q.store_thm("rbp",
    `!r b. (RexReg (b, r) = RBP) = ~b /\ (r = 5w)`,
-   wordsLib.Cases_word_value
-   \\ rw [x64Theory.RexReg_def, x64Theory.num2Zreg_thm]
+   simp [x64Theory.RexReg_def]
+   \\ wordsLib.Cases_word_value
+   \\ Cases
+   \\ CONV_TAC (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV)
+   \\ simp [x64Theory.num2Zreg_thm]
    )
 
 (* ------------------------------------------------------------------------ *)

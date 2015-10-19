@@ -1162,28 +1162,14 @@ val ArchVersion_rwts = Q.prove(
     |> SIMP_RULE (srw_ss()) []
     |> save_as "ArchVersion_rwts"
 
-val ISETSTATE_lem = Q.prove(
-   `(!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 0w:word2) = ~b1 /\ ~b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 1w:word2) = ~b1 /\ b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 2w:word2) = b1 /\ ~b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 3w:word2) = b1 /\ b2)`,
-   lrw [])
-
 val CurrentInstrSet_rwt = Q.prove(
    `((FST (CurrentInstrSet x s) = InstrSet_ARM) = ~s.CPSR.J /\ ~s.CPSR.T) /\
     ((FST (CurrentInstrSet x s) = InstrSet_Thumb) = ~s.CPSR.J /\ s.CPSR.T) /\
     ((FST (CurrentInstrSet x s) = InstrSet_Jazelle) = s.CPSR.J /\ ~s.CPSR.T) /\
     ((FST (CurrentInstrSet x s) = InstrSet_ThumbEE) = s.CPSR.J /\ s.CPSR.T)`,
-    lrw [CurrentInstrSet_def, ISETSTATE_def, ISETSTATE_lem]
-   \\ ntac 2 (fs []))
+   lrw [CurrentInstrSet_def, ISETSTATE_def, bitstringTheory.word_concat_v2w]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
 
 fun after_srw tm =
    boolSyntax.rhs (Thm.concl (Conv.QCONV (SIMP_CONV (srw_ss()) []) tm))

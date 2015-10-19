@@ -739,6 +739,15 @@ local
          then b
       else boolSyntax.mk_cond x
 
+   fun mk_word_from_bool (tm, ty) =
+      if tm = boolSyntax.T
+         then mk_word1 ty
+      else if tm = boolSyntax.F
+         then mk_word0 ty
+      else bitstringSyntax.mk_v2w
+             (listSyntax.mk_list ([tm], Type.bool),
+              wordsSyntax.dest_word_type ty)
+
    fun pickCast ty2 tm =
       let
          val ty1 = Term.type_of tm
@@ -829,16 +838,13 @@ local
                  else Term.mk_comb (string2enum ty2, tm)
          else if ty1 = Type.bool
             then if wordsSyntax.is_word_type ty2
-                    then mk_from_bool (tm, mk_word1 ty2, mk_word0 ty2)
+                    then mk_word_from_bool (tm, ty2)
                  else if ty2 = bitstringSyntax.bitstring_ty
-                    then mk_from_bool (tm,
-                           bitstringSyntax.bitstring_of_binstring "1",
-                           bitstringSyntax.bitstring_of_binstring "0")
+                    then listSyntax.mk_list ([tm], Type.bool)
                  else if ty2 = numSyntax.num
                     then mk_from_bool (tm, one_tm, numSyntax.zero_tm)
                  else if ty2 = intSyntax.int_ty
-                    then mk_from_bool (tm,
-                           intSyntax.one_tm, intSyntax.zero_tm)
+                    then mk_from_bool (tm, intSyntax.one_tm, intSyntax.zero_tm)
                  else if ty2 = stringSyntax.string_ty
                     then mk_from_bool (tm,
                            stringSyntax.fromMLstring "true",
