@@ -2326,6 +2326,19 @@ val LUPDATE_APPEND1 = Q.store_thm("LUPDATE_APPEND1",
    >> Cases_on`z < LENGTH l1`
    >> fs[]
    >> simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
+
+val is_prefix_el = Q.store_thm ("is_prefix_el",
+  `!n l1 l2.
+    isPREFIX l1 l2 ∧
+    n < LENGTH l1 ∧
+    n < LENGTH l2
+    ⇒
+    (EL n l1 = EL n l2)`,
+  Induct_on `n` >> rw [] >>
+  Cases_on `l1` >>
+  Cases_on `l2` >>
+  rw [] >> fs []);
+
 end
 
 val EL_CONS = Q.store_thm ("EL_CONS",
