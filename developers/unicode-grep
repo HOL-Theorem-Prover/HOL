@@ -4,4 +4,4 @@
 
 # As of 18 Feb 2014, sources include some Unicode in comments.
 
-grep -R --color=auto -P -n "[\x80-\xFF]" --include=*.sml --exclude=*Theory.sml --exclude=*Theory.sig --exclude selftest.sml --exclude EmitTeX.sml "$(dirname $0)/../src/"
+LC_ALL=C grep -R -n -v -E '^[[:print:][:space:]]*$|UOK' --include=*.sml --exclude=*Theory.sml --exclude=*Theory.sig --exclude selftest.sml --exclude EmitTeX.sml "$(dirname $0)/../src/"
