@@ -6,6 +6,11 @@ val _ = ParseExtras.temp_tight_equality();
 
 val _ = new_theory "lprefix_lub";
 
+val IS_PREFIX_FILTER = Q.store_thm("IS_PREFIX_FILTER",
+  `∀l1 l2. IS_PREFIX l1 l2 ⇒ IS_PREFIX (FILTER P l1) (FILTER P l2)`,
+  Induct >> simp[IS_PREFIX_NIL] >>
+  gen_tac >> Cases >> simp[] >> rw[]);
+
 val less_opt_def = Define `
   (less_opt n NONE ⇔ T) ∧
   (less_opt n (SOME m) ⇔ n < m)`;
@@ -437,5 +442,23 @@ val lprefix_lub_new_chain = Q.store_thm ("lprefix_lub_new_chain",
     ⇒
     lprefix_lub ls2 ll`,
   metis_tac [lprefix_lub_equiv_chain, lprefix_lub_is_chain]);
+
+val prefix_chain_def = Define`
+  prefix_chain ls ⇔
+    ∀l1 l2. l1 ∈ ls ∧ l2 ∈ ls ⇒ l1 ≼ l2 ∨ l2 ≼ l1`;
+
+val prefix_chain_lprefix_chain = Q.store_thm("prefix_chain_lprefix_chain",
+  `prefix_chain ls ⇒ lprefix_chain (IMAGE fromList ls)`,
+  rw[prefix_chain_def,lprefix_chain_def] >>
+  rw[llistTheory.LPREFIX_fromList,llistTheory.from_toList])
+
+val prefix_chain_FILTER = Q.store_thm("prefix_chain_FILTER",
+  `prefix_chain ls ⇒ prefix_chain (IMAGE (FILTER P) ls)`,
+  rw[prefix_chain_def] >> metis_tac[IS_PREFIX_FILTER])
+
+val build_prefix_lub_intro = Q.store_thm("build_prefix_lub_intro",
+  `lprefix_chain ls ⇒
+   (lprefix_lub ls lub ⇔ (lub = build_lprefix_lub ls))`,
+  metis_tac[build_lprefix_lub_thm,unique_lprefix_lub])
 
 val _ = export_theory ();
