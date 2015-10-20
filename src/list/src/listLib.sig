@@ -12,6 +12,7 @@ sig
   val NORM_CONS_APPEND_CONV : conv
   val LIST_EQ_SIMP_CONV : conv
 
+  val add_rich_list_compset : computeLib.compset -> unit
   val list_rws : computeLib.compset -> unit
   val list_compset : unit -> computeLib.compset
 

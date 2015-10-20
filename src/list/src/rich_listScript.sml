@@ -3552,24 +3552,29 @@ val () = computeLib.add_persistent_funs
 
 (*
 
-   EVAL ``ELL 4 [1;2;3;4;5;6]``;
-   EVAL ``REPLICATE 4 [1;2;3;4;5;6]``;
-   EVAL ``SCANL (+) 1 [1;2;3;4;5;6]``;
-   EVAL ``SCANR (+) 1 [1;2;3;4;5;6]``;
-   EVAL ``SPLITP (\x. x > 4) [1;2;3;4;5;6]``;
-   EVAL ``PREFIX (\x. x < 4) [1;2;3;4;5;6]``;
-   EVAL ``SUFFIX (\x. x < 4) [1;2;3]`` (* ??? *);
-   EVAL ``AND_EL [T;T;T]``;
-   EVAL ``OR_EL [T;T;T]``;
-   EVAL ``UNZIP_FST [(1, 2), (3, 4)]``;
-   EVAL ``UNZIP_SND [(1, 2), (3, 4)]``;
-   EVAL ``LIST_ELEM_COUNT 2 [1;2;2;3]``;
-   EVAL ``COUNT_LIST 4``;
-   EVAL ``LASTN 3 [1;2;3;4;5]``;
-   EVAL ``BUTLASTN 3 [1;2;3;4;5]``;
-   EVAL ``IS_SUBLIST [1;2;3;4;5] [2;3]``;
-   EVAL ``SEG 2 3 [1;2;3;4;5]``;
-   EVAL ``IS_SUFFIX [1;2;3;4;5] [4;5]``;
+val conv = EVAL
+
+   conv ``AND_EL [T;T;T]``;
+   conv ``BUTLASTN 3 [1n;2;3;4;5]``;
+   conv ``COUNT_LIST 4``;
+   conv ``ELL 4 [1n;2;3;4;5;6]``;
+   conv ``IS_SUBLIST [1n;2;3;4;5] [2;3]``;
+   conv ``IS_SUFFIX [1n;2;3;4;5] [4;5]``;
+   conv ``LASTN 3 [1n;2;3;4;5]``;
+   conv ``LIST_ELEM_COUNT 2 [1n;2;2;3]``;
+   conv ``OR_EL [T;F;T]``;
+   conv ``PREFIX (\x. x < 4) [1n;2;3;4;5;6]``;
+   conv ``REPLICATE 4 [1n;2;3;4;5;6]``;
+   conv ``SCANL (+) 1 [1n;2;3;4;5;6]``;
+   conv ``SCANR (+) 1 [1n;2;3;4;5;6]``;
+   conv ``SEG 2 3 [1n;2;3;4;5]``;
+   conv ``SPLITL (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SPLITP (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SPLITR (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SUFFIX (\x. x < 4) [1n;2;3]`` (* ??? *);
+   conv ``TL_T ([]: 'a list)``;
+   conv ``UNZIP_FST [(1n, 2n); (3, 4)]``;
+   conv ``UNZIP_SND [(1n, 2n); (3, 4)]``;
 
 *)
 

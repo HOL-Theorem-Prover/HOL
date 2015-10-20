@@ -1,12 +1,8 @@
 structure sptreeLib :> sptreeLib =
 struct
 
-(* interactive use:
-  app load ["ConseqConv", "wordsLib", "listLib"]
-*)
-
 open HolKernel Parse boolLib bossLib
-open sptreeTheory sptreeSyntax;
+open sptreeTheory sptreeSyntax numeral_bitTheory;
 
 val ERR = mk_HOL_ERR "sptree"
 
@@ -16,9 +12,8 @@ local
    val times2_thm =
       GSYM (REWRITE_RULE [GSYM arithmeticTheory.TIMES2] numeralTheory.iDUB)
    val foldi_thms =
-      CONJUNCTS
-        (SIMP_RULE (bool_ss++boolSimps.LET_ss) [times2_thm]
-           sptreeTheory.foldi_def)
+      CONJUNCTS (SIMP_RULE (bool_ss++boolSimps.LET_ss) [times2_thm]
+                   sptreeTheory.foldi_def)
    val lrnext_cnv =
       let open numeralTheory in
          PURE_REWRITE_CONV
@@ -61,8 +56,7 @@ end
 
 local
    fun REC_LIST_BETA_CONV tm =
-      (Drule.LIST_BETA_CONV
-       THENC TRY_CONV (RAND_CONV REC_LIST_BETA_CONV)) tm
+      (Drule.LIST_BETA_CONV THENC TRY_CONV (RAND_CONV REC_LIST_BETA_CONV)) tm
 in
    val domain_CONV =
       Conv.REWR_CONV sptreeTheory.domain_foldi
@@ -73,6 +67,40 @@ in
       THENC foldi_CONV
       THENC REC_LIST_BETA_CONV
 end
+
+fun add_sptree_compset compset =
+  ( computeLib.add_thms
+     [sptreeTheory.delete_compute,
+      sptreeTheory.difference_def,
+      sptreeTheory.fromAList_def,
+      sptreeTheory.fromList_def,
+      sptreeTheory.insert_compute,
+      sptreeTheory.inter_def,
+      sptreeTheory.lookup_compute,
+      sptreeTheory.lrnext_thm,
+      sptreeTheory.map_def,
+      sptreeTheory.mk_BN_def,
+      sptreeTheory.mk_BS_def,
+      sptreeTheory.mk_wf_def,
+      sptreeTheory.size_def,
+      sptreeTheory.toListA_def,
+      sptreeTheory.toList_def,
+      sptreeTheory.union_def,
+      sptreeTheory.wf_def] compset
+  ; computeLib.add_conv (sptreeSyntax.foldi_tm, 4, foldi_CONV) compset
+  ; computeLib.add_conv (sptreeSyntax.domain_tm, 1, domain_CONV) compset
+  ; computeLib.add_conv (sptreeSyntax.toAList_tm, 1, toAList_CONV) compset
+  ; computeLib.add_datatype_info compset
+      (Option.valOf (TypeBase.fetch ``:'a sptree$spt``))
+  )
+
+val SPTREE_CONV =
+   let
+      val c = reduceLib.num_compset ()
+   in
+       add_sptree_compset c
+     ; computeLib.CBV_CONV c
+   end
 
 (* ------------------------------------------------------------------------- *)
 
