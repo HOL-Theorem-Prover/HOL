@@ -3526,11 +3526,13 @@ val LUPDATE_SOME_MAP = store_thm("LUPDATE_SOME_MAP",
   Cases_on `n` THEN fs [LUPDATE_def]);
 
 val ZIP_EQ_NIL = store_thm("ZIP_EQ_NIL",
-  ``∀l1 l2. (LENGTH l1 = LENGTH l2) ⇒ ((ZIP (l1,l2) = []) ⇔ ((l1 = []) ∧ (l2 = [])))``,
-  REPEAT GEN_TAC >> Cases_on`l1`>>rw[LENGTH_NIL_SYM,ZIP]>> Cases_on`l2`>>fs[ZIP])
+  ``!l1 l2. (LENGTH l1 = LENGTH l2) ==>
+            ((ZIP (l1,l2) = []) <=> ((l1 = []) /\ (l2 = [])))``,
+  REPEAT GEN_TAC >> Cases_on`l1` >> rw[LENGTH_NIL_SYM,ZIP] >> Cases_on`l2` >>
+  fs[ZIP])
 
 val LUPDATE_SAME = store_thm("LUPDATE_SAME",
-  ``∀n ls. n < LENGTH ls ⇒ (LUPDATE (EL n ls) n ls = ls)``,
+  ``!n ls. n < LENGTH ls ==> (LUPDATE (EL n ls) n ls = ls)``,
   rw[LIST_EQ_REWRITE,EL_LUPDATE]>>rw[])
 
 end;

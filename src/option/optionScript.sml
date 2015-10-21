@@ -202,7 +202,7 @@ val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
 fun OPTION_CASES_TAC t = STRUCT_CASES_TAC (ISPEC t option_nchotomy);
 
 val IS_SOME_EXISTS = store_thm("IS_SOME_EXISTS",
-  ``∀opt. IS_SOME opt ⇔ ∃x. opt = SOME x``,
+  ``!opt. IS_SOME opt <=> ?x. opt = SOME x``,
   GEN_TAC THEN (Q_TAC OPTION_CASES_TAC`opt`) THEN
   SRW_TAC[][IS_SOME_DEF])
 

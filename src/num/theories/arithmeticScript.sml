@@ -311,9 +311,9 @@ val NOT_LT_ZERO_EQ_ZERO = store_thm(
   REWRITE_TAC [GSYM NOT_ZERO_LT_ZERO]);
 
 val LESS_OR_EQ_ALT = store_thm ("LESS_OR_EQ_ALT",
-  ``$<= = RTC (λx y. y = SUC x)``,
+  ``$<= = RTC (\x y. y = SUC x)``,
   REWRITE_TAC [FUN_EQ_THM, LESS_OR_EQ, relationTheory.RTC_CASES_TC, LESS_ALT]
-    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) 
+    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []) ;
 
 (* --------------------------------------------------------------------- *)
@@ -336,7 +336,7 @@ val transitive_LESS = store_thm(
 
 val LESS_TRANS = store_thm ("LESS_TRANS",
    ``!m n p. (m < n) /\ (n < p) ==> (m < p)``,
-  MATCH_ACCEPT_TAC 
+  MATCH_ACCEPT_TAC
     (REWRITE_RULE [relationTheory.transitive_def] transitive_LESS)) ;
 
 val LESS_ANTISYM = store_thm ("LESS_ANTISYM",
@@ -368,7 +368,7 @@ val transitive_measure = Q.store_thm ("transitive_measure",
     THEN SRW_TAC [SatisfySimps.SATISFY_ss][]);
 
 val LESS_EQ = store_thm ("LESS_EQ",
-  ``!m n. (m < n) = (SUC m <= n)``, 
+  ``!m n. (m < n) = (SUC m <= n)``,
   REWRITE_TAC[LESS_OR_EQ_ALT, LESS_ALT, RTC_IM_TC]) ;
 
 val LESS_OR = store_thm ("LESS_OR",
