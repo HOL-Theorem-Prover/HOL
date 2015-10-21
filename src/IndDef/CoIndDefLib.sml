@@ -71,7 +71,7 @@ fun derive_canon_coinductive_relations pclauses =
 		val B = CONJUNCT2(ASSUME conj);
 		val step1 = PROVE_HYP A (UNDISCH th);
 		val step2 = PROVE_HYP B step1;
-		val ex_fn = fn (v, (t1, t2)) => 
+		val ex_fn = fn (v, (t1, t2)) =>
 		    (mk_exists(v, t1), CHOOSE(v, ASSUME (mk_exists(v, t1))) t2)
 	    in foldl ex_fn (conj, step2) (rev rels')
 	    end

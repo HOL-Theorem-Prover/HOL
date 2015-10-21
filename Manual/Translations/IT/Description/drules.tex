@@ -1,47 +1,47 @@
 \chapter{Regole d'inferenza derivate}
 \label{derived-rules}
 
-La nozione di {\it dimostrazione\/} è stata definita in modo astratto nel manuale 
-\LOGIC:\linebreak una dimostrazione di un sequente $(\Gamma,t)$ da un insieme di sequenti 
-$\Delta$ (rispetto a un sistema deduttivo ${\cal D}$) è 
-una catena di sequenti culminanti in $(\Gamma,t)$, tale che ogni 
-elemento della catena o appartiene a $\Delta$ o altrimenti segue da 
-$\Delta$ e dagli elementi precedenti della catena per deduzione. Anche la nozione 
-di {\it teorema\/} è stata definita in \LOGIC: un teorema di un 
-sistema deduttivo è un sequente che segue dall'insieme vuoto di 
-sequenti per deduzione; cioè, è l'ultimo elemento di una dimostrazione 
-dall'insieme vuoto di sequenti, nel sistema deduttivo. In questa sezione, 
+La nozione di {\it dimostrazione\/} è stata definita in modo astratto nel manuale
+\LOGIC:\linebreak una dimostrazione di un sequente $(\Gamma,t)$ da un insieme di sequenti
+$\Delta$ (rispetto a un sistema deduttivo ${\cal D}$) è
+una catena di sequenti culminanti in $(\Gamma,t)$, tale che ogni
+elemento della catena o appartiene a $\Delta$ o altrimenti segue da
+$\Delta$ e dagli elementi precedenti della catena per deduzione. Anche la nozione
+di {\it teorema\/} è stata definita in \LOGIC: un teorema di un
+sistema deduttivo è un sequente che segue dall'insieme vuoto di
+sequenti per deduzione; cioè, è l'ultimo elemento di una dimostrazione
+dall'insieme vuoto di sequenti, nel sistema deduttivo. In questa sezione,
 le dimostrazioni e i teoremi sono resi concreti in \HOL.
 
-Il sistema deduttivo di \HOL\ 
-è stato abbozzato nella Sezione~\ref{rules}, dove 
-le otto famiglie d'inferenze primitive che compongono il 
-sistema deduttivo sono state specificate da diagrammi. E' stato spiegato che 
-queste famiglie d'inferenze sono rappresentate in \HOL\ attraverso 
-funzioni \ML, e che i teoremi 
-sono rappresentati da un tipo \ML\ astratto chiamato \ml{thm}\index{thm@\ml{thm}}. 
-Le otto funzioni \ML\ corrispondenti alle inferenze 
-sono operazioni sul tipo \ml{thm}, ed ognuna delle otto 
-restituisce un valore di tipo \ml{thm}. E' stato spiegato che il 
-tipo \ml{thm} ha dei de-costruttori primitivi, ma nessun costruttore 
-primitivo; e che in questo modo, la logica è protetta contro 
-la possibilità di computare teoremi se non per mezzo di funzioni che rappresentano 
+Il sistema deduttivo di \HOL\
+è stato abbozzato nella Sezione~\ref{rules}, dove
+le otto famiglie d'inferenze primitive che compongono il
+sistema deduttivo sono state specificate da diagrammi. E' stato spiegato che
+queste famiglie d'inferenze sono rappresentate in \HOL\ attraverso
+funzioni \ML, e che i teoremi
+sono rappresentati da un tipo \ML\ astratto chiamato \ml{thm}\index{thm@\ml{thm}}.
+Le otto funzioni \ML\ corrispondenti alle inferenze
+sono operazioni sul tipo \ml{thm}, ed ognuna delle otto
+restituisce un valore di tipo \ml{thm}. E' stato spiegato che il
+tipo \ml{thm} ha dei de-costruttori primitivi, ma nessun costruttore
+primitivo; e che in questo modo, la logica è protetta contro
+la possibilità di computare teoremi se non per mezzo di funzioni che rappresentano
 inferenze primitive, o loro composizioni.
 
-Infine, la logica \HOL\ primitiva è stata integrata di tre costanti 
-primitive e quattro assiomi, per formare la logica base. Le inferenze 
-primitive, insieme con le costanti primitive, i quattro assiomi, 
-e una collezione di definizioni, forniscono un punto iniziale per 
-costruire dimostrazioni, e di conseguenza computare teoremi. Tuttavia, dimostrare 
-persino i teoremi più semplici a partire da questa base minimale costa uno sforzo 
-considerevole. La base non fornisce immediatamente la transitività 
-dell'eguaglianza, per esempio, o un mezzo per la quantificazione universale; entrambe 
+Infine, la logica \HOL\ primitiva è stata integrata di tre costanti
+primitive e quattro assiomi, per formare la logica base. Le inferenze
+primitive, insieme con le costanti primitive, i quattro assiomi,
+e una collezione di definizioni, forniscono un punto iniziale per
+costruire dimostrazioni, e di conseguenza computare teoremi. Tuttavia, dimostrare
+persino i teoremi più semplici a partire da questa base minimale costa uno sforzo
+considerevole. La base non fornisce immediatamente la transitività
+dell'eguaglianza, per esempio, o un mezzo per la quantificazione universale; entrambe
 devono a loro volta essere derivate.
 
 \section{Derivazioni Semplici}
 
-Come illustrazione di una dimostrazione in \HOL{}, la seguente catena di 
-teoremi forma una dimostrazione (dall'insieme vuoto, nel sistema deduttivo 
+Come illustrazione di una dimostrazione in \HOL{}, la seguente catena di
+teoremi forma una dimostrazione (dall'insieme vuoto, nel sistema deduttivo
 \HOL{}), per i particolari termini \ml{``}$t_1$\ml{``}%''
 e \ml{``}$t_2$\ml{``}, %''
 entrambi del tipo \HOL\ \ml{``:bool``}:%''
@@ -56,7 +56,7 @@ entrambi del tipo \HOL\ \ml{``:bool``}:%''
 
 \noindent Cioè, il terzo teorema segue dal primo e dal secondo.
 
-Nella sessione di sotto, la dimostrazione è eseguita nel sistema \HOL, 
+Nella sessione di sotto, la dimostrazione è eseguita nel sistema \HOL,
 usando le funzioni \ML\ \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} e
 \ml{MP}.
 
@@ -77,7 +77,7 @@ usando le funzioni \ML\ \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} e
 \end{verbatim}
 \end{session}
 
-\noindent Più in breve, si potrebbe valutare la seguente, e `contare'\index{contare le inferenze, nelle dimostrazioni HOL@contare le inferenze, nelle dimostrazioni \HOL{}} le 
+\noindent Più in breve, si potrebbe valutare la seguente, e `contare'\index{contare le inferenze, nelle dimostrazioni HOL@contare le inferenze, nelle dimostrazioni \HOL{}} le
 invocazioni delle funzioni che rappresentano inferenze primitive.
 
 \begin{session}
@@ -93,51 +93,51 @@ Intermediate theorems generated: 3
 \end{verbatim}
 \end{session}
 
-\noindent Ciascuno dei tre passi d'inferenza della dimostrazione astratta 
+\noindent Ciascuno dei tre passi d'inferenza della dimostrazione astratta
 corrisponde all'applicazione %
 %
 \index{inferenze, nella logica HOL@inferenze, nella logica \HOL{}!come applicazioni di funzioni ML@come applicazioni di funzioni \ML}%
 \index{passi di dimostrazione, come applicazioni di funzioni ML@passi di dimostrazione, come applicazioni di funzioni \ML}%
-\index{dimostrazione!la nozione di, nel sistema HOL@la nozione 
+\index{dimostrazione!la nozione di, nel sistema HOL@la nozione
   di, nel sistema \HOL}%
 %
-di una funzione \ML\ nell'esecuzione della dimostrazione in \HOL; e ciascuna 
-delle funzioni \ML\ corrisponde a un'inferenza primitiva del 
+di una funzione \ML\ nell'esecuzione della dimostrazione in \HOL; e ciascuna
+delle funzioni \ML\ corrisponde a un'inferenza primitiva del
 sistema deduttivo.
 
-E' bene sottolineare che, in entrambi i casi, è fatta ogni 
-inferenza primitiva nella catena di dimostrazione, nel senso 
-che per ogni inferenza, è valutata la corrispondente funzione \ML. Cioè, 
-\HOL\ non permette alcuna scorciatoia circa la necessità di eseguire 
-dimostrazioni complete. La scorciatoia fornita dalle regole 
-d'inferenza derivate\index{inferenze, nella logica HOL@inferenze, nella logica \HOL{}!nelle regole derivate} 
-(come implementate in \ML) riguarda la necessità di 
-\emph{specificare} ogni passo; un qualcosa che sarebbe impossibile per 
-una dimostrazione di qualsiasi lunghezza. Si può vedere da questo che la regola 
+E' bene sottolineare che, in entrambi i casi, è fatta ogni
+inferenza primitiva nella catena di dimostrazione, nel senso
+che per ogni inferenza, è valutata la corrispondente funzione \ML. Cioè,
+\HOL\ non permette alcuna scorciatoia circa la necessità di eseguire
+dimostrazioni complete. La scorciatoia fornita dalle regole
+d'inferenza derivate\index{inferenze, nella logica HOL@inferenze, nella logica \HOL{}!nelle regole derivate}
+(come implementate in \ML) riguarda la necessità di
+\emph{specificare} ogni passo; un qualcosa che sarebbe impossibile per
+una dimostrazione di qualsiasi lunghezza. Si può vedere da questo che la regola
 derivata,%
 %
 \index{dimostrazioni, nella logica HOL@dimostrazioni, nella logica \HOL{}!come applicazioni di funzioni ML@come applicazioni di funzioni \ML}
 \index{dimostrazioni, nella logica HOL@dimostrazioni, nella logica \HOL{}!così come generate da regole derivate}
 \index{regole derivate, nella logica HOL@regole derivate, nella logica \HOL{}!importanza delle}
 %
-e la sua rappresentazione come una funzione \ML{}, è essenziale alla 
+e la sua rappresentazione come una funzione \ML{}, è essenziale alla
 metodologia \HOL{}; la dimostrazione di teoremi altrimenti sarebbe impossibile.
 
-Ci sono, naturalmente, un numero infinito di dimostrazioni, della `forma' 
-mostrata nell'esempio, che possono essere condotte in \HOL: una per ogni 
+Ci sono, naturalmente, un numero infinito di dimostrazioni, della `forma'
+mostrata nell'esempio, che possono essere condotte in \HOL: una per ogni
 coppia di termini tipizzati \ml{``:bool``}. %''
 Inoltre, ogni volta che è richiesto un teorema della forma
 
 $$t_1 \ \imp \ t_2, \ t_1 \ \vdash \ t_2,$$
 
-\noindent la sua dimostrazione deve essere costruita da capo. Per catturare il 
-pattern generale dell'inferenza, si può scrivere una funzione \ML\ per 
+\noindent la sua dimostrazione deve essere costruita da capo. Per catturare il
+pattern generale dell'inferenza, si può scrivere una funzione \ML\ per
 implementare una regola d'inferenza come una derivazione dalle inferenze primitive.
 Astrattamente, una \emph{regola d'inferenza derivata}
 \index{regole derivate, nella logica HOL@regole derivate, nella logica \HOL{}!giustificazione delle}
 %
-è una regola che può essere giustificata sulla base delle regole 
-primitive\linebreak d'inferenza (e/o degli assiomi). Nel caso attuale, la regola 
+è una regola che può essere giustificata sulla base delle regole
+primitive\linebreak d'inferenza (e/o degli assiomi). Nel caso attuale, la regola
 ha richiesto lo `scaricamento' delle assunzioni. Essa è specificata per \HOL{} da
 
 \bigskip
@@ -151,13 +151,13 @@ $\Gamma\cup\{t_1\}${\small\verb% |- %}$t_2$
 
 \bigskip
 
-\noindent Questa regola generale è valida perché da un teorema \HOL\ della 
+\noindent Questa regola generale è valida perché da un teorema \HOL\ della
 forma $\Gamma${\small\verb% |- %}$t_1${\small\verb%==>%}$t_2$, si può derivare il teorema
-$\Gamma\cup\{t_1\}${\small\verb% |- %}$t_2$ 
+$\Gamma\cup\{t_1\}${\small\verb% |- %}$t_2$
 come nell'esempio specifico di sopra.
-La regola può essere implementata in \ML\ come una funzione (diciamo 
-\ml{UNDISCH})\index{UNDISCH@\ml{UNDISCH}} che richiama la 
-sequenza appropriata d'inferenze 
+La regola può essere implementata in \ML\ come una funzione (diciamo
+\ml{UNDISCH})\index{UNDISCH@\ml{UNDISCH}} che richiama la
+sequenza appropriata d'inferenze
 primitive. La definizione \ML\ di \ml{UNDISCH} è semplicemente
 
 \begin{session}
@@ -167,14 +167,14 @@ primitive. La definizione \ML\ di \ml{UNDISCH} è semplicemente
 \end{verbatim}
 \end{session}
 
-\noindent Questo fornisce una funzione che mappa un teorema a un teorema; 
+\noindent Questo fornisce una funzione che mappa un teorema a un teorema;
 cioè, esegue dimostrazioni in \HOL.
-La seguente sessione illustra l'uso della regola derivata, su 
-una conseguenza dell'assioma \ml{IMP\_ANTISYM\_AX}. (Le inferenze sono 
+La seguente sessione illustra l'uso della regola derivata, su
+una conseguenza dell'assioma \ml{IMP\_ANTISYM\_AX}. (Le inferenze sono
 contate.%
 \index{contare le inferenze, nelle dimostrazioni HOL@contare le inferenze, nelle dimostrazioni \HOL{}}%
 %
-) Assumiamo che la stampa dei teoremi sia stata aggiustata come di sopra e che 
+) Assumiamo che la stampa dei teoremi sia stata aggiustata come di sopra e che
 \ml{th} sia legato come mostrato di sotto:
 
 \setcounter{sessioncount}{1}
@@ -200,34 +200,34 @@ Intermediate theorems generated: 2
 \end{verbatim}
 \end{session}
 
-\noindent Ogni applicazione di successo di {\small\verb%UNDISCH%} 
-a un teorema invoca un'applicazione 
-di {\small\verb%ASSUME%}, seguita da un'applicazione di {\small\verb%MP%}; 
-\ml{UNDISCH} costruisce la 
+\noindent Ogni applicazione di successo di {\small\verb%UNDISCH%}
+a un teorema invoca un'applicazione
+di {\small\verb%ASSUME%}, seguita da un'applicazione di {\small\verb%MP%};
+\ml{UNDISCH} costruisce la
 dimostrazione di due passi per qualsiasi teorema dato (della forma appropriata).
-Come si può 
-vedere, essa fa affidamento sulla classe delle funzioni \ML\ che accedono alla sintassi \HOL: 
-in particolare, \ml{concl} per produrre la conclusione 
-del teorema, \ml{dest\_imp} per separare l'implicazione, e il 
+Come si può
+vedere, essa fa affidamento sulla classe delle funzioni \ML\ che accedono alla sintassi \HOL:
+in particolare, \ml{concl} per produrre la conclusione
+del teorema, \ml{dest\_imp} per separare l'implicazione, e il
 selettore \ml{fst} per scegliere l'antecedente.
 
-Questo esempio particolare è molto semplice, ma una regola d'inferenza derivata 
-può eseguire dimostrazioni di lunghezza arbitraria. Essa può fare anche uso di 
-regole definite in precedenza. In questo modo, i normali pattern d'inferenza 
-possono essere sviluppati molto più velocemente e facilmente; la transitività, 
+Questo esempio particolare è molto semplice, ma una regola d'inferenza derivata
+può eseguire dimostrazioni di lunghezza arbitraria. Essa può fare anche uso di
+regole definite in precedenza. In questo modo, i normali pattern d'inferenza
+possono essere sviluppati molto più velocemente e facilmente; la transitività,
 la generalizzazione, e così via, supportano i pattern d'inferenza familiari.
 
-Quando si entra nel sistema \HOL\ sono pre-definite un numero di regole 
-d'inferenza derivate (di cui \ml{UNDISCH} è una delle prime). Nella 
-Sezione~\ref{avra_standard}, sono date le derivazioni astratte per 
-le regole pre-definite che riflettono i pattern d'inferenza più usuali 
-del calcolo predicativo (e del lambda calcolo). Come quelle mostrate, alcune delle 
-regole derivate pre-definite in \HOL\ generano dimostrazioni relativamente corte. 
-Altre invocano migliaia d'inferenze primitive, e chiaramente risparmiano una 
-grande quantità di sforzo. Inoltre, possono essere definite dall'utente regole per 
+Quando si entra nel sistema \HOL\ sono pre-definite un numero di regole
+d'inferenza derivate (di cui \ml{UNDISCH} è una delle prime). Nella
+Sezione~\ref{avra_standard}, sono date le derivazioni astratte per
+le regole pre-definite che riflettono i pattern d'inferenza più usuali
+del calcolo predicativo (e del lambda calcolo). Come quelle mostrate, alcune delle
+regole derivate pre-definite in \HOL\ generano dimostrazioni relativamente corte.
+Altre invocano migliaia d'inferenze primitive, e chiaramente risparmiano una
+grande quantità di sforzo. Inoltre, possono essere definite dall'utente regole per
 fare passi ancora più ampi, o per implementare pattern più specializzati.
 
-Tutte le regole derivate pre-definite in \HOL\ sono descritte 
+Tutte le regole derivate pre-definite in \HOL\ sono descritte
 in \REFERENCE.
 
 \section{Riscrittura}
@@ -235,65 +235,65 @@ in \REFERENCE.
 
 \index{riscrittura!regole per|(}
 \index{REWRITE_RULE@\ml{REWRITE\_RULE}|(}
-Nell'insieme d'inferenze derivate che sono pre-definite in 
-\HOL\ è incluso un gruppo di regole con delle definizioni complesse che eseguono una limitata 
-quantità di dimostrazione `automatica' di teoremi in forma di riscrittura. L'idea 
-e l'implementazione furono sviluppate originariamente da 
-Milner\index{Milner, R.}  e Wadsworth\index{Wadsworth, C.} per 
-l'\LCF\ di Edimburgo\index{LCF@\LCF!Edinburgh}, e furono successivamente implementate 
+Nell'insieme d'inferenze derivate che sono pre-definite in
+\HOL\ è incluso un gruppo di regole con delle definizioni complesse che eseguono una limitata
+quantità di dimostrazione `automatica' di teoremi in forma di riscrittura. L'idea
+e l'implementazione furono sviluppate originariamente da
+Milner\index{Milner, R.}  e Wadsworth\index{Wadsworth, C.} per
+l'\LCF\ di Edimburgo\index{LCF@\LCF!Edinburgh}, e furono successivamente implementate
 in modo più flessibile ed efficiente da Paulson\index{Paulson, L.} e
 Huet\index{Huet, G.} per l'\LCF\ di Cambridge\index{LCF@\LCF!Cambridge}.
-Esse appaiono in \HOL{} nella forma di Cambridge. La regola base di riscrittura 
-è \ml{REWRITE\_RULE}. Tutte le regole di riscrittura sono descritte in 
+Esse appaiono in \HOL{} nella forma di Cambridge. La regola base di riscrittura
+è \ml{REWRITE\_RULE}. Tutte le regole di riscrittura sono descritte in
 dettaglio in \REFERENCE.
 
-\ml{REWRITE\_RULE} usa una lista di teoremi equazionali 
+\ml{REWRITE\_RULE} usa una lista di teoremi equazionali
 \index{teoremi equazionali, nella logica HOL@teoremi equazionali, nella logica \HOL{}!uso dei \ldots nella riscrittura}
 \index{teoremi, nella logica HOL@teoremi, nella logica \HOL{}!equazionali}
-(teoremi le cui conclusioni possono essere considerate avere la forma 
-$t_1${\small\verb% = %}$t_2$) per sostituire 
-qualsiasi sottotermine di un teorema oggetto che `matcha' $t_1$ con 
-l'istanza corrispondente di $t_2$. La regola esegue un matching ricorsivo e a tutte le profondità, 
-fino a quando non possono essere fatte ulteriori sostituzioni, 
-usando algoritmi di ricerca, matching e 
-istanziazione\index{istanziazione di tipo, nella logica HOL@istanziazione di tipo, nella logica \HOL{}!nella regola di riscrittura} definiti internamente. La validità 
- di \ml{REWRITE\_RULE} si appoggia 
-in definitiva sulle regole primitive \ml{SUBST} (per eseguire le sostituzioni); 
-\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}}  (per istanziare i tipi); e le regole derivate per 
-la generalizzazione e la specializzazione (si vedano le Sezioni~\ref{avra_gen} 
-e \ref{avra_spec}) per istanziare i termini. La definizione 
-di \ml{REWRITE\_RULE} in \ML\ 
-si basa anche su un grande numero di funzioni \ML\ generali 
+(teoremi le cui conclusioni possono essere considerate avere la forma
+$t_1${\small\verb% = %}$t_2$) per sostituire
+qualsiasi sottotermine di un teorema oggetto che `matcha' $t_1$ con
+l'istanza corrispondente di $t_2$. La regola esegue un matching ricorsivo e a tutte le profondità,
+fino a quando non possono essere fatte ulteriori sostituzioni,
+usando algoritmi di ricerca, matching e
+istanziazione\index{istanziazione di tipo, nella logica HOL@istanziazione di tipo, nella logica \HOL{}!nella regola di riscrittura} definiti internamente. La validità
+ di \ml{REWRITE\_RULE} si appoggia
+in definitiva sulle regole primitive \ml{SUBST} (per eseguire le sostituzioni);
+\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}}  (per istanziare i tipi); e le regole derivate per
+la generalizzazione e la specializzazione (si vedano le Sezioni~\ref{avra_gen}
+e \ref{avra_spec}) per istanziare i termini. La definizione
+di \ml{REWRITE\_RULE} in \ML\
+si basa anche su un grande numero di funzioni \ML\ generali
 e \HOL-oriented.
 %The implementation is partly described in Chapter~\ref{avra_conv}.
 
-In pratica, la regola derivata \ml{REWRITE\_RULE} gioca un ruolo centrale 
-nelle dimostrazioni, perché prende il posto di un grande numero d'inferenze 
-che potrebbero accadere in un ordine complesso e non prevedibile. E' diversa 
-da qualsiasi altra regola primitiva o pre-definita, primo per il numero 
-di inferenze che genera\footnote{Il numero di inferenze eseguite 
-	da questa regola è in generale `inflazionato'; cioè, è in genere più grande della 
-	lunghezza della dimostrazione stessa, se la dimostrazione si potesse `vedere'. Questo 
-	accade perché, nell'attuale implementazione, alcune inferenze sono fatte 
-	durante la fase di ricerca che non necessariamente sostiene delle 
-	sostituzioni di successo.}; e secondo perché il suo risultato è spesso 
-inaspettato. Il suo potere è accresciuto dal fatto che qualsiasi teorema 
-equazionale esistente può essere fornito come una `regola di riscrittura', incluso un 
-insieme \HOL\ standard di tautologie pre-dimostrate; e queste regole di riscrittura 
-possono interagire l'una con l'altra nel processo di riscrittura per trasformare il 
+In pratica, la regola derivata \ml{REWRITE\_RULE} gioca un ruolo centrale
+nelle dimostrazioni, perché prende il posto di un grande numero d'inferenze
+che potrebbero accadere in un ordine complesso e non prevedibile. E' diversa
+da qualsiasi altra regola primitiva o pre-definita, primo per il numero
+di inferenze che genera\footnote{Il numero di inferenze eseguite
+	da questa regola è in generale `inflazionato'; cioè, è in genere più grande della
+	lunghezza della dimostrazione stessa, se la dimostrazione si potesse `vedere'. Questo
+	accade perché, nell'attuale implementazione, alcune inferenze sono fatte
+	durante la fase di ricerca che non necessariamente sostiene delle
+	sostituzioni di successo.}; e secondo perché il suo risultato è spesso
+inaspettato. Il suo potere è accresciuto dal fatto che qualsiasi teorema
+equazionale esistente può essere fornito come una `regola di riscrittura', incluso un
+insieme \HOL\ standard di tautologie pre-dimostrate; e queste regole di riscrittura
+possono interagire l'una con l'altra nel processo di riscrittura per trasformare il
 teorema originale.
 
-L'applicazione di \ml{REWRITE\_RULE}, nella sessione di sotto, 
-illustra che le sostituzioni sono eseguite a tutti i livelli della 
+L'applicazione di \ml{REWRITE\_RULE}, nella sessione di sotto,
+illustra che le sostituzioni sono eseguite a tutti i livelli della
 struttura di un termine.
 L'esempio è numerico;
-gli infissi {\small\verb%"$>"%} e {\small\verb%"$<"%} sono 
-le usuali relazioni `maggiore di' e `minore di', rispettivamente, 
-e \ml{"SUC"}, 
+gli infissi {\small\verb%"$>"%} e {\small\verb%"$<"%} sono
+le usuali relazioni `maggiore di' e `minore di', rispettivamente,
+e \ml{"SUC"},
 l'usuale funzione successore.
 Si usa la definizione pre-esistente di {\small\verb%"$>"%}:
 \ml{GREATER} (si veda \REFERENCE).
-Si usa di nuovo la funzionalità di timinig\index{contare le inferenze, nelle dimostrazioni HOL@contare le inferenze, nelle dimostrazioni \HOL{}}, a titolo informativo, e la stampa 
+Si usa di nuovo la funzionalità di timinig\index{contare le inferenze, nelle dimostrazioni HOL@contare le inferenze, nelle dimostrazioni \HOL{}}, a titolo informativo, e la stampa
 di teoremi è aggiustata come sopra.
 
 
@@ -324,13 +324,13 @@ Intermediate theorems generated: 23
 \end{verbatim}
 \end{session}
 
-\noindent Si noti che le equazioni 
-di riscrittura possono essere estratte da 
-teoremi quantificati universalmente. 
-Costruire la 
-dimostrazione passo passo, con tutte le istanziazioni, 
-sostituzioni, ed usi della transitività, ecc, 
-sarebbe un processo lungo. Le regole di riscrittura lo rendono facile, 
+\noindent Si noti che le equazioni
+di riscrittura possono essere estratte da
+teoremi quantificati universalmente.
+Costruire la
+dimostrazione passo passo, con tutte le istanziazioni,
+sostituzioni, ed usi della transitività, ecc,
+sarebbe un processo lungo. Le regole di riscrittura lo rendono facile,
 e lo fanno pur continuando a generare l'intera catena d'inferenze.
 \index{REWRITE_RULE@\ml{REWRITE\_RULE}|)}
 \index{riscrittura!regole per|)}
@@ -340,72 +340,72 @@ e lo fanno pur continuando a generare l'intera catena d'inferenze.
 
 \index{regole derivate, nella logica HOL@regole derivate, nella logica \HOL{}!pre-definite|(}
 %
-Il sistema \HOL{} fornisce tutte le regole standard d'introduzione ed 
-eliminazione del calcolo dei predicato pre-definite come inferenze 
-derivate. Sono queste regole, piuttosto che le regole 
-primitive, che normalmente si usano in pratica. In questa sezione, sono date 
-le derivazioni di alcune delle regole standard, in sequenza. 
-Queste derivazioni usano solo gli assiomi e le definizioni nella teoria 
-\theoryimp{bool} (si veda la Sezione~\ref{boolfull}), le otto regole 
-d'inferenza primitive della logica \HOL, e le inferenze definite in precedenza nella 
+Il sistema \HOL{} fornisce tutte le regole standard d'introduzione ed
+eliminazione del calcolo dei predicato pre-definite come inferenze
+derivate. Sono queste regole, piuttosto che le regole
+primitive, che normalmente si usano in pratica. In questa sezione, sono date
+le derivazioni di alcune delle regole standard, in sequenza.
+Queste derivazioni usano solo gli assiomi e le definizioni nella teoria
+\theoryimp{bool} (si veda la Sezione~\ref{boolfull}), le otto regole
+d'inferenza primitive della logica \HOL, e le inferenze definite in precedenza nella
 sequenza.
 
 I teoremi,%
 %
 \index{teoremi, nella logica HOL@teoremi, nella logica \HOL{}!come regole d'inferenza}%
 %
-in accordo con la definizione data all'inizio di questo 
-capitolo, sono trattati come regole senza ipotesi; così la derivazione 
-di un teorema assomiglia alla derivazione di una regola eccetto per il fatto che non 
-ha ipotesi. (La derivazione di \ml{TRUTH}, Sezione~\ref{avra_T}, è 
-l'unico esempio dato di questo, ma ce ne sono molti altri in \HOL.) 
-Ci sono anche alcune regole che sono intrinsecamente più generali dei 
-teoremi. Per esempio, per ogni due termini $t_1$ e $t_2$, il teorema 
-$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ segue dala regola primitiva 
-\rul{BETA\_CONV}. La regola \ml{BETA\_CONV} restituisce un teorema per ogni 
-coppia di termini $t_1$ e $t_2$, ed è quindi equivalente a una 
+in accordo con la definizione data all'inizio di questo
+capitolo, sono trattati come regole senza ipotesi; così la derivazione
+di un teorema assomiglia alla derivazione di una regola eccetto per il fatto che non
+ha ipotesi. (La derivazione di \ml{TRUTH}, Sezione~\ref{avra_T}, è
+l'unico esempio dato di questo, ma ce ne sono molti altri in \HOL.)
+Ci sono anche alcune regole che sono intrinsecamente più generali dei
+teoremi. Per esempio, per ogni due termini $t_1$ e $t_2$, il teorema
+$\vdash(\lquant{x}t_1)t_2 = t_1[t_2/x]$ segue dala regola primitiva
+\rul{BETA\_CONV}. La regola \ml{BETA\_CONV} restituisce un teorema per ogni
+coppia di termini $t_1$ e $t_2$, ed è quindi equivalente a una
 famiglia infinita %
 %
 \index{famiglie d'inferenze, nella logica HOL@famiglie d'inferenze, nella logica \HOL{}}%
-% 
-di teoremi. Nella logica \HOL{} non è possibile esprimere alcun teorema singolo 
+%
+di teoremi. Nella logica \HOL{} non è possibile esprimere alcun teorema singolo
 che sia equivalente a \rul{BETA\_CONV}.%
 \index{teoremi, nella logica HOL@teoremi, nella logica \HOL{}!regole non esprimibili come}
 \index{beta-conversione, nella logica HOL@beta-conversione, nella logica \HOL{}!non esprimibile come un teorema}%
 %
 %(See Chapter~\ref{avra_conv} for further discussion of this point.)
-(\ml{UNDISCH} non è una regola di questo tipo, dal momento che può, di fatto, essere 
+(\ml{UNDISCH} non è una regola di questo tipo, dal momento che può, di fatto, essere
 espressa come un teorema.)
 
-Per ogni derivazione data di sotto, c'è la definizione di una funzione \ML\ 
-nel sistema \HOL\ che implementa la regola derivata come una procedura in 
-\ML. L'attuale implementazione nel sistema \HOL\ differisce in qualche 
-caso dalle derivazioni date qui, dal momento che il codice del sistema è stato 
+Per ogni derivazione data di sotto, c'è la definizione di una funzione \ML\
+nel sistema \HOL\ che implementa la regola derivata come una procedura in
+\ML. L'attuale implementazione nel sistema \HOL\ differisce in qualche
+caso dalle derivazioni date qui, dal momento che il codice del sistema è stato
 ottimizzato per performance migliori.
 
-Inoltre per ragioni che sono più che altro storiche, non tutte le 
-inferenze che sono derivate in termini della logica astratta sono 
-di fatto derivate nella versione attuale del sistema \HOL. Più precisamente, 
-ci sono attualmente circa quaranta regole che sono installate nel sistema 
-su una base `assiomatica', ognuna delle quali dovrebbe essere derivata attraverso un'inferenza 
-esplicita. Benché lo stato attuale di queste regole non sia 
-soddisfacente, ed è pianificato, con priorità alta, di derivarle 
-in modo appropriato in una versione futura, il loro stato attuale di fatto 
-non compromette la coerenza della logica. In effetti, il sistema 
-\HOL\ esistente ha un sistema deduttivo più comprensivo di quello 
-presentato astrattamente, ma il modello delineato in \LOGIC{} si estenderebbe 
+Inoltre per ragioni che sono più che altro storiche, non tutte le
+inferenze che sono derivate in termini della logica astratta sono
+di fatto derivate nella versione attuale del sistema \HOL. Più precisamente,
+ci sono attualmente circa quaranta regole che sono installate nel sistema
+su una base `assiomatica', ognuna delle quali dovrebbe essere derivata attraverso un'inferenza
+esplicita. Benché lo stato attuale di queste regole non sia
+soddisfacente, ed è pianificato, con priorità alta, di derivarle
+in modo appropriato in una versione futura, il loro stato attuale di fatto
+non compromette la coerenza della logica. In effetti, il sistema
+\HOL\ esistente ha un sistema deduttivo più comprensivo di quello
+presentato astrattamente, ma il modello delineato in \LOGIC{} si estenderebbe
 facilmente per coprirlo.%
 %
 \index{regole derivate, nella logica HOL@regole derivate, nella logica \HOL{}!pre-definite|)}
 
-A titolo informativo, nella Versione 2.0 di \HOL\ le seguenti regole che dovrebbero essere 
+A titolo informativo, nella Versione 2.0 di \HOL\ le seguenti regole che dovrebbero essere
 derivate
 %
 \index{regole d'inferenza, della logica HOL@regole d'inferenza, della logica \HOL{}!alcune \ldots non derivate in modo appropriato|(}
 \index{regole nella logica HOL, alcune \ldots non derivate in modo appropriato@regole nella logica \HOL{}, alcune \ldots non derivate in modo appropriato|(}
 %
-non sono derivate, ma (per questioni di efficienza) sono implementate come 
-primitive. La lista include alcune conversioni e funzioni con valore 
+non sono derivate, ma (per questioni di efficienza) sono implementate come
+primitive. La lista include alcune conversioni e funzioni con valore
 di conversioni. % (conversions are discussed in Chapter~\ref{avra_conv}).
 \vfill \newpage
 
@@ -455,16 +455,16 @@ di conversioni. % (conversions are discussed in Chapter~\ref{avra_conv}).
 \index{regole nella logica HOL, alcune \ldots non derivate in modo appropriato@regole nella logica \HOL{}, alcune \ldots non derivate in modo appropriato|(}
 
 \index{regole d'inferenza, della logica HOL@regole d'inferenza, della logica \HOL{}!derivate|(}
-Le derivazioni che seguono consistono di sequenze di passi numerati ciascuno dei 
-quali 
+Le derivazioni che seguono consistono di sequenze di passi numerati ciascuno dei
+quali
 \begin{enumerate}
 \item è un assioma, oppure
 \item è un'ipotesi della regola che si sta derivando, oppure
-\item segue da passi precedenti per una regola d'inferenza (o primitiva 
+\item segue da passi precedenti per una regola d'inferenza (o primitiva
 o precedentemente derivata).
 \end{enumerate}
 
-\noindent Si noti che l'abbreviazione \ml{conv} (che sta per 
+\noindent Si noti che l'abbreviazione \ml{conv} (che sta per
 `conversione') è usata per il tipo \ML\ \ml{term ->
   thm}.%
 % \footnote{This stands for `conversion', as explained in
@@ -740,8 +740,8 @@ $$\Gamma\turn t = \T\over \Gamma\turn t$$
 
 $$\Gamma\turn \uquant{x}t\over \Gamma\turn t[t'/x]$$
 \begin{itemize}
-\item $t[t'/x]$ denota il risultato della sostituzione di $t'$ per le occorrenze libere\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}} 
-di $x$ in $t$, con la restrizione che nessuna variabile libera in $t'$ 
+\item $t[t'/x]$ denota il risultato della sostituzione di $t'$ per le occorrenze libere\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}}
+di $x$ in $t$, con la restrizione che nessuna variabile libera in $t'$
 diventi legata dopo la sostituzione.
 \end{itemize}
 
@@ -857,9 +857,9 @@ $$\Gamma\turn t\over\Gamma\turn\uquant{x} t$$
 
 $$\turn(\lquant{x_1}t\ x_1) = (\lquant{x_2}t\ x_2)$$
 \begin{itemize}
-\item Dove né $x_1$ né $x_2$ occorre libera in $t$\footnote{\ml{SIMPLE\_ALPHA} è 
-inclusa qui perché è 
-usata in una derivazione successiva, ma di fatto non è nel 
+\item Dove né $x_1$ né $x_2$ occorre libera in $t$\footnote{\ml{SIMPLE\_ALPHA} è
+inclusa qui perché è
+usata in una derivazione successiva, ma di fatto non è nel
 sistema \HOL\ dal momento che è sussunta da altre funzioni.}.
 \end{itemize}
 
@@ -902,7 +902,7 @@ sistema \HOL\ dal momento che è sussunta da altre funzioni.}.
 
 $$\turn(\lquant{x'}t\ x') = t$$
 \begin{itemize}
-\item Dove $x'$ non occorre libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}} in $t$ (usiamo $x'$ piuttosto che semplicemente $x$ 
+\item Dove $x'$ non occorre libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}} in $t$ (usiamo $x'$ piuttosto che semplicemente $x$
 per motivare l'uso di \rul{SIMPLE\_ALPHA} nella derivazione di sotto).
 \end{itemize}
 
@@ -969,7 +969,7 @@ $$\Gamma\turn t_1\ t_2\over\Gamma\turn t_1(\hilbert\ t_1)$$
 \vspace{12pt plus2pt minus1pt}
 
 \begin{proof}
-\item $\turn\uquant{P\ x}P\ x\imp P(\hilbert\ P)$\hfill [Assioma con un'adatta 
+\item $\turn\uquant{P\ x}P\ x\imp P(\hilbert\ P)$\hfill [Assioma con un'adatta
 istanziazione dei tipi]
 \item $\turn t_1\ t_2 \imp t_1(\hilbert\ t_1)$\hfill [\rul{SPEC} 1 (due volte)]
 \item $\Gamma\turn t_1\ t_2$\hfill [Ipotesi]
@@ -993,7 +993,7 @@ istanziazione dei tipi]
 $$\Gamma_1\turn t_1(\hilbert\ t_1)\qquad\qquad\qquad\Gamma_2,\ t_1\ v\turn t
 \over \Gamma_1\cup\Gamma_2\turn t$$
 \begin{itemize}
-\item Dove $v$ non occorre da nessuna parte eccetto nell'assunzione $t_1\ v$ della seconda 
+\item Dove $v$ non occorre da nessuna parte eccetto nell'assunzione $t_1\ v$ della seconda
 ipotesi.
 \end{itemize}
 
@@ -1024,10 +1024,10 @@ ipotesi.
 
 $$\Gamma\turn t_1[t_2]\over \Gamma\turn \equant{x}t_1[x]$$
 \begin{itemize}
-\item Dove $t_1[t_2]$ denota un termine $t_1$ con qualche occorrenza libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}} 
-di $t_2$ 
-scelta, e $t_1[x]$ denota il risultato di sostituire queste 
-occorrenze di $t_1$ con $x$, con la restrizione che $x$ 
+\item Dove $t_1[t_2]$ denota un termine $t_1$ con qualche occorrenza libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}}
+di $t_2$
+scelta, e $t_1[x]$ denota il risultato di sostituire queste
+occorrenze di $t_1$ con $x$, con la restrizione che $x$
 non divenga legata dopo la sostituzione.
 \end{itemize}
 
@@ -1068,10 +1068,10 @@ non divenga legata dopo la sostituzione.
 $$\Gamma_1\turn\equant{x}t[x]\qquad\qquad\qquad \Gamma_2,\ t[v]\turn t'
 \over \Gamma_1\cup\Gamma_2\turn t'$$
 \begin{itemize}
-\item Dove $t[v]$ denota un termine $t$ con qualche occorrenza libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}} 
-della variabile $v$ 
-selezionata, e $t[x]$ denota il risultato di sostituire queste 
-occorrenze di $v$ con $x$, con la restrizione che $x$ non divenga 
+\item Dove $t[v]$ denota un termine $t$ con qualche occorrenza libera\index{variabili libere, nella logica HOL@variabili libere, nella logica \HOL{}}
+della variabile $v$
+selezionata, e $t[x]$ denota il risultato di sostituire queste
+occorrenze di $v$ con $x$, con la restrizione che $x$ non divenga
 legata dopo la sostituzione.
 \end{itemize}
 

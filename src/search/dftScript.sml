@@ -1,7 +1,7 @@
 (*---------------------------------------------------------------------------*)
 (* Depth first traversal of directed graphs that can contain cycles.         *)
 (*---------------------------------------------------------------------------*)
- 
+
 open HolKernel boolLib bossLib
      pred_setTheory pred_setLib relationTheory listTheory;
 
@@ -41,20 +41,20 @@ val Parents_def = Define `Parents G = {x | ~(G x = [])}`;
 (*---------------------------------------------------------------------------*)
 
 val Rel_def =   (* map arg. tuples into a pair of numbers for termination *)
- Define 
-   `Rel(G,f,seen,to_visit,acc) = 
+ Define
+   `Rel(G,f,seen,to_visit,acc) =
         (CARD(Parents G DIFF (LIST_TO_SET seen)), LENGTH to_visit)`;
 
 val def = (* Define function and prove termination *)
  tDefine
-  "DFT" 
-  `DFT G f seen to_visit acc = 
+  "DFT"
+  `DFT G f seen to_visit acc =
     if FINITE (Parents G)
       then case to_visit
-           of [] => acc 
+           of [] => acc
            | visit_now :: visit_later =>
-              if MEM visit_now seen 
-                then DFT G f seen visit_later acc 
+              if MEM visit_now seen
+                then DFT G f seen visit_later acc
                 else DFT G f (visit_now :: seen)
                              (G visit_now ++ visit_later)
                              (f visit_now acc)
@@ -66,14 +66,14 @@ val def = (* Define function and prove termination *)
    [MATCH_MP_TAC (DECIDE ``y <= x /\ y < z ==> x < z + (x - y)``) THEN
      CONJ_TAC THENL
       [METIS_TAC [CARD_INTER_LESS_EQ],
-       MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET) 
+       MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
          THEN RW_TAC set_ss [INTER_DEF,PSUBSET_DEF,SUBSET_DEF,EXTENSION]
          THEN METIS_TAC[]],
-    MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET) 
-       THEN RW_TAC set_ss [INTER_DEF,PSUBSET_DEF,SUBSET_DEF,EXTENSION] 
+    MATCH_MP_TAC (SIMP_RULE dnf_ss [] CARD_PSUBSET)
+       THEN RW_TAC set_ss [INTER_DEF,PSUBSET_DEF,SUBSET_DEF,EXTENSION]
        THEN METIS_TAC[],
-    MATCH_MP_TAC (DECIDE ``(p=q) ==> (x-p = x-q)``) 
-      THEN MATCH_MP_TAC (METIS_PROVE [] ``(s1=s2) ==> (CARD s1 = CARD s2)``) 
+    MATCH_MP_TAC (DECIDE ``(p=q) ==> (x-p = x-q)``)
+      THEN MATCH_MP_TAC (METIS_PROVE [] ``(s1=s2) ==> (CARD s1 = CARD s2)``)
       THEN RW_TAC set_ss [INTER_DEF,EXTENSION] THEN METIS_TAC [],
     FULL_SIMP_TAC set_ss [Parents_def]]);
 
@@ -84,10 +84,10 @@ val def = (* Define function and prove termination *)
 
 val DFT_def = Q.store_thm
 ("DFT_def",
- `FINITE (Parents G) ==> 
+ `FINITE (Parents G) ==>
   (DFT G f seen [] acc = acc) /\
   (DFT G f seen (visit_now :: visit_later) acc =
-    if MEM visit_now seen 
+    if MEM visit_now seen
        then DFT G f seen visit_later acc
        else DFT G f (visit_now :: seen)
                     (G visit_now ++ visit_later)
@@ -106,7 +106,7 @@ val DFT_def = Q.store_thm
 val DFT_ind = Q.store_thm
 ("DFT_ind",
  `!P.
-    (!G f seen visit_now visit_later acc. 
+    (!G f seen visit_now visit_later acc.
        P G f seen [] acc /\
        ((FINITE (Parents G) /\ ~MEM visit_now seen ==>
             P G f (visit_now :: seen)
@@ -117,7 +117,7 @@ val DFT_ind = Q.store_thm
          ==> P G f seen (visit_now :: visit_later) acc))
    ==>
    !v v1 v2 v3 v4. P v v1 v2 v3 v4`,
- NTAC 2 STRIP_TAC 
+ NTAC 2 STRIP_TAC
  THEN HO_MATCH_MP_TAC (fetch "-" "DFT_ind")
  THEN REPEAT GEN_TAC THEN Cases_on `to_visit`
  THEN RW_TAC list_ss []);
@@ -129,10 +129,10 @@ val DFT_ind = Q.store_thm
 val DFT_CONS = Q.store_thm
 ("DFT_CONS",
  `!G f seen to_visit acc a b.
-    FINITE (Parents G) /\ (f = CONS) /\ (acc = APPEND a b) 
+    FINITE (Parents G) /\ (f = CONS) /\ (acc = APPEND a b)
       ==>
     (DFT G f seen to_visit acc = DFT G f seen to_visit a ++ b)`,
- recInduct DFT_ind 
+ recInduct DFT_ind
   THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC [APPEND]);
 
 val FOLDR_UNROLL = Q.prove
@@ -141,15 +141,15 @@ val FOLDR_UNROLL = Q.prove
 
 val DFT_FOLD = Q.store_thm
 ("DFT_FOLD",
- `!G f seen to_visit acc. 
-    FINITE (Parents G) 
+ `!G f seen to_visit acc.
+    FINITE (Parents G)
        ==>
    (DFT G f seen to_visit acc = FOLDR f acc (DFT G CONS seen to_visit []))`,
- recInduct DFT_ind THEN 
+ recInduct DFT_ind THEN
  RW_TAC list_ss [DFT_def] THEN METIS_TAC [FOLDR_UNROLL,DFT_CONS,APPEND]);
 
 val DFT_ALL_DISTINCT_LEM = Q.prove
-(`!G f seen to_visit acc. 
+(`!G f seen to_visit acc.
     FINITE (Parents G) /\ (f = CONS) /\
     ALL_DISTINCT acc /\ (!x. MEM x acc ==> MEM x seen)
       ==>
@@ -158,7 +158,7 @@ val DFT_ALL_DISTINCT_LEM = Q.prove
 
 val DFT_ALL_DISTINCT = Q.store_thm
 ("DFT_ALL_DISTINCT",
- `!G seen to_visit. 
+ `!G seen to_visit.
     FINITE (Parents G) ==> ALL_DISTINCT (DFT G CONS seen to_visit [])`,
  RW_TAC list_ss [DFT_ALL_DISTINCT_LEM]);
 
@@ -166,11 +166,11 @@ val DFT_ALL_DISTINCT = Q.store_thm
 (* Definition of reachability in a graph of the kind we are using here.      *)
 (*---------------------------------------------------------------------------*)
 
-val REACH_DEF = 
- Define 
+val REACH_DEF =
+ Define
    `REACH G = RTC (\x y. MEM y (G x))`;
 
-val REACH_LIST_DEF = 
+val REACH_LIST_DEF =
  Define
    `REACH_LIST G nodes y = ?x. MEM x nodes /\ y IN REACH G x`;
 
@@ -178,7 +178,7 @@ val REACH_LIST_DEF =
 (* Removing a set of nodes ex from G.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val EXCLUDE_DEF = 
+val EXCLUDE_DEF =
  Define
    `EXCLUDE G ex node = if node IN ex then [] else G node`;
 
@@ -186,7 +186,7 @@ val EXCLUDE_DEF =
 (* Lemmas about reachability and restricted graphs.                          *)
 (*---------------------------------------------------------------------------*)
 
-val EXCLUDE_LEM = Q.store_thm 
+val EXCLUDE_LEM = Q.store_thm
 ("EXCLUDE_LEM",
  `!G x l. EXCLUDE G (x INSERT l) = EXCLUDE (EXCLUDE G l) {x}`,
  RW_TAC set_ss [FUN_EQ_THM,EXTENSION, EXCLUDE_DEF, IN_INSERT, NOT_IN_EMPTY]
@@ -195,8 +195,8 @@ val EXCLUDE_LEM = Q.store_thm
 val REACH_EXCLUDE = Q.store_thm
 ("REACH_EXCLUDE",
 `!G x. REACH (EXCLUDE G x) = RTC (\x' y. ~(x' IN x) /\ MEM y (G x'))`,
- RW_TAC set_ss [REACH_DEF, EXCLUDE_DEF] THEN AP_TERM_TAC 
-  THEN RW_TAC set_ss [FUN_EQ_THM] 
+ RW_TAC set_ss [REACH_DEF, EXCLUDE_DEF] THEN AP_TERM_TAC
+  THEN RW_TAC set_ss [FUN_EQ_THM]
   THEN RW_TAC set_ss []);
 
 (*---------------------------------------------------------------------------*)
@@ -206,16 +206,16 @@ val REACH_EXCLUDE = Q.store_thm
 
 val REACH_LEM1 = Q.store_thm
 ("REACH_LEM1",
-`!p G seen. 
+`!p G seen.
     ~(p IN seen) ==>
      (REACH (EXCLUDE G seen) p =
       p INSERT (REACH_LIST (EXCLUDE G (p INSERT seen)) (G p)))`,
- RW_TAC set_ss [EXTENSION,SPECIFICATION,REACH_EXCLUDE,REACH_LIST_DEF] 
-  THEN Cases_on `p = x` 
+ RW_TAC set_ss [EXTENSION,SPECIFICATION,REACH_EXCLUDE,REACH_LIST_DEF]
+  THEN Cases_on `p = x`
   THEN RW_TAC list_ss [RTC_RULES] THEN EQ_TAC THEN RW_TAC bool_ss [] THENL
- [Q.PAT_ASSUM `$~a` MP_TAC THEN POP_ASSUM MP_TAC 
-   THEN Q.SPEC_TAC (`x`,`q`) THEN Q.ID_SPEC_TAC `p` 
-   THEN HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN RW_TAC bool_ss [] 
+ [Q.PAT_ASSUM `$~a` MP_TAC THEN POP_ASSUM MP_TAC
+   THEN Q.SPEC_TAC (`x`,`q`) THEN Q.ID_SPEC_TAC `p`
+   THEN HO_MATCH_MP_TAC RTC_INDUCT_RIGHT1 THEN RW_TAC bool_ss []
    THEN Cases_on `p' = x'` THEN FULL_SIMP_TAC bool_ss [] THENL
    [METIS_TAC [RTC_RULES],
     Q.EXISTS_TAC `x''` THEN RW_TAC bool_ss [Once RTC_CASES2] THEN METIS_TAC[]],
@@ -225,7 +225,7 @@ val REACH_LEM1 = Q.store_thm
 
 (*---------------------------------------------------------------------------*)
 (* If y is reachable from x, but not z, then y is reachable from x on a path *)
-(* that does not include z.                                                  *) 
+(* that does not include z.                                                  *)
 (*---------------------------------------------------------------------------*)
 
 val REACH_LEM2 = Q.store_thm
@@ -243,29 +243,29 @@ val REACH_LEM2 = Q.store_thm
 
 val DFT_REACH_1 = Q.store_thm
 ("DFT_REACH_1",
- `!G f seen to_visit acc. 
+ `!G f seen to_visit acc.
     FINITE (Parents G) /\ (f = CONS) ==>
     !x. MEM x (DFT G f seen to_visit acc) ==>
       x IN (REACH_LIST G to_visit) \/ MEM x acc`,
- recInduct DFT_ind 
-   THEN RW_TAC set_ss [DFT_def, REACH_LIST_DEF, REACH_DEF, IN_DEF] 
-   THENL[METIS_TAC [], ALL_TAC] 
-   THEN POP_ASSUM MP_TAC THEN RW_TAC set_ss [] 
+ recInduct DFT_ind
+   THEN RW_TAC set_ss [DFT_def, REACH_LIST_DEF, REACH_DEF, IN_DEF]
+   THENL[METIS_TAC [], ALL_TAC]
+   THEN POP_ASSUM MP_TAC THEN RW_TAC set_ss []
    THEN POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN RW_TAC set_ss [] THENL
-   [IMP_RES_TAC RTC_RULES THEN METIS_TAC[], 
+   [IMP_RES_TAC RTC_RULES THEN METIS_TAC[],
     METIS_TAC[], METIS_TAC[RTC_RULES], METIS_TAC[]]);
 
 (*---------------------------------------------------------------------------*)
 (* If x is reachable from to_visit on a path that does not include the nodes *)
-(* in seen, then DFT visits x.                                               *) 
+(* in seen, then DFT visits x.                                               *)
 (*---------------------------------------------------------------------------*)
 
 val DFT_REACH_2 = Q.store_thm
 ("DFT_REACH_2",
- `!G f seen to_visit acc x. 
+ `!G f seen to_visit acc x.
     FINITE (Parents G) /\ (f = CONS) /\
-    x IN (REACH_LIST (EXCLUDE G (LIST_TO_SET seen)) to_visit) /\ 
-    ~MEM x seen 
+    x IN (REACH_LIST (EXCLUDE G (LIST_TO_SET seen)) to_visit) /\
+    ~MEM x seen
      ==>
       MEM x (DFT G f seen to_visit acc)`,
  recInduct DFT_ind THEN RW_TAC set_ss [DFT_def] THENL
@@ -288,10 +288,10 @@ val DFT_REACH_2 = Q.store_thm
                               `[]`, `visit_now::acc`] DFT_CONS],
      FIRST_ASSUM MATCH_MP_TAC THEN RW_TAC set_ss [] THEN
        Cases_on `x IN REACH (EXCLUDE G (LIST_TO_SET seen)) visit_now` THENL
-       [POP_ASSUM MP_TAC THEN RW_TAC set_ss [REACH_LEM1] THEN 
+       [POP_ASSUM MP_TAC THEN RW_TAC set_ss [REACH_LEM1] THEN
          FULL_SIMP_TAC set_ss [SPECIFICATION,REACH_LIST_DEF,LIST_TO_SET_THM]
          THEN METIS_TAC [],
-        FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_DEF,LIST_TO_SET_THM] 
+        FULL_SIMP_TAC set_ss [SPECIFICATION, REACH_LIST_DEF,LIST_TO_SET_THM]
         THENL [METIS_TAC [], METIS_TAC [REACH_LEM2, EXCLUDE_LEM]]]]]);
 
 (*---------------------------------------------------------------------------*)
@@ -300,9 +300,9 @@ val DFT_REACH_2 = Q.store_thm
 
 val DFT_REACH_THM = Q.store_thm
 ("DFT_REACH_THM",
- `!G to_visit. 
-    FINITE (Parents G) 
-      ==> 
+ `!G to_visit.
+    FINITE (Parents G)
+      ==>
     !x. x IN REACH_LIST G to_visit = MEM x (DFT G CONS [] to_visit [])`,
  RW_TAC bool_ss [EQ_IMP_THM] THENL
  [MATCH_MP_TAC DFT_REACH_2,IMP_RES_TAC DFT_REACH_1] THEN

@@ -546,7 +546,7 @@ structure Yices = struct
           (* case constants for data types (+ arguments) *)
           let val (cases, elem) =
                 case rands of
-                  [] => 
+                  [] =>
                     raise Feedback.mk_HOL_ERR "Yices" "translate_term"
                       "not a case constant (no operands)"
                 | (h::t) => (t,h)

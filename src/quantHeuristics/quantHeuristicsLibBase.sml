@@ -2026,7 +2026,7 @@ local
          val gc'' = get_implication_gc sys v t neg dneg i P thm'';
       in
          guess_collection_append gc gc''
-      end else gc 
+      end else gc
    in SOME gc' end handle HOL_ERR _ => NONE;
 in
 

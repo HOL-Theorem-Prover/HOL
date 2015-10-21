@@ -22,7 +22,7 @@ REPEAT STRIP_TAC THEN
 SELECT_ELIM_TAC THEN
 PROVE_TAC[])
 
-val some_var_bool_T = store_thm ("some_var_bool_T", 
+val some_var_bool_T = store_thm ("some_var_bool_T",
   ``(some x. x) = SOME T``,
   `(some x. x) = (some x. (x = T))` by REWRITE_TAC[] THEN
   ONCE_ASM_REWRITE_TAC[] THEN
@@ -30,7 +30,7 @@ val some_var_bool_T = store_thm ("some_var_bool_T",
   REWRITE_TAC[]
 )
 
-val some_var_bool_F = store_thm ("some_var_bool_F", 
+val some_var_bool_F = store_thm ("some_var_bool_F",
   ``(some x. ~x) = SOME F``,
   `(some x. ~x) = (some x. (x = F))` by REWRITE_TAC[] THEN
   ONCE_ASM_REWRITE_TAC[] THEN
@@ -69,7 +69,7 @@ Cases_on `x` THEN Cases_on `x'` THEN (
 (* Main Definitions                                *)
 (***************************************************)
 
-(* rows of a case-expression consist of a 
+(* rows of a case-expression consist of a
    - pattern p
    - guard g
    - rhs r
@@ -103,19 +103,19 @@ val PMATCH_def = Define `
 
 val _ = new_constant ("PMATCH_magic_1", type_of ``PMATCH``)
 
-val _ = new_constant ("PMATCH_ROW_magic_1", type_of 
+val _ = new_constant ("PMATCH_ROW_magic_1", type_of
    ``\abc. PMATCH_ROW (\x. FST (abc x)) (\x. FST (SND (abc x))) (\x. SND (SND ((abc x))))``)
 
-val _ = new_constant ("PMATCH_ROW_magic_0", type_of 
+val _ = new_constant ("PMATCH_ROW_magic_0", type_of
    ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
 
-val _ = new_constant ("PMATCH_ROW_magic_4", type_of 
+val _ = new_constant ("PMATCH_ROW_magic_4", type_of
    ``\abc. PMATCH_ROW (\x:unit. FST abc) (\x. FST (SND abc)) (\x. SND (SND (abc)))``)
 
-val _ = new_constant ("PMATCH_ROW_magic_2", type_of 
+val _ = new_constant ("PMATCH_ROW_magic_2", type_of
    ``\(pat:'a) (g:bool) (res:'b). (pat,g,res)``)
 
-val _ = new_constant ("PMATCH_ROW_magic_3", type_of 
+val _ = new_constant ("PMATCH_ROW_magic_3", type_of
    ``\(pat:'a) (res:'b). (pat,T,res)``)
 
 
@@ -235,8 +235,8 @@ SIMP_TAC std_ss [PMATCH_EVAL,
    each other by modifying or dropping rows are equivalent.
    We want to perform these proofs in an a way that can be
    automated nicely. In the following, we provide lemmata that
-   given an established equivalence, allow adding 
-   a row to both or a single side. 
+   given an established equivalence, allow adding
+   a row to both or a single side.
    By starting with an empty list and iterating, one can
    use this method to construct the desired correspondance. *)
 val PMATCH_EXTEND_BASE = store_thm ("PMATCH_EXTEND_BASE",
@@ -464,9 +464,9 @@ ASM_REWRITE_TAC[])
 
 
 
-(* A row is redundant, if (but not(!) only if) it is made 
+(* A row is redundant, if (but not(!) only if) it is made
    redundant by exactly one
-   row above. This is simple to test and often already very 
+   row above. This is simple to test and often already very
    helful. More fancy tests involving multiple rows follow below. *)
 val PMATCH_ROWS_DROP_REDUNDANT = store_thm (
   "PMATCH_ROWS_DROP_REDUNDANT",
@@ -538,7 +538,7 @@ Cases_on `?r. MEM r rows2 ∧ IS_SOME (r v)` THEN (
   Cases_on `r1 v` THEN (
     FULL_SIMP_TAC std_ss [EVERY_MEM]
   ) THEN
-  RES_TAC THEN 
+  RES_TAC THEN
   FULL_SIMP_TAC std_ss [],
 
   Cases_on `r1 v` THEN (
@@ -578,7 +578,7 @@ REPEAT STRIP_TAC THENL [
 ]);
 
 
-(* A common case for removing subsumed rows 
+(* A common case for removing subsumed rows
    is removing ARB rows that are introduced by
    translating a classical case-expression naively. *)
 val PMATCH_REMOVE_ARB = store_thm ("PMATCH_REMOVE_ARB",
@@ -631,11 +631,11 @@ val PMATCH_ROW_REDUNDANT_def = Define `
    This is done via IS_REDUNDANT_ROWS_INFO v rows c infos.
    If the n-th entry of list infos is true, then the n-th
    row of rows is redundant for input v. If it is not true,
-   it may or may not be redundant. 
+   it may or may not be redundant.
 
    The parameter c is used for accumulating information
    of all rows already in the info. If none of the rows
-   in rows matches, c holds. *) 
+   in rows matches, c holds. *)
 val IS_REDUNDANT_ROWS_INFO_def = Define `
   IS_REDUNDANT_ROWS_INFO v rows c infos <=> (
   (LENGTH rows = LENGTH infos) /\
@@ -881,18 +881,18 @@ METIS_TAC[])
 
 val STRONGEST_REDUNDANT_ROWS_INFO_AUX_def = Define `
   (STRONGEST_REDUNDANT_ROWS_INFO_AUX v [] p infos = (p, infos)) /\
-  (STRONGEST_REDUNDANT_ROWS_INFO_AUX v (r::rows) p infos = 
+  (STRONGEST_REDUNDANT_ROWS_INFO_AUX v (r::rows) p infos =
    STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows (p /\ (r v = NONE))
    (SNOC (p ==> (r v = NONE)) infos))`
-  
+
 val STRONGEST_REDUNDANT_ROWS_INFO_def = Define `
   STRONGEST_REDUNDANT_ROWS_INFO v rows =
   SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows T [])`
 
 val LENGTH_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "LENGTH_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
-  ``!v rows p infos. 
-      LENGTH (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) = 
+  ``!v rows p infos.
+      LENGTH (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) =
       (LENGTH rows + LENGTH infos)``,
 
 Induct_on `rows` THEN (
@@ -901,8 +901,8 @@ Induct_on `rows` THEN (
 
 val FST_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "FST_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
-  ``!v rows p infos. 
-      FST (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos) = 
+  ``!v rows p infos.
+      FST (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos) =
       (p /\ EVERY (\r. r v = NONE) rows)``,
 
 Induct_on `rows` THEN (
@@ -913,9 +913,9 @@ Induct_on `rows` THEN (
 
 val EL1_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "EL1_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
-  ``!v rows p infos i. 
+  ``!v rows p infos i.
       (i < LENGTH infos) ==>
-      (EL i (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) = 
+      (EL i (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) =
        EL i infos)``,
 
 Induct_on `rows` THEN (
@@ -925,9 +925,9 @@ Induct_on `rows` THEN (
 
 val EL2_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "EL2_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
-  ``!v rows p infos i. 
+  ``!v rows p infos i.
       (i >= LENGTH infos /\ i < LENGTH rows + LENGTH infos) ==>
-      (EL i (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) = 
+      (EL i (SND (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos)) =
        ((p /\ EVERY (\r. r v = NONE) (TAKE (i - LENGTH infos) rows)) ==> ((EL (i - LENGTH infos) rows) v = NONE)))``,
 
 GEN_TAC THEN
@@ -958,8 +958,8 @@ SIMP_TAC list_ss [STRONGEST_REDUNDANT_ROWS_INFO_def,
 
 val FST_STRONGEST_REDUNDANT_ROWS_INFO_AUX = store_thm (
   "FST_STRONGEST_REDUNDANT_ROWS_INFO_AUX",
-  ``!v rows p infos. 
-      FST (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos) = 
+  ``!v rows p infos.
+      FST (STRONGEST_REDUNDANT_ROWS_INFO_AUX v rows p infos) =
       (p /\ EVERY (\r. r v = NONE) rows)``,
 
 Induct_on `rows` THEN (
@@ -968,10 +968,10 @@ Induct_on `rows` THEN (
 
 val EL_STRONGEST_REDUNDANT_ROWS_INFO = store_thm (
   "EL_STRONGEST_REDUNDANT_ROWS_INFO",
-  ``!v rows p infos i. 
+  ``!v rows p infos i.
       (i < LENGTH rows) ==>
-      (EL i (STRONGEST_REDUNDANT_ROWS_INFO v rows) = 
-       ((EVERY (\r. r v = NONE) (TAKE i rows)) ==> 
+      (EL i (STRONGEST_REDUNDANT_ROWS_INFO v rows) =
+       ((EVERY (\r. r v = NONE) (TAKE i rows)) ==>
         ((EL i rows) v = NONE)))``,
 
 SIMP_TAC list_ss [STRONGEST_REDUNDANT_ROWS_INFO_def,
@@ -985,7 +985,7 @@ val STRONGEST_REDUNDANT_ROWS_INFO_OK = store_thm ("STRONGEST_REDUNDANT_ROWS_INFO
 
 SIMP_TAC std_ss [IS_REDUNDANT_ROWS_INFO_def,
   EL_STRONGEST_REDUNDANT_ROWS_INFO,
-  LENGTH_STRONGEST_REDUNDANT_ROWS_INFO, 
+  LENGTH_STRONGEST_REDUNDANT_ROWS_INFO,
   PMATCH_ROW_REDUNDANT_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `EL i rows v` THEN1 (
@@ -1005,7 +1005,7 @@ PROVE_TAC[])
 (* IN order to automate this procedure, we need a few
    simple, additional lemmata  *)
 
-val PMATCH_ROW_COND_EX_FULL_DEF = store_thm ("PMATCH_ROW_COND_EX_FULL_DEF", 
+val PMATCH_ROW_COND_EX_FULL_DEF = store_thm ("PMATCH_ROW_COND_EX_FULL_DEF",
  ``PMATCH_ROW_COND_EX i p g =
    ?x. (i = p x) /\ g x``,
 SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def] THEN
@@ -1041,16 +1041,16 @@ val PMATCH_ROW_COND_EX_IMP_REWRITE = store_thm ("PMATCH_ROW_COND_EX_IMP_REWRITE"
 SIMP_TAC std_ss [PMATCH_ROW_COND_EX_def, PMATCH_ROW_COND_def,
   GSYM LEFT_FORALL_IMP_THM]);
 
-(* Use this simple contradiction to bring 
-   PMATCH_IS_EXHAUSTIVE in the form we need for 
-   automation *)   
+(* Use this simple contradiction to bring
+   PMATCH_IS_EXHAUSTIVE in the form we need for
+   automation *)
 val PMATCH_IS_EXHAUSTIVE_CONTRADICT = store_thm (
   "PMATCH_IS_EXHAUSTIVE_CONTRADICT",
-``!v rs. 
+``!v rs.
   (EVERY (\r. r v = NONE) rs ==> F) ==>
   (PMATCH_IS_EXHAUSTIVE v rs)``,
 
-REPEAT STRIP_TAC THEN 
+REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def,
   combinTheory.o_DEF, quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE])
 
@@ -1063,12 +1063,12 @@ FULL_SIMP_TAC list_ss [PMATCH_IS_EXHAUSTIVE_def,
    we can via the following theorem introduce a fresh variable
    and add the connection between the old and the newly created
    var to the guard. *)
-val PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM = 
+val PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM =
   store_thm ("PMATCH_ROW_REMOVE_DOUBLE_BINDS_THM",
 ``!g p1 g1 r1 p2 g2 r2.
    ((!x y. (p1 x = p1 y) ==> (x = y)) /\
    (!x. (p2 (g x) = p1 x)) /\
-   (!x'. g2 x' = (?x. (x' = g x) /\ g1 x)) /\ 
+   (!x'. g2 x' = (?x. (x' = g x) /\ g1 x)) /\
    (!x. r2 (g x) = r1 x)) ==>
 
   (PMATCH_ROW p1 g1 r1 = PMATCH_ROW p2 g2 r2)``,
@@ -1081,7 +1081,7 @@ Cases_on `?x'. (p1 x' = x) ∧ g1 x'` THEN (
   ASM_REWRITE_TAC[optionTheory.OPTION_MAP_DEF]
 ) THEN
 SELECT_ELIM_TAC THEN ASM_REWRITE_TAC[] THEN
-SELECT_ELIM_TAC THEN 
+SELECT_ELIM_TAC THEN
 REPEAT STRIP_TAC THEN (
   METIS_TAC[]
 ))
@@ -1093,7 +1093,7 @@ REPEAT STRIP_TAC THEN (
 (***************************************************)
 
 (* We can eliminate guards by replacing them with true
-   and add the guard in form of a conditional. 
+   and add the guard in form of a conditional.
    Notice that all the rows after the guard are
    duplicated. We heavily rely on simplification
    of PMATCH to avoid a huge blowup of term-size,
@@ -1211,7 +1211,7 @@ val PMATCH_PRED_UNROLL_NIL = store_thm ("PMATCH_PRED_UNROLL_NIL",
   SIMP_TAC std_ss [PMATCH_def, PMATCH_INCOMPLETE_def]);
 
 val PMATCH_PRED_UNROLL_CONS = store_thm ("PMATCH_PRED_UNROLL_CONS",
-``!P v p g r rows. 
+``!P v p g r rows.
      (!x1 x2. (g x1 /\ g x2 /\ (p x1 = p x2)) ==> (x1 = x2)) ==>
 
      (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
@@ -1232,7 +1232,7 @@ Cases_on `?x. PMATCH_ROW_COND p g v x` THENL [
 ])
 
 val PMATCH_PRED_UNROLL_CONS_NO_INJ = store_thm ("PMATCH_PRED_UNROLL_CONS_NO_INJ",
-``!P v p g r rows.      
+``!P v p g r rows.
      (P (PMATCH v ((PMATCH_ROW p g r)::rows)) <=>
        ((?x. (p x = v) /\ g x) ==> ?x. (
          (v = p x) /\ g x /\ ((@x. PMATCH_ROW_COND p g v x) = x) /\

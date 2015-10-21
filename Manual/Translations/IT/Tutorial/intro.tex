@@ -1,35 +1,35 @@
 \chapter{Ottenere e Installare \HOL{}}
 \label{install}
 
-Questo capitolo descrive come ottenere il sistema \HOL{} e come installarlo. 
-Si assume in generale che si stia usando un qualche sistema Unix, 
+Questo capitolo descrive come ottenere il sistema \HOL{} e come installarlo.
+Si assume in generale che si stia usando un qualche sistema Unix,
 ma le istruzioni che seguono dovrebbero applicarsi {\it mutatis
-  mutandis\/} ad altre piattaforme. Unix non è un prerequisito per 
-usare il sistema. \HOL{} può essere lanciato su PC che utilizzano sistemi 
-operativi Windows da Windows~NT in avanti (cioè anche Windows~2000, XP e Vista 
+  mutandis\/} ad altre piattaforme. Unix non è un prerequisito per
+usare il sistema. \HOL{} può essere lanciato su PC che utilizzano sistemi
+operativi Windows da Windows~NT in avanti (cioè anche Windows~2000, XP e Vista
 sono supportati), esattamente come Macintosh che utilizzano MacOS~X.
 
 \section{Ottenere \HOL{}}
 
-Il sistema \HOL{} può essere scaricato da 
-\url{http://hol.sourceforge.net}. Lo schema di denominazione per le release di 
+Il sistema \HOL{} può essere scaricato da
+\url{http://hol.sourceforge.net}. Lo schema di denominazione per le release di
 \holn{} è $\langle${\it nome}$\rangle$-$\langle${\it
   numero}$\rangle$; la release descritta qui è \holnversion.
 
 \section{La mailing list {\tt hol-info}}
 
-La mailing list \texttt{hol-info} serve come un forum per discutere su 
-\HOL{} e diffondere notizie che lo riguardano. Se si desidera essere in questa 
-lista (cosa che si raccomanda a tutti gli utenti di \HOL), si visiti 
-\url{http://lists.sourceforge.net/lists/listinfo/hol-info}. Questa 
+La mailing list \texttt{hol-info} serve come un forum per discutere su
+\HOL{} e diffondere notizie che lo riguardano. Se si desidera essere in questa
+lista (cosa che si raccomanda a tutti gli utenti di \HOL), si visiti
+\url{http://lists.sourceforge.net/lists/listinfo/hol-info}. Questa
 pagina web può anche essere usata per annullare l'iscrizione alla mailing list.
 
 \section{Installare \HOL{}}
 
-Si assume che si siano ottenuti i sorgenti di \HOL{} e che il 
-file \texttt{tar} sia stato estratto in una directory \ml{hol}\footnote{Si può 
-scegliere un altro nome se lo si desidera; non è importante.}. E' probabile che 
-il contenuto di questa directory cambi nel tempo, ma dovrebbe 
+Si assume che si siano ottenuti i sorgenti di \HOL{} e che il
+file \texttt{tar} sia stato estratto in una directory \ml{hol}\footnote{Si può
+scegliere un altro nome se lo si desidera; non è importante.}. E' probabile che
+il contenuto di questa directory cambi nel tempo, ma dovrebbe
 contenere i seguenti:
 
 \begin{center}
@@ -51,24 +51,24 @@ contenere i seguenti:
 \end{tabular}
 \end{center}
 
-La sessione nel box di sotto mostra una directory di distribuzione tipica. 
-La distribuzione \HOL{} è stata messa su un PC che esegue Linux nella 
+La sessione nel box di sotto mostra una directory di distribuzione tipica.
+La distribuzione \HOL{} è stata messa su un PC che esegue Linux nella
 directory {\small\tt /home/mn200/hol/}.
 
-Tutte le sessioni in questa documentazione saranno mostrate in box con un 
-numero nell'angolo destro in alto. Questo numero indica se 
-la sessione è una nuova (quando il numero sarà {\small\sl 1}) o 
+Tutte le sessioni in questa documentazione saranno mostrate in box con un
+numero nell'angolo destro in alto. Questo numero indica se
+la sessione è una nuova (quando il numero sarà {\small\sl 1}) o
 la continuazione di una sessione iniziata in un box precedente.
-Si assume che box numerati consecutivamente siano parte di una singola 
-sessione continua. Il prompt Unix per la sessione è 
-\texttt{\small \dol}, così le linee che iniziano con questo prompt sono state digitate 
-dall'utente. Dopo essere entrato nel sistema \HOL{} (si veda di sotto), all'utente è presentato 
-il prompt {\small\verb|-|} per inserire un'espressione o un comando del 
-meta-linguaggio \ML\ di \HOL{}; le linee che cominciano con questo prompt sono dunque espressioni o 
+Si assume che box numerati consecutivamente siano parte di una singola
+sessione continua. Il prompt Unix per la sessione è
+\texttt{\small \dol}, così le linee che iniziano con questo prompt sono state digitate
+dall'utente. Dopo essere entrato nel sistema \HOL{} (si veda di sotto), all'utente è presentato
+il prompt {\small\verb|-|} per inserire un'espressione o un comando del
+meta-linguaggio \ML\ di \HOL{}; le linee che cominciano con questo prompt sono dunque espressioni o
 dichiarazioni \ML. Le linee che non cominciano con \texttt{\small
-  \$} o {\small\verb|-|} sono output del sistema. Saltuariamente, l'output 
-di sistema sarà rimpiazzato con una linea contenente {\small\verb|...|} quando 
-è di interesse minimo. Il meta-linguaggio \ML{} è introdotto nel 
+  \$} o {\small\verb|-|} sono output del sistema. Saltuariamente, l'output
+di sistema sarà rimpiazzato con una linea contenente {\small\verb|...|} quando
+è di interesse minimo. Il meta-linguaggio \ML{} è introdotto nel
 Capitolo~\ref{ML}.
 
 \setcounter{sessioncount}{0}
@@ -82,13 +82,13 @@ README     doc/  help/      sigobj/  tools/
 \end{verbatim}
 \end{session}
 
-Ora sarà necessario ricostruire \HOL{} dai sorgenti\footnote{ E' 
-  possibile che sistemi pre-costruiti siano disponibili a breve dalla 
+Ora sarà necessario ricostruire \HOL{} dai sorgenti\footnote{ E'
+  possibile che sistemi pre-costruiti siano disponibili a breve dalla
 	pagina web menzionata di sopra.}.
 
-Prima di iniziare è necessario avere una versione attuale di Moscow~ML o 
-Poly/ML\footnote{Poly/ML non può essere usato con HOL su Windows.}. Nel 
-caso di Moscow~ML, bisogna avere la versione 2.01. Moscow~ML è disponibile 
+Prima di iniziare è necessario avere una versione attuale di Moscow~ML o
+Poly/ML\footnote{Poly/ML non può essere usato con HOL su Windows.}. Nel
+caso di Moscow~ML, bisogna avere la versione 2.01. Moscow~ML è disponibile
 sul web all'indirizzo \url{http://www.itu.dk/~sestoft/mosml.html}.
 Poly/ML è disponibile all'indirizzo \url{http://polyml.org}.
 
@@ -99,7 +99,7 @@ Un esempio di comando di inizializzazione di \texttt{LD\_LIBRARY\_PATH}  (in un 
    declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib $
 \end{verbatim}
 
-Quando il proprio sistema ML è installato, e ci si trova nella directory radice della distribuzione, il passo successivo è eseguire \texttt{smart-configure}. 
+Quando il proprio sistema ML è installato, e ci si trova nella directory radice della distribuzione, il passo successivo è eseguire \texttt{smart-configure}.
 Con Moscow~ML, questo equivale a:
 
 \begin{session}
@@ -128,17 +128,17 @@ Se si usa Poly/ML, allora si scrive
 \end{verbatim}
 al suo posto.
 
-Assumendo che il processo di configurazione non venga interrotto, questo 
-costruirà i programmi \texttt{Holmake} e \texttt{build}, e li sposterà 
-nella directory \texttt{hol/bin}. Se qualcosa va storto in  questo 
+Assumendo che il processo di configurazione non venga interrotto, questo
+costruirà i programmi \texttt{Holmake} e \texttt{build}, e li sposterà
+nella directory \texttt{hol/bin}. Se qualcosa va storto in  questo
 passo, si consulti la Sezione~\ref{sec:editting-configure} di sotto.
 
-Il passo successivo è eseguire il programma \texttt{build}. Questo dovrebbe 
-risultare in una grande quantità di output mentre il codice del sistema viene compilato 
-e le teorie costruite. Alla fine è prodotto un sistema \HOL{}\footnote{Sono 
+Il passo successivo è eseguire il programma \texttt{build}. Questo dovrebbe
+risultare in una grande quantità di output mentre il codice del sistema viene compilato
+e le teorie costruite. Alla fine è prodotto un sistema \HOL{}\footnote{Sono
   prodotti quattro eseguibili \HOL{}: \textsf{hol}, \textsf{hol.noquote},
-  \textsf{hol.bare} e \textsf{hol.bare.noquote}. Il primo di questi 
-	sarà usato per la maggior parte degli esempi nel \TUTORIAL{}.} nella 
+  \textsf{hol.bare} e \textsf{hol.bare.noquote}. Il primo di questi
+	sarà usato per la maggior parte degli esempi nel \TUTORIAL{}.} nella
 directory \texttt{bin/}.
 
 \begin{session}
@@ -157,15 +157,15 @@ Hol built successfully.
 \subsection{Sovrascrivere \texttt{smart-configure}}
 \label{sec:editting-configure}
 
-Se \texttt{smart-configure} non è in rado di indovinare i valori corretti per i 
-vari parametri (\texttt{holdir}, \texttt{OS} \etc) allora si può 
-creare un file richiamato per fornire i valori corretti. Con Moscow~ML, questo 
-dovrebbe essere \texttt{config-override} nella directory radice della distribuzione 
-HOL. Con Poly/ML, questo dovrebbe essere \texttt{poly-includes.ML} 
-nella directory \texttt{tools-poly}. In questo file, si specifichi il 
-valore corretto per il parametro appropriato fornendo un binding ML 
-per esso. A tutte le variabili eccetto \texttt{dynlib\_available} deve essere data 
-una stringa come valore possibile, mentre \texttt{dynlib\_available} deve essere 
+Se \texttt{smart-configure} non è in rado di indovinare i valori corretti per i
+vari parametri (\texttt{holdir}, \texttt{OS} \etc) allora si può
+creare un file richiamato per fornire i valori corretti. Con Moscow~ML, questo
+dovrebbe essere \texttt{config-override} nella directory radice della distribuzione
+HOL. Con Poly/ML, questo dovrebbe essere \texttt{poly-includes.ML}
+nella directory \texttt{tools-poly}. In questo file, si specifichi il
+valore corretto per il parametro appropriato fornendo un binding ML
+per esso. A tutte le variabili eccetto \texttt{dynlib\_available} deve essere data
+una stringa come valore possibile, mentre \texttt{dynlib\_available} deve essere
 \texttt{true} o \texttt{false}, Così, si potrebbe scrivere
 
 \begin{session}
@@ -176,45 +176,45 @@ val dynlib_available = false;
 \end{verbatim}
 \end{session}
 
-Il file \texttt{config-override} ha bisogno di fornire soli i valori per quelle 
+Il file \texttt{config-override} ha bisogno di fornire soli i valori per quelle
 variabili che devono essere sovra scritte.
 
-Con questo file nel posto corretto, il programma \texttt{smart-configure} userà 
-i valori li specificati piuttosto che quelli che tenta di calcolare 
-da solo. Il valore dato per la variabile \texttt{OS} deve essere uno tra 
+Con questo file nel posto corretto, il programma \texttt{smart-configure} userà
+i valori li specificati piuttosto che quelli che tenta di calcolare
+da solo. Il valore dato per la variabile \texttt{OS} deve essere uno tra
 \texttt{"unix"}, \texttt{"linux"}, \texttt{"solaris"},
-\texttt{"macosx"} or \texttt{"winNT"}\footnote{La stringa 
+\texttt{"macosx"} or \texttt{"winNT"}\footnote{La stringa
   \texttt{"winNT"} è usata per sistemi operativi Microsoft Windows
-	recenti almeno quanto Windows~NT. Questi includono 
+	recenti almeno quanto Windows~NT. Questi includono
 	Windows~2000, XP and Vista.}.
 
-In circostanze estreme è possibile modificare il file 
-\texttt{tools/configure.sml} da soli per impostare le variabili di configurazione 
-direttamente. (Se si sta usando Poly/ML, bisogna invece 
-modificare \texttt{tools-poly/configure.sml}.) All'inizio di questo file 
-sono presenti varie dichiarazioni SML incomplete, ma commentate. 
-Sarà necessario decommentare questa sezione (rimuovendo i segni \texttt{(*} e 
-\texttt{*)}), e fornire valori appropriati. Tutte le stringhe devono 
+In circostanze estreme è possibile modificare il file
+\texttt{tools/configure.sml} da soli per impostare le variabili di configurazione
+direttamente. (Se si sta usando Poly/ML, bisogna invece
+modificare \texttt{tools-poly/configure.sml}.) All'inizio di questo file
+sono presenti varie dichiarazioni SML incomplete, ma commentate.
+Sarà necessario decommentare questa sezione (rimuovendo i segni \texttt{(*} e
+\texttt{*)}), e fornire valori appropriati. Tutte le stringhe devono
 essere incluse tra doppie virgolette.
 
-Il valore \texttt{holdir} deve essere il nome della directory principale 
-elencata nella prima sessione di sopra. Il valore \texttt{OS} dovrebbe essere 
+Il valore \texttt{holdir} deve essere il nome della directory principale
+elencata nella prima sessione di sopra. Il valore \texttt{OS} dovrebbe essere
 una delle stringhe specificate nel commento che accompagna quella sezione.
 
-Quando si lavora con Moscow~ML, il valore \texttt{mosmldir} deve essere il 
-nome della directory che contiene i binari di Moscow~ML 
-(\texttt{mosmlc}, \texttt{mosml}, \texttt{mosmllex} ecc.). Quando 
-si lavora con Poly/ML, la stringa \texttt{poly} deve essere il percorso 
-all'eseguibile \texttt{poly} che inizia una sessione \ML{} interattiva. 
-Il valore \texttt{polymllibdir} deve essere un percorso a una directory che contiene 
+Quando si lavora con Moscow~ML, il valore \texttt{mosmldir} deve essere il
+nome della directory che contiene i binari di Moscow~ML
+(\texttt{mosmlc}, \texttt{mosml}, \texttt{mosmllex} ecc.). Quando
+si lavora con Poly/ML, la stringa \texttt{poly} deve essere il percorso
+all'eseguibile \texttt{poly} che inizia una sessione \ML{} interattiva.
+Il valore \texttt{polymllibdir} deve essere un percorso a una directory che contiene
 il file \texttt{libpolymain.a}.
 
-I valori successivi (\texttt{CC} e \texttt{GNUMAKE}) sono necessari per 
-componenti del sistema ``opzionali''. La prima da una stringa 
-appropriata per invocare il compilatore C di sistema, e la seconda 
+I valori successivi (\texttt{CC} e \texttt{GNUMAKE}) sono necessari per
+componenti del sistema ``opzionali''. La prima da una stringa
+appropriata per invocare il compilatore C di sistema, e la seconda
 specifica un programma \textsf{make}.
 
-Dopo la modifica, le righe di \texttt{tools/configure.sml} di sopra saranno 
+Dopo la modifica, le righe di \texttt{tools/configure.sml} di sopra saranno
 qualcosa di simile a :
 
 \begin{session}
@@ -233,8 +233,8 @@ val GNUMAKE  = "gnumake"; (* for robdd library                             *)
 \end{alltt}
 \end{session}
 
-\noindent Ora, a questo livello (nella directory \texttt{tools} o 
-\texttt{tools-poly}) o al livello di sopra, bisogna passare lo script 
+\noindent Ora, a questo livello (nella directory \texttt{tools} o
+\texttt{tools-poly}) o al livello di sopra, bisogna passare lo script
 \texttt{configure.sml} all'interprete \ML{} (\ie,
 \texttt{mosml} o \texttt{poly}).  Per esempio,
 
