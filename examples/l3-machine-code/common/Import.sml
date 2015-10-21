@@ -642,9 +642,11 @@ local
    val mk_drop      = mk_uncurry ``\(x, l:'a list). list$DROP x l``
    val mk_update    = mk_uncurry ``\(e, x, l:'a list). list$LUPDATE e x l``
    val mk_element   = mk_uncurry ``\(x, l:'a list). list$EL x l``
-   val mk_remove    = mk_uncurry ``\(l1, l2). list$FILTER (\x. ~MEM x l1) l2``
-   val mk_remove_e  = mk_uncurry ``\(l1, l2). list$FILTER (\x. MEM x l1) l2``
    val mk_indexof   = mk_uncurry ``\(x:'a, l). list$INDEX_OF x l``
+   val mk_remove    = mk_uncurry ``\(l1:'a list, l2).
+                                      list$FILTER (\x. ~MEM x l1) l2``
+   val mk_remove_e  = mk_uncurry ``\(l1:'a list, l2).
+                                      list$FILTER (\x. MEM x l1) l2``
 
    val mk_word_min  = mk_uncurry ``\(m:'a word, n). words$word_min m n``
    val mk_word_max  = mk_uncurry ``\(m:'a word, n). words$word_max m n``
