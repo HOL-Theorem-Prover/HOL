@@ -29,6 +29,11 @@ New features:
   We removed `prim_constant_definition` from the kernel, but kept `prim_specification` because the new derivation of `new_specification` uses pairs.
   ([Github pull-req](https://github.com/HOL-Theorem-Prover/HOL/pull/201))
 
+- Various commands for moving over and selecting HOL tactics in the emacs mode have been improved.
+  We have also added a new command `hol-find-eval-next-tactic` (bound to `M-h M-e` by default), which selects and highlights the next tactic in the source text, and then applies it to the current goal in the `*HOL*` buffer.
+  This shortcuts the current idiom, which requires the tactic to be highlighted manually, and then applied *via* `M-h e`.
+  (The advantage of the latter is that one can select specific tactic sequences to be applied all at once.)
+
 Bugs fixed:
 -----------
 
