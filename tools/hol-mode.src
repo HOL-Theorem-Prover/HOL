@@ -2064,6 +2064,9 @@ second is to show the new term.
 (define-key global-map [menu-bar hol-menu hol-goalstack apply-tactic]
    '("Apply tactic" . copy-region-as-hol-tactic))
 
+(define-key global-map [menu-bar hol-menu hol-goalstack new-termination-goal]
+  '("New termination goal" . hol-start-termination-proof))
+
 (define-key global-map [menu-bar hol-menu hol-goalstack new-goal]
    '("New goal" . hol-do-goal))
 
