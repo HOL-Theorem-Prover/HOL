@@ -336,6 +336,34 @@ val mapM_cons = store_thm("mapM_cons",
   ``mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))``,
   BasicProvers.SRW_TAC[][mapM_def,sequence_def])
 
+(*---------------------------------------------------------------------------*)
+(* Support for termination condition extraction for recursive monadic defns. *)
+(*---------------------------------------------------------------------------*)
+
+val BIND_CONG = Q.store_thm
+("BIND_CONG",
+ `!a b c d. 
+   (a = c) /\
+   (!x y s. (c s = (x,y)) ==> (b x y = d x y))
+    ==> 
+   (BIND a b = BIND c d)`,
+ SRW_TAC [] [BIND_DEF,pairTheory.UNCURRY_VAR,combinTheory.o_DEF,FUN_EQ_THM]
+  THEN FIRST_ASSUM MATCH_MP_TAC
+  THEN METIS_TAC [pairTheory.PAIR]);
+
+val _ = DefnBase.export_cong "BIND_CONG";
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = DefnBase.add_cong BIND_CONG;";
+   S "val _ = TotalDefn.termination_simps := (!TotalDefn.termination_simps @ [UNIT_DEF]);"
+ end)};
+
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory ()
+val _ = export_theory ();
+
