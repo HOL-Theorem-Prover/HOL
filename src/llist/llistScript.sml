@@ -184,6 +184,14 @@ val llist_CASES = store_thm(
     SRW_TAC [][llist_repabs']
   ]);
 
+fun llist_CASE_TAC tm = STRUCT_CASES_TAC (SPEC tm llist_CASES) ;
+
+val LTL_HD_11 = Q.store_thm ("LTL_HD_11",
+  `(LTL_HD ll1 = LTL_HD ll2) ==> (ll1 = ll2)`,
+  llist_CASE_TAC ``ll1 : 'a llist`` THEN
+  llist_CASE_TAC ``ll2 : 'a llist`` THEN
+  ASM_SIMP_TAC std_ss [LTL_HD_LNIL, LTL_HD_LCONS]) ;
+
 val LHD_THM = store_thm(
   "LHD_THM",
   ``(LHD LNIL = NONE) /\ (!h t. LHD (LCONS h t) = SOME h)``,
@@ -301,6 +309,17 @@ val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE",
     SIMP_TAC std_ss [FUNPOW, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC,
       pair_CASE_def, FUNPOW_BIND_NONE, OPTION_MAP_DEF, UNCURRY_VAR] THEN
     FIRST_ASSUM (MATCH_ACCEPT_TAC)) ;
+
+(* LUNFOLD is a sort of inverse to LTL_HD *)
+val lu1 = BETA_RULE 
+  (ISPECL [``LTL_HD``, ``(\x. x) : 'a llist -> 'a llist``] LUNFOLD_UNIQUE) ;
+
+val LUNFOLD_LTL_HD = Q.store_thm ("LUNFOLD_LTL_HD",
+  `LUNFOLD LTL_HD ll = ll`,
+  irule EQ_SYM THEN irule lu1 THEN
+  GEN_TAC THEN irule LTL_HD_11 THEN
+  Cases_on `LTL_HD x` THEN
+  SIMP_TAC std_ss [LTL_HD_LNIL, pair_CASE_def, LTL_HD_LCONS]) ;
 
 (*---------------------------------------------------------------------------*)
 (* Co-recursion theorem for lazy lists                                       *)
