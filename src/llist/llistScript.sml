@@ -7,6 +7,7 @@ open BasicProvers boolSimps markerLib;
 
 val _ = new_theory "llist";
 
+val NOT_SUC = numTheory.NOT_SUC ;
 
 (* ----------------------------------------------------------------------
     The representing type is :num -> 'a option
@@ -64,6 +65,23 @@ val llist_rep_LCONS = store_thm(
   SRW_TAC [][LCONS, GSYM llist_repabs] THEN
   MATCH_MP_TAC (CONJUNCT2 lrep_ok_rules) THEN SRW_TAC [][]);
 
+val llist_rep_LNIL = Q.store_thm ("llist_rep_LNIL",
+  `llist_rep LNIL = \n. NONE`,
+  SIMP_TAC std_ss [LNIL, lrep_ok_rules, llist_repabs']) ;
+
+val LTL_HD_def = Define `LTL_HD ll = case llist_rep ll 0 of NONE => NONE
+  | SOME h => SOME (llist_abs (llist_rep ll o SUC), h)` ;
+
+val LTL_HD_LNIL = Q.store_thm ("LTL_HD_LNIL", `LTL_HD LNIL = NONE`,
+  SIMP_TAC std_ss [LTL_HD_def, llist_rep_LNIL]) ;
+
+val lr_eta = Q.prove (`(λn. llist_rep t n) = llist_rep t`, irule ETA_AX) ;
+
+val LTL_HD_LCONS = Q.store_thm ("LTL_HD_LCONS",
+  `LTL_HD (LCONS h t) = SOME (t, h)`,
+  SIMP_TAC std_ss [LTL_HD_def, llist_rep_LCONS, combinTheory.o_ABS_L,
+    NOT_SUC, lr_eta, llist_absrep]) ;
+
 val LHD = new_definition("LHD", ``LHD ll = llist_rep ll 0``);
 val LTL = new_definition(
   "LTL",
@@ -71,6 +89,17 @@ val LTL = new_definition(
                NONE => NONE
              | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
 );
+
+val LTL_HD_HD = Q.store_thm ("LTL_HD_HD", 
+  `LHD ll = OPTION_MAP SND (LTL_HD ll)`,
+  Cases_on `llist_rep ll 0` THEN
+  ASM_SIMP_TAC std_ss [LTL_HD_def, LHD]) ;
+
+val LTL_HD_TL = Q.store_thm ("LTL_HD_TL", 
+  `LTL ll = OPTION_MAP FST (LTL_HD ll)`,
+  Cases_on `llist_rep ll 0` THEN
+  ASM_SIMP_TAC std_ss [LTL_HD_def, LTL, LHD] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [FUN_EQ_THM, arithmeticTheory.ADD1]) ;
 
 val LHD_LCONS = store_thm(
   "LHD_LCONS",
