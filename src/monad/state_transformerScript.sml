@@ -351,8 +351,6 @@ val BIND_CONG = Q.store_thm
   THEN FIRST_ASSUM MATCH_MP_TAC
   THEN METIS_TAC [pairTheory.PAIR]);
 
-val _ = DefnBase.export_cong "BIND_CONG";
-
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
