@@ -412,34 +412,18 @@ val llist_Axiom_1 = Q.store_thm
             case f x
              of NONE => LNIL
               | SOME (a,b) => LCONS b (g a)`,
- GEN_TAC THEN
- STRIP_ASSUME_TAC (SPEC_ALL llist_Axiom) THEN
- Q.EXISTS_TAC `g` THEN
- GEN_TAC THEN (REPEAT CASE_TAC) THENL [
-   METIS_TAC [LHD_EQ_NONE,optionTheory.OPTION_MAP_DEF],
-   SRW_TAC [][LHDTL_EQ_SOME]
- ]);
-
+  GEN_TAC THEN Q.EXISTS_TAC `LUNFOLD f` THEN
+  GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD) ;
+  
 val llist_Axiom_1ue = store_thm(
   "llist_Axiom_1ue",
   ``!f. ?!g. !x. g x = case f x
                        of NONE => LNIL
                         | SOME (a,b) => b ::: g a``,
-  GEN_TAC THEN
-  STRIP_ASSUME_TAC
-    (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] (SPEC_ALL llist_ue_Axiom)) THEN
-  SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
-    Q.EXISTS_TAC `g` THEN GEN_TAC THEN REPEAT CASE_TAC THENL [
-      METIS_TAC [LHD_EQ_NONE,optionTheory.OPTION_MAP_DEF],
-      SRW_TAC [][LHDTL_EQ_SOME]
-    ],
-    MAP_EVERY Q.X_GEN_TAC [`f1`, `f2`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ONCE_ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
-    `(f x = NONE) \/  (?a b. f x = SOME(a,b))`
-       by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES] THEN
-    POP_ASSUM SUBST1_TAC THEN SIMP_TAC (srw_ss()) []
-  ]);
+  SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN REPEAT STRIP_TAC 
+  THENL [
+    Q.EXISTS_TAC `LUNFOLD f` THEN GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD,
+    IMP_RES_TAC LUNFOLD_UNIQUE THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] ]) ;
 
 (* ----------------------------------------------------------------------
     Another consequence of the finality theorem is the principle of
