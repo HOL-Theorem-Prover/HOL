@@ -3,17 +3,21 @@ struct
 
 open HolKernel boolLib Parse bossLib lcsymtacs
 
-open BasicProvers boolSimps markerLib;
+open BasicProvers boolSimps markerLib optionTheory ;
 
 val _ = new_theory "llist";
 
 val NOT_SUC = numTheory.NOT_SUC ;
+val SUC_SUB1 = arithmeticTheory.SUC_SUB1 ;
+val FUNPOW = arithmeticTheory.FUNPOW ;
+val pair_CASE_def = pairTheory.pair_CASE_def ;
+val UNCURRY_VAR = pairTheory.UNCURRY_VAR ;
 
 (* ----------------------------------------------------------------------
     The representing type is :num -> 'a option
    ---------------------------------------------------------------------- *)
 
-val (lrep_ok_rules, lrep_ok_coinduction, lrep_ok_cases) = Hol_coreln`
+val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
    (lrep_ok (\n. NONE))
 /\ (lrep_ok t ==> lrep_ok (\n. if n = 0 then SOME h else t(n - 1)))
 `;
@@ -50,6 +54,30 @@ val llist_rep_11 = prove(
   POP_ASSUM (MP_TAC o AP_TERM ``llist_abs``) THEN SRW_TAC [][llist_absrep]);
 
 val llist_repabs' = #1 (EQ_IMP_RULE (SPEC_ALL llist_repabs))
+
+val llist_if_rep_abs = Q.prove (
+  `(f = llist_rep a) ==> (a = llist_abs f)`,
+  DISCH_TAC THEN ASM_REWRITE_TAC [repabs_fns]) ;
+
+val FUNPOW_BIND_NONE = Q.prove (
+  `!n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE`,
+  Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
+
+val lrep_ok_MAP_FUNPOW_BIND = Q.prove (
+  `lrep_ok (\n. OPTION_MAP f (FUNPOW (\m. OPTION_BIND m g) n fz))`,
+  irule lrep_ok_coind THEN
+  Q.EXISTS_TAC `\abs. ?fz. abs =
+    \n. OPTION_MAP f (FUNPOW (λm. OPTION_BIND m g) n fz)` THEN
+  SIMP_TAC bool_ss [] THEN
+  REPEAT STRIP_TAC THEN1 (Q.EXISTS_TAC `fz` THEN REFL_TAC) THEN
+  Cases_on `fz` THEN1 ASM_REWRITE_TAC [FUNPOW_BIND_NONE, OPTION_MAP_DEF] THEN
+  DISJ2_TAC THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] THEN
+  Q.EXISTS_TAC `f x` THEN
+  Q.EXISTS_TAC `\i. OPTION_MAP f (FUNPOW (\m. OPTION_BIND m g) i (g x))` THEN
+  REPEAT STRIP_TAC THEN1
+   (Cases_on `n` THEN ASM_SIMP_TAC bool_ss [FUNPOW,
+     NOT_SUC, SUC_SUB1, OPTION_BIND_def, OPTION_MAP_DEF]) THEN
+  Q.EXISTS_TAC `g x` THEN SIMP_TAC bool_ss []) ;
 
 val LNIL = new_definition("LNIL", ``LNIL = llist_abs (\n. NONE)``);
 val LCONS = new_definition(
@@ -237,6 +265,44 @@ val LNTH_THM = store_thm(
 val _ = export_rewrites ["LNTH_THM"]
 
 (*---------------------------------------------------------------------------*)
+(* LUNFOLD by definition                                                     *)
+(*                                                                           *)
+(* Formerly we got LUNFOLD by Skolemization using llist_Axiom_1              *)
+(* which was proved independently                                            *)
+(*---------------------------------------------------------------------------*)
+
+val LUNFOLD_def = Define `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
+  (FUNPOW (\m. OPTION_BIND m (UNCURRY (K o f))) n (f z)))` ;
+
+val LUNFOLD = Q.store_thm ("LUNFOLD", `!f x. LUNFOLD f x =
+     case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1`,
+  REPEAT GEN_TAC THEN 
+  REWRITE_TAC [LUNFOLD_def] THEN
+  irule (GSYM llist_if_rep_abs) THEN
+  Cases_on `f x` THEN
+  ASM_SIMP_TAC std_ss [llist_rep_LCONS, llist_rep_LNIL, pair_CASE_def,
+    FUNPOW_BIND_NONE, OPTION_MAP_DEF, FUN_EQ_THM] THEN
+  GEN_TAC THEN Cases_on `n` THEN
+  SIMP_TAC std_ss [FUNPOW, OPTION_MAP_DEF, NOT_SUC, UNCURRY_VAR,
+    SUC_SUB1, OPTION_BIND_def, llist_repabs', lrep_ok_MAP_FUNPOW_BIND]) ;
+
+(* this is the uniqueness in the definition of llist as final coalgebra *)
+val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE", 
+   `!f g. (!x. g x = case f x of NONE => [||] 
+                       | SOME (v1,v2) => v2:::g v1) ==>
+	   (!y. g y = LUNFOLD f y)`,
+    REWRITE_TAC [LUNFOLD_def] THEN
+    REPEAT STRIP_TAC THEN irule llist_if_rep_abs THEN
+    SIMP_TAC bool_ss [FUN_EQ_THM] THEN
+    GEN_TAC THEN Q.SPEC_TAC (`y`, `y`) THEN
+    Induct_on `n` THEN GEN_TAC THEN
+    ONCE_ASM_REWRITE_TAC [] THEN
+    Cases_on `f y` THEN
+    SIMP_TAC std_ss [FUNPOW, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC,
+      pair_CASE_def, FUNPOW_BIND_NONE, OPTION_MAP_DEF, UNCURRY_VAR] THEN
+    FIRST_ASSUM (MATCH_ACCEPT_TAC)) ;
+
+(*---------------------------------------------------------------------------*)
 (* Co-recursion theorem for lazy lists                                       *)
 (*---------------------------------------------------------------------------*)
 
@@ -256,7 +322,7 @@ val llist_ue_Axiom = store_thm(
      by (REPEAT GEN_TAC THEN
          Q_TAC SUFF_TAC `!g. (?x. g = (\n. h f n x)) ==> lrep_ok g`
                THEN1 SRW_TAC [DNF_ss][] THEN
-         HO_MATCH_MP_TAC lrep_ok_coinduction THEN
+         HO_MATCH_MP_TAC lrep_ok_coind THEN
          SRW_TAC [][] THEN
          Cases_on `f x` THENL [
            DISJ1_TAC THEN SRW_TAC [][FUN_EQ_THM] THEN
@@ -355,26 +421,6 @@ val llist_Axiom_1ue = store_thm(
        by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES] THEN
     POP_ASSUM SUBST1_TAC THEN SIMP_TAC (srw_ss()) []
   ]);
-
-(*---------------------------------------------------------------------------*)
-(* From which we get LUNFOLD by Skolemization :                              *)
-(*                                                                           *)
-(* LUNFOLD                                                                   *)
-(*    |- !f x. LUNFOLD f x =                                                 *)
-(*              case f x                                                     *)
-(*               of NONE => [||]                                             *)
-(*                | SOME (v1,v2) => v2:::LUNFOLD f v1                        *)
-(*---------------------------------------------------------------------------*)
-
-val LUNFOLD = new_specification
-("LUNFOLD", ["LUNFOLD"],
-  Q.prove(
-    `?LUNFOLD.
-      !f x. LUNFOLD f x =
-             case f x
-              of NONE => [||]
-               | SOME (v1,v2) => v2:::LUNFOLD f v1`,
-   METIS_TAC [llist_Axiom_1]));
 
 (* ----------------------------------------------------------------------
     Another consequence of the finality theorem is the principle of
