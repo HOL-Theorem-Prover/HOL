@@ -4,10 +4,10 @@ INCLUDES = ../../common ../prog \
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
-HOLHEAP = local-hol-heap
+HOLHEAP = arm8-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../prog/arm8_progLib $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
+BARE_THYS = ../prog/arm8_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
