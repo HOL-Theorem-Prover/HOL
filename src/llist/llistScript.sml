@@ -810,11 +810,10 @@ val _ = export_rewrites ["LLENGTH_THM"]
 
 val LLENGTH_0 = Q.store_thm("LLENGTH_0[simp]",
   `(LLENGTH x = SOME 0) <=> (x = [||])`,
-  reverse EQ_TAC >- simp[LLENGTH_THM] >>
-  METIS_TAC[LLENGTH_THM,llist_CASES,
-            numeralTheory.numeral_distrib,
-            optionTheory.OPTION_MAP_EQ_SOME,
-            arithmeticTheory.NOT_SUC_LESS_EQ_0]);
+  llist_CASE_TAC ``x : 'a llist`` THEN
+  SIMP_TAC bool_ss [LLENGTH_THM, LCONS_NOT_NIL] THEN
+  Cases_on `LLENGTH t` THEN
+  SIMP_TAC std_ss [OPTION_MAP_DEF, NOT_SUC]) ;
 
 val LFINITE_HAS_LENGTH = store_thm(
   "LFINITE_HAS_LENGTH",
