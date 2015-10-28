@@ -352,6 +352,20 @@ val llist_Axiom_1ue = store_thm(
 
 val eq_imp_lem = Q.prove (`(p = q) ==> p ==> q`, DECIDE_TAC)  ;
 
+fun OPTION_CASES_TAC t = STRUCT_CASES_TAC (ISPEC t option_nchotomy);
+
+(* this rather horrible way of proceeding is because in the 
+  experimental kernel (build -expk) the step 
+  SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM]
+  turns \f. xxx = \f. yyy to !f'. xxx = yyy,
+  whereas the ordinary kernel gives !f. xxx = yyy *)
+ 
+fun asgtac tac (asl, goal) = 
+  let val (lt, rt) = dest_eq goal ;
+    val (gx, oc) = dest_eq lt ;
+    val fx = rand (rator (rator oc)) ;
+  in tac (gx, fx) (asl, goal) end ;
+
 val llist_ue_Axiom = store_thm(
   "llist_ue_Axiom",
   ``!f : 'a -> ('a # 'b) option.
@@ -362,9 +376,9 @@ val llist_ue_Axiom = store_thm(
   MATCH_MP_TAC eq_imp_lem THEN
   REPEAT (AP_TERM_TAC THEN 
     SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM] THEN GEN_TAC) THEN
-  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
-  REPEAT (POP_ASSUM MP_TAC) THEN
-  Cases_on `f x` THEN llist_CASE_TAC ``g x : 'b llist`` THEN
+  asgtac (fn (gx, fx) => REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+    REPEAT (POP_ASSUM MP_TAC) THEN
+    OPTION_CASES_TAC fx THEN llist_CASE_TAC gx) THEN
   SIMP_TAC std_ss [OPTION_MAP_DEF, LHD_THM, LTL_THM, pair_CASE_def,
     LCONS_NOT_NIL, LCONS_11]) ;
 
