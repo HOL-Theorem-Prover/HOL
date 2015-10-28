@@ -184,7 +184,7 @@ val llist_CASES = store_thm(
     SRW_TAC [][llist_repabs']
   ]);
 
-fun llist_CASE_TAC tm = STRUCT_CASES_TAC (SPEC tm llist_CASES) ;
+fun llist_CASE_TAC tm = STRUCT_CASES_TAC (ISPEC tm llist_CASES) ;
 
 val LTL_HD_11 = Q.store_thm ("LTL_HD_11",
   `(LTL_HD ll1 = LTL_HD ll2) ==> (ll1 = ll2)`,
@@ -325,81 +325,6 @@ val LUNFOLD_LTL_HD = Q.store_thm ("LUNFOLD_LTL_HD",
 (* Co-recursion theorem for lazy lists                                       *)
 (*---------------------------------------------------------------------------*)
 
-val llist_ue_Axiom = store_thm(
-  "llist_ue_Axiom",
-  ``!f : 'a -> ('a # 'b) option.
-      ?!g : 'a -> 'b llist.
-        (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-        (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
-  GEN_TAC THEN
-  STRIP_ASSUME_TAC
-    (prove_rec_fn_exists prim_recTheory.num_Axiom
-       ``(h f 0 = \x:'a. OPTION_MAP SND (f x)) /\
-         (!n. h f (SUC n) =
-                  \x. OPTION_JOIN (OPTION_MAP (h f n o FST) (f x)))``) THEN
-  `!f x. lrep_ok (\n. h f n x)`
-     by (REPEAT GEN_TAC THEN
-         Q_TAC SUFF_TAC `!g. (?x. g = (\n. h f n x)) ==> lrep_ok g`
-               THEN1 SRW_TAC [DNF_ss][] THEN
-         HO_MATCH_MP_TAC lrep_ok_coind THEN
-         SRW_TAC [][] THEN
-         Cases_on `f x` THENL [
-           DISJ1_TAC THEN SRW_TAC [][FUN_EQ_THM] THEN
-           Cases_on `n` THEN SRW_TAC [][],
-           DISJ2_TAC THEN
-           MAP_EVERY Q.EXISTS_TAC [`SND x'`, `\n. h f n (FST x')`] THEN
-           CONJ_TAC THENL [
-             SRW_TAC [][FUN_EQ_THM] THEN Cases_on `n` THEN
-             SRW_TAC [][],
-	     Q.EXISTS_TAC `FST x'` THEN SRW_TAC [][]
-           ]
-         ]) THEN
-  SRW_TAC [][EXISTS_UNIQUE_THM] THENL [
-    Q.EXISTS_TAC `\x. llist_abs (\n. h f n x)` THEN
-    SRW_TAC [][LHD,LTL,llist_repabs'] THEN
-    Cases_on `f x` THEN SRW_TAC [][] THEN AP_TERM_TAC THEN
-    SRW_TAC [][FUN_EQ_THM] THEN
-    Cases_on `n` THENL [
-      ASM_SIMP_TAC bool_ss [DECIDE ``0 + 1 = SUC 0``] THEN
-      SRW_TAC [][],
-      SRW_TAC [][DECIDE ``SUC n + 1 = SUC (SUC n)``]
-    ],
-
-    Q_TAC SUFF_TAC `!a. g a = g' a` THEN1 SRW_TAC [][FUN_EQ_THM] THEN
-    Q_TAC SUFF_TAC `!a. llist_rep (g a) = llist_rep (g' a)` THEN1
-          SRW_TAC [][llist_rep_11] THEN
-    Q_TAC SUFF_TAC `!n a. llist_rep (g a) n = llist_rep (g' a) n` THEN1
-          SRW_TAC [][FUN_EQ_THM] THEN
-    Q_TAC SUFF_TAC `!n a. (llist_rep (g a) n = h f n a) /\
-                          (llist_rep (g' a) n = h f n a)` THEN1
-          SRW_TAC [][] THEN
-    Induct THENL [
-      FULL_SIMP_TAC (srw_ss()) [LHD],
-      GEN_TAC THEN
-      `(f a = NONE) \/ (?a' b. f a = SOME (a', b))`
-          by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES]
-      THENL [
-        `(LHD (g a) = NONE) /\ (LHD (g' a) = NONE)`
-           by ASM_SIMP_TAC std_ss [] THEN
-        `(g a = LNIL) /\ (g' a = LNIL)` by METIS_TAC [LHD_EQ_NONE] THEN
-        SRW_TAC [][LNIL,llist_repabs',lrep_ok_rules],
-        Q_TAC SUFF_TAC `(g a = LCONS b (g a')) /\ (g' a = LCONS b (g' a'))`
-              THEN1 SRW_TAC [][llist_rep_LCONS] THEN
-        SRW_TAC [][LHDTL_EQ_SOME]
-      ]
-    ]
-  ]);
-
-val llist_Axiom = store_thm(
-  "llist_Axiom",
-  ``!f : 'a -> ('a # 'b) option.
-      ?g.
-         (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
-  MATCH_ACCEPT_TAC
-    (CONJUNCT1
-      (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM, FORALL_AND_THM] llist_ue_Axiom)));
-
 (*---------------------------------------------------------------------------*)
 (* Alternative version of llist_Axiom (more understandable)                  *)
 (*---------------------------------------------------------------------------*)
@@ -424,6 +349,34 @@ val llist_Axiom_1ue = store_thm(
   THENL [
     Q.EXISTS_TAC `LUNFOLD f` THEN GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD,
     IMP_RES_TAC LUNFOLD_UNIQUE THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] ]) ;
+
+val eq_imp_lem = Q.prove (`(p = q) ==> p ==> q`, DECIDE_TAC)  ;
+
+val llist_ue_Axiom = store_thm(
+  "llist_ue_Axiom",
+  ``!f : 'a -> ('a # 'b) option.
+      ?!g : 'a -> 'b llist.
+        (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
+        (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
+  MP_TAC llist_Axiom_1ue THEN
+  MATCH_MP_TAC eq_imp_lem THEN
+  REPEAT (AP_TERM_TAC THEN 
+    SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM] THEN GEN_TAC) THEN
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN
+  Cases_on `f x` THEN llist_CASE_TAC ``g x : 'b llist`` THEN
+  SIMP_TAC std_ss [OPTION_MAP_DEF, LHD_THM, LTL_THM, pair_CASE_def,
+    LCONS_NOT_NIL, LCONS_11]) ;
+
+val llist_Axiom = store_thm(
+  "llist_Axiom",
+  ``!f : 'a -> ('a # 'b) option.
+      ?g.
+         (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
+         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
+  MATCH_ACCEPT_TAC
+    (CONJUNCT1
+      (SIMP_RULE bool_ss [EXISTS_UNIQUE_THM, FORALL_AND_THM] llist_ue_Axiom)));
 
 (* ----------------------------------------------------------------------
     Another consequence of the finality theorem is the principle of
