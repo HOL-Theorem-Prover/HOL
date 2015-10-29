@@ -41,7 +41,8 @@ sig
   | TRANS_prf of thm * thm
   | Beta_prf of thm
   | Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
-  | Def_const_prf of string * (string * hol_type) list * thm
+  | Def_const_prf of {Thy:string,Name:string} * term
+  | Def_const_list_prf of string * (string * hol_type) list * thm
   | Def_spec_prf of term list * thm
   | Mk_abs_prf of thm * term * thm
   | Mk_comb_prf of thm * thm * thm

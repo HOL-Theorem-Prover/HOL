@@ -146,7 +146,8 @@ and proof =
 | Mk_abs_prf of thm * term * thm
 | Specialize_prf of term * thm
 | Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
-| Def_const_prf of string * (string * hol_type) list * thm
+| Def_const_prf of {Thy:string,Name:string} * term
+| Def_const_list_prf of string * (string * hol_type) list * thm
 | Def_spec_prf of term list * thm
 | deductAntisym_prf of thm * thm
 
@@ -1298,8 +1299,13 @@ fun gen_prim_specification thyname th = let
   val body        = concl th
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
+  val prf = Def_const_list_prf(thyname,stys,th)
+  val prf =
+    case cnames of [c] => if HOLset.member(hyps,body) then
+      Def_const_prf({Thy=thyname,Name=c},Term.rand body)
+    else prf | _ => prf
 in
-  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, Def_const_prf(thyname,stys,th)))
+  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, prf))
 end
 
 (* ----------------------------------------------------------------------
