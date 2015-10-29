@@ -272,6 +272,15 @@ val LNTH_THM = store_thm(
   SRW_TAC [][LNTH]);
 val _ = export_rewrites ["LNTH_THM"]
 
+(* ----------------------------------------------------------------------
+    LNTH is just llist_rep with arguments swapped
+   ---------------------------------------------------------------------- *)
+
+val LNTH_rep = Q.store_thm ("LNTH_rep", 
+  `!i ll. LNTH i ll = llist_rep ll i`,
+  Induct THEN GEN_TAC THEN llist_CASE_TAC ``ll : 'a llist`` THEN
+  ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]) ;
+
 (*---------------------------------------------------------------------------*)
 (* LUNFOLD by definition                                                     *)
 (*                                                                           *)
@@ -477,10 +486,7 @@ val LLIST_STRONG_BISIMULATION = store_thm(
    that LNTH is everywhere the same over them *)
 val LNTH_llist_rep = prove(
   ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
-  Induct THEN SRW_TAC [][LNTH, LHD, llist_repabs',LTL] THEN
-  Q.UNDISCH_THEN `lrep_ok r` MP_TAC THEN
-  ONCE_REWRITE_TAC [lrep_ok_cases] THEN SRW_TAC [][] THEN
-  SRW_TAC [ETA_ss][]);
+  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
 
 val LNTH_EQ = store_thm(
   "LNTH_EQ",
