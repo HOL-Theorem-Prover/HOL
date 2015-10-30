@@ -1,4 +1,5 @@
-open HolKernel boolLib bossLib OpenTheoryBoolTheory lcsymtacs
+open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryBoolTheory lcsymtacs
+
 val _ = new_theory"HOL4Compatibility"
 
 val n = ref 0;
@@ -71,11 +72,29 @@ val res = export(``!x. (x = x) <=> T``,
   |> GEN_ALL |> ACCEPT_TAC)
   (* DB.match["OpenTheoryBool"]``(x = T)`` *)
 
-val _ = OpenTheoryMap.OpenTheory_const_name{
+val _ = OpenTheory_const_name{
   const={Thy="HOL4Compatibility",Name="literal_case"},
   name=(["HOL4"],"literal_case")}
 val def = new_definition("literal_case_def",concl boolTheory.literal_case_DEF)
 val res = export(``!f x. literal_case f x = f x``,
+  rpt gen_tac >> CONV_TAC(PATH_CONV"lrll"(REWR_CONV def)) >>
+  CONV_TAC(RATOR_CONV(RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV))) >>
+  REFL_TAC);
+
+val _ = OpenTheory_const_name{
+  const={Thy="HOL4Compatibility",Name="LET"},
+  name=(["Data","Bool"],"let")}
+val def = new_definition("LET",concl boolTheory.LET_DEF)
+val res = export(``!f x. LET f x = f x``,
+  rpt gen_tac >> CONV_TAC(PATH_CONV"lrll"(REWR_CONV def)) >>
+  CONV_TAC(RATOR_CONV(RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV))) >>
+  REFL_TAC);
+
+val _ = OpenTheory_const_name{
+  const={Thy="HOL4Compatibility",Name="TYPE_DEFINITION"},
+  name=(["HOL4"],"TYPE_DEFINITION")}
+val def = new_definition("TYPE_DEFINITION",concl boolTheory.TYPE_DEFINITION)
+val res = export(``!P rep. TYPE_DEFINITION P rep <=> ^(rhs(concl(SPEC_ALL boolTheory.TYPE_DEFINITION_THM)))``,
   rpt gen_tac >> CONV_TAC(PATH_CONV"lrll"(REWR_CONV def)) >>
   CONV_TAC(RATOR_CONV(RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV))) >>
   REFL_TAC);
@@ -141,28 +160,148 @@ val res = export(``!t.
   (* DB.match["OpenTheoryBool"]``t ⇒ t`` *)
   (* DB.match["OpenTheoryBool"]``t ⇒ F`` *)
 
-(*
-val res = export(``(p <=> ~q) <=> (p \/ q) /\ (~q \/ ~p)``,
-  (* DB.match["OpenTheoryBool"]``(p <=> ~q)`` *)
-  (* DB.match["OpenTheoryBool"]``q \/ ~p`` *)
-*)
+val res = export(``~(t /\ ~t)``,
+  CONV_TAC(REWR_CONV OTbool51) >>
+  MATCH_ACCEPT_TAC OTbool82)
+  (* DB.match["OpenTheoryBool"]``~(t /\ q)`` *)
+  (* DB.match["OpenTheoryBool"]``t \/ ~t`` *)
 
-(*
-val res = export(``~(~A \/ B) ==> F <=> A ==> ~B ==> F``,
-  (* DB.match["OpenTheoryBool"]``~A \/ b`` *)
-*)
+val res = export(``!t. ~t ==> t ==> F``,
+  gen_tac >>
+  CONV_TAC(LAND_CONV(REWR_CONV(GSYM OTbool95))) >>
+  MATCH_ACCEPT_TAC OTbool84)
+  (* DB.match["OpenTheoryBool"]``t ==> F`` *)
+  (* DB.match["OpenTheoryBool"]``t ==> t`` *)
 
-(*
+val res = export(``!t. (t ==> F) ==> ~t``,
+  gen_tac >>
+  CONV_TAC(RAND_CONV(REWR_CONV(GSYM OTbool95))) >>
+  MATCH_ACCEPT_TAC OTbool84)
+
+val res = export(``!f b x y. f (if b then x else y) = if b then f x else f y``,
+  rpt gen_tac >>
+  MATCH_ACCEPT_TAC OTbool6);
+  (* DB.match["OpenTheoryBool"]``if x then y else z`` *)
+
+val res = export(``(!(t1:'a) t2. (if T then t1 else t2) = t1) /\
+                    !(t1:'a) t2. (if F then t1 else t2) = t2``,
+  ACCEPT_TAC(CONJ OTbool75 OTbool76));
+  (* DB.match["OpenTheoryBool"]``if x then y else z`` *)
+
 val res = export(``!A B. A ==> B <=> ~A \/ B``,
-  OTbool51
-  OTbool0
-  (* DB.match["OpenTheoryBool"]``~A \/ b`` *)
-  (* DB.match["OpenTheoryBool"]``if a then b else c`` *)
-*)
+  rpt gen_tac >>
+  qspec_then`A`strip_assume_tac OTbool81 >>
+  first_assum(fn th => PURE_REWRITE_TAC [th]) >>
+  PURE_REWRITE_TAC[OTbool134,OTbool135,OTbool93,OTbool94,OTbool97,OTbool98] >>
+  REFL_TAC )
+  (* DB.match["OpenTheoryBool"]``A <=> T`` *)
+  (* DB.match["OpenTheoryBool"]``T ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``F ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``~T`` *)
+  (* DB.match["OpenTheoryBool"]``~F`` *)
+  (* DB.match["OpenTheoryBool"]``F ∨ b`` *)
+  (* DB.match["OpenTheoryBool"]``T ∨ b`` *)
+
+val res = export(``(x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w``,
+  MATCH_ACCEPT_TAC OTbool3)
+
+val res = export(``(x ==> y) /\ (z ==> w) ==> x \/ z ==> y \/ w``,
+  MATCH_ACCEPT_TAC OTbool2)
+
+val res = export(``!t1 t2 t3. t1 /\ t2 /\ t3 <=> (t1 /\ t2) /\ t3``,
+  MATCH_ACCEPT_TAC(GSYM OTbool14))
+  (* DB.match["OpenTheoryBool"]``a /\ b /\ c`` *)
+
+val res = export(``!A B C. A \/ B \/ C <=> (A \/ B) \/ C``,
+  MATCH_ACCEPT_TAC(GSYM OTbool11))
+  (* DB.match["OpenTheoryBool"]``a \/ b \/ c`` *)
+
+val res = export(``!Q P. (!e. P e \/ Q) <=> (!x. P x) \/ Q``,
+  MATCH_ACCEPT_TAC OTbool40)
+  (* DB.match["OpenTheoryBool"]``P e \/ Q`` *)
+
+val res = export(``!t1 t2. (t1 <=> t2) <=> t1 /\ t2 \/ ~t1 /\ ~t2``,
+  rpt gen_tac >>
+  qspec_then`t1`strip_assume_tac OTbool81 >>
+  first_assum(fn th => PURE_REWRITE_TAC[th]) >>
+  PURE_REWRITE_TAC[OTbool107,OTbool102,OTbool104,OTbool103,OTbool134,OTbool135,OTbool94,OTbool92] >>
+  REFL_TAC)
+  (* DB.match["OpenTheoryBool"]``T <=> t`` *)
+  (* DB.match["OpenTheoryBool"]``F <=> t`` *)
+  (* DB.match["OpenTheoryBool"]``T /\ t`` *)
+  (* DB.match["OpenTheoryBool"]``F /\ t`` *)
+  (* DB.match["OpenTheoryBool"]``~T`` *)
+  (* DB.match["OpenTheoryBool"]``F \/ t`` *)
+  (* DB.match["OpenTheoryBool"]``t \/ F`` *)
+
+val res = export(``!A B C. B /\ C \/ A <=> (B \/ A) /\ (C \/ A)``,
+  MATCH_ACCEPT_TAC OTbool10)
+  (* DB.match["OpenTheoryBool"]``b /\ c \/ a`` *)
+
+val res = export(``(?!x. P x) <=> ((?x. P x) /\ !x y. P x /\ P y ==> (x = y))``,
+  Q.ISPEC_THEN`P`MATCH_ACCEPT_TAC OTbool86)
+  (* DB.match["OpenTheoryBool"]``?!x. P x`` *)
+
+val res = export(``(!x. P x ==> Q x) ==> (?x. P x) ==> ?x. Q x``,
+  MATCH_ACCEPT_TAC OTbool21)
+
+val res = export(``
+  !P Q.
+    ((?x. P x) ==> Q <=> !x. P x ==> Q) /\
+    ((?x. P x) /\ Q <=> ?x. P x /\ Q) /\
+    (Q /\ (?x. P x) <=> ?x. Q /\ P x)``,
+  rpt gen_tac >>
+  conj_tac >- MATCH_ACCEPT_TAC OTbool55 >>
+  conj_tac >- MATCH_ACCEPT_TAC (GSYM OTbool36) >>
+  MATCH_ACCEPT_TAC OTbool69)
+  (* DB.match["OpenTheoryBool"]``(?x. P x) ==> Q`` *)
+  (* DB.match["OpenTheoryBool"]``(?x. P x) /\ Q`` *)
+  (* DB.match["OpenTheoryBool"]``Q /\ (?x. P x)`` *)
+
+val res = export(
+  ``!x x' y y'.
+      (x <=> x') /\ (x' ==> (y <=> y')) ==> (x ==> y <=> x' ==> y')``,
+  rpt gen_tac >>
+  PURE_REWRITE_TAC[GSYM OTbool17] >>
+  disch_then(fn th => PURE_REWRITE_TAC[th]) >>
+  qspec_then`x'`strip_assume_tac OTbool81 >>
+  pop_assum(fn th => PURE_REWRITE_TAC[th]) >>
+  PURE_REWRITE_TAC[OTbool97,OTbool98] >>
+  TRY(disch_then ACCEPT_TAC) >> REFL_TAC)
+  (* DB.match["OpenTheoryBool"]``(p1 ==> p2) <=> p3`` *)
+  (* DB.match["OpenTheoryBool"]``T ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``F ==> t`` *)
+
+val res = export(``!A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B)``,
+  rpt gen_tac >>
+  conj_tac >- MATCH_ACCEPT_TAC OTbool51 >>
+  MATCH_ACCEPT_TAC OTbool50)
+  (* DB.match["OpenTheoryBool"]``~(a /\ b)`` *)
+  (* DB.match["OpenTheoryBool"]``~(a \/ b)`` *)
 
 (*
-  |- ~(~A \/ B) ==> F <=> A ==> ~B ==> F
+``
+!P.
+  (?rep. HOL4.TYPE_DEFINITION P rep) ==>
+  ?rep abs. (!a. abs (rep a) = a) /\ !r. P r <=> rep (abs r) = r
+``
+``
+!P Q x x' y y'.
+  (P <=> Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
+  ((if P then x else y) = if Q then x' else y')
+``
+sat thms:
+``~(~A \/ B) ==> F <=> A ==> ~B ==> F``
+``~(A \/ B) ==> F <=> (A ==> F) ==> ~B ==> F``
+``(p <=> q ==> r) <=> (p \/ q) /\ (p \/ ~r) /\ (~q \/ r \/ ~p)``
+``(p <=> q \/ r) <=> (p \/ ~q) /\ (p \/ ~r) /\ (q \/ r \/ ~p)``
+``(p <=> q /\ r) <=> (p \/ ~q \/ ~r) /\ (q \/ ~p) /\ (r \/ ~p)``
+``(p <=> (q <=> r)) <=>
+    (p \/ q \/ r) /\ (p \/ ~r \/ ~q) /\ (q \/ ~r \/ ~p) /\ (r \/ ~q \/ ~p)``
+``(p <=> if q then r else s) <=>
+    (p \/ q \/ ~s) /\ (p \/ ~r \/ ~q) /\ (p \/ ~r \/ ~s) /\
+    (~q \/ r \/ ~p) /\ (q \/ s \/ ~p)``
+``(p <=> ~q) <=> (p \/ q) /\ (~q \/ ~p)``
 *)
-
 
 val _ = export_theory()
