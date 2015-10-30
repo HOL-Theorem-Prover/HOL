@@ -6,7 +6,7 @@ HOL4Compatibility.ot.art: HOL4Compatibility.art
 HOL4Compatibility.art: HOL4CompatibilityScript.sml OpenTheoryBoolTheory.uo
 	Holmake --ot HOL4CompatibilityTheory.uo
 
-OpenTheoryBoolTheory.uo: $(boolpkg).art
+OpenTheoryBoolScript.sml: $(boolpkg).art
 
 $(boolpkg).art:
 	opentheory info --theorems -o $@ $(boolpkg)
