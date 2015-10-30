@@ -76,8 +76,8 @@ val option_REP_ONTO    = reduce(prove_rep_fn_onto option_REP_ABS_DEF);
 
 val SOME_DEF = new_definition("SOME_DEF",Term`!x. SOME x = option_ABS(INL x)`);
 val NONE_DEF = new_definition("NONE_DEF",Term`NONE = option_ABS(INR one)`);
-val _ = ot "SOME"
-val _ = ot "NONE"
+val _ = ot0 "SOME" "some"
+val _ = ot0 "NONE" "none"
 
 val option_Axiom = store_thm (
   "option_Axiom",
@@ -153,11 +153,13 @@ val IS_SOME_DEF = Prim_rec.new_recursive_definition
   {name="IS_SOME_DEF",
    rec_axiom=option_Axiom,
    def = Term`(IS_SOME (SOME x) = T) /\ (IS_SOME NONE = F)`};
+val _ = ot0 "IS_SOME" "isSome"
 
 val IS_NONE_DEF = Prim_rec.new_recursive_definition {
   name = "IS_NONE_DEF",
   rec_axiom = option_Axiom,
   def = Term`(IS_NONE (SOME x) = F) /\ (IS_NONE NONE = T)`};
+val _ = ot0 "IS_NONE" "isNone"
 
 val THE_DEF = Prim_rec.new_recursive_definition
   {name="THE_DEF",
@@ -506,7 +508,7 @@ val OPTION_MCOMP_def = Q.new_definition ("OPTION_MCOMP_def",
 
 val o_THM = combinTheory.o_THM ;
 
-(* OPTION_MCOMP is the composition operator in the 
+(* OPTION_MCOMP is the composition operator in the
   Kleisli category of the option monad *)
 val OPTION_MCOMP_ASSOC = store_thm
   ("OPTION_MCOMP_ASSOC",
