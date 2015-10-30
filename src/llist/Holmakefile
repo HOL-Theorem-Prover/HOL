@@ -1,0 +1,7 @@
+ifdef OTKNL
+llist.ot.art: llist.art
+	opentheory info --article -o $@ $<
+
+llist.art: llistScript.sml
+	Holmake --ot llistTheory.uo
+endif

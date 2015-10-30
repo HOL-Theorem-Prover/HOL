@@ -116,7 +116,7 @@ src/string/help
 src/TeX/holindex-demo.pdf
 src/TeX/holindex-demo.ps
 
-src/opentheory/compat/*.art
+*.art
 
 Manual/*/*.pdf
 Manual/*/*.ps
