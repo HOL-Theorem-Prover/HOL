@@ -1,0 +1,12 @@
+boolpkg=bool-1.37
+
+HOL4Compatibility.ot.art: HOL4Compatibility.art
+	opentheory info --article -o $@ $<
+
+HOL4Compatibility.art: HOL4CompatibilityScript.sml OpenTheoryBoolTheory.uo
+	Holmake --ot HOL4CompatibilityTheory.uo
+
+OpenTheoryBoolTheory.uo: $(boolpkg).art
+
+$(boolpkg).art:
+	opentheory info --theorems -o $@ $(boolpkg)
