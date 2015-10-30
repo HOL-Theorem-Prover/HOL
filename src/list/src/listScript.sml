@@ -75,17 +75,19 @@ val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 local open OpenTheoryMap in
 val ns = ["Data","List"]
 val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name=(ns,"list")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="APPEND"},name=(ns,"@")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="EXISTS"},name=(ns,"any")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="EVERY"},name=(ns,"all")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="FILTER"},name=(ns,"filter")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="MAP"},name=(ns,"map")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="HD"},name=(ns,"head")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="TL"},name=(ns,"tail")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="EVERY"},name=(ns,"all")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="EXISTS"},name=(ns,"any")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="FILTER"},name=(ns,"filter")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="FLAT"},name=(ns,"concat")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="MAP"},name=(ns,"map")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="REVERSE"},name=(ns,"reverse")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="TAKE"},name=(ns,"take")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="TL"},name=(ns,"tail")}
 end
 
 (*---------------------------------------------------------------------------*)
