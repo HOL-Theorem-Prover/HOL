@@ -237,6 +237,7 @@ fun raw_read_article input
         val th = List.foldl ft th ls
       in {stack=os,dict=dict,thms=Net.insert(concl th,th)thms} end
     | f "typeOp"  (st as {stack=OName n::os,...})          = st_(OTypeOp (ot_to_tyop "typeOp" n)::os,st)
+    | f "version" (st as {stack=ONum n::os,...})           = if n = 6 then st_(os,st) else raise ERR "unsupported article version"
     | f "var"     (st as {stack=OType t::OName n::os,...}) = st_(OVar(mk_var(n,t))::os,st)
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
     | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype n)::os,st)
