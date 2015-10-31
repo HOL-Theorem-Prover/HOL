@@ -94,7 +94,7 @@ val _ = OpenTheory_const_name{
   const={Thy="HOL4Compatibility",Name="TYPE_DEFINITION"},
   name=(["HOL4"],"TYPE_DEFINITION")}
 val def = new_definition("TYPE_DEFINITION",concl boolTheory.TYPE_DEFINITION)
-val res = export(``!P rep. TYPE_DEFINITION P rep <=> ^(rhs(concl(SPEC_ALL boolTheory.TYPE_DEFINITION_THM)))``,
+val res13 = export(``!P rep. TYPE_DEFINITION P rep <=> ^(rhs(concl(SPEC_ALL boolTheory.TYPE_DEFINITION_THM)))``,
   rpt gen_tac >> CONV_TAC(PATH_CONV"lrll"(REWR_CONV def)) >>
   CONV_TAC(RATOR_CONV(RAND_CONV (RATOR_CONV BETA_CONV THENC BETA_CONV))) >>
   REFL_TAC);
@@ -279,17 +279,65 @@ val res = export(``!A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B)``,
   (* DB.match["OpenTheoryBool"]``~(a /\ b)`` *)
   (* DB.match["OpenTheoryBool"]``~(a \/ b)`` *)
 
+val res8' = CONV_RULE(STRIP_QUANT_CONV(REWR_CONV OTbool17))res8
+
+val res = export(``
+    !P.
+      (?(rep:'b -> 'a). TYPE_DEFINITION P rep) ==>
+      ?(rep:'b -> 'a) abs. (!a. (abs (rep a) = a)) /\ !r. (P r <=> (rep (abs r) = r))``,
+  gen_tac >>
+  ho_match_mp_tac OTbool21 >>
+  gen_tac >>
+  CONV_TAC(LAND_CONV(REWR_CONV res13)) >>
+  strip_tac >>
+  qexists_tac`λra. @a. rep a = ra` >>
+  conj_tac >- (
+    CONV_TAC (QUANT_CONV(LAND_CONV BETA_CONV)) >>
+    gen_tac >>
+    ho_match_mp_tac OTbool23 >>
+    gen_tac >>
+    match_mp_tac res8' >>
+    conj_tac >- first_assum MATCH_ACCEPT_TAC >>
+    disch_then(fn th => PURE_REWRITE_TAC[th]) >>
+    REFL_TAC ) >>
+  gen_tac >>
+  CONV_TAC(PATH_CONV"rlrr"BETA_CONV) >>
+  match_mp_tac res8' >>
+  pop_assum(fn th => PURE_REWRITE_TAC[th]) >>
+  conj_tac >- (
+    CONV_TAC(HO_REWR_CONV OTbool55) >>
+    CONV_TAC(QUANT_CONV(LAND_CONV SYM_CONV)) >>
+    Q.ISPEC_THEN`λa. rep a = r`(MATCH_ACCEPT_TAC o BETA_RULE) OTbool29 ) >>
+  disch_then(fn th => CONV_TAC(QUANT_CONV(LAND_CONV(REWR_CONV(SYM th))))) >>
+  qexists_tac`@a. rep a = r` >>
+  REFL_TAC)
+  (* DB.match["OpenTheoryBool"]``$@`` *)
+  (* DB.match["OpenTheoryBool"]``p ==> q ==> r`` *)
+
+val res = export(``
+  !P Q x x' y y'.
+    (P <=> Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
+    ((if P then x else y) = if Q then x' else y')``,
+  rpt gen_tac >>
+  qspec_then`P`strip_assume_tac OTbool81 >>
+  first_assum(fn th => PURE_REWRITE_TAC [th]) >>
+  qspec_then`Q`strip_assume_tac OTbool81 >>
+  first_assum(fn th => PURE_REWRITE_TAC [th]) >>
+  PURE_REWRITE_TAC[OTbool107,OTbool104,OTbool75,OTbool76,OTbool134,OTbool135,OTbool102,OTbool103,OTbool97,OTbool98,OTbool100] >>
+  disch_then ACCEPT_TAC )
+  (* DB.match["OpenTheoryBool"]``F ⇔ t`` *)
+  (* DB.match["OpenTheoryBool"]``T ⇔ t`` *)
+  (* DB.match["OpenTheoryBool"]``T ⇒ t`` *)
+  (* DB.match["OpenTheoryBool"]``F ⇒ t`` *)
+  (* DB.match["OpenTheoryBool"]``T ∧ t`` *)
+  (* DB.match["OpenTheoryBool"]``t ∧ T`` *)
+  (* DB.match["OpenTheoryBool"]``F ∧ t`` *)
+  (* DB.match["OpenTheoryBool"]``~T`` *)
+  (* DB.match["OpenTheoryBool"]``~F`` *)
+  (* DB.match["OpenTheoryBool"]``if T then x else y`` *)
+  (* DB.match["OpenTheoryBool"]``if F then x else y`` *)
+
 (*
-``
-!P.
-  (?rep. HOL4.TYPE_DEFINITION P rep) ==>
-  ?rep abs. (!a. abs (rep a) = a) /\ !r. P r <=> rep (abs r) = r
-``
-``
-!P Q x x' y y'.
-  (P <=> Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
-  ((if P then x else y) = if Q then x' else y')
-``
 sat thms:
 ``~(~A \/ B) ==> F <=> A ==> ~B ==> F``
 ``~(A \/ B) ==> F <=> (A ==> F) ==> ~B ==> F``
