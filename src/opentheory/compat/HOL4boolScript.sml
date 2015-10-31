@@ -1,6 +1,7 @@
 open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryBoolTheory lcsymtacs
 
-val _ = new_theory"HOL4bool"
+val Thy = "HOL4bool"
+val _ = new_theory Thy
 
 val n = ref 0;
 fun export (tm,tac) =
@@ -73,7 +74,7 @@ val res = export(``!x. (x = x) <=> T``,
   (* DB.match["OpenTheoryBool"]``(x = T)`` *)
 
 val _ = OpenTheory_const_name{
-  const={Thy="HOL4Compatibility",Name="literal_case"},
+  const={Thy=Thy,Name="literal_case"},
   name=(["HOL4"],"literal_case")}
 val def = new_definition("literal_case_def",concl boolTheory.literal_case_DEF)
 val res = export(``!f x. literal_case f x = f x``,
@@ -82,7 +83,7 @@ val res = export(``!f x. literal_case f x = f x``,
   REFL_TAC);
 
 val _ = OpenTheory_const_name{
-  const={Thy="HOL4Compatibility",Name="LET"},
+  const={Thy=Thy,Name="LET"},
   name=(["Data","Bool"],"let")}
 val def = new_definition("LET",concl boolTheory.LET_DEF)
 val res = export(``!f x. LET f x = f x``,
@@ -91,7 +92,7 @@ val res = export(``!f x. LET f x = f x``,
   REFL_TAC);
 
 val _ = OpenTheory_const_name{
-  const={Thy="HOL4Compatibility",Name="TYPE_DEFINITION"},
+  const={Thy=Thy,Name="TYPE_DEFINITION"},
   name=(["HOL4"],"TYPE_DEFINITION")}
 val def = new_definition("TYPE_DEFINITION",concl boolTheory.TYPE_DEFINITION)
 val res13 = export(``!P rep. TYPE_DEFINITION P rep <=> ^(rhs(concl(SPEC_ALL boolTheory.TYPE_DEFINITION_THM)))``,
@@ -280,6 +281,15 @@ val res = export(``!A B. (~(A /\ B) <=> ~A \/ ~B) /\ (~(A \/ B) <=> ~A /\ ~B)``,
   (* DB.match["OpenTheoryBool"]``~(a \/ b)`` *)
 
 val res8' = CONV_RULE(STRIP_QUANT_CONV(REWR_CONV OTbool17))res8
+
+val res = export(``!t1 t2. (t1 <=> t2) <=> (t1 ==> t2) /\ (t2 ==> t1)``,
+  rpt gen_tac >>
+  match_mp_tac res8' >>
+  reverse conj_tac >- MATCH_ACCEPT_TAC res8' >>
+  disch_then(fn th => ACCEPT_TAC(CONJ
+    (MATCH_MP OTbool27 th)
+    (MATCH_MP OTbool27 (SYM th) ))))
+  (* DB.match["OpenTheoryBool"]``(t1 <=> t2) ==> t3`` *)
 
 val res = export(``
     !P.

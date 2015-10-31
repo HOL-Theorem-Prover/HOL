@@ -1,0 +1,7 @@
+ifdef OTKNL
+sat.ot.art: sat.art
+	opentheory info --article -o $@ $<
+
+sat.art: satScript.sml
+	Holmake --ot --poly $(HOLDIR)/bin/hol.builder0 satTheory.uo
+endif

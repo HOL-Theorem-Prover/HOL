@@ -8,6 +8,11 @@ show: "Data.Bool"
 bool {
   package: hol-bool-1.0
 }
+sat {
+  import: bool
+  package: hol-sat-1.0
+}
 main {
   import: bool
+  import: sat
 }
