@@ -1,6 +1,6 @@
-structure bossLib =
+structure HolKernel =
 struct
-  open bossLib Logging
+  open HolKernel Logging
   fun new_theory s = let
     val _ = HolKernel.new_theory s
     val _ = start_logging()

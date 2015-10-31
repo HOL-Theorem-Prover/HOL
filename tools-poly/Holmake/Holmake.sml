@@ -840,7 +840,7 @@ in
           else if quit_on_failure then [scriptuo]
           else ["holmakebuild.uo", scriptuo]
       val objectfiles0 =
-        if opentheory then "loggingBossLib.uo" :: objectfiles0 else objectfiles0
+        if opentheory then "loggingHolKernel.uo" :: objectfiles0 else objectfiles0
       val objectfiles =
         if polynothol then
           objectfiles0
