@@ -1,10 +1,13 @@
 name: hol-compatibility
 version: 1.0
-description: Interface between OpenTheory Standard Library and HOL4 standard library
+description: Interface between OpenTheory Standard Library and HOL4
 author: Ramana Kumar <ramana@member.fsf.org>
 license: GPL
 requires: base
 show: "Data.Bool"
+bool {
+  package: hol-bool-1.0
+}
 main {
-  article: "HOL4Compatibility.ot.art"
+  import: bool
 }

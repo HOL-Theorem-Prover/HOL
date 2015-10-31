@@ -1,6 +1,6 @@
 open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryBoolTheory lcsymtacs
 
-val _ = new_theory"HOL4Compatibility"
+val _ = new_theory"HOL4bool"
 
 val n = ref 0;
 fun export (tm,tac) =
@@ -336,20 +336,5 @@ val res = export(``
   (* DB.match["OpenTheoryBool"]``~F`` *)
   (* DB.match["OpenTheoryBool"]``if T then x else y`` *)
   (* DB.match["OpenTheoryBool"]``if F then x else y`` *)
-
-(*
-sat thms:
-``~(~A \/ B) ==> F <=> A ==> ~B ==> F``
-``~(A \/ B) ==> F <=> (A ==> F) ==> ~B ==> F``
-``(p <=> q ==> r) <=> (p \/ q) /\ (p \/ ~r) /\ (~q \/ r \/ ~p)``
-``(p <=> q \/ r) <=> (p \/ ~q) /\ (p \/ ~r) /\ (q \/ r \/ ~p)``
-``(p <=> q /\ r) <=> (p \/ ~q \/ ~r) /\ (q \/ ~p) /\ (r \/ ~p)``
-``(p <=> (q <=> r)) <=>
-    (p \/ q \/ r) /\ (p \/ ~r \/ ~q) /\ (q \/ ~r \/ ~p) /\ (r \/ ~q \/ ~p)``
-``(p <=> if q then r else s) <=>
-    (p \/ q \/ ~s) /\ (p \/ ~r \/ ~q) /\ (p \/ ~r \/ ~s) /\
-    (~q \/ r \/ ~p) /\ (q \/ s \/ ~p)``
-``(p <=> ~q) <=> (p \/ q) /\ (~q \/ ~p)``
-*)
 
 val _ = export_theory()
