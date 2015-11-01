@@ -1,11 +1,13 @@
 open HolKernel boolSyntax Opentheory
-val _ = new_theory"OpenTheoryBool"
-val file = "bool-1.37.art"
+val Thy = "OpenTheoryBool"
+val pkg = "bool-1.37"
+val _ = new_theory Thy
+val file = pkg^".art"
 
-val ERR=mk_HOL_ERR"OpenTheoryBool"
+val ERR=mk_HOL_ERR Thy
 
 val _ = new_constant("dummy",alpha)
-val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="OpenTheoryBool",Name="dummy"},name=([],"bool-1.37")}
+val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy=Thy,Name="dummy"},name=([],pkg)}
 
 val reader = {
   const_name = const_name_in_map,
@@ -15,6 +17,6 @@ val reader = {
   axiom = axiom_in_db
 };
 val thms = read_article file reader;
-val _ = Net.itnet (fn th => fn n => (save_thm("OTbool"^Int.toString(n),th); n+1)) thms 0;
+val _ = Net.itnet (fn th => fn n => (save_thm("th"^Int.toString(n),th); n+1)) thms 0;
 
 val _ = export_theory()
