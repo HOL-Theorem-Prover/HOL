@@ -41,6 +41,7 @@ fun fromFileNoSuf f =
   | UI c  => codeToString c
   | SIG c => codeToString c
   | SML c => codeToString c
+  | ART a => articleToString a
   | Unhandled s => s
 
 
@@ -144,7 +145,7 @@ fun parse_command_line list = let
   val (rem, allfast) = find_toggle "--fast" rem
   val (rem, fastfiles) = find_pairs "-f" rem
   val (rem, qofp) = find_toggle "--qof" rem
-  val (rem, ot) = find_toggle "--ot" rem
+  val (rem, ot) = find_one_pairtag "--ot" NONE SOME rem
   val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
   val (rem, no_prereqs) = find_toggle "--no_prereqs" rem
   val (rem, recursive) = find_toggle "-r" rem
@@ -683,6 +684,10 @@ end else ()
     *.sig --> *.ui                          [ mosmlc -c ]
     *Script.uo --> *Theory.sig *Theory.sml
        [ running the *Script that can be produced from the .uo file ]
+    *Script.uo --> *.art
+       [ running the *Script with proof-recording enabled ]
+    *.art --> *.ot.art
+       [ opentheory info --article ]
 
    (where I have included the tool that achieves the production of the
    result in []s)
@@ -720,11 +725,12 @@ fun get_implicit_dependencies incinfo (f: File) : File list = let
                     toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
-  fun is_thy_file (SML (Theory _)) = true
-    | is_thy_file (SIG (Theory _)) = true
-    | is_thy_file _                = false
+  fun requires_exec (SML (Theory _)) = true
+    | requires_exec (SIG (Theory _)) = true
+    | requires_exec (ART (RawArticle _)) = true
+    | requires_exec _                = false
 in
-  if is_thy_file f then let
+  if requires_exec f then let
       (* because we have to build an executable in order to build a
          theory, this build depends on all of the dependencies
          (meaning the transitive closure of the direct dependency
@@ -799,6 +805,8 @@ fun get_explicit_dependencies (f : File) : File list =
 
 datatype buildcmds = Compile of File list
                    | BuildScript of string * File list
+                   | BuildArticle of string * File list
+                   | ProcessArticle of string * File list
 
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)
@@ -808,6 +816,57 @@ fun build_command (ii as {preincludes,includes}) c arg = let
   val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   exception CompileFailed
   exception FileNotFound
+  val isSuccess = OS.Process.isSuccess
+  fun setup_script s deps extras = let
+    val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
+            (print ("Not re-running "^s^"Script; believe it will fail\n");
+             raise CompileFailed)
+    val scriptsml_file = SML (Script s)
+    val scriptsml = fromFile scriptsml_file
+    val script   = s^"Script"
+    val scriptuo = script^".uo"
+    val scriptui = script^".ui"
+    (* first thing to do is to create the Script.uo file *)
+    val b = build_command ii (Compile deps) scriptsml_file
+    val _ = b orelse raise CompileFailed
+    val _ = print ("Linking "^scriptuo^
+                   " to produce theory-builder executable\n")
+    val objectfiles0 =
+        if allfast <> member s fastfiles
+        then ["fastbuild.uo", scriptuo]
+        else if quit_on_failure then [scriptuo]
+        else ["holmakebuild.uo", scriptuo]
+    val objectfiles0 = extras @ objectfiles0
+    val objectfiles =
+      if polynothol then
+        objectfiles0
+      else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
+      else "holmake_not_interactive.uo" :: objectfiles0
+    in ((script,scriptuo,scriptui,scriptsml,s), objectfiles) end
+  fun run_script (script,scriptuo,scriptui,scriptsml,s) objectfiles expected_results =
+    if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
+    then let
+      fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+      val _ = app safedelete expected_results
+      val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
+      val () =
+          if not (isSuccess res2) then
+            (failed_script_cache := Binaryset.add(!failed_script_cache, s);
+             warn ("Failed script build for "^script^" - "^
+                   posix_diagnostic res2))
+          else ()
+      val _ = if isSuccess res2 orelse not debug then
+                app safedelete [script, scriptuo, scriptui]
+              else ()
+    in
+      (isSuccess res2) andalso
+      List.all (fn file =>
+        exists_readable file orelse
+        (print ("Script file "^script^" didn't produce "^file^"; \n\
+                \  maybe need export_theory() at end of "^scriptsml^"\n");
+         false)) expected_results
+    end
+    else (print ("Failed to build script file, "^script^"\n"); false)
 in
   case c of
     Compile deps => let
@@ -819,64 +878,29 @@ in
     in
       OS.Process.isSuccess res
     end
-  | BuildScript (s, deps) => let
-      val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
-              (print ("Not re-running "^s^"Script; believe it will fail\n");
-               raise CompileFailed)
-      val scriptsml_file = SML (Script s)
-      val scriptsml = fromFile scriptsml_file
-      val script   = s^"Script"
-      val scriptuo = script^".uo"
-      val scriptui = script^".ui"
-      open OS.Process
-      (* first thing to do is to create the Script.uo file *)
-      val b = build_command ii (Compile deps) scriptsml_file
-      val _ = b orelse raise CompileFailed
-      val _ = print ("Linking "^scriptuo^
-                     " to produce theory-builder executable\n")
-      val objectfiles0 =
-          if allfast <> member s fastfiles
-          then ["fastbuild.uo", scriptuo]
-          else if quit_on_failure then [scriptuo]
-          else ["holmakebuild.uo", scriptuo]
-      val objectfiles0 =
-        if opentheory then "loggingHolKernel.uo" :: objectfiles0 else objectfiles0
-      val objectfiles =
-        if polynothol then
-          objectfiles0
-        else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-        else "holmake_not_interactive.uo" :: objectfiles0
+  | BuildScript (s, deps) => (let
+      val (scriptetc,objectfiles) = setup_script s deps []
     in
-      if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
-      then let
-        val thysmlfile = s^"Theory.sml"
-        val thysigfile = s^"Theory.sig"
-        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete [thysmlfile, thysigfile]
-        val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val () =
-            if not (isSuccess res2) then
-              (failed_script_cache := Binaryset.add(!failed_script_cache, s);
-               warn ("Failed script build for "^script^" - "^
-                     posix_diagnostic res2))
-            else ()
-        val _ = if isSuccess res2 orelse not debug then
-                  app safedelete [script, scriptuo, scriptui]
-                else ()
-      in
-        (isSuccess res2) andalso
-        (exists_readable thysmlfile orelse
-         (print ("Script file "^script^" didn't produce "^thysmlfile^"; \n\
-                 \  maybe need export_theory() at end of "^scriptsml^"\n");
-         false)) andalso
-        (exists_readable thysigfile orelse
-         (print ("Script file "^script^" didn't produce "^thysigfile^"; \n\
-                 \  maybe need export_theory() at end of "^scriptsml^"\n");
-         false))
-      end
-      else (print ("Failed to build script file, "^script^"\n"); false)
+      run_script scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
     end handle CompileFailed => false
-             | FileNotFound => false
+             | FileNotFound => false)
+  | BuildArticle (s, deps) => (let
+      val loggingextras =
+        case opentheory of SOME uo => [uo] | NONE => ["loggingHolKernel.uo"]
+      val (scriptetc,objectfiles) = setup_script s deps loggingextras
+    in
+      run_script scriptetc objectfiles [s^".art"]
+    end handle CompileFailed => false
+             | FileNotFound => false)
+  | ProcessArticle (s, []) => let
+      val raw_art_file = ART (RawArticle s)
+      val art_file = ART (ProcessedArticle s)
+      val raw_art = fromFile raw_art_file
+      val art = fromFile art_file
+      val res = OS.Process.system ("opentheory info --article -o "^art^" "^raw_art)
+    in
+      OS.Process.isSuccess res
+    end
 end
 
 fun do_a_build_command incinfo target pdep secondaries =
@@ -891,6 +915,8 @@ fun do_a_build_command incinfo target pdep secondaries =
        | UI c           => build_command (Compile secondaries) pdep
        | SML (Theory s) => build_command (BuildScript (s, secondaries)) pdep
        | SIG (Theory s) => build_command (BuildScript (s, secondaries)) pdep
+       | ART (RawArticle s)       => build_command (BuildArticle (s, secondaries)) pdep
+       | ART (ProcessedArticle s) => build_command (ProcessArticle (s, secondaries)) pdep
        | x => raise Fail "Can't happen"
                     (* can't happen because do_a_build_command is only
                        called on targets that have primary_dependents,
@@ -1185,7 +1211,7 @@ in
      "    --no_prereqs         : don't recursively build in INCLUDES\n",
      "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
      "    --overlay <file>     : use given .ui file as overlay\n",
-     "    --ot                 : log an OpenTheory article for each theory\n",
+     "    --ot <file>          : use given .uo file to set up OpenTheory logging\n",
      "    --qof                : quit on tactic failure\n",
      "    --quiet              : be quieter in operation\n",
      "    --rebuild_deps       : always rebuild dependency info files \n"]

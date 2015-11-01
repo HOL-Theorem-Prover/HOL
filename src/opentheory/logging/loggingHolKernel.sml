@@ -14,5 +14,5 @@ struct
     val _ = map (export_thm o snd) (current_definitions())
     val _ = map (export_thm o snd) (current_axioms())
     val _ = stop_logging()
-  in HolKernel.export_theory() end
+  in () end
 end
