@@ -36,7 +36,6 @@ struct
         val c = ("o",ty)
         val () = new_constant c
         val th = Q.GENL[`g`,`f`](mk_thm([],Parse.Term q))
-        val _ = Parse.print_thm th
       in
         save_thm(name,th)
       end
