@@ -1,10 +1,7 @@
 boolpkg=bool-1.37
 
-HOL4bool.ot.art: HOL4bool.art
-	opentheory info --article -o $@ $<
-
-HOL4bool.art: HOL4boolScript.sml OpenTheoryBoolTheory.uo
-	Holmake --ot HOL4boolTheory.uo
+all: HOL4bool.ot.art $(HOLDIR)/src/HolSat/sat.ot.art
+.PHONY: all
 
 OpenTheoryBoolScript.sml: $(boolpkg).art
 

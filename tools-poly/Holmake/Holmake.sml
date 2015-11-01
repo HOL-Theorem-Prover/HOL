@@ -806,7 +806,7 @@ fun get_explicit_dependencies (f : File) : File list =
 datatype buildcmds = Compile of File list
                    | BuildScript of string * File list
                    | BuildArticle of string * File list
-                   | ProcessArticle of string * File list
+                   | ProcessArticle of string
 
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)
@@ -868,7 +868,7 @@ fun build_command (ii as {preincludes,includes}) c arg = let
     end
     else (print ("Failed to build script file, "^script^"\n"); false)
 in
-  case c of
+  let in case c of
     Compile deps => let
       val file = fromFile arg
       val _ = exists_readable file orelse
@@ -878,21 +878,19 @@ in
     in
       OS.Process.isSuccess res
     end
-  | BuildScript (s, deps) => (let
+  | BuildScript (s, deps) => let
       val (scriptetc,objectfiles) = setup_script s deps []
     in
       run_script scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
-    end handle CompileFailed => false
-             | FileNotFound => false)
-  | BuildArticle (s, deps) => (let
+    end
+  | BuildArticle (s, deps) => let
       val loggingextras =
         case opentheory of SOME uo => [uo] | NONE => ["loggingHolKernel.uo"]
       val (scriptetc,objectfiles) = setup_script s deps loggingextras
     in
       run_script scriptetc objectfiles [s^".art"]
-    end handle CompileFailed => false
-             | FileNotFound => false)
-  | ProcessArticle (s, []) => let
+    end
+  | ProcessArticle s => let
       val raw_art_file = ART (RawArticle s)
       val art_file = ART (ProcessedArticle s)
       val raw_art = fromFile raw_art_file
@@ -901,6 +899,9 @@ in
     in
       OS.Process.isSuccess res
     end
+  end handle
+    CompileFailed => false
+  | FileNotFound  => false
 end
 
 fun do_a_build_command incinfo target pdep secondaries =
@@ -916,7 +917,7 @@ fun do_a_build_command incinfo target pdep secondaries =
        | SML (Theory s) => build_command (BuildScript (s, secondaries)) pdep
        | SIG (Theory s) => build_command (BuildScript (s, secondaries)) pdep
        | ART (RawArticle s)       => build_command (BuildArticle (s, secondaries)) pdep
-       | ART (ProcessedArticle s) => build_command (ProcessArticle (s, secondaries)) pdep
+       | ART (ProcessedArticle s) => build_command (ProcessArticle s) pdep
        | x => raise Fail "Can't happen"
                     (* can't happen because do_a_build_command is only
                        called on targets that have primary_dependents,
