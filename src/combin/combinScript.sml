@@ -35,11 +35,12 @@ val _ = overload_on("=+", ``UPDATE``);
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
 
 local open OpenTheoryMap in
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"flip")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="I"},name=(["Function"],"id")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"C")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function"],"S")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"K")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
 end
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
