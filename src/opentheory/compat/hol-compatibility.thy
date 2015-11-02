@@ -12,7 +12,12 @@ sat {
   import: bool
   package: hol-sat-1.0
 }
+combin {
+  import: bool
+  package: hol-combin-1.0
+}
 main {
   import: bool
   import: sat
+  import: combin
 }
