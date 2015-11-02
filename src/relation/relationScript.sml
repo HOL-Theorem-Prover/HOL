@@ -26,6 +26,7 @@ val transitive_def =
 Q.new_definition
 ("transitive_def",
    `transitive (R:'a->'a->bool) = !x y z. R x y /\ R y z ==> R x z`);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="transitive"},name=(["Relation"],"transitive")}
 
 val reflexive_def = new_definition(
   "reflexive_def",
@@ -80,6 +81,7 @@ val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "TC"}
 val _ = TeX_notation {hol = Unicode.UChar.sup_plus,
                       TeX = ("\\HOLTokenSupPlus{}", 1)}
 val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="TC"},name=(["Relation"],"transitiveClosure")}
 
 
 val RTC_DEF = new_definition(
@@ -1710,6 +1712,7 @@ val RSUBSET = new_definition(
   "RSUBSET",
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RSUBSET"},name=(["Relation"],"subrelation")}
 
 val irreflexive_RSUBSET = store_thm(
   "irreflexive_RSUBSET",
@@ -1724,6 +1727,7 @@ val RUNION = new_definition(
   "RUNION",
   ``(RUNION) R1 R2 x y = R1 x y \/ R2 x y``);
 val _ = set_fixity "RUNION" (Infixl 500)
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
 
 val RUNION_COMM = store_thm(
   "RUNION_COMM",
@@ -1743,6 +1747,7 @@ val RINTER = new_definition(
   "RINTER",
   ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
 
 val RINTER_COMM = store_thm(
   "RINTER_COMM",
@@ -2047,6 +2052,7 @@ val RUNIV = new_definition(
   "RUNIV",
   ``RUNIV x y = T``);
 val _ = export_rewrites ["RUNIV"]
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
 
 val RUNIV_SUBSET = store_thm(
   "RUNIV_SUBSET",
