@@ -1,9 +1,14 @@
 boolpkg=bool-1.37
+functionpkg=function-1.55
 
-all: HOL4bool.ot.art $(HOLDIR)/src/HolSat/sat.ot.art
+all: HOL4bool.ot.art HOL4combin.ot.art $(HOLDIR)/src/HolSat/sat.ot.art $(HOLDIR)/src/combin/combin.ot.art
 .PHONY: all
 
 OpenTheoryBoolScript.sml: $(boolpkg).art
+OpenTheoryFunctionScript.sml: $(functionpkg).art
 
 $(boolpkg).art:
 	opentheory info --theorems -o $@ $(boolpkg)
+
+$(functionpkg).art:
+	opentheory info --theorems -o $@ $(functionpkg)
