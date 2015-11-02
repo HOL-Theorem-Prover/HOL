@@ -3168,6 +3168,7 @@ val FINITE_StrongOrder_WF = store_thm(
 val BIGUNION = Q.new_definition
  ("BIGUNION",
   `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
+val _ = ot0 "BIGUNION" "bigUnion"
 
 val IN_BIGUNION = store_thm
 ("IN_BIGUNION",
@@ -3315,6 +3316,7 @@ val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
 val BIGINTER = Q.new_definition
 ("BIGINTER",
  `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
+val _ = ot0 "BIGINTER" "bigIntersect"
 
 val IN_BIGINTER = store_thm
 ("IN_BIGINTER",
