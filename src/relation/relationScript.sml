@@ -31,10 +31,12 @@ val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="transit
 val reflexive_def = new_definition(
   "reflexive_def",
   ``reflexive (R:'a->'a->bool) = !x. R x x``);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="reflexive"},name=(["Relation"],"reflexive")}
 
 val irreflexive_def = new_definition(
   "irreflexive_def",
   ``irreflexive (R:'a->'a->bool) = !x. ~R x x``);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="irreflexive"},name=(["Relation"],"irreflexive")}
 
 val symmetric_def = new_definition(
   "symmetric_def",
