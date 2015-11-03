@@ -20,8 +20,8 @@ of arguments (type variables) for the type operator in the desired order, and
 the names of the rep and abs constants. The call must return the type bijection
 theorems. The type axiom will be of the form |- P t. The bijection theorems
 should be:
-  abs_rep = |- abs (rep a) = a
-  rep_abs = |- P r = (rep(abs r) = r)
+  abs_rep = |- (\a. abs (rep a)) = (\a. a)
+  rep_abs = |- (\r. rep(abs r) = r) = (\r. P r)
 
 [define_const name rhs] will be called when the article wants to define a new
 constant. The call must return a theorem |- const = rhs, where [const] is the
