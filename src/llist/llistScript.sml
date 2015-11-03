@@ -22,6 +22,34 @@ val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
 /\ (lrep_ok t ==> lrep_ok (\n. if n = 0 then SOME h else t(n - 1)))
 `;
 
+val lrep_ok_alt' = Q.prove (
+  `!n f. lrep_ok f ==> IS_SOME (f (SUC n)) ==> IS_SOME (f n)`,
+  let open arithmeticTheory in 
+  Induct THEN REPEAT STRIP_TAC THEN 
+  IMP_RES_TAC lrep_ok_cases THEN
+  FULL_SIMP_TAC bool_ss [NOT_SUC, optionTheory.IS_SOME_DEF,
+    ONE, SUB_EQUAL_0, SUB_MONO_EQ, SUB_0] end) ;
+
+val lrep_ok_alt = Q.store_thm ("lrep_ok_alt",
+  `lrep_ok f = (!n. IS_SOME (f (SUC n)) ==> IS_SOME (f n))`,
+  EQ_TAC THEN REPEAT STRIP_TAC
+  THEN1 (irule lrep_ok_alt' THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  irule lrep_ok_coind THEN
+  Q.EXISTS_TAC `\f. !n. IS_SOME (f (SUC n)) ⇒ IS_SOME (f n)` THEN
+  ASM_SIMP_TAC bool_ss [] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `a0 0`
+  THENL [ DISJ1_TAC THEN
+      SIMP_TAC bool_ss [FUN_EQ_THM] THEN
+      Induct THEN1 POP_ASSUM ACCEPT_TAC THEN
+      FULL_SIMP_TAC bool_ss [GSYM optionTheory.NOT_IS_SOME_EQ_NONE] THEN
+      PROVE_TAC [],
+    DISJ2_TAC THEN
+      Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `a0 o SUC` THEN
+      ASM_SIMP_TAC std_ss [FUN_EQ_THM] THEN
+      GEN_TAC THEN Cases_on `n` THEN
+      ASM_SIMP_TAC bool_ss [NOT_SUC, SUC_SUB1]]) ;
+
 val type_inhabited = prove(
   ``?f. lrep_ok f``,
   Q.EXISTS_TAC `\n. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
@@ -63,21 +91,18 @@ val FUNPOW_BIND_NONE = Q.prove (
   `!n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE`,
   Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
 
+val lrep_ok_MAP = Q.store_thm ("lrep_ok_MAP",
+  `lrep_ok (\n. OPTION_MAP f (g n)) = lrep_ok g`,
+  SIMP_TAC bool_ss [lrep_ok_alt, IS_SOME_MAP]) ;
+
+val lrep_ok_FUNPOW_BIND = Q.store_thm ("lrep_ok_FUNPOW_BIND",
+  `lrep_ok (\n. FUNPOW (\m. OPTION_BIND m g) n fz)`,
+  SIMP_TAC bool_ss [lrep_ok_alt, arithmeticTheory.FUNPOW_SUC] THEN
+  GEN_TAC THEN MATCH_ACCEPT_TAC IS_SOME_BIND) ;
+
 val lrep_ok_MAP_FUNPOW_BIND = Q.prove (
   `lrep_ok (\n. OPTION_MAP f (FUNPOW (\m. OPTION_BIND m g) n fz))`,
-  irule lrep_ok_coind THEN
-  Q.EXISTS_TAC `\abs. ?fz. abs =
-    \n. OPTION_MAP f (FUNPOW (λm. OPTION_BIND m g) n fz)` THEN
-  SIMP_TAC bool_ss [] THEN
-  REPEAT STRIP_TAC THEN1 (Q.EXISTS_TAC `fz` THEN REFL_TAC) THEN
-  Cases_on `fz` THEN1 ASM_REWRITE_TAC [FUNPOW_BIND_NONE, OPTION_MAP_DEF] THEN
-  DISJ2_TAC THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] THEN
-  Q.EXISTS_TAC `f x` THEN
-  Q.EXISTS_TAC `\i. OPTION_MAP f (FUNPOW (\m. OPTION_BIND m g) i (g x))` THEN
-  REPEAT STRIP_TAC THEN1
-   (Cases_on `n` THEN ASM_SIMP_TAC bool_ss [FUNPOW,
-     NOT_SUC, SUC_SUB1, OPTION_BIND_def, OPTION_MAP_DEF]) THEN
-  Q.EXISTS_TAC `g x` THEN SIMP_TAC bool_ss []) ;
+  SIMP_TAC bool_ss [lrep_ok_MAP] THEN irule lrep_ok_FUNPOW_BIND) ;
 
 val LNIL = new_definition("LNIL", ``LNIL = llist_abs (\n. NONE)``);
 val LCONS = new_definition(
@@ -271,6 +296,15 @@ val LNTH_THM = store_thm(
   SRW_TAC [][LNTH] THEN Induct_on `n` THEN
   SRW_TAC [][LNTH]);
 val _ = export_rewrites ["LNTH_THM"]
+
+(* ----------------------------------------------------------------------
+    LNTH is just llist_rep with arguments swapped
+   ---------------------------------------------------------------------- *)
+
+val LNTH_rep = Q.store_thm ("LNTH_rep", 
+  `!i ll. LNTH i ll = llist_rep ll i`,
+  Induct THEN GEN_TAC THEN llist_CASE_TAC ``ll : 'a llist`` THEN
+  ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]) ;
 
 (*---------------------------------------------------------------------------*)
 (* LUNFOLD by definition                                                     *)
@@ -477,10 +511,7 @@ val LLIST_STRONG_BISIMULATION = store_thm(
    that LNTH is everywhere the same over them *)
 val LNTH_llist_rep = prove(
   ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
-  Induct THEN SRW_TAC [][LNTH, LHD, llist_repabs',LTL] THEN
-  Q.UNDISCH_THEN `lrep_ok r` MP_TAC THEN
-  ONCE_REWRITE_TAC [lrep_ok_cases] THEN SRW_TAC [][] THEN
-  SRW_TAC [ETA_ss][]);
+  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
 
 val LNTH_EQ = store_thm(
   "LNTH_EQ",
