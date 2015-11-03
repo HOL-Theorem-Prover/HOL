@@ -144,10 +144,6 @@ local open Substring in
   val trimr  = fn s => string(trimr 1 (full s))
 end
 
-fun special_mk_thy_type {Thy=thy,Tyop=tyop,Args=args} =
-  if tyop = "set" then mk_type("fun",(hd args)::[bool]) else
-    mk_thy_type {Thy=thy,Tyop=tyop,Args=args}
-
 fun raw_read_article input
   {const_name,tyop_name,define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
@@ -196,7 +192,7 @@ fun raw_read_article input
       handle HOL_ERR e => raise ERR "EqMp failed")
     | f "nil"    st                                          = push(OList [],st)
     | f "opType" (st as {stack=OList ls::OTypeOp {Thy,Tyop}::os,...})
-               = st_(OType(special_mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
+               = st_(OType(mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
 (*
     | f "pop"    (st as {stack=OList[OList hl,OTerm c]::OThm th::os,line_num,...}) = let
       val hl = unOTermls "pop" hl
