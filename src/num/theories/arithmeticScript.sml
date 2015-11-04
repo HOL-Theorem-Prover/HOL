@@ -1083,13 +1083,13 @@ val ADD_SUB = store_thm ("ADD_SUB",
  ``!a c. (a + c) - c = a``,
    GEN_TAC THEN INDUCT_TAC THEN
    ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ]) ;
-   
+
 val LESS_EQ_ADD_SUB = store_thm ("LESS_EQ_ADD_SUB",
  ``!c b. (c <= b) ==> !a. (((a + b) - c) = (a + (b - c)))``,
    REPEAT INDUCT_TAC THEN
    ASM_REWRITE_TAC [ADD_CLAUSES, SUB_0, SUB_MONO_EQ,
      NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]) ;
-   
+
 (* ---------------------------------------------------------------------*)
 (* SUB_EQUAL_0 = |- !c. c - c = 0                                       *)
 (* ---------------------------------------------------------------------*)
@@ -1145,14 +1145,14 @@ val SUB_CANCEL = store_thm ("SUB_CANCEL",
  ``!p n m. ((n <= p) /\ (m <= p)) ==> (((p - n) = (p - m)) = (n = m))``,
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [SUB_0, ZERO_LESS_EQ, SUB_MONO_EQ, LESS_EQ_MONO, INV_SUC_EQ,
-    NOT_SUC_LESS_EQ_0, NOT_SUC, GSYM NOT_SUC, SUB_NE_SUC, GSYM SUB_NE_SUC]) ;  
+    NOT_SUC_LESS_EQ_0, NOT_SUC, GSYM NOT_SUC, SUB_NE_SUC, GSYM SUB_NE_SUC]) ;
 
 val CANCEL_SUB = store_thm ("CANCEL_SUB",
  ``!p n m.((p <= n) /\ (p <= m)) ==> (((n - p) = (m - p)) = (n = m))``,
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [SUB_0, ZERO_LESS_EQ, SUB_MONO_EQ, LESS_EQ_MONO, INV_SUC_EQ,
-    NOT_SUC_LESS_EQ_0]) ;  
-  
+    NOT_SUC_LESS_EQ_0]) ;
+
 val NOT_EXP_0 = store_thm ("NOT_EXP_0",
  ``!m n. ~(((SUC n) EXP m) = 0)``,
    INDUCT_TAC THEN REWRITE_TAC [EXP] THENL
@@ -1552,7 +1552,7 @@ val pls = prove (``p ≤ m ∨ p ≤ 0 = p <= m``,
    REWRITE_TAC [LESS_EQ_0] THEN
    EQ_TAC THEN REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC [ZERO_LESS_EQ]) ;
- 
+
 val SUB_LEFT_LESS_EQ = store_thm ("SUB_LEFT_LESS_EQ",
    ``!m n p. (m <= (n - p)) = ((m + p) <= n) \/ (m <= 0)``,
    GEN_TAC THEN REPEAT INDUCT_TAC THEN
@@ -1628,7 +1628,7 @@ val SUB_RIGHT_EQ = store_thm ("SUB_RIGHT_EQ",
    ASM_REWRITE_TAC [SUB_0,ADD_CLAUSES, INV_SUC_EQ, SUB_EQ_0, SUB_MONO_EQ,
      LESS_EQ_MONO, ZERO_LESS_EQ, LESS_EQ_0, NOT_SUC, GSYM NOT_SUC] THEN
    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
-     
+
 val LE = save_thm ("LE",
    CONJ LESS_EQ_0
       (prove(``(!m n. m <= SUC n = (m = SUC n) \/ m <= n)``,
@@ -3202,63 +3202,63 @@ val leq_ss = MATCH_MP (MATCH_MP LESS_EQ_TRANS'' LESS_EQ_SUC_REFL')
 val imp_leq_ss = MATCH_MP LESS_EQ_TRANS'' leq_ss ;
 
 val ABS_DIFF_SUC_LE = Q.store_thm ("ABS_DIFF_SUC_LE",
-  `!x z. ABS_DIFF x (SUC z) ≤ SUC (ABS_DIFF x z)`,
-  REPEAT INDUCT_TAC THEN 
-  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC, 
+  `!x z. ABS_DIFF x (SUC z) <= SUC (ABS_DIFF x z)`,
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC,
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ, leq_ss]) ;
 
 val ABS_DIFF_PLUS_LE = Q.store_thm ("ABS_DIFF_PLUS_LE",
   `!x z y. ABS_DIFF x (y + z) ≤ y + (ABS_DIFF x z)`,
-  GEN_TAC THEN GEN_TAC THEN INDUCT_TAC 
+  GEN_TAC THEN GEN_TAC THEN INDUCT_TAC
     THEN REWRITE_TAC [ADD, LESS_EQ_REFL]
     THEN MATCH_MP_TAC (MATCH_MP LESS_EQ_TRANS' (SPEC_ALL ABS_DIFF_SUC_LE))
     THEN ASM_REWRITE_TAC [LESS_EQ_MONO]) ;
 
 val ABS_DIFF_PLUS_LE' = owr ADD_COMM ABS_DIFF_PLUS_LE ;
-val [ADT_splemx, ADT_splemx'] = 
-  map (owr ABS_DIFF_COMM) [ABS_DIFF_PLUS_LE, ABS_DIFF_PLUS_LE'] ; 
+val [ADT_splemx, ADT_splemx'] =
+  map (owr ABS_DIFF_COMM) [ABS_DIFF_PLUS_LE, ABS_DIFF_PLUS_LE'] ;
 
 val ABS_DIFF_LE_SUM = Q.store_thm ("ABS_DIFF_LE_SUM",
   `ABS_DIFF x z ≤ x + z`,
-  REWRITE_TAC [ABS_DIFF_def] THEN COND_CASES_TAC 
-    THEN MATCH_MP_TAC (MATCH_MP LESS_EQ_TRANS' (SPEC_ALL SUB_LESS_EQ)) 
+  REWRITE_TAC [ABS_DIFF_def] THEN COND_CASES_TAC
+    THEN MATCH_MP_TAC (MATCH_MP LESS_EQ_TRANS' (SPEC_ALL SUB_LESS_EQ))
     THEN REWRITE_TAC [LESS_EQ_ADD, LESS_EQ_ADD']) ;
 
 val ABS_DIFF_LE_SUM' = owr ADD_COMM ABS_DIFF_LE_SUM ;
 
-val [ADT_sslem, ADT_sslem'] = map (MATCH_MP imp_leq_ss) 
+val [ADT_sslem, ADT_sslem'] = map (MATCH_MP imp_leq_ss)
   [ABS_DIFF_LE_SUM, ABS_DIFF_LE_SUM'] ;
 
 val ABS_DIFF_TRIANGLE_lem = Q.store_thm ("ABS_DIFF_TRIANGLE_lem",
   `!x y. x ≤ ABS_DIFF x y + y`,
-  REPEAT INDUCT_TAC THEN 
-  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC, 
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC,
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ]) ;
 
-val ABS_DIFF_TRIANGLE_lem' = 
+val ABS_DIFF_TRIANGLE_lem' =
   owr ABS_DIFF_COMM (owr ADD_COMM ABS_DIFF_TRIANGLE_lem) ;
 
 val ABS_DIFF_TRIANGLE = Q.store_thm ("ABS_DIFF_TRIANGLE",
 `!x y z. ABS_DIFF x z <= ABS_DIFF x y + ABS_DIFF y z`,
-  REPEAT INDUCT_TAC THEN 
-  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC, 
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC,
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ,
     ABS_DIFF_TRIANGLE_lem, ABS_DIFF_TRIANGLE_lem', ADT_sslem]) ;
 
 val ABS_DIFF_ADD_SAME = Q.store_thm ("ABS_DIFF_ADD_SAME",
    `!n m p. ABS_DIFF (n + p) (m + p) = ABS_DIFF n m`,
-   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC 
+   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC
      THEN ASM_REWRITE_TAC [ADD_0, GSYM ADD_SUC, ABS_DIFF_SUC]) ;
 
 val LE_SUB_RCANCEL = Q.store_thm ("LE_SUB_RCANCEL",
    `!m n p. n - m <= p - m <=> n <= m \/ n <= p`,
-  REPEAT INDUCT_TAC THEN 
+  REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [ LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ,
     NOT_SUC_LESS_EQ_0, SUB_MONO_EQ, SUB_0, SUB_EQ_0, LESS_EQ_0]) ;
 
 val LT_SUB_RCANCEL = Q.store_thm ("LT_SUB_RCANCEL",
    `!m n p. n - m < p - m <=> n < p /\ m < p`,
-  REPEAT GEN_TAC THEN 
+  REPEAT GEN_TAC THEN
   REWRITE_TAC [GSYM NOT_LESS_EQUAL, LE_SUB_RCANCEL, DE_MORGAN_THM] THEN
   MATCH_ACCEPT_TAC CONJ_COMM) ;
 
@@ -3266,7 +3266,7 @@ val LE_SUB_LCANCEL = Q.store_thm ("LE_SUB_LCANCEL",
   `!z y x. x − y <= x − z = z <= y \/ x <= y`,
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [ SUB_MONO_EQ, LESS_EQ_MONO, LESS_EQ_REFL,
-    SUB_0, NOT_SUC_LESS_EQ_0, ZERO_LESS_EQ, 
+    SUB_0, NOT_SUC_LESS_EQ_0, ZERO_LESS_EQ,
     NOT_SUC_LESS_EQ, SUB_LESS_EQ, SUB_LE_SUC]) ;
 
 val LT_SUB_LCANCEL = Q.store_thm ("LT_SUB_LCANCEL",
@@ -3275,8 +3275,8 @@ val LT_SUB_LCANCEL = Q.store_thm ("LT_SUB_LCANCEL",
 
 val ABS_DIFF_SUMS = Q.store_thm ("ABS_DIFF_SUMS",
 `!n1 n2 m1 m2. ABS_DIFF (n1 + n2) (m1 + m2) <= ABS_DIFF n1 m1 + ABS_DIFF n2 m2`,
-  REPEAT INDUCT_TAC THEN 
-  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC, 
+  REPEAT INDUCT_TAC THEN
+  ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC,
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ, ADT_sslem', ADT_sslem]
   THENL [
     REWRITE_TAC [GSYM (CONJUNCT2 ADD), ABS_DIFF_PLUS_LE],
