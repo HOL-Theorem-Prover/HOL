@@ -98,7 +98,7 @@ val FRAC_EQ = store_thm("FRAC_EQ",
     POP_ASSUM (MP_TAC o AP_TERM ``rep_frac``) THEN
       VALIDATE (CONV_TAC (DEPTH_CONV (REWR_CONV_A (UNDISCH raf_eqI)))),
     ALL_TAC] THEN
-  ASM_SIMP_TAC std_ss []) ; 
+  ASM_SIMP_TAC std_ss []) ;
 
 (*--------------------------------------------------------------------------
  *  FRAC_EQ_ALT : thm
@@ -149,7 +149,7 @@ val FRAC_NOT_EQ_IMP = store_thm("FRAC_NOT_EQ_IMP",
  *   =========================================  FRAC_EQ_TAC
  *     A ?- a1=a2 | A ?- b1=b2
  *
- * simplified version - note, doesn't check that goal is of given form 
+ * simplified version - note, doesn't check that goal is of given form
  *--------------------------------------------------------------------------*)
 
 val FRAC_EQ_TAC:tactic = fn (asm_list,goal) =>

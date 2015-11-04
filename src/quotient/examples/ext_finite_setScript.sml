@@ -287,7 +287,7 @@ val fnlist =
 (* if desired, a membership constant for finite sets can be defined in
    terms of fset2set:
 
-     fmem x s = x ∈ fset2set s
+     fmem x s = x ∈ fset2set s                        (UOK)
 
    Alternatively, fmem could just be overloaded to a term of this form, as
    is done in the finite_set version of this example.

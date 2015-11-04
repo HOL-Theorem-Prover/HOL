@@ -183,8 +183,8 @@ fun hh_try thml cj time =
     (print "Doubling the number of predictions\n";
      print "Try KNN ...\n"; hh_argl thml cj (mk_argl strat3)) handle _ =>
     (print "Try Mepo ...\n"; hh_argl thml cj (mk_argl strat4)) handle _ =>
-    (print "Proving the negation ...\n"; 
-     hh_argl thml (mk_neg cj) (mk_argl strat1)) 
+    (print "Proving the negation ...\n";
+     hh_argl thml (mk_neg cj) (mk_argl strat1))
   end
 
 (* Let you chose the specific prover you want to use either *)

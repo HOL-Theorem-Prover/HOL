@@ -1,6 +1,6 @@
 \chapter{La logica di \HOL{}}\label{HOLlogic}
 
-Il sistema \HOL{} supporta \emph{la logica di ordine superiore}. 
+Il sistema \HOL{} supporta \emph{la logica di ordine superiore}.
 Questa è una versione del calcolo dei predicati con tre estensioni principali:
 
 \begin{itemize}
@@ -55,7 +55,7 @@ Per esempio, l'espressione \holtxt{``x /\bs{} y ==> z``} è valutata in \ML{} a u
 I termini possono essere manipolati da varie funzioni incorporate in \ML{}.
 Per esempio, la funzione \ML{} \ml{dest\_imp} con il tipo \ML{} \ml{term -> term * term} divide un'implicazione in una coppia di termini che consiste nel suo antecedente e nel suo conseguente, e la funzione \ML\ \ml{dest\_conj} di tipo \ml{term -> term * term} divide una congiunzione nei suoi due congiunti%
 \footnote{Tutti gli esempi di sotto assumono che l'utente stia eseguendo \texttt{hol}, il cui eseguibile è nella directory \texttt{bin/}.
-A seconda della configurazione del sistema, è anche possibile che la notazione ASCII utilizzata nelle sessioni di esempio che seguono sia sostituita da una notazione 
+A seconda della configurazione del sistema, è anche possibile che la notazione ASCII utilizzata nelle sessioni di esempio che seguono sia sostituita da una notazione
 Unicode più gradevole: in cui per esempio \holtxt{/\bs} è sostituito da $\land$.}.
 
 \setcounter{sessioncount}{0}
@@ -72,7 +72,7 @@ Unicode più gradevole: in cui per esempio \holtxt{/\bs} è sostituito da $\land$.
 \end{verbatim}
 \end{session}
 
-I termini della logica di \HOL{} sono piuttosto simili a espressioni \ML{}, e questo all'inizio può confondere. 
+I termini della logica di \HOL{} sono piuttosto simili a espressioni \ML{}, e questo all'inizio può confondere.
 Di fatto, i termini della logica hanno tipi analoghi a quelli dell'espressioni \ML{}.
 Per esempio, \holtxt{``(1,2)``}  è un'espressione \ML{} con tipo \ML{} \ml{term}.
 Il tipo \HOL{} di questo termine è \holtxt{num \# num}.
@@ -100,7 +100,7 @@ La funzione incorporata \ml{type_of} ha il tipo \ML{} \ml{term->hol_type} e rest
 \end{verbatim}
 \end{session}
 
-Per tentare di minimizzare la confusione tra i tipi logici dei termini \HOL{} e i tipi \ML{} di espressioni \ML{}, ci si riferirà ai primi come a \emph{tipi del  linguaggio oggetto} e ai secondi come a \emph{tipi del meta-linguaggio}. 
+Per tentare di minimizzare la confusione tra i tipi logici dei termini \HOL{} e i tipi \ML{} di espressioni \ML{}, ci si riferirà ai primi come a \emph{tipi del  linguaggio oggetto} e ai secondi come a \emph{tipi del meta-linguaggio}.
 Per esempio, \ml{``(1,T)``} è un'espressione \ML{} che ha il tipo \ml{term} del meta-linguaggio ed è valutato a un termine con il tipo \ml{``:num\#bool``} del linguaggio oggetto.
 %
 \begin{session}
@@ -143,7 +143,7 @@ E' disponibile un'ampia collezione di costruttori e distruttori di termini per l
 \paragraph{Controllo di tipo}
 
 Di fatto ci sono quattro generi differenti di termini in \HOL: variabili, costanti, applicazioni di funzione (\ml{``$t_1$ $t_2$``}), e lambda astrazioni (\ml{``\bs$x$.$t$``}).
-Termini più complicati, come quelli che abbiamo già visto di sopra, sono soltanto composizioni di termini da questo semplice insieme. 
+Termini più complicati, come quelli che abbiamo già visto di sopra, sono soltanto composizioni di termini da questo semplice insieme.
 Al fine di comprendere il comportamento del parser delle quotation, è necessario capire come il controllore dei tipi deduca i tipi per le quattro categorie base di termini.
 
 Sia le variabili sia le costanti hanno un nome e un tipo; la differenza è che le costanti non possono essere legate da quantificatori, e il loro tipo è fissato quando sono dichiarate (si veda di sotto).
@@ -157,10 +157,10 @@ Per esempio, nel caso seguente, il controllore di tipi di \HOL{} ha usato il tip
 \end{verbatim}
 \end{session}
 
-Nei prossimi due casi, il tipo di \ml{x} e \ml{y} non può essere 
+Nei prossimi due casi, il tipo di \ml{x} e \ml{y} non può essere
 dedotto.
-(Di default lo `scopo' dell'informazione di tipo per il controllore di tipo è una singola quotation, così un tipo in una quotation non può influenzare il controllo di tipo di un'altra. 
-Così \ml{x} non è costretta ad avere il tipo \ml{bool} nella seconda quotation.) 
+(Di default lo `scopo' dell'informazione di tipo per il controllore di tipo è una singola quotation, così un tipo in una quotation non può influenzare il controllo di tipo di un'altra.
+Così \ml{x} non è costretta ad avere il tipo \ml{bool} nella seconda quotation.)
 
 \begin{session}
 \begin{verbatim}
@@ -242,7 +242,7 @@ unification failure message: unify failed
 \end{session}
 
 Il simbolo di dollaro all'inizio di \holtxt{\td} indica che la costante di negazione booleana ha uno stato sintattico speciale (in questo caso una precedenza non standard).
-Mettere \holtxt{\$} davanti a un simbolo qualsiasi fa sì che il parser ignori qualsiasi status sintattico speciale esso possa avere (come l'essere un infisso). 
+Mettere \holtxt{\$} davanti a un simbolo qualsiasi fa sì che il parser ignori qualsiasi status sintattico speciale esso possa avere (come l'essere un infisso).
 Lo stesso effetto si può ottenere racchiudendo il simbolo fra parentesi.
 Questo è analogo al modo in cui \texttt{op} è usato in \ML.
 
@@ -270,7 +270,7 @@ Le funzioni hanno tipi della forma \ml{$\sigma_1$->$\sigma_2$}, dove $\sigma_1$ 
 \end{verbatim}
 \end{session}
 
-\noindent Di nuovo, sia \holtxt{+} che \holtxt{==>} sono infissi, così il loro uso in contesti dove non sono usati come tali richiede un'escaping della sintassi. 
+\noindent Di nuovo, sia \holtxt{+} che \holtxt{==>} sono infissi, così il loro uso in contesti dove non sono usati come tali richiede un'escaping della sintassi.
 La sessione di sotto illustra l'uso di queste costanti come infissi, illustra anche i tipi del linguaggio oggetto di contro a quelli del meta-linguaggio.
 
 \begin{session}
@@ -363,15 +363,15 @@ Il parser accetta sia \holtxt{<=>} che \holtxt{=} con argomenti booleani; tentar
 \end{session}
 
 
-I teoremi sono stampati con un turnstile anteposto {\small\verb+|-+} come illustrato di sotto; il simbolo `{\small\verb|!|}' è il quantificatore universale `$\forall$'. 
-Le regole d'inferenza sono funzioni \ML{} che restituiscono valori di tipo \ml{thm}. 
+I teoremi sono stampati con un turnstile anteposto {\small\verb+|-+} come illustrato di sotto; il simbolo `{\small\verb|!|}' è il quantificatore universale `$\forall$'.
+Le regole d'inferenza sono funzioni \ML{} che restituiscono valori di tipo \ml{thm}.
 Un esempio di una regola d'inferenza è la {\it specializzazione\/} (o $\forall$-eliminazione).
 Nella notazione standard della `deduzione naturale' questo è:
 
 \[ \frac{\Gamma\turn \uquant{x}t}{\Gamma\turn t[t'/x]}\]
 
 \begin{itemize}
-\item $t[t'/x]$ denota il risultato della sostituzione di $t'$ per tutte le occorrenze libere di $x$ in $t$, con la restrizione che nessuna variabile libera in $t'$ venga legata dopo la sostituzione. 
+\item $t[t'/x]$ denota il risultato della sostituzione di $t'$ per tutte le occorrenze libere di $x$ in $t$, con la restrizione che nessuna variabile libera in $t'$ venga legata dopo la sostituzione.
 \end{itemize}
 
 \noindent Questa regola è rappresentata in \ML{} da una funzione \ml{SPEC},%
@@ -398,10 +398,10 @@ Questa sessione consiste di una dimostrazione di due passi: usando un assioma e 
 \end{proofenumerate}
 \end{samepage}
 
-Se l'argomento a una funzione \ML{} che rappresenta una regola d'inferenza è del genere sbagliato, o viola una condizione della regola, allora l'applicazione fallisce. 
-Per esempio, $\ml{SPEC}\ t\ th$ fallirà se $th$ non è della forma $\ml{|-\ !}x\ml{.}\cdots$ o se è di questa forma ma il tipo di $t$ non è lo stesso del tipo di $x$, o se non è soddisfatta la restrizione della variabile libera. 
+Se l'argomento a una funzione \ML{} che rappresenta una regola d'inferenza è del genere sbagliato, o viola una condizione della regola, allora l'applicazione fallisce.
+Per esempio, $\ml{SPEC}\ t\ th$ fallirà se $th$ non è della forma $\ml{|-\ !}x\ml{.}\cdots$ o se è di questa forma ma il tipo di $t$ non è lo stesso del tipo di $x$, o se non è soddisfatta la restrizione della variabile libera.
 Quando è sollevata una delle eccezioni \ml{HOL\_ERR} standard, si può spesso ottenere più informazione circa il fallimento usando la funzione \ml{Raise}.%
-\footnote{La funzione \ml{Raise} passa su tutte le eccezioni che vede; essa non incide per nulla sulla semantica della computazione. 
+\footnote{La funzione \ml{Raise} passa su tutte le eccezioni che vede; essa non incide per nulla sulla semantica della computazione.
 Comunque, quando le viene passata un'eccezione \ml{HOL\_ERR}, stampa alcune utili informazioni prima di passare l'eccezione al livello successivo.}.
 
 \begin{session}
@@ -427,13 +427,13 @@ Gli strumenti che generano dimostrazioni nel sistema \HOL{} sono soltanto quelli
 
 La forma generale di un teorema è $t_1,\ldots,t_n\;\ml{|-}\;t$, dove $t_1$, $\ldots$ , $t_n$ sono termini booleani chiamati le {\it assunzioni} e $t$ è un termine booleano chiamato la  {\it conclusione\/}.
 Un tale teorema afferma che se le sue assunzioni sono vere allora lo è anche la sua conclusione.
-Le sue condizioni di verità sono così le stesse di quelle per il 
+Le sue condizioni di verità sono così le stesse di quelle per il
 singolo termine $(t_1\,\ml{/\bs}\ldots\ml{/\bs}\,t_n)\,\ml{==>}\,t$.
 I teoremi senza assunzioni sono stampati nella forma \ml{|-}$\ t$.
 
 I cinque assiomi e le otto regole primitive d'inferenza della logica di \HOL{} sono descritte nel dettaglio nel documento \DESCRIPTION.
 Ogni valore di tipo \ml{thm} nel sistema \HOL{} si può ottenere applicando ripetutamente regole primitive d'inferenza agli assiomi.
-Quando il sistema \HOL{} è costruito, le otto regole primitive d'inferenza sono definite e i cinque assiomi sono legati ai loro nomi \ML{}. 
+Quando il sistema \HOL{} è costruito, le otto regole primitive d'inferenza sono definite e i cinque assiomi sono legati ai loro nomi \ML{}.
 Tutti gli altri teoremi predefiniti sono dimostrati usando le regole d'inferenza mentre il sistema si costruisce\footnote{Questa è una semplificazione leggeremnte eccessiva}.
 Questa è una delle ragioni per cui la costruzione di \ml{hol} richiede così tanto tempo.
 
@@ -443,15 +443,15 @@ Nella Sezione~\ref{tactics} è descritta la \emph{dimostrazione diretta dal goal}
 \section{Dimostrazione in avanti}
 \label{forward}
 
-Tre delle regole primitive d'inferenza della logica \HOL{} sono 
-\ml{ASSUME} (introduzione di un'assunzione), \ml{DISCH} (scaricamento o 
-eliminazione di un'assunzione) e \ml{MP} (Modus Ponens). Queste regole saranno 
+Tre delle regole primitive d'inferenza della logica \HOL{} sono
+\ml{ASSUME} (introduzione di un'assunzione), \ml{DISCH} (scaricamento o
+eliminazione di un'assunzione) e \ml{MP} (Modus Ponens). Queste regole saranno
 usate per illustrare la dimostrazione in avanti e la scrittura di regole derivate.
 
 La regola d'inferenza \ml{ASSUME} genera teoremi della forma \ml{$t$
-  |- $t$}. Si noti, comunque, che il printer \ML{} stampa ogni 
-assunzione come un punto (ma questo default può essere cambiato; si veda di sotto). La 
-funzione \ml{dest\_thm} decompone un teorema in una coppia che consiste nella 
+  |- $t$}. Si noti, comunque, che il printer \ML{} stampa ogni
+assunzione come un punto (ma questo default può essere cambiato; si veda di sotto). La
+funzione \ml{dest\_thm} decompone un teorema in una coppia che consiste nella
 lista delle assunzioni e nella conclusione
 
 \begin{session}
@@ -464,11 +464,11 @@ lista delle assunzioni e nella conclusione
 \end{verbatim}
 \end{session}
 
-Una sorta di duale di \ml{ASSUME} è la regola primitiva d'inferenza 
-\ml{DISCH} (scaricamento, eliminazione di un'assunzione) che deduce da 
-un teorema della forma $\cdots t_1\cdots\ml{\ |-\ }t_2$ il nuovo teorema 
-$\cdots\ \cdots\ \ml{|-}\ t_1\ml{==>}t_2$. \ml{DISCH} prende come argomenti 
-il termine che deve essere scaricato (\ie\ $t_1$) e il teorema da cui 
+Una sorta di duale di \ml{ASSUME} è la regola primitiva d'inferenza
+\ml{DISCH} (scaricamento, eliminazione di un'assunzione) che deduce da
+un teorema della forma $\cdots t_1\cdots\ml{\ |-\ }t_2$ il nuovo teorema
+$\cdots\ \cdots\ \ml{|-}\ t_1\ml{==>}t_2$. \ml{DISCH} prende come argomenti
+il termine che deve essere scaricato (\ie\ $t_1$) e il teorema da cui
 le assunzioni devono essere scaricate e restituisce il risultato dello scaricamento.
 La seguente sessione illustra questo:
 
@@ -478,7 +478,7 @@ La seguente sessione illustra questo:
 > val Th4 = |- (t1 ==> t2) ==> t1 ==> t2 : thm
 \end{verbatim}
 \end{session}
-Si noti che non è necessario che il termine che deve essere scaricato sia nelle assunzioni; in 
+Si noti che non è necessario che il termine che deve essere scaricato sia nelle assunzioni; in
 questo caso esse rimarranno invariate.
 
 \begin{session}
@@ -496,11 +496,11 @@ In \HOL\, la regola \ml{MP} del Modus Ponens è specificata nella notazione conve
 \frac{\Gamma_1 \turn t_1 \imp t_2 \qquad\qquad \Gamma_2\turn t_1}
 {\Gamma_1 \cup \Gamma_2 \turn t_2}
 \]
-La funzione \ML{} \ml{MP} prende come argomenti teoremi della forma 
-\ml{$\cdots\ $|-$\ t_1$\ ==>\ $t_2$} e \ml{$\cdots\ $|-$\ t_1$} e 
-restituisce \ml{$\cdots\ $|-$\ t_2$}. La prossima sessione illustrerà l'uso 
-di \ml{MP} e anche un errore comune, cioè il non fornire informazione sufficiente 
-al controllore di tipo logico di \HOL\ . 
+La funzione \ML{} \ml{MP} prende come argomenti teoremi della forma
+\ml{$\cdots\ $|-$\ t_1$\ ==>\ $t_2$} e \ml{$\cdots\ $|-$\ t_1$} e
+restituisce \ml{$\cdots\ $|-$\ t_2$}. La prossima sessione illustrerà l'uso
+di \ml{MP} e anche un errore comune, cioè il non fornire informazione sufficiente
+al controllore di tipo logico di \HOL\ .
 
 \begin{session}
 \begin{verbatim}
@@ -524,8 +524,8 @@ not a proposition
 \end{verbatim}
 \end{session}
 
-Le ipotesi di \ml{Th6} possono essere ispezionate con la funzione \ML{} 
-\ml{hyp}, che restituisce la lista delle assunzioni di un teorema (la 
+Le ipotesi di \ml{Th6} possono essere ispezionate con la funzione \ML{}
+\ml{hyp}, che restituisce la lista delle assunzioni di un teorema (la
 conclusione è restituita da \ml{concl}).
 
 \begin{session}
@@ -551,7 +551,7 @@ Si può far sì che \HOL{} stampi in modo esplicito le ipotesi dei teoremi imposta
 \end{session}
 
 
-\noindent Scaricando \ml{Th6} due volte si stabilisce il teorema 
+\noindent Scaricando \ml{Th6} due volte si stabilisce il teorema
 \ml{|-\ t1 ==> (t1==>t2) ==> t2}.
 
 \begin{session}
@@ -564,7 +564,7 @@ Si può far sì che \HOL{} stampi in modo esplicito le ipotesi dei teoremi imposta
 \end{verbatim}
 \end{session}
 
-La sequenza di teoremi: \ml{Th3}, \ml{Th5}, \ml{Th6}, \ml{Th7}, \ml{Th8} costituisce una dimostrazione in \HOL{} del teorema \ml{|-\ t1 ==> (t1 ==> t2) ==> t2}. 
+La sequenza di teoremi: \ml{Th3}, \ml{Th5}, \ml{Th6}, \ml{Th7}, \ml{Th8} costituisce una dimostrazione in \HOL{} del teorema \ml{|-\ t1 ==> (t1 ==> t2) ==> t2}.
 In notazione logica standard questa dimostrazione potrebbe essere scritta:
 
 \begin{proofenumerate}
@@ -594,12 +594,12 @@ Per esempio, una dimostrazione di $\Gamma,\ t'\turn t$ dalle ipotesi $\Gamma\tur
 \item $ \Gamma,\ t'\turn t$ \hfill [Modus Ponens applicato alle linee 3 e 1]
 \end{proofenumerate}
 
-\noindent Questa dimostrazione funziona per qualunque ipotesi della forma $\Gamma\turn t$ 
-e qualsiasi termine booleano $t'$ e mostra che il risultato di aggiungere un'ipotesi 
-arbitraria a un teorema è un altro teorema (perché le quattro 
-linee di sopra possono essere aggiunte a qualsiasi dimostrazione di $\Gamma\turn t$ per ottenere una 
-dimostrazione di $\Gamma,\ t'\turn t$)\footnote{Questa proprietà della logica è 
-  chiamata {\it monotonicità}.}. Per esempio, la prossima sessione usa questa 
+\noindent Questa dimostrazione funziona per qualunque ipotesi della forma $\Gamma\turn t$
+e qualsiasi termine booleano $t'$ e mostra che il risultato di aggiungere un'ipotesi
+arbitraria a un teorema è un altro teorema (perché le quattro
+linee di sopra possono essere aggiunte a qualsiasi dimostrazione di $\Gamma\turn t$ per ottenere una
+dimostrazione di $\Gamma,\ t'\turn t$)\footnote{Questa proprietà della logica è
+  chiamata {\it monotonicità}.}. Per esempio, la prossima sessione usa questa
 dimostrazione per aggiungere l'ipotesi \ml{``t3``} a \ml{Th6}.
 
 \begin{session}
@@ -616,11 +616,11 @@ dimostrazione per aggiungere l'ipotesi \ml{``t3``} a \ml{Th6}.
 \end{session}
 
 
-    Una {\it regola derivata\/} è una procedura \ML{} che genera una dimostrazione 
-		dalle ipotesi date ogni volta che è invocata. Le ipotesi sono 
-		gli argomenti della regola. Per illustrare questo, una regola, chiamata 
-		\ml{ADD\_ASSUM}, sarà ora definita come una procedura \ML{} che 
-		svolge la dimostrazione di sopra. In notazione standard questo sarebbe 
+    Una {\it regola derivata\/} è una procedura \ML{} che genera una dimostrazione
+		dalle ipotesi date ogni volta che è invocata. Le ipotesi sono
+		gli argomenti della regola. Per illustrare questo, una regola, chiamata
+		\ml{ADD\_ASSUM}, sarà ora definita come una procedura \ML{} che
+		svolge la dimostrazione di sopra. In notazione standard questo sarebbe
 		descritto da:
 
 \[ \frac{\Gamma\turn t}{\Gamma,\ t'\turn t} \]
@@ -642,9 +642,9 @@ dimostrazione per aggiungere l'ipotesi \ml{``t3``} a \ml{Th6}.
 \end{verbatim}
 \end{session}
 
-\noindent Il corpo di \ml{ADD\_ASSUM} è stato codificato per riflettere la dimostrazione fatta 
-nella sessione~10 di sopra, così da mostrare come una dimostrazione interattiva può essere 
-generalizzata in una procedura. Ma \ml{ADD\_ASSUM} può essere scritta in modo 
+\noindent Il corpo di \ml{ADD\_ASSUM} è stato codificato per riflettere la dimostrazione fatta
+nella sessione~10 di sopra, così da mostrare come una dimostrazione interattiva può essere
+generalizzata in una procedura. Ma \ml{ADD\_ASSUM} può essere scritta in modo
 molto più conciso come.
 
 \begin{session}
@@ -677,7 +677,7 @@ Una regola derivata \ML{} che implementa questo è:
 \end{verbatim}
 \end{session}
 
-\noindent Ogni volta che è eseguita \ml{UNDISCH\ $\Gamma\turn t_1\imp t_2$}, 
+\noindent Ogni volta che è eseguita \ml{UNDISCH\ $\Gamma\turn t_1\imp t_2$},
 è svolta la seguente dimostrazione:
 
 \begin{proofenumerate}
@@ -686,23 +686,23 @@ Una regola derivata \ML{} che implementa questo è:
 \item $ \Gamma,\ t_1\turn t_2$ \hfill [Modus Ponens applicata alle linee 2 and 1]
 \end{proofenumerate}
 
-Le regole \ml{ADD\_ASSUM} e \ml{UNDISCH} sono le prime regole derivate 
-definite quando il sistema \HOL{} è costruito. Per una descrizione delle regole 
+Le regole \ml{ADD\_ASSUM} e \ml{UNDISCH} sono le prime regole derivate
+definite quando il sistema \HOL{} è costruito. Per una descrizione delle regole
 principali si veda la sezione sulle regole derivate in \DESCRIPTION.
 
 \subsubsection{Riscrittura}
 
-Un'interessante regola derivata è \ml{REWRITE\_RULE}. Questa prende una lista di 
+Un'interessante regola derivata è \ml{REWRITE\_RULE}. Questa prende una lista di
 teoremi equazionali della forma:
 
 \[
 \Gamma\turn (u_1 = v_1) \conj (u_2 = v_2) \conj \ldots\ \conj (u_n  = v_n)
 \]
-e un teorema $\Delta\turn t$ e sostituisce ripetutamente istanze di $u_i$ in $t$ con l'istanza corrispondente di $v_i$ fino a quando non occorrono altri cambiamenti. 
-Il risultato è un teorema $\Gamma\cup\Delta\turn t'$ dove $t'$ è il risultato di riscrivere $t$ in questo modo. 
-La sessione di sotto illustra l'uso di \ml{REWRITE\_RULE}. 
-In essa la lista di equazioni è il valore \ml{rewrite\_list} che contiene i teoremi pre-dimostrati \ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}. 
-Questi teoremi appartengono alla teoria \ml{arithmetic}, così per riferirsi ad essi dobbiamo usare un nome completo con il nome della teoria come primo componente. 
+e un teorema $\Delta\turn t$ e sostituisce ripetutamente istanze di $u_i$ in $t$ con l'istanza corrispondente di $v_i$ fino a quando non occorrono altri cambiamenti.
+Il risultato è un teorema $\Gamma\cup\Delta\turn t'$ dove $t'$ è il risultato di riscrivere $t$ in questo modo.
+La sessione di sotto illustra l'uso di \ml{REWRITE\_RULE}.
+In essa la lista di equazioni è il valore \ml{rewrite\_list} che contiene i teoremi pre-dimostrati \ml{ADD\_CLAUSES} and \ml{MULT\_CLAUSES}.
+Questi teoremi appartengono alla teoria \ml{arithmetic}, così per riferirsi ad essi dobbiamo usare un nome completo con il nome della teoria come primo componente.
 (In alternativa, potremmo, come nell'esempio Euclide della sezione~\ref{chap:euclid}, usare \ml{open} per dichiarare tutti i valori nella teoria al top level.)
 
 \begin{session}
@@ -729,7 +729,7 @@ Questi teoremi appartengono alla teoria \ml{arithmetic}, così per riferirsi ad e
 \end{session}
 
 \noindent
-Questo può essere riscritto usando un altro teorema pre-dimostrato 
+Questo può essere riscritto usando un altro teorema pre-dimostrato
 \ml{LESS\_THM}, che appartiene alla teoria \ml{prim\_rec}:
 
 \begin{session}
@@ -739,7 +739,7 @@ Questo può essere riscritto usando un altro teorema pre-dimostrato
 \end{verbatim}
 \end{session}
 
-\ml{REWRITE\_RULE} non è una regola primitiva in \HOL, ma è una regola derivata. 
+\ml{REWRITE\_RULE} non è una regola primitiva in \HOL, ma è una regola derivata.
 E' ereditata dal Cambridge \LCF\ e fu implementata da Larry Paulson (per i dettagli si veda il suo scritto \cite{lcp-rewrite}).
 In aggiunta alle equazioni fornite, \ml{REWRITE\_RULE} ha incorporate alcune semplificazioni standard:
 
@@ -755,19 +755,19 @@ Ci sono degli strumenti elaborati in \HOL{} per produrre riscritture personalizz
 \section{Dimostrazioni Dirette dal Goal: Tattiche e Tatticali}
 \label{backward}\label{tactics}
 
-Lo stile della dimostrazione in avanti descritto nella sessione precedente è 
-innaturale e troppo di `basso livello' per molte applicazioni. Un importante 
-passo in avanti nella metodologia di generazione delle dimostrazioni fu fatto da Robin Milner nei primi 
-anno 1970 quando inventò la nozione delle {\it tattiche\/}. Una 
+Lo stile della dimostrazione in avanti descritto nella sessione precedente è
+innaturale e troppo di `basso livello' per molte applicazioni. Un importante
+passo in avanti nella metodologia di generazione delle dimostrazioni fu fatto da Robin Milner nei primi
+anno 1970 quando inventò la nozione delle {\it tattiche\/}. Una
 tattica è una funzione che fa le seguenti cose.
 \begin{myenumerate}
 \item Divide un `goal' in `subgoals'.
 \item Tiene traccia del motivo per cui risolvere i subgoals risolve il goal.
 \end{myenumerate}
 
-\noindent Si consideri, per esempio, la regola di $\wedge$-introduzione\footnote{Nella 
-  logica di ordine superiore questa è una regola derivata; nella logica del primo ordine essa 
-	di solito è primitiva. In HOL la regola è chiamata {\tt CONJ} e la sua 
+\noindent Si consideri, per esempio, la regola di $\wedge$-introduzione\footnote{Nella
+  logica di ordine superiore questa è una regola derivata; nella logica del primo ordine essa
+	di solito è primitiva. In HOL la regola è chiamata {\tt CONJ} e la sua
 	derivazione è data in \DESCRIPTION.} mostrata di sotto:
 
 \[ \frac{\Gamma_1\turn
@@ -775,14 +775,14 @@ t_1\qquad\qquad\qquad\Gamma_2\turn t_2}{\Gamma_1\cup\Gamma_2 \turn t_1\conj
 t_2} \]
 
 
-\noindent In \HOL, la  $\wedge$-introduzione è rappresentata dalla funzione \ML{} 
+\noindent In \HOL, la  $\wedge$-introduzione è rappresentata dalla funzione \ML{}
 \ml{CONJ}:
 
 \[\ml{CONJ}\ (\Gamma_1\turn t_1)\ (\Gamma_2\turn t_2) \ \ \leadsto\
 \ (\Gamma_1\cup\Gamma_2\turn  t_1\conj  t_2)\]
 
-\noindent Questo è illustrato nella 
-seguente nuova sessione (si noti che il numero di sessione è stata reimpostato a 
+\noindent Questo è illustrato nella
+seguente nuova sessione (si noti che il numero di sessione è stata reimpostato a
 {\small\sl 1}:
 
 \setcounter{sessioncount}{0}
@@ -800,27 +800,27 @@ val it = () : unit
 \end{verbatim}
 \end{session}
 
-    Si supponga che il goal sia dimostrare $A\conj B$, quindi questa regola dice che 
-		è sufficiente dimostrare i due subgoal $A$ e $B$, perché 
-		da $\turn A$ e $\turn B$ può essere dedotto il teorema 
+    Si supponga che il goal sia dimostrare $A\conj B$, quindi questa regola dice che
+		è sufficiente dimostrare i due subgoal $A$ e $B$, perché
+		da $\turn A$ e $\turn B$ può essere dedotto il teorema
 		$\turn A\conj B$. Così:
 
 \begin{myenumerate}
-\item Per dimostrare $\turn A \conj B$ è sufficiente 
+\item Per dimostrare $\turn A \conj B$ è sufficiente
       dimostrare $\turn A$ e $\turn B$.
-\item La giustificazione per la riduzione del 
+\item La giustificazione per la riduzione del
 goal  $\turn A \conj B$  ai due subgoals  $\turn A$
 e $\turn B$ è la regola di $\wedge$-introduzione.
 \end{myenumerate}
 
 Un \emph{goal} in \HOL{} è una coppia \ml{([$t_1$,\ldots,$t_n$],$t$)} di tipo \ML{} \ml{term list~*~term}.
-Una \emph{realizzazione} di un tale goal è un teorema \ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}. 
+Una \emph{realizzazione} di un tale goal è un teorema \ml{$t_1$,$\ldots$,$t_n$\ |-\ $t$}.
 Una tattica è una funzione \ML{} che quando applicata a un goal genera i subgoal insieme con una \emph{funzione di giustificazione} o di {\it validazione\/}, che sarà una regola d'inferenza derivata \ML{}, che può essere usata per inferire una realizzazione del goal originale dalla realizzazione dei subgoal.
 
-Se $T$ è una tattica (cioè una funzione \ML{} di tipo\linebreak \ml{goal\,->\,(goal\,list\,*\,(thm\,list\,->\,thm))}) e $g$ è un goal, allora applicare $T$ a 
-$g$ (cioè valutare l'espressione \ML{} $T\ g$) risulterà in un 
-oggetto che è una coppia il cui primo componente è una lista di goal e 
-il cui secondo componente è una funzione di giustificazione, cioè un valore con 
+Se $T$ è una tattica (cioè una funzione \ML{} di tipo\linebreak \ml{goal\,->\,(goal\,list\,*\,(thm\,list\,->\,thm))}) e $g$ è un goal, allora applicare $T$ a
+$g$ (cioè valutare l'espressione \ML{} $T\ g$) risulterà in un
+oggetto che è una coppia il cui primo componente è una lista di goal e
+il cui secondo componente è una funzione di giustificazione, cioè un valore con
 tipo \ML{} {\small\verb|thm list -> thm|}.
 
 Un esempio di tattica è \ml{CONJ\_TAC} che implementa (i) e (ii) di sopra.
@@ -844,8 +844,8 @@ Per esempio, si consideri il goal del tutto banale di mostrare \holtxt{T~/\bs{}~
 \end{verbatim}
 \end{session}
 
-\noindent \ml{CONJ\_TAC} ha prodotto una lista di goal che consiste di due subgoal 
-identici di dimostrare soltanto \ml{([],"T")}. Ora, c'è un teorema 
+\noindent \ml{CONJ\_TAC} ha prodotto una lista di goal che consiste di due subgoal
+identici di dimostrare soltanto \ml{([],"T")}. Ora, c'è un teorema
 pre-dimostrato in \HOL, chiamato \ml{TRUTH}, che ottiene questo goal.
 
 \begin{session}
@@ -855,8 +855,8 @@ pre-dimostrato in \HOL, chiamato \ml{TRUTH}, che ottiene questo goal.
 \end{verbatim}
 \end{session}
 
-\noindent Applicare la funzione di giustificazione \ml{just\_fn} a una lista 
-di teoremi che ottengono i goal nella \ml{goal\_list} risulta 
+\noindent Applicare la funzione di giustificazione \ml{just\_fn} a una lista
+di teoremi che ottengono i goal nella \ml{goal\_list} risulta
 in un teorema che ottiene il goal originario:
 
 \begin{session}
@@ -866,9 +866,9 @@ in un teorema che ottiene il goal originario:
 \end{verbatim}
 \end{session}
 
-    Nonostante questo esempio sia banale, esso illustra l'idea 
-		essenziale delle tattiche. Si noti che le tattiche non sono delle primitive 
-		speciali di dimostrazione di teoremi; esse sono solo funzioni \ML{}. Per 
+    Nonostante questo esempio sia banale, esso illustra l'idea
+		essenziale delle tattiche. Si noti che le tattiche non sono delle primitive
+		speciali di dimostrazione di teoremi; esse sono solo funzioni \ML{}. Per
 		esempio, la definizione di \ml{CONJ\_TAC} è semplicemente:
 
 \begin{hol}
@@ -881,47 +881,47 @@ in un teorema che ottiene il goal originario:
 \end{verbatim}
 \end{hol}
 
-\noindent La funzione \ml{dest\_conj} divide una congiunzione nei suoi 
-due congiunti: se\linebreak \ml{(asl,``$t_1$}{\small\verb|/\|}\ml{$t_2$``)} è un 
-goal, allora \ml{CONJ\_TAC} lo divide nella lista dei due subgoal 
-\ml{(asl,$t_1$)} e \ml{(asl,$t_2$)}. La funzione di giustificazione, 
-{\small\verb|fn [th1,th2] => CONJ th1 th2|} prende una lista 
-di teoremi \ml{[$th_1$,$th_2$]} e applica la regola \ml{CONJ} a 
+\noindent La funzione \ml{dest\_conj} divide una congiunzione nei suoi
+due congiunti: se\linebreak \ml{(asl,``$t_1$}{\small\verb|/\|}\ml{$t_2$``)} è un
+goal, allora \ml{CONJ\_TAC} lo divide nella lista dei due subgoal
+\ml{(asl,$t_1$)} e \ml{(asl,$t_2$)}. La funzione di giustificazione,
+{\small\verb|fn [th1,th2] => CONJ th1 th2|} prende una lista
+di teoremi \ml{[$th_1$,$th_2$]} e applica la regola \ml{CONJ} a
 $th_1$ e $th_2$.
 
-Riassumendo: se $T$ è una tattica e $g$ è un goal, allora l'applicazione di $T$ 
-a $g$ risulterà in una coppia il cui primo componente è una lista di goal 
-e il cui secondo componente è una funzione di giustificazione, con tipo \ML{} 
+Riassumendo: se $T$ è una tattica e $g$ è un goal, allora l'applicazione di $T$
+a $g$ risulterà in una coppia il cui primo componente è una lista di goal
+e il cui secondo componente è una funzione di giustificazione, con tipo \ML{}
 {\small\verb|thm list -> thm|}.
 
-Supponiamo 
+Supponiamo
 $T\ g${\small\verb| = ([|}$g_1${\small\verb|,|}$\ldots${\small\verb|,|}$g_n${\small\verb|],|}$p${\small\verb|)|}.
-L'idea è che $g_1$ , $\ldots$ , $g_n$ siano subgoal e $p$ sia una 
+L'idea è che $g_1$ , $\ldots$ , $g_n$ siano subgoal e $p$ sia una
 `giustificazione' della riduzione del goal $g$ ai subgoal $g_1$ ,
 $\ldots$ , $g_n$. Supponiamo inoltre che i subgoal  $g_1$ , $\ldots$
 , $g_n$ siano stati risolti.  Questo significherebbe che i teoremi $th_1$ ,
 $\ldots$ , $th_n$ sono stati dimostrati in modo tale che $th_i$ ($1\leq i\leq
-n$) `ottiene' il goal $g_i$. La giustificazione $p$ (prodotta 
-dall'applicazione di $T$ a $g$) è una funzione \ML{} che quando applicata alla 
-lista 
-{\small\verb|[|}$th_1${\small\verb|,|}$\ldots${\small\verb|,|}$th_n${\small\verb|]|} 
-restituisce un teorema $th$, che `ottiene' il goal originario $g$. Così 
-$p$ è una funzione per convertire una soluzione dei subgoal in una 
-soluzione del goal originario. Se $p$ fa questo con successo, allora la 
-tattica $T$ è chiamata {\it valida\/}. Tattiche non valide non possono risultare nella 
-dimostrazione di teoremi non validi; il peggio che possono fare è risultare in 
-goal irrisolvibili o nella dimostrazione di teoremi diversi da quelli che si aveva l'intenzione di dimostrare. Se $T$ fosse 
+n$) `ottiene' il goal $g_i$. La giustificazione $p$ (prodotta
+dall'applicazione di $T$ a $g$) è una funzione \ML{} che quando applicata alla
+lista
+{\small\verb|[|}$th_1${\small\verb|,|}$\ldots${\small\verb|,|}$th_n${\small\verb|]|}
+restituisce un teorema $th$, che `ottiene' il goal originario $g$. Così
+$p$ è una funzione per convertire una soluzione dei subgoal in una
+soluzione del goal originario. Se $p$ fa questo con successo, allora la
+tattica $T$ è chiamata {\it valida\/}. Tattiche non valide non possono risultare nella
+dimostrazione di teoremi non validi; il peggio che possono fare è risultare in
+goal irrisolvibili o nella dimostrazione di teoremi diversi da quelli che si aveva l'intenzione di dimostrare. Se $T$ fosse
 non valida e fosse usata per ridurre il goal $g$ ai subgoal $g_1$ , $\ldots$
 , $g_n$, potrebbero essere spese energie per dimostrare i teoremi $th_1$ , $\ldots$
-, $th_n$ per ottenere i subgoal $g_1$ , $\ldots$ , $g_n$, solo per 
-poi scoprire che il lavoro fatto è un vicolo cieco perché 
+, $th_n$ per ottenere i subgoal $g_1$ , $\ldots$ , $g_n$, solo per
+poi scoprire che il lavoro fatto è un vicolo cieco perché
 $p${\small\verb|[|}$th_1${\small\verb|,|}$\ldots${\small\verb|,|}$th_n${\small\verb|]|}
-non ottiene $g$ (cioè fallisce, oppure ottiene un altro 
+non ottiene $g$ (cioè fallisce, oppure ottiene un altro
 goal).
 
-Un teorema {\it ottiene\/} un goal se le assunzioni del teorema sono 
-incluse nelle assunzioni del goal {\it e\/} se la conclusione del 
-teorema è uguale (a meno della rinomina delle variabili legate) alla conclusione del 
+Un teorema {\it ottiene\/} un goal se le assunzioni del teorema sono
+incluse nelle assunzioni del goal {\it e\/} se la conclusione del
+teorema è uguale (a meno della rinomina delle variabili legate) alla conclusione del
 goal. Più precisamente, un teorema
 \begin{center}
 $t_1$, $\dots$, $t_m${\small\verb% |- %}$t$
@@ -932,21 +932,21 @@ $t_1$, $\dots$, $t_m${\small\verb% |- %}$t$
 {\small\verb|([|}$u_1${\small\verb|,|}$\ldots${\small\verb|,|}$u_n${\small\verb|],|}$u${\small\verb|)|}
 \end{center}
 
-\noindent se e solo se $\{t_1,\ldots,t_m\}$ 
-è un sottoinsieme di $\{u_1,\ldots,u_n\}$ e $t$ è uguale a $u$ (a meno 
-della rinomina delle variabili legate). Per esempio, il goal\linebreak 
-{\small\verb|([``x=y``, ``y=z``, ``z=w``], ``x=z``)|} è ottenuto dal 
-teorema {\small\verb+[x=y, y=z] |- x=z+}\linebreak (l'assunzione 
+\noindent se e solo se $\{t_1,\ldots,t_m\}$
+è un sottoinsieme di $\{u_1,\ldots,u_n\}$ e $t$ è uguale a $u$ (a meno
+della rinomina delle variabili legate). Per esempio, il goal\linebreak
+{\small\verb|([``x=y``, ``y=z``, ``z=w``], ``x=z``)|} è ottenuto dal
+teorema {\small\verb+[x=y, y=z] |- x=z+}\linebreak (l'assunzione
 {\small\verb|``z=w``|} non è necessaria).
 
-Una tattica {\it risolve\/} un goal se esso riduce il goal 
-alla lista vuota 
-di subgoal. Così $T$ risolve $g$ se 
+Una tattica {\it risolve\/} un goal se esso riduce il goal
+alla lista vuota
+di subgoal. Così $T$ risolve $g$ se
 $T\ g${\small\verb| = ([],|}$p${\small\verb|)|}.
-Se questo è vero e se $T$ è valida, allora $p${\small\verb|[]|} 
+Se questo è vero e se $T$ è valida, allora $p${\small\verb|[]|}
 sarà valutata a un teorema che ottiene $g$.
-Così se $T$ risolve $g$ allora l'espressione \ML{} 
-{\small\verb|snd(|}$T\ g${\small\verb|)[]|} è valutata 
+Così se $T$ risolve $g$ allora l'espressione \ML{}
+{\small\verb|snd(|}$T\ g${\small\verb|)[]|} è valutata
 un teorema che ottiene $g$
 
 Le tattiche sono specificate usando la seguente notazione:
@@ -972,15 +972,15 @@ $t_1$ & $t_2$ \\
 
 
 
-\noindent Così {\small\verb|CONJ_TAC|} riduce un goal della forma 
+\noindent Così {\small\verb|CONJ_TAC|} riduce un goal della forma
 {\small\verb|(|}$\Gamma${\small\verb|,``|}$t_1${\small\verb|/\|}$t_2${\small\verb|``)|}
-ai subgoal 
+ai subgoal
 {\small\verb|(|}$\Gamma${\small\verb|,``|}$t_1${\small\verb|``)|} e {\small\verb|(|}$\Gamma${\small\verb|,``|}$t_2${\small\verb|``)|}.
-Il fatto che le assunzioni del goal principale 
-sono propagate senza modifica ai due subgoal è indicato dall'assenza 
+Il fatto che le assunzioni del goal principale
+sono propagate senza modifica ai due subgoal è indicato dall'assenza
 delle assunzioni nella notazione.
 
-Un altro esempio è \ml{numLib.INDUCT_TAC},\footnote{Più avanti, scriveremo \ml{INDUCT_TAC} da solo, senza anteporre ad esso il prefisso \ml{numLib}. Per permettere questo dobbiamo immettere il comando \ml{open~numLib}.} la tattica per 
+Un altro esempio è \ml{numLib.INDUCT_TAC},\footnote{Più avanti, scriveremo \ml{INDUCT_TAC} da solo, senza anteporre ad esso il prefisso \ml{numLib}. Per permettere questo dobbiamo immettere il comando \ml{open~numLib}.} la tattica per
 eseguire l'induzione matematica sui numeri naturali.
 
 \begin{center}
@@ -991,11 +991,11 @@ $t[\texttt{0}]$ & $\quad\{t[n]\}\ t[\texttt{SUC}\;n]$
 \end{center}
 
 {\small\verb|INDUCT_TAC|} riduce un goal
-{\small\verb|(|}$\Gamma${\small\verb|,``!|}$n${\small\verb|.|}$t[n]${\small\verb|``)|} a un subgoal base 
+{\small\verb|(|}$\Gamma${\small\verb|,``!|}$n${\small\verb|.|}$t[n]${\small\verb|``)|} a un subgoal base
 {\small\verb|(|}$\Gamma${\small\verb|,``|}$t[${\small\verb|0|}$]${\small\verb|``)|}
 e a un subgoal passo d'induzione
 {\small\verb|(|}$\Gamma\cup\{${\small\verb|``|}$t[n]${\small\verb|``|}$\}${\small\verb|,``|}$t[${\small\verb|SUC |}$n]${\small\verb|``)|}.
-L'assunzione extra {\small\verb|``|}$t[n]${\small\verb|``|} 
+L'assunzione extra {\small\verb|``|}$t[n]${\small\verb|``|}
 è indicata nella notazione delle tattiche con le parentesi di insieme.
 
 \begin{session}
@@ -1008,13 +1008,13 @@ L'assunzione extra {\small\verb|``|}$t[n]${\small\verb|``|}
 \end{verbatim}
 \end{session}
 
-\noindent Il primo subgoal è il caso base e il secondo subgoal è 
+\noindent Il primo subgoal è il caso base e il secondo subgoal è
 il caso passo d'induzione.
 
-Le tattiche in genere falliscono (nel senso \ML{}, cioè sollevano un'eccezione) se 
-sono applicate a goal inappropriati. Per esempio, 
-{\small\verb|CONJ_TAC|} fallirà se è applicata a un goal la cui 
-conclusione non è una congiunzione. Alcune tattiche non falliscono mail, per esempio 
+Le tattiche in genere falliscono (nel senso \ML{}, cioè sollevano un'eccezione) se
+sono applicate a goal inappropriati. Per esempio,
+{\small\verb|CONJ_TAC|} fallirà se è applicata a un goal la cui
+conclusione non è una congiunzione. Alcune tattiche non falliscono mail, per esempio
 {\small\verb|ALL_TAC|}
 
 
@@ -1025,32 +1025,32 @@ $t$
 \end{tabular}
 \end{center}
 
-\noindent è la `tattica identità'; essa riduce un goal 
-{\small\verb|(|}$\Gamma${\small\verb|,|}$t${\small\verb|)|} all'unico 
-subgoal 
-{\small\verb|(|}$\Gamma${\small\verb|,|}$t${\small\verb|)|}---\ie\ non 
-ha alcun effetto. {\small\verb|ALL_TAC|} è utile per scrivere tattiche 
+\noindent è la `tattica identità'; essa riduce un goal
+{\small\verb|(|}$\Gamma${\small\verb|,|}$t${\small\verb|)|} all'unico
+subgoal
+{\small\verb|(|}$\Gamma${\small\verb|,|}$t${\small\verb|)|}---\ie\ non
+ha alcun effetto. {\small\verb|ALL_TAC|} è utile per scrivere tattiche
 complesse usando i tatticali.
 
 \subsection{Usare le tattiche per dimostrare teoremi}
 \label{using-tactics}
 
-Supponiamo di dover risolvere il goal $g$. Se $g$ è semplice potrebbe essere 
-possibile pensare immediatamente a una tattica, diciamo $T$, che lo riduce 
+Supponiamo di dover risolvere il goal $g$. Se $g$ è semplice potrebbe essere
+possibile pensare immediatamente a una tattica, diciamo $T$, che lo riduce
 alla lista vuota di subgoal. Se questo è il caso allora eseguire:
 
 $\ ${\small\verb| val (|}$gl${\small\verb|,|}$p${\small\verb|) = |}$T\ g$
 
-\noindent legherà $p$ a una funzione che quando applicata alla lista vuota 
-di teoremi restituisce un teorema $th$ che ottiene $g$. (La dichiarazione 
-di sopra legherà anche $gl$ alla lista vuota di goal.) Così un teorema 
+\noindent legherà $p$ a una funzione che quando applicata alla lista vuota
+di teoremi restituisce un teorema $th$ che ottiene $g$. (La dichiarazione
+di sopra legherà anche $gl$ alla lista vuota di goal.) Così un teorema
 che ottiene $g$ può essere computato eseguendo:
 
 $\ ${\small\verb| val |}$th${\small\verb| = |}$p${\small\verb|[]|}
 
-\noindent Questo sarà illustrato usando \ml{REWRITE\_TAC} che prende una lista 
-di equazioni (vuota nell'esempio che segue) e proverà a dimostrare un goal 
-riscrivendo con queste equazioni insieme con 
+\noindent Questo sarà illustrato usando \ml{REWRITE\_TAC} che prende una lista
+di equazioni (vuota nell'esempio che segue) e proverà a dimostrare un goal
+riscrivendo con queste equazioni insieme con
 \ml{basic\_rewrites}:
 
 \begin{session}
@@ -1066,23 +1066,23 @@ riscrivendo con queste equazioni insieme con
 \end{verbatim}
 \end{session}
 
-\noindent I teoremi dimostrati sono di solito archiviati nella teoria attuale 
+\noindent I teoremi dimostrati sono di solito archiviati nella teoria attuale
 così che possano essere usati nelle sessioni successive.
 
-La funzione incorporata 
- \ml{store\_thm} di 
-tipo \ML{} {\small\verb|(string * term * tactic) -> thm|} facilita l'uso 
+La funzione incorporata
+ \ml{store\_thm} di
+tipo \ML{} {\small\verb|(string * term * tactic) -> thm|} facilita l'uso
 delle tattiche:
-{\small\verb|store_thm("foo",|}$t${\small\verb|,|}$T${\small\verb|)|} dimostra 
-il goal {\small\verb|([],|}$t${\small\verb|)|} (cioè il goal senza 
-assunzioni e con la conclusione $t$) usando la tattica $T$ e salva il teorema 
+{\small\verb|store_thm("foo",|}$t${\small\verb|,|}$T${\small\verb|)|} dimostra
+il goal {\small\verb|([],|}$t${\small\verb|)|} (cioè il goal senza
+assunzioni e con la conclusione $t$) usando la tattica $T$ e salva il teorema
 risultante con il nome {\small\verb|foo|} nella teoria corrente.
 
-Se non si deve salvare il teorema, si può usare la funzione \ml{prove} di tipo\linebreak 
-{\small\verb|(term * tactic) -> thm|}. Valutare 
-{\small\verb|prove(|}$t${\small\verb|,|}$T${\small\verb|)|} dimostra il goal 
-{\small\verb|([],|}$t${\small\verb|)|} usando $T$ e restituisce il risultato senza 
-salvarlo. In entrambi i case, la valutazione fallisce se $T$ non risolve il 
+Se non si deve salvare il teorema, si può usare la funzione \ml{prove} di tipo\linebreak
+{\small\verb|(term * tactic) -> thm|}. Valutare
+{\small\verb|prove(|}$t${\small\verb|,|}$T${\small\verb|)|} dimostra il goal
+{\small\verb|([],|}$t${\small\verb|)|} usando $T$ e restituisce il risultato senza
+salvarlo. In entrambi i case, la valutazione fallisce se $T$ non risolve il
 goal {\small\verb|([],|}$t${\small\verb|)|}.
 
 Quando si conduce una dimostrazione che coinvolge molti subgoal e tattiche, è necessario tenere traccia di tutte le funzioni di giustificazione e comporle nell'ordine corretto.
@@ -1095,10 +1095,10 @@ E' documentato in modo completo in \DESCRIPTION.
 \subsection{Tatticali}
 \label{tacticals}
 
-Un {\it tatticale\/} è una funzione \ML{} che prende una o più tattiche 
-come argomenti, possibilmente con anche altri argomenti, e restituisce una 
-tattica come suo risultato. I diversi parametri passati ai tatticali sono 
-riflessi nei vari tipi \ML{} che hanno i tatticali incorporati nel sistema. 
+Un {\it tatticale\/} è una funzione \ML{} che prende una o più tattiche
+come argomenti, possibilmente con anche altri argomenti, e restituisce una
+tattica come suo risultato. I diversi parametri passati ai tatticali sono
+riflessi nei vari tipi \ML{} che hanno i tatticali incorporati nel sistema.
 Alcuni tatticali importanti nel sistema \HOL{} sono elencati di sotto.
 
 \subsubsection{\tt THENL : tactic -> tactic list -> tactic}
@@ -1106,7 +1106,7 @@ Alcuni tatticali importanti nel sistema \HOL{} sono elencati di sotto.
 Se una tattica $T$ produce $n$ subgoal e $T_1$, $\ldots$ , $T_n$ sono tattiche allora \ml{$T$~THENL~[$T_1$,$\ldots$,$T_n$]} è una tattica che prima applica $T$ e poi applica $T_i$ all'$i$-esimo subgoal prodotto da $T$.
 Il tatticale \ml{THENL} è utile se si vogliono fare cose differenti per subgoal differenti.
 
-\ml{THENL} può essere illustrata eseguendo la dimostrazione di $\vdash \uquant{m}m+0=m$ in 
+\ml{THENL} può essere illustrata eseguendo la dimostrazione di $\vdash \uquant{m}m+0=m$ in
 un solo passo.
 
 \setcounter{sessioncount}{0}
@@ -1132,19 +1132,19 @@ OK..
 \]
 prima applica \ml{INDUCT_TAC} e quindi applica \ml{REWRITE\_TAC[ADD]} al primo subgoal (la base) e \ml{ASM\_REWRITE\_TAC[ADD]} al secondo subgoal (il passo).
 
-Il tatticale {\small\verb|THENL|} è utile per fare cose differenti 
-per subgoal differenti. il tatticale \ml{THEN} può essere usato per applicare 
+Il tatticale {\small\verb|THENL|} è utile per fare cose differenti
+per subgoal differenti. il tatticale \ml{THEN} può essere usato per applicare
 la stessa tattica a tutti i subgoal.
 
 \subsubsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
 
-Il tatticale {\small\verb|THEN|} è un \ML{} infisso. Se $T_1$ e $T_2$ 
-sono tattiche, allora l'espressione \ML{} $T_1${\small\verb| THEN |}$T_2$ 
-è valutata a una tattica che prima applica $T_1$ e poi applica $T_2$ 
+Il tatticale {\small\verb|THEN|} è un \ML{} infisso. Se $T_1$ e $T_2$
+sono tattiche, allora l'espressione \ML{} $T_1${\small\verb| THEN |}$T_2$
+è valutata a una tattica che prima applica $T_1$ e poi applica $T_2$
 a tutti i subgoal prodotti da $T_1$.
 
-Di fatto, \ml{ASM\_REWRITE\_TAC[ADD]} risolverà tanto la base che 
-il passo dell'induzione per $\uquant{m}m+0=m$, così esiste una 
+Di fatto, \ml{ASM\_REWRITE\_TAC[ADD]} risolverà tanto la base che
+il passo dell'induzione per $\uquant{m}m+0=m$, così esiste una
 dimostrazione di un solo passo persino più semplice di quella di sopra:
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1164,9 +1164,9 @@ OK..
 \end{verbatim}
 \end{session}
 
-\noindent Questo è tipico: è comune usare un'unica tattica per molti 
-goal. Qui, per esempio, ci sono le prime quattro conseguenze della 
-definizione \ml{ADD} dell'addizione che sono pre-dimostrate quando la 
+\noindent Questo è tipico: è comune usare un'unica tattica per molti
+goal. Qui, per esempio, ci sono le prime quattro conseguenze della
+definizione \ml{ADD} dell'addizione che sono pre-dimostrate quando la
 teoria \ml{arithmetic} incorporata in \HOL{} è costruita.
 
 \begin{hol}
@@ -1205,20 +1205,20 @@ teoria \ml{arithmetic} incorporata in \HOL{} è costruita.
 \end{hol}
 
 
-\noindent Queste dimostrazioni sono eseguite quando il sistema \HOL{} è costruito e i 
-teoremi sono salvati nella teoria \ml{arithmetic}. La lista completa delle 
-dimostrazioni per questa teoria incorporata si possono trovare nel file 
+\noindent Queste dimostrazioni sono eseguite quando il sistema \HOL{} è costruito e i
+teoremi sono salvati nella teoria \ml{arithmetic}. La lista completa delle
+dimostrazioni per questa teoria incorporata si possono trovare nel file
 \ml{src/num/theories/arithmeticScript.sml}.
 
 
 \subsubsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
 
-Il tatticale {\small\verb|ORELSE|} è un \ML{} infisso. Se $T_1$ e 
-$T_2$ sono tattiche, 
+Il tatticale {\small\verb|ORELSE|} è un \ML{} infisso. Se $T_1$ e
+$T_2$ sono tattiche,
 %\index{tacticals!for alternation}
-allora $T_1${\small\verb| ORELSE |}$T_2$ è valutata a una tattica che 
+allora $T_1${\small\verb| ORELSE |}$T_2$ è valutata a una tattica che
 applica $T_1$ a meno che fallisce; se fallisce, applica $T_2$.
-\ml{ORELSE} è definita in \ML{} come un infisso curried\footnote{Questa è 
+\ml{ORELSE} è definita in \ML{} come un infisso curried\footnote{Questa è
   una semplificazione minore.}
 
 \begin{hol}
@@ -1229,8 +1229,8 @@ applica $T_1$ a meno che fallisce; se fallisce, applica $T_2$.
 
 \subsubsection{\tt REPEAT : tactic -> tactic}
 
-Se $T$ è una tattica allora {\small\verb|REPEAT |}$T$ è una tattiche che 
-applica ripetutamente $T$ fino a quando fallisce. Questo può essere illustrato in 
+Se $T$ è una tattica allora {\small\verb|REPEAT |}$T$ è una tattiche che
+applica ripetutamente $T$ fino a quando fallisce. Questo può essere illustrato in
 congiunzione con \ml{GEN\_TAC}, che è specificato da:
 
 \begin{center}
@@ -1243,7 +1243,7 @@ $t[x']$
 \end{center}
 
 \begin{itemize}
-\item Dove $x'$ è una variante di $x$ 
+\item Dove $x'$ è una variante di $x$
 non libera nel goal o nelle assunzioni.
 \end{itemize}
 
@@ -1275,8 +1275,8 @@ OK..
 
 \subsection{Alcune tattiche incorporate in \HOL{}}
 
-Questa sezione contiene un sommario di alcune tattiche incorporate nel 
-sistema \HOL{} (incluse quelle già discusse). Le tattiche date 
+Questa sezione contiene un sommario di alcune tattiche incorporate nel
+sistema \HOL{} (incluse quelle già discusse). Le tattiche date
 qui sono quelle che sono usate nell'esempio del bit di parità.
 
 \subsubsection{\tt REWRITE\_TAC : thm list -> tactic}
@@ -1284,8 +1284,8 @@ qui sono quelle che sono usate nell'esempio del bit di parità.
 
 \begin{itemize}
 \item{\bf Sommario:} {\small\verb|REWRITE_TAC[|}$th_1${\small\verb|,|}$\ldots${\small\verb|,|}$th_n${\small\verb|]|}
-semplifica il goal riscrivendolo 
-con i teoremi dati esplicitamente $th_1$, $\ldots$ , $th_n$, 
+semplifica il goal riscrivendolo
+con i teoremi dati esplicitamente $th_1$, $\ldots$ , $th_n$,
 e varie regole di riscrittura incorporate.
 
 
@@ -1298,7 +1298,7 @@ $\{t_1, \ldots , t_m\}t'$
 \end{tabular}
 \end{center}
 
-\noindent dove $t'$ è ottenuto da $t$ attraverso la riscrittura con 
+\noindent dove $t'$ è ottenuto da $t$ attraverso la riscrittura con
 \begin{enumerate}
 \item  $th_1$, $\ldots$ , $th_n$ e
 \item  le scritture standard contenute nella variabile \ML{} {\small\verb|basic_rewrites|}.
@@ -1308,18 +1308,18 @@ $\{t_1, \ldots , t_m\}t'$
 
 \item{\bf Altre tattiche di riscrittura}:
 \begin{enumerate}
-\item {\small\verb|ASM_REWRITE_TAC|} aggiunge le assunzioni del goal 
+\item {\small\verb|ASM_REWRITE_TAC|} aggiunge le assunzioni del goal
   alla lista dei teoremi usati per la riscrittura.
-\item {\small\verb|PURE_REWRITE_TAC|} non usa né le assunzioni 
+\item {\small\verb|PURE_REWRITE_TAC|} non usa né le assunzioni
   né le riscritture incorporate.
 \item {\small\verb|RW_TAC|} di tipo \ml{simpLib.simpset -> thm
-    list -> tactic}.  Un \ml{simpset} è una speciale collezione 
-  di teoremi di riscrittura e altre funzionalità di dimostrazione di teoremi. I valori 
-  definiti da \HOL{} includono \ml{bossLib.std\_ss}, che ha la conoscenza 
+    list -> tactic}.  Un \ml{simpset} è una speciale collezione
+  di teoremi di riscrittura e altre funzionalità di dimostrazione di teoremi. I valori
+  definiti da \HOL{} includono \ml{bossLib.std\_ss}, che ha la conoscenza
   di base dei connettivi booleani, \ml{bossLib.arith\_ss} che
   ``conosce'' tutto riguardo all'aritmetica, e \ml{HOLSimps.list\_ss}, che
   include teoremi appropriati per le liste, le coppie, e l'aritmetica.
-  Teoremi aggiuntivi per la riscrittura possono essere aggiunti usando il secondo 
+  Teoremi aggiuntivi per la riscrittura possono essere aggiunti usando il secondo
   argomento di \ml{RW\_TAC}.
 \end{enumerate}
 \end{itemize}
@@ -1329,7 +1329,7 @@ $\{t_1, \ldots , t_m\}t'$
 
 \begin{itemize}
 
-\item{\bf Sommario:} Divide un 
+\item{\bf Sommario:} Divide un
 goal {\small\verb|``|}$t_1${\small\verb|/\|}$t_2${\small\verb|``|} in due subgoals {\small\verb|``|}$t_1${\small\verb|``|}
 e {\small\verb|``|}$t_2${\small\verb|``|}.
 
@@ -1362,7 +1362,7 @@ $u\; \ml{==>}\; v$ & $\quad v\; \ml{==>}\; u$ \\
 \end{tabular}
 \end{center}
 
-\item{\bf Uso:} Dimostrare equivalenze logiche, \ie\ goal della forma 
+\item{\bf Uso:} Dimostrare equivalenze logiche, \ie\ goal della forma
 ``$u$\ml{=}$v$'' dove $u$ e $v$ sono termini booleani.
 
 \end{itemize}
@@ -1374,7 +1374,7 @@ $u\; \ml{==>}\; v$ & $\quad v\; \ml{==>}\; u$ \\
 
 \begin{itemize}
 
-\item{\bf Sommario:} Sposta l'antecedente 
+\item{\bf Sommario:} Sposta l'antecedente
 di un goal implicazione nelle assunzioni
 
 \begin{center}
@@ -1407,11 +1407,11 @@ $t[x']$
 \end{tabular}
 \end{center}
 
-\noindent Dove $x'$ è una variante di $x$ 
+\noindent Dove $x'$ è una variante di $x$
 non libera nel goal o nelle assunzioni.
 
 \item{\bf   Usi:} Risolvere goal quantificati universalmente.
-{\small\verb|REPEAT GEN_TAC|} elimina tutti 
+{\small\verb|REPEAT GEN_TAC|} elimina tutti
 i quantificatori universali ed è spesso la prima cosa che si fa in una dimostrazione.
 {\small\verb|STRIP_TAC|} (si veda di sotto) applica {\small\verb|GEN_TAC|} ai goal quantificati universalmente.
 \end{itemize}
@@ -1420,13 +1420,13 @@ i quantificatori universali ed è spesso la prima cosa che si fa in una dimostraz
 \subsubsection{\tt PROVE\_TAC : thm list -> tactic}
 
 \begin{itemize}
-\item {\bf Sommario:} Usato per eseguire un ragionamento al primo ordine; risolvendo il 
-	goal completamente se ha successo, e fallendo altrimenti. Usando 
-	i teoremi forniti e le assunzioni del goal, 
-	{\small\verb|PROVE_TAC|} esegue una ricerca delle dimostrazioni possibili del 
-	goal. Alla fine fallisce se la ricerca fallisce di trovare una dimostrazione più corta 
+\item {\bf Sommario:} Usato per eseguire un ragionamento al primo ordine; risolvendo il
+	goal completamente se ha successo, e fallendo altrimenti. Usando
+	i teoremi forniti e le assunzioni del goal,
+	{\small\verb|PROVE_TAC|} esegue una ricerca delle dimostrazioni possibili del
+	goal. Alla fine fallisce se la ricerca fallisce di trovare una dimostrazione più corta
 	di una profondità ragionevole.
-\item {\bf Usi:} Per concludere un goal quando è chiaro che è una 
+\item {\bf Usi:} Per concludere un goal quando è chiaro che è una
 	conseguenza delle assunzioni e dei teoremi forniti.
 \end{itemize}
 
@@ -1438,11 +1438,11 @@ i quantificatori universali ed è spesso la prima cosa che si fa in una dimostraz
 \item{\bf Sommario:} Spezza un goal. {\small\verb|STRIP_TAC|}
   rimuove un connettivo esterno dal goal, usando
 	{\small\verb|CONJ_TAC|}, {\small\verb|DISCH_TAC|},
-  {\small\verb|GEN_TAC|}, \etc\ Se il goal è 
-$t_1${\small\verb|/\|}$\cdots${\small\verb|/\|}$t_n${\small\verb| ==> |}$t$ 
+  {\small\verb|GEN_TAC|}, \etc\ Se il goal è
+$t_1${\small\verb|/\|}$\cdots${\small\verb|/\|}$t_n${\small\verb| ==> |}$t$
 allora {\small\verb|STRIP_TAC|} rende ogni $t_i$ in una assunzione separata.
 
-\item{\bf Usi:} utile per dividere un goal in pezzi maneggevoli. 
+\item{\bf Usi:} utile per dividere un goal in pezzi maneggevoli.
 Spesso la cosa migliore da fare per prima è {\small\verb|REPEAT STRIP_TAC|}.
 \end{itemize}
 
@@ -1453,13 +1453,13 @@ Spesso la cosa migliore da fare per prima è {\small\verb|REPEAT STRIP_TAC|}.
 \begin{itemize}
 
 \item{\bf Sommario:} {\small\verb|ACCEPT_TAC |}$th$
-è una tattica che risolve qualsiasi goal che sia 
+è una tattica che risolve qualsiasi goal che sia
 ottenuto da $th$.
 
-\item{\bf Uso:} Incorporare dimostrazioni in avanti, o teoremi già 
-  dimostrati, in dimostrazioni dirette dal goal. Per esempio, si potrebbe ridurre un 
-	goal $g$ ai subgoal $g_1$, $\dots$, $g_n$ usando una tattica $T$ e 
-	poi dimostrare i teoremi $th_1$ , $\dots$, $th_n$ ottenendo rispettivamente 
+\item{\bf Uso:} Incorporare dimostrazioni in avanti, o teoremi già
+  dimostrati, in dimostrazioni dirette dal goal. Per esempio, si potrebbe ridurre un
+	goal $g$ ai subgoal $g_1$, $\dots$, $g_n$ usando una tattica $T$ e
+	poi dimostrare i teoremi $th_1$ , $\dots$, $th_n$ ottenendo rispettivamente
 	questi goal attraverso dimostrazioni in avanti. La tattica
 
 \[\ml{  T THENL[ACCEPT\_TAC }th_1\ml{,}\ldots\ml{,ACCEPT\_TAC }th_n\ml{]}
@@ -1467,7 +1467,7 @@ ottenuto da $th$.
 
 risolverebbe poi $g$, dove \ml{THENL}
 %\index{THENL@\ml{THENL}}
-è il tatticale che applica gli elementi rispettivi della lista di 
+è il tatticale che applica gli elementi rispettivi della lista di
 tattiche ai subgoal prodotti da \ml{T}.
 
 \end{itemize}
@@ -1484,9 +1484,9 @@ tattiche ai subgoal prodotti da \ml{T}.
 \begin{enumerate}
 \item Scrivere tatticali (si veda la descrizione di {\small\verb|REPEAT|}
 in \DESCRIPTION).
-\item Con {\small\verb|THENL|}; per esempio, se la tattica $T$ produce due subgoal 
-e vogliamo applicare $T_1$ 
-al primo ma non fare nulla al secondo, quindi 
+\item Con {\small\verb|THENL|}; per esempio, se la tattica $T$ produce due subgoal
+e vogliamo applicare $T_1$
+al primo ma non fare nulla al secondo, quindi
 la tattica da usare è \ml{$T$~THENL[$T_1$,ALL_TAC]}.
 \end{enumerate}
 \end{itemize}

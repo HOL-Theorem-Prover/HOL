@@ -24,8 +24,8 @@ val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
 
 val lrep_ok_alt' = Q.prove (
   `!n f. lrep_ok f ==> IS_SOME (f (SUC n)) ==> IS_SOME (f n)`,
-  let open arithmeticTheory in 
-  Induct THEN REPEAT STRIP_TAC THEN 
+  let open arithmeticTheory in
+  Induct THEN REPEAT STRIP_TAC THEN
   IMP_RES_TAC lrep_ok_cases THEN
   FULL_SIMP_TAC bool_ss [NOT_SUC, optionTheory.IS_SOME_DEF,
     ONE, SUB_EQUAL_0, SUB_MONO_EQ, SUB_0] end) ;
@@ -143,12 +143,12 @@ val LTL = new_definition(
              | SOME _ => SOME (llist_abs (\n. llist_rep ll (n + 1)))``
 );
 
-val LTL_HD_HD = Q.store_thm ("LTL_HD_HD", 
+val LTL_HD_HD = Q.store_thm ("LTL_HD_HD",
   `LHD ll = OPTION_MAP SND (LTL_HD ll)`,
   Cases_on `llist_rep ll 0` THEN
   ASM_SIMP_TAC std_ss [LTL_HD_def, LHD]) ;
 
-val LTL_HD_TL = Q.store_thm ("LTL_HD_TL", 
+val LTL_HD_TL = Q.store_thm ("LTL_HD_TL",
   `LTL ll = OPTION_MAP FST (LTL_HD ll)`,
   Cases_on `llist_rep ll 0` THEN
   ASM_SIMP_TAC std_ss [LTL_HD_def, LTL, LHD] THEN
@@ -301,7 +301,7 @@ val _ = export_rewrites ["LNTH_THM"]
     LNTH is just llist_rep with arguments swapped
    ---------------------------------------------------------------------- *)
 
-val LNTH_rep = Q.store_thm ("LNTH_rep", 
+val LNTH_rep = Q.store_thm ("LNTH_rep",
   `!i ll. LNTH i ll = llist_rep ll i`,
   Induct THEN GEN_TAC THEN llist_CASE_TAC ``ll : 'a llist`` THEN
   ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]) ;
@@ -318,7 +318,7 @@ val LUNFOLD_def = Define `LUNFOLD f z = llist_abs (\n. OPTION_MAP SND
 
 val LUNFOLD = Q.store_thm ("LUNFOLD", `!f x. LUNFOLD f x =
      case f x of NONE => [||] | SOME (v1,v2) => v2 ::: LUNFOLD f v1`,
-  REPEAT GEN_TAC THEN 
+  REPEAT GEN_TAC THEN
   REWRITE_TAC [LUNFOLD_def] THEN
   irule (GSYM llist_if_rep_abs) THEN
   Cases_on `f x` THEN
@@ -329,8 +329,8 @@ val LUNFOLD = Q.store_thm ("LUNFOLD", `!f x. LUNFOLD f x =
     SUC_SUB1, OPTION_BIND_def, llist_repabs', lrep_ok_MAP_FUNPOW_BIND]) ;
 
 (* this is the uniqueness in the definition of llist as final coalgebra *)
-val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE", 
-   `!f g. (!x. g x = case f x of NONE => [||] 
+val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE",
+   `!f g. (!x. g x = case f x of NONE => [||]
                        | SOME (v1,v2) => v2:::g v1) ==>
 	   (!y. g y = LUNFOLD f y)`,
     REWRITE_TAC [LUNFOLD_def] THEN
@@ -345,7 +345,7 @@ val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE",
     FIRST_ASSUM (MATCH_ACCEPT_TAC)) ;
 
 (* LUNFOLD is a sort of inverse to LTL_HD *)
-val lu1 = BETA_RULE 
+val lu1 = BETA_RULE
   (ISPECL [``LTL_HD``, ``(\x. x) : 'a llist -> 'a llist``] LUNFOLD_UNIQUE) ;
 
 val LUNFOLD_LTL_HD = Q.store_thm ("LUNFOLD_LTL_HD",
@@ -373,13 +373,13 @@ val llist_Axiom_1 = Q.store_thm
               | SOME (a,b) => LCONS b (g a)`,
   GEN_TAC THEN Q.EXISTS_TAC `LUNFOLD f` THEN
   GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD) ;
-  
+
 val llist_Axiom_1ue = store_thm(
   "llist_Axiom_1ue",
   ``!f. ?!g. !x. g x = case f x
                        of NONE => LNIL
                         | SOME (a,b) => b ::: g a``,
-  SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN REPEAT STRIP_TAC 
+  SIMP_TAC bool_ss [EXISTS_UNIQUE_THM] THEN REPEAT STRIP_TAC
   THENL [
     Q.EXISTS_TAC `LUNFOLD f` THEN GEN_TAC THEN MATCH_ACCEPT_TAC LUNFOLD,
     IMP_RES_TAC LUNFOLD_UNIQUE THEN ASM_SIMP_TAC bool_ss [FUN_EQ_THM] ]) ;
@@ -394,7 +394,7 @@ val llist_ue_Axiom = store_thm(
         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))``,
   MP_TAC llist_Axiom_1ue THEN
   MATCH_MP_TAC eq_imp_lem THEN
-  AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM] THEN 
+  AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM, GSYM FORALL_AND_THM] THEN
     Q.X_GEN_TAC `f` THEN
   AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM] THEN Q.X_GEN_TAC `g` THEN
   AP_TERM_TAC THEN SIMP_TAC bool_ss [FUN_EQ_THM] THEN GEN_TAC THEN
@@ -906,7 +906,7 @@ val LFINITE_APPEND = store_thm(
 
 val LTAKE_LNTH_EL = Q.store_thm ("LTAKE_LNTH_EL",
   `!n ll m l.
-    (LTAKE n ll = SOME l) ∧
+    (LTAKE n ll = SOME l) /\
     m < n
     ==>
     (LNTH m ll = SOME (EL m l))`,
@@ -1794,7 +1794,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
 METIS_TAC []);
 
 val LTAKE_TAKE_LESS = Q.store_thm("LTAKE_TAKE_LESS",
-  `(LTAKE n ll = SOME l) ∧ m ≤ n ==>
+  `(LTAKE n ll = SOME l) /\ m <= n ==>
    (LTAKE m ll = SOME (TAKE m l))`,
   rw[] >> Cases_on`n=m`>>fs[] >>
   imp_res_tac LTAKE_LENGTH >> rw[] >>
@@ -2123,7 +2123,7 @@ val LPREFIX_def = Define `
         | SOME ys => isPREFIX xs ys`
 
 val LPREFIX_LNIL = Q.store_thm("LPREFIX_LNIL[simp]",
-  `LPREFIX [||] ll ∧
+  `LPREFIX [||] ll /\
    (LPREFIX ll [||] <=> (ll = [||]))`,
   rw[LPREFIX_def,toList_THM] >>
   BasicProvers.CASE_TAC >>
@@ -2136,10 +2136,10 @@ val LPREFIX_LNIL = Q.store_thm("LPREFIX_LNIL[simp]",
 val LPREFIX_LCONS = Q.store_thm("LPREFIX_LCONS",
   `(!ll h t.
      LPREFIX ll (h:::t) <=>
-      ((ll = [||]) ∨ ?l. (ll = h:::l) ∧ LPREFIX l t)) ∧
+      ((ll = [||]) \/ ?l. (ll = h:::l) /\ LPREFIX l t)) /\
    (!h t ll.
      LPREFIX (h:::t) ll <=>
-      ?l. (ll = h:::l) ∧ LPREFIX t l)`,
+      ?l. (ll = h:::l) /\ LPREFIX t l)`,
   rw[] >>
   Q.ISPEC_THEN`ll`FULL_STRUCT_CASES_TAC llist_CASES >>
   simp[LPREFIX_def,toList_THM] >>
@@ -2148,7 +2148,7 @@ val LPREFIX_LCONS = Q.store_thm("LPREFIX_LCONS",
 val LPREFIX_LUNFOLD = Q.store_thm("LPREFIX_LUNFOLD",
   `LPREFIX ll (LUNFOLD f n) <=>
    case f n of NONE => (ll = LNIL)
-   | SOME (n,x) => !h t. (ll = h:::t) ==> (h = x) ∧ LPREFIX t (LUNFOLD f n)`,
+   | SOME (n,x) => !h t. (ll = h:::t) ==> (h = x) /\ LPREFIX t (LUNFOLD f n)`,
   BasicProvers.CASE_TAC >- (
     simp[LUNFOLD_THM,LPREFIX_LNIL] ) >>
   BasicProvers.CASE_TAC >>
@@ -2163,14 +2163,14 @@ val LPREFIX_REFL = Q.store_thm("LPREFIX_REFL[simp]",
   rw[LPREFIX_def] >> BasicProvers.CASE_TAC >> simp[]);
 
 val LPREFIX_ANTISYM = Q.store_thm("LPREFIX_ANTISYM",
-  `LPREFIX l1 l2 ∧ LPREFIX l2 l1 ==> (l1 = l2)`,
+  `LPREFIX l1 l2 /\ LPREFIX l2 l1 ==> (l1 = l2)`,
   rw[LPREFIX_def] >>
   every_case_tac >> fs[] >>
   imp_res_tac rich_listTheory.IS_PREFIX_ANTISYM >> rw[] >>
   metis_tac[to_fromList,optionTheory.THE_DEF,toList,optionTheory.NOT_SOME_NONE]);
 
 val LPREFIX_TRANS = Q.store_thm("LPREFIX_TRANS",
-  `LPREFIX l1 l2 ∧ LPREFIX l2 l3 ==> LPREFIX l1 l3`,
+  `LPREFIX l1 l2 /\ LPREFIX l2 l3 ==> LPREFIX l1 l3`,
   rw[LPREFIX_def] >>
   every_case_tac >> fs[] >>
   TRY(imp_res_tac rich_listTheory.IS_PREFIX_TRANS >> NO_TAC) >>
@@ -2188,15 +2188,15 @@ val LPREFIX_fromList = Q.store_thm ("LPREFIX_fromList",
   rw [LPREFIX_def, from_toList]);
 
 val prefixes_lprefix_total = Q.store_thm("prefixes_lprefix_total",
-  `!ll. !l1 l2. LPREFIX l1 ll ∧ LPREFIX l2 ll ==>
-    LPREFIX l1 l2 ∨ LPREFIX l2 l1`,
+  `!ll. !l1 l2. LPREFIX l1 ll /\ LPREFIX l2 ll ==>
+    LPREFIX l1 l2 \/ LPREFIX l2 l1`,
   rw[LPREFIX_def] >> reverse every_case_tac >> fs[]
   >- metis_tac[rich_listTheory.prefixes_is_prefix_total] >>
   rpt(pop_assum mp_tac) >>
   qho_match_abbrev_tac`P l1 l2 x x'` >>
   `P l1 l2 x x' <=> P l2 l1 x' x` by (
     simp[Abbr`P`] >> metis_tac[] ) >>
-  `!ll1 ll2 l1 l2. LENGTH l1 ≤ LENGTH l2 ==> P ll1 ll2 l1 l2` suffices_by (
+  `!ll1 ll2 l1 l2. LENGTH l1 <= LENGTH l2 ==> P ll1 ll2 l1 l2` suffices_by (
     rw[] >> metis_tac[arithmeticTheory.LESS_EQ_CASES] ) >>
   pop_assum kall_tac >> unabbrev_all_tac >> rw[] >>
   `l1 = (TAKE (LENGTH l1) l2)` by (
@@ -2214,7 +2214,7 @@ val LPREFIX_LAPPEND1 = Q.prove(
 val LTAKE_IMP_LDROP = Q.store_thm("LTAKE_IMP_LDROP",
   `!n ll l1.
     (LTAKE n ll = SOME l1) ==>
-     ?l2. (LDROP n ll = SOME l2) ∧
+     ?l2. (LDROP n ll = SOME l2) /\
           (LAPPEND (fromList l1) l2 = ll)`,
   Induct >> simp[] >>
   gen_tac >> qspec_then`ll`FULL_STRUCT_CASES_TAC llist_CASES >> rw[] >>

@@ -150,7 +150,7 @@ fun GABS_CONV conv tm =
         LAMB(Bvar,Body) => ((ABS_CONV conv tm) handle HOL_ERR _ =>
         let
            fun conv2 tm =
-              SPEC Bvar (GEN_ASSUM Bvar (conv tm));	
+              SPEC Bvar (GEN_ASSUM Bvar (conv tm));
         in
           ABS_CONV conv2 tm
         end)
@@ -972,7 +972,7 @@ fun simpset_strengthen_conseq_conv conv =
 fun expands_strengthen_conseq_conv conv =
    (fn p => (fn context => (STRENGTHEN_CONSEQ_CONV
          (conv (#expands_level p) (#do_prop_simps p, #prop_simp_ss p) context)))):var_res_inference
-									
+
 
 fun update_var_res_param () =
     (update_varlist_rwts();update_prover_extra();prover_cache_clear ();());

@@ -85,7 +85,7 @@ val align_sub = Q.store_thm("align_sub",
    rw_tac bool_ss [align_0]
    \\ Cases_on `dimindex(:'a) <= p - 1`
    >- (
-      `(p − 1 >< 0) w : 'a word = (dimindex (:'a) - 1 >< 0) w`
+      `(p - 1 >< 0) w : 'a word = (dimindex (:'a) - 1 >< 0) w`
       by simp [wordsTheory.WORD_EXTRACT_MIN_HIGH]
       \\ rule_assum_tac (SIMP_RULE (srw_ss()) ths)
       \\ asm_rewrite_tac []

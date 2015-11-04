@@ -1220,11 +1220,11 @@ fun INST_TT_HYPS subs th =
     val thd = DISCH_ALL th ;
     val thdsub = INST_TY_TERM subs thd ;
     (* UNDISCH_TM nhyps times only *)
-    fun UNDISCH_TM_L (th, tms) = 
+    fun UNDISCH_TM_L (th, tms) =
       let val (tm, th') = UNDISCH_TM th ;
       in (th', tm :: tms) end ;
   in Lib.funpow nhyps UNDISCH_TM_L (thdsub, []) end ;
-  
+
 (*---------------------------------------------------------------------------*
  *   |- !x y z. w   --->  |- w[g1/x][g2/y][g3/z]                             *
  *---------------------------------------------------------------------------*)
@@ -1272,7 +1272,7 @@ fun PART_MATCH_A partfn th =
 
 			[x = y, y = z] |- x = z
 	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
-	       [∃y. (x = y) ∧ (y = z)] |- x = z
+	       [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
 
  * --------------------------------------------------------------------------*)
 

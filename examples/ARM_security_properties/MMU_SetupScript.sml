@@ -2,7 +2,7 @@
 
 open HolKernel boolLib bossLib Parse;
 open MMUTheory;
-open Cond_rewrite blastLib;     
+open Cond_rewrite blastLib;
 
 val _ = new_theory "MMU_Setup";
 
@@ -34,17 +34,17 @@ val inequal_by_inequalities = save_thm(
 (CONJ (SPEC ``guest1_max_adr:word32`` inequal_by_inequalities_gtu_lem)
 (CONJ (SPEC ``guest1_min_adr:word32`` inequal_by_inequalities_ltu_lem)
 (CONJ (SPEC ``guest1_max_adr:word32`` inequal_by_inequalities_ltu_lem)
-(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_gtu_lem) 
+(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_gtu_lem)
 (CONJ (SPEC ``guest2_max_adr:word32`` inequal_by_inequalities_gtu_lem)
-(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_ltu_lem) 
+(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_ltu_lem)
 (CONJ (SPEC ``guest2_max_adr:word32`` inequal_by_inequalities_ltu_lem)
 (CONJ (SPEC ``guest1_min_adr:word32`` inequal_by_inequalities_gt_lem)
 (CONJ (SPEC ``guest1_max_adr:word32`` inequal_by_inequalities_gt_lem)
 (CONJ (SPEC ``guest1_min_adr:word32`` inequal_by_inequalities_lt_lem)
 (CONJ (SPEC ``guest1_max_adr:word32`` inequal_by_inequalities_lt_lem)
-(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_gt_lem) 
+(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_gt_lem)
 (CONJ (SPEC ``guest2_max_adr:word32`` inequal_by_inequalities_gt_lem)
-(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_lt_lem) 
+(CONJ (SPEC ``guest2_min_adr:word32`` inequal_by_inequalities_lt_lem)
       (SPEC ``guest2_max_adr:word32`` inequal_by_inequalities_lt_lem)))))))))))))))));
 
 
@@ -82,7 +82,7 @@ val address_cases = save_thm(
 
 
 val negated_and_or =  save_thm(
-    "negated_and_or", 
+    "negated_and_or",
     blastLib.BBLAST_PROVE
 ``!(a:word32).
 ((~(a > guest2_max_adr ∨ a < guest2_min_adr))  =  (a <= guest2_max_adr /\ a >= guest2_min_adr)) /\
@@ -180,19 +180,19 @@ FULL_SIMP_TAC (srw_ss()) [guest1_min_adr_def, guest1_max_adr_def, guest2_min_adr
 
 val address_complete = store_thm(
     "address_complete",
-    ``!(add1:word32). (add1 <=+ guest1_max_adr ∧ add1 >=+ guest1_min_adr) \/ 
+    ``!(add1:word32). (add1 <=+ guest1_max_adr ∧ add1 >=+ guest1_min_adr) \/
                      (add1 <=+ guest2_max_adr ∧ add1 >=+ guest2_min_adr) \/
                      (add1 >+ guest2_max_adr ∨ add1 <+ guest1_min_adr)``,
     FULL_SIMP_TAC (srw_ss()) [guest1_min_adr_def, guest1_max_adr_def, guest2_min_adr_def, guest2_max_adr_def] THEN blastLib.BBLAST_TAC);
 
 
 (* what we assume when guests are running *)
-val mmu_requirements_def = Define `mmu_requirements state id = 
+val mmu_requirements_def = Define `mmu_requirements state id =
 !add1 is_write u p m.
-  ((u,p,m) = permitted_byte add1 
+  ((u,p,m) = permitted_byte add1
                             is_write
-                            state.coprocessors.state.cp15.C1 
-                            state.coprocessors.state.cp15.C2 
+                            state.coprocessors.state.cp15.C1
+                            state.coprocessors.state.cp15.C2
                             state.coprocessors.state.cp15.C3
                             F
                             state.memory)
@@ -210,26 +210,26 @@ val mmu_requirements_def = Define `mmu_requirements state id =
 val mmu_requirements_pure_def = Define `mmu_requirements_pure state id =
 !add1 is_write.
 ( ((add1 <=+ guest1_max_adr) /\ (add1 >=+ guest1_min_adr))   ==>
-  ((id=guest1) = permitted_byte_pure add1 
+  ((id=guest1) = permitted_byte_pure add1
                                 is_write
-                                state.coprocessors.state.cp15.C1 
-                                state.coprocessors.state.cp15.C2 
+                                state.coprocessors.state.cp15.C1
+                                state.coprocessors.state.cp15.C2
                                 state.coprocessors.state.cp15.C3
                                 F
                                 state.memory))  /\
 ( ((add1 <=+ guest2_max_adr ) /\ (add1 >=+ guest2_min_adr))   ==>
-  ((id=guest2) = permitted_byte_pure add1 
+  ((id=guest2) = permitted_byte_pure add1
                                 is_write
-                                state.coprocessors.state.cp15.C1 
-                                state.coprocessors.state.cp15.C2 
+                                state.coprocessors.state.cp15.C1
+                                state.coprocessors.state.cp15.C2
                                 state.coprocessors.state.cp15.C3
                                 F
                                 state.memory))  /\
 ( ((add1 >+ guest2_max_adr ) \/ (add1 <+  guest1_min_adr))   ==>
-  (~ permitted_byte_pure add1 
+  (~ permitted_byte_pure add1
                                 is_write
-                                state.coprocessors.state.cp15.C1 
-                                state.coprocessors.state.cp15.C2 
+                                state.coprocessors.state.cp15.C1
+                                state.coprocessors.state.cp15.C2
                                 state.coprocessors.state.cp15.C3
                                 F
                                 state.memory))`;
@@ -241,7 +241,7 @@ val mmu_requirements_simp = store_thm(
     ``!s g. mmu_requirements s g ==> mmu_requirements_pure s g``,
     PURE_ONCE_REWRITE_TAC [mmu_requirements_pure_def]
       THEN NTAC 5 STRIP_TAC
-      THEN Cases_on `permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory` 
+      THEN Cases_on `permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory`
       THEN pairLib.PairCases_on `r`
       THEN NTAC 2 STRIP_TAC
       THEN TRY DISCH_TAC
@@ -259,14 +259,14 @@ val mmu_requirements_simp = store_thm(
 
 val mmu_requirement_accesses_update_lem = store_thm(
     "mmu_requirement_accesses_update_lem",
-    ``!add1 x s g. 
+    ``!add1 x s g.
       ((mmu_requirements s g) = (mmu_requirements (s with accesses updated_by CONS (MEM_READ add1)) g))
    /\ ((mmu_requirements s g) = (mmu_requirements (s with accesses updated_by CONS (MEM_WRITE add1 x)) g))``,
     FULL_SIMP_TAC (srw_ss()) [mmu_requirements_def]);
 
 val mmu_requirement_accesses_update_lem2 = store_thm(
     "mmu_requirement_accesses_update_lem2",
-    ``!add1 x s g. 
+    ``!add1 x s g.
       ((mmu_requirements s g) = (mmu_requirements (s with accesses updated_by CONS (MEM_READ add1) o other) g))
    /\ ((mmu_requirements s g) = (mmu_requirements (s with accesses updated_by CONS (MEM_WRITE add1 x) o other) g))``,
     FULL_SIMP_TAC (srw_ss()) [mmu_requirements_def]);
@@ -276,7 +276,7 @@ val mmu_requirement_accesses_update_lem2 = store_thm(
 (* lemma: same setup -->  same access rights *)
 
 val same_setup_same_rights_lem = store_thm(
-    "same_setup_same_rights_lem", 
+    "same_setup_same_rights_lem",
     ``! s1 s2 g add1 is_write.
       mmu_requirements_pure s1 g ==>
       mmu_requirements_pure s2 g
@@ -297,7 +297,7 @@ val same_setup_same_rights_lem = store_thm(
 
 
 val same_setup_same_check_accesses_lem = store_thm(
-    "same_setup_same_check_accesses_lem", 
+    "same_setup_same_check_accesses_lem",
     ``! s1 s2 g accesses.
       mmu_requirements_pure s1 g ==>
       mmu_requirements_pure s2 g
@@ -309,7 +309,7 @@ val same_setup_same_check_accesses_lem = store_thm(
                                     s2.coprocessors.state.cp15.C2
                                     s2.coprocessors.state.cp15.C3 F s2.memory)``,
     REPEAT STRIP_TAC
-       THEN Induct_on `accesses` 
+       THEN Induct_on `accesses`
        THEN PURE_ONCE_REWRITE_TAC [check_accesses_pure_def]
        THEN FULL_SIMP_TAC (srw_ss()) [LET_DEF]
        THEN STRIP_TAC
@@ -336,16 +336,16 @@ val same_setup_same_av_pure_lem = store_thm(
 
 val access_violation_req = store_thm (
     "access_violation_req",
-    ``!s id. (mmu_requirements s id) 
+    ``!s id. (mmu_requirements s id)
       ==> (access_violation s = access_violation_pure s)``,
     REPEAT STRIP_TAC
-      THEN Cond_rewrite.COND_REWRITE1_TAC (SPEC ``s:arm_state`` access_violation_simp_FST)      
+      THEN Cond_rewrite.COND_REWRITE1_TAC (SPEC ``s:arm_state`` access_violation_simp_FST)
       THEN FULL_SIMP_TAC (srw_ss()) [access_violation_full_def]
-      THEN  `!add1 is_write. 
+      THEN  `!add1 is_write.
             ((u,p,m) = (permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory))
             ==> u` by METIS_TAC [mmu_requirements_def]
-     THEN  `!add1 is_write. 
-            FST (permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory)` 
+     THEN  `!add1 is_write.
+            FST (permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory)`
             by (RW_TAC (srw_ss()) []
                   THEN Cases_on `permitted_byte add1 is_write s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory`
                   THEN pairLib.PairCases_on `r`
@@ -425,25 +425,25 @@ val malicious_write = store_thm (
 
 
 val aligned_word_readable_def = Define `aligned_word_readable s is_thumb add1 =
- (  permitted_byte_pure (add1) F s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory 
+ (  permitted_byte_pure (add1) F s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory
        /\ (is_thumb ==> (  permitted_byte_pure (align(add1,2)) F s.coprocessors.state.cp15.C1
-                                                        s.coprocessors.state.cp15.C2 
+                                                        s.coprocessors.state.cp15.C2
         						 s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,2) + 1w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2 
+        	                                              s.coprocessors.state.cp15.C2
         						      s.coprocessors.state.cp15.C3 F s.memory))
-        
+
        /\ (~is_thumb ==> (  permitted_byte_pure (align(add1,4)) F s.coprocessors.state.cp15.C1
-                                                        s.coprocessors.state.cp15.C2 
+                                                        s.coprocessors.state.cp15.C2
         						 s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 1w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2 
+        	                                              s.coprocessors.state.cp15.C2
         						      s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 2w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2 
+        	                                              s.coprocessors.state.cp15.C2
         						      s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 3w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2 
+        	                                              s.coprocessors.state.cp15.C2
         						      s.coprocessors.state.cp15.C3 F s.memory)))`;
 
 

@@ -2183,7 +2183,7 @@ let
    val inf_thm = if af then
                     VAR_RES_FRAME_SPLIT___data_array___data_array___SAME_EXP_LENGTH
                  else
-                    VAR_RES_FRAME_SPLIT___data_interval___data_interval___SAME_EXP_LENGTH		
+                    VAR_RES_FRAME_SPLIT___data_interval___data_interval___SAME_EXP_LENGTH
    val thm1 = PART_MATCH (lhs o snd o dest_imp) inf_thm (rhs (concl thm0))
    val thm2 = var_res_precondition_prove thm1
 
@@ -2955,7 +2955,7 @@ fun holfoot_tac_verify_spec file optL_opt tacL =
 fun holfoot_auto_verify_spec file =
   holfoot_interactive_verify_spec true true file (SOME [generate_vcs]) []
 
-				
+
 (*
 val examplesDir = concat [Globals.HOLDIR, "/examples/separationLogic/src/holfoot/EXAMPLES"]
 (* 27.5 s *) val file = concat [examplesDir, "/automatic/append.dsf"];
