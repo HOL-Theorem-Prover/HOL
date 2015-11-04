@@ -1669,6 +1669,33 @@ RW_TAC bool_ss [BIJ_DEF, SURJ_DEF, INJ_DELETE, DELETE_DEF, INJ_DEF] THENL
 (* Left and right inverses.						 *)
 (* ===================================================================== *)
 
+(* Left inverse, to option type, result is NONE outside image of domain *)
+val LINV_OPT_def = new_definition ("LINV_OPT_def",
+  ``LINV_OPT f s y =
+    if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE``) ;
+
+val SELECT_EQ_AX = Q.prove (`($@ P = x) ==> $? P ==> P x`,
+  DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN DISCH_TAC THEN
+  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]) ;
+
+val INJ_LINV_OPT = Q.store_thm ("INJ_LINV_OPT",
+  `INJ f s t ==> !x:'a. !y:'b.
+    (LINV_OPT f s y = SOME x) = (y = f x) /\ x IN s /\ y IN t`,
+  REWRITE_TAC [LINV_OPT_def, INJ_DEF, IMAGE_DEF, GSPECIFICATION] THEN
+  REPEAT STRIP_TAC THEN
+  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN1
+  (POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN REV_FULL_SIMP_TAC std_ss []) THEN
+  EQ_TAC THENL [
+    DISCH_THEN (ASSUME_TAC o MATCH_MP SELECT_EQ_AX) THEN
+    VALIDATE (POP_ASSUM (fn th => REWRITE_TAC [BETA_RULE (UNDISCH th)])) THEN
+    Q.EXISTS_TAC `x'` THEN ASM_REWRITE_TAC [],
+    DISCH_TAC THEN irule SELECT_UNIQUE THEN
+    BETA_TAC THEN GEN_TAC THEN EQ_TAC
+    THENL [
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`y'`, `x`]) THEN
+      REPEAT STRIP_TAC THEN RES_TAC THEN FULL_SIMP_TAC bool_ss [],
+      REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []]]) ;
+
 val lemma1 = TAC_PROOF(([],
 (--`!(f:'a->'b) s.
       (!x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)) =
@@ -2515,6 +2542,13 @@ val CARD_INJ_IMAGE = store_thm(
   REWRITE_TAC [GSYM AND_IMP_INTRO] THEN NTAC 3 STRIP_TAC THEN
   Q.ID_SPEC_TAC `s` THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SRW_TAC [][]);
+
+val CARD_IMAGE = store_thm("CARD_IMAGE",
+  ``!s. FINITE s ==> (CARD (IMAGE f s) <= CARD s)``,
+  SET_INDUCT_TAC THEN
+  ASM_SIMP_TAC bool_ss [CARD_DEF, IMAGE_INSERT, IMAGE_FINITE, 
+    IMAGE_EMPTY, ZERO_LESS_EQ] THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC arith_ss []) ;
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
