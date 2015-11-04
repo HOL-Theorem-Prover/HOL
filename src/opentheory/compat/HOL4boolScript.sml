@@ -45,7 +45,7 @@ val res7 = export(``!A. A ==> ~A ==> F``,
   gen_tac >> strip_tac >>
   disch_then(fn th => qspec_then`A`(mp_tac o C EQ_MP th o SYM)th104) >>
   disch_then(fn th => pop_assum(ACCEPT_TAC o EQ_MP (SYM th))))
-  (* DB.match["OpenTheoryBool"]``(F ⇔ t) ⇔ ~t`` *)
+  (* DB.match["OpenTheoryBool"]``(F <=> t) <=> ~t`` *)
 
 val res8 = export(``!t1 t2. (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 <=> t2)``,
   deductAntisym
@@ -111,11 +111,11 @@ val res = export(``!f g. (f = g) <=> !x. (f x = g x)``,
   ACCEPT_TAC(GSYM th49))
   (* DB.match["OpenTheoryBool"]``!x. f x = g x`` *)
 
-val res = export(``!t1 t2. ((if T then t1 else t2) = t1) ∧ ((if F then t1 else t2) = t2)``,
+val res = export(``!t1 t2. ((if T then t1 else t2) = t1) /\ ((if F then t1 else t2) = t2)``,
   rpt gen_tac >> ACCEPT_TAC (CONJ (SPEC_ALL th75) (SPEC_ALL th76)))
   (* DB.match["OpenTheoryBool"]``if a then b else c`` *)
 
-val res = export(``(!t. ~~t <=> t) ∧ (~T <=> F) /\ (~F <=> T)``,
+val res = export(``(!t. ~~t <=> t) /\ (~T <=> F) /\ (~F <=> T)``,
   ACCEPT_TAC (LIST_CONJ[th110,th134,th135]))
   (* DB.match["OpenTheoryBool"]``~~ t <=> t`` *)
   (* DB.match["OpenTheoryBool"]``~T <=> F`` *)
@@ -134,32 +134,32 @@ val res = export(``!t.
        (T /\ t <=> t) /\ (t /\ T <=> t) /\ (F /\ t <=> F) /\
        (t /\ F <=> F) /\ (t /\ t <=> t)``,
   ACCEPT_TAC (GEN_ALL(LIST_CONJ(map SPEC_ALL [th102,th100,th103,th101,th99]))))
-  (* DB.match["OpenTheoryBool"]``T ∧ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ∧ T`` *)
-  (* DB.match["OpenTheoryBool"]``F ∧ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ∧ F`` *)
-  (* DB.match["OpenTheoryBool"]``t ∧ t = t`` *)
+  (* DB.match["OpenTheoryBool"]``T /\ t`` *)
+  (* DB.match["OpenTheoryBool"]``t /\ T`` *)
+  (* DB.match["OpenTheoryBool"]``F /\ t`` *)
+  (* DB.match["OpenTheoryBool"]``t /\ F`` *)
+  (* DB.match["OpenTheoryBool"]``t /\ t = t`` *)
 
 val res = export(``!t.
        (T \/ t <=> T) /\ (t \/ T <=> T) /\ (F \/ t <=> t) /\
        (t \/ F <=> t) /\ (t \/ t <=> t)``,
   ACCEPT_TAC (GEN_ALL(LIST_CONJ(map SPEC_ALL [th93,th91,th94,th92,th90]))))
-  (* DB.match["OpenTheoryBool"]``T ∨ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ∨ T`` *)
-  (* DB.match["OpenTheoryBool"]``F ∨ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ∨ F`` *)
-  (* DB.match["OpenTheoryBool"]``t ∨ t = t`` *)
+  (* DB.match["OpenTheoryBool"]``T \/ t`` *)
+  (* DB.match["OpenTheoryBool"]``t \/ T`` *)
+  (* DB.match["OpenTheoryBool"]``F \/ t`` *)
+  (* DB.match["OpenTheoryBool"]``t \/ F`` *)
+  (* DB.match["OpenTheoryBool"]``t \/ t = t`` *)
 
 val res = export(``!t.
        (T ==> t <=> t) /\ (t ==> T <=> T) /\ (F ==> t <=> T) /\
        (t ==> t <=> T) /\ (t ==> F <=> ~t)``,
   ACCEPT_TAC (GEN_ALL(LIST_CONJ(map SPEC_ALL [th97,th96,th98,
     EQ_MP (Q.SPEC`t ==> t`res3) (SPEC_ALL th84), th95]))))
-  (* DB.match["OpenTheoryBool"]``T ⇒ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ⇒ T`` *)
-  (* DB.match["OpenTheoryBool"]``F ⇒ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ⇒ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ⇒ F`` *)
+  (* DB.match["OpenTheoryBool"]``T ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``t ==> T`` *)
+  (* DB.match["OpenTheoryBool"]``F ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``t ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``t ==> F`` *)
 
 val res = export(``~(t /\ ~t)``,
   CONV_TAC(REWR_CONV th51) >>
@@ -200,8 +200,8 @@ val res = export(``!A B. A ==> B <=> ~A \/ B``,
   (* DB.match["OpenTheoryBool"]``F ==> t`` *)
   (* DB.match["OpenTheoryBool"]``~T`` *)
   (* DB.match["OpenTheoryBool"]``~F`` *)
-  (* DB.match["OpenTheoryBool"]``F ∨ b`` *)
-  (* DB.match["OpenTheoryBool"]``T ∨ b`` *)
+  (* DB.match["OpenTheoryBool"]``F \/ b`` *)
+  (* DB.match["OpenTheoryBool"]``T \/ b`` *)
 
 val res = export(``(x ==> y) /\ (z ==> w) ==> x /\ z ==> y /\ w``,
   MATCH_ACCEPT_TAC th3)
@@ -300,7 +300,7 @@ val res = export(``
   gen_tac >>
   CONV_TAC(LAND_CONV(REWR_CONV res13)) >>
   strip_tac >>
-  qexists_tac`λra. @a. rep a = ra` >>
+  qexists_tac`\ra. @a. rep a = ra` >>
   conj_tac >- (
     CONV_TAC (QUANT_CONV(LAND_CONV BETA_CONV)) >>
     gen_tac >>
@@ -317,7 +317,7 @@ val res = export(``
   conj_tac >- (
     CONV_TAC(HO_REWR_CONV th55) >>
     CONV_TAC(QUANT_CONV(LAND_CONV SYM_CONV)) >>
-    Q.ISPEC_THEN`λa. rep a = r`(MATCH_ACCEPT_TAC o BETA_RULE) th29 ) >>
+    Q.ISPEC_THEN`\a. rep a = r`(MATCH_ACCEPT_TAC o BETA_RULE) th29 ) >>
   disch_then(fn th => CONV_TAC(QUANT_CONV(LAND_CONV(REWR_CONV(SYM th))))) >>
   qexists_tac`@a. rep a = r` >>
   REFL_TAC)
@@ -335,13 +335,13 @@ val res = export(``
   first_assum(fn th => PURE_REWRITE_TAC [th]) >>
   PURE_REWRITE_TAC[th107,th104,th75,th76,th134,th135,th102,th103,th97,th98,th100] >>
   disch_then ACCEPT_TAC )
-  (* DB.match["OpenTheoryBool"]``F ⇔ t`` *)
-  (* DB.match["OpenTheoryBool"]``T ⇔ t`` *)
-  (* DB.match["OpenTheoryBool"]``T ⇒ t`` *)
-  (* DB.match["OpenTheoryBool"]``F ⇒ t`` *)
-  (* DB.match["OpenTheoryBool"]``T ∧ t`` *)
-  (* DB.match["OpenTheoryBool"]``t ∧ T`` *)
-  (* DB.match["OpenTheoryBool"]``F ∧ t`` *)
+  (* DB.match["OpenTheoryBool"]``F <=> t`` *)
+  (* DB.match["OpenTheoryBool"]``T <=> t`` *)
+  (* DB.match["OpenTheoryBool"]``T ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``F ==> t`` *)
+  (* DB.match["OpenTheoryBool"]``T /\ t`` *)
+  (* DB.match["OpenTheoryBool"]``t /\ T`` *)
+  (* DB.match["OpenTheoryBool"]``F /\ t`` *)
   (* DB.match["OpenTheoryBool"]``~T`` *)
   (* DB.match["OpenTheoryBool"]``~F`` *)
   (* DB.match["OpenTheoryBool"]``if T then x else y`` *)

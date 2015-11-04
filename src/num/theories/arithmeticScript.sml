@@ -1548,7 +1548,7 @@ val SUB_LEFT_SUC = store_thm ("SUB_LEFT_SUC",
     ASSUM_LIST (MAP_EVERY (REWRITE_TAC o CONJUNCTS o
                            (PURE_REWRITE_RULE [LESS_OR_EQ,DE_MORGAN_THM])))]);
 
-val pls = prove (``p ≤ m ∨ p ≤ 0 = p <= m``,
+val pls = prove (``p <= m \/ p <= 0 = p <= m``,
    REWRITE_TAC [LESS_EQ_0] THEN
    EQ_TAC THEN REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC [ZERO_LESS_EQ]) ;
@@ -3208,7 +3208,7 @@ val ABS_DIFF_SUC_LE = Q.store_thm ("ABS_DIFF_SUC_LE",
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ, leq_ss]) ;
 
 val ABS_DIFF_PLUS_LE = Q.store_thm ("ABS_DIFF_PLUS_LE",
-  `!x z y. ABS_DIFF x (y + z) ≤ y + (ABS_DIFF x z)`,
+  `!x z y. ABS_DIFF x (y + z) <= y + (ABS_DIFF x z)`,
   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC
     THEN REWRITE_TAC [ADD, LESS_EQ_REFL]
     THEN MATCH_MP_TAC (MATCH_MP LESS_EQ_TRANS' (SPEC_ALL ABS_DIFF_SUC_LE))
@@ -3219,7 +3219,7 @@ val [ADT_splemx, ADT_splemx'] =
   map (owr ABS_DIFF_COMM) [ABS_DIFF_PLUS_LE, ABS_DIFF_PLUS_LE'] ;
 
 val ABS_DIFF_LE_SUM = Q.store_thm ("ABS_DIFF_LE_SUM",
-  `ABS_DIFF x z ≤ x + z`,
+  `ABS_DIFF x z <= x + z`,
   REWRITE_TAC [ABS_DIFF_def] THEN COND_CASES_TAC
     THEN MATCH_MP_TAC (MATCH_MP LESS_EQ_TRANS' (SPEC_ALL SUB_LESS_EQ))
     THEN REWRITE_TAC [LESS_EQ_ADD, LESS_EQ_ADD']) ;
@@ -3230,7 +3230,7 @@ val [ADT_sslem, ADT_sslem'] = map (MATCH_MP imp_leq_ss)
   [ABS_DIFF_LE_SUM, ABS_DIFF_LE_SUM'] ;
 
 val ABS_DIFF_TRIANGLE_lem = Q.store_thm ("ABS_DIFF_TRIANGLE_lem",
-  `!x y. x ≤ ABS_DIFF x y + y`,
+  `!x y. x <= ABS_DIFF x y + y`,
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [ABS_DIFF_ZERO, ABS_DIFF_SUC, ADD, ADD_0, GSYM ADD_SUC,
     LESS_EQ_REFL, LESS_EQ_MONO, ZERO_LESS_EQ]) ;
@@ -3263,14 +3263,14 @@ val LT_SUB_RCANCEL = Q.store_thm ("LT_SUB_RCANCEL",
   MATCH_ACCEPT_TAC CONJ_COMM) ;
 
 val LE_SUB_LCANCEL = Q.store_thm ("LE_SUB_LCANCEL",
-  `!z y x. x − y <= x − z = z <= y \/ x <= y`,
+  `!z y x. x - y <= x - z = z <= y \/ x <= y`,
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC [ SUB_MONO_EQ, LESS_EQ_MONO, LESS_EQ_REFL,
     SUB_0, NOT_SUC_LESS_EQ_0, ZERO_LESS_EQ,
     NOT_SUC_LESS_EQ, SUB_LESS_EQ, SUB_LE_SUC]) ;
 
 val LT_SUB_LCANCEL = Q.store_thm ("LT_SUB_LCANCEL",
-  `!z y x. x − y < x − z = z < y /\ z < x`,
+  `!z y x. x - y < x - z = z < y /\ z < x`,
   REWRITE_TAC [GSYM NOT_LESS_EQUAL, LE_SUB_LCANCEL, DE_MORGAN_THM]) ;
 
 val ABS_DIFF_SUMS = Q.store_thm ("ABS_DIFF_SUMS",

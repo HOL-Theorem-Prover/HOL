@@ -3442,7 +3442,7 @@ val LAST_REVERSE = Q.store_thm("LAST_REVERSE",
    Induct >> simp [])
 
 val last_drop = Q.store_thm ("last_drop",
-  `!l n. n < LENGTH l ⇒ (LAST (DROP n l) = LAST l)`,
+  `!l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)`,
   Induct >> rw [] >>
   Q.SPEC_THEN`l`FULL_STRUCT_CASES_TAC list_CASES >> fs [] >>
   FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] >> SRW_TAC[] [] >>
