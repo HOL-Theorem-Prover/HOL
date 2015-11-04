@@ -15,14 +15,14 @@ val ERR = Feedback.mk_HOL_ERR "MyDatatype";
 fun gen_tyvar _ = Type.gen_tyvar ();
 
 (* get type variables in a pretype *)
-fun pty_get_tyvars pty = 
+fun pty_get_tyvars pty =
     case pty of
       dAQ _             => [ ]
     | dVartype s        => [s]
     | dTyop {Args, ...} => Lib.U (map pty_get_tyvars Args);
 
 (* fromType : hol_type -> ParseDatatype.pretype *)
-fun fromType ty = 
+fun fromType ty =
   if is_vartype ty
   then dVartype (dest_vartype ty)
   else let val {Args, Thy, Tyop} = dest_thy_type ty
@@ -36,12 +36,12 @@ fun interleave [] y = y
   | interleave (x::xs) (y::ys) = x::y::(interleave xs ys);
 
 (* functions to access dictionaries *)
-fun lookup tyvar (tyvar'::tyvars, h::dict) = 
+fun lookup tyvar (tyvar'::tyvars, h::dict) =
     if tyvar = tyvar' then SOME h
     else lookup tyvar (tyvars, dict)
   | lookup _ _ = NONE;
 fun insert (tyvar, value) ([], []) = ([tyvar], [value])
-  | insert (tyvar, value) (tyvar'::tyvars, h::dict) = 
+  | insert (tyvar, value) (tyvar'::tyvars, h::dict) =
     if tyvar = tyvar' then (tyvar::tyvars, value::dict)
     else let
       val (x, y) = (insert (tyvar,value) (tyvars, dict))
@@ -49,7 +49,7 @@ fun insert (tyvar, value) ([], []) = ([tyvar], [value])
 
 (* Constructs a 0-ary type, caring for the theory *)
 fun make_type tyop  NONE      = mk_type(tyop, [])
-  | make_type tyop (SOME thy) = 
+  | make_type tyop (SOME thy) =
        mk_thy_type {Thy =thy, Tyop=tyop, Args=[]};
 
 (* Replaces occurrences of defining types with type variables *)
@@ -118,7 +118,7 @@ fun nest_tyop tyop [] =
    to get just one constructor *)
 fun type_descriptions ([]: ParseDatatype.AST list) = []
   | type_descriptions ((_, ParseDatatype.Constructors clist)::tl)
-    = (nest_tyop "sum" 
+    = (nest_tyop "sum"
           (map ((nest_tyop "prod") o snd) clist)
        )::(type_descriptions tl)
   | type_descriptions ((_, ParseDatatype.Record _)::_)
@@ -131,7 +131,7 @@ fun type_descriptions ([]: ParseDatatype.AST list) = []
    with theorems of the parameter types to get theorems for the
    composed type *)
 local
-fun compose_inj_pair thm thms = 
+fun compose_inj_pair thm thms =
     foldl ((uncurry o C) MATCH_MP) thm thms;
 fun compose_ret_map thm thms =
   let val retrieve_tm = ( fst  o strip_comb o snd  o dest_eq
@@ -140,12 +140,12 @@ fun compose_ret_map thm thms =
      (SYM (LIST_MK_ICOMB (REFL retrieve_tm) thms )))
 end;
 fun compose_all_tm tm tms = list_mk_icomb(tm, tms);
-fun compose_all_mono thm thms = 
+fun compose_all_mono thm thms =
     if List.length thms = 1 then MATCH_MP thm (hd thms)
     else if List.length thms = 2 then MATCH_MP thm
                           ((uncurry CONJ) (pair_of_list(thms)))
     else MATCH_MP thm (foldl (uncurry CONJ) (hd (rev thms)) (tl (rev thms)));
-in 
+in
 val compose_funs = {
     inj_pair = compose_inj_pair     ,
     ret_map  = compose_ret_map      ,
@@ -162,9 +162,9 @@ fun compose dict self pty =
     case pty of
       dAQ ty     => gen_rich_const ty self
     | dVartype s => valOf (lookup s dict)
-    | dTyop {Args, Thy, Tyop} => 
-        case lookup Tyop (!types) of 
-          NONE => if Args = [] then 
+    | dTyop {Args, Thy, Tyop} =>
+        case lookup Tyop (!types) of
+          NONE => if Args = [] then
                     compose dict self (dAQ (pretypeToType pty))
                   else raise ERR "compose"
                     ("Type '"^Tyop^"' not supported.")
@@ -239,7 +239,7 @@ fun compose_pretype pty = let
     val alls  = map (fn v => genvar (v --> bool)) vars
     val alls' = map (fn v => genvar (v --> bool)) vars
     val func = fn (w, (x, (y, z))) => gen_rich_tyvar w x y z
-    val rtcs = map func 
+    val rtcs = map func
         (zip vars (zip rets (zip (zip maps maps') (zip alls alls'))))
     val dict = (vnames, rtcs)
     val comp = compose dict self pty
@@ -261,12 +261,12 @@ end;
 (*                 constructor with respect to the type vars     *)
 (*                 that have been created by gen_tyvar.          *)
 (*****************************************************************)
-local 
+local
   val x = mk_var("x", alpha);
   val Jsome_tm = mk_abs(x, mk_abs(mk_var("u", one_ty),
                       optionSyntax.mk_some x));
   val Iu_tm = mk_abs(x, oneSyntax.one_tm)
-  fun helper thm = 
+  fun helper thm =
     if (is_forall o concl) thm then let
      val c = concl thm
      val (f, c') = dest_forall c
@@ -380,9 +380,9 @@ fun Datatype q = let
   val Cons = map mk_comb (zip oks Cs)
   val rules = map mk_imp (zip Hyps Cons)
   val genl = map mk_forall (zip (map fst vars) rules)
-  val def_tm = list_mk_conj genl 
+  val def_tm = list_mk_conj genl
   (**)
-  val mythm = prove(``!P Q. (P ⊆ Q) = (!x. P x ==> Q x)``,
+  val mythm = prove(``!P Q. (P SUBSET Q) = (!x. P x ==> Q x)``,
         simp[pred_setTheory.SUBSET_DEF, boolTheory.IN_DEF])
   val mono = PURE_REWRITE_RULE [mythm] (#all_mono rich_comp)
   val func = fn x =>  (PURE_REWRITE_RULE [mythm] x
@@ -391,7 +391,7 @@ fun Datatype q = let
   val monoset = map (fn x =>
            ((fst o dest_const o #all_tm) x, func (#all_mono x)))
                 (snd (!NDDB.types))
-  val (rules, ind, cases) = 
+  val (rules, ind, cases) =
       InductiveDefinition.new_inductive_definition
       ((!IndDefLib.the_monoset)@monoset) "stem" (def_tm, [])
   (* witnesses *)
@@ -432,18 +432,18 @@ val map_tm = (hd o tl o snd o strip_comb o fst o dest_eq
              o snd o strip_forall o concl o #all_map) rich_comp
 list_mk_icomb(map_tm, )
 free_vars map_tm
-val map_reps_tm = list_mk_comb(map_tm, 
+val map_reps_tm = list_mk_comb(map_tm,
 list_mk_icomb(combinSyntax.o_tm, [Co, ]
-  val 
+  val
 
 (* RUBBISH *)
 (*
     MyDatatype.wit_test `X = C X 'a X 'b | C 'a ; Y = C Y | C 'a`
     test2 `X = C (X+(X#X))`
 *)(*
-val xxx = mk_thm([], ``(∀x. sette x ⇒ nove x) ⇒
+val xxx = mk_thm([], ``(!x. sette x ==> nove x) ==>
      (sum_all sette
-          (prod_all sette otto )) x ⇒
+          (prod_all sette otto )) x ==>
        (sum_all nove
           (prod_all nove zero )) x``);
 *)

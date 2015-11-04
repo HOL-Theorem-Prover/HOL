@@ -75,7 +75,7 @@ val sum_prod_duality = prove(``!f1 f2.
      (prod_retrieve f1 f2) =
      (combin$C (sum_retrieve (combin$C f1) (combin$C f2)))``,
    simp[C_DEF]
->> REPEAT GEN_TAC 
+>> REPEAT GEN_TAC
 >> REPEAT RW_HELP_TAC
 >> BETA_TAC
 >> simp[sum_retrieve_def, prod_retrieve_def]
@@ -107,7 +107,7 @@ simp[o_DEF, inj_pair_def]
 
 
 prove(``!f1 g1 f2 g2.
- ((sum_retrieve g1 g2)o h) o ((sum_map f1 f2)o h) = 
+ ((sum_retrieve g1 g2)o h) o ((sum_map f1 f2)o h) =
  ((sum_retrieve (g1 o f1) (g2 o f2)) o h)``
 
 Cases_on`h (INL x')`
@@ -128,7 +128,7 @@ val sum_inj_pair_thm = prove(``!f1 g1 f2 g2.
 );
 
 val sum_retrieve_map_thm = prove(``!f1 g1 f2 g2.
- (sum_retrieve g1 g2) o (sum_map f1 f2) = 
+ (sum_retrieve g1 g2) o (sum_map f1 f2) =
  (sum_retrieve (g1 o f1) (g2 o f2))
 ``, REPEAT GEN_TAC >> simp[o_DEF]
 >> RW_HELP_TAC
@@ -155,8 +155,8 @@ val sum_all_T_thm = prove(``sum_all KT KT = KT``,
   RW_HELP_TAC >> simp[sum_all_def, KT_def]
 );
 
-val sum_all_mono_thm = prove(``!P Q P' Q'. 
-  (P ⊆ P') /\ (Q ⊆ Q') ==> (sum_all P Q) ⊆ (sum_all P' Q')
+val sum_all_mono_thm = prove(``!P Q P' Q'.
+  (P SUBSET P') /\ (Q SUBSET Q') ==> (sum_all P Q) SUBSET (sum_all P' Q')
 ``, simp[pred_setTheory.SUBSET_DEF, boolTheory.IN_DEF]
 >> REPEAT GEN_TAC >> REPEAT DISCH_TAC
 >> Cases >> simp[sum_all_def]
@@ -190,7 +190,7 @@ val prod_inj_pair_thm = prove(``!f1 g1 f2 g2.
 );
 
 val prod_retrieve_map_thm = prove(``!f1 g1 f2 g2.
- (prod_retrieve g1 g2) o (f1 ## f2) = 
+ (prod_retrieve g1 g2) o (f1 ## f2) =
  (prod_retrieve (g1 o f1) (g2 o f2))
 ``, REPEAT GEN_TAC >> simp[o_DEF]
 >> RW_HELP_TAC >> BETA_TAC
@@ -216,8 +216,8 @@ val prod_all_T_thm = prove(``prod_all KT KT = KT``,
   RW_HELP_TAC >> simp[prod_all_def, KT_def]
 );
 
-val prod_all_mono_thm = prove(``!P Q P' Q'. 
-  (P ⊆ P') /\ (Q ⊆ Q') ==> (prod_all P Q) ⊆ (prod_all P' Q')
+val prod_all_mono_thm = prove(``!P Q P' Q'.
+  (P SUBSET P') /\ (Q SUBSET Q') ==> (prod_all P Q) SUBSET (prod_all P' Q')
 ``, simp[pred_setTheory.SUBSET_DEF, boolTheory.IN_DEF]
 >> REPEAT GEN_TAC >> REPEAT DISCH_TAC
 >> Cases >> simp[prod_all_def]
@@ -268,14 +268,14 @@ first_x_assum(fn th => (Q.SPEC `x` th) |> BETA_RULE |> ASSUME_TAC)
      (Q.SPEC `(n, c)` th)) |> BETA_RULE |> ASSUME_TAC)
 
 >> first_assum(fn th => ((Q.SPEC `0` th)) |> BETA_RULE |> ASSUME_TAC)
->> 
+>>
 >> first_x_assum(fn th => ((Q.SPEC `SUC n` th)) |> BETA_RULE |> ASSUME_TAC)
 
 >> fs[prod_retrieve_def, prod_map_def, pairTheory.PAIR_MAP]
 );
 
 val prod_retrieve_map_thm = prove(``!f1 g1 f2 g2.
- (prod_retrieve g1 g2) o (f1 ## f2) = 
+ (prod_retrieve g1 g2) o (f1 ## f2) =
  (prod_retrieve (g1 o f1) (g2 o f2))
 ``, REPEAT GEN_TAC >> simp[o_DEF]
 >> RW_HELP_TAC >> BETA_TAC
@@ -323,8 +323,8 @@ simp[inj_pair_def, pred_setTheory.INJ_DEF] >> DISCH_TAC >> REPEAT GEN_TAC
 
 (*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*)
 
-(* constant functions 
-val retrieve_k = 
+(* constant functions
+val retrieve_k =
     mk_abs (mk_var("x",  alpha),
     mk_abs (mk_var("y", one_ty),
     mk_arb(gamma)));
@@ -356,7 +356,7 @@ val constantly_rich = {
 (* support for option type *)
 
 val option_inj_pair_thm = prove(
-``!f g. (inj_pair f g) ==> 
+``!f g. (inj_pair f g) ==>
   (inj_pair (option_map f) (option_retrieve g))``,
    REPEAT GEN_TAC
 >> simp[inj_pair_def] >> DISCH_TAC
@@ -403,8 +403,8 @@ val option_all_T_thm = prove(``option_all KT = KT``,
   RW_HELP_TAC >> simp[option_all_def, KT_def]
 );
 
-val option_all_mono_thm = prove(``!P P'. 
-  (P ⊆ P') ==> (option_all P) ⊆ (option_all P')
+val option_all_mono_thm = prove(``!P P'.
+  (P SUBSET P') ==> (option_all P) SUBSET (option_all P')
 ``, simp[pred_setTheory.SUBSET_DEF, boolTheory.IN_DEF]
 >> REPEAT GEN_TAC >> REPEAT DISCH_TAC
 >> Cases >> simp[option_all_def]
@@ -422,7 +422,7 @@ val _ = register_type("option", {
 });
 
 (* test: all *)
-val _ = prove(``let sum_all2 = 
+val _ = prove(``let sum_all2 =
 (\P Q x. !p. (option_CASE (sum_retrieve (\x1 _. SOME (P x1)) (\x2 _. SOME (Q x2)) x p) T I)) in (
       (sum_all2 P Q (INL x') = P x')
    /\ (sum_all2 P Q (INR y') = Q y')
@@ -437,13 +437,13 @@ val _ = prove(``let sum_all2 =
 (* Constructor *)
 
 val inj_constr_thm = prove(
-``!f g. (inj_pair f g) ==> (INJ (\t pi. case pi of 
+``!f g. (inj_pair f g) ==> (INJ (\t pi. case pi of
          []    => (f t, 0)
-       | p::ps => (case (g t p) of 
+       | p::ps => (case (g t p) of
 		     NONE => (ARB, 0)
 		   | SOME c => (case c ps of (r, n) => (r, SUC n)
 ))))
-``, REPEAT GEN_TAC 
+``, REPEAT GEN_TAC
 >> simp[INJ_def, inj_pair_def, FUN_EQ_THM]
 >> DISCH_TAC >> REPEAT GEN_TAC >> DISCH_TAC
 >> first_assum (ASSUME_TAC o BETA_RULE o (Q.SPEC `[]`))
@@ -467,7 +467,7 @@ val inj_constr_thm = prove(
 (*val inj_constr_thm = prove(
 ``!f g. (inj_pair f g) ==>
         (INJ (\t pi. list_CASE pi (f t) (g t)))
-``, REPEAT GEN_TAC 
+``, REPEAT GEN_TAC
 >> simp[INJ_def, inj_pair_def, FUN_EQ_THM]
 >> DISCH_TAC >> REPEAT GEN_TAC >> DISCH_TAC
 >> first_assum (ASSUME_TAC o BETA_RULE o (Q.SPEC `[]`))
