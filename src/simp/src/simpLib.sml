@@ -505,33 +505,37 @@ fun remove_ssfrags ss names =
        |> mk_simpset
 
 local
-  val term_of_thm = Thm.concl o Drule.GEN_ALL o Drule.DISCH_ALL
-  fun same_thm thm = Term.aconv (term_of_thm thm)
-  fun exists_same l thm = List.exists (same_thm thm) l
+  val lhs_of_thm = boolSyntax.lhs o snd o boolSyntax.strip_forall o Thm.concl
+  fun term_of_thm th =
+    case (Lib.total lhs_of_thm th, Thm.hyp th) of
+       (SOME tm, []) => tm
+     | _ => boolSyntax.T
+  fun match_eq tm1 tm2 =
+    Lib.can (Term.match_term tm1) tm2 andalso Lib.can (Term.match_term tm2) tm1
+  fun exists_match l thm = List.exists (match_eq (term_of_thm thm)) l
   fun remove_theorems_from_frag f
     (SSFRAG_CON { name, convs, rewrs, ac, filter, dprocs, congs, relsimps}) =
       SSFRAG_CON
         { name = name,
           convs = convs,
-          rewrs = List.mapPartial f rewrs,
-          ac = List.filter (fn (th1, th2) => Option.isSome (f th1) andalso
-                                             Option.isSome (f th2)) ac,
+          rewrs = List.mapPartial (f false) rewrs,
+          ac = let val ok = Option.isSome o (f true) in
+                 List.filter (fn (th1, th2) => ok th1 andalso ok th2) ac
+               end,
           filter = filter,
           dprocs = dprocs,
-          congs = List.mapPartial f congs,
+          congs = congs,
           relsimps = relsimps
         }
 in
-  fun remove_theorems thms (SS {mk_rewrs, ssfrags, ...}) =
+  fun remove_theorems avoids (SS {mk_rewrs, ssfrags, ...}) =
     let
       fun thm_to_thms thm =
          List.map fst (mk_rewrs (thm, BoundedRewrites.BOUNDED (ref 1)))
-      val avoids =
-        List.map term_of_thm (List.concat (List.map thm_to_thms thms))
-      val part = List.partition (exists_same avoids) o thm_to_thms
-      fun f thm =
+      val part = List.partition (exists_match avoids)
+      fun f ac thm =
         let
-          val (l, r) = part thm
+          val (l, r) = part (if ac then [thm] else thm_to_thms thm)
         in
           if List.null l then SOME thm else Lib.total Drule.LIST_CONJ r
         end
