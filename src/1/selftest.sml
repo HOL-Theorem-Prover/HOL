@@ -591,5 +591,41 @@ in
   if s2 = ":bool -> bool" then print "OK\n" else die "FAILED!"
 end
 
+fun nc (s,ty) =
+  (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
+
+val _ = let
+  val _ = tprint "irule 1"
+  val P = nc("P", alpha --> beta --> bool)
+  val Q = nc("Q", ``:'d -> 'b -> 'c -> bool``)
+  val R = nc("R", beta --> mk_vartype "'e" --> bool)
+  val f = nc("f", ``:'c -> 'e``)
+  val th = mk_thm([],
+    ``!x u. ^P u x ==> !y. ^Q w x y ==> ^R x (^f y)``)
+  val g = ([] : term list, ``^R a (^f b) : bool``)
+  val exsg1 = ``?u. ^P u a`` and exsg2 = ``?w. ^Q w a b``
+  val (sgs, vf) = irule th g
+  val verdict =
+      case sgs of
+          [([], sg1), ([], sg2)] => aconv sg1 exsg1 andalso aconv sg2 exsg2
+        | _ => false
+in
+  if verdict then print "OK\n" else die "FAILED!"
+end
+
+val _ = let
+  val _ = tprint "irule 2"
+  val g = ([]: term list, ``a:bool = b``)
+  val th = TRANS (ASSUME ``x:'a = y``) (ASSUME ``y:'a = z``)
+                 |> DISCH ``y:'a = z`` |> GEN ``z:'a``
+                 |> DISCH_ALL |> GEN ``y:'a`` |> GEN ``x:'a``
+  val expected = ``?y:bool. (a = y) /\ (y = b)``
+  val (sgs, vf) = irule th g
+in
+  case sgs of
+      [([], sg)] => if aconv sg expected then print "OK\n" else die "FAILED!"
+    | _ => die "FAILED!"
+end
+
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
