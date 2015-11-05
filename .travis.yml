@@ -1,6 +1,4 @@
 language: c
-compiler:
-  - gcc
 before_script: developers/travis/before_install.sh
 script: poly < tools/smart-configure.sml && bin/build $BUILDOPTS -nograph
 notifications:
@@ -28,5 +26,5 @@ env:
 matrix:
   include:
     - os: osx
-    - env: ROOTPOLY= BUILDOPTS=
-    - sudo: false
+      env: ROOTPOLY= BUILDOPTS=
+      sudo: false
