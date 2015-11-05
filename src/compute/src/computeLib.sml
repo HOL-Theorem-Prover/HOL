@@ -234,7 +234,10 @@ end
 (*---------------------------------------------------------------------------*)
 
 open LoadableThyData
-val {export,...} = ThmSetData.new_exporter "compute" (K add_funs)
+val {export,...} =
+    ThmSetData.new_exporter "compute"
+                            (fn _ (* thy *) => fn namedthms =>
+                                add_funs (map #2 namedthms))
 val add_persistent_funs = app export
 
 (*---------------------------------------------------------------------------*)

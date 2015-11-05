@@ -3,7 +3,7 @@ sig
 
   type data = Theory.LoadableThyData.t
   val new_exporter : string ->
-                     (string -> Thm.thm list -> unit) ->
+                     (string -> (string * Thm.thm) list -> unit) ->
                      {dest : data -> (string * Thm.thm) list option,
                       export : string -> unit,
                       mk : string list -> data * (string * Thm.thm) list}
@@ -16,7 +16,8 @@ sig
                     (string * Thm.thm) list
   val all_data : string -> (string * (string * Thm.thm) list) list
   val data_storefn : string -> (string -> unit) option
-  val data_exportfn : string -> (string -> Thm.thm list -> unit) option
+  val data_exportfn :
+      string -> (string -> (string * Thm.thm) list -> unit) option
 
   val all_set_types : unit -> string list
 

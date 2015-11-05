@@ -92,7 +92,7 @@ end
 
 (* making it exportable *)
 val {export = export_rule_induction, dest, ...} =
-    ThmSetData.new_exporter "rule_induction" (K (app add_rule_induction))
+    ThmSetData.new_exporter "rule_induction" (K (app (add_rule_induction o #2)))
 
 fun thy_rule_inductions thyname = let
   val segdata =
@@ -121,7 +121,7 @@ fun add_mono_thm th = the_monoset := (mono_name th, th) :: (!the_monoset)
 
 (* making it exportable *)
 val {export = export_mono, dest, ...} =
-    ThmSetData.new_exporter "mono" (K (app add_mono_thm))
+    ThmSetData.new_exporter "mono" (K (app (add_mono_thm o #2)))
 
 fun thy_monos thyname =
     case LoadableThyData.segment_data {thy = thyname, thydataty = "mono"} of
