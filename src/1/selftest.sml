@@ -595,7 +595,7 @@ fun nc (s,ty) =
   (new_constant(s,ty); prim_mk_const{Name = s, Thy = current_theory()})
 
 val _ = let
-  val _ = tprint "irule 1"
+  val _ = tprint "irule 1 (basic match-mp)"
   val P = nc("P", alpha --> beta --> bool)
   val Q = nc("Q", ``:'d -> 'b -> 'c -> bool``)
   val R = nc("R", beta --> mk_vartype "'e" --> bool)
@@ -614,18 +614,56 @@ in
 end
 
 val _ = let
-  val _ = tprint "irule 2"
-  val g = ([]: term list, ``a:bool = b``)
-  val th = TRANS (ASSUME ``x:'a = y``) (ASSUME ``y:'a = z``)
-                 |> DISCH ``y:'a = z`` |> GEN ``z:'a``
-                 |> DISCH_ALL |> GEN ``y:'a`` |> GEN ``x:'a``
-  val expected = ``?y:bool. (a = y) /\ (y = b)``
-  val (sgs, vf) = irule th g
+  val _ = tprint "irule 2 (shared existential)"
+  val g = ([]: term list, ``a:'a = b``)
+  val expected = ``?y:'a. (a = y) /\ (y = b)``
+  val (sgs, vf) = irule EQ_TRANS g
 in
   case sgs of
       [([], sg)] => if aconv sg expected then print "OK\n" else die "FAILED!"
     | _ => die "FAILED!"
 end
+
+val _ = let
+  val _ = tprint "irule 3 (thm from goal)"
+  val P = nc("P", ``:'a -> bool``)
+  val Q = nc("Q", ``:'a -> bool``)
+  val g = ([``!x. ^P x ==> ^Q x``], ``^Q (b:'a)``)
+  val (sgs, vf) = POP_ASSUM irule g
+  val rth = vf (map mk_thm sgs)
+  val _ = aconv (concl rth) (#2 g) andalso length (hyp rth) = 1 andalso
+          aconv (hd (hyp rth)) (hd (#1 g)) orelse die "FAILED!"
+in
+  case sgs of
+      [([], sg)] => if aconv sg ``^P (b:'a)`` then print "OK\n"
+                    else die "FAILED!"
+    | _ => die "FAILED!"
+end
+
+val _ = let
+  val _ = tprint "irule 4 (thm from goal, extra vars)"
+  val g = ([``!x:'a y:'a. PP x y ==> QQ y (f y:'a)``],
+           ``(QQ:'a -> 'a -> bool) a (f a)``)
+  val (sgs, vf) = POP_ASSUM irule g
+  val rth = vf (map mk_thm sgs)
+in
+  case sgs of
+      [([], sg)] => if aconv sg ``?x:'a. PP x (a:'a)`` then print "OK\n"
+                    else die "FAILED!"
+    | _ => die "FAILED!"
+end
+
+val _ = let
+  val _ = tprint "irule 5 (as match_accept_tac)"
+  val _ = hide "P"
+  val g = ``(!x:'a. P x) ==> P a``
+  val th = prove(g, DISCH_THEN irule)
+           handle HOL_ERR _ => die "FAILED!"
+in
+  if aconv g (concl th) then print "OK\n" else die "FAILED!"
+end
+
+
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
