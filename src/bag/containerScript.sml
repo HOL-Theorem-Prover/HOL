@@ -166,7 +166,7 @@ Induct_on `l` THENL [
 
 val LIST_TO_BAG_DISTINCT = store_thm ("LIST_TO_BAG_DISTINCT",
   ``BAG_ALL_DISTINCT (LIST_TO_BAG b) = ALL_DISTINCT b``,
-  Induct_on `b` THEN 
+  Induct_on `b` THEN
     ASM_SIMP_TAC (srw_ss ()) [LIST_TO_BAG_def, IN_LIST_TO_BAG]) ;
 
 val LIST_TO_BAG_EQ_EMPTY = store_thm ("LIST_TO_BAG_EQ_EMPTY",
@@ -194,7 +194,7 @@ val EQ_TRANS' = REWRITE_RULE [GSYM AND_IMP_INTRO] EQ_TRANS ;
 val th = MATCH_MP EQ_TRANS' (SYM CARD_LIST_TO_BAG) ;
 
 val BAG_TO_LIST_CARD = store_thm ("BAG_TO_LIST_CARD",
-  ``!b. FINITE_BAG b ⇒ (LENGTH (BAG_TO_LIST b) = BAG_CARD b)``,
+  ``!b. FINITE_BAG b ==> (LENGTH (BAG_TO_LIST b) = BAG_CARD b)``,
   EVERY [REPEAT STRIP_TAC, irule th,
     ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV] ]) ;
 
@@ -221,11 +221,11 @@ end
 (* the head of the list is replaced by a list of smaller elements.           *)
 (*---------------------------------------------------------------------------*)
 
-val mlt_list_def = 
+val mlt_list_def =
  Define
-   `mlt_list R = 
+   `mlt_list R =
      \l1 l2.
-       ?h t list. 
+       ?h t list.
          (l1 = list ++ t) /\
          (l2 = h::t) /\
          (!e. MEM e list ==> R e h)`;
@@ -237,12 +237,12 @@ val WF_mlt_list = Q.store_thm
   Q.EXISTS_TAC `inv_image (mlt1 R) LIST_TO_BAG` THEN
   CONJ_TAC THENL
   [METIS_TAC [relationTheory.WF_inv_image,bagTheory.WF_mlt1],
-   RW_TAC list_ss [mlt_list_def, relationTheory.inv_image_thm,bagTheory.mlt1_def] 
+   RW_TAC list_ss [mlt_list_def, relationTheory.inv_image_thm,bagTheory.mlt1_def]
    THENL
    [METIS_TAC [FINITE_LIST_TO_BAG],
     METIS_TAC [FINITE_LIST_TO_BAG],
-    MAP_EVERY Q.EXISTS_TAC [`h`, `LIST_TO_BAG list`, `LIST_TO_BAG t`] 
-     THEN RW_TAC std_ss [BAG_INSERT_UNION,LIST_TO_BAG_APPEND,LIST_TO_BAG_def] 
+    MAP_EVERY Q.EXISTS_TAC [`h`, `LIST_TO_BAG list`, `LIST_TO_BAG t`]
+     THEN RW_TAC std_ss [BAG_INSERT_UNION,LIST_TO_BAG_APPEND,LIST_TO_BAG_def]
       THENL [METIS_TAC [COMM_BAG_UNION,ASSOC_BAG_UNION,BAG_UNION_EMPTY],
              METIS_TAC [IN_LIST_TO_BAG]]]]);
 

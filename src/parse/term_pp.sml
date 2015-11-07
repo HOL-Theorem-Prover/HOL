@@ -1004,18 +1004,23 @@ fun pp_term (G : grammar) TyG backend = let
            isSome recfupd_info andalso isSome recupd_info
         then let
             open Overload
+            fun ap1 t = let val (d,_) = dom_rng (type_of t)
+                        in mk_comb(t,genvar d) end
+            fun ap2 t = t |> ap1 |> ap1
+            fun fupdstr0 t =
+              t |> ap2 |> Overload.oi_strip_comb overload_info
+                |> Option.map (atom_name o #1)
+            val fupdstr = Option.join o Lib.total fupdstr0
             (* function to determine if t is a record update *)
             fun is_record_update t =
-                if is_comb t andalso is_const (rator t) then let
-                    val rname = overloading_of_term overload_info (rator t)
-                  in
-                    case rname of
+                if is_comb t andalso is_const (rator t) then
+                  case fupdstr (rator t) of
                       SOME s =>
                       (!prettyprint_bigrecs andalso isSuffix "_fupd" s andalso
                        is_substring (bigrec_subdivider_string ^ "sf") s) orelse
                       isPrefix recfupd_special s
                     | NONE => false
-                  end else false
+                else false
             (* descend the rands of a term until one that is not a record
                update is found.  Return this and the list of rators up to
                this point. *)
@@ -1027,7 +1032,7 @@ fun pp_term (G : grammar) TyG backend = let
             fun categorise_bigrec_updates v = let
               fun bigrec_update t =
                   if is_comb t then
-                    case overloading_of_term overload_info (rator t) of
+                    case fupdstr (rator t) of
                       SOME s => if is_substring bigrec_subdivider_string s then
                                   SOME (s, rand t)
                                 else NONE
@@ -1086,7 +1091,7 @@ fun pp_term (G : grammar) TyG backend = let
                string, and a boolean, which is true iff the update is a value
                update (not a "fupd") *)
             val (fld, value) = dest_comb t
-            val rname = valOf (overloading_of_term' overload_info fld)
+            val rname = valOf (fupdstr fld)
           in
             if isPrefix recfupd_special rname then let
                 val (f, x) = dest_comb value
@@ -1643,30 +1648,8 @@ fun pp_term (G : grammar) TyG backend = let
                 NONE => add_prim_name()
               | SOME s =>
                 (* term is overloaded *)
-                if isPrefix recsel_special s orelse
-                   isPrefix recupd_special s orelse
-                   isPrefix recfupd_special s
-                then
-                  (* if overloaded to a record special, check to see if it *)
-                  (* has a normal name in the map that we could use instead. *)
-                  (* This way we will print out something that can still be *)
-                  (* parsed back to the original term, without having to go *)
-                  (* for full uglification with dollared syntax.  *)
-
-                  (* Note that if we've got this far, we can't print out *)
-                  (* the special record syntax for some other reason, so *)
-                  (* is our "fall-back" action *)
-                  case Overload.info_for_name overload_info Name of
-                    NONE => add_prim_name()
-                  | SOME {actual_ops,...} =>
-                    if List.exists (aconv tm) actual_ops then
-                      cope_with_rules Name
-                    else
-                      add_prim_name()
-                else if s = "case" then
-                  cope_with_rules Name
-                else
-                  cope_with_rules s
+                if s = "case" then cope_with_rules Name
+                else cope_with_rules s
           end
         in
           case (showtypes_v, const_is_polymorphic tm, const_has_multi_ovl tm) of

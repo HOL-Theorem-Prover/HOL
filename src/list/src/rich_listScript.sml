@@ -2326,6 +2326,17 @@ val LUPDATE_APPEND1 = Q.store_thm("LUPDATE_APPEND1",
    >> Cases_on`z < LENGTH l1`
    >> fs[]
    >> simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
+
+val is_prefix_el = Q.store_thm ("is_prefix_el",
+  `!n l1 l2.
+    isPREFIX l1 l2 /\ n < LENGTH l1 /\ n < LENGTH l2
+   ==>
+    (EL n l1 = EL n l2)`,
+  Induct_on `n` >> rw [] >>
+  Cases_on `l1` >>
+  Cases_on `l2` >>
+  rw [] >> fs []);
+
 end
 
 val EL_CONS = Q.store_thm ("EL_CONS",
@@ -2725,6 +2736,12 @@ val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
                     |> Q.GENL [`c`, `a`])
 val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
+val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
+  `!l l1 l2.
+    IS_PREFIX l l1 /\ IS_PREFIX l l2 ==> IS_PREFIX l2 l1 \/ IS_PREFIX l1 l2`,
+  Induct THEN SIMP_TAC(srw_ss())[IS_PREFIX_NIL] THEN
+  GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
+  Cases THEN SRW_TAC[][])
 
 (*---------------------------------------------------------------------------
    A list of numbers
@@ -3170,7 +3187,7 @@ val map_replicate = Q.store_thm ("map_replicate",
    Induct_on `n` >> rw [REPLICATE]);
 
 val REPLICATE_NIL = Q.store_thm("REPLICATE_NIL",
-  `(REPLICATE x y = []) ⇔ (x = 0)`,
+  `(REPLICATE x y = []) <=> (x = 0)`,
   Cases_on`x`>>rw[REPLICATE]);
 
 val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
@@ -3183,7 +3200,7 @@ val DROP_REPLICATE = Q.store_thm("DROP_REPLICATE",
   simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP])
 
 val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
-  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) ⇔ (n > 0 ⇒ P x y)``,
+  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) <=> (n > 0 ==> P x y)``,
   simp[LIST_REL_EL_EQN,REPLICATE_GENLIST] >>
   Cases_on`n`>>simp[EQ_IMP_THM] >> rw[] >>
   FIRST_X_ASSUM MATCH_MP_TAC >>
@@ -3209,31 +3226,31 @@ val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
 
 val list_rel_lastn = Q.store_thm("list_rel_lastn",
   `!f l1 l2 n.
-    n ≤ LENGTH l1 ∧
-    LIST_REL f l1 l2 ⇒
+    n <= LENGTH l1 /\
+    LIST_REL f l1 l2 ==>
     LIST_REL f (LASTN n l1) (LASTN n l2)`,
   Induct_on `l1` >>
   rw [LASTN] >>
   imp_res_tac EVERY2_LENGTH >>
   Cases_on `n = LENGTH l1 + 1`
   >- metis_tac [LASTN_LENGTH_ID, ADD1, LENGTH, LIST_REL_def] >>
-  `n ≤ LENGTH l1` by decide_tac >>
-  `n ≤ LENGTH ys` by decide_tac >>
+  `n <= LENGTH l1` by decide_tac >>
+  `n <= LENGTH ys` by decide_tac >>
   res_tac >>
   fs [LASTN_CONS]);
 
 val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
   `!f l1 l2 n.
-    n ≤ LENGTH l1 ∧
-    LIST_REL f l1 l2 ⇒
+    n <= LENGTH l1 /\
+    LIST_REL f l1 l2 ==>
     LIST_REL f (BUTLASTN n l1) (BUTLASTN n l2)`,
   Induct_on `l1` >>
   rw [BUTLASTN] >>
   imp_res_tac EVERY2_LENGTH >>
   Cases_on `n = LENGTH l1 + 1`
   >- metis_tac [BUTLASTN_LENGTH_NIL, ADD1, LENGTH, LIST_REL_def] >>
-  `n ≤ LENGTH l1` by decide_tac >>
-  `n ≤ LENGTH ys` by decide_tac >>
+  `n <= LENGTH l1` by decide_tac >>
+  `n <= LENGTH ys` by decide_tac >>
   res_tac >>
   fs [BUTLASTN_CONS]);
 
@@ -3534,24 +3551,29 @@ val () = computeLib.add_persistent_funs
 
 (*
 
-   EVAL ``ELL 4 [1;2;3;4;5;6]``;
-   EVAL ``REPLICATE 4 [1;2;3;4;5;6]``;
-   EVAL ``SCANL (+) 1 [1;2;3;4;5;6]``;
-   EVAL ``SCANR (+) 1 [1;2;3;4;5;6]``;
-   EVAL ``SPLITP (\x. x > 4) [1;2;3;4;5;6]``;
-   EVAL ``PREFIX (\x. x < 4) [1;2;3;4;5;6]``;
-   EVAL ``SUFFIX (\x. x < 4) [1;2;3]`` (* ??? *);
-   EVAL ``AND_EL [T;T;T]``;
-   EVAL ``OR_EL [T;T;T]``;
-   EVAL ``UNZIP_FST [(1, 2), (3, 4)]``;
-   EVAL ``UNZIP_SND [(1, 2), (3, 4)]``;
-   EVAL ``LIST_ELEM_COUNT 2 [1;2;2;3]``;
-   EVAL ``COUNT_LIST 4``;
-   EVAL ``LASTN 3 [1;2;3;4;5]``;
-   EVAL ``BUTLASTN 3 [1;2;3;4;5]``;
-   EVAL ``IS_SUBLIST [1;2;3;4;5] [2;3]``;
-   EVAL ``SEG 2 3 [1;2;3;4;5]``;
-   EVAL ``IS_SUFFIX [1;2;3;4;5] [4;5]``;
+val conv = EVAL
+
+   conv ``AND_EL [T;T;T]``;
+   conv ``BUTLASTN 3 [1n;2;3;4;5]``;
+   conv ``COUNT_LIST 4``;
+   conv ``ELL 4 [1n;2;3;4;5;6]``;
+   conv ``IS_SUBLIST [1n;2;3;4;5] [2;3]``;
+   conv ``IS_SUFFIX [1n;2;3;4;5] [4;5]``;
+   conv ``LASTN 3 [1n;2;3;4;5]``;
+   conv ``LIST_ELEM_COUNT 2 [1n;2;2;3]``;
+   conv ``OR_EL [T;F;T]``;
+   conv ``PREFIX (\x. x < 4) [1n;2;3;4;5;6]``;
+   conv ``REPLICATE 4 [1n;2;3;4;5;6]``;
+   conv ``SCANL (+) 1 [1n;2;3;4;5;6]``;
+   conv ``SCANR (+) 1 [1n;2;3;4;5;6]``;
+   conv ``SEG 2 3 [1n;2;3;4;5]``;
+   conv ``SPLITL (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SPLITP (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SPLITR (\x. x > 4) [1n;2;3;4;5;6]``;
+   conv ``SUFFIX (\x. x < 4) [1n;2;3]`` (* ??? *);
+   conv ``TL_T ([]: 'a list)``;
+   conv ``UNZIP_FST [(1n, 2n); (3, 4)]``;
+   conv ``UNZIP_SND [(1n, 2n); (3, 4)]``;
 
 *)
 

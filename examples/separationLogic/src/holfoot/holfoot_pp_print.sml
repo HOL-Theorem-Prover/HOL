@@ -244,7 +244,7 @@ fun holfoot_prog_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) grav
     ) else if (same_const op_term asl_prog_diverge_term)  then (
           ublock CONSISTENT 0 (
              add_string "diverge"
-          )		
+          )
     ) else if (same_const op_term asl_prog_fail_term)  then (
           ublock CONSISTENT 0 (
              add_string "fail"
@@ -1057,7 +1057,7 @@ fun holfoot_specification_printer GS backend sys (ppfns:term_pp_types.ppstream_f
 
 	 val argL1_const = map (fn n => mk_comb (holfoot_var_term, stringLib.fromMLstring n)) argL1_string;
 	 val argL2_const = map (fn n => mk_var (n, numSyntax.num)) argL2_string
-			
+
 	 val argL_term =  pairLib.mk_pair
 	   		       (listSyntax.mk_list (argL1_const, ``:holfoot_var``),
 			        listSyntax.mk_list (argL2_const, numSyntax.num));

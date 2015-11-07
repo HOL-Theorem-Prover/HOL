@@ -46,6 +46,7 @@ val proof_type = let open Thm fun
 |f (Beta_prf _) = "Beta"
 |f (Def_tyop_prf _) = "Def_tyop"
 |f (Def_const_prf _) = "Def_const"
+|f (Def_const_list_prf _) = "Def_const_list"
 |f (Def_spec_prf _) = "Def_spec"
 |f (Mk_abs_prf _) = "Mk_abs"
 |f (Mk_comb_prf _) = "Mk_comb"
@@ -244,7 +245,7 @@ val (log_term, log_thm, log_clear,
 
   (* Attribution: ideas (and code) for reconstructing DISCH, SPEC, GEN, etc.
                   taken from HOL Light *)
-  local open metisLib Thm Conv boolTheory boolSyntax Term Type Lib Drule in
+  local open Thm Conv boolTheory boolSyntax Term Type Lib Drule in
     fun proveHyp th1 th2 =
     case HOLset.find (aconv (concl th1)) (hypset th2) of
         SOME _ => EQ_MP (deductAntisym th1 th2) th1
@@ -332,16 +333,19 @@ val (log_term, log_thm, log_clear,
       val th = CONV_RULE BETA_CONV (EQ_MP (AP_TERM l (SYM th2)) th1)
       in (th,defs) end
     val EXISTENCE_RULE = CONV_RULE (SEL_CONV THENC (RATOR_CONV ETA_CONV))
-    fun mk_ra (b,r,rep,abs) = mk_eq(mk_comb(b,r),mk_eq(mk_comb(rep,mk_comb(abs,r)),r))
-    fun mk_ar (abs,rep,a)   = mk_eq(mk_comb(abs,mk_comb(rep,a)),a)
+    fun mk_ra (b,r,rep,abs) = mk_eq(mk_abs(r,mk_eq(mk_comb(rep,mk_comb(abs,r)),r)),
+                                    mk_abs(r,mk_comb(b,r)))
+    fun mk_ar (abs,rep,a)   = mk_eq(mk_abs(a,mk_comb(abs,mk_comb(rep,a))),
+                                    mk_abs(a,a))
+    fun absspec x th = CONV_RULE(BINOP_CONV BETA_CONV)(AP_THM th x)
     val Def_tyop_pth = let
       val phi = mk_var("phi",alpha-->bool)
       val abs = mk_var("abs",alpha-->beta)
       val rep = mk_var("rep",beta-->alpha)
       val a   = mk_var("a",beta)
       val r   = mk_var("r",alpha)
-      val ar  = ASSUME (mk_forall(a,mk_ar(abs,rep,a)))
-      val ra  = ASSUME (mk_forall(r,mk_ra(phi,r,rep,abs)))
+      val ar  = ASSUME (mk_ar(abs,rep,a))
+      val ra  = ASSUME (mk_ra(phi,r,rep,abs))
       val c             = concl TYPE_DEFINITION
       val tyd           = lhs c
       val (c1,c2)       = dest_conj(snd(dest_abs(snd(dest_abs(rhs c)))))
@@ -351,56 +355,20 @@ val (log_term, log_thm, log_clear,
       val th1 = BETA_RULE (AP_THM (AP_THM TYPE_DEFINITION phi) rep)
       val rx' = mk_comb(rep,x')
       val rr  = mk_eq(rx',mk_comb(rep,x''))
-      val xar = SPEC x' ar
-      val th2 = TRANS (TRANS (SYM xar) (AP_TERM abs (ASSUME rr))) (SPEC x'' ar)
+      val xar = absspec x' ar
+      val th2 = TRANS (TRANS (SYM xar) (AP_TERM abs (ASSUME rr))) (absspec x'' ar)
       val th3 = GEN x' (GEN x'' (DISCH rr th2))
       val phx = mk_comb(phi,x)
       val xre = mk_eq(x,rx')
       val exr = mk_exists(x',xre)
-      val xra = SPEC x ra
-      val th4 = DISCH phx (EXISTS (exr,mk_comb(abs,x)) (SYM (EQ_MP xra (ASSUME phx))))
+      val xra = absspec x ra
+      val th4 = DISCH phx (EXISTS (exr,mk_comb(abs,x)) (SYM (EQ_MP (SYM xra) (ASSUME phx))))
       val xrt = ASSUME xre
       val th5 = TRANS (REFL rx') (SYM xrt)
       val th6 = TRANS (AP_TERM rep (TRANS (AP_TERM abs xrt) xar)) th5
-      val th7 = DISCH exr (CHOOSE (x',ASSUME exr) (EQ_MP (SYM xra) th6))
+      val th7 = DISCH exr (CHOOSE (x',ASSUME exr) (EQ_MP xra th6))
       val th8 = GEN x (IMP_ANTISYM_RULE th4 th7)
       in EXISTS (mk_exists(rep,w),rep) (EQ_MP (SYM th1) (CONJ th3 th8)) end
-  end
-
-  val special_needs_proof = let
-    open Thm boolLib combinTheory
-    val literal_case_FORALL_ELIM =
-      ``literal_case f v = (!) (S ((==>) o Abbrev o (combin$C (=) v)) f)``
-    val LET_FORALL_ELIM =
-      ``LET f v = (!) (S ((==>) o Abbrev o (combin$C (=) v)) f)``
-    val literal_case_FORALL_ELIM_th =
-      prove(literal_case_FORALL_ELIM,
-            REWRITE_TAC [S_DEF, literal_case_THM, C_DEF] THEN BETA_TAC THEN
-            REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
-            EQ_TAC THEN REPEAT STRIP_TAC THENL [
-              ASM_REWRITE_TAC [],
-              FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
-            ])
-    val LET_FORALL_ELIM_th =
-      prove(LET_FORALL_ELIM,
-            REWRITE_TAC [S_DEF, LET_THM, C_DEF] THEN BETA_TAC THEN
-            REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
-            EQ_TAC THEN REPEAT STRIP_TAC THENL [
-              ASM_REWRITE_TAC [],
-              FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
-            ])
-  in fn th =>
-    case proof th of Axiom_prf =>
-      if concl th = literal_case_FORALL_ELIM
-      then (
-        Feedback.HOL_MESG("Adding proof for literal_case_FORALL_ELIM");
-        literal_case_FORALL_ELIM_th) else
-      if concl th = LET_FORALL_ELIM
-      then (
-        Feedback.HOL_MESG("Adding proof for LET_FORALL_ELIM");
-        LET_FORALL_ELIM_th) else
-      th
-    | _ => th
   end
 
   fun log_thm th = let
@@ -415,7 +383,6 @@ val (log_term, log_thm, log_clear,
     (*
     val _ = log_comment ("("^pt)
     *)
-    val th = special_needs_proof th
     val _ = case proof th of
 
       Axiom_prf => let
@@ -647,6 +614,19 @@ val (log_term, log_thm, log_clear,
       val _ = app log_thm (rev defs)
       val _ = log_thm th
       in () end
+    | Def_const_list_prf (thyname,stys,th) => let
+      val nvars = map (fn (s,ty) => ({Thy=thyname,Name=s},mk_var(s,ty))) stys
+      val _ = log_list (log_pair (log_const_name, log_var)) nvars
+      val _ = log_thm th
+      val _ = log_command "defineConstList"
+      val k = save_dict ob
+      val _ = log_command "pop"
+      val _ = app (fn _ => log_command "hdTl") nvars
+      val _ = log_command "pop"
+      val _ = app (ignore o save_dict o OConst o #1) (rev nvars)
+      val _ = log_num k
+      val _ = log_command "ref"
+      in () end
     | Def_tyop_prf (name,tyvars,th,aty) => let
       val n = log_tyop_name name
       val (ns,n) = n
@@ -685,7 +665,7 @@ val (log_term, log_thm, log_clear,
                                    mk_var("abs",rty-->aty)|->abs,
                                    mk_var("rep",aty-->rty)|->rep],
                                   [alpha|->rty,beta|->aty]) Def_tyop_pth
-      val _       = log_thm (proveHyp (GEN r ra) (proveHyp (GEN a ar) pth))
+      val _       = log_thm (proveHyp ra (proveHyp ar pth))
       in () end
     val _ = if !verbosity >= 4 then HOL_MESG("Finish proof for "^(Susp.force ths)) else ()
     (*

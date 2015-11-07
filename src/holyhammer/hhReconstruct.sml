@@ -27,7 +27,7 @@ fun remove_white_spaces s =
   end
 
 (* Assumes the term was single quoted before *)
-fun unsquotify s = 
+fun unsquotify s =
   if String.size s >= 2
   then String.substring (s, 1, String.size s - 2)
   else raise ERR "unsquotify" ""
@@ -36,9 +36,9 @@ fun map_half b f l = case l of
     [] => []
   | a :: m => if b then f a :: map_half false f m
               else a :: map_half true f m
- 
+
 fun hh_unescape s =
-  let 
+  let
     val sl = String.fields (fn c => c = #"#") s
     fun f s = case s of
        "hash"   => "#"
@@ -46,12 +46,12 @@ fun hh_unescape s =
       |"quote"  => "\""
       |"squote" => "'"
       | _       => raise ERR "hh_unescape" ""
-  in  
+  in
     String.concat (map_half false f sl)
   end
 
 fun split_name s = case String.fields (fn c => c = #"/") s of
-    [_,thy,name] => (thy,name) 
+    [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
 
 (*---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ fun readl path =
     (TextIO.closeIn file; l3)
   end
 
-fun read_status atp_status = 
+fun read_status atp_status =
   remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
 
 (* removing reserverd names: use a similar escaping than the holyhammer fof writer *)
@@ -91,10 +91,10 @@ fun reserved_escape name =
 val reserved_names_escaped = map reserved_escape reserved_names
 
 fun read_lemmas atp_out =
-  let 
+  let
     val l = readl atp_out
     val l' = filter (fn x => not (mem x reserved_names_escaped)) l
-  in 
+  in
     map (split_name o hh_unescape o unsquotify) l'
   end
 

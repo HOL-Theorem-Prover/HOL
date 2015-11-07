@@ -217,6 +217,11 @@ val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
 
+val _ = type_abbrev ("ms", ``:'a -> num``)
+val _ = Hol_datatype`
+  polyrcd = <| pfld1 : 'a ms ; pfld2 : 'b -> bool ; pfld3 : num|>
+`;
+
 val _ = List.app pptest
         [("field selection", ``r.fld2``, "r.fld2"),
          ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
@@ -237,7 +242,29 @@ val _ = List.app pptest
           s ``r with <| fld3 := 6; fld9 := (T,6)|>``,
           "r with <|fld3 := 6; fld9 := (T,6)|>"),
          ("overloaded bare var.fld", ``ID``, "ID"),
-         ("overloaded var.fld with args", ``inv x``, "inv x")
+         ("overloaded var.fld with args", ``inv x``, "inv x"),
+         ("poly simple upd", ``r : ('c,num) polyrcd with pfld1 := K 1``,
+            "r with pfld1 := K 1"),
+         ("poly simple seln", ``(r : ('c,'d)polyrcd).pfld1``, "r.pfld1"),
+         ("bare ('a,'b) polyrcd_pfld1",
+             ``polyrcd_pfld1 : ('a,'b) polyrcd -> 'a ms``, "polyrcd_pfld1"),
+         ("bare ('a,'b) polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd :
+                ('a ms -> 'a ms) -> ('a,'b) polyrcd -> ('a,'b) polyrcd``,
+            "pfld1_fupd"),
+         ("bare (num,num) polyrcd_pfld1",
+            ``polyrcd_pfld1 : (num,num) polyrcd -> num ms``, "polyrcd_pfld1"),
+         ("bare ('c,'d) polyrcd_pfld1",
+            ``polyrcd_pfld1 : ('c,'d) polyrcd -> 'c ms``, "polyrcd_pfld1"),
+         ("bare ('c,'d) polyrcd_pfld3",
+            ``polyrcd_pfld3 : ('c,'d) polyrcd -> num``, "polyrcd_pfld3"),
+         ("bare ('c,'d) polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd :
+                ('c ms -> 'c ms) -> ('c,'d) polyrcd -> ('c,'d) polyrcd``,
+            "pfld1_fupd"),
+         ("one-arg polyrcd_pfld1_fupd",
+            ``polyrcd_pfld1_fupd f : ('a,'b) polyrcd -> ('a,'b) polyrcd``,
+            "pfld1_fupd f")
          ]
 
 val _ = Feedback.emit_MESG := false

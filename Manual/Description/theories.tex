@@ -1263,7 +1263,7 @@ The constructors of this type are
 Options can be used to model partial functions.  If a function of type
 $\alpha\rightarrow\beta$ does not have useful $\beta$ values for all
 $\alpha$ inputs, then this distinction can be marked by making the
-range of the function $\beta\,\konst{option}$, and mapping the
+range of the function $\beta\,\holtxt{option}$, and mapping the
 undefined $\alpha$ values to \holtxt{NONE}.
 
 An inductive type, options have a recursion theorem supporting the
@@ -1288,12 +1288,12 @@ one to inspect option values in a ``pattern-matching'' style.
 \end{verbatim}
 \end{hol}
 %
-The constant underlying this syntactic sugar is \verb+option_case+
+The constant underlying this syntactic sugar is \verb+option_CASE+
 with definition
 \begin{hol}
 \begin{verbatim}
-   option_case_def |- (option_case u f NONE = u) /\
-                      (option_case u f (SOME x) = f x)
+   option_case_def |- (option_CASE NONE u f = u) /\
+                      (option_CASE (SOME x) u f = f x)
 \end{verbatim}
 \end{hol}
 %

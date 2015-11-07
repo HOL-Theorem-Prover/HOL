@@ -3,6 +3,7 @@ tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
 src/portableML
+!src/portableML/testsrc
 src/prekernel
 **KERNEL**
 src/postkernel

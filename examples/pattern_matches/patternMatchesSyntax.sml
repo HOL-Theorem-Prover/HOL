@@ -81,7 +81,7 @@ fun ALL_DISJ_CONV c t = if (is_disj t) then (
   (BINOP_CONV (ALL_DISJ_CONV c)) t
 ) else (TRY_CONV c) t
 
-(* apply a conversion to all leafs of a disjunct 
+(* apply a conversion to all leafs of a disjunct
    and simplify the result by removing T and F. *)
 fun ALL_DISJ_TF_ELIM_CONV c t = let
   val (t1, t2) = dest_disj t
@@ -150,10 +150,10 @@ val prove_attempt = Lib.with_flag (Feedback.emit_MESG, false) prove
 (* Labels from markerLib                       *)
 (***********************************************)
 
-(* generating fresh labels and vars using 
+(* generating fresh labels and vars using
    a counter *)
 fun mk_new_label_gen prefix = let
-  val c = ref 0 
+  val c = ref 0
 in
   fn () => let
     val l = prefix ^ int_to_string (!c)
@@ -178,7 +178,7 @@ end
 fun strip_labels t = let
   fun aux acc t = let
     val (l, t') = markerSyntax.dest_label t
-  in 
+  in
     aux (l::acc) t'
   end handle HOL_ERR _ => (List.rev acc, t)
 in
@@ -252,7 +252,7 @@ end handle HOL_ERR _ => (t, avoid)
 fun REMOVE_REBIND_CONV t = let
   val (t', _) = REMOVE_REBIND_CONV_AUX [] t
 in
-  ALPHA t t'  
+  ALPHA t t'
 end
 
 
@@ -292,14 +292,14 @@ fun mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t) = let
     val gr_s = FVL [g_t, r_t] empty_tmset
     val p_s = FVL [p_t] empty_tmset
 
-    val mk_wc = mk_wildcard_gen (HOLset.listItems 
+    val mk_wc = mk_wildcard_gen (HOLset.listItems
       (HOLset.union (gr_s, p_s)))
-				
+
     fun apply (v, (vars', subst)) = (
       if (not (HOLset.member (gr_s, v)) andalso
           not (varname_starts_with_uscore v)) then let
-        val v' = mk_wc (type_of v) 
-      in 
+        val v' = mk_wc (type_of v)
+      in
         (v'::vars', (v |-> v')::subst)
       end else
          (v::vars', subst)
@@ -379,7 +379,7 @@ fun PMATCH_ROW_INTRO_WILDCARDS_CONV row = let
   val (vars_tm, p_t, g_t, r_t) = dest_PMATCH_ROW_ABS row
   val vars = pairSyntax.strip_pair vars_tm
   val (ch, row') = mk_PMATCH_ROW_PABS_WILDCARDS vars (p_t, g_t, r_t)
-  val _ = if ch then () else raise UNCHANGED 
+  val _ = if ch then () else raise UNCHANGED
 in
   ALPHA row row'
 end handle HOL_ERR _ => raise UNCHANGED
@@ -435,7 +435,7 @@ fun dest_PATLIST_COLS v ps = let
 
   val col_no = length (hd rows')
   fun aux acc v col_no = if (col_no <= 1) then List.rev (v::acc) else (
-    let 
+    let
        val (v1, v2) = pairSyntax.dest_pair v handle HOL_ERR _ =>
           (pairSyntax.mk_fst v,  pairSyntax.mk_snd v)
     in
@@ -444,7 +444,7 @@ fun dest_PATLIST_COLS v ps = let
   )
 
   val vs = aux [] v col_no
-  
+
   fun get_cols acc vs rows = case vs of
       [] => List.rev acc
     | (v::vs') => let
@@ -464,15 +464,15 @@ fun dest_PMATCH_COLS t = let
   val ps = List.map (#1 o dest_PMATCH_ROW) rows
 in
   dest_PATLIST_COLS v ps
-end 
+end
 
-fun list_CONV c t = 
+fun list_CONV c t =
   if not (listSyntax.is_cons t) then  raise UNCHANGED else (
   (RATOR_CONV (RAND_CONV c) THENC
    RAND_CONV (list_CONV c)) t)
 
-fun list_nth_CONV n c t = 
-  if not (listSyntax.is_cons t) then  raise UNCHANGED else 
+fun list_nth_CONV n c t =
+  if not (listSyntax.is_cons t) then  raise UNCHANGED else
   if (n < 0) then raise UNCHANGED else
   if (n = 0) then RATOR_CONV (RAND_CONV c) t else
   (RAND_CONV (list_nth_CONV (n-1) c)) t
@@ -483,7 +483,7 @@ in
   RAND_CONV (list_CONV c) t
 end
 
-val PMATCH_FORCE_SAME_VARS_CONV = 
+val PMATCH_FORCE_SAME_VARS_CONV =
   PMATCH_ROWS_CONV PMATCH_ROW_FORCE_SAME_VARS_CONV
 
 val PMATCH_INTRO_WILDCARDS_CONV =
@@ -548,14 +548,14 @@ fun mk_PMATCH_ROW_COND_EX_PABS vars (i, p_t, g_t) = let
   end
 
 fun mk_PMATCH_ROW_COND_EX_PABS_MOVE_TO_GUARDS find vars (i, p_t, g_t) = let
-  val fr_vs = free_vars i @ free_vars p_t @ free_vars g_t 
+  val fr_vs = free_vars i @ free_vars p_t @ free_vars g_t
   fun move_to_guard (vars, p_t, g_t) = let
     val (p: term) = case find vars p_t of
                 NONE => failwith "not found"
               | SOME p => p
     val _ = if (mem p vars) then failwith "loop" else ()
     val x = mk_var ("x", type_of p)
-    val x = variant (fr_vs @ vars) x 
+    val x = variant (fr_vs @ vars) x
     val p_t' = Term.subst [p |-> x] p_t
     val g_t' = mk_conj (mk_eq (x, p), g_t)
     val vars' = x :: vars
@@ -624,7 +624,7 @@ in
   rc_eq_thm
 end
 
-fun PMATCH_ROW_COND_EX_INTRO_CONV v t = 
+fun PMATCH_ROW_COND_EX_INTRO_CONV v t =
   PMATCH_ROW_COND_EX_INTRO_CONV_GEN (fn _ => fn _ => NONE) v t;
 
 fun nchotomy2PMATCH_ROW_COND_EX_CONV_GEN P t = let
@@ -633,7 +633,7 @@ in
   (QUANT_CONV (ALL_DISJ_CONV (PMATCH_ROW_COND_EX_INTRO_CONV_GEN P v))) t
 end;
 
-fun nchotomy2PMATCH_ROW_COND_EX_CONV t = 
+fun nchotomy2PMATCH_ROW_COND_EX_CONV t =
   nchotomy2PMATCH_ROW_COND_EX_CONV_GEN (fn _ => fn _ => NONE) t;
 
 fun PMATCH_ROW_COND_EX_ELIM_CONV t = let
@@ -662,11 +662,11 @@ fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val var_l = pairSyntax.strip_pair vars
   val (wc_l, var_l') = partition varname_starts_with_uscore var_l
 
-  fun mk_fake wc = mk_var (GrammarSpecials.mk_fakeconst_name {fake = "_", original = NONE}, type_of wc) 
+  fun mk_fake wc = mk_var (GrammarSpecials.mk_fakeconst_name {fake = "_", original = NONE}, type_of wc)
 
   val fake_subst = map (fn wc => (wc |-> mk_fake wc)) wc_l
 
-  val vars' = 
+  val vars' =
     if (List.null var_l') then
       variant (free_varsl [pat, guard, rh]) ``uv:unit``
     else
@@ -676,7 +676,7 @@ fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val guard' = Term.subst fake_subst guard
   val rh' = Term.subst fake_subst rh
 in
-  (vars', pat', guard', rh')  
+  (vars', pat', guard', rh')
 end handle HOL_ERR _ => (vars, pat, guard, rh)
 
 
@@ -698,20 +698,20 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
             not (free_in vars guard) andalso
             not (free_in vars rh)) then (
           add_string "||." >> add_break (1, 0)
-        ) else (          
+        ) else (
           add_string "||" >>
           add_break (1, 0) >>
           sys (Top, Top, Top) (d - 1) vars >>
           add_string "." >>
           add_break (1, 0)
-        )) >> 
+        )) >>
         sys (Top, Top, Top) (d - 1) pat >>
         (if (aconv guard T) then nothing else (
           add_string " when" >> add_break (1, 0) >>
           sys (Top, Prec (2000, ""), Top) (d - 1) guard
         )) >>
         add_string " ~>" >> add_break (1, 0) >>
-        sys (Top, Prec (2000, ""), Top) (d - 1) rh        
+        sys (Top, Prec (2000, ""), Top) (d - 1) rh
       ))
     )
   in ublock PP.CONSISTENT 0 (
@@ -837,7 +837,7 @@ val _ = temp_add_rule{term_name = "PMATCH_magic_1",
 
 
 
-fun traverse f tm = 
+fun traverse f tm =
   f tm handle HOL_ERR _ =>
   let
     val (tm1, tm2) = dest_comb tm
@@ -852,38 +852,38 @@ fun traverse f tm =
 
 
 fun fix_CASE tm = let
-     val (c, args) = strip_comb tm 
+     val (c, args) = strip_comb tm
    in
    if (same_const c PMATCH_magic_1_tm) then
      let
        val tys = match_type (type_of PMATCH_magic_1_tm) (type_of c)
        val c' = inst tys PMATCH_tm;
-       val args' = map (traverse fix_CASE) args     
+       val args' = map (traverse fix_CASE) args
      in
        list_mk_comb (c', args')
      end
    else if (same_const c PMATCH_ROW_magic_1_tm) orelse (same_const c PMATCH_ROW_magic_0_tm) orelse (same_const c PMATCH_ROW_magic_4_tm) then
      let
-       val args' = map (traverse fix_CASE) args            
-       val (vars, b) = 
+       val args' = map (traverse fix_CASE) args
+       val (vars, b) =
           if (same_const c PMATCH_ROW_magic_1_tm) then let
-            val (p_var, b) = dest_pabs (hd args') 
+            val (p_var, b) = dest_pabs (hd args')
             val vars = pairSyntax.strip_pair p_var
-          in 
-            (vars, b) 
+          in
+            (vars, b)
           end else if (same_const c PMATCH_ROW_magic_4_tm) then let
             val b = hd args'
             val (_, b_args) = strip_comb b;
             val vars = List.filter (not o varname_starts_with_uscore)
                           (free_vars_lr (el 1 b_args))
-          in 
-            (vars, b) 
+          in
+            (vars, b)
           end else (* magic 0 *) ([], hd args');
        val (b_c, b_args) = strip_comb b;
        val (p, g, r) = if (same_const b_c PMATCH_ROW_magic_2_tm) then
-            (el 1 b_args, el 2 b_args, el 3 b_args) 
+            (el 1 b_args, el 2 b_args, el 3 b_args)
           else if (same_const b_c PMATCH_ROW_magic_3_tm) then
-            (el 1 b_args, T, el 2 b_args) 
+            (el 1 b_args, T, el 2 b_args)
           else failwith "unexpected constant";
        val wildcards = List.filter varname_starts_with_uscore (
           free_vars p
@@ -894,7 +894,7 @@ fun fix_CASE tm = let
      end
    else failwith "no CASE"
 end;
-       
+
 (*
 Preterm.post_process_term := I *)
 val old_f = !Preterm.post_process_term;

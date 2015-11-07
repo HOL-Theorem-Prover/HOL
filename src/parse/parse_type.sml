@@ -131,7 +131,10 @@ fun parse_type tyfns allow_unknown_suffixes G = let
                 | SOME st => structure_to_value (s,locn) args st
             end
       end
-    | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
+    | QTypeIdent(thy,ty) =>
+        (case Binarymap.peek(abbrevs, {Name = ty, Thy = thy}) of
+             NONE => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
+         |   SOME st => structure_to_value (ty,locn) args st)
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
 
   fun apply_asfx locn (base,index) =

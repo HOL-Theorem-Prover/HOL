@@ -12,9 +12,6 @@
 (* DATE          : August 7, 1997                                        *)
 (* ===================================================================== *)
 
-structure pairScript =
-struct
-
 (*  interactive use:
  app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
  open Parse relationTheory mesonLib;
@@ -330,6 +327,37 @@ val FORALL_PROD = Q.store_thm("FORALL_PROD",
 
 
 val pair_induction = save_thm("pair_induction", #2(EQ_IMP_RULE FORALL_PROD));
+
+(* ----------------------------------------------------------------------
+    PROD_ALL
+   ---------------------------------------------------------------------- *)
+
+val PROD_ALL_def = new_definition(
+  "PROD_ALL_def",
+  ``PROD_ALL (P:'a -> bool) (Q : 'b -> bool) p <=> P (FST p) /\ Q (SND p)``);
+
+val PROD_ALL_THM = store_thm(
+  "PROD_ALL_THM",
+  ``PROD_ALL P Q (x:'a,y:'b) <=> P x /\ Q y``,
+  REWRITE_TAC [PROD_ALL_def, FST, SND]);
+val _ = BasicProvers.export_rewrites ["PROD_ALL_THM"]
+val _ = computeLib.add_persistent_funs ["PROD_ALL_THM"]
+
+val PROD_ALL_MONO = store_thm(
+  "PROD_ALL_MONO",
+  ``(!x:'a. P x ==> P' x) /\ (!y:'b. Q y ==> Q' y) ==>
+    PROD_ALL P Q p ==> PROD_ALL P' Q' p``,
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC ABS_PAIR_THM THEN
+  REWRITE_TAC [PROD_ALL_THM] THEN REPEAT STRIP_TAC THEN RES_TAC);
+val _ = IndDefLib.export_mono "PROD_ALL_MONO"
+
+val PROD_ALL_CONG = store_thm(
+  "PROD_ALL_CONG[defncong]",
+  ``!p p' P P' Q Q'.
+      (p = p') /\ (!x:'a y:'b. (p' = (x,y)) ==> (P x <=> P' x)) /\
+      (!x:'a y:'b. (p' = (x,y)) ==> (Q y <=> Q' y)) ==>
+      (PROD_ALL P Q p <=> PROD_ALL P' Q' p')``,
+  SIMP_TAC (BasicProvers.srw_ss()) [FORALL_PROD, PAIR_EQ]);
 
 (* ------------------------------------------------------------------------- *)
 (* ELIM_PEXISTS = |- !P. (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2           *)
@@ -700,7 +728,7 @@ val LEX_CONG = Q.store_thm
      (!a b c d. (v1' = (a,b)) /\ (v2' = (c,d)) /\ (a=c) ==> (R2 b d = R2' b d))
    ==>
     ($LEX R1 R2 v1 v2 = $LEX R1' R2' v1' v2')`,
- Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ] 
+ Ho_Rewrite.REWRITE_TAC [LEX_DEF,FORALL_PROD,PAIR_EQ]
    THEN NTAC 2 (REWRITE_TAC [UNCURRY_VAR,FST,SND] THEN BETA_TAC)
    THEN METIS_TAC[]);
 
@@ -886,5 +914,3 @@ val _ = adjoin_to_theory
 val _ = export_theory();
 
 val _ = export_theory_as_docfiles (Path.concat (Path.parentArc, "help/thms"))
-
-end;

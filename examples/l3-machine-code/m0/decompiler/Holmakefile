@@ -4,7 +4,7 @@ INCLUDES = ../prog ../step ../../common \
 OPTIONS = QUIT_ON_FAILURE
 
 ifdef POLY
-HOLHEAP = local-hol-heap
+HOLHEAP = m0-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../prog/m0_progLib

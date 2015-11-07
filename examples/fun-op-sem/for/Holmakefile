@@ -1,1 +1,2 @@
 OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../lprefix_lub

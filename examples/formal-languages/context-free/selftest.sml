@@ -4,7 +4,7 @@ open testutils
 local
   open pegLib simpleSexpPEGTheory pegexecTheory
   val ds = derive_compset_distincts ``:sexpNT``
-  val lookups = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``,
+  val {lookups,...} = derive_lookup_ths {pegth = sexpPEG_def, ntty = ``:sexpNT``,
                                    simp = SIMP_CONV (srw_ss())}
   val _ = computeLib.add_funs (ds::lookups)
   val _ = let
@@ -47,9 +47,14 @@ val _ = print "\n" before app test [
   ("(foo )", ``⦇SX_SYM "foo"⦈``),
   ("foo2", ``SX_SYM "foo2"``),
   ("(foo bar 3 4)", ``⦇ SX_SYM "foo"; SX_SYM "bar"; 3; 4 ⦈``),
+  ("(1 2 3 . 4)", ``SX_CONS 1 (SX_CONS 2 (SX_CONS 3 4))``),
+  ("(1 . (2 . (3 . 4)))", ``SX_CONS 1 (SX_CONS 2 (SX_CONS 3 4))``),
   ("(3 . 4)", ``SX_CONS 3 4``),
   ("\"foo bar\"", ``SX_STR "foo bar"``),
   ("( \" foo \"  \"bar\" )", ``⦇ SX_STR " foo "; SX_STR "bar" ⦈``),
   ("\"foo\\\"\"", ``SX_STR "foo\""``),
-  ("\"foo\\\\\"", ``SX_STR "foo\\"``)
+  ("\"foo\\\\\"", ``SX_STR "foo\\"``),
+  ("(1sym)", ``⦇1; SX_SYM "sym"⦈``),
+  ("symq\"9", ``SX_SYM "symq\"9"``),
+  ("symd.9", ``SX_SYM "symd.9"``)
 ]

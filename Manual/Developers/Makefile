@@ -1,6 +1,8 @@
-.PHONY: all
+.PHONY: all clean
 
-all: developers.pdf developers.html
+TARGETS = developers.pdf developers.html
+
+all: $(TARGETS)
 
 developers.pdf: developers.tex
 	latexmk -pdf developers
@@ -10,3 +12,6 @@ developers.tex: developers.md
 
 developers.html: developers.md
 	pandoc -s $< -o $@
+
+clean:
+	-/bin/rm -f $(TARGETS) developers.tex

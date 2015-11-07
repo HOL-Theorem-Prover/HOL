@@ -392,6 +392,8 @@ val mem_thms =
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
     cond_0_1, cond_0_3, cond_0_7,
+    bitstringLib.v2w_n2w_CONV ``v2w [T] : word1``,
+    bitstringLib.v2w_n2w_CONV ``v2w [F] : word1``,
     EVAL ``word_replicate 2 (0w: word1) : word2``,
     EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,

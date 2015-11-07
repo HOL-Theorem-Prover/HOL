@@ -88,25 +88,17 @@ val FRAC = store_thm("FRAC", ``!f. abs_frac (frac_nmr f,frac_dnm f) = f``,
  *     ((abs_frac(a1,b1)=abs_frac(a2,b2)) = (a1=a2) /\ (b1=b2) )
  *--------------------------------------------------------------------------*)
 
-val FRAC_EQ =
-	let
-		val subst2a = #1 (EQ_IMP_RULE (REWRITE_RULE [SND] (BETA_RULE (SPEC ``(a1:int,b1:int)`` (CONJUNCT2 frac_bij)))));
-		val subst2b = #1 (EQ_IMP_RULE (REWRITE_RULE [SND] (BETA_RULE (SPEC ``(a2:int,b2:int)`` (CONJUNCT2 frac_bij)))));
-	in
-		store_thm("FRAC_EQ", ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==> ((abs_frac(a1,b1)=abs_frac(a2,b2)) = (a1=a2) /\ (b1=b2) )``,
-			REPEAT GEN_TAC THEN
-			STRIP_TAC THEN
-			STRIP_TAC THEN
-			EQ_TAC THENL
-			[
-				STRIP_TAC THEN
-				REWRITE_TAC[ prove(``((a1:int = a2:int) /\ (b1:int = b2:int)) = ((a1,b1)=(a2,b2))``,RW_TAC int_ss []) ] THEN
-				SUBST_TAC[GSYM (UNDISCH_ALL subst2a), GSYM (UNDISCH_ALL subst2b)] THEN
-				PROVE_TAC[frac_bij]
-			,
-				PROVE_TAC[]
-			] )
-	end;
+val [abs_rep_frac, rep_abs_frac] = CONJUNCTS frac_bij ;
+val (raf_eqI, raf_eqD) = EQ_IMP_RULE (SPEC_ALL rep_abs_frac) ;
+
+val FRAC_EQ = store_thm("FRAC_EQ",
+  ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
+    ((abs_frac(a1,b1)=abs_frac(a2,b2)) = (a1=a2) /\ (b1=b2) )``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN DISCH_TAC THENL [
+    POP_ASSUM (MP_TAC o AP_TERM ``rep_frac``) THEN
+      VALIDATE (CONV_TAC (DEPTH_CONV (REWR_CONV_A (UNDISCH raf_eqI)))),
+    ALL_TAC] THEN
+  ASM_SIMP_TAC std_ss []) ;
 
 (*--------------------------------------------------------------------------
  *  FRAC_EQ_ALT : thm
@@ -141,21 +133,14 @@ val FRAC_NOT_EQ = store_thm("FRAC_NOT_EQ", ``!a1 b1 a2 b2. 0i<b1 ==> 0i<b2 ==> (
  *     ~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))
  *--------------------------------------------------------------------------*)
 
-val FRAC_NOT_EQ_IMP =
-	let
-		val lemma01a = fst(EQ_IMP_RULE (ONCE_REWRITE_RULE[EQ_SYM_EQ] (SPEC ``(a1:int,b1:int)`` (ONCE_REWRITE_RULE [EQ_SYM_EQ] (CONJUNCT2 frac_bij)))));
-		val lemma01b = fst(EQ_IMP_RULE (ONCE_REWRITE_RULE[EQ_SYM_EQ] (SPEC ``(a2:int,b2:int)`` (ONCE_REWRITE_RULE [EQ_SYM_EQ] (CONJUNCT2 frac_bij)))));
-		val lemma02a = UNDISCH_ALL (GSYM (REWRITE_RULE[SND] (BETA_RULE (SPEC_ALL lemma01a))));
-		val lemma02b = UNDISCH_ALL (GSYM (REWRITE_RULE[SND] (BETA_RULE (SPEC_ALL lemma01b))));
-	in
-		store_thm("FRAC_NOT_EQ", ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==> ~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))``,
-			REPEAT GEN_TAC THEN
-			STRIP_TAC THEN STRIP_TAC THEN
-			REWRITE_TAC[CONTRAPOS_CONV ``~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))``] THEN
-			ONCE_REWRITE_TAC[lemma02a,lemma02b] THEN
-			REWRITE_TAC[CONJUNCT1 frac_bij] THEN
-			RW_TAC int_ss [] )
-	end;
+(* following theorem (with longer proof)
+  was previously stored as "FRAC_NOT_EQ", must be an error JED 16.9.15 *)
+val FRAC_NOT_EQ_IMP = store_thm("FRAC_NOT_EQ_IMP",
+  ``!a1 b1 a2 b2. 0i < b1 ==> 0i < b2 ==>
+    ~((a1,b1) = (a2,b2)) ==> ~(abs_frac (a1,b1) = abs_frac (a2,b2))``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [FRAC_EQ]) ;
+
 
 (*--------------------------------------------------------------------------
  *  FRAC_EQ_TAC : tactic
@@ -163,32 +148,13 @@ val FRAC_NOT_EQ_IMP =
  *     A ?- abs_frac(a1,b1) = abs_frac(a2,b2)
  *   =========================================  FRAC_EQ_TAC
  *     A ?- a1=a2 | A ?- b1=b2
+ *
+ * simplified version - note, doesn't check that goal is of given form
  *--------------------------------------------------------------------------*)
 
 val FRAC_EQ_TAC:tactic = fn (asm_list,goal) =>
-let
-	val (lhs,rhs) = dest_eq goal;
-	val (lhc, lha) = dest_comb lhs;
-	val (rhc, rha ) = dest_comb rhs;
-	val (a1,b1) = dest_pair lha;
-	val (a2,b2) = dest_pair rha;
-in
-	let
-		val subgoal1 = mk_eq(a1,a2);
-		val subgoal2 = mk_eq(b1,b2);
-	in
-		(
-			[(asm_list,subgoal1), (asm_list,subgoal2)],
-			fn thms => MP
-				(SPEC b2 (SPEC a2 (SPEC b1 (SPEC a1 (
-				prove(``!a1 b1 a2 b2. (a1=a2) /\ (b1=b2) ==> (abs_frac(a1,b1)=abs_frac(a2,b2))``, RW_TAC int_ss [])
-				)))))
-				(LIST_CONJ thms)
-		)
-	end
-end
-handle HOL_ERR _ => raise ERR "FRAC_EQ_TAC" "";
-
+  (AP_TERM_TAC THEN MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]) (asm_list,goal)
+  handle HOL_ERR _ => raise ERR "FRAC_EQ_TAC" "";
 
 (*==========================================================================
  *  some useful things about positive and non-zero

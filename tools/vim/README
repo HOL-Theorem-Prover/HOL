@@ -2,7 +2,7 @@
 
 Send the visually selected region of a Vim buffer to a HOL interactive session.
 
-Feedback to: Ramana Kumar <firstname.lastname@gmail.com>
+Feedback to: Ramana Kumar <ramana(at)member.fsf.org>
 
 == Dependencies ==
 

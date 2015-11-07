@@ -89,13 +89,13 @@ val InSetCons =
 
 val InSing =
  store_thm
-  ("InSing",	
+  ("InSing",
    ``!x y. x In {y} = (x = y)``,
    METIS_TAC[Extension_ax,U_def,Singleton_def,InSetCons,Empty_def]);
 
 val SingNotEmpty =
  store_thm
-  ("SingNotEmpty",	
+  ("SingNotEmpty",
    ``!x. ~({x} = {}) /\ ~({} = {x})``,
    METIS_TAC[Extension_ax,InSing,Empty_def]);
 
@@ -107,7 +107,7 @@ val InDouble =
 
 val DoubleNotEmpty =
  store_thm
-  ("DoubleNotEmpty",	
+  ("DoubleNotEmpty",
    ``!x y. ~({x;y} = {}) /\ ~({} = {x;y})``,
    METIS_TAC[Extension_ax,InDouble,Empty_def]);
 

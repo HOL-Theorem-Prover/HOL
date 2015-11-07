@@ -29,12 +29,21 @@ type reader =
 fun const_name_in_map n = Map.find(const_from_ot_map(),n)
 fun tyop_name_in_map n = Map.find(tyop_from_ot_map(),n)
 
+local
+  open Thm Drule
+  fun uneta a t = BETA_CONV(mk_comb(mk_abs(a,t),a))
+  fun fix_bij th =
+  let
+    val (a,eq) = dest_forall(concl th)
+    val (l,r) = dest_eq eq
+  in
+    EXT (GEN a (TRANS (TRANS (uneta a l) (SPEC a th)) (SYM (uneta a r))))
+  end
+in
 fun define_tyop_in_thy
   {name={Thy=tthy,Tyop},ax,args,
-   rep={Thy=rthy,Name=rep},abs={Thy=athy,Name=abs}}
-= if (tthy = "string") andalso (Tyop = "char") then  (*  *ugly* hack to avoid  *)
-    {rep_abs=Q.SPEC `a`(DB.fetch "string" "ORD_CHR"), (*  duplicate definition  *)
-     abs_rep=Q.SPEC `r`(DB.fetch "string" "CHR_ORD")} else let
+   rep={Thy=rthy,Name=rep},abs={Thy=athy,Name=abs}} =
+let
   open boolLib
   val (P,t) = dest_comb (concl ax)
   val v   = variant (free_vars P) (mk_var ("v",type_of t))
@@ -45,8 +54,10 @@ fun define_tyop_in_thy
   val _   = if athy = tthy andalso rthy = tthy then () else
             raise ERR "define_tyop_in_thy" ("wrong theory: "^ct^" (given "^athy^" for "^abs^" and "^rthy^" for "^rep^")")
   val bij = define_new_type_bijections {name=Tyop^"_bij",ABS=abs,REP=rep,tyax=th}
-  val [ar,ra] = CONJUNCTS bij
-in {rep_abs=SPEC_ALL ra,abs_rep=SPEC_ALL ar} end
+  val (ar,ra) = CONJ_PAIR bij
+in {rep_abs=fix_bij ra,
+    abs_rep=fix_bij ar} end
+end
 
 fun define_const_in_thy ML_name {Thy,Name} rhs = let
   val ct = current_theory()
@@ -133,10 +144,6 @@ local open Substring in
   val trimr  = fn s => string(trimr 1 (full s))
 end
 
-fun special_mk_thy_type {Thy=thy,Tyop=tyop,Args=args} =
-  if tyop = "set" then mk_type("fun",(hd args)::[bool]) else
-    mk_thy_type {Thy=thy,Tyop=tyop,Args=args}
-
 fun raw_read_article input
   {const_name,tyop_name,define_tyop,define_const,axiom} = let
   val ERR = ERR "read_article"
@@ -176,7 +183,7 @@ fun raw_read_article input
         val tyop = ot_to_tyop "defineTypeOp" n
         val ot_to_const = ot_to_const "defineTypeOp"
         val {abs_rep,rep_abs} = define_tyop {name=tyop,ax=ax,args=ls,rep=ot_to_const rep,abs=ot_to_const abs}
-        val (abs,foo) = dest_comb(lhs(concl abs_rep))
+        val (abs,foo) = dest_comb(#2(dest_abs(lhs(concl abs_rep))))
         val (rep,_)   = dest_comb foo
         val {Thy,Name,...} = dest_thy_const rep val rep = {Thy=Thy,Name=Name}
         val {Thy,Name,...} = dest_thy_const abs val abs = {Thy=Thy,Name=Name}
@@ -185,7 +192,7 @@ fun raw_read_article input
       handle HOL_ERR e => raise ERR "EqMp failed")
     | f "nil"    st                                          = push(OList [],st)
     | f "opType" (st as {stack=OList ls::OTypeOp {Thy,Tyop}::os,...})
-               = st_(OType(special_mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
+               = st_(OType(mk_thy_type{Thy=Thy,Tyop=Tyop,Args=unOTypels "opType" ls})::os,st)
 (*
     | f "pop"    (st as {stack=OList[OList hl,OTerm c]::OThm th::os,line_num,...}) = let
       val hl = unOTermls "pop" hl
@@ -237,6 +244,7 @@ fun raw_read_article input
         val th = List.foldl ft th ls
       in {stack=os,dict=dict,thms=Net.insert(concl th,th)thms} end
     | f "typeOp"  (st as {stack=OName n::os,...})          = st_(OTypeOp (ot_to_tyop "typeOp" n)::os,st)
+    | f "version" (st as {stack=ONum n::os,...})           = if n = 6 then st_(os,st) else raise ERR "unsupported article version"
     | f "var"     (st as {stack=OType t::OName n::os,...}) = st_(OVar(mk_var(n,t))::os,st)
     | f "varTerm" (st as {stack=OVar t::os,...})           = st_(OTerm t::os,st)
     | f "varType" (st as {stack=OName n::os,...})          = st_(OType(mk_vartype n)::os,st)

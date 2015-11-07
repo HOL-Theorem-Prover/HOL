@@ -80,6 +80,7 @@ sig
   val GSPEC            : thm -> thm
 
   val PART_MATCH       : (term -> term) -> thm -> term -> thm
+  val PART_MATCH_A     : (term -> term) -> thm -> term -> thm
   val MATCH_MP         : thm -> thm -> thm
   val BETA_VAR         : term -> term -> term -> thm
   val HO_PART_MATCH    : (term -> term) -> thm -> term -> thm

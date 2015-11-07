@@ -24,6 +24,11 @@ returned.
 Fails if the selector function {fn} fails when applied to the instantiated
 theorem, or if the match fails with the term it has provided.
 
+Since {PART_MATCH} will not instantiate variables which appear in the
+hypotheses of the given theorem, it fails if the attempted match would require
+instantiating these variables.
+To allow instantiation of these variables, use {PART_MATCH_A}.
+
 \EXAMPLE
 Suppose that we have the following theorem:
 {
@@ -42,6 +47,6 @@ because the selector function picks the antecedent of the implication
 it to {T}.
 
 \SEEALSO
-Thm.INST_TYPE, Drule.INST_TY_TERM, Term.match_term.
+Drule.PART_MATCH_A, Thm.INST_TYPE, Drule.INST_TY_TERM, Term.match_term.
 
 \ENDDOC

@@ -16,7 +16,7 @@ fun cong_ss thms = simpLib.SSFRAG {
     dprocs = [],
      congs = thms}
 
-fun failwith f x = 
+fun failwith f x =
  raise (mk_HOL_ERR "constrFamiliesLib" f x)
 
 fun variants used_vs vs = let
@@ -31,7 +31,7 @@ end
 fun list_mk_comb_subst (c, args) = (case args of
     [] => c
   | (a::args') => let
-      val (v, c') = dest_abs c      
+      val (v, c') = dest_abs c
     in
       list_mk_comb_subst (subst [v |-> a] c', args')
     end handle HOL_ERR _ =>
@@ -74,7 +74,7 @@ end
 
 fun base_ty ty = let
   val (tn, targs) = dest_type ty
-  val targs' = List.rev (snd (List.foldl (fn (_, (v, l)) => (next_ty v, v::l)) (Type.alpha, []) targs)) 
+  val targs' = List.rev (snd (List.foldl (fn (_, (v, l)) => (next_ty v, v::l)) (Type.alpha, []) targs))
 in
   mk_type (tn, targs')
 end
@@ -106,7 +106,7 @@ in
 end
 
 fun set_goal_list tl = let
-  val thm = encode_term_opt_list tl 
+  val thm = encode_term_opt_list tl
 in
   proofManagerLib.set_goal ([], rhs (concl thm))
 end
@@ -150,7 +150,7 @@ end
 fun match_constructor (CONSTR (cr, args)) t = let
   val (t', args') = strip_comb_bounded (List.length args) t
 in
-  if (same_const t' cr) then 
+  if (same_const t' cr) then
     SOME (t', zip args args')
   else NONE
 end
@@ -176,8 +176,8 @@ in
     cl_is_exhaustive = is_exhaustive }:constructorList
 end
 
-fun make_constructorList is_exhaustive constrs = 
-  mk_constructorList is_exhaustive (List.map 
+fun make_constructorList is_exhaustive constrs =
+  mk_constructorList is_exhaustive (List.map
     (uncurry mk_constructor) constrs)
 
 (***************************************************)
@@ -185,7 +185,7 @@ fun make_constructorList is_exhaustive constrs =
 (***************************************************)
 
 (* Contructor families are lists of constructors with
-   a cass-split constant + extra theorems. 
+   a cass-split constant + extra theorems.
 *)
 
 type constructorFamily = {
@@ -198,14 +198,14 @@ type constructorFamily = {
   nchotomy_thm  : thm option
 }
 
-fun constructorFamily_get_rewrites (cf : constructorFamily) = 
+fun constructorFamily_get_rewrites (cf : constructorFamily) =
   case (#one_one_thm cf, #distinct_thm cf) of
       (NONE, NONE) => TRUTH
     | (SOME thm1, NONE) => thm1
     | (NONE, SOME thm2) => thm2
     | (SOME thm1, SOME thm2) => CONJ thm1 thm2
 
-fun constructorFamily_get_ssfrag (cf : constructorFamily) = 
+fun constructorFamily_get_ssfrag (cf : constructorFamily) =
   simpLib.merge_ss [simpLib.rewrites [constructorFamily_get_rewrites cf],
    cong_ss [#case_cong_thm cf]]
 
@@ -226,15 +226,15 @@ fun constructorFamily_get_case_cong (cf: constructorFamily) =
 fun constructorFamily_get_nchotomy_thm_opt (cf: constructorFamily) =
   (#nchotomy_thm cf)
 
-(* Test datatype 
+(* Test datatype
 val _ = Datatype `test_ty =
-    A 
+    A
   | B 'b
   | C bool 'a bool
   | D num bool`
 
-val SOME constrL = constructorList_of_typebase ``:('a, 'b) test_ty`` 
-val case_const = TypeBase.case_const_of ``:('a, 'b) test_ty`` 
+val SOME constrL = constructorList_of_typebase ``:('a, 'b) test_ty``
+val case_const = TypeBase.case_const_of ``:('a, 'b) test_ty``
 
 val constrL = make_constructorList false [(``{}:'a set``, []), (``\x:'a. {x}``, ["x"])]
 
@@ -317,7 +317,7 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
   val (args_l, args_r) = let
     fun mk_args avoid = let
       fun mk_arg (a_ty, (i, avoid, vs)) =
-        let 
+        let
           val v = variant avoid (mk_var ("f"^(int_to_string i), a_ty))
         in
           (i+1, v::avoid, v::vs)
@@ -325,7 +325,7 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
       val (_, _, vs_rev) = foldl mk_arg (1, avoid, []) (tl arg_tys)
     in
      List.rev vs_rev
-    end 
+    end
 
     val r0 = mk_var ("x", hd arg_tys)
     val l0 = variant [r0] r0
@@ -347,7 +347,7 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
        el (n+1) args_r)
 
     val (CONSTR (c, vns), al, ar) = extract 2
-   
+
   *)
   val congs_main = let
     fun mk_arg_vars acc avoid (a_ty, vns) = case vns of
@@ -359,7 +359,7 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
            mk_arg_vars (v::acc) (v::avoid) (el 2 atys, vns')
         end
 
-   fun process_all acc neg_pres crs als ars = 
+   fun process_all acc neg_pres crs als ars =
      case (crs, als, ars) of
         ([], [], []) => List.rev acc
       | ([], [al], [ar]) => let
@@ -367,8 +367,8 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
           val eq_t = mk_eq (list_mk_comb (al, arg_ts),
                             list_mk_comb (ar, arg_ts))
 
-    
-          val pre_t = list_mk_conj neg_pres 
+
+          val pre_t = list_mk_conj neg_pres
           val t_full = list_mk_forall (arg_ts,  mk_imp (pre_t, eq_t))
         in
           List.rev (t_full :: acc)
@@ -386,16 +386,16 @@ fun mk_case_const_cong_thm_term case_const (constrL : constructorList) = let
         end
        | _ => failwith "" "Something is wrong with the constructors/case constant. Wrong arity somewhere?"
     in
-      process_all [] [] (#cl_constructors constrL) (tl args_l) (tl args_r)  
+      process_all [] [] (#cl_constructors constrL) (tl args_l) (tl args_r)
     end
 
 in
-  list_mk_forall (args_l @ args_r, 
+  list_mk_forall (args_l @ args_r,
      list_mk_imp (cong_0 :: congs_main, base))
 end
 
 
-fun mk_nchotomy_thm_term_opt (constrL : constructorList) = 
+fun mk_nchotomy_thm_term_opt (constrL : constructorList) =
   if not (#cl_is_exhaustive constrL) then NONE else let
     val v = mk_var ("x", #cl_type constrL)
 
@@ -405,7 +405,7 @@ fun mk_nchotomy_thm_term_opt (constrL : constructorList) =
     in
       list_mk_exists (vs, eq)
     end
-  
+
     val eqs = List.map mk_disj (#cl_constructors constrL)
     val eqs_t = list_mk_disj eqs
   in
@@ -414,7 +414,7 @@ fun mk_nchotomy_thm_term_opt (constrL : constructorList) =
 
 
 fun mk_constructorFamily_terms case_const constrL = let
-  val t1 = mk_one_one_thm_term_opt constrL 
+  val t1 = mk_one_one_thm_term_opt constrL
   val t2 = mk_distinct_thm_term_opt constrL
   val t3 = SOME (mk_case_expand_thm_term case_const constrL)
   val t4 = SOME (mk_case_const_cong_thm_term case_const constrL)
@@ -424,7 +424,7 @@ in
 end
 
 fun get_constructorFamily_proofObligations (constrL, case_const) = let
-  val ts = mk_constructorFamily_terms case_const constrL 
+  val ts = mk_constructorFamily_terms case_const constrL
   val thm = encode_term_opt_list ts
 in
   rhs (concl thm)
@@ -457,7 +457,7 @@ end
    from typebase. Do not use the default type-base functions
    for this but destruct the nchotomy_thm in order to get
    the default argument names as well. *)
-fun constructorList_of_typebase ty = 
+fun constructorList_of_typebase ty =
   if null (TypeBase.constructors_of ty) then NONE else let
   val nchotomy_thm = TypeBase.nchotomy_of ty
   val eqs = strip_disj (snd (dest_forall (concl nchotomy_thm)))
@@ -487,7 +487,7 @@ fun constructorFamily_of_typebase ty = let
   val thm_case_cong = TypeBase.case_cong_of ty
 
   (*  set_constructorFamily (crL, case_split_tm) *)
-  val cf = mk_constructorFamily (crL, case_split_tm, 
+  val cf = mk_constructorFamily (crL, case_split_tm,
     SIMP_TAC std_ss [thm_distinct, thm_one_one, thm_case_cong] THEN
     REPEAT STRIP_TAC THEN (
       Cases_on `x` THEN
@@ -514,12 +514,12 @@ type matchcol_stats = {
   colstat_cases : int,
      (* how many cases are covered ? *)
 
-  colstat_missed_constr : int 
+  colstat_missed_constr : int
      (* how many constructors of the family do not appear in the column *)
 }
 
-fun matchcol_stats_compare 
-  (st1 : matchcol_stats) 
+fun matchcol_stats_compare
+  (st1 : matchcol_stats)
   (st2 : matchcol_stats) = let
   fun lex_ord (i1, i2) b =
      (i1 < i2) orelse ((i1 = i2) andalso b)
@@ -555,9 +555,9 @@ val empty : pmatch_compile_db = {
 val thePmatchCompileDB = ref empty
 
 fun lookup_typeBase_constructorFamily ty = let
-  val b_ty = base_ty ty  
+  val b_ty = base_ty ty
 in
-  SOME (b_ty, TypeNet.find (!typeConstrFamsDB, b_ty)) handle 
+  SOME (b_ty, TypeNet.find (!typeConstrFamsDB, b_ty)) handle
      NotFound => let
        val cf = constructorFamily_of_typebase b_ty
        val net = !typeConstrFamsDB
@@ -565,19 +565,19 @@ in
        val _ = typeConstrFamsDB := net'
      in
        SOME (b_ty, cf)
-     end    
+     end
 end handle HOL_ERR _ => NONE
 
 
-fun measure_constructorFamily (cf : constructorFamily) col = let  
-  fun list_count p col = 
+fun measure_constructorFamily (cf : constructorFamily) col = let
+  fun list_count p col =
     foldl (fn (r, c) => if (p r) then c+1 else c) 0 col
 
   (* extract the constructors of the family *)
   val crs = List.map (fn (CONSTR (c, _)) => c) (
     #cl_constructors (#constructors cf))
 
-  fun row_is_missed (vs, p) = 
+  fun row_is_missed (vs, p) =
     if (is_var p andalso mem p vs) then
       (* bound variables are fine *)
       false
@@ -603,13 +603,13 @@ in
     colstat_cases = cases_no'
   }
 end
- 
+
 fun lookup_constructorFamilies_for_type (db : pmatch_compile_db) ty = let
   val cts_fams = let
     val cts_fams = TypeNet.match (#pcdb_constrFams db, ty)
     val cts_fams' = Lib.flatten (List.map (fn (ty, l) =>
        List.map (fn cf => (ty, cf)) l) cts_fams)
-    val cty_opt = lookup_typeBase_constructorFamily ty  
+    val cty_opt = lookup_typeBase_constructorFamily ty
     val cty_l = case cty_opt of
          NONE => []
        | SOME (ty, cf) => [(ty, cf)]
@@ -636,10 +636,10 @@ fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
   val ty = type_of (snd (hd col))
 
-  val cts_fams = lookup_constructorFamilies_for_type db ty 
-  val cts_fams' = if not force_exh then 
+  val cts_fams = lookup_constructorFamilies_for_type db ty
+  val cts_fams' = if not force_exh then
      cts_fams
-  else 
+  else
      List.filter (fn (_, cf) => isSome (#nchotomy_thm cf)) cts_fams
 
   val weighted_fams = List.map (fn (ty, cf) =>
@@ -654,7 +654,7 @@ end;
 
 
 fun pmatch_compile_db_compile_aux db col = (
-  if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else let    
+  if (List.null col) then failwith "pmatch_compile_db_compile" "col 0" else let
     val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_compile_funs db)
     val cf_res = lookup_constructorFamily false db col
 
@@ -670,7 +670,7 @@ fun pmatch_compile_db_compile_aux db col = (
       (NONE, NONE) => (NONE, NONE)
     | (NONE, SOME (tycf, w)) => (SOME (process_cf_res tycf w), SOME tycf)
     | (SOME (thm, c_no, ss), NONE) => (SOME (thm, c_no, ss), NONE)
-    | (SOME (thm, c_no, ss), SOME (tycf, w)) => if (c_no < #colstat_cases w) then 
+    | (SOME (thm, c_no, ss), SOME (tycf, w)) => if (c_no < #colstat_cases w) then
         (SOME (thm, c_no, ss), NONE) else (SOME (process_cf_res tycf w), SOME tycf)
   end
 );
@@ -695,7 +695,7 @@ fun pmatch_compile_db_compile_nchotomy db col = (
 *)
 
 fun pmatch_compile_db_compile_nchotomy db col = (
-  if (List.null col) then failwith "pmatch_compile_db_compile_nchotomy" "col 0" else let    
+  if (List.null col) then failwith "pmatch_compile_db_compile_nchotomy" "col 0" else let
     val fun_res = get_first (fn f => f col handle HOL_ERR _ => NONE) (#pcdb_nchotomy_funs db)
     val cf_res = lookup_constructorFamily true db col
 
@@ -705,7 +705,7 @@ fun pmatch_compile_db_compile_nchotomy db col = (
       (NONE, NONE) => NONE
     | (NONE, SOME (tycf, _)) => process_cf_res tycf
     | (SOME (thm, _), NONE) => SOME thm
-    | (SOME (thm, _), SOME (tycf, w)) => if (0 < #colstat_missed_rows w) then 
+    | (SOME (thm, _), SOME (tycf, w)) => if (0 < #colstat_missed_rows w) then
         (SOME thm) else (process_cf_res tycf)
   end
 );
@@ -808,8 +808,8 @@ fun literals_compile_fun (col:(term list * term) list) = let
   fun extract_literal ((vs, c), ts) = let
      val vars = FVL [c] empty_tmset
      val is_lit = not (List.exists (fn v => HOLset.member (vars, v)) vs)
-  in 
-    if is_lit then HOLset.add(ts,c) else 
+  in
+    if is_lit then HOLset.add(ts,c) else
       (if is_var c then ts else failwith "" "extract_literal")
   end
 
@@ -836,7 +836,7 @@ fun literals_compile_fun (col:(term list * term) list) = let
       in
          thm2
       end
-    
+
   val thm0 = mk_expand_thm lits
   val thm1 = GEN split_fun (GEN split_arg thm0)
 in
@@ -854,8 +854,8 @@ fun literals_nchotomy_fun (col:(term list * term) list) = let
   fun extract_literal ((vs, c), ts) = let
      val vars = FVL [c] empty_tmset
      val is_lit = not (List.exists (fn v => HOLset.member (vars, v)) vs)
-  in 
-    if is_lit then HOLset.add(ts,c) else 
+  in
+    if is_lit then HOLset.add(ts,c) else
       (if is_var c then ts else failwith "" "extract_literal")
   end
 
@@ -880,8 +880,8 @@ fun literals_nchotomy_fun (col:(term list * term) list) = let
 
   val nchot_tm = list_mk_disj (lit_tms @ [wc_tm])
   val nchot_thm = prove(nchot_tm,
-    SIMP_TAC std_ss [] THEN 
-    EVERY (List.map (fn t => 
+    SIMP_TAC std_ss [] THEN
+    EVERY (List.map (fn t =>
        (BOOL_CASES_TAC t THEN REWRITE_TAC[])) lit_tms))
   val nchot_thm' = GEN split_arg nchot_thm
 in

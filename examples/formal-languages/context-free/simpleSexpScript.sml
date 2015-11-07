@@ -46,12 +46,32 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
 
 val _ = overload_on ("’", ``λs. ⦇ SX_SYM "quote" ; s ⦈``)
 
+val valid_first_symchar_def = Define`
+  valid_first_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"; #"."; #"\""} ∧ ¬isDigit c`;
+
+val valid_symchar_def =  Define`
+  valid_symchar c ⇔ isGraph c ∧ c ∉ {#"'"; #"("; #")"}`;
+
+val valid_symbol_def = Define`
+   (valid_symbol "" ⇔ F) ∧
+   (valid_symbol (c::cs) ⇔ valid_first_symchar c ∧ EVERY valid_symchar cs)`;
+
+val valid_sexp_def = Define`
+  (valid_sexp (SX_SYM s) ⇔ valid_symbol s) ∧
+  (valid_sexp (SX_CONS s1 s2) ⇔ valid_sexp s1 ∧ valid_sexp s2) ∧
+  (valid_sexp s ⇔ T)`;
+val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
+
 val destSXNUM_def = Define`
   destSXNUM (SX_NUM n) = n
 `;
 
 val destSXSYM_def = Define`
   destSXSYM (SX_SYM s) = s
+`;
+
+val destSXCONS_def = Define`
+  destSXCONS (SX_CONS a d) = (a,d)
 `;
 
 val strip_sxcons_def = Define`
@@ -119,10 +139,10 @@ val sexpG_def = mk_grammar_def ginfo `
   escapablechar ::= "\\" | "\"" ;
 
   sexpsym ::= first_symchar symchars ;
-  first_symchar ::=
-    ^(``{ c | isGraph c ∧ c ∉ {#"'"; #"("; #")"} ∧ ¬isDigit c}``) ;
+  first_symchar ::= ^(``{ c | valid_first_symchar c }``)
+ ;
   symchars ::= symchar symchars | ;
-  symchar ::= ^(``{ c | isGraph c ∧ c ∉ {#"'"; #"("; #")"}}``);
+  symchar ::= ^(``{ c | valid_symchar c }``);
 `;
 
 val _ = type_abbrev("NT", ``:sexpNT inf``)

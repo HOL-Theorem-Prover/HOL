@@ -23,22 +23,22 @@
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
 
-\index{teorie, nella logica HOL@theories, nella logica \HOL{}!gerarchie 
+\index{teorie, nella logica HOL@theories, nella logica \HOL{}!gerarchie
 delle}%
-Il sistema \HOL{} fornisce una collezione di teorie sulla quali basare strumenti di verifica o un ulteriore sviluppo di teorie. 
+Il sistema \HOL{} fornisce una collezione di teorie sulla quali basare strumenti di verifica o un ulteriore sviluppo di teorie.
 Nel resto di questa sezione, queste teorie sono descritte brevemente.
 Le sessioni che seguono forniscono una panoramica del contenuto di ciascuna teoria.
 Per un elenco completo degli assiomi, definizioni e teoremi in \HOL, si vedano le risorse online distribuite con il sistema.
-In particolare, il file HTML \url{help/HOLindex.html} è un buon punto di partenza per esplorare le teorie disponibili. 
+In particolare, il file HTML \url{help/HOLindex.html} è un buon punto di partenza per esplorare le teorie disponibili.
 Per un'immagine grafica della gerarchia delle teorie, si veda \url{help/theorygraph/theories.html}.
 
 \section{La Teoria {\tt min}}\label{minTheory}
 
 La teoria di partenza di \HOL{} è la teoria \ml{min}.
 \index{min, la teoria HOL@\ml{min}, la teoria \HOL{}|(}
-In questa teoria sono dichiarate la costante di tipo {\small\verb+bool+} dei booleani, 
-l'operatore di tipo binario $(\alpha,\beta)${\small\verb+fun+} delle funzioni, e la costante 
-di tipo {\small\verb+ind+} degli individui. Sulla base di 
+In questa teoria sono dichiarate la costante di tipo {\small\verb+bool+} dei booleani,
+l'operatore di tipo binario $(\alpha,\beta)${\small\verb+fun+} delle funzioni, e la costante
+di tipo {\small\verb+ind+} degli individui. Sulla base di
 questi tipi, sono dichiarate tre costanti primitive:
 %
 \index{costanti, nella logica HOL@costanti, nella logica \HOL{}!logiche primitive}
@@ -52,29 +52,29 @@ eguaglianza, implicazione, e un operatore di scelta:
 \index{eguaglianza, nella logica HOL@eguaglianza, nella logica \HOL{}}
 \item [Implicazione] Implicazione
   ({\small\verb+==> : bool -> bool -> bool+}) è l'
-  \emph{implicazione materiale} ed è un operatore infisso che è 
-  associativo a destra, cioè, \verb+x ==> y ==> z+ è parsato allo stesso termine 
+  \emph{implicazione materiale} ed è un operatore infisso che è
+  associativo a destra, cioè, \verb+x ==> y ==> z+ è parsato allo stesso termine
   di \verb+x ==> (y ==> z)+.
 \index{implicazione, nella logica HOL@implicazione, nella logica \HOL{}}
-\item [Scelta] L'eguaglianza 
-e l'implicazione sono nozioni standard del calcolo dei predicati, ma la scelta è 
-più esotica: se $t$ è un termine che ha il tipo $\sigma${\small\verb+->bool+}, 
-allora {\small\verb+@x.+}$t${\small\verb+ x+} (o, equivalentemente, 
-{\small\verb+$@+}$t$) denota \emph{qualche} membro dell'insieme la cui 
-funzione caratteristica\index{predicato caratteristico, delle definizioni di tipo} 
- è $t$. Se l'insieme è vuoto, allora 
-{\small\verb+@x.+}$t${\small\verb+ x+} denota un membro arbitrario 
-dell'insieme denotato da $\sigma$. La costante {\small\verb+@+} è una versione 
-di ordine superiore dell'$\hilbert$-operatore 
+\item [Scelta] L'eguaglianza
+e l'implicazione sono nozioni standard del calcolo dei predicati, ma la scelta è
+più esotica: se $t$ è un termine che ha il tipo $\sigma${\small\verb+->bool+},
+allora {\small\verb+@x.+}$t${\small\verb+ x+} (o, equivalentemente,
+{\small\verb+$@+}$t$) denota \emph{qualche} membro dell'insieme la cui
+funzione caratteristica\index{predicato caratteristico, delle definizioni di tipo}
+ è $t$. Se l'insieme è vuoto, allora
+{\small\verb+@x.+}$t${\small\verb+ x+} denota un membro arbitrario
+dell'insieme denotato da $\sigma$. La costante {\small\verb+@+} è una versione
+di ordine superiore dell'$\hilbert$-operatore
 \index{Hilbert, D.}
 \index{operatore epsilon}
-di Hilbert; è collegato alla costante 
-$\iota$ nella formulazione di Church della logica di ordine superiore. Per maggiori dettagli, 
-si veda lo scritto 
-originale 
-di Church\index{Church, A.} \cite{Church}, il libro di 
-Leinsenring\index{Leisenring, A.} 
-del simbolo-$\hilbert$ di Hilbert \cite{Leisenring}, oppure il libro di testo 
+di Hilbert; è collegato alla costante
+$\iota$ nella formulazione di Church della logica di ordine superiore. Per maggiori dettagli,
+si veda lo scritto
+originale
+di Church\index{Church, A.} \cite{Church}, il libro di
+Leinsenring\index{Leisenring, A.}
+del simbolo-$\hilbert$ di Hilbert \cite{Leisenring}, oppure il libro di testo
 di Andrews sulla teoria dei tipi \cite{Andrews}.
 
 \end{description}
@@ -89,13 +89,13 @@ Le regole primitive d'inferenza di \HOL{} dipendono dalla presenza di
 
 \section{Teorie di Base}
 
-Le teorie più di base in HOL forniscono il supporto per una collezione standard 
-di tipi. La teoria \theoryimp{bool} definisce la base della 
-logica \HOL{}, includendo le operazioni booleane e 
-i quantificatori. Su questa piattaforma si può già costruire un bel pò 
-d'infrastruttura di dimostrazione di teoremi. Ulteriori tipi base sono sviluppati 
-nella teoria delle coppie (\theoryimp{prod}), delle somme disgiunte 
-(\theoryimp{sum}),  del tipo di un solo elemento (\theoryimp{one}), e del 
+Le teorie più di base in HOL forniscono il supporto per una collezione standard
+di tipi. La teoria \theoryimp{bool} definisce la base della
+logica \HOL{}, includendo le operazioni booleane e
+i quantificatori. Su questa piattaforma si può già costruire un bel pò
+d'infrastruttura di dimostrazione di teoremi. Ulteriori tipi base sono sviluppati
+nella teoria delle coppie (\theoryimp{prod}), delle somme disgiunte
+(\theoryimp{sum}),  del tipo di un solo elemento (\theoryimp{one}), e del
 tipo (\theoryimp{option}).
 
 
@@ -103,30 +103,30 @@ tipo (\theoryimp{option}).
 
 \index{assiomi!primitivi, della logica HOL@primitivi, della logica \HOL{}|(}
 %
-All'avvio, la teoria iniziale per gli utenti del sistema \HOL{} è 
-chiamata \ml{bool}\index{HOL@\HOL{}}, che è costruita quando viene eseguito 
-il build del sistema \HOL{}. La teoria \theoryimp{bool} è un'estensione 
-della combinazione delle teorie ``concettuali'' \theory{LOG} e 
+All'avvio, la teoria iniziale per gli utenti del sistema \HOL{} è
+chiamata \ml{bool}\index{HOL@\HOL{}}, che è costruita quando viene eseguito
+il build del sistema \HOL{}. La teoria \theoryimp{bool} è un'estensione
+della combinazione delle teorie ``concettuali'' \theory{LOG} e
 \theory{INIT}, descritte in \LOGIC. Così essa contiene i quattro assiomi
 %
 \index{assiomi!nella teoria bool@nella teoria \ml{bool}}
 %
-per la logica di ordine superiore. Questi assiomi, insieme con le regole 
-d'inferenza descritte nella Sezione~\ref{rules}, costituiscono il nucleo della 
+per la logica di ordine superiore. Questi assiomi, insieme con le regole
+d'inferenza descritte nella Sezione~\ref{rules}, costituiscono il nucleo della
 logica \HOL{}. A causa del modo in cui il sistema \HOL{} si è evoluto dall'\LCF%
 %
 \index{LCF@\LCF}%
 %
-\footnote{Per semplificare il porting degli strumenti di dimostrazione di teoremi LCF al 
-	sistema HOL, la logica HOL è stata resa quanto più simile possibile a 
-	PP$\lambda$ (la logica incorporata in LCF).}, la particolare assiomatizzazione 
-della logica di ordine superiore che esso usa differisce dall'assiomatizzazione 
-classica dovuta a Church\index{Church, A.}  \cite{Church}. La 
+\footnote{Per semplificare il porting degli strumenti di dimostrazione di teoremi LCF al
+	sistema HOL, la logica HOL è stata resa quanto più simile possibile a
+	PP$\lambda$ (la logica incorporata in LCF).}, la particolare assiomatizzazione
+della logica di ordine superiore che esso usa differisce dall'assiomatizzazione
+classica dovuta a Church\index{Church, A.}  \cite{Church}. La
 differenza più grande è che nella formulazione di Church le variabili di tipo
 %
 \index{variabili di tipo, nella logica HOL@variabili di tipo, nella logica \HOL{}!differenza da quelle classiche}
 %
-sono nel meta-linguaggio, mentre nella logica \HOL{} esse sono parte del 
+sono nel meta-linguaggio, mentre nella logica \HOL{} esse sono parte del
 linguaggio oggetto.
 
 Le costanti logiche
@@ -166,8 +166,8 @@ possono essere tutte definite in termini di eguaglianza,
 %
 \index{eguaglianza, nella logica HOL@eguaglianza, nella logica \HOL{}}
 %
-implicazione e scelta. Le definizioni elencate di sotto sono abbastanza 
-standard; ognuna è preceduta dal suo nome \ML{}. Le definizioni posteriori 
+implicazione e scelta. Le definizioni elencate di sotto sono abbastanza
+standard; ognuna è preceduta dal suo nome \ML{}. Le definizioni posteriori
 a volte sono costruite sulla base di quelle precedenti.
 
 \begin{hol}
@@ -230,14 +230,14 @@ i primi tre sono i seguenti:
 
    ETA_AX          |- !t. (\x. t x) = t
 
-   SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P) 
+   SELECT_AX       |- !P:'a->bool x. P x ==> P($@ P)
 \end{verbatim}
 \end{hol}
 
 \noindent
-Il quarto ed ultimo assioma della logica \HOL{} è l'Assioma 
-dell'Infinito\index{assioma dell'infinito}. Il suo enunciato è formulato in termini delle 
-proprietà di funzione {\small\verb+ONE_ONE+} e {\small\verb+ONTO+}. Le 
+Il quarto ed ultimo assioma della logica \HOL{} è l'Assioma
+dell'Infinito\index{assioma dell'infinito}. Il suo enunciato è formulato in termini delle
+proprietà di funzione {\small\verb+ONE_ONE+} e {\small\verb+ONTO+}. Le
 definizioni sono:
 
 \begin{hol}
@@ -264,29 +264,29 @@ definizioni sono:
 \end{hol}
 %
 \noindent
-Questo asserisce che esiste una mappa uno-a-uno da \holtxt{ind} a 
-sé stesso che non è suriettiva. Questo implica che il tipo \holtxt{ind} 
+Questo asserisce che esiste una mappa uno-a-uno da \holtxt{ind} a
+sé stesso che non è suriettiva. Questo implica che il tipo \holtxt{ind}
 denota un insieme infinito.
 %
 \index{assiomi!primitive, della logica HOL@primitive, della logica \HOL{}|)}
 
-Gli altri tre assiomi della teoria \theoryimp{bool}, le regole 
-d'inferenza nella Sezione~\ref{rules} e l'Assioma dell'Infinito sono, 
-insieme, sufficienti per sviluppare tutta la matematica standard. Così, 
-in linea di principio, l'utente del sistema \HOL{} non dovrebbe avere mai bisogno 
-di fare una teoria 
+Gli altri tre assiomi della teoria \theoryimp{bool}, le regole
+d'inferenza nella Sezione~\ref{rules} e l'Assioma dell'Infinito sono,
+insieme, sufficienti per sviluppare tutta la matematica standard. Così,
+in linea di principio, l'utente del sistema \HOL{} non dovrebbe avere mai bisogno
+di fare una teoria
 %
 \index{assiomi!dispensabilità di aggiungere}
 \index{teorie definizionali}
 %
-non-definizionale. In pratica, è spesso molto allettante correre il rischio di 
-introdurre nuovi assiomi perché derivarli dalle definizioni può essere 
-noioso---dimostrare che gli `assiomi' seguono da definizioni equivale a 
+non-definizionale. In pratica, è spesso molto allettante correre il rischio di
+introdurre nuovi assiomi perché derivarli dalle definizioni può essere
+noioso---dimostrare che gli `assiomi' seguono da definizioni equivale a
 dimostrare la loro coerenza.
 
 \paragraph {Ulteriori definizioni}
 
-La teoria \theoryimp{bool} fornisce anche le definizioni di un numero di 
+La teoria \theoryimp{bool} fornisce anche le definizioni di un numero di
 utili costanti.
 \begin{hol}
 \index{COND, la costante HOL@\holtxt{COND}, la costante \HOL{}}
@@ -303,42 +303,42 @@ La costante \holtxt{LET}
 %
 \index{termini-let, nella logica HOL@termini-\holtxt{let}, nella logica \HOL{}!costante per}
 %
-è usata nella rappresentazione di termini che contengono binding per variabili locali (cioé 
+è usata nella rappresentazione di termini che contengono binding per variabili locali (cioé
 termini-\holtxt{let}).
 %
 \index{termini-let, nella logica HOL@termini-\holtxt{let}, nella logica \HOL{}!assioma definizionale per}
 %
-Per esempio, la sintassi concreta \holtxt{let v = M in N} è tradotta 
-dal parser al termine \holtxt{LET (\bs{}v.N) M}. Per la descrizione 
-completa di come le espressioni \holtxt{let} sono tradotte, si veda 
+Per esempio, la sintassi concreta \holtxt{let v = M in N} è tradotta
+dal parser al termine \holtxt{LET (\bs{}v.N) M}. Per la descrizione
+completa di come le espressioni \holtxt{let} sono tradotte, si veda
 la Sezione \ref{prod}.
 
-La costante \holtxt{COND} è usata per rappresentare espressioni 
+La costante \holtxt{COND} è usata per rappresentare espressioni
 condizionali. La sintassi concreta
 %
 \index{termini, nella logica HOL@termini, nella logica \HOL{}!condizionali}%
 \index{condizionali, nella logica HOL@v, nella logica \HOL{}}%
 %
-$\holtxt{if}\;t_1\;\holtxt{then}\;t_2\;\holtxt{else}\;t_3$ abbrevia 
+$\holtxt{if}\;t_1\;\holtxt{then}\;t_2\;\holtxt{else}\;t_3$ abbrevia
 l'applicazione \holtxt{COND $t_1$ $t_2$ $t_3$}.
 
-La costante \holtxt{IN} (scritta come un infisso) è la base 
-della modellazione degli insiemi attraverso funzioni caratteristiche. Il termine 
-$x\holtxt{ IN }P$ può essere letto come ``$x$ è un elemento dell'insieme 
-$P$'', o (più in linea con la sua definizione) come ``il predicato $P$ è 
+La costante \holtxt{IN} (scritta come un infisso) è la base
+della modellazione degli insiemi attraverso funzioni caratteristiche. Il termine
+$x\holtxt{ IN }P$ può essere letto come ``$x$ è un elemento dell'insieme
+$P$'', o (più in linea con la sua definizione) come ``il predicato $P$ è
 vero di $x$''.
 
-Infine, la costante polimorfica $\holtxt{ARB}:\alpha$ denota un 
-elemento arbitrario fissato. \holtxt{ARB} è occasionalmente utile quando 
+Infine, la costante polimorfica $\holtxt{ARB}:\alpha$ denota un
+elemento arbitrario fissato. \holtxt{ARB} è occasionalmente utile quando
 si tenta di trattare con il problema della parzialità.
 
 \subsubsection{Quantificatori ristretti}\label{res-quant}
 
 \index{quantificazione ristretta}
 %
-La teoria \theoryimp{bool} definisce anche costanti che implementano 
-la \emph{quantificazione ristretta}. Questa fornisce un mezzo per simulare 
-sotto-tipi e tipi dipendenti con dei predicati. Quelle usate più pesantemente 
+La teoria \theoryimp{bool} definisce anche costanti che implementano
+la \emph{quantificazione ristretta}. Questa fornisce un mezzo per simulare
+sotto-tipi e tipi dipendenti con dei predicati. Quelle usate più pesantemente
 sono le restrizioni dei quantificatori esistenziale e universale:
 %
 \begin{verbatim}
@@ -352,16 +352,16 @@ sono le restrizioni dei quantificatori esistenziale e universale:
                             (RES_ABSTRACT P m1 = RES_ABSTRACT P m2)
 \end{verbatim}
 %
-La definizione di \ml{RES\_ABSTRACT} è una formula caratterizzante, piuttosto 
+La definizione di \ml{RES\_ABSTRACT} è una formula caratterizzante, piuttosto
 che un'equazione diretta. Ci sono due proprietà importanti
 \begin{itemize}
 \item se $y$ è un elemento di $P$ allora $(\bs{}x :: P.\; M)
   y = M[y/x]$
-\item se due astrazioni ristrette concordano per tutti i valori sul loro 
+\item se due astrazioni ristrette concordano per tutti i valori sul loro
 	insieme (comune) di restrizione, allora sono uguali.
 \end{itemize}
 
-Per completezza, sono fornite le versioni ristrette dell'esistenza unica e 
+Per completezza, sono fornite le versioni ristrette dell'esistenza unica e
 della descrizione indefinita, benché difficilmente usate.
 \begin{verbatim}
    RES_EXISTS_UNIQUE_DEF
@@ -372,13 +372,13 @@ della descrizione indefinita, benché difficilmente usate.
      |- RES_SELECT = \P m. @x. x IN P /\ m x
 \end{verbatim}
 
-La definizione di \ml{RES\_EXISTS\_UNIQUE} usa la sintassi della 
-quantificazione ristretta con il simbolo {\small\verb+::+}, che si riferisce 
+La definizione di \ml{RES\_EXISTS\_UNIQUE} usa la sintassi della
+quantificazione ristretta con il simbolo {\small\verb+::+}, che si riferisce
 alle precedenti definizioni \ml{RES\_EXISTS} e \ml{RES\_FORALL}.
-La sintassi \texttt{::} è usata con i quantificatori ristretti per permettere 
-predicati arbitrari per restringere le variabili di binding. Il parser \HOL{} 
-permette la quantificazione ristretta su tutte le variabili di una sequenza di variabili 
-di binding mettendo la restrizione alla fine della sequenza, così 
+La sintassi \texttt{::} è usata con i quantificatori ristretti per permettere
+predicati arbitrari per restringere le variabili di binding. Il parser \HOL{}
+permette la quantificazione ristretta su tutte le variabili di una sequenza di variabili
+di binding mettendo la restrizione alla fine della sequenza, così
 con una quantificazione universale:
 %
 \[
@@ -392,41 +392,41 @@ Qui il predicato $P$ restringe ognuna delle $x$, $y$ e $z$.
 \index{quotation, nella logica HOL@quotation, nella logica \HOL{}!of non-primitive terms|(}
 % don't refill the \index entries above, it's important to keep each
 % entry on one line
-Il parser delle quotation di \HOL{} 
+Il parser delle quotation di \HOL{}
 %
 \index{quotation, nella logica HOL@quotation, nella logica \HOL{}!parser per}
 %
-può tradurre varie notazioni logiche 
+può tradurre varie notazioni logiche
 standard
 %
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!delle notazioni standard}
 %
-in termini primitivi. Per esempio, se \ml{+} è stato dichiarato un 
+in termini primitivi. Per esempio, se \ml{+} è stato dichiarato un
 infisso
 %
 \index{infissi, nella logica HOL@infissi, nella logica \HOL{}}
 %
-(come spiegato nella Sezione~\ref{theoryfns}), come avviene quando 
-è stata caricata \ml{arithmeticTheory}, allora \ml{``x+1``} è 
+(come spiegato nella Sezione~\ref{theoryfns}), come avviene quando
+è stata caricata \ml{arithmeticTheory}, allora \ml{``x+1``} è
 tradotto in \ml{``\$+~x~1``}. Il carattere di escape \ml{\$}
 %
 \index{ escape, nel parser della logica HOL@\ml{\$} (escape, nel parser della logica \HOL{})}
 \index{costanti dichiarate, nella logica HOL@costanti dichiarate, nella logica \HOL{}}
 \index{infissi, nella logica HOL@infissi, nella logica \HOL{}}
 %
-sopprime il comportamento infisso di \ml{+} e impedisce al parser delle 
-quotation di rimanere confuso. In generale, \ml{\$} può essere usato per sopprimere 
+sopprime il comportamento infisso di \ml{+} e impedisce al parser delle
+quotation di rimanere confuso. In generale, \ml{\$} può essere usato per sopprimere
 qualsiasi comportamento sintattico speciale che un token (come \texttt{if},
 \texttt{+} o \texttt{let})
 %
 \index{token!sopprimere il comportamento di parsing di}
 %
-potrebbe avere. Questo è illustrato nella tabella di sotto, in cui i termini 
-nella colonna intestata \textit{`Quotation \ML{}'} sono tradotti dal 
-parser di quotation nei corrispondenti termini nella colonna intestata 
-\textit{`Termine primitivo'}. Invece, i termini nell'ultima colonna 
-sono sempre stampati nella forma mostrata nella prima. Le espressioni 
-costruttore \ML{} nella colonna più a destra sono valutate agli stessi 
+potrebbe avere. Questo è illustrato nella tabella di sotto, in cui i termini
+nella colonna intestata \textit{`Quotation \ML{}'} sono tradotti dal
+parser di quotation nei corrispondenti termini nella colonna intestata
+\textit{`Termine primitivo'}. Invece, i termini nell'ultima colonna
+sono sempre stampati nella forma mostrata nella prima. Le espressioni
+costruttore \ML{} nella colonna più a destra sono valutate agli stessi
 valori (di tipo \ml{term}) come le altre quotation nella stessa riga.
 
 \bigskip
@@ -506,11 +506,11 @@ Espressione-{\small\verb+let+} & {\small\verb+let +}$x${\small\verb+=+}$t_1${\sm
 
 \bigskip
 
-Ci sono costruttori, de-costruttori, e indicatori per tutti i costrutti 
-ovvi. (Gli indicatori, ad esempio \ml{is\_neg}, restituiscono valori di verità 
-che indicano se un termine appartiene o meno alla classe di sintassi in 
-questione.) In aggiunta ai costruttori elencati nella tabella ci sono 
-costruttori, de-costruttori, e indicatori per coppie e liste, 
+Ci sono costruttori, de-costruttori, e indicatori per tutti i costrutti
+ovvi. (Gli indicatori, ad esempio \ml{is\_neg}, restituiscono valori di verità
+che indicano se un termine appartiene o meno alla classe di sintassi in
+questione.) In aggiunta ai costruttori elencati nella tabella ci sono
+costruttori, de-costruttori, e indicatori per coppie e liste,
 cioè \ml{mk\_pair},
 %
 \index{mk_pair@\ml{mk\_pair}}
@@ -523,25 +523,25 @@ e \ml{mk\_list}
 %
 \index{mk_list@\ml{mk\_list}}
 %
-(si veda \REFERENCE). Le costanti \holtxt{COND} e \holtxt{LET} sono 
+(si veda \REFERENCE). Le costanti \holtxt{COND} e \holtxt{LET} sono
 spiegate nella Sezione~\ref{boolfull}. Le costanti \holtxt{\bs/},
 %
 \index{disgiunzione, nella logica HOL@disgiunzione, nella logica \HOL{}!sintassi di}
 %
-\holtxt{/\bs}, \holtxt{==>} e \holtxt{=} sono esempi di 
+\holtxt{/\bs}, \holtxt{==>} e \holtxt{=} sono esempi di
 \textit{infissi} e rappresentano $\vee$, $\wedge$, $\imp$ e l'eguaglianza,
-rispettivamente. Se $c$ è dichiarato essere un infisso, allora il parser 
+rispettivamente. Se $c$ è dichiarato essere un infisso, allora il parser
 \HOL{} tradurrà $t_1\ c\ t_2$ in {\small\verb+$+}$c\ t_1\ t_2$.
 
-Le costanti {\small\verb+!+}, {\small\verb+?+} e {\small\verb+@+} 
+Le costanti {\small\verb+!+}, {\small\verb+?+} e {\small\verb+@+}
 sono esempi di \label{binder} \textit{binder}
 %
 \index{binder, nella logica HOL@binder, nella logica \HOL{}}
 %
-e rappresentano $\forall$, $\exists$ e $\hilbert$, rispettivamente. Se 
-$c$ è dichiarata essere un binder, allora il parser \HOL{} tradurrà 
-\holtxt{$c$ $x$.$t$} nella combinazione \holtxt{\$$c$(\bs$x$.$t$)} 
-(cioè l'applicazione della costante $c$ alla rappresentazione 
+e rappresentano $\forall$, $\exists$ e $\hilbert$, rispettivamente. Se
+$c$ è dichiarata essere un binder, allora il parser \HOL{} tradurrà
+\holtxt{$c$ $x$.$t$} nella combinazione \holtxt{\$$c$(\bs$x$.$t$)}
+(cioè l'applicazione della costante $c$ alla rappresentazione
 dell'astrazione $\lquant{x}t$).
 \index{ binder astrazione di funzione, nella logica HOL@\holtxt{\bs} (binder astrazione di funzione, nella logica \HOL{})}
 
@@ -580,10 +580,10 @@ $t\ t_1 \cdots t_n$ &
 \end{tabular}
 \end{center}
 
-\noindent Ci sono anche costruttori 
+\noindent Ci sono anche costruttori
 \ml{list\_mk\_conj}\index{list_mk_conj@\ml{list\_mk\_conj}},
 \ml{list\_mk\_disj}\index{list_mk_disj@\ml{list\_mk\_disj}} e
-\ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} 
+\ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}}
 per le congiunzioni, le disgiunzioni, e le implicazioni rispettivamente.
 Le corrispondenti funzioni de-costruttore sono chiamate \ml{strip\_comb}, ecc.,
 %
@@ -595,9 +595,9 @@ Le corrispondenti funzioni de-costruttore sono chiamate \ml{strip\_comb}, ecc.,
 
 \subsubsection{Teoremi}
 
-Nella teoria \theoryimp{bool} sono pre-dimostrati molti teoremi che coinvolgono 
-costanti logiche. I seguenti teoremi 
-illustrano come la logica di ordine superiore permette l'espressione concisa di 
+Nella teoria \theoryimp{bool} sono pre-dimostrati molti teoremi che coinvolgono
+costanti logiche. I seguenti teoremi
+illustrano come la logica di ordine superiore permette l'espressione concisa di
 teoremi che supportano lo spostamento del quantificatore.
 
 \begin{holboxed}
@@ -630,7 +630,7 @@ teoremi che supportano lo spostamento del quantificatore.
 \end{verbatim}
 \end{holboxed}
 
-Inoltre, è dimostrato un teorema che giustifica la Skolemizzazione 
+Inoltre, è dimostrato un teorema che giustifica la Skolemizzazione
 ({\small\verb+SKOLEM_THM+}). Nella teoria \theoryimp{bool} si possono trovare molti altri teoremi.
 
 
@@ -673,7 +673,7 @@ UPDATE_DEF |- (k =+ v) = (\f c. if k = c then v else f c)
 \end{verbatim}
 \end{hol}
 
-\noindent Le seguenti proprietà elementari sono dimostrate nella teoria 
+\noindent Le seguenti proprietà elementari sono dimostrate nella teoria
 \ml{combin}:
 
 \begin{hol}
@@ -710,14 +710,14 @@ come costanti incorporate
 %
 \index{variabili, nella logica HOL@variabili, nella logica \HOL{}!con nomi di costanti}
 %
-talvolta non è conveniente perché spesso essi sono desiderati come nomi 
-mnemonici per variabili (ad esempio \ml{S} varia su insiemi e \ml{o}  
-varia su output)\footnote{Le costanti dichiarate nelle nuove teorie possono 
-	riutilizzare liberamente questi nomi, con input ambigui risolti dall'inferenza 
-	di tipo.}. Si possono usare variabili con questi nomi nel sistema 
-attuale se \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, e \ml{C} sono prima 
-nascosti (si veda la Sezione~\ref{hidden}). Di fatto, questo accade così spesso 
-con la costante \holtxt{C} che essa è `nascosta' di default. Quando è 
+talvolta non è conveniente perché spesso essi sono desiderati come nomi
+mnemonici per variabili (ad esempio \ml{S} varia su insiemi e \ml{o}
+varia su output)\footnote{Le costanti dichiarate nelle nuove teorie possono
+	riutilizzare liberamente questi nomi, con input ambigui risolti dall'inferenza
+	di tipo.}. Si possono usare variabili con questi nomi nel sistema
+attuale se \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, e \ml{C} sono prima
+nascosti (si veda la Sezione~\ref{hidden}). Di fatto, questo accade così spesso
+con la costante \holtxt{C} che essa è `nascosta' di default. Quando è
 nascosta, deve essere scritta nella sua forma completamente-qualificata, come
 \holtxt{combin\$C}.
 %
@@ -732,7 +732,7 @@ nascosta, deve essere scritta nella sua forma completamente-qualificata, come
 \index{coppie, nella logica HOL@coppie, nella logica \HOL{}|(}
 \index{tipi prodotto!nella logica HOL@in \HOL{} logic|(}
 %
-L'operatore di prodotto Cartesiano 
+L'operatore di prodotto Cartesiano
 %
 \index{operatori di tipo, nella logica HOL@operatori di tipo, nella logica \HOL{}!per coppie}
 %
@@ -740,14 +740,14 @@ L'operatore di prodotto Cartesiano
 %
 \index{prod, l'operatore di tipo HOL@\holtxt{prod}, l'operatore di tipo \HOL{}}
 %
-è definito nella teoria \theoryimp{pair}. I valori di tipo 
-\holtxt{($\sigma_1$,$\sigma_2$)prod} sono coppie ordinate il cui primo 
-componente ha il tipo $\sigma_1$ e il cui secondo componente ha il tipo 
-$\sigma_2$. Il parser di tipo \HOL{} 
+è definito nella teoria \theoryimp{pair}. I valori di tipo
+\holtxt{($\sigma_1$,$\sigma_2$)prod} sono coppie ordinate il cui primo
+componente ha il tipo $\sigma_1$ e il cui secondo componente ha il tipo
+$\sigma_2$. Il parser di tipo \HOL{}
 %
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!of pairs}
 %
-converte le espressioni di tipo della forma \holtxt{:$\sigma_1$\#$\sigma_2$} 
+converte le espressioni di tipo della forma \holtxt{:$\sigma_1$\#$\sigma_2$}
 %
 \index{ operatore di tipo prodotto, nella logica HOL@\holtxt{\#} (operatore di tipo prodotto, nella logica \HOL{})}
 %
@@ -768,20 +768,20 @@ sono costruite con un simbolo di virgola infisso
 \end{hol}
 
 \noindent
-così, per esempio, se $t_1$ e $t_2$ hanno i tipi $\sigma_1$ e 
-$\sigma_2$ rispettivamente, allora $t_1$\ml{,}$t_2$ è un termine con tipo 
-$\sigma_1$\holtxt{\#}$\sigma_2$. Di solito, le coppie sono scritte all'interno 
-di parentesi: \holtxt{($t_1$,$t_2$)}. Il simbolo virgola associa 
+così, per esempio, se $t_1$ e $t_2$ hanno i tipi $\sigma_1$ e
+$\sigma_2$ rispettivamente, allora $t_1$\ml{,}$t_2$ è un termine con tipo
+$\sigma_1$\holtxt{\#}$\sigma_2$. Di solito, le coppie sono scritte all'interno
+di parentesi: \holtxt{($t_1$,$t_2$)}. Il simbolo virgola associa
 %
 \index{costruttore di accoppiamento, nella logica HOL@costruttore di accoppiamento, nella logica \HOL{}!associatività di}
 %
-a destra, così che \holtxt{($t_1$,$t_2$,$\ldots$,$t_n$)} significa 
+a destra, così che \holtxt{($t_1$,$t_2$,$\ldots$,$t_n$)} significa
 \holtxt{($t_1$,($t_2$,$\ldots$,$t_n$))}.
 
 \paragraph {Definire il tipo prodotto}
 
-Il tipo dei prodotti Cartesiani è definito rappresentando una coppia 
-{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%} 
+Il tipo dei prodotti Cartesiani è definito rappresentando una coppia
+{\small\verb%(%}$t_1${\small\verb%,%}$t_2${\small\verb%)%}
 per mezzo della funzione
 %
 \begin{hol}
@@ -790,11 +790,11 @@ per mezzo della funzione
 \end{alltt}
 \end{hol}
 %
-\noindent Il tipo rappresentante di 
-$\sigma_1${\small\verb%#%}$\sigma_2$ è così 
+\noindent Il tipo rappresentante di
+$\sigma_1${\small\verb%#%}$\sigma_2$ è così
 $\sigma_1${\small\verb%->%}$\sigma_2${\small\verb%->bool%}.
-E' facile dimostrare il seguente teorema\footnote{Questo teorema ha 
-un $\beta$-redex non ridotto al fine di soddisfare l'interfaccia 
+E' facile dimostrare il seguente teorema\footnote{Questo teorema ha
+un $\beta$-redex non ridotto al fine di soddisfare l'interfaccia
 richiesta dal principio di definizione di tipo}.
 %
 \begin{hol}
@@ -813,8 +813,8 @@ L'operatore di tipo {\small\verb%prod%} è definito invocando \ml{new\_type\_defi
 \end{hol}
 %
 Poi, sono introdotte le funzioni di rappresentazione e astrazione \holtxt{REP\_prod}
-e \holtxt{ABS\_prod} per il nuovo tipo, insieme con il 
-seguente teorema caratterizzante, per mezzo dell'uso della funzione 
+e \holtxt{ABS\_prod} per il nuovo tipo, insieme con il
+seguente teorema caratterizzante, per mezzo dell'uso della funzione
 \ml{define\_new\_type\_bijections}.
 %
 \begin{hol}
@@ -826,10 +826,10 @@ seguente teorema caratterizzante, per mezzo dell'uso della funzione
 
 \paragraph {Coppie e proiezioni}
 
-Il costruttore infisso `{\small\verb%,%}' è poi definito 
-essere un'applicazione della funzione di astrazione. Successivamente, sono 
-dimostrati due teoremi cruciali: {\small\verb+PAIR_EQ+} afferma che coppie 
-uguali hanno componenti uguali e {\small\verb+ABS_PAIR_THM+} mostra che 
+Il costruttore infisso `{\small\verb%,%}' è poi definito
+essere un'applicazione della funzione di astrazione. Successivamente, sono
+dimostrati due teoremi cruciali: {\small\verb+PAIR_EQ+} afferma che coppie
+uguali hanno componenti uguali e {\small\verb+ABS_PAIR_THM+} mostra che
 ogni termine che ha un tipo prodotto può essere decomposto in una coppia di termini.
 \begin{hol}
 \index{costruttore di accoppiamento, nella logica HOL@costruttore di accoppiamento, nella logica \HOL{}!definizione di}
@@ -845,8 +845,8 @@ ogni termine che ha un tipo prodotto può essere decomposto in una coppia di term
 \end{verbatim}
 \end{hol}
 %
-Skolemizzando {\small\verb+ABS_PAIR_THM+} e facendo le specifiche di costante 
-per {\small\verb+FST+} e {\small\verb+SND+}, sono dimostrati i 
+Skolemizzando {\small\verb+ABS_PAIR_THM+} e facendo le specifiche di costante
+per {\small\verb+FST+} e {\small\verb+SND+}, sono dimostrati i
 seguenti teoremi.
 %
 \begin{hol}
@@ -866,7 +866,7 @@ seguenti teoremi.
 
 \paragraph{Coppie e funzioni}
 
-In \HOL{}, una funzione di tipo $\alpha \# \beta\to\gamma$ ha sempre una 
+In \HOL{}, una funzione di tipo $\alpha \# \beta\to\gamma$ ha sempre una
 controparte di tipo $\alpha\to\beta\to\gamma$, e \emph{vice versa}.
 Questa conversione è compiuta attraverso le funzioni \holtxt{CURRY} e
 \holtxt{UNCURRY}. Queste funzioni sono inverse.
@@ -886,8 +886,8 @@ Questa conversione è compiuta attraverso le funzioni \holtxt{CURRY} e
 
 \paragraph {Mappare funzioni su una coppia}
 
-Le funzioni $f : \alpha \to \gamma_1$ e $g : \beta\to\gamma_2$ possono essere 
-applicate in modo componente ({\small\verb+##+}, infisso) su una coppia di tipo 
+Le funzioni $f : \alpha \to \gamma_1$ e $g : \beta\to\gamma_2$ possono essere
+applicate in modo componente ({\small\verb+##+}, infisso) su una coppia di tipo
 $\alpha \# \beta$ per ottenere una coppia di tipo $\gamma_1 \# \gamma_2$.
 %
 \begin{hol}
@@ -900,10 +900,10 @@ $\alpha \# \beta$ per ottenere una coppia di tipo $\gamma_1 \# \gamma_2$.
 
 \paragraph {Binder e coppie}
 
-Quando si fanno dimostrazioni, gli enunciati che coinvolgono tuple possono prendere la forma di un 
-binding (quantificazione o $\lambda$-astrazione) di una variabile con un 
-tipo prodotto. Può essere conveniente nei successivi passi di ragionamento 
-rimpiazzare le variabili con tuple di variabili. I seguenti teoremi 
+Quando si fanno dimostrazioni, gli enunciati che coinvolgono tuple possono prendere la forma di un
+binding (quantificazione o $\lambda$-astrazione) di una variabile con un
+tipo prodotto. Può essere conveniente nei successivi passi di ragionamento
+rimpiazzare le variabili con tuple di variabili. I seguenti teoremi
 supportano questo.
 %
 \begin{hol}
@@ -921,11 +921,11 @@ Il teorema \ml{LAMBDA\_PROD} coinvolge una \emph{astrazione
 \paragraph {Relazioni benfondate su coppie}
 
 La benfondatezza, definita nella Sezione \ref{prim-rec-conseq},
-è una nozione utile, specialmente per dimostrare la terminazione delle 
-funzioni ricorsive. Per le coppie, la combinazione lessicografica 
-delle relazioni ({\small\verb+LEX+}, infisso) può essere definita usando 
-astrazioni accoppiate. Poi il teorema che la combinazione lessicografica 
-delle relazioni benfondate produce [delivers n.d.t.] una relazione benfondata è facile da 
+è una nozione utile, specialmente per dimostrare la terminazione delle
+funzioni ricorsive. Per le coppie, la combinazione lessicografica
+delle relazioni ({\small\verb+LEX+}, infisso) può essere definita usando
+astrazioni accoppiate. Poi il teorema che la combinazione lessicografica
+delle relazioni benfondate produce [delivers n.d.t.] una relazione benfondata è facile da
 dimostrare.
 %
 \begin{hol}
@@ -946,13 +946,13 @@ dimostrare.
 \index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!accoppiate|(}
 \index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!uncurrying, nella ... accoppiata|(}
 
-E' conveniente dal punto di vista della notazione includere l'accoppiamento nella lambda 
-astrazione, come un semplice meccanismo di pattern-matching. Il parser delle quotation 
+E' conveniente dal punto di vista della notazione includere l'accoppiamento nella lambda
+astrazione, come un semplice meccanismo di pattern-matching. Il parser delle quotation
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!di astrazioni di funzione}
 \index{astrazione di funzione nella logica HOL@astrazione di funzione, nella logica \HOL{}!abbreviazione per ... multipla}
-\index{termini, nella logica HOL@termini, nella logica \HOL{}!astrazione di funzione} 
-convertirà il termine 
-{\small\bs\texttt{(}}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t$ 
+\index{termini, nella logica HOL@termini, nella logica \HOL{}!astrazione di funzione}
+convertirà il termine
+{\small\bs\texttt{(}}$x_1${\small\verb%,%}$x_2${\small\verb%).%}$t$
 in {\small\verb%UNCURRY(%\bs}$x_1\ x_2${\small\verb%.%}$t${\small\verb%)%}.
 La trasformazione è fatta ricorsivamente così che, per esempio,
 %
@@ -970,7 +970,7 @@ La trasformazione è fatta ricorsivamente così che, per esempio,
 \end{alltt}
 \end{hol}
 %
-\noindent Più in generale, il parser delle quotation applica ripetutamente la 
+\noindent Più in generale, il parser delle quotation applica ripetutamente la
 trasformazione:
 %
 \begin{hol}
@@ -997,13 +997,13 @@ trasformazione:
 \vspace{1ex}
 
 \noindent Come risultato di questa traduzione del parser, una struttura variabile, come \ml{(x,y)} in
-\ml{\bs(x,y).x+y}, non è un sottotermine della astrazione 
-\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!sottotermini di} 
+\ml{\bs(x,y).x+y}, non è un sottotermine della astrazione
+\index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!sottotermini di}
 in cui occorre; essa scompare nel parsing.
 \index{binder, nella logica HOL@binder, nella logica \HOL{}!parsing di}
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!di binders}
-Questo può portare ad errori inaspettati (accompagnati da oscuri messaggi 
-di errore). Per esempio, l'antiquoting di una coppia nella posizione della variabile 
+Questo può portare ad errori inaspettati (accompagnati da oscuri messaggi
+di errore). Per esempio, l'antiquoting di una coppia nella posizione della variabile
 legata di una lambda astrazione fallisce:
 
 \begin{session}
@@ -1021,11 +1021,11 @@ not a var
 ! Uncaught exception:
 \end{verbatim}
 \end{session}
-Se $b$ è un binder, allora \ml{$b$($x_1$,$x_2$).$t$} è parsato come 
-\ml{$b$(\bs($x_1$,$x_2$).$t$)}, e di conseguenza trasformato come di sopra. Per 
-esempio, 
+Se $b$ è un binder, allora \ml{$b$($x_1$,$x_2$).$t$} è parsato come
+\ml{$b$(\bs($x_1$,$x_2$).$t$)}, e di conseguenza trasformato come di sopra. Per
+esempio,
 \ml{!(x,y).\ x > y}
-è parsato a\linebreak 
+è parsato a\linebreak
 \ml{\$!(UNCURRY(\bs{}x.\bs{}y.\ x > y))}.
 \index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!accoppiata|)}
 \index{astrazione di funzione, nella logica HOL@astrazione di funzione, nella logica \HOL{}!uncurrying, nella ... accoppiata|)}
@@ -1040,7 +1040,7 @@ Il parser delle quotation
 %
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!di termini-let@di termini-\holtxt{let}}
 %
-accetta termini-\ml{let} 
+accetta termini-\ml{let}
 \index{termini, nella logica HOL@termini, nella logica \HOL{}!let-@\holtxt{let}-}
 \index{termini-let, nella logica HOL@termini-\holtxt{let}, nella logica \HOL{}!come abbreviazioni}
 analoghi a quelli \ML. Per esempio, sono permessi i seguenti termini:
@@ -1053,7 +1053,7 @@ analoghi a quelli \ML. Per esempio, sono permessi i seguenti termini:
 \end{verbatim}
 \end{hol}
 
-i termini-\ml{let} sono di fatto abbreviazioni per termini ordinari che sono 
+i termini-\ml{let} sono di fatto abbreviazioni per termini ordinari che sono
 supportati in modo speciale dal parser e dal pretty printer.
 La costante \ml{LET}
 %
@@ -1067,7 +1067,7 @@ La costante \ml{LET}
 \end{verbatim}
 \end{hol}
 
-\noindent ed è usata per codificare i termini-\ml{let} nella logica. Il parser 
+\noindent ed è usata per codificare i termini-\ml{let} nella logica. Il parser
 applica ripetutamente le trasformazioni:
 
 \bigskip
@@ -1086,7 +1086,7 @@ $\leadsto$~~\texttt{LET($\ldots$(LET(LET(\bs$v_1\ldots v_n$.$t$)$t_1$)$t_2$)$\ld
 \bigskip
 
 
-\noindent La struttura sottostante del termine si può vedere applicando 
+\noindent La struttura sottostante del termine si può vedere applicando
 le operazioni di de-costruzione. Per esempio:
 
 \begin{session}
@@ -1105,8 +1105,8 @@ le operazioni di de-costruzione. Per esempio:
 \end{verbatim}
 \end{session}
 
-I lettori sono incoraggiati a convincersi che le traduzioni dei 
-termini-\ml{let} rappresentano il significato intuitivo suggerito dalla 
+I lettori sono incoraggiati a convincersi che le traduzioni dei
+termini-\ml{let} rappresentano il significato intuitivo suggerito dalla
 sintassi di superficie.%
 %
 
@@ -1116,13 +1116,13 @@ sintassi di superficie.%
 \index{somme (unioni disgiunte), la teoria HOL delle@somme (unioni disgiunte), la teoria \HOL{} delle|(}
 
 
-La teoria \theoryimp{sum} definisce l'operatore di tipo binario unione 
-disgiunta \holtxt{sum}. Un tipo \holtxt{($\sigma_1$,$\sigma_2$)sum} 
-denota l'unione disgiunta dei tipi $\sigma_1$ and $\sigma_2$. L'operatore 
-di tipo \holtxt{sum} può essere definito, esattamente come è stato per \holtxt{prod}, 
-ma i dettagli sono qui omessi\footnote{La definizione delle unioni 
-	disgiunte nel sistema HOL è dovuta a Tom Melham. I dettagli tecnici 
-	di questa definizione si possono trovare in~\cite{Melham-banff}.} Il parser 
+La teoria \theoryimp{sum} definisce l'operatore di tipo binario unione
+disgiunta \holtxt{sum}. Un tipo \holtxt{($\sigma_1$,$\sigma_2$)sum}
+denota l'unione disgiunta dei tipi $\sigma_1$ and $\sigma_2$. L'operatore
+di tipo \holtxt{sum} può essere definito, esattamente come è stato per \holtxt{prod},
+ma i dettagli sono qui omessi\footnote{La definizione delle unioni
+	disgiunte nel sistema HOL è dovuta a Tom Melham. I dettagli tecnici
+	di questa definizione si possono trovare in~\cite{Melham-banff}.} Il parser
 di \HOL{}
 %
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!dei tipi sum}
@@ -1153,14 +1153,14 @@ Le operazioni standard sulle somme sono:
 \end{verbatim}
 \end{hol}
 
-\noindent Queste sono tutte definite come costanti nella teoria \ml{sum}. Le 
-costanti \ml{INL} e \ml{INR} iniettano nei sommandi sinistro e destro, 
-rispettivamente. Le costanti \ml{ISL} e \ml{ISR} testano l'appartenenza ai 
-sommandi sinistro e destro, rispettivamente. Le costanti \ml{OUTL} e \ml{OUTR} 
+\noindent Queste sono tutte definite come costanti nella teoria \ml{sum}. Le
+costanti \ml{INL} e \ml{INR} iniettano nei sommandi sinistro e destro,
+rispettivamente. Le costanti \ml{ISL} e \ml{ISR} testano l'appartenenza ai
+sommandi sinistro e destro, rispettivamente. Le costanti \ml{OUTL} e \ml{OUTR}
 proiettano da una somma ai sommandi sinistro e destro, rispettivamente.
 
-Il seguente teorema è dimostrato nella teoria \ml{sum}. Esso fornisce una 
-caratterizzazione completa e astratta del tipo somma disgiunta, ed 
+Il seguente teorema è dimostrato nella teoria \ml{sum}. Esso fornisce una
+caratterizzazione completa e astratta del tipo somma disgiunta, ed
 è usato per giustificare la definizione delle funzioni sulle somme.
 
 \begin{hol}
@@ -1169,7 +1169,7 @@ caratterizzazione completa e astratta del tipo somma disgiunta, ed
 \end{verbatim}
 \end{hol}
 
-\noindent Inoltre sono forniti i seguenti teoremi che hanno a che fare 
+\noindent Inoltre sono forniti i seguenti teoremi che hanno a che fare
 con le funzioni discriminatore \ml{ISL} e \ml{ISR}:
 
 \begin{hol}
@@ -1181,7 +1181,7 @@ con le funzioni discriminatore \ml{ISL} e \ml{ISR}:
 \end{verbatim}
 \end{hol}
 
-\noindent La teoria \ml{sum} fornisce anche i seguenti teoremi 
+\noindent La teoria \ml{sum} fornisce anche i seguenti teoremi
 relativi alle funzioni di proiezione e ai discriminatori.
 
 \begin{hol}
@@ -1202,7 +1202,7 @@ relativi alle funzioni di proiezione e ai discriminatori.
 \index{one, la teoria e il tipo HOL@\ml{one}, la teoria e il tipo \HOL{}}%
 
 La teoria \ml{one} definisce il tipo \ml{one} che contiene un solo elemento.
-La costante \ml{one} è specificata denotare questo elemento. I teoremi 
+La costante \ml{one} è specificata denotare questo elemento. I teoremi
 pre-dimostrati nella teoria \ml{one} sono:
 
 \begin{hol}
@@ -1214,18 +1214,18 @@ pre-dimostrati nella teoria \ml{one} sono:
 \end{verbatim}
 \end{hol}
 
-\noindent Questi tre teoremi sono caratterizzazioni equivalenti del tipo 
-con un solo valore. La teoria \ml{one} è usata tipicamente nella 
-costruzione di tipi più elaborati. L'unico valore del tipo 
-\ml{one}, può anche essere scritto \ml{()} per analogia con il valore 
-unit nell'\ML. Questo è anche il modo di default in cui questo valore 
+\noindent Questi tre teoremi sono caratterizzazioni equivalenti del tipo
+con un solo valore. La teoria \ml{one} è usata tipicamente nella
+costruzione di tipi più elaborati. L'unico valore del tipo
+\ml{one}, può anche essere scritto \ml{()} per analogia con il valore
+unit nell'\ML. Questo è anche il modo di default in cui questo valore
 è stampato dal pretty-printer del sistema.
 
 \subsubsection{Il tipo itself}
 \index{itself, l'operatore di tipo HOL@\holtxt{itself}, l'operatore di tipo \HOL{}}%
-L'operatore di tipo \holtxt{itself} fornisce una famiglia di tipi singleton simili a \holtxt{one}. 
-Così, per ogni tipo $\alpha$, \holtxt{$\alpha$~itself} è un tipo che contiene solo un unico valore. 
-Il nome di questo valore è \holtxt{the\_value}, ma il parser e il pretty-printere sono impostati così che per il tipo \holtxt{$\alpha$~itself}, \holtxt{the\_value} può essere scritto come \holtxt{(:$\alpha$)} (la sintassi include le parentesi). 
+L'operatore di tipo \holtxt{itself} fornisce una famiglia di tipi singleton simili a \holtxt{one}.
+Così, per ogni tipo $\alpha$, \holtxt{$\alpha$~itself} è un tipo che contiene solo un unico valore.
+Il nome di questo valore è \holtxt{the\_value}, ma il parser e il pretty-printere sono impostati così che per il tipo \holtxt{$\alpha$~itself}, \holtxt{the\_value} può essere scritto come \holtxt{(:$\alpha$)} (la sintassi include le parentesi).
 Per esempio, \holtxt{(:num)} è il singolo valore che abita il tipo \holtxt{num~itself}.
 
 Il punto del tipo itself è che se si definisce una funzione con \holtxt{$\alpha$~itself} come dominio, la funzione sceglie un solo valore nel suo rango, e così si può pensare alla funzione come se fosse una dal tipo a un valore per l'intero tipo.
@@ -1250,9 +1250,9 @@ Il tipo itself è usato nella costruzione del Prodotto Cartesiano Finito sottosta
 \subsection{Il tipo option}
 \index{option, la teoria HOL delle@option, la teoria \HOL{} delle}
 
-La teoria \theoryimp{option} definisce un operatore di tipo \verb+option+ 
-che `solleva' il suo tipo argomento, creando un tipo con tutti i valori 
-dell'argomento e un altro valore distinto in modo speciale. 
+La teoria \theoryimp{option} definisce un operatore di tipo \verb+option+
+che `solleva' il suo tipo argomento, creando un tipo con tutti i valori
+dell'argomento e un altro valore distinto in modo speciale.
 I costruttori di questo tipo sono
 \begin{hol}
 \begin{verbatim}
@@ -1260,13 +1260,13 @@ I costruttori di questo tipo sono
    SOME : 'a -> 'a option
 \end{verbatim}
 \end{hol}
-Le option possono essere usate per modellizzare le funzioni parziali. Se una funzione di tipo 
-$\alpha\rightarrow\beta$ non valori $\beta$ utili per tutti 
-gli input $\alpha$, allora questa distinzione può essere contrassegnata rendendo il 
-rango della funzione $\beta\,\konst{option}$, e mappando i 
+Le option possono essere usate per modellizzare le funzioni parziali. Se una funzione di tipo
+$\alpha\rightarrow\beta$ non valori $\beta$ utili per tutti
+gli input $\alpha$, allora questa distinzione può essere contrassegnata rendendo il
+rango della funzione $\beta\,\konst{option}$, e mappando i
 valori $\alpha$ indefiniti su \holtxt{NONE}.
 
-Come tipo induttivo, le option hanno un teorema di ricorsione che supporta la 
+Come tipo induttivo, le option hanno un teorema di ricorsione che supporta la
 definizione di funzioni ricorsive primitive su valori option.
 %
 \begin{hol}
@@ -1278,7 +1278,7 @@ definizione di funzioni ricorsive primitive su valori option.
            (h NONE = e)
 \end{verbatim}
 \end{hol}
-La teoria \theoryimp{option} definisce anche una costante case che permette 
+La teoria \theoryimp{option} definisce anche una costante case che permette
 di ispezionare i valori option in un stile ``pattern-matching''.
 \begin{hol}
 \begin{verbatim}
@@ -1288,8 +1288,8 @@ di ispezionare i valori option in un stile ``pattern-matching''.
 \end{verbatim}
 \end{hol}
 %
-La costante sottostante a questo addolcimento sintattico è \verb+option_case+ 
-con la definizione 
+La costante sottostante a questo addolcimento sintattico è \verb+option_case+
+con la definizione
 \begin{hol}
 \begin{verbatim}
    option_case_def |- (option_case u f NONE = u) /\
@@ -1306,8 +1306,8 @@ Un altre funzione utile mappa una funzione su un'option:
                       (OPTION_MAP f (SOME x) = SOME (f x))
 \end{verbatim}
 \end{hol}
-Infine, la funzione \holtxt{THE} prende un valore 
-\holtxt{SOME} per quell'argomento del costruttore, ed è indefinita su 
+Infine, la funzione \holtxt{THE} prende un valore
+\holtxt{SOME} per quell'argomento del costruttore, ed è indefinita su
 \holtxt{NONE}:
 \begin{hol}
 \begin{verbatim}
@@ -1317,31 +1317,31 @@ Infine, la funzione \holtxt{THE} prende un valore
 
 \section{Numeri}
 
-I numeri naturali, gli interi, e i numeri reali sono forniti in una 
-serie di teorie. Sono anche disponibili teorie di parole di $n$-bit 
+I numeri naturali, gli interi, e i numeri reali sono forniti in una
+serie di teorie. Sono anche disponibili teorie di parole di $n$-bit
 (numeri modulo $2^n$), numeri a virgola mobile e numeri a virgola fissa.
 
 \subsection{Numeri naturali}
 
-I numeri naturali sono sviluppati in una serie di teorie: 
+I numeri naturali sono sviluppati in una serie di teorie:
 \theoryimp{num}, \theoryimp{prim\_rec}, \theoryimp{arithmetic}, e
-\theoryimp{numeral}. In \theoryimp{num}, il tipo dei numeri è 
-definito dall'Assioma dell'Infinito, e sono derivati gli assiomi di Peano. In 
-\theoryimp{prim\_rec} è dimostrato il teorema di Ricorsione Primitiva. Sulla base 
-di questo, in \theoryimp{arithmetic} è sviluppata un'ampia teoria che tratta le operazioni aritmetiche 
-standard. Da ultimo, è sviluppata una teoria dei 
+\theoryimp{numeral}. In \theoryimp{num}, il tipo dei numeri è
+definito dall'Assioma dell'Infinito, e sono derivati gli assiomi di Peano. In
+\theoryimp{prim\_rec} è dimostrato il teorema di Ricorsione Primitiva. Sulla base
+di questo, in \theoryimp{arithmetic} è sviluppata un'ampia teoria che tratta le operazioni aritmetiche
+standard. Da ultimo, è sviluppata una teoria dei
 numerali.
 
 \subsubsection{La teoria \theoryimp{num}}
 
 La teoria \theoryimp{num}
 \index{num, la teoria nella logica HOL@\ml{num}, la teoria nella logica \HOL{}}
-definisce che il tipo \ml{num} dei numeri naturali è 
-isomorfo a un sottoinsieme numerabile del tipo primitivo \ml{ind}. In questa 
+definisce che il tipo \ml{num} dei numeri naturali è
+isomorfo a un sottoinsieme numerabile del tipo primitivo \ml{ind}. In questa
 teoria, sono definite le costanti \ml{0}
 \index{ zero, nella logica HOL@\ml{0} (zero, nella logica \HOL{})}
-e \ml{SUC} (la funzione successore) 
-e gli assiomi di Peano 
+e \ml{SUC} (la funzione successore)
+e gli assiomi di Peano
 \index{assiomi!nella teoria num@nella teoria \ml{num}}
 \index{gli assiomi di Peano}
 \index{assiomi!non-primitivi, della logica HOL@non-primitive, della logica \HOL{}!per i numeri naturali}
@@ -1358,10 +1358,10 @@ sono pre-dimostrati nella forma:
 \end{verbatim}
 \end{hol}
 
-Nella logica di ordine superiore, gli assiomi di Peano sono sufficienti per sviluppare 
-la teoria dei numeri perché possono essere definite l'addizione e la moltiplicazione. Nella 
-logica del primo ordine queste devono essere prese come primitive. Si noti anche che 
-\ml{INDUCTION} non potrebbe essere enunciato come un singolo assioma nella logica del 
+Nella logica di ordine superiore, gli assiomi di Peano sono sufficienti per sviluppare
+la teoria dei numeri perché possono essere definite l'addizione e la moltiplicazione. Nella
+logica del primo ordine queste devono essere prese come primitive. Si noti anche che
+\ml{INDUCTION} non potrebbe essere enunciato come un singolo assioma nella logica del
 primo ordine perché i predicati (ad esempio \holtxt{P}) non possono essere quantificati.
 
 \subsubsection{La teoria \theoryimp{prim\_rec}}
@@ -1377,30 +1377,30 @@ le definizioni arbitrariamente ricorsive
 %
 \index{definizioni ricorsive, nelle logiche classiche}
 %
-non sono permesse. Per esempio, non c'è alcuna funzione $f$ (di tipo 
+non sono permesse. Per esempio, non c'è alcuna funzione $f$ (di tipo
 \ml{num->num}) tale che
 
 \begin{alltt}
    !\(x\). \(f\) \(x\) = (\(f\) \(x\)) + 1
 \end{alltt}
-Certe ristrette forme di definizione 
+Certe ristrette forme di definizione
 %
 \index{funzioni ricorsive primitive}
 %
-ricorsiva, comunque, definiscono funzioni in modo univoco. Un esempio 
-importante sono le funzioni \emph{ricorsive primitive}\footnote{Nella 
-	logica di ordine superiore, la ricorsione primitiva è molto più potente che 
-	nella logica del primo ordine; per esempio la funzione di Ackermann può essere 
-	definita per ricorsione primitiva nella logica di ordine superiore.}. Per qualsiasi $x$ 
-e $f$ il \emph{teorema di ricorsione primitiva} ci dice che c'è 
+ricorsiva, comunque, definiscono funzioni in modo univoco. Un esempio
+importante sono le funzioni \emph{ricorsive primitive}\footnote{Nella
+	logica di ordine superiore, la ricorsione primitiva è molto più potente che
+	nella logica del primo ordine; per esempio la funzione di Ackermann può essere
+	definita per ricorsione primitiva nella logica di ordine superiore.}. Per qualsiasi $x$
+e $f$ il \emph{teorema di ricorsione primitiva} ci dice che c'è
 un'unica funzione \holtxt{fn} tale che:
 
 \begin{alltt}
    (fn 0 = \(x\)) /\bs (!\(n\). fn(SUC \(n\)) = f (fn \(n\)) \(n\))
 \end{alltt}
 
-Il teorema di ricorsione primitiva, chiamato \ml{num\_Axiom} in \HOL, 
-segue dagli assiomi 
+Il teorema di ricorsione primitiva, chiamato \ml{num\_Axiom} in \HOL,
+segue dagli assiomi
 %
 \index{assiomi di Peano}
 %
@@ -1413,10 +1413,10 @@ di Peano.
 \end{verbatim}
 \end{hol}
 
-\noindent Il teorema stabilisce la validità delle definizioni ricorsive 
-primitive sui numeri naturali: per qualsiasi \ml{x} e \ml{f} esiste una 
-corrispondente funzione totale \ml{fn} che soddisfa 
-la definizione ricorsiva primitiva la cui forma è determinata da \ml{x} e 
+\noindent Il teorema stabilisce la validità delle definizioni ricorsive
+primitive sui numeri naturali: per qualsiasi \ml{x} e \ml{f} esiste una
+corrispondente funzione totale \ml{fn} che soddisfa
+la definizione ricorsiva primitiva la cui forma è determinata da \ml{x} e
 \ml{f}.
 
 \paragraph{La relazione minore-di}
@@ -1424,10 +1424,10 @@ la definizione ricorsiva primitiva la cui forma è determinata da \ml{x} e
 La relazione minore-di `\holtxt{<}'
 \index{ minore di, nella logica HOL@\ml{<} (minore di, nella logica \HOL{})}
 \index{minore di, nella logica HOL@minore di, nella logica \HOL{}}
-è definita in modo più naturale per ricorsione primitiva. Tuttavia, nel nostro 
-sviluppo è richiesta per la dimostrazione del 
-	teorema di ricorsione primitiva, così deve essere definita prima che la definizione 
-	per ricorsione primitiva sia disponibile. La teoria \theoryimp{prim\_rec} 
+è definita in modo più naturale per ricorsione primitiva. Tuttavia, nel nostro
+sviluppo è richiesta per la dimostrazione del
+	teorema di ricorsione primitiva, così deve essere definita prima che la definizione
+	per ricorsione primitiva sia disponibile. La teoria \theoryimp{prim\_rec}
 	di conseguenza contiene la seguente definizione non ricorsiva di \ml{<}:
 
 \begin{hol}
@@ -1438,10 +1438,10 @@ sviluppo è richiesta per la dimostrazione del
 \end{hol}
 
 \noindent
-Questa definizione dice che {\small\verb%m < n%} se esiste un insieme (con 
-funzione caratteristica {\small\verb%P%}) che è chiuso 
-verso il basso\footnote{Un insieme di numeri è \textit{chiuso verso il basso} se ogni volta che 
-contiene il successore di un numero, contiene anche il numero.} e 
+Questa definizione dice che {\small\verb%m < n%} se esiste un insieme (con
+funzione caratteristica {\small\verb%P%}) che è chiuso
+verso il basso\footnote{Un insieme di numeri è \textit{chiuso verso il basso} se ogni volta che
+contiene il successore di un numero, contiene anche il numero.} e
 contiene {\small\verb%m%} ma non {\small\verb%n%}.
 \index{prim_rec, la teoria HOL@\ml{prim\_rec}, la teoria \HOL{}|)}
 
@@ -1451,10 +1451,10 @@ contiene {\small\verb%m%} ma non {\small\verb%n%}.
 
 \index{definizioni ricorsive, nella logica HOL@definizioni ricorsive, nella logica \HOL{}!automatiche, per i numeri}
 \index{teorema di ricorsione primitiva!uso automatico del, nel sistema HOL@uso automatico del, nel sistema \HOL{}|(}
-Il teorema 
+Il teorema
 \index{definizioni ricorsive primitive, nella logica HOL@definizioni ricorsive primitive, nella logica \HOL{}!giustificazione delle}
-di ricorsione primitiva può essere usato per giustificare qualsiasi definizione di una funzione 
-sui numeri naturali per ricorsione primitiva. Per esempio, una 
+di ricorsione primitiva può essere usato per giustificare qualsiasi definizione di una funzione
+sui numeri naturali per ricorsione primitiva. Per esempio, una
 definizione ricorsiva primitiva nella logica di ordine superiore della forma
 
 \begin{hol}
@@ -1476,10 +1476,10 @@ definizione ricorsiva primitiva nella logica di ordine superiore della forma
 \end{alltt}
 \end{hol}
 
-L'esistenza di una funzione ricorsiva \ml{fun} che soddisfa queste due 
-equazioni segue direttamente dal teorema di ricorsione primitiva 
+L'esistenza di una funzione ricorsiva \ml{fun} che soddisfa queste due
+equazioni segue direttamente dal teorema di ricorsione primitiva
 \ml{num\_Axiom} mostrato di sopra. La specializzazione delle variabili quantificate \verb!x!
-e \verb!f! con un'adeguata istanziazione dei tipi di \ml{num\_Axiom} così 
+e \verb!f! con un'adeguata istanziazione dei tipi di \ml{num\_Axiom} così
 che
 
 \begin{hol}
@@ -1497,11 +1497,11 @@ che
 \end{alltt}
 \end{hol}
 
-\noindent Questo teorema permette d'introdurre una costante \ml{fun} (attraverso il 
-meccanismo\linebreak definizionale delle specifiche di costante---si veda la Sezione~\ref{conspec}) 
-per denotare la funzione ricorsiva che soddisfa le due equazioni nel corpo 
-del teorema. L'introduzione di una costante \ml{fun} per nominare la funzione che è affermata 
-esistere dal teorema mostrato di sopra, e la semplificazione per mezzo di una $\beta$-riduzione, 
+\noindent Questo teorema permette d'introdurre una costante \ml{fun} (attraverso il
+meccanismo\linebreak definizionale delle specifiche di costante---si veda la Sezione~\ref{conspec})
+per denotare la funzione ricorsiva che soddisfa le due equazioni nel corpo
+del teorema. L'introduzione di una costante \ml{fun} per nominare la funzione che è affermata
+esistere dal teorema mostrato di sopra, e la semplificazione per mezzo di una $\beta$-riduzione,
 porta al seguente teorema:
 
 \begin{hol}
@@ -1511,8 +1511,8 @@ porta al seguente teorema:
 \end{alltt}
 \end{hol}
 
-\noindent Segue immediatamente da questo teorema che la costante \ml{fun} 
-soddisfa le equazioni di definizione ricorsiva primitiva date dal teorema mostrato 
+\noindent Segue immediatamente da questo teorema che la costante \ml{fun}
+soddisfa le equazioni di definizione ricorsiva primitiva date dal teorema mostrato
 di sotto:
 
 \begin{hol}
@@ -1522,10 +1522,10 @@ di sotto:
 \end{alltt}
 \end{hol}
 
-Per automatizzare l'uso del teorema di ricorsione primitiva nel derivare 
-definizioni ricorsive di questo genere, il sistema \HOL{} fornisce una funzione 
-che automaticamente dimostra l'esistenza di funzioni ricorsive 
-primitive e poi fa una specifica di costante per introdurre la costante 
+Per automatizzare l'uso del teorema di ricorsione primitiva nel derivare
+definizioni ricorsive di questo genere, il sistema \HOL{} fornisce una funzione
+che automaticamente dimostra l'esistenza di funzioni ricorsive
+primitive e poi fa una specifica di costante per introdurre la costante
 che denota una tale funzione:
 
 \begin{holboxed}
@@ -1536,22 +1536,22 @@ che denota una tale funzione:
 \end{verbatim}
 \end{holboxed}
 
-\noindent Di fatto, \ml{new\_recursive\_definition} gestisce 
-definizioni ricorsive primitive su un range di tipi, non solo sui 
+\noindent Di fatto, \ml{new\_recursive\_definition} gestisce
+definizioni ricorsive primitive su un range di tipi, non solo sui
 numeri naturali. Per i dettagli, si veda la documentazione \REFERENCE.
 
-In modo ancora più conveniente, la funzione \ml{Define} (si veda 
-la Sezione~\ref{sec:high-level-proof-steps}) supporta la ricorsione 
-primitiva, insieme con altri stili di ricorsione, e non richiede 
-all'utente di citare l'assioma di ricorsione primitiva. Può, tuttavia, 
-richiedere di eseguire dimostrazioni di terminazione; fortunatamente, non è necessario 
+In modo ancora più conveniente, la funzione \ml{Define} (si veda
+la Sezione~\ref{sec:high-level-proof-steps}) supporta la ricorsione
+primitiva, insieme con altri stili di ricorsione, e non richiede
+all'utente di citare l'assioma di ricorsione primitiva. Può, tuttavia,
+richiedere di eseguire dimostrazioni di terminazione; fortunatamente, non è necessario
 fare queste dimostrazioni per le ricorsioni primitive.
 
 \subsubsection{Scelta dipendente e benfondatezza}
 \label{prim-rec-conseq}
 
-Il teorema di ricorsione primitiva è utile oltre il suo scopo principale di 
-giustificare le definizioni ricorsive. Per esempio, la teoria 
+Il teorema di ricorsione primitiva è utile oltre il suo scopo principale di
+giustificare le definizioni ricorsive. Per esempio, la teoria
 \theoryimp{prim\_rec} dimostra l'Assioma di Scelta Dipendente ({\small\verb+DC+}).
 
 \begin{hol}
@@ -1565,10 +1565,10 @@ giustificare le definizioni ricorsive. Per esempio, la teoria
 \end{verbatim}
 \end{hol}
 
-La dimostrazione usa {\small\verb+SELECT_AX+}. Il teorema {\small\verb+DC+} 
-è utile quando si desidera costruire una funzione che ha una certa 
-proprietà da una relazione. Per esempio, un modo di definire la 
-benfondatezza di una relazione $R$ è quello di dire che non ha infinite 
+La dimostrazione usa {\small\verb+SELECT_AX+}. Il teorema {\small\verb+DC+}
+è utile quando si desidera costruire una funzione che ha una certa
+proprietà da una relazione. Per esempio, un modo di definire la
+benfondatezza di una relazione $R$ è quello di dire che non ha infinite
 $R$ catene discendenti.
 %
 \begin{hol}
@@ -1581,13 +1581,13 @@ $R$ catene discendenti.
      |- !R. WF R = wellfounded R
 \end{verbatim}
 \end{hol}
-Per mezzo dell'uso di {\small\verb+DC+}, questo enunciato può essere dimostrato 
-essere uguale alla nozione di benfondatezza {\small\verb+WF+} 
-(cioè, che ogni insieme ha un elemento $R$-minimale) definita nella teoria 
+Per mezzo dell'uso di {\small\verb+DC+}, questo enunciato può essere dimostrato
+essere uguale alla nozione di benfondatezza {\small\verb+WF+}
+(cioè, che ogni insieme ha un elemento $R$-minimale) definita nella teoria
 \theoryimp{relation}.
 
-Nella teoria \theoryimp{prim\_rec} sono anche dimostrati teoremi che affermano la benfondatezza della relazione di predecessore e 
-della relazione minore-di, esattamente come la benfondatezza delle funzioni 
+Nella teoria \theoryimp{prim\_rec} sono anche dimostrati teoremi che affermano la benfondatezza della relazione di predecessore e
+della relazione minore-di, esattamente come la benfondatezza delle funzioni
 di misura.
 
 \begin{hol}
@@ -1609,7 +1609,7 @@ di misura.
 \subsection{Aritmetica}
 \index{aritmetica, la teoria HOL della@aritmetica, la teoria \HOL{} della}
 
-La teoria \HOL{} \theoryimp{arithmetic} contiene le definizioni ricorsive 
+La teoria \HOL{} \theoryimp{arithmetic} contiene le definizioni ricorsive
 primitive, dei seguenti operatori aritmetici standard.
 
 \begin{hol}
@@ -1635,8 +1635,8 @@ primitive, dei seguenti operatori aritmetici standard.
 \end{verbatim}
 \end{hol}
 %
-Si noti che \holtxt{EXP} è un infisso. La notazione infissa 
-\holtxt{**} può essere usata al posto di \holtxt{EXP}. Così 
+Si noti che \holtxt{EXP} è un infisso. La notazione infissa
+\holtxt{**} può essere usata al posto di \holtxt{EXP}. Così
 (\holtxt{x EXP y}) significa $x^y$, e lo stesso vale per (\holtxt{x ** y}).
 
 \paragraph{Operatori di confronto}
@@ -1657,7 +1657,7 @@ Un completo insieme di operatori di confronto è definito in termini di \verb+<+.
 \paragraph{Divisione e modulo}
 
 Per introdurre gli operatori divisione ({\small\verb+DIV+}, infisso) e
-modulo ({\small\verb+MOD+}, infisso) è usata una specifica di costante, insieme con le loro 
+modulo ({\small\verb+MOD+}, infisso) è usata una specifica di costante, insieme con le loro
 proprietà caratterizzanti.
 \begin{hol}
 \index{MOD, la costante HOL@\ml{MOD}, la costante \HOL{}}
@@ -1710,9 +1710,9 @@ Il fattoriale di un numero è una definizione ricorsiva primitiva.
 \index{FUNPOW, la costante HOL@\ml{FUNPOW}, la costante \HOL{}}
 
 L'applicazione iterata $f^n x$ di una funzione $f : \alpha \to
-\alpha$ è definita per ricorsione primitiva. La definizione 
-(\ml{FUNPOW}) è tail-recursive, il che può essere scomodo per ragionarci 
-sopra. Una caratterizzazione alternativa (\ml{FUNPOW\_SUC}) può essere più facile 
+\alpha$ è definita per ricorsione primitiva. La definizione
+(\ml{FUNPOW}) è tail-recursive, il che può essere scomodo per ragionarci
+sopra. Una caratterizzazione alternativa (\ml{FUNPOW\_SUC}) può essere più facile
 da applicare quando si fanno delle dimostrazioni.
 %
 \begin{hol}
@@ -1727,16 +1727,16 @@ da applicare quando si fanno delle dimostrazioni.
 
 \medskip
 
-Su questa base, quando è eseguito il build di \HOL{} una serie \adhoc\ ma utile di più duecentocinquanta 
-teoremi elementari sono dimostrati 
-e archiviati nella teoria \theoryimp{arithmetic}. Per una lista 
-completa dei teoremi disponibili, si veda \REFERENCE. Si veda inoltre 
-la Sezione~\ref{sec:while-loops} per la discussione dell'operatore 
+Su questa base, quando è eseguito il build di \HOL{} una serie \adhoc\ ma utile di più duecentocinquanta
+teoremi elementari sono dimostrati
+e archiviati nella teoria \theoryimp{arithmetic}. Per una lista
+completa dei teoremi disponibili, si veda \REFERENCE. Si veda inoltre
+la Sezione~\ref{sec:while-loops} per la discussione dell'operatore
 \holtxt{LEAST}, che restituisce il più piccolo numero che soddisfa un predicato.
 
 \subsubsection{Informazioni sulla grammatica}
 
-La seguente tabella da lo status di parsing delle costanti 
+La seguente tabella da lo status di parsing delle costanti
 aritmetiche.
 
 \begin{center}
@@ -1759,11 +1759,11 @@ Operatore & Forza & Associatività \\ \hline
 \subsection{Numerali}\label{sec:numerals}
 
 Il tipo \ml{num}
-\index{num, il tipo ... nella logica \HOL{}@\ml{num}, il tipo ... nella logica  \HOL{}} 
-di solito è pensato essere fornito di una collezione infinita di 
-numerali: \ml{1}, \ml{2}, \ml{3}, \etc. Tuttavia, la logica \HOL{} non ha 
-alcun modo di definire tali famiglie infinite di costanti; piuttosto, tutti 
-i numerali diversi da $0$ sono di fatto costruiti dalle costanti 
+\index{num, il tipo ... nella logica \HOL{}@\ml{num}, il tipo ... nella logica  \HOL{}}
+di solito è pensato essere fornito di una collezione infinita di
+numerali: \ml{1}, \ml{2}, \ml{3}, \etc. Tuttavia, la logica \HOL{} non ha
+alcun modo di definire tali famiglie infinite di costanti; piuttosto, tutti
+i numerali diversi da $0$ sono di fatto costruiti dalle costanti
 introdotte dalle seguenti definizioni:
 
 \begin{verbatim}
@@ -1779,14 +1779,14 @@ introdotte dalle seguenti definizioni:
 \[
    \ml{NUMERAL}(\ml{BIT1}(\ml{BIT2}\;\ml{ZERO}))
 \]
-e il parser e il pretty-printer di \HOL{} fanno apparire tali termini come 
-numerali. Questa rappresentazione binaria per i numerali permette un 
-calcolo asintoticamente efficiente. I teoremi che supportano i calcoli 
-aritmetici sui numerali si possono trovare nella teoria 
-\theoryimp{numeral}; questi sono meccanizzati dalla libreria \verb+reduce+. Così, 
-i calcoli aritmetici sono eseguiti per passi deduttivi in \HOL. Per 
-esempio il seguente calcolo di $2 ^{(1023 + 14)/9}$ richiede 
-approssimativamente 4,200 passi d'inferenza primitiva e si completa in 30 
+e il parser e il pretty-printer di \HOL{} fanno apparire tali termini come
+numerali. Questa rappresentazione binaria per i numerali permette un
+calcolo asintoticamente efficiente. I teoremi che supportano i calcoli
+aritmetici sui numerali si possono trovare nella teoria
+\theoryimp{numeral}; questi sono meccanizzati dalla libreria \verb+reduce+. Così,
+i calcoli aritmetici sono eseguiti per passi deduttivi in \HOL. Per
+esempio il seguente calcolo di $2 ^{(1023 + 14)/9}$ richiede
+approssimativamente 4,200 passi d'inferenza primitiva e si completa in 30
 milli-secondi.
 %
 \setcounter{sessioncount}{0}
@@ -1801,15 +1801,15 @@ milli-secondi.
 \paragraph {Costruzione dei numerali}
 \index{numerali, nella logica HOL@numerali, nella logica \HOL{}!costruzione dei}
 
-I numerali si possono naturalmente costruire usando\linebreak \ml{mk\_comb}, e si possono scomporre con 
-\ml{dest\_comb}; comunque, un'interfaccia più conveniente per questa 
+I numerali si possono naturalmente costruire usando\linebreak \ml{mk\_comb}, e si possono scomporre con
+\ml{dest\_comb}; comunque, un'interfaccia più conveniente per questa
 funzionalità è fornita dalle funzioni \ml{mk\_numeral},
-\ml{dest\_numeral}, e \ml{is\_numeral} (che si trovano nella structure 
-\ml{numSyntax}). Questi entry-point fanno uso di una structure \ML 
-\ml{Arbnum} che implementa numeri di precisione arbitraria {\verb+num+}. La 
-seguente sessione mostra come i numerali \HOL{} sono costruiti da elementi del 
-tipo \verb+num+ e come i numerali sono de-costruiti. La structure 
-{\small\verb+Arbnum+} fornisce una collezione completa di operazioni 
+\ml{dest\_numeral}, e \ml{is\_numeral} (che si trovano nella structure
+\ml{numSyntax}). Questi entry-point fanno uso di una structure \ML
+\ml{Arbnum} che implementa numeri di precisione arbitraria {\verb+num+}. La
+seguente sessione mostra come i numerali \HOL{} sono costruiti da elementi del
+tipo \verb+num+ e come i numerali sono de-costruiti. La structure
+{\small\verb+Arbnum+} fornisce una collezione completa di operazioni
 aritmetiche, che usano i nomi usuali per le operazioni, ad esempio \verb|+|,
 \verb|*|, \verb|-|, ecc.
 
@@ -1833,19 +1833,19 @@ aritmetiche, che usano i nomi usuali per le operazioni, ad esempio \verb|+|,
 \index{token!parsing dei numerali}
 \index{numerali, nella logica HOL@numerali, nella logica \HOL{}!parsing dei}
 %
-Le sequenze semplici di cifre sono rese dal parser come numeri decimali, ma il parser 
-supporta anche l'input di numeri in notazione binaria, ottale ed 
-esadecimale. I numeri possono essere scritti in forma binaria ed esadecimale aggiungendo ad essi 
-come prefisso le stringhe \holtxt{0b} e \holtxt{0x} rispettivamente. Le 
-`cifre' A--F nei numeri esadecimali possono essere scritte con le lettere maiuscole o 
-minuscole. I numeri binari hanno le loro cifre più significative più a sinistra. Ai 
-fini della retro-compatibilità i numeri ottali non sono 
-abilitati di default, ma se la reference 
-\ml{base\_tokens.allow\_octal\_input} è impostata a \ml{true}, i numeri 
+Le sequenze semplici di cifre sono rese dal parser come numeri decimali, ma il parser
+supporta anche l'input di numeri in notazione binaria, ottale ed
+esadecimale. I numeri possono essere scritti in forma binaria ed esadecimale aggiungendo ad essi
+come prefisso le stringhe \holtxt{0b} e \holtxt{0x} rispettivamente. Le
+`cifre' A--F nei numeri esadecimali possono essere scritte con le lettere maiuscole o
+minuscole. I numeri binari hanno le loro cifre più significative più a sinistra. Ai
+fini della retro-compatibilità i numeri ottali non sono
+abilitati di default, ma se la reference
+\ml{base\_tokens.allow\_octal\_input} è impostata a \ml{true}, i numeri
 ottali sono quelli che appaiono con gli zero in testa.
 
-Infine, tutti i numeri possono essere intervallati da caratteri di underscore 
-(\ml{\_}). Questi possono essere usati per raggruppare le cifre per aggiungere leggibilità 
+Infine, tutti i numeri possono essere intervallati da caratteri di underscore
+(\ml{\_}). Questi possono essere usati per raggruppare le cifre per aggiungere leggibilità
 e non hanno alcun effetto semantico.
 
 Così
@@ -1867,8 +1867,8 @@ Così
 
 \paragraph{Numerali e numeri di Peano}
 
-I numerali sono collegati ai numeri costruiti da \holtxt{0} e \holtxt{SUC} 
-attraverso la regola d'inferenza derivata \ml{num\_CONV}, che si trova 
+I numerali sono collegati ai numeri costruiti da \holtxt{0} e \holtxt{SUC}
+attraverso la regola d'inferenza derivata \ml{num\_CONV}, che si trova
 nella libreria \ml{numLib}.
 
 \begin{holboxed}
@@ -1878,7 +1878,7 @@ nella libreria \ml{numLib}.
 \end{verbatim}
 \end{holboxed}
 
-\noindent \ml{num\_CONV} può essere usata per generare l'equazione 
+\noindent \ml{num\_CONV} può essere usata per generare l'equazione
 `\ml{SUC}' per qualsiasi numerale diverso da zero. Per esempio:
 
 \begin{session}
@@ -1898,12 +1898,12 @@ nella libreria \ml{numLib}.
 \subsubsection{Overloading degli operatori aritmetici}
 \label{arith-overloading}
 
-Quando sono caricate altre teorie numeriche (come quelle per i reali o 
-gli interi), i numerali sono sottoposti all'overloading così che il numerale {\small\verb+1+} può 
-stare di fatto per un numero naturale, un intero o un valore reale. Il 
-parser ha un passo di risoluzione dell'overloading in cui tenta di 
-determinare il tipo corrente da dare a un numero. Per esempio, nella 
-seguente sessione, la teoria degli interi è caricata, dopo di che il 
+Quando sono caricate altre teorie numeriche (come quelle per i reali o
+gli interi), i numerali sono sottoposti all'overloading così che il numerale {\small\verb+1+} può
+stare di fatto per un numero naturale, un intero o un valore reale. Il
+parser ha un passo di risoluzione dell'overloading in cui tenta di
+determinare il tipo corrente da dare a un numero. Per esempio, nella
+seguente sessione, la teoria degli interi è caricata, dopo di che il
 numerale \verb+2+ è considerato essere un intero.
 %
 \begin{session}
@@ -1920,8 +1920,8 @@ numerale \verb+2+ è considerato essere un intero.
 \end{verbatim}
 \end{session}
 
-Al fine di specificare in modo preciso il tipo desiderato, l'utente può usare dei suffissi 
-di un singolo carattere (`\ml{n}' per i numeri naturali, e `\ml{i}' per 
+Al fine di specificare in modo preciso il tipo desiderato, l'utente può usare dei suffissi
+di un singolo carattere (`\ml{n}' per i numeri naturali, e `\ml{i}' per
 gli interi):
 \begin{session}
 \begin{verbatim}
@@ -1933,27 +1933,27 @@ gli interi):
 \end{verbatim}
 \end{session}
 
-Un letterale numerico per un tipo \HOL{} diverso da \verb+num+, come 
-\verb+42i+, è rappresentato dall'applicazione di una funzione 
-d'\emph{iniezione} di tipo {\small\verb+num -> ty+} per un 
-numerale. La funzione di iniezione è differente per ogni tipo 
+Un letterale numerico per un tipo \HOL{} diverso da \verb+num+, come
+\verb+42i+, è rappresentato dall'applicazione di una funzione
+d'\emph{iniezione} di tipo {\small\verb+num -> ty+} per un
+numerale. La funzione di iniezione è differente per ogni tipo
 {\small\verb+ty+}. Si veda la Sezione \ref{integers} per un'ulteriore discussione.
 
-Le funzioni {\verb+mk_numeral+}, {\verb+dest_numeral+}, e 
-{\verb+is_numeral+} funzionano solo per numerali, e per letterali 
-numerici con suffissi di un carattere diverso da {\small\verb+n+}. Per 
-informazioni su come installare nuovi suffissi di un carattere, si consulti la 
+Le funzioni {\verb+mk_numeral+}, {\verb+dest_numeral+}, e
+{\verb+is_numeral+} funzionano solo per numerali, e per letterali
+numerici con suffissi di un carattere diverso da {\small\verb+n+}. Per
+informazioni su come installare nuovi suffissi di un carattere, si consulti la
 voce \ml{add\_numeral\_form} in \REFERENCE.
 
 \subsection{Interi}
 \label{integers}
 \index{interi, la teoria HOL degli@interi, la teoria \HOL{} degli}
 
-In \HOL{} c'è un'estesa teoria degli interi. Il tipo degli interi 
-è costruito come un quoziente su coppie di numeri naturali. E' definita 
-una collezione standard di operatori. Questi sono degli overload con 
+In \HOL{} c'è un'estesa teoria degli interi. Il tipo degli interi
+è costruito come un quoziente su coppie di numeri naturali. E' definita
+una collezione standard di operatori. Questi sono degli overload con
 operazioni analoghe sui numeri naturali, e sui numeri reali.
-Le costanti definite nella teoria degli interi includono quelle che si trovano nella 
+Le costanti definite nella teoria degli interi includono quelle che si trovano nella
 seguente tabella.
 
 \begin{center}
@@ -1975,8 +1975,8 @@ Costante & Simbolo sottoposto a overload & Forza & Associatività \\ \hline
 \end{tabular}}
 \end{center}
 
-Il simbolo sottoposto a overload {\small\verb+& : num -> int+} denota la 
-funzione d'iniezione dai numeri naturali agli interi. La seguente 
+Il simbolo sottoposto a overload {\small\verb+& : num -> int+} denota la
+funzione d'iniezione dai numeri naturali agli interi. La seguente
 sessione illustra come sono trattati l'overloading e i letterali interi.
 
 \setcounter{sessioncount}{0}
@@ -1998,16 +1998,16 @@ Term `1i = &(1n + 0n)`;
 \subsection{Numeri razionali}\label{rationals}
 \index{numeri razionali, la teoria HOL dei@razionali, la teoria \HOL{} dei|(}
 
-Il tipo dei razionali è costruito come un quoziente di coppie ordinate di 
-interi (il numeratore e il denominatore di una frazione) il cui secondo 
-componente non deve essere zero. Per rendere le cose più semplici nella teoria \HOL\, 
-il segno di un numero razionale è sempre spostato al numeratore. 
+Il tipo dei razionali è costruito come un quoziente di coppie ordinate di
+interi (il numeratore e il denominatore di una frazione) il cui secondo
+componente non deve essere zero. Per rendere le cose più semplici nella teoria \HOL\,
+il segno di un numero razionale è sempre spostato al numeratore.
 Così, il denominatore è sempre positivo.
 
-E' definita una collezione di operatori, che sono sottoposti a overload con 
-operazioni analoghe sugli interi. Questi includono quelli che si trovano nella 
-seguente tabella. L'iniezione dai numeri naturali è supportata 
-dal simbolo sottoposto a overload {\small\verb+& : num -> rat+} e dal 
+E' definita una collezione di operatori, che sono sottoposti a overload con
+operazioni analoghe sugli interi. Questi includono quelli che si trovano nella
+seguente tabella. L'iniezione dai numeri naturali è supportata
+dal simbolo sottoposto a overload {\small\verb+& : num -> rat+} e dal
 suffisso {\small\verb+q+}.
 
 
@@ -2029,10 +2029,10 @@ Costante & Simbolo sottoposto a overload & Forza & Associatività \\ \hline
 \end{tabular}}
 \end{center}
 
-I teoremi nella teoria dei numeri razionali includono le proprietà del campo, 
-le regole aritmetiche la manipolazione delle (in)equazioni e la loro riduzione a 
-(in)equazioni tra interi, le proprietà delle relazioni minore-di e la 
-densità dei numeri razionali. Per i dettagli, si consulti \REFERENCE\ e i 
+I teoremi nella teoria dei numeri razionali includono le proprietà del campo,
+le regole aritmetiche la manipolazione delle (in)equazioni e la loro riduzione a
+(in)equazioni tra interi, le proprietà delle relazioni minore-di e la
+densità dei numeri razionali. Per i dettagli, si consulti \REFERENCE\ e i
 file sorgenti.
 
 \index{numeri razionali, la teoria HOL dei@razionali, la teoria \HOL{} dei|)}
@@ -2040,20 +2040,20 @@ file sorgenti.
 \subsection{Numeri reali}\label{reals}
 \index{numeri reali, la teoria HOL dei@numeri reali, la teoria \HOL{} dei|(}
 
-C'è un'estesa collezione di teorie che costituisce lo 
-sviluppo dei numeri reali e dell'analisi in HOL, dovuta a John Harrison 
-\cite{jrh:thesis}. Daremo solo una panoramica approssimativa dello 
-sviluppo; il lettore interessato dovrebbe consultare \REFERENCE\ e 
+C'è un'estesa collezione di teorie che costituisce lo
+sviluppo dei numeri reali e dell'analisi in HOL, dovuta a John Harrison
+\cite{jrh:thesis}. Daremo solo una panoramica approssimativa dello
+sviluppo; il lettore interessato dovrebbe consultare \REFERENCE\ e
 la tesi di Harrison.
 
-Gli assiomi per i numeri reali sono derivati dai `mezzi reali' che 
-sono costruiti dai `mezzi razionali'. Questa parte dello sviluppo 
+Gli assiomi per i numeri reali sono derivati dai `mezzi reali' che
+sono costruiti dai `mezzi razionali'. Questa parte dello sviluppo
 è registrata in {\small\verb+hratTheory+} e
-{\small\verb+hrealTheory+}, ma non è usata una volta che i reali sono stati 
-costruiti. Gli assiomi reali sono derivati nella teoria 
-{\small\verb+realaxTheory+}. Una collezione standard di operatori sui 
+{\small\verb+hrealTheory+}, ma non è usata una volta che i reali sono stati
+costruiti. Gli assiomi reali sono derivati nella teoria
+{\small\verb+realaxTheory+}. Una collezione standard di operatori sui
 reali, e di teoremi che li riguardano, si trova in {\small\verb+realaxTheory+}
-and {\small\verb+realTheory+}. Gli operatori e il loro status di parsing sono 
+and {\small\verb+realTheory+}. Gli operatori e il loro status di parsing sono
 elencati nella seguente tabella.
 
 \begin{center}
@@ -2074,20 +2074,20 @@ Constante & Simbolo sottoposto a overload & Forza & Associatività \\ \hline
 \end{tabular}}
 \end{center}
 
-Sulla base di {\small\verb+realTheory+}, è costruita la seguente sequenza di 
+Sulla base di {\small\verb+realTheory+}, è costruita la seguente sequenza di
 teorie:
 
 \begin{description}
-\item [topology] Topologie e spazi metrici, inclusa la metrica sulla 
+\item [topology] Topologie e spazi metrici, inclusa la metrica sulla
 linea reale.
-\item [nets] Reti di convergenza Moore-Smith, e casi speciali come 
+\item [nets] Reti di convergenza Moore-Smith, e casi speciali come
 le sequenze.
 \item [seq] Sequenze e serie di numeri reali.
 \item [lim] Limiti, continuità e differenziazione.
 \item [powser] Serie potenza.
 \item [transc] Funzioni trascendenti, \emph{ad esempio}, exp, sin,
-cos, ln, root, sqrt, pi, tan, asn, acs, atn. Inoltre la misura integrale 
-Kurzweil-Henstock il teorema fondamentale del calcolo, e il teorema di 
+cos, ln, root, sqrt, pi, tan, asn, acs, atn. Inoltre la misura integrale
+Kurzweil-Henstock il teorema fondamentale del calcolo, e il teorema di
 McLaurin
 
 \end{description}
@@ -2095,7 +2095,7 @@ McLaurin
 
 \index{numeri complessi, la teoria HOL dei@numeri complessi, la teoria \HOL{} dei}
 \noindent
-\HOL{} include anche una teoria di base dei numeri complessi (\ml{complexTheory}), dove il tipo \holtxt{complex} è un'abbreviazione di tipo per una coppia di numeri reali. 
+\HOL{} include anche una teoria di base dei numeri complessi (\ml{complexTheory}), dove il tipo \holtxt{complex} è un'abbreviazione di tipo per una coppia di numeri reali.
 Il valore $\sqrt{-1}$ è la costante \HOL{} \holtxt{i}.
 I numerali sono supportati (con il suffisso \holtxt{c} disponibile per forzare il parsing dei numerali come numeri complessi).
 Sono definite le operazioni aritmetiche standard, con dimostrati gli appropriati teoremi che le riguardano.
@@ -2103,21 +2103,21 @@ Sono definite le operazioni aritmetiche standard, con dimostrati gli appropriati
 \subsection{Teoria della probabilità}\label{prob}
 \index{probabilità, la teoria HOL della@probabilità, la teoria \HOL{} della}
 
-Una costruzione fondazionale della teoria della probabilità sviluppata da Joe 
-Hurd~\cite{hurd-thesis}. Per prima cosa è definito un tipo di sequenze booleane 
-per modellare una sequenza infinita di lanci di monete. Poi è formalizzata 
-una funzione di probabilità che prende come input un insieme di sequenze 
-booleane, e restituisce un numero reale tra 0 e 1. Sfortunatamente 
-non a tutti gli insiemi può essere assegnata una probabilità (il paradosso di 
-Banach-Tarski), piuttosto gli insiemi a cui può essere assegnata una probabilità sono 
-chiamati \emph{insiemi misurabili}, e anche questi sono formalizzati nella 
+Una costruzione fondazionale della teoria della probabilità sviluppata da Joe
+Hurd~\cite{hurd-thesis}. Per prima cosa è definito un tipo di sequenze booleane
+per modellare una sequenza infinita di lanci di monete. Poi è formalizzata
+una funzione di probabilità che prende come input un insieme di sequenze
+booleane, e restituisce un numero reale tra 0 e 1. Sfortunatamente
+non a tutti gli insiemi può essere assegnata una probabilità (il paradosso di
+Banach-Tarski), piuttosto gli insiemi a cui può essere assegnata una probabilità sono
+chiamati \emph{insiemi misurabili}, e anche questi sono formalizzati nella
 teoria HOL.
 
-Su questa base, la teoria della probabilità è usata per definire 
-una funzione di esempio che prende una sequenza infinita di lanci di monete e 
+Su questa base, la teoria della probabilità è usata per definire
+una funzione di esempio che prende una sequenza infinita di lanci di monete e
 un intero positivo $N$, e restituisce un intero $n$ nel range $0\le
-n < N$, selezionato uniformemente a caso tra le scelte possibili. Questa 
-funzione di esempio per la distribuzione uniforme è usata più avanti per verificare 
+n < N$, selezionato uniformemente a caso tra le scelte possibili. Questa
+funzione di esempio per la distribuzione uniforme è usata più avanti per verificare
 il test di primalità di Miller-Rabin.
 
 \subsection{Vettori di bit}
@@ -2133,38 +2133,38 @@ il test di primalità di Miller-Rabin.
 \newcommand{\hash}{\,\holtxt{\#}\,}
 \newcommand{\oo}[2]{\mbox{\holtxt{#1\,'\,#2}}}
 
-\HOL{} fornisce una teoria di vettori du bit, o parole di $n$-bit. Per esempio, nelle architetture 
+\HOL{} fornisce una teoria di vettori du bit, o parole di $n$-bit. Per esempio, nelle architetture
 informatiche si trovano:
 byte/octet ($n = 8$), mezze-parole ($n = 16$), parole ($n = 32$) e parole-lunghe
-($n = 64$). Nella teoria \theoryimp{words}, i vettori di bit sono rappresentati come 
-\emph{prodotti cartesiani finiti}: a una parola di $n$-bit è dato il tipo $\worda$ 
-dove la \emph{dimensione} del tipo $\alpha$ determina la lunghezza $n$ della parola. Questo 
-approccio viene da un'idea di John Harrison, che fu presentata al TPHOLs del 
+($n = 64$). Nella teoria \theoryimp{words}, i vettori di bit sono rappresentati come
+\emph{prodotti cartesiani finiti}: a una parola di $n$-bit è dato il tipo $\worda$
+dove la \emph{dimensione} del tipo $\alpha$ determina la lunghezza $n$ della parola. Questo
+approccio viene da un'idea di John Harrison, che fu presentata al TPHOLs del
 2005\footnote{La teoria attuale sussume teorie di parola precedenti -- si è evoluta da uno sviluppo basato su una costruzione di classi di equivalenza. La teoria di parola di Wai Wong, che era basata sulla teoria \ml{rich\_list} di Paul Curzon, non è più distribuita con HOL. I principali vantaggi della teoria attuale sono che c'è un'unica teoria per tutte le dimensioni di parole e che non sono richiesti effetti secondari della lunghezza delle parole.}
 
 \subsubsection{Prodotti cartesiani finiti}
 
-La teoria \HOL{} \theoryimp{fcp} introduce un operatore di tipo infisso 
-\holtxt{**}, che è usato per rappresentare prodotti cartesiani finiti\footnote{La teoria dei 
+La teoria \HOL{} \theoryimp{fcp} introduce un operatore di tipo infisso
+\holtxt{**}, che è usato per rappresentare prodotti cartesiani finiti\footnote{La teoria dei
 prodotti cartesiani finiti è stata portata da HOL Light.}. Il tipo \holtxt{'a ** 'b}, o equivalentemente \fcp{'a}{'b}, è concettualmente equivalente a:
 \begin{hol}
 $\underbrace{\ty{'a}\;\hash\;\ty{'a}\;\hash\;\cdots\;\hash\;\ty{'a}}_{\holtxt{dimindex('b)}}$
 \end{hol}
 dove \holtxt{dimindex('b)} è la cardinalità di \holtxt{univ(:'b)} quando \ty{'b} è finito e uno quando è infinito. Così, \fcp{'a}{\num} è analogo a \ty{'a}, e \fcp{'a}{\bool} è analogo a \ty{'a}\hash\ty{'a}. Sono supportati nomi di tipo numerici, così si può lavorare liberamente con insiemi indicizzati di qualsiasi dimensione, ad esempio il tipo \ty{32} ha trentadue elementi e \fcp{\bool}{32} rappresenta parole di 32-bit.
 
-Si accede alle \emph{componenti} di un prodotto cartesiano finito con una 
-funzione di indicizzazione 
+Si accede alle \emph{componenti} di un prodotto cartesiano finito con una
+funzione di indicizzazione
 \begin{hol}
 \begin{alltt}
    fcp_index : \fcp{'a}{'b}\rarr\num\rarr\ty{'a}
 \end{alltt}
 \end{hol}
-che tipicamente è scritta con un apostrofo infisso: 
-\oo{x}{i} denota il valore del vettore \holtxt{x} alla posizione \holtxt{i}. 
+che tipicamente è scritta con un apostrofo infisso:
+\oo{x}{i} denota il valore del vettore \holtxt{x} alla posizione \holtxt{i}.
 Tipicamente, gli indici sono vincolati ad essere minori della dimensione di \ty{'b}.
 
-Il seguente teorema mostra che due prodotti cartesiani \holtxt{x} e 
-\holtxt{y} sono uguali se, e solo se, tutte le loro componenti \oo{x}{i} e 
+Il seguente teorema mostra che due prodotti cartesiani \holtxt{x} e
+\holtxt{y} sono uguali se, e solo se, tutte le loro componenti \oo{x}{i} e
 \oo{y}{i} sono uguali:
 \begin{hol}
 \begin{verbatim}
@@ -2172,7 +2172,7 @@ CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x ' i = y ' i)
 \end{verbatim}
 \end{hol}
 
-Al fine di costruire prodotti cartesiani, la teoria \theoryimp{fcp} introduce un 
+Al fine di costruire prodotti cartesiani, la teoria \theoryimp{fcp} introduce un
 binder \holtxt{FCP}, che è caratterizzato dai seguenti teoremi:
 \begin{hol}
 \begin{verbatim}
@@ -2181,24 +2181,24 @@ FCP_ETA:  |- !x. (FCP i. x ' i) = x
 $
 \end{verbatim}
 \end{hol}
-Il teorema \ml{FCP\_BETA} mostra che i componenti di \holtxt{\$FCP g} sono 
-determinati dalla funzione \holtxt{g:\num\rarr\ty{'a}}. Il teorema 
-\ml{FCP\_ETA} mostra che si può eliminare un binding quando tutte le componenti 
+Il teorema \ml{FCP\_BETA} mostra che i componenti di \holtxt{\$FCP g} sono
+determinati dalla funzione \holtxt{g:\num\rarr\ty{'a}}. Il teorema
+\ml{FCP\_ETA} mostra che si può eliminare un binding quando tutte le componenti
 sono identiche a quelle di \holtxt{x}.
-Questi due teoremi, insieme con \ml{CART\_EQ}, si possono trovare nel 
+Questi due teoremi, insieme con \ml{CART\_EQ}, si possono trovare nel
 frammento \ml{fcpLib.FCP\_ss} di \emph{simpset}.
 
-I prodotti cartesiani finiti forniscono un buon mezzo per modellare parole di $n$-bit. Vale a 
-dire, il tipo \fcp{bool}{'a} può rappresentare una parola binaria la cui lunghezza $n$ 
-corrisponde alla dimensione del tipo \ty{'a}. Il binder \holtxt{FCP} 
-fornisce un mezzo flessibile per definire parole -- si può fornire una funzione 
+I prodotti cartesiani finiti forniscono un buon mezzo per modellare parole di $n$-bit. Vale a
+dire, il tipo \fcp{bool}{'a} può rappresentare una parola binaria la cui lunghezza $n$
+corrisponde alla dimensione del tipo \ty{'a}. Il binder \holtxt{FCP}
+fornisce un mezzo flessibile per definire parole -- si può fornire una funzione
 \holtxt{f:\num\rarr\bool} che da i valori bit della parola, a ciascuno dei quali si può accedere usando la mappa d'indicizzazione \holtxt{fcp\_index}.
 
 \subsubsection{Teoria bit}
 
-La teoria \theoryimp{bit} definisce alcune operazioni bit sui numeri naturali, 
+La teoria \theoryimp{bit} definisce alcune operazioni bit sui numeri naturali,
 ad esempio \holtxt{BITS}, \holtxt{SLICE}, \holtxt{BIT}, \holtxt{BITWISE} e
-\holtxt{BIT\_MODIFY}. In questo contesto, i numeri naturali sono trattati come parole binarie di 
+\holtxt{BIT\_MODIFY}. In questo contesto, i numeri naturali sono trattati come parole binarie di
 lunghezza slegata. Le operazioni in \theoryimp{bit} principalmente sono definite usando \holtxt{DIV}, \holtxt{MOD} e \holtxt{EXP}. Pe esempio, dalla definizione di \holtxt{BIT}, vale il seguente teorema:
 \begin{hol}
 \begin{verbatim}
@@ -2206,40 +2206,40 @@ lunghezza slegata. Le operazioni in \theoryimp{bit} principalmente sono definite
 \end{verbatim}
 \end{hol}
 
-Questa teoria è usata nello sviluppo della teoria word e fornisce anche 
-un meccanismo per la valutazione efficiente di alcune operazioni su parole attraverso la teoria 
+Questa teoria è usata nello sviluppo della teoria word e fornisce anche
+un meccanismo per la valutazione efficiente di alcune operazioni su parole attraverso la teoria
 \theoryimp{numeral\_bit}.
 
 \subsubsection{La teoria words}
 
-La teoria \theoryimp{words} introduce una selezione di costanti ed operazioni polimorfiche, i cui tipi possono essere istanziati a parole di qualsiasi dimensione. Per esempio, l'addizione word 
+La teoria \theoryimp{words} introduce una selezione di costanti ed operazioni polimorfiche, i cui tipi possono essere istanziati a parole di qualsiasi dimensione. Per esempio, l'addizione word
 ha il tipo:
 \begin{hol}
 +:\worda\rarr\worda\rarr\worda
 \end{hol}
-Se \ty{'a} è istanziato a \ty{32} allora questa operazione corrisponde all'addizione 32-bit. 
-Tutti i teoremi circa operazioni word si applicano a word di qualsiasi lunghezza\footnote{Si noti 
-che è impossibile introdurre word di lunghezza zero perché tutti i tipi 
-devono essere abitati, e di conseguenza la loro dimensione sarà sempre maggiore o uguale a 
+Se \ty{'a} è istanziato a \ty{32} allora questa operazione corrisponde all'addizione 32-bit.
+Tutti i teoremi circa operazioni word si applicano a word di qualsiasi lunghezza\footnote{Si noti
+che è impossibile introdurre word di lunghezza zero perché tutti i tipi
+devono essere abitati, e di conseguenza la loro dimensione sarà sempre maggiore o uguale a
 uno.}
 
 \paragraph{Alcune operazioni di base}
 
-La funzione \holtxt{w2n:\worda\rarr\num} da il valore del numero naturale di una 
-parola. Se $x\in\bools^{\{0, 1, \ldots, n - 1\}}$ è un prodotto cartesiano finito 
+La funzione \holtxt{w2n:\worda\rarr\num} da il valore del numero naturale di una
+parola. Se $x\in\bools^{\{0, 1, \ldots, n - 1\}}$ è un prodotto cartesiano finito
 che rappresenta una parola di $n$-bit allora il valore del suo numero naturale è:
 \[ \mathrm{w2n}(x) = \sum_{i = 0}^{n - 1} \textbf{if } x_i \textbf{ then } 2^i
 \textbf{ else } 0\ .\]
-La lunghezza di una parola (il numero $n$) è dato dalla funzione 
+La lunghezza di una parola (il numero $n$) è dato dalla funzione
 \holtxt{word\_len:\worda\rarr\num}.
-La funzione \holtxt{n2w:\num\rarr\worda} mappa un numero a una parola ed è 
+La funzione \holtxt{n2w:\num\rarr\worda} mappa un numero a una parola ed è
 definita in \HOL{} da:
 \begin{hol}
 \begin{verbatim}
 |- !n. n2w n = FCP i. BIT i n
 \end{verbatim}
 \end{hol}
-Il suffisso \holtxt{w} è usato per denotare parole letterali, ad esempio 
+Il suffisso \holtxt{w} è usato per denotare parole letterali, ad esempio
 \holtxt{255w} è lo stesso di \holtxt{n2w 255}.
 
 La funzione \holtxt{w2w:\worda\rarr\wordb} fornisce conversioni da-parola-a-parola (casting):
@@ -2248,9 +2248,9 @@ La funzione \holtxt{w2w:\worda\rarr\wordb} fornisce conversioni da-parola-a-paro
 |- !w. w2w w = n2w (w2n w)
 \end{verbatim}
 \end{hol}
-Se $\beta$ è più piccolo di $\alpha$ allora i bit più alti di \holtxt{w} saranno 
-persi (esegue un'estrazione di bit), altrimenti la parola più lunga avrà lo stesso valore dell'originale (fornendo in effetti zero padding). 
-Tuttavia, se si stesse trattando \holtxt{w} come un numero complemento di due allora la 
+Se $\beta$ è più piccolo di $\alpha$ allora i bit più alti di \holtxt{w} saranno
+persi (esegue un'estrazione di bit), altrimenti la parola più lunga avrà lo stesso valore dell'originale (fornendo in effetti zero padding).
+Tuttavia, se si stesse trattando \holtxt{w} come un numero complemento di due allora la
 parola dovrebbe essere sign extended, cioè
 \begin{eqnarray*}
 \mbox{\small ($-$ve)}\quad 1b_{n-2} \cdots b_0\ \mapsto \ 1 \cdots 1 1 b_{n-2}
@@ -2258,10 +2258,10 @@ parola dovrebbe essere sign extended, cioè
 \mbox{\small ($+$ve)}\quad 0b_{n-2} \cdots b_0\ \mapsto \ 0 \cdots 0 0 b_{n-2}
 \cdots b_0
 \end{eqnarray*}
-La funzione \holtxt{sw2sw:\worda\rarr\wordb} fornisce questa versione sign extending di 
+La funzione \holtxt{sw2sw:\worda\rarr\wordb} fornisce questa versione sign extending di
 \holtxt{w2w}.
 
-E' fornita una collezione di operazioni per mappare da stringhe a liste di numeri (cifre) e vice versa, ad esempio 
+E' fornita una collezione di operazioni per mappare da stringhe a liste di numeri (cifre) e vice versa, ad esempio
 \begin{hol}
 \begin{verbatim}
 |- word_to_dec_string 876w = "876"
@@ -2281,42 +2281,42 @@ L'operazione \holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatena parole
 
 \paragraph{Parole con e senza segno}
 
-Le parole possono essere \emph{viste} sia come aventi segno (usando la rappresentazione 
-in complemento a due) o come non aventi segno. Tuttavia, questo non è 
-reso esplicito all'interno della teoria\footnote{Le parole non sono etichettate come 
+Le parole possono essere \emph{viste} sia come aventi segno (usando la rappresentazione
+in complemento a due) o come non aventi segno. Tuttavia, questo non è
+reso esplicito all'interno della teoria\footnote{Le parole non sono etichettate come
 	aventi/non aventi segno. Sono forniti mapping a/da interi (\holtxt{w2i} e
   \holtxt{i2w}) nella teoria \theoryimp{integer\_word}.}
-e tutte le operazioni aritmetiche sono definite usando i numeri 
-naturali, cioè attraverso \holtxt{w2n} e \holtxt{n2w}. In particolare, 
-l'addizione e la moltiplicazione funzionano in modo naturale (hanno la stessa definizione) 
-sotto la rappresentazione in complemento a due. Questo tuttavia non avviene 
-nella conversione da-parola-a-parola, negli ordinamenti, nella divisione e nello shifting 
-a destra, dove sono necessarie le varianti con segno e senza segno. Quando 
-si opera su numeri naturali, alcune delle versioni complemento 
-a due hanno delle presentazioni leggermente innaturali da vedere. Per esempio, 
-con la versione (complemento a due) con segno di ``minore di'' abbiamo 
-\holtxt{255w < (0w:word8)} perché la parola \holtxt{255w} è di fatto 
-considerata rappresentare l'intero $-1$, mentre la versione 
+e tutte le operazioni aritmetiche sono definite usando i numeri
+naturali, cioè attraverso \holtxt{w2n} e \holtxt{n2w}. In particolare,
+l'addizione e la moltiplicazione funzionano in modo naturale (hanno la stessa definizione)
+sotto la rappresentazione in complemento a due. Questo tuttavia non avviene
+nella conversione da-parola-a-parola, negli ordinamenti, nella divisione e nello shifting
+a destra, dove sono necessarie le varianti con segno e senza segno. Quando
+si opera su numeri naturali, alcune delle versioni complemento
+a due hanno delle presentazioni leggermente innaturali da vedere. Per esempio,
+con la versione (complemento a due) con segno di ``minore di'' abbiamo
+\holtxt{255w < (0w:word8)} perché la parola \holtxt{255w} è di fatto
+considerata rappresentare l'intero $-1$, mentre la versione
 senza segno è più naturale: \holtxt{0w <+ (255w:word8)}.
 
 \paragraph{Operazioni bit field}
 
-Sono fornite le operazioni booleane bit field standard, cioè la negazione bitwise 
-(complemento a uno), la congiunzione bitwise, la disgiunzione bitwise e l'or-esclusivo bitwise. Queste funzioni 
-sono definite in modo piuttosto naturale usando il binder prodotto cartesiano; per esempio, 
+Sono fornite le operazioni booleane bit field standard, cioè la negazione bitwise
+(complemento a uno), la congiunzione bitwise, la disgiunzione bitwise e l'or-esclusivo bitwise. Queste funzioni
+sono definite in modo piuttosto naturale usando il binder prodotto cartesiano; per esempio,
 la congiunzione bitwise è definita da:
 \begin{hol}
 \begin{verbatim}
 |- !v w. v && w = FCP i. v ' i /\ w ' i .
 \end{verbatim}
 \end{hol}
-C'è anche una collezione di operazioni di \emph{riduzione} parola, che riducono vettori di bit a parole di 1 bit, ad esempio 
+C'è anche una collezione di operazioni di \emph{riduzione} parola, che riducono vettori di bit a parole di 1 bit, ad esempio
 \[ \mathrm{reduce\_and}(x)\;'\; 0= \bigwedge_{i = 0}^{n - 1} x_i\ .\]
 
-Le funzioni \holtxt{word\_lsb}, \holtxt{word\_msb} e \holtxt{word\_bit(i)} 
-danno il valore bit di una parola alle posizioni $0$, $n - 1$ e $i$ 
-rispettivamente. Sono fornite quattro operazioni per selezionare bit 
-field, o sotto-parole: \holtxt{word\_bits} (\holtxt{--}),  \holtxt{word\_signed\_bits} (\holtxt{---}), \holtxt{word\_slice} (\holtxt{''}) e 
+Le funzioni \holtxt{word\_lsb}, \holtxt{word\_msb} e \holtxt{word\_bit(i)}
+danno il valore bit di una parola alle posizioni $0$, $n - 1$ e $i$
+rispettivamente. Sono fornite quattro operazioni per selezionare bit
+field, o sotto-parole: \holtxt{word\_bits} (\holtxt{--}),  \holtxt{word\_signed\_bits} (\holtxt{---}), \holtxt{word\_slice} (\holtxt{''}) e
 \holtxt{word\_extract} (\holtxt{><}). Per esempio, \holtxt{word\_bits 4 1} selezionerà quattro bit iniziando dalla posizione bit 1. La funzione slice è una variante in-place 8azzeira i bit fuori dal bit range) e la funzione extract combina \holtxt{word\_bits} con un cast di parola (\holtxt{w2w}). L'operazione \holtxt{word\_signed\_bits} è analoga a \holtxt{word\_bits}, eccetto che segna-estende il bit field.
 
 
@@ -2330,25 +2330,25 @@ bit_field_insert 5 2 a b
 
 L'ordinamento di un bit di parola può essere capovolto con \holtxt{word\_reverse}, cioè il bit zero è scambiato con il bit $n - 1$ e così via.
 
-La funzione 
-\holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} cambia 
+La funzione
+\holtxt{word\_modify:(\num\,\rarr\,\bool\,\rarr\,\bool)\,\rarr\,\worda\,\rarr\,\worda} cambia
 una parola applicando una mappa ad ogni posizione bit.
-Questa operazione fornisce un meccanismo molto flessibile e conveniente per 
+Questa operazione fornisce un meccanismo molto flessibile e conveniente per
 manipolare parole, as esempio
 \begin{hol}
 \holtxt{word\_modify ($\lambda$i b.\,if EVEN i then $\sim$b else b) w}
 \end{hol}
-nega i bit di \holtxt{w} che sono nelle posizioni pari. Naturalmente, il 
-binder \holtxt{FCP} fornisce anche un mezzo molto generale per rappresentare parole usando 
-un predicato ad esempio \holtxt{\$FCP ODD} rappresenta una parola dove tutti i bit dispari 
+nega i bit di \holtxt{w} che sono nelle posizioni pari. Naturalmente, il
+binder \holtxt{FCP} fornisce anche un mezzo molto generale per rappresentare parole usando
+un predicato ad esempio \holtxt{\$FCP ODD} rappresenta una parola dove tutti i bit dispari
 sono insiemi.
 
 \paragraph{Shift}
 
 Sono fornite sei tipi di shift: shift logico sinistra/destra (\holtxt{<<} e
-\holtxt{>>>}), shift aritmetico destro (\holtxt{>>}), ruotare a sinistra/destra 
-(\holtxt{\#<<} e \holtxt{\#>>}) e ruotare a destra propagato di 1 posto 
-(\holtxt{word\_rrx}). Questi shisft sono illustrati nella Figura~\ref{fig:shifts} e sono definiti in un maniera analoga alle operazioni bit field. Per 
+\holtxt{>>>}), shift aritmetico destro (\holtxt{>>}), ruotare a sinistra/destra
+(\holtxt{\#<<} e \holtxt{\#>>}) e ruotare a destra propagato di 1 posto
+(\holtxt{word\_rrx}). Questi shisft sono illustrati nella Figura~\ref{fig:shifts} e sono definiti in un maniera analoga alle operazioni bit field. Per
 esempio, la rotazione a destra è definita da:
 
 \begin{hol}
@@ -2356,7 +2356,7 @@ esempio, la rotazione a destra è definita da:
 |- !w n. w #>> x = FCP i. w ' (i + x) MOD dimindex (:'a) .
 \end{verbatim}
 \end{hol}
-La rotazione a sinistra di $x$ posti è definita come rotazione a destra di $n - x \bmod n$ 
+La rotazione a sinistra di $x$ posti è definita come rotazione a destra di $n - x \bmod n$
 posti.
 
 \begin{figure}
@@ -2382,21 +2382,21 @@ word\_rrx (c,v)}.}
 
 \paragraph{Aritmetica e ordinamenti}
 
-Le operazioni aritmetiche sono: addizione, sottrazione, meno unario (coplemento a 
-due), logaritmo (base-2), moltiplicazione, modulo e divisione (con e senza 
+Le operazioni aritmetiche sono: addizione, sottrazione, meno unario (coplemento a
+due), logaritmo (base-2), moltiplicazione, modulo e divisione (con e senza
 segno).
-Queste operazioni sono definite rispetto ai numeri naturali. Per esempio, 
+Queste operazioni sono definite rispetto ai numeri naturali. Per esempio,
 l'addizione parola è definita da:
 \begin{hol}
 \begin{verbatim}
 |- !v w. v + w = n2w (w2n v + w2n w)
 \end{verbatim}
 \end{hol}
-Il \holtxt{+} sul lato sinistro è un'addizione parola e quello sul lato destro è 
+Il \holtxt{+} sul lato sinistro è un'addizione parola e quello sul lato destro è
 l'addizione sui numeri naturali.
 
-Sono forniti tutti gli ordinamenti parola standard, con le versioni con e senza 
-segno di $<$, $\leq$, $>$ e $\geq$. Le versioni senza segno hanno un suffisso 
+Sono forniti tutti gli ordinamenti parola standard, con le versioni con e senza
+segno di $<$, $\leq$, $>$ e $\geq$. Le versioni senza segno hanno un suffisso
 con un più; per esempio, \holtxt{<+} è il ``minore di'' senza segno.
 
 \paragraph{Costanti}
@@ -2512,7 +2512,7 @@ Type &
 
 \section{Sequenze}
 
-\HOL{} fornisce teorie per vari generi di sequenze: liste finite, liste lazy, 
+\HOL{} fornisce teorie per vari generi di sequenze: liste finite, liste lazy,
 percorsi, e stringhe finite.
 
 \subsection{Liste}\label{avra_list}
@@ -2521,10 +2521,10 @@ percorsi, e stringhe finite.
 \index{liste, la teoria HOL dei@liste, la teoria \HOL{} dei|(}
 \index{ liste, la teoria HOL dei@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (liste, la teoria \HOL{} dei)|(}
 
-Le liste \HOL{} sono sequenze finite definite induttivamente dove ogni 
-elemento in una lista ha lo stesso tipo. La teoria \ml{list} introduce 
-l'operatore di tipo unario $\alpha \; \konst{list}$ per mezzo di una definizione di tipo 
-ed è definita una collezione standard di funzioni di elaborazioni di 
+Le liste \HOL{} sono sequenze finite definite induttivamente dove ogni
+elemento in una lista ha lo stesso tipo. La teoria \ml{list} introduce
+l'operatore di tipo unario $\alpha \; \konst{list}$ per mezzo di una definizione di tipo
+ed è definita una collezione standard di funzioni di elaborazioni di
 liste. I costruttori primitivi {\small\verb+NIL+} e {\small\verb+CONS+}
 %
 \begin{hol}
@@ -2536,12 +2536,12 @@ liste. I costruttori primitivi {\small\verb+NIL+} e {\small\verb+CONS+}
 \end{verbatim}
 \end{hol}
 %
-sono usati per costruire liste e sono state definite dal tipo rappresentante per 
+sono usati per costruire liste e sono state definite dal tipo rappresentante per
 le liste. Il parser \HOL{}
 %
 \index{parsing, della logica HOL@parsing, della logica \HOL{}!delle espressioni lista}
 %
-è stato modificato in modo speciale per eseguire il parsing dell'espressione \holtxt{[]} in 
+è stato modificato in modo speciale per eseguire il parsing dell'espressione \holtxt{[]} in
 \holtxt{NIL}, per eseguire il parsing dell'espressione \holtxt{h::t} in \holtxt{CONS
   h t}, e il parsing dell'espressione \holtxt{[$t_1$;$t_2$;\dots;$t_n$]}
 in \holtxt{CONS $t_1$ (CONS $t_2$ $\cdots$ (CONS $t_n$ NIL)
@@ -2552,8 +2552,8 @@ in \holtxt{CONS $t_1$ (CONS $t_2$ $\cdots$ (CONS $t_n$ NIL)
 inverte queste trasformazioni.
 
 \index{teoremi sulle liste, nella logica HOL@teoremi sulle liste, nella logica \HOL{}}
-Sulla base della caratterizzazione induttiva del tipo, i seguenti 
-teoremi fondamentali sulle liste sono dimostrati e archiviati nella teoria 
+Sulla base della caratterizzazione induttiva del tipo, i seguenti
+teoremi fondamentali sulle liste sono dimostrati e archiviati nella teoria
 \ml{list}.
 
 \begin{hol}
@@ -2577,34 +2577,34 @@ teoremi fondamentali sulle liste sono dimostrati e archiviati nella teoria
 \end{verbatim}
 \end{hol}
 
-Il teorema \ml{list\_Axiom} mostrato di sopra è analogo al teorema di 
-ricorsione primitiva 
+Il teorema \ml{list\_Axiom} mostrato di sopra è analogo al teorema di
+ricorsione primitiva
 %
 \index{teorema di ricorsione primitiva!per le liste}
 %
-sui numeri naturali discusso di sopra nella Sezione~\ref{num-prim-rec}. 
-Esso afferma la validità delle definizioni ricorsive primitive sulle liste, 
-e può essere usato per giustificare qualsiasi di tali definizioni. La funzione \ML{} 
-\ml{new\_recursive\_definition} usa questo teorema per fare 
+sui numeri naturali discusso di sopra nella Sezione~\ref{num-prim-rec}.
+Esso afferma la validità delle definizioni ricorsive primitive sulle liste,
+e può essere usato per giustificare qualsiasi di tali definizioni. La funzione \ML{}
+\ml{new\_recursive\_definition} usa questo teorema per fare
 %
 \index{teorema di ricorsione primitiva!uso automatizzato del, nel sistema HOL@uso automatizzato del, nel sistema \HOL{}|)}
 %
-dimostrazioni di esistenza delle funzioni ricorsive primitive sulle liste e 
-quindi fare specifiche di costanti per introdurre costanti che denotano 
+dimostrazioni di esistenza delle funzioni ricorsive primitive sulle liste e
+quindi fare specifiche di costanti per introdurre costanti che denotano
 tali funzioni.
 
-Il teorema d'induzione per le liste, \ml{list\_INDUCT}, fornisce lo strumento 
-di dimostrazione principale usato per ragionare su operazioni che manipolano liste. Il 
-teorema \ml{list\_CASES} è usato per eseguire l'analisi dei casi riguardo al fatto che una 
+Il teorema d'induzione per le liste, \ml{list\_INDUCT}, fornisce lo strumento
+di dimostrazione principale usato per ragionare su operazioni che manipolano liste. Il
+teorema \ml{list\_CASES} è usato per eseguire l'analisi dei casi riguardo al fatto che una
 lista sia vuota o meno.
 
-Il teorema {\small\verb+CONS_11+}  mostra che {\small\verb+CONS+} è iniettiva; 
-i teoremi {\small\verb+NOT_NIL_CONS+} e {\small\verb+NOT_CONS_NIL+} mostrano che 
-{\small\verb+NIL+} e {\small\verb+CONS+} sono distinte, cioè, 
-non possono dare origine alla stessa struttura. Insieme, questi tre teoremi 
+Il teorema {\small\verb+CONS_11+}  mostra che {\small\verb+CONS+} è iniettiva;
+i teoremi {\small\verb+NOT_NIL_CONS+} e {\small\verb+NOT_CONS_NIL+} mostrano che
+{\small\verb+NIL+} e {\small\verb+CONS+} sono distinte, cioè,
+non possono dare origine alla stessa struttura. Insieme, questi tre teoremi
 sono usati per il ragionamento equazionale circa le liste.
 
-Il predicato \ml{NULL} e i selettori 
+Il predicato \ml{NULL} e i selettori
 %
 \index{selettori, nella logica HOL@selettori, nella logica \HOL{}!per le liste}
 %
@@ -2627,8 +2627,8 @@ Il predicato \ml{NULL} e i selettori
 \paragraph{Espressioni case}
 \index{espressioni case!sulle liste}
 
-Le espressioni composte \HOL{} che ramificano sulla base del fatto che un termine sia 
-un lista vuota o non vuota hanno la sintassi di superficie (grossomodo presa in prestito 
+Le espressioni composte \HOL{} che ramificano sulla base del fatto che un termine sia
+un lista vuota o non vuota hanno la sintassi di superficie (grossomodo presa in prestito
 dall'ML)
 \begin{hol}
 \begin{verbatim}
@@ -2639,7 +2639,7 @@ dall'ML)
 \end{hol}
 %
 Una tale espressione è tradotta in
-$\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ dove la costante 
+$\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ dove la costante
 \holtxt{list\_CASE} è definita come segue:
 \begin{hol}
 \begin{verbatim}
@@ -2666,10 +2666,10 @@ L'appartenenza a una lista, \ml{MEM}, è definita come segue:
 \index{concatenazione di liste!nella logica HOL@nella logica \HOL{}}
 \index{FLAT, la costante HOL@\ml{FLAT}, la costante \HOL{}}
 
-La concatenazione binaria di liste ({\small\verb+APPEND+}) può anche essere denotata 
-dall'operatore infisso {\small\verb|++|}; così l'espressione 
-{\small\verb|L1 ++ L2|} è tradotta in {\small\verb+APPEND L1 L2+}. 
-La concatenazione di una lista di liste in una lista è ottenuta da 
+La concatenazione binaria di liste ({\small\verb+APPEND+}) può anche essere denotata
+dall'operatore infisso {\small\verb|++|}; così l'espressione
+{\small\verb|L1 ++ L2|} è tradotta in {\small\verb+APPEND L1 L2+}.
+La concatenazione di una lista di liste in una lista è ottenuta da
 {\small\verb+FLAT+}.
 %
 \begin{hol}
@@ -2687,12 +2687,12 @@ La concatenazione di una lista di liste in una lista è ottenuta da
 \index{EL, la costante HOL@\ml{EL}, la costante \HOL{}}
 \index{list_size, la costante HOL@\ml{list\_size}, la costante \HOL{}}
 
-La lunghezza (\holtxt{LENGTH}) e la dimensione (\holtxt{list\_size}) di una lista 
-sono nozioni correlate. La dimensione di una lista tiene conto della dimensione di 
-ciascun elemento della lista (data dal parametro 
-$f:\alpha\to\konst{num}$), mentre la lunghezza della lista ignora la 
-dimensione di ciascun elemento della lista. La definizione alternativa della lunghezza 
-(\holtxt{LEN}) è tail-recursive. Si possono inoltre usare numeri come indici 
+La lunghezza (\holtxt{LENGTH}) e la dimensione (\holtxt{list\_size}) di una lista
+sono nozioni correlate. La dimensione di una lista tiene conto della dimensione di
+ciascun elemento della lista (data dal parametro
+$f:\alpha\to\konst{num}$), mentre la lunghezza della lista ignora la
+dimensione di ciascun elemento della lista. La definizione alternativa della lunghezza
+(\holtxt{LEN}) è tail-recursive. Si possono inoltre usare numeri come indici
 nelle liste, estraendo l'elemento alla posizione specificata.
 %
 \begin{hol}
@@ -2710,9 +2710,9 @@ nelle liste, estraendo l'elemento alla posizione specificata.
 \end{hol}
 
 \noindent
-Si noti che l'estrazione dell'elemento $n$-esimo (\holtxt{EL}) di una lista 
-inizia la sua indicizzazione da 0. Se la lunghezza della lista $\ell$ è minore 
-o uguale a $n$, il risultato di \holtxt{EL~$n$~$\ell$~} non è 
+Si noti che l'estrazione dell'elemento $n$-esimo (\holtxt{EL}) di una lista
+inizia la sua indicizzazione da 0. Se la lunghezza della lista $\ell$ è minore
+o uguale a $n$, il risultato di \holtxt{EL~$n$~$\ell$~} non è
 specificato.
 
 \paragraph {Funzioni di mapping sulle liste}
@@ -2720,7 +2720,7 @@ specificato.
 \index{MAP2, la costante HOL@\ml{MAP2}, la costante \HOL{}}
 \index{funzioni di mapping, nella logica HOL@funzioni di mapping, nella logica \HOL{}!per liste}
 
-Ci sono delle funzioni per mappare una funzione $f : \alpha \to \beta$ su 
+Ci sono delle funzioni per mappare una funzione $f : \alpha \to \beta$ su
 una singola lista (\holtxt{MAP}) o una funzione $f : \alpha \to \beta
 \to \gamma$ sopra due liste (\holtxt{MAP2}).
 \begin{hol}
@@ -2733,7 +2733,7 @@ una singola lista (\holtxt{MAP}) o una funzione $f : \alpha \to \beta
         !f h1 t1 h2 t2. MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2
 \end{verbatim}
 \end{hol}
-Il comportamento di \holtxt{MAP2} nel caso in cui le siano date liste di 
+Il comportamento di \holtxt{MAP2} nel caso in cui le siano date liste di
 lunghezza diversa è indeterminato.
 
 \paragraph {Predicati su liste}
@@ -2743,11 +2743,11 @@ lunghezza diversa è indeterminato.
 \index{EXISTS, la costante HOL (sulle liste)@\ml{EXISTS}, la costante \HOL{}
   (sulle liste)}
 
-I predicati possono essere applicati a liste in un senso universale (il predicato 
-deve valere per ogni elemento nella lista) o in un senso esistenziale (il 
-predicato deve valere per qualche elemento nella lista). Questa funzionalità 
-è supportata da \holtxt{EVERY} e \holtxt{EXISTS}, rispettivamente. L'eliminazione 
-di tutti gli elementi in una lista che non soddisfano il predicato dato 
+I predicati possono essere applicati a liste in un senso universale (il predicato
+deve valere per ogni elemento nella lista) o in un senso esistenziale (il
+predicato deve valere per qualche elemento nella lista). Questa funzionalità
+è supportata da \holtxt{EVERY} e \holtxt{EXISTS}, rispettivamente. L'eliminazione
+di tutti gli elementi in una lista che non soddisfano il predicato dato
 è eseguita da \holtxt{FILTER}.
 \begin{hol}
 \begin{verbatim}
@@ -2765,17 +2765,17 @@ di tutti gli elementi in una lista che non soddisfano il predicato dato
         (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
 \end{verbatim}
 \end{hol}
-Il predicato \holtxt{ALL\_DISTINCT} vale su una lista solo nel caso in cui 
+Il predicato \holtxt{ALL\_DISTINCT} vale su una lista solo nel caso in cui
 nessun elemento nella lista è uguale ad uno qualsiasi degli altri.
 
 \paragraph {Folding}
 \index{FOLDL, la costante HOL@\ml{FOLDL}, la costante \HOL{}}
 \index{FOLDR, la costante HOL@\ml{FOLDR}, la costante \HOL{}}
 
-L'applicare una funzione binaria $f : \alpha\to\beta\to\beta$ in modo accoppiato 
-attraverso una lista e accumulando il risultato è conosciuto come 
-\emph{folding}. A volte, è necessario eseguire questa operazione 
-da sinistra a destra (\holtxt{FOLDL}), e altre volte è richieste la 
+L'applicare una funzione binaria $f : \alpha\to\beta\to\beta$ in modo accoppiato
+attraverso una lista e accumulando il risultato è conosciuto come
+\emph{folding}. A volte, è necessario eseguire questa operazione
+da sinistra a destra (\holtxt{FOLDL}), e altre volte è richieste la
 direzione da destra a sinistra (\holtxt{FOLDR}).
 \begin{hol}
 \begin{verbatim}
@@ -2790,7 +2790,7 @@ direzione da destra a sinistra (\holtxt{FOLDR}).
 
 \paragraph {Capovolgimento di liste}
 
-Il capovolgimento di una lista (\holtxt{REVERSE}) e la sua controparte 
+Il capovolgimento di una lista (\holtxt{REVERSE}) e la sua controparte
 tail recursive \holtxt{REV} sono definite in \theoryimp{list}.
 \begin{hol}
 \begin{verbatim}
@@ -2805,8 +2805,8 @@ tail recursive \holtxt{REV} sono definite in \theoryimp{list}.
 
 \paragraph {Conversione a insiemi}
 
-Le liste possono essere convertite in insiemi (\ml{LIST\_TO\_SET}) attraverso l'applicazione 
-parziale di of \holtxt{MEM}. La definizione in qualche modo concisa è usata per 
+Le liste possono essere convertite in insiemi (\ml{LIST\_TO\_SET}) attraverso l'applicazione
+parziale di of \holtxt{MEM}. La definizione in qualche modo concisa è usata per
 derivare il teorema \ml{IN\_LIST\_TO\_SET}.
 %
 \begin{hol}
@@ -2819,15 +2819,15 @@ derivare il teorema \ml{IN\_LIST\_TO\_SET}.
 \end{verbatim}
 \end{hol}
 %
-Ulteriore supporto per tradurre tra differenti generi di 
+Ulteriore supporto per tradurre tra differenti generi di
 collezioni si può trovare nella teoria \theoryimp{container}.
 
 \paragraph {Coppie e liste}
 
-Due liste di uguale lunghezza possono essere accoppiate componente per componente attraverso 
-l'operazione {\small\verb+ZIP+}. Il risultato non è specificato 
-quando le liste non sono della stessa lunghezza. L'operazione inversa, 
-{\small\verb+UNZIP+}, traduce una lista di coppie in una coppia di 
+Due liste di uguale lunghezza possono essere accoppiate componente per componente attraverso
+l'operazione {\small\verb+ZIP+}. Il risultato non è specificato
+quando le liste non sono della stessa lunghezza. L'operazione inversa,
+{\small\verb+UNZIP+}, traduce una lista di coppie in una coppia di
 liste.
 \begin{hol}
 \begin{verbatim}
@@ -2844,9 +2844,9 @@ liste.
 \index{LAST, la costante HOL@\ml{LAST}, la costante \HOL{}}
 \index{FRONT, la costante HOL@\ml{FRONT}, la costante \HOL{}}
 %
-Le liste sono trattate essenzialmente in modo simile a uno stack. Tuttavia, a 
-volte è conveniente accedere all'ultimo elemento 
-(\holtxt{LAST}) di una lista non vuota in modo diretto. L'ultimo elemento 
+Le liste sono trattate essenzialmente in modo simile a uno stack. Tuttavia, a
+volte è conveniente accedere all'ultimo elemento
+(\holtxt{LAST}) di una lista non vuota in modo diretto. L'ultimo elemento
 di una lista non vuota è eliminato attraverso \holtxt{FRONT}.
 \begin{hol}
 \begin{verbatim}
@@ -2859,16 +2859,16 @@ di una lista non vuota è eliminato attraverso \holtxt{FRONT}.
 \end{verbatim}
 \end{hol}
 %
-Concatenare la parte frontale e l'ultimo elemento di una lista non vuota porta 
-alla lista originale. Entrambi \holtxt{LAST} e \holtxt{FRONT} 
+Concatenare la parte frontale e l'ultimo elemento di una lista non vuota porta
+alla lista originale. Entrambi \holtxt{LAST} e \holtxt{FRONT}
 sono non specificate su liste vuote.
 
 
 \paragraph {Controllo prefisso}
 
 \index{isPREFIX, la costante HOL@\ml{isPREFIX}, la costante \HOL{}}
-La relazione che cattura se una lista $\ell_1$ è un prefisso di $\ell_2$ 
-({\holtxt{isPREFIX}) può essere definita per ricorsione. L'infisso 
+La relazione che cattura se una lista $\ell_1$ è un prefisso di $\ell_2$
+({\holtxt{isPREFIX}) può essere definita per ricorsione. L'infisso
 \holtxt{<{}<=} può anche essere usato come una notazione per questo ordine parziale.
 % use of {} above is just a trick to stop Emacs font-lock colouring
 % this file disgustingly
@@ -2881,15 +2881,15 @@ La relazione che cattura se una lista $\ell_1$ è un prefisso di $\ell_2$
         (h1::t1 <<= h2::t2 <=> (h1 = h2) /\ t1 <<= t2)
 \end{verbatim}
 \end{hol}
-Il teorema di sopra afferma che: la lista vuota è un prefisso di ogni altra 
-lista (clausola 1); che nessuna lista non vuota è un prefisso della lista vuota 
-(clausola 2); e che una lista non vuota è un prefisso di un'altra lista 
-non vuota se i primi elementi delle liste sono gli stessi, e se la coda 
+Il teorema di sopra afferma che: la lista vuota è un prefisso di ogni altra
+lista (clausola 1); che nessuna lista non vuota è un prefisso della lista vuota
+(clausola 2); e che una lista non vuota è un prefisso di un'altra lista
+non vuota se i primi elementi delle liste sono gli stessi, e se la coda
 della prima è un prefisso della coda della seconda.
 
 \vspace{1ex}
-\noindent Per una lista completa dei teoremi disponibili in 
-\theoryimp{list}, si veda \REFERENCE. Un ulteriore sviluppo della teoria 
+\noindent Per una lista completa dei teoremi disponibili in
+\theoryimp{list}, si veda \REFERENCE. Un ulteriore sviluppo della teoria
 delle liste si può trovare in \theoryimp{rich\_list}.
 
 
@@ -2897,15 +2897,15 @@ delle liste si può trovare in \theoryimp{rich\_list}.
 \index{permutazioni (di liste), la teoria HOL delle@permutazioni (di liste), la teoria \HOL{} delle}
 \index{ordinamento, la teoria HOL del@ordinamento, la teoria \HOL{} del}
 
-La teoria \theoryimp{sorting} definisce la nozione per cui due liste sono 
-permutazioni l'una dell'altra, poi definisce una nozione generale di ordinamento, 
+La teoria \theoryimp{sorting} definisce la nozione per cui due liste sono
+permutazioni l'una dell'altra, poi definisce una nozione generale di ordinamento,
 quindi mostra che Quicksort è una funzione di ordinamento.
 
 \paragraph{Permutazione di liste}
 
-Due liste sono in permutazione se hanno esattamente gli stessi membri, 
-e ogni membro ha lo stesso numero di occorrenze in entrambe le liste. Una 
-definizione (\holtxt{PERM}) che cattura questa relazione è la 
+Due liste sono in permutazione se hanno esattamente gli stessi membri,
+e ogni membro ha lo stesso numero di occorrenze in entrambe le liste. Una
+definizione (\holtxt{PERM}) che cattura questa relazione è la
 seguente:
 %
 \begin{hol}
@@ -2923,13 +2923,13 @@ seguente:
 \end{verbatim}
 \end{hol}
 %
-Un teorema di induzione derivato (\holtxt{PERM\_IND}) è molto 
+Un teorema di induzione derivato (\holtxt{PERM\_IND}) è molto
 utile nelle dimostrazioni circa le permutazioni.
 
 \paragraph{Ordinamento}
 
-Una lista è $R$-ordinata se $R$ vale a coppie attraverso la lista. Questa 
-nozione (\holtxt{SORTED}) è catturata da una definizione ricorsiva. Quindi 
+Una lista è $R$-ordinata se $R$ vale a coppie attraverso la lista. Questa
+nozione (\holtxt{SORTED}) è catturata da una definizione ricorsiva. Quindi
 una funzione di tipo
 %
 \begin{hol}
@@ -2938,7 +2938,7 @@ una funzione di tipo
 \end{verbatim}
 \end{hol}
 %
-è una funzione di ordinamento (\holtxt{SORTS}) rispetto a $R$ se 
+è una funzione di ordinamento (\holtxt{SORTS}) rispetto a $R$ se
 emette una permutazione del suo input, e il risultato è $R$-ordinato.
 %
 \begin{hol}
@@ -2952,8 +2952,8 @@ emette una permutazione del suo input, e il risultato è $R$-ordinato.
 \end{verbatim}
 \end{hol}
 %
-Quicksort è definito nell'usuale stile di programmazione funzionale, ed 
-è di fatto una funzione di ordinamento, purché $R$ sia una relazione 
+Quicksort è definito nell'usuale stile di programmazione funzionale, ed
+è di fatto una funzione di ordinamento, purché $R$ sia una relazione
 transitiva e totale.
 %
 \begin{hol}
@@ -2978,13 +2978,13 @@ transitiva e totale.
 
 \index{liste lazy, la teoria HOL delle@liste ``lazy'', la teoria \HOL{} delle|(}
 
-La teoria \theoryimp{llist} contiene la definizione di un tipo di 
-sequenze potenzialmente infinite. Questo tipo è analogo alle ``liste 
-lazy'' di linguaggi di programmazione come l'Haskell, da qui il nome 
-della teoria. La teoria \theoryimp{llist} ha un numero di costanti che 
-sono analoghe alle costanti nella teoria delle liste 
-finite. Le versioni \theoryimp{llist} di queste costanti hanno gli 
-stessi nomi, ma con una `L\/' maiuscola anteposta. Così, alcune delle costanti 
+La teoria \theoryimp{llist} contiene la definizione di un tipo di
+sequenze potenzialmente infinite. Questo tipo è analogo alle ``liste
+lazy'' di linguaggi di programmazione come l'Haskell, da qui il nome
+della teoria. La teoria \theoryimp{llist} ha un numero di costanti che
+sono analoghe alle costanti nella teoria delle liste
+finite. Le versioni \theoryimp{llist} di queste costanti hanno gli
+stessi nomi, ma con una `L\/' maiuscola anteposta. Così, alcune delle costanti
 core in questa teoria sono:
 \begin{hol}
 \begin{verbatim}
@@ -2995,16 +2995,16 @@ core in questa teoria sono:
 \end{verbatim}
 \end{hol}
 
-Le costanti \ml{LHD} e \ml{LTL} restituiscono \ml{NONE} quando applicate alla 
-sequenza vuota, \ml{LNIL}. Questo uso di un tipo opzione è un altro 
-modo di modellare la parzialità essenziale di queste costanti. (Nella 
-teoria delle liste, le analoghe funzioni \ml{HD} e \ml{TL} hanno 
+Le costanti \ml{LHD} e \ml{LTL} restituiscono \ml{NONE} quando applicate alla
+sequenza vuota, \ml{LNIL}. Questo uso di un tipo opzione è un altro
+modo di modellare la parzialità essenziale di queste costanti. (Nella
+teoria delle liste, le analoghe funzioni \ml{HD} e \ml{TL} hanno
 semplicemente dei valori non specificati quando applicate alle liste vuote.)
 
-Il tipo \ml{llist} non è induttivo, e non c'è alcun teorema di 
-ricorsione primitiva che supporti la definizione di funzioni che hanno 
-domini di tipo \ml{llist}. Piuttosto, \ml{llist} è un tipo coinduttivo, 
-e ha un assioma che giustifica la definizione di funzioni 
+Il tipo \ml{llist} non è induttivo, e non c'è alcun teorema di
+ricorsione primitiva che supporti la definizione di funzioni che hanno
+domini di tipo \ml{llist}. Piuttosto, \ml{llist} è un tipo coinduttivo,
+e ha un assioma che giustifica la definizione di funzioni
 (co-)ricorsive che mappano \emph{al} tipo \ml{llist}:
 \begin{hol}
 \begin{verbatim}
@@ -3071,9 +3071,9 @@ Esse sono caratterizzate dai seguenti teoremi
 
 \paragraph{Concatenazione}
 
-Due liste lazy possono essere concatenate per mezzo di \ml{LAPPEND}. Se la prima lista 
-lazy è infinita, gli elementi della seconda sono inaccessibili nel 
-risultato. Una lista lazy di liste lazy può essere appiattita per mezzo 
+Due liste lazy possono essere concatenate per mezzo di \ml{LAPPEND}. Se la prima lista
+lazy è infinita, gli elementi della seconda sono inaccessibili nel
+risultato. Una lista lazy di liste lazy può essere appiattita per mezzo
 di \ml{LFLATTEN}.
 \begin{hol}\begin{verbatim}
    LAPPEND
@@ -3088,7 +3088,7 @@ di \ml{LFLATTEN}.
 
 \paragraph{Liste e liste lazy}
 
-Il mapping da liste a liste lazy e vice versa si ottiene 
+Il mapping da liste a liste lazy e vice versa si ottiene
 per mezzo di \ml{fromList} and \ml{toList}:
 \begin{hol}\begin{verbatim}
    fromList
@@ -3101,16 +3101,16 @@ per mezzo di \ml{fromList} and \ml{toList}:
 
 \paragraph{Principi di dimostrazione}
 
-In fine, ci sono due principi di dimostrazione molto importanti per dimostrare 
-che due valori \ml{llist} sono uguali. Il primo afferma che due 
-sequenze sono uguali se restituiscono gli stessi prefissi di lunghezza $n$ per 
+In fine, ci sono due principi di dimostrazione molto importanti per dimostrare
+che due valori \ml{llist} sono uguali. Il primo afferma che due
+sequenze sono uguali se restituiscono gli stessi prefissi di lunghezza $n$ per
 tutti i valori possibili di $n$:
 \begin{hol}
 \begin{verbatim}
    LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
 \end{verbatim}
 \end{hol}
-Questo teorema è usato successivamente per derivare il principio 
+Questo teorema è usato successivamente per derivare il principio
 di bi-simulazione:
 \begin{hol}
 \begin{verbatim}
@@ -3123,20 +3123,20 @@ di bi-simulazione:
                              R (THE (LTL ll3)) (THE (LTL ll4))
 \end{verbatim}
 \end{hol}
-Il principio di bi-simulazione afferma che due valori \ml{llist} $l_1$ 
-e $l_2$ sono uguali se (e solo se) è possibile trovare una 
+Il principio di bi-simulazione afferma che due valori \ml{llist} $l_1$
+e $l_2$ sono uguali se (e solo se) è possibile trovare una
 relazione $R$ tale che
 \begin{itemize}
 \item $R$ collega i due valori, cioè, $R\;l_1\;l_2$; and
-\item se $R$ vale di due valori qualsiasi $l_3$ e $l_4$, allora o 
+\item se $R$ vale di due valori qualsiasi $l_3$ e $l_4$, allora o
   \begin{itemize}
   \item entrambi $l_3$ e $l_4$ sono vuoti; o
-  \item gli elementi testa di $l_3$ e $l_4$ sono gli stessi, e le 
+  \item gli elementi testa di $l_3$ e $l_4$ sono gli stessi, e le
 		code di quei due valori sono di nuovo collegati da $R$
   \end{itemize}
 \end{itemize}
-Naturalmente, un $R$ possibile è l'eguaglianza stessa, ma la forza 
-di questo teorema è che possono essere usate anche altre relazioni 
+Naturalmente, un $R$ possibile è l'eguaglianza stessa, ma la forza
+di questo teorema è che possono essere usate anche altre relazioni
 più convenienti.
 \index{liste lazy, la teoria HOL delle@liste ``lazy'', la teoria \HOL{} delle|)}
 
@@ -3148,7 +3148,7 @@ La teoria \theoryimp{path}
 \index{sequenze di riduzione, la teoria HOL delle@sequenze di riduzione, la teoria \HOL{} delle|(}
 \index{percorsi (sequenze di riduzione), la teoria HOL delle@percorsi (sequenze di riduzione), la teoria \HOL{} delle|(}
 %
-definisce un operatore di tipo binario $(\alpha,\beta)\ml{path}$, che 
+definisce un operatore di tipo binario $(\alpha,\beta)\ml{path}$, che
 sta per percorsi potenzialmente infiniti della seguente forma
 \[
   \alpha_1 \stackrel{\beta_1}{\longrightarrow}
@@ -3157,12 +3157,12 @@ sta per percorsi potenzialmente infiniti della seguente forma
   \alpha_n \stackrel{\beta_n}{\longrightarrow}
   \alpha_{n+1} \stackrel{\beta_{n+1}}{\longrightarrow}  \cdots
   \]
-Il tipo \ml{path} è così un modello appropriato per sequenze 
-di riduzione, dove il parametro $\alpha$ corrisponde a ``stati'', e 
+Il tipo \ml{path} è così un modello appropriato per sequenze
+di riduzione, dove il parametro $\alpha$ corrisponde a ``stati'', e
 il parametro $\beta$ corrisponde alle etichette sulle frecce.
 
 Il modello di $(\alpha,\beta)\ml{path}$ è $\alpha \times
-((\alpha\times\beta)\ml{llist})$. Il tipo dei percorsi ha due 
+((\alpha\times\beta)\ml{llist})$. Il tipo dei percorsi ha due
 costruttori:
 \begin{hol}
 \begin{verbatim}
@@ -3170,11 +3170,11 @@ costruttori:
    pcons      : 'a -> 'b -> ('a,'b) path -> ('a,'b) path
 \end{verbatim}
 \end{hol}
-Il costruttore \holtxt{stopped\_at} restituisce un percorso che contiene solo uno 
-stato, e nessuna transizione. (Così, la sequenza di riduzione ha 
-questo stato ``fermato'' [``stopped at'' ndt].) Il costruttore \ml{pcons} prende uno stato, 
-un'etichetta, e un percorso, e restituisce un percorso che è ora intestato 
-dall'argomento stato, e che si sposta da quello stato attraverso l'argomento etichetta 
+Il costruttore \holtxt{stopped\_at} restituisce un percorso che contiene solo uno
+stato, e nessuna transizione. (Così, la sequenza di riduzione ha
+questo stato ``fermato'' [``stopped at'' ndt].) Il costruttore \ml{pcons} prende uno stato,
+un'etichetta, e un percorso, e restituisce un percorso che è ora intestato
+dall'argomento stato, e che si sposta da quello stato attraverso l'argomento etichetta
 al percorso. Graficamente, $\ml{pcons}\;x\;l\;p$ è uguale a
 \[
 x \stackrel{l}{\longrightarrow}
@@ -3207,8 +3207,8 @@ C'è sempre un tale elemento, e le equazioni di definizione sono
 \end{verbatim}
 \end{hol}
 
-Dall'altro lato, la funzione \ml{last} non ha sempre un 
-valore ben-specificato, benché abbia ancora delle eleganti equazioni 
+Dall'altro lato, la funzione \ml{last} non ha sempre un
+valore ben-specificato, benché abbia ancora delle eleganti equazioni
 di caratterizzazione.
 \begin{hol}
 \begin{verbatim}
@@ -3217,8 +3217,8 @@ di caratterizzazione.
 \end{verbatim}
 \end{hol}
 
-Il teorema per \ml{finite} ha un aspetto simile, ma ha un valore 
-definito (\ml{F}, o \emph{false}) su percorsi infiniti, mentre il 
+Il teorema per \ml{finite} ha un aspetto simile, ma ha un valore
+definito (\ml{F}, o \emph{false}) su percorsi infiniti, mentre il
 valore di \ml{last} su tali percorsi non è specificato:
 \begin{hol}
 \begin{verbatim}
@@ -3227,9 +3227,9 @@ valore di \ml{last} su tali percorsi non è specificato:
 \end{verbatim}
 \end{hol}
 
-La funzione \ml{pconcat} concatena due percorsi, collegandoli 
-con un'etichetta fornita. Se il primo percorso è infinito, allora il risultato 
-è uguale a quello del primo percorso. Le equazioni di definizioni è 
+La funzione \ml{pconcat} concatena due percorsi, collegandoli
+con un'etichetta fornita. Se il primo percorso è infinito, allora il risultato
+è uguale a quello del primo percorso. Le equazioni di definizioni è
 \begin{hol}
 \begin{verbatim}
    pconcat_thm |- (pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
@@ -3238,11 +3238,11 @@ con un'etichetta fornita. Se il primo percorso è infinito, allora il risultato
 \end{verbatim}
 \end{hol}
 %
-Queste equazioni sono vere persino quando il primo argomento a 
+Queste equazioni sono vere persino quando il primo argomento a
 \ml{pconcat} è un percorso infinito.
 
-Il predicato \ml{okpath} testa se un percorso è o meno una transizione 
-valida data una relazione di transizione ternaria. Il suo teorema 
+Il predicato \ml{okpath} testa se un percorso è o meno una transizione
+valida data una relazione di transizione ternaria. Il suo teorema
 di caratterizzazione è
 \begin{hol}
 \begin{verbatim}
@@ -3252,7 +3252,7 @@ di caratterizzazione è
 \end{verbatim}
 \end{hol}
 %
-C'è anche un principio d'induzione che semplifica il ragionamento circa 
+C'è anche un principio d'induzione che semplifica il ragionamento circa
 $R$-percorsi finiti:
 %
 \begin{hol}
@@ -3265,7 +3265,7 @@ $R$-percorsi finiti:
 \end{verbatim}
 \end{hol}
 
-Si può mostrare che un insieme \holtxt{P} di percorsi sono tutti $R$-percorsi con il 
+Si può mostrare che un insieme \holtxt{P} di percorsi sono tutti $R$-percorsi con il
 principio di co-induzione:
 \begin{hol}
 \begin{verbatim}
@@ -3283,16 +3283,16 @@ principio di co-induzione:
 \subsection{Le stringhe di caratteri (\theoryimp{string})}
 \index{stringhe, la teoria HOL delle@stringhe, la teoria \HOL{} delle|(}
 
-La teoria \theoryimp{string} definisce un tipo di caratteri e un tipo 
-di stringhe finite costruite da quei caratteri, insieme con un'utile suite di 
+La teoria \theoryimp{string} definisce un tipo di caratteri e un tipo
+di stringhe finite costruite da quei caratteri, insieme con un'utile suite di
 definizioni per operare su stringhe.
 
 \paragraph {Caratteri}
 \index{caratteri, la teoria HOL dei@caratteri, la teoria \HOL{} dei}
 
-Il tipo \holtxt{char} è rappresentato dai numeri minori di 256. Sono 
+Il tipo \holtxt{char} è rappresentato dai numeri minori di 256. Sono
 definite due costanti: {\small\verb+CHR +}$: \konst{num}\to\konst{char}$ e
-{\small\verb+ORD +}$: \konst{char}\to\konst{num}$. Valgono i seguenti 
+{\small\verb+ORD +}$: \konst{char}\to\konst{num}$. Valgono i seguenti
 teoremi:
 \begin{hol}
 \begin{verbatim}
@@ -3302,7 +3302,7 @@ teoremi:
 \end{hol}
 
 \index{letterali carattere}
-I letterali carattere possono essere inseriti usando la sintassi \ML{}, con un carattere 
+I letterali carattere possono essere inseriti usando la sintassi \ML{}, con un carattere
 hash immediatamente seguito da un letterale stringa di lunghezza uno.
 Così:
 \setcounter{sessioncount}{0}
@@ -3321,14 +3321,14 @@ Così:
 
 \paragraph {Stringhe}
 
-Il tipo \holtxt{string} è un alias per il tipo \holtxt{char list}. 
-Tutte le funzioni e i predicati sulle liste sono così disponibili per l'uso 
-sulle stringhe. Alcune di queste costanti sono sottoposte a overload così che sono 
-stampate (e possono essere elaborate dal parsing) con nomi che sono più appropriate per 
+Il tipo \holtxt{string} è un alias per il tipo \holtxt{char list}.
+Tutte le funzioni e i predicati sulle liste sono così disponibili per l'uso
+sulle stringhe. Alcune di queste costanti sono sottoposte a overload così che sono
+stampate (e possono essere elaborate dal parsing) con nomi che sono più appropriate per
 il particolare caso delle liste di caratteri.
 
-Per esempio, \holtxt{NIL} e \holtxt{CONS} su liste hanno 
-i nomi alternativi \holtxt{EMPTYSTRING} e \holtxt{STRING} 
+Per esempio, \holtxt{NIL} e \holtxt{CONS} su liste hanno
+i nomi alternativi \holtxt{EMPTYSTRING} e \holtxt{STRING}
 rispettivamente:
 %
 \begin{hol}
@@ -3340,9 +3340,9 @@ rispettivamente:
 \end{verbatim}
 \end{hol}
 \index{letterali stringa}
-Il parser \HOL{} mappa la sintassi \holtxt{""} a \holtxt{EMPTYSTRING}, 
-e il printer \HOL{} inverte questo. Il parser espande i letterali 
-stringa della forma \holtxt{"$c_1 c_2 \ldots c_n$"} al termine 
+Il parser \HOL{} mappa la sintassi \holtxt{""} a \holtxt{EMPTYSTRING},
+e il printer \HOL{} inverte questo. Il parser espande i letterali
+stringa della forma \holtxt{"$c_1 c_2 \ldots c_n$"} al termine
 composto
 \[
 \holtxt{STRING} \;c_1\; (\holtxt{STRING}\;c_2\,\ldots\,
@@ -3357,9 +3357,9 @@ Naturalmente, si potrebbe anche scrivere
 \end{verbatim}
 \end{session}
 
-I letterali stringa possono essere costruiti usando le varie speciali sequenze 
-di escape che sono usate in \ML{}. Per esempio, \ml{\bs{}n} per il 
-carattere di nuova linea, e un backslash seguite da tre cifre decimali 
+I letterali stringa possono essere costruiti usando le varie speciali sequenze
+di escape che sono usate in \ML{}. Per esempio, \ml{\bs{}n} per il
+carattere di nuova linea, e un backslash seguite da tre cifre decimali
 per caratteri del numero dato.
 \begin{session}
 \begin{verbatim}
@@ -3367,12 +3367,12 @@ per caratteri del numero dato.
 > val t = ``"foo bar\n\^A"`` : term
 \end{verbatim}
 \end{session}
-Si noti che se si vuole usare la sintassi di controllo caratteri con il 
-caret che il pretty-printer ha scelto di usare per stampare la stringa 
-data, e questo accade all'interno di una quotation, allora il caret dovrà 
+Si noti che se si vuole usare la sintassi di controllo caratteri con il
+caret che il pretty-printer ha scelto di usare per stampare la stringa
+data, e questo accade all'interno di una quotation, allora il caret dovrà
 essere duplicato. (Si veda la Sezione~\ref{sec:quotation-antiquotation}.)
 
-C'è anche una funzione de-costruttore {\small\verb+DEST_STRING+} per 
+C'è anche una funzione de-costruttore {\small\verb+DEST_STRING+} per
 le stringhe che restituisce un tipo opzione.
 \begin{hol}
 \begin{verbatim}
@@ -3386,8 +3386,8 @@ le stringhe che restituisce un tipo opzione.
 \paragraph{Espressioni case}
 \index{espressioni case!su stringhe}
 
-Le espressioni \HOL{} composte che ramificano sulla base del fatto che 
-un termine sia una stringa vuota o non vuota possono essere scritte con la 
+Le espressioni \HOL{} composte che ramificano sulla base del fatto che
+un termine sia una stringa vuota o non vuota possono essere scritte con la
 sintassi di superficie
 \begin{hol}
 \begin{verbatim}
@@ -3401,10 +3401,10 @@ Una tale espressione è di fatto un'espressione case sulla lista sottostante, e c
 
 \paragraph {Lunghezza e concatenazione}
 
-Una funzione standard \holtxt{LENGTH} può essere scritta \holtxt{STRLEN} 
-quando applicata a una stringa, e \holtxt{APPEND} può essere scritta come 
-\holtxt{STRCAT}. Ci sono anche teoremi che caratterizzano queste 
-costanti in \ml{stringTheory}, benché esse siano semplicemente istanziazioni 
+Una funzione standard \holtxt{LENGTH} può essere scritta \holtxt{STRLEN}
+quando applicata a una stringa, e \holtxt{APPEND} può essere scritta come
+\holtxt{STRCAT}. Ci sono anche teoremi che caratterizzano queste
+costanti in \ml{stringTheory}, benché esse siano semplicemente istanziazioni
 dei risultati da \ml{listTheory}:
 \begin{hol}
 \begin{verbatim}
@@ -3424,35 +3424,35 @@ dei risultati da \ml{listTheory}:
 
 \section{Collezioni}
 
-In \HOL{} sono disponibili alcune nozioni differenti di collezione di elementi: 
+In \HOL{} sono disponibili alcune nozioni differenti di collezione di elementi:
 insiemi, multi-insiemi, relazioni, e mappe finite.
 
 \subsection{Insiemi (\theoryimp{pred\_set})}
 \label{sec:theory-of-sets}
 \index{insiemi, la teoria HOL dei@insiemi, la teoria \HOL{} dei}
 
-Un esteso sviluppo della teoria degli insiemi è disponibile nella teoria 
-\theoryimp{pred\_set}. Gli insiemi sono rappresentati da funzione del tipo 
-$\alpha \to \konst{bool}$, cioé, essi sono le cosiddette funzioni 
+Un esteso sviluppo della teoria degli insiemi è disponibile nella teoria
+\theoryimp{pred\_set}. Gli insiemi sono rappresentati da funzione del tipo
+$\alpha \to \konst{bool}$, cioé, essi sono le cosiddette funzioni
 caratteristiche.
 %
 \index{funzioni caratteristiche!come base della teoria \HOL{} degli insiemi}
 %
-Si può usare l'abbreviazione di tipo $\alpha\; \konst{set}$ 
-al posto di $\alpha \to \konst{bool}$. Gli insiemi possono essere finiti o 
+Si può usare l'abbreviazione di tipo $\alpha\; \konst{set}$
+al posto di $\alpha \to \konst{bool}$. Gli insiemi possono essere finiti o
 infiniti. Tutti gli elementi in un insieme devono avere lo stesso tipo.
 
-L'\emph{appartenenza a un insieme} è la nozione base sui cui è basata la teoria degli insiemi 
-formalizzata. In \HOL, l'appartenenza è rappresentata da una costante 
-infissa \holtxt{IN}, definita per convenienza nella teoria 
+L'\emph{appartenenza a un insieme} è la nozione base sui cui è basata la teoria degli insiemi
+formalizzata. In \HOL, l'appartenenza è rappresentata da una costante
+infissa \holtxt{IN}, definita per convenienza nella teoria
 \theoryimp{bool}.
 \begin{hol}
 \begin{verbatim}
    IN_DEF   |- IN = \x f. f x
 \end{verbatim}
 \end{hol}
-L'operatore \holtxt{IN} è semplicemente un modo di applicare la 
-funzione caratteristica a un elemento, come mostra la seguente conseguenza 
+L'operatore \holtxt{IN} è semplicemente un modo di applicare la
+funzione caratteristica a un elemento, come mostra la seguente conseguenza
 banale della definizione:
 \begin{hol}
 \begin{verbatim}
@@ -3477,11 +3477,11 @@ L'insieme universale, \holtxt{UNIV}, su un tipo è la funzione caratteristica che
 \end{verbatim}
 \end{hol}
 In aggiunta a \holtxt{UNIV} (magari con un'annotazione di tipo \holtxt{:'a~set}), si può anche  scrivere \holtxt{univ(:'a)} per rappresentare l'insieme universale sul tipo \holtxt{:'a}.
-La sintassi Unicode \holtxt{$\mathbb{U}$(:'a)} significa la stessa cosa. 
+La sintassi Unicode \holtxt{$\mathbb{U}$(:'a)} significa la stessa cosa.
 Il simbolo Unicode per $\mathbb{U}$ è U+1D54C, e potrebbe non esistere in molti set di font.
 
-Una di queste forme sarà usata per stampare \holtxt{UNIV} di default. 
-La traccia utente (si veda la Sezione~\ref{sec:traces}) \ml{"Univ~pretty-printing"} può essere impostata a zero per cancellare questo comportamento. 
+Una di queste forme sarà usata per stampare \holtxt{UNIV} di default.
+La traccia utente (si veda la Sezione~\ref{sec:traces}) \ml{"Univ~pretty-printing"} può essere impostata a zero per cancellare questo comportamento.
 Inoltre, la traccia \ml{"Unicode Univ printing"} può essere usata per smettere di usare la sintassi U+1D54C, persino se è attiva la traccia Unicode.
 
 I simboli \holtxt{univ} e \holtxt{$\mathbb{U}$} sono prefissi di priorità alta (si veda la Sezione~\ref{sec:parseprint:fixities}), e pattern sottoposti a overload (si veda la Sezione~\ref{sec:parser:syntactic-patterns}) che mappano un valore dello tipo stesso alla costante corrispondente \holtxt{UNIV}.
@@ -3495,10 +3495,10 @@ senza il bisogno di parentesi intorno all'argomento di \holtxt{FINITE}.
 
 \paragraph{Inserimento, unione, e intersezione}
 
-L'inserimento ({\small\verb+INSERT+}, scritto infisso) di un elemento 
-in un insieme è definito con una comprensione d'insieme. La comprensione d'insieme è 
+L'inserimento ({\small\verb+INSERT+}, scritto infisso) di un elemento
+in un insieme è definito con una comprensione d'insieme. La comprensione d'insieme è
 discussa nella sottosezione successiva. Le definizioni usuali per l'unione insiemistica ({\small\verb+UNION+},
-scritto infisso) e l'intersezione ({\small\verb+INTER+}, anch'esso infisso) 
+scritto infisso) e l'intersezione ({\small\verb+INTER+}, anch'esso infisso)
 sono date attraverso la comprensione d'insieme.
 \begin{hol}
 \begin{verbatim}
@@ -3507,9 +3507,9 @@ sono date attraverso la comprensione d'insieme.
    INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
 \end{verbatim}
 \end{hol}
-\holtxt{UNION} e \holtxt{INTER} sono operazioni 
-binarie. Le operazioni di unione e intersezione indicizzata, cioé, 
-$\bigcup_{i \in P}$ e $\bigcap_{i \in P}$ sono fornite dalle 
+\holtxt{UNION} e \holtxt{INTER} sono operazioni
+binarie. Le operazioni di unione e intersezione indicizzata, cioé,
+$\bigcup_{i \in P}$ e $\bigcap_{i \in P}$ sono fornite dalle
 definizioni di \holtxt{BIGUNION} e \holtxt{BIGINTER}.
 \begin{hol}
 \begin{verbatim}
@@ -3517,14 +3517,14 @@ definizioni di \holtxt{BIGUNION} e \holtxt{BIGINTER}.
    BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
 \end{verbatim}
 \end{hol}
-Sia \holtxt{BIGUNION} che \holtxt{BIGINTER} riducono un insieme di insiemi a un 
-insieme e così hanno il tipo 
+Sia \holtxt{BIGUNION} che \holtxt{BIGINTER} riducono un insieme di insiemi a un
+insieme e così hanno il tipo
 $((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
 
 \paragraph{Sottoinsiemi}
 
-L'inclusione di insiemi (\holtxt{SUBSET}, infisso), l'inclusione propria 
-(\holtxt{PSUBSET}, infisso), e l'insieme potenza (\holtxt{POW}) sono definite come 
+L'inclusione di insiemi (\holtxt{SUBSET}, infisso), l'inclusione propria
+(\holtxt{PSUBSET}, infisso), e l'insieme potenza (\holtxt{POW}) sono definite come
 segue:
 %
 \begin{hol}
@@ -3537,10 +3537,10 @@ segue:
 
 \paragraph{Differenza di insiemi e complemento}
 
-La differenza tra due insiemi (\holtxt{DIFF}, infisso) è definita da una 
-comprensione di insieme. Sulla base di quella, la cancellazione di un singolo elemento 
-(\holtxt{DELETE}, infisso) da un insieme è diretta. Dal momento che 
-l'universo di un tipo è sempre disponibile attraverso \holtxt{UNIV}, si può prendere il 
+La differenza tra due insiemi (\holtxt{DIFF}, infisso) è definita da una
+comprensione di insieme. Sulla base di quella, la cancellazione di un singolo elemento
+(\holtxt{DELETE}, infisso) da un insieme è diretta. Dal momento che
+l'universo di un tipo è sempre disponibile attraverso \holtxt{UNIV}, si può prendere il
 complemento (\holtxt{COMPL}) di un insieme.
 \begin{hol}
 \begin{verbatim}
@@ -3551,7 +3551,7 @@ complemento (\holtxt{COMPL}) di un insieme.
 \end{hol}
 
 \paragraph{Funzioni su insiemi}
-L'immagine di una funzione $f :\alpha \to \beta$ su 
+L'immagine di una funzione $f :\alpha \to \beta$ su
 un insieme (\holtxt{IMAGE}) è definito con una comprensione d'insieme.
 \begin{hol}
 \begin{verbatim}
@@ -3559,7 +3559,7 @@ un insieme (\holtxt{IMAGE}) è definito con una comprensione d'insieme.
 \end{verbatim}
 \end{hol}
 %
-Iniezioni, suriezioni, e biezioni tra insiemi sono definite 
+Iniezioni, suriezioni, e biezioni tra insiemi sono definite
 come segue:
 %
 \begin{hol}
@@ -3581,7 +3581,7 @@ come segue:
 
 \paragraph{Insiemi finiti}
 \index{finitezza!di insiemi}
-Gli insiemi finiti (\holtxt{FINITE}) sono definiti induttivamente come quelli 
+Gli insiemi finiti (\holtxt{FINITE}) sono definiti induttivamente come quelli
 costruiti dall'insieme vuoto per mezzo di un numero finito di inserimenti.
 %
 \begin{hol}
@@ -3609,9 +3609,9 @@ Gli insiemi finiti hanno un teorema d'induzione:
 \end{verbatim}
 \end{hol}
 %
-Come menzionato, le operazioni su insiemi si applicano sia a insiemi finiti che 
-infiniti. Tuttavia, alcune operazioni, come la cardinalità 
-(\holtxt{CARD}), sono definite soltanto per insiemi finiti. La 
+Come menzionato, le operazioni su insiemi si applicano sia a insiemi finiti che
+infiniti. Tuttavia, alcune operazioni, come la cardinalità
+(\holtxt{CARD}), sono definite soltanto per insiemi finiti. La
 cardinalità di un insieme infinito non è specificata.
 \index{cardinalità d'insiemi (finiti)}
 %
@@ -3624,10 +3624,10 @@ cardinalità di un insieme infinito non è specificata.
 \end{verbatim}
 \end{hol}
 %
-Dal momento che gli insiemi finiti e infiniti sono gestiti in modo uniforme in 
-\theoryimp{pred\_set}, le proprietà delle operazioni su insiemi finiti devono 
-includere esplicitamente dei vincoli circa la finitezza. Per esempio il 
-seguente teorema che collega la cardinalità e i sottoinsiemi è vero solo per 
+Dal momento che gli insiemi finiti e infiniti sono gestiti in modo uniforme in
+\theoryimp{pred\_set}, le proprietà delle operazioni su insiemi finiti devono
+includere esplicitamente dei vincoli circa la finitezza. Per esempio il
+seguente teorema che collega la cardinalità e i sottoinsiemi è vero solo per
 insiemi finiti.
 %
 \begin{hol}
@@ -3637,11 +3637,11 @@ insiemi finiti.
 \end{verbatim}
 \end{hol}
 %
-In \theoryimp{pred\_set} è disponibile un'estesa suite di teoremi che trattano 
+In \theoryimp{pred\_set} è disponibile un'estesa suite di teoremi che trattano
 con la finitezza e la cardinalità.
 
 \paragraph{Prodotto incrociato}
-Il prodotto di due insiemi ({\small\verb+CROSS+}, infisso) è definito 
+Il prodotto di due insiemi ({\small\verb+CROSS+}, infisso) è definito
 con una comprensione d'insieme.
 %
 \begin{hol}
@@ -3660,13 +3660,13 @@ con una comprensione d'insieme.
 
 \paragraph{Funzioni ricorsive su insiemi}
 
-Le funzioni ricorsive su insiemi possono essere definite dalla ricorsione 
-benfondata. Di solito, la totalità di una tale funzione è stabilita 
-misurando la cardinalità dell'insieme (finito). Tuttavia, si può usare 
+Le funzioni ricorsive su insiemi possono essere definite dalla ricorsione
+benfondata. Di solito, la totalità di una tale funzione è stabilita
+misurando la cardinalità dell'insieme (finito). Tuttavia, si può usare
 un altro teorema per giustificare un fold ({\small\verb+ITSET+}) per insiemi finiti.
-Purché una funzione $f:\alpha\to\beta\to\beta$ obbedisca a una condizione 
+Purché una funzione $f:\alpha\to\beta\to\beta$ obbedisca a una condizione
 conosciuta come \emph{commutativa-a-sinistra}, cioè, $f\;x\;(f\;y\;z) =
-f\;y\;(f\;x\;z)$, allora $f$ può essere applicata eseguendo il suo folding sull'insieme 
+f\;y\;(f\;x\;z)$, allora $f$ può essere applicata eseguendo il suo folding sull'insieme
 in un modo tail-ricorsivo.
 \begin{hol}
 \begin{verbatim}
@@ -3686,10 +3686,10 @@ E' disponibile anche una versione ricorsiva:
           (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
 \end{verbatim}
 \end{hol}
-Per la completa derivazione, si vedano i sorgenti di {\small\verb+pred_set+}. 
-La definizione di {\small\verb+ITSET+} permette, per esempio, la 
-definizione della sommatoria dei risultati di una funzione su un insieme finito di 
-elementi, da cui sono derivati una caratterizzazione ricorsiva e altri utili 
+Per la completa derivazione, si vedano i sorgenti di {\small\verb+pred_set+}.
+La definizione di {\small\verb+ITSET+} permette, per esempio, la
+definizione della sommatoria dei risultati di una funzione su un insieme finito di
+elementi, da cui sono derivati una caratterizzazione ricorsiva e altri utili
 teoremi.
 %
 \begin{hol}
@@ -3705,15 +3705,15 @@ teoremi.
 
 \paragraph{Altre definizioni e teoremi}
 
-TCi sono molte altre definizioni in \theoryimp{pred\_set}, ma non sono 
-usate così pesantemente come quelle presentate qui. Analogamente, la maggior parte dei teoremi 
-in \theoryimp{pred\_set} collegano varie operazioni comuni sugli insiemi l'una 
+TCi sono molte altre definizioni in \theoryimp{pred\_set}, ma non sono
+usate così pesantemente come quelle presentate qui. Analogamente, la maggior parte dei teoremi
+in \theoryimp{pred\_set} collegano varie operazioni comuni sugli insiemi l'una
 con le altre, ma non esprimono al cun teorema profondo della teoria degli insiemi.
 
-Comunque, un teorema degno di nota è il Lemma di Koenig, che afferma che 
-ogni albero infinito finitamente ramificato ha un percorso infinito. Ci sono 
-molti modi di formulare questo teorema, a seconda di come la nozione di 
-albero è formalizzata. In \theoryimp{pred\_set}, la ramificazione finita è 
+Comunque, un teorema degno di nota è il Lemma di Koenig, che afferma che
+ogni albero infinito finitamente ramificato ha un percorso infinito. Ci sono
+molti modi di formulare questo teorema, a seconda di come la nozione di
+albero è formalizzata. In \theoryimp{pred\_set}, la ramificazione finita è
 definita come un predicato su una relazione.
 %
 \begin{hol}
@@ -3723,7 +3723,7 @@ definita come un predicato su una relazione.
 \end{verbatim}
 \end{hol}
 %
-Da questo, la seguente versione del Lemma di Koenig è enunciata e 
+Da questo, la seguente versione del Lemma di Koenig è enunciata e
 dimostrata:
 \begin{hol}
 \begin{verbatim}
@@ -3737,16 +3737,16 @@ dimostrata:
 
 \subsubsection{Sintassi per gli insiemi}\index{notazione insiemistica}
 
-Le notazioni insiemistiche special purpose 
+Le notazioni insiemistiche special purpose
 {\small\verb%{%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%}%} e
-{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} sono riconosciute 
-dal parser e dal printer di \HOL{} quando la teoria \theoryimp{pred\_set} 
+{\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} sono riconosciute
+dal parser e dal printer di \HOL{} quando la teoria \theoryimp{pred\_set}
 è caricata.
 
-L'interpretazione normale di \lb$t_1 ;t_2 ; \ldots ; t_n$\rb{} è l'insieme finito 
+L'interpretazione normale di \lb$t_1 ;t_2 ; \ldots ; t_n$\rb{} è l'insieme finito
 che contiene solo $t_1,t_2,\ldots,
-t_n$. Questo può essere modellato iniziando con l'insieme vuoto e 
-eseguendo una sequenza di inserimenti. Per esempio, \holtxt{\lb{}1;2;3;4\rb{}} 
+t_n$. Questo può essere modellato iniziando con l'insieme vuoto e
+eseguendo una sequenza di inserimenti. Per esempio, \holtxt{\lb{}1;2;3;4\rb{}}
 è parsato a
 
 \begin{hol}
@@ -3763,13 +3763,13 @@ l'insieme di tutti i $t$ tali che $p$. In \HOL, tale sintassi è analizzata dal p
 %
 \ml{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
-\noindent dove $x_1, \ldots, x_n$ sono quelle variabili libere che 
-occorrono sia in $t$ sia in $p$ se entrambi hanno almeno una variabile libera. Se 
-$t$ o $p$ non hanno variabili libere, allora $x_1, \ldots, x_n$ sono considerate 
-essere le variabili libere dell'altro termine. Se entrambi hanno variabili 
-libere, ma non c'è sovrapposizione, allora risulta un errore. L'ordine 
-in cui le variabili sono elencate nella struttura di variabili 
-dell'astrazione accoppiata è una funzione nn specificata della struttura di $t$ 
+\noindent dove $x_1, \ldots, x_n$ sono quelle variabili libere che
+occorrono sia in $t$ sia in $p$ se entrambi hanno almeno una variabile libera. Se
+$t$ o $p$ non hanno variabili libere, allora $x_1, \ldots, x_n$ sono considerate
+essere le variabili libere dell'altro termine. Se entrambi hanno variabili
+libere, ma non c'è sovrapposizione, allora risulta un errore. L'ordine
+in cui le variabili sono elencate nella struttura di variabili
+dell'astrazione accoppiata è una funzione nn specificata della struttura di $t$
 (è approssimativamente da sinistra a destra). Per esempio,
 %
 \begin{hol}
@@ -3794,8 +3794,8 @@ dove \ml{GSPEC} è caratterizzata da:
 \end{verbatim}
 \end{hol}
 
-Questa specifica in qualche modo criptica si può comprendere attraverso 
-un esempio. La sintassi 
+Questa specifica in qualche modo criptica si può comprendere attraverso
+un esempio. La sintassi
 %
 \begin{hol}
 \begin{verbatim}
@@ -3817,9 +3817,9 @@ che, per \ml{GSPECIFICATION}, è uguale a
 \end{verbatim}
 \end{hol}
 %
-La variabile quantificata esistenzialmente \verb+x+ ha un tipo coppia, 
-così che può essere sostituita da una coppia \verb+(p,q)+ e 
-si può eseguire una $\beta$-riduzione-accoppiata, portando a 
+La variabile quantificata esistenzialmente \verb+x+ ha un tipo coppia,
+così che può essere sostituita da una coppia \verb+(p,q)+ e
+si può eseguire una $\beta$-riduzione-accoppiata, portando a
 %
 \begin{hol}
 \begin{verbatim}
@@ -3827,7 +3827,7 @@ si può eseguire una $\beta$-riduzione-accoppiata, portando a
 \end{verbatim}
 \end{hol}
 %
-che è uguale al significato inteso della sintassi 
+che è uguale al significato inteso della sintassi
 originale:
 %
 \begin{hol}
@@ -3836,26 +3836,26 @@ originale:
 \end{verbatim}
 \end{hol}
 
-\paragraph{Comprensioni d'insieme non ambigue} C'è anche una sintassi 
-della comprensione d'insieme non ambigua, che permetter all'utente di 
-specificare quali variabili devono essere quantificate nell'astrazione 
-cioè l'argomento di \holtxt{GSPEC}. Termini della forma 
+\paragraph{Comprensioni d'insieme non ambigue} C'è anche una sintassi
+della comprensione d'insieme non ambigua, che permetter all'utente di
+specificare quali variabili devono essere quantificate nell'astrazione
+cioè l'argomento di \holtxt{GSPEC}. Termini della forma
 \begin{hol}
 \begin{verbatim}
    { t | vs | P }
 \end{verbatim}
 \end{hol}
-generano insiemi che contengono valori della forma data da \holtxt{t}, dove 
-le variabili menzionate in \holtxt{vs} devono soddisfare il vincolo 
-\holtxt{P}. Per esempio, l'insieme 
+generano insiemi che contengono valori della forma data da \holtxt{t}, dove
+le variabili menzionate in \holtxt{vs} devono soddisfare il vincolo
+\holtxt{P}. Per esempio, l'insieme
 \begin{hol}
 \begin{verbatim}
    { x + y | x | x < y }
 \end{verbatim}
 \end{hol}
-è l'insieme dei numeri da \holtxt{y} fino a ma non incluso 
-\holtxt{2~*~y}. L'insieme può essere ``letto'' in modo computazionale: escludere tutte 
-quelle \holtxt{x} che sono minori di \holtxt{y}, e ad ognuna di tali 
+è l'insieme dei numeri da \holtxt{y} fino a ma non incluso
+\holtxt{2~*~y}. L'insieme può essere ``letto'' in modo computazionale: escludere tutte
+quelle \holtxt{x} che sono minori di \holtxt{y}, e ad ognuna di tali
 \holtxt{x} aggiungere \holtxt{y}, generando con ciò un insieme di numeri.
 
 Nell'esempio di sopra, il termine \holtxt{GSPEC} sottostante sarà
@@ -3865,37 +3865,37 @@ Nell'esempio di sopra, il termine \holtxt{GSPEC} sottostante sarà
 \end{verbatim}
 \end{hol}
 
-Il componente \holtxt{vs} della notazione non ambigua deve essere una singola 
-``struttura variabile'' che potrebbe apparire sotto un'astrazione possibilmente 
+Il componente \holtxt{vs} della notazione non ambigua deve essere una singola
+``struttura variabile'' che potrebbe apparire sotto un'astrazione possibilmente
 accoppiata come nella Sezione~\ref{HOL-varstruct}. In altre parole, questo
 \begin{hol}
 \begin{verbatim}
    { x + y | (x,y) | x < y }
 \end{verbatim}
 \end{hol}
-va bene, ma questo 
+va bene, ma questo
 \begin{hol}
 \begin{verbatim}
    { x + y | x y | x < y }
 \end{verbatim}
 \end{hol}
-solleverà un errore. (Inoltre, le parentesi più esterne intorno 
+solleverà un errore. (Inoltre, le parentesi più esterne intorno
 alle coppie nella posizione \holtxt{vs} si possono omettere.)
 
-La notazione non ambigua è stampata dal pretty-printere ogni volta che 
-l'insieme da stampare non può essere espressa con la notazione di default, o 
-se la variabile di traccia con nome \ml{pp\_unambiguous\_comprehensions} 
+La notazione non ambigua è stampata dal pretty-printere ogni volta che
+l'insieme da stampare non può essere espressa con la notazione di default, o
+se la variabile di traccia con nome \ml{pp\_unambiguous\_comprehensions}
 è impostata a \ml{true}.
 
 
 \subsection{Multi-insiemi (\theoryimp{bag})}\label{multiset}
 
-I multinsiemi, anche conosciuti come \emph{bag}, sono simili agli insiemi, eccetto per il fatto che 
-essi permettono occorrenze ripetute di un elemento. Mentre gli insiemi sono 
-rappresentati da funzioni di tipo $\alpha\to\konst{bool}$, che segnalano 
-la presenza, o l'assenza, di un elemento, i multinsiemi sono rappresentati 
-da funzioni di tipo $\alpha\to\konst{num}$, che danno la 
-molteplicità di ciascun elemento nel multinsieme. I multinsiemi possono essere finiti 
+I multinsiemi, anche conosciuti come \emph{bag}, sono simili agli insiemi, eccetto per il fatto che
+essi permettono occorrenze ripetute di un elemento. Mentre gli insiemi sono
+rappresentati da funzioni di tipo $\alpha\to\konst{bool}$, che segnalano
+la presenza, o l'assenza, di un elemento, i multinsiemi sono rappresentati
+da funzioni di tipo $\alpha\to\konst{num}$, che danno la
+molteplicità di ciascun elemento nel multinsieme. I multinsiemi possono essere finiti
 o infiniti.
 
 Le abbreviazioni di tipo $\alpha\;\konst{multiset}$ e
@@ -3903,7 +3903,7 @@ $\alpha\;\konst{bag}$ possono essere usate al posto di $\alpha\to\konst{num}$.
 
 \paragraph {Multinsieme vuoto}
 
-Il multinsieme vuoto non ha elementi. Così, la funzione che lo implementa 
+Il multinsieme vuoto non ha elementi. Così, la funzione che lo implementa
 restituisce $0$ per ogni input.
 %
 \begin{hol}
@@ -3912,7 +3912,7 @@ restituisce $0$ per ogni input.
 \end{verbatim}
 \end{hol}
 
-\noindent La sintassi speciale {\verb+{||}+} può essere usata per rappresentare il multinsieme 
+\noindent La sintassi speciale {\verb+{||}+} può essere usata per rappresentare il multinsieme
 vuoto.
 
 \paragraph {Appartenenza}
@@ -3922,8 +3922,8 @@ bag. There are two notions: does an element occur at least $n$ times
 in a bag ({\small\verb+BAG_INN+}); and does an element occur in a bag
 at all ({\small\verb+BAG_IN+}).
 
-La maggior parte della teoria si può basare sulla nozione di appartenenza a un 
-multinsieme. Ci sono due nozioni: un elemento occorre al meno $n$ volte 
+La maggior parte della teoria si può basare sulla nozione di appartenenza a un
+multinsieme. Ci sono due nozioni: un elemento occorre al meno $n$ volte
 in una bag
 %
 \begin{hol}
@@ -3945,8 +3945,8 @@ Due bag sono uguali se tutti gli elemento hanno lo stesso conteggio.
 \paragraph{Sotto-multinsieme}
 
 Una relazione sotto-bag (\holtxt{SUB\_BAG}) vale tra $b_1$ e
-$b_2$ a condizione che ogni elemento in $b_1$ occorra almeno le stesse volte in 
-$b_2$. La nozione di una sotto-bag propria (\holtxt{PSUB\_BAG}) è facilmente 
+$b_2$ a condizione che ogni elemento in $b_1$ occorra almeno le stesse volte in
+$b_2$. La nozione di una sotto-bag propria (\holtxt{PSUB\_BAG}) è facilmente
 definita.
 %
 \begin{hol}
@@ -3960,7 +3960,7 @@ definita.
 
 \paragraph{Inserimento}
 
-L'inserimento di un elemento in una bag (\holtxt{BAG\_INSERT}) aggiorna il 
+L'inserimento di un elemento in una bag (\holtxt{BAG\_INSERT}) aggiorna il
 conteggio di quell'elemento e lascia gli altri inalterati.
 %
 \begin{hol}
@@ -3970,10 +3970,10 @@ conteggio di quell'elemento e lascia gli altri inalterati.
 \end{verbatim}
 \end{hol}
 
-Multinsiemi esplicitamente-dati sono supportati dalla sintassi 
-{\small\verb%{|%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%|}%}, dove 
-ci possono essere, naturalmente, ripetizioni. Questo è modellando iniziando con il multinsieme 
-vuoto ed eseguendo una sequenza di inserimenti. Per esempio, 
+Multinsiemi esplicitamente-dati sono supportati dalla sintassi
+{\small\verb%{|%}$t_1 ;t_2 ; \ldots ; t_n${\small\verb%|}%}, dove
+ci possono essere, naturalmente, ripetizioni. Questo è modellando iniziando con il multinsieme
+vuoto ed eseguendo una sequenza di inserimenti. Per esempio,
 \verb+{|1; 2; 3; 2; 1|}+ è analizzato dal parser a
 
 \begin{hol}
@@ -3986,15 +3986,15 @@ vuoto ed eseguendo una sequenza di inserimenti. Per esempio,
 
 \paragraph{Unione and differenza}
 
-Le operazioni di unione (\holtxt{BAG\_UNION}) e differenza (\holtxt{BAG\_DIFF}) 
-su bag si riducono entrambe a un calcolo aritmetico sui loro 
-elementi. L'eliminazione di un singolo elemento da un bag può essere espresso come il 
-prendere la differenza tra il multinsieme con un multinsieme di un singolo elemento; 
-tuttavia, c'è anche una presentazione relazionale 
-(\holtxt{BAG\_DELETE}) che collega i suoi primi e ultimi argomenti solo 
-se il primo contiene esattamente una occorrenza in più dell'argomento 
-di mezzo rispetto all'ultimo. Questa non è la stessa cosa di usare 
-\holtxt{BAG\_DIFF} per rimuovere una bag di un elemento perché insiste sul fatto che 
+Le operazioni di unione (\holtxt{BAG\_UNION}) e differenza (\holtxt{BAG\_DIFF})
+su bag si riducono entrambe a un calcolo aritmetico sui loro
+elementi. L'eliminazione di un singolo elemento da un bag può essere espresso come il
+prendere la differenza tra il multinsieme con un multinsieme di un singolo elemento;
+tuttavia, c'è anche una presentazione relazionale
+(\holtxt{BAG\_DELETE}) che collega i suoi primi e ultimi argomenti solo
+se il primo contiene esattamente una occorrenza in più dell'argomento
+di mezzo rispetto all'ultimo. Questa non è la stessa cosa di usare
+\holtxt{BAG\_DIFF} per rimuovere una bag di un elemento perché insiste sul fatto che
 l'elemento che viene rimosso appare effettivamente nella bag più grande.
 %
 \begin{hol}
@@ -4010,9 +4010,9 @@ l'elemento che viene rimosso appare effettivamente nella bag più grande.
 
 \paragraph {Intersezione, merge, e filtro}
 
-L'intersezione di due bag (\holtxt{BAG\_INTER}) prende il minimo 
-puntuale. L'operazione duale, il merging (\holtxt{BAG\_MERGE}), prende il 
-massimo puntuale. Una bag può essere `filtrata' da un insieme per restituire la bag 
+L'intersezione di due bag (\holtxt{BAG\_INTER}) prende il minimo
+puntuale. L'operazione duale, il merging (\holtxt{BAG\_MERGE}), prende il
+massimo puntuale. Una bag può essere `filtrata' da un insieme per restituire la bag
 dove tutti gli elementi che non sono nell'insieme sono stati rimossi.
 %
 \begin{hol}
@@ -4028,7 +4028,7 @@ dove tutti gli elementi che non sono nell'insieme sono stati rimossi.
 
 \paragraph {Insiemi e Multinsiemi}
 
-Lo spostamento tra bag e insiemi si ottiene con le seguenti due 
+Lo spostamento tra bag e insiemi si ottiene con le seguenti due
 definizioni
 %
 \begin{hol}
@@ -4042,16 +4042,16 @@ definizioni
 
 \paragraph {Immagine}
 
-Prendere l'immagina di una funzione su un multinsieme per ottenere un nuovo multinsieme 
-sembrerebbe essere semplicemente una questione di applicare la funzione a ciascun elemento 
-del multinsieme. Tuttavia, c'è un problema se $f$ non è iniettiva 
-e il multinsieme è infinito. Per esempio, si prenda il multinsieme 
-che consiste di tutti i numeri naturali e si applichi $\lambda x.\; 1$ a 
-ciascun elemento. Il multinsieme risultante conterrebbe un numero infinito di 
-$1$. Per evitare questo sono richiesti alcuni vincoli: per esempio, 
-stipulare che la funzione sia solo finitamente non-iniettiva, o che 
-il multinsieme di input sia finito. Tali condizioni sarebbero onerose alla prova 
-dei fatti; il compromesso è mappare la molteplicità degli elementi 
+Prendere l'immagina di una funzione su un multinsieme per ottenere un nuovo multinsieme
+sembrerebbe essere semplicemente una questione di applicare la funzione a ciascun elemento
+del multinsieme. Tuttavia, c'è un problema se $f$ non è iniettiva
+e il multinsieme è infinito. Per esempio, si prenda il multinsieme
+che consiste di tutti i numeri naturali e si applichi $\lambda x.\; 1$ a
+ciascun elemento. Il multinsieme risultante conterrebbe un numero infinito di
+$1$. Per evitare questo sono richiesti alcuni vincoli: per esempio,
+stipulare che la funzione sia solo finitamente non-iniettiva, o che
+il multinsieme di input sia finito. Tali condizioni sarebbero onerose alla prova
+dei fatti; il compromesso è mappare la molteplicità degli elementi
 problematici a $0$.
 %
 \begin{hol}
@@ -4067,7 +4067,7 @@ problematici a $0$.
 
 \paragraph {Multinsiemi finiti}
 \index{finitezza!dei multinsiemi}
-I multinsiemi finiti (\holtxt{FINITE\_BAG}) sono definiti in modo induttivo come 
+I multinsiemi finiti (\holtxt{FINITE\_BAG}) sono definiti in modo induttivo come
 quelli costruiti dalla bag vuota attraverso un numero finito di inserimenti.
 %
 \begin{hol}
@@ -4079,7 +4079,7 @@ quelli costruiti dalla bag vuota attraverso un numero finito di inserimenti.
 \end{verbatim}
 \end{hol}
 %
-I multinsiemi finiti hanno un teorema d'induzione, e anche un teorema 
+I multinsiemi finiti hanno un teorema d'induzione, e anche un teorema
 d'induzione completa.
 %
 \index{teoremi d'induzione, nella logica HOL@teoremi d'induzione, nella logica \HOL{}!per bag finite}
@@ -4098,7 +4098,7 @@ d'induzione completa.
 \end{verbatim}
 \end{hol}
 %
-La cardinalità (\holtxt{BAG\_CARD}) di un multinsieme conta il 
+La cardinalità (\holtxt{BAG\_CARD}) di un multinsieme conta il
 numero totale di occorrenze. Essa è specificata solo per multinsiemi finiti.
 %
 \begin{hol}
@@ -4112,13 +4112,13 @@ numero totale di occorrenze. Essa è specificata solo per multinsiemi finiti.
 
 \paragraph{Funzioni ricorsive su multinsiemi}
 
-Le funzioni ricorsive su multinsiemi possono essere definite per ricorsione 
-benfondata. Di solito, la totalità di una tale funzione è stabilita 
-misurando la cardinalità del multinsieme (finito). Tuttavia, è fornito 
-un fold (\holtxt{ITBAG}) per insiemi [multinsiemi? ndt] finiti. A condizione che una funzione 
-$f:\alpha\to\beta\to\beta$ obbedisca a una condizione conosciuta come 
+Le funzioni ricorsive su multinsiemi possono essere definite per ricorsione
+benfondata. Di solito, la totalità di una tale funzione è stabilita
+misurando la cardinalità del multinsieme (finito). Tuttavia, è fornito
+un fold (\holtxt{ITBAG}) per insiemi [multinsiemi? ndt] finiti. A condizione che una funzione
+$f:\alpha\to\beta\to\beta$ obbedisca a una condizione conosciuta come
 \emph{commutatività-a-sinistra}, cioé, $f\;x\;(f\;y\;z) =
-f\;y\;(f\;x\;z)$, allora $f$ può essere applicata eseguendone il folding sul 
+f\;y\;(f\;x\;z)$, allora $f$ può essere applicata eseguendone il folding sul
 multinsieme in una maniera tail-ricorsiva.
 %
 \begin{hol}
@@ -4142,13 +4142,13 @@ E' disponibile anceh una versione ricorsiva:
 
 \subsection{Relazioni (\theoryimp{relation})}\label{relation}
 
-Le relazioni matematiche possono essere rappresentate in \HOL{} dal tipo 
-$\alpha \to\beta\to\konst{bool}$. (Nella maggior parte delle applicazioni, il tipo di una 
-relazione è un'istanza di $\alpha \to\alpha\to\konst{bool}$, ma la 
-generalità extra non fa male.) La teoria \theoryimp{relation} 
-fornisce definizioni delle proprietà e delle operazioni di base sulle relazioni, 
-definisce vari generi di ordini e chiusure, definisce la benfondatezza 
-e dimostra il teorema di ricorsione benfondata, e sviluppa alcuni 
+Le relazioni matematiche possono essere rappresentate in \HOL{} dal tipo
+$\alpha \to\beta\to\konst{bool}$. (Nella maggior parte delle applicazioni, il tipo di una
+relazione è un'istanza di $\alpha \to\alpha\to\konst{bool}$, ma la
+generalità extra non fa male.) La teoria \theoryimp{relation}
+fornisce definizioni delle proprietà e delle operazioni di base sulle relazioni,
+definisce vari generi di ordini e chiusure, definisce la benfondatezza
+e dimostra il teorema di ricorsione benfondata, e sviluppa alcuni
 risultati base usati nella Riscrittura dei Termini.
 
 \paragraph {Proprietà base}
@@ -4178,9 +4178,9 @@ Le seguenti proprietà base delle relazioni sono definite.
 
 \paragraph{Operazioni base}
 
-Le seguenti operazioni base sulle relazioni sono definite: la relazione 
+Le seguenti operazioni base sulle relazioni sono definite: la relazione
 vuota (\holtxt{EMPTY\_REL}), la composizione di relazione (\holtxt{O},
-infisso), l'inversione (\holtxt{inv}), il dominio (\holtxt{RDOM}), e il rango 
+infisso), l'inversione (\holtxt{inv}), il dominio (\holtxt{RDOM}), e il rango
 (\holtxt{RRANGE}).
 %
 \begin{hol}
@@ -4198,7 +4198,7 @@ infisso), l'inversione (\holtxt{inv}), il dominio (\holtxt{RDOM}), e il rango
 \end{verbatim}
 \end{hol}
 
-\noindent Le operazioni sugli insiemi riutilizzate per lavorare sulle relazioni includono il sottoinsieme 
+\noindent Le operazioni sugli insiemi riutilizzate per lavorare sulle relazioni includono il sottoinsieme
 (\holtxt{RSUBSET}, infisso), l'unione (\holtxt{RUNION}, infisso),
 l'intersezione (\holtxt{RINTER}, infisso), il complemento (\holtxt{RCOMPL}),
 e l'universo (\holtxt{RUNIV}).
@@ -4220,7 +4220,7 @@ e l'universo (\holtxt{RUNIV}).
 
 \paragraph {Ordini}
 
-In \theoryimp{relation} è fatta una serie di definizioni che catturano varie 
+In \theoryimp{relation} è fatta una serie di definizioni che catturano varie
 nozioni.
 %
 \begin{hol}
@@ -4245,9 +4245,9 @@ nozioni.
 \paragraph {Chiusure}
 
 La chiusura transitiva (\holtxt{TC}) di una relazione $R : \alpha
-\to\alpha\to\konst{bool}$ è definita in modo induttivo, come la più piccola 
-relazione che include $R$ ed è chiusa sotto la transitività. Analogamente, la 
-chiusura riflessiva-transitiva (\holtxt{RTC}) è definita essere la più piccola 
+\to\alpha\to\konst{bool}$ è definita in modo induttivo, come la più piccola
+relazione che include $R$ ed è chiusa sotto la transitività. Analogamente, la
+chiusura riflessiva-transitiva (\holtxt{RTC}) è definita essere la più piccola
 relazione chiusa sotto la transitività e la riflessività.
 %
 \begin{hol}
@@ -4280,19 +4280,19 @@ Da queste definizioni, si possono recuperare le regole iniziali.
 \end{verbatim}
 \end{hol}
 %
-Si noti che {\small\verb+RTC_RULES+}, in linea con la definizione 
-di {\small\verb+RTC+}, estende un \verb+R+-passo da \verb+x+ a 
-\verb+y+ con una sequenza di \verb+R+-passi da \verb+y+ a \verb+z+ 
-per costruire \verb+RTC x z+. Il teorema 
+Si noti che {\small\verb+RTC_RULES+}, in linea con la definizione
+di {\small\verb+RTC+}, estende un \verb+R+-passo da \verb+x+ a
+\verb+y+ con una sequenza di \verb+R+-passi da \verb+y+ a \verb+z+
+per costruire \verb+RTC x z+. Il teorema
 {\small\verb+RTC_RULES_RIGHT1+} prima fa una serie di \verb+R+
-passi e poi un singolo \verb+R+ passo per formare \verb+RTC x z+. Analoghi 
+passi e poi un singolo \verb+R+ passo per formare \verb+RTC x z+. Analoghi
 teoremi alternatici sono dimostrati per l'analisi dei casi e l'induzione.
 
-Per esempio, {\small\verb+TC_CASES1+} e {\small\verb+TC_CASES2+} in ciò che 
-segue de-compongono {\small\verb+RTC R x z+} o a 
+Per esempio, {\small\verb+TC_CASES1+} e {\small\verb+TC_CASES2+} in ciò che
+segue de-compongono {\small\verb+RTC R x z+} o a
 {\small\verb+R x y+} seguito da {\small\verb+RTC R y z+}
 ({\small\verb+TC_CASES1+})
-o a 
+o a
 {\small\verb+RTC R x y+} seguito da {\small\verb+R y z+}
 ({\small\verb+TC_CASES2+}).
 
@@ -4314,7 +4314,7 @@ o a
 \end{hol}
 
 Esattamente come i teoremi d'induzione di base per {\small\verb+TC+} e
-{\small\verb+RTC+}, ci sono i cosiddetti teoremi d'induzione 
+{\small\verb+RTC+}, ci sono i cosiddetti teoremi d'induzione
 \emph{completa}, che hanno ipotesi d'induzione più forti.
 %
 \begin{hol}
@@ -4337,14 +4337,14 @@ Esattamente come i teoremi d'induzione di base per {\small\verb+TC+} e
               (!x y. RTC R x y ==> P x y)
 \end{verbatim}
 \end{hol}
-Sono anche disponibili varianti di questi teoremi d'induzione che dividono 
+Sono anche disponibili varianti di questi teoremi d'induzione che dividono
 la chiusura dalla sinistra o dalla destra, come per i teoremi di analisi dei casi.
 
 \medskip
 
-Le chiusure riflessiva~(\holtxt{RC}) e simmetrica~(\holtxt{SC}) sono 
-facili da definire. La chiusura di equivalenza 
-({\small\verb+EQC+}) è la chiusura simmetrica poi transitiva poi riflessiva 
+Le chiusure riflessiva~(\holtxt{RC}) e simmetrica~(\holtxt{SC}) sono
+facili da definire. La chiusura di equivalenza
+({\small\verb+EQC+}) è la chiusura simmetrica poi transitiva poi riflessiva
 di $R$.
 %
 \begin{hol}
@@ -4357,8 +4357,8 @@ di $R$.
 
 \paragraph {Relazioni benfondate}
 
-Una relazione $R$ è benfondata ({\small\verb+WF+}) se ogni insieme non-vuoto 
-ha un elemento $R$-minimo. La benfondatezza è usata per giustificare il 
+Una relazione $R$ è benfondata ({\small\verb+WF+}) se ogni insieme non-vuoto
+ha un elemento $R$-minimo. La benfondatezza è usata per giustificare il
 principio d'induzione benfondata ({\small\verb+WF_INDUCTION_THM+}).
 %
 \begin{hol}
@@ -4370,8 +4370,8 @@ principio d'induzione benfondata ({\small\verb+WF_INDUCTION_THM+}).
 \end{verbatim}
 \end{hol}
 
-La \emph{parte benfondata} ({\small\verb+WFP+}) di una relazione può essere 
-definita induttivamente, da essa possono essere derivate le sue regole, il teorema di analisi dei casi e 
+La \emph{parte benfondata} ({\small\verb+WFP+}) di una relazione può essere
+definita induttivamente, da essa possono essere derivate le sue regole, il teorema di analisi dei casi e
 i teoremi d'induzione.
 %
 \begin{hol}
@@ -4391,19 +4391,19 @@ i teoremi d'induzione.
 \end{verbatim}
 \end{hol}
 
-La benfondatezza può essere usata anche per giustificare un teorema di ricorsione 
-generale. Intuitivamente, una collezione di equazioni di ricorsione possono essere 
-ammesse nella logica \HOL{} senza perdita di coerenza purché 
-ogni sequenza possibile di chiamate ricorsive sia finita. Le relazioni 
-benfondate sono usate per catturare questa nozione: se c'è una relazione 
-benfondata $R$ sul dominio della funzione desiderata tale che ogni 
-sequenza di chiamate ricorsive è $R$-decrescente, allora le equazioni 
-di ricorsione specificano un'unica funzione totale e le equazioni possono essere 
+La benfondatezza può essere usata anche per giustificare un teorema di ricorsione
+generale. Intuitivamente, una collezione di equazioni di ricorsione possono essere
+ammesse nella logica \HOL{} senza perdita di coerenza purché
+ogni sequenza possibile di chiamate ricorsive sia finita. Le relazioni
+benfondate sono usate per catturare questa nozione: se c'è una relazione
+benfondata $R$ sul dominio della funzione desiderata tale che ogni
+sequenza di chiamate ricorsive è $R$-decrescente, allora le equazioni
+di ricorsione specificano un'unica funzione totale e le equazioni possono essere
 ammesse nella logica.
 
-I teoremi di ricorsione {\small\verb+WFREC_COROLLARY+} e 
-{\small\verb+WF_RECURSION_THM+} usano la nozione di una restrizione 
-di funzione ({\small\verb+RESTRICT+}) al fine di forzare l'applicazione della funzione 
+I teoremi di ricorsione {\small\verb+WFREC_COROLLARY+} e
+{\small\verb+WF_RECURSION_THM+} usano la nozione di una restrizione
+di funzione ({\small\verb+RESTRICT+}) al fine di forzare l'applicazione della funzione
 ricorsiva ad argomenti $R$-più-piccoli nelle chiamate ricorsive.
 %
 \begin{hol}
@@ -4420,9 +4420,9 @@ ricorsiva ad argomenti $R$-più-piccoli nelle chiamate ricorsive.
 \end{hol}
 
 \noindent I teoremi {\small\verb+WF_INDUCTION_THM+} e
-{\small\verb+WFREC_COROLLARY+} sono usati per automatizzare le definizioni 
-ricorsive; si veda la Sezione \ref{TFL}. Sono anche definiti alcuni operatori 
-di base per le relazioni benfondate, insieme con i teoremi che affermano 
+{\small\verb+WFREC_COROLLARY+} sono usati per automatizzare le definizioni
+ricorsive; si veda la Sezione \ref{TFL}. Sono anche definiti alcuni operatori
+di base per le relazioni benfondate, insieme con i teoremi che affermano
 che essi propagano la benfondatezza.
 
 \begin{hol}
@@ -4438,10 +4438,10 @@ che essi propagano la benfondatezza.
 
 \paragraph {Riscrittura di termini}
 
-Alcune definizioni di base prese dalla teoria della Riscrittura di Termini 
-(la proprietà diamante (\verb+diamond+), la proprietà 
-Church-Rosser ({\small\verb+CR+} e {\small\verb+WCR+}), e la Normalizzazione 
-Forte ({\small\verb+SN+})) appaiono 
+Alcune definizioni di base prese dalla teoria della Riscrittura di Termini
+(la proprietà diamante (\verb+diamond+), la proprietà
+Church-Rosser ({\small\verb+CR+} e {\small\verb+WCR+}), e la Normalizzazione
+Forte ({\small\verb+SN+})) appaiono
 in \theoryimp{relation}.
 %
 \begin{hol}
@@ -4467,21 +4467,21 @@ Da queste, è dimostrato il Lemma di Newman.
 
 \subsection{Mappe finite (\theoryimp{finite\_map})}\label{finite_map}
 
-La teoria \theoryimp{finite\_map} formalizza un tipo 
-$(\alpha,\beta)\,\holtxt{fmap}$ di funzioni finite. Queste teoricamente  
-hanno il tipo $\alpha\to\beta$, ma in più hanno solo un numero finito di 
-elementi nel loro dominio. Le mappe finite sono utili per formalizzare 
+La teoria \theoryimp{finite\_map} formalizza un tipo
+$(\alpha,\beta)\,\holtxt{fmap}$ di funzioni finite. Queste teoricamente
+hanno il tipo $\alpha\to\beta$, ma in più hanno solo un numero finito di
+elementi nel loro dominio. Le mappe finite sono utili per formalizzare
 le sostituzioni e gli array. Il tipo rappresentate è $\alpha\to\beta +
-\konst{one}$, dove solo un numero finito degli $\alpha$ mappano a un 
-$\beta$ e il resto mappano a \verb+one+. la sintassi 
-$\alpha\,\holtxt{|->}\,\beta$ è riconosciuta dal parser come 
+\konst{one}$, dove solo un numero finito degli $\alpha$ mappano a un
+$\beta$ e il resto mappano a \verb+one+. la sintassi
+$\alpha\,\holtxt{|->}\,\beta$ è riconosciuta dal parser come
 un'alternativa a $(\alpha,\beta)\,\holtxt{fmap}$.
 
 \paragraph {Nozioni base}
 
-La mappa vuota (\holtxt{FEMPTY}), l'aggiornamento di una mappa 
-(\holtxt{FUPDATE}), l'applicazione di una mappa a un argomento 
-(\holtxt{FAPPLY}), e il dominio di una mappa (\holtxt{FDOM}) sono le 
+La mappa vuota (\holtxt{FEMPTY}), l'aggiornamento di una mappa
+(\holtxt{FUPDATE}), l'applicazione di una mappa a un argomento
+(\holtxt{FAPPLY}), e il dominio di una mappa (\holtxt{FDOM}) sono le
 nozioni principali nella teoria.
 \begin{hol}
 \begin{verbatim}
@@ -4492,21 +4492,21 @@ nozioni principali nella teoria.
 \end{verbatim}
 \end{hol}
 
-Il parser e il printer \HOL{} tratteranno la sintassi \holtxt{f\,'\,x} come 
-l'applicazione della mappa finita \verb+f+ to argument \verb+x+, cioè, come 
-\holtxt{FAPPLY\,f\,x}. La notazione \holtxt{f\,|+\,(x,y)} rappresenta 
-\holtxt{FUPDATE\,f\,(x,y)}, cioè, l'aggiornamento della mappa finita 
+Il parser e il printer \HOL{} tratteranno la sintassi \holtxt{f\,'\,x} come
+l'applicazione della mappa finita \verb+f+ to argument \verb+x+, cioè, come
+\holtxt{FAPPLY\,f\,x}. La notazione \holtxt{f\,|+\,(x,y)} rappresenta
+\holtxt{FUPDATE\,f\,(x,y)}, cioè, l'aggiornamento della mappa finita
 \verb+f+ per mezzo della coppia \verb+(x,y)+.
 
-Le costanti base hanno delle definizioni oscure, dalle quali sono poi derivate 
-proprietà più utili. {\small\verb+FAPPLY_FUPDATE_THM+} collega 
-l'aggiornamento di una mappa con l'applicazione di una mappa. {\small\verb+fmap_EXT+} è un 
-risultato di estensionalità: due mappe sono uguali se hanno lo stesso dominio 
-e si accordano quando applicate ad argomenti in quel dominio. Si possono dimostrare 
-proprietà delle mappe finite per induzione sulla costruzione della mappa 
-({\small\verb+fmap_INDUCT+}). La cardinalità di una mappa finita è 
-semplicemente la cardinalità del suo dominio ({\small\verb+FCARD_DEF+}); da 
-questo è derivata una caratterizzazione ricorsiva 
+Le costanti base hanno delle definizioni oscure, dalle quali sono poi derivate
+proprietà più utili. {\small\verb+FAPPLY_FUPDATE_THM+} collega
+l'aggiornamento di una mappa con l'applicazione di una mappa. {\small\verb+fmap_EXT+} è un
+risultato di estensionalità: due mappe sono uguali se hanno lo stesso dominio
+e si accordano quando applicate ad argomenti in quel dominio. Si possono dimostrare
+proprietà delle mappe finite per induzione sulla costruzione della mappa
+({\small\verb+fmap_INDUCT+}). La cardinalità di una mappa finita è
+semplicemente la cardinalità del suo dominio ({\small\verb+FCARD_DEF+}); da
+questo è derivata una caratterizzazione ricorsiva
 ({\small\verb+FCARD_FUPDATE+}).
 \begin{hol}
 \begin{verbatim}
@@ -4524,7 +4524,7 @@ questo è derivata una caratterizzazione ricorsiva
                    if a IN FDOM fm then FCARD fm else 1 + FCARD fm
 \end{verbatim}
 \end{hol}
-Aggiornamenti iterati (\holtxt{FUPDATE\_LIST}) a una mappa sono utili. Si può anche usare 
+Aggiornamenti iterati (\holtxt{FUPDATE\_LIST}) a una mappa sono utili. Si può anche usare
 la notazione infissa \holtxt{|++}. Per esempio, \holtxt{fm\,|++\,[(k1,v1);\,(k2,v2)]} è uguale a \holtxt{(fm\,|+\,(k1,v1))\,|+\,(k2,v2)}.
 \begin{hol}
 \begin{verbatim}
@@ -4539,8 +4539,8 @@ la notazione infissa \holtxt{|++}. Per esempio, \holtxt{fm\,|++\,[(k1,v1);\,(k2,
 \paragraph {Dominio e rango}
 
 Il dominio di una mappa finita è l'insieme di elementi a cui essa si applica;
-questo può essere caratterizzato ricorsivamente 
-({\small\verb+FDOM_FUPDATE+}). Il rango di una mappa è definito nel 
+questo può essere caratterizzato ricorsivamente
+({\small\verb+FDOM_FUPDATE+}). Il rango di una mappa è definito nel
 modo usuale.
 \begin{hol}
 \begin{verbatim}
@@ -4551,9 +4551,9 @@ modo usuale.
 \end{verbatim}
 \end{hol}
 %
-Una mappa finita può avere il suo dominio ({\small\verb+DRESTRICT+}) 
-o rango ({\small\verb+RRESTRICT+}) ristretti per intersezione con un 
-insieme. Queste nozioni hanno anche delle versioni ricorsive 
+Una mappa finita può avere il suo dominio ({\small\verb+DRESTRICT+})
+o rango ({\small\verb+RRESTRICT+}) ristretti per intersezione con un
+insieme. Queste nozioni hanno anche delle versioni ricorsive
 ({\small\verb+DRESTRICT_FUPDATE+} e {\small\verb+RRESTRICT_FUPDATE+}).
 %
 \begin{hol}
@@ -4578,10 +4578,10 @@ insieme. Queste nozioni hanno anche delle versioni ricorsive
                        else RRESTRICT (DRESTRICT f (COMPL {x})) r)
 \end{verbatim}
 \end{hol}
-La rimozione di un singolo elemento dal dominio di una mappa 
-(\holtxt{\bs\bs}, infisso) è una semplice applicazione di 
-(\holtxt{DRESTRICT}), ma sufficientemente utile per essere degno di una sua propria 
-definizione. Di nuovo, questo concetto ha una presentazione ricorsiva alternativa 
+La rimozione di un singolo elemento dal dominio di una mappa
+(\holtxt{\bs\bs}, infisso) è una semplice applicazione di
+(\holtxt{DRESTRICT}), ma sufficientemente utile per essere degno di una sua propria
+definizione. Di nuovo, questo concetto ha una presentazione ricorsiva alternativa
 (\holtxt{DOMSUB\_FUPDATE\_THM}).
 %
 \begin{hol}
@@ -4596,10 +4596,10 @@ definizione. Di nuovo, questo concetto ha una presentazione ricorsiva alternativ
 
 \paragraph {Unione e sotto-mappe}
 
-Diversamente dall'unione d'insiemi, l'unione di due mappe finite 
-(\holtxt{FUNION\_DEF}) non è simmetrica: il dominio della prima mappa 
-prende la precedenza. La nozione dell'essere una mappa finita una sotto-mappa di un'altra 
-(\holtxt{SUBMAP}, infisso) è un'estensione di come sono formalizzati i 
+Diversamente dall'unione d'insiemi, l'unione di due mappe finite
+(\holtxt{FUNION\_DEF}) non è simmetrica: il dominio della prima mappa
+prende la precedenza. La nozione dell'essere una mappa finita una sotto-mappa di un'altra
+(\holtxt{SUBMAP}, infisso) è un'estensione di come sono formalizzati i
 sottoinsiemi.
 \begin{hol}
 \begin{verbatim}
@@ -4615,13 +4615,13 @@ sottoinsiemi.
 
 \paragraph {Mappe finite e funzioni}
 
-Per quanto possibile, le mappe finite dovrebbero essere come funzioni ordinarie. 
-Così, se \holtxt{f} è una mappa finita, allora \holtxt{FAPPLY f} è una 
-funzione ordinaria. Analogamente, c'è un'operazione per 
-\emph{totalizzare} una mappa finita (\holtxt{lookup}) così che 
-un'applicazione di essa restituisca una funzione ordinaria, il rango della quale è 
-il tipo option. Una funzione ordinaria può essere trasformata in una mappa finita 
-restringendo la funzione a un insieme finito di argomenti 
+Per quanto possibile, le mappe finite dovrebbero essere come funzioni ordinarie.
+Così, se \holtxt{f} è una mappa finita, allora \holtxt{FAPPLY f} è una
+funzione ordinaria. Analogamente, c'è un'operazione per
+\emph{totalizzare} una mappa finita (\holtxt{lookup}) così che
+un'applicazione di essa restituisca una funzione ordinaria, il rango della quale è
+il tipo option. Una funzione ordinaria può essere trasformata in una mappa finita
+restringendo la funzione a un insieme finito di argomenti
 (\ml{FUN\_FMAP\_DEF}).
 %
 \begin{hol}
@@ -4638,14 +4638,14 @@ restringendo la funzione a un insieme finito di argomenti
 \paragraph {Composizione di mappe}
 \index{composizione di funzione, nella logica HOL@composizione di funzione, nella logica \HOL{}!di mappe finite}
 
-Ci sono tre nuove definizioni di composizione, determinate dal fatto se 
-le funzioni composte sono mappe finite o no. La composizione di due 
-mappe finite (\verb+f_o_f+, infisso) ha attaccati dei vincoli 
-di dominio. La composizione di una mappa finita con una funzione ordinaria 
-(\verb+o_f+, infisso) applica prima la mappa finita, poi la funzione 
-ordinaria. La composizione di una funzione ordinaria con una mappa finita 
-(\verb+f_o+, infisso) applica la funzione ordinaria e poi la mappa 
-finita; l'applicazione della funzione ordinaria è ottenuta trasformandola 
+Ci sono tre nuove definizioni di composizione, determinate dal fatto se
+le funzioni composte sono mappe finite o no. La composizione di due
+mappe finite (\verb+f_o_f+, infisso) ha attaccati dei vincoli
+di dominio. La composizione di una mappa finita con una funzione ordinaria
+(\verb+o_f+, infisso) applica prima la mappa finita, poi la funzione
+ordinaria. La composizione di una funzione ordinaria con una mappa finita
+(\verb+f_o+, infisso) applica la funzione ordinaria e poi la mappa
+finita; l'applicazione della funzione ordinaria è ottenuta trasformandola
 in una mappa finita.
 %
 \begin{hol}
@@ -4666,10 +4666,10 @@ in una mappa finita.
 \section{Cicli While}
 \label{sec:while-loops}
 
-E' un fatto curioso che la logica di ordine superiore, benché sia una logica di 
-funzioni totali, permetta la definizione di funzioni che non sembrano 
-totali, almeno da un punto di vista computazionale. Un esempio 
-sono i cicli-\holtxt{WHILE}. La seguente equazione è derivata nella teoria 
+E' un fatto curioso che la logica di ordine superiore, benché sia una logica di
+funzioni totali, permetta la definizione di funzioni che non sembrano
+totali, almeno da un punto di vista computazionale. Un esempio
+sono i cicli-\holtxt{WHILE}. La seguente equazione è derivata nella teoria
 \theoryimp{while}:
 %
 \begin{hol}
@@ -4679,14 +4679,14 @@ sono i cicli-\holtxt{WHILE}. La seguente equazione è derivata nella teoria
 \end{hol}
 %
 Chiaramente, se \holtxt{P} in questo teorema fosse istanziato a $\lambda
-x.\;\konst{T}$, l'istanza risultante di \holtxt{WHILE} sarebbe `va avanti 
-per sempre' se eseguita. Perché una tale funzione ``ovviamente'' parziale 
+x.\;\konst{T}$, l'istanza risultante di \holtxt{WHILE} sarebbe `va avanti
+per sempre' se eseguita. Perché una tale funzione ``ovviamente'' parziale
 è definibile in HOL?
 %
 La risposta si trova in una sottile definizione di \holtxt{WHILE},
 \footnote{L'idea originale è dovuta a J. Moore,
           che la suggerì per l'uso in ACL2.}
-che usa il potere espressivo di HOL per un effetto sorprendente. Si consideri 
+che usa il potere espressivo di HOL per un effetto sorprendente. Si consideri
 la seguente funzione totale e non-ricorsiva:
 %
 \begin{hol}
@@ -4698,10 +4698,10 @@ la seguente funzione totale e non-ricorsiva:
 \end{verbatim}
 \end{hol}
 %
-Questa funzione fa un'analisi dei casi sulle iterazioni della funzione 
-\holtxt{g}: quelle finite restituiscono il primo valore nell'iterazione per 
-cui \holtxt{P} vale (cioè, quando l'iterazione si ferma); quelle 
-infinite sono mappate a \holtxt{ARB}. Questa funzione è usata come il testimone 
+Questa funzione fa un'analisi dei casi sulle iterazioni della funzione
+\holtxt{g}: quelle finite restituiscono il primo valore nell'iterazione per
+cui \holtxt{P} vale (cioè, quando l'iterazione si ferma); quelle
+infinite sono mappate a \holtxt{ARB}. Questa funzione è usata come il testimone
 per \verb+f+ nella dimostrazione del seguente teorema:
 %
 \begin{hol}
@@ -4711,16 +4711,16 @@ per \verb+f+ nella dimostrazione del seguente teorema:
 \end{verbatim}
 \end{hol}
 %
-Da questo, è semplicemente questione di applicare la Skolemizzazione e 
+Da questo, è semplicemente questione di applicare la Skolemizzazione e
 di \holtxt{new\_specification} per ottenere l'equazione per \holtxt{WHILE}.
 
 \paragraph{Ragionare circa i cicli \holtxt{WHILE}}
 
-Il teorema d'induzione per i cicli \holtxt{WHILE} è dimostrato per 
-induzione benfondata, e porta con sé dei vincoli di benfondatezza 
-che ne limitano la sua applicazione. Al fine di applicare \verb+WHILE_INDUCTION+, 
-le istanziazione per \verb+B+ e \verb+C+ devono essere conosciute prima 
-che una relazione benfondata per \verb+R+ sia trovata e usata per eliminare i 
+Il teorema d'induzione per i cicli \holtxt{WHILE} è dimostrato per
+induzione benfondata, e porta con sé dei vincoli di benfondatezza
+che ne limitano la sua applicazione. Al fine di applicare \verb+WHILE_INDUCTION+,
+le istanziazione per \verb+B+ e \verb+C+ devono essere conosciute prima
+che una relazione benfondata per \verb+R+ sia trovata e usata per eliminare i
 vincoli.
 %
 \begin{hol}
@@ -4732,7 +4732,7 @@ vincoli.
 \end{verbatim}
 \end{hol}
 %
-Un livello di supporto più raffinato è fornito dalla regola \holtxt{WHILE} 
+Un livello di supporto più raffinato è fornito dalla regola \holtxt{WHILE}
 standard della Logica di Hoare, espressa in termini di triple Hoare
 (\holtxt{HOARE\_SPEC}).
 %
@@ -4748,7 +4748,7 @@ standard della Logica di Hoare, espressa in termini di triple Hoare
 \end{verbatim}
 \end{hol}
 %
-Come seguito, è definito un operatore per trovare l'ultimo numero con la proprietà 
+Come seguito, è definito un operatore per trovare l'ultimo numero con la proprietà
 \verb+P+.
 %
 \begin{hol}
@@ -4757,14 +4757,14 @@ Come seguito, è definito un operatore per trovare l'ultimo numero con la proprie
 \end{verbatim}
 \end{hol}
 %
-Alcuni teoremi per ragionare su  \holtxt{LEAST} si possono trovare nella 
+Alcuni teoremi per ragionare su  \holtxt{LEAST} si possono trovare nella
 teoria \theoryimp{while}.
 
 
 %\section{Partial orders}
 
 \section{Altre Teorie}
-Altre teorie di interesse in \HOL{} sono elencate e brevemente descritte 
+Altre teorie di interesse in \HOL{} sono elencate e brevemente descritte
 nella Figura~\ref{fig:further-hol-theories}.
 
 \begin{figure}[hbtp]
@@ -4777,7 +4777,7 @@ nella Figura~\ref{fig:further-hol-theories}.
   Divisibilità e il massimo comun divisore.
   \\
   \theoryimp{poly} &
-  Una teoria di polinomi su $\mathbb{R}$, che fornisce 
+  Una teoria di polinomi su $\mathbb{R}$, che fornisce
 	una collezione di operazioni su polinomi, e teoremi che li riguardano.
   \\
   \theoryimp{Temporal\_Logic},\newline \theoryimp{Omega\_Automata}
@@ -4786,7 +4786,7 @@ nella Figura~\ref{fig:further-hol-theories}.
   \\
   \theoryimp{ctl}, \theoryimp{mu}
   &
-  La logica Computation Tree Logic e l'$\mu$-calculo. Si veda la tesi di 
+  La logica Computation Tree Logic e l'$\mu$-calculo. Si veda la tesi di
 	Hasan Amjad. \\
   \theoryimp{lbtree} & Alberi binari possibilmente infinitamente profondi (cioè, co-algebrici).\\
   \theoryimp{inftree} & Alberi algebrici possibilmente infinitamente ramificanti\\

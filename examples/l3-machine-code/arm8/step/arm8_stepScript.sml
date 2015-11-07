@@ -303,10 +303,8 @@ val SetTheFlags = Theory.save_thm("SetTheFlags",
 (* ------------------------------------------------------------------------ *)
 
 val Replicate_32_64 = Q.store_thm("Replicate_32_64",
-   `(!b. Replicate (if b then [T] else [F]) =
-         if b then 0xFFFFFFFFw else 0w: word32) /\
-    (!b. Replicate (if b then [T] else [F]) =
-         if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)`,
+   `(!b. Replicate [b] = if b then 0xFFFFFFFFw else 0w: word32) /\
+    (!b. Replicate [b] = if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)`,
    rw [Replicate_def] \\ EVAL_TAC
    )
 

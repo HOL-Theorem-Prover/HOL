@@ -169,21 +169,21 @@ RW_TAC bool_ss [o_DEF]
     Alternative definition of PERM
    ---------------------------------------------------------------------- *)
 
-val FILTER_EQ_REP = store_thm ("FILTER_EQ_REP", 
+val FILTER_EQ_REP = store_thm ("FILTER_EQ_REP",
   ``FILTER ($= x) l = REPLICATE (LENGTH (FILTER ($= x) l)) x``,
   EVERY [Induct_on `l`,
     SIMP_TAC list_ss [rich_listTheory.REPLICATE], GEN_TAC,
     COND_CASES_TAC THENL [ BasicProvers.VAR_EQ_TAC, ALL_TAC],
     ASM_SIMP_TAC list_ss [rich_listTheory.REPLICATE] ]) ;
 
-val FILTER_EQ_LENGTHS_EQ = store_thm ("FILTER_EQ_LENGTHS_EQ",   
-  ``(LENGTH (FILTER ($= x) l1) = LENGTH (FILTER ($= x) l2)) ==> 
+val FILTER_EQ_LENGTHS_EQ = store_thm ("FILTER_EQ_LENGTHS_EQ",
+  ``(LENGTH (FILTER ($= x) l1) = LENGTH (FILTER ($= x) l2)) ==>
     (FILTER ($= x) l1 = FILTER ($= x) l2)``,
   EVERY [ DISCH_TAC, ONCE_REWRITE_TAC [FILTER_EQ_REP],
     ASM_SIMP_TAC bool_ss [] ]) ;
 
 val PERM_alt = store_thm ("PERM_alt",
-  ``!L1 L2. PERM L1 L2 = 
+  ``!L1 L2. PERM L1 L2 =
     !x. LENGTH (FILTER ($= x) L1) = LENGTH (FILTER ($= x) L2)``,
   EVERY [REWRITE_TAC [PERM_DEF], REPEAT GEN_TAC,
     EQ_TAC, REPEAT STRIP_TAC ] THENL [
@@ -282,7 +282,7 @@ val perm_cons_append = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==>
                         !M N. (l2 = M ++ N) ==>
                               !h. perm (h::l1) (M ++ [h] ++ N)``,
-  REPEAT STRIP_TAC >> MATCH_MP_TAC perm_trans >> 
+  REPEAT STRIP_TAC >> MATCH_MP_TAC perm_trans >>
     Q.EXISTS_TAC `h :: l2` >> CONJ_TAC
   THENL [ ASSUME_TAC perm_rules >> ASM_SIMP_TAC list_ss [],
     BasicProvers.VAR_EQ_TAC >>
@@ -627,7 +627,7 @@ val PERM_SINGLE_SWAP_I = Q.store_thm ("PERM_SINGLE_SWAP_I",
 val PERM_SINGLE_SWAP_APPEND = save_thm ("PERM_SINGLE_SWAP_APPEND",
   REWRITE_RULE [APPEND] (Q.INST [`x1` |-> `NIL`] PERM_SINGLE_SWAP_I)) ;
 
-val PERM_SINGLE_SWAP_REFL = save_thm ("PERM_SINGLE_SWAP_REFL", 
+val PERM_SINGLE_SWAP_REFL = save_thm ("PERM_SINGLE_SWAP_REFL",
   GEN_ALL (REWRITE_RULE [APPEND, APPEND_NIL]
     (Q.INST [`x2` |-> `NIL`, `x3` |-> `l`] PERM_SINGLE_SWAP_APPEND))) ;
 
@@ -932,7 +932,7 @@ val MEM_PERM =
 
 val SORTED_PERM_EQ = Q.store_thm ("SORTED_PERM_EQ",
   `!R. transitive R /\ antisymmetric R ==>
-    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)`, 
+    !l1 l2. SORTED R l1 /\ SORTED R l2 /\ PERM l1 l2 ==> (l1 = l2)`,
   GEN_TAC >> STRIP_TAC >>
     Induct THEN1 SIMP_TAC list_ss [PERM_NIL] >>
     REPEAT STRIP_TAC >>
@@ -1366,7 +1366,7 @@ val less_sorted_eq = MATCH_MP SORTED_EQ arithmeticTheory.transitive_LESS
   |> curry save_thm"less_sorted_eq";
 
 val SORTED_GENLIST_PLUS = store_thm("SORTED_GENLIST_PLUS",
-  ``∀n k. SORTED $< (GENLIST ($+ k) n)``,
+  ``!n k. SORTED $< (GENLIST ($+ k) n)``,
   Induct >> simp[GENLIST_CONS,less_sorted_eq,MEM_GENLIST] >> gen_tac >>
   `$+ k o SUC = $+ (k+1)` by (
     simp[FUN_EQ_THM] ) >>
@@ -1380,7 +1380,7 @@ val SORTED_ALL_DISTINCT = store_thm("SORTED_ALL_DISTINCT",
   METIS_TAC[relationTheory.irreflexive_def])
 
 val sorted_filter = Q.store_thm("sorted_filter",
-  `∀R ls. transitive R ⇒ SORTED R ls ⇒ SORTED R (FILTER P ls)`,
+  `!R ls. transitive R ==> SORTED R ls ==> SORTED R (FILTER P ls)`,
   HO_MATCH_MP_TAC SORTED_IND >>
   rw[SORTED_DEF] >> fs[] >>
   rfs[SORTED_EQ,MEM_FILTER] >>

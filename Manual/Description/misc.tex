@@ -1147,6 +1147,8 @@ The \texttt{nosp} option prevents this.
 By default, arguments to \holthm{} are printed with a turnstile~($\vdash$).
 %
 If this option is present, the turnstile is not printed (and the theorem will have its left margin three spaces further left).
+%
+For controlling how the turnstile is printed when this option is not present, see the paragraph on Overrides in Section~\ref{sec:running-munger}.
 
 \item[\texttt{of}] (Only for use with \holty.)
 %
@@ -1406,6 +1408,9 @@ Overrides for \HOL{} tokens can also be provided within \HOL{}
 theories, using the
 \texttt{TeX\_notation} command (see
 Section~\ref{sec:holtheories-tex-ready} below).
+
+By overriding the special token \texttt{\$Turnstile\$}, one can control the printing of the turnstile produced by \holthm{}.
+The default setup is roughly equivalent to overriding \texttt{\$Turnstile\$} to \texttt{\textbackslash{}HOLTokenTurnstile\{\} } with a width of \texttt{3}.
 
 \paragraph{Default width}
 A munger can specify the default width in which \HOL{} will print its

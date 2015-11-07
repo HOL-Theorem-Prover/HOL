@@ -38,9 +38,9 @@ sig
      non-constructor patterns. *)
   val pmatch2case : term -> term
 
-  (* The following conversions call 
+  (* The following conversions call
      case2pmatch and pmatch2case and
-     afterwards prove the equivalence of 
+     afterwards prove the equivalence of
      the result. *)
   val PMATCH_INTRO_CONV : conv
   val PMATCH_INTRO_CONV_NO_OPTIMISE : conv
@@ -121,7 +121,7 @@ sig
      cases explicitly. This is often handy to
      prove properties about functions defined
      via pattern matches without the need to
-     do the case-splits manually. 
+     do the case-splits manually.
 
      This tactic looks for the smallest wrapper
      around a PMATCH such that the term is of type
@@ -160,7 +160,7 @@ sig
 
   (* A column heuristic is used to figure out, in
      which order to process columns. It gets a list of columns
-     and returns, which one to pick. *)  
+     and returns, which one to pick. *)
   type column_heuristic = (term * (term list * term) list) list -> int
 
   (* Many heuristics are build on ranking funs.
@@ -233,7 +233,7 @@ sig
      original ones and are exhaustive. Moreover these patterns usually
      have some nice properties like e.g. not overlapping with each other.
      Such a nchotomy theorem is often handy. We use it to check for
-     exhaustiveness for example. The interface 
+     exhaustiveness for example. The interface
      to compute such an nchotomy is exponsed here as well. *)
 
   (* [nchotomy_of_pats_GEN db colHeu pats] computes an nchotomy-theorem
@@ -260,14 +260,14 @@ sig
 
   (* The redundancy removal conversion works by
      first creating a is-redundant-rows-info theorem and
-     then turning it into a PMATCH equation. One can 
+     then turning it into a PMATCH equation. One can
      separate these steps, this allows using interactive proofs
      for showing that a row is redundant. *)
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN :
     ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term -> thm
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH : term -> thm
 
-  (* Apply the resulting redundant rows-info *) 
+  (* Apply the resulting redundant rows-info *)
   val IS_REDUNDANT_ROWS_INFO_TO_PMATCH_EQ_THM : thm -> thm
 
 
@@ -291,7 +291,7 @@ sig
 
   val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV : ConseqConv.conseq_conv;
 
-  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN : 
+  val PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV_GEN :
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      ssfrag list -> ConseqConv.conseq_conv;
 
@@ -300,7 +300,7 @@ sig
       expression is exhaustive might be adding at the end
       additional rows that explicitly list the missing pats
       and return ARB for them. This is achieved by the following
-      functions. 
+      functions.
 
       The additional patterns can use guards or not. If not
       guards are used, the added patterns are more coarse, but
@@ -312,7 +312,7 @@ sig
    (* and as usual more general versions that allows using
       own pattern compilation settings *)
    val PMATCH_COMPLETE_CONV_GEN : ssfrag list ->
-     constrFamiliesLib.pmatch_compile_db -> column_heuristic -> 
+     constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> conv
 								 	   val PMATCH_COMPLETE_GEN_ss :
      ssfrag list ->
@@ -326,8 +326,8 @@ sig
 
   (* [show_nchotomy t] tries to prove an nchotomy-theorem.
      Given an nchotomy theorem of the form
-     ``!x. (?xs1. v = p1 xs1 /\ g1 xs1) \/ ... \/ 
-           (?xsn. v = pn xsn /\ gn xsn)``. 
+     ``!x. (?xs1. v = p1 xs1 /\ g1 xs1) \/ ... \/
+           (?xsn. v = pn xsn /\ gn xsn)``.
      It returns a theorem that is an implication with
      the input as conclusion. *)
   val SHOW_NCHOTOMY_CONSEQ_CONV : ConseqConv.conseq_conv

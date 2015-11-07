@@ -9,7 +9,7 @@ sig
 
   (* A constructor is a combination of a term with
      a list of names for all it's arguments *)
-  type constructor 
+  type constructor
 
   (* [mk_constructor c arg_names] generate a constructor [c]
      with argument names [arg_names] *)
@@ -18,7 +18,7 @@ sig
   (* check whether a constructor has no arguments *)
   val constructor_is_const : constructor -> bool
 
-  (* [mk_constructor_term vs constr] construct a term 
+  (* [mk_constructor_term vs constr] construct a term
      corresponding to [constr]. For the arguments
      variables are generated. These variables are
      distinct from the ones provided in the argument [vs].
@@ -41,7 +41,7 @@ sig
 
   (* [make_constructorList exh constrs] is a convenience functions
      that maps [mk_constructor] over constrs before calling
-     [mk_constructorList]. *) 
+     [mk_constructorList]. *)
   val make_constructorList : bool -> (term * string list) list -> constructorList
 
   (************************)
@@ -60,7 +60,7 @@ sig
   (* Get the case-cong stored in a constructor family. *)
   val constructorFamily_get_case_cong : constructorFamily -> thm
 
-  (* Get the ssfrag resulting form all the stuff 
+  (* Get the ssfrag resulting form all the stuff
      in a constructor family. *)
   val constructorFamily_get_ssfrag : constructorFamily -> simpLib.ssfrag
 
@@ -81,8 +81,8 @@ sig
   val mk_constructorFamily : constructorList * term * tactic -> constructorFamily
 
   (* [get_constructorFamily_proofObligations] returns the
-     proof obligations that occur when creating a new constructor family 
-     via [mk_constructorFamily]. *) 
+     proof obligations that occur when creating a new constructor family
+     via [mk_constructorFamily]. *)
   val get_constructorFamily_proofObligations : constructorList * term -> term
 
   (* [set_constructorFamily] sets the proof obligations that occur when
@@ -92,15 +92,15 @@ sig
   (* [constructorFamily_of_typebase ty] extracts the constructor family
      for the given type [ty] from typebase. *)
   val constructorFamily_of_typebase : hol_type -> constructorFamily
- 
+
 
   (************************)
   (* Compile DBs          *)
   (************************)
 
   (* A compile database combines constructor families,
-     an ssfrag and arbitrary compilation funs. *) 
-     
+     an ssfrag and arbitrary compilation funs. *)
+
 
   (* A compilation fun gets a column, i.e. a list of
      terms together with a list of free variables in this term.
@@ -124,16 +124,16 @@ sig
   }
 
   (* empty db *)
-  val empty : pmatch_compile_db 
+  val empty : pmatch_compile_db
 
   (* a default db implemented as a reference *)
   val thePmatchCompileDB : pmatch_compile_db ref
 
-  (* A database represents essentially a compile fun. 
+  (* A database represents essentially a compile fun.
      This functions combines all the contents of a db to
      turn it into a compile fun.  *)
   val pmatch_compile_db_compile : pmatch_compile_db -> pmatch_compile_fun
-  (* This tries to find the family used by a call to 
+  (* This tries to find the family used by a call to
      [pmatch_compile_db_compile]. If this call picks a
      use a hand-written compile-fun, [NONE] is returned. Similarly,
      if no constructor family is found for this column. *)
@@ -194,7 +194,7 @@ sig
   (************************)
   (* Compile Funs         *)
   (************************)
-  
+
   (* Compilation fun that turns a column of literals into
      a large if-then-else case distinction. It is
      present automatically in the default db. *)

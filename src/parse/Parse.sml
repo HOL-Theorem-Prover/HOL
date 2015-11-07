@@ -703,7 +703,12 @@ fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
                   ", Prec = ", Int.toString Prec, "}"])
  end
 
-fun temp_thytype_abbrev(knm, ty) = let
+fun replace_exnfn fnm f x =
+  f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
+             raise HOL_ERR {message = m, origin_function = fnm,
+                            origin_structure = s}
+
+fun temp_thytype_abbrev (knm, ty) = let
   val params = Listsort.sort Type.compare (type_vars ty)
   val (num_vars, pset) =
       List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
@@ -721,18 +726,11 @@ in
                                                     (knm, mk_structure pset ty);
   type_grammar_changed := true;
   term_grammar_changed := true
-end handle GrammarError s => raise ERROR "type_abbrev" s
+end handle GrammarError s => raise ERR "temp_thytype_abbrev" s
 
-fun temp_type_abbrev (s, ty) = let
-  val thy = Theory.current_theory()
+fun thytype_abbrev(knm, ty) = let
 in
-  temp_thytype_abbrev({Thy = thy, Name = s}, ty)
-end
-
-fun type_abbrev (s, ty) = let
-  val knm = {Thy=Theory.current_theory(),Name=s}
-in
-  temp_type_abbrev (s, ty);
+  replace_exnfn "thytype_abbrev" temp_thytype_abbrev (knm, ty);
   full_update_grms ("temp_thytype_abbrev",
                     String.concat ["(", KernelSig.name_toMLString knm, ", ",
                                    PP.pp_to_string (!Globals.linewidth)
@@ -741,7 +739,15 @@ in
                                    ")"],
                     SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
                    )
-end;
+end
+
+fun temp_type_abbrev (s, ty) =
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
+
+fun type_abbrev (s, ty) =
+  replace_exnfn "type_abbrev" thytype_abbrev
+                ({Thy = Theory.current_theory(), Name = s}, ty)
 
 fun temp_disable_tyabbrev_printing s = let
   val tyg = the_type_grammar
@@ -1207,29 +1213,33 @@ in
 end
 
 
-fun temp_add_record_field (fldname, term) = let
+fun primadd_rcdfld f ovopn (fldname, t) = let
+  val (d,r) = dom_rng (type_of t)
+              handle HOL_ERR _ =>
+              raise ERROR f "field selection term must be of type t -> a"
+  val r = mk_var("rcd", d)
   val recfldname = recsel_special^fldname
 in
-  temp_overload_on(recfldname, term)
+  ovopn(recfldname, mk_abs(r, mk_comb(t, r)))
 end
 
-fun add_record_field (fldname, term) = let
-  val recfldname = recsel_special^fldname
+val temp_add_record_field =
+    primadd_rcdfld "temp_add_record_field" temp_overload_on
+val add_record_field = primadd_rcdfld "add_record_field" overload_on
+
+fun buildfupdt f ovopn (fnm, t) = let
+  val (argtys, rty) = strip_fun (type_of t)
+  val err = ERROR f "fupdate term must be of type (a -> a) -> t -> t"
+  val f = mk_var("f", hd argtys) handle Empty => raise err
+  val x = mk_var("x", hd (tl argtys)) handle Empty => raise err
+  val recfldname = recfupd_special ^ fnm
 in
-  overload_on(recfldname, term)
+  ovopn(recfldname, list_mk_abs([f,x], list_mk_comb(t, [f,x])))
 end
 
-fun temp_add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  temp_overload_on(recfldname, term)
-end
-
-fun add_record_fupdate (fldname, term) = let
-  val recfldname = recfupd_special ^ fldname
-in
-  overload_on(recfldname, term)
-end
+val temp_add_record_fupdate =
+    buildfupdt "temp_add_record_fupdate" temp_overload_on
+val add_record_fupdate = buildfupdt "add_record_fupdate" overload_on
 
 fun temp_add_numeral_form (c, stropt) = let
   val _ =
