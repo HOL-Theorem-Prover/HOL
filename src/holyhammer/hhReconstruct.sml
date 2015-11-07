@@ -76,6 +76,20 @@ fun readl path =
 fun read_status atp_status = 
   remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
 
+(* removing reserverd names: use a similar escaping than the holyhammer fof writer *)
+fun reserved_escape name =
+  let fun is_alphanumeric s =
+    let val l = String.explode s in
+      all (fn x => Char.isAlphaNum x orelse x = #"_") l
+    end
+  in
+  if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
+  then name
+  else "'" ^ name ^ "'"
+  end
+
+val reserved_names_escaped = map reserved_escape reserved_names
+
 fun read_lemmas atp_out =
   let 
     val l = readl atp_out
@@ -177,7 +191,10 @@ fun minimize_lemmas lemmas cj =
          print "Minimization ...\n";
          pp_lemmas (map fst (minimize_lemmas_loop [] l cj))
          )
-    else pp_lemmas lemmas
+    else (
+         print "Metis could not find a proof in less than 2 seconds. \n"; 
+         pp_lemmas lemmas
+         )
   end
 
 (*---------------------------------------------------------------------------
@@ -194,7 +211,6 @@ fun reconstructl atpfilel cj =
     val lemmasl = map atp_lemmas atpfilel
     val proofl = filter (fn (x,_) => x = "Theorem") lemmasl
   in
-   (* If no proof is found, find a not "Unknown" message *)
    if null proofl
    then
      let val s = if all (fn x => x = "Unknown") (map fst lemmasl)
@@ -203,7 +219,6 @@ fun reconstructl atpfilel cj =
      in
        raise Status s
      end
-   (* else take the one that uses the less lemmas. *)
    else
       let
         fun cmp l1 l2 = length l1 < length l2

@@ -15,7 +15,7 @@ grep "SZS status" $OUT1 > $STATUS 2> $ERROR
 sed -i -e 's/^%[ ]*SZS[ ]*status\(.*\)[ ]*for.*$/\1/' $STATUS 2> $ERROR
 sed -i 's/ //g' $STATUS 2> $ERROR
 # Extracting axioms
-grep "file[(]" $OUT1 > $OUT2 2> $ERROR
+grep "^fof[(].*file(.*,\(.*\)[)][)]" $OUT1 > $OUT2 2> $ERROR
 sed -e 's/^[ ]*file[(].*,\(.*\)[)])\..*$/\1/' $OUT2 > $OUT 2> $ERROR
 # Cleaning
 rm -f $OUT1

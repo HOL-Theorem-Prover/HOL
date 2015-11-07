@@ -8,6 +8,6 @@ sig
   val write_conjecture : string -> term -> unit
   val write_thydep     : string -> string list -> unit
 
-  val reserved_names_escaped : string list
+  val reserved_names   : string list
 
 end

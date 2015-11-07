@@ -105,17 +105,6 @@ fun hh_escape s =
 fun squotify name = "'" ^ name ^ "'"
 fun full_escape name = "'" ^ hh_escape name ^ "'"
 
-
-(* TO BE MOVED *)
-(* use a similar escaping than the holyhammer fof writer *)
-fun reserved_escape name =
-  if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
-  then name
-  else "'" ^ name ^ "'"
-
-val reserved_names_escaped = map reserved_escape reserved_names
-
-
 (* nice printing *)
 fun nice_dest_vartype v =
   let
@@ -469,10 +458,7 @@ fun write_hh_thyl folder thyl =
    app (write_hh_thy folder) (sort_thyl thyl))
 
 
-fun write_conjecture file conjecture = (* TO DO: put it in a subdirectory *)
-  (* if is_oversized_term conjecture
-    then raise ERR "write_conjecture" "too large conjecture"
-  else *)
+fun write_conjecture file conjecture =
   if type_of conjecture = bool
     then
     (
