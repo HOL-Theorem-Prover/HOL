@@ -67,7 +67,7 @@ val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
 val user_rewrites = ref (SSFRAG {dprocs = [], ac = [], rewrs = [],
                                  congs = [], filter = NONE,
                                  name = SOME "betasimps", convs = []})
-fun add_rwts ths =
+fun add_rwts (ths : (string * thm) list) =
     user_rewrites :=
       simpLib.merge_ss [!user_rewrites, simpLib.rewrites (map #2 ths)]
 
