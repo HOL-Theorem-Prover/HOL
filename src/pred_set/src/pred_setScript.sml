@@ -1555,6 +1555,11 @@ val INJ_SUBSET = store_thm(
 ``!f s t s0 t0. INJ f s t /\ s0 SUBSET s /\ t SUBSET t0 ==> INJ f s0 t0``,
 SRW_TAC[][INJ_DEF,SUBSET_DEF])
 
+val INJ_IMAGE = Q.prove (`INJ f s t ==> INJ f s (IMAGE f s)`,
+  REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
+  REPEAT DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
+  REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC [])  ;
+
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
 (* ===================================================================== *)
@@ -2587,6 +2592,18 @@ val PHP = Q.store_thm
 ("PHP",
  `!(f:'a->'b) s t. FINITE t /\ CARD t < CARD s ==> ~INJ f s t`,
  METIS_TAC [INJ_CARD, AP ``x < y = ~(y <= x)``]);
+
+val INJ_CARD_IMAGE_EQ = Q.store_thm ("INJ_CARD_IMAGE_EQ",
+  `INJ f s t ==> FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP INJ_IMAGE) THEN
+  IMP_RES_TAC INJ_CARD THEN
+  IMP_RES_TAC IMAGE_FINITE THEN
+  VALIDATE (FIRST_X_ASSUM (ASSUME_TAC o UNDISCH)) THEN1
+    POP_ASSUM MATCH_ACCEPT_TAC THEN
+  IMP_RES_TAC CARD_IMAGE THEN
+  POP_ASSUM (ASSUME_TAC o Q.SPEC `f`) THEN
+  ASM_SIMP_TAC arith_ss []) ;
 
 (* =====================================================================*)
 (* Infiniteness								*)
