@@ -1076,6 +1076,17 @@ val LDROP = new_recursive_definition {
   rec_axiom = prim_recTheory.num_Axiom,
   name = "LDROP"};
 
+val FUNPOW_BIND_NONE = Q.prove (
+  `!n. FUNPOW (\m. OPTION_BIND m g) n NONE = NONE`,
+  Induct THEN ASM_SIMP_TAC bool_ss [FUNPOW, OPTION_BIND_def]) ;
+
+val LDROP_FUNPOW = Q.store_thm ("LDROP_FUNPOW",
+  `!n ll. LDROP n ll = FUNPOW (\m. OPTION_BIND m LTL) n (SOME ll)`,
+  Induct THEN RULE_ASSUM_TAC GSYM THEN
+  SIMP_TAC std_ss [LDROP, FUNPOW, FUNPOW_BIND_NONE] THEN
+  GEN_TAC THEN Cases_on `LTL ll` THEN
+  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]) ;
+
 val LDROP_THM = store_thm(
   "LDROP_THM",
   ``(!ll. LDROP 0 ll = SOME ll) /\
@@ -1165,10 +1176,10 @@ val LDROP_ADD = store_thm("LDROP_ADD",
       LDROP (k1 + k2) x = case LDROP k1 x of
                           | NONE => NONE
                           | SOME ll => LDROP k2 ll``,
-  Induct \\ fs [arithmeticTheory.ADD_CLAUSES]
-  \\ fs [LDROP] \\ REPEAT STRIP_TAC
-  \\ Cases_on `LTL x` \\ fs []
-  \\ Cases_on `LDROP k1 x'` \\ fs []);
+  ONCE_REWRITE_TAC [arithmeticTheory.ADD_COMM] THEN
+  REWRITE_TAC [LDROP_FUNPOW, arithmeticTheory.FUNPOW_ADD] THEN
+  REPEAT GEN_TAC THEN CASE_TAC THEN
+  REWRITE_TAC [FUNPOW_BIND_NONE]) ;
 
 val LDROP_SOME_LLENGTH = Q.store_thm("LDROP_SOME_LLENGTH",
   `(LDROP n ll = SOME l) /\ (LLENGTH ll = SOME m) ==>
@@ -2219,31 +2230,15 @@ val LTAKE_IMP_LDROP = Q.store_thm("LTAKE_IMP_LDROP",
   first_x_assum(fn th => first_x_assum (strip_assume_tac o MATCH_MP th)) >>
   rw[])
 
-val LDROP_EQ_LNIL = Q.store_thm("LDROP_EQ_LNIL",
-  `(LDROP n ll = SOME LNIL) <=> (LLENGTH ll = SOME n)`,
-  EQ_TAC >> strip_tac >>
-  (`LFINITE ll` by (
-    metis_tac[LFINITE_LNTH_NONE,LNTH,LNTH_LDROP,LNTH_THM,
-              NOT_LFINITE_NO_LENGTH,
-              optionTheory.NOT_NONE_SOME,
-              optionTheory.THE_DEF,
-              optionTheory.option_nchotomy] ))
-  >- (
-    `?m. LLENGTH ll = SOME m` by metis_tac[LFINITE_HAS_LENGTH] >>
-    `toList ll = LTAKE m ll` by simp[toList] >>
-    imp_res_tac LFINITE_toList >>
-    imp_res_tac to_fromList >> rfs[] >>
-    imp_res_tac LTAKE_IMP_LDROP >>
-    `l2 = [||]` by metis_tac[LFINITE_LAPPEND_IMP_NIL] >>
-    imp_res_tac LDROP_SOME_LLENGTH >> fs[] >>
-    decide_tac )
-  >- (
-    Cases_on`LDROP n ll` >- (
-      metis_tac[LTAKE_IMP_LDROP,LFINITE_TAKE
-               ,optionTheory.THE_DEF,optionTheory.NOT_SOME_NONE
-               ,arithmeticTheory.LESS_OR_EQ] ) >>
-    imp_res_tac LDROP_SOME_LLENGTH >>
-    fs[] ))
+val LDROP_EQ_LNIL' = Q.prove (
+  `!n ll. (LDROP n ll = SOME LNIL) <=> (LLENGTH ll = SOME n)`,
+  Induct THEN 
+  FULL_SIMP_TAC std_ss [LDROP_FUNPOW, FUNPOW, LLENGTH_0] THEN GEN_TAC THEN
+  llist_CASE_TAC ``ll : 'a llist`` THEN
+  ASM_SIMP_TAC std_ss [LTL_THM, LLENGTH_THM, FUNPOW_BIND_NONE, 
+    arithmeticTheory.SUC_NOT]) ;
+
+val LDROP_EQ_LNIL = save_thm("LDROP_EQ_LNIL", SPEC_ALL LDROP_EQ_LNIL') ;
 
 val LPREFIX_APPEND = Q.store_thm("LPREFIX_APPEND",
   `LPREFIX l1 l2 <=> ?ll. l2 = LAPPEND l1 ll`,
@@ -2307,33 +2302,9 @@ val LDROP_fromList = Q.store_thm("LDROP_fromList",
   Induct >- ( Cases >> simp[] ) >>
   gen_tac >> Cases >> simp[])
 
-val LFINITE_LDROP_SUC = Q.prove(
-  `!ls. LFINITE ls ==> !n. LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL`,
-  ho_match_mp_tac LFINITE_INDUCTION >>
-  simp[] >>
-  conj_tac >- ( Cases >> simp[] ) >>
-  ntac 3 strip_tac >>
-  Cases >> simp[] );
-
 val LDROP_SUC = Q.store_thm("LDROP_SUC",
   `LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL`,
-  Cases_on`LFINITE ls` >- metis_tac[LFINITE_LDROP_SUC] >>
-  `IS_SOME (LDROP n ls)` by (
-    metis_tac[optionTheory.IS_SOME_DEF,NOT_LFINITE_DROP] ) >>
-  `IS_SOME (LTAKE n ls)` by (
-    metis_tac[optionTheory.IS_SOME_DEF,NOT_LFINITE_TAKE]) >>
-  fs[optionTheory.IS_SOME_EXISTS] >>
-  imp_res_tac LTAKE_DROP >>
-  first_x_assum(qspec_then`n`mp_tac) >> simp[] >>
-  disch_then (SUBST1_TAC o SYM) >>
-  imp_res_tac LTAKE_LENGTH >>
-  simp[arithmeticTheory.ADD1] >>
-  simp[LDROP_ADD] >>
-  qmatch_assum_rename_tac`n = LENGTH l` >>
-  `LDROP n (fromList l) = SOME [||]` by (
-    simp[LDROP_fromList,rich_listTheory.DROP_LENGTH_NIL] ) >>
-  var_eq_tac >>
-  imp_res_tac LDROP_APPEND1 >> fs[LDROP1_THM])
+  SIMP_TAC std_ss [LDROP_FUNPOW, arithmeticTheory.FUNPOW_SUC]) ;
 
 val _ = export_theory();
 
