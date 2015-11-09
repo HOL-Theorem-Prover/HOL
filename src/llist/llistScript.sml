@@ -306,6 +306,18 @@ val LNTH_rep = Q.store_thm ("LNTH_rep",
   Induct THEN GEN_TAC THEN llist_CASE_TAC ``ll : 'a llist`` THEN
   ASM_SIMP_TAC std_ss [LNTH_THM, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC]) ;
 
+(* can also prove that two lists are equal "extensionally", by showing
+   that LNTH is everywhere the same over them *)
+val LNTH_llist_rep = prove(
+  ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
+  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
+
+val LNTH_EQ = store_thm(
+  "LNTH_EQ",
+  ``!ll1 ll2. (ll1 = ll2) = (!n. LNTH n ll1 = LNTH n ll2)``,
+  SIMP_TAC (srw_ss()) [forall_llist, LNTH_llist_rep, llist_abs_11,
+                       FUN_EQ_THM]);
+
 (*---------------------------------------------------------------------------*)
 (* LUNFOLD by definition                                                     *)
 (*                                                                           *)
@@ -332,17 +344,13 @@ val LUNFOLD = Q.store_thm ("LUNFOLD", `!f x. LUNFOLD f x =
 val LUNFOLD_UNIQUE = Q.store_thm ("LUNFOLD_UNIQUE",
    `!f g. (!x. g x = case f x of NONE => [||]
                        | SOME (v1,v2) => v2:::g v1) ==>
-	   (!y. g y = LUNFOLD f y)`,
-    REWRITE_TAC [LUNFOLD_def] THEN
-    REPEAT STRIP_TAC THEN irule llist_if_rep_abs THEN
-    SIMP_TAC bool_ss [FUN_EQ_THM] THEN
-    GEN_TAC THEN Q.SPEC_TAC (`y`, `y`) THEN
-    Induct_on `n` THEN GEN_TAC THEN
-    ONCE_ASM_REWRITE_TAC [] THEN
-    Cases_on `f y` THEN
-    SIMP_TAC std_ss [FUNPOW, llist_rep_LCONS, llist_rep_LNIL, NOT_SUC,
-      pair_CASE_def, FUNPOW_BIND_NONE, OPTION_MAP_DEF, UNCURRY_VAR] THEN
-    FIRST_ASSUM (MATCH_ACCEPT_TAC)) ;
+           (!y. g y = LUNFOLD f y)`,
+  REWRITE_TAC [LNTH_EQ] THEN
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  Induct_on `n` THEN GEN_TAC THEN
+  ONCE_ASM_REWRITE_TAC [LUNFOLD] THEN
+  Cases_on `f y` THEN SIMP_TAC std_ss [pair_CASE_def, LNTH_THM] THEN
+  FIRST_ASSUM MATCH_ACCEPT_TAC) ;
 
 (* LUNFOLD is a sort of inverse to LTL_HD *)
 val lu1 = BETA_RULE
@@ -429,35 +437,12 @@ val LLIST_BISIMULATION0 = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `$=` THEN SRW_TAC [][] THEN
     Q.SPEC_THEN `ll3` STRUCT_CASES_TAC llist_CASES THEN SRW_TAC [][],
-    SRW_TAC [][] THEN
-    Q.ISPEC_THEN `\ (l1,l2). if R l1 l2 then
-                               case LHD l1 of
-                                 NONE => NONE
-                               | SOME h => SOME ((THE (LTL l1), THE (LTL l2)),
-                                                  h)
-                             else NONE`
-                 (ASSUME_TAC o
-                  Q.SPECL [`\ (l1,l2). if R l1 l2 then l1 else LNIL`,
-                           `\ (l1,l2). if R l1 l2 then l2 else LNIL`] o
-                  CONJUNCT2 o
-                  SIMP_RULE bool_ss [EXISTS_UNIQUE_THM])
-                 llist_Axiom_1ue THEN
-    Q_TAC SUFF_TAC `(\ (l1,l2). if R l1 l2 then l1 else LNIL) =
-                    (\ (l1,l2). if R l1 l2 then l2 else LNIL)`
-          THEN1 (SRW_TAC [][FUN_EQ_THM,pairTheory.FORALL_PROD] THEN
-                 METIS_TAC []) THEN
-    POP_ASSUM MATCH_MP_TAC THEN
-    ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
-    SRW_TAC [][] THEN
-    Cases_on `LHD p_1` THEN SRW_TAC [][] THENL [
-      FULL_SIMP_TAC (srw_ss()) [],
-      RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
-      RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
-      RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
-      RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
-      RES_TAC THEN FULL_SIMP_TAC (srw_ss()) []
-    ]
-  ]);
+    STRIP_TAC THEN POP_ASSUM_LIST (MAP_EVERY ASSUME_TAC) THEN
+    POP_ASSUM MP_TAC THEN 
+    Q.SPEC_TAC (`ll1`, `ll1`) THEN Q.SPEC_TAC (`ll2`, `ll2`) THEN
+    Ho_Rewrite.REWRITE_TAC [LNTH_EQ, PULL_FORALL] THEN
+    Induct_on `n` THEN REPEAT STRIP_TAC THEN
+    RES_TAC THEN ASM_SIMP_TAC std_ss [LNTH_THM] ]) ;
 
 val LLIST_BISIMULATION = store_thm(
   "LLIST_BISIMULATION",
@@ -506,19 +491,6 @@ val LLIST_STRONG_BISIMULATION = store_thm(
       SRW_TAC [][]
     ]
   ]);
-
-(* can also prove that two lists are equal "extensionally", by showing
-   that LNTH is everywhere the same over them *)
-val LNTH_llist_rep = prove(
-  ``!n r. lrep_ok r ==> (LNTH n (llist_abs r) = r n)``,
-  SIMP_TAC bool_ss [LNTH_rep, llist_repabs']) ;
-
-val LNTH_EQ = store_thm(
-  "LNTH_EQ",
-  ``!ll1 ll2. (ll1 = ll2) = (!n. LNTH n ll1 = LNTH n ll2)``,
-  SIMP_TAC (srw_ss()) [forall_llist, LNTH_llist_rep, llist_abs_11,
-                       FUN_EQ_THM]);
-
 
 (* ----------------------------------------------------------------------
     LTAKE : num -> 'a llist -> 'a list option
