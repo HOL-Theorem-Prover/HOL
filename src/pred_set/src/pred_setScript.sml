@@ -1555,6 +1555,11 @@ val INJ_SUBSET = store_thm(
 ``!f s t s0 t0. INJ f s t /\ s0 SUBSET s /\ t SUBSET t0 ==> INJ f s0 t0``,
 SRW_TAC[][INJ_DEF,SUBSET_DEF])
 
+val INJ_IMAGE = Q.prove (`INJ f s t ==> INJ f s (IMAGE f s)`,
+  REWRITE_TAC [INJ_DEF, IN_IMAGE] THEN
+  REPEAT DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
+  REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC [])  ;
+
 (* ===================================================================== *)
 (* Surjective functions on a set.					 *)
 (* ===================================================================== *)
@@ -1669,33 +1674,50 @@ RW_TAC bool_ss [BIJ_DEF, SURJ_DEF, INJ_DELETE, DELETE_DEF, INJ_DEF] THENL
 (* Left and right inverses.						 *)
 (* ===================================================================== *)
 
-val lemma1 = TAC_PROOF(([],
-(--`!(f:'a->'b) s.
-      (!x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)) =
-      (!y. y IN s ==> !x.((x IN s /\ (f x = f y))=(y IN s /\ (x = y))))`--)),
-     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
-     RES_TAC THEN ASM_REWRITE_TAC []);
+(* Left inverse, to option type, result is NONE outside image of domain *)
+val LINV_OPT_def = new_definition ("LINV_OPT_def",
+  ``LINV_OPT f s y =
+    if y IN IMAGE f s then SOME (@x. x IN s /\ (f x = y)) else NONE``) ;
 
-val lemma2 = TAC_PROOF (([],
-(--`!f:'a->'b. !s. ?g. !t. INJ f s t ==> !x:'a. x IN s ==> (g(f x) = x)`--)),
-     REPEAT GEN_TAC THEN PURE_REWRITE_TAC [INJ_DEF,lemma1] THEN
-     EXISTS_TAC (--`\y:'b. @x:'a. x IN s /\ (f x = y)`--) THEN
-     CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
-     REPEAT STRIP_TAC THEN (RES_THEN (fn th => REWRITE_TAC [th])) THEN
-     ASM_REWRITE_TAC [] THEN CONV_TAC SELECT_CONV THEN
-     EXISTS_TAC (--`x:'a`--) THEN REFL_TAC);
+val SELECT_EQ_AX = Q.prove (`($@ P = x) ==> $? P ==> P x`,
+  DISCH_THEN (fn th => REWRITE_TAC [SYM th]) THEN DISCH_TAC THEN
+  irule SELECT_AX THEN ASM_REWRITE_TAC [ETA_AX]) ;
+
+val INJ_LINV_OPT = Q.store_thm ("INJ_LINV_OPT",
+  `INJ f s t ==> !x:'a. !y:'b.
+    (LINV_OPT f s y = SOME x) = (y = f x) /\ x IN s /\ y IN t`,
+  REWRITE_TAC [LINV_OPT_def, INJ_DEF, IMAGE_DEF, GSPECIFICATION] THEN
+  REPEAT STRIP_TAC THEN
+  REVERSE COND_CASES_TAC THEN FULL_SIMP_TAC std_ss [] THEN1
+  (POP_ASSUM (ASSUME_TAC o Q.SPEC `x`) THEN REV_FULL_SIMP_TAC std_ss []) THEN
+  EQ_TAC THENL [
+    DISCH_THEN (ASSUME_TAC o MATCH_MP SELECT_EQ_AX) THEN
+    VALIDATE (POP_ASSUM (fn th => REWRITE_TAC [BETA_RULE (UNDISCH th)])) THEN
+    Q.EXISTS_TAC `x'` THEN ASM_REWRITE_TAC [],
+    DISCH_TAC THEN irule SELECT_UNIQUE THEN
+    BETA_TAC THEN GEN_TAC THEN EQ_TAC
+    THENL [
+      FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`y'`, `x`]) THEN
+      REPEAT STRIP_TAC THEN RES_TAC THEN FULL_SIMP_TAC bool_ss [],
+      REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []]]) ;
+
+(* LINV was previously "defined" by new_specification, giving LINV_DEF *)
+val LINV_LO = new_definition ("LINV_LO",
+  ``LINV f s y = THE (LINV_OPT f s y)``) ;
 
 (* --------------------------------------------------------------------- *)
 (* LINV_DEF:								 *)
 (*   |- !f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))	 *)
 (* --------------------------------------------------------------------- *)
 
-val LINV_DEF =
-   let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma2
-       val th2 = CONV_RULE SKOLEM_CONV th1
-   in
-      new_specification("LINV_DEF",["LINV"],th2)
-   end;
+val LINV_DEF = Q.store_thm ("LINV_DEF",
+  `!f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))`,
+  REWRITE_TAC [LINV_LO] THEN REPEAT GEN_TAC THEN
+  DISCH_THEN (fn th => ASSUME_TAC th THEN
+    ASSUME_TAC (MATCH_MP INJ_LINV_OPT th)) THEN
+  GEN_TAC THEN POP_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `f x`]) THEN
+  DISCH_TAC THEN FULL_SIMP_TAC std_ss [INJ_DEF] THEN 
+  RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
 
 val BIJ_LINV_INV = Q.store_thm (
 "BIJ_LINV_INV",
@@ -1743,31 +1765,27 @@ val BIJ_INSERT = store_thm(
     SRW_TAC [][]
   ]);
 
-val lemma3 = TAC_PROOF(([],
-(--`!f:'a->'b. !s. ?g. !t. SURJ f s t ==> !x:'b. x IN t ==> (f(g x) = x)`--)),
-     REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN
-     EXISTS_TAC (--`\y:'b. @x:'a. x IN s /\ (f x = y)`--) THEN
-     CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
-     REPEAT STRIP_TAC THEN
-     (fn (A,g) =>
-       let val tm = mk_conj(Term`^(rand(lhs g)) IN s`, g)
-       in SUBGOAL_THEN tm (fn th => ACCEPT_TAC(CONJUNCT2 th))(A,g)
-       end)
-     THEN CONV_TAC SELECT_CONV THEN
-     FIRST_ASSUM MATCH_MP_TAC THEN
-     FIRST_ASSUM ACCEPT_TAC);
+(* RINV was previously "defined" by new_specification, giving RINV_DEF *)
+val RINV_LO = new_definition ("RINV_LO", 
+  ``RINV f s y = THE (LINV_OPT f s y)``) ;
 
 (* --------------------------------------------------------------------- *)
 (* RINV_DEF:								 *)
 (*   |- !f s t. SURJ f s t ==> (!x. x IN t ==> (f(RINV f s x) = x))      *)
 (* --------------------------------------------------------------------- *)
 
-val RINV_DEF =
-    let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma3
-        val th2 = CONV_RULE SKOLEM_CONV th1
-    in
-         new_specification("RINV_DEF",["RINV"],th2)
-    end;
+val RINV_DEF = Q.store_thm ("RINV_DEF", 
+  `!f s t. SURJ f s t ==> (!x. x IN t ==> (f (RINV f s x) = x))`,
+  REPEAT GEN_TAC THEN 
+  DISCH_THEN (fn th => ASSUME_TAC th THEN 
+    ASSUME_TAC (REWRITE_RULE [IMAGE_SURJ] th)) THEN
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def, 
+    optionTheory.THE_DEF] THEN
+  RES_TAC THEN
+  irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN1
+    SIMP_TAC std_ss [] THEN
+  Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
 
 (* ===================================================================== *)
 (* Finiteness								 *)
@@ -2516,6 +2534,13 @@ val CARD_INJ_IMAGE = store_thm(
   Q.ID_SPEC_TAC `s` THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SRW_TAC [][]);
 
+val CARD_IMAGE = store_thm("CARD_IMAGE",
+  ``!s. FINITE s ==> (CARD (IMAGE f s) <= CARD s)``,
+  SET_INDUCT_TAC THEN
+  ASM_SIMP_TAC bool_ss [CARD_DEF, IMAGE_INSERT, IMAGE_FINITE, 
+    IMAGE_EMPTY, ZERO_LESS_EQ] THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC arith_ss []) ;
+
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
   `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
@@ -2567,6 +2592,18 @@ val PHP = Q.store_thm
 ("PHP",
  `!(f:'a->'b) s t. FINITE t /\ CARD t < CARD s ==> ~INJ f s t`,
  METIS_TAC [INJ_CARD, AP ``x < y = ~(y <= x)``]);
+
+val INJ_CARD_IMAGE_EQ = Q.store_thm ("INJ_CARD_IMAGE_EQ",
+  `INJ f s t ==> FINITE s ==> (CARD (IMAGE f s) = CARD s)`,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM (ASSUME_TAC o MATCH_MP INJ_IMAGE) THEN
+  IMP_RES_TAC INJ_CARD THEN
+  IMP_RES_TAC IMAGE_FINITE THEN
+  VALIDATE (FIRST_X_ASSUM (ASSUME_TAC o UNDISCH)) THEN1
+    POP_ASSUM MATCH_ACCEPT_TAC THEN
+  IMP_RES_TAC CARD_IMAGE THEN
+  POP_ASSUM (ASSUME_TAC o Q.SPEC `f`) THEN
+  ASM_SIMP_TAC arith_ss []) ;
 
 (* =====================================================================*)
 (* Infiniteness								*)
