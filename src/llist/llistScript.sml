@@ -255,6 +255,13 @@ val LCONS_11 = store_thm(
   SRW_TAC [ETA_ss][GSYM FUN_EQ_THM, llist_rep_11]);
 val _ = export_rewrites ["LCONS_11"]
 
+val LTL_HD_iff = Q.store_thm ("LTL_HD_iff",
+  `((LTL_HD x = SOME (t, h)) = (x = LCONS h t)) /\
+    ((LTL_HD x = NONE) = (x = LNIL))`,
+  llist_CASE_TAC ``x :'a llist`` THEN
+  SIMP_TAC std_ss [LTL_HD_LCONS, LTL_HD_LNIL, LCONS_NOT_NIL, LCONS_11] THEN
+  DECIDE_TAC) ;
+
 val LHD_EQ_NONE = store_thm(
   "LHD_EQ_NONE",
   ``!ll. ((LHD ll = NONE) = (ll = LNIL)) /\ ((NONE = LHD ll) = (ll = LNIL))``,
@@ -363,6 +370,13 @@ val LUNFOLD_LTL_HD = Q.store_thm ("LUNFOLD_LTL_HD",
   Cases_on `LTL_HD x` THEN
   SIMP_TAC std_ss [LTL_HD_LNIL, pair_CASE_def, LTL_HD_LCONS]) ;
 
+val LTL_HD_LUNFOLD = Q.store_thm ("LTL_HD_LUNFOLD",
+  `LTL_HD (LUNFOLD f x) = OPTION_MAP (LUNFOLD f ## I) (f x)`,
+  ONCE_REWRITE_TAC [LUNFOLD] THEN CASE_TAC THEN
+  SIMP_TAC std_ss [OPTION_MAP_DEF, pair_CASE_def, LTL_HD_LNIL,
+    LTL_HD_LCONS, pairTheory.PAIR_MAP]) ;
+
+
 (*---------------------------------------------------------------------------*)
 (* Co-recursion theorem for lazy lists                                       *)
 (*---------------------------------------------------------------------------*)
@@ -422,8 +436,31 @@ val llist_Axiom = store_thm(
 
 (* ----------------------------------------------------------------------
     Another consequence of the finality theorem is the principle of
-    bisimulation
+    bisimulation, including for lists unfolded from different generators
    ---------------------------------------------------------------------- *)
+
+val LUNFOLD_BISIMULATION = store_thm(
+  "LUNFOLD_BISIMULATION",
+  ``!f1 f2 x1 x2. (LUNFOLD f1 x1 = LUNFOLD f2 x2) =
+      ?R. R x1 x2 /\
+	!y1 y2.  R y1 y2 ==>
+	   (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
+	   ?h t1 t2.
+	     (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [
+    DISCH_THEN (fn th => 
+      Q.EXISTS_TAC `\x1 x2. LUNFOLD f1 x1 = LUNFOLD f2 x2` THEN
+      SIMP_TAC std_ss [th]) THEN
+    REPEAT GEN_TAC THEN
+    DISCH_THEN (MP_TAC o ONCE_REWRITE_RULE [LUNFOLD]) THEN
+    REPEAT CASE_TAC THEN SIMP_TAC std_ss [LCONS_NOT_NIL, LCONS_11], 
+    STRIP_TAC THEN POP_ASSUM_LIST (MAP_EVERY ASSUME_TAC) THEN
+    POP_ASSUM MP_TAC THEN 
+    Q.SPEC_TAC (`x1`, `x1`) THEN Q.SPEC_TAC (`x2`, `x2`) THEN
+    Ho_Rewrite.REWRITE_TAC [LNTH_EQ, PULL_FORALL] THEN
+    Induct_on `n` THEN REPEAT STRIP_TAC THEN
+    ONCE_REWRITE_TAC [LUNFOLD] THEN RES_TAC THEN
+    ASM_SIMP_TAC std_ss [pair_CASE_def, LNTH_THM] ]) ;
 
 val LLIST_BISIMULATION0 = store_thm(
   "LLIST_BISIMULATION0",
@@ -434,15 +471,11 @@ val LLIST_BISIMULATION0 = store_thm(
                              ?h t1 t2.
                                  (ll3 = h:::t1) /\ (ll4 = h:::t2) /\
                                  R t1 t2``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [
-    DISCH_THEN SUBST_ALL_TAC THEN Q.EXISTS_TAC `$=` THEN SRW_TAC [][] THEN
-    Q.SPEC_THEN `ll3` STRUCT_CASES_TAC llist_CASES THEN SRW_TAC [][],
-    STRIP_TAC THEN POP_ASSUM_LIST (MAP_EVERY ASSUME_TAC) THEN
-    POP_ASSUM MP_TAC THEN 
-    Q.SPEC_TAC (`ll1`, `ll1`) THEN Q.SPEC_TAC (`ll2`, `ll2`) THEN
-    Ho_Rewrite.REWRITE_TAC [LNTH_EQ, PULL_FORALL] THEN
-    Induct_on `n` THEN REPEAT STRIP_TAC THEN
-    RES_TAC THEN ASM_SIMP_TAC std_ss [LNTH_THM] ]) ;
+  REPEAT GEN_TAC THEN
+  CONV_TAC (LHS_CONV (ONCE_DEPTH_CONV (REWR_CONV (SYM LUNFOLD_LTL_HD)))) THEN
+  REWRITE_TAC [LUNFOLD_BISIMULATION] THEN
+  REPEAT (FIRST [AP_TERM_TAC, ABS_TAC, AP_THM_TAC]) THEN
+  SIMP_TAC std_ss [LTL_HD_iff]) ;
 
 val LLIST_BISIMULATION = store_thm(
   "LLIST_BISIMULATION",
