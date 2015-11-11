@@ -63,6 +63,8 @@ val default_options =
 fun isDelim c =
    Char.isPunct c andalso (c <> #"-") andalso (c <> #":") orelse Char.isSpace c
 
+val print_options = utilsLib.print_options (SOME 34)
+
 fun process_options s =
    let
       val l = String.tokens isDelim s
@@ -98,10 +100,15 @@ fun process_options s =
                thumb = thumb,
                vfp = vfp,
                itblock = itblock}
-      else raise ERR "process_options"
+      else ( print_options "Endianness" endian_options
+           ; print_options "Architecture version" arch_options
+           ; print_options "Thumb mode" thumb_options
+           ; print_options "Floating-point" vfp_options
+           ; raise ERR "process_options"
                  ("Unrecognized option" ^
                   (if List.length l > 1 then "s" else "") ^
                   ": " ^ String.concat (commafy l))
+           )
    end
 
 (* ----------------------------------------------------------------------- *)

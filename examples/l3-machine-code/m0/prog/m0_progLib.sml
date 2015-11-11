@@ -463,7 +463,7 @@ type opt = {gpr_map: bool, mem: memory, temporal: bool}
 local
    val gpr_map_options =
       [["map-gpr", "gpr-map", "reg-map", "map-reg"],
-       ["no-gpr-map", "no-map-gpr"]]
+       ["no-map-gpr", "no-gpr-map"]]
    val mem_options =
       [["map-mem", "mem-map", "mapped"],
        ["array-mem", "mem-array", "array"],
@@ -477,6 +477,9 @@ local
        | 1 => Array
        | 2 => Flat
        | _ => raise ERR "process_rule_options" ""
+   val print_options = utilsLib.print_options (SOME 24)
+      TextIO.print (StringCvt.padRight #" " 34 (" * " ^ name ^ " options:") ^
+                    String.concat (Lib.commafy (List.map hd l)) ^ "\n")
 in
    fun basic_opt () =
       {gpr_map = false, mem = Flat,
@@ -518,10 +521,14 @@ in
       in
          if List.null l
             then {gpr_map = gpr_map, mem = mem, temporal = temporal}: opt
-         else raise ERR "process_options"
+         else ( print_options "Register view" gpr_map_options
+              ; print_options "Memory view" mem_options
+              ; print_options "Temporal triple" temporal_options
+              ; raise ERR "process_options"
                     ("Unrecognized option" ^
                      (if List.length l > 1 then "s" else "") ^
                      ": " ^ String.concat (commafy l))
+              )
       end
 end
 
