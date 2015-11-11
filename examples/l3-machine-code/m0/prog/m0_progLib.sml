@@ -478,8 +478,6 @@ local
        | 2 => Flat
        | _ => raise ERR "process_rule_options" ""
    val print_options = utilsLib.print_options (SOME 24)
-      TextIO.print (StringCvt.padRight #" " 34 (" * " ^ name ^ " options:") ^
-                    String.concat (Lib.commafy (List.map hd l)) ^ "\n")
 in
    fun basic_opt () =
       {gpr_map = false, mem = Flat,
