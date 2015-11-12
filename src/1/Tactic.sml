@@ -802,18 +802,6 @@ local
           if is_conj l then norm (CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)) th)
           else norm (UNDISCH th)
 
-fun list_elfupd f l =
-  let
-    fun recurse k l =
-      case l of
-          [] => NONE
-        | h::t => (case f h of
-                       NONE => recurse (fn l => k (h::l)) t
-                     | SOME h' => SOME (k (h' :: t)))
-  in
-    recurse (fn x => x) l
-  end
-
 fun group_hyps gfvs tlist =
   let
     fun overlaps fvset (tfvs,_) =
