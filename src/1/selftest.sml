@@ -653,9 +653,12 @@ in
     | _ => die "FAILED!"
 end
 
+val _ = hide "P"
+val _ = hide "f"
+val _ = hide "c"
+
 val _ = let
   val _ = tprint "irule 5 (as match_accept_tac)"
-  val _ = hide "P"
   val g = ``(!x:'a. P x) ==> P a``
   val th = prove(g, DISCH_THEN irule)
            handle HOL_ERR _ => die "FAILED!"
