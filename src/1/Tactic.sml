@@ -861,7 +861,7 @@ fun reconstitute groups th =
           [] => (acc, th)
         | (fvset, ts) :: rest =>
           let
-            val (th1,c) = CONJL (List.rev ts) th
+            val (th1,c) = CONJL ts th
             val (ext, th2) = CHOOSEL (HOLset.listItems fvset) c th1
           in
             recurse (ext::acc) rest th2
