@@ -816,9 +816,10 @@ fun list_elfupd f l =
 
 fun group_hyps gfvs tlist =
   let
-    fun overlaps (fvset,t) (tfvs,tlist) =
-      if HOLset.isEmpty (HOLset.intersection(fvset, tfvs)) then NONE
-      else SOME (HOLset.union(fvset,tfvs), t::tlist)
+    fun overlaps fvset (tfvs,_) =
+      not (HOLset.isEmpty (HOLset.intersection(fvset, tfvs)))
+    fun union ((fvset1, tlist1), (fvset2, tlist2)) =
+      (HOLset.union(fvset1, fvset2), tlist1 @ tlist2)
     fun recurse acc tlist =
       case tlist of
           [] => acc
@@ -826,9 +827,10 @@ fun group_hyps gfvs tlist =
           let
             val tfvs = FVL [t] empty_tmset - gfvs
           in
-            case list_elfupd (overlaps (tfvs,t)) acc of
-                NONE => recurse ((tfvs,[t])::acc) ts
-              | SOME acc' => recurse acc' ts
+            case List.partition (overlaps tfvs) acc of
+                ([], _) => recurse ((tfvs,[t])::acc) ts
+              | (ovlaps, rest) =>
+                recurse (List.foldl union (tfvs, [t]) ovlaps :: rest) ts
           end
   in
     recurse [] tlist
