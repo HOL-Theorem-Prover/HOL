@@ -1103,10 +1103,8 @@ val _ = export_rewrites ["LDROP_THM"]
 val LDROP1_THM = store_thm(
   "LDROP1_THM",
   ``LDROP 1 = LTL``,
-  CONV_TAC (Q.X_FUN_EQ_CONV `ll`) THEN
-  SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``, LDROP] THEN
-  GEN_TAC THEN Cases_on `LTL ll` THEN
-  SIMP_TAC (srw_ss()) [LDROP]);
+  SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``,
+    LDROP_FUNPOW, FUN_EQ_THM, FUNPOW, OPTION_BIND_def]);
 
 val NOT_LFINITE_TAKE = store_thm(
   "NOT_LFINITE_TAKE",
