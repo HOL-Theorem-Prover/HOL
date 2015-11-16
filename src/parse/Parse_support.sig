@@ -16,8 +16,7 @@ sig
   val make_aq_binding_occ   : locn.locn -> term -> bvar_in_env
   val make_atom             : overload_info -> locn.locn ->
                               string -> preterm_in_env
-  val make_qconst           : overload_info -> locn.locn -> string * string ->
-                              preterm_in_env
+  val make_qconst           : locn.locn -> string * string -> preterm_in_env
   val list_make_comb        : locn.locn -> preterm_in_env list -> preterm_in_env
   val bind_term             : locn.locn -> bvar_in_env list ->
                               preterm_in_env -> preterm_in_env

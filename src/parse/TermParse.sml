@@ -252,7 +252,7 @@ in
       end
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
     | IDENT (l, s)       => make_atom oinfo l s
-    | QIDENT (l, s1, s2) => make_qconst oinfo l (s1,s2)
+    | QIDENT (l, s1, s2) => make_qconst l (s1,s2)
     | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
     | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
     | AQ (l, t)          => make_aq l t
