@@ -295,4 +295,10 @@ val num = numSyntax.num
 val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
 val _ = print "OK\n"
 
+val _ = tprint "Records with polymorphic fields 1"
+val _ = (``polyrcd_pfld1_fupd :
+             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,d)polyrcd``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
 val _ = Process.exit Process.success;
