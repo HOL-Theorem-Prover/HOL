@@ -259,11 +259,13 @@ fun CONTR tm th =
    MP (SPEC tm FALSITY) th handle HOL_ERR _ => raise ERR "CONTR" ""
 
 (*---------------------------------------------------------------------------*
- *  Undischarging                                                            *
+ *  Undischarging - UNDISCH                                                  *
  *                                                                           *
  *   A |- t1 ==> t2                                                          *
  *   --------------                                                          *
  *    A, t1 |- t2                                                            *
+ *                                                                           *
+ * UNDISCH_TM also returns t1, UNDISCH_SPLIT splits t1 into its conjuncts    *
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH th =
@@ -274,6 +276,11 @@ fun UNDISCH_TM th =
    let val (ant, conseq) = dest_imp (concl th) ;
    in (ant, MP th (ASSUME ant)) end
    handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
+
+fun UNDISCH_SPLIT th =
+  let val (ant, conseq) = dest_imp (concl th) ;
+  in MP th (ASSUME_CONJS ant) end 
+  handle HOL_ERR _ => raise ERR "UNDISCH_SPLIT" ""
 
 (*---------------------------------------------------------------------------*
  * =T elimination                                                            *
@@ -1337,12 +1344,13 @@ fun EXISTS_LEFT1 fv th =
     in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
 
 (* --------------------------------------------------------------------------*
- * SPEC_UNDISCH_EXL: strips !x, ant ==>, then EXISTS_LEFT for stripped vars  *
+ * SPEC_UNDISCH_EXL: strips !x, ant ==>, (splitting conjuncts of ant)        *
+ * then EXISTS_LEFT for stripped vars                                        *
  * --------------------------------------------------------------------------*)
 
 fun SPEC_UNDISCH_EXL thm =
-  let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
-    val th2 = UNDISCH_ALL th1 ;
+  let val (fvs, th1) = strip_gen_left (SPEC_VAR o repeat UNDISCH_SPLIT) thm ;
+    val th2 = repeat UNDISCH_SPLIT th1 ;
     val th3 = EXISTS_LEFT (rev fvs) th2 ;
   in th3 end ;
 
