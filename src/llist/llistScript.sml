@@ -1106,6 +1106,14 @@ val LDROP1_THM = store_thm(
   SIMP_TAC bool_ss [DECIDE ``1 = SUC 0``,
     LDROP_FUNPOW, FUN_EQ_THM, FUNPOW, OPTION_BIND_def]);
 
+val LNTH_HD_LDROP = Q.store_thm ("LNTH_HD_LDROP",
+  `!n ll. LNTH n ll = OPTION_BIND (LDROP n ll) LHD`,
+  REWRITE_TAC [LDROP_FUNPOW] THEN
+  Induct THEN RULE_ASSUM_TAC GSYM THEN
+  SIMP_TAC std_ss [LNTH, FUNPOW, FUNPOW_BIND_NONE] THEN
+  GEN_TAC THEN Cases_on `LTL ll` THEN
+  ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]) ;
+
 val NOT_LFINITE_TAKE = store_thm(
   "NOT_LFINITE_TAKE",
   ``!ll. ~LFINITE ll ==> !n. ?y. LTAKE n ll = SOME y``,
@@ -1320,7 +1328,6 @@ val exists_LDROP = store_thm(
     Q.SPEC_THEN `ll` FULL_STRUCT_CASES_TAC llist_CASES THEN
     FULL_SIMP_TAC (srw_ss()) [LDROP]
   ]);
-
 
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
