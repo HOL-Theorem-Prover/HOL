@@ -5,14 +5,14 @@ sig
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
   val store_thm      : string * term * tactic -> thm
-  val THEN           : ('a -> goal list * (thm list -> 'b)) * tactic ->
-       'a -> goal list * (thm list -> 'b)
+  val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
+  val >>             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   (* could be used as
   val THEN           : tactic * tactic -> tactic
   val THEN           : list_tactic * tactic -> list_tactic
   *)
-  val THENL          : ('a -> goal list * (thm list -> 'b)) * tactic list ->
-       'a -> goal list * (thm list -> 'b)
+  val THENL          : ('a,'b) gentactic * tactic list -> ('a,'b) gentactic
+  val >|             : ('a,'b) gentactic * tactic list -> ('a,'b) gentactic
   (* could be used as
   val THENL          : tactic * tactic list -> tactic
   val THENL          : list_tactic * tactic list -> list_tactic
@@ -20,8 +20,9 @@ sig
   val ORELSE         : tactic * tactic -> tactic
   val ORELSE_LT      : list_tactic * list_tactic -> list_tactic
   val THEN1          : tactic * tactic -> tactic
-  val THEN_LT : ('a -> goal list * (thm list -> 'b)) * list_tactic ->
-        'a -> goal list * (thm list -> 'b)
+  val >-             : tactic * tactic -> tactic
+  val THEN_LT        : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic
+  val >>>            : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic
   (* could be used as
   val THEN_LT        : tactic * list_tactic -> tactic
   val THEN_LT        : list_tactic * list_tactic -> list_tactic
@@ -51,8 +52,8 @@ sig
   val VALID_LT       : list_tactic -> list_tactic
   val VALIDATE       : tactic -> tactic
   val VALIDATE_LT    : list_tactic -> list_tactic
-  val GEN_VALIDATE       : bool -> tactic -> tactic
-  val GEN_VALIDATE_LT    : bool -> list_tactic -> list_tactic
+  val GEN_VALIDATE   : bool -> tactic -> tactic
+  val GEN_VALIDATE_LT: bool -> list_tactic -> list_tactic
   val ADD_SGS_TAC    : term list -> tactic -> tactic
   val EVERY          : tactic list -> tactic
   val EVERY_LT       : list_tactic list -> list_tactic

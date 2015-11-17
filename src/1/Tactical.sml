@@ -75,8 +75,6 @@ fun store_thm (name, tm, tac) =
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
-infix THEN THENL THEN1 ORELSE ORELSE_LT THEN_LT
-
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
  * A tactical that applies ltac2 to the list of subgoals resulting from tac1
@@ -90,6 +88,8 @@ fun op THEN_LT (tac1, ltac2 : list_tactic) =
       in
          (gl2, vf1 o vf2)
       end
+
+val op >>> = op THEN_LT
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN_LT : tactic * list_tactic -> tactic ;
@@ -131,6 +131,7 @@ fun ALLGOALS tac2 gl =
  *---------------------------------------------------------------------------*)
 
 fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
+val op >> = op THEN
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN : tactic * tactic -> tactic ;
@@ -188,6 +189,7 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
  *---------------------------------------------------------------------------*)
 
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
+val op >| = op THENL
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THENL : tactic * tactic list -> tactic ;
@@ -216,6 +218,8 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       in
          (t_gl, fn thl => jf (h_jf [] :: thl))
       end
+
+val op >- = op THEN1
 
 (*---------------------------------------------------------------------------
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal

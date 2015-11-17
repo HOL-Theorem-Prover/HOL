@@ -111,10 +111,10 @@ struct
   val fs = fsrw_tac []
   val rfs = rfsrw_tac []
 
-  val op>> = op Tactical.THEN
-  val op\\ = op Tactical.THEN
-  val op>- = op Tactical.THEN1
-  val op>| = op Tactical.THENL
-  val op>>> = op Tactical.THEN_LT
+  val op>> = op Tactical.>>
+  val op\\ = op Tactical.>>
+  val op>- = op Tactical.>-
+  val op>| = op Tactical.>|
+  val op>>> = op Tactical.>>>
 
 end
