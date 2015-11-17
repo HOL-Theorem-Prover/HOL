@@ -656,12 +656,14 @@ fun define_bigrec_functions (tyname, fldlist) = let
     val leaf_fupdname = leaf_accname ^ "_fupd"
     val leaf_fupd = prim_mk_const{Name = leaf_fupdname, Thy = current_theory()}
     val fupd_const_name = acc_const_name ^ "_fupd"
-    val fupd_const = mk_var(fupd_const_name, (field_ty --> field_ty) -->
-                                             (toprec_ty --> toprec_ty))
-    val field_fvar = mk_var("f", field_ty --> field_ty)
+    val (leafd, leafr) = dom_rng (type_of leaf_fupd)
+    val (topd, topr) = dom_rng (type_of subrec_fupd)
+    val tysig = match_type topd leafr
+    val fupd_const = mk_var(fupd_const_name, leafd --> type_subst tysig topr)
+    val field_fvar = mk_var("f", leafd)
     val fupd_defn =
         mk_eq(list_mk_comb(fupd_const, [field_fvar, rvar]),
-              list_mk_comb(subrec_fupd,
+              list_mk_comb(inst tysig subrec_fupd,
                            [mk_comb(leaf_fupd, field_fvar), rvar]))
     val fupd_defn_th = new_definition(fupd_const_name, fupd_defn)
     val fupd_defn_const = defn_hd fupd_defn_th
@@ -714,9 +716,11 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   fun mk_literal base values = let
     fun foldthis (upd, value, acc) = let
       val ty = type_of value
+      val theta = match_type (#1 (dom_rng (type_of upd))) (ty --> ty)
+      val upd' = inst theta upd
       val K = Term.inst [alpha |-> ty, beta |-> ty] combinSyntax.K_tm
     in
-      list_mk_comb(upd, [mk_comb(K, value), acc])
+      list_mk_comb(upd', [mk_comb(K, value), acc])
     end
   in
     ListPair.foldr foldthis base (fupdates, values)

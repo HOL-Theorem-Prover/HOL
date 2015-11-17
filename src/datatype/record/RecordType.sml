@@ -107,6 +107,48 @@ fun update_tyinfo opt new_simpls tyinfo =
          (put_fields flds base))
 end
 
+fun digit_suffix s =
+  let
+    val ss = Substring.full s
+    val (l,r) = Substring.splitr Char.isDigit ss
+  in
+    (Substring.string l, Int.fromString (Substring.string r))
+  end
+
+fun nexttyvar ty =
+  let
+    val qnm = dest_vartype ty
+    val nm = String.extract(qnm, 1, NONE)
+  in
+    if size nm = 1 andalso Char.isLower (String.sub(nm, 0)) then
+      if nm <> "z" then
+        mk_vartype("'" ^ String.str (Char.chr(Char.ord (String.sub(nm,0)) + 1)))
+      else
+        mk_vartype "'a0"
+    else
+      case digit_suffix qnm of
+          (pfx, NONE) => mk_vartype (pfx ^ "0")
+        | (pfx, SOME i) => mk_vartype (pfx ^ Int.toString (i + 1))
+  end
+
+fun tyvariant avoids ty =
+  if mem ty avoids then tyvariant avoids (nexttyvar ty)
+  else ty
+
+(* assumes that avoids is a superset of tyvs *)
+fun freshsubst avoids tyvs =
+  let
+    fun foldthis (tyv, (avoids, s)) =
+      let
+        val v' = tyvariant avoids tyv
+      in
+        (v'::avoids, (tyv |-> v') :: s)
+      end
+  in
+    #2 (List.foldl foldthis (avoids, []) tyvs)
+  end
+
+
 (* ----------------------------------------------------------------------
     prove_recordtype_thms
 
@@ -135,6 +177,33 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   in
     domtys [] (type_of constructor)
   end
+  val varying_tyvs = let
+    val tymap = Binarymap.mkDict Type.compare : (hol_type,int) Binarymap.dict
+    fun recurse m tys =
+      case tys of
+          [] => m
+        | ty::tyrest =>
+          let
+            val tyvs = HOLset.fromList Type.compare (Type.type_vars ty)
+            fun foldthis (tyv,m) =
+                case Binarymap.peek(m, tyv) of
+                    NONE => Binarymap.insert(m,tyv,1)
+                  | SOME i => Binarymap.insert(m,tyv,i+1)
+          in
+            recurse (HOLset.foldl foldthis m tyvs) tyrest
+          end
+  in
+    Binarymap.foldl (fn (tyv,c,acc) => if c = 1 then tyv::acc else acc)
+                    []
+                    (recurse tymap types)
+  end
+
+  val tysigma = let
+    val avoids = Type.type_varsl types
+  in
+    freshsubst avoids varying_tyvs
+  end
+  val sigsubst = type_subst tysigma
   val var = Psyntax.mk_var(app_letter typ, typ)
   val size = length fields
 
@@ -186,17 +255,25 @@ fun prove_recordtype_thms (tyinfo, fields) = let
        field_fupd f o = field_update (f (field o)) o
    *)
   val fupd_names = map (fn s => s ^ "_fupd") access_fn_names
-  val fupd_fun_types = map (fn t => t --> t) types
-  val fupd_types = map (fn t => t --> (typ --> typ)) fupd_fun_types
-  val fupd_terms = ListPair.map mk_var (fupd_names, fupd_types)
-  fun mk_fupd_defn (fldfupd, result, (pos, acc)) = let
+  fun getredex t = let
+    val tyvs = type_vars t
+  in
+    List.filter (fn {redex,residue} => mem redex tyvs)
+  end
+  val fupd_fun_types =
+      map (fn t => (getredex t tysigma, t --> sigsubst t)) types
+  val fupd_types =
+      map (fn (s,t) => (s, t --> typ --> type_subst s typ)) fupd_fun_types
+  val fupd_terms =
+      ListPair.map (fn (n,(s,ty)) => (s, mk_var(n,ty))) (fupd_names, fupd_types)
+  fun mk_fupd_defn ((s, fldfupd), result, (pos, acc)) = let
     val (f_ty, _) = dom_rng (type_of fldfupd)
     val f0 = mk_var("f", f_ty)
     val f = variant typeletters f0
   in
     (pos + 1,
      mk_eq(list_mk_comb(fldfupd, [f, cons_comb]),
-           list_mk_comb(constructor,
+           list_mk_comb(Term.inst s constructor,
                         update pos (mk_comb(f, result)) typeletters)) :: acc)
   end
   val (_, fupd_def_terms0) = ListPair.foldl mk_fupd_defn (1, [])
@@ -207,7 +284,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   val fupdfn_thms = ListPair.map mk_defn_th (fupd_names, fupd_def_terms)
   val fupdfn_thm =
     save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
-  val fupdfn_terms = map (mk_const o dest_var) fupd_terms
+  val fupdfn_terms =
+      map (fn (s, v) => (s, mk_const (dest_var v))) fupd_terms
 
 
   (* do cases and induction theorem *)
@@ -227,17 +305,17 @@ fun prove_recordtype_thms (tyinfo, fields) = let
          fld1 (fld2_fupd val r) = fld1 r
       )
   *)
-  fun create_goal (acc, fupd) = let
+  fun create_goal (acc, (s, fupd)) = let
     val f = gen_var_domty("f", fupd, [var])
   in
-    Term`^acc (^fupd ^f ^var) = ^acc ^var`
+    Term`^(Term.inst s acc) (^fupd ^f ^var) = ^acc ^var`
   end
   val combinations = crosslessdiag accfn_terms fupdfn_terms
   val goals = map create_goal combinations
-  fun create_goal (acc, fupd) = let
+  fun create_goal (acc, (s, fupd)) = let
     val f = gen_var_domty("f", fupd, [var])
   in
-    Term`^acc (^fupd ^f ^var) = ^f (^acc ^var)`
+    Term`^(Term.inst s acc) (^fupd ^f ^var) = ^f (^acc ^var)`
   end
   val diag_goals = ListPair.map create_goal (accfn_terms, fupdfn_terms)
   val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
@@ -286,14 +364,18 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   (* do fupdates of (same) fupdates *)
   (* i.e., fupd_fld1 f (fupd_fld1 g r) = fupd_fld1 (f o g) r *)
-  fun create_goal fupd = let
-    val fty = #1 (dom_rng (type_of fupd))
+  fun create_goal (s, fupd) = let
+    val fupdty = type_of fupd
+    val (gty,r) = dom_rng fupdty
+    val (gd, gr) = dom_rng gty
+    val ftys = freshsubst (type_vars fupdty) (map #residue s)
+    val fty = gr --> type_subst ftys gr
     val f = variant [var] (mk_var("f", fty))
-    val g = variant [var, f] (mk_var("g", fty))
-    val x = variant [var, f, g] (mk_var("x", #1 (dom_rng fty)))
+    val g = variant [var, f] (mk_var("g", gty))
   in
-    mk_eq(list_mk_comb(fupd, [f, list_mk_comb(fupd, [g, var])]),
-          list_mk_comb(fupd, [combinSyntax.mk_o(f, g), var]))
+    mk_eq(list_mk_comb(inst s (inst ftys fupd),
+                       [f, list_mk_comb(fupd, [g, var])]),
+          list_mk_comb(inst ftys fupd, [combinSyntax.mk_o(f, g), var]))
   end
   val goals = map create_goal fupdfn_terms
   val thms = map (C (curry prove) tactic) goals
@@ -306,18 +388,18 @@ fun prove_recordtype_thms (tyinfo, fields) = let
   (* do fupdates of (different) fupdates *)
   val combinations = crossprod fupdfn_terms fupdfn_terms
   val filterfn = (fn (n,_) => let val m = n - 1
-                                  val d =  m div size
+                                  val d = m div size
                                   val m = m - (d * size) in
                                     d > m end)
   val lower_triangle = nfilter filterfn combinations
-  fun create_goal(f1,f2) = let
+  fun create_goal((s1, f1),(s2, f2)) = let
     val (f_t, _) = dom_rng (type_of f1)
     val (g_t, _) = dom_rng (type_of f2)
     val f = variant [var] (mk_var("f", f_t))
     val g = variant [var, f] (mk_var("g", g_t))
   in
-    mk_eq(list_mk_comb(f1, [f, list_mk_comb(f2, [g, var])]),
-          list_mk_comb(f2, [g, list_mk_comb(f1, [f, var])]))
+    mk_eq(list_mk_comb(inst s2 f1, [f, list_mk_comb(f2, [g, var])]),
+          list_mk_comb(inst s1 f2, [g, list_mk_comb(f1, [f, var])]))
   end
   val goals = map create_goal lower_triangle
   val fupdcanon_thms = map (C (curry prove) tactic) goals
@@ -391,12 +473,16 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       variant avoids v0
     end
 
+    fun rng_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #2
+    fun dom_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #1
     val value_vars =
-      List.take(List.foldr
-                  (fn (ty, sofar) =>
-                      mk_var_avds(app_letter ty, ty, var::sofar)::sofar)
-                  [var] types,
-                length fields)
+        List.foldr
+          (fn ((_,updt), sofar) =>
+              let val ty = rng_of_dom (type_of updt)
+              in
+                mk_var_avds(app_letter ty, ty, var::sofar)::sofar
+              end)
+          [var] fupdfn_terms |> (fn l => List.take(l, length fields))
     fun augvar n v = let
       val (nm, ty) = dest_var v
     in
@@ -405,20 +491,17 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val vvars1 = map (augvar 1) value_vars
     val vvars2 = map (augvar 2) value_vars
     val arb = mk_arb typ
-    fun mapthis (upd,v) = let
+    fun foldthis ((s,upd),v,(s0,acc)) = let
       val ty = type_of v
-      val K = Term.inst [alpha |-> ty, beta |-> ty] K_tm
+      val K = Term.inst [alpha |-> ty, beta |-> dom_of_dom (type_of upd)] K_tm
     in
-      mk_comb(upd, mk_comb(K, v))
+      (s @ s0,mk_comb(mk_comb(inst s0 upd, mk_comb(K, v)), acc))
     end
-    val updfns = ListPair.map mapthis (fupdfn_terms, value_vars)
-    val lhs = List.foldr mk_comb var updfns
-    val rhs = List.foldr mk_comb arb updfns
+    val (_, lhs) = ListPair.foldr foldthis ([], var) (fupdfn_terms, value_vars)
+    val (_, rhs) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, value_vars)
 
-    val lit1 =
-        List.foldr mk_comb arb (ListPair.map mapthis (fupdfn_terms, vvars1))
-    val lit2 =
-        List.foldr mk_comb arb (ListPair.map mapthis (fupdfn_terms, vvars2))
+    val (_, lit1) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, vvars1)
+    val (_, lit2) = ListPair.foldr foldthis ([], arb) (fupdfn_terms, vvars2)
 
     val literal_equality =
         GENL (var::value_vars)
@@ -427,36 +510,38 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                                C SPEC cases_thm) [arb, var] THEN
                     REWRITE_TAC [fupdfn_thm, combinTheory.K_THM]))
 
+    val var' = inst tysigma var
+    val typ' = type_of var'
     val literal_nchotomy =
-        GEN var
-            (prove(list_mk_exists(value_vars, mk_eq(var, rhs)),
-                   MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm)
-                             [arb, var] THEN
+        GEN var'
+            (prove(list_mk_exists(value_vars, mk_eq(var', rhs)),
+                   MAP_EVERY (STRUCT_CASES_TAC o C ISPEC cases_thm)
+                             [arb, var'] THEN
                              REWRITE_TAC [fupdfn_thm, accessor_thm, oneone_thm,
                                           combinTheory.K_THM] THEN
                              REPEAT Unwind.UNWIND_EXISTS_TAC))
 
-    val pred_r = mk_var_avds("P", typ --> bool, var::value_vars)
-    val P_r = mk_comb(pred_r, var)
+    val pred_r = mk_var_avds("P", typ' --> bool, var::value_vars)
+    val P_r = mk_comb(pred_r, var')
     val P_literal = mk_comb(pred_r, rhs)
-    val forall_goal = mk_eq(mk_forall(var, P_r),
+    val forall_goal = mk_eq(mk_forall(var', P_r),
                             list_mk_forall(value_vars, P_literal))
-    val exists_goal = mk_eq(mk_exists(var, P_r),
+    val exists_goal = mk_eq(mk_exists(var', P_r),
                             list_mk_exists(value_vars, P_literal))
     val forall_thm =
         GEN_ALL
           (prove(forall_goal,
                  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-                 X_GEN_TAC var THEN
-                 STRUCT_CASES_TAC (SPEC var literal_nchotomy) THEN
+                 X_GEN_TAC var' THEN
+                 STRUCT_CASES_TAC (ISPEC var' literal_nchotomy) THEN
                  ASM_REWRITE_TAC []))
     val exists_thm =
         GEN_ALL
         (prove(exists_goal,
                EQ_TAC THENL [
-                 DISCH_THEN (X_CHOOSE_THEN var ASSUME_TAC) THEN
+                 DISCH_THEN (X_CHOOSE_THEN var' ASSUME_TAC) THEN
                  EVERY_TCL (map X_CHOOSE_THEN value_vars)
-                           SUBST_ALL_TAC (SPEC var literal_nchotomy) THEN
+                           SUBST_ALL_TAC (ISPEC var' literal_nchotomy) THEN
                  MAP_EVERY EXISTS_TAC value_vars THEN ASM_REWRITE_TAC [],
                  DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN value_vars)
                                        ASSUME_TAC) THEN
@@ -466,7 +551,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val literal_11 =
         GENL (vvars1 @ vvars2)
              (REWRITE_RULE [accfupd_thm, combinTheory.K_THM]
-                           (SPECL [lit1, lit2] component_wise_equality))
+                           (ISPECL [lit1, lit2] component_wise_equality))
 
   in
     val literal_equality =
@@ -498,10 +583,11 @@ fun prove_recordtype_thms (tyinfo, fields) = let
       if List.exists (is_substring brss) (typename :: fields) then
         ()
       else let
-          fun do_fupdfn (name0, tm) = let val name = name0 ^ "_fupd"
-                                      in
-                                        Parse.overload_on(name, tm)
-                                      end
+          fun do_fupdfn (name0, (_, tm)) =
+            let val name = name0 ^ "_fupd"
+            in
+              Parse.overload_on(name, tm)
+            end
         in
           ListPair.app add_record_field (fields, accfn_terms);
           (* overload strings of the form fld_fupd to refer to the
@@ -513,7 +599,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
              syntax, and we want this to be preferred where
              possible. *)
           ListPair.app do_fupdfn (fields, fupdfn_terms);
-          ListPair.app add_record_fupdate (fields, fupdfn_terms);
+          ListPair.app (fn (n,(_,t)) => add_record_fupdate(n,t))
+                       (fields, fupdfn_terms);
           Parse.overload_on(typename, constructor)
         end
 
