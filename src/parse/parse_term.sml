@@ -1527,7 +1527,7 @@ fun remove_specials t =
                 ("Record selection must have single id to right \
                  \(possibly non-integer numeric literal)",#2 t2)
           else if s = reccons_special then
-            remove_recupdate (#2 t) f t2 (IDENT (locn.Loc_None,"ARB"))
+            remove_recupdate (#2 t) f t2 (QIDENT (locn.Loc_None,"bool", "ARB"))
           else if s = recwith_special then
             remove_recupdate' (#2 t) t2 (remove_specials f)
           else

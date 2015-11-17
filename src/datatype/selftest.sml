@@ -1,6 +1,7 @@
 (* tests for Hol_datatype *)
 
 open HolKernel Parse
+open testutils
 
 val _ = Feedback.set_trace "Theory.save_thm_reporting" 0;
 
@@ -101,6 +102,26 @@ val _ = Hol_datatype`
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
 val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+
+val _ = tprint "Parse polymorphic record literal"
+val r = with_flag (Globals.guessing_tyvars, false) Parse.Term
+                  `<| fld1 := SUC |>`
+val rnd = repeat rand r
+val fupd_t = repeat rator r
+val (args, _) = strip_fun (type_of fupd_t)
+val fty = hd args
+val (d,r) = dom_rng fty
+val _ = if type_of rnd = ``:(num, num)poly_squish_record`` andalso
+           Type.compare(d,r) = EQUAL
+        then print "OK\n"
+        else die "FAILED!"
+val _ = tprint "TypeBase.mk_record on polymorphic record"
+val _ =
+    case Lib.total TypeBase.mk_record
+                   (``:(num,num)poly_squish_record``, [("fld1", ``SUC``)]) of
+        NONE => die "FAILED!"
+      | SOME _ => print "OK\n"
+
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
 val _ = Datatype.big_record_size := 10;
@@ -187,8 +208,6 @@ val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
 (* Ramana Kumar's TypeNet bug from 2010/08/25 *)
 val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
-
-open testutils
 
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
