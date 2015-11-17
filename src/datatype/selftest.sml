@@ -241,6 +241,10 @@ val _ = Hol_datatype`
   polyrcd = <| pfld1 : 'a ms ; pfld2 : 'b -> bool ; pfld3 : num|>
 `;
 
+val _ = Datatype.Datatype`
+  polyrcd2 = <| p2fld1 : 'a ms ; p2fld2 : 'a # 'b -> bool ; p2fld3 : num |>
+`
+
 val _ = List.app pptest
         [("field selection", ``r.fld2``, "r.fld2"),
          ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
@@ -316,8 +320,30 @@ val _ = print "OK\n"
 
 val _ = tprint "Records with polymorphic fields 1"
 val _ = (``polyrcd_pfld1_fupd :
-             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,d)polyrcd``;
+             ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd``;
          print "OK\n"; true)
         orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 2"
+val _ = (``polyrcd2_p2fld1_fupd :
+             ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 3"
+val _ = (``polyrcd2_p2fld2_fupd :
+             (('a # 'b -> bool) -> ('a # 'c -> bool)) ->
+             ('a,'b) polyrcd2 -> ('a,'c)polyrcd2``;
+         print "OK\n"; true)
+        orelse die "FAILED!"
+
+val _ = tprint "Records with polymorphic fields 4"
+val _ =
+  case Lib.total (trace("show_typecheck_errors", 0) Parse.Term)
+       `polyrcd2_p2fld1_fupd :
+             ('a ms -> 'b ms) -> ('a,'c) polyrcd2 -> ('b,'c)polyrcd2`
+  of
+    NONE => print "OK\n"
+  | _ => die "FAILED!";
 
 val _ = Process.exit Process.success;

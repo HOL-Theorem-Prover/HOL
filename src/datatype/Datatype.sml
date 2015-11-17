@@ -716,9 +716,11 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
   fun mk_literal base values = let
     fun foldthis (upd, value, acc) = let
       val ty = type_of value
+      val theta = match_type (#1 (dom_rng (type_of upd))) (ty --> ty)
+      val upd' = inst theta upd
       val K = Term.inst [alpha |-> ty, beta |-> ty] combinSyntax.K_tm
     in
-      list_mk_comb(upd, [mk_comb(K, value), acc])
+      list_mk_comb(upd', [mk_comb(K, value), acc])
     end
   in
     ListPair.foldr foldthis base (fupdates, values)
