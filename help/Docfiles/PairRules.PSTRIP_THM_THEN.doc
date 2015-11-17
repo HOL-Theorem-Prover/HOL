@@ -15,7 +15,7 @@ stripping off one outer connective from the given theorem.
 \DESCRIBE
 Given a theorem-tactic {ttac}, a theorem {th} whose conclusion is a
 conjunction, a disjunction or a paired existentially quantified term,
-and a goal {(A,t)}, {STRIP_THM_THEN ttac th} first strips apart the 
+and a goal {(A,t)}, {STRIP_THM_THEN ttac th} first strips apart the
 conclusion of {th}, next applies {ttac} to the theorem(s) resulting from the
 stripping and then applies the resulting tactic to the goal.
 
@@ -41,7 +41,7 @@ then:
 When stripping a paired existentially quantified theorem
 {A'|- ?p. u}, the tactic resulting from applying {ttac} to the
 body of the paired existential quantification, {ttac(u|-u)},
-is applied to the goal.  
+is applied to the goal.
 That is, if:
 {
     A ?- t

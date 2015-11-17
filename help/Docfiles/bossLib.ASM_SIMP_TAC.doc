@@ -25,14 +25,14 @@ explained in the entry for {SIMP_CONV}.
 {ASM_SIMP_TAC} never fails, though it may diverge.
 
 \EXAMPLE
-The simple goal {x < y ?- x + y < y + y} can be proved by using 
+The simple goal {x < y ?- x + y < y + y} can be proved by using
 {bossLib.arith_ss} and the assumption by
 {
    ASM_SIMP_TAC bossLib.arith_ss []
 }
 
 \SEEALSO
-bossLib.++, bossLib.bool_ss, bossLib.FULL_SIMP_TAC, 
+bossLib.++, bossLib.bool_ss, bossLib.FULL_SIMP_TAC,
 simpLib.mk_simpset, bossLib.SIMP_CONV, bossLib.SIMP_TAC,
 Rewrite.ASM_REWRITE_TAC, BasicProvers.VAR_EQ_TAC
 

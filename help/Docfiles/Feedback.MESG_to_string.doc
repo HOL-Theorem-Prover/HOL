@@ -9,8 +9,8 @@ Alterable function for formatting {HOL_MESG}.
 message, formatting
 
 \DESCRIBE
-{MESG_to_string} is a reference to a function for formatting the argument 
-to an application of {HOL_MESG}. 
+{MESG_to_string} is a reference to a function for formatting the argument
+to an application of {HOL_MESG}.
 
 The default value of {MESG_to_string} is {format_MESG}.
 

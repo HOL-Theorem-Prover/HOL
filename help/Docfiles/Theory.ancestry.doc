@@ -6,9 +6,9 @@
 Returns the (proper) ancestry of a theory in a list.
 
 \DESCRIBE
-A call to {ancestry thy} returns a list of all the proper 
+A call to {ancestry thy} returns a list of all the proper
 ancestors (i.e. parents, parents of parents, etc.) of the theory {thy}.
-The shorthand {"-"} may be used to denote the name of the current 
+The shorthand {"-"} may be used to denote the name of the current
 theory segment.
 
 \FAILURE

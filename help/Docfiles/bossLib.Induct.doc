@@ -52,7 +52,7 @@ with {Induct} yields the two goals
    n > 2 ==> !x y z. ~(x EXP n + y EXP n = z EXP n)
    ?- SUC n > 2 ==> !x y z. ~(x EXP SUC n + y EXP SUC n = z EXP SUC n)
 }
-{Induct} can also be used to perform induction on mutually recursive types. 
+{Induct} can also be used to perform induction on mutually recursive types.
 For example, given the datatype
 {
    Hol_datatype
@@ -72,7 +72,7 @@ defined for datatypes.) Typically, mutually recursive types lead to
 mutually recursive induction schemes having multiple predicates. The
 scheme for the above definition has 3 predicates: {P0}, {P1}, and {P2},
 which respectively range over expressions, boolean expressions, and
-lists of expressions.  
+lists of expressions.
 {
    |- !P0 P1 P2.
         (!a. P0 (VAR a)) /\
@@ -82,9 +82,9 @@ lists of expressions.
         (!e e0. P0 e /\ P0 e0 ==> P1 (LEQ e e0)) /\
         (!b b0. P1 b /\ P1 b0 ==> P1 (AND b b0)) /\
         (!b b0. P1 b /\ P1 b0 ==> P1 (OR b b0)) /\
-        (!b. P1 b ==> P1 (NOT b)) /\ 
+        (!b. P1 b ==> P1 (NOT b)) /\
         P2 [] /\
-        (!e l. P0 e /\ P2 l ==> P2 (e::l)) 
+        (!e l. P0 e /\ P2 l ==> P2 (e::l))
           ==>
         (!e. P0 e) /\ (!b. P1 b) /\ !l. P2 l
 }
@@ -95,28 +95,28 @@ Invoking {Induct} on a goal such as
 yields the three subgoals
 {
    ?- !s. 0 < exp_size (APP s l)
-    
- 
+
+
    [ 0 < exp_size e, 0 < exp_size e' ] ?- 0 < exp_size (IF b e e')
-    
+
    ?- !s. 0 < exp_size (VAR s)
 }
 In this case, {P1} and {P2} have been vacuously instantiated in the
 application of {Induct}, since it detects that only {P0} is
 needed. However, it is also possible to use {Induct} to start the proofs
-of 
+of
 {
     (!e. 0 < exp_size e) /\ (!b. 0 < bexp_size b)
 }
 and
 {
-    (!e. 0 < exp_size e) /\ 
-    (!b. 0 < bexp_size b) /\ 
+    (!e. 0 < exp_size e) /\
+    (!b. 0 < bexp_size b) /\
     (!list. 0 < exp1_size list)
 }
 
 \SEEALSO
-bossLib.Induct_on, bossLib.completeInduct_on, 
+bossLib.Induct_on, bossLib.completeInduct_on,
 bossLib.measureInduct_on, Prim_rec.INDUCT_THEN, bossLib.Cases,
 bossLib.Hol_datatype, proofManagerLib.g, proofManagerLib.e.
 

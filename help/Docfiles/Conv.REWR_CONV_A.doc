@@ -9,16 +9,16 @@ Uses an instance of a given equation to rewrite a term.
 conversion.
 
 \DESCRIBE
-{REWR_CONV_A th} behaves as 
+{REWR_CONV_A th} behaves as
 {REWR_CONV th} except that it allows substitution of variables or type
 variables which appear in the hypotheses of {th}.
 
 \EXAMPLE
-Consider the theorem {th} 
+Consider the theorem {th}
 {
    [0 < n] |- (a * n = b * (n : int)) <=> (a = b)
 }
-and the term {tm} 
+and the term {tm}
 {
    f (a * m = b * (m : int)) x
 }
@@ -36,6 +36,6 @@ gives the two subgoals:
 }
 
 \SEEALSO
-Conv.REWR_CONV, Rewrite.REWRITE_CONV, 
+Conv.REWR_CONV, Rewrite.REWRITE_CONV,
 Conv.DEPTH_CONV, Tactic.CONV_TAC, Tactical.VALIDATE.
 \ENDDOC

@@ -35,7 +35,7 @@ or if {p} and {q} have different types.
    > val it =  [.] |- 1 + 2 = 2 + 1 : thm
 }
 
-{PSPEC} treats paired structures of variables as variables and 
+{PSPEC} treats paired structures of variables as variables and
 preserves structure accordingly.
 {
    - PSPEC (Term `x:'a#'a`) (ASSUME (Term `!(x:'a,y:'a). (x,y) = (x,y)`));

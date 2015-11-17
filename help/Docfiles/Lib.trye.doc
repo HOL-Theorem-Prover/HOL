@@ -29,11 +29,11 @@ Fails if the function application fails.
 \EXAMPLE
 {
 - hd [];
-! Uncaught exception: 
+! Uncaught exception:
 ! Empty
 
 - trye hd [];
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 
 - trye (fn _ => raise Interrupt) 1;

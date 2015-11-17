@@ -6,7 +6,7 @@
 Term constructor for universal quantification.
 
 \DESCRIBE
-If {v} is a variable and {t} is a term of type {bool}, then 
+If {v} is a variable and {t} is a term of type {bool}, then
 {mk_forall (v,t)} returns the term {!v. t}.
 
 \FAILURE

@@ -3,7 +3,7 @@
 \TYPE {RIGHT_ETA : thm -> thm}
 
 \SYNOPSIS
-Perform one step of eta-reduction on the right hand side of an 
+Perform one step of eta-reduction on the right hand side of an
 equational theorem.
 
 \KEYWORDS

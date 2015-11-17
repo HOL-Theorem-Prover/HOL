@@ -12,11 +12,11 @@ theory.
 An invocation {DB.thy s} returns the contents of the specified theory segment
 {s} in a list of {(thy,name),(thm,class)} tuples. In a tuple,
 {(thy,name)} designate the theory and the name given to the object
-in the theory. The {thm} element is the named object, and {class} its 
+in the theory. The {thm} element is the named object, and {class} its
 classification (one of {Thm} (theorem), {Axm} (axiom), or {Def} (definition)).
 
-Case distinctions are ignored when determining the segment. The current 
-segment may be specified, either by the distinguished literal {"-"}, 
+Case distinctions are ignored when determining the segment. The current
+segment may be specified, either by the distinguished literal {"-"},
 or by the name given when creating the segment with {new_theory}.
 
 \FAILURE

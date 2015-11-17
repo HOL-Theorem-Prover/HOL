@@ -31,7 +31,7 @@ When application of the second argument to the third argument returns {NONE}.
 > val it = NONE : int option
 
 - partial (Fail "not convertable") Int.fromString "foo";
-! Uncaught exception: 
+! Uncaught exception:
 ! Fail  "not convertable"
 
 - (total o partial (Fail "not convertable")) Int.fromString "foo";

@@ -20,7 +20,7 @@ to control {EVAL_CONV} to some extent.
 Never fails, but may diverge.
 
 \EXAMPLE
-In the following, we first attempt to map the factorial function {FACT} 
+In the following, we first attempt to map the factorial function {FACT}
 over a list of variables. This attempt goes into a loop, because the
 conditional statement in the evaluation rule for {FACT} is never
 determine when the argument is equal to zero. However, if we suppress
@@ -42,6 +42,6 @@ Controlling symbolic evaluation when it loops or becomes exponential.
 
 \SEEALSO
 bossLib.EVAL, computeLib.RESTR_EVAL_TAC,computeLib.RESTR_EVAL_RULE,
-Term.decls. 
+Term.decls.
 
 \ENDDOC

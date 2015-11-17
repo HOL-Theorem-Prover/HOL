@@ -23,7 +23,7 @@ Never fails.
 
 
 \COMMENTS
-This operator associates to the right, that is, {ty1 --> ty2 --> ty3} 
+This operator associates to the right, that is, {ty1 --> ty2 --> ty3}
 is identical to {ty1 --> (ty2 --> ty3)}.
 
 \SEEALSO

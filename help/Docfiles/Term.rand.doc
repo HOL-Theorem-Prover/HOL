@@ -6,7 +6,7 @@
 Returns the operand from a combination (function application).
 
 \DESCRIBE
-If {M} is a combination, i.e., has the form {(t1 t2)}, then 
+If {M} is a combination, i.e., has the form {(t1 t2)}, then
 {rand M} returns {t2}.
 
 \FAILURE

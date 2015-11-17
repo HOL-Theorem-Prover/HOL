@@ -7,7 +7,7 @@ Proves finiteness of sets of the form {{t1;...;tn}}.
 
 \LIBRARY pred_set
 
-\DESCRIBE 
+\DESCRIBE
 The conversion {FINITE_CONV} expects its term argument to be an assertion of
 the form {FINITE {t1;...;tn}}. Given such a term, the conversion returns
 the theorem

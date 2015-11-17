@@ -8,7 +8,7 @@ the quantified variable, predicate and body.
 
 \DESCRIBE
 {dest_res_exists_unique} is a term destructor for restricted existential
-quantification: 
+quantification:
 {
    dest_res_exists_unique "?var::P. t"
 }

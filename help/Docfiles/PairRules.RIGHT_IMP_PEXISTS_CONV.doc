@@ -13,7 +13,7 @@ Moves a paired existential quantification of the consequent outwards through
 an implication.
 
 \DESCRIBE
-When applied to a term of the form {t ==> (?p. u)}, 
+When applied to a term of the form {t ==> (?p. u)},
 {RIGHT_IMP_PEXISTS_CONV} returns the theorem:
 {
    |- t ==> (?p. u) = (?p'. t ==> (u[p'/p]))

@@ -15,7 +15,7 @@ conversion, rewriting, conditional.
 {COND_REWR_CONV} is one of the basic building blocks for the
 implementation of the simple conditional rewriting conversions in the
 HOL system. In particular, the conditional term replacement or
-rewriting done by all the conditional 
+rewriting done by all the conditional
 rewriting conversions in this library is ultimately done by applications of
 {COND_REWR_CONV}.  The description given here for {COND_REWR_CONV} may
 therefore be taken as a specification of the atomic action of
@@ -34,7 +34,7 @@ implicative theorem in the following form:
 }
 where {x1}, ..., {xn} are all the variables that occur free in the
 left hand side of the conclusion of the theorem but do not occur free in the
-assumptions. 
+assumptions.
 
 The last argument to {COND_REWR_CONV} is the term to be rewritten.
 

@@ -10,7 +10,7 @@ rule, modus ponens, restricted quantifier.
 
 \DESCRIBE
 When applied to theorems {A1 |- !x::P. Q[x]} and {A2 |- P x'}, the
-derived inference rule {RESQ_MATCH_MP} matches {x'} to {x} by instantiating 
+derived inference rule {RESQ_MATCH_MP} matches {x'} to {x} by instantiating
 free or universally quantified variables in the first theorem (only),
 and returns a theorem {A1 u A2 |- Q[x'/x]}. Polymorphic types are also
 instantiated if necessary.

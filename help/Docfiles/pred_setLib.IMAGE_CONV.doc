@@ -7,7 +7,7 @@ Compute the image of a function on a finite set.
 
 \LIBRARY pred_set
 
-\DESCRIBE 
+\DESCRIBE
 The function {IMAGE_CONV} is a parameterized conversion for computing the image
 of a function {f:ty1->ty2} on a finite set {{t1;...;tn}} of type
 {ty1->bool}.  The first argument to {IMAGE_CONV} is expected to be a conversion
@@ -55,7 +55,7 @@ The result contains only one occurrence of {f 1}, even though
 removing elements that are redundant up to alpha-equivalence.
 
 For the next example, we construct a conversion that maps {SUC n} for any
-numeral {n} to the numeral standing for the successor of {n}. 
+numeral {n} to the numeral standing for the successor of {n}.
 {
    - fun SUC_CONV tm =
       let open numLib Arbnum
@@ -81,18 +81,18 @@ of the successor function on a finite set:
    - IMAGE_CONV SUC_CONV NO_CONV ``IMAGE SUC {1; 2; 1; 4}``;
    > val it = |- IMAGE SUC {1; 2; 1; 4} = {3; 2; 5} : thm
 }
-Note that {2} (= {SUC 1}) appears only once in the resulting set. 
+Note that {2} (= {SUC 1}) appears only once in the resulting set.
 
 Finally, here is an example of using {IMAGE_CONV} to compute the image of a
 paired addition function on a set of pairs of numbers:
 {
-   - IMAGE_CONV (pairLib.PAIRED_BETA_CONV THENC reduceLib.ADD_CONV) 
+   - IMAGE_CONV (pairLib.PAIRED_BETA_CONV THENC reduceLib.ADD_CONV)
                 numLib.REDUCE_CONV
             ``IMAGE (\(n,m).n+m) {{(1,2), (3,4), (0,3), (1,3)}}``;
    > val it = |- IMAGE (\(n,m). n + m) {(1,2); (3,4); (0,3); (1,3)} = {7; 3; 4}
 }
 
-\FAILURE 
+\FAILURE
 {IMAGE_CONV conv1 conv2} fails if applied to a term not of the form
 {IMAGE f {t1;...;tn}}.  An application of {IMAGE_CONV conv1 conv2} to
 a term {IMAGE f {t1;...;tn}} fails unless for all {ti} in the set

@@ -13,8 +13,8 @@ Rewrite
 
 \DESCRIBE
 The variable {implicit_rewrites} holds a collection of rewrite rules
-commonly used to simplify expressions. These rules include the clause 
-for reflexivity: 
+commonly used to simplify expressions. These rules include the clause
+for reflexivity:
 {
    |- !x. (x = x) = T
 }
@@ -65,13 +65,13 @@ universally and existentially quantified variables and abstractions:
    |- !t1 t2. (\x. t1)t2 = t1
 }
 
-The value of {implicit_rewrites} can be augmented by 
+The value of {implicit_rewrites} can be augmented by
 {add_implicit_rewrites} and altered by {set_implicit_rewrites}.
 
 The initial value of {implicit_rewrites} is {bool_rewrites}.
 
 \USES
-The rewrite rules held in {implicit_rewrites} are automatically 
+The rewrite rules held in {implicit_rewrites} are automatically
 included in the simplifications performed by some of the rewriting tools.
 
 \SEEALSO

@@ -22,7 +22,7 @@ variable capture, and have all antecedents which are a conjunction
 transformed to implications. The output theorem will be in the
 following form
 {
-   !x1 ... xn y1 ... ym z1 ... zk. 
+   !x1 ... xn y1 ... ym z1 ... zk.
     P11[xi] ==> ... ==> P1p[xi] ==> ... ==>
      Pr1[xi,yi] ==> ... ==> Prq[x1,yi] ==> (u[xi,yi,zi] = v[xi,yi,zi])
 }

@@ -28,7 +28,7 @@ Never fails.
 
 \COMMENTS
 Useful for untangling confusion arising from overloading and
-also the possibility to declare two different constants with the 
+also the possibility to declare two different constants with the
 same name in different theories.
 
 \SEEALSO

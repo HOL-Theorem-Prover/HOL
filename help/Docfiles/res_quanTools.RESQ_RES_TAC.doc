@@ -14,7 +14,7 @@ tactic, resolution, restricted quantifier.
 quantifications in resolution in a way similar to {RES_TAC}. It calls
 {RESQ_RES_THEN} repeatedly until there is no more resolution can be done.
 The conclusions of all the new results are returned as additional
-assumptions of the subgoal(s).  The effect of {RESQ_RES_TAC} 
+assumptions of the subgoal(s).  The effect of {RESQ_RES_TAC}
 on a goal is to enrich the assumption set with some of its collective
 consequences.
 

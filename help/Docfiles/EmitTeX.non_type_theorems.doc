@@ -8,7 +8,7 @@ A versions of {theorems} that attempts to filter out theorems created by {Hol_da
 \DESCRIBE
 An invocation {non_type_theorems thy}, where {thy} is the name of a currently
 loaded theory segment, will return a list of the theorems stored in
-that theory. Axioms and definitions are excluded.  Each theorem is 
+that theory. Axioms and definitions are excluded.  Each theorem is
 paired with its name in the result.
 
 \FAILURE
@@ -27,7 +27,7 @@ the empty list is returned.
 Definition has been stored under "example_def".
 > val example_def = |- (example First = Second) /\ (example Second = First) :
   thm
-- save_thm("example_thm", 
+- save_thm("example_thm",
    METIS_PROVE [example_def, theorem "example_nchotomy"]
      ``!x. example (example x) = x``);
 metis: r[+0+5]+0+0+0+0+6+2+2+1+0+1+1#

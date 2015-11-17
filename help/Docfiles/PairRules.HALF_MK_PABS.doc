@@ -23,7 +23,7 @@ universally quantified equation, {HALF_MK_PABS} returns the theorem
 
 
 \FAILURE
-Fails unless the theorem is a singly paired universally quantified equation 
+Fails unless the theorem is a singly paired universally quantified equation
 whose left-hand side is a function applied to the quantified pair,
 or if any of the variables in the quantified pair is free in that function.
 

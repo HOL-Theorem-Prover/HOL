@@ -9,14 +9,14 @@ Alterable function for formatting {HOL_WARNING}.
 message, formatting
 
 \DESCRIBE
-{WARNING_to_string} is a reference to a function for formatting the argument 
-to {HOL_WARNING}. 
+{WARNING_to_string} is a reference to a function for formatting the argument
+to {HOL_WARNING}.
 
 The default value of {WARNING_to_string} is {format_WARNING}.
 
 \EXAMPLE
 {
-    - fun alt_WARNING_report s t u = 
+    - fun alt_WARNING_report s t u =
         String.concat["WARNING---", s,".",t,": ",u,"---END WARNING\n"];
 
     - WARNING_to_string := alt_WARNING_report;

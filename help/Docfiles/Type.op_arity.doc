@@ -10,7 +10,7 @@ signature, type operator.
 
 \DESCRIBE
 An invocation {op_arity{Tyop,Thy}} returns {NONE} if the given record
-does not identify a type operator in the current type signature. 
+does not identify a type operator in the current type signature.
 Otherwise, it returns {SOME n}, where {n} identifies the number
 of arguments the specified type operator takes.
 

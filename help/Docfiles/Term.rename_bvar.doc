@@ -10,7 +10,7 @@ conversion, alpha.
 
 \DESCRIBE
 If {M} is a lambda abstraction, i.e., has the form {\v.N}, an
-invocation {rename_bvar s M} performs one step of alpha conversion to 
+invocation {rename_bvar s M} performs one step of alpha conversion to
 obtain {\s. N[s/v]}.
 
 \FAILURE

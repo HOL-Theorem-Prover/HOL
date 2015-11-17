@@ -7,18 +7,18 @@ Reduce {{t1;...;tn} DELETE t} by deleting {t} from  {{t1;...;tn}}.
 
 \LIBRARY pred_set
 
-\DESCRIBE 
+\DESCRIBE
 The function {DELETE_CONV} is a parameterized conversion for reducing finite
 sets of the form {{t1;...;tn} DELETE t}, where the term {t} and the
 elements of {{t1;...;tn}} are of some base type {ty}.  The first argument to
 {DELETE_CONV} is expected to be a conversion that decides equality between
 values of the base type {ty}.  Given an equation {e1 = e2}, where {e1} and
-{e2} are terms of type {ty}, this conversion should return the theorem 
+{e2} are terms of type {ty}, this conversion should return the theorem
 {|- (e1 = e2) = T} or the theorem {|- (e1 = e2) = F}, as appropriate.
 
 Given such a conversion {conv}, the function {DELETE_CONV} returns a
 conversion that maps a term of the form {{t1;...;tn} DELETE t} to the
-theorem 
+theorem
 {
    |- {t1;...;tn} DELETE t = {ti;...;tj}
 }
@@ -42,11 +42,11 @@ elements of the set.
    > val it = |- {2; 1; SUC 1; 3} DELETE 2 = {1; 3} : thm
 }
 `
-\FAILURE 
-{DELETE_CONV conv} fails if applied to a term not of the form 
+\FAILURE
+{DELETE_CONV conv} fails if applied to a term not of the form
 {{t1;...;tn} DELETE t}.  A call {DELETE_CONV conv ``{t1;...;tn} DELETE t``}
-fails unless for each element {ti} of the set {{t1;...;tn}}, the 
-term {t} is either alpha-equivalent to {ti} or {conv ``ti = t``} returns 
+fails unless for each element {ti} of the set {{t1;...;tn}}, the
+term {t} is either alpha-equivalent to {ti} or {conv ``ti = t``} returns
 {|- (ti = t) = T} or {|- (ti = t) = F}.
 
 \SEEALSO

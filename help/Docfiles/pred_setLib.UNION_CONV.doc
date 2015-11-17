@@ -7,7 +7,7 @@ Reduce {{t1;...;tn} UNION s} to {t1 INSERT (... (tn INSERT s))}.
 
 \LIBRARY pred_set
 
-\DESCRIBE 
+\DESCRIBE
 The function {UNION_CONV} is a parameterized conversion for reducing sets of
 the form {{t1;...;tn} UNION s}, where {{t1;...;tn}} and {s} are sets of
 type {ty->bool}. The first argument to {UNION_CONV} is expected to be a
@@ -35,7 +35,7 @@ finite set {{1;2;3}} of the union in the second finite set {{SUC 0;3;4}}.
    > val it = |- {1; 2; 3} UNION {SUC 0; 3; 4} = {2; SUC 0; 3; 4} : thm
 }
 The result is {{2;SUC 0;3;4}}, rather than {{1;2;SUC 0;3;4}},
-because {UNION_CONV} is able by means of a call to 
+because {UNION_CONV} is able by means of a call to
 {
    - IN_CONV REDUCE_CONV (Term`1 IN {SUC 0;3;4}`);
 }
@@ -56,7 +56,7 @@ the second set argument to {UNION} need not be a finite set:
 And, of course, in this case the conversion argument to {UNION_CONV}
 is irrelevant.
 
-\FAILURE 
+\FAILURE
 {UNION_CONV conv} fails if applied to a term not of the form
 {{t1;...;tn} UNION s}.
 

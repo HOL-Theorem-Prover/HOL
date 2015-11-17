@@ -47,7 +47,7 @@ automatically proves the existence of a function {fn} that satisfies
 the defining equations supplied as the fourth argument, and then declares a new
 constant in the current theory with this definition as its specification. This
 constant specification is returned as a theorem and is saved in the current
-theory segment under the name {name}. 
+theory segment under the name {name}.
 
 {new_recursive_definition} also allows the supplied definition to omit clauses
 for any number of constructors.  If a defining equation for the {i}th
@@ -99,7 +99,7 @@ tree:
             rec_axiom = th,
             def = --`(IsLeaf (NODE t1 t2) = F) /\
                      (IsLeaf (LEAF (x:'a)) = T)`--};
-> val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\ 
+> val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\
                   !x. IsLeaf (LEAF x) = T : thm
 }
 Note that the equations defining a (recursive or non-recursive)
@@ -136,7 +136,7 @@ expresses the idea that one tree is a proper subtree of another.
    > val Subtree =
        |- (!t x. t << LEAF x = F) /\
           !t t1 t2.
-            t << NODE t1 t2 = (t = t1) \/ (t = t2) \/ 
+            t << NODE t1 t2 = (t = t1) \/ (t = t2) \/
                               (t << t1) \/ (t << t2) : thm
 }
 Note that the fixity of the identifier {<<} is set independently of

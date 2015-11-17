@@ -23,8 +23,8 @@ If {conv N} fails, or if {v} is free in {A}.
 }
 
 \COMMENTS
-For deeply nested quantifiers, {STRIP_BINDER_CONV} and 
-{STRIP_QUANT_CONV} are more efficient than iterated application of 
+For deeply nested quantifiers, {STRIP_BINDER_CONV} and
+{STRIP_QUANT_CONV} are more efficient than iterated application of
 {BINDER_CONV}, {BINDER_CONV}, or {ABS_CONV}.
 
 \SEEALSO

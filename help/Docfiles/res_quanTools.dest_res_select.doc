@@ -8,7 +8,7 @@ the quantified variable, predicate and body.
 
 \DESCRIBE
 {dest_res_select} is a term destructor for restricted choice
-quantification: 
+quantification:
 {
    dest_res_select "@var::P. t"
 }

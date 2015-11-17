@@ -3,7 +3,7 @@
 \TYPE {GEN_VALIDATE : bool -> tactic -> tactic}
 
 \SYNOPSIS
-Where a tactic requires assumptions to be in the goal, 
+Where a tactic requires assumptions to be in the goal,
 add those assumptions as new subgoals.
 
 \DESCRIBE
@@ -22,12 +22,12 @@ a theorem whose conclusion differs from that of the goal.
 Also fails if {tac} fails when applied to the given goal.
 
 \EXAMPLE
-For example, where theorem {uthr'} is {[p', q] |- r} 
+For example, where theorem {uthr'} is {[p', q] |- r}
 
 {
 1 subgoal:
 val it =
-   
+
 r
 ------------------------------------
   0.  p
@@ -37,20 +37,20 @@ r
 OK..
 1 subgoal:
 val it =
-   
+
 p'
 ------------------------------------
   p
 :
    proof
-} 
-but, instead of that,  
+}
+but, instead of that,
 {
 > e (GEN_VALIDATE false (ACCEPT_TAC uthr')) ;
 OK..
 2 subgoals:
 val it =
-   
+
 q
 ------------------------------------
   0.  p
@@ -65,7 +65,7 @@ p'
 
 \USES
 Use {GEN_VALIDATE false} rather than {VALIDATE}
-when programming compound tactics if you want to know 
+when programming compound tactics if you want to know
 what the resulting subgoals will be,
  regardless of what the assumptions of the goal are.
 

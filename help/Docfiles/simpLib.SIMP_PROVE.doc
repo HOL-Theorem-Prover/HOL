@@ -29,7 +29,7 @@ to the goal {?- x + y = 10} yields the new goal
 }
 Using {SIMP_PROVE} here allows {ASSUME_TAC} to add a new fact, where
 the equality with truth that {SIMP_CONV} would produce would be less
-useful. 
+useful.
 
 
 \USES

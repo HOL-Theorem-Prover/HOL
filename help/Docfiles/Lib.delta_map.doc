@@ -10,7 +10,7 @@ sharing.
 
 \DESCRIBE
 An application {delta_map f list} applies {f} to each member {[x1,...,xn]}
-of {list}. If all applications of {f} return {SAME}, then {delta_map f list} 
+of {list}. If all applications of {f} return {SAME}, then {delta_map f list}
 returns {SAME}. Otherwise, {DIFF [y1,...,yn]} is returned. If {f xi}
 yielded {SAME}, then {yi} is {xi}. Otherwise, {f xi} equals {DIFF yi}.
 

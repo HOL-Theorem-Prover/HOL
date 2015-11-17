@@ -6,7 +6,7 @@
 Breaks apart a variable into name and type.
 
 \DESCRIBE
-If {M} is a HOL variable, then {dest_var M} returns {(v,ty)}, where {v} 
+If {M} is a HOL variable, then {dest_var M} returns {(v,ty)}, where {v}
 is the name of the variable, an {ty} is its type.
 
 \FAILURE

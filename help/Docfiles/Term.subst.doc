@@ -24,16 +24,16 @@ equal.
 {
 - load "arithmeticTheory";
 
-- subst [Term`SUC 0` |-> Term`1`] 
+- subst [Term`SUC 0` |-> Term`1`]
         (Term`SUC(SUC 0)`);
 > val it = `SUC 1` : term
 
-- subst [Term`SUC 0` |-> Term`1`, 
+- subst [Term`SUC 0` |-> Term`1`,
          Term`SUC 1` |-> Term`2`]
         (Term`SUC(SUC 0)`);
 > val it = `SUC 1` : term
 
-- subst [Term`SUC 0` |-> Term`1`, 
+- subst [Term`SUC 0` |-> Term`1`,
          Term`SUC 1` |-> Term`2`]
         (Term`SUC(SUC 0) = SUC 1`);
 > val it = `SUC 1 = 2` : term
@@ -42,7 +42,7 @@ equal.
         (Term`\a:num. b:num`);
 > val it = `\a'. a` : term
 
-- subst [Term`flip:'a` |-> Term`foo:'a`]  
+- subst [Term`flip:'a` |-> Term`foo:'a`]
         (Term`waddle:'a`);
 > val it = `waddle` : term
 }

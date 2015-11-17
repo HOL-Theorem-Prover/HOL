@@ -21,7 +21,7 @@ It returns the theorem
 if for every {xi} occurred in the list, {conv (--`x = xi`--)}
 returns a theorem {|- P xi = F}, otherwise, if for at least one {xi},
 evaluating {conv (--`P xi`--)} returns the theorem {|- P xi = T}, then it
-returns the theorem 
+returns the theorem
 {
    |- IS_EL P [x0;...xn] = T
 }

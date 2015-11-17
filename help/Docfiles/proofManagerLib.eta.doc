@@ -3,7 +3,7 @@
 \TYPE {eta : tactic -> proof}
 
 \SYNOPSIS
-Applies a tactic to all goals, on which it succeeds, in the current goal list, 
+Applies a tactic to all goals, on which it succeeds, in the current goal list,
 replacing the list with the resulting subgoals.
 
 \DESCRIBE

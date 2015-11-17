@@ -6,7 +6,7 @@
 Check if HOL term is a numeral.
 
 \DESCRIBE
-An invocation {is_numeral tm}, where {tm} is a HOL term with 
+An invocation {is_numeral tm}, where {tm} is a HOL term with
 the following form
 {
      <numeral> ::= 0 | NUMERAL <bits>
@@ -14,7 +14,7 @@ the following form
 }
 returns {true}; otherwise, {false} is returned.
 The {NUMERAL} constant is used as a tag signalling that its argument
-is indeed a numeric literal. The {ZERO} constant is equal to {0}, 
+is indeed a numeric literal. The {ZERO} constant is equal to {0},
 and {BIT1(n) = 2*n + 1} while {BIT2(n) = 2*n + 2}. This representation
 allows asymptotically efficient operations on numeric values.
 

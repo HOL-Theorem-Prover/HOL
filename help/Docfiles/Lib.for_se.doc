@@ -19,7 +19,7 @@ If {f i} fails for {b <= i <= t}.
 \EXAMPLE
 {
 - let val A = Array.array(26,#" ")
-  in 
+  in
      for_se 0 25 (fn i => Array.update(A,i, Char.chr (i+97)))
    ; for_se 0 25 (print o Char.toString o curry Array.sub A)
    ; print "\n"

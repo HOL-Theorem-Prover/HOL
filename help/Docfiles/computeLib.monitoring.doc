@@ -15,7 +15,7 @@ operation of {EVAL}, {EVAL_RULE}, and {EVAL_TAC}. The initial value of
 defined with constant {c}, then setting {monitoring} to {SOME (same_const c)}
 will tell the system to print out the expansion of {c} by the evaluation
 entrypoints. To monitor the expansions of a collection of functions, defined
-with {c1},...,{cn}, then {monitoring} can be set to 
+with {c1},...,{cn}, then {monitoring} can be set to
 {
    SOME (fn x => same_const c1 x orelse ... orelse same_const cn x)
 }

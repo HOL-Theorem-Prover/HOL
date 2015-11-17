@@ -18,8 +18,8 @@ variables {x1,...,xm}.  A binder is defined by evaluating
 {
 new_binder_definition (name, `b v1 ... vn = t`)
 }
-where {b} does not occur in {t}, all the free variables that 
-occur in {t} are a subset of {x1,...,xn}, and the type 
+where {b} does not occur in {t}, all the free variables that
+occur in {t} are a subset of {x1,...,xn}, and the type
 of {b} has the form {(ty1->ty2)->ty3}.  This declares {b} to be a new
 constant with the syntactic status of a binder in the current theory, and with
 the definitional theorem
