@@ -11,8 +11,6 @@ notifications:
     channels:
       - "irc.freenode.net#hol"
 
-sudo: false
-
 addons:
   apt:
     sources:
