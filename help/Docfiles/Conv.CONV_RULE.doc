@@ -29,5 +29,5 @@ function returned by {CONV_RULE c} will also fail if the ML function
 {t} to a theorem {|- t = t'}).
 
 \SEEALSO
-Tactic.CONV_TAC, Conv.RIGHT_CONV_RULE.
+Tactic.CONV_TAC, Conv.HYP_CONV_RULE, Conv.RIGHT_CONV_RULE.
 \ENDDOC

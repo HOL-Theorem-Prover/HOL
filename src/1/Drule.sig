@@ -22,6 +22,7 @@ sig
   val CONTR            : term -> thm -> thm
   val UNDISCH          : thm -> thm
   val UNDISCH_TM       : thm -> term * thm
+  val UNDISCH_SPLIT    : thm -> thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
   val SELECT_INTRO     : thm -> thm

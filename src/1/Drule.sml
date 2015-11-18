@@ -259,11 +259,24 @@ fun CONTR tm th =
    MP (SPEC tm FALSITY) th handle HOL_ERR _ => raise ERR "CONTR" ""
 
 (*---------------------------------------------------------------------------*
- *  Undischarging                                                            *
+ * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
+ *                                                                           *
+ *  constructs a theorem proving conjunction from individual conjuncts       *
+ *---------------------------------------------------------------------------*)
+
+fun ASSUME_CONJS tm =
+  let val (tm1, tm2) = dest_conj tm ;
+  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
+  handle _ => ASSUME tm ;
+
+(*---------------------------------------------------------------------------*
+ *  Undischarging - UNDISCH                                                  *
  *                                                                           *
  *   A |- t1 ==> t2                                                          *
  *   --------------                                                          *
  *    A, t1 |- t2                                                            *
+ *                                                                           *
+ * UNDISCH_TM also returns t1, UNDISCH_SPLIT splits t1 into its conjuncts    *
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH th =
@@ -274,6 +287,11 @@ fun UNDISCH_TM th =
    let val (ant, conseq) = dest_imp (concl th) ;
    in (ant, MP th (ASSUME ant)) end
    handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
+
+fun UNDISCH_SPLIT th =
+  let val (ant, conseq) = dest_imp (concl th) ;
+  in MP th (ASSUME_CONJS ant) end 
+  handle HOL_ERR _ => raise ERR "UNDISCH_SPLIT" ""
 
 (*---------------------------------------------------------------------------*
  * =T elimination                                                            *
@@ -449,17 +467,6 @@ val CONJUNCTS =
    in
       aux []
    end
-
-(*---------------------------------------------------------------------------*
- * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
- *                                                                           *
- *  constructs a theorem proving conjunction from individual conjuncts       *
- *---------------------------------------------------------------------------*)
-
-fun ASSUME_CONJS tm =
-  let val (tm1, tm2) = dest_conj tm ;
-  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
-  handle _ => ASSUME tm ;
 
 (*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
@@ -1299,14 +1306,15 @@ fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
       val (hyps_ctg_fv, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
       (* following raises Bind if fv not in any hypothesis *)
       val _ = not (null hyps_ctg_fv) orelse raise Bind
+      (* select and conjoin the hyps containing fv *)
       val conj_tm = list_mk_conj (map #hyp hyps_ctg_fv) ;
-      val conj_th = ASSUME conj_tm ;
-      (* CONJ_LIST gives original hyps, even if they are conjunctions *)
-      val sep_ths = CONJ_LIST (length hyps_ctg_fv) conj_th ;
+      (* using CONJ_LIST gives original hyps, even if they are conjunctions *)
+      val sep_ths = CONJ_LIST (length hyps_ctg_fv) (ASSUME conj_tm) ;
+      (* replace the previous hyps with the single new one, which is
+        conjunction of the previous ones *)
       val th2 = Lib.itlist PROVE_HYP sep_ths th ;
       val ex_conj_tm = mk_exists (fv, conj_tm) ;
-      val ex_conj_th = ASSUME ex_conj_tm ;
-      val the = CHOOSE (fv, ex_conj_th) th2 ;
+      val the = CHOOSE (fv, ASSUME ex_conj_tm) th2 ;
       val thex = EXISTS_LEFT' strict fvs_c
         ({hyp = ex_conj_tm, fvs = free_vars ex_conj_tm} :: hyps_nc) fvs the ;
     in thex end
@@ -1337,12 +1345,13 @@ fun EXISTS_LEFT1 fv th =
     in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
 
 (* --------------------------------------------------------------------------*
- * SPEC_UNDISCH_EXL: strips !x, ant ==>, then EXISTS_LEFT for stripped vars  *
+ * SPEC_UNDISCH_EXL: strips !x, ant ==>, (splitting conjuncts of ant)        *
+ * then EXISTS_LEFT for stripped vars                                        *
  * --------------------------------------------------------------------------*)
 
 fun SPEC_UNDISCH_EXL thm =
-  let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
-    val th2 = UNDISCH_ALL th1 ;
+  let val (fvs, th1) = strip_gen_left (SPEC_VAR o repeat UNDISCH_SPLIT) thm ;
+    val th2 = repeat UNDISCH_SPLIT th1 ;
     val th3 = EXISTS_LEFT (rev fvs) th2 ;
   in th3 end ;
 
