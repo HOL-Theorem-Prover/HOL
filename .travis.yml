@@ -10,11 +10,13 @@ notifications:
   irc:
     channels:
       - "irc.freenode.net#hol"
+
+sudo: false
+
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
     - ROOTPOLY= BUILDOPTS=
     - ROOTPOLY= BUILDOPTS=-expk
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/selftestseq -selftest"
@@ -27,4 +29,5 @@ matrix:
   include:
     - os: osx
       env: ROOTPOLY= BUILDOPTS=
-      sudo: false
+    - ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+      sudo: true
