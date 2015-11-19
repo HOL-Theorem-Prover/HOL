@@ -168,6 +168,8 @@ val rat_def = save_thm("rat_def",
 
 val QUOTIENT_def = DB.fetch "quotient" "QUOTIENT_def";
 val rat_thm = REWRITE_RULE[QUOTIENT_def] rat_def ; (* was rat_def *)
+val rat_type_thm = save_thm ("rat_type_thm",
+  REWRITE_RULE[QUOTIENT_def, RAT_EQUIV_REF] rat_def) ;
 
 (*--------------------------------------------------------------------------*
  * operations
@@ -620,11 +622,27 @@ val RAT_LES_CALCULATE = store_thm("RAT_LES_CALCULATE", ``!f1 f2. (abs_rat f1 < a
 	`~frac_nmr f1 * frac_dnm f2 = ~(frac_nmr f1 * frac_dnm f2)` by ARITH_TAC THEN
 	ASM_REWRITE_TAC[INT_LT_ADDNEG, INT_ADD_LID] );
 
+val RAT_LEQ_CALCULATE = store_thm("RAT_LEQ_CALCULATE",
+  ``!f1 f2. (abs_rat f1 <= abs_rat f2) =
+    (frac_nmr f1 * frac_dnm f2 <= frac_nmr f2 * frac_dnm f1)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_leq_def, RAT_LES_CALCULATE, INT_LE_LT, RAT_EQ_CALCULATE]) ; 
+
 val RAT_OF_NUM_CALCULATE = store_thm("RAT_OF_NUM_CALCULATE", ``!n1. rat_of_num n1 = abs_rat( abs_frac( &n1, 1) )``,
 	recInduct (DB.fetch "-" "rat_of_num_ind") THEN
 	RW_TAC arith_ss [rat_of_num_def, rat_0_def, frac_0_def, rat_1_def, frac_1_def, RAT_ADD_CALCULATE, frac_add_def] THEN
 	FRAC_POS_TAC ``1i`` THEN
 	RW_TAC int_ss [NMR,DNM, ARITH_PROVE ``int_of_num (SUC n) + 1 = int_of_num (SUC (SUC n))``] );
+
+val RAT_OF_NUM_LEQ = store_thm("RAT_OF_NUM_LEQ",
+  ``rat_of_num a <= rat_of_num b = a <= b``,
+  SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LEQ_CALCULATE,
+    NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LE]);
+
+val RAT_OF_NUM_LES = store_thm("RAT_OF_NUM_LES",
+  ``rat_of_num a < rat_of_num b = a < b``,
+  SIMP_TAC std_ss [RAT_OF_NUM_CALCULATE, RAT_LES_CALCULATE,
+    NMR, DNM, INT_LT_01, INT_MUL_RID, INT_LT]);
 
 (*--------------------------------------------------------------------------
  *  rat_calculate_table : (term * thm) list
@@ -1763,7 +1781,7 @@ val RAT_AINV_EQ = store_thm("RAT_AINV_EQ", ``!r1 r2. (rat_ainv r1 = r2) = (r1 = 
 	REWRITE_TAC[RAT_AINV_AINV] );
 
 (*--------------------------------------------------------------------------
-   RAT_EQ_SUB_LADD, RAT_EQ_SUB_RADD
+   RAT_LSUB_EQ, RAT_RSUB_EQ
 
    |- !r1 r2 r3. (r1 - r2 = r3) = (r1 = r2 + r3)
    |- !r1 r2 r3. (r1 = r2 - r3) = (r1 + r3 = r2)
@@ -1828,10 +1846,12 @@ val RAT_RDIV_EQ = store_thm("RAT_RDIV_EQ", ``!r1 r2 r3. ~(r3 = 0q) ==> ((r1 = ra
  *==========================================================================*)
 
 (*--------------------------------------------------------------------------
-   RAT_LES_LADD, RAT_LES_RADD
+   RAT_LES_LADD, RAT_LES_RADD, RAT_LEQ_LADD, RAT_LEQ_RADD
 
-   |- !r1 r2 r3. (r3 + r1) < (r3 + r2) = r1 + r2
-   |- !r1 r2 r3. (r1 + r3) < (r2 + r3) = r1 + r2
+   |- !r1 r2 r3. (r3 + r1) < (r3 + r2) = r1 < r2
+   |- !r1 r2 r3. (r1 + r3) < (r2 + r3) = r1 < r2
+   |- !r1 r2 r3. (r3 + r1) <= (r3 + r2) = r1 <= r2
+   |- !r1 r2 r3. (r1 + r3) <= (r2 + r3) = r1 <= r2
  *--------------------------------------------------------------------------*)
 
 val RAT_LES_RADD = store_thm("RAT_LES_RADD", ``!r1 r2 r3. rat_les (rat_add r1 r3) (rat_add r2 r3) = rat_les r1 r2``,
@@ -1843,6 +1863,20 @@ val RAT_LES_RADD = store_thm("RAT_LES_RADD", ``!r1 r2 r3. rat_les (rat_add r1 r3
 
 val RAT_LES_LADD = store_thm("RAT_LES_LADD", ``!r1 r2 r3. rat_les (rat_add r3 r1) (rat_add r3 r2) = rat_les r1 r2``,
 	PROVE_TAC[RAT_LES_RADD, RAT_ADD_COMM] );
+
+val RAT_LEQ_RADD = store_thm("RAT_LEQ_RADD",
+  ``!r1 r2 r3. rat_leq (rat_add r1 r3) (rat_add r2 r3) = rat_leq r1 r2``,
+	REWRITE_TAC[rat_leq_def, RAT_LES_RADD, RAT_EQ_RADD]) ;
+
+val RAT_LEQ_LADD = store_thm("RAT_LEQ_LADD",
+  ``!r1 r2 r3. rat_leq (rat_add r3 r1) (rat_add r3 r2) = rat_leq r1 r2``,
+	REWRITE_TAC[rat_leq_def, RAT_LES_LADD, RAT_EQ_LADD]) ;
+
+val RAT_ADD_MONO = Q.store_thm ("RAT_ADD_MONO",
+  `!a b c d. a <= b /\ c <= d ==> rat_add a c <= rat_add b d`,
+  REPEAT STRIP_TAC THEN irule RAT_LEQ_TRANS THEN
+  Q.EXISTS_TAC `b + c` THEN
+  ASM_SIMP_TAC std_ss [RAT_LEQ_LADD, RAT_LEQ_RADD]) ;
 
 (*--------------------------------------------------------------------------
    RAT_LES_AINV
@@ -1875,6 +1909,14 @@ val RAT_RSUB_LES = store_thm("RAT_RSUB_LES", ``!r1 r2 r3. rat_les r1 (rat_sub r2
 	REWRITE_TAC[rat_les_def] THEN
 	REWRITE_TAC[RAT_SUB_ADDAINV, RAT_AINV_ADD] THEN
 	PROVE_TAC [AC_CONV (RAT_ADD_ASSOC, RAT_ADD_COMM) ``rat_add (rat_add r2 (rat_ainv r3)) (rat_ainv r1) = rat_add r2 (rat_add (rat_ainv r1) (rat_ainv r3))``] );
+
+val RAT_LSUB_LEQ = store_thm("RAT_LSUB_LEQ",
+  ``!r1 r2 r3. rat_leq (rat_sub r1 r2) r3 = rat_leq r1 (rat_add r2 r3)``,
+	REWRITE_TAC[rat_leq_def, RAT_LSUB_LES, RAT_LSUB_EQ]) ;
+
+val RAT_RSUB_LEQ = store_thm("RAT_RSUB_LEQ",
+  ``!r1 r2 r3. rat_leq r1 (rat_sub r2 r3) = rat_leq (rat_add r1 r3) r2``,
+	REWRITE_TAC[rat_leq_def, RAT_RSUB_LES, RAT_RSUB_EQ]) ;
 
 (*--------------------------------------------------------------------------
    RAT_LES_LMUL_NEG RAT_LES_LMUL_POS RAT_LES_RMUL_POS RAT_LES_RMUL_NEG
@@ -1972,6 +2014,9 @@ val RAT_AINV_LES = store_thm("RAT_AINV_LES", ``!r1 r2. rat_les (rat_ainv r1) r2 
    |- !r1 r2 r3. r2 < 0q ==> ((r1 / r2 < r3) = (r2 * r3 < r1))
    |- !r1 r2 r3. 0q < r3 ==> ((r1 < r2 / r3) = (r1 * r3 < r2))
    |- !r1 r2 r3. r3 < 0q ==> ((r1 < r2 / r3) = (r2 < r1 * r3))
+
+   RAT_LDIV_LEQ_POS, RAT_LDIV_LEQ_NEG, RAT_RDIV_LEQ_POS, RAT_RDIV_LEQ_NEG
+   for <= likewise
  *--------------------------------------------------------------------------*)
 
 val RAT_LDIV_LES_POS = store_thm("RAT_LDIV_LES_POS", ``!r1 r2 r3. 0q < r2 ==> ((rat_div r1 r2 < r3) = (r1 < rat_mul r2 r3))``,
@@ -2008,6 +2053,44 @@ val RAT_RDIV_LES_NEG = store_thm("RAT_RDIV_LES_NEG", ``!r1 r2 r3. r3 < 0q ==> ((
 	REWRITE_TAC [RAT_DIV_MULMINV] THEN
 	SUBST_TAC [EQT_ELIM (AC_CONV (RAT_MUL_ASSOC, RAT_MUL_COMM) ``r2 * rat_minv r3 * r3 = r2 * (r3 * rat_minv r3)``)] THEN
 	RW_TAC bool_ss [RAT_MUL_RINV, RAT_MUL_RID] );
+
+val RAT_LDIV_LEQ_POS = store_thm("RAT_LDIV_LEQ_POS",
+  ``!r1 r2 r3. 0q < r2 ==> ((rat_div r1 r2 <= r3) = (r1 <= rat_mul r2 r3))``,
+	REPEAT STRIP_TAC THEN
+	ASM_SIMP_TAC bool_ss [rat_leq_def, RAT_LDIV_LES_POS] THEN
+	RULE_ASSUM_TAC (CONJUNCT2 o
+	  REWRITE_RULE [rat_leq_def, DE_MORGAN_THM] o
+	  REWRITE_RULE [GSYM RAT_LES_LEQ]) THEN
+	ASM_SIMP_TAC bool_ss [RAT_LDIV_EQ]) ;
+
+val RAT_LDIV_LEQ_NEG = store_thm("RAT_LDIV_LEQ_NEG",
+  ``!r1 r2 r3. r2 < 0q ==> ((rat_div r1 r2 <= r3) = (rat_mul r2 r3 <= r1))``,
+	REPEAT STRIP_TAC THEN
+	ASM_SIMP_TAC bool_ss [rat_leq_def, RAT_LDIV_LES_NEG] THEN
+	RULE_ASSUM_TAC (GSYM o CONJUNCT2 o
+	  REWRITE_RULE [rat_leq_def, DE_MORGAN_THM] o
+	  REWRITE_RULE [GSYM RAT_LES_LEQ]) THEN
+	CONV_TAC (RHS_CONV (ONCE_DEPTH_CONV SYM_CONV)) THEN
+	ASM_SIMP_TAC bool_ss [RAT_LDIV_EQ]) ;
+
+val RAT_RDIV_LEQ_POS = store_thm("RAT_RDIV_LEQ_POS",
+  ``!r1 r2 r3. 0q < r3 ==> ((r1 <= rat_div r2 r3) = (rat_mul r1 r3 <= r2))``,
+	REPEAT STRIP_TAC THEN
+	ASM_SIMP_TAC bool_ss [rat_leq_def, RAT_RDIV_LES_POS] THEN
+	RULE_ASSUM_TAC (CONJUNCT2 o
+	  REWRITE_RULE [rat_leq_def, DE_MORGAN_THM] o
+	  REWRITE_RULE [GSYM RAT_LES_LEQ]) THEN
+	ASM_SIMP_TAC bool_ss [RAT_RDIV_EQ]) ;
+
+val RAT_RDIV_LEQ_NEG = store_thm("RAT_RDIV_LEQ_NEG",
+  ``!r1 r2 r3. r3 < 0q ==> ((r1 <= rat_div r2 r3) = (r2 <= rat_mul r1 r3))``,
+	REPEAT STRIP_TAC THEN
+	ASM_SIMP_TAC bool_ss [rat_leq_def, RAT_RDIV_LES_NEG] THEN
+	RULE_ASSUM_TAC (GSYM o CONJUNCT2 o
+	  REWRITE_RULE [rat_leq_def, DE_MORGAN_THM] o
+	  REWRITE_RULE [GSYM RAT_LES_LEQ]) THEN
+	CONV_TAC (RHS_CONV (ONCE_DEPTH_CONV SYM_CONV)) THEN
+	ASM_SIMP_TAC bool_ss [RAT_RDIV_EQ]) ;
 
 (*--------------------------------------------------------------------------
    RAT_LES_SUB0
