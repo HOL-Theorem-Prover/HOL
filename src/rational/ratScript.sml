@@ -1631,16 +1631,10 @@ val RAT_LES0_LEQ0_ADD = store_thm("RAT_LES0_LEQ0_ADD", ``!r1 r2. rat_les r1 0q =
    |- !r1 r2 r3. (r1 = r2 - r3) = (r1 + r3 = r2)
  *--------------------------------------------------------------------------*)
 
-val RAT_LSUB_EQ = store_thm("RAT_LSUB_EQ", ``!r1 r2 r3. (rat_sub r1 r2 = r3) = (r1 = rat_add r2 r3)``,
-	REPEAT GEN_TAC THEN
-	EQ_TAC THENL
-	[
-		ONCE_REWRITE_TAC[EQ_SYM_EQ]
-	,
-		ALL_TAC
-	] THEN
-	STRIP_TAC THEN
-	ASM_REWRITE_TAC[] THEN
+val RAT_LSUB_EQ = store_thm("RAT_LSUB_EQ",
+  ``!r1 r2 r3. (rat_sub r1 r2 = r3) = (r1 = rat_add r2 r3)``,
+	REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+	BasicProvers.VAR_EQ_TAC THEN 
 	REWRITE_TAC[RAT_SUB_ADDAINV] THEN
 	ONCE_REWRITE_TAC[RAT_ADD_COMM] THENL
 	[
@@ -1649,22 +1643,39 @@ val RAT_LSUB_EQ = store_thm("RAT_LSUB_EQ", ``!r1 r2 r3. (rat_sub r1 r2 = r3) = (
 		ONCE_REWRITE_TAC[RAT_ADD_ASSOC]
 	] THEN
 	REWRITE_TAC[RAT_ADD_LINV] THEN
-	RW_TAC int_ss[RAT_ADD_LID, RAT_ADD_RID] );
+	REWRITE_TAC[RAT_ADD_LID, RAT_ADD_RID] );
 
-val RAT_RSUB_EQ = store_thm("RAT_RSUB_EQ", ``!r1 r2 r3. (r1 = rat_sub r2 r3) = (rat_add r1 r3 = r2)``,
-	REPEAT GEN_TAC THEN
-	EQ_TAC THENL
-	[
-		ALL_TAC
-	,
-		ONCE_REWRITE_TAC[EQ_SYM_EQ]
-	] THEN
-	STRIP_TAC THEN
-	ASM_REWRITE_TAC[] THEN
+val RAT_RSUB_EQ = store_thm("RAT_RSUB_EQ",
+  ``!r1 r2 r3. (r1 = rat_sub r2 r3) = (rat_add r1 r3 = r2)``,
+	REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+	BasicProvers.VAR_EQ_TAC THEN 
 	REWRITE_TAC[RAT_SUB_ADDAINV] THEN
 	ONCE_REWRITE_TAC[GSYM RAT_ADD_ASSOC] THEN
 	REWRITE_TAC[RAT_ADD_LINV, RAT_ADD_RINV] THEN
-	RW_TAC int_ss[RAT_ADD_LID, RAT_ADD_RID] );
+	REWRITE_TAC[RAT_ADD_LID, RAT_ADD_RID] );
+
+(*--------------------------------------------------------------------------
+   RAT_LDIV_EQ, RAT_RDIV_EQ
+
+   |- !r1 r2 r3. ~(r2 = 0q) ==> ((r1 / r2 = r3) = (r1 = r2 * r3))
+   |- !r1 r2 r3. ~(r3 = 0q) ==> ((r1 = r2 / r3) = (r1 * r3 = r2))
+ *--------------------------------------------------------------------------*)
+
+val RAT_LDIV_EQ = store_thm("RAT_LDIV_EQ",
+  ``!r1 r2 r3. ~(r2 = 0q) ==> ((rat_div r1 r2 = r3) = (r1 = rat_mul r2 r3))``,
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+  BasicProvers.VAR_EQ_TAC THEN 
+  ONCE_REWRITE_TAC [RAT_MUL_COMM] THEN
+  REWRITE_TAC [RAT_DIV_MULMINV, GSYM RAT_MUL_ASSOC] THEN
+  ASM_SIMP_TAC std_ss [RAT_MUL_RINV, RAT_MUL_LINV, RAT_MUL_RID, RAT_MUL_LID]) ;
+
+val RAT_RDIV_EQ = store_thm("RAT_RDIV_EQ",
+  ``!r1 r2 r3. ~(r3 = 0q) ==> ((r1 = rat_div r2 r3) = (rat_mul r1 r3 = r2))``,
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN 
+  BasicProvers.VAR_EQ_TAC THEN 
+  REWRITE_TAC [RAT_DIV_MULMINV, GSYM RAT_MUL_ASSOC] THEN
+  ASM_SIMP_TAC std_ss [RAT_MUL_RINV, RAT_MUL_LINV, RAT_MUL_RID, RAT_MUL_LID]) ;
+
 
 (*==========================================================================
  *  one-to-one and onto theorems
@@ -1705,41 +1716,16 @@ val RAT_ADD_ONE_ONE = store_thm("RAT_ADD_ONE_ONE",
    |- !r1. ~(r1=0q) = ONE_ONE (rat_mul r1)
  *--------------------------------------------------------------------------*)
 
-val RAT_MUL_ONE_ONE =
-let
-	val subst1a = EQT_ELIM (INT_RING_CONV ``frac_nmr (rep_rat r1) * frac_nmr (rep_rat x1) * (frac_dnm (rep_rat r1) * frac_dnm (rep_rat x2)) = frac_nmr (rep_rat x1) * frac_dnm (rep_rat x2) * (frac_nmr (rep_rat r1) * frac_dnm (rep_rat r1))``);
-	val subst1b = EQT_ELIM (INT_RING_CONV ``frac_nmr (rep_rat r1) * frac_nmr (rep_rat x2) * (frac_dnm (rep_rat r1) * frac_dnm (rep_rat x1)) = frac_nmr (rep_rat x2) * frac_dnm (rep_rat x1) * (frac_nmr (rep_rat r1) * frac_dnm (rep_rat r1))``);
-in
-	store_thm("RAT_MUL_ONE_ONE", ``!r1. ~(r1=0q) = ONE_ONE (rat_mul r1)``,
-		GEN_TAC THEN
-		REWRITE_TAC[ONE_ONE_DEF] THEN
-		BETA_TAC THEN
-		EQ_TAC THENL
-		[
-			STRIP_TAC THEN
-			REPEAT GEN_TAC THEN
-			RAT_CALC_TAC THEN
-			FRAC_CALC_TAC THEN
-			REWRITE_TAC[RAT_EQ] THEN
-			FRAC_NMRDNM_TAC THEN
-			APPLY_ASM_TAC 0 (REWRITE_TAC[RAT_EQ0_NMR, rat_nmr_def]) THEN
-			SUBST_TAC[subst1a, subst1b] THEN
-			STRIP_TAC THEN
-			FRAC_NOT0_TAC ``frac_nmr (rep_rat r1) * frac_dnm (rep_rat r1)`` THEN
-			PROVE_TAC[INT_EQ_RMUL_IMP]
-		,
-			SUBST_TAC[CONTRAPOS_CONV ``(!x1 x2. (rat_mul r1 x1 = rat_mul r1 x2) ==> (x1 = x2)) ==> ~(r1 = 0q)``] THEN
-			REWRITE_TAC[NOT_CLAUSES] THEN
-			STRIP_TAC THEN
-			ASM_REWRITE_TAC[] THEN
-			REWRITE_TAC[RAT_MUL_LZERO] THEN
-			REWRITE_TAC[BETA_RULE (SPEC ``\x1. ($! (\x2. x1=x2))`` NOT_FORALL_THM)] THEN
-			EXISTS_TAC ``0q`` THEN
-			REWRITE_TAC[BETA_RULE (SPEC ``\x2. x1=x2`` NOT_FORALL_THM)] THEN
-			EXISTS_TAC ``1q`` THEN
-			PROVE_TAC [RAT_1_NOT_0]
-		 ] )
-end;
+val RAT_MUL_ONE_ONE = store_thm("RAT_MUL_ONE_ONE",
+  ``!r1. ~(r1=0q) = ONE_ONE (rat_mul r1)``,
+  REPEAT GEN_TAC THEN REWRITE_TAC [ONE_ONE_DEF] THEN BETA_TAC THEN 
+  EQ_TAC THEN REPEAT DISCH_TAC
+  THENL [
+    ASM_SIMP_TAC std_ss [GSYM RAT_LDIV_EQ] THEN
+    ASM_SIMP_TAC std_ss [RAT_RDIV_EQ] THEN 
+    MATCH_ACCEPT_TAC RAT_MUL_COMM,
+    FIRST_X_ASSUM (ASSUME_TAC o Q.SPECL [`1q`, `0q`]) THEN
+    REV_FULL_SIMP_TAC std_ss [RAT_1_NOT_0, RAT_MUL_LZERO] ]) ;
 
 (*==========================================================================
  *  transformation of equations
@@ -1808,13 +1794,6 @@ val RAT_AINV_EQ = store_thm("RAT_AINV_EQ", ``!r1 r2. (rat_ainv r1 = r2) = (r1 = 
 	ONCE_REWRITE_TAC[GSYM RAT_EQ_AINV] THEN
 	ASM_REWRITE_TAC[] THEN
 	REWRITE_TAC[RAT_AINV_AINV] );
-
-(*--------------------------------------------------------------------------
-   RAT_LDIV_EQ, RAT_RDIV_EQ
-
-   |- !r1 r2 r3. ~(r2 = 0q) ==> ((r1 / r2 = r3) = (r1 = r2 * r3))
-   |- !r1 r2 r3. ~(r3 = 0q) ==> ((r1 = r2 / r3) = (r1 * r3 = r2))
- *--------------------------------------------------------------------------*)
 
 val RAT_LDIV_EQ = store_thm("RAT_LDIV_EQ", ``!r1 r2 r3. ~(r2 = 0q) ==> ((rat_div r1 r2 = r3) = (r1 = rat_mul r2 r3))``,
 	REPEAT GEN_TAC THEN
