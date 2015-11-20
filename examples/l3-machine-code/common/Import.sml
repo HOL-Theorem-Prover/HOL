@@ -2,8 +2,9 @@ structure Import :> Import =
 struct
 
 open HolKernel boolLib bossLib
-open state_transformerTheory bitstringLib stringLib machine_ieeeSyntax
-open intSyntax integer_wordSyntax bitstringSyntax state_transformerSyntax
+open state_transformerTheory bitstringLib stringLib binary_ieeeSyntax
+     machine_ieeeSyntax intSyntax integer_wordSyntax bitstringSyntax
+     state_transformerSyntax
 
 val ERR = mk_HOL_ERR "Import"
 
@@ -81,6 +82,7 @@ in
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
    val rTy = mkTy (SOME "binary_ieee", "rounding")
+   val oTy = mkTy (SOME "binary_ieee", "compare")
    val cTy = mkTy (SOME "string", "char")
    val sTy = mkListTy cTy
    val vTy = mkListTy bTy
@@ -181,6 +183,11 @@ fun LE ty = pred_setSyntax.mk_empty (Ty ty)
 fun LNL ty = listSyntax.mk_nil (Ty ty)
 (* UNKNOWN  *)
 fun LX ty = boolSyntax.mk_arb (Ty ty)
+
+val NEGINF32 = machine_ieeeSyntax.fp32Syntax.fp_neginf_tm
+val POSINF32 = machine_ieeeSyntax.fp32Syntax.fp_posinf_tm
+val NEGINF64 = machine_ieeeSyntax.fp64Syntax.fp_neginf_tm
+val POSINF64 = machine_ieeeSyntax.fp64Syntax.fp_posinf_tm
 
 (* ------------------------------------------------------------------------ *)
 
@@ -460,14 +467,23 @@ datatype monop =
    | Difference
    | Drop
    | Element
-   | FPAbs of int
+   | FPAbs of int * bool
    | FPAdd of int
-   | FPEqual of int
-   | FPIsNaN of int
-   | FPLess of int
+   | FPCmp of int
+   | FPDiv of int
+   | FPEq of int
+   | FPFromInt of int
+   | FPGe of int
+   | FPGt of int
+   | FPIsFinite of int
+   | FPIsNan of int
+   | FPIsNormal of int
+   | FPLe of int
+   | FPLt of int
    | FPMul of int
-   | FPNeg of int
+   | FPNeg of int * bool
    | FPSub of int
+   | FPToInt of int
    | Flat
    | Fst
    | Head
@@ -681,15 +697,29 @@ local
 
    fun mk_fp_binop f =
       let
-         val ftm = case f of
-                      FPEqual 32 => machine_ieeeSyntax.fp32Syntax.fp_equal_tm
-                    | FPEqual 64 => machine_ieeeSyntax.fp64Syntax.fp_equal_tm
-                    | FPLess 32 => machine_ieeeSyntax.fp32Syntax.fp_lessThan_tm
-                    | FPLess 64 => machine_ieeeSyntax.fp64Syntax.fp_lessThan_tm
-                    | _ => raise ERR "mk_fp_binop" ""
-         val ty = ftm |> Term.type_of |> Type.dom_rng |> fst
-         val b = Term.mk_var ("b", ty)
-         val c = Term.mk_var ("c", ty)
+         val ftm =
+            case f of
+               FPCmp 32 => machine_ieeeSyntax.fp32Syntax.fp_compare_tm
+             | FPCmp 64 => machine_ieeeSyntax.fp64Syntax.fp_compare_tm
+             | FPEq 32 => machine_ieeeSyntax.fp32Syntax.fp_equal_tm
+             | FPEq 64 => machine_ieeeSyntax.fp64Syntax.fp_equal_tm
+             | FPLt 32 => machine_ieeeSyntax.fp32Syntax.fp_lessThan_tm
+             | FPLt 64 => machine_ieeeSyntax.fp64Syntax.fp_lessThan_tm
+             | FPLe 32 => machine_ieeeSyntax.fp32Syntax.fp_lessEqual_tm
+             | FPLe 64 => machine_ieeeSyntax.fp64Syntax.fp_lessEqual_tm
+             | FPGt 32 => machine_ieeeSyntax.fp32Syntax.fp_greaterThan_tm
+             | FPGt 64 => machine_ieeeSyntax.fp64Syntax.fp_greaterThan_tm
+             | FPGe 32 => machine_ieeeSyntax.fp32Syntax.fp_greaterEqual_tm
+             | FPGe 64 => machine_ieeeSyntax.fp64Syntax.fp_greaterEqual_tm
+             | FPToInt 32 => machine_ieeeSyntax.fp32Syntax.fp_to_int_tm
+             | FPToInt 64 => machine_ieeeSyntax.fp64Syntax.fp_to_int_tm
+             | FPFromInt 32 => machine_ieeeSyntax.fp32Syntax.int_to_fp_tm
+             | FPFromInt 64 => machine_ieeeSyntax.fp64Syntax.int_to_fp_tm
+             | _ => raise ERR "mk_fp_binop" ""
+         val (ty1, ty) = ftm |> Term.type_of |> Type.dom_rng
+         val ty2 = fst (Type.dom_rng ty)
+         val b = Term.mk_var ("b", ty1)
+         val c = Term.mk_var ("c", ty2)
          val l = [b, c]
          val p = pairSyntax.list_mk_pair l
          val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
@@ -702,11 +732,13 @@ local
          val ftm = case f of
                       FPAdd 32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
                     | FPAdd 64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
+                    | FPDiv 32 => machine_ieeeSyntax.fp32Syntax.fp_div_tm
+                    | FPDiv 64 => machine_ieeeSyntax.fp64Syntax.fp_div_tm
                     | FPMul 32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
                     | FPMul 64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
                     | FPSub 32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
                     | FPSub 64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
-                    | _ => raise ERR "mk_fp_triop" ""
+                    | _ => raise ERR "mk_fp_triop" (PolyML.makestring f)
          val ty = ftm |> Term.type_of
                       |> Type.dom_rng |> snd
                       |> Type.dom_rng |> fst
@@ -920,17 +952,37 @@ in
        | Difference => mk_difference
        | Drop => mk_drop
        | Element => mk_element
-       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
-       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
-       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
-       | FPEqual _ => mk_fp_binop m
-       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
-       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
-       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
-       | FPLess _ => mk_fp_binop m
-       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
-       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
-       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPAbs (32, old) =>
+           if old then machine_ieeeSyntax.fp32Syntax.mk_fp_abs1985
+           else machine_ieeeSyntax.fp32Syntax.mk_fp_abs
+       | FPAbs (64, old) =>
+           if old then machine_ieeeSyntax.fp64Syntax.mk_fp_abs1985
+           else machine_ieeeSyntax.fp64Syntax.mk_fp_abs
+       | FPAbs (i, _) => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPCmp _ => mk_fp_binop m
+       | FPEq _ => mk_fp_binop m
+       | FPFromInt _ => mk_fp_binop m
+       | FPGe _ => mk_fp_binop m
+       | FPGt _ => mk_fp_binop m
+       | FPIsFinite 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isFinite
+       | FPIsFinite 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isFinite
+       | FPIsFinite i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsNan 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
+       | FPIsNan 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
+       | FPIsNan i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsNormal 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNormal
+       | FPIsNormal 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNormal
+       | FPIsNormal i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPLe _ => mk_fp_binop m
+       | FPLt _ => mk_fp_binop m
+       | FPNeg (32, old) =>
+           if old then machine_ieeeSyntax.fp32Syntax.mk_fp_negate1985
+           else machine_ieeeSyntax.fp32Syntax.mk_fp_negate
+       | FPNeg (64, old) =>
+           if old then machine_ieeeSyntax.fp64Syntax.mk_fp_negate1985
+           else machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | FPNeg (i, _) => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPToInt _ => mk_fp_binop m
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd

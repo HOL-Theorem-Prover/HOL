@@ -14,6 +14,9 @@ val float_value_ty =
 val rounding_ty =
    Type.mk_thy_type {Thy = "binary_ieee", Tyop = "rounding", Args = []}
 
+val float_compare_ty =
+   Type.mk_thy_type {Thy = "binary_ieee", Tyop = "float_compare", Args = []}
+
 fun mk_float_ty (t, w) =
    Type.mk_thy_type {Thy = "binary_ieee", Tyop = "float", Args = [t, w]}
 
@@ -218,8 +221,15 @@ val (float_is_integral_tm, mk_float_is_integral, dest_float_is_integral,
 val (float_negate_tm, mk_float_negate, dest_float_negate, is_float_negate) =
    monop "float_negate"
 
+val (float_negate1985_tm, mk_float_negate1985, dest_float_negate1985,
+     is_float_negate1985) =
+   monop "float_negate1985"
+
 val (float_abs_tm, mk_float_abs, dest_float_abs, is_float_abs) =
    monop "float_abs"
+
+val (float_abs1985_tm, mk_float_abs1985, dest_float_abs1985, is_float_abs1985) =
+   monop "float_abs1985"
 
 val (float_plus_infinity_tm, mk_float_plus_infinity, dest_float_plus_infinity,
      is_float_plus_infinity) = monop "float_plus_infinity"
@@ -260,6 +270,9 @@ val (ULP_tm, mk_ULP, dest_ULP, is_ULP) = monop "ULP"
 
 val (integral_round_tm, mk_integral_round, dest_integral_round,
      is_integral_round) = binop "integral_round"
+
+val (float_to_int_tm, mk_float_to_int, dest_float_to_int,
+     is_float_to_int) = binop "float_to_int"
 
 val (float_round_to_integral_tm, mk_float_round_to_integral,
      dest_float_round_to_integral, is_float_round_to_integral) =

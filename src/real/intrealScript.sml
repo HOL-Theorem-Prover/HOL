@@ -13,8 +13,9 @@ val _ = new_theory "intreal"
 (* Define the inclusion homomorphism real_of_int :int->real.                 *)
 (*---------------------------------------------------------------------------*)
 
-val real_of_int = new_definition ("real_of_int", ``real_of_int i =
-  if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)``)
+val real_of_int = Lib.with_flag (boolLib.def_suffix, "") bossLib.Define
+  `real_of_int i =
+   if i < 0 then ~(real_of_num (Num (~i))) else real_of_num (Num i)`
 
 (*---------------------------------------------------------------------------*)
 (* Floor and ceiling (ints)                                                  *)

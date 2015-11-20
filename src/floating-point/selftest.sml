@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib
-open binary_ieeeLib binary_ieeeSyntax
+open intLib binary_ieeeLib binary_ieeeSyntax
 open testutils
 
 fun printn s = print (s ^ "\n")

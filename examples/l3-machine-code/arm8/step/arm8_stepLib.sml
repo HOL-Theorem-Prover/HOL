@@ -375,10 +375,10 @@ local
    val f = UNDISCH o DECIDE o Parse.Term
 
    val lem1 = f `(~wback \/ n <> t \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ (n = t)) /\ n <> 31w)`
+                 ~(d /\ wback /\ (n = t) /\ n <> 31w)`
 
    val lem2 = f `(~wback \/ n <> t /\ n <> t2 \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ ((n = t) \/ (n = t2))) /\ n <> 31w)`
+                 ~(d /\ wback /\ ((n = t) \/ (n = t2)) /\ n <> 31w)`
 
    fun w1 i = bitstringSyntax.fixedwidth_of_int (i, 1)
    fun w2 i = bitstringSyntax.padded_fixedwidth_of_int (i, 2)

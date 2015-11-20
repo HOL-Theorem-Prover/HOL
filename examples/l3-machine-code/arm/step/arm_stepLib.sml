@@ -186,7 +186,7 @@ local
    val write'Rmode_rwt =
       EV thms
          [[``Extension_Security NOTIN ^st.Extensions``, ``n <> 15w: word4``,
-           ``~(((n = 13w: word4) /\ ~aligned 2 (v: word32)) /\ ^st.CPSR.T)``]]
+           ``~((n = 13w: word4) /\ ~aligned 2 (v: word32) /\ ^st.CPSR.T)``]]
          []
         ``write'Rmode (v, n, m)``
         |> hd
@@ -914,7 +914,7 @@ local
         (n2w (LowestSetBit (r: word16)) = n: word4)) ==>
        ((if word_bit i r then
            ((), x1,
-            if ((n2w i = n) /\ wb) /\ (i <> LowestSetBit r) then x2 else x3)
+            if (n2w i = n) /\ wb /\ (i <> LowestSetBit r) then x2 else x3)
          else
            ((), x4)) =
         (if word_bit i r then ((), x1, x3) else ((), x4)))`,

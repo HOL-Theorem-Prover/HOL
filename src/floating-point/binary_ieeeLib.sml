@@ -1071,7 +1071,7 @@ val ieee_rewrites =
        spc float_negate_def, spc float_abs_def, float_plus_zero_def,
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
-       float_components
+       float_components, float_round_to_integral_compute, float_to_int_compute
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end
