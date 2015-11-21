@@ -951,7 +951,8 @@ val RAT_MUL_LID = store_thm("RAT_MUL_LID", ``!a. rat_mul 1q a = a``,
    |- !a. ~(a = 0q) ==> (rat_mul (rat_minv a) a = 1q)
  *--------------------------------------------------------------------------*)
 
-val RAT_ADD_RINV = store_thm("RAT_ADD_RINV", ``!a. rat_add a (rat_ainv a) = 0q``,
+val RAT_ADD_RINV = store_thm("RAT_ADD_RINV",
+   ``!a. rat_add a (rat_ainv a) = 0q``,
 	GEN_TAC THEN
 	REWRITE_TAC[rat_add_def,rat_ainv_def,rat_0,RAT_ADD_CONG] THEN
 	REWRITE_TAC[frac_add_def,frac_ainv_def,frac_0_def] THEN
@@ -962,57 +963,29 @@ val RAT_ADD_RINV = store_thm("RAT_ADD_RINV", ``!a. rat_add a (rat_ainv a) = 0q``
 	REWRITE_TAC [INT_MUL_LZERO, INT_MUL_RID, INT_LT_01,
 	  GSYM INT_NEG_LMUL, INT_ADD_RINV]) ;
 
-val RAT_ADD_LINV = store_thm("RAT_ADD_LINV", ``!a. rat_add (rat_ainv a) a = 0q``,
+val RAT_ADD_LINV = store_thm("RAT_ADD_LINV",
+   ``!a. rat_add (rat_ainv a) a = 0q``,
 	ONCE_REWRITE_TAC[RAT_ADD_COMM] THEN
 	REWRITE_TAC[RAT_ADD_RINV] );
 
-val RAT_MUL_RINV =
-let
-	val lemmaX = prove(``(a = 0q) = (frac_nmr (rep_rat a) = 0)``,
-		EQ_TAC THENL
-		[
-			REWRITE_TAC[rat_0, frac_0_def] THEN
-			STRIP_TAC THEN
-			ASM_REWRITE_TAC[] THEN
-			RW_TAC int_ss[RAT_NMREQ0_CONG] THEN
-			FRAC_POS_TAC``1i`` THEN
-			RW_TAC int_ss[NMR]
-		,
-			REWRITE_TAC[rat_0, frac_0_def] THEN
-			ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-			ASM_REWRITE_TAC[] THEN
-			SUBST_TAC[GSYM (SPEC ``a:rat`` (CONJUNCT1 rat_thm))] THEN
-			REWRITE_TAC[rat_equiv_def, RAT_ABS_EQUIV] THEN
-			RW_TAC int_ss[rat_thm] THEN
-			FRAC_POS_TAC ``1i`` THEN
-			RW_TAC int_ss[NMR,DNM] THEN
-			UNDISCH_TAC ``0 = frac_nmr (rep_rat a)`` THEN
-			ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-			RW_TAC int_ss[INT_MUL_LZERO]
-		] );
-	val lemmaY = prove(``! x y. 0<y ==> 0 < frac_dnm x * y``,
-		REPEAT GEN_TAC THEN
-		FRAC_POS_TAC ``frac_dnm x`` THEN
-		RW_TAC int_ss[INT_MUL_POS_SIGN]);
-in
-	store_thm("RAT_MUL_RINV", ``!a. ~(a=0q) ==> (rat_mul a (rat_minv a) = 1q)``,
-		GEN_TAC THEN
-		REWRITE_TAC[rat_mul_def, rat_minv_def, rat_1] THEN
-		REWRITE_TAC[RAT_MUL_CONG] THEN
-		REWRITE_TAC[frac_mul_def, frac_minv_def, frac_1_def] THEN
-		REWRITE_TAC[lemmaX] THEN
-		STRIP_TAC THEN
-		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr (rep_rat a)``
-                                              INT_ABS_NOT0POS)) THEN
-		RW_TAC int_ss[NMR,DNM] THEN
-		REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
-		ASSUME_TAC (UNDISCH_ALL (SPEC  ``ABS (frac_nmr (rep_rat a))`` (SPEC ``rep_rat a`` lemmaY)))  THEN
-		RW_TAC int_ss[NMR,DNM] THEN
-		RW_TAC int_ss[INT_ABS,frac_sgn_def, SGN_def] THEN
-		INT_RING_TAC )
-end;
+val RAT_MUL_RINV = store_thm("RAT_MUL_RINV",
+   ``!a. ~(a=0q) ==> (rat_mul a (rat_minv a) = 1q)``,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[rat_mul_def, rat_minv_def, rat_1, RAT_MUL_CONG] THEN
+  REWRITE_TAC[frac_mul_def, frac_minv_def, frac_1_def] THEN
+  REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
+  VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
+  TRY (irule INT_MUL_POS_SIGN) THEN
+  TRY (irule FRAC_DNMPOS) THEN
+  TRY (irule INT_LT_01) THEN
+  TRY (irule INT_ABS_NOT0POS) THEN
+  ASM_REWRITE_TAC [GSYM RAT_EQ0_NMR, GSYM rat_nmr_def] THEN
+  REWRITE_TAC[INT_MUL_LID, INT_MUL_RID, frac_sgn_def,
+    ABS_EQ_MUL_SGN, rat_nmr_def] THEN
+  CONV_TAC (AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM))) ;
 
-val RAT_MUL_LINV = store_thm("RAT_MUL_LINV", ``!a. ~(a = 0q) ==> (rat_mul (rat_minv a) a = 1q)``,
+val RAT_MUL_LINV = store_thm("RAT_MUL_LINV",
+   ``!a. ~(a = 0q) ==> (rat_mul (rat_minv a) a = 1q)``,
 	ONCE_REWRITE_TAC[RAT_MUL_COMM] THEN
 	RW_TAC int_ss[RAT_MUL_RINV] );
 
