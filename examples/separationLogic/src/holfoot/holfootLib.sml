@@ -94,7 +94,7 @@ fun holfoot_term_to_string t =
        holfoot_term_to_string (dest_var_res_exp_var t)
    else if (is_holfoot_var t) then
        stringLib.fromHOLstring (dest_holfoot_var t)
-   else term_to_string t;
+   else "x";
 
 
 fun is_no_proper_diseq thm =
