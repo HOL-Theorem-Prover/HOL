@@ -791,102 +791,14 @@ end
  * (3) hypotheses of the theorem provided also become new subgoals           *
  * --------------------------------------------------------------------------*)
 
-local
-  fun (s1 - s2) = HOLset.difference(s1,s2)
-  fun norm th =
-    if is_forall (concl th) then norm (SPEC_ALL th)
-    else
-      case Lib.total dest_imp (concl th) of
-          NONE => th
-        | SOME (l,r) =>
-          if is_conj l then norm (CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)) th)
-          else norm (UNDISCH th)
-
-fun group_hyps gfvs tlist =
-  let
-    fun overlaps fvset (tfvs,_) =
-      not (HOLset.isEmpty (HOLset.intersection(fvset, tfvs)))
-    fun union ((fvset1, tlist1), (fvset2, tlist2)) =
-      (HOLset.union(fvset1, fvset2), tlist1 @ tlist2)
-    fun recurse acc tlist =
-      case tlist of
-          [] => acc
-        | t::ts =>
-          let
-            val tfvs = FVL [t] empty_tmset - gfvs
-          in
-            case List.partition (overlaps tfvs) acc of
-                ([], _) => recurse ((tfvs,[t])::acc) ts
-              | (ovlaps, rest) =>
-                recurse (List.foldl union (tfvs, [t]) ovlaps :: rest) ts
-          end
-  in
-    recurse [] tlist
-  end
-
-fun CHOOSEL vs t th =
-  let
-    fun foldthis (v,(t,th)) =
-      let val ext = mk_exists(v,t)
-      in
-        (ext, CHOOSE (v,ASSUME ext) th)
-      end
-  in
-    List.foldr foldthis (t,th) vs
-  end
-
-fun CONJL ts th = let
-  val c = list_mk_conj ts
-  val cths = CONJUNCTS (ASSUME c)
-in
-  (List.foldl (fn (c,th) => PROVE_HYP c th) th cths, c)
-end
-
-fun reconstitute groups th =
-  let
-    fun recurse acc groups th =
-      case groups of
-          [] => (acc, th)
-        | (fvset, ts) :: rest =>
-          let
-            val (th1,c) = CONJL ts th
-            val (ext, th2) = CHOOSEL (HOLset.listItems fvset) c th1
-          in
-            recurse (ext::acc) rest th2
-          end
-  in
-    recurse [] groups th
-  end
-
-fun toplevel_create th =
-  let
-    val th1 = norm (GEN_ALL th)
-    val orighyps = hypset th
-    val origl = HOLset.listItems orighyps
-    val gfvs = FVL (concl th1 :: origl) empty_tmset
-    val newhyps = hypset th1 - orighyps
-    val grouped = group_hyps gfvs (HOLset.listItems newhyps)
-    val (cs, th2) = reconstitute grouped th1
-  in
-    case cs of
-        [] => GEN_ALL th2
-      | _ =>
-        let
-          val (th3,c) = CONJL cs th2
-        in
-          DISCH c th3 |> GEN_ALL
-        end
-  end
-
-in
 fun irule thm = let
-  val th' = toplevel_create thm
+  val th' = IRULE_CANON thm
 in
   if th' |> concl |> strip_forall |> #2 |> is_imp then
     MATCH_MP_TAC th' THEN REPEAT CONJ_TAC
   else MATCH_ACCEPT_TAC th'
 end
-end (* local *)
+val IRULE_TAC = irule
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

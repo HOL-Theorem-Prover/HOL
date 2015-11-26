@@ -87,6 +87,7 @@ sig
   val HO_PART_MATCH    : (term -> term) -> thm -> term -> thm
   val HO_MATCH_MP      : thm -> thm -> thm
   val RES_CANON        : thm -> thm list
+  val IRULE_CANON      : thm -> thm
 
   val prove_rep_fn_one_one : thm -> thm
   val prove_rep_fn_onto    : thm -> thm
