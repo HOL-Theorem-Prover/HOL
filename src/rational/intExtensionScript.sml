@@ -41,7 +41,7 @@ val ABS_EQ_MUL_SGN = store_thm ("ABS_EQ_MUL_SGN", ``ABS x = x * SGN x``,
 val MUL_ABS_SGN = store_thm ("MUL_ABS_SGN", ``ABS x * SGN x = x``,
   REWRITE_TAC [INT_ABS, SGN_def] THEN
   REPEAT COND_CASES_TAC THEN
-  ASM_SIMP_TAC int_ss []) ; 
+  ASM_SIMP_TAC int_ss []) ;
 
 (*--------------------------------------------------------------------------
    INT_MUL_POS_SIGN: thm

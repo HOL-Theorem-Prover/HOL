@@ -28,7 +28,7 @@ val JOIN_DEF = DEF `JOIN (z: (('b, 'a) M, 'a) M) = BIND z I`;
 val EXT_DEF = DEF `EXT (f: 'b -> ('c, 's) M) (m: ('b, 's) M) = UNCURRY f o m`;
 
 (* composition in the Kleisli category *)
-val MCOMP_DEF = 
+val MCOMP_DEF =
   DEF `MCOMP (g: 'b -> ('c, 's) M) (f: 'a -> ('b, 's) M) = EXT g o f` ;
 
 val FOR_def = TotalDefn.tDefine "FOR"
@@ -152,47 +152,47 @@ val Know = Q_TAC KNOW_TAC
 val FUN_EQ_TAC = CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
 
 (* UNIT and MCOMP are identity and composition of the Kleisli category *)
-val UNIT_CURRY = store_thm 
+val UNIT_CURRY = store_thm
   ("UNIT_CURRY",
    ``UNIT = CURRY I``,
    REWRITE_TAC [CURRY_DEF, UNIT_DEF, FUN_EQ_THM, combinTheory.I_THM]
     ++ BETA_TAC ++ REWRITE_TAC []) ;
 
-val MCOMP_ALT = store_thm 
+val MCOMP_ALT = store_thm
   ("MCOMP_ALT",
   ``MCOMP g f = CURRY (UNCURRY g o UNCURRY f)``,
   REWRITE_TAC [MCOMP_DEF, CURRY_DEF, FUN_EQ_THM, o_THM, UNCURRY_DEF, EXT_DEF]);
 
-val MCOMP_ID = store_thm 
+val MCOMP_ID = store_thm
   ("MCOMP_ID",
    ``(MCOMP g UNIT = g) /\ (MCOMP UNIT f = f)``,
-  REWRITE_TAC [MCOMP_ALT, UNIT_CURRY, 
+  REWRITE_TAC [MCOMP_ALT, UNIT_CURRY,
     UNCURRY_CURRY_THM, CURRY_UNCURRY_THM, I_o_ID]);
 
-val MCOMP_ASSOC = store_thm 
+val MCOMP_ASSOC = store_thm
   ("MCOMP_ASSOC",
    ``MCOMP f (MCOMP g h) = MCOMP (MCOMP f g) h``,
   REWRITE_TAC [MCOMP_ALT, o_ASSOC, UNCURRY_CURRY_THM, CURRY_UNCURRY_THM]);
 
 (* EXT is a functor from the Kleisli category into the (I,o) category *)
-val EXT_UNIT = store_thm 
+val EXT_UNIT = store_thm
   ("EXT_UNIT",
   ``EXT UNIT = I``,
   REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNIT_CURRY,
     UNCURRY_CURRY_THM, o_THM, I_THM]);
 
-val EXT_MCOMP = store_thm 
+val EXT_MCOMP = store_thm
   ("EXT_MCOMP",
   ``EXT (MCOMP g f) = EXT g o EXT f``,
   REWRITE_TAC [FUN_EQ_THM, EXT_DEF, UNCURRY_CURRY_THM, o_THM, MCOMP_ALT]);
 
-val EXT_o_UNIT = store_thm 
+val EXT_o_UNIT = store_thm
   ("EXT_o_UNIT",
   ``EXT f o UNIT = f``,
   REWRITE_TAC [GSYM MCOMP_DEF, MCOMP_ID]);
 
 (* UNIT o _ is the functor in the opposite direction *)
-val UNIT_o_MCOMP = store_thm 
+val UNIT_o_MCOMP = store_thm
   ("UNIT_o_MCOMP",
   ``MCOMP (UNIT o g) (UNIT o f) = UNIT o g o f``,
   REWRITE_TAC [MCOMP_DEF, o_ASSOC, EXT_o_UNIT]) ;

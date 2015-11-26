@@ -290,7 +290,7 @@ fun UNDISCH_TM th =
 
 fun UNDISCH_SPLIT th =
   let val (ant, conseq) = dest_imp (concl th) ;
-  in MP th (ASSUME_CONJS ant) end 
+  in MP th (ASSUME_CONJS ant) end
   handle HOL_ERR _ => raise ERR "UNDISCH_SPLIT" ""
 
 (*---------------------------------------------------------------------------*

@@ -445,7 +445,7 @@ fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th
  *------------------------------------------------------------------------*)
 
 fun HYP_CONV_RULE hypsel conv th =
-  let fun get_eq_thm h = 
+  let fun get_eq_thm h =
       if hypsel h then SOME (conv h) handle UNCHANGED => NONE
       else NONE ;
     val hyp_eq_thms = List.mapPartial get_eq_thm (hyp th) ;

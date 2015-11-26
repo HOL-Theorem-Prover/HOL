@@ -1716,7 +1716,7 @@ val LINV_DEF = Q.store_thm ("LINV_DEF",
   DISCH_THEN (fn th => ASSUME_TAC th THEN
     ASSUME_TAC (MATCH_MP INJ_LINV_OPT th)) THEN
   GEN_TAC THEN POP_ASSUM (ASSUME_TAC o Q.SPECL [`x`, `f x`]) THEN
-  DISCH_TAC THEN FULL_SIMP_TAC std_ss [INJ_DEF] THEN 
+  DISCH_TAC THEN FULL_SIMP_TAC std_ss [INJ_DEF] THEN
   RES_TAC THEN FULL_SIMP_TAC std_ss []) ;
 
 val BIJ_LINV_INV = Q.store_thm (
@@ -1766,7 +1766,7 @@ val BIJ_INSERT = store_thm(
   ]);
 
 (* RINV was previously "defined" by new_specification, giving RINV_DEF *)
-val RINV_LO = new_definition ("RINV_LO", 
+val RINV_LO = new_definition ("RINV_LO",
   ``RINV f s y = THE (LINV_OPT f s y)``) ;
 
 (* --------------------------------------------------------------------- *)
@@ -1774,13 +1774,13 @@ val RINV_LO = new_definition ("RINV_LO",
 (*   |- !f s t. SURJ f s t ==> (!x. x IN t ==> (f(RINV f s x) = x))      *)
 (* --------------------------------------------------------------------- *)
 
-val RINV_DEF = Q.store_thm ("RINV_DEF", 
+val RINV_DEF = Q.store_thm ("RINV_DEF",
   `!f s t. SURJ f s t ==> (!x. x IN t ==> (f (RINV f s x) = x))`,
-  REPEAT GEN_TAC THEN 
-  DISCH_THEN (fn th => ASSUME_TAC th THEN 
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (fn th => ASSUME_TAC th THEN
     ASSUME_TAC (REWRITE_RULE [IMAGE_SURJ] th)) THEN
   REPEAT STRIP_TAC THEN
-  FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def, 
+  FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def,
     optionTheory.THE_DEF] THEN
   RES_TAC THEN
   irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN1
@@ -2537,7 +2537,7 @@ val CARD_INJ_IMAGE = store_thm(
 val CARD_IMAGE = store_thm("CARD_IMAGE",
   ``!s. FINITE s ==> (CARD (IMAGE f s) <= CARD s)``,
   SET_INDUCT_TAC THEN
-  ASM_SIMP_TAC bool_ss [CARD_DEF, IMAGE_INSERT, IMAGE_FINITE, 
+  ASM_SIMP_TAC bool_ss [CARD_DEF, IMAGE_INSERT, IMAGE_FINITE,
     IMAGE_EMPTY, ZERO_LESS_EQ] THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC arith_ss []) ;
 
