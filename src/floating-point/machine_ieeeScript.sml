@@ -38,6 +38,25 @@ val thms =
             computeLib.add_persistent_funs names; thms
          end)
 
+val convert_def = Define`
+  convert (to_float: 'a word -> ('b, 'c) float)
+          (from_float: ('d, 'e) float -> 'f word) from_real (m: rounding) w =
+  let f = to_float w in
+  case float_value f of
+     Float r => from_real m r
+   | NaN => from_float (float_some_nan (:'d # 'e))
+   | Infinity => from_float (if f.Sign = 0w then
+                               float_plus_infinity (:'d # 'e)
+                             else
+                               float_minus_infinity (:'d # 'e))`
+
+val fp32_to_fp64_def = Define`
+  fp32_to_fp64 =
+  convert fp32_to_float float_to_fp64 real_to_fp64 roundTiesToEven`
+
+val fp64_to_fp32_def = Define`
+  fp64_to_fp32 = convert fp64_to_float float_to_fp32 real_to_fp32`
+
 (* ------------------------------------------------------------------------ *)
 
 (* Testing:

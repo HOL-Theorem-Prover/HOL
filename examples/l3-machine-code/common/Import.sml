@@ -467,6 +467,8 @@ datatype monop =
    | Difference
    | Drop
    | Element
+   | FP32To64
+   | FP64To32
    | FPAbs of int * bool
    | FPAdd of int
    | FPCmp of int
@@ -482,6 +484,7 @@ datatype monop =
    | FPLt of int
    | FPMul of int
    | FPNeg of int * bool
+   | FPSqrt of int
    | FPSub of int
    | FPToInt of int
    | Flat
@@ -711,10 +714,13 @@ local
              | FPGt 64 => machine_ieeeSyntax.fp64Syntax.fp_greaterThan_tm
              | FPGe 32 => machine_ieeeSyntax.fp32Syntax.fp_greaterEqual_tm
              | FPGe 64 => machine_ieeeSyntax.fp64Syntax.fp_greaterEqual_tm
+             | FPSqrt 32 => machine_ieeeSyntax.fp32Syntax.fp_sqrt_tm
+             | FPSqrt 64 => machine_ieeeSyntax.fp64Syntax.fp_sqrt_tm
              | FPToInt 32 => machine_ieeeSyntax.fp32Syntax.fp_to_int_tm
              | FPToInt 64 => machine_ieeeSyntax.fp64Syntax.fp_to_int_tm
              | FPFromInt 32 => machine_ieeeSyntax.fp32Syntax.int_to_fp_tm
              | FPFromInt 64 => machine_ieeeSyntax.fp64Syntax.int_to_fp_tm
+             | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
              | _ => raise ERR "mk_fp_binop" ""
          val (ty1, ty) = ftm |> Term.type_of |> Type.dom_rng
          val ty2 = fst (Type.dom_rng ty)
@@ -982,7 +988,10 @@ in
            if old then machine_ieeeSyntax.fp64Syntax.mk_fp_negate1985
            else machine_ieeeSyntax.fp64Syntax.mk_fp_negate
        | FPNeg (i, _) => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPSqrt _ => mk_fp_binop m
        | FPToInt _ => mk_fp_binop m
+       | FP64To32 => mk_fp_binop m
+       | FP32To64 => machine_ieeeSyntax.mk_fp32_to_fp64
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd

@@ -67,6 +67,7 @@ struct
    val fp_poszero_tm = const "posZero"
    val (fp_roundToIntegral_tm, mk_fp_roundToIntegral, dest_fp_roundToIntegral,
         is_fp_roundToIntegral) = binop "roundToIntegral"
+   val (fp_sqrt_tm, mk_fp_sqrt, dest_fp_sqrt, is_fp_sqrt) = binop "sqrt"
    val (fp_sub_tm, mk_fp_sub, dest_fp_sub, is_fp_sub) = triop "sub"
    val (fp_to_float_tm, mk_fp_to_float, dest_fp_to_float, is_fp_to_float) =
       monop "to_float"

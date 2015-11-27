@@ -11,6 +11,8 @@ sig
      | Difference
      | Drop
      | Element
+     | FP32To64
+     | FP64To32
      | FPAbs of int * bool
      | FPAdd of int
      | FPCmp of int
@@ -26,6 +28,7 @@ sig
      | FPLt of int
      | FPMul of int
      | FPNeg of int * bool
+     | FPSqrt of int
      | FPSub of int
      | FPToInt of int
      | Flat

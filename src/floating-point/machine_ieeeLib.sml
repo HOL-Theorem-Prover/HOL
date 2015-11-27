@@ -31,6 +31,7 @@ local
    val i2t = numLib.term_of_int
    val mk_w = wordsSyntax.mk_word_type
    val real_ty = realSyntax.real_ty
+   val value_ty = binary_ieeeSyntax.float_value_ty
    val mode = Term.mk_var ("mode", rounding_ty)
    fun dest_float_ty ty =
       case Lib.total Type.dest_type ty of
@@ -71,13 +72,13 @@ local
       in
          (get_function def, def)
       end
-   fun mk_fp_to_real fp float_to_real fp_to_float fp_ty =
+   fun mk_fp_to_real fp float_value fp_to_float fp_ty =
       let
          val fp_to_real = fp ^ "_to_real"
-         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> real_ty)
+         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> value_ty)
          val def =
             Definition.new_definition (fp_to_real ^ "_def",
-              fp_to_real_var == float_to_real o' fp_to_float)
+              fp_to_real_var == float_value o' fp_to_float)
       in
          (get_function def, def)
       end
@@ -359,8 +360,7 @@ in
          val w_ty = fcpSyntax.mk_int_numeric_type w
          val fp_ty = mk_w (fcpSyntax.mk_int_numeric_type k)
          val float_ty = Type.mk_type ("float", [t_ty, w_ty])
-         val float_to_real =
-            Term.mk_const ("float_to_real", float_ty --> real_ty)
+         val float_value = Term.mk_const ("float_value", float_ty --> value_ty)
          val round =
             Term.mk_const ("round", rounding_ty --> real_ty --> float_ty)
          val (fp_to_float, fp_to_float_def) =
@@ -368,7 +368,7 @@ in
          val (float_to_fp, float_to_fp_def) =
             mk_float_to_fp fp fp_ty float_ty t_ty w_ty
          val (fp_to_real, fp_to_real_def) =
-            mk_fp_to_real fp float_to_real fp_to_float fp_ty
+            mk_fp_to_real fp float_value fp_to_float fp_ty
          val (real_to_fp, real_to_fp_def) =
             mk_real_to_fp fp round float_to_fp fp_ty
          val int_to_fp_def = mk_int_to_fp fp real_to_fp fp_ty

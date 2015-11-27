@@ -31,6 +31,7 @@ sig
     val fp_posmin_tm : term
     val fp_poszero_tm : term
     val fp_roundToIntegral_tm : term
+    val fp_sqrt_tm : term
     val fp_sub_tm : term
     val fp_to_float_tm : term
     val fp_to_int_tm : term
@@ -61,6 +62,7 @@ sig
     val mk_fp_negate : term -> term
     val mk_fp_negate1985 : term -> term
     val mk_fp_roundToIntegral : term * term -> term
+    val mk_fp_sqrt : term * term -> term
     val mk_fp_sub : term * term * term -> term
     val mk_fp_to_float : term -> term
     val mk_fp_to_int : term * term -> term
@@ -90,6 +92,7 @@ sig
     val is_fp_negate : term -> bool
     val is_fp_negate1985 : term -> bool
     val is_fp_roundToIntegral : term -> bool
+    val is_fp_sqrt : term -> bool
     val is_fp_sub : term -> bool
     val is_fp_to_float : term -> bool
     val is_fp_to_int : term -> bool
@@ -119,6 +122,7 @@ sig
     val dest_fp_negate : term -> term
     val dest_fp_negate1985 : term -> term
     val dest_fp_roundToIntegral : term -> term * term
+    val dest_fp_sqrt : term -> term * term
     val dest_fp_sub : term -> term * term * term
     val dest_fp_to_float : term -> term
     val dest_fp_to_int : term -> term * term
