@@ -27,7 +27,9 @@ sig
    val neg2008: BitsN.nbit -> BitsN.nbit
    val neg: BitsN.nbit -> BitsN.nbit (* native *)
    val negInf: BitsN.nbit
+   val negZero: BitsN.nbit
    val posInf: BitsN.nbit
+   val posZero: BitsN.nbit
    val size: int
    val sqrt: IEEEReal.rounding_mode * BitsN.nbit -> BitsN.nbit
    val sub: IEEEReal.rounding_mode * (BitsN.nbit * BitsN.nbit) -> BitsN.nbit

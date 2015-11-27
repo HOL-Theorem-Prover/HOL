@@ -189,6 +189,11 @@ val POSINF32 = machine_ieeeSyntax.fp32Syntax.fp_posinf_tm
 val NEGINF64 = machine_ieeeSyntax.fp64Syntax.fp_neginf_tm
 val POSINF64 = machine_ieeeSyntax.fp64Syntax.fp_posinf_tm
 
+val NEGZERO32 = machine_ieeeSyntax.fp32Syntax.fp_negzero_tm
+val POSZERO32 = machine_ieeeSyntax.fp32Syntax.fp_poszero_tm
+val NEGZERO64 = machine_ieeeSyntax.fp64Syntax.fp_negzero_tm
+val POSZERO64 = machine_ieeeSyntax.fp64Syntax.fp_poszero_tm
+
 (* ------------------------------------------------------------------------ *)
 
 (* Function call *)
@@ -480,6 +485,7 @@ datatype monop =
    | FPIsFinite of int
    | FPIsNan of int
    | FPIsNormal of int
+   | FPIsSubnormal of int
    | FPLe of int
    | FPLt of int
    | FPMul of int
@@ -972,13 +978,16 @@ in
        | FPGt _ => mk_fp_binop m
        | FPIsFinite 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isFinite
        | FPIsFinite 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isFinite
-       | FPIsFinite i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsFinite i => raise ERR "Mop" ("FPIsFinite " ^ Int.toString i)
        | FPIsNan 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
        | FPIsNan 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
        | FPIsNan i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
        | FPIsNormal 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNormal
        | FPIsNormal 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNormal
-       | FPIsNormal i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsNormal i => raise ERR "Mop" ("FPIsNormal " ^ Int.toString i)
+       | FPIsSubnormal 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
        | FPLe _ => mk_fp_binop m
        | FPLt _ => mk_fp_binop m
        | FPNeg (32, old) =>

@@ -9,6 +9,8 @@ struct
 
    val posInf = BitsN.B (0, 0)
    val negInf = BitsN.B (0, 0)
+   val posZero = BitsN.B (0, 0)
+   val negZero = BitsN.B (0, 0)
 
    fun err s = raise Fail (s ^ ": not supported")
 

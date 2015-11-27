@@ -35,6 +35,8 @@ struct
 
    val posInf = toBits R.posInf
    val negInf = toBits R.negInf
+   val posZero = toBits (Option.valOf (R.fromString "0.0"))
+   val negZero = toBits (Option.valOf (R.fromString "-0.0"))
 
    fun withMode m f x =
      let

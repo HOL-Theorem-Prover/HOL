@@ -24,6 +24,7 @@ sig
      | FPIsFinite of int
      | FPIsNan of int
      | FPIsNormal of int
+     | FPIsSubnormal of int
      | FPLe of int
      | FPLt of int
      | FPMul of int
@@ -171,6 +172,10 @@ sig
    val NEGINF64 : Term.term
    val POSINF32 : Term.term
    val POSINF64 : Term.term
+   val NEGZERO32 : Term.term
+   val NEGZERO64 : Term.term
+   val POSZERO32 : Term.term
+   val POSZERO64 : Term.term
 
    val Call : string * ParseDatatype.pretype * Term.term -> Term.term
    val Const : string * ParseDatatype.pretype -> Term.term
