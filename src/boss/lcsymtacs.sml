@@ -1,38 +1,17 @@
 structure lcsymtacs :> lcsymtacs =
 struct
 
-  open Abbrev HolKernel boolLib
+  open Abbrev HolKernel boolLib Tactic Tactical
 
-  val all_tac : tactic = Tactical.ALL_TAC
-  fun kall_tac (_: 'a) : tactic = Tactical.ALL_TAC
-  val eq_tac : tactic = Tactic.EQ_TAC
-  val strip_tac : tactic = Tactic.STRIP_TAC
-  val conj_tac : tactic = Tactic.CONJ_TAC
-  val conj_asm1_tac : tactic = Tactic.CONJ_ASM1_TAC
-  val conj_asm2_tac : tactic = Tactic.CONJ_ASM2_TAC
-  val disj1_tac : tactic = Tactic.DISJ1_TAC
-  val disj2_tac : tactic = Tactic.DISJ2_TAC
-  val gen_tac : tactic = Tactic.GEN_TAC
-  val exists_tac : term -> tactic = Tactic.EXISTS_TAC
+  fun kall_tac (_: 'a) : tactic = all_tac
   val suff_tac : term -> tactic = Tactic.SUFF_TAC
-  val rpt = Tactical.REPEAT
-  val reverse = Tactical.REVERSE
-  val ntac = Tactic.NTAC
   val var_eq_tac = BasicProvers.VAR_EQ_TAC
 
   val rewrite_tac : thm list -> tactic = Rewrite.REWRITE_TAC
   val once_rewrite_tac : thm list -> tactic = Rewrite.ONCE_REWRITE_TAC
   val asm_rewrite_tac : thm list -> tactic =  Rewrite.ASM_REWRITE_TAC
   val once_asm_rewrite_tac : thm list -> tactic =  Rewrite.ONCE_ASM_REWRITE_TAC
-  val ho_match_mp_tac : thm_tactic = Tactic.HO_MATCH_MP_TAC
-  val match_mp_tac : thm_tactic = Tactic.MATCH_MP_TAC
-  val mp_tac = Tactic.MP_TAC
 
-  val pop_assum : thm_tactic -> tactic = Tactical.POP_ASSUM
-  val first_assum : thm_tactic -> tactic = Tactical.FIRST_ASSUM
-  val first_x_assum : thm_tactic -> tactic = Tactical.FIRST_X_ASSUM
-  val last_assum : thm_tactic -> tactic = Tactical.LAST_ASSUM
-  val last_x_assum : thm_tactic -> tactic = Tactical.LAST_X_ASSUM
   val disch_then = Thm_cont.DISCH_THEN
 
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
@@ -61,17 +40,11 @@ struct
   val every_case_tac = BasicProvers.EVERY_CASE_TAC
   val full_case_tac = BasicProvers.FULL_CASE_TAC
 
-  val rule_assum_tac : (thm -> thm) -> tactic = Tactic.RULE_ASSUM_TAC
-  val assume_tac : thm_tactic = Tactic.ASSUME_TAC
-  val strip_assume_tac : thm_tactic = Tactic.STRIP_ASSUME_TAC
   val spose_not_then : thm_tactic -> tactic = BasicProvers.SPOSE_NOT_THEN
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
-
-  val res_tac : tactic = Tactic.RES_TAC
-  val imp_res_tac : thm_tactic = Tactic.IMP_RES_TAC
 
   val map_every : ('a -> tactic) -> 'a list -> tactic = Tactical.MAP_EVERY
   val qx_genl_tac = map_every qx_gen_tac

@@ -287,6 +287,7 @@ fun REVERSE tac g =
    in
       (rev gl, jf o rev)
    end
+val reverse = REVERSE
 
 (*---------------------------------------------------------------------------
  * REVERSE_LT: A list_tactic that reverses a list of subgoals
@@ -327,6 +328,7 @@ fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT
 
 val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
+val all_tac = ALL_TAC
 
 fun TRY tac = tac ORELSE ALL_TAC
 fun TRY_LT ltac = ltac ORELSE_LT ALL_LT
@@ -339,6 +341,7 @@ fun TRYALL tac = ALLGOALS (TRY tac) ;
 
 fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
 fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
+val rpt = REPEAT
 
 (*---------------------------------------------------------------------------
  * Add extra subgoals, which may be needed to make a tactic valid;
@@ -490,6 +493,7 @@ fun ASSUM_LIST aslfun (g as (asl, _)) = aslfun (map ASSUME asl) g
 
 fun POP_ASSUM thfun (a :: asl, w) = thfun (ASSUME a) (asl, w)
   | POP_ASSUM   _   ([], _) = raise ERR "POP_ASSUM" "no assum"
+val pop_assum = POP_ASSUM
 
 (*---------------------------------------------------------------------------
  * Pop off the entire assumption list and give it to a function (tactic)
@@ -593,6 +597,8 @@ in
         shut_parser_up (find ttac "FIRST_ASSUM" (A, g)) A
   fun LAST_ASSUM ttac (A, g) =
         shut_parser_up (find ttac "LAST_ASSUM" (A, g)) (List.rev A)
+  val first_assum = FIRST_ASSUM
+  val last_assum = LAST_ASSUM
 end
 
 
@@ -612,6 +618,8 @@ local
 in
    val FIRST_X_ASSUM = FIRST_ASSUM o f
    val LAST_X_ASSUM = LAST_ASSUM o f
+   val first_x_assum = FIRST_X_ASSUM
+   val last_x_assum = LAST_X_ASSUM
 end
 
 (*---------------------------------------------------------------------------

@@ -37,16 +37,19 @@ sig
   val SPLIT_LT       : int -> list_tactic * list_tactic -> list_tactic
   val ROTATE_LT      : int -> list_tactic
   val REVERSE        : tactic -> tactic
+  val reverse        : tactic -> tactic
   val REVERSE_LT     : list_tactic
   val FAIL_TAC       : string -> tactic
   val NO_TAC         : tactic
   val FAIL_LT        : string -> list_tactic
   val NO_LT          : list_tactic
   val ALL_TAC        : tactic
+  val all_tac        : tactic
   val ALL_LT         : list_tactic
   val TRY            : tactic -> tactic
   val TRY_LT         : list_tactic -> list_tactic
   val REPEAT         : tactic -> tactic
+  val rpt            : tactic -> tactic
   val REPEAT_LT      : list_tactic -> list_tactic
   val VALID          : tactic -> tactic
   val VALID_LT       : list_tactic -> list_tactic
@@ -63,11 +66,16 @@ sig
   val FIRST_PROVE    : tactic list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic
   val FIRST_ASSUM    : thm_tactic -> tactic
+  val first_assum    : thm_tactic -> tactic
   val FIRST_X_ASSUM  : thm_tactic -> tactic
+  val first_x_assum  : thm_tactic -> tactic
   val LAST_ASSUM     : thm_tactic -> tactic
+  val last_assum     : thm_tactic -> tactic
   val LAST_X_ASSUM   : thm_tactic -> tactic
+  val last_x_assum   : thm_tactic -> tactic
   val ASSUM_LIST     : (thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
+  val pop_assum      : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic
   val PAT_ASSUM      : term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (thm list -> tactic) -> tactic

@@ -106,6 +106,8 @@ fun CCONTR_TAC (asl, w) = ([(mk_neg w :: asl, boolSyntax.F)], sing (CCONTR w))
 val ASSUME_TAC: thm_tactic =
    fn bth => fn (asl, w) => ([(concl bth :: asl, w)], sing (PROVE_HYP bth))
 
+val assume_tac = ASSUME_TAC
+
 (*---------------------------------------------------------------------------*
  * "Freeze" a theorem to prevent instantiation                               *
  *                                                                           *
@@ -139,11 +141,14 @@ val CONJ_TAC: tactic =
           fn [th1, th2] => CONJ th1 th2 | _ => raise Match)
       end
       handle HOL_ERR _ => raise ERR "CONJ_TAC" ""
+val conj_tac = CONJ_TAC
 
 (* ASM1 & ASM2 variants assume the given conjunct when proving the other one *)
 
 val CONJ_ASM1_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 1 2 ;
 val CONJ_ASM2_TAC = CONJ_TAC THEN_LT USE_SG_THEN ASSUME_TAC 2 1 ;
+val conj_asm1_tac = CONJ_ASM1_TAC
+val conj_asm2_tac = CONJ_ASM2_TAC
 
 (*---------------------------------------------------------------------------*
  * Disjunction introduction                                                  *
@@ -161,6 +166,7 @@ fun DISJ1_TAC (asl, w) =
       ([(asl, disj1)], sing (fn th => DISJ1 th disj2))
    end
    handle HOL_ERR _ => raise ERR "DISJ1_TAC" ""
+val disj1_tac = DISJ1_TAC
 
 (*---------------------------------------------------------------------------*
  *      A \/ B                                                               *
@@ -176,6 +182,7 @@ fun DISJ2_TAC (asl, w) =
       ([(asl, disj2)], sing (DISJ2 disj1))
    end
    handle HOL_ERR _ => raise ERR "DISJ2_TAC" ""
+val disj2_tac = DISJ2_TAC
 
 (*---------------------------------------------------------------------------*
  * Implication elimination                                                   *
@@ -188,6 +195,7 @@ fun DISJ2_TAC (asl, w) =
 
 fun MP_TAC thb (asl, w) =
    ([(asl, mk_imp (concl thb, w))], sing (fn thimp => MP thimp thb))
+val mp_tac = MP_TAC
 
 (*---------------------------------------------------------------------------*
  * Equality Introduction                                                     *
@@ -207,6 +215,7 @@ val EQ_TAC: tactic =
           fn [th1, th2] => IMP_ANTISYM_RULE th1 th2 | _ => raise Match)
       end
       handle HOL_ERR _ => raise ERR "EQ_TAC" ""
+val eq_tac = EQ_TAC
 
 (*---------------------------------------------------------------------------*
  * Universal quantifier                                                      *
@@ -275,6 +284,7 @@ val GEN_TAC: tactic =
              (gen_variant Parse.is_constname "" (free_varsl (w :: asl)) Bvar)
              (asl, w)
       end
+val gen_tac = GEN_TAC
 
 (*---------------------------------------------------------------------------*
  * Specialization                                                            *
@@ -312,6 +322,7 @@ fun EXISTS_TAC t : tactic =
          ([(asl, subst [Bvar |-> t] Body)], sing (EXISTS (w, t)))
       end
       handle HOL_ERR _ => raise ERR "EXISTS_TAC" ""
+val exists_tac = EXISTS_TAC
 
 (*---------------------------------------------------------------------------*
  * Substitution                                                              *
@@ -373,6 +384,7 @@ fun SUBST1_TAC rthm = SUBST_TAC [rthm]
 fun RULE_ASSUM_TAC rule : tactic =
    POP_ASSUM_LIST
       (fn asl => MAP_EVERY ASSUME_TAC (rev_itlist (cons o rule) asl []))
+val rule_assum_tac = RULE_ASSUM_TAC
 
 fun RULE_L_ASSUM_TAC rule : tactic =
    POP_ASSUM_LIST
@@ -390,6 +402,7 @@ val CHECK_ASSUME_TAC: thm_tactic =
              DISCARD_TAC gth, ASSUME_TAC gth]
 
 val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN CHECK_ASSUME_TAC
+val strip_assume_tac = STRIP_ASSUME_TAC
 
 (*---------------------------------------------------------------------------*
  * given a theorem:                                                          *
@@ -524,6 +537,7 @@ fun X_CHOOSE_TAC x = X_CHOOSE_THEN x ASSUME_TAC
 fun STRIP_TAC g =
    STRIP_GOAL_THEN STRIP_ASSUME_TAC g
    handle HOL_ERR _ => raise ERR "STRIP_TAC" ""
+val strip_tac = STRIP_TAC
 
 val FILTER_STRIP_TAC = FILTER_STRIP_THEN STRIP_ASSUME_TAC
 
@@ -681,6 +695,7 @@ end
  *---------------------------------------------------------------------------*)
 
 fun NTAC n tac = funpow n (curry op THEN tac) ALL_TAC
+val ntac = NTAC
 
 (*---------------------------------------------------------------------------*
  * WEAKEN_TAC tm - Removes the first term meeting P from the hypotheses      *
@@ -780,6 +795,7 @@ in
                ([(A, ant)], fn thl => MP (DISCH ant gth) (hd thl))
             end
       end
+   val match_mp_tac = MATCH_MP_TAC
 end
 
 (* --------------------------------------------------------------------------*
@@ -821,6 +837,9 @@ in
    fun RES_TAC g =
       RES_THEN (REPEAT_GTCL IMP_RES_THEN STRIP_ASSUME_TAC) g
       handle HOL_ERR _ => ALL_TAC g
+
+   val res_tac = RES_TAC
+   val imp_res_tac = IMP_RES_TAC
 end
 
 (*--------------------------------------------------------------------------*
@@ -930,6 +949,8 @@ fun HO_MATCH_MP_TAC th =
          end
          handle e => raise (wrap_exn "Tactic" "HO_MATCH_MP_TAC" e)
    end
+
+val ho_match_mp_tac = HO_MATCH_MP_TAC
 
 (*----------------------------------------------------------------------*
  *   Tactics explicitly declaring subgoals.                             *
