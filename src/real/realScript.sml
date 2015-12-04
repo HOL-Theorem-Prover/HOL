@@ -3561,9 +3561,8 @@ val lt_int = store_thm(
 val NUM_FLOOR_def = zDefine`
    NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
 
-val NUM_CEILING_def =
- Define
-   `NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num(n)`;
+val NUM_CEILING_def = zDefine`
+   NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num n`;
 
 val _ = overload_on ("flr",``NUM_FLOOR``);
 val _ = overload_on ("clg",``NUM_CEILING``);
@@ -3648,11 +3647,46 @@ val NUM_FLOOR_DIV_LOWERBOUND = store_thm
   SRW_TAC [][add1_gt_exists] THEN Cases_on `n` THEN
   POP_ASSUM MP_TAC THEN SRW_TAC [][real_gt, REAL_LT_LDIV_EQ]);
 
+val NUM_FLOOR_BASE = Q.store_thm("NUM_FLOOR_BASE",
+  `!r. r < 1 ==> (NUM_FLOOR r = 0)`,
+  SRW_TAC [] [NUM_FLOOR_def]
+  THEN numLib.LEAST_ELIM_TAC
+  THEN SRW_TAC [] []
+  THEN1 (Q.EXISTS_TAC `0` THEN ASM_SIMP_TAC std_ss [real_gt])
+  THEN Cases_on `n = 0`
+  THEN1 ASM_REWRITE_TAC []
+  THEN `0 < n` by DECIDE_TAC
+  THEN RES_TAC
+  THEN FULL_SIMP_TAC arith_ss [real_gt]
+  )
+
+val lem =
+  metisLib.METIS_PROVE [REAL_LT_01, REAL_LET_TRANS]
+    ``!r: real. r <= 0 ==> r < 1``
+
+val NUM_FLOOR_NEG = Q.prove(
+  `NUM_FLOOR (~real_of_num n) = 0`,
+  MATCH_MP_TAC NUM_FLOOR_BASE
+  THEN MATCH_MP_TAC lem
+  THEN REWRITE_TAC [REAL_NEG_LE0, REAL_POS])
+
+val NUM_FLOOR_NEGQ = Q.prove(
+  `0 < m ==> (NUM_FLOOR (~real_of_num n / real_of_num m) = 0)`,
+  ONCE_REWRITE_TAC [GSYM REAL_LT]
+  THEN STRIP_TAC
+  THEN MATCH_MP_TAC NUM_FLOOR_BASE
+  THEN ASM_SIMP_TAC std_ss [REAL_LT_LDIV_EQ, REAL_MUL_LID, lt_int]
+  THEN FULL_SIMP_TAC arith_ss [REAL_LT]
+  )
+
 val NUM_FLOOR_EQNS = store_thm(
  "NUM_FLOOR_EQNS",
   ``(NUM_FLOOR (real_of_num n) = n) /\
-    (0 < m ==> (NUM_FLOOR (real_of_num n / real_of_num m) = n DIV m))``,
-  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THENL [
+    (NUM_FLOOR (~real_of_num n) = 0) /\
+    (0 < m ==> (NUM_FLOOR (real_of_num n / real_of_num m) = n DIV m)) /\
+    (0 < m ==> (NUM_FLOOR (~real_of_num n / real_of_num m) = 0))``,
+  REWRITE_TAC [NUM_FLOOR_NEG, NUM_FLOOR_NEGQ]
+  THEN SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THENL [
     SIMP_TAC (srw_ss()) [real_gt, REAL_LT] THEN
     CONJ_TAC THENL
      [Q.EXISTS_TAC `n` THEN RW_TAC old_arith_ss [],
@@ -3697,6 +3731,63 @@ val NUM_FLOOR_UPPER_BOUND = store_thm(
   ``(&n <= x:real) = (n < NUM_FLOOR(x + 1))``,
   MP_TAC (AP_TERM negation NUM_FLOOR_LOWER_BOUND) THEN
   PURE_REWRITE_TAC [REAL_NOT_LT, NOT_LESS_EQUAL,IMP_CLAUSES]);
+
+val NUM_CEILING_NUM_FLOOR = Q.store_thm("NUM_CEILING_NUM_FLOOR",
+  `!r. NUM_CEILING r =
+       let n = NUM_FLOOR r in
+       if r <= 0 \/ (r = real_of_num n) then n else n + 1`,
+  SRW_TAC [boolSimps.LET_ss] [NUM_CEILING_def, NUM_FLOOR_BASE]
+  THEN1 (IMP_RES_TAC lem
+         THEN ASM_SIMP_TAC std_ss [NUM_FLOOR_BASE]
+         THEN numLib.LEAST_ELIM_TAC
+         THEN CONJ_TAC
+         THEN1 METIS_TAC []
+         THEN SRW_TAC [] []
+         THEN FULL_SIMP_TAC std_ss [REAL_NOT_LE]
+         THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
+         THEN `0 < n` by DECIDE_TAC
+         THEN METIS_TAC [REAL_LTE_ANTSYM])
+  THEN1 (POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [th])))
+         THEN SRW_TAC [] [NUM_FLOOR_LET, NUM_FLOOR_def, real_gt])
+  THEN FULL_SIMP_TAC std_ss [REAL_NOT_LE]
+  THEN numLib.LEAST_ELIM_TAC
+  THEN CONJ_TAC
+  THEN1 (Q.EXISTS_TAC `flr r + 1`
+         THEN Cases_on `r < 1`
+         THEN1 SRW_TAC [] [NUM_FLOOR_BASE, REAL_LT_IMP_LE]
+         THEN `0 <= r` by METIS_TAC [REAL_NOT_LT, REAL_LE_01, REAL_LE_TRANS]
+         THEN METIS_TAC
+              [NUM_FLOOR_DIV_LOWERBOUND
+               |> Q.INST [`y` |-> `1r`]
+               |> SIMP_RULE (srw_ss()) [],
+              REAL_LT_IMP_LE])
+  THEN SRW_TAC [] []
+  THEN Q.PAT_ASSUM `x <> y` MP_TAC
+  THEN SIMP_TAC std_ss [NUM_FLOOR_def]
+  THEN numLib.LEAST_ELIM_TAC
+  THEN CONJ_TAC
+  THEN1 (Q.EXISTS_TAC `n`
+         THEN ASM_SIMP_TAC std_ss [real_gt, GSYM REAL_ADD, REAL_LT_ADD1])
+  THEN SRW_TAC [] [real_gt]
+  THEN FULL_SIMP_TAC std_ss [REAL_NOT_LE, REAL_NOT_LT]
+  THEN Cases_on `n' + 1 < n`
+  THEN1 METIS_TAC [REAL_LT_ANTISYM]
+  THEN Cases_on `n' + 1 = n`
+  THEN1 ASM_REWRITE_TAC []
+  THEN `n < n' + 1` by DECIDE_TAC
+  THEN Cases_on `n = 0`
+  THEN FULL_SIMP_TAC std_ss []
+  THEN1 METIS_TAC [REAL_LET_ANTISYM]
+  THEN `n - 1 < n'` by DECIDE_TAC
+  THEN RES_TAC
+  THEN FULL_SIMP_TAC arith_ss []
+  THEN REV_FULL_SIMP_TAC std_ss [DECIDE ``n <> 0n ==> (n - 1 + 1 = n)``]
+  THEN IMP_RES_TAC REAL_LE_ANTISYM
+  THEN FULL_SIMP_TAC (srw_ss()) []
+  THEN `n' - 1 < n'` by DECIDE_TAC
+  THEN RES_TAC
+  THEN FULL_SIMP_TAC arith_ss []
+  )
 
 (*---------------------------------------------------------------------------*)
 (* Ceiling function                                                          *)

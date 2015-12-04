@@ -298,8 +298,20 @@ val float_round_to_integral_def = Define`
 
 val float_to_int_def = Define`
    float_to_int mode (x: ('t, 'w) float) =
-   case float_value (float_round_to_integral mode x) of
-      Float r => SOME (INT_FLOOR r)
+   case float_value x of
+      Float r =>
+       SOME (case mode of
+                roundTiesToEven =>
+                  let f = INT_FLOOR r in
+                  let df = abs (r - real_of_int f) in
+                  if (df < 1r / 2) \/ (df = 1r / 2) /\ EVEN (Num (ABS f)) then
+                    f
+                  else
+                    INT_CEILING r
+              | roundTowardPositive => INT_CEILING r
+              | roundTowardNegative => INT_FLOOR r
+              | roundTowardZero =>
+                  if x.Sign = 1w then INT_CEILING r else INT_FLOOR r)
     | _ => NONE`
 
 val float_sqrt_def = Define`
@@ -3206,13 +3218,6 @@ val float_round_to_integral_compute = Q.store_thm(
     (!m. float_round_to_integral m (float_some_nan (:'t # 'w)) =
          float_some_nan (:'t # 'w))`,
    simp [float_round_to_integral_def, float_values]
-   )
-
-val float_to_int_compute = Q.store_thm("float_to_int_compute",
-   `(!m. float_to_int m (float_minus_infinity (:'t # 'w)) = NONE) /\
-    (!m. float_to_int m (float_plus_infinity (:'t # 'w)) = NONE) /\
-    (!m. float_to_int m (float_some_nan (:'t # 'w)) = NONE)`,
-   simp [float_to_int_def, float_round_to_integral_compute, float_values]
    )
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
