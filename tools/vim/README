@@ -43,8 +43,8 @@ on, you can add "filetype on" to your ~/.vimrc.
 Use of HOL mode may cause your Vim to appear frozen and unresponsive. This
 happens when the plugin is trying to write to a fifo that is not being read.
 The remedy is to read the fifo: either start hol (if everything is set up
-correctly) or simply cat $(HOLDIR)/tools/vim/fifo (or $(HOLDIR)/$(VIMHOL_FIFO)
-if you are using a custom fifo path).
+correctly) or simply cat $(HOLDIR)/tools/vim/fifo (or $(VIMHOL_FIFO) if you are
+using a custom fifo path).
 
 == Key mappings ==
 
