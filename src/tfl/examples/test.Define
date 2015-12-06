@@ -1021,3 +1021,27 @@ val term_cmp_def =
   WF_REL_TAC `measure (term_size o FST)` THEN
   Induct_on `ts1` THEN RW_TAC list_ss [term_size_def] THENL
   [ALL_TAC, RES_TAC THEN POP_ASSUM (MP_TAC o SPEC_ALL)] THEN DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Monadic-style definitions. From Anthony Fox.                              *)
+(*---------------------------------------------------------------------------*)
+
+load "state_transformerTheory";
+
+val foo_def = 
+ Define 
+   `foo n = BIND (UNIT (n - 1)) 
+                 (\k. if n = 0 then UNIT T else foo k)`;
+
+val eta_free = REWRITE_RULE [ETA_THM] foo_def;
+
+val test_def = Define`
+  test n = BIND (UNIT (n - 1))
+                (\a. BIND (UNIT a)
+                     (\b. if n = 0 then UNIT T else test a))`
+
+
+val test_def = Define`
+  test n = BIND (UNIT (n - 1))
+                (\a. BIND (UNIT a)
+                     (\b. if n = 0 then UNIT T else test b))`;
