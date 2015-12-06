@@ -1167,4 +1167,40 @@ val wf_map = store_thm("wf_map[simp]",
   ``!t f. wf (map f t) = wf t``,
   Induct \\ fs [wf_def,map_def]);
 
+val map_map_o = store_thm("map_map_o",
+  ``!t f g. map f (map g t) = map (f o g) t``,
+  Induct >> fs[map_def])
+
+val map_insert = store_thm("map_insert",
+  ``!f x y z.
+  map f (insert x y z) = insert x (f y) (map f z)``,
+  completeInduct_on`x`>>
+  Induct_on`z`>>
+  rw[]>>
+  simp[Once map_def,Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  BasicProvers.EVERY_CASE_TAC>>fs[map_def]>>
+  `(x-1) DIV 2 < x` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  fs[map_def])
+
+val insert_shadow = store_thm("insert_shadow",
+  ``!t a b c.
+  insert a b (insert a c t) = insert a b t``,
+  completeInduct_on`a`>>
+  Induct>>
+  simp[Once insert_def]>>
+  rw[]>>
+  simp[Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  `(a-1) DIV 2 < a` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  metis_tac[])
+
 val _ = export_theory();
