@@ -791,7 +791,14 @@ end
  * (3) hypotheses of the theorem provided also become new subgoals           *
  * --------------------------------------------------------------------------*)
 
-fun irule thm = prim_irule (SPEC_UNDISCH_EXL (GEN_ALL thm)) ;
+fun irule thm = let
+  val th' = IRULE_CANON thm
+in
+  if th' |> concl |> strip_forall |> #2 |> is_imp then
+    MATCH_MP_TAC th' THEN REPEAT CONJ_TAC
+  else MATCH_ACCEPT_TAC th'
+end
+val IRULE_TAC = irule
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *

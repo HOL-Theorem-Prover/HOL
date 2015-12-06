@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Kananaskis-11
 
 <!-- search and replace ?????? strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
 (Released: ??????)
 
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-11 release of HOL 4.
 
 Contents
 --------
@@ -28,6 +28,11 @@ New features:
   The new primitive `gen_prim_specification` in the kernel is used to implement the new rule, `gen_new_specification`, and is also used to re-implement `new_definition` and `new_specification`.
   We removed `prim_constant_definition` from the kernel, but kept `prim_specification` because the new derivation of `new_specification` uses pairs.
   ([Github pull-req](https://github.com/HOL-Theorem-Prover/HOL/pull/201))
+
+- Various commands for moving over and selecting HOL tactics in the emacs mode have been improved.
+  We have also added a new command `hol-find-eval-next-tactic` (bound to `M-h M-e` by default), which selects and highlights the next tactic in the source text, and then applies it to the current goal in the `*HOL*` buffer.
+  This shortcuts the current idiom, which requires the tactic to be highlighted manually, and then applied *via* `M-h e`.
+  (The advantage of the latter is that one can select specific tactic sequences to be applied all at once.)
 
 Bugs fixed:
 -----------
@@ -116,7 +121,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol.sourceforge.net)*
+*[HOL4, Kananaskis-11](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-10.release.html)
 

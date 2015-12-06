@@ -37,3 +37,18 @@ val failing_tydef =
            then
              die "FAILED"
            else (print "OK\n"; TRUTH)
+
+val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
+val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)
+val (sgs, _) = Q.MATCH_ABBREV_TAC `a * _ <= b /\ _` goal
+val expectedg = ``(a:num) * y <= b /\ !x y:'a. x < f y``
+val exab1 = ``Abbrev((a:num) = n + 10)``
+val exab2 = ``Abbrev((b:num) = 42315)``
+val _ = case sgs of
+            [(asms, g')] =>
+            if aconv g' expectedg andalso op_mem aconv exab1 asms andalso
+               op_mem aconv exab2 asms andalso length asms = 2
+            then
+              print "OK\n"
+            else die "FAILED!"
+          | _ => die "FAILED!"

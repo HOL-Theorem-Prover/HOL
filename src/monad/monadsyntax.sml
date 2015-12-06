@@ -131,15 +131,20 @@ val _ = Parse.temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
 fun dest_bind G t = let
   open term_pp_types
   val oinfo = term_grammar.overload_info G
-  val (fx, y) = dest_comb t
-  val (f, x) = dest_comb fx
-  val prname = case Overload.overloading_of_term oinfo f of
-                 NONE => if is_var f then #1 (dest_var f)
-                         else raise UserPP_Failed
-               | SOME s => s
+  val (f, args) = valOf (Overload.oi_strip_comb oinfo t)
+                  handle Option => raise UserPP_Failed
+  val (x,y) =
+      case args of
+          [x,y] => (x,y)
+        | _ => raise UserPP_Failed
+  val prname =
+      f |> dest_var |> #1 |> GrammarSpecials.dest_fakeconst_name
+        |> valOf |> #fake
+        handle HOL_ERR _ => raise UserPP_Failed
+             | Option => raise UserPP_Failed
   val _ = prname = monad_unitbind orelse
           (prname = monad_bind andalso pairSyntax.is_pabs y) orelse
-          raise UserPP_Failed
+           raise UserPP_Failed
 in
   SOME (prname, x, y)
 end handle HOL_ERR _ => NONE

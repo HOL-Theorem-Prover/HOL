@@ -75,17 +75,19 @@ val _ = Datatype.Hol_datatype `list = NIL | CONS of 'a => list`;
 local open OpenTheoryMap in
 val ns = ["Data","List"]
 val _ = OpenTheory_tyop_name{tyop={Thy="list",Tyop="list"},name=(ns,"list")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="APPEND"},name=(ns,"@")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="EXISTS"},name=(ns,"any")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="EVERY"},name=(ns,"all")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="FILTER"},name=(ns,"filter")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="MAP"},name=(ns,"map")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="CONS"},name=(ns,"::")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="HD"},name=(ns,"head")}
-val _ = OpenTheory_const_name{const={Thy="list",Name="TL"},name=(ns,"tail")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="EVERY"},name=(ns,"all")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="EXISTS"},name=(ns,"any")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="FILTER"},name=(ns,"filter")}
 val _ = OpenTheory_const_name{const={Thy="list",Name="FLAT"},name=(ns,"concat")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="LENGTH"},name=(ns,"length")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="MAP"},name=(ns,"map")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="NIL"},name=(ns,"[]")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="REVERSE"},name=(ns,"reverse")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="TAKE"},name=(ns,"take")}
+val _ = OpenTheory_const_name{const={Thy="list",Name="TL"},name=(ns,"tail")}
 end
 
 (*---------------------------------------------------------------------------*)
@@ -3440,7 +3442,7 @@ val LAST_REVERSE = Q.store_thm("LAST_REVERSE",
    Induct >> simp [])
 
 val last_drop = Q.store_thm ("last_drop",
-  `!l n. n < LENGTH l ⇒ (LAST (DROP n l) = LAST l)`,
+  `!l n. n < LENGTH l ==> (LAST (DROP n l) = LAST l)`,
   Induct >> rw [] >>
   Q.SPEC_THEN`l`FULL_STRUCT_CASES_TAC list_CASES >> fs [] >>
   FULL_SIMP_TAC (srw_ss()++numSimps.ARITH_ss) [] >> SRW_TAC[] [] >>
@@ -3534,11 +3536,13 @@ val LUPDATE_SOME_MAP = store_thm("LUPDATE_SOME_MAP",
   Cases_on `n` THEN fs [LUPDATE_def]);
 
 val ZIP_EQ_NIL = store_thm("ZIP_EQ_NIL",
-  ``∀l1 l2. (LENGTH l1 = LENGTH l2) ⇒ ((ZIP (l1,l2) = []) ⇔ ((l1 = []) ∧ (l2 = [])))``,
-  REPEAT GEN_TAC >> Cases_on`l1`>>rw[LENGTH_NIL_SYM,ZIP]>> Cases_on`l2`>>fs[ZIP])
+  ``!l1 l2. (LENGTH l1 = LENGTH l2) ==>
+            ((ZIP (l1,l2) = []) <=> ((l1 = []) /\ (l2 = [])))``,
+  REPEAT GEN_TAC >> Cases_on`l1` >> rw[LENGTH_NIL_SYM,ZIP] >> Cases_on`l2` >>
+  fs[ZIP])
 
 val LUPDATE_SAME = store_thm("LUPDATE_SAME",
-  ``∀n ls. n < LENGTH ls ⇒ (LUPDATE (EL n ls) n ls = ls)``,
+  ``!n ls. n < LENGTH ls ==> (LUPDATE (EL n ls) n ls = ls)``,
   rw[LIST_EQ_REWRITE,EL_LUPDATE]>>rw[])
 
 end;

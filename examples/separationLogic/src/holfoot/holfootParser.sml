@@ -1172,7 +1172,7 @@ let
    fun initPfundecl (Pfundecl(assume_opt, funname, (ref_args, val_args), rwOpt, preCondOpt, localV,
    fun_body, postCondOpt)) =
       (funname, ((map (K false) ref_args), []:string list, []:string list))
-   val init_funL = map initPfundecl fun_decl_list;		
+   val init_funL = map initPfundecl fun_decl_list;
    val emp_s = Redblackset.empty String.compare
    val init = map (fn p => (init_funL, (emp_s,emp_s), p)) fun_decl_list
 

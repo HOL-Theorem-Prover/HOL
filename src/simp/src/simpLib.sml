@@ -133,16 +133,17 @@ fun merge_names list =
 (*---------------------------------------------------------------------------*)
 
 fun merge_ss (s:ssfrag list) =
-    SSFRAG_CON {name=merge_names (map (#name o D) s),
-                convs=flatten (map (#convs o D) s),
-                rewrs=flatten (map (#rewrs o D) s),
-                filter=SOME (end_foldr (op oo)
-                                       (mapfilter (the o #filter o D) s))
-                       handle HOL_ERR _ => NONE,
-                ac=flatten (map (#ac o D) s),
-	        dprocs=flatten (map (#dprocs o D) s),
-	        congs=flatten (map (#congs o D) s),
-                relsimps = flatten (map (#relsimps o D) s)};
+  SSFRAG_CON
+    { name     = merge_names (map (#name o D) s),
+      convs    = flatten (map (#convs o D) s),
+      rewrs    = flatten (map (#rewrs o D) s),
+      filter   = SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
+                 handle HOL_ERR _ => NONE,
+      ac       = flatten (map (#ac o D) s),
+      dprocs   = flatten (map (#dprocs o D) s),
+      congs    = flatten (map (#congs o D) s),
+      relsimps = flatten (map (#relsimps o D) s)
+    }
 
 fun named_rewrites name = (name_ss name) o rewrites;
 fun named_merge_ss name = (name_ss name) o merge_ss;
@@ -503,6 +504,45 @@ fun remove_ssfrags ss names =
        |> snd |> List.rev
        |> mk_simpset
 
+local
+  val lhs_of_thm = boolSyntax.lhs o snd o boolSyntax.strip_forall o Thm.concl
+  fun term_of_thm th =
+    case (Lib.total lhs_of_thm th, Thm.hyp th) of
+       (SOME tm, []) => tm
+     | _ => boolSyntax.T
+  fun match_eq tm1 tm2 =
+    Lib.can (Term.match_term tm1) tm2 andalso Lib.can (Term.match_term tm2) tm1
+  fun exists_match l thm = List.exists (match_eq (term_of_thm thm)) l
+  fun remove_theorems_from_frag f
+    (SSFRAG_CON { name, convs, rewrs, ac, filter, dprocs, congs, relsimps}) =
+      SSFRAG_CON
+        { name = name,
+          convs = convs,
+          rewrs = List.mapPartial (f false) rewrs,
+          ac = let val ok = Option.isSome o (f true) in
+                 List.filter (fn (th1, th2) => ok th1 andalso ok th2) ac
+               end,
+          filter = filter,
+          dprocs = dprocs,
+          congs = congs,
+          relsimps = relsimps
+        }
+in
+  fun remove_theorems avoids (SS {mk_rewrs, ssfrags, ...}) =
+    let
+      fun thm_to_thms thm =
+         List.map fst (mk_rewrs (thm, BoundedRewrites.BOUNDED (ref 1)))
+      val part = List.partition (exists_match avoids)
+      fun f ac thm =
+        let
+          val (l, r) = part (if ac then [thm] else thm_to_thms thm)
+        in
+          if List.null l then SOME thm else Lib.total Drule.LIST_CONJ r
+        end
+    in
+      mk_simpset (List.rev (List.map (remove_theorems_from_frag f) ssfrags))
+    end
+end
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)

@@ -439,6 +439,21 @@ fun TOP_SWEEP_CONV conv tm =
 fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th
 
 (*------------------------------------------------------------------------*
+ * Apply a conversion to the hypotheses of a theorem                      *
+ * hypsel selects hypotheses to be dealt with;                             *
+ * error if a conversion fails (as distinct from raising UNCHANGED)        *
+ *------------------------------------------------------------------------*)
+
+fun HYP_CONV_RULE hypsel conv th =
+  let fun get_eq_thm h =
+      if hypsel h then SOME (conv h) handle UNCHANGED => NONE
+      else NONE ;
+    val hyp_eq_thms = List.mapPartial get_eq_thm (hyp th) ;
+    val hyp_imp_thms = map (UNDISCH o #2 o EQ_IMP_RULE) hyp_eq_thms ;
+    val new_th = Lib.itlist PROVE_HYP hyp_imp_thms th ;
+  in new_th end ;
+
+(*------------------------------------------------------------------------*
  * Rule for beta-reducing on all beta-redexes                             *
  *------------------------------------------------------------------------*)
 

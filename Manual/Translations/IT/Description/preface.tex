@@ -15,82 +15,82 @@ E' uno di quattro volumi che compongono la documentazione per \HOL:
 \noindent Si farà riferimento a questi quattro documenti con i nomi abbreviati (in
 maiuscoletto inclinato) dati di sopra.
 
-Questo documento, \DESCRIPTION, è una guida avanzata per utenti con qualche 
-esperienza precedente del sistema. I principianti dovrebbero iniziare con il 
+Questo documento, \DESCRIPTION, è una guida avanzata per utenti con qualche
+esperienza precedente del sistema. I principianti dovrebbero iniziare con il
 documento di accompagnamento \TUTORIAL.
 
-Il sistema \HOL\ è sviluppato per supportare la dimostrazione interattiva di teoremi nella 
-logica di ordine superiore (da qui l'acronimo `\HOL' [Higher Order Logic (ndt)]). A questo scopo, la logica 
-formale è interfacciata a un linguaggio di programmazione di scopo generale (\ML, per 
-meta-linguaggio) in cui possono essere denotati i termini e i teoremi della logica, 
-possono essere espresse ed applicate le strategie di dimostrazione, e sviluppate le teorie logiche. 
-La versione della logica di ordine superiore usata in \HOL\ è il calcolo dei predicati 
-con termini dal lambda calcolo tipizzato (cioè la teoria dei 
-tipi semplici). Questo fu inizialmente sviluppato come una fondazione per la matematica 
-\cite{Church}. La principale area di applicazione di \HOL\ fu inizialmente 
-intesa essere la specifica e la verifica dei modelli hardware. 
-(L'uso della logica di ordine superiore a questo scopo fu inizialmente difesa da 
-Keith Hanna \cite{Hanna-Daeche}.) Tuttavia, la logica non limita 
+Il sistema \HOL\ è sviluppato per supportare la dimostrazione interattiva di teoremi nella
+logica di ordine superiore (da qui l'acronimo `\HOL' [Higher Order Logic (ndt)]). A questo scopo, la logica
+formale è interfacciata a un linguaggio di programmazione di scopo generale (\ML, per
+meta-linguaggio) in cui possono essere denotati i termini e i teoremi della logica,
+possono essere espresse ed applicate le strategie di dimostrazione, e sviluppate le teorie logiche.
+La versione della logica di ordine superiore usata in \HOL\ è il calcolo dei predicati
+con termini dal lambda calcolo tipizzato (cioè la teoria dei
+tipi semplici). Questo fu inizialmente sviluppato come una fondazione per la matematica
+\cite{Church}. La principale area di applicazione di \HOL\ fu inizialmente
+intesa essere la specifica e la verifica dei modelli hardware.
+(L'uso della logica di ordine superiore a questo scopo fu inizialmente difesa da
+Keith Hanna \cite{Hanna-Daeche}.) Tuttavia, la logica non limita
 le applicazione all'hardware; \HOL\ è stato applicato a molte altre aree.
 
-Questo documento presenta la logica \HOL\ nella sua forma \ML{}, e 
-spiega i mezzi con cui le funzioni del meta-linguaggio possono essere usate per 
-generare dimostrazioni nella logica. Così. descrive come il sistema 
-astratto di \LOGIC{} è di fatto implementato nel linguaggio di programmazione 
-\ML{}, fornendo una descrizione complessiva delle principali caratteristiche 
+Questo documento presenta la logica \HOL\ nella sua forma \ML{}, e
+spiega i mezzi con cui le funzioni del meta-linguaggio possono essere usate per
+generare dimostrazioni nella logica. Così. descrive come il sistema
+astratto di \LOGIC{} è di fatto implementato nel linguaggio di programmazione
+\ML{}, fornendo una descrizione complessiva delle principali caratteristiche
 del sistema.
 
 L'approccio di meccanizzare le dimostrazioni formali usato in \HOL\ è dovuto a Robin
-Milner \cite{Edinburgh-LCF}, che ha anche diretto il team che ha progettato 
-e implementato il linguaggio \ML. Quel lavoro era centrato su un sistema 
-chiamato \LCF\ (logica per le funzioni computabili), che era inteso per 
-il ragionamento interattivo automatizzato circa funzioni di ordine superiore definite 
-ricorsivamente. L'interfaccia della logica al meta-linguaggio era reso 
-esplicito, usando la struttura di tipi dell'\ML, con l'intenzione che alla fine 
-altre logiche sarebbe state provate al posto della logica originaria. Il 
-sistema \HOL\ è un discendente diretto di \LCF; questo è riflesso in 
-ogni cosa dalla sua struttura e aspetto alla sua incorporazione dell'\ML, 
-e persino a parti della sua implementazione. Così \HOL\ soddisfa il 
+Milner \cite{Edinburgh-LCF}, che ha anche diretto il team che ha progettato
+e implementato il linguaggio \ML. Quel lavoro era centrato su un sistema
+chiamato \LCF\ (logica per le funzioni computabili), che era inteso per
+il ragionamento interattivo automatizzato circa funzioni di ordine superiore definite
+ricorsivamente. L'interfaccia della logica al meta-linguaggio era reso
+esplicito, usando la struttura di tipi dell'\ML, con l'intenzione che alla fine
+altre logiche sarebbe state provate al posto della logica originaria. Il
+sistema \HOL\ è un discendente diretto di \LCF; questo è riflesso in
+ogni cosa dalla sua struttura e aspetto alla sua incorporazione dell'\ML,
+e persino a parti della sua implementazione. Così \HOL\ soddisfa il
 piano iniziale di applicare la metodologia \LCF\ ad altre logiche.
 
-L'\LCF\ originario fu implementato ad Edimburgo nei primi anni 1970, ed ora ci si 
-riferisce ad esso come all'`\LCF di Edimburgo'. Il suo codice fu portato dallo Stanford Lisp 
-al Franz Lisp da G\'erard Huet presso l'{\small INRIA}, e fu usato in un progetto di ricerca 
-francese chiamato `Formel'. La versione Franz Lisp dell'\LCF\ di Huet fu 
-ulteriormente sviluppata a Cambridge da Larry Paulson, e divenne conosciuta come il 
-`Cambridge \LCF'. Il sistema \HOL\ è implementato sulla base di una prima versione del Cambridge 
-\LCF\ e di conseguenza molte delle caratteristiche sia dell'Edinburgh che del Cambridge \LCF\ furono 
-ereditate da \HOL. Per esempio, l'assiomatizzazione della logica di ordine superiore utilizzata 
-non è quella classica dovuta a Church, ma una formulazione equivalente 
+L'\LCF\ originario fu implementato ad Edimburgo nei primi anni 1970, ed ora ci si
+riferisce ad esso come all'`\LCF di Edimburgo'. Il suo codice fu portato dallo Stanford Lisp
+al Franz Lisp da G\'erard Huet presso l'{\small INRIA}, e fu usato in un progetto di ricerca
+francese chiamato `Formel'. La versione Franz Lisp dell'\LCF\ di Huet fu
+ulteriormente sviluppata a Cambridge da Larry Paulson, e divenne conosciuta come il
+`Cambridge \LCF'. Il sistema \HOL\ è implementato sulla base di una prima versione del Cambridge
+\LCF\ e di conseguenza molte delle caratteristiche sia dell'Edinburgh che del Cambridge \LCF\ furono
+ereditate da \HOL. Per esempio, l'assiomatizzazione della logica di ordine superiore utilizzata
+non è quella classica dovuta a Church, ma una formulazione equivalente
 influenzata da \LCF.
 
-Una versione avanzata e razionalizzata di \HOL, chiamata \HOL 88, fu 
-rilasciata (nel 1988), dopo che il sistema \HOL\ originario era stato in uso 
-per molti anni. \HOL 90 (rilasciato nel 1990) fu un porting di \HOL 88 
-in SML \cite{sml} da parte di Konrad Slind presso l'Università di Calgary. Esso è stato 
-ulteriormente sviluppato nel corso degli anni 1990. \HOL{} 4 è l'ultima 
-versione di \HOL, e anch'esso è implementato in SML; è dotato di un numero 
-di novità rispetto ai suoi predecessori. \HOL{} 4 è anche la 
+Una versione avanzata e razionalizzata di \HOL, chiamata \HOL 88, fu
+rilasciata (nel 1988), dopo che il sistema \HOL\ originario era stato in uso
+per molti anni. \HOL 90 (rilasciato nel 1990) fu un porting di \HOL 88
+in SML \cite{sml} da parte di Konrad Slind presso l'Università di Calgary. Esso è stato
+ulteriormente sviluppato nel corso degli anni 1990. \HOL{} 4 è l'ultima
+versione di \HOL, e anch'esso è implementato in SML; è dotato di un numero
+di novità rispetto ai suoi predecessori. \HOL{} 4 è anche la
 versione del sistema supportata per la comunità internazionale \HOL.
 
-Abbiamo deciso di numerare le implementazioni di \HOL{} retroattivamente nel 
+Abbiamo deciso di numerare le implementazioni di \HOL{} retroattivamente nel
 modo seguente
 \begin{enumerate}
-\item \HOL88 e precedenti: implementazioni basate su un substrato Lisp, 
+\item \HOL88 e precedenti: implementazioni basate su un substrato Lisp,
 	con l'ML Classico.
-\item \HOL90: implementazioni in Standard ML, che usano principalmente 
+\item \HOL90: implementazioni in Standard ML, che usano principalmente
 	l'implementazione SML/NJ.
-\item \HOL98 (distribuzioni Athabasca e Taupo): implementazioni che usano 
+\item \HOL98 (distribuzioni Athabasca e Taupo): implementazioni che usano
 	il Moscow ML, e con una nuova libreria e un nuovo meccanismo di teoria.
 \item \HOL{} (distribuzioni Kananaskis)
 \end{enumerate}
-Di conseguenza, con \HOL{}~4, facciamo a meno dell'abitudine di associare 
-le implementazioni con i numeri degli anni. Le distribuzioni individuali all'interno 
+Di conseguenza, con \HOL{}~4, facciamo a meno dell'abitudine di associare
+le implementazioni con i numeri degli anni. Le distribuzioni individuali all'interno
 di \HOL{}~4 conservano lo schema di nome \textit{lake-number}.
 
-In questo documento, l'acronimo `\HOL' si riferisce sia al sistema di dimostrazione 
-interattiva di teoremi sia alla versione di logica di ordine superiore che il sistema 
-supporta; dove c'è una seria ambiguità, il primo è chiamato `il sistema 
+In questo documento, l'acronimo `\HOL' si riferisce sia al sistema di dimostrazione
+interattiva di teoremi sia alla versione di logica di ordine superiore che il sistema
+supporta; dove c'è una seria ambiguità, il primo è chiamato `il sistema
 \HOL' e la seconda `la logica \HOL'.
 
 

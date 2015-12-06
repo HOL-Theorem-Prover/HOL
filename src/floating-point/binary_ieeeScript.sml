@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open lcsymtacs realLib wordsLib
+open lcsymtacs intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
 
@@ -98,7 +98,7 @@ val float_is_integral_def = Define`
        | _ => F`
 
 (* ------------------------------------------------------------------------
-   Basic operations
+   Abs and Negate (IEEE754:2008 behaviour)
    ------------------------------------------------------------------------ *)
 
 val float_negate_def = Define`
@@ -106,6 +106,18 @@ val float_negate_def = Define`
 
 val float_abs_def = Define`
    float_abs (x: ('t, 'w) float) = x with Sign := 0w`
+
+(* ------------------------------------------------------------------------
+   Abs and Negate (IEEE754:1985 behaviour)
+   ------------------------------------------------------------------------ *)
+
+val float_negate1985_def = Define`
+   float_negate1985 (x: ('t, 'w) float) =
+   if float_is_finite x then float_negate x else x`
+
+val float_abs1985_def = Define`
+   float_abs1985 (x: ('t, 'w) float) =
+   if float_is_finite x then float_abs x else x`
 
 (* ------------------------------------------------------------------------
    Some constants
@@ -284,6 +296,24 @@ val float_round_to_integral_def = Define`
          Float r => integral_round mode r
        | _ => x`
 
+val float_to_int_def = Define`
+   float_to_int mode (x: ('t, 'w) float) =
+   case float_value x of
+      Float r =>
+       SOME (case mode of
+                roundTiesToEven =>
+                  let f = INT_FLOOR r in
+                  let df = abs (r - real_of_int f) in
+                  if (df < 1r / 2) \/ (df = 1r / 2) /\ EVEN (Num (ABS f)) then
+                    f
+                  else
+                    INT_CEILING r
+              | roundTowardPositive => INT_CEILING r
+              | roundTowardNegative => INT_FLOOR r
+              | roundTowardZero =>
+                  if x.Sign = 1w then INT_CEILING r else INT_FLOOR r)
+    | _ => NONE`
+
 val float_sqrt_def = Define`
    float_sqrt mode (x: ('t, 'w) float) =
       if x.Sign = 0w then
@@ -398,7 +428,7 @@ val float_mul_add_def = Define`
    Some comparison operations
    ------------------------------------------------------------------------ *)
 
-val () = Hol_datatype `float_compare = LT | GT | EQ | UN`
+val () = Hol_datatype `float_compare = LT | EQ | GT | UN`
 
 val float_compare_def = Define`
    float_compare (x: ('t, 'w) float) (y: ('t, 'w) float) =
@@ -3176,6 +3206,19 @@ val float_infinity_negate_abs = Q.store_thm("float_infinity_negate_abs",
     rw [float_plus_infinity_def, float_minus_infinity_def,
         float_negate_def, float_abs_def]
     )
+
+(* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
+
+val float_round_to_integral_compute = Q.store_thm(
+   "float_round_to_integral_compute",
+   `(!m. float_round_to_integral m (float_minus_infinity (:'t # 'w)) =
+         float_minus_infinity (:'t # 'w)) /\
+    (!m. float_round_to_integral m (float_plus_infinity (:'t # 'w)) =
+         float_plus_infinity (:'t # 'w)) /\
+    (!m. float_round_to_integral m (float_some_nan (:'t # 'w)) =
+         float_some_nan (:'t # 'w))`,
+   simp [float_round_to_integral_def, float_values]
+   )
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 

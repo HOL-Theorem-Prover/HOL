@@ -1116,6 +1116,14 @@ in
               ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
 end
 
+fun temp_remove_absyn_postprocessor s =
+  let
+    val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
+  in
+    the_term_grammar := g;
+    res
+  end
+
 
 (*-------------------------------------------------------------------------
         Overloading

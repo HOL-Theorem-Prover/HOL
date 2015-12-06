@@ -912,8 +912,8 @@ open LoadableThyData
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun add_rewrites thyname thms = let
-  val ssfrag = simpLib.named_rewrites thyname thms
+fun add_rewrites thyname (thms : (string * thm) list) = let
+  val ssfrag = simpLib.named_rewrites thyname (map #2 thms)
   open Binarymap
 in
   augment_srw_ss [ssfrag];

@@ -12,7 +12,7 @@ Parsing, pretty-printing.
 A call to {thytype_abbrev({Name=n,Thy=t}, ty)} establishes the
 ``kernel'' name {t$n} as an abbreviation for the type {ty}, as happens
 with {type_abbrev}. In other words, after the call it becomes possible
-to write ``:args t$n`` to stand for type {ty}. If there are type
+to write {``:args t$n``} to stand for type {ty}. If there are type
 variables in {ty} they become the parameters to the new abbreviated
 type operator. These parameters need to be filled in in the {args}
 position above. If there are no type variables in {ty} then

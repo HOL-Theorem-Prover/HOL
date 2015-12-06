@@ -132,7 +132,7 @@ val NOT_LESS_0 =
 
 val LESS_0 = store_thm("LESS_0",
    --`!n. 0 < (SUC n)`--,
-   GEN_TAC 
+   GEN_TAC
     THEN REWRITE_TAC[LESS_DEF]
     THEN EXISTS_TAC (--`\x.x = 0`--)
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -176,20 +176,20 @@ val LESS_MONO_EQ =
 (* now show that < is the transitive closure of the successor relation *)
 
 val TC_LESS_0 = prove ( --`!n. TC (\x y. y = SUC x) 0 (SUC n)`--,
-  INDUCT_TAC 
+  INDUCT_TAC
   THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
     ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
     THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
 
 val TC_NOT_LESS_0 = prove ( --`!n. ~(TC (\x y. y = SUC x) n 0)`--,
-  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] 
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
   THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
 
 val TC_IM_RTC_SUC = store_thm ("TC_IM_RTC_SUC",
   ``!m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n``,
-  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC 
+  ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN BETA_TAC
     THEN REWRITE_TAC [relationTheory.RTC_CASES_TC, INV_SUC_EQ]
-    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) 
+    THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
     THEN ASM_REWRITE_TAC []
     THEN DISJ2_TAC THEN EXISTS_TAC ``n : num``
     THEN ASM_REWRITE_TAC []) ;
@@ -198,7 +198,7 @@ val RTC_IM_TC = store_thm ("RTC_IM_TC",
   ``!m n. RTC (\x y. y = f x) (f m) n = TC (\x y. y = f x) m n``,
   REWRITE_TAC [relationTheory.EXTEND_RTC_TC_EQN]
    THEN BETA_TAC THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
-   THENL [Q.EXISTS_TAC `f m`, 
+   THENL [Q.EXISTS_TAC `f m`,
      FIRST_X_ASSUM (ASSUME_TAC o SYM)]
    THEN ASM_REWRITE_TAC []) ;
 

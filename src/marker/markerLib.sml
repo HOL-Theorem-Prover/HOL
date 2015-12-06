@@ -149,7 +149,10 @@ val safe_inst_cmp = let
 in
   inv_img_cmp img cmp
 end
-val safe_inst_sort = Listsort.sort safe_inst_cmp
+val safe_inst_sort =
+    List.filter
+      (fn {redex,residue} => String.sub(#1 (dest_var redex),0) <> #"_") o
+    Listsort.sort safe_inst_cmp
 
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
   val ctxt = HOLset.listItems fv_set

@@ -116,6 +116,14 @@ in
                            (fn option => find_pos (Lib.mem option) opt)
 end
 
+fun print_options bk name l =
+   let
+      val s = " * " ^ name ^ " options:"
+      val s = case bk of SOME w => StringCvt.padRight #" " w s | _ => s ^ "\n\t"
+   in
+      TextIO.print (s ^ String.concat (Lib.commafy (List.map hd l)) ^ "\n")
+   end
+
 (* ------------------------------------------------------------------------- *)
 
 fun maximal (cmp: 'a cmp) f =

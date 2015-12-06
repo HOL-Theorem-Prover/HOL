@@ -41,12 +41,12 @@ fun thydepl_of dep = case dep of
   | DEP_UNSAVED thydl     => thydl
 
 fun flatten_thydepl thydepl =
-  let fun distrib (s,nl) = map (fn n => (s,n)) nl in 
+  let fun distrib (s,nl) = map (fn n => (s,n)) nl in
     List.concat (map distrib thydepl)
   end
 
 fun depidl_of dep = flatten_thydepl (thydepl_of dep)
-  
+
 (*---------------------------------------------------------------------------
    Comparison
  ----------------------------------------------------------------------------*)
@@ -71,7 +71,7 @@ fun transfer_thydepl d = case d of
 fun merge_intl nl1 nl2 = case (nl1, nl2) of
      ([], _) => nl2
    | (_, []) => nl1
-   | (n1 :: m1, n2 :: m2) => 
+   | (n1 :: m1, n2 :: m2) =>
      (
      case Int.compare (n1,n2) of
         LESS    => n1 :: merge_intl m1 nl2

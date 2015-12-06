@@ -11,6 +11,9 @@ struct
    val (float_to_fp_tm, mk_float_to_fp, dest_float_to_fp, is_float_to_fp) =
       monop ("float_to_" ^ fp)
 
+   val (int_to_fp_tm, mk_int_to_fp, dest_int_to_fp, is_int_to_fp) =
+      binop ("int_to_" ^ fp)
+
    val (real_to_fp_tm, mk_real_to_fp, dest_real_to_fp, is_real_to_fp) =
       binop ("real_to_" ^ fp)
 
@@ -22,9 +25,13 @@ struct
    val triop = HolKernel.syntax_fns3 thy o pre
 
    val (fp_abs_tm, mk_fp_abs, dest_fp_abs, is_fp_abs) = monop "abs"
+   val (fp_abs1985_tm, mk_fp_abs1985, dest_fp_abs1985, is_fp_abs1985) =
+      monop "abs1985"
    val (fp_add_tm, mk_fp_add, dest_fp_add, is_fp_add) = triop "add"
    val fp_bottom_tm = const "bottom"
    val (fp_div_tm, mk_fp_div, dest_fp_div, is_fp_div) = triop "div"
+   val (fp_compare_tm, mk_fp_compare, dest_fp_compare, is_fp_compare) =
+      binop "compare"
    val (fp_equal_tm, mk_fp_equal, dest_fp_equal, is_fp_equal) = binop "equal"
    val (fp_greaterEqual_tm, mk_fp_greaterEqual, dest_fp_greaterEqual,
         is_fp_greaterEqual) = binop "greaterEqual"
@@ -53,14 +60,19 @@ struct
    val fp_negzero_tm = const "negZero"
    val (fp_negate_tm, mk_fp_negate, dest_fp_negate, is_fp_negate) =
       monop "negate"
+   val (fp_negate1985_tm, mk_fp_negate1985, dest_fp_negate1985,
+        is_fp_negate1985) = monop "negate1985"
    val fp_posinf_tm = const "posInf"
    val fp_posmin_tm = const "posMin"
    val fp_poszero_tm = const "posZero"
    val (fp_roundToIntegral_tm, mk_fp_roundToIntegral, dest_fp_roundToIntegral,
         is_fp_roundToIntegral) = binop "roundToIntegral"
+   val (fp_sqrt_tm, mk_fp_sqrt, dest_fp_sqrt, is_fp_sqrt) = binop "sqrt"
    val (fp_sub_tm, mk_fp_sub, dest_fp_sub, is_fp_sub) = triop "sub"
    val (fp_to_float_tm, mk_fp_to_float, dest_fp_to_float, is_fp_to_float) =
       monop "to_float"
+   val (fp_to_int_tm, mk_fp_to_int, dest_fp_to_int, is_fp_to_int) =
+      binop "to_int"
    val (fp_to_real_tm, mk_fp_to_real, dest_fp_to_real, is_fp_to_real) =
       monop "to_real"
    val fp_top_tm = const "top"

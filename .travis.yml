@@ -1,6 +1,4 @@
 language: c
-compiler:
-  - gcc
 before_script: developers/travis/before_install.sh
 script: poly < tools/smart-configure.sml && bin/build $BUILDOPTS -nograph
 notifications:
@@ -12,11 +10,19 @@ notifications:
   irc:
     channels:
       - "irc.freenode.net#hol"
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - ocaml
+    - g++-4.8
+
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
     - ROOTPOLY= BUILDOPTS=
     - ROOTPOLY= BUILDOPTS=-expk
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/selftestseq -selftest"
@@ -24,3 +30,10 @@ env:
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/more_examples_seq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/more_examples_seq -selftest"
     - ROOTPOLY= SVNPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+
+matrix:
+  include:
+    - os: osx
+      env: ROOTPOLY= BUILDOPTS=
+    - env: ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+      sudo: true

@@ -2329,10 +2329,8 @@ val LUPDATE_APPEND1 = Q.store_thm("LUPDATE_APPEND1",
 
 val is_prefix_el = Q.store_thm ("is_prefix_el",
   `!n l1 l2.
-    isPREFIX l1 l2 ∧
-    n < LENGTH l1 ∧
-    n < LENGTH l2
-    ⇒
+    isPREFIX l1 l2 /\ n < LENGTH l1 /\ n < LENGTH l2
+   ==>
     (EL n l1 = EL n l2)`,
   Induct_on `n` >> rw [] >>
   Cases_on `l1` >>
@@ -2739,7 +2737,8 @@ val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
 val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
 val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
-  `∀l. ∀l1 l2. IS_PREFIX l l1 ∧ IS_PREFIX l l2 ⇒ IS_PREFIX l2 l1 ∨ IS_PREFIX l1 l2`,
+  `!l l1 l2.
+    IS_PREFIX l l1 /\ IS_PREFIX l l2 ==> IS_PREFIX l2 l1 \/ IS_PREFIX l1 l2`,
   Induct THEN SIMP_TAC(srw_ss())[IS_PREFIX_NIL] THEN
   GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
   Cases THEN SRW_TAC[][])
@@ -3188,7 +3187,7 @@ val map_replicate = Q.store_thm ("map_replicate",
    Induct_on `n` >> rw [REPLICATE]);
 
 val REPLICATE_NIL = Q.store_thm("REPLICATE_NIL",
-  `(REPLICATE x y = []) ⇔ (x = 0)`,
+  `(REPLICATE x y = []) <=> (x = 0)`,
   Cases_on`x`>>rw[REPLICATE]);
 
 val REPLICATE_APPEND = Q.store_thm("REPLICATE_APPEND",
@@ -3201,7 +3200,7 @@ val DROP_REPLICATE = Q.store_thm("DROP_REPLICATE",
   simp[LIST_EQ_REWRITE,LENGTH_REPLICATE,EL_REPLICATE,EL_DROP])
 
 val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
-  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) ⇔ (n > 0 ⇒ P x y)``,
+  ``LIST_REL P (REPLICATE n x) (REPLICATE n y) <=> (n > 0 ==> P x y)``,
   simp[LIST_REL_EL_EQN,REPLICATE_GENLIST] >>
   Cases_on`n`>>simp[EQ_IMP_THM] >> rw[] >>
   FIRST_X_ASSUM MATCH_MP_TAC >>
@@ -3227,31 +3226,31 @@ val all_distinct_count_list = Q.store_thm ("all_distinct_count_list",
 
 val list_rel_lastn = Q.store_thm("list_rel_lastn",
   `!f l1 l2 n.
-    n ≤ LENGTH l1 ∧
-    LIST_REL f l1 l2 ⇒
+    n <= LENGTH l1 /\
+    LIST_REL f l1 l2 ==>
     LIST_REL f (LASTN n l1) (LASTN n l2)`,
   Induct_on `l1` >>
   rw [LASTN] >>
   imp_res_tac EVERY2_LENGTH >>
   Cases_on `n = LENGTH l1 + 1`
   >- metis_tac [LASTN_LENGTH_ID, ADD1, LENGTH, LIST_REL_def] >>
-  `n ≤ LENGTH l1` by decide_tac >>
-  `n ≤ LENGTH ys` by decide_tac >>
+  `n <= LENGTH l1` by decide_tac >>
+  `n <= LENGTH ys` by decide_tac >>
   res_tac >>
   fs [LASTN_CONS]);
 
 val list_rel_butlastn = Q.store_thm ("list_rel_butlastn",
   `!f l1 l2 n.
-    n ≤ LENGTH l1 ∧
-    LIST_REL f l1 l2 ⇒
+    n <= LENGTH l1 /\
+    LIST_REL f l1 l2 ==>
     LIST_REL f (BUTLASTN n l1) (BUTLASTN n l2)`,
   Induct_on `l1` >>
   rw [BUTLASTN] >>
   imp_res_tac EVERY2_LENGTH >>
   Cases_on `n = LENGTH l1 + 1`
   >- metis_tac [BUTLASTN_LENGTH_NIL, ADD1, LENGTH, LIST_REL_def] >>
-  `n ≤ LENGTH l1` by decide_tac >>
-  `n ≤ LENGTH ys` by decide_tac >>
+  `n <= LENGTH l1` by decide_tac >>
+  `n <= LENGTH ys` by decide_tac >>
   res_tac >>
   fs [BUTLASTN_CONS]);
 

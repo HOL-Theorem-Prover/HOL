@@ -6,11 +6,16 @@ sig
          | Script of string
          | Other of string
 
+  datatype ArticleType =
+           RawArticle of string
+         | ProcessedArticle of string
+
   datatype File =
            SML of CodeType
          | SIG of CodeType
          | UO of CodeType
          | UI of CodeType
+         | ART of ArticleType
          | Unhandled of string
 
   (* string/path manipulations *)
@@ -39,6 +44,7 @@ sig
   val toCodeType : string -> CodeType
   val toFile : string -> File
   val codeToString : CodeType -> string
+  val articleToString : ArticleType -> string
   val fromFile : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option

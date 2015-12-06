@@ -145,7 +145,7 @@ fun save_thm_attrs fname (n, attrs, th) = let
     storefn n;
     case exportfn of
         NONE => ()
-      | SOME ef => ef (current_theory()) [th]
+      | SOME ef => ef (current_theory()) [(n,th)]
   end
 in
   Theory.save_thm(n,th) before app do_attr attrs

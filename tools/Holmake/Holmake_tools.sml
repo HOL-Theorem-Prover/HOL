@@ -166,20 +166,28 @@ datatype CodeType =
        | Script of string
        | Other of string
 
+datatype ArticleType =
+         RawArticle of string
+       | ProcessedArticle of string
+
 datatype File =
          SML of CodeType
        | SIG of CodeType
        | UO of CodeType
        | UI of CodeType
+       | ART of ArticleType
        | Unhandled of string
 
 fun string_part0 (Theory s) = s
   | string_part0 (Script s) = s
   | string_part0 (Other s) = s
+fun string_part1 (RawArticle s) = s
+  | string_part1 (ProcessedArticle s) = s
 fun string_part (UO c)  = string_part0 c
   | string_part (UI c)  = string_part0 c
   | string_part (SML c) = string_part0 c
   | string_part (SIG c) = string_part0 c
+  | string_part (ART c) = string_part1 c
   | string_part (Unhandled s) = s
 
 fun isProperSuffix s1 s2 =
@@ -199,6 +207,13 @@ in
   end
 end
 
+fun toArticleType s = let
+  val possprefix = isProperSuffix ".ot" s
+in
+  if (isSome possprefix) then ProcessedArticle (valOf possprefix)
+  else RawArticle s
+end
+
 fun toFile s0 = let
   val {base = s, ext} = OS.Path.splitBaseExt s0
 in
@@ -207,6 +222,7 @@ in
   | SOME "sig" => SIG (toCodeType s)
   | SOME "uo"  => UO (toCodeType s)
   | SOME "ui"  => UI (toCodeType s)
+  | SOME "art" => ART (toArticleType s)
   |    _       => Unhandled s0
 end
 
@@ -216,12 +232,18 @@ fun codeToString c =
   | Script s => s ^ "Script"
   | Other s  => s
 
+fun articleToString c =
+  case c of
+    RawArticle s => s
+  | ProcessedArticle s => s ^ ".ot"
+
 fun fromFile f =
   case f of
     UO c  => codeToString c ^ ".uo"
   | UI c  => codeToString c ^ ".ui"
   | SIG c => codeToString c ^ ".sig"
   | SML c => codeToString c ^ ".sml"
+  | ART c => articleToString c ^ ".art"
   | Unhandled s => s
 
 fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
@@ -232,6 +254,8 @@ fun primary_dependent f =
     | UI c => SOME (SIG c)
     | SML (Theory s) => SOME (SML (Script s))
     | SIG (Theory s) => SOME (SML (Script s))
+    | ART (RawArticle s) => SOME (SML (Script s))
+    | ART (ProcessedArticle s) => SOME (ART (RawArticle s))
     | _ => NONE
 
 fun read_files ds P action =
@@ -250,6 +274,7 @@ fun clean_dir {extra_cleans} = let
       | UI _ => true
       | SIG (Theory _) => true
       | SML (Theory _) => true
+      | ART (RawArticle _) => true
       | _ => false
   fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
@@ -495,9 +520,10 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
         case f of
           SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
                                    SIG (Theory t), UI (Theory t),
-                                   UO (Theory t), f]
+                                   UO (Theory t), ART (RawArticle t), f]
         | SML ss => [UI ss, UO ss, f]
         | SIG ss => [UI ss, f]
+        | ART (RawArticle s) => [ART (ProcessedArticle s), f]
         | x => [x]
   in
     map fromFile files
@@ -575,6 +601,8 @@ fun holdep_arg (UO c) = SOME (SML c)
   | holdep_arg (UI c) = SOME (SIG c)
   | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
   | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
+  | holdep_arg (ART (RawArticle s)) = SOME (SML (Script s))
+  | holdep_arg (ART (ProcessedArticle s)) = SOME (ART (RawArticle s))
   | holdep_arg _ = NONE
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]

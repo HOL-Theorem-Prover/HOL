@@ -1,0 +1,8 @@
+FILES = $(wildcard *.sml)
+TARGETS = $(patsubst %.sml,%.uo,$(FILES))
+
+all: $(TARGETS)
+.PHONY: all
+
+FP64.uo: FP.uo
+FP32.uo: FP.uo

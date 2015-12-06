@@ -116,6 +116,8 @@ src/string/help
 src/TeX/holindex-demo.pdf
 src/TeX/holindex-demo.ps
 
+*.art
+
 Manual/*/*.pdf
 Manual/*/*.ps
 Manual/Reference/entries.tex

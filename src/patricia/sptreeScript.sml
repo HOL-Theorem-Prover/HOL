@@ -642,9 +642,9 @@ val domain_empty = store_thm("domain_empty",
   simp[] >> Induct >> simp[wf_def] >> metis_tac[])
 
 val toAList_append = prove(
-  ``∀t n ls.
-      foldi (λk v a. (k,v)::a) n ls t =
-      foldi (λk v a. (k,v)::a) n [] t ++ ls``,
+  ``!t n ls.
+      foldi (\k v a. (k,v)::a) n ls t =
+      foldi (\k v a. (k,v)::a) n [] t ++ ls``,
   Induct
   >- simp[foldi_def]
   >- simp[foldi_def]
@@ -667,9 +667,9 @@ val toAList_append = prove(
   metis_tac[APPEND_ASSOC,APPEND] )
 
 val toAList_inc = prove(
-  ``∀t n.
-      foldi (λk v a. (k,v)::a) n [] t =
-      MAP (λ(k,v). (n + lrnext n * k,v)) (foldi (λk v a. (k,v)::a) 0 [] t)``,
+  ``!t n.
+      foldi (\k v a. (k,v)::a) n [] t =
+      MAP (\(k,v). (n + lrnext n * k,v)) (foldi (\k v a. (k,v)::a) 0 [] t)``,
   Induct
   >- simp[foldi_def]
   >- simp[foldi_def]
@@ -709,8 +709,8 @@ val toAList_inc = prove(
     simp[lrlemma1,lrlemma2] ))
 
 val lemmas = prove(
-    ``(∀x. EVEN (2 * x + 2)) ∧
-      (∀x. ODD (2 * x + 1))``,
+    ``(!x. EVEN (2 * x + 2)) /\
+      (!x. ODD (2 * x + 1))``,
     conj_tac >- (
       simp[EVEN_EXISTS] >> rw[] >>
       qexists_tac`SUC x` >> simp[] ) >>
@@ -718,7 +718,7 @@ val lemmas = prove(
     metis_tac[] )
 
 val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
-  ``∀t. ALL_DISTINCT (MAP FST (toAList t))``,
+  ``!t. ALL_DISTINCT (MAP FST (toAList t))``,
   simp[toAList_def] >>
   Induct >> simp[foldi_def] >- (
     CONV_TAC(RAND_CONV(RAND_CONV(RATOR_CONV(RAND_CONV(REWR_CONV toAList_inc))))) >>
@@ -728,14 +728,14 @@ val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
     simp[ALL_DISTINCT_APPEND] >>
     rpt conj_tac >- (
       qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
-      `MAP f ls = MAP (λx. 2 * x + 1) (MAP FST ls)` by (
+      `MAP f ls = MAP (\x. 2 * x + 1) (MAP FST ls)` by (
         simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
       pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
       match_mp_tac ALL_DISTINCT_MAP_INJ >>
       simp[] )
     >- (
       qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
-      `MAP f ls = MAP (λx. 2 * x + 2) (MAP FST ls)` by (
+      `MAP f ls = MAP (\x. 2 * x + 2) (MAP FST ls)` by (
         simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
       pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
       match_mp_tac ALL_DISTINCT_MAP_INJ >>
@@ -750,7 +750,7 @@ val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
   simp[ALL_DISTINCT_APPEND] >>
   rpt conj_tac >- (
     qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
-    `MAP f ls = MAP (λx. 2 * x + 1) (MAP FST ls)` by (
+    `MAP f ls = MAP (\x. 2 * x + 1) (MAP FST ls)` by (
       simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
     pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
     match_mp_tac ALL_DISTINCT_MAP_INJ >>
@@ -758,7 +758,7 @@ val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
   >- ( simp[MEM_MAP] )
   >- (
     qmatch_abbrev_tac`ALL_DISTINCT (MAP f ls)` >>
-    `MAP f ls = MAP (λx. 2 * x + 2) (MAP FST ls)` by (
+    `MAP f ls = MAP (\x. 2 * x + 2) (MAP FST ls)` by (
       simp[MAP_MAP_o,combinTheory.o_DEF,Abbr`f`] ) >>
     pop_assum SUBST1_TAC >> qunabbrev_tac`f` >>
     match_mp_tac ALL_DISTINCT_MAP_INJ >>
@@ -769,13 +769,13 @@ val ALL_DISTINCT_MAP_FST_toAList = store_thm("ALL_DISTINCT_MAP_FST_toAList",
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
 val foldi_FOLDR_toAList_lemma = prove(
-  ``∀t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
-               FOLDR (UNCURRY f) a (foldi (λk v a. (k,v)::a) n ls t)``,
+  ``!t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
+               FOLDR (UNCURRY f) a (foldi (\k v a. (k,v)::a) n ls t)``,
   Induct >> simp[foldi_def] >>
   rw[] >> pop_assum(assume_tac o GSYM) >> simp[])
 
 val foldi_FOLDR_toAList = store_thm("foldi_FOLDR_toAList",
-  ``∀f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)``,
+  ``!f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)``,
   simp[toAList_def,GSYM foldi_FOLDR_toAList_lemma])
 
 val toListA_def = Define`
@@ -823,7 +823,7 @@ fun tac () = (
   (metis_tac[]))
 
 val MEM_toListA = prove(
-  ``∀t acc x. MEM x (toListA acc t) ⇔ (MEM x acc ∨ ∃k. lookup k t = SOME x)``,
+  ``!t acc x. MEM x (toListA acc t) <=> (MEM x acc \/ ?k. lookup k t = SOME x)``,
   Induct >> simp[toListA_def,lookup_def] >- metis_tac[] >>
   rw[EQ_IMP_THM] >> rw[] >> pop_assum mp_tac >> rw[]
   >- (tac())
@@ -837,7 +837,7 @@ val MEM_toListA = prove(
   >- (tac()))
 
 val MEM_toList = store_thm("MEM_toList",
-  ``∀x t. MEM x (toList t) ⇔ ∃k. lookup k t = SOME x``,
+  ``!x t. MEM x (toList t) <=> ?k. lookup k t = SOME x``,
   rw[toList_def,MEM_toListA])
 
 val div2_even_lemma = prove(
@@ -1145,18 +1145,18 @@ val map_def = Define`
   (map f (BS t1 a t2) = BS (map f t1) (f a) (map f t2))`
 
 val toList_map = store_thm("toList_map",
-  ``∀s. toList (map f s) = MAP f (toList s)``,
+  ``!s. toList (map f s) = MAP f (toList s)``,
   Induct >>
   fs[toList_def,map_def,toListA_def] >>
   simp[Once toListA_append] >>
   simp[Once toListA_append,SimpRHS])
 
 val domain_map = store_thm("domain_map",
-  ``∀s. domain (map f s) = domain s``,
+  ``!s. domain (map f s) = domain s``,
   Induct >> simp[map_def])
 
 val lookup_map = store_thm("lookup_map",
-  ``∀s x. lookup x (map f s) = OPTION_MAP f (lookup x s)``,
+  ``!s x. lookup x (map f s) = OPTION_MAP f (lookup x s)``,
   Induct >> simp[map_def,lookup_def] >> rw[])
 
 val map_LN = store_thm("map_LN[simp]",
@@ -1166,5 +1166,41 @@ val map_LN = store_thm("map_LN[simp]",
 val wf_map = store_thm("wf_map[simp]",
   ``!t f. wf (map f t) = wf t``,
   Induct \\ fs [wf_def,map_def]);
+
+val map_map_o = store_thm("map_map_o",
+  ``!t f g. map f (map g t) = map (f o g) t``,
+  Induct >> fs[map_def])
+
+val map_insert = store_thm("map_insert",
+  ``!f x y z.
+  map f (insert x y z) = insert x (f y) (map f z)``,
+  completeInduct_on`x`>>
+  Induct_on`z`>>
+  rw[]>>
+  simp[Once map_def,Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  BasicProvers.EVERY_CASE_TAC>>fs[map_def]>>
+  `(x-1) DIV 2 < x` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  fs[map_def])
+
+val insert_shadow = store_thm("insert_shadow",
+  ``!t a b c.
+  insert a b (insert a c t) = insert a b t``,
+  completeInduct_on`a`>>
+  Induct>>
+  simp[Once insert_def]>>
+  rw[]>>
+  simp[Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  `(a-1) DIV 2 < a` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  metis_tac[])
 
 val _ = export_theory();

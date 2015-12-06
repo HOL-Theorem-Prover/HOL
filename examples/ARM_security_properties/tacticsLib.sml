@@ -29,42 +29,42 @@ val FORCE_REV_REWRITE_TAC = (fn thm =>
                              end);
 
 
-val ASSUME_SPECL_TAC = 
+val ASSUME_SPECL_TAC =
 fn l => fn thm => ASSUME_TAC (SPECL l thm);
 
-val ASSUME_SIMP_TAC = 
+val ASSUME_SIMP_TAC =
 fn l => fn thm => ASSUME_TAC (SIMP_RULE (srw_ss()) l thm);
 
-val IMP_RES_SIMP_TAC = 
+val IMP_RES_SIMP_TAC =
 fn l => fn thm => IMP_RES_TAC (SIMP_RULE (srw_ss()) l thm);
 
 
-val ASSUME_SPEC_TAC = 
+val ASSUME_SPEC_TAC =
 fn l => fn thm => ASSUME_TAC (SPEC l thm);
 
 
-val ASSUME_SPECL_SIMP_TAC = 
+val ASSUME_SPECL_SIMP_TAC =
 fn l => fn sthms => fn thm => ASSUME_TAC (SPECL l (SIMP_RULE (srw_ss()) sthms thm));
 
-val IMP_RES_SPEC_TAC = 
+val IMP_RES_SPEC_TAC =
 fn l => fn thm => IMP_RES_TAC (SPEC l thm);
 
-val IMP_RES_SPECL_TAC = 
+val IMP_RES_SPECL_TAC =
 fn l => fn thm => IMP_RES_TAC (SPECL l thm);
 
-val MP_SPEC_TAC = 
+val MP_SPEC_TAC =
 fn l => fn thm => MP_TAC (SPEC l thm);
 
-val MP_SPECL_TAC = 
+val MP_SPECL_TAC =
 fn l => fn thm => MP_TAC (SPECL l thm);
 
-val ASSUME_SPECL_INST_TAC =  
+val ASSUME_SPECL_INST_TAC =
  fn sl => fn tl => fn thm =>
-	     ASSUME_TAC (SPECL sl (INST_TYPE tl thm)) 
+	     ASSUME_TAC (SPECL sl (INST_TYPE tl thm))
 
 
 val ASSUME_SPECL_GEN_REWRITE_TAC =
- fn (l , thm, simps) => ASSUME_TAC (SPECL 
+ fn (l , thm, simps) => ASSUME_TAC (SPECL
 					l (GEN_ALL (REWRITE_RULE simps thm)));
 
 end

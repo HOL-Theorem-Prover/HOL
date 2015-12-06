@@ -427,7 +427,7 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 		(* generate subgoals: prove the hypothesis of the hypothesis of the calculation theorems *)
 		val hyps_sgs = map (fn x => (asm_list,x)) asms_hyp;
 
-		(* TODO: statt oben hier noch ein paar Theoreme ergänzen, die dann mit thms konkateniert werden *)
+		(* TODO: statt oben hier noch ein paar Theoreme ergänzen, die dann mit thms konkateniert werden (UOK) *)
 
 		(*val thms = map mk_thm ([subs_sg] @ hyps_sgs);*)
 
@@ -439,7 +439,7 @@ fun frac_calc_tac (frac_terms:term list) (asm_list:term list,goal:term) =
 				(* all other theorems: hyptothesis subgoals *)
 				val asm_thms = tl thms;
 
-				(* erster Schritt: baue Voraussetzungen für die calc_thms zusammen *)
+				(* erster Schritt: baue Voraussetzungen für die calc_thms zusammen (UOK) *)
 
 
 				(* extract proof from asm_thms list (TODO: other list) *)

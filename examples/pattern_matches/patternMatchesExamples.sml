@@ -3,13 +3,13 @@
 (* around with the pattern match lib  *)
 (**************************************)
 
-open bossLib 
+open bossLib
 open patternMatchesLib
 open patternMatchesTheory
 open patternMatchesSyntax
 open pred_setTheory
 open constrFamiliesLib
-open stringTheory 
+open stringTheory
 open pred_setLib
 
 val _ = Globals.priming := SOME "_"
@@ -22,8 +22,8 @@ val _ = Globals.priming := SOME "_"
 
 val t = ``case x of (NONE, []) => 0``
 val t' = ``CASE x OF [ ||. (NONE, []) ~> 0 ]``
-val t'' = case2pmatch true t 
-val t''' = case2pmatch false t 
+val t'' = case2pmatch true t
+val t''' = case2pmatch false t
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
@@ -35,14 +35,14 @@ val t'''' = pmatch2case t'''
 val thm_t'' = PMATCH_ELIM_CONV t'''
 val thm_t2'' = PMATCH_ELIM_CONV t2'
 
-		    
+
 (* more fancy *)
-val t = ``case x of 
+val t = ``case x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
  | (SOME _, (x :: xs)) => x``
-val t' = case2pmatch true t 
+val t' = case2pmatch true t
 val thm_t = PMATCH_INTRO_CONV t;
 
 (* Playing around with some examples *)
@@ -66,7 +66,7 @@ val _ = pmatch2case example1;
 
 val example2 = ``PMATCH (h::t)
   [PMATCH_ROW (\_ . []) (\_. T) (\_. x);
-   PMATCH_ROW (\_. [2]) (\_. T) (\_. x); 
+   PMATCH_ROW (\_. [2]) (\_. T) (\_. x);
    PMATCH_ROW (\v18. [v18]) (\v19. T) (\v18. 3);
    PMATCH_ROW (\ (v12,v16,v17). (v12::v16::v17))
               (K T)
@@ -94,7 +94,7 @@ set_trace "use pmatch_pp" 1;
 example1;
 
 
-val thm1 = PMATCH_SIMP_CONV example1 
+val thm1 = PMATCH_SIMP_CONV example1
 val thm2 = PMATCH_SIMP_CONV example2
 val thm3 = PMATCH_SIMP_CONV example3
 
@@ -130,7 +130,7 @@ proofManagerLib.drop ()
 (* set parsing of case expression to deep ones *)
 set_trace "parse deep cases" 1;
 
-val ex1 = ``case (x, y, z) of 
+val ex1 = ``case (x, y, z) of
     (x, [], NONE) => x
   | (x, [], SOME y) => x+y
   | (_, z::zs, _) => z``
@@ -151,7 +151,7 @@ set_trace "use pmatch_pp" 1
 (* there are new features as well. Multiple
    occurences of the same variable in a pattern are fine *)
 
-val ex2 = ``case (x, y) of 
+val ex2 = ``case (x, y) of
     (x, x) => T
   | _ => F``
 
@@ -185,8 +185,8 @@ val my_d_def = Define
        || (x,y,ys). (x,y::ys) ~> (my_d (x + y,ys))]`
 
 val my_d_thms = store_thm ("my_d_thms",
-``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
-  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\ 
+``(!x. x > 3 ==> (my_d (x, []) = x)) /\
+  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\
   (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
 
 REPEAT STRIP_TAC THEN (
@@ -195,8 +195,8 @@ REPEAT STRIP_TAC THEN (
 
 (* Let's prove it via lifting *)
 val my_d_thms2 = store_thm ("my_d_thms2",
-``(!x. x > 3 ==> (my_d (x, []) = x)) /\ 
-  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\ 
+``(!x. x > 3 ==> (my_d (x, []) = x)) /\
+  (!x. x <= 3 ==> (my_d (x, []) = 0)) /\
   (!x y ys. my_d (x, y::ys) = my_d (x + y, ys))``,
 
 REPEAT STRIP_TAC THEN (
@@ -279,7 +279,7 @@ val balance_black_dectree_def = CONV_RULE
   (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV)
   balance_black_def
 
-val balance_black_dectree_def' = 
+val balance_black_dectree_def' =
   SIMP_RULE (std_ss++PMATCH_CASE_SPLIT_ss ()) []
   balance_black_def
 
@@ -300,7 +300,7 @@ val string_match_def = Define `string_match s x =
      ]`
 
 val string_match_dectree_def = CONV_RULE
-  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV) 
+  (TOP_SWEEP_CONV PMATCH_CASE_SPLIT_CONV)
   string_match_def
 
 
@@ -318,13 +318,13 @@ val dummy_bool_def = Define `dummy_bool a b c =
 val dummy_bool_tm = rhs (concl (SPEC_ALL dummy_bool_def))
 
 (* try to compile to a tree inside the logic *)
-val dummy_bool_eq1 = 
+val dummy_bool_eq1 =
   PMATCH_CASE_SPLIT_CONV_HEU colHeu_first_col dummy_bool_tm
 
-val dummy_bool_eq2 = 
+val dummy_bool_eq2 =
   PMATCH_CASE_SPLIT_CONV_HEU colHeu_last_col dummy_bool_tm
 
-val dummy_bool_eq3 = 
+val dummy_bool_eq3 =
   PMATCH_CASE_SPLIT_CONV_HEU colHeu_default dummy_bool_tm
 
 
@@ -342,9 +342,9 @@ val list_REVCASE_THM = prove (``
   ((list_REVCASE [] c_nil c_snoc) = c_nil) /\
   ((list_REVCASE (SNOC x xs) c_nil c_snoc) = c_snoc x xs)``,
 SIMP_TAC list_ss [list_REVCASE_def, rich_listTheory.NOT_SNOC_NIL])
- 
+
 val cl = make_constructorList true [
-  (``[]:'a list``, []), 
+  (``[]:'a list``, []),
   (``SNOC: 'a -> 'a list -> 'a list``,  ["x", "xs"])
 ]
 
@@ -400,7 +400,7 @@ val tree_red_CASE_THM = prove (``
   (tree_red_CASE (Red t1 n t2) f_red f_else = f_red t1 n t2) /\
   (tree_red_CASE (Black t1 n t2) f_red f_else = f_else (Black t1 n t2))``,
 SIMP_TAC list_ss [tree_red_CASE_def, tree_case_def])
- 
+
 val cl = make_constructorList false [
   (``Red``, ["t1", "n", "t2"])
 ]
@@ -428,7 +428,7 @@ val size_old = term_size (rhs (snd (strip_forall (concl balance_black_dectree_de
 val size_classic = term_size (rhs (snd (strip_forall (concl balance_black_dectree_def3))))
 
 
-(* even with the family for red, the full cases are 
+(* even with the family for red, the full cases are
    still available when needed (notice the added row above
    the last one) *)
 val t = ``
@@ -460,7 +460,7 @@ val my_divmod_def = Define `my_divmod (n:num) c =
 
 val my_divmod_THM_AUX = PMATCH_TO_TOP_RULE my_divmod_def
 
-val my_divmod_THM = store_thm ("my_divmod_THM", 
+val my_divmod_THM = store_thm ("my_divmod_THM",
 ``0 < c ==> (my_divmod n c = (n DIV c, n MOD c))``,
 
 REPEAT STRIP_TAC THEN
@@ -615,7 +615,7 @@ val t = ``CASE (x, z) OF [
   ||. (_, NONE) ~> 2
 ]``
 
-(* The last row is redundant, but it needs both first 
+(* The last row is redundant, but it needs both first
    rows to show this. Therefore, the fast test,
    which only considers single rows, fails. *)
 

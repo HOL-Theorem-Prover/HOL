@@ -11,14 +11,27 @@ sig
      | Difference
      | Drop
      | Element
-     | FPAbs of int
+     | FP32To64
+     | FP64To32
+     | FPAbs of int * bool
      | FPAdd of int
-     | FPEqual of int
-     | FPIsNaN of int
-     | FPLess of int
+     | FPCmp of int
+     | FPDiv of int
+     | FPEq of int
+     | FPFromInt of int
+     | FPGe of int
+     | FPGt of int
+     | FPIsFinite of int
+     | FPIsNan of int
+     | FPIsNormal of int
+     | FPIsSubnormal of int
+     | FPLe of int
+     | FPLt of int
      | FPMul of int
-     | FPNeg of int
+     | FPNeg of int * bool
+     | FPSqrt of int
      | FPSub of int
+     | FPToInt of int
      | Flat
      | Fst
      | Head
@@ -154,6 +167,15 @@ sig
    val LNL: ParseDatatype.pretype -> Term.term
    val LO : ParseDatatype.pretype -> Term.term
    val LX : ParseDatatype.pretype -> Term.term
+
+   val NEGINF32 : Term.term
+   val NEGINF64 : Term.term
+   val POSINF32 : Term.term
+   val POSINF64 : Term.term
+   val NEGZERO32 : Term.term
+   val NEGZERO64 : Term.term
+   val POSZERO32 : Term.term
+   val POSZERO64 : Term.term
 
    val Call : string * ParseDatatype.pretype * Term.term -> Term.term
    val Const : string * ParseDatatype.pretype -> Term.term
