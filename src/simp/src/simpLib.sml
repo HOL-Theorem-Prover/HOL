@@ -589,11 +589,13 @@ fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
 fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
+val simp_tac = SIMP_TAC
 
 fun ASM_SIMP_TAC ss =
    markerLib.ABBRS_THEN
     (fn thl => fn gl as (asl,_) =>
          SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
+val asm_simp_tac = ASM_SIMP_TAC
 
 local
    (* differs only in that it doesn't call OPPOSITE_TAC or DISCARD_TAC *)
@@ -620,7 +622,9 @@ local
    val rev_full_tac = GEN_FULL_SIMP_TAC (drop Lib.I, List.rev)
 in
    val FULL_SIMP_TAC = full_tac STRIP_ASSUME_TAC'
+   val full_simp_tac = FULL_SIMP_TAC
    val REV_FULL_SIMP_TAC = rev_full_tac STRIP_ASSUME_TAC'
+   val rev_full_simp_tac = REV_FULL_SIMP_TAC
    val NO_STRIP_FULL_SIMP_TAC = full_tac caa_tac
    val NO_STRIP_REV_FULL_SIMP_TAC = rev_full_tac caa_tac
 end

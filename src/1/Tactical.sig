@@ -7,6 +7,7 @@ sig
   val store_thm      : string * term * tactic -> thm
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val >>             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
+  val \\             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   (* could be used as
   val THEN           : tactic * tactic -> tactic
   val THEN           : list_tactic * tactic -> list_tactic
@@ -62,6 +63,7 @@ sig
   val EVERY_LT       : list_tactic list -> list_tactic
   val FIRST          : tactic list -> tactic
   val MAP_EVERY      : ('a -> tactic) -> 'a list -> tactic
+  val map_every      : ('a -> tactic) -> 'a list -> tactic
   val MAP_FIRST      : ('a -> tactic) -> 'a list -> tactic
   val FIRST_PROVE    : tactic list -> tactic
   val EVERY_ASSUM    : thm_tactic -> tactic

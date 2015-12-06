@@ -1,18 +1,10 @@
 structure lcsymtacs :> lcsymtacs =
 struct
 
-  open Abbrev HolKernel boolLib Tactic Tactical
+  open Abbrev HolKernel boolLib Tactic Tactical BasicProvers simpLib
+  open Rewrite bossLib Thm_cont
 
   fun kall_tac (_: 'a) : tactic = all_tac
-  val suff_tac : term -> tactic = Tactic.SUFF_TAC
-  val var_eq_tac = BasicProvers.VAR_EQ_TAC
-
-  val rewrite_tac : thm list -> tactic = Rewrite.REWRITE_TAC
-  val once_rewrite_tac : thm list -> tactic = Rewrite.ONCE_REWRITE_TAC
-  val asm_rewrite_tac : thm list -> tactic =  Rewrite.ASM_REWRITE_TAC
-  val once_asm_rewrite_tac : thm list -> tactic =  Rewrite.ONCE_ASM_REWRITE_TAC
-
-  val disch_then = Thm_cont.DISCH_THEN
 
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
   val qx_choose_then = Q.X_CHOOSE_THEN
@@ -37,57 +29,12 @@ struct
   val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
   val qcase_tac = Q.FIND_CASE_TAC
 
-  val every_case_tac = BasicProvers.EVERY_CASE_TAC
-  val full_case_tac = BasicProvers.FULL_CASE_TAC
-
-  val spose_not_then : thm_tactic -> tactic = BasicProvers.SPOSE_NOT_THEN
-
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
   val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
   val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
 
-  val map_every : ('a -> tactic) -> 'a list -> tactic = Tactical.MAP_EVERY
   val qx_genl_tac = map_every qx_gen_tac
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
-
-  val decide_tac : tactic = numLib.DECIDE_TAC
-  val metis_tac : thm list -> tactic = metisLib.METIS_TAC
-  val prove_tac : thm list -> tactic = BasicProvers.PROVE_TAC
-
-  val simp_tac = simpLib.SIMP_TAC
-  val asm_simp_tac = simpLib.ASM_SIMP_TAC
-  val full_simp_tac = simpLib.FULL_SIMP_TAC
-  val rev_full_simp_tac = simpLib.REV_FULL_SIMP_TAC
-  val rw_tac = BasicProvers.RW_TAC
-  val srw_tac = BasicProvers.SRW_TAC
-
-  fun stateful f ssfl thm : tactic =
-     let
-        val ss = List.foldl (simpLib.++ o Lib.swap) (BasicProvers.srw_ss()) ssfl
-     in
-        f ss thm
-     end
-
-  val fsrw_tac = stateful full_simp_tac
-  val rfsrw_tac = stateful rev_full_simp_tac
-
-  val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
-  val simp = stateful asm_simp_tac let_arith_list
-  val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
-  val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
-  val lrw = srw_tac let_arith_list
-  val lfs = fsrw_tac let_arith_list
-  val lrfs = rfsrw_tac let_arith_list
-
-  val rw = srw_tac []
-  val fs = fsrw_tac []
-  val rfs = rfsrw_tac []
-
-  val op>> = op Tactical.>>
-  val op\\ = op Tactical.>>
-  val op>- = op Tactical.>-
-  val op>| = op Tactical.>|
-  val op>>> = op Tactical.>>>
 
 end

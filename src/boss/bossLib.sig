@@ -48,7 +48,9 @@ sig
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
+  val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
+  val decide_tac     : tactic
 
   (* Simplification *)
 
@@ -115,5 +117,17 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* more simplification variants *)
+  val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+  val simp : thm list -> tactic
+  val csimp : thm list -> tactic
+  val dsimp : thm list -> tactic
+  val lrw : thm list -> tactic
+  val lfs : thm list -> tactic
+  val lrfs : thm list -> tactic
+  val rw : thm list -> tactic
+  val fs : thm list -> tactic
+  val rfs : thm list -> tactic
 
 end

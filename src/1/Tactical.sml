@@ -132,6 +132,7 @@ fun ALLGOALS tac2 gl =
 
 fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
 val op >> = op THEN
+val op \\ = op THEN
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN : tactic * tactic -> tactic ;
@@ -561,6 +562,7 @@ fun FIRST [] g = NO_TAC g
   | FIRST (tac :: rst) g = tac g handle HOL_ERR _ => FIRST rst g
 
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
+val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
 
 (*---------------------------------------------------------------------------
