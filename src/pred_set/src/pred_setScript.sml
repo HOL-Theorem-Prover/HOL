@@ -3096,64 +3096,6 @@ val INFINITE_DIFF_FINITE = store_thm("INFINITE_DIFF_FINITE",
      CONV_TAC NOT_FORALL_CONV THEN
      EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]);
 
-val FINITE_ISO_NUM =
-    store_thm
-    ("FINITE_ISO_NUM",
-     (--`!s:'a set.
-       FINITE s ==>
-       ?f. (!n m. (n < CARD s /\ m < CARD s) ==> (f n = f m) ==> (n = m)) /\
-           (s = {f n | n < CARD s})`--),
-  SET_INDUCT_TAC THENL
-  [PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-   CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-   REWRITE_TAC [CARD_EMPTY,NOT_LESS_0,NOT_IN_EMPTY],
-   FIRST_ASSUM (fn th => fn g => CHOOSE_THEN STRIP_ASSUME_TAC th g) THEN
-   PURE_ONCE_REWRITE_TAC [UNDISCH (SPEC (--`s:'a set`--) CARD_INSERT)] THEN
-   FILTER_ASM_REWRITE_TAC is_neg [] THEN
-   PURE_ONCE_REWRITE_TAC [LESS_THM] THEN
-   EXISTS_TAC (--`\n. if n < (CARD (s:'a set)) then f n else (e:'a)`--) THEN
-   CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
-   [REPEAT GEN_TAC THEN
-    let fun ttac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
-    in DISCH_THEN (REPEAT_TCL STRIP_THM_THEN ttac) end
-    THENL
-    [REPEAT STRIP_TAC THEN REFL_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
-     PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-     CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-     REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
-     PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-     CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-     CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
-     REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM MATCH_MP_TAC THEN
-     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
-    FIRST_ASSUM (fn th => fn g => (MP_TAC (assert(is_eq o concl) th)) g) THEN
-    PURE_REWRITE_TAC [EXTENSION,IN_INSERT] THEN
-    CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-    DISCH_THEN (fn th => PURE_ONCE_REWRITE_TAC [th]) THEN
-    GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-    [EXISTS_TAC (--`CARD (s:'a set)`--) THEN
-     REWRITE_TAC [LESS_REFL] THEN FIRST_ASSUM ACCEPT_TAC,
-     EXISTS_TAC (--`n:num`--) THEN
-     FILTER_ASM_REWRITE_TAC (fn t => (not(lhs t = (--`s:'a set`--)))
-                                     handle _ => true) [],
-     SUBST1_TAC
-       (ASSUME (--`x:'a = (if n < CARD (s:'a set) then f n else e)`--)) THEN
-     SUBST1_TAC (ASSUME (--`n = CARD (s:'a set)`--)) THEN
-     REWRITE_TAC [LESS_REFL],
-     SUBST1_TAC
-       (ASSUME (--`x:'a = (if n < CARD (s:'a set) then f n else e)`--)) THEN
-     DISJ2_TAC THEN EXISTS_TAC (--`n:num`--) THEN
-     REWRITE_TAC [ASSUME (--`n < CARD (s:'a set)`--)]]]]);
-
 val FINITE_INDUCT' =
   Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ; 
 
@@ -3185,6 +3127,39 @@ val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
     COND_CASES_TAC THEN
     (REFL_TAC ORELSE REPEAT BasicProvers.VAR_EQ_TAC) THEN
     IMP_RES_TAC NOT_IN_COUNT]) ;
+
+fun drop_forall th = if is_forall (concl th) then [] else [th] ;
+
+val FINITE_BIJ_CARD_EQ' = 
+  Ho_Rewrite.REWRITE_RULE [PULL_FORALL, AND_IMP_INTRO] FINITE_BIJ_CARD_EQ ;
+
+val FINITE_ISO_NUM =
+    store_thm
+    ("FINITE_ISO_NUM",
+     (--`!s:'a set.
+       FINITE s ==>
+       ?f. (!n m. (n < CARD s /\ m < CARD s) ==> (f n = f m) ==> (n = m)) /\
+           (s = {f n | n < CARD s})`--),
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC FINITE_BIJ_COUNT THEN
+  ASSUME_TAC (Q.SPEC `b` FINITE_COUNT) THEN
+  IMP_RES_TAC FINITE_BIJ_CARD_EQ' THEN
+  ASSUME_TAC (Q.ISPECL [`count b`, `s : 'a -> bool`] FINITE_BIJ_CARD_EQ') THEN
+  RES_TAC THEN Q.EXISTS_TAC `f` THEN
+  (* omitting next step multiplies proof time by 40! *)
+  RULE_L_ASSUM_TAC drop_forall THEN
+  RULE_L_ASSUM_TAC (CONJUNCTS o 
+    REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT]) THEN
+  FIRST_ASSUM (fn th => REWRITE_TAC [SYM th, CARD_COUNT]) THEN
+  CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
+  REWRITE_TAC [EXTENSION] THEN
+  GEN_TAC THEN EQ_TAC
+  THENL [
+    DISCH_TAC THEN RES_TAC THEN
+    HO_MATCH_MP_TAC IN_GSPEC THEN
+    Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC [],
+    SIMP_TAC std_ss [GSPECIFICATION] THEN
+    REPEAT STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [] ]) ;
 
 val FINITE_WEAK_ENUMERATE = Q.store_thm ("FINITE_WEAK_ENUMERATE",
   `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
