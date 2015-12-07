@@ -3161,7 +3161,7 @@ val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
   REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
 
 val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
-  `∀s. FINITE s ==> ∃f b. BIJ f (count b) s`,
+  `!s. FINITE s ==> ?f b. BIJ f (count b) s`,
   GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT' THEN
   REPEAT STRIP_TAC THEN1
     (REWRITE_TAC [BIJ_EMPTY] THEN Q.EXISTS_TAC `0` THEN
@@ -3187,7 +3187,7 @@ val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
     IMP_RES_TAC NOT_IN_COUNT]) ;
 
 val FINITE_WEAK_ENUMERATE = Q.store_thm ("FINITE_WEAK_ENUMERATE",
-  `∀s. FINITE s ⇔ ∃f b. ∀e. e ∈ s ⇔ ∃n. n < b ∧ (e = f n)`,
+  `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
   GEN_TAC THEN EQ_TAC 
   THENL [
     DISCH_TAC THEN IMP_RES_TAC FINITE_BIJ_COUNT THEN
