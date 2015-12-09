@@ -202,7 +202,8 @@ SRW_TAC [] [SPECIFICATION] THEN
 IMP_RES_TAC (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
              (Q.SPECL [`r`, `\(x, y). tc' x y`] tc_ind)));
 
-val [tc_rule1, tc_rule2] = CONJUNCTS (SPEC_ALL tc_rules) ;
+val [tc_rule1', tc_rule2] = CONJUNCTS (SPEC_ALL tc_rules) ;
+val tc_rule1 = Ho_Rewrite.REWRITE_RULE [GSYM FORALL_PROD] tc_rule1' ;
 
 (** closure rules for tc **)
 
@@ -837,6 +838,29 @@ val minimal_elements_rrestrict = Q.store_thm ("minimal_elements_rrestrict",
   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
   (FIRST_ASSUM ACCEPT_TAC ORELSE RES_TAC)) ;
 
+val WF_has_minimal_path = Q.store_thm ("WF_has_minimal_path",
+  `WF (reln_to_rel r) ==> x IN s ==>
+    ?y. y IN minimal_elements s r /\ ((y,x) IN tc r \/ (y = x))`,
+  Ho_Rewrite.REWRITE_TAC
+    [WF_DEF, reln_to_rel_app, minimal_elements_def, IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THEN
+  VALIDATE (FIRST_X_ASSUM (ASSUME_TAC o UNDISCH o
+    Q.SPEC `\z. z IN s /\ ((z, x) IN tc r \/ (z = x))`))
+  THENL [
+    Q.EXISTS_TAC `x` THEN BETA_TAC THEN
+    ASM_REWRITE_TAC [],
+    POP_ASSUM CHOOSE_TAC THEN
+    Q.EXISTS_TAC `min` THEN
+    RULE_L_ASSUM_TAC (CONJUNCTS o BETA_RULE) THEN
+    ASM_REWRITE_TAC [] THEN
+    REPEAT STRIP_TAC THEN RES_TAC THEN
+    IMP_RES_TAC tc_rule1 THEN
+    FIRST_ASSUM DISJ_CASES_TAC
+    THENL [
+      IMP_RES_TAC tc_rule2,
+      BasicProvers.VAR_EQ_TAC] THEN
+    RES_TAC]) ;
+
 val tc_path_max_lem = Q.prove (
 `!s. FINITE s ==>
      s <> {} ==> !r. acyclic r ==> ?x. x IN maximal_elements s (tc r)`,
@@ -974,49 +998,6 @@ Cases_on `s={}` THENL
           FULL_SIMP_TAC (srw_ss()) [maximal_elements_def, acyclic_def] THEN
           METIS_TAC [tc_rules]]]);
 
-val tc_path_min_lem2 = Q.prove (
-`!s.
-  FINITE s
-  ==>
-  !r x.
-    acyclic r /\
-    x IN s /\
-    x NOTIN minimal_elements s (tc r)
-    ==>
-    ?y. y IN minimal_elements s (tc r) /\ (y, x) IN tc r`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [] [] THEN
-Cases_on `s={}` THENL
-[FULL_SIMP_TAC (srw_ss()) [minimal_elements_def],
- `?e'. (e', e) IN tc r /\ e' IN s`
-        by (FULL_SIMP_TAC (srw_ss()) [minimal_elements_def] THEN
-            METIS_TAC [tc_rules]) THEN
-     Cases_on `e' IN minimal_elements s (tc r)` THENL
-     [Q.EXISTS_TAC `e'` THEN
-          SRW_TAC [] [] THEN
-          FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, acyclic_def] THEN
-          SRW_TAC [] [] THEN
-          METIS_TAC [tc_rules],
-      `?y. y IN minimal_elements s (tc r) /\ (y, e') IN tc r`
-              by METIS_TAC [] THEN
-          Q.EXISTS_TAC `y` THEN
-          SRW_TAC [] [] THENL
-          [FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, acyclic_def] THEN
-               SRW_TAC [] [] THEN
-               METIS_TAC [tc_rules],
-           METIS_TAC [tc_rules]]],
- FULL_SIMP_TAC (srw_ss()) [minimal_elements_def],
- Cases_on `x NOTIN minimal_elements s (tc r)` THENL
-     [`?y. y IN minimal_elements s (tc r) /\ (y, x) IN tc r`
-              by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, acyclic_def] THEN
-          METIS_TAC [tc_rules],
-      Cases_on `(e, x) IN tc r` THENL
-          [Q.EXISTS_TAC `e`,
-           Q.EXISTS_TAC `x`] THEN
-          FULL_SIMP_TAC (srw_ss()) [minimal_elements_def, acyclic_def] THEN
-          METIS_TAC [tc_rules]]]);
-
 val finite_acyclic_has_maximal_path = Q.store_thm
 ("finite_acyclic_has_maximal_path",
 `!s r x.
@@ -1031,6 +1012,14 @@ IMP_RES_TAC tc_path_max_lem2 THEN
 FULL_SIMP_TAC (srw_ss()) [maximal_elements_def] THEN
 METIS_TAC [tc_rules]);
 
+val rr_acyclic_WF = Q.INST [`r` |-> `rrestrict r s`] acyclic_WF ;
+val rme = MATCH_MP WF_has_minimal_path (UNDISCH_ALL rr_acyclic_WF) ;
+val irme = Q.INST [`s'` |-> `s`] rme ;
+val urme = REWRITE_RULE [domain_rrestrict_SUBSET, range_rrestrict_SUBSET,
+  minimal_elements_rrestrict] (DISCH_ALL irme) ;
+
+val tcrr = REWRITE_RULE [SUBSET_DEF] (MATCH_MP tc_mono rrestrict_SUBSET) ;
+
 val finite_acyclic_has_minimal_path = Q.store_thm
 ("finite_acyclic_has_minimal_path",
 `!s r x.
@@ -1040,10 +1029,13 @@ val finite_acyclic_has_minimal_path = Q.store_thm
   x NOTIN minimal_elements s r
   ==>
   ?y. y IN minimal_elements s r /\ (y, x) IN tc r`,
-SRW_TAC [] [] THEN
-IMP_RES_TAC tc_path_min_lem2 THEN
-FULL_SIMP_TAC (srw_ss()) [minimal_elements_def] THEN
-METIS_TAC [tc_rules]);
+  REPEAT STRIP_TAC THEN
+  IMP_RES_THEN (ASSUME_TAC o Q.SPEC `s`) acyclic_rrestrict THEN
+  IMP_RES_TAC urme THEN
+  TRY (BasicProvers.VAR_EQ_TAC THEN RES_TAC) THEN
+  Q.EXISTS_TAC `y'` THEN
+  ASM_REWRITE_TAC [] THEN
+  IMP_RES_TAC tcrr) ;
 
 val finite_prefix_po_has_minimal_path = Q.store_thm
 ("finite_prefix_po_has_minimal_path",
