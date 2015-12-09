@@ -392,6 +392,26 @@ HO_MATCH_MP_TAC tc_ind THEN
 SRW_TAC [] [rrestrict_def] THEN
 METIS_TAC [tc_rules]);
 
+val pair_in_IMAGE_SWAP = Q.prove (
+  `((a, b) IN IMAGE SWAP r) = ((b, a) IN r)`,
+  Ho_Rewrite.REWRITE_TAC [IN_IMAGE, EXISTS_PROD, SWAP_def, 
+    FST, SND, PAIR_EQ] THEN 
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN PROVE_TAC []) ;
+
+val tc_ind' = Ho_Rewrite.REWRITE_RULE [PULL_FORALL] tc_ind ;
+
+val tc_SWAP = Q.store_thm ("tc_SWAP",
+  `tc (IMAGE SWAP r) = IMAGE SWAP (tc r)`,
+  Ho_Rewrite.REWRITE_TAC [SET_EQ_SUBSET, SUBSET_DEF, 
+    FORALL_PROD, pair_in_IMAGE_SWAP] THEN CONJ_TAC
+  THENL [
+    HO_MATCH_MP_TAC tc_ind THEN
+    REWRITE_TAC [pair_in_IMAGE_SWAP] THEN REPEAT STRIP_TAC
+    THENL [IMP_RES_TAC tc_rule1, IMP_RES_TAC tc_rule2],
+    REPEAT GEN_TAC THEN HO_MATCH_MP_TAC tc_ind' THEN REPEAT STRIP_TAC 
+    THENL [irule tc_rule1 THEN ASM_REWRITE_TAC [pair_in_IMAGE_SWAP],
+      IMP_RES_TAC tc_rule2]]) ;
+
 (* ------------------------------------------------------------------------ *)
 (* Acyclic relations                                                        *)
 (* ------------------------------------------------------------------------ *)
@@ -420,6 +440,10 @@ val acyclic_irreflexive = Q.store_thm ("acyclic_irreflexive",
 `!r x. acyclic r ==> (x, x) NOTIN r`,
 SRW_TAC [] [acyclic_def] THEN
 METIS_TAC [tc_cases]);
+
+val acyclic_SWAP = Q.store_thm ("acyclic_SWAP",
+  `acyclic (IMAGE SWAP r) = acyclic r`,
+  REWRITE_TAC [acyclic_def, tc_SWAP, pair_in_IMAGE_SWAP]) ; 
 
 val tc_BIGUNION_lem = Q.prove (
 `!x y. (x, y) IN tc (BIGUNION rs) ==>
@@ -810,6 +834,11 @@ val minimal_elements_def = Define `
     {x | x IN xs /\ !x'. x' IN xs /\ (x', x) IN r ==> (x = x')}`;
 val _ = ot0 "minimal_elements" "minimalElements"
 
+val minimal_elements_SWAP = Q.store_thm ("minimal_elements_SWAP",
+  `minimal_elements xs (IMAGE SWAP r) = maximal_elements xs r`,
+  REWRITE_TAC [minimal_elements_def, maximal_elements_def, 
+    EXTENSION, pair_in_IMAGE_SWAP]) ;
+
 val maximal_union = Q.store_thm ("maximal_union",
 `!e s r1 r2.
   e IN maximal_elements s (r1 UNION r2)
@@ -955,63 +984,6 @@ METIS_TAC [lemma1, tc_rules]);
 
 end;
 
-val tc_path_max_lem2 = Q.prove (
-`!s.
-  FINITE s
-  ==>
-  !r x.
-    acyclic r /\
-    x IN s /\
-    x NOTIN maximal_elements s (tc r)
-    ==>
-    ?y. y IN maximal_elements s (tc r) /\ (x, y) IN tc r`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [] [] THEN
-Cases_on `s={}` THENL
-[FULL_SIMP_TAC (srw_ss()) [maximal_elements_def],
- `?e'. (e, e') IN tc r /\ e' IN s`
-         by (FULL_SIMP_TAC (srw_ss()) [maximal_elements_def] THEN
-             METIS_TAC [tc_rules]) THEN
-     Cases_on `e' IN maximal_elements s (tc r)` THENL
-     [Q.EXISTS_TAC `e'` THEN
-          SRW_TAC [] [] THEN
-          FULL_SIMP_TAC (srw_ss()) [maximal_elements_def, acyclic_def] THEN
-          SRW_TAC [] [] THEN
-          METIS_TAC [tc_rules],
-      `?y. y IN maximal_elements s (tc r) /\ (e', y) IN tc r`
-              by METIS_TAC [] THEN
-          Q.EXISTS_TAC `y` THEN
-          SRW_TAC [] [] THENL
-          [FULL_SIMP_TAC (srw_ss()) [maximal_elements_def, acyclic_def] THEN
-               SRW_TAC [] [] THEN
-               METIS_TAC [tc_rules],
-           METIS_TAC [tc_rules]]],
- FULL_SIMP_TAC (srw_ss()) [maximal_elements_def],
- Cases_on `x NOTIN maximal_elements s (tc r)` THENL
-     [`?y. y IN maximal_elements s (tc r) /\ (x, y) IN tc r`
-              by METIS_TAC [] THEN
-          FULL_SIMP_TAC (srw_ss()) [maximal_elements_def, acyclic_def] THEN
-          METIS_TAC [tc_rules],
-      Cases_on `(x, e) IN tc r` THENL
-          [Q.EXISTS_TAC `e`,
-           Q.EXISTS_TAC `x`] THEN
-          FULL_SIMP_TAC (srw_ss()) [maximal_elements_def, acyclic_def] THEN
-          METIS_TAC [tc_rules]]]);
-
-val finite_acyclic_has_maximal_path = Q.store_thm
-("finite_acyclic_has_maximal_path",
-`!s r x.
-  FINITE s /\
-  acyclic r /\
-  x IN s /\
-  x NOTIN maximal_elements s r
-  ==>
-  ?y. y IN maximal_elements s r /\ (x, y) IN tc r`,
-SRW_TAC [] [] THEN
-IMP_RES_TAC tc_path_max_lem2 THEN
-FULL_SIMP_TAC (srw_ss()) [maximal_elements_def] THEN
-METIS_TAC [tc_rules]);
-
 val rr_acyclic_WF = Q.INST [`r` |-> `rrestrict r s`] acyclic_WF ;
 val rme = MATCH_MP WF_has_minimal_path (UNDISCH_ALL rr_acyclic_WF) ;
 val irme = Q.INST [`s'` |-> `s`] rme ;
@@ -1036,6 +1008,21 @@ val finite_acyclic_has_minimal_path = Q.store_thm
   Q.EXISTS_TAC `y'` THEN
   ASM_REWRITE_TAC [] THEN
   IMP_RES_TAC tcrr) ;
+
+val tc_SWAP' = REWRITE_RULE [rextension, pair_in_IMAGE_SWAP] tc_SWAP ;
+
+val finite_acyclic_has_maximal_path = Q.store_thm
+("finite_acyclic_has_maximal_path",
+`!s r x.
+  FINITE s /\
+  acyclic r /\
+  x IN s /\
+  x NOTIN maximal_elements s r
+  ==>
+  ?y. y IN maximal_elements s r /\ (x, y) IN tc r`,
+  ONCE_REWRITE_TAC [GSYM tc_SWAP', GSYM minimal_elements_SWAP, 
+    GSYM acyclic_SWAP] THEN REPEAT STRIP_TAC THEN
+  irule finite_acyclic_has_minimal_path THEN FIRST_ASSUM ACCEPT_TAC) ;
 
 val finite_prefix_po_has_minimal_path = Q.store_thm
 ("finite_prefix_po_has_minimal_path",
