@@ -43,6 +43,16 @@ val in_range = Q.store_thm ("in_range",
 `!y r. y IN range r = ?x. (x,y) IN r`,
 SRW_TAC [] [range_def]);
 
+val domain_mono = Q.store_thm ("domain_mono",
+  `r SUBSET r' ==> domain r SUBSET domain r'`,
+  REWRITE_TAC [in_domain, SUBSET_DEF] THEN
+  REPEAT STRIP_TAC THEN Q.EXISTS_TAC `y` THEN RES_TAC) ;
+
+val range_mono = Q.store_thm ("range_mono",
+  `r SUBSET r' ==> range r SUBSET range r'`,
+  REWRITE_TAC [in_range, SUBSET_DEF] THEN
+  REPEAT STRIP_TAC THEN Q.EXISTS_TAC `x'` THEN RES_TAC) ;
+
 val rrestrict_def = Define `
   rrestrict r s = {(x, y) | (x, y) IN r /\ x IN s /\ y IN s}`;
 val _ = ot0 "rrestrict" "restrict"
@@ -50,6 +60,14 @@ val _ = ot0 "rrestrict" "restrict"
 val in_rrestrict = Q.store_thm ("in_rrestrict",
 `!x y r s. (x, y) IN rrestrict r s = (x, y) IN r /\ x IN s /\ y IN s`,
 SRW_TAC [] [rrestrict_def]);
+
+val in_rrestrict_alt = Q.store_thm ("in_rrestrict_alt",
+  `x IN rrestrict r s <=> x IN r /\ FST x IN s /\ SND x IN s`,
+  Cases_on `x` THEN REWRITE_TAC [in_rrestrict, FST, SND]) ;
+
+val rrestrict_SUBSET = Q.store_thm ("rrestrict_SUBSET",
+  `rrestrict r s SUBSET r`,
+  REWRITE_TAC [in_rrestrict_alt, SUBSET_DEF] THEN REPEAT STRIP_TAC) ;
 
 val rrestrict_union = Q.store_thm ("rrestrict_union",
 `!r1 r2 s. rrestrict (r1 UNION r2) s = (rrestrict r1 s) UNION (rrestrict r2 s)`,
@@ -61,6 +79,14 @@ val rrestrict_rrestrict = Q.store_thm ("rrestrict_rrestrict",
 SRW_TAC [] [rrestrict_def, EXTENSION] THEN
 EQ_TAC THEN
 SRW_TAC [] []);
+
+val domain_rrestrict_SUBSET = Q.store_thm ("domain_rrestrict_SUBSET",
+  `domain (rrestrict r s) SUBSET s`,
+  REWRITE_TAC [in_domain, SUBSET_DEF, in_rrestrict] THEN REPEAT STRIP_TAC) ;
+
+val range_rrestrict_SUBSET = Q.store_thm ("range_rrestrict_SUBSET",
+  `range (rrestrict r s) SUBSET s`,
+  REWRITE_TAC [in_range, SUBSET_DEF, in_rrestrict] THEN REPEAT STRIP_TAC) ;
 
 val rcomp_def = Define `
   rcomp r1 r2 = { (x, y) | ?z. (x, z) IN r1 /\ (z, y) IN r2}`;
@@ -175,6 +201,32 @@ val tc_ind = Q.store_thm ("tc_ind",
 SRW_TAC [] [SPECIFICATION] THEN
 IMP_RES_TAC (SIMP_RULE (srw_ss()) [LAMBDA_PROD, GSYM PFORALL_THM]
              (Q.SPECL [`r`, `\(x, y). tc' x y`] tc_ind)));
+
+val [tc_rule1, tc_rule2] = CONJUNCTS (SPEC_ALL tc_rules) ;
+
+(** closure rules for tc **)
+
+val tc_closure = Q.store_thm ("tc_closure",
+  `r SUBSET tc s ==> tc r SUBSET tc s`,
+  Ho_Rewrite.REWRITE_TAC [SUBSET_DEF, FORALL_PROD] THEN DISCH_TAC THEN
+  HO_MATCH_MP_TAC tc_ind THEN CONJ_TAC
+  THENL [ POP_ASSUM ACCEPT_TAC, MATCH_ACCEPT_TAC tc_rule2]) ;
+
+val subset_tc = Q.store_thm ("subset_tc",
+  `r SUBSET tc r`,
+  Ho_Rewrite.REWRITE_TAC [SUBSET_DEF, FORALL_PROD] THEN
+  MATCH_ACCEPT_TAC tc_rule1) ;
+
+val tc_idemp = Q.store_thm ("tc_idemp",
+  `tc (tc r) = tc r`,
+  REWRITE_TAC [SET_EQ_SUBSET] THEN CONJ_TAC
+  THENL [irule tc_closure THEN irule SUBSET_REFL, irule subset_tc]) ;
+
+val tc_mono = Q.store_thm ("tc_mono",
+  `r SUBSET s ==> tc r SUBSET tc s`,
+  DISCH_TAC THEN irule tc_closure THEN
+  irule SUBSET_TRANS THEN Q.EXISTS_TAC `s` THEN
+  ASM_REWRITE_TAC [subset_tc]) ;
 
 val tc_strongind = Q.store_thm ("tc_strongind",
 `!r tc'.
@@ -1662,10 +1714,6 @@ IMP_RES_TAC po2lolem1 THEN
 SRW_TAC [] [] THEN
 METIS_TAC [partial_order_def, nth_min_subset_lem2]);
 
-
-
-
-
 (* ------------------------------------------------------------------------ *)
 (*  Link to relation theory                                                 *)
 (* ------------------------------------------------------------------------ *)
@@ -1694,6 +1742,15 @@ val reln_to_rel_app = Q.store_thm ("reln_to_rel_app",
 `(reln_to_rel r) x y = (x, y) IN r`,
 SRW_TAC [] [reln_to_rel_def])
 
+val rel_to_reln_IS_UNCURRY = Q.store_thm ("rel_to_reln_IS_UNCURRY",
+  `rel_to_reln = UNCURRY`,
+  REWRITE_TAC [FUN_EQ_THM,
+    REWRITE_RULE [IN_APP] in_rel_to_reln, UNCURRY_VAR]) ;
+
+val reln_to_rel_IS_CURRY = Q.store_thm ("reln_to_rel_IS_CURRY",
+  `reln_to_rel = CURRY`,
+  REWRITE_TAC [FUN_EQ_THM, CURRY_DEF, reln_to_rel_app, IN_APP]) ;
+
 val rel_to_reln_inv = Q.store_thm ("rel_to_reln_inv",
 `reln_to_rel (rel_to_reln R) = R`,
 SRW_TAC [] [reln_to_rel_def, rel_to_reln_def, FUN_EQ_THM])
@@ -1701,7 +1758,6 @@ SRW_TAC [] [reln_to_rel_def, rel_to_reln_def, FUN_EQ_THM])
 val reln_to_rel_inv = Q.store_thm ("reln_to_rel_inv",
 `rel_to_reln (reln_to_rel r) = r`,
 SRW_TAC [] [reln_to_rel_app, EXTENSION, in_rel_to_reln]);
-
 
 val reln_to_rel_11 = Q.store_thm ("reln_to_rel_11",
 `(reln_to_rel r1 = reln_to_rel r2) <=> (r1 = r2)`,
@@ -1719,7 +1775,6 @@ reln_to_rel_11, rel_to_reln_11]
 val rel_to_reln_swap = Q.store_thm("rel_to_reln_swap",
 `(r = rel_to_reln R) <=> (reln_to_rel r = R)`,
 METIS_TAC [rel_to_reln_inv, reln_to_rel_inv]);
-
 
 val domain_to_rel_conv = Q.store_thm ("domain_to_rel_conv",
   `domain r = RDOM (reln_to_rel r)`,

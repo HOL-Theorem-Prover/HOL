@@ -80,6 +80,11 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
+val IN_APP = store_thm (
+  "IN_APP",
+  ``!x P. (x IN P) = P x``,
+  SIMP_TAC bool_ss [IN_DEF]);
+
 val IN_ABS = store_thm (
   "IN_ABS",
   ``!x P. (x IN \x. P x) = P x``,
