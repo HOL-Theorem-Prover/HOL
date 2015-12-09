@@ -825,6 +825,18 @@ val minimal_union = Q.store_thm ("minimal_union",
   e IN minimal_elements s r2`,
 SRW_TAC [] [minimal_elements_def]);
 
+val minimal_elements_mono = Q.store_thm ("minimal_elements_mono",
+  `r SUBSET r' ==> minimal_elements xs r' SUBSET minimal_elements xs r`,
+  Ho_Rewrite.REWRITE_TAC [minimal_elements_def, SUBSET_DEF, IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THENL [FIRST_ASSUM ACCEPT_TAC, REPEAT RES_TAC]) ;
+
+val minimal_elements_rrestrict = Q.store_thm ("minimal_elements_rrestrict",
+  `minimal_elements xs (rrestrict r xs) = minimal_elements xs r`,
+  Ho_Rewrite.REWRITE_TAC [minimal_elements_def,
+    in_rrestrict, EXTENSION, IN_GSPEC_IFF] THEN
+  REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+  (FIRST_ASSUM ACCEPT_TAC ORELSE RES_TAC)) ;
+
 val tc_path_max_lem = Q.prove (
 `!s. FINITE s ==>
      s <> {} ==> !r. acyclic r ==> ?x. x IN maximal_elements s (tc r)`,
