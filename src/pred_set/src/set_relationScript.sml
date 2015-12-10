@@ -1092,9 +1092,11 @@ val extend_linear_order = Q.store_thm ("extend_linear_order",
   linear_order r s
   ==>
   linear_order (r UNION {(y, x) | y | y IN (s UNION {x})}) (s UNION {x})`,
-SRW_TAC [] [linear_order_def, domain_def, range_def,
-            transitive_def, antisym_def, SUBSET_DEF] THEN
-METIS_TAC []);
+  Ho_Rewrite.REWRITE_TAC [linear_order_def, domain_def, range_def,
+      transitive_def, antisym_def, SUBSET_DEF,
+      IN_UNION, IN_SING, PAIR_IN_GSPEC_1, PAIR_IN_GSPEC_2, IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC [] THEN METIS_TAC []) ; 
 
 val strict_linear_order_acyclic = Q.store_thm ("strict_linear_order_acyclic",
 `!r s. strict_linear_order r s ==> acyclic r`,

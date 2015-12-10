@@ -219,6 +219,18 @@ val IN_GSPEC = store_thm ("IN_GSPEC",
   REWRITE_TAC [GSPECIFICATION] THEN REPEAT STRIP_TAC THEN
   Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
 
+val PAIR_IN_GSPEC_1 = Q.store_thm ("PAIR_IN_GSPEC_1",
+  `(a,b) IN {(y,x) | y | P y} = P a /\ (b = x)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    MATCH_ACCEPT_TAC CONJ_COMM) ;
+
+val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2", 
+  `(a,b) IN {(x,y) | y | P y} = P b /\ (a = x)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    MATCH_ACCEPT_TAC CONJ_COMM) ;
+
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
 
@@ -1521,6 +1533,14 @@ val IMAGE_CONG = store_thm(
 ==> (IMAGE f s = IMAGE f' s')``,
 SRW_TAC[][EXTENSION] THEN METIS_TAC[])
 val _ = DefnBase.export_cong"IMAGE_CONG"
+
+val GSPEC_IMAGE = Q.store_thm ("GSPEC_IMAGE",
+  `GSPEC f = IMAGE (FST o f) (SND o f)`,
+  REWRITE_TAC [EXTENSION, IN_IMAGE, GSPECIFICATION] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+  Q.EXISTS_TAC `x'` THEN Cases_on `f x'` THEN
+  FULL_SIMP_TAC bool_ss [EXTENSION, SPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ]) ;
 
 (* ===================================================================== *)
 (* Injective functions on a set.					 *)
