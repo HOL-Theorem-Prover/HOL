@@ -1128,9 +1128,10 @@ SRW_TAC [] [] THENL
 
 val strict_linear_order = Q.store_thm ("strict_linear_order",
 `!r s. linear_order r s ==> strict_linear_order (strict r) s`,
-SRW_TAC [] [linear_order_def, strict_linear_order_def, strict_def,
-            domain_def, range_def, SUBSET_DEF, transitive_def, antisym_def] THEN
-METIS_TAC []);
+Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def, strict_def,
+            domain_def, range_def, SUBSET_DEF, transitive_def, antisym_def,
+	    IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF] THEN
+REPEAT STRIP_TAC THEN METIS_TAC []);
 
 val linear_order = Q.store_thm ("linear_order",
 `!r s. strict_linear_order r s ==> linear_order (r UNION {(x, x) | x IN s}) s`,

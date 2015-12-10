@@ -197,9 +197,22 @@ val GSPEC_ETA = store_thm(
   ``{x | P x} = P``,
   SRW_TAC [] [EXTENSION, SPECIFICATION]);
 
+val GSPEC_PAIR_ETA = store_thm(
+  "GSPEC_PAIR_ETA",
+  ``{(x,y) | P x y} = UNCURRY P``,
+  SRW_TAC [] [EXTENSION, SPECIFICATION] THEN EQ_TAC THEN STRIP_TAC 
+  THENL [ ASM_REWRITE_TAC [UNCURRY_DEF],
+    Q.EXISTS_TAC `FST x` THEN
+    Q.EXISTS_TAC `SND x` THEN
+    FULL_SIMP_TAC std_ss [UNCURRY] ]) ;
+
 val IN_GSPEC_IFF = store_thm ("IN_GSPEC_IFF",
   ``y IN {x | P x} = P y``,
   REWRITE_TAC [GSPEC_ETA, SPECIFICATION]) ;
+
+val PAIR_IN_GSPEC_IFF = store_thm ("PAIR_IN_GSPEC_IFF",
+  ``(x,y) IN {(x,y) | P x y} = P x y``,
+  REWRITE_TAC [GSPEC_PAIR_ETA, UNCURRY_DEF, SPECIFICATION]) ;
 
 val IN_GSPEC = store_thm ("IN_GSPEC",
   ``!y x P. P y /\ (x = f y) ==> x IN {f x | P x}``,
