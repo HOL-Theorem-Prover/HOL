@@ -231,6 +231,12 @@ val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2",
     combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
     MATCH_ACCEPT_TAC CONJ_COMM) ;
 
+val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same", 
+  `(a,b) IN {(x,x) | P x} = P a /\ (a = b)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
+
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
 

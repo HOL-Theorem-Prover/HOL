@@ -1073,18 +1073,26 @@ SRW_TAC [] []);
 
 val linear_order_restrict = Q.store_thm ("linear_order_restrict",
 `!s r s'. linear_order r s ==> linear_order (rrestrict r s') (s INTER s')`,
-SRW_TAC [] [linear_order_def, rrestrict_def, domain_def, range_def,
-            SUBSET_DEF, transitive_def, antisym_def] THEN
-METIS_TAC []);
+  Ho_Rewrite.REWRITE_TAC 
+    [linear_order_def, rrestrict_def, domain_def, range_def,
+	      SUBSET_DEF, transitive_def, antisym_def,
+	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
+  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  RES_TAC) ; 
 
 val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
 `!s r s'.
   strict_linear_order r s
   ==>
   strict_linear_order (rrestrict r s') (s INTER s')`,
-SRW_TAC [] [strict_linear_order_def, rrestrict_def, domain_def, range_def,
-            transitive_def, SUBSET_DEF] THEN
-METIS_TAC []);
+  Ho_Rewrite.REWRITE_TAC 
+    [strict_linear_order_def, rrestrict_def, domain_def, range_def,
+	      SUBSET_DEF, transitive_def, antisym_def,
+	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
+  LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  RES_TAC) ; 
 
 val extend_linear_order = Q.store_thm ("extend_linear_order",
 `!r s x.
@@ -1130,16 +1138,21 @@ SRW_TAC [] [] THENL
 
 val strict_linear_order = Q.store_thm ("strict_linear_order",
 `!r s. linear_order r s ==> strict_linear_order (strict r) s`,
-Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def, strict_def,
-            domain_def, range_def, SUBSET_DEF, transitive_def, antisym_def,
-	    IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF] THEN
-REPEAT STRIP_TAC THEN METIS_TAC []);
+  Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def,
+    strict_def, domain_def, range_def, SUBSET_DEF, transitive_def,
+     antisym_def, IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF] THEN
+  REPEAT STRIP_TAC THEN 
+  REPEAT BasicProvers.VAR_EQ_TAC THEN
+  ASM_REWRITE_TAC [] THEN METIS_TAC []) ;
 
 val linear_order = Q.store_thm ("linear_order",
 `!r s. strict_linear_order r s ==> linear_order (r UNION {(x, x) | x IN s}) s`,
-SRW_TAC [] [linear_order_def, strict_linear_order_def, transitive_def,
-            antisym_def, domain_def, range_def, SUBSET_DEF] THEN
-METIS_TAC []);
+  Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def,
+     domain_def, range_def, SUBSET_DEF, transitive_def, antisym_def,
+      IN_UNION, IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, PAIR_IN_GSPEC_same] THEN
+  REPEAT STRIP_TAC THEN 
+  REPEAT BasicProvers.VAR_EQ_TAC THEN
+  ASM_REWRITE_TAC [] THEN METIS_TAC []) ;
 
 val finite_strict_linear_order_has_maximal = Q.store_thm
 ("finite_strict_linear_order_has_maximal",
