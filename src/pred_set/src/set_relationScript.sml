@@ -394,21 +394,21 @@ METIS_TAC [tc_rules]);
 
 val pair_in_IMAGE_SWAP = Q.prove (
   `((a, b) IN IMAGE SWAP r) = ((b, a) IN r)`,
-  Ho_Rewrite.REWRITE_TAC [IN_IMAGE, EXISTS_PROD, SWAP_def, 
-    FST, SND, PAIR_EQ] THEN 
+  Ho_Rewrite.REWRITE_TAC [IN_IMAGE, EXISTS_PROD, SWAP_def,
+    FST, SND, PAIR_EQ] THEN
   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN PROVE_TAC []) ;
 
 val tc_ind' = Ho_Rewrite.REWRITE_RULE [PULL_FORALL] tc_ind ;
 
 val tc_SWAP = Q.store_thm ("tc_SWAP",
   `tc (IMAGE SWAP r) = IMAGE SWAP (tc r)`,
-  Ho_Rewrite.REWRITE_TAC [SET_EQ_SUBSET, SUBSET_DEF, 
+  Ho_Rewrite.REWRITE_TAC [SET_EQ_SUBSET, SUBSET_DEF,
     FORALL_PROD, pair_in_IMAGE_SWAP] THEN CONJ_TAC
   THENL [
     HO_MATCH_MP_TAC tc_ind THEN
     REWRITE_TAC [pair_in_IMAGE_SWAP] THEN REPEAT STRIP_TAC
     THENL [IMP_RES_TAC tc_rule1, IMP_RES_TAC tc_rule2],
-    REPEAT GEN_TAC THEN HO_MATCH_MP_TAC tc_ind' THEN REPEAT STRIP_TAC 
+    REPEAT GEN_TAC THEN HO_MATCH_MP_TAC tc_ind' THEN REPEAT STRIP_TAC
     THENL [irule tc_rule1 THEN ASM_REWRITE_TAC [pair_in_IMAGE_SWAP],
       IMP_RES_TAC tc_rule2]]) ;
 
@@ -443,7 +443,7 @@ METIS_TAC [tc_cases]);
 
 val acyclic_SWAP = Q.store_thm ("acyclic_SWAP",
   `acyclic (IMAGE SWAP r) = acyclic r`,
-  REWRITE_TAC [acyclic_def, tc_SWAP, pair_in_IMAGE_SWAP]) ; 
+  REWRITE_TAC [acyclic_def, tc_SWAP, pair_in_IMAGE_SWAP]) ;
 
 val tc_BIGUNION_lem = Q.prove (
 `!x y. (x, y) IN tc (BIGUNION rs) ==>
@@ -836,7 +836,7 @@ val _ = ot0 "minimal_elements" "minimalElements"
 
 val minimal_elements_SWAP = Q.store_thm ("minimal_elements_SWAP",
   `minimal_elements xs (IMAGE SWAP r) = maximal_elements xs r`,
-  REWRITE_TAC [minimal_elements_def, maximal_elements_def, 
+  REWRITE_TAC [minimal_elements_def, maximal_elements_def,
     EXTENSION, pair_in_IMAGE_SWAP]) ;
 
 val maximal_union = Q.store_thm ("maximal_union",
@@ -1020,7 +1020,7 @@ val finite_acyclic_has_maximal_path = Q.store_thm
   x NOTIN maximal_elements s r
   ==>
   ?y. y IN maximal_elements s r /\ (x, y) IN tc r`,
-  ONCE_REWRITE_TAC [GSYM tc_SWAP', GSYM minimal_elements_SWAP, 
+  ONCE_REWRITE_TAC [GSYM tc_SWAP', GSYM minimal_elements_SWAP,
     GSYM acyclic_SWAP] THEN REPEAT STRIP_TAC THEN
   irule finite_acyclic_has_minimal_path THEN FIRST_ASSUM ACCEPT_TAC) ;
 
@@ -1073,26 +1073,26 @@ SRW_TAC [] []);
 
 val linear_order_restrict = Q.store_thm ("linear_order_restrict",
 `!s r s'. linear_order r s ==> linear_order (rrestrict r s') (s INTER s')`,
-  Ho_Rewrite.REWRITE_TAC 
+  Ho_Rewrite.REWRITE_TAC
     [linear_order_def, rrestrict_def, domain_def, range_def,
 	      SUBSET_DEF, transitive_def, antisym_def,
 	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
   LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
-  RES_TAC) ; 
+  RES_TAC) ;
 
 val strict_linear_order_restrict = Q.store_thm ("strict_linear_order_restrict",
 `!s r s'.
   strict_linear_order r s
   ==>
   strict_linear_order (rrestrict r s') (s INTER s')`,
-  Ho_Rewrite.REWRITE_TAC 
+  Ho_Rewrite.REWRITE_TAC
     [strict_linear_order_def, rrestrict_def, domain_def, range_def,
 	      SUBSET_DEF, transitive_def, antisym_def,
 	       IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, IN_INTER] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN_LT
   LASTGOAL (FIRST_X_ASSUM irule THEN FIRST_ASSUM ACCEPT_TAC) THEN
-  RES_TAC) ; 
+  RES_TAC) ;
 
 val extend_linear_order = Q.store_thm ("extend_linear_order",
 `!r s x.
@@ -1104,13 +1104,22 @@ val extend_linear_order = Q.store_thm ("extend_linear_order",
       transitive_def, antisym_def, SUBSET_DEF,
       IN_UNION, IN_SING, PAIR_IN_GSPEC_1, PAIR_IN_GSPEC_2, IN_GSPEC_IFF] THEN
   REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC [] THEN METIS_TAC []) ; 
+  ASM_REWRITE_TAC [] THEN METIS_TAC []) ;
 
 val strict_linear_order_acyclic = Q.store_thm ("strict_linear_order_acyclic",
 `!r s. strict_linear_order r s ==> acyclic r`,
 SRW_TAC [] [acyclic_def, strict_linear_order_def] THEN
 IMP_RES_TAC transitive_tc THEN
 FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, transitive_def]);
+
+val acyclic_union = Q.prove (
+  `acyclic (r1 ∪ r2) ==> (q, r) IN r2 ==> (r, q) NOTIN r1`,
+  REWRITE_TAC [acyclic_def] THEN
+  REPEAT STRIP_TAC THEN
+  VALIDATE (FIRST_ASSUM (CONTR_TAC o UNDISCH o
+    MATCH_MP F_IMP o Q.SPEC `q`)) THEN
+  irule tc_rule2 THEN Q.EXISTS_TAC `r` THEN
+  CONJ_TAC THEN irule tc_rule1 THEN ASM_REWRITE_TAC [IN_UNION]) ;
 
 val strict_linear_order_union_acyclic = Q.store_thm
 ("strict_linear_order_union_acyclic",
@@ -1122,13 +1131,14 @@ val strict_linear_order_union_acyclic = Q.store_thm
 SRW_TAC [] [] THEN
 EQ_TAC THEN
 SRW_TAC [] [] THENL
-[FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, domain_def,
+[ FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, domain_def,
                            transitive_def, range_def, SUBSET_DEF] THEN
-     Cases_on `x` THEN
-     IMP_RES_TAC acyclic_irreflexive THEN
-     CCONTR_TAC THEN
-     FULL_SIMP_TAC (srw_ss()) [] THEN
-     METIS_TAC [acyclic_def, tc_rules, IN_UNION],
+    REPEAT STRIP_TAC THEN
+    Cases_on `x` THEN
+    RES_TAC THEN RES_TAC THEN
+    IMP_RES_TAC acyclic_union THEN
+    IMP_RES_TAC acyclic_irreflexive THEN
+    CCONTR_TAC THEN FULL_SIMP_TAC std_ss [IN_UNION],
  `r1 UNION r2 = r1`
          by (FULL_SIMP_TAC (srw_ss()) [domain_def, range_def, SUBSET_DEF,
                                        EXTENSION] THEN
@@ -1141,7 +1151,7 @@ val strict_linear_order = Q.store_thm ("strict_linear_order",
   Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def,
     strict_def, domain_def, range_def, SUBSET_DEF, transitive_def,
      antisym_def, IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   REPEAT BasicProvers.VAR_EQ_TAC THEN
   ASM_REWRITE_TAC [] THEN METIS_TAC []) ;
 
@@ -1150,7 +1160,7 @@ val linear_order = Q.store_thm ("linear_order",
   Ho_Rewrite.REWRITE_TAC [linear_order_def, strict_linear_order_def,
      domain_def, range_def, SUBSET_DEF, transitive_def, antisym_def,
       IN_UNION, IN_GSPEC_IFF, PAIR_IN_GSPEC_IFF, PAIR_IN_GSPEC_same] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   REPEAT BasicProvers.VAR_EQ_TAC THEN
   ASM_REWRITE_TAC [] THEN METIS_TAC []) ;
 
