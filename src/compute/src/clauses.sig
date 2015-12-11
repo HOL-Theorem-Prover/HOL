@@ -52,4 +52,11 @@ sig
   val from_term : comp_rws * term list * term -> db dterm
   val set_skip : comp_rws -> string * string -> int option -> unit
 
+  datatype transform 
+    = Conversion of (term -> thm * db fterm)
+    | RRules of thm list
+
+  val deplist : comp_rws -> ((string * string) * transform list) list
+  val no_transform : comp_rws -> (string * string) list
+
 end
