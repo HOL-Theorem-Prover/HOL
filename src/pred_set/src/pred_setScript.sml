@@ -80,6 +80,11 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
+val IN_APP = store_thm (
+  "IN_APP",
+  ``!x P. (x IN P) = P x``,
+  SIMP_TAC bool_ss [IN_DEF]);
+
 val IN_ABS = store_thm (
   "IN_ABS",
   ``!x P. (x IN \x. P x) = P x``,
@@ -192,14 +197,45 @@ val GSPEC_ETA = store_thm(
   ``{x | P x} = P``,
   SRW_TAC [] [EXTENSION, SPECIFICATION]);
 
+val GSPEC_PAIR_ETA = store_thm(
+  "GSPEC_PAIR_ETA",
+  ``{(x,y) | P x y} = UNCURRY P``,
+  SRW_TAC [] [EXTENSION, SPECIFICATION] THEN EQ_TAC THEN STRIP_TAC 
+  THENL [ ASM_REWRITE_TAC [UNCURRY_DEF],
+    Q.EXISTS_TAC `FST x` THEN
+    Q.EXISTS_TAC `SND x` THEN
+    FULL_SIMP_TAC std_ss [UNCURRY] ]) ;
+
 val IN_GSPEC_IFF = store_thm ("IN_GSPEC_IFF",
   ``y IN {x | P x} = P y``,
   REWRITE_TAC [GSPEC_ETA, SPECIFICATION]) ;
+
+val PAIR_IN_GSPEC_IFF = store_thm ("PAIR_IN_GSPEC_IFF",
+  ``(x,y) IN {(x,y) | P x y} = P x y``,
+  REWRITE_TAC [GSPEC_PAIR_ETA, UNCURRY_DEF, SPECIFICATION]) ;
 
 val IN_GSPEC = store_thm ("IN_GSPEC",
   ``!y x P. P y /\ (x = f y) ==> x IN {f x | P x}``,
   REWRITE_TAC [GSPECIFICATION] THEN REPEAT STRIP_TAC THEN
   Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
+
+val PAIR_IN_GSPEC_1 = Q.store_thm ("PAIR_IN_GSPEC_1",
+  `(a,b) IN {(y,x) | y | P y} = P a /\ (b = x)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    MATCH_ACCEPT_TAC CONJ_COMM) ;
+
+val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2", 
+  `(a,b) IN {(x,y) | y | P y} = P b /\ (a = x)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    MATCH_ACCEPT_TAC CONJ_COMM) ;
+
+val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same", 
+  `(a,b) IN {(x,x) | P x} = P a /\ (a = b)`,
+  SIMP_TAC bool_ss [GSPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
+    EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []) ;
 
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
@@ -1503,6 +1539,14 @@ val IMAGE_CONG = store_thm(
 ==> (IMAGE f s = IMAGE f' s')``,
 SRW_TAC[][EXTENSION] THEN METIS_TAC[])
 val _ = DefnBase.export_cong"IMAGE_CONG"
+
+val GSPEC_IMAGE = Q.store_thm ("GSPEC_IMAGE",
+  `GSPEC f = IMAGE (FST o f) (SND o f)`,
+  REWRITE_TAC [EXTENSION, IN_IMAGE, GSPECIFICATION] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN
+  Q.EXISTS_TAC `x'` THEN Cases_on `f x'` THEN
+  FULL_SIMP_TAC bool_ss [EXTENSION, SPECIFICATION,
+    combinTheory.o_THM, FST, SND, PAIR_EQ]) ;
 
 (* ===================================================================== *)
 (* Injective functions on a set.					 *)
@@ -3096,6 +3140,43 @@ val INFINITE_DIFF_FINITE = store_thm("INFINITE_DIFF_FINITE",
      CONV_TAC NOT_FORALL_CONV THEN
      EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]);
 
+val FINITE_INDUCT' =
+  Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ; 
+
+val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
+  REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
+
+val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
+  `!s. FINITE s ==> ?f b. BIJ f (count b) s`,
+  GEN_TAC THEN HO_MATCH_MP_TAC FINITE_INDUCT' THEN
+  REPEAT STRIP_TAC THEN1
+    (REWRITE_TAC [BIJ_EMPTY] THEN Q.EXISTS_TAC `0` THEN
+      REWRITE_TAC [COUNT_ZERO]) THEN
+  Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
+  Q.EXISTS_TAC `SUC b` THEN
+  REWRITE_TAC [IN_INSERT, COUNT_SUC, BIJ_DEF, INJ_DEF, SURJ_DEF] THEN
+  BETA_TAC THEN 
+  RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF]) THEN
+  REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
+  REPEAT COND_CASES_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
+  REWRITE_TAC [NOT_IN_COUNT] THEN REPEAT STRIP_TAC THEN
+  REPEAT BasicProvers.VAR_EQ_TAC THEN
+  TRY (FIRST_X_ASSUM (fn tha => FIRST_X_ASSUM (fn thb => 
+    let val th = MATCH_MP thb tha in
+      REWRITE_TAC [th] THEN RULE_ASSUM_TAC (REWRITE_RULE [th]) end)) THEN
+      FIRST_ASSUM CONTR_TAC) 
+  THENL [ RES_TAC,
+    Q.EXISTS_TAC `b` THEN REWRITE_TAC [],
+    RES_TAC THEN Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC [] THEN
+    COND_CASES_TAC THEN
+    (REFL_TAC ORELSE REPEAT BasicProvers.VAR_EQ_TAC) THEN
+    IMP_RES_TAC NOT_IN_COUNT]) ;
+
+fun drop_forall th = if is_forall (concl th) then [] else [th] ;
+
+val FINITE_BIJ_CARD_EQ' = 
+  Ho_Rewrite.REWRITE_RULE [PULL_FORALL, AND_IMP_INTRO] FINITE_BIJ_CARD_EQ ;
+
 val FINITE_ISO_NUM =
     store_thm
     ("FINITE_ISO_NUM",
@@ -3103,82 +3184,37 @@ val FINITE_ISO_NUM =
        FINITE s ==>
        ?f. (!n m. (n < CARD s /\ m < CARD s) ==> (f n = f m) ==> (n = m)) /\
            (s = {f n | n < CARD s})`--),
-  SET_INDUCT_TAC THENL
-  [PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-   CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-   REWRITE_TAC [CARD_EMPTY,NOT_LESS_0,NOT_IN_EMPTY],
-   FIRST_ASSUM (fn th => fn g => CHOOSE_THEN STRIP_ASSUME_TAC th g) THEN
-   PURE_ONCE_REWRITE_TAC [UNDISCH (SPEC (--`s:'a set`--) CARD_INSERT)] THEN
-   FILTER_ASM_REWRITE_TAC is_neg [] THEN
-   PURE_ONCE_REWRITE_TAC [LESS_THM] THEN
-   EXISTS_TAC (--`\n. if n < (CARD (s:'a set)) then f n else (e:'a)`--) THEN
-   CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
-   [REPEAT GEN_TAC THEN
-    let fun ttac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
-    in DISCH_THEN (REPEAT_TCL STRIP_THM_THEN ttac) end
-    THENL
-    [REPEAT STRIP_TAC THEN REFL_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
-     PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-     CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-     REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM (fn th => fn g => MP_TAC (assert (is_eq o concl) th) g) THEN
-     PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
-     CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-     CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
-     REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC,
-     let fun is_less t = (fst(strip_comb t) = (--`$<`--)) handle _ => false
-     in FILTER_ASM_REWRITE_TAC is_less [LESS_REFL] end THEN
-     FIRST_ASSUM MATCH_MP_TAC THEN
-     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
-    FIRST_ASSUM (fn th => fn g => (MP_TAC (assert(is_eq o concl) th)) g) THEN
-    PURE_REWRITE_TAC [EXTENSION,IN_INSERT] THEN
-    CONV_TAC (ONCE_DEPTH_CONV SET_SPEC_CONV) THEN
-    DISCH_THEN (fn th => PURE_ONCE_REWRITE_TAC [th]) THEN
-    GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-    [EXISTS_TAC (--`CARD (s:'a set)`--) THEN
-     REWRITE_TAC [LESS_REFL] THEN FIRST_ASSUM ACCEPT_TAC,
-     EXISTS_TAC (--`n:num`--) THEN
-     FILTER_ASM_REWRITE_TAC (fn t => (not(lhs t = (--`s:'a set`--)))
-                                     handle _ => true) [],
-     SUBST1_TAC
-       (ASSUME (--`x:'a = (if n < CARD (s:'a set) then f n else e)`--)) THEN
-     SUBST1_TAC (ASSUME (--`n = CARD (s:'a set)`--)) THEN
-     REWRITE_TAC [LESS_REFL],
-     SUBST1_TAC
-       (ASSUME (--`x:'a = (if n < CARD (s:'a set) then f n else e)`--)) THEN
-     DISJ2_TAC THEN EXISTS_TAC (--`n:num`--) THEN
-     REWRITE_TAC [ASSUME (--`n < CARD (s:'a set)`--)]]]]);
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC FINITE_BIJ_COUNT THEN
+  ASSUME_TAC (Q.SPEC `b` FINITE_COUNT) THEN
+  IMP_RES_TAC FINITE_BIJ_CARD_EQ' THEN
+  ASSUME_TAC (Q.ISPECL [`count b`, `s : 'a -> bool`] FINITE_BIJ_CARD_EQ') THEN
+  RES_TAC THEN Q.EXISTS_TAC `f` THEN
+  (* omitting next step multiplies proof time by 40! *)
+  RULE_L_ASSUM_TAC drop_forall THEN
+  RULE_L_ASSUM_TAC (CONJUNCTS o 
+    REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT]) THEN
+  FIRST_ASSUM (fn th => REWRITE_TAC [SYM th, CARD_COUNT]) THEN
+  CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
+  REWRITE_TAC [EXTENSION] THEN
+  GEN_TAC THEN EQ_TAC
+  THENL [
+    DISCH_TAC THEN RES_TAC THEN
+    HO_MATCH_MP_TAC IN_GSPEC THEN
+    Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC [],
+    SIMP_TAC std_ss [GSPECIFICATION] THEN
+    REPEAT STRIP_TAC THEN RES_TAC THEN ASM_REWRITE_TAC [] ]) ;
 
-val FINITE_INDUCT' =
-  Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ; 
-
-val FINITE_WEAK_ENUMERATE = Q.store_thm
-("FINITE_WEAK_ENUMERATE",
- `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
+val FINITE_WEAK_ENUMERATE = Q.store_thm ("FINITE_WEAK_ENUMERATE",
+  `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
   GEN_TAC THEN EQ_TAC 
   THENL [
-    HO_MATCH_MP_TAC FINITE_INDUCT' THEN
-    REPEAT STRIP_TAC THEN1 
-      (Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `0` THEN
-      SIMP_TAC std_ss [NOT_IN_EMPTY]) THEN 
-    Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
-    Q.EXISTS_TAC `SUC b` THEN
-    REWRITE_TAC [IN_INSERT] THEN
-    REPEAT (STRIP_TAC ORELSE EQ_TAC)
-    THENL [ Q.EXISTS_TAC `b` THEN ASM_SIMP_TAC std_ss [],
-      RES_TAC THEN Q.EXISTS_TAC `n` THEN ASM_SIMP_TAC arith_ss [],
-      POP_ASSUM MP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN1
-      SIMP_TAC std_ss [] THEN
-      FIRST_X_ASSUM (ASSUME_TAC o #2 o EQ_IMP_RULE o Q.SPEC `e'`) THEN
-      DISCH_TAC THEN VALIDATE (FIRST_X_ASSUM (ASSUME_TAC o UNDISCH))
-      THENL [ 
-	Q.EXISTS_TAC `n` THEN ASM_SIMP_TAC arith_ss [],
-	ASM_SIMP_TAC bool_ss [] ]],
+    DISCH_TAC THEN IMP_RES_TAC FINITE_BIJ_COUNT THEN
+    RULE_L_ASSUM_TAC (CONJUNCTS o
+      REWRITE_RULE [BIJ_DEF, SURJ_DEF, IN_COUNT]) THEN
+    Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `b` THEN
+    GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN RES_TAC 
+    THENL [Q.EXISTS_TAC `y`, ALL_TAC] THEN ASM_REWRITE_TAC [], 
     STRIP_TAC THEN irule SUBSET_FINITE THEN
     Q.EXISTS_TAC `IMAGE f (count b)` THEN CONJ_TAC
     THENL [ irule IMAGE_FINITE THEN irule FINITE_COUNT,
