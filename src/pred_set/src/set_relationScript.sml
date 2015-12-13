@@ -1113,7 +1113,7 @@ IMP_RES_TAC transitive_tc THEN
 FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, transitive_def]);
 
 val acyclic_union = Q.prove (
-  `acyclic (r1 ∪ r2) ==> (q, r) IN r2 ==> (r, q) NOTIN r1`,
+  `acyclic (r1 UNION r2) ==> (q, r) IN r2 ==> (r, q) NOTIN r1`,
   REWRITE_TAC [acyclic_def] THEN
   REPEAT STRIP_TAC THEN
   VALIDATE (FIRST_ASSUM (CONTR_TAC o UNDISCH o
