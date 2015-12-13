@@ -116,6 +116,7 @@ end
 
 fun prove_recordtype_thms (tyinfo, fields) = let
 
+  val save_thm = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm
   fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
   val app2 = C (curry op^)
