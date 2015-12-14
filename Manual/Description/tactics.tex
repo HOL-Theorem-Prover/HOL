@@ -496,91 +496,63 @@ until it fails (see Section~\ref{sec:repeat}).
 
 
 
-\subsection{Case analysis on a boolean term}
+\subsection{Case analysis}
 \index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|(}
 
-\index{ASM_CASES_TAC@\ml{ASM\_CASES\_TAC}|(}
+\index{Cases_on@\ml{Cases\_on}|(}
 \begin{holboxed}
 \begin{verbatim}
-   ASM_CASES_TAC : term -> tactic
+   Cases_on : term quotation -> tactic
 \end{verbatim}
 \end{holboxed}
 
 \begin{itemize}
 
-\item{\bf Summary:} \ml{ASM\_CASES\_TAC} $u$ , where $u$ is a
-boolean-valued term, does case analysis on $u$.
+\item{\bf Summary:}
+\ml{Cases\_on}~$q$, where $q$ is a quotation denoting a term of an algebraic type (\eg, booleans, lists, natural numbers, types defined by the user with \ml{Datatype}), does case analysis on that term.
+Let the relevant type have $m$ constructors $\textsf{C}_1$ to $\textsf{C}_m$, where $\textsf{C}_i$ has $n_i$ arguments.
+If the term is a variable, then the variable is substituted out of the goal entirely:
 
 \begin{center}
 \begin{tabular}{c} \\
 $t$
 \\ \hline \hline
-$\{u\}t\ \ \ \ \ \{${\small\verb%~%}$u\}t$
+$t[q := \textsf{C}_1\,a_{11}\cdots a_{1n_1}]\quad\cdots\quad
+t[q := \textsf{C}_m\,a_{m1}\cdots a_{mn_m}]$
 \\
 \end{tabular}
 \end{center}
 
+If the term denoted by $q$ is not simply a variable (\eg, \ml{Cases\_on`n~+~1`}), then fresh assumptions are introduced:
+\begin{center}
+\begin{tabular}{c} \\
+$t$
+\\ \hline \hline
+$\{q := \textsf{C}_1\,a_{11}\cdots a_{1n_1}\}t\quad\cdots\quad
+\{q := \textsf{C}_m\,a_{m1}\cdots a_{mn_m}\}t$
+\\
+\end{tabular}
+\end{center}
 \item{\bf Use:} Case analysis.
 \end{itemize}
-\index{ASM_CASES_TAC@\ml{ASM\_CASES\_TAC}|)}
-
-\subsection{Case analysis on a disjunction}
-
-
-\begin{holboxed}
-\index{DISJ_CASES_TAC@\ml{DISJ\_CASES\_TAC}|pin}
-\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!tactic for case splits on}
-\begin{verbatim}
-   DISJ_CASES_TAC : thm_tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
-\item{\bf Summary:}
-{\small\verb%DISJ_CASES_TAC |- %}$u${\small\verb% \/ %}$v$
-splits a goal into two cases: one with $u$
-as an assumption
-and the other with $v$ as an assumption.
-
-\begin{center}
-\begin{tabular}{c} \\
-$t$
-\\ \hline \hline
-$\{u\}t\ \ \ \ \ \{v\}t$
-\\
-\end{tabular}
-\end{center}
-
-\item{\bf Use:} Case analysis. The
-tactic {\small\verb%ASM_CASES_TAC%} is defined in \ML{} by
-
-{\small\begin{verbatim}
-   let ASM_CASES_TAC t = DISJ_CASES_TAC(SPEC t EXCLUDED_MIDDLE)
-\end{verbatim}}
-
-
-\noindent where {\small\verb%EXCLUDED_MIDDLE%} is
-the theorem {\small\verb%|- !t. t \/ ~t%}.
-
-\end{itemize}
-\index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|)}
+\index{Cases_on@\ml{Cases\_on}|)}
 
 \subsection{Rewriting}
 \label{rewrite}
 
 \index{rewriting!main tactic for|(}
 \begin{holboxed}
-\index{REWRITE_TAC@\ml{REWRITE\_TAC}|pin}
+\index{rewrite_tac@\ml{rewrite\_tac}|pin}
 \begin{verbatim}
-   REWRITE_TAC : thm list -> tactic
-\end{verbatim}\end{holboxed}
-
-
+   rewrite_tac : thm list -> tactic
+\end{verbatim}
+\end{holboxed}
 \begin{itemize}
-\item{\bf Summary:} {\small\verb%REWRITE_TAC[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%}
+\item{\bf Summary:} {\small\verb%rewrite_tac[%}$th_1${\small\verb%,%}$\ldots${\small\verb%,%}$th_n${\small\verb%]%}
 transforms the term part of a goal by rewriting
 it with the given theorems $th_1$, $\dots$, $th_n$,
 and the set of pre-proved standard tautologies\index{tautologies, in rewriting tactic}.
+Also written \ml{REWRITE\_TAC}.
 
 
 \begin{center}
@@ -595,21 +567,21 @@ $\{t_1, \ldots , t_m\}t'$
 \noindent where $t'$ is obtained from $t$ as described.
 
 \item{\bf Use:} Advancing goals by using definitions and
-previously proved theorems (lemmas).\index{lemmas}
+previously proved theorems.
 
 
-\item{\bf Some other rewriting tactics} (based on {\small\verb%REWRITE_TAC%}) are:
+\item{\bf Some other rewriting tactics} (based on \ml{rewrite\_tac}) are:
 \begin{enumerate}
-\item {\small\verb%ASM_REWRITE_TAC%}\index{ASM_REWRITE_TAC@\ml{ASM\_REWRITE\_TAC}}
- adds the assumptions of the goal to the list of
-theorems used for rewriting.
+\item {\small\verb%asm_rewrite_tac%}\index{asm_rewrite_tac@\ml{asm\_rewrite\_tac}} adds the assumptions of the goal to the list of theorems used for rewriting.
+Also written \ml{ASM\_REWRITE\_TAC}.
+
 \index{PURE_ASM_REWRITE_TAC@\ml{PURE\_ASM\_REWRITE\_TAC}}
-\item {\small\verb%PURE_ASM_REWRITE_TAC%} is like {\small\verb%ASM_REWRITE_TAC%}, but it
+\item {\small\verb%PURE_ASM_REWRITE_TAC%} is like {\small\verb%asm_rewrite_tac%}, but it
 doesn't use any built-in rewrites.
 \index{PURE_REWRITE_TAC@\ml{PURE\_REWRITE\_TAC}}
 \item {\small\verb%PURE_REWRITE_TAC%} uses neither the assumptions nor the built-in rewrites.
 \index{FILTER_ASM_REWRITE_TAC@\ml{FILTER\_ASM\_REWRITE\_TAC}}
-\item {\small\verb%FILTER_ASM_REWRITE_TAC %}$p${\small\verb% [%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%}
+\item {\small\verb%FILTER_ASM_REWRITE_TAC %}$p${\small\verb% [%}$th_1${\small\verb%,%}$\ldots${\small\verb%,%}$th_n${\small\verb%]%}
 simplifies the goal by rewriting
 it with the explicitly given theorems $th_1$ , $\dots$, $th_n$ ,
 together with those
@@ -617,6 +589,9 @@ assumptions of the goal which satisfy the predicate $p$ and also
 the standard rewrites.
 
 \end{enumerate}
+
+See also the more powerful simplification tactics described in Section~\ref{sec:simpLib}.
+
 \end{itemize}
 
 \index{rewriting!main tactic for|)}
@@ -625,21 +600,19 @@ the standard rewrites.
 \subsection{Resolution by Modus Ponens}
 
 \index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
-\index{IMP_RES_TAC@\ml{IMP\_RES\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
-   IMP_RES_TAC : thm -> tactic
-\end{verbatim}\end{holboxed}
+\index{imp_res_tac@\ml{imp\_res\_tac}|pin}
+\begin{holboxed}
+\begin{verbatim}
+   imp_res_tac : thm -> tactic
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
 \index{resolution tactics}
-\item{\bf Summary:} {\small\verb%IMP_RES_TAC %}$th$ does a limited amount of
-automated theorem proving in the form of forward inference; it
-`resolves' the theorem $th$ with the
-assumptions of the goal
-and adds any new results to the assumptions. The specification for
-\ml{IMP\_RES\_TAC} is:
-
+\item{\bf Summary:}
+\ml{imp\_res\_tac}~$th$ does a limited amount of automated theorem proving in the form of forward inference; it `resolves' the theorem $th$ with the assumptions of the goal and adds any new results to the assumptions.
+The specification for \ml{imp\_res\_tac} is:
 
 \begin{center}
 \begin{tabular}{c} \\
@@ -650,30 +623,23 @@ $\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t$
 \end{tabular}
 \end{center}
 
-\noindent  where $u_1$, $\dots$, $u_n$
-are derived by `resolving' the theorem $th$ with the existing assumptions
-$t_1$, $\dots$, $t_m$.
-Resolution in \HOL{} is not classical resolution, but just Modus Ponens with
-one-way pattern matching (not unification) and term and type instantiation. The
-general case is where $th$ is of the canonical form
+\noindent  where $u_1$, $\dots$, $u_n$ are derived by `resolving' the theorem $th$ with the existing assumptions $t_1$, $\dots$, $t_m$.
+Resolution in \HOL{} is not classical resolution, but just Modus Ponens with one-way pattern matching (not unification) and term and type instantiation.
+The general case is where $th$ is of the canonical form
 
 $\ \ \ ${\small\verb%|- !%}$x_1$$\ldots x_p${\small\verb%.%}$v_1$ {\small\verb%==>%} $v_2$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
 
-\noindent {\small\verb%IMP_RES_TAC %}$th$ then tries to specialize $x_1$,
-$\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of
-$\{t_1,\ldots ,t_m\}$.  Each time a match is found for some antecedent $v_i$,
-for $i$ successively equal to $1$, $2$, \dots, $q$, a term and type
-instantiation is made and the rule of Modus Ponens is applied.  If all the
-antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then
-the appropriate instance of $v$ is added to the assumptions. Otherwise, if only
-some initial sequence $v_1$, \dots, $v_k$ (for some $k$ where $1 < k < q$) of
-the assumptions can be dismissed, then the remaining implication:
+\noindent
+\ml{imp\_res\_tac}~$th$ then tries to specialize $x_1$, $\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of $\{t_1,\ldots ,t_m\}$.
+Each time a match is found for some antecedent $v_i$, for $i$ successively equal to $1$, $2$, \dots, $q$, a term and type instantiation is made and the rule of Modus Ponens is applied.
+If all the antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then the appropriate instance of $v$ is added to the assumptions.
+Otherwise, if only some initial sequence $v_1$, \dots, $v_k$ (for some $k$ where $1 < k < q$) of the assumptions can be dismissed, then the remaining implication:
 
 $\ \ \ ${\small\verb%|- %} $v_{k+1}$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
 
 \noindent is added to the assumptions.
 
-For a more detailed description of resolution and \ml{IMP\_RES\_TAC}, see
+For a more detailed description of resolution and \ml{imp\_res\_tac}, see
 \REFERENCE.  (See also the Cambridge \LCF\ Manual \cite{new-LCF-man}.)
 
 \item{\bf Use:} Deriving new results from a previously proved implicative
@@ -687,10 +653,10 @@ tactics can use these new results.
 
 \subsection{Identity}
 
-\index{ALL_TAC@\ml{ALL\_TAC}|pin}
+\index{all_tac@\ml{all\_tac}|pin}
 \begin{holboxed}
 \begin{verbatim}
-   ALL_TAC : tactic
+   all_tac : tactic
 \end{verbatim}
 \end{holboxed}
 
@@ -703,9 +669,10 @@ tactics can use these new results.
 \item{\bf Use:}
 \begin{enumerate}
 \index{REPEAT@\ml{REPEAT}}
-\item Writing tacticals (see description of {\small\verb%REPEAT%}
-in Section~\ref{tacticals}).
+\index{rpt@\ml{rpt}}
+\item Writing tacticals (see description of \ml{rpt} in Section~\ref{tacticals}).
 \index{THENL@\ml{THENL}}
+\index{>{"|}@\ml{\gt\pipe}~(\ml{THENL})}
 \item With {\small\verb%THENL%} (see Section~\ref{sec:thenl});
 for example, if tactic $T$ produces two subgoals
 $T_1$ is to be applied to the first while
