@@ -45,11 +45,7 @@ fun add_missing_sig x = let
   val _ = print ("No signature info for section: " ^ x ^ "\n")
   in (missing_sigs := x :: (!missing_sigs)) end;
 
-fun read_complete_sections filename filename_sigs ignore = let
-  (* helper functions *)
-  fun try_map f [] = []
-    | try_map f (x::xs) = (f x :: try_map f xs) handle HOL_ERR _ => try_map f xs
-  (* read basic section info *)
+fun read_sections filename = let
   val xs = lines_from_file filename
   fun is_hex_char c = mem c (explode "0123456789abcdefABCDEF")
   fun is_hex_string str = every is_hex_char (explode str)
@@ -69,7 +65,48 @@ fun read_complete_sections filename filename_sigs ignore = let
           val ys = drop_until (fn x => x = "\n") ys
           in (sec_name,location,body) :: split_by_sections ys end
           handle HOL_ERR _ => split_by_sections ys)
-  val all_sections = split_by_sections ys
+  in split_by_sections ys end
+
+(* function that cleans names *)
+val remove_dot =
+  String.translate (fn c => if mem c [#".",#" "] then "_" else implode [c])
+
+fun format_line sec_name = let
+  fun find_first i c s = if String.sub(s,i) = c then i else find_first (i+1) c s
+  fun split_at c s =
+    (String.substring(s,0,find_first 0 c s),
+     String.extract(s,find_first 0 c s+1,NONE))
+  fun is_subroutine_call s3 =
+    (String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
+                             andalso not (String.isPrefix "ble" s3)
+                             andalso not (String.isPrefix "blt" s3)) orelse let
+    val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
+    in 1 < length ts andalso not (el 2 ts = sec_name) andalso
+       length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end
+  fun format_line_aux line = let
+    val (s1,s2) = split_at #":" line
+    val s2 = String.extract(s2,1,NONE)
+    val (s2,s3) = split_at #"\t" s2
+    val s3 = String.extract(s3,0,SOME (size s3 - 1))
+    val i = Arbnum.toInt(Arbnum.fromHexString s1)
+    val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
+    val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
+    val s2 = ((if is_subroutine_call s3
+               then "call:" ^ remove_dot
+                 (el 2 (String.tokens (fn x => mem x [#"<",#">"]) s3)) ^ ":" ^ s2
+               else s2)
+              handle HOL_ERR _ => s2)
+    val f = String.translate (fn c => if c = #" " then "" else
+              implode [c])
+    in (i,f s2,s3) end
+  in format_line_aux end
+
+fun read_complete_sections filename filename_sigs ignore = let
+  (* helper functions *)
+  fun try_map f [] = []
+    | try_map f (x::xs) = (f x :: try_map f xs) handle HOL_ERR _ => try_map f xs
+  (* read basic section info *)
+  val all_sections = read_sections filename
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
   fun process_sig_line line = let
@@ -88,41 +125,10 @@ fun read_complete_sections filename filename_sigs ignore = let
   fun combine_ss (sec_name,location,body) =
     (sec_name,lookup (hd (String.tokens (fn x => x = #".") sec_name)) ss_alist,location,body)
   val all_sections = try_map combine_ss all_sections
-  (* function that cleans names *)
-  val remove_dot =
-    String.translate (fn c => if mem c [#".",#" "] then "_" else implode [c])
   (* process section bodies *)
-  fun process_body (sec_name,io,location,body) = let
-    val lines = body
-    fun find_first i c s = if String.sub(s,i) = c then i else find_first (i+1) c s
-    fun split_at c s =
-      (String.substring(s,0,find_first 0 c s),
-       String.extract(s,find_first 0 c s+1,NONE))
-    fun is_subroutine_call s3 =
-      (String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
-                               andalso not (String.isPrefix "ble" s3)
-                               andalso not (String.isPrefix "blt" s3)) orelse let
-      val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
-      in 1 < length ts andalso not (el 2 ts = sec_name) andalso
-         length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end
-    fun format_line line = let
-      val (s1,s2) = split_at #":" line
-      val s2 = String.extract(s2,1,NONE)
-      val (s2,s3) = split_at #"\t" s2
-      val s3 = String.extract(s3,0,SOME (size s3 - 1))
-      val i = Arbnum.toInt(Arbnum.fromHexString s1)
-      val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
-      val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
-      val s2 = ((if is_subroutine_call s3
-                 then "call:" ^ remove_dot
-                   (el 2 (String.tokens (fn x => mem x [#"<",#">"]) s3)) ^ ":" ^ s2
-                 else s2)
-                handle HOL_ERR _ => s2)
-      val f = String.translate (fn c => if c = #" " then "" else
-                implode [c])
-      in (i,f s2,s3) end
-    in (remove_dot sec_name,io,location,
-        if mem sec_name ignore then [] else map format_line body) end
+  fun process_body (sec_name,io,location,body) =
+    (remove_dot sec_name,io,location,
+        if mem sec_name ignore then [] else map (format_line sec_name) body)
   val all_sections = map process_body all_sections
   (* location function *)
   fun update x y f a = if x = a then y else f a
