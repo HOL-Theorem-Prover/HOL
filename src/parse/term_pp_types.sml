@@ -10,7 +10,8 @@ structure term_pp_types = struct
 
   type 'a printer = (printing_info,'a)smppt
   type uprinter = unit printer
-  type sysprinter = (grav * grav * grav) -> int -> Term.term -> uprinter
+  type sysprinter = { gravs : (grav * grav * grav), binderp : bool,
+                      depth : int } -> Term.term -> uprinter
 
   datatype lit_type = FldName | StringLit | NumLit | CharLit
 

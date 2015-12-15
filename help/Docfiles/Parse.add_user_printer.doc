@@ -49,7 +49,9 @@ The type {uprinter} (standing for "unit printer") is a special monadic
 printing type based on the {smpp} module (explained further in the
 example below).  The type {sysprinter} is another abbreviation
 {
-   type sysprinter = (grav * grav * grav) -> int -> term -> uprinter
+   type sysprinter =
+     { gravs : (grav * grav * grav), binderp : bool,
+       depth : int } -> term -> uprinter
 }
 Thus, when the user's printing function is called, it is passed ten
 parameters, including three "gravity" values in a triple, and two
@@ -125,6 +127,14 @@ by one.  It starts out at the value stored in
 {Globals.max_print_depth}.  Setting the latter to {~1} will ensure
 that all of a term is always printed.
 
+The {binderp} parameter to the system-printer is true when the term to
+be printed should be considered as a binder. This makes a difference
+when the printer comes to print type annotations: annotations will
+occur with variables if the variable is in a binding position, and not
+elsewhere. This logic ensures that a term like {\x. x} prints as
+{\x:'a. x}. The first, binding occurrence of the variable gets an
+annotation; subsequent occurrences do not.
+
 Finally, the string parameter to the {add_user_printer} function is a
 string corresponding to the ML function.  Best practice is probably to
 define the printing function in an independent structure and to then
@@ -149,12 +159,14 @@ itself only with printing conjunctions.  Note how the actions that make up the p
       open Portable term_pp_types smpp
       val (str,brk) = (#add_string ppfns, #add_break ppfns);
       val (l,r) = dest_conj t
+      fun syspr gravs =
+        sys {gravs = gravs, depth = d - 1, binderp = false}
     in
       str "CONJ:" >>
       brk (1,0) >>
-      sys (Top, Top, Top) (d - 1) l >>
+      syspr (Top, Top, Top) l >>
       brk (1,0) >> str "and then" >> brk(1,0) >>
-      sys (Top, Top, Top) (d - 1) r >>
+      sys (Top, Top, Top) r >>
       str "ENDCONJ"
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
   >  val myprint = fn :
@@ -192,6 +204,9 @@ governing style ({ustyle}), or indented to reveal block structure
         case pg of
           Prec(_, "CONJ") => body
         | _ => wrap body
+      fun syspr t =
+        sys {gravs = (Prec(0,"CONJ"), Top, Top), depth = d - 1,
+             binderp = false} t
     in
       delim (fn bod => ublock CONSISTENT 0
                          (ustyle [Bold] (add_string "CONJ") >>
@@ -199,9 +214,7 @@ governing style ({ustyle}), or indented to reveal block structure
                           ublock INCONSISTENT 0 bod >>
                           add_break (1,0) >>
                           ustyle [Bold] (add_string "ENDCONJ")))
-         (sys (Prec(0, "CONJ"), Top, Top) (d - 1) l >>
-          add_string "," >> add_break (1,0) >>
-          sys (Prec(0, "CONJ"), Top, Top) (d - 1) r)
+         (syspr l >> add_string "," >> add_break (1,0) >> syspr r)
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
   - temp_add_user_printer ("myprint2", ``p /\ q``, myprint2);

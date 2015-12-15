@@ -200,7 +200,7 @@ val GSPEC_ETA = store_thm(
 val GSPEC_PAIR_ETA = store_thm(
   "GSPEC_PAIR_ETA",
   ``{(x,y) | P x y} = UNCURRY P``,
-  SRW_TAC [] [EXTENSION, SPECIFICATION] THEN EQ_TAC THEN STRIP_TAC 
+  SRW_TAC [] [EXTENSION, SPECIFICATION] THEN EQ_TAC THEN STRIP_TAC
   THENL [ ASM_REWRITE_TAC [UNCURRY_DEF],
     Q.EXISTS_TAC `FST x` THEN
     Q.EXISTS_TAC `SND x` THEN
@@ -225,13 +225,13 @@ val PAIR_IN_GSPEC_1 = Q.store_thm ("PAIR_IN_GSPEC_1",
     combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
     MATCH_ACCEPT_TAC CONJ_COMM) ;
 
-val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2", 
+val PAIR_IN_GSPEC_2 = Q.store_thm ("PAIR_IN_GSPEC_2",
   `(a,b) IN {(x,y) | y | P y} = P b /\ (a = x)`,
   SIMP_TAC bool_ss [GSPECIFICATION,
     combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
     MATCH_ACCEPT_TAC CONJ_COMM) ;
 
-val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same", 
+val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same",
   `(a,b) IN {(x,x) | P x} = P a /\ (a = b)`,
   SIMP_TAC bool_ss [GSPECIFICATION,
     combinTheory.o_THM, FST, SND, PAIR_EQ] THEN
@@ -354,7 +354,7 @@ fun univ_printer (tyg, tmg) backend printer ppfns gravs depth tm = let
           else "univ"
 in
   #add_string ppfns U >>
-  printer gravs depth itself_t
+  printer {gravs = gravs, depth = depth, binderp = false} itself_t
 end
 
 val _ = temp_add_user_printer("UNIVprinter", ``UNIV: 'a set``, univ_printer)
@@ -3141,7 +3141,7 @@ val INFINITE_DIFF_FINITE = store_thm("INFINITE_DIFF_FINITE",
      EXISTS_TAC (--`x:'a`--) THEN ASM_REWRITE_TAC[]);
 
 val FINITE_INDUCT' =
-  Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ; 
+  Ho_Rewrite.REWRITE_RULE [PULL_FORALL] FINITE_INDUCT ;
 
 val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
   REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
@@ -3155,16 +3155,16 @@ val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
   Q.EXISTS_TAC `\n. if n = b then e else f n` THEN
   Q.EXISTS_TAC `SUC b` THEN
   REWRITE_TAC [IN_INSERT, COUNT_SUC, BIJ_DEF, INJ_DEF, SURJ_DEF] THEN
-  BETA_TAC THEN 
+  BETA_TAC THEN
   RULE_L_ASSUM_TAC (CONJUNCTS o REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF]) THEN
   REPEAT CONJ_TAC THEN REPEAT GEN_TAC THEN
   REPEAT COND_CASES_TAC THEN REPEAT BasicProvers.VAR_EQ_TAC THEN
   REWRITE_TAC [NOT_IN_COUNT] THEN REPEAT STRIP_TAC THEN
   REPEAT BasicProvers.VAR_EQ_TAC THEN
-  TRY (FIRST_X_ASSUM (fn tha => FIRST_X_ASSUM (fn thb => 
+  TRY (FIRST_X_ASSUM (fn tha => FIRST_X_ASSUM (fn thb =>
     let val th = MATCH_MP thb tha in
       REWRITE_TAC [th] THEN RULE_ASSUM_TAC (REWRITE_RULE [th]) end)) THEN
-      FIRST_ASSUM CONTR_TAC) 
+      FIRST_ASSUM CONTR_TAC)
   THENL [ RES_TAC,
     Q.EXISTS_TAC `b` THEN REWRITE_TAC [],
     RES_TAC THEN Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC [] THEN
@@ -3174,7 +3174,7 @@ val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
 
 fun drop_forall th = if is_forall (concl th) then [] else [th] ;
 
-val FINITE_BIJ_CARD_EQ' = 
+val FINITE_BIJ_CARD_EQ' =
   Ho_Rewrite.REWRITE_RULE [PULL_FORALL, AND_IMP_INTRO] FINITE_BIJ_CARD_EQ ;
 
 val FINITE_ISO_NUM =
@@ -3192,7 +3192,7 @@ val FINITE_ISO_NUM =
   RES_TAC THEN Q.EXISTS_TAC `f` THEN
   (* omitting next step multiplies proof time by 40! *)
   RULE_L_ASSUM_TAC drop_forall THEN
-  RULE_L_ASSUM_TAC (CONJUNCTS o 
+  RULE_L_ASSUM_TAC (CONJUNCTS o
     REWRITE_RULE [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_COUNT]) THEN
   FIRST_ASSUM (fn th => REWRITE_TAC [SYM th, CARD_COUNT]) THEN
   CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
@@ -3207,14 +3207,14 @@ val FINITE_ISO_NUM =
 
 val FINITE_WEAK_ENUMERATE = Q.store_thm ("FINITE_WEAK_ENUMERATE",
   `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
-  GEN_TAC THEN EQ_TAC 
+  GEN_TAC THEN EQ_TAC
   THENL [
     DISCH_TAC THEN IMP_RES_TAC FINITE_BIJ_COUNT THEN
     RULE_L_ASSUM_TAC (CONJUNCTS o
       REWRITE_RULE [BIJ_DEF, SURJ_DEF, IN_COUNT]) THEN
     Q.EXISTS_TAC `f` THEN Q.EXISTS_TAC `b` THEN
-    GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN RES_TAC 
-    THENL [Q.EXISTS_TAC `y`, ALL_TAC] THEN ASM_REWRITE_TAC [], 
+    GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN RES_TAC
+    THENL [Q.EXISTS_TAC `y`, ALL_TAC] THEN ASM_REWRITE_TAC [],
     STRIP_TAC THEN irule SUBSET_FINITE THEN
     Q.EXISTS_TAC `IMAGE f (count b)` THEN CONJ_TAC
     THENL [ irule IMAGE_FINITE THEN irule FINITE_COUNT,

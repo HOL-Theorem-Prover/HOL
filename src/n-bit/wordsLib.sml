@@ -2705,7 +2705,7 @@ fun remove_word_printer () =
 (* A pretty-printer that shows the types for ><, w2w and @@                  *)
 (* ------------------------------------------------------------------------- *)
 
-fun word_cast Gs backend sys ppfns (pg, lg, rg) d t =
+fun word_cast Gs backend syspr ppfns (pg, lg, rg) d t =
    let
       open Portable term_pp_types smpp
       infix >>
@@ -2716,6 +2716,7 @@ fun word_cast Gs backend sys ppfns (pg, lg, rg) d t =
             Prec (j, _) => if i <= j then act else nothing
           | _ => nothing
       val (f, x) = strip_comb t
+      fun sys g d t = syspr {gravs = g, depth = d, binderp = false} t
    in
       case (dest_thy_const f, x) of
          ({Name = "n2w", Thy = "words", Ty = ty}, [a]) =>

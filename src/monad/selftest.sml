@@ -59,6 +59,9 @@ val _ = temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
 val _ = temp_overload_on("monad_bind", ``option$OPTION_BIND``)
 val _ = temp_overload_on("monad_unitbind", ``option$OPTION_IGNORE_BIND``)
 
+val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
+                    "do (x :num) <- (s :num option); SOME (x + (1 :num)) od"
+
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND"
 val t = ``do x <- opt ; SOME (x + 1) od``
 val (f, args) = strip_comb t
