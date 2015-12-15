@@ -36,7 +36,7 @@ fun tppw width {input=s,output,testf} = let
   val t = Parse.Term [QUOTE s]
   val res = Portable.pp_to_string width Parse.pp_term t
 in
-  if res = output then print "OK\n" else die "FAILED!\n"
+  if res = output then print "OK\n" else die ("FAILED!\n  Saw: >|" ^ res ^ "|<")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
