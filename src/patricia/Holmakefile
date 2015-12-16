@@ -1,4 +1,4 @@
-selftest.exe: selftest.uo sptreeSyntax.uo
+selftest.exe: selftest.uo sptreeSyntax.uo sptreeTheory.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe
