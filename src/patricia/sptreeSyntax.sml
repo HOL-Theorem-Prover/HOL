@@ -191,13 +191,14 @@ in
       end
 end
 
-fun sptree_print Gs B sys ppfns (pg, _, _) d t =
+fun sptree_print Gs B syspr ppfns (pg, _, _) d t =
    let
       open Portable term_pp_types smpp
       val {add_string = str, add_break = brk, ublock, ...} =
          ppfns: term_pp_types.ppstream_funs
       val t2 = sptree_pretty_term t
                handle HOL_ERR _ => raise term_pp_types.UserPP_Failed
+      fun sys gs d = syspr {gravs = gs, depth = d, binderp = false}
       fun delim s =
          case pg of
             Prec (j, _) => if 200 <= j then str s else nothing
@@ -227,24 +228,5 @@ fun temp_add_sptree_printer () =
 
 fun remove_sptree_printer () =
    General.ignore (Parse.remove_user_printer "sptree")
-
-(* ------------------------------------------------------------------------- *)
-
-(* Testing
-
-open sptreeSyntax
-
-val () = temp_add_sptree_printer ()
-val () = remove_sptree_printer ()
-
-val th = EVAL ``fromAList [(23746, a:num); (73246, b); (912, c); (0, d)]``
-val th = EVAL ``fromList [a;b;c;d:num]``
-
-val tm = fromList (List.tabulate (100, fn i => numSyntax.term_of_int (2 * i)))
-val tm = fromAList (List.tabulate (100, fn i => (Arbnum.fromInt (2 * i), numSyntax.term_of_int i)))
-
-val th = EVAL ``wf ^tm``
-
-*)
 
 end
