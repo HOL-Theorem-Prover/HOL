@@ -28,6 +28,8 @@ sig
      | FPLe of int
      | FPLt of int
      | FPMul of int
+     | FPMulAdd of int
+     | FPMulSub of int
      | FPNeg of int * bool
      | FPSqrt of int
      | FPSub of int

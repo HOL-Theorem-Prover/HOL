@@ -35,6 +35,7 @@ sig
    val STEP:
       (thm list -> thm list) * term -> thm list -> term list list -> cover ->
       term -> thm list
+   val STRIP_UNDISCH: rule
    val WALPHA_CONV: conv
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
