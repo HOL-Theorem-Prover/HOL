@@ -1859,8 +1859,8 @@ local
              val r_lt = numSyntax.mk_less (r, sz)
            in
              (Tactic.MATCH_MP_TAC
-                (Thm.INST_TYPE [Type.alpha |-> typ]
-                   (Drule.SPECL [l, r] intro_thm))
+                (Drule.SPECL [l, r]
+                   (Thm.INST_TYPE [Type.alpha |-> typ] intro_thm))
               THEN LT_THMS_TAC l
               THEN LT_THMS_TAC r
               THEN Tactical.SUBGOAL_THEN l_lt
