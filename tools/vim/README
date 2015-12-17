@@ -86,7 +86,7 @@ hh          A normal h (usually means move cursor left).
             This one works in both normal and visual modes.
 
 hj          Toggle HOL's show types trace.
-hn          Toggle HOL's Unicode trace.
+hn          Toggle HOL's PP.avoid_unicode trace.
 
 === Automatic stripping ===
 
