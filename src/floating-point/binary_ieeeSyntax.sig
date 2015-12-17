@@ -57,6 +57,7 @@ sig
    val float_minus_zero_tm: term
    val float_mul_tm: term
    val float_mul_add_tm: term
+   val float_mul_sub_tm: term
    val float_negate_tm: term
    val float_negate1985_tm: term
    val float_plus_infinity_tm: term
@@ -126,6 +127,7 @@ sig
    val dest_float_minus_zero: term -> term
    val dest_float_mul: term -> term * term * term
    val dest_float_mul_add: term -> term * term * term * term
+   val dest_float_mul_sub: term -> term * term * term * term
    val dest_float_negate: term -> term
    val dest_float_negate1985: term -> term
    val dest_float_plus_infinity: term -> term
@@ -188,6 +190,7 @@ sig
    val is_float_minus_zero: term -> bool
    val is_float_mul: term -> bool
    val is_float_mul_add: term -> bool
+   val is_float_mul_sub: term -> bool
    val is_float_negate: term -> bool
    val is_float_negate1985: term -> bool
    val is_float_plus_infinity: term -> bool
@@ -251,6 +254,7 @@ sig
    val mk_float_minus_zero: term -> term
    val mk_float_mul: term * term * term -> term
    val mk_float_mul_add: term * term * term * term -> term
+   val mk_float_mul_sub: term * term * term * term -> term
    val mk_float_negate: term -> term
    val mk_float_negate1985: term -> term
    val mk_float_plus_infinity: term -> term

@@ -23,6 +23,7 @@ struct
    val monop = monop o pre
    val binop = binop o pre
    val triop = HolKernel.syntax_fns3 thy o pre
+   val quadop = HolKernel.syntax_fns4 thy o pre
 
    val (fp_abs_tm, mk_fp_abs, dest_fp_abs, is_fp_abs) = monop "abs"
    val (fp_abs1985_tm, mk_fp_abs1985, dest_fp_abs1985, is_fp_abs1985) =
@@ -55,6 +56,10 @@ struct
    val (fp_lessThan_tm, mk_fp_lessThan, dest_fp_lessThan, is_fp_lessThan) =
       binop "lessThan"
    val (fp_mul_tm, mk_fp_mul, dest_fp_mul, is_fp_mul) = triop "mul"
+   val (fp_mul_add_tm, mk_fp_mul_add, dest_fp_mul_add, is_fp_mul_add) =
+      quadop "mul_add"
+   val (fp_mul_sub_tm, mk_fp_mul_sub, dest_fp_mul_sub, is_fp_mul_sub) =
+      quadop "mul_sub"
    val fp_neginf_tm = const "negInf"
    val fp_negmin_tm = const "negMin"
    val fp_negzero_tm = const "negZero"

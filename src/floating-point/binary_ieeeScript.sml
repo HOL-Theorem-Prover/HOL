@@ -290,6 +290,9 @@ val float_round_def = Define`
                  else float_plus_zero (:'t # 'w)
          else x`
 
+val real_to_float_def = Define`
+   real_to_float m = float_round m (m = roundTowardNegative)`
+
 val float_round_to_integral_def = Define`
    float_round_to_integral mode (x: ('t, 'w) float) =
       case float_value x of
@@ -320,7 +323,7 @@ val float_sqrt_def = Define`
          case float_value x of
             NaN => float_some_nan (:'t # 'w)
           | Infinity => float_plus_infinity (:'t # 'w)
-          | Float r => float_round mode (x.Sign = 1w) (sqrt r)
+          | Float r => float_round mode F (sqrt r)
       else
          float_some_nan (:'t # 'w)`
 
@@ -421,8 +424,33 @@ val float_mul_add_def = Define`
                  else
                     float_plus_zero (:'t # 'w)
          else
-            float_round mode (mode = roundTowardNegative)
-               (float_to_real z + float_to_real x * float_to_real y)`
+            real_to_float mode
+              (float_to_real x * float_to_real y + float_to_real z)`
+
+val float_mul_sub_def = Define`
+   float_mul_sub mode
+      (x: ('t, 'w) float) (y: ('t, 'w) float) (z: ('t, 'w) float) =
+      let signP = x.Sign ?? y.Sign in
+      let infP = float_is_infinite x  \/ float_is_infinite y
+      in
+         if float_is_nan x \/ float_is_nan y \/ float_is_nan z \/
+            float_is_infinite x /\ float_is_zero y \/
+            float_is_zero x /\ float_is_infinite y \/
+            float_is_infinite z /\ infP /\ (z.Sign = signP)
+            then float_some_nan (:'t # 'w)
+         else if float_is_infinite z /\ (z.Sign = 1w) \/ infP /\ (signP = 0w)
+            then float_plus_infinity (:'t # 'w)
+         else if float_is_infinite z /\ (z.Sign = 0w) \/ infP /\ (signP = 1w)
+            then float_minus_infinity (:'t # 'w)
+         else if float_is_zero z /\ (float_is_zero x \/ float_is_zero y) /\
+                 (x.Sign <> signP)
+            then if x.Sign = 0w then
+                    float_minus_zero (:'t # 'w)
+                 else
+                    float_plus_zero (:'t # 'w)
+         else
+            real_to_float mode
+              (float_to_real x * float_to_real y - float_to_real z)`
 
 (* ------------------------------------------------------------------------
    Some comparison operations

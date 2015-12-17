@@ -22,6 +22,8 @@ sig
     val fp_lessEqual_tm : term
     val fp_lessThan_tm : term
     val fp_mul_tm : term
+    val fp_mul_add_tm : term
+    val fp_mul_sub_tm : term
     val fp_negate_tm : term
     val fp_negate1985_tm : term
     val fp_neginf_tm : term
@@ -59,6 +61,8 @@ sig
     val mk_fp_lessEqual : term * term -> term
     val mk_fp_lessThan : term * term -> term
     val mk_fp_mul : term * term * term -> term
+    val mk_fp_mul_add : term * term * term * term -> term
+    val mk_fp_mul_sub : term * term * term * term -> term
     val mk_fp_negate : term -> term
     val mk_fp_negate1985 : term -> term
     val mk_fp_roundToIntegral : term * term -> term
@@ -89,6 +93,8 @@ sig
     val is_fp_lessEqual : term -> bool
     val is_fp_lessThan : term -> bool
     val is_fp_mul : term -> bool
+    val is_fp_mul_add : term -> bool
+    val is_fp_mul_sub : term -> bool
     val is_fp_negate : term -> bool
     val is_fp_negate1985 : term -> bool
     val is_fp_roundToIntegral : term -> bool
@@ -119,6 +125,8 @@ sig
     val dest_fp_lessEqual : term -> term * term
     val dest_fp_lessThan : term -> term * term
     val dest_fp_mul : term -> term * term * term
+    val dest_fp_mul_add : term -> term * term * term * term
+    val dest_fp_mul_sub : term -> term * term * term * term
     val dest_fp_negate : term -> term
     val dest_fp_negate1985 : term -> term
     val dest_fp_roundToIntegral : term -> term * term

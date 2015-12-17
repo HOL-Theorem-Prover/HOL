@@ -318,6 +318,9 @@ val (float_equal_tm, mk_float_equal, dest_float_equal, is_float_equal) =
 val (float_mul_add_tm, mk_float_mul_add, dest_float_mul_add, is_float_mul_add) =
    quadop "float_mul_add"
 
+val (float_mul_sub_tm, mk_float_mul_sub, dest_float_mul_sub, is_float_mul_sub) =
+   quadop "float_mul_sub"
+
 (* ------------------------------------------------------------------------- *)
 
 val (round_tm, mk_round, dest_round, is_round) = tw_binop "round"

@@ -995,6 +995,9 @@ val native_float_div_CONV =
 val native_float_mul_add_CONV =
    liftNative3 Real.*+ binary_ieeeSyntax.dest_float_mul_add
 
+val native_float_mul_sub_CONV =
+   liftNative3 Real.*- binary_ieeeSyntax.dest_float_mul_sub
+
 val native_float_less_than_CONV =
    liftNativeOrder (mk_b o Real.<) binary_ieeeSyntax.dest_float_less_than
 
@@ -1019,17 +1022,22 @@ val sub_CONV = lcf_or_native_conv (float_sub_CONV, native_float_sub_CONV, 2)
 val mul_CONV = lcf_or_native_conv (float_mul_CONV, native_float_mul_CONV, 2)
 val div_CONV = lcf_or_native_conv (float_div_CONV, native_float_div_CONV, 2)
 
+(* the following could benefit from a more efficient LCF custom conversion *)
+
 val sqrt_CONV =
    lcf_or_native_conv
       (Conv.REWR_CONV binary_ieeeTheory.float_sqrt_def THENC EVAL,
        native_float_sqrt_CONV, 1)
 
-(* mul_add_CONV could benefit from a more efficient LCF custom conversion *)
-
 val mul_add_CONV =
    lcf_or_native_conv
       (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL,
        native_float_mul_add_CONV, 2)
+
+val mul_sub_CONV =
+   lcf_or_native_conv
+      (Conv.REWR_CONV binary_ieeeTheory.float_mul_sub_def THENC EVAL,
+       native_float_mul_sub_CONV, 2)
 
 (**************************************************************
  NOTE:
@@ -1074,7 +1082,8 @@ val ieee_rewrites =
        spc float_negate_def, spc float_abs_def, float_plus_zero_def,
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
-       float_components, float_round_to_integral_compute, float_to_int_def
+       float_components, float_round_to_integral_compute, float_to_int_def,
+       real_to_float_def
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end
@@ -1103,6 +1112,7 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_mul_tm, 3, mul_CONV),
          (binary_ieeeSyntax.float_div_tm, 3, div_CONV),
          (binary_ieeeSyntax.float_mul_add_tm, 4, mul_add_CONV),
+         (binary_ieeeSyntax.float_mul_sub_tm, 4, mul_sub_CONV),
          (binary_ieeeSyntax.float_round_tm, 3, float_round_CONV),
          (binary_ieeeSyntax.float_compare_tm, 2, compare_CONV),
          (binary_ieeeSyntax.float_equal_tm, 2, equal_CONV),
