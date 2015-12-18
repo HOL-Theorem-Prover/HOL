@@ -183,6 +183,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
   val base_name = "/Users/mom22/graph-decompiler/loop-m0/example"
+  val ignore = []
 *)
 
 fun read_files base_name ignore = let
@@ -200,19 +201,6 @@ fun read_files base_name ignore = let
   val filename_sigs = get_filename ".sigs";
   (* read sections *)
   val () = read_complete_sections filename filename_sigs ignore
-(*
-  (* read md5sum *)
-  val (md5sum,date_now) = let
-    fun drop_newline_char s = let
-      val xs = s |> explode
-      in if last xs = #"\n" then xs |> butlast |> implode else s end
-    val raw = map drop_newline_char (lines_from_file filename_md5)
-    val m = hd raw
-    val d = hd (tl raw)
-    in (m,d) end;
-  val _ = print long_line
-  val _ = print ("  md5: "^md5sum^"\n")
-*)
   (* print stats *)
   val f = print
   val names = section_names ()

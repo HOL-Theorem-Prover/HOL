@@ -438,7 +438,7 @@ fun get_pc_val th = let
        |> rand |> rand |> numSyntax.int_of_term end
 
 fun derive_insts_for sec_name = let
-  val thms = dervie_specs_for sec_name
+  val thms = derive_specs_for sec_name
   val _ = write_subsection "Proving inst theorems"
   val _ = (writer_prints := false)
   val insts = try_map (fn (_,(th,_,_),_) =>
