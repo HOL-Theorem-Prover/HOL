@@ -11,4 +11,6 @@ sig
 
    val core_decompile: string -> string quotation -> Thm.thm * Thm.thm
 
+   val compose : Thm.thm -> Thm.thm -> Thm.thm
+
 end
