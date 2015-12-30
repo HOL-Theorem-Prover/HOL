@@ -210,10 +210,10 @@ val my_d_thms3 = PMATCH_TO_TOP_RULE my_d_def
 (* The result is not as nice, but often useful
 
  val my_d_thms3 =
-   |- (∀x. x > 3 ⇒ (my_d (x,[]) = x)) ∧
-   (∀x. ¬(x > 3) ⇒ (my_d (x,[]) = 0)) ∧
-   (∀x y ys. my_d (x,y::ys) = my_d (x + y,ys)) ∧
-   ∀xx. (∀x. xx ≠ (x,[])) ∧ (∀x y ys. xx ≠ (x,y::ys)) ⇒ (my_d xx = ARB):
+   |- (!x. x > 3 ==> (my_d (x,[]) = x)) /\
+   (!x. ~(x > 3) ==> (my_d (x,[]) = 0)) /\
+   (!x y ys. my_d (x,y::ys) = my_d (x + y,ys)) /\
+   !xx. (!x. xx <> (x,[])) /\ (!x y ys. xx <> (x,y::ys)) ==> (my_d xx = ARB):
    thm
 *)
 

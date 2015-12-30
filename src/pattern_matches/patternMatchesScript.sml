@@ -483,11 +483,11 @@ val PMATCH_ROWS_DROP_REDUNDANT = store_thm (
 REPEAT STRIP_TAC THEN
 SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_APPEND_SEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM] THEN
 
-Cases_on `?r. MEM r rows1 ∧ IS_SOME (r v)` THEN (
+Cases_on `?r. MEM r rows1 /\ IS_SOME (r v)` THEN (
   ASM_REWRITE_TAC []
 ) THEN
 Cases_on `IS_SOME (r1 v)` THEN ASM_REWRITE_TAC[] THEN
-Cases_on `?r. MEM r rows2 ∧ IS_SOME (r v)` THEN (
+Cases_on `?r. MEM r rows2 /\ IS_SOME (r v)` THEN (
   ASM_REWRITE_TAC []
 ) THEN
 FULL_SIMP_TAC std_ss [PMATCH_def]);
@@ -504,7 +504,7 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC PMATCH_ROWS_DROP_REDUNDANT THEN
 SIMP_TAC std_ss [PMATCH_ROW_def, optionTheory.some_def,
   PMATCH_ROW_COND_def, IS_SOME_OPTION_MAP] THEN
-Cases_on `?x'. (p' x' = v) ∧ g' x'` THEN (
+Cases_on `?x'. (p' x' = v) /\ g' x'` THEN (
   ASM_SIMP_TAC std_ss []
 ) THEN
 METIS_TAC[IS_SOME_DEF]);
@@ -533,10 +533,10 @@ REPEAT STRIP_TAC THEN
 REWRITE_TAC [GSYM rich_listTheory.APPEND_ASSOC_CONS] THEN
 SIMP_TAC (list_ss++boolSimps.CONJ_ss) [PMATCH_APPEND_SEM, RIGHT_AND_OVER_OR, EXISTS_OR_THM] THEN
 
-Cases_on `?r. MEM r rows1 ∧ IS_SOME (r v)` THEN (
+Cases_on `?r. MEM r rows1 /\ IS_SOME (r v)` THEN (
   ASM_REWRITE_TAC []
 ) THEN
-Cases_on `?r. MEM r rows2 ∧ IS_SOME (r v)` THEN (
+Cases_on `?r. MEM r rows2 /\ IS_SOME (r v)` THEN (
   ASM_REWRITE_TAC []
 ) THENL [
   SIMP_TAC std_ss [PMATCH_def] THEN
@@ -566,7 +566,7 @@ REPEAT STRIP_TAC THEN
 MATCH_MP_TAC PMATCH_ROWS_DROP_SUBSUMED THEN
 SIMP_TAC std_ss [PMATCH_ROW_def, optionTheory.some_def,
   PMATCH_ROW_COND_def, IS_SOME_OPTION_MAP] THEN
-Cases_on `?x. (p x = v) ∧ g x` THEN (
+Cases_on `?x. (p x = v) /\ g x` THEN (
   ASM_SIMP_TAC std_ss []
 ) THEN
 REPEAT STRIP_TAC THENL [
@@ -950,7 +950,7 @@ ASM_SIMP_TAC list_ss [SNOC_APPEND, GSYM arithmeticTheory.ADD1] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
-`(i − LENGTH infos) = SUC (i − SUC (LENGTH infos))` by DECIDE_TAC THEN
+`(i - LENGTH infos) = SUC (i - SUC (LENGTH infos))` by DECIDE_TAC THEN
 ASM_SIMP_TAC list_ss [])
 
 
@@ -1082,7 +1082,7 @@ SIMP_TAC (std_ss++boolSimps.CONJ_ss) [PMATCH_ROW_def, FUN_EQ_THM,
   optionTheory.some_def, PMATCH_ROW_COND_def,
   GSYM RIGHT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THEN
-Cases_on `?x'. (p1 x' = x) ∧ g1 x'` THEN (
+Cases_on `?x'. (p1 x' = x) /\ g1 x'` THEN (
   ASM_REWRITE_TAC[optionTheory.OPTION_MAP_DEF]
 ) THEN
 SELECT_ELIM_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1196,7 +1196,7 @@ Q.PAT_ASSUM `_ = SOME x` (fn thm =>
   ASSUME_TAC (HO_MATCH_MP some_eq_SOME thm)) THEN
 `!x'. (p x' = v) = (x' = x)` by PROVE_TAC[] THEN
 ASM_SIMP_TAC (std_ss++boolSimps.CONJ_ss) [] THEN
-Cases_on `(some x'. (p' x' = x) ∧ g' x x')` THEN (
+Cases_on `(some x'. (p' x' = x) /\ g' x x')` THEN (
   ASM_SIMP_TAC std_ss []
 ) THEN
 Q.PAT_ASSUM `_ = SOME x'` (fn thm =>

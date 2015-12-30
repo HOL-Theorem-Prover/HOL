@@ -956,14 +956,14 @@ PMATCH (NONE,x,l)
 
 val t = ``
   PMATCH (x + y,ys)
-    [PMATCH_ROW (λx. (x,[])) (λx. T) (λx. x);
-     PMATCH_ROW (λ(x,y,ys). (x,y::ys)) (λ(x,y,ys). T)
-       (λ(x,y,ys). my_d (x + y,ys))]``
+    [PMATCH_ROW (\x. (x,[])) (\x. T) (\x. x);
+     PMATCH_ROW (\ (x,y,ys). (x,y::ys)) (\ (x,y,ys). T)
+       (\ (x,y,ys). my_d (x + y,ys))]``
 
 
 val t = ``PMATCH (x,y)
-    [PMATCH_ROW (λx. (x,x)) (λx. T) (λx. T);
-     PMATCH_ROW (λ (z, y). (z, y)) (λ (z, y). T) (λ (z, y). F)]``
+    [PMATCH_ROW (\x. (x,x)) (\x. T) (\x. T);
+     PMATCH_ROW (\ (z, y). (z, y)) (\ (z, y). T) (\ (z, y). F)]``
 
 
 val rc_arg = []
