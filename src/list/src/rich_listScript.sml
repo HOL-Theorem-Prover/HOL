@@ -161,32 +161,24 @@ val NOT_NULL_SNOC = Q.store_thm("NOT_NULL_SNOC",
 
 (* ------------------------------------------------------------------------ *)
 
-local
-   val lastn_thm = Prim_rec.prove_rec_fn_exists prim_recTheory.num_Axiom
-      ``(lastn 0 (l: 'a list) = []) /\
-        (lastn (SUC n) l = SNOC (LAST l) (lastn n (FRONT l)))``
-   val lastn_exists = Q.prove(
-      `?lastn.
-         (!l. lastn 0 l = []) /\
-         (!n x l. lastn (SUC n) (SNOC x l) = SNOC x (lastn n l))`,
-      METIS_TAC [lastn_thm, listTheory.LAST_SNOC, listTheory.FRONT_SNOC])
-in
-   val LASTN = Definition.new_specification ("LASTN", ["LASTN"], lastn_exists)
-end;
+val LASTN_def = zDefine `
+  LASTN n xs = REVERSE (TAKE n (REVERSE xs))`;
 
-local
-   val butlastn_thm = Prim_rec.prove_rec_fn_exists prim_recTheory.num_Axiom
-      ``(butlastn 0 (l: 'a list) = l) /\
-        (butlastn (SUC n) l = butlastn n (FRONT l))``
-   val butlastn_exists = Q.prove(
-      `?butlastn.
-         (!l. butlastn 0 l = l) /\
-         (!n x l. butlastn (SUC n) (SNOC x l) = butlastn n l)`,
-      METIS_TAC [butlastn_thm, listTheory.FRONT_SNOC])
-in
-   val BUTLASTN =
-      Definition.new_specification ("BUTLASTN", ["BUTLASTN"], butlastn_exists)
-end;
+val LASTN = store_thm("LASTN",
+  ``(!l. LASTN 0 l = []) /\
+    (!n x l. LASTN (SUC n) (SNOC x l) = SNOC x (LASTN n l))``,
+  FULL_SIMP_TAC std_ss [LASTN_def,listTheory.REVERSE_SNOC,
+    TAKE,listTheory.REVERSE_DEF]
+  THEN FULL_SIMP_TAC std_ss [listTheory.SNOC_APPEND]);
+
+val BUTLASTN_def = zDefine `
+  BUTLASTN n xs = REVERSE (DROP n (REVERSE xs))`;
+
+val BUTLASTN = store_thm("BUTLASTN",
+  ``(!l. BUTLASTN 0 l = l) /\
+    (!n x l. BUTLASTN (SUC n) (SNOC x l) = BUTLASTN n l)``,
+  FULL_SIMP_TAC std_ss [BUTLASTN_def,DROP,
+    listTheory.REVERSE_REVERSE,listTheory.REVERSE_SNOC]);
 
 local
    val is_sublist_thm = Prim_rec.prove_rec_fn_exists listTheory.list_Axiom
