@@ -6,7 +6,7 @@
     between the two.
    ---------------------------------------------------------------------- *)
 
-infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSEC
+infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
   THEN_TCL ORELSE_TCL ?> |>
 infixr ##
 infixr 3 -->;
