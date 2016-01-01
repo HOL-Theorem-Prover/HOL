@@ -42,7 +42,7 @@ on {u}:
     ASM_CASES_TAC u ([],g)
     end;
 
-    ([([`u`],  `P u`), 
+    ([([`u`],  `P u`),
       ([`~u`], `P u`)], fn) : tactic_result
 }
 

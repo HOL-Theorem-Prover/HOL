@@ -13,7 +13,7 @@ Iteratively beta-reduces a top-level paired beta-redex on the left-hand side
 of an equation.
 
 \DESCRIBE
-When applied to an equational theorem, {LEFT_LIST_PBETA} applies paired 
+When applied to an equational theorem, {LEFT_LIST_PBETA} applies paired
 beta-reduction over a top-level chain of beta-redexes to the left-hand side
 (only).
 Variables are renamed if necessary to avoid free variable capture.

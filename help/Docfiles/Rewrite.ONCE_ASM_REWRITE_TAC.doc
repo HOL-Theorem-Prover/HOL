@@ -28,7 +28,7 @@ performed is illustrated below:
    - ONCE_ASM_REWRITE_TAC []
        ([Term` (a:'a) = b`, Term `(b:'a) = c`], Term `P (a:'a): bool`);
 
-   > val it = ([([`a = b`, `b = c`], `P b`)], fn) 
+   > val it = ([([`a = b`, `b = c`], `P b`)], fn)
       : (term list * term) list * (thm list -> thm)
 }
 

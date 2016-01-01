@@ -12,8 +12,8 @@ evaluation.
 An invocation {EVAL M} symbolically evaluates {M} by applying the defining
 equations of constants occurring in {M}. These equations are held
 in a mutable datastructure that is automatically added to
-by {Hol_datatype}, {Define}, and {tprove}. The underlying 
-algorithm is call-by-value with a few differences, see the entry for 
+by {Hol_datatype}, {Define}, and {tprove}. The underlying
+algorithm is call-by-value with a few differences, see the entry for
 {CBV_CONV} for details.
 
 

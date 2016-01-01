@@ -9,9 +9,9 @@ Deletes assumption from goal.
 tactic, assumption.
 
 \DESCRIBE
-Given an ML predicate {P} mapping terms to {true} or {false} and 
-a goal {(asl,g)}, an invocation {WEAKEN_TAC P (asl,g)} removes the 
-first element (call it {tm}) that {P} holds of from {asl}, returning 
+Given an ML predicate {P} mapping terms to {true} or {false} and
+a goal {(asl,g)}, an invocation {WEAKEN_TAC P (asl,g)} removes the
+first element (call it {tm}) that {P} holds of from {asl}, returning
 the goal {(asl - tm,g)}.
 
 \FAILURE

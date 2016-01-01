@@ -6,7 +6,7 @@
 Constructs an implication.
 
 \DESCRIBE
-If {t1} and {t2} are terms of type {bool}, then {mk_imp(t1,t2)} 
+If {t1} and {t2} are terms of type {bool}, then {mk_imp(t1,t2)}
 constructs the term {t1 ==> t2}.
 
 \FAILURE

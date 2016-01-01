@@ -992,8 +992,8 @@ fun mk_record tybase (ty,fields) =
  then let val (Thy,Tyop) = type_names ty
         val fupds = map (fn p => String.concat[Tyop,"_",fst p,"_fupd"]) fields
         val updfns = map (fn n => prim_mk_const{Name=n,Thy=Thy}) fupds
-        fun ifn c = let val (_,ty') = strip_fun (type_of c)
-                        val theta = match_type ty' ty
+        fun ifn c = let val (_,ty') = dom_rng (type_of c)
+                        val theta = match_type ty' (ty --> ty)
                     in inst theta c
                     end
         val updfns' = map ifn updfns

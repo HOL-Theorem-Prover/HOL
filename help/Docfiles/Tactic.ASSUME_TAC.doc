@@ -61,7 +61,7 @@ assumptions of {g}:
    end;
 
    val it =
-     ([([`!x y z. (x = y) /\ (y = z) ==> (x = z)`, 
+     ([([`!x y z. (x = y) /\ (y = z) ==> (x = z)`,
          `x = y`,`y = z`],`P`)],fn) : tactic_result
 
 }

@@ -24,9 +24,9 @@ a call to {P_FUN_EQ_CONV "p" "f = g"} returns the theorem:
 
 \FAILURE
 {P_FUN_EQ_CONV p tm} fails if {p} is not a paired structure of variables
-or if {tm} is not an equation {f = g} where {f} and {g} are functions.  
+or if {tm} is not an equation {f = g} where {f} and {g} are functions.
 Furthermore, if {f} and {g} are functions of type {ty1->ty2},
-then the pair {x} must have type {ty1}; otherwise the conversion fails.  
+then the pair {x} must have type {ty1}; otherwise the conversion fails.
 Finally, failure also occurs if any of the variables in {p} is free in either
 {f} or {g}.
 

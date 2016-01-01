@@ -5,7 +5,7 @@
 \SYNOPSIS
 Returns the properties that will be checked for this HolCheck model. Throws an exception if no properties have been set.
 
-\SEEALSO 
+\SEEALSO
 holCheckLib.holCheck,
 holCheckLib.set_props.
 

@@ -37,7 +37,7 @@ The new bound pair and the old bound pair need not have the same structure.
    - PALPHA_CONV
        (Term `((wx:'a#'a),(y:'a,z:'a))`)
        (Term `\((a:'a,b:'a),(c:'a,d:'a)). (f a b c d):'a`);
-   > val it = |- (\((a,b),c,d). f a b c d) = 
+   > val it = |- (\((a,b),c,d). f a b c d) =
                  (\(wx,y,z). f (FST wx) (SND wx) y z) : thm
 }
 {PALPHA_CONV} recognises subpairs of a pair as variables
@@ -51,15 +51,15 @@ and preserves structure accordingly.
 
 
 \COMMENTS
-{PALPHA_CONV} will only ever add the terms {FST} and {SND}, i.e., it will 
-never remove them. This means that while {\(x,y). x + y} can be 
+{PALPHA_CONV} will only ever add the terms {FST} and {SND}, i.e., it will
+never remove them. This means that while {\(x,y). x + y} can be
 converted to {\xy. (FST xy) + (SND xy)}, it can not be converted
 back again.
 
 \FAILURE
 {PALPHA_CONV q tm} fails if {q} is not a variable,
-if {tm} is not an abstraction, or if {q} is a variable and 
-{tm} is the lambda abstraction {\p.t} but the types of {p} 
+if {tm} is not an abstraction, or if {q} is a variable and
+{tm} is the lambda abstraction {\p.t} but the types of {p}
 and {q} differ.
 
 \SEEALSO

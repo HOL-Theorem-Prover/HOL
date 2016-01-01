@@ -10,7 +10,7 @@ for those elements for which application succeeds.
 list.
 
 \FAILURE
-If {f x} raises {Interrupt} for some element {x} of {l}, then 
+If {f x} raises {Interrupt} for some element {x} of {l}, then
 {mapfilter f l} fails.
 
 \EXAMPLE

@@ -30,7 +30,7 @@ The function {backup} will fail if the backup list is empty.
     1. Incomplete:
          Initial goal:
          (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-         
+
      : proofs
 
 - e CONJ_TAC;
@@ -38,18 +38,18 @@ OK..
 2 subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
-    
+
+
     HD [1; 2; 3] = 1
-    
+
      : proof
 
 - backup();
 > val it =
     Initial goal:
-    
+
     (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-    
+
      : proof
 
 - e (REWRITE_TAC[listTheory.HD, listTheory.TL]);

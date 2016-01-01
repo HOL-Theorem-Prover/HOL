@@ -23,7 +23,7 @@ For a description of the subgoal package, see  {set_goal}.
     1. Incomplete:
          Initial goal:
          (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-         
+
      : proofs
 
 - e CONJ_TAC;
@@ -31,10 +31,10 @@ OK..
 2 subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
-    
+
+
     HD [1; 2; 3] = 1
-    
+
      :proof
 
 - e (REWRITE_TAC[listTheory.HD]);
@@ -46,20 +46,20 @@ Goal proved.
 Remaining subgoals:
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
+
      : proof
 
 - b();
 > val it =
     TL [1; 2; 3] = [2; 3]
-    
-    
+
+
     HD [1; 2; 3] = 1
-    
+
      : proof
 
 - b();
-! Uncaught exception: 
+! Uncaught exception:
 ! CANT_BACKUP_ANYMORE
 }
 

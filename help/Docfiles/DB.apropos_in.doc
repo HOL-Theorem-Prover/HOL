@@ -6,7 +6,7 @@
 Attempt to select matching theorems among a given list.
 
 \DESCRIBE
-An invocation {DB.apropos_in M data_list} selects all 
+An invocation {DB.apropos_in M data_list} selects all
 theorems, definitions, and axioms within {data_list} that have a subterm
 that matches {M}. If there are no matches, the empty list is returned.
 
@@ -39,7 +39,7 @@ It uses {DB.matches}.
 
 \USES
 Finding theorems in interactive proof sessions.
-The second argument will normally be the result of a previous call to 
+The second argument will normally be the result of a previous call to
 {DB.find, DB.match, DB.apropos, DB.listDB, DB.thy} etc.
 
 \SEEALSO

@@ -10,7 +10,7 @@ tactic, contradiction.
 
 \DESCRIBE
 {CCONTR_TAC} takes a theorem {A' |- F} and completely solves the goal.
-This is an invalid tactic unless {A'} is a subset of {A}.  
+This is an invalid tactic unless {A'} is a subset of {A}.
 {
     A ?- t
    ========  CCONTR_TAC (A' |- F)

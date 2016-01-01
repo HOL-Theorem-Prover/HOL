@@ -20,8 +20,8 @@ It returns the theorem
 where {ei} is the result of applying the function {f} to
 the result of the previous iteration and the current element, i.e.,
 {ei = f e(i-1) xi}. The iteration starts from the left-hand side (the
-head) of the list. 
-The user supplied conversion {conv} is used to derive a theorem 
+head) of the list.
+The user supplied conversion {conv} is used to derive a theorem
 {
    |- f e(i-1) xi = ei
 }

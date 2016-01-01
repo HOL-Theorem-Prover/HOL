@@ -19,7 +19,7 @@ variables in the resulting theorem, in the same way as {INST}.
 \COMMENTS
 Because the types are instantiated first, the terms (redexes as well as
 residues) in the term substitution must contain the substituted types, not the
-original ones. Use {norm_subst} to achieve this. 
+original ones. Use {norm_subst} to achieve this.
 
 \FAILURE
 {INST_TY_TERM} fails under the same conditions as either {INST} or

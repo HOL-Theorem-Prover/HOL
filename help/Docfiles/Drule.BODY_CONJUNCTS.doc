@@ -26,7 +26,7 @@ or conjuncts.
 \EXAMPLE
 The following illustrates how a typical term will be split:
 {
-   - local val tm = Parser.term_parser 
+   - local val tm = Parser.term_parser
                         `!x:bool. A /\ (B \/ (C /\ D)) /\ ((!y:bool. E) /\ F)`
      in
      val x = ASSUME tm

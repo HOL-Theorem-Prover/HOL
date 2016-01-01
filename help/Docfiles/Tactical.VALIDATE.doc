@@ -11,7 +11,7 @@ Suppose {tac} applied to the goal {(asl,g)} produces a justification that
 creates a theorem {A |- g'}.
 If {A} a not a subset of {asl}, then the tactic is invalid
 (and {VALID tac (asl,g)} fails, ie, raises an exception).
-But {VALIDATE tac (asl,g)} produces a subgoal list augmented by the 
+But {VALIDATE tac (asl,g)} produces a subgoal list augmented by the
 members of {A} missing from {asl}.
 
 If {g'} differs from {g}, both {VALID tac (asl,g)} and {VALIDATE tac (asl,g)}
@@ -25,12 +25,12 @@ a theorem whose conclusion differs from that of the goal.
 Also fails if {tac} fails when applied to the given goal.
 
 \EXAMPLE
-For example, where theorem {uth'} is {[p'] |- q} 
+For example, where theorem {uth'} is {[p'] |- q}
 
 {
 1 subgoal:
 val it =
-   
+
 q
 ------------------------------------
   p
@@ -47,20 +47,20 @@ Invalid tactic [...]
 OK..
 1 subgoal:
 val it =
-   
+
 p'
 ------------------------------------
   p
 :
    proof
-} 
+}
 
-Given a goal with an implication in the assumptions, 
+Given a goal with an implication in the assumptions,
 one can split it into two subgoals.
 {
 1 subgoal:
 val it =
-   
+
 r
 ------------------------------------
   p ==> q
@@ -72,7 +72,7 @@ r
 OK..
 2 subgoals:
 val it =
-   
+
 r
 ------------------------------------
   q
@@ -86,13 +86,13 @@ p
    proof
 }
 Meanwhile, to propose a term, prove it as a subgoal and then use it to prove
-the goal, as is done using {SUBGOAL_THEN tm ASSUME_TAC}, 
+the goal, as is done using {SUBGOAL_THEN tm ASSUME_TAC},
 can also be done by {VALIDATE (ASSUME_TAC (ASSUME tm)))}
 
 
 \USES
-Where a tactic {tac} requires certain assumptions to be present in the goal, 
-which are not present but are capable of being proved, 
+Where a tactic {tac} requires certain assumptions to be present in the goal,
+which are not present but are capable of being proved,
 {VALIDATE tac} will conveniently set up new subgoals to prove the missing
 assumptions.
 

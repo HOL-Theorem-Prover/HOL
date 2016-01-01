@@ -9,7 +9,7 @@ Proves equality of terms using associative and commutative laws.
 conversion,associative, commutative.
 
 \DESCRIBE
-Suppose {_} is a function, which is assumed to be infix in the following 
+Suppose {_} is a function, which is assumed to be infix in the following
 syntax, and {ath} and {cth} are theorems expressing its associativity and
 commutativity; they must be of the following form, except that any free
 variables may have arbitrary names and may be universally quantified:
@@ -32,7 +32,7 @@ Consider the terms {x + SUC t + ((3 + y) + z)} and {3 + SUC t + x + y + z}.
    - AC_CONV(ADD_ASSOC,ADD_SYM)
        (Term `x + (SUC t) + ((3 + y) + z) = 3 + (SUC t) + x + y + z`);
 
-   > val it = 
+   > val it =
      |- (x + ((SUC t) + ((3 + y) + z)) = 3 + ((SUC t) + (x + (y + z)))) = T
 }
 

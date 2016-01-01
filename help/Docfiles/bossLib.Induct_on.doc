@@ -25,9 +25,9 @@ goal, then {Induct_on} equates {M} to a new variable {v} (one not
 occurring in the goal), moves all hypotheses in which free variables of
 {M} occur to the conclusion of the goal, adds the antecedent {v = M},
 and quantifies all free variables of {M} before universally quantifying
-{v} and then finally inducting on {v}.  
+{v} and then finally inducting on {v}.
 
-{Induct_on} may also be used to apply an induction theorem coming from 
+{Induct_on} may also be used to apply an induction theorem coming from
 declaration of a mutually recursive datatype.
 
 
@@ -42,10 +42,10 @@ If attempting to prove
 }
 one can apply {Induct_on `x`} to begin a proof by induction on the
 list structure of {x}. In this case, {Induct_on} serves as an explicit
-version of {Induct}. 
+version of {Induct}.
 
 \SEEALSO
-bossLib.Induct, bossLib.completeInduct_on, 
+bossLib.Induct, bossLib.completeInduct_on,
 bossLib.measureInduct_on, Prim_rec.INDUCT_THEN, bossLib.Cases,
 bossLib.Hol_datatype, proofManagerLib.g, proofManagerLib.e.
 

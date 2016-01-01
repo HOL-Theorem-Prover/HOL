@@ -1,4 +1,4 @@
-\DOC VALID_LT 
+\DOC VALID_LT
 
 \TYPE {VALID_LT : list_tactic -> list_tactic}
 
@@ -19,12 +19,12 @@ and {VALID_LT ltac gl} fails (raises an exception).
 Otherwise, {VALID_LT ltac gl} behaves the same as {ltac gl}.
 
 \FAILURE
-{VALID_LT ltac gl} fails by design if {ltac gl} produces new goals and 
+{VALID_LT ltac gl} fails by design if {ltac gl} produces new goals and
 justification which do not prove the given goals {gl}.
 Also fails if its {ltac gl} fails.
 
 \SEEALSO
-Tactical.VALID, Tactical.VALIDATE_LT, 
+Tactical.VALID, Tactical.VALIDATE_LT,
 proofManagerLib.elt, proofManagerLib.expand_list.
 
 \ENDDOC

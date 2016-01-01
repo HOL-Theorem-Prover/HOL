@@ -13,7 +13,7 @@ In this example, assume that {h1} and {h3} (only) involve the free variable {x}.
 {
       h1, h2, h3 |- t
    --------------------- EXISTS_LEFT [``x``]
-   ?x. h1 /\ h3, h2 |- t 
+   ?x. h1 /\ h3, h2 |- t
 }
 
 \FAILURE
@@ -22,21 +22,21 @@ variables
 
 \EXAMPLE
 Where {th} is {[p, q, g x, h y, f x y] |- r}, and {fvx} and {fvy} are
-{``x``} and {``y``}, 
+{``x``} and {``y``},
 
 {EXISTS_LEFT [fvx, fvy] th} is {[p, q, ?y. (?x. g x /\ f x y) /\ h y] |- r}
 
 {EXISTS_LEFT [fvy, fvx] th} is {[p, q, ?x. (?y. h y /\ f x y) /\ g x] |- r}
 
 \USES
-Where {EQ_TRANS} is 
+Where {EQ_TRANS} is
 {[] |- !x y z. (x = y) /\ (y = z) ==> (x = z)}
 and the current goal is {a = b},
 the tactic {MATCH_MP_TAC EQ_TRANS} gives a new goal
 {?y. (a = y) /\ (y = b)}
 by virtue of the smart features built into {MATCH_MP_TAC}.
 
-Where {trans_thm} is 
+Where {trans_thm} is
 {[] |- !x y z. (x = y) ==> (y = z) ==> (x = z)}
 the same result could of course be achieved by rewriting it with
 {AND_IMP_INTRO}.

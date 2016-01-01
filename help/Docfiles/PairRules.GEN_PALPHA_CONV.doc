@@ -15,7 +15,7 @@ or other binder.
 \DESCRIBE
 The conversion {GEN_PALPHA_CONV} provides alpha conversion for lambda
 abstractions of the form {\p.t}, quantified terms of the forms {!p.t},
-{?p.t} or {?!p.t}, and epsilon terms of the form {@p.t}. 
+{?p.t} or {?!p.t}, and epsilon terms of the form {@p.t}.
 
 The renaming of pairs is as described for {PALPHA_CONV}.
 

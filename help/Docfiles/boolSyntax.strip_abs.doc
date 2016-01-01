@@ -6,7 +6,7 @@
 Iteratively breaks apart abstractions.
 
 \DESCRIBE
-If {M} has the form {\x1 ... xn.t} then {strip_abs M} returns 
+If {M} has the form {\x1 ... xn.t} then {strip_abs M} returns
 {([x1,...,xn],t)}. Note that
 {
    strip_abs(list_mk_abs([x1,...,xn],t))

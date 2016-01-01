@@ -15,14 +15,14 @@ identifier. For example, some advanced definition mechanisms in HOL
 automatically construct names to bind the results of making a
 definition. In some cases, particularly when symbolic identifiers are
 involved, a binding name can be generated that is not a valid ML
-identifier. 
+identifier.
 
-In such cases, we don't want to fail and lose the work done by the 
-definition mechanism. Instead, when {export_theory} is invoked, 
+In such cases, we don't want to fail and lose the work done by the
+definition mechanism. Instead, when {export_theory} is invoked,
 all names binding axioms, definitions, and theorems are examined
-to see if they are valid ML identifiers. If not, an informative 
+to see if they are valid ML identifiers. If not, an informative
 error message is generated, and it is up to the user to change the
-names in the offending bindings. The function {set_MLname s1 s2} will 
+names in the offending bindings. The function {set_MLname s1 s2} will
 replace a binding with name {s1} by one with name {s2}.
 
 \FAILURE
@@ -45,7 +45,7 @@ point.
 "%%_rules", "%%_ind", "%%_cases"
  are not acceptable ML identifiers.
    Use `set_MLname <bad> <good>' to change each name.>>
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 
 - (set_MLname "%%_rules" "odd_rules";   (* OK, do what it says *)
@@ -64,12 +64,12 @@ The definition principles that currently have the potential to make
 problematic bindings are {Hol_datatype} and {Hol_reln}.
 
 It is slightly awkward to have to repair the names in a post-hoc fashion.
-It is probably simpler to proceed by using alphanumeric names when 
+It is probably simpler to proceed by using alphanumeric names when
 defining constants, and to use overloading to get the desired name.
 
 \SEEALSO
 bossLib.Hol_reln, bossLib.Hol_datatype, Theory.export_theory,
-Theory.current_definitions, Theory.current_theorems, 
+Theory.current_definitions, Theory.current_theorems,
 Theory.current_axioms, DB.thy, DB.dest_theory.
 
 \ENDDOC

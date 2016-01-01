@@ -14,7 +14,7 @@ Introduces a user-supplied Skolem function.
 \DESCRIBE
 {P_PSKOLEM_CONV} takes two arguments.  The first is a variable {f}, which
 must range over functions of the appropriate type, and the second is a term of
-the form {!p1...pn. ?q. t} (where {pi} and {q} may be pairs).  
+the form {!p1...pn. ?q. t} (where {pi} and {q} may be pairs).
 Given these arguments, {P_PSKOLEM_CONV} returns the theorem:
 {
    |- (!p1...pn. ?q. t) = (?f. !p1...pn. tm[f p1 ... pn/q])

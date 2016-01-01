@@ -16,7 +16,7 @@ the identity for the {THEN} tactical.
 Never fails.
 
 \EXAMPLE
-The tactic 
+The tactic
 {
    INDUCT_THEN numTheory.INDUCTION THENL [ALL_TAC, tac]
 }

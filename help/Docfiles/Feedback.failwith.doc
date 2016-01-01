@@ -25,7 +25,7 @@ Always fails.
 
 Exception raised at ??.failwith:
 foo
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 

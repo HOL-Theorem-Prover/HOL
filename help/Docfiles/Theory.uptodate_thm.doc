@@ -9,7 +9,7 @@ Tells if a theorem is out of date.
 theorem.
 
 \DESCRIBE
-Operations in the current theory segment of HOL allow one to redefine 
+Operations in the current theory segment of HOL allow one to redefine
 types and constants. This can cause theorems to become invalid. As a
 result, HOL has a rudimentary consistency maintenance system built
 around the notion of whether type operators and term constants are
@@ -17,12 +17,12 @@ around the notion of whether type operators and term constants are
 
 An invocation {uptodate_thm th} should check {th} to see if it
 has been proved from any out-of-date components. However, HOL does
-not currently keep the proofs of theorems, so a simpler approach is 
-taken. Instead, {th} is checked to see if its hypotheses and 
+not currently keep the proofs of theorems, so a simpler approach is
+taken. Instead, {th} is checked to see if its hypotheses and
 conclusions are up-to-date.
 
 All items from ancestor theories are fixed, and unable to
-be overwritten, thus are always up-to-date.  
+be overwritten, thus are always up-to-date.
 
 \FAILURE
 Never fails.
@@ -49,14 +49,14 @@ Induction stored under "fact_ind".
 
 \COMMENTS
 It may happen that a theorem {th} is proved with the use of another
-theorem {th1} that subsequently becomes garbage because a 
+theorem {th1} that subsequently becomes garbage because a
 constant {c} was deleted. If {c} does not occur in {th}, then {th} does
 not become garbage, which may be contrary to expectation. The conservative
 extension property of HOL says that {th} is still provable, even in
 the absence of {c}.
 
 \SEEALSO
-Theory.uptodate_type, Theory.uptodate_term, 
+Theory.uptodate_type, Theory.uptodate_term,
 Theory.delete_const, Theory.delete_type.
 
 \ENDDOC

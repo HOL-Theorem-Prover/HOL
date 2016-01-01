@@ -32,7 +32,7 @@ Saving CPU time when doing goal-directed proofs, since the extra validation is
 not done. Redoing proofs quickly that are already known to work.
 
 \COMMENTS
-The CPU time saved may cause  misery later. 
+The CPU time saved may cause  misery later.
 If an invalid tactic or list-tactic is used, this
 will only be discovered when the proof has apparently been finished and the
 justifications are applied.

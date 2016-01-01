@@ -32,8 +32,8 @@ provided no variable in {p} is free in the assumptions.
 
 
 \FAILURE
-Fails if the conclusion of the theorem is not an equation, 
-of if {p} is not a paired structure of variables, 
+Fails if the conclusion of the theorem is not an equation,
+of if {p} is not a paired structure of variables,
 or if any variable in {p} is free in {A}.
 
 \SEEALSO

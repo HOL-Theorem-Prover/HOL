@@ -9,7 +9,7 @@ Passes on a goal list unchanged.
 list-tactic, identity.
 
 \DESCRIBE
-{ALL_LT} applied to a goal list {gl} 
+{ALL_LT} applied to a goal list {gl}
 simply produces the goal list {gl}. It is
 the identity for the {THEN_LT} tactical.
 
@@ -17,7 +17,7 @@ the identity for the {THEN_LT} tactical.
 Never fails.
 
 \EXAMPLE
-To apply tactic {tac1} to a goal, and then to apply {tac2} 
+To apply tactic {tac1} to a goal, and then to apply {tac2}
 to all resulting subgoals except the first, use
 {
   tac1 THEN_LT SPLIT_LT 1 (ALL_LT, ALLGOALS tac2)

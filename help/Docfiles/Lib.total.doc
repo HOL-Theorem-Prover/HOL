@@ -30,14 +30,14 @@ When application of the first argument to the second argument raises
 \EXAMPLE
 {
 - 3 div 0;
-! Uncaught exception: 
+! Uncaught exception:
 ! Div
 
 - total (op div) (3,0);
 > val it = NONE : int option
 
 - (partial Div o total) (op div) (3,0);
-! Uncaught exception: 
+! Uncaught exception:
 ! Div
 }
 

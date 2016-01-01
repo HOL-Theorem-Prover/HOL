@@ -14,44 +14,44 @@ boolSimps
 
 \DESCRIBE
 The {bool_ss} simpset is almost at the base of the system-provided
-simpset hierarchy.  Though not very powerful, it does include the 
-following ad hoc collection of rewrite rules for propositions and 
+simpset hierarchy.  Though not very powerful, it does include the
+following ad hoc collection of rewrite rules for propositions and
 first order terms:
 {
    |- !A B. ~(A ==> B) = A /\ ~B
-   |- !A B. (~(A /\ B) = ~A \/ ~B) /\ 
+   |- !A B. (~(A /\ B) = ~A \/ ~B) /\
             (~(A \/ B) = ~A /\ ~B)
    |- !P. ~(!x. P x) = ?x. ~P x
-   |- !P. ~(?x. P x) = !x. ~P x 
+   |- !P. ~(?x. P x) = !x. ~P x
    |- (~p = ~q) = (p = q)
    |- !x. (x = x) = T
-   |- !t. ((T = t) = t) /\ 
-          ((t = T) = t) /\ 
-          ((F = t) = ~t) /\ 
+   |- !t. ((T = t) = t) /\
+          ((t = T) = t) /\
+          ((F = t) = ~t) /\
           ((t = F) = ~t)
    |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)
-   |- !t. (T /\ t = t) /\ 
-          (t /\ T = t) /\ 
+   |- !t. (T /\ t = t) /\
+          (t /\ T = t) /\
           (F /\ t = F) /\
-          (t /\ F = F) /\ 
+          (t /\ F = F) /\
           (t /\ t = t)
-   |- !t. (T \/ t = T) /\ 
-          (t \/ T = T) /\ 
+   |- !t. (T \/ t = T) /\
+          (t \/ T = T) /\
           (F \/ t = t) /\
-          (t \/ F = t) /\ 
+          (t \/ F = t) /\
           (t \/ t = t)
-   |- !t. (T ==> t = t) /\ 
-          (t ==> T = T) /\ 
+   |- !t. (T ==> t = t) /\
+          (t ==> T = T) /\
           (F ==> t = T) /\
-          (t ==> t = T) /\ 
+          (t ==> t = T) /\
           (t ==> F = ~t)
    |- !t1 t2. ((if T then t1 else t2) = t1) /\
               ((if F then t1 else t2) = t2)
    |- !t. (!x. t) = t
    |- !t. (?x. t) = t
    |- !b t. (if b then t else t) = t
-   |- !a. ?x. x = a 
-   |- !a. ?x. a = x 
+   |- !a. ?x. x = a
+   |- !a. ?x. a = x
    |- !a. ?!x. x = a,
    |- !a. ?!x. a = x,
    |- (!b e. (if b then T else e) = b \/ e) /\
@@ -59,7 +59,7 @@ first order terms:
       (!b e. (if b then F else e) = ~b /\ e) /\
       (!b t. (if b then t else F) = b /\ t)
    |- !t. t \/ ~t
-   |- !t. ~t \/ t 
+   |- !t. ~t \/ t
    |- !t. ~(t /\ ~t)
    |- !x. (@y. y = x) = x
    |- !x. (@y. x = y) = x
@@ -69,8 +69,8 @@ first order terms:
    |- !P a. (?x. (a = x) /\ P x) = P a
 }
 Also included in {bool_ss} is a conversion to perform beta reduction, as
-well as the following congruence rules, which allow the simplifier to glean 
-additional contextual information as it descends through implications and 
+well as the following congruence rules, which allow the simplifier to glean
+additional contextual information as it descends through implications and
 conditionals.
 {
    |- !x x' y y'.

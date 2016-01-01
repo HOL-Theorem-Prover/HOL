@@ -27,7 +27,7 @@ input term.
 Both {q} and any {pi} may be a paired structure of variables:
 {
    - PSKOLEM_CONV
-      (Term `!(x11:'a,x12:'a) (x21:'a,x22:'a). 
+      (Term `!(x11:'a,x12:'a) (x21:'a,x22:'a).
              ?(y1:'a,y2:'a). tm x11 x12 x21 x21 y1 y2`);
 
    > val it =

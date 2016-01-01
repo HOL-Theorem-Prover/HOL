@@ -66,8 +66,10 @@ val PROVE           = BasicProvers.PROVE
 val PROVE_TAC       = BasicProvers.PROVE_TAC
 val METIS_PROVE     = metisLib.METIS_PROVE
 val METIS_TAC       = metisLib.METIS_TAC
+val metis_tac       = METIS_TAC
 val RW_TAC          = BasicProvers.RW_TAC
 val SRW_TAC         = BasicProvers.SRW_TAC
+val srw_tac         = BasicProvers.srw_tac
 val srw_ss          = BasicProvers.srw_ss
 val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
@@ -113,6 +115,7 @@ end
 
 val DECIDE = numLib.DECIDE;
 val DECIDE_TAC = numLib.DECIDE_TAC;
+val decide_tac = DECIDE_TAC
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss
@@ -152,5 +155,32 @@ val Abbr = markerLib.Abbr
 val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
+
+(* ----------------------------------------------------------------------
+    convenient simplification aliases
+   ---------------------------------------------------------------------- *)
+
+open simpLib
+fun stateful f ssfl thm : tactic =
+  let
+    val ss = List.foldl (simpLib.++ o Lib.swap) (srw_ss()) ssfl
+  in
+    f ss thm
+  end
+
+val fsrw_tac = stateful full_simp_tac
+val rfsrw_tac = stateful rev_full_simp_tac
+
+val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
+val simp = stateful asm_simp_tac let_arith_list
+val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
+val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
+val lrw = srw_tac let_arith_list
+val lfs = fsrw_tac let_arith_list
+val lrfs = rfsrw_tac let_arith_list
+
+val rw = srw_tac []
+val fs = fsrw_tac []
+val rfs = rfsrw_tac []
 
 end

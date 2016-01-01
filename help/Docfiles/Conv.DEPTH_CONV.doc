@@ -39,8 +39,8 @@ contain subterms to which the supplied conversion applies.  For example, in:
    > val it = |- (\f x. (f x) + 1)(\y. y)2 = ((\y. y)2) + 1 : thm
 }
 the right-hand side of the result still contains a beta-redex,
-because the redex {(\y.y)2} is introduced by virtue of an application of 
-{BETA_CONV} higher-up in the structure of the input term.  By contrast, 
+because the redex {(\y.y)2} is introduced by virtue of an application of
+{BETA_CONV} higher-up in the structure of the input term.  By contrast,
 in the example:
 {
    - DEPTH_CONV BETA_CONV (Term `(\f x. (f x)) (\y.y) 2`);

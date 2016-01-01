@@ -8,7 +8,7 @@ All the definitions stored in the named theory.
 \DESCRIBE
 An invocation {definitions thy}, where {thy} is the name of a currently
 loaded theory segment, will return a list of the definitions stored in
-that theory. Each definition is paired with its name in the result. 
+that theory. Each definition is paired with its name in the result.
 The string {"-"} may be used to denote the current theory segment.
 
 \FAILURE

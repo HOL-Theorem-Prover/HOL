@@ -9,8 +9,8 @@ pair
 Returns a pair structure of variables whose names have not been previously used.
 
 \DESCRIBE
-When given a product type, {genvarstruct} returns a 
-paired structure of variables whose names have not been  
+When given a product type, {genvarstruct} returns a
+paired structure of variables whose names have not been
 used for variables or constants in the HOL session so far.
 The structure of the term returned will be identical to the structure of the
 argument.

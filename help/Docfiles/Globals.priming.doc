@@ -30,8 +30,8 @@ The default value of {priming} is {NONE}.
 
 
 \COMMENTS
-Proofs should be re-run in the same priming regime as they were 
-originally performed in, since different styles of renaming can 
+Proofs should be re-run in the same priming regime as they were
+originally performed in, since different styles of renaming can
 break proofs.
 
 \SEEALSO

@@ -9,7 +9,7 @@ Extract the type of an instance of the {ARB} constant.
 
 
 \DESCRIBE
-If {M} is an instance of the constant {ARB} with type {ty}, then 
+If {M} is an instance of the constant {ARB} with type {ty}, then
 {dest_arb M} equals {ty}.
 
 \FAILURE

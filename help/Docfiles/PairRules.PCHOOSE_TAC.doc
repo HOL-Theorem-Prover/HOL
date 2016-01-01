@@ -14,7 +14,7 @@ of a goal.
 
 \DESCRIBE
 When applied to a theorem {A' |- ?p. t} and a goal, {CHOOSE_TAC} adds
-{t[p'/p]} to the assumptions of the goal, where {p'} is a variant of 
+{t[p'/p]} to the assumptions of the goal, where {p'} is a variant of
 the pair {p} which has no components free in the assumption list;
 normally {p'} is just {p}.
 {

@@ -5,7 +5,7 @@
 \SYNOPSIS
 Returns whether or not the transition system for this HolCheck model is synchronous (conjunctive). Throws an exception if this information has not been set.
 
-\SEEALSO 
+\SEEALSO
 holCheckLib.holCheck,
 holCheckLib.set_flag_ric.
 

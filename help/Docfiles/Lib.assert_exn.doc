@@ -28,7 +28,7 @@ an exception {ex}, then {assert_exn p x e} raises {ex}.
 > false : bool
 
 - assert_exn null [1] (Fail "non-empty list");;
-! Uncaught exception: 
+! Uncaught exception:
 ! Fail  "non-empty list"
 }
 

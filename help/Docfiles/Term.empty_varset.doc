@@ -9,7 +9,7 @@ Empty set of term variables.
 term, set.
 
 \DESCRIBE
-The value {empty_varset} represents an empty set of term variables. 
+The value {empty_varset} represents an empty set of term variables.
 The set has a built-in ordering, which is given by {Term.var_compare}.
 
 \COMMENTS

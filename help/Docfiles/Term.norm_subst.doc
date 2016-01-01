@@ -13,15 +13,15 @@ Instantiate term substitution by a type substitution.
 substitution, term, type.
 
 \DESCRIBE
-Given a term substitution and a type substitution, 
+Given a term substitution and a type substitution,
 {norm_subst} applies the type substitution to the redexes of the term
 substitution.
 
 The substitutions coming from {raw_match} need to be normalized before
 they can be applied by inference rules like {INST_TY_TERM}. An invocation
 {raw_match avoid_tys avoid_tms pat ob A} returns a pair of substitutions
-{((S,Ids),(T,Idt))}. The {Id} components can be ignored. The {S} component is 
-a substitution for term variables, but it has to be instantiated by 
+{((S,Ids),(T,Idt))}. The {Id} components can be ignored. The {S} component is
+a substitution for term variables, but it has to be instantiated by
 the type substitution {T} in order to be suitable for use by {INST_TY_TERM}.
 In this case, one uses
 {norm_subst ((S,Ids),(T,Idt))} as the first argument for {INST_TY_TERM}.
@@ -36,20 +36,20 @@ Never fails.
 
 \EXAMPLE
 {
-- val ((S,Ids),(T,Idt)) = raw_match [] empty_varset 
+- val ((S,Ids),(T,Idt)) = raw_match [] empty_varset
                     (Term `\x:'a. x = f (y:'b)`)
                     (Term `\a.    a = ~p`) ([],[]);
 > val S = [{redex = `(f :'b -> 'a)`, residue = `$~`},
            {redex = `(y :'b)`,       residue = `(p :bool)`}]
 	: (term, term) subst
 
-  val T = [{redex = `:'b`, residue = `:bool`}, 
-           {redex = `:'a`, residue = `:bool`}] 
+  val T = [{redex = `:'b`, residue = `:bool`},
+           {redex = `:'a`, residue = `:bool`}]
         : (hol_type, hol_type) subst
 
 - val (S',_) = norm_subst ((S,Ids),(T,Idt)) ;
 > val S' = [{redex = `(y :bool)`,          residue = `(p :bool)`},
-	    {redex = `(f :bool -> bool)`, residue = `$~`}] 
+	    {redex = `(f :bool -> bool)`, residue = `$~`}]
       : (term, term) subst
 }
 

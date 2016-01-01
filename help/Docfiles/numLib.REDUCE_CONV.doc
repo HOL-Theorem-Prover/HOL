@@ -3,8 +3,8 @@
 \TYPE {REDUCE_CONV : conv}
 
 \SYNOPSIS
-Evaluate ground expressions involving arithemetic and boolean 
-operations. 
+Evaluate ground expressions involving arithemetic and boolean
+operations.
 
 \KEYWORDS
 Ground evaluation.
@@ -12,7 +12,7 @@ Ground evaluation.
 \DESCRIBE
 An invocation {REDUCE_CONV M}, where {M} is a ground term made up of
 the standard boolean and numerical operators, uses deductive steps
-to perform any possible reductions, yielding the result {N}. The 
+to perform any possible reductions, yielding the result {N}. The
 theorem {|- M = N} is returned.
 
 \FAILURE
@@ -23,7 +23,7 @@ Never fails.
 - REDUCE_CONV (Term `!x:num. x = x`);
 > val it = |- (!x. x = x) = !x. T : thm
 
-- REDUCE_CONV 
+- REDUCE_CONV
     (Term`(y = (((2 + 4 - 1) * 5) ** 3) DIV 2) /\ (p \/ T ==> q)`);
 > val it =
     |- (y = ((2 + 4 - 1) * 5) ** 3 DIV 2) /\ (p \/ T ==> q) =

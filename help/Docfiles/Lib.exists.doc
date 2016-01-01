@@ -26,7 +26,7 @@ exception. In that case, {exists P l} raises an exception.
 > val it = false : bool
 
 - exists (fn _ => raise Fail "") [1];
-! Uncaught exception: 
+! Uncaught exception:
 ! Fail  ""
 }
 

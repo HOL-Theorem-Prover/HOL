@@ -11,9 +11,9 @@ list.
 
 \DESCRIBE
 An invocation {rev_assoc y [(x1,y1),...,(xn,yn)]} locates
-the first {(xi,yi)} in a left-to-right scan of the list such that 
-{yi} equals {y}. Then {xi} is returned. The lookup is done on an eqtype, 
-i.e., the SML implementation must be able to decide equality for the type 
+the first {(xi,yi)} in a left-to-right scan of the list such that
+{yi} equals {y}. Then {xi} is returned. The lookup is done on an eqtype,
+i.e., the SML implementation must be able to decide equality for the type
 of {y}.
 
 \FAILURE

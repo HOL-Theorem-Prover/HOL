@@ -10,7 +10,7 @@ tactical, list-tactic.
 
 \DESCRIBE
 If {tac} is a tactic, {TRYALL tac} is a list-tactic which,
-when applied to a list of goals, 
+when applied to a list of goals,
 applies the tactic {tac} to each goal for which it succeeds.
 When {tac} fails on a goal, {TRYALL tac} has no effect on that goal.
 

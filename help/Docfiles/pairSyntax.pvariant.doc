@@ -29,7 +29,7 @@ variables, or if {p} is not a paired structure of variables and constants.
 \EXAMPLE
 The following shows a case that exhibits most possible behaviours:
 {
-   - pvariant [Term `b:'a`, Term `(c:'a,c':'a)`] 
+   - pvariant [Term `b:'a`, Term `(c:'a,c':'a)`]
               (Term `((a:'a,b:'a),(c:'a,b':'a,T,b:'a))`);
    val it = `(a,b''),c'',b',T',b''` : term
 }

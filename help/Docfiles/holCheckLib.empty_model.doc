@@ -3,12 +3,12 @@
 \TYPE {empty_model : model}
 
 \SYNOPSIS
-Represents a HolCheck model with no information. 
+Represents a HolCheck model with no information.
 
 \DESCRIBE
 This is used as a starting point for building a HolCheck model, using the set_X functions in holCheckLib.
 
-\SEEALSO 
+\SEEALSO
 holCheckLib.holCheck,
 holCheckLib.set_init,
 holCheckLib.set_trans,

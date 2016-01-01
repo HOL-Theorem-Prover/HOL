@@ -6,7 +6,7 @@
 Attempt to find matching theorems in the currently loaded theories.
 
 \DESCRIBE
-An invocation {DB.apropos M} collects all theorems, definitions, and 
+An invocation {DB.apropos M} collects all theorems, definitions, and
 axioms of the currently loaded theories that have a subterm
 that matches {M}. If there are no matches, the empty list is returned.
 

@@ -18,7 +18,7 @@ ordering specified among the set of rewrites.
 
 Variants of this conversion allow changes in the set of equations used:
 {PURE_REWRITE_CONV} and others in its family do not rewrite with the
-theorems in {implicit_rewrites}. 
+theorems in {implicit_rewrites}.
 
 The top-down recursive search for matches may not be desirable, as
 this may increase the number of inferences being made or may result in

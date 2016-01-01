@@ -19,6 +19,6 @@ Controlling symbolic evaluation when it loops or becomes exponential.
 
 \SEEALSO
 bossLib.EVAL, bossLib.EVAL_RULE, bossLib.EVAL_TAC,
-computeLib.RESTR_EVAL_CONV, computeLib.RESTR_EVAL_RULE. 
+computeLib.RESTR_EVAL_CONV, computeLib.RESTR_EVAL_RULE.
 
 \ENDDOC

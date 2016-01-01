@@ -20,23 +20,11 @@ generates every primitive step of the proof. The third device is
 the tactic as a means of organizing the construction of proofs;
 and the use of tacticals for composing tactics.
 
-Even with recourse to derived inference rules,
-it is still surprisingly awkward to work forward,
-\index{forward proof!compared to goal directed} to find a chain of
-theorems that culminates in a desired theorem.  This is in part because
-chains have no structure, while `proof efforts' do.  For instance, if
-within one sequence, two chains of steps
-are to be combined in the end by conjunction, then
-one chain must follow or be interspersed with
-the other in the overall sequence.  It can also be difficult to direct
-the proof toward its object when starting from
-only hypotheses (if any), lemmas (if any),
-axioms, and theorems following from no hypotheses
-(\eg\ by \ml{ASSUME} or \ml{REFL}). Likewise, it can be equally difficult
-to reconstruct
-\index{tactics!as documentation of proofs}
-the plan of the proof effort after the fact, from the
-linear sequence of theorems; the sequence is unhelpful as documentation.
+Even with recourse to derived inference rules, it is still surprisingly awkward to work forward, \index{forward proof!compared to goal-directed} to find a chain of theorems that culminates in a desired theorem.
+This is in part because chains have no structure, while `proof efforts' do.  For instance, if within one sequence, two chains of steps are to be combined in the end by conjunction, then one chain must follow or be interspersed with the other in the overall sequence.
+It can also be difficult to direct the proof toward its object when starting from only hypotheses (if any), lemmas (if any), axioms, and theorems following from no hypotheses (\eg,\ by \ml{ASSUME} or \ml{REFL}).
+\index{tactics!as documentation of proofs}%
+Likewise, it can be equally difficult to reconstruct the plan of the proof effort after the fact, from the linear sequence of theorems; the sequence is unhelpful as documentation.
 
 The idea of goal directed proof\index{goal directed proof search!reason for} is a simple one, well known in
 artificial intelligence: to organize the search\index{proof construction!as tree search} as a tree, and to reverse
@@ -72,31 +60,19 @@ translating subgoals solutions to solutions of goals.
 %from the ones
 %in Edinburgh \LCF\ \cite{Edinburgh-LCF}).
 
-\section{Tactics, goals and justifications}
+\section{Tactics, goals and validations}
 \label{tactics}
 
 \index{goal directed proof search!concepts of|(}
-A \emph{tactic}%
-\index{proof steps, as ML function applications@proof steps, as \ML{} function applications}
-is an \ML{} function that when applied to a \emph{goal}
-\index{goals, in HOL system@goals, in \HOL{} system}
-reduces it to (i) a list\footnote{The ordering is necessary for selecting
-a tree search strategy.} of
-(sub)goals, along with (ii) a \emph{justification}
-\index{justifications, in goal-directed proof search}
-function mapping a list of theorems to a theorem.  The idea is that
-the function justifies the decomposition of the goal.
-%that respectively {\it achieve\/} the (sub)goals
-%to a theorem that achieves the goal.
-A goal is an \ML{} value whose type is isomorphic
-to, but distinct from, the \ML{} abstract type \ml{thm} of theorems.
-That is, a goal is
-a list of terms ({\it assumptions\/})
-\index{assumption list, of goal} paired with a term.
-\index{term component, of goal}
+A \emph{tactic}\index{proof steps, as ML function applications@proof steps, as \ML{} function applications} is an \ML{} function that when applied to a \emph{goal}\index{goals, in HOL system@goals, in \HOL{} system} reduces it to
+(i) a list\footnote{The ordering is necessary for selecting a tree search strategy.} of (sub)goals, along with
+(ii) a \emph{validation}\index{validations, in goal-directed proof search} function mapping a list of theorems to a theorem.
+The idea is that this function justifies the decomposition of the goal, and so it is also known as a \emph{justification}.
+A goal is an \ML{} value whose type is isomorphic to, but distinct from, the \ML{} abstract type \ml{thm} of theorems.
+That is, a goal is a list of terms (\emph{assumptions})\index{assumption list, of goal} paired with a term.\index{term component, of goal}
 These two components correspond, respectively, to the list of hypotheses
-and the conclusion of a theorem. The list of assumptions is a working
-record of facts that may be used in decomposing the goal.
+and the conclusion of a theorem.
+The list of assumptions is a working record of facts that may be used in decomposing the goal.
 
 The relation of theorems to goals is achievement:
 \index{achievement, of goals}
@@ -107,53 +83,16 @@ again) to some assumption of the goal. This definition assures that
 the theorem purporting to satisfy a goal does not depend on
 assumptions beyond the working assumptions of the goal.
 
-A justification is (rather confusingly) called
-a {\it proof\/}
-\index{proofs, in HOL logic@proofs, in \HOL{} logic!as ML function applications@as \ML{} function applications}
-\index{proof functions (same as justifications, validations)}
-in \HOL{}, following the \LCF{} usage; it is, as mentioned,
-an \ML{} function
-from a theorem list to a theorem.  The \ML{} `proof' function
-corresponds to a proof
-\index{proofs, in HOL logic@proofs, in \HOL{} logic!as generated by tactics} in the
-logical sense (of a sequence of theorems depending on inference\index{inferences, in HOL logic@inferences, in \HOL{} logic!in goal-directed proof search} rules)
-only in that it must
-evaluate the \ML{} function corresponding
-to each inference rule on which the sequence depends
-in order to compute its \ml{thm}-valued result. (`Justification', or
-`validation',
-\index{validations} as is sometimes used, are less confusing terms for
-the \ML{} function in question.)
-The proof function, or justification, returned by a tactic is intended to map the
-list of theorems respectively achieving the subgoals to the
-theorem achieving the original goal; it justifies the decomposition
-into subgoals.
+A tactic is said to \emph{solve}\index{solving, of goals} a goal if it reduces the goal to the empty set of subgoals.
+This depends, obviously, on there being at least one tactic that maps a goal to the empty subgoal list.
+The simplest tactic that does this is one that can recognize when a goal is achieved by an axiom or an existing theorem; in \HOL, the function \ml{ACCEPT\_TAC}\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}} does this. \ml{ACCEPT\_TAC} takes a theorem $\mathit{th}$
+and produces a tactic that maps a value of type \ml{thm} to the empty list of subgoals.
+It justifies this `decomposition' by a validation function that maps the empty list of theorems to the theorem $\mathit{th}$.
+The use of this technical device, or other such tactics, ends the decomposition of subgoals, and allows the proof to be built up.\index{tactics!purpose of|)}
 
-A tactic is said to {\it solve\/}
-\index{solving, of goals} a goal if it reduces the goal to the
-empty set of subgoals.
-This depends, obviously, on there being at least one
-tactic that maps a goal to the empty subgoal list.  The simplest
-tactic that does this is one that can recognize when a goal is
-achieved by an axiom or an existing theorem; in \HOL, the function
-\ml{ACCEPT\_TAC}\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}}
- does this. \ml{ACCEPT\_TAC} takes a theorem $th$
-and produces a tactic that maps a value
-of type \ml{thm} to the empty list of subgoals. It justifies this
-`decomposition' by a proof function that maps the empty list of theorems
-to the theorem $th$. The use of this technical device, or other
-such tactics, ends the decomposition of subgoals, and allows the proof
-to be built up.\index{tactics!purpose of|)}
-
-Unlike theorems, goals need not be defined as an abstract type; they
-are transparent and can be constructed freely. Thus, an \ML{} type
-abbreviation is introduced for goals.\footnote{However, if goals were
-  an abstract type, the print abbreviation could be avoided where not
-  intended.}  The operations on goals are therefore just the ordinary
-pair selectors and constructor.
-Likewise, type abbreviations are introduced for justifications
-(proofs) and tactics. Conceptually, the following abbreviations are
-made in \HOL:
+Unlike theorems, goals need not be defined as an abstract type; they are transparent and can be constructed freely. Thus, an \ML{} type abbreviation is introduced for goals.
+The operations on goals are therefore just the ordinary pair selectors and constructor.
+Likewise, type abbreviations are introduced for validations and tactics. Conceptually, the following abbreviations are made in \HOL:
 
 \begin{hol}
 \index{goal@\ml{goal}}
@@ -162,42 +101,20 @@ made in \HOL:
 \index{tactics!ML type of@\ML{} type of}
 \begin{verbatim}
    goal       = term list * term
-   tactic     = goal -> goal list * proof
-   proof      = thm list -> thm
-\end{verbatim}\end{hol}
+   tactic     = goal -> goal list * validation
+   validation = thm list -> thm
+\end{verbatim}
+\end{hol}
 
-\index{subgoals@\ml{subgoals}} In fact, the type
-\ml{goal~list~*~proof} is abbreviated in \ML{} to \ml{subgoals}, and
-the abbreviation of \ml{tactic} made indirectly through it.  Thus, if
-$T$ is a tactic and $g$ is a goal, then applying $T$ to $g$ (\ie\
-evaluating the \ML\ expression $T\ g$) results in an \ML{} value of
-type \ml{subgoals}, \ie\ a pair whose first component is a list of
-goals and whose second component has \ML{} type \ml{proof}. (The word
-`tactic' is occasionally used loosely to mean a tactic-valued
-function.)
-
-It does not follow, of course, from the type \ml{tactic} that a
-particular tactic is well-behaved. For example,
-suppose that
-$T\ g${\small\verb% = ([%}$g_1${\small\verb%;%}$\ldots
-${\small\verb%;%}$g_n${\small\verb%],%}$p${\small\verb%)%}, and that
-the subgoals $g_1$ , $\dots$, $g_n$ have been solved.
-That means that some
-theorems $th_1$ , $\dots$, $th_n$ have been proved
-such that each $th_i$ ($1\leq i\leq n$) achieves the goal $g_i$.
-The justification $p$
-is intended to be a
-function that when applied to the list
-{\small\verb%[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%},
-succeeds in returning a theorem, $th$,
-achieving the original goal $g$; but, of course, it might sometimes
-not succeed. If $p$
-succeeds for every list of achieving theorems, then the tactic $T$ is
-said to be {\it valid\/}\index{validity, of tactics|(}. This does not guarantee, however, that
-the subgoals are solvable in the first place. If, in addition
+It does not follow, of course, from the type \ml{tactic} that a particular tactic is well-behaved.
+For example, suppose that $T\ g${\small\verb% = ([%}$g_1${\small\verb%,%}$\ldots ${\small\verb%,%}$g_n${\small\verb%],%}$v${\small\verb%)%}, and that the subgoals $g_1$ , $\dots$, $g_n$ have been solved.
+That means that some theorems $\mathit{th}_1$ , $\dots$, $\mathit{th}_n$ have been proved such that each $\mathit{th}_i$ ($1\leq i\leq n$) achieves the goal $g_i$.
+The validation $v$ is intended to be a function that when applied to the list {\small\verb%[%}$\mathit{th}_1${\small\verb%,%}$\ldots${\small\verb%,%}$\mathit{th}_n${\small\verb%]%}, succeeds in returning a theorem, $\mathit{th}$, achieving the original goal $g$; but, of course, it might sometimes not succeed.
+If $v$ succeeds for every list of achieving theorems, then the tactic $T$ is said to be \emph{valid}\index{validity, of tactics|(}.
+This does not guarantee, however, that the subgoals are solvable in the first place.
+If, in addition
 to being valid, a tactic always produces solvable subgoals from a
-solvable goal, it is called {\it strongly valid\/}.
-\index{strong validity, of tactics}
+solvable goal, it is called \emph{strongly valid}.\index{strong validity, of tactics}
 
 Tactics can be perfectly useful without being
 strongly valid, or without
@@ -244,20 +161,16 @@ $\mathit{goal}_1\ \ \ \mathit{goal}_2 \ \ \ \ldots\ \ \ \mathit{goal}_n$ \\
 \end{tabular}
 \end{center}
 
-\noindent For example, the
-tactic for decomposing conjunctions into
-two  conjunct subgoals is called {\small\verb%CONJ_TAC%}.
-\index{CONJ_TAC@\ml{CONJ\_TAC}}  It is described by:
-
+\noindent For example, the tactic for decomposing conjunctions into two  conjunct subgoals is called {\small\verb%conj_tac%}.\index{conj_tac@\ml{conj\_tac}}\footnote{The tactic is also available under the name \ml{CONJ\_TAC}.}
+It is described by:
 \begin{center}
-\begin{tabular}{c} \\
-$ t_1${\small\verb% /\ %}$t_2$ \\ \hline \hline
-$t_1\ \ \ \ \ \ \ t_2$ \\
+\begin{tabular}{lcr}
+\multicolumn{3}{c}{$t_1 \quad\land\quad t_2$} \\ \hline \hline
+$t_1$ & & $t_2$
 \end{tabular}
 \end{center}
 
-\noindent This indicates
-that {\small\verb%CONJ_TAC%} reduces a goal of the form
+\noindent This indicates that {\small\verb%conj_tac%} reduces a goal of the form
 {\small\verb%(%}$\Gamma${\small\verb%,%}$t_1${\small\verb%/\%}$t_2${\small\verb%)%}
 to subgoals
 {\small\verb%(%}$\Gamma${\small\verb%,%}$t_1${\small\verb%)%} and {\small\verb%(%}$\Gamma${\small\verb%,%}$t_2${\small\verb%)%}.
@@ -266,32 +179,26 @@ are propagated unchanged to the two subgoals is indicated by the absence
 of assumptions in the notation. The notation gives no indication of the
 proof function.
 
-Another example is {\small\verb%INDUCT_TAC%}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}\index{induction tactics},
-the tactic for performing mathematical induction
-on the natural numbers:
+Another example is {\small\verb%numLib.INDUCT_TAC%}\index{INDUCT_TAC@\ml{INDUCT\_TAC}}\index{induction tactics}, a low-level tactic for performing mathematical induction on the natural numbers:
 
 \begin{center}
-\begin{tabular}{c} \\
-{\small\verb%!%}$n${\small\verb%.%}$t[n]$ \\ \hline \hline
-$t[${\small\verb%0%}$]$ {\small\verb%     %} $\{t[n]\}\ t[${\small\verb%SUC %}$n]$
+\begin{tabular}{lcr} \\
+\multicolumn{3}{c}{$\forall n.\;t[n]$}\\ \hline \hline
+$t[${\small\verb%0%}$]$ & &  $\{t[n]\}\ t[${\small\verb%SUC %}$n]$
 \end{tabular}
 \end{center}
 
-{\small\verb%INDUCT_TAC%} reduces a goal of the form
-{\small\verb%(%}$\Gamma${\small\verb%,!%}$n${\small\verb%.%}$t[n]${\small\verb%)%} to a basis subgoal
+Thus, {\small\verb%INDUCT_TAC%} reduces a goal of the form
+{\small\verb%(%}$\Gamma,\forall n.\;t[n]${\small\verb%)%} to a basis subgoal
 {\small\verb%(%}$\Gamma${\small\verb%,%}$t[${\small\verb%0%}$]${\small\verb%)%}
 and an induction step subgoal
 {\small\verb%(%}$\Gamma\cup\{${\small\verb%%}$t[n]${\small\verb%%}$\}${\small\verb%,%}$t[${\small\verb%SUC %}$n]${\small\verb%)%}.
-The induction assumption
-is indicated in the tactic notation with set brackets.
+The induction assumption is indicated in the tactic notation with set brackets.
 
-Tactics fail
-\index{failure, of tactics|)}
-(in the \ML{} sense) if they are applied to
-inappropriate
-goals. For example, {\small\verb%CONJ_TAC%} will fail if it is applied to a goal whose
-conclusion is not a conjunction. Some tactics never fail; for example
-{\small\verb%ALL_TAC%}\index{ALL_TAC@\ml{ALL\_TAC}}
+Tactics fail \index{failure, of tactics|)} (in the \ML{} sense) if they are applied to inappropriate goals.
+For example, {\small\verb%conj_tac%} will fail if it is applied to a goal whose conclusion is not a conjunction.
+Some tactics never fail; for example
+{\small\verb%all_tac%}\index{all_tac@\ml{all\_tac}}
 
 \begin{center}
 \begin{tabular}{c} \\
@@ -304,55 +211,48 @@ $t$
 \index{identity tactic} it reduces a goal
 {\small\verb%(%}$\Gamma${\small\verb%,%}$t${\small\verb%)%}
 to the single
-subgoal {\small\verb%(%}$\Gamma${\small\verb%,%}$t${\small\verb%)%}---\ie\
-it has no effect. {\small\verb%ALL_TAC%} is useful for writing
-compound tactics, as discussed later (see Section~\ref{tacticals}).
+subgoal {\small\verb%(%}$\Gamma${\small\verb%,%}$t${\small\verb%)%}---\ie,\
+it has no effect.
+The {\small\verb%all_tac%} tactic is useful for writing
+compound tactics, as discussed later~(see Section~\ref{tacticals}).
 
-In just the way that the derived rule \ml{REWRITE\_RULE}
-\index{REWRITE_TAC@\ml{REWRITE\_TAC}|(}
- is central
-to forward proof (Section~\ref{sec:rewriting}), the corresponding
-function \ml{REWRITE\_TAC}
-\index{rewriting!main tactic for|(}
-\index{rewriting!importance of, in goal directed proof|(}
-is central to goal
-directed proof.  Given a goal and a list of equational theorems,
-\ml{REWRITE\_TAC} transforms the term component of the goal by
-applying the equations as left-to-right rewrites, recursively and
-to all depths, until no more changes can be made.  Unless not
-required, the function includes as rewrites the same
-standard set of pre-proved tautologies
-\index{tautologies, in rewriting tactic}
-that \ml{REWRITE\_RULE} uses.
+In just the way that the derived rule \ml{REWRITE\_RULE}\index{rewrite_tac@\ml{rewrite\_tac}|(} can be used in forward proof (Section~\ref{sec:rewriting}), the corresponding tactic \ml{rewrite\_tac}\index{rewriting!main tactic for|(}\index{rewriting!importance of, in goal directed proof|(} can be used in goal-directed proof.
+Given a goal and a list of equational theorems, \ml{rewrite\_tac} transforms the term component of the goal by applying the equations as left-to-right rewrites, recursively and to all depths, until no more changes can be made.
+Unless not required, the function includes as rewrites the same standard set of pre-proved tautologies \index{tautologies, in rewriting tactic} that \ml{REWRITE\_RULE} uses.
 By use of the tautologies, some subgoals can be solved
 internally by rewriting, and in that case, an empty list of subgoals
 is returned. The transformation of the goal is justified in each case by the
 appropriate chain of inferences.
-Rewriting often does a large share of the work in goal directed proof searches.\index{goal directed proof search!concepts of|)}
-\index{REWRITE_TAC@\ml{REWRITE\_TAC}|)}
+Rewriting is a simple implementation of an extremely powerful idea.
+The more sophisticated simplification functions~(\eg, \ml{simp}; see Section~\ref{sec:simpLib}) often do a very large share of the work in goal directed proof searches.\index{goal directed proof search!concepts of|)}
+\index{rewrite_tac@\ml{rewrite\_tac}|)}
+\index{simplification}
 \index{rewriting!importance of, in goal directed proof|)}
 \index{rewriting!main tactic for|)}
 
 A simple example from list theory (Section~\ref{sec:list})
 illustrates the use of tactics.
-A conjunctive goal is declared, and \ml{CONJ\_TAC} applied to it:
+A conjunctive goal is declared, and \ml{conj\_tac} applied to it:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - val g = ([]:term list,``(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])``);
 > val g = ([], ``(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])``) :
   term list * term
 
-- val (gl1,p1) = CONJ_TAC g;
+- val (gl1,p1) = conj_tac g;
 > val gl1 = [([], ``HD[1;2;3] = 1``); ([], ``TL[1;2;3] = [2;3]``)] :
   (term list * term) list
   val p1 = fn : thm list -> thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent The subgoals are each rewritten, using the definitions of
 \ml{HD} and \ml{TL}:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - open listTheory
   [...]
 
@@ -369,7 +269,8 @@ A conjunctive goal is declared, and \ml{CONJ\_TAC} applied to it:
 - val (gl1_2,p1_2) = REWRITE_TAC[HD,TL](hd(tl gl1));
 > val gl1_2 = [] : (term list * term) list
   val p1_2 = fn : thm list -> thm
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 \noindent Both of the two subgoals are now solved, so the
 decomposition is complete and the proof can be built up in stages.
@@ -397,12 +298,11 @@ the entire chain\index{goal directed proof search!generation of proofs by}\index
 The same proof could be constructed by forward search, starting from
 the definitions of \ml{HD} and \ml{TL}, but not nearly as easily.
 
-The \HOL{} system provides a collection of pre-defined tactics (and
-\ml{tactic}-valued functions) that includes
-\ml{CONJ\_TAC}, \ml{INDUCT\_TAC}, \ml{ALL\_TAC}  and
-\ml{REWRITE\_TAC}. The pre-defined tactics
-are adequate for many applications.  In addition, there are two means of
-defining new tactics.
+The \HOL{} system provides a very large collection of pre-defined tactics that includes
+\ml{conj\_tac}, \ml{INDUCT\_TAC}, \ml{all\_tac}  and
+\ml{rewrite\_tac}.
+The pre-defined tactics are adequate for many applications.
+In addition, there are two means of defining new tactics.
 \index{tactics!definition of new}
 Since a tactic\index{proof steps, as ML function applications@proof steps, as \ML{} function applications} is an \ML{} function, the user
 can define a new tactic directly in \ML.  Definitions of this sort
@@ -418,13 +318,13 @@ given. This typically involves references to axioms and
 primitive and defined inference rules,
 and is usually the more difficult part of the project.
 
-A simple example of a tactic written in \ML\index{proofs, in HOL logic@proofs, in \HOL{} logic!as ML function applications@as \ML{} function applications}\ is afforded by \ml{CONJ\_TAC},
+A simple example of a tactic written in \ML\index{proofs, in HOL logic@proofs, in \HOL{} logic!as ML function applications@as \ML{} function applications}\ is afforded by \ml{conj\_tac},
 whose definition in \HOL{} is as follows:
 
 \begin{hol}
-\index{CONJ_TAC@\ml{CONJ\_TAC}!ML implementation of@\ML{} implementation of}
+\index{conj_tac@\ML{conj\_tac}!ML implementation of@\ML{} implementation of}
 \begin{verbatim}
-   fun CONJ_TAC (asl,w) =
+   fun conj_tac (asl,w) =
      let val (l,r) = dest_conj w
      in
          ([(asl,l), (asl,r)],(fn [th1, th2] => CONJ th1 th2))
@@ -433,8 +333,7 @@ whose definition in \HOL{} is as follows:
 \end{hol}
 
 \noindent This shows how the subgoals are constructed, and how the
-proof function is specified in terms of the derived rule \ml{CONJ}
-(Section~\ref{sec:conj}).
+proof function is specified in terms of the derived rule \ml{CONJ}~(Section~\ref{sec:conj}).
 
 The second method is to compose
 \index{tactics!indirect implementation of}%
@@ -448,28 +347,30 @@ For example, two existing tactics can be sequenced
 \index{sequencing!of tactics}%
 \index{tactics!sequencing of}%
  by use of the
-tactical \ml{THEN}:\index{THEN@\ml{THEN}}
+tactical \ml{>>}\footnote{The \ml{>>} function can also be written as \ml{THEN}.}:\index{THEN@\ml{THEN}}
 if $T_1$ and
-$T_2$ are  tactics,  then the  \ML{} expression  $T_1${\small\verb% THEN %}$T_2$
+$T_2$ are  tactics,  then the  \ML{} expression  $T_1${\small\verb% >> %}$T_2$
 evaluates to a  tactic that first applies  $T_1$ to  a goal  and then applies
-$T_2$ to each subgoal produced by $T_1$.   The  tactical {\small\verb%THEN%} is
+$T_2$ to each subgoal produced by $T_1$.   The  tactical {\small\verb%>>%} is
 an infixed \ML{} function. Complex and powerful tactics can be
 constructed in this way; and new tacticals can also be defined, although
 this is unusual.
 
 The example from earlier
-is continued, to illustrate the use of the tactical \ml{THEN}:
+is continued, to illustrate the use of the tactical \ml{>>}:
 
-\begin{session}\begin{verbatim}
-- val (gl2,p2) = (CONJ_TAC THEN REWRITE_TAC [HD, TL])g;
+\begin{session}
+\begin{verbatim}
+- val (gl2,p2) = (conj_tac >> rewrite_tac [HD, TL])g;
 > val gl2 = [] : (term list * term) list
   val p2 = fn : thm list -> thm
 
 - p2 [];
 > val it = |- (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
-\noindent The single tactic \ml{CONJ\_TAC THEN REWRITE\_TAC[HD;TL]}
+\noindent The single tactic \ml{conj\_tac >> rewrite\_tac[HD;TL]}
 solves the goal in one single application. The chain of inference computed,
 however, is exactly the same as in the interactive proof; only the search is
 different.
@@ -487,57 +388,15 @@ directly in \ML{} may fail
 \index{tactics!debugging of}%
 in a variety of ways, and although, as usual, they cannot cause false
 theorems to appear, the failures can be difficult to understand and
-trace.\footnote{A possible extension to \HOL\ would be a `debugging
-  environment' for this class of tactic.} On the other hand, there are
-some proof strategies that cannot be implemented as compositions of
-existing tactics, and these have to be implemented directly in \ML.
+trace.
+On the other hand, there are some proof strategies that cannot be implemented as compositions of existing tactics, and these have to be implemented directly in \ML.
 Certain sorts of inductions are an example of this; as well as tactics
 to support some personal styles of proof.
 
-Either sort of tactic can be difficult to apply by hand, as shown in
-the examples above.  There can be a lot of book-keeping required to
-support such an activity.  For this reason, most interactive
-theorem-proving uses the subgoal or goalstack package described in
-Section~\ref{sec:goalstack}.
+Either sort of tactic can be difficult to apply by hand, as shown in the examples above.
+There can be a lot of book-keeping required to support such an activity.
+For this reason, most interactive theorem-proving uses the subgoal or goalstack package described in Section~\ref{sec:goalstack}.
 
-
-\subsection{Details of proving theorems}
-\label{using-tactics}
-
-When a theorem is proved that the user wishes to preserve for future use,
-it can be stored in the current theory
-by using the function \ml{save\_thm} (see Section~\ref{theoryprims}).
-
-To simplify the use of tactics there are three standard functions
-
-\index{TAC_PROOF@\ml{TAC\_PROOF}|pin}
-\index{prove_thm@\ml{prove\_thm}|pin}
-\index{PROVE@\ml{PROVE}|pin}
-\begin{holboxed}\begin{verbatim}
-   TAC_PROOF : (goal * tactic) -> thm
-   store_thm : (string * term * tactic) -> thm
-   prove     : (term * tactic) -> thm
-\end{verbatim}\end{holboxed}
-
-\noindent \ml{TAC\_PROOF} takes a goal and a tactic, and applies the
-tactic to the goal; the goal can have assumptions.  Executing
-\ml{store\_thm("foo",}$t$\ml{,}$T$\ml{)} proves the goal
-\ml{([],}$t$\ml{)} (\ie\ the goal with no assumptions and conclusion
-$t$) using tactic $T$ and saves the resulting theorem with name
-\ml{foo} in the current theory.  Executing
-\ml{prove(}$t$\ml{,}$T$\ml{)} proves the goal \ml{([],}$t$\ml{)} using
-$T$ and returns the result without saving it. In all cases the
-evaluation fails if $T$ does not solve the goal.
-
-In short, \HOL{} provides a very general framework in which proof
-strategies can be designed, implemented, applied and tested.  Tactics
-range from the very simple to the very advanced; in theory, a
-conventional automatic theorem prover could be expressed as a tactic or group
-of tactics.  In contrast, some users never have need to go beyond the
-built in tactics of the system.  The vital support that \HOL{} provides
-in all cases is the assurance that only theorems of the deductive system
-can be represented as theorems of the \HOL{} system---security is
-always preserved.
 
 \section{Some tactics built into HOL}
 
@@ -549,83 +408,26 @@ for the complete list, with fuller explanations.)
 It should be recalled that the \ML{} type \ml{thm\_tactic} abbreviates
 \ml{thm->tactic}, and the type \ml{conv} abbreviates \ml{term->thm}.
 
-\subsection{Acceptance of a theorem}
-
-
-\begin{holboxed}\index{ACCEPT_TAC@\ml{ACCEPT\_TAC}|pin}
-\begin{verbatim}
-   ACCEPT_TAC : thm_tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
-\item{\bf Summary:} {\small\verb%ACCEPT_TAC %}$th$
-is a tactic that solves any goal that is
-achieved by $th$.
-
-\index{forward proof!interfacing to goal directed}
-\item{\bf  Use:} Incorporating forward proofs, or theorems already
-proved, into goal directed proofs.
-For example, one might reduce a goal $g$ to
-subgoals $g_1$, $\dots$, $g_n$
-using a tactic $T$ and then prove theorems $th_1$ , $\dots$, $th_n$
-respectively achieving
-these goals by forward proof. The tactic
-
-\[\ml{  T THENL[ACCEPT\_TAC }th_1\ml{;}\ldots\ml{;ACCEPT\_TAC }th_n\ml{]}
-\]
-
-would then solve $g$, where \ml{THENL}
-\index{THENL@\ml{THENL}} is the tactical that applies
-the respective elements of the tactic list to the subgoals produced
-by \ml{T} (see Section~\ref{sec:thenl}).
-
-\end{itemize}
-
-
-\subsection{Adding an assumption}
-
-\index{ASSUME_TAC@\ml{ASSUME\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
-   ASSUME_TAC : thm_tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
-\item {\bf Summary:} {\small\verb%ASSUME_TAC |-%}$u$ adds $u$ as an assumption.
-\index{assumptions!tactic for adding}
-
-\begin{center}
-\begin{tabular}{c} \\
-$t$
-\\ \hline \hline
-$\{u\}t$
-\\
-\end{tabular}
-\end{center}
-
-\item{\bf Use:} Enriching the assumptions of a goal
-with definitions or previously proved theorems.
-
-\end{itemize}
-
 \subsection{Specialization}\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!tactics for}
 
-\index{GEN_TAC@\ml{GEN\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
-   GEN_TAC : tactic
-\end{verbatim}\end{holboxed}
+\index{gen_tac@\ml{gen\_tac}|pin}
+\begin{holboxed}
+\begin{verbatim}
+   gen_tac : tactic
+\end{verbatim}
+\end{holboxed}
 
-\begin{itemize}
+\begin{description}
 
 \index{specialization tactic}
-\item{\bf  Summary:} Specializes a universally quantified
-theorem to an arbitrary value.
+\item[Summary:]
+Specializes a universally quantified theorem to an arbitrary value.
+Also available under the name \ml{GEN_TAC}.
 
 
 \begin{center}
 \begin{tabular}{c} \\
-{\small\verb%!%}$x${\small\verb%.%}$t[x]$
+$\forall{}x${\small\verb%.%}$t[x]$
 \\ \hline \hline
 $t[x']$
 \\
@@ -636,26 +438,24 @@ $t[x']$
 not free in either goal or assumptions.
 
 \item{\bf   Use:} Solving universally quantified goals.
-\ml{GEN\_TAC} is often the first step of a goal directed proof.
-{\small\verb%STRIP_TAC%} (see below)
-applies {\small\verb%GEN_TAC%} to universally quantified goals.
-\end{itemize}
+\ml{gen\_tac} is often the first step of a goal directed proof.
+{\small\verb%strip_tac%} (see below)
+applies {\small\verb%gen_tac%} to universally quantified goals.
+\end{description}
 
 \subsection{Conjunction}
 
-\index{CONJ_TAC@\ml{CONJ\_TAC}|pin}
+\index{conj_tac@\ml{conj\_tac}|pin}
 \begin{holboxed}
 \begin{verbatim}
-   CONJ_TAC : tactic
+   conj_tac : tactic
 \end{verbatim}
 \end{holboxed}
 
-\begin{itemize}
+\begin{description}
 
 \index{conjunction, in HOL logic@conjunction, in \HOL{} logic!tactic for splitting of}
-\item{\bf Summary:} Splits a
-goal $t_1${\small\verb%/\%}$t_2$ into two
-subgoals, $t_1$ and $t_2$.
+\item[Summary:] Splits a goal $t_1\land t_2$ into two subgoals, $t_1$ and $t_2$.
 
 \begin{center}
 \begin{tabular}{c} \\
@@ -666,178 +466,93 @@ $t_1\ \ \ \ \ \ t_2$
 \end{tabular}
 \end{center}
 
-\item{\bf Use:} Solving conjunctive goals.
-{\small\verb%CONJ_TAC%} is invoked by {\small\verb%STRIP_TAC%} (see below).
+\item[Use:] Solving conjunctive goals.
+{\small\verb%conj_tac%} is also invoked by {\small\verb%strip_tac%} (see below).
 
-\end{itemize}
-
-\subsection{Discharging an assumption}
-\label{sec:disch}
-
-\index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
-\index{DISCH_TAC@\ml{DISCH\_TAC}|pin}
-\begin{holboxed}
-\begin{verbatim}
-   DISCH_TAC : tactic
-\end{verbatim}
-\end{holboxed}
-
-\begin{itemize}
-
-\item{\bf Summary:} Moves the antecedant
-of an implicative goal into the assumptions, leaving the consequent
-as the term component.
-
-\begin{center}
-\begin{tabular}{c} \\
-$u${\small\verb% ==> %}$v$
-\\ \hline \hline
-$\{u\}v$
-\\
-\end{tabular}
-\end{center}
-
-
-\item{\bf Use:} Solving goals of the form
-$u${\small\verb% ==> %}$v$
-by assuming $u$  and then solving
-$v$ under the assumption.
-{\small\verb%STRIP_TAC%} (see below) invokes
-{\small\verb%DISCH_TAC%} on implicative goals.
-\end{itemize}
+\end{description}
 
 \subsection{Combined simple decompositions}
 
-\index{STRIP_TAC@\ml{STRIP\_TAC}|pin}
+\index{strip_tac@\ml{strip\_tac}|pin}
 \begin{holboxed}
 \begin{verbatim}
-   STRIP_TAC : tactic
+   strip_tac : tactic
+\end{verbatim}
+\end{holboxed}
+
+\begin{description}
+
+\item[Summary:] Breaks a goal apart.
+The tactic {\small\verb%strip_tac%} removes one outer connective from the goal, using
+{\small\verb%conj_tac%}, {\small\verb%gen_tac%}, and other tactics.
+If the goal has the form $t_1\land \cdots \land t_n${\small\verb% ==> %}$t$
+then {\small\verb%strip_tac%} makes each $t_i$ into a separate assumption.
+
+\item[Use:] Useful for splitting a goal up into manageable pieces.
+Often the best thing to do first is {\small\verb%rpt strip_tac%},
+where \ml{rpt} is the tactical that repeatedly applies a tactic
+until it fails (see Section~\ref{sec:repeat}).
+\end{description}
+
+
+
+\subsection{Case analysis}
+\index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|(}
+
+\index{Cases_on@\ml{Cases\_on}|(}
+\begin{holboxed}
+\begin{verbatim}
+   Cases_on : term quotation -> tactic
 \end{verbatim}
 \end{holboxed}
 
 \begin{itemize}
 
-\item{\bf Summary:} Breaks a goal apart.
-{\small\verb%STRIP_TAC%} removes one outer connective from the goal, using
-{\small\verb%CONJ_TAC%}, {\small\verb%DISCH_TAC%}, {\small\verb%GEN_TAC%},
-and other tactics.
-If the goal has the form $t_1${\small\verb%/\%}$\cdots${\small\verb%/\%}$t_n${\small\verb% ==> %}$t$
-then {\small\verb%DISCH_TAC%} makes each $t_i$ into a separate assumption.
-
-\item{\bf Use:} Useful for splitting a goal up into manageable pieces.
-Often the best thing to do first is {\small\verb%REPEAT STRIP_TAC%},
-where \ml{REPEAT} is the tactical that repeatedly applies a tactic
-until it fails (see Section~\ref{sec:repeat}).
-\end{itemize}
-
-
-
-\subsection{Substitution}
-
-\index{SUBST_TAC@\ml{SUBST\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
-   SUBST_TAC : thm list -> tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
 \item{\bf Summary:}
-{\small\verb%SUBST_TAC[|-%}$u_1${\small\verb%=%}$v_1${\small\verb%;%}$\ldots${\small\verb%;|-%}$u_n${\small\verb%=%}$v_n${\small\verb%]%}
-changes\index{substitution, tactic for} each sub-term
-$t[u_1,\ldots ,u_n]$ of the goal to
-$t[v_1,\ldots ,v_n]$
-by substitution.
-
-\item{\bf Use:}
-Useful in situations where {\small\verb%REWRITE_TAC%}
-\index{REWRITE_TAC@\ml{REWRITE\_TAC}} does too much,
-or would loop.
-\end{itemize}
-
-
-\subsection{Case analysis on a boolean term}
-\index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|(}
-
-\index{ASM_CASES_TAC@\ml{ASM\_CASES\_TAC}|(}
-\begin{holboxed}\begin{verbatim}
-   ASM_CASES_TAC : term -> tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
-\item{\bf Summary:} \ml{ASM\_CASES\_TAC} $u$ , where $u$ is a
-boolean-valued term, does case analysis on $u$.
+\ml{Cases\_on}~$q$, where $q$ is a quotation denoting a term of an algebraic type (\eg, booleans, lists, natural numbers, types defined by the user with \ml{Datatype}), does case analysis on that term.
+Let the relevant type have $m$ constructors $\textsf{C}_1$ to $\textsf{C}_m$, where $\textsf{C}_i$ has $n_i$ arguments.
+If the term is a variable, then the variable is substituted out of the goal entirely:
 
 \begin{center}
 \begin{tabular}{c} \\
 $t$
 \\ \hline \hline
-$\{u\}t\ \ \ \ \ \{${\small\verb%~%}$u\}t$
+$t[q := \textsf{C}_1\,a_{11}\cdots a_{1n_1}]\quad\cdots\quad
+t[q := \textsf{C}_m\,a_{m1}\cdots a_{mn_m}]$
 \\
 \end{tabular}
 \end{center}
 
+If the term denoted by $q$ is not simply a variable (\eg, \ml{Cases\_on`n~+~1`}), then fresh assumptions are introduced:
+\begin{center}
+\begin{tabular}{c} \\
+$t$
+\\ \hline \hline
+$\{q := \textsf{C}_1\,a_{11}\cdots a_{1n_1}\}t\quad\cdots\quad
+\{q := \textsf{C}_m\,a_{m1}\cdots a_{mn_m}\}t$
+\\
+\end{tabular}
+\end{center}
 \item{\bf Use:} Case analysis.
 \end{itemize}
-\index{ASM_CASES_TAC@\ml{ASM\_CASES\_TAC}|)}
-
-\subsection{Case analysis on a disjunction}
-
-
-\begin{holboxed}
-\index{DISJ_CASES_TAC@\ml{DISJ\_CASES\_TAC}|pin}
-\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!tactic for case splits on}
-\begin{verbatim}
-   DISJ_CASES_TAC : thm_tactic
-\end{verbatim}\end{holboxed}
-
-\begin{itemize}
-
-\item{\bf Summary:}
-{\small\verb%DISJ_CASES_TAC |- %}$u${\small\verb% \/ %}$v$
-splits a goal into two cases: one with $u$
-as an assumption
-and the other with $v$ as an assumption.
-
-\begin{center}
-\begin{tabular}{c} \\
-$t$
-\\ \hline \hline
-$\{u\}t\ \ \ \ \ \{v\}t$
-\\
-\end{tabular}
-\end{center}
-
-\item{\bf Use:} Case analysis. The
-tactic {\small\verb%ASM_CASES_TAC%} is defined in \ML{} by
-
-{\small\begin{verbatim}
-   let ASM_CASES_TAC t = DISJ_CASES_TAC(SPEC t EXCLUDED_MIDDLE)
-\end{verbatim}}
-
-
-\noindent where {\small\verb%EXCLUDED_MIDDLE%} is
-the theorem {\small\verb%|- !t. t \/ ~t%}.
-
-\end{itemize}
-\index{case analysis, in HOL logic@case analysis, in \HOL{} logic!tactics for|)}
+\index{Cases_on@\ml{Cases\_on}|)}
 
 \subsection{Rewriting}
 \label{rewrite}
 
 \index{rewriting!main tactic for|(}
 \begin{holboxed}
-\index{REWRITE_TAC@\ml{REWRITE\_TAC}|pin}
+\index{rewrite_tac@\ml{rewrite\_tac}|pin}
 \begin{verbatim}
-   REWRITE_TAC : thm list -> tactic
-\end{verbatim}\end{holboxed}
-
-
-\begin{itemize}
-\item{\bf Summary:} {\small\verb%REWRITE_TAC[%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%}
+   rewrite_tac : thm list -> tactic
+\end{verbatim}
+\end{holboxed}
+\begin{description}
+\item[Summary:] {\small\verb%rewrite_tac[%}$th_1${\small\verb%,%}$\ldots${\small\verb%,%}$th_n${\small\verb%]%}
 transforms the term part of a goal by rewriting
 it with the given theorems $th_1$, $\dots$, $th_n$,
 and the set of pre-proved standard tautologies\index{tautologies, in rewriting tactic}.
+Also written \ml{REWRITE\_TAC}.
 
 
 \begin{center}
@@ -851,22 +566,22 @@ $\{t_1, \ldots , t_m\}t'$
 
 \noindent where $t'$ is obtained from $t$ as described.
 
-\item{\bf Use:} Advancing goals by using definitions and
-previously proved theorems (lemmas).\index{lemmas}
+\item[Use:] Advancing goals by using definitions and
+previously proved theorems.
 
 
-\item{\bf Some other rewriting tactics} (based on {\small\verb%REWRITE_TAC%}) are:
+\item[Other rewriting tactics] (based on \ml{rewrite\_tac}) are:
 \begin{enumerate}
-\item {\small\verb%ASM_REWRITE_TAC%}\index{ASM_REWRITE_TAC@\ml{ASM\_REWRITE\_TAC}}
- adds the assumptions of the goal to the list of
-theorems used for rewriting.
+\item {\small\verb%asm_rewrite_tac%}\index{asm_rewrite_tac@\ml{asm\_rewrite\_tac}} adds the assumptions of the goal to the list of theorems used for rewriting.
+Also written \ml{ASM\_REWRITE\_TAC}.
+
 \index{PURE_ASM_REWRITE_TAC@\ml{PURE\_ASM\_REWRITE\_TAC}}
-\item {\small\verb%PURE_ASM_REWRITE_TAC%} is like {\small\verb%ASM_REWRITE_TAC%}, but it
+\item {\small\verb%PURE_ASM_REWRITE_TAC%} is like {\small\verb%asm_rewrite_tac%}, but it
 doesn't use any built-in rewrites.
 \index{PURE_REWRITE_TAC@\ml{PURE\_REWRITE\_TAC}}
 \item {\small\verb%PURE_REWRITE_TAC%} uses neither the assumptions nor the built-in rewrites.
 \index{FILTER_ASM_REWRITE_TAC@\ml{FILTER\_ASM\_REWRITE\_TAC}}
-\item {\small\verb%FILTER_ASM_REWRITE_TAC %}$p${\small\verb% [%}$th_1${\small\verb%;%}$\ldots${\small\verb%;%}$th_n${\small\verb%]%}
+\item {\small\verb%FILTER_ASM_REWRITE_TAC %}$p${\small\verb% [%}$th_1${\small\verb%,%}$\ldots${\small\verb%,%}$th_n${\small\verb%]%}
 simplifies the goal by rewriting
 it with the explicitly given theorems $th_1$ , $\dots$, $th_n$ ,
 together with those
@@ -874,7 +589,10 @@ assumptions of the goal which satisfy the predicate $p$ and also
 the standard rewrites.
 
 \end{enumerate}
-\end{itemize}
+
+See also the more powerful simplification tactics described in Section~\ref{sec:simpLib}.
+
+\end{description}
 
 \index{rewriting!main tactic for|)}
 
@@ -882,21 +600,19 @@ the standard rewrites.
 \subsection{Resolution by Modus Ponens}
 
 \index{implication, in HOL logic@implication, in \HOL{} logic!tactics for}
-\index{IMP_RES_TAC@\ml{IMP\_RES\_TAC}|pin}
-\begin{holboxed}\begin{verbatim}
-   IMP_RES_TAC : thm -> tactic
-\end{verbatim}\end{holboxed}
+\index{imp_res_tac@\ml{imp\_res\_tac}|pin}
+\begin{holboxed}
+\begin{verbatim}
+   imp_res_tac : thm -> tactic
+\end{verbatim}
+\end{holboxed}
 
-\begin{itemize}
+\begin{description}
 
 \index{resolution tactics}
-\item{\bf Summary:} {\small\verb%IMP_RES_TAC %}$th$ does a limited amount of
-automated theorem proving in the form of forward inference; it
-`resolves' the theorem $th$ with the
-assumptions of the goal
-and adds any new results to the assumptions. The specification for
-\ml{IMP\_RES\_TAC} is:
-
+\item[Summary:]
+\ml{imp\_res\_tac}~$th$ does a limited amount of automated theorem proving in the form of forward inference; it `resolves' the theorem $th$ with the assumptions of the goal and adds any new results to the assumptions.
+The specification for \ml{imp\_res\_tac} is:
 
 \begin{center}
 \begin{tabular}{c} \\
@@ -907,118 +623,91 @@ $\{t_1,\ldots,t_m,u_1,\ldots,u_n\}t$
 \end{tabular}
 \end{center}
 
-\noindent  where $u_1$, $\dots$, $u_n$
-are derived by `resolving' the theorem $th$ with the existing assumptions
-$t_1$, $\dots$, $t_m$.
-Resolution in \HOL{} is not classical resolution, but just Modus Ponens with
-one-way pattern matching (not unification) and term and type instantiation. The
-general case is where $th$ is of the canonical form
+\noindent  where $u_1$, $\dots$, $u_n$ are derived by `resolving' the theorem $th$ with the existing assumptions $t_1$, $\dots$, $t_m$.
+Resolution in \HOL{} is not classical resolution, but just Modus Ponens with one-way pattern matching (not unification) and term and type instantiation.
+The general case is where $th$ is of the canonical form
 
 $\ \ \ ${\small\verb%|- !%}$x_1$$\ldots x_p${\small\verb%.%}$v_1$ {\small\verb%==>%} $v_2$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
 
-\noindent {\small\verb%IMP_RES_TAC %}$th$ then tries to specialize $x_1$,
-$\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of
-$\{t_1,\ldots ,t_m\}$.  Each time a match is found for some antecedent $v_i$,
-for $i$ successively equal to $1$, $2$, \dots, $q$, a term and type
-instantiation is made and the rule of Modus Ponens is applied.  If all the
-antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then
-the appropriate instance of $v$ is added to the assumptions. Otherwise, if only
-some initial sequence $v_1$, \dots, $v_k$ (for some $k$ where $1 < k < q$) of
-the assumptions can be dismissed, then the remaining implication:
+\noindent
+\ml{imp\_res\_tac}~$th$ then tries to specialize $x_1$, $\dots$, $x_p$ in succession so that $v_1$, $\dots$, $v_q$ match members of $\{t_1,\ldots ,t_m\}$.
+Each time a match is found for some antecedent $v_i$, for $i$ successively equal to $1$, $2$, \dots, $q$, a term and type instantiation is made and the rule of Modus Ponens is applied.
+If all the antecedents $v_i$ (for $1 \leq i \leq q$) can be dismissed in this way, then the appropriate instance of $v$ is added to the assumptions.
+Otherwise, if only some initial sequence $v_1$, \dots, $v_k$ (for some $k$ where $1 < k < q$) of the assumptions can be dismissed, then the remaining implication:
 
 $\ \ \ ${\small\verb%|- %} $v_{k+1}$ {\small\verb%==>%} $\ldots$ {\small\verb%==>%} $v_q$ {\small\verb%==>%} $v$
 
 \noindent is added to the assumptions.
 
-For a more detailed description of resolution and \ml{IMP\_RES\_TAC}, see
+For a more detailed description of resolution and \ml{imp\_res\_tac}, see
 \REFERENCE.  (See also the Cambridge \LCF\ Manual \cite{new-LCF-man}.)
 
-\item{\bf Use:} Deriving new results from a previously proved implicative
+\item[Use:] Deriving new results from a previously proved implicative
 theorem, in combination with the current assumptions, so that subsequent
 tactics can use these new results.
 
-\end{itemize}
+\end{description}
 
 
 
 
 \subsection{Identity}
 
-\index{ALL_TAC@\ml{ALL\_TAC}|pin}
+\index{all_tac@\ml{all\_tac}|pin}
 \begin{holboxed}
 \begin{verbatim}
-   ALL_TAC : tactic
+   all_tac : tactic
 \end{verbatim}
 \end{holboxed}
 
 \begin{itemize}
 \index{identity tactic}\index{tactics!identity for}
 \index{THEN@\ml{THEN}}
-\item{\bf Summary:} The identity tactic for the tactical {\small\verb%THEN%}
-(see Section~\ref{tactics}). Useful for writing tactics.
+\item{\bf Summary:} The identity tactic for the tactical \ml{\gt\gt} (see the example in Section~\ref{tactics}, and Section~\ref{sec:sequencing-tacticals}). Useful for writing tactics.
 
 \item{\bf Use:}
 \begin{enumerate}
 \index{REPEAT@\ml{REPEAT}}
-\item Writing tacticals (see description of {\small\verb%REPEAT%}
-in Section~\ref{tacticals}).
+\item Writing tacticals (see description of \ml{rpt} in Section~\ref{tacticals}).
 \index{THENL@\ml{THENL}}
-\item With {\small\verb%THENL%} (see Section~\ref{sec:thenl});
-for example, if tactic $T$ produces two subgoals
-$T_1$ is to be applied to the first while
-nothing is to be done to the second,
-then $T${\small\verb% THENL[%}$T_1${\small\verb%;ALL_TAC]%} is the
+\index{>{"|}@\ml{\gt\pipe}|see{\ml{THENL}}}
+\item
+With \ml{THENL} (see Section~\ref{sec:thenl}); for example, if tactic $T$ produces two subgoals and $T_1$ is to be applied to the first while nothing is to be done to the second, then $T\;\ml{THENL}\;[T_1,\,\ml{all\_tac}]$ is the
 tactic required.
 \end{enumerate}
 \end{itemize}
-
-\subsection{Null}
-
-\index{NO_TAC@\ml{NO\_TAC}|pin}
-\begin{holboxed}
-\begin{verbatim}
-   NO_TAC : tactic
-\end{verbatim}
-\end{holboxed}
-
-\begin{itemize}
-\item{\bf Summary:} Tactic that always fails.
-
-\item{\bf Use:} Writing tacticals.
-\end{itemize}
-
 
 \subsection{Splitting logical equivalences}
 
 
 \begin{holboxed}
-\index{EQ_TAC@\ml{EQ\_TAC}|pin}
+\index{eq_tac@\ml{eq\_tac}|pin}
 \index{equality, in HOL logic@equality, in \HOL{} logic!tactic for splitting}
 \begin{verbatim}
-   EQ_TAC : tactic
-\end{verbatim}\end{holboxed}
+   eq_tac : tactic
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
 \item{\bf Summary:}
-{\small\verb%EQ_TAC%}
-splits an equational goal into two implications (the `if-case' and
-the `only-if' case):
+\ml{eq_tac} splits an equational goal into two implications (the `if-case' and the `only-if' case):
 
 \begin{center}
-
-
-
 \begin{tabular}{c} \\
-$u\ \ml{=}\ v$
+$u \iff v$
 \\ \hline \hline
-$u\ \ml{==>}\ v\ \ \ \ \ v\ \ml{==>}\ u$
+$u\ \Rightarrow\ v \qquad v\ \Rightarrow\ u$
 \\
 \end{tabular}
 \end{center}
 
-\item{\bf Use:} Proving logical equivalences, \ie\ goals of the form
-``$u$\ml{=}$v$'' where $u$ and $v$ are boolean terms.
+\item{\bf Use:}
+Proving logical equivalences, \ie\ goals of the form ``$u\iff v$'' where $u$ and $v$ are boolean terms.
+Note that the same end can often be achieved by rewriting with the theorem \ml{EQ\_IMP\_THM}, which states
+\[
+\vdash (u \iff v) \iff (u \Rightarrow v) \land (v \Rightarrow u)
+\]
 
 \end{itemize}
 
@@ -1030,18 +719,18 @@ $u\ \ml{==>}\ v\ \ \ \ \ v\ \ml{==>}\ u$
 \index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!tactic for}
 \begin{verbatim}
    EXISTS_TAC : term -> tactic
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
 \begin{itemize}
 
 \item{\bf Summary:}
-{\small\verb%EXISTS_TAC "%}$u${\small\verb%"%}
-reduces an existential goal {\small\verb%!%}$x${\small\verb%. %}$t[x]$
-to the subgoal $t[u]$.
+$\ml{EXISTS\_TAC}\;u$ reduces an existential goal $\exists x.\;t[x]$ to the subgoal $t[u]$.
+(In ASCII form, the existential is printed as a question mark.)
 
 \begin{center}
 \begin{tabular}{c} \\
-$\ml{!}x\ml{.} t[x]$
+$\ml{?}x\ml{.} t[x]$
 \\ \hline \hline
 $t[u]$
 \\
@@ -1049,15 +738,6 @@ $t[u]$
 \end{center}
 
 \item{\bf Use:} Proving existential goals.
-
-\item{\bf Comment:} \ml{EXISTS\_TAC} is a crude way of solving
-existential goals, but it is the only built-in tactic for this
-purpose.  A more powerful approach uses Prolog-style `logic variables'
-(\ie\ meta-variables)
-that can be progressively refined towards the eventual witness.
-Implementing this requires goals to contain an environment giving the binding
-of logic variables to terms. Details (in the context of \LCF) are given
-in a  paper by Stefan Soko\l owski \cite{Stefan}.
 
 \end{itemize}
 \index{tactics!list of some|)}
@@ -1143,186 +823,32 @@ denote the same set (\ie\ contain the same elements).
 
 
 \subsection{Sequencing}
+\label{sec:sequencing-tacticals}
 \index{sequencing!of tactics|(}
 \index{tacticals!for sequencing|(}
 \index{tactics!sequencing of|(}
-\index{THEN@\ml{THEN}!ML implementation of@\ML{} implementation of|(}
+\index{THEN@\ml{THEN}}
+\index{>>@\ml{\gt\gt}|see{\ml{THEN}}}
 
-\begin{holboxed}\index{THEN@\ml{THEN}|pin}
+\begin{holboxed}
 \begin{verbatim}
    THEN : tactic -> tactic -> tactic
-\end{verbatim}\end{holboxed}
+   >>   : tactic -> tactic -> tactic
+\end{verbatim}
+\end{holboxed}
 
+The tactical \ml{\gt\gt} is an \ML{} infix.
+Its alias \ml{THEN} is also an infix.
+If $T_1$ and $T_2$ are tactics, then the \ML{} expression $T_1\;\ml{\gt\gt}\;T_2$ evaluates to a tactic which first applies $T_1$ and then applies $T_2$ to each subgoal produced by $T_1$.
 
-The tactical {\small\verb%THEN%} is an \ML{} infix. If $T_1$ and $T_2$ are tactics,
-then the \ML{} expression $T_1${\small\verb% THEN %}$T_2$ evaluates to a tactic
-which first applies $T_1$ and then applies $T_2$ to each subgoal produced by
-$T_1$. Its definition
- in \ML{} is complex (and due to Milner)\index{Milner, R.} but worth
-understanding as an exercise in \ML.  It is an \ML{} curried infix.
-
-\begin{hol}\begin{verbatim}
-   let ((T1:tactic) THEN (T2:tactic)) g =
-    let gl,p = T1 g
-    in
-    let gll,pl = split(map T2 gl)
-    in
-    (flat gll, (p o mapshape(map length gll)pl));;
-\end{verbatim}\end{hol}
-
-\noindent Here are
-the definitions of the \ML{} functions \ml{map}, \ml{split}, \ml{o},
-\ml{length}, \ml{flat} and \ml{mapshape}:
-
-%\begin{itemize}
-\bigskip
-
-\index{map@\ml{map}}
-{\small\verb%map : (* -> **) -> * list -> ** list%}
-
-\medskip
-
-\begin{hol}\begin{alltt}
-   map \(f\) [\(x\sb{1}\);\(\ldots\);\(x\sb{n}\)]  =  [\(f\) \(x\sb{1}\);\(\ldots\);\(f\) \(x\sb{n}\)]
-\end{alltt}\end{hol}
-
-\medskip
-
-\index{split@\ml{split}}
-{\small\verb%split : (* # **) list -> (* list # ** list)%}
-
-\medskip
-
-\begin{hol}\begin{alltt}\   split[(\(x\sb{1}\),\(y\sb{1}\));\(\ldots\);(\(x\sb{n}\),\(y\sb{n}\))]  =  ([\(x\sb{1}\);\(\ldots\);\(x\sb{n}\)],[\(y\sb{1}\);\(\ldots\);\(y\sb{n}\)])
-\end{alltt}\end{hol}
-
-
-\medskip
-
-{\small\verb%$o : ((* -> **) # (*** -> *)) -> *** -> **$%}
- (an infix)\index{function composition, in ML@function composition, in \ML}
-
-\medskip
-
-\begin{hol}
-\begin{alltt}
-   (\(f\) o \(g\)) \(x\)  =  \(f\)(\(g\) \(x\))
-\end{alltt}\end{hol}
-\index{ function composition operator, in ML@{\small\verb+o+} (function composition operator, in \ML)}
-
-\medskip
-
-\index{length@\ml{length}}
-{\small\verb%length : * list -> int%}
-
-\medskip
-
-\begin{hol}\begin{alltt}
-   length[\(x\sb{1}\);\(\ldots\);\(x\sb{n}\)]  =  n
-\end{alltt}\end{hol}
-
-\medskip
-
-
-{\small\verb%flat : (* list) list -> * list%}\index{flat@\ml{flat}}
-
-
-\medskip
-
-\begin{hol}\begin{alltt}
-   flat[[\({x\sb{1}}\sb{1}\);\(\ldots\);\({x\sb{1}}\sb{m\sb{1}}\)];[\({x\sb{2}}\sb{1}\);\(\ldots\);\({x\sb{2}}\sb{m\sb{2}}\)];\(\ldots\);[\({x\sb{n}}\sb{1}\);\(\ldots\);\({x\sb{n}}\sb{m\sb{n}}\)]] =
-    [\({x\sb{1}}\sb{1}\);\(\ldots\);\({x\sb{1}}\sb{m\sb{1}}\);\({x\sb{2}}\sb{1}\);\(\ldots\);\({x\sb{2}}\sb{m\sb{2}}\); \(\ldots\) ;\({x\sb{n}}\sb{1}\);\(\ldots\);\({x\sb{n}}\sb{m\sb{n}}\)]
-\end{alltt}\end{hol}
-
-\medskip
-
-{\small\verb%mapshape : int list -> (* list -> **) list -> * list -> ** list%}\index{mapshape@\ml{mapshape}}
-
-
-\medskip
-
-\begin{hol}\begin{alltt}
-   mapshape
-    [\(m\sb{1}\);\(\ldots\);\(m\sb{n}\)]
-    [\(f\sb{1}\);\(\ldots\);\(f\sb{n}\)]
-    [\({x\sb{1}}\sb{1}\);\(\ldots\);\({x\sb{1}}\sb{m\sb{1}}\);\({x\sb{2}}\sb{1}\);\(\ldots\);\({x\sb{2}}\sb{m\sb{2}}\); \(\ldots\) ;\({x\sb{n}}\sb{1}\);\(\ldots\);\({x\sb{n}}\sb{m\sb{n}}\)] =
-   [\(f\sb{1}\)[\({x\sb{1}}\sb{1}\);\(\ldots\);\({x\sb{1}}\sb{m\sb{1}}\)];\(f\sb{2}\)[\({x\sb{2}}\sb{1}\);\(\ldots\);\({x\sb{2}}\sb{m\sb{2}}\)]; \(\ldots\) ;\(f\sb{n}\)[\({x\sb{n}}\sb{1}\);\(\ldots\);\({x\sb{n}}\sb{m\sb{n}}\)]]
-\end{alltt}\end{hol}
-
-%\end{itemize}
-
-\bigskip
-
-Suppose \ml{$T_1\ g$ = ($gl$,$p$)} where \ml{$gl$=[$g_1$;$\ldots$;$g_n$]}.
-Suppose also that
-for $i$ between $1$ and $n$ it is the case that
-\ml{$T_2\ g_i$ = ([${g_i}_1$;$\ldots$;${g_i}_{m_i}$],$p_i$)}.
-Then \ml{split(map $T_2$ $gl$)} will evaluate to the
-pair \ml{($gll$,$pl$)} of a subgoal list and a proof function, where
-
-\bigskip
-
-\ml{$gll$ = [[${g_1}_1$;$\ldots$;${g_1}_{m_1}$];[${g_2}_1$;$\ldots$;${g_2}_{m_2}$];
-$\ \ldots\ $;[${g_n}_1$;$\ldots$;${g_n}_{m_n}$]]}
-
-\bigskip
-
-\noindent and
-\ml{$pl$ = [$p_1$;$\ldots$;$p_n$]}. Note that
-
-\bigskip
-
-\ml{map length $gll$ = [$m_1$;$\ldots$;$m_n$]}
-
-\bigskip
-
-\noindent and that
-
-\bigskip
-
-\ml{flat $gll$ = [${g_1}_1$;$\ldots$;${g_1}_{m_1}$;${g_2}_1$;$\ldots$;${g_2}_{m_2}$;
-$\ \ldots\ $;${g_n}_1$;$\ldots$;${g_n}_{m_n}$]}
-
-\bigskip
-
-Suppose now that, for $i$ between $1$ and $n$, the theorems
-${th_i}_1$, $\dots$, ${th_i}_{m_i}$ achieve
-the goals ${g_i}_1$, $\dots$, ${g_i}_{m_i}$, respectively.
-It will follow that if $T_2$ is valid
-then for $i$ between $1$ and $n$
-the result of applying $p_i$ to the list of
-theorems \ml{[${th_i}_1$;$\ldots$;${th_i}_{m_i}$]}
-will be a theorem, $th_i$ say, which achieves
-$g_i$.
-Now if $T_1$ is valid then \ml{$p$[$th_1$;$\ldots$;$th_n$]}
-will evaluate to a theorem,
-$th$ say,
-that achieves the goal $g$. Thus
-
-\begin{hol}
-\begin{alltt}
-    \(p\)
-    (mapshape
-     (map length \(gll\))
-     \(pl\)
-     [\({th\sb{1}}\sb{1}\);\(\ldots\);\({th\sb{1}}\sb{m\sb{1}}\);\({th\sb{2}}\sb{1}\);\(\ldots\);\({th\sb{2}}\sb{m\sb{2}}\);\(\ \ldots\ \) ;\({th\sb{n}}\sb{1}\);\(\ldots\);\({th\sb{n}}\sb{m\sb{n}}\)]) =
-
-    \(p\)([\(p\sb{1}\)[\({th\sb{1}}\sb{1}\);\(\ldots\);\({th\sb{1}}\sb{m\sb{1}}\)];\(p\sb{2}\)[\({th\sb{2}}\sb{1}\);\(\ldots\);\({th\sb{2}}\sb{m\sb{2}}\)];\(\ \ldots\ \);\(p\sb{n}\)[\({th\sb{n}}\sb{1}\);\(\ldots\);\({th\sb{n}}\sb{m\sb{n}}\)]]) =
-
-    \(p\)([\(th\sb{1}\);\(\ldots\);\(th\sb{n}\)]) =
-
-    \(th\)
-\end{alltt}
-\end{hol}
-
-This shows that
-\index{justifications, in goal-directed proof search!THEN example of@\ml{THEN} example of}
-\index{proof functions (same as justifications, validations)!THEN example of@\ml{THEN} example of}
-\ml{$p$ o mapshape(map length $gll$)$pl$}
-is a function that, when
-applied to a list of theorems respectively
-achieving \ml{flat $gll$}, returns a theorem
-(namely $th$) that achieves $g$.\index{sequencing!of tactics|)}
+Both \ml{\gt\gt} and \ml{THEN} associate to the left, which can lead to some counter-intuitive behaviours when they combine with other sequencing operators.
+However, chains of tactics connected with \ml{\gt\gt} behave as one might expect.
+In particular, if $T_1$ produces $n$ sub-goals, and $T_2$ produces varying numbers of sub-goals when applied to each of those, then the expression
+\(
+T_1 \;\texttt{\gt\gt}\; T_2 \;\texttt{\gt\gt}\; T_3
+\)
+will apply $T_3$ to \emph{all} of the leaf sub-goals generated by the sequencing of $T_1$ and $T_2$.
+\index{sequencing!of tactics|)}
 \index{tacticals!for sequencing|)}
 \index{THEN@\ml{THEN}!ML implementation of@\ML{} implementation of|)}
 
@@ -1332,6 +858,7 @@ achieving \ml{flat $gll$}, returns a theorem
 \begin{holboxed}
 \begin{verbatim}
    THENL : tactic -> tactic list -> tactic
+   >|    : tactic -> tactic list -> tactic
 \end{verbatim}
 \end{holboxed}
 \label{sec:thenl}
@@ -1339,25 +866,12 @@ achieving \ml{flat $gll$}, returns a theorem
 \index{selective sequencing tactical}
 If tactic $T$ produces $n$ subgoals and $T_1$, $\dots$,
 $T_n$ are tactics
-then $T${\small\verb% THENL [%}$T_1${\small\verb%;%}$\ldots${\small\verb%;%}$T_n${\small\verb%]%}
+then $T${\small\verb% >| [%}$T_1${\small\verb%,%}$\ldots${\small\verb%,%}$T_n${\small\verb%]%}
 is a tactic which first applies $T$ and then
 applies $T_i$ to the $i$th subgoal produced by $T$.
 The tactical {\small\verb%THENL%} is useful if one wants to apply different
 tactics to different subgoals.
-
-Here is the definition of \ml{THENL}:
-
-\begin{hol}\begin{verbatim}
-      let ((T:tactic) THENL (Tl:tactic list)) g =
-       let gl,p = T g
-       in
-       let gll,pl = (split(map (\(T,g). T g) Tgl)
-                      where Tgl = combine(Tl,gl) ? failwith `THENL`)
-       in
-       (flat gll, (p o mapshape(map length gll)pl))
-\end{verbatim}\end{hol}
-
-\noindent The understanding of this procedure is left as an exercise!\index{tactics!sequencing of|)}
+\index{tactics!sequencing of|)}
 
 \subsection{Successive application}
 
@@ -1374,33 +888,36 @@ Here is the definition of \ml{THENL}:
 The tactical \ml{EVERY} applies a list of tactics one after the other.
 
 
-\begin{hol}\begin{alltt}
-   EVERY [\(T\sb{1}\);\(T\sb{2}\);\(\ldots\);\(T\sb{n}\)] = \(T\sb{1}\) THEN \(T\sb{2}\) THEN \(\ldots\) THEN \(T\sb{n}\)
-\end{alltt}\end{hol}
+\begin{hol}
+\begin{alltt}
+   EVERY [\(T\sb{1}\),\(T\sb{2}\),\(\ldots\),\(T\sb{n}\)] = \(T\sb{1}\) \gt\gt \(T\sb{2}\) \gt\gt \(\ldots\) \gt\gt \(T\sb{n}\)
+\end{alltt}
+\end{hol}
 
 
 
 \subsection{Repetition}
 
-\begin{holboxed}\index{REPEAT@\ml{REPEAT}|pin}
+\begin{holboxed}\index{REPEAT@\ml{REPEAT}|pin}\index{rpt@\ml{rpt}|see{\ml{REPEAT}}}
 \begin{verbatim}
    REPEAT : tactic -> tactic
-\end{verbatim}\end{holboxed}
+   rpt    : tactic -> tactic
+\end{verbatim}
+\end{holboxed}
 \label{sec:repeat}
 
 If $T$ is a
-tactic then {\small\verb%REPEAT %}$T$ is a tactic\index{tactics!repetition of}
+tactic then {\small\verb%rpt %}$T$ is a tactic\index{tactics!repetition of}
 \index{tacticals!for repetition}\index{repetition!of tactics}
 that repeatedly applies
 $T$ until it fails. It is defined in \ML{} by:
 
 {\small\baselineskip\HOLSpacing
 \begin{verbatim}
-   letrec REPEAT T g = ((T THEN REPEAT T) ORELSE ALL_TAC) g
+   fun REPEAT T g = ((T THEN REPEAT T) ORELSE ALL_TAC) g
 \end{verbatim}}
 
-\noindent (The extra argument {\small\verb%g%} is needed because \ML{} does not use
-lazy evaluation.)
+\noindent (The extra argument {\small\verb%g%} is needed because \ML{} does not use lazy evaluation.)
 \index{tacticals|)}
 \index{tacticals!list of some|)}
 \index{tactics!tacticals for|)}
@@ -1693,48 +1210,65 @@ $p$ and $q$, respectively, as new assumptions.
 
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#g "((n = 0) \/ (n = 1)) ==> (n * n = n)";;
-"(n = 0) \/ (n = 1) ==> (n * n = n)"
+\begin{session}
+\begin{alltt}
+> g `((n = 0) \/ (n = 1)) ==> (n * n = n)`;
+     Initial goal:
 
-() : void
+     (n = 0) \(\lor\) (n = 1) \(\Rightarrow\) (n * n = n)
 
-#e DISCH_TAC;;
+> e DISCH_TAC;
 OK..
-"n * n = n"
-    [ "(n = 0) \/ (n = 1)" ]
+1 subgoal:
+val it =
 
-() : void
+n * n = n
+------------------------------------
+  (n = 0) \(\lor\) (n = 1)
 
-#backup();;
-"(n = 0) \/ (n = 1) ==> (n * n = n)"
-\end{verbatim}\end{session}
-\vfill
-\newpage
-\begin{session}\begin{verbatim}
-#e(DISCH_TAC THEN POP_ASSUM DISJ_CASES_TAC);;
+> b();
+val it =
+   Initial goal:
+
+
+(n = 0) \(\lor\) (n = 1) \(\Rightarrow\) (n * n = n)
+\end{alltt}
+\end{session}
+
+\begin{session}
+\begin{alltt}
+> e(DISCH_TAC THEN POP_ASSUM DISJ_CASES_TAC);
 OK..
-2 subgoals
-"n * n = n"
-    [ "n = 1" ]
+2 subgoals:
+val it =
 
-"n * n = n"
-    [ "n = 0" ]
+n * n = n
+------------------------------------
+  n = 1
 
-() : void
 
-#backup();;
-"(n = 0) \/ (n = 1) ==> (n * n = n)"
+n * n = n
+------------------------------------
+  n = 0
 
-() : void
+> b();
+val it =
+   Initial goal:
 
-#e(DISCH_TAC THEN POP_ASSUM DISJ_CASES_TAC THEN POP_ASSUM SUBST1_TAC);;
+
+(n = 0) \(\lor\) (n = 1) \(\Rightarrow\) (n * n = n)
+
+> e(DISCH_TAC THEN POP_ASSUM DISJ_CASES_TAC THEN POP_ASSUM SUBST1_TAC);;
 OK..
-2 subgoals
-"1 * 1 = 1"
+2 subgoals:
+val it =
+1 * 1 = 1
 
-"0 * 0 = 0"
-\end{verbatim}\end{session}
+
+0 * 0 = 0
+
+\end{alltt}
+\end{session}
 
 As noted earlier, \ml{POP\_ASSUM} is useful when an assumption
 is required that is still at the top of the stack,
@@ -1918,64 +1452,56 @@ to push and subsequently pop assumptions, especially in immediate succession,
 where this could be avoided.
 
 Two other tacticals that can be used to manipulate the assumption list are
-{\small\verb%FIRST_ASSUM%} and {\small\verb%EVERY_ASSUM%}.
+\ml{FIRST\_ASSUM} and \ml{EVERY\_ASSUM}.
 These are characterized by:
 
 \index{FIRST_ASSUM@\ml{FIRST\_ASSUM}}
 \index{EVERY_ASSUM@\ml{EVERY\_ASSUM}}
-\begin{hol}\begin{alltt}
-   FIRST_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
-    (\(f\)(ASSUME \(t\sb{1}\)) ORELSE \(\ldots\) ORELSE \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
+\begin{hol}
+\begin{alltt}
+   FIRST_ASSUM \(f\) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{n}\)], \(t\)) =
+    (\(f\)(ASSUME \(t\sb{1}\)) ORELSE \(\ldots\) ORELSE \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{n}\)], \(t\))
 
-   EVERY_ASSUM \(f\) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\)) =
-    (\(f\)(ASSUME \(t\sb{1}\)) THEN \(\ldots\) THEN  \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\); \(\ldots\) ;\(t\sb{n}\)], \(t\))
-\end{alltt}\end{hol}
+   EVERY_ASSUM \(f\) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{n}\)], \(t\)) =
+    (\(f\)(ASSUME \(t\sb{1}\)) THEN \(\ldots\) THEN  \(f\)(ASSUME \(t\sb{n}\))) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{n}\)], \(t\))
+\end{alltt}
+\end{hol}
+
+Both of these tactics leave the terms that are assumed (the various $t_i$) in the goal's assumption list.
+The \index{FIRST_X_ASSUM@\ml{FIRST\_X\_ASSUM}}\ml{FIRST\_X\_ASSUM} tactical is similar to \ml{FIRST\_ASSUM}, but in addition to assuming one of the goal's assumptions as a theorem and passing this to the function $f$, the goal-state that $f\,(t_i\vdash t_i)$ acts upon has had $t_i$ removed from the assumption list.
 
 
 \subsection{Theorem continuations without popping}
 \label{tacont}
 
-The idea of the second approach is suggested by the way the array-style
-tacticals\index{tacticals!purpose of} supply a list of theorems (the assumed assumptions)
-to a function.  These tacticals use the function to
-infer new
-results from the list of theorems, and then to do something with the
-results. In some cases,
-\eg\ the last example, the assumptions need never have been made in the
-first place, which suggests a different use of tacticals.
-The original example for \ml{POP\_ASSUM}
-illustrates this: namely, to show that $(n = 0) \imp (n\times n = n)$.  Here,
-instead of discharging the antecedent by applying
-\ml{DISCH\_TAC} to the goal, which adds the antecedent as an assumption
-and returns the consequent as the conclusion,
-and {\it then\/} supplying the (assumed) added assumption to the
-theorem continuation \ml{SUBST1\_TAC} and
-discarding it at the same time,
-a tactical called \ml{DISCH\_THEN} is applied to \ml{SUBST1\_TAC} directly.
-\ml{DISCH\_THEN} transforms \ml{SUBST1\_TAC} into
-a new tactic: one that applies \ml{SUBST1\_TAC} directly to the (assumed)
-antecedent, and the resulting tactic to a subgoal with no new
-assumptions and the consequent as its conclusion:
-\vfill
-\newpage
+The idea of the second approach is suggested by the way the array-style tacticals\index{tacticals!purpose of} supply a list of theorems (the assumed assumptions) to a function.
+These tacticals use the function to infer new results from the list of theorems, and then to do something with the results.
+In some cases, \eg\ the last example, the assumptions need never have been made in the first place, which suggests a different use of tacticals.
+The original example for \ml{POP\_ASSUM} illustrates this: namely, to show that $(n = 0) \imp (n\times n = n)$.
+Here, instead of discharging the antecedent by applying \ml{DISCH\_TAC} to the goal, which adds the antecedent as an assumption and returns the consequent as the conclusion, and {\it then\/} supplying the (assumed) added assumption to the theorem continuation \ml{SUBST1\_TAC} and discarding it at the same time, a tactical called \ml{DISCH\_THEN} is applied to \ml{SUBST1\_TAC} directly.
+\ml{DISCH\_THEN} transforms \ml{SUBST1\_TAC} into a new tactic: one that applies \ml{SUBST1\_TAC} directly to the (assumed) antecedent, and the resulting tactic to a subgoal with no new assumptions and the consequent as its conclusion:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#DISCH_THEN;;
-- : (thm_tactic -> tactic)
+\begin{session}
+\begin{verbatim}
+> DISCH_THEN;
+val it = fn : (thm_tactic -> tactic)
 
-#DISCH_THEN SUBST1_TAC;;
-- : tactic
+> DISCH_THEN SUBST1_TAC;
+val it = fn : tactic
 
-#g "(n = 0) ==> (n * n = n)";;
-"(n = 0) ==> (n * n = n)"
+> g `(n = 0) ==> (n * n = n)`;
+     Initial goal:
 
-() : void
+     (n = 0) \(\Rightarrow\) (n * n = n)
 
-#e(DISCH_THEN SUBST1_TAC);;
+> e(DISCH_THEN SUBST1_TAC);
 OK..
-"0 * 0 = 0"
-\end{verbatim}\end{session}
+1 subgoal:
+val it =
+0 * 0 = 0
+\end{verbatim}
+\end{session}
 
 \noindent This gives the same result as the stack method, but more
 directly, with a more compact \ML{} expression,
@@ -1992,16 +1518,20 @@ the result $n=0$ could be reversed
 immediately:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#g "(0 = n) ==> (n * n = n)";;
-"(0 = n) ==> (n * n = n)"
+\begin{session}
+\begin{alltt}
+> g `(0 = n) ==> (n * n = n)`;
+     Initial goal:
 
-() : void
+     (0 = n) \(\Rightarrow\) (n * n = n)
 
-#e(DISCH_THEN(SUBST1_TAC o SYM));;
+> e(DISCH_THEN(SUBST1_TAC o SYM));
 OK..
-"0 * 0 = 0"
-\end{verbatim}\end{session}
+1 subgoal:
+val it =
+0 * 0 = 0
+\end{alltt}
+\end{session}
 
 The justification of \ml{DISCH\_THEN SUBST1\_TAC} is easily constructed
 from the justification of \ml{DISCH\_TAC} composed with the justification of
@@ -2020,30 +1550,40 @@ On the goal with the disjunctive antecedent, this method again
 provides a compact tactic:
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-#g "((n = 0) \/ (n = 1)) ==> (n * n = n)";;
-"(n = 0) \/ (n = 1) ==> (n * n = n)"
+\begin{session}
+\begin{alltt}
+> g `((n = 0) \/ (n = 1)) ==> (n * n = n)`;
+     Initial goal:
 
-() : void
+     (n = 0) \(\lor\) (n = 1) \(\Rightarrow\) (n * n = n)
 
-#e(DISCH_THEN(DISJ_CASES_THEN SUBST1_TAC));;
+> e(DISCH_THEN(DISJ_CASES_THEN SUBST1_TAC));
 OK..
-2 subgoals
-"1 * 1 = 1"
+2 subgoals:
+val it =
+1 * 1 = 1
 
-"0 * 0 = 0"
-\end{verbatim}\end{session}
+
+
+0 * 0 = 0
+
+
+2 subgoals
+\end{alltt}
+\end{session}
 
 \noindent This avoids the repeated popping and pushing of the stack
 solution, and likewise, gives a shorter \ML{} expression. Both give
 a shorter expression than the direct method, which is:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    DISCH_TAC
-    THEN DISJ_CASES_TAC(ASSUME "(n = 0) \/ (n = 1)")
-    THENL[SUBST1_TAC(ASSUME "n = 0");
-          SUBST1_TAC(ASSUME "n = 1")]
-\end{verbatim}\end{hol}
+    THEN DISJ_CASES_TAC(ASSUME ``(n = 0) \/ (n = 1)``)
+    THENL[SUBST1_TAC(ASSUME ``n = 0``);
+          SUBST1_TAC(ASSUME ``n = 1``)]
+\end{verbatim}
+\end{hol}
 
 To summarize, there are so far at least five ways to solve a goal
 (and these are often combined in one interaction):
@@ -2056,7 +1596,7 @@ on the goal $(n=0) \imp (n \times n = n)$:
 \begin{hol}\index{ASSUM_LIST@\ml{ASSUM\_LIST}}
 \begin{verbatim}
    DISCH_TAC
-    THEN SUBST1_TAC(ASSUME "n = 0")
+    THEN SUBST1_TAC(ASSUME ``n = 0``)
     THEN REWRITE_TAC[MULT_CLAUSES]
 
    DISCH_TAC
@@ -2096,11 +1636,8 @@ show how results can be used as assumptions (discarded when
 redundant, if desired); and how
 assumptions can be denoted without
 recourse to their text.
-It is a strength of the \LCF\ approach
-\index{LCF@\LCF} to
-theorem proving that many different proof styles are supported,
-(all in a secure way) and indeed, can be studied in their own
-right.
+%
+It is a strength of the \LCF\ approach \index{LCF@\LCF} to theorem proving that many different proof styles are supported, (all in a secure way) and indeed, can be studied in their own right.
 
 \HOL{} provides several other theorem continuation functions analogous to
 \ml{DISCH\_THEN} and \ml{DISJ\_CASES\_THEN}.
@@ -2110,22 +1647,22 @@ Some of these do convenient inferences for the user.
 For example:
 
 \index{CHOOSE_THEN@\ml{CHOOSE\_THEN}|pin}
-\begin{holboxed}\begin{verbatim}
+\begin{holboxed}
+\begin{verbatim}
    CHOOSE_THEN : thm_tactical
-\end{verbatim}\end{holboxed}
+\end{verbatim}
+\end{holboxed}
 
-\noindent Where \ml{thm\_tactical} abbreviates
-{\small\verb%thm_tactic -> tactic%}.
-\ml{CHOOSE\_THEN\ $f$\ (|-\ ?$x$.$t[x]$)}
+\noindent Where \ml{thm\_tactical} abbreviates \ml{thm\_tactic -> tactic}.
+\ml{CHOOSE\_THEN\ $f$\ ($\vdash\;\exists x.\;t[x]$)}
 is a tactic that, given a goal, generates the subgoal
 obtained
-by applying $f$ to \ml{($t[x]$|-$t[x]$)}.  The intuition is that if
-\ml{|-\ ?$x$.$t[x]$} holds then \ml{|-\ $t[x]$}
+by applying $f$ to \ml{($t[x]$|-$t[x]$)}.
+The intuition is that if
+\ml{|-\ $\exists x$.$t[x]$} holds then \ml{|-\ $t[x]$}
 holds for some value of $x$ (as long as the
 variable $x$ is not free elsewhere in the theorem or current goal).
-%(The choice of the witness is `understood' by the justification function.)
-This gives an easy way of using existentially quantified theorems,
-something that is otherwise awkward.
+This gives an easy way of using existentially quantified theorems, something that is otherwise awkward.
 
 The new method has other applications as well, including as an
 implementation technique.
@@ -2134,21 +1671,19 @@ For example,
 taking \ml{DISJ\_CASES\_THEN} as basic, \ml{DISJ\_CASES\_TAC}
 can be defined by:
 
-\begin{hol}\begin{verbatim}
-   let DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{verbatim}
+   val DISJ_CASES_TAC = DISJ_CASES_THEN ASSUME_TAC
+\end{verbatim}
+\end{hol}
 
-\noindent Similarly, the method is useful for modifying existing tactics
-(\eg\ resolution tactics) without
-having to re-program them in \ML.  This avoids the danger of
-introducing tactics
-whose justifications may fail,
-\index{failure, of tactics} a particularly difficult problem to
-track down; it is also much easier than starting from scratch.
+\noindent Similarly, the method is useful for modifying existing tactics (\eg\ resolution tactics) without having to re-program them in \ML.
+This avoids the danger of introducing tactics whose justifications may fail, \index{failure, of tactics} a particularly difficult problem to track down; it is also much easier than starting from scratch.
 
 The main theorem continuation functions in the system are:
 
-\begin{hol}\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
    ANTE_RES_THEN
    CHOOSE_THEN      X_CHOOSE_THEN
    CONJUNCTS_THEN   CONJUNCTS_THEN2
@@ -2158,14 +1693,11 @@ The main theorem continuation functions in the system are:
    RES_THEN
    STRIP_THM_THEN
    STRIP_GOAL_THEN
-\end{verbatim}\end{hol}
+\end{verbatim}
+\end{hol}
 
 \noindent See \REFERENCE\ for full details.
 \index{tactics!for manipulating assumptions|)}
-
-
-
-
 
 %%% Local Variables:
 %%% mode: latex

@@ -3,8 +3,8 @@
 \TYPE {hh : Thm.thm list -> Term.term -> unit}
 
 \SYNOPSIS
-Select relevant lemmas for proving a term using premise selection 
-algorithms and external provers (ATP). Additional theorems may 
+Select relevant lemmas for proving a term using premise selection
+algorithms and external provers (ATP). Additional theorems may
 optionnally be provided to help the proof search.
 
 \DESCRIBE
@@ -13,7 +13,7 @@ If an easy goal fails, consider changing predictor using
 is {KNN}. It is also possible to increase the default timeout of the
 provers using {set_timeout 5}. Additional theorems are considered very
 important for the proof so they should be chosen carefully and their
-number should be limited. 
+number should be limited.
 
 \FAILURE
 Fails if the supplied term is not a boolean. Or if no ATP is installed.

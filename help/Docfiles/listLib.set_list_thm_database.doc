@@ -17,7 +17,7 @@ replaces the existing database with the theorems given as the arguments. The
 {Aux_thms} field contains the new auxiliary theorems. Theorems which do not
 have an appropriate form will be ignored.
 
-The  following is an example of a fold definition in the database:  
+The  following is an example of a fold definition in the database:
 {
    |- !l. SUM l = FOLDR $+ 0 l
 }
