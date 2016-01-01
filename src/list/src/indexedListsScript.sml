@@ -219,7 +219,7 @@ val LIST_RELi_EL_EQN = Q.store_thm(
   eq_tac >> map_every qid_spec_tac [`l2`, `l1`]
   >- (Induct_on `LIST_RELi` >> csimp[] >> rpt strip_tac >>
       qcase_tac `i < LENGTH l2 + 1` >>
-      `i < LENGTH l2 ∨ i = LENGTH l2` by simp[] >- simp[EL_APPEND1] >>
+      `i < LENGTH l2 \/ i = LENGTH l2` by simp[] >- simp[EL_APPEND1] >>
       simp[EL_APPEND2]) >>
   ho_match_mp_tac SNOC_INDUCT >>
   simp[SNOC_APPEND, LENGTH_NIL_SYM, LIST_RELi_rules] >> rpt strip_tac >>
