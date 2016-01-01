@@ -2274,7 +2274,10 @@ These function are specialised versions of \holtxt{w2s} and \holtxt{w2l} respect
 
 \paragraph{Concatenation}
 
-The operation \holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words.  Note that the return type is not constrained.  This means that two sixteen bit words can be concatenated to give a word of any length -- which may be smaller or larger than the expect value of 32.   The related function \holtxt{word\_join} does return a word of the expected length, \ie{} of type \fcp{\bool}{$\alpha+\beta$};  however, the concatenation operation is more useful because we often want \fcp{\bool}{\ty{32}} and not the logically distinct \fcp{\bool}{\ty{16}+\ty{16}}.
+The operation \holtxt{word\_concat:\worda\rarr\wordb\rarr\wordc} concatenates words.
+Note that the return type is not constrained.
+This means that two sixteen bit words can be concatenated to give a word of any length -- which may be smaller or larger than the expected value of 32.
+The related function \holtxt{word\_join} does return a word of the expected length, \ie{} of type \fcp{\bool}{$\alpha+\beta$};  however, the concatenation operation is more useful because we often want \fcp{\bool}{\ty{32}} and not the logically distinct \fcp{\bool}{\ty{16}+\ty{16}}.
 
 \paragraph{Signed and unsigned words}
 
