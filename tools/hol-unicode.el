@@ -69,6 +69,7 @@
 (define-key hol-unicode-not-map "<" "≮")
 (define-key hol-unicode-not-map ">" "≯")
 (define-key hol-unicode-not-map (kbd "C-S-q") "≰")
+(define-key hol-unicode-not-map (kbd "C-+") "⇎")
 
 (define-key hol-unicode-subscript-map "1" "₁")
 (define-key hol-unicode-subscript-map "2" "₂")
