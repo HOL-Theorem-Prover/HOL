@@ -43,7 +43,7 @@ val MEM_MAPi = store_thm(
 val MAPi_CONG = store_thm(
   "MAPi_CONG[defncong]",
   ``!l1 l2 f1 f2.
-      l1 = l2 /\ (!x n. MEM x l2 /\ n < LENGTH l2 ==> f1 n x = f2 n x) ==>
+      l1 = l2 /\ (!x n. MEM x l2 ==> f1 n x = f2 n x) ==>
       MAPi f1 l1 = MAPi f2 l2``,
   Induct_on `l1` >> dsimp[LT_SUC]);
 
