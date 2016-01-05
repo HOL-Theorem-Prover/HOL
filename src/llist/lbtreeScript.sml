@@ -437,7 +437,7 @@ val _ = export_rewrites ["finite_map"]
    ---------------------------------------------------------------------- *)
 
 (* helper function that we "delete" immediately after def'n below *)
-val drop_while_def = Define`
+val drop_while_def = zDefine`
   (drop_while P [] = []) /\
   (drop_while P (h::t) = if P h then drop_while P t else h::t)
 `;
