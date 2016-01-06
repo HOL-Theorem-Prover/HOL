@@ -61,9 +61,6 @@ in
   ; PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num)
   ; PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int)
   ; PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat)
-  ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_ssfrag)
-  ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_simpset)
-  ; PolyML.addPrettyPrinter (pp2polypp computeLib.pp_compset)
   )
 end
 
@@ -187,7 +184,7 @@ in
     ; term_pp_suffix := "``"
     ; type_pp_prefix := "``"
     ; type_pp_suffix := "``"
-    ; set_trace "pp_annotations" 1
+    ; Feedback.set_trace "pp_annotations" 1
     )
 end;
 
