@@ -15,6 +15,7 @@ fun rw thl = SRW_TAC[] thl
 fun fs thl = full_simp_tac (srw_ss()) thl
 val qcase_tac = Q.FIND_CASE_TAC
 val qspec_then = Q.SPEC_THEN
+val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
 open listTheory rich_listTheory
 
@@ -22,11 +23,32 @@ val _ = new_theory "indexedLists";
 
 val _ = ParseExtras.temp_tight_equality()
 
-val MAPi_def = Define`
+val MAPi_def = zDefine`
   (MAPi f [] = []) /\
   (MAPi f (h::t) = f 0 h :: MAPi (f o SUC) t)
 `;
 val _ = export_rewrites ["MAPi_def"]
+
+val MAPi_ACC_def = Define`
+  (MAPi_ACC f i a [] = REVERSE a) /\
+  (MAPi_ACC f i a (h::t) = MAPi_ACC f (i + 1) (f i h :: a) t)
+`;
+
+val MAPi_ACC_MAPi = store_thm(
+  "MAPi_ACC_MAPi",
+  ``MAPi_ACC f n a l = REVERSE a ++ MAPi (f o (+) n) l``,
+  MAP_EVERY Q.ID_SPEC_TAC [`f`, `n`, `a`] >> Induct_on `l` >>
+  simp[MAPi_ACC_def] >> REWRITE_TAC [GSYM APPEND_ASSOC, APPEND] >>
+  REPEAT GEN_TAC >> REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  simp[FUN_EQ_THM]);
+
+val MAPi_compute = store_thm(
+  "MAPi_compute",
+  ``MAPi f l = MAPi_ACC f 0 [] l``,
+  simp[MAPi_ACC_MAPi] >> REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) >>
+  simp[FUN_EQ_THM]);
+
+val _ = computeLib.add_persistent_funs ["MAPi_compute"]
 
 val LT_SUC = store_thm(
   "LT_SUC",
