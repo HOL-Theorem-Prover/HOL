@@ -7,7 +7,7 @@
  *)
 
 (* the functions and data for actually doing printing. *)
-structure HOLPP :> HOLPP =
+structure HOLPP : HOLPP =
 struct
 
 datatype 'a frag = QUOTE of string | ANTIQUOTE of 'a

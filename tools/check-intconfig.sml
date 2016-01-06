@@ -25,5 +25,3 @@ of
         ignore (oldq orelse HOL_Interactive.toggle_quietdec())
       end
   end;
-
-

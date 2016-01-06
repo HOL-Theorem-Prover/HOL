@@ -10,7 +10,7 @@
 (* ===================================================================== *)
 
 
-structure holyHammer :> holyHammer =
+structure holyHammer : holyHammer =
 struct
 
 open HolKernel boolLib hhWriter hhReconstruct
