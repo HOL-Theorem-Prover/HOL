@@ -4,7 +4,7 @@ set -e
 
 cd
 
-if [ -z "$SVNPOLY" ]
+if [ -z "$GITPOLY" ]
 then
 
 wget -q -O polyml5.5.2.tar.gz "http://sourceforge.net/projects/polyml/files/polyml/5.5.2/polyml.5.5.2.tar.gz/download"
@@ -26,9 +26,9 @@ fi
 
 else
 
-svn checkout svn://svn.code.sourceforge.net/p/polyml/code/trunk/polyml polyml
+git clone https://github.com/polyml/polyml.git
 cd polyml
-./configure --prefix=$HOME --enable-shared
+./configure --prefix=$HOME
 make
 make compiler
 make install

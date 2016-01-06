@@ -29,11 +29,13 @@ env:
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/selftestseq -selftest"
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/more_examples_seq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/more_examples_seq -selftest"
-    - ROOTPOLY= SVNPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+    - ROOTPOLY= GITPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
 
 matrix:
   include:
     - os: osx
       env: ROOTPOLY= BUILDOPTS=
+    - os: osx
+      env: ROOTPOLY= BUILDOPTS= GITPOLY=1
     - env: ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
       sudo: true
