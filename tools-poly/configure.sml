@@ -61,24 +61,16 @@ in
    val machine_flags =
        if sysname = "Darwin" (* Mac OS X *) then
          let
-           open PolyML
-           val vnum_s = hd (String.fields Char.isSpace Compiler.compilerVersion)
-           val (major,minor,point) =
-              case String.fields (fn c => c = #".") vnum_s of
-                 [mj] => (intOf mj, 0, 0)
-               | [mj, mn] => (intOf mj, intOf mn, 0)
-               | [mj, mn, pt] => (intOf mj, intOf mn, intOf pt)
-               | _ => die "Can't pull apart Compiler.compilerVersion"
-           val number = major * 100 + 10 * minor + point
+           val number = PolyML.Compiler.compilerVersionNumber
          in
-           (if number >= 551
-               then ["-lpthread", "-lm", "-ldl", "-lstdc++",
-                     "-Wl,-no_pie"]
+           (if number >= 560
+               then ["-lstdc++", "-Wl,-no_pie", "-w"]
+            else if number >= 551
+               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
             else if number >= 550
                then ["-Wl,-no_pie"]
             else ["-segprot", "POLY", "rwx", "rwx"]) @
-           (if PolyML.architecture() = "I386" then ["-arch", "i386"]
-            else [])
+           (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
          end
        else []
 end;
