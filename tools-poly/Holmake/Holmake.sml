@@ -738,7 +738,7 @@ in
       val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val heap_deps = [Unhandled POLY]
+      val heap_deps = [Unhandled HOLSTATE]
       val alldeps = set_union (set_union tcdeps uo_deps)
                               (set_union file_dependencies heap_deps)
     in
