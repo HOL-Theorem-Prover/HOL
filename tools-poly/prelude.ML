@@ -33,14 +33,66 @@ in
   val () =
   ( if PolyML.Compiler.compilerVersionNumber < 560 then
       let
-        fun tybpp pps (_:TypeBasePure.typeBase) = PP.add_string pps "<typeBase>"
-        fun pp_seq pps (_:'a seq.seq) = PP.add_string pps "<seq>"
+        fun pp_typebase _ _ (_: TypeBasePure.typeBase) =
+          PolyML.PrettyString "<typeBase>"
+        fun pp_seq _ _ (_: 'a seq.seq) = PolyML.PrettyString "<seq>"
       in
-        PolyML.addPrettyPrinter (pp2polypp tybpp)
-      ; PolyML.addPrettyPrinter (pp2polypp pp_seq)
+        PolyML.addPrettyPrinter pp_typebase
+      ; PolyML.addPrettyPrinter pp_seq
       ; PolyML.addPrettyPrinter (pp2polypp HOLset.pp_holset)
       end
-    else ()
+    else
+      let
+        fun pp_db _ _ (c: DB.class) =
+          PolyML.PrettyString
+            (case c of
+               DB.Thm => "Thm"
+             | DB.Axm => "Axm"
+             | DB.Def => "Def")
+        fun pp_delta depth printArgTypes (d: 'a delta) =
+          case d of
+            Lib.SAME => PolyML.PrettyString "SAME"
+          | Lib.DIFF a =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "DIFF", PolyML.PrettyBreak (1, 0),
+                  printArgTypes (a, depth)])
+        fun pp_verdict depth (pra, prb) (v: ('a, 'b) Lib.verdict) =
+          case v of
+            Lib.PASS (a: 'a) =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "PASS", PolyML.PrettyBreak (1, 0),
+                  pra (a, depth)])
+          | Lib.FAIL (b: 'b) =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "FAIL", PolyML.PrettyBreak (1, 0),
+                  prb (b, depth)])
+        fun pp_frag depth printArgTypes (f: 'a HOLPP.frag) =
+          case f of
+            HOLPP.QUOTE s =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "QUOTE", PolyML.PrettyBreak (1, 0),
+                  PolyML.PrettyString s])
+          | HOLPP.ANTIQUOTE a =>
+              PolyML.PrettyBlock
+                (2, false, [],
+                 [PolyML.PrettyString "ANTIQUOTE", PolyML.PrettyBreak (1, 0),
+                  printArgTypes (a, depth)])
+        fun pp_breakstyle _ _ (b: HOLPP.break_style) =
+          PolyML.PrettyString
+            (case b of
+               HOLPP.CONSISTENT => "CONSISTENT"
+             | HOLPP.INCONSISTENT => "INCONSISTENT")
+      in
+        PolyML.addPrettyPrinter pp_db
+      ; PolyML.addPrettyPrinter pp_delta
+      ; PolyML.addPrettyPrinter pp_verdict
+      ; PolyML.addPrettyPrinter pp_frag
+      ; PolyML.addPrettyPrinter pp_breakstyle
+      end
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
   ; PolyML.addPrettyPrinter (pp2polypp locpp)
   ; PolyML.addPrettyPrinter (pp2polypp pp_redblackmap)
