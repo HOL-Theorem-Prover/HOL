@@ -7,7 +7,7 @@
 (* Modified      : September 22, 1997, Ken Larsen                        *)
 (* ===================================================================== *)
 
-structure Lib : Lib =
+structure Lib :> Lib =
 struct
 
 open Feedback;
