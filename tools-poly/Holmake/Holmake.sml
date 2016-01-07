@@ -386,7 +386,7 @@ val extra_cleans = envlist "EXTRA_CLEANS"
 val HOLSTATE = let
   val default =
       case cmdl_HOLSTATE of
-        NONE => default_holstate
+        NONE => if polynothol then POLY else default_holstate
       | SOME s => s
 in
   case envlist "HOLHEAP" of
