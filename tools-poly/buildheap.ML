@@ -62,7 +62,10 @@ in
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
   p "in";
   p ("val _ = PolyML.SaveState.saveChild(\""^ outputheap ^
-     "\", List.length (PolyML.SaveState.showHierarchy()))\nend\n");
+     "\", List.length (PolyML.SaveState.showHierarchy()))");
+  p ("val _ = print \"Exported "^outputheap^"\\n\"");
+  p ("val _ = OS.Process.exit OS.Process.success");
+  p ("end");
   closeOut ostrm;
   system_ps (Systeml.POLY ^ " -q < " ^ ofile)
 end
