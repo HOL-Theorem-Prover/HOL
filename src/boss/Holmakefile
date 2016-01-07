@@ -1,7 +1,7 @@
 ifdef POLY
 EXTRA_CLEANS = $(TARGET)
 
-TARGET = $(dprot $(HOLDIR)/bin/hol.builder)
+TARGET = $(dprot $(HOLDIR)/bin/hol.state)
 
 builder0 = $(HOLDIR)/src/num/termination/numheap
 
@@ -14,8 +14,7 @@ DEPS = bossLib.uo $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(boss_deps)) \
 all: $(TARGET)
 
 $(TARGET): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o hol.builder -b $(builder0) $(boss_deps) bossLib && \
-	$(MV) hol.builder $(TARGET)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(TARGET) -b $(builder0) $(boss_deps) bossLib
 
 endif
 

@@ -20,7 +20,7 @@ local
     end
 in
   val () =
-    ( if heapname <> "hol.builder" then
+    ( if heapname <> Systeml.DEFAULT_STATE then
         TextIO.output
           (TextIO.stdOut, "[In non-standard heap: " ^ heapname ^ "]\n")
       else ()

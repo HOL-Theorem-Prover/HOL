@@ -26,11 +26,11 @@ val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
 
 open Systeml;
 
-fun which_hol () =
+fun phase_extras () =
   case !phase of
-    Initial => [POLY, "--poly_not_hol"]
-  | Bare => [fullPath [HOLDIR, "bin", "hol.builder0"]]
-  | Full => [fullPath [HOLDIR, "bin", "hol.builder"]]
+    Initial => ["--poly_not_hol"]
+  | Bare => ["--holstate", fullPath [HOLDIR, "bin", "hol.state0"]]
+  | Full => []
 
 fun aug_systeml proc args = let
   open Posix.Process
@@ -49,7 +49,6 @@ end
 
 
 val Holmake = let
-  fun extras() = "--poly" :: which_hol()
   fun isSuccess Posix.Process.W_EXITED = true
     | isSuccess _ = false
   fun analysis hmstatus = let
@@ -64,7 +63,7 @@ val Holmake = let
                       SysWord.toString (Posix.Signal.toWord sg)
   end
 in
-  buildutils.Holmake aug_systeml isSuccess extras analysis do_selftests
+  buildutils.Holmake aug_systeml isSuccess phase_extras analysis do_selftests
 end
 
 (* create a symbolic link - Unix only *)

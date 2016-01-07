@@ -1,1 +1,1 @@
-val _ = mkmunger.munger()
+val _ = mkmunger.munger false ()

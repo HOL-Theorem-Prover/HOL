@@ -13,7 +13,7 @@ use "../tools/Holmake/Systeml.sig";
 use "Holmake/Systeml.sml";
 open Systeml;
 
-val defaultbase = fullPath [HOLDIR, "bin", "hol.builder"]
+val defaultbase = Systeml.DEFAULT_STATE
 
 fun usage() =
     (output(stdErr, "Usage:\n");
@@ -52,6 +52,7 @@ fun create_heap (objs, outputheap, base) = let
       if OS.Process.isSuccess (Systeml.system_ps s) then ()
       else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
 in
+  p ("val _ = PolyML.SaveState.loadState \"" ^ String.toString base ^ "\"\n");
   p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
@@ -59,18 +60,11 @@ in
   p ("val _ = List.map hload [" ^
      String.concatWith "," (map (fn f => "\"" ^ String.toString f ^ "\"") objs) ^
      "] handle x => ((case x of Fail s => print (s^\"\\n\") | _ => ()); OS.Process.exit OS.Process.failure);");
-  p "fun safe_use s = if String.sub (s, 0) = #\"-\" then () else use s";
-  p "fun main() = (List.app safe_use (CommandLine.arguments()); PolyML.rootFunction());";
-  p "val _ = PolyML.shareCommonData main;";
   p "in";
-  p ("val _ = PolyML.export(\""^ outputheap ^"\", main) end");
+  p ("val _ = PolyML.SaveState.saveChild(\""^ outputheap ^
+     "\", List.length (PolyML.SaveState.showHierarchy()))\nend\n");
   closeOut ostrm;
-  system_ps (base ^ " < " ^ ofile);
-  system_ps ("cc -o " ^ outputheap ^ " " ^ outputheap^".o" ^ " " ^
-             String.concatWith " " POLY_LDFLAGS);
-  OS.FileSys.remove (outputheap^".o")
-  handle OS.SysErr(msg, _) =>
-         warn ("Couldn't remove "^outputheap^".o: "^msg)
+  system_ps (Systeml.POLY ^ " -q < " ^ ofile)
 end
 
 

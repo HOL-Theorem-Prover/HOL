@@ -57,6 +57,7 @@ val DYNLIB =
 val version =
 val release =
 val DOT_PATH =
+val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = false
 val pointer_eq = PolyML.pointerEq
