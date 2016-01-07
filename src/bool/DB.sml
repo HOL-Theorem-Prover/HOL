@@ -15,7 +15,7 @@
 (*                                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-structure DB : DB =
+structure DB :> DB =
 struct
 
 open HolKernel;
