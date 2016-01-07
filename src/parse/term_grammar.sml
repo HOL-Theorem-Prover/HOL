@@ -1,4 +1,4 @@
-structure term_grammar : term_grammar =
+structure term_grammar :> term_grammar =
 struct
 
 open HOLgrammars GrammarSpecials Lib Feedback
