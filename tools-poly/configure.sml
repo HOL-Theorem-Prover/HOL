@@ -45,6 +45,11 @@ val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
+val _ = if PolyML.Compiler.compilerVersionNumber < 551 then
+          (TextIO.output(TextIO.stdErr,
+                         "Must be running PolyML with version >= 5.5.1\n");
+           OS.Process.exit OS.Process.failure)
+        else ()
 
 local
    fun assoc item =
