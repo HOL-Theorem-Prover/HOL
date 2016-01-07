@@ -25,7 +25,7 @@ tyabb_output: tyabb_input tymunge.exe
 utyabb_output: tyabb_input utymunge.exe
 	./utymunge.exe < $< > $@
 
-munge.exe: mdtTheory.uo
+munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe)
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
 
 tymunge.exe: tyabbrevTheory.uo

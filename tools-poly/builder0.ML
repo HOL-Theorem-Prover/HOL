@@ -19,6 +19,5 @@ local
      (List.app safe_use (CommandLine.arguments ())
       ; PolyML.rootFunction ())
 in
-   val _ = PolyML.shareCommonData main
-   val _ = PolyML.export ("hol.builder0", main)
+   val _ = PolyML.SaveState.saveState (Systeml.HOLDIR ++ "bin/hol.state0")
 end

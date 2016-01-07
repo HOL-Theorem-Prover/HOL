@@ -96,6 +96,7 @@ val version = ""
 val ML_SYSNAME = ""
 val release = ""
 val DOT_PATH = ""
+val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = false
 local val cast : 'a -> int = Obj.magic
