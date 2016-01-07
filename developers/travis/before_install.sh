@@ -28,9 +28,20 @@ else
 
 git clone https://github.com/polyml/polyml.git
 cd polyml
-./configure --prefix=$HOME
+if [ $(uname) = "Darwin" ]
+then
+  SHARED=
+else
+  SHARED=--enable-shared
+fi
+./configure --prefix=$HOME $SHARED
 make
 make compiler
 make install
+
+if [ $(uname) = "Darwin" ]
+then
+    perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
+fi
 
 fi
