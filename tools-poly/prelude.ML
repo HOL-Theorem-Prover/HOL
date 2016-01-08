@@ -183,7 +183,7 @@ in
         handle e => (try_remove filename; raise e)
       end
     else PolyML.use s
-end (* local *)
+end; (* local *)
 
 local
   infix ++
