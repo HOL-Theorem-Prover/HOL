@@ -14,12 +14,12 @@ cd polyml.5.5.2
 if [ -z "$ROOTPOLY" ]
 then
   echo "*** Installing PolyML in home directory"
-  ./configure --prefix=$HOME --enable-shared
+  ./configure --prefix=$HOME
   make
   make install
 else
   echo "*** Installing PolyML in root land directory"
-  ./configure --prefix=/usr/ --enable-shared
+  ./configure --prefix=/usr/
   make
   sudo make install
 fi
@@ -28,13 +28,7 @@ else
 
 git clone https://github.com/polyml/polyml.git
 cd polyml
-if [ $(uname) = "Darwin" ]
-then
-  SHARED=
-else
-  SHARED=--enable-shared
-fi
-./configure --prefix=$HOME $SHARED
+./configure --prefix=$HOME
 make
 make compiler
 make install
