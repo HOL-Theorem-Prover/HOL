@@ -20,7 +20,7 @@ sig
   val HOLDIR : string
   val POLYMLLIBDIR : string
   val POLY : string
-  val POLYC : string option
+  val POLYC : string
   val POLY_VERSION : int
   val POLY_LDFLAGS : string list
   val POLY_LDFLAGS_STATIC : string list

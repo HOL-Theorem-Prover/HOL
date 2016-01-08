@@ -45,12 +45,6 @@ val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
-val _ = if PolyML.Compiler.compilerVersionNumber < 551 then
-          (TextIO.output(TextIO.stdErr,
-                         "Must be running PolyML with version >= 5.5.1\n");
-           OS.Process.exit OS.Process.failure)
-        else ()
-
 local
    fun assoc item =
       let
@@ -229,7 +223,7 @@ in
   ["val HOLDIR ="   --> ("val HOLDIR = "^quote holdir^"\n"),
    "val POLYMLLIBDIR =" --> ("val POLYMLLIBDIR = "^quote polymllibdir^"\n"),
    "val POLY =" --> ("val POLY = "^quote poly^"\n"),
-   "val POLYC =" --> ("val POLYC = "^optquote polyc^"\n"),
+   "val POLYC =" --> ("val POLYC = "^quote polyc^"\n"),
    "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
                              (String.concatWith
                                   ", "
@@ -366,28 +360,13 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
 val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
-fun fakepolyc src tgt =
+fun polyc_compile s tgt =
   let
-    val cline =
-        "echo 'use \"" ^ src ^ "\"; PolyML.export(\"" ^ tgt ^ "\", main);' | " ^
-        POLY ^ " -q --error-exit"
+    val cline = POLYC ^ " -o " ^ tgt ^ " " ^ s
   in
     echov cline;
-    system_ps cline;
-    compile systeml tgt (tgt ^ ".o")
+    system_ps cline
   end
-
-val maybe_polyc_compile =
-    case POLYC of
-        NONE => fakepolyc
-      | SOME pc => (fn s => fn tgt =>
-                       let
-                         val cline = pc ^ " -o " ^ tgt ^ " " ^ s
-                       in
-                         echov cline;
-                         system_ps cline
-                       end)
-
 
 fun work_in_dir tgtname d f =
   (echo ("Making " ^ tgtname); FileSys.chDir d; f(); FileSys.chDir cdir)
@@ -396,44 +375,44 @@ fun work_in_dir tgtname d f =
 (* mllex *)
 val _ = work_in_dir "mllex"
           lexdir
-          (fn () => maybe_polyc_compile "poly-mllex.ML" "mllex.exe")
+          (fn () => polyc_compile "poly-mllex.ML" "mllex.exe")
 
 (* mlyacc *)
 val _ = work_in_dir
           "mlyacc" yaccdir
           (fn () => (systeml [lexer, "yacc.lex"];
-                     maybe_polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
+                     polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
 
 (* unquote - the quotation filter *)
 val _ = work_in_dir "unquote." qfdir
                     (fn () => (systeml [lexer, "filter"];
-                               maybe_polyc_compile "poly-unquote.ML" qfbin))
+                               polyc_compile "poly-unquote.ML" qfbin))
 
 (* Holmake *)
 val _ = work_in_dir "Holmake" hmakedir
-                    (fn () => maybe_polyc_compile "poly-Holmake.ML" hmakebin)
+                    (fn () => polyc_compile "poly-Holmake.ML" hmakebin)
 
 (* holdeptool *)
 val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
                     (fn () =>
-                        maybe_polyc_compile
+                        polyc_compile
                           "poly-holdeptool.ML"
                           (fullPath [HOLDIR, "bin", "holdeptool.exe"]))
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => maybe_polyc_compile "poly-build.ML" buildbin)
+                    (fn () => polyc_compile "poly-build.ML" buildbin)
 
 (* heapname *)
 val _ = work_in_dir
           "heapname" toolsdir
-          (fn () => maybe_polyc_compile "heapname.ML"
+          (fn () => polyc_compile "heapname.ML"
                                         (fullPath [HOLDIR,"bin","heapname"]))
 
 (* buildheap *)
 val _ = work_in_dir
           "buildheap" toolsdir
-          (fn () => maybe_polyc_compile "buildheap.ML"
+          (fn () => polyc_compile "buildheap.ML"
                                         (fullPath [HOLDIR, "bin", "buildheap"]))
 
 end (* local *)

@@ -4,7 +4,7 @@ all: cmp.exe
 
 ifdef POLY
 cmp.exe: cmp.sml
-	$(POLY)c $< -o $@
+	$(POLYC) $< -o $@
 
 EXTRA_CLEANS = cmp.exe
 
