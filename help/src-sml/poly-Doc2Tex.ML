@@ -17,6 +17,4 @@ val _ = useB "Symbolic";
 val _ = useB "ParseDoc";
 val _ = use "Doc2Tex.sml";
 
-val _ = PolyML.shareCommonData Doc2Tex.main;
-val _ = PolyML.export ("Doc2Tex", Doc2Tex.main);
-
+val main = Doc2Tex.main;
