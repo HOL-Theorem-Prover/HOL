@@ -52,7 +52,10 @@ fun create_heap (objs, outputheap, base) = let
       if OS.Process.isSuccess (Systeml.system_ps s) then ()
       else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
 in
+  p ("fun die s = (TextIO.output(TextIO.stdErr, s ^ \"\\n\"); \
+     \OS.Process.exit OS.Process.failure)");
   p ("val _ = PolyML.SaveState.loadState \"" ^ String.toString base ^ "\"\n");
+  p ("  handle e => die (General.exnMessage e)");
   p ("val heapname = \""^outputheap^"\";");
   p "local";
   p "fun hload s = (print (\"Loading \"^s^\"\\n\"); load s)";
