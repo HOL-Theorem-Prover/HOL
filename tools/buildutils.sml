@@ -719,14 +719,10 @@ fun Poly_compilehelp() = let
 in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
-  system_ps (POLY ^ " < poly-makebase.ML");
-  link "makebase.exe" "makebase.o";
-  system_ps (POLY ^ " < poly-Doc2Html.ML");
-  link "Doc2Html.exe" "Doc2Html.o";
-  system_ps (POLY ^ " < poly-Doc2Txt.ML");
-  link "Doc2Txt.exe" "Doc2Txt.o";
-  system_ps (POLY ^ " < poly-Doc2Tex.ML");
-  link "Doc2Tex.exe" "Doc2Tex.o"
+  system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
+  system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
+  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -761,7 +757,7 @@ fun build_help graph =
      val _ = OS.FileSys.chDir dir
 
      (* builds the documentation tools called below *)
-     val _ = if ML_SYSNAME = "poly" then Poly_compilehelp()
+     val _ = if ML_SYSNAME = "poly" then ignore (Poly_compilehelp())
              else if ML_SYSNAME = "mosml" then mosml_compilehelp()
              else raise Fail "Bogus ML_SYSNAME"
 
