@@ -58,6 +58,7 @@ val version =
 val release =
 val DOT_PATH =
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
+val POLY_VERSION = PolyML.Compiler.compilerVersionNumber
 
 val isUnix = false
 val pointer_eq = PolyML.pointerEq

@@ -568,6 +568,11 @@ in
      warn ("  this suggests you should reconfigure the system.");
      warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
      warn ("WARNING! WARNING!");
+     if Systeml.POLY_VERSION = 551 orelse Systeml.POLY_VERSION = 552 then
+       ignore(TextIO.inputLine TextIO.stdIn)
+       (* see PolyML bug report at
+            https://www.mail-archive.com/polyml@inf.ed.ac.uk/msg00982.html *)
+     else ();
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
 end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
