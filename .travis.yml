@@ -35,7 +35,5 @@ matrix:
   include:
     - os: osx
       env: ROOTPOLY= BUILDOPTS=
-    - os: osx
-      env: ROOTPOLY= BUILDOPTS= GITPOLY=1
     - env: ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
       sudo: true
