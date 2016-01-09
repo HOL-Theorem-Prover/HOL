@@ -43,7 +43,9 @@ in
   recurse args ([], NONE, NONE)
 end
 
-fun create_heap (objs, outputheap, base) = let
+fun mkAbs p = OS.Path.mkAbsolute {relativeTo = OS.FileSys.getDir(), path = p}
+
+fun create_heap (objs, outputheap0, base0) = let
   open Systeml
   val ofile = OS.FileSys.tmpName()
   val ostrm = openOut ofile
@@ -51,6 +53,8 @@ fun create_heap (objs, outputheap, base) = let
   fun system_ps s =
       if OS.Process.isSuccess (Systeml.system_ps s) then ()
       else die ("*** Failed to execute\n  "^s^"\nsuccessfully")
+  val outputheap = mkAbs outputheap0
+  val base = mkAbs base0
 in
   p ("fun die s = (TextIO.output(TextIO.stdErr, s ^ \"\\n\"); \
      \OS.Process.exit OS.Process.failure)");
