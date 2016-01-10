@@ -685,7 +685,7 @@ val string_to_int =
 
 val saying = ref true
 
-fun say s = if !saying then TextIO.print s else ()
+fun say s = if !saying then !Feedback.MESG_outstream s else ()
 
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
