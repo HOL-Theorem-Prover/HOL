@@ -23,8 +23,7 @@ First, we start the system, with the command \ml{<holdir>/bin/hol}.
 We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings from the \HOL{} theory of arithmetic are made available at the top level.
 \begin{session}
 \begin{verbatim}
-- open arithmeticTheory;
-  ...
+>>_ open arithmeticTheory;
 \end{verbatim}
 \end{session}
 We now begin the formalization. In order to define the concept of
@@ -32,11 +31,7 @@ prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
 \begin{alltt}
-- val divides_def = Define `divides a b = ?x. b = a * x`;
-
-Definition has been stored under "divides_def".
-val divides_def =
-  |- \(\forall\)a b. divides a b \(\iff\) \(\exists\)x. b = a * x : thm
+>> val divides_def = Define`divides a b = ?x. b = a * x`;
 \end{alltt}
 \end{session}
 Note how we are using ASCII notation to input our terms, but the system responds with pleasant Unicode.
@@ -54,7 +49,7 @@ later reference in the session.
 We want to treat \ml{divides} as a (non-associating) infix:
 \begin{session}
 \begin{verbatim}
-- set_fixity "divides" (Infix(NONASSOC, 450));
+>>_ set_fixity "divides" (Infix(NONASSOC, 450));
 \end{verbatim}
 \end{session}
 Next we define the property of a number being \emph{prime}: a number $p$ is
@@ -63,13 +58,8 @@ than $1$ and itself:
 
 \begin{session}
 \begin{alltt}
-- val prime_def =
+>> val prime_def =
     Define `prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
-
-Definition has been stored under "prime_def".
-val prime_def =
-    |- \(\forall\)p. prime p \(\iff\) p \(\ne\) 1 \(\land\) \(\forall\)x. x divides p \(\Rightarrow\) (x = 1) \(\lor\) (x = p)
-    : thm
 \end{alltt}
 \end{session}
 
@@ -88,10 +78,9 @@ tackle a HOL proof, even if one has only a single (informal) proof in
 mind.
 In this example, we often \emph{find} proofs by using the rewriter \ml{rw} to unwind definitions and perform basic simplifications, often reducing a goal to its essence.
 \begin{session}
-\begin{verbatim}
-rw;
-val it = fn :thm list -> tactic
-\end{verbatim}
+\begin{alltt}
+>> rw;
+\end{alltt}
 \end{session}
 When \ml{rw} is applied to a list of theorems, the theorems will be added to \HOL{}'s built-in database of useful facts as supplementary rewrite rules.
 We will see that \ml{rw} is also somewhat knowledgeable about
@@ -160,15 +149,7 @@ to the proof manager via ``\ml{g}'', which starts a fresh goalstack:
 
 \begin{session}
 \begin{alltt}
-- g `!x. x divides 0`;
-
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         \(\forall\)x. x divides 0
-
-     : proofs
+>> g `!x. x divides 0`;
 \end{alltt}
 \end{session}
 The proof manager tells us that it has only one proof to manage, and
@@ -177,39 +158,21 @@ echoes the given goal.  Now we expand the definition of
 keep distinct the $x$ of the goal and the $x$ in the definition of
 \ml{divides}:
 \begin{session}
-\begin{verbatim}
-- e (lrw[divides_def]);
-OK..
-<<HOL message: Initialising SRW simpset ... done>>
-1 subgoal:
-val it =
-\(\exists\)x'. (x = 0) \/ (x' = 0)
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[divides_def]);
+\end{alltt}
 \end{session}
 It is of course quite easy to instantiate the existential quantifier by
 hand.
 \begin{session}
 \begin{alltt}
-- e (qexists_tac `0`);
-OK..
-1 subgoal:
-val it =
-(x = 0) \(\lor\) (0 = 0)
+>> e (qexists_tac `0`);
 \end{alltt}
 \end{session}
 Then a simplification step finishes the proof.
 \begin{session}
 \begin{alltt}
-- e (lrw[]);
-OK..
-
-Goal proved.
-|- (x = 0) \(\lor\) (0 = 0)
-
-Goal proved.
-|- \(\exists\)x'. (x = 0) \(\lor\) (x' = 0)
-val it = Initial goal proved.
-|- \(\forall\)x. x divides 0: proof
+>> e (lrw[]);
 \end{alltt}
 \end{session}
 

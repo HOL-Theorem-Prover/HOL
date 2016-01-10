@@ -1,0 +1,7 @@
+INCLUDES = ../Tools
+
+tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex
+	latexmk -pdf tutorial
+
+euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter
+	../Tools/polyscripter ../Tools/umap < $< > $@
