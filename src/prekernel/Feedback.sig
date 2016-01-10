@@ -15,9 +15,9 @@ sig
     val emit_WARNING      : bool ref
     val WARNINGs_as_ERRs  : bool ref
 
-    val ERR_outstream     : TextIO.outstream ref
-    val MESG_outstream    : TextIO.outstream ref
-    val WARNING_outstream : TextIO.outstream ref
+    val ERR_outstream     : (string -> unit) ref
+    val MESG_outstream    : (string -> unit) ref
+    val WARNING_outstream : (string -> unit) ref
 
     val format_ERR        : error_record -> string
     val format_MESG       : string -> string
