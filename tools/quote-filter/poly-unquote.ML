@@ -39,7 +39,9 @@ fun main() = let
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open filter.UserDeclarations
-  val state as QFS args = newstate outstream
+  val state as QFS args =
+      newstate ((fn s => TextIO.output(outstream, s)),
+                (fn () => TextIO.flushOut outstream))
 
   fun loop() = let
     val lexer = filter.makeLexer (read_from_stream instream) state
