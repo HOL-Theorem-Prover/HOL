@@ -1,0 +1,4 @@
+EXTRA_CLEANS = polyscripter
+
+polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
+	$(POLYC) $< -o $@

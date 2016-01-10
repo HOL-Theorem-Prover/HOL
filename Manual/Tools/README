@@ -1,0 +1,20 @@
+# The `polyscripter` Tool
+
+The `polyscripter` tool is a Unix filter program that passes most input lines unchanged, but looks out for those lines beginning with `>>` characters.
+If it sees one such, it executes the Poly/ML compiler on that line, captures the result and then emits the input and the response to standard out.
+
+## Inline Options
+
+- The usual `>>` command gets the input after this prompt read until the next line that begins with a non-space character.
+- The `>>_` command gets the compiler to act on the accompanying input, and this input is printed out, but the output is elided
+
+## Command-line Options
+
+-   If `polyscripter` is passed a filename as its first argument, this file is read, and treated as a dictionary mapping single (UTF8) characters to replacement strings (with character separated from mapping by whitespace).
+    This mapping is applied to user-input strings (after the `>>`) and to compiler output as well.
+    An example mapping would include lines such as
+
+           ∀ \(\forall\)
+           ∧ \(\land\)
+
+    A mapping for LaTeX `alltt` type environments should also handle backslash and brace characters.
