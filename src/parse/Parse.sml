@@ -1220,6 +1220,24 @@ in
                  [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
 end
 
+fun temp_gen_remove_ovl_mapping s t =
+  let
+    open term_grammar
+  in
+    the_term_grammar :=
+      fupdate_overload_info (Overload.gen_remove_mapping s t) (term_grammar());
+    term_grammar_changed := true
+  end
+
+fun gen_remove_ovl_mapping s t =
+  let
+  in
+    temp_gen_remove_ovl_mapping s t ;
+    update_grms "gen_remove_ovl_mapping"
+                ("(UTOFF (temp_gen_remove_ovl_mapping " ^ quote s ^ "))",
+                 minprint t)
+  end
+
 
 fun primadd_rcdfld f ovopn (fldname, t) = let
   val (d,r) = dom_rng (type_of t)
