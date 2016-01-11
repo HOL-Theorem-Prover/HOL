@@ -4,6 +4,12 @@ val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;
 
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             OS.Process.exit OS.Process.failure)
+fun lnumdie linenum extra exn =
+  die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
+       extra ^ General.exnMessage exn)
+
 fun mkBuffer () = let
   val buf = ref ([] : string list)
   fun push s = buf := s :: !buf
@@ -35,11 +41,19 @@ fun readFromString s =
   end
 
 fun quote s =
-  (QBreset() ; filter.makeLexer (readFromString s) qstate () ;
+  (QBreset() ; filter.makeLexer (readFromString s) qstate ();
    QBread())
 
-fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
+fun quoteFile lnum fname =
+  let
+    val instrm = TextIO.openIn fname handle e => lnumdie lnum "" e
+  in
+    QBreset() ;
+    filter.makeLexer (fn n => TextIO.input instrm) qstate ();
+    TextIO.closeIn instrm;
+    QBread()
+  end
+
 
 datatype lbuf =
          LB of {
@@ -72,16 +86,28 @@ in
   doit
 end
 
-fun compiler (obufPush, obufRD, _) linenum infn = let
+fun compiler (obufPush, obufRD, obufRST) linenum infn = let
   fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
+  fun rpt acc =
+    (obufRST();
+     PolyML.compiler(infn,
+                     [PolyML.Compiler.CPErrorMessageProc record_error,
+                      PolyML.Compiler.CPOutStream obufPush]) ()
+     handle e => lnumdie linenum (obufRD()) e;
+     if obufRD() = "" then String.concat (List.rev acc)
+     else rpt (obufRD() :: acc))
 in
-  PolyML.compiler(infn,
-                  [PolyML.Compiler.CPErrorMessageProc record_error,
-                   PolyML.Compiler.CPOutStream obufPush]) ()
-   handle e => die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
-                    obufRD() ^ General.exnMessage e);
-  obufRD()
+  rpt []
 end
+
+fun silentUse lnum s =
+  let
+    val filecontents = quoteFile lnum s
+    val buf = mkBuffer()
+  in
+    compiler buf 1 (mkLex filecontents)
+  end
+
 
 fun umunge umap s =
   let
@@ -111,7 +137,23 @@ fun process_line umap (obuf as (_, _, obRST)) line lbuf = let
                       String.concat (List.rev acc)
     end
 in
-  if String.isPrefix ">>_" line then
+  if String.isPrefix "##use " line then
+    let
+      val fname = String.substring(line, 6, size line - 7) (* for \n at end *)
+      val _ = silentUse (linenum lbuf) fname
+      val _ = advance lbuf
+    in
+      ("\n", NONE)
+    end
+  else if String.isPrefix ">>__" line then
+    let
+      val firstline = String.extract(line, 4, NONE)
+      val input = getRest [firstline]
+      val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
+    in
+      ("\n", NONE)
+    end
+  else if String.isPrefix ">>_" line then
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest [firstline]
