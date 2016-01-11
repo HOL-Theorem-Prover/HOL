@@ -6,7 +6,7 @@ val _ = Datatype`rcd = <| myset : 'a -> bool ; sz : num |>`;
 
 val _ = gen_remove_ovl_mapping
           (GrammarSpecials.recfupd_special ^ "myset")
-          ``λf x. rcd_myset_fupd f x``
+          ``\f x. rcd_myset_fupd f x``
 
 val _ = Parse.add_record_fupdate(
       "myset", Term.inst[beta |-> alpha] ``rcd_myset_fupd``);
