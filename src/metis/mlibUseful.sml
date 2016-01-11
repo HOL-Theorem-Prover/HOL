@@ -82,7 +82,7 @@ in
     end;
 end;
 
-val trace = print;
+val trace = Lib.say;
 
 (* ------------------------------------------------------------------------- *)
 (* Combinators                                                               *)
