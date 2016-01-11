@@ -4,7 +4,9 @@ structure UD = mungeLex.UserDeclarations
 in
 fun munger eatfirstNL () = let
   val () = Feedback.emit_MESG := false
-  val () = Feedback.WARNING_outstream := TextIO.stdErr
+  val () = Feedback.WARNING_outstream :=
+             (fn s => (TextIO.output(TextIO.stdErr, s);
+                       TextIO.flushOut TextIO.stdErr))
   val () = set_trace "Unicode" 1
   val () = set_trace "pp_dollar_escapes" 1
   val () = set_trace "ambiguous grammar warning" 2

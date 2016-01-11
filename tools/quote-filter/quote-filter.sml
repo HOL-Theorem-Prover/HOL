@@ -31,7 +31,10 @@ val (instream, outstream) =
             exit failure)
 
 open filter.UserDeclarations
-val state as QFS args = newstate outstream
+val state as QFS args =
+    newstate ((fn s => TextIO.output(outstream, s)),
+              (fn () => TextIO.flushOut outstream))
+
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
