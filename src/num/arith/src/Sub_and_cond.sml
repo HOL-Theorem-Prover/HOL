@@ -220,8 +220,11 @@ in
 end
 
 fun find_celim p t m = let
+  fun isboolnum ty =
+    Type.compare(ty, numSyntax.num) = EQUAL orelse
+    Type.compare(ty, bool) = EQUAL
   fun doit t =
-    if is_cond t then
+    if is_cond t andalso isboolnum (type_of t) then
       UNBETA_CONV (t |> rator |> rator |> rand) THENC
       REWR_CONV CASES_ELIM THENC
       BINOP_CONV (RAND_CONV BETA_CONV) THENC
