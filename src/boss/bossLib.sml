@@ -172,20 +172,22 @@ fun stateful f ssfl thm : tactic =
     f ss thm
   end
 
+val ARITH_ss = numSimps.ARITH_ss
 val fsrw_tac = stateful full_simp_tac
 val rfsrw_tac = stateful rev_full_simp_tac
 
-val let_arith_list = [boolSimps.LET_ss, numSimps.ARITH_ss, listSimps.LIST_ss]
+val let_arith_list = [boolSimps.LET_ss, ARITH_ss]
 val simp = stateful asm_simp_tac let_arith_list
 val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
 val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
+
 val lrw = srw_tac let_arith_list
 val lfs = fsrw_tac let_arith_list
 val lrfs = rfsrw_tac let_arith_list
 
-val rw = srw_tac []
-val fs = fsrw_tac []
-val rfs = rfsrw_tac []
+val rw = srw_tac let_arith_list
+val fs = fsrw_tac let_arith_list
+val rfs = rfsrw_tac let_arith_list
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC

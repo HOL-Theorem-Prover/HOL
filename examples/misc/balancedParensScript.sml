@@ -50,7 +50,7 @@ val balanced_append = Q.store_thm("balanced_append",
   ho_match_mp_tac balanced_ind >>
   rw[] >> fs[] >- (
     res_tac >> fsrw_tac[ARITH_ss][ADD1] ) >>
-  REWRITE_TAC[GSYM SUC_ADD_SYM] >>
+  REWRITE_TAC[ADD_CLAUSES] >>
   simp[])
 
 val S_balanced = Q.store_thm("S_balanced",
