@@ -170,8 +170,22 @@ fun process_line umap (obuf as (_, _, obRST)) line lbuf = let
                     else
                       String.concat (List.rev acc)
     end
+  val assertcmd = "##assert "
+  val assertcmdsz = size assertcmd
 in
-  if String.isPrefix "##use " line then
+  if String.isPrefix assertcmd line then
+    let
+      val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
+                              (* for \n at end *)
+      val _ = compiler obuf (linenum lbuf)
+                       (mkLex ("val _ = if (" ^ quote e ^ ") then () " ^
+                               "else die \"Assertion failed: line " ^
+                               Int.toString (linenum lbuf) ^ "\";"))
+      val _ = advance lbuf
+    in
+      ("\n", NONE)
+    end
+  else if String.isPrefix "##use " line then
     let
       val fname = String.substring(line, 6, size line - 7) (* for \n at end *)
       val _ = silentUse (linenum lbuf) fname

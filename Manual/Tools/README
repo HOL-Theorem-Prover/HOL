@@ -13,6 +13,9 @@ All of the following inline commands must begin the line in which they occur:
 -   The `##use` command gets the compiler to evaluate the `use` the filename.
     The filename is given after a single space character and is the rest of the line; it need not be quoted, and shouldn’t be followed by a semicolon.
     The compilation and evaluation of the filename is done entirely silently.
+-   The `##assert` command gets the compiler to evaluate the following expression (which can just be one line long).
+    If it evaluates to true, then nothing is output.
+    If it is false, then the scripter aborts.
 
 ## Command-line Options
 

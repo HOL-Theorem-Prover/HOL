@@ -43,10 +43,9 @@ detailed `proof hacking' on a small and fairly simple example.
 
 \section{Specification}
 \label{example}
-The first step is to start up the \HOL{} system.  We again use
-\texttt{<holdir>/bin/hol}.  The \ML{} prompt is {\small\verb|-|}, so
-lines beginning with {\small\verb|-|} are typed by the user and other
-lines are the system's response.
+The first step is to start up the \HOL{} system.
+We again use \texttt{<holdir>/bin/hol}.
+The \ML{} prompt is {\small\verb|>|}, so lines beginning with {\small\verb|>|} are typed by the user and other lines are the system's response.
 
 To specify the device, a primitive recursive function
 {\small\verb|PARITY|} is defined so that for $n>0$, {\small\tt PARITY}
@@ -56,17 +55,11 @@ $f${\small\tt (}$1${\small\tt)}, $\ldots$ , $f${\small\tt
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- val PARITY_def = Define`
-    (PARITY 0 f = T) /\
-    (PARITY(SUC n) f = if f(SUC n) then ~(PARITY n f) else PARITY n f)`;
-Definition has been stored under "PARITY_def".
-> val PARITY_def =
-    |- (!f. PARITY 0 f = T) /\
-       !n f. PARITY (SUC n) f =
-             (if f (SUC n) then ~PARITY n f else PARITY n f)
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val PARITY_def = Define`
+     (PARITY 0 f = T) /\
+     (PARITY(SUC n) f = if f(SUC n) then ~PARITY n f else PARITY n f)`;
+\end{alltt}
 \end{session}
 
 \noindent
@@ -139,44 +132,28 @@ is started by putting the goal to be proved on a goal stack using the
 function {\small\verb|g|} which takes a goal as argument.
 
 \begin{session}
-\begin{verbatim}
-- g `!inp out.
+\begin{alltt}
+>> g `!inp out.
         (out 0 = T) /\
         (!t. out(SUC t) = (if inp(SUC t) then ~(out t) else out t)) ==>
         (!t. out t = PARITY t inp)`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         !inp out.
-           (out 0 = T) /\
-           (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
-           !t. out t = PARITY t inp
-\end{verbatim}
+\end{alltt}
 \end{session}
 
-\noindent The subgoal package prints out the goal on the top of the goal stack.
+\noindent
+The subgoal package prints out the goal on the top of the goal stack.
 The top goal is expanded by stripping off the universal quantifier
-(with {\small\verb|GEN_TAC|}) and then making the two conjuncts of the
+(with {\small\verb|gen_tac|}) and then making the two conjuncts of the
 antecedent of the implication into assumptions of the goal (with
-{\small\verb|STRIP_TAC|}).  The \ML{} function {\small\verb|expand|}
-takes a tactic and applies it to the top goal; the resulting subgoals
-are pushed on to the goal stack.  The message `{\small\verb|OK..|}' is
-printed out just before the tactic is applied.  The resulting subgoal
-is then printed.
-
+{\small\verb|strip_tac|}).
+The \ML{} function {\small\verb|e|} takes a tactic and applies it to the top goal; the resulting subgoals are pushed on to the goal stack.
+The message `{\small\verb|OK..|}' is printed out just before the tactic is applied.
+The resulting subgoal is then printed.
 
 \begin{session}
-\begin{verbatim}
-- expand(REPEAT GEN_TAC THEN STRIP_TAC);
-OK..
-1 subgoal:
-> val it =
-    !t. out t = PARITY t inp
-    ------------------------------------
-      0.  out 0 = T
-      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\begin{alltt}
+>> e(rpt gen_tac >> strip_tac);
+\end{alltt}
 \end{session}
 
 \noindent Next induction on {\small\verb|t|} is done
@@ -184,22 +161,9 @@ using {\small\verb|Induct|}, which does
 induction on the outermost universally quantified variable.
 
 \begin{session}
-\begin{verbatim}
-- expand Induct;
-OK..
-2 subgoals:
-> val it =
-    out (SUC t) = PARITY (SUC t) inp
-    ------------------------------------
-      0.  out 0 = T
-      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-      2.  out t = PARITY t inp
-
-    out 0 = PARITY 0 inp
-    ------------------------------------
-      0.  out 0 = T
-      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\begin{alltt}
+>> e Induct;
+\end{alltt}
 \end{session}
 
 \noindent The assumptions of the two subgoals
@@ -208,23 +172,10 @@ last goal printed is the one on the top of the stack, which is the
 basis case. This is solved by rewriting with its assumptions and the
 definition of {\small\verb|PARITY|}.
 
-
 \begin{session}
-\begin{verbatim}
-- expand(ASM_REWRITE_TAC[PARITY_def]);
-OK..
-
-Goal proved.
- [.] |- out 0 = PARITY 0 inp
-
-Remaining subgoals:
-> val it =
-    out (SUC t) = PARITY (SUC t) inp
-    ------------------------------------
-      0.  out 0 = T
-      1.  !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-      2.  out t = PARITY t inp
-\end{verbatim}
+\begin{alltt}
+>> e(rw[PARITY_def]);
+\end{alltt}
 \end{session}
 
 The top goal is proved, so the system pops it from the goal stack (and
@@ -232,22 +183,10 @@ puts the proved theorem on a stack of theorems). The new top goal is
 the step case of the induction. This goal is also solved by rewriting.
 
 \begin{session}
-\begin{verbatim}
-- expand(ASM_REWRITE_TAC[PARITY_def]);
-OK..
-
-Goal proved.
- [..] |- out (SUC t) = PARITY (SUC t) inp
-
-Goal proved.
- [..] |- !t. out t = PARITY t inp
-> val it =
-    Initial goal proved.
-    |- !inp out.
-         (out 0 = T) /\
-         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
-         !t. out t = PARITY t inp
-\end{verbatim}
+\begin{alltt}
+>> e(rw[PARITY_def]);
+##assert can top_thm ()
+\end{alltt}
 \end{session}
 
 \noindent The goal is proved, \ie\ the empty list of subgoals is produced.
@@ -270,15 +209,9 @@ in the current theory, and we bind this to the \ML{} name
 \ml{UNIQUENESS\_LEMMA}.
 
 \begin{session}
-\begin{verbatim}
-- val UNIQUENESS_LEMMA = top_thm();
-> val UNIQUENESS_LEMMA =
-    |- !inp out.
-         (out 0 = T) /\
-         (!t. out (SUC t) = (if inp (SUC t) then ~out t else out t)) ==>
-         !t. out t = PARITY t inp
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val UNIQUENESS_LEMMA = top_thm();
+\end{alltt}
 \end{session}
 
 \section{Implementation}
@@ -369,11 +302,9 @@ of a signal {\small\verb|out|} if for all times {\small\verb|t|} the value of
 {\small\verb|out|} is {\small\verb|T|}.
 
 \begin{session}
-\begin{verbatim}
-- val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
-Definition stored under "ONE_def".
-> val ONE_def = |- !out. ONE out = !t. out t = T : thm
-\end{verbatim}
+\begin{alltt}
+>> val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
+\end{alltt}
 \end{session}
 
 \noindent Note that, as discussed above, `{\small\verb|ONE_def|}'  is used both
@@ -390,11 +321,9 @@ modelled as having no delay. This is appropriate for a
 register-transfer level model, but not at a lower level.
 
 \begin{session}
-\begin{verbatim}
-- val NOT_def = Define`NOT(inp, out:num->bool) = !t. out t = ~(inp t)`;
-Definition stored under "NOT_def".
-> val NOT_def = |- !inp out. NOT (inp,out) = !t. out t = ~inp t : Thm.thm
-\end{verbatim}
+\begin{alltt}
+>> val NOT_def = Define`NOT(inp, out:num->bool) = !t. out t = ~(inp t)`;
+\end{alltt}
 \end{session}
 
 \noindent The final combinational device needed is a multiplexer.
@@ -403,16 +332,11 @@ This is a `hardware conditional'; the input
 two inputs are to be connected to the output {\small\verb|out|}.
 
 \begin{session}
-\begin{verbatim}
-- val MUX_def = Define`
-    MUX(sw,in1,in2,out:num->bool) =
-      !t. out t = if sw t then in1 t else in2 t`;
-Definition stored under "MUX_def".
-> val MUX_def =
-    |- !sw in1 in2 out.
-         MUX (sw,in1,in2,out) = !t. out t = (if sw t then in1 t else in2 t)
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val MUX_def = Define`
+     MUX(sw,in1,in2,out:num->bool) =
+       !t. out t = if sw t then in1 t else in2 t`;
+\end{alltt}
 \end{session}
 
 The remaining devices in the schematic are registers.  These are
@@ -423,16 +347,11 @@ time {\small\verb|0|} when the register outputs
   device is switched on.}
 
 \begin{session}
-\begin{verbatim}
-- val REG_def =
-    Define `REG(inp,out:num->bool) =
-              !t. out t = if (t=0) then F else inp(t-1)`;
-Definition stored under "REG_def".
-> val REG_def =
-    |- !inp out. REG (inp,out) = !t. out t =
-                 (if t = 0 then F else inp (t - 1))
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val REG_def =
+     Define `REG(inp,out:num->bool) =
+               !t. out t = if (t=0) then F else inp(t-1)`;
+\end{alltt}
 \end{session}
 
 The schematic diagram above can be represented as a predicate by
@@ -442,21 +361,13 @@ This technique is explained elsewhere
 (\eg\ see \cite{Camilleri-et-al,Why-HOL-paper}).
 
 \begin{session}
-\begin{verbatim}
-- val PARITY_IMP_def = Define
-   `PARITY_IMP(inp,out) =
-      ?l1 l2 l3 l4 l5.
-        NOT(l2,l1) /\ MUX(inp,l1,l2,l3) /\ REG(out,l2) /\
-        ONE l4     /\ REG(l4,l5)        /\ MUX(l5,l3,l4,out)`;
-Definition stored under "PARITY_IMP_def".
-> val PARITY_IMP_def =
-    |- !inp out.
-         PARITY_IMP (inp,out) =
-         ?l1 l2 l3 l4 l5.
-           NOT (l2,l1) /\ MUX (inp,l1,l2,l3) /\ REG (out,l2) /\ ONE l4 /\
-           REG (l4,l5) /\ MUX (l5,l3,l4,out)
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val PARITY_IMP_def = Define
+    `PARITY_IMP(inp,out) =
+       ?l1 l2 l3 l4 l5.
+         NOT(l2,l1) /\ MUX(inp,l1,l2,l3) /\ REG(out,l2) /\
+         ONE l4     /\ REG(l4,l5)        /\ MUX(l5,l3,l4,out)`;
+\end{alltt}
 \end{session}\label{parity-imp}
 
 \section{Verification}
