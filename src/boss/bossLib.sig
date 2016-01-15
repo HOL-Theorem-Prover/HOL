@@ -47,6 +47,7 @@ sig
   val METIS_PROVE    : thm list -> term -> thm   (* First order *)
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
+  val prove_tac      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
   val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
@@ -113,6 +114,7 @@ sig
 
   val ZAP_TAC        : simpset -> thm list -> tactic
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+  val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val cheat          : tactic

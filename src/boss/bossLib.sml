@@ -64,6 +64,7 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC
 
 val PROVE           = BasicProvers.PROVE
 val PROVE_TAC       = BasicProvers.PROVE_TAC
+val prove_tac       = BasicProvers.PROVE_TAC
 val METIS_PROVE     = metisLib.METIS_PROVE
 val METIS_TAC       = metisLib.METIS_TAC
 val metis_tac       = METIS_TAC
@@ -143,6 +144,7 @@ val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
+val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
