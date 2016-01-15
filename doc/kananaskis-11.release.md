@@ -52,6 +52,8 @@ New features:
 
     This definition would have previously been rejected.  ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/173))
 
+-   PolyML “heaps” are now implemented with its `SaveState` technology, used hierarchically.
+    This should make heaps smaller as they now only save deltas over the last used heap.
 
 Bugs fixed:
 -----------
