@@ -105,6 +105,22 @@ New tools:
 
     Thanks to Thibault Gauthier for this tool.
 
+-   A principle for making coinductive definitions, `Hol_coreln`.
+    The input syntax is the same as for `Hol_reln`, that is: a conjunction of introduction rules.
+    For example, if one is representing coalgebraic lists as a subset of the type `:num → α option`, the coinductive predicate specifying the subset would be given as
+
+           val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
+             lrep_ok (λn. NONE)
+                 ∧
+             ∀h t.
+               lrep_ok t
+                   ⇒
+               lrep_ok (λn. if n = 0 then SOME h else t(n - 1))
+           `;
+
+    as is now done in `src/llist/llistScript.sml`.
+
+    Thanks to Andrea Condoluci for this tool.
 
 New examples:
 ---------
