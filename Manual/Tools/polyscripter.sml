@@ -122,6 +122,40 @@ fun umunge umap s =
     recurse [] s
   end
 
+val elision_string1 =
+    ref "\\quad\\textit{\\small\\dots{}output elided\\dots{}}\n"
+
+fun deleteTrailingWhiteSpace s =
+  let
+    open Substring
+    val (pfx, sfx) = splitr Char.isSpace (full s)
+    val noNLsfx = dropl (not o equal #"\n") sfx
+    val term = if size noNLsfx = 0 then "" else "\n"
+  in
+    string pfx ^ term
+  end
+
+fun cruftSuffix sfxs s =
+  case List.find (fn (sfx,_) => String.isSuffix sfx s) sfxs of
+      NONE => NONE
+    | SOME (sfx,rep) => SOME (String.substring(s, 0, size s - size sfx) ^ rep)
+
+val cruftySuffixes = ref [
+      (":\n   proofs\n", ""),
+      ("\n: proof\n", "\n"),
+      (":\n   proof\n", "\n")
+    ]
+
+fun removeCruft s =
+  case cruftSuffix (!cruftySuffixes) s of
+      NONE => s
+    | SOME s' => removeCruft s'
+
+fun transformOutput umap s =
+  s |> umunge umap
+    |> removeCruft
+    |> deleteTrailingWhiteSpace
+
 fun process_line umap (obuf as (_, _, obRST)) line lbuf = let
   fun getRest acc =
     let
@@ -158,17 +192,18 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest [firstline]
       val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
+      fun removeNL s = String.substring(s, 0, size s - 1)
     in
-      (umunge umap input, SOME "  ... output elided ...\n")
+      (removeNL (umunge umap input), SOME (!elision_string1))
     end
   else if String.isPrefix ">>" line then
     let
       val _ = obRST()
       val firstline = String.extract(line, 2, NONE)
       val input = getRest [firstline]
+      val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
     in
-      (umunge umap input,
-       SOME (umunge umap (compiler obuf (linenum lbuf) (mkLex (quote input)))))
+      (umunge umap input, SOME (transformOutput umap raw_output))
     end
   else
     (advance lbuf; (line, NONE))

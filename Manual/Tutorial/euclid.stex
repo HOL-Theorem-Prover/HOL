@@ -22,9 +22,9 @@ Let's get started.
 First, we start the system, with the command \ml{<holdir>/bin/hol}.
 We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings from the \HOL{} theory of arithmetic are made available at the top level.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >>_ open arithmeticTheory;
-\end{verbatim}
+\end{alltt}
 \end{session}
 We now begin the formalization. In order to define the concept of
 prime number, we first need to define the \emph{divisibility} relation:
