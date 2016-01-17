@@ -25,7 +25,7 @@ Fails if some {vi} (1 <= i <= n) is not a variable.
 
 
 \COMMENTS
-In the current implementation, {list_mk_abs} is more efficient than 
+In the current implementation, {list_mk_abs} is more efficient than
 iteration of {mk_abs} for larger tasks.
 
 \SEEALSO

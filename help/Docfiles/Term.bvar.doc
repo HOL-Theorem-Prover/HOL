@@ -6,7 +6,7 @@
 Returns the bound variable of an abstraction.
 
 \DESCRIBE
-If {M} is a lambda abstraction, i.e, has the form {\v. t}, then 
+If {M} is a lambda abstraction, i.e, has the form {\v. t}, then
 {bvar M} returns {v}.
 
 \FAILURE

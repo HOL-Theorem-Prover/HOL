@@ -14,11 +14,11 @@ local
                        (Systeml.HOLDIR ++ "sigobj") ::
                        (!loadPath)
    val _ = app load ["boolLib", "proofManagerLib", "Arbrat"]
+               handle e => OS.Process.exit OS.Process.failure
    fun safe_use s = if String.sub (s, 0) = #"-" then () else use s
    fun main () =
      (List.app safe_use (CommandLine.arguments ())
       ; PolyML.rootFunction ())
 in
-   val _ = PolyML.shareCommonData main
-   val _ = PolyML.export ("hol.builder0", main)
+   val _ = PolyML.SaveState.saveState (Systeml.HOLDIR ++ "bin/hol.state0")
 end

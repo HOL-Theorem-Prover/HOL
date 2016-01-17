@@ -10,7 +10,7 @@ type, delete.
 
 \DESCRIBE
 An invocation {delete_type s} removes the type constant denoted by {s}
-from the current HOL segment. All types, terms, and theorems that 
+from the current HOL segment. All types, terms, and theorems that
 depend on that type should therefore disappear, as though they hadn't been
 constructed in the first place. Conceptually, they have become "garbage"
 and need to be collected. However, because of the way that HOL is
@@ -21,11 +21,11 @@ some consistency maintenance support.
 In particular, the implementation ensures that a deleted type
 operator is never equal to a subsequently declared type operator
 with the same name (and arity). Furthermore, although garbage types,
-terms, and theorems may exist in a session, no theorem, definition, 
-or axiom that is garbage is exported when {export_theory} is invoked. 
+terms, and theorems may exist in a session, no theorem, definition,
+or axiom that is garbage is exported when {export_theory} is invoked.
 
 The notion of garbage is hereditary. Any type, term, definition, or theorem
-is garbage if any of its constituents are. Furthermore, if a type operator or 
+is garbage if any of its constituents are. Furthermore, if a type operator or
 term constant had been defined, and its witness theorem later becomes
 garbage, then that type or term is garbage, as is anything built from it.
 
@@ -55,7 +55,7 @@ new_type ("foo", 2);
 }
 
 \COMMENTS
-It's rather dodgy to withdraw constants from the HOL signature. 
+It's rather dodgy to withdraw constants from the HOL signature.
 
 It is not possible to delete constants from ancestor theories.
 

@@ -75,8 +75,6 @@ fun store_thm (name, tm, tac) =
      (print ("Failed to prove theorem " ^ name ^ ".\n");
       Raise e)
 
-infix THEN THENL THEN1 ORELSE ORELSE_LT THEN_LT
-
 (*---------------------------------------------------------------------------
  * tac1 THEN_LT ltac2:
  * A tactical that applies ltac2 to the list of subgoals resulting from tac1
@@ -90,6 +88,8 @@ fun op THEN_LT (tac1, ltac2 : list_tactic) =
       in
          (gl2, vf1 o vf2)
       end
+
+val op >>> = op THEN_LT
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN_LT : tactic * list_tactic -> tactic ;
@@ -131,6 +131,8 @@ fun ALLGOALS tac2 gl =
  *---------------------------------------------------------------------------*)
 
 fun tac1 THEN tac2 = tac1 THEN_LT ALLGOALS tac2 ;
+val op >> = op THEN
+val op \\ = op THEN
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THEN : tactic * tactic -> tactic ;
@@ -188,6 +190,7 @@ fun NULL_OK_LT ltac [] = ([], Lib.I)
  *---------------------------------------------------------------------------*)
 
 fun tac1 THENL tacs2 = tac1 THEN_LT NULL_OK_LT (TACS_TO_LT tacs2) ;
+val op >| = op THENL
 
 (* first argument can be a tactic or a list-tactic *)
 val _ = op THENL : tactic * tactic list -> tactic ;
@@ -216,6 +219,8 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       in
          (t_gl, fn thl => jf (h_jf [] :: thl))
       end
+
+val op >- = op THEN1
 
 (*---------------------------------------------------------------------------
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
@@ -283,6 +288,7 @@ fun REVERSE tac g =
    in
       (rev gl, jf o rev)
    end
+val reverse = REVERSE
 
 (*---------------------------------------------------------------------------
  * REVERSE_LT: A list_tactic that reverses a list of subgoals
@@ -323,6 +329,7 @@ fun tac1 THEN1 tac2 = tac1 THEN_LT REVERSE_LT THEN_LT
 
 val ALL_TAC: tactic = fn (g: goal) => ([g], hd)
 val ALL_LT: list_tactic = fn (gl: goal list) => (gl, Lib.I)
+val all_tac = ALL_TAC
 
 fun TRY tac = tac ORELSE ALL_TAC
 fun TRY_LT ltac = ltac ORELSE_LT ALL_LT
@@ -335,6 +342,7 @@ fun TRYALL tac = ALLGOALS (TRY tac) ;
 
 fun REPEAT tac g = ((tac THEN REPEAT tac) ORELSE ALL_TAC) g
 fun REPEAT_LT ltac gl = ((ltac THEN_LT REPEAT_LT ltac) ORELSE_LT ALL_LT) gl
+val rpt = REPEAT
 
 (*---------------------------------------------------------------------------
  * Add extra subgoals, which may be needed to make a tactic valid;
@@ -486,6 +494,7 @@ fun ASSUM_LIST aslfun (g as (asl, _)) = aslfun (map ASSUME asl) g
 
 fun POP_ASSUM thfun (a :: asl, w) = thfun (ASSUME a) (asl, w)
   | POP_ASSUM   _   ([], _) = raise ERR "POP_ASSUM" "no assum"
+val pop_assum = POP_ASSUM
 
 (*---------------------------------------------------------------------------
  * Pop off the entire assumption list and give it to a function (tactic)
@@ -553,6 +562,7 @@ fun FIRST [] g = NO_TAC g
   | FIRST (tac :: rst) g = tac g handle HOL_ERR _ => FIRST rst g
 
 fun MAP_EVERY tacf lst = EVERY (map tacf lst)
+val map_every = MAP_EVERY
 fun MAP_FIRST tacf lst = FIRST (map tacf lst)
 
 (*---------------------------------------------------------------------------
@@ -589,6 +599,8 @@ in
         shut_parser_up (find ttac "FIRST_ASSUM" (A, g)) A
   fun LAST_ASSUM ttac (A, g) =
         shut_parser_up (find ttac "LAST_ASSUM" (A, g)) (List.rev A)
+  val first_assum = FIRST_ASSUM
+  val last_assum = LAST_ASSUM
 end
 
 
@@ -608,6 +620,8 @@ local
 in
    val FIRST_X_ASSUM = FIRST_ASSUM o f
    val LAST_X_ASSUM = LAST_ASSUM o f
+   val first_x_assum = FIRST_X_ASSUM
+   val last_x_assum = LAST_X_ASSUM
 end
 
 (*---------------------------------------------------------------------------

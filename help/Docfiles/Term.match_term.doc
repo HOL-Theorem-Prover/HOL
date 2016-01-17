@@ -9,9 +9,9 @@ Finds instantiations to match one term to another.
 An application {match_term M N} attempts to find a set of type
 and term instantiations for {M} to make it alpha-convertible
 to {N}. If {match_term} succeeds, it returns the instantiations
-in the form of a pair containing a term substitution and a 
-type substitution. In particular, if {match_term pat ob} succeeds 
-in returning a value {(S,T)}, then 
+in the form of a pair containing a term substitution and a
+type substitution. In particular, if {match_term pat ob} succeeds
+in returning a value {(S,T)}, then
 {
    aconv (subst S (inst T pat)) ob.
 }

@@ -9,16 +9,16 @@ A tactic to intantiate quantifiers in a term using an explitly given list of (pa
 tactic, quantifier, existential, choose, witness.
 
 \DESCRIBE
-This tactic can be seen as a generalisation of {Q.EXISTS_TAC}. 
+This tactic can be seen as a generalisation of {Q.EXISTS_TAC}.
 When applied to a term fragment {u} and a goal {?x. t}, the tactic
 {EXISTS_TAC} reduces the goal to {t[u/x]}. {QUANT_TAC} allows to
-perform similar instantiations of quantifiers at subpositions, provided 
+perform similar instantiations of quantifiers at subpositions, provided
 the subposition occurs in a formula composed of standard operators that
 the tactic can handle. It can - depending on negation level - instantiate
 both existential and universal quantifiers. Moreover, it allows partial
 instantiations and instantiating multiple variables at the same time.
 
-{QUANT_TAC} gets a list of triples {(var_name, instantiation, free_vars)} 
+{QUANT_TAC} gets a list of triples {(var_name, instantiation, free_vars)}
 as an argument. {var_name} is the name of the variable to be instantiated;
 {instantiation} is the term this variable should be instantiated with. Finally,
 {free_vars} is a list of free variables in {instantiation} that should remain
@@ -28,7 +28,7 @@ As this tactic adresses variables by their name, resulting proofs might
 not be robust. Therefore, this tactic should be used carefully.
 
 \EXAMPLE
-Given the goal 
+Given the goal
 {
    !x. (!z. P x z) ==> ?a b.    Q a        b z
 }
@@ -38,11 +38,11 @@ The variable {z} is universally quantified, but in the antecedent of the implica
 Therefore, it can be safely instantiated. {a} is existentially quantified.
 In this example we just want to say that {a} is not {0}, therefore {a'} is
 considered as a free variable and thus remains existentially quantified.
-The call results in the goal 
+The call results in the goal
 {
    !x. (    P x 0) ==> ?  b a'. Q (SUC a') b z
 }
-  
+
 \SEEALSO
 Tactic.EXISTS_TAC.
 \ENDDOC

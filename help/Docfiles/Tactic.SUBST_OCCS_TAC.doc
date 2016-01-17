@@ -42,7 +42,7 @@ When trying to solve the goal
 applying the commutative law for addition on the third occurrence of
 the subterm {m + n}
 {
-   SUBST_OCCS_TAC [([3], SPECL [Term `m:num`, Term `n:num`] 
+   SUBST_OCCS_TAC [([3], SPECL [Term `m:num`, Term `n:num`]
                                arithmeticTheory.ADD_SYM)]
 }
 results in the goal
@@ -53,8 +53,8 @@ results in the goal
 
 \USES
 {SUBST_OCCS_TAC} is used when rewriting a goal at specific occurrences
-of a term, and when rewriting tactics such as {REWRITE_TAC}, 
-{PURE_REWRITE_TAC}, {ONCE_REWRITE_TAC}, {SUBST_TAC}, etc. 
+of a term, and when rewriting tactics such as {REWRITE_TAC},
+{PURE_REWRITE_TAC}, {ONCE_REWRITE_TAC}, {SUBST_TAC}, etc.
 are too extensive or would diverge.
 
 \SEEALSO

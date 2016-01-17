@@ -3,15 +3,15 @@
 \TYPE {RW_TAC : simpset -> thm list -> tactic}
 
 \SYNOPSIS
-Simplification with case-splitting and built-in knowledge of 
+Simplification with case-splitting and built-in knowledge of
 declared datatypes.
 
 \KEYWORDS
 simplification, datatype.
 
 \DESCRIBE
-{RW_TAC} is a simplification tactic that provides conditional and 
-contextual rewriting, and automatic invocation of conversions and decision 
+{RW_TAC} is a simplification tactic that provides conditional and
+contextual rewriting, and automatic invocation of conversions and decision
 procedures in the course of simplification. An application {RW_TAC ss thl}
 adds the theorems in {thl} to the simpset {ss} and proceeds to simplify the
 goal.
@@ -30,13 +30,13 @@ variable or negated boolean variable occurring as a hypothesis. It
 breaks down any conjunctions, disjunctions, double negations, or
 existentials occurring as hypotheses. It keeps the goal in "stripped"
 format so that the resulting goal will not be an implication or
-universally quantified.  
+universally quantified.
 
 \FAILURE
 Never fails, but may diverge.
 
 \COMMENTS
-The case splits arising from conditionals and disjunctions can result in 
+The case splits arising from conditionals and disjunctions can result in
 many unforeseen subgoals. In that case, {SIMP_TAC} or even {REWRITE_TAC}
 should be used.
 

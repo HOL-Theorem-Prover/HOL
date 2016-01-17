@@ -75,6 +75,8 @@ A. [Moscow ML:] First, install Moscow ML. This is usually
 
        ./configure --enable-shared
 
+   Do not use the --with-portable option.
+
 B. Unpack HOL with the commands
 
        gunzip release.tar.gz; tar xf release.tar
@@ -162,6 +164,11 @@ E. If bin/build completes (it takes a while!), successfully, you are
 
    On Windows the hol scripts additionally include a .bat extension,
    and Holmake has a .exe extension.
+
+   At this point, the system is build in <hol-dir> and cannot easily
+   be moved to other locations. In other words, you should unpack HOL
+   in the location/directory where you wish to access it for all your
+   future work.
 
 
 External tools

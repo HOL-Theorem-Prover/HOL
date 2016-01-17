@@ -35,7 +35,7 @@ fun say s = if !chatting then Lib.say s else ();
 fun add_string_cr s = say (s^"\n")
 fun cr_add_string_cr s = say ("\n"^s^"\n")
 
-fun printthm th = if !chatting then Parse.print_thm th else ()
+fun printthm th = if !chatting then say (Parse.thm_to_string th) else ()
 
 fun rotl (a::rst) = rst@[a]
   | rotl [] = raise ERR "rotl" "empty list"

@@ -10,7 +10,7 @@ Constructs an object-level (HOL) list from an ML list of terms.
 The type argument is required so that empty lists can be constructed.
 
 \FAILURE
-Fails if any term in the list is not of the type specified as the 
+Fails if any term in the list is not of the type specified as the
 second argument.
 
 \SEEALSO

@@ -8,7 +8,7 @@ Applies a consequence conversion at most a given number
 of times to the sub-terms of a term, in bottom-up order.
 
 \DESCRIBE
-While {DEPTH_CONSEQ_CONV c tm} applies {c} repeatedly, 
+While {DEPTH_CONSEQ_CONV c tm} applies {c} repeatedly,
 {NUM_DEPTH_CONSEQ_CONV c n tm} applies it at most n-times.
 
 \SEEALSO

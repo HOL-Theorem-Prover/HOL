@@ -16,6 +16,7 @@ sig
   val DISJ_CASES_THEN  : thm_tactical
   val DISJ_CASES_THENL : thm_tactic list -> thm_tactic
   val DISCH_THEN       : thm_tactic -> tactic
+  val disch_then       : thm_tactic -> tactic
   val UNDISCH_THEN     : Term.term -> thm_tactic -> tactic
   val X_CHOOSE_THEN    : Term.term -> thm_tactical
   val CHOOSE_THEN      : thm_tactical

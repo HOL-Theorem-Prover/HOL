@@ -21,7 +21,7 @@ Always fails.
 
 Exception raised at ??.??:
 fail
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 

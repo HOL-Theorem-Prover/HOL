@@ -290,7 +290,7 @@ end (* local *)
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst _ l (p as (thy,s)) E = (gen_thy_const l p, E);
+fun make_qconst l (p as (thy,s)) E = (gen_thy_const l p, E);
 
 fun make_atom oinfo l s E =
  make_bvar l (s,E) handle HOL_ERR _

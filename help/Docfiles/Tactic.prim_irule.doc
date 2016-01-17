@@ -10,13 +10,13 @@ replace the goal by the instantiated hypotheses of the supplied theorem.
 tactic.
 
 \DESCRIBE
-When given a theorem {th = A' |- t} and a goal {A ?- t'} 
+When given a theorem {th = A' |- t} and a goal {A ?- t'}
 where {t} can be matched to {t'} by instantiating free variables,
 including appropriate type instantiation,
 {prim_irule} replaces the goal by new subgoals which are the hypotheses
 {A'}, instantiated
 
-The order of the new subgoals corresponds to the order in which 
+The order of the new subgoals corresponds to the order in which
 {hyp th} returns the hypotheses {A'}
 
 \FAILURE
@@ -30,6 +30,6 @@ of the goal.
 theorem may also be substituted, and will appear as new subgoals
 
 \SEEALSO
-Tactic.irule, Tactic.MATCH_ACCEPT_TAC, Tactic.ACCEPT_TAC 
+Tactic.irule, Tactic.MATCH_ACCEPT_TAC, Tactic.ACCEPT_TAC
 \ENDDOC
 

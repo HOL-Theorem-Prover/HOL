@@ -8,7 +8,7 @@ Breaks an implication or negation into antecedent and consequent.
 \DESCRIBE
 {dest_imp} is a term destructor for implications. It treats negations as
 implications with consequent {F}. Thus, if {M} is a term with the form
-{t1 ==> t2}, then {dest_imp M} returns {(t1,t2)}, and if {M} has the 
+{t1 ==> t2}, then {dest_imp M} returns {(t1,t2)}, and if {M} has the
 form {~t}, then {dest_imp M} returns {(t,F)}.
 
 \FAILURE

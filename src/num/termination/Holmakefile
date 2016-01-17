@@ -21,8 +21,8 @@ DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
 all: $(HOLHEAP)
 
-$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.builder0)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.builder0) $(BARE_DEPS)
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
 else
 EXTRA_CLEANS = selftest.exe
 endif

@@ -8,7 +8,7 @@ value.
 
 \DESCRIBE
 {assoc x [(x1,y1),...,(xn,yn)]} returns the first {(xi,yi)} in the list such
-that {xi} equals {x}. The lookup is done on an eqtype, i.e., the SML 
+that {xi} equals {x}. The lookup is done on an eqtype, i.e., the SML
 implementation must be able to decide equality for the type of {x}.
 
 \FAILURE

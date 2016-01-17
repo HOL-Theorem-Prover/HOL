@@ -9,7 +9,7 @@ rule.
 pair
 
 \SYNOPSIS
-Beta-reduces a top-level paired beta-redex on the right-hand side of an 
+Beta-reduces a top-level paired beta-redex on the right-hand side of an
 equation.
 
 \DESCRIBE

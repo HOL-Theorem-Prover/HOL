@@ -21,10 +21,6 @@ open lcsymtacs forTheory listTheory arithmeticTheory;
 
 val _ = temp_tight_equality ();
 
-val ect = BasicProvers.EVERY_CASE_TAC;
-
-val IMP_IMP = METIS_PROVE [] ``b /\ (b1 ==> b2) ==> ((b ==> b1) ==> b2)``
-
 
 (* === PHASE 1 : simplifies For loops and removes Dec === *)
 
@@ -40,6 +36,29 @@ val phase1_def = Define `
   (phase1 (For e1 e2 t) = Loop (If e1 (Seq (phase1 t) (Exp e2)) Break))`;
 
 (* Verification of phase 1 *)
+
+val sem_e_break = store_thm("sem_e_break[simp]",
+  ``!b1 s. ~(sem_e s b1 = (Rbreak,r)) /\ ~(sem_e s b1 = (Rtimeout,r))``,
+  Induct \\ rpt strip_tac
+  \\ fs [sem_e_def]
+  \\ every_case_tac \\ fs [] \\ rfs []);
+
+val phase1_correct = store_thm("phase1_correct",
+  ``!s t. sem_t s (phase1 t) = sem_t s t``,
+  once_rewrite_tac [EQ_SYM_EQ]
+  \\ recInduct sem_t_ind
+  \\ rw [phase1_def,Loop_def]
+  \\ simp [sem_t_def_with_stop,sem_e_def]
+  \\ rpt (BasicProvers.TOP_CASE_TAC \\ simp [sem_t_def_with_stop])
+  \\ fs [STOP_def]);
+
+val phase1_pres = store_thm("phase1_pres",
+  ``!t. semantics (phase1 t) = semantics t``,
+  fs [semantics_def,phase1_correct]);
+
+(* End of phase 1 verification -- 18 lines *)
+
+(* the rest is old redundant stuff *)
 
 val sem_t_Dec = store_thm("sem_t_Dec",
   ``sem_t s (Dec v t) =
@@ -60,19 +79,13 @@ val sem_t_Loop = save_thm("sem_t_Loop",
   |> (SIMP_CONV (srw_ss()) [Once sem_t_def,sem_e_def,Loop_def] THENC
       REWRITE_CONV [GSYM Loop_def]));
 
-val sem_e_break = prove(
-  ``!b1 s. ~(sem_e s b1 = (Rbreak,r)) /\ ~(sem_e s b1 = (Rtimeout,r))``,
-  Induct \\ REPEAT STRIP_TAC
-  \\ fs [sem_e_def] \\ ect
-  \\ fs [] \\ rfs []);
-
 val sem_t_For_swap_body = prove(
   ``(!s. sem_t s t1 = sem_t s t2) ==>
     (sem_t s (For b1 b2 t1) = sem_t s (For b1 b2 t2))``,
   STRIP_TAC
   \\ completeInduct_on `s.clock`
   \\ rw [sem_t_def_with_stop,sem_e_def,Once sem_t_Loop]
-  \\ ect \\ fs [PULL_FORALL,STOP_def]
+  \\ every_case_tac \\ fs [PULL_FORALL,STOP_def]
   \\ FIRST_X_ASSUM MATCH_MP_TAC
   \\ fs [dec_clock_def]
   \\ imp_res_tac sem_e_clock
@@ -100,16 +113,6 @@ val sem_t_For = store_thm("sem_t_For",
   \\ imp_res_tac sem_e_clock
   \\ imp_res_tac sem_t_clock
   \\ decide_tac);
-
-val phase1_correct = store_thm("phase1_correct",
-  ``!t s. sem_t s (phase1 t) = sem_t s t``,
-  Induct \\ fs [phase1_def,sem_t_def_with_stop,GSYM sem_t_For,GSYM sem_t_Dec]
-  \\ REPEAT STRIP_TAC \\ ect \\ fs [STOP_def]
-  \\ MATCH_MP_TAC sem_t_For_swap_body \\ fs []);
-
-val phase1_pres = store_thm("phase1_pres",
-  ``!t. semantics (phase1 t) = semantics t``,
-  fs [semantics_def,phase1_correct]);
 
 
 (* === PHASE 2 : compiles expressions into very simple assignments === *)
@@ -174,7 +177,7 @@ val sem_e_possible_var_name = prove(
       (sem_e s e = (Rval i,r)) /\ exp_max e < STRLEN k ==>
       possible_var_name k s.store ==>
       possible_var_name k r.store``,
-  Induct \\ fs [sem_e_def] \\ REPEAT STRIP_TAC \\ ect \\ fs []
+  Induct \\ fs [sem_e_def] \\ REPEAT STRIP_TAC \\ every_case_tac \\ fs []
   THEN1
    (FIRST_X_ASSUM (MP_TAC o Q.SPEC `r'`)
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `s`)
@@ -308,6 +311,8 @@ val sem_t_possible_var_name = prove(
     \\ IMP_RES_TAC sem_e_possible_var_name))
   |> Q.SPECL [`s`,`e`,`Rval i`,`r`]
   |> SIMP_RULE (srw_ss()) [];
+
+val IMP_IMP = METIS_PROVE [] ``b /\ (b1 ==> b2) ==> ((b ==> b1) ==> b2)``
 
 val flatten_t_correct = prove(
   ``!s e t n res s1.
@@ -449,7 +454,7 @@ inc_pc s = s with pc := s.pc + 1`;
 val sem_e_clock = prove(
   ``!e x st' st. (sem_e st e = (x,st')) ==> (st'.clock = st.clock)``,
   Induct \\ fs [sem_e_def] \\ REPEAT STRIP_TAC
-  \\ ect \\ SRW_TAC [] [] \\ fs [store_var_def] \\ METIS_TAC []) |> GSYM;
+  \\ every_case_tac \\ SRW_TAC [] [] \\ fs [store_var_def] \\ METIS_TAC []) |> GSYM;
 
 val sem_a_def = tDefine "sem_a" `
 sem_a s =
@@ -491,7 +496,7 @@ sem_a s =
        (\s. (s.store.clock,LENGTH s.instrs - s.pc))`
    \\ fs [inc_pc_def,do_jump_def,LET_DEF]
    \\ REPEAT STRIP_TAC
-   \\ ect \\ fs []
+   \\ every_case_tac \\ fs []
    \\ SRW_TAC [] [] \\ fs []
    \\ IMP_RES_TAC sem_e_clock
    \\ DECIDE_TAC);
@@ -635,7 +640,7 @@ val phase3_lemma = prove(
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC,APPEND])
     \\ fs [LET_DEF,rich_listTheory.EL_LENGTH_APPEND]
     \\ fs [sem_e_def] \\ SRW_TAC [] []
-    \\ ect \\ fs [] \\ SRW_TAC [] []
+    \\ every_case_tac \\ fs [] \\ SRW_TAC [] []
     \\ Q.EXISTS_TAC `(inc_pc (x with store := store_var v (i'' + i') x.store))`
     \\ fs [inc_pc_def])
   THEN1 (* Break *)
@@ -888,200 +893,147 @@ val compile_correct = store_thm("compile_correct",
   METIS_TAC [type_soundness,syntax_ok_def,compile_pres]);
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
-(* We now re-verify phase1 in the relational big step semantics *)
 
-val simple_sem_t_reln_Dec = Q.prove(
-  `simple_sem_t_reln s (Exp (Assign v (Num 0))) (Rval 0,s with store := s.store |+ (v,0))`,
-  simp[Once simple_sem_t_reln_cases]>>
-  ntac 2 (simp[Once sem_e_reln_cases]))
+(* Start re-verification of phase1 in relational big step semantics *)
 
-val sem_e_reln_not_break = Q.prove(
-  `∀s e res. sem_e_reln s e res ⇒
-  FST res ≠ Rbreak`,
+val sem_e_reln_not = Q.prove(
+  `∀s e res. sem_e_reln s e res ⇒ FST res ≠ Rbreak ∧ FST res ≠ Rtimeout`,
   ho_match_mp_tac sem_e_reln_ind>>rw[])
 
 val semttac = simp[Once simple_sem_t_reln_cases,is_rval_def]
 val semetac = simp[Once sem_e_reln_cases]
-
-val simple_sem_t_reln_Loop1 = Q.prove(
-  `∀s t res.
-  simple_sem_t_reln s t res ⇒
-  ∀e1 e2 t'.
-  t = (For e1 e2 t') ⇒
-  simple_sem_t_reln s (Loop (If e1 (Seq t' (Exp e2)) Break)) res`,
-  ho_match_mp_tac simple_sem_t_reln_strongind>>fs[Loop_def]>>rw[]>>
-  semttac>>simp[is_rval_def]
-  >-
-    (ntac 2 DISJ2_TAC>>
-    semttac>>
-    simp[Once sem_e_reln_cases,Once simple_sem_t_reln_cases])
-  >-
-    (ntac 8 semetac>>
-    ntac 4 DISJ2_TAC>>
-    semttac>>
-    imp_res_tac sem_e_reln_not_break>>
-    fs[])
-  >-
-    (ntac 8 semetac>>simp[is_rval_def]>>
-    DISJ1_TAC>>
-    qexists_tac`s''`>>qexists_tac`n3`>>
-    semttac>>simp[is_rval_def]>>DISJ2_TAC>>
-    qexists_tac`s'`>>qexists_tac`n1`>>
-    semetac>>
-    semttac>>
-    metis_tac[simple_sem_t_reln_cases])
-  >-
-    (ntac 4 semetac>>DISJ2_TAC>>
-    semttac>>DISJ2_TAC>>DISJ1_TAC>>
-    semttac>>
-    metis_tac[simple_sem_t_reln_cases])
-  >-
-    (ntac 8 semetac>>
-    ntac 4 DISJ2_TAC>>
-    imp_res_tac sem_e_reln_not_break>>fs[]>>
-    metis_tac[simple_sem_t_reln_cases])
-  >>
-    ntac 8 semetac>>
-    ntac 4 DISJ2_TAC>>
-    metis_tac[simple_sem_t_reln_cases])
-
-val sem_e_reln_num = Q.prove(
-`sem_e_reln s (Num 1) (Rval n1,s') ⇔
- s' = s ∧ n1 = 1`,
- simp[Once sem_e_reln_cases]>>
- metis_tac[])
-
-val simple_sem_t_reln_Loop2 = Q.prove(
-  `∀s t res.
-  simple_sem_t_reln s t res ⇒
-  ∀e1 e2 t'.
-  t = (Loop (If e1 (Seq t' (Exp e2)) Break)) ⇒
-  simple_sem_t_reln s (For e1 e2 t') res`,
-  ho_match_mp_tac simple_sem_t_reln_strongind>>fs[Loop_def]>>rw[]>>
-  semttac>>simp[is_rval_def]>>fs[sem_e_reln_num]
-  >-
-    (fs[Once sem_e_reln_cases]>>metis_tac[is_rval_def])
-  >-
-    (ntac 2 DISJ2_TAC>>DISJ1_TAC>>
-    qpat_assum`simple_sem_t_reln s' B C` mp_tac>>
-    semttac>>rw[] >- fs[Once simple_sem_t_reln_cases]>>
-    pop_assum mp_tac>>
-    semttac>>rw[]>>
-    pop_assum mp_tac>>
-    semttac>>rw[]>>
-    metis_tac[])
-  >-
-    (pop_assum mp_tac>>semttac>>rw[]
-    >-
-      fs[Once simple_sem_t_reln_cases]
-    >-
-      (pop_assum mp_tac>>semttac>>rw[]
-      >-
-        (pop_assum mp_tac>>semttac>>rw[]>>
-        imp_res_tac sem_e_reln_not_break>>fs[])
-      >-
-        metis_tac[])
-    >-
-      (imp_res_tac sem_e_reln_not_break>>fs[]))
-  >-
-    (qpat_assum`simple_sem_t_reln A B C` mp_tac>>
-    semttac>>rw[]
-    >-
-      fs[Once simple_sem_t_reln_cases]
-    >>
-      (fs[Once sem_e_reln_cases]>>
-      metis_tac[is_rval_def]))
-  >-
-    (qpat_assum`simple_sem_t_reln A B C` mp_tac>>
-    semttac>>rw[]>>fs[]
-    >-
-      fs[Once simple_sem_t_reln_cases]
-    >-
-      (pop_assum mp_tac>>semttac>>rw[]
-      >-
-        (pop_assum mp_tac>>semttac>>rw[]>>
-        metis_tac[])
-      >-
-        metis_tac[])))
-
-val simple_sem_t_reln_Loop = Q.prove(
-`simple_sem_t_reln s (Loop (If e1 (Seq t (Exp e2)) Break)) res ⇔
- simple_sem_t_reln s (For e1 e2 t) res`,
- metis_tac[simple_sem_t_reln_Loop1,simple_sem_t_reln_Loop2])
-
-val phase1_correct_reln = store_thm("phase1_correct_reln",
-``∀s t res.
- simple_sem_t_reln s t res ⇒
- simple_sem_t_reln s (phase1 t) res``,
- ho_match_mp_tac simple_sem_t_reln_strongind>>fs[phase1_def]>>rw[]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_Dec,simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >- metis_tac[simple_sem_t_reln_cases]
- >>
-   (fs[simple_sem_t_reln_Loop]>>
-   simp[Once simple_sem_t_reln_cases]>>
-   metis_tac[]))
-
 val sdtac = simp[Once simple_sem_t_div_cases]
 
-val phase1_correct_div = Q.prove (
-`∀s t'.
-  (∃t. t' = phase1 t ∧ simple_sem_t_div s t) ⇒
-  simple_sem_t_div s t'`,
+val phase1_correct_reln = store_thm("phase1_correct_reln",
+``∀s t res. simple_sem_t_reln s t res ⇒ simple_sem_t_reln s (phase1 t) res``,
+  ho_match_mp_tac simple_sem_t_reln_strongind>>fs[phase1_def]>>rw[]>>
+  TRY(semttac>>metis_tac[])
+  >- metis_tac[simple_sem_t_reln_cases,sem_e_reln_cases]>>
+  simp[Loop_def]>>semttac>>
+  ntac 8 semetac>>
+  metis_tac[simple_sem_t_reln_cases,is_rval_def,sem_e_reln_not,FST,sem_e_reln_cases,Loop_def])
+
+val phase1_correct_div_lemma = Q.prove (
+`∀s t'. (∃t. phase1 t = t' ∧ simple_sem_t_div s t) ⇒ simple_sem_t_div s t'`,
   ho_match_mp_tac simple_sem_t_div_coind>>rw[]>>
-  Cases_on`t`>>fs[phase1_def,Loop_def]
+  Cases_on`t`>>fs[phase1_def,Loop_def,PULL_EXISTS]>>
+  pop_assum mp_tac>> sdtac>>rw[]
+  >- metis_tac[simple_sem_t_div_cases,sem_e_reln_cases,simple_sem_t_reln_cases,is_rval_def]>>
+  TRY(metis_tac[phase1_correct_reln])
   >-
-    (DISJ2_TAC>>semttac>>
-    semetac>>semetac>>
-    qexists_tac`0`>>
-    qexists_tac`s with store:=s.store|+(s',0)`>>fs[is_rval_def]>>
-    pop_assum mp_tac >>sdtac>>
-    metis_tac[])
-  >-(pop_assum mp_tac >> sdtac)
-  >-(pop_assum mp_tac >> sdtac)
-  >-(pop_assum mp_tac >> sdtac >>rw[]
-    >-
-      metis_tac[]
-    >-
-      (DISJ2_TAC>>
-      imp_res_tac phase1_correct_reln>>
-      metis_tac[]))
-  >-
-    (pop_assum mp_tac>>sdtac>>rw[]>>metis_tac[])
+    (semetac>>DISJ1_TAC>>
+    qexists_tac`If e0 (Seq t' (Exp e)) Break`>>fs[phase1_def]>>
+    metis_tac[simple_sem_t_div_cases])
   >>
-    pop_assum mp_tac>>sdtac>>rw[]
-    >-
-      (semetac>>DISJ1_TAC>>
-      qexists_tac`If e0 (Seq t' (Exp e)) Break`>>fs[phase1_def]>>
-      sdtac>>DISJ2_TAC>>
-      sdtac>>
-      metis_tac[])
-   >>
-     semetac>>DISJ2_TAC>>
-     ntac 2 semetac>>
-     qexists_tac`n3`>>qexists_tac`s3`>>CONJ_TAC
-     >-
-       (imp_res_tac phase1_correct_reln>>
-       metis_tac[simple_sem_t_reln_cases])
-     >>
-       qexists_tac`For e0 e t'`>>fs[phase1_def,Loop_def])
+    semetac>>DISJ2_TAC>>
+    ntac 2 semetac>>
+    qexists_tac`n3`>>qexists_tac`s3`>>qexists_tac`For e0 e t'`>>
+    CONJ_TAC>- metis_tac[phase1_correct_reln,simple_sem_t_reln_cases]>>
+    fs[phase1_def,Loop_def])
 
 val phase1_correct_div = store_thm("phase1_correct_div",
-``∀s t.
-  simple_sem_t_div s t ⇒
-  simple_sem_t_div s (phase1 t)``,
-  metis_tac[phase1_correct_div])
+``∀s t. simple_sem_t_div s t ⇒ simple_sem_t_div s (phase1 t)``,
+  metis_tac[phase1_correct_div_lemma])
 
 val phase1_pres_rel = Q.store_thm("phase1_pres_rel",`
-  ∀t.
-  rel_semantics t ≠ Crash ⇒
-  rel_semantics (phase1 t) = rel_semantics t`,
+  ∀t. rel_semantics t ≠ Crash ⇒ rel_semantics (phase1 t) = rel_semantics t`,
   strip_tac>>fs[rel_semantics_def,EQ_SYM_EQ]>>
   metis_tac[phase1_correct_reln,simple_sem_t_reln_not_div,phase1_correct_div])
+
+(* End verification for relational semantics -- 43 lines *)
+
+(* We now re-verify phase1 in the relational Pretty Big Step semantics (for terminating programs) *)
+
+val bp_step_tac = simp [Once pb_sem_t_reln_cases] \\ fs [];
+val bp_size_step_tac = simp [Once pb_sem_t_size_reln_cases] \\ fs [];
+
+val pb_sem_t_reln_Exp = ``pb_sem_t_reln s1' (Trm (Exp e)) r3'``
+  |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
+
+val sem_e_reln_Num = store_thm("sem_e_reln_Num[simp]",
+  ``sem_e_reln s (Num n) r1 <=> r1 = (Rval n,s)``,
+  fs [Once sem_e_reln_cases]);
+
+val pb_sem_t_reln_Forn2 = ``pb_sem_t_reln s (Forn 2 r3 n1 n1 t) (Ter r)``
+  |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
+
+val pb_sem_t_reln_Forn3 = ``pb_sem_t_reln s (Forn 3 r3 n1 n1 t) (Ter r)``
+  |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
+
+val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
+  `!s t r.
+     pb_sem_t_reln s (Trm t) (Ter r) ⇒
+     pb_sem_t_reln s (Trm (phase1 t)) (Ter r)`,
+  simp [Once pb_sem_t_size_reln_equiv,PULL_EXISTS]
+  \\ completeInduct_on `n` \\ fs [PULL_FORALL]
+  \\ Cases_on `t` \\ fs [phase1_def]
+  \\ TRY (rw [] \\ fs [pb_sem_t_size_reln_equiv]
+          \\ qexists_tac `n` \\ fs [] \\ NO_TAC)
+  THEN1 (* Dec case *)
+   (bp_size_step_tac \\ fs [] \\ rw []
+    \\ fs [AND_IMP_INTRO] \\ res_tac \\ fs []
+    \\ ntac 2 (bp_step_tac \\ fs [] \\ rw [])
+    \\ rpt (fs [Once sem_e_reln_cases,is_rval_def]))
+  THEN1 (* Seq case *)
+   (bp_size_step_tac \\ fs [] \\ rw []
+    \\ fs [AND_IMP_INTRO] \\ res_tac \\ fs []
+    \\ fs [DECIDE ``0 < h' + 1n /\ h' < h + (h' + 1n)``]
+    \\ bp_step_tac \\ rw [] \\ metis_tac [])
+  THEN1 (* If case *)
+   (bp_size_step_tac \\ fs [] \\ rw []
+    \\ fs [AND_IMP_INTRO] \\ res_tac \\ fs []
+    \\ bp_step_tac \\ rw [] \\ metis_tac [])
+  (* the rest is For case *)
+  \\ ntac 2 bp_size_step_tac \\ fs [] \\ rw []
+  THEN1 (* For stops *)
+   (rw [Loop_def]
+    \\ ntac 4 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
+    \\ fs [pb_sem_t_reln_Forn2] \\ metis_tac [])
+  THEN1 (* For runs the body *)
+   (ntac 2 (pop_assum mp_tac)
+    \\ bp_size_step_tac \\ fs [] \\ rw [Loop_def]
+    \\ `!x. sem_e_reln s e0 x <=> (x = (Rval n',s'))` by
+            metis_tac [sem_e_reln_determ]
+    THEN1 (* Break in body *)
+     (ntac 4 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
+      \\ qexists_tac `(Ter (Rbreak,s''))`
+      \\ fs [abort_def,is_rval_def,pb_sem_t_reln_Forn2]
+      \\ metis_tac [DECIDE ``n<n+1+1:num``])
+    THEN1 (* For continues *)
+     (ntac 4 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num,is_rval_def])
+      \\ fs [pb_sem_t_reln_Exp] \\ disj1_tac
+      \\ qexists_tac `Ter r2` \\ fs [] \\ rw []
+      THEN1
+       (fs [AND_IMP_INTRO] \\ res_tac
+        \\ metis_tac [DECIDE ``h' < h' + (h + 1 + 1) + 1n``])
+      \\ fs [abort_def,is_rval_def,pb_sem_t_reln_Forn2]
+      \\ imp_res_tac sem_e_reln_not \\ fs[pb_sem_t_reln_Forn3]
+      \\ qpat_assum `pb_sem_t_size_reln h s'' _ (Ter r)` mp_tac
+      \\ bp_size_step_tac \\ fs [] \\ reverse (rw [Loop_def])
+      THEN1 (rpt disj2_tac \\ Cases_on `r` \\ fs [abort_def])
+      \\ disj1_tac
+      \\ fs [AND_IMP_INTRO] \\ res_tac
+      \\ rpt (pop_assum mp_tac \\ match_mp_tac IMP_IMP \\ conj_tac THEN1 decide_tac)
+      \\ rw [] \\ fs [phase1_def,Loop_def])
+    \\ ntac 4 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
+    \\ disj1_tac \\ qexists_tac `Ter r`
+    \\ Cases_on `r` \\ fs [is_rval_def,abort_def,pb_sem_t_reln_Forn2]
+    \\ metis_tac [DECIDE ``n<n+1n+1``])
+  THEN1 (* For eval of exp fails *)
+   (Cases_on `r` \\ fs [abort_def,Loop_def]
+    \\ ntac 3 (bp_step_tac \\ fs [] \\ rw [sem_e_reln_Num])
+    \\ disj1_tac \\ qexists_tac `Ter (q,r')` \\ fs []
+    \\ fs [pb_sem_t_reln_Forn2,abort_def]
+    \\ imp_res_tac sem_e_reln_not\\ fs []));
+
+(* End verification in Pretty-Big-Step -- 81 lines
+   Note: this verification does not cover divergence preservation. *)
+
+(* for presentation purposes: *)
+
+val phase1_abbrev = store_thm("phase1_abbrev",
+  ``(phase1 (For g e t) = Loop (If g (Seq (phase1 t) (Exp e)) Break))/\
+    (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t))``,
+  fs [phase1_def]);
 
 val _ = export_theory ();

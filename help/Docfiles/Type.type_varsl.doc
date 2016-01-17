@@ -9,8 +9,8 @@ Returns the set of type variables in a list of types.
 variable, type.
 
 \DESCRIBE
-An invocation {type_varsl [ty1,...,tyn]} returns a list 
-representing the set-theoretic union of the type variables 
+An invocation {type_varsl [ty1,...,tyn]} returns a list
+representing the set-theoretic union of the type variables
 occurring in {ty1,...,tyn}.
 
 \FAILURE

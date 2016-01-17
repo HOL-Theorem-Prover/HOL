@@ -248,11 +248,38 @@ in
             list_make_comb l [to_ptmInEnv t0, to_ptmInEnv t1,
                               every_case do_arrow t2]
           end
+        else if String.isPrefix GrammarSpecials.recfupd_special caseform then
+          let
+            fun isARB_updchain a =
+              case a of
+                  QIDENT (locn.Loc_None, "bool", "ARB") => true
+                | APP (l1, APP (l2, IDENT (l3, fupd), t1), r) =>
+                    String.isPrefix GrammarSpecials.recfupd_special fupd andalso
+                    isARB_updchain r
+                | _ => false
+            open Preterm
+            fun getARBTy pt =
+              case pt of
+                  Comb{Rand,...} => getARBTy Rand
+                | Const{Ty,...} => Ty
+                | Constrained{Ptm,Ty,...} => Ty
+                | _ => raise Fail "TermParse.getARBTy invariant failure"
+            val ptE = list_make_comb l (map to_ptmInEnv [t0, t1, t2])
+          in
+            if isARB_updchain t2 then
+              (fn e => let
+                 val (pt,e') = ptE e
+                 val ty = getARBTy pt
+               in
+                 (Constrained{Ptm = pt,Ty = ty,Locn = locn.Loc_None}, e')
+               end)
+            else ptE
+          end
         else list_make_comb l (map to_ptmInEnv [t0, t1, t2])
       end
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
     | IDENT (l, s)       => make_atom oinfo l s
-    | QIDENT (l, s1, s2) => make_qconst oinfo l (s1,s2)
+    | QIDENT (l, s1, s2) => make_qconst l (s1,s2)
     | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
     | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
     | AQ (l, t)          => make_aq l t

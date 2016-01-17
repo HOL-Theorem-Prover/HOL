@@ -21,7 +21,7 @@ Should never fail.
 
 \COMMENTS
 
-The LaTeX style file {holtexbasic.sty} (or {holtex.sty}) should be used and the output should be pasted into a Verbatim environment.   
+The LaTeX style file {holtexbasic.sty} (or {holtex.sty}) should be used and the output should be pasted into a Verbatim environment.
 
 \SEEALSO
 EmitTeX.print_term_as_tex, EmitTeX.print_theorem_as_tex, EmitTeX.print_theory_as_tex, EmitTeX.print_theories_as_tex_doc, EmitTeX.tex_theory

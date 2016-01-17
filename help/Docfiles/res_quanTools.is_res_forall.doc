@@ -6,7 +6,7 @@
 Tests a term to see if it is a restricted universal quantification.
 
 \DESCRIBE
-{is_res_forall "!var::P. t"} returns {true}. If the term is not a 
+{is_res_forall "!var::P. t"} returns {true}. If the term is not a
 restricted universal quantification the result is {false}.
 
 \FAILURE

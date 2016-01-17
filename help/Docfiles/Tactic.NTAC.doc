@@ -9,11 +9,11 @@ Apply tactic a specified number of times.
 tactic.
 
 \DESCRIBE
-An invocation {NTAC n tac} applies the tactic {tac} 
+An invocation {NTAC n tac} applies the tactic {tac}
 exactly {n} times. If {n <= 0} then the goal is unchanged.
 
 \FAILURE
-Fails if {tac} fails. 
+Fails if {tac} fails.
 
 \EXAMPLE
 Suppose we have the following goal:

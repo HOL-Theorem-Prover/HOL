@@ -48,7 +48,9 @@ sig
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
+  val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
+  val decide_tac     : tactic
 
   (* Simplification *)
 
@@ -115,5 +117,42 @@ sig
   val UNABBREV_ALL_TAC : tactic
   val REABBREV_TAC     : tactic
   val WITHOUT_ABBREVS  : tactic -> tactic
+
+  (* more simplification variants *)
+  val fsrw_tac : simpLib.ssfrag list -> thm list -> tactic
+  val simp : thm list -> tactic
+  val csimp : thm list -> tactic
+  val dsimp : thm list -> tactic
+  val lrw : thm list -> tactic
+  val lfs : thm list -> tactic
+  val lrfs : thm list -> tactic
+  val rw : thm list -> tactic
+  val fs : thm list -> tactic
+  val rfs : thm list -> tactic
+
+  (* useful quotation-based tactics (from Q) *)
+  val qx_gen_tac : term quotation -> tactic
+  val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
+  val qexists_tac : term quotation -> tactic
+  val qsuff_tac : term quotation -> tactic
+  val qid_spec_tac : term quotation -> tactic
+  val qspec_tac : term quotation * term quotation -> tactic
+  val qspec_then : term quotation -> thm_tactic -> thm -> tactic
+  val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
+  val qpat_assum : term quotation -> thm_tactic -> tactic
+  val qpat_abbrev_tac : term quotation -> tactic
+  val qmatch_abbrev_tac : term quotation -> tactic
+  val qho_match_abbrev_tac : term quotation -> tactic
+  val qmatch_rename_tac : term quotation -> tactic
+  val qmatch_assum_abbrev_tac : term quotation -> tactic
+  val qmatch_assum_rename_tac : term quotation -> tactic
+  val qmatch_asmsub_rename_tac : term quotation -> tactic
+  val qmatch_goalsub_rename_tac : term quotation -> tactic
+  val qcase_tac : term quotation -> tactic
+  val qabbrev_tac : term quotation -> tactic
+  val qunabbrev_tac : term quotation -> tactic
+  val unabbrev_all_tac : tactic
+  val qx_genl_tac : term quotation list -> tactic
+  val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
 end

@@ -9,9 +9,9 @@ Constant time equality check for constants.
 constant, equality.
 
 \DESCRIBE
-In many cases, one needs to check that a constant is an instance of 
+In many cases, one needs to check that a constant is an instance of
 the generic constant originally introduced into the signature, or that
-two constants are both type instantiations of another. This can be 
+two constants are both type instantiations of another. This can be
 achieved by taking the constants apart with {dest_thy_const} and comparing
 their name and theory. However, this is relatively inefficient. Instead,
 one can invoke {same_const}, which takes constant time.

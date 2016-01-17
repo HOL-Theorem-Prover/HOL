@@ -8,31 +8,31 @@ Compute the result of mapping a function down a list.
 \KEYWORDS
 conversion, list.
 
-\DESCRIBE 
+\DESCRIBE
 The function {MAP_CONV} is a parameterized conversion for computing the result
 of mapping a function {f:ty1->ty2} down a list {--`[t1;...;tn]`--} of elements of
 type {ty1}.  The first argument to {MAP_CONV} is expected to be a conversion
 that computes the result of applying the function {f} to an element of this
 list. When applied to a term {--`f ti`--}, this conversion should return a theorem
 of the form {|- (f ti) = ri}, where {ri} is the result of applying the function
-{f} to the element {ti}. 
+{f} to the element {ti}.
 
 Given an appropriate {conv}, the conversion {MAP_CONV conv} takes a
 term of the form {--`MAP f [t1;...;tn]`--} to the theorem
 {
-   |- MAP f [t1;...;tn] = [r1;...;rn] 
-} 
+   |- MAP f [t1;...;tn] = [r1;...;rn]
+}
 where {conv (--`f ti`--)} returns {|- (f ti) = ri} for {i} from {1} to {n}.
 
 \EXAMPLE
 
-The following is a very simple example in which no computation is done for 
+The following is a very simple example in which no computation is done for
 applications of the function being mapped down a list:
 {
    - MAP_CONV ALL_CONV (--`MAP SUC [1;2;1;4]`--);
    |- MAP SUC[1;2;1;4] = [SUC 1;SUC 2;SUC 1;SUC 4]
 }
-The result just contains applications of {SUC}, since the supplied 
+The result just contains applications of {SUC}, since the supplied
 conversion {ALL_CONV} does no evaulation.
 
 We now construct a conversion that maps {SUC n} for any numeral {n} to the
@@ -61,7 +61,7 @@ result of mapping the successor function down a list of numerals:
    |- MAP SUC[1;2;1;4] = [2;3;2;5]
 }
 
-\FAILURE 
+\FAILURE
 {MAP_CONV conv} fails if applied to a term not of the form
 {--`MAP f [t1;...;tn]`--}.  An application of {MAP_CONV conv} to a term
 {--`MAP f [t1;...;tn]`--} fails unless for all {ti} in the list {[t1;...;tn]},

@@ -9,8 +9,8 @@ Type of imperative streams.
 stream.
 
 \DESCRIBE
-The type {('a,'b) istream} is an abstract type of imperative streams. 
-These may be created with {mk_istream}, advanced by {next}, 
+The type {('a,'b) istream} is an abstract type of imperative streams.
+These may be created with {mk_istream}, advanced by {next},
 accessed by {state}, and reset with {reset}.
 
 \COMMENTS

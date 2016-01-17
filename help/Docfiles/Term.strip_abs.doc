@@ -10,7 +10,7 @@ lambda abstraction.
 
 \DESCRIBE
 If M is a term of the form {\v1...vn.N}, where {N} is not a lambda abstraction,
-then {strip_abs M} equals {([v1,...,vn],N)}. Otherwise, the result 
+then {strip_abs M} equals {([v1,...,vn],N)}. Otherwise, the result
 is {([],M)}.
 
 \FAILURE

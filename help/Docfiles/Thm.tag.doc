@@ -10,7 +10,7 @@ tag, theorem.
 
 \DESCRIBE
 An invocation {tag th}, where {th} has type {thm}, returns the tag
-of the theorem. If derivation of the theorem has appealed at some 
+of the theorem. If derivation of the theorem has appealed at some
 point to an oracle, the tag of that oracle will be embedded in the result.
 Otherwise, an empty tag is returned.
 

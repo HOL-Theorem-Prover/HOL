@@ -34,13 +34,13 @@ a symbolic identifier.
     - set_fixity ("/", Infixl 600);    (* tell the parser about "/" *)
     > val it = () : unit
 
-    - Define 
+    - Define
        `x/y = if y=0 then NONE else
-              if x<y then SOME 0 
+              if x<y then SOME 0
                else OPTION_MAP SUC ((x-y)/y)`;
 
     Definition failed! Can't make name for storing definition
-    because there is no alphanumeric identifier in: 
+    because there is no alphanumeric identifier in:
 
        "/".
 
@@ -55,7 +55,7 @@ theory.
 {
     - xDefine "div"
          `x/y = if y=0 then NONE else
-                if x<y then SOME 0 
+                if x<y then SOME 0
                  else OPTION_MAP SUC ((x-y)/y)`;
 
     Equations stored under "div_def".
@@ -65,7 +65,7 @@ theory.
         |- x / y =
            (if y = 0 then NONE
             else
-             (if x < y then SOME 0 
+             (if x < y then SOME 0
                        else OPTION_MAP SUC ((x - y) / y))) : thm
 }
 

@@ -33,7 +33,7 @@ then the result is:
 
 \FAILURE
 {PFORALL_OR_CONV} fails if it is applied to a term not of the form
-{!p. t \/ u}, or if it is applied to a term {!p. t \/ u} in which 
+{!p. t \/ u}, or if it is applied to a term {!p. t \/ u} in which
 variables from {p} are free in both {t} and {u}.
 
 \SEEALSO

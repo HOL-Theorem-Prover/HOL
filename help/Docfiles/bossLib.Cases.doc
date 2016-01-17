@@ -3,7 +3,7 @@
 \TYPE {Cases : tactic}
 
 \SYNOPSIS
-Performs case analysis on the variable of the leading universally 
+Performs case analysis on the variable of the leading universally
 quantified variable of the goal.
 
 \KEYWORDS
@@ -13,8 +13,8 @@ tactic
 BasicProvers
 
 \DESCRIBE
-When applied to a universally quantified goal {?- !u. G}, {Cases} performs a 
-case-split, based on the cases theorem for the type of {u} stored in 
+When applied to a universally quantified goal {?- !u. G}, {Cases} performs a
+case-split, based on the cases theorem for the type of {u} stored in
 the global {TypeBase} database.
 
 The cases theorem for a type {ty} will be of the form:
@@ -52,7 +52,7 @@ and the following function:
    - val foofn_def = Define `(foofn (Bar n) = n + 10) /\
                              (foofn (Baz x) = 10)`;
    > val foofn_def =
-       |- (!n. foofn (Bar n) = n + 10) /\ 
+       |- (!n. foofn (Bar n) = n + 10) /\
            !x. foofn (Baz x) = 10 : thm
 }
 then it is possible to make progress with the goal

@@ -103,6 +103,7 @@ That is, your configure command (the first thing that is done when building the 
 \begin{verbatim}
    ./configure --enable-shared
 \end{verbatim}
+Do not use the \texttt{--with-portable} option.
 
 When you have your ML system installed, and are in the root directory of the distribution, the next step is to run \texttt{smart-configure}.
 With Moscow~ML, this looks like:
@@ -157,6 +158,10 @@ Hol built successfully.
 \dol
 \end{alltt}
 \end{session}
+
+At this point, the system is build in your HOL directory, and cannot easily be moved to other locations.
+In other words, you should unpack HOL in the location/directory where you wish to access it for all your future work.
+
 
 
 \subsection{Overriding \texttt{smart-configure}}

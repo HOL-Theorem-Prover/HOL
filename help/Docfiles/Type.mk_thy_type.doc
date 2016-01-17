@@ -1,7 +1,7 @@
 \DOC mk_thy_type
 
 \BLTYPE
-mk_thy_type 
+mk_thy_type
        : {Thy:string, Tyop:string, Args:hol_type list} -> hol_type
 \ELTYPE
 
@@ -15,8 +15,8 @@ to {n}, then {mk_thy_type{Tyop=s, Thy=thy, Args=tyl}} returns the
 requested compound type.
 
 \FAILURE
-Fails if {s} is not the name of a type in theory {thy}, if {thy} is 
-not in the ancestry of the current theory, or if {n} is not 
+Fails if {s} is not the name of a type in theory {thy}, if {thy} is
+not in the ancestry of the current theory, or if {n} is not
 the length of {tyl}.
 
 \EXAMPLE
@@ -25,14 +25,14 @@ the length of {tyl}.
 > val it = `:'a -> bool` : hol_type
 
 - try mk_thy_type {Tyop="bar", Thy="foo", Args = []};
- 
+
 Exception raised at Type.mk_thy_type:
 "foo$bar" not found
 }
 
 
 \COMMENTS
-In general, {mk_thy_type} is to be preferred over {mk_type} because 
+In general, {mk_thy_type} is to be preferred over {mk_type} because
 HOL provides a fresh namespace for each theory ({mk_type} is a holdover
 from a time when there was only one namespace shared by all theories).
 

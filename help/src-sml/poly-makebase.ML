@@ -1,6 +1,3 @@
-val _ = PolyML.Compiler.prompt1:="";
-val _ = PolyML.Compiler.prompt2:="";
-val _ = PolyML.print_depth 0;
 val _ = use "../../tools-poly/poly/Binarymap.sig";
 val _ = use "../../tools-poly/poly/Binarymap.sml";
 val _ = use "../../tools-poly/poly/Binaryset.sig";
@@ -47,6 +44,4 @@ val _ = useB "../../sigobj/Systeml";
 
 val _ = use "makebase.sml";
 
-val _ = PolyML.shareCommonData makebase.main;
-val _ = PolyML.export ("makebase", makebase.main);
-
+val main = makebase.main

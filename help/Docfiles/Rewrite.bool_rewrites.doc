@@ -6,7 +6,7 @@
 Contains a number of basic equalities useful in rewriting.
 
 \DESCRIBE
-The variable {bool_rewrites} is a basic collection of rewrite rules 
+The variable {bool_rewrites} is a basic collection of rewrite rules
 useful in expression simplification. The current collection is
 {
    - bool_rewrites;
@@ -26,7 +26,7 @@ useful in expression simplification. The current collection is
 
 
 \USES
-The contents of {bool_rewrites} provide a standard basis upon which to 
+The contents of {bool_rewrites} provide a standard basis upon which to
 build bespoke rewrite rule sets for use by the functions in {Rewrite}.
 
 \SEEALSO

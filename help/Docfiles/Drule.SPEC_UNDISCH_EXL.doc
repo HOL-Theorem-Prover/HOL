@@ -16,7 +16,7 @@ In this example, assume that {a1} and {a3} (only) involve the free variable {x}.
 {
    |- !x. a1 ==> !y. a2 ==> !z. a3 ==> !u. t
    ----------------------------------------- SPEC_UNDISCH_EXL
-	   ?x. a1 /\ a3, a2 |- t 
+	   ?x. a1 /\ a3, a2 |- t
 }
 
 \FAILURE

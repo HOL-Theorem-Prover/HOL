@@ -4,26 +4,29 @@ fun dec r = (r := !r - 1)
 
 fun bslash_escape s = "\\" ^ Int.toString (Char.ord(String.sub(s,0)))
 
-datatype qfs = QFS of {output_stream : TextIO.outstream,
+datatype qfs = QFS of {output_stream : string -> unit,
+                       flush : unit -> unit,
                        comdepth : int ref,
                        pardepth : int ref,
                        antiquote: bool ref,
                        row      : int ref,
                        rowstart : int ref}
 
-fun newstate os = QFS {output_stream = os,
-                       comdepth = ref 0,
-                       pardepth = ref 0,
-                       antiquote = ref false,
-                       row = ref 0,
-                       rowstart = ref 0}
+fun newstate (os,flush) =
+  QFS {output_stream = os,
+       flush = flush,
+       comdepth = ref 0,
+       pardepth = ref 0,
+       antiquote = ref false,
+       row = ref 0,
+       rowstart = ref 0}
 
 fun resetstate (QFS{comdepth, pardepth, antiquote,...}) =
     (comdepth := 0; pardepth := 0; antiquote := false)
 
 
-fun ECHO (QFS {output_stream , ...}) s = TextIO.output(output_stream, s)
-fun print (QFS {output_stream, ...}) s = TextIO.output(output_stream, s)
+fun ECHO (QFS {output_stream , ...}) s = output_stream s
+fun print (QFS {output_stream, ...}) s = output_stream s
 
 fun makesafe c =
     if not (Char.isPrint c) then "\\" ^ Int.toString (Char.ord c)
@@ -54,7 +57,7 @@ fun locpragma (QFS {row, rowstart, ...}) (s,pos) off
 nised
        when prepended by a paren or symbol char.  --KW
        See cvs log comment at rev 1.2 of src/parse/base_tokens.lex *)
-fun flushOut (QFS {output_stream,...}) = TextIO.flushOut output_stream
+fun flushOut (QFS {flush,...}) = flush()
 
 fun newline (arg as QFS q) (yypos,yytext) =
   (print arg "\n";
@@ -82,7 +85,7 @@ fun eof arg = ("", 0)
 %%
 %structure filter
 %s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
-%arg (UserDeclarations.QFS {output_stream, comdepth, pardepth, antiquote, row, rowstart});
+%arg (UserDeclarations.QFS {output_stream, flush, comdepth, pardepth, antiquote, row, rowstart});
 %full
 
 letter = [A-Za-z];

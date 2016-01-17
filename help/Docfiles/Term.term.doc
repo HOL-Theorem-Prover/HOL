@@ -9,9 +9,9 @@ ML datatype of HOL terms.
 term.
 
 \DESCRIBE
-The ML abstract type {term} represents the set of HOL terms, 
+The ML abstract type {term} represents the set of HOL terms,
 which is essentially the simply typed lambda calculus of Church. A term
-may be a variable, a constant, an application of one term to another, 
+may be a variable, a constant, an application of one term to another,
 or a lambda abstraction.
 
 \COMMENTS

@@ -12,6 +12,10 @@ fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 
+val _ = if PolyML.Compiler.compilerVersionNumber < 551 then
+          die "Must be running PolyML with version >= 5.5.1\n"
+        else ()
+
 fun readdir s = let
   val ds = OS.FileSys.openDir s
   fun recurse acc =
@@ -130,7 +134,7 @@ val polyinstruction =
     \properly.\n\
     \This file should include a line of the form\n\n\
     \  val poly = \"path-to-poly\";"
-val (poly,polyc) =
+val (poly,polycopt) =
     if poly = "" then let
         val _ = determining "poly"
         val nm = CommandLine.name()
@@ -176,6 +180,11 @@ val (poly,polyc) =
                      "'\nas the location of the poly executable.\n"^
                      polyinstruction)
       | SOME p => (OS.Path.concat(p, "poly"), check_polyc p)
+
+val polyc =
+    case polycopt of
+        NONE => die ("Couldn't find polyc executable\n" ^ polyinstruction)
+      | SOME p => p
 
 val polylibsister = let
   val p as {arcs,isAbs,vol} = OS.Path.fromString poly
@@ -236,7 +245,7 @@ fun optverdict (prompt, optvalue) =
 
 verdict ("OS", OS);
 verdict ("poly", poly);
-optverdict ("polyc", polyc);
+verdict ("polyc", polyc);
 verdict ("polymllibdir", polymllibdir);
 verdict ("holdir", holdir);
 verdict ("DOT_PATH", DOT_PATH);

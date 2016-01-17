@@ -9,7 +9,7 @@ tactic, quantifier, existential, choose, witness.
 pair
 
 \SYNOPSIS
-Reduces paired existentially quantified goal to one involving a 
+Reduces paired existentially quantified goal to one involving a
 specific witness.
 
 \DESCRIBE

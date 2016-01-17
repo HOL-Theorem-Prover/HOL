@@ -4,7 +4,7 @@ set -e
 
 cd
 
-if [ -z "$SVNPOLY" ]
+if [ -z "$GITPOLY" ]
 then
 
 wget -q -O polyml5.5.2.tar.gz "http://sourceforge.net/projects/polyml/files/polyml/5.5.2/polyml.5.5.2.tar.gz/download"
@@ -14,23 +14,28 @@ cd polyml.5.5.2
 if [ -z "$ROOTPOLY" ]
 then
   echo "*** Installing PolyML in home directory"
-  ./configure --prefix=$HOME --enable-shared
+  ./configure --prefix=$HOME
   make
   make install
 else
   echo "*** Installing PolyML in root land directory"
-  ./configure --prefix=/usr/ --enable-shared
+  ./configure --prefix=/usr/
   make
   sudo make install
 fi
 
 else
 
-svn checkout svn://svn.code.sourceforge.net/p/polyml/code/trunk/polyml polyml
+git clone https://github.com/polyml/polyml.git
 cd polyml
-./configure --prefix=$HOME --enable-shared
+./configure --prefix=$HOME
 make
 make compiler
 make install
+
+if [ $(uname) = "Darwin" ]
+then
+    perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
+fi
 
 fi

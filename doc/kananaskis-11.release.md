@@ -34,6 +34,25 @@ New features:
   This shortcuts the current idiom, which requires the tactic to be highlighted manually, and then applied *via* `M-h e`.
   (The advantage of the latter is that one can select specific tactic sequences to be applied all at once.)
 
+-   Record updates can now be more polymorphic. For example, if one defined
+
+           Datatype`rcd = <| myset : α -> bool ; size : num |>`
+
+    one used to get back an update constant for the `myset` field:
+
+           rcd_myset_fupd : ((α -> bool) -> (α -> bool)) -> α rcd -> α rcd
+
+    Now, the same constant is
+
+           rcd_myset_fupd : ((α -> bool) -> (β -> bool)) -> α rcd -> β rcd
+
+    One might use this to define
+
+           Define`img (f:α->β) r = r with myset updated_by IMAGE f`
+
+    This definition would have previously been rejected.  ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/173))
+
+
 Bugs fixed:
 -----------
 

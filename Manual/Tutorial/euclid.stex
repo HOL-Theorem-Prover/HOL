@@ -3,54 +3,39 @@
 
 \setcounter{sessioncount}{0}
 
-In this chapter, we prove in \holn{} that for every number, there is a
-prime number that is larger, \ie, that the prime numbers form an
-infinite sequence. This proof has been excerpted and adapted from a
-much larger example due to John Harrison, in which he proved the $n =
-4$ case of Fermat's Last Theorem. The proof development is intended
-to serve as an introduction to performing high-level interactive proofs
-in \holn.\footnote{The proofs discussed below may be found in
+In this chapter, we prove in \holn{} that for every number, there is a prime number that is larger, \ie, that the prime numbers form an infinite sequence.
+This proof has been excerpted and adapted from a much larger example due to John Harrison, in which he proved the $n = 4$ case of Fermat's Last Theorem.
+The proof development is intended to serve as an introduction to performing high-level interactive proofs in \holn.%
+\footnote{The proofs discussed below may be found in
 \texttt{examples/euclid.sml} of the \HOL{} distribution.}
-Many of the details may be difficult to grasp for the novice reader;
-nonetheless, it is recommended that the example be followed through in
-order to gain a true taste of using \HOL{} to prove non-trivial theorems.
+Many of the details may be difficult to grasp for the novice reader; nonetheless, it is recommended that the example be followed through in order to gain a true taste of using \HOL{} to prove non-trivial theorems.
 
-Some tutorial descriptions of proof systems show the system performing
-amazing feats of automated theorem proving. In this example, we have
-\textit{not} taken this approach; instead, we try to show how one
-actually goes about the business of proving theorems in \holn{}: when
-more than one way to prove something is possible, we will consider the
-choices; when a difficulty arises, we will attempt to explain how to fight
-one's way clear.
+Some tutorial descriptions of proof systems show the system performing amazing feats of automated theorem proving.
+In this example, we have \textit{not} taken this approach; instead, we try to show how one actually goes about the business of proving theorems in \holn{}: when more than one way to prove something is possible, we will consider the choices; when a difficulty arises, we will attempt to explain how to fight one's way clear.
 
-One `drives' \holn{} by interacting with the ML top-level loop. In this
-interaction style, ML function calls are made to bring in
-already-established logical context, \eg, via \ml{load}; to define
-new concepts, \eg, via \ml{Hol\_datatype},  \ml{Define}, and \ml{Hol\_reln};
-and to perform proofs using the goalstack interface, and
-the proof tools from \ml{bossLib} (or if they fail to do the job, from
-lower-level libraries).
+One `drives' \holn{} by interacting with the ML top-level loop, perhaps mediated \emph{via} an editor such as \texttt{emacs} or \texttt{vim}.
+In this interaction style, ML function calls are made to bring in already-established logical context, \eg, \emph{via} \ml{load};
+to define new concepts, \eg, \emph{via} \ml{Datatype},  \ml{Define}, and \ml{Hol\_reln};
+and to perform proofs using the goalstack interface, and the proof tools from \ml{bossLib} (or if they fail to do the job, from lower-level libraries).
 
-Let's get started. First, we start the system, with the command \ml{<holdir>/bin/hol}.
-We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings
-from the \HOL{} theory of arithmetic are made available at the top level.
+Let's get started.
+First, we start the system, with the command \ml{<holdir>/bin/hol}.
+We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings from the \HOL{} theory of arithmetic are made available at the top level.
 \begin{session}
 \begin{verbatim}
-- open arithmeticTheory;
-  ...
+>>_ open arithmeticTheory;
 \end{verbatim}
 \end{session}
 We now begin the formalization. In order to define the concept of
 prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
-\begin{verbatim}
-- val divides_def = Define `divides a b = ?x. b = a * x`;
-
-Definition has been stored under "divides_def".
-> val divides_def = |- !a b. divides a b = ?x. b = a * x : thm
-\end{verbatim}
+\begin{alltt}
+>> val divides_def = Define`divides a b = ?x. b = a * x`;
+\end{alltt}
 \end{session}
+Note how we are using ASCII notation to input our terms, but the system responds with pleasant Unicode.
+Unicode characters can also be used in the input.
 
 The definition is added to the current theory with the name
 \ml{divides\_def}, and also returned from the invocation of
@@ -64,7 +49,7 @@ later reference in the session.
 We want to treat \ml{divides} as a (non-associating) infix:
 \begin{session}
 \begin{verbatim}
-- set_fixity "divides" (Infix(NONASSOC, 450));
+>> set_fixity "divides" (Infix(NONASSOC, 450));
 \end{verbatim}
 \end{session}
 Next we define the property of a number being \emph{prime}: a number $p$ is
@@ -72,15 +57,10 @@ prime if and only if it is not equal to $1$ and it has no divisors other
 than $1$ and itself:
 
 \begin{session}
-\begin{verbatim}
-- val prime_def =
-    Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
-
-Definition has been stored under "prime_def".
-> val prime_def =
-    |- !p. prime p = ~(p = 1) /\ !x. x divides p ==> (x = 1) \/ (x = p)
-    : thm
-\end{verbatim}
+\begin{alltt}
+>> val prime_def =
+    Define `prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
+\end{alltt}
 \end{session}
 
 That concludes the definitions to be made. Now we ``just'' have to prove
@@ -95,44 +75,36 @@ simpler problem of explaining how to prove the required theorems.
 \paragraph{Proof tools}
 The development will illustrate that there is often more than one way to
 tackle a HOL proof, even if one has only a single (informal) proof in
-mind. In this example, we often \emph{find} proofs by using
-the rewriter \ml{RW\_TAC} to unwind definitions and perform basic
-simplifications, often reducing a goal to its essence.
+mind.
+In this example, we often \emph{find} proofs by using the rewriter \ml{rw} to unwind definitions and perform basic simplifications, often reducing a goal to its essence.
 \begin{session}
-\begin{verbatim}
-RW_TAC;
-val it = fn :simpset -> thm list -> term list * term ->
-             (term list * term) list * (thm list -> thm)
-\end{verbatim}
+\begin{alltt}
+>> lrw;
+\end{alltt}
 \end{session}
-The ML type of \ml{RW\_TAC} is
-\ml{:simpset -> thm list -> tactic}.\footnote{Unfortunately, the MoscowML system does not print out
-the type of tactics in its abbreviated form.}
-When \ml{RW\_TAC} is applied to a \textit{simpset}---for this example it will
-always be \ml{arith\_ss}---and a list of theorems, the
-theorems will be added to the simpset as supplementary rewrite rules.
-We will see that \ml{arith\_ss} is also somewhat knowledgeable about
+When \ml{lrw} is applied to a list of theorems, the theorems will be added to \HOL{}'s built-in database of useful facts as supplementary rewrite rules.
+We will see that \ml{rw} is also somewhat knowledgeable about
 arithmetic.\footnote{Linear arithmetic especially: purely universal
 formulas involving the operators {\tt SUC}, $+$, $-$, numeric
 literals, $<$, $\leq$, $>$, $\geq$, $=$, and multiplication by numeric
 literals.}
-Sometimes simplification with \ml{RW\_TAC} proves the goal immediately.
+Sometimes simplification with \ml{rw} proves the goal immediately.
 Often however, we are left with a goal that requires some study before one
-realizes what lemmas are needed to conclude the proof. Once these lemmas
-have been proven, or located in ancestor theories,
-\ml{METIS\_TAC}\footnote{\ml{METIS\_TAC}
-performs resolution-style first-order proof search.} can
-be invoked with them, with the expectation that it will find the right
-instantiations needed to finish the proof. Note that these two operations,
-simplification and resolution-style automatic proof search, will not suffice to
-perform all the proofs in this example; in particular, our development will
-also need case analysis and induction.
+realizes what lemmas are needed to conclude the proof.
+Once these lemmas have been proven, or located in ancestor theories,
+\ml{metis\_tac}%
+\footnote{The \ml{metis\_tac} tactic performs resolution-style first-order proof search.}
+can be invoked with them, with the expectation that it will find the right instantiations needed to finish the proof.
+Note that these two operations, simplification and resolution-style
+automatic proof search, will not suffice to perform all the proofs in
+this example; in particular, our development will also need case
+analysis and induction.
 
 \paragraph{Finding theorems}
 This raises the following question: how does one find the right lemmas
-and rewrite rules to use? This is quite a problem, especially since the number of
-ancestor theories, and the theorems in them,  is large. There are several
-possibilities
+and rewrite rules to use?
+This is quite a problem, especially since the number of ancestor theories, and the theorems in them,  is large.
+There are several possibilities
 \begin{itemize}
 \item The help system can be used to look up definitions and
 theorems, as well as proof procedures; for example, an invocation of
@@ -165,28 +137,20 @@ following, we will show how this is done in a few cases.
 
 We start by proving a number of theorems about the \verb+divides+
 relation.  We will see that each of these initial theorems can be
-proved with a single invocation of \ml{METIS\_TAC}. Both \ml{RW\_TAC}
-and \ml{METIS\_TAC} are quite powerful reasoners, and the choice of a
+proved with a single invocation of \ml{metis\_tac}. Both \ml{rw}
+and \ml{metis\_tac} are quite powerful reasoners, and the choice of a
 reasoner in a particular situation is a matter of experience.  The
-major reason that \ml{METIS\_TAC} works so well is that \verb+divides+
-is defined by means of an existential quantifier, and \ml{METIS\_TAC}
+major reason that \ml{metis\_tac} works so well is that \verb+divides+
+is defined by means of an existential quantifier, and \ml{metis\_tac}
 is quite good at automatically instantiating existentials in the
 course of proof. For a simple example, consider proving $\forall x.\
 x\; \mathtt{divides}\; 0$. A new proposition to be proved is entered
 to the proof manager via ``\ml{g}'', which starts a fresh goalstack:
 
 \begin{session}
-\begin{verbatim}
-- g `!x. x divides 0`;
-
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         !x. x divides 0
-
-     : proofs
-\end{verbatim}
+\begin{alltt}
+>> g `!x. x divides 0`;
+\end{alltt}
 \end{session}
 The proof manager tells us that it has only one proof to manage, and
 echoes the given goal.  Now we expand the definition of
@@ -194,409 +158,192 @@ echoes the given goal.  Now we expand the definition of
 keep distinct the $x$ of the goal and the $x$ in the definition of
 \ml{divides}:
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss [divides_def]);
-
-OK..
-1 subgoal:
-> val it =
-    ?x'. (x = 0) \/ (x' = 0)
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[divides_def]);
+\end{alltt}
 \end{session}
 It is of course quite easy to instantiate the existential quantifier by
 hand.
 \begin{session}
-\begin{verbatim}
-- e (EXISTS_TAC ``0``);
-
-OK..
-1 subgoal:
-> val it =
-    (x = 0) \/ (0 = 0)
-\end{verbatim}
+\begin{alltt}
+>> e (qexists_tac `0`);
+\end{alltt}
 \end{session}
 Then a simplification step finishes the proof.
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
-
-Goal proved.
-|- (x = 0) \/ (0 = 0)
-
-Goal proved.
-|- ?x'. (x = 0) \/ (x' = 0)
-> val it =
-    Initial goal proved.
-    |- !x. x divides 0
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[]);
+\end{alltt}
 \end{session}
 
-What just happened here? The application of \ml{RW\_TAC} to the goal
-decomposed it to an empty list of subgoals; in other words the goal was
-proved by \ml{RW\_TAC}.  Once a goal has been proved, it is popped off
-the goalstack, prettyprinted to the output, and the theorem becomes
-available for use by the level of the stack. When all the sub-goals
-required by \textit{that} level are proven, the corresponding goal at
-that level can be proven too.  This `unwinding' process continues until
-the stack is empty, or until it hits a goal with more than one remaining
-unproved subgoal. This process may be hard to
-visualize,\footnote{Perhaps since we have used a stack to implement what
-is notionally a tree!} but that doesn't matter, since the goalstack was
-expressly written to allow the user to ignore such details.
+What just happened here? The application of \ml{lrw} to the goal decomposed it to an empty list of subgoals; in other words the goal was proved by \ml{lrw}.
+Once a goal has been proved, it is popped off the goalstack, prettyprinted to the output, and the theorem becomes available for use by the level of the stack. When all the sub-goals required by \textit{that} level are proven, the corresponding goal at that level can be proven too.  This `unwinding' process continues until the stack is empty, or until it hits a goal with more than one remaining unproved subgoal.
+This process may be hard to visualize,\footnote{Perhaps since we have used a stack to implement what is notionally a tree!} but that doesn't matter, since the goalstack was expressly written to allow the user to ignore such details.
 
-If the three interactions are joined together with \ml{THEN} to
-form a single tactic, we can try the proof again from the
-beginning (using the \ml{restart} function) and this time it will
-take just one step:
+If the three interactions are joined together with \ml{\gt\gt} to form a single tactic, we can try the proof again from the beginning (using the \ml{restart} function) and this time it will take just one step:
 \begin{session}
-\begin{verbatim}
-- restart();
->   ...
+\begin{alltt}
+>>_ restart();
 
-- e (RW_TAC arith_ss [divides_def] THEN EXISTS_TAC ``0``
-     THEN RW_TAC arith_ss []);
-OK..
-
-> val it =
-    Initial goal proved.
-    |- !x. x divides 0
-\end{verbatim}
+>> e (lrw[divides_def] >> qexists_tac `0` >> lrw[]);
+\end{alltt}
 \end{session}
-We have seen one way to prove the theorem. However, as mentioned
-earlier, there is another: one can let \ml{METIS\_TAC} expand the
-definition of \ml{divides} and find the required instantiation for
-\verb+x'+ from the theorem \ml{MULT\_CLAUSES}.\footnote{You might
+We have seen one way to prove the theorem.
+However, as mentioned
+earlier, there is another: one can let \ml{metis\_tac} expand the definition of \ml{divides} and find the required instantiation for \verb+x'+ from the theorem \ml{MULT\_CLAUSES}.%
+\footnote{You might
   like to try typing \ml{MULT\_CLAUSES} into the interactive loop
   to see exactly what it states.}
 \begin{session}
-\begin{verbatim}
-- restart();
->   ...
+\begin{alltt}
+>>_ restart();
 
-- e (METIS_TAC [divides_def, MULT_CLAUSES]);
-OK..
-metis: r[+0+10]+0+0+0+1+2#
-> val it =
-    Initial goal proved.
-    |- !x. x divides 0
-\end{verbatim}
+>> e (metis_tac [divides_def, MULT_CLAUSES]);
+\end{alltt}
 \end{session}
-As it runs, \ml{METIS\_TAC} prints out some possibly interesting
-diagnostics. In any case, having done our proof inside the goalstack package,
-    we now want to have access to the theorem value that we have
-    proved.  We use the \ml{top\_thm} function to do this, and then
-    use \ml{drop} to dispose of the stack:
+As it runs, \ml{metis\_tac} prints out some possibly interesting diagnostics.
+In any case, having done our proof inside the goalstack package, we now want to have access to the theorem value that we have proved.
+We use the \ml{top\_thm} function to do this, and then use \ml{drop} to dispose of the stack:
 \begin{session}
-\begin{verbatim}
-- val DIVIDES_0 = top_thm();
-
-> val DIVIDES_0 = |- !x. x divides 0 : thm
-
-- drop();
-OK..
-> val it = There are currently no proofs. : proofs
-\end{verbatim}
+\begin{alltt}
+>> val DIVIDES_0 = top_thm();
+>> drop();
+\end{alltt}
 \end{session}
 
-We have used \ml{METIS\_TAC} in this way to prove the following
-collection of theorems about \ml{divides}. As mentioned previously, the
-theorems supplied to \ml{METIS\_TAC} in the following proofs did not
-(usually) come from thin air: in most cases some exploratory work with
-\ml{RW\_TAC} was done to open up definitions and see what lemmas would
-be required by \ml{METIS\_TAC}.
+We have used \ml{metis\_tac} in this way to prove the following collection of theorems about \ml{divides}.
+As mentioned previously, the theorems supplied to \ml{metis\_tac} in the following proofs did not (usually) come from thin air: in most cases some exploratory work with the simplifier (\ml{lrw}) was done to open up definitions and see what lemmas would be required by \ml{metis\_tac}.
+
+##use euclid-extras.ML
 
 \begin{description}
 \label{euclid:extra-proofs}
 \item [\small{({\it DIVIDES\_0\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 0+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
+ \verb+metis_tac [divides_def, MULT_CLAUSES]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ZERO\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. 0 divides x = (x = 0)+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_CLAUSES]+
+ \verb+metis_tac [divides_def, MULT_CLAUSES]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ONE\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides 1 = (x = 1)+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_CLAUSES, MULT_EQ_1]+
+ \verb+metis_tac [divides_def, MULT_CLAUSES, MULT_EQ_1]+
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_REFL\/})}]
 \begin{tabular}[t]{l}
 \verb+!x. x divides x+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_CLAUSES]+ \\
+ \verb+metis_tac [divides_def, MULT_CLAUSES]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_TRANS\/})}]
 \begin{tabular}[t]{l}
 \verb+!a b c. a divides b /\ b divides c ==> a divides c+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_ASSOC]+ \\
+ \verb+metis_tac [divides_def, MULT_ASSOC]+ \\
 \end{tabular}
 \item[\small{({\it DIVIDES\_ADD\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides b ==> d divides (a+b)| \\ \hline
- \verb|METIS_TAC [divides_def,LEFT_ADD_DISTRIB]|
+ \verb|metis_tac [divides_def,LEFT_ADD_DISTRIB]|
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_SUB\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a b. d divides a /\ d divides b ==> d divides (a-b)+ \\ \hline
- \verb+METIS_TAC [divides_def, LEFT_SUB_DISTRIB]+ \\
+ \verb+metis_tac [divides_def, LEFT_SUB_DISTRIB]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_ADDL\/})}]
 \begin{tabular}[t]{l}
 \verb|!d a b. d divides a /\ d divides (a+b) ==> d divides b| \\ \hline
- \verb+METIS_TAC [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
+ \verb+metis_tac [ADD_SUB, ADD_SYM, DIVIDES_SUB]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_LMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (x * a)+ \\ \hline
- \verb+METIS_TAC [divides_def, MULT_ASSOC, MULT_SYM]+ \\
+ \verb+metis_tac [divides_def, MULT_ASSOC, MULT_SYM]+ \\
 \end{tabular}
 
 \item[\small{({\it DIVIDES\_RMUL\/})}]
 \begin{tabular}[t]{l}
 \verb+!d a x. d divides a ==> d divides (a * x)+ \\ \hline
- \verb+METIS_TAC [MULT_SYM, DIVIDES_LMUL]+ \\
+ \verb+metis_tac [MULT_SYM, DIVIDES_LMUL]+ \\
 \end{tabular}
 
 \end{description}
 
 \noindent We'll assume that the above proofs have been performed, and
 that the appropriate ML names have been given to all of the theorems.
-Now we encounter a lemma about divisibility that doesn't succumb to a
-single invocation of \ml{METIS\_TAC}:
+Now we encounter a lemma about divisibility that doesn't succumb to just a
+single invocation of \ml{metis\_tac}:
 \begin{description}
 \item [\small{({\it DIVIDES\_LE\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. m divides n ==> m <= n \/ (n = 0)+ \\ \hline
-\verb+RW_TAC arith_ss [divides_def]+ \\
-\verb+   THEN Cases_on `x`+ \\
-\verb+   THEN RW_TAC arith_ss [MULT_CLAUSES]+ \\
+\verb+lrw[divides_def] >> lrw[]+ \\
 \end{tabular}
 \end{description}
-Let's see how this is proved. The easiest way to start is to simplify
-with the definition of \ml{divides}:
+Let's see how this is proved.
+The easiest way to start is to simplify with the definition of \ml{divides}:
 \begin{session}
-\begin{verbatim}
-- g `!m n . m divides n ==> m <= n \/ (n = 0)`;
->   ...
+\begin{alltt}
+>>_ g `!m n. m divides n ==> m <= n \/ (n = 0)`;
 
-- e (RW_TAC arith_ss [divides_def]);
-
-1 subgoal:
-> val it =
-    m <= m * x \/ (m * x = 0)
-\end{verbatim}
+>> e (lrw[divides_def]);
+\end{alltt}
 \end{session}
 
-Considering the goal, we basically have three choices: (1) find a
-collection of lemmas that together imply the goal and use
-\ml{METIS\_TAC}; (2) do a case split on $m$; or (3) do a case split on
-$x$. The first doesn't seem simple, because the goal doesn't really fit
-in the `shape' of any pre-proved theorem(s) that the author knows
-about. Although option (2) will be rejected in the end, let's try it
-anyway. To perform the case split, we use \verb+Cases_on+, which stands
-for ``find the given term in the goal and do a case split on the
-possible means of building it out of datatype constructors''. Since the
-occurrence of $m$ in the goal has type $num$, the cases considered will
-be whether $m$ is $0$ or a successor.
-\begin{session}
-\begin{verbatim}
-- e (Cases_on `m`);
-OK..
-2 subgoals:
-> val it =
-    SUC n <= SUC n * x \/ (SUC n * x = 0)
+This goal is a disappointing one to have the simplifier produce.
+Both disjuncts look as if they should simplify further:
+the first looks as if we should be able to divide through by \holtxt{m} on both sides of the inequality, and the second looks like something we could attack with the knowledge that one of two factors must be zero if a multiplication equals zero.
 
-    0 <= 0 * x \/ (0 * x = 0)
-\end{verbatim}
-\end{session}
-\noindent The first subgoal (the last one printed) is trivial:
+The relevant theorems justifying such steps have already been proved in \ml{arithmeticTheory}; something we can confirm with the generally useful \ml{DB.match} function
 
-\begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
 
-Goal proved.
-  ...
-
-Remaining subgoals:
-> val it =
-    SUC n <= SUC n * x \/ (SUC n * x = 0)
-\end{verbatim}
-\end{session}
-\noindent Let's try \ml{RW\_TAC} again:
-\begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
-1 subgoal:
-> val it =
-    SUC n <= x * SUC n \/ (x = 0)
-\end{verbatim}
-\end{session}
-The right disjunct has been simplified; however, the left disjunct has
-failed to expand the definition of multiplication in the expression
-$\mathtt{SUC}\ n * x$, which would have been convenient. In fact, it has
-changed it to $x * \mathtt{SUC}\ n$, which is inconvenient.
-Why, when \verb+arith_ss+ and hence \ml{RW\_TAC} is supposed to be expert in
-arithmetic? The answer is twofold: first, the recursive clauses for addition and
-multiplication are not in \verb+arith_ss+ because uncontrolled
-application of them by the rewriter seems, in general, to make some
-proofs \emph{more} complicated, rather than simpler; second, the simplifier
-will rearrange arithmetical terms to make some automated proofs simpler. So
-the absence of the recursive clauses for multiplication
-means that $\mathtt{SUC}\ n * x$ does not expand to $(n * x) + x$;
-instead, the rearrangement yields $x * \mathtt{SUC}\; n$. OK, so let's
-add in the definition of multiplication. This uncovers a new problem: how
-to locate this definition. The function
 \begin{holboxed}
 \begin{verbatim}
    DB.match : string list -> term
                 -> ((string * string) * (thm * class)) list
 \end{verbatim}
 \end{holboxed}
-
-\noindent
-is often helpful for such tasks. It takes a list of theory names, and
-a pattern, and looks in the list of theories for any theorem,
-definition, or axiom that has an instance of the pattern as a subterm.
+This function takes a list of theory names, and a pattern, and looks in the list of theories for any theorem, definition, or axiom that has an instance of the pattern as a subterm.
 If the list of theory names is empty, then all loaded theories are
-included in the search. Let's look in the theory of arithmetic for the
-subterm to be rewritten.
+included in the search.
+Let's look in the theory of arithmetic for the subterm to be rewritten.
 
 \begin{session}
-\begin{verbatim}
-- DB.match ["arithmetic"] ``SUC n * x``;
-
-> val it =
-   [(("arithmetic", "FACT"),
-     (|- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n, Def)),
-    (("arithmetic", "LESS_MULT_MONO"),
-     (|- !m i n. SUC n * m < SUC n * i = m < i, Thm)),
-    (("arithmetic", "MULT"),
-     (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
-    (("arithmetic", "MULT_CLAUSES"),
-     (|- !m n.
-           (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
-           (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
-    (("arithmetic", "MULT_LESS_EQ_SUC"),
-     (|- !m n p. m <= n = SUC p * m <= SUC p * n, Thm)),
-    (("arithmetic", "MULT_MONO_EQ"),
-     (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm)),
-    (("arithmetic", "ODD_OR_EVEN"),
-     (|- !n. ?m. (n = SUC (SUC 0) * m) \/ (n = SUC (SUC 0) * m + 1), Thm))]
-   : ...
-\end{verbatim}
+\begin{alltt}
+>> DB.match ["arithmetic"] ``m <= m * x``;
+\end{alltt}
 \end{session}
 
-For some, this returns slightly too much information; however, we can
-focus the search by stipulating that the pattern look like a rewrite
-rule:
-
+This is just the theorem we'd like to use.
+Using \ml{DB.match} again, you should now try to find the theorem that will simplify the other disjunct.
+Because both are so generally useful, \ml{lrw} already has both rewrites in its internal database, and all we need to do is rewrite once more to get those rewrites applied:
 \begin{session}
-\begin{verbatim}
-- DB.match [] ``SUC n * x = M``;
-
-> val it =
-    [(("arithmetic", "MULT"),
-      (|- (!n. 0 * n = 0) /\ !m n. SUC m * n = m * n + n, Def)),
-     (("arithmetic", "MULT_CLAUSES"),
-      (|- !m n.
-            (0 * m = 0) /\ (m * 0 = 0) /\ (1 * m = m) /\ (m * 1 = m) /\
-            (SUC m * n = m * n + n) /\ (m * SUC n = m + m * n), Thm)),
-     (("arithmetic", "MULT_MONO_EQ"),
-      (|- !m i n. (SUC n * m = SUC n * i) = m = i, Thm))] : ...
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[]);
+\end{alltt}
 \end{session}
 
-Either {\small\verb+arithmeticTheory.MULT+} or
-{\small\verb+arithmeticTheory.MULT_CLAUSES+} would be acceptable; we
-choose the latter.
-
+That was gratifyingly easy!
+The process of {\it finding\/} the proof has now finished, and all that remains is for the proof to be packaged up into the single tactic we saw above.
+Rather than use \ml{top\_thm} and the goalstack, we can bypass it and use the \ml{store\_thm} function.
+This function takes a string, a term and a tactic and applies the tactic to the term to get a theorem, and then stores the theorem in the current theory under the given name.
 \begin{session}
-\begin{verbatim}
-- b();
-  ...
-
-e (RW_TAC arith_ss [MULT_CLAUSES]);
-
-OK..
-1 subgoal:
-> val it =
-    SUC n <= x + n * x \/ (x = 0)
-\end{verbatim}
-\end{session}
-Now we see that, in order to make progress in the proof, we will have to
-do a case split on $x$ anyway, and that we should have split on it
-originally. Hence we backup. We will have to backup (undo) three times:
-\begin{session}
-\begin{verbatim}
-- b();
-> val it =
-    SUC n <= SUC n * x \/ (SUC n * x = 0)
-
-- b();
-> val it =
-    SUC n <= SUC n * x \/ (SUC n * x = 0)
-
-
-    0 <= 0 * x \/ (0 * x = 0)
-
-- b();
-> val it =
-    m <= m * x \/ (m * x = 0)
-\end{verbatim}
-\end{session}
-
-Now we can go forward and do case analysis on $x$. We will also make a
-compound tactic invocation, since we already know that we'll have to
-invoke \ml{RW\_TAC} in both branches of the case split. This can be
-done using \ml{THEN}.  When $t_1 \ \mbox{\ml{THEN}}\ t_2$ is applied
-to a goal $g$, first $t_1$ is applied to $g$, giving a list of new
-subgoals, then $t_2$ is applied to each member of the list. All goals
-resulting from these applications of $t_2$ are gathered together and
-returned.
-\begin{session}
-\begin{verbatim}
-- e (Cases_on `x` THEN RW_TAC arith_ss [MULT_CLAUSES]);
-OK..
-
-Goal proved.
-|- m <= m * x \/ (m * x = 0)
-> val it =
-    Initial goal proved.
-    |- !m n. m divides n ==> m <= n \/ (n = 0)
-\end{verbatim}
-\end{session}
-That was easy! Obviously making a case split on $x$ was the right
-choice. The process of {\it finding\/} the proof has now finished, and
-all that remains is for the proof to be packaged up into the single
-tactic we saw above.  Rather than use \ml{top\_thm} and the goalstack,
-we can bypass it and use the \ml{store\_thm} function.  This function
-takes a string, a term and a tactic and applies the tactic to the term
-to get a theorem, and then stores the theorem in the current theory
-under the given name.
-\begin{session}
-\begin{verbatim}
-- val DIVIDES_LE = store_thm (
+\begin{alltt}
+>> val DIVIDES_LE = store_thm(
      "DIVIDES_LE",
-     ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-     RW_TAC arith_ss  [divides_def]
-       THEN Cases_on `x`
-       THEN RW_TAC arith_ss  [MULT_CLAUSES]);
-
-> val DIVIDES_LE = |- !m n. m divides n ==> m <= n \/ (n = 0) : thm
-\end{verbatim}
+      ``!m n. m divides n ==> m <= n \/ (n = 0)``,
+      lrw[divides_def] >> lrw[]);
+\end{alltt}
 \end{session}
 Storing theorems in our script record of the session in this style
 (rather than with the goalstack) results in a more concise script, and
@@ -626,86 +373,70 @@ following\footnote{This and subsequent proofs use the theorems proved
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
-\verb+RW_TAC arith_ss [LESS_EQ_EXISTS]+ \\
-\verb+ THEN Induct_on `p`+ \\
-\verb+ THEN RW_TAC arith_ss [FACT,ADD_CLAUSES]+ \\
-\verb+ THENL [Cases_on `m`, ALL_TAC]+ \\
-\verb+ THEN METIS_TAC [FACT, DECIDE ``!x. ~(x < x)``,+ \\
-\verb+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
+\verb+lrw[LESS_EQ_EXISTS] >>+ \\
+\verb+Induct_on `p`+ >>+\\
+\verb!qcase_tac `m divides FACT (m + q)`+ >>!\\
+\verb+lrw[FACT,ADD_CLAUSES] >| [+ \\
+\verb+  Cases_on `m`, ALL_TAC+ \\
+\verb+] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,+ \\
+\verb+                DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
 \end{tabular}
 \end{description}
-We will examine this proof in detail, so we should first attempt to
-understand why the theorem is true. What's the underlying intuition?
-Suppose $0 < m \leq n$, and so $\mbox{\tt FACT}\ n = 1 * \cdots * m *
-\cdots * n$. To show $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$
-means exhibiting a $q$ such that $q * m = \mbox{\tt FACT}\ n$. Thus $q
-= \mbox{\tt FACT}\ n \div m$. If we were to take this approach to the
-proof, we would end up having to find and apply lemmas about $\div$.
+We will examine this proof in detail, so we should first attempt to understand why the theorem is true.
+What's the underlying intuition?
+Suppose $0 < m \leq n$, and so $\mbox{\tt FACT}\ n = 1 * \cdots * m * \cdots * n$.
+To show $m\ \mbox{\tt divides}\ (\mbox{\tt FACT}\ n)$ means exhibiting a $q$ such that $q * m = \mbox{\tt FACT}\ n$.
+Thus $q = \mbox{\tt FACT}\ n \div m$.
+If we were to take this approach to the proof, we would end up having to find and apply lemmas about $\div$.
 This seems to take us a little out of our way; isn't there a proof
-that doesn't use division? Well yes, we can prove the theorem by
-induction on $n - m$: in the base case, we will have to prove $n\;
-\mbox{\tt divides}\ (\mbox{\tt FACT}\; n)$, which ought to be easy; in
-the inductive case, the inductive hypothesis seems like it should give
-us what we need. This strategy for the inductive case is a bit vague,
-because we are trying to mentally picture a slightly complicated
-formula, but we can rely on the system to accurately calculate the
-cases of the induction for us. If the inductive case turns out to be
-not what we expect, we will have to re-think our approach.
+that doesn't use division?
+Well yes, we can prove the theorem by induction on $n - m$: in the base case, we will have to prove $n\; \mbox{\tt divides}\ (\mbox{\tt FACT}\; n)$, which ought to be easy; in the inductive case, the inductive hypothesis seems like it should give us what we need.
+This strategy for the inductive case is a bit vague, because we are trying to mentally picture a slightly complicated formula, but we can rely on the system to accurately calculate the cases of the induction for us.
+If the inductive case turns out to be not what we expect, we will have to re-think our approach.
 \begin{session}
-\begin{verbatim}
-- g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
-
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         !m n. 0 < m /\ m <= n ==> m divides FACT n
-\end{verbatim}
+\begin{alltt}
+>> g `!m n. 0 < m /\ m <= n ==> m divides (FACT n)`;
+\end{alltt}
 \end{session}
 Instead of directly inducting on $n-m$, we will induct on a witness
 variable, obtained by use of the theorem \verb+LESS_EQ_EXISTS+.
 \begin{session}
-\begin{verbatim}
-- LESS_EQ_EXISTS;
-> val it = |- !m n. m <= n = (?p. n = m + p) : thm
+\begin{alltt}
+>> LESS_EQ_EXISTS;
 
-- e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
-OK..
-1 subgoal:
-> val it =
-    m divides FACT (m + p)
-    ------------------------------------
-       0 < m
-\end{verbatim}
+>> e (lrw[LESS_EQ_EXISTS]);
+\end{alltt}
 \end{session}
-\noindent Now we induct on $p$:
+\noindent Now we want to induct on $p$, but before doing so, we should realise that the name $p$ has been chosen by the system.
+In this case, it has come from the theorem \ml{LESS\_EQ\_EXISTS}, and future changes to \HOL{} are unlikely to change this behaviour.
+Nonetheless, it is generally not good practice to rely on names chosen by the system.
+We can make our proof much more robust at the cost of slight wordiness by using the \ml{qcase\_tac} tactic:
 \begin{session}
-\begin{verbatim}
-- e (Induct_on `p`);
-OK..
-2 subgoals:
-> val it =
-    m divides FACT (m + SUC p)
-    ------------------------------------
-      0.  0 < m
-      1.  m divides FACT (m + p)
-
-    m divides FACT (m + 0)
-   ------------------------------------
-      0 < m
-\end{verbatim}
+\begin{alltt}
+> qcase_tac;
+val it = fn : term quotation -> tactic
+\end{alltt}
 \end{session}
-\noindent The first goal can obviously be simplified:
+This tactic takes a \emph{quotation} as an argument corresponding to a pattern that appears somewhere within the goal, and then renames the variables in the goal to match those in the pattern.
+Here we will rename to \holtxt{q} just to illustrate how we can choose whichever variables we like:
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
-1 subgoal:
-> val it =
-    m divides FACT m
-    ------------------------------------
-      0 < m
-\end{verbatim}
+\begin{alltt}
+>> e (qcase_tac `m divides FACT (m + q)`)
+\end{alltt}
+\end{session}
+And now we can perform the induction:
+\begin{session}
+\begin{alltt}
+>> e (Induct_on `q`);
+\end{alltt}
+\end{session}
+\noindent We now have two sub-goals to prove: a base case and a step case.
+The first goal the system expects us to prove is the lowest one printed (it's closest to the cursor), the base-case.
+This can obviously be simplified:
+\begin{session}
+\begin{alltt}
+>> e (lrw[]);
+\end{alltt}
 \end{session}
 \noindent Now we can do a case analysis on $m$: if it is $0$, we have a
 trivial goal; if it is a successor, then we can use the definition of
@@ -713,110 +444,56 @@ trivial goal; if it is a successor, then we can use the definition of
 \ml{DIVIDES\_REFL}.
 \begin{session}
 \begin{verbatim}
-- e (Cases_on `m`);
-OK..
-2 subgoals:
-> val it =
-    SUC n divides FACT (SUC n)
-    ------------------------------------
-      0 < SUC n
-
-    0 divides FACT 0
-    ------------------------------------
-      0 < 0
+>> e (Cases_on `m`);
 \end{verbatim}
 \end{session}
 
- Here the first sub-goal goal has an assumption that is false.  We
- can demonstrate this to the system by using the \ml{DECIDE}
-function to prove a simple fact about arithmetic (namely, that no
-number $x$ is less than itself), and then passing the resulting
-theorem to \ml{METIS\_TAC}, which can combine this with the
-contradictory assumption.\footnote{Note how the interactive system
-  prints out the proved theorem with \ml{[.]} before the
-  turnstile.  This notation indicates that a theorem has an
- assumption (the false $0 < 0$ in this case).}
+Here the first sub-goal goal has an assumption that is false.
+We can demonstrate this to the system by using the \ml{DECIDE} function to prove a simple fact about arithmetic (namely, that no number $x$ is less than itself), and then passing the resulting theorem to \ml{METIS\_TAC}, which can combine this with the contradictory assumption.
+
 
 \begin{session}
-\begin{verbatim}
-- e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
-OK..
-metis: r[+0+4]#
-
-Goal proved.
- [.] |- 0 divides FACT 0
-
-Remaining subgoals:
-> val it =
-    SUC n divides FACT (SUC n)
-    ------------------------------------
-      0 < SUC n
-\end{verbatim}
+\begin{alltt}
+>> e (metis_tac [DECIDE ``!x. ~(x < x)``]);
+\end{alltt}
 \end{session}
+
+Alternatively, we could trust that \HOL{}'s existing theories somewhere include the fact that less-then is irreflexive, find that theorem using \ml{DB.match} (using the pattern \holtxt{x~$<$~x}), and then quote that theorem-name to \ml{metis\_tac}.
+
+Another alternative would be to apply the simplifier directly to the sub-goal's assumptions.
+Certainly, the simplifier has already been primed with the irreflexivity of less-than, so this seems natural.
+This can be done with the \ml{fs} tactic:
+\begin{session}
+\begin{alltt}
+>> b();
+>> e (fs[]);
+\end{alltt}
+\end{session}
+
+
+
 Using the theorems identified above the remaining sub-goal can
 be proved with \ml{RW\_TAC}.
 
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
-OK..
-
-Goal proved.   ...
-
-Remaining subgoals:
-> val it =
-    m divides FACT (m + SUC p)
-    ------------------------------------
-      0.  0 < m
-      1.  m divides FACT (m + p)
-\end{verbatim}
-\end{session}
-This last step, namely the invocation of \ml{RW\_TAC},
-could also have been accomplished with \ml{METIS\_TAC}. Note that
-the only difference is the use of \ml{DIVIDES\_LMUL} in the simplifier
-\emph{versus} \ml{DIVIDES\_RMUL} in \ml{METIS\_TAC}. This is due to the
-already mentioned algebraic rearrangement of arithmetical terms in the simplifier.
-\begin{session}
-\begin{verbatim}
-- b();
-> ...
-
-- e (METIS_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
-OK..
-
-Goal proved.  ...
-\end{verbatim}
+\begin{alltt}
+>> e (lrw [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+\end{alltt}
 \end{session}
 Now we have finished the base case of the induction and can move to the
 step case. An obvious thing to try is simplification with the
 definitions of addition and factorial:
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
-
-OK..
-1 subgoal:
-> val it =
-    m divides FACT (m + p) * SUC (m + p)
-    ------------------------------------
-      0.  0 < m
-      1.  m divides FACT (m + p)
-\end{verbatim}
+\begin{alltt}
+>> e (lrw [FACT, ADD_CLAUSES]);
+\end{alltt}
 \end{session}
-\noindent And now, by \ml{DIVIDES\_RMUL} and the inductive hypothesis, we are
+\noindent And now, by \ml{DIVIDES\_LMUL} and the inductive hypothesis, we are
 done:
 \begin{session}
-\begin{verbatim}
-- e (METIS_TAC [DIVIDES_RMUL]);
-OK..
-metis: r[+0+5]+0+0+0+0+1#
-
-Goal proved.
-  ...
-> val it =
-    Initial goal proved.
-    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
-\end{verbatim}
+\begin{alltt}
+>> e (metis_tac [DIVIDES_RMUL]);
+\end{alltt}
 \end{session}
 We have finished the search for the proof, and now turn to the task of
 making a single tactic out of the sequence of tactic invocations we have
@@ -825,18 +502,19 @@ track of in a file or a text editor buffer. We would thus have something
 like the following:
 \begin{hol}
 \begin{verbatim}
-    e (RW_TAC arith_ss [LESS_EQ_EXISTS]);
-    e (Induct_on `p`);
+    e (lrw[LESS_EQ_EXISTS]);
+    e (qcase_tac `m divides FACT (m + q)`);
+    e (Induct_on `q`);
     (*1*)
-    e (RW_TAC arith_ss  []);
+    e (lrw[]);
     e (Cases_on `m`);
     (*1.1*)
-    e (METIS_TAC [DECIDE ``!x. ~(x < x)``]);
+    e (metis_tac [DECIDE ``!x. ~(x < x)``]);
     (*1.2*)
-    e (RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+    e (lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
     (*2*)
-    e (RW_TAC arith_ss [FACT, ADD_CLAUSES]);
-    e (METIS_TAC [DIVIDES_RMUL]);
+    e (lrw[FACT, ADD_CLAUSES]);
+    e (metis_tac [DIVIDES_RMUL]);
 \end{verbatim}
 \end{hol}
 \noindent
@@ -847,35 +525,34 @@ tactic:
 
 \begin{hol}
 \begin{verbatim}
-    RW_TAC arith_ss [LESS_EQ_EXISTS]
-     THEN Induct_on `p`
-     THENL [RW_TAC arith_ss [] THEN Cases_on `m`
-            THENL [METIS_TAC [DECIDE ``!x. ~(x < x)``],
-                   RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
-            RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]
+   lrw[LESS_EQ_EXISTS] >>
+   qcase_tac `m divides FACT (m + q)` >>
+   Induct_on `q` >| [
+     lrw[] >> Cases_on `m` >| [
+       METIS_TAC [DECIDE ``!x. ~(x < x)``],
+       lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+     ],
+     lrw[FACT, ADD_CLAUSES] >> metis_tac [DIVIDES_RMUL]
+   ]
 \end{verbatim}
 \end{hol}
 
 \noindent This can be tested to see that we have made no errors:
 
 \begin{session}
-\begin{verbatim}
-- restart();
-> ...
+\begin{alltt}
+>>_ restart();
 
-- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
-       THEN Induct_on `p` THENL
-       [RW_TAC arith_ss [] THEN Cases_on `m` THENL
-          [METIS_TAC [DECIDE ``!x. ~(x < x)``],
-           RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
-        RW_TAC arith_ss [FACT, ADD_CLAUSES] THEN METIS_TAC [DIVIDES_RMUL]]);
-OK..
-metis: r[+0+5]+0+0+0+0+1#
-metis: r[+0+4]#
-> val it =
-    Initial goal proved.
-    |- !m n. 0 < m /\ m <= n ==> m divides FACT n
-\end{verbatim}
+>> e (lrw[LESS_EQ_EXISTS] >>
+      qcase_tac `m divides FACT (m + q)` >>
+      Induct_on `q` >| [
+        lrw[] >> Cases_on `m` >| [
+          METIS_TAC [DECIDE ``!x. ~(x < x)``],
+          lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+        ],
+        lrw[FACT, ADD_CLAUSES] >> metis_tac [DIVIDES_RMUL]
+      ])
+\end{alltt}
 \end{session}
 
 For many users, this would be the end of dealing with this proof: the
@@ -884,26 +561,29 @@ tactic can now be packaged into an invocation of
 and attempts to prove the term using the supplied tactic.  It
 returns the proved theorem if the tactic succeeds.  It doesn't save
 the theorem to the developing theory.} or \ml{store\_thm} and that
-would be the end of it. However, another user might notice
-that this tactic could be shortened.
+would be the end of it.
+However, another user might notice that this tactic could be shortened.
 
 To start, both arms of the induction start with an invocation of
-\ml{RW\_TAC}, and the semantics of \ml{THEN} allow us to merge the
-occurrences of \ml{RW\_TAC} above the \ml{THENL}. The recast tactic
-is
+\ml{lrw}, and the semantics of \ml{\gt\gt} allow us to merge the
+occurrences of \ml{lrw} above the \ml{\gt|}.
+The recast tactic is
 \begin{hol}
 \begin{verbatim}
- RW_TAC arith_ss [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
-   THENL [Cases_on `m` THENL
-            [METIS_TAC [DECIDE ``!x. ~(x < x)``],
-             RW_TAC arith_ss [FACT, DIVIDES_LMUL, DIVIDES_REFL]],
-          METIS_TAC [DIVIDES_RMUL]]
+   lrw[LESS_EQ_EXISTS] >>
+   qcase_tac `m divides FACT (m + q)` >>
+   Induct_on `q` >> lrw[FACT, ADD_CLAUSES] >| [
+     Cases_on `m` >| [
+       metis_tac [DECIDE ``!x. ~(x < x)``],
+       lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+     ],
+     metis_tac [DIVIDES_RMUL]
+   ]
 \end{verbatim}
 \end{hol}
 (Of course, when a tactic has been revised, it should be tested to see
-if it still proves the goal!) Now recall that the use of \ml{RW\_TAC}
+if it still proves the goal!)
+Now recall that the use of \ml{RW\_TAC}
 in the base case could be replaced by a call to \ml{METIS\_TAC}. Thus
 it seems possible to merge the two sub-cases of the base case into a
 single invocation of \ml{METIS\_TAC}:

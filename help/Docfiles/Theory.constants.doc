@@ -10,7 +10,7 @@ The call
 {
    constants thy
 }
-where {thy} is an ancestor theory (the special string {"-"} 
+where {thy} is an ancestor theory (the special string {"-"}
 means the current theory), returns a list of all the constants in
 that theory.
 
@@ -28,7 +28,7 @@ current theory.
 }
 
 \SEEALSO
-Theory.types, Theory.current_axioms, 
+Theory.types, Theory.current_axioms,
 Theory.current_definitions, Theory.current_theorems.
 
 \ENDDOC

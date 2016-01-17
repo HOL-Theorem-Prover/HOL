@@ -11,7 +11,7 @@ I/O, exception
 \DESCRIBE
 The {Raise} function prints out information about its argument exception
 before re-raising it. It uses the value of {ERR_to_string} to format the
-message, and prints the information on the {outstream} held in 
+message, and prints the information on the {outstream} held in
 {ERR_outstream}.
 
 \FAILURE
@@ -23,7 +23,7 @@ Never fails, since it always succeeds in raising the supplied exception.
 
 Exception raised at Foo.bar:
 incomprehensible input
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 

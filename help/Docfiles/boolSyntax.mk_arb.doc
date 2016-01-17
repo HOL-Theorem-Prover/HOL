@@ -16,7 +16,7 @@ constant.
 Never fails.
 
 \COMMENTS
-{ARB} is a constant of type {'a}. It is sometimes used for 
+{ARB} is a constant of type {'a}. It is sometimes used for
 creating pseudo-partial functions.
 
 \SEEALSO

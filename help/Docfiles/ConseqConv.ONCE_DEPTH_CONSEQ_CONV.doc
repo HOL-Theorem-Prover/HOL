@@ -7,7 +7,7 @@
 Applies a consequence conversion at most once to a sub-terms of a term.
 
 \DESCRIBE
-While {DEPTH_CONSEQ_CONV c tm} applies {c} repeatedly, 
+While {DEPTH_CONSEQ_CONV c tm} applies {c} repeatedly,
 {ONCE_DEPTH_CONSEQ_CONV c tm} applies {c} at most once.
 
 \SEEALSO

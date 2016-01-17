@@ -95,7 +95,8 @@ val MOSMLDIR = ""
 val HAVE_BASIS2002 = false
 val OS = ""
 val POLY = ""
-val POLYC = NONE
+val POLYC = ""
+val POLY_VERSION = 0
 val POLYMLLIBDIR = ""
 val POLY_LDFLAGS = []
 val POLY_LDFLAGS_STATIC = []
@@ -108,6 +109,7 @@ val version = ""
 val ML_SYSNAME = ""
 val release = ""
 val DOT_PATH = ""
+val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = true
 local val cast : 'a -> int = Obj.magic

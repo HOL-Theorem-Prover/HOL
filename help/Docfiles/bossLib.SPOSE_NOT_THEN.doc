@@ -14,13 +14,13 @@ Simple tactics for contradiction proofs often simply negate the goal and
 place it on the assumption list. However, if the goal is quantified, as
 is often the case, then more processing is required in order to get it
 into a suitable form for subsequent work. {SPOSE_NOT_THEN ttac} negates
-the current goal, pushes the negation inwards, and applies {ttac} to it. 
+the current goal, pushes the negation inwards, and applies {ttac} to it.
 
 \FAILURE
 Never fails, unless {ttac} fails.
 
 \EXAMPLE
-Suppose we want to prove Euclid's theorem. 
+Suppose we want to prove Euclid's theorem.
 {
    !m. ?n. prime n /\ m < n
 }
@@ -41,6 +41,6 @@ and {SPOSE_NOT_THEN STRIP_ASSUME_TAC} results in
 
 \SEEALSO
 Tactic.CCONTR_TAC, Tactic.CONTR_TAC, Tactic.ASSUME_TAC,
-Tactic.STRIP_ASSUME_TAC. 
+Tactic.STRIP_ASSUME_TAC.
 
 \ENDDOC

@@ -1,0 +1,14 @@
+hol.state
+hol.state0
+Holmake
+build
+hol
+hol.bare
+hol.bare.noquote
+hol.noquote
+unquote
+hol.builder
+hol.builder0
+heapname
+buildheap
+*.bat

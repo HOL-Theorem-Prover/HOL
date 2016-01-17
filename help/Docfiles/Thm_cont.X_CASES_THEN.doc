@@ -59,7 +59,7 @@ used to split into 2 cases:
 {
    th = |- (?m. x = 2 * m) \/ (?m. x = (2 * m) + 1)
 }
-by the tactic 
+by the tactic
 {
    X_CASES_THEN [[Term`n:num`],[Term`n:num]] ASSUME_TAC th
 }

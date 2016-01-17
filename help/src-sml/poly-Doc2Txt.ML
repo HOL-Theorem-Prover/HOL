@@ -18,6 +18,4 @@ val _ = useB "ParseDoc";
 val _ = useB "../../sigobj/Systeml";
 val _ = use "Doc2Txt.sml";
 
-val _ = PolyML.shareCommonData Doc2Txt.main;
-val _ = PolyML.export ("Doc2Txt", Doc2Txt.main);
-
+val main = Doc2Txt.main;

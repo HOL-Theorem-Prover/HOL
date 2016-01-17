@@ -12,7 +12,9 @@ fun omega() = test_cases.perform_tests Omega.OMEGA_CONV Omega.OMEGA_TAC andalso
 val omega_result = (print "Omega Test regression tests\n"; omega())
 
 fun usage() =
-    (TextIO.output(TextIO.stdErr, "Testing Cooper's: bogus commandline\n");
+    (TextIO.output(TextIO.stdErr,
+                   "Testing Cooper's: bogus commandline: " ^
+                   String.concatWith " " (CommandLine.arguments()) ^ "\n");
      TextIO.flushOut TextIO.stdErr)
 
 val cooper_result =

@@ -20,7 +20,7 @@ alpha-equivalent, {ALPHA} returns the theorem {|- t1 = t1'}.
     |- t1 = t1'
 }
 
-The difference between {PALPHA} and {ALPHA} is that 
+The difference between {PALPHA} and {ALPHA} is that
 {PALPHA} is prepared to consider pair structures of different
 structure to be alpha-equivalent.
 In its most trivial case this means that {PALPHA} can consider
@@ -37,7 +37,7 @@ Fails unless the terms provided are alpha-equivalent.
 
 
 \COMMENTS
-Alpha-converting a paired abstraction to a nonpaired abstraction 
+Alpha-converting a paired abstraction to a nonpaired abstraction
 can introduce instances of the terms {FST} and {SND}.
 A paired abstraction and a nonpaired abstraction will be considered
 equivalent by {PALPHA} if the nonpaired abstraction contains all
@@ -57,7 +57,7 @@ For example:
 
    Exception raised at ??.failwith:
    PALPHA
-   ! Uncaught exception: 
+   ! Uncaught exception:
    ! HOL_ERR
 }
 

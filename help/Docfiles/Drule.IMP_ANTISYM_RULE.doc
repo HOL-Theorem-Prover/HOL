@@ -10,7 +10,7 @@ rule, implication, equality.
 
 \DESCRIBE
 When applied to the theorems {A1 |- t1 ==> t2} and {A2 |- t2 ==> t1},
-the inference rule {IMP_ANTISYM_RULE} returns the theorem 
+the inference rule {IMP_ANTISYM_RULE} returns the theorem
 {A1 u A2 |- t1 = t2}.
 {
    A1 |- t1 ==> t2     A2 |- t2 ==> t1

@@ -10,7 +10,7 @@ variable, type.
 
 \DESCRIBE
 An invocation {polymorphic ty} checks to see if {ty} has an occurrence
-of any type variable. It is equivalent in functionality to 
+of any type variable. It is equivalent in functionality to
 {not o null o type_vars}, but may be more efficient in some situations,
 since it can stop processing once it finds one type variable.
 

@@ -3,7 +3,7 @@
 \TYPE {CONSEQ_CONV_TAC : directed_conseq_conv -> tactic}
 
 \SYNOPSIS
-Reduces the goal using a consequence conversion. 
+Reduces the goal using a consequence conversion.
 
 \DESCRIBE
 {CONSEQ_CONV_TAC c} tries to strengthen a goal {P} using

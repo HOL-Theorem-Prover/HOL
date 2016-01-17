@@ -9,8 +9,8 @@ Infix operator for adding theorems into a simpset.
 simplification.
 
 \DESCRIBE
-It is occasionally necessary to extend an existing simpset {ss} with a  
-collection {rwlist} of new rewrite rules. To achieve this, one 
+It is occasionally necessary to extend an existing simpset {ss} with a
+collection {rwlist} of new rewrite rules. To achieve this, one
 applies the {&&} function via {ss && rwlist}.
 
 \FAILURE
@@ -25,8 +25,8 @@ Never fails.
 }
 
 \COMMENTS
-Of limited applicability since most of the tactics for rewriting 
-already include this functionality. However, applications of {ZAP_TAC} 
+Of limited applicability since most of the tactics for rewriting
+already include this functionality. However, applications of {ZAP_TAC}
 can benefit.
 
 \SEEALSO

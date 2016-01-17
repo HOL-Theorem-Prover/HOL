@@ -9,7 +9,7 @@ Maps a function over two lists to create one new list.
 {map2 f [x1,...,xn] [y1,...,yn]} returns {[f x1 y1,...,f xn yn]}.
 
 \FAILURE
-Fails if the two lists are of different lengths. Also fails if any 
+Fails if the two lists are of different lengths. Also fails if any
 {f xi yi} fails.
 
 \EXAMPLE

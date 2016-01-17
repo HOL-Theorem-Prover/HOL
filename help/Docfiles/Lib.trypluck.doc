@@ -19,7 +19,7 @@ this to happen, {f(xk)} must hold, and {f(xi)} must fail for {x1,...,xk-1}.
 
 \FAILURE
 If the input list is empty. Also fails if {f} fails on every member of the
-list. 
+list.
 
 \EXAMPLE
 {
