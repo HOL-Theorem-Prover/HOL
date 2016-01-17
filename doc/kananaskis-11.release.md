@@ -52,6 +52,17 @@ New features:
 
     This definition would have previously been rejected.  ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/173))
 
+    This change can cause **incompatibilities**.
+    If one wants the old behaviour, it should suffice to overload the record update syntax to use a more specific type.
+    For example:
+
+           val _ = gen_remove_ovl_mapping
+                     (GrammarSpecials.recfupd_special ^ "myset")
+                     ``λf x. rcd_myset_fupd f x``
+
+           val _ = Parse.add_record_fupdate(
+                 "myset", Term.inst[beta |-> alpha] ``rcd_myset_fupd``);
+
 -   PolyML “heaps” are now implemented with its `SaveState` technology, used hierarchically.
     This should make heaps smaller as they now only save deltas over the last used heap.
 
