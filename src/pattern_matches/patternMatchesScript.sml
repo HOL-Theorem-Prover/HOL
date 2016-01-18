@@ -1268,6 +1268,12 @@ val _ = add_rule{pp_elements = [HardSpace 1, TOK ".|", BreakSpace(1,2)],
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_endbinding_special}
 
-val _ = set_pmatch_use true
+val _ = add_rule{pp_elements = [HardSpace 1, TOK "when", BreakSpace(1,2)],
+                 fixity = Infix(NONASSOC,14),
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                 paren_style = OnlyIfNecessary,
+                 term_name = GrammarSpecials.case_when_special}
+
+(* val _ = set_pmatch_use true *)
 
 val _ = export_theory();;

@@ -35,6 +35,13 @@ sig
                               preterm_in_env -> preterm_in_env ->
                               preterm_in_env
 
+  val pm_make_case_arrow    : overload_info -> locn.locn ->
+                              { bvs : Absyn.absyn option,
+                                pat : preterm_in_env,
+                                grd : preterm_in_env option,
+                                rhs : preterm_in_env } ->
+                              preterm_in_env
+
   val binder_restrictions   : unit -> (string * string) list
   val associate_restriction : locn.locn -> string * string -> unit
   val delete_restriction    : locn.locn -> string -> unit

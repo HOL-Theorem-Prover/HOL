@@ -467,6 +467,18 @@ fun make_set_const oinfo l fname s E =
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
 
+fun mk_one_vstruct oinfo l (qvs0:(string*pretype)list) =
+  let
+    val qvs =
+        map (fn (bnd as (Name,Ty)) => fn E =>
+                ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l},
+                                      Body=b, Locn=l}),
+                 add_scope(bnd,E)))
+            (rev qvs0)
+  in
+    [make_vstruct oinfo l qvs NONE]
+  end
+
 fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
   val (_,(e1:env)) = tm1 empty_env
   val (_,(e2:env)) = tm2 empty_env
@@ -481,18 +493,12 @@ in
   case filter (fn (name,_) => mem name fv_names) init_fv of
     [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
   | quants => let
-      val quants' = map
-                      (fn (bnd as (Name,Ty)) =>
-                          fn E =>
-                             ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l(*ugh*)},
-                                                   Body=b, Locn=l}),
-                              add_scope(bnd,E)))
-                      (rev quants) (* make_vstruct expects reverse occ. order *)
       fun comma E = (gen_overloaded_const oinfo l ",", E)
     in
       list_make_comb l
                      [(make_set_const oinfo l "make_set_abs" "GSPEC"),
-                      (bind_term l [make_vstruct oinfo l quants' NONE]
+                      (bind_term l
+                                 (mk_one_vstruct oinfo l quants)
                                  (list_make_comb l [comma,tm1,tm2]))] E
     end
 end
@@ -517,6 +523,61 @@ in
                 Rand = ptm2,
                 Locn = loc}, E')
 end
+
+(* ----------------------------------------------------------------------
+    pm_make_case_arrow
+
+    If the bvs are present, the Absyn should be parsed into a var-struct
+    that will bind the remaining components.  If not, then the var-struct
+    should be built by extracting variables from the pat.  If the grd is
+    absent, then it turns into combin$K bool$T (ignoring bvs even if
+    present).
+   ---------------------------------------------------------------------- *)
+
+fun to_vstruct oinfo a =
+  let
+    open Absyn
+  in
+    case a of
+        APP(l, APP(_, IDENT(_, ","), t1), t2) =>
+          make_vstruct oinfo l (map (to_vstruct oinfo) [t1, t2]) NONE
+      | AQ (l,t) => make_aq_binding_occ l t
+      | IDENT(l,s) => make_binding_occ l s
+      | TYPED(l, t, pty) => make_vstruct oinfo l [to_vstruct oinfo t] (SOME pty)
+      | _ => raise ERRORloc "Parse_support" (locn_of_absyn a)
+                   "Bad variable structure"
+  end
+
+val unit_pty = Pretype.Tyop{Thy = "one", Tyop = "one", Args = []}
+
+fun pm_make_case_arrow oinfo loc {bvs,pat:preterm_in_env,grd,rhs} =
+  let
+    val vstruct : bvar_in_env list =
+        case bvs of
+            NONE =>
+            let
+              val (pat_ptm, patE) = pat empty_env
+              val pat_fv_names0 = #free patE
+              val qvs = case pat_fv_names0 of
+                            [] => [("_",unit_pty)]
+                          | vs => vs
+            in
+              mk_one_vstruct oinfo loc qvs
+            end
+          | SOME a => [to_vstruct oinfo a]
+    val guard =
+        case grd of
+            NONE => list_make_comb loc [make_qconst loc ("combin", "K"),
+                                        make_qconst loc ("bool", "T")]
+          | SOME g => bind_term loc vstruct g
+  in
+    list_make_comb loc [make_qconst loc ("patternMatches", "PMATCH_ROW"),
+                        bind_term loc vstruct pat,
+                        guard,
+                        bind_term loc vstruct rhs]
+  end
+
+
 
 
 (*---------------------------------------------------------------------------

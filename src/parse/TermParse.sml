@@ -197,14 +197,15 @@ local open Parse_support Absyn
       | _ => raise ERRORloc "Term" (locn_of_absyn t)
                             "Bad variable-structure"
 in
-  fun absyn_to_preterm_in_env oinfo t = let
+  fun absyn_to_preterm_in_env TmG t = let
+    val oinfo = term_grammar.overload_info TmG
     fun binder(VIDENT (l,s))    = make_binding_occ l s
       | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
                                                NONE
       | binder(VAQ (l,x))       = make_aq_binding_occ l x
       | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
     open parse_term Absyn Parse_support
-    val to_ptmInEnv = absyn_to_preterm_in_env oinfo
+    val to_ptmInEnv = absyn_to_preterm_in_env TmG
   in
     case t of
       APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
@@ -216,23 +217,72 @@ in
         to_ptmInEnv (APP(l, QIDENT(l, "pred_set", "GSPEC"),
                          LAM(l, to_vstruct t2, newbody)))
       end
-    | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) => let
+    | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) =>
+      let
+        fun every_case sing cons base ab =
+          case ab of
+              APP(l, APP(_, t0 as IDENT (_, casesplit), t1), t2) =>
+              let
+              in
+                if casesplit = GrammarSpecials.case_split_special then let
+                  val t1' = base t1
+                  val t2' = every_case sing cons base t2
+                in
+                  list_make_comb l [cons, t1', t2']
+                end
+                else sing (base ab)
+              end
+            | _ => sing (base ab)
       in
-        if caseform = GrammarSpecials.case_special then let
-            (* handle possible arrows in t2 *)
-            fun every_case base ab =
+        if caseform = GrammarSpecials.case_special then
+          if #pmatch_on (term_grammar.specials TmG) then
+            let
+              fun splitrow_opt_kR opn k ab =
                 case ab of
-                  APP(l, APP(_, t0 as IDENT (_, casesplit), t1), t2) => let
-                  in
-                    if casesplit = GrammarSpecials.case_split_special then let
-                        val t1' = every_case base t1
-                        val t2' = every_case base t2
-                      in
-                        list_make_comb l [to_ptmInEnv t0, t1', t2']
-                      end
-                    else base ab
-                  end
-                | _ => base ab
+                    APP(_, APP(_, t0 as IDENT (_, row_opn), t1), t2) =>
+                      if row_opn = opn then (SOME t1, k t2)
+                      else (NONE, k ab)
+                  | _ => (NONE, k ab)
+              fun splitrow_opt_kL opn k ab =
+                case ab of
+                    APP(_, APP(_, IDENT(_, row_opn), t1), t2) =>
+                      if row_opn = opn then (k t1, SOME t2)
+                      else (k ab, NONE)
+                  | _ => (k ab, NONE)
+              fun splitrow_kL opn k ab =
+                case ab of
+                    APP(l, APP(_, IDENT(_, row_opn), t1), t2) =>
+                      if row_opn = opn then (k t1, t2)
+                      else raise ERRORloc "Term" l
+                                 "Mal-formed case expression (no arrow)"
+                  | _ => raise ERRORloc "Term" l
+                               "Mal-formed case expression (no arrow)"
+              fun do_row a =
+                let
+                  open GrammarSpecials
+                  val (bvsopt, ((pat_a, grd_a), rhs_a)) =
+                      splitrow_opt_kR case_endbinding_special
+                                      (splitrow_kL
+                                         case_arrow_special
+                                         (splitrow_opt_kL case_when_special I))
+                                      a
+                in
+                  pm_make_case_arrow
+                    oinfo (locn_of_absyn a)
+                    {bvs = bvsopt, pat = to_ptmInEnv pat_a,
+                     grd = Option.map to_ptmInEnv grd_a,
+                     rhs = to_ptmInEnv rhs_a}
+                end
+              val cons_pt = make_qconst l ("list", "CONS")
+              fun sing pt =
+                list_make_comb l [cons_pt, pt, make_qconst l ("list", "NIL")]
+              val rows = every_case sing cons_pt do_row t2
+              val match_pt = make_qconst l ("patternMatches", "PMATCH")
+            in
+              list_make_comb l [match_pt, to_ptmInEnv t1, rows]
+            end
+          else let
+            (* handle possible arrows in t2 *)
             fun do_arrow ab =
                 case ab of
                   APP(l, APP(_, t0 as IDENT (_, casearrow), t1), t2) => let
@@ -245,9 +295,11 @@ in
                   end
                 | _ => raise ERRORloc "Term" (locn_of_absyn ab)
                                       "Mal-formed case expression (no arrow)"
+            val row_cons =
+                to_ptmInEnv (IDENT(l, GrammarSpecials.case_split_special))
           in
             list_make_comb l [to_ptmInEnv t0, to_ptmInEnv t1,
-                              every_case do_arrow t2]
+                              every_case (fn x => x) row_cons do_arrow t2]
           end
         else if String.isPrefix GrammarSpecials.recfupd_special caseform then
           let
@@ -287,11 +339,8 @@ in
   end
 end;
 
-fun absyn_to_preterm g a = let
-  val oinfo = term_grammar.overload_info g
-in
-  a |> absyn_to_preterm_in_env oinfo |> Parse_support.make_preterm
-end
+fun absyn_to_preterm g a =
+  a |> absyn_to_preterm_in_env g |> Parse_support.make_preterm
 
 fun preterm g tyg q = q |> absyn g tyg |> absyn_to_preterm g
 

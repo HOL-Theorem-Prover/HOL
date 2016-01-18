@@ -701,7 +701,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
             not (free_in vars guard) andalso
             not (free_in vars rh)) then (
           add_string "|||." >> add_break (1, 0)
-        ) else (          
+        ) else (
           add_string "|||" >>
           add_break (1, 0) >>
           sys (Top, Top, Top) (d - 1) vars >>
@@ -797,7 +797,7 @@ val PMATCH_ROW_magic_3_tm = mk_const("PMATCH_ROW_magic_3",
 val PMATCH_ROW_magic_4_tm = mk_const ("PMATCH_ROW_magic_4",
   ``:'a # bool # 'b -> 'a -> 'b option``);
 
-val _ = temp_add_rule{pp_elements = [TOK "~>"],
+(* val _ = temp_add_rule{pp_elements = [TOK "~>"],
                  fixity = Infix (NONASSOC, 3),
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
@@ -809,6 +809,7 @@ val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_2",
       paren_style = OnlyIfNecessary,
       block_style = (AroundEachPhrase,
         (PP.INCONSISTENT, 0))};
+*)
 
 val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
       fixity = Binder,
