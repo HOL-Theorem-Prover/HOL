@@ -1,0 +1,55 @@
+foo bar
+baz
+> val x = 10;
+val x = 10: int
+> x + 1;
+val it = 11: int
+> g `!x. 4 < x /\bs{} x < 10 ==>
+x < 20`;
+val it =
+   Proof manager status: 1 proof.
+1. Incomplete goalstack:
+     Initial goal:
+
+     \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
+\end{verbatim}
+
+\begin{session}
+> open arithmeticTheory;\quad\textit{\small\dots{}output elided\dots{}}
+> ADD_CLAUSES;
+val it =
+   |- (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
+   (m + SUC n = SUC (m + n)):
+   thm
+> load "bagTheory";
+val it = (): unit
+> bagTheory.BAG_IN_BAG_INSERT;
+val it = |- \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b:
+   thm
+This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
+
+> g `p \(\in\) set l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)`;
+<<HOL message: inventing new type variable names: 'a>>
+val it =
+   Proof manager status: 2 proofs.
+2. Incomplete goalstack:
+     Initial goal:
+
+     \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
+
+
+1. Incomplete goalstack:
+     Initial goal:
+
+     MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
+> ``3 <> 4``;
+val it = ``3 \(\ne\) 4``: term
+> type_of ``[]``;
+<<HOL message: inventing new type variable names: 'a>>
+val it = ``:\(\alpha\) list``: hol_type
+\end{session}
+> 3 +
+4;
+val it = 7: int
+foo
+bar

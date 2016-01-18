@@ -1,4 +1,13 @@
-EXTRA_CLEANS = polyscripter
+INCLUDES = ../../tools/cmp
+EXTRA_CLEANS = polyscripter testoutput1
+
+.PHONY: all tests
+
+all: polyscripter tests
 
 polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
 	$(POLYC) $< -o $@
+
+tests: polyscripter umap testinput1 expected1 $(dprot ../../tools/cmp/cmp.exe)
+	./polyscripter umap < testinput1 > testoutput1
+	../../tools/cmp/cmp.exe testoutput1 expected1

@@ -1,0 +1,25 @@
+foo bar
+baz
+>> val x = 10;
+>> x + 1;
+>> g `!x. 4 < x /\ x < 10 ==>
+          x < 20`;
+\end{verbatim}
+
+\begin{session}
+>>_ open arithmeticTheory;
+>> ADD_CLAUSES;
+
+>> load "bagTheory";
+>> bagTheory.BAG_IN_BAG_INSERT;
+
+This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
+
+>> g `p ∈ set l ⇒ ∃i. i < LENGTH l ∧ (p = EL i l)`;
+>> ``3 <> 4``;
+>> type_of ``[]``;
+\end{session}
+>> 3 +
+ 4;
+foo
+bar
