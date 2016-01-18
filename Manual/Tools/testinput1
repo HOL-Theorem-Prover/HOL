@@ -23,3 +23,11 @@ This case illustrates an interesting issue: the HOL system itself writes a messa
  4;
 foo
 bar
+
+   >> "indented string";
+
+   >> x + size "indented\
+    \string";
+   >> 10 +
+      20 +
+       4;

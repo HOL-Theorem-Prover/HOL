@@ -10,6 +10,8 @@ fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
        extra ^ General.exnMessage exn)
 
+val outputPrompt = ref ">"
+
 fun mkBuffer () = let
   val buf = ref ([] : string list)
   fun push s = buf := s :: !buf
@@ -158,26 +160,40 @@ fun transformOutput umap ws s =
     |> removeCruft
     |> addIndent ws
     |> deleteTrailingWhiteSpace
+    |> (fn s => ws ^ s)
+
+fun spaceNotNL c = Char.isSpace c andalso c <> #"\n"
 
 val getIndent =
   (Substring.string ## Substring.string)
-    o Substring.splitl Char.isSpace o Substring.full
+    o Substring.splitl spaceNotNL o Substring.full
 
 fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
   val (ws,line) = getIndent origline
   val indent = String.size ws
-  fun getRest acc =
+  val oPsize = size (!outputPrompt)
+  fun getRest userPromptSize acc =
     let
       val _ = advance lbuf
+      val handlePromptSize =
+        if userPromptSize > oPsize then
+          fn s => String.extract(s, userPromptSize - oPsize, NONE)
+        else
+          let
+            val ws_n =
+                CharVector.tabulate(oPsize - userPromptSize, fn _ => #" ")
+          in
+            fn s => ws_n ^ s
+          end
     in
       case current lbuf of
           NONE => String.concat (List.rev acc)
         | SOME s =>
           let
-            val (ws',s) = getIndent s
+            val (ws',_) = getIndent s
           in
             if indent < String.size ws'
-            then getRest (s::acc)
+            then getRest userPromptSize (handlePromptSize s::acc)
             else String.concat (List.rev acc)
           end
     end
@@ -207,7 +223,7 @@ in
   else if String.isPrefix ">>__" line then
     let
       val firstline = String.extract(line, 4, NONE)
-      val input = getRest [firstline]
+      val input = getRest 4 [firstline]
       val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
     in
       ("", NONE)
@@ -215,20 +231,20 @@ in
   else if String.isPrefix ">>_" line then
     let
       val firstline = String.extract(line, 3, NONE)
-      val input = getRest [firstline]
+      val input = getRest 3 [firstline]
       val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
-      (ws^">"^addIndent ws (removeNL (umunge umap input)), SOME (!elision_string1))
+      (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
     end
   else if String.isPrefix ">>" line then
     let
       val _ = obRST()
       val firstline = String.extract(line, 2, NONE)
-      val input = getRest [firstline]
+      val input = getRest 2 [firstline]
       val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
     in
-      (ws^">"^addIndent ws (umunge umap input), SOME (transformOutput umap ws raw_output))
+      (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
   else
     (advance lbuf; (origline, NONE))
