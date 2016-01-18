@@ -51,6 +51,7 @@ struct
   val case_special = "case__magic"
   val case_split_special = "case_split__magic"
   val case_arrow_special = "case_arrow__magic"
+  val case_endbinding_special = "case_endbinding__magic"
 
   open HolKernel
   val compilefn = ref (NONE : (term -> term) option)
