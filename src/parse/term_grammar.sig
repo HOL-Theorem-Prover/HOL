@@ -134,7 +134,8 @@ sig
                        lambda        : string list,
                        endbinding    : string,
                        restr_binders : (string option * string) list,
-                       res_quanop    : string}
+                       res_quanop    : string,
+                       pmatch_on     : bool}
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
   val specials       : grammar -> special_info

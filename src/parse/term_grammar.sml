@@ -133,7 +133,8 @@ type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
                      restr_binders : (string option * string) list,
-                     res_quanop : string}
+                     res_quanop : string,
+                     pmatch_on : bool}
 
 
 datatype grammar = GCONS of
@@ -264,14 +265,15 @@ end
 
 
 fun update_restr_binders rb
-  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
+  {lambda, endbinding, type_intro, restr_binders, res_quanop, pmatch_on} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-         restr_binders = rb, res_quanop = res_quanop}
+   restr_binders = rb, res_quanop = res_quanop, pmatch_on = pmatch_on}
 
 fun fupdate_restr_binders f
   {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = f restr_binders, res_quanop = res_quanop}
+   restr_binders = f restr_binders, res_quanop = res_quanop,
+   pmatch_on = pmatch_on}
 
 fun map_rrfn_rule f g r =
   case r of
@@ -462,7 +464,7 @@ val stdhol : grammar =
                         block_info = (PP.INCONSISTENT, 0),
                         cons = reccons_special, nilstr = recnil_special}])],
    specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
-               restr_binders = [], res_quanop = "::"},
+               restr_binders = [], res_quanop = "::", pmatch_on = false},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
    user_printers = (Net.empty, Binaryset.empty String.compare),
