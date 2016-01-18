@@ -136,6 +136,11 @@ sig
                        restr_binders : (string option * string) list,
                        res_quanop    : string,
                        pmatch_on     : bool}
+
+  val fupd_pmatch_on : (bool -> bool) -> (special_info -> special_info)
+  val fupd_lambda : (string list -> string list) ->
+                    (special_info -> special_info)
+
   val rules          : grammar -> (int option * grammar_rule) list
   val grammar_rules  : grammar -> grammar_rule list
   val specials       : grammar -> special_info

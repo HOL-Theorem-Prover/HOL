@@ -394,7 +394,8 @@ fun pp_term (G : grammar) TyG backend = let
   fun block x = backend_block backend x
   fun tystr ty =
       PP.pp_to_string 10000 (type_pp.pp_type TyG PPBackEnd.raw_terminal) ty
-  val {restr_binders,lambda,endbinding,type_intro,res_quanop} = specials G
+  val {restr_binders,lambda,endbinding,type_intro,
+       res_quanop,pmatch_on} = specials G
   val overload_info = overload_info G
   val spec_table =
       HOLset.addList (HOLset.empty String.compare, grammar_tokens G)

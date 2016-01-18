@@ -136,6 +136,13 @@ type special_info = {type_intro : string,
                      res_quanop : string,
                      pmatch_on : bool}
 
+fun fupd_pmatch_on f {lambda, endbinding, type_intro, restr_binders,
+                      res_quanop, pmatch_on} =
+    {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
+     restr_binders = restr_binders, res_quanop = res_quanop,
+     pmatch_on = f pmatch_on}
+
+
 
 datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
@@ -270,9 +277,16 @@ fun update_restr_binders rb
    restr_binders = rb, res_quanop = res_quanop, pmatch_on = pmatch_on}
 
 fun fupdate_restr_binders f
-  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
+  {lambda, endbinding, type_intro, restr_binders, res_quanop, pmatch_on} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
    restr_binders = f restr_binders, res_quanop = res_quanop,
+   pmatch_on = pmatch_on}
+
+fun fupd_lambda f
+  {type_intro,lambda,endbinding,restr_binders,res_quanop,pmatch_on}
+  =
+  {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
+   restr_binders = restr_binders, res_quanop = res_quanop,
    pmatch_on = pmatch_on}
 
 fun map_rrfn_rule f g r =
@@ -1037,13 +1051,14 @@ fun remove_numeral_form G c =
 
 fun merge_specials S1 S2 = let
   val {type_intro = typ1, lambda = lam1, endbinding = end1,
-       restr_binders = res1, res_quanop = resq1} = S1
+       restr_binders = res1, res_quanop = resq1, pmatch_on = pm1} = S1
   val {type_intro = typ2, lambda = lam2, endbinding = end2,
-       restr_binders = res2, res_quanop = resq2} = S2
+       restr_binders = res2, res_quanop = resq2, pmatch_on = pm2} = S2
 in
   if typ1 = typ2 andalso lam1 = lam2 andalso end1 = end2 andalso resq1 = resq2
   then
     {type_intro = typ1, lambda = lam1, endbinding = end1,
+     pmatch_on = pm1 orelse pm2,
      restr_binders = Lib.union res1 res2, res_quanop = resq1}
   else
     raise GrammarError "Specials in two grammars don't agree"
