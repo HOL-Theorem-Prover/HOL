@@ -114,6 +114,20 @@ val _ = case sgs of
             [([], t)] => (aconvdie "goal" t expected_result1; print "OK\n")
           | _ => die "FAILED!"
 
+val _ = tprint "Q.MATCH_GOALSUB_ABBREV_TAC 1"
+val gl1 = ([] : term list,
+          ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + a)``)
+val expected_result1 =
+    ``!x. x * SUC (SUC zero) < y * s * (y + a)``
+val expected_abbrev =
+    ``Abbrev(s = z + SUC zero)``
+val (sgs, _) = Q.MATCH_GOALSUB_ABBREV_TAC `y * s` gl1
+val _ = case sgs of
+            [([a], t)] => (aconvdie "assumption" a expected_abbrev;
+                           aconvdie "goal" t expected_result1;
+                           print "OK\n")
+          | _ => die "FAILED!"
+
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 2"
 val gl2 = ([] : term list,
            ``!x. x * SUC zero < y * (z + SUC zero) * (z + SUC (SUC zero))``)
@@ -148,6 +162,22 @@ val _ = case sgs of
                                 print "OK\n")
           | _ => die "FAILED!"
 
+val _ = tprint "Q.MATCH_ASMSUB_ABBREV_TAC 1"
+val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
+           ``x + y < SUC (SUC zero)``);
+val expected_a1 = ``Abbrev(two = SUC (SUC zero))``
+val expected_a2 = ``P (x:num) : bool``
+val expected_a3 = ``Q (x < SUC two) : bool``
+val expected_c = ``x + y < two``
+val (sgs, _) = Q.MATCH_ASMSUB_ABBREV_TAC `x < _ two` gl3
+val _ = case sgs of
+            [([a1, a2, a3], c)] =>
+              (aconvdie "assumption #1" a1 expected_a1;
+               aconvdie "assumption #2" a2 expected_a2;
+               aconvdie "assumption #3" a3 expected_a3;
+               aconvdie "goal conclusion" c expected_c;
+               print "OK\n")
+          | _ => die "FAILED!"
 
 val _ = tprint "Q.PAT_ABBREV_TAC (gh252)"
 val (sgs, _) = Q.PAT_ABBREV_TAC `v = I x` ([], ``I p /\ v``)

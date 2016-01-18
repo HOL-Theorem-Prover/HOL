@@ -346,6 +346,9 @@ fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
   markerLib.MATCH_ASSUM_ABBREV_TAC fv_set pattern
  end gl;
 
+fun make_abbrev_tac s =
+  MAP_EVERY markerLib.ABB' (markerLib.safe_inst_sort s)
+
 (*---------------------------------------------------------------------------*)
 (*    Renaming tactics                                                       *)
 (*---------------------------------------------------------------------------*)
@@ -401,7 +404,7 @@ end g
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_rename_helper {thetasz,ERR,pat,fvs_set} t g = let
+fun subterm_helper make_tac {thetasz,ERR,pat,fvs_set} t g = let
   fun test (bvs, subt) =
       case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
           SOME ((theta0, _), (tytheta,_)) =>
@@ -418,7 +421,7 @@ fun subterm_rename_helper {thetasz,ERR,pat,fvs_set} t g = let
         | NONE => NONE
 in
   case gen_find_term test t of
-      SOME theta => make_rename_tac theta
+      SOME theta => make_tac theta
     | NONE => raise ERR "No matching sub-term found"
 end g
 
@@ -435,12 +438,21 @@ in
 end
 
 fun MATCH_GOALSUB_RENAME_TAC q (g as (asl, t)) =
-    subterm_rename_helper (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
+    subterm_helper make_rename_tac (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
 
 fun MATCH_ASMSUB_RENAME_TAC q (g as (asl, t)) = let
   val args = prep_rename q "MATCH_ASMSUB_RENAME_TAC" g
 in
-  FIRST_ASSUM (subterm_rename_helper args o concl) g
+  FIRST_ASSUM (subterm_helper make_rename_tac args o concl) g
+end
+
+fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) =
+    subterm_helper make_abbrev_tac (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g
+
+fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) = let
+  val args = prep_rename q "MATCH_ASMSUB_ABBREV_TAC" g
+in
+  FIRST_ASSUM (subterm_helper make_abbrev_tac args o concl) g
 end
 
 fun FIND_CASE_TAC q =
