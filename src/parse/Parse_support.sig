@@ -31,7 +31,7 @@ sig
                               preterm_in_env * preterm_in_env ->
                               preterm_in_env
 
-  val make_case_arrow       : overload_info -> locn.locn ->
+  val old_make_case_arrow   : overload_info -> locn.locn ->
                               preterm_in_env -> preterm_in_env ->
                               preterm_in_env
 

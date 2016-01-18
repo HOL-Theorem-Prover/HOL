@@ -498,12 +498,15 @@ in
 end
 
 (* ----------------------------------------------------------------------
-    case arrow
+    old_make_case_arrow
 
-    Free variables in the first should bind in the second
+    Free variables in the first argument should bind in the second.
+
+    Return a preterm with case-arrow as operator, the pattern as the
+    first argument and the rhs as the second.
    ---------------------------------------------------------------------- *)
 
-fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
+fun old_make_case_arrow oinfo loc tm1 tm2 (E : env) = let
   val (ptm1, e1 : env) = tm1 empty_env
   val arr = gen_overloaded_const oinfo loc GrammarSpecials.case_arrow_special
   fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))

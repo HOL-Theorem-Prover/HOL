@@ -238,7 +238,8 @@ in
                   APP(l, APP(_, t0 as IDENT (_, casearrow), t1), t2) => let
                   in
                     if casearrow = GrammarSpecials.case_arrow_special then
-                      make_case_arrow oinfo l (to_ptmInEnv t1) (to_ptmInEnv t2)
+                      old_make_case_arrow oinfo l
+                          (to_ptmInEnv t1) (to_ptmInEnv t2)
                     else raise ERRORloc "Term" l
                                         "Mal-formed case expression (no arrow)"
                   end
