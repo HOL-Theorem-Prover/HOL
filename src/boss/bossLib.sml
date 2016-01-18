@@ -205,6 +205,8 @@ val rfs = rfsrw_tac []
      Q.MATCH_ASSUM_RENAME_TAC
   val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
   val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
+  val qmatch_asmsub_abbrev_tac = Q.MATCH_ASMSUB_ABBREV_TAC
+  val qmatch_goalsub_abbrev_tac = Q.MATCH_GOALSUB_ABBREV_TAC
   val qcase_tac = Q.FIND_CASE_TAC
 
   val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
