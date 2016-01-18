@@ -4022,7 +4022,9 @@ val _ = let open GrammarSpecials
         end
 
 val _ = add_rule{pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,2)],
-                 fixity = Infixr 10,
+                 fixity = Infix(NONASSOC, 12),
+                 (* allowing for insertion of .| infix at looser precedence
+                    level *)
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_arrow_special}
