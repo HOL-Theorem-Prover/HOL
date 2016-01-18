@@ -200,7 +200,11 @@ fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
 in
-  if String.isPrefix assertcmd line then
+  if String.isPrefix ">>>" line then
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+  else if String.isPrefix "###" line then
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+  else if String.isPrefix assertcmd line then
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)

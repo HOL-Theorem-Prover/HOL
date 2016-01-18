@@ -66,3 +66,7 @@ bar
      20 +
       4;
    val it = 34: int
+
+  >> is something I want passed “unchanged”
+
+##use should also be let through
