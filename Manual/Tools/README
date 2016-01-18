@@ -5,7 +5,7 @@ If it sees one such, it executes the Poly/ML compiler on that line, captures the
 
 ## Inline Options
 
-All of the following inline commands must begin the line in which they occur:
+All of the following inline commands must be the first non-whitespace on the line in which they occur.
 
 -   The usual `>>` command gets the input after this prompt read until the next line that begins with a non-space character.
 -   The `>>_` command gets the compiler to act on the accompanying input, and this input is printed out, but the output is elided

@@ -151,24 +151,35 @@ fun removeCruft s =
       NONE => s
     | SOME s' => removeCruft s'
 
-fun transformOutput umap s =
+fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
+
+fun transformOutput umap ws s =
   s |> umunge umap
     |> removeCruft
+    |> addIndent ws
     |> deleteTrailingWhiteSpace
 
+val getIndent =
+  (Substring.string ## Substring.string)
+    o Substring.splitl Char.isSpace o Substring.full
+
 fun process_line umap (obuf as (_, _, obRST)) line lbuf = let
+  val (ws,line) = getIndent line
+  val indent = String.size ws
   fun getRest acc =
     let
       val _ = advance lbuf
     in
       case current lbuf of
           NONE => String.concat (List.rev acc)
-        | SOME s => if String.size s > 1 andalso
-                       Char.isSpace (String.sub(s,0))
-                    then
-                      getRest (String.extract(s,1,NONE)::acc)
-                    else
-                      String.concat (List.rev acc)
+        | SOME s =>
+          let
+            val (ws',s) = getIndent s
+          in
+            if indent < String.size ws'
+            then getRest (s::acc)
+            else String.concat (List.rev acc)
+          end
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
@@ -191,7 +202,7 @@ in
       val _ = silentUse (linenum lbuf) fname
       val _ = advance lbuf
     in
-      ("\n", NONE)
+      ("", NONE)
     end
   else if String.isPrefix ">>__" line then
     let
@@ -199,7 +210,7 @@ in
       val input = getRest [firstline]
       val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
     in
-      ("\n", NONE)
+      ("", NONE)
     end
   else if String.isPrefix ">>_" line then
     let
@@ -208,7 +219,7 @@ in
       val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
-      (removeNL (umunge umap input), SOME (!elision_string1))
+      (ws^">"^addIndent ws (removeNL (umunge umap input)), SOME (!elision_string1))
     end
   else if String.isPrefix ">>" line then
     let
@@ -217,7 +228,7 @@ in
       val input = getRest [firstline]
       val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
     in
-      (umunge umap input, SOME (transformOutput umap raw_output))
+      (ws^">"^addIndent ws (umunge umap input), SOME (transformOutput umap ws raw_output))
     end
   else
     (advance lbuf; (line, NONE))
@@ -279,7 +290,7 @@ fun main () =
           in
             (case coutopt of
                 NONE => print i
-              | SOME out => print (">" ^ i ^ out));
+              | SOME out => print (i ^ out));
             recurse lb
           end
   in
