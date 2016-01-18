@@ -163,8 +163,8 @@ val getIndent =
   (Substring.string ## Substring.string)
     o Substring.splitl Char.isSpace o Substring.full
 
-fun process_line umap (obuf as (_, _, obRST)) line lbuf = let
-  val (ws,line) = getIndent line
+fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
+  val (ws,line) = getIndent origline
   val indent = String.size ws
   fun getRest acc =
     let
@@ -231,7 +231,7 @@ in
       (ws^">"^addIndent ws (umunge umap input), SOME (transformOutput umap ws raw_output))
     end
   else
-    (advance lbuf; (line, NONE))
+    (advance lbuf; (origline, NONE))
 end
 
 fun read_umap fname =
