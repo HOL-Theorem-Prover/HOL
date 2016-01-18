@@ -101,6 +101,7 @@ signature Parse = sig
 
   val remove_rules_for_term : string -> unit
   val remove_termtok : {term_name : string, tok : string} -> unit
+  val set_pmatch_use : bool -> unit
 
   (* overloading and records *)
 
@@ -173,6 +174,7 @@ signature Parse = sig
                               unit
   val temp_remove_user_printer : string ->
                                  (term * term_grammar.userprinter) option
+  val temp_set_pmatch_use : bool -> unit
 
   val try_grammar_extension : ('a -> 'b) -> 'a -> 'b
 

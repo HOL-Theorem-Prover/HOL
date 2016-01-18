@@ -565,6 +565,7 @@ in
   term_grammar_changed := true;
   type_grammar_changed := true
 end
+fun temp_set_term_grammar tmg = temp_set_grammars(type_grammar(), tmg)
 
 fun standard_mapped_spacing {term_name,tok,fixity}  = let
   open term_grammar  (* to get fixity constructors *)
@@ -586,10 +587,19 @@ fun standard_spacing name fixity =
 
 val std_binder_precedence = 0;
 
+fun temp_set_pmatch_use b =
+  temp_set_term_grammar
+    (fupdate_specials (fupd_pmatch_on (fn _ => b)) (term_grammar()))
+fun set_pmatch_use b =
+  let
+  in
+    temp_set_pmatch_use b ;
+    update_grms "set_pmatch_use"
+                ("temp_set_pmatch_use", Bool.toString b)
+  end
+
 structure Unicode =
 struct
-
-  fun temp_set_term_grammar tmg = temp_set_grammars(type_grammar(), tmg)
 
   val master_unicode_switch = ref true
   fun lift0 f = temp_set_term_grammar (f (term_grammar()))
@@ -622,6 +632,7 @@ struct
 
   val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
   val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
+
 
   structure UChar = UnicodeChars
 
