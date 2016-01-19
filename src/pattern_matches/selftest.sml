@@ -622,6 +622,17 @@ val _ = app test [
    ``PMATCH x [PMATCH_ROW (\u:one. 0) (K T) (\u:one. 3);
                PMATCH_ROW (\n:num. SUC n) (K T) (\n:num. 4)]``),
 
+  ("case (x : bool list) of [] => F | (x,xs) .| x::xs => x",
+   ``PMATCH x [PMATCH_ROW (\u:one. []:bool list) (K T) (\u:one. F);
+               PMATCH_ROW (\ (x:bool,xs:bool list). x::xs) (K T)
+                          (\ (x:bool,xs:bool list). x)]``),
+
+  ("(n:num) + case m of 0 => 3 | () .| SUC n => 10 | z => z",
+   ``(n:num) +
+     PMATCH m [PMATCH_ROW (\u:one. 0n) (K T) (\u:one. 3n);
+               PMATCH_ROW (\u:one. SUC n) (K T) (\u:one. 10);
+               PMATCH_ROW (\z:num. z) (K T) (\z:num. z)]``),
+
   ("case (y,x) of\
    \ | (NONE,[]) => 0\
    \ | (NONE,[T]) => 1\
