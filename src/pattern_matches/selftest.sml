@@ -30,8 +30,8 @@ let
              let
                 val thm_t = concl (valOf thm_opt);
                 val (t'_opt, r') = dest thm_t;
-             in                
-               (aconv r' (valOf r_opt)) andalso 
+             in
+               (aconv r' (valOf r_opt)) andalso
                case t'_opt of
                     SOME t' => (aconv t' t)
                   | _ => true
@@ -65,13 +65,13 @@ end;
 
 
 val test_conv = test_conv_gen (fn t => let
-  val (l, r) = dest_eq t 
+  val (l, r) = dest_eq t
 in
   (SOME l, r)
 end)
 
 val test_conseq_conv = test_conv_gen (fn t => let
-  val (p, c) = dest_imp_only t 
+  val (p, c) = dest_imp_only t
 in
   (SOME c, p)
 end)
@@ -84,10 +84,10 @@ let
         [QUOTE s] => s
       | _ => failwith "invalid input"
     val _ = print (if quiet then "``" else "Testing parsing '"^s^"'\n   ");
-    val ok =  
+    val ok =
        aconv t (Term q)
        handle HOL_ERR _ => false;
-        
+
     val quiet = quiet andalso ok
     val _ = if ok then
                print_with_style [FG Green] "OK "
@@ -166,7 +166,7 @@ val _ = test_parse q t
 (* Converting from existing decision trees                                    *)
 (******************************************************************************)
 
-val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV 
+val tc = test_conv "PMATCH_INTRO_CONV" PMATCH_INTRO_CONV
 
 val t = ``case x of (NONE, []) => 0``;
 val r_thm = SOME ``PMATCH (x :'a option # 'b list)
@@ -174,7 +174,7 @@ val r_thm = SOME ``PMATCH (x :'a option # 'b list)
        (\(uv :unit). T) (\(uv :unit). (0 :num))]``
 val _ = tc (t, r_thm);
 
-val t = ``case x of 
+val t = ``case x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -194,7 +194,7 @@ val _ = tc (t, r_thm);
 
 
 
-val tcn = test_conv "PMATCH_INTRO_CONV_NO_OPTIMISE" PMATCH_INTRO_CONV_NO_OPTIMISE 
+val tcn = test_conv "PMATCH_INTRO_CONV_NO_OPTIMISE" PMATCH_INTRO_CONV_NO_OPTIMISE
 
 val t = ``case x of (NONE, []) => 0``
 val r_thm = SOME ``PMATCH x
@@ -208,7 +208,7 @@ val r_thm = SOME ``PMATCH x
         (\((v2 :'a),(v1 :'b list)). (ARB :num))]``
 val _ = tcn (t, r_thm);
 
-val t = ``case x of 
+val t = ``case x of
    (NONE, []) => 0
  | (SOME 2, []) => 2
  | (SOME 3, (x :: xs)) => 3 + x
@@ -242,7 +242,7 @@ val _ = tcn (t, r_thm);
 
 val test =  test_conv "PMATCH_SIMP_CONV" PMATCH_SIMP_CONV
 
-val t = 
+val t =
    ``PMATCH ((a :num option),(x :num),(xs :num list))
     [PMATCH_ROW (\(_0 :num). ((NONE :num option),_0,([] :num list)))
        (\(_0 :num). T) (\(_0 :num). (0 :num));
@@ -502,12 +502,12 @@ val _ = test_conv "PMATCH_REMOVE_REDUNDANT_CONV" PMATCH_REMOVE_REDUNDANT_CONV (t
 (*********************************)
 
 val test_precond = test_conv_gen (fn t => let
-  val (p, c) = dest_imp_only t 
+  val (p, c) = dest_imp_only t
 in
   (NONE, p)
 end)
 
-val t = 
+val t =
    ``PMATCH ((x :'a option),(z :'b option))
     [PMATCH_ROW (\(uv :unit). ((NONE :'a option),(NONE :'b option)))
        (\(uv :unit). T) (\(uv :unit). (0 :num));
