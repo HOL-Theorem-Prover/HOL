@@ -106,6 +106,7 @@ end;
 (* Parsing Tests                                                              *)
 (******************************************************************************)
 
+(*
 val q = `CASE ((x : bool list)) OF [
     |||. [] ~> F;
     ||| (x, xs). x :: xs ~> x
@@ -156,9 +157,9 @@ val t =
        (\((z1 :bool),(z2 :bool list),(z3 :'b list)).
           LENGTH z3 > (5 :num))
        (\((z1 :bool),(z2 :bool list),(z3 :'b list)). (7 :num))]``;
-  
-val _ = test_parse q t
 
+val _ = test_parse q t
+*)
 
 
 (******************************************************************************)
@@ -584,3 +585,74 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
         (\((x :num),(y :num),(_3 :num list)). x + y)]``);
 
 
+(* ----------------------------------------------------------------------
+    Parser
+   ---------------------------------------------------------------------- *)
+
+open testutils
+val _ = Parse.set_pmatch_use true
+fun pel2string [] = ""
+  | pel2string (pLeft::rest) = "L" ^ pel2string rest
+  | pel2string (pRight::rest) = "R" ^ pel2string rest
+  | pel2string (pAbs::rest) = "A" ^ pel2string rest
+fun d2string (p,t1,t2) =
+  "   " ^ term_to_string t1 ^ " - " ^ term_to_string t2 ^
+  "  (" ^ pel2string p ^ ")\n"
+
+fun test(inp, expected) =
+  let
+    val _ = tprint ("Parsing "^inp)
+    val tm = Parse.Term [QUOTE inp]
+  in
+    if aconv tm expected then print "OK\n"
+    else
+      let
+        val diffs = term_diff expected tm
+      in
+        die ("FAILED!\n" ^ String.concat (map d2string diffs))
+      end
+  end
+
+val _ = app test [
+  ("case x of 0 => 3 | SUC n => n + 1",
+   ``PMATCH x [PMATCH_ROW (\u:one. 0) (K T) (\u:one. 3);
+               PMATCH_ROW (\n. SUC n) (K T) (\n. n + 1)]``),
+
+  ("case x of 0 => 3 | SUC _ => 4",
+   ``PMATCH x [PMATCH_ROW (\u:one. 0) (K T) (\u:one. 3);
+               PMATCH_ROW (\n:num. SUC n) (K T) (\n:num. 4)]``),
+
+  ("case (y,x) of\
+   \ | (NONE,[]) => 0\
+   \ | (NONE,[T]) => 1\
+   \ | (SOME T,[]) => 2\
+   \ | (SOME _, _) => 3\
+   \ | z .| (SOME _, z) => 4\
+   \ | (z1, z2:'a) .| (SOME _, z1) => 5\
+   \ | z .| (SOME T, z) when LENGTH x > 5 => 6\
+   \ | (z1, z2, z3:'b list) .| (SOME z1, z2) when LENGTH z3 > 5 => 7",
+   ``PMATCH ((y :bool option),(x :bool list))
+      [PMATCH_ROW (\ (uv :unit). ((NONE :bool option),([] :bool list)))
+         (K T) (\ (uv :unit). 0n);
+       PMATCH_ROW (\ (uv :unit). ((NONE :bool option),[T]))
+         (K T) (\ (uv :unit). 1n);
+       PMATCH_ROW (\ (uv :unit). (SOME T,([] :bool list))) (K T)
+         (\ (uv :unit). 2n);
+       PMATCH_ROW (\ ((xx :bool),(yy :bool list)). (SOME xx,yy))
+         (K T)
+         (\ ((xx :bool),(yy :bool list)). 3n);
+       PMATCH_ROW (\ ((z :bool list),(u2 :bool)). (SOME u2,z))
+         (K T)
+         (\ ((z :bool list),(u2 :bool)). 4n);
+       PMATCH_ROW (\ (((z1 :bool list),(z2 :'a)),(u3 :bool)). (SOME u3,z1))
+         (K T)
+         (\ (((z1 :bool list),(z2 :'a)),(u3 :bool)). 5n);
+       PMATCH_ROW (\ (z :bool list). (SOME T,z))
+         (\ (z :bool list). LENGTH x > 5n)
+         (\ (z :bool list). 6n);
+       PMATCH_ROW
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). (SOME z1,z2))
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``)
+
+]

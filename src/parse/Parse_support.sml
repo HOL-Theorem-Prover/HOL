@@ -169,7 +169,14 @@ end
  * Bound occurrences of variables.
  *---------------------------------------------------------------------------*)
 
-fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
+fun make_bvar l (s0,E0) =
+  let
+    val (s,E) = if all_uscores s0 then
+                  ("_" ^ Int.toString (#uscore_cnt E0), new_uscore E0)
+                else (s0,E0)
+  in
+    (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E)
+  end
 
 (* ----------------------------------------------------------------------
      Treatment of overloaded identifiers
@@ -469,7 +476,7 @@ fun make_set_const oinfo l fname s E =
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
 
-fun mk_one_vstruct oinfo l (qvs0:(string*pretype)list) =
+fun mk_one_vstruct oinfo l (qvs0:(string*pretype)list) : bvar_in_env =
   let
     val qvs =
         map (fn (bnd as (Name,Ty)) => fn E =>
@@ -478,7 +485,7 @@ fun mk_one_vstruct oinfo l (qvs0:(string*pretype)list) =
                  add_scope(bnd,E)))
             (rev qvs0)
   in
-    [make_vstruct oinfo l qvs NONE]
+    make_vstruct oinfo l qvs NONE
   end
 
 fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
@@ -500,7 +507,7 @@ in
       list_make_comb l
                      [(make_set_const oinfo l "make_set_abs" "GSPEC"),
                       (bind_term l
-                                 (mk_one_vstruct oinfo l quants)
+                                 [mk_one_vstruct oinfo l quants]
                                  (list_make_comb l [comma,tm1,tm2]))] E
     end
 end
@@ -536,6 +543,8 @@ end
     present).
    ---------------------------------------------------------------------- *)
 
+val unit_pty = Pretype.Tyop{Thy = "one", Tyop = "one", Args = []}
+
 fun to_vstruct oinfo a =
   let
     open Absyn
@@ -544,40 +553,54 @@ fun to_vstruct oinfo a =
         APP(l, APP(_, IDENT(_, ","), t1), t2) =>
           make_vstruct oinfo l (map (to_vstruct oinfo) [t1, t2]) NONE
       | AQ (l,t) => make_aq_binding_occ l t
-      | IDENT(l,s) => make_binding_occ l s
+      | IDENT(l,s) => if s = "()" orelse s = "" then
+                        mk_one_vstruct oinfo l [("_", unit_pty)]
+                      else
+                        make_binding_occ l s
       | TYPED(l, t, pty) => make_vstruct oinfo l [to_vstruct oinfo t] (SOME pty)
       | _ => raise ERRORloc "Parse_support" (locn_of_absyn a)
                    "Bad variable structure"
   end
 
-val unit_pty = Pretype.Tyop{Thy = "one", Tyop = "one", Args = []}
-
-fun pm_make_case_arrow oinfo loc {bvs,pat:preterm_in_env,grd,rhs} =
+fun pm_make_case_arrow oinfo loc {bvs,pat:preterm_in_env,grd,rhs} E =
   let
-    val vstruct : bvar_in_env list =
+    val vstruct : bvar_in_env =
         case bvs of
             NONE =>
             let
-              val (pat_ptm, patE) = pat empty_env
-              val pat_fv_names0 = #free patE
-              val qvs = case pat_fv_names0 of
+              val (_, patE) = pat E
+              val pat_fvs = Lib.set_diff (#free patE) (#free E)
+              val qvs = case pat_fvs of
                             [] => [("_",unit_pty)]
-                          | vs => vs
+                          | _ => pat_fvs
             in
               mk_one_vstruct oinfo loc qvs
             end
-          | SOME a => [to_vstruct oinfo a]
+          | SOME a =>
+            let
+              val a_vs = to_vstruct oinfo a
+              val (_, patE) = pat E
+              val pat_fvs = Lib.set_diff (#free patE) (#free E)
+              val uscore_fvs =
+                  List.filter (fn (n, _) => String.isPrefix "_" n) pat_fvs
+            in
+              case uscore_fvs of
+                  [] => a_vs
+                | _ => make_vstruct oinfo loc
+                                    [a_vs, mk_one_vstruct oinfo loc uscore_fvs]
+                                    NONE
+            end
     val guard =
         case grd of
             NONE => list_make_comb loc [make_qconst loc ("combin", "K"),
                                         make_qconst loc ("bool", "T")]
-          | SOME g => bind_term loc vstruct g
+          | SOME g => bind_term loc [vstruct] g
   in
     list_make_comb loc [make_qconst loc ("patternMatches", "PMATCH_ROW"),
-                        bind_term loc vstruct pat,
+                        bind_term loc [vstruct] pat,
                         guard,
-                        bind_term loc vstruct rhs]
-  end
+                        bind_term loc [vstruct] rhs]
+  end E
 
 
 
