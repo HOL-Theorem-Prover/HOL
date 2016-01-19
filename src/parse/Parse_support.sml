@@ -29,6 +29,8 @@ fun new_uscore {scope,free,uscore_cnt} =
     {scope = scope, free = free, uscore_cnt = uscore_cnt + 1}
 
 val empty_env = {scope=[], free=[], uscore_cnt = 0};
+fun fvars (E:env) = #free E
+fun bvars (E:env) = #scope E
 
 type preterm_in_env = env -> Preterm.preterm * env
 
