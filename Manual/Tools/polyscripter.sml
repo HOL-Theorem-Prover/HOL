@@ -224,6 +224,14 @@ in
     in
       ("", NONE)
     end
+  else if String.isPrefix ">>-" line then
+    let
+      val firstline = String.extract(line, 3, NONE)
+      val input = getRest 3 [firstline]
+      val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
+    in
+      ("", SOME (transformOutput umap ws raw_output))
+    end
   else if String.isPrefix ">>__" line then
     let
       val firstline = String.extract(line, 4, NONE)

@@ -9,7 +9,8 @@ All of the following inline commands must be the first non-whitespace on the lin
 
 -   The usual `>>` command gets the input after this prompt read until the next line that begins with a non-space character.
 -   The `>>_` command gets the compiler to act on the accompanying input, and this input is printed out, but the output is elided
--   The `>>__` command gets the compiler to act on the accompanying input, but nothing is printed out (strictly, this line is replaced by a blank line).
+-   The `>>__` command gets the compiler to act on the accompanying input, but nothing is printed out.
+-   The `>>-` command is similar to `>>_` except the input is suppressed while the output is printed out.
 -   The `##use` command gets the compiler to evaluate the `use` the filename.
     The filename is given after a single space character and is the rest of the line; it need not be quoted, and shouldn’t be followed by a semicolon.
     The compilation and evaluation of the filename is done entirely silently.
