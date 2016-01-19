@@ -1,6 +1,7 @@
 \documentclass[a4paper,10pt]{article}
 
 \usepackage{alltt}
+\usepackage{url}
 
 \addtolength{\voffset}{-1em}
 \addtolength{\textheight}{-2em}
@@ -41,7 +42,7 @@ reference manual.
 \item[~] Section \ref{tactics}:~~Common proof tactics
 \item[~] Section \ref{reading}:~~Further reading and general advice
 \end{enum}
-The text assumes that the reader has HOL4 installed from: {\tt\small http://hol.sf.net/}.
+The text assumes that the reader has HOL4 installed. You can download and install HOL4 following the instructions on \url{http://hol-theorem-prover.org}.
 
 \mysec{Interaction with HOL4 (via emacs or xemacs)\label{interaction}}
 
@@ -64,21 +65,18 @@ Restart emacs to make these changes take effect.
 \begin{enum}
 \item Start emacs.
 \item Press {\tt C-x C-f} to open a file for your proof script.
-\item Press {\tt C-x 3} to split the emacs window into two columns.
-\item Press {\tt M-h h} to start HOL4.
-\item Press {\tt C-x o} to move cursor to the other window (where we type).
+\item Press {\tt C-h 3} to split the emacs window into two columns and start HOL4.
 \end{enum}
 The HOL window should look something like this:
 \begin{code}
------------------------------------------------------------------
-       HOL-4 [Kananaskis 5 (built Thu Feb 21 08:37:11 2008)]
+---------------------------------------------------------------------
+       HOL-4 [Kananaskis 11 (stdknl, built Fri Jan 15 10:58:28 2016)]
 
        For introductory HOL help, type: help "hol";
------------------------------------------------------------------
-
-[loading theories and proof tools ............. ]
-[closing file "/local/scratch/user/HOL/tools/end-init-boss.sml"]
--
+       To exit type <Control>-D
+---------------------------------------------------------------------
+[Use-ing configuration file /Users/myreen/.hol-config.sml]
+> > > > >
 \end{code}
 
 \mysubsec{Copying input into HOL4 (Opening a theory)\label{copy}}
@@ -169,13 +167,14 @@ Induct_on `n`                   (* comment: induction on n  *)
   ASM_SIMP_TAC bool_ss [MULT]   (* comment: simplify goal   *)
   DECIDE_TAC                    (* comment: solve step case *)
 \end{code}
-Tactics can be pieced together for {\tt prove} using {\tt THEN} and {\tt THENL}:
+Tactics can be pieced together for {\tt prove} using {\tt THEN} and {\tt THEN1}. {\tt THEN} is an infix that composes tactics. {\tt THEN1} \emph{tac} proves the first subgoal using \emph{tac}.
 \begin{code}
-val LESS_EQ_MULT = prove({`}` !n. n <= n * n {`}`,
-  Induct_on `n` THENL [
-    DECIDE_TAC,
-    ASM_SIMP_TAC bool_ss [MULT] THEN
-    DECIDE_TAC]);
+val LESS_EQ_MULT = prove(
+  {`}` !n. n <= n * n {`}`,
+  Induct_on `n`
+  THEN1 DECIDE_TAC
+  THEN1 (ASM_SIMP_TAC bool_ss [MULT]
+         THEN DECIDE_TAC]));
 \end{code}
 Copy the above into HOL4 using {\tt C-space} then
 {\tt M-h M-r}, as in Section~\ref{copy}.
@@ -221,7 +220,7 @@ val SQUARE_def = Define `SQUARE n = n * n`;
 Data-types are defined using {\tt Hol\_datatype}, \eg{} a binary tree
 which holds values of type {\tt 'a} (a type variable) at the leaves:
 \begin{code}
-val _ = Hol_datatype `TREE = LEAF of 'a | BRANCH of TREE => TREE`;
+val _ = Datatype `TREE = LEAF 'a | BRANCH TREE TREE`;
 \end{code}
 
 \noindent
@@ -247,7 +246,7 @@ Proofs and definitions are stored in files called scripts, \eg{} we
 can store the definitions from above in a file called {\tt
   mytreeScript.sml}, which should begin with the lines
 \begin{code}
-open HolKernel boolLib bossLib Parse;
+open HolKernel boolLib bossLib Parse lcsymtacs;
 val _ = new_theory "mytree";
 \end{code}
 and end with the line
