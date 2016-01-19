@@ -164,4 +164,32 @@ in
   save_thm_attrs "save_thm" (n,attrs,th)
 end
 end (* local *)
+
+datatype pel = pLeft | pRight | pAbs
+fun term_diff t1 t2 =
+  let
+    open Term HolKernel
+    fun recurse p t1 t2 =
+      if aconv t1 t2 then []
+      else
+        case (dest_term t1, dest_term t2) of
+            (COMB(f1,x1), COMB (f2,x2)) =>
+            if aconv f1 f2 then recurse (pRight :: p) x1 x2
+            else if aconv x1 x2 then recurse (pLeft :: p) f1 f2
+            else recurse (pLeft :: p) f1 f2 @ recurse (pRight :: p) x1 x2
+          | (LAMB(v1,b1), LAMB(v2,b2)) =>
+            if aconv v1 v2 then recurse (pAbs :: p) b1 b2
+            else if Type.compare(type_of v1,type_of v2) = EQUAL then
+              let val v1' = variant (free_vars b2) v1
+              in
+                recurse (pAbs :: p) b1 (subst [v2 |-> v1'] b2)
+              end
+            else recurse (pAbs :: p) b1 b2
+          | (CONST _, CONST _) => if same_const t1 t2 then []
+                                  else [(List.rev p,t1,t2)]
+          | _ => [(List.rev p,t1,t2)]
+  in
+    recurse [] t1 t2
+  end
+
 end;
