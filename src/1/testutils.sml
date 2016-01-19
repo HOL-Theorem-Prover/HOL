@@ -8,13 +8,18 @@ val linewidth = ref 80
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
 fun OK () = print "OK\n"
 
-fun crush w s =
-  if UTF8.size s <= w then
-    UTF8.padRight #" " w (s ^ " ... ")
-  else
-    (UTF8.substring(s,0,w-5) ^ " ... ")
+fun crush extra w s =
+  let
+    val exsize = UTF8.size extra
+    val desired_size = UTF8.size s + exsize
+  in
+    if desired_size <= w then
+      UTF8.padRight #" " w (s ^ extra)
+    else
+      UTF8.substring(s,0,w-exsize) ^ extra
+  end
 
-fun tprint s = print (crush 65 s)
+fun tprint s = print (crush " ...  " 68 s)
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =
