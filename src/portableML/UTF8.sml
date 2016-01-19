@@ -183,4 +183,21 @@ fun padRight c len s =
     else s ^ CharVector.tabulate(len - slen, fn _ => c)
   end
 
+fun substring (s,start,finish) =
+  let
+    fun recurse acc i s =
+      if i >= start andalso i < finish then
+        let
+          val ((c, _), rest) =
+              valOf (getChar s)
+              handle Option => raise Fail "Malformed UTF8 string"
+        in
+          recurse (c::acc) (i + 1) rest
+        end
+      else
+        String.concat (List.rev acc)
+  in
+    recurse [] 0 s
+  end
+
 end (* struct *)
