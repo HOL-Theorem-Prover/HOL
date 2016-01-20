@@ -634,6 +634,16 @@ val _ = app test [
                PMATCH_ROW (\u:one. SUC n) (\u:one. T) (\u:one. 10);
                PMATCH_ROW (\z:num. z) (\z:num. T) (\z:num. z)]``),
 
+  ("case x of 0 => 3 | () .| n => 4 | _ => 100",
+   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
+                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
+                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
+
+  ("case x of 0 => 3 | () .| n => 4 | x => 100",
+   ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
+                     PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
+                     PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
+
   ("case (y,x) of\
    \ | (NONE,[]) => 0\
    \ | (NONE,[T]) => 1\
@@ -690,6 +700,6 @@ fun testpp s =
 val _ = app testpp [
   "case x of 0 => 3 | SUC n => n",
   "case x of 0 => 4 | SUC _ => 10",
-  "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11" (* ,
-  "case x of 0 => 3 | () .| n => 4 | x => 100" *)
+  "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
+  "case x of 0 => 3 | () .| n => 4 | x => 100"
 ]
