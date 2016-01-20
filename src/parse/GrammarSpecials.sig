@@ -33,8 +33,6 @@ sig
   val case_special : string
   val case_split_special : string
   val case_arrow_special : string
-  val case_endbinding_special : string
-  val case_when_special : string
 
   val set_case_specials :
       ((Term.term -> Term.term) *

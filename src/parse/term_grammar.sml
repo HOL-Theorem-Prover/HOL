@@ -133,15 +133,7 @@ type special_info = {type_intro : string,
                      lambda : string list,
                      endbinding : string,
                      restr_binders : (string option * string) list,
-                     res_quanop : string,
-                     pmatch_on : bool}
-
-fun fupd_pmatch_on f {lambda, endbinding, type_intro, restr_binders,
-                      res_quanop, pmatch_on} =
-    {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-     restr_binders = restr_binders, res_quanop = res_quanop,
-     pmatch_on = f pmatch_on}
-
+                     res_quanop : string}
 
 
 datatype grammar = GCONS of
@@ -272,22 +264,14 @@ end
 
 
 fun update_restr_binders rb
-  {lambda, endbinding, type_intro, restr_binders, res_quanop, pmatch_on} =
+  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = rb, res_quanop = res_quanop, pmatch_on = pmatch_on}
+         restr_binders = rb, res_quanop = res_quanop}
 
 fun fupdate_restr_binders f
-  {lambda, endbinding, type_intro, restr_binders, res_quanop, pmatch_on} =
+  {lambda, endbinding, type_intro, restr_binders, res_quanop} =
   {lambda = lambda, endbinding = endbinding, type_intro = type_intro,
-   restr_binders = f restr_binders, res_quanop = res_quanop,
-   pmatch_on = pmatch_on}
-
-fun fupd_lambda f
-  {type_intro,lambda,endbinding,restr_binders,res_quanop,pmatch_on}
-  =
-  {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
-   restr_binders = restr_binders, res_quanop = res_quanop,
-   pmatch_on = pmatch_on}
+   restr_binders = f restr_binders, res_quanop = res_quanop}
 
 fun map_rrfn_rule f g r =
   case r of
@@ -478,7 +462,7 @@ val stdhol : grammar =
                         block_info = (PP.INCONSISTENT, 0),
                         cons = reccons_special, nilstr = recnil_special}])],
    specials = {lambda = ["\\"], type_intro = ":", endbinding = ".",
-               restr_binders = [], res_quanop = "::", pmatch_on = false},
+               restr_binders = [], res_quanop = "::"},
    numeral_info = [],
    overload_info = Overload.null_oinfo,
    user_printers = (Net.empty, Binaryset.empty String.compare),
@@ -1051,14 +1035,13 @@ fun remove_numeral_form G c =
 
 fun merge_specials S1 S2 = let
   val {type_intro = typ1, lambda = lam1, endbinding = end1,
-       restr_binders = res1, res_quanop = resq1, pmatch_on = pm1} = S1
+       restr_binders = res1, res_quanop = resq1} = S1
   val {type_intro = typ2, lambda = lam2, endbinding = end2,
-       restr_binders = res2, res_quanop = resq2, pmatch_on = pm2} = S2
+       restr_binders = res2, res_quanop = resq2} = S2
 in
   if typ1 = typ2 andalso lam1 = lam2 andalso end1 = end2 andalso resq1 = resq2
   then
     {type_intro = typ1, lambda = lam1, endbinding = end1,
-     pmatch_on = pm1 orelse pm2,
      restr_binders = Lib.union res1 res2, res_quanop = resq1}
   else
     raise GrammarError "Specials in two grammars don't agree"

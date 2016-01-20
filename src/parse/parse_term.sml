@@ -695,8 +695,7 @@ end
 
 fun parse_term (G : grammar) typeparser = let
   val Grules = grammar_rules G
-  val {type_intro, lambda, endbinding, restr_binders,
-       res_quanop, pmatch_on} = specials G
+  val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
   val overload_info = overload_info G
   val {casebar,caseof,casecase} = get_case_info G
