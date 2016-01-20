@@ -295,23 +295,21 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val m0_rename1 =
+   val m0_rmap =
       Lib.total
-        (fn "m0_prog$m0_PSR_N" => "n"
-          | "m0_prog$m0_PSR_Z" => "z"
-          | "m0_prog$m0_PSR_C" => "c"
-          | "m0_prog$m0_PSR_V" => "v"
-          | "m0_prog$m0_AIRCR_ENDIANNESS" => "endianness"
-          | "m0_prog$m0_CurrentMode" => "mode"
-          | "m0_prog$m0_count" => "count"
-          | _ => fail())
-   val m0_rename2 =
-      Lib.total
-        (fn "m0_prog$m0_REG" => Lib.curry (op ^) "r" o Int.toString o reg_index
+        (fn "m0_prog$m0_PSR_N" => K "n"
+          | "m0_prog$m0_PSR_Z" => K "z"
+          | "m0_prog$m0_PSR_C" => K "c"
+          | "m0_prog$m0_PSR_V" => K "v"
+          | "m0_prog$m0_AIRCR_ENDIANNESS" => K "endianness"
+          | "m0_prog$m0_CurrentMode" => K "mode"
+          | "m0_prog$m0_count" => K "count"
+          | "m0_prog$m0_REG" =>
+             Lib.curry (op ^) "r" o Int.toString o reg_index o List.hd
           | "m0_prog$m0_MEM" => K "b"
           | _ => fail())
 in
-   val m0_rename = stateLib.rename_vars (m0_rename1, m0_rename2, ["b"])
+   val m0_rename = stateLib.rename_vars (m0_rmap, ["b"])
 end
 
 local
@@ -408,9 +406,7 @@ local
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
       helperLib.PRE_CONV
          (DEPTH_COND_CONV

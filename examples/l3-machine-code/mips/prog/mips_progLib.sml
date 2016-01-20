@@ -86,6 +86,8 @@ val state_id =
       [["CP0", "PC", "gpr"],
        ["CP0", "PC", "exceptionSignalled", "gpr"],
        ["CP0", "PC", "exceptionSignalled"],
+       ["CP0", "PC", "exceptionSignalled", "hi"],
+       ["CP0", "PC", "exceptionSignalled", "lo"],
        ["CP0", "PC", "exceptionSignalled", "hi", "lo"],
        ["CP0", "PC", "exceptionSignalled", "gpr", "hi", "lo"],
        ["CP0", "LLbit", "PC"],
@@ -98,8 +100,10 @@ val state_id =
        ["CP0", "PC", "hi", "lo"],
        ["CP0", "PC", "gpr", "hi", "lo"],
        ["CP0", "LLbit", "MEM", "PC"],
+       ["CP0", "LLbit", "MEM", "PC", "exceptionSignalled"],
        ["CP0", "MEM", "PC"],
        ["CP0", "MEM", "PC", "exceptionSignalled", "gpr"],
+       ["MEM", "PC", "exceptionSignalled"],
        ["MEM", "PC", "exceptionSignalled", "gpr"],
        ["MEM", "PC"],
        ["gpr", "hi", "lo"],
@@ -204,27 +208,25 @@ val mips_mk_pre_post =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val mips_rename1 =
+   val mips_rmap =
       Lib.total
-        (fn "mips_prog$mips_CP0_Count" => "count"
-          | "mips_prog$mips_CP0_Cause" => "cause"
-          | "mips_prog$mips_CP0_EPC" => "epc"
-          | "mips_prog$mips_CP0_ErrorEPC" => "errorpc"
-          | "mips_prog$mips_CP0_Status_ERL" => "erl"
-          | "mips_prog$mips_CP0_Status_EXL" => "exl"
-          | "mips_prog$mips_CP0_Status_BEV" => "bev"
-          | "mips_prog$mips_LLbit" => "llbit"
-          | "mips_prog$mips_hi" => "hi"
-          | "mips_prog$mips_lo" => "lo"
-          | _ => fail())
-   val mips_rename2 =
-      Lib.total
-        (fn "mips_prog$mips_gpr" =>
-              Lib.curry (op ^) "r" o Int.toString o wordsSyntax.uint_of_word
+        (fn "mips_prog$mips_CP0_Count" => K "count"
+          | "mips_prog$mips_CP0_Cause" => K "cause"
+          | "mips_prog$mips_CP0_EPC" => K "epc"
+          | "mips_prog$mips_CP0_ErrorEPC" => K "errorpc"
+          | "mips_prog$mips_CP0_Status_ERL" => K "erl"
+          | "mips_prog$mips_CP0_Status_EXL" => K "exl"
+          | "mips_prog$mips_CP0_Status_BEV" => K "bev"
+          | "mips_prog$mips_LLbit" => K "llbit"
+          | "mips_prog$mips_hi" => K "hi"
+          | "mips_prog$mips_lo" => K "lo"
+          | "mips_prog$mips_gpr" =>
+              Lib.curry (op ^) "r" o Int.toString o wordsSyntax.uint_of_word o
+              List.hd
           | "mips_prog$mips_MEM" => K "b"
           | _ => fail())
 in
-   val mips_rename = stateLib.rename_vars (mips_rename1, mips_rename2, ["b"])
+   val mips_rename = stateLib.rename_vars (mips_rmap, ["b"])
 end
 
 fun spec_BranchTo th =
@@ -269,9 +271,7 @@ local
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
       PRE_CONV
          (DEPTH_COND_CONV
@@ -408,10 +408,7 @@ in
 end
 
 local
-   val component_11 =
-      (case Drule.CONJUNCTS mips_progTheory.mips_component_11 of
-          [r, m] => [r, m]
-        | _ => raise ERR "component_11" "")
+   val component_11 = Drule.CONJUNCTS mips_progTheory.mips_component_11
    val mips_rwts = List.drop (utilsLib.datatype_rewrites true "mips"
                                 ["mips_state", "CP0", "StatusRegister"], 1)
    val STATE_TAC = ASM_REWRITE_TAC mips_rwts
@@ -557,39 +554,8 @@ in
    val spec_join_rule = helperLib.SPEC_COMPOSE_RULE o Lib.list_of_pair
 end
 
-local
-   val move_cond = GSYM progTheory.SPEC_MOVE_COND
-   val move_precond = REWRITE_RULE [GSYM set_sepTheory.precond_def] move_cond
-   fun rule pre =
-      Conv.CONV_RULE
-        (Conv.REWR_CONV
-           (if pre then move_precond else move_cond)) o Lib.uncurry Thm.DISCH
-   fun spec_cases pre b th =
-      let
-         val r = (if pre then Lib.I else helperLib.MERGE_CONDS_RULE) o rule pre
-         val nb = boolSyntax.mk_neg b
-         val pt = Drule.EQT_INTRO (Thm.ASSUME b)
-         val nt = Drule.EQF_INTRO (Thm.ASSUME nb)
-         val pth = PURE_REWRITE_RULE [pt, boolTheory.COND_CLAUSES] th
-         val _ = Thm.hyp pth = [b] orelse raise ERR "spec_cases" ""
-         val nth = PURE_REWRITE_RULE [nt, boolTheory.COND_CLAUSES] th
-      in
-         [r (b, pth), r (nb, nth)]
-      end
-   fun split pre f th =
-      let
-         val p = progSyntax.strip_star (progSyntax.dest_post (Thm.concl th))
-      in
-         case List.mapPartial (Lib.total f) p of
-            [t] => (case Lib.total boolSyntax.dest_cond t of
-                       SOME (b, _, _) => spec_cases pre b th
-                     | NONE => [th])
-          | _ => [th]
-      end
-in
-   val split_BranchDelay = split true dest_BranchDelay
-   val split_exception = split false dest_mips_PC
-end
+ val split_BranchDelay = stateLib.split_cond true dest_BranchDelay
+ val split_exception = stateLib.split_cond false dest_mips_PC
 
 fun mips_spec_hex2 s =
    List.map mips_pc_intro_rule

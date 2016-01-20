@@ -1279,7 +1279,7 @@ local
              (if p then b1 /\ b2 /\ b3 else b4 /\ b5 /\ b6)) /\
        (!p. ((if p then v2w [b1; b2] else v2w [b3; b4]) = 0w : word2) =
              (if p then ~b1 /\ ~b2 else ~b3 /\ ~b4))`,
-      lrw []
+      rw_tac std_ss []
       \\ CONV_TAC (Conv.LHS_CONV bitstringLib.v2w_eq_CONV)
       \\ decide_tac)
 

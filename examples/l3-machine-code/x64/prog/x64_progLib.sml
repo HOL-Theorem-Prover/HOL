@@ -168,12 +168,12 @@ val x64_mk_pre_post =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val lowercase_const = utilsLib.lowercase o fst o Term.dest_const
-   val x64_rename2 =
+   val lowercase_const = utilsLib.lowercase o fst o Term.dest_const o List.hd
+   val x64_rmap =
       fn "x64_prog$x64_REG" => SOME lowercase_const
        | "x64_prog$x64_EFLAGS" => SOME lowercase_const
        | _ => NONE
-   val x64_rename = stateLib.rename_vars (K NONE, x64_rename2, [])
+   val x64_rename = stateLib.rename_vars (x64_rmap, [])
    val byte_mem_intro =
       stateLib.introduce_map_definition
           (x64_progTheory.x64_BYTE_MEMORY_INSERT, Conv.ALL_CONV)

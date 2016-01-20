@@ -194,6 +194,9 @@ val removeSpaces =
 val long_term_to_string =
    Lib.with_flag (Globals.linewidth, 1000) Hol_pp.term_to_string
 
+val strings_to_quote =
+   Lib.list_of_singleton o QUOTE o String.concat o Lib.separate "\n"
+
 val lhsc = boolSyntax.lhs o Thm.concl
 val rhsc = boolSyntax.rhs o Thm.concl
 val eval = rhsc o bossLib.EVAL
@@ -391,17 +394,32 @@ end
 fun CHANGE_CBV_CONV cmp = Conv.CHANGED_CONV (computeLib.CBV_CONV cmp)
 
 local
+   val rule = PURE_REWRITE_RULE [SYM wordsTheory.WORD_NEG_1]
+   val and_thms = rule wordsTheory.WORD_AND_CLAUSES
+   val or_thms  = rule wordsTheory.WORD_OR_CLAUSES
+   val xor_thms = rule wordsTheory.WORD_XOR_CLAUSES
    val alpha_rwts =
-        [boolTheory.COND_ID, wordsTheory.WORD_SUB_RZERO,
-         wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
-         wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
-         wordsTheory.WORD_XOR_CLAUSES, wordsTheory.WORD_EXTRACT_ZERO2,
-         wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL, wordsTheory.SHIFT_ZERO]
-in
+      [boolTheory.COND_ID, wordsTheory.WORD_SUB_RZERO,
+       wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
+       and_thms, or_thms, xor_thms, wordsTheory.WORD_EXTRACT_ZERO2,
+       wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL, wordsTheory.SHIFT_ZERO]
+   val UINT_MAX_LOGIC_CONV =
+     let
+       fun get th = List.take (Drule.CONJUNCTS (Drule.SPEC_ALL th), 2)
+     in
+       (Conv.LAND_CONV wordsLib.UINT_MAX_CONV
+        ORELSEC Conv.RAND_CONV wordsLib.UINT_MAX_CONV)
+       THENC Conv.CHANGED_CONV
+               (PURE_REWRITE_CONV
+                  (List.concat (List.map get [and_thms, or_thms, xor_thms])))
+     end
    val WALPHA_CONV = REWRITE_CONV alpha_rwts
+in
    val WGROUND_CONV =
-      Conv.DEPTH_CONV (wordsLib.WORD_GROUND_CONV false)
-      THENC PURE_REWRITE_CONV alpha_rwts
+      WALPHA_CONV
+      THENC Conv.DEPTH_CONV wordsLib.WORD_GROUND_CONV
+      THENC Conv.DEPTH_CONV UINT_MAX_LOGIC_CONV
+      THENC WALPHA_CONV
 end
 
 fun NCONV n conv = Lib.funpow n (Lib.curry (op THENC) conv) Conv.ALL_CONV

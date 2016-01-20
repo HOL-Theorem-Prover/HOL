@@ -278,9 +278,11 @@ local
                              String.size sthy + 2, NONE)
 
    fun component (n, ty) =
-      case Lib.total Type.dom_rng ty of
-         SOME (d, r) => ((n, [ParseDatatype.dAQ d]), r)
-       | NONE => ((n, []), ty)
+      let
+        val (a, r) = HolKernel.strip_fun ty
+      in
+        ((n, List.map ParseDatatype.dAQ a), r)
+      end
 
    fun build_names (sthy, expnd, hide, state_ty) =
       let
@@ -324,8 +326,8 @@ local
       case Type.dest_thy_type ty of
          {Thy = "fcp", Args = [_, n], Tyop = "cart"} =>
             "word" ^ Arbnum.toString (fcpSyntax.dest_numeric_type n)
-       | {Thy = "min", Args = [a, b], Tyop = "fun"} =>
-            data_constructor a ^ "_to_" ^ data_constructor b
+       | {Thy = "min", Args = [_, b], Tyop = "fun"} =>
+            data_constructor b
        | {Thy = "pair", Args = [a, b], Tyop = "prod"} =>
             data_constructor a ^ "_X_" ^ data_constructor b
        | {Thy = "option", Args = [a], Tyop = "option"} =>
@@ -347,23 +349,23 @@ local
          Definition.new_definition (def_suffix s, boolSyntax.mk_eq (l, r))
       end
 
-   fun define_assert1 sthy pred_ty (tm1, tm2) =
+   fun define_assert1 sthy pred_ty (tm1, tm2, vs) =
       let
-         val (tm1, v, vty) =
-            case Term.free_vars tm1 of
-               [v] => let
-                         val vty = Term.type_of v
-                         val fv = Term.mk_var ("c", vty)
-                      in
-                         (Term.subst [v |-> fv] tm1, fv, vty)
-                      end
-             | _ => raise ERR "define_assert1" "expecting single free var"
+         val cs =
+            case vs of
+               [v] => [Term.mk_var ("c", Term.type_of v)]
+             | l => List.tabulate
+                      (List.length vs,
+                       fn i => Term.mk_var ("c" ^ Int.toString i,
+                                            Term.type_of (List.nth (vs, i))))
+         val tm1 = Term.subst (List.map (op |->) (ListPair.zip (vs, cs))) tm1
          val dty = utilsLib.dom (Term.type_of tm2)
          val d = Term.mk_var ("d", dty)
          val tm_d = Term.mk_comb (tm2, d)
          val s = make_assert_name sthy (fst (boolSyntax.strip_comb tm1))
-         val l =
-            Term.list_mk_comb (Term.mk_var (s, vty --> dty --> pred_ty), [v, d])
+         val tys = List.map Term.type_of cs
+         val ty = List.foldl (op -->) pred_ty (dty :: List.rev tys)
+         val l = Term.list_mk_comb (Term.mk_var (s, ty), cs @ [d])
          val r = mk_state_pred (tm1, tm_d)
       in
          Definition.new_definition (def_suffix s, boolSyntax.mk_eq (l, r))
@@ -399,19 +401,21 @@ in
                 in
                    ((tm1, Term.mk_comb (tm2, tm)), a0 (tm1, tm2))
                 end
-             | ((s, [a]), tm) =>
+             | ((s, ptys), tm) =>
                 let
-                   val aty = ParseDatatype.pretypeToType a
-                   val v = Term.mk_var ("v" ^ Int.toString (!n), aty)
-                   val tm_v = Term.mk_comb (tm, v)
-                   val bty = utilsLib.rng (Term.type_of tm)
-                   val () = Portable.inc n
-                   val tm1 = Term.mk_comb (Term.mk_const (s, aty --> cty), v)
+                   val tys = List.map ParseDatatype.pretypeToType ptys
+                   val vs =
+                     List.map
+                       (fn ty => Term.mk_var ("v" ^ Int.toString (!n), ty)
+                                 before Portable.inc n) tys
+                   val tm_v = Term.list_mk_comb (tm, vs)
+                   val bty = snd (HolKernel.strip_fun (Term.type_of tm))
+                   val aty = List.foldl (op -->) cty (List.rev tys)
+                   val tm1 = Term.list_mk_comb (Term.mk_const (s, aty), vs)
                    val tm2 = mk_dc (Term.type_of tm_v)
                 in
-                   ((tm1, Term.mk_comb (tm2, tm_v)), a1 (tm1, tm2))
+                   ((tm1, Term.mk_comb (tm2, tm_v)), a1 (tm1, tm2, vs))
                 end
-             | _ => raise ERR "define_component" "too many arguments"
          val l = List.map define_component (ListPair.zip (components, tms))
          val (cs, defs) = ListPair.unzip l
          val proj_r = TypeBase.mk_pattern_fn cs
@@ -681,7 +685,6 @@ local
       case Lib.total optionSyntax.dest_is_some tm of
          SOME t => not (optionSyntax.is_some t)
        | NONE => true
-
 in
    fun read_footprint proj_def comp_defs cpool (extras: footprint_extra list) =
       let
@@ -763,10 +766,8 @@ local
                                            SOME c => c = d
                                          | NONE => false) p)
             end)
-   fun prefix tm = case boolSyntax.strip_comb tm of
-                      (a, [_]) => a
-                    | (a, [b, _]) => Term.mk_comb (a, b)
-                    | _ => raise ERR "prefix" ""
+   val prefix =
+     HolKernel.list_mk_comb o (Lib.I ## Lib.butlast) o boolSyntax.strip_comb
    fun fillIn f ty =
       fn []: term list => []
        | _ => [f (vvar ty)]: term list
@@ -892,36 +893,34 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   rename_vars (rename1, rename2, bump)
+   rename_vars:
 
-   Rename generated variables "%v" is a SPEC theorem.
+   Rename generated variables "%v" in a SPEC theorem.
    ------------------------------------------------------------------------ *)
 
-fun rename_vars (rename1, rename2, bump) =
+fun rename_vars (rmap, bump) =
    let
       fun rename f tm =
-         case boolSyntax.dest_strip_comb tm of
-            (c, [v]) =>
-               if is_vvar v
-                  then case rename1 c of
-                          SOME s => SOME (v |-> f (s, Term.type_of v))
-                        | NONE => NONE
-               else NONE
-          | (c, [x, v]) =>
-               if is_vvar v
-                  then case rename2 c of
-                          SOME g =>
-                             (case Lib.total g x of
-                                 SOME s => SOME (v |-> f (s, Term.type_of v))
-                               | NONE => NONE)
-                        | NONE => NONE
-               else NONE
-          | _ => NONE
+        case boolSyntax.dest_strip_comb tm of
+          (_, []) => NONE
+        | (c, l) =>
+            let
+              val (x, v) = Lib.front_last l
+            in
+              if is_vvar v
+                then case rmap c of
+                        SOME g =>
+                           (case Lib.total g x of
+                               SOME s => SOME (v |-> f (s, Term.type_of v))
+                             | NONE => NONE)
+                      | NONE => NONE
+              else NONE
+            end
    in
       fn thm =>
          let
             val p = temporal_stateSyntax.dest_pre' (Thm.concl thm)
-            val () = varReset()
+            val () = varReset ()
             val () = List.app (fn s => General.ignore (gvar s Type.alpha)) bump
             val avoid = utilsLib.avoid_name_clashes p o Lib.uncurry gvar
             val p = progSyntax.strip_star p
@@ -1169,6 +1168,68 @@ in
             end
         | thms as [_] => thms
         | _ => raise ERR "fix_precond" ""
+end
+
+(* ------------------------------------------------------------------------
+   split_cond pre dst_f th
+
+   Given a theorem th of the form
+
+     |- SPEC m (p * cond c) code (q * f (if b then x else y)),
+
+   this routine returns theorems of the form
+
+     [
+       |- SPEC m (p1 * cond c1 * precond b) code (q1 * f x) ,
+       |- SPEC m (p2 * cond c2 * precond ~b) code (q2 * f y)
+     ]
+
+   when pre is true and
+
+     [
+       |- SPEC m (p1 * cond (c1 /\ b)) code (q1 * f x),
+       |- SPEC m (p2 * cond (c2 /\ ~b)) code (q2 * f y)
+     ]
+
+   when pre is false. The expressions p1, q1, c1 are p, q, c rewritten assuming
+   b = T and p2, q2, c2 are p, q, c rewritten assuming b = F.
+
+   cond T assertions are eliminated.
+
+   ------------------------------------------------------------------------ *)
+
+local
+   val move_cond = GSYM progTheory.SPEC_MOVE_COND
+   val move_precond = REWRITE_RULE [GSYM set_sepTheory.precond_def] move_cond
+   val cond_true_elim = REWRITE_RULE [stateTheory.cond_true_elim]
+   fun rule pre =
+      cond_true_elim o (if pre then Lib.I else helperLib.MERGE_CONDS_RULE) o
+      Conv.CONV_RULE
+        (Conv.REWR_CONV
+           (if pre then move_precond else move_cond)) o Lib.uncurry Thm.DISCH
+   fun spec_cases pre b th =
+      let
+         val nb = boolSyntax.mk_neg b
+         val pt = Drule.EQT_INTRO (Thm.ASSUME b)
+         val nt = Drule.EQF_INTRO (Thm.ASSUME nb)
+         val pth = PURE_REWRITE_RULE [pt, boolTheory.COND_CLAUSES] th
+         val _ = Thm.hyp pth = [b] orelse raise ERR "spec_cases" ""
+         val nth = PURE_REWRITE_RULE [nt, boolTheory.COND_CLAUSES] th
+         val r = rule pre
+      in
+         [r (b, pth), r (nb, nth)]
+      end
+in
+   fun split_cond pre dst th =
+      let
+         val p = progSyntax.strip_star (progSyntax.dest_post (Thm.concl th))
+      in
+         case List.mapPartial (Lib.total dst) p of
+            [t] => (case Lib.total boolSyntax.dest_cond t of
+                       SOME (b, _, _) => spec_cases pre b th
+                     | NONE => [th])
+          | _ => [th]
+      end
 end
 
 (* ------------------------------------------------------------------------
@@ -1668,6 +1729,7 @@ end
 open lcsymtacs
 val () = set_trace "Goalstack.print_goal_at_top" 0
 val () = set_trace "Goalstack.print_goal_at_top" 1
+val () = set_trace "stateLib.spec" 1
 *)
 
 local
