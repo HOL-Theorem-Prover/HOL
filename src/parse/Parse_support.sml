@@ -592,8 +592,7 @@ fun pm_make_case_arrow oinfo loc {bvs,pat:preterm_in_env,grd,rhs} E =
             end
     val guard =
         case grd of
-            NONE => list_make_comb loc [make_qconst loc ("combin", "K"),
-                                        make_qconst loc ("bool", "T")]
+            NONE => bind_term loc [vstruct] (make_qconst loc ("bool", "T"))
           | SOME g => bind_term loc [vstruct] g
   in
     list_make_comb loc [make_qconst loc ("patternMatches", "PMATCH_ROW"),

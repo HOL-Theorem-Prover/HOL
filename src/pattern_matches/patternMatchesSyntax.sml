@@ -680,7 +680,11 @@ in
   (vars', pat', guard', rh')
 end handle HOL_ERR _ => (vars, pat, guard, rh)
 
-
+(* wildcard munging turns _ variables into "fake consts" (ensuring the
+   pretty-printer doesn't treat them as variables (giving them a colour etc).
+*)
+fun is_uscV v =
+  isSome (GrammarSpecials.dest_fakeconst_name (#1 (dest_var v)))
 
 fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
   let
@@ -689,45 +693,56 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     val _ = if (!use_pmatch_pp) then () else raise term_pp_types.UserPP_Failed
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
     val (v,rows) = dest_PMATCH t;
-    val rows' = map (fn t => pmatch_printer_fix_wildcards (dest_PMATCH_ROW_ABS t)) rows
+    val rows' = map (pmatch_printer_fix_wildcards o dest_PMATCH_ROW_ABS) rows
+    val bsys =
+     fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = true}
     val sys =
      fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = false}
 
-    fun pp_row (vars, pat, guard, rh) = (
-      term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
-      ublock PP.INCONSISTENT 5 (
-        (if ((type_of vars = oneSyntax.one_ty) andalso
-            not (free_in vars pat) andalso
-            not (free_in vars guard) andalso
-            not (free_in vars rh)) then (
-          add_string "|||." >> add_break (1, 0)
-        ) else (
-          add_string "|||" >>
-          add_break (1, 0) >>
-          sys (Top, Top, Top) (d - 1) vars >>
-          add_string "." >>
-          add_break (1, 0)
-        )) >>
-        sys (Top, Top, Top) (d - 1) pat >>
-        (if (aconv guard T) then nothing else (
-          add_string " when" >> add_break (1, 0) >>
-          sys (Top, Prec (2000, ""), Top) (d - 1) guard
-        )) >>
-        add_string " ~>" >> add_break (1, 0) >>
-        sys (Top, Prec (2000, ""), Top) (d - 1) rh
-      ))
+    fun pp_row (vars, pat, guard, rh) =
+      let
+        val print_vars =
+            let val vs = FVL [vars] empty_tmset
+                val pvs0 = FVL [pat] empty_tmset
+                val pvs = HOLset.foldl
+                            (fn (v, acc) => if is_uscV v then acc
+                                            else HOLset.add(acc,v))
+                            empty_tmset
+                            pvs0
+            in
+              not (HOLset.isSubset(pvs,vs))
+            end
+        val patsys = if print_vars then sys else bsys
+      in
+        term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
+          ublock PP.INCONSISTENT 5 (
+            (if not print_vars then nothing
+             else
+              bsys (Top, Top, Top) (d - 1) vars >>
+              add_string " " >>
+              add_string ".|" >>
+              add_break (1, 0)) >>
+            sys (Top, Top, Top) (d - 1) pat >>
+            (if aconv guard T then nothing
+             else
+              add_string " " >> add_string "when" >> add_break (1, 0) >>
+              sys (Top, Top, Top) (d - 1) guard) >>
+            add_string " " >> add_string "=>" >> add_break (1, 0) >>
+            sys (Top, Prec (2000, ""), Top) (d - 1) rh))
+      end
+  in
+    ublock PP.CONSISTENT 0 (
+       ublock PP.CONSISTENT 2
+               (add_string "case" >> add_break(1,2) >>
+                sys (Top, Top, Top) (d - 1) v >>
+                add_break(1,0) >> add_string "of") >>
+       add_break (1, 2) >>
+       ublock PP.CONSISTENT 0 (
+         smpp.pr_list
+           pp_row
+           (add_break(1,~2) >> add_string "|" >> add_string " ") rows'
+       )
     )
-  in ublock PP.CONSISTENT 0 (
-     (ublock PP.CONSISTENT 2 (add_string "CASE" >> add_break(1,2) >>
-       sys (Top, Top, Top) (d - 1) v >>
-       add_break(1,0) >> add_string "OF [")) >>
-     add_break (1, 2) >>
-     ublock PP.CONSISTENT 0 (
-       smpp.pr_list pp_row (add_string ";" >> add_break (1, 0)) rows'
-     ) >>
-     add_break (1, 0) >>
-     add_string "]"
-  )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
 val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
