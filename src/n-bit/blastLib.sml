@@ -1036,9 +1036,6 @@ in
 end
 
 local
-  fun TAUT_INDEX_CONV top conv =
-     conv THENC (if top then Conv.ALL_CONV else Conv.TRY_CONV BIT_TAUT_CONV)
-
   val FCP_NEQ = trace ("metis",0) Q.prove(
     `!i a b:'a word.
        i < dimindex (:'a) /\ ((a ' i = b ' i) = F) ==> ((a = b) = F)`,
@@ -1049,9 +1046,9 @@ local
 
   val toString = Arbnum.toString
 
-  fun bit_theorems top conv (n, l, r) =
+  fun bit_theorems conv (n, l, r) =
      let
-        fun BIT_TAUT_CONV tm = (INDEX_CONV THENC TAUT_INDEX_CONV top conv) tm
+        fun BIT_TAUT_CONV tm = (INDEX_CONV THENC conv) tm
                                handle Conv.UNCHANGED => dummy_thm
         val tr = !blast_trace > 1
         val () = if tr then print ("Checking " ^ toString n ^ " bit word\n")
@@ -1080,7 +1077,7 @@ local
      List.foldr (fn (v,t) => Drule.FORALL_EQ v t) t vars
      |> Conv.RIGHT_CONV_RULE (Rewrite.REWRITE_CONV [])
 in
-  fun BIT_BLAST_CONV top tm =
+  fun BIT_BLAST_CONV tm =
      let
         val _ = is_blastable tm orelse
                 raise ERR "BIT_BLAST_CONV" "term not suited to bit blasting"
@@ -1093,14 +1090,14 @@ in
                 val RW_CONV = PURE_REWRITE_CONV (mk_sums c)
              in
                 if wordsSyntax.is_index tm
-                   then Conv.RIGHT_CONV_RULE (TAUT_INDEX_CONV top RW_CONV) thm
+                   then Conv.RIGHT_CONV_RULE RW_CONV thm
                         handle Conv.UNCHANGED => thm
                 else if wordsSyntax.is_word_lo tm
                    then Conv.RIGHT_CONV_RULE RW_CONV thm
                 else let
                         val (l,r) = boolSyntax.dest_eq c
                      in
-                        case bit_theorems top RW_CONV (dim_of_word l, l, r) of
+                        case bit_theorems RW_CONV (dim_of_word l, l, r) of
                            Lib.PASS thms =>
                              Conv.RIGHT_CONV_RULE
                                 (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
@@ -1118,14 +1115,14 @@ in
              end
      end
 
-  fun BBLAST_CONV top tm =
+  fun BBLAST_CONV tm =
      let
         val _ = Term.type_of tm = Type.bool orelse
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
         val tms = HolKernel.find_terms is_blastable (rhsc thm)
-        val thms = Lib.mapfilter (BIT_BLAST_CONV top) tms
+        val thms = Lib.mapfilter BIT_BLAST_CONV tms
         val res = FORALL_EQ_RULE vars
                     (Conv.RIGHT_CONV_RULE
                        (Rewrite.ONCE_REWRITE_CONV thms
@@ -1172,10 +1169,10 @@ local
         s2 @ (List.filter (okay o #redex) s1)
      end
 in
-  fun BBLAST_PROVE top tm =
+  fun BBLAST_PROVE tm =
      let
         val (vars,tm') = boolSyntax.strip_exists tm
-        val thm = Conv.QCONV (BBLAST_CONV top) tm'
+        val thm = Conv.QCONV BBLAST_CONV tm'
      in
         if List.null vars
            then Drule.EQT_ELIM thm
@@ -1225,15 +1222,6 @@ in
      end
 end
 
-val BIT_BLAST_CONV = BIT_BLAST_CONV false
-
-val EBLAST_CONV  = BBLAST_CONV false
-val EBLAST_PROVE = BBLAST_PROVE false
-val EBLAST_RULE = Conv.CONV_RULE EBLAST_CONV
-val EBLAST_TAC  = Tactic.CONV_TAC EBLAST_CONV
-
-val BBLAST_CONV  = BBLAST_CONV true
-val BBLAST_PROVE = BBLAST_PROVE true
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV
 val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV
 

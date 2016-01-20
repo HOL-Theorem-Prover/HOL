@@ -18,9 +18,6 @@ in
    val () = Feedback.MESG_to_string := f
 end
 
-infix \\
-val op \\ = op THEN;
-
 val Define = bossLib.zDefine
 
 (* ------------------------------------------------------------------------
@@ -1183,7 +1180,7 @@ val ulp_lt_ULP = Q.store_thm("ulp_lt_ULP",
    `!e: 'w word. ulp (:'t # 'w) <= ULP (e,(:'t))`,
    rw [ulp_def]
    \\ Cases_on `e = 0w`
-   \\ simp [wordsTheory.WORD_0_LS, ULP_le_mono]
+   \\ simp [ULP_le_mono]
    )
 
 val lem = Q.prove(

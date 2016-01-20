@@ -3,211 +3,206 @@
 (* DESCRIPTION   : A model of binary words. Based on John Harrison's         *)
 (*                 treatment of finite Cartesian products (TPHOLs 2005)      *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2005                                                      *)
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib Q lcsymtacs;
-open arithmeticTheory pred_setTheory;
-open bitTheory sum_numTheory fcpTheory;
+open arithmeticTheory pred_setTheory
+open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
 
-val _ = new_theory "words";
+val () = Theory.new_theory "words"
 
-(* ------------------------------------------------------------------------- *)
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
-val Abbr = BasicProvers.Abbr;
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
-val WL = ``dimindex (:'a)``;
-val HB = ``^WL - 1``;
+val WL = ``dimindex (:'a)``
+val HB = ``^WL - 1``
 
 val dimword_def  = zDefine `dimword (:'a) = 2 ** ^WL`
 val INT_MIN_def  = zDefine `INT_MIN (:'a) = 2 ** ^HB`
-val UINT_MAX_def = Define `UINT_MAX (:'a) = dimword(:'a) - 1`;
-val INT_MAX_def  = Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`;
+val UINT_MAX_def =  Define `UINT_MAX (:'a) = dimword(:'a) - 1`
+val INT_MAX_def  =  Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`
 
 val dimword_ML = rhs (#2 (strip_forall (concl dimword_def)))
 val INT_MIN_ML = rhs (#2 (strip_forall (concl INT_MIN_def)))
 
-val _ = type_abbrev("word", ``:bool['a]``);
+val _ = type_abbrev ("word", ``:bool['a]``)
 
-(* ------------------------------------------------------------------------- *)
-(*  Domain transforming maps : definitions                                   *)
-(* ------------------------------------------------------------------------- *)
+fun add_infixes n assoc =
+  List.app (fn (s, t) => ( Parse.add_infix (s, n, assoc)
+                         ; Parse.overload_on (s, Parse.Term t)
+                         ))
+
+fun add_TeX_tokens n =
+  List.app
+    (fn (s, m) =>
+      TexTokenMap.TeX_notation {hol = s, TeX = ("\\HOLToken" ^ m ^ "{}", n)})
+
+(* -------------------------------------------------------------------------
+    Domain transforming maps : definitions
+   ------------------------------------------------------------------------- *)
 
 val w2n_def = zDefine`
-  w2n (w:'a word) = SUM ^WL (\i. SBIT (w ' i) i)`;
+  w2n (w:'a word) = SUM ^WL (\i. SBIT (w ' i) i)`
 
 val n2w_def = zDefine`
-  (n2w:num->'a word) n = FCP i. BIT i n`;
+  (n2w:num->'a word) n = FCP i. BIT i n`
 
 val w2w_def = zDefine`
-  (w2w:'a word -> 'b word) w = n2w (w2n w)`;
+  (w2w:'a word -> 'b word) w = n2w (w2n w)`
 
 val sw2sw_def = zDefine`
   (sw2sw:'a word -> 'b word) w =
-    n2w (SIGN_EXTEND (dimindex(:'a)) (dimindex(:'b)) (w2n w))`;
+    n2w (SIGN_EXTEND (dimindex(:'a)) (dimindex(:'b)) (w2n w))`
 
-val _ = add_bare_numeral_form (#"w", SOME "n2w");
+val _ = add_bare_numeral_form (#"w", SOME "n2w")
 
-val w2l_def = Define `w2l b w = n2l b (w2n w)`;
-val l2w_def = Define `l2w b l = n2w (l2n b l)`;
-val w2s_def = Define `w2s b f w = n2s b f (w2n w)`;
-val s2w_def = Define `s2w b f s = n2w (s2n b f s)`;
+val w2l_def = Define `w2l b w = n2l b (w2n w)`
+val l2w_def = Define `l2w b l = n2w (l2n b l)`
+val w2s_def = Define `w2s b f w = n2s b f (w2n w)`
+val s2w_def = Define `s2w b f s = n2w (s2n b f s)`
 
-val word_from_bin_list_def = Define `word_from_bin_list = l2w 2`;
-val word_from_oct_list_def = Define `word_from_oct_list = l2w 8`;
-val word_from_dec_list_def = Define `word_from_dec_list = l2w 10`;
-val word_from_hex_list_def = Define `word_from_hex_list = l2w 16`;
+val word_from_bin_list_def = Define `word_from_bin_list = l2w 2`
+val word_from_oct_list_def = Define `word_from_oct_list = l2w 8`
+val word_from_dec_list_def = Define `word_from_dec_list = l2w 10`
+val word_from_hex_list_def = Define `word_from_hex_list = l2w 16`
 
-val word_to_bin_list_def = Define `word_to_bin_list = w2l 2`;
-val word_to_oct_list_def = Define `word_to_oct_list = w2l 8`;
-val word_to_dec_list_def = Define `word_to_dec_list = w2l 10`;
-val word_to_hex_list_def = Define `word_to_hex_list = w2l 16`;
+val word_to_bin_list_def = Define `word_to_bin_list = w2l 2`
+val word_to_oct_list_def = Define `word_to_oct_list = w2l 8`
+val word_to_dec_list_def = Define `word_to_dec_list = w2l 10`
+val word_to_hex_list_def = Define `word_to_hex_list = w2l 16`
 
-val word_from_bin_string_def = Define `word_from_bin_string = s2w 2 UNHEX`;
-val word_from_oct_string_def = Define `word_from_oct_string = s2w 8 UNHEX`;
-val word_from_dec_string_def = Define `word_from_dec_string = s2w 10 UNHEX`;
-val word_from_hex_string_def = Define `word_from_hex_string = s2w 16 UNHEX`;
+val word_from_bin_string_def = Define `word_from_bin_string = s2w 2 UNHEX`
+val word_from_oct_string_def = Define `word_from_oct_string = s2w 8 UNHEX`
+val word_from_dec_string_def = Define `word_from_dec_string = s2w 10 UNHEX`
+val word_from_hex_string_def = Define `word_from_hex_string = s2w 16 UNHEX`
 
-val word_to_bin_string_def = Define `word_to_bin_string = w2s 2 HEX`;
-val word_to_oct_string_def = Define `word_to_oct_string = w2s 8 HEX`;
-val word_to_dec_string_def = Define `word_to_dec_string = w2s 10 HEX`;
-val word_to_hex_string_def = Define `word_to_hex_string = w2s 16 HEX`;
+val word_to_bin_string_def = Define `word_to_bin_string = w2s 2 HEX`
+val word_to_oct_string_def = Define `word_to_oct_string = w2s 8 HEX`
+val word_to_dec_string_def = Define `word_to_dec_string = w2s 10 HEX`
+val word_to_hex_string_def = Define `word_to_hex_string = w2s 16 HEX`
 
-(* ------------------------------------------------------------------------- *)
-(*  The Boolean operations : definitions                                     *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    The Boolean operations : definitions
+   ------------------------------------------------------------------------- *)
 
 val word_T_def = Define`
-  word_T = (n2w:num->'a word) (UINT_MAX(:'a))`;
+  word_T = (n2w:num->'a word) (UINT_MAX(:'a))`
 
 val word_L_def = Define`
-  word_L = (n2w:num->'a word) (INT_MIN(:'a))`;
+  word_L = (n2w:num->'a word) (INT_MIN(:'a))`
 
 val word_H_def = Define`
-  word_H = (n2w:num->'a word) (INT_MAX(:'a))`;
+  word_H = (n2w:num->'a word) (INT_MAX(:'a))`
 
 val word_1comp_def = zDefine`
-  word_1comp (w:'a word) = (FCP i. ~(w ' i)):'a word`;
+  word_1comp (w:'a word) = (FCP i. ~(w ' i)):'a word`
 
 val word_and_def = zDefine`
   word_and (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) /\ (w ' i)):'a word`;
+    (FCP i. (v ' i) /\ (w ' i)):'a word`
 
 val word_or_def = zDefine`
   word_or (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) \/ (w ' i)):'a word`;
+    (FCP i. (v ' i) \/ (w ' i)):'a word`
 
 val word_xor_def = zDefine`
   word_xor (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) = (w ' i))):'a word`;
+    (FCP i. ~((v ' i) = (w ' i))):'a word`
 
 val word_nand_def = zDefine`
   word_nand (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) /\ (w ' i))):'a word`;
+    (FCP i. ~((v ' i) /\ (w ' i))):'a word`
 
 val word_nor_def = zDefine`
   word_nor (v:'a word) (w:'a word) =
-    (FCP i. ~((v ' i) \/ (w ' i))):'a word`;
+    (FCP i. ~((v ' i) \/ (w ' i))):'a word`
 
 val word_xnor_def = zDefine`
   word_xnor (v:'a word) (w:'a word) =
-    (FCP i. (v ' i) = (w ' i)):'a word`;
+    (FCP i. (v ' i) = (w ' i)):'a word`
+
+
+val () = add_infixes 400 HOLgrammars.RIGHT
+  [("&&",  `words$word_and`),
+   ("~&&", `words$word_nand`)]
+
+val () = add_infixes 375 HOLgrammars.RIGHT
+  [("??",  `words$word_xor`),
+   ("~??", `words$word_xnor`)]
+
+val () = add_infixes 300 HOLgrammars.RIGHT
+  [("!!",  `words$word_or`),
+   ("||",  `words$word_or`),
+   ("~||", `words$word_nor`)]
 
 val _ = overload_on ("~", ``words$word_1comp``)
-val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"};
+val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"}
 
-val _ = add_infix("&&",400,HOLgrammars.RIGHT)
-val _ = add_infix("??",375,HOLgrammars.RIGHT)
-val _ = add_infix("!!",300,HOLgrammars.RIGHT)
-val _ = add_infix("||",300,HOLgrammars.RIGHT)
-val _ = add_infix("~&&",400,HOLgrammars.RIGHT)
-val _ = add_infix("~??",375,HOLgrammars.RIGHT)
-val _ = add_infix("~||",300,HOLgrammars.RIGHT)
+val _ = overload_on ("UINT_MAXw", ``words$word_T``)
+val _ = overload_on ("INT_MAXw",  ``words$word_H``)
+val _ = overload_on ("INT_MINw",  ``words$word_L``)
 
-val _ = overload_on ("&&",``words$word_and``)
-val _ = overload_on ("??",``words$word_xor``)
-val _ = overload_on ("!!",``words$word_or``)
-val _ = overload_on ("||",``words$word_or``)
-val _ = overload_on ("~&&",``words$word_nand``)
-val _ = overload_on ("~??",``words$word_xnor``)
-val _ = overload_on ("~||",``words$word_nor``)
-val _ = overload_on ("Tw",``words$word_T``)
-val _ = overload_on ("UINT_MAXw",``words$word_T``)
-val _ = overload_on ("INT_MAXw",``words$word_H``)
-val _ = overload_on ("INT_MINw",``words$word_L``)
+val _ = Unicode.unicode_version {u = Unicode.UChar.xor, tmnm = "??"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.or, tmnm = "||"}
 
-val _ = Unicode.unicode_version{u=Unicode.UChar.xor, tmnm="??"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.or, tmnm="||"}
+val () = add_TeX_tokens 1
+  [("!!", "Or"), ("||", "Or"), (Unicode.UChar.or, "Or"),
+   ("??", "Eor"), (Unicode.UChar.xor, "Eor")]
 
-val _ = TeX_notation {hol = "!!", TeX = ("\\HOLTokenOr{}", 1)}
-val _ = TeX_notation {hol = "||", TeX = ("\\HOLTokenOr{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.or, TeX = ("\\HOLTokenOr{}", 1)}
-
-val _ = TeX_notation {hol = "??", TeX = ("\\HOLTokenEor{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.xor, TeX = ("\\HOLTokenEor{}", 1)}
-
-(* ------------------------------------------------------------------------- *)
-(*  Reduction operations : definitions                                       *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Reduction operations : definitions
+   ------------------------------------------------------------------------- *)
 
 val word_reduce_def = zDefine`
   word_reduce f (w : 'a word) =
     $FCP (K
       (let l = GENLIST (\i. w ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) in
-         FOLDL f (HD l) (TL l))) : 1 word`;
+         FOLDL f (HD l) (TL l))) : 1 word`
 
 (* equals 1w iff all bits are equal *)
 val word_compare_def = Define`
-  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word`;
+  word_compare (a:'a word) b = if a = b then 1w else 0w :1 word`
 
-val reduce_and_def  = zDefine `reduce_and  = word_reduce (/\)`;
-val reduce_or_def   = zDefine `reduce_or   = word_reduce (\/)`;
-val reduce_xor_def  =  Define `reduce_xor  = word_reduce (<>)`;
-val reduce_nand_def =  Define `reduce_nand = word_reduce (\a b. ~(a /\ b))`;
-val reduce_nor_def  =  Define `reduce_nor  = word_reduce (\a b. ~(a \/ b))`;
-val reduce_xnor_def =  Define `reduce_xnor = word_reduce (=)`;
+val reduce_and_def  = zDefine `reduce_and  = word_reduce (/\)`
+val reduce_or_def   = zDefine `reduce_or   = word_reduce (\/)`
+val reduce_xor_def  =  Define `reduce_xor  = word_reduce (<>)`
+val reduce_nand_def =  Define `reduce_nand = word_reduce (\a b. ~(a /\ b))`
+val reduce_nor_def  =  Define `reduce_nor  = word_reduce (\a b. ~(a \/ b))`
+val reduce_xnor_def =  Define `reduce_xnor = word_reduce (=)`
 
-(* ------------------------------------------------------------------------- *)
-(*  Bit field operations : definitions                                       *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Bit field operations : definitions
+   ------------------------------------------------------------------------- *)
 
 val word_lsb_def = zDefine`
-  word_lsb (w:'a word) = w ' 0`;
+  word_lsb (w:'a word) = w ' 0`
 
 val word_msb_def = zDefine`
-  word_msb (w:'a word) = w ' ^HB`;
+  word_msb (w:'a word) = w ' ^HB`
 
 val word_slice_def = zDefine`
   word_slice h l = \w:'a word.
-    (FCP i. l <= i /\ i <= MIN h ^HB /\ w ' i):'a word`;
+    (FCP i. l <= i /\ i <= MIN h ^HB /\ w ' i):'a word`
 
 val word_bits_def = zDefine`
   word_bits h l = \w:'a word.
-    (FCP i. i + l <= MIN h ^HB /\ w ' (i + l)):'a word`;
+    (FCP i. i + l <= MIN h ^HB /\ w ' (i + l)):'a word`
 
 val word_signed_bits_def = zDefine`
   word_signed_bits h l = \w:'a word.
-    (FCP i. l <= MIN h ^HB /\ w ' (MIN (i + l) (MIN h ^HB))):'a word`;
+    (FCP i. l <= MIN h ^HB /\ w ' (MIN (i + l) (MIN h ^HB))):'a word`
 
 val word_extract_def = zDefine`
-  word_extract h l = w2w o word_bits h l`;
+  word_extract h l = w2w o word_bits h l`
 
 val word_bit_def = zDefine`
-  word_bit b (w:'a word) = b <= ^HB /\ w ' b`;
+  word_bit b (w:'a word) = b <= ^HB /\ w ' b`
 
 val word_reverse_def = zDefine`
-  word_reverse (w:'a word) = (FCP i. w ' (^HB - i)):'a word`;
+  word_reverse (w:'a word) = (FCP i. w ' (^HB - i)):'a word`
 
 val word_modify_def = zDefine`
-  word_modify f (w:'a word) = (FCP i. f i (w ' i)):'a word`;
+  word_modify f (w:'a word) = (FCP i. f i (w ' i)):'a word`
 
 val BIT_SET_def = zDefine`
   BIT_SET i n =
@@ -217,54 +212,47 @@ val BIT_SET_def = zDefine`
       if ODD n then
         i INSERT (BIT_SET (SUC i) (n DIV 2))
       else
-        BIT_SET (SUC i) (n DIV 2)`;
+        BIT_SET (SUC i) (n DIV 2)`
 
 val bit_field_insert_def = Define`
   bit_field_insert h l a =
-    word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))`;
+    word_modify (\i. COND (l <= i /\ i <= h) (a ' (i - l)))`
 
 val word_sign_extend_def = Define`
   word_sign_extend n (w:'a word) =
-    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`;
+    n2w (SIGN_EXTEND n (dimindex(:'a)) (w2n w)) : 'a word`
 
-val word_len_def = Define `word_len (w:'a word) = dimindex (:'a)`;
+val word_len_def = Define `word_len (w:'a word) = dimindex (:'a)`
 
 val bit_count_upto_def = Define`
-   bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`;
+   bit_count_upto n (w : 'a word) = SUM n (\i. if w ' i then 1 else 0)`
 
 val bit_count_def = Define`
-   bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`;
+   bit_count (w : 'a word) = bit_count_upto (dimindex(:'a)) w`
 
-val _ = overload_on ("''",Term`$word_slice`);
-val _ = overload_on ("--",Term`$word_bits`);
-val _ = overload_on ("><",Term`$word_extract`);
-val _ = overload_on ("---",Term`$word_signed_bits`);
+val () = add_infixes 375 HOLgrammars.RIGHT
+  [("''", `$word_slice`),
+   ("--", `$word_bits`),
+   ("><", `$word_extract`),
+   ("---", `$word_signed_bits`)]
 
-val _ = set_fixity "''" (Infixr 375)
-val _ = set_fixity "--" (Infixr 375)
-val _ = set_fixity "><" (Infixr 375)
-val _ = set_fixity "---" (Infixr 375);
+val _ = TeX_notation {hol = "><", TeX = ("\\HOLTokenExtract{}", 2)}
 
-val _ = TeX_notation {hol = "><", TeX = ("\\HOLTokenExtract", 2)}
-
-(* ------------------------------------------------------------------------- *)
-(*  Word arithmetic: definitions                                             *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Word arithmetic: definitions
+   ------------------------------------------------------------------------- *)
 
 val word_2comp_def = zDefine`
-  word_2comp (w:'a word) =
-    (n2w:num->'a word) (dimword(:'a) - w2n w)`;
+  word_2comp (w:'a word) = (n2w:num->'a word) (dimword(:'a) - w2n w)`
 
 val word_add_def = zDefine`
-  word_add (v:'a word) (w:'a word) =
-    (n2w:num->'a word) (w2n v + w2n w)`;
+  word_add (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v + w2n w)`
 
 val word_mul_def = zDefine`
-  word_mul (v:'a word) (w:'a word) =
-    (n2w:num->'a word) (w2n v * w2n w)`;
+  word_mul (v:'a word) (w:'a word) = (n2w:num->'a word) (w2n v * w2n w)`
 
 val word_log2_def = zDefine`
-  word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
+  word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`
 
 val add_with_carry_def = Define`
   add_with_carry (x:'a word, y:'a word, carry_in:bool) =
@@ -273,18 +261,13 @@ val add_with_carry_def = Define`
     let carry_out = ~(w2n result = unsigned_sum)
     and overflow = (word_msb x = word_msb y) /\ (word_msb x <> word_msb result)
     in
-       (result,carry_out,overflow)`;
-
-val _ =
-  (overload_on ("CARRY_OUT", ``\a b c. FST (SND (add_with_carry (a,b,c)))``);
-   overload_on ("OVERFLOW",  ``\a b c. SND (SND (add_with_carry (a,b,c)))``));
+       (result,carry_out,overflow)`
 
 val word_sub_def = Define`
-  word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`;
+  word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`
 
 val word_div_def = Define`
-  word_div (v: 'a word) (w: 'a word) =
-    (n2w:num->'a word) (w2n v DIV w2n w)`;
+  word_div (v: 'a word) (w: 'a word) = (n2w:num->'a word) (w2n v DIV w2n w)`
 
 val word_sdiv_def = Define`
   word_sdiv a b =
@@ -297,11 +280,11 @@ val word_sdiv_def = Define`
       if word_msb b then
         word_2comp (word_div a (word_2comp b))
       else
-        word_div a b`;
+        word_div a b`
 
 val word_mod_def = Define`
   word_mod (v:'a word) (w:'a word) =
-    n2w (w2n v MOD w2n w):'a word`;
+    n2w (w2n v MOD w2n w):'a word`
 
 (* 2's complement signed remainder (sign follows dividend) *)
 val word_srem_def = Define`
@@ -315,7 +298,7 @@ val word_srem_def = Define`
       if word_msb b then
         word_mod a (word_2comp b)
       else
-        word_mod a b`;
+        word_mod a b`
 
 (* 2's complement signed remainder (sign follows divisor), as in SMT-LIB *)
 val word_smod_def = Define`
@@ -335,245 +318,219 @@ val word_smod_def = Define`
           if word_msb t then
             word_add u t
           else
-            u`;
+            u`
 
-val word_L2_def = Define `word_L2 = word_mul word_L word_L`;
+val word_L2_def = Define `word_L2 = word_mul word_L word_L`
 
-val _ = overload_on ("+", Term`$word_add`);
-val _ = overload_on ("-", Term`$word_sub`);
-val _ = overload_on ("numeric_negate", Term`$word_2comp`);
-val _ = overload_on ("*", Term`$word_mul`);
-val _ = overload_on ("//",Term`$word_div`);
-val _ = overload_on ("/", Term`$word_sdiv`);
+val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
+  [("+", `$word_add`),
+   ("-", `$word_sub`),
+   ("numeric_negate", `$word_2comp`),
+   ("*", `$word_mul`),
+   ("CARRY_OUT", `\a b c. FST (SND (add_with_carry (a,b,c)))`),
+   ("OVERFLOW",  `\a b c. SND (SND (add_with_carry (a,b,c)))`),
+   ("INT_MINw2", `word_L2`)]
 
-val _ = set_fixity "//" (Infixl 600);
-val _ = set_fixity "/"  (Infixl 600);
+val () = add_infixes 600 HOLgrammars.LEFT
+  [("//", `$word_div`),
+   ("/", `$word_sdiv`)]
 
-val _ = overload_on ("INT_MINw2",Term`word_L2`);
-
-(* ------------------------------------------------------------------------- *)
-(*  Orderings : definitions                                                  *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Orderings : definitions
+   ------------------------------------------------------------------------- *)
 
 val nzcv_def = Define `
   nzcv (a:'a word) (b:'a word) =
     let q = w2n a + w2n (- b) in
     let r = (n2w q):'a word in
       (word_msb r,r = 0w,BIT ^WL q \/ (b = 0w),
-     ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))`;
+     ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))`
 
 val word_lt_def = zDefine`
-  word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`;
+  word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`
 
 val word_gt_def = zDefine`
-  word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)`;
+  word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)`
 
 val word_le_def = zDefine`
-  word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)`;
+  word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)`
 
 val word_ge_def = zDefine`
-  word_ge a b = let (n,z,c,v) = nzcv a b in n = v`;
+  word_ge a b = let (n,z,c,v) = nzcv a b in n = v`
 
 val word_ls_def = zDefine`
-  word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`;
+  word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`
 
 val word_hi_def = zDefine`
-  word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`;
+  word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`
 
 val word_lo_def = zDefine`
-  word_lo a b = let (n,z,c,v) = nzcv a b in ~c`;
+  word_lo a b = let (n,z,c,v) = nzcv a b in ~c`
 
 val word_hs_def = zDefine`
-  word_hs a b = let (n,z,c,v) = nzcv a b in c`;
+  word_hs a b = let (n,z,c,v) = nzcv a b in c`
 
 val word_min_def = Define`
-  word_min a b = if word_lo a b then a else b`;
+  word_min a b = if word_lo a b then a else b`
 
 val word_max_def = Define`
-  word_max a b = if word_lo a b then b else a`;
+  word_max a b = if word_lo a b then b else a`
 
 val word_smin_def = Define`
-  word_smin a b = if word_lt a b then a else b`;
+  word_smin a b = if word_lt a b then a else b`
 
 val word_smax_def = Define`
-  word_smax a b = if word_lt a b then b else a`;
+  word_smax a b = if word_lt a b then b else a`
 
 val word_abs_def = Define`
-  word_abs w = if word_lt w (n2w 0) then word_2comp w else w`;
+  word_abs w = if word_lt w (n2w 0) then word_2comp w else w`
 
-val _ = add_infix("<+", 450,HOLgrammars.NONASSOC)
-val _ = add_infix(">+", 450,HOLgrammars.NONASSOC)
-val _ = add_infix("<=+",450,HOLgrammars.NONASSOC)
-val _ = add_infix(">=+",450,HOLgrammars.NONASSOC)
+val () = add_infixes 450 HOLgrammars.NONASSOC
+  [("<",   `word_lt`),
+   (">",   `word_gt`),
+   ("<=",  `word_le`),
+   (">=",  `word_ge`),
+   ("<=+", `word_ls`),
+   (">+",  `word_hi`),
+   ("<+",  `word_lo`),
+   (">=+", `word_hs`)]
 
-val _ = overload_on ("<",  Term`word_lt`)
-val _ = overload_on (">",  Term`word_gt`)
-val _ = overload_on ("<=", Term`word_le`)
-val _ = overload_on (">=", Term`word_ge`)
-val _ = overload_on ("<=+",Term`word_ls`)
-val _ = overload_on (">+", Term`word_hi`)
-val _ = overload_on ("<+", Term`word_lo`)
-val _ = overload_on (">=+",Term`word_hs`)
+val _ = Unicode.unicode_version {u = Unicode.UChar.ls, tmnm = "<=+"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.hi, tmnm = ">+"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.lo, tmnm = "<+"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.hs, tmnm = ">=+"}
 
-val _ = Unicode.unicode_version{u=Unicode.UChar.ls, tmnm = "<=+"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.hi, tmnm = ">+"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.lo, tmnm = "<+"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.hs, tmnm = ">=+"}
+val () = add_TeX_tokens 1
+   [("<+", "Lo"), (Unicode.UChar.lo, "Lo"),
+    (">+", "Hi"), (Unicode.UChar.hi, "Hi"),
+    ("<=+", "Ls"), (Unicode.UChar.ls, "Ls"),
+    (">=+", "Hs"), (Unicode.UChar.hs, "Hs")]
 
-val _ = TeX_notation {hol = "<+", TeX = ("\\HOLTokenLo{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.lo, TeX = ("\\HOLTokenLo{}", 1)}
-
-val _ = TeX_notation {hol = ">+", TeX = ("\\HOLTokenHi{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.hi, TeX = ("\\HOLTokenHi{}", 1)}
-
-val _ = TeX_notation {hol = "<=+", TeX = ("\\HOLTokenLs{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.ls, TeX = ("\\HOLTokenLs{}", 1)}
-
-val _ = TeX_notation {hol = ">=+", TeX = ("\\HOLTokenHs{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.hs, TeX = ("\\HOLTokenHs{}", 1)}
-
-(* ------------------------------------------------------------------------- *)
-(*  Shifts : definitions                                                     *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Shifts : definitions
+   ------------------------------------------------------------------------- *)
 
 val word_lsl_def = zDefine`
   word_lsl (w:'a word) n =
-    (FCP i. i < ^WL /\ n <= i /\ w ' (i - n)):'a word`;
+    (FCP i. i < ^WL /\ n <= i /\ w ' (i - n)):'a word`
 
 val word_lsr_def = zDefine`
   word_lsr (w:'a word) n =
-    (FCP i. i + n < ^WL /\ w ' (i + n)):'a word`;
+    (FCP i. i + n < ^WL /\ w ' (i + n)):'a word`
 
 val word_asr_def = zDefine`
   word_asr (w:'a word) n =
     (FCP i. if ^WL <= i + n then
               word_msb w
             else
-              w ' (i + n)):'a word`;
+              w ' (i + n)):'a word`
 
 val word_ror_def = zDefine`
   word_ror (w:'a word) n =
-    (FCP i. w ' ((i + n) MOD ^WL)):'a word`;
+    (FCP i. w ' ((i + n) MOD ^WL)):'a word`
 
 val word_rol_def = zDefine`
   word_rol (w:'a word) n =
-    word_ror w (^WL - n MOD ^WL)`;
+    word_ror w (^WL - n MOD ^WL)`
 
 val word_rrx_def = zDefine`
   word_rrx(c, w:'a word) =
     (word_lsb w,
-     (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`;
+     (FCP i. if i = ^HB then c else (word_lsr w 1) ' i):'a word)`
 
 val word_lsl_bv_def = Define`
-  word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)`;
+  word_lsl_bv (w:'a word) (n:'a word) = word_lsl w (w2n n)`
 
 val word_lsr_bv_def = Define`
-  word_lsr_bv (w:'a word) (n:'a word) = word_lsr w (w2n n)`;
+  word_lsr_bv (w:'a word) (n:'a word) = word_lsr w (w2n n)`
 
 val word_asr_bv_def = Define`
-  word_asr_bv (w:'a word) (n:'a word) = word_asr w (w2n n)`;
+  word_asr_bv (w:'a word) (n:'a word) = word_asr w (w2n n)`
 
 val word_ror_bv_def = Define`
-  word_ror_bv (w:'a word) (n:'a word) = word_ror w (w2n n)`;
+  word_ror_bv (w:'a word) (n:'a word) = word_ror w (w2n n)`
 
 val word_rol_bv_def = Define`
-  word_rol_bv (w:'a word) (n:'a word) = word_rol w (w2n n)`;
+  word_rol_bv (w:'a word) (n:'a word) = word_rol w (w2n n)`
 
-val _ = add_infix("<<", 680,HOLgrammars.LEFT)
-val _ = add_infix(">>", 680,HOLgrammars.LEFT)
-val _ = add_infix(">>>",680,HOLgrammars.LEFT)
-val _ = add_infix("#>>",680,HOLgrammars.LEFT)
-val _ = add_infix("#<<",680,HOLgrammars.LEFT)
-val _ = add_infix("<<~", 680,HOLgrammars.LEFT)
-val _ = add_infix(">>~", 680,HOLgrammars.LEFT)
-val _ = add_infix(">>>~",680,HOLgrammars.LEFT)
-val _ = add_infix("#>>~",680,HOLgrammars.LEFT)
-val _ = add_infix("#<<~",680,HOLgrammars.LEFT)
+val () = add_infixes 680 HOLgrammars.LEFT
+  [("<<",   `words$word_lsl`),
+   (">>",   `words$word_asr`),
+   (">>>",  `words$word_lsr`),
+   ("#>>",  `words$word_ror`),
+   ("#<<",  `words$word_rol`),
+   ("<<~",  `words$word_lsl_bv`),
+   (">>~",  `words$word_asr_bv`),
+   (">>>~", `words$word_lsr_bv`),
+   ("#>>~", `words$word_ror_bv`),
+   ("#<<~", `words$word_rol_bv`)]
 
-val _ = overload_on ("<<", ``words$word_lsl``)
-val _ = overload_on (">>", ``words$word_asr``)
-val _ = overload_on (">>>",``words$word_lsr``)
-val _ = overload_on ("#>>",``words$word_ror``)
-val _ = overload_on ("#<<",``words$word_rol``)
-val _ = overload_on ("<<~", ``words$word_lsl_bv``)
-val _ = overload_on (">>~", ``words$word_asr_bv``)
-val _ = overload_on (">>>~",``words$word_lsr_bv``)
-val _ = overload_on ("#>>~",``words$word_ror_bv``)
-val _ = overload_on ("#<<~",``words$word_rol_bv``)
+val _ = Unicode.unicode_version {u = Unicode.UChar.lsl, tmnm = "<<"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.asr, tmnm = ">>"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.lsr, tmnm = ">>>"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.ror, tmnm = "#>>"}
+val _ = Unicode.unicode_version {u = Unicode.UChar.rol, tmnm = "#<<"}
 
-val _ = Unicode.unicode_version{u=Unicode.UChar.lsl, tmnm="<<"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.asr, tmnm=">>"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.lsr, tmnm=">>>"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.ror, tmnm="#>>"}
-val _ = Unicode.unicode_version{u=Unicode.UChar.rol, tmnm="#<<"}
+val () = add_TeX_tokens 1
+  [("#<<", "Rol"), (Unicode.UChar.rol, "Rol"),
+   ("#>>", "Ror"), (Unicode.UChar.ror, "Ror")]
 
-val _ = TeX_notation {hol = "<<", TeX = ("\\HOLTokenLsl{}", 2)}
-val _ = TeX_notation {hol = Unicode.UChar.lsl, TeX = ("\\HOLTokenLsl{}", 2)}
+val () = add_TeX_tokens 2
+  [("<<", "Lsl"), (Unicode.UChar.lsl, "Lsl"),
+   (">>", "Asr"), (Unicode.UChar.asr, "Asr")]
 
-val _ = TeX_notation {hol = ">>", TeX = ("\\HOLTokenAsr{}", 2)}
-val _ = TeX_notation {hol = Unicode.UChar.asr, TeX = ("\\HOLTokenAsr{}", 2)}
+val () = add_TeX_tokens 3
+  [(">>>", "Lsr"), (Unicode.UChar.lsr, "Lsr")]
 
-val _ = TeX_notation {hol = ">>>", TeX = ("\\HOLTokenLsr{}", 3)}
-val _ = TeX_notation {hol = Unicode.UChar.lsr, TeX = ("\\HOLTokenLsr{}", 3)}
-
-val _ = TeX_notation {hol = "#>>", TeX = ("\\HOLTokenRor{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.ror, TeX = ("\\HOLTokenRor{}", 2)}
-
-val _ = TeX_notation {hol = "#<<", TeX = ("\\HOLTokenRol{}", 1)}
-val _ = TeX_notation {hol = Unicode.UChar.rol, TeX = ("\\HOLTokenRol{}", 1)}
-
-(* ------------------------------------------------------------------------- *)
-(*  Concatenation : definition                                               *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Concatenation : definitions
+   ------------------------------------------------------------------------- *)
 
 val word_join_def = Define`
   (word_join (v:'a word) (w:'b word)):('a + 'b) word =
     let cv = (w2w v):('a + 'b) word
     and cw = (w2w w):('a + 'b) word
-    in  (cv << (dimindex (:'b))) || cw`;
+    in  (cv << (dimindex (:'b))) || cw`
 
 val word_concat_def = zDefine`
-  word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`;
+  word_concat (v:'a word) (w:'b word) = w2w (word_join v w)`
 
 val word_replicate_def = zDefine`
   word_replicate n (w : 'a word) =
-    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`;
+    FCP i. i < n * dimindex(:'a) /\ w ' (i MOD dimindex(:'a))`
 
 val concat_word_list_def = Define`
   (concat_word_list ([]:'a word list) = 0w) /\
-  (concat_word_list (h::t) =
-     w2w h || (concat_word_list t << dimindex(:'a)))`;
+  (concat_word_list (h::t) = w2w h || (concat_word_list t << dimindex(:'a)))`
 
-val _ = overload_on ("@@",Term`$word_concat`);
+val () = add_infixes 700 HOLgrammars.RIGHT [("@@", `$word_concat`)]
 
-val _ = add_infix("@@",700,HOLgrammars.RIGHT);
-
-(* ------------------------------------------------------------------------- *)
-(*  Saturating maps/operations : definitions                                 *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Saturating maps/operations : definitions
+   ------------------------------------------------------------------------- *)
 
 val saturate_n2w_def = Define`
   (saturate_n2w: num -> 'a word) n =
-    if dimword(:'a) <= n then word_T else n2w n`;
+    if dimword(:'a) <= n then word_T else n2w n`
 
 val saturate_w2w_def = zDefine`
-  saturate_w2w (w: 'a word) = saturate_n2w (w2n w)`;
+  saturate_w2w (w: 'a word) = saturate_n2w (w2n w)`
 
 val saturate_add_def = Define`
   saturate_add (a: 'a word) (b: 'a word) =
-    saturate_n2w (w2n a + w2n b) : 'a word`;
+    saturate_n2w (w2n a + w2n b) : 'a word`
 
 val saturate_sub_def = Define`
   saturate_sub (a: 'a word) (b: 'a word) =
-    n2w (w2n a - w2n b) : 'a word`;
+    n2w (w2n a - w2n b) : 'a word`
 
 val saturate_mul_def = Define`
   saturate_mul (a: 'a word) (b: 'a word) =
-    saturate_n2w (w2n a * w2n b) : 'a word`;
+    saturate_n2w (w2n a * w2n b) : 'a word`
 
-(* ------------------------------------------------------------------------- *)
-(*  Theorems                                                                 *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Theorems
+   ------------------------------------------------------------------------- *)
 
 val ZERO_LT_dimword = store_thm(
   "ZERO_LT_dimword",
@@ -745,9 +702,9 @@ val dimindex_uint_max_lt_iso = Q.store_thm("dimindex_uint_max_lt_iso",
   SIMP_TAC bool_ss [UINT_MAX_def, dimindex_dimword_lt_iso,
     iso_lem, ZERO_LT_dimword]);
 
-(* ------------------------------------------------------------------------- *)
-(*  Domain transforming maps : theorems                                      *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Domain transforming maps : theorems
+   ------------------------------------------------------------------------- *)
 
 val WORD_ss = rewrites [w2n_def,n2w_def];
 
@@ -780,7 +737,7 @@ val n2w_w2n_lem = prove(
   Induct \\ ASM_SIMP_TAC arith_ss [SUM_def,BIT_ZERO]
     \\ REPEAT STRIP_TAC \\ Cases_on `i < n`
     \\ FULL_SIMP_TAC arith_ss [NOT_LESS,prim_recTheory.LESS_THM]
-    << [
+    >| [
       IMP_RES_TAC LESS_ADD_1
         \\ `SBIT (f n) n = (if f n then 1 else 0) * 2 ** p * 2 ** (SUC i)`
         by RW_TAC (std_ss++numSimps.ARITH_AC_ss) [SBIT_def,EXP_ADD,EXP]
@@ -1044,9 +1001,11 @@ val word_dec_string = store_thm("word_dec_string",
 val word_hex_string = store_thm("word_hex_string",
   `word_from_hex_string o word_to_hex_string = I`, SRW_TAC [ARITH_ss] rwts);
 
-(* ------------------------------------------------------------------------- *)
-(*  The Boolean operations : theorems                                        *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    The Boolean operations : theorems
+   ------------------------------------------------------------------------- *)
+
+val _ = temp_overload_on ("Tw",``words$word_T``)
 
 val ONE_COMP_0_THM =
   (SIMP_RULE arith_ss [BIT_ZERO,ZERO_MOD,ZERO_LT_TWOEXP] o
@@ -1100,7 +1059,7 @@ val WORD_NEG_1 = store_thm("WORD_NEG_1",
   `-1w:'a word = Tw:'a word`,
   REWRITE_TAC [word_T_def,word_2comp_def,w2n_n2w,UINT_MAX_def]
     \\ Cases_on `dimword (:'a) = 1`
-    >> ASM_SIMP_TAC arith_ss [n2w_11]
+    >- ASM_SIMP_TAC arith_ss [n2w_11]
     \\ ASM_SIMP_TAC arith_ss [DECIDE ``0 < x /\ ~(x = 1) ==> 1 < x``,
          LESS_MOD,ZERO_LT_TWOEXP,dimword_def]);
 
@@ -1270,9 +1229,9 @@ val WORD_AND_EXP_SUB1 = store_thm("WORD_AND_EXP_SUB1",
     \\ SRW_TAC [ARITH_ss] [BITS_ZERO, MIN_DEF, BIT_def, BITS_COMP_THM2,
          GSYM BITS_ZERO3]);
 
-(* ------------------------------------------------------------------------- *)
-(*  Bit field operations : theorems                                          *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Bit field operations : theorems
+   ------------------------------------------------------------------------- *)
 
 val w2w = store_thm("w2w",
   `!w:'a word i. i < dimindex (:'b) ==>
@@ -1391,9 +1350,9 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
   SRW_TAC [fcpLib.FCP_ss,ARITH_ss] [MIN_DEF, word_signed_bits_def,
            w2n_n2w, n2w_def]
      \\ FULL_SIMP_TAC (arith_ss++boolSimps.CONJ_ss) [NOT_LESS]
-     << [
+     >| [
        Cases_on `l <= h`
-         << [
+         >| [
            SRW_TAC [ARITH_ss] [bit_sign_extend, BIT_OF_BITS_THM,
                   DECIDE ``l <= h ==> (SUC h - l = SUC (h - l))``,
                   GSYM BITS_ZERO3, BITS_COMP_THM2]
@@ -1404,14 +1363,14 @@ val word_signed_bits_n2w = Q.store_thm("word_signed_bits_n2w",
              \\ SRW_TAC [ARITH_ss, boolSimps.LET_ss]
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]],
        Cases_on `l <= dimindex (:'a) - 1`
-         << [
+         >| [
            `0 < dimindex (:'a) - l` by DECIDE_TAC
              \\ `?x. dimindex (:'a) - l = SUC x`
              by METIS_TAC [LESS_ADD_1, ADD1, ADD]
              \\ SRW_TAC [ARITH_ss] [bit_sign_extend, BIT_OF_BITS_THM,
                   GSYM BITS_ZERO3, BITS_COMP_THM2]
              \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
-             << [
+             >| [
                `i + l = dimindex (:'a) - 1` by DECIDE_TAC \\ METIS_TAC [],
                `l + x = dimindex (:'a) - 1` by DECIDE_TAC \\ METIS_TAC []],
            `(dimindex (:'a) - l = 0)` by DECIDE_TAC
@@ -1595,7 +1554,7 @@ val WORD_BIT_BITS = store_thm("WORD_BIT_BITS",
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [MIN_DEF,GSYM BITS_ZERO3,SUC_SUB1,BITS_COMP_THM2]
     \\ Cases_on `b = 0` \\ FULL_SIMP_TAC arith_ss []
-    << [`m = 0` by DECIDE_TAC \\ ASM_REWRITE_TAC [],
+    >| [`m = 0` by DECIDE_TAC \\ ASM_REWRITE_TAC [],
       Cases_on `m = b` \\ ASM_SIMP_TAC arith_ss [BITS_ZERO]]);
 
 val lem = prove(`MIN d (l1 + MIN h2 d) = MIN (h2 + l1) d`,
@@ -1637,7 +1596,7 @@ val WORD_BITS_LT = store_thm("WORD_BITS_LT",
     \\ RW_TAC arith_ss [word_bits_n2w,w2n_n2w,GSYM BITS_ZERO3,
          BITS_COMP_THM2,MIN_DEF,BITSLT_THM,dimword_def]
     \\ FULL_SIMP_TAC std_ss []
-    << [`SUC m - l <= SUC h - l` by DECIDE_TAC,
+    >| [`SUC m - l <= SUC h - l` by DECIDE_TAC,
      `SUC (l + m) - l <= SUC h - l` by DECIDE_TAC]
     \\ PROVE_TAC [TWOEXP_MONO2,BITSLT_THM,LESS_LESS_EQ_TRANS]);
 
@@ -1700,7 +1659,7 @@ val WORD_EXTRACT_COMP_THM = store_thm("WORD_EXTRACT_COMP_THM",
     \\ Cases_on `i + (l + n) < dimindex (:'c)`
     \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [w2w]
     \\ FULL_SIMP_TAC bool_ss [NOT_LESS, NOT_LESS_EQUAL]
-    << [
+    >| [
       METIS_TAC [DECIDE ``i + (l + n) <= h + n = i + l <= h:num``],
       `0 < i + l` by METIS_TAC [LESS_LESS_EQ_TRANS,DIMINDEX_GT_0]
         \\ ASM_SIMP_TAC arith_ss []]);
@@ -1759,7 +1718,7 @@ val CONCAT_EXTRACT = store_thm("CONCAT_EXTRACT",
     \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [DIMINDEX_GT_0,w2w]
     \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0,SUB_RIGHT_EQ,NOT_LESS,
          DECIDE ``0 < x ==> (a + (b + c) <= x + c - 1 = a + b <= x - 1)``]
-    << [
+    >| [
       METIS_TAC [DIMINDEX_GT_0,NOT_ZERO_LT_ZERO],
       Cases_on `dimindex (:'a) + dimindex (:'c) <= i`
         \\ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL]
@@ -1789,7 +1748,7 @@ val EXTRACT_JOIN = store_thm("EXTRACT_JOIN",
     \\ Cases_on `i < dimindex (:'a)`
     \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
          [w2w, DIMINDEX_GT_0, NOT_LESS, NOT_LESS_EQUAL]
-    << [
+    >| [
       Cases_on `i + l <= dimindex (:'a) - 1`
         \\ SRW_TAC [ARITH_ss] []
         \\ Cases_on `m + 1 < i + l`
@@ -1838,7 +1797,7 @@ val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
       (h '' l) v || (h '' l) w = (h '' l) (v || w)) /\
    (!h l v:'a word w:'a word.
       (h '' l) v ?? (h '' l) w = (h '' l) (v ?? w))`,
-  FIELD_WORD_TAC << [PROVE_TAC [], PROVE_TAC [], ALL_TAC]
+  FIELD_WORD_TAC >| [PROVE_TAC [], PROVE_TAC [], ALL_TAC]
     \\ Cases_on `l <= i /\ i <= h` \\ FULL_SIMP_TAC arith_ss []);
 
 val WORD_BITS_OVER_BITWISE = store_thm("WORD_BITS_OVER_BITWISE",
@@ -1975,7 +1934,7 @@ val bitwise_log_max = prove(
     \\ Cases_on `l <= SUC (MAX (LOG2 a) (LOG2 b))`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
     \\ Cases_on `i < SUC (MAX (LOG2 a) (LOG2 b))`
-    >> ASM_SIMP_TAC std_ss [BITWISE_THM]
+    >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `MAX (LOG2 a) (LOG2 b) < i` by DECIDE_TAC
     \\ IMP_RES_TAC lem \\ ASM_SIMP_TAC std_ss []);
@@ -1988,7 +1947,7 @@ val bitwise_log_min = prove(
     \\ Cases_on `l <= SUC (MIN (LOG2 a) (LOG2 b))`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
     \\ Cases_on `i < SUC (MIN (LOG2 a) (LOG2 b))`
-    >> ASM_SIMP_TAC std_ss [BITWISE_THM]
+    >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `MIN (LOG2 a) (LOG2 b) < i` by DECIDE_TAC
     \\ IMP_RES_TAC lem2 \\ ASM_SIMP_TAC std_ss []);
@@ -2001,7 +1960,7 @@ val bitwise_log_left = prove(
     \\ Cases_on `l <= SUC (LOG2 a)`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
     \\ Cases_on `i < SUC (LOG2 a)`
-    >> ASM_SIMP_TAC std_ss [BITWISE_THM]
+    >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `LOG2 a < i` by DECIDE_TAC
     \\ IMP_RES_TAC NOT_BIT_GT_LOG2 \\ ASM_SIMP_TAC std_ss []);
@@ -2069,7 +2028,7 @@ val word_replicate_concat_word_list = Q.store_thm
   Induct
      \\ SRW_TAC [] [word_replicate_def, concat_word_list_def,
           rich_listTheory.GENLIST, SNOC_GENLIST_K]
-     >> SRW_TAC [fcpLib.FCP_ss] [word_0]
+     >- SRW_TAC [fcpLib.FCP_ss] [word_0]
      \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
      \\ SRW_TAC [fcpLib.FCP_ss,ARITH_ss]
           [word_replicate_def, word_or_def, word_lsl_def, w2w]
@@ -2105,9 +2064,9 @@ val word_join_index = Q.store_thm("word_join_index",
   \\ `i = 0` by DECIDE_TAC
   \\ FULL_SIMP_TAC (srw_ss()) []);
 
-(* ------------------------------------------------------------------------- *)
-(* Reduce operations : theorems                                              *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Reduce operations : theorems
+   ------------------------------------------------------------------------- *)
 
 val genlist_dimindex_not_null = Q.prove(
   `!f. ~NULL (GENLIST f (dimindex(:'a)))`,
@@ -2209,9 +2168,9 @@ val LEAST_BIT_LT = Q.store_thm("LEAST_BIT_LT",
   \\ POP_ASSUM MP_TAC
   \\ ASM_SIMP_TAC std_ss [word_index]);
 
-(* ------------------------------------------------------------------------- *)
-(*  Word redection: theorems                                                 *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Word reduction: theorems
+   ------------------------------------------------------------------------- *)
 
 val BOOLIFY = Q.prove(
   `!n m a. GENLIST (\i. BIT (n - 1 - i) (BITS (n - 1) 0 m)) n ++ a =
@@ -2294,7 +2253,7 @@ val reduce_and = Q.store_thm ("reduce_and",
   `!w. reduce_and w = if w = UINT_MAXw then 1w else 0w`,
   SRW_TAC [boolSimps.LET_ss]
        [GENLIST_UINT_MAXw, WORD_REDUCE_LIFT, reduce_and_def, word_reduce_def]
-    \\ (Cases_on `dimindex (:'a)` >>
+    \\ (Cases_on `dimindex (:'a)` >-
           FULL_SIMP_TAC bool_ss [DECIDE ``0 < a ==> a <> 0n``, DIMINDEX_GT_0])
     \\ SRW_TAC [] [rich_listTheory.HD_GENLIST, TL_GENLIST_K,
          rich_listTheory.EVERY_GENLIST, GSYM rich_listTheory.AND_EL_FOLDL,
@@ -2307,7 +2266,7 @@ val reduce_and = Q.store_thm ("reduce_and",
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ IMP_RES_TAC NOT_UINTMAXw
     \\ Cases_on `0 < n`
-    << [Cases_on `i = n` >> FULL_SIMP_TAC std_ss []
+    >| [Cases_on `i = n` >- FULL_SIMP_TAC std_ss []
           \\ `i < n` by DECIDE_TAC
           \\ `n - i - 1 < n` by DECIDE_TAC
           \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
@@ -2321,7 +2280,7 @@ val reduce_or = Q.store_thm ("reduce_or",
   `!w. reduce_or w = if w = 0w then 0w else 1w`,
   SRW_TAC [boolSimps.LET_ss]
        [GENLIST_0w, WORD_REDUCE_LIFT, reduce_or_def, word_reduce_def]
-    \\ (Cases_on `dimindex (:'a)` >>
+    \\ (Cases_on `dimindex (:'a)` >-
           FULL_SIMP_TAC bool_ss [DECIDE ``0 < a ==> a <> 0n``, DIMINDEX_GT_0])
     \\ SRW_TAC [] [rich_listTheory.HD_GENLIST, TL_GENLIST_K,
          rich_listTheory.EVERY_GENLIST, GSYM rich_listTheory.OR_EL_FOLDL,
@@ -2334,7 +2293,7 @@ val reduce_or = Q.store_thm ("reduce_or",
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ IMP_RES_TAC NOT_0w
     \\ Cases_on `0 < n`
-    << [Cases_on `i = n` >> FULL_SIMP_TAC std_ss []
+    >| [Cases_on `i = n` >- FULL_SIMP_TAC std_ss []
           \\ `i < n` by DECIDE_TAC
           \\ `n - i - 1 < n` by DECIDE_TAC
           \\ Q.PAT_ASSUM `!i. P` (Q.SPEC_THEN ` n - i - 1` IMP_RES_TAC)
@@ -2344,9 +2303,9 @@ val reduce_or = Q.store_thm ("reduce_or",
         `(n = 0) /\ (i = 0)` by DECIDE_TAC
           \\ FULL_SIMP_TAC bool_ss []]);
 
-(* ------------------------------------------------------------------------- *)
-(*  Word arithmetic: theorems                                                *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Word arithmetic: theorems
+   ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "==" (Infix(NONASSOC, 450));
 
@@ -2372,7 +2331,7 @@ val SUC_EQUIV_mod = LET_RULE (prove(
 val INV_SUC_EQ_mod = LET_RULE (prove(
   `!m n. let $== = ^equiv in
            (SUC m == SUC n) = (m == n)`,
-  LET_TAC \\ REPEAT STRIP_TAC \\ EQ_TAC << [
+  LET_TAC \\ REPEAT STRIP_TAC \\ EQ_TAC >| [
     STRIP_TAC \\ IMP_RES_TAC SUC_EQUIV_mod
       \\ FULL_SIMP_TAC arith_ss [GSYM LESS_EQ_ADD_SUB,ADD1,ADD_MODULUS,
            ZERO_LT_TWOEXP,ONE_LT_EQ_TWOEXP],
@@ -2406,7 +2365,7 @@ val WORD_NEG_mod = LET_RULE (prove(
     by SIMP_TAC std_ss [DECIDE ``a < b ==> 1 + a <= b``,MOD_2EXP_LT]
     \\ ASM_SIMP_TAC arith_ss [SUB_RIGHT_SUB,SUB_RIGHT_ADD]
     \\ Tactical.REVERSE (Cases_on `1 + n MOD ^top = ^top`)
-    >> FULL_SIMP_TAC arith_ss []
+    >- FULL_SIMP_TAC arith_ss []
     \\ RULE_ASSUM_TAC
          (SIMP_RULE bool_ss [GSYM SUC_ONE_ADD,GSYM PRE_SUC_EQ,ZERO_LT_TWOEXP])
     \\ ASM_SIMP_TAC arith_ss [PRE_SUB1]));
@@ -2662,7 +2621,7 @@ val WORD_MULT_SUC  = store_thm("WORD_MULT_SUC",
 val WORD_NEG_LMUL = store_thm("WORD_NEG_LMUL",
   `!v:'a word w. - (v * w) = (- v) * w`,
   REPEAT Cases \\ POP_ASSUM (K ALL_TAC)
-    \\ Induct_on `n'` >> REWRITE_TAC [WORD_MULT_CLAUSES,WORD_NEG_0]
+    \\ Induct_on `n'` >- REWRITE_TAC [WORD_MULT_CLAUSES,WORD_NEG_0]
     \\ ASM_REWRITE_TAC [WORD_NEG_ADD,ADD1,WORD_MULT_SUC,GSYM word_mul_n2w]);
 
 val WORD_NEG_RMUL = save_thm("WORD_NEG_RMUL",
@@ -2701,7 +2660,7 @@ val WORD_ADD_BIT = Q.store_thm("WORD_ADD_BIT",
             a ' n = b ' n
           else
             a ' n <=/=> b ' n))`,
-  Cases >> SRW_TAC [] [WORD_ADD_BIT0]
+  Cases >- SRW_TAC [] [WORD_ADD_BIT0]
     \\ Cases \\ Cases \\ STRIP_TAC
     \\ SRW_TAC [] [word_add_n2w, word_bits_n2w]
     \\ POP_ASSUM MP_TAC
@@ -2728,7 +2687,7 @@ val WORD_LITERAL_ADD = store_thm("WORD_LITERAL_ADD",
    (!m n. n2w m + - (n2w n) =
           if n <= m then n2w (m - n) else - (n2w (n - m)))`,
   REPEAT STRIP_TAC
-    >> REWRITE_TAC [GSYM word_sub_def,GSYM word_add_n2w,WORD_NEG_ADD]
+    >- REWRITE_TAC [GSYM word_sub_def,GSYM word_add_n2w,WORD_NEG_ADD]
     \\ Cases_on `n <= m`
     \\ IMP_RES_TAC (DECIDE ``~(m <= n) ==> n <= m:num``)
     \\ IMP_RES_TAC LESS_EQUAL_ADD
@@ -2752,9 +2711,7 @@ val WORD_SUB_INTRO = Q.store_thm("WORD_SUB_INTRO",
          GSYM WORD_SUB_LNEG, WORD_NEG_NEG]
     \\ METIS_TAC [WORD_NEG_MUL, WORD_MULT_COMM, WORD_MULT_CLAUSES]);
 
-(*---------------------------------------------------------------------------*)
-(*  n2w_SUC |- !n. n2w (SUC n) = n2w n + 1w                                  *)
-(*---------------------------------------------------------------------------*)
+(* n2w_SUC |- !n. n2w (SUC n) = n2w n + 1w *)
 val n2w_SUC = save_thm ("n2w_SUC",
   SIMP_RULE std_ss [WORD_MULT_CLAUSES,GSYM ADD1]
           (ISPEC `1w` WORD_MULT_SUC));
@@ -2788,9 +2745,9 @@ val word_L_MULT = store_thm("word_L_MULT",
                    ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0,
                    ZERO_LT_dimword, INT_MIN_LT_DIMWORD]);
 
-(* ------------------------------------------------------------------------- *)
-(*  Shifts : theorems                                                        *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Shifts : theorems
+   ------------------------------------------------------------------------- *)
 
 val WORD_ss = rewrites [word_msb_def,word_lsl_def,word_lsr_def,word_asr_def,
   word_ror_def,word_rol_def,word_rrx_def,word_T,word_or_def,word_lsb_def,
@@ -2867,7 +2824,7 @@ val ROR_ROL = store_thm("ROR_ROL",
   SHIFT_WORD_TAC
     \\ SPECL_THEN [`n`,`^WL`]
          (STRIP_ASSUME_TAC o SIMP_RULE std_ss [DIMINDEX_GT_0]) DA
-    >> ASM_SIMP_TAC std_ss [MOD_TIMES,GSYM ADD_ASSOC,DIMINDEX_GT_0,LESS_MOD,
+    >- ASM_SIMP_TAC std_ss [MOD_TIMES,GSYM ADD_ASSOC,DIMINDEX_GT_0,LESS_MOD,
          DECIDE ``!a:num b c. a < c ==> (a + (b + (c - a)) = b + c)``,
          ADD_MODULUS_LEFT]
     \\ ONCE_REWRITE_TAC [ADD_COMM]
@@ -2893,9 +2850,9 @@ val MOD_SUM_N = prove(
          [`a`, `b`, `r + r'`])
     \\ ASM_SIMP_TAC std_ss [MOD_MULT,
          DECIDE ``a * n + r + (b * n + s) = (a + b) * n + (r + s:num)``]
-    \\ Cases_on `q'' = 0` >> FULL_SIMP_TAC arith_ss [MOD_MULT_]
+    \\ Cases_on `q'' = 0` >- FULL_SIMP_TAC arith_ss [MOD_MULT_]
     \\ Cases_on `q'' = 1`
-    >> FULL_SIMP_TAC arith_ss [MOD_MULT_,
+    >- FULL_SIMP_TAC arith_ss [MOD_MULT_,
          DECIDE ``n + (r + n * (a + b)) = r + n * (a + b + 1n)``]
     \\ `1 < q''` by DECIDE_TAC \\ IMP_RES_TAC lem
     \\ FULL_SIMP_TAC arith_ss []);
@@ -2912,7 +2869,7 @@ val MOD_COMPLEMENT = store_thm("MOD_COMPLEMENT",
   `!n q a. 0 < n /\ 0 < q /\ a < q * n ==>
       ((q * n - a) MOD n = (n - a MOD n) MOD n)`,
   SRW_TAC [] [] \\ Cases_on `a MOD n = 0`
-    << [
+    >| [
      ASM_SIMP_TAC std_ss [] \\ IMP_RES_TAC lem
        \\ FULL_SIMP_TAC arith_ss [MOD_EQ_0_,
             DECIDE ``n * a - b * n = n * (a - b):num``],
@@ -2957,7 +2914,7 @@ val SHIFT_ZERO = store_thm("SHIFT_ZERO",
 val word_lsl_n2w = store_thm("word_lsl_n2w",
   `!n m. (n2w m):'a word << n =
       if ^HB < n then 0w else n2w (m * 2 ** n)`,
-  Induct >> SIMP_TAC arith_ss [SHIFT_ZERO]
+  Induct >- SIMP_TAC arith_ss [SHIFT_ZERO]
     \\ ASM_REWRITE_TAC [ADD1,GSYM LSL_ADD]
     \\ Cases_on `dimindex (:'a) - 1 < n`
     \\ ASM_SIMP_TAC arith_ss [ZERO_SHIFT]
@@ -2987,7 +2944,7 @@ val word_asr_n2w = prove(
      else
        w >>> n`,
   NTAC 2 STRIP_TAC \\ Cases_on `^WL < n`
-    >> RW_TAC arith_ss [MIN_DEF,SHIFT_ZERO,LSR_LIMIT,ASR_LIMIT,WORD_OR_CLAUSES]
+    >- RW_TAC arith_ss [MIN_DEF,SHIFT_ZERO,LSR_LIMIT,ASR_LIMIT,WORD_OR_CLAUSES]
     \\ SHIFT_WORD_TAC \\ Cases_on `^WL <= i + n`
     \\ FULL_SIMP_TAC arith_ss [MIN_DEF]);
 
@@ -3030,7 +2987,7 @@ val word_ror_n2w = store_thm("word_ror_n2w",
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [] \\ ONCE_REWRITE_TAC [MULT_COMM]
     \\ Cases_on `i < SUC m - n MOD SUC m`
-    << [
+    >| [
       `i + n MOD SUC m < SUC m` by DECIDE_TAC
         \\ PAT_ASSUM `i < y - z` (fn th => (STRIP_ASSUME_TAC o REWRITE_RULE
              [DECIDE ``a + (b + 1) = b + SUC a``]) (MATCH_MP LESS_ADD_1 th))
@@ -3055,7 +3012,7 @@ val word_rrx_n2w = store_thm("word_rrx_n2w",
   SHIFT_WORD_TAC
     \\ RW_TAC arith_ss [BIT0_ODD,SBIT_def,BIT_OF_BITS_THM]
     \\ STRIP_ASSUME_TAC EXISTS_HB \\ FULL_SIMP_TAC arith_ss []
-    << [
+    >| [
       METIS_TAC [BITSLT_THM,SUC_SUB1,BITS_SUM1,BIT_def,BIT_B],
       SIMP_TAC arith_ss [BIT_def,BITS_COMP_THM2,MIN_lem,BITS_ZERO],
       `i < m` by DECIDE_TAC
@@ -3159,7 +3116,7 @@ val LSL_BITWISE = store_thm("LSL_BITWISE",
   `(!n v:'a word w:'a word. w << n && v << n = ((w && v) << n)) /\
    (!n v:'a word w:'a word. w << n || v << n = ((w || v) << n)) /\
    (!n v:'a word w:'a word. w << n ?? v << n = ((w ?? v) << n))`,
-  SHIFT_WORD_TAC << [PROVE_TAC [], PROVE_TAC [], ALL_TAC]
+  SHIFT_WORD_TAC >| [PROVE_TAC [], PROVE_TAC [], ALL_TAC]
     \\ Cases_on `n <= i` \\ ASM_SIMP_TAC arith_ss []);
 
 val ROR_BITWISE = store_thm("ROR_BITWISE",
@@ -3220,9 +3177,9 @@ val WORD_BITS_LSL = store_thm("WORD_BITS_LSL",
     \\ RW_TAC arith_ss [LSL_LIMIT, WORD_BITS_ZERO]
     \\ FULL_SIMP_TAC arith_ss
          [NOT_LESS, NOT_LESS_EQUAL, LSL_LIMIT, WORD_BITS_ZERO2, ZERO_SHIFT]
-    << [
+    >| [
       Cases_on `n <= l`
-        << [`n - l = 0` by DECIDE_TAC,
+        >| [`n - l = 0` by DECIDE_TAC,
             FULL_SIMP_TAC std_ss [NOT_LESS_EQUAL] \\ `l - n = 0` by DECIDE_TAC]
         \\ ASM_REWRITE_TAC [SHIFT_ZERO],
       Cases_on `dimindex (:'a) <= n`
@@ -3241,7 +3198,7 @@ val WORD_EXTRACT_LSL = store_thm("WORD_EXTRACT_LSL",
   SRW_TAC [] [DIMINDEX_GT_0, w2w_LSL, word_extract_def,
               WORD_BITS_LSL, w2w_n2w, BITS_ZERO2]
     \\ SRW_TAC [] [WORD_BITS_COMP_THM]
-    << [
+    >| [
       `h - n <= dimindex (:'a) - 1 - (n - l) + (l - n)` by DECIDE_TAC
         \\ ASM_SIMP_TAC std_ss [MIN_FST],
       FULL_SIMP_TAC arith_ss [NOT_LESS]]);
@@ -3308,9 +3265,9 @@ val word_shift_bv = Q.store_thm("word_shift_bv",
   \\ SRW_TAC [ARITH_ss] [ROR_MOD, ROL_MOD]
   );
 
-(* ------------------------------------------------------------------------- *)
-(*  Orderings : theorems                                                     *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Orderings : theorems
+   ------------------------------------------------------------------------- *)
 
 val EQUAL_THEN_SUB_ZERO = GEN_ALL (PROVE [WORD_SUB_REFL,WORD_LCANCEL_SUB]
   ``((a - b) = 0w) = (a = b)``);
@@ -3473,7 +3430,7 @@ val TWO_COMP_POS = prove(
   Cases
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC bool_ss [WORD_NEG_0]
-    \\ Cases_on `^HB = 0` >> PROVE_TAC [HB_0_NOT_MSB]
+    \\ Cases_on `^HB = 0` >- PROVE_TAC [HB_0_NOT_MSB]
     \\ `~(m = 0)` by DECIDE_TAC
     \\ MAP_EVERY IMP_RES_TAC [MSB_THM4,w2n_mod]
     \\ PAT_ASSUM `dimindex(:'a) = SUC m` (fn t =>
@@ -3507,7 +3464,7 @@ val TWO_COMP_NEG = store_thm("TWO_COMP_NEG",
          word_msb (word_2comp a)
        else
         ~word_msb (word_2comp a)`,
-  RW_TAC bool_ss [] << [
+  RW_TAC bool_ss [] >| [
     IMP_RES_TAC HB_0_MSB
       \\ ASM_SIMP_TAC arith_ss [word_msb_n2w,word_T_def,WORD_NEG_1,
            DIMINDEX_GT_0,ONE_COMP_0_THM,UINT_MAX_def,dimword_def],
@@ -3525,7 +3482,7 @@ val TWO_COMP_POS_NEG = store_thm("TWO_COMP_POS_NEG",
   `!a:'a word. ~((^HB = 0) \/ (a = 0w) \/ (a = word_L)) ==>
      (~word_msb a = word_msb (word_2comp a))`,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-    >> METIS_TAC [TWO_COMP_POS]
+    >- METIS_TAC [TWO_COMP_POS]
     \\ METIS_TAC [WORD_NEG_L,WORD_NEG_EQ,WORD_NEG_NEG,TWO_COMP_NEG]);
 
 val TWO_COMP_NEG_POS = METIS_PROVE [TWO_COMP_POS_NEG]
@@ -3567,7 +3524,7 @@ val SUB_EQUAL_WORD_L_INT_MIN = prove(
     \\ `SLICE m 0 n = SLICE m m n + SLICE (m - 1) 0 n`
     by METIS_TAC [SLICE_COMP_MSB,SUC_SUB2]
     \\ Cases_on `BIT m n`
-    << [IMP_RES_TAC BIT_SLICE_THM2,IMP_RES_TAC BIT_SLICE_THM3]
+    >| [IMP_RES_TAC BIT_SLICE_THM2,IMP_RES_TAC BIT_SLICE_THM3]
     \\ ASM_SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,SLICE_MSB_LT,
          DIV_MULT,DIV_MULT_1]);
 
@@ -3592,15 +3549,15 @@ val LEM2_TAC =
 
 val WORD_GREATER = store_thm("WORD_GREATER",
   `!a:'a word b. a > b = b < a`,
-  Cases_on `^HB = 0` << [LEM2_TAC,LEM1_TAC]);
+  Cases_on `^HB = 0` >| [LEM2_TAC,LEM1_TAC]);
 
 val WORD_GREATER_EQ = store_thm("WORD_GREATER_EQ",
   `!a:'a word b. a >= b = b <= a`,
-  Cases_on `^HB = 0` << [LEM2_TAC,LEM1_TAC]);
+  Cases_on `^HB = 0` >| [LEM2_TAC,LEM1_TAC]);
 
 val WORD_NOT_LESS = store_thm("WORD_NOT_LESS",
   `!a:'a word b. ~(a < b) = b <= a`,
-  Cases_on `^HB = 0` << [LEM2_TAC,LEM1_TAC]);
+  Cases_on `^HB = 0` >| [LEM2_TAC,LEM1_TAC]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3656,7 +3613,7 @@ val w2n_0 =
 val start_tac = REWRITE_TAC [word_sub_def,word_add_def]
     \\ NTAC 2 STRIP_TAC
     \\ Cases_on `b = 0w`
-    >> (ASM_REWRITE_TAC [WORD_NEG_0,w2n_0,ADD_0,n2w_w2n]
+    >- (ASM_REWRITE_TAC [WORD_NEG_0,w2n_0,ADD_0,n2w_w2n]
           \\ PROVE_TAC [prim_recTheory.NOT_LESS_0])
     \\ RW_TAC bool_ss [word_msb_n2w]
     \\ POP_ASSUM MP_TAC
@@ -3699,7 +3656,7 @@ val WORD_LT = store_thm("WORD_LT",
   `!a b. word_lt a b = (word_msb a = word_msb b) /\ w2n a < w2n b \/
                         word_msb a /\ ~word_msb b`,
   Tactical.REVERSE (Cases_on `^HB = 0`) \\ REPEAT STRIP_TAC
-    >> METIS_TAC [word_lt,WORD_LT_lem,WORD_LT_lem2,WORD_LT_lem3,WORD_LT_lem4]
+    >- METIS_TAC [word_lt,WORD_LT_lem,WORD_LT_lem2,WORD_LT_lem3,WORD_LT_lem4]
     \\ MAP_EVERY Cases_on [`word_msb a`,`word_msb b`,
          `word_msb (n2w (w2n a + w2n (- b)):'a word)`]
     \\ ASM_REWRITE_TAC [word_lt] \\ POP_ASSUM MP_TAC
@@ -3736,10 +3693,10 @@ val WORD_LO = store_thm("WORD_LO",
     \\ ASM_SIMP_TAC arith_ss [w2n_2comp,w2n_0,GSYM LESS_EQ_ADD_SUB,
          REWRITE_RULE [dimword_def]
                       (MATCH_MP LESS_IMP_LESS_OR_EQ (SPEC `b` w2n_lt))]
-    \\ Cases_on `a = b` >> ASM_SIMP_TAC arith_ss [BIT_B]
+    \\ Cases_on `a = b` >- ASM_SIMP_TAC arith_ss [BIT_B]
     \\ Cases_on `w2n a < w2n b` \\ ASM_REWRITE_TAC []
     \\ ONCE_REWRITE_TAC [ADD_COMM]
-    \\ RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_0,w2n_n2w]) << [
+    \\ RULE_ASSUM_TAC (REWRITE_RULE [GSYM w2n_11,w2n_0,w2n_n2w]) >| [
       IMP_RES_TAC LESS_IMP_LESS_OR_EQ
         \\ `~(w2n b - w2n a = 0)` by DECIDE_TAC
         \\ POP_ASSUM (fn th => `^dimword_ML - (w2n b - w2n a) < ^dimword_ML`
@@ -3968,7 +3925,7 @@ fun bound_tac th1 th2 =
   RW_TAC bool_ss [WORD_LE,WORD_L_NEG,WORD_LE,WORD_H_POS,w2n_word_H,w2n_word_L]
     \\ Cases_on `word_msb a` \\ ASM_REWRITE_TAC []
     \\ Cases_on `^HB = 0`
-    >> (IMP_RES_TAC th1 \\ ASM_SIMP_TAC arith_ss [])
+    >- (IMP_RES_TAC th1 \\ ASM_SIMP_TAC arith_ss [])
     \\ Cases_on `a` \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC bool_ss [w2n_n2w,word_msb_n2w,dimword_def]
     \\ MAP_EVERY IMP_RES_TAC [th2,SLICE_COMP_MSB]
@@ -4019,7 +3976,7 @@ val tac =
     \\ IMP_RES_TAC (DECIDE ``~(a <= b) ==> (b <= a:num)``)
     \\ Cases_on `n + n' < dimword (:'a)`
     \\ SRW_TAC [ARITH_ss] [SUB_LEFT_LESS, SUB_RIGHT_ADD]
-    >> (Cases_on `n' = 0` \\ SRW_TAC [ARITH_ss] [])
+    >- (Cases_on `n' = 0` \\ SRW_TAC [ARITH_ss] [])
     \\ FULL_SIMP_TAC bool_ss [NOT_LESS]
     \\ `?p. p < dimword (:'a) /\ (n + n' = dimword (:'a) + p)`
     by (EXISTS_TAC `(n + n') MOD dimword (:'a)`
@@ -4477,7 +4434,7 @@ val w2w_eq_n2w = Q.store_thm("w2w_eq_n2w",
       dimindex (:'a) <= dimindex (:'b) /\ y < dimword (:'a) ==>
       ((w2w x = n2w y :'b word) = (x = n2w y))`,
   Cases \\ SRW_TAC [] [w2w_n2w]
-  >> FULL_SIMP_TAC arith_ss [dimindex_dimword_le_iso]
+  >- FULL_SIMP_TAC arith_ss [dimindex_dimword_le_iso]
   \\ SRW_TAC [] [MOD_DIMINDEX, bitTheory.BITS_COMP_THM2, MIN_DEF]
   \\ FULL_SIMP_TAC arith_ss [dimword_def, DIMINDEX_GT_0, bitTheory.BITS_ZEROL,
        SUB1_SUC]
@@ -4499,8 +4456,8 @@ val word_concat_0 = Q.store_thm("word_concat_0",
   `!x. FINITE univ(:'a) /\ x < dimword (:'b) ==>
      ((0w :'a word) @@ (n2w x :'b word) = (n2w x :'c word))`,
   Cases_on `FINITE univ(:'b)`
-  << [Cases_on `dimindex (:'b) <= dimindex (:'c)`
-      >> SRW_TAC [numSimps.ARITH_ss] [fcpTheory.index_sum, word_concat_def,
+  >| [Cases_on `dimindex (:'b) <= dimindex (:'c)`
+      >- SRW_TAC [numSimps.ARITH_ss] [fcpTheory.index_sum, word_concat_def,
               word_join_0, w2w_w2w, w2w_eq_n2w, WORD_ALL_BITS]
       \\ SRW_TAC [fcpLib.FCP_ss] [word_concat_def, word_join_0, n2w_def, w2w]
       \\ Cases_on `i < dimindex (:'a) + dimindex (:'b)`
@@ -4634,7 +4591,7 @@ val word_reverse_thm = store_thm("word_reverse_thm",
      (word_reverse (word_reverse w) = w) /\
      (word_reverse (w << n) = word_reverse w >>> n) /\
      (word_reverse (w >>> n) = word_reverse w << n) /\
-     (word_reverse (w !! v) = word_reverse w !! word_reverse v) /\
+     (word_reverse (w || v) = word_reverse w || word_reverse v) /\
      (word_reverse (w && v) = word_reverse w && word_reverse v) /\
      (word_reverse (w ?? v) = word_reverse w ?? word_reverse v) /\
      (word_reverse (~w) = ~(word_reverse w)) /\
@@ -4678,9 +4635,9 @@ val bit_count_is_zero = Q.store_thm("bit_count_is_zero",
   `!w. (bit_count w = 0) = (w = 0w)`,
   simp [bit_count_def, bit_count_upto_is_zero, word_eq_0]);
 
-(* ------------------------------------------------------------------------- *)
-(* Theorems sets of words                                                    *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Theorems: sets of words
+   ------------------------------------------------------------------------- *)
 
 val WORD_FINITE = store_thm("WORD_FINITE",
   `!s:'a word set. FINITE s`,
@@ -4710,9 +4667,9 @@ val WORD_SET_INDUCT = save_thm("WORD_SET_INDUCT",
   REWRITE_RULE [WORD_FINITE]
   (INST_TYPE [`:'a`|->`:'a word`] FINITE_INDUCT));
 
-(* ------------------------------------------------------------------------- *)
-(* Support for termination proofs                                            *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Support for termination proofs
+   ------------------------------------------------------------------------- *)
 
 val SUC_WORD_PRED = store_thm("SUC_WORD_PRED",
   `!x:'a word. ~(x = 0w) ==> (SUC (w2n (x - 1w)) = w2n x)`,
@@ -4826,9 +4783,9 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
   `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y /\ x - y <= x`,
   SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB]);
 
-(* ------------------------------------------------------------------------- *)
-(* Create a few word sizes                                                   *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+    Create a few word sizes
+   ------------------------------------------------------------------------- *)
 
 val sizes =
   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
@@ -4856,9 +4813,9 @@ fun mk_word_size n =
 
 val _ = List.app mk_word_size sizes;
 
-(*---------------------------------------------------------------------------*)
-(* Write some code into wordsTheory.sml                                      *)
-(*---------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Write some code into wordsTheory.sml
+   ------------------------------------------------------------------------- *)
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
   struct_ps = SOME (fn ppstrm =>
@@ -4889,8 +4846,6 @@ val _ = adjoin_to_theory_struct
 (* For use with EmitML                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`;
+val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`
 
-(* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();
+val _ = export_theory()
