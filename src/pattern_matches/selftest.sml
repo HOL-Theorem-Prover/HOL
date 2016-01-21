@@ -685,7 +685,7 @@ val _ = app test [
     Pretty-printer
    ---------------------------------------------------------------------- *)
 
-val _ = set_trace "use pmatch_pp" 1
+val _ = parsePMATCH.temp_ADD_PMATCH ()
 
 fun testpp s =
   let
