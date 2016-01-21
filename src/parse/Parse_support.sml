@@ -19,6 +19,8 @@ type env = {scope : (string * pretype) list,
             free  : (string * pretype) list,
             uscore_cnt : int};
 
+fun frees (e:env) = #free e
+
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
 fun add_free(b,{scope,free,uscore_cnt}) =

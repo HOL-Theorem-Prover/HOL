@@ -9,6 +9,9 @@ sig
   type bvar_in_env    = env -> (preterm -> preterm) * env
   type overload_info  = term_grammar.overload_info
 
+  val empty_env             : env
+  val frees                 : env -> (string * pretype) list
+
   val gen_overloaded_const  : overload_info -> locn.locn -> string -> preterm
   val make_preterm          : preterm_in_env -> preterm
   val make_aq               : locn.locn -> term -> preterm_in_env
