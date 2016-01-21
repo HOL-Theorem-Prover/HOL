@@ -505,7 +505,7 @@ end
 
 fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
   val (ptm1, e1 : env) = tm1 empty_env
-  val arr = gen_overloaded_const oinfo loc GrammarSpecials.case_arrow_special
+  val (arr,_) = make_qconst loc ("bool", GrammarSpecials.case_arrow_special) E
   fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))
   val qs = map mk_bvar (#free e1)
   val (ptm2, E') = bind_term loc qs tm2 E

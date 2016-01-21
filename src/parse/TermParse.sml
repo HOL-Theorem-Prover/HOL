@@ -218,11 +218,12 @@ in
       end
     | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) => let
       in
-        if caseform = GrammarSpecials.case_special then let
+        if caseform = GrammarSpecials.core_case_special then let
             (* handle possible arrows in t2 *)
             fun every_case base ab =
                 case ab of
-                  APP(l, APP(_, t0 as IDENT (_, casesplit), t1), t2) => let
+                  APP(l, APP(_, t0 as QIDENT (_, "bool", casesplit), t1), t2) =>
+                  let
                   in
                     if casesplit = GrammarSpecials.case_split_special then let
                         val t1' = every_case base t1
