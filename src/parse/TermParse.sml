@@ -197,101 +197,119 @@ local open Parse_support Absyn
       | _ => raise ERRORloc "Term" (locn_of_absyn t)
                             "Bad variable-structure"
 in
-  fun absyn_to_preterm_in_env oinfo t = let
+  fun absyn_to_preterm_in_env TmG t = let
+    val oinfo = term_grammar.overload_info TmG
     fun binder(VIDENT (l,s))    = make_binding_occ l s
       | binder(VPAIR(l,v1,v2))  = make_vstruct oinfo l [binder v1, binder v2]
                                                NONE
       | binder(VAQ (l,x))       = make_aq_binding_occ l x
       | binder(VTYPED(l,v,pty)) = make_vstruct oinfo l [binder v] (SOME pty)
     open parse_term Absyn Parse_support
-    val to_ptmInEnv = absyn_to_preterm_in_env oinfo
+    val to_ptmInEnv = absyn_to_preterm_in_env TmG
+    val (f, args) = Absyn.strip_app t
+    val user_processor =
+        case f of
+            IDENT(l, nm) => term_grammar.preterm_processor TmG (nm, length args)
+          | _ => NONE
   in
-    case t of
-      APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
-        make_set_abs oinfo l (to_ptmInEnv t1, to_ptmInEnv t2)
-    | APP(l,APP(_,APP(_,IDENT (_, "gspec2 special"), t1), t2), t3) => let
-        val l3 = locn_of_absyn t3
-        val newbody = APP(l3, APP(l3, QIDENT(l3, "pair", ","), t1), t3)
-      in
-        to_ptmInEnv (APP(l, QIDENT(l, "pred_set", "GSPEC"),
-                         LAM(l, to_vstruct t2, newbody)))
-      end
-    | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) => let
-      in
-        if caseform = GrammarSpecials.core_case_special then let
-            (* handle possible arrows in t2 *)
-            fun every_case base ab =
-                case ab of
-                  APP(l, APP(_, t0 as QIDENT (_, "bool", casesplit), t1), t2) =>
+    case user_processor of
+        SOME f => f TmG to_ptmInEnv t
+      | NONE =>
+        let
+        in
+          case t of
+              APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
+              make_set_abs oinfo l (to_ptmInEnv t1, to_ptmInEnv t2)
+            | APP(l,APP(_,APP(_,IDENT (_, "gspec2 special"), t1), t2), t3) =>
+              let
+                val l3 = locn_of_absyn t3
+                val newbody = APP(l3, APP(l3, QIDENT(l3, "pair", ","), t1), t3)
+              in
+                to_ptmInEnv (APP(l, QIDENT(l, "pred_set", "GSPEC"),
+                                 LAM(l, to_vstruct t2, newbody)))
+              end
+            | APP(l, APP(_, t0 as IDENT (_, caseform), t1), t2) =>
+              let
+              in
+                if caseform = GrammarSpecials.core_case_special then let
+                  (* handle possible arrows in t2 *)
+                  fun every_case base ab =
+                    case ab of
+                        APP(l, APP(_, t0 as QIDENT (_, "bool", casesplit), t1),
+                            t2) =>
+                        let
+                        in
+                          if casesplit = GrammarSpecials.case_split_special then
+                            let
+                              val t1' = every_case base t1
+                              val t2' = every_case base t2
+                            in
+                              list_make_comb l [to_ptmInEnv t0, t1', t2']
+                            end
+                          else base ab
+                        end
+                      | _ => base ab
+                  fun do_arrow ab =
+                    case ab of
+                        APP(l, APP(_, t0 as IDENT (_, casearrow), t1), t2) =>
+                        let
+                        in
+                          if casearrow = GrammarSpecials.case_arrow_special then
+                            make_case_arrow oinfo
+                                            l (to_ptmInEnv t1) (to_ptmInEnv t2)
+                          else raise ERRORloc "Term" l
+                                     "Mal-formed case expression (no arrow)"
+                        end
+                      | _ => raise ERRORloc "Term" (locn_of_absyn ab)
+                                   "Mal-formed case expression (no arrow)"
+                in
+                  list_make_comb l [to_ptmInEnv t0, to_ptmInEnv t1,
+                                    every_case do_arrow t2]
+                end
+                else if String.isPrefix GrammarSpecials.recfupd_special caseform
+                then
                   let
+                    fun isARB_updchain a =
+                      case a of
+                          QIDENT (locn.Loc_None, "bool", "ARB") => true
+                        | APP (l1, APP (l2, IDENT (l3, fupd), t1), r) =>
+                          String.isPrefix GrammarSpecials.recfupd_special fupd
+                          andalso
+                          isARB_updchain r
+                        | _ => false
+                    open Preterm
+                    fun getARBTy pt =
+                      case pt of
+                          Comb{Rand,...} => getARBTy Rand
+                        | Const{Ty,...} => Ty
+                        | Constrained{Ptm,Ty,...} => Ty
+                        | _ => raise Fail "TermParse.getARBTy invariant failure"
+                    val ptE = list_make_comb l (map to_ptmInEnv [t0, t1, t2])
                   in
-                    if casesplit = GrammarSpecials.case_split_special then let
-                        val t1' = every_case base t1
-                        val t2' = every_case base t2
-                      in
-                        list_make_comb l [to_ptmInEnv t0, t1', t2']
-                      end
-                    else base ab
+                    if isARB_updchain t2 then
+                      (fn e => let
+                         val (pt,e') = ptE e
+                         val ty = getARBTy pt
+                       in
+                         (Constrained{Ptm = pt,Ty = ty,Locn = locn.Loc_None},
+                          e')
+                       end)
+                    else ptE
                   end
-                | _ => base ab
-            fun do_arrow ab =
-                case ab of
-                  APP(l, APP(_, t0 as IDENT (_, casearrow), t1), t2) => let
-                  in
-                    if casearrow = GrammarSpecials.case_arrow_special then
-                      make_case_arrow oinfo l (to_ptmInEnv t1) (to_ptmInEnv t2)
-                    else raise ERRORloc "Term" l
-                                        "Mal-formed case expression (no arrow)"
-                  end
-                | _ => raise ERRORloc "Term" (locn_of_absyn ab)
-                                      "Mal-formed case expression (no arrow)"
-          in
-            list_make_comb l [to_ptmInEnv t0, to_ptmInEnv t1,
-                              every_case do_arrow t2]
-          end
-        else if String.isPrefix GrammarSpecials.recfupd_special caseform then
-          let
-            fun isARB_updchain a =
-              case a of
-                  QIDENT (locn.Loc_None, "bool", "ARB") => true
-                | APP (l1, APP (l2, IDENT (l3, fupd), t1), r) =>
-                    String.isPrefix GrammarSpecials.recfupd_special fupd andalso
-                    isARB_updchain r
-                | _ => false
-            open Preterm
-            fun getARBTy pt =
-              case pt of
-                  Comb{Rand,...} => getARBTy Rand
-                | Const{Ty,...} => Ty
-                | Constrained{Ptm,Ty,...} => Ty
-                | _ => raise Fail "TermParse.getARBTy invariant failure"
-            val ptE = list_make_comb l (map to_ptmInEnv [t0, t1, t2])
-          in
-            if isARB_updchain t2 then
-              (fn e => let
-                 val (pt,e') = ptE e
-                 val ty = getARBTy pt
-               in
-                 (Constrained{Ptm = pt,Ty = ty,Locn = locn.Loc_None}, e')
-               end)
-            else ptE
-          end
-        else list_make_comb l (map to_ptmInEnv [t0, t1, t2])
-      end
-    | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
-    | IDENT (l, s)       => make_atom oinfo l s
-    | QIDENT (l, s1, s2) => make_qconst l (s1,s2)
-    | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
-    | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
-    | AQ (l, t)          => make_aq l t
+                else list_make_comb l (map to_ptmInEnv [t0, t1, t2])
+              end
+            | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
+            | IDENT (l, s)       => make_atom oinfo l s
+            | QIDENT (l, s1, s2) => make_qconst l (s1,s2)
+            | LAM(l, vs, t)      => bind_term l [binder vs] (to_ptmInEnv t)
+            | TYPED(l, t, pty)   => make_constrained l (to_ptmInEnv t) pty
+            | AQ (l, t)          => make_aq l t
+        end
   end
 end;
 
-fun absyn_to_preterm g a = let
-  val oinfo = term_grammar.overload_info g
-in
-  a |> absyn_to_preterm_in_env oinfo |> Parse_support.make_preterm
-end
+fun absyn_to_preterm g a =
+  a |> absyn_to_preterm_in_env g |> Parse_support.make_preterm
 
 fun preterm g tyg q = q |> absyn g tyg |> absyn_to_preterm g
 

@@ -1124,6 +1124,16 @@ fun temp_remove_absyn_postprocessor s =
     res
   end
 
+fun temp_add_preterm_processor k f =
+  the_term_grammar := term_grammar.new_preterm_processor k f (!the_term_grammar)
+
+fun temp_remove_preterm_processor k =
+  let
+    val (g, res) = term_grammar.remove_preterm_processor k (!the_term_grammar)
+  in
+    the_term_grammar := g;
+    res
+  end
 
 (*-------------------------------------------------------------------------
         Overloading

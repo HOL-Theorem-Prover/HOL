@@ -15,11 +15,7 @@ val ERRORloc = mk_HOL_ERRloc "Parse_support";
        Parsing environments
  ---------------------------------------------------------------------------*)
 
-type env = {scope : (string * pretype) list,
-            free  : (string * pretype) list,
-            uscore_cnt : int};
-
-fun frees (e:env) = #free e
+open Parse_supportENV
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;

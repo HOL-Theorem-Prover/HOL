@@ -4,13 +4,10 @@ sig
   type preterm = Preterm.preterm
   type term    = Term.term
 
-  type env
-  type preterm_in_env = env -> preterm * env
+  type env            = Parse_supportENV.env
+  type preterm_in_env = preterm Parse_supportENV.PSM
   type bvar_in_env    = env -> (preterm -> preterm) * env
   type overload_info  = term_grammar.overload_info
-
-  val empty_env             : env
-  val frees                 : env -> (string * pretype) list
 
   val gen_overloaded_const  : overload_info -> locn.locn -> string -> preterm
   val make_preterm          : preterm_in_env -> preterm
