@@ -48,9 +48,23 @@ struct
 
   val std_binder_precedence = 0
 
-  val case_special = "case__magic"
-  val case_split_special = "case_split__magic"
-  val case_arrow_special = "case_arrow__magic"
+
+  fun mk_case_special0 nm component =
+      mk_fakeconst_name {original = SOME {Thy = "case magic", Name = nm},
+                         fake = component}
+  val mk_default_case = mk_case_special0 "default"
+  fun mk_case_special nm = mk_case_special0 nm "case"
+  fun dest_case_special s =
+    case dest_fakeconst_name s of
+        SOME {original = SOME{Thy="case magic",Name},fake="case"} => SOME Name
+      | _ => NONE
+  val is_case_special = isSome o dest_case_special
+
+
+
+  val core_case_special = mk_default_case "case"
+  val case_split_special = mk_default_case "split"
+  val case_arrow_special = mk_default_case "arrow"
 
   open HolKernel
   val compilefn = ref (NONE : (term -> term) option)

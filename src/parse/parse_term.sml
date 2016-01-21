@@ -673,24 +673,47 @@ fun get_case_info (G : grammar) = let
       | _ => acc
   fun extract_toks ppels = List.rev (List.foldl extract_tok [] ppels)
   fun rr_foldthis ({term_name,elements,...}, acc) =
-      if term_name <> GrammarSpecials.case_special then acc
-      else extract_toks elements :: acc
+    if GrammarSpecials.is_case_special term_name then
+      case Binarymap.peek(acc, term_name) of
+          NONE => Binarymap.insert(acc, term_name, [extract_toks elements])
+        | SOME els =>
+            Binarymap.insert(acc, term_name, extract_toks elements :: els)
+    else acc
   fun foldthis (gr, acc) =
       case gr of
         PREFIX (STD_prefix rrs) => List.foldl rr_foldthis acc rrs
       | _ => acc
-  val candidates = List.foldl foldthis [] (grammar_rules G)
+  val candidates =
+      List.foldl foldthis (Binarymap.mkDict String.compare) (grammar_rules G)
   val error_case = {casebar = NONE, casecase = NONE, caseof = NONE}
+  fun mapthis (cspecial, candidates) =
+    case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
+        [] => error_case
+      | toks :: _ =>
+        let
+        in
+          if length toks <> 4 orelse last toks <> last (butlast toks) then
+            error_case
+          else {casebar = SOME (last toks), casecase = SOME (hd toks),
+                caseof = SOME (hd (tl toks))}
+        end
+  val specials_to_toks = Binarymap.map mapthis candidates
+  val toks_to_specials = let
+    fun foldthis (k,r,acc) =
+      case #casecase r of
+          NONE => acc
+        | SOME tok =>
+          (case Binarymap.peek(acc,tok) of
+               NONE => Binarymap.insert(acc,tok,k)
+             | SOME k' => raise Fail ("Tok \"" ^ tok ^
+                                      "\" maps to case specials " ^
+                                      valOf (dest_case_special k) ^ " and " ^
+                                      valOf (dest_case_special k')))
+  in
+    Binarymap.foldl foldthis (Binarymap.mkDict String.compare) specials_to_toks
+  end
 in
-  case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
-    [] => error_case
-  | toks :: _ => let
-    in
-      if length toks <> 4 orelse last toks <> last (butlast toks) then
-        error_case
-      else {casebar = SOME (last toks), casecase = SOME (hd toks),
-            caseof = SOME (hd (tl toks))}
-    end
+  (specials_to_toks, toks_to_specials)
 end
 
 fun parse_term (G : grammar) typeparser = let
@@ -698,7 +721,7 @@ fun parse_term (G : grammar) typeparser = let
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
   val overload_info = overload_info G
-  val {casebar,caseof,casecase} = get_case_info G
+  val (casespec_to_tok, casetok_to_spec) = get_case_info G
   val closed_lefts = find_prefix_lhses G
   val left_grabbers = List.concat (map left_grabbing_elements Grules)
   val fnapp_closed_lefts = Lib.subtract closed_lefts left_grabbers
@@ -841,7 +864,7 @@ fun parse_term (G : grammar) typeparser = let
        have been caught by the insertion of these rules specifically into
        the DB. *)
     datatype rule_possibility = Normal of rule_summary
-                              | CaseRule
+                              | CaseRule of string
 
     fun handle_listcase_reduction lrlocn pattern = let
       val errmsg = "No rule for "^ listtoString reltoString pattern
@@ -851,49 +874,58 @@ fun parse_term (G : grammar) typeparser = let
       fun tokstring x = case x of TOK s => SOME s | _ => NONE
       val poss_left = case hd pattern of TOK x => x | _ => fail()
     in
-      if SOME poss_left = casecase then let
-          fun bars_ok l =
+      case Binarymap.peek(casetok_to_spec, poss_left) of
+          SOME cspec =>
+          let
+            val {casecase,casebar,caseof} =
+                Binarymap.find(casespec_to_tok,cspec)
+            fun bars_ok l =
               case l of
-                [TM] => true
-              | TM :: TOK s :: rest => SOME s = casebar andalso bars_ok rest
-              | _ => false
-          fun case_ok l =
+                  [TM] => true
+                | TM :: TOK s :: rest => SOME s = casebar andalso bars_ok rest
+                | _ => false
+            fun case_ok l =
               case l of
-                TM :: TOK ofs :: TOK s :: rest => let
-                in
-                  SOME ofs = caseof andalso SOME s = casebar andalso
-                  bars_ok rest
-                end
-              | TM :: TOK ofs :: rest => SOME ofs = caseof andalso bars_ok rest
-              | _ => false
-        in
-          if case_ok (tl pattern) then CaseRule else badcase()
-        end
-      else let
-          val poss_right =
-              case (List.last pattern) of TOK x => x | _ => fail()
-          val interior = butlast (tl pattern)
-          val poss_sep =
-              case (List.nth(interior, 1)) of TOK x => x | _ => fail()
-          fun list_ok [] = raise Fail "list_ok: shouldn't happen"
-            | list_ok [TM] = true
-            | list_ok (TOK _::_) = false
-            | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso list_ok rest
-            | list_ok (TM :: TM :: _) = false
-          val listrec = {separator = poss_sep, leftdelim = poss_left,
-                         rightdelim = poss_right}
-        in
-          if list_ok interior then
-            case compatible_listrule G listrec of
-              NONE => fail()
-            | SOME r => Normal (listfix_rule r)
-          else
-            fail()
-        end
+                  TM :: TOK ofs :: TOK s :: rest =>
+                  let
+                  in
+                    SOME ofs = caseof andalso SOME s = casebar andalso
+                    bars_ok rest
+                  end
+                | TM :: TOK ofs :: rest => SOME ofs = caseof andalso
+                                           bars_ok rest
+                | _ => false
+          in
+            if case_ok (tl pattern) then CaseRule cspec else badcase()
+          end
+        | NONE =>
+          let
+            val poss_right =
+                case (List.last pattern) of TOK x => x | _ => fail()
+            val interior = butlast (tl pattern)
+            val poss_sep =
+                case (List.nth(interior, 1)) of TOK x => x | _ => fail()
+            fun list_ok [] = raise Fail "list_ok: shouldn't happen"
+              | list_ok [TM] = true
+              | list_ok (TOK _::_) = false
+              | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso
+                                                list_ok rest
+              | list_ok (TM :: TM :: _) = false
+            val listrec = {separator = poss_sep, leftdelim = poss_left,
+                           rightdelim = poss_right}
+          in
+            if list_ok interior then
+              case compatible_listrule G listrec of
+                  NONE => fail()
+                | SOME r => Normal (listfix_rule r)
+            else
+              fail()
+          end
     end
     fun checkcase r =
         case r of
-          prefix_rule s => if s = GrammarSpecials.case_special then CaseRule
+          prefix_rule s => if GrammarSpecials.is_case_special s then
+                             CaseRule s
                            else Normal r
         | _ => Normal r
 
@@ -976,13 +1008,14 @@ fun parse_term (G : grammar) typeparser = let
             | Normal rule =>
               List.foldl CCOMB (VAR (summary_toString rule),llocn')
                          args_w_seglocs
-            | CaseRule => let
-                fun mkcase1 ((t,loc),_) =
-                    (COMB((VAR GrammarSpecials.case_special, loc), (t,loc)),
-                     loc)
+            | CaseRule cs => let
+                fun mkcase1 ((t,loc),_) = (COMB((VAR cs, loc), (t,loc)), loc)
                 fun mkbar(((t,loc),_),acc) =
-                    (COMB((COMB((VAR GrammarSpecials.case_split_special, loc),
-                                (t,loc)), loc),
+                    (COMB((COMB((QIDENT("bool",
+                                        GrammarSpecials.case_split_special),
+                                 loc),
+                                (t,loc)),
+                           loc),
                           acc),
                      locn.between loc rlocn)
               in

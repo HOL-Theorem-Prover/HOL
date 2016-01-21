@@ -817,7 +817,7 @@ fun remove_case_magic0 tm0 = let
                 val {Name,Thy,Ty} = dest_thy_const f
                     handle HOL_ERR _ => {Name = "", Thy = "", Ty = alpha}
               in
-                if Name = case_special andalso Thy = "bool" then let
+                if Name = core_case_special andalso Thy = "bool" then let
                     val _ = length args >= 2 orelse
                             raise ERR "remove_case_magic"
                                       "case constant has wrong # of args"

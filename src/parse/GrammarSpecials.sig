@@ -30,7 +30,10 @@ sig
   val num_injection : string
 
   (* handling case expressions *)
-  val case_special : string
+  val mk_case_special : string -> string
+  val dest_case_special : string -> string option
+  val is_case_special : string -> bool
+  val core_case_special : string
   val case_split_special : string
   val case_arrow_special : string
 

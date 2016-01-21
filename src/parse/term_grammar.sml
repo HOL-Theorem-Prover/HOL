@@ -1131,7 +1131,12 @@ fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
       else if s = recupd_special then "record field update"
       else if s = recfupd_special then "functional record update"
       else if s = recwith_special then "record update"
-      else s
+      else
+        case dest_fakeconst_name s of
+            NONE => s
+          | SOME {fake,original = NONE} => "%" ^ fake ^ "%"
+          | SOME {fake,original = SOME{Thy,Name}} =>
+              Thy ^ "$" ^ Name ^ " - %" ^ fake ^ "%"
 
     val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
     val tmid_suffix =
