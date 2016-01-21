@@ -121,13 +121,14 @@ sig
   val user_printers :
     grammar -> (term * string * userprinter)Net.net
 
-  val absyn_postprocessors : grammar ->
-                             (string * (Absyn.absyn -> Absyn.absyn)) list
-  val new_absyn_postprocessor : string * (Absyn.absyn -> Absyn.absyn) ->
-                                grammar -> grammar
+  type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
+
+  val absyn_postprocessors :
+      grammar -> (string * absyn_postprocessor) list
+  val new_absyn_postprocessor :
+      string * absyn_postprocessor -> grammar -> grammar
   val remove_absyn_postprocessor :
-      string -> grammar ->
-      (grammar * (Absyn.absyn -> Absyn.absyn) option)
+      string -> grammar -> (grammar * absyn_postprocessor option)
 
 
   type special_info = {type_intro    : string,

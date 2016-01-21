@@ -162,7 +162,7 @@ end
 fun absyn_postprocess G a = let
   val pps = term_grammar.absyn_postprocessors G
 in
-  foldl (fn ((_, f), acc) => f acc) a pps
+  foldl (fn ((_, f), acc) => f G acc) a pps
 end
 
 

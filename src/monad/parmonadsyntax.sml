@@ -140,7 +140,7 @@ in
     end
 end
 
-val transform_absyn = clean_do false
+fun transform_absyn G a = clean_do false a
 
 val _ = Parse.temp_add_absyn_postprocessor ("parmonadsyntax.transform_absyn",
                                             transform_absyn)

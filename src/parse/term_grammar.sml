@@ -142,8 +142,14 @@ datatype grammar = GCONS of
    numeral_info : (char * string option) list,
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
-   absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
+   absyn_postprocessors : (string * postprocessor) list
    }
+and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
+
+fun destAbPP (AbPP f) = f
+
+type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
+
 
 type userprinter =
      (type_grammar.grammar * grammar, grammar) term_pp_types.userprinter
@@ -154,7 +160,8 @@ fun overload_info (GCONS G) = #overload_info G
 fun known_constants (GCONS G) = Overload.known_constants (#overload_info G)
 fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
-fun absyn_postprocessors (GCONS g) = #absyn_postprocessors g
+fun absyn_postprocessors0 (GCONS g) = #absyn_postprocessors g
+fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
 
 (* fupdates *)
 open FunctionalRecordUpdate
@@ -250,7 +257,7 @@ fun update_alist (k,v) [] = [(k,v)]
 fun new_absyn_postprocessor (k,f) (GCONS g) = let
   val old = #absyn_postprocessors g
 in
-  GCONS (update_G g (U #absyn_postprocessors (update_alist (k,f) old)) $$)
+  GCONS (update_G g (U #absyn_postprocessors (update_alist (k,AbPP f) old)) $$)
 end
 
 fun remove_absyn_postprocessor k (GCONS g) = let
@@ -258,7 +265,7 @@ fun remove_absyn_postprocessor k (GCONS g) = let
 in
   case total (pluck (equal k o #1)) old of
     NONE => (GCONS g, NONE)
-  | SOME ((_,f), rest) =>
+  | SOME ((_,AbPP f), rest) =>
     (GCONS (update_G g (U #absyn_postprocessors rest) $$), SOME f)
 end
 
@@ -1095,8 +1102,8 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
          overload_info = new_oload_info, user_printers = new_ups,
-         absyn_postprocessors = alist_merge (absyn_postprocessors G1)
-                                            (absyn_postprocessors G2)}
+         absyn_postprocessors = alist_merge (absyn_postprocessors0 G1)
+                                            (absyn_postprocessors0 G2)}
 end
 
 (* ----------------------------------------------------------------------

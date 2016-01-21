@@ -45,11 +45,12 @@ signature Parse = sig
   (* Parsing terms *)
 
   val post_process_term: (term -> term) ref
-  val add_absyn_postprocessor : (string * (Absyn.absyn->Absyn.absyn)) -> unit
+  val add_absyn_postprocessor :
+      (string * term_grammar.absyn_postprocessor) -> unit
   val temp_add_absyn_postprocessor :
-      (string * (Absyn.absyn->Absyn.absyn)) -> unit
+      (string * term_grammar.absyn_postprocessor) -> unit
   val temp_remove_absyn_postprocessor :
-      string -> (Absyn.absyn->Absyn.absyn) option
+      string -> term_grammar.absyn_postprocessor option
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
   val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
   val Absyn            : term frag list -> Absyn.absyn
