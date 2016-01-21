@@ -88,14 +88,14 @@ in
   doit
 end
 
-fun compiler (obufPush, obufRD, obufRST) linenum infn = let
+fun compiler (obufPush, obufRD, obufRST) handler infn = let
   fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
   fun rpt acc =
     (obufRST();
      PolyML.compiler(infn,
                      [PolyML.Compiler.CPErrorMessageProc record_error,
                       PolyML.Compiler.CPOutStream obufPush]) ()
-     handle e => lnumdie linenum (obufRD()) e;
+     handle e => handler (obufRD()) e;
      if obufRD() = "" then String.concat (List.rev acc)
      else rpt (obufRD() :: acc))
 in
@@ -107,7 +107,7 @@ fun silentUse lnum s =
     val filecontents = quoteFile lnum s
     val buf = mkBuffer()
   in
-    compiler buf 1 (mkLex filecontents)
+    compiler buf (lnumdie 1) (mkLex filecontents)
   end
 
 
@@ -208,7 +208,7 @@ in
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)
-      val _ = compiler obuf (linenum lbuf)
+      val _ = compiler obuf (lnumdie (linenum lbuf))
                        (mkLex ("val _ = if (" ^ quote e ^ ") then () " ^
                                "else die \"Assertion failed: line " ^
                                Int.toString (linenum lbuf) ^ "\";"))
@@ -228,7 +228,7 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
+      val raw_output = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
     in
       ("", SOME (transformOutput umap ws raw_output))
     end
@@ -236,7 +236,7 @@ in
     let
       val firstline = String.extract(line, 4, NONE)
       val input = getRest 4 [firstline]
-      val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
+      val _ = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
     in
       ("", NONE)
     end
@@ -244,17 +244,27 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val _ = compiler obuf (linenum lbuf) (mkLex (quote input))
+      val _ = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
       (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
+    end
+  else if String.isPrefix ">>+" line then
+    let
+      val firstline = String.extract(line, 3, NONE)
+      val input = getRest 3 [firstline]
+      fun handle_exn extra exn = raise Fail (extra ^ General.exnMessage exn)
+      val raw_output = compiler obuf handle_exn (mkLex (quote input))
+                       handle Fail s => s
+    in
+      (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
   else if String.isPrefix ">>" line then
     let
       val _ = obRST()
       val firstline = String.extract(line, 2, NONE)
       val input = getRest 2 [firstline]
-      val raw_output = compiler obuf (linenum lbuf) (mkLex (quote input))
+      val raw_output = compiler obuf (lnumdie (linenum lbuf)) (mkLex (quote input))
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
