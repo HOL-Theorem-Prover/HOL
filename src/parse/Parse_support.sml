@@ -127,6 +127,15 @@ in
                 Locn=locn.near (Preterm.locn b)}), E')
 end
 
+fun make_typed_binding l (v as (s,pty)) E = let
+  open Preterm
+  val E' = add_scope(v, E)
+in
+  ((fn b => Abs{Bvar=Var{Name=s,Ty=pty,Locn=l},Body=b,
+                Locn=locn.near (Preterm.locn b)}),
+   E')
+end
+
 fun make_aq_binding_occ l aq E = let
   val (v as (Name,Ty)) = Term.dest_var aq
   val pty = Pretype.fromType Ty

@@ -14,6 +14,7 @@ sig
   val absyn : grammar -> tygrammar -> term quotation -> absyn
   val preterm : grammar -> tygrammar -> term quotation -> preterm
   val absyn_to_preterm : grammar -> absyn -> preterm
+  val absyn_to_preterm_in_env : grammar -> absyn -> Parse_support.preterm_in_env
   val absyn_to_term : pprinters -> grammar -> absyn -> term
   val preterm_to_term : pprinters -> preterm -> term
   val term : pprinters -> grammar -> tygrammar -> term quotation -> term
