@@ -590,7 +590,10 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
    ---------------------------------------------------------------------- *)
 
 open testutils
-val _ = Parse.set_pmatch_use true
+val _ = parsePMATCH.temp_ADD_PMATCH()
+val _ = Parse.temp_add_preterm_processor
+          (parsePMATCH.PMATCH_case_special, 2)
+          parsePMATCH.pmatch_case
 fun pel2string [] = ""
   | pel2string (pLeft::rest) = "L" ^ pel2string rest
   | pel2string (pRight::rest) = "R" ^ pel2string rest
@@ -614,6 +617,10 @@ fun test(inp, expected) =
   end
 
 val _ = app test [
+  ("case b of T => F | F => T",
+   ``PMATCH (b:bool) [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. F);
+                      PMATCH_ROW (\u:one. F) (\u:one. T) (\u:one. T)]``),
+
   ("case x of 0 => 3 | SUC n => n + 1",
    ``PMATCH x [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 3);
                PMATCH_ROW (\n. SUC n) (\n:num. T) (\n. n + 1)]``),
@@ -639,6 +646,16 @@ val _ = app test [
                      PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
                      PMATCH_ROW (\x:num. x) (\x:num. T) (\x:num. 100n)]``),
 
+  ("n + case b of T => 1 | n => 2",
+   ``n + PMATCH (b:bool)
+                [PMATCH_ROW (\u:one. T) (\u:one. T) (\u:one. 1n);
+                 PMATCH_ROW (\n:bool. n) (\n:bool. T) (\n:bool. 2n)]``),
+
+  ("n + case x of 0 => 1 | m .| m + n => m * 2",
+   ``n + PMATCH (x:num)
+                [PMATCH_ROW (\u:one. 0) (\u:one. T) (\u:one. 1);
+                 PMATCH_ROW (\m:num. m + n) (\m:num. T) (\m:num. m * 2)]``),
+
   ("case x of 0 => 3 | () .| n => 4 | x => 100",
    ``PMATCH (x:num) [PMATCH_ROW (\u:one. 0n) (\u:one. T) (\u:one. 3n);
                      PMATCH_ROW (\u:one. n:num) (\u:one. T) (\u:one. 4n);
@@ -663,14 +680,14 @@ val _ = app test [
        PMATCH_ROW (\uv:unit. (SOME T, [] :bool list)) (\uv:unit. T)
                   (\uv :unit. 2n);
        PMATCH_ROW (\ ((xx :bool),(yy :bool list)). (SOME xx,yy))
-         (\ ((xx :bool),(yy :bool list)). T)
-         (\ ((xx :bool),(yy :bool list)). 3n);
+                  (\ ((xx :bool),(yy :bool list)). T)
+                  (\ ((xx :bool),(yy :bool list)). 3n);
        PMATCH_ROW (\ ((z :bool list),(u2 :bool)). (SOME u2,z))
-         (\ ((z :bool list),(u2 :bool)). T)
-         (\ ((z :bool list),(u2 :bool)). 4n);
-       PMATCH_ROW (\ (((z1 :bool list),(z2 :'a)),(u3 :bool)). (SOME u3,z1))
-         (\ (((z1 :bool list),(z2 :'a)),(u3 :bool)). T)
-         (\ (((z1 :bool list),(z2 :'a)),(u3 :bool)). 5n);
+                  (\ ((z :bool list),(u2 :bool)). T)
+                  (\ ((z :bool list),(u2 :bool)). 4n);
+       PMATCH_ROW (\ (z1 :bool list, (z2 :'a, u3 :bool)). (SOME u3,z1))
+                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). T)
+                  (\ (z1 :bool list, (z2 :'a, u3 :bool)). 5n);
        PMATCH_ROW (\ (z :bool list). (SOME T,z))
                   (\ (z :bool list). LENGTH x > 5n)
                   (\ (z :bool list). 6n);
@@ -679,6 +696,19 @@ val _ = app test [
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``)
 
+]
+
+fun shouldfail s = let
+  val _ = tprint ("Should NOT parse: " ^ s)
+in
+  case Lib.total Parse.Term [QUOTE s] of
+      NONE => print "OK\n"
+    | _ => die "FAILED!"
+end
+
+
+val _ = app shouldfail [
+      "case x of NONE => F | y .| SOME(x,y) => x < y"
 ]
 
 (* ----------------------------------------------------------------------

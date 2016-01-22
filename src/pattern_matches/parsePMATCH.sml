@@ -1,10 +1,7 @@
-structure parsePMATCH :> parsePMATCH =
+structure parsePMATCH =
 struct
 
-exception unch
-fun Unchanged a = raise unch
-open term_grammar
-
+open Lib HolKernel Parse term_grammar
 
 fun case_element s (e : pp_element) =
   case e of
@@ -69,11 +66,30 @@ and map_tok_elements f els = map (map_tok_element f) els
 fun map_tok_add_record f = ar_elements_fupd (map_tok_elements f)
 
 val PMATCH_case_special = GrammarSpecials.mk_case_special "PMATCH"
+val PMATCH_endbinding =
+    GrammarSpecials.mk_fakeconst_name {fake = ".|",
+                                       original = SOME{Thy = "patternMatches",
+                                                       Name = "endbinding"}}
+val PMATCH_when =
+    GrammarSpecials.mk_fakeconst_name {fake = "when",
+                                       original = SOME{Thy = "patternMatches",
+                                                       Name = "when"}}
+
+val endbinding_ar = {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                     fixity = Infix(NONASSOC, 13),
+                     paren_style = OnlyIfNecessary,
+                     pp_elements = [RE (TOK ".|")],
+                     term_name = PMATCH_endbinding}
+val when_ar = {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+               fixity = Infix(NONASSOC, 14),
+               paren_style = OnlyIfNecessary,
+               pp_elements = [RE (TOK "when")],
+               term_name = PMATCH_when}
 
 fun mk_dtcase ar = map_tok_add_record (fn "case" => "dtcase" | s => s) ar
 fun mk_pmcase ar = ar_name_fupd (K PMATCH_case_special) ar
 
-fun add_pmatch get arule rmtmtok G =
+fun add_pmatch get (arule : add_record -> 'a -> 'a) rmtmtok G =
   let
     val crules = grammar_tok_rules "case" (get G)
     val dtcrules0 = grammar_tok_rules "dtcase" (get G)
@@ -84,17 +100,20 @@ fun add_pmatch get arule rmtmtok G =
                         "No existing case rules?"
           | c :: _ => #term_name c <> PMATCH_case_special
     val G =
-        if do_pm then rmtmtok G {term_name = GrammarSpecials.core_case_special,
-                                 tok = "case"}
+        if do_pm then rmtmtok {term_name = GrammarSpecials.core_case_special,
+                               tok = "case"} G
         else G
     val G =
         if do_dtc then
-          List.foldl (fn (ar, G) => arule G (mk_dtcase ar)) G crules
+          List.foldl (fn (ar, G) => arule (mk_dtcase ar) G) G crules
         else G
     val G =
         if do_pm then
-          List.foldl (fn (ar, G) => arule G (mk_pmcase ar)) G crules
+          List.foldl (fn (ar, G) => arule (mk_pmcase ar) G) G crules
         else G
+    val G = if do_pm then
+              G |> arule when_ar |> arule endbinding_ar
+            else G
   in
     G
   end
@@ -103,49 +122,22 @@ val fixityRF = ar_fixity_fupd Parse.RF
 
 val ADD_PMATCH =
     add_pmatch term_grammar
-               (fn _ => Parse.add_rule o fixityRF)
-               (fn _ => Parse.remove_termtok)
+               (K o Parse.add_rule o fixityRF)
+               (K o Parse.remove_termtok)
 
 val temp_ADD_PMATCH =
     add_pmatch term_grammar
-               (fn _ => Parse.temp_add_rule o fixityRF)
-               (fn _ => Parse.temp_remove_termtok)
+               (K o Parse.temp_add_rule o fixityRF)
+               (K o Parse.temp_remove_termtok)
 
 val grammar_add_pmatch =
-    add_pmatch (fn g => g) term_grammar.add_rule remove_form_with_tok
+    add_pmatch (fn g => g) (C term_grammar.add_rule) (C remove_form_with_tok)
 
 (* ----------------------------------------------------------------------
     absyn traversal
    ---------------------------------------------------------------------- *)
 
-open Absyn
-fun optbind f x y k =
-  case f x of
-      NONE => (case f y of NONE => NONE
-                         | SOME y' => SOME (k x y'))
-    | SOME x' => (case f y of NONE => SOME (k x' y)
-                            | SOME y' => SOME (k x' y'))
-
-fun lift f x = case f x of NONE => x | SOME x' => x'
-
-fun absyn_traverse (f : (absyn -> absyn option) -> absyn -> absyn option) =
-  let
-    fun recurse a =
-      case f recurse a of
-          NONE =>
-          (case a of
-               APP(l,a1,a2) => optbind recurse a1 a2
-                                       (fn x => fn y => APP(l,x,y))
-             | LAM(l,vs,a) => (case recurse a of NONE => NONE
-                                               | SOME a' => SOME(LAM(l,vs,a')))
-             | TYPED(l,a,pty) =>
-                 (case recurse a of NONE => NONE
-                                  | SOME a' => SOME(TYPED(l,a',pty)))
-             | _ => NONE)
-          | x => x
-  in
-    lift recurse
-  end
+open Absyn Parse_support Parse_supportENV
 
 fun strip_casesplit a =
   let
@@ -162,56 +154,128 @@ fun strip_casesplit a =
   end
 
 val noloc = locn.Loc_None
+val cons_pt = Parse_support.make_qconst noloc ("list", "CONS")
+val nil_pt = Parse_support.make_qconst noloc ("list", "NIL")
+val PMATCH_ROW_pt =
+    Parse_support.make_qconst noloc ("patternMatches", "PMATCH_ROW")
+val unit_pty = Pretype.Tyop{Thy = "one", Tyop = "one", Args = []}
+val bool_pty = Pretype.Tyop{Thy = "min", Tyop = "bool", Args = []}
 
-fun mk_rowlist rs =
-  case rs of
-      [] => raise Fail "pmatch_case: impossible"
-    | [r] =>
-      let
-        val l = locn_of_absyn r
-      in
-        APP(l,
-            APP(l, QIDENT(noloc, "list", "CONS"), r),
-            QIDENT(noloc, "list", "NIL"))
-      end
-    | r::rs =>
-      let
-        val l = locn_of_absyn r
-      in
-        APP(l,
-            APP(l, QIDENT(noloc, "list", "CONS"), r),
-            mk_rowlist rs)
-      end
+fun mk_ptlist pts =
+  case pts of
+      [] => nil_pt
+    | h::t => Parse_support.list_make_comb noloc [cons_pt, h, mk_ptlist t]
 
-fun mk_row a =
+type env = Parse_supportENV.env
+fun push bvs ({scope,free,uscore_cnt} : env) : env =
+  {scope = bvs @ scope, free = free, uscore_cnt = uscore_cnt}
+
+fun popn n ({scope,free,uscore_cnt} : env) : env =
+  {scope = List.drop(scope,n), free = free, uscore_cnt = uscore_cnt}
+
+fun ptlist_mk_comb [] = raise Fail "ptlist_mk_comb: empty list"
+  | ptlist_mk_comb [t] = t
+  | ptlist_mk_comb (f::x::xs) =
+    ptlist_mk_comb (Preterm.Comb{Locn = noloc, Rand = x, Rator = f} :: xs)
+
+val UNCURRY_pty = Pretype.fromType (type_of pairSyntax.uncurry_tm)
+fun mkUNCURRY () =
+  Preterm.Const {Locn = noloc, Name = "UNCURRY", Thy = "pair",
+                 Ty = Pretype.rename_typevars [] UNCURRY_pty}
+
+fun ptmkabs((vnm,vty),b) =
+  Preterm.Abs{Body = b,
+              Bvar = Preterm.Var{Locn=noloc,Name=vnm,Ty=vty},
+              Locn = noloc}
+fun ptmkcomb(f,x) = Preterm.Comb{Rator = f, Rand = x, Locn = noloc}
+fun tuplify vs body =
+  case vs of
+      [] => body
+    | [x] => ptmkabs(x,body)
+    | [x,y] => ptmkcomb(mkUNCURRY(), ptmkabs(x,ptmkabs(y,body)))
+    | v::rest => ptmkcomb(mkUNCURRY(), ptmkabs(v, tuplify rest body))
+
+fun mk_row recursor a E =
   case a of
       APP(l1, APP(l2, IDENT (l3, arr), lh), rh) =>
       let
         val _ = arr = GrammarSpecials.case_arrow_special orelse
                 raise mk_HOL_ERRloc "parsePMATCH" "pmatch_transform" l1
                       "No arrow"
+        val (bvs_opt, lhbody) =
+            case lh of
+                APP(_, APP(_, IDENT (_, bvsplit), bvs), body) =>
+                  if bvsplit = PMATCH_endbinding then (SOME bvs, body)
+                  else (NONE, lh)
+              | _ => (NONE, lh)
+        val (pat, guard_opt) =
+            case lhbody of
+                APP(_, APP(_, IDENT(_, gdsplit), pat), gd) =>
+                  if gdsplit = PMATCH_when then
+                    (pat, SOME gd)
+                  else (lhbody, NONE)
+              | _ => (lhbody, NONE)
+        val bvsE =
+            case bvs_opt of
+                NONE => NONE
+              | SOME a => recursor a empty_env |> #2 |> SOME
+        val (patStartE,pop_count) =
+            case bvsE of
+                NONE => (empty_env,0)
+              | SOME e => let val vs = frees e in (push vs E, length vs) end
+
+        val (pat_ptm, patfrees, patE) =
+            let
+              val (pat_ptm, E') = recursor pat patStartE
+            in
+              (pat_ptm,
+               Lib.set_diff (frees E') (frees E),
+               popn pop_count E')
+            end
+        val allvars0 =
+            case bvsE of
+                NONE => patfrees
+              | SOME e => List.filter (fn (nm,_) => String.isPrefix "_" nm)
+                                      patfrees @
+                          frees e
+        val allvars = if null allvars0 then [("_", unit_pty)] else allvars0
+        val allpop_count = length allvars
+        val (guard_ptm, guardE) =
+            case guard_opt of
+                NONE => (Preterm.Const{Thy="bool", Name = "T", Locn = noloc,
+                                       Ty = bool_pty}, patE)
+              | SOME ga =>
+                let
+                  val (g, E') = recursor ga (push allvars patE)
+                in
+                  (g, popn allpop_count E')
+                end
+        val (rh_ptm, rhE) = let
+          val (pt, E') = recursor rh (push allvars guardE)
+        in
+          (pt, popn allpop_count E')
+        end
+        val (prow_pt,_) = PMATCH_ROW_pt rhE
+        val tupled_args =
+            map (tuplify (List.rev allvars)) [pat_ptm, guard_ptm, rh_ptm]
       in
-        APP(l1, APP(l2, IDENT (l3, ","), lh), rh)
+        (ptlist_mk_comb (prow_pt :: tupled_args), rhE)
       end
     | _ => raise mk_HOL_ERRloc "parsePMATCH" "pmatch_transform"
                  (locn_of_absyn a)
                  "No arrow"
 
-fun pmatch_case recursor a =
+fun pmatch_case G recursor a =
   case a of
       APP(l1, APP(l2, IDENT(l3, c), arg1), arg2) =>
-      if c = PMATCH_case_special then
-        let
-          val arg1 = lift recursor arg1
-          val rows = map mk_row (strip_casesplit arg2)
-        in
-          SOME(APP(l1,APP(l2,QIDENT(l3,"patternMatches", "PMATCH"), arg1),
-                   mk_rowlist rows))
-        end
-      else NONE
-    | _ => NONE
-
-val a = absyn_traverse pmatch_case (Absyn`case x of T => F | F => T`)
-
+      let
+        open Parse_support
+        val arg1 = recursor arg1
+        val pmatch_pt = make_qconst noloc ("patternMatches", "PMATCH")
+        val rows = map (mk_row recursor) (strip_casesplit arg2)
+      in
+        list_make_comb l1 [pmatch_pt, arg1, mk_ptlist rows]
+      end
+    | _ => raise Fail "pmatch_case: should never happen"
 
 end
