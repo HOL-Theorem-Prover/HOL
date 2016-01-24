@@ -668,8 +668,8 @@ fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val fake_subst = map (fn wc => (wc |-> mk_fake wc)) wc_l
 
   val vars' =
-    if (List.null var_l') then
-      variant (free_varsl [pat, guard, rh]) ``uv:unit``
+    if List.null var_l' then
+      variant (free_varsl [pat, guard, rh]) (mk_var("_", oneSyntax.one_ty))
     else
       pairSyntax.list_mk_pair var_l'
 
@@ -701,7 +701,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
 
     fun pp_row (vars, pat, guard, rh) =
       let
-        val print_vars =
+        val (print_vars, print_unit) =
             let val vs = FVL [vars] empty_tmset
                 val pvs0 = FVL [pat] empty_tmset
                 val pvs = HOLset.foldl
@@ -710,7 +710,9 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
                             empty_tmset
                             pvs0
             in
-              not (HOLset.isSubset(pvs,vs))
+              if HOLset.isSubset(pvs,vs) then (false, false)
+              else
+                (true, HOLset.find (not o varname_starts_with_uscore) vs = NONE)
             end
         val patsys = if print_vars then sys else bsys
       in
@@ -718,10 +720,13 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
           ublock PP.INCONSISTENT 5 (
             (if not print_vars then nothing
              else
-              bsys (Top, Top, Top) (d - 1) vars >>
-              add_string " " >>
-              add_string ".|" >>
-              add_break (1, 0)) >>
+               let val V = if print_unit then oneSyntax.one_tm else vars
+               in
+                 bsys (Top, Top, Top) (d - 1) V >>
+                 add_string " " >>
+                 add_string ".|" >>
+                 add_break (1, 0)
+               end) >>
             sys (Top, Top, Top) (d - 1) pat >>
             (if aconv guard T then nothing
              else
