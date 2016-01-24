@@ -224,12 +224,12 @@ fun mk_row recursor a E =
                 NONE => (empty_env,0)
               | SOME e => let val vs = frees e in (push vs E, length vs) end
 
-        val (pat_ptm, patfrees, patE) =
+        val (pat_ptm, patfrees, patE0) =
             let
               val (pat_ptm, E') = recursor pat patStartE
             in
               (pat_ptm,
-               Lib.set_diff (frees E') (frees E),
+               Lib.set_diff (frees E') (frees patStartE),
                popn pop_count E')
             end
         val allvars0 =
@@ -239,6 +239,10 @@ fun mk_row recursor a E =
                                       patfrees @
                           frees e
         val allvars = if null allvars0 then [("_", unit_pty)] else allvars0
+        val patE =
+            case bvsE of
+                NONE => E
+              | SOME _ => patE0
         val allpop_count = length allvars
         val (guard_ptm, guardE) =
             case guard_opt of
