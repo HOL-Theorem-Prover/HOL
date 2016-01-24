@@ -599,7 +599,9 @@ fun pel2string [] = ""
   | pel2string (pRight::rest) = "R" ^ pel2string rest
   | pel2string (pAbs::rest) = "A" ^ pel2string rest
 fun d2string (p,t1,t2) =
-  "   " ^ term_to_string t1 ^ " - " ^ term_to_string t2 ^
+  "   " ^
+  trace ("types", 1) term_to_string t1 ^ " - " ^
+  trace ("types", 1) term_to_string t2 ^
   "  (" ^ pel2string p ^ ")\n"
 
 fun test(inp, expected) =
@@ -694,16 +696,28 @@ val _ = app test [
        PMATCH_ROW
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). (SOME z1,z2))
          (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). LENGTH z3 > 5n)
-         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``)
+         (\ ((z1 :bool),(z2 :bool list),(z3 :'b list)). 7n)]``),
+
+  ("case x of NONE => y | SOME (z:'foo) => (f z : 'bar)",
+   ``PMATCH (x:'foo option) [
+       PMATCH_ROW (\uv:unit. NONE) (\uv:unit. T) (\uv:unit. y:'bar);
+       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
+     ]``),
+
+  ("case x of NONE => y | z:'foo .| SOME z => (f z : 'bar)",
+   ``PMATCH (x:'foo option) [
+       PMATCH_ROW (\uv:unit. NONE) (\uv:unit. T) (\uv:unit. y:'bar);
+       PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
+     ]``)
 
 ]
 
 fun shouldfail s = let
   val _ = tprint ("Should NOT parse: " ^ s)
 in
-  case Lib.total Parse.Term [QUOTE s] of
+  case Lib.total (trace ("show_typecheck_errors", 0) Parse.Term) [QUOTE s] of
       NONE => print "OK\n"
-    | _ => die "FAILED!"
+    | SOME t => die ("FAILED!\n  Parsed to: " ^ term_to_string t)
 end
 
 
