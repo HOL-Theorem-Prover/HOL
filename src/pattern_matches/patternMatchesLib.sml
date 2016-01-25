@@ -9,7 +9,7 @@ open DatatypeSimps
 open patternMatchesSyntax
 open Traverse
 open constrFamiliesLib
-open unwindLib 
+open unwindLib
 
 val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
@@ -3087,7 +3087,7 @@ val tt = list_mk_disj disjs
 (*************************************)
 
 type pmatch_info = {
-  pmi_is_well_formed            : bool, 
+  pmi_is_well_formed            : bool,
   pmi_ill_formed_rows           : int list,
   pmi_has_free_pat_vars         : (int * term list) list,
   pmi_has_unused_pat_vars       : (int * term list) list,
@@ -3102,7 +3102,7 @@ fun is_proven_exhaustive_pmatch (pmi : pmatch_info) =
   (case (#pmi_exhaustiveness_cond pmi) of
       NONE => false
     | SOME thm => let
-        val (pre, _) = dest_imp_only (concl thm) 
+        val (pre, _) = dest_imp_only (concl thm)
       in
         aconv pre ``~F``
       end handle HOL_ERR _ => false
@@ -3112,12 +3112,12 @@ fun get_possibly_missing_patterns (pmi : pmatch_info) =
   (case (#pmi_exhaustiveness_cond pmi) of
       NONE => NONE
     | SOME thm => (let
-        val (pre, _) = dest_imp_only (concl thm) 
-      in if aconv pre ``~F`` then SOME [] else 
+        val (pre, _) = dest_imp_only (concl thm)
+      in if aconv pre ``~F`` then SOME [] else
       let
         val ps = strip_disj (dest_neg pre)
         fun dest_p p = let
-           val (_, vs, p, g) = dest_PMATCH_ROW_COND_EX_ABS p 
+           val (_, vs, p, g) = dest_PMATCH_ROW_COND_EX_ABS p
         in (vs, p, g) end
       in
         SOME (List.map dest_p ps)
@@ -3132,9 +3132,9 @@ fun extend_possibly_missing_patterns t (pmi : pmatch_info) =
        val use_guards = not (null (#pmi_has_guards pmi))
        val arb_t = mk_arb (type_of t)
        fun mk_row (v, p, g) = let
-         val vars = pairSyntax.strip_pair v 
+         val vars = pairSyntax.strip_pair v
        in
-         snd (mk_PMATCH_ROW_PABS_WILDCARDS vars (p, 
+         snd (mk_PMATCH_ROW_PABS_WILDCARDS vars (p,
            if use_guards then g else T, arb_t))
        end
        val rows = List.map mk_row rs
@@ -3148,7 +3148,7 @@ fun extend_possibly_missing_patterns t (pmi : pmatch_info) =
 
 
 fun is_well_formed_pmatch (pmi : pmatch_info) =
-  (#pmi_is_well_formed pmi) andalso 
+  (#pmi_is_well_formed pmi) andalso
   (null (#pmi_ill_formed_rows pmi)) andalso
   (null (#pmi_has_unused_pat_vars pmi)) andalso
   (null (#pmi_has_lambda_in_pat pmi));
@@ -3164,7 +3164,7 @@ fun is_sml_pmatch (pmi : pmatch_info) =
   (null (#pmi_has_guards pmi));
 
 val init_pmatch_info : pmatch_info = {
-  pmi_is_well_formed            = false, 
+  pmi_is_well_formed            = false,
   pmi_ill_formed_rows           = [],
   pmi_has_free_pat_vars         = [],
   pmi_has_unused_pat_vars       = [],
@@ -3175,9 +3175,9 @@ val init_pmatch_info : pmatch_info = {
   pmi_exhaustiveness_cond       = NONE
 }
 
-fun pmi_genupdate f1 f2 f3 f4 f5 f6 f7 f8 f9 
+fun pmi_genupdate f1 f2 f3 f4 f5 f6 f7 f8 f9
   (pmi : pmatch_info) = ({
-  pmi_is_well_formed            = f1 (#pmi_is_well_formed pmi), 
+  pmi_is_well_formed            = f1 (#pmi_is_well_formed pmi),
   pmi_ill_formed_rows           = f2 (#pmi_ill_formed_rows pmi),
   pmi_has_free_pat_vars         = f3 (#pmi_has_free_pat_vars pmi),
   pmi_has_unused_pat_vars       = f4 (#pmi_has_unused_pat_vars pmi),
@@ -3187,9 +3187,9 @@ fun pmi_genupdate f1 f2 f3 f4 f5 f6 f7 f8 f9
   pmi_has_non_contr_in_pat      = f8 (#pmi_has_non_contr_in_pat pmi),
   pmi_exhaustiveness_cond       = f9 (#pmi_exhaustiveness_cond pmi)
 }:pmatch_info)
-		  
+
 fun pmi_set_is_well_formed x =
-    pmi_genupdate (K x) I I I I I I I I 
+    pmi_genupdate (K x) I I I I I I I I
 
 fun pmi_add_ill_formed_row row_no =
     pmi_genupdate (K true) (cons row_no) I I I I I I I;
@@ -3216,25 +3216,25 @@ fun pmi_set_pmi_exhaustiveness_cond thm_opt =
     pmi_genupdate I I I I I I I I (K thm_opt);
 
 
-local 
+local
 
-  fun analyse_pat (ls : bool (* has lamdbda been seen *), 
-                   sv : term set (* set of all seen vars *), 
+  fun analyse_pat (ls : bool (* has lamdbda been seen *),
+                   sv : term set (* set of all seen vars *),
                    msv : term set (* set of all vars seen more than once *),
                    sc : term set (* set of all seen constants *))
-       t = 
+       t =
     if is_var t then let
          val (sv, msv) = if HOLset.member (sv, t) then
             (sv, HOLset.add (msv, t))
          else
             (HOLset.add (sv, t), msv)
-      in (ls, sv, msv, sc) 
+      in (ls, sv, msv, sc)
     end else if (Literal.is_literal t orelse is_const t) then
       (ls, sv, msv, HOLset.add (sc,t))
     else if (is_abs t) then
       (true, sv, msv, sc)
     else if (is_comb t) then let
-        val (t1, t2) = dest_comb t 
+        val (t1, t2) = dest_comb t
         val (ls, sv, msv, sc) = analyse_pat (ls, sv, msv, sc) t1
         val (ls, sv, msv, sc) = analyse_pat (ls, sv, msv, sc) t2
       in
@@ -3310,7 +3310,7 @@ fun analyse_pmatch try_exh t = let
   val pmi = (if (try_exh andalso is_ocaml_pmatch pmi) then
       pmi_set_pmi_exhaustiveness_cond (SOME (PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t)) pmi else pmi) handle HOL_ERR _ => pmi
 
-in 
+in
   pmi
 end handle HOL_ERR _ => init_pmatch_info
 
