@@ -255,7 +255,7 @@ in
       val input = getRest 3 [firstline]
       fun handle_exn extra exn = raise Fail (extra ^ General.exnMessage exn)
       val raw_output = compiler obuf handle_exn (mkLex (quote input))
-                       handle Fail s => s
+                       handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
