@@ -738,7 +738,7 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
               add_string " " >> add_string "when" >> add_break (1, 0) >>
               sys (Top, Top, Top) (d - 1) guard) >>
             add_string " " >> add_string "=>" >> add_break (1, 0) >>
-            sys (Top, Prec (2000, ""), Top) (d - 1) rh))
+            sys (Top, Top, Top) (d - 1) rh))
       end
   in
     ublock PP.CONSISTENT 0 (

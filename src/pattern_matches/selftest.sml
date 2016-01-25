@@ -743,5 +743,6 @@ val _ = app testpp [
   "case x of 0 => 3 | SUC n => n",
   "case x of 0 => 4 | SUC _ => 10",
   "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
-  "case x of 0 => 3 | () .| n => 4 | x => 100"
+  "case x of 0 => 3 | () .| n => 4 | x => 100",
+  "case x of NONE => 3 | () .| SOME n => n | SOME x => x + 1"
 ]
