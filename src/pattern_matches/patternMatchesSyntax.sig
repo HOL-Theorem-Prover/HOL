@@ -228,10 +228,10 @@ sig
      leafs. *)
   val ALL_CONJ_CONV : conv -> conv
 
-  (* [DECEND_CONV c_desc c] applies [c] and then uses
+  (* [DESCEND_CONV c_desc c] applies [c] and then uses
      [c_desc] to descend into the result via [c_desc] and
      repeat. *)
-  val DECEND_CONV : (conv -> conv) -> conv -> conv
+  val DESCEND_CONV : (conv -> conv) -> conv -> conv
 
   (* Apply a conversion to all elements of a list (build
      only by cons and nil) *)

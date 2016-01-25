@@ -133,8 +133,8 @@ fun ALL_CONJ_CONV c t = if (is_conj t) then (
 ) else (TRY_CONV c) t
 
 
-fun DECEND_CONV c_desc c t =
-  (c THENC TRY_CONV (c_desc (DECEND_CONV c_desc c))) t
+fun DESCEND_CONV c_desc c t =
+  (c THENC TRY_CONV (c_desc (DESCEND_CONV c_desc c))) t
 
 
 fun STRIP_ABS_CONV conv t =
