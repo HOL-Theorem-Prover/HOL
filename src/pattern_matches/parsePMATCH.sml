@@ -195,10 +195,43 @@ fun tuplify vs body =
     | [x,y] => ptmkcomb(mkUNCURRY(), ptmkabs(x,ptmkabs(y,body)))
     | v::rest => ptmkcomb(mkUNCURRY(), ptmkabs(v, tuplify rest body))
 
+val pty_to_string = PP.pp_to_string 70 Pretype.pp_pretype
+(*
+fun envdiag msg E = ()
+  print (msg ^ ": " ^
+         String.concatWith ", "
+                           (map (fn (n,ty) => n ^ ": " ^ pty_to_string ty)
+                                (frees E)) ^ "\n") *)
+
+fun extract_fvs ptm =
+  let
+    open Preterm Pretype
+    fun recurse tyopt acc ptm =
+      case (ptm, tyopt) of
+          (Var{Name,Ty,...}, NONE) => (Name, Ty) :: acc
+        | (Var{Name,...}, SOME Ty) => (Name, Ty) :: acc
+        | (Constrained {Ptm,Ty,...}, _) => recurse (SOME Ty) acc Ptm
+        | (Comb{Rator = Comb{Rator = Const {Name = ",", Thy = "pair", ...},
+                             Rand = arg1, ...},
+                Rand = arg2, ...}, _) =>
+          (case tyopt of
+               SOME (Tyop{Thy = "pair", Tyop = "prod", Args = [ty1,ty2]}) =>
+                 recurse (SOME ty1) (recurse (SOME ty2) acc arg2) arg1
+             | _ => recurse NONE (recurse NONE acc arg2) arg1)
+        | (Comb{Rator = arg1, Rand = arg2, ...}, _) =>
+            recurse NONE (recurse NONE acc arg2) arg1
+        | (Antiq{Tm,...}, _) =>
+            recurse (SOME (fromType (type_of Tm))) acc (term_to_preterm [] Tm)
+        | _ => acc
+  in
+    recurse NONE [] ptm
+  end
+
 fun mk_row recursor a E =
   case a of
       APP(l1, APP(l2, IDENT (l3, arr), lh), rh) =>
       let
+        (* val _ = envdiag "mk_row entry" E *)
         val _ = arr = GrammarSpecials.case_arrow_special orelse
                 raise mk_HOL_ERRloc "parsePMATCH" "pmatch_transform" l1
                       "No arrow"
@@ -218,11 +251,17 @@ fun mk_row recursor a E =
         val bvsE =
             case bvs_opt of
                 NONE => NONE
-              | SOME a => recursor a empty_env |> #2 |> SOME
+              | SOME a =>
+                let
+                  val (bv_ptm, _) = recursor a empty_env
+                in
+                  SOME (extract_fvs bv_ptm)
+                end
+
         val (patStartE,pop_count) =
             case bvsE of
                 NONE => (empty_env,0)
-              | SOME e => let val vs = frees e in (push vs E, length vs) end
+              | SOME vs => (push vs E, length vs)
 
         val (pat_ptm, patfrees, patE0) =
             let
@@ -232,17 +271,13 @@ fun mk_row recursor a E =
                Lib.set_diff (frees E') (frees patStartE),
                popn pop_count E')
             end
-        val allvars0 =
+        val (allvars0, patE) =
             case bvsE of
-                NONE => patfrees
-              | SOME e => List.filter (fn (nm,_) => String.isPrefix "_" nm)
-                                      patfrees @
-                          frees e
+                NONE => (List.rev patfrees, E)
+              | SOME vs =>
+                (vs @ List.filter (fn(nm,_) => String.isPrefix "_" nm) patfrees,
+                 patE0)
         val allvars = if null allvars0 then [("_", unit_pty)] else allvars0
-        val patE =
-            case bvsE of
-                NONE => E
-              | SOME _ => patE0
         val allpop_count = length allvars
         val (guard_ptm, guardE) =
             case guard_opt of
@@ -261,7 +296,8 @@ fun mk_row recursor a E =
         end
         val (prow_pt,_) = PMATCH_ROW_pt rhE
         val tupled_args =
-            map (tuplify (List.rev allvars)) [pat_ptm, guard_ptm, rh_ptm]
+            map (tuplify allvars) [pat_ptm, guard_ptm, rh_ptm]
+        (* val _ = envdiag "mk_row exit" rhE *)
       in
         (ptlist_mk_comb (prow_pt :: tupled_args), rhE)
       end
