@@ -208,28 +208,31 @@ end
 (* Terms                                       *)
 (***********************************************)
 
+val TyV = mk_vartype
 val ty_var_subst = [alpha |-> gen_tyvar (),
              beta |-> gen_tyvar (),
              gamma |-> gen_tyvar (),
              delta |-> gen_tyvar (),
-             ``:'e`` |-> gen_tyvar (),
-             ``:'f`` |-> gen_tyvar (),
-             ``:'g`` |-> gen_tyvar (),
-             ``:'h`` |-> gen_tyvar (),
-             ``:'i`` |-> gen_tyvar (),
-             ``:'j`` |-> gen_tyvar ()
+             TyV "'e" |-> gen_tyvar (),
+             TyV "'f" |-> gen_tyvar (),
+             TyV "'g" |-> gen_tyvar (),
+             TyV "'h" |-> gen_tyvar (),
+             TyV "'i" |-> gen_tyvar (),
+             TyV "'j" |-> gen_tyvar ()
             ]
 
-val PMATCH_ROW_tm = ``PMATCH_ROW``
+fun PC nm = prim_mk_const { Thy = "patternMatches", Name = nm }
+
+val PMATCH_ROW_tm = PC "PMATCH_ROW"
 val PMATCH_ROW_gtm = inst ty_var_subst PMATCH_ROW_tm;
 
-val PMATCH_ROW_COND_tm = ``PMATCH_ROW_COND``
+val PMATCH_ROW_COND_tm = PC "PMATCH_ROW_COND"
 val PMATCH_ROW_COND_gtm = inst ty_var_subst PMATCH_ROW_COND_tm;
 
-val PMATCH_ROW_COND_EX_tm = ``PMATCH_ROW_COND_EX``
+val PMATCH_ROW_COND_EX_tm = PC "PMATCH_ROW_COND_EX"
 val PMATCH_ROW_COND_EX_gtm = inst ty_var_subst PMATCH_ROW_COND_EX_tm;
 
-val PMATCH_tm = ``PMATCH``
+val PMATCH_tm = PC "PMATCH"
 val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 
 fun FRESH_TY_VARS_RULE thm =
@@ -275,7 +278,8 @@ fun mk_PMATCH_ROW (p_t, g_t, r_t) =
 
 fun mk_pabs_from_vars vars tl = case vars of
       []  => let
-               val uv = variant (free_varsl tl) ``uv:unit``
+               val uv =
+                   variant (free_varsl tl) (mk_var("uv", oneSyntax.one_ty))
              in
                fn t => mk_abs (uv, t)
              end
@@ -336,8 +340,9 @@ in
   (p_vars', subst sub p_body, subst sub g_body, subst sub r_body)
 end;
 
-val K_elim = prove (``K x = (\y. x)``, SIMP_TAC std_ss [
-  combinTheory.K_DEF])
+val K_elim = (* |- K x = (\y. x) *)
+  AP_THM combinTheory.K_DEF (mk_var("x", alpha))
+         |> CONV_RULE (RAND_CONV BETA_CONV)
 
 fun PMATCH_ROW_PABS_ELIM_CONV row = let
   val (p, _, _) = dest_PMATCH_ROW row
@@ -750,181 +755,12 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
-
-(***********************************************)
-(* Parser                                      *)
-(***********************************************)
-
-
-fun case_magic_to_deep_case t = let
-  val rows = strip_conj t
-
-  val v = rator (lhs (hd rows))
-  val (arg_tyL, res_ty) = strip_fun (type_of v)
-
-  fun process_row row = let
-    val (l,r) = dest_eq row
-    val p = rand l
-
-    val vars = free_vars_lr p
-  in
-    mk_PMATCH_ROW_PABS vars (p, T, r)
-  end
-
-  val prows = map process_row rows
-  val i = genvar (hd arg_tyL)
-  val prows' = listSyntax.mk_list (prows, type_of (hd prows))
-  val pmatch_t = mk_PMATCH i prows'
+val _ = let
+  val (argtys, _) = strip_fun (type_of PMATCH_tm)
+  val args = Lib.mapi (fn i => fn ty => mk_var("x" ^ Int.toString i, ty)) argtys
+  val pmatch_pattern = list_mk_comb(PMATCH_tm, args)
 in
-  mk_abs (v, mk_abs (i, pmatch_t))
+  temp_add_user_printer ("PMATCH", pmatch_pattern, pmatch_printer)
 end
-
-
-val parse_case_as_pmatch = ref false
-val _ = Feedback.register_btrace ("parse deep cases", parse_case_as_pmatch);
-
-val _ =
-  let fun lookup s =
-        case TypeBase.read s
-         of SOME tyi => SOME {constructors = TypeBasePure.constructors_of tyi,
-                              case_const = TypeBasePure.case_const_of tyi}
-          | NONE => NONE
-      open GrammarSpecials
-  in
-    set_case_specials ((fn t =>
-      if !parse_case_as_pmatch then
-         case_magic_to_deep_case t
-      else
-         #functional (Pmatch.mk_functional lookup t)),
-
-                       (fn s =>
-                             case lookup s of
-                               NONE => []
-                             | SOME {constructors,...} => constructors))
-  end;
-
-
-val PMATCH_magic_1_tm = mk_const ("PMATCH_magic_1", ``:'a -> ('a -> 'b option) list -> 'b``);
-val PMATCH_ROW_magic_0_tm = mk_const ("PMATCH_ROW_magic_0",
-  ``:'a # bool # 'b -> 'a -> 'b option``);
-val PMATCH_ROW_magic_1_tm = mk_const ("PMATCH_ROW_magic_1",
-  ``:('a -> 'b # bool # 'c) -> 'b -> 'c option``);
-val PMATCH_ROW_magic_2_tm = mk_const("PMATCH_ROW_magic_2",
-  ``:'a -> bool -> 'b -> 'a # bool # 'b``);
-val PMATCH_ROW_magic_3_tm = mk_const("PMATCH_ROW_magic_3",
-  ``:'a -> 'b -> 'a # bool # 'b``);
-val PMATCH_ROW_magic_4_tm = mk_const ("PMATCH_ROW_magic_4",
-  ``:'a # bool # 'b -> 'a -> 'b option``);
-
-(* val _ = temp_add_rule{pp_elements = [TOK "~>"],
-                 fixity = Infix (NONASSOC, 3),
-                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                 paren_style = OnlyIfNecessary,
-                 term_name = "PMATCH_ROW_magic_3"}
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_2",
-      fixity = Infix (HOLgrammars.NONASSOC, 3),
-      pp_elements = [TOK "when", TM, TOK "~>"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-*)
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
-      fixity = Binder,
-      pp_elements = [TOK "|||"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_0",
-      fixity = Prefix 2,
-      pp_elements = [TOK "|||."],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_4",
-      fixity = Prefix 2,
-      pp_elements = [TOK "|||!"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_magic_1",
-      fixity = Closefix,
-      pp_elements = [TOK "CASE", TM, TOK "OF"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-
-
-fun traverse f tm =
-  f tm handle HOL_ERR _ =>
-  let
-    val (tm1, tm2) = dest_comb tm
-  in
-    mk_comb (traverse f tm1, traverse f tm2)
-  end handle HOL_ERR _ =>
-  let
-    val (tm1, tm2) = dest_abs tm
-  in
-    mk_abs (traverse f tm1, traverse f tm2)
-  end handle HOL_ERR _ => tm;
-
-
-fun fix_CASE tm = let
-     val (c, args) = strip_comb tm
-   in
-   if (same_const c PMATCH_magic_1_tm) then
-     let
-       val tys = match_type (type_of PMATCH_magic_1_tm) (type_of c)
-       val c' = inst tys PMATCH_tm;
-       val args' = map (traverse fix_CASE) args
-     in
-       list_mk_comb (c', args')
-     end
-   else if (same_const c PMATCH_ROW_magic_1_tm) orelse (same_const c PMATCH_ROW_magic_0_tm) orelse (same_const c PMATCH_ROW_magic_4_tm) then
-     let
-       val args' = map (traverse fix_CASE) args
-       val (vars, b) =
-          if (same_const c PMATCH_ROW_magic_1_tm) then let
-            val (p_var, b) = dest_pabs (hd args')
-            val vars = pairSyntax.strip_pair p_var
-          in
-            (vars, b)
-          end else if (same_const c PMATCH_ROW_magic_4_tm) then let
-            val b = hd args'
-            val (_, b_args) = strip_comb b;
-            val vars = List.filter (not o varname_starts_with_uscore)
-                          (free_vars_lr (el 1 b_args))
-          in
-            (vars, b)
-          end else (* magic 0 *) ([], hd args');
-       val (b_c, b_args) = strip_comb b;
-       val (p, g, r) = if (same_const b_c PMATCH_ROW_magic_2_tm) then
-            (el 1 b_args, el 2 b_args, el 3 b_args)
-          else if (same_const b_c PMATCH_ROW_magic_3_tm) then
-            (el 1 b_args, T, el 2 b_args)
-          else failwith "unexpected constant";
-       val wildcards = List.filter varname_starts_with_uscore (
-          free_vars p
-       )
-       val vars = vars @ wildcards
-     in
-       mk_PMATCH_ROW_PABS vars (p, g, r)
-     end
-   else failwith "no CASE"
-end;
-
-(*
-Preterm.post_process_term := I *)
-val old_f = !Preterm.post_process_term;
-val _ = (Preterm.post_process_term := (fn tm => (traverse fix_CASE (old_f tm))));
-
-
-
 
 end
