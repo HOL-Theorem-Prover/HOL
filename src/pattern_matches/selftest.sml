@@ -729,8 +729,6 @@ val _ = app shouldfail [
     Pretty-printer
    ---------------------------------------------------------------------- *)
 
-val _ = parsePMATCH.temp_ADD_PMATCH ()
-
 fun testpp s =
   let
     val _ = tprint ("PP-test: "^s)
