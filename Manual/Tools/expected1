@@ -72,3 +72,6 @@ bar
 ##use should also be let through
 
   val it = "input elided": string
+
+> 3 div 0;
+Exception- Div raised

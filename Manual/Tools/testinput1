@@ -37,3 +37,5 @@ bar
 ###use should also be let through
 
   >>- "input elided";
+
+>>+ 3 div 0;
