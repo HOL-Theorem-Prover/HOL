@@ -190,8 +190,11 @@ structure GetOpt :> GetOpt =
 		in
 		  if (SS.isPrefix "--" arg')
 		    then addOpt(longOpt (SS.triml 2 arg', rest))
-        	  else if (SS.isPrefix "-" arg')
-		    then addOpt(shortOpt (SS.sub(arg', 1), SS.triml 2 arg', rest))
+        	  else if (SS.isPrefix "-" arg') then
+                    if SS.size arg' = 1 then
+                      (errFn "Malformed option (-)"; get(rest, opts, nonOpts))
+                    else
+                      addOpt(shortOpt (SS.sub(arg', 1), SS.triml 2 arg', rest))
         	  else (case argOrder
 		     of RequireOrder => (List.rev opts, List.revAppend(nonOpts, arg::rest))
 		      | Permute => get(rest, opts, arg::nonOpts)
