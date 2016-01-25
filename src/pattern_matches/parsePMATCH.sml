@@ -1,4 +1,4 @@
-structure parsePMATCH =
+structure parsePMATCH :> parsePMATCH =
 struct
 
 open Lib HolKernel Parse term_grammar
@@ -21,28 +21,29 @@ fun case_rulerecord s fixity (rr : rule_record, acc) =
     else acc
   end
 
-type add_record = { block_style : PhraseBlockStyle * block_info,
-                    fixity : rule_fixity,
-                    paren_style : ParenStyle,
-                    pp_elements : pp_element list,
-                    term_name : string }
+type 'a add_record = { block_style : PhraseBlockStyle * block_info,
+                       fixity : 'a,
+                       paren_style : ParenStyle,
+                       pp_elements : pp_element list,
+                       term_name : string }
 fun ar_elements_fupd
       f
-      ({block_style,fixity,paren_style,pp_elements,term_name} : add_record) =
+      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
   { block_style = block_style, fixity = fixity, paren_style = paren_style,
     pp_elements = f pp_elements, term_name = term_name }
 fun ar_name_fupd
       (f : string -> string)
-      ({block_style,fixity,paren_style,pp_elements,term_name} : add_record) =
+      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
   { block_style = block_style, fixity = fixity, paren_style = paren_style,
     pp_elements = pp_elements, term_name = f term_name }
 fun ar_fixity_fupd
-      (f : rule_fixity -> 'a)
-      ({block_style,fixity,paren_style,pp_elements,term_name} : add_record) =
+      (f : 'a -> 'b)
+      ({block_style,fixity,paren_style,pp_elements,term_name} : 'a add_record) =
   { block_style = block_style, fixity = f fixity, paren_style = paren_style,
     pp_elements = pp_elements, term_name = term_name }
 
-fun case_rules s ((precopt, r : grammar_rule),acc) : add_record list =
+fun case_rules s ((precopt, r : grammar_rule),acc) : rule_fixity add_record list
+  =
   case (precopt, r) of
       (_, CLOSEFIX rrs) =>
         List.foldl (case_rulerecord s Closefix) acc rrs
@@ -89,52 +90,9 @@ val when_ar = {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
 fun mk_dtcase ar = map_tok_add_record (fn "case" => "dtcase" | s => s) ar
 fun mk_pmcase ar = ar_name_fupd (K PMATCH_case_special) ar
 
-fun add_pmatch get (arule : add_record -> 'a -> 'a) rmtmtok G =
-  let
-    val crules = grammar_tok_rules "case" (get G)
-    val dtcrules0 = grammar_tok_rules "dtcase" (get G)
-    val do_dtc = null dtcrules0
-    val do_pm =
-        case crules of
-            [] => raise mk_HOL_ERR "parsePMATCH" "ADD_PMATCH"
-                        "No existing case rules?"
-          | c :: _ => #term_name c <> PMATCH_case_special
-    val G =
-        if do_pm then rmtmtok {term_name = GrammarSpecials.core_case_special,
-                               tok = "case"} G
-        else G
-    val G =
-        if do_dtc then
-          List.foldl (fn (ar, G) => arule (mk_dtcase ar) G) G crules
-        else G
-    val G =
-        if do_pm then
-          List.foldl (fn (ar, G) => arule (mk_pmcase ar) G) G crules
-        else G
-    val G = if do_pm then
-              G |> arule when_ar |> arule endbinding_ar
-            else G
-  in
-    G
-  end
-
-val fixityRF = ar_fixity_fupd Parse.RF
-
-val ADD_PMATCH =
-    add_pmatch term_grammar
-               (K o Parse.add_rule o fixityRF)
-               (K o Parse.remove_termtok)
-
-val temp_ADD_PMATCH =
-    add_pmatch term_grammar
-               (K o Parse.temp_add_rule o fixityRF)
-               (K o Parse.temp_remove_termtok)
-
-val grammar_add_pmatch =
-    add_pmatch (fn g => g) (C term_grammar.add_rule) (C remove_form_with_tok)
 
 (* ----------------------------------------------------------------------
-    absyn traversal
+    pmatch absyn to preterm-in-env conversion
    ---------------------------------------------------------------------- *)
 
 open Absyn Parse_support Parse_supportENV
@@ -317,5 +275,49 @@ fun pmatch_case G recursor a =
         list_make_comb l1 [pmatch_pt, arg1, mk_ptlist rows]
       end
     | _ => raise Fail "pmatch_case: should never happen"
+
+(* ----------------------------------------------------------------------
+    Functions to modify grammars so that they do or don't use new
+    pmatch case expressions
+  ---------------------------------------------------------------------- *)
+
+fun add_pmatch actions (G:'a) =
+  let
+    val {get, arule : rule_fixity add_record -> 'a -> 'a, rmtmtok,
+         add_ptmproc: string * int -> preterm_processor -> 'a -> 'a,
+         addup, up} =
+        actions
+    val crules = grammar_tok_rules "case" (get G)
+    val dtcrules0 = grammar_tok_rules "dtcase" (get G)
+    val do_dtc = null dtcrules0
+    val do_pm =
+        case crules of
+            [] => raise mk_HOL_ERR "parsePMATCH" "ADD_PMATCH"
+                        "No existing case rules?"
+          | c :: _ => #term_name c <> PMATCH_case_special
+    val G =
+        if do_pm then rmtmtok {term_name = GrammarSpecials.core_case_special,
+                               tok = "case"} G
+        else G
+    val G =
+        if do_dtc then
+          List.foldl (fn (ar, G) => arule (mk_dtcase ar) G) G crules
+        else G
+    val G =
+        if do_pm then
+          List.foldl (fn (ar, G) => arule (mk_pmcase ar) G) G crules
+        else G
+    val G = if do_pm then
+              G |> arule when_ar |> arule endbinding_ar
+            else G
+    val G = if do_pm then
+              G |> add_ptmproc (PMATCH_case_special, 2) pmatch_case
+            else G
+    val G = if do_pm then G |> addup up else G
+  in
+    G
+  end
+
+
 
 end

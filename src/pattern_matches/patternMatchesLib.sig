@@ -2,6 +2,9 @@ signature patternMatchesLib =
 sig
   include Abbrev
   type ssfrag = simpLib.ssfrag
+
+
+  val ENABLE_PMATCH_CASES : unit -> unit
   (********************************)
   (* eliminating select           *)
   (********************************)

@@ -252,4 +252,7 @@ sig
      from each other *)
   val mk_new_label_gen : string -> (unit -> string)
 
+  val ENABLE_PMATCH_CASES : unit -> unit
+  val grammar_add_pmatch : term_grammar.grammar -> term_grammar.grammar
+
 end

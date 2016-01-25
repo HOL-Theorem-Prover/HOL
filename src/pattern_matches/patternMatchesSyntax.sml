@@ -755,12 +755,35 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = let
+val userprinter_info = let
   val (argtys, _) = strip_fun (type_of PMATCH_tm)
   val args = Lib.mapi (fn i => fn ty => mk_var("x" ^ Int.toString i, ty)) argtys
   val pmatch_pattern = list_mk_comb(PMATCH_tm, args)
 in
-  temp_add_user_printer ("PMATCH", pmatch_pattern, pmatch_printer)
+  ("PMATCH", pmatch_pattern, pmatch_printer)
 end
+
+(* Enabling pmatch *)
+open parsePMATCH
+val fixityRF = ar_fixity_fupd Parse.RF
+
+val ENABLE_PMATCH_CASES =
+    add_pmatch {get = term_grammar,
+                arule = K o Parse.temp_add_rule o fixityRF,
+                rmtmtok = K o Parse.temp_remove_termtok,
+                add_ptmproc =
+                  (fn s => fn pp => K (temp_add_preterm_processor s pp)),
+                addup = K o temp_add_user_printer,
+                up = userprinter_info}
+
+val grammar_add_pmatch =
+    add_pmatch { get = (fn g => g),
+                 arule = C term_grammar.add_rule,
+                 rmtmtok = C term_grammar.remove_form_with_tok,
+                 add_ptmproc = term_grammar.new_preterm_processor,
+                 addup = term_grammar.add_user_printer,
+                 up = userprinter_info }
+
+
 
 end

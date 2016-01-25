@@ -590,10 +590,7 @@ val _ = run_test (``(4::3::l) : num list``, ``PMATCH ((4 :num)::(3 :num)::l)
    ---------------------------------------------------------------------- *)
 
 open testutils
-val _ = parsePMATCH.temp_ADD_PMATCH()
-val _ = Parse.temp_add_preterm_processor
-          (parsePMATCH.PMATCH_case_special, 2)
-          parsePMATCH.pmatch_case
+val _ = patternMatchesLib.ENABLE_PMATCH_CASES ()
 fun pel2string [] = ""
   | pel2string (pLeft::rest) = "L" ^ pel2string rest
   | pel2string (pRight::rest) = "R" ^ pel2string rest
@@ -708,7 +705,10 @@ val _ = app test [
    ``PMATCH (x:'foo option) [
        PMATCH_ROW (\uv:unit. NONE) (\uv:unit. T) (\uv:unit. y:'bar);
        PMATCH_ROW (\z:'foo. SOME z) (\z:'foo. T) (\z:'foo. f z : 'bar)
-     ]``)
+     ]``),
+
+  ("dtcase x of NONE => 3 | SOME y => y + 1",
+   ``option_CASE (x : num option) 3n (\z:num. z + 1)``)
 
 ]
 
