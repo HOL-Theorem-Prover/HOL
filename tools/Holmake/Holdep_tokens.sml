@@ -34,6 +34,8 @@ in
   make (fn () => TextIO.input is) (fn () => TextIO.closeIn is)
 end
 fun fromStream is = make (fn () => TextIO.input is) (fn () => ())
+fun fromReader uc = make (fn () => case uc() of NONE => "" | SOME c => str c)
+                         (fn () => ())
 fun closeCR (CR {closer,...}) = closer()
 
 fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
@@ -49,19 +51,15 @@ datatype SCR = SCR of {linenum : int,
                        colnum : int,
                        ids : string Binaryset.set,
                        cr : char_reader}
-fun makeSCR fname = let
-  val cr = fromFile fname
-in
-  SCR {linenum = 1, colnum = 0, filename = fname,
-       ids = Binaryset.empty String.compare, cr = cr}
-end
 
-fun SCRfromStream (name, is) = let
-  val cr = fromStream is
-in
-  SCR {linenum = 1, colnum = 0, filename = name,
-       ids = Binaryset.empty String.compare, cr = cr}
-end
+
+fun SCRfromNamedCR (name, cr) =
+  SCR { linenum = 1, colnum = 0, filename = name,
+        ids = Binaryset.empty String.compare, cr = cr }
+
+fun makeSCR fname = SCRfromNamedCR (fname, fromFile fname)
+fun SCRfromStream (name, is) = SCRfromNamedCR (name, fromStream is)
+fun SCRfromReader (name, uc) = SCRfromNamedCR (name, fromReader uc)
 
 fun currentChar (SCR{cr,...}) = current cr
 fun closeSCR (SCR{cr,...}) = closeCR cr
@@ -443,5 +441,6 @@ fun scrdeps scr =
 
 fun file_deps fname = scrdeps (makeSCR fname)
 fun stream_deps p = scrdeps (SCRfromStream p)
+fun reader_deps p = scrdeps (SCRfromReader p)
 
 end (* struct *)
