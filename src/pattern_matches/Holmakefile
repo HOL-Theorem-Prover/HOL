@@ -1,4 +1,10 @@
-.PHONY: test
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+
+.PHONY: all
 
 ifdef POLY
 HOLHEAP = ../num/termination/numheap
@@ -6,8 +12,5 @@ endif
 
 selftest.exe: selftest.uo patternMatchesSyntax.uo patternMatchesTheory.uo patternMatchesLib.uo constrFamiliesLib.uo
 	$(HOLMOSMLC) -o $@ $<
-
-test: selftest.exe
-	./$<
 
 EXTRA_CLEANS = selftest.exe
