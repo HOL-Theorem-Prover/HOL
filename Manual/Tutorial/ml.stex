@@ -3,12 +3,11 @@
 
 This chapter is a brief introduction to the meta-language \ML.  The
 aim is just to give a feel for what it is like to interact with the
-language.  A more detailed introduction can be found in numerous
-textbooks and web-pages; see for example the list of resources on the
-MoscowML
-home-page\footnote{\url{http://www.dina.kvl.dk/~sestoft/mosml.html}},
-or the \texttt{comp.lang.ml}
-FAQ\footnote{\url{http://www.faqs.org/faqs/meta-lang-faq/}}.
+language.
+A more detailed introduction can be found in numerous textbooks and web-pages; see for example the list of resources on the MoscowML home-page%
+\footnote{\url{http://mosml.org}}%
+, or the \texttt{comp.lang.ml} FAQ.%
+\footnote{\url{http://www.faqs.org/faqs/meta-lang-faq/}}
 
 \section{How to interact with ML}
 
