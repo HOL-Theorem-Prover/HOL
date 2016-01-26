@@ -22,9 +22,9 @@ Let's get started.
 First, we start the system, with the command \ml{<holdir>/bin/hol}.
 We then ``\ml{open}'' the arithmetic theory; this means that all of the \ML{} bindings from the \HOL{} theory of arithmetic are made available at the top level.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >>_ open arithmeticTheory;
-\end{verbatim}
+\end{alltt}
 \end{session}
 We now begin the formalization. In order to define the concept of
 prime number, we first need to define the \emph{divisibility} relation:
@@ -369,13 +369,21 @@ A polished proof of {\small{\it DIVIDES\_FACT\/}} is the
 following\footnote{This and subsequent proofs use the theorems proved
   on page~\pageref{euclid:extra-proofs}, which were added to the \ML{} environment
   after being proved.}:
+>>__ prove(``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
+    lrw[LESS_EQ_EXISTS] >>
+    qcase_tac `m divides FACT (m + q)` >>
+    Induct_on `q` >>
+    lrw[FACT,ADD_CLAUSES] >| [
+      Cases_on `m`, ALL_TAC
+    ] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
+                    DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL])
 \begin{description}
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
 \verb+lrw[LESS_EQ_EXISTS] >>+ \\
-\verb+Induct_on `p`+ >>+\\
-\verb!qcase_tac `m divides FACT (m + q)`+ >>!\\
+\verb!qcase_tac `m divides FACT (m + q)` >>!\\
+\verb+Induct_on `q` >>+\\
 \verb+lrw[FACT,ADD_CLAUSES] >| [+ \\
 \verb+  Cases_on `m`, ALL_TAC+ \\
 \verb+] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,+ \\
@@ -465,7 +473,7 @@ Certainly, the simplifier has already been primed with the irreflexivity of less
 This can be done with the \ml{fs} tactic:
 \begin{session}
 \begin{alltt}
->> b();
+>>_ b();
 >> e (fs[]);
 \end{alltt}
 \end{session}
@@ -542,7 +550,6 @@ tactic:
 \begin{session}
 \begin{alltt}
 >>_ restart();
-
 >> e (lrw[LESS_EQ_EXISTS] >>
       qcase_tac `m divides FACT (m + q)` >>
       Induct_on `q` >| [
@@ -583,66 +590,63 @@ The recast tactic is
 \end{hol}
 (Of course, when a tactic has been revised, it should be tested to see
 if it still proves the goal!)
-Now recall that the use of \ml{RW\_TAC}
-in the base case could be replaced by a call to \ml{METIS\_TAC}. Thus
-it seems possible to merge the two sub-cases of the base case into a
-single invocation of \ml{METIS\_TAC}:
+Now recall that the use of \ml{lrw} in the base case could be replaced by a call to \ml{metis\_tac}.
+Thus it seems possible to merge the two sub-cases of the base case into a single invocation of \ml{metis\_tac}:
 
 \begin{hol}
 \begin{verbatim}
- RW_TAC arith_ss [LESS_EQ_EXISTS]
-   THEN Induct_on `p`
-   THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
-   THENL [Cases_on `m` THEN
-            METIS_TAC[DECIDE ``!x. ~(x<x)``,FACT,DIVIDES_RMUL,DIVIDES_REFL],
-          METIS_TAC [DIVIDES_RMUL]]
+ lrw[LESS_EQ_EXISTS] >>
+ qcase_tac `m divides FACT (m + q)` >>
+ Induct_on `q` >>
+ lrw[FACT, ADD_CLAUSES] >| [
+   Cases_on `m` >>
+   metis_tac[DECIDE ``!x. ~(x<x)``,FACT,DIVIDES_RMUL,DIVIDES_REFL],
+   metis_tac [DIVIDES_RMUL]
+ ]
 \end{verbatim}
 \end{hol}
 
 \noindent
-Finally, pushing this revisionism nearly to its limit, we'd
-like there to be only a single invocation of \ml{METIS\_TAC} to finish
-the proof off. The semantics of \ml{THEN} and \ml{ALL\_TAC} come to
+Finally, pushing this revisionism nearly to its limit, we'd like there to be only a single invocation of \ml{metis\_tac} to finish the proof off.
+The semantics of \ml{\gt\gt} and \ml{all\_tac} come to
 our rescue: we will split on the construction of $m$ in the base case,
 as in the current incarnation of the tactic, but we will let the
-inductive case pass unaltered through the \ml{THENL}. This is achieved
-by using \verb+ALL_TAC+, which is a tactic that acts as an identity
-function on the goal.
+inductive case pass unaltered through the \ml{\gt|}.
+This is achieved by using \ml{all\_tac}, which is a tactic that acts as an identity function on the goal.
 \begin{hol}
 \begin{verbatim}
-   RW_TAC arith_ss [LESS_EQ_EXISTS]
-     THEN Induct_on `p`
-     THEN RW_TAC arith_ss [FACT, ADD_CLAUSES]
-     THENL [Cases_on `m`, ALL_TAC]
-     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``,
-                     FACT, DIVIDES_RMUL, DIVIDES_REFL]
+   lrw[LESS_EQ_EXISTS] >>
+   qcase_tac `m divides FACT (m + q)` >>
+   Induct_on `q` >>
+   lrw[FACT, ADD_CLAUSES] >| [Cases_on `m`, all_tac] >>
+   metis_tac [DECIDE ``!x. ~(x < x)``, FACT, DIVIDES_RMUL, DIVIDES_REFL]
 \end{verbatim}
 \end{hol}
 
 \noindent
-The result is that there will be three subgoals emerging from the
-\ml{THENL}: the two sub-cases in the base case and the unaltered step
-case. Each is proved with a call to \ml{METIS\_TAC}. Are we now done?
-Not necessarily. For example, the explicit case split, namely \ml{Cases\_on `m`},
-can be replaced by providing the \emph{cases} theorem for natural numbers
-(\ml{num\_CASES}) to \ml{METIS\_TAC}. With this, the case split on $m$ will be
-automatically generated by \ml{METIS\_TAC} as it searches for the proof. Hence we
-can shorten the tactic again.
+The result is that there will be three subgoals emerging from the \ml{THENL}: the two sub-cases in the base case and the unaltered step case.
+Each is proved with a call to \ml{metis\_tac}.
+Are we now done?
+Not necessarily.
+For example, the explicit case split, namely \ml{Cases\_on `m`}, can be replaced by providing the \emph{cases} theorem for natural numbers (\ml{num\_CASES}) to \ml{metis\_tac}.
+With this, the case split on $m$ will be automatically generated by \ml{metis\_tac} as it searches for the proof.
+Hence we can shorten the tactic again.
 \begin{session}
-\begin{verbatim}
-- num_CASES;
-> val it = |- !m. (m = 0) \/ ?n. m = SUC n : thm
+\begin{alltt}
+>> num_CASES;
 
-- restart();
-- e (RW_TAC arith_ss [LESS_EQ_EXISTS]
-     THEN Induct_on `p`
-     THEN METIS_TAC [DECIDE ``!x. ~(x < x)``, FACT, num_CASES,
-                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL, ADD_CLAUSES]);
-\end{verbatim}
+>>_ restart();
+>> e (lrw[LESS_EQ_EXISTS] >>
+      qcase_tac `m divides FACT (m + q)` >>
+      Induct_on `q` >>
+      metis_tac [DECIDE ``!x. ~(x < x)``, FACT, num_CASES,
+                 DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL, ADD_CLAUSES]);
+##assert can top_thm ()
+\end{alltt}
 \end{session}
 We have now finished our exercise in tactic revision. Certainly, it
 would be hard to foresee that this final tactic would prove the
-goal; the required lemmas for the final invocation of \ml{METIS\_TAC}
+goal; the required lemmas for the final invocation of \ml{metis\_tac}
 have been found by an incremental process of revision.
 
 \subsection{Divisibility and factorial (again!)}
@@ -653,83 +657,32 @@ really by induction on $n - m$. Can we express this directly? The
 answer is a qualified yes: the induction can be naturally stated, but
 it leads to somewhat less natural goals.
 \begin{session}
-\begin{verbatim}
-- restart();
-
-- e (Induct_on `n - m`);
-
-OK..
-2 subgoals:
-> val it =
-    !n m. (SUC v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
-    ------------------------------------
-      !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
-
-    !n m. (0 = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
-\end{verbatim}
+\begin{alltt}
+>>_ restart();
+>> e (Induct_on `n - m`);
+\end{alltt}
 \end{session}
-    This is slighly hard to read, so we use \ml{STRIP\_TAC} and
-    \ml{REPEAT} to move the antecedents of the goals to the
-    assumptions. Use of \ml{THEN} ensures that the tactic gets applied
-    in both branches of the induction.
+This is slighly hard to read, so we combine with a call to the simplifier to strip both arms of the proof.
+Use of \ml{\gt\gt} ensures that the tactic gets applied in both branches of the induction.
+(We might also use \ml{rpt~strip\_tac} if we \emph{didn't} want the simplification to happen.)
 \begin{session}
-\begin{verbatim}
-- b();
-  ...
-
-- e (Induct_on `n - m` THEN REPEAT STRIP_TAC);
-
-OK..
-2 subgoals:
-> val it =
-    m divides FACT n
-    ------------------------------------
-      0.  !n m. (v = n - m) ==> 0 < m /\ m <= n ==> m divides FACT n
-      1.  SUC v = n - m
-      2.  0 < m
-      3.  m <= n
-
-    m divides FACT n
-    ------------------------------------
-      0.  0 = n - m
-      1.  0 < m
-      2.  m <= n
-\end{verbatim}
+\begin{alltt}
+>>_ b();
+>> e (Induct_on `n - m` >> lrw[]);
+\end{alltt}
 \end{session}
-Looking at the first goal, we reason that if $0 = n - m$ and $m
-\leq n$, then $m = n$. We can prove this fact, using \ml{DECIDE\_TAC}\footnote
-{\ml{DECIDE\_TAC} is a decision procedure for a useful class of arithmetical formulas.}
-and add it to the hypotheses by use of the infix operator ``\ml{by}'':
+Looking at the first goal, we reason that if $0 = n - m$ and $m \leq n$, then $m = n$. We can prove this fact, using \ml{lrw} and add it to the hypotheses by use of the infix operator ``\ml{by}'':
 \begin{session}
-\begin{verbatim}
-- e (`m = n` by DECIDE_TAC);
-OK..
-1 subgoal:
-> val it =
-    m divides FACT n
-    ------------------------------------
-      0.  0 = n - m
-      1.  0 < m
-      2.  m <= n
-      3.  m = n
-\end{verbatim}
+\begin{alltt}
+>> e (`m = n` by lrw[]);
+\end{alltt}
 \end{session}
 
-\noindent We can now use \ml{RW\_TAC} to propagate the newly derived equality
-throughout the goal.
+\noindent We can now use simplification again to propagate the newly derived equality throughout the goal.
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-
-OK..
-1 subgoal:
-> val it =
-    m divides FACT m
-    ------------------------------------
-      0.  0 = m - m
-      1.  0 < m
-      2.  m <= m
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[]);
+\end{alltt}
 \end{session}
     At this point in the previous proof we did a case analysis on $m$.
     However, we already have the hypothesis that $m$ is positive
@@ -739,9 +692,13 @@ OK..
 \[
     \mbox{\ml{`?k. m = SUC k` by <tactic>}}
 \]
-But what is the tactic? If we try \ml{DECIDE\_TAC}, it will fail since
-it doesn't handle existential statements. An application of
-\ml{RW\_TAC} will also prove to be unsatisfactory. What to do?
+But what is the tactic?
+If we try \ml{lrw}, it will fail since the embedded arithmetic decision procedure doesn't handle existential statements very well.
+What to do?
+
+In fact, that earlier case analysis will again do the job: but now we hide it away so that it is only used to prove this sub-goal.
+When we execute \ml{Cases\_on `m`}, we will get a case where \holtxt{m} has been substituted out for \holtxt{0}.
+This case will be contradictory given that we already have an assumption \holtxt{0~$<$~m}.
 
 When such situations occur, it is often best to start a new proof for
 the required lemma. This can be done simply by invoking ``\ml{g}''

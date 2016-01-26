@@ -52,6 +52,19 @@ New features:
 
     This definition would have previously been rejected.  ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/173))
 
+    This change can cause **incompatibilities**.
+    If one wants the old behaviour, it should suffice to overload the record update syntax to use a more specific type.
+    For example:
+
+           val _ = gen_remove_ovl_mapping
+                     (GrammarSpecials.recfupd_special ^ "myset")
+                     ``λf x. rcd_myset_fupd f x``
+
+           val _ = Parse.add_record_fupdate(
+                 "myset", Term.inst[beta |-> alpha] ``rcd_myset_fupd``);
+
+-   PolyML “heaps” are now implemented with its `SaveState` technology, used hierarchically.
+    This should make heaps smaller as they now only save deltas over the last used heap.
 
 Bugs fixed:
 -----------
@@ -94,9 +107,33 @@ New theories:
 New tools:
 ----------
 
-- Holyhammer: A method for automatically finding relevant theorems for Metis. Given a term, the procedure selects a large number of lemmas through different predictors such as KNN or Mepo. These lemmas are given to the external provers E-prover, Vampire or Z3. The necessary lemmas  in the provers' proofs are then returned to the user.
-  Modifications to the kernels to track dependencies between theorems allow predictors to learn from the induced relation improving future predictions.
-  The build of the source directory `src/holyhammer` needs ocaml (> 3.12.1) installed as well as a recent version of g++ that supports the c++11 standard. The three ATPs have to be installed independently. At least one of them should be present, preferably E-prover.
+-   **Holyhammer:** A method for automatically finding relevant theorems for Metis.
+    Given a term, the procedure selects a large number of lemmas through different predictors such as KNN or Mepo.
+    These lemmas are given to the external provers E-prover, Vampire or Z3.
+    The necessary lemmas  in the provers' proofs are then returned to the user.
+    Modifications to the kernels to track dependencies between theorems allow predictors to learn from the induced relation improving future predictions.
+    The build of the source directory `src/holyhammer` needs ocaml (> 3.12.1) installed as well as a recent version of g++ that supports the C++11 standard.
+    The three ATPs have to be installed independently.
+    At least one of them should be present, preferably E-prover.
+
+    Thanks to Thibault Gauthier for this tool.
+
+-   A principle for making coinductive definitions, `Hol_coreln`.
+    The input syntax is the same as for `Hol_reln`, that is: a conjunction of introduction rules.
+    For example, if one is representing coalgebraic lists as a subset of the type `:num → α option`, the coinductive predicate specifying the subset would be given as
+
+           val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
+             lrep_ok (λn. NONE)
+                 ∧
+             ∀h t.
+               lrep_ok t
+                   ⇒
+               lrep_ok (λn. if n = 0 then SOME h else t(n - 1))
+           `;
+
+    as is now done in `src/llist/llistScript.sml`.
+
+    Thanks to Andrea Condoluci for this tool.
 
 New examples:
 ---------
@@ -130,9 +167,13 @@ Incompatibilities:
 
            ?- (f x = Pair c1 c2) ⇒ (f c1 = f c2)
 
-    where the `X` in the pattern was ignored.  The interface now achieves the same end by simply allowing the user to write underscores in the pattern.  Thus, the tactic would become ``Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ⇒ _` ``.  Multiple underscores can be used to ignore multiple sub-terms.
+    where the `X` in the pattern was ignored.
+    The interface now achieves the same end by simply allowing the user to write underscores in the pattern.
+    Thus, the tactic would become ``Q.MATCH_RENAME_TAC `(f x = Pair c1 c2) ⇒ _` ``.
+    Multiple underscores can be used to ignore multiple sub-terms.
 
-    Of course, the `qmatch_rename_tac` and `qmatch_assum_rename_tac` names for these tactics in `lcsymtacs` have changed types as well.  The new `Q.MATCH_GOALSUB_RENAME_TAC` and `Q.MATCH_ASMSUB_RENAME_TAC` (and their lower-case versions) have similar types, without explicit lists of variable names to ignore.
+    Of course, the `qmatch_rename_tac` and `qmatch_assum_rename_tac` names for these tactics in `bossLib` have changed types as well.
+    The new `Q.MATCH_GOALSUB_RENAME_TAC` and `Q.MATCH_ASMSUB_RENAME_TAC` (and their lower-case versions) have similar types, without explicit lists of variable names to ignore.
 
 -   The theory `state_option` was removed.
     The better-developed `errorStateMonad` theory should be used instead.

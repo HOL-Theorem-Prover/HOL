@@ -64,11 +64,14 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC
 
 val PROVE           = BasicProvers.PROVE
 val PROVE_TAC       = BasicProvers.PROVE_TAC
+val prove_tac       = BasicProvers.PROVE_TAC
 val METIS_PROVE     = metisLib.METIS_PROVE
 val METIS_TAC       = metisLib.METIS_TAC
 val metis_tac       = METIS_TAC
 val RW_TAC          = BasicProvers.RW_TAC
 val SRW_TAC         = BasicProvers.SRW_TAC
+val rw_tac          = BasicProvers.RW_TAC
+val srw_tac         = BasicProvers.SRW_TAC
 val srw_tac         = BasicProvers.srw_tac
 val srw_ss          = BasicProvers.srw_ss
 val augment_srw_ss  = BasicProvers.augment_srw_ss
@@ -123,6 +126,7 @@ fun ZAP_TAC ss thl =
           ORELSE DECIDE_TAC
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
+fun kall_tac x = Tactical.all_tac
 val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 (*---------------------------------------------------------------------------
@@ -141,6 +145,7 @@ val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
+val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by

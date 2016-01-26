@@ -65,16 +65,6 @@ A. [Moscow ML:] First, install Moscow ML. This is usually
 
        declare -x LD_LIBRARY_PATH=/usr/local/lib:$HOME/lib
 
-   If you are using PolyML 5.5.1 or later, you will have to configure
-   its build with the
-
-       --enabled-shared
-
-   option. In other words, the first thing to do when building PolyML
-   will be
-
-       ./configure --enable-shared
-
    Do not use the --with-portable option.
 
 B. Unpack HOL with the commands

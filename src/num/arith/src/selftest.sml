@@ -51,31 +51,47 @@ in
   else die "FAILED\n"
 end
 
-val _ = pr "Testing Alexey Gotsman's arith d.p. problem ..."
-val _ = let
-  val t =
-   ``(e*bv_c+e*(2*bv_cout+wb_sum)+wbs_sum =
-        bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
-     ==>
-     (2n*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)``
-  val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
-in
-  case result of
-    SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
-               else die "FAILED!\n"
-  | NONE => die "FAILED!\n"
-end
+fun TRUE_ARITH nm t =
+  let
+    val _ = pr ("ARITH_CONV: " ^ nm)
+    val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
+  in
+    case result of
+        SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
+                   else die "FAILED!"
+      | NONE => die "FAILED!"
+  end
 
-val _ = pr "Testing arith on nested COND clause"
-val _ = let
-  val t = ``x <= y ==> x <= y + if p then q else r``
-  val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
-in
-  case result of
-      SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
-                 else die "FAILED!\n"
-    | NONE => die "FAILED!\n"
-end
+val _ = TRUE_ARITH
+          "Alexey Gotsman's problem ..."
+          ``(e*bv_c+e*(2*bv_cout+wb_sum)+wbs_sum =
+              bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
+            ==>
+            (2n*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)``
+
+val _ = TRUE_ARITH
+          "Testing arith on nested COND clause"
+          ``x <= y ==> x <= y + if p then q else r``
+
+val _ = TRUE_ARITH
+          "Subtraction term 1 (should be very quick)"
+          ``1 <= x /\ (i = 1) ==> (x - PRE i - SUC (PRE i - PRE i) = x - 1)``
+
+val _ = TRUE_ARITH
+          "Subtraction + cond (should be very quick)"
+          ``(if x = 0 then 1 else 0) = 1 - x``
+
+val _ = TRUE_ARITH
+          "Distributing subtraction over multiplication"
+          ``0 < b ⇒ (a * b − a = (b − 1) * a)``
+
+val _ = TRUE_ARITH
+          "Horrible subtraction + conditional"
+          ``!j i. i <> j ==>
+              (if (if i < j then i + 1 else i − 1) < j then
+                 j − if i < j then i + 1 else i − 1
+               else (if i < j then i + 1 else i − 1) − j) <
+              if i < j then j − i else i − j``
 
 val _ = pr "Testing r-cache behaviour with CONJ_ss ..."
 val _ = let

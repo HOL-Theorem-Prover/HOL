@@ -47,6 +47,7 @@ sig
   val METIS_PROVE    : thm list -> term -> thm   (* First order *)
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
+  val prove_tac      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
   val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
@@ -85,11 +86,17 @@ sig
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
   val SIMP_TAC          : simpset -> thm list -> tactic
+  val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
+  val asm_simp_tac      : simpset -> thm list -> tactic
   val FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val full_simp_tac     : simpset -> thm list -> tactic
   val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+  val rev_full_simp_tac : simpset -> thm list -> tactic
   val RW_TAC            : simpset -> thm list -> tactic
+  val rw_tac            : simpset -> thm list -> tactic
   val SRW_TAC           : ssfrag list -> thm list -> tactic
+  val srw_tac           : ssfrag list -> thm list -> tactic
 
   val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
   val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
@@ -107,9 +114,11 @@ sig
 
   val ZAP_TAC        : simpset -> thm list -> tactic
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+  val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val cheat          : tactic
+  val kall_tac       : 'a -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 
