@@ -5,14 +5,22 @@ If it sees one such, it executes the Poly/ML compiler on that line, captures the
 
 ## Inline Options
 
-All of the following inline commands must begin the line in which they occur:
+All of the following inline commands must be the first non-whitespace on the line in which they occur.
 
 -   The usual `>>` command gets the input after this prompt read until the next line that begins with a non-space character.
 -   The `>>_` command gets the compiler to act on the accompanying input, and this input is printed out, but the output is elided
--   The `>>__` command gets the compiler to act on the accompanying input, but nothing is printed out (strictly, this line is replaced by a blank line).
+-   The `>>__` command gets the compiler to act on the accompanying input, but nothing is printed out.
+-   The `>>-` command is similar to `>>_` except the input is suppressed while the output is printed out.
+-   The `>>+` command is similar to `>>` except that if the input expression raises an un-handled exception, then rather than aborting execution, the exception will be printed as output.
 -   The `##use` command gets the compiler to evaluate the `use` the filename.
     The filename is given after a single space character and is the rest of the line; it need not be quoted, and shouldn’t be followed by a semicolon.
     The compilation and evaluation of the filename is done entirely silently.
+-   The `##assert` command gets the compiler to evaluate the following expression (which can just be one line long).
+    If it evaluates to true, then nothing is output.
+    If it is false, then the scripter aborts.
+
+If the first non-whitespace characters are `>>>` or `###` then the first of these characters is dropped, and the rest of the line is passed unchanged.
+This allows for a form of escaping, just in case the input naturally wants to include `>>` or `##` at the start of a line.
 
 ## Command-line Options
 

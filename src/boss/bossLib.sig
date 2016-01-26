@@ -118,6 +118,7 @@ sig
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val cheat          : tactic
+  val kall_tac       : 'a -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 

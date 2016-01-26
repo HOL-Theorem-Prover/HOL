@@ -695,7 +695,9 @@ in
           \***    config-override           (Moscow ML)\n\
           \***\n\
           \*** (Under Poly/ML you will have to delete bin/hol.builder0 as \
-          \well)\n")
+          \well)\n***\n\
+          \*** (Or: build with -nograph to stop this \
+          \message from appearing again)\n")
   else let
       val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
       val _ = print "  (Use build's -nograph option to skip this step.)\n"

@@ -126,6 +126,7 @@ fun ZAP_TAC ss thl =
           ORELSE DECIDE_TAC
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
+fun kall_tac x = Tactical.all_tac
 val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 (*---------------------------------------------------------------------------
