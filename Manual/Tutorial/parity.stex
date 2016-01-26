@@ -389,26 +389,17 @@ checker follows from this and {\small\verb|UNIQUENESS_LEMMA|} by the
 transitivity of {\small{\tt\verb+==>+}}.
 
 \begin{session}
-\begin{verbatim}
-- g `!inp out.
+\begin{alltt}
+>> g `!inp out.
         PARITY_IMP(inp,out) ==>
         (out 0 = T) /\
         !t. out(SUC t) = if inp(SUC t) then ~(out t) else out t`;
-> val it =
-    Proof manager status: 2 proofs.
-    2. Completed: ...
-    1. Incomplete:
-         Initial goal:
-         !inp out.
-           PARITY_IMP (inp,out) ==>
-           (out 0 = T) /\
-           !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 The first step in proving this goal is to rewrite with definitions
 followed by a decomposition of the resulting goal using
-{\small\verb|STRIP_TAC|}. The rewriting tactic
+{\small\verb|strip_tac|}. The rewriting tactic
 {\small\verb|PURE_REWRITE_TAC|} is used; this does no built-in
 simplifications, only the ones explicitly given in the list of
 theorems supplied as an argument.  One of the built-in simplifications
@@ -416,31 +407,11 @@ used by {\small\verb|REWRITE_TAC|} is {\small\tt |-~(x~=~T)~=~x}.
 {\small\verb|PURE_REWRITE_TAC|} is used to prevent rewriting with this
 being done.
 \begin{session}
-\begin{verbatim}
-- expand(PURE_REWRITE_TAC
-           [PARITY_IMP_def, ONE_def, NOT_def, MUX_def, REG_def] THEN
-         REPEAT STRIP_TAC);
-OK..
-2 subgoals:
-> val it =
-    out (SUC t) = (if inp (SUC t) then ~out t else out t)
-    ------------------------------------
-      0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = (if inp t then l1 t else l2 t)
-      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
-      3.  !t. l4 t = T
-      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
-      5.  !t. out t = (if l5 t then l3 t else l4 t)
-
-    out 0 = T
-    ------------------------------------
-      0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = (if inp t then l1 t else l2 t)
-      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
-      3.  !t. l4 t = T
-      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
-      5.  !t. out t = (if l5 t then l3 t else l4 t)
-\end{verbatim}
+\begin{alltt}
+>> expand(PURE_REWRITE_TAC
+           [PARITY_IMP_def, ONE_def, NOT_def, MUX_def, REG_def] >>
+         rpt strip_tac);
+\end{alltt}
 \end{session}
 
 The top goal is the one printed last; its conclusion is
@@ -450,28 +421,12 @@ be to expand the top goal by rewriting with the assumptions.  However,
 if this were done the system would go into an infinite loop because
 the equations for {\small\verb|out|}, {\small\verb|l2|} and
 {\small\verb|l3|} are mutually recursive.  Instead we use the
-first-order reasoner {\small\verb|PROVE_TAC|} to do the work:
+first-order reasoner \ml{metis\_tac} to do the work:
 
 \begin{session}
-\begin{verbatim}
-- expand(PROVE_TAC []);
-OK..
-Meson search level: .....
-
-Goal proved.
- [......] |- out 0 = T
-
-Remaining subgoals:
-> val it =
-    out (SUC t) = (if inp (SUC t) then ~out t else out t)
-    ------------------------------------
-      0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = (if inp t then l1 t else l2 t)
-      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
-      3.  !t. l4 t = T
-      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
-      5.  !t. out t = (if l5 t then l3 t else l4 t)
-\end{verbatim}
+\begin{alltt}
+>> e(metis_tac []);
+\end{alltt}
 \end{session}
 The first of the two subgoals is proved.  Inspecting the remaining
 goal it can be seen that it will be solved if its left hand side,
@@ -484,35 +439,19 @@ goal it can be seen that it will be solved if its left hand side,
 \end{hol}
 
 
-    However, if this assumption is used for rewriting, then all the
-    subterms of the form {\small\verb|out t|} will also be expanded.
-    To prevent this, we really want to rewrite with a formula that is
-    specifically about {\small\verb|out (SUC t)|}.  We want to somehow
-    pull the assumption that we do have out of the list and rewrite
-    with a specialised version of it.  We can do just this using
-    {\small\verb|PAT_ASSUM|}.  This tactic is of type \ml{term -> thm
-      -> tactic}.  It selects an assumption that is of the form given
-    by its term argument, and passes it to the second argument, a
-    function which expects a theorem and returns a tactic.  Here it is
-    in action:
+However, if this assumption is used for rewriting, then all the subterms of the form {\small\verb|out t|} will also be expanded.
+To prevent this, we really want to rewrite with a formula that is specifically about {\small\verb|out (SUC t)|}.
+We want to somehow pull the assumption that we do have out of the list and rewrite with a specialised version of it.
+We can do just this using \ml{qpat\_assum}.
+This tactic is of type \ml{term quotation~->~thm~->~tactic}.
+It selects an assumption that is of the form given by its first argument, and passes it to the second argument, a function which expects a theorem and returns a tactic.
+Here it is in action:
 
 \begin{session}
-\begin{verbatim}
-- e (PAT_ASSUM ``!t. out t = X t``
+\begin{alltt}
+>> e (qpat_assum `!t. out t = X t`
        (fn th => REWRITE_TAC [SPEC ``SUC t`` th]));
-<<HOL message: inventing new type variable names: 'a, 'b.>>
-OK..
-1 subgoal:
-> val it =
-    (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
-    (if inp (SUC t) then ~out t else out t)
-    ------------------------------------
-      0.  !t. l1 t = ~l2 t
-      1.  !t. l3 t = (if inp t then l1 t else l2 t)
-      2.  !t. l2 t = (if t = 0 then F else out (t - 1))
-      3.  !t. l4 t = T
-      4.  !t. l5 t = (if t = 0 then F else l4 (t - 1))
-\end{verbatim}
+\end{alltt}
 \end{session}
 The pattern used here exploited something called \emph{higher order
   matching}. The actual assumption that was taken off the assumption
@@ -522,45 +461,22 @@ could nonetheless be seen as equal to the application of \emph{some}
 function to the \ml{t} parameter.  In fact, the value that matched
 \ml{X} was {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
 
-Inspecting the goal above, it can be seen that the next step is to
-unwind the equations for the remaining lines of the circuit.  We do
-this using the \ml{arith\_ss} simpset that comes with \ml{bossLib} to
-help with the arithmetic embodied by the subtractions and \ml{SUC}
-terms.
+Inspecting the goal above, it can be seen that the next step is to unwind the equations for the remaining lines of the circuit.
+We do using the standard simplifier \ml{lrw}.
 
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
-
-Goal proved.
- [.....]
-|- (if l5 (SUC t) then l3 (SUC t) else l4 (SUC t)) =
-   (if inp (SUC t) then ~out t else out t)
-
-Goal proved.
- [......] |- out (SUC t) = (if inp (SUC t) then ~out t else out t)
-> val it =
-    Initial goal proved.
-    |- !inp out.
-         PARITY_IMP (inp,out) ==>
-         (out 0 = T) /\
-         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\begin{alltt}
+>> e (lrw[]);
+\end{alltt}
 \end{session}
 
 \noindent The theorem just proved is named
 {\small\verb|PARITY_LEMMA|} and saved in the current theory.
 
 \begin{session}
-\begin{verbatim}
-- val PARITY_LEMMA = top_thm ();
-> val PARITY_LEMMA =
-    |- !inp out.
-         PARITY_IMP (inp,out) ==>
-         (out 0 = T) /\
-         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\begin{alltt}
+>> val PARITY_LEMMA = top_thm ();
+\end{alltt}
 \end{session}
 
 {\small\verb|PARITY_LEMMA|} could have been proved in one step with a
@@ -569,42 +485,30 @@ single tactic corresponding to the sequence of tactics that were used
 interactively:
 
 \begin{session}
-\begin{verbatim}
-- restart()
-> ...
-- e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
-                       MUX_def, REG_def] THEN
-     REPEAT STRIP_TAC THENL [
-       PROVE_TAC [],
-       PAT_ASSUM ``!t. out t = X t``
-                 (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) THEN
-       RW_TAC arith_ss []
+\begin{alltt}
+>>_ restart();
+>> e (PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
+                        MUX_def, REG_def] >>
+     rpt strip_tac >| [
+       metis_tac [],
+       qpat_assum `!t. out t = X t`
+                  (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) >>
+       lrw[]
      ]);
-<<HOL message: inventing new type variable names: 'a, 'b.>>
-OK..
-Meson search level: .....
-> val it =
-    Initial goal proved.
-    |- !inp out.
-         PARITY_IMP (inp,out) ==>
-         (out 0 = T) /\
-         !t. out (SUC t) = (if inp (SUC t) then ~out t else out t)
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 Armed with {\small\verb|PARITY_LEMMA|}, the final theorem is easily
-proved.  This will be done in one step using the \ML{} function
-{\small\verb|prove|}.
+proved.
+This will be done in one step using the \ML{} function \ml{prove}.
 
 \begin{session}
-\begin{verbatim}
-- val PARITY_CORRECT = prove(
-    ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC UNIQUENESS_LEMMA THEN
-    MATCH_MP_TAC PARITY_LEMMA THEN ASM_REWRITE_TAC []);
-> val PARITY_CORRECT =
-    |- !inp out. PARITY_IMP (inp,out) ==> !t. out t = PARITY t inp
-\end{verbatim}
+\begin{alltt}
+>> val PARITY_CORRECT = prove(
+     ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
+     rpt strip_tac >> irule UNIQUENESS_LEMMA >>
+     irule PARITY_LEMMA >> lrw[]);
+\end{alltt}
 \end{session}
 
 \noindent This completes the proof of the
@@ -639,9 +543,9 @@ This is formalized in \HOL{} by the definition:
 
 \begin{hol}
 \begin{verbatim}
-   RESET_REG(reset,inp,out) =
-    (!t. reset t ==> (out t = T)) /\
-    (!t. out(t+1) = if reset t \/ reset(t+1) then T else inp t)
+   RESET_REG(reset,inp,out) <=>
+     (!t. reset t ==> (out t = T)) /\
+     (!t. out(t+1) = if reset t \/ reset(t+1) then T else inp t)
 \end{verbatim}
 \end{hol}
 
