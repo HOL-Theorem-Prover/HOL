@@ -124,8 +124,11 @@ structure HOL_Interactive :>
   sig
     val toggle_quietdec : unit -> bool
     val amquiet : unit -> bool
+    val print_banner : unit -> unit
   end =
 struct
+  infix ++
+  val op ++ = OS.Path.concat
   val qd = ref true
   fun toggle_quietdec () =
     if !qd then
@@ -143,6 +146,32 @@ struct
       ; true
       )
   fun amquiet () = !qd
+  val build_stamp =
+    let
+      val stampstr = TextIO.openIn (HOLDIR ++ "tools" ++ "build-stamp")
+      val stamp = TextIO.inputAll stampstr before TextIO.closeIn stampstr
+    in
+      stamp
+    end
+    handle _ => ""
+  val id_string =
+    "HOL-4 [" ^ Globals.release ^ " " ^ Lib.int_to_string Globals.version ^
+    " (" ^ Thm.kernelid ^ ", " ^ build_stamp ^ ")]\n\n"
+  val exit_string =
+    if Systeml.OS = "winNT" then
+      "To exit type <Control>-Z <Return>  (*not* quit();)"
+    else
+      "To exit type <Control>-D"
+  val line =
+    "\n---------------------------------------------------------------------\n"
+
+  fun print_banner () =
+    TextIO.output (TextIO.stdOut,
+      line ^
+      "       " ^ id_string ^
+      "       For introductory HOL help, type: help \"hol\";\n" ^
+      "       " ^ exit_string ^
+      line)
 end;
 
 (*---------------------------------------------------------------------------*
@@ -195,32 +224,8 @@ local
       use (nm ^ ".sig")
     ; use (nm ^ ".sml")
     end
-  val build_stamp =
-    let
-      val stampstr = TextIO.openIn (HOLDIR ++ "tools" ++ "build-stamp")
-      val stamp = TextIO.inputAll stampstr before TextIO.closeIn stampstr
-    in
-      stamp
-    end
-    handle _ => ""
-  val id_string =
-    "HOL-4 [" ^ Globals.release ^ " " ^ Lib.int_to_string Globals.version ^
-    " (" ^ Thm.kernelid ^ ", " ^ build_stamp ^ ")]\n\n"
-  val exit_string =
-    if Systeml.OS = "winNT" then
-      "To exit type <Control>-Z <Return>  (*not* quit();)"
-    else
-      "To exit type <Control>-D"
-  val line =
-    "\n---------------------------------------------------------------------\n"
-  val () =
-    TextIO.output (TextIO.stdOut,
-      line ^
-      "       " ^ id_string ^
-      "       For introductory HOL help, type: help \"hol\";\n" ^
-      "       " ^ exit_string ^
-      line)
 in
+  val _ = HOL_Interactive.print_banner()
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
