@@ -75,3 +75,14 @@ bar
 
 > 3 div 0;
 Exception- Div raised
+
+Term`p /\bs{} q ==>
+     r`
+
+> t;
+val it = ``p \(\land\) q \(\Rightarrow\) r``: term
+
+Term`p /\bs{} q ==>
+     r`;
+
+   3 + 4;

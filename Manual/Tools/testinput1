@@ -39,3 +39,13 @@ bar
   >>- "input elided";
 
 >>+ 3 div 0;
+
+##eval[t] Term`p /\ q ==>
+               r`
+
+>> t;
+
+##eval Term`p /\ q ==>
+            r`;
+
+   ##eval 3 + 4;
