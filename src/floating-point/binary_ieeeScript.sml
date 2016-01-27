@@ -964,7 +964,7 @@ val min_properties = Q.store_thm("min_properties",
        \\ Cases_on `precision (:'t) = 1`
        \\ Cases_on `precision (:'w) = 1`
        \\ imp_res_tac ge2
-       \\ rw []
+       \\ srw_tac[][]
        >- (qexists_tac `1n` \\ decide_tac)
        \\ Cases_on `n`
        \\ simp []
@@ -1000,9 +1000,9 @@ val lem2 = Q.prove(
 
 val tac =
    tac
-   \\ rw [float_to_real_def, two_mod_eq_zero, wordsTheory.dimword_def,
-          realLib.REAL_ARITH ``0r <= n ==> 1 + n <> 0``, exp_id, lem1,
-          DECIDE ``0 < n ==> n <> 0n``]
+   \\ srw_tac[] [float_to_real_def, two_mod_eq_zero, wordsTheory.dimword_def,
+                 realLib.REAL_ARITH ``0r <= n ==> 1 + n <> 0``, exp_id, lem1,
+                 DECIDE ``0 < n ==> n <> 0n``]
    \\ Cases_on `dimindex(:'w) = 1`
    \\ lrw [lem2]
 
@@ -1534,7 +1534,8 @@ val not_next_tac =
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
    \\ imp_res_tac arithmeticTheory.LESS_ADD_1
    \\ pop_assum kall_tac
-   \\ rfs [DECIDE ``1 < b ==> ((b - 1 = e) = (b = e + 1n))``]
+   \\ REV_FULL_SIMP_TAC (srw_ss())
+        [DECIDE ``1 < b ==> ((b - 1 = e) = (b = e + 1n))``]
    \\ simp [arithmeticTheory.LEFT_ADD_DISTRIB]
 
 local
@@ -1673,10 +1674,13 @@ in
                cancel_rwts]
       \\ rsimp [realTheory.REAL_OF_NUM_POW, Abbr `z`]
       \\ match_mp_tac lem4
-      \\ fs [exponent_boundary_def]
-      \\ rfs [w2n_lt_pow, w2n_lt_pow_sub1, word_lt0, ge4, lem5]
-      \\ `p <> 0` by (strip_tac \\ fs [DECIDE ``(1 = x + 1) = (x = 0n)``])
-      \\ fs [ge4]
+      \\ full_simp_tac (srw_ss()) [exponent_boundary_def]
+      \\ REV_FULL_SIMP_TAC (srw_ss())
+           [w2n_lt_pow, w2n_lt_pow_sub1, word_lt0, ge4, lem5]
+      \\ `p <> 0` by (strip_tac \\
+                      full_simp_tac (srw_ss())
+                                [DECIDE ``(1 = x + 1) = (x = 0n)``])
+      \\ full_simp_tac (srw_ss()) [ge4]
    val tac4 =
       abs_diff_tac abs_diff1a
       >- (match_mp_tac abs_diff1a \\ simp [subnormal_lt_normal])
@@ -1719,7 +1723,7 @@ in
                cancel_rwts]
       \\ rsimp [realTheory.REAL_OF_NUM_POW, Abbr `z`]
       \\ match_mp_tac lem4b
-      \\ rfs [w2n_lt_pow, word_lt0, lem5]
+      \\ REV_FULL_SIMP_TAC (srw_ss()) [w2n_lt_pow, word_lt0, lem5]
 end
 
 val diff_exponent_ULP = Q.prove(

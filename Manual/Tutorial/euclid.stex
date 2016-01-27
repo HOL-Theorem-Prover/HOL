@@ -79,10 +79,10 @@ mind.
 In this example, we often \emph{find} proofs by using the rewriter \ml{rw} to unwind definitions and perform basic simplifications, often reducing a goal to its essence.
 \begin{session}
 \begin{alltt}
->> lrw;
+>> rw;
 \end{alltt}
 \end{session}
-When \ml{lrw} is applied to a list of theorems, the theorems will be added to \HOL{}'s built-in database of useful facts as supplementary rewrite rules.
+When \ml{rw} is applied to a list of theorems, the theorems will be added to \HOL{}'s built-in database of useful facts as supplementary rewrite rules.
 We will see that \ml{rw} is also somewhat knowledgeable about
 arithmetic.\footnote{Linear arithmetic especially: purely universal
 formulas involving the operators {\tt SUC}, $+$, $-$, numeric
@@ -159,7 +159,7 @@ keep distinct the $x$ of the goal and the $x$ in the definition of
 \ml{divides}:
 \begin{session}
 \begin{alltt}
->> e (lrw[divides_def]);
+>> e (rw[divides_def]);
 \end{alltt}
 \end{session}
 It is of course quite easy to instantiate the existential quantifier by
@@ -172,7 +172,7 @@ hand.
 Then a simplification step finishes the proof.
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
 \end{alltt}
 \end{session}
 
@@ -180,17 +180,17 @@ What just happened here? The application of \ml{lrw} to the goal decomposed it t
 Once a goal has been proved, it is popped off the goalstack, prettyprinted to the output, and the theorem becomes available for use by the level of the stack. When all the sub-goals required by \textit{that} level are proven, the corresponding goal at that level can be proven too.  This `unwinding' process continues until the stack is empty, or until it hits a goal with more than one remaining unproved subgoal.
 This process may be hard to visualize,\footnote{Perhaps since we have used a stack to implement what is notionally a tree!} but that doesn't matter, since the goalstack was expressly written to allow the user to ignore such details.
 
-If the three interactions are joined together with \ml{\gt\gt} to form a single tactic, we can try the proof again from the beginning (using the \ml{restart} function) and this time it will take just one step:
+We can sequence tactics with the \ml{\gt\gt} operator (also known as \ml{THEN}).
+If our three interactions above are joined together with \ml{\gt\gt} to form a single tactic, we can try the proof again from the beginning (using the \ml{restart} function) and this time it will take just one step:
 \begin{session}
 \begin{alltt}
 >>_ restart();
 
->> e (lrw[divides_def] >> qexists_tac `0` >> lrw[]);
+>> e (rw[divides_def] >> qexists_tac `0` >> rw[]);
 \end{alltt}
 \end{session}
 We have seen one way to prove the theorem.
-However, as mentioned
-earlier, there is another: one can let \ml{metis\_tac} expand the definition of \ml{divides} and find the required instantiation for \verb+x'+ from the theorem \ml{MULT\_CLAUSES}.%
+However, as mentioned earlier, there is another: one can let \ml{metis\_tac} expand the definition of \ml{divides} and find the required instantiation for \verb+x'+ from the theorem \ml{MULT\_CLAUSES}.%
 \footnote{You might
   like to try typing \ml{MULT\_CLAUSES} into the interactive loop
   to see exactly what it states.}
@@ -296,7 +296,7 @@ The easiest way to start is to simplify with the definition of \ml{divides}:
 \begin{alltt}
 >>_ g `!m n. m divides n ==> m <= n \/ (n = 0)`;
 
->> e (lrw[divides_def]);
+>> e (rw[divides_def]);
 \end{alltt}
 \end{session}
 
