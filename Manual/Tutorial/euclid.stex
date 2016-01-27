@@ -176,7 +176,7 @@ Then a simplification step finishes the proof.
 \end{alltt}
 \end{session}
 
-What just happened here? The application of \ml{lrw} to the goal decomposed it to an empty list of subgoals; in other words the goal was proved by \ml{lrw}.
+What just happened here? The application of \ml{rw} to the goal decomposed it to an empty list of subgoals; in other words the goal was proved by \ml{rw}.
 Once a goal has been proved, it is popped off the goalstack, prettyprinted to the output, and the theorem becomes available for use by the level of the stack. When all the sub-goals required by \textit{that} level are proven, the corresponding goal at that level can be proven too.  This `unwinding' process continues until the stack is empty, or until it hits a goal with more than one remaining unproved subgoal.
 This process may be hard to visualize,\footnote{Perhaps since we have used a stack to implement what is notionally a tree!} but that doesn't matter, since the goalstack was expressly written to allow the user to ignore such details.
 
@@ -212,7 +212,7 @@ We use the \ml{top\_thm} function to do this, and then use \ml{drop} to dispose 
 \end{session}
 
 We have used \ml{metis\_tac} in this way to prove the following collection of theorems about \ml{divides}.
-As mentioned previously, the theorems supplied to \ml{metis\_tac} in the following proofs did not (usually) come from thin air: in most cases some exploratory work with the simplifier (\ml{lrw}) was done to open up definitions and see what lemmas would be required by \ml{metis\_tac}.
+As mentioned previously, the theorems supplied to \ml{metis\_tac} in the following proofs did not (usually) come from thin air: in most cases some exploratory work with the simplifier (\ml{rw}) was done to open up definitions and see what lemmas would be required by \ml{metis\_tac}.
 
 ##use euclid-extras.ML
 
@@ -287,7 +287,7 @@ single invocation of \ml{metis\_tac}:
 \item [\small{({\it DIVIDES\_LE\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. m divides n ==> m <= n \/ (n = 0)+ \\ \hline
-\verb+lrw[divides_def] >> lrw[]+ \\
+\verb+rw[divides_def] >> rw[]+ \\
 \end{tabular}
 \end{description}
 Let's see how this is proved.
@@ -326,10 +326,11 @@ Let's look in the theory of arithmetic for the subterm to be rewritten.
 
 This is just the theorem we'd like to use.
 Using \ml{DB.match} again, you should now try to find the theorem that will simplify the other disjunct.
-Because both are so generally useful, \ml{lrw} already has both rewrites in its internal database, and all we need to do is rewrite once more to get those rewrites applied:
+Because both are so generally useful, \ml{rw} already has both rewrites in its internal database, and all we need to do is rewrite once more to get those rewrites applied:
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
+##assert can top_thm()
 \end{alltt}
 \end{session}
 
@@ -342,7 +343,7 @@ This function takes a string, a term and a tactic and applies the tactic to the 
 >> val DIVIDES_LE = store_thm(
      "DIVIDES_LE",
       ``!m n. m divides n ==> m <= n \/ (n = 0)``,
-      lrw[divides_def] >> lrw[]);
+      rw[divides_def] >> rw[]);
 \end{alltt}
 \end{session}
 Storing theorems in our script record of the session in this style
@@ -373,7 +374,7 @@ following\footnote{This and subsequent proofs use the theorems proved
     `!p m. 0 < m ==> m divides (FACT (m + p))`
       suffices_by metis_tac[LESS_EQ_EXISTS] >>
     Induct_on `p` >>
-    lrw[FACT,ADD_CLAUSES] >| [
+    rw[FACT,ADD_CLAUSES] >| [
       Cases_on `m`, ALL_TAC
     ] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,
                     DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL])
@@ -381,10 +382,10 @@ following\footnote{This and subsequent proofs use the theorems proved
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
-\verb+lrw[LESS_EQ_EXISTS] >>+ \\
+\verb+rw[LESS_EQ_EXISTS] >>+ \\
 \verb!qcase_tac `m divides FACT (m + q)` >>!\\
 \verb+Induct_on `q` >>+\\
-\verb+lrw[FACT,ADD_CLAUSES] >| [+ \\
+\verb+rw[FACT,ADD_CLAUSES] >| [+ \\
 \verb+  Cases_on `m`, ALL_TAC+ \\
 \verb+] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,+ \\
 \verb+                DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
@@ -414,7 +415,7 @@ variable, obtained by use of the theorem \verb+LESS_EQ_EXISTS+.
 \end{alltt}
 \end{session}
 \noindent Now we want to induct on the $p$ that our theorem says exists.
-This effectively requires to prove a slight restatement of the theorem.
+This effectively requires us to prove a slight restatement of the theorem.
 We might prove the restatement as a separate lemma, but it is probably just as easy to do this inline with the (infix) \ml{suffices\_by} tactic:
 \begin{session}
 \begin{alltt}
@@ -435,7 +436,7 @@ The first goal the system expects us to prove is the lowest one printed (it's cl
 This can obviously be simplified:
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
 \end{alltt}
 \end{session}
 \noindent Now we can do a case analysis on $m$: if it is $0$, we have a
@@ -443,9 +444,9 @@ trivial goal; if it is a successor, then we can use the definition of
 \ml{FACT} and the theorems \ml{DIVIDES\_RMUL} and
 \ml{DIVIDES\_REFL}.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >> e (Cases_on `m`);
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 Here the first sub-goal goal has an assumption that is false.
@@ -475,7 +476,7 @@ be proved with the simplifier \ml{rw}.
 
 \begin{session}
 \begin{alltt}
->> e (lrw [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+>> e (rw [FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 \end{alltt}
 \end{session}
 Now we have finished the base case of the induction and can move to the
@@ -483,7 +484,7 @@ step case. An obvious thing to try is simplification with the
 definitions of addition and factorial:
 \begin{session}
 \begin{alltt}
->> e (lrw [FACT, ADD_CLAUSES]);
+>> e (rw [FACT, ADD_CLAUSES]);
 \end{alltt}
 \end{session}
 \noindent And now, by \ml{DIVIDES\_LMUL} and the inductive hypothesis, we are
@@ -491,6 +492,7 @@ done:
 \begin{session}
 \begin{alltt}
 >> e (rw[DIVIDES_RMUL]);
+##assert can top_thm()
 \end{alltt}
 \end{session}
 We have finished the search for the proof, and now turn to the task of
@@ -505,14 +507,14 @@ like the following:
             suffices_by metis_tac[LESS_EQ_EXISTS]);
        e (Induct_on `p`);
        (*1*)
-       e (lrw[]);
+       e (rw[]);
        e (Cases_on `m`);
        (*1.1*)
        e (fs[]);
        (*1.2*)
-       e (lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+       e (rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
        (*2*)
-       e (lrw[FACT, ADD_CLAUSES]);
+       e (rw[FACT, ADD_CLAUSES]);
        e (rw[DIVIDES_RMUL]);
 ##assert can top_thm ()
 \end{alltt}
@@ -528,11 +530,11 @@ tactic:
   ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
                 suffices_by metis_tac[LESS_EQ_EXISTS] >>
               Induct_on `p` >| [
-                lrw[] >> Cases_on `m` >| [
+                rw[] >> Cases_on `m` >| [
                   fs[],
-                  lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+                  rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
                 ],
-                lrw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
+                rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
               ]
 >>__ restart(); e tac;
 ##assert can top_thm ()
@@ -547,11 +549,11 @@ tactic:
 >> e (`!m p.  0 < m ==> m divides FACT (m + p)`
         suffices_by metis_tac[LESS_EQ_EXISTS] >>
       Induct_on `p` >| [
-        lrw[] >> Cases_on `m` >| [
+        rw[] >> Cases_on `m` >| [
           fs[],
-          lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+          rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
         ],
-        lrw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
+        rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
       ])
 ##assert can top_thm ()
 \end{alltt}
@@ -574,23 +576,23 @@ One obvious step would be to merge the two successive invocations of the simplif
               Induct_on `p`  >| [
                 Cases_on `m` >| [
                   fs[],
-                  lrw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
+                  rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
                 ],
-                lrw[FACT, ADD_CLAUSES, DIVIDES_RMUL]
+                rw[FACT, ADD_CLAUSES, DIVIDES_RMUL]
               ]
 >>__ restart(); e tac;
 ##assert can top_thm()
 \end{alltt}
 \end{hol}
 
-Then, both arms of the induction start with an invocation of \ml{lrw}, and the semantics of \ml{\gt\gt} allow us to merge the occurrences of \ml{lrw} above the \ml{\gt|}.
+Then, both arms of the induction start with an invocation of \ml{rw}, and the semantics of \ml{\gt\gt} allow us to merge the occurrences of \ml{rw} above the \ml{\gt|}.
 This makes the step case entirely empty, so that when we execute the first steps of the proof we are left with only the base case to prove:
 \begin{session}
 \begin{alltt}
 >>_ restart();
 >> e (`!m p.  0 < m ==> m divides FACT (m + p)`
          suffices_by metis_tac[LESS_EQ_EXISTS] >>
-      Induct_on `p` >> lrw[FACT, ADD_CLAUSES, DIVIDES_RMUL]);
+      Induct_on `p` >> rw[FACT, ADD_CLAUSES, DIVIDES_RMUL]);
 \end{alltt}
 \end{session}
 This means that our tactic can become
@@ -599,11 +601,11 @@ This means that our tactic can become
   ##eval[it] `!m p.  0 < m ==> m divides FACT (m + p)`
              suffices_by metis_tac[LESS_EQ_EXISTS] >>
              Induct_on `p` >>
-             lrw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
+             rw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
              (* base case only remains *)
              Cases_on `m` >| [
                fs[],
-               lrw[FACT,DIVIDES_LMUL,DIVIDES_REFL]
+               rw[FACT,DIVIDES_LMUL,DIVIDES_REFL]
              ]
 >>__ val tac = it; restart(); e tac;
 ##assert can top_thm ()
@@ -623,11 +625,12 @@ Thus, we can merge the two sub-cases of the base-case into a single invocation o
   ##eval[tac] `!m p.  0 < m ==> m divides FACT (m + p)`
                 suffices_by metis_tac[LESS_EQ_EXISTS] >>
               Induct_on `p` >>
-              lrw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
+              rw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
               Cases_on `m` >>
-              fs[FACT,DIVIDES_RMUL,DIVIDES_REFL]
+              fs[FACT,DIVIDES_LMUL,DIVIDES_REFL]
 >>__ restart(); e tac;
 ##assert can top_thm()
+>>__ val DIVIDES_FACT = top_thm()
 \end{alltt}
 \end{hol}
 
@@ -655,20 +658,20 @@ Use of \ml{\gt\gt} ensures that the tactic gets applied in both branches of the 
 \begin{session}
 \begin{alltt}
 >>_ b();
->> e (Induct_on `n - m` >> lrw[]);
+>> e (Induct_on `n - m` >> rw[]);
 \end{alltt}
 \end{session}
-Looking at the first goal, we reason that if $0 = n - m$ and $m \leq n$, then $m = n$. We can prove this fact, using \ml{lrw} and add it to the hypotheses by use of the infix operator ``\ml{by}'':
+Looking at the first goal, we reason that if $0 = n - m$ and $m \leq n$, then $m = n$. We can prove this fact, using \ml{rw} and add it to the hypotheses by use of the infix operator ``\ml{by}'':
 \begin{session}
 \begin{alltt}
->> e (`m = n` by lrw[]);
+>> e (`m = n` by rw[]);
 \end{alltt}
 \end{session}
 
 \noindent We can now use simplification again to propagate the newly derived equality throughout the goal.
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
 \end{alltt}
 \end{session}
     At this point in the previous proof we did a case analysis on $m$.
@@ -680,7 +683,7 @@ Looking at the first goal, we reason that if $0 = n - m$ and $m \leq n$, then $m
     \mbox{\ml{`?k. m = SUC k` by <tactic>}}
 \]
 But what is the tactic?
-If we try \ml{lrw}, it will fail since the embedded arithmetic decision procedure doesn't handle existential statements very well.
+If we try \ml{rw}, it will fail since the embedded arithmetic decision procedure doesn't handle existential statements very well.
 What to do?
 
 In fact, that earlier case analysis will again do the job: but now we hide it away so that it is only used to prove this sub-goal.
@@ -698,7 +701,7 @@ Thus:
 \noindent Now the tactic we used before can finish this off:
 \begin{session}
 \begin{alltt}
->> e (lfs[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
+>> e (fs[FACT, DIVIDES_LMUL, DIVIDES_REFL]);
 \end{alltt}
 \end{session}
 That takes care of the base case.
@@ -706,18 +709,17 @@ For the induction step, things look a bit more difficult than in the earlier pro
 However, we can make progress by realizing that the hypotheses imply that $0 < n$ and so we can transform $n$ into a successor, thus enabling the unfolding of \ml{FACT}, as in the previous proof:
 \begin{session}
 \begin{alltt}
->> e (`0 < n` by lrw[] >> `?k. n = SUC k` by (Cases_on `n` >> fs[]));
+>> e (`0 < n` by rw[] >> `?k. n = SUC k` by (Cases_on `n` >> fs[]));
 \end{alltt}
 \end{session}
 \noindent The proof now finishes in much the same manner as the previous one:
 \begin{session}
 \begin{alltt}
->> e (lrw [FACT, DIVIDES_RMUL]);
+>> e (rw [FACT, DIVIDES_RMUL]);
 ##assert can top_thm()
 \end{alltt}
 \end{session}
-\noindent We leave the details of stitching the proof together to the interested
-reader.
+\noindent We leave the details of stitching the proof together to the interested reader.
 
 \section{Primality}
 
@@ -730,35 +732,35 @@ primes are positive. These are all quite simple to prove.
 \item [\small{({\it NOT\_PRIME\_0\/})}]
 \begin{tabular}[t]{l}
 \verb+~prime 0+ \\ \hline
-\verb+lrw[prime_def,DIVIDES_0]+ \\
+\verb+rw[prime_def,DIVIDES_0]+ \\
 \end{tabular}
->>__ val NOT_PRIME_0 = prove(``~prime 0``, lrw[prime_def, DIVIDES_0])
+>>__ val NOT_PRIME_0 = prove(``~prime 0``, rw[prime_def, DIVIDES_0])
 
 \item [\small{({\it NOT\_PRIME\_1\/})}]
 \begin{tabular}[t]{l}
 \verb+~prime 1+ \\ \hline
-\verb+lrw[prime_def]+ \\
+\verb+rw[prime_def]+ \\
 \end{tabular}
->>__ val NOT_PRIME_1 = prove(``~prime 1``, lrw[prime_def])
+>>__ val NOT_PRIME_1 = prove(``~prime 1``, rw[prime_def])
 
 \item [\small{({\it PRIME\_2\/})}]
 \begin{tabular}[t]{l}
 \verb+prime 2+ \\ \hline
-\verb+lrw[prime_def] >>+ \\
+\verb+rw[prime_def] >>+ \\
 \verb+metis_tac [DIVIDES_LE, DIVIDES_ZERO, DECIDE ``2<>0``,+ \\
 \verb+           DECIDE ``x <= 2 <=> (x=0) \/ (x=1) \/ (x=2)``]+ \\
 \end{tabular}
 >>__ val PRIME_2 = prove(``prime 2``,
-   lrw[prime_def] >>
+   rw[prime_def] >>
    metis_tac[DIVIDES_LE, DIVIDES_ZERO, DECIDE ``~(2=0)``,
              DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``])
 
 \item [\small{({\it PRIME\_POS\/})}]
 \begin{tabular}[t]{l}
 \verb+!p. prime p ==> 0<p+ \\ \hline
-\verb+Cases >> lrw[NOT_PRIME_0]+ \\
+\verb+Cases >> rw[NOT_PRIME_0]+ \\
 >>__ val PRIME_POS = prove(
-       ``!p. prime p ==> 0 < p``, Cases >> lrw[NOT_PRIME_0])
+       ``!p. prime p ==> 0 < p``, Cases >> rw[NOT_PRIME_0])
 \end{tabular}
 \end{description}
 
@@ -782,7 +784,7 @@ or $n$.  The polished tactic is the following:
 \begin{tabular}[t]{l}
 \verb+!n. ~(n = 1) ==> ?p. prime p /\ p divides n+ \\ \hline
 \verb+completeInduct_on `n` >>+ \\
-\verb+  lrw [] >>+ \\
+\verb+  rw [] >>+ \\
 \verb+  Cases_on `prime n` >| [+ \\
 \verb+    metis_tac [DIVIDES_REFL], + \\
 \verb+    `?x. x divides n /\ x<>1 /\ x<>n` + \\
@@ -807,7 +809,7 @@ split. Notice that the term given to \ml{Cases\_on} need not occur in
 the goal:
 \begin{session}
 \begin{alltt}
->> e (lrw[] >> Cases_on `prime n`);
+>> e (rw[] >> Cases_on `prime n`);
 \end{alltt}
 \end{session}
 \noindent As mentioned, the first case is proved with the reflexivity of
@@ -848,11 +850,11 @@ Goal proved.
 \noindent The remaining goal can be clarified by simplification:
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
 
 >> DIVIDES_0;
 
->> e (lrw[it]);
+>> e (rw[it]);
 \end{alltt}
 \end{session}
 The two steps of exploratory simplification have led us to a state where
@@ -860,6 +862,7 @@ all we have to do is exhibit a prime. And we already have one to hand:
 \begin{session}
 \begin{alltt}
 >> e (metis_tac [PRIME_2]);
+>>__ val PRIME_FACTOR = top_thm();
 \end{alltt}
 \end{session}
 Again, work now needs to be done to compose and perhaps polish a single tactic from the individual proof steps, but we will not describe it.%
@@ -883,16 +886,16 @@ A HOL rendition of the proof may be given as follows:
 \item [\small{({\it EUCLID\/})}]
 \begin{tabular}[t]{l}
 \verb+!n. ?p. n < p /\ prime p+ \\ \hline
-\verb+SPOSE_NOT_THEN STRIP_ASSUME_TAC+ \\
-\verb!  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
-\verb+  THEN RW_TAC arith_ss [FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
-\verb+  THEN METIS_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
-\verb+                  DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
+\verb+spose_not_then strip_assume_tac+ \\
+\verb!  >> mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
+\verb+  >> rw[FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
+\verb+  >> metis_tac [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
+\verb+                DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
 \end{tabular}
 \end{description}
 Let's prise this apart and look at it in some detail. A proof by
 contradiction can be started by using the \ml{bossLib} function
-\ml{SPOSE\_NOT\_THEN}. With it, one assumes the negation of the
+\ml{spose\_not\_then}. With it, one assumes the negation of the
 current goal and then uses that in an attempt to prove falsity
 (\verb+F+). The assumed negation $\neg(\forall n.\ \exists p.\ n < p
 \land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\
@@ -901,17 +904,11 @@ passed to the tactic \ml{STRIP\_ASSUME\_TAC}. This moves its argument
 to the assumption list of the goal after eliminating the existential
 quantification on $n$.
 \begin{session}
-\begin{verbatim}
-- g `!n. ?p. n < p /\ prime p`;
+\begin{alltt}
+>>_ g `!n. ?p. n < p /\ prime p`;
 
-- e (SPOSE_NOT_THEN STRIP_ASSUME_TAC);
-OK..
-1 subgoal:
-> val it =
-    F
-    ------------------------------------
-      !p. n < p ==> ~prime p
-\end{verbatim}
+>> e (spose_not_then strip_assume_tac);
+\end{alltt}
 \end{session}
 Thus we have the hypothesis that all $p$ beyond a certain unspecified
 $n$ are not prime, and our task is to show that this cannot be. At this
@@ -925,14 +922,11 @@ formal HOL proof? Answer: by instantiating a lemma with it and bringing the
 lemma into the proof. The lemma and its instantiation are:\footnote{The
 function {\tt SPEC} implements the rule of universal specialization.}
 \begin{session}
-\begin{verbatim}
-- PRIME_FACTOR;
-> val it = |- !n. ~(n = 1) ==> (?p. prime p /\ p divides n) : thm
+\begin{alltt}
+>> PRIME_FACTOR;
 
-- val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
-> val th =
-    |- ~(FACT n + 1 = 1) ==> (?p. prime p /\ p divides FACT n + 1)
-\end{verbatim}
+>> val th = SPEC ``FACT n + 1`` PRIME_FACTOR;
+\end{alltt}
 \end{session}
 It is evident that the antecedent of \ml{th} can be eliminated. In
 \holn{}, one could do this in a so-called {\it forward\/} proof style (by
@@ -941,44 +935,26 @@ modus ponens}, the result of which can then be used in the proof), or
 one could bring \ml{th} into the proof and simplify it {\it in
 situ}. We choose the latter approach.
 \begin{session}
-\begin{verbatim}
-- e (MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR));
-OK..
-1 subgoal:
-> val it =
-    (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
-    ------------------------------------
-      !p. n < p ==> ~prime p
-\end{verbatim}
+\begin{alltt}
+>> e (mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR));
+\end{alltt}
 \end{session}
-    The invocation \ml{MP\_TAC} ($\vdash M$) applied to a goal
-    $(\Delta, g)$ returns the goal $(\Delta, M \supset g)$. Now we
-    simplify:
+The invocation \ml{mp\_tac} ($\vdash M$) applied to a goal $(\Delta, g)$ returns the goal $(\Delta, M \supset g)$.
+Now we simplify:
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss []);
-OK..
-2 subgoals:
-> val it =
-    ~prime p \/ ~(p divides FACT n + 1)
-    ------------------------------------
-      0.  !p. n < p ==> ~prime p
-      1.  prime p
-
-    ~(FACT n = 0)
-    ------------------------------------
-      !p. n < p ==> ~prime p
-\end{verbatim}
+\begin{alltt}
+>> e (rw[]);
+\end{alltt}
 \end{session}
     We recall that zero is less than every factorial, a fact found in
     \ml{arithmeticTheory} under the name \ml{FACT\_LESS}. Thus we can
     solve the top goal by simplification:
 \begin{session}
-\begin{verbatim}
-- e (RW_TAC arith_ss [FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
-OK..
-Goal proved.  ...
-\end{verbatim}
+\begin{alltt}
+>>_ e (rw[FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
+
+Goal proved. ...
+\end{alltt}
 \end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}
 rewrite. Looking at the remaining goal, one might think that our aim, to
@@ -989,47 +965,21 @@ $\vdash A \imp B = \neg A \lor B$ as a rewrite rule oriented right to left by
 use of \ml{GSYM}.\footnote{Loosely speaking, \ml{GSYM} swaps the left and
 right hand sides of any equations it finds.}
 \begin{session}
-\begin{verbatim}
-- IMP_DISJ_THM;
-> val it = |- !A B. A ==> B = ~A \/ B : thm
+\begin{alltt}
+>> IMP_DISJ_THM;
 
-- e (RW_TAC arith_ss [GSYM IMP_DISJ_THM]);
-OK..
-1 subgoal:
-> val it =
-    ~(p divides FACT n + 1)
-    ------------------------------------
-      0.  !p. n < p ==> ~prime p
-      1.  prime p
-     : goalstack
-\end{verbatim}
+>> e (rw[GSYM IMP_DISJ_THM]);
+\end{alltt}
 \end{session}
 
-We can quickly proceed to show that $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$,
-and thus that $p = 1$, hence that $p$ is not prime, at which point we are done.
+We can quickly proceed to show that $p \ \mathtt{divides}\ (\mathtt{FACT}\; n)$, so that if it also divides \holtxt{FACT n + 1}, then $p$ divides 1, meaning that $p = 1$.
+But then $p$ is not prime, at which point we are done.
 This can all be packaged into a single invocation of \ml{METIS\_TAC}:
 \begin{session}
-\begin{verbatim}
-- e (METIS_TAC [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
-                NOT_PRIME_1, NOT_LESS, PRIME_POS]);
-metis: r[+0+12]+0+0+0+0+0+0+0+1+1+0+0+0+0+1+1+1+1+4#
-
-Goal proved.
- [..] |- ~(p divides FACT n + 1)
-
-Goal proved.
- [.] |- ~prime p \/ ~(p divides FACT n + 1)
-
-Goal proved.
- [.]
-|- (~(FACT n + 1 = 1) ==> ?p. prime p /\ p divides FACT n + 1) ==> F
-
-Goal proved.
- [.] |- F
-> val it =
-    Initial goal proved.
-    |- !n. ?p. n < p /\ prime p : goalstack
-\end{verbatim}
+\begin{alltt}
+>> e (metis_tac [DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE,
+                 NOT_PRIME_1, NOT_LESS, PRIME_POS]);
+\end{alltt}
 \end{session}
     Euclid's theorem is now proved, and we can rest. However, this
     presentation of the final proof will be unsatisfactory to some,
@@ -1048,19 +998,19 @@ Goal proved.
 \item [\small{({\it AGAIN\/})}]
 \begin{tabular}[t]{l}
 \verb+!n. ?p. n < p /\ prime p+ \\ \hline
-\verb|CCONTR_TAC THEN | \\
-\verb|`?n. !p. n < p ==> ~prime p`  by METIS_TAC []             THEN| \\
-\verb|`~(FACT n + 1 = 1)`           by RW_TAC arith_ss  [FACT_LESS,| \\
-\verb|                                    DECIDE``~(x=0)=0<x``] THEN| \\
+\verb|CCONTR_TAC >> | \\
+\verb|`?n. !p. n < p ==> ~prime p`  by metis_tac []             >>| \\
+\verb|`~(FACT n + 1 = 1)`           by rw[FACT_LESS,| \\
+\verb|                                    DECIDE``~(x=0)=0<x``] >>| \\
 \verb|`?p. prime p /\  | \\
-\verb|     p divides (FACT n + 1)`  by METIS_TAC [PRIME_FACTOR] THEN| \\
-\verb|`0 < p`                       by METIS_TAC [PRIME_POS]    THEN| \\
-\verb|`p <= n`                      by METIS_TAC [NOT_LESS]     THEN| \\
-\verb|`p divides FACT n`            by METIS_TAC [DIVIDES_FACT] THEN| \\
-\verb|`p divides 1`                 by METIS_TAC [DIVIDES_ADDL] THEN| \\
-\verb|`p = 1`                       by METIS_TAC [DIVIDES_ONE]  THEN| \\
-\verb|`~prime p`                    by METIS_TAC [NOT_PRIME_1]  THEN| \\
-\verb|METIS_TAC []| \\
+\verb|     p divides (FACT n + 1)`  by metis_tac [PRIME_FACTOR] >>| \\
+\verb|`0 < p`                       by metis_tac [PRIME_POS]    >>| \\
+\verb|`p <= n`                      by metis_tac [NOT_LESS]     >>| \\
+\verb|`p divides FACT n`            by metis_tac [DIVIDES_FACT] >>| \\
+\verb|`p divides 1`                 by metis_tac [DIVIDES_ADDL] >>| \\
+\verb|`p = 1`                       by metis_tac [DIVIDES_ONE]  >>| \\
+\verb|`~prime p`                    by metis_tac [NOT_PRIME_1]  >>| \\
+\verb|metis_tac []| \\
 \end{tabular}
 \end{description}
 
@@ -1073,14 +1023,10 @@ us to go all through the theorem-proving effort again.  Even having a
 complete script from which it would be possible to cut-and-paste is an
 error-prone solution.
 
-In order to do this we need to create a file with the name
-$x$\ml{Script.sml}, where $x$ is the name of the theory we wish to
-export.  This file then needs to be compiled.  In fact, we really do
-use the Moscow ML compiler, carefully augmented with the appropriate
-logical context.  However, the language accepted by the compiler is
-not quite the same as that accepted by the interactive system, so we
-will need to do a little work to massage the original script into the
-correct form.
+In order to do this we need to create a file with the name $x$\ml{Script.sml}, where $x$ is the name of the theory we wish to export.
+This file then needs to be compiled.
+In fact, we really do use the \ML{} compiler, carefully augmented with the appropriate logical context.
+However, the language accepted by the compiler is not quite the same as that accepted by the interactive system, so we will need to do a little work to massage the original script into the correct form.
 
 We'll give an illustration of converting to a form that can be
 compiled using the script
@@ -1209,32 +1155,30 @@ understand when presented informally, a perhaps surprising amount of
 support development was required to set the stage for Euclid's classic
 argument.
 
-\item The proof support offered by \ml{bossLib}
-(\verb+RW_TAC+, \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, \ml{DECIDE},
-\ml{Cases\_on}, \ml{Induct\_on}, and the ``\ml{by}'' construct) was
-nearly complete for this example: it was rarely necessary to resort to
+\item The proof support offered by \ml{bossLib} (\ml{rw}, \ml{metis\_tac}, \ml{DECIDE}, \ml{Cases\_on}, \ml{Induct\_on}, and the ``\ml{by}'' construct) was nearly complete for this example: it was rarely necessary to resort to
 lower-level tactics.
 
 \item Simplification is a workhorse tactic; even when an automated
-reasoner such as \ml{METIS\_TAC} is used, its application has often been
+reasoner such as \ml{metis\_tac} is used, its application has often been
 set up by some exploratory simplifications. It therefore pays to become
 familiar with the strengths and weaknesses of the simplifier.
 
 \item A common problem with interactive proof systems is dealing with
-hypotheses. Often \ml{METIS\_TAC} and the ``\ml{by}'' construct allow
+hypotheses. Often \ml{metis\_tac} and the ``\ml{by}'' construct allow
 the use of hypotheses without directly resorting to indexing into them
 (or naming them, which amounts to the same thing). This is desirable,
 since the hypotheses are notionally a {\it set}, and moreover,
 experience has shown that profligate indexing into hypotheses results in
-hard-to-maintain proof scripts. However, it can be clumsy to work with a
-large set of hypotheses, in which case the following approaches may be
-useful.
+hard-to-maintain proof scripts.
+
+We also found that we could directly simplify in the assumptions by using the \ml{fs} tactic.
+Nonetheless, it can be clumsy to work with a large set of hypotheses, in which case the following approaches may be useful.
 
 One can directly refer to hypotheses by using \ml{UNDISCH\_TAC} (makes
 the designated hypothesis the antecedent to the goal),
 \ml{ASSUM\_LIST} (gives the entire hypothesis list to a tactic),
-\ml{POP\_ASSUM} (gives the top hypothesis to a tactic), and
-\ml{PAT\_ASSUM} (gives the first {\it matching\/} hypothesis to a
+\ml{pop\_assum} (gives the top hypothesis to a tactic), and
+\ml{qpat\_assum} (gives the first {\it matching\/} hypothesis to a
 tactic). (See the \REFERENCE{} for further details on all of these.)
 The numbers attached to hypotheses by the proof manager could likely
 be used to access hypotheses (it would be quite simple to write such a
@@ -1244,12 +1188,12 @@ clarifying thing to do.
 In some cases, it is useful to be able to delete a hypothesis. This can
 be accomplished by passing the hypothesis to a tactic that ignores
 it. For example, to discard the top hypothesis, one could invoke
-\ml{POP\_ASSUM (K ALL\_TAC)}.
+\ml{pop\_assum~kall\_tac}.
 
 \item In the example, we didn't use the more advanced features of
 \ml{bossLib}, largely because they do not, as yet, provide much more
 functionality than the simple sequencing of simplification, decision
-procedures, and automated first order reasoning. The \ml{THEN}
+procedures, and automated first order reasoning. The \ml{\gt\gt}
 tactical has thus served as an adequate replacement. In the future,
 these entrypoints should become more powerful.
 
@@ -1272,14 +1216,11 @@ On the other hand, one of the advantages of having a mechanized logic
 is that the machine can be used as a formal expression calculator,
 and thus the user can use it to quickly and accurately explore various
 proof possibilities.
-\item High powered tools like \ml{METIS\_TAC}, \ml{DECIDE\_TAC}, and
-\ml{RW\_TAC} are the principal way of advancing a proof in
-\ml{bossLib}. In many cases, they do exactly what is desired, or even
-manage to surprise the user with their power. In the formalization of
-Euclid's theorem, the tools performed fairly well. However, sometimes
-they are overly aggressive, or they simply flounder. In such cases, more
-specialized proof tools need to be used, or even written, and hence the
-support underlying \ml{bossLib} must eventually be learned.
+
+\item High powered tools like \ml{metis\_tac},  and \ml{rw} are the principal way of advancing a proof in \ml{bossLib}.
+In many cases, they do exactly what is desired, or even manage to surprise the user with their power.
+In the formalization of Euclid's theorem, the tools performed fairly well. However, sometimes they are overly aggressive, or they simply flounder.
+In such cases, more specialized proof tools need to be used, or even written, and hence the support underlying \ml{bossLib} must eventually be learned.
 
 \item Having a good knowledge of the available lemmas, and where they
 are located, is an essential part of being successful. Often powerful
