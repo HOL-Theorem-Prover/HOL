@@ -59,15 +59,9 @@ by the user and other lines are the system's responses.
 \begin{session}
 \begin{alltt}
 \$ bin/hol
+>>- val _ = HOL_Interactive.print_banner();
 
------------------------------------------------------------------
-       HOL-4 [\holnsversion (built Fri Apr 12 15:34:35 2002)]
-
-       For introductory HOL help, type: help "hol";
------------------------------------------------------------------
-
-> 1 :: [2,3,4,5];
-val it = [1, 2, 3, 4, 5] : int list
+>> 1 :: [2,3,4,5];
 \end{alltt}
 \end{session}
 
@@ -85,7 +79,6 @@ The value of the last expression evaluated at the top-level not otherwise bound 
 
 \begin{session}
 \begin{alltt}
->>__ 1 :: [2,3,4,5];
 >> val l = it;
 
 >> tl l;
