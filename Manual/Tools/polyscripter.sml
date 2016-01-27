@@ -216,6 +216,33 @@ in
     in
       ("\n", NONE)
     end
+  else if String.isPrefix "##eval" line then
+    let
+      val line = String.extract(line, 6, NONE)
+      val e = Fail ""
+      val (inputpfx, firstline, indent) =
+          if String.isPrefix "[" line then
+            let
+              val ss = Substring.full line
+              val (p,s) = Substring.position "] " ss
+              val _ = Substring.size s <> 0 orelse
+                      lnumdie (linenum lbuf) "Mal-formed ##eval directive" e
+              val vname = String.extract(Substring.string p, 1, NONE)
+              val firstline = String.extract(Substring.string s, 2, NONE)
+            in
+              ("val "^vname^" = ", firstline, 9 + size vname)
+            end
+          else
+            ("", String.extract(line, 1, NONE), 7)
+              handle Subcript =>
+                     lnumdie (linenum lbuf) "Mal-formed ##eval directive" e
+      val input = getRest (indent + 1) [firstline]
+      val _ = compiler obuf
+                       (lnumdie (linenum lbuf))
+                       (mkLex (quote (inputpfx ^ input)))
+    in
+      (ws ^ umunge umap input, NONE)
+    end
   else if String.isPrefix "##use " line then
     let
       val fname = String.substring(line, 6, size line - 7) (* for \n at end *)

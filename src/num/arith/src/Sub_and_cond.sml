@@ -95,7 +95,7 @@ end
 val SUB_LEFT_EQ0 = let
   open arithmeticTheory
 in
-  SUB_LEFT_EQ |> SPEC ``0``
+  SUB_LEFT_EQ |> SPEC numSyntax.zero_tm
               |> REWRITE_RULE [ADD_CLAUSES, LESS_EQ_REFL, peqn_or_nleqp]
 end
 val SUB_RIGHT_EQ0 =
