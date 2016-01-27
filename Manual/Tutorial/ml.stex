@@ -42,18 +42,12 @@ this way. These sessions are split into segments displayed in boxes
 with a number in their top right hand corner (to indicate their
 position in the complete session).
 
-The interactions in these boxes should be understood as occurring in
-sequence.  For example, variable bindings made in earlier boxes are
-assumed to persist to later ones.  To enter the \HOL{} system one
-types {\small\verb|hol|} or {\small\verb|hol.noquote|} to Unix,
-possibly preceded by path information if the \HOL{} system's
-\texttt{bin} directory is not in one's path.  The \HOL{} system then
-prints a sign-on message and puts one into \ML.  The \ML{} prompt is
-{\small\verb|-|}, so lines beginning with {\small\verb|-|} are typed
-by the user and other lines are the system's responses.
-
-  Here, as elsewhere in the \TUTORIAL{}, we will be assuming use of
-  {\small\verb|hol|}.
+The interactions in these boxes should be understood as occurring in sequence.
+For example, variable bindings made in earlier boxes are assumed to persist to later ones.
+To enter the \HOL{} system, one types \texttt{hol} at the command-line, possibly preceded by path information if the \HOL{} system's \texttt{bin} directory is not in one's path.
+The \HOL{} system then prints a sign-on message and puts one into \ML.
+The \ML{} prompt varies depending on the implementation.
+In Poly/ML, the implementation assumed for our sessions here, the prompt is \ml{\gt}, so lines beginning with \ml{\gt} are typed by the user, and other lines are the system's responses.
 
 \setcounter{sessioncount}{0}
 \begin{session}
