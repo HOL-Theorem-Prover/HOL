@@ -11,3 +11,6 @@ parity.tex: parity.stex ../Tools/umap ../Tools/polyscripter
 
 ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
 	../Tools/polyscripter ../Tools/umap < $< > $@
+
+combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
+	../Tools/polyscripter ../Tools/umap < $< > $@
