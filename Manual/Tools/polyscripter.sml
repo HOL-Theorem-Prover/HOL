@@ -137,6 +137,30 @@ fun deleteTrailingWhiteSpace s =
     string pfx ^ term
   end
 
+fun remove_multi_goalproved s =
+  let
+    val ss = Substring.full s
+    val (l,r) = Substring.position "\n\nGoal proved." ss
+    fun recurse ss =
+      let
+        val ss' = Substring.slice(ss, 1, NONE)
+        val (l,r) = Substring.position "\n\nGoal proved." ss'
+      in
+        if Substring.size r <> 0 then
+          case recurse r of NONE => SOME r | x => x
+        else NONE
+      end
+  in
+    if Substring.size r <> 0 then
+      case recurse r of
+          NONE => NONE
+        | SOME r' =>
+          SOME (Substring.string l ^ !elision_string1 ^
+                Substring.string (Substring.triml 1 r'))
+    else
+      NONE
+  end
+
 fun cruftSuffix sfxs s =
   case List.find (fn (sfx,_) => String.isSuffix sfx s) sfxs of
       NONE => NONE
@@ -148,10 +172,33 @@ val cruftySuffixes = ref [
       (":\n   proof\n", "\n")
     ]
 
+fun try _ [] s = s
+  | try restart (f::fs) s = case f s of
+                                SOME s' => restart s'
+                              | NONE => try restart fs s
+
+fun remove_nsubgoals s =
+  let
+    open Substring
+    val ss0 = full s
+    val (ss,_) = splitr Char.isSpace ss0
+  in
+    if isSuffix "subgoals" ss then
+      let
+        val (p,s) = splitr (fn c => c <> #"\n") ss
+        val (sn, rest) = splitl Char.isDigit s
+      in
+        if size sn <> 0 andalso string rest = " subgoals" then SOME (string p)
+        else NONE
+      end
+    else NONE
+  end
+
 fun removeCruft s =
-  case cruftSuffix (!cruftySuffixes) s of
-      NONE => s
-    | SOME s' => removeCruft s'
+  try removeCruft [cruftSuffix (!cruftySuffixes),
+                   remove_multi_goalproved,
+                   remove_nsubgoals]
+      s
 
 fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
 

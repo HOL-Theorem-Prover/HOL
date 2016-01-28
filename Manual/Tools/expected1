@@ -86,3 +86,15 @@ Term`p /\bs{} q ==>
      r`;
 
    3 + 4;
+
+> e Induct;
+OK..
+2 subgoals:
+val it =
+   
+0 < SUC n \(\Rightarrow\) 0 < SUC n * SUC n
+------------------------------------
+  0 < n \(\Rightarrow\) 0 < n * n
+
+
+0 < 0 \(\Rightarrow\) 0 < 0 * 0
