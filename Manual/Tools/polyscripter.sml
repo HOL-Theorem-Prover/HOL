@@ -348,7 +348,7 @@ end
 
 fun read_umap fname =
   let
-    val instrm = TextIO.openIn fname
+    val instrm = TextIO.openIn fname handle _ => die ("Couldn't open "^fname)
     fun recurse (i, acc) =
       case TextIO.inputLine instrm of
           SOME line =>
