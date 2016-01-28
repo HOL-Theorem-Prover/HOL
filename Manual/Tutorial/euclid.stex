@@ -34,8 +34,10 @@ prime number, we first need to define the \emph{divisibility} relation:
 >> val divides_def = Define`divides a b = ?x. b = a * x`;
 \end{alltt}
 \end{session}
-Note how we are using ASCII notation to input our terms, but the system responds with pleasant Unicode.
+Note how we are using ASCII notation to input our terms (\holtxt{?} is the ASCII way to write the existential quantifier), but the system responds with pleasant Unicode.
 Unicode characters can also be used in the input.
+Also note how equality on booleans gets printed as the if-and-only-if arrow, while equality on natural numbers stays as an equality.
+The underlying constant is the same (equality) (as is implied by the fact that one can use \holtxt{=} in both places in the input), but the system tries to be helpful when printing.
 
 The definition is added to the current theory with the name
 \ml{divides\_def}, and also returned from the invocation of
@@ -62,6 +64,7 @@ than $1$ and itself:
     Define `prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 \end{alltt}
 \end{session}
+There is more ASCII syntax to observe here: \holtxt{\lt\gt} for not-equals, and \holtxt{!} for the universal quantifier.
 
 That concludes the definitions to be made. Now we ``just'' have to prove
 that there are infinitely many prime numbers. If we were coming to this
@@ -382,13 +385,12 @@ following\footnote{This and subsequent proofs use the theorems proved
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
-\verb+rw[LESS_EQ_EXISTS] >>+ \\
-\verb!qcase_tac `m divides FACT (m + q)` >>!\\
-\verb+Induct_on `q` >>+\\
-\verb+rw[FACT,ADD_CLAUSES] >| [+ \\
-\verb+  Cases_on `m`, ALL_TAC+ \\
-\verb+] >> metis_tac [FACT, DECIDE ``!x. ~(x < x)``,+ \\
-\verb+                DIVIDES_RMUL, DIVIDES_LMUL, DIVIDES_REFL]+ \\
+\verb|`!p m. 0 < m ==> m divides (FACT (m + p))` |
+\verb+    suffices_by metis_tac[LESS_EQ_EXISTS] >>+
+\verb+Induct_on `p` >>+
+\verb+rw[FACT,ADD_CLAUSES,DIVIDES_RMUL] >>+
+\verb+Cases_on `m` >>+
+\verb+fs[FACT,DIVIDES_LMUL,DIVIDES_REFL]+\\
 \end{tabular}
 \end{description}
 We will examine this proof in detail, so we should first attempt to understand why the theorem is true.
@@ -487,7 +489,7 @@ definitions of addition and factorial:
 >> e (rw [FACT, ADD_CLAUSES]);
 \end{alltt}
 \end{session}
-\noindent And now, by \ml{DIVIDES\_LMUL} and the inductive hypothesis, we are
+\noindent And now, by \ml{DIVIDES\_RMUL} and the inductive hypothesis, we are
 done:
 \begin{session}
 \begin{alltt}
@@ -554,7 +556,7 @@ tactic:
           rw[FACT, DIVIDES_LMUL, DIVIDES_REFL]
         ],
         rw[FACT, ADD_CLAUSES] >> rw[DIVIDES_RMUL]
-      ])
+      ]);
 ##assert can top_thm ()
 \end{alltt}
 \end{session}
@@ -599,7 +601,7 @@ This means that our tactic can become
 \begin{hol}
 \begin{alltt}
   ##eval[it] `!m p.  0 < m ==> m divides FACT (m + p)`
-             suffices_by metis_tac[LESS_EQ_EXISTS] >>
+               suffices_by metis_tac[LESS_EQ_EXISTS] >>
              Induct_on `p` >>
              rw[FACT, ADD_CLAUSES,DIVIDES_RMUL] >>
              (* base case only remains *)
@@ -611,7 +613,6 @@ This means that our tactic can become
 ##assert can top_thm ()
 \end{alltt}
 \end{hol}
-
 In the base case, we have two invocations of the simplifier under the case-split on \holtxt{m}.
 In general, the two different simplifier invocations do slightly different things in addition to simplifying the conclusion of the goal:
 \begin{itemize}
@@ -842,26 +843,25 @@ transitivity of divisibility to get the fact that this divisor of $x$ is
 also a divisor of $n$, thus finishing this branch of the proof:
 \begin{session}
 \begin{alltt}
->>_ e (metis_tac [DIVIDES_TRANS]);
-
-Goal proved.
+>> e (metis_tac [DIVIDES_TRANS]);
 \end{alltt}
 \end{session}
 \noindent The remaining goal can be clarified by simplification:
 \begin{session}
 \begin{alltt}
 >> e (rw[]);
-
->> DIVIDES_0;
-
->> e (rw[it]);
 \end{alltt}
 \end{session}
-The two steps of exploratory simplification have led us to a state where
-all we have to do is exhibit a prime. And we already have one to hand:
+We know that everything divides 0:
 \begin{session}
 \begin{alltt}
->> e (metis_tac [PRIME_2]);
+>> DIVIDES_0;
+\end{alltt}
+\end{session}
+So any prime will do for \holtxt{p}.
+\begin{session}
+\begin{alltt}
+>> e (metis_tac [PRIME_2, DIVIDES_0]);
 >>__ val PRIME_FACTOR = top_thm();
 \end{alltt}
 \end{session}
@@ -900,7 +900,7 @@ current goal and then uses that in an attempt to prove falsity
 (\verb+F+). The assumed negation $\neg(\forall n.\ \exists p.\ n < p
 \land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\
 \forall p.\ n < p \supset \, \neg \,\mbox{\tt prime}\ p$ and then is
-passed to the tactic \ml{STRIP\_ASSUME\_TAC}. This moves its argument
+passed to the tactic \ml{strip\_assume\_tac}. This moves its argument
 to the assumption list of the goal after eliminating the existential
 quantification on $n$.
 \begin{session}
@@ -951,9 +951,7 @@ Now we simplify:
     solve the top goal by simplification:
 \begin{session}
 \begin{alltt}
->>_ e (rw[FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
-
-Goal proved. ...
+>> e (rw[FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
 \end{alltt}
 \end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}
