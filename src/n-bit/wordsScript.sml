@@ -5,7 +5,7 @@
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib Q lcsymtacs;
+open HolKernel Parse boolLib bossLib Q;
 open arithmeticTheory pred_setTheory
 open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
@@ -2137,7 +2137,7 @@ val LOG2_w2n = Q.store_thm("LOG2_w2n",
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ numLib.LEAST_ELIM_TAC
   \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_index, BIT_IMP_GE_TWOEXP]
-  THENL [
+  >| [
     SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ `!i. i <= dimindex (:'a) - 1 ==> ~BIT i n`
     by (SRW_TAC [] []
@@ -4124,7 +4124,7 @@ val word_abs_neg = Q.store_thm("word_abs_neg",
   `!w. word_abs (-w) = word_abs w`,
   SRW_TAC [] [word_abs_def]
   \\ FULL_SIMP_TAC std_ss [GSYM word_msb_neg]
-  THENL [
+  >| [
     IMP_RES_TAC TWO_COMP_NEG
     \\ Cases_on `dimindex(:'a) = 1`
     \\ FULL_SIMP_TAC arith_ss
@@ -4473,6 +4473,26 @@ val word_concat_0_eq = Q.store_thm("word_concat_0_eq",
      (((0w :'a word) @@ (x :'b word) = (n2w y :'c word)) <=> (x = n2w y))`,
    Cases
    \\ SRW_TAC [numSimps.ARITH_ss] [dimindex_dimword_le_iso, word_concat_0]);
+
+val word_concat_assoc = Q.store_thm("word_concat_assoc",
+  `!a:'a word b:'b word c:'c word.
+      FINITE univ(:'a) /\
+      FINITE univ(:'b) /\
+      FINITE univ(:'c) /\
+      (dimindex(:'d) = dimindex(:'a) + dimindex(:'b)) /\
+      (dimindex(:'e) = dimindex(:'b) + dimindex(:'c)) /\
+      (dimindex(:'f) = dimindex(:'d) + dimindex(:'c)) ==>
+      (((a @@ b) : 'd word) @@ c = (a @@ ((b @@ c) : 'e word)) : 'f word)`,
+  SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss] [word_concat_def, w2w]
+  \\ `FINITE univ(:'d) /\ FINITE univ(:'e)`
+  by METIS_TAC [DIMINDEX_GT_0, fcpTheory.dimindex_def,
+                DECIDE ``0n < a /\ 0 < b ==> ~(1 = a + b)``]
+  \\ Cases_on `i < dimindex(:'d + 'c)`
+  \\ Cases_on `i < dimindex(:'a + 'e)`
+  \\ SRW_TAC [ARITH_ss] [word_join_index, w2w]
+  \\ FULL_SIMP_TAC arith_ss [fcpTheory.index_sum, word_join_index]
+  \\ REV_FULL_SIMP_TAC arith_ss []
+  )
 
 val word_join_word_T = store_thm("word_join_word_T",
   `word_join (- 1w) (- 1w) = - 1w`,

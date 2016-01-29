@@ -1648,6 +1648,45 @@ val WORD_EXTRACT_ss =
 (* ------------------------------------------------------------------------- *)
 
 local
+  val thm = Drule.SPEC_ALL wordsTheory.word_concat_assoc
+  val etm = thm |> Thm.concl |> boolSyntax.rand
+  val ety = etm |> boolSyntax.rhs
+                |> wordsSyntax.dest_word_concat |> snd
+                |> wordsSyntax.dim_of
+  val mtch = Drule.INST_TY_TERM o Term.match_term (boolSyntax.lhs etm)
+  val err = ERR "WORD_CONCAT_ASSOC_CONV" ""
+  fun attempt f a = Lib.with_exn f a err
+  val rule =
+     Conv.CONV_RULE
+       (Conv.LAND_CONV (Conv.DEPTH_CONV SIZES_CONV THENC numLib.REDUCE_CONV)
+        THENC Conv.REWR_CONV ConseqConvTheory.IMP_CLAUSES_TX)
+in
+  fun WORD_CONCAT_ASSOC_CONV tm =
+    let
+      val (ab, c) = attempt wordsSyntax.dest_word_concat tm
+      val (a, b) = attempt wordsSyntax.dest_word_concat ab
+    in
+      case List.map (Lib.total wordsSyntax.size_of) [a, b, c, ab, tm] of
+         [SOME na, SOME nb, SOME nc, SOME nab, SOME ntm] =>
+           if Arbnum.+ (na, nb) = nab andalso Arbnum.+ (nab, nc) = ntm
+             then let
+                    val bc_ty = fcpSyntax.mk_numeric_type (Arbnum.+ (nb, nc))
+                  in
+                    attempt (rule o Thm.INST_TYPE [ety |-> bc_ty] o mtch tm) thm
+                  end
+           else raise err
+       | _ => raise err
+    end
+end
+
+val WORD_CONCAT_ASSOC_ss =
+  simpLib.std_conv_ss
+    {conv = WORD_CONCAT_ASSOC_CONV, name = "WORD_CONCAT_ASSOC_CONV",
+     pats = [``(a @@ b) @@ c``]}
+
+(* ------------------------------------------------------------------------- *)
+
+local
    val WORD_NO_SUB_ARITH_ss =
       simpLib.named_merge_ss "word arith"
         [WORD_MULT_ss, WORD_ADD_ss, WORD_w2n_ss, WORD_CONST_ss, WORD_ABS_ss]

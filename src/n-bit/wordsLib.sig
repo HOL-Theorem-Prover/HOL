@@ -17,6 +17,7 @@ sig
     val WORD_EXTRACT_ss     : simpLib.ssfrag
     val WORD_MUL_LSL_ss     : simpLib.ssfrag
     val WORD_UINT_MAX_ss    : simpLib.ssfrag
+    val WORD_CONCAT_ASSOC_ss: simpLib.ssfrag
     val WORD_ss             : simpLib.ssfrag
 
     val LESS_CONV           : conv
