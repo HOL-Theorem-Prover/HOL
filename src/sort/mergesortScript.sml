@@ -2,7 +2,6 @@ open HolKernel boolLib bossLib BasicProvers;
 open pred_setTheory arithmeticTheory listTheory rich_listTheory optionTheory
      pairTheory relationTheory sortingTheory;
 open permLib;
-open lcsymtacs;
 
 val _ = new_theory "mergesort";
 

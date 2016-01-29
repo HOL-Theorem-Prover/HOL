@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs blastLib stateLib
+open blastLib stateLib
 open set_sepTheory progTheory temporal_stateTheory arm8_stepTheory
 
 val () = new_theory "arm8_prog"

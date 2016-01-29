@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory lcsymtacs
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
 
 val _ = new_theory "alist";
 

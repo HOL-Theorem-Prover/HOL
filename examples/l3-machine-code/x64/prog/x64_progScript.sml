@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
+open set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
 
 val () = new_theory "x64_prog"
 

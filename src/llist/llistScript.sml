@@ -1,7 +1,7 @@
 structure llistScript =
 struct
 
-open HolKernel boolLib Parse bossLib lcsymtacs
+open HolKernel boolLib Parse bossLib
 
 open BasicProvers boolSimps markerLib optionTheory ;
 

@@ -5,7 +5,7 @@
 structure intrealScript =
 struct
 
-open HolKernel boolLib bossLib lcsymtacs
+open HolKernel boolLib bossLib
 open intLib realLib
 
 val _ = new_theory "intreal"

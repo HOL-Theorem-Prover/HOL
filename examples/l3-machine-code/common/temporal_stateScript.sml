@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory temporalTheory stateTheory
+open set_sepTheory progTheory temporalTheory stateTheory
 
 val _ = new_theory "temporal_state"
 

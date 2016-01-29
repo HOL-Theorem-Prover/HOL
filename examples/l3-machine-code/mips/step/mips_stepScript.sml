@@ -4,7 +4,7 @@
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs utilsLib
+open utilsLib
 open wordsLib blastLib
 open mipsTheory
 

@@ -3,7 +3,7 @@
    ------------------------------------------------------------------------ *)
 
 open HolKernel boolLib bossLib
-open lcsymtacs intrealTheory realLib wordsLib
+open intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
 

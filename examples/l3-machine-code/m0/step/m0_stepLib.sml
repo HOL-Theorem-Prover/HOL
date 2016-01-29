@@ -7,7 +7,7 @@ struct
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs m0Theory m0_stepTheory
+open m0Theory m0_stepTheory
 open state_transformerSyntax blastLib
 
 structure Parse =

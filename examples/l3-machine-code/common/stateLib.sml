@@ -2,7 +2,7 @@ structure stateLib :> stateLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs updateLib utilsLib
+open updateLib utilsLib
 open stateTheory temporal_stateTheory
 open helperLib progSyntax temporalSyntax temporal_stateSyntax
 
@@ -1726,7 +1726,6 @@ end
    ------------------------------------------------------------------------ *)
 
 (*
-open lcsymtacs
 val () = set_trace "Goalstack.print_goal_at_top" 0
 val () = set_trace "Goalstack.print_goal_at_top" 1
 val () = set_trace "stateLib.spec" 1
@@ -1769,7 +1768,6 @@ in
    fun spec imp_spec imp_temp read_thms write_thms select_state_thms frame_thms
             component_11 map_tys EXTRA_TAC STATE_TAC =
       let
-         open lcsymtacs
          val sthms = cond_STAR1_I :: select_state_thms
          val pthms = [boolTheory.DE_MORGAN_THM, pred_setTheory.NOT_IN_EMPTY,
                       pred_setTheory.IN_DIFF, pred_setTheory.IN_INSERT]

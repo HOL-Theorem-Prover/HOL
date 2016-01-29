@@ -4,7 +4,6 @@
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib Q
-open lcsymtacs
 open wordsLib
 
 val () = Theory.new_theory "alignment";

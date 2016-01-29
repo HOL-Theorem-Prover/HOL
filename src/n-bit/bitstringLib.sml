@@ -2,7 +2,7 @@ structure bitstringLib :> bitstringLib =
 struct
 
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs listLib wordsLib bitstringSyntax;
+open listLib wordsLib bitstringSyntax
 
 structure Parse = struct
   open Parse
@@ -98,7 +98,7 @@ end
 (* Evaluate ``v2n [...]`` *)
 
 local
-   open lcsymtacs arithmeticTheory numeralTheory
+   open arithmeticTheory numeralTheory
 
    val l2n_2_compute = Q.prove(
       `(l2n 2 [] = 0) /\

@@ -2252,7 +2252,7 @@ val fmap_size_def =
 (*---------------------------------------------------------------------------*)
 
 local
-  open lcsymtacs optionTheory rich_listTheory listTheory boolSimps sortingTheory
+  open optionTheory rich_listTheory listTheory boolSimps sortingTheory
 in
 
 val o_f_FUNION = store_thm("o_f_FUNION",

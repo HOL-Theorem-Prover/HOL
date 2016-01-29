@@ -6,7 +6,7 @@ open HolKernel boolLib bossLib
 
 open bitstringLib wordsLib blastLib
 open x64Theory
-open lcsymtacs utilsLib
+open utilsLib
 
 val _ = new_theory "x64_step"
 

@@ -7,7 +7,7 @@ struct
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs armTheory arm_stepTheory arm_configLib
+open armTheory arm_stepTheory arm_configLib
 open state_transformerSyntax blastLib
 
 structure Parse =

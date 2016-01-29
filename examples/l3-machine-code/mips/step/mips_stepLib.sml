@@ -6,7 +6,7 @@ structure mips_stepLib :> mips_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs blastLib mipsTheory mips_stepTheory
+open blastLib mipsTheory mips_stepTheory
 
 local open mips in end
 

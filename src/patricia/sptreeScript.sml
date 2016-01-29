@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs
 open arithmeticTheory
 open logrootTheory
 open listTheory
