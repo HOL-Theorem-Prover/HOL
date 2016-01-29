@@ -398,7 +398,7 @@ Now we can apply our induction hypothesis (assumption 3) to complete
 the long, lop-sided strip of the diamond.
 We will conclude that there is a $u$ such that $R^*\;p\;u$ and $R^*\;v\;u$.
 We actually need a $u$ such that $\con{RTC}\;R\;z\;u$, but because there is a single $R$-step between $z$ and $v$ we have that as well.
-All we need to provide \texttt{PROVE\_TAC} is the rules for \con{RTC}:
+All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 \begin{session}
 \begin{alltt}
 >> e (metis_tac [RTC_rules]);
