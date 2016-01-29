@@ -224,13 +224,18 @@ fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
       val _ = advance lbuf
       val handlePromptSize =
         if userPromptSize > oPsize then
-          fn s => String.extract(s, userPromptSize - oPsize, NONE)
+          fn i => fn s =>
+             if i < userPromptSize then
+               s |> Substring.full |> Substring.dropl Char.isSpace
+                 |> Substring.string
+             else
+               String.extract(s, userPromptSize - oPsize, NONE)
         else
           let
             val ws_n =
                 CharVector.tabulate(oPsize - userPromptSize, fn _ => #" ")
           in
-            fn s => ws_n ^ s
+            fn i => fn s => ws_n ^ s
           end
     in
       case current lbuf of
@@ -238,9 +243,10 @@ fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
         | SOME s =>
           let
             val (ws',_) = getIndent s
+            val wssz = String.size ws'
           in
-            if indent < String.size ws'
-            then getRest userPromptSize (handlePromptSize s::acc)
+            if indent < wssz
+            then getRest userPromptSize (handlePromptSize wssz s::acc)
             else String.concat (List.rev acc)
           end
     end

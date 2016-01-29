@@ -98,3 +98,11 @@ val it =
 
 
 0 < 0 \(\Rightarrow\) 0 < 0 * 0
+
+> val foo = store_thm(
+"foo",
+``p /\bs{} q ==> p``,
+strip_tac);
+val foo = |- p \(\land\) q \(\Rightarrow\) p: thm
+> foo;
+val it = |- p \(\land\) q \(\Rightarrow\) p: thm
