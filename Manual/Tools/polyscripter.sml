@@ -194,9 +194,39 @@ fun remove_nsubgoals s =
     else NONE
   end
 
+fun shorten_longmetis s =
+  let
+    open Substring
+    val ss = full s
+    val (pfx, sfx) = position "\nmetis: " ss
+    fun ismetis_guff c =
+      case c of
+          #"r" => true | #"+" => true | #"[" => true | #"]" => true
+        | _ => Char.isDigit c
+    fun recurse csfx =
+      if size csfx <> 0 then
+        let
+          val (guff, rest) = splitl ismetis_guff (triml 8 csfx)
+        in
+          if size guff > 55 then
+            SOME (string (span (pfx, slice(guff, 0, SOME 50))) ^ " .... " ^
+                  string rest)
+          else
+            let
+              val (_, sfx') = position "\nmetis: " (triml 1 csfx)
+            in
+              recurse sfx'
+            end
+        end
+      else NONE
+  in
+    recurse sfx
+  end
+
 fun removeCruft s =
   try removeCruft [cruftSuffix (!cruftySuffixes),
                    remove_multi_goalproved,
+                   shorten_longmetis,
                    remove_nsubgoals]
       s
 
