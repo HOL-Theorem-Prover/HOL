@@ -267,7 +267,7 @@ in
                                Int.toString (linenum lbuf) ^ "\";"))
       val _ = advance lbuf
     in
-      ("\n", NONE)
+      ("", NONE)
     end
   else if String.isPrefix "##eval" line then
     let
