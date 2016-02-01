@@ -385,11 +385,11 @@ following\footnote{This and subsequent proofs use the theorems proved
 \item [\small{({\it DIVIDES\_FACT\/})}]
 \begin{tabular}[t]{l}
 \verb+!m n. 0 < m /\ m <= n ==> m divides (FACT n)+ \\ \hline
-\verb|`!p m. 0 < m ==> m divides (FACT (m + p))` |
-\verb+    suffices_by metis_tac[LESS_EQ_EXISTS] >>+
-\verb+Induct_on `p` >>+
-\verb+rw[FACT,ADD_CLAUSES,DIVIDES_RMUL] >>+
-\verb+Cases_on `m` >>+
+\verb|`!p m. 0 < m ==> m divides (FACT (m + p))` |\\
+\verb+    suffices_by metis_tac[LESS_EQ_EXISTS] >>+\\
+\verb+Induct_on `p` >>+\\
+\verb+rw[FACT,ADD_CLAUSES,DIVIDES_RMUL] >>+\\
+\verb+Cases_on `m` >>+\\
 \verb+fs[FACT,DIVIDES_LMUL,DIVIDES_REFL]+\\
 \end{tabular}
 \end{description}
@@ -587,8 +587,8 @@ One obvious step would be to merge the two successive invocations of the simplif
 \end{alltt}
 \end{hol}
 
-Then, both arms of the induction start with an invocation of \ml{rw}, and the semantics of \ml{\gt\gt} allow us to merge the occurrences of \ml{rw} above the \ml{\gt|}.
-This makes the step case entirely empty, so that when we execute the first steps of the proof we are left with only the base case to prove:
+Now we'll make the occasionally dangerous assumption that the simplifications of the step case won't interfere with what is happening in the base case, and move the step case's tactic to precede the first \ml{\gt|}, using \ml{\gt\gt}.
+When the \ml{Induct} tactic generates two sub-goals, the step case's simplification will be applied to both of them:
 \begin{session}
 \begin{alltt}
 >>_ restart();
@@ -597,6 +597,7 @@ This makes the step case entirely empty, so that when we execute the first steps
       Induct_on `p` >> rw[FACT, ADD_CLAUSES, DIVIDES_RMUL]);
 \end{alltt}
 \end{session}
+The step case has been dealt with, and as we hoped the base case has not been changed at all.
 This means that our tactic can become
 \begin{hol}
 \begin{alltt}
@@ -653,8 +654,8 @@ it leads to somewhat less natural goals.
 >> e (Induct_on `n - m`);
 \end{alltt}
 \end{session}
-This is slighly hard to read, so we combine with a call to the simplifier to strip both arms of the proof.
-Use of \ml{\gt\gt} ensures that the tactic gets applied in both branches of the induction.
+This is slighly hard to read, so we sequence a call to the simplifier to strip both arms of the proof.
+As before, use of \ml{\gt\gt} ensures that the tactic gets applied in both branches of the induction.
 (We might also use \ml{rpt~strip\_tac} if we \emph{didn't} want the simplification to happen.)
 \begin{session}
 \begin{alltt}
@@ -662,7 +663,8 @@ Use of \ml{\gt\gt} ensures that the tactic gets applied in both branches of the 
 >> e (Induct_on `n - m` >> rw[]);
 \end{alltt}
 \end{session}
-Looking at the first goal, we reason that if $0 = n - m$ and $m \leq n$, then $m = n$. We can prove this fact, using \ml{rw} and add it to the hypotheses by use of the infix operator ``\ml{by}'':
+Looking at the first goal, we can see (by the anti-symmetry of ${\le}$) that $m = n$.
+We can prove this fact, using \ml{rw} and add it to the hypotheses by use of the infix operator ``\ml{by}'':
 \begin{session}
 \begin{alltt}
 >> e (`m = n` by rw[]);
@@ -939,7 +941,7 @@ situ}. We choose the latter approach.
 >> e (mp_tac (SPEC ``FACT n + 1`` PRIME_FACTOR));
 \end{alltt}
 \end{session}
-The invocation \ml{mp\_tac} ($\vdash M$) applied to a goal $(\Delta, g)$ returns the goal $(\Delta, M \supset g)$.
+The invocation \ml{mp\_tac} ($\vdash M$) applied to a goal $(\Delta, g)$ returns the goal $(\Delta, M \Rightarrow g)$.
 Now we simplify:
 \begin{session}
 \begin{alltt}

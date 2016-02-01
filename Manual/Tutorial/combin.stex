@@ -409,17 +409,17 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
     sub-goal package commands:
 \begin{session}
 \begin{alltt}
->>_ val R_RTC_diamond = store_thm(
-      "R_RTC_diamond",
-      ``!R. diamond R ==>
-             !x p. RTC R x p ==>
-                   !z. R x z ==>
-                       ?u. RTC R p u /\ RTC R z u``,
-      strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
-        metis_tac [RTC_rules],
-        `?v. R x' v /\ R z v` by metis_tac [diamond_def] >>
-        metis_tac [RTC_rules]
-      ]);
+##eval val R_RTC_diamond = store_thm(
+         "R_RTC_diamond",
+         ``!R. diamond R ==>
+                !x p. RTC R x p ==>
+                      !z. R x z ==>
+                          ?u. RTC R p u /\ RTC R z u``,
+         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
+           metis_tac [RTC_rules],
+           `?v. R x' v /\ R z v` by metis_tac [diamond_def] >>
+           metis_tac [RTC_rules]
+         ]);
 \end{alltt}
 \end{session}
 \eos{}
@@ -564,7 +564,7 @@ reduction because of its own parallel lines:
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
->> val (predn_rules, _, predn_cases) = xHol_reln "predn"
+>>_ val (predn_rules, _, predn_cases) = xHol_reln "predn"
       `(!x. x -||-> x) /\
        (!x y u v. x -||-> y /\ u -||-> v
                          ==>
@@ -715,7 +715,7 @@ val RTCredn_ap_congruence = store_thm(
 >>__ val RTCredn_ap_congruence = store_thm(
   "RTCredn_ap_congruence",
   ``!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y``,
-  Induct_on `RTC` THEN PROVE_TAC [RTC_rules, redn_rules]);
+  Induct_on `RTC` >> metis_tac [RTC_rules, redn_rules]);
 \end{verbatim}
 \end{session}
     Now that we have this, our sub-goal is almost immediately
@@ -922,51 +922,23 @@ for all that we might look upon the four disjunctions and despair.
 \noindent Now we are ready to prove the final goal.  It is
 \begin{session}
 \begin{alltt}
-- g `!x y. x -||-> y ==>
-           !z. x -||-> z ==> ?u. y -||-> u /\bs z -||-> u`;
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
+>> g `!x y. x -||-> y ==>
+            !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u`;
 \end{alltt}
 \end{session}
 We now induct and split the goal into its individual conjuncts:
 \begin{session}
 \begin{alltt}
-- e (Induct_on `$-||->` THEN REPEAT CONJ_TAC);
-OK..
-4 subgoals:
-> val it =
-    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
-              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
-
-
-    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
-
-
-    \(\forall\)x y u v.
-      x -||-> y \(\land\)
-      (\(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u) \(\land\)
-      u -||-> v \(\land\)
-      (\(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u) \(\Rightarrow\)
-      \(\forall\)z. x # u -||-> z \(\Rightarrow\) \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
-
-
-    \(\forall\)x z. x -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+>> e (Induct_on `$-||->` >> rpt conj_tac);
 \end{alltt}
 \end{session}
 The first goal is easily disposed of.  The witness we would provide
 for this case is simply \texttt{z}, but \texttt{PROVE\_TAC} will do
 the work for us:
 \begin{session}
-\begin{verbatim}
-- e (PROVE_TAC [predn_rules]);
-OK..
-Meson search level: ...
-
-Goal proved. [...]
-\end{verbatim}
+\begin{alltt}
+>> e (metis_tac [predn_rules]);
+\end{alltt}
 \end{session}
     The next goal includes two instances of terms of the form
     \verb!x # y -||-> z!.  We can use our \verb!x_ap_y_predn!
@@ -977,17 +949,7 @@ Goal proved. [...]
     lead us too far astray.
 \begin{session}
 \begin{alltt}
-- e (REPEAT STRIP_TAC);
-OK..
-1 subgoal:
-> val it =
-    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
-    ------------------------------------
-      0.  x -||-> y
-      1.  \(\forall\)z. x -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
-      2.  u -||-> v
-      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
-      4.  x # u -||-> z
+>> e (rw[]);
 \end{alltt}
 \end{session}
 We need to split up assumption 4.  We can get it out of the assumption
