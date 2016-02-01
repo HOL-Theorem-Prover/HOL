@@ -798,11 +798,9 @@ fun end_time timer =
       val {sys, usr} = Timer.checkCPUTimer timer
       val gc = Timer.checkGCTime timer
    in
-      TextIO.output (TextIO.stdOut,
-           "runtime: " ^ timeToString usr ^ ",\
+      say ("runtime: " ^ timeToString usr ^ ",\
        \    gctime: " ^ timeToString gc ^ ", \
-       \    systime: " ^ timeToString sys ^ ".\n");
-      TextIO.flushOut TextIO.stdOut
+       \    systime: " ^ timeToString sys ^ ".\n")
    end
 
 fun time f x =
@@ -816,10 +814,7 @@ fun time f x =
 fun start_real_time () = Timer.startRealTimer ()
 
 fun end_real_time timer =
-  (TextIO.output
-     (TextIO.stdOut,
-      "realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n")
-   ; TextIO.flushOut TextIO.stdOut)
+  say ("realtime: " ^ Time.toString (Timer.checkRealTimer timer) ^ "s\n")
 
 fun real_time f x =
    let
