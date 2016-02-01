@@ -22,24 +22,21 @@ the \texttt{examples/ind\_def} directory of the distribution.  It is
 self-contained and so includes the answers to the exercises set at the
 end of this document.
 
-The HOL sessions assume that the Unicode trace is \emph{on} (as it is
-by default), meaning that even though the inputs may be written in
-pure ASCII, the output still uses nice Unicode output (symbols such as
-$\forall$ and $\Rightarrow$).  The Unicode symbols could also be used
-in the input.
+The \HOL{} sessions assume that the Unicode trace is \emph{on} (as it is by default), meaning that even though the inputs may be written in pure ASCII, the output still uses nice Unicode output (symbols such as $\forall$ and $\Rightarrow$).
+The Unicode symbols could also be used in the input.
 
 
 \section{The type of combinators}
 \label{sec:Type-Combinators}
 
-The first thing we need to do is define the type of
-\emph{combinators}.  There are just two of these, \KC{} and \SC, but
-we also need to be able to \emph{combine} them, and for this we need
-to introduce the notion of application.  For lack of a better ASCII
-symbol, we will use the hash (\#) to represent this in the logic:
+The first thing we need to do is define the type of \emph{combinators}.
+There are just two of these, \KC{} and \SC, but we also need to be able to \emph{combine} them, and for this we need to introduce the notion of application.
+For lack of a better ASCII symbol, we will use the hash (\#) to represent this in the logic.
+Finally, we will start by ``hiding'' the names \holtxt{S} and \holtxt{K} so that the constants of these names from the existing \HOL{} theories won't interfere with parsing.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>> hide "K"; hide "S";
 >> Datatype `cl = K | S | # cl cl`;
 \end{alltt}
 \end{session}
@@ -79,33 +76,24 @@ congruence rules:\[
 \infer{x\;y\;\;\rightarrow\;\;x\;y'}{y\;\;\rightarrow\;\;y'}
 \end{array}\]
 In HOL, we can capture this relation with an inductive definition.
-First we need to set our arrow symbol up as an infix to make everything that
-bit prettier
+First we need to set our arrow symbol up as an infix to make everything that bit prettier.
+The \ml{set\_mapped\_fixity} function lets the arrow be our surface syntax, but maps to the name \holtxt{redn} underneath.
+Making constants have pure alphanumeric names is generally a good idea.
 \begin{session}
 \begin{alltt}
->> set_fixity "-->" (Infix(NONASSOC, 450));
+>> set_mapped_fixity {fixity = Infix(NONASSOC, 450),
+                      tok = "-->", term_name = "redn"}
 \end{alltt}
 \end{session}
 We make our arrow symbol non-associative, thereby making it a
-parse error to write \verb!x --> y --> z!. It would be nice to be able
-to write this and have it mean \verb!x --> y /\ y --> z!, but this is
-not presently possible with the HOL parser.
+parse error to write \verb!x --> y --> z!.
+It would be nice to be able to write this and have it mean \verb!x --> y /\ y --> z!, but this is not presently possible with the HOL parser.
 
-Our next step is to actually define the relation with the
-\ml{xHol\_reln} function.  In addition to a quotation specifying the
-rules for the new relation, it requires a name to use as the stem for
-the theorems it proves.  We pick the string \ml{"redn"}.\footnote{The
-  related function \ml{Hol\_reln} can be used if the system's choice
-  of stem is acceptable.  In this case, \ml{Hol\_reln} can't cope with the
-  non-alphanumeric characters in \holtxt{-->} and will raise an
-  error.}
-The \ml{xHol\_reln} function for
-doing this returns three separate theorems, and we bind the first (the
-``rules'' theorem) and
-third (the ``cases'' theorem):
+Our next step is to actually define the relation with the \ml{Hol\_reln} function.
+This function returns three separate theorems, but we will only need to refer to the first:
 \begin{session}
 \begin{alltt}
->> val (redn_rules, _, redn_cases) = xHol_reln "redn"
+>> val (redn_rules, _, redn_cases) = Hol_reln
      `(!x y f. x --> y   ==>    f # x --> f # y) /\
       (!f g x. f --> g   ==>    f # x --> g # x) /\
       (!x y.   K # x # y --> x) /\
@@ -546,12 +534,12 @@ property, and therefore, our original relation will be confluent.
 \subsection{Parallel reduction}
 \label{sec:Parallel-Reduction}
 
-Our new relation allows for any number of reductions to occur in
-parallel.  We use the \texttt{-||->} symbol to indicate parallel
-reduction because of its own parallel lines:
+Our new relation allows for any number of reductions to occur in parallel.
+We use the \texttt{-||->} symbol to indicate parallel reduction because of its own parallel lines, and use \holtxt{predn} to name the constant:
 \begin{session}
 \begin{alltt}
->> set_fixity "-||->" (Infix(NONASSOC, 450));
+>> set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
+                      term_name = "predn"};
 \end{alltt}
 \end{session}
     Then we can define parallel reduction itself.  The rules look very
@@ -564,7 +552,7 @@ reduction because of its own parallel lines:
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
->>_ val (predn_rules, _, predn_cases) = xHol_reln "predn"
+>>_ val (predn_rules, _, predn_cases) = Hol_reln
       `(!x. x -||-> x) /\
        (!x y u v. x -||-> y /\ u -||-> v
                          ==>
@@ -590,7 +578,7 @@ desired form.
 \begin{alltt}
 >> set_fixity "-->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-->*", ``RTC $-->``);
+>> overload_on ("-->*", ``RTC redn``);
 \end{alltt}
 \end{session}
 We do exactly the same thing for the reflexive and transitive closure
@@ -599,7 +587,7 @@ of our parallel reduction.
 \begin{verbatim}
 >> set_fixity "-||->*" (Infix(NONASSOC, 450));
 
->> overload_on ("-||->*", ``RTC $-||->``);
+>> overload_on ("-||->*", ``RTC predn``);
 \end{verbatim}
 \end{session}
 Incidentally, in conjunction with \texttt{PROVE} we can now
@@ -646,7 +634,7 @@ We back-chain using our monotonicity result:
 Now we can induct over the rules for $\rightarrow$:
 \begin{session}
 \begin{alltt}
->> e (Induct_on `$-->`);
+>> e (Induct_on `x --> y`);
 \end{alltt}
 \end{session}
 We could split the 4-way conjunction apart into four goals, but there
@@ -664,7 +652,7 @@ Packaged into a tidy little sub-goal-package-free parcel, our proof is
          "RTCredn_RTCpredn",
          ``!x y. x -->* y   ==>   x -||->* y``,
          match_mp_tac RTC_monotone >>
-         Induct_on `$-->` >> metis_tac [predn_rules]);
+         Induct_on `x --> y` >> metis_tac [predn_rules]);
 \end{alltt}
 \end{session}
 \eos{}
@@ -685,7 +673,7 @@ This time our induction will be over the rules defining the parallel
 reduction relation.
 \begin{session}
 \begin{alltt}
->> e (Induct_on `$-||->`);
+>> e (Induct_on `x -||-> y`);
 \end{alltt}
 \end{session}
 
@@ -740,10 +728,10 @@ indeed:
 \begin{session}
 \begin{alltt}
 ##eval val predn_RTCredn = store_thm(
-        "predn_RTCredn",
-        ``!x y. x -||-> y  ==>  x -->* y``,
-        Induct_on `$-||->` >>
-        metis_tac [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_congruence]);
+         "predn_RTCredn",
+         ``!x y. x -||-> y  ==>  x -->* y``,
+         Induct_on `x -||-> y` >>
+         metis_tac [RTC_rules, redn_rules, RTC_RTC, RTCredn_ap_congruence]);
 \end{alltt}
 \end{session}
 \eos{}
@@ -929,11 +917,11 @@ for all that we might look upon the four disjunctions and despair.
 We now induct and split the goal into its individual conjuncts:
 \begin{session}
 \begin{alltt}
->> e (Induct_on `$-||->` >> rpt conj_tac);
+>> e (Induct_on `x -||-> y` >> rpt conj_tac);
 \end{alltt}
 \end{session}
 The first goal is easily disposed of.  The witness we would provide
-for this case is simply \texttt{z}, but \texttt{PROVE\_TAC} will do
+for this case is simply \texttt{z}, but \texttt{metis\_tac} will do
 the work for us:
 \begin{session}
 \begin{alltt}
@@ -953,218 +941,146 @@ the work for us:
 \end{alltt}
 \end{session}
 We need to split up assumption 4.  We can get it out of the assumption
-list using the \texttt{Q.PAT\_ASSUM} theorem-tactical.  We will write
-\begin{verbatim}
-    Q.PAT_ASSUM `x # y -||-> z`
-      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn])
-\end{verbatim}
+list using the \ml{qpat\_assum} theorem-tactical.
+We will write
+\begin{alltt}
+##eval qpat_assum `x # y -||-> z`
+         (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn])
+\end{alltt}
 The quotation specifies the pattern that we want to match.  The second
 argument specifies how we are going to transform the theorem.  Reading
 the compositions from right to left, first we will simplify with the
 \verb!x_ap_y_predn! theorem and then we will assume the result back
 into the assumptions, stripping disjunctions and existentials as we
-go.\footnote{An alternative to using \texttt{PAT\_ASSUM} is to use
+go.\footnote{An alternative to using \ml{qpat\_assum} is to use
   \texttt{by} instead: you would have to state the four-way
   disjunction yourself, but the proof would be more ``declarative'' in
   style, and though wordier, might be more maintainable.}
 
-We already know that doing this is going to produce four new sub-goals
-(there were four disjuncts in the \verb!x_ap_y_predn! theorem).  At
-least one of these should be trivial because it will correspond to the
-case when the parallel reduction is just a ``do nothing'' step.  Let's
-try eliminating the simple cases with a ``speculative'' call to
-\texttt{PROVE\_TAC} wrapped inside a \texttt{TRY}.  And before doing
-that, we should do some rewriting to make sure that equalities in the
-assumptions are eliminated.
+We already know that doing this is going to produce four new sub-goals (there were four disjuncts in the \verb!x_ap_y_predn! theorem).
+We'll follow up the use of \ml{strip\_assume\_tac} with \ml{rw} to eliminate any equalities that might appear as assumptions.
 
 So:
 \begin{session}
 \begin{alltt}
-- e (Q.PAT_ASSUM `x # y -||-> z`
-      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
-     RW_TAC std_ss [] THEN
-     TRY (PROVE_TAC [predn_rules]));
-OK..
-Meson search level: ...............................
-Meson search level: ...............................
-Meson search level: ..................
-Meson search level: .....
-2 subgoals:
-> val it =
-    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
-    ------------------------------------
-      0.  S # f # g -||-> y
-      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
-      2.  u -||-> v
-      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
-
-    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
-    ------------------------------------
-      0.  K # z -||-> y
-      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
-      2.  u -||-> v
-      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+>>__ set_trace "Goalstack.howmany_printed_subgoals" 1;
+>> e (qpat_assum `x # y -||-> z`
+       (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn]) >>
+      rw[]);
 \end{alltt}
 \end{session}
-Brilliant!  We've eliminated two of the four disjuncts already.  Now
-our next goal features a term \verb!K # z -||-> y! in the assumptions.
-We have a theorem that pertains to just this situation.  But before
-applying it willy-nilly, let us try to figure out exactly what the
-situation is.  A diagram of the current situation might look like
+This first sub-goal is an easy consequence of the rules for parallel reduction.
+Because we've elided the somewhat voluminous output, we call \ml{p()} to print the next sub-goal again:
+\begin{session}
+\begin{alltt}
+>>_ e (metis_tac[predn_rules]);
+>> p();
+\end{alltt}
+\end{session}
+This goal requires application of the two inductive hypotheses as well as the rules for parallel reduction, but is again straightforward for \ml{metis\_tac};
+\begin{session}
+\begin{alltt}
+>>_ e (metis_tac[predn_rules]);
+>> p();
+\end{alltt}
+\end{session}
+Now our next goal (the third of the four) features a term \verb!K # z -||-> y! in the assumptions.
+We have a theorem that pertains to just this situation.
+But before applying it willy-nilly, let us try to figure out exactly what the situation is.
+A diagram of the current situation might look like
 \[\xymatrix @C=2cm {
-*+<4pt>[F--]\txt{\fbox{\texttt{K\kern2mm \#\kern2mm z}} \texttt{\#} \fbox{\texttt{u}}} \ar[r] & \txt{\texttt{z}} \ar@{.>}[d] \\
-*+<4pt>[F--]\txt{\fbox{\texttt{y}} \texttt{\#} \fbox{\texttt{v}}} \ar@{.>}[r] & \txt{\texttt{?u?}}
+*+<4pt>[F--]\txt{\fbox{\texttt{K\kern2mm \#\kern2mm z}} \texttt{\#} \fbox{\texttt{x'}}} \ar[r] & \txt{\texttt{z}} \ar@{.>}[d] \\
+*+<4pt>[F--]\txt{\fbox{\texttt{y}} \texttt{\#} \fbox{\texttt{y'}}} \ar@{.>}[r] & \txt{\texttt{?u?}}
 \ar "1,1"!<-12pt,0pt>;"2,1"!<-12pt,0pt>
 \ar "1,1"!<28pt,0pt>;"2,1"!<11pt,0pt>
 } \]
-Our theorem tells us that \texttt{y} must actually be of the form
-\verb!K # w! for some \texttt{w}, and that there must be an arrow
-between \texttt{z} and \texttt{w}.  Thus:
+Our theorem tells us that \texttt{y} must actually be of the form \verb!K # w! for some \texttt{w}, and that there must be an arrow between \texttt{z} and \texttt{w}.
+Thus:
 \begin{session}
 \begin{alltt}
-- e (`?w. (y = K # w) /\bs (z -||-> w)` by PROVE_TAC [Kx_predn]);
-OK..
-Meson search level: ......
-1 subgoal:
-> val it =
-    \(\exists\)u. y # v -||-> u \(\land\) z -||-> u
-    ------------------------------------
-      0.  K # z -||-> y
-      1.  \(\forall\)z'. K # z -||-> z' \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z' -||-> u
-      2.  u -||-> v
-      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
-      4.  y = K # w
-      5.  z -||-> w
+>> e (`?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn]);
 \end{alltt}
 \end{session}
-    On inspection, it becomes clear that the \texttt{u} must be
-    \texttt{w}.  The first conjunct requires \verb!K # w # v -||-> w!,
-    which we have because this is what \KC{}s do, and the second
-    conjunct is already in the assumption list.  Rewriting
-    (eliminating that equality in the assumption list first will make
-    \texttt{PROVE\_TAC}'s job that much easier), and then first order
-    reasoning will solve this goal:
+On inspection, it becomes clear that the \texttt{u} must be \texttt{w}.
+The first conjunct requires \verb!K # w # y' -||-> w!, which we have because this is what \KC{}s do, and the second conjunct is already in the assumption list.
+Rewriting (eliminating that equality in the assumption list first will make \ml{metis\_tac}'s job that much easier), and then first order reasoning will solve this goal:
 \begin{session}
 \begin{alltt}
-- e (RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
-OK..
-Meson search level: ...
-
-Goal proved. [...]
-Remaining subgoals:
-> val it =
-    \(\exists\)u'. y # v -||-> u' \(\land\) f # u # (g # u) -||-> u'
-    ------------------------------------
-      0.  S # f # g -||-> y
-      1.  \(\forall\)z. S # f # g -||-> z \(\Rightarrow\) \(\exists\)u. y -||-> u \(\land\) z -||-> u
-      2.  u -||-> v
-      3.  \(\forall\)z. u -||-> z \(\Rightarrow\) \(\exists\)u. v -||-> u \(\land\) z -||-> u
+>> e (rw [] >> metis_tac [predn_rules]);
 \end{alltt}
 \end{session}
 This case involving \SC{} is analogous.  Here's the tactic to apply:
 \begin{session}
 \begin{alltt}
-- e (`?p q. (y = S # p # q) /\bs (f -||-> p) /\bs (g -||-> q)`
-        by PROVE_TAC [Sxy_predn] THEN
-     RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]);
-OK..
-Meson search level: ........
-Meson search level: ...........
-
-Goal proved.[...]
-Remaining subgoals:
-> val it =
-    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
-              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
-
-
-    \(\forall\)x y z. K # x # y -||-> z \(\Rightarrow\) \(\exists\)u. x -||-> u \(\land\) z -||-> u
+>> e (`?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)`
+         by metis_tac [Sxy_predn] >>
+      rw [] >> metis_tac [predn_rules]);
 \end{alltt}
 \end{session}
-This next goal features a \verb!K # x # y -||-> z! term that we have a
-theorem for already.  And again, let's speculatively use a call to
-\texttt{PROVE\_TAC} to eliminate the simple cases immediately
-(\verb!Kxy_predn! is a disjunct so we'll get two sub-goals if we don't
-eliminate anything).
+This next goal features a \verb!K # x # y -||-> z! term that we have a theorem for already.
+Let's speculatively use a call to \texttt{metis\_tac} to eliminate the simple cases immediately (\verb!Kxy_predn! is a disjunct so we'll get two sub-goals if we don't eliminate anything).
 \begin{session}
 \begin{alltt}
-- e (RW_TAC std_ss [Kxy_predn] THEN
-     TRY (PROVE_TAC [predn_rules]));
-OK..
-Meson search level: ..
-Meson search level: ...
-
-Goal proved. [...]
-Remaining subgoals:
-> val it =
-    \(\forall\)f g x z. S # f # g # x -||-> z \(\Rightarrow\)
-              \(\exists\)u. f # x # (g # x) -||-> u \(\land\) z -||-> u
+>> e (rw[Kxy_predn] >> metis_tac[predn_rules]);
 \end{alltt}
 \end{session}
-Better yet! We got both cases immediately, and have moved onto the
-last case.  We can try the same strategy.
+We got both cases immediately, and have moved onto the last case.
+We can try the same strategy.
 \begin{session}
 \begin{alltt}
-- e (RW_TAC std_ss [Sxyz_predn] THEN PROVE_TAC [predn_rules]);
-OK..
-Meson search level: ..
-Meson search level: ...........
-
-Goal proved.[...]
-> val it =
-    Initial goal proved.
-    |- \(\forall\)x y. x -||-> y \(\Rightarrow\) \(\forall\)z. x -||-> z \(\Rightarrow\)
-             \(\exists\)u. y -||-> u \(\land\) z -||-> u : goalstack
+>> e (rw[Sxyz_predn] >> metis_tac [predn_rules]);
+##assert can top_thm()
 \end{alltt}
 \end{session}
 The final goal proof can be packaged into:
 \begin{session}
-\begin{verbatim}
-val predn_diamond_lemma = prove(
-  ``!x y. x -||-> y ==>
-          !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
-  Induct_on `$-||->` THEN REPEAT CONJ_TAC THENL [
-    PROVE_TAC [predn_rules],
-    REPEAT STRIP_TAC THEN
-    Q.PAT_ASSUM `x # y -||-> z`
-      (STRIP_ASSUME_TAC o SIMP_RULE std_ss [x_ap_y_predn]) THEN
-    RW_TAC std_ss [] THEN
-    TRY (PROVE_TAC [predn_rules]) THENL [
-      `?w. (y = K # w) /\ (z -||-> w)` by PROVE_TAC [Kx_predn] THEN
-      RW_TAC std_ss [] THEN PROVE_TAC [predn_rules],
-      `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
-         PROVE_TAC [Sxy_predn] THEN
-      RW_TAC std_ss [] THEN PROVE_TAC [predn_rules]
-    ],
-    RW_TAC std_ss [Kxy_predn] THEN PROVE_TAC [predn_rules],
-    RW_TAC std_ss [Sxyz_predn] THEN PROVE_TAC [predn_rules]
-  ]);
-\end{verbatim}
+\begin{alltt}
+##eval val predn_diamond_lemma = prove(
+         ``!x y. x -||-> y ==>
+                 !z. x -||-> z ==> ?u. y -||-> u /\ z -||-> u``,
+         Induct_on `x -||-> y` >> rpt conj_tac >| [
+           metis_tac [predn_rules],
+           rw[] >>
+           qpat_assum `x # y -||-> z`
+             (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
+           rw[] >| [
+             metis_tac[predn_rules],
+             metis_tac[predn_rules],
+             `?w. (y = K # w) /\ (z -||-> w)` by metis_tac [Kx_predn] >>
+             rw[] >> metis_tac [predn_rules],
+             `?p q. (y = S # p # q) /\ (f -||-> p) /\ (g -||-> q)` by
+                metis_tac [Sxy_predn] >>
+             rw [] >> metis_tac [predn_rules]
+           ],
+           rw[Kxy_predn] >> metis_tac [predn_rules],
+           rw[Sxyz_predn] >> metis_tac [predn_rules]
+         ]);
+\end{alltt}
 \end{session}
 \eos{}
 
 We are on the home straight.  The lemma can be turned into a statement
 involving the \con{diamond} constant directly:
 \begin{session}
-\begin{verbatim}
-val predn_diamond = store_thm(
-  "predn_diamond",
-  ``diamond $-||->``,
-  PROVE_TAC [diamond_def, predn_diamond_lemma]);
-\end{verbatim}
+\begin{alltt}
+##eval val predn_diamond = store_thm(
+         "predn_diamond",
+         ``diamond predn``,
+         metis_tac [diamond_def, predn_diamond_lemma]);
+\end{alltt}
 \end{session}
 
 And now we can prove that our original relation is confluent in
 similar fashion:
 
 \begin{session}
-\begin{verbatim}
-val confluent_redn = store_thm(
-  "confluent_redn",
-  ``confluent $-->``,
-  PROVE_TAC [predn_diamond, confluent_diamond_RTC,
-             RTCpredn_EQ_RTCredn, diamond_RTC]);
-\end{verbatim}
+\begin{alltt}
+##eval val confluent_redn = store_thm(
+         "confluent_redn",
+         ``confluent redn``,
+         metis_tac [predn_diamond, confluent_diamond_RTC,
+                    RTCpredn_EQ_RTCredn, diamond_RTC]);
+\end{alltt}
 \end{session}
 
 
