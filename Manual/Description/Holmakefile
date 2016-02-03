@@ -1,0 +1,10 @@
+TEX_SOURCES = description.tex ../LaTeX/ack.tex title.tex preface.tex ../LaTeX/commands.tex system.tex drules.tex tactics.tex theories.tex definitions.tex libraries.tex misc.tex
+
+PS_STUFF = ../Tools/polyscripter ../Tools/umap
+PS_COMMAND = $(PS_STUFF) < $< > $@
+
+description.pdf: $(TEX_SOURCES)
+	latexmk -pdf description
+
+drules.tex: drules.stex $(PS_STUFF)
+	$(PS_COMMAND)
