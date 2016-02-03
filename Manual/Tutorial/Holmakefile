@@ -2,7 +2,7 @@ INCLUDES = ../Tools
 
 EXTRA_CLEANS = tutorial.pdf euclid.tex parity.tex ml.tex combin.tex proof-tools.tex
 
-tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex parity.tex ml.tex more-examples.tex
+tutorial.pdf: tutorial.tex euclid.tex logic.tex preface.tex proof-tools.tex theories.tex combin.tex parity.tex ml.tex more-examples.tex intro.tex
 	latexmk -pdf tutorial
 
 euclid.tex: euclid.stex ../Tools/umap ../Tools/polyscripter euclid-extras.ML

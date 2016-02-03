@@ -141,7 +141,7 @@ The values {\small\verb|(1,2,3)|}, {\small\verb|(1,(2,3))|} and
 
 >> val triple2 = (1, (true, "abc"));
 
->> #2 triple2;;
+>> #2 triple2;
 \end{alltt}
 \end{session}
 
