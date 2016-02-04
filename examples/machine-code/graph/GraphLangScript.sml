@@ -1973,4 +1973,45 @@ val NEQ_SYM = store_thm("NEQ_SYM",
   ``~(x = y) <=> ~(y = x)``,
   METIS_TAC []);
 
+val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
+  ``IMPL_INST code locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name.
+      (locs name = SOME entry) ==>
+      IMPL_INST code locs
+       (Inst entry (K T)
+         (CALL NONE
+           [("ret",(\s. VarWord32 exit)); ("r0",var_acc "r0");
+            ("r1",var_acc "r1"); ("r2",var_acc "r2");
+            ("r3",var_acc "r3"); ("r4",var_acc "r4");
+            ("r5",var_acc "r5"); ("r6",var_acc "r6");
+            ("r7",var_acc "r7"); ("r8",var_acc "r8");
+            ("r9",var_acc "r9"); ("r10",var_acc "r10");
+            ("r11",var_acc "r11"); ("r12",var_acc "r12");
+            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+            ("mode",var_acc "mode"); ("n",var_acc "n");
+            ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
+            ("mem",var_acc "mem"); ("dom",var_acc "dom");
+            ("stack",var_acc "stack");
+            ("dom_stack",var_acc "dom_stack");
+            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+          name (Jump exit)))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM]
+  \\ Cases_on `code`
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
+         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL])
+
 val _ = export_theory();

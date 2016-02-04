@@ -131,9 +131,20 @@ fun prove_funcs_ok names = let
       \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [])
     in MP th lemma end
   val fs = map expend_code fs
+  (* complete fs *)
+  val fs = let
+    val all = fs |> map (rand o concl)
+    val pat = ``locs (name:string) = SOME (w:word32)``
+    fun f tm = subst (fst (match_term pat tm)) ``Func name w []``
+    val extra = try_map (fn x => x) f (flatten (map hyp fs))
+    val all_rator = map rator all
+    val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
+    val r = fs |> hd |> concl |> rator
+    val extra_fs = map (fn tm => prove(mk_comb(r,tm),
+                     SIMP_TAC (srw_ss()) [func_ok_def])) extra
+    in fs @ extra_fs end
   (* package up into funcs_ok *)
   val code = fs |> hd |> concl |> rator |> rator |> rand
-  val funcs = listSyntax.mk_list(fs |> map (rand o concl),``:func``)
   val lemma = prove(``EVERY (func_ok ^code locs) []``,
                     SIMP_TAC std_ss [EVERY_DEF])
   fun combine [] = lemma
@@ -199,6 +210,7 @@ fun prove_funcs_ok names = let
   val _ = (skip_proofs := true)
   val _ = (skip_proofs := false)
   val names = section_names()
+
   local val randgen = Random.newgen()
   in fun get_rand_name () =
        el (Random.range(1,length names) randgen) names end
