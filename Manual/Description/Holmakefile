@@ -8,3 +8,6 @@ description.pdf: $(TEX_SOURCES)
 
 drules.tex: drules.stex $(PS_STUFF)
 	$(PS_COMMAND)
+
+tactics.tex: tactics.stex $(PS_STUFF)
+	$(PS_COMMAND)
