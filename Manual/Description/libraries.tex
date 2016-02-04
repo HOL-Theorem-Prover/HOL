@@ -461,16 +461,16 @@ Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
 form $\lambda x.\;M$), then the parser will perform all possible
 $\beta$-reductions for that term and the arguments accompanying it.  For
 example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \holquote{\bs{}x~y.~\td{}(x~=~y)}.
+\ml{"<>"} is overloaded to the term \holquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
 Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \holquote{x~\lt\gt~y}, the resulting
+infix.  When the user inputs \holquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type
+\holquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -480,7 +480,7 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{x~\lt\gt~y}.
+\holquote{\holtxt{x~\lt\gt~y}}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
