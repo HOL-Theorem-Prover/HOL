@@ -1,4 +1,6 @@
-TEX_SOURCES = description.tex ../LaTeX/ack.tex title.tex preface.tex ../LaTeX/commands.tex system.tex drules.tex tactics.tex theories.tex definitions.tex libraries.tex misc.tex
+TEX_CORES = description title preface system drules tactics theories definitions libraries misc
+
+TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
 
 PS_STUFF = ../Tools/polyscripter ../Tools/umap
 PS_COMMAND = $(PS_STUFF) < $< > $@
@@ -11,3 +13,11 @@ drules.tex: drules.stex $(PS_STUFF)
 
 tactics.tex: tactics.stex $(PS_STUFF)
 	$(PS_COMMAND)
+
+theories.tex: theories.stex $(PS_STUFF)
+	$(PS_COMMAND)
+
+EXTRA_CLEANS = drules.tex tactics.tex theories.tex description.pdf \
+               $(patsubst %,%.aux,$(TEX_CORES)) description.log description.out \
+               description.toc description.fls description.idx description.ilg \
+               description.ind description.blg description.bbl description.fdb_latexmk

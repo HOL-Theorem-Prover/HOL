@@ -1007,19 +1007,13 @@ messages).  For example, antiquoting a pair into the bound variable
 position of a lambda abstraction fails:
 
 \begin{session}
-\begin{verbatim}
-- ``\(x,y).x+y``;
-> val it = `\(x,y). x + y` : term
+\begin{alltt}
+>> ``\(x,y).x+y``;
 
-- val p = Term `(x:num,y:num)`;
-> val p = `(x,y)` : term
+>> val p = Term `(x:num,y:num)`;
 
-- Lib.try Term `\^p.x+y`;
-
-Exception raised at Term.dest_var:
-not a var
-! Uncaught exception:
-\end{verbatim}
+>>+ Lib.try Term `\^p.x+y` handle _ => T
+\end{alltt}
 \end{session}
 If $b$ is a binder, then \ml{$b$($x_1$,$x_2$).$t$} is parsed as
 \ml{$b$(\bs($x_1$,$x_2$).$t$)}, and hence transformed as above.  For
@@ -1090,19 +1084,15 @@ $\leadsto$~~\texttt{LET($\ldots$(LET(LET(\bs$v_1\ldots v_n$.$t$)$t_1$)$t_2$)$\ld
 destructor operations.  For example:
 
 \begin{session}
-\begin{verbatim}
-- Term `let x = 1 and y = 2 in x+y`;
-> val it = `let x = 1 and y = 2 in x + y` : term
+\begin{alltt}
+>> Term `let x = 1 and y = 2 in x+y`;
 
-- dest_comb it;
-> val it = (`LET (LET (\x y. x + y) 1)`, `2`) : term * term
+>> dest_comb it;
 
-- Term `let (x,y) = (1,2) in x+y`;
-> val it = `let (x,y) = (1,2) in x + y` : Term.term
+>> Term `let (x,y) = (1,2) in x+y`;
 
-- dest_comb it;
-> val it = (`LET (\(x,y). x + y)`, `(1,2)`) : Term.term * Term.term
-\end{verbatim}
+>> dest_comb it;
+\end{alltt}
 \end{session}
 
 Readers are encouraged to convince themselves that the translations of
@@ -1785,16 +1775,13 @@ calculations on numerals can be found in the \theoryimp{numeral}
 theory; these are mechanized by the \verb+reduce+ library. Thus,
 arithmetic calculations are performed by deductive steps in \HOL.  For
 example the following calculation of $2 ^{(1023 + 14)/9}$ takes
-approximately 4,200 primitive inference steps and returns in 30
-milli-seconds.
+approximately 4,200 primitive inference steps and returns quickly:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- reduceLib.REDUCE_CONV ``2 EXP ((1023 + 14) DIV 9)``;
-
-> val it = |- 2 ** ((1023 + 14) DIV 9) = 41538374868278621028243970633760768
-\end{verbatim}
+\begin{alltt}
+>> Count.apply reduceLib.REDUCE_CONV ``2 EXP ((1023 + 14) DIV 9)``;
+\end{alltt}
 \end{session}
 
 \paragraph {Construction of numerals}
@@ -1813,17 +1800,14 @@ operations, using the usual names for the operations, \eg \verb|+|,
 \verb|*|, \verb|-|, \etc
 
 \begin{session}
-\begin{verbatim}
-- numSyntax.mk_numeral
+\begin{alltt}
+>> numSyntax.mk_numeral
      (Arbnum.fromString "3432432423423423234");
-> val it = ``3432432423423423234`` : term
 
-- numSyntax.dest_numeral it;
-> val it = 3432432423423423234 : num
+>> numSyntax.dest_numeral it;
 
-- Arbnum.+(it,it);
-> val it = 6864864846846846468 : num
-\end{verbatim}
+>> Arbnum.+(it,it);
+\end{alltt}
 \end{session}
 
 \paragraph{Numerals and the parser}
@@ -1849,19 +1833,15 @@ and have no semantic effect.
 
 Thus
 \begin{session}
-\begin{verbatim}
-- ``0xAA``;
-> val it = ``170`` : term
+\begin{alltt}
+>> ``0xAA``;
 
-- ``0b1010_1011``;
-> val it = ``171`` : term
+>> ``0b1010_1011``;
 
-- base_tokens.allow_octal_input := true;
-> val it = () : unit
+>> base_tokens.allow_octal_input := true;
 
-- ``067``;
-> val it = ``55`` : term
-\end{verbatim}
+>> ``067``;
+\end{alltt}
 \end{session}
 
 \paragraph{Numerals and Peano numbers}
@@ -1881,15 +1861,12 @@ via the derived inference rule \ml{num\_CONV}, found in the
 equation for any non-zero numeral.  For example:
 
 \begin{session}
-\begin{verbatim}
-- load "numLib"; open numLib;
+\begin{alltt}
+>>_ open numLib;
+>> num_CONV ``2``;
 
-- num_CONV ``2``;
-> val it = |- 2 = SUC 1 : thm
-
-- num_CONV ``3141592653``;
-> val it = |- 3141592653 = SUC 3141592652 : thm
-\end{verbatim}
+>> num_CONV ``3141592653``;
+\end{alltt}
 \end{session}
 
 \noindent The \ml{num\_CONV} function works purely by inference.
@@ -1906,30 +1883,24 @@ following session, the theory of integers is loaded, whereupon the
 numeral \verb+2+ is taken to be an integer.
 %
 \begin{session}
-\begin{verbatim}
-- load "integerTheory";
-> val it = () : unit
+\begin{alltt}
+>> load "integerTheory";
 
-- ``2``;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `2` : term
+>> ``2``;
 
-- type_of it;
-> val it = `:int` : hol_type
-\end{verbatim}
+>> type_of it;
+\end{alltt}
 \end{session}
 
  In order to precisely specify the desired type, the user can use single
 character suffixes (`\ml{n}' for the natural numbers, and `\ml{i}' for
 the integers):
 \begin{session}
-\begin{verbatim}
-- type_of ``2n``;
-> val it = `:num` : hol_type
+\begin{alltt}
+>> type_of ``2n``;
 
-- type_of ``42i``;
-> val it = `:int` : hol_type
-\end{verbatim}
+>> type_of ``42i``;
+\end{alltt}
 \end{session}
 
 A numeric literal for a \HOL{} type other than \verb+num+, such as
@@ -1980,17 +1951,13 @@ session illustrates how overloading and integers literals are treated.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-Term `1i = &(1n + 0n)`;
-> val it = `1 = & (1 + 0)` : term
+\begin{alltt}
+>> Term `1i = &(1n + 0n)`;
 
-- show_numeral_types := true;
-> val it = () : unit
+>> show_numeral_types := true;
 
-- Term `&1 = &(1n + 0n)`;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `1i = & (1n + 0n)` : Term.term
-\end{verbatim}
+>> Term `&1 = &(1n + 0n)`;
+\end{alltt}
 \end{session}
 
 
@@ -3317,14 +3284,12 @@ character immediately followed by a string literal of length one.
 Thus:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- val t = ``f #"c" #"\n"``;
-<<HOL message: inventing new type variable names: 'a>>
-> val t = ``f #"c" #"\n"`` : term
+\begin{alltt}
+>> load "stringTheory";
+>> val t = ``f #"c" #"\n"``;
 
-- dest_term ``#"\t"``;
-> val it = COMB(``CHR``, ``9``) : lambda
-\end{verbatim}
+>> dest_term ``#"\t"``;
+\end{alltt}
 \end{session}
 
 
@@ -3361,10 +3326,9 @@ c_n \; \holtxt{EMPTYSTRING})) \,\ldots\, )
 \]
 Of course, one could also write
 \begin{session}
-\begin{verbatim}
-- ``[#"a"; #"b"]``;
-> val it = ``"ab"`` : term
-\end{verbatim}
+\begin{alltt}
+>> ``[#"a"; #"b"]``;
+\end{alltt}
 \end{session}
 
 String literals can be constructed using the various special escape
@@ -3372,10 +3336,9 @@ sequences that are used in \ML{}.  For example, \ml{\bs{}n} for the
 newline character, and a backslash followed by three decimal digits
 for characters of the given number.
 \begin{session}
-\begin{verbatim}
-- val t = ``"foo bar\n\001"``;
-> val t = ``"foo bar\n\^A"`` : term
-\end{verbatim}
+\begin{alltt}
+>> val t = ``"foo bar\n\001"``;
+\end{alltt}
 \end{session}
 Note that if one wants to use the control-character syntax with the
 caret that the pretty-printer has chosen to use in printing the given
