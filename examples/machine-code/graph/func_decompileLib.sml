@@ -142,6 +142,11 @@ fun prove_funcs_ok names = let
     val r = fs |> hd |> concl |> rator
     val extra_fs = map (fn tm => prove(mk_comb(r,tm),
                      SIMP_TAC (srw_ss()) [func_ok_def])) extra
+    fun export_empty th = let
+      val sec_name = th |> concl |> rand |> rator |> rator |> rand
+                        |> stringLib.fromHOLstring
+      in func_export sec_name th TRUTH end
+    val _ = map export_empty extra_fs
     in fs @ extra_fs end
   (* package up into funcs_ok *)
   val code = fs |> hd |> concl |> rator |> rator |> rand
