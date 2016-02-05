@@ -1682,7 +1682,8 @@ end
 val WORD_CONCAT_ASSOC_ss =
   simpLib.std_conv_ss
     {conv = WORD_CONCAT_ASSOC_CONV, name = "WORD_CONCAT_ASSOC_CONV",
-     pats = [``(a @@ b) @@ c``]}
+     pats =
+       [``((((a:'a word) @@ (b:'b word)):'d word) @@ (c:'c word)):'e word``]}
 
 (* ------------------------------------------------------------------------- *)
 
