@@ -3227,13 +3227,11 @@ The library \theoryimp{wordsLib} should be loaded when evaluating ground bit-vec
 can be used in the construction of custom \emph{compsets} and conversions.
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- load "wordsLib";
-> val it = () : unit
+\begin{alltt}
+>> load "wordsLib";
 
-- EVAL ``8w + 9w:word4``;
-> val it = |- 8w + 9w = 1w : thm
-\end{verbatim}
+>> EVAL ``8w + 9w:word4``;
+\end{alltt}
 \end{session}
 Note that a type annotation is used here to designate the word size.  When the word size is represented by a type variable (\ie{} for arbitrary length words), evaluation may give partial or unsatisfactory results.
 
@@ -3241,38 +3239,31 @@ Note that a type annotation is used here to designate the word size.  When the w
 
 Words can be parsed in binary, decimal and hexadecimal.   For example:
 \begin{session}
-\begin{verbatim}
-- ``0b111010w : word8``;
-> val it = ``58w`` : term
+\begin{alltt}
+>> ``0b111010w : word8``;
 
-- ``0x3Aw : word8``;
-> val it = ``58w`` : term
-\end{verbatim}
+>> ``0x3Aw : word8``;
+\end{alltt}
 \end{session}
 It is possible to parse octal numbers, but this must be enabled first by setting the reference \ml{base\_tokens.allow\_octal\_input} to true.  For example:
 \begin{session}
-\begin{verbatim}
-- ``072w : word8``;
-> val it = ``72w`` : term
+\begin{alltt}
+>> ``072w : word8``;
 
-- base_tokens.allow_octal_input:=true;
-> val it = () : unit
+>> base_tokens.allow_octal_input:=true;
 
-- ``072w : word8``;
-> val it = ``58w`` : term
-\end{verbatim}
+>> ``072w : word8``;
+\end{alltt}
 \end{session}
 
 Words can be pretty-printed using the standard number bases. For example, the function
 \ml{wordsLib.output\_words\_as\_bin} will select binary format:
 \begin{session}
-\begin{verbatim}
-- wordsLib.output_words_as_bin();
-> val it = () : unit
+\begin{alltt}
+>> wordsLib.output_words_as_bin();
 
-- EVAL ``($FCP ODD):word16``;
-> val it = |- $FCP ODD = 0b1010101010101010w : thm
-\end{verbatim}
+>> EVAL ``($FCP ODD):word16``;
+\end{alltt}
 \end{session}
 The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
 the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
@@ -3280,11 +3271,9 @@ The function \ml{output\_words\_as\_oct} will automatically enable the parsing o
 
 The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
 \begin{session}
-\begin{verbatim}
-- Feedback.trace ("word printing", 1) Parse.print_term ``32w``;
-<<HOL message: inventing new type variable names: 'a>>
-0b100000w> val it = () : unit
-\end{verbatim}
+\begin{alltt}
+>> Feedback.trace ("word printing", 1) Parse.term_to_string ``32w``;
+\end{alltt}
 \end{session}
 The choices are as follows: 0 (default) -- small numbers decimal, large numbers hexadecimal; 1 -- binary; 2 -- octal; 3 -- decimal; and 4 -- hexadecimal.
 
@@ -3292,72 +3281,50 @@ The choices are as follows: 0 (default) -- small numbers decimal, large numbers 
 
 You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenient parsing abbreviations for \ty{:\bool[4]} and \ty{:\bool[8]} --- this facility is available for many standard word sizes.  Users wishing to use this notation for non-standard word sizes can use the function \ml{wordsLib.mk\_word\_size}:
 \begin{session}
-\begin{verbatim}
-- ``:word15``;
-! Uncaught exception:
-! HOL_ERR
+\begin{alltt}
+>>+ Lib.try Parse.Type `:word15` handle _ => bool;
 
-- wordsLib.mk_word_size 15;
-> val it = () : unit
+>> wordsLib.mk_word_size 15;
 
-- ``:word15``;
-> val it = ``:bool[15]`` : hol_type
-\end{verbatim}
+>> ``:word15``;
+\end{alltt}
 \end{session}
 
 \subsubsection{Operator overloading}
 
 The symbols for the standard arithmetic operations (addition, subtraction and multiplication) are overloaded with operators from other standard theories, \ie{} for the natural, integer, rational and real numbers.  In many cases type inference will resolve overloading, however, in some cases this is not possible.  The choice of operator will then depend upon the order in which theories are loaded.  To change this behaviour the functions \ml{wordsLib.deprecate\_word} and \ml{wordsLib.prefer\_word} are provided.  For example, in the following session, the selection of word operators is deprecated:
 \begin{session}
-\begin{verbatim}
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-<<HOL message: inventing new type variable names: 'a>>
-> val it = ``:bool['a]`` : hol_type
+\begin{alltt}
+>> type_of ``a + b``;
 
-- wordsLib.deprecate_word();
-> val it = () : unit
+>> wordsLib.deprecate_word();
 
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-> val it = ``:num`` : hol_type
-\end{verbatim}
+>> type_of ``a + b``;
+\end{alltt}
 \end{session}
 In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
 \begin{session}
-\begin{verbatim}
-- load "intLib"; ...
+\begin{alltt}
+>>_ load "intLib";
+>>__ temp_overload_on("+", ``int_add``);
 
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-> val it = ``:int`` : hol_type
+>> type_of ``a + b``;
 
-- wordsLib.prefer_word();
-> val it = () : unit
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-<<HOL message: inventing new type variable names: 'a>>
-> it = ``:bool['a]`` : hol_type
-\end{verbatim}
+>> wordsLib.prefer_word();
+>> type_of ``a + b``;
+\end{alltt}
 \end{session}
-Of course, type annotations could have been added to avoid this problem entirely.  Note that, unlike \ml{deprecate\_int}, the function \ml{deprecate\_word} does not remove the overloadings, it simply lowers their priority.
+Of course, type annotations could have been added to avoid this problem entirely.
 
 \subsubsection{Guessing word lengths}
 
 It can be a nuisance to add type annotations when specifying the return type for operations such as: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} and \holtxt{word\_replicate}.  This is because there is often a ``standard'' length that could be guessed, \eg{} concatenation usually sums the constituent word lengths.  A facility for word length guessing is controlled by the reference \ml{wordsLib.guessing\_word\_lengths}, which is false by default.  The guesses are made during a post-processing step that occurs after the application of \ml{Parse.Term}.  This is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- wordsLib.guessing_word_lengths:=true;
-> val it = () : unit
+\begin{alltt}
+>> wordsLib.guessing_word_lengths:=true;
 
-- ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
-<<HOL message: inventing new type variable names: 'a, 'b>>
-<<HOL message: assigning word length: 'a <- 4>>
-<<HOL message: assigning word length: 'b <- 12>>
-> val it =
-    ``concat_word_list [(4 >< 1) w; w2; w3]``
-     : term
-\end{verbatim}
+>> ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
+\end{alltt}
 \end{session}
 In the example above, word length guessing is turned on.  Two guesses are made: the extraction is expected to give a four bit word, and the concatenation gives a twelve bit word ($3 \times 4$).  If non-standard numeric lengths are required then type annotations can be added to avoid guesses being made.  With guessing turned off the result types would remain as invented type variables, \ie{} as alpha and beta above.
 
@@ -3380,87 +3347,62 @@ Many of these \emph{simpset} fragments have corresponding conversions.  For exam
 
 The behaviour of the fragments listed above are demonstrated using the following function:
 \begin{session}
-\begin{verbatim}
-- fun conv ss = SIMP_CONV (pure_ss++ss) [];
-> val conv = fn : ssfrag -> term -> thm
-\end{verbatim}
+\begin{alltt}
+>> fun conv ss = SIMP_CONV (pure_ss++ss) [];
+\end{alltt}
 \end{session}
 The following session demonstrates \ml{SIZES\_ss}:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.SIZES_ss ``dimindex(:12)``;
-> val it = |- dimindex (:12) = 12 : thm
+\begin{alltt}
+>> conv wordsLib.SIZES_ss ``dimindex(:12)``;
 
-- conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
-> val it = |- FINITE univ(:32) <=> T : thm
-\end{verbatim}
+>> conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
+\end{alltt}
 \end{session}
 The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.BIT_ss ``BIT 3 5``;
-> val it = |- BIT 3 5 <=> (3 = 0) \/ (3 = 2) : thm
+\begin{alltt}
+>> conv wordsLib.BIT_ss ``BIT 3 5``;
 
-- conv wordsLib.BIT_ss ``BIT i 123``;
-> val it = |- BIT i 123 <=> i IN {0; 1; 3; 4; 5; 6} :
-  thm
-\end{verbatim}
+>> conv wordsLib.BIT_ss ``BIT i 123``;
+\end{alltt}
 \end{session}
 This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    |- a && 12w || 11w && a = 15w && a :
-  thm
+\begin{alltt}
+>> conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
 
-- conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
-> val it =
-    |- 3w * b + a + 2w * b - a * 4w = a + b
-     : thm
+>> conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
 
-- conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    |- 0w << 12 + a >>> 0 + b << 2 << 3 = 0w + a + b << (2 + 3)
-     : thm
-\end{verbatim}
+>> conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
+\end{alltt}
 \end{session}
 
 The remaining fragments are not included in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}.  The bit equality fragment is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
-> val it =
-    |- (a && b = ~0w) <=> (a ' 1 /\ b ' 1) /\ a ' 0 /\ b ' 0
-     : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
+\end{alltt}
 \end{session}
 The extract fragment is useful for reasoning about bit-field operations and is best used in combination with \ml{wordsLib.SIZES\_ss} or \ml{wordsLib.WORD\_ss}, for example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
-   ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
-> val it =
-    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 || (1 >< 1) b
-     : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
+     ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
+\end{alltt}
 \end{session}
 Finally, the fragment \ml{WORD\_MUL\_LSL\_ss} is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
-> val it = |- 5w * a = a << 2 + a : thm
-\end{verbatim}
+\begin{alltt}
+>> conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
+\end{alltt}
 \end{session}
 Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to undo this simplification, for example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
-    ``a << 2 + a : word8``;
-> val it = |- a << 2 + a = 5w * a : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
+     ``a << 2 + a : word8``;
+\end{alltt}
 \end{session}
 Obviously, without adding safeguards, this rewrite theorem cannot be deployed when used in combination with the \ml{WORD\_MUL\_LSL\_ss} fragment.
 
@@ -3480,26 +3422,20 @@ there are many nested additions (perhaps through multiplication).
 
 The following examples show \ml{BBLAST\_PROVE} in use:
 \begin{session}
-\begin{verbatim}
-- blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
-> val it =
-    |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
-     : thm
+\begin{alltt}
+>>_ load "blastLib";
+>> blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
 
-- blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
-> val it = |- w2w a <+ 256w : thm
-\end{verbatim}
+>> blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
+\end{alltt}
 \end{session}
 The decision procedure \ml{BBLAST\_PROVE} is based on the conversion
 \ml{BBLAST\_CONV}. This conversion can be used to convert bit-vector problems
 into a propositional form; for example:
 \begin{session}
-\begin{verbatim}
-- blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
-> val it =
-   |- ((a + 5w) << 3) ' 5 <=> (~a ' 2 <=> ~(a ' 1 /\ a ' 0))
-   : thm
-\end{verbatim}
+\begin{alltt}
+>> blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
+\end{alltt}
 \end{session}
 There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}; with only the latter making use of goal assumptions.
 
