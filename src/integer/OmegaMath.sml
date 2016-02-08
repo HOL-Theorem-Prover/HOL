@@ -5,8 +5,8 @@ open CooperMath
 local open OmegaTheory in end
 
 (* Fix the grammar used by this file *)
-val ctxt_grammars = (type_grammar(), term_grammar())
-val _ = temp_set_grammars int_arith_grammars
+val ctxt_grammars = (Parse.type_grammar(), Parse.term_grammar())
+val _ = Parse.temp_set_grammars int_arith_grammars
 
 val REWRITE_CONV = GEN_REWRITE_CONV TOP_DEPTH_CONV bool_rewrites
 
@@ -1157,6 +1157,6 @@ in
   TRY_CONV eliminate_negative_divides
 end t
 
-val _ = temp_set_grammars ctxt_grammars
+val _ = Parse.temp_set_grammars ctxt_grammars
 
 end (* struct *)
