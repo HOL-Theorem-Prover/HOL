@@ -1160,6 +1160,7 @@ in
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",
      "    --holmakefile <file> : use file as Holmakefile\n",
+     "    --holstate <file>    : use file as underlying \"heap\"\n",
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
      "    --logging            : do per-theory time logging\n",
