@@ -99,6 +99,7 @@ fun format_line sec_name = let
     val f = String.translate (fn c => if c = #" " then "" else
               implode [c])
     in (i,f s2,s3) end
+    handle Subscript => (fail())
   in format_line_aux end
 
 fun read_complete_sections filename filename_sigs ignore = let
@@ -128,7 +129,7 @@ fun read_complete_sections filename filename_sigs ignore = let
   (* process section bodies *)
   fun process_body (sec_name,io,location,body) =
     (remove_dot sec_name,io,location,
-        if mem sec_name ignore then [] else map (format_line sec_name) body)
+        if mem sec_name ignore then [] else try_map (format_line sec_name) body)
   val all_sections = map process_body all_sections
   (* location function *)
   fun update x y f a = if x = a then y else f a
