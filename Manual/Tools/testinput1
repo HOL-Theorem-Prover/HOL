@@ -49,3 +49,16 @@ bar
             r`;
 
    ##eval 3 + 4;
+
+>>__ g `!n. 0 < n ==> 0 < n * n`;
+>> e Induct;
+
+>> val foo = store_thm(
+ "foo",
+ ``p /\ q ==> p``,
+ strip_tac);
+>>__ val foo = store_thm(
+ "foo",
+ ``p /\ q ==> p``,
+ strip_tac);
+>> foo;

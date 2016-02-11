@@ -62,35 +62,29 @@ using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
 
 \setcounter{sessioncount}{1}
 \begin{session}
-\begin{verbatim}
-- show_assums := true;
-> val it = () : unit
+\begin{alltt}
+>> show_assums := true;
 
-- val th1 = ASSUME ``t1 ==> t2``;
-> val th1 = [t1 ==> t2] |- t1 ==> t2 : thm
+>> val th1 = ASSUME ``t1 ==> t2``;
 
-- val th2 = ASSUME ``t1:bool``
-> val th2 = [t1] |- t1 : thm
+>> val th2 = ASSUME ``t1:bool``
 
-- MP th1 th2;
-> val it = [t1 ==> t2, t1] |- t2 : thm
-\end{verbatim}
+>> MP th1 th2;
+\end{alltt}
 \end{session}
 
-\noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs} the
-invocations of functions representing primitive inferences.
+\noindent More briefly, one could evaluate the following, and `count'\index{counting inferences, in HOL proofs@counting inferences, in \HOL{} proofs} the invocations of functions representing primitive inferences.
+Here, the \ml{Count.apply} function counts the number of primitive inferences performed after the function is applied to the argument.
+In the first invocation, this means that only the \emph{modus ponens} step is counted.
+We create an artificial function to see the count of all 3 in the second interaction:
 
 \begin{session}
-\begin{verbatim}
-#set_flag(`timing`, true);;
-false : bool
-Run time: 0.0s
+\begin{alltt}
+>> Count.apply (MP (ASSUME ``t1 ==> t2``)) (ASSUME ``t1:bool``);
 
-#MP(ASSUME "t1 ==> t2")(ASSUME "t1:bool");;
-t1 ==> t2, t1 |- t2
-Run time: 0.0s
-Intermediate theorems generated: 3
-\end{verbatim}
+>> fun f () = MP (ASSUME ``t1 ==> t2``) (ASSUME ``t1:bool``);
+>> Count.apply f ();
+\end{alltt}
 \end{session}
 
 \noindent Each of the three inference steps of the abstract proof
@@ -161,10 +155,9 @@ appropriate sequence of primitive
 inferences. The \ML\ definition of \ml{UNDISCH} is simply
 
 \begin{session}
-\begin{verbatim}
-- fun UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));;
-> val UNDISCH = fn : thm -> thm
-\end{verbatim}
+\begin{alltt}
+>> fun UNDISCH th = MP th (ASSUME(fst(dest_imp(concl th))));
+\end{alltt}
 \end{session}
 
 \noindent This provides a function that maps a theorem to a theorem;
@@ -179,25 +172,14 @@ counted.%
 
 \setcounter{sessioncount}{1}
 \begin{session}
-\begin{verbatim}
-#th;;
-|- (t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)
-Run time: 0.0s
+\begin{alltt}
+>>__ val th = DECIDE ``(t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)``
+>> th;
 
-#set_flag(`timing`,true);;
-true : bool
-Run time: 0.0s
+>> Count.apply UNDISCH th;
 
-#UNDISCH th;;
-t1 ==> t2 |- (t2 ==> t1) ==> (t1 = t2)
-Run time: 0.1s
-Intermediate theorems generated: 2
-
-#UNDISCH it;;
-t1 ==> t2, t2 ==> t1 |- t1 = t2
-Run time: 0.0s
-Intermediate theorems generated: 2
-\end{verbatim}
+>> Count.apply UNDISCH it;
+\end{alltt}
 \end{session}
 
 \noindent Each successful application of {\small\verb%UNDISCH%}
@@ -299,29 +281,13 @@ of theorems is adjusted as above.
 
 \setcounter{sessioncount}{1}
 \begin{session}
-\begin{verbatim}
-#top_print print_all_thm;;
-- : (thm -> void)
-
-#set_flag(`timing`,true);;
-false : bool
-Run time: 0.0s
-
-#REWRITE_RULE
- [GREATER]
- (ASSUME "SUC 4 > 0 = (SUC 3 > 0 = (SUC 2 > 0 = (SUC 1 > 0 = SUC 0 > 0)))");;
-##Definition GREATER autoloaded from theory `arithmetic`.
-GREATER = |- !m n. m > n = n < m
-Run time: 1.5s
-Intermediate theorems generated: 1
-
-(SUC 4) > 0 =
-((SUC 3) > 0 = ((SUC 2) > 0 = ((SUC 1) > 0 = (SUC 0) > 0)))
-|- 0 < (SUC 4) =
-   (0 < (SUC 3) = (0 < (SUC 2) = (0 < (SUC 1) = 0 < (SUC 0))))
-Run time: 0.3s
-Intermediate theorems generated: 23
-\end{verbatim}
+\begin{alltt}
+>>__ Globals.linewidth := 60;
+>> Count.apply (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
+     (ASSUME ``SUC 4 > 0 = (SUC 3 > 0 = (SUC 2 > 0 =
+                 (SUC 1 > 0 = SUC 0 > 0)))``);
+>>__ Globals.linewidth := 72;
+\end{alltt}
 \end{session}
 
 \noindent Notice that rewriting
@@ -386,73 +352,13 @@ optimised for improved performance.
 In addition, for reasons that are mostly historical, not all the
 inferences that are derived in terms of the abstract logic are
 actually derived in the current version of the \HOL\ system.  That is,
-there are currently about forty rules that are installed in the system
+there are currently a number of rules that are installed in the system
 on an `axiomatic' basis, all of which should be derived by explicit
-inference.  Although the current status of these rules is not
-satisfactory, and it is planned, as a high priority, to derive them
-properly in a future version, their current status does not actually
-compromise the consistency of the logic.  In effect, the existing
-\HOL\ system has a deductive system more comprehensive than the one
-presented abstractly, but the model outlined in \LOGIC{} would easily
-extend to cover it.%
+inference.
+These rules' status does not actually compromise the consistency of the logic.
+In effect, the existing \HOL\ system has a deductive system more comprehensive than the one presented abstractly, but the model outlined in \LOGIC{} would easily extend to cover it.%
 %
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!pre-defined|)}
-
-For reference, in \HOL\ Version 2.0 the following rules that should be
-derived
-%
-\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!some not properly derived|(}%
-\index{rules in HOL logic, some not properly derived@rules in \HOL{} logic, some not properly derived|(}%
-%
-are not derived, but (for efficiency) are implemented as
-primitives. The list includes some conversions and conversion-valued
-functions. % (conversions are discussed in Chapter~\ref{avra_conv}).
-\vfill \newpage
-
-\begin{hol}
-\index{derived rules, in HOL logic@derived rules, in \HOL{} logic!list of axiomatic}
-\index{AP_TERM@\ml{AP\_TERM}}
-\index{AP_THM@\ml{AP\_THM}}
-\index{CCONTR@\ml{CCONTR}}
-\index{CHOOSE@\ml{CHOOSE}}
-\index{CONJ@\ml{CONJ}}
-\index{CONJUNCT1@\ml{CONJUNCT1}}
-\index{CONJUNCT2@\ml{CONJUNCT2}}
-\index{DISJ_CASES@\ml{DISJ\_CASES}}
-\index{DISJ1@\ml{DISJ1}}
-\index{DISJ2@\ml{DISJ2}}
-\index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}}
-\index{EQ_MP@\ml{EQ\_MP}}
-\index{EQT_INTRO@\ml{EQT\_INTRO}}
-\index{ETA_CONV@\ml{ETA\_CONV}}
-\index{EXISTS@\ml{EXISTS}}
-\index{EXT@\ml{EXT}}
-\index{GEN@\ml{GEN}}
-\index{MK_ABS@\ml{MK\_ABS}}
-\index{MK_COMB@\ml{MK\_COMB}}
-\index{num_CONV@\ml{num\_CONV}}
-\index{SPEC@\ml{SPEC}}
-\index{SUBS@\ml{SUBS}}
-\index{SUBS_OCCS@\ml{SUBS\_OCCS}}
-\index{SUBST_CONV@\ml{SUBST\_CONV}}
-\index{SYM@\ml{SYM}}
-\index{TRANS@\ml{TRANS}}
-\begin{verbatim}
-   ADD_ASSUM              CONTR                  IMP_ANTISYM_RULE
-   ALPHA                  DEF_EXISTS_RULE        IMP_TRANS
-   AP_TERM                DISJ_CASES             INST
-   AP_THM                 DISJ1                  MK_ABS
-   SUBS                   DISJ2                  MK_COMB
-   SUBS_OCCS              EQ_IMP_RULE            MK_EXISTS
-   CCONTR                 EQ_MP                  NOT_ELIM
-   CHOOSE                 EQT_INTRO              NOT_INTRO
-   CONJ                   ETA_CONV               num_CONV
-   EXISTS                 SPEC                   TRANS
-   EXT                    SUBST_CONV             CONJUNCT1
-   GEN                    SYM                    CONJUNCT2
-\end{verbatim}\end{hol}
-\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!some not properly derived|)}
-\index{rules in HOL logic, some not properly derived@rules in \HOL{} logic, some not properly derived|)}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!derived|(}
 The derivations that follow consist of sequences of numbered steps each of
@@ -652,7 +558,7 @@ $$\Gamma_1\turn t_1=t_2\qquad\qquad\qquad \Gamma_2\turn t_1\over
 \begin{holboxed}
 \index{EQ_IMP_RULE@\ml{EQ\_IMP\_RULE}|pin}
 \begin{verbatim}
-   EQ_IMP_RULE : thm -> (thm # thm)
+   EQ_IMP_RULE : thm -> thm * thm
 \end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
@@ -986,7 +892,7 @@ type-instantiated axiom]
 \index{choice operator, in HOL logic@choice operator, in \HOL{} logic!inference rules for}
 \index{SELECT_ELIM@\ml{SELECT\_ELIM}|pin}
 \begin{verbatim}
-   SELECT_ELIM : thm -> (term # thm) -> thm
+   SELECT_ELIM : thm -> term * thm -> thm
 \end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
@@ -1018,8 +924,9 @@ hypothesis.
 \begin{holboxed}
 \index{EXISTS@\ml{EXISTS}|pin}
 \begin{verbatim}
-   EXISTS : (term # term) -> thm -> thm
-\end{verbatim}\end{holboxed}
+   EXISTS : term * term -> thm -> thm
+\end{verbatim}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 
@@ -1061,7 +968,7 @@ doesn't become bound after substitution.
 \begin{holboxed}
 \index{CHOOSE@\ml{CHOOSE}|pin}
 \begin{verbatim}
-   CHOOSE : (term # thm) -> thm -> thm
+   CHOOSE : term * thm -> thm -> thm
 \end{verbatim}\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}

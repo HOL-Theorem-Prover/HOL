@@ -462,11 +462,11 @@ function to the \ml{t} parameter.  In fact, the value that matched
 \ml{X} was {\small\verb|``\x. if l5 x then l3 x else l4 x``|}.
 
 Inspecting the goal above, it can be seen that the next step is to unwind the equations for the remaining lines of the circuit.
-We do using the standard simplifier \ml{lrw}.
+We do using the standard simplifier \ml{rw}.
 
 \begin{session}
 \begin{alltt}
->> e (lrw[]);
+>> e (rw[]);
 \end{alltt}
 \end{session}
 
@@ -493,7 +493,7 @@ interactively:
        metis_tac [],
        qpat_assum `!t. out t = X t`
                   (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) >>
-       lrw[]
+       rw[]
      ]);
 \end{alltt}
 \end{session}
@@ -507,7 +507,7 @@ This will be done in one step using the \ML{} function \ml{prove}.
 >> val PARITY_CORRECT = prove(
      ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
      rpt strip_tac >> irule UNIQUENESS_LEMMA >>
-     irule PARITY_LEMMA >> lrw[]);
+     irule PARITY_LEMMA >> rw[]);
 \end{alltt}
 \end{session}
 

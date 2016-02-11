@@ -137,6 +137,30 @@ fun deleteTrailingWhiteSpace s =
     string pfx ^ term
   end
 
+fun remove_multi_goalproved s =
+  let
+    val ss = Substring.full s
+    val (l,r) = Substring.position "\n\nGoal proved." ss
+    fun recurse ss =
+      let
+        val ss' = Substring.slice(ss, 1, NONE)
+        val (l,r) = Substring.position "\n\nGoal proved." ss'
+      in
+        if Substring.size r <> 0 then
+          case recurse r of NONE => SOME r | x => x
+        else NONE
+      end
+  in
+    if Substring.size r <> 0 then
+      case recurse r of
+          NONE => NONE
+        | SOME r' =>
+          SOME (Substring.string l ^ !elision_string1 ^
+                Substring.string (Substring.triml 1 r'))
+    else
+      NONE
+  end
+
 fun cruftSuffix sfxs s =
   case List.find (fn (sfx,_) => String.isSuffix sfx s) sfxs of
       NONE => NONE
@@ -148,10 +172,63 @@ val cruftySuffixes = ref [
       (":\n   proof\n", "\n")
     ]
 
+fun try _ [] s = s
+  | try restart (f::fs) s = case f s of
+                                SOME s' => restart s'
+                              | NONE => try restart fs s
+
+fun remove_nsubgoals s =
+  let
+    open Substring
+    val ss0 = full s
+    val (ss,_) = splitr Char.isSpace ss0
+  in
+    if isSuffix "subgoals" ss then
+      let
+        val (p,s) = splitr (fn c => c <> #"\n") ss
+        val (sn, rest) = splitl Char.isDigit s
+      in
+        if size sn <> 0 andalso string rest = " subgoals" then SOME (string p)
+        else NONE
+      end
+    else NONE
+  end
+
+fun shorten_longmetis s =
+  let
+    open Substring
+    val ss = full s
+    val (pfx, sfx) = position "\nmetis: " ss
+    fun ismetis_guff c =
+      case c of
+          #"r" => true | #"+" => true | #"[" => true | #"]" => true
+        | _ => Char.isDigit c
+    fun recurse csfx =
+      if size csfx <> 0 then
+        let
+          val (guff, rest) = splitl ismetis_guff (triml 8 csfx)
+        in
+          if size guff > 55 then
+            SOME (string (span (pfx, slice(guff, 0, SOME 50))) ^ " .... " ^
+                  string rest)
+          else
+            let
+              val (_, sfx') = position "\nmetis: " (triml 1 csfx)
+            in
+              recurse sfx'
+            end
+        end
+      else NONE
+  in
+    recurse sfx
+  end
+
 fun removeCruft s =
-  case cruftSuffix (!cruftySuffixes) s of
-      NONE => s
-    | SOME s' => removeCruft s'
+  try removeCruft [cruftSuffix (!cruftySuffixes),
+                   remove_multi_goalproved,
+                   shorten_longmetis,
+                   remove_nsubgoals]
+      s
 
 fun addIndent ws = String.translate(fn #"\n" => "\n"^ws | c => str c)
 
@@ -177,13 +254,18 @@ fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
       val _ = advance lbuf
       val handlePromptSize =
         if userPromptSize > oPsize then
-          fn s => String.extract(s, userPromptSize - oPsize, NONE)
+          fn i => fn s =>
+             if i < userPromptSize then
+               s |> Substring.full |> Substring.dropl Char.isSpace
+                 |> Substring.string
+             else
+               String.extract(s, userPromptSize - oPsize, NONE)
         else
           let
             val ws_n =
                 CharVector.tabulate(oPsize - userPromptSize, fn _ => #" ")
           in
-            fn s => ws_n ^ s
+            fn i => fn s => ws_n ^ s
           end
     in
       case current lbuf of
@@ -191,9 +273,10 @@ fun process_line umap (obuf as (_, _, obRST)) origline lbuf = let
         | SOME s =>
           let
             val (ws',_) = getIndent s
+            val wssz = String.size ws'
           in
-            if indent < String.size ws'
-            then getRest userPromptSize (handlePromptSize s::acc)
+            if indent < wssz
+            then getRest userPromptSize (handlePromptSize wssz s::acc)
             else String.concat (List.rev acc)
           end
     end
@@ -214,7 +297,7 @@ in
                                Int.toString (linenum lbuf) ^ "\";"))
       val _ = advance lbuf
     in
-      ("\n", NONE)
+      ("", NONE)
     end
   else if String.isPrefix "##eval" line then
     let
@@ -301,7 +384,7 @@ end
 
 fun read_umap fname =
   let
-    val instrm = TextIO.openIn fname
+    val instrm = TextIO.openIn fname handle _ => die ("Couldn't open "^fname)
     fun recurse (i, acc) =
       case TextIO.inputLine instrm of
           SOME line =>

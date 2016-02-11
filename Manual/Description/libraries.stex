@@ -461,16 +461,16 @@ Moreover, if the term mapped to is a lambda-abstraction (\ie, of the
 form $\lambda x.\;M$), then the parser will perform all possible
 $\beta$-reductions for that term and the arguments accompanying it.  For
 example, in \theoryimp{boolTheory} and its descendants, the string
-\ml{"<>"} is overloaded to the term \holquote{\bs{}x~y.~\td{}(x~=~y)}.
+\ml{"<>"} is overloaded to the term \holquote{\holtxt{\bs{}x~y.~\td{}(x~=~y)}}.
 Additionally, \ml{"<>"} is set up at the concrete syntax level as an
-infix.  When the user inputs \holquote{x~\lt\gt~y}, the resulting
+infix.  When the user inputs \holquote{\holtxt{x~\lt\gt~y}}, the resulting
 \ml{Absyn} value is
 \begin{verbatim}
    APP(APP(IDENT "<>", IDENT "x"), IDENT "x")
 \end{verbatim}
 The \ml{"x"}  and \ml{"y"} identifiers will map to free variables, but
 the \ml{"<>"} identifier maps to a list containing
-\holquote{\bs{}x~y.~\td(x~=~y)}. This term has type
+\holquote{\holtxt{\bs{}x~y.~\td(x~=~y)}}. This term has type
 \begin{verbatim}
    :'a -> 'a -> bool
 \end{verbatim}
@@ -480,7 +480,7 @@ Assuming that this option is the only overloading for \ml{"<>"} left
 after type inference, then the resulting term will be
 \holtxt{\td(x~=~y)}.  Better, though this will be the underlying
 structure of the term in memory, it will actually print as
-\holquote{x~\lt\gt~y}.
+\holquote{\holtxt{x~\lt\gt~y}}.
 
 If the term mapped to in the overload map contains any free variables,
 these variables will not be instantiated in any way.  In particular,
@@ -641,17 +641,13 @@ system will inform us that overloading resolution is being performed.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- load "integerTheory";
-> val it = () : unit
+\begin{alltt}
+>> load "integerTheory";
 
-- Term `~~x`;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `~~x` : term
+>> Term `~~x`;
 
-- type_of it;
-> val it = `:bool` : hol_type
-\end{verbatim}
+>> type_of it;
+\end{alltt}
 \end{session}
 
 A priority mechanism is used to resolve multiple possible choices. In
@@ -664,17 +660,13 @@ while in the second, a type constraint ensures that \holtxt{\~{}\~{}x} has
 type \holtxt{:int}.
 
 \begin{session}
-\begin{verbatim}
-- show_types := true;
-> val it = () : unit
+\begin{alltt}
+>> show_types := true;
 
-- Term `~(x = ~~x)`;
-<<HOL message: more than one resolution of overloading was possible.>>
-> val it = `~((x :bool) = ~~x)` : term
+>> Term `~(x = ~~x)`;
 
-- Term `~(x:int = ~~x)`;
-> val it = `~((x :int) = ~~x)` : term
-\end{verbatim}
+>> Term `~(x:int = ~~x)`;
+\end{alltt}
 \end{session}
 
 Note that the symbol \holtxt{\~{}} stands for two different constants in
@@ -996,17 +988,13 @@ print depth are printed as \holtxt{...}. For example:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- ADD_CLAUSES;
-> val it =
-    |- (0 + m = m) /\ (m + 0 = m) /\ (SUC m + n = SUC (m + n)) /\
-       (m + SUC n = SUC (m + n)) : thm
+\begin{alltt}
+>> arithmeticTheory.ADD_CLAUSES;
 
-- max_print_depth := 3;
-> val it = () : unit
-- ADD_CLAUSES;
-> val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
-\end{verbatim}
+>> max_print_depth := 3;
+>> arithmeticTheory.ADD_CLAUSES;
+>>__ max_print_depth := ~1;
+\end{alltt}
 \end{session}
 \index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
 
@@ -1023,10 +1011,9 @@ rather ugly because of the special filtering that is done to these
 values before the ML interpreter even sees them:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- val q = `f x = 3`;
-> val 'a q = [QUOTE " (*#loc 1 11*)f x = 3"] : 'a frag list
-\end{verbatim}
+\begin{alltt}
+>> val q = `f x = 3`;
+\end{alltt}
 \end{session}
 Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
 raw input form expected by the various HOL parsers.  They are also
@@ -1040,13 +1027,11 @@ double back-ticks as delimiters.  For the type parser, the first
 non-space character after the leading delimiter must also be a colon.
 Thus:
 \begin{session}
-\begin{verbatim}
-- val t = ``p /\ q``;
-> val t = ``p /\ q`` : term
+\begin{alltt}
+>> val t = ``p /\ q``;
 
-- val ty = ``:'a -> bool``;
-> val ty = ``:'a -> bool`` : hol_type
-\end{verbatim}
+>> val ty = ``:'a -> bool``;
+\end{alltt}
 \end{session}
 
 The expression bound to ML variable \ml{t} above is actually expanded
@@ -1070,33 +1055,27 @@ passed to the HOL parser unchanged.  Otherwise, one caret can be
 obtained by writing two in a row. (This last rule is analogous to the
 way in \ML{} string syntax treats the back-slash.) Thus:
 \begin{session}
-\begin{verbatim}
-- ``f ^` x ``;
-<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
-> val it = ``f ` x`` : term
+\begin{alltt}
+>> ``f ^` x ``;
 
-- ``f ^ x``;
-<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
-> val it = ``f ^ x`` : term
-\end{verbatim}
+>> ``f ^ x``;
+\end{alltt}
 \end{session}
 
 The rule for carets not followed by white-space is illustrated here,
 including an example of what happens when the quoting rule is not
 followed:
 \begin{session}
-\begin{verbatim}
-- ``f ^^+ x``;
-<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
-> val it = ``f ^+ x`` : term
+\begin{alltt}
+>> ``f ^^+ x``;
 
-- ``f ^+ x``;
+>>+ ``f ^+ x``;
 ! Toplevel input:
 ! (Parse.Term [QUOTE " (*#loc 2 3*)f ", ANTIQUOTE (+),
 !              QUOTE " (*#loc 2 7*) x"]);
 !                                                  ^
 ! Ill-formed infix expression
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 The main use of the caret is to introduce \emph{antiquotations} (as
@@ -1125,28 +1104,24 @@ The following session illustrates antiquotation.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- val y = ``x+1``;
-> val y = ``x + 1`` : term
+\begin{alltt}
+>>__ remove_ovl_mapping "+" {Name = "int_add", Thy = "integer"};
+>> val y = ``x+1``;
 
-val z = ``y = ^y``;
-> val z = ``y = x + 1`` : term
+>> val z = ``y = ^y``;
 
-- ``!x:num.?y:num.^z``;
-> val it = ``!x. ?y. y = x + 1`` : term
-\end{verbatim}
+>> ``!x:num.?y:num.^z``;
+\end{alltt}
 \end{session}
 
 \noindent Types may be antiquoted as well:
 
 \begin{session}
-\begin{verbatim}
-- val pred = ``:'a -> bool``;
-> val pred = ``:'a -> bool`` : hol_type
+\begin{alltt}
+>> val pred = ``:'a -> bool``;
 
-- ``:^pred -> bool``;
-> val it = ``:('a -> bool) -> bool`` : hol_type
-\end{verbatim}
+>> ``:^pred -> bool``;
+\end{alltt}
 \end{session}
 
 \noindent Quotations are polymorphic, and the type variable of a
@@ -1158,20 +1133,12 @@ terms, antiquoting a type into a term quotation requires the use of
 \index{ty_antiq@\ml{ty\_antiq}}
 
 \begin{session}
-\begin{verbatim}
-- ``!P:^pred. P x ==> Q x``;
+\begin{alltt}
+>>+ ``!P:^pred. P x ==> Q x``;
 
-! Toplevel input:
-! Term `!P:^pred. P x ==> Q x`;
-!           ^^^^
-! Type clash: expression of type
-!   hol_type
-! cannot have type
-!   term
-
-- ``!P:^(ty_antiq pred). P x ==> Q x``;
+>> ``!P:^(ty_antiq pred). P x ==> Q x``;
 > val it = `!P. P x ==> Q x` : term
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
@@ -1688,19 +1655,18 @@ in \ml{boolSimps} embodies all of the usual rewrite theorems one would want over
 formulas:
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
-> val it = |- p /\ T \/ ~(q /\ r) = p \/ ~q \/ ~r : thm
-\end{verbatim}
+\begin{alltt}
+>>__ show_types := false;
+>> SIMP_CONV bool_ss [] ``p /\ T \/ ~(q /\ r)``;
+\end{alltt}
 \end{session}
 In addition to rewriting with the obvious theorems, \ml{bool\_ss} is
 also capable of performing simplifications that are not expressible as
 simple theorems:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
-> val it = |- (?x. (\y. P (f y)) x /\ (x = z)) = P (f z) : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV bool_ss [] ``?x. (\y. P (f y)) x /\ (x = z)``;
+\end{alltt}
 \end{session}
 In this example, the simplifier performed a $\beta$-reduction in the
 first conjunct under the existential quantifier, and then did an
@@ -1722,10 +1688,10 @@ term size (there are two occurrences of $p$ on the right hand
 side of the theorem).  Nonetheless, it is clear that this theorem may
 be appropriate on occasion:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
-> val it = |- p * (n + 1) = p + n * p : thm
-\end{verbatim}
+\begin{alltt}
+>>_ open arithmeticTheory;
+>> SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
+\end{alltt}
 \end{session}
 Note how the \ml{arith\_ss} \simpset{} has not only simplified the
 intermediate \ml{(p * 1)} term, but also re-ordered the addition to
@@ -1759,23 +1725,12 @@ Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal
 (leaving the assumptions untouched), but includes the goal's
 assumptions as extra rewrite rules.  Thus:
 \begin{session}
-\begin{verbatim}
-1 subgoal:
-> val it =
-    P x
-    ------------------------------------
-      x = 3
-     : goalstack
+\begin{alltt}
+>>__ g `(x = 3) ==> P x`;
+>>- e strip_tac;
 
-- e (ASM_SIMP_TAC bool_ss []);
-OK..
-1 subgoal:
-> val it =
-    P 3
-    ------------------------------------
-      x = 3
-     : goalstack
-\end{verbatim}
+>> e (ASM_SIMP_TAC bool_ss []);
+\end{alltt}
 \end{session}
 \noindent
 In this example, \ml{ASM\_SIMP\_TAC} used \holtxt{x = 3} as an
@@ -1809,23 +1764,13 @@ way up the list of assumptions, from bottom to top.
 
 The following demonstrates a simple use of \ml{FULL\_SIMP\_TAC}:
 \begin{session}
-\begin{verbatim}
-    x + y < z
-    ------------------------------------
-      0.  f x < 10
-      1.  x = 4
-     : goalstack
+\begin{alltt}
+>>__ drop();
+>>__ g `f (x:num) < 10  /\ (x = 4) ==> 4 + x < 10`;
+>>- e strip_tac;
 
-- e (FULL_SIMP_TAC bool_ss []);
-OK..
-1 subgoal:
-> val it =
-    4 + y < z
-    ------------------------------------
-      0.  f 4 < 10
-      1.  x = 4
-     : goalstack
-\end{verbatim}
+>> e (FULL_SIMP_TAC bool_ss []);
+\end{alltt}
 \end{session}
 In this example, the assumption \holtxt{x = 4} caused the \holtxt{x}
 in the assumption \holtxt{f x < 10} to be replaced by \holtxt{4}.  The
@@ -1835,30 +1780,16 @@ have changed.
 
 The next session demonstrates more interesting behaviour:
 \begin{session}
-\begin{verbatim}
-> val it =
-    f x + 1 < 10
-    ------------------------------------
-      x <= 4
-     : goalstack
+\begin{alltt}
+>>__ drop(); g`x <= 4n ==> f x + 1 < 10`;
+>>- e strip_tac;
 
-- e (FULL_SIMP_TAC bool_ss [arithmeticTheory.LESS_OR_EQ]);
-OK..
-2 subgoals:
-> val it =
-    f 4 + 1 < 10
-    ------------------------------------
-      x = 4
-
-    f x + 1 < 10
-    ------------------------------------
-      x < 4
-     : goalstack
-\end{verbatim}
+>> e (FULL_SIMP_TAC bool_ss [arithmeticTheory.LESS_OR_EQ]);
+\end{alltt}
 \end{session}
 In this example, the goal was rewritten with the theorem stating
 \[
-\vdash x \leq y \equiv x < y \lor x = y
+\vdash x \leq y \iff x < y \lor x = y
 \]
 Turning the assumption into a disjunction resulted in two sub-goals.
 In the second of these, the assumption \holtxt{x = 4} further
@@ -1977,14 +1908,13 @@ explained in Section~\ref{sec:simplifier-rewriting} below, but can be
 illustrated by some examples (the first also demonstrates unwinding
 under a universal quantifier):
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
-> val it = |- (!x. (x = 3) /\ P x ==> Q x /\ P 3) = P 3 ==> Q 3 : thm
+\begin{alltt}
+>>__ remove_ovl_mapping GrammarSpecials.fromNum_str
+       {Name = "int_of_num", Thy = "integer"};
+>> SIMP_CONV bool_ss [] ``!x. (x = 3) /\ P x ==> Q x /\ P 3``;
 
-- SIMP_CONV bool_ss [] ``if ~(x = 3) then P x else Q x``;
-> val it = |- (if ~(x = 3) then P x else Q x) =
-              (if ~(x = 3) then P x else Q 3) : thm
-\end{verbatim}
+>> SIMP_CONV bool_ss [] ``if x <> 3 then P x else Q x``;
+\end{alltt}
 \end{session}
 
 \subsubsection{\ml{std\_ss}}
@@ -1995,27 +1925,22 @@ The \ml{std\_ss} \simpset{} is defined in \ml{bossLib}, and adds
 rewrite rules pertinent to the types of sums, pairs, options and
 natural numbers to \ml{bool\_ss}.
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
-<<HOL message: inventing new type variable names: 'a, 'b>>
-> val it = |- FST (x,y) + OUTR (INR z) = x + z : thm
+\begin{alltt}
+>> SIMP_CONV std_ss [] ``FST (x,y) + OUTR (INR z)``;
 
-- SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
-> val it = |- (case SOME x of NONE => P | SOME v => f v) = f x : thm
-\end{verbatim}
+>> SIMP_CONV std_ss [] ``case SOME x of NONE => P | SOME y => f y``;
+\end{alltt}
 \end{session}
 
 With the natural numbers, the \ml{std\_ss} \simpset{} can calculate
 with ground values, and also includes a suite of ``obvious rewrites''
 for formulas including variables.
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
-> val it = |- P (0 <= x) /\ Q (y + x - y) = P T /\ Q x : thm
+\begin{alltt}
+>> SIMP_CONV std_ss [] ``P (0 <= x) /\ Q (y + x - y)``;
 
-- SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
-> val it = |- 23 * 6 + 7 ** 2 - 31 DIV 3 = 177 : thm
-\end{verbatim}
+>> SIMP_CONV std_ss [] ``23 * 6 + 7 ** 2 - 31 DIV 3``;
+\end{alltt}
 \end{session}
 
 \subsubsection{\ml{arith\_ss}}
@@ -2032,23 +1957,19 @@ Section~\ref{sec:numLib} below.
 These two facets of the \ml{arith\_ss} \simpset{} are demonstrated
 here:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
-> val it = |- x < 3 /\ P x ==> x < 20 DIV 2 = T : thm
+\begin{alltt}
+>> SIMP_CONV arith_ss [] ``x < 3 /\ P x ==> x < 20 DIV 2``;
 
-- SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
-> val it = |- 2 * x + y - x + y = x + 2 * y : thm
-\end{verbatim}
+>> SIMP_CONV arith_ss [] ``2 * x + y - x + y``;
+\end{alltt}
 \end{session}
 Note that subtraction over the natural numbers works in ways that can
 seem unintuitive.  In particular, coefficient normalisation may not
 occur when first expected:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
-! Uncaught exception:
-! UNCHANGED
-\end{verbatim}
+\begin{alltt}
+>>+ SIMP_CONV arith_ss [] ``2 * x + y - z + y``;
+\end{alltt}
 \end{session}
 Over the natural numbers, the expression $2 x + y - z + y$ is not
 equal to $2 x + 2 y - z$.  In particular, these expressions are not
@@ -2072,16 +1993,13 @@ Conveniently, \ml{list\_ss} also includes rewrites for the functions
 defined by primitive recursion over lists.  Examples include
 \holtxt{MAP}, \holtxt{FILTER} and \holtxt{LENGTH}.  Thus:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
-> val it = |- MAP (\x. x + 1) [1; 2; 3; 4] = [2; 3; 4; 5] : thm
+\begin{alltt}
+>> SIMP_CONV list_ss [] ``MAP (\x. x + 1) [1;2;3;4]``;
 
-- SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
-> val it = |- FILTER (\x. x < 4) [1; 2; y + 4] = [1; 2] : thm
+>> SIMP_CONV list_ss [] ``FILTER (\x. x < 4) [1;2;y + 4]``;
 
-- SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
-> val it = |- LENGTH (FILTER ODD [1; 2; 3; 4; 5]) = 3 : thm
-\end{verbatim}
+>> SIMP_CONV list_ss [] ``LENGTH (FILTER ODD [1;2;3;4;5])``;
+\end{alltt}
 \end{session}
 These examples demonstrate how the simplifier can be used as a general
 purpose symbolic evaluator for terms that look a great deal like those
@@ -2090,12 +2008,9 @@ this functionality is also provided by \ml{computeLib} (see
 Section~\ref{sec:computeLib} below); \ml{computeLib} is more
 efficient, but less general than the simplifier.  For example:
 \begin{session}
-\begin{verbatim}
-- EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
-> val it =
-    |- FILTER (\x. x < 4) [1; 2; y + 4] =
-       1::2::(if y + 4 < 4 then [y + 4] else []) : thm
-\end{verbatim}
+\begin{alltt}
+>> EVAL ``FILTER (\x. x < 4) [1;2;y + 4]``;
+\end{alltt}
 \end{session}
 
 \subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
@@ -2121,23 +2036,15 @@ all situations where the simplifier is used.
 
 This versatility is illustrated in the following example:
 \begin{session}
-\begin{verbatim}
-- Datatype `tree = Leaf | Node num tree tree`;
-<<HOL message: Defined type: "tree">>
-> val it = () : unit
+\begin{alltt}
+>> Datatype `tree = Leaf | Node num tree tree`;
 
-- SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
-<<HOL message: Initialising SRW simpset ... done>>
-> val it =
-    |- (Node x Leaf Leaf = Node 3 t1 t2) =
-       (x = 3) /\ (Leaf = t1) /\ (Leaf = t2) : thm
+>> SIMP_CONV (srw_ss()) [] ``Node x Leaf Leaf = Node 3 t1 t2``;
 
-- load "pred_setTheory";
-> val it = () : unit
+>> load "pred_setTheory";
 
-- SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
-> val it = |- x IN {y | y < 6} = x < 6 : thm
-\end{verbatim}
+>> SIMP_CONV (srw_ss()) [] ``x IN { y | y < 6}``;
+\end{alltt}
 \end{session}
 %
 Users can augment the stateful \simpset{} themselves with the function
@@ -2154,21 +2061,16 @@ in the current segment (those that will be exported when
 the underlying \simpset{} in the current session, but they will be
 added in future sessions when the current theory is reloaded.
 \begin{session}
-\begin{verbatim}
-- val tsize_def = Define`
-  (tsize Leaf = 0) /\
-  (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
-`;
-Definition has been stored under "tsize_def".
-> val tsize_def =
-    |- (tsize Leaf = 0) /\
-       !n t1 t2. tsize (Node n t1 t2) = n + tsize t1 + tsize t2 : thm
+\begin{alltt}
+>> val tsize_def = Define`
+     (tsize Leaf = 0) /\
+     (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+   `;
 
-- val _ = BasicProvers.export_rewrites ["tsize_def"];
+>> val _ = BasicProvers.export_rewrites ["tsize_def"];
 
-- SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
-> val it = |- tsize (Node 4 (Node 6 Leaf Leaf) Leaf) = 10 : thm
-\end{verbatim}
+>> SIMP_CONV (srw_ss()) [] ``tsize (Node 4 (Node 6 Leaf Leaf) Leaf)``;
+\end{alltt}
 \end{session}
 
 Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
@@ -3132,12 +3034,11 @@ augments this database with relevant definitions, that of Quicksort
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  - load "sortingTheory";
+\begin{alltt}
+>> load "sortingTheory";
 
-  - EVAL ``QSORT (<=) [76;34;102;3;4]``;
-  > val it = |- QSORT $<= [76; 34; 102; 3; 4] = [3; 4; 34; 76; 102] : thm
-\end{verbatim}
+>> EVAL ``QSORT (<=) [76;34;102;3;4]``;
+\end{alltt}
 \end{session}
 Often, the argument to a function has no variables: in that case
 application of \ml{EVAL} ought to return a ground result,
@@ -3151,13 +3052,11 @@ in the input to allow the algorithm any traction, no expansion will
 take place.
 %
 \begin{session}
-\begin{verbatim}
-  - EVAL ``REVERSE [u;v;w;x;y;z]``;
-  > val it = |- REVERSE [u; v; w; x; y; z] = [z; y; x; w; v; u] : thm
+\begin{alltt}
+>> EVAL ``REVERSE [u;v;w;x;y;z]``;
 
-  - EVAL ``REVERSE alist``;
-  > val it = |- REVERSE alist = REVERSE alist : thm
-\end{verbatim}
+>> EVAL ``REVERSE alist``;
+\end{alltt}
 \end{session}
 %
 
@@ -3169,22 +3068,20 @@ enormous terms. The usual cause is conditionals with variables in the
 test. For example, the following definition is provably equal to \holtxt{FACT},
 %
 \begin{session}
-\begin{verbatim}
-  Define `fact n = if n=0 then 1 else n * fact (n-1)`;
-  > val it = |- fact n = (if n = 0 then 1 else n * fact (n - 1)) : thm
-\end{verbatim}
+\begin{alltt}
+>> Define `fact n = if n=0 then 1 else n * fact (n-1)`;
+\end{alltt}
 \end{session}
 %
 But the two definitions evaluate completely differently.
 %
 \begin{session}
 \begin{verbatim}
-  EVAL ``FACT n``;
-  > val it = |- FACT n = FACT n : thm
+>> EVAL ``FACT n``;
 
-  - EVAL ``fact n``;
+> EVAL ``fact n``;
   <.... interrupt key struck ...>
-  > Interrupted.
+Interrupted.
 \end{verbatim}
 \end{session}
 %
@@ -3194,32 +3091,26 @@ expanding. A rudimentary monitoring facility shows the behaviour, first
 on a ground argument, then on a symbolic argument.
 %
 \begin{session}
-\begin{verbatim}
-  - val [fact] = decls "fact";
-  - computeLib.monitoring := SOME (same_const fact);
+\begin{alltt}
+>> val [fact] = decls "fact";
+>> computeLib.monitoring := SOME (same_const fact);
 
-  - EVAL ``fact 4``;
-  fact 4 = (if 4 = 0 then 1 else 4 * fact (4 - 1))
-  fact 3 = (if 3 = 0 then 1 else 3 * fact (3 - 1))
-  fact 2 = (if 2 = 0 then 1 else 2 * fact (2 - 1))
-  fact 1 = (if 1 = 0 then 1 else 1 * fact (1 - 1))
-  fact 0 = (if 0 = 0 then 1 else 0 * fact (0 - 1))
-  > val it = |- fact 4 = 24 : thm
+>> EVAL ``fact 4``;
 
-  - EVAL ``fact n``;
-  fact n = (if n = 0 then 1 else n * fact (n - 1))
-  fact (n - 1) = (if n - 1 = 0 then 1 else (n - 1) * fact (n - 1 - 1))
-  fact (n - 1 - 1) =
-  (if n - 1 - 1 = 0 then 1 else (n - 1 - 1) * fact (n - 1 - 1 - 1))
-  fact (n - 1 - 1 - 1) =
-  (if n - 1 - 1 - 1 = 0 then
-     1
-   else
-     (n - 1 - 1 - 1) * fact (n - 1 - 1 - 1 - 1))
-     .
-     .
-     .
-\end{verbatim}
+> EVAL ``fact n``;
+fact n = (if n = 0 then 1 else n * fact (n - 1))
+fact (n - 1) = (if n - 1 = 0 then 1 else (n - 1) * fact (n - 1 - 1))
+fact (n - 1 - 1) =
+(if n - 1 - 1 = 0 then 1 else (n - 1 - 1) * fact (n - 1 - 1 - 1))
+fact (n - 1 - 1 - 1) =
+(if n - 1 - 1 - 1 = 0 then
+   1
+ else
+   (n - 1 - 1 - 1) * fact (n - 1 - 1 - 1 - 1))
+   .
+   .
+   .
+\end{alltt}
 \end{session}
 %
 In each recursive expansion, the test involves a variable, and hence
@@ -3336,13 +3227,11 @@ The library \theoryimp{wordsLib} should be loaded when evaluating ground bit-vec
 can be used in the construction of custom \emph{compsets} and conversions.
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- load "wordsLib";
-> val it = () : unit
+\begin{alltt}
+>> load "wordsLib";
 
-- EVAL ``8w + 9w:word4``;
-> val it = |- 8w + 9w = 1w : thm
-\end{verbatim}
+>> EVAL ``8w + 9w:word4``;
+\end{alltt}
 \end{session}
 Note that a type annotation is used here to designate the word size.  When the word size is represented by a type variable (\ie{} for arbitrary length words), evaluation may give partial or unsatisfactory results.
 
@@ -3350,38 +3239,31 @@ Note that a type annotation is used here to designate the word size.  When the w
 
 Words can be parsed in binary, decimal and hexadecimal.   For example:
 \begin{session}
-\begin{verbatim}
-- ``0b111010w : word8``;
-> val it = ``58w`` : term
+\begin{alltt}
+>> ``0b111010w : word8``;
 
-- ``0x3Aw : word8``;
-> val it = ``58w`` : term
-\end{verbatim}
+>> ``0x3Aw : word8``;
+\end{alltt}
 \end{session}
 It is possible to parse octal numbers, but this must be enabled first by setting the reference \ml{base\_tokens.allow\_octal\_input} to true.  For example:
 \begin{session}
-\begin{verbatim}
-- ``072w : word8``;
-> val it = ``72w`` : term
+\begin{alltt}
+>> ``072w : word8``;
 
-- base_tokens.allow_octal_input:=true;
-> val it = () : unit
+>> base_tokens.allow_octal_input:=true;
 
-- ``072w : word8``;
-> val it = ``58w`` : term
-\end{verbatim}
+>> ``072w : word8``;
+\end{alltt}
 \end{session}
 
 Words can be pretty-printed using the standard number bases. For example, the function
 \ml{wordsLib.output\_words\_as\_bin} will select binary format:
 \begin{session}
-\begin{verbatim}
-- wordsLib.output_words_as_bin();
-> val it = () : unit
+\begin{alltt}
+>> wordsLib.output_words_as_bin();
 
-- EVAL ``($FCP ODD):word16``;
-> val it = |- $FCP ODD = 0b1010101010101010w : thm
-\end{verbatim}
+>> EVAL ``($FCP ODD):word16``;
+\end{alltt}
 \end{session}
 The function \ml{output\_words\_as} is more flexible and allows the number base to vary depending on
 the word length and numeric value.  The default pretty-printer (installed when loading \theoryimp{wordsLib}) prints small values in decimal and large values in hexadecimal.
@@ -3389,11 +3271,9 @@ The function \ml{output\_words\_as\_oct} will automatically enable the parsing o
 
 The trace variable \ml{"word printing"} provides an alternative method for changing the output number base --- it is particularly suited to temporarily selecting a number base, for example:
 \begin{session}
-\begin{verbatim}
-- Feedback.trace ("word printing", 1) Parse.print_term ``32w``;
-<<HOL message: inventing new type variable names: 'a>>
-0b100000w> val it = () : unit
-\end{verbatim}
+\begin{alltt}
+>> Feedback.trace ("word printing", 1) Parse.term_to_string ``32w``;
+\end{alltt}
 \end{session}
 The choices are as follows: 0 (default) -- small numbers decimal, large numbers hexadecimal; 1 -- binary; 2 -- octal; 3 -- decimal; and 4 -- hexadecimal.
 
@@ -3401,72 +3281,50 @@ The choices are as follows: 0 (default) -- small numbers decimal, large numbers 
 
 You may have noticed that \ty{:word4} and \ty{:word8} have been used as convenient parsing abbreviations for \ty{:\bool[4]} and \ty{:\bool[8]} --- this facility is available for many standard word sizes.  Users wishing to use this notation for non-standard word sizes can use the function \ml{wordsLib.mk\_word\_size}:
 \begin{session}
-\begin{verbatim}
-- ``:word15``;
-! Uncaught exception:
-! HOL_ERR
+\begin{alltt}
+>>+ Lib.try Parse.Type `:word15` handle _ => bool;
 
-- wordsLib.mk_word_size 15;
-> val it = () : unit
+>> wordsLib.mk_word_size 15;
 
-- ``:word15``;
-> val it = ``:bool[15]`` : hol_type
-\end{verbatim}
+>> ``:word15``;
+\end{alltt}
 \end{session}
 
 \subsubsection{Operator overloading}
 
 The symbols for the standard arithmetic operations (addition, subtraction and multiplication) are overloaded with operators from other standard theories, \ie{} for the natural, integer, rational and real numbers.  In many cases type inference will resolve overloading, however, in some cases this is not possible.  The choice of operator will then depend upon the order in which theories are loaded.  To change this behaviour the functions \ml{wordsLib.deprecate\_word} and \ml{wordsLib.prefer\_word} are provided.  For example, in the following session, the selection of word operators is deprecated:
 \begin{session}
-\begin{verbatim}
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-<<HOL message: inventing new type variable names: 'a>>
-> val it = ``:bool['a]`` : hol_type
+\begin{alltt}
+>> type_of ``a + b``;
 
-- wordsLib.deprecate_word();
-> val it = () : unit
+>> wordsLib.deprecate_word();
 
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-> val it = ``:num`` : hol_type
-\end{verbatim}
+>> type_of ``a + b``;
+\end{alltt}
 \end{session}
 In the above, natural number addition is chosen in preference to word addition.  Conversely, words are preferred over the integers below:
 \begin{session}
-\begin{verbatim}
-- load "intLib"; ...
+\begin{alltt}
+>>_ load "intLib";
+>>__ temp_overload_on("+", ``int_add``);
 
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-> val it = ``:int`` : hol_type
+>> type_of ``a + b``;
 
-- wordsLib.prefer_word();
-> val it = () : unit
-- type_of ``a + b``;
-<<HOL message: more than one resolution of overloading was possible>>
-<<HOL message: inventing new type variable names: 'a>>
-> it = ``:bool['a]`` : hol_type
-\end{verbatim}
+>> wordsLib.prefer_word();
+>> type_of ``a + b``;
+\end{alltt}
 \end{session}
-Of course, type annotations could have been added to avoid this problem entirely.  Note that, unlike \ml{deprecate\_int}, the function \ml{deprecate\_word} does not remove the overloadings, it simply lowers their priority.
+Of course, type annotations could have been added to avoid this problem entirely.
 
 \subsubsection{Guessing word lengths}
 
 It can be a nuisance to add type annotations when specifying the return type for operations such as: \holtxt{word\_extract}, \holtxt{word\_concat}, \holtxt{concat\_word\_list} and \holtxt{word\_replicate}.  This is because there is often a ``standard'' length that could be guessed, \eg{} concatenation usually sums the constituent word lengths.  A facility for word length guessing is controlled by the reference \ml{wordsLib.guessing\_word\_lengths}, which is false by default.  The guesses are made during a post-processing step that occurs after the application of \ml{Parse.Term}.  This is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- wordsLib.guessing_word_lengths:=true;
-> val it = () : unit
+\begin{alltt}
+>> wordsLib.guessing_word_lengths:=true;
 
-- ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
-<<HOL message: inventing new type variable names: 'a, 'b>>
-<<HOL message: assigning word length: 'a <- 4>>
-<<HOL message: assigning word length: 'b <- 12>>
-> val it =
-    ``concat_word_list [(4 >< 1) w; w2; w3]``
-     : term
-\end{verbatim}
+>> ``concat_word_list [(4 >< 1) (w:word32); w2; w3]``;
+\end{alltt}
 \end{session}
 In the example above, word length guessing is turned on.  Two guesses are made: the extraction is expected to give a four bit word, and the concatenation gives a twelve bit word ($3 \times 4$).  If non-standard numeric lengths are required then type annotations can be added to avoid guesses being made.  With guessing turned off the result types would remain as invented type variables, \ie{} as alpha and beta above.
 
@@ -3489,87 +3347,62 @@ Many of these \emph{simpset} fragments have corresponding conversions.  For exam
 
 The behaviour of the fragments listed above are demonstrated using the following function:
 \begin{session}
-\begin{verbatim}
-- fun conv ss = SIMP_CONV (pure_ss++ss) [];
-> val conv = fn : ssfrag -> term -> thm
-\end{verbatim}
+\begin{alltt}
+>> fun conv ss = SIMP_CONV (pure_ss++ss) [];
+\end{alltt}
 \end{session}
 The following session demonstrates \ml{SIZES\_ss}:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.SIZES_ss ``dimindex(:12)``;
-> val it = |- dimindex (:12) = 12 : thm
+\begin{alltt}
+>> conv wordsLib.SIZES_ss ``dimindex(:12)``;
 
-- conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
-> val it = |- FINITE univ(:32) <=> T : thm
-\end{verbatim}
+>> conv wordsLib.SIZES_ss ``FINITE univ(:32)``;
+\end{alltt}
 \end{session}
 The fragment \ml{BIT\_ss} converts \holtxt{BIT} into membership test over a set of (high) bit positions:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.BIT_ss ``BIT 3 5``;
-> val it = |- BIT 3 5 <=> (3 = 0) \/ (3 = 2) : thm
+\begin{alltt}
+>> conv wordsLib.BIT_ss ``BIT 3 5``;
 
-- conv wordsLib.BIT_ss ``BIT i 123``;
-> val it = |- BIT i 123 <=> i IN {0; 1; 3; 4; 5; 6} :
-  thm
-\end{verbatim}
+>> conv wordsLib.BIT_ss ``BIT i 123``;
+\end{alltt}
 \end{session}
 This simplification provides some support for reasoning about bitwise operations over arbitrary word lengths.  The arithmetic, logic and shift fragments help tidy up basic word expressions:
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    |- a && 12w || 11w && a = 15w && a :
-  thm
+\begin{alltt}
+>> conv wordsLib.WORD_LOGIC_ss ``a && 12w || 11w && a``;
 
-- conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
-> val it =
-    |- 3w * b + a + 2w * b - a * 4w = a + b
-     : thm
+>> conv wordsLib.WORD_ARITH_ss ``3w * b + a + 2w * b - a * 4w:word2``;
 
-- conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it =
-    |- 0w << 12 + a >>> 0 + b << 2 << 3 = 0w + a + b << (2 + 3)
-     : thm
-\end{verbatim}
+>> conv wordsLib.WORD_SHIFT_ss ``0w << 12 + a >>> 0 + b << 2 << 3``;
+\end{alltt}
 \end{session}
 
 The remaining fragments are not included in \ml{wordsLib.WORD\_ss} or \ml{srw\_ss}.  The bit equality fragment is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
-> val it =
-    |- (a && b = ~0w) <=> (a ' 1 /\ b ' 1) /\ a ' 0 /\ b ' 0
-     : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.WORD_BIT_EQ_ss) [] ``a && b = ~0w : word2``;
+\end{alltt}
 \end{session}
 The extract fragment is useful for reasoning about bit-field operations and is best used in combination with \ml{wordsLib.SIZES\_ss} or \ml{wordsLib.WORD\_ss}, for example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
-   ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
-> val it =
-    |- (4 -- 1) (a @@ b) = (2 >< 0) a << 1 || (1 >< 1) b
-     : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.SIZES_ss++wordsLib.WORD_EXTRACT_ss) []
+     ``(4 -- 1) ((a:word3) @@ (b:word2)) : word5``;
+\end{alltt}
 \end{session}
 Finally, the fragment \ml{WORD\_MUL\_LSL\_ss} is demonstrated below.
 \begin{session}
-\begin{verbatim}
-- conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
-> val it = |- 5w * a = a << 2 + a : thm
-\end{verbatim}
+\begin{alltt}
+>> conv wordsLib.WORD_MUL_LSL_ss ``5w * a : word8``;
+\end{alltt}
 \end{session}
 Rewriting with the theorem \ml{wordsTheory.WORD\_MUL\_LSL} provides an means to undo this simplification, for example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
-    ``a << 2 + a : word8``;
-> val it = |- a << 2 + a = 5w * a : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (std_ss++wordsLib.WORD_ARITH_ss) [wordsTheory.WORD_MUL_LSL]
+     ``a << 2 + a : word8``;
+\end{alltt}
 \end{session}
 Obviously, without adding safeguards, this rewrite theorem cannot be deployed when used in combination with the \ml{WORD\_MUL\_LSL\_ss} fragment.
 
@@ -3589,26 +3422,20 @@ there are many nested additions (perhaps through multiplication).
 
 The following examples show \ml{BBLAST\_PROVE} in use:
 \begin{session}
-\begin{verbatim}
-- blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
-> val it =
-    |- a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a
-     : thm
+\begin{alltt}
+>>_ load "blastLib";
+>> blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
 
-- blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
-> val it = |- w2w a <+ 256w : thm
-\end{verbatim}
+>> blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
+\end{alltt}
 \end{session}
 The decision procedure \ml{BBLAST\_PROVE} is based on the conversion
 \ml{BBLAST\_CONV}. This conversion can be used to convert bit-vector problems
 into a propositional form; for example:
 \begin{session}
-\begin{verbatim}
-- blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
-> val it =
-   |- ((a + 5w) << 3) ' 5 <=> (~a ' 2 <=> ~(a ' 1 /\ a ' 0))
-   : thm
-\end{verbatim}
+\begin{alltt}
+>> blastLib.BBLAST_CONV ``(((a : word16) + 5w) << 3) ' 5``;
+\end{alltt}
 \end{session}
 There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}; with only the latter making use of goal assumptions.
 

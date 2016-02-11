@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open boolSimps
 
 open set_relationTheory pred_setTheory (* cardinalTheory *)
@@ -243,18 +242,9 @@ val wellorder_fromNat = store_thm(
   "wellorder_fromNat",
   ``wellorder { (i,j) | i <= j /\ j < n }``,
   rw[wellorder_def, wellfounded_def, linear_order_def, in_range, in_domain,
-     reflexive_def]
-  >| [
-    qexists_tac `LEAST m. m IN s` >> numLib.LEAST_ELIM_TAC >> rw[strict_def] >>
-    metis_tac [DECIDE ``x ≤ y ⇔ (x = y) ∨ x < y``],
-    srw_tac[ARITH_ss][transitive_def],
-    srw_tac[ARITH_ss][antisym_def],
-    decide_tac,
-    decide_tac,
-    decide_tac,
-    decide_tac,
-    decide_tac
-  ]);
+     reflexive_def,transitive_def,antisym_def] >>
+  qexists_tac `LEAST m. m IN s` >> numLib.LEAST_ELIM_TAC >> rw[strict_def] >>
+  metis_tac []);
 
 val INJ_preserves_transitive = store_thm(
   "INJ_preserves_transitive",
