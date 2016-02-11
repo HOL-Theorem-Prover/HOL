@@ -9,7 +9,7 @@ val _ = new_theory "lprefix_lub";
 val IS_PREFIX_FILTER = Q.store_thm("IS_PREFIX_FILTER",
   `∀l1 l2. IS_PREFIX l1 l2 ⇒ IS_PREFIX (FILTER P l1) (FILTER P l2)`,
   Induct >> simp[IS_PREFIX_NIL] >>
-  gen_tac >> Cases >> simp[] >> rw[]);
+  gen_tac >> Cases >> simp[] >> srw_tac[][]);
 
 val less_opt_def = Define `
   (less_opt n NONE ⇔ T) ∧
@@ -17,22 +17,22 @@ val less_opt_def = Define `
 
 val less_opt_SUC_elim = Q.store_thm("less_opt_SUC_elim",
   `less_opt (SUC n) z ⇒ less_opt n z`,
-  Cases_on`z`>>rw[less_opt_def]>>simp[])
+  Cases_on`z`>>srw_tac[][less_opt_def]>>simp[])
 
 val less_opt_LLENGTH_LNTH_SOME = Q.store_thm("less_opt_LLENGTH_LNTH_SOME",
   `less_opt n (LLENGTH l) ⇔ IS_SOME (LNTH n l)`,
   EQ_TAC >- (
     Cases_on`LFINITE l` >- (
       imp_res_tac LFINITE_HAS_LENGTH >>
-      rw[less_opt_def] >>
+      srw_tac[][less_opt_def] >>
       qmatch_assum_rename_tac`LLENGTH l = SOME z` >>
       `IS_SOME(LTAKE z l)` suffices_by
         metis_tac[optionTheory.IS_SOME_EXISTS,LTAKE_LNTH_EL] >>
       metis_tac[LFINITE_toList_SOME,optionTheory.THE_DEF,llistTheory.toList] ) >>
     imp_res_tac NOT_LFINITE_NO_LENGTH >>
-    rw[less_opt_def] >>
+    srw_tac[][less_opt_def] >>
     metis_tac[LFINITE_LNTH_NONE,optionTheory.option_CASES,optionTheory.IS_SOME_DEF]) >>
-  rw[IS_SOME_EXISTS] >>
+  srw_tac[][IS_SOME_EXISTS] >>
   Cases_on`LFINITE l` >- (
     imp_res_tac LFINITE_HAS_LENGTH >>
     simp[less_opt_def] >>
@@ -43,67 +43,67 @@ val less_opt_LLENGTH_LNTH_SOME = Q.store_thm("less_opt_LLENGTH_LNTH_SOME",
       arithmeticTheory.LESS_EQ_REFL,
       arithmeticTheory.NOT_NUM_EQ])>>
   imp_res_tac NOT_LFINITE_NO_LENGTH >>
-  rw[less_opt_def]);
+  srw_tac[][less_opt_def]);
 
 val IS_SOME_LTAKE_less_opt_LLENGTH = Q.store_thm("IS_SOME_LTAKE_less_opt_LLENGTH",
   `IS_SOME (LTAKE n ll) ⇒ LLENGTH ll = SOME n ∨ less_opt n (LLENGTH ll)`,
-  rw[IS_SOME_EXISTS] >>
-  imp_res_tac LTAKE_LENGTH >> rw[] >>
-  imp_res_tac LTAKE_IMP_LDROP >> rw[] >>
-  rw[LLENGTH_APPEND] >> fs[LFINITE_fromList] >>
+  srw_tac[][IS_SOME_EXISTS] >>
+  imp_res_tac LTAKE_LENGTH >> srw_tac[][] >>
+  imp_res_tac LTAKE_IMP_LDROP >> srw_tac[][] >>
+  srw_tac[][LLENGTH_APPEND] >> full_simp_tac(srw_ss())[LFINITE_fromList] >>
   simp[less_opt_def,LLENGTH_fromList])
 
 val LPREFIX_NTH = Q.store_thm ("LPREFIX_NTH",
   `!ll1 ll2.
     LPREFIX ll1 ll2 ⇔ !n. less_opt n (LLENGTH ll1) ⇒ LNTH n ll1 = LNTH n ll2`,
-  rw [LPREFIX_APPEND,EQ_IMP_THM]
+  srw_tac[][LPREFIX_APPEND,EQ_IMP_THM]
   >- (
     imp_res_tac (#1(EQ_IMP_RULE less_opt_LLENGTH_LNTH_SOME)) >>
-    fs [IS_SOME_EXISTS, LNTH_LAPPEND] >>
+    full_simp_tac(srw_ss())[IS_SOME_EXISTS, LNTH_LAPPEND] >>
     every_case_tac >>
-    fs [less_opt_def])
+    full_simp_tac(srw_ss())[less_opt_def])
   >- (
     Cases_on `LLENGTH ll1`
     >- (
       `~LFINITE ll1` by metis_tac [LFINITE_HAS_LENGTH, NOT_SOME_NONE] >>
-      fs [less_opt_def, NOT_LFINITE_APPEND] >>
-      rw [LNTH_EQ])
+      full_simp_tac(srw_ss())[less_opt_def, NOT_LFINITE_APPEND] >>
+      srw_tac[][LNTH_EQ])
     >- (
-      fs [less_opt_def, LNTH_EQ, LNTH_LAPPEND] >>
+      full_simp_tac(srw_ss())[less_opt_def, LNTH_EQ, LNTH_LAPPEND] >>
       qexists_tac `THE (LDROP x ll2)` >>
-      rw [] >>
-      fs[arithmeticTheory.NOT_LESS,arithmeticTheory.LESS_EQ_EXISTS] >>
+      srw_tac[][] >>
+      full_simp_tac(srw_ss())[arithmeticTheory.NOT_LESS,arithmeticTheory.LESS_EQ_EXISTS] >>
       simp[LNTH_ADD] >>
       Cases_on`LDROP x ll2`>>simp[] >>
       reverse(Cases_on`LTAKE x ll2`) >- (
-        imp_res_tac LTAKE_IMP_LDROP >> fs[] ) >>
+        imp_res_tac LTAKE_IMP_LDROP >> full_simp_tac(srw_ss())[] ) >>
       `LFINITE ll2` by metis_tac[LFINITE_LNTH_NONE,LTAKE_EQ_NONE_LNTH] >>
-      rw[] >>
+      srw_tac[][] >>
       imp_res_tac LFINITE_HAS_LENGTH >>
       `∀x. n ≤ x ⇒ LNTH x ll2 = NONE` by metis_tac[LNTH_LLENGTH_NONE] >>
       `∀n. n < x ⇒ LNTH n ll1 ≠ NONE` by metis_tac[less_opt_def,less_opt_LLENGTH_LNTH_SOME,optionTheory.IS_SOME_DEF] >>
       `¬(n < x)` by metis_tac[arithmeticTheory.LESS_EQ_REFL] >>
       imp_res_tac to_fromList >>
       imp_res_tac LFINITE_toList >>
-      fs[toList] >> rfs[] >>
-      imp_res_tac LTAKE_LENGTH >> rw[] >>
+      full_simp_tac(srw_ss())[toList] >> rev_full_simp_tac(srw_ss())[] >>
+      imp_res_tac LTAKE_LENGTH >> srw_tac[][] >>
       imp_res_tac LTAKE_TAKE_LESS >>
       metis_tac[arithmeticTheory.NOT_LESS,optionTheory.NOT_NONE_SOME])));
 
 val lnth_some_length = Q.store_thm ("lnth_some_length",
   `!ll n x. LNTH n ll = SOME x ⇒ less_opt n (LLENGTH ll)`,
   Induct_on `n` >>
-  rw [] >>
+  srw_tac[][] >>
   `ll = [||] ∨ ?h t. ll = h:::t` by metis_tac [llist_CASES] >>
-  fs [less_opt_def]
+  full_simp_tac(srw_ss())[less_opt_def]
   >- (
     Cases_on `LLENGTH t` >>
-    fs [less_opt_def])
+    full_simp_tac(srw_ss())[less_opt_def])
   >- (
     first_x_assum (qspec_then `t` mp_tac) >>
     simp [] >>
     Cases_on `LLENGTH t` >>
-    fs [less_opt_def]));
+    full_simp_tac(srw_ss())[less_opt_def]));
 
 val llist_shorter_def = Define `
   llist_shorter ll1 ll2 ⇔
@@ -118,38 +118,38 @@ val llist_shorter_lnth = Q.prove (
   llist_shorter ll1 ll2
   ⇔
   !n x. LNTH n ll1 = SOME x ⇒ ?y. LNTH n ll2 = SOME y`,
- rw [llist_shorter_def] >>
+ srw_tac[][llist_shorter_def] >>
  every_case_tac >>
- fs []
+ full_simp_tac(srw_ss())[]
  >- metis_tac [NOT_SOME_NONE, LFINITE_LLENGTH, LFINITE_LNTH_NONE, option_nchotomy]
  >- metis_tac [NOT_SOME_NONE, LFINITE_LLENGTH, LFINITE_LNTH_NONE, option_nchotomy]
  >- metis_tac [NOT_SOME_NONE, LFINITE_LLENGTH, LFINITE_LNTH_NONE, option_nchotomy]
  >- (
    eq_tac >>
-   rw []
+   srw_tac[][]
    >- (
      imp_res_tac lnth_some_length >>
-     rfs [less_opt_def] >>
+     rev_full_simp_tac(srw_ss())[less_opt_def] >>
      `n < x'` by decide_tac >>
      metis_tac [LTAKE_LNTH_EL, LTAKE_LLENGTH_SOME])
    >- (
      imp_res_tac LTAKE_LLENGTH_SOME >>
      Cases_on `x = 0` >>
-     fs [] >>
+     full_simp_tac(srw_ss())[] >>
      first_x_assum (qspecl_then [`x-1`, `EL (x-1) l'`] mp_tac) >>
-     rw [] >>
+     srw_tac[][] >>
      `x-1 < x` by decide_tac >>
      imp_res_tac LTAKE_LNTH_EL >>
-     fs [lnth_fromList_some] >>
+     full_simp_tac(srw_ss())[lnth_fromList_some] >>
      imp_res_tac lnth_some_length >>
-     rfs [less_opt_def] >>
+     rev_full_simp_tac(srw_ss())[less_opt_def] >>
      simp [])));
 
 val llist_shorter_fromList = Q.store_thm ("llist_shorter_fromList",
 `!l1 l2. llist_shorter (fromList l1) (fromList l2) ⇔ LENGTH l1 ≤ LENGTH l2`,
- rw [llist_shorter_def] >>
+ srw_tac[][llist_shorter_def] >>
  every_case_tac >>
- fs [LLENGTH_fromList]);
+ full_simp_tac(srw_ss())[LLENGTH_fromList]);
 
 val lprefix_chain_def = Define `
   lprefix_chain ls ⇔
@@ -157,7 +157,7 @@ val lprefix_chain_def = Define `
 
 val lprefix_chain_subset = Q.store_thm("lprefix_chain_subset",
   `lprefix_chain ls ∧ y ⊆ ls ⇒ lprefix_chain y`,
-  rw[lprefix_chain_def,SUBSET_DEF]);
+  srw_tac[][lprefix_chain_def,SUBSET_DEF]);
 
 val lprefix_chain_LNTHs_agree = Q.store_thm ("lprefix_chain_LNTHs_agree",
   `lprefix_chain ls ∧
@@ -165,14 +165,14 @@ val lprefix_chain_LNTHs_agree = Q.store_thm ("lprefix_chain_LNTHs_agree",
    LNTH n l1 = SOME x1 ∧
    LNTH n l2 = SOME x2 ⇒
    x1 = x2`,
-  rw[] >>
-  fs[lprefix_chain_def] >>
+  srw_tac[][] >>
+  full_simp_tac(srw_ss())[lprefix_chain_def] >>
   first_x_assum(qspecl_then[`l1`,`l2`]mp_tac) >>
-  rw[] >> fs[LPREFIX_APPEND] >> rw[] >>
-  fs[LNTH_LAPPEND] >>
+  srw_tac[][] >> full_simp_tac(srw_ss())[LPREFIX_APPEND] >> srw_tac[][] >>
+  full_simp_tac(srw_ss())[LNTH_LAPPEND] >>
   every_case_tac >>
-  fs[arithmeticTheory.NOT_LESS,arithmeticTheory.LESS_EQ_EXISTS] >>
-  rw[] >> fsrw_tac[ARITH_ss][] >>
+  full_simp_tac(srw_ss())[arithmeticTheory.NOT_LESS,arithmeticTheory.LESS_EQ_EXISTS] >>
+  srw_tac[][] >> fsrw_tac[ARITH_ss][] >>
   metis_tac[LNTH_LLENGTH_NONE,arithmeticTheory.ADD_SYM,arithmeticTheory.LESS_EQ_ADD,optionTheory.NOT_NONE_SOME]);
 
 val lprefix_chain_nth_def = Define `
@@ -184,7 +184,7 @@ val exists_lprefix_chain_nth = Q.store_thm ("exists_lprefix_chain_nth",
     lprefix_chain ls ∧
     (?l. l ∈ ls ∧ LNTH n l = SOME x) ⇒
     lprefix_chain_nth n ls = SOME x`,
-  rw [some_def, lprefix_chain_nth_def] >>
+  srw_tac[][some_def, lprefix_chain_nth_def] >>
   metis_tac [lprefix_chain_LNTHs_agree, SELECT_THM]);
 
 val not_exists_lprefix_chain_nth = Q.store_thm ("not_exists_lprefix_chain_nth",
@@ -192,7 +192,7 @@ val not_exists_lprefix_chain_nth = Q.store_thm ("not_exists_lprefix_chain_nth",
     lprefix_chain ls ∧
     (!l. l ∈ ls ⇒ LNTH n l = NONE) ⇒
     lprefix_chain_nth n ls = NONE`,
-  rw [some_def, lprefix_chain_nth_def] >>
+  srw_tac[][some_def, lprefix_chain_nth_def] >>
   metis_tac [NOT_SOME_NONE]);
 
 val lprefix_chain_nth_none_mono = Q.store_thm ("lprefix_chain_nth_none_mono",
@@ -202,11 +202,11 @@ val lprefix_chain_nth_none_mono = Q.store_thm ("lprefix_chain_nth_none_mono",
     lprefix_chain_nth m ls = NONE
     ⇒
     lprefix_chain_nth n ls = NONE`,
- rw [] >>
+ srw_tac[][] >>
  match_mp_tac not_exists_lprefix_chain_nth >>
- rw [] >>
+ srw_tac[][] >>
  CCONTR_TAC >>
- fs [] >>
+ full_simp_tac(srw_ss())[] >>
  `LNTH m l ≠ NONE` by metis_tac [LNTH_NONE_MONO] >>
  metis_tac [exists_lprefix_chain_nth, NOT_SOME_NONE, option_nchotomy]);
 
@@ -221,12 +221,12 @@ val equiv_lprefix_chain_thm = Q.store_thm ("equiv_lprefix_chain_thm",
     (equiv_lprefix_chain ls1 ls2 ⇔
       (!ll1 n x. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x ⇒ ?ll2. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x) ∧
       (!ll2 n x. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x ⇒ ?ll1. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x))`,
-  rw [equiv_lprefix_chain_def] >>
+  srw_tac[][equiv_lprefix_chain_def] >>
   eq_tac
   >- metis_tac [not_exists_lprefix_chain_nth, NOT_SOME_NONE, exists_lprefix_chain_nth, option_nchotomy] >>
-  rw [] >>
+  srw_tac[][] >>
   Cases_on `?s l. l ∈ ls1 ∧ LNTH n l = SOME x` >>
-  fs [] >>
+  full_simp_tac(srw_ss())[] >>
   metis_tac [not_exists_lprefix_chain_nth, NOT_SOME_NONE, exists_lprefix_chain_nth, option_nchotomy]);
 
 val equiv_lprefix_chain_thm2 = Q.store_thm ("equiv_lprefix_chain_thm2",
@@ -238,35 +238,35 @@ val equiv_lprefix_chain_thm2 = Q.store_thm ("equiv_lprefix_chain_thm2",
       ∃ll2. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x) ∧
    (!ll2 n x.
      ll2 ∈ ls2 ∧ ll2 ≠ [||] ⇒ ?ll1. ll1 ∈ ls1 ∧ llist_shorter ll2 ll1))`,
- rw [equiv_lprefix_chain_thm] >>
+ srw_tac[][equiv_lprefix_chain_thm] >>
  eq_tac >>
- rw [llist_shorter_lnth]
+ srw_tac[][llist_shorter_lnth]
  >- metis_tac []
  >- (
    Cases_on `?x. LLENGTH ll2 = SOME x` >>
-   fs []
+   full_simp_tac(srw_ss())[]
    >- (
      imp_res_tac LTAKE_LLENGTH_SOME >>
      Cases_on `x = 0` >>
-     fs [] >>
+     full_simp_tac(srw_ss())[] >>
      `x-1 < x` by decide_tac >>
      imp_res_tac LTAKE_LNTH_EL >>
      first_x_assum (qspecl_then [`ll2`, `x-1`, `EL (x-1) l`] mp_tac) >>
-     rw [] >>
+     srw_tac[][] >>
      qexists_tac `ll1` >>
-     rw [] >>
+     srw_tac[][] >>
      imp_res_tac lnth_some_length >>
-     rfs [less_opt_def] >>
+     rev_full_simp_tac(srw_ss())[less_opt_def] >>
      `n ≤ x-1` by decide_tac >>
      metis_tac [lnth_some_down_closed])
    >- (
-     `~LFINITE ll2` by fs [LLENGTH] >>
+     `~LFINITE ll2` by full_simp_tac(srw_ss())[LLENGTH] >>
      metis_tac []))
  >- metis_tac []
  >- (
    `ll2 ≠ [||]` by (
      CCONTR_TAC >>
-     fs []) >>
+     full_simp_tac(srw_ss())[]) >>
    metis_tac [lprefix_chain_LNTHs_agree]));
 
 val lprefix_lub_def = Define `
@@ -276,22 +276,22 @@ val lprefix_lub_def = Define `
 
 val lprefix_lub_is_chain = Q.store_thm ("lprefix_lub_is_chain",
   `!ls ll. lprefix_lub ls ll ⇒ lprefix_chain ls`,
-  rw[lprefix_lub_def,lprefix_chain_def] >>
+  srw_tac[][lprefix_lub_def,lprefix_chain_def] >>
   metis_tac[prefixes_lprefix_total]);
 
 val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
   `!ls lub. lprefix_chain ls ⇒
     (lprefix_lub ls lub ⇔ !n. LNTH n lub = lprefix_chain_nth n ls)`,
-  rw [lprefix_lub_def,EQ_IMP_THM] >- (
-    Cases_on `LNTH n lub` >> rw []
+  srw_tac[][lprefix_lub_def,EQ_IMP_THM] >- (
+    Cases_on `LNTH n lub` >> srw_tac[][]
     >- (
       `!l. l ∈ ls ⇒ LNTH n l = NONE` by (
-         rw [] >>
+         srw_tac[][] >>
          res_tac >>
-         fs [LPREFIX_APPEND] >>
-         fs [LNTH_LAPPEND] >>
+         full_simp_tac(srw_ss())[LPREFIX_APPEND] >>
+         full_simp_tac(srw_ss())[LNTH_LAPPEND] >>
          every_case_tac >>
-         fs [] >>
+         full_simp_tac(srw_ss())[] >>
          match_mp_tac LNTH_LLENGTH_NONE >>
          simp []) >>
       metis_tac [not_exists_lprefix_chain_nth])
@@ -302,12 +302,12 @@ val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
       spose_not_then strip_assume_tac >>
       qpat_assum `∀ub. (∀ll. ll ∈ ls ⇒ LPREFIX ll ub) ⇒ LPREFIX lub ub`
         (qspec_then `fromList (THE (LTAKE n lub))` mp_tac) >>
-      rw [] >- (
+      srw_tac[][] >- (
         `IS_SOME (LTAKE n lub)` by metis_tac[LTAKE_EQ_NONE_LNTH,IF_NONE_EQUALS_OPTION] >>
-        fs[IS_SOME_EXISTS] >>
+        full_simp_tac(srw_ss())[IS_SOME_EXISTS] >>
         simp[LPREFIX_NTH] >>
         simp[LNTH_fromList] >>
-        rw[] >- (
+        srw_tac[][] >- (
           `LPREFIX ll lub` by metis_tac[] >>
           pop_assum mp_tac >>
           simp_tac std_ss [LPREFIX_NTH] >>
@@ -320,7 +320,7 @@ val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
         imp_res_tac LTAKE_LENGTH >>
         qmatch_assum_rename_tac`less_opt m (LLENGTH ll)` >>
         `n ≤ m` by decide_tac >>
-        fs[less_opt_LLENGTH_LNTH_SOME] >>
+        full_simp_tac(srw_ss())[less_opt_LLENGTH_LNTH_SOME] >>
         `IS_SOME (LNTH n ll)` by
           metis_tac[arithmeticTheory.LESS_EQ_TRANS,
                     arithmeticTheory.NOT_LESS,
@@ -328,48 +328,48 @@ val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
                     less_opt_def,
                     NOT_LFINITE_NO_LENGTH,
                     less_opt_LLENGTH_LNTH_SOME] >>
-        fs[IS_SOME_EXISTS] >>
+        full_simp_tac(srw_ss())[IS_SOME_EXISTS] >>
         `less_opt n (LLENGTH ll)` by metis_tac[IS_SOME_DEF,less_opt_LLENGTH_LNTH_SOME] >>
         `LPREFIX ll lub` by metis_tac[] >> pop_assum mp_tac >>
         simp_tac std_ss [LPREFIX_NTH] >>
         qexists_tac`n`>>simp[]>>
-        strip_tac >> rw[] >> metis_tac[]) >>
+        strip_tac >> srw_tac[][] >> metis_tac[]) >>
       simp[LPREFIX_def,from_toList] >>
       `IS_SOME (LTAKE n lub)` by metis_tac[LTAKE_EQ_NONE_LNTH,optionTheory.IF_NONE_EQUALS_OPTION] >>
-      fs[IS_SOME_EXISTS] >>
+      full_simp_tac(srw_ss())[IS_SOME_EXISTS] >>
       qmatch_assum_rename_tac`LTAKE n lub = SOME l` >>
-      rw[toList] >- (
+      srw_tac[][toList] >- (
         imp_res_tac LFINITE_HAS_LENGTH >> simp[] >>
         imp_res_tac LTAKE_LLENGTH_SOME >> simp[] >>
-        imp_res_tac to_fromList >> rfs[] >> rw[] >>
-        fs[LLENGTH_fromList] >> rw[] >>
-        imp_res_tac LTAKE_LENGTH >> rw[] >>
-        strip_tac >> fs[IS_PREFIX_APPEND] >> fs[] >>
-        imp_res_tac LTAKE_LENGTH >> fs[] >>
+        imp_res_tac to_fromList >> rev_full_simp_tac(srw_ss())[] >> srw_tac[][] >>
+        full_simp_tac(srw_ss())[LLENGTH_fromList] >> srw_tac[][] >>
+        imp_res_tac LTAKE_LENGTH >> srw_tac[][] >>
+        strip_tac >> full_simp_tac(srw_ss())[IS_PREFIX_APPEND] >> full_simp_tac(srw_ss())[] >>
+        imp_res_tac LTAKE_LENGTH >> full_simp_tac(srw_ss())[] >>
         `IS_SOME (LTAKE (LENGTH l) (fromList l'))` by simp[] >>
         imp_res_tac IS_SOME_LTAKE_less_opt_LLENGTH >>
         pop_assum mp_tac >>
         simp[LLENGTH_fromList,less_opt_def] >>
-        Cases_on`l''`>>simp[] >> fs[] >> rw[] >>
+        Cases_on`l''`>>simp[] >> full_simp_tac(srw_ss())[] >> srw_tac[][] >>
         metis_tac[LLENGTH_fromList,LNTH_LLENGTH_NONE,NOT_SOME_NONE,
                   arithmeticTheory.LESS_EQ_ADD,
                   numeralTheory.numeral_distrib |> CONJUNCT2 |> CONJUNCT1]) >>
       metis_tac[LFINITE_fromList]))
   >- (
-    rw [LPREFIX_NTH] >>
+    srw_tac[][LPREFIX_NTH] >>
     imp_res_tac (#1(EQ_IMP_RULE less_opt_LLENGTH_LNTH_SOME)) >>
-    fs [IS_SOME_EXISTS] >>
+    full_simp_tac(srw_ss())[IS_SOME_EXISTS] >>
     metis_tac [exists_lprefix_chain_nth])
   >- (
-    rw[LPREFIX_NTH] >>
+    srw_tac[][LPREFIX_NTH] >>
     Cases_on`∃l x. l ∈ ls ∧ LNTH n l = SOME x` >- (
-      fs[] >>
+      full_simp_tac(srw_ss())[] >>
       `lprefix_chain_nth n ls = SOME x` by
         metis_tac[exists_lprefix_chain_nth] >>
       simp[] >>
       `LPREFIX l ub` by metis_tac[] >>
       pop_assum mp_tac >>
-      simp_tac std_ss [LPREFIX_APPEND] >> rw[] >>
+      simp_tac std_ss [LPREFIX_APPEND] >> srw_tac[][] >>
       simp[LNTH_LAPPEND] >>
       every_case_tac >> simp[] >>
       metis_tac[LNTH_LLENGTH_NONE,optionTheory.NOT_SOME_NONE,arithmeticTheory.NOT_LESS] ) >>
@@ -383,7 +383,7 @@ val unique_lprefix_lub = Q.store_thm ("unique_lprefix_lub",
     lprefix_lub f ll2
     ⇒
     ll1 = ll2`,
-  rw[lprefix_lub_def] >>
+  srw_tac[][lprefix_lub_def] >>
   metis_tac[LPREFIX_ANTISYM,LPREFIX_REFL]);
 
 val build_lprefix_lub_f_def = Define`
@@ -399,15 +399,15 @@ val build_lprefix_lub_lem = Q.prove (
   rpt gen_tac >>
   DISCH_TAC >>
   Induct_on `n` >>
-  rw [Once LUNFOLD, build_lprefix_lub_f_def] >>
+  srw_tac[][Once LUNFOLD, build_lprefix_lub_f_def] >>
   Cases_on `lprefix_chain_nth m ls` >>
-  fs []
+  full_simp_tac(srw_ss())[]
   >- metis_tac [lprefix_chain_nth_none_mono, DECIDE ``m ≤ m + SUC n``]
   >- simp [arithmeticTheory.ADD1]);
 
 val build_lprefix_lub_thm = Q.store_thm ("build_lprefix_lub_thm",
   `!ls. lprefix_chain ls ⇒ lprefix_lub ls (build_lprefix_lub ls)`,
-  rw [lprefix_lub_nth, build_lprefix_lub_def] >>
+  srw_tac[][lprefix_lub_nth, build_lprefix_lub_def] >>
   metis_tac [build_lprefix_lub_lem, DECIDE ``0 + x = x:num``])
 
 val lprefix_lub_equiv_chain = Q.store_thm ("lprefix_lub_equiv_chain",
@@ -417,9 +417,9 @@ val lprefix_lub_equiv_chain = Q.store_thm ("lprefix_lub_equiv_chain",
     equiv_lprefix_chain ls1 ls2
     ⇒
     (lprefix_lub ls1 ll ⇔ lprefix_lub ls2 ll)`,
-  rw [] >>
+  srw_tac[][] >>
   imp_res_tac lprefix_lub_is_chain >>
-  fs [lprefix_lub_nth, equiv_lprefix_chain_def]);
+  full_simp_tac(srw_ss())[lprefix_lub_nth, equiv_lprefix_chain_def]);
 
 val lprefix_lub_equiv_chain2 = Q.store_thm ("lprefix_lub_equiv_chain2",
   `!ls1 ls2 ll1 ll2.
@@ -427,11 +427,11 @@ val lprefix_lub_equiv_chain2 = Q.store_thm ("lprefix_lub_equiv_chain2",
     lprefix_lub ls2 ll2
     ⇒
     (ll1 = ll2 ⇔ equiv_lprefix_chain ls1 ls2)`,
-  rw [] >>
+  srw_tac[][] >>
   imp_res_tac lprefix_lub_is_chain >>
   eq_tac >>
-  rw [] >>
-  fs [lprefix_lub_nth, equiv_lprefix_chain_def] >>
+  srw_tac[][] >>
+  full_simp_tac(srw_ss())[lprefix_lub_nth, equiv_lprefix_chain_def] >>
   simp [LNTH_EQ]);
 
 val lprefix_lub_new_chain = Q.store_thm ("lprefix_lub_new_chain",
@@ -449,12 +449,12 @@ val prefix_chain_def = Define`
 
 val prefix_chain_lprefix_chain = Q.store_thm("prefix_chain_lprefix_chain",
   `prefix_chain ls ⇒ lprefix_chain (IMAGE fromList ls)`,
-  rw[prefix_chain_def,lprefix_chain_def] >>
-  rw[llistTheory.LPREFIX_fromList,llistTheory.from_toList])
+  srw_tac[][prefix_chain_def,lprefix_chain_def] >>
+  srw_tac[][llistTheory.LPREFIX_fromList,llistTheory.from_toList])
 
 val prefix_chain_FILTER = Q.store_thm("prefix_chain_FILTER",
   `prefix_chain ls ⇒ prefix_chain (IMAGE (FILTER P) ls)`,
-  rw[prefix_chain_def] >> metis_tac[IS_PREFIX_FILTER])
+  srw_tac[][prefix_chain_def] >> metis_tac[IS_PREFIX_FILTER])
 
 val build_prefix_lub_intro = Q.store_thm("build_prefix_lub_intro",
   `lprefix_chain ls ⇒
