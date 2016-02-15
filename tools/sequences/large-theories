@@ -22,6 +22,7 @@ src/HolSmt
 !examples/pattern_matches
 src/Boolify/src
 src/float
-[poly]src/floating-point
+src/floating-point
+[poly]src/floating-point/compute
 src/probability
 src/temporal/src
