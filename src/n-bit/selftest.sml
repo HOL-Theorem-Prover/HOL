@@ -111,16 +111,6 @@ in
   fun qtest_conv conv q = List.app (test_conv conv) (quote_to_term_list q)
 end
 
-fun time_to_minutes e =
-let
-  val s = Time.toSeconds e
-  val minutes = Int.quot (s, 60)
-  val seconds = Int.rem (s, 60)
-in
-  Int.toString minutes ^ "m " ^
-  StringCvt.padLeft #"0" 2 (Int.toString seconds) ^ "s"
-end
-
 val blast_true = test blastLib.BBLAST_PROVE
 val blast_fail = test_fail "BBLAST_PROVE" blastLib.BBLAST_PROVE
 val blast_counter = test_counter blastLib.BBLAST_PROVE
@@ -624,6 +614,6 @@ val () = qtest_conv wordsLib.WORD_GROUND_CONV
 
 val elapsed = Timer.checkRealTimer tt
 
-val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n");
+val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n");
 
 val _ = OS.Process.exit OS.Process.success
