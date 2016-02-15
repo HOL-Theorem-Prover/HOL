@@ -21,18 +21,20 @@ fun fromString s =
       open Substring
       val (pfx, rest) = splitl (fn c => c = #"-" orelse c = #"~") (full s)
       val is_positive = Int.mod (size pfx, 2) = 0
-      val res = Arbnumcore.toInt (Arbnumcore.fromString (string rest))
+      val res = Arbnumcore.toLargeInt (Arbnumcore.fromString (string rest))
    in
       if is_positive then res else ~res
    end
 
-fun fromInt x = x
-fun fromNat x = Arbnumcore.toInt x
-fun toInt x = x
+val fromInt = IntInf.fromInt
+fun fromLargeInt x = x
+fun fromNat x = Arbnumcore.toLargeInt x
+val toInt = IntInf.toInt
+fun toLargeInt x = x
 fun toNat x =
    if x < 0
       then raise Fail "Attempt to make negative integer a nat"
-   else Arbnumcore.fromInt x
+   else Arbnumcore.fromLargeInt x
 
 val divmod = divMod
 val quotrem = quotRem

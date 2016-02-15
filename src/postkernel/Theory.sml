@@ -858,33 +858,6 @@ fun export_theory () = let
        theorems = T,
        struct_ps = struct_ps,
        thydata = mungethydata thydata}
-  val five_minutes = 300
-  val one_hour = 60 * 60
-  fun divmod (x,y) = (x div y, x mod y)
-  fun tstr t = let
-    val secs = Time.toSeconds t
-    val pad2 = StringCvt.padLeft #"0" 2
-  in
-    if secs > five_minutes then let
-        val (minutes, secs) = divmod(secs, 60)
-      in
-        if minutes > 60 then let
-            val (hours,  minutes) = divmod(minutes, 60)
-          in
-            Int.toString hours ^ "h" ^
-            pad2 (Int.toString minutes) ^ "m" ^
-            pad2 (Int.toString secs) ^ "s"
-          end
-        else Int.toString minutes ^ "m" ^ pad2 (Int.toString secs)
-      end
-    else let
-        val msecs = Time.toMilliseconds t
-        val (secs,msecs) = divmod(msecs, 1000)
-      in
-        Int.toString secs ^ "." ^
-        StringCvt.padLeft #"0" 3 (Int.toString msecs) ^ "s"
-      end
-  end
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in
@@ -894,7 +867,7 @@ fun export_theory () = let
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
-          val tstr = tstr time_since
+          val tstr = Lib.time_to_string time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
         theory_out 85 (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
