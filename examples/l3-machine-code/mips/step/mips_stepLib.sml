@@ -133,7 +133,7 @@ val rule =
 
 val () = utilsLib.resetStepConv ()
 
-fun reg i = bitstringSyntax.padded_fixedwidth_of_int (i, 5)
+fun reg i = bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt i, 5)
 
 val r0 = reg 0
 
@@ -855,7 +855,8 @@ local
    fun x i = Term.mk_var ("x" ^ Int.toString i, Type.bool)
    fun assign_bits (p, i, n) =
       let
-         val l = (i, n) |> bitstringSyntax.padded_fixedwidth_of_int
+         val l = (i, n) |> (Arbnum.fromInt ## Lib.I)
+                        |> bitstringSyntax.padded_fixedwidth_of_num
                         |> bitstringSyntax.dest_v2w |> fst
                         |> listSyntax.dest_list |> fst
       in

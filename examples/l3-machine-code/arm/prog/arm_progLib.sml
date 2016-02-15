@@ -227,7 +227,8 @@ local
        | "arm_FP_FPSCR_C" => 22
        | "arm_FP_FPSCR_V" => 23
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
+   val int_of_v2w =
+     Arbnum.toInt o bitstringSyntax.num_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
@@ -578,7 +579,8 @@ in
    fun stm_wb_thms base thm =
       let
         val (x3, x4, x5, x6) =
-           utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist base)
+           utilsLib.padLeft false 4
+                (bitstringSyntax.num_to_bitlist (Arbnum.fromInt base))
            |> List.map bitstringSyntax.mk_b
            |> Lib.quadruple_of_list
       in

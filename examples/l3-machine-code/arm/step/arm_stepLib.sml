@@ -3869,7 +3869,8 @@ local
            |> Term.rand
            |> bitstringSyntax.dest_v2w |> fst
            |> get_cond
-           |> bitstringSyntax.int_of_term
+           |> bitstringSyntax.num_of_term
+           |> Arbnum.toInt
            |> (fn i => wordsSyntax.mk_wordii (if i = 15 then 14 else i, 4))
            |> mk_state enc
    val default_tms = List.map fix_datatype

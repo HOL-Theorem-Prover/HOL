@@ -157,13 +157,13 @@ sig
    val LU : Term.term
    val LT : Term.term
    val LF : Term.term
-   val LI : int -> Term.term
-   val LN : int -> Term.term
+   val LI : IntInf.int -> Term.term
+   val LN : IntInf.int -> Term.term
    val LSC : char -> Term.term
    val LS : string -> Term.term
    val LV : string -> Term.term
-   val LW : int * int -> Term.term
-   val LY : int * string -> Term.term
+   val LW : IntInf.int * int -> Term.term
+   val LY : IntInf.int * string -> Term.term
    val LC : string * ParseDatatype.pretype -> Term.term
    val LE : ParseDatatype.pretype -> Term.term
    val LNL: ParseDatatype.pretype -> Term.term

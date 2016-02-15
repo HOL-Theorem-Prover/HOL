@@ -224,7 +224,8 @@ local
   val rwts =
     List.map bitstringLib.v2w_n2w_CONV
        (List.tabulate
-          (32, fn i => bitstringSyntax.padded_fixedwidth_of_int (i, 5)))
+          (32, fn i => bitstringSyntax.padded_fixedwidth_of_num
+                         (Arbnum.fromInt i, 5)))
   fun dest_reg tm = let val (_, n, v) = dest_riscv_gpr tm in (n, v) end
   val reg_width = 5
   val proj_reg = NONE : (term -> int) option

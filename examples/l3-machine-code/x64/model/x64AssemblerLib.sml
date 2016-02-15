@@ -73,7 +73,7 @@ fun x64_syntax_pass1 q =
 
 local
    open x64
-   fun w64 i = BitsN.fromInt (i, 64)
+   fun w64 i = BitsN.fromNativeInt (i, 64)
    fun sub i = fn j => BitsN.- (j, w64 i)
    val s2 = sub 2
    val s5 = sub 5
@@ -166,7 +166,7 @@ in
                  x64.Zfull_inst (_, (ast, [])) =>
                     let
                        val s = x64.joinString
-                                 (x64.instructionToString (ast, List.length l))
+                                 (x64.instructionToString (ast, L3.length l))
                     in
                        (s, SOME (bs, check c l s))
                     end

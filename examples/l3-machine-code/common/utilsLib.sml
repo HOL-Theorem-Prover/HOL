@@ -176,7 +176,8 @@ fun zipLists f =
 fun list_mk_wordii w = List.map (fn i => wordsSyntax.mk_wordii (i, w))
 
 fun tab_fixedwidth m w =
-   List.tabulate (m, fn n => bitstringSyntax.padded_fixedwidth_of_int (n, w))
+   List.tabulate
+     (m, fn n => bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt n, w))
 
 local
    fun liftSplit f = (Substring.string ## Substring.string) o f o Substring.full

@@ -4,18 +4,20 @@ sig
    eqtype nat
    *)
 
-   type nat = int
+   type nat = IntInf.int
 
    val compare: nat * nat -> order
 
    val fromBool: bool -> nat
-   val fromInt: int -> nat
+   val fromInt: IntInf.int -> nat
+   val fromNativeInt: int -> nat
    val fromString: string -> nat option
    val fromBinString: string -> nat option
    val fromHexString: string -> nat option
    val fromLit: string -> nat option
 
-   val toInt: nat -> int
+   val toInt: nat -> IntInf.int
+   val toNativeInt: nat -> int
    val toWord: nat -> word
    val toString: nat -> string
    val toBinString: nat -> string

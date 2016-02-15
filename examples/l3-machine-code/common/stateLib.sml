@@ -1591,7 +1591,8 @@ in
          val reg_rule = utilsLib.FULL_CONV_RULE reg_conv
          val bits = List.map bitstringSyntax.mk_b o
                     utilsLib.padLeft false reg_width o
-                    bitstringSyntax.int_to_bitlist
+                    bitstringSyntax.num_to_bitlist o
+                    Arbnum.fromInt
          fun proj_reg0 tm =
             case Lib.total (fst o bitstringSyntax.dest_v2w) tm of
                SOME l => fst (listSyntax.dest_list l)

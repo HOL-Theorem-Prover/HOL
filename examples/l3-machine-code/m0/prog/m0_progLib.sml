@@ -195,7 +195,8 @@ local
        | "m0_PSR_C" => 11
        | "m0_PSR_V" => 12
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
+   val int_of_v2w =
+     Arbnum.toInt o bitstringSyntax.num_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    val total_dest_reg = Lib.total (wordsSyntax.uint_of_word o Term.rand)
    fun word_compare (w1, w2) =
@@ -562,8 +563,7 @@ local
                       |> List.map Arbnum.fromString
                       |> mlibUseful.min Arbnum.compare
                       |> fst
-                      |> Arbnum.toInt
-                      |> bitstringSyntax.int_to_bitlist
+                      |> bitstringSyntax.num_to_bitlist
                       |> utilsLib.padLeft false 3
                       |> List.map bitstringSyntax.mk_b
                       |> Lib.triple_of_list

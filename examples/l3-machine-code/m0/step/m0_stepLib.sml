@@ -1374,7 +1374,8 @@ local
                      val l = List.drop (i, 5)
                      val rn = List.take (l, 3)
                               |> List.map bitstringSyntax.dest_b
-                              |> bitstringSyntax.bitlist_to_int
+                              |> bitstringSyntax.bitlist_to_num
+                              |> Arbnum.toInt
                      val registers = List.drop (l, 3)
                      val wb = not (bitstringSyntax.dest_b
                                       (List.nth (registers, 7 - rn)))

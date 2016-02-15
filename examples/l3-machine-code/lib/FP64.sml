@@ -12,14 +12,18 @@ struct
      val bytes = Word8Vector.length (P.toBytes R.posInf)
    in
      val size = 8 * bytes
-     val byte = Word8.fromInt o BitsN.toNat o L3.uncurry BitsN.bits
-     fun unbyte b = BitsN.fromNat (Word8.toInt b, 8)
+     val byte = Word8.fromLargeInt o BitsN.toNat o L3.uncurry BitsN.bits
+     fun unbyte b = BitsN.fromNat (Word8.toLargeInt b, 8)
      fun fromBits w =
-       ( BitsN.size w = size orelse
+       ( IntInf.toInt (BitsN.size w) = size orelse
          raise Fail ("fromBits: not " ^ Int.toString size ^ "-bit word")
        ; (P.fromBytes o Word8Vector.fromList)
            (List.tabulate
-             (bytes, fn i => let val j = 8 * i in byte ((j + 7, j), w) end))
+             (bytes, fn i => let
+                                val j = 8 * IntInf.fromInt i
+                             in
+                                byte ((j + 7, j), w)
+                             end))
        )
      fun toBits r =
        let
@@ -50,10 +54,10 @@ struct
      let
        val r = fromBits w
      in
-       if R.isFinite r then SOME (R.toInt m r) else NONE
+       if R.isFinite r then SOME (R.toLargeInt m r) else NONE
      end
 
-   fun fromInt (m, i) = toBits (withMode m R.fromInt i)
+   fun fromInt (m, i) = toBits (withMode m R.fromLargeInt i)
    val fromString = Option.map toBits o R.fromString
    val toString = R.fmt StringCvt.EXACT o fromBits
 
@@ -63,15 +67,18 @@ struct
    fun isSubnormal a = R.class (fromBits a) = IEEEReal.SUBNORMAL
 
    local
-     fun fpOp f (a, b) = f (fromBits a, fromBits b)
-     fun fpOp1 f = toBits o f o fromBits
-     fun fpOp2 f (m, a) = toBits (withMode m (fpOp f) a)
-     val sign_bit = BitsN.#>> (BitsN.B (1, size), 1)
+     fun fromBits2 (a, b) = (fromBits a, fromBits b)
+     fun fpOp from f (m, a) = (toBits o withMode m f o from) a
+     fun fpOp0 f = toBits o f o fromBits
+     val fpOp1 = fpOp fromBits
+     val fpOp2 = fpOp fromBits2
+     val fpOp3 = fpOp (fn (a, (b, c)) => (fromBits a, fromBits b, fromBits c))
+     val sign_bit = BitsN.#>> (BitsN.B (1, IntInf.fromInt size), 1)
      val comp_sign_bit = BitsN.~ sign_bit
    in
      (* native versions - could be IEEE:1985 or IEEE:2008 *)
-     val abs = fpOp1 R.abs
-     val neg = fpOp1 R.~
+     val abs = fpOp0 R.abs
+     val neg = fpOp0 R.~
 
      (* IEEE754:1985 says that the sign bit of a NaN is left unchanged *)
      fun abs1985 x =
@@ -105,20 +112,23 @@ struct
          if R.isNan r then BitsN.?? (x, sign_bit) else toBits (R.~ r)
        end
 
+     val sqrt = fpOp1 R.Math.sqrt
+
      val add = fpOp2 R.+
      val mul = fpOp2 R.*
      val sub = fpOp2 R.-
      val op div = fpOp2 R./
 
-     fun sqrt (m, a) = toBits (withMode m R.Math.sqrt (fromBits a))
+     val equal = R.== o fromBits2
+     val compare = R.compareReal o fromBits2
+     val greaterThan = R.> o fromBits2
+     val greaterEqual = R.>= o fromBits2
+     val lessThan = R.< o fromBits2
+     val lessEqual = R.<= o fromBits2
 
-     val equal = fpOp R.==
-     val compare = fpOp R.compareReal
-     val greaterThan = fpOp R.>
-     val greaterEqual = fpOp R.>=
-     val lessThan = fpOp R.<
-     val lessEqual = fpOp R.<=
+     val mul_add = fpOp3 R.*+
+     val mul_sub = fpOp3 R.*-
 
    end
 
-end (* structure FP64 *)
+end (* functor FP *)

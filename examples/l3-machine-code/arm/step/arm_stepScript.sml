@@ -986,7 +986,8 @@ fun enumerate_v2w n =
    in
       List.tabulate
          (m, fn i => bitstringLib.v2w_n2w_CONV
-                         (bitstringSyntax.padded_fixedwidth_of_int (i, n)))
+                         (bitstringSyntax.padded_fixedwidth_of_num
+                            (Arbnum.fromInt i, n)))
       |> Drule.LIST_CONJ
    end
 
