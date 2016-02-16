@@ -694,7 +694,7 @@ in
           \***  or\n\
           \***    config-override           (Moscow ML)\n\
           \***\n\
-          \*** (Under Poly/ML you will have to delete bin/hol.builder0 as \
+          \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
           \well)\n***\n\
           \*** (Or: build with -nograph to stop this \
           \message from appearing again)\n")
