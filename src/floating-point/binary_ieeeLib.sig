@@ -3,11 +3,20 @@ sig
 
    val add_ieee_to_compset: computeLib.compset -> unit
 
-   val floatToReal : Term.term -> real
-   val wordToReal  : Term.term -> real
-   val realToFloat : real -> Term.term
-   val realToWord  : real -> Term.term
-   val native_ty   : Type.hol_type
+   val is_native: (Type.hol_type -> bool) ref
+   val native_float_sqrt_CONV: Conv.conv ref
+   val native_float_add_CONV: Conv.conv ref
+   val native_float_sub_CONV: Conv.conv ref
+   val native_float_mul_CONV: Conv.conv ref
+   val native_float_div_CONV: Conv.conv ref
+   val native_float_mul_add_CONV: Conv.conv ref
+   val native_float_mul_sub_CONV: Conv.conv ref
+   val native_float_less_than_CONV: Conv.conv ref
+   val native_float_less_equal_CONV: Conv.conv ref
+   val native_float_greater_than_CONV: Conv.conv ref
+   val native_float_greater_equal_CONV: Conv.conv ref
+   val native_float_equal_CONV: Conv.conv ref
+   val native_float_compare_CONV: Conv.conv ref
 
    val FLOAT_DATATYPE_CONV: Conv.conv
    val REAL_REDUCE_CONV: Conv.conv

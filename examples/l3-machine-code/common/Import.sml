@@ -3,8 +3,8 @@ struct
 
 open HolKernel boolLib bossLib
 open state_transformerTheory bitstringLib stringLib binary_ieeeSyntax
-     fp32Syntax fp64Syntax intSyntax integer_wordSyntax bitstringSyntax
-     state_transformerSyntax
+     fp32Syntax fp64Syntax machine_ieeeSyntax intSyntax integer_wordSyntax
+     bitstringSyntax state_transformerSyntax
 
 val ERR = mk_HOL_ERR "Import"
 
@@ -706,12 +706,6 @@ local
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
 
-   val (fp32_to_fp64_tm, mk_fp32_to_fp64, dest_fp32_to_fp64, is_fp32_to_fp64) =
-      HolKernel.syntax_fns1 "machine_ieee" "fp32_to_fp64"
-
-   val (fp64_to_fp32_tm, mk_fp64_to_fp32, dest_fp64_to_fp32, is_fp64_to_fp32) =
-      HolKernel.syntax_fns2 "machine_ieee" "fp64_to_fp32"
-
    local
      val mk_vars =
        List.rev o snd o
@@ -741,7 +735,7 @@ local
             | FPToInt 64 => fp64Syntax.fp_to_int_tm
             | FPFromInt 32 => fp32Syntax.int_to_fp_tm
             | FPFromInt 64 => fp64Syntax.int_to_fp_tm
-            | FP64To32 => fp64_to_fp32_tm
+            | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
             | FPAdd 32 => fp32Syntax.fp_add_tm
             | FPAdd 64 => fp64Syntax.fp_add_tm
             | FPDiv 32 => fp32Syntax.fp_div_tm
@@ -985,7 +979,7 @@ in
        | FPNeg (64, old) =>
            if old then fp64Syntax.mk_fp_negate1985 else fp64Syntax.mk_fp_negate
        | FPNeg (i, _) => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
-       | FP32To64 => mk_fp32_to_fp64
+       | FP32To64 => machine_ieeeSyntax.mk_fp32_to_fp64
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd

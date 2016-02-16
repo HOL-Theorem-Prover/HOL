@@ -1,10 +1,12 @@
 open HolKernel Parse boolLib bossLib
-open intLib binary_ieeeLib binary_ieeeSyntax
+open intLib native_ieeeLib binary_ieeeSyntax machine_ieeeTheory
 open testutils
 
+(*
 fun printn s = print (s ^ "\n")
 fun die s = ( printn s; raise ERR "" "" )
 val die = printn
+*)
 
 val () = show_tags := true
 
@@ -42,7 +44,7 @@ val round_constants =
    [roundTiesToEven_tm, roundTowardZero_tm]
 
 fun lcf_eval tm = Feedback.trace ("native ieee", 0) EVAL tm
-fun native_eval tm = Feedback.trace ("native ieee", 2) EVAL tm
+fun native_eval tm = Feedback.trace ("native ieee", 1) EVAL tm
 
 fun has_tags tags thm =
    case Tag.dest_tag (Thm.tag thm) of
