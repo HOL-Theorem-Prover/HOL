@@ -506,7 +506,7 @@ This will be done in one step using the \ML{} function \ml{prove}.
 \begin{alltt}
 >> val PARITY_CORRECT = prove(
      ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
-     rpt strip_tac >> irule UNIQUENESS_LEMMA >>
+     rpt strip_tac >> match_mp_tac UNIQUENESS_LEMMA >>
      irule PARITY_LEMMA >> rw[]);
 \end{alltt}
 \end{session}
