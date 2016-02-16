@@ -7,8 +7,8 @@ struct
 
 datatype 'a ptree =
      Empty
-   | Leaf of int * 'a
-   | Branch of int * int * 'a ptree * 'a ptree
+   | Leaf of IntInf.int * 'a
+   | Branch of IntInf.int * int * 'a ptree * 'a ptree
 
 fun bit (b, n) = IntInf.~>> (n, Word.fromInt b) mod 2 = 1
 fun mod_2exp (x, n) = IntInf.andb (n, IntInf.<< (1, Word.fromInt x) - 1)

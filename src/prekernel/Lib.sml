@@ -763,31 +763,25 @@ end
 local
    val second = Time.fromReal 1.0
    val minute = Time.fromReal 60.0
-   val hour = Time.fromReal (60.0 * 60.0)
-   fun divmod (x, y) = (x div y, x mod y)
-   fun toStr v u = StringCvt.padLeft #"0" 2 (Int.toString v) ^ u
+   val year0 = Date.year (Date.fromTimeUniv Time.zeroTime)
+   fun to_str i u = if i = 0 then "" else Int.toString i ^ u
 in
-   fun timeToString t =
+   fun time_to_string t =
       if Time.< (t, second)
          then Time.fmt 5 t ^ "s"
       else if Time.< (t, minute)
-         then Time.toString t ^ "s"
+         then Time.fmt 1 t ^ "s"
       else let
-              val (m, s) = divmod (Time.toSeconds t, 60)
+              val d = Date.fromTimeUniv t
+              val years = Date.year d - year0
+              val days = Date.yearDay d
+              val hours = Date.hour d
+              val minutes = Date.minute d
            in
-              if Time.< (t, hour)
-                 then Int.toString m ^ "m" ^ toStr s "s"
-              else let
-                     val (h, m) = divmod (m, 60)
-                     val (d, h) = divmod (h, 24)
-                   in
-                      (if d = 0
-                          then ""
-                       else if d = 1
-                          then "1 day "
-                       else Int.toString d ^ " days ") ^
-                      Int.toString h ^ "h" ^ toStr m "m" ^ toStr s "s"
-                   end
+              if years + days + hours = 0 andalso minutes < 10 then
+                 to_str minutes "m" ^ Date.fmt "%Ss" d
+              else to_str years "y" ^ to_str days "d" ^ to_str hours "h" ^
+                   Date.fmt "%Mm%Ss" d
            end
 end
 
@@ -798,9 +792,9 @@ fun end_time timer =
       val {sys, usr} = Timer.checkCPUTimer timer
       val gc = Timer.checkGCTime timer
    in
-      say ("runtime: " ^ timeToString usr ^ ",\
-       \    gctime: " ^ timeToString gc ^ ", \
-       \    systime: " ^ timeToString sys ^ ".\n")
+      say ("runtime: " ^ time_to_string usr ^ ",\
+       \    gctime: " ^ time_to_string gc ^ ", \
+       \    systime: " ^ time_to_string sys ^ ".\n")
    end
 
 fun time f x =

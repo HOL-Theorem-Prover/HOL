@@ -22,12 +22,6 @@ sig
    val mk_float_var: hol_type * hol_type -> string -> term
    val mk_ifloat_var: int * int -> string -> term
 
-   val floatToReal : term -> real
-   val wordToReal  : term -> real
-   val realToFloat : real -> term
-   val realToWord  : real -> term
-   val native_ty   : hol_type
-
    val EQ_tm: term
    val GT_tm: term
    val LT_tm: term

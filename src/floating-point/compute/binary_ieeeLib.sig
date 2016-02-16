@@ -3,6 +3,12 @@ sig
 
    val add_ieee_to_compset: computeLib.compset -> unit
 
+   val floatToReal : Term.term -> real
+   val wordToReal  : Term.term -> real
+   val realToFloat : real -> Term.term
+   val realToWord  : real -> Term.term
+   val native_ty   : Type.hol_type
+
    val FLOAT_DATATYPE_CONV: Conv.conv
    val REAL_REDUCE_CONV: Conv.conv
    val ULP_CONV: Conv.conv

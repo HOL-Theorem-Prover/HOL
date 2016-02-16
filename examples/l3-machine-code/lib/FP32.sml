@@ -33,6 +33,8 @@ struct
    fun neg2008 _ = err "neg2008"
    fun add _ = err "add"
    fun mul _ = err "mul"
+   fun mul_add _ = err "mul_add"
+   fun mul_sub _ = err "mul_sub"
    fun sub _ = err "sub"
    fun sqrt _ = err "sqrt"
    fun op div _ = err "div"

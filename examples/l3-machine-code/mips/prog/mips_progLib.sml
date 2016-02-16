@@ -310,8 +310,8 @@ local
    fun dest_reg tm =
       case Lib.total dest_v2w_reg tm of
          SOME l => l
-       | NONE => dest_reg (bitstringSyntax.padded_fixedwidth_of_int
-                              (wordsSyntax.uint_of_word tm, 5))
+       | NONE => dest_reg (bitstringSyntax.padded_fixedwidth_of_num
+                              (wordsSyntax.dest_word_literal tm, 5))
    val join =
       fn ([(s1 as {redex = r1, residue = d1} :: l1, l2)],
           [(s2 as {redex = r2, residue = d2} :: l3, l4)]) =>

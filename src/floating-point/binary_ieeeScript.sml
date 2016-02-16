@@ -543,7 +543,7 @@ val zero_le_pos_div_twopow = Q.store_thm("zero_le_pos_div_twopow",
    rw [realTheory.REAL_LE_DIV, realTheory.REAL_LT_IMP_LE])
 
 val div_eq0 = Q.store_thm("div_eq0",
-   `!a b. 0 < b ==> ((a / b = 0) = (a = 0))`,
+   `!a b. 0r < b ==> ((a / b = 0) = (a = 0))`,
    rw [realTheory.REAL_EQ_LDIV_EQ])
 
 val () = bossLib.export_rewrites ["zero_le_pos_div_twopow", "div_eq0"]
@@ -613,7 +613,7 @@ val ge2 = Q.prove(
    rw [DECIDE ``0 < a /\ a <> 1 ==> 2n <= a``])
 
 val ge2b = Q.prove(
-   `!n. 2n <= n ==> 1 <= 2 ** (n - 1) - 1`,
+   `!n. 2n <= n ==> 1 <= 2n ** (n - 1) - 1`,
    REPEAT strip_tac
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
    \\ simp [arithmeticTheory.EXP_ADD, DECIDE ``0 < n ==> 1n <= 2 * n - 1``])
@@ -669,7 +669,7 @@ val le2 = Q.store_thm("le2",
    )
 
 val ge4 = Q.prove(
-   `!n. n <> 0 ==> 4 <= 2 EXP n * 2`,
+   `!n. n <> 0 ==> 4n <= 2 EXP n * 2`,
    Cases
    \\ simp [arithmeticTheory.EXP]
    )
@@ -758,7 +758,7 @@ val exp_id = Q.prove(
   \\ lrw [arithmeticTheory.EXP, mult_id])
 
 val sub_rat_same_base = Q.prove(
-   `!a b d. 0 < d ==> (a / d - b / d = (a - b) / d)`,
+   `!a b d. 0r < d ==> (a / d - b / d = (a - b) / d)`,
    rrw [realTheory.REAL_EQ_RDIV_EQ, realTheory.REAL_SUB_RDISTRIB,
         realTheory.REAL_DIV_RMUL]
    )
@@ -1384,7 +1384,7 @@ val diff_sign_ULP_gt = Q.prove(
            DECIDE ``0n < x ==> 0 < 2 * x``,
            realLib.REAL_ARITH ``a <= b /\ 0r <= c /\ 1 <= d ==> a < b + c + d``,
            realLib.REAL_ARITH
-              ``a <= b /\ 0 <= c /\ 2 <= d /\ 0 <= e ==> a < b + c + (d + e)``,
+              ``a <= b /\ 0r <= c /\ 2 <= d /\ 0 <= e ==> a < b + c + (d + e)``,
            realLib.REAL_ARITH
               ``1 <= a /\ 2r <= b /\ 0 <= c ==> 2 < 2 * a + (b + c)``
            |> Q.INST [`a` |-> `&n`]
@@ -1609,7 +1609,7 @@ local
       )
 
    val lem2 = Q.prove(
-      `!x. x <> 0w ==> 1 < 2 EXP w2n x`,
+      `!x. x <> 0w ==> 1n < 2 EXP w2n x`,
       Cases
       \\ rw []
       \\ `0 < n` by decide_tac
@@ -1697,7 +1697,7 @@ local
    fun tac thm q =
       abs_diff_tac thm
       >- (match_mp_tac thm \\ t2)
-      \\ Q.ABBREV_TAC `z = &w2n ^(Parse.Term q)`
+      \\ Q.ABBREV_TAC `z:real = &w2n ^(Parse.Term q)`
       \\ t3
 in
    fun tac1 thm =
@@ -1715,14 +1715,14 @@ in
       by (ASSUME_TAC (Q.ISPEC `(x: ('t, 'w) float).Significand` w2n_lt_pow)
            \\ pop_assum
                 (strip_assume_tac o MATCH_MP arithmeticTheory.LESS_ADD_1)
-           \\ qexists_tac `&(p' + 1)`
+           \\ qexists_tac `&(p' + 1n)`
            \\ simp [realTheory.REAL_OF_NUM_POW, Abbr `z`])
       \\ rsimp []
    val tac3 =
       tac abs_diff2b `(y: ('t, 'w) float).Significand`
       \\ once_rewrite_tac
            [div_le
-            |> Q.SPEC `2 pow w2n (y:('t, 'w) float).Exponent`
+            |> Q.SPEC `2r pow w2n (y:('t, 'w) float).Exponent`
             |> SIMP_RULE (srw_ss()) []
             |> GSYM]
       \\ simp [GSYM realTheory.REAL_DIV_ADD, GSYM realTheory.REAL_ADD_LDISTRIB,
@@ -2080,7 +2080,7 @@ val float_to_real_11_left =
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
 val diff1pos = Q.prove(
-   `!a. a <> 0w ==> (&w2n a - &w2n (a + -1w) = 1)`,
+   `!a. a <> 0w ==> (&w2n a - &w2n (a + -1w) = 1r)`,
    Cases
    \\ Cases_on `n`
    \\ simp [wordsTheory.n2w_SUC]
@@ -2088,7 +2088,7 @@ val diff1pos = Q.prove(
    )
 
 val diff1neg = Q.prove(
-   `!a. a <> -1w ==> (&w2n a - &w2n (a + 1w) = -1)`,
+   `!a. a <> -1w ==> (&w2n a - &w2n (a + 1w) = -1r)`,
    rw [realTheory.REAL_SUB, bitTheory.SUC_SUB, DECIDE ``~(SUC n <= n)``,
        GSYM wordsTheory.WORD_LS,
        ONCE_REWRITE_RULE [GSYM wordsTheory.WORD_ADD_COMM]

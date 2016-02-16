@@ -8,7 +8,7 @@ sig
    eqtype nbit
    *)
 
-   datatype nbit = B of (int * Nat.nat)
+   datatype nbit = B of (IntInf.int * Nat.nat)
 
    val compare: nbit * nbit -> order
    val signedCompare: nbit * nbit -> order
@@ -18,8 +18,9 @@ sig
    val fromBitstring: Bitstring.bitstring * Nat.nat -> nbit
    val fromBool: Nat.nat -> bool -> nbit
    val fromHexString: string * Nat.nat -> nbit option
-   val fromInt: int * Nat.nat -> nbit
-   val fromLit: string * int -> nbit option
+   val fromInt: IntInf.int * Nat.nat -> nbit
+   val fromNativeInt: int * int -> nbit
+   val fromLit: string * IntInf.int -> nbit option
    val fromNat: Nat.nat * Nat.nat -> nbit
    val fromNatCheck: Nat.nat * Nat.nat -> nbit
    val fromString: string * Nat.nat -> nbit option
@@ -27,10 +28,10 @@ sig
    val toBinString: nbit -> string
    val toBitstring: nbit -> Bitstring.bitstring
    val toHexString: nbit -> string
-   val toInt: nbit -> int
+   val toInt: nbit -> IntInf.int
    val toNat: nbit -> Nat.nat
    val toString: nbit -> string
-   val toUInt: nbit -> int
+   val toUInt: nbit -> IntInf.int
 
    val #<< : nbit * Nat.nat -> nbit
    val #<<^ : nbit * nbit -> nbit
@@ -80,8 +81,8 @@ sig
    val quot: nbit * nbit -> nbit
    val rem: nbit * nbit -> nbit
    val replicate: nbit * Nat.nat -> nbit
-   val resize: int -> nbit -> nbit
-   val resize_replicate: int -> nbit * Nat.nat -> nbit
+   val resize: IntInf.int -> nbit -> nbit
+   val resize_replicate: IntInf.int -> nbit * Nat.nat -> nbit
    val reverse: nbit -> nbit
    val signExtend: Nat.nat -> nbit -> nbit
    val size: nbit -> Nat.nat

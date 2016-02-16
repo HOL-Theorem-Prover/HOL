@@ -187,7 +187,6 @@ local
        | "arm8_TCR_EL1_TBI0" => 10
        | "arm8_TCR_EL1_TBI1" => 11
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
@@ -251,7 +250,8 @@ local
    val rwts =
       List.map bitstringLib.v2w_n2w_CONV
          (List.tabulate
-            (32, fn i => bitstringSyntax.padded_fixedwidth_of_int (i, 5)))
+            (32, fn i => bitstringSyntax.padded_fixedwidth_of_num
+                           (Arbnum.fromInt i, 5)))
 in
    val REG_CONV = Conv.QCONV (REWRITE_CONV rwts)
 end

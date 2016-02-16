@@ -10,16 +10,6 @@ val () = show_tags := true
 
 (* ------------------------------------------------------------------------ *)
 
-fun time_to_minutes e =
-   let
-      val s = Time.toSeconds e
-      val minutes = Int.quot (s, 60);
-      val seconds = Int.rem (s, 60);
-   in
-      Int.toString minutes ^ "m " ^
-      StringCvt.padLeft #"0" 2 (Int.toString seconds) ^ "s"
-   end
-
 local
    val s_t = ``1w:word1``
    val s_f = ``0w:word1``
@@ -271,7 +261,7 @@ val () = test_orderings native_ty
 
 val elapsed = Timer.checkRealTimer tt;
 
-val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n")
+val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n")
 
 (* ------------------------------------------------------------------------ *)
 

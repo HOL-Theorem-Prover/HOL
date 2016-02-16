@@ -5,8 +5,8 @@ sig
 
    val bitstring_ty : hol_type
 
-   val int_to_bitlist : int -> bool list
-   val bitlist_to_int : bool list -> int
+   val num_to_bitlist : Arbnum.num -> bool list
+   val bitlist_to_num : bool list -> Arbnum.num
 
    val bool_of_term : term -> bool
    val term_of_bool : bool -> term
@@ -14,24 +14,24 @@ sig
    val bitlist_of_term : term -> bool list
    val binstring_of_term : term -> string
    val hexstring_of_term : term -> string
-   val int_of_term : term -> int
+   val num_of_term : term -> Arbnum.num
 
    val bitstring_of_bitlist : bool list -> term
    val bitstring_of_binstring : string -> term
    val bitstring_of_hexstring : string -> term
-   val bitstring_of_int : int -> term
+   val bitstring_of_num : Arbnum.num -> term
 
    val bitvector_of_bitlist : bool list -> term
    val bitvector_of_binstring : string -> term
    val bitvector_of_hexstring : string -> term
-   val bitvector_of_int : int -> term
+   val bitvector_of_num : Arbnum.num -> term
 
    val fixedwidth_of_bitlist : bool list * int -> term
    val fixedwidth_of_binstring : string * int -> term
    val fixedwidth_of_hexstring : string * int -> term
-   val fixedwidth_of_int : int * int -> term
+   val fixedwidth_of_num : Arbnum.num * int -> term
 
-   val padded_fixedwidth_of_int : int * int -> term
+   val padded_fixedwidth_of_num : Arbnum.num * int -> term
 
    val dest_b : term -> bool
 

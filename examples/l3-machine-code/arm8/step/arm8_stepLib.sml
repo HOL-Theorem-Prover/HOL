@@ -380,8 +380,8 @@ local
    val lem2 = f `(~wback \/ n <> t /\ n <> t2 \/ (n = 31w: word5)) ==>
                  ~(d /\ wback /\ ((n = t) \/ (n = t2)) /\ n <> 31w)`
 
-   fun w1 i = bitstringSyntax.fixedwidth_of_int (i, 1)
-   fun w2 i = bitstringSyntax.padded_fixedwidth_of_int (i, 2)
+   fun w1 i = bitstringSyntax.fixedwidth_of_num (Arbnum.fromInt i, 1)
+   fun w2 i = bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt i, 2)
 
    val () = setEvConv (Conv.DEPTH_CONV bitstringLib.word_bit_CONV)
 in
