@@ -4112,6 +4112,36 @@ MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
 Q.EXISTS_TAC `f e + SIGMA g s` THEN
 SRW_TAC [][]);
 
+val SUM_IMAGE_INJ_o = store_thm(
+  "SUM_IMAGE_INJ_o",
+  ``!s. FINITE s ==> !g. INJ g s univ(:'a) ==>
+        !f. SIGMA f (IMAGE g s) = SIGMA (f o g) s``,
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  REPEAT STRIP_TAC THEN1
+    SRW_TAC[][SUM_IMAGE_THM] THEN
+  `INJ g s univ(:'a) /\ g e IN univ(:'a) /\
+   !y. y IN s /\ (g e = g y) ==> (e = y)`
+    by METIS_TAC[INJ_INSERT] THEN
+  `g e NOTIN (IMAGE g s)` by METIS_TAC[IN_IMAGE] THEN
+  `(s DELETE e = s) /\ (IMAGE g s DELETE g e = IMAGE g s)`
+     by METIS_TAC[DELETE_NON_ELEMENT] THEN
+  SRW_TAC[][SUM_IMAGE_THM, IMAGE_FINITE]);
+
+val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
+val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
+
+val SUM_IMAGE_PERMUTES = store_thm(
+  "SUM_IMAGE_PERMUTES",
+  ``!s. FINITE s ==> !g. g PERMUTES s ==> !f. SIGMA (f o g) s = SIGMA f s``,
+  REPEAT STRIP_TAC THEN
+  `INJ g s s /\ SURJ g s s` by METIS_TAC[BIJ_DEF] THEN
+  `IMAGE g s = s` by SRW_TAC[][GSYM IMAGE_SURJ] THEN
+  `s SUBSET univ(:'a)` by SRW_TAC[][SUBSET_UNIV] THEN
+  `INJ g s univ(:'a)` by METIS_TAC[INJ_SUBSET, SUBSET_REFL] THEN
+  `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by SRW_TAC[][SUM_IMAGE_INJ_o] THEN
+  SRW_TAC[][]);
+
+
 (*---------------------------------------------------------------------------*)
 (* Support for Cases, Cases_on, Induct, and termination proofs               *)
 (*---------------------------------------------------------------------------*)
