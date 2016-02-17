@@ -60,7 +60,7 @@ In the session below, the proof is performed in the \HOL\ system,
 using the \ML\ functions \ml{ASSUME}\index{ASSUME@\ml{ASSUME}} and
 \ml{MP}.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >> show_assums := true;
@@ -170,7 +170,7 @@ counted.%
 ) Assume that the printing of theorems has been adjusted as above and
 \ml{th} is bound as shown below:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ val th = DECIDE ``(t1 ==> t2) ==> (t2 ==> t1) ==> (t1 = t2)``
@@ -279,7 +279,7 @@ The timing\index{counting inferences, in HOL proofs@counting inferences, in \HOL
 of theorems is adjusted as above.
 
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ Globals.linewidth := 60;
