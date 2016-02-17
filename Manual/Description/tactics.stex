@@ -234,7 +234,7 @@ A simple example from list theory (Section~\ref{sec:list})
 illustrates the use of tactics.
 A conjunctive goal is declared, and \ml{conj\_tac} applied to it:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >> val gl0 = ([]:term list,``(HD[1;2;3] = 1) /\ (TL[1;2;3] = [2;3])``);
@@ -1050,7 +1050,7 @@ to a particular tactic, namely \ml{DISCH\_TAC}.
 $v$ under the assumption $u$, the discharged antecedent.  For example,
 suppose it were required to prove that $(n = 0) \imp (n\times n = n)$:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >> g `(n = 0) ==> (n * n = n)`;
@@ -1092,7 +1092,7 @@ The one subgoal therefore has no
 assumptions on its stack.  The two tactics used thus far could be combined
 into one using the tactical \ml{\gt\gt}:\index{THEN@\ml{THEN}}
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop()
@@ -1111,7 +1111,7 @@ into one using the tactical \ml{\gt\gt}:\index{THEN@\ml{THEN}}
 
 \noindent A single tactic can, of course, be written to solve the goal:\footnote{Indeed, the tactic \ml{simp[]} solves the entire goal from the outset.}
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>_ restart();
@@ -1129,7 +1129,7 @@ To accomplish this access in the straightforward way would
 require some more awkward
 \index{assumptions!explicit} construct, with explicit assumptions:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop();
@@ -1161,7 +1161,7 @@ The tactic
 $p$ and $q$, respectively, as new assumptions.
 
 Simply using \ml{DISCH\_TAC} does not cause the disjunction to split when it becomes an assumption.
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop()
@@ -1231,7 +1231,7 @@ The original example for \ml{pop\_assum} illustrates this: namely, to show that 
 Here, instead of discharging the antecedent by applying \ml{DISCH\_TAC} to the goal, which adds the antecedent as an assumption and returns the consequent as the conclusion, and {\it then\/} supplying the (assumed) added assumption to the theorem continuation \ml{SUBST1\_TAC} and discarding it at the same time, a tactical called \ml{disch\_then} is applied to \ml{SUBST1\_TAC} directly.
 \ml{disch\_then} transforms \ml{SUBST1\_TAC} into a new tactic: one that applies \ml{SUBST1\_TAC} directly to the (assumed) antecedent, and the resulting tactic to a subgoal with no new assumptions and the consequent as its conclusion:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop();
@@ -1259,7 +1259,7 @@ For example, to prove $(0=n) \imp (n \times n = n)$,
 the result $n=0$ could be reversed
 immediately:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop();
@@ -1284,7 +1284,7 @@ reflected the assumption.
 On the goal with the disjunctive antecedent, this method again
 provides a compact tactic:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
 >>__ drop();
