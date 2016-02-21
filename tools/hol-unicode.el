@@ -151,6 +151,7 @@
 (define-key hol-unicode-zero-map "-" "⊖")
 (define-key hol-unicode-zero-map "." "⊙")
 (define-key hol-unicode-zero-map "/" "⊘")
+(define-key hol-unicode-zero-map "0" "∘") ; U+2218
 
 (define-key hol-unicode-U-map "u" "𝕌")
 (define-key hol-unicode-U-map "+" "⊎") ; U+228E "multiset union"
