@@ -31,7 +31,7 @@ val bitify_def = Define`
   (bitify a (T :: l) = bitify (1::a) l)`
 
 val n2v_def = Define`
-  n2v n = if n = 0 then [F] else boolify [] (num_to_bin_list n)`
+  n2v n = boolify [] (num_to_bin_list n)`
 
 val v2n_def = Define`
   v2n l = num_from_bin_list (bitify [] l)`
