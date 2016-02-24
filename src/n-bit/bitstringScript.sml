@@ -18,7 +18,7 @@ val _ = new_theory "bitstring";
 val _ = Parse.type_abbrev ("bitstring", ``:bool list``);
 
 val extend_def = Define`
-   (extend _ 0 l = l) /\
+   (extend _ 0 l = l: bitstring) /\
    (extend c (SUC n) l = extend c n (c::l))`;
 
 val boolify_def = Define`
@@ -64,7 +64,7 @@ val shiftl_def = Define`
   shiftl v m = PAD_RIGHT F (LENGTH v + m) v`;
 
 val shiftr_def = Define`
-  shiftr v m = TAKE (LENGTH v - m) v`;
+  shiftr (v: bitstring) m = TAKE (LENGTH v - m) v`;
 
 val field_def = Define`
   field h l v = fixwidth (SUC h - l) (shiftr v l)`;
@@ -986,7 +986,7 @@ val _ = computeLib.add_persistent_funs [
      "word_bits_v2w",
      "word_extract_v2w",
      "word_slice_v2w",
-     "word_join_v2w",
+     "word_join_v2w_rwt",
      "word_concat_v2w_rwt",
      "word_reduce_v2w",
      "reduce_and_v2w",
