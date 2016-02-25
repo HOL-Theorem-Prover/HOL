@@ -22,6 +22,7 @@ local
       ppt pps t
     end
   val ppg = term_grammar.prettyprint_grammar gprint
+  val ppgrules = term_grammar.prettyprint_grammar_rules gprint
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
   fun pp_redblackmap pps (d: ('a,'b) Redblackmap.dict) =
     PP.add_string pps
@@ -94,6 +95,7 @@ in
       ; PolyML.addPrettyPrinter pp_breakstyle
       end
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
+  ; PolyML.addPrettyPrinter (pp2polypp ppgrules)
   ; PolyML.addPrettyPrinter (pp2polypp locpp)
   ; PolyML.addPrettyPrinter (pp2polypp pp_redblackmap)
   ; PolyML.addPrettyPrinter (pp2polypp pp_redblackset)

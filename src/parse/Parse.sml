@@ -350,7 +350,7 @@ fun print_term_grammar() = let
     open PP
   in
     begin_block pps CONSISTENT 0;
-    prettyprint_grammar_rules tmprint pps (!the_term_grammar);
+    prettyprint_grammar_rules tmprint pps (ruleset (!the_term_grammar));
     add_newline pps;
     end_block pps
   end
