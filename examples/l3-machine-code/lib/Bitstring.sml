@@ -140,9 +140,6 @@ struct
    fun toList l = l
    fun fromList l = l
 
-   fun modify (f: Nat.nat * bool -> bool) a =
-      #1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0) a)
-
    fun op << (l, s) = l @ zero s
 
    fun op >>+ (l, s) = List.take (l, List.length l - Nat.toNativeInt s)
@@ -175,6 +172,9 @@ struct
       end
 
    fun bit (a, n) = bits (n, n) a = [true]
+
+   fun modify (f: Nat.nat * bool -> bool) a =
+      #1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0) a)
 
    fun bitFieldInsert (h,l) (x, y) =
       modify (fn (i, b) => if Nat.<= (l, i) andalso Nat.<= (i, h)

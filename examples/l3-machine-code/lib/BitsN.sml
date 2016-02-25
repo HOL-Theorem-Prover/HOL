@@ -132,11 +132,6 @@ struct
       fun fromList l = B (iter 0 l, Nat.fromNativeInt (List.length l))
    end
 
-   fun modify (f: Nat.nat * bool -> bool, a) =
-      fromList
-         (#1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0)
-                (toList a)))
-
    fun tabulate (s, f: Nat.nat -> bool) =
       let
          val s = Nat.toNativeInt s

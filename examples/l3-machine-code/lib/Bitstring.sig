@@ -28,7 +28,6 @@ sig
    val fromList: bool list -> bitstring
 
    val bitFieldInsert: Nat.nat * Nat.nat -> bitstring * bitstring -> bitstring
-   val modify: (Nat.nat * bool -> bool) -> bitstring -> bitstring
 
    val zero: Nat.nat -> bitstring
    val one: Nat.nat -> bitstring

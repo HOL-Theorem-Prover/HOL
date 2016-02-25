@@ -99,7 +99,6 @@ sig
      | Lsl
      | Lsr
      | Lt
-     | Mdfy
      | Mod
      | Mul
      | Or
