@@ -766,6 +766,10 @@ val WORD_ADD_REDUCE_CONV =
    PURE_REWRITE_CONV WORD_LITERAL_ADD_thms THENC WORD_LITERAL_REDUCE_CONV
 
 val gci_word_mul =
+  let
+    val cnv = PURE_REWRITE_CONV WORD_LITERAL_MULT_thms
+              THENC WORD_LITERAL_REDUCE_CONV
+  in
    GenPolyCanon.GCI
     {dest = wordsSyntax.dest_word_mul,
      is_literal = fn t => is_word_literal t
@@ -778,13 +782,12 @@ val gci_word_mul =
      l_asscomm = GenPolyCanon.derive_l_asscomm WORD_MULT_ASSOC WORD_MULT_COMM,
      r_asscomm = GenPolyCanon.derive_r_asscomm WORD_MULT_ASSOC WORD_MULT_COMM,
      non_coeff = I,
-     merge = PURE_REWRITE_CONV WORD_LITERAL_MULT_thms
-             THENC WORD_LITERAL_REDUCE_CONV,
-     postnorm = REWRITE_CONV (List.take (word_mult_clauses, 2)),
+     merge = cnv,
+     postnorm = ALL_CONV,
      left_id = WORD_MULT_LEFT_1,
      right_id = List.nth (word_mult_clauses, 3),
-     reducer = PURE_REWRITE_CONV WORD_LITERAL_MULT_thms
-               THENC WORD_LITERAL_REDUCE_CONV}
+     reducer = cnv}
+  end
 
 local
    fun is_good t =
