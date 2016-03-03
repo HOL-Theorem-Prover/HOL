@@ -9,6 +9,8 @@ src/prekernel
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+src/opentheory
+src/opentheory/logging
 src/bool
 src/1
 src/proofman

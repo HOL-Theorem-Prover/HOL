@@ -702,24 +702,53 @@ in th end
 
 fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
 
-fun raw_start_logging out =
+
+
+fun log_some_thms axdefs th =
+  (case Thm.proof th of
+      Thm.Def_const_prf (thyrec, _) =>
+      if Lib.mem (#Name thyrec) axdefs then Thm.delete_proof th
+      else ()
+    | _ => ();
+   log_thm th)
+
+fun raw_start_logging axdefs out =
   case !log_state of
     Not_logging => let
-      val _ = Thm.set_definition_callback log_thm
+      val _ = Thm.set_definition_callback (log_some_thms axdefs)
       val _ = log_state := Active_logging out
       val _ = log_num 6
       val _ = log_command "version"
     in () end
   | Active_logging _ => ()
 
-fun start_logging() =
-  case !log_state of
-    Not_logging => let
-      val name = Theory.current_theory()
-      val path = mk_path name
-      val file = TextIO.openOut path
-    in raw_start_logging file end
-  | Active_logging _ => ()
+fun start_logging nm =
+  let
+    val mungefilename = nm ^ ".mfn"
+    val axiomatic_defs =
+        let
+          val strm = TextIO.openIn mungefilename
+          val _ = print ("Opening "^mungefilename^"\n")
+          fun read acc =
+            case TextIO.inputLine strm of
+                NONE => acc
+              | SOME s0 =>
+                 (case String.tokens Char.isSpace s0 of
+                      [constname] => read (constname :: acc)
+                    | _=> (print ("Malformed line: "^s0); read acc))
+        in
+          (read [] before TextIO.closeIn strm)
+        end handle IO.Io _ => []
+  in
+    case !log_state of
+        Not_logging =>
+        let
+          val name = Theory.current_theory()
+          val path = mk_path name
+          val file = TextIO.openOut path
+        in raw_start_logging axiomatic_defs file end
+      | Active_logging _ => ()
+  end
 
 fun stop_logging() =
   case !log_state of

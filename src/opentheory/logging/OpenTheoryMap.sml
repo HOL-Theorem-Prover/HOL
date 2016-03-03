@@ -60,44 +60,12 @@ struct
                                               write = write_deltas}
   fun tyopToString  {Thy,Tyop} = "(Thy="^Thy^",Tyop="^Tyop^")"
   fun constToString {Thy,Name} = "(Thy="^Thy^",Name="^Name^")"
-  fun temp_OpenTheory_tyop_name0 src {tyop,name} = let
-    val _ = case Map.peek(!the_tyop_to_ot,tyop) of NONE => ()
-            | SOME oldn => if oldn = name then () else
-              Feedback.HOL_WARNING "OpenTheoryMap" "OpenTheory_tyop_name"
-                (src^" overrides "^tyopToString tyop^
-                 " (was \""^(ots oldn)^"\"; now \""^(ots name)^"\"")
-  in
-    the_tyop_to_ot   := Map.insert(!the_tyop_to_ot  ,tyop,name);
-    the_tyop_from_ot := Map.insert(!the_tyop_from_ot,name,tyop)
-  end
+  fun temp_OpenTheory_tyop_name0 src {tyop,name} = ()
   val temp_OpenTheory_tyop_name = temp_OpenTheory_tyop_name0 "OpenTheory_tyop_name call"
-  fun temp_OpenTheory_const_name0 src {const,name} = let
-    val _ =
-        case Map.peek(!the_const_to_ot,const) of
-          NONE => ()
-        | SOME oldn =>
-          if oldn = name then ()
-          else
-            Feedback.HOL_WARNING
-                "OpenTheoryMap" "OpenTheory_const_name"
-                (String.concat [src, " overrides ", constToString const,
-                                " (was \"", ots oldn, "\"; now \"", ots name,
-                                "\""])
-  in
-    the_const_to_ot   := Map.insert(!the_const_to_ot  ,const,name);
-    if unwanted name then () else the_const_from_ot := Map.insert(!the_const_from_ot,name,const)
-  end
+  fun temp_OpenTheory_const_name0 src {const,name} = ()
   val temp_OpenTheory_const_name = temp_OpenTheory_const_name0 "OpenTheory_const_name call"
-  fun OpenTheory_tyop_name r = let in
-    temp_OpenTheory_tyop_name r;
-    Theory.LoadableThyData.write_data_update {thydataty = tyname,
-                                              data = mk ([r],[])}
-  end
-  fun OpenTheory_const_name r = let in
-    temp_OpenTheory_const_name r;
-    Theory.LoadableThyData.write_data_update {thydataty = tyname,
-                                              data = mk ([],[r])}
-  end
+  fun OpenTheory_tyop_name r = ()
+  fun OpenTheory_const_name r = ()
   fun onload thyname =
     case Theory.LoadableThyData.segment_data {thy = thyname, thydataty = tyname} of
       NONE => ()

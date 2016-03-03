@@ -1,8 +1,8 @@
 signature Logging =
 sig
 
-val raw_start_logging : TextIO.outstream -> unit
-val start_logging : unit -> unit
+val raw_start_logging : string list -> TextIO.outstream -> unit
+val start_logging : string -> unit
 val export_thm    : Thm.thm -> Thm.thm
 val stop_logging  : unit -> unit
 
