@@ -1,3 +1,20 @@
+name: hol-base
+version: 1.0
+description: HOL4 Basic theories
+author: HOL4 people
+license: MIT
+show: "HOL4"
+show: "Data.Bool"
+show: "Data.Option"
+show: "Data.Unit"
+show: "Data.Sum"
+show: "Data.Pair"
+show: "Function"
+show: "Relation"
+show: "Number.Natural"
+requires: base
+main {
+  article: "hol4-base.art"
   interpret: type "HOL4.min.ind" as "ind"
   interpret: const "HOL4.min.@" as "select"
   interpret: const "HOL4.bool.!" as "Data.Bool.!"
@@ -61,3 +78,4 @@
   interpret: const "HOL4.num.SUC" as "Number.Natural.suc"
   interpret: const "HOL4.prim_rec.<" as "Number.Natural.<"
   interpret: const "HOL4.prim_rec.PRE" as "Number.Natural.pre"
+}

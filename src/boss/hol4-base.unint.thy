@@ -27,50 +27,40 @@ main {
 }
 marker {
   article: "../marker/marker.ot.art"
-!interpretation
 }
 combin {
   import: marker
   article: "../combin/combin.ot.art"
-!interpretation
 }
 relation {
   import: combin
   article: "../relation/relation.ot.art"
-!interpretation
 }
 one {
   article: "../one/one.ot.art"
-!interpretation
 }
 pair {
   import: relation
   article: "../pair/src/pair.ot.art"
-!interpretation
 }
 poset {
   import: pair
   article: "../pair/src/poset.ot.art"
-!interpretation
 }
 sum {
   import: combin
   article: "../sum/sum.ot.art"
-!interpretation
 }
 option {
   import: one
   import: sum
   article: "../option/option.ot.art"
-!interpretation
 }
 num {
   article: "../num/theories/num.ot.art"
-!interpretation
 }
 prim-rec {
   import: relation
   import: num
   article: "../num/theories/prim_rec.ot.art"
-!interpretation
 }

@@ -25,3 +25,23 @@ all: selftest.exe $(UOFILES)
 
 selftest.exe: selftest.uo bossLib.uo
 	$(HOLMOSMLC) -o $@ $<
+
+.PHONY: OpenTheoryInstall
+
+OpenTheoryInstall: hol4-base.thy hol4-base.art
+	opentheory install --reinstall $<
+
+ARTS =\
+  ../marker/marker.ot.art\
+  ../combin/combin.ot.art\
+  ../relation/relation.ot.art\
+  ../one/one.ot.art\
+  ../pair/src/pair.ot.art\
+  ../pair/src/poset.ot.art\
+  ../sum/sum.ot.art\
+  ../option/option.ot.art\
+  ../num/theories/num.ot.art\
+  ../num/theories/prim_rec.ot.art
+
+hol4-base.art: hol4-base.unint.thy $(ARTS)
+	opentheory info --article -o $@ $<
