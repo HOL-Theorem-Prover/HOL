@@ -683,11 +683,18 @@ in (log_term, log_thm, reset_dict,
     set_tyop_name_handler, reset_tyop_name_handler)
 end
 
+val definitions = ref []
+
+fun log_definitions () =
+  (List.app log_thm (List.rev (!definitions));
+   definitions := [])
+
 fun export_thm th = let
   open Thm Feedback Parse
   val _ = case !log_state of
       Not_logging => ()
     | Active_logging _ => let
+      val _ = log_definitions ()
       val v = !verbosity >= 1
       val s = Susp.delay (fn () => Lib.ppstring pp_thm th)
       val _ = if v then HOL_MESG("Start logging\n"^(Susp.force s)^"\n") else ()
@@ -721,7 +728,7 @@ fun log_some_thms axdefs th =
        | _ => false)
    then Thm.delete_proof th
    else ();
-   log_thm th)
+   definitions := th::(!definitions))
 
 fun raw_start_logging axdefs out =
   case !log_state of
