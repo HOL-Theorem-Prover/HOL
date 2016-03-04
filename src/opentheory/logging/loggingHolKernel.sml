@@ -19,9 +19,19 @@ struct
 
   fun export_theory() = let
     open Lib Theory
-    val _ = map (export_thm o snd) (current_theorems())
-    val _ = map (export_thm o snd) (current_definitions())
-    val _ = map (export_thm o snd) (current_axioms())
+    val directives = Logging.read_otdfile (current_theory() ^ ".otd")
+                                          handle IO.Io _ => []
+    fun prepare (nm, th) =
+      if Lib.mem (SkipThm, nm) directives then NONE
+      else if Lib.mem (DeleteThm, nm) directives then
+        (Thm.delete_proof th; SOME th)
+      else SOME th
+    val defs' = List.mapPartial prepare (current_definitions())
+    val ths' = List.mapPartial prepare (current_theorems())
+    val axs' = List.mapPartial prepare (current_axioms())
+    val _ = List.app (ignore o export_thm) defs'
+    val _ = List.app (ignore o export_thm) ths'
+    val _ = List.app (ignore o export_thm) axs'
     val _ = stop_logging()
   in () end
 end
