@@ -62,9 +62,11 @@ struct
    end
 
    fun listUpdate (e, (i, [])) = []
-     | listUpdate (e, (0, _::l)) = e::l
+     | listUpdate (e, (0: IntInf.int, _::l)) = e :: l
      | listUpdate (e, (n, h::l)) = h :: listUpdate (e, (n - 1, l))
 
+   val chr = Char.chr o IntInf.toInt
+   val ord = IntInf.fromInt o Char.ord
    local
      fun sz (n, l) =
        Nat.toNativeInt (Nat.- (n, Nat.fromNativeInt (List.length l)))
@@ -100,7 +102,7 @@ struct
             fn [] => NONE
              | h :: t => if eq e h then SOME i else loop (i + 1) t
       in
-         loop 0 l
+         loop (0: IntInf.int) l
       end
 
    fun remove (l1, l2) = List.filter (fn x => not (Set.mem (x, l2))) l1
