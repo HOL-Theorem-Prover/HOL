@@ -704,7 +704,7 @@ fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=n
 
 fun mkpair f x = (f,x)
 
-datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteThm
+datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteProof
 
 fun log_some_thms axdefs th =
   (if (case Thm.proof th of
@@ -744,7 +744,7 @@ fun read_otdfile fname =
             val dir = case d of
                           "deltype" => SOME DeleteType
                         | "delconst" => SOME DeleteConstant
-                        | "delthm" => SOME DeleteThm
+                        | "delproof" => SOME DeleteProof
                         | "skipthm" => SOME SkipThm
                         | _ => (Feedback.HOL_WARNING "Logging" "read_otdfile"
                                                      ("Bad directive "^d);

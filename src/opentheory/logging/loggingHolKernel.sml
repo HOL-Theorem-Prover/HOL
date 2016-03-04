@@ -23,7 +23,7 @@ struct
                                           handle IO.Io _ => []
     fun prepare (nm, th) =
       if Lib.mem (SkipThm, nm) directives then NONE
-      else if Lib.mem (DeleteThm, nm) directives then
+      else if Lib.mem (DeleteProof, nm) directives then
         (Thm.delete_proof th; SOME th)
       else SOME th
     val defs' = List.mapPartial prepare (current_definitions())

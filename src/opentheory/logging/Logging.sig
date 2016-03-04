@@ -1,7 +1,7 @@
 signature Logging =
 sig
 
-datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteThm
+datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteProof
 
 val raw_start_logging : (OTDirective * string) list -> TextIO.outstream -> unit
 val start_logging : string -> unit

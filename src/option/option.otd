@@ -6,8 +6,8 @@ delconst OPTION_MAP
 deltype option
 skipthm NONE_DEF
 skipthm SOME_DEF
-delthm option_Axiom
-delthm option_induction
-delthm SOME_11
-delthm NOT_NONE_SOME
-delthm NOT_SOME_NONE
+delproof option_Axiom
+delproof option_induction
+delproof SOME_11
+delproof NOT_NONE_SOME
+delproof NOT_SOME_NONE
