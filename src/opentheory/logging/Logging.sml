@@ -705,11 +705,14 @@ fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=n
 
 
 fun log_some_thms axdefs th =
-  (case Thm.proof th of
-      Thm.Def_const_prf (thyrec, _) =>
-      if Lib.mem (#Name thyrec) axdefs then Thm.delete_proof th
-      else ()
-    | _ => ();
+  (if (case Thm.proof th of
+         Thm.Def_const_prf (thyrec, _) => Lib.mem (#Name thyrec) axdefs
+       | Thm.Def_const_list_prf (_,stys,_) => List.exists (Lib.C Lib.mem axdefs o #1) stys
+       | Thm.Def_spec_prf (cs,_) => List.exists (Lib.C Lib.mem axdefs o #1 o Term.dest_const) cs
+       | Thm.Def_tyop_prf (thyrec,_,_,_) => Lib.mem (#Tyop thyrec) axdefs
+       | _ => false)
+   then Thm.delete_proof th
+   else ();
    log_thm th)
 
 fun raw_start_logging axdefs out =
