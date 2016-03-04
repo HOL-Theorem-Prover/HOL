@@ -1,0 +1,4 @@
+deltype prod
+delconst FST
+delconst SND
+delconst ,

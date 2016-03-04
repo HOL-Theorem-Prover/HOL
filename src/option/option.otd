@@ -1,0 +1,6 @@
+delconst NONE
+delconst SOME
+delconst IS_SOME
+delconst IS_NONE
+delconst OPTION_MAP
+deltype option

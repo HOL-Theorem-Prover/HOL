@@ -1,0 +1,7 @@
+deltype sum
+delconst INL
+delconst INR
+delconst ISL
+delconst ISR
+delconst OUTL
+delconst OUTR

@@ -1,0 +1,10 @@
+delconst TC
+delconst reflexive
+delconst irreflexive
+delconst transitive
+delconst WF
+delconst RSUBSET
+delconst RUNION
+delconst RINTER
+delconst RUNIV
+delconst EMPTY_REL

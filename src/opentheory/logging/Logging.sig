@@ -1,7 +1,9 @@
 signature Logging =
 sig
 
-val raw_start_logging : string list -> TextIO.outstream -> unit
+datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteThm
+
+val raw_start_logging : (OTDirective * string) list -> TextIO.outstream -> unit
 val start_logging : string -> unit
 val export_thm    : Thm.thm -> Thm.thm
 val stop_logging  : unit -> unit
@@ -14,6 +16,8 @@ type otname    = OpenTheoryMap.otname
   val reset_tyop_name_handler  : unit -> unit
   val set_const_name_handler   : (thy_const -> otname) -> unit
   val reset_const_name_handler : unit -> unit
+
+val read_otdfile : string -> (OTDirective * string) list
 
 (*
 [start_logging()] creates a new article file based on the current theory name.

@@ -702,14 +702,22 @@ in th end
 
 fun mk_path name = OS.Path.concat(OS.FileSys.getDir(),OS.Path.joinBaseExt{base=name,ext=SOME"art"})
 
+fun mkpair f x = (f,x)
 
+datatype OTDirective = DeleteConstant | DeleteType | SkipThm | DeleteThm
 
 fun log_some_thms axdefs th =
   (if (case Thm.proof th of
-         Thm.Def_const_prf (thyrec, _) => Lib.mem (#Name thyrec) axdefs
-       | Thm.Def_const_list_prf (_,stys,_) => List.exists (Lib.C Lib.mem axdefs o #1) stys
-       | Thm.Def_spec_prf (cs,_) => List.exists (Lib.C Lib.mem axdefs o #1 o Term.dest_const) cs
-       | Thm.Def_tyop_prf (thyrec,_,_,_) => Lib.mem (#Tyop thyrec) axdefs
+         Thm.Def_const_prf (thyrec, _) =>
+           Lib.mem (DeleteConstant, #Name thyrec) axdefs
+       | Thm.Def_const_list_prf (_,stys,_) =>
+           List.exists (Lib.C Lib.mem axdefs o mkpair DeleteConstant o #1)
+                       stys
+       | Thm.Def_spec_prf (cs,_) =>
+           List.exists (Lib.C Lib.mem axdefs o mkpair DeleteConstant o #1 o
+                        Term.dest_const) cs
+       | Thm.Def_tyop_prf (thyrec,_,_,_) =>
+           Lib.mem (DeleteType, #Tyop thyrec) axdefs
        | _ => false)
    then Thm.delete_proof th
    else ();
@@ -725,23 +733,35 @@ fun raw_start_logging axdefs out =
     in () end
   | Active_logging _ => ()
 
+fun read_otdfile fname =
+  let
+    val instrm = TextIO.openIn fname
+    fun recurse acc =
+      case Option.map (String.tokens Char.isSpace) (TextIO.inputLine instrm) of
+          NONE => List.rev acc
+        | SOME [d, nm] =>
+          let
+            val dir = case d of
+                          "deltype" => SOME DeleteType
+                        | "delconst" => SOME DeleteConstant
+                        | "delthm" => SOME DeleteThm
+                        | "skipthm" => SOME SkipThm
+                        | _ => (Feedback.HOL_WARNING "Logging" "read_otdfile"
+                                                     ("Bad directive "^d);
+                                NONE)
+          in
+            recurse (case dir of NONE => acc | SOME dir => (dir,nm) :: acc)
+          end
+        | SOME _ => recurse acc
+  in
+    recurse [] before TextIO.closeIn instrm
+  end
+
+
 fun start_logging nm =
   let
-    val mungefilename = nm ^ ".mfn"
-    val axiomatic_defs =
-        let
-          val strm = TextIO.openIn mungefilename
-          val _ = print ("Opening "^mungefilename^"\n")
-          fun read acc =
-            case TextIO.inputLine strm of
-                NONE => acc
-              | SOME s0 =>
-                 (case String.tokens Char.isSpace s0 of
-                      [constname] => read (constname :: acc)
-                    | _=> (print ("Malformed line: "^s0); read acc))
-        in
-          (read [] before TextIO.closeIn strm)
-        end handle IO.Io _ => []
+    val mungefilename = nm ^ ".otd"
+    val axiomatic_defs = read_otdfile mungefilename handle IO.Io _ => []
   in
     case !log_state of
         Not_logging =>
