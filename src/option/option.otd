@@ -4,3 +4,10 @@ delconst IS_SOME
 delconst IS_NONE
 delconst OPTION_MAP
 deltype option
+skipthm NONE_DEF
+skipthm SOME_DEF
+delthm option_Axiom
+delthm option_induction
+delthm SOME_11
+delthm NOT_NONE_SOME
+delthm NOT_SOME_NONE
