@@ -22,6 +22,8 @@ main {
   import: poset
   import: option
   import: sum
+  import: num
+  import: prim-rec
 }
 marker {
   article: "../marker/marker.ot.art"
@@ -60,5 +62,15 @@ option {
   import: one
   import: sum
   article: "../option/option.ot.art"
+!interpretation
+}
+num {
+  article: "../num/theories/num.ot.art"
+!interpretation
+}
+prim-rec {
+  import: relation
+  import: num
+  article: "../num/theories/prim_rec.ot.art"
 !interpretation
 }
