@@ -689,13 +689,13 @@ fun export_thm th = let
       Not_logging => ()
     | Active_logging _ => let
       val v = !verbosity >= 1
-      val s = Lib.ppstring pp_thm th
-      val _ = if v then HOL_MESG("Start logging\n"^s^"\n") else ()
+      val s = Susp.delay (fn () => Lib.ppstring pp_thm th)
+      val _ = if v then HOL_MESG("Start logging\n"^(Susp.force s)^"\n") else ()
       val _ = log_thm th
       val _ = log_list log_term (hyp th)
       val _ = log_term (concl th)
       val _ = log_command "thm"
-      val _ = if v then HOL_MESG("Finish logging\n"^s^"\n") else ()
+      val _ = if v then HOL_MESG("Finish logging\n"^(Susp.force s)^"\n") else ()
       in () end
     val _ = delete_proof th
 in th end
