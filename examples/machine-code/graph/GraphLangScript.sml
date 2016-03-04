@@ -1898,6 +1898,19 @@ val fix_align = blastLib.BBLAST_PROVE
     ((31 '' 1) w = w >>> 1 << 1) /\
     ((31 '' 0) w = w)``;
 
+val w2w_w2w_and_255 = prove(
+  ``w2w ((w2w:word32->word8) v) = (v && 0xFFw)``,
+  blastLib.BBLAST_TAC)
+
+val Shift_intro = prove(
+  ``(w >> w2n ((w2w:word32->word8) v) = SignedShiftRight w (v && 0xFFw)) /\
+    (w >>> w2n ((w2w:word32->word8) v) = ShiftRight w (v && 0xFFw)) /\
+    (w << w2n ((w2w:word32->word8) v) = ShiftLeft w (v && 0xFFw))``,
+  fs [SignedShiftRight_def,ShiftRight_def,ShiftLeft_def,GSYM w2w_w2w_and_255]
+  \\ fs [w2w_def,w2n_n2w]
+  \\ `w2n v MOD 256 < 4294967296` by all_tac \\ fs []
+  \\ match_mp_tac LESS_TRANS \\ qexists_tac `256` \\ fs []);
+
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
@@ -1906,6 +1919,7 @@ val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   |> CONJ carry_out_eq
   |> CONJ word_add_with_carry_eq
   |> CONJ fix_align
+  |> CONJ Shift_intro
   |> RW [GSYM CONJ_ASSOC]
   |> SIMP_RULE std_ss [])
 
