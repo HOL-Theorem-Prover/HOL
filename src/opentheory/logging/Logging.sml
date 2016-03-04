@@ -743,6 +743,7 @@ fun raw_start_logging axdefs out =
 fun read_otdfile fname =
   let
     val instrm = TextIO.openIn fname
+    val _ = Feedback.HOL_MESG("Reading "^fname)
     fun recurse acc =
       case Option.map (String.tokens Char.isSpace) (TextIO.inputLine instrm) of
           NONE => List.rev acc
@@ -763,7 +764,6 @@ fun read_otdfile fname =
   in
     recurse [] before TextIO.closeIn instrm
   end
-
 
 fun start_logging nm =
   let
