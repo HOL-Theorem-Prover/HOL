@@ -2,3 +2,6 @@ deltype prod
 delconst FST
 delconst SND
 delconst ,
+skipthm COMMA_DEF
+delthm PAIR_EQ
+delthm ABS_PAIR_THM
