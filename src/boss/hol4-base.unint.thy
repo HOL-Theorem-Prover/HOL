@@ -52,8 +52,6 @@ sum {
   article: "../sum/sum.ot.art"
 }
 option {
-  import: one
-  import: sum
   article: "../option/option.ot.art"
 }
 num {
