@@ -8,7 +8,6 @@ src/sort
 src/string
 !src/string/theorytesting
 src/opentheory
-(otknl)src/opentheory/logging
 !examples/STE
 src/res_quan/src
 src/quotient/src
