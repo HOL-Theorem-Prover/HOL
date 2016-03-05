@@ -14,7 +14,7 @@ Parse
 \DESCRIBE
 {Absyn} takes a quotation and parses it into an abstract syntax
 tree of type {absyn}, using the current term and type grammars.
-This phase of parsing is unconcerned with types, and will happily 
+This phase of parsing is unconcerned with types, and will happily
 parse meaningless expressions that are syntactically valid.
 
 \EXAMPLE

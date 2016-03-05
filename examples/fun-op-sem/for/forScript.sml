@@ -843,7 +843,7 @@ val semttac = simp[Once simple_sem_t_reln_cases,is_rval_def]
 val semetac = simp[Once sem_e_reln_cases]
 
 (* Determinism of simple_sem_t_reln *)
-val sem_e_reln_determ = Q.prove(
+val sem_e_reln_determ = Q.store_thm("sem_e_reln_determ",
 `∀s e res.
   sem_e_reln s e res ⇒
   ∀res'. sem_e_reln s e res' ⇒ res=res'`,
@@ -946,8 +946,33 @@ val simple_sem_t_reln_imp_sem_t = Q.prove(
  >>
    (inst_2`c'`>>fs[]>>qexists_tac`c`>>fs[]>>ect>>fs[is_rval_def]))
 
-val _ = save_thm("simple_sem_t_reln_imp_sem_t",
-simple_sem_t_reln_imp_sem_t |> SIMP_RULE std_ss [FORALL_PROD])
+(*val _ = save_thm("simple_sem_t_reln_imp_sem_t",
+simple_sem_t_reln_imp_sem_t |> SIMP_RULE std_ss [FORALL_PROD])*)
+
+val sem_e_reln_not_timeout = prove(``
+ ∀s e r.
+ sem_e_reln s e r ⇒ FST r ≠ Rtimeout``,
+ ho_match_mp_tac sem_e_reln_ind >>rw[])
+
+val simple_sem_t_reln_not_timeout = prove(``
+  ∀s t r. simple_sem_t_reln s t r ⇒ FST r ≠ Rtimeout``,
+  ho_match_mp_tac simple_sem_t_reln_ind>>rw[]>>
+  TRY(metis_tac[sem_e_reln_not_timeout,FST]))
+
+val simple_sem_t_reln_iff_sem_t = store_thm("simple_sem_t_reln_iff_sem_t",``
+   ∀s t r s'.
+   simple_sem_t_reln s t (r,s' with clock:=s.clock) ⇔
+   ∃c'. sem_t (s with clock:=c') t = (r,s') ∧ r ≠ Rtimeout``,
+   rw[]>>EQ_TAC>>strip_tac>>fs[]
+   >-
+     (imp_res_tac simple_sem_t_reln_imp_sem_t>>fs[]>>
+     first_assum(qspec_then`s'.clock` assume_tac)>>fs[clock_rm]>>
+     metis_tac[simple_sem_t_reln_not_timeout,FST])
+   >>
+     imp_res_tac sem_t_imp_simple_sem_t_reln>>
+     fs[]>>
+     imp_res_tac simple_sem_t_reln_ignores_clock>>
+     first_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm])
 
 (* Next, we prove that simple_sem_t_div covers all diverging cases of sem_t *)
 
@@ -1154,6 +1179,244 @@ val reln_type_soundness = Q.prove(
  pop_assum mp_tac>>fs[]>>
  match_mp_tac sem_t_div_simple_sem_t_div>>fs[sem_t_div_def]>>
  metis_tac[FST])
+
+(* Pretty big-step semantics, inductive interpretation only *)
+
+(* Wrapping the datatypes *)
+val _ = Datatype `
+pbr =
+  | Ter (r#state)
+  | Div`;
+
+val _ = Datatype `
+pbt =
+  | Trm t
+  | Forn num pbr e e t`;
+
+val abort_def = Define`
+  (abort flag Div ⇔ T) ∧
+  (abort flag (Ter (r,s)) ⇔ ¬ is_rval r ∧ (flag ⇒ r ≠ Rbreak))`
+
+val (pb_sem_t_reln_rules,pb_sem_t_reln_ind,pb_sem_t_reln_cases) = Hol_reln`
+(!s e r.
+  sem_e_reln s e r
+  ⇒
+  pb_sem_t_reln s (Trm(Exp e)) (Ter r)) ∧
+(!s x t r.
+  pb_sem_t_reln (s with store := s.store |+ (x,0)) (Trm t) r
+  ⇒
+  pb_sem_t_reln s (Trm(Dec x t)) r) ∧
+(* Initial For runs the guard *)
+(!s r r1 e1 e2 t.
+  sem_e_reln s e1 r1 ∧
+  pb_sem_t_reln s (Forn 1 (Ter r1) e1 e2 t) r
+  ⇒
+  pb_sem_t_reln s (Trm (For e1 e2 t)) r) ∧
+(* For 1 checks the guard value (and possibly) runs the body *)
+(!s s' e1 e2 t.
+  pb_sem_t_reln s' (Forn 1 (Ter (Rval 0,s)) e1 e2 t) (Ter (Rval 0,s))) ∧
+(!s s' e1 e2 t r r3 n.
+  pb_sem_t_reln s (Trm t) r3 ∧
+  pb_sem_t_reln s (Forn 2 r3 e1 e2 t) r ∧
+  n ≠ 0 ⇒
+  pb_sem_t_reln s' (Forn 1 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* For 2 checks the result of the body and runs the step *)
+(!s s' e1 e2 t.
+  pb_sem_t_reln s' (Forn 2 (Ter (Rbreak,s)) e1 e2 t) (Ter (Rval 0,s))) ∧
+(!s s' r r2 e1 e2 t n.
+  sem_e_reln s e2 r2 ∧
+  pb_sem_t_reln s (Forn 3 (Ter r2) e1 e2 t) r ⇒
+  pb_sem_t_reln s' (Forn 2 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* For 3 runs the loop again *)
+(!s s' r e1 e2 t n.
+  pb_sem_t_reln s (Trm (For e1 e2 t)) r ⇒
+  pb_sem_t_reln s' (Forn 3 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* One rule for all the breaks and divergence *)
+(!s r e1 e2 t i.
+  abort (i = 2) r ⇒
+  pb_sem_t_reln s (Forn i r e1 e2 t) r) ∧
+(!s.
+  pb_sem_t_reln s (Trm(Break)) (Ter (Rbreak, s))) ∧
+(*Seq and If can be changed to pretty-big-step too, although they will have a similar number of raw rules*)
+(!s s1 t1 t2 n1 r.
+  pb_sem_t_reln s (Trm t1) (Ter (Rval n1, s1)) ∧
+  pb_sem_t_reln s1 (Trm t2) r
+  ⇒
+  pb_sem_t_reln s (Trm (Seq t1 t2)) r) ∧
+(!s t1 t2 r.
+  pb_sem_t_reln s (Trm t1) r ∧
+  abort F r ⇒
+  pb_sem_t_reln s (Trm (Seq t1 t2)) r) ∧
+(!s s1 e t1 t2 r.
+  sem_e_reln s e (Rval 0, s1) ∧
+  pb_sem_t_reln s1 (Trm t2) r
+  ⇒
+  pb_sem_t_reln s (Trm (If e t1 t2)) r) ∧
+(!s s1 e t1 t2 n r.
+  sem_e_reln s e (Rval n, s1) ∧
+  n ≠ 0 ∧
+  pb_sem_t_reln s1 (Trm t1) r
+  ⇒
+  pb_sem_t_reln s (Trm (If e t1 t2)) r) ∧
+(!s s1 e t1 t2 r.
+  sem_e_reln s e (r, s1) ∧
+  ~is_rval r
+  ⇒
+  pb_sem_t_reln s (Trm (If e t1 t2)) (Ter (r, s1)))`;
+
+(* The first argument of pb_sem_t_size_reln is used as an explicit size measure to facilitate induction on derivation trees in our proofs *)
+val (pb_sem_t_size_reln_rules,pb_sem_t_size_reln_ind,pb_sem_t_size_reln_cases) = Hol_reln`
+(!s e r.
+  sem_e_reln s e r
+  ⇒
+  pb_sem_t_size_reln 0n s (Trm(Exp e)) (Ter r)) ∧
+(!s x t r.
+  pb_sem_t_size_reln h (s with store := s.store |+ (x,0)) (Trm t) r
+  ⇒
+  pb_sem_t_size_reln (h+1) s (Trm(Dec x t)) r) ∧
+(* Initial For runs the guard *)
+(!s r r1 e1 e2 t.
+  sem_e_reln s e1 r1 ∧
+  pb_sem_t_size_reln h s (Forn 1 (Ter r1) e1 e2 t) r
+  ⇒
+  pb_sem_t_size_reln (h+1) s (Trm (For e1 e2 t)) r) ∧
+(* For 1 checks the guard value (and possibly) runs the body *)
+(!s s' e1 e2 t.
+  pb_sem_t_size_reln 0 s' (Forn 1 (Ter (Rval 0,s)) e1 e2 t) (Ter (Rval 0,s))) ∧
+(!s s' e1 e2 t r r3 n.
+  pb_sem_t_size_reln h s (Trm t) r3 ∧
+  pb_sem_t_size_reln h' s (Forn 2 r3 e1 e2 t) r ∧
+  n ≠ 0 ⇒
+  pb_sem_t_size_reln (h+h'+1) s' (Forn 1 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* For 2 checks the result of the body and runs the step *)
+(!s s' e1 e2 t.
+  pb_sem_t_size_reln 0 s' (Forn 2 (Ter (Rbreak,s)) e1 e2 t) (Ter (Rval 0,s))) ∧
+(!s s' r r2 e1 e2 t n.
+  sem_e_reln s e2 r2 ∧
+  pb_sem_t_size_reln h s (Forn 3 (Ter r2) e1 e2 t) r ⇒
+  pb_sem_t_size_reln (h+1) s' (Forn 2 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* For 3 runs the loop again *)
+(!s s' r e1 e2 t n.
+  pb_sem_t_size_reln h s (Trm (For e1 e2 t)) r ⇒
+  pb_sem_t_size_reln (h+1) s' (Forn 3 (Ter (Rval n,s)) e1 e2 t) r) ∧
+(* One rule for all the breaks and divergence *)
+(!s r e1 e2 t i.
+  abort (i = 2) r ⇒
+  pb_sem_t_size_reln 0 s (Forn i r e1 e2 t) r) ∧
+(!s.
+  pb_sem_t_size_reln 0 s (Trm(Break)) (Ter (Rbreak, s))) ∧
+(*Seq and If can be changed to pretty-big-step too, although they will have a similar number of raw rules*)
+(!s s1 t1 t2 n1 r.
+  pb_sem_t_size_reln h s (Trm t1) (Ter (Rval n1, s1)) ∧
+  pb_sem_t_size_reln h' s1 (Trm t2) r
+  ⇒
+  pb_sem_t_size_reln (h+h'+1) s (Trm (Seq t1 t2)) r) ∧
+(!s t1 t2 r.
+  pb_sem_t_size_reln h s (Trm t1) r ∧
+  abort F r ⇒
+  pb_sem_t_size_reln (h+1) s (Trm (Seq t1 t2)) r) ∧
+(!s s1 e t1 t2 r.
+  sem_e_reln s e (Rval 0, s1) ∧
+  pb_sem_t_size_reln h s1 (Trm t2) r
+  ⇒
+  pb_sem_t_size_reln (h+1) s (Trm (If e t1 t2)) r) ∧
+(!s s1 e t1 t2 n r.
+  sem_e_reln s e (Rval n, s1) ∧
+  n ≠ 0 ∧
+  pb_sem_t_size_reln h s1 (Trm t1) r
+  ⇒
+  pb_sem_t_size_reln (h+1) s (Trm (If e t1 t2)) r) ∧
+(!s s1 e t1 t2 r.
+  sem_e_reln s e (r, s1) ∧
+  ~is_rval r
+  ⇒
+  pb_sem_t_size_reln 0 s (Trm (If e t1 t2)) (Ter (r, s1)))`;
+
+val _ = set_trace "Goalstack.print_goal_at_top" 0;
+
+val pbrsem_tac = simp[Once pb_sem_t_size_reln_cases]
+
+(* Connect pretty-big-step to relational semantics *)
+val reln_to_pb_reln = prove(``
+  ∀s t r.
+  simple_sem_t_reln s t r ⇒
+  ∃h. pb_sem_t_size_reln h s (Trm t) (Ter r)``,
+  ho_match_mp_tac simple_sem_t_reln_ind>>
+  rw[]>>TRY(pbrsem_tac>>metis_tac[abort_def])
+  (*FOR equivalence*)
+  >- metis_tac[pb_sem_t_size_reln_cases,abort_def]
+  >-
+    (pbrsem_tac>>pbrsem_tac>>simp[abort_def]>>
+    metis_tac[pb_sem_t_size_reln_cases,abort_def])
+  >-
+    (pbrsem_tac>>
+    qexists_tac`h+h'+3`>>
+    qexists_tac`Rval n1,s'`>>pbrsem_tac>>
+    qexists_tac`h`>>qexists_tac`h'+2`>>simp[]>>
+    qexists_tac`Ter(Rval n2,s2)`>>pbrsem_tac>>
+    qexists_tac`h'+1`>>qexists_tac`Rval n3,s''`>>pbrsem_tac)
+  >-
+    (pbrsem_tac>>metis_tac[pb_sem_t_size_reln_cases])
+  >-
+    (pbrsem_tac>>
+    qexists_tac`h+2`>>
+    qexists_tac`Rval n1,s'`>>pbrsem_tac>>
+    qexists_tac`h`>>qexists_tac`1`>>simp[]>>
+    qexists_tac`Ter(Rval n2,s2)`>>pbrsem_tac>>
+    qexists_tac`0`>>qexists_tac`r,s3`>>pbrsem_tac>>
+    metis_tac[abort_def])
+  >-
+    (pbrsem_tac>>
+    qexists_tac`h+1`>>
+    HINT_EXISTS_TAC>>pbrsem_tac>>
+    qexists_tac`h`>>qexists_tac`0`>>simp[]>>
+    HINT_EXISTS_TAC>>pbrsem_tac>>
+    metis_tac[abort_def]))
+
+val pb_reln_to_reln = prove(``
+  ∀n s t r.
+  pb_sem_t_size_reln n s (Trm t) (Ter r) ⇒
+  simple_sem_t_reln s t r``,
+  completeInduct_on`n`>>simp[Once pb_sem_t_size_reln_cases]>>rw[]>>
+  TRY(semttac>>NO_TAC)>>
+  `h < h+1 ∧
+   h < h+(h'+1) ∧
+   h' < h+(h'+1)` by DECIDE_TAC>>
+  Cases_on`r`>>TRY(semttac>>metis_tac[abort_def])>>
+  ntac 3 (pop_assum kall_tac)>>
+  pop_assum mp_tac>>
+  pbrsem_tac>>rw[]>>
+  TRY(semttac>>metis_tac[abort_def])>>
+  qpat_assum`pb_sem_t_size_reln A B (Forn 2 _ _ _ _) _` mp_tac>>
+  pbrsem_tac>>rw[]>>fs[]>>
+  `h' < h' +1 +1` by DECIDE_TAC>>
+  TRY(semttac>>metis_tac[abort_def])>>
+  qpat_assum`pb_sem_t_size_reln A B (Forn 3 _ _ _ _) _` mp_tac>>
+  pbrsem_tac>>rw[]>>fs[]>>
+  `h' < h' +2 +1` by DECIDE_TAC>>
+  `h' < h'+(h''+1+1+1)+1` by DECIDE_TAC>>
+  `h'' < h'+(h''+1+1+1)+1` by DECIDE_TAC>>
+  TRY(semttac>>metis_tac[abort_def]))
+
+val pb_sem_t_size_reln_equiv_lemma1 = prove(``
+  ∀n s t r.
+    pb_sem_t_size_reln n s t r ⇒
+    pb_sem_t_reln s t r``,
+  HO_MATCH_MP_TAC pb_sem_t_size_reln_ind \\ rw []
+  \\ once_rewrite_tac [pb_sem_t_reln_cases] \\ fs []
+  \\ metis_tac []);
+
+val pb_sem_t_size_reln_equiv_lemma2 = prove(``
+  ∀s t r.
+    pb_sem_t_reln s t r ==>
+    ?n. pb_sem_t_size_reln n s t r``,
+  HO_MATCH_MP_TAC pb_sem_t_reln_ind \\ rw []
+  \\ once_rewrite_tac [pb_sem_t_size_reln_cases] \\ fs []
+  \\ metis_tac []);
+
+val pb_sem_t_size_reln_equiv = store_thm("pb_sem_t_size_reln_equiv",
+  ``∀s t r. pb_sem_t_reln s t r ⇔ ∃n. pb_sem_t_size_reln n s t r``,
+  metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]);
 
 (* Pretty printing for paper *)
 val OMIT_def = Define `OMIT x = x`;

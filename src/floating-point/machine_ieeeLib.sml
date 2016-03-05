@@ -2,7 +2,7 @@ structure machine_ieeeLib :> machine_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open lcsymtacs realSyntax wordsLib binary_ieeeSyntax
+open realSyntax intrealSyntax wordsLib binary_ieeeSyntax
 
 structure Parse =
 struct
@@ -23,7 +23,7 @@ local
    infix 0 ==
    infix 8 &
    infixr 5 @@ o'
-   open lcsymtacs binary_ieeeSyntax
+   open binary_ieeeSyntax
    val op & = Term.mk_comb
    val op == = boolSyntax.mk_eq
    val op @@ = wordsSyntax.mk_word_concat
@@ -31,6 +31,7 @@ local
    val i2t = numLib.term_of_int
    val mk_w = wordsSyntax.mk_word_type
    val real_ty = realSyntax.real_ty
+   val value_ty = binary_ieeeSyntax.float_value_ty
    val mode = Term.mk_var ("mode", rounding_ty)
    fun dest_float_ty ty =
       case Lib.total Type.dest_type ty of
@@ -71,26 +72,49 @@ local
       in
          (get_function def, def)
       end
-   fun mk_fp_to_real fp float_to_real fp_to_float fp_ty =
+   fun mk_fp_to_real fp float_value fp_to_float fp_ty =
       let
          val fp_to_real = fp ^ "_to_real"
-         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> real_ty)
+         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> value_ty)
          val def =
             Definition.new_definition (fp_to_real ^ "_def",
-              fp_to_real_var == float_to_real o' fp_to_float)
+              fp_to_real_var == float_value o' fp_to_float)
       in
          (get_function def, def)
       end
-   fun mk_real_to_fp fp round float_to_fp fp_ty =
+   fun mk_real_to_fp fp real_to_float float_to_fp fp_ty =
       let
          val real_to_fp = "real_to_" ^ fp
          val real_to_fp_var =
             Term.mk_var (real_to_fp, rounding_ty --> real_ty --> fp_ty)
          val def =
             Definition.new_definition (real_to_fp ^ "_def",
-              real_to_fp_var & mode == float_to_fp o' round & mode)
+              real_to_fp_var & mode == float_to_fp o' real_to_float & mode)
       in
          (get_function def, def)
+      end
+   fun mk_int_to_fp fp real_to_fp fp_ty =
+      let
+         val ty = rounding_ty --> intSyntax.int_ty --> fp_ty
+         val a = Term.mk_var ("a", intSyntax.int_ty)
+         val s = "int_to_" ^ fp
+         val v = Term.mk_var (s, ty)
+      in
+         Definition.new_definition (s ^ "_def",
+            v & mode & a ==
+            real_to_fp & mode & (intrealSyntax.real_of_int_tm & a))
+      end
+   val int_option_ty = optionSyntax.mk_option intSyntax.int_ty
+   fun mk_fp_to_int fp fp_to_float fp_ty float_ty =
+      let
+         val ty1 = rounding_ty --> fp_ty --> int_option_ty
+         val ty2 = rounding_ty --> float_ty --> int_option_ty
+         val s = fp ^ "_to_int"
+         val v = Term.mk_var (s, ty1)
+         val float_to_int = Term.mk_const ("float_to_int", ty2)
+      in
+         Definition.new_definition (s ^ "_def",
+            v & mode == (float_to_int & mode) o' fp_to_float)
       end
    fun lift1 float_to_fp fp_to_float fp_ty float_ty =
       let
@@ -162,10 +186,10 @@ local
                def
             end
       end
-   fun lift2b fp_to_float fp_ty float_ty =
+   fun lift2b fp_to_float fp_ty float_ty res_ty =
       let
-         val ty1 = fp_ty --> fp_ty --> Type.bool
-         val ty2 = float_ty --> float_ty --> Type.bool
+         val ty1 = fp_ty --> fp_ty --> res_ty
+         val ty2 = float_ty --> float_ty --> res_ty
          val a = Term.mk_var ("a", fp_ty)
          val b = Term.mk_var ("b", fp_ty)
       in
@@ -328,95 +352,102 @@ local
       end
 in
    fun mk_fp_encoding (fp, t, w, a) =
-      let
- (* e.g. val fp = "fp16" and t = 10 and w = 5 *)
-         val pre_k = t + w
-         val k = pre_k + 1
-         val t_ty = fcpSyntax.mk_int_numeric_type t
-         val w_ty = fcpSyntax.mk_int_numeric_type w
-         val fp_ty = mk_w (fcpSyntax.mk_int_numeric_type k)
-         val float_ty = Type.mk_type ("float", [t_ty, w_ty])
-         val float_to_real =
-            Term.mk_const ("float_to_real", float_ty --> real_ty)
-         val round =
-            Term.mk_const ("round", rounding_ty --> real_ty --> float_ty)
-         val (fp_to_float, fp_to_float_def) =
-            mk_fp_to_float fp fp_ty float_ty pre_k t t_ty w_ty
-         val (float_to_fp, float_to_fp_def) =
-            mk_float_to_fp fp fp_ty float_ty t_ty w_ty
-         val (fp_to_real, fp_to_real_def) =
-            mk_fp_to_real fp float_to_real fp_to_float fp_ty
-         val (real_to_fp, real_to_fp_def) =
-            mk_real_to_fp fp round float_to_fp fp_ty
-         val lift1 = lift1 float_to_fp fp_to_float fp_ty float_ty
-         val lift1b = lift1b fp_to_float fp_ty float_ty
-         val lift1c = lift1c float_to_fp fp_ty float_ty
-         val lift2 = lift2 float_to_fp fp_to_float fp_ty float_ty
-         val lift2b = lift2b fp_to_float fp_ty float_ty
-         val lift3 = lift3 float_to_fp fp_to_float fp_ty float_ty
-         val fp_roundToIntegral_def =
-            lift1 (fp ^ "_roundToIntegral", "float_round_to_integral")
-         val fp_sqrt_def = lift1 (fp ^ "_sqrt", "float_sqrt")
-         val fp_negate_def = lift1 (fp ^ "_negate", "float_negate")
-         val fp_abs_def = lift1 (fp ^ "_abs", "float_abs")
-         val fp_isnan_def = lift1b (fp ^ "_isNan", "float_is_nan")
-         val fp_isintegral_def =
-            lift1b (fp ^ "_isIntegral", "float_is_integral")
-         val fp_iszero_def = lift1b (fp ^ "_isZero", "float_is_zero")
-         val fp_isnormal_def = lift1b (fp ^ "_isNormal", "float_is_normal")
-         val fp_issubnormal_def =
-            lift1b (fp ^ "_isSubnormal", "float_is_subnormal")
-         val fp_isfinite_def = lift1b (fp ^ "_isFinite", "float_is_finite")
-         val fp_isinfinite_def =
-            lift1b (fp ^ "_isInfinite", "float_is_infinite")
-         val fp_posinf_def = lift1c (fp ^ "_posInf", "float_plus_infinity")
-         val fp_neginf_def = lift1c (fp ^ "_negInf", "float_minus_infinity")
-         val fp_poszero_def = lift1c (fp ^ "_posZero", "float_plus_zero")
-         val fp_negzero_def = lift1c (fp ^ "_negZero", "float_minus_zero")
-         val fp_minpos_def = lift1c (fp ^ "_posMin", "float_plus_min")
-         val fp_minneg_def = lift1c (fp ^ "_negMin", "float_minus_min")
-         val fp_top_def = lift1c (fp ^ "_top", "float_top")
-         val fp_bottom_def = lift1c (fp ^ "_bottom", "float_bottom")
-         val fp_add_def = lift2 (fp ^ "_add", "float_add")
-         val fp_sub_def = lift2 (fp ^ "_sub", "float_sub")
-         val fp_mul_def = lift2 (fp ^ "_mul", "float_mul")
-         val fp_div_def = lift2 (fp ^ "_div", "float_div")
-         val fp_equal_def = lift2b (fp ^ "_equal", "float_equal")
-         val fp_lessthan_def = lift2b (fp ^ "_lessThan", "float_less_than")
-         val fp_lessequal_def = lift2b (fp ^ "_lessEqual", "float_less_equal")
-         val fp_greaterthan_def =
-            lift2b (fp ^ "_greaterThan", "float_greater_than")
-         val fp_greaterequal_def =
-            lift2b (fp ^ "_greaterEqual", "float_greater_equal")
-         val fp_mul_add_def = lift3 (fp ^ "_mul_add", "float_mul_add")
-         val (fp_to_float_11, float_to_fp_11,
-              float_to_fp_fp_to_float, fp_to_float_float_to_fp,
-              fp_nchotomy, float_nchotomy) =
-            encoding_thms (fp, fp_to_float_def, float_to_fp_def)
-         val monop = monop fp_to_float_float_to_fp
-         val binop = binop fp_to_float_float_to_fp
-         val triop = triop fp_to_float_float_to_fp
-         val fp_to_float_n2w = fp_to_float_n2w (fp, t, w, fp_to_float_def)
-      in
-         case a of
-            SOME name => Parse.type_abbrev (name, float_ty)
-          | NONE => ()
-       ; [fp_to_float_float_to_fp, fp_to_float_n2w, real_to_fp_def,
-          fp_posinf_def, fp_neginf_def, fp_poszero_def, fp_negzero_def,
-          fp_minpos_def, fp_minneg_def, fp_top_def, fp_bottom_def,
-          float_to_fp_fp_to_float, fp_to_float_float_to_fp] @
-         (List.concat o List.map (fn th => [monop th, monop_n2w th]))
-            [fp_to_real_def, fp_abs_def, fp_negate_def, fp_isnan_def,
-             fp_isintegral_def, fp_iszero_def, fp_isnormal_def,
-             fp_issubnormal_def, fp_isfinite_def, fp_isinfinite_def,
-             fp_roundToIntegral_def, fp_sqrt_def] @
-         (List.concat o List.map (fn th => [binop th, binop_n2w th]))
-            [fp_add_def, fp_sub_def, fp_mul_def, fp_div_def,
-             fp_equal_def, fp_lessthan_def, fp_lessequal_def,
-             fp_greaterthan_def, fp_greaterequal_def] @
-         (List.concat o List.map (fn th => [triop th, triop_n2w th]))
-            [fp_mul_add_def]
-      end
+     let
+(* e.g. val fp = "fp16" and t = 10 and w = 5 and a = SOME "half" *)
+        val pre_k = t + w
+        val k = pre_k + 1
+        val t_ty = fcpSyntax.mk_int_numeric_type t
+        val w_ty = fcpSyntax.mk_int_numeric_type w
+        val fp_ty = mk_w (fcpSyntax.mk_int_numeric_type k)
+        val float_ty = Type.mk_type ("float", [t_ty, w_ty])
+        val float_value = Term.mk_const ("float_value", float_ty --> value_ty)
+        val real_to_float =
+           Term.mk_const ("real_to_float", rounding_ty --> real_ty --> float_ty)
+        val (fp_to_float, fp_to_float_def) =
+           mk_fp_to_float fp fp_ty float_ty pre_k t t_ty w_ty
+        val (float_to_fp, float_to_fp_def) =
+           mk_float_to_fp fp fp_ty float_ty t_ty w_ty
+        val (fp_to_real, fp_to_real_def) =
+           mk_fp_to_real fp float_value fp_to_float fp_ty
+        val (real_to_fp, real_to_fp_def) =
+           mk_real_to_fp fp real_to_float float_to_fp fp_ty
+        val int_to_fp_def = mk_int_to_fp fp real_to_fp fp_ty
+        val lift1 = lift1 float_to_fp fp_to_float fp_ty float_ty
+        val lift1b = lift1b fp_to_float fp_ty float_ty
+        val lift1c = lift1c float_to_fp fp_ty float_ty
+        val lift2 = lift2 float_to_fp fp_to_float fp_ty float_ty
+        val lift2c = lift2b fp_to_float fp_ty float_ty float_compare_ty
+        val lift2b = lift2b fp_to_float fp_ty float_ty Type.bool
+        val lift3 = lift3 float_to_fp fp_to_float fp_ty float_ty
+        val fp_roundToIntegral_def =
+           lift1 (fp ^ "_roundToIntegral", "float_round_to_integral")
+        val fp_to_int_def = mk_fp_to_int fp fp_to_float fp_ty float_ty
+        val fp_sqrt_def = lift1 (fp ^ "_sqrt", "float_sqrt")
+        val fp_negate_def = lift1 (fp ^ "_negate", "float_negate")
+        val fp_negate1985_def = lift1 (fp ^ "_negate1985", "float_negate1985")
+        val fp_abs_def = lift1 (fp ^ "_abs", "float_abs")
+        val fp_abs1985_def = lift1 (fp ^ "_abs1985", "float_abs1985")
+        val fp_isnan_def = lift1b (fp ^ "_isNan", "float_is_nan")
+        val fp_isintegral_def =
+           lift1b (fp ^ "_isIntegral", "float_is_integral")
+        val fp_iszero_def = lift1b (fp ^ "_isZero", "float_is_zero")
+        val fp_isnormal_def = lift1b (fp ^ "_isNormal", "float_is_normal")
+        val fp_issubnormal_def =
+           lift1b (fp ^ "_isSubnormal", "float_is_subnormal")
+        val fp_isfinite_def = lift1b (fp ^ "_isFinite", "float_is_finite")
+        val fp_isinfinite_def =
+           lift1b (fp ^ "_isInfinite", "float_is_infinite")
+        val fp_posinf_def = lift1c (fp ^ "_posInf", "float_plus_infinity")
+        val fp_neginf_def = lift1c (fp ^ "_negInf", "float_minus_infinity")
+        val fp_poszero_def = lift1c (fp ^ "_posZero", "float_plus_zero")
+        val fp_negzero_def = lift1c (fp ^ "_negZero", "float_minus_zero")
+        val fp_minpos_def = lift1c (fp ^ "_posMin", "float_plus_min")
+        val fp_minneg_def = lift1c (fp ^ "_negMin", "float_minus_min")
+        val fp_top_def = lift1c (fp ^ "_top", "float_top")
+        val fp_bottom_def = lift1c (fp ^ "_bottom", "float_bottom")
+        val fp_add_def = lift2 (fp ^ "_add", "float_add")
+        val fp_sub_def = lift2 (fp ^ "_sub", "float_sub")
+        val fp_mul_def = lift2 (fp ^ "_mul", "float_mul")
+        val fp_div_def = lift2 (fp ^ "_div", "float_div")
+        val fp_compare_def = lift2c (fp ^ "_compare", "float_compare")
+        val fp_equal_def = lift2b (fp ^ "_equal", "float_equal")
+        val fp_lessthan_def = lift2b (fp ^ "_lessThan", "float_less_than")
+        val fp_lessequal_def = lift2b (fp ^ "_lessEqual", "float_less_equal")
+        val fp_greaterthan_def =
+           lift2b (fp ^ "_greaterThan", "float_greater_than")
+        val fp_greaterequal_def =
+           lift2b (fp ^ "_greaterEqual", "float_greater_equal")
+        val fp_mul_add_def = lift3 (fp ^ "_mul_add", "float_mul_add")
+        val fp_mul_sub_def = lift3 (fp ^ "_mul_sub", "float_mul_sub")
+        val (fp_to_float_11, float_to_fp_11,
+             float_to_fp_fp_to_float, fp_to_float_float_to_fp,
+             fp_nchotomy, float_nchotomy) =
+           encoding_thms (fp, fp_to_float_def, float_to_fp_def)
+        val monop = monop fp_to_float_float_to_fp
+        val binop = binop fp_to_float_float_to_fp
+        val triop = triop fp_to_float_float_to_fp
+        val fp_to_float_n2w = fp_to_float_n2w (fp, t, w, fp_to_float_def)
+     in
+        case a of
+           SOME name => Parse.type_abbrev (name, float_ty)
+         | NONE => ()
+      ; [fp_to_float_float_to_fp, fp_to_float_n2w, real_to_fp_def,
+         int_to_fp_def, fp_posinf_def, fp_neginf_def, fp_poszero_def,
+         fp_negzero_def, fp_minpos_def, fp_minneg_def, fp_top_def,
+         fp_bottom_def, float_to_fp_fp_to_float, fp_to_float_float_to_fp] @
+        (List.concat o List.map (fn th => [monop th, monop_n2w th]))
+           [fp_to_real_def, fp_to_int_def, fp_abs_def, fp_negate_def,
+            fp_abs1985_def, fp_negate1985_def, fp_isnan_def,
+            fp_isintegral_def, fp_iszero_def, fp_isnormal_def,
+            fp_issubnormal_def, fp_isfinite_def, fp_isinfinite_def,
+            fp_roundToIntegral_def, fp_sqrt_def] @
+        (List.concat o List.map (fn th => [binop th, binop_n2w th]))
+           [fp_add_def, fp_sub_def, fp_mul_def, fp_div_def, fp_compare_def,
+            fp_equal_def, fp_lessthan_def, fp_lessequal_def,
+            fp_greaterthan_def, fp_greaterequal_def] @
+        (List.concat o List.map (fn th => [triop th, triop_n2w th]))
+           [fp_mul_add_def, fp_mul_sub_def]
+     end
 end
 
 end

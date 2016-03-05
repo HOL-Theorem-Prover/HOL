@@ -9,12 +9,12 @@ Apply a function under a particular flag setting.
 Lib
 
 \DESCRIBE
-An invocation {with_flag (r,v) f x} sets the reference variable {r} to 
-the value {v}, then evaluates {f x}, then resets {r} to its original value, 
+An invocation {with_flag (r,v) f x} sets the reference variable {r} to
+the value {v}, then evaluates {f x}, then resets {r} to its original value,
 and returns the value of {f x}.
 
 \FAILURE
-Fails if {f x} fails. In that case, {r} is reset to its original value 
+Fails if {f x} fails. In that case, {r} is reset to its original value
 before raising the exception from {f x}.
 
 \EXAMPLE

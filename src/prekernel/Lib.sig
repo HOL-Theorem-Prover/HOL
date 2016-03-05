@@ -135,6 +135,7 @@ sig
    val subtract : ''a list -> ''a list -> ''a list
    val swap : 'a * 'b -> 'b * 'a
    val time : ('a -> 'b) -> 'a -> 'b
+   val time_to_string : Time.time -> string
    val topsort : ('a -> 'a -> bool) -> 'a list -> 'a list
    val total : ('a -> 'b) -> 'a -> 'b option
    val triple : 'a -> 'b -> 'c -> 'a * 'b * 'c

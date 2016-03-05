@@ -653,14 +653,41 @@ in
     | _ => die "FAILED!"
 end
 
+val _ = hide "P"
+val _ = hide "f"
+val _ = hide "c"
+
 val _ = let
   val _ = tprint "irule 5 (as match_accept_tac)"
-  val _ = hide "P"
   val g = ``(!x:'a. P x) ==> P a``
   val th = prove(g, DISCH_THEN irule)
            handle HOL_ERR _ => die "FAILED!"
 in
   if aconv g (concl th) then print "OK\n" else die "FAILED!"
+end
+
+val _ = let
+  val _ = tprint "irule 6 (JD)"
+  val _ = nc ("IMAGE", ``:('a -> 'b) -> ('a -> bool) -> ('b -> bool)``)
+  val tm = ``P x /\ U u ==> T' w ==> S' u w /\ V v ==> IMAGE f s x``
+  val thm = mk_thm ([], tm)
+  val g = ``IMAGE a b c``
+  val (sgs, vf) = irule thm ([], g)
+  val r_thm = vf (map mk_thm sgs)
+in
+  if aconv (concl r_thm) g then print "OK\n" else die "FAILED!"
+end
+
+val _ = let
+  val _ = tprint "irule 7 (JD)"
+  val tm = ``!(f:'a -> 'b) s x u w v.
+               P x /\ U u ==> T' w ==> S' u w /\ V v ==> IMAGE f s x``
+  val thm = ASSUME tm
+  val g = ``IMAGE (a:'a -> 'b) b c``
+  val (sgs, vf) = irule thm ([], g)
+  val r_thm = vf (map mk_thm sgs)
+in
+  if aconv (concl r_thm) g then print "OK\n" else die "FAILED!"
 end
 
 

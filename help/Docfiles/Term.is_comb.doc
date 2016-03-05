@@ -6,7 +6,7 @@
 Tests a term to see if it is a combination (function application).
 
 \DESCRIBE
-If term {M} has the form {f x}, then {is_comb M} equals {true}. 
+If term {M} has the form {f x}, then {is_comb M} equals {true}.
 Otherwise, the result is {false}.
 
 \FAILURE

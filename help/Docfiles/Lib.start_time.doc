@@ -26,7 +26,7 @@ Never fails.
 \COMMENTS
 Multiple timers may be started without any interfering with the others.
 
-Further operations associated with the type {cpu_timer} may be found 
+Further operations associated with the type {cpu_timer} may be found
 in the Standard ML Basis Library structures {Timer} and {Time}.
 
 \SEEALSO

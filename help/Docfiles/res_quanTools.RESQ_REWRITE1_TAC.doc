@@ -28,7 +28,7 @@ form {asml'}, and they also become new subgoals {(asml,P x')}.
 
 \FAILURE
 {RESQ_REWRITE1_TAC th}  fails if {th} cannot be transformed into the
-required form by the function {RESQ_REWR_CANON}. Otherwise, it fails if no 
+required form by the function {RESQ_REWR_CANON}. Otherwise, it fails if no
 match is found or the theorem cannot be instantiated.
 
 

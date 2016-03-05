@@ -20,7 +20,8 @@ sig
   val HOLDIR : string
   val POLYMLLIBDIR : string
   val POLY : string
-  val POLYC : string option
+  val POLYC : string
+  val POLY_VERSION : int
   val POLY_LDFLAGS : string list
   val POLY_LDFLAGS_STATIC : string list
   val CC : string
@@ -32,6 +33,7 @@ sig
   val DYNLIB : bool
   val ML_SYSNAME : string
   val DOT_PATH : string
+  val DEFAULT_STATE : string
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool

@@ -2,13 +2,13 @@ structure binary_ieeeLib :> binary_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open realLib wordsLib binary_ieeeSyntax machine_ieeeSyntax
+open realLib wordsLib binary_ieeeSyntax
 
 structure Parse =
 struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars machine_ieeeTheory.machine_ieee_grammars
+     parse_from_grammars binary_ieeeTheory.binary_ieee_grammars
 end
 open Parse
 
@@ -16,8 +16,6 @@ val ERR = Feedback.mk_HOL_ERR "binary_ieeeLib"
 
 val lhsc = boolSyntax.lhs o Thm.concl
 val rhsc = boolSyntax.rhs o Thm.concl
-
-fun mk_native_ieee_thm th = Thm.mk_oracle_thm "native_ieee" ([], th)
 
 (* ------------------------------------------------------------------------
    real_to_arbrat
@@ -862,100 +860,22 @@ in
 end
 
 (* -------------------------------------------------------------------------
-   liftNative
-   ------------------------------------------------------------------------- *)
-
-fun withRounding tm f x =
-   let
-      val mode = IEEEReal.getRoundingMode ()
-   in
-      IEEEReal.setRoundingMode
-        (if tm = binary_ieeeSyntax.roundTiesToEven_tm
-            then IEEEReal.TO_NEAREST
-         else if tm = binary_ieeeSyntax.roundTowardZero_tm
-            then IEEEReal.TO_ZERO
-         else if tm = binary_ieeeSyntax.roundTowardNegative_tm
-            then IEEEReal.TO_NEGINF
-         else if tm = binary_ieeeSyntax.roundTowardPositive_tm
-            then IEEEReal.TO_POSINF
-         else raise ERR "setRounding" "not a valid mode")
-     ; f x before IEEEReal.setRoundingMode mode
-   end
-
-fun liftNative1 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a) =>
-        (case Lib.total floatToReal a of
-            SOME ra =>
-               withRounding mode
-                 (fn ra =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f ra)))) ra
-          | _ => raise ERR "liftNative1" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative1" ""
-
-fun liftNative2 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-               withRounding mode
-                 (fn (ra, rb) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb)))))
-                 (ra, rb)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
-
-fun liftNative3 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b, c) =>
-        (case (Lib.total floatToReal a,
-               Lib.total floatToReal b,
-               Lib.total floatToReal c) of
-            (SOME ra, SOME rb, SOME rc) =>
-               withRounding mode
-                 (fn (ra, rb, rc) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb, rc)))))
-                 (ra, rb, rc)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
-
-fun liftNativeOrder f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-                mk_native_ieee_thm (boolSyntax.mk_eq (tm, f (ra, rb)))
-          | _ => raise ERR "liftNativeOrder"
-                           "failed to convert to native reals")
-    | NONE => raise ERR "liftNativeOrder" ""
-
-(* -------------------------------------------------------------------------
    lcf_or_native_conv
    ------------------------------------------------------------------------- *)
 
-fun mk_b true = boolSyntax.T
-  | mk_b false = boolSyntax.F
+val native_eval = ref false (* off by default *)
+val () = Feedback.register_btrace ("native ieee", native_eval)
 
-val mk_float_compare =
-   fn IEEEReal.LESS      => binary_ieeeSyntax.LT_tm
-    | IEEEReal.EQUAL     => binary_ieeeSyntax.EQ_tm
-    | IEEEReal.GREATER   => binary_ieeeSyntax.GT_tm
-    | IEEEReal.UNORDERED => binary_ieeeSyntax.UN_tm
+val is_native = ref (fn _ => false)
 
-val native_eval = ref 0 (* off by default *)
-val () = Feedback.register_trace ("native ieee", native_eval, 2)
-
-fun lcf_or_native_conv0 (get_ty, lcf_conv: conv, native_conv: conv, level) =
+fun lcf_or_native_conv0 (get_ty, lcf_conv: conv, native_conv: conv ref) =
    fn tm =>
-      if !native_eval = level andalso get_ty tm = native_ty
-         then native_conv tm (* doesn't cover NaN cases *)
+      if !native_eval andalso !is_native (get_ty tm)
+         then (!native_conv) tm (* doesn't cover NaN cases *)
               handle HOL_ERR _ => lcf_conv tm
       else lcf_conv tm
 
-fun lcf_or_native_conv (lcf_conv, native_conv, level) =
+fun lcf_or_native_conv (lcf_conv, native_conv) =
    let
       val rnd_conv =
          REAL_REDUCE_CONV
@@ -965,73 +885,51 @@ fun lcf_or_native_conv (lcf_conv, native_conv, level) =
          THENC float_round_CONV
       val cnv = lcf_conv THENC TRY_CONV rnd_conv
    in
-      lcf_or_native_conv0 (Term.type_of, cnv, native_conv, level)
+      lcf_or_native_conv0 (Term.type_of, cnv, native_conv)
    end
 
 fun lcf_or_native_order_conv (lcf_conv, native_conv) =
-   lcf_or_native_conv0 (Term.type_of o Term.rand, lcf_conv, native_conv, 2)
+   lcf_or_native_conv0 (Term.type_of o Term.rand, lcf_conv, native_conv)
 
-val native_float_sqrt_CONV =
-   liftNative1 Math.sqrt binary_ieeeSyntax.dest_float_sqrt
+(* Stubs for native evaluation *)
 
-val native_float_add_CONV =
-   liftNative2 Real.+ binary_ieeeSyntax.dest_float_add
+val native_float_sqrt_CONV = ref Conv.NO_CONV
+val native_float_add_CONV = ref Conv.NO_CONV
+val native_float_sub_CONV = ref Conv.NO_CONV
+val native_float_mul_CONV = ref Conv.NO_CONV
+val native_float_div_CONV = ref Conv.NO_CONV
+val native_float_mul_add_CONV = ref Conv.NO_CONV
+val native_float_mul_sub_CONV = ref Conv.NO_CONV
+val native_float_less_than_CONV = ref Conv.NO_CONV
+val native_float_less_equal_CONV = ref Conv.NO_CONV
+val native_float_greater_than_CONV = ref Conv.NO_CONV
+val native_float_greater_equal_CONV = ref Conv.NO_CONV
+val native_float_equal_CONV = ref Conv.NO_CONV
+val native_float_compare_CONV = ref Conv.NO_CONV
 
-val native_float_sub_CONV =
-   liftNative2 Real.- binary_ieeeSyntax.dest_float_sub
+(* Evaluation conversions *)
 
-(**************************************************************
- NOTE:
-   Poly/ML's multiply isn't fully IEEE compliant on 64-bit machines, which
-   results in some selftest failures
- **************************************************************)
+val add_CONV = lcf_or_native_conv (float_add_CONV, native_float_add_CONV)
+val sub_CONV = lcf_or_native_conv (float_sub_CONV, native_float_sub_CONV)
+val mul_CONV = lcf_or_native_conv (float_mul_CONV, native_float_mul_CONV)
+val div_CONV = lcf_or_native_conv (float_div_CONV, native_float_div_CONV)
 
-val native_float_mul_CONV =
-   liftNative2 Real.* binary_ieeeSyntax.dest_float_mul
+(* the following could benefit from a more efficient LCF custom conversion *)
 
-val native_float_div_CONV =
-   liftNative2 Real./ binary_ieeeSyntax.dest_float_div
-
-val native_float_mul_add_CONV =
-   liftNative3 Real.*+ binary_ieeeSyntax.dest_float_mul_add
-
-val native_float_less_than_CONV =
-   liftNativeOrder (mk_b o Real.<) binary_ieeeSyntax.dest_float_less_than
-
-val native_float_less_equal_CONV =
-   liftNativeOrder (mk_b o Real.<=) binary_ieeeSyntax.dest_float_less_equal
-
-val native_float_greater_than_CONV =
-   liftNativeOrder (mk_b o Real.>) binary_ieeeSyntax.dest_float_greater_than
-
-val native_float_greater_equal_CONV =
-   liftNativeOrder (mk_b o Real.>=) binary_ieeeSyntax.dest_float_greater_equal
-
-val native_float_equal_CONV =
-   liftNativeOrder (mk_b o Real.==) binary_ieeeSyntax.dest_float_equal
-
-val native_float_compare_CONV =
-   liftNativeOrder (mk_float_compare o Real.compareReal)
-      binary_ieeeSyntax.dest_float_compare
-
-val sqrt_CONV = lcf_or_native_conv (NO_CONV, native_float_sqrt_CONV, 1)
-
-val add_CONV = lcf_or_native_conv (float_add_CONV, native_float_add_CONV, 2)
-val sub_CONV = lcf_or_native_conv (float_sub_CONV, native_float_sub_CONV, 2)
-val mul_CONV = lcf_or_native_conv (float_mul_CONV, native_float_mul_CONV, 2)
-val div_CONV = lcf_or_native_conv (float_div_CONV, native_float_div_CONV, 2)
-
-(* mul_add_CONV could benefit from a more efficient LCF custom conversion *)
+val sqrt_CONV =
+   lcf_or_native_conv
+      (Conv.REWR_CONV binary_ieeeTheory.float_sqrt_def THENC EVAL,
+       native_float_sqrt_CONV)
 
 val mul_add_CONV =
    lcf_or_native_conv
       (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL,
-       native_float_mul_add_CONV, 2)
+       native_float_mul_add_CONV)
 
-(**************************************************************
- NOTE:
-   Real.compareReal for Poly/ML < revision 1918 doesn't work for infinities.
- **************************************************************)
+val mul_sub_CONV =
+   lcf_or_native_conv
+      (Conv.REWR_CONV binary_ieeeTheory.float_mul_sub_def THENC EVAL,
+       native_float_mul_sub_CONV)
 
 val compare_CONV =
    lcf_or_native_order_conv (float_compare_CONV, native_float_compare_CONV)
@@ -1071,7 +969,8 @@ val ieee_rewrites =
        spc float_negate_def, spc float_abs_def, float_plus_zero_def,
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
-       float_components
+       float_components, float_round_to_integral_compute, float_to_int_def,
+       real_to_float_def
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end
@@ -1100,6 +999,7 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_mul_tm, 3, mul_CONV),
          (binary_ieeeSyntax.float_div_tm, 3, div_CONV),
          (binary_ieeeSyntax.float_mul_add_tm, 4, mul_add_CONV),
+         (binary_ieeeSyntax.float_mul_sub_tm, 4, mul_sub_CONV),
          (binary_ieeeSyntax.float_round_tm, 3, float_round_CONV),
          (binary_ieeeSyntax.float_compare_tm, 2, compare_CONV),
          (binary_ieeeSyntax.float_equal_tm, 2, equal_CONV),

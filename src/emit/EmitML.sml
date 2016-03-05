@@ -894,11 +894,23 @@ fun diag vlist flist = tl
 fun gen_updates ty fields =
  let open pairSyntax
      val {Tyop,Thy,Args} = dest_thy_type ty
-     fun mk_upd_const (fname,fty) =
-        mk_thy_const{Name=Tyop^"_"^fname^"_fupd",Thy=Thy,
-                     Ty = (fty --> fty) --> ty --> ty}
+     fun mk_upd_const (fname,_) =
+       let
+         val rpty = Pretype.fromType ty
+         fun gv() = Pretype.UVar (ref NONE)
+         val op -=> = Pretype.mk_fun_ty infix -=>
+         val upd_pty = gv() -=> (rpty -=> gv())
+         val ln = locn.Loc_None
+         val qid = Absyn.QIDENT(ln, Thy, Tyop^"_"^fname^"_fupd")
+         val ptm0 = Parse.absyn_to_preterm qid
+         val ptm = Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty}
+         val _ = with_flag (Globals.guessing_tyvars, true)
+                           (Preterm.typecheck_phase1 NONE) ptm
+       in
+         Preterm.to_term ptm
+       end
      val upds = map mk_upd_const fields
-     val fns = map (fn (_,ty) => mk_var ("f", ty--> ty)) fields
+     val fns = map (fn upd_t => mk_var ("f", #1(dom_rng (type_of upd_t)))) upds
      val fake_tyc = mk_record_vconstr(Tyop,list_mk_fun(map snd fields, ty))
      val vars = itlist
           (fn (n,(_,ty)) => fn acc =>
@@ -907,8 +919,13 @@ fun gen_updates ty fields =
      val pat = list_mk_comb(fake_tyc,vars)
      val lefts = map2 (fn upd => fn f => list_mk_comb(upd,[f,pat])) upds fns
      val diags = diag vars (map (curry mk_comb) fns)
-     val rights = map (curry list_mk_comb fake_tyc) diags
-     val eqns = rev(map2 (curry mk_eq) lefts rights)
+     fun mapthis (l, d) = let
+       val rtys = map type_of d
+       val rtyc = mk_record_vconstr(Tyop, list_mk_fun(rtys, type_of l))
+     in
+       mk_eq(l, list_mk_comb(rtyc, d))
+     end
+     val eqns = ListPair.map mapthis (lefts, diags)
      val mk_thm = mk_oracle_thm "EmitML fake thm"
  in
    map (curry mk_thm []) eqns

@@ -1565,7 +1565,7 @@ val STM_INIT2 = prove(
 val STM_f =
   `\t. (if t = 0 then
           REG_READ6 (REG_WRITE reg usr 15w
-            (REG_READ6 reg usr 15w + 4w)) nbs (RP stm ((15 >< 0) ireg) Tw)
+           (REG_READ6 reg usr 15w + 4w)) nbs (RP stm ((15 >< 0) ireg) UINT_MAXw)
          else
            REG_READ6
              (if ireg %% 21 /\ ~((19 >< 16) ireg = 15w:word4) then
@@ -1713,7 +1713,7 @@ val STM_MEMOPS = Count.apply prove(
             \\ POP_ASSUM SUBST1_TAC
             \\ ASM_SIMP_TAC arith_ss [ZIP,MAP,FST_HD_FST_ADDR_MODE4]
             \\ RW_TAC arith_ss finish_rws2
-            \\ Cases_on `RP stm ((15 >< 0) ireg) Tw = 15w`
+            \\ Cases_on `RP stm ((15 >< 0) ireg) UINT_MAXw = 15w`
             \\ RW_TAC arith_ss ([REG_READ_WRITE_NEQ,REG_WRITE_READ_NEQ_15] @
                  finish_rws2),
           IMP_RES_TAC FILTER_STM_MEMOPS_X
@@ -1769,7 +1769,7 @@ val STM_MEMOPS = Count.apply prove(
             \\ CONJ_TAC
             << [
               RW_TAC arith_ss finish_rws2
-                \\ Cases_on `RP stm ((15 >< 0) ireg) Tw = 15w`
+                \\ Cases_on `RP stm ((15 >< 0) ireg) UINT_MAXw = 15w`
                 \\ RW_TAC arith_ss
                      ([REG_READ_WRITE_NEQ,REG_WRITE_READ_NEQ_15] @ finish_rws2),
               MATCH_MP_TAC GENLIST_FUN_EQ
@@ -1837,7 +1837,7 @@ val STM = Count.apply prove(
              ([Abbr`alu`,LSL_ZERO,ALUOUT_ALU_logic,WB_ADDRESS_ZERO,IN_LDM_STM,
                (REWRITE_RULE [] o SPEC `0w`) PENCZ_THM2] @ finish_rws3)
         \\ RW_TAC std_ss finish_rws2,
-      `~PENCZ stm ((15 >< 0) ireg) Tw`
+      `~PENCZ stm ((15 >< 0) ireg) UINT_MAXw`
           by (FULL_SIMP_TAC std_ss [PENCZ_THM2] \\
               METIS_TAC [STM_PENCZ_ZERO,NOT_ZERO_LT_ZERO])
         \\ Cases_on `w = 1`

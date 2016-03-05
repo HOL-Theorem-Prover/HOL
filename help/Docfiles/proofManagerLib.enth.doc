@@ -3,7 +3,7 @@
 \TYPE {enth : tactic -> int -> proof}
 
 \SYNOPSIS
-Applies a tactic to one goal, referenced by number, in the current goal list, 
+Applies a tactic to one goal, referenced by number, in the current goal list,
 replacing that goal with the resulting subgoals.
 
 \DESCRIBE

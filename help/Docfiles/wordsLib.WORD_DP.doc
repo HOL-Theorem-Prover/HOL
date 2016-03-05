@@ -14,7 +14,7 @@ decision procedures include {tautLib.TAUT_PROVE}, {bossLib.DECIDE},
 {intLib.ARITH_PROVE} and {intLib.COOPER_PROVE}.  The procedure will first apply
 {conv} and then {WORD_BIT_EQ_CONV}.  If this is not sufficient then an attempt
 is made to solve the problem by applying an arithmetic decision procedure {dp},
-e.g. {``(a = 0w) \/ (a = 1w :1 word)``} is mapped to the goal 
+e.g. {``(a = 0w) \/ (a = 1w :1 word)``} is mapped to the goal
 {``w2n a < 2 ==> (w2n a = 0) \/ (w2n a = 1)``}.
 
 \FAILURE

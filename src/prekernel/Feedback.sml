@@ -42,9 +42,6 @@ val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
      Misc. utilities
  ---------------------------------------------------------------------------*)
 
-val output = TextIO.output
-val flush_out = TextIO.flushOut
-
 fun quote s = String.concat ["\"", s, "\""]
 
 fun assoc1 item =
@@ -65,9 +62,11 @@ val emit_MESG    = ref true
 val emit_WARNING = ref true
 val WARNINGs_as_ERRs = ref false
 
-val ERR_outstream     = ref TextIO.stdErr
-val MESG_outstream    = ref TextIO.stdOut
-val WARNING_outstream = ref TextIO.stdOut
+fun out strm s = (TextIO.output(strm, s); TextIO.flushOut strm)
+
+val ERR_outstream     = ref (out TextIO.stdErr)
+val MESG_outstream    = ref (out TextIO.stdOut)
+val WARNING_outstream = ref (out TextIO.stdOut)
 
 (*---------------------------------------------------------------------------*
  * Formatting and output for exceptions, messages, and warnings.             *
@@ -90,10 +89,7 @@ val ERR_to_string     = ref format_ERR
 val MESG_to_string    = ref format_MESG
 val WARNING_to_string = ref format_WARNING
 
-fun output_ERR s =
-   if !emit_ERR
-      then (output (!ERR_outstream, s); flush_out (!ERR_outstream))
-   else ()
+fun output_ERR s = if !emit_ERR then !ERR_outstream s else ()
 
 (*---------------------------------------------------------------------------
     Makes an informative message from an exception. Subtlety: if we see
@@ -130,28 +126,22 @@ fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
   | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn)
 
 fun HOL_MESG s =
-   if !emit_MESG
-     then (output (!MESG_outstream, !MESG_to_string s)
-           ; flush_out (!MESG_outstream))
-   else ()
+  if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()
 
 fun HOL_PROGRESS_MESG (start, finish) f x =
-   if !emit_MESG
-      then let
-              val () = output (!MESG_outstream, "<<HOL message: " ^ start)
-              val () = flush_out (!MESG_outstream)
-           in
-              f x before
-              (output (!MESG_outstream, finish ^ ">>\n")
-               ; flush_out (!MESG_outstream))
-           end
+   if !emit_MESG then
+     let
+     in
+       !MESG_outstream ("<<HOL message: " ^ start);
+       f x before
+       !MESG_outstream (finish ^ ">>\n")
+     end
    else f x
 
 fun HOL_WARNING s1 s2 s3 =
     if !WARNINGs_as_ERRs then raise mk_HOL_ERR s1 s2 s3
     else if !emit_WARNING then
-      (output (!WARNING_outstream, !WARNING_to_string s1 s2 s3)
-       ; flush_out (!WARNING_outstream))
+      !WARNING_outstream (!WARNING_to_string s1 s2 s3)
     else ()
 
 fun HOL_WARNINGloc s1 s2 locn s3 =

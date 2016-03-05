@@ -6,7 +6,7 @@
 Tests a case expression over {bool}.
 
 \DESCRIBE
-If {M} has the form {bool_case M1 M2 b}, then {is_bool_case M} 
+If {M} has the form {bool_case M1 M2 b}, then {is_bool_case M}
 returns {true}. Otherwise, it returns {false}.
 
 \FAILURE

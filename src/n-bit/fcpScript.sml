@@ -6,14 +6,11 @@
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs pred_setTheory listTheory
+open pred_setTheory listTheory
 
 val () = new_theory "fcp";
 
 (* ------------------------------------------------------------------------- *)
-
-infix \\
-val op \\ = op THEN;
 
 val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
 

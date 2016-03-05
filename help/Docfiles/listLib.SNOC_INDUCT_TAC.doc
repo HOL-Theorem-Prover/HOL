@@ -13,7 +13,7 @@ tactic, list, induction.
 subgoals corresponding to the base and step cases in a proof by structural
 induction on {l} from the tail end. The induction hypothesis appears
 among the assumptions of the subgoal for the step case.  The
-specification of {SNOC_INDUCT_TAC} is: 
+specification of {SNOC_INDUCT_TAC} is:
 {
                      A ?- !l. P
    =====================================================  SNOC_INDUCT_TAC

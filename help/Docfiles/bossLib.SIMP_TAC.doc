@@ -32,10 +32,10 @@ simplification.
 {SIMP_TAC} never fails, though it may diverge.
 
 \EXAMPLE
-{SIMP_TAC} and the {arith_ss} simpset combine to prove quite 
+{SIMP_TAC} and the {arith_ss} simpset combine to prove quite
 difficult seeming goals:
 {
-   - val (_, p) = SIMP_TAC arith_ss [] 
+   - val (_, p) = SIMP_TAC arith_ss []
                  ([], Term`P x /\ (x = y + 3) ==> P x /\ y < x`);
 
    > val p = fn : thm list -> thm
@@ -65,10 +65,10 @@ rewrites can still result in divergence, or poor performance.
 
 
 \SEEALSO
-bossLib.++, bossLib.ASM_SIMP_TAC, 
-bossLib.std_ss, bossLib.bool_ss, bossLib.arith_ss, bossLib.list_ss, 
-bossLib.FULL_SIMP_TAC, simpLib.mk_simpset, 
-Rewrite.REWRITE_TAC, bossLib.SIMP_CONV, 
+bossLib.++, bossLib.ASM_SIMP_TAC,
+bossLib.std_ss, bossLib.bool_ss, bossLib.arith_ss, bossLib.list_ss,
+bossLib.FULL_SIMP_TAC, simpLib.mk_simpset,
+Rewrite.REWRITE_TAC, bossLib.SIMP_CONV,
 simpLib.SIMP_PROVE, bossLib.SIMP_RULE.
 
 \ENDDOC

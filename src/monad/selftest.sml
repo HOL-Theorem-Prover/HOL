@@ -1,10 +1,11 @@
-open HolKernel Parse boolTheory boolLib
-open parmonadsyntax state_transformerTheory
+open HolKernel Parse boolTheory boolLib testutils
+open monadsyntax parmonadsyntax state_transformerTheory
+
+val _ = temp_remove_absyn_postprocessor "monadsyntax.transform_absyn"
 
 val _ = set_trace "Unicode" 0
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
-fun die () = (print "FAILED!\n"; Process.exit Process.failure)
+val die = fn () => die "FAILED!"
 
 val _ = tprint "Testing parsing of parmonadsyntax"
 val bind_t = prim_mk_const{Thy = "state_transformer", Name = "BIND"}
@@ -43,10 +44,52 @@ val fy = free "y"
 val fp = free "p"
 val fx = free "x"
 
-val _ = app tpp [
-  ("do x <- f y; g x od",
-   concat ["do ", bx, " <- ", free "f", " ", fy, "; ", free "g", " ",
-           bx, " od"])
-]
+val monadtpp_test1 =
+    ("do x <- f y; g x od",
+     concat ["do ", bx, " <- ", free "f", " ", fy, "; ", free "g", " ",
+             bx, " od"])
+
+val _ = app tpp [monadtpp_test1]
+
+val _ = clear_overloads_on "monad_bind"
+
+val _ = temp_remove_absyn_postprocessor "parmonadsyntax.transform_absyn"
+val _ = temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
+                                      monadsyntax.transform_absyn)
+val _ = temp_overload_on("monad_bind", ``option$OPTION_BIND``)
+val _ = temp_overload_on("monad_unitbind", ``option$OPTION_IGNORE_BIND``)
+
+val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
+                    "do (x :num) <- (s :num option); SOME (x + (1 :num)) od"
+
+val _ = tprint "Testing monadsyntax parse of OPTION_BIND"
+val t = ``do x <- opt ; SOME (x + 1) od``
+val (f, args) = strip_comb t
+val _ = same_const f ``option$OPTION_BIND`` andalso
+        hd args = mk_var("opt", ``:num option``) andalso
+        hd (tl args) = ``\x:num. SOME (x + 1)`` andalso
+        (print "OK\n"; true) orelse die ()
+
+val _ = tprint "Testing monadsyntax parse of OPTION_IGNORE_BIND"
+val t = ``do SOME 3 ; SOME 4 od``
+val (f, args) = strip_comb t
+val _ = same_const f ``option$OPTION_IGNORE_BIND`` andalso
+        hd args = ``SOME 3`` andalso
+        hd (tl args) = ``SOME 4`` andalso
+        (print "OK\n"; true) orelse die()
+
+val _ = clear_overloads_on "monad_unitbind"
+val _ = temp_overload_on ("monad_unitbind",
+                          ``\m1 m2. option$OPTION_BIND m1 (K m2)``)
+
+val _ = tprint "Testing monadsyntax parse of OPTION_BIND (ignoring)"
+val t = ``do SOME 3 ; SOME 4 od``
+val (f, args) = strip_comb t
+val _ = same_const f ``option$OPTION_BIND`` andalso
+        hd args = ``SOME 3`` andalso
+        hd (tl args) = ``K (SOME 4) : num -> num option`` andalso
+        (print "OK\n"; true) orelse die()
+
+val _ = app tpp [monadtpp_test1]
 
 val _ = Process.exit Process.success

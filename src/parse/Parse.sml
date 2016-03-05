@@ -350,7 +350,7 @@ fun print_term_grammar() = let
     open PP
   in
     begin_block pps CONSISTENT 0;
-    prettyprint_grammar_rules tmprint pps (!the_term_grammar);
+    prettyprint_grammar_rules tmprint pps (ruleset (!the_term_grammar));
     add_newline pps;
     end_block pps
   end
@@ -1116,6 +1116,14 @@ in
               ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
 end
 
+fun temp_remove_absyn_postprocessor s =
+  let
+    val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
+  in
+    the_term_grammar := g;
+    res
+  end
+
 
 (*-------------------------------------------------------------------------
         Overloading
@@ -1211,6 +1219,24 @@ in
                String.concat
                  [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
 end
+
+fun temp_gen_remove_ovl_mapping s t =
+  let
+    open term_grammar
+  in
+    the_term_grammar :=
+      fupdate_overload_info (Overload.gen_remove_mapping s t) (term_grammar());
+    term_grammar_changed := true
+  end
+
+fun gen_remove_ovl_mapping s t =
+  let
+  in
+    temp_gen_remove_ovl_mapping s t ;
+    update_grms "gen_remove_ovl_mapping"
+                ("(UTOFF (temp_gen_remove_ovl_mapping " ^ quote s ^ "))",
+                 minprint t)
+  end
 
 
 fun primadd_rcdfld f ovopn (fldname, t) = let

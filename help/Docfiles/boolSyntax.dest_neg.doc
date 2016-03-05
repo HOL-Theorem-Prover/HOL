@@ -6,7 +6,7 @@
 Breaks apart a negation, returning its body.
 
 \DESCRIBE
-{dest_neg} is a term destructor for negations: if {M} has the 
+{dest_neg} is a term destructor for negations: if {M} has the
 form {~t}, then {dest_neg M} returns {t}.
 
 \FAILURE

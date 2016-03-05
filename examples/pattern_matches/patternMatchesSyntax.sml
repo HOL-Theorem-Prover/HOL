@@ -689,6 +689,8 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
     val (v,rows) = dest_PMATCH t;
     val rows' = map (fn t => pmatch_printer_fix_wildcards (dest_PMATCH_ROW_ABS t)) rows
+    val sys =
+     fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = false}
 
     fun pp_row (vars, pat, guard, rh) = (
       term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
@@ -904,5 +906,3 @@ val _ = (Preterm.post_process_term := (fn tm => (traverse fix_CASE (old_f tm))))
 
 
 end
-
-

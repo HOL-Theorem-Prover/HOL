@@ -14,7 +14,7 @@ val istep_def = Define`
     ((bi + {|(Var v, t)|} = bl) ∨
      (bi + {|(t, Var v)|} = bl)) ∧
     v ∉ vars t ∧
-    (br = BAG_IMAGE (λ(t1,t2). ((FEMPTY|+(v,t)) '' t1, (FEMPTY|+(v,t)) '' t2)) bi) ∧
+    (br = BAG_IMAGE (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2)) bi) ∧
     (sr = sl |+ (v,t)))`;
 
 val tstep_def = Define`
@@ -194,7 +194,7 @@ val istep_def = Define`
     (Var v, t) <: el ∧
     v ∉ vars t ∧
     ¬ BAG_EVERY el (λ(t1,t2) v ∉ vars t1 ∧ v ∉ vars t2) ∧
-    (er = {|(Var v, t)|} + BAG_IMAGE (el - (Var v, t)) (λ(t1,t2). ((FEMPTY|+(v,t)) '' t1, (FEMPTY|+(v,t)) '' t2))))`;
+    (er = {|(Var v, t)|} + BAG_IMAGE (el - (Var v, t)) (λ(t1,t2). ((FEMPTY|+(v,t)) ❜ t1, (FEMPTY|+(v,t)) ❜ t2))))`;
 
 val tstep_def = Define`
   tstep f (sl,el) (sr,er) =

@@ -115,7 +115,7 @@ local
                     else "univ"
           in
             add_string U >>
-            printer gravs depth itself_t
+            printer {gravs = gravs, depth = depth, binderp = false} itself_t
           end
         else
           case Overload.info_for_name (term_grammar.overload_info tmg) "UNIV" of

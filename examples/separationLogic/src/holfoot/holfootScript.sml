@@ -6832,8 +6832,8 @@ SIMP_TAC (std_ss++CONJ_ss) [IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM,
   GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (`
-   (holfoot_ap_data_array_MAP_LIST e y data2 =
-    holfoot_ap_data_array_MAP_LIST e y data1)` by ALL_TAC) THEN1 (
+   (holfoot_ap_data_array_MAP_LIST e x' data2 =
+    holfoot_ap_data_array_MAP_LIST e x' data1)` by ALL_TAC) THEN1 (
    ASM_SIMP_TAC std_ss []
 ) THEN
 
@@ -6846,10 +6846,10 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_LIST_TO_FMAP,
 REPEAT STRIP_TAC THENL [
    METIS_TAC[sortingTheory.PERM_MEM_EQ],
 
-   Cases_on `y'` THEN
+   Cases_on `y` THEN
    ASM_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC (prove (``!c. ((A = c) /\ (B = c)) ==> (A = B)``, SIMP_TAC std_ss [])) THEN
-   Q.EXISTS_TAC `var_res_exp_const (EL x' r)` THEN
+   Q.EXISTS_TAC `var_res_exp_const (EL x'' r)` THEN
    CONSEQ_REWRITE_TAC ([], [LIST_TO_FMAP___ALL_DISTINCT], []) THEN
    ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, ETA_THM,
       MEM_MAP, var_res_exp_eq_THM, GSYM RIGHT_EXISTS_AND_THM,
@@ -7720,7 +7720,7 @@ val holfoot_ap_data_array_interval___same_start___SPLIT___ai = store_thm (
    "holfoot_ap_data_array_interval___same_start___SPLIT___ai",
 ``!c1 c2 c3 c4 c5 lc data.
 (c1 <= SUC c3) /\ (c3 < c1 + c2) ==>
-((SUC c3 = c4) /\ (c2 − (SUC c3 − c1) = c5) /\ (SUC c3 − c1 = lc)) ==>
+((SUC c3 = c4) /\ (c2 - (SUC c3 - c1) = c5) /\ (SUC c3 - c1 = lc)) ==>
 
 (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
 asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)

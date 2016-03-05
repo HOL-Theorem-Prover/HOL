@@ -2,8 +2,6 @@ open HolKernel Parse boolLib boolSimps bossLib
      numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
 
-open lcsymtacs
-
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 val _ = new_theory "bag";
@@ -139,16 +137,14 @@ val BAG_INN_BAG_INSERT_STRONG = store_thm (
   PROVE_TAC[BAG_INN_LESS]);
 
 val BAG_UNION_EQ_LCANCEL1 = store_thm(
-  "BAG_UNION_EQ_LCANCEL1",
+  "BAG_UNION_EQ_LCANCEL1[simp]",
   ``(b = BAG_UNION b c) <=> (c = {||})``,
   rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
-val _ = export_rewrites ["BAG_UNION_EQ_LCANCEL1"]
 
 val BAG_UNION_EQ_RCANCEL1 = store_thm(
-  "BAG_UNION_EQ_RCANCEL1",
+  "BAG_UNION_EQ_RCANCEL1[simp]",
   ``(b = BAG_UNION c b) <=> (c = {||})``,
-  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = y + x) <=> (y = 0)``])
-val _ = export_rewrites ["BAG_UNION_EQ_RCANCEL1"]
+  rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
 
 val BAG_IN_BAG_UNION = Q.store_thm(
   "BAG_IN_BAG_UNION",

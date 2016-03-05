@@ -34,6 +34,7 @@ local
     ppt pps t
   end
   fun ppg pps g = term_grammar.prettyprint_grammar gprint pps g
+  fun ppgrules pps grs = term_grammar.prettyprint_grammar_rules gprint pps grs
   fun timepp pps t = PP.add_string pps (Time.toString t ^ "s")
   fun locpp pps l = PP.add_string pps (locn.toShortString l)
   structure MPP = MosmlPP
@@ -73,6 +74,7 @@ in
   val _ = installPP (mosmlpp Hol_pp.pp_theory)
   val _ = installPP (mosmlpp type_grammar.prettyprint_grammar)
   val _ = installPP (mosmlpp ppg)
+  val _ = installPP (mosmlpp ppgrules)
   val _ = installPP (mosmlpp proofManagerLib.pp_proof)
   val _ = installPP (mosmlpp proofManagerLib.pp_proofs)
   val _ = installPP (mosmlpp Rewrite.pp_rewrites)
@@ -150,22 +152,36 @@ val exit_string =
     else
       "To exit type <Control>-D (*not* quit();)"
 
-val _ =
-TextIO.output(TextIO.stdOut,
-   "\n---------------------------------------------------------------------\n"
-  ^"       HOL-4 ["
-  ^Globals.release^" "^Lib.int_to_string(Globals.version)
-  ^" ("^Thm.kernelid^", "^build_stamp
-  ^")]\n\n"
-  ^"       For introductory HOL help, type: help \"hol\";\n"
-  ^"       "^exit_string
-  ^"\n---------------------------------------------------------------------\n\
-   \\n");
 
 (* ----------------------------------------------------------------------
     if present, look at a Holmakefile in the current directory to see
     if we should extend the loadPath
    ---------------------------------------------------------------------- *)
+
+structure HOL_Interactive : sig
+  val toggle_quietdec : unit -> bool
+  val amquiet : unit -> bool
+  val print_banner : unit -> unit
+end =
+struct
+  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
+                            !Meta.quietdec)
+  fun amquiet () = !Meta.quietdec
+  fun print_banner() =
+    TextIO.output(TextIO.stdOut,
+     "\n---------------------------------------------------------------------\n"
+     ^"       HOL-4 ["
+     ^Globals.release^" "^Lib.int_to_string(Globals.version)
+     ^" ("^Thm.kernelid^", "^build_stamp
+     ^")]\n\n"
+     ^"       For introductory HOL help, type: help \"hol\";\n"
+     ^"       "^exit_string
+     ^"\n---------------------------------------------------------------------\
+      \\n\n")
+
+end;
+
+val _ = HOL_Interactive.print_banner()
 
 local
   open Path
@@ -177,15 +193,6 @@ end;
 
 use (OS.Path.concat (HOLDIR, OS.Path.concat("tools", "makefile-includes.ML")));
 
-structure HOL_Interactive : sig
-  val toggle_quietdec : unit -> bool
-  val amquiet : unit -> bool
-end =
-struct
-  fun toggle_quietdec () = (Meta.quietdec := not (!Meta.quietdec) ;
-                            !Meta.quietdec)
-  fun amquiet () = !Meta.quietdec
-end;
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

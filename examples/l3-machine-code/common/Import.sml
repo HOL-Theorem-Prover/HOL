@@ -2,8 +2,9 @@ structure Import :> Import =
 struct
 
 open HolKernel boolLib bossLib
-open state_transformerTheory bitstringLib stringLib machine_ieeeSyntax
-open intSyntax integer_wordSyntax bitstringSyntax state_transformerSyntax
+open state_transformerTheory bitstringLib stringLib binary_ieeeSyntax
+     fp32Syntax fp64Syntax machine_ieeeSyntax intSyntax integer_wordSyntax
+     bitstringSyntax state_transformerSyntax
 
 val ERR = mk_HOL_ERR "Import"
 
@@ -81,6 +82,7 @@ in
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
    val rTy = mkTy (SOME "binary_ieee", "rounding")
+   val oTy = mkTy (SOME "binary_ieee", "compare")
    val cTy = mkTy (SOME "string", "char")
    val sTy = mkListTy cTy
    val vTy = mkListTy bTy
@@ -158,9 +160,9 @@ val LU = oneSyntax.one_tm
 val LT = boolSyntax.T
 val LF = boolSyntax.F
 (* Integer *)
-fun LI i = intSyntax.term_of_int (Arbint.fromInt i)
+fun LI i = intSyntax.term_of_int (Arbint.fromLargeInt i)
 (* Natural *)
-fun LN n = numSyntax.term_of_int n
+fun LN n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 (* Char *)
 fun LSC c = stringSyntax.fromMLchar c
 (* String *)
@@ -168,7 +170,7 @@ fun LS s = stringSyntax.fromMLstring s
 (* Bitstring *)
 fun LV v = bitstringSyntax.bitstring_of_binstring v
 (* Fixed-width  *)
-fun LW (i, w) = wordsSyntax.mk_wordii (i, w)
+fun LW (i, w) = wordsSyntax.mk_wordi (Arbnum.fromLargeInt i, w)
 (* N-bit  *)
 fun LY (i, n) = wordsSyntax.mk_n2w (LN i, typevar n)
 (* Enumerated  *)
@@ -181,6 +183,16 @@ fun LE ty = pred_setSyntax.mk_empty (Ty ty)
 fun LNL ty = listSyntax.mk_nil (Ty ty)
 (* UNKNOWN  *)
 fun LX ty = boolSyntax.mk_arb (Ty ty)
+
+val NEGINF32 = fp32Syntax.fp_neginf_tm
+val POSINF32 = fp32Syntax.fp_posinf_tm
+val NEGINF64 = fp64Syntax.fp_neginf_tm
+val POSINF64 = fp64Syntax.fp_posinf_tm
+
+val NEGZERO32 = fp32Syntax.fp_negzero_tm
+val POSZERO32 = fp32Syntax.fp_poszero_tm
+val NEGZERO64 = fp64Syntax.fp_negzero_tm
+val POSZERO64 = fp64Syntax.fp_poszero_tm
 
 (* ------------------------------------------------------------------------ *)
 
@@ -460,14 +472,29 @@ datatype monop =
    | Difference
    | Drop
    | Element
-   | FPAbs of int
+   | FP32To64
+   | FP64To32
+   | FPAbs of int * bool
    | FPAdd of int
-   | FPEqual of int
-   | FPIsNaN of int
-   | FPLess of int
+   | FPCmp of int
+   | FPDiv of int
+   | FPEq of int
+   | FPFromInt of int
+   | FPGe of int
+   | FPGt of int
+   | FPIsFinite of int
+   | FPIsNan of int
+   | FPIsNormal of int
+   | FPIsSubnormal of int
+   | FPLe of int
+   | FPLt of int
    | FPMul of int
-   | FPNeg of int
+   | FPMulAdd of int
+   | FPMulSub of int
+   | FPNeg of int * bool
+   | FPSqrt of int
    | FPSub of int
+   | FPToInt of int
    | Flat
    | Fst
    | Head
@@ -533,7 +560,6 @@ datatype binop =
    | Lsl
    | Lsr
    | Lt
-   | Mdfy
    | Mod
    | Mul
    | Or
@@ -679,46 +705,56 @@ local
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
 
-   fun mk_fp_binop f =
-      let
-         val ftm = case f of
-                      FPEqual 32 => machine_ieeeSyntax.fp32Syntax.fp_equal_tm
-                    | FPEqual 64 => machine_ieeeSyntax.fp64Syntax.fp_equal_tm
-                    | FPLess 32 => machine_ieeeSyntax.fp32Syntax.fp_lessThan_tm
-                    | FPLess 64 => machine_ieeeSyntax.fp64Syntax.fp_lessThan_tm
-                    | _ => raise ERR "mk_fp_binop" ""
-         val ty = ftm |> Term.type_of |> Type.dom_rng |> fst
-         val b = Term.mk_var ("b", ty)
-         val c = Term.mk_var ("c", ty)
-         val l = [b, c]
+   local
+     val mk_vars =
+       List.rev o snd o
+       List.foldl
+         (fn (ty, (c, l)) =>
+            (Char.succ c, Term.mk_var (String.str c, ty) :: l)) (#"a", [])
+   in
+     fun mk_fp_op f =
+       let
+         val ftm =
+           case f of
+              FPCmp 32 => fp32Syntax.fp_compare_tm
+            | FPCmp 64 => fp64Syntax.fp_compare_tm
+            | FPEq 32 => fp32Syntax.fp_equal_tm
+            | FPEq 64 => fp64Syntax.fp_equal_tm
+            | FPLt 32 => fp32Syntax.fp_lessThan_tm
+            | FPLt 64 => fp64Syntax.fp_lessThan_tm
+            | FPLe 32 => fp32Syntax.fp_lessEqual_tm
+            | FPLe 64 => fp64Syntax.fp_lessEqual_tm
+            | FPGt 32 => fp32Syntax.fp_greaterThan_tm
+            | FPGt 64 => fp64Syntax.fp_greaterThan_tm
+            | FPGe 32 => fp32Syntax.fp_greaterEqual_tm
+            | FPGe 64 => fp64Syntax.fp_greaterEqual_tm
+            | FPSqrt 32 => fp32Syntax.fp_sqrt_tm
+            | FPSqrt 64 => fp64Syntax.fp_sqrt_tm
+            | FPToInt 32 => fp32Syntax.fp_to_int_tm
+            | FPToInt 64 => fp64Syntax.fp_to_int_tm
+            | FPFromInt 32 => fp32Syntax.int_to_fp_tm
+            | FPFromInt 64 => fp64Syntax.int_to_fp_tm
+            | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
+            | FPAdd 32 => fp32Syntax.fp_add_tm
+            | FPAdd 64 => fp64Syntax.fp_add_tm
+            | FPDiv 32 => fp32Syntax.fp_div_tm
+            | FPDiv 64 => fp64Syntax.fp_div_tm
+            | FPMul 32 => fp32Syntax.fp_mul_tm
+            | FPMul 64 => fp64Syntax.fp_mul_tm
+            | FPSub 32 => fp32Syntax.fp_sub_tm
+            | FPSub 64 => fp64Syntax.fp_sub_tm
+            | FPMulAdd 32 => fp32Syntax.fp_mul_add_tm
+            | FPMulAdd 64 => fp64Syntax.fp_mul_add_tm
+            | FPMulSub 32 => fp32Syntax.fp_mul_sub_tm
+            | FPMulSub 64 => fp64Syntax.fp_mul_sub_tm
+            | _ => raise ERR "mk_fp_op" ""
+         val l = mk_vars (fst (HolKernel.strip_fun (Term.type_of ftm)))
          val p = pairSyntax.list_mk_pair l
          val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
-      in
+       in
          fn tm => pbeta (Term.mk_comb (ptm, tm))
-      end
-
-   fun mk_fp_triop f =
-      let
-         val ftm = case f of
-                      FPAdd 32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
-                    | FPAdd 64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
-                    | FPMul 32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
-                    | FPMul 64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
-                    | FPSub 32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
-                    | FPSub 64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
-                    | _ => raise ERR "mk_fp_triop" ""
-         val ty = ftm |> Term.type_of
-                      |> Type.dom_rng |> snd
-                      |> Type.dom_rng |> fst
-         val a = Term.mk_var ("a", binary_ieeeSyntax.rounding_ty)
-         val b = Term.mk_var ("b", ty)
-         val c = Term.mk_var ("c", ty)
-         val l = [a, b, c]
-         val p = pairSyntax.list_mk_pair l
-         val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
-      in
-         fn tm => pbeta (Term.mk_comb (ptm, tm))
-      end
+       end
+   end
 
    local
       fun mk_test a b c d = boolSyntax.mk_cond (boolSyntax.mk_eq (a, b), c, d)
@@ -920,17 +956,29 @@ in
        | Difference => mk_difference
        | Drop => mk_drop
        | Element => mk_element
-       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
-       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
-       | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
-       | FPEqual _ => mk_fp_binop m
-       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
-       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
-       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
-       | FPLess _ => mk_fp_binop m
-       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
-       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
-       | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FPAbs (32, old) =>
+           if old then fp32Syntax.mk_fp_abs1985 else fp32Syntax.mk_fp_abs
+       | FPAbs (64, old) =>
+           if old then fp64Syntax.mk_fp_abs1985 else fp64Syntax.mk_fp_abs
+       | FPAbs (i, _) => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
+       | FPIsFinite 32 => fp32Syntax.mk_fp_isFinite
+       | FPIsFinite 64 => fp64Syntax.mk_fp_isFinite
+       | FPIsFinite i => raise ERR "Mop" ("FPIsFinite " ^ Int.toString i)
+       | FPIsNan 32 => fp32Syntax.mk_fp_isNan
+       | FPIsNan 64 => fp64Syntax.mk_fp_isNan
+       | FPIsNan i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsNormal 32 => fp32Syntax.mk_fp_isNormal
+       | FPIsNormal 64 => fp64Syntax.mk_fp_isNormal
+       | FPIsNormal i => raise ERR "Mop" ("FPIsNormal " ^ Int.toString i)
+       | FPIsSubnormal 32 => fp32Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal 64 => fp64Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
+       | FPNeg (32, old) =>
+           if old then fp32Syntax.mk_fp_negate1985 else fp32Syntax.mk_fp_negate
+       | FPNeg (64, old) =>
+           if old then fp64Syntax.mk_fp_negate1985 else fp64Syntax.mk_fp_negate
+       | FPNeg (i, _) => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FP32To64 => machine_ieeeSyntax.mk_fp32_to_fp64
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd
@@ -976,7 +1024,7 @@ in
        | Union => mk_union
        | Update => mk_update
        | ValOf => optionSyntax.mk_the
-       | _ => mk_fp_triop m
+       | _ => mk_fp_op m
       ) x
 end
 
@@ -1005,7 +1053,6 @@ local
        Term.mk_comb
           (Term.inst [Type.alpha |-> numSyntax.num, Type.beta |-> Type.bool,
                       Type.gamma |-> Type.bool] pairSyntax.curry_tm, tm)
-   fun mk_modify (f, a) = wordsSyntax.mk_word_modify (icurry f, a)
 in
    fun Bop (b : binop, x, y) = (x, y) |>
      (case b of
@@ -1018,7 +1065,6 @@ in
                         SOME bitstringSyntax.mk_bxor, NONE, NONE)
       | In     => pred_setSyntax.mk_in
       | Insert => pred_setSyntax.mk_insert
-      | Mdfy   => mk_modify
       | Or     => boolSyntax.mk_disj
       | Uge    => wordsSyntax.mk_word_hs
       | Ugt    => wordsSyntax.mk_word_hi

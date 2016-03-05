@@ -3,7 +3,7 @@
 \TYPE {elt : list_tactic -> proof}
 
 \SYNOPSIS
-Applies a list-tactic to the current goal list, 
+Applies a list-tactic to the current goal list,
 replacing it with the resulting subgoals.
 
 \DESCRIBE

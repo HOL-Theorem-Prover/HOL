@@ -8,8 +8,13 @@ val auto_import_definitions = ref true;
 (* re-exporting types from clauses *)
 
 type compset = comp_rws;
+type transform = clauses.transform
 
 val new_compset = from_list;
+
+val listItems = clauses.deplist;
+val unmapped  = clauses.no_transform;
+
 
 type cbv_stack =
   ((thm->thm->thm) * (thm * db fterm),

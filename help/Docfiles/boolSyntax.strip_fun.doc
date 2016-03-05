@@ -6,7 +6,7 @@
 Iteratively breaks apart function types.
 
 \DESCRIBE
-If {fty} is of the form {ty1 -> (... (tyn -> ty) ...)}, then 
+If {fty} is of the form {ty1 -> (... (tyn -> ty) ...)}, then
 {strip_fun fty} returns {([ty1,...,tyn],ty)}. Note that
 {
    strip_fun(list_mk_fun([ty1,...,tyn],ty))

@@ -36,7 +36,7 @@ possible with simplification ({FORALL_AND_THM} states
 {SIMP_RULE ss thmlist} is equivalent to {CONV_RULE (SIMP_CONV ss thmlist)}.
 
 \SEEALSO
-simpLib.ASM_SIMP_RULE, bossLib.SIMP_CONV, bossLib.SIMP_TAC, 
+simpLib.ASM_SIMP_RULE, bossLib.SIMP_CONV, bossLib.SIMP_TAC,
 bossLib.bool_ss.
 
 \ENDDOC

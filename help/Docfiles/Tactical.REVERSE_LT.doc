@@ -13,7 +13,7 @@ The list-tactic {REVERSE_LT} reverses
 the order of a list of subgoals.
 
 \FAILURE
-Never fails. 
+Never fails.
 
 \EXAMPLE
 Where {tac} is a tactic,

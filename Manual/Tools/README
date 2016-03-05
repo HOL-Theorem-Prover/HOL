@@ -1,0 +1,44 @@
+# The `polyscripter` Tool
+
+The `polyscripter` tool is a Unix filter program that passes most input lines unchanged, but looks out for those lines beginning with `>>` characters.
+If it sees one such, it executes the Poly/ML compiler on that line, captures the result and then emits the input and the response to standard out.
+
+## Inline Options
+
+All of the following inline commands must be the first non-whitespace on the line in which they occur.
+
+-   The usual `>>` command gets the input after this prompt read until the next line that begins with a non-space character.
+-   The `>>_` command gets the compiler to act on the accompanying input, and this input is printed out, but the output is elided
+-   The `>>__` command gets the compiler to act on the accompanying input, but nothing is printed out.
+-   The `>>-` command is similar to `>>_` except the input is suppressed while the output is printed out.
+-   The `>>+` command is similar to `>>` except that if the input expression raises an un-handled exception, then rather than aborting execution, the exception will be printed as output.
+-   The `##use` command gets the compiler to evaluate the `use` the filename.
+    The filename is given after a single space character and is the rest of the line; it need not be quoted, and shouldn’t be followed by a semicolon.
+    The compilation and evaluation of the filename is done entirely silently.
+-   The `##assert` command gets the compiler to evaluate the following expression (which can just be one line long).
+    If it evaluates to true, then nothing is output.
+    If it is false, then the scripter aborts.
+-   The `##eval` command gets the compiler to evaluate the following code (similarly to the various `>>` commands).
+    The output is *not* printed, and the input is printed without a prompt symbol (the `>`).
+    The command may be followed by a name in square brackets.
+    This can allow further assertion checking on an expression that has been shown to the user.
+    For example
+
+        ##eval[n] 3 + 4;
+        ##assert (equal n) 7;
+
+    will print `3 + 4` in the document and also silently check that it really does evaluate to 7.
+
+If the first non-whitespace characters are `>>>` or `###` then the first of these characters is dropped, and the rest of the line is passed unchanged.
+This allows for a form of escaping, just in case the input naturally wants to include `>>` or `##` at the start of a line.
+
+## Command-line Options
+
+-   If `polyscripter` is passed a filename as its first argument, this file is read, and treated as a dictionary mapping single (UTF8) characters to replacement strings (with character separated from mapping by whitespace).
+    This mapping is applied to user-input strings (after the `>>`) and to compiler output as well.
+    An example mapping would include lines such as
+
+           ∀ \(\forall\)
+           ∧ \(\land\)
+
+    A mapping for LaTeX `alltt` type environments should also handle backslash and brace characters.

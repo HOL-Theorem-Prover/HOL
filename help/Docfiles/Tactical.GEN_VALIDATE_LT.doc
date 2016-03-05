@@ -1,9 +1,9 @@
-\DOC GEN_VALIDATE_LT 
+\DOC GEN_VALIDATE_LT
 
 \TYPE {GEN_VALIDATE_LT : bool -> list_tactic -> list_tactic}
 
 \SYNOPSIS
-Where a list-tactic requires assumptions to be in the goal, 
+Where a list-tactic requires assumptions to be in the goal,
 add those assumptions as new subgoals.
 
 \DESCRIBE
@@ -35,7 +35,7 @@ of the goal, which may be useful when coding compound tactics.
 
 \SEEALSO
 Tactical.VALID, Tactical.VALID_LT, Tactical.VALIDATE,
-Tactical.VALIDATE_LT, Tactical.GEN_VALIDATE 
+Tactical.VALIDATE_LT, Tactical.GEN_VALIDATE
 
 \ENDDOC
 

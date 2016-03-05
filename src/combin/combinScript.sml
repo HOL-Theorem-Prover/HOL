@@ -32,7 +32,9 @@ val UPDATE_def = Q.new_definition("UPDATE_def",
 val _ = set_fixity ":>" (Infixl 310);
 val _ = set_fixity "=+" (Infix(NONASSOC, 320));
 val _ = overload_on("=+", ``UPDATE``);
+val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
+val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}

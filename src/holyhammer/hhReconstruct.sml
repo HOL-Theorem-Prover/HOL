@@ -192,7 +192,7 @@ fun minimize_lemmas lemmas cj =
          pp_lemmas (map fst (minimize_lemmas_loop [] l cj))
          )
     else (
-         print "Metis could not find a proof in less than 2 seconds. \n"; 
+         print "Metis could not find a proof in less than 2 seconds. \n";
          pp_lemmas lemmas
          )
   end

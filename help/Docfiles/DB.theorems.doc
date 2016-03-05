@@ -8,8 +8,8 @@ All the theorems stored in the named theory.
 \DESCRIBE
 An invocation {theorems thy}, where {thy} is the name of a currently
 loaded theory segment, will return a list of the theorems stored in
-that theory. Axioms and definitions are excluded. Each theorem is 
-paired with its name in the result. The string {"-"} may be 
+that theory. Axioms and definitions are excluded. Each theorem is
+paired with its name in the result. The string {"-"} may be
 used to denote the current theory segment.
 
 \FAILURE

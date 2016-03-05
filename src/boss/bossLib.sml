@@ -64,10 +64,15 @@ val WF_REL_TAC = TotalDefn.WF_REL_TAC
 
 val PROVE           = BasicProvers.PROVE
 val PROVE_TAC       = BasicProvers.PROVE_TAC
+val prove_tac       = BasicProvers.PROVE_TAC
 val METIS_PROVE     = metisLib.METIS_PROVE
 val METIS_TAC       = metisLib.METIS_TAC
+val metis_tac       = METIS_TAC
 val RW_TAC          = BasicProvers.RW_TAC
 val SRW_TAC         = BasicProvers.SRW_TAC
+val rw_tac          = BasicProvers.RW_TAC
+val srw_tac         = BasicProvers.SRW_TAC
+val srw_tac         = BasicProvers.srw_tac
 val srw_ss          = BasicProvers.srw_ss
 val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
@@ -113,6 +118,7 @@ end
 
 val DECIDE = numLib.DECIDE;
 val DECIDE_TAC = numLib.DECIDE_TAC;
+val decide_tac = DECIDE_TAC
 
 fun ZAP_TAC ss thl =
    BasicProvers.STP_TAC ss
@@ -120,6 +126,7 @@ fun ZAP_TAC ss thl =
           ORELSE DECIDE_TAC
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
+fun kall_tac x = Tactical.all_tac
 val cheat:tactic = fn g => ([], fn _ => Thm.mk_oracle_thm "cheat" g)
 
 (*---------------------------------------------------------------------------
@@ -138,6 +145,7 @@ val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 
 val SPOSE_NOT_THEN    = BasicProvers.SPOSE_NOT_THEN
+val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
@@ -152,5 +160,69 @@ val Abbr = markerLib.Abbr
 val UNABBREV_ALL_TAC = markerLib.UNABBREV_ALL_TAC
 val REABBREV_TAC = markerLib.REABBREV_TAC
 val WITHOUT_ABBREVS = markerLib.WITHOUT_ABBREVS
+
+(* ----------------------------------------------------------------------
+    convenient simplification aliases
+   ---------------------------------------------------------------------- *)
+
+open simpLib
+fun stateful f ssfl thm : tactic =
+  let
+    val ss = List.foldl (simpLib.++ o Lib.swap) (srw_ss()) ssfl
+  in
+    f ss thm
+  end
+
+val ARITH_ss = numSimps.ARITH_ss
+val fsrw_tac = stateful full_simp_tac
+val rfsrw_tac = stateful rev_full_simp_tac
+
+val let_arith_list = [boolSimps.LET_ss, ARITH_ss]
+val simp = stateful asm_simp_tac let_arith_list
+val dsimp = stateful asm_simp_tac (boolSimps.DNF_ss :: let_arith_list)
+val csimp = stateful asm_simp_tac (boolSimps.CONJ_ss :: let_arith_list)
+
+val lrw = srw_tac let_arith_list
+val lfs = fsrw_tac let_arith_list
+val lrfs = rfsrw_tac let_arith_list
+
+val rw = srw_tac let_arith_list
+val fs = fsrw_tac let_arith_list
+val rfs = rfsrw_tac let_arith_list
+
+  (* useful quotation-based tactics (from Q) *)
+  val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC
+  val qx_choose_then = Q.X_CHOOSE_THEN
+  val qexists_tac : term quotation -> tactic = Q.EXISTS_TAC
+  val qsuff_tac : term quotation -> tactic = Q_TAC SUFF_TAC
+  val qspec_tac = Q.SPEC_TAC
+  val qid_spec_tac : term quotation -> tactic = Q.ID_SPEC_TAC
+  val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
+  val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
+     Q.SPECL_THEN
+  val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
+  val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
+  val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC
+  val qho_match_abbrev_tac : term quotation -> tactic = Q.HO_MATCH_ABBREV_TAC
+  val qmatch_rename_tac : term quotation -> tactic =
+     Q.MATCH_RENAME_TAC
+  val qmatch_assum_abbrev_tac : term quotation -> tactic =
+     Q.MATCH_ASSUM_ABBREV_TAC
+  val qmatch_assum_rename_tac : term quotation -> tactic =
+     Q.MATCH_ASSUM_RENAME_TAC
+  val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
+  val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
+  val qmatch_asmsub_abbrev_tac = Q.MATCH_ASMSUB_ABBREV_TAC
+  val qmatch_goalsub_abbrev_tac = Q.MATCH_GOALSUB_ABBREV_TAC
+  val qcase_tac = Q.FIND_CASE_TAC
+
+  val qabbrev_tac : term quotation -> tactic = Q.ABBREV_TAC
+  val qunabbrev_tac : term quotation -> tactic = Q.UNABBREV_TAC
+  val unabbrev_all_tac : tactic = markerLib.UNABBREV_ALL_TAC
+
+  val qx_genl_tac = map_every qx_gen_tac
+  fun qx_choosel_then [] ttac = ttac
+    | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
+
 
 end

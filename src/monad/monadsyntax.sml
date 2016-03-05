@@ -131,39 +131,46 @@ val _ = Parse.temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
 fun dest_bind G t = let
   open term_pp_types
   val oinfo = term_grammar.overload_info G
-  val (fx, y) = dest_comb t
-  val (f, x) = dest_comb fx
-  val prname = case Overload.overloading_of_term oinfo f of
-                 NONE => if is_var f then #1 (dest_var f)
-                         else raise UserPP_Failed
-               | SOME s => s
+  val (f, args) = valOf (Overload.oi_strip_comb oinfo t)
+                  handle Option => raise UserPP_Failed
+  val (x,y) =
+      case args of
+          [x,y] => (x,y)
+        | _ => raise UserPP_Failed
+  val prname =
+      f |> dest_var |> #1 |> GrammarSpecials.dest_fakeconst_name
+        |> valOf |> #fake
+        handle HOL_ERR _ => raise UserPP_Failed
+             | Option => raise UserPP_Failed
   val _ = prname = monad_unitbind orelse
           (prname = monad_bind andalso pairSyntax.is_pabs y) orelse
-          raise UserPP_Failed
+           raise UserPP_Failed
 in
   SOME (prname, x, y)
 end handle HOL_ERR _ => NONE
          | term_pp_types.UserPP_Failed =>  NONE
 
 
-fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
+fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open term_pp_types term_grammar smpp term_pp_utils
   infix >>
   val ppfns = ppfns :ppstream_funs
   val {add_string=strn,add_break=brk,ublock,...} = ppfns
   val (prname, arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
+  fun syspr bp gravs t =
+    sysprinter {gravs = gravs, binderp = bp, depth = depth - 1} t
   fun pr_action (v, action) =
       case v of
-        NONE => sysprinter (Top,Top,Top) (dpth - 1) action
+        NONE => syspr false (Top,Top,Top) action
       | SOME v => let
           val bvars = free_vars v
         in
           addbvs bvars >>
           ublock PP.INCONSISTENT 0
-            (sysprinter (Top,Top,Prec(100, "monad_assign")) (dpth - 1) v >>
+            (syspr true (Top,Top,Prec(100, "monad_assign")) v >>
              strn " " >> strn "<-" >> brk(1,2) >>
-             sysprinter (Top,Prec(100, "monad_assign"),Top) (dpth - 1) action)
+             syspr false (Top,Prec(100, "monad_assign"),Top) action)
         end
   fun brk_bind binder arg1 arg2 =
       if binder = monad_bind then let

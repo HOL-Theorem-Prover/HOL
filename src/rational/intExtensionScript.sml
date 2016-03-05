@@ -30,6 +30,20 @@ val _ = new_theory "intExtension";
 val SGN_def = Define `SGN x = (if x = 0i then 0i else (if x < 0i then ~1 else 1i))`;
 
 (*--------------------------------------------------------------------------
+   linking ABS and SGN: |- ABS x = x * SGN x, |- ABS x * SGN x = x
+ *--------------------------------------------------------------------------*)
+
+val ABS_EQ_MUL_SGN = store_thm ("ABS_EQ_MUL_SGN", ``ABS x = x * SGN x``,
+  REWRITE_TAC [INT_ABS, SGN_def] THEN
+  REPEAT COND_CASES_TAC THEN
+  ASM_SIMP_TAC int_ss [GSYM INT_NEG_RMUL]) ;
+
+val MUL_ABS_SGN = store_thm ("MUL_ABS_SGN", ``ABS x * SGN x = x``,
+  REWRITE_TAC [INT_ABS, SGN_def] THEN
+  REPEAT COND_CASES_TAC THEN
+  ASM_SIMP_TAC int_ss []) ;
+
+(*--------------------------------------------------------------------------
    INT_MUL_POS_SIGN: thm
    |- !a b. 0 < a ==> 0 < b ==> 0 < a * b
  *--------------------------------------------------------------------------*)

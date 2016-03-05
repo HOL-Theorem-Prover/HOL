@@ -10,8 +10,8 @@ arithmetic, decision procedure.
 
 \DESCRIBE
 An application {DECIDE M}, where {M} is a boolean term, attempts to
-prove {M} using a propositional tautology checker and a linear 
-arithmetic decision procedure.  
+prove {M} using a propositional tautology checker and a linear
+arithmetic decision procedure.
 
 \FAILURE
 The invocation fails if {M} is not of boolean type. It also fails if {M}
@@ -27,7 +27,7 @@ is not a tautology or an instance of a theorem of linear arithmetic.
 }
 
 \COMMENTS
-{DECIDE} is currently somewhat underpowered. Formerly it was 
+{DECIDE} is currently somewhat underpowered. Formerly it was
 implemented by a cooperating decision procedure mechanism. However,
 most proofs seemed to go somewhat smoother with simplification using the
 {arith_ss} simpset, so we have adopted a simpler implementation. That

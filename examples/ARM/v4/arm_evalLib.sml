@@ -795,7 +795,8 @@ fun myprint Gs backend sys ppfns (pg,lg,rg) d t = let
 in
   delim (
     smpp.pr_list
-      (sys (Prec(0, "CONS"), Top, Top) (d - 1))
+      (sys {gravs = (Prec(0, "CONS"), Top, Top),
+            depth = d - 1, binderp = false})
       (strn ";" >> add_newline)
       l)
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;

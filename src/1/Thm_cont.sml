@@ -194,6 +194,7 @@ fun DISCH_THEN ttac (asl,w) =
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
    handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
+val disch_then = DISCH_THEN
 
 (*---------------------------------------------------------------------------*
  * DISCH_THEN's "dual"                                                       *

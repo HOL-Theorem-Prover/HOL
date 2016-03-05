@@ -10,21 +10,30 @@ notifications:
   irc:
     channels:
       - "irc.freenode.net#hol"
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - ocaml
+    - g++-4.8
+
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
     - ROOTPOLY= BUILDOPTS=
     - ROOTPOLY= BUILDOPTS=-expk
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/selftestseq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/selftestseq -selftest"
     - ROOTPOLY= BUILDOPTS="-seq developers/travis/more_examples_seq -selftest"
     - ROOTPOLY= BUILDOPTS="-expk -seq developers/travis/more_examples_seq -selftest"
-    - ROOTPOLY= SVNPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+    - ROOTPOLY= GITPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
 
 matrix:
   include:
     - os: osx
       env: ROOTPOLY= BUILDOPTS=
-      sudo: false
+    - env: ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
+      sudo: true

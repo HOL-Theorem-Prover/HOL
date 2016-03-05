@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs
 open arithmeticTheory
 open logrootTheory
 open listTheory
@@ -377,14 +376,14 @@ val lrnext_def = prove(
   REPEAT STRIP_TAC
   THEN1 (fs [Once ALT_ZERO,Once lrnext_real_def])
   THEN1
-   (fs [Once BIT1,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ fs [Once BIT1]
-    \\ fs [ADD_ASSOC,DECIDE ``n+n=n*2``,MULT_DIV])
+   (full_simp_tac (srw_ss()) [Once BIT1,Once lrnext_real_def]
+    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT1]
+    \\ full_simp_tac (srw_ss()) [ADD_ASSOC,DECIDE ``n+n=n*2``,MULT_DIV])
   THEN1
-   (fs [Once BIT2,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ fs [Once BIT2]
+   (simp_tac (srw_ss()) [Once BIT2,Once lrnext_real_def]
+    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT2]
     \\ `n + (n + 2) - 1 = n * 2 + 1` by DECIDE_TAC
-    \\ fs [DIV_MULT]))
+    \\ asm_simp_tac (srw_ss()) [DIV_MULT]))
 val lrnext' = prove(
   ``(!a. lrnext 0 = 1) /\ (!n a. lrnext (NUMERAL n) = lrnext n)``,
   simp[NUMERAL_DEF, GSYM ALT_ZERO, lrnext_def])
@@ -431,7 +430,6 @@ val lookup_fromList = store_thm(
 val bit_cases = prove(
   ``!n. (n = 0) \/ (?m. n = 2 * m + 1) \/ (?m. n = 2 * m + 2)``,
   Induct >> simp[] >> fs[]
-  >- (disj1_tac >> qexists_tac `0` >> simp[])
   >- (disj2_tac >> qexists_tac `m` >> simp[])
   >- (disj1_tac >> qexists_tac `SUC m` >> simp[]))
 
@@ -1166,5 +1164,41 @@ val map_LN = store_thm("map_LN[simp]",
 val wf_map = store_thm("wf_map[simp]",
   ``!t f. wf (map f t) = wf t``,
   Induct \\ fs [wf_def,map_def]);
+
+val map_map_o = store_thm("map_map_o",
+  ``!t f g. map f (map g t) = map (f o g) t``,
+  Induct >> fs[map_def])
+
+val map_insert = store_thm("map_insert",
+  ``!f x y z.
+  map f (insert x y z) = insert x (f y) (map f z)``,
+  completeInduct_on`x`>>
+  Induct_on`z`>>
+  rw[]>>
+  simp[Once map_def,Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  BasicProvers.EVERY_CASE_TAC>>fs[map_def]>>
+  `(x-1) DIV 2 < x` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  fs[map_def])
+
+val insert_shadow = store_thm("insert_shadow",
+  ``!t a b c.
+  insert a b (insert a c t) = insert a b t``,
+  completeInduct_on`a`>>
+  Induct>>
+  simp[Once insert_def]>>
+  rw[]>>
+  simp[Once insert_def]>>
+  simp[Once insert_def,SimpRHS]>>
+  `(a-1) DIV 2 < a` by
+    (`0 < (2:num)` by fs[] >>
+    imp_res_tac DIV_LT_X>>
+    first_x_assum match_mp_tac>>
+    DECIDE_TAC)>>
+  metis_tac[])
 
 val _ = export_theory();

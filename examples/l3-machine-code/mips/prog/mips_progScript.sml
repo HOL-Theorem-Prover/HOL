@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs stateLib set_sepTheory progTheory mips_stepTheory
+open stateLib set_sepTheory progTheory mips_stepTheory
 
 val () = new_theory "mips_prog"
 

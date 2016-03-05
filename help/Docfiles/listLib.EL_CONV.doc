@@ -21,7 +21,7 @@ is the theorem
 
 
 \FAILURE
-{EL_CONV tm} fails if {tm} is not of the form described above, 
+{EL_CONV tm} fails if {tm} is not of the form described above,
 or {k} is not less than the length of the list.
 
 \SEEALSO

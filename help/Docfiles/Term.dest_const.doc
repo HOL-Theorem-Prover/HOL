@@ -6,7 +6,7 @@
 Breaks apart a constant into name and type.
 
 \DESCRIBE
-{dest_const} is a term destructor for constants. If {M} is a 
+{dest_const} is a term destructor for constants. If {M} is a
 constant with name {c} and type {ty}, then {dest_const M}
 returns {(c,ty)}.
 
@@ -14,8 +14,8 @@ returns {(c,ty)}.
 Fails if {M} is not a constant.
 
 \COMMENTS
-In Hol98, constants also carry the theory they are declared in. A 
-more precise and robust way to analyze a constant is with 
+In Hol98, constants also carry the theory they are declared in. A
+more precise and robust way to analyze a constant is with
 {dest_thy_const}.
 
 \SEEALSO

@@ -19,7 +19,7 @@ val list_rel_lem1 = Q.prove (
     ((n = LENGTH l ∧ n ≠ LENGTH l') ∨
      (n ≠ LENGTH l ∧ n = LENGTH l') ∨
      (n ≠ LENGTH l ∧ n ≠ LENGTH l' ∧ ~f (EL n l) (EL n l')))`,
- rw [] >>
+ srw_tac[][] >>
  `FINITE { n | n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') }`
          by (rw [GSPEC_AND, LE_LT1] >>
              match_mp_tac FINITE_INTER >>
@@ -27,30 +27,31 @@ val list_rel_lem1 = Q.prove (
              rw [GSYM count_def]) >>
  qabbrev_tac `nset = { n | n ≤ LENGTH l ∧ n ≤ LENGTH l' ∧ LIST_REL f (TAKE n l) (TAKE n l') }` >>
  Cases_on `nset = {}` >>
- rw []
- >- (fs [markerTheory.Abbrev_def, EXTENSION] >>
+ srw_tac[] []
+ >- (full_simp_tac (srw_ss()) [markerTheory.Abbrev_def, EXTENSION] >>
      qexists_tac `0` >>
-     rw [] >>
+     srw_tac[][] >>
      Cases_on `l` >>
      Cases_on `l'` >>
-     fs [] >>
+     full_simp_tac (srw_ss()) [] >>
      pop_assum (qspecl_then [`0`] mp_tac) >>
-     rw [])
+     srw_tac[][])
  >- (imp_res_tac MAX_SET_DEF >>
      qexists_tac `MAX_SET nset` >>
      qabbrev_tac `max_nset = MAX_SET nset` >>
      qunabbrev_tac `nset` >>
      imp_res_tac in_max_set >>
-     rfs [] >>
-     rw [] >>
-     fs [LESS_OR_EQ] >>
+     REV_FULL_SIMP_TAC (srw_ss()) [] >>
+     srw_tac[] [] >>
+     full_simp_tac (srw_ss()) [LESS_OR_EQ] >>
      srw_tac [ARITH_ss] [] >>
-     fs [TAKE_LENGTH_ID] >>
+     full_simp_tac (srw_ss()) [TAKE_LENGTH_ID] >>
      CCONTR_TAC >>
-     fs [] >>
+     full_simp_tac (srw_ss()) [] >>
      `LIST_REL f (TAKE (max_nset + 1) l) (TAKE (max_nset + 1) l')`
-            by (fs [rich_listTheory.TAKE_EL_SNOC, SNOC_APPEND,
-                    rich_listTheory.LIST_REL_APPEND_SING]) >>
+            by (full_simp_tac (srw_ss())
+                              [rich_listTheory.TAKE_EL_SNOC, SNOC_APPEND,
+                               rich_listTheory.LIST_REL_APPEND_SING]) >>
      `max_nset + 1 ∈ {n | (n < LENGTH l ∨ n = LENGTH l) ∧ (n < LENGTH l' ∨ n = LENGTH l') ∧ LIST_REL f (TAKE n l) (TAKE n l')}`
             by srw_tac [ARITH_ss] [] >>
      imp_res_tac in_max_set >>
@@ -66,28 +67,28 @@ val list_rel_lem2 = Q.prove (
      (n ≠ LENGTH l ∧ n = LENGTH l') ∨
      (n ≠ LENGTH l ∧ n ≠ LENGTH l' ∧ ~f (EL n l) (EL n l')))`,
  ho_match_mp_tac LIST_REL_ind >>
- rw [] >>
+ srw_tac[] [] >>
  CCONTR_TAC >>
- fs [] >>
+ full_simp_tac (srw_ss()) [] >>
  EVERY_CASE_TAC >>
- fs [] >>
- rw []
+ full_simp_tac (srw_ss()) [] >>
+ srw_tac[] []
  >- (first_x_assum (qspecl_then [`LENGTH l`] mp_tac) >>
-     rw [])
+     srw_tac[] [])
  >- (first_x_assum (qspecl_then [`LENGTH l'`] mp_tac) >>
-     rw [])
+     srw_tac[] [])
  >- (first_x_assum (qspecl_then [`n-1`] mp_tac) >>
-     rw [] >>
-     full_simp_tac (srw_ss()++ARITH_ss) [] >>
-     fs [LIST_REL_EL_EQN] >>
+     srw_tac[] [] >>
+     fs[] >>
+     full_simp_tac (srw_ss()) [LIST_REL_EL_EQN] >>
      `n - 1 ≤ LENGTH l ∧ n - 1 ≤ LENGTH l'` by decide_tac >>
      `n ≤ LENGTH l ∧ n ≤ LENGTH l'` by decide_tac >>
-     fs [LENGTH_TAKE, rich_listTheory.EL_TAKE] >>
-     rw [] >>
+     full_simp_tac (srw_ss()) [LENGTH_TAKE, rich_listTheory.EL_TAKE] >>
+     srw_tac[] [] >>
      `0 < n` by decide_tac >>
      full_simp_tac (srw_ss()++ARITH_ss) [rich_listTheory.EL_CONS] >>
      `PRE n = n - 1` by decide_tac >>
-     fs []));
+     full_simp_tac (srw_ss()) []));
 
 val list_rel_thm = Q.prove (
 `!f l l'.

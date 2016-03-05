@@ -15,7 +15,7 @@ a directed consequence conversion {DCONSEQ_CONV} should be of the form
 - t ==> wt for dir = CONSEQ_CONV_WEAKEN_direction
 - st ==> t, t ==> wt or t = eqt for dir = CONSEQ_CONV_UNKNOWN_direction
 }
-  
+
 \SEEALSO
 ConseqConv.directed_conseq_conv, ConseqConv.TRUE_FALSE_REFL_CONSEQ_CONV
 \ENDDOC

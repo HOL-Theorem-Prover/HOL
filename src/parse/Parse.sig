@@ -48,6 +48,8 @@ signature Parse = sig
   val add_absyn_postprocessor : (string * (Absyn.absyn->Absyn.absyn)) -> unit
   val temp_add_absyn_postprocessor :
       (string * (Absyn.absyn->Absyn.absyn)) -> unit
+  val temp_remove_absyn_postprocessor :
+      string -> (Absyn.absyn->Absyn.absyn) option
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
   val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
   val Absyn            : term frag list -> Absyn.absyn
@@ -109,6 +111,7 @@ signature Parse = sig
   val bring_to_front_overload : string -> {Name: string, Thy: string} -> unit
   val clear_overloads_on : string -> unit
   val remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+  val gen_remove_ovl_mapping : string -> term -> unit
   val add_record_field : string * term -> unit
   val add_record_fupdate : string * term -> unit
 
@@ -161,6 +164,7 @@ signature Parse = sig
   val temp_bring_to_front_overload : string -> {Name:string,Thy:string} -> unit
   val temp_clear_overloads_on : string -> unit
   val temp_remove_ovl_mapping : string -> {Name:string, Thy:string} -> unit
+  val temp_gen_remove_ovl_mapping : string -> term -> unit
 
   val temp_add_record_field : string * term -> unit
   val temp_add_record_fupdate : string * term -> unit

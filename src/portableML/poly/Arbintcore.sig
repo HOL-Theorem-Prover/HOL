@@ -13,8 +13,10 @@ sig
   val fromString : string -> int
 
   val fromInt    : Int.int -> int
+  val fromLargeInt : LargeInt.int -> int
   val fromNat    : num -> int
   val toInt      : int -> Int.int
+  val toLargeInt : int -> LargeInt.int
   val toNat      : int -> num
 
   val +          : (int * int) -> int

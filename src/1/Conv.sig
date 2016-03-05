@@ -43,6 +43,7 @@ sig
    val TOP_SWEEP_CONV        : conv -> conv
    val ONCE_DEPTH_CONV       : conv -> conv
    val CONV_RULE             : conv -> thm -> thm
+   val HYP_CONV_RULE         : (term -> bool) -> conv -> thm -> thm
    val BETA_RULE             : thm -> thm
    val UNBETA_CONV           : term -> conv
    val NOT_FORALL_CONV       : conv

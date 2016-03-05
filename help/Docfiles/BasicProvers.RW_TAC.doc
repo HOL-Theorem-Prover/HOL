@@ -3,7 +3,7 @@
 \TYPE {RW_TAC : simpset -> thm list -> tactic}
 
 \SYNOPSIS
-Simplification with case-splitting and built-in knowledge of 
+Simplification with case-splitting and built-in knowledge of
 declared datatypes.
 
 \DESCRIBE

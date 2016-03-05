@@ -11,12 +11,12 @@ val fun_all_rule = prove(``!P x.
 (* GEN_TAC THEN GEN_TAC THEN DISCH_TAC THEN PURE_ONCE_REWRITE_TAC [fun_all_def] THEN GEN_TAC THEN BETA_TAC THEN (W (ACCEPT_TAC o mk_thm)));*)
 
 (************************* rules storage *************************)
-fun lookup tyvar (tyvar'::tyvars, h::dict) = 
+fun lookup tyvar (tyvar'::tyvars, h::dict) =
     if tyvar = tyvar' then SOME h
     else lookup tyvar (tyvars, dict)
   | lookup _ _ = NONE;
 fun insert (tyvar, value) ([], []) = ([tyvar], [value])
-  | insert (tyvar, value) (tyvar'::tyvars, h::dict) = 
+  | insert (tyvar, value) (tyvar'::tyvars, h::dict) =
     if tyvar = tyvar' then (tyvar::tyvars, value::dict)
     else let
       val (x, y) = (insert (tyvar,value) (tyvars, dict))
@@ -63,12 +63,12 @@ fun get_rules rules xrules tm =
   if is_abs tm then let
     val var = (genvar o fst o dom_rng o type_of) tm
     in [BETA_CONV (mk_comb (tm, var))] end
-  else if is_const tm then 
-    case lookup (#1 (dest_const tm)) rules of 
+  else if is_const tm then
+    case lookup (#1 (dest_const tm)) rules of
       NONE => raise ERR "" "unknown all fun"
     | SOME thm => map variant (CONJUNCTS thm)
-  else if is_var tm then 
-    case lookup (#1 (dest_var tm)) xrules of 
+  else if is_var tm then
+    case lookup (#1 (dest_var tm)) xrules of
       NONE => raise ERR "" ""
     | SOME thm => [thm]
   else raise ERR "" "";
@@ -79,7 +79,7 @@ fun REMOVE_EQ eq thm =
     (INST [(op|-> o dest_eq) eq] thm);
 
 fun leftmost alls xalls [     ] = raise ERR "Witness" "Empty type"
-  | leftmost alls xalls (t::ts) = 
+  | leftmost alls xalls (t::ts) =
       prove_all alls xalls t handle _ => leftmost alls xalls ts
 and prove_all alls xalls thm = let
    val hs = hyp thm
@@ -88,7 +88,7 @@ and prove_all alls xalls thm = let
    else if h1 = T   then prove_all alls xalls (PROVE_HYP TRUTH thm)
    else if is_eq h1 then prove_all alls xalls (REMOVE_EQ h1    thm)
    else let val (ator, _) = strip_comb h1
-            val rules = get_rules alls xalls ator 
+            val rules = get_rules alls xalls ator
             val res = resolve h1 rules thm
         in leftmost alls xalls res
    end end;
@@ -116,7 +116,7 @@ test`sum_all (\_.F) (\_.F)`;
 test`fun_all (\_.T)`;
 
 val llrecycle = prove(``!x. ?ll. ll = x:::ll``,
-GEN_TAC THEN EXISTS_TAC 
+GEN_TAC THEN EXISTS_TAC
 
 Define`llx = 0:::llx`
 
@@ -129,7 +129,7 @@ val all_llist_rule = prove(``P a ==> all_llist P (abs (\x. SOME a))``
 
 local
 fun update_witnesses' [] [] _ _ = []
-  | update_witnesses' (NONE::wits) ((SOME t)::results) cs n = 
+  | update_witnesses' (NONE::wits) ((SOME t)::results) cs n =
       (SOME (MATCH_MP (el n cs) t))
       :: (update_witnesses' wits results cs (n+1))
   | update_witnesses' (w::wits) (r::results) cs n =
@@ -148,7 +148,7 @@ fun update_wits_loop tms ws constrs = let
     val ws' = map app tms
     (* 3: update known witnesses *)
     val func = fn (i, (wit, res)) => (
-        if (not (isSome wit)) andalso (isSome res) then 
+        if (not (isSome wit)) andalso (isSome res) then
            (SOME (MATCH_MP (el (i+1) constrs) (valOf res)))
           else wit)
     val ws'' = mapi (curry func) (zip ws ws')

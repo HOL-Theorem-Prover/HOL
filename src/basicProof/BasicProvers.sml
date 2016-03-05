@@ -32,6 +32,7 @@ in
   EXPAND_COND_TAC THEN CONV_TAC (DEST_LABELS_CONV) THEN
   mesonLib.MESON_TAC (map NORM_RULE working)
 end (asl, w)
+val prove_tac = PROVE_TAC
 
 fun GEN_PROVE_TAC x y z thl (asl, w) = let
   val working = LLABEL_RESOLVE thl asl
@@ -51,6 +52,7 @@ fun SPOSE_NOT_THEN ttac =
   CCONTR_TAC THEN
   POP_ASSUM (fn th => ttac (simpLib.SIMP_RULE boolSimps.bool_ss
                                      [GSYM boolTheory.IMP_DISJ_THM] th))
+val spose_not_then = SPOSE_NOT_THEN
 
 (*===========================================================================*)
 (* Case analysis and induction tools that index the TypeBase.                *)
@@ -487,6 +489,7 @@ fun FULL_CASE_TAC goal =
     THEN RULE_ASSUM_TAC asm_rule
     THEN CONV_TAC case_conv
  end goal;
+val full_case_tac = FULL_CASE_TAC
 
 (*---------------------------------------------------------------------------*)
 (* Repeatedly do a case analysis anywhere in the goal. Avoids re-computing   *)
@@ -503,6 +506,7 @@ fun EVERY_CASE_TAC goal =
                   CONV_TAC case_conv) a
  in REPEAT tac
  end goal;
+val every_case_tac = EVERY_CASE_TAC
 
 (*===========================================================================*)
 (* Rewriters                                                                 *)
@@ -556,6 +560,7 @@ fun grab P f v =
 fun ASSUM_TAC f P = W (fn (asl,_) => grab P f NO_TAC asl)
 
 val VAR_EQ_TAC = ASSUM_TAC VSUBST_TAC var_eq;
+val var_eq_tac = VAR_EQ_TAC
 
 fun ASSUMS_TAC f P = W (fn (asl,_) =>
   case filter P asl
@@ -829,6 +834,7 @@ fun STP_TAC ss finisher
 fun RW_TAC ss thl g = markerLib.ABBRS_THEN
                           (fn thl => STP_TAC (ss && thl) NO_TAC) thl
                           g
+val rw_tac = RW_TAC
 
 fun NORM_TAC ss thl g =
     markerLib.ABBRS_THEN
@@ -899,6 +905,7 @@ fun SRW_TAC ssdl thl g = let
 in
   markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
 end g;
+val srw_tac = SRW_TAC
 
 val Abbr = markerSyntax.Abbr
 

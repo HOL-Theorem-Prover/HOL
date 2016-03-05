@@ -14,7 +14,7 @@ Generalizes a goal.
 \DESCRIBE
 When applied to a pair of terms {(q,p)}, where {p} is a paired structure of
 variables and a goal {A ?- t}, the tactic {PSPEC_TAC} generalizes the
-goal to {A ?- !p. t[p/q]}, that is, all components of {q} are turned into 
+goal to {A ?- !p. t[p/q]}, that is, all components of {q} are turned into
 the corresponding components of {p}.
 {
         A ?- t
@@ -40,7 +40,7 @@ OK..
 1 subgoal:
 > val it =
     !(x,y). x + y = y + x
-    
+
      : proof
 }
 

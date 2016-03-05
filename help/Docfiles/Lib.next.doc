@@ -12,7 +12,7 @@ stream.
 An application {next istrm} moves to the next element in the stream.
 
 \FAILURE
-If the transition function supplied when building the stream fails on 
+If the transition function supplied when building the stream fails on
 the current state.
 
 \EXAMPLE

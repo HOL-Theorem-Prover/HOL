@@ -568,6 +568,11 @@ in
      warn ("  this suggests you should reconfigure the system.");
      warn ("  Press Ctl-C now to abort the build; <RETURN> to continue.");
      warn ("WARNING! WARNING!");
+     if Systeml.POLY_VERSION = 551 orelse Systeml.POLY_VERSION = 552 then
+       ignore(TextIO.inputLine TextIO.stdIn)
+       (* see PolyML bug report at
+            https://www.mail-archive.com/polyml@inf.ed.ac.uk/msg00982.html *)
+     else ();
      ignore (TextIO.inputLine TextIO.stdIn))
   else ()
 end handle OS.SysErr _ => die ("File "^s^" has disappeared.");
@@ -690,7 +695,9 @@ in
           \***    config-override           (Moscow ML)\n\
           \***\n\
           \*** (Under Poly/ML you will have to delete bin/hol.builder0 as \
-          \well)\n")
+          \well)\n***\n\
+          \*** (Or: build with -nograph to stop this \
+          \message from appearing again)\n")
   else let
       val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
       val _ = print "  (Use build's -nograph option to skip this step.)\n"
@@ -714,14 +721,10 @@ fun Poly_compilehelp() = let
 in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");
-  system_ps (POLY ^ " < poly-makebase.ML");
-  link "makebase.exe" "makebase.o";
-  system_ps (POLY ^ " < poly-Doc2Html.ML");
-  link "Doc2Html.exe" "Doc2Html.o";
-  system_ps (POLY ^ " < poly-Doc2Txt.ML");
-  link "Doc2Txt.exe" "Doc2Txt.o";
-  system_ps (POLY ^ " < poly-Doc2Tex.ML");
-  link "Doc2Tex.exe" "Doc2Tex.o"
+  system_ps (POLYC ^ " poly-makebase.ML -o makebase.exe");
+  system_ps (POLYC ^ " poly-Doc2Html.ML -o Doc2Html.exe");
+  system_ps (POLYC ^ " poly-Doc2Txt.ML -o Doc2Txt.exe");
+  system_ps (POLYC ^ " poly-Doc2Tex.ML -o Doc2Tex.exe")
 end
 
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -756,7 +759,7 @@ fun build_help graph =
      val _ = OS.FileSys.chDir dir
 
      (* builds the documentation tools called below *)
-     val _ = if ML_SYSNAME = "poly" then Poly_compilehelp()
+     val _ = if ML_SYSNAME = "poly" then ignore (Poly_compilehelp())
              else if ML_SYSNAME = "mosml" then mosml_compilehelp()
              else raise Fail "Bogus ML_SYSNAME"
 

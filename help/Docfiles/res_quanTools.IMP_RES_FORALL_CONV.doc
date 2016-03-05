@@ -12,7 +12,7 @@ conversion, restricted quantifier, universal, implication.
 When applied to a term of the form {!x.P x ==> Q}, the conversion
 {IMP_RES_FORALL_CONV} returns the theorem:
 {
-   |- (!x. P x ==> Q) = !x::P. Q 
+   |- (!x. P x ==> Q) = !x::P. Q
 }
 
 \FAILURE

@@ -11,6 +11,7 @@ structure clauses :> clauses =
 struct
 
 open HolKernel boolSyntax Drule compute_rules
+
 val CL_ERR = mk_HOL_ERR "clauses"
 infix ##
 
@@ -252,7 +253,6 @@ in
     end
 end
 
-
 fun add_thms lthm rws =
   List.app (List.app (enter_thm rws) o BODY_CONJUNCTS) lthm;
 
@@ -287,5 +287,85 @@ fun scrub_thms lthm rws =
  end
  handle e => raise wrap_exn "clauses" "del_list" e;
 
+
+(*---------------------------------------------------------------------------*)
+(* Support for analysis of compsets                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun rws_of (RWS (ref rbmap)) = 
+ let val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, ref (db,opt)) = db
+     val dblist = List.map db_of_entry thinglist
+     fun get_actions db = 
+      case db
+       of EndDb => []
+        | NeedArg db' => get_actions db'
+        | Try{Hcst,Rws,Tail} => (Hcst,Rws)::get_actions Tail
+     val actionlist = List.concat (List.map get_actions dblist)
+     fun dest (RW{cst,lhs,npv,rhs,thm}) = thm
+     fun dest_action (Hcst,Rewrite rws) = (Hcst,map dest rws)
+       | dest_action (Hcst,Conv _) = (Hcst,[])
+     val rwlist = List.map dest_action actionlist
+ in 
+   rwlist
+ end;
+
+datatype transform 
+  = Conversion of (term -> thm * db fterm)
+  | RRules of thm list;
+
+(*---------------------------------------------------------------------------*)
+(* Compute the "attachments" for each element of the compset. Fortunately,   *)
+(* it seems that the insertion of an attachment into a compset also makes    *)
+(* insertions for the constants mentioned in the rhs of the rewrite.         *)
+(* Otherwise, one would have to do a transitive closure sort of construction *)
+(* to make all the dependencies explicit.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun deplist (RWS (ref rbmap)) = 
+ let val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, ref (db,opt)) = (ss,db)
+     val dblist = List.map db_of_entry thinglist
+     fun get_actions db = 
+      case db
+       of EndDb => []
+        | NeedArg db' => get_actions db'
+        | Try{Hcst,Rws,Tail} => Rws::get_actions Tail
+     val actionlist = List.map (I##get_actions) dblist
+     fun dest (RW{cst,lhs,npv,rhs,thm}) = thm
+     fun dest_action (Rewrite rws) = RRules (map dest rws)
+       | dest_action (Conv ecnv) = Conversion ecnv
+     val rwlist = List.map (I##(map dest_action)) actionlist
+ in 
+   rwlist
+ end;
+
+fun mkCSET () =
+ let val tyinfol = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val init_set = HOLset.empty
+                      (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
+                              (pair_compare(String.compare,String.compare)))
+     fun insert_const c cset = HOLset.add(cset,dest_thy_const c)
+     fun insert_tycs tyinfo cset = 
+        itlist insert_const (TypeBasePure.constructors_of tyinfo) cset
+ in 
+     itlist insert_tycs tyinfol init_set
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Compute the attachments for each constant, then delete the constructors.  *)
+(*---------------------------------------------------------------------------*)
+
+fun no_transform compset = 
+ let val CSET = mkCSET()
+     fun inCSET t = HOLset.member(CSET, dest_thy_const t)
+     fun interesting (ss,_::_) = false
+       | interesting ((Name,Thy),[]) = 
+          let val c = prim_mk_const{Name=Name,Thy=Thy}
+          in not(inCSET c)
+          end
+ in
+    map fst (filter interesting (deplist compset))
+ end;
 
 end

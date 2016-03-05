@@ -3,7 +3,7 @@
 \TYPE {assoc1 : ''a -> (''a * 'b) list -> (''a * 'b)option}
 
 \SYNOPSIS
-Searches a list of pairs for a pair whose first component equals a 
+Searches a list of pairs for a pair whose first component equals a
 specified value.
 
 \KEYWORDS

@@ -9,7 +9,7 @@ Search for theory element by name fragment, among a given list.
 An invocation {DB.find_in s data_list}
 selects from {data_list} those theory elements which have
 been stored with a name in which {s} occurs as a proper substring,
-ignoring case distinctions. 
+ignoring case distinctions.
 
 \FAILURE
 Never fails. If nothing suitable can be found, the empty list is returned.
@@ -35,7 +35,7 @@ Never fails. If nothing suitable can be found, the empty list is returned.
 
 \USES
 Finding theorems in interactive proof sessions.
-The second argument will normally be the result of a previous call to 
+The second argument will normally be the result of a previous call to
 {DB.find, DB.match, DB.apropos, DB.listDB, DB.thy} etc.
 
 \SEEALSO

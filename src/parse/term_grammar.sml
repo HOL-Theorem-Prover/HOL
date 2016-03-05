@@ -145,6 +145,9 @@ datatype grammar = GCONS of
    absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
    }
 
+datatype ruleset = GRS of (int option * grammar_rule) list * special_info
+fun ruleset (GCONS {rules,specials,...}) = GRS (rules, specials)
+
 type userprinter =
      (type_grammar.grammar * grammar, grammar) term_pp_types.userprinter
 
@@ -1105,7 +1108,7 @@ end
 
 datatype ruletype_info = add_prefix | add_suffix | add_both | add_nothing
 
-fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
+fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
   open Portable
   val {add_string, add_break, begin_block, end_block,
        add_newline,...} = with_ppstream pstrm
@@ -1154,11 +1157,11 @@ fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
     open Lib
     val bnames =
       case b of
-        LAMBDA => map (fn s => (s,"")) (#lambda (specials G))
+        LAMBDA => map (fn s => (s,"")) (#lambda specials)
       | BinderString {term_name,tok,...} => [(tok,
                                               if tok = term_name then ""
                                               else " ["^term_name^"]")]
-    val endb = quote (#endbinding (specials G))
+    val endb = quote (#endbinding specials)
     fun one_binder (s, tnminfo) =
         add_string (quote s ^ " <..binders..> " ^ endb ^ " TM" ^ tnminfo)
   in
@@ -1184,7 +1187,7 @@ fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
     | PREFIX (BINDER blist) => print_binderl blist
     | SUFFIX (STD_suffix rrl) => pprint_rrl add_suffix rrl
     | SUFFIX TYPE_annotation => let
-        val type_intro = #type_intro (specials G)
+        val type_intro = #type_intro specials
       in
         add_string ("TM \""^type_intro^"\" TY  (type annotation)")
       end
@@ -1202,7 +1205,7 @@ fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
         end_block()
       end
     | INFIX RESQUAN_OP => let
-        val rsqstr = #res_quanop (specials G)
+        val rsqstr = #res_quanop specials
       in
         add_string ("TM \""^rsqstr^
                     "\" TM (restricted quantification operator)")
@@ -1247,7 +1250,7 @@ fun prettyprint_grammar_rules tmprint pstrm (G :grammar) = let
   end
 
 in
-  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) (rules G)
+  pr_list print_whole_rule (fn () => ()) (fn () => add_break (1,0)) rules
 end
 
 fun prettyprint_grammar tmprint pstrm (G :grammar) = let
@@ -1322,7 +1325,7 @@ fun prettyprint_grammar tmprint pstrm (G :grammar) = let
 in
   begin_block CONSISTENT 0;
   (* rules *)
-  prettyprint_grammar_rules tmprint pstrm G;
+  prettyprint_grammar_rules tmprint pstrm (ruleset G);
   add_newline();
   (* known constants *)
   add_string "Known constants:";

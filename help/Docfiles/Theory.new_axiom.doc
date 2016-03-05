@@ -6,12 +6,12 @@
 Install a new axiom in the current theory.
 
 \DESCRIBE
-If {M} is a term of type {bool}, a call {new_axiom(name,M)} creates 
+If {M} is a term of type {bool}, a call {new_axiom(name,M)} creates
 a theorem
 {
    |- tm
 }
-and stores it away in the current theory segment under {name}. 
+and stores it away in the current theory segment under {name}.
 
 \FAILURE
 Fails if the given term does not have type {bool}.
@@ -23,9 +23,9 @@ Fails if the given term does not have type {bool}.
 }
 
 \COMMENTS
-For most purposes, it is unnecessary to declare new axioms: all 
+For most purposes, it is unnecessary to declare new axioms: all
 of classical mathematics can be derived by definitional extension
-alone. Proceeding by definition is not only more elegant, but also 
+alone. Proceeding by definition is not only more elegant, but also
 guarantees the consistency of the deductions made. However, there are
 certain entities which cannot be modelled in simple type theory without
 further axioms, such as higher transfinite ordinals.

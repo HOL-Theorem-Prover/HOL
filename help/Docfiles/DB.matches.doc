@@ -3,7 +3,7 @@
 \TYPE {matches : term -> thm -> bool}
 
 \SYNOPSIS
-Tells whether part of a theorem matches a pattern. 
+Tells whether part of a theorem matches a pattern.
 
 \KEYWORDS
 matching.

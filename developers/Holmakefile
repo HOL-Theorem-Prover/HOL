@@ -1,18 +1,20 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = mosml-comparelogs comparelogs generateBuildSummary $($(ML_SYSNAME)_gbsdep)
+EXTRA_CLEANS = comparelogs generateBuildSummary genUseScript
 MLTON_SRCS = mlton-srcs/Binarymap.sml mlton-srcs/Listsort.sml comparelogs.mlb
 
-mosml-comparelogs : mosmlTextIO.ui comparelogs.sml
-	$(MOSMLC) -o $@ -toplevel mosmlTextIO.ui comparelogs.sml
-
-mosmlTextIO.ui mosmlTextIO.uo: mosmlTextIO.sml
-	$(MOSMLC) -toplevel $<
+.PHONY: all
+all: comparelogs generateBuildSummary
 
 ifdef POLY
 
+all: genUseScript
+
 comparelogs: poly-comparelogs.ML comparelogs.sml
-	poly < $<
-	gcc -o $@ comparelogs.o $(POLY_LDFLAGS)
+	$(POLYC) $< -o $@
+
+genUseScript: genUseScript.sml $(dprot $(HOLDIR)/src/portableML/getOpt.sig) \
+              $(dprot $(HOLDIR)/src/portableML/getOpt.sml)
+	$(POLYC) $< -o $@
 
 else
 
@@ -21,10 +23,10 @@ comparelogs: comparelogs.uo
 
 endif
 
-poly_gbsdep = generateBuildSummary.o
+poly_gbsdep = poly-gbs.ML generateBuildSummary.sml
 mosml_gbsdep = mosmlgbs.uo generateBuildSummary.uo
 
-poly_gbscomm = gcc -o $@ $< $(POLY_LDFLAGS)
+poly_gbscomm = $(POLYC) -o $@ $<
 mosml_gbscomm = $(MOSMLC) -o $@ $<
 
 

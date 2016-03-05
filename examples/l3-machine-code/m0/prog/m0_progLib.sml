@@ -195,7 +195,8 @@ local
        | "m0_PSR_C" => 11
        | "m0_PSR_V" => 12
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
+   val int_of_v2w =
+     Arbnum.toInt o bitstringSyntax.num_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    val total_dest_reg = Lib.total (wordsSyntax.uint_of_word o Term.rand)
    fun word_compare (w1, w2) =
@@ -295,23 +296,21 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val m0_rename1 =
+   val m0_rmap =
       Lib.total
-        (fn "m0_prog$m0_PSR_N" => "n"
-          | "m0_prog$m0_PSR_Z" => "z"
-          | "m0_prog$m0_PSR_C" => "c"
-          | "m0_prog$m0_PSR_V" => "v"
-          | "m0_prog$m0_AIRCR_ENDIANNESS" => "endianness"
-          | "m0_prog$m0_CurrentMode" => "mode"
-          | "m0_prog$m0_count" => "count"
-          | _ => fail())
-   val m0_rename2 =
-      Lib.total
-        (fn "m0_prog$m0_REG" => Lib.curry (op ^) "r" o Int.toString o reg_index
+        (fn "m0_prog$m0_PSR_N" => K "n"
+          | "m0_prog$m0_PSR_Z" => K "z"
+          | "m0_prog$m0_PSR_C" => K "c"
+          | "m0_prog$m0_PSR_V" => K "v"
+          | "m0_prog$m0_AIRCR_ENDIANNESS" => K "endianness"
+          | "m0_prog$m0_CurrentMode" => K "mode"
+          | "m0_prog$m0_count" => K "count"
+          | "m0_prog$m0_REG" =>
+             Lib.curry (op ^) "r" o Int.toString o reg_index o List.hd
           | "m0_prog$m0_MEM" => K "b"
           | _ => fail())
 in
-   val m0_rename = stateLib.rename_vars (m0_rename1, m0_rename2, ["b"])
+   val m0_rename = stateLib.rename_vars (m0_rmap, ["b"])
 end
 
 local
@@ -408,9 +407,7 @@ local
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
    val PRE_COND_CONV =
       helperLib.PRE_CONV
          (DEPTH_COND_CONV
@@ -463,7 +460,7 @@ type opt = {gpr_map: bool, mem: memory, temporal: bool}
 local
    val gpr_map_options =
       [["map-gpr", "gpr-map", "reg-map", "map-reg"],
-       ["no-gpr-map", "no-map-gpr"]]
+       ["no-map-gpr", "no-gpr-map"]]
    val mem_options =
       [["map-mem", "mem-map", "mapped"],
        ["array-mem", "mem-array", "array"],
@@ -477,6 +474,7 @@ local
        | 1 => Array
        | 2 => Flat
        | _ => raise ERR "process_rule_options" ""
+   val print_options = utilsLib.print_options (SOME 24)
 in
    fun basic_opt () =
       {gpr_map = false, mem = Flat,
@@ -518,10 +516,14 @@ in
       in
          if List.null l
             then {gpr_map = gpr_map, mem = mem, temporal = temporal}: opt
-         else raise ERR "process_options"
+         else ( print_options "Register view" gpr_map_options
+              ; print_options "Memory view" mem_options
+              ; print_options "Temporal triple" temporal_options
+              ; raise ERR "process_options"
                     ("Unrecognized option" ^
                      (if List.length l > 1 then "s" else "") ^
                      ": " ^ String.concat (commafy l))
+              )
       end
 end
 
@@ -561,8 +563,7 @@ local
                       |> List.map Arbnum.fromString
                       |> mlibUseful.min Arbnum.compare
                       |> fst
-                      |> Arbnum.toInt
-                      |> bitstringSyntax.int_to_bitlist
+                      |> bitstringSyntax.num_to_bitlist
                       |> utilsLib.padLeft false 3
                       |> List.map bitstringSyntax.mk_b
                       |> Lib.triple_of_list

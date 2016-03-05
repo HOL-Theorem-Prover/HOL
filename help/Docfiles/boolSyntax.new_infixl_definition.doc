@@ -17,7 +17,7 @@ definition requested by the user.
 
 Let {v_1} and {v_2} be tuples of distinct variables, containing the variables
 {x_1,...,x_m}.  Evaluating {new_infix_definition (name, ix v_1 v_2 = t)}
-declares the sequent {({},\v_1 v_2. t)} to be a definition in the 
+declares the sequent {({},\v_1 v_2. t)} to be a definition in the
 current theory, and declares {ix} to be a new constant in the
 current theory with this definition as its specification.
 This constant specification is returned as a theorem with the form

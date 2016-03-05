@@ -19,6 +19,8 @@ val two = 2
 fun times2 x = 2 * x
 fun div2 x = x div 2
 fun mod2 x = x mod 2
+fun pow (x, y) = IntInf.pow (x, IntInf.toInt y)
+val log2 = IntInf.fromInt o IntInf.log2
 
 fun plus1 x = x + 1
 fun plus2 x = x + 2
@@ -45,7 +47,7 @@ local
    fun err rdx = Fail ("String not " ^ radix rdx)
 in
    fun genFromString rdx s =
-      case Int.scan rdx Substring.getc (Substring.full s) of
+      case IntInf.scan rdx Substring.getc (Substring.full s) of
          SOME (i, r) => if Substring.size r = 0 then i else raise (err rdx)
        | _ => raise (err rdx)
    val fromHexString = genFromString StringCvt.HEX
@@ -54,20 +56,22 @@ in
    val fromString = genFromString StringCvt.DEC
 end
 
-fun fromInt n = if n < 0 then raise Overflow else n
+fun fromLargeInt n = if n < 0 then raise Overflow else n
+fun fromInt n = if Int.< (n, 0) then raise Overflow else IntInf.fromInt n
 
-fun toInt x = x
+val toInt = IntInf.toInt
+fun toLargeInt n = n
 
 fun floor x =
    let
-      val y = Real.floor x
+      val y = Real.toLargeInt IEEEReal.TO_NEGINF x
    in
       if y < 0 then raise Overflow else y
    end
 
-val toReal = Real.fromInt
+val toReal = Real.fromLargeInt
 
-fun asList x = [x]
+fun asList x = [toInt x]
 
 fun (x - y) = if x < y then 0 else IntInf.- (x, y)
 

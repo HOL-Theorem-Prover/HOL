@@ -22,14 +22,14 @@ Fails unless the named theory is an ancestor, or the current theory.
 
 - itlist union (map types (ancestry "-")) [];
 > val it =
-    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2), 
-     ("fun", 2), ("ind", 0), ("bool", 0), ("num", 0), 
+    [("one", 0), ("option", 1), ("prod", 2), ("sum", 2),
+     ("fun", 2), ("ind", 0), ("bool", 0), ("num", 0),
      ("recspace", 1), ("list", 1)] : (string * int) list
 }
 
 \SEEALSO
-Theory.constants, Theory.current_axioms, Theory.current_definitions, 
-Theory.current_theorems, Theory.new_type, Definition.new_type_definition, 
+Theory.constants, Theory.current_axioms, Theory.current_definitions,
+Theory.current_theorems, Theory.new_type, Definition.new_type_definition,
 Theory.parents, Theory.ancestry.
 
 \ENDDOC

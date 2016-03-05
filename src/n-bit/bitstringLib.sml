@@ -2,7 +2,7 @@ structure bitstringLib :> bitstringLib =
 struct
 
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs listLib wordsLib bitstringSyntax;
+open listLib wordsLib bitstringSyntax
 
 structure Parse = struct
   open Parse
@@ -98,7 +98,7 @@ end
 (* Evaluate ``v2n [...]`` *)
 
 local
-   open lcsymtacs arithmeticTheory numeralTheory
+   open arithmeticTheory numeralTheory
 
    val l2n_2_compute = Q.prove(
       `(l2n 2 [] = 0) /\
@@ -150,6 +150,10 @@ in
       end
       handle HOL_ERR {message = m, ...} => raise ERR "v2w_n2w_CONV" m
 end
+
+val v2w_n2w_ss =
+  simpLib.std_conv_ss
+    {name = "v2w_n2w", pats = [``v2w x: 'a word``], conv = v2w_n2w_CONV}
 
 (* ------------------------------------------------------------------------- *)
 
@@ -516,26 +520,76 @@ end
 
 (* ------------------------------------------------------------------------- *)
 
-val add_bitstring_compset =
-   let
-      open bitstringTheory
-   in
-      computeLib.add_thms
-       [
-        numLib.SUC_RULE extend_def, boolify_def, bitify_def, n2v_def, v2n_def,
-        s2v_def, v2s_def, shiftl_def, shiftr_def, field_def, rotate_def,
-        w2v_def, rev_count_list_def, modify_def, field_insert_def, add_def,
-        bitwise_def, bnot_def, bor_def, band_def, bxor_def, bnor_def,
-        bxnor_def, bnand_def, replicate_def, testbit, ops_to_v2w, ops_to_n2w,
-        fixwidth, extend, v2w_11, bit_v2w, w2n_v2w, w2v_v2w, w2w_v2w,
-        sw2sw_v2w, word_index_v2w, word_lsl_v2w, word_lsr_v2w, word_asr_v2w,
-        word_ror_v2w, word_1comp_v2w, word_and_v2w, word_or_v2w, word_xor_v2w,
-        word_nand_v2w, word_nor_v2w, word_xnor_v2w, word_lsb_v2w, word_msb_v2w,
-        word_reverse_v2w, word_modify_v2w, word_bits_v2w, word_extract_v2w,
-        word_slice_v2w, word_join_v2w, word_concat_v2w_rwt, word_reduce_v2w,
-        reduce_and_v2w, reduce_or_v2w
-       ]
-   end
+local
+  open bitstringTheory
+  val thms =
+    [
+     numLib.SUC_RULE extend_def, boolify_def, bitify_def, n2v_def, v2n_def,
+     s2v_def, v2s_def, shiftl_def, shiftr_def, field_def, rotate_def, w2v_def,
+     rev_count_list_def, modify_def, field_insert_def, add_def, bitwise_def,
+     bnot_def, bor_def, band_def, bxor_def, bnor_def, bxnor_def, bnand_def,
+     replicate_def, testbit, ops_to_v2w, ops_to_n2w, fixwidth, extend, v2w_11,
+     bit_v2w, w2n_v2w, w2v_v2w, w2w_v2w, sw2sw_v2w, word_index_v2w,
+     word_lsl_v2w, word_lsr_v2w, word_asr_v2w, word_ror_v2w, word_1comp_v2w,
+     word_and_v2w, word_or_v2w, word_xor_v2w, word_nand_v2w, word_nor_v2w,
+     word_xnor_v2w, word_lsb_v2w, word_msb_v2w, word_reverse_v2w,
+     word_modify_v2w, word_bits_v2w, word_extract_v2w, word_slice_v2w,
+     word_join_v2w_rwt, word_concat_v2w_rwt, word_reduce_v2w, reduce_and_v2w,
+     reduce_or_v2w
+    ]
+  fun name_ty tm =
+    let
+      val {Thy = thy, Name = name, ...} =
+         Term.dest_thy_const tm
+         handle e as HOL_ERR _ => (print_term tm; raise e)
+    in
+      (thy ^ "$" ^ name,
+       List.length (fst (boolSyntax.strip_fun (Term.type_of tm))))
+    end
+  val get_function =
+     name_ty o fst o boolSyntax.strip_comb o boolSyntax.lhs o
+     snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o
+     snd o boolSyntax.strip_forall o Thm.concl
+  val s =
+    thms |> List.map get_function
+         |> List.filter
+              (fn (s, _) =>
+                 not (Lib.mem s ["bitstring$modify", "bitstring$bitwise",
+                                 "words$word_modify", "words$word_reduce"]))
+         |> Redblackmap.fromList String.compare
+  fun is_ground_arg tm =
+    Lib.can bitstringSyntax.bitlist_of_term tm orelse
+    Lib.can (bitstringSyntax.bitlist_of_term o fst o
+             bitstringSyntax.dest_v2w) tm orelse
+    listSyntax.is_nil tm orelse
+    wordsSyntax.is_word_literal tm andalso Lib.can wordsSyntax.size_of tm orelse
+    numSyntax.is_numeral tm orelse
+    Term.same_const boolSyntax.T tm orelse
+    Term.same_const boolSyntax.F tm orelse
+    stringSyntax.is_string_literal tm
+  fun is_ground tm =
+    case Lib.total boolSyntax.dest_strip_comb tm of
+       SOME (name, l) =>
+         (case Redblackmap.peek (s, name) of
+             SOME i => List.length l = i andalso List.all is_ground_arg l
+           | NONE => false)
+     | NONE => false
+in
+  val add_bitstring_compset = computeLib.add_thms thms
+  val cnv =
+    let
+      val cmp = wordsLib.words_compset ()
+    in
+      add_bitstring_compset cmp
+    ; Conv.CHANGED_CONV (computeLib.CBV_CONV cmp)
+    end
+  fun BITSTRING_GROUND_CONV tm =
+    if is_ground tm then cnv tm
+    else raise ERR "BITSTRING_GROUND_CONV" "Term not ground"
+  val BITSTRING_GROUND_ss =
+    simpLib.std_conv_ss
+      {name = "BITSTRING_GROUND", pats = [], conv = BITSTRING_GROUND_CONV}
+end
 
 (* ------------------------------------------------------------------------- *)
 

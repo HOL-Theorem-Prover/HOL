@@ -6,7 +6,7 @@ structure x64_stepLib :> x64_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs utilsLib x64Lib x64Theory x64_stepTheory
+open utilsLib x64Lib x64Theory x64_stepTheory
 
 structure Parse =
 struct
@@ -586,8 +586,7 @@ val Zret_rwts =
    |> addThms
 
 val Zxchg_rwts =
-   EV ([dfn'Zxchg_def] @
-        ea_Zrm_rwt @ EA_rwt @ write'EA_rwt_r)
+   EV ([dfn'Zxchg_def] @ ea_Zrm_rwt @ EA_rwt @ write'EA_rwt_r)
       [] rm_cases
       ``dfn'Zxchg (size, rm, r2)``
    |> data_hyp_rule

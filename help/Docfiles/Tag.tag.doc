@@ -10,10 +10,10 @@ tag, oracle.
 
 \DESCRIBE
 The type {tag} is used to track the use of oracles in HOL. An `oracle'
-is a source of theorems that are not proved, but just asserted. In HOL, 
+is a source of theorems that are not proved, but just asserted. In HOL,
 such unproven `theorems' are used to incorporate the results of
-external proof tools. Each theorem coming from an oracle has a tag 
-attached to it. This tag gets copied to any theorems hereditarily 
+external proof tools. Each theorem coming from an oracle has a tag
+attached to it. This tag gets copied to any theorems hereditarily
 generated from an oracular theorem by inference.
 
 \SEEALSO

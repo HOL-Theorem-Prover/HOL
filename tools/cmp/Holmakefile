@@ -3,13 +3,10 @@
 all: cmp.exe
 
 ifdef POLY
-cmp.o: cmp.ML cmp.sml
-	$(POLY) < $<
+cmp.exe: cmp.sml
+	$(POLYC) $< -o $@
 
-cmp.exe: cmp.o
-	$(CC) -o $@ $< $(POLY_LDFLAGS)
-
-EXTRA_CLEANS = cmp.exe cmp.o
+EXTRA_CLEANS = cmp.exe
 
 else
 

@@ -3,7 +3,8 @@
 \TYPE {SPEC_UNDISCH_EXL : thm -> thm}
 
 \SYNOPSIS
-Strips universal quantifiers and antecedents of implications,
+Strips universal quantifiers and antecedents of implications
+(splitting conjunctive antecedents),
 then where possible replaces the formerly quantified variables
 as existentials in the new hypotheses.
 
@@ -15,7 +16,7 @@ In this example, assume that {a1} and {a3} (only) involve the free variable {x}.
 {
    |- !x. a1 ==> !y. a2 ==> !z. a3 ==> !u. t
    ----------------------------------------- SPEC_UNDISCH_EXL
-	   ?x. a1 /\ a3, a2 |- t 
+	   ?x. a1 /\ a3, a2 |- t
 }
 
 \FAILURE

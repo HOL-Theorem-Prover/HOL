@@ -14,6 +14,10 @@ open Systeml Holmake_tools
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 
+infix //
+fun p1 // p2 = OS.Path.concat(p1,p2)
+val default_holstate = Systeml.DEFAULT_STATE
+
 fun main () = let
 
 val execname = OS.Path.file (CommandLine.name())
@@ -160,7 +164,8 @@ fun parse_command_line list = let
   val (rem, quiet_flag) = find_toggle "--quiet" rem
   val (rem, do_logging_flag) = find_toggle "--logging" rem
 
-  val (rem, cmdl_POLYs) = find_pairs "--poly" rem
+  val (rem, POLY) = find_one_pairtag "--poly" Systeml.POLY (fn x => x) rem
+  val (rem, cmdl_HOLSTATE) = find_one_pairtag "--holstate" NONE SOME rem
   val (rem, polynothol) = find_toggle "--poly_not_hol" rem
   val (rem, no_lastmakercheck) = find_toggle "--nolmbc" rem
 in
@@ -196,15 +201,8 @@ in
          warn "Ignoring all but last --polymllibdir spec.";
          SOME (List.last cmdl_POLYMLLIBDIRs)
        end,
-   cmdl_POLY =
-     case cmdl_POLYs of
-       [] => NONE
-     | [x] => SOME x
-     | _ => let
-       in
-         warn "Ignoring all but last --poly spec.";
-         SOME (List.last cmdl_POLYs)
-       end,
+   POLY = POLY,
+   cmdl_HOLSTATE = cmdl_HOLSTATE,
    polynothol = polynothol,
    keep_going_flag = keep_going_flag,
    quiet_flag = quiet_flag,
@@ -216,7 +214,7 @@ end
 val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
      always_rebuild_deps, interactive_flag, opentheory,
      additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_POLYMLLIBDIR, cmdl_POLY, polynothol,
+     cmdl_HOLDIR, cmdl_HOLSTATE, cmdl_POLYMLLIBDIR, POLY, polynothol,
      no_sigobj = cline_no_sigobj, no_prereqs,
      quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
      no_lastmakercheck, user_overlay, keep_going_flag, quiet_flag,
@@ -385,10 +383,10 @@ val hmake_qof = member "QUIT_ON_FAILURE" hmake_options
 val hmake_noprereqs = member "NO_PREREQS" hmake_options
 val extra_cleans = envlist "EXTRA_CLEANS"
 
-val POLY = let
+val HOLSTATE = let
   val default =
-      case cmdl_POLY of
-        NONE => fullPath [HOLDIR, "bin", "hol.builder"]
+      case cmdl_HOLSTATE of
+        NONE => if polynothol then POLY else default_holstate
       | SOME s => s
 in
   case envlist "HOLHEAP" of
@@ -398,16 +396,6 @@ in
                  " as a HOL HEAP spec; using default hol.builder.");
            default)
 end
-
-val EXE_POLY =
-    if Path.isRelative POLY then let
-        val d = Path.dir POLY
-      in
-        if d = "" then Path.concat(".", POLY)
-        else if d = "." then POLY
-        else POLY
-      end
-    else POLY
 
 val quit_on_failure = quit_on_failure orelse hmake_qof
 
@@ -515,12 +503,9 @@ let
       (TextIO.output (out, s); TextIO.output (out, "\n"))
 in
   p "#!/bin/sh";
-  p (protect(EXE_POLY) ^ " --gcthreads=1 " ^
+  p (protect(POLY) ^ " -q --gcthreads=1 " ^
      String.concatWith " " (envlist "POLY_CLINE_OPTIONS") ^
      " <<'__end-of-file__'");
-  p "val _ = PolyML.Compiler.prompt1:=\"\";";
-  p "val _ = PolyML.Compiler.prompt2:=\"\";";
-  p "val _ = PolyML.print_depth 0;";
   (if polynothol then
      (p "local";
       p "val dir = OS.FileSys.getDir();";
@@ -530,7 +515,8 @@ in
       p "val _ = OS.FileSys.chDir dir;";
       p "in end;")
    else
-     ());
+     (p ("val _ = PolyML.SaveState.loadState \"" ^
+         String.toString HOLSTATE ^ "\";\n")));
   p ("val _ = List.map load [" ^
                       String.concatWith ","
                                         (List.map (fn f => "\"" ^ f ^ "\"")
@@ -758,7 +744,7 @@ in
       val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
-      val heap_deps = [Unhandled POLY]
+      val heap_deps = [Unhandled HOLSTATE]
       val alldeps = set_union (set_union tcdeps uo_deps)
                               (set_union file_dependencies heap_deps)
     in
@@ -1201,6 +1187,7 @@ in
      "    --help | -h          : show this message\n",
      "    --holdir <directory> : use specified directory as HOL root\n",
      "    --holmakefile <file> : use file as Holmakefile\n",
+     "    --holstate <file>    : use file as underlying \"heap\"\n",
      "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
      "    --keep-going | -k    : don't stop on failure\n",
      "    --logging            : do per-theory time logging\n",

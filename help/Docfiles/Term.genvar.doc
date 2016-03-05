@@ -32,8 +32,8 @@ Note that one can anticipate {genvar}:
 }
 
 This shortcoming could be guarded against, but it doesn't seem worth
-it currently. It doesn't seem to affect the soundness of the 
-implementation of HOL; at worst, a proof procedure may fail because 
+it currently. It doesn't seem to affect the soundness of the
+implementation of HOL; at worst, a proof procedure may fail because
 it doesn't have a sufficiently fresh variable.
 
 \USES

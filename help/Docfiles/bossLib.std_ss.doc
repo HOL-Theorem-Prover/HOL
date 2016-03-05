@@ -9,10 +9,10 @@ Basic simplification set.
 simplification.
 
 \DESCRIBE
-The simplification set {std_ss} extends {bool_ss} with a useful set 
-of rewrite rules for terms involving options, pairs, and sums. It 
-also performs beta and eta reduction. It applies some standard rewrites 
-to evaluate expressions involving only numerals. 
+The simplification set {std_ss} extends {bool_ss} with a useful set
+of rewrite rules for terms involving options, pairs, and sums. It
+also performs beta and eta reduction. It applies some standard rewrites
+to evaluate expressions involving only numerals.
 
 The following rewrites from {pairTheory} are included in {std_ss}:
 {
@@ -34,9 +34,9 @@ The following rewrites from {sumTheory} are included in {std_ss}:
    |- !x. ISR x ==> (INR (OUTR x) = x)
    |- (!x. ISL (INL x)) /\ !y. ~ISL (INR y)
    |- (!x. ISR (INR x)) /\ !y. ~ISR (INL y)
-   |- !x. OUTL (INL x) = x 
+   |- !x. OUTL (INL x) = x
    |- !x. OUTR (INR x) = x
-   |- !x y. ~(INL x = INR y) 
+   |- !x y. ~(INL x = INR y)
    |- !x y. ~(INR y = INL x)
    |- (!y x. (INL x = INL y) = (x = y)) /\
       (!y x. (INR x = INR y) = (x = y))
@@ -48,8 +48,8 @@ The following rewrites from {optionTheory} are included in {std_ss}:
    |- (!x y. (SOME x = SOME y) = (x = y))
    |- (!x. ~(NONE = SOME x))
    |- (!x. ~(SOME x = NONE))
-   |- (!x. THE (SOME x) = x) 
-   |- (!x. IS_SOME (SOME x) = T) 
+   |- (!x. THE (SOME x) = x)
+   |- (!x. IS_SOME (SOME x) = T)
    |- (IS_SOME NONE = F)
    |- (!x. IS_NONE x = (x = NONE))
    |- (!x. ~IS_SOME x = (x = NONE))
@@ -69,22 +69,22 @@ The following rewrites from {optionTheory} are included in {std_ss}:
    |- !f x. (OPTION_MAP f x = NONE) = (x = NONE)
 }
 \USES
-For performing obvious simplification steps on terms, formulas, and 
-goals. Also, sometimes simplification with more powerful simpsets, 
+For performing obvious simplification steps on terms, formulas, and
+goals. Also, sometimes simplification with more powerful simpsets,
 like {arith_ss}, becomes too slow, in which case one can use {std_ss}
 supplemented with whatever theorems are needed.
 
 \COMMENTS
-The simplification sets provided in {BasicProvers} and {bossLib} 
-(currently {bool_ss}, {std_ss}, {arith_ss}, and {list_ss}) do not 
-include useful rewrites stemming from HOL datatype declarations, such 
-as injectivity and distinctness of constructors. However, the 
+The simplification sets provided in {BasicProvers} and {bossLib}
+(currently {bool_ss}, {std_ss}, {arith_ss}, and {list_ss}) do not
+include useful rewrites stemming from HOL datatype declarations, such
+as injectivity and distinctness of constructors. However, the
 simplification routines {RW_TAC} and {SRW_TAC} automatically load these
 rewrites.
 
 \SEEALSO
-BasicProvers.RW_TAC, BasicProvers.SRW_TAC, 
+BasicProvers.RW_TAC, BasicProvers.SRW_TAC,
 simpLib.SIMP_TAC, simpLib.SIMP_CONV, simpLib.SIMP_RULE,
-BasicProvers.bool_ss, bossLib.arith_ss, bossLib.list_ss. 
+BasicProvers.bool_ss, bossLib.arith_ss, bossLib.list_ss.
 
 \ENDDOC

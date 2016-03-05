@@ -35,7 +35,7 @@ sig
    val STEP:
       (thm list -> thm list) * term -> thm list -> term list list -> cover ->
       term -> thm list
-   val WALPHA_CONV: conv
+   val STRIP_UNDISCH: rule
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
    val add_base_datatypes: computeLib.compset -> unit
@@ -75,6 +75,7 @@ sig
    val partitions: 'a list -> 'a list list list
    val pattern: string -> term
    val pick: bool list -> 'a list -> 'a list
+   val print_options: int option -> string -> string list list -> unit
    val process_opt:
       ''a list list -> string -> 'b -> ''a list -> (int -> 'b) -> 'b * ''a list
    val process_option:
@@ -94,6 +95,7 @@ sig
    val splitAtPos: int -> string -> string * string
    val split_conditions: thm -> thm list
    val strip_add_or_sub: term -> term * (bool * term) list
+   val strings_to_quote: string list -> string frag list
    val tab_fixedwidth: int -> int -> term list
    val theory_compset: (thm list * inventory) -> computeLib.compset
    val theory_rewrites: (thm list * inventory) -> thm list

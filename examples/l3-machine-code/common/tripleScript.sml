@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open arithmeticTheory whileTheory pairTheory pred_setTheory progTheory;
 
 val _ = new_theory "triple";

@@ -5,40 +5,47 @@
 default: all
 
 clean:
-	(cd Description; make clean; cd ..)
-	(cd Tutorial; make clean; cd ..)
+	(cd Description; Holmake cleanAll; cd ..)
+	(cd Tutorial; Holmake cleanAll; cd ..)
 	(cd Logic; make clean; cd ..)
 	(cd Reference; make clean; cd ..)
 	(cd Interaction; make clean; cd ..)
 	(cd Quick; make clean; cd ..)
 
-description:
-	(cd Description; make; cd ..)
+Description/description.pdf:
+	(cd Description; Holmake; cd ..)
 	@echo "====> DESCRIPTION made"
 
-logic:
+Logic/logic.pdf:
 	(cd Logic; make; cd ..)
 	@echo "====> LOGIC made"
 
-tutorial:
-	(cd Tutorial; make; cd ..)
+Tutorial/tutorial.pdf:
+	(cd Tutorial; Holmake; cd ..)
 	@echo "====> TUTORIAL made"
 
-reference:
+Reference/reference.pdf:
 	(cd Reference; make; cd ..)
 	@echo "====> REFERENCE made"
 
-interaction:
+Interaction/HOL-interaction.pdf:
 	(cd Interaction; make; cd ..)
 	@echo "====> Quick Reference made"
 
-quick:
+Quick/quick.pdf:
 	(cd Quick; make; cd ..)
 	@echo "====> Quick Reference made"
 
 # libraries:
 # 	(cd Libraries; make all; cd ..)
 # 	@echo "====> LIBRARIES made"
+
+description: Description/description.pdf
+logic: Logic/logic.pdf
+tutorial: Tutorial/tutorial.pdf
+reference: Reference/reference.pdf
+interaction: Interaction/HOL-interaction.pdf
+quick: Quick/quick.pdf
 
 all: description tutorial logic reference interaction quick
 	@echo "=======> MANUAL made"

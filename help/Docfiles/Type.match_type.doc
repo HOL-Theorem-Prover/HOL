@@ -3,7 +3,7 @@
 \TYPE {match_type : hol_type -> hol_type -> hol_type subst}
 
 \SYNOPSIS
-Calculates a substitution {theta} such that instantiating the first 
+Calculates a substitution {theta} such that instantiating the first
 argument with {theta} equals the second argument.
 
 \DESCRIBE
@@ -30,7 +30,7 @@ If no such substitution can be found.
 
 - match_type (alpha --> alpha)
              (ind   --> bool);
-! Uncaught exception: 
+! Uncaught exception:
 ! HOL_ERR
 }
 

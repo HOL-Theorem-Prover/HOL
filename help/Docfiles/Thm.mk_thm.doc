@@ -16,7 +16,7 @@ and conclusion. All the terms therein should be of type {bool}.
 of it tags the resulting theorem with {MK_THM}.
 
 \FAILURE
-Fails unless all the terms provided for assumptions and conclusion 
+Fails unless all the terms provided for assumptions and conclusion
 are of type {bool}.
 
 \EXAMPLE

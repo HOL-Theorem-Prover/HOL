@@ -6,8 +6,8 @@
 Remove a stored value from the current theory segment.
 
 \DESCRIBE
-An invocation {delete_binding s} attempts to locate an axiom, definition, 
-or theorem that has been stored under name {s} in the current theory segment. 
+An invocation {delete_binding s} attempts to locate an axiom, definition,
+or theorem that has been stored under name {s} in the current theory segment.
 If such a binding can be found, it is deleted.
 
 \FAILURE

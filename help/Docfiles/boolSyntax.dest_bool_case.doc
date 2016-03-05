@@ -6,7 +6,7 @@
 Destructs a case expression over {bool}.
 
 \DESCRIBE
-If {M} has the form {bool_case M1 M2 b}, then {dest_bool_case M} 
+If {M} has the form {bool_case M1 M2 b}, then {dest_bool_case M}
 returns {M1,M2,b}.
 
 \FAILURE

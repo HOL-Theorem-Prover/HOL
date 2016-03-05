@@ -36,11 +36,11 @@ It might be necessary, say for subsequent application of an induction
 hypothesis, to resist reducing a term {b = T} to {b}.
 {
   - PURE_REWRITE_TAC [] ([], Term `b = T`);
-  > val it = ([([], `b = T`)], fn) 
+  > val it = ([([], `b = T`)], fn)
      : (term list * term) list * (thm list -> thm)
 
   - REWRITE_TAC [] ([], Term `b = T`);
-  > val it = ([([], `b`)], fn) 
+  > val it = ([([], `b`)], fn)
      : (term list * term) list * (thm list -> thm)
 }
 

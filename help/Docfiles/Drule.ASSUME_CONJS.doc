@@ -21,8 +21,8 @@ Never fails.
 { [t1, t2, ..., tn] |- t1 /\ t2 /\ ... /\ tn }
 
 To split up conjuncts in selected hypotheses {hyps} of a theorem {th},
-use {Lib.itlist (PROVE_HYP o ASSUME_CONJS) hyps th} 
+use {Lib.itlist (PROVE_HYP o ASSUME_CONJS) hyps th}
 
 \SEEALSO
-Drule.CONJUNCTS, Thm.CONJ, Drule.CONJUNCTS_AC
+Drule.CONJUNCTS, Thm.CONJ, Drule.CONJUNCTS_AC, Drule.UNDISCH_SPLIT
 \ENDDOC

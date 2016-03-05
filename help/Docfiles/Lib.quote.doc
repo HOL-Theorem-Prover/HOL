@@ -17,7 +17,7 @@ Never fails
 
 \EXAMPLE
 {
-- print "foo\n"; 
+- print "foo\n";
 foo
 > val it = () : unit
 

@@ -7,13 +7,13 @@ All theory elements satisfying a predicate.
 
 \DESCRIBE
 An invocation {matchp P [thy1,...,thyn]} collects all elements of
-the theory segments {thy1},...,{thyn} that {P} holds of.  If the list 
+the theory segments {thy1},...,{thyn} that {P} holds of.  If the list
 of theory segments is empty, then all currently loaded segments are
 examined. The string {"-"} may be used to designate the current
 theory segment.
 
 \FAILURE
-Fails if {P} fails when applied to a theorem in one of the 
+Fails if {P} fails when applied to a theorem in one of the
 theories being searched.
 
 \EXAMPLE

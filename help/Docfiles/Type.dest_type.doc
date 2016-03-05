@@ -24,7 +24,7 @@ Fails if {ty} is a type variable.
 
 
 \COMMENTS
-A more precise alternative is {dest_thy_type}, which tells which theory 
+A more precise alternative is {dest_thy_type}, which tells which theory
 the type operator was declared in.
 
 \SEEALSO

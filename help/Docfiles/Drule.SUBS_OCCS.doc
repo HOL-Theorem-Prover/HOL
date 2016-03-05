@@ -36,7 +36,7 @@ The commutative law for addition
 can be used for substituting only the second occurrence of
 the subterm {m + n}
 {
-   - SUBS_OCCS [([2],thm)] 
+   - SUBS_OCCS [([2],thm)]
                (ASSUME (Term `(n + m) + (m + n) = (m + n) + (m + n)`));
    > val it =  [.] |- n + m + (m + n) = n + m + (m + n) : thm
 }

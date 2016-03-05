@@ -16,7 +16,7 @@ Uncurrys an application of an abstraction.
 
 
 \FAILURE
-{UNCURRY_CONV tm} fails if {tm} is not double abstraction applied to two 
+{UNCURRY_CONV tm} fails if {tm} is not double abstraction applied to two
 arguments
 
 \SEEALSO

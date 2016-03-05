@@ -61,6 +61,6 @@ When trying to solve a goal, often the best thing to do first
 is {REPEAT STRIP_TAC} to split the goal up into manageable pieces.
 
 \SEEALSO
-Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.GEN_TAC, 
+Tactic.CONJ_TAC, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Tactic.GEN_TAC,
 Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_GOAL_THEN.
 \ENDDOC

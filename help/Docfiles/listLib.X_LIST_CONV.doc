@@ -15,9 +15,9 @@ conversion, list.
 theorems about user-defined constants as an argument. It takes a term of the
 form:
 {
-   CONST1 ... (CONST2 ...) ...                                       
-}                                                                         
-where {CONST1} and {CONST2} are operators on lists and {CONST2} returns a list    
+   CONST1 ... (CONST2 ...) ...
+}
+where {CONST1} and {CONST2} are operators on lists and {CONST2} returns a list
 result. It can be one of {NIL}, {CONS}, {SNOC}, {APPEND}, {FLAT} or {REVERSE}.
 The form of the resulting theorem depends on {CONST1} and {CONST2}. Some
 auxiliary information must be provided about {CONST1}. {X_LIST_CONV} maintains a
@@ -55,38 +55,38 @@ auxiliary theorems needed if {CONST1} is defined in terms of {FOLDR}.
 {
     CONST2       |  side conditions               | tm2 in result |- tm1 = tm2
    ==============|================================|===========================
-   []            | NONE                           | e                         
-   [x]           | NONE                           | f x e                     
-   CONS x l      | NONE                           | f x (CONST1 l)            
-   SNOC x l      | e is a list variable           | CONST1 (f x e) l          
-   APPEND l1 l2  | e is a list variable           | CONST1 (CONST1 l1) l2     
-   APPEND l1 l2  | |- FCOMM g f, |- LEFT_ID g e   | g (CONST1 l1) (CONST2 l2) 
-   FLAT l1       | |- FCOMM g f, |- LEFT_ID g e,  |                           
-                 | |- CONST3 l = FOLDR g e l      | CONST3 (MAP CONST1 l)     
-   REVERSE l     | |- COMM f, |- ASSOC f          | CONST1 l                  
-   REVERSE l     | f == (\x l. h (g x) l)         |                           
-                 | |- COMM h, |- ASSOC h          | CONST1 l                  
+   []            | NONE                           | e
+   [x]           | NONE                           | f x e
+   CONS x l      | NONE                           | f x (CONST1 l)
+   SNOC x l      | e is a list variable           | CONST1 (f x e) l
+   APPEND l1 l2  | e is a list variable           | CONST1 (CONST1 l1) l2
+   APPEND l1 l2  | |- FCOMM g f, |- LEFT_ID g e   | g (CONST1 l1) (CONST2 l2)
+   FLAT l1       | |- FCOMM g f, |- LEFT_ID g e,  |
+                 | |- CONST3 l = FOLDR g e l      | CONST3 (MAP CONST1 l)
+   REVERSE l     | |- COMM f, |- ASSOC f          | CONST1 l
+   REVERSE l     | f == (\x l. h (g x) l)         |
+                 | |- COMM h, |- ASSOC h          | CONST1 l
 }
 The following table shows the form of the theorem returned and the
 auxiliary theorems needed if {CONST1} is defined in terms of {FOLDL}.
 {
     CONST2       |  side conditions               | tm2 in result |- tm1 = tm2
    ==============|================================|===========================
-   []            | NONE                           | e                         
-   [x]           | NONE                           | f x e                     
-   SNOC x l      | NONE                           | f x (CONST1 l)            
-   CONS x l      | e is a list variable           | CONST1 (f x e) l          
-   APPEND l1 l2  | e is a list variable           | CONST1 (CONST1 l1) l2     
-   APPEND l1 l2  | |- FCOMM f g, |- RIGHT_ID g e  | g (CONST1 l1) (CONST2 l2) 
-   FLAT l1       | |- FCOMM f g, |- RIGHT_ID g e, |                           
-                 | |- CONST3 l = FOLDR g e l      | CONST3 (MAP CONST1 l)     
-   REVERSE l     | |- COMM f, |- ASSOC f          | CONST1 l                  
-   REVERSE l     | f == (\l x. h l (g x))         |                           
-                 | |- COMM h, |- ASSOC h          | CONST1 l                  
+   []            | NONE                           | e
+   [x]           | NONE                           | f x e
+   SNOC x l      | NONE                           | f x (CONST1 l)
+   CONS x l      | e is a list variable           | CONST1 (f x e) l
+   APPEND l1 l2  | e is a list variable           | CONST1 (CONST1 l1) l2
+   APPEND l1 l2  | |- FCOMM f g, |- RIGHT_ID g e  | g (CONST1 l1) (CONST2 l2)
+   FLAT l1       | |- FCOMM f g, |- RIGHT_ID g e, |
+                 | |- CONST3 l = FOLDR g e l      | CONST3 (MAP CONST1 l)
+   REVERSE l     | |- COMM f, |- ASSOC f          | CONST1 l
+   REVERSE l     | f == (\l x. h l (g x))         |
+                 | |- COMM h, |- ASSOC h          | CONST1 l
 }
 {|- MONOID f e} can be used  instead of {|- FCOMM f f},
 {|- LEFT_ID f} or {|- RIGHT_ID f}. {|- ASSOC f} can also be used in place of
-{|- FCOMM f f}.                                                              
+{|- FCOMM f f}.
 
 
 

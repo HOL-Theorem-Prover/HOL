@@ -216,7 +216,7 @@ nn <silent> <LocalLeader>c :call HOLINT()<CR>
 nn <silent> <LocalLeader>t :call HOLSelect("`","`")<CR>
 nn <silent> <LocalLeader>T :call HOLSelect("``","``")<CR>
 nn <silent> <LocalLeader>j :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
-nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"Unicode\" (1 - Feedback.current_trace \"Unicode\")"])<CR>
+nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
 no <LocalLeader>h h
 
 let b:did_hol = 1

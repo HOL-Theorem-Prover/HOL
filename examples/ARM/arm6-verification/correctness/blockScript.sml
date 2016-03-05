@@ -44,7 +44,7 @@ val MASK_BIT_def = Define`
   MASK_BIT (list:bool ** 'a) mask =
     CLEARBIT ((LEASTBIT (list && mask)) MOD ^WL) mask`;
 
-val MASKN_def = Define `MASKN n list = FUNPOW (MASK_BIT list) n Tw`;
+val MASKN_def = Define `MASKN n list = FUNPOW (MASK_BIT list) n UINT_MAXw`;
 
 val REG_WRITE_RP_def = Define`
   REG_WRITE_RP n reg mode list data =
@@ -97,7 +97,7 @@ val BIT_w2n = prove(
     \\ ASM_SIMP_TAC fcp_ss [BIT_def,n2w_def]);
 
 val MASKN_ZERO = store_thm("MASKN_ZERO",
-  `!ireg. MASKN 0 list = Tw`,
+  `!ireg. MASKN 0 list = UINT_MAXw`,
   REWRITE_TAC [MASKN_def,FUNPOW]);
 
 val MASKN_SUC = prove(
@@ -482,7 +482,7 @@ val LENGTH_ADDRESS_LIST =
 
 val FST_HD_FST_ADDR_MODE4 = store_thm("FST_HD_FST_ADDR_MODE4",
   `!P U base n. 0 < LENGTH (REGISTER_LIST n) ==>
-     (HD (FST (ADDR_MODE4 P U base n)) = RP stm n Tw)`,
+     (HD (FST (ADDR_MODE4 P U base n)) = RP stm n UINT_MAXw)`,
   METIS_TAC [FST_ADDR_MODE4,(GSYM o CONJUNCT1) EL,MASKN_ZERO,
     LENGTH_ADDRESS_LIST,REGISTER_LIST_THM,IN_LDM_STM]);
 
@@ -908,7 +908,7 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
              pipeaabt pipebabt pipebabt (IS_ABORT i 1) aregn2 (~(w = 1)) T F
              sctrlreg psrfb oareg (MASKN 2 ((15 >< 0) ireg))
              (RP ldm ((15 >< 0) ireg) (MASKN 1 ((15 >< 0) ireg)))
-             (RP ldm ((15 >< 0) ireg) Tw) mul mul2 borrow2 mshift);
+             (RP ldm ((15 >< 0) ireg) UINT_MAXw) mul mul2 borrow2 mshift);
            inp := ADVANCE 2 i|> =
         (let dataabt2 = ?s. (s < x + 1) /\ IS_ABORT i (s + 1) in
          let y = if dataabt2 then LEAST s. (s < w) /\ IS_ABORT i (s + 1) else x
@@ -1019,7 +1019,7 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
               T F F onfq ooonfq oniq oooniq pipeaabt pipebabt pipebabt dataabt2
               aregn2 T T T sctrlreg psrfb oareg (MASKN 2 ((15 >< 0) ireg))
               (RP stm ((15 >< 0) (ireg)) (MASKN 1 ((15 >< 0) ireg)))
-              (RP stm ((15 >< 0) (ireg)) Tw) mul mul2 borrow2 mshift);
+              (RP stm ((15 >< 0) (ireg)) UINT_MAXw) mul mul2 borrow2 mshift);
           inp := ADVANCE 2 i|> =
        (let nbs = if ireg %% 22 then usr else
                     DECODE_MODE ((4 >< 0) (CPSR_READ psr)) in
@@ -1087,7 +1087,7 @@ val NEXT_CORE_STM_TN_W1 = prove(
             T F F onfq ooonfq oniq oooniq pipeaabt pipebabt pipebabt dataabt2
             aregn2 T T T sctrlreg psrfb oareg (MASKN 2 ((15 >< 0) ireg))
             (RP stm ((15 >< 0) (ireg)) (MASKN 1 ((15 >< 0) ireg)))
-            (RP stm ((15 >< 0) (ireg)) Tw) mul mul2 borrow2 mshift);
+            (RP stm ((15 >< 0) (ireg)) UINT_MAXw) mul mul2 borrow2 mshift);
          inp := ADVANCE 2 i|> =
        (let nbs = if ireg %% 22 then usr else
                     DECODE_MODE ((4 >< 0) (CPSR_READ psr)) in

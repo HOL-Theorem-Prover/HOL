@@ -47,4 +47,9 @@ sig
   val del_persistent_consts : term list -> unit
   val pp_compset : PP.ppstream -> compset -> unit
 
+  type transform = clauses.transform
+
+  val listItems : compset -> ((string * string) * transform list) list
+  val unmapped  : compset -> (string * string) list
+
 end

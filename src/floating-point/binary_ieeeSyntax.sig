@@ -5,6 +5,7 @@ sig
 
    val float_value_ty: hol_type
    val rounding_ty: hol_type
+   val float_compare_ty: hol_type
 
    val mk_float_ty: hol_type * hol_type -> hol_type
    val dest_float_ty: hol_type -> hol_type * hol_type
@@ -21,18 +22,13 @@ sig
    val mk_float_var: hol_type * hol_type -> string -> term
    val mk_ifloat_var: int * int -> string -> term
 
-   val floatToReal : term -> real
-   val wordToReal  : term -> real
-   val realToFloat : real -> term
-   val realToWord  : real -> term
-   val native_ty   : hol_type
-
    val EQ_tm: term
    val GT_tm: term
    val LT_tm: term
    val UN_tm: term
    val ULP_tm: term
    val float_abs_tm: term
+   val float_abs1985_tm: term
    val float_add_tm: term
    val float_bottom_tm: term
    val float_compare_tm: term
@@ -55,7 +51,9 @@ sig
    val float_minus_zero_tm: term
    val float_mul_tm: term
    val float_mul_add_tm: term
+   val float_mul_sub_tm: term
    val float_negate_tm: term
+   val float_negate1985_tm: term
    val float_plus_infinity_tm: term
    val float_plus_min_tm: term
    val float_plus_zero_tm: term
@@ -67,6 +65,7 @@ sig
    val float_some_nan_tm: term
    val float_sub_tm: term
    val float_tm: term
+   val float_to_int_tm: term
    val float_to_real_tm: term
    val float_top_tm: term
    val float_value_tm: term
@@ -99,6 +98,7 @@ sig
    val dest_ULP: term -> term
    val dest_float: term -> term
    val dest_float_abs: term -> term
+   val dest_float_abs1985: term -> term
    val dest_float_add: term -> term * term * term
    val dest_float_bottom: term -> term
    val dest_float_compare: term -> term * term
@@ -121,7 +121,9 @@ sig
    val dest_float_minus_zero: term -> term
    val dest_float_mul: term -> term * term * term
    val dest_float_mul_add: term -> term * term * term * term
+   val dest_float_mul_sub: term -> term * term * term * term
    val dest_float_negate: term -> term
+   val dest_float_negate1985: term -> term
    val dest_float_plus_infinity: term -> term
    val dest_float_plus_min: term -> term
    val dest_float_plus_zero: term -> term
@@ -132,6 +134,7 @@ sig
    val dest_float_some_nan: term -> term
    val dest_float_sqrt: term -> term * term
    val dest_float_sub: term -> term * term * term
+   val dest_float_to_int: term -> term * term
    val dest_float_to_real: term -> term
    val dest_float_top: term -> term
    val dest_float_value: term -> term
@@ -158,6 +161,7 @@ sig
    val is_ULP: term -> bool
    val is_float: term -> bool
    val is_float_abs: term -> bool
+   val is_float_abs1985: term -> bool
    val is_float_add: term -> bool
    val is_float_bottom: term -> bool
    val is_float_compare: term -> bool
@@ -180,7 +184,9 @@ sig
    val is_float_minus_zero: term -> bool
    val is_float_mul: term -> bool
    val is_float_mul_add: term -> bool
+   val is_float_mul_sub: term -> bool
    val is_float_negate: term -> bool
+   val is_float_negate1985: term -> bool
    val is_float_plus_infinity: term -> bool
    val is_float_plus_min: term -> bool
    val is_float_plus_zero: term -> bool
@@ -191,6 +197,7 @@ sig
    val is_float_some_nan: term -> bool
    val is_float_sqrt: term -> bool
    val is_float_sub: term -> bool
+   val is_float_to_int: term -> bool
    val is_float_to_real: term -> bool
    val is_float_top: term -> bool
    val is_float_value: term -> bool
@@ -218,6 +225,7 @@ sig
    val mk_ULP: term -> term
    val mk_float: term -> term
    val mk_float_abs: term -> term
+   val mk_float_abs1985: term -> term
    val mk_float_add: term * term * term -> term
    val mk_float_bottom: term -> term
    val mk_float_compare: term * term -> term
@@ -240,7 +248,9 @@ sig
    val mk_float_minus_zero: term -> term
    val mk_float_mul: term * term * term -> term
    val mk_float_mul_add: term * term * term * term -> term
+   val mk_float_mul_sub: term * term * term * term -> term
    val mk_float_negate: term -> term
+   val mk_float_negate1985: term -> term
    val mk_float_plus_infinity: term -> term
    val mk_float_plus_min: term -> term
    val mk_float_plus_zero: term -> term
@@ -251,6 +261,7 @@ sig
    val mk_float_some_nan: term -> term
    val mk_float_sqrt: term * term -> term
    val mk_float_sub: term * term * term -> term
+   val mk_float_to_int: term * term -> term
    val mk_float_to_real: term -> term
    val mk_float_top: term -> term
    val mk_float_value: term -> term

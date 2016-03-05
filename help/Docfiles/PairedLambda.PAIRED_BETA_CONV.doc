@@ -63,7 +63,7 @@ use {BETA_CONV}, or {GEN_BETA_CONV}.
 \EXAMPLE
 The following is a typical use of the conversion:
 {
-   - PairedLambda.PAIRED_BETA_CONV 
+   - PairedLambda.PAIRED_BETA_CONV
         (Term `(\((a,b),(c,d)). a + b + c + d)  ((1,2),(3,4))`);
    > val it = |- (\((a,b),c,d). a+b+c+d) ((1,2),3,4) = 1+2+3+4 : thm
 }
@@ -71,15 +71,15 @@ Note that the term to which the tupled lambda abstraction
 is applied must have the same structure as the varstruct.  For example,
 the following succeeds:
 {
-   - PairedLambda.PAIRED_BETA_CONV 
+   - PairedLambda.PAIRED_BETA_CONV
          (Term `(\((a,b),p). a + b)  ((1,2),(3+5,4))`);
    > val it = |- (\((a,b),p). a + b)((1,2),3 + 5,4) = 1 + 2 : thm
 }
 but the following call fails:
 {
-   - PairedLambda.PAIRED_BETA_CONV 
+   - PairedLambda.PAIRED_BETA_CONV
        (Term `(\((a,b),(c,d)). a + b + c + d)  ((1,2),p)`);
-   ! Uncaught exception: 
+   ! Uncaught exception:
    ! HOL_ERR
 }
 because {p} is not a pair.

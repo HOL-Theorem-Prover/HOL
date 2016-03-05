@@ -6,7 +6,7 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs arm8Theory arm8_stepTheory arm8AssemblerLib
+open arm8Theory arm8_stepTheory arm8AssemblerLib
 open blastLib
 
 structure Parse =
@@ -375,13 +375,13 @@ local
    val f = UNDISCH o DECIDE o Parse.Term
 
    val lem1 = f `(~wback \/ n <> t \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ (n = t)) /\ n <> 31w)`
+                 ~(d /\ wback /\ (n = t) /\ n <> 31w)`
 
    val lem2 = f `(~wback \/ n <> t /\ n <> t2 \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ ((n = t) \/ (n = t2))) /\ n <> 31w)`
+                 ~(d /\ wback /\ ((n = t) \/ (n = t2)) /\ n <> 31w)`
 
-   fun w1 i = bitstringSyntax.fixedwidth_of_int (i, 1)
-   fun w2 i = bitstringSyntax.padded_fixedwidth_of_int (i, 2)
+   fun w1 i = bitstringSyntax.fixedwidth_of_num (Arbnum.fromInt i, 1)
+   fun w2 i = bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt i, 2)
 
    val () = setEvConv (Conv.DEPTH_CONV bitstringLib.word_bit_CONV)
 in

@@ -7,7 +7,6 @@ sig
     val SIZES_ss            : simpLib.ssfrag
     val BIT_ss              : simpLib.ssfrag
     val BITS_INTRO_ss       : simpLib.ssfrag
-
     val WORD_ARITH_ss       : simpLib.ssfrag
     val WORD_LOGIC_ss       : simpLib.ssfrag
     val WORD_SUB_ss         : simpLib.ssfrag
@@ -17,13 +16,14 @@ sig
     val WORD_BIT_EQ_ss      : simpLib.ssfrag
     val WORD_EXTRACT_ss     : simpLib.ssfrag
     val WORD_MUL_LSL_ss     : simpLib.ssfrag
-
+    val WORD_UINT_MAX_ss    : simpLib.ssfrag
+    val WORD_CONCAT_ASSOC_ss: simpLib.ssfrag
     val WORD_ss             : simpLib.ssfrag
 
     val LESS_CONV           : conv
     val SIZES_CONV          : conv
     val word_EQ_CONV        : conv
-
+    val UINT_MAX_CONV       : conv
     val BIT_SET_CONV        : conv
     val BITS_INTRO_CONV     : conv
     val WORD_ARITH_CONV     : conv
@@ -48,7 +48,7 @@ sig
 
     val add_words_compset   : bool -> computeLib.compset -> unit
 
-    val WORD_GROUND_CONV    : bool -> conv
+    val WORD_GROUND_CONV    : conv
     val WORD_EVAL_CONV      : conv
     val WORD_EVAL_RULE      : rule
     val WORD_EVAL_TAC       : tactic

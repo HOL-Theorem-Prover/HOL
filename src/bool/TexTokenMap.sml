@@ -41,11 +41,13 @@ struct
           fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
                                 Int.toString i ^ ")"
         in
-          HOL_WARNING "TexTokenMap" "TeX_notation"
-                      (src^" overrides \""^
-                       String.toString hol^"\" (was \""^
-                       ttoString oldt^"\"); now \""^
-                       ttoString TeX^"\"");
+          if oldt <> TeX then
+            HOL_WARNING "TexTokenMap" "TeX_notation"
+                        (src^" overrides \""^
+                         String.toString hol^"\" (was \""^
+                         ttoString oldt^"\"); now \""^
+                         ttoString TeX^"\"")
+          else ();
           tokmap := Binarymap.insert(!tokmap,hol,TeX)
         end
 

@@ -1,0 +1,798 @@
+\chapter{Proof Tools: Propositional Logic}
+\label{chap:proof-tools}
+
+\newcommand{\naive}{na\"\i{}ve}
+
+Users of \HOL{} can create their own theorem proving tools by
+combining predefined rules and tactics. The \ML{} type-discipline
+ensures that only logically sound methods can be used to create values
+of type \ml{thm}.  In this chapter, a real example is described.
+
+Two implementations of the tool are given to illustrate various styles
+of proof programming. The first implementation is the obvious one, but
+is inefficient because of the `brute force' method used. The second
+implementation attempts to be a great deal more intelligent.
+Extensions to the tools to allow more general applicability are also
+discussed.
+
+The problem to be solved is that of deciding the truth of a closed
+formula of propositional logic.  Such a formula has the general form
+\[
+\begin{array}{ccl}
+\varphi & ::= & v \;|\;\neg\varphi\;|\;\varphi
+\land \varphi \;|\; \varphi \lor \varphi \;|\; \varphi \Rightarrow
+\varphi\;|\;\varphi = \varphi
+\\[1ex]
+\mathit{formula} &::= & \forall \vec{v}. \;\varphi
+\end{array}
+\]
+where the variables $v$ are all of boolean type, and where the
+universal quantification at the outermost level captures all of the
+free variables.
+
+\section{Method 1: Truth Tables}
+
+\setcounter{sessioncount}{0}
+
+The first method to be implemented is the brute force method of trying
+all possible boolean combinations.  This approach's only real virtue
+is that it is exceptionally easy to implement.  First we will prove
+the motivating theorem:
+\begin{hol}
+\begin{alltt}
+##eval val FORALL_BOOL = prove(
+         ``(!v. P v) = P T /\ P F``,
+         rw[EQ_IMP_THM] >> Cases_on `v` >> rw[]);
+\end{alltt}
+\end{hol}
+The proof proceeds by splitting the goal into two halves, showing
+\[
+(\forall v. \;P(v))\Rightarrow P(\top) \land P(\bot)
+\]
+(which goal is automatically shown by the simplifier), and
+\[
+P(\top) \land P(\bot) \Rightarrow P(v)
+\]
+for an arbitrary boolean variable $v$.  After case-splitting on $v$,
+the assumptions are then enough to show the goal.  (This theorem is
+actually already proved in the theory \theoryimp{bool}.)
+
+The next, and final, step is to rewrite with this theorem:
+\begin{hol}
+\begin{alltt}
+   ##eval val tautDP = SIMP_CONV bool_ss [FORALL_BOOL]
+\end{alltt}
+\end{hol}
+
+This enables the following
+
+\begin{session}
+\begin{alltt}
+>> tautDP ``!p q. p /\ q /\ ~p``;
+
+>> tautDP ``!p. p \/ ~p``
+\end{alltt}
+\end{session}
+and even the marginally more intimidating
+\begin{session}
+\begin{alltt}
+>> time tautDP
+     ``!p q c a. ~(((~a \/ p /\ ~q \/ ~p /\ q) /\
+                    (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+                   (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) \/
+                 ~(p /\ q) \/ c /\ ~a``;
+\end{alltt}
+\end{session}
+
+This is a dreadful algorithm for solving this problem.  The system's
+built-in function, \ml{tautLib.TAUT\_CONV}, solves the problem above
+much faster.  The only real
+merit in this solution is that it took one line to write.  This is a
+general illustration of the truth that \HOL{}'s high-level tools,
+particularly the simplifier, can provide fast prototypes for a variety
+of proof tasks.
+
+\section{Method 2: the DPLL Algorithm}
+
+The Davis-Putnam-Loveland-Logemann method~\cite{DPLL-paper} for
+deciding the satisfiability of propositional formulas in CNF
+(Conjunctive Normal Form) is a powerful technique, still used in
+state-of-the-art solvers today.  If we strip the universal quantifiers
+from our input formulas, our task can be seen as determining the
+validity of a propositional formula.  Testing the negation of such a
+formula for satisfiability is a test for validity: if the formula's
+negation is satisfiable, then it is not valid (the satisfying
+assignment will make the original false); if the formula's negation is
+unsatisfiable, then the formula is valid (no assignment can make it
+false).
+
+\smallskip
+\noindent
+(The source code for this example is available in the file \texttt{examples/dpll.sml}.)
+
+\subsection*{Preliminaries}
+
+To begin, assume that we have code already to convert arbitrary
+formulas into CNF{}, and to then decide the satisfiability of these
+formulas.  Assume further that if the input to the latter procedure is
+unsatisfiable, then it will return with a theorem of the form
+\[ \vdash \varphi = \holtxt{F}
+\]
+or if it is satisfiable, then it will return a satisfying assignment,
+a map from variables to booleans.   This map will be a function from
+\HOL{} variables to one of the \HOL{} terms \holtxt{T} or \holtxt{F}.
+Thus, we will assume
+\begin{hol}
+\begin{verbatim}
+   datatype result = Unsat of thm | Sat of term -> term
+   val toCNF : term -> thm
+   val DPLL : term -> result
+\end{verbatim}
+\end{hol}
+(The theorem returned by \ml{toCNF} will equate the input term to
+another in CNF{}.)
+
+\smallskip
+\noindent
+Before looking into implementing these functions, we will need to
+consider
+\begin{itemize}
+\item how to transform our inputs to suit the function; and
+\item how to use the outputs from the functions to produce our desired
+  results
+\end{itemize}
+
+We are assuming our input is a universally quantified formula.  Both
+the CNF and DPLL procedures expect formulas without quantifiers.  We
+also want to pass these procedures the negation of the original
+formula.  Both of the required term manipulations required can be done
+by functions found in the structure \ml{boolSyntax}.  (In general,
+important theories (such as \theoryimp{bool}) are accompanied by
+\ml{Syntax} modules containing functions for manipulating the
+term-forms associated with that theory.)
+
+In this case we need the functions
+\begin{hol}
+\begin{verbatim}
+   strip_forall : term -> term list * term
+   mk_neg       : term -> term
+\end{verbatim}
+\end{hol}
+The function \ml{strip\_forall} strips a term of all its outermost
+universal quantifications, returning the list of variables stripped
+and the body of the quantification.  The function \ml{mk\_neg} takes a
+term of type \holtxt{bool} and returns the term corresponding to its
+negation.
+
+Using these functions, it is easy to see how we will be able to take
+$\forall\vec{v}.\;\varphi$ as input, and pass the term $\neg\varphi$
+to the function \ml{toCNF}.  A more significant question is how to
+use the results of these calls.   The call to \ml{toCNF} will return a
+theorem
+\[
+\vdash \neg\varphi = \varphi'
+\]
+The formula $\varphi'$ is what will then be passed to \ml{DPLL}.  (We
+can extract it by using the \ml{concl} and \ml{rhs} functions.) If
+\ml{DPLL} returns the theorem $\vdash \varphi' = \holtxt{F}$, an
+application of \ml{TRANS} to this and the theorem displayed above will
+derive the formula $\vdash \neg\varphi = F$.  In order to derive the
+final result, we will need to turn this into $\vdash\varphi$.  This is
+best done by proving a bespoke theorem embodying the equality (there
+isn't one such already in the system):
+\begin{hol}
+\begin{alltt}
+   ##eval val NEG_EQ_F = prove(``(~p = F) = p``, REWRITE_TAC []);
+\end{alltt}
+\end{hol}
+To turn $\vdash \varphi$ into $\vdash (\forall
+\vec{v}.\;\varphi) = \holtxt{T}$, we will perform the following proof:
+\[
+\infer[\texttt{\scriptsize EQT\_INTRO}]{
+  \vdash (\forall \vec{v}.\;\varphi) = \holtxt{T}}{
+  \infer[\texttt{\scriptsize GENL}(\vec{v})]{\vdash \forall \vec{v}.\;\varphi}{
+    \vdash \varphi
+  }
+}
+\]
+The other possibility is that \ml{DPLL} will return a satisfying
+assignment demonstrating that $\varphi'$ is satisfiable.  If this is
+the case, we want to show that $\forall\vec{v}.\;\varphi$ is false.
+We can do this by assuming this formula, and then specialising the
+universally quantified variables in line with the provided map.  In
+this way, it will be possible to produce the theorem
+\[
+\forall \vec{v}.\;\varphi \vdash \varphi[\vec{v} := \mbox{\emph{satisfying
+  assignment}}]
+\]
+Because there are no free variables in $\forall\vec{v}.\;\varphi$, the
+substitution will produce a completely ground boolean formula.  This
+will straightforwardly rewrite to \holtxt{F} (if the assignment
+makes $\neg\varphi$ true, it must make $\varphi$ false).  Turning
+$\phi\vdash \holtxt{F}$ into $\vdash \phi = \holtxt{F}$ is a matter of
+calling \ml{DISCH} and then rewriting with the built-in theorem
+\ml{IMP\_F\_EQ\_F}:
+\[
+\vdash \forall t.\;t \Rightarrow \holtxt{F} = (t = \holtxt{F})
+\]
+Putting all of the above together, we can write our wrapper function,
+which we will call \ml{DPLL\_UNIV}, with the \ml{UNIV} suffix
+reminding us that the input must be universally quantified.
+\begin{hol}
+\begin{verbatim}
+>>__ datatype result = Unsat of thm | Sat of term -> term
+  fun DPLL (t : term) = raise Fail "Not yet implemented"
+  fun toCNF (t : term) = raise Fail "Not yet implemented"
+##eval   fun DPLL_UNIV t = let
+           val (vs, phi) = strip_forall t
+           val cnf_eqn = toCNF (mk_neg phi)
+           val phi' = rhs (concl cnf_eqn)
+         in
+           case DPLL phi' of
+             Unsat phi'_eq_F => let
+               val negphi_eq_F = TRANS cnf_eqn phi'_eq_F
+               val phi_thm = CONV_RULE (REWR_CONV NEG_EQ_F) negphi_eq_F
+             in
+               EQT_INTRO (GENL vs phi_thm)
+             end
+           | Sat f => let
+               val t_assumed = ASSUME t
+               fun spec th =
+                   spec (SPEC (f (#1 (dest_forall (concl th)))) th)
+                   handle HOL_ERR _ => REWRITE_RULE [] th
+             in
+               CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH t (spec t_assumed))
+             end
+         end
+\end{verbatim}
+\end{hol}
+
+The auxiliary function \ml{spec} that is used in the second case
+relies on the fact that \ml{dest\_forall} will raise a \ml{HOL\_ERR}
+exception if the term it is applied to is not universally quantified.
+When \ml{spec}'s argument is not universally quantified, this means
+that the recursion has bottomed out, and all of the original formula's
+universal variables have been specialised.  Then the resulting formula
+can be rewritten to false (\ml{REWRITE\_RULE}'s built-in rewrites will
+handle all of the necessary cases).
+
+The \ml{DPLL\_UNIV} function also uses \ml{REWR\_CONV} in two places.
+The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
+the top of a term.  These uses of \ml{REWR\_CONV} are done within
+calls to the \ml{CONV\_RULE} function.  This lifts a conversion $c$ (a
+function taking a term $t$ and producing a theorem $\vdash t = t'$),
+so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$ to $\vdash t'$.
+
+
+\subsection{Conversion to Conjunctive Normal Form}
+\label{sec:conv-conj-norm}
+
+A formula in Conjunctive Normal Form is a conjunction of disjunctions
+of literals (either variables, or negated variables).  It is possible
+to convert formulas of the form we are expecting into CNF by simply
+rewriting with the following theorems
+\begin{eqnarray*}
+\neg (\phi \land \psi) &=& \neg\phi \lor \neg\psi\\
+\neg (\phi \lor \psi) &=& \neg\phi \land \neg\psi\\
+\phi \lor (\psi \land \xi) &=& (\phi \lor \psi) \land (\phi \lor \xi)\\
+(\psi \land \xi)\lor\phi \ &=& (\phi \lor \psi) \land (\phi \lor
+\xi)\\[1ex]
+\phi \Rightarrow\psi &=& \neg\phi \lor \psi\\
+(\phi = \psi) &=& (\phi \Rightarrow \psi) \land (\psi \Rightarrow
+\phi)
+\end{eqnarray*}
+Unfortunately, using these theorems as rewrites can result in an
+exponential increase in the size of a formula.  (Consider using them
+to convert an input in Disjunctive Normal Form, a disjunction
+of conjunctions of literals, into CNF{}.)
+
+A better approach is to convert to what is known as ``definitional
+CNF''. \HOL{} includes functions to do this in the structure
+\ml{defCNF}.  Unfortunately, this approach adds extra, existential,
+quantifiers to the formula.  For example
+\begin{session}
+\begin{alltt}
+>>__ load "defCNF";
+>> defCNF.DEF_CNF_CONV ``p \/ (q /\ r)``;
+\end{alltt}
+\end{session}
+Under the existentially-bound \holtxt{x}, the code has produced a
+formula in CNF{}.  With an example this small, the formula is actually
+bigger than that produced by the \naive{} translation, but with more
+realistic examples, the difference quickly becomes significant.  The
+last example used with \ml{tautDP} is 20 times bigger when translated
+\naive{}ly than when using \ml{defCNF}, and the translation takes 150
+times longer to perform.
+
+But what of these extra existentially quantified variables?  In fact,
+we can ignore the quantification when calling the core DPLL procedure.
+If we pass the unquantified body to DPLL, we will either get back an
+unsatisfiable verdict of the form $\vdash \varphi' = \holtxt{F}$, or a
+satisfying assignment for all of the free variables.  If the latter
+occurs, the same satisfying assignment will also satisfy the
+original.  If the former, we will perform the following proof
+\[
+\infer{\vdash (\exists \vec{x}.\;\varphi') = \holtxt{F}}{
+  \infer{\vdash (\exists \vec{x}.\;\varphi') \Rightarrow \holtxt{F}}{
+    \infer{\vdash\forall \vec{x}.\;\varphi' \Rightarrow \holtxt{F}}{
+      \infer{\vdash\varphi' \Rightarrow \holtxt{F}}{
+        \vdash \varphi' = \holtxt{F}
+      }
+    }
+  }
+}
+\]
+producing a theorem of the form expected by our \ml{wrapper}
+function.
+
+In fact, there is an alternative function in the \ml{defCNF} API that
+we will use in preference to \ml{DEF\_CNF\_CONV}.   The problem with
+\ml{DEF\_CNF\_CONV} is that it can produce a big quantification,
+involving lots of variables.  We will rather use
+\ml{DEF\_CNF\_VECTOR\_CONV}.  Instead of output of the form
+\[
+\vdash \varphi = (\exists \vec{x}.\; \varphi')
+\]
+this second function produces
+\[
+\vdash \varphi = (\exists (v : \textsf{num} \rightarrow
+\textsf{bool}).\; \varphi')
+\]
+where the individual variables $x_i$ of the first formula are replaced
+by calls to the $v$ function $v(i)$, and there is just one quantified
+variable, $v$.  This variation will not affect the operation of the
+proof sketched above.  And as long as we don't require literals to be
+variables or their negations, but also allow them to be terms of
+the form $v(i)$ and $\neg v(i)$ as well, then the action of the DPLL
+procedure on the formula $\varphi'$ won't be affected either.
+
+Unfortunately for uniformity, in simple cases, the definitional CNF
+conversion functions may not result in any existential
+quantifications at all.  This makes our implementation of \ml{DPLL}
+somewhat more complicated.  We calculate a \ml{body} variable that
+will be passed onto the \ml{CoreDPLL} function, as well as a
+\ml{transform} function that will transform an unsatisfiability result
+into something of the desired form.  If the result of conversion to
+CNF produces an existential quantification, we use the proof sketched
+above.  Otherwise, the transformation can be the identity function,
+\ml{I}:
+\begin{hol}
+\begin{alltt}
+>>__ fun CoreDPLL (x:term) : result = raise Fail "Not yet implemented"
+##eval fun DPLL t = let
+         val (transform, body) = let
+           val (vector, body) = dest_exists t
+           fun transform body_eq_F = let
+             val body_imp_F = CONV_RULE (REWR_CONV (GSYM IMP_F_EQ_F)) body_eq_F
+             val fa_body_imp_F = GEN vector body_imp_F
+             val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
+           in
+             CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
+           end
+         in
+           (transform, body)
+         end handle HOL_ERR _ => (I, t)
+       in
+         case CoreDPLL body of
+           Unsat body_eq_F => Unsat (transform body_eq_F)
+         | x => x
+       end
+\end{alltt}
+\end{hol}
+where we have still to implement the core DPLL procedure (called
+\ml{CoreDPLL} above).  The above code uses \ml{REWR\_CONV} with the
+\ml{IMP\_F\_EQ\_F} theorem to affect two of the proof's
+transformations.  The \ml{GSYM} function is used to flip the
+orientation a theorem's top-level equalities.  Finally, the
+\ml{FORALL\_IMP\_CONV} conversion takes a term of the form
+\[
+\forall x.\;P(x) \Rightarrow Q
+\]
+and returns the theorem
+\[
+\vdash (\forall x.\;P(x) \Rightarrow Q) = ((\exists
+x.\;P(x))\Rightarrow Q)
+\]
+
+
+
+
+\subsection{The Core DPLL Procedure}
+\label{sec:dpll-procedure}
+
+The DPLL procedure can be seen as a slight variation on the basic
+``truth table'' technique we have already seen.  As with that
+procedure, the core operation is a case-split on a boolean variable.
+There are two significant differences though: DPLL can be seen as a
+search for a satisfying assignment, so that if picking a variable to
+have a particular value results in a satisfying assignment, we do not
+need to also check what happens if the same variable is given the
+opposite truth-value.  Secondly, DPLL takes some care to pick good
+variables to split on.  In particular, \emph{unit propagation} is used
+to eliminate variables that will not cause branching in the
+search-space.
+
+Our implementation of the core DPLL procedure is a function that takes
+a term and returns a value of type \ml{result}: either a theorem
+equating the original term to false, or a satisfying assignment (in
+the form of a function from terms to terms).  As the DPLL search for a
+satisfying assignment proceeds, an assignment is incrementally
+constructed.  This suggests that the recursive core of our function
+will need to take a term (the current formula) and a context (the
+current assignment) as parameters.  The assignment can be naturally
+represented as a set of equations, where each equation is either $v =
+\holtxt{T}$ or $v = \holtxt{F}$.
+
+This suggests that a natural representation for our program state is a
+theorem: the hypotheses will represent the assignment, and the
+conclusion can be the current formula.  Of course, \HOL{} theorems
+can't just be wished into existence.  In this case, we can make
+everything sound by also assuming the initial formula.  Thus, when we
+begin our initial state will be $\phi\vdash\phi$.  After splitting on
+variable $v$, we will generate two new states
+$\phi,(v\!=\!\holtxt{T})\vdash \phi_1$, and
+$\phi,(v\!=\!\holtxt{F})\vdash \phi_2$, where the $\phi_i$ are the
+result of simplifying $\phi$ under the additional assumption
+constraining $v$.
+
+The easiest way to add an assumption to a theorem is to use the
+rule \ml{ADD\_ASSUM}.  But in this situation, we also want to
+simplify the conclusion of the theorem with the same assumption.  This
+means that it will be enough to rewrite with the theorem
+$\psi\vdash\psi$, where $\psi$ is the new assumption.  The action of
+rewriting with such a theorem will cause the new assumption to appear
+among the assumptions of the result.
+
+The \ml{casesplit} function is thus:
+\begin{hol}
+\begin{verbatim}
+   ##eval fun casesplit v th = let
+            val eqT = ASSUME (mk_eq(v, boolSyntax.T))
+            val eqF = ASSUME (mk_eq(v, boolSyntax.F))
+          in
+            (REWRITE_RULE [eqT] th, REWRITE_RULE [eqF] th)
+          end
+\end{verbatim}
+\end{hol}
+
+A case-split can result in a formula that has been rewritten all the
+way to true or false.  These are the recursion's base cases. If the
+formula has been rewritten to true, then we have found a satisfying
+assignment, one that is now stored for us in the hypotheses of the
+theorem itself.  The following function, \ml{mk\_satmap}, extracts
+those hypotheses into a finite-map, and then returns the lookup
+function for that finite-map:
+\begin{hol}
+\begin{verbatim}
+   ##eval fun mk_satmap th = let
+            val hyps = hypset th
+            fun foldthis (t,acc) = let
+              val (l,r) = dest_eq t
+            in
+              Binarymap.insert(acc,l,r)
+            end handle HOL_ERR _ => acc
+            val fmap = HOLset.foldl foldthis (Binarymap.mkDict Term.compare) hyps
+          in
+            Sat (fn v => Binarymap.find(fmap,v)
+                         handle Binarymap.NotFound => boolSyntax.T)
+          end
+\end{verbatim}
+\end{hol}
+The \ml{foldthis} function above adds the equations that are stored as
+hypotheses into the finite-map.  The exception handler in
+\ml{foldthis} is necessary because one of the hypotheses will be the
+original formula.  The exception handler in the function that looks up
+variable bindings is necessary because a formula may be reduced to
+true without every variable being assigned a value at all.  In this
+case, it is irrelevant what value we give to the variable, so we
+arbitrarily map such variables to \holtxt{T}.
+
+If the formula has been rewritten to false, then we can just return
+this theorem directly.  Such a theorem is not quite in the right form
+for the external caller, which is expecting an equation, so if the
+final result is of the form $\phi\vdash \holtxt{F}$, we will have to
+transform this to $\vdash \phi = \holtxt{F}$.
+
+The next question to address is what to do with the results of
+recursive calls.  If a case-split returns a satisfying assignment this
+can be returned unchanged.  But if a recursive call returns a theorem
+equating the input to false, more needs to be done.  If this is the
+first call, then the other branch needs to be checked.  If this also
+returns that the theorem is unsatisfiable, we will have two theorems:
+\[
+\phi_0,\Delta,(v\!=\!\holtxt{T})\vdash \holtxt{F} \qquad
+\phi_0,\Delta,(v\!=\!\holtxt{F})\vdash \holtxt{F}
+\] where $\phi_0$ is the original formula, $\Delta$ is the rest of the
+current assignment, and $v$ is the variable on which a split has just
+been performed.  To turn these two theorems into the desired
+\[
+\phi_0,\Delta\vdash \holtxt{F}
+\]
+we will use the rule of inference \ml{DISJ\_CASES}:
+\[
+\infer{\Gamma \cup \Delta_1 \cup \Delta_2 \vdash \phi}{
+  \Gamma \vdash \psi \lor \xi &
+  \Delta_1 \cup \{\psi\}\vdash \phi &
+  \Delta_2 \cup \{\xi\} \vdash \phi
+}
+\]
+and the theorem \ml{BOOL\_CASES\_AX}:
+\[
+\vdash \forall t.\;(t = \holtxt{T}) \lor (t = \holtxt{F})
+\]
+
+We can put these fragments together and write the top-level
+\ml{CoreDPLL} function, in Figure~\ref{fig:coredpll}.
+\begin{figure}[htbp]
+\begin{holboxed}
+\begin{verbatim}
+>>__ fun find_splitting_var (c:term) : term = raise Fail ""
+##eval fun CoreDPLL form = let
+         val initial_th = ASSUME form
+         fun recurse th = let
+           val c = concl th
+         in
+           if c = boolSyntax.T then
+             mk_satmap th
+           else if c = boolSyntax.F then
+             Unsat th
+           else let
+               val v = find_splitting_var c
+               val (l,r) = casesplit v th
+             in
+               case recurse l of
+                 Unsat l_false => let
+                 in
+                   case recurse r of
+                     Unsat r_false =>
+                       Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
+                   | x => x
+                 end
+               | x => x
+             end
+         end
+       in
+         case (recurse initial_th) of
+           Unsat th => Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH form th))
+         | x => x
+       end
+\end{verbatim}
+\end{holboxed}
+\caption{The core of the DPLL function}
+\label{fig:coredpll}
+\end{figure}
+
+
+All that remains to be done is to figure out which variable to
+case-split on.  The most important variables to split on are those
+that appear in what are called ``unit clauses'', a clause containing
+just one literal.  If there is a unit clause in a formula then it is
+of the form
+\[
+\phi \land v \land \phi'
+\]
+or
+\[
+\phi \land \neg v \land \phi'
+\]
+In either situation, splitting on $v$ will always result in a branch
+that evaluates directly to false.  We thus eliminate a variable
+without increasing the size of the problem.  The process of
+eliminating unit clauses is usually called ``unit propagation''.
+Unit propagation is not usually thought of as a case-splitting
+operation, but doing it this way makes our code simpler.
+
+If a formula does not include a unit clause, then choice of the next
+variable to split on is much more of a black art.  Here we will
+implement a very simple choice: to split on the variable that occurs
+most often.  Our function \ml{find\_splitting\_var} takes a formula
+and returns the variable to split on.
+\begin{hol}
+\begin{verbatim}
+   fun find_splitting_var phi = let
+     fun recurse acc [] = getBiggest acc
+       | recurse acc (c::cs) = let
+           val ds = strip_disj c
+         in
+           case ds of
+             [lit] => (dest_neg lit handle HOL_ERR _ => lit)
+           | _ => recurse (count_vars ds acc) cs
+         end
+   in
+     recurse (Binarymap.mkDict Term.compare) (strip_conj phi)
+   end
+\end{verbatim}
+\end{hol}
+This function works by handing a list of clauses to the inner
+\ml{recurse} function.  This strips each clause apart in turn.  If a
+clause has only one disjunct it is a unit-clause and the variable can
+be returned directly.  Otherwise, the variables in the clause are
+counted and added to the accumulating map by \ml{count\_vars}, and the
+recursion can continue.
+
+The \ml{count\_vars} function has the following implementation:
+\begin{hol}
+\begin{verbatim}
+   fun count_vars ds acc =
+     case ds of
+       [] => acc
+     | lit::lits => let
+         val v = dest_neg lit handle HOL_ERR _ => lit
+       in
+         case Binarymap.peek (acc, v) of
+           NONE => count_vars lits (Binarymap.insert(acc,v,1))
+         | SOME n => count_vars lits (Binarymap.insert(acc,v,n + 1))
+       end
+\end{verbatim}
+\end{hol}
+
+The use of a binary tree to store variable data makes it efficient to
+update the data as it is being collected.  Extracting the variable
+with the largest count is then a linear scan of the tree, which we can
+do with the \ml{foldl} function:
+\begin{hol}
+\begin{verbatim}
+   fun getBiggest acc =
+     #1 (Binarymap.foldl(fn (v,cnt,a as (bestv,bestcnt)) =>
+                            if cnt > bestcnt then (v,cnt) else a)
+                        (boolSyntax.T, 0)
+                        acc
+\end{verbatim}
+\end{hol}
+
+\subsection{Performance}
+\label{sec:dpll-performance}
+
+##use ../../examples/dpll.sml
+Once inputs get even a little beyond the clearly trivial, the function
+we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
+better than the truth table implementation.  For example, the
+generalisation of the following term, with 29 variables, takes
+our function between three and four seconds to demonstrate as a tautology:
+\begin{hol}
+\begin{alltt}
+##eval val t0 = ``
+         (s0_0 = (x_0 = ~y_0)) /\ (c0_1 = x_0 /\ y_0) /\
+         (s0_1 = ((x_1 = ~y_1) = ~c0_1)) /\
+         (c0_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c0_1) /\
+         (s0_2 = ((x_2 = ~y_2) = ~c0_2)) /\
+         (c0_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c0_2) /\
+         (s1_0 = ~(x_0 = ~y_0)) /\ (c1_1 = x_0 /\ y_0 \/ x_0 \/ y_0) /\
+         (s1_1 = ((x_1 = ~y_1) = ~c1_1)) /\
+         (c1_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c1_1) /\
+         (s1_2 = ((x_2 = ~y_2) = ~c1_2)) /\
+         (c1_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c1_2) /\
+         (c_3 = ~c_0 /\ c0_3 \/ c_0 /\ c1_3) /\
+         (s_0 = ~c_0 /\ s0_0 \/ c_0 /\ s1_0) /\
+         (s_1 = ~c_0 /\ s0_1 \/ c_0 /\ s1_1) /\
+         (s_2 = ~c_0 /\ s0_2 \/ c_0 /\ s1_2) /\ ~c_0 /\
+         (s2_0 = (x_0 = ~y_0)) /\ (c2_1 = x_0 /\ y_0) /\
+         (s2_1 = ((x_1 = ~y_1) = ~c2_1)) /\
+         (c2_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c2_1) /\
+         (s2_2 = ((x_2 = ~y_2) = ~c2_2)) /\
+         (c2_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c2_2) ==>
+         (c_3 = c2_3) /\ (s_0 = s2_0) /\ (s_1 = s2_1) /\ (s_2 = s2_2)``;
+##eval val t = list_mk_forall(free_vars t0, t0);
+
+>> val _ = time DPLL_UNIV t;
+>> val _ = time tautLib.TAUT_PROVE t;
+\end{alltt}
+\end{hol}
+(If you want real speed, the built-in function \ml{tautLib.TAUT\_PROVE} does the above in less than a hundredth of a second, by using  an external tool to generate the proof of unsatisfiability, and then translating that proof back into HOL.)
+
+\section{Extending our Procedure's Applicability}
+\label{sec:dpll-applicability-extension}
+
+The function \ml{DPLL\_UNIV} requires its input to be universally
+quantified, with all free variables bound, and for each literal to be
+a variable or the negation of a variable.  This makes \ml{DPLL\_UNIV}
+a little unfriendly when it comes to using it as part of the proof of
+a goal.  In this section, we will write one further ``wrapper''
+layer to wrap around \ml{DPLL\_UNIV}, producing a tool that can be
+applied to many more goals.
+
+\paragraph{Relaxing the Quantification Requirement}  The first step is
+to allow formulas that are not closed.  In order to hand on a formula
+that \emph{is} closed to \ml{DPLL\_UNIV}, we can simply generalise
+over the formula's free variables.   If \ml{DPLL\_UNIV} then says that
+the new, ground formula is true, then so too will be the original.  On
+the other hand, if \ml{DPLL\_UNIV} says that the ground formula is
+false, then we can't conclude anything further and will have to raise
+an exception.
+
+Code implementing this is shown below:
+\begin{hol}
+\begin{verbatim}
+   fun nonuniv_wrap t = let
+     val fvs = free_vars t
+     val gen_t = list_mk_forall(fvs, t)
+     val gen_t_eq = DPLL_UNIV gen_t
+   in
+     if rhs (concl gen_t_eq) = boolSyntax.T then let
+         val gen_th = EQT_ELIM gen_t_eq
+       in
+         EQT_INTRO (SPECL fvs gen_th)
+       end
+     else
+       raise mk_HOL_ERR "dpll" "nonuniv_wrap" "No conclusion"
+   end
+\end{verbatim}
+\end{hol}
+
+\paragraph{Allowing Non-Literal Leaves}
+We can do better than \ml{nonuniv\_wrap}: rather than quantifying over
+just the free variables (which we have conveniently assumed will only
+be boolean), we can turn any leaf part of the term that is not a
+variable or a negated variable into a fresh variable.  We first
+extract those boolean-valued leaves that are not the constants true or
+false.
+\begin{hol}
+\begin{verbatim}
+   fun var_leaves acc t = let
+     val (l,r) = dest_conj t handle HOL_ERR _ =>
+                 dest_disj t handle HOL_ERR _ =>
+                 dest_imp t handle HOL_ERR _ =>
+                 dest_bool_eq t
+   in
+     var_leaves (var_leaves acc l) r
+   end handle HOL_ERR _ =>
+     if type_of t <> bool then
+       raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
+     else if t = boolSyntax.T then acc
+     else if t = boolSyntax.F then acc
+     else HOLset.add(acc, t)
+\end{verbatim}
+\end{hol}
+Note that we haven't explicitly attempted to pull apart boolean
+negations (which one might do with \ml{dest\_neg}).  This is because
+\ml{dest\_imp} also destructs terms \holtxt{\~{}p}, returning
+\holtxt{p} and \holtxt{F} as the antecedent and conclusion.  We have
+also used a function \ml{dest\_bool\_eq} designed to pull apart only
+those equalities which are over boolean values.  Its definition is
+\begin{hol}
+\begin{verbatim}
+   fun dest_bool_eq t = let
+     val (l,r) = dest_eq t
+     val _ = type_of l = bool orelse
+             raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
+   in
+     (l,r)
+   end
+\end{verbatim}
+\end{hol}
+
+Now we can finally write our final \ml{DPLL\_TAUT} function:
+\begin{hol}
+\begin{verbatim}
+   fun DPLL_TAUT tm =
+     let val (univs,tm') = strip_forall tm
+         val insts = HOLset.listItems (var_leaves empty_tmset tm')
+         val vars = map (fn t => genvar bool) insts
+         val theta = map2 (curry (op |->)) insts vars
+         val tm'' = list_mk_forall (vars,subst theta tm')
+     in
+         EQT_INTRO (GENL univs
+                      (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
+     end
+\end{verbatim}
+\end{hol}
+Note how this code first pulls off all external universal
+quantifications (with \ml{strip\_forall}), and then re-generalises
+(with \ml{list\_mk\_forall}).  The calls to \ml{GENL} and \ml{SPECL}
+undo these manipulations, but at the level of theorems.  This produces
+a theorem equating the original input to true.  (If the input term is
+not an instance of a valid propositional formula, the call to
+\ml{EQT\_ELIM} will raise an exception.)
+
+\section*{Exercises}
+
+\begin{enumerate}
+\item Extend the procedure so that it handles conditional expressions
+  (both arms of the terms must be of boolean type).
+\end{enumerate}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

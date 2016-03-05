@@ -1,0 +1,9 @@
+To generate the list of files that poly uses when building HOL, try something like
+
+    ./genUseScript --hol ../src/bool/boolScript.sml > usethis.ML
+
+Follow up with
+
+    poly --use usethis.ML
+
+to get into a Poly/ML session with that early prefix of stuff built.

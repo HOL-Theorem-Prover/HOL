@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
-     markerLib metisLib BasicProvers lcsymtacs ;
+     markerLib metisLib BasicProvers
 
 val _ = new_theory "sorting";
 
@@ -1303,7 +1303,7 @@ val QSORT3_STABLE =
 (* Various useful theorems from the CakeML project https://cakeml.org.       *)
 (*---------------------------------------------------------------------------*)
 
-local open lcsymtacs rich_listTheory in
+local open rich_listTheory in
 
 val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
 `!R L x. MEM x (QSORT3 R L) <=> MEM x L`,

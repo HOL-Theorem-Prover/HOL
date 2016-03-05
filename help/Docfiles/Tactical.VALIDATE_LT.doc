@@ -1,4 +1,4 @@
-\DOC VALIDATE_LT 
+\DOC VALIDATE_LT
 
 \TYPE {VALIDATE_LT : list_tactic -> list_tactic}
 
@@ -13,7 +13,7 @@ When the justification is applied to a list {thl'} of theorems
 which are the new goals {gl'}, proved, it should produce a list {thl}
 of theorems which are the goals {gl}, proved.
 
-A list-tactic can be invalid due to proving 
+A list-tactic can be invalid due to proving
 a theorem whose conclusion differs from that of the corresponding goal,
 or due to proving a theorem which contains extra assumptions relative to the
 corresponding goal.
@@ -30,12 +30,12 @@ a theorem whose conclusion differs from that of the corresponding goal.
 Also fails if {ltac} fails when applied to the given goals.
 
 \EXAMPLE
-Where {uthr'} is {[p', q] |- r} and {uths'} is {[p, q'] |- s} 
+Where {uthr'} is {[p', q] |- r} and {uths'} is {[p, q'] |- s}
 
 {
 2 subgoals:
 val it =
-   
+
 s
 ------------------------------------
   0.  p
@@ -60,7 +60,7 @@ Invalid list-tactic [...]
 OK..
 2 subgoals:
 val it =
-   
+
 q'
 ------------------------------------
   0.  p
@@ -77,14 +77,14 @@ p'
 }
 
 \USES
-Where a tactic {ltac} requires certain assumptions to be present in 
-one of the goals, 
-which are not present but are capable of being proved, 
+Where a tactic {ltac} requires certain assumptions to be present in
+one of the goals,
+which are not present but are capable of being proved,
 {VALIDATE_LT ltac} will conveniently set up new subgoals to prove the missing
 assumptions.
 
 \SEEALSO
-Tactical.VALID, Tactical.VALID_LT, Tactical.VALIDATE, 
+Tactical.VALID, Tactical.VALID_LT, Tactical.VALIDATE,
 proofManagerLib.elt, proofManagerLib.expand_list.
 
 \ENDDOC

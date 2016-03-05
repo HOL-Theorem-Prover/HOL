@@ -3,7 +3,7 @@
 \TYPE {bool_ss : simpset}
 
 \SYNOPSIS
-Basic simpset containing standard propositional and first order 
+Basic simpset containing standard propositional and first order
 logic simplifications, plus beta-conversion.
 
 \DESCRIBE

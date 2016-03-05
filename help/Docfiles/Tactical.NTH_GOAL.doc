@@ -10,7 +10,7 @@ The list-tactic which applies a tactic to the
 tactical.
 
 \DESCRIBE
-If {tac} is a tactic, {NTH_GOAL n tac} is a 
+If {tac} is a tactic, {NTH_GOAL n tac} is a
 list-tactic which applies the tactic {tac} to the
 {n}'th member of a list of goals.
 
@@ -27,7 +27,7 @@ or finally if {tac} fails when applied to the {n}'th member of the goal list.
 Applying a tactic to a particular subgoal.
 
 \EXAMPLE
-Where {tac1} and {tac2} are tactics, {tac1 THEN_LT NTH_GOAL n tac2} 
+Where {tac1} and {tac2} are tactics, {tac1 THEN_LT NTH_GOAL n tac2}
 applies {tac1} to a goal, and then applies {tac2} to the {n}'th resulting
 subgoal.
 

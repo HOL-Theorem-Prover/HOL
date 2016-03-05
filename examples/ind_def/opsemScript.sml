@@ -32,18 +32,18 @@ val _ = type_abbrev("state", ``:string |-> num``);
 (*---------------------------------------------------------------------------*)
 
 val _ =
- Hol_datatype
-      `nexp = Var of string
-            | Const of num
-            | Plus of nexp => nexp
-            | Times of nexp => nexp
-            | Sub of nexp => nexp`;
+ Datatype
+      `nexp = Var string
+            | Const num
+            | Plus nexp nexp
+            | Times nexp nexp
+            | Sub nexp nexp`;
 
 val _ =
- Hol_datatype
-      `bexp = Equal of nexp => nexp
-            | Less of nexp => nexp
-            | Not of bexp`;
+ Datatype
+      `bexp = Equal nexp nexp
+            | Less nexp nexp
+            | Not bexp`;
 
 val neval_def =
  Define
@@ -65,12 +65,12 @@ val beval_def =
 (*---------------------------------------------------------------------------*)
 
 val _ =
- Hol_datatype
+ Datatype
   `program = Skip
-           | Assign of string => nexp
-           | Seq    of program => program
-           | Cond   of bexp => program => program
-           | While  of bexp => program`;
+           | Assign string nexp
+           | Seq    program program
+           | Cond   bexp program program
+           | While  bexp program`;
 
 
 (*---------------------------------------------------------------------------*)

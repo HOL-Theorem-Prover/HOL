@@ -6,7 +6,7 @@
 Tests a term to see if it is an implication.
 
 \DESCRIBE
-If {M} has the form {t1 ==> t2} then {is_imp_only M} returns {true}. 
+If {M} has the form {t1 ==> t2} then {is_imp_only M} returns {true}.
 If the term is not an implication, the result is {false}.
 
 \FAILURE

@@ -69,8 +69,11 @@ in
   OS.Process.exit OS.Process.failure
 end
 
+fun shorten_name name =
+  if OS.Path.file name = "Holmake" then "Holmake" else name
+
 fun output_functions {quiet_flag: bool, debug:bool} = let
-  val execname = CommandLine.name()
+  val execname = shorten_name (CommandLine.name())
   open TextIO
   fun msg strm s = (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
   fun donothing _ = ()

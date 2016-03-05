@@ -1,0 +1,9 @@
+EXTRA_CLEANS = selftest.exe
+
+TARGETS = $(patsubst %.sml,%.uo,$(wildcard *Lib.sml))
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

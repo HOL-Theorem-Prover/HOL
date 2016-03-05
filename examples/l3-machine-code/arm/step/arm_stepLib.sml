@@ -7,7 +7,7 @@ struct
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs armTheory arm_stepTheory arm_configLib
+open armTheory arm_stepTheory arm_configLib
 open state_transformerSyntax blastLib
 
 structure Parse =
@@ -186,7 +186,7 @@ local
    val write'Rmode_rwt =
       EV thms
          [[``Extension_Security NOTIN ^st.Extensions``, ``n <> 15w: word4``,
-           ``~(((n = 13w: word4) /\ ~aligned 2 (v: word32)) /\ ^st.CPSR.T)``]]
+           ``~((n = 13w: word4) /\ ~aligned 2 (v: word32) /\ ^st.CPSR.T)``]]
          []
         ``write'Rmode (v, n, m)``
         |> hd
@@ -914,7 +914,7 @@ local
         (n2w (LowestSetBit (r: word16)) = n: word4)) ==>
        ((if word_bit i r then
            ((), x1,
-            if ((n2w i = n) /\ wb) /\ (i <> LowestSetBit r) then x2 else x3)
+            if (n2w i = n) /\ wb /\ (i <> LowestSetBit r) then x2 else x3)
          else
            ((), x4)) =
         (if word_bit i r then ((), x1, x3) else ((), x4)))`,
@@ -1279,7 +1279,7 @@ local
              (if p then b1 /\ b2 /\ b3 else b4 /\ b5 /\ b6)) /\
        (!p. ((if p then v2w [b1; b2] else v2w [b3; b4]) = 0w : word2) =
              (if p then ~b1 /\ ~b2 else ~b3 /\ ~b4))`,
-      lrw []
+      rw_tac std_ss []
       \\ CONV_TAC (Conv.LHS_CONV bitstringLib.v2w_eq_CONV)
       \\ decide_tac)
 
@@ -3869,7 +3869,8 @@ local
            |> Term.rand
            |> bitstringSyntax.dest_v2w |> fst
            |> get_cond
-           |> bitstringSyntax.int_of_term
+           |> bitstringSyntax.num_of_term
+           |> Arbnum.toInt
            |> (fn i => wordsSyntax.mk_wordii (if i = 15 then 14 else i, 4))
            |> mk_state enc
    val default_tms = List.map fix_datatype

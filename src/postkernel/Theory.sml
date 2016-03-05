@@ -338,7 +338,8 @@ local fun pluck1 x L =
        | SOME ((_,f'),l') => p::l'
 in
 fun add_fact (th as (s,_)) {thid, facts,adjoin,thydata} =
-    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata}
+    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata} before
+    call_hooks (TheoryDelta.NewBinding s)
 end;
 
 fun new_addon a {thid, facts, adjoin, thydata} =
@@ -521,56 +522,62 @@ end
 
 local
   fun check_name tempok (fname,s) =
-      if Lexis.ok_sml_identifier s andalso
-         not (Lib.mem s ["ref", "true", "false", "::", "nil", "="]) orelse
-         tempok andalso is_temp_binding s
+    if Lexis.ok_sml_identifier s andalso
+       not (Lib.mem s ["ref", "true", "false", "::", "nil", "="]) orelse
+       tempok andalso is_temp_binding s
       then ()
-      else raise ERR fname ("Can't use name "^Lib.mlquote s^
-                            " as a theory-binding")
+    else raise ERR fname ("Can't use name " ^ Lib.mlquote s ^
+                          " as a theory-binding")
   fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
   val save_thm_reporting = ref 1
   val _ = Feedback.register_trace ("Theory.save_thm_reporting",
                                    save_thm_reporting, 2)
-  val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
+  fun is_cheated th = Lib.mem "cheat" (fst (Tag.dest_tag (Thm.tag th)))
+  fun save_mesg cheated name =
+    if !save_thm_reporting = 0 orelse
+       !Globals.interactive andalso !save_thm_reporting < 2
+      then ()
+    else let
+           val s = if cheated then "CHEAT" else "theorem"
+           val s = if !Globals.interactive then s
+                   else StringCvt.padRight #"_" 13 (s ^ " ")
+         in
+           with_flag (MESG_to_string, Lib.I) HOL_MESG
+             ("Saved " ^ s ^ " " ^ Lib.quote name ^ "\n")
+         end
 in
-fun save_thm (name,th) =
-    let val th' = save_dep (CTname()) th in
-       check_name true ("save_thm",name)
-       ; if uptodate_thm th' then add_thmCT(name,th')
-         else raise DATED_ERR "save_thm" name
-       ; if !save_thm_reporting = 0 then ()
-         else if !Globals.interactive then
-           if !save_thm_reporting > 1 then
-             mesg ("Saved theorem " ^ Lib.quote name ^ "\n")
-           else
-             ()
-         else
-           mesg ("Saved theorem _____ " ^ Lib.quote name ^ "\n")
-       ; th'
-    end
-
-fun new_axiom (name,tm) =
-    let val rname  = Nonce.mk name
-        val axiom  = Thm.mk_axiom_thm (rname,tm)
-        val axiom' = save_dep (CTname()) axiom
-        val  _     = check_name false ("new_axiom",name)
-    in if uptodate_term tm then add_axiomCT(rname,axiom')
-       else raise DATED_ERR "new_axiom" name
-       ; axiom'
-    end
-
-fun store_definition(name, def) =
+  fun save_thm (name, th) =
     let
-      val def' = save_dep (CTname()) def
-      val ()  = check_name true ("store_definition",name)
+      val th' = save_dep (CTname ()) th
     in
-      if uptodate_thm def' then ()
-      else raise DATED_ERR "store_definition" name
-      ; add_defnCT(name,def')
+      check_name true ("save_thm", name)
+      ; if uptodate_thm th' then add_thmCT (name, th')
+        else raise DATED_ERR "save_thm" name
+      ; save_mesg (is_cheated th') name
+      ; th'
+    end
+
+  fun new_axiom (name,tm) =
+    let
+      val rname  = Nonce.mk name
+      val axiom  = Thm.mk_axiom_thm (rname, tm)
+      val axiom' = save_dep (CTname()) axiom
+    in
+      check_name false ("new_axiom",name)
+      ; if uptodate_term tm then add_axiomCT (rname, axiom')
+        else raise DATED_ERR "new_axiom" name
+      ; axiom'
+    end
+
+  fun store_definition (name, def) =
+    let
+      val def' = save_dep (CTname ()) def
+    in
+      check_name true ("store_definition", name)
+      ; uptodate_thm def' orelse raise DATED_ERR "store_definition" name
+      ; add_defnCT (name, def')
       ; def'
     end
-
-
 end;
 
 (*---------------------------------------------------------------------------*
@@ -858,33 +865,6 @@ fun export_theory () = let
        theorems = T,
        struct_ps = struct_ps,
        thydata = mungethydata thydata}
-  val five_minutes = 300
-  val one_hour = 60 * 60
-  fun divmod (x,y) = (x div y, x mod y)
-  fun tstr t = let
-    val secs = Time.toSeconds t
-    val pad2 = StringCvt.padLeft #"0" 2
-  in
-    if secs > five_minutes then let
-        val (minutes, secs) = divmod(secs, 60)
-      in
-        if minutes > 60 then let
-            val (hours,  minutes) = divmod(minutes, 60)
-          in
-            Int.toString hours ^ "h" ^
-            pad2 (Int.toString minutes) ^ "m" ^
-            pad2 (Int.toString secs) ^ "s"
-          end
-        else Int.toString minutes ^ "m" ^ pad2 (Int.toString secs)
-      end
-    else let
-        val msecs = Time.toMilliseconds t
-        val (secs,msecs) = divmod(msecs, 1000)
-      in
-        Int.toString secs ^ "." ^
-        StringCvt.padLeft #"0" 3 (Int.toString msecs) ^ "s"
-      end
-  end
   fun filtP s = not (Lexis.ok_sml_identifier s) andalso
                 not (is_temp_binding s)
  in
@@ -894,7 +874,7 @@ fun export_theory () = let
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, !new_theory_time)
-          val tstr = tstr time_since
+          val tstr = Lib.time_to_string time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
         theory_out 85 (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;

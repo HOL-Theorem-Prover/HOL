@@ -3,7 +3,7 @@
 \TYPE {Beta : thm -> thm}
 
 \SYNOPSIS
-Perform one step of beta-reduction on the right hand side of 
+Perform one step of beta-reduction on the right hand side of
 an equational theorem.
 
 \KEYWORDS

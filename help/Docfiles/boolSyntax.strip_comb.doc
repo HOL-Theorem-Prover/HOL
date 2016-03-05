@@ -6,7 +6,7 @@
 Iteratively breaks apart combinations (function applications).
 
 \DESCRIBE
-If {M} has the form {t t1 ... tn} then {strip_comb M} returns 
+If {M} has the form {t t1 ... tn} then {strip_comb M} returns
 {(t,[t1,...,tn])}. Note that
 {
    strip_comb(list_mk_comb(t,[t1,...,tn]))
