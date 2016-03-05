@@ -41,7 +41,8 @@ ARTS =\
   ../sum/sum.ot.art\
   ../option/option.ot.art\
   ../num/theories/num.ot.art\
-  ../num/theories/prim_rec.ot.art
+  ../num/theories/prim_rec.ot.art\
+  ../num/theories/arithmetic.ot.art
 
 hol4-base.art: hol4-base.unint.thy $(ARTS)
 	opentheory info --article -o $@ $<

@@ -12,6 +12,7 @@ struct
     fun ch {Thy,Name} =
       case (Thy,Name) of
           ("min", "=") => ([], "=")
+        | ("arithmetic", "NUMERAL") => (["Unwanted"],"id")
         | _ => (["HOL4",Thy],Name)
     val _ = set_tyop_name_handler th
     val _ = set_const_name_handler ch

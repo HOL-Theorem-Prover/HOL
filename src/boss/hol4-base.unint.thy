@@ -24,6 +24,7 @@ main {
   import: sum
   import: num
   import: prim-rec
+  import: arithmetic
 }
 marker {
   article: "../marker/marker.ot.art"
@@ -61,4 +62,11 @@ prim-rec {
   import: relation
   import: num
   article: "../num/theories/prim_rec.ot.art"
+}
+arithmetic {
+  import: marker
+  import: pair
+  import: prim-rec
+  import: relation
+  article: "../num/theories/arithmetic.ot.art"
 }
