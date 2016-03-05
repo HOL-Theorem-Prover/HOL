@@ -27,6 +27,9 @@ main {
   import: arithmetic
   import: basic-size
   import: while
+  import: list
+  import: rich-list
+  import: indexed-lists
 }
 marker {
   article: "../marker/marker.ot.art"
@@ -79,4 +82,24 @@ basic-size {
 while {
   import: arithmetic
   article: "../num/theories/while.ot.art"
+}
+list {
+  import: arithmetic
+  import: option
+  import: pair
+  import: relation
+  import: while
+  import: marker
+  article: "../list/src/list.ot.art"
+}
+rich-list {
+  import: list
+  import: arithmetic
+  import: combin
+  article: "../list/src/rich_list.ot.art"
+}
+indexed-lists {
+  import: list
+  import: relation
+  article: "../list/src/indexedLists.ot.art"
 }

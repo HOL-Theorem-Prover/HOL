@@ -1,0 +1,28 @@
+deltype list
+skipthm list_TY_DEF
+delproof list_Axiom
+delproof list_11
+delproof list_INDUCT
+skipthm list_induction
+delproof CONS_11
+delproof NOT_NIL_CONS
+delproof list_distinct
+delproof list_nchotomy
+delconst NIL
+delconst CONS
+delconst LENGTH
+delconst APPEND
+delconst MAP
+delconst REVERSE
+delconst HD
+delconst TL
+delconst FLAT
+delconst FILTER
+delconst NULL
+delconst EVERY
+delconst EXISTS
+delconst LAST
+delconst @temp @ind_typelist0
+delconst @temp @ind_typelist1
+delconst @temp @ind_typelist2
+delconst @temp @ind_typelist3
