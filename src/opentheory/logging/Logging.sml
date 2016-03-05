@@ -745,10 +745,11 @@ fun read_otdfile fname =
     val instrm = TextIO.openIn fname
     val _ = Feedback.HOL_MESG("Reading "^fname)
     fun recurse acc =
-      case Option.map (String.tokens Char.isSpace) (TextIO.inputLine instrm) of
+      case Option.map (Substring.splitl (not o Char.isSpace) o Substring.full) (TextIO.inputLine instrm) of
           NONE => List.rev acc
-        | SOME [d, nm] =>
+        | SOME (d,nm) =>
           let
+            val d = Substring.string d
             val dir = case d of
                           "deltype" => SOME DeleteType
                         | "delconst" => SOME DeleteConstant
@@ -757,10 +758,10 @@ fun read_otdfile fname =
                         | _ => (Feedback.HOL_WARNING "Logging" "read_otdfile"
                                                      ("Bad directive "^d);
                                 NONE)
+            val fixnm = Substring.string o Substring.dropl Char.isSpace o Substring.trimr 1
           in
-            recurse (case dir of NONE => acc | SOME dir => (dir,nm) :: acc)
+            recurse (case dir of NONE => acc | SOME dir => (dir,fixnm nm) :: acc)
           end
-        | SOME _ => recurse acc
   in
     recurse [] before TextIO.closeIn instrm
   end
