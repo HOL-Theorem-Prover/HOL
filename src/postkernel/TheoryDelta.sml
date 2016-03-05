@@ -9,6 +9,7 @@ struct
  | NewTypeOp of KernelSig.kernelname
  | DelConstant of KernelSig.kernelname
  | DelTypeOp of KernelSig.kernelname
+ | NewBinding of string
  | DelBinding of string
 
 local
@@ -26,6 +27,7 @@ fun toString t =
     | NewTypeOp n => ksOp "NewTypeOp" n
     | DelConstant n => ksOp "DelConstant" n
     | DelTypeOp n => ksOp "DelTypeOp" n
+    | NewBinding s => sOp "NewBinding" s
     | DelBinding s => sOp "DelBinding" s
 end (* local *)
 

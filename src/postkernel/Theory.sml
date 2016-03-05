@@ -338,7 +338,8 @@ local fun pluck1 x L =
        | SOME ((_,f'),l') => p::l'
 in
 fun add_fact (th as (s,_)) {thid, facts,adjoin,thydata} =
-    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata}
+    {facts= overwrite th facts, thid=thid, adjoin=adjoin,thydata=thydata} before
+    call_hooks (TheoryDelta.NewBinding s)
 end;
 
 fun new_addon a {thid, facts, adjoin, thydata} =
