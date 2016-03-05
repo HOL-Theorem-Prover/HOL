@@ -25,6 +25,8 @@ main {
   import: num
   import: prim-rec
   import: arithmetic
+  import: basic-size
+  import: while
 }
 marker {
   article: "../marker/marker.ot.art"
@@ -69,4 +71,12 @@ arithmetic {
   import: prim-rec
   import: relation
   article: "../num/theories/arithmetic.ot.art"
+}
+basic-size {
+  import: pair
+  article: "../num/theories/basicSize.ot.art"
+}
+while {
+  import: arithmetic
+  article: "../num/theories/while.ot.art"
 }
