@@ -3,16 +3,6 @@ version: 1.0
 description: HOL4 Basic theories
 author: HOL4 people
 license: BSD
-show: "HOL4"
-show: "Data.Bool"
-show: "Data.Option"
-show: "Data.Unit"
-show: "Data.Sum"
-show: "Data.Pair"
-show: "Function"
-show: "Relation"
-show: "Number.Natural"
-requires: base
 main {
   import: marker
   import: combin
