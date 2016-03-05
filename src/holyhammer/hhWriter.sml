@@ -95,6 +95,7 @@ fun hh_escape s =
         #"#"  => String.explode "#hash#"
       | #"/"  => String.explode "#slash#"
       | #"\"" => String.explode "#quote#"
+      | #"\\" => String.explode "#bslash#"
       | #"'" => String.explode "#squote#"
       | _     => [x]
     val l2 = map image l1
