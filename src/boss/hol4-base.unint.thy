@@ -15,6 +15,7 @@ main {
   import: num
   import: prim-rec
   import: arithmetic
+  import: numeral
   import: basic-size
   import: while
   import: list
@@ -65,6 +66,12 @@ arithmetic {
   import: relation
   article: "../num/theories/arithmetic.ot.art"
 }
+numeral {
+  import: arithmetic
+  import: marker
+  import: relation
+  article: "../num/theories/numeral.ot.art"
+}
 basic-size {
   import: pair
   article: "../num/theories/basicSize.ot.art"
@@ -75,6 +82,7 @@ while {
 }
 list {
   import: arithmetic
+  import: numeral
   import: option
   import: pair
   import: relation
