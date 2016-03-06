@@ -94,6 +94,7 @@ main {
   interpret: const "HOL4.arithmetic.ODD" as "Number.Natural.odd"
   interpret: const "HOL4.arithmetic.LOG" as "Number.Natural.log"
   interpret: const "HOL4.arithmetic.EXP" as "Number.Natural.^"
+  interpret: const "HOL4.arithmetic.FACT" as "Number.Natural.factorial"
   interpret: const "HOL4.arithmetic.BIT1" as "Number.Natural.bit1"
   interpret: const "HOL4.arithmetic.ZERO" as "Number.Natural.zero"
 
