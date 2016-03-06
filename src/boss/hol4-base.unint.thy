@@ -18,6 +18,8 @@ main {
   import: numeral
   import: basic-size
   import: while
+  import: numpair
+  import: pred-set
   import: list
   import: rich-list
   import: indexed-lists
@@ -80,6 +82,26 @@ while {
   import: arithmetic
   article: "../num/theories/while.ot.art"
 }
+numpair {
+  import: pair
+  import: numeral
+  import: relation
+  import: marker
+  import: prim-rec
+  article: "../num/extra_theories/numpair.ot.art"
+}
+pred-set {
+  import: pair
+  import: relation
+  import: option
+  import: arithmetic
+  import: while
+  import: prim-rec
+  import: numeral
+  import: numpair
+  import: marker
+  article: "../pred_set/src/pred_set.ot.art"
+}
 list {
   import: arithmetic
   import: numeral
@@ -88,6 +110,7 @@ list {
   import: relation
   import: while
   import: marker
+  import: pred-set
   article: "../list/src/list.ot.art"
 }
 rich-list {
