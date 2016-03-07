@@ -7,7 +7,6 @@ src/TeX
 src/sort
 src/string
 !src/string/theorytesting
-src/opentheory
 !examples/STE
 src/res_quan/src
 src/quotient/src
