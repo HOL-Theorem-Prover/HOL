@@ -706,7 +706,7 @@ in
           \***  or\n\
           \***    config-override           (Moscow ML)\n\
           \***\n\
-          \*** (Under Poly/ML you will have to delete bin/hol.builder0 as \
+          \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
           \well)\n***\n\
           \*** (Or: build with -nograph to stop this \
           \message from appearing again)\n")
@@ -723,13 +723,8 @@ in
     end
 end
 
-fun Poly_link {exe, obj} =
-    (Systeml.systeml([Systeml.CC, "-o", exe, obj] @ Systeml.POLY_LDFLAGS);
-     OS.FileSys.remove obj)
-
 fun Poly_compilehelp() = let
   open Systeml
-  fun link exe obj = Poly_link{exe=exe,obj=obj}
 in
   system_ps (fullPath [HOLDIR, "tools", "mllex", "mllex.exe"] ^ " Lexer.lex");
   system_ps (fullPath [HOLDIR, "tools", "mlyacc", "src", "mlyacc.exe"] ^ " Parser.grm");

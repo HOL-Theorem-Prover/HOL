@@ -1853,6 +1853,44 @@ rewrites.  The latter ``advantage'' is based on the assumption that
 of unused rewrites is never a concern: the presence of rewrites that
 do the wrong thing can be a major irritation.
 
+\subsubsection{Abbreviated ``Power'' Tactics}
+\HOL{}'s \ml{bossLib} module (part of the standard interactive environment) comes with a number of powerful simplification tactics with short lower-case names.
+These do not require or allow for the specification of a particular \simpset{} because they use \ml{srw_ss()} combined with the arithmetic decision procedure for the natural numbers, as well as a \simpset{} fragment that eliminates \holtxt{let}-terms.
+All of the tactics take a list of rewrite theorems as their one argument.
+These tactics are:
+
+\begin{center}
+\index{simp (simplification tactic)@\ml{simp} (simplification tactic)}%
+\index{rw (simplification tactic)@\ml{rw} (simplification tactic)}%
+\index{fs (simplification tactic)@ \ml{fs} (simplification tactic)}%
+\index{rfs (simplification tactic)@\ml{rfs} (simplification tactic)}%
+\begin{tabular}{ll}
+\ml{simp} & Corresponds to \ml{ASM\_SIMP\_TAC}\\
+\ml{rw} & Corresponds to \ml{SRW\_TAC[]}\\
+\ml{fs} & Corresponds to \ml{FULL\_SIMP\_TAC}\\
+\ml{rfs} & Corresponds to \ml{REV\_FULL\_SIMP\_TAC}
+\end{tabular}
+\end{center}
+Thus, the following is possible:
+\begin{session}
+\begin{alltt}
+>>_ g `x < 3 /\ P x ==> x < 20 DIV 2`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+In addition, two similar tactics allow special-purpose simplification of propositional structure:
+\begin{itemize}
+\item%
+\index{csimp@\ml{csimp}}%
+\ml{csimp} simplifies with \ml{srw\_ss()} and the \ml{CONJ\_ss} \simpset{} fragment.
+The latter allows for conjuncts to be used as assumptions when rewriting other conjuncts.
+Thus, if simplifying $c_1\land c_2$, $c_2$ will be assumed as a possible source of rewrites while $c_1$ is simplified to $c_1'$.
+Then $c_1'$ will be assumed while $c_2$ is simplified.
+\item \index{dsimp@\ml{dsimp}}\ml{dsimp} simplifies with \ml{srw\_ss()} and the \ml{DNF\_ss} \simpset{} fragment.
+The latter normalises to disjunctive normal form and also moves quantifiers so as to maximise the chance that they can be eliminated over equalities.
+When this tactic works well, it can provide a ``pure'' simplification analogue of the repeated stripping and variable elimination done by \ml{rw}.
+\end{itemize}
+
 \subsection{The standard \simpset{}s}
 \label{sec:standard-simpsets}
 
