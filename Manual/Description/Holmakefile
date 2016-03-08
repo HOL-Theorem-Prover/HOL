@@ -1,3 +1,5 @@
+INCLUDES = ../Tools
+
 TEX_CORES = description title preface system drules tactics theories definitions libraries misc HolSat
 
 TEX_SOURCES = ../LaTeX/ack.tex ../LaTeX/commands.tex $(patsubst %,%.tex,$(TEX_CORES))
