@@ -16,6 +16,8 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
+fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+
 (* message emission *)
 fun die s =
     let open TextIO
@@ -291,6 +293,15 @@ datatype cline_action =
                     rest : string list,
                     build_theory_graph : bool}
 exception DoClean of string
+
+fun write_kernelid s =
+  let
+    val strm = TextIO.openOut Holmake_tools.kernelid_fname
+  in
+    TextIO.output(strm, s ^ "\n");
+    TextIO.closeOut strm
+  end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
+
 fun get_cline kmod = let
   val reader = TextIO.inputLine
   (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
@@ -346,6 +357,7 @@ fun get_cline kmod = let
   val (knlspec, newopts) =
       unary_toggle "kernel" "-stdknl" I ["-expk", "-otknl", "-stdknl"] newopts
   val knlspec = kmod knlspec
+  val _ = write_kernelid knlspec
   val (buildgraph, newopts) =
       unary_toggle "theory-graph" true (fn x => x = "-graph")
                    ["-graph", "-nograph"] newopts
@@ -358,7 +370,7 @@ fun get_cline kmod = let
 in
   Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
           build_theory_graph = buildgraph}
-end handle DoClean s => Clean s
+end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions

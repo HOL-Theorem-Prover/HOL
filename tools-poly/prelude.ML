@@ -232,7 +232,8 @@ in
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
     ; List.app (hol_use ("tools" ++ "Holmake"))
-        ["regexpMatch", "parse_glob", "internal_functions", "Holmake_types",
+        ["regexpMatch", "parse_glob", "internal_functions",
+         "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
          "ReadHMF"]
     ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
         ["makefile-includes.ML", "check-intconfig.sml"]

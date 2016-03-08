@@ -36,6 +36,7 @@
 
 config-override
 tools-poly/poly-includes.ML
+.kernelidstr
 
 *~
 build-log

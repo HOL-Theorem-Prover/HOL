@@ -23,8 +23,8 @@ val _ = useC "Holdep";
 val _ = useC "regexpMatch";
 val _ = useC "parse_glob";
 val _ = useC "internal_functions";
-val _ = useC "Holmake_types";
 val _ = useC "Holmake_tools";
+val _ = useC "Holmake_types";
 val _ = useC "ReadHMF";
 
 val _ = use "Holmake.sml";

@@ -368,10 +368,10 @@ val _ =
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
-    compile [] "Holmake_types.sig";
-    compile [] "Holmake_types.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
+    compile [] "Holmake_types.sig";
+    compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
     compile [] "Holmake.sml";

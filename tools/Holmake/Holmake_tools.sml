@@ -27,6 +27,8 @@ in
   implode (trans charlist)
 end
 
+val kernelid_fname = Path.concat(HOLDIR, ".kernelidstr")
+
 fun realspace_delimited_fields s = let
   open Substring
   fun inword cword words ss =

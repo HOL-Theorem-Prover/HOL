@@ -25,6 +25,7 @@ sig
   val nspaces : (string -> unit) -> int -> unit
   val collapse_bslash_lines : string -> string
   val realspace_delimited_fields : string -> string list
+  val kernelid_fname : string
 
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit, info : string -> unit,
