@@ -76,6 +76,7 @@ fun add_sptree_compset compset =
       sptreeTheory.mk_BS_def,
       sptreeTheory.mk_wf_def,
       sptreeTheory.size_def,
+      sptreeTheory.toListA_def,
       sptreeTheory.toList_def,
       sptreeTheory.union_def,
       sptreeTheory.wf_def
