@@ -1,7 +1,7 @@
 structure state_monadLib :> state_monadLib =
 struct
 
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib numLib simpLib
 open state_transformerTheory
 
 structure Parse = struct
