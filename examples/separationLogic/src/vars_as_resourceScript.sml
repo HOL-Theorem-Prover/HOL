@@ -5824,11 +5824,11 @@ val var_res_exp_varlist_update___var_EVAL = store_thm ("var_res_exp_varlist_upda
 
 SIMP_TAC list_ss [var_res_exp_varlist_update_def,
    var_res_exp_var_def, var_res_state_varlist_update_REWRITE,
-   FDOM_FUPDATE_LIST, IN_UNION, IN_LIST_TO_SET, IN_SING,
+   FDOM_FUPDATE_LIST, IN_UNION, IN_SING,
    MEM_MAP, GSYM RIGHT_EXISTS_AND_THM, MAP_APPEND,
    FUPDATE_LIST_APPEND, FUPDATE_LIST_THM,
    FDOM_FUPDATE, IN_INSERT, var_res_exp_const_def,
-   FDOM_FUPDATE_LIST, IN_UNION, IN_LIST_TO_SET,
+   FDOM_FUPDATE_LIST, IN_UNION,
    FAPPLY_FUPDATE_THM, combinTheory.K_DEF] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `v1 = v2` THEN (

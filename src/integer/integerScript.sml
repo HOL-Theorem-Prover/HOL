@@ -3030,7 +3030,7 @@ open pred_setTheory
 val INFINITE_INT_UNIV = store_thm(
   "INFINITE_INT_UNIV",
   ``INFINITE univ(:int)``,
-  REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
+  REWRITE_TAC [] THEN STRIP_TAC THEN
   `FINITE (IMAGE Num univ(:int))` by SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `IMAGE Num univ(:int) = univ(:num)`
         THEN1 (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
