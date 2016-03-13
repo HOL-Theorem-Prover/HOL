@@ -14,8 +14,8 @@ i.e. a sub-term of the form {p=>u|v}, choosing one by its own criteria if there
 is more than one. It then induces a case split over {p} as follows:
 {
                              A ?- t
-    =======================================================  COND_CASES_TAC
-     A u {p} ?- t[u/(p=>u|v)]   A u {~p} ?- t[v/(p=>u|v)]]
+    ==============================================================  COND_CASES_TAC
+     A u {p} ?- t[u/(p=>u|v),T/p]   A u {~p} ?- t[v/(p=>u|v),F/p]
 }
 where {p} is not a constant, and the term {p=>u|v} is free in {t}.
 Note that it both enriches the assumptions and inserts the assumed value into
