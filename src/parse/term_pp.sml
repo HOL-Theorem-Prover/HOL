@@ -687,7 +687,8 @@ fun pp_term (G : grammar) TyG backend = let
               | NONE => raise mk_HOL_ERR "term_pp" "constann"
                               "Called on non-const (fake or o/wise)"
           end
-      val constr = if CharVector.all Char.isAlphaNum s then PPBackEnd.Const
+      fun isAlphaNum_ish c = Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
+      val constr = if CharVector.all isAlphaNum_ish s then PPBackEnd.Const
                    else PPBackEnd.SymConst
     in
       add_ann_string(s, constr {Thy = Thy, Name = Name, Ty = (Ty, fn () => tystr Ty)})
