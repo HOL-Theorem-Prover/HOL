@@ -60,63 +60,58 @@ val TIMES_2EXP1 =
     Q.SPECL [`x`, `1`]) bitTheory.TIMES_2EXP_def
 
 local
-   val compset = reduceLib.num_compset ()
-   val () = computeLib.add_thms
-              [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
-               FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP] compset
-   val thms = [TIMES_2EXP1, arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
-   val rwts = List.map (REWRITE_RULE thms)
-                 [INT_MIN_def, dimword_IS_TWICE_INT_MIN,
-                  UINT_MAX_def, INT_MAX_def, INT_MIN_SUM]
+  val cnv =
+    computeLib.compset_conv (reduceLib.num_compset())
+      [computeLib.Defs
+         [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
+          FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP]]
+  val thms = [TIMES_2EXP1, arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
+  val rwts = List.map (REWRITE_RULE thms)
+                [INT_MIN_def, dimword_IS_TWICE_INT_MIN,
+                 UINT_MAX_def, INT_MAX_def, INT_MIN_SUM]
 in
-   val PRIM_SIZES_CONV =
-      PURE_REWRITE_CONV rwts
-      THENC fcpLib.INDEX_CONV
-      THENC computeLib.CBV_CONV compset
+  val PRIM_SIZES_CONV = PURE_REWRITE_CONV rwts THENC fcpLib.INDEX_CONV THENC cnv
 end
 
 local
-    fun intSuff (s, n) =
-       Option.isSome (Int.fromString (String.extract (s, n, NONE)))
-    fun is_fcp_thm s =
-       let
-          fun is_pref_int p =
-             String.isPrefix p s andalso intSuff (s, String.size p)
-       in
-          Lib.exists
-             is_pref_int ["finite_", "dimindex_", "dimword_", "INT_MIN_"]
-          andalso s <> "dimindex_1_cases"
-       end
-    fun get_fcp_thm (s, thm) = if is_fcp_thm s then SOME thm else NONE
-    val machine_sizes = List.mapPartial get_fcp_thm (DB.theorems "words")
-    val err =
-       ERR "SIZES_CONV"
-           "Term not dimword, dimindex, INT_MIN, INT_MAX, UINT_MAX or FINITE"
-    val compset = computeLib.new_compset machine_sizes
-    val cnv = Conv.CHANGED_CONV (computeLib.CBV_CONV compset)
-    val is_numeric =
-       Lib.can (fcpSyntax.dest_numeric_type o boolSyntax.dest_itself)
-    val is_univ_numeric =
-       Lib.can (fcpSyntax.dest_numeric_type o fst o Type.dom_rng o
-                pred_setSyntax.dest_univ)
-    val ok = Lib.C Lib.mem ["words$dimword", "fcp$dimindex",
-                            "words$INT_MIN", "words$INT_MAX", "words$UINT_MAX"]
-    fun suitable t =
-       case Lib.total boolSyntax.dest_strip_comb t of
-          SOME ("pred_set$FINITE", [a]) => is_univ_numeric a
-        | SOME (s, [a]) => ok s andalso is_numeric a
-        | _ => false
+  fun intSuff (s, n) =
+    Option.isSome (Int.fromString (String.extract (s, n, NONE)))
+  fun is_fcp_thm s =
+    let
+      fun is_pref_int p = String.isPrefix p s andalso intSuff (s, String.size p)
+    in
+      Lib.exists is_pref_int ["finite_", "dimindex_", "dimword_", "INT_MIN_"]
+      andalso s <> "dimindex_1_cases"
+    end
+  fun get_fcp_thm (s, th) =
+    if is_fcp_thm s then
+      SOME (case Lib.total (fst o boolSyntax.dest_eq o Thm.concl) th of
+               SOME t => (t, th)
+             | NONE => (Thm.concl th, Drule.EQT_INTRO th))
+    else NONE
+  val tree = DB.theorems "words"
+             |> List.mapPartial get_fcp_thm
+             |> Redblackmap.fromList Term.compare
+  val err =
+     ERR "SIZES_CONV"
+         "Term not dimword, dimindex, INT_MIN, INT_MAX, UINT_MAX or FINITE"
+  val is_numeric =
+    Lib.can (fcpSyntax.dest_numeric_type o boolSyntax.dest_itself)
+  val is_univ_numeric =
+    Lib.can (fcpSyntax.dest_numeric_type o fst o Type.dom_rng o
+             pred_setSyntax.dest_univ)
+  fun suitable t =
+    case Lib.total boolSyntax.dest_strip_comb t of
+       SOME ("pred_set$FINITE", [a]) => is_univ_numeric a
+     | SOME ("words$INT_MIN", [a]) => is_numeric a
+     | SOME ("words$INT_MAX", [a]) => is_numeric a
+     | SOME ("words$UINT_MAX", [a]) => is_numeric a
+     | SOME ("words$dimword", [a]) => is_numeric a
+     | SOME ("fcp$dimindex", [a]) => is_numeric a
+     | _ => false
+  fun dst t = if suitable t then SOME t else NONE
 in
-   fun SIZES_CONV t =
-      if suitable t
-         then cnv t
-              handle HOL_ERR _ =>
-               let
-                  val x = PRIM_SIZES_CONV t
-               in
-                  computeLib.add_thms [x] compset; x
-               end
-      else raise err
+  val SIZES_CONV = Conv.memoize dst tree (Lib.K true) err PRIM_SIZES_CONV
 end
 
 val SIZES_ss =
@@ -401,22 +396,22 @@ in
        mrw (GSYM bitTheory.MOD_2EXP_def)) thms
 end
 
-fun add_words_compset extras cmp =
-  ( computeLib.add_thms thms cmp
-  ; List.app (fn x => computeLib.add_conv (x, 1, SIZES_CONV) cmp)
-     [fcpSyntax.dimindex_tm, wordsSyntax.dimword_tm, wordsSyntax.uint_max_tm,
-      wordsSyntax.int_min_tm, wordsSyntax.int_max_tm, pred_setSyntax.finite_tm]
-  ; computeLib.add_conv
-      (``words$BIT_SET : num -> num -> num set``, 2, BIT_SET_CONV) cmp
-  ; computeLib.add_conv
-      (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV) cmp
-  ; if extras
-       then List.app (fn f => f cmp)
-              [listSimps.list_rws, bitLib.add_bit_compset,
-               numposrepLib.add_numposrep_compset,
-               ASCIInumbersLib.add_ASCIInumbers_compset]
-    else ()
-  )
+fun add_words_compset extras =
+  computeLib.extend_compset
+   (computeLib.Extenders
+      (if extras then
+          [listSimps.list_rws, bitLib.add_bit_compset,
+           numposrepLib.add_numposrep_compset,
+           ASCIInumbersLib.add_ASCIInumbers_compset]
+       else []) ::
+    [computeLib.Defs thms,
+     computeLib.Convs
+        ([(``words$BIT_SET : num -> num -> num set``, 2, BIT_SET_CONV),
+          (``min$= : 'a word -> 'a word -> bool``, 2, word_EQ_CONV)] @
+         List.map (fn x => (x, 1, SIZES_CONV))
+          [fcpSyntax.dimindex_tm, wordsSyntax.dimword_tm,
+           wordsSyntax.uint_max_tm, wordsSyntax.int_min_tm,
+           wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])])
 
 val () = add_words_compset false computeLib.the_compset
 
@@ -1132,25 +1127,18 @@ end
 
 (* ------------------------------------------------------------------------- *)
 
-fun bitwise_compset () =
-   let
-      open numeral_bitTheory
-      val cmp = reduceLib.num_compset ()
-      val () = computeLib.add_thms
-                [NUMERAL_BITWISE, iBITWISE, numeral_log2, numeral_ilog2] cmp
-      val () = computeLib.add_conv
-                (``fcp$dimindex:'a itself->num``, 1, SIZES_CONV) cmp
-   in
-      cmp
-   end
+val BITWISE_CONV =
+  let open numeral_bitTheory in
+    computeLib.compset_conv (reduceLib.num_compset())
+      [computeLib.Defs [NUMERAL_BITWISE, iBITWISE, numeral_log2, numeral_ilog2],
+       computeLib.Convs [(``fcp$dimindex:'a itself->num``, 1, SIZES_CONV)]]
+  end
 
 val WORD_LITERAL_AND_thms =
    (numLib.SUC_RULE o REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_AND
 
 val WORD_LITERAL_OR_thms =
    (numLib.SUC_RULE o REWRITE_RULE [WORD_NOT_NUMERAL]) WORD_LITERAL_OR
-
-val BITWISE_CONV = computeLib.CBV_CONV (bitwise_compset ())
 
 val GSYM_WORD_OR_ASSOC = GSYM WORD_OR_ASSOC
 val GSYM_WORD_AND_ASSOC = GSYM WORD_AND_ASSOC
@@ -1711,17 +1699,16 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
 
 local
    open listTheory
-   val cmp = reduceLib.num_compset ()
-   val _ = computeLib.add_thms
-             [foldl_reduce_and, foldl_reduce_or, foldl_reduce_xor,
-              foldl_reduce_nand, foldl_reduce_nor, foldl_reduce_xnor,
-              GENLIST_AUX_compute, GENLIST_GENLIST_AUX, FOLDL, HD, TL] cmp
-   val _ = computeLib.add_conv
-             (``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV) cmp
-   val conv = computeLib.CBV_CONV cmp
+   val cnv =
+     computeLib.compset_conv (reduceLib.num_compset())
+       [computeLib.Defs
+          [foldl_reduce_and, foldl_reduce_or, foldl_reduce_xor,
+           foldl_reduce_nand, foldl_reduce_nor, foldl_reduce_xnor,
+           GENLIST_AUX_compute, GENLIST_GENLIST_AUX, FOLDL, HD, TL],
+        computeLib.Convs [(``fcp$dimindex:'a itself -> num``, 1, SIZES_CONV)]]
    fun reduce_thm f ty =
       if Lib.can (fcpLib.index_to_num o dest_word_type) ty
-         then conv (f (Term.mk_var ("w", ty)))
+         then cnv (f (Term.mk_var ("w", ty)))
       else raise ERR "EXPAND_REDUCE_CONV" ""
 in
    fun EXPAND_REDUCE_CONV tm =
@@ -2664,13 +2651,8 @@ val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
 val Cases_word = Cases
 val Cases_on_word = Cases_on
 
-val LESS_CONV =
-   let
-      val compset = reduceLib.num_compset ()
-      val () = computeLib.add_thms [wordsTheory.NUMERAL_LESS_THM] compset
-   in
-      computeLib.CBV_CONV compset
-   end
+val LESS_CONV = computeLib.compset_conv (reduceLib.num_compset())
+                  [computeLib.Defs [wordsTheory.NUMERAL_LESS_THM]]
 
 local
    val tac =

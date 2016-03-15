@@ -114,4 +114,7 @@ sig
    val PRINT_CONV            : conv
    val MAP_THM               : conv -> thm -> thm
    val PATH_CONV             : string -> conv -> conv
+
+   val memoize : (term -> 'a option) -> ('a, thm) Redblackmap.dict ->
+                 (term -> bool) -> exn -> conv -> conv
 end
