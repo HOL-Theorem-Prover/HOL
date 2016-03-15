@@ -35,3 +35,24 @@ val _ = if aconv desired_ind (concl (theorem "fact_ind")) then print "OK\n"
 
 val fs_def = DefineSchema`(fs 0 y = z + y) /\ (fs x y = x)`;
 val gs_def = DefineSchema`(gs 0 y = x + y) /\ (gs x y = x)`;
+
+val _ = tprint "Testing 0-arg recursive function with lambda"
+
+val f1_def = Define`
+  f1 = \x. case x of 0 => 0n | SUC n => f1 n
+` handle _ => die "FAILED!"
+val _ = print "OK\n";
+
+val _ = tprint "Testing 1-arg recursive function with lambda"
+
+val f1_def = Define`
+  f2 (y : 'a) = \x. case x of 0 => 0n | SUC n => f2 y n
+` handle _ => die "FAILED!"
+val _ = print "OK\n";
+
+val _ = tprint "Testing 2-arg recursive function with lambda"
+
+val f1_def = Define`
+  f3 (y : 'a) (z : 'a) = \x. case x of 0 => 0n | SUC n => f3 y z n
+` handle _ => die "FAILED!"
+val _ = print "OK\n";

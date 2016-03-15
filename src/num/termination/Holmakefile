@@ -19,7 +19,7 @@ BARE_DEPS = ../theories/numeralTheory ../../tfl/src/Defn ../numLib \
             $(patsubst %,../arith/src/%,$(ARITH_DEPS))
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
-all: $(HOLHEAP)
+all: $(HOLHEAP) selftest.exe
 
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
 	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
