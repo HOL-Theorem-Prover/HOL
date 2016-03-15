@@ -36,8 +36,14 @@ in
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
     "case e1 of 0 => 1 | SUC n => case e2 of 0 => 2 | SUC m => 3",
     "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y"
-  ]
+  ] ;
+  trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
+  trace ("PP.print_firstcasebar", 1) tpp
+    "case f e n longvarname of\n\
+    \| 0 => superlongvarname * secondsuperlongname + 1\n\
+    \| SUC n => n + 2"
 end
+
 
 
 

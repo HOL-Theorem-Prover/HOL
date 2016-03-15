@@ -365,8 +365,10 @@ fun nthy_compare ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
   | x => x
 
 val prettyprint_bigrecs = ref true;
-
 val _ = register_btrace ("pp_bigrecs", prettyprint_bigrecs)
+
+val pp_print_firstcasebar = ref false
+val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
 
 fun decdepth n = if n < 0 then n else n - 1
 
@@ -1897,7 +1899,10 @@ fun pp_term (G : grammar) TyG backend = let
                             (add_string "case" >> add_break(1,2) >>
                              pr_term split_on Top Top Top (decdepth depth) >>
                              add_break(1,0) >> add_string "of") >>
-                           add_break (1,2) >>
+                           (if !pp_print_firstcasebar then
+                              casebar
+                            else
+                              add_break (1,2)) >>
                            (if length splits > 1 then
                               pr_list (do_split (Prec(0,"casebar")))
                                       casebar
