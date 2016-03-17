@@ -449,12 +449,13 @@ fun GEN_COND_CASES_TAC P (asl, w) =
       val (cond, larm, rarm) = dest_cond cond
       val inst = INST_TYPE [Type.alpha |-> type_of larm] COND_CLAUSES
       val (ct, cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
+      fun subst_tac th c = SUBST1_TAC th THEN SUBST1_TAC (SUBS [th] c)
    in
       DISJ_CASES_THEN2
         (fn th =>
-           SUBST1_TAC (EQT_INTRO th) THEN SUBST1_TAC ct THEN ASSUME_TAC th)
+           subst_tac (EQT_INTRO th) ct THEN ASSUME_TAC th)
         (fn th =>
-           SUBST1_TAC (EQF_INTRO th) THEN SUBST1_TAC cf THEN ASSUME_TAC th)
+           subst_tac (EQF_INTRO th) cf THEN ASSUME_TAC th)
         (SPEC cond EXCLUDED_MIDDLE)
         (asl, w)
    end
