@@ -45,6 +45,10 @@ ARTS =\
   ../num/theories/arithmetic.ot.art\
   ../num/theories/basicSize.ot.art\
   ../num/theories/while.ot.art\
+  ../num/extra_theories/numpair.ot.art\
+  ../datatype/ind_type.ot.art\
+  ../pred_set/src/pred_set.ot.art\
+  ../list/src/operator.ot.art\
   ../list/src/list.ot.art\
   ../list/src/rich_list.ot.art\
   ../list/src/indexedLists.ot.art

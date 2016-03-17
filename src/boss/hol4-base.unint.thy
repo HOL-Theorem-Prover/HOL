@@ -20,6 +20,8 @@ main {
   import: while
   import: numpair
   import: pred-set
+  import: ind-type
+  import: operator
   import: list
   import: rich-list
   import: indexed-lists
@@ -102,6 +104,13 @@ pred-set {
   import: marker
   article: "../pred_set/src/pred_set.ot.art"
 }
+ind-type {
+  import: arithmetic
+  article: "../datatype/ind_type.ot.art"
+}
+operator {
+  article: "../list/src/operator.ot.art"
+}
 list {
   import: arithmetic
   import: numeral
@@ -111,12 +120,14 @@ list {
   import: while
   import: marker
   import: pred-set
+  import: operator
   article: "../list/src/list.ot.art"
 }
 rich-list {
   import: list
   import: arithmetic
   import: combin
+  import: operator
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
