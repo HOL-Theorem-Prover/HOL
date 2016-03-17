@@ -461,11 +461,11 @@ can be used instead of\footnote{In order to be processed successfully,
   been loaded, which can be accomplished in the interactive system by
   \ml{load "arithmeticTheory"}.}
 
-\begin{hol}
-\begin{verbatim}
-  let val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
-  in
-   mk_abs
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{alltt}
+>> val numty = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+>> mk_abs
     (mk_var("x",numty),
      mk_comb(mk_comb
       (mk_thy_const
@@ -473,10 +473,9 @@ can be used instead of\footnote{In order to be processed successfully,
          mk_var("x", numty)),
        mk_comb(mk_thy_const{Name="NUMERAL",Thy="arithmetic",Ty=numty-->numty},
         mk_comb(mk_thy_const{Name="BIT1",Thy="arithmetic",Ty=numty-->numty},
-                mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))))
-  end
-\end{verbatim}
-\end{hol}
+                mk_thy_const{Name="ZERO",Thy="arithmetic",Ty=numty}))));
+\end{alltt}
+\end{session}
 
 The \HOL{} printer, which is integrated into the \ML{} toplevel loop,
 also outputs types and terms using this syntax.
@@ -528,39 +527,21 @@ illustrated in the following session.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- ``x = (x = 1)``;
-Type inference failure: unable to infer a type for the application of
-
-$= (x :num)
-
-which has type
-
-:num -> bool
-
-to
-
-(x :num) = (1 :num)
-
-which has type
-
-:bool
-
-unification failure message: unify failed
-\end{verbatim}
+\begin{alltt}
+>>+ ``x = (x = 1)``;
+\end{alltt}
 \end{session}
 
 The desired value can be directly constructed by the primitive constructor
 functions:
 
 \begin{session}
-\begin{verbatim}
-- mk_eq
+\begin{alltt}
+>> mk_eq
    (mk_var("x",bool),
     mk_eq(mk_var("x",numty),
-          mk_numeral (Arbnum.fromString "1")));
-> val it = ``x <=> (x = 1)`` : term
-\end{verbatim}
+          numSyntax.mk_numeral (Arbnum.fromString "1")));
+\end{alltt}
 \end{session}
 
 The original quotation type checker was designed and implemented by
@@ -598,19 +579,10 @@ used in the startup context of \HOL{} has the type operators
 \verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
 \verb+bool+.
 
-\setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- type_grammar();
-> val it =
-    Rules:
-    (50)   TY  ::=  TY -> TY [fun] (R-associative)
-    (60)   TY  ::=  TY + TY [sum] (R-associative)
-    (70)   TY  ::=  TY # TY [prod] (R-associative)
-    (100)  TY  ::=  TY list | TY recspace | num | (TY, TY)prod | TY option |
-                    one | (TY, TY)sum | label | (TY, TY)fun | ind | bool
-     : grammar
-\end{verbatim}
+\begin{alltt}
+>> type_grammar();
+\end{alltt}
 \end{session}
 
 Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix
@@ -632,8 +604,8 @@ which bind very tightly.
 \begin{figure}[htbp]
 \begin{session}
 \begin{verbatim}
-- term_grammar();
-> val it =
+> term_grammar();
+val it =
     (0)    TM  ::=  "LEAST" <..binders..>  "." TM |
                     "?!" <..binders..>  "." TM | "?" <..binders..>  "." TM |
                     "!" <..binders..>  "." TM | "@" <..binders..>  "." TM |
@@ -698,10 +670,9 @@ explicitly specified.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-- ``prim_rec$< x y``
-> val it = ``x < y`` : term
-\end{verbatim}
+\begin{alltt}
+>> ``prim_rec$< x y``
+\end{alltt}
 \end{session}
 Note how the \holtxt{<} symbol is not treated as an infix by the
 parser when given in ``fully-qualified'' form.  Syntactically, such
@@ -989,12 +960,12 @@ below).  For example, the axiom \ml{BOOL\_CASES\_AX} mentioned in
 \ml{F} are the \HOL{} logic's constants representing truth and
 falsity, respectively):
 
-\begin{hol}
+\begin{session}
 \index{F (falsity), the HOL constant@\holtxt{F} (falsity), the \HOL{} constant!axiom for}
-\begin{verbatim}
-   |- !t. (t = T) \/ (t = F) : thm
-\end{verbatim}
-\end{hol}
+\begin{alltt}
+>> BOOL_CASES_AX;
+\end{alltt}
+\end{session}
 
 \noindent
 Note the special print format,
@@ -1015,19 +986,13 @@ destructor functions:
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-   - val th = BOOL_CASES_AX;
-   > val th = |- !t. (t = T) \/ (t = F) : thm
+\begin{alltt}
+>> hyp BOOL_CASES_AX;
 
-   - hyp th;
-   > val it = [] : term list
+>> concl BOOL_CASES_AX;
 
-   - concl th;
-   > val it = ``!t. (t = T) \/ (t = F)`` : term
-
-   - type_of it;
-   > val it = ``:bool`` : hol_type
-\end{verbatim}
+>> type_of it;
+\end{alltt}
 \end{session}
 \index{turnstile notation|)}
 
@@ -1041,16 +1006,13 @@ theorem inferred, for example purposes, from another axiom mentioned
 in \LOGIC, \ml{SELECT\_AX}.
 
 \begin{session}
-\begin{verbatim}
-- val th = UNDISCH (SPEC_ALL SELECT_AX);
-> val th =  [.] |- P ($@ P) : thm
+\begin{alltt}
+>> val th = UNDISCH (SPEC_ALL SELECT_AX);
 
-- show_assums := true;
-> val it = () : unit
+>> show_assums := true;
 
-- th;
-> val it =  [P x] |- P ($@ P) : thm
-\end{verbatim}
+>> th;
+\end{alltt}
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|)}
 
@@ -1408,13 +1370,11 @@ true.
 
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-   - Globals.show_tags := true;
-   > val it = () : unit
+\begin{alltt}
+>> Globals.show_tags := true;
 
-   - mk_thm([], Term `F`);;
-   > val it = [oracles: MK_THM] [axioms: ] [] |- F : thm
-\end{verbatim}
+>> mk_thm([], Term `F`);;
+\end{alltt}
 \end{session}\index{mk_thm@\ml{mk\_thm}}
 
 There are three elements to the left of the turnstile in the fully printed
@@ -1556,17 +1516,11 @@ of the theory hierarchy.  The argument is the name of a theory (or
 \texttt{ancestry} will respond with a list of the argument's ancestors
 in the theory hierarchy.
 
-\begin{holboxed}
-{\small
-\begin{verbatim}
-   - ancestry "-";
-   > val it =
-      ["num", "prim_rec", "normalForms", "relation", "pair",
-        "arithmetic", "while", "numeral", "label", "combin", "sum", "min",
-        "bool", "marker", "one", "option", "ind_type", "list"] : string list
-\end{verbatim}
-}
-\end{holboxed}
+\begin{session}
+\begin{alltt}
+>> ancestry "-";
+\end{alltt}
+\end{session}
 
 
 \paragraph{Creating a theory segment}

@@ -18,7 +18,6 @@ sig
       {cmdline : string list, build_theory_graph : bool,
        do_selftests : int, SRCDIRS : (string * int) list}
 
-  val Poly_link : {exe:string,obj:string} -> unit
   val map_dir : (string * string -> unit) -> string -> unit
                 (* f gets dirname * filename *)
   val rem_file : string -> unit
