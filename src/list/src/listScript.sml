@@ -297,7 +297,7 @@ val NULL = store_thm ("NULL",
 (* |- P [] /\ (!t. P t ==> !h. P(h::t)) ==> (!x.P x)                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_INDUCT0 = TypeBase.induction_of ``:'a list``;
+val list_INDUCT0 = save_thm("list_INDUCT0",TypeBase.induction_of ``:'a list``);
 
 val list_INDUCT = Q.store_thm
 ("list_INDUCT",

@@ -1,15 +1,24 @@
 deltype list
+delproof list_TY_DEF
 skipthm list_TY_DEF
 delproof list_Axiom
+delproof list_Axiom_old
 delproof list_11
 delproof list_INDUCT
-skipthm list_induction
-delproof CONS_11
-delproof NOT_NIL_CONS
+skipthm list_INDUCT
+delproof list_INDUCT0
+skipthm list_INDUCT0
+delproof list_induction
 delproof list_distinct
+delproof list_CASES
 delproof list_nchotomy
+skipthm list_nchotomy
+delconst list_CASE
+delproof list_case_def
 delconst NIL
 delconst CONS
+delproof CONS_11
+delproof NOT_NIL_CONS
 delconst LENGTH
 delconst APPEND
 delconst MAP
@@ -22,7 +31,3 @@ delconst NULL
 delconst EVERY
 delconst EXISTS
 delconst LAST
-delconst @temp @ind_typelist0
-delconst @temp @ind_typelist1
-delconst @temp @ind_typelist2
-delconst @temp @ind_typelist3
