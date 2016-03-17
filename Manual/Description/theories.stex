@@ -2616,15 +2616,14 @@ $\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ where the constant
 \end{hol}
 
 \paragraph{List membership}
-\index{MEM, the HOL constant@\ml{MEM}, the \HOL{} constant}
+\index{MEM, the HOL notion of list membership@\holtxt{MEM}, the \HOL{} notion of list membership}
 
-Membership in a list, \ml{MEM}, is defined as follows:
+Membership in a list, written using the \holtxt{MEM} syntax, is characterised as follows:
 %
 \begin{hol}
-\begin{verbatim}
-   MEM |- (!x. MEM x [] = F) /\
-          (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)
-\end{verbatim}
+\begin{alltt}
+>> listTheory.MEM;
+\end{alltt}
 \end{hol}
 
 \paragraph {Concatenation of lists}
@@ -2772,28 +2771,25 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 \paragraph {Removal of duplicates}
 The \holtxt{nub} function removes all duplicate entries from a list.
 \begin{hol}
-\begin{verbatim}
-   nub_DEF
-     |- (nub [] = []) /\
-        (!x l. nub (x::l) = if MEM x l then nub l else x::nub l)
-\end{verbatim}
+\begin{alltt}
+>> listTheory.nub_def;
+\end{alltt}
 \end{hol}
 
 \paragraph {Conversion to sets}
 
-Lists can be converted to sets (\ml{LIST\_TO\_SET}) by partial
-application of \holtxt{MEM}. The somewhat terse definition is used to
-derive the theorem \ml{IN\_LIST\_TO\_SET}.
+Lists can be converted to sets with the \holtxt{LIST\_TO\_SET} constant, which is overloaded to the prettier name \holtxt{set}.
+The definition is made by primitive recursion in \holtxt{listTheory}:
 %
 \begin{hol}
-\begin{verbatim}
-  LIST_TO_SET
-    |- LIST_TO_SET = combin$C MEM
-  IN_LIST_TO_SET
-    |- x IN LIST_TO_SET l = MEM x l
-\end{verbatim}
+\begin{alltt}
+>> listTheory.LIST_TO_SET;
+\end{alltt}
 \end{hol}
 %
+\index{MEM, the HOL notion of list membership@\holtxt{MEM}, the \HOL{} notion of list membership}
+Note that \holtxt{MEM} is an overloaded form of syntax such that \holtxt{MEM~x~l} is actually a pretty-printing of the underlying term \holtxt{x~$\in$~set~l}.
+
 Further support for translating between different kinds of
 collections may be found in the \theoryimp{container} theory.
 
