@@ -188,6 +188,7 @@ val sem_e_possible_var_name = prove(
   \\ REPEAT STRIP_TAC \\ SRW_TAC [] []
   \\ fs [] \\ DECIDE_TAC);
 
+local val fs = fsrw_tac[] in
 val comp_exp_correct = prove(
   ``!e s t n res s1.
       sem_e s e = (res,s1) /\ res <> Rfail /\
@@ -259,6 +260,7 @@ val comp_exp_correct = prove(
     \\ fs [possible_var_name_def]
     \\ REPEAT STRIP_TAC
     \\ SRW_TAC [] [] \\ fs [] \\ DECIDE_TAC));
+end
 
 val phase2_subset_def = Define `
   (phase2_subset (Dec v t) = F) /\
@@ -578,6 +580,7 @@ val EL_LEMMA = prove(
 val state_rel_def = Define `
   state_rel s x = (x.store = s)`;
 
+local val rw = srw_tac[] val fs = fsrw_tac[] val rfs = rev_full_simp_tac(srw_ss()) in
 val phase3_lemma = prove(
   ``!s1 t res s2 x xs ys b.
       (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
@@ -780,6 +783,7 @@ val phase3_lemma = prove(
     \\ REPEAT STRIP_TAC \\ fs []
     \\ Q.PAT_ASSUM `xxx <= b` MP_TAC
     \\ ONCE_REWRITE_TAC [LENGTH_phase3] \\ fs []))
+end
 
 val _ = save_thm("phase3_lemma",
   phase3_lemma |> REWRITE_RULE [state_rel_def]);
@@ -944,9 +948,6 @@ val phase1_pres_rel = Q.store_thm("phase1_pres_rel",`
 
 (* We now re-verify phase1 in the relational Pretty Big Step semantics (for terminating programs) *)
 
-val bp_step_tac = simp [Once pb_sem_t_reln_cases] \\ fs [];
-val bp_size_step_tac = simp [Once pb_sem_t_size_reln_cases] \\ fs [];
-
 val pb_sem_t_reln_Exp = ``pb_sem_t_reln s1' (Trm (Exp e)) r3'``
   |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
 
@@ -960,6 +961,11 @@ val pb_sem_t_reln_Forn2 = ``pb_sem_t_reln s (Forn 2 r3 n1 n1 t) (Ter r)``
 val pb_sem_t_reln_Forn3 = ``pb_sem_t_reln s (Forn 3 r3 n1 n1 t) (Ter r)``
   |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
 
+local
+    val rw = srw_tac[] val fs = fsrw_tac[]
+    val bp_step_tac = simp [Once pb_sem_t_reln_cases] \\ fs [];
+    val bp_size_step_tac = simp [Once pb_sem_t_size_reln_cases] \\ fs [];
+in
 val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
   `!s t r.
      pb_sem_t_reln s (Trm t) (Ter r) ⇒
@@ -1025,6 +1031,7 @@ val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
     \\ disj1_tac \\ qexists_tac `Ter (q,r')` \\ fs []
     \\ fs [pb_sem_t_reln_Forn2,abort_def]
     \\ imp_res_tac sem_e_reln_not\\ fs []));
+end
 
 (* End verification in Pretty-Big-Step -- 81 lines
    Note: this verification does not cover divergence preservation. *)
