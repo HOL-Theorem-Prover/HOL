@@ -634,6 +634,7 @@ val sem_t_for_no_break = Q.prove(
    DECIDE_TAC>>
  fs[dec_clock_def])
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val big_small_lem = Q.store_thm ("big_small_lem",
 `!s t r.
   sem_t s t = r
@@ -909,6 +910,7 @@ val big_small_lem = Q.store_thm ("big_small_lem",
      fs[LAST_APPEND,LAST_MAP,res_rel_e_cases,is_val_t_def]>>
      match_mp_tac no_step_t_handle>>fs[is_val_t_def]>>
      metis_tac[no_step_t_if1]))
+end
 
 val big_timeout_0 = Q.prove (
 `!st p r.

@@ -264,8 +264,6 @@ A conjunctive goal is declared, and \ml{conj\_tac} applied to it:
 decomposition is complete and the proof can be built up in stages.
 First the theorems achieving the subgoals are proved, then from those,
 the theorem achieving the original goal:
-\vfill
-\newpage
 \begin{session}
 \begin{alltt}
 >> val th1 = p1_1[];
@@ -704,7 +702,7 @@ Note that the same end can often be achieved by rewriting with the theorem \ml{E
 \end{verbatim}
 \end{holboxed}
 
-\begin{itemize}
+\begin{description}
 
 \item[Summary:]
 $\ml{EXISTS\_TAC}\;u$ reduces an existential goal $\exists x.\;t[x]$ to the subgoal $t[u]$.
@@ -721,7 +719,7 @@ $t[u]$
 
 \item[Use:] Proving existential goals.
 
-\end{itemize}
+\end{description}
 \index{tactics!list of some|)}
 
 \section{Tacticals}
@@ -764,7 +762,7 @@ as a curried infix by
 
 \begin{hol}
 \begin{verbatim}
-   (T1 ORELSE T2) g =  T1 g ? T2 g
+   (T1 ORELSE T2) g = T1 g handle HOL_ERR _ => T2 g
 \end{verbatim}
 \end{hol}\index{alternation!of tactics|)}
 
@@ -797,11 +795,12 @@ of tactics, that succeeds.
 \end{holboxed}
 
 
-\ml{CHANGED\_TAC\ $T$\ $g$} fails if the subgoals
-produced by $T$ are just \ml{[$g$]}; otherwise it is equivalent
-to $T\ g$. It is defined by the following, where
-{\small\verb%set_equal : * list -> * list -> bool%} tests whether two lists
-denote the same set (\ie\ contain the same elements).
+\ml{CHANGED\_TAC\ $T$\ $g$} fails if the subgoals produced by $T$ are just \ml{[$g$]}; otherwise it is equivalent to $T\ g$.
+It is defined by the following, where
+\begin{verbatim}
+  set_eq: 'a list -> 'a list -> bool
+\end{verbatim}
+tests whether two lists denote the same set (\ie\ contain the same elements).
 
 
 \begin{hol}
@@ -809,7 +808,9 @@ denote the same set (\ie\ contain the same elements).
    fun CHANGED_TAC tac g =
     let val (gl,p) = tac g
     in
-    if set_eq gl [g] then fail else (gl,p)
+      if set_eq gl [g] then raise ERR "CHANGED_TAC" "no change"
+      else (gl,p)
+    end
 \end{verbatim}
 \end{hol}
 
@@ -1171,12 +1172,18 @@ Simply using \ml{DISCH\_TAC} does not cause the disjunction to split when it bec
 \end{alltt}
 \end{session}
 
+So, we can combine \ml{pop\_assum} and \ml{DISJ\_CASES\_TAC} to apply the latter to the theorem corresponding to the disjunctive assumption:
 \begin{session}
 \begin{alltt}
 >>_ restart();
 
 >> e(DISCH_TAC >> pop_assum DISJ_CASES_TAC);
+\end{alltt}
+\end{session}
 
+Indeed, we can then combine this with our earlier use of \ml{SUBST1\_TAC} to have both branches make progress at once:
+\begin{session}
+\begin{alltt}
 >>_ restart();
 
 >> e(DISCH_TAC >> pop_assum DISJ_CASES_TAC >> pop_assum SUBST1_TAC);

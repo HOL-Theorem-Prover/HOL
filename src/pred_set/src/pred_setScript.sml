@@ -80,12 +80,12 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
-val IN_APP = store_thm (
+val IN_APP = Tactical.store_thm (
   "IN_APP",
   ``!x P. (x IN P) = P x``,
   SIMP_TAC bool_ss [IN_DEF]);
 
-val IN_ABS = store_thm (
+val IN_ABS = Tactical.store_thm (
   "IN_ABS",
   ``!x P. (x IN \x. P x) = P x``,
   SIMP_TAC bool_ss [IN_DEF]);
@@ -2720,7 +2720,6 @@ val _ = export_rewrites ["COUNT_11"]
 (* =====================================================================*)
 
 val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
-val INFINITE_DEF = save_thm("INFINITE_DEF", TRUTH)
 
 val NOT_IN_FINITE =
     store_thm
@@ -3053,7 +3052,7 @@ val finite_N_bounded =
 val N_lemma =
     TAC_PROOF
     (([], (--`INFINITE(UNIV:(num->bool))`--)),
-     REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
+     REWRITE_TAC [] THEN STRIP_TAC THEN
      IMP_RES_THEN MP_TAC finite_N_bounded THEN
      REWRITE_TAC [IN_UNIV] THEN
      CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC THEN
@@ -3109,7 +3108,7 @@ val INFINITE_UNIV =
 val INFINITE_NUM_UNIV = store_thm(
   "INFINITE_NUM_UNIV",
   ``INFINITE univ(:num)``,
-  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  REWRITE_TAC [] THEN
   SRW_TAC [][INFINITE_UNIV] THEN Q.EXISTS_TAC `SUC` THEN SRW_TAC [][] THEN
   Q.EXISTS_TAC `0` THEN SRW_TAC [][]);
 val _ = export_rewrites ["INFINITE_NUM_UNIV"]
@@ -3117,7 +3116,7 @@ val _ = export_rewrites ["INFINITE_NUM_UNIV"]
 val FINITE_PSUBSET_INFINITE = store_thm("FINITE_PSUBSET_INFINITE",
 (--`!s. INFINITE (s:'a set) =
         !t. FINITE (t:'a set) ==> ((t SUBSET s) ==> (t PSUBSET s))`--),
-   PURE_REWRITE_TAC [INFINITE_DEF,PSUBSET_DEF] THEN
+   PURE_REWRITE_TAC [PSUBSET_DEF] THEN
    GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THENL
     [FIRST_ASSUM ACCEPT_TAC,
@@ -4873,7 +4872,7 @@ val infinite_rest = Q.store_thm ("infinite_rest",
 `!s. INFINITE s ==> INFINITE (REST s)`,
 RWTAC [] THEN
 CCONTR_TAC THEN
-FSTAC [INFINITE_DEF, REST_DEF]);
+FSTAC [REST_DEF]);
 
 val chooser_def = TotalDefn.Define `
   (chooser s 0 = CHOICE s) /\
@@ -4939,7 +4938,7 @@ RWTAC [] THENL
 [Q.EXISTS_TAC `chooser s` THEN
      RWTAC [INJ_DEF] THEN
      METIS_TAC [chooser_lem1, chooser_lem3, SUBSET_REFL],
- METIS_TAC [infinite_num_inj_lem, INFINITE_DEF]]);
+ METIS_TAC [infinite_num_inj_lem]]);
 
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;

@@ -281,4 +281,27 @@ fun del_persistent_consts [] = ()
 
 fun pp_compset pps c = PP.add_string pps "<compset>"
 
+(* ----------------------------------------------------------------------
+   Help for building up compsets and creating new compset based conversions
+   ---------------------------------------------------------------------- *)
+
+datatype compset_element =
+    Convs of (term * int * conv) list
+  | Defs of thm list
+  | Tys of hol_type list
+  | Extenders of (compset -> unit) list
+
+local
+  fun add_datatype cmp = add_datatype_info cmp o Option.valOf o TypeBase.fetch
+in
+  fun extend_compset frags cmp =
+    List.app
+      (fn Convs l => List.app (fn x => add_conv x cmp) l
+        | Defs l => add_thms l cmp
+        | Tys l => List.app (add_datatype cmp) l
+        | Extenders l => List.app (fn f => f cmp) l) frags
+end
+
+fun compset_conv cmp l = (extend_compset l cmp; CBV_CONV cmp)
+
 end

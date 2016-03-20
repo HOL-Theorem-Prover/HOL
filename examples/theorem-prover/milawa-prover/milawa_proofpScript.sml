@@ -107,7 +107,7 @@ val subset_thm = add_prove(
             LISP_TEST (set xs SUBSET set ys)``,
   Induct \\ ONCE_REWRITE_TAC [subsetp_def]
   \\ FS [LIST_TO_SET_THM,EMPTY_SUBSET,INSERT_SUBSET] \\ REPEAT STRIP_TAC
-  \\ Cases_on `MEM h ys` \\ FS [IN_LIST_TO_SET]);
+  \\ Cases_on `MEM h ys` \\ FS []);
 
 val list_exists_def = Define `
   list_exists n x = ?xs. (LENGTH xs = n) /\ (x = list2sexp xs)`;
@@ -494,7 +494,7 @@ val logic_flag_termp_thm = prove(
     \\ Cases_on `ts'` \\ FS [MAP,NOT_CONS_NIL]
     \\ Cases_on `t'` \\ FS [MAP,NOT_CONS_NIL,CONS_11]
     \\ Q.EXISTS_TAC `mLamApp zs h ts` \\ FS [t2sexp_def,term_syntax_ok_def,EVERY_DEF]
-    \\ FS [LENGTH_MAP] \\ FS [SUBSET_DEF,IN_LIST_TO_SET,MEM_MAP]
+    \\ FS [LENGTH_MAP] \\ FS [SUBSET_DEF,MEM_MAP]
     \\ REPEAT STRIP_TAC
     \\ Q.PAT_ASSUM `!x. bb1 ==> bb2` (MP_TAC o Q.SPEC `Sym x`) \\ FS [])
   \\ FS [LET_DEF] \\ Cases_on `?xs. S0 = list2sexp xs` \\ FS []
@@ -1466,7 +1466,7 @@ val logic_induction_okp_thm = add_prove(
   \\ REPEAT (Q.PAT_ASSUM `isTrue xxx` MP_TAC)
   \\ FS [logic_make_all_measure_steps_thm]
   \\ FS [logic_make_induction_steps_thm]
-  \\ FS [SUBSET_DEF,IN_LIST_TO_SET,MEM_FLAT,MEM_MAP,f2sexp_11,
+  \\ FS [SUBSET_DEF,MEM_FLAT,MEM_MAP,f2sexp_11,
        PULL_EXISTS_IMP,EXISTS_PROD,PULL_CONJ]
   \\ REPEAT STRIP_TAC
   \\ `?x1 zs1. MEM (q,zs1,x1) (ZIP (qs,yss)) /\ (ss = MAP FST zs1)` by
@@ -2429,7 +2429,7 @@ val lookup_safe_init_ftbl_EXISTS = prove(
 
 val set_MAP_SUBSET = add_prove(
   ``!xs ys. set (MAP Sym xs) SUBSET set (MAP Sym ys) = set xs SUBSET set ys``,
-  SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET,MEM_MAP]
+  SIMP_TAC std_ss [SUBSET_DEF,MEM_MAP]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ FS []
   \\ METIS_TAC [SExp_11,SExp_distinct]);
 
@@ -4183,7 +4183,7 @@ val core_admit_defun_thm = prove(
            ASSUME_TAC th THEN ONCE_REWRITE_TAC [REWRITE_RULE [markerTheory.Abbrev_def] th])
       \\ METIS_TAC [MilawaTrue_new_definition])
     \\ NTAC 2 STRIP_TAC
-    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
     \\ `MEM v params` by FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [params_lemma])
   THEN1 (* core_assums *)

@@ -177,27 +177,21 @@ end
    EVAL_CONV    : General purpose evaluation
    ------------------------------------------------------------------------ *)
 
-local
-  val cmp = reduceLib.num_compset ()
-
-  val () =
-     (computeLib.add_thms
-        [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
-         REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
-         listTheory.EVERY_DEF, listTheory.FOLDL,
-         numLib.SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
-         GSYM rich_listTheory.COUNT_LIST_GENLIST,
-         rich_listTheory.COUNT_LIST_compute,
-         numeral_bitTheory.numeral_log2, numeral_bitTheory.numeral_ilog2,
-         numeral_bitTheory.LOG_compute, GSYM DISJ_ASSOC] cmp
-      ; computeLib.add_conv
-            (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
-      ; computeLib.add_conv
-            (``words$word_mod:'a word -> 'a word -> 'a word``, 2,
-             wordsLib.WORD_MOD_BITS_CONV) cmp)
-in
-   val EVAL_CONV = computeLib.CBV_CONV cmp
-end
+val EVAL_CONV =
+  computeLib.compset_conv (reduceLib.num_compset())
+    [computeLib.Defs
+       [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+        REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
+        listTheory.EVERY_DEF, listTheory.FOLDL,
+        numLib.SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
+        GSYM rich_listTheory.COUNT_LIST_GENLIST,
+        rich_listTheory.COUNT_LIST_compute,
+        numeral_bitTheory.numeral_log2, numeral_bitTheory.numeral_ilog2,
+        numeral_bitTheory.LOG_compute, GSYM DISJ_ASSOC],
+     computeLib.Convs
+        [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV),
+         (``words$word_mod:'a word -> 'a word -> 'a word``, 2,
+          wordsLib.WORD_MOD_BITS_CONV)]]
 
 (* ------------------------------------------------------------------------ *)
 
@@ -794,10 +788,8 @@ local
           | NONE => ONCE_REWRITE_CONV [WORD_NEG] tm
       end
 
-   val cmp = reduceLib.num_compset ()
-
-   val () =
-     (computeLib.add_thms
+   val cnv = computeLib.compset_conv (reduceLib.num_compset())
+     [computeLib.Defs
         [n2w_def, v2w_def, word_xor, word_or_def, word_and_def,
          word_1comp_def, word_nor_def, word_xnor_def, word_nand_def,
          word_reduce_def, reduce_or_def, reduce_and_def, reduce_xor,
@@ -812,8 +804,8 @@ local
          listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
          listTheory.GENLIST_GENLIST_AUX, numLib.SUC_RULE
          listTheory.GENLIST_AUX, combinTheory.o_THM, pairTheory.SND,
-         pairTheory.FST] cmp
-      ; List.app (fn x => computeLib.add_conv x cmp)
+         pairTheory.FST],
+      computeLib.Convs
          [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV),
           (``words$dimword:'a itself -> num``, 1, wordsLib.SIZES_CONV),
           (``words$INT_MIN:'a itself -> num``, 1, wordsLib.SIZES_CONV),
@@ -824,11 +816,11 @@ local
           (``words$word_asr_bv:'a word -> 'a word -> 'a word``, 2, ASR_BV_CONV),
           (``words$word_ror_bv:'a word -> 'a word -> 'a word``, 2, ROR_BV_CONV),
           (``words$word_rol_bv:'a word -> 'a word -> 'a word``, 2, ROL_BV_CONV)
-         ])
+         ]]
 in
    val BLAST_CONV =
       PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
-      THENC computeLib.CBV_CONV cmp
+      THENC cnv
       THENC WORD_LIT_CONV
 end
 

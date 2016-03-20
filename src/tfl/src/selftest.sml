@@ -29,10 +29,10 @@ val _ =
 
 val def6 = test "Case expression with multiple underscores"
                 (Hol_defn "f1")
-                `(f1 x y = case (x, y) of (T, _) => T | (_,_) => F)`
+                `(f1 x y = case (x, y:'a) of (T, _) => T | (_,_) => F)`
 val def7 = test "Case expression with underscores of different types"
                 (Hol_defn "f2")
-                `(f2 x y = case (x, y) of (T, _) => T | _ => F)`
+                `(f2 x y = case (x, y:'a) of (T, _) => T | _ => F)`
 
 val def8 = test "Case expression with variables of different types"
                 (Hol_defn "f3")

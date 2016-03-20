@@ -993,13 +993,11 @@ val sem_e_clock_inc = Q.prove(
   imp_res_tac sem_e_reln_same_clock>>
   fs[])
 
-(*Should be in HOL somewhere...*)
-val LTE_SUM = Q.prove(
- `∀A:num B. A ≤ B ⇒ ∃C. B = A+C`,
- Induct>>fs[]>>rw[]>>
- Cases_on`B`>>fs[]>>res_tac>>
- qexists_tac`C`>>fs[]>>
- DECIDE_TAC)
+val LTE_SUM =
+  arithmeticTheory.LESS_EQ_EXISTS
+  |> Q.SPECL[`A`,`B`]
+  |> CONV_RULE(RAND_CONV(RAND_CONV(ALPHA_CONV``C:num``)))
+  |> Q.GENL[`B`,`A`]
 
 val LT_SUM = Q.prove(
  `∀A:num B. A < B ⇒ ∃C. B = A+C ∧ C > 0`,
@@ -1009,6 +1007,7 @@ val LT_SUM = Q.prove(
  DECIDE_TAC)
 
 (* Everything above current clock gives same result if didn't time out*)
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val sem_t_clock_inc = Q.prove(
 `∀s t r.
   sem_t s t = r ∧ FST r ≠ Rtimeout ⇒
@@ -1040,6 +1039,7 @@ val sem_t_clock_inc = Q.prove(
     fs[dec_clock_def,STOP_def]>>
     `1 ≤ r''.clock` by DECIDE_TAC>>
     metis_tac[arithmeticTheory.LESS_EQ_ADD_SUB])
+end
 
 val _ = save_thm ("sem_t_clock_inc", sem_t_clock_inc |> SIMP_RULE std_ss [FORALL_PROD])
 
@@ -1373,6 +1373,7 @@ val reln_to_pb_reln = prove(``
     HINT_EXISTS_TAC>>pbrsem_tac>>
     metis_tac[abort_def]))
 
+local val fs = fsrw_tac[] in
 val pb_reln_to_reln = prove(``
   ∀n s t r.
   pb_sem_t_size_reln n s (Trm t) (Ter r) ⇒
@@ -1397,6 +1398,7 @@ val pb_reln_to_reln = prove(``
   `h' < h'+(h''+1+1+1)+1` by DECIDE_TAC>>
   `h'' < h'+(h''+1+1+1)+1` by DECIDE_TAC>>
   TRY(semttac>>metis_tac[abort_def]))
+end
 
 val pb_sem_t_size_reln_equiv_lemma1 = prove(``
   ∀n s t r.

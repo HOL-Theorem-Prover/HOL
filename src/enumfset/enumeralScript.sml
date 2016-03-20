@@ -183,21 +183,21 @@ Induct_on `m` THEN
 SRW_TAC [] [smerge, OL, smerge_nil] THEN
 Cases_on `apto cmp h h'` THEN SRW_TAC [] [OL] THENL
 [`MEM p l \/ MEM p (h' :: m)`
- by (RW_TAC bool_ss [GSYM IN_LIST_TO_SET, GSYM IN_UNION] THEN
-     ASM_REWRITE_TAC [GSYM smerge_set, IN_LIST_TO_SET]) THENL
+ by (RW_TAC bool_ss [GSYM IN_UNION] THEN
+     ASM_REWRITE_TAC [GSYM smerge_set]) THENL
  [RES_TAC
  ,`(p = h') \/ MEM p m` by ASM_REWRITE_TAC [GSYM MEM] THENL
   [AR, RES_TAC THEN IMP_RES_TAC totoLLtrans
  ]]
 ,`MEM p l \/ MEM p m`
- by (RW_TAC bool_ss [GSYM IN_LIST_TO_SET, GSYM IN_UNION] THEN
-     ASM_REWRITE_TAC [GSYM smerge_set, IN_LIST_TO_SET]) THENL
+ by (RW_TAC bool_ss [GSYM IN_UNION] THEN
+     ASM_REWRITE_TAC [GSYM smerge_set]) THENL
  [RES_TAC
  ,RES_TAC THEN IMP_RES_TAC totoELtrans
  ]
 ,`MEM p (h :: l) \/ MEM p m`
- by (RW_TAC bool_ss [GSYM IN_LIST_TO_SET, GSYM IN_UNION] THEN
-     ASM_REWRITE_TAC [GSYM smerge_set, IN_LIST_TO_SET]) THENL
+ by (RW_TAC bool_ss [GSYM IN_UNION] THEN
+     ASM_REWRITE_TAC [GSYM smerge_set]) THENL
  [`(p = h) \/ MEM p l` by ASM_REWRITE_TAC [GSYM MEM] THENL
   [ASM_REWRITE_TAC [GSYM toto_antisym],
    RES_TAC THEN IMP_RES_TAC totoGLtrans
@@ -644,7 +644,7 @@ RW_TAC bool_ss [OWL, ol_set, OL_bt_to_ol]);
 val OL_set_EQ = maybe_thm ("OL_set_EQ",
 ``!cmp:'a toto l m. OL cmp l /\ OL cmp m ==> ((set l = set m) <=> (l = m))``,
 REPEAT GEN_TAC THEN DISCH_THEN (MP_TAC o MATCH_MP OL_MEM_EQ) THEN
-REWRITE_TAC [IN_LIST_TO_SET, EXTENSION]);
+REWRITE_TAC [EXTENSION]);
 
 (* "OU" for "Ordered Union" - used for intermediate (tree, binary list) pair
    in converting betw. binary lists and rightist trees. *)
@@ -824,7 +824,7 @@ val list_to_bl_set = maybe_thm ("list_to_bl_set",
 GEN_TAC THEN Induct THEN
 SRW_TAC [] [bl_to_set, list_to_bl, LIST_TO_SET_THM, OL] THEN
 RES_THEN (SUBST1_TAC o SYM) THEN MATCH_MP_TAC BL_CONS_set THEN
-RES_THEN SUBST1_TAC THEN RW_TAC bool_ss [IN_LIST_TO_SET, LESS_ALL]);
+RES_THEN SUBST1_TAC THEN RW_TAC bool_ss [LESS_ALL]);
 
 val bt_to_ol_ID = maybe_thm ("bt_to_ol_ID",
 ``!cmp:'a toto. !l::OL cmp. bt_to_ol cmp (list_to_bt l) = l``,
@@ -935,7 +935,7 @@ RW_TAC (srw_ss()) [sinter] THENL
 
 val sinter_set = maybe_thm ("sinter_set", ``!cmp:'a toto l m.
  OL cmp l /\ OL cmp m ==> (set (sinter cmp l m) = set l INTER set m)``,
-SRW_TAC [] [IN_INTER, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
+SRW_TAC [] [IN_INTER, EXTENSION] THEN EQ_TAC THENL
 [MATCH_ACCEPT_TAC sinter_subset_inter
 ,METIS_TAC [inter_subset_sinter]
 ]);
@@ -1031,7 +1031,7 @@ IMP_RES_TAC sdiff_subset_diff THEN RES_TAC);
 
 val sdiff_set = maybe_thm ("sdiff_set", ``!cmp:'a toto l m.
  OL cmp l /\ OL cmp m ==> (set (sdiff cmp l m) = set l DIFF set m)``,
-SRW_TAC [] [IN_DIFF, EXTENSION, IN_LIST_TO_SET] THEN EQ_TAC THENL
+SRW_TAC [] [IN_DIFF, EXTENSION] THEN EQ_TAC THENL
 [METIS_TAC [sdiff_subset_diff]
 ,MATCH_ACCEPT_TAC diff_subset_sdiff
 ]);

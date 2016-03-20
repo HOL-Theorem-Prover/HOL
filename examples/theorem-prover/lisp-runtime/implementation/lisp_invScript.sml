@@ -1523,7 +1523,7 @@ val PIGEONHOLE_LEMMA = prove(
   ``!k xs. ALL_DISTINCT xs ==> k < LENGTH xs ==> ?i. MEM i xs /\ k <= i``,
   REPEAT STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
   \\ `?f. INJ f (LIST_TO_SET xs) (RANGE(0,k))` by ALL_TAC THEN1
-   (Q.EXISTS_TAC `I` \\ SIMP_TAC std_ss [INJ_DEF,IN_LIST_TO_SET]
+   (Q.EXISTS_TAC `I` \\ SIMP_TAC std_ss [INJ_DEF]
     \\ FULL_SIMP_TAC std_ss [IN_DEF,RANGE_def,GSYM NOT_LESS] \\ METIS_TAC [])
   \\ `FINITE (RANGE (0,k))` by ASM_SIMP_TAC std_ss [FINITE_RANGE]
   \\ IMP_RES_TAC INJ_CARD
