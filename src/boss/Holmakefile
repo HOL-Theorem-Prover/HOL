@@ -55,3 +55,9 @@ ARTS =\
 
 hol4-base.art: hol4-base.unint.thy $(ARTS)
 	opentheory info --article -o $@ $<
+
+base-theorems.art:
+	opentheory info --theorems -o $@ base
+
+hol4-assums.art: hol4-base.unsat.thy hol4-base.thy hol4-base.art
+	opentheory info --assumptions -o $@ $<
