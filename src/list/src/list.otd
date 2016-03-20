@@ -13,8 +13,6 @@ delproof list_distinct
 delproof list_CASES
 delproof list_nchotomy
 skipthm list_nchotomy
-delconst list_CASE
-delproof list_case_def
 delconst NIL
 delconst CONS
 delproof CONS_11
