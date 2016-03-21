@@ -148,6 +148,8 @@ sig
   val qspec_tac : term quotation * term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
+  val qhdtm_assum : term quotation -> thm_tactic -> tactic
+  val qhdtm_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
   val qpat_abbrev_tac : term quotation -> tactic
   val qmatch_abbrev_tac : term quotation -> tactic

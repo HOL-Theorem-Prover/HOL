@@ -35,6 +35,8 @@ sig
   val SUBGOAL_THEN           : tmquote -> thm_tactic -> tactic
   val DISCH                  : tmquote -> thm -> thm
   val PAT_UNDISCH_TAC        : tmquote -> tactic
+  val hdtm_assum             : tmquote -> thm_tactic -> tactic
+  val hdtm_x_assum           : tmquote -> thm_tactic -> tactic
   val UNDISCH_THEN           : tmquote -> thm_tactic -> tactic
   val PAT_ASSUM              : tmquote -> thm_tactic -> tactic
   val UNDISCH_TAC            : tmquote -> tactic
