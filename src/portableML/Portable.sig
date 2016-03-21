@@ -33,6 +33,8 @@ sig
   val dec: int ref -> unit
   val inc: int ref -> unit
 
+  val pull_prefix : ('a -> bool) list -> 'a list -> 'a list
+
   val explode: string -> string list
   val implode: string list -> string
   val ordof: string * int -> int

@@ -753,4 +753,7 @@ end handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
 
 end (* local *)
 
+val sort_vars =
+  Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
+
 end

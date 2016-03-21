@@ -21,6 +21,20 @@ structure FileSys = OS.FileSys
 exception Div = General.Div
 exception Mod = General.Div
 
+(* ----------------------------------------------------------------------
+    Lists
+   ---------------------------------------------------------------------- *)
+
+fun pull_prefix ps l =
+  case ps of
+      [] => l
+    | p :: rest =>
+      let
+        val (s, l0) = List.partition p l
+      in
+        s @ pull_prefix rest l0
+      end
+
 (*---------------------------------------------------------------------------
       Refs
  ---------------------------------------------------------------------------*)
