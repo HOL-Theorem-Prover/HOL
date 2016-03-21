@@ -36,6 +36,7 @@ sig
   val explode: string -> string list
   val implode: string list -> string
   val ordof: string * int -> int
+  val replace_string : {from:string,to:string} -> string -> string
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time
