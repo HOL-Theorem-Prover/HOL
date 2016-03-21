@@ -1081,5 +1081,35 @@ fun HINT_EXISTS_TAC g =
     EXISTS_TAC witness g
   end;
 
+(* ----------------------------------------------------------------------
+    part_match_exists_tac : (term -> term) -> term -> tactic
+
+    part_match_exists_tac selfn tm (asl,w)
+
+    w must be of shape ?v1 .. vn. body.
+
+    Apply selfn to body extracting a term that is then matched against
+    tm.  Instantiate the existential variables according to this match.
+
+   ---------------------------------------------------------------------- *)
+
+fun part_match_exists_tac selfn tm (g as (_,w)) =
+  let
+    val (vs,b) = strip_exists w
+    val c = selfn b
+    val cfvs = FVL [c] empty_tmset
+    val constvars = HOLset.difference(cfvs, HOLset.fromList Term.compare vs)
+    val ((tms0,tmfixed),_) = raw_match [] constvars c tm ([], [])
+    val tms =
+        tms0 @ HOLset.foldl
+                 (fn (v,acc) => if Lib.mem v vs then {redex=v,residue=v}::acc
+                                else acc)
+                 [] tmfixed
+    val xs = map #redex tms
+    val ys = map #residue tms
+    fun sorter ls = xs@(List.filter(not o Lib.C Lib.mem xs)ls)
+  in
+    CONV_TAC(RESORT_EXISTS_CONV sorter) >> map_every exists_tac ys
+  end g
 
 end (* Tactic *)

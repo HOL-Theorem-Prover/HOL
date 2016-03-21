@@ -99,4 +99,5 @@ sig
 
   val SELECT_ELIM_TAC       : tactic
   val HINT_EXISTS_TAC       : tactic
+  val part_match_exists_tac : (term -> term) -> term -> tactic
 end
