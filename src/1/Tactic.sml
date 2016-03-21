@@ -817,6 +817,25 @@ in
 end
 val IRULE_TAC = irule
 
+fun impl_tac (g as (_,w)) =
+  let
+    val (h0,c) = dest_imp w
+    val (a,h) = dest_imp h0
+  in
+    SUBGOAL_THEN a (fn ath => DISCH_THEN (fn impth => MP_TAC (MP impth ath)))
+  end g
+
+fun impl_keep_tac (g as (_,w)) =
+  let
+    val (h0,c) = dest_imp w
+    val (a,h) = dest_imp h0
+  in
+    SUBGOAL_THEN a
+       (fn ath => DISCH_THEN
+                    (fn impth => ASSUME_TAC ath THEN MP_TAC (MP impth ath)))
+  end g
+
+
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *
  *                                                                       *
