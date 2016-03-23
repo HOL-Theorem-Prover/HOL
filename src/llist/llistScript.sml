@@ -55,8 +55,7 @@ val type_inhabited = prove(
   Q.EXISTS_TAC `\n. NONE` THEN ACCEPT_TAC(CONJUNCT1 lrep_ok_rules)
 );
 
-val llist_tydef =
-  new_type_definition ("llist", type_inhabited);
+val llist_tydef = new_type_definition ("llist", type_inhabited);
 
 val repabs_fns = define_new_type_bijections {
   name = "llist_absrep",
@@ -2315,6 +2314,17 @@ val LDROP_fromList = Q.store_thm("LDROP_fromList",
 val LDROP_SUC = Q.store_thm("LDROP_SUC",
   `LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL`,
   SIMP_TAC std_ss [LDROP_FUNPOW, arithmeticTheory.FUNPOW_SUC]) ;
+
+(* --------------------------------------------------------------------------
+   Update TypeBase
+   -------------------------------------------------------------------------- *)
+
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = TypeBase.write
+  [TypeBasePure.mk_nondatatype_info
+     (Parse.Type^`:'a llist^`,
+      {nchotomy = SOME llist_CASES,
+       induction = NONE, size = NONE, encode = NONE})]`
 
 val _ = export_theory();
 

@@ -77,8 +77,9 @@ sig
   exception Div
   exception Interrupt
 
-
   val norm_quote : 'a quotation -> 'a quotation
+  val quote_to_string : ('a -> string) -> 'a quotation -> string
+  val quote_to_string_list : string quotation -> string list
 
   val catch_SIGINT : unit -> unit
   val md5sum : string -> string

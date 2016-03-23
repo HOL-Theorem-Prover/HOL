@@ -232,6 +232,45 @@ fun norm_quote [] = []
       norm_quote (QUOTE (s1 ^ s2) :: rst)
   | norm_quote (h :: rst) = h :: norm_quote rst
 
+local
+  fun strip_comments (d, a) s =
+    if Substring.size s = 0
+      then a
+    else let
+           val (l, r) = Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
+           val a' = if 0 < d then a else a @ [l]
+         in
+           if Substring.isPrefix "(*#loc " r
+             then strip_comments (d + 1, a @ [Substring.trimr 1 l])
+                    (Substring.triml 7 r)
+           else if Substring.isPrefix "(*" r
+             then strip_comments (d + 1, a') (Substring.triml 2 r)
+           else if Substring.isPrefix "*)" r
+             then strip_comments (d - 1, a') (Substring.triml 2 r)
+           else if Substring.size r = 0
+             then a'
+           else let
+                  val (r1, r2) = Substring.splitAt (r, 1)
+                in
+                  strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
+                end
+         end
+  val finish = Substring.concat o strip_comments (0, []) o Substring.full o
+               String.concat o List.rev
+in
+  fun quote_to_string (f : 'a -> string) =
+    let
+      fun quote_to_strings a =
+        fn [] => finish a
+         | QUOTE s :: r => quote_to_strings (s :: a) r
+         | ANTIQUOTE s :: r => quote_to_strings (f s :: a) r
+    in
+      quote_to_strings []
+    end
+  val quote_to_string_list =
+    String.tokens (fn c => c = #"\n") o quote_to_string (fn x => x)
+end
+
 (* suck in implementation specific stuff *)
 
 open MLSYSPortable

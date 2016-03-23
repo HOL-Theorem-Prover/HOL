@@ -3394,23 +3394,22 @@ val _ = BasicProvers.export_rewrites
          "INT_SUB_RNEG", "INT_SUB_RZERO", "INT_SUB_SUB",
          "INT_SUB_SUB2", "NUM_OF_INT"]
 
-val _ = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-   app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
-   ["val _ = TypeBase.write [TypeBasePure.mk_nondatatype_info",
-    "  (``:int``, {nchotomy = SOME INT_NUM_CASES,",
-    "              induction = NONE,",
-    "              encode = NONE, size = NONE})];",
-    "",
-    "val () = Literal.add_literal",
-    "   (fn tm =>",
-    "      case Lib.total boolSyntax.dest_strip_comb tm of",
-    "         SOME (\"integer$int_of_num\", [n]) => numSyntax.is_numeral n",
-    "       | SOME (\"integer$int_neg\", [n]) =>",
-    "           (case Lib.total boolSyntax.dest_strip_comb n of",
-    "               SOME (\"integer$int_of_num\", [n]) => numSyntax.is_numeral n",
-    "             | _ => false)",
-    "       | _ => false)"])}
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = TypeBase.write
+  [TypeBasePure.mk_nondatatype_info
+    (Parse.Type^`:int^`,
+      {nchotomy = SOME INT_NUM_CASES,
+       induction = NONE, encode = NONE, size = NONE})]
+
+val () = Literal.add_literal
+  (fn tm =>
+     case Lib.total boolSyntax.dest_strip_comb tm of
+        SOME ("integer$int_of_num", [n]) => numSyntax.is_numeral n
+      | SOME ("integer$int_neg", [n]) =>
+          (case Lib.total boolSyntax.dest_strip_comb n of
+              SOME ("integer$int_of_num", [n]) => numSyntax.is_numeral n
+            | _ => false)
+      | _ => false)`
 
 val _ = export_theory()
 

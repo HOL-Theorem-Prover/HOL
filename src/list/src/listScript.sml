@@ -3572,30 +3572,25 @@ val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
-   fun NL() = PP.add_newline ppstrm
- in
-   S "val _ = let open computeLib";
-   S "        in add_funs [APPEND, APPEND_NIL, FLAT, HD, TL,";
-   S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
-   S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
-   S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
-   S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
-   S "        end;";
-   NL(); NL();
-   S "val _ =";
-   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"list\",Tyop=\"list\"})";
-   S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
-   S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
-   S "  in TypeBase.write [list_info']";
-   S "  end;"
- end)};
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = computeLib.add_funs
+  [APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2, NULL_DEF, MEM,
+   EXISTS_DEF, DROP_compute, EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+   TAKE_compute, FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,
+   EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute, GENLIST_NUMERALS,
+   computeLib.lazyfy_thm list_case_compute, list_size_def, FRONT_DEF,
+   LAST_compute, isPREFIX]
+
+val _ =
+  let
+    val list_info = Option.valOf (TypeBase.read {Thy = "list", Tyop="list"})
+    val lift_list =
+      mk_var ("listSyntax.lift_list",
+              Parse.Type^`: 'type -> ('a -> 'term) -> 'a list -> 'term^`)
+    val list_info' = TypeBasePure.put_lift lift_list list_info
+  in
+    TypeBase.write [list_info']
+  end;`
 
 val _ = export_rewrites
           ["APPEND_11",

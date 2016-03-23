@@ -416,6 +416,19 @@ in
 
 end;
 
+local
+  fun pp_lines pps =
+    List.app (fn s => (PP.add_string pps s; PP.add_newline pps))
+  val is_empty =
+    fn [] => true
+     | [s] => s = "none" orelse List.all Char.isSpace (String.explode s)
+     | _ => false
+  fun pp l = if is_empty l then NONE else SOME (fn pps => pp_lines pps l)
+  val qpp = pp o Portable.quote_to_string_list
+in
+  fun quote_adjoin_to_theory q1 q2 =
+    adjoin_to_theory {sig_ps = qpp q1, struct_ps = qpp q2}
+end
 
 (*---------------------------------------------------------------------------*
  *            INSTALLING CONSTANTS IN THE CURRENT SEGMENT                    *

@@ -5371,46 +5371,34 @@ val _ = export_rewrites
      "SUBSET_UNION"
 ];
 
-val sspec_conv_str =
-"local\n\
-\  val GSPEC_t = prim_mk_const{Name = \"GSPEC\", Thy = \"pred_set\"}\n\
-\  val IN_t = mk_thy_const{Name = \"IN\", Thy = \"bool\",\n\
-\                          Ty = alpha --> (alpha --> bool) --> bool}\n\
-\  val f_t = mk_var(\"f\", beta --> pairSyntax.mk_prod(alpha, bool))\n\
-\  val x_t = mk_var(\"x\", alpha)\n\
-\  \n\
-\  val SET_SPEC_CONV =\n\
-\    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),\n\
-\     key = SOME ([], list_mk_comb(IN_t, [x_t, mk_comb(GSPEC_t, f_t)])),\n\
-\     name = \"SET_SPEC_CONV\",\n\
-\     trace = 2}\n\
-\  in\n\
-\  val SET_SPEC_ss = simpLib.SSFRAG {name=SOME\"SET_SPEC\", ac = [], congs = [],\n\
-\                                     convs = [SET_SPEC_CONV], dprocs = [],\n\
-\                                     filter = NONE, rewrs = []}\n\
-\  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]\n  end\n"
+val _ = Theory.quote_adjoin_to_theory
+  `val SET_SPEC_ss : simpLib.ssfrag`
+`local
+  val GSPEC_t = prim_mk_const {Name = "GSPEC", Thy = "pred_set"}
+  val IN_t = mk_thy_const {Name = "IN", Thy = "bool",
+                           Ty = alpha --> (alpha --> bool) --> bool}
+  val f_t = mk_var ("f", beta --> pairSyntax.mk_prod (alpha, bool))
+  val x_t = mk_var ("x", alpha)
+  val SET_SPEC_CONV =
+    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
+     key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
+     name = "SET_SPEC_CONV",
+     trace = 2}
+in
+  val SET_SPEC_ss =
+    simpLib.SSFRAG
+      {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
+       dprocs = [], filter = NONE, rewrs = []}
+  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
+end
 
-fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssfrag";
-                 PP.add_newline pps)
-
-val _ = adjoin_to_theory {sig_ps = SOME sigps,
-                          struct_ps =
-                          SOME (fn pps => PP.add_string pps sspec_conv_str)}
-
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     List.app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (alpha --> bool,",
-      "    {nchotomy = SOME SET_CASES,",
-      "     induction = SOME FINITE_INDUCT,",
-      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\\x:'a. 1 + obsize x)`,SUM_IMAGE_THM),",
-      "     encode=NONE})];\n"
-      ] end)};
+val _ =
+  TypeBase.write
+   [TypeBasePure.mk_nondatatype_info
+     (alpha --> bool,
+      {nchotomy = SOME SET_CASES,
+       induction = SOME FINITE_INDUCT,
+       size = SOME (Parse.Term^`\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\x:'a. 1 + obsize x)^`, SUM_IMAGE_THM),
+       encode = NONE})];`
 
 val _ = export_theory();

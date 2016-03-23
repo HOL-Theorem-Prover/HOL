@@ -4814,30 +4814,29 @@ val _ = List.app mk_word_size sizes
    Write some code into wordsTheory.sml
    ------------------------------------------------------------------------- *)
 
-fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)}
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = TotalDefn.termination_simps :=
+  LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps
 
-val _ = adjoin_to_theory_struct
- ["val _ = TotalDefn.termination_simps := ",
-  "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps",
-  "",
-  "val _ = let open Lib boolSyntax numSyntax",
-  "   val word_type = type_of (fst(dest_forall(concl word_nchotomy)))",
-  "   val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))",
-  "   val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),",
-  "                              mk_var(\"v2\",alpha-->num),",
-  "                              mk_var(\"v3\",word_type)],",
-  "                              mk_comb(w2n_tm,mk_var(\"v3\",word_type)))",
-  "in",
-  " TypeBase.write",
-  " [TypeBasePure.mk_nondatatype_info",
-  "  (word_type,",
-  "    {nchotomy = SOME ranged_word_nchotomy,",
-  "     induction = NONE,",
-  "     size = SOME(w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),",
-  "     encode=NONE})]",
-  "end;"]
+val _ =
+  let
+    open Lib boolSyntax numSyntax Drule
+    val word_type = type_of (fst (dest_forall (concl word_nchotomy)))
+    val w2n_tm = fst (strip_comb (lhs (snd (dest_forall (concl w2n_def)))))
+    val w2n_abs =
+      list_mk_abs ([mk_var ("v1", bool --> num),
+                    mk_var ("v2", alpha --> num),
+                    mk_var ("v3", word_type)],
+                    mk_comb (w2n_tm, mk_var("v3" ,word_type)))
+  in
+    TypeBase.write
+     [TypeBasePure.mk_nondatatype_info
+      (word_type,
+       {nchotomy = SOME ranged_word_nchotomy,
+        induction = NONE,
+        size = SOME (w2n_abs, CONJUNCT1 (SPEC_ALL boolTheory.AND_CLAUSES)),
+        encode = NONE})]
+  end;`
 
 (* ------------------------------------------------------------------------- *)
 (* For use with EmitML                                                       *)
