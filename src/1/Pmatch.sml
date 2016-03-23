@@ -412,8 +412,11 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
      else
        case List.find (not o is_constructor_var_pat ty_info) col0 of
          NONE => let
-
-           val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
+           val {case_const,constructors} =
+             Lib.with_exn Option.valOf (ty_info thy_tyop)
+               (ERR "mk_case0" ("could not get case constructors for type " ^
+                                Parse.type_to_string pty))
+             handle Option.Option => (print "hello\n"; raise Option)
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
            val nrows = flatten (map (expand constructors pty) rows)
            val subproblems = divide(constructors, pty, range_ty, nrows)
@@ -453,8 +456,7 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
 
 fun mk_case0 ty_info ty_match FV range_ty rows =
 let
-  fun run_heu heu = mk_case0_heu heu ty_info
-    ty_match FV range_ty rows;
+  fun run_heu heu = mk_case0_heu heu ty_info ty_match FV range_ty rows
 
   val (min_fun0, heu_fun) = (!pmatch_heuristic) ()
   fun min_fun ((pL1, dt1), (pL2, dt2)) =
