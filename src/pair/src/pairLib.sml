@@ -7,13 +7,51 @@ struct
 
 local open pairTheory pairSimps pairTools PairRules in end;
 
-open boolLib pairSyntax PairedLambda pairTools simpLib;
+open HolKernel boolLib pairSyntax PairedLambda pairTools simpLib;
+
+fun pairLib_ERR src msg = mk_HOL_ERR "pairLib" src msg
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
 (* Implementation of new_specification as a rule derived from
    gen_new_specification. This occurs here because the derivation
    depends on pairs. *)
+
+(* given (λ(x,y,...) ...) arg                            (UOK)
+  produces an assumption:
+  arg = (x,y,...)
+  where the variables may be primed if necessary *)
+fun split_uncurry_arg_tac tm =
+  let
+    val (f,p) = dest_comb tm
+    val (x,b) = pairSyntax.dest_pabs f
+    val (x,s) = variant_of_term (free_vars p) x
+    val xs = pairSyntax.strip_pair x
+    val g = list_mk_exists(xs,mk_eq(p,x))
+    (* ?x y z ... .  arg = (x,y,z,...) *)
+    val th =
+        prove(g, simpLib.SIMP_TAC boolSimps.bool_ss
+                                  [GSYM pairTheory.EXISTS_PROD])
+  in
+    strip_assume_tac th
+  end
+
+local
+  val find_and_split_pair =
+      partial(pairLib_ERR"find_and_split_pair""not found")
+             (bvk_find_term
+                (fn (ls,tm) =>
+                    is_comb tm andalso
+                    List.all (not o
+                              curry HOLset.member(FVL[rand tm]empty_tmset)) ls)
+                split_uncurry_arg_tac)
+in
+val pairarg_tac =
+    (fn g => find_and_split_pair (#2 g) g) ORELSE
+    first_assum(find_and_split_pair o concl)
+end (* local *)
+
+
 
 local
   open Term Thm

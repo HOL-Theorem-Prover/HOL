@@ -141,6 +141,7 @@ val recInduct = Induction.recInduct
 val Cases_on          = BasicProvers.Cases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
+val pairarg_tac       = pairLib.pairarg_tac
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 

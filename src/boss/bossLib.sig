@@ -40,6 +40,7 @@ sig
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
   val CASE_TAC          : tactic
+  val pairarg_tac       : tactic
 
   (* Proof automation *)
 
