@@ -5,7 +5,7 @@ open boolSyntax HolKernel Parse OpenTheoryMap OpenTheoryCommon
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars stringTheory.string_grammars
+   val (Type, Term) = parse_from_grammars listTheory.list_grammars
 end
 
 local open Thm Drule in
@@ -68,7 +68,7 @@ in
 end
 
 local
-  open boolLib bossLib
+  open boolLib BasicProvers metisLib
   fun ins (th,n) = Net.insert (concl th,th) n
   val imp_def = METIS_PROVE[]``$==> = (\p q. p /\ q = p)``;
   val and_def = prove(``$/\ = (\p q. (\f:bool->bool->bool. f p q) = (\f. f T T))``,
