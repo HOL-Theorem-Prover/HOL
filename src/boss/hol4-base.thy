@@ -14,7 +14,8 @@ show: "Function"
 show: "Relation"
 show: "Number.Natural"
 requires: base
-unsat {
+main {
+  import: proofs
   package: hol-base-unsat-1.0
 }
 proofs {
@@ -116,8 +117,4 @@ proofs {
   interpret: const "HOL4.list.FILTER" as "Data.List.filter"
   interpret: const "HOL4.prove_base_assums.Data_List_null" as "Data.List.null"
   interpret: const "HOL4.prove_base_assums.Data_List_last" as "Data.List.last"
-}
-main {
-  import: unsat
-  import: proofs
 }
