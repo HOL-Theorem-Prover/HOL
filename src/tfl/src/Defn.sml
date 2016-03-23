@@ -1107,7 +1107,7 @@ fun pairf (stem, eqs0) =
              let
                val P = fst (dest_var (fst (dest_forall (concl induction))))
                val Qty = itlist (curry Type.-->) argtys Type.bool
-               val Q = mk_primed_var(P, Qty)
+               val Q = mk_primed_var (P, Qty)
                val tm =
                  mk_pabs (list_mk_pair defvars, list_mk_comb (Q, defvars))
              in
@@ -1115,7 +1115,7 @@ fun pairf (stem, eqs0) =
                    (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
          in
-           (rules', induction')
+           (rules', induction') before Theory.delete_const stem'name
          end
      in
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)

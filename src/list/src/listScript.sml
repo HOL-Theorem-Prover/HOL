@@ -267,7 +267,6 @@ val EL = new_recursive_definition
 val MAP2_DEF = dDefine`
   (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
   (MAP2 f x y = [])`
-val _ = delete_const "MAP2_tupled"
 
 val MAP2 = store_thm ("MAP2",
 ``(!f. MAP2 f [] [] = []) /\
@@ -1674,7 +1673,6 @@ val FOLDL2_def = Define`
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
   (FOLDL2 f a bs cs = a)`
 val _ = export_rewrites["FOLDL2_def"]
-val _ = delete_const "FOLDL2_tupled"
 
 val FOLDL2_cong = store_thm(
 "FOLDL2_cong",
