@@ -76,7 +76,7 @@ in
               PolyML.PrettyBlock
                 (2, false, [],
                  [PolyML.PrettyString "QUOTE", PolyML.PrettyBreak (1, 0),
-                  PolyML.PrettyString s])
+                  PolyML.prettyRepresentation (s, depth)])
           | HOLPP.ANTIQUOTE a =>
               PolyML.PrettyBlock
                 (2, false, [],
