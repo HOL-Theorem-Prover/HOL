@@ -51,7 +51,59 @@ val pairarg_tac =
     first_assum(find_and_split_pair o concl)
 end (* local *)
 
+local
+  exception Not_pair_case
+  fun loop tm vs =
+    let
+      val _ = assert is_pair_case tm
+      val (f,x) = dest_comb tm
+    in
+      let
+        val (v,b) = dest_abs x
+        val vs = v::vs
+      in
+        case total dest_abs b of
+          NONE => (vs,tm)
+        | SOME (v,tm) => loop tm vs
+          handle Not_pair_case => (v::vs,tm)
+      end handle HOL_ERR _ => (vs,tm)
+    end handle HOL_ERR _ => raise Not_pair_case
+in
+fun strip_pair_case tm =
+    (case loop tm [] of (vs,b) => (lhand tm,rev vs,b))
+    handle Not_pair_case =>
+           raise pairLib_ERR "strip_pair_case" "not a pair case"
 
+fun split_pair_case0_tac tm =
+  let
+    open boolSimps simpLib
+    val (p,vs,b) = strip_pair_case tm
+    val vs = map (variant (free_vars p)) vs
+    val g = list_mk_exists(vs,mk_eq(p,pairSyntax.list_mk_pair vs))
+    val th = prove(g, SIMP_TAC bool_ss [GSYM pairTheory.EXISTS_PROD])
+  in
+    strip_assume_tac th
+  end
+end (* local *)
+
+
+local
+open pairSyntax
+val find_split =
+      partial(pairLib_ERR"split_pair_case_tac" "not found")
+        (bvk_find_term
+           (fn (ls,tm) =>
+               is_pair_case tm andalso
+               let val fvs = FVL [lhand tm] empty_tmset
+               in
+                 List.all (fn bv => not(HOLset.member(fvs,bv))) ls
+               end)
+           split_pair_case0_tac)
+in
+fun split_pair_case_tac (g as (_,w)) =
+  (find_split w ORELSE first_assum (find_split o concl)) g
+
+end (* local *)
 
 local
   open Term Thm

@@ -41,6 +41,7 @@ sig
   val completeInduct_on : term quotation -> tactic
   val CASE_TAC          : tactic
   val pairarg_tac       : tactic
+  val split_pair_case_tac : tactic
 
   (* Proof automation *)
 
