@@ -12,5 +12,5 @@ base {
 }
 hol {
   import: base
-  package: hol-base-1.0
+  package: hol-base-unsat-1.0
 }

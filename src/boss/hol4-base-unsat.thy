@@ -1,4 +1,4 @@
-name: hol-base
+name: hol-base-unsat
 version: 1.0
 description: HOL4 Basic theories
 author: HOL4 people
@@ -14,11 +14,8 @@ show: "Function"
 show: "Relation"
 show: "Number.Natural"
 requires: base
-unsat {
-  package: hol-base-unsat-1.0
-}
-proofs {
-  article: "prove_base_assums.ot.art"
+main {
+  article: "hol4-base-unsat.art"
   interpret: type "HOL4.min.ind" as "ind"
   interpret: const "HOL4.min.@" as "select"
   interpret: const "HOL4.bool.!" as "Data.Bool.!"
@@ -77,9 +74,9 @@ proofs {
   interpret: const "HOL4.pair.FST" as "Data.Pair.fst"
   interpret: const "HOL4.pair.SND" as "Data.Pair.snd"
 
-  interpret: type "HOL4.prove_base_assums.Number_Natural_natural" as "Number.Natural.natural"
+  interpret: type "HOL4.num.num" as "Number.Natural.natural"
   interpret: const "HOL4.num.0" as "Number.Natural.zero"
-  interpret: const "HOL4.prove_base_assums.Number_Natural_suc" as "Number.Natural.suc"
+  interpret: const "HOL4.num.SUC" as "Number.Natural.suc"
   interpret: const "HOL4.prim_rec.<" as "Number.Natural.<"
   interpret: const "HOL4.prim_rec.PRE" as "Number.Natural.pre"
 
@@ -101,9 +98,9 @@ proofs {
   interpret: const "HOL4.arithmetic.BIT1" as "Number.Natural.bit1"
   interpret: const "HOL4.arithmetic.ZERO" as "Number.Natural.zero"
 
-  interpret: type "HOL4.prove_base_assums.Data_List_list" as "Data.List.list"
-  interpret: const "HOL4.prove_base_assums.Data_List_nil" as "Data.List.[]"
-  interpret: const "HOL4.prove_base_assums.Data_List_cons" as "Data.List.::"
+  interpret: type "HOL4.list.list" as "Data.List.list"
+  interpret: const "HOL4.list.NIL" as "Data.List.[]"
+  interpret: const "HOL4.list.CONS" as "Data.List.::"
   interpret: const "HOL4.list.LENGTH" as "Data.List.length"
   interpret: const "HOL4.list.APPEND" as "Data.List.@"
   interpret: const "HOL4.list.MAP" as "Data.List.map"
@@ -114,10 +111,6 @@ proofs {
   interpret: const "HOL4.list.EXISTS" as "Data.List.any"
   interpret: const "HOL4.list.FLAT" as "Data.List.concat"
   interpret: const "HOL4.list.FILTER" as "Data.List.filter"
-  interpret: const "HOL4.prove_base_assums.Data_List_null" as "Data.List.null"
-  interpret: const "HOL4.prove_base_assums.Data_List_last" as "Data.List.last"
-}
-main {
-  import: unsat
-  import: proofs
+  interpret: const "HOL4.list.NULL" as "Data.List.null"
+  interpret: const "HOL4.list.LAST" as "Data.List.last"
 }

@@ -1,0 +1,7 @@
+deltype Data_List_list
+delconst Data_List_cons
+delconst Data_List_nil
+delconst Data_List_last
+delconst Data_List_null
+delconst Number_Natural_suc
+deltype Number_Natural_natural
