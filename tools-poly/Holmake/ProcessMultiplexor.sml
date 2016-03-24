@@ -235,34 +235,35 @@ struct
   fun do_work (wl0 : 'a worklist, monitorfn) =
     let
       open Posix.Process
-      val (cmds, wl) = fill_workq monitorfn ([], wl0)
+      val (cmds, wl1) = fill_workq monitorfn ([], wl0)
       fun monitor msg (acc as (cmds, wl, actp)) =
         case monitorfn msg of
             NONE => acc
           | SOME c => (c::cmds, wl, actp)
-      fun nothing wj (cmds, cjs, actp) =
+      fun nothing wj (cmds, wl, actp) =
         let
           val msg =
               NothingSeen (wjkey wj, {delay = Time.-(Time.now(), #lastevent wj),
                                       total_elapsed = elapsed wj})
         in
-          monitor msg (cmds, cjs_addjob wj cjs, actp)
+          monitor msg (cmds, addjob wj wl, actp)
         end
       fun exitstatus wj status (cs, wl, _) =
         let
           val msg = Terminated (wjkey wj, status, elapsed wj)
+          val newstate = #update wj (#current_state wl, status = W_EXITED)
         in
-          monitor msg (cs, wl, true)
+          monitor msg (cs, updateWL wl (U #current_state newstate) $$, true)
         end
-      fun eof wj chan (cmds, cjs, _) =
+      fun eof wj chan (cmds, wl, _) =
         monitor (EOF (wjkey wj, chan, elapsed wj))
-                (cmds, cjs_addjob (markeof chan wj) cjs, true)
-      fun caninput wj k chan (cmds, cjs, _) =
+                (cmds, addjob (markeof chan wj) wl, true)
+      fun caninput wj k chan (cmds, wl, _) =
         let
           val s = TextIO.inputN(wjstrm chan wj, k)
           val msg = Output(wjkey wj, elapsed wj, chan, s)
         in
-          monitor msg (cmds, cjs_addjob (touch wj) cjs, true)
+          monitor msg (cmds, addjob (touch wj) wl, true)
         end
       fun is_neweof wj chan =
         case chan of
@@ -278,53 +279,86 @@ struct
           | SOME 0 => if is_neweof wj chan then eof wj chan acc
                       else k (wj, acc)
           | SOME k => caninput wj k chan acc
-      fun one_wjob (k, wj : 'a working_job, acc as (cmds, wl, actp)) =
+      fun one_wjob (k, wj : 'a working_job, acc) =
         checkchan wj OUT acc (fn (wj, acc) => checkchan wj ERR acc dowait)
 
-      fun workloop (cmds, jobs, actp) =
-        Binarymap.foldl one_wjob
-                        (cmds, Binarymap.mkDict jobkey_compare, actp)
-                        jobs
+      fun workloop (cmds, wl, actp) =
+        let
+          val empty_jobs = Binarymap.mkDict jobkey_compare
+        in
+          Binarymap.foldl one_wjob
+                          (cmds,
+                           updateWL wl (U #current_jobs empty_jobs) $$,
+                           actp)
+                          (#current_jobs wl)
+        end
 
       fun loop (cmds, wl : 'a worklist) : 'a =
         if Binarymap.numItems (#current_jobs wl) = 0 then #current_state wl
         else
           let
-            val (cmds', cjs', activity) =
-                workloop (cmds, #current_jobs wl, false)
+            val (cmds', wl', activity) = workloop (cmds, wl, false)
             val () = execute_cmds cmds'
-            val wl = updateWL wl (U #current_jobs cjs') $$
           in
             if not activity then
               ignore (Posix.Process.sleep (Time.fromMilliseconds 100))
             else ();
-            loop (fill_workq monitorfn ([], wl))
+            loop (fill_workq monitorfn ([], wl'))
           end
     in
-      loop (cmds, wl)
+      loop (cmds, wl1)
     end
+
+  fun fupdAlist k f [] = raise Fail "updAlist: No element with given key"
+    | fupdAlist k f ((k',v') :: rest) =
+      if k=k' then (k,f v') :: rest
+      else (k',v') :: fupdAlist k f rest
+  fun findUpd P f k [] = k (NONE, [])
+    | findUpd P f k (x::xs) =
+      if P x then k (SOME (f x), f x :: xs)
+      else findUpd P f (fn (res, l) => k (res, x::l)) xs
+
 
   fun shell_commands m (cmds0, n) =
     let
+      datatype stat = Waiting | Running | Done of bool
       val (cmds00, _) =
-          List.foldl (fn (c, (cs, n)) => ((str (chr n), c)::cs, n + 1))
-                     ([], 65)
-                     cmds0
+          List.foldl
+            (fn (c, (cs, n)) => ((str (chr n), (c, Waiting))::cs, n + 1))
+            ([], 65)
+            cmds0
       val cmds = List.rev cmds00
       fun genjob clist =
-        case clist of
-            [] => NONE
-          | (t,c)::cs => SOME ({tag = t,
-                                command = ("/bin/sh", ["/bin/sh", "-c", c]),
-                                update = (fn (s, _) => s)},
-                               cs)
+        let
+          val (cdata, l) = findUpd (fn (_, (_, s)) => s = Waiting)
+                                   (fn (k, (c, _)) => (k, (c, Running)))
+                                   (fn x => x)
+                                   clist
+        in
+          case cdata of
+              NONE => NONE
+            | SOME (t, (c, _)) =>
+              let
+                fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
+              in
+                SOME ({tag = t,
+                       command = ("/bin/sh", ["/bin/sh", "-c", c]),
+                       update = upd},
+                      l)
+              end
+        end
       val wl =
           new_worklist {
             provider = {initial = cmds, genjob = genjob},
             worklimit = n
           }
+      val cs = do_work(wl,m)
     in
-      ignore (do_work(wl,m))
+      List.mapPartial (fn (k,(c,st)) =>
+                          case st of
+                              Done b => SOME (c,b)
+                            | _ => NONE)
+                      cs
     end
 
 

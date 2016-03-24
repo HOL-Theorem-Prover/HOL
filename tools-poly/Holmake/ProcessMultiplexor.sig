@@ -24,6 +24,7 @@ sig
                      'a worklist
 
   val do_work : ('a worklist * monitor) -> 'a
-  val shell_commands : monitor -> string list * int -> unit
+  val shell_commands : monitor -> string list * int ->
+                       (string * bool) list
 
 end
