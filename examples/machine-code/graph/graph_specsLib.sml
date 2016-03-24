@@ -456,14 +456,20 @@ fun derive_insts_for sec_name = let
   val insts = try_map (fn (_,(th,_,_),_) =>
     add_graph_spec_fail (get_pc_val th) sec_name) make_INST thms
   val _ = (writer_prints := true)
+  val all_ok_chars = explode
+   ("abcdefghijklmonpqrstuvwxyz" ^
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ^
+    "0123456789_")
   fun remove_SKIP_TAG th = let
     val th = MATCH_MP SKIP_TAG_IMP_CALL th
     val name = find_term (can stringLib.dest_string) (concl th)
     fun join [] = ""
       | join [x] = x
       | join (x::ys) = x ^ "_" ^ join ys
-    val new_name = String.tokens (fn c => mem c [#" ",#",",#"{",#"}"])
-                   (stringLib.fromHOLstring name) |> join |> get_name
+    fun prefix_instr str = "instruction'" ^ str
+    val new_name = stringLib.fromHOLstring name
+                   |> String.tokens (fn c => not (mem c all_ok_chars))
+                   |> join |> prefix_instr |> get_name
     in th |> SIMP_RULE std_ss []
           |> SPEC (stringLib.fromMLstring new_name)
           |> UNDISCH end

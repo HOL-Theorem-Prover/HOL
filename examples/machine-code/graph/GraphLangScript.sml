@@ -2028,4 +2028,23 @@ val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
       arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL])
 
+val fixwidth_w2v = prove(
+  ``fixwidth (dimindex (:'a)) (w2v (w:'a word)) = w2v w``,
+  EVAL_TAC \\ fs []);
+
+val v2w_field_insert_31_16 = prove(
+  ``(v2w (field_insert 31 16
+                      (field 15 0 (w2v (w:word32)))
+                      (w2v (v:word32)))) =
+    bit_field_insert 31 16 w v``,
+  fs [bit_field_insert_def,bitstringTheory.field_insert_def]
+  \\ once_rewrite_tac [GSYM fixwidth_w2v]
+  \\ rewrite_tac [GSYM bitstringTheory.word_modify_v2w,bitstringTheory.v2w_w2v]
+  \\ AP_THM_TAC \\ AP_TERM_TAC \\ fs [FUN_EQ_THM]
+  \\ rpt strip_tac \\ IF_CASES_TAC \\ fs []
+  \\ EVAL_TAC \\ Cases_on `i` \\ fs []
+  \\ rpt (Cases_on `n` \\ fs [] \\ Cases_on `n'` \\ fs []));
+
+val export_init_rw = save_thm("export_init_rw",v2w_field_insert_31_16);
+
 val _ = export_theory();

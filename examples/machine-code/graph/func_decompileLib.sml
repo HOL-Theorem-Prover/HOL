@@ -44,7 +44,7 @@ fun func_export sec_name th funcs_def = let
   val trans_def = new_definition(name,mk_eq(lhs,rhs))
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
-          THENC REWRITE_CONV [wordsTheory.word_extract_mask]
+          THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw]
           THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def]
           THENC prepare_for_export_conv
