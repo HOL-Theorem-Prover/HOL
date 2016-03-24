@@ -1,3 +1,4 @@
+
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
@@ -236,7 +237,7 @@ in
          "ReadHMF"]
     ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
         ["makefile-includes.ML", "check-intconfig.sml"]
-    ; List.app Meta.fakeload ["PP", "PolyML"]
+    ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
     ; term_pp_prefix := "``"
