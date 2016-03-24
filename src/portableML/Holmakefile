@@ -2,7 +2,14 @@ OPTIONS = NO_OVERLAY
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
-all: $(UOFILES) selftest.exe
+FRS = FunctionalRecordUpdate.sml
+
+all: $(UOFILES) selftest.exe $(FRS)
 
 selftest.exe: selftest.uo Redblackset.uo
 	$(MOSMLC) -o $@ $<
+
+$(FRS): $(dprot $(HOLDIR)/tools-poly/Holmake/$(FRS))
+	$(CP) $< $@
+
+EXTRA_CLEANS = $(FRS)
