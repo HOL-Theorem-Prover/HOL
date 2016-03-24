@@ -55,9 +55,9 @@ proofs {
   interpret: const "HOL4.relation.RSUBSET" as "Relation.subrelation"
   interpret: const "HOL4.relation.WF" as "Relation.wellFounded"
 
-  interpret: type "HOL4.option.option" as "Data.Option.option"
-  interpret: const "HOL4.option.SOME" as "Data.Option.some"
-  interpret: const "HOL4.option.NONE" as "Data.Option.none"
+  interpret: type "HOL4.prove_base_assums.Data_Option_option" as "Data.Option.option"
+  interpret: const "HOL4.prove_base_assums.Data_Option_some" as "Data.Option.some"
+  interpret: const "HOL4.prove_base_assums.Data_Option_none" as "Data.Option.none"
   interpret: const "HOL4.option.IS_NONE" as "Data.Option.isNone"
   interpret: const "HOL4.option.IS_SOME" as "Data.Option.isSome"
   interpret: const "HOL4.option.OPTION_MAP" as "Data.Option.map"

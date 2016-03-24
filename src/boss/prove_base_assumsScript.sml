@@ -93,6 +93,8 @@ val (reader:reader) = {
 
 val base_thms = read_article "base-theorems.art" reader;
 
+val _ = Net.itnet (fn th => (Thm.delete_proof th; K ())) base_thms ()
+
 fun itpred P th acc = if P th then th::acc else acc
 fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms []
 
@@ -179,6 +181,28 @@ val th26 = store_thm("th26", el 26 goals |> concl,
 val ext = hd(amatch``(∀x. f x = g x) ⇔ _``)
 val th30 = store_thm("th30", el 30 goals |> concl,
   MATCH_ACCEPT_TAC (GSYM ext))
+
+val cons_neq_nil = hd(amatch``_ ≠ Data_List_nil``)
+val th34 = store_thm("th34", el 34 goals |> concl, MATCH_ACCEPT_TAC (GSYM cons_neq_nil))
+
+val some_neq_none = hd(amatch``_ ≠ Data_Option_none``)
+val th35 = store_thm("th35", el 35 goals |> concl, MATCH_ACCEPT_TAC (GSYM some_neq_none))
+
+val eq_T = hd(amatch``(t ⇔ T) ⇔ _``)
+fun EQT_INTRO th = EQ_MP (SPEC (concl th) (GSYM eq_T)) th
+
+val imp_T = hd(amatch``t ⇒ T``)
+val T_imp = hd(amatch``T ⇒ t``)
+val F_imp = hd(amatch``F ⇒ t``)
+val imp_F = hd(amatch``t ⇒ F ⇔ _``)
+val imp_i = hd(amatch``t ⇒ t``)
+val th36 = store_thm("th36", el 36 goals |> concl,
+  gen_tac
+  \\ conj_tac >- MATCH_ACCEPT_TAC T_imp
+  \\ conj_tac >- MATCH_ACCEPT_TAC imp_T
+  \\ conj_tac >- MATCH_ACCEPT_TAC F_imp
+  \\ conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL imp_i))
+  \\ MATCH_ACCEPT_TAC imp_F);
 
 val _ = List.app (Theory.delete_binding o #1) (axioms"-");
 val _ = List.app (Theory.delete_binding o #1) (definitions"-");

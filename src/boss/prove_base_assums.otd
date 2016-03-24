@@ -1,7 +1,10 @@
 deltype Data_List_list
-delconst Data_List_cons
 delconst Data_List_nil
+delconst Data_List_cons
 delconst Data_List_last
 delconst Data_List_null
-delconst Number_Natural_suc
+deltype Data_Option_option
+delconst Data_Option_none
+delconst Data_Option_some
 deltype Number_Natural_natural
+delconst Number_Natural_suc
