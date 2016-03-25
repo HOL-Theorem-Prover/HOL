@@ -30,6 +30,7 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["HOL4","bool"],"DATATYPE") = {Thy="bool",Name="DATATYPE"}
   | const_name (["HOL4","bool"],"literal_case") = {Thy="bool",Name="literal_case"}
   | const_name (["HOL4","bool"],"IN") = {Thy="bool",Name="IN"}
+  | const_name (["Data","Bool"],"arb") = {Thy="bool",Name="ARB"}
   | const_name (["Data","Bool"],"let") = {Thy="bool",Name="LET"}
   | const_name (["Data","Unit"],"()") = {Thy=Thy,Name="Data_Unit_unit"}
   | const_name (["Data","Pair"],",") = {Thy=Thy,Name="Data_Pair_comma"}
@@ -81,6 +82,8 @@ fun define_const {Thy="bool",Name="~"} tm = add_def(``$~ = ^tm``)
   | define_const {Thy="bool",Name="T"} tm = add_def(``T = ^tm``)
   | define_const {Thy="bool",Name="F"} tm = add_def(``F = ^tm``)
   | define_const {Thy="bool",Name="COND"} tm = add_def(``COND = ^tm``)
+  | define_const {Thy="bool",Name="LET"} tm = add_def(``LET = ^tm``)
+  | define_const {Thy="bool",Name="ARB"} tm = add_def(``ARB = ^tm``)
   | define_const {Thy="min",Name="==>"} tm = add_def(``$==> = ^tm``)
   | define_const x tm = define_const_in_thy (fn x => x) x tm
 
@@ -313,6 +316,115 @@ val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``)
 val th56 = store_thm("th56", el 56 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO null_nil)
   \\ MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL null_cons)));
+
+val odd_nil = hd(amatch``Number_Natural_odd Number_Natural_zero``)
+val odd_cons = hd(amatch``Number_Natural_odd (Number_Natural_suc _)``)
+val th57 = store_thm("th57", el 57 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO odd_nil)
+  \\ MATCH_ACCEPT_TAC odd_cons);
+
+val even_nil = hd(amatch``Number_Natural_even Number_Natural_zero``)
+val even_cons = hd(amatch``Number_Natural_even (Number_Natural_suc _)``)
+val th58 = store_thm("th58", el 58 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO even_nil)
+  \\ MATCH_ACCEPT_TAC even_cons);
+
+val map_none = hd(amatch``Data_Option_map _ Data_Option_none = _``)
+val map_some = hd(amatch``Data_Option_map _ (Data_Option_some _) = _``)
+val th59 = store_thm("th59", el 59 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC map_some
+  \\ MATCH_ACCEPT_TAC map_none);
+
+val filter_nil = hd(amatch``Data_List_filter _ Data_List_nil``)
+val filter_cons = hd(amatch``Data_List_filter _ (Data_List_cons _ _)``)
+val th60 = store_thm("th60", el 60 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC filter_nil
+  \\ MATCH_ACCEPT_TAC filter_cons);
+
+val any_nil = hd(amatch``Data_List_any _ Data_List_nil``)
+val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``)
+val th62 = store_thm("th62", el 62 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL any_nil))
+  \\ MATCH_ACCEPT_TAC any_cons)
+
+val all_nil = hd(amatch``Data_List_all _ Data_List_nil``)
+val all_cons = hd(amatch``Data_List_all _ (Data_List_cons _ _)``)
+val th63 = store_thm("th63", el 63 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL all_nil))
+  \\ MATCH_ACCEPT_TAC all_cons)
+
+val map_nil = hd(amatch``Data_List_map _ Data_List_nil``)
+val map_cons = hd(amatch``Data_List_map _ (Data_List_cons _ _)``)
+val th64 = store_thm("th64", el 64 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC map_nil
+  \\ MATCH_ACCEPT_TAC map_cons)
+
+val append_nil = hd(amatch``Data_List_append Data_List_nil``)
+val append_cons = hd(amatch``Data_List_append (Data_List_cons _ _) _ = Data_List_cons _ (_ _ _)``)
+val th65 = store_thm("th65", el 65 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC append_nil
+  \\ MATCH_ACCEPT_TAC append_cons)
+
+val power_zero = hd(amatch``Number_Natural_power _ Number_Natural_zero``)
+val power_suc = hd(amatch``Number_Natural_power _ (Number_Natural_suc _)``)
+val th66  = store_thm("th66", el 66 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC power_zero
+  \\ MATCH_ACCEPT_TAC power_suc)
+
+val times_comm = hd(amatch``Number_Natural_times x y = Number_Natural_times y x``)
+val plus_comm = hd(amatch``Number_Natural_plus x y = Number_Natural_plus y x``)
+val times_zero = hd(amatch``Number_Natural_times _ Number_Natural_zero``)
+val times_suc = hd(amatch``Number_Natural_times _ (Number_Natural_suc _)``)
+val times_zero_comm = PURE_ONCE_REWRITE_RULE[times_comm]times_zero
+val th67  = store_thm("th67", el 67 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC times_zero_comm
+  \\ MATCH_ACCEPT_TAC
+      (PURE_ONCE_REWRITE_RULE[plus_comm](PURE_ONCE_REWRITE_RULE[times_comm]times_suc)))
+
+val plus_zero = hd(amatch``Number_Natural_plus _ Number_Natural_zero``)
+val plus_suc = hd(amatch``Number_Natural_plus _ (Number_Natural_suc _)``)
+val th68  = store_thm("th68", el 68 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_zero)
+  \\ MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_suc))
+
+val isSome_some = hd(amatch``Data_Option_isSome (Data_Option_some _)``)
+val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``)
+val th70 = store_thm("th70", el 70 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL isSome_some))
+  \\ MATCH_ACCEPT_TAC (EQF_INTRO isSome_none))
+
+val isNone_some = hd(amatch``Data_Option_isNone (Data_Option_some _)``)
+val isNone_none = hd(amatch``Data_Option_isNone (Data_Option_none)``)
+val th71 = store_thm("th71", el 71 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC (EQF_INTRO (SPEC_ALL isNone_some))
+  \\ MATCH_ACCEPT_TAC (EQT_INTRO isNone_none))
+
+val isRight_right = hd(amatch``Data_Sum_isRight (Data_Sum_right _)``)
+val isRight_left = hd(amatch``Data_Sum_isRight (Data_Sum_left _)``)
+val th72 = store_thm("th72", el 72 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC isRight_right
+  \\ MATCH_ACCEPT_TAC isRight_left)
+
+val isLeft_right = hd(amatch``Data_Sum_isLeft (Data_Sum_right _)``)
+val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``)
+val th73 = store_thm("th73", el 73 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC isLeft_left
+  \\ MATCH_ACCEPT_TAC isLeft_right)
+
+val comma_11 = hd(amatch``Data_Pair_comma _ _ = Data_Pair_comma _ _``)
+val th104 = store_thm("th104", el 104 goals |> concl,
+  MATCH_ACCEPT_TAC comma_11)
+
+val right_11 = hd(amatch``Data_Sum_right _ = Data_Sum_right _``)
+val th105 = store_thm("th105", el 105 goals |> concl,
+  MATCH_ACCEPT_TAC right_11)
+
+val left_11 = hd(amatch``Data_Sum_left _ = Data_Sum_left _``)
+val th106 = store_thm("th106", el 106 goals |> concl,
+  MATCH_ACCEPT_TAC left_11)
+
+val th120 = store_thm("th120", el 120 goals |> concl,
+  REFL_TAC)
 
 val _ = List.app (Theory.delete_binding o #1) (axioms"-");
 val _ = List.app (Theory.delete_binding o #1) (definitions"-");
