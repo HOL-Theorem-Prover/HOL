@@ -367,7 +367,7 @@ val (log_term, log_thm, log_clear,
       val th5 = TRANS (REFL rx') (SYM xrt)
       val th6 = TRANS (AP_TERM rep (TRANS (AP_TERM abs xrt) xar)) th5
       val th7 = DISCH exr (CHOOSE (x',ASSUME exr) (EQ_MP xra th6))
-      val th8 = GEN x (IMP_ANTISYM_RULE th4 th7)
+      val th8 = GEN x (deductAntisym (UNDISCH th7) (UNDISCH th4))
       in EXISTS (mk_exists(rep,w),rep) (EQ_MP (SYM th1) (CONJ th3 th8)) end
   end
 
