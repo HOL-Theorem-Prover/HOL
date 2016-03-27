@@ -139,9 +139,29 @@ val goals = Net.listItems goalsNet
 
 val _ = Parse.hide"_"
 
+val bool_cases = hd (amatch ``t ∨ ¬ t``)
+val or_def = hd(amatch``$\/ = _``)
+
+val imp_T = hd(amatch``t ⇒ T``)
+val T_imp = hd(amatch``T ⇒ t``)
+val F_imp = hd(amatch``F ⇒ t``)
+val imp_F = hd(amatch``t ⇒ F ⇔ _``)
+val imp_i = hd(amatch``t ⇒ t``)
+
+val T_iff = hd(amatch``(T ⇔ t) ⇔ _``)
+val iff_T = hd(amatch``(t ⇔ T) ⇔ _``)
+val F_iff = hd(amatch``(F ⇔ t) ⇔ _``)
+val iff_F = hd(amatch``(t ⇔ F) ⇔ _``)
+
+val and_imp_intro = hd(amatch``(a ⇒ b ⇒ c) ⇔ _``)
+
+val eq_T = hd(amatch``(t ⇔ T) ⇔ _``)
+fun EQT_INTRO th = EQ_MP (SPEC (concl th) (GSYM eq_T)) th
+
+val EQF_INTRO = SYM o (CONV_RULE(REWR_CONV(GSYM F_iff)))
+
 val not_and = hd (amatch ``¬(t1 ∧ t2) ⇔ _``)
 val not_not = hd (amatch ``¬(¬ _)``)
-val bool_cases = hd (amatch ``t ∨ ¬ t``)
 val disj_comm = hd (amatch ``_ ∨ _ ⇔ _ ∨ _``)
 val th1 = store_thm("th1", el 1 goals |> concl, PURE_REWRITE_TAC[not_and,not_not,Once disj_comm,bool_cases])
 
@@ -150,7 +170,7 @@ val th1 = store_thm("th1", el 1 goals |> concl, PURE_REWRITE_TAC[not_and,not_not
 val ex_unique_thm = hd (amatch``(?!x. p x) ⇔ _ ∧ _``)
 val list_rec = hd(amatch``fn (Data_List_cons h t) = f h t (fn t)``)
 val list_ind = hd(amatch``_ ⇒ ∀l:'a Data_List_list. P l``)
-val eta_ax = hd(amatch``(∀x. f x = g x) ⇔ (f = g)``)
+val fun_eq_thm = hd(amatch``(∀x. f x = g x) ⇔ (f = g)``)
 val th5 = store_thm("th5", el 5 goals |> concl,
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
@@ -160,7 +180,7 @@ val th5 = store_thm("th5", el 5 goals |> concl,
        \\ first_x_assum (fn th => conj_tac >- MATCH_ACCEPT_TAC th)
        \\ first_x_assum (MATCH_ACCEPT_TAC o BETA_RULE) )
   \\ rpt gen_tac \\ strip_tac
-  \\ PURE_REWRITE_TAC[GSYM eta_ax]
+  \\ PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ ho_match_mp_tac list_ind
   \\ rpt BasicProvers.VAR_EQ_TAC
   \\ conj_tac >- (first_assum MATCH_ACCEPT_TAC)
@@ -181,13 +201,13 @@ val th6 = store_thm("th6", el 6 goals |> concl,
   rpt gen_tac
   \\ CONV_TAC(HO_REWR_CONV ex_unique_thm)
   \\ PURE_REWRITE_TAC[o_def]
-  \\ PURE_REWRITE_TAC[GSYM eta_ax]
+  \\ PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ rpt strip_tac
   >- (
     qexists_tac`Data_Sum_case_left_right f g`
     \\ PURE_REWRITE_TAC sum_case_thms
-    \\ PURE_REWRITE_TAC[eta_ax]
+    \\ PURE_REWRITE_TAC[fun_eq_thm]
     \\ conj_tac \\ REFL_TAC )
   \\ Q.ISPEC_THEN`x`FULL_STRUCT_CASES_TAC sum_cases
   >- (
@@ -218,20 +238,6 @@ val and_T = hd(amatch``t ∧ T ⇔ _``)
 val F_and = hd(amatch``F ∧ t``)
 val and_F = hd(amatch``t ∧ F ⇔ _``)
 val and_i = hd(amatch``t ∧ t``)
-
-val imp_T = hd(amatch``t ⇒ T``)
-val T_imp = hd(amatch``T ⇒ t``)
-val F_imp = hd(amatch``F ⇒ t``)
-val imp_F = hd(amatch``t ⇒ F ⇔ _``)
-val imp_i = hd(amatch``t ⇒ t``)
-
-val T_iff = hd(amatch``(T ⇔ t) ⇔ _``)
-val iff_T = hd(amatch``(t ⇔ T) ⇔ _``)
-val F_iff = hd(amatch``(F ⇔ t) ⇔ _``)
-val iff_F = hd(amatch``(t ⇔ F) ⇔ _``)
-
-val eq_T = hd(amatch``(t ⇔ T) ⇔ _``)
-fun EQT_INTRO th = EQ_MP (SPEC (concl th) (GSYM eq_T)) th
 
 val th8 = store_thm("th8", el 8 goals |> concl,
   rpt strip_tac
@@ -310,6 +316,41 @@ val th19 = store_thm("th19", el 19 goals |> concl,
 val th20 = store_thm("th20", el 20 goals |> concl,
   rpt gen_tac \\ MATCH_ACCEPT_TAC (CONJ (SPEC_ALL if_T) (SPEC_ALL if_F)))
 
+val forall_eq = hd(amatch``∀x. (x = t) ⇒ _``)
+
+val ex_def = hd(amatch``$? = _``)
+val select_ax = hd(amatch ``p t ⇒ p ($@ p)``)
+
+val th21 = store_thm("th21", el 21 goals |> concl,
+  PURE_REWRITE_TAC[forall_eq,ex_def]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ MATCH_ACCEPT_TAC select_ax);
+
+val eta_ax = hd(amatch``∀f. (λx. f x) = f``)
+
+val th22 = store_thm("th22", el 22 goals |> concl,
+  PURE_REWRITE_TAC[ex_def]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt strip_tac
+  \\ first_x_assum match_mp_tac
+  \\ CONV_TAC(RAND_CONV(RAND_CONV(REWR_CONV (GSYM eta_ax))))
+  \\ first_x_assum ACCEPT_TAC);
+
+val th23 = store_thm("th23", el 23 goals |> concl,
+  rpt strip_tac
+  \\ Q.ISPEC_THEN`t1`mp_tac bool_cases
+  \\ PURE_REWRITE_TAC[or_def]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ disch_then(qspec_then`t1 = t2`mp_tac)
+  \\ PURE_REWRITE_TAC[iff_T,iff_F,and_imp_intro]
+  \\ disch_then match_mp_tac
+  \\ conj_tac
+  \\ TRY (disch_then(SUBST_ALL_TAC o EQF_INTRO))
+  \\ TRY (disch_then(SUBST_ALL_TAC o EQT_INTRO))
+  \\ rpt (pop_assum mp_tac)
+  \\ PURE_REWRITE_TAC[T_imp,T_iff,imp_T,F_imp,F_iff,imp_F]
+  \\ disch_then ACCEPT_TAC);
+
 val suc_11 =hd(amatch``Number_Natural_suc _ = Number_Natural_suc _``)
 val th24 = store_thm("th24", el 24 goals |> concl,
   rpt gen_tac \\ MATCH_ACCEPT_TAC (#1 (EQ_IMP_RULE (SPEC_ALL suc_11))))
@@ -323,9 +364,39 @@ val last_cons = hd(amatch``Data_List_last (Data_List_cons h t) = COND _ _ _``)
 val th26 = store_thm("th26", el 26 goals |> concl,
   MATCH_ACCEPT_TAC(PURE_REWRITE_RULE[null_eq]last_cons))
 
+(* 27 TYPE_DEFINITION *)
+
+val not_T = hd(amatch``¬T``)
+
+val T_or = hd(amatch``T ∨ t``)
+val or_T = hd(amatch``t ∨ T``)
+val F_or = hd(amatch``F ∨ t``)
+val or_F = hd(amatch``t ∨ F``)
+val or_i = hd(amatch``t ∨ t``)
+
+val th28 = store_thm("th28", el 28 goals |> concl,
+  rpt gen_tac
+  \\ Q.ISPEC_THEN`t1`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_and,not_T,F_and,or_F,not_F,F_or,F_iff]
+  \\ REFL_TAC);
+
+val th29 = store_thm("th29", el 29 goals |> concl,
+  rpt gen_tac
+  \\ Q.ISPEC_THEN`t1`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,F_iff,T_imp,F_imp,imp_T,imp_F,and_T,T_and]
+  \\ REFL_TAC);
+
 val ext = hd(amatch``(∀x. f x = g x) ⇔ _``)
 val th30 = store_thm("th30", el 30 goals |> concl,
   MATCH_ACCEPT_TAC (GSYM ext))
+
+val th31 = store_thm("th31", el 31 goals |> concl,
+  rpt gen_tac
+  \\ Q.ISPEC_THEN`A`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,or_T,F_iff,or_F,imp_T,imp_F]
+  \\ REFL_TAC);
+
+(* 32 and 33 are literal_case and LET, which probably should be defined (they're not in OT)? *)
 
 val cons_neq_nil = hd(amatch``_ ≠ Data_List_nil``)
 val th34 = store_thm("th34", el 34 goals |> concl, MATCH_ACCEPT_TAC (GSYM cons_neq_nil))
@@ -341,11 +412,6 @@ val th36 = store_thm("th36", el 36 goals |> concl,
   \\ conj_tac >- MATCH_ACCEPT_TAC (EQT_INTRO (SPEC_ALL imp_i))
   \\ MATCH_ACCEPT_TAC imp_F);
 
-val T_or = hd(amatch``T ∨ t``)
-val or_T = hd(amatch``t ∨ T``)
-val F_or = hd(amatch``F ∨ t``)
-val or_F = hd(amatch``t ∨ F``)
-val or_i = hd(amatch``t ∨ t``)
 val th37 = store_thm("th37", el 37 goals |> concl,
   gen_tac
   \\ conj_tac >- MATCH_ACCEPT_TAC T_or
@@ -422,18 +488,6 @@ fun EQF_ELIM th =
    in
       NOT_INTRO (DISCH lhs (EQ_MP th (ASSUME lhs)))
    end
-
-val falsity = th51
-
-fun CONTR tm th = MP (SPEC tm falsity) th
-
-local
-   val Fth = ASSUME F
-in
-   fun EQF_INTRO th =
-      IMP_ANTISYM_RULE (NOT_ELIM th)
-                       (DISCH F (CONTR (dest_neg (concl th)) Fth))
-end
 
 val null_nil = hd(amatch``Data_List_null Data_List_nil``)
 val null_cons = hd(amatch``Data_List_null (Data_List_cons _ _)``)
