@@ -440,9 +440,43 @@ val th40 = store_thm("th40", el 40 goals |> concl,
   CONV_TAC(QUANT_CONV(LAND_CONV(RAND_CONV(ABS_CONV SYM_CONV))))
   \\ MATCH_ACCEPT_TAC select_eq);
 
+val th41 = store_thm("th41", el 41 goals |> concl,
+  PURE_REWRITE_TAC[imp_F, iff_F]
+  \\ gen_tac \\ REFL_TAC)
+
 val refl = hd(amatch``∀x. x = x``)
 val th42 = store_thm("th42", el 42 goals |> concl,
   gen_tac \\ MATCH_ACCEPT_TAC(EQT_INTRO(SPEC_ALL refl)))
+
+(* 43 DATATYPE *)
+
+val eq_trans = hd(amatch``(x = y) /\ (y = z) ==> _``)
+
+val th44 = store_thm("th44", el 44 goals |> concl,
+  rpt strip_tac
+  \\ first_assum(qspecl_then[`x`,`y`,`z`]SUBST_ALL_TAC)
+  \\ last_assum(qspecl_then[`f x y`,`z`]SUBST_ALL_TAC)
+  \\ first_assum(qspecl_then[`z`,`x`,`y`]SUBST_ALL_TAC)
+  \\ last_assum(qspecl_then[`f z x`,`y`]SUBST_ALL_TAC)
+  \\ AP_TERM_TAC
+  \\ last_assum(qspecl_then[`z`,`x`]ACCEPT_TAC));
+
+(* 45 TYPE_DEFINITION *)
+
+val less_zero = hd(amatch``Number_Natural_less Number_Natural_zero n ⇔ _ ≠ _``)
+val div_mod = hd(amatch``Number_Natural_times (Number_Natural_div k n) n``)
+
+val less_mod = hd(amatch``Number_Natural_less (Number_Natural_mod _ _)``)
+
+val th46 = store_thm("th46", el 46 goals |> concl,
+  PURE_REWRITE_TAC[less_zero]
+  \\ gen_tac
+  \\ disch_then(fn th => (strip_assume_tac (MATCH_MP less_mod th) >>
+       (strip_assume_tac (MATCH_MP div_mod th))))
+  \\ gen_tac
+  \\ first_x_assum(qspec_then`k`SUBST_ALL_TAC)
+  \\ conj_tac >- REFL_TAC
+  \\ first_x_assum(qspec_then`k`ACCEPT_TAC));
 
 val list_ind = hd(amatch``_ ⇒ ∀(l:'a Data_List_list). P l``)
 val th47 = store_thm("th47", el 47 goals |> concl,
@@ -458,6 +492,11 @@ val th48 = store_thm("th48", el 48 goals |> concl,
 val th49 = store_thm("th49", el 49 goals |> concl,
   imp_F |> SPEC_ALL |> EQ_IMP_RULE |> #2 |> MATCH_ACCEPT_TAC)
 
+val th50 = store_thm("th50", el 50 goals |> concl,
+  PURE_REWRITE_TAC[GSYM imp_F]
+  \\ gen_tac
+  \\ disch_then(fn th => disch_then(ACCEPT_TAC o C MP th)));
+
 val th51 = store_thm("th51", el 51 goals |> concl,
   MATCH_ACCEPT_TAC(EQT_ELIM(SPEC_ALL F_imp)))
 
@@ -472,6 +511,13 @@ val concat_cons = hd(amatch``Data_List_concat (Data_List_cons _ _)``)
 val th53 = store_thm("th53", el 53 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC concat_nil
   \\ MATCH_ACCEPT_TAC concat_cons);
+
+val fact_zero = hd(amatch``Number_Natural_factorial Number_Natural_zero``)
+val fact_suc = hd(amatch``Number_Natural_factorial (Number_Natural_suc _)``)
+
+val th54 = store_thm("th54", el 54 goals |> concl,
+  conj_tac >- MATCH_ACCEPT_TAC fact_zero
+  \\ MATCH_ACCEPT_TAC fact_suc);
 
 val length_nil = hd(amatch``Data_List_length Data_List_nil``)
 val length_cons = hd(amatch``Data_List_length (Data_List_cons _ _)``)
@@ -519,6 +565,8 @@ val th60 = store_thm("th60", el 60 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC filter_nil
   \\ MATCH_ACCEPT_TAC filter_cons);
 
+(* 61 - minus is more specified in HOL than in OT *)
+
 val any_nil = hd(amatch``Data_List_any _ Data_List_nil``)
 val any_cons = hd(amatch``Data_List_any _ (Data_List_cons _ _)``)
 val th62 = store_thm("th62", el 62 goals |> concl,
@@ -565,6 +613,10 @@ val th68  = store_thm("th68", el 68 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_zero)
   \\ MATCH_ACCEPT_TAC (PURE_ONCE_REWRITE_RULE[plus_comm]plus_suc))
 
+val th69 = store_thm("th69", el 69 goals |> concl,
+  PURE_REWRITE_TAC[not_not,iff_F,iff_T,truth,not_F,and_T]
+  \\ gen_tac \\ REFL_TAC)
+
 val isSome_some = hd(amatch``Data_Option_isSome (Data_Option_some _)``)
 val isSome_none = hd(amatch``Data_Option_isSome (Data_Option_none)``)
 val th70 = store_thm("th70", el 70 goals |> concl,
@@ -588,6 +640,108 @@ val isLeft_left = hd(amatch``Data_Sum_isLeft (Data_Sum_left _)``)
 val th73 = store_thm("th73", el 73 goals |> concl,
   conj_tac >- MATCH_ACCEPT_TAC isLeft_left
   \\ MATCH_ACCEPT_TAC isLeft_right)
+
+val th74 = store_thm("th74", el 74 goals |> concl,
+  rpt strip_tac
+  \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
+  \\ qexists_tac`x`
+  \\ first_assum ACCEPT_TAC);
+
+val th75 = store_thm("th75", el 75 goals |> concl,
+  rpt strip_tac
+  \\ first_x_assum match_mp_tac
+  \\ first_x_assum(qspec_then`x`ACCEPT_TAC));
+
+val th76 = store_thm("th76", el 76 goals |> concl,
+  rpt strip_tac
+  \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
+  \\ TRY (disj1_tac >> first_assum ACCEPT_TAC)
+  \\ TRY (disj2_tac >> first_assum ACCEPT_TAC))
+
+val th77 = store_thm("th77", el 77 goals |> concl,
+   rpt strip_tac
+  \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
+  \\ first_x_assum(fn th => first_x_assum (assume_tac o MATCH_MP th))
+  \\ first_assum ACCEPT_TAC);
+
+val th78 = store_thm("th78", el 78 goals |> concl,
+  PURE_REWRITE_TAC[imp_F]
+  \\ disch_then ACCEPT_TAC)
+
+val th79 = store_thm("th79", el 79 goals |> concl,
+  PURE_REWRITE_TAC[not_or]
+  \\ strip_tac)
+
+val th80 = store_thm("th80", el 80 goals |> concl,
+  PURE_REWRITE_TAC[not_or]
+  \\ strip_tac)
+
+val not_imp = hd(amatch``¬(_ ⇒ _)``)
+
+val th81 = store_thm("th81", el 81 goals |> concl,
+  PURE_REWRITE_TAC[not_imp]
+  \\ strip_tac)
+
+val th82 = store_thm("th82", el 82 goals |> concl,
+  PURE_REWRITE_TAC[not_imp]
+  \\ strip_tac)
+
+val th83 = store_thm("th83", el 83 goals |> concl,
+  PURE_REWRITE_TAC[not_not]
+  \\ strip_tac)
+
+val th95 = store_thm("th95", el 95 goals |> concl,
+  MATCH_ACCEPT_TAC ex_unique_thm)
+
+val th96 = store_thm("th96", el 96 goals |> concl,
+  Q.ISPEC_THEN`A`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[not_or,imp_F,not_and,not_not,T_or,not_T,F_imp,F_or,T_imp]
+  \\ REFL_TAC)
+
+val th97 = store_thm("th97", el 97 goals |> concl,
+  Q.ISPEC_THEN`A`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[not_or,imp_F,not_and,not_not,T_or,not_T,F_imp,F_or,T_imp,not_F]
+  \\ REFL_TAC)
+
+val th98 = store_thm("th98", el 98 goals |> concl,
+  Q.ISPEC_THEN`q`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[if_T,T_or,not_T,or_T,or_F,T_and,F_or,and_T]
+  \\ Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,if_F,or_T,and_T]
+  \\ TRY REFL_TAC
+  \\ Q.ISPEC_THEN`r`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[not_T,F_or,F_and,not_F,T_or,T_and,and_T,and_i]
+  \\ REFL_TAC)
+
+val th99 = store_thm("th99", el 99 goals |> concl,
+  Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T]
+  \\ Q.ISPEC_THEN`q`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T,not_not]
+  \\ REFL_TAC)
+
+val th100 = store_thm("th100", el 100 goals |> concl,
+  Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T,not_and]
+  \\ REFL_TAC)
+
+val th101 = store_thm("th101", el 101 goals |> concl,
+  Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T,not_and,not_or]
+  \\ REFL_TAC)
+
+val th102 = store_thm("th102", el 102 goals |> concl,
+  Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T,not_imp]
+  \\ TRY REFL_TAC
+  \\ Q.ISPEC_THEN`q`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
+  \\ REFL_TAC)
+
+val th103 = store_thm("th103", el 103 goals |> concl,
+  Q.ISPEC_THEN`p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_iff,T_or,not_T,or_F,T_and,F_iff,F_or,not_F,or_T,and_T,not_not]
+  \\ REFL_TAC)
 
 val comma_11 = hd(amatch``Data_Pair_comma _ _ = Data_Pair_comma _ _``)
 val th104 = store_thm("th104", el 104 goals |> concl,

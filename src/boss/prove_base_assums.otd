@@ -28,7 +28,17 @@ delconst Number_Natural_even
 delconst Number_Natural_odd
 delconst Number_Natural_plus
 delconst Number_Natural_times
+delconst Number_Natural_minus
 delconst Number_Natural_power
+delconst Number_Natural_max
+delconst Number_Natural_min
+delconst Number_Natural_mod
+delconst Number_Natural_div
+delconst Number_Natural_less
+delconst Number_Natural_lesseq
+delconst Number_Natural_greater
+delconst Number_Natural_greatereq
+delconst Number_Natural_factorial
 deltype Data_Sum_sum
 delconst Data_Sum_isLeft
 delconst Data_Sum_isRight
