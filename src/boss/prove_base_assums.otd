@@ -1,3 +1,4 @@
+delconst Function_o
 deltype Data_List_list
 delconst Data_List_nil
 delconst Data_List_cons
@@ -35,6 +36,7 @@ delconst Data_Sum_left
 delconst Data_Sum_right
 delconst Data_Sum_destLeft
 delconst Data_Sum_destRight
+delconst Data_Sum_case_left_right
 deltype Data_Pair_prod
 delconst Data_Pair_comma
 delconst Data_Pair_fst

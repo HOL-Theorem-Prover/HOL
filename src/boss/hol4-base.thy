@@ -37,12 +37,12 @@ proofs {
   interpret: const "HOL4.bool.ONTO" as "Function.surjective"
   interpret: const "HOL4.bool.ARB" as "Data.Bool.arb"
 
-  interpret: const "HOL4.combin.o" as "Function.o"
-  interpret: const "HOL4.combin.K" as "Function.const"
-  interpret: const "HOL4.combin.I" as "Function.id"
-  interpret: const "HOL4.combin.C" as "Function.flip"
-  interpret: const "HOL4.combin.S" as "Function.Combinator.s"
-  interpret: const "HOL4.combin.W" as "Function.Combinator.w"
+  interpret: const "HOL4.prove_base_assums.Function_o" as "Function.o"
+  interpret: const "HOL4.prove_base_assums.Function_const" as "Function.const"
+  interpret: const "HOL4.prove_base_assums.Function_id" as "Function.id"
+  interpret: const "HOL4.prove_base_assums.Function_flip" as "Function.flip"
+  interpret: const "HOL4.prove_base_assums.Function_Combinator_s" as "Function.Combinator.s"
+  interpret: const "HOL4.prove_base_assums.Function_Combinator_w" as "Function.Combinator.w"
 
   interpret: const "HOL4.relation.TC" as "Relation.transitiveClosure"
   interpret: const "HOL4.relation.reflexive" as "Relation.reflexive"
@@ -72,6 +72,7 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Data_Sum_isRight" as "Data.Sum.isRight"
   interpret: const "HOL4.prove_base_assums.Data_Sum_destLeft" as "Data.Sum.destLeft"
   interpret: const "HOL4.prove_base_assums.Data_Sum_destRight" as "Data.Sum.destRight"
+  interpret: const "HOL4.prove_base_assums.Data_Sum_case_left_right" as "Data.Sum.case.left.right"
 
   interpret: type "HOL4.prove_base_assums.Data_Pair_prod" as "Data.Pair.*"
   interpret: const "HOL4.prove_base_assums.Data_Pair_comma" as "Data.Pair.,"
