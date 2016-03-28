@@ -15,8 +15,9 @@ struct
 open Systeml Holmake_tools
 infix forces_update_of
 
-structure Process = OS.Process
+structure FileSys = OS.FileSys
 structure Path = OS.Path
+structure Process = OS.Process
 
 
 val execname = Path.file (CommandLine.name())

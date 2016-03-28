@@ -8,8 +8,11 @@ structure Holmake =
 struct
 
 open Systeml Holmake_tools
+infix forces_update_of
+
 structure FileSys = OS.FileSys
 structure Path = OS.Path
+structure Process = OS.Process
 
 val default_holstate = Systeml.DEFAULT_STATE
 
@@ -44,14 +47,6 @@ val SYSTEML = Systeml.systeml
      iff
      f1 exists /\ (f2 exists ==> f1 is newer than f2)
 *)
-
-infix forces_update_of
-fun (f1 forces_update_of f2) = let
-  open Time
-in
-  OS.FileSys.access(f1, []) andalso
-  (not (OS.FileSys.access(f2, [])) orelse OS.FileSys.modTime f1 > OS.FileSys.modTime f2)
-end
 
 (**** get dependencies from file *)
 
