@@ -12,9 +12,6 @@
 structure Holmake =
 struct
 
-prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
-val _ = catch_interrupt true;
-
 open Systeml Holmake_tools
 infix forces_update_of
 

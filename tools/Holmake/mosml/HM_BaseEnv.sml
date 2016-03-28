@@ -3,6 +3,12 @@ struct
 
   open Systeml Holmake_tools
 
+  (* Moscow ML magic to make interrupts appear as the Interrupt exception *)
+  prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
+  val _ = catch_interrupt true;
+
+
+
   fun make_base_env (optv : HM_Cline.t) =
     let
       open Holmake_types
