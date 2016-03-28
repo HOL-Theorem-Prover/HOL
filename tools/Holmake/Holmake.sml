@@ -147,10 +147,6 @@ val quit_on_failure = #quit_on_failure coption_value
 val always_rebuild_deps = #rebuild_deps coption_value
 val cline_recursive = #recursive coption_value
 
-val cline_no_sigobj = false
-val fastfiles = []
-val user_overlay = NONE
-
 val cmdl_MOSMLDIR = #mosmldir option_value
 val nob2002 = #no_basis2002 option_value
 
@@ -275,9 +271,8 @@ val base_env = let
   open Holmake_types
   val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
   val alist = [
-    ("MOSML_INCLUDES", (if cline_no_sigobj then []
-                        else [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
-                                   \$(protect $(SIGOBJ))", LIT " "]) @
+    ("MOSML_INCLUDES", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
+                                   \$(protect $(SIGOBJ))", LIT " "] @
                        [VREF ("patsubst %,-I %,$(INCLUDES) $(PREINCLUDES)")]),
     ("HOLMOSMLC", [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES"] @
                   basis_string),
@@ -342,13 +337,10 @@ val _ =
   else
     ()
 
-val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
+val no_sigobj = hmake_no_sigobj
 val actual_overlay =
   if no_sigobj orelse no_overlay orelse hmake_no_overlay then NONE
-  else
-    case user_overlay of
-      NONE => SOME DEFAULT_OVERLAY
-    | SOME _ => user_overlay
+  else SOME DEFAULT_OVERLAY
 
 val std_include_flags = if no_sigobj then [] else [SIGOBJ]
 
@@ -634,8 +626,7 @@ in
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
       val objectfiles0 =
-          if allfast <> member s fastfiles
-          then ["fastbuild.uo", scriptuo]
+          if allfast then ["fastbuild.uo", scriptuo]
           else if quit_on_failure then [scriptuo]
           else ["holmakebuild.uo", scriptuo]
       val objectfiles =
