@@ -4,7 +4,7 @@ UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
 FRS = FunctionalRecordUpdate
 
-all: $(UOFILES) selftest.exe $(FRS).uo
+all: $(UOFILES) selftest.exe $(FRS).uo GetOpt.ui GetOpt.uo
 
 selftest.exe: selftest.uo Redblackset.uo
 	$(MOSMLC) -o $@ $<
@@ -12,4 +12,10 @@ selftest.exe: selftest.uo Redblackset.uo
 $(FRS).sml: $(dprot $(HOLDIR)/tools-poly/Holmake/$(FRS).sml)
 	$(CP) $< $@
 
-EXTRA_CLEANS = $(FRS).sml
+GetOpt.sig: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sig)
+	$(CP) $< $@
+
+GetOpt.sml: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sml)
+	$(CP) $< $@
+
+EXTRA_CLEANS = $(FRS).sml GetOpt.sig GetOpt.sml
