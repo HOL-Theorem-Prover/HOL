@@ -42,21 +42,6 @@ val SYSTEML = Systeml.systeml
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-(* does the file have an occurrence of `` *)
-fun has_dq filename = let
-  val istrm = TextIO.openIn filename
-  fun loop() =
-    case TextIO.input1 istrm of
-      NONE => false
-    | SOME #"`" => (case TextIO.input1 istrm of
-                      NONE => false
-                    | SOME #"`" => true
-                    | _ => loop())
-    | _ => loop()
-in
-  loop() before TextIO.closeIn istrm
-end
-
 fun variant str =  (* get an unused file name in the current directory *)
  if FileSys.access(str,[])
  then let fun vary i =
@@ -84,11 +69,6 @@ fun variant str =  (* get an unused file name in the current directory *)
 (** Command line parsing *)
 
 (*** list functions *)
-fun butlast0 _ [] = raise Fail "butlast - empty list"
-  | butlast0 acc [x] = List.rev acc
-  | butlast0 acc (h::t) = butlast0 (h::acc) t
-fun butlast l = butlast0 [] l
-
 fun member m [] = false
   | member m (x::xs) = if x = m then true else member m xs
 fun set_union s1 s2 =
@@ -104,9 +84,6 @@ fun delete m [] = []
 fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
-fun alltrue [] = true
-  | alltrue (x::xs) = x andalso alltrue xs
-fun I x = x
 
 (*** parse command line *)
 fun includify [] = []

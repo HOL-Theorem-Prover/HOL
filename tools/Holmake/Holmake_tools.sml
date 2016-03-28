@@ -249,6 +249,15 @@ fun fromFile f =
   | ART c => articleToString c ^ ".art"
   | Unhandled s => s
 
+fun fromFileNoSuf f =
+  case f of
+    UO c  => codeToString c
+  | UI c  => codeToString c
+  | SIG c => codeToString c
+  | SML c => codeToString c
+  | ART a => articleToString a
+  | Unhandled s => s
+
 fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 
 fun primary_dependent f =

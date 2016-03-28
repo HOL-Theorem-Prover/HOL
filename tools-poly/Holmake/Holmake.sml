@@ -39,20 +39,7 @@ val SYSTEML = Systeml.systeml
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
 
-fun fromFileNoSuf f =
-  case f of
-    UO c  => codeToString c
-  | UI c  => codeToString c
-  | SIG c => codeToString c
-  | SML c => codeToString c
-  | ART a => articleToString a
-  | Unhandled s => s
-
-
 (*** Construction of secondary dependencies *)
-
-fun mk_depfile_name s = fullPath [DEPDIR, s^".d"]
-
 
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
@@ -94,7 +81,6 @@ fun delete m [] = []
 fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
 fun remove_duplicates [] = []
   | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
-fun I x = x
 
 (*** parse command line *)
 fun parse_command_line list = let

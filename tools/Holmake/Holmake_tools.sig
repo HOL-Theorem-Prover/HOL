@@ -46,6 +46,7 @@ sig
   val codeToString : CodeType -> string
   val articleToString : ArticleType -> string
   val fromFile : File -> string
+  val fromFileNoSuf : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
