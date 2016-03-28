@@ -2,14 +2,14 @@ OPTIONS = NO_OVERLAY
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
-FRS = FunctionalRecordUpdate
+FRU = FunctionalRecordUpdate
 
-all: $(UOFILES) selftest.exe $(FRS).uo GetOpt.ui GetOpt.uo
+all: $(UOFILES) selftest.exe $(FRU).uo GetOpt.ui GetOpt.uo
 
 selftest.exe: selftest.uo Redblackset.uo
 	$(MOSMLC) -o $@ $<
 
-$(FRS).sml: $(dprot $(HOLDIR)/tools-poly/Holmake/$(FRS).sml)
+$(FRU).sml: $(dprot $(HOLDIR)/tools/Holmake/$(FRU).sml)
 	$(CP) $< $@
 
 GetOpt.sig: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sig)
@@ -18,4 +18,4 @@ GetOpt.sig: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sig)
 GetOpt.sml: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sml)
 	$(CP) $< $@
 
-EXTRA_CLEANS = $(FRS).sml GetOpt.sig GetOpt.sml
+EXTRA_CLEANS = $(FRU).sml GetOpt.sig GetOpt.sml
