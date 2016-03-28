@@ -12,6 +12,7 @@ show: "Data.Pair"
 show: "Data.List"
 show: "Function"
 show: "Relation"
+show: "Set"
 show: "Number.Natural"
 requires: base
 main {
@@ -44,16 +45,19 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Function_Combinator_s" as "Function.Combinator.s"
   interpret: const "HOL4.prove_base_assums.Function_Combinator_w" as "Function.Combinator.w"
 
-  interpret: const "HOL4.relation.TC" as "Relation.transitiveClosure"
-  interpret: const "HOL4.relation.reflexive" as "Relation.reflexive"
-  interpret: const "HOL4.relation.irreflexive" as "Relation.irreflexive"
-  interpret: const "HOL4.relation.transitive" as "Relation.transitive"
-  interpret: const "HOL4.relation.RUNION" as "Relation.union"
-  interpret: const "HOL4.relation.RINTER" as "Relation.intersect"
-  interpret: const "HOL4.relation.RUNIV" as "Relation.universe"
-  interpret: const "HOL4.relation.EMPTY_REL" as "Relation.empty"
-  interpret: const "HOL4.relation.RSUBSET" as "Relation.subrelation"
-  interpret: const "HOL4.relation.WF" as "Relation.wellFounded"
+  interpret: const "HOL4.prove_base_assums.Relation_transitiveClosure" as "Relation.transitiveClosure"
+  interpret: const "HOL4.prove_base_assums.Relation_reflexive" as "Relation.reflexive"
+  interpret: const "HOL4.prove_base_assums.Relation_irreflexive" as "Relation.irreflexive"
+  interpret: const "HOL4.prove_base_assums.Relation_transitive" as "Relation.transitive"
+  interpret: const "HOL4.prove_base_assums.Relation_union" as "Relation.union"
+  interpret: const "HOL4.prove_base_assums.Relation_intersect" as "Relation.intersect"
+  interpret: const "HOL4.prove_base_assums.Relation_universe" as "Relation.universe"
+  interpret: const "HOL4.prove_base_assums.Relation_empty" as "Relation.empty"
+  interpret: const "HOL4.prove_base_assums.Relation_subrelation" as "Relation.subrelation"
+  interpret: const "HOL4.prove_base_assums.Relation_wellFounded" as "Relation.wellFounded"
+  interpret: const "HOL4.prove_base_assums.Relation_toSet" as "Relation.toSet"
+  interpret: const "HOL4.prove_base_assums.Relation_fromSet" as "Relation.fromSet"
+  interpret: const "HOL4.prove_base_assums.Relation_bigIntersect" as "Relation.bigIntersect"
 
   interpret: type "HOL4.prove_base_assums.Data_Option_option" as "Data.Option.option"
   interpret: const "HOL4.prove_base_assums.Data_Option_some" as "Data.Option.some"
@@ -62,8 +66,8 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Data_Option_isSome" as "Data.Option.isSome"
   interpret: const "HOL4.prove_base_assums.Data_Option_map" as "Data.Option.map"
 
-  interpret: type "HOL4.one.one" as "Data.Unit.unit"
-  interpret: const "HOL4.one.one" as "Data.Unit.()"
+  interpret: type "HOL4.prove_base_assums.Data_Unit_unit" as "Data.Unit.unit"
+  interpret: const "HOL4.prove_base_assums.Data_Unit_unit" as "Data.Unit.()"
 
   interpret: type "HOL4.prove_base_assums.Data_Sum_sum" as "Data.Sum.+"
   interpret: const "HOL4.prove_base_assums.Data_Sum_left" as "Data.Sum.left"
@@ -100,6 +104,7 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Number_Natural_log" as "Number.Natural.log"
   interpret: const "HOL4.prove_base_assums.Number_Natural_power" as "Number.Natural.^"
   interpret: const "HOL4.prove_base_assums.Number_Natural_factorial" as "Number.Natural.factorial"
+  interpret: const "HOL4.prove_base_assums.Number_Natural_bit0" as "Number.Natural.bit0"
   interpret: const "HOL4.prove_base_assums.Number_Natural_bit1" as "Number.Natural.bit1"
 
   interpret: type "HOL4.prove_base_assums.Data_List_list" as "Data.List.list"
@@ -117,4 +122,11 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Data_List_filter" as "Data.List.filter"
   interpret: const "HOL4.prove_base_assums.Data_List_null" as "Data.List.null"
   interpret: const "HOL4.prove_base_assums.Data_List_last" as "Data.List.last"
+
+  interpret: type "HOL4.prove_base_assums.Set_set" as "Set.set"
+  interpret: const "HOL4.prove_base_assums.Set_empty" as "Set.{}"
+  interpret: const "HOL4.prove_base_assums.Set_member" as "Set.member"
+  interpret: const "HOL4.prove_base_assums.Set_fromPredicate" as "Set.fromPredicate"
+  interpret: const "HOL4.prove_base_assums.Set_union" as "Set.union"
+  interpret: const "HOL4.prove_base_assums.Set_intersect" as "Set.intersect"
 }

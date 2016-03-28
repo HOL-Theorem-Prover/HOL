@@ -1,4 +1,4 @@
-open HolKernel boolLib Opentheory lcsymtacs
+open HolKernel boolLib Opentheory lcsymtacs BasicProvers
 
 val Thy = "prove_base_assums";
 
@@ -163,7 +163,22 @@ val EQF_INTRO = SYM o (CONV_RULE(REWR_CONV(GSYM F_iff)))
 val not_and = hd (amatch ``¬(t1 ∧ t2) ⇔ _``)
 val not_not = hd (amatch ``¬(¬ _)``)
 val disj_comm = hd (amatch ``_ ∨ _ ⇔ _ ∨ _``)
-val th1 = store_thm("th1", el 1 goals |> concl, PURE_REWRITE_TAC[not_and,not_not,Once disj_comm,bool_cases])
+
+val T_or = hd(amatch``T ∨ t``)
+val or_T = hd(amatch``t ∨ T``)
+val F_or = hd(amatch``F ∨ t``)
+val or_F = hd(amatch``t ∨ F``)
+val or_i = hd(amatch``t ∨ t``)
+
+val truth = hd(amatch``T``);
+val not_F = hd(amatch``¬F``)
+
+val bool_cases = hd(amatch``(x = T) ∨ _``)
+
+val th1 = store_thm("th1", el 1 goals |> concl,
+  PURE_REWRITE_TAC[not_and,not_not]
+  \\ Q.SPEC_THEN`t`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[or_T,or_F,not_F])
 
 (* 2, 3, 4 are TYPE_DEFINITION *)
 
@@ -182,7 +197,7 @@ val th5 = store_thm("th5", el 5 goals |> concl,
   \\ rpt gen_tac \\ strip_tac
   \\ PURE_REWRITE_TAC[GSYM fun_eq_thm]
   \\ ho_match_mp_tac list_ind
-  \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ rpt VAR_EQ_TAC
   \\ conj_tac >- (first_assum MATCH_ACCEPT_TAC)
   \\ rpt strip_tac
   \\ rpt (last_x_assum(qspecl_then[`h`,`x`]mp_tac))
@@ -216,13 +231,8 @@ val th6 = store_thm("th6", el 6 goals |> concl,
   \\ rpt(first_x_assum(qspec_then`b`SUBST_ALL_TAC))
   \\ REFL_TAC)
 
-val bool_cases = hd(amatch``(x = T) ∨ _``)
-
 val if_T = hd(amatch``(if T then _ else _) = _``)
 val if_F = hd(amatch``(if F then _ else _) = _``)
-
-val truth = hd(amatch``T``);
-val not_F = hd(amatch``¬F``)
 
 val th7 = store_thm("th7", el 7 goals |> concl,
   rpt gen_tac
@@ -317,6 +327,7 @@ val th20 = store_thm("th20", el 20 goals |> concl,
   rpt gen_tac \\ MATCH_ACCEPT_TAC (CONJ (SPEC_ALL if_T) (SPEC_ALL if_F)))
 
 val forall_eq = hd(amatch``∀x. (x = t) ⇒ _``)
+val forall_eq2 = hd(amatch``∀x. (t = x) ⇒ _``)
 
 val ex_def = hd(amatch``$? = _``)
 val select_ax = hd(amatch ``p t ⇒ p ($@ p)``)
@@ -367,12 +378,6 @@ val th26 = store_thm("th26", el 26 goals |> concl,
 (* 27 TYPE_DEFINITION *)
 
 val not_T = hd(amatch``¬T``)
-
-val T_or = hd(amatch``T ∨ t``)
-val or_T = hd(amatch``t ∨ T``)
-val F_or = hd(amatch``F ∨ t``)
-val or_F = hd(amatch``t ∨ F``)
-val or_i = hd(amatch``t ∨ t``)
 
 val th28 = store_thm("th28", el 28 goals |> concl,
   rpt gen_tac
@@ -690,6 +695,162 @@ val th83 = store_thm("th83", el 83 goals |> concl,
   PURE_REWRITE_TAC[not_not]
   \\ strip_tac)
 
+val tc_def = hd(amatch``∀x. Relation_transitiveClosure x = _``)
+
+val bigIntersect_thm = hd(amatch``Relation_bigIntersect a b c ⇔ _``)
+
+val mem_fromPred = hd(amatch``Set_member r (Set_fromPredicate _)``)
+
+val subrelation_thm = hd(amatch``Relation_subrelation x s ⇔ ∀x y. _``)
+
+val transitive_thm = hd(amatch``Relation_transitive s ⇔ _``)
+
+val th84 = store_thm("th84", el 84 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm]
+  \\ PURE_REWRITE_TAC[tc_def,bigIntersect_thm,mem_fromPred]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ Ho_Rewrite.PURE_REWRITE_TAC[ex_imp]
+  \\ PURE_REWRITE_TAC[subrelation_thm,transitive_thm]
+  \\ PURE_ONCE_REWRITE_TAC[GSYM and_imp_intro]
+  \\ Ho_Rewrite.PURE_REWRITE_TAC[forall_eq2]
+  \\ rpt gen_tac
+  \\ PURE_REWRITE_TAC[GSYM and_imp_intro]
+  \\ REFL_TAC)
+
+(* 85 TYPE_DEFINITION *)
+
+val wellFounded_thm = hd(amatch``Relation_wellFounded r ⇔ ∀p. (∃x. _) ⇒ _``)
+
+val th86 = store_thm("th86", el 86 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm]
+  \\ PURE_REWRITE_TAC[wellFounded_thm]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ gen_tac \\ REFL_TAC)
+
+val less_thm = hd(amatch``Number_Natural_less _ _ ⇔ ∃x. _``)
+val less_refl = hd(amatch``Number_Natural_less x x``)
+val less_zero = hd(amatch``¬(Number_Natural_less _ (Number_Natural_zero))``)
+val less_suc_suc = hd(amatch``Number_Natural_less (Number_Natural_suc _) b``)
+
+val less_suc = hd(amatch``Number_Natural_less n (Number_Natural_suc n)``)
+val less_trans = hd(amatch``Number_Natural_less x y ∧ Number_Natural_less y z ⇒ _``)
+
+val num_cases = hd(amatch``(n = Number_Natural_zero) ∨ ∃n. _``)
+
+val num_ind = hd(amatch``_ ⇒ ∀n. P (n:Number_Natural_natural)``)
+
+val num_less_ind = hd(amatch``(∀x. _ ⇒ _) ⇒ ∀n. P (n:Number_Natural_natural)``)
+
+val not_less = hd(amatch``¬(Number_Natural_less _ _) ⇔ _``)
+
+val less_lesseq = hd(amatch``Number_Natural_less m (Number_Natural_suc n) ⇔  Number_Natural_lesseq m n``)
+
+val less_or_eq = hd(amatch``Number_Natural_lesseq _ _ ⇔ (Number_Natural_less _ _) ∨ _``)
+
+val trichotomy = hd(amatch``_ ∨ _ ∨ (_ = _)``)
+
+val th87 = store_thm("th87", el 87 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm]
+  \\ qx_genl_tac[`a`,`b`]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ match_mp_tac (PURE_REWRITE_RULE[and_imp_intro]th23)
+  \\ conj_tac \\ strip_tac
+  >- (
+    qexists_tac`λx. Number_Natural_less x b`
+    \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+    \\ reverse conj_tac
+    >- (
+      conj_tac >- (first_assum ACCEPT_TAC)
+      \\ MATCH_ACCEPT_TAC less_refl )
+    \\ gen_tac
+    \\ Q.ISPEC_THEN`b`FULL_STRUCT_CASES_TAC num_cases
+    >- (
+      PURE_REWRITE_TAC[EQF_INTRO (SPEC_ALL less_zero)]
+      \\ disch_then ACCEPT_TAC)
+    \\ PURE_REWRITE_TAC[less_suc_suc]
+    \\ strip_tac
+    \\ match_mp_tac less_trans
+    \\ qexists_tac`n'`
+    \\ conj_tac >- (first_assum ACCEPT_TAC)
+    \\ MATCH_ACCEPT_TAC less_suc )
+  \\ `∀n. Number_Natural_less n a ⇒ P n`
+  by (
+    qpat_assum`P a`mp_tac
+    \\ qid_spec_tac`a`
+    \\ ho_match_mp_tac num_ind
+    \\ conj_tac
+    >- (
+      PURE_REWRITE_TAC[EQF_INTRO (SPEC_ALL less_zero)]
+      \\ ntac 2 strip_tac
+      \\ CONV_TAC(REWR_CONV F_imp))
+    \\ rpt strip_tac
+    \\ `P a` by (first_x_assum(fn th => (first_x_assum match_mp_tac \\ first_assum ACCEPT_TAC)))
+    \\ `∀n. Number_Natural_less n a ⇒ P n` by (first_x_assum match_mp_tac \\ first_assum ACCEPT_TAC)
+    \\ first_x_assum(assume_tac o CONV_RULE(REWR_CONV less_lesseq))
+    \\ first_x_assum(strip_assume_tac o CONV_RULE(REWR_CONV less_or_eq))
+    >- (
+      first_x_assum match_mp_tac
+      \\ first_assum ACCEPT_TAC)
+    \\ VAR_EQ_TAC
+    \\ first_assum ACCEPT_TAC )
+  \\ qspecl_then[`a`,`b`]strip_assume_tac trichotomy
+  >- (
+    qspec_then`Number_Natural_less a b`(match_mp_tac o EQT_ELIM) F_imp
+    \\ qspec_then`¬(P b)`(match_mp_tac o UNDISCH) th50
+    \\ PURE_REWRITE_TAC[not_not]
+    \\ first_x_assum match_mp_tac
+    \\ first_assum ACCEPT_TAC )
+  \\ VAR_EQ_TAC
+  \\ first_x_assum(assume_tac o EQF_INTRO)
+  \\ first_x_assum(fn th => (first_x_assum(mp_tac o EQ_MP th)))
+  \\ PURE_REWRITE_TAC[F_imp])
+
+val th88 = store_thm("th88", el 88 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,transitive_thm]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ gen_tac \\ REFL_TAC)
+
+val th89 = store_thm("th89", el 89 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,subrelation_thm]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+(* 90 - pre is more specified in HOL than in OT *)
+
+val union_thm = hd(amatch``Relation_union r s = _``)
+val fromSet_thm = hd(amatch``Relation_fromSet _ _ _``)
+val mem_union = hd(amatch``Set_member _ (Set_union _ _) ⇔ _``)
+val mem_toSet = hd(amatch``Set_member _ (Relation_toSet _)``)
+
+val th91 = store_thm("th91", el 91 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,union_thm,fromSet_thm,mem_union,mem_toSet]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+val intersect_thm = hd(amatch``Relation_intersect x y = _``)
+
+val mem_inter = hd(amatch``Set_member _ (Set_intersect _ _)``)
+
+val th92 = store_thm("th92", el 92 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,intersect_thm,fromSet_thm,mem_inter,mem_toSet]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+val greatereq_thm = hd(amatch``Number_Natural_greatereq _ _``)
+val greater_thm = hd(amatch``Number_Natural_greater _ _ = _``)
+
+val th93 = store_thm("th93", el 93 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,greatereq_thm,less_or_eq,greater_thm]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac
+  \\ CONV_TAC(RAND_CONV(ONCE_DEPTH_CONV SYM_CONV))
+  \\ REFL_TAC)
+
+val th94 = store_thm("th94", el 94 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,less_or_eq]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
 val th95 = store_thm("th95", el 95 goals |> concl,
   MATCH_ACCEPT_TAC ex_unique_thm)
 
@@ -754,6 +915,110 @@ val th105 = store_thm("th105", el 105 goals |> concl,
 val left_11 = hd(amatch``Data_Sum_left _ = Data_Sum_left _``)
 val th106 = store_thm("th106", el 106 goals |> concl,
   MATCH_ACCEPT_TAC left_11)
+
+val min_thm = hd(amatch``Number_Natural_min _ _ = COND _ _ _``)
+
+val if_id = hd(amatch``if _ then x else x``)
+
+val th107 = store_thm("th107", el 107 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,min_thm,less_or_eq]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac
+  \\ qspec_then`x = x'`strip_assume_tac bool_cases
+  \\ first_assum SUBST1_TAC
+  \\ PURE_REWRITE_TAC[or_F,or_T,if_T]
+  \\ TRY REFL_TAC
+  \\ pop_assum(SUBST1_TAC o EQT_ELIM)
+  \\ PURE_REWRITE_TAC[if_id]
+  \\ REFL_TAC)
+
+val max_thm = hd(amatch``Number_Natural_max _ _ = COND _ _ _``)
+
+val th108 = store_thm("th108", el 108 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,max_thm,less_or_eq]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac
+  \\ qspec_then`x = x'`strip_assume_tac bool_cases
+  \\ first_assum SUBST1_TAC
+  \\ PURE_REWRITE_TAC[or_F,or_T,if_T]
+  \\ TRY REFL_TAC
+  \\ pop_assum(SUBST1_TAC o EQT_ELIM)
+  \\ PURE_REWRITE_TAC[if_id]
+  \\ REFL_TAC)
+
+val bit1_thm = hd(amatch``Number_Natural_bit1 _ = _``)
+val bit0_suc = hd(amatch``Number_Natural_bit0 _ = _ _``)
+val bit0_zero = hd(amatch``Number_Natural_bit0 Number_Natural_zero``)
+val plus_zero = hd(amatch``Number_Natural_plus Number_Natural_zero _``)
+val plus_suc = hd(amatch``Number_Natural_plus _ (Number_Natural_suc _)``)
+val plus_suc1 = hd(amatch``Number_Natural_plus (Number_Natural_suc _) _``)
+
+val th109 = store_thm("th109", el 109 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,bit1_thm,plus_suc]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ gen_tac
+  \\ AP_TERM_TAC
+  \\ qid_spec_tac`x`
+  \\ ho_match_mp_tac num_ind
+  \\ PURE_REWRITE_TAC[bit0_zero,bit0_suc,plus_zero,plus_suc1]
+  \\ conj_tac >- REFL_TAC
+  \\ gen_tac
+  \\ disch_then SUBST_ALL_TAC
+  \\ PURE_REWRITE_TAC[plus_suc]
+  \\ REFL_TAC)
+
+val irreflexive_thm = hd(amatch``Relation_irreflexive _ = _``)
+
+val th110 = store_thm("th110", el 110 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm, irreflexive_thm]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac
+  \\ REFL_TAC)
+
+val reflexive_thm = hd(amatch``Relation_reflexive _ = _``)
+
+val th111 = store_thm("th111", el 111 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm, reflexive_thm]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+val o_thm = hd(amatch``(Function_o _ _) _ = _``)
+
+val th112 = store_thm("th112", el 112 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,o_thm]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+val th113 = store_thm("th113", el 113 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,greater_thm]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+(* 114, 115 - LET, IN *)
+
+val skk = hd(amatch``Function_Combinator_s _ _ = Function_id``)
+
+val th116 = store_thm("th116", el 116 goals |> concl,
+  PURE_REWRITE_TAC[skk] \\ REFL_TAC)
+
+val one_thm = hd(amatch``_ = Data_Unit_unit``)
+
+val th117 = store_thm("th117", el 117 goals |> concl,
+  PURE_ONCE_REWRITE_TAC[one_thm] \\ REFL_TAC)
+
+val universe_thm = hd(amatch``Relation_universe _ _``)
+
+val th118 = store_thm("th118", el 118 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,EQT_INTRO(SPEC_ALL universe_thm)]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
+
+val empty_thm = hd(amatch``Relation_empty _ _``)
+
+val th119 = store_thm("th119", el 119 goals |> concl,
+  PURE_REWRITE_TAC[GSYM fun_eq_thm,EQF_INTRO (SPEC_ALL empty_thm)]
+  \\ CONV_TAC (DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC)
 
 val th120 = store_thm("th120", el 120 goals |> concl,
   REFL_TAC)
