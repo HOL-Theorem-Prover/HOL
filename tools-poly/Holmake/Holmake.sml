@@ -4,9 +4,6 @@
      SML libraries.
  ---------------------------------------------------------------------------*)
 
-(* Copyright University of Cambridge, Michael Norrish, 1999-2001 *)
-(* Author: Michael Norrish *)
-
 structure Holmake =
 struct
 

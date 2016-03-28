@@ -4,9 +4,6 @@
      SML libraries.
  ---------------------------------------------------------------------------*)
 
-(* Copyright University of Cambridge, Michael Norrish, 1999-2001 *)
-(* Author: Michael Norrish *)
-
 (*---------------------------------------------------------------------------*)
 (* Magic to ensure that interruptions (SIGINTs) are actually seen by the     *)
 (* linked executable as Interrupt exceptions                                 *)
