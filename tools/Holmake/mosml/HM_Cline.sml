@@ -68,12 +68,9 @@ fun mapd
 
 
 val option_descriptions =
-    mosml_option_descriptions @
     map (fn {desc,help,short,long} =>
             {desc = mapd desc, help = help, long = long, short = short})
-        HM_Core_Cline.core_option_descriptions
-
-
-
+        HM_Core_Cline.core_option_descriptions @
+    mosml_option_descriptions
 
 end

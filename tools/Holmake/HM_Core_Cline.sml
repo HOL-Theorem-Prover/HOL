@@ -3,39 +3,44 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate17 z
+  fun makeUpdateT z = makeUpdate18 z
 in
 fun updateT z = let
   fun from debug do_logging dontmakes fast help hmakefile holdir includes
-           interactive keep_going no_lastmaker_check no_overlay no_prereqs quiet
+           interactive keep_going no_hmakefile no_lastmaker_check no_overlay
+           no_prereqs quiet
            quit_on_failure rebuild_deps recursive =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, keep_going = keep_going,
+      no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun from' recursive rebuild_deps quit_on_failure quiet no_prereqs
-            no_overlay no_lastmaker_check keep_going interactive includes holdir
+            no_overlay no_lastmaker_check no_hmakefile keep_going interactive
+            includes holdir
             hmakefile help fast dontmakes do_logging debug =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, keep_going = keep_going,
+      no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
-            includes, interactive, keep_going, no_lastmaker_check, no_overlay,
-            no_prereqs,
+            includes, interactive, keep_going, no_hmakefile, no_lastmaker_check,
+            no_overlay, no_prereqs,
             quiet, quit_on_failure, rebuild_deps, recursive} =
     f debug do_logging dontmakes fast help hmakefile holdir includes
-      interactive keep_going no_lastmaker_check no_overlay no_prereqs quiet
+      interactive keep_going no_hmakefile no_lastmaker_check no_overlay
+      no_prereqs quiet
       quit_on_failure rebuild_deps recursive
 in
   makeUpdateT (from, from', to)
@@ -55,6 +60,7 @@ type t = {
   includes : string list,
   interactive : bool,
   keep_going : bool,
+  no_hmakefile : bool,
   no_lastmaker_check : bool,
   no_overlay : bool,
   no_prereqs : bool,
@@ -76,6 +82,7 @@ val default_core_options =
   includes = [],
   interactive = false,
   keep_going = false,
+  no_hmakefile = false,
   no_lastmaker_check = false,
   no_overlay = false,
   no_prereqs = false,
@@ -102,8 +109,6 @@ fun set_holdir s (wn, t) =
 val core_option_descriptions = [
   { help = "turn on diagnostic messages", long = ["debug"], short = "",
     desc = mkBoolT #debug},
-  { help = "enable time loggin", long = ["logging"], short = "",
-    desc = mkBoolT #do_logging },
   { help = "don't make this target", long = [], short = "d",
     desc = ReqArg (cons_dontmakes, "target") },
   { help = "fast build (ignore tactic failure)", long = ["fast"], short = "",
@@ -120,11 +125,15 @@ val core_option_descriptions = [
     desc = ReqArg (cons_includes, "directory") },
   { help = "try to build all targets", long = ["keep-going"], short = "k",
     desc = mkBoolT #keep_going },
+  { help = "enable time logging", long = ["logging"], short = "",
+    desc = mkBoolT #do_logging },
+  { help = "don't use a Holmakefile", long = ["no_hmakefile"], short = "",
+    desc = mkBoolT #no_hmakefile },
   { help = "don't check which Holmake was last used", long = ["nolmbc"],
     short = "", desc = mkBoolT #no_lastmaker_check },
   { help = "don't use Overlay.sml file", long = ["no_overlay"],
     short = "", desc = mkBoolT #no_overlay },
-  { help = "don't build recursively in INCLUDES directories",
+  { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
   { help = "be quieter with output", short = "", long = ["quiet"],
     desc = mkBoolT #quiet },

@@ -354,6 +354,11 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
+    compile [] "FunctionalRecordUpdate.sml";
+    compile [] "GetOpt.sig";
+    compile [] "GetOpt.sml";
+    compile [] "HM_Core_Cline.sig";
+    compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "holdeptool.sml";
@@ -374,8 +379,12 @@ val _ =
     compile [] "Holmake_tools.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    compile [] "Holmake.sml";
-    link{extras = [], tgt = bin, srcobj = "Holmake.uo"};
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "HM_Cline.sig";
+    compile ["-I", ".."] "HM_Cline.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "Holmake.sml";
+    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
