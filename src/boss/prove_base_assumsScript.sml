@@ -30,8 +30,8 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["HOL4","bool"],"DATATYPE") = {Thy="bool",Name="DATATYPE"}
   | const_name (["HOL4","bool"],"literal_case") = {Thy="bool",Name="literal_case"}
   | const_name (["HOL4","bool"],"IN") = {Thy="bool",Name="IN"}
-  | const_name (["Data","Bool"],"arb") = {Thy="bool",Name="ARB"}
-  | const_name (["Data","Bool"],"let") = {Thy="bool",Name="LET"}
+  | const_name (["HOL4","bool"],"ARB") = {Thy="bool",Name="ARB"}
+  | const_name (["HOL4","bool"],"LET") = {Thy="bool",Name="LET"}
   | const_name (["Data","Unit"],"()") = {Thy=Thy,Name="Data_Unit_unit"}
   | const_name (["Data","Pair"],",") = {Thy=Thy,Name="Data_Pair_comma"}
   | const_name (["Data","List"],"[]") = {Thy=Thy,Name="Data_List_nil"}

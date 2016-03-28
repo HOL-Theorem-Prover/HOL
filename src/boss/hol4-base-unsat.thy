@@ -28,10 +28,8 @@ main {
   interpret: const "HOL4.min.==>" as "Data.Bool.==>"
   interpret: const "HOL4.bool.~" as "Data.Bool.~"
   interpret: const "HOL4.bool.COND" as "Data.Bool.cond"
-  interpret: const "HOL4.bool.LET" as "Data.Bool.let"
   interpret: const "HOL4.bool.ONE_ONE" as "Function.injective"
   interpret: const "HOL4.bool.ONTO" as "Function.surjective"
-  interpret: const "HOL4.bool.ARB" as "Data.Bool.arb"
 
   interpret: const "HOL4.combin.o" as "Function.o"
   interpret: const "HOL4.combin.K" as "Function.const"
