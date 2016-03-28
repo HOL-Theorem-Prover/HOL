@@ -20,6 +20,8 @@ structure Path = OS.Path
 structure Process = OS.Process
 
 
+fun main() = let
+
 val execname = Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
@@ -730,7 +732,7 @@ in
 end
 
 
-val _ =
+in
   if show_usage then
     print (GetOpt.usageInfo {header = "Holmake [targets]",
                              options = HM_Cline.option_descriptions})
@@ -749,6 +751,9 @@ val _ =
       else exit failure
     end
 
+end (* main *)handle Interrupt => die_with "Holmake interrupted"
+                   | e => die_with ("Holmake failed with exception: " ^
+                                    exnMessage e)
 
 end (* struct *)
 

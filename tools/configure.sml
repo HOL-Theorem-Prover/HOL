@@ -387,7 +387,8 @@ val _ =
     compile ["-I", ".."] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml"] "Holmake.sml";
-    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "Holmake.uo"};
+    compile [] "mosml_Holmake.sml";
+    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
