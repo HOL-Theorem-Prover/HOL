@@ -382,6 +382,8 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "HM_BaseEnv.sig";
+    compile ["-I", ".."] "HM_BaseEnv.sml";
     compile ["-I", ".."] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml"] "Holmake.sml";

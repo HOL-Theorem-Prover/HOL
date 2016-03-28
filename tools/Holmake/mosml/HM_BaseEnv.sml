@@ -1,4 +1,4 @@
-structure HM_BaseEnv =
+structure HM_BaseEnv :> HM_BaseEnv =
 struct
 
   open Systeml Holmake_tools
