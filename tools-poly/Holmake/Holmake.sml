@@ -29,7 +29,6 @@ fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
 val HOLDIR0 = Systeml.HOLDIR;
 val POLYMLLIBDIR0 = Systeml.POLYMLLIBDIR;
 val DEPDIR = ".HOLMK";
-val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
@@ -64,23 +63,6 @@ end
 
 
 (** Command line parsing *)
-
-(*** list functions *)
-fun member m [] = false
-  | member m (x::xs) = if x = m then true else member m xs
-fun set_union s1 s2 =
-  case s1 of
-    [] => s2
-  | (e::es) => let
-      val s' = set_union es s2
-    in
-      if member e s' then s' else e::s'
-    end
-fun delete m [] = []
-  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
-fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
-fun remove_duplicates [] = []
-  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
 
 (*** parse command line *)
 fun parse_command_line list = let
@@ -774,11 +756,6 @@ fun get_explicit_dependencies (f : File) : File list =
     | NONE => []
 
 (** Build graph *)
-
-datatype buildcmds = Compile of File list
-                   | BuildScript of string * File list
-                   | BuildArticle of string * File list
-                   | ProcessArticle of string
 
 (*** Compilation of files *)
 val failed_script_cache = ref (Binaryset.empty String.compare)

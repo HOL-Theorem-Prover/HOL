@@ -32,25 +32,13 @@ fun die s = (warn s; Process.exit Process.failure)
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val MOSMLDIR0 = Systeml.MOSMLDIR;
 val DEPDIR = ".HOLMK";
-val DEFAULT_OVERLAY = "Overlay.ui";
 
 val SYSTEML = Systeml.systeml
 
 (*---------------------------------------------------------------------------
      Support for handling the preprocessing of files containing ``
  ---------------------------------------------------------------------------*)
-
-fun variant str =  (* get an unused file name in the current directory *)
- if FileSys.access(str,[])
- then let fun vary i =
-           let val s = str^Int.toString i
-           in if FileSys.access(s,[])  then vary (i+1) else s
-           end
-      in vary 0
-      end
- else str;
 
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
@@ -69,26 +57,7 @@ fun variant str =  (* get an unused file name in the current directory *)
 (** Command line parsing *)
 
 (*** list functions *)
-fun member m [] = false
-  | member m (x::xs) = if x = m then true else member m xs
-fun set_union s1 s2 =
-  case s1 of
-    [] => s2
-  | (e::es) => let
-      val s' = set_union es s2
-    in
-      if member e s' then s' else e::s'
-    end
-fun delete m [] = []
-  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
-fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
-fun remove_duplicates [] = []
-  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
-
 (*** parse command line *)
-fun includify [] = []
-  | includify (h::t) = "-I" :: h :: includify t
-
 fun apply_updates fs v = List.foldl (fn (f,v) => f (warn,v)) v fs
 
 val (cline_options, targets) = let
@@ -124,7 +93,6 @@ val quit_on_failure = #quit_on_failure coption_value
 val always_rebuild_deps = #rebuild_deps coption_value
 val cline_recursive = #recursive coption_value
 
-val cmdl_MOSMLDIR = #mosmldir option_value
 val nob2002 = #no_basis2002 option_value
 
 val nob2002 = nob2002 orelse Systeml.HAVE_BASIS2002
@@ -177,21 +145,7 @@ val _ = Process.atExit (fn () => ignore (finish_logging false))
    for a value compiled into the code.
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
-val MOSMLDIR =  case cmdl_MOSMLDIR of NONE => MOSMLDIR0 | SOME s => s
-val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
-
-val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
-fun has_unquoter() = FileSys.access(UNQUOTER, [FileSys.A_EXEC])
-fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
-
-fun compile debug args = let
-  val _ = if debug then print ("  with command "^
-                               spacify(MOSMLCOMP::args)^"\n")
-          else ()
-in
-  SYSTEML (MOSMLCOMP::args)
-end;
 
 (* turn a variable name into a list *)
 fun envlist env id = let
@@ -244,30 +198,7 @@ val hmakefile =
       if exists_readable s then s
       else die_with ("Couldn't read/find makefile: "^s)
 
-val base_env = let
-  open Holmake_types
-  val basis_string = if nob2002 then [] else [LIT " basis2002.ui"]
-  val alist = [
-    ("MOSML_INCLUDES", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,-I \
-                                   \$(protect $(SIGOBJ))", LIT " "] @
-                       [VREF ("patsubst %,-I %,$(INCLUDES) $(PREINCLUDES)")]),
-    ("HOLMOSMLC", [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES"] @
-                  basis_string),
-    ("HOLMOSMLC-C",
-     [VREF "MOSMLCOMP", LIT (" -q "), VREF "MOSML_INCLUDES", LIT " -c "] @
-     basis_string @ [LIT " "] @
-     [VREF ("if $(findstring NO_OVERLAY,$(OPTIONS)),,"^DEFAULT_OVERLAY)]),
-    ("MOSMLC",  [VREF "MOSMLCOMP", LIT " ", VREF "MOSML_INCLUDES"]),
-    ("MOSMLDIR", [LIT MOSMLDIR]),
-    ("MOSMLCOMP", [VREF "protect $(MOSMLDIR)/mosmlc"]),
-    ("MOSMLLEX", [VREF "protect $(MOSMLDIR)/mosmllex"]),
-    ("MOSMLYAC", [VREF "protect $(MOSMLDIR)/mosmlyac"])] @
-    (if Systeml.HAVE_BASIS2002 then [("HAVE_BASIS2002", [LIT "1"])] else [])
-in
-  List.foldl (fn (kv,acc) => Holmake_types.env_extend kv acc)
-             Holmake_types.base_environment
-             alist
-end
+val base_env = HM_BaseEnv.make_base_env option_value
 
 
 
@@ -388,11 +319,11 @@ fun run_extra_commands tgt commands =
 val _ = if (debug) then let
 in
   print ("HOLDIR = "^HOLDIR^"\n");
-  print ("MOSMLDIR = "^MOSMLDIR^"\n");
   print ("Targets = ["^String.concatWith ", " targets^"]\n");
   print ("Additional includes = [" ^
          String.concatWith ", " additional_includes ^ "]\n");
-  print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n")
+  print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n");
+  HM_BaseEnv.print_debug_info option_value
 end else ()
 
 (** Top level sketch of algorithm *)
@@ -524,124 +455,10 @@ fun get_explicit_dependencies (f : File) : File list =
 
 (** Build graph *)
 
-datatype buildcmds = MOSMLC
-                   | BuildScript of string
-
-(*** Pre-processing of files that use `` *)
-
-
 (*** Compilation of files *)
-val failed_script_cache = ref (Binaryset.empty String.compare)
 
-fun build_command (ii as {preincludes,includes}) c arg = let
-  val include_flags = includify (preincludes @ includes)
- (*  val include_flags = ["-I",SIGOBJ] @ additional_includes *)
-  val overlay_stringl =
-      case actual_overlay of
-        NONE => if not nob2002 then ["basis2002.ui"] else []
-      | SOME s => if Systeml.HAVE_BASIS2002 then [s] else ["basis2002.ui", s]
-  exception CompileFailed
-  exception FileNotFound
-in
-  case c of
-    MOSMLC => let
-      val file = fromFile arg
-      val _ = exists_readable file orelse
-              (print ("Wanted to compile "^file^", but it wasn't there\n");
-               raise FileNotFound)
-      val _ = print ("Compiling "^file^"\n")
-      open Process
-      val res =
-          if has_unquoter() then let
-              (* force to always use unquoter if present, so as to generate
-                 location pragmas. Must test for existence, for bootstrapping.
-              *)
-              val clone = variant file
-              val _ = FileSys.rename {old=file, new=clone}
-              fun revert() =
-                  if FileSys.access (clone, [FileSys.A_READ]) then
-                    (FileSys.remove file handle _ => ();
-                     FileSys.rename{old=clone, new=file})
-                  else ()
-            in
-              (if Process.isSuccess (unquote_to clone file)
-                  handle e => (revert();
-                               print ("Unquoting "^file^
-                                      " raised exception\n");
-                               raise CompileFailed)
-               then
-                 compile debug ("-q"::(include_flags @ ["-c"] @
-                                       overlay_stringl @ [file])) before
-                 revert()
-               else (print ("Unquoting "^file^" ran and failed\n");
-                     revert();
-                     raise CompileFailed))
-              handle CompileFailed => raise CompileFailed
-                   | e => (revert();
-                           print("Unable to compile: "^file^
-                                 " - raised exception "^exnName e^"\n");
-                           raise CompileFailed)
-            end
-          else compile debug ("-q"::(include_flags@ ("-c"::(overlay_stringl @
-                                                            [file]))))
-     in
-        Process.isSuccess res
-     end
-  | BuildScript s => let
-      val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
-              (print ("Not re-running "^s^"Script; believe it will fail\n");
-               raise CompileFailed)
-      val scriptsml_file = SML (Script s)
-      val scriptsml = fromFile scriptsml_file
-      val script   = s^"Script"
-      val scriptuo = script^".uo"
-      val scriptui = script^".ui"
-      open Process
-      (* first thing to do is to create the Script.uo file *)
-      val b = build_command ii MOSMLC scriptsml_file
-      val _ = b orelse raise CompileFailed
-      val _ = print ("Linking "^scriptuo^
-                     " to produce theory-builder executable\n")
-      val objectfiles0 =
-          if allfast then ["fastbuild.uo", scriptuo]
-          else if quit_on_failure then [scriptuo]
-          else ["holmakebuild.uo", scriptuo]
-      val objectfiles =
-          if interactive_flag then "holmake_interactive.uo" :: objectfiles0
-          else objectfiles0
-    in
-      if
-        isSuccess (compile debug (include_flags @ ["-o", script] @ objectfiles))
-      then let
-        val status = Systeml.mk_xable script
-        val _ = OS.Process.isSuccess status orelse
-                die_with ("Couldn't make script "^script^" executable")
-        val script' = xable_string script
-        val thysmlfile = s^"Theory.sml"
-        val thysigfile = s^"Theory.sig"
-        fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
-        val _ = app safedelete [thysmlfile, thysigfile]
-        val res2    = Systeml.systeml [fullPath [FileSys.getDir(), script']]
-        val _       = app safedelete [script', scriptuo, scriptui]
-        val ()      = if not (isSuccess res2) then
-                        failed_script_cache :=
-                        Binaryset.add(!failed_script_cache, s)
-                      else ()
-      in
-        isSuccess res2 andalso
-        (exists_readable thysmlfile orelse
-         (print ("Script file "^script'^" didn't produce "^thysmlfile^"; \n\
-                 \  maybe need export_theory() at end of "^scriptsml^"\n");
-         false)) andalso
-        (exists_readable thysigfile orelse
-         (print ("Script file "^script'^" didn't produce "^thysigfile^"; \n\
-                 \  maybe need export_theory() at end of "^scriptsml^"\n");
-         false))
-      end
-      else (print ("Failed to build script file, "^script^"\n"); false)
-    end handle CompileFailed => false
-             | FileNotFound => false
-end
+val build_command =
+    BuildCommand.make_build_command option_value hmake_options actual_overlay
 
 fun do_a_build_command incinfo target pdep secondaries =
   case (extra_commands (fromFile target)) of
@@ -651,10 +468,13 @@ fun do_a_build_command incinfo target pdep secondaries =
       val build_command = build_command incinfo
     in
       case target of
-         UO c           => build_command MOSMLC pdep
-       | UI c           => build_command MOSMLC pdep
-       | SML (Theory s) => build_command (BuildScript s) pdep
-       | SIG (Theory s) => build_command (BuildScript s) pdep
+         UO c           => build_command (Compile secondaries) pdep
+       | UI c           => build_command (Compile secondaries) pdep
+       | SML (Theory s) => build_command (BuildScript (s, secondaries)) pdep
+       | SIG (Theory s) => build_command (BuildScript (s, secondaries)) pdep
+       | ART (RawArticle s) =>
+           build_command (BuildArticle(s, secondaries)) pdep
+       | ART (ProcessedArticle s) => build_command (ProcessArticle s) pdep
        | x => raise Fail "Can't happen"
                     (* can't happen because do_a_build_command is only
                        called on targets that have primary_dependents,

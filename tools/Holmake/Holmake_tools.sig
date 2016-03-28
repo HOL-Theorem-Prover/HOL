@@ -18,6 +18,22 @@ sig
          | ART of ArticleType
          | Unhandled of string
 
+  (* file lists are dependencies *)
+  datatype buildcmds = Compile of File list
+                     | BuildScript of string * File list
+                     | BuildArticle of string * File list
+                     | ProcessArticle of string
+
+  (* simple list things *)
+  val member : ''a -> ''a list -> bool
+  val set_union : ''a list -> ''a list -> ''a list
+  val delete : ''a -> ''a list -> ''a list
+  val set_diff : ''a list -> ''a list -> ''a list
+  val remove_duplicates : ''a list -> ''a list
+
+  (* fixed constants *)
+  val DEFAULT_OVERLAY : string
+
   (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string

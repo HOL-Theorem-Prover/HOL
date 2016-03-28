@@ -382,6 +382,7 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml"] "Holmake.sml";
     link{extras = ["-I", "mosml"], tgt = bin, srcobj = "Holmake.uo"};
