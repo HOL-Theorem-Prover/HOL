@@ -11,8 +11,6 @@ open Systeml Holmake_tools
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 
-infix //
-fun p1 // p2 = OS.Path.concat(p1,p2)
 val default_holstate = Systeml.DEFAULT_STATE
 
 fun main () = let
