@@ -107,7 +107,7 @@ fun set_holdir s (wn, t) =
    else ();
    updateT t (U #holdir (SOME s)) $$)
 val core_option_descriptions = [
-  { help = "turn on diagnostic messages", long = ["debug"], short = "",
+  { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
     desc = mkBoolT #debug},
   { help = "don't make this target", long = [], short = "d",
     desc = ReqArg (cons_dontmakes, "target") },
