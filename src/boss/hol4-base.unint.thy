@@ -4,6 +4,7 @@ description: HOL4 Basic theories
 author: HOL4 people
 license: BSD
 main {
+  import: bool
   import: marker
   import: combin
   import: relation
@@ -26,14 +27,23 @@ main {
   import: rich-list
   import: indexed-lists
 }
+bool {
+  article: "bool_defs.ot.art"
+  interpret: const "HOL4.bool_defs.LET" as "HOL4.bool.LET"
+  interpret: const "HOL4.bool_defs.literal_case" as "HOL4.bool.literal_case"
+  interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
+  interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
+}
 marker {
   article: "../marker/marker.ot.art"
 }
 combin {
+  import: bool
   import: marker
   article: "../combin/combin.ot.art"
 }
 relation {
+  import: bool
   import: combin
   article: "../relation/relation.ot.art"
 }
@@ -41,6 +51,7 @@ one {
   article: "../one/one.ot.art"
 }
 pair {
+  import: bool
   import: relation
   article: "../pair/src/pair.ot.art"
 }
@@ -93,6 +104,7 @@ numpair {
   article: "../num/extra_theories/numpair.ot.art"
 }
 pred-set {
+  import: bool
   import: pair
   import: relation
   import: option
@@ -105,6 +117,7 @@ pred-set {
   article: "../pred_set/src/pred_set.ot.art"
 }
 ind-type {
+  import: bool
   import: arithmetic
   article: "../datatype/ind_type.ot.art"
 }
@@ -112,6 +125,7 @@ operator {
   article: "../list/src/operator.ot.art"
 }
 list {
+  import: bool
   import: arithmetic
   import: numeral
   import: option

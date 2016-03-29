@@ -37,7 +37,7 @@ OTInstall : hol4-base.thy prove_base_assums.ot.art
 hol4-base-info.txt : hol4-base.thy prove_base_assums.ot.art
 	opentheory info --theory $< > $@
 
-ARTS =\
+ARTS =bool_defs.ot.art\
   ../marker/marker.ot.art\
   ../combin/combin.ot.art\
   ../relation/relation.ot.art\
