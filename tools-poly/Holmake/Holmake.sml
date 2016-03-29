@@ -30,12 +30,6 @@ val DEPDIR = ".HOLMK";
 
 val SYSTEML = Systeml.systeml
 
-
-
-(*---------------------------------------------------------------------------
-     Support for handling the preprocessing of files containing ``
- ---------------------------------------------------------------------------*)
-
 (*** Construction of secondary dependencies *)
 
 (**** get_dependencies *)

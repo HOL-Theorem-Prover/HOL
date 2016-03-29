@@ -4,11 +4,6 @@
      SML libraries.
  ---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*)
-(* Magic to ensure that interruptions (SIGINTs) are actually seen by the     *)
-(* linked executable as Interrupt exceptions                                 *)
-(*---------------------------------------------------------------------------*)
-
 structure Holmake =
 struct
 
@@ -18,7 +13,6 @@ infix forces_update_of
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
-
 
 fun main() = let
 
@@ -32,10 +26,6 @@ val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
 
 val SYSTEML = Systeml.systeml
-
-(*---------------------------------------------------------------------------
-     Support for handling the preprocessing of files containing ``
- ---------------------------------------------------------------------------*)
 
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
