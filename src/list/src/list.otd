@@ -29,3 +29,4 @@ delconst NULL
 delconst EVERY
 delconst EXISTS
 delconst LAST
+skipthm datatype_list

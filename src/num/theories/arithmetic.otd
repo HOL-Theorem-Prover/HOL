@@ -15,3 +15,4 @@ delconst BIT1
 delconst NUMERAL
 delconst ZERO
 delconst FACT
+skipthm datatype_num

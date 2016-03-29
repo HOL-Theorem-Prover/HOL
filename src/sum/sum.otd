@@ -13,3 +13,4 @@ delproof sum_axiom
 delproof INL_11
 delproof INR_11
 delproof INR_neq_INL
+skipthm datatype_sum
