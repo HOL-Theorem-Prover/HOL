@@ -154,6 +154,13 @@ val core_option_descriptions = [
     desc = mkBoolT #recursive }
 ]
 
+fun descr_key (d:'a GetOpt.opt_descr) =
+  str (String.sub(#short d, 0))
+  handle Subscript => hd (#long d) handle Empty => ""
+
+fun descr_compare (d1, d2) = String.compare(descr_key d1, descr_key d2)
+
+fun sort_descriptions dl = Listsort.sort descr_compare dl
 
 
 end

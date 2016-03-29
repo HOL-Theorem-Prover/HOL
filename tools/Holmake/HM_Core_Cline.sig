@@ -28,4 +28,6 @@ val default_core_options : t
 
 val core_option_descriptions : ((string -> unit) * t -> t) GetOpt.opt_descr list
 
+val sort_descriptions : 'a GetOpt.opt_descr list -> 'a GetOpt.opt_descr list
+
 end
