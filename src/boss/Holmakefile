@@ -26,10 +26,16 @@ all: selftest.exe $(UOFILES)
 selftest.exe: selftest.uo bossLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
-.PHONY: OTInstallUnsat
+.PHONY: OTInstallUnsat OTInstall
 
 OTInstallUnsat : hol4-base-unsat.thy hol4-base-unsat.art
 	opentheory install --reinstall $<
+
+OTInstall : hol4-base.thy prove_base_assums.ot.art
+	opentheory install --reinstall $<
+
+hol4-base-info.txt : hol4-base.thy prove_base_assums.ot.art
+	opentheory info --theory $< > $@
 
 ARTS =\
   ../marker/marker.ot.art\
@@ -61,3 +67,5 @@ base-theorems.art:
 
 hol4-assums.art: hol4-assums.thy hol4-base-unsat.thy hol4-base-unsat.art
 	opentheory info --skip-definitions --assumptions -o $@ $<
+
+prove_base_assums.ot.art : base-theorems.art hol4-assums.art
