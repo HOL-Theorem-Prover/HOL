@@ -76,11 +76,9 @@ main {
   interpret: const "HOL4.num.0" as "Number.Natural.zero"
   interpret: const "HOL4.num.SUC" as "Number.Natural.suc"
   interpret: const "HOL4.prim_rec.<" as "Number.Natural.<"
-  interpret: const "HOL4.prim_rec.PRE" as "Number.Natural.pre"
 
   interpret: const "HOL4.arithmetic.*" as "Number.Natural.*"
   interpret: const "HOL4.arithmetic.+" as "Number.Natural.+"
-  interpret: const "HOL4.arithmetic.-" as "Number.Natural.-"
   interpret: const "HOL4.arithmetic.<=" as "Number.Natural.<="
   interpret: const "HOL4.arithmetic.>" as "Number.Natural.>"
   interpret: const "HOL4.arithmetic.>=" as "Number.Natural.>="

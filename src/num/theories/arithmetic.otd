@@ -1,6 +1,5 @@
 delconst *
 delconst +
-delconst -
 delconst <=
 delconst >
 delconst >=
