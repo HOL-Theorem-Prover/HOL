@@ -53,4 +53,6 @@ val TYPE_DEFINITION_thm = store_thm("TYPE_DEFINITION_thm",
   \\ Ho_Rewrite.PURE_REWRITE_TAC[NOT_EXISTS_THM]
   \\ disch_then(qspec_then`@x. r = rep x`(ACCEPT_TAC o GSYM)))
 
+val ARB_def = new_definition("ARB_def",mk_eq(mk_var("ARB",alpha),``@x. F``))
+
 val _ = export_theory();

@@ -30,6 +30,7 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["HOL4","bool"],"IN") = {Thy="bool",Name="IN"}
   | const_name (["HOL4","bool"],"literal_case") = {Thy="bool",Name="literal_case"}
   | const_name (["HOL4","bool"],"TYPE_DEFINITION") = {Thy="bool",Name="TYPE_DEFINITION"}
+  | const_name (["HOL4","bool"],"ARB") = {Thy="bool",Name="ARB"}
   | const_name (["Data","Unit"],"()") = {Thy=Thy,Name="Data_Unit_unit"}
   | const_name (["Data","Pair"],",") = {Thy=Thy,Name="Data_Pair_comma"}
   | const_name (["Data","List"],"[]") = {Thy=Thy,Name="Data_List_nil"}
@@ -134,6 +135,7 @@ val _ = add_def(concl LET_DEF)
 val _ = add_def(concl IN_DEF)
 val _ = add_def(concl literal_case_DEF)
 val _ = add_def(concl TYPE_DEFINITION)
+val _ = add_def(``ARB = @x. F``)
 
 val goalsNet = read_article "hol4-assums.art" reader;
 

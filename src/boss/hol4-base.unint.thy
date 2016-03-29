@@ -33,6 +33,7 @@ bool {
   interpret: const "HOL4.bool_defs.literal_case" as "HOL4.bool.literal_case"
   interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
   interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
+  interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
 }
 marker {
   article: "../marker/marker.ot.art"
@@ -75,6 +76,7 @@ prim-rec {
   article: "../num/theories/prim_rec.ot.art"
 }
 arithmetic {
+  import: bool
   import: marker
   import: pair
   import: prim-rec
@@ -82,6 +84,7 @@ arithmetic {
   article: "../num/theories/arithmetic.ot.art"
 }
 numeral {
+  import: bool
   import: arithmetic
   import: marker
   import: relation
@@ -138,6 +141,7 @@ list {
   article: "../list/src/list.ot.art"
 }
 rich-list {
+  import: bool
   import: list
   import: arithmetic
   import: combin
