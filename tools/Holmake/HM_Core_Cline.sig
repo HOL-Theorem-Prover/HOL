@@ -16,6 +16,7 @@ type t = {
   no_lastmaker_check : bool,
   no_overlay : bool,
   no_prereqs : bool,
+  opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,

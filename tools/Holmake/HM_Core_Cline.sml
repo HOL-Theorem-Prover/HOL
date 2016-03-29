@@ -3,12 +3,12 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate18 z
+  fun makeUpdateT z = makeUpdate19 z
 in
 fun updateT z = let
   fun from debug do_logging dontmakes fast help hmakefile holdir includes
            interactive keep_going no_hmakefile no_lastmaker_check no_overlay
-           no_prereqs quiet
+           no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
@@ -16,11 +16,11 @@ fun updateT z = let
       includes = includes, interactive = interactive, keep_going = keep_going,
       no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
-      no_prereqs = no_prereqs,
+      no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
-  fun from' recursive rebuild_deps quit_on_failure quiet no_prereqs
+  fun from' recursive rebuild_deps quit_on_failure quiet opentheory no_prereqs
             no_overlay no_lastmaker_check no_hmakefile keep_going interactive
             includes holdir
             hmakefile help fast dontmakes do_logging debug =
@@ -30,17 +30,17 @@ fun updateT z = let
       includes = includes, interactive = interactive, keep_going = keep_going,
       no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
-      no_prereqs = no_prereqs,
+      no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
             includes, interactive, keep_going, no_hmakefile, no_lastmaker_check,
-            no_overlay, no_prereqs,
+            no_overlay, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive} =
     f debug do_logging dontmakes fast help hmakefile holdir includes
       interactive keep_going no_hmakefile no_lastmaker_check no_overlay
-      no_prereqs quiet
+      no_prereqs opentheory quiet
       quit_on_failure rebuild_deps recursive
 in
   makeUpdateT (from, from', to)
@@ -64,13 +64,14 @@ type t = {
   no_lastmaker_check : bool,
   no_overlay : bool,
   no_prereqs : bool,
+  opentheory : string option,
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
   recursive : bool
 }
 
-val default_core_options =
+val default_core_options : t =
 {
   debug = false,
   do_logging = false,
@@ -86,6 +87,7 @@ val default_core_options =
   no_lastmaker_check = false,
   no_overlay = false,
   no_prereqs = false,
+  opentheory = NONE,
   quiet = false,
   quit_on_failure = false,
   rebuild_deps = false,
@@ -106,6 +108,11 @@ fun set_holdir s (wn, t) =
      wn "Multiple holdir specs; ignoring earlier spec"
    else ();
    updateT t (U #holdir (SOME s)) $$)
+fun set_openthy s (wn, t) =
+  (if isSome (#opentheory t) then
+     wn "Multiple opentheory specs; ignoring earlier spec"
+   else ();
+   updateT t (U #opentheory (SOME s)) $$)
 val core_option_descriptions = [
   { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
     desc = mkBoolT #debug},
@@ -135,6 +142,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_overlay },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
+  { help = "use file as opentheory logging .uo",
+    long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
   { help = "be quieter with output", short = "", long = ["quiet"],
     desc = mkBoolT #quiet },
   { help = "quit on failure", short = "", long = ["qof"],
