@@ -1,2 +1,3 @@
 delconst one
 deltype one
+skipthm one_TY_DEF

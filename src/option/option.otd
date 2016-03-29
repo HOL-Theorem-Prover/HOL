@@ -4,6 +4,7 @@ delconst IS_SOME
 delconst IS_NONE
 delconst OPTION_MAP
 deltype option
+skipthm option_TY_DEF
 skipthm NONE_DEF
 skipthm SOME_DEF
 delproof option_Axiom

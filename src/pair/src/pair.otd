@@ -1,4 +1,5 @@
 deltype prod
+skipthm prod_TY_DEF
 delconst FST
 delconst SND
 delconst ,
