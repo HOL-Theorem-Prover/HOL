@@ -135,7 +135,7 @@ val _ = add_def(concl LET_DEF)
 val _ = add_def(concl IN_DEF)
 val _ = add_def(concl literal_case_DEF)
 val _ = add_def(concl TYPE_DEFINITION)
-val _ = add_def(``ARB = @x. F``)
+val _ = add_def(concl (REFL``ARB``))
 
 val goalsNet = read_article "hol4-assums.art" reader;
 
