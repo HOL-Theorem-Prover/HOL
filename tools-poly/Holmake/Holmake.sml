@@ -1169,9 +1169,7 @@ in
       if isSome result then exit success
       else exit failure
     end
-end handle SML90.Interrupt => die_with "Holmake interrupted"
-         | e => die_with ("Holmake failed with exception: "^
-                          exnMessage e)
+end
 
 end (* struct *)
 

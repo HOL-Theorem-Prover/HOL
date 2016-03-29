@@ -751,9 +751,7 @@ in
       else exit failure
     end
 
-end (* main *)handle Interrupt => die_with "Holmake interrupted"
-                   | e => die_with ("Holmake failed with exception: " ^
-                                    exnMessage e)
+end (* main *)
 
 end (* struct *)
 

@@ -29,4 +29,10 @@ val _ = useC "ReadHMF";
 
 val _ = use "Holmake.sml";
 
-fun main() = Holmake.main();
+val die_with = Holmake.die_with
+
+fun main() =
+  Holmake.main()
+  handle SML90.Interrupt => die_with "Holmake interrupted"
+       | e => die_with ("Holmake failed with exception: "^
+                          exnMessage e)
