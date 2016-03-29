@@ -27,7 +27,7 @@ selftest.exe: selftest.uo bossLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
 installed-unsat.txt : hol4-base-unsat.thy hol4-base-unsat.art
-	opentheory install --reinstall $<
+	opentheory install --reinstall --auto-uninstall $<
 	touch $@
 
 installed.txt : hol4-base.thy prove_base_assums.ot.art
