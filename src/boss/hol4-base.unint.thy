@@ -20,6 +20,11 @@ main {
   import: basic-size
   import: while
   import: numpair
+  import: divides
+  import: logroot
+  import: gcd
+  import: bit
+  import: numeral-bit
   import: pred-set
   import: ind-type
   import: operator
@@ -104,7 +109,59 @@ numpair {
   import: relation
   import: marker
   import: prim-rec
+  import: relation
   article: "../num/extra_theories/numpair.ot.art"
+}
+divides {
+  import: bool
+  import: num
+  import: arithmetic
+  import: numeral
+  import: while
+  article: "../num/extra_theories/divides.ot.art"
+}
+logroot {
+  import: bool
+  import: combin
+  import: num
+  import: arithmetic
+  import: numeral
+  import: while
+  import: pair
+  article: "../num/extra_theories/logroot.ot.art"
+}
+gcd {
+  import: bool
+  import: combin
+  import: num
+  import: arithmetic
+  import: numeral
+  import: divides
+  import: pair
+  import: relation
+  article: "../num/extra_theories/gcd.ot.art"
+}
+bit {
+  import: bool
+  import: num
+  import: combin
+  import: arithmetic
+  import: numeral
+  import: while
+  import: logroot
+  article: "../num/extra_theories/bit.ot.art"
+}
+numeral-bit {
+  import: bool
+  import: num
+  import: combin
+  import: arithmetic
+  import: numeral
+  import: while
+  import: pair
+  import: logroot
+  import: bit
+  article: "../num/extra_theories/numeral_bit.ot.art"
 }
 pred-set {
   import: bool

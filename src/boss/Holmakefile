@@ -55,6 +55,11 @@ ARTS =bool_defs.ot.art\
   ../num/theories/basicSize.ot.art\
   ../num/theories/while.ot.art\
   ../num/extra_theories/numpair.ot.art\
+  ../num/extra_theories/divides.ot.art\
+  ../num/extra_theories/logroot.ot.art\
+  ../num/extra_theories/gcd.ot.art\
+  ../num/extra_theories/bit.ot.art\
+  ../num/extra_theories/numeral_bit.ot.art\
   ../datatype/ind_type.ot.art\
   ../pred_set/src/pred_set.ot.art\
   ../list/src/operator.ot.art\
