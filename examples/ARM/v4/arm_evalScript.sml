@@ -19,9 +19,8 @@ val _ = new_theory "arm_eval";
 
 (* ------------------------------------------------------------------------- *)
 
-infix \\ << >>
+infix << >>
 
-val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
@@ -100,8 +99,8 @@ val READ_TO_READ6 = store_thm("READ_TO_READ6",
   `!r m n d. (REG_READ (REG_WRITE r usr 15w (d - 8w)) m n =
               REG_READ6 (REG_WRITE r usr 15w d) m n)`,
   RW_TAC (std_ss++SIZES_ss) [REG_READ_def,REG_READ6_def,FETCH_PC_def,
-         REG_WRITE_def,UPDATE_def,WORD_SUB_ADD,mode_reg2num_15,r15]
-    \\ PROVE_TAC [num2register_11,mode_reg2num_lt,not_pc,DECIDE ``15 < 31``]);
+         REG_WRITE_def,UPDATE_def,WORD_SUB_ADD,mode_reg2num_15]
+  \\ PROVE_TAC [r15,num2register_11,mode_reg2num_lt,not_pc,DECIDE ``15 < 31``]);
 
 val TO_WRITE_READ6 = store_thm("TO_WRITE_READ6",
   `(!r. FETCH_PC r = REG_READ6 r usr 15w) /\
@@ -109,7 +108,7 @@ val TO_WRITE_READ6 = store_thm("TO_WRITE_READ6",
    (!r m d. REG_WRITE r m 15w d = REG_WRITE r usr 15w d) /\
    (!r m. REG_READ6 r m 15w = REG_READ6 r usr 15w)`,
   RW_TAC std_ss [INC_PC_def,REG_READ6_def,REG_WRITE_def,REG_READ_def,
-    FETCH_PC_def,mode_reg2num_15,r15]);
+    FETCH_PC_def,mode_reg2num_15]);
 
 val REG_WRITE_WRITE = store_thm("REG_WRITE_WRITE",
   `!r m n d1 d2. REG_WRITE (REG_WRITE r m n d1) m n d2 = REG_WRITE r m n d2`,
@@ -139,8 +138,8 @@ val REG_READ_WRITE_THM = prove(
       if n1 = n2 then d else REG_READ6 r m n2) /\
     !r m n d. (REG_WRITE r m n (REG_READ6 r m n) = r)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    UPDATE_APPLY_IMP_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [UPDATE_def]
-    \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
+    UPDATE_APPLY_IMP_ID,mode_reg2num_15] \\ SIMP_TAC std_ss [UPDATE_def]
+    \\ PROVE_TAC [r15,not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
 val REG_READ_WRITE_PC_THM =
@@ -154,8 +153,8 @@ val REG_READ_WRITE_NEQ = store_thm("REG_READ_WRITE_NEQ",
   `!r m1 m2 n1 n2 d. ~(n1 = n2) ==>
       (REG_READ6 (REG_WRITE r m1 n1 d) m2 n2 = REG_READ6 r m2 n2)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    UPDATE_APPLY_IMP_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [UPDATE_def]
-    \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
+    UPDATE_APPLY_IMP_ID,mode_reg2num_15] \\ SIMP_TAC std_ss [UPDATE_def]
+    \\ PROVE_TAC [r15,not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
 val REG_READ_READ6 = store_thm("REG_READ_READ6",
@@ -227,8 +226,9 @@ val lem2 = prove(
   `!r m m2 n d. ~(n = 15w) ==>
      (REG_READ (REG_WRITE r m n d) m2 15w = REG_READ r m2 15w)`,
   RW_TAC std_ss [REG_READ_def,REG_WRITE_def,UPDATE_def,
-         r15,mode_reg2num_lt,num2register_11]
-    \\ METIS_TAC [mode_reg2num_15,not_reg_eq]);
+         mode_reg2num_lt,num2register_11]
+    \\ PROVE_TAC [r15,mode_reg2num_lt,armTheory.num2register_11,
+                  mode_reg2num_15,not_reg_eq]);
 
 val REG_READ_WRITEL_PC = store_thm("REG_READ_WRITEL_PC",
   `!r m m2 a b l. REG_READ (REG_WRITEL r m ((a,b)::l)) m2 15w =
@@ -239,8 +239,9 @@ val REG_READ_WRITEL_PC2 = store_thm("REG_READ_WRITEL_PC2",
   `!r m a b l. (REG_WRITEL r m ((a,b)::l)) r15 =
        if a = 15w then b else (REG_WRITEL r m l) r15`,
   RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_def,UPDATE_def,
-         r15,mode_reg2num_lt,num2register_11]
-    \\ METIS_TAC [mode_reg2num_15,not_reg_eq]);
+         mode_reg2num_lt,num2register_11]
+    \\ PROVE_TAC [r15,mode_reg2num_lt,armTheory.num2register_11,
+                  mode_reg2num_15,not_reg_eq]);
 
 (* ------------------------------------------------------------------------- *)
 

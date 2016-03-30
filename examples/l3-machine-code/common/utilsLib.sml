@@ -876,53 +876,8 @@ in
 end
 
 local
-   fun fetch1 thy name =
-      case Lib.total (DB.fetch thy) name of
-         SOME thm => [thm]
-       | NONE => []
-   val err = ERR "enum_eq_CONV" "Equality not between constants"
-   fun add_datatype cmp ty =
-      case Type.dest_thy_type ty of
-         {Thy = thy, Args = [], Tyop = name} =>
-         let
-            val ftch = fetch1 thy
-            val ty2num = ftch (name ^ "2num_thm")
-            val num2ty = ftch ("num2" ^ name ^ "_thm")
-            val fupds = TypeBase.updates_of ty
-            fun add r = computeLib.add_thms (r @ ty2num @ num2ty @ fupds) cmp
-         in
-            (case Lib.total TypeBase.case_const_of ty of
-                SOME tm => computeLib.set_skip cmp tm NONE
-              | NONE => ())
-            ; case TypeBase.simpls_of ty of
-                 {convs = [], rewrs = r} => add r
-               | {convs = {name = n, ...} :: _, rewrs = r} =>
-                 ( add r
-                 ; if String.isSuffix "const_eq_CONV" n (* enumerated *)
-                      then case (ftch (name ^ "_EQ_" ^ name), ty2num) of
-                              ([eq_elim_thm], [_]) =>
-                              let
-                                 val cnv =
-                                    Conv.REWR_CONV eq_elim_thm
-                                    THENC PURE_REWRITE_CONV ty2num
-                                    THENC reduceLib.REDUCE_CONV
-                                 fun ecnv tm =
-                                    let
-                                       val (l, r) = boolSyntax.dest_eq tm
-                                       val _ = Term.is_const l
-                                               andalso Term.is_const r
-                                               orelse raise err
-                                    in
-                                       cnv tm
-                                    end
-                              in
-                                 computeLib.add_conv
-                                    (boolSyntax.equality, 2, ecnv) cmp
-                              end
-                            | _ => ()
-                   else ())
-         end
-       | _ => computeLib.add_thms (#rewrs (TypeBase.simpls_of ty)) cmp
+   fun add_datatype cmp =
+     computeLib.add_datatype_info cmp o Option.valOf o TypeBase.fetch
 in
    fun add_datatypes l cmp = List.app (add_datatype cmp) l
 end
@@ -966,8 +921,8 @@ in
 end
 
 fun add_theory (x as (_, i)) cmp =
-   (add_datatypes (theory_types i) cmp
-    ; computeLib.add_thms (theory_rewrites x) cmp)
+   ( add_datatypes (theory_types i) cmp
+   ; computeLib.add_thms (theory_rewrites x) cmp)
 
 fun add_to_the_compset x = computeLib.add_funs (theory_rewrites x)
 
