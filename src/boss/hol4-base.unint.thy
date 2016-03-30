@@ -31,6 +31,7 @@ main {
   import: list
   import: rich-list
   import: indexed-lists
+  import: numposrep
 }
 bool {
   article: "bool_defs.ot.art"
@@ -209,4 +210,14 @@ indexed-lists {
   import: list
   import: relation
   article: "../list/src/indexedLists.ot.art"
+}
+numposrep {
+  import: num
+  import: arithmetic
+  import: list
+  import: bit
+  import: numeral
+  import: marker
+  import: relation
+  article: "../list/src/numposrep.ot.art"
 }
