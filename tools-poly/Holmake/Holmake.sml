@@ -21,11 +21,10 @@ fun main () = let
 val execname = OS.Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
-
+fun die s = (warn s; Process.exit Process.failure)
 
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
-val POLYMLLIBDIR0 = Systeml.POLYMLLIBDIR;
 val DEPDIR = ".HOLMK";
 
 val SYSTEML = Systeml.systeml
@@ -49,129 +48,46 @@ val SYSTEML = Systeml.systeml
 (** Command line parsing *)
 
 (*** parse command line *)
-fun parse_command_line list = let
-  fun find_pairs0 tag rem inc [] = (List.rev rem, List.rev inc)
-    | find_pairs0 tag rem inc [x] = (List.rev (x::rem), List.rev inc)
-    | find_pairs0 tag rem inc (x::(ys as (y::xs))) = let
-      in
-        if x = tag then
-          find_pairs0 tag rem (y::inc) xs
-        else
-          find_pairs0 tag (x::rem) inc ys
-      end
-  fun find_pairs tag = find_pairs0 tag [] []
-  fun find_toggle tag [] = ([], false)
-    | find_toggle tag (x::xs) = let
-      in
-        if x = tag then (delete tag xs, true)
-        else let val (xs', b) = find_toggle tag xs in
-          (x::xs', b)
-        end
-      end
-  fun find_alternative_tags [] input = (input, false)
-    | find_alternative_tags (t1::ts) input = let
-        val (rem0, b0) = find_toggle t1 input
-        val (rem1, b1) = find_alternative_tags ts rem0
-      in
-        (rem1, b0 orelse b1)
-      end
+fun apply_updates fs v = List.foldl (fn (f,v) => f (warn,v)) v fs
 
-  fun find_one_pairtag tag nov somev list = let
-    val (rem, vals) = find_pairs tag list
-  in
-    case vals of
-      [] => (rem, nov)
-    | [x] => (rem, somev x)
-    | _ => let
-        open TextIO
-      in
-        output(stdErr,"Ignoring all but last "^tag^" spec.\n");
-        flushOut stdErr;
-        (rem, somev (List.last vals))
-      end
-  end
-
-  val (rem, includes) = find_pairs "-I" list
-  val (rem, dontmakes) = find_pairs "-d" rem
-  val (rem, debug) = find_toggle "--d" rem
-  val (rem, help) = find_alternative_tags  ["--help", "-h"] rem
-  val (rem, rebuild_deps) = find_toggle "--rebuild_deps" rem
-  val (rem, cmdl_HOLDIRs) = find_pairs "--holdir" rem
-  val (rem, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem
-  val (rem, allfast) = find_toggle "--fast" rem
-  val (rem, fastfiles) = find_pairs "-f" rem
-  val (rem, qofp) = find_toggle "--qof" rem
-  val (rem, ot) = find_one_pairtag "--ot" NONE SOME rem
-  val (rem, no_hmakefile) = find_toggle "--no_holmakefile" rem
-  val (rem, no_prereqs) = find_toggle "--no_prereqs" rem
-  val (rem, recursive) = find_toggle "-r" rem
-  val (rem, user_hmakefile) =
-    find_one_pairtag "--holmakefile" NONE SOME rem
-  val (rem, no_overlay) = find_toggle "--no_overlay" rem
-  val (rem, user_overlay) = find_one_pairtag "--overlay" NONE SOME rem
-  val (rem, cmdl_POLYMLLIBDIRs) = find_pairs "--polymllibdir" rem
-  val (rem, interactive_flag) = find_alternative_tags ["--interactive", "-i"]
-                                rem
-  val (rem, keep_going_flag) = find_alternative_tags ["-k", "--keep-going"] rem
-  val (rem, quiet_flag) = find_toggle "--quiet" rem
-  val (rem, do_logging_flag) = find_toggle "--logging" rem
-
-  val (rem, POLY) = find_one_pairtag "--poly" Systeml.POLY (fn x => x) rem
-  val (rem, cmdl_HOLSTATE) = find_one_pairtag "--holstate" NONE SOME rem
-  val (rem, polynothol) = find_toggle "--poly_not_hol" rem
-  val (rem, no_lastmakercheck) = find_toggle "--nolmbc" rem
+val (cline_options, targets) = let
+  open GetOpt
 in
-  {targets=rem, debug=debug, show_usage=help,
-   always_rebuild_deps=rebuild_deps,
-   additional_includes=includes,
-   dontmakes=dontmakes, no_sigobj = no_sigobj,
-   quit_on_failure = qofp,
-   no_prereqs = no_prereqs,
-   cline_recursive = recursive,
-   opentheory = ot, no_hmakefile = no_hmakefile,
-   allfast = allfast, fastfiles = fastfiles,
-   user_hmakefile = user_hmakefile,
-   no_overlay = no_overlay,
-   no_lastmakercheck = no_lastmakercheck,
-   user_overlay = user_overlay,
-   interactive_flag = interactive_flag,
-   cmdl_HOLDIR =
-     case cmdl_HOLDIRs of
-       []  => NONE
-     | [x] => SOME x
-     |  _  => let
-       in
-         warn "Ignoring all but last --holdir spec.";
-         SOME (List.last cmdl_HOLDIRs)
-       end,
-   cmdl_POLYMLLIBDIR =
-     case cmdl_POLYMLLIBDIRs of
-       [] => NONE
-     | [x] => SOME x
-     | _ => let
-       in
-         warn "Ignoring all but last --polymllibdir spec.";
-         SOME (List.last cmdl_POLYMLLIBDIRs)
-       end,
-   POLY = POLY,
-   cmdl_HOLSTATE = cmdl_HOLSTATE,
-   polynothol = polynothol,
-   keep_going_flag = keep_going_flag,
-   quiet_flag = quiet_flag,
-   do_logging_flag = do_logging_flag}
+  getOpt {argOrder = RequireOrder,
+          options = HM_Cline.option_descriptions,
+          errFn = die}
+         (CommandLine.arguments())
 end
 
+val option_value = apply_updates cline_options HM_Cline.default_options
 
 (* parameters which vary from run to run according to the command-line *)
-val {targets, debug, dontmakes, show_usage, allfast, fastfiles,
-     always_rebuild_deps, interactive_flag, opentheory,
-     additional_includes = cline_additional_includes,
-     cmdl_HOLDIR, cmdl_HOLSTATE, cmdl_POLYMLLIBDIR, POLY, polynothol,
-     no_sigobj = cline_no_sigobj, no_prereqs,
-     quit_on_failure, no_hmakefile, user_hmakefile, no_overlay,
-     no_lastmakercheck, user_overlay, keep_going_flag, quiet_flag,
-     do_logging_flag, cline_recursive} =
-  parse_command_line (CommandLine.arguments())
+val coption_value = #core option_value
+
+val debug = #debug coption_value
+val do_logging_flag = #do_logging coption_value
+val dontmakes = #dontmakes coption_value
+val allfast = #fast coption_value
+val show_usage = #help coption_value
+val user_hmakefile = #hmakefile coption_value
+val cmdl_HOLDIR = #holdir coption_value
+val interactive_flag = #interactive coption_value
+val cline_additional_includes = #includes coption_value
+val keep_going_flag = #keep_going coption_value
+val no_hmakefile = #no_hmakefile coption_value
+val no_lastmakercheck = #no_lastmaker_check coption_value
+val no_overlay = #no_overlay coption_value
+val no_prereqs = #no_prereqs coption_value
+val quiet_flag = #quiet coption_value
+val quit_on_failure = #quit_on_failure coption_value
+val always_rebuild_deps = #rebuild_deps coption_value
+val cline_recursive = #recursive coption_value
+val opentheory = #opentheory coption_value
+
+val cmdl_POLYMLLIBDIR = #polymllibdir option_value
+val POLY = case #poly option_value of NONE => Systeml.POLY | SOME s => s
+val cmdl_HOLSTATE = #holstate option_value
+val polynothol = #poly_not_hol option_value
 
 val (outputfunctions as {warn,info,tgtfatal,diag}) =
     output_functions {quiet_flag = quiet_flag, debug = debug}
@@ -220,6 +136,7 @@ val _ = OS.Process.atExit (fn () => ignore (finish_logging false))
 (* find HOLDIR and POLYMLDIR by first looking at command-line, then looking
    for a value compiled into the code.
 *)
+val POLYMLLIBDIR0 = Systeml.POLYMLLIBDIR;
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val POLYMLLIBDIR =  case cmdl_POLYMLLIBDIR of NONE => POLYMLLIBDIR0 | SOME s => s
 val SIGOBJ    = normPath(OS.Path.concat(HOLDIR, "sigobj"));
@@ -291,10 +208,8 @@ val base_env = let
   open Holmake_types
   val alist = [
     ("ISIGOBJ", [VREF "if $(findstring NO_SIGOBJ,$(OPTIONS)),,$(SIGOBJ)"]),
-    ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,"^
-                              (if cline_no_sigobj then ""
-                               else "$(ISIGOBJ)") ^
-                              " $(INCLUDES) $(PREINCLUDES)")]),
+    ("MOSML_INCLUDES", [VREF ("patsubst %,-I %,$(ISIGOBJ) \
+                              \ $(INCLUDES) $(PREINCLUDES)")]),
     ("HOLMOSMLC", [VREF "MOSMLCOMP"]),
     ("HOLMOSMLC-C", [VREF "MOSMLCOMP", LIT " -c "]),
     ("MOSMLC",  [VREF "MOSMLCOMP"]),
@@ -362,13 +277,10 @@ val _ =
   else
     ()
 
-val no_sigobj = cline_no_sigobj orelse hmake_no_sigobj
+val no_sigobj = hmake_no_sigobj
 val actual_overlay =
   if no_sigobj orelse no_overlay orelse hmake_no_overlay then NONE
-  else
-    case user_overlay of
-      NONE => SOME DEFAULT_OVERLAY
-    | SOME _ => user_overlay
+  else SOME DEFAULT_OVERLAY
 
 val std_include_flags = if no_sigobj then [] else [SIGOBJ]
 
@@ -765,8 +677,7 @@ fun build_command (ii as {preincludes,includes}) c arg = let
     val _ = print ("Linking "^scriptuo^
                    " to produce theory-builder executable\n")
     val objectfiles0 =
-        if allfast <> member s fastfiles
-        then ["fastbuild.uo", scriptuo]
+        if allfast then ["fastbuild.uo", scriptuo]
         else if quit_on_failure then [scriptuo]
         else ["holmakebuild.uo", scriptuo]
     val objectfiles0 = extras @ objectfiles0
@@ -1118,38 +1029,8 @@ end
 
 in
   if show_usage then
-    List.app print
-    ["Holmake [targets]\n",
-     "  special targets are:\n",
-     "    clean                : remove all object code in directory\n",
-     "    cleanDeps            : remove dependency information\n",
-     "    cleanAll             : do all of above\n",
-     "  additional command-line options are:\n",
-     "    -I <file>            : include directory (can be repeated)\n",
-     "    -d <file>            : ignore file (can be repeated)\n",
-     "    -f <theory>          : toggles fast build (can be repeated)\n",
-     "    -r                   : force recursion (even for cleans)\n",
-     "    --d                  : print debugging information\n",
-     "    --fast               : files default to fast build; -f toggles\n",
-     "    --help | -h          : show this message\n",
-     "    --holdir <directory> : use specified directory as HOL root\n",
-     "    --holmakefile <file> : use file as Holmakefile\n",
-     "    --holstate <file>    : use file as underlying \"heap\"\n",
-     "    --interactive | -i   : run HOL with \"interactive\" flag set\n",
-     "    --keep-going | -k    : don't stop on failure\n",
-     "    --logging            : do per-theory time logging\n",
-     "    --polymllibdir <dir> : use specified directory for Poly/ML's libraries\n",
-     "    --poly file          : use specified file as the Poly/ML executable\n",
-     "    --poly_not_hol       : Treat the Poly/ML executable as plain, not as a hol-augmented executable\n",
-     "    --no_holmakefile     : don't use any Holmakefile\n",
-     "    --no_overlay         : don't use an overlay file\n",
-     "    --no_prereqs         : don't recursively build in INCLUDES\n",
-     "    --no_sigobj | -n     : don't use any HOL files from sigobj\n",
-     "    --overlay <file>     : use given .ui file as overlay\n",
-     "    --ot <file>          : use given .uo file to set up OpenTheory logging\n",
-     "    --qof                : quit on tactic failure\n",
-     "    --quiet              : be quieter in operation\n",
-     "    --rebuild_deps       : always rebuild dependency info files \n"]
+    print (GetOpt.usageInfo {header = "Holmake [targets]",
+                             options = HM_Cline.option_descriptions})
   else let
       open OS.Process
       val result =

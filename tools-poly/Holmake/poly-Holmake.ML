@@ -26,6 +26,10 @@ val _ = useC "internal_functions";
 val _ = useC "Holmake_types";
 val _ = useC "Holmake_tools";
 val _ = useC "ReadHMF";
+val _ = useC "GetOpt";
+val _ = use "../../tools/Holmake/FunctionalRecordUpdate.sml";
+val _ = useC "HM_Core_Cline";
+val _ = useC "poly/HM_Cline";
 
 val _ = use "Holmake.sml";
 
