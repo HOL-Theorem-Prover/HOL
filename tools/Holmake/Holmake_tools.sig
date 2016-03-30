@@ -50,6 +50,17 @@ sig
   val die_with : string -> 'a
 
 
+  type 'optv buildinfo_t = {
+    optv : 'optv, hmake_options : string list,
+    actual_overlay : string option,
+    envlist : string -> string list,
+    quit_on_failure : bool,
+    outs : output_functions
+  }
+
+
+
+
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit

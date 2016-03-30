@@ -7,7 +7,7 @@
 structure Holmake =
 struct
 
-open Systeml Holmake_tools
+open Systeml Holmake_tools Holmake_types
 infix forces_update_of
 
 structure FileSys = OS.FileSys
@@ -443,9 +443,12 @@ fun get_explicit_dependencies (f : File) : File list =
 (** Build graph *)
 
 (*** Compilation of files *)
+val binfo : HM_Cline.t buildinfo_t =
+    {optv = option_value, hmake_options = hmake_options,
+     actual_overlay = actual_overlay, envlist = envlist,
+     quit_on_failure = quit_on_failure, outs = output_functions}
+val build_command = BuildCommand.make_build_command binfo
 
-val build_command =
-    BuildCommand.make_build_command option_value hmake_options actual_overlay
 
 fun do_a_build_command incinfo target pdep secondaries =
   case (extra_commands (fromFile target)) of

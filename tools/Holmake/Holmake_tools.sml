@@ -62,6 +62,14 @@ end
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
+type 'optv buildinfo_t = {
+  optv : 'optv, hmake_options : string list,
+  actual_overlay : string option,
+  envlist : string -> string list,
+  quit_on_failure : bool,
+  outs : output_functions
+}
+
 
 fun die_with message = let
   open TextIO

@@ -1,10 +1,14 @@
 structure BuildCommand =
 struct
 
-open Systeml Holmake_tools
+open Systeml Holmake_tools Holmake_types
 structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
+
+type info_t = {optv : HM_Cline.t, hmake_options : string list,
+               actual_overlay : string option,
+               envlist : string -> string list}
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
 
@@ -29,7 +33,8 @@ fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
-fun make_build_command (optv : HM_Cline.t) hmake_options actual_overlay = let
+fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
+  val {optv,actual_overlay,hmake_options,...} = buildinfo
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
   val quit_on_failure = #quit_on_failure (#core optv)
