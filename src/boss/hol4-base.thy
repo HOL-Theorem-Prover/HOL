@@ -1,7 +1,7 @@
 name: hol-base
 version: 1.0
-description: HOL4 Basic theories
-author: HOL4 people
+description: HOL basic theories
+author: HOL developers <hol-developers@lists.sourceforge.net>
 license: MIT
 show: "HOL4"
 show: "Data.Bool"

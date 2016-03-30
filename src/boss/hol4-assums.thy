@@ -1,6 +1,6 @@
-name: HOL4 Base
+name: hol-base-assums
 version: 1.0
-description: HOL4 Basic theories
+description: Assumptions of the HOL basic theories
 author: HOL4 people
 license: BSD
 main {

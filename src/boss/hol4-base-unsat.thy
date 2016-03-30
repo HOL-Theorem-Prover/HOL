@@ -1,7 +1,7 @@
 name: hol-base-unsat
 version: 1.0
-description: HOL4 Basic theories
-author: HOL4 people
+description: HOL basic theories (with unsatisfied assumptions)
+author: HOL developers <hol-developers@lists.sourceforge.net>
 license: MIT
 show: "HOL4"
 show: "Data.Bool"

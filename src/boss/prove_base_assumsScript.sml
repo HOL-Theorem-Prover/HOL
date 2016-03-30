@@ -98,7 +98,7 @@ val _ = Net.itnet (fn th => (Thm.delete_proof th; K ())) base_thms ()
 fun itpred P th acc = if P th then th::acc else acc
 fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms []
 
-val _ = new_constant("unknown",alpha);
+val _ = new_constant("hol-base-assums-1.0",alpha);
 
 (* TODO: copied from Opentheory.sml *)
   fun uneta a t = BETA_CONV(mk_comb(mk_abs(a,t),a))

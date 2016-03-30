@@ -1,8 +1,8 @@
-name: HOL4 Base
+name: hol-base-unint
 version: 1.0
-description: HOL4 Basic theories
-author: HOL4 people
-license: BSD
+description: HOL basic theories (before re-interpretation)
+author: HOL developers <hol-developers@lists.sourceforge.net>
+license: MIT
 main {
   import: bool
   import: marker
