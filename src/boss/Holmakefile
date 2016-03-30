@@ -30,12 +30,15 @@ installed-unsat.txt : hol4-base-unsat.thy hol4-base-unsat.art
 	opentheory install --reinstall --auto-uninstall $<
 	touch $@
 
-installed.txt : hol4-base.thy prove_base_assums.ot.art
+installed.txt : hol4-base.thy hol4-base-sat.art
 	opentheory install --reinstall $<
 	touch $@
 
-hol4-base-info.txt : hol4-base.thy prove_base_assums.ot.art
+hol4-base-sat-info.txt : hol4-base-sat.thy prove_base_assums.ot.art
 	opentheory info --theory $< > $@
+
+hol4-base-sat.art: hol4-base-sat.thy prove_base_assums.ot.art
+	opentheory info --article -o $@ $<
 
 ARTS =bool_defs.ot.art\
   ../marker/marker.ot.art\
