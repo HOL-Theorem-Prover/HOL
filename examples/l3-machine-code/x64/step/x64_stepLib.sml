@@ -634,6 +634,13 @@ local
                (i + 1, PURE_REWRITE_RULE [ASSUME rwt, optionTheory.THE_DEF] thm)
             end) (0, x64_fetch) l |> snd
    val decode_tm = ``x64_decode (FST (x64_fetch ^st))``
+   fun decode_thm fetch_rwt =
+      (Conv.RAND_CONV
+         (Conv.RAND_CONV (Conv.REWR_CONV fetch_rwt)
+          THENC Conv.REWR_CONV pairTheory.FST) THENC x64_CONV) decode_tm
+   val get_list =
+     fst o listSyntax.dest_list o optionSyntax.dest_some o #3 o
+     Lib.triple_of_list o pairSyntax.strip_pair
 in
    fun get_bytes s =
       let
@@ -658,24 +665,18 @@ in
       end
    fun x64_decode l =
       let
-         val fetch_rwt = fetch l
-         val thm =
-            (Conv.RAND_CONV
-                (Conv.RAND_CONV (Conv.REWR_CONV fetch_rwt)
-                 THENC Conv.REWR_CONV pairTheory.FST)
-             THENC x64_CONV) decode_tm
+         val thm = decode_thm (fetch l)
       in
          case boolSyntax.dest_strip_comb (utilsLib.rhsc thm) of
-             ("x64$Zfull_inst", [a]) =>
-                (case pairSyntax.strip_pair a of
-                    [_, _, l] =>
-                       (case listSyntax.dest_list l of
-                           ([], _) => thm
-                         | (h :: _, _) =>
-                             (not (wordsSyntax.is_n2w h)
-                              orelse raise decode_err "trailing bytes"; thm))
-                  | _ => raise decode_err "decode failed")
-           | _ => (Parse.print_thm thm; raise decode_err "too few bytes")
+            ("x64$Zfull_inst", [a]) =>
+               (case Lib.total get_list a of
+                   SOME l =>
+                     ( List.null l orelse not (wordsSyntax.is_n2w (hd l))
+                       orelse raise decode_err "trailing bytes"
+                     ; thm
+                     )
+                 | NONE => raise decode_err "decode failed")
+          | _ => (Parse.print_thm thm; raise decode_err "too few bytes")
       end
    val x64_decode_hex = x64_decode o get_bytes
 end
@@ -710,7 +711,7 @@ local
          (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
       THENC utilsLib.WGROUND_CONV
    val rwts = [pairTheory.FST, pairTheory.SND, word_thms]
-   val get_strm1 = Term.rand o Term.rand o Term.rand o utilsLib.rhsc
+   val get_strm1 = Term.rand o Term.rand o Term.rand o Term.rand o utilsLib.rhsc
    val get_ast = Term.rand o Term.rator o Term.rand o Term.rand o utilsLib.rhsc
    val get_state = snd o pairSyntax.dest_pair o utilsLib.rhsc
    val state_exception_tm =

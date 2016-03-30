@@ -24,7 +24,7 @@ val NextStateX64_def = Define`
 
 val NextStateX64_0 = utilsLib.ustore_thm("NextStateX64_0",
   `(s.exception = NoException) ==>
-   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, strm1)) /\
+   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, SOME strm1)) /\
    (20 - LENGTH strm1 = len) /\
    (!s. Run ast s = f s) /\
    (f (s with RIP := s.RIP + n2w len) = ((), s1)) /\
@@ -34,7 +34,7 @@ val NextStateX64_0 = utilsLib.ustore_thm("NextStateX64_0",
 
 val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
   `(s.exception = NoException) ==>
-   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, strm1)) /\
+   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, SOME strm1)) /\
    (20 - LENGTH strm1 = len) /\
    (!s. Run ast s = f x s) /\
    (f x (s with RIP := s.RIP + n2w len) = ((), s1)) /\
@@ -199,15 +199,15 @@ val immediate8_rwt = to_n2w [`n2w n`] (Q.prove(
        (if b1 <+ 128w then
            n2w (w2n b1)
         else
-           n2w (2 ** 64 - 2 ** 8 + w2n b1), l)`,
+           n2w (2 ** 64 - 2 ** 8 + w2n b1), SOME l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem]
-   \\ rw [immediate8_def]
+   \\ rw [immediate8_def, oimmediate8_def]
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate8_rwt";
 
 val immediate8 = Q.store_thm("immediate8",
-   `!imm:word8 l. immediate8 (I imm :: l) = (sw2sw imm, l)`,
-   srw_tac [] [immediate8_def]
+   `!imm:word8 l. immediate8 (I imm :: l) = (sw2sw imm, SOME l)`,
+   srw_tac [] [immediate8_def, oimmediate8_def]
    )
 
 val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
@@ -216,7 +216,7 @@ val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
        (if b1 <+ 128w then
            n2w (w2n b1 * 2 ** 8 + w2n b2)
         else
-           n2w (2 ** 64 - 2 ** 16 + w2n b1 * 2 ** 8 + w2n b2), l)`,
+           n2w (2 ** 64 - 2 ** 16 + w2n b1 * 2 ** 8 + w2n b2), SOME l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
          GSYM wordsTheory.word_mul_n2w]
    \\ rw [immediate16_def]
@@ -225,7 +225,7 @@ val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
 
 val immediate16 = Q.store_thm("immediate16",
    `!imm:word16 l.
-       immediate16 ((7 >< 0) imm :: (15 >< 8) imm :: l) = (sw2sw imm, l)`,
+       immediate16 ((7 >< 0) imm :: (15 >< 8) imm :: l) = (sw2sw imm, SOME l)`,
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate16_def]
    )
 
@@ -238,7 +238,7 @@ val immediate32_rwt = to_n2w [`n2w n4`, `n2w n3`, `n2w n2`, `n2w n1`] (Q.prove(
         else
            n2w (2 ** 64 - 2 ** 32 +
                 w2n b1 * 2 ** 24 + w2n b2 * 2 ** 16 +
-                w2n b3 * 2 ** 8 + w2n b4), l)`,
+                w2n b3 * 2 ** 8 + w2n b4), SOME l)`,
    simp [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
          GSYM wordsTheory.word_mul_n2w]
    \\ rw [immediate32_def]
@@ -249,7 +249,7 @@ val immediate32 = Q.store_thm("immediate32",
    `!imm:word32 l.
        immediate32
           ((7 >< 0) imm :: (15 >< 8) imm ::
-           (23 >< 16) imm :: (31 >< 24) imm :: l) = (sw2sw imm, l)`,
+           (23 >< 16) imm :: (31 >< 24) imm :: l) = (sw2sw imm, SOME l)`,
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate32_def]
    )
 
@@ -261,7 +261,7 @@ val immediate64_rwt =
        (n2w (w2n b1 * 2 ** 56 + w2n b2 * 2 ** 48 +
              w2n b3 * 2 ** 40 + w2n b4 * 2 ** 32 +
              w2n b5 * 2 ** 24 + w2n b6 * 2 ** 16 +
-             w2n b7 * 2 ** 8 + w2n b8), l)`,
+             w2n b7 * 2 ** 8 + w2n b8), SOME l)`,
    rw [GSYM wordsTheory.word_add_n2w, n2w_w2n_lem,
        GSYM wordsTheory.word_mul_n2w, immediate64_def]
    \\ blastLib.FULL_BBLAST_TAC
@@ -273,7 +273,7 @@ val immediate64 = Q.store_thm("immediate64",
           ((7 >< 0) imm :: (15 >< 8) imm ::
            (23 >< 16) imm :: (31 >< 24) imm ::
            (39 >< 32) imm :: (47 >< 40) imm ::
-           (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, l)`,
+           (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, SOME l)`,
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate64_def]
    )
 
@@ -635,7 +635,7 @@ val readModRM_not_4_or_5 = Q.prove(
                             ((2 >< 0) r2: word3)) : word6) :: rest) =
        (if b1 = r1 ' 3 then num2Zreg (w2n r1) else RexReg (b1,(2 >< 0) r1),
         Zm (NONE, ZregBase (if b2 = r2 ' 3 then num2Zreg (w2n r2)
-                            else RexReg (b2,(2 >< 0) r2)), 0w), rest))`,
+                            else RexReg (b2,(2 >< 0) r2)), 0w), SOME rest))`,
    tac)
 
 fun rule q = Drule.GEN_ALL o REWRITE_RULE [RegNot] o Q.SPECL [`r1`, q]

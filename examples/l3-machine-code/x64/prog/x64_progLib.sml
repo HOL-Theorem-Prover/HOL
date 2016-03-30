@@ -230,8 +230,7 @@ local
            component_11
            [qword, ``:Zreg``, ``:Zeflags``]
            NO_TAC STATE_TAC
-   val disassemble1 =
-      hd o x64AssemblerLib.x64_disassemble o Lib.list_of_singleton o QUOTE
+   val disassemble1 = x64AssemblerLib.x64_disassemble1
    val x64_spec_trace = ref 0
    val () = Feedback.register_trace ("x64 spec", x64_spec_trace, 2)
 in
