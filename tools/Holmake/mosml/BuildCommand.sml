@@ -34,7 +34,7 @@ fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,actual_overlay,hmake_options,...} = buildinfo
+  val {optv,actual_overlay,hmake_options,SIGOBJ,...} = buildinfo
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
   val quit_on_failure = #quit_on_failure (#core optv)
@@ -174,7 +174,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                  | FileNotFound => false
   end (* fun's let *)
 in
-  build_command
+  {build_command = build_command,
+   mosml_build_command = (fn _ => fn _ => fn _ => NONE),
+   extra_impl_deps = if nob2002 then []
+                     else [toFile (fullPath [SIGOBJ, "basis2002.uo"])]}
 end (* make_build_command's let *)
 
 end (* struct *)

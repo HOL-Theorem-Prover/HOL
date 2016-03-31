@@ -30,6 +30,8 @@ val _ = useC "GetOpt";
 val _ = use "../../tools/Holmake/FunctionalRecordUpdate.sml";
 val _ = useC "HM_Core_Cline";
 val _ = useC "poly/HM_Cline";
+val _ = useC "poly/HM_BaseEnv";
+val _ = use "../../tools/Holmake/poly/BuildCommand.sml";
 
 val _ = use "Holmake.sml";
 

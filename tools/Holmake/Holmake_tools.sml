@@ -67,7 +67,8 @@ type 'optv buildinfo_t = {
   actual_overlay : string option,
   envlist : string -> string list,
   quit_on_failure : bool,
-  outs : output_functions
+  outs : output_functions,
+  SIGOBJ : string
 }
 
 
