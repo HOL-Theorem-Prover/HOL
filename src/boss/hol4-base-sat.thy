@@ -23,7 +23,16 @@ unsat {
   import: proofs
   package: hol-base-unsat-1.0
 }
+bool {
+  article: "bool_defs.ot.art"
+  interpret: const "HOL4.bool_defs.LET" as "HOL4.bool.LET"
+  interpret: const "HOL4.bool_defs.literal_case" as "HOL4.bool.literal_case"
+  interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
+  interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
+  interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
+}
 proofs {
+  import: bool
   article: "prove_base_assums.ot.art"
   interpret: type "HOL4.min.ind" as "ind"
   interpret: const "HOL4.min.@" as "select"

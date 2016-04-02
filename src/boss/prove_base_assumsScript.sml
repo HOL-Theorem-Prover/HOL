@@ -131,11 +131,11 @@ in
     tyop_name = tyop_name}
 end
 
-val _ = add_def(concl LET_DEF)
-val _ = add_def(concl IN_DEF)
-val _ = add_def(concl literal_case_DEF)
-val _ = add_def(concl TYPE_DEFINITION)
-val _ = add_def(concl (REFL``ARB``))
+val LET_DEF = add_def(concl LET_DEF)
+val IN_DEF = add_def(concl IN_DEF)
+val literal_case_DEF = add_def(concl literal_case_DEF)
+val TYPE_DEFINITION = add_def(concl TYPE_DEFINITION)
+val ARB_DEF = add_def(concl (REFL``ARB``))
 
 val goalsNet = read_article "hol4-assums.art" reader;
 
@@ -1008,6 +1008,22 @@ val th106 = store_thm("th106", el 106 goals |> concl,
 
 val th107 = store_thm("th107", el 107 goals |> concl,
   REFL_TAC)
+
+(* other theorems from boolTheory *)
+
+val IMP_DISJ_THM = store_thm("IMP_DISJ_THM", concl boolTheory.IMP_DISJ_THM,
+  rpt gen_tac
+  \\ qspec_then`A`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[T_imp,not_T,F_imp,not_F,F_or,T_or]
+  \\ REFL_TAC)
+
+val LET_CONG = store_thm("LET_CONG", concl boolTheory.LET_CONG,
+  rpt strip_tac
+  \\ VAR_EQ_TAC
+  \\ PURE_REWRITE_TAC[LET_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ first_x_assum match_mp_tac
+  \\ REFL_TAC)
 
 val _ = List.app (Theory.delete_binding o #1) (axioms"-");
 val _ = List.app (Theory.delete_binding o #1) (definitions"-");
