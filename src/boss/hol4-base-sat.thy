@@ -17,6 +17,10 @@ show: "Number.Natural"
 requires: base
 main {
   import: proofs
+  import: unsat
+}
+unsat {
+  import: proofs
   package: hol-base-unsat-1.0
 }
 proofs {
