@@ -55,6 +55,7 @@ relation {
   article: "../relation/relation.ot.art"
 }
 one {
+  import: bool
   article: "../one/one.ot.art"
 }
 pair {
@@ -71,9 +72,11 @@ sum {
   article: "../sum/sum.ot.art"
 }
 option {
+  import: bool
   article: "../option/option.ot.art"
 }
 num {
+  import: bool
   article: "../num/theories/num.ot.art"
 }
 prim-rec {
