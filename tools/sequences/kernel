@@ -13,6 +13,7 @@ src/opentheory
 (otknl)src/opentheory/logging
 src/bool
 src/1
+(otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
 !tools/Holmake/tests/depchain1/dir3
