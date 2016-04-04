@@ -42,6 +42,7 @@ bool {
   interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
 }
 marker {
+  import: bool
   article: "../marker/marker.ot.art"
 }
 combin {
@@ -64,10 +65,12 @@ pair {
   article: "../pair/src/pair.ot.art"
 }
 poset {
+  import: bool
   import: pair
   article: "../pair/src/poset.ot.art"
 }
 sum {
+  import: bool
   import: combin
   article: "../sum/sum.ot.art"
 }
@@ -80,6 +83,7 @@ num {
   article: "../num/theories/num.ot.art"
 }
 prim-rec {
+  import: bool
   import: relation
   import: num
   article: "../num/theories/prim_rec.ot.art"
@@ -100,14 +104,17 @@ numeral {
   article: "../num/theories/numeral.ot.art"
 }
 basic-size {
+  import: bool
   import: pair
   article: "../num/theories/basicSize.ot.art"
 }
 while {
+  import: bool
   import: arithmetic
   article: "../num/theories/while.ot.art"
 }
 numpair {
+  import: bool
   import: pair
   import: numeral
   import: relation
@@ -186,6 +193,7 @@ ind-type {
   article: "../datatype/ind_type.ot.art"
 }
 operator {
+  import: bool
   article: "../list/src/operator.ot.art"
 }
 list {
@@ -210,11 +218,13 @@ rich-list {
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
+  import: bool
   import: list
   import: relation
   article: "../list/src/indexedLists.ot.art"
 }
 numposrep {
+  import: bool
   import: num
   import: arithmetic
   import: list
