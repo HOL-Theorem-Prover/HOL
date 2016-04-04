@@ -16,6 +16,7 @@ structure Process = OS.Process
 
 fun main() = let
 
+val base_env0 = base_environment()
 val execname = Path.file (CommandLine.name())
 fun warn s = (TextIO.output(TextIO.stdErr, execname^": "^s^"\n");
               TextIO.flushOut TextIO.stdErr)
@@ -56,6 +57,7 @@ in
 end
 
 val option_value = apply_updates cline_options HM_Cline.default_options
+val base_env = HM_BaseEnv.extend_env option_value base_env0
 
 (* parameters which vary from run to run according to the command-line *)
 val coption_value = #core option_value
@@ -177,9 +179,6 @@ val hmakefile =
   | SOME s =>
       if exists_readable s then s
       else die_with ("Couldn't read/find makefile: "^s)
-
-val base_env = HM_BaseEnv.make_base_env option_value
-
 
 val (hmakefile_env, extra_rules, first_target) =
   if exists_readable hmakefile andalso not no_hmakefile

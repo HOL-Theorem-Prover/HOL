@@ -10,7 +10,7 @@ end
 
 val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
             open Holmake_types
-            val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
+            val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
             fun envlist id =
                 map dequote (tokenize (perform_substitution env [VREF id]))
           in

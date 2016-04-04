@@ -448,14 +448,7 @@ end
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
-        fun base_env s =
-            case s of
-              "HOLDIR" => [LIT HOLDIR]
-            | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-            | _ => (case OS.Process.getEnv s of
-                      NONE => [LIT ""]
-                    | SOME v => [LIT v])
-        val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
+        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in

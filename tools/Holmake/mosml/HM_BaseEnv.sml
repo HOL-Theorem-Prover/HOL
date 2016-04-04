@@ -3,7 +3,7 @@ struct
 
   open Systeml Holmake_tools
 
-  fun make_base_env (optv : HM_Cline.t) =
+  fun extend_env (optv : HM_Cline.t) e =
     let
       open Holmake_types
       val nob2002 = Systeml.HAVE_BASIS2002 orelse #no_basis2002 optv
@@ -33,7 +33,7 @@ struct
           else [])
     in
       List.foldl (fn (kv,acc) => Holmake_types.env_extend kv acc)
-                 Holmake_types.base_environment
+                 e
                  alist
     end
 
