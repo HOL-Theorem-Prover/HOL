@@ -49,6 +49,7 @@ fun mk_term_rsubst ctxt = let
         SOME (redex' |-> residue')
       end
     else NONE
+
   end
 in
   List.mapPartial f
@@ -225,6 +226,9 @@ in Tactic.UNDISCH_TAC (ptm_with_ctxtty' ctxt Type.bool q) g
 end
 
 fun UNDISCH_THEN q ttac = UNDISCH_TAC q THEN DISCH_THEN ttac;
+
+fun hdtm_assum q ttac = Q_TAC (C Tactical.hdtm_assum ttac) q
+fun hdtm_x_assum q ttac = Q_TAC (C Tactical.hdtm_x_assum ttac) q
 
 val ASSUME = ASSUME o btm
 

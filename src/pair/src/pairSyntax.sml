@@ -38,6 +38,7 @@ val curry_tm    = prim_mk_const {Name="CURRY", Thy="pair"}
 val pair_map_tm = prim_mk_const {Name="##",    Thy="pair"}
 val lex_tm      = prim_mk_const {Name="LEX",   Thy="pair"}
 val swap_tm     = prim_mk_const {Name="SWAP",  Thy="pair"}
+val pair_case_tm = prim_mk_const {Name = "pair_CASE", Thy = "pair"}
 
 (*---------------------------------------------------------------------------
      Make a pair from two components, or a tuple from a list of components
@@ -155,6 +156,20 @@ fun mk_swap t =
       Term.mk_comb
          (Term.inst [Type.alpha |-> aty, Type.beta |-> bty] swap_tm, t)
    end
+
+fun mk_pair_case {pairtm, ftm} = list_mk_icomb(pair_case_tm, [pairtm, ftm])
+
+fun dest_pair_case tm = let
+  val (f, args) = strip_comb tm
+in
+  if same_const pair_case_tm f andalso length args = 2 then
+    {pairtm = el 1 args, ftm = el 2 args}
+  else
+    raise ERR "dest_pair_case" "Term not a pair_CASE"
+end
+
+val is_pair_case = can dest_pair_case
+
 
 val dest_fst = dest_monop fst_tm (ERR "dest_fst" "")
 val dest_snd = dest_monop snd_tm (ERR "dest_snd" "")

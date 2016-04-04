@@ -161,21 +161,26 @@ fun absyn_postprocessors (GCONS g) = #absyn_postprocessors g
 
 (* fupdates *)
 open FunctionalRecordUpdate
-infix &
-fun makeUpdateG z = makeUpdate A A A A A A $$ z (* 6 A's - 6 fields *)
+fun makeUpdateG z = makeUpdate6 z (* 6 fields *)
 fun update_G z = let
-  fun p2r (rules & specials & numeral_info & overload_info & user_printers &
-           absyn_postprocessors) =
+  fun from rules specials numeral_info overload_info user_printers
+           absyn_postprocessors =
         {rules = rules, specials = specials, numeral_info = numeral_info,
          overload_info = overload_info, user_printers = user_printers,
          absyn_postprocessors = absyn_postprocessors}
-    fun r2p  {rules, specials, numeral_info, overload_info, user_printers,
+  (* from' has arguments in reverse order *)
+  fun from' absyn_postprocessors user_printers overload_info numeral_info
+            specials rules =
+        {rules = rules, specials = specials, numeral_info = numeral_info,
+         overload_info = overload_info, user_printers = user_printers,
+         absyn_postprocessors = absyn_postprocessors}
+  fun to f  {rules, specials, numeral_info, overload_info, user_printers,
               absyn_postprocessors} =
-        (rules & specials & numeral_info & overload_info & user_printers &
-         absyn_postprocessors)
-  in
-    makeUpdateG (p2r, p2r, r2p)
-  end z
+    f rules specials numeral_info overload_info user_printers
+      absyn_postprocessors
+in
+    makeUpdateG (from, from', to)
+end z
 
 
 fun fupdate_rules f (GCONS g) =

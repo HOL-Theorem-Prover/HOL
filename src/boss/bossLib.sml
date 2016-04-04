@@ -141,6 +141,9 @@ val recInduct = Induction.recInduct
 val Cases_on          = BasicProvers.Cases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
+val pairarg_tac       = pairLib.pairarg_tac
+val split_pair_case_tac = pairLib.split_pair_case_tac
+
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 
@@ -200,6 +203,8 @@ val rfs = rfsrw_tac let_arith_list
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
      Q.SPECL_THEN
+  val qhdtm_assum = Q.hdtm_assum
+  val qhdtm_x_assum = Q.hdtm_x_assum
   val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
   val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
   val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC

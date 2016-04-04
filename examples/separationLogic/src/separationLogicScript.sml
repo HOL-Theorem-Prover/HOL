@@ -12335,8 +12335,7 @@ Q.EXISTS_TAC `\penv'. ASL_PROCEDURE_SPEC (f,LIST_TO_FUN lock_decls)
    penv' (ASL_proc_specs_spec (MAP SND (FILTER (\x. ~FST x) specs)))` THEN
 REPEAT CONJ_TAC THENL [
    FULL_SIMP_TAC std_ss [ASL_PROCEDURE_SPEC___wellformed_spec_def,
-      FDOM_ASL_proc_specs_penv, IN_LIST_TO_SET,
-      EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
+      FDOM_ASL_proc_specs_penv, EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
       GSYM LEFT_FORALL_IMP_THM, IN_UNION, MEM_FILTER] THEN
    PROVE_TAC[],
 

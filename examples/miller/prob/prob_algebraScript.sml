@@ -962,7 +962,7 @@ val INFINITE_TLS = store_thm
    `!s. ?sel.
       INFINITE s ==> INFINITE {TL x | x IN s /\ (HD x : bool = sel)}`
    >> DISCH_THEN (ACCEPT_TAC o CONV_RULE SKOLEM_CONV)
-   ++ RW_TAC std_ss [INFINITE_DEF]
+   ++ RW_TAC std_ss []
    ++ CCONTR_TAC
    ++ POP_ASSUM MP_TAC
    ++ DISCH_THEN (MP_TAC o CONV_RULE NOT_EXISTS_CONV)
@@ -987,7 +987,7 @@ val PREFIX_SET_UNION_UNIV = store_thm
    ++ RW_TAC std_ss []
    ++ CCONTR_TAC
    ++ POP_ASSUM MP_TAC
-   ++ PURE_REWRITE_TAC [GSYM INFINITE_DEF]
+   ++ PURE_REWRITE_TAC []
    ++ STRIP_TAC
    ++ Q.PAT_ASSUM `x = UNIV` MP_TAC
    ++ PSET_TAC [EXTENSION]

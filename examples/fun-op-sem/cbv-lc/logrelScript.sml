@@ -38,7 +38,7 @@ val val_rel_def = tDefine "val_rel" `
                s1.clock = s2.clock ∧
                state_rel s1.clock s1 s2 ∧
                val_rel s1.clock v1 v2
-           | (Rtimeout, Rtimeout) => 
+           | (Rtimeout, Rtimeout) =>
                state_rel s1.clock s1 s2
            | (Rfail, _) => T
            | _ => F
@@ -46,9 +46,9 @@ val val_rel_def = tDefine "val_rel" `
       T) ∧
 (state_rel i s s' ⇔
   LIST_REL (val_rel i) s.store s'.store)`
-(WF_REL_TAC `inv_image ($< LEX $<) 
-             (\x. case x of 
-                     | INL (i,v,v') => (i:num,0:num) 
+(WF_REL_TAC `inv_image ($< LEX $<)
+             (\x. case x of
+                     | INL (i,v,v') => (i:num,0:num)
                      | INR (INL (i,st,st')) => (i,2)
                      | INR (INR (i,s,s')) => (i,1))` >>
  rw [] >>
@@ -62,17 +62,17 @@ val val_rel_def = tDefine "val_rel" `
 val res_rel_def = Define `
 (res_rel (Rval v1, s1) (Rval v2, s2) ⇔
   s1.clock = s2.clock ∧
-  state_rel s1.clock s1 s2 ∧ 
-  val_rel s1.clock v1 v2) ∧ 
+  state_rel s1.clock s1 s2 ∧
+  val_rel s1.clock v1 v2) ∧
 (res_rel (Rtimeout, s1) (Rtimeout, s2) ⇔
   state_rel s1.clock s1 s2) ∧
 (res_rel (Rfail, _) _ ⇔ T) ∧
 (res_rel _ _ ⇔ F)`;
 
 val res_rel_rw = Q.store_thm ("res_rel_rw",
-`(res_rel (Rval v, s) x ⇔ 
+`(res_rel (Rval v, s) x ⇔
   ?v' s'. x = (Rval v', s') ∧ val_rel s.clock v v' ∧ state_rel s.clock s s' ∧ s.clock = s'.clock) ∧
- (res_rel (Rtimeout, s) x ⇔ 
+ (res_rel (Rtimeout, s) x ⇔
    ?s'. x = (Rtimeout, s') ∧ state_rel s.clock s s') ∧
  (res_rel (Rfail, s) x ⇔ T)`,
  rw [] >>
@@ -91,10 +91,10 @@ exp_rel e e' ⇔
 
 val val_rel_ind = theorem "val_rel_ind";
 
-fun find_clause good_const = 
+fun find_clause good_const =
   good_const o fst o strip_comb o fst o dest_eq o snd o strip_forall o concl;
 
-val val_rel_rw = 
+val val_rel_rw =
   let val clauses = CONJUNCTS val_rel_def
       fun good_const x = same_const ``val_rel`` x
   in
@@ -103,7 +103,7 @@ val val_rel_rw =
 
 val _ = save_thm ("val_rel_rw", val_rel_rw);
 
-val state_rel_rw = 
+val state_rel_rw =
   let val clauses = CONJUNCTS val_rel_def
       fun good_const x = same_const ``state_rel`` x
   in
@@ -120,11 +120,11 @@ val exec_rel_rw = Q.store_thm ("exec_rel_rw",
 `exec_rel i (env,s,e) (env',s',e') ⇔
   !i'. i' ≤ i ⇒
     res_rel (sem env (s with clock := i') e) (sem env' (s' with clock := i') e')`,
- rw [val_rel_def] >>
- fs [LET_THM] >>
+ srw_tac[] [val_rel_def] >>
+ fsrw_tac[] [LET_THM] >>
  eq_tac >>
- fs [] >>
- rw []
+ fsrw_tac[] [] >>
+ srw_tac[] []
  >- (Cases_on `sem env (s with clock := i') e` >>
      Cases_on `sem env' (s' with clock := i') e'` >>
      Cases_on `q` >>
@@ -145,7 +145,7 @@ val val_rel_mono = Q.store_thm ("val_rel_mono",
  (!i st st'. exec_rel i st st' ⇒ !i'. i' ≤ i ⇒ exec_rel i' st st') ∧
  (!i s s'. state_rel i s s' ⇒ !i'. i' ≤ i ⇒ state_rel i' s s')`,
  ho_match_mp_tac val_rel_ind >>
- rw [val_rel_rw]
+ srw_tac[] [val_rel_rw]
  >- (`i'' < i` by decide_tac >>
      metis_tac [])
  >- (fs [exec_rel_rw, LET_THM] >>
@@ -197,6 +197,7 @@ val compat_var = Q.store_thm ("compat_var",
  >- (`0 ≤ i'` by decide_tac >>
      metis_tac [MEM_EL, val_rel_mono]));
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val compat_app = Q.store_thm ("compat_app",
 `!e1 e1' e2 e2'.
   exp_rel e1 e1' ∧
@@ -210,17 +211,17 @@ val compat_app = Q.store_thm ("compat_app",
  rw [] >>
  `?s2 res2. sem env (s with clock := i') e1 = (res2,s2)` by metis_tac [pair_CASES] >>
  fs [] >>
- reverse (Cases_on `res2`) >> 
+ reverse (Cases_on `res2`) >>
  fs [res_rel_rw, sem_def] >>
  rw [] >>
  first_x_assum (qspec_then `i'` mp_tac) >>
  rw [LET_THM] >>
  `?s2' res2'. sem env' (s' with clock := i') e1' = (res2',s2')` by metis_tac [pair_CASES] >>
  fs []
- >- (Cases_on `res2'` >> 
+ >- (Cases_on `res2'` >>
      fs [val_rel_rw, res_rel_rw]) >>
  fs [] >>
- Cases_on `res2'` >> 
+ Cases_on `res2'` >>
  fs [val_rel_rw, res_rel_rw] >>
  imp_res_tac sem_clock >>
  fs [] >>
@@ -251,6 +252,7 @@ val compat_app = Q.store_thm ("compat_app",
      metis_tac [val_rel_mono])
  >- metis_tac []
  >- metis_tac []);
+end
 
 val compat_fn = Q.store_thm ("compat_fn",
 `!e e'. exp_rel e e' ⇒ exp_rel (Fun e) (Fun e')`,
@@ -414,6 +416,7 @@ val lemma = Q.prove (
  Cases_on `g` >>
  fs []);
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val exec_to_val = Q.prove (
 `(!i. exec_rel i (env',s',e') (env'',s'',e'')) ∧
  sem env' (s' with clock := c') e' = (Rval v',r') ∧
@@ -424,12 +427,12 @@ val exec_to_val = Q.prove (
  rw [exec_rel_rw] >>
  first_x_assum (qspecl_then [`c' + i`, `c' + i`] mp_tac) >>
  rw [LET_THM] >>
- `sem env' (s' with clock := c' + i) e' = (Rval v', r' with clock := r'.clock + i)` 
+ `sem env' (s' with clock := c' + i) e' = (Rval v', r' with clock := r'.clock + i)`
                  by metis_tac [sem_clock_add] >>
  fs [res_rel_rw] >>
  `i ≤ r'.clock + i` by decide_tac >>
  metis_tac [sem_clock_val_determ, val_rel_mono]);
-
+end
 
 val exec_to_state = Q.prove (
 `(!i. exec_rel i (env',s',e') (env'',s'',e'')) ∧
@@ -559,16 +562,16 @@ val exp_refl_sem = Q.store_thm ("exp_refl_sem",
  fs [res_rel_rw] >>
  rfs [] >>
  `s2 = s2 with clock := s2.clock` by rw [] >>
- `v''' = v' ∧ s2' = s' with clock := s2'.clock` 
-         by metis_tac [sem_clock_val_determ, PAIR_EQ, r_11] >> 
+ `v''' = v' ∧ s2' = s' with clock := s2'.clock`
+         by metis_tac [sem_clock_val_determ, PAIR_EQ, r_11] >>
  fs [state_component_equality, state_rel_rw]);
 
 val res_rel_trans = Q.store_thm ("res_rel_trans",
-`!r1 r2 r3 s1 s2 s3. 
-  res_rel (r1,s1) (r2,s2) ∧ 
+`!r1 r2 r3 s1 s2 s3.
+  res_rel (r1,s1) (r2,s2) ∧
   (!c. res_rel (r2,s2 with clock := c) (r3,s3 with clock := c)) ∧
   s2.clock = s3.clock
-  ⇒ 
+  ⇒
   res_rel (r1,s1) (r3,s3)`,
  rw [] >>
  Cases_on `r1` >>
@@ -582,10 +585,10 @@ val res_rel_trans = Q.store_thm ("res_rel_trans",
 
 val res_rel_trans_lemma = Q.prove (
 `!st1 st2 st3.
-  res_rel st1 st2 ∧ 
+  res_rel st1 st2 ∧
   (!c. res_rel (FST st2, SND st2 with clock := c) (FST st3, SND st3 with clock := c)) ∧
   (SND st2).clock = (SND st3).clock
-  ⇒ 
+  ⇒
   res_rel st1 st3`,
  Cases_on `st1` >>
  Cases_on `st2` >>
@@ -595,9 +598,9 @@ val res_rel_trans_lemma = Q.prove (
 
 val res_rel_trans_val = Q.store_thm ("res_rel_trans_val",
 `∀c v s1 s2 s3 e1 e2 env e env' e'.
-  res_rel (Rval v, s1 with clock := c) (sem env (s2 with clock := c) e) ∧ 
+  res_rel (Rval v, s1 with clock := c) (sem env (s2 with clock := c) e) ∧
   (!c. res_rel (sem env (s2 with clock := c) e) (sem env' (s3 with clock := c) e'))
-  ⇒ 
+  ⇒
   res_rel (Rval v,s1 with clock := c) (sem env' (s3 with clock := c) e')`,
  rw [] >>
  match_mp_tac res_rel_trans_lemma >>

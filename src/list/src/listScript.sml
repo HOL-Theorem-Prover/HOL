@@ -41,7 +41,9 @@ val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
+val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
+val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
+val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
@@ -205,8 +207,6 @@ val LIST_TO_SET = store_thm(
   SRW_TAC [] [FUN_EQ_THM, IN_DEF]);
 val _ = export_rewrites ["LIST_TO_SET"]
 
-val IN_LIST_TO_SET = save_thm("IN_LIST_TO_SET", TRUTH)
-
 val FILTER = new_recursive_definition
       {name = "FILTER",
        rec_axiom = list_Axiom,
@@ -264,10 +264,9 @@ val EL = new_recursive_definition
 (* [TFM 92.04.21]							*)
 (* ---------------------------------------------------------------------*)
 
-val MAP2_DEF = Define`
+val MAP2_DEF = dDefine`
   (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
   (MAP2 f x y = [])`
-val _ = delete_const "MAP2_tupled"
 
 val MAP2 = store_thm ("MAP2",
 ``(!f. MAP2 f [] [] = []) /\
@@ -1674,7 +1673,6 @@ val FOLDL2_def = Define`
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
   (FOLDL2 f a bs cs = a)`
 val _ = export_rewrites["FOLDL2_def"]
-val _ = delete_const "FOLDL2_tupled"
 
 val FOLDL2_cong = store_thm(
 "FOLDL2_cong",
@@ -1974,8 +1972,8 @@ val LIST_TO_SET_FILTER = store_thm(
     unspecified.
    ---------------------------------------------------------------------- *)
 
-val _ = Defn.def_suffix := "";
-val SET_TO_LIST_defn = Defn.Hol_defn "SET_TO_LIST"
+val SET_TO_LIST_defn = Lib.with_flag (Defn.def_suffix, "") Defn.Hol_defn
+  "SET_TO_LIST"
   `SET_TO_LIST s =
      if FINITE s then
         if s={} then []
@@ -2077,7 +2075,7 @@ SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
     isPREFIX
    ---------------------------------------------------------------------- *)
 
-val isPREFIX = Define`
+val isPREFIX = bDefine`
   (isPREFIX [] l = T) /\
   (isPREFIX (h::t) l = case l of [] => F
                                | h'::t' => (h = h') /\ isPREFIX t t')
@@ -2293,7 +2291,7 @@ val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
     THEN ASM_REWRITE_TAC[GENLIST, LENGTH, LENGTH_SNOC]);
 val _ = export_rewrites ["LENGTH_GENLIST"]
 
-val GENLIST_AUX = Define`
+val GENLIST_AUX = bDefine`
   (GENLIST_AUX f 0 l = l) /\
   (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
 
@@ -2308,10 +2306,10 @@ val _ = export_rewrites ["GENLIST_AUX_compute"]
        List padding (left and right)
  ---------------------------------------------------------------------------*)
 
-val PAD_LEFT_def = Define`
+val PAD_LEFT = bDefine`
   PAD_LEFT c n s = (GENLIST (K c) (n - LENGTH s)) ++ s`;
 
-val PAD_RIGHT_def = Define`
+val PAD_RIGHT = bDefine`
   PAD_RIGHT c n s = s ++ (GENLIST (K c) (n - LENGTH s))`;
 
 (*---------------------------------------------------------------------------
@@ -2539,7 +2537,7 @@ val _ = export_rewrites["MAP_ZIP_SAME"]
 val INFINITE_LIST_UNIV = store_thm(
   "INFINITE_LIST_UNIV",
   ``INFINITE univ(:'a list)``,
-  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  REWRITE_TAC [] THEN
   SRW_TAC [] [INFINITE_UNIV] THEN
   Q.EXISTS_TAC `\l. x::l` THEN SRW_TAC [] [] THEN
   Q.EXISTS_TAC `[]` THEN SRW_TAC [] [])
@@ -2550,15 +2548,13 @@ val _ = export_rewrites ["INFINITE_LIST_UNIV"]
 (* Tail recursive versions for better memory usage when applied in ML        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Defn.def_suffix := "_DEF";
-
 (* EVAL performance of LEN seems to be worse than of LENGTH *)
 
-val LEN_DEF = Define
+val LEN_DEF = dDefine
   `(LEN [] n = n) /\
    (LEN (h::t) n = LEN t (n+1))`;
 
-val REV_DEF = Define
+val REV_DEF = dDefine
   `(REV [] acc = acc) /\
    (REV (h::t) acc = REV t (h::acc))`;
 
@@ -2584,7 +2580,7 @@ val REVERSE_REV = Q.store_thm
  `!L. REVERSE L = REV L []`,
  PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]);
 
-val SUM_ACC_DEF = Define
+val SUM_ACC_DEF = dDefine
   `(SUM_ACC [] acc = acc) /\
    (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))`
 
@@ -3078,8 +3074,6 @@ local
   val fs = FULL_SIMP_TAC (srw_ss())
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
 in
-
-val () = Defn.def_suffix := "_def";
 
 (* nub *)
 
@@ -3578,30 +3572,25 @@ val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
-   fun NL() = PP.add_newline ppstrm
- in
-   S "val _ = let open computeLib";
-   S "        in add_funs [APPEND, APPEND_NIL, FLAT, HD, TL,";
-   S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
-   S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
-   S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
-   S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
-   S "        end;";
-   NL(); NL();
-   S "val _ =";
-   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"list\",Tyop=\"list\"})";
-   S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
-   S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
-   S "  in TypeBase.write [list_info']";
-   S "  end;"
- end)};
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = computeLib.add_funs
+  [APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2, NULL_DEF, MEM,
+   EXISTS_DEF, DROP_compute, EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+   TAKE_compute, FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,
+   EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute, GENLIST_NUMERALS,
+   computeLib.lazyfy_thm list_case_compute, list_size_def, FRONT_DEF,
+   LAST_compute, isPREFIX]
+
+val _ =
+  let
+    val list_info = Option.valOf (TypeBase.read {Thy = "list", Tyop="list"})
+    val lift_list =
+      mk_var ("listSyntax.lift_list",
+              Parse.Type^`: 'type -> ('a -> 'term) -> 'a list -> 'term^`)
+    val list_info' = TypeBasePure.put_lift lift_list list_info
+  in
+    TypeBase.write [list_info']
+  end;`
 
 val _ = export_rewrites
           ["APPEND_11",

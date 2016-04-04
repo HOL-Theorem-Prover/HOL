@@ -61,9 +61,9 @@ val el_take = Q.store_thm ("el_take",
 
 val path_eq = Q.store_thm ("path_eq",
 `!p1 p2.
-  p1 = p2 
-  ⇔ 
-  PL p1 = PL p2 ∧ 
+  p1 = p2
+  ⇔
+  PL p1 = PL p2 ∧
   !n. (n ∈ PL p1 ⇒ el n p1 = el n p2) ∧ (SUC n ∈ PL p1 ⇒ nth_label n p1 = nth_label n p2)`,
  rw [] >>
  eq_tac >>
@@ -128,10 +128,10 @@ val last_pconcat = Q.store_thm ("last_pconcat[simp]",
  rw [pconcat_thm]);
 
 val okpath_pconcat = Q.store_thm ("okpath_pconcat[simp]",
-`!p1. 
-  finite p1 
-  ⇒ 
-  !R l p2. 
+`!p1.
+  finite p1
+  ⇒
+  !R l p2.
     (okpath R (pconcat p1 l p2) ⇔ okpath R p1 ∧ okpath R p2 ∧ R (last p1) l (first p2))`,
  ho_match_mp_tac finite_path_ind >>
  rw [pconcat_thm]
@@ -175,7 +175,7 @@ val toList_lappend = Q.store_thm ("toList_lappend",
   LFINITE l1 ⇒ !l2. LFINITE l2
   ⇒
   THE (toList (LAPPEND l1 l2)) = THE (toList l1) ++ THE (toList l2)`,
- ho_match_mp_tac LFINITE_ind >> 
+ ho_match_mp_tac LFINITE_ind >>
  rw [toList] >>
  fs [LFINITE_APPEND, LLENGTH_APPEND] >>
  rfs [] >>
@@ -204,8 +204,8 @@ val okpath_steps_lem1 = Q.prove (
 val okpath_steps_lem2 = Q.prove (
 `!n p rel.
   okpath rel p ∧
-  n + 1 ∈ PL p 
-  ⇒ 
+  n + 1 ∈ PL p
+  ⇒
   rel (el n p) (nth_label n p) (el (n+1) p)`,
  Induct_on `n` >>
  rw [] >>
@@ -239,7 +239,7 @@ val path_limit = Q.store_thm ("path_limit",
   ?p.
     ~finite p ∧
     okpath rel p ∧
-    !n p'. 
+    !n p'.
       p' ∈ P ⇒
       (n ∈ PL p' ⇒ take n p' = take n p)`,
  rw [SKOLEM_THM, PULL_EXISTS] >>
@@ -248,7 +248,7 @@ val path_limit = Q.store_thm ("path_limit",
  >- metis_tac [finite_length, pgenerate_infinite]
  >- (fs [okpath_steps, el_pgenerate, nth_label_pgenerate] >>
      rw [] >>
-     `take (n+1) (f (SUC (n+1))) = take (n+1) (f (SUC n))` 
+     `take (n+1) (f (SUC (n+1))) = take (n+1) (f (SUC n))`
             by (first_x_assum match_mp_tac >>
                 rw [] >>
                 fs [GSYM arithmeticTheory.ADD1] >>
@@ -262,18 +262,18 @@ val path_limit = Q.store_thm ("path_limit",
          `n ∈ PL (pgenerate (λn. el n (f (SUC n))) (λn. nth_label n (f (SUC n))))`
                 by rw [PL_pgenerate] >>
          rw [PL_take_eq, PL_pgenerate])
-     >- (`take n' p' = take n' (f (SUC n'))` 
+     >- (`take n' p' = take n' (f (SUC n'))`
               by (first_x_assum match_mp_tac >>
                   rw [] >>
                   `n' < n ∨ n' = n` by decide_tac >>
                   rw [] >>
                   metis_tac [DECIDE ``!x:num. x < SUC x``, PL_downward_closed]) >>
-         `n' ∈ PL p'` 
+         `n' ∈ PL p'`
                  by metis_tac [PL_downward_closed, arithmeticTheory.LESS_OR_EQ] >>
          `SUC n' ∈ PL (f (SUC n'))` by metis_tac [] >>
          `n' ∈ PL (f (SUC n'))` by metis_tac [DECIDE ``!x:num. x < SUC x``, PL_downward_closed] >>
          fs [take_eq])
-     >- (`take (SUC n') p' = take (SUC n') (f (SUC n'))` 
+     >- (`take (SUC n') p' = take (SUC n') (f (SUC n'))`
               by (first_x_assum match_mp_tac >>
                   rw [] >>
                   `SUC n' < n ∨ SUC n' = n` by decide_tac >>
@@ -292,7 +292,7 @@ lfilter_map f l = LMAP THE (LFILTER (\x. x ≠ NONE) (LMAP f l))`;
 
 val lfinite_lfilter = Q.store_thm ("lfinite_lfilter",
 `!l. LFINITE l ⇒ LFINITE (LFILTER P l)`,
- ho_match_mp_tac LFINITE_ind >> 
+ ho_match_mp_tac LFINITE_ind >>
  rw []);
 
 val inf_const_def = Define `
@@ -304,9 +304,9 @@ complete rel p ⇔ (finite p ⇒ ¬?l s. rel (last p) l s)`;
 val compose_paths_def = Define `
 compose_paths p1 p2 =
   unfold (\(p1,p2). (first p1, first p2))
-         (\(p1,p2). 
-           if is_stopped p1 ∨ is_stopped p2 then 
-             NONE 
+         (\(p1,p2).
+           if is_stopped p1 ∨ is_stopped p2 then
+             NONE
            else if first_label p1 = first_label p2 then
              SOME ((tail p1, tail p2), first_label p1)
            else NONE)
@@ -356,7 +356,7 @@ val okpath_compose_paths = Q.store_thm ("okpath_compose_paths",
 val first_compose_paths = Q.store_thm ("first_compose_paths",
 `!p1 p2. first (compose_paths p1 p2) = (first p1, first p2)`,
  rw [compose_paths_def] >>
- rw [Once unfold_thm]); 
+ rw [Once unfold_thm]);
 
 val labels_compose_paths = Q.store_thm ("labels_compose_paths",
 `!p1 p2.
@@ -371,7 +371,7 @@ val labels_compose_paths = Q.store_thm ("labels_compose_paths",
  `(?x. p1' = stopped_at x) ∨ (?s l p3. p1' = pcons s l p3)` by metis_tac [path_cases] >>
  `(?x. p2' = stopped_at x) ∨ (?s l p4. p2' = pcons s l p4)` by metis_tac [path_cases] >>
  rw [] >>
- fs [] >> 
+ fs [] >>
  metis_tac []);
 
 val last_compose_paths = Q.store_thm ("last_compose_paths",
@@ -457,6 +457,7 @@ val length_pconcat = Q.store_thm ("length_pconcat",
  rw [] >>
  simp [LFINITE_APPEND]);
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val PL_pconcat = Q.store_thm ("PL_pconcat",
 `!p1 l p2. PL (pconcat p1 l p2) = 0 INSERT { x + y + 1 | x ∈ PL p1 ∧ y ∈ PL p2 }`,
  rw [PL_def, EXTENSION] >>
@@ -484,11 +485,12 @@ val PL_pconcat = Q.store_thm ("PL_pconcat",
      intLib.ARITH_TAC)
  >- (`x ≠ 0 ∧ x'' ≠ 0` by metis_tac [length_never_zero] >>
      intLib.ARITH_TAC));
+end
 
 val complete_path = Q.store_thm ("complete_path",
-`!r p1. 
-  okpath r p1 ∧ ~complete r p1 
-  ⇒ 
+`!r p1.
+  okpath r p1 ∧ ~complete r p1
+  ⇒
   ?l p2. okpath r (pconcat p1 l p2) ∧ complete r (pconcat p1 l p2)`,
  rw [complete_def] >>
  qexists_tac `l` >>
@@ -607,7 +609,7 @@ val lnth_abs = Q.store_thm ("lnth_abs",
  >- fs [llist_absrep] >>
  ect >>
  rw []
- >- (`f 0 = NONE` by metis_tac [llist_absrep] >> 
+ >- (`f 0 = NONE` by metis_tac [llist_absrep] >>
      pop_assum mp_tac >>
      pop_assum kall_tac >>
      pop_assum mp_tac >>
@@ -617,7 +619,7 @@ val lnth_abs = Q.store_thm ("lnth_abs",
      metis_tac [DECIDE ``SUC 0 = 1``, lrep_ok_thm]) >>
  `llist_rep (llist_abs f) = f` by metis_tac [llist_absrep] >>
  fs [] >>
- `lrep_ok (λn'. f (n' + 1))` 
+ `lrep_ok (λn'. f (n' + 1))`
           by (fs [lrep_ok_thm] >>
               rw [] >>
               res_tac >>
@@ -627,8 +629,8 @@ val lnth_abs = Q.store_thm ("lnth_abs",
 
  *)
  (*
-val _ = augment_srw_ss [rewrites 
-  [toList_THM, finite_labels, labels_plink, LFINITE_APPEND, finite_pconcat, 
+val _ = augment_srw_ss [rewrites
+  [toList_THM, finite_labels, labels_plink, LFINITE_APPEND, finite_pconcat,
    LFINITE_MAP, LAPPEND_NIL_2ND]];
 
    *)

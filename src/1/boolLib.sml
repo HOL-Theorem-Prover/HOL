@@ -163,5 +163,32 @@ fun save_thm(n0,th) = let
 in
   save_thm_attrs "save_thm" (n,attrs,th)
 end
+
+
+(* ----------------------------------------------------------------------
+    Gets a variant of an arbitrary term instead of a single variable.
+    Besides the resulting term, it returns also the substitution used to
+    get it.
+   ---------------------------------------------------------------------- *)
+
+fun variant_of_term vs t =
+  let
+    open HolKernel
+    val check_vars = free_vars t
+    val (_,sub) =
+        foldl (fn (v, (vs,sub)) =>
+	          let
+                    val v' = variant vs v
+                    val vs' = v'::vs
+                    val sub' = if (aconv v v') then sub else
+			       (v |-> v')::sub
+                  in
+                    (vs',sub')
+                  end) (vs,[]) check_vars
+    val t' = subst sub t
+  in
+    (t', sub)
+  end
+
 end (* local *)
 end;

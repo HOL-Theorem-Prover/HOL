@@ -33,9 +33,12 @@ sig
   val dec: int ref -> unit
   val inc: int ref -> unit
 
+  val pull_prefix : ('a -> bool) list -> 'a list -> 'a list
+
   val explode: string -> string list
   val implode: string list -> string
   val ordof: string * int -> int
+  val replace_string : {from:string,to:string} -> string -> string
 
   val time_eq: time -> time -> bool
   val timestamp: unit -> time
@@ -74,8 +77,9 @@ sig
   exception Div
   exception Interrupt
 
-
   val norm_quote : 'a quotation -> 'a quotation
+  val quote_to_string : ('a -> string) -> 'a quotation -> string
+  val quote_to_string_list : string quotation -> string list
 
   val catch_SIGINT : unit -> unit
   val md5sum : string -> string

@@ -18,6 +18,18 @@ local
       fn depth => fn printArgTypes => fn e: 'b =>
         PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
     end
+  fun pp_transform d _ (t : clauses.transform) =
+    case t of
+      clauses.Conversion c =>
+        PolyML.PrettyBlock
+          (2, false, [],
+           [PolyML.PrettyString "Conversion", PolyML.PrettyBreak (1, 0),
+            PolyML.prettyRepresentation (c, d)])
+    | clauses.RRules l =>
+        PolyML.PrettyBlock
+          (2, false, [],
+           [PolyML.PrettyString "RRules", PolyML.PrettyBreak (1, 0),
+            PolyML.prettyRepresentation (l, d)])
 in
   val () =
     ( if heapname <> Systeml.DEFAULT_STATE then
@@ -29,6 +41,7 @@ in
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_ssfrag)
     ; PolyML.addPrettyPrinter (pp2polypp simpLib.pp_simpset)
     ; PolyML.addPrettyPrinter (pp2polypp computeLib.pp_compset)
+    ; PolyML.addPrettyPrinter pp_transform
     ; PolyML.print_depth 100
     )
 end

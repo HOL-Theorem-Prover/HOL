@@ -18,6 +18,22 @@ sig
          | ART of ArticleType
          | Unhandled of string
 
+  (* file lists are dependencies *)
+  datatype buildcmds = Compile of File list
+                     | BuildScript of string * File list
+                     | BuildArticle of string * File list
+                     | ProcessArticle of string
+
+  (* simple list things *)
+  val member : ''a -> ''a list -> bool
+  val set_union : ''a list -> ''a list -> ''a list
+  val delete : ''a -> ''a list -> ''a list
+  val set_diff : ''a list -> ''a list -> ''a list
+  val remove_duplicates : ''a list -> ''a list
+
+  (* fixed constants *)
+  val DEFAULT_OVERLAY : string
+
   (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string
@@ -35,6 +51,18 @@ sig
   val die_with : string -> 'a
 
 
+  type 'optv buildinfo_t = {
+    optv : 'optv, hmake_options : string list,
+    actual_overlay : string option,
+    envlist : string -> string list,
+    quit_on_failure : bool,
+    outs : output_functions,
+    SIGOBJ : string
+  }
+
+
+
+
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit
@@ -47,6 +75,7 @@ sig
   val codeToString : CodeType -> string
   val articleToString : ArticleType -> string
   val fromFile : File -> string
+  val fromFileNoSuf : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool

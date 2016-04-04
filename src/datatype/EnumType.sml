@@ -310,78 +310,99 @@ in
            LIST_CONJ (map mk_consequence constrs))
 end
 
-
-fun enum_eq_CONV eq_elim_th repth t = let
-  (* keying will have already ensured that t is an equality between two
-     values in the enumerated type *)
-  val (l, r) = dest_eq t
-  val _ = is_const l andalso is_const r orelse
-          raise ERR "enum_eq_CONV" "Equality not between constants"
+local
+  fun enum_eq_CONV eq_elim_th repth =
+    let
+      val cnv = Conv.REWR_CONV eq_elim_th
+                THENC PURE_REWRITE_CONV [repth]
+                THENC numLib.REDUCE_CONV
+    in
+      fn t =>
+        let
+          (* keying will have already ensured that t is an equality between two
+             values in the enumerated type *)
+          val (l, r) = boolSyntax.dest_eq t
+        in
+          if Term.is_const l andalso Term.is_const r
+            then cnv t
+          else raise ERR "enum_eq_CONV" "Equality not between constants"
+        end
+    end
 in
-  REWR_CONV eq_elim_th THENC REWRITE_CONV [repth] THENC
-  numLib.REDUCE_CONV
-end t
-
-fun update_tyinfo tyname eqth repth tyinfo0 = let
-  open TypeBasePure
-  val ty = type_of (hd (#1 (strip_forall (concl eqth))))
-  val x = mk_var("x", ty) and y = mk_var("y", ty)
-  val {convs, rewrs} = simpls_of tyinfo0
-  val new_conv = {name = tyname ^ "const_eq_CONV",
-                  key = SOME ([], mk_eq(x, y)),
+  fun update_simpls cnvs rws tyinfo0 =
+    let
+      val {convs, rewrs} = TypeBasePure.simpls_of tyinfo0
+    in
+      TypeBasePure.put_simpls
+        {convs = cnvs @ convs, rewrs = rws @ rewrs} tyinfo0
+    end
+  fun update_tyinfo absth repth eq =
+    let
+      val cnvs =
+        case eq of
+           SOME (tyname, eqth) =>
+             let
+               val ty = type_of (hd (#1 (strip_forall (concl eqth))))
+               val new_conv =
+                 {name = tyname ^ "const_eq_CONV",
+                  key = SOME ([], mk_eq (mk_var ("x", ty), mk_var ("y", ty))),
                   trace = 3,
                   conv = K (K (enum_eq_CONV eqth repth))}
-in
-  put_simpls {convs = new_conv::convs, rewrs = rewrs} tyinfo0
+             in
+               [new_conv]
+             end
+         | NONE => []
+    in
+      update_simpls cnvs [absth, repth]
+    end
 end
 
-
 fun enum_type_to_tyinfo (ty, clist) = let
-  val abs = "num2"^ty
-  val rep = ty^"2num"
-  val (result as {constrs,TYPE,...}) = define_enum_type(ty,clist,abs,rep)
-  val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
+  val abs = "num2" ^ ty
+  val rep = ty ^ "2num"
+  val (result as {constrs,TYPE,...}) = define_enum_type (ty,clist,abs,rep)
+  val abs_name = abs ^ "_thm"
+  val abs_thm = save_thm (abs_name, LIST_CONJ (map SYM (#defs result)))
   val rep_name = rep ^ "_thm"
-  val rep_thm = save_thm(rep_name,
+  val rep_thm = save_thm (rep_name,
                    LIST_CONJ (num_values (#REP_ABS result) (#defs result)))
-  val eq_elim_name = ty^"_EQ_"^ty
-  val eq_elim_th = save_thm(eq_elim_name, GSYM (#REP_11 result))
+  val eq_elim_name = ty ^ "_EQ_" ^ ty
+  val eq_elim_th = save_thm (eq_elim_name, GSYM (#REP_11 result))
   val simpls = [rep_thm, eq_elim_th]
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
   val induction = prove_induction_thm nchotomy
   val size = mk_size_definition TYPE
-  val distinct =
-      if length constrs > 15 then NONE
-      else prove_distinctness_thm simpls constrs
+  val distinct = if length constrs > 15 then NONE
+                 else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
   val case_def = define_case (ty, rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
-  open TypeBasePure
   val tyinfo0 =
-      mk_datatype_info
-         {ax = ORIG initiality,
-          induction = ORIG induction,
-          case_def = case_def,
-          case_cong = case_cong,
-          nchotomy = nchotomy,
-          size = size,
-          encode = NONE,
-          lift = NONE,
-          one_one = NONE,
-          fields = [],
-          accessors = [],
-          updates = [],
-          recognizers = [],
-          destructors = [],
-          distinct = distinct }
-  val _ = List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
+    TypeBasePure.mk_datatype_info
+       {ax = TypeBasePure.ORIG initiality,
+        induction = TypeBasePure.ORIG induction,
+        case_def = case_def,
+        case_cong = case_cong,
+        nchotomy = nchotomy,
+        size = size,
+        encode = NONE,
+        lift = NONE,
+        one_one = NONE,
+        fields = [],
+        accessors = [],
+        updates = [],
+        recognizers = [],
+        destructors = [],
+        distinct = distinct }
+  val (eq, s) =
+    if Option.isSome distinct then (NONE, "NONE")
+    else (SOME (ty, eq_elim_th),
+          "(SOME (" ^ mlquote ty ^ ", " ^ eq_elim_name ^ "))")
 in
-  case distinct of
-    NONE => (update_tyinfo ty eq_elim_th rep_thm tyinfo0,
-             "EnumType.update_tyinfo "^mlquote ty^" "^
-             eq_elim_name^" "^rep_name^" ")
-  | SOME thm => (tyinfo0, "")
+    List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
+  ; (update_tyinfo abs_thm rep_thm eq tyinfo0,
+     "EnumType.update_tyinfo " ^ abs_name ^ " " ^ rep_name ^ " " ^ s ^ " ")
 end
 
 val _ = Parse.temp_set_grammars ambient_grammars

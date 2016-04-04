@@ -16,7 +16,6 @@ type ruledb =
 datatype token = HM_defn of string * quotation
                | HM_rule of raw_rule_info
 
-
 fun normquote acc [] = List.rev acc
   | normquote acc [x] = List.rev (x::acc)
   | normquote acc (LIT s1 :: LIT s2 :: t) = normquote acc (LIT (s1 ^ s2) :: t)

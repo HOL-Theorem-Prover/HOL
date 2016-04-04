@@ -693,6 +693,7 @@ val EL_LEMMA = prove(
 val state_rel_def = Define `
   state_rel s x = (x.state = s)`;
 
+local val fs = fsrw_tac[] val rfs = rev_full_simp_tac(srw_ss()) in
 val phase3_aux_thm = store_thm("phase3_aux_thm",
   ``!s1 t res s2 x xs ys b.
       (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
@@ -929,6 +930,7 @@ val phase3_aux_thm = store_thm("phase3_aux_thm",
     \\ Q.PAT_ASSUM `xxx <= b` MP_TAC
     \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []))
   |> REWRITE_RULE [state_rel_def];
+end
 
 val phase3_correct = store_thm("phase3_correct",
   ``!s1 t res s2 x xs ys b.

@@ -1033,7 +1033,7 @@ val EvalTerm_IGNORE_FunVarBind = prove(
      EvalTerm (a,ctxt) body)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST \\ ASM_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC
-  \\ `MEM x params` by FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+  \\ `MEM x params` by FULL_SIMP_TAC std_ss [SUBSET_DEF]
   \\ POP_ASSUM MP_TAC
   \\ Q.SPEC_TAC (`x`,`x`) \\ Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`params`,`params`)
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
@@ -1131,7 +1131,7 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
       EvalFormula_sub,term_ok_def,EvalTerm_def,LET_DEF,EvalTerm_sub]
     \\ FULL_SIMP_TAC std_ss [MAP_SND_ZIP,MAP_FST_ZIP,MAP_o]
     \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST
-    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
     \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ `(MAP (\a''. EvalTerm (a',ctxt) a'') ys) =
         (MAP (EvalTerm (a',ctxt)) ys)` by METIS_TAC []
@@ -1845,17 +1845,17 @@ val callmap_free_vars = prove(
       \\ Q.PAT_ASSUM `xs = [x1;x2;x3]` ASSUME_TAC
       \\ FULL_SIMP_TAC std_ss [EVERY_DEF]
       \\ FULL_SIMP_TAC std_ss [MEM_APPEND] \\ RES_TAC THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC \\ RES_TAC \\ METIS_TAC [MEM])
       THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC
         \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
         \\ NTAC 2 (POP_ASSUM MP_TAC)
         \\ FULL_SIMP_TAC std_ss [APPEND,MEM]
         \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
       THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC
         \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
         \\ NTAC 2 (POP_ASSUM MP_TAC)
@@ -1864,12 +1864,12 @@ val callmap_free_vars = prove(
         \\ METIS_TAC []))
     \\ Cases_on `f' = mFun f` \\ FULL_SIMP_TAC std_ss [MEM]
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM,APPEND,free_vars_def]
-    \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+    \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
            MEM_FLAT,MEM_MAP,term_ok_def,EVERY_MEM] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss [MEM_APPEND] THEN1
-   (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+   (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP,term_ok_def] \\ REPEAT STRIP_TAC \\ METIS_TAC [])
-  \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+  \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP,term_ok_def,callmap_sub_def]
   \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL_IMP]
@@ -1890,7 +1890,7 @@ val EvalTerm_SIMP = prove(
      EvalTerm (FunVarBind l1 ys,ctxt) y)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
-  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]);
+  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]);
 
 val M_ev_SIMP = prove(
   ``set (free_vars y) SUBSET set l1 ==>
@@ -1898,7 +1898,7 @@ val M_ev_SIMP = prove(
      M_ev f (y,FunVarBind l1 ys,ctxt) x)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC M_ev_EQ
   \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
-  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]);
+  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]);
 
 val M_ev_TERMINATES_STEP = prove(
   ``f IN FDOM ctxt /\ (ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)) /\
@@ -1981,7 +1981,7 @@ val M_ev_TERMINATES_STEP = prove(
     \\ `(!v. MEM v (free_vars body) ==>
              (FunVarBindAux params (MAP (EvalTerm (a,ctxt)) l) a v =
               FunVarBind params (MAP (EvalTerm (a,ctxt)) l) v))` by ALL_TAC THEN1
-     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
       \\ RES_TAC \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
       \\ ASM_SIMP_TAC std_ss [LENGTH_MAP]
       \\ FULL_SIMP_TAC std_ss [term_ok_def,func_arity_def]
@@ -2056,7 +2056,7 @@ val M_ev_REMOVE_FunVarBind = prove(
   ``set (free_vars y) SUBSET set xs ==>
     (M_ev f (y,FunVarBind xs (MAP a xs),ctxt) x = M_ev f (y,a,ctxt) x)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC M_ev_EQ
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
   \\ RES_TAC \\ POP_ASSUM MP_TAC \\ Q.SPEC_TAC (`xs`,`xs`)
   \\ Induct \\ SIMP_TAC std_ss [MEM,MAP,FunVarBind_def,APPLY_UPDATE_THM]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [MEM,MAP,FunVarBind_def,APPLY_UPDATE_THM]);

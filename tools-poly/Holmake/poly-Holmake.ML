@@ -8,11 +8,11 @@ OS.FileSys.chDir "Holmake";
 structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
-fun useH f = (use (f ^ ".sig"); use (f ^ ".sml"));
-
 fun useC f =
     (use ("../../tools/Holmake/" ^ f ^ ".sig");
      use ("../../tools/Holmake/" ^ f ^ ".sml"))
+
+fun useS f = use ("../../tools/Holmake/" ^ f ^ ".sml")
 
 val _ = use "../../tools/Holmake/Systeml.sig"
 val _ = use "Systeml.sml";
@@ -26,7 +26,18 @@ val _ = useC "internal_functions";
 val _ = useC "Holmake_tools";
 val _ = useC "Holmake_types";
 val _ = useC "ReadHMF";
+val _ = useC "GetOpt";
+val _ = useS "FunctionalRecordUpdate";
+val _ = useC "HM_Core_Cline";
+val _ = useC "poly/HM_Cline";
+val _ = useC "poly/HM_BaseEnv";
+val _ = useS "poly/BuildCommand";
+val _ = useS "Holmake";
 
-val _ = use "Holmake.sml";
+val die_with = Holmake.die_with
 
-fun main() = Holmake.main();
+fun main() =
+  Holmake.main()
+  handle SML90.Interrupt => die_with "Holmake interrupted"
+       | e => die_with ("Holmake failed with exception: "^
+                          exnMessage e)

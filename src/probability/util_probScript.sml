@@ -660,7 +660,7 @@ val FINITE_INJ = store_thm
 val INFINITE_INJ = store_thm
   ("INFINITE_INJ",
    ``!f s t. INJ f s t /\ INFINITE s ==> INFINITE t``,
-   PROVE_TAC [INFINITE_DEF, FINITE_INJ]);
+   PROVE_TAC [FINITE_INJ]);
 
 val ENUMERATE = store_thm
   ("ENUMERATE",
@@ -682,7 +682,7 @@ val EXPLICIT_ENUMERATE_MONO = store_thm
 val EXPLICIT_ENUMERATE_NOT_EMPTY = store_thm
   ("EXPLICIT_ENUMERATE_NOT_EMPTY",
    ``!n s. INFINITE s ==> ~(FUNPOW REST n s = {})``,
-   REWRITE_TAC [INFINITE_DEF]
+   REWRITE_TAC []
    ++ Induct >> (RW_TAC std_ss [FUNPOW] ++ PROVE_TAC [FINITE_EMPTY])
    ++ RW_TAC std_ss [FUNPOW]
    ++ Q.PAT_ASSUM `!s. P s` (MP_TAC o Q.SPEC `REST s`)
@@ -724,7 +724,7 @@ val INFINITE_EXPLICIT_ENUMERATE = store_thm
     ++ PROVE_TAC [CHOICE_NOT_IN_REST],
     RW_TAC std_ss [FUNPOW]
     ++ Q.PAT_ASSUM `!y. P y` (MP_TAC o Q.SPECL [`n`, `REST s`])
-    ++ PROVE_TAC [INFINITE_DEF, FINITE_REST]]);
+    ++ PROVE_TAC [FINITE_REST]]);
 
 val COUNTABLE_ALT = store_thm
   ("COUNTABLE_ALT",
@@ -742,7 +742,7 @@ val COUNTABLE_ALT = store_thm
        ++ RW_TAC std_ss [SURJ_DEF, IN_UNIV]
        ++ PROVE_TAC [])
    ++ MP_TAC (Q.SPEC `s` INFINITE_EXPLICIT_ENUMERATE)
-   ++ RW_TAC std_ss [INFINITE_DEF]
+   ++ RW_TAC std_ss []
    ++ PROVE_TAC []);
 
 val DISJOINT_COUNT = store_thm

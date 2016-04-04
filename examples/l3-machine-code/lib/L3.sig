@@ -5,6 +5,7 @@
 signature L3 =
 sig
    val K : 'a -> 'b -> 'a
+   val chr : IntInf.int -> char
    val drop : IntInf.int * 'a list -> 'a list
    val dropString : IntInf.int * string -> string
    val element : IntInf.int * 'a list -> 'a
@@ -19,6 +20,7 @@ sig
    val listUpdate : 'a * (IntInf.int * 'a list) -> 'a list
    val lowercase : string -> string
    val memString : char * string -> bool
+   val ord : char -> IntInf.int
    val padLeft : 'a * (IntInf.int * 'a list) -> 'a list
    val padLeftString : char * (IntInf.int * string) -> string
    val padRight : 'a * (IntInf.int * 'a list) -> 'a list

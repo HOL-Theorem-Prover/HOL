@@ -21,6 +21,20 @@ structure FileSys = OS.FileSys
 exception Div = General.Div
 exception Mod = General.Div
 
+(* ----------------------------------------------------------------------
+    Lists
+   ---------------------------------------------------------------------- *)
+
+fun pull_prefix ps l =
+  case ps of
+      [] => l
+    | p :: rest =>
+      let
+        val (s, l0) = List.partition p l
+      in
+        s @ pull_prefix rest l0
+      end
+
 (*---------------------------------------------------------------------------
       Refs
  ---------------------------------------------------------------------------*)
@@ -35,6 +49,25 @@ fun dec r = (r := !r - 1)
 fun ordof (string, place) = Char.ord (String.sub (string, place))
 val implode = String.concat
 val explode = map Char.toString o String.explode
+
+fun replace_string {from, to} =
+  let
+    val next = Substring.position from
+    val drop = Substring.triml (String.size from)
+    val to = Substring.full to
+    fun f acc s =
+      let
+        val (prefix,s) = next s
+        val acc = prefix::acc
+      in
+        if Substring.isEmpty s then
+          Substring.concat(List.rev acc)
+        else
+          f (to::acc) (drop s)
+      end
+  in
+    f [] o Substring.full
+  end
 
 (*---------------------------------------------------------------------------
     System
@@ -198,6 +231,45 @@ fun norm_quote [] = []
   | norm_quote (QUOTE s1 :: QUOTE s2 :: rst) =
       norm_quote (QUOTE (s1 ^ s2) :: rst)
   | norm_quote (h :: rst) = h :: norm_quote rst
+
+local
+  fun strip_comments (d, a) s =
+    if Substring.size s = 0
+      then a
+    else let
+           val (l, r) = Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
+           val a' = if 0 < d then a else a @ [l]
+         in
+           if Substring.isPrefix "(*#loc " r
+             then strip_comments (d + 1, a @ [Substring.trimr 1 l])
+                    (Substring.triml 7 r)
+           else if Substring.isPrefix "(*" r
+             then strip_comments (d + 1, a') (Substring.triml 2 r)
+           else if Substring.isPrefix "*)" r
+             then strip_comments (d - 1, a') (Substring.triml 2 r)
+           else if Substring.size r = 0
+             then a'
+           else let
+                  val (r1, r2) = Substring.splitAt (r, 1)
+                in
+                  strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
+                end
+         end
+  val finish = Substring.concat o strip_comments (0, []) o Substring.full o
+               String.concat o List.rev
+in
+  fun quote_to_string (f : 'a -> string) =
+    let
+      fun quote_to_strings a =
+        fn [] => finish a
+         | QUOTE s :: r => quote_to_strings (s :: a) r
+         | ANTIQUOTE s :: r => quote_to_strings (f s :: a) r
+    in
+      quote_to_strings []
+    end
+  val quote_to_string_list =
+    String.tokens (fn c => c = #"\n") o quote_to_string (fn x => x)
+end
 
 (* suck in implementation specific stuff *)
 

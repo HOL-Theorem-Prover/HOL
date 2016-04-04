@@ -34,38 +34,18 @@ fun instruction_apply f =
 
 (* Remove whitespace before and after a string *)
 val remove_whitespace =
-   Substring.string o Substring.dropr Char.isSpace o
-   Substring.dropl Char.isSpace o Substring.full
+  Substring.string o Substring.dropr Char.isSpace o
+  Substring.dropl Char.isSpace o Substring.full
 
 (* Turns a quote `...` into a list of strings *)
 local
-   fun strip_comments (d, a) s =
-      if Substring.size s = 0
-         then a
-      else let
-              val (l, r) =
-                 Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
-              val a' = if 0 < d then a else a @ [l]
-           in
-              if Substring.isPrefix "(*" r
-                 then strip_comments (d + 1, a') (Substring.triml 2 r)
-              else if Substring.isPrefix "*)" r
-                 then strip_comments (d - 1, a') (Substring.triml 2 r)
-              else if Substring.size r = 0
-                 then a'
-              else let
-                      val (r1, r2) = Substring.splitAt (r, 1)
-                   in
-                      strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
-                   end
-           end
-   val lines =
-      List.mapPartial
-         (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
-      String.tokens (fn c => c = #"\n" orelse c = #"|") o
-      Substring.concat o strip_comments (0, []) o Substring.full
+  val f =
+    List.mapPartial
+       (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
+    String.tokens (fn c => c = #"\n" orelse c = #"|")
 in
-   val quote_to_strings = fn [QUOTE s] => lines s | _ => raise General.Bind
+  fun quote_to_strings q =
+    f (Portable.quote_to_string (fn _ => raise General.Bind) q)
 end
 
 (* mechanism for printing *)

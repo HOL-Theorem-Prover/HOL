@@ -219,6 +219,27 @@ val aligned_imp = Q.store_thm("aligned_imp",
    \\ simp []
    )
 
+val align_add_aligned = Q.store_thm("align_add_aligned",
+  `!p a b : 'a word.
+     aligned p a /\ w2n b < 2 ** p ==> (align p (a + b) = a)`,
+  strip_tac
+  \\ Cases_on `dimindex(:'a) <= p`
+  >- (`w2n b < 2 ** p`
+      by metis_tac [wordsTheory.w2n_lt, wordsTheory.dimword_def,
+                    bitTheory.TWOEXP_MONO2, arithmeticTheory.LESS_LESS_EQ_TRANS]
+      \\ simp [aligned_ge_dim, align_w2n, arithmeticTheory.LESS_DIV_EQ_ZERO])
+  \\ fs [arithmeticTheory.NOT_LESS_EQUAL]
+  \\ rw [aligned_extract, align_sub, wordsTheory.WORD_EXTRACT_COMP_THM,
+         arithmeticTheory.MIN_DEF,
+         Once (GSYM wordsTheory.WORD_EXTRACT_OVER_ADD2),
+         wordsTheory.WORD_EXTRACT_ID
+         |> Q.SPECL [`w`, `p - 1`]
+         |> Q.DISCH `p <> 0n`
+         |> SIMP_RULE std_ss [DECIDE ``p <> 0n ==> (SUC (p - 1) = p)``]
+        ]
+  \\ fs [DECIDE ``(a < 1n) = (a = 0n)``, wordsTheory.w2n_eq_0]
+  )
+
 (* -------------------------------------------------------------------------
    Theorems for standard alignment lengths of 1, 2 and 3 bits
    ------------------------------------------------------------------------- *)

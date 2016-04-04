@@ -7,6 +7,8 @@ open Systeml
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
+val DEFAULT_OVERLAY = "Overlay.ui"
+
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
 fun itlist f L base =
    let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
@@ -62,6 +64,15 @@ end
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
+type 'optv buildinfo_t = {
+  optv : 'optv, hmake_options : string list,
+  actual_overlay : string option,
+  envlist : string -> string list,
+  quit_on_failure : bool,
+  outs : output_functions,
+  SIGOBJ : string
+}
+
 
 fun die_with message = let
   open TextIO
@@ -183,6 +194,12 @@ datatype File =
        | ART of ArticleType
        | Unhandled of string
 
+(* file lists are dependencies *)
+datatype buildcmds = Compile of File list
+                   | BuildScript of string * File list
+                   | BuildArticle of string * File list
+                   | ProcessArticle of string
+
 fun string_part0 (Theory s) = s
   | string_part0 (Script s) = s
   | string_part0 (Other s) = s
@@ -250,6 +267,33 @@ fun fromFile f =
   | SML c => codeToString c ^ ".sml"
   | ART c => articleToString c ^ ".art"
   | Unhandled s => s
+
+fun fromFileNoSuf f =
+  case f of
+    UO c  => codeToString c
+  | UI c  => codeToString c
+  | SIG c => codeToString c
+  | SML c => codeToString c
+  | ART a => articleToString a
+  | Unhandled s => s
+
+fun member m [] = false
+  | member m (x::xs) = if x = m then true else member m xs
+fun set_union s1 s2 =
+  case s1 of
+    [] => s2
+  | (e::es) => let
+      val s' = set_union es s2
+    in
+      if member e s' then s' else e::s'
+    end
+fun delete m [] = []
+  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
+fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
+fun remove_duplicates [] = []
+  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
+
+
 
 fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 

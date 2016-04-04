@@ -74,7 +74,6 @@ sig
    val max: nbit * nbit -> nbit
    val min: nbit * nbit -> nbit
    val mod: nbit * nbit -> nbit
-   val modify: (Nat.nat * bool -> bool) * nbit -> nbit
    val msb: nbit -> bool
    val neg: nbit -> nbit
    val one: Nat.nat -> nbit

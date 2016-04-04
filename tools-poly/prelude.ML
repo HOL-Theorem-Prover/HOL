@@ -1,3 +1,4 @@
+
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
@@ -76,7 +77,7 @@ in
               PolyML.PrettyBlock
                 (2, false, [],
                  [PolyML.PrettyString "QUOTE", PolyML.PrettyBreak (1, 0),
-                  PolyML.PrettyString s])
+                  PolyML.prettyRepresentation (s, depth)])
           | HOLPP.ANTIQUOTE a =>
               PolyML.PrettyBlock
                 (2, false, [],
@@ -237,7 +238,7 @@ in
          "ReadHMF"]
     ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
         ["makefile-includes.ML", "check-intconfig.sml"]
-    ; List.app Meta.fakeload ["PP", "PolyML"]
+    ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
     ; term_pp_prefix := "``"

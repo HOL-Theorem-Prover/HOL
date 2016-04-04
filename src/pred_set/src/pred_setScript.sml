@@ -80,12 +80,12 @@ val SPECIFICATION = store_thm(
   --`!P x. $IN (x:'a) (P:'a set) = P x`--,
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
-val IN_APP = store_thm (
+val IN_APP = Tactical.store_thm (
   "IN_APP",
   ``!x P. (x IN P) = P x``,
   SIMP_TAC bool_ss [IN_DEF]);
 
-val IN_ABS = store_thm (
+val IN_ABS = Tactical.store_thm (
   "IN_ABS",
   ``!x P. (x IN \x. P x) = P x``,
   SIMP_TAC bool_ss [IN_DEF]);
@@ -2720,7 +2720,6 @@ val _ = export_rewrites ["COUNT_11"]
 (* =====================================================================*)
 
 val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
-val INFINITE_DEF = save_thm("INFINITE_DEF", TRUTH)
 
 val NOT_IN_FINITE =
     store_thm
@@ -3053,7 +3052,7 @@ val finite_N_bounded =
 val N_lemma =
     TAC_PROOF
     (([], (--`INFINITE(UNIV:(num->bool))`--)),
-     REWRITE_TAC [INFINITE_DEF] THEN STRIP_TAC THEN
+     REWRITE_TAC [] THEN STRIP_TAC THEN
      IMP_RES_THEN MP_TAC finite_N_bounded THEN
      REWRITE_TAC [IN_UNIV] THEN
      CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC THEN
@@ -3109,7 +3108,7 @@ val INFINITE_UNIV =
 val INFINITE_NUM_UNIV = store_thm(
   "INFINITE_NUM_UNIV",
   ``INFINITE univ(:num)``,
-  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  REWRITE_TAC [] THEN
   SRW_TAC [][INFINITE_UNIV] THEN Q.EXISTS_TAC `SUC` THEN SRW_TAC [][] THEN
   Q.EXISTS_TAC `0` THEN SRW_TAC [][]);
 val _ = export_rewrites ["INFINITE_NUM_UNIV"]
@@ -3117,7 +3116,7 @@ val _ = export_rewrites ["INFINITE_NUM_UNIV"]
 val FINITE_PSUBSET_INFINITE = store_thm("FINITE_PSUBSET_INFINITE",
 (--`!s. INFINITE (s:'a set) =
         !t. FINITE (t:'a set) ==> ((t SUBSET s) ==> (t PSUBSET s))`--),
-   PURE_REWRITE_TAC [INFINITE_DEF,PSUBSET_DEF] THEN
+   PURE_REWRITE_TAC [PSUBSET_DEF] THEN
    GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THENL
     [FIRST_ASSUM ACCEPT_TAC,
@@ -4873,7 +4872,7 @@ val infinite_rest = Q.store_thm ("infinite_rest",
 `!s. INFINITE s ==> INFINITE (REST s)`,
 RWTAC [] THEN
 CCONTR_TAC THEN
-FSTAC [INFINITE_DEF, REST_DEF]);
+FSTAC [REST_DEF]);
 
 val chooser_def = TotalDefn.Define `
   (chooser s 0 = CHOICE s) /\
@@ -4939,7 +4938,7 @@ RWTAC [] THENL
 [Q.EXISTS_TAC `chooser s` THEN
      RWTAC [INJ_DEF] THEN
      METIS_TAC [chooser_lem1, chooser_lem3, SUBSET_REFL],
- METIS_TAC [infinite_num_inj_lem, INFINITE_DEF]]);
+ METIS_TAC [infinite_num_inj_lem]]);
 
 val countable_def = TotalDefn.Define `
   countable s = ?f. INJ f s (UNIV:num set)`;
@@ -5372,46 +5371,34 @@ val _ = export_rewrites
      "SUBSET_UNION"
 ];
 
-val sspec_conv_str =
-"local\n\
-\  val GSPEC_t = prim_mk_const{Name = \"GSPEC\", Thy = \"pred_set\"}\n\
-\  val IN_t = mk_thy_const{Name = \"IN\", Thy = \"bool\",\n\
-\                          Ty = alpha --> (alpha --> bool) --> bool}\n\
-\  val f_t = mk_var(\"f\", beta --> pairSyntax.mk_prod(alpha, bool))\n\
-\  val x_t = mk_var(\"x\", alpha)\n\
-\  \n\
-\  val SET_SPEC_CONV =\n\
-\    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),\n\
-\     key = SOME ([], list_mk_comb(IN_t, [x_t, mk_comb(GSPEC_t, f_t)])),\n\
-\     name = \"SET_SPEC_CONV\",\n\
-\     trace = 2}\n\
-\  in\n\
-\  val SET_SPEC_ss = simpLib.SSFRAG {name=SOME\"SET_SPEC\", ac = [], congs = [],\n\
-\                                     convs = [SET_SPEC_CONV], dprocs = [],\n\
-\                                     filter = NONE, rewrs = []}\n\
-\  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]\n  end\n"
+val _ = Theory.quote_adjoin_to_theory
+  `val SET_SPEC_ss : simpLib.ssfrag`
+`local
+  val GSPEC_t = prim_mk_const {Name = "GSPEC", Thy = "pred_set"}
+  val IN_t = mk_thy_const {Name = "IN", Thy = "bool",
+                           Ty = alpha --> (alpha --> bool) --> bool}
+  val f_t = mk_var ("f", beta --> pairSyntax.mk_prod (alpha, bool))
+  val x_t = mk_var ("x", alpha)
+  val SET_SPEC_CONV =
+    {conv = Lib.K (Lib.K (PGspec.SET_SPEC_CONV GSPECIFICATION)),
+     key = SOME ([], list_mk_comb (IN_t, [x_t, mk_comb (GSPEC_t, f_t)])),
+     name = "SET_SPEC_CONV",
+     trace = 2}
+in
+  val SET_SPEC_ss =
+    simpLib.SSFRAG
+      {name = SOME "SET_SPEC", ac = [], congs = [], convs = [SET_SPEC_CONV],
+       dprocs = [], filter = NONE, rewrs = []}
+  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
+end
 
-fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssfrag";
-                 PP.add_newline pps)
-
-val _ = adjoin_to_theory {sig_ps = SOME sigps,
-                          struct_ps =
-                          SOME (fn pps => PP.add_string pps sspec_conv_str)}
-
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     List.app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (alpha --> bool,",
-      "    {nchotomy = SOME SET_CASES,",
-      "     induction = SOME FINITE_INDUCT,",
-      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\\x:'a. 1 + obsize x)`,SUM_IMAGE_THM),",
-      "     encode=NONE})];\n"
-      ] end)};
+val _ =
+  TypeBase.write
+   [TypeBasePure.mk_nondatatype_info
+     (alpha --> bool,
+      {nchotomy = SOME SET_CASES,
+       induction = SOME FINITE_INDUCT,
+       size = SOME (Parse.Term^`\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\x:'a. 1 + obsize x)^`, SUM_IMAGE_THM),
+       encode = NONE})];`
 
 val _ = export_theory();

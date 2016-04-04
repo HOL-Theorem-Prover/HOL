@@ -322,11 +322,12 @@ val BIT_B = Q.store_thm("BIT_B",
    `!b. BIT b (2 ** b)`,
    SIMP_TAC arith_ss [BIT_def, BITS_THM, DIVMOD_ID, ZERO_LT_TWOEXP, SUC_SUB])
 
-val BIT_B_NEQ = Q.store_thm("BIT_B_NEQ",
-   `!a b. ~(a = b) ==> ~BIT a (2 ** b)`,
-   NTAC 3 STRIP_TAC
+val BIT_TWO_POW = Q.store_thm("BIT_TWO_POW[simp]",
+   `!n m. BIT n (2 ** m) = (m = n)`,
+   REPEAT STRIP_TAC
+   \\ Cases_on `m = n` >- ASM_REWRITE_TAC [BIT_B]
    \\ REWRITE_TAC [BIT_def, BITS_THM, SUC_SUB, EXP_1]
-   \\ IMP_RES_TAC (DECIDE ``!(a:num) b. ~(a = b) ==> (a < b) \/ (b < a)``)
+   \\ IMP_RES_TAC (DECIDE ``!(a:num) b. ~(b = a) ==> (a < b) \/ (b < a)``)
    >| [
       IMP_RES_TAC LESS_ADD_1
       \\ ASM_SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
@@ -334,6 +335,9 @@ val BIT_B_NEQ = Q.store_thm("BIT_B_NEQ",
       IMP_RES_TAC TWOEXP_MONO
       \\ ASM_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]
    ])
+
+val BIT_B_NEQ = Theory.save_thm("BIT_B_NEQ",
+   METIS_PROVE [BIT_TWO_POW] ``!a b. ~(a = b) ==> ~BIT a (2 ** b)``)
 
 (* ------------------------------------------------------------------------- *)
 

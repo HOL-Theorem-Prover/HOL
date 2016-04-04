@@ -560,7 +560,6 @@ datatype binop =
    | Lsl
    | Lsr
    | Lt
-   | Mdfy
    | Mod
    | Mul
    | Or
@@ -1054,7 +1053,6 @@ local
        Term.mk_comb
           (Term.inst [Type.alpha |-> numSyntax.num, Type.beta |-> Type.bool,
                       Type.gamma |-> Type.bool] pairSyntax.curry_tm, tm)
-   fun mk_modify (f, a) = wordsSyntax.mk_word_modify (icurry f, a)
 in
    fun Bop (b : binop, x, y) = (x, y) |>
      (case b of
@@ -1067,7 +1065,6 @@ in
                         SOME bitstringSyntax.mk_bxor, NONE, NONE)
       | In     => pred_setSyntax.mk_in
       | Insert => pred_setSyntax.mk_insert
-      | Mdfy   => mk_modify
       | Or     => boolSyntax.mk_disj
       | Uge    => wordsSyntax.mk_word_hs
       | Ugt    => wordsSyntax.mk_word_hi
