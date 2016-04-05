@@ -1,12 +1,14 @@
 structure HM_DepGraph :> HM_DepGraph =
 struct
 
+structure Map = Binarymap
+
 datatype target_status = Pending | Succeeded | Failed | Running
 exception NoSuchNode
 exception DuplicateTarget
 type node = int
 type nodeInfo = { target : string, status : target_status,
-                  command : string,
+                  command : string option,
                   dependencies : node list  }
 
 fun setStatus s {target,command,status,dependencies} =
@@ -15,27 +17,27 @@ fun setStatus s {target,command,status,dependencies} =
 
 val node_compare = Int.compare
 
-type t = (node, nodeInfo) Binarymap.dict * string Binaryset.set
+type t = (node, nodeInfo) Map.dict * (string,node) Map.dict
 
-val empty = (Binarymap.mkDict node_compare, Binaryset.empty String.compare)
+val empty = (Map.mkDict node_compare, Map.mkDict String.compare)
 
-fun size ((g,_) : t) = Binarymap.numItems g
+fun size ((g,_) : t) = Map.numItems g
 
 fun add_node nI (g as (m,s):t) =
-  if Binaryset.member(s, #target nI) then raise DuplicateTarget
+  if isSome (Map.peek(s, #target nI)) then raise DuplicateTarget
   else
     let
       val n = size g
     in
-      ((Binarymap.insert(m,n,nI), Binaryset.add(s,#target nI)), n)
+      ((Map.insert(m,n,nI), Map.insert(s,#target nI,n)), n)
     end
 
 fun updnode (n, st) ((g,s): t) =
-  case Binarymap.peek (g, n) of
+  case Map.peek (g, n) of
       NONE => raise NoSuchNode
-    | SOME nI => (Binarymap.insert(g, n, setStatus st nI), s)
+    | SOME nI => (Map.insert(g, n, setStatus st nI), s)
 
-fun peeknode ((g,_):t) n = Binarymap.peek(g, n)
+fun peeknode ((g,_):t) n = Map.peek(g, n)
 
 fun find_runnable (g : t) =
   let
@@ -53,5 +55,21 @@ fun find_runnable (g : t) =
     search 0
   end
 
+fun target_node ((m,s):t) t = Map.peek(s,t)
+fun listNodes (g:t) = Map.foldr (fn (k,v,acc) => v::acc) [] (#1 g)
+
+fun status_toString s =
+  case s of
+      Succeeded => "[Succeeded]"
+    | Failed => "[Failed]"
+    | Running => "[Running]"
+    | Pending => "[Pending]"
+
+
+fun nodeInfo_toString {target,status,command,dependencies} =
+  target ^ " " ^ status_toString status ^ " : " ^
+  (case command of
+       SOME s => s
+     | NONE => "handled by Holmake")
 
 end

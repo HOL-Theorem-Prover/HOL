@@ -12,6 +12,7 @@ type t = {
   includes : string list,
   interactive : bool,
   keep_going : bool,
+  no_action : bool,
   no_hmakefile : bool,
   no_lastmaker_check : bool,
   no_overlay : bool,

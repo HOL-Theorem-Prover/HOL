@@ -29,6 +29,7 @@ val _ = useC "ReadHMF";
 val _ = useC "GetOpt";
 val _ = useS "FunctionalRecordUpdate";
 val _ = useC "HM_Core_Cline";
+val _ = useC "HM_DepGraph";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/HM_BaseEnv";
 val _ = useS "poly/BuildCommand";

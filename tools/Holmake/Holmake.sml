@@ -71,6 +71,7 @@ val user_hmakefile = #hmakefile coption_value
 val cmdl_HOLDIR = #holdir coption_value
 val cline_additional_includes = #includes coption_value
 val keep_going_flag = #keep_going coption_value
+val no_action = #no_action coption_value
 val no_hmakefile = #no_hmakefile coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val no_overlay = #no_overlay coption_value
@@ -453,6 +454,100 @@ val up_to_date_cache:(File, bool)Binarymap.dict ref =
 fun cache_insert(f, b) =
   ((up_to_date_cache := Binarymap.insert (!up_to_date_cache, f, b));
    b)
+open HM_DepGraph
+
+fun build_depgraph incinfo target g0 = let
+  val pdep = primary_dependent target
+  val target_s = fromFile target
+in
+  case target_node g0 target_s of
+      (x as SOME _) => (x, g0)
+    | NONE =>
+      if Path.dir (string_part target) <> "" andalso
+         Path.dir (string_part target) <> "." andalso
+         no_full_extra_rule target
+         (* path outside of current directory *)
+      then if exists_readable target_s then (NONE, g0)
+           else
+             let
+               val (g, n) = add_node {target = target_s, status = Failed,
+                                      command = NONE, dependencies = []} g0
+             in
+               (SOME n, g)
+             end
+      else if isSome pdep andalso no_full_extra_rule target then
+        let
+          val pdep = valOf pdep
+          val (pnode, g1) = build_depgraph incinfo pdep g0
+          val secondaries = set_union (get_implicit_dependencies incinfo target)
+                                      (get_explicit_dependencies target)
+          fun foldthis (d, (secnodes, g)) =
+            let
+              val (n, g') = build_depgraph incinfo d g
+            in
+              (n::secnodes, g')
+            end
+          val (depnodes, g2) = List.foldl foldthis ([pnode], g1) secondaries
+          val realdeps = List.mapPartial (fn x => x) depnodes
+        in
+          if not (null realdeps) orelse
+             List.exists (fn d => d forces_update_of target_s)
+                         (fromFile pdep :: map fromFile secondaries)
+          then
+            let
+              val (g, tnode) =
+                  add_node {target = target_s, status = Pending,
+                            command = NONE,
+                            dependencies = realdeps } g2
+            in
+              (SOME tnode, g)
+            end
+          else (NONE, g2)
+        end
+      else
+        case extra_rule_for target_s of
+            NONE =>
+            if exists_readable target_s then (NONE, g0)
+            else
+              let
+                val (g, tnode) =
+                    add_node {target = target_s, status = Failed,
+                              command = SOME "File doesn't exist - no rule",
+                              dependencies = []} g0
+              in
+                (SOME tnode, g)
+              end
+          | SOME {dependencies, commands, ...} =>
+            let
+              fun foldthis (d, (secnodes, g)) =
+                let
+                  val (n, g') = build_depgraph incinfo d g
+                in
+                  (n::secnodes, g')
+                end
+              val (depnodes, g1) = List.foldl foldthis ([], g0)
+                                              (map toFile dependencies)
+              val realdeps = List.mapPartial (fn x => x) depnodes
+            in
+              if (not (null realdeps) orelse
+                  List.exists (fn d => d forces_update_of target_s)
+                              dependencies) andalso
+                 not (null commands)
+              then
+                let
+                  val (g, tnode) =
+                      add_node {
+                        target = target_s, status = Pending,
+                        command = SOME (String.concatWith " ; " commands),
+                        dependencies = realdeps} g1
+                in
+                  (SOME tnode, g)
+                end
+              else (NONE, g1)
+            end
+end
+
+
 fun make_up_to_date incinfo ctxt target = let
   val make_up_to_date = make_up_to_date incinfo
   fun print s =
@@ -665,7 +760,19 @@ in
        cleantgt = ctgt}
 end
 
-fun stdcont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
+fun basecont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
+fun no_action_cont tgts ii =
+  let
+    open HM_DepGraph
+    val nI_l =
+        List.foldl (fn (t, g) => #2 (build_depgraph ii t g)) empty
+                   (map toFile tgts)
+  in
+    List.app (fn ni => print (nodeInfo_toString ni ^ "\n")) (listNodes nI_l);
+    true
+  end
+
+val stdcont = if no_action then no_action_cont else basecont
 
 in
   case targets of

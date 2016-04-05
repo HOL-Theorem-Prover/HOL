@@ -379,6 +379,8 @@ val _ =
     compile [] "Holmake_tools.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
+    compile [] "HM_DepGraph.sig";
+    compile [] "HM_DepGraph.sml";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";

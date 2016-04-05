@@ -3,43 +3,47 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate19 z
+  fun makeUpdateT z = makeUpdate20 z
 in
 fun updateT z = let
   fun from debug do_logging dontmakes fast help hmakefile holdir includes
-           interactive keep_going no_hmakefile no_lastmaker_check no_overlay
+           interactive keep_going no_action no_hmakefile no_lastmaker_check
+           no_overlay
            no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, keep_going = keep_going,
-      no_hmakefile = no_hmakefile,
+      no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun from' recursive rebuild_deps quit_on_failure quiet opentheory no_prereqs
-            no_overlay no_lastmaker_check no_hmakefile keep_going interactive
+            no_overlay no_lastmaker_check no_hmakefile no_action keep_going
+            interactive
             includes holdir
             hmakefile help fast dontmakes do_logging debug =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, keep_going = keep_going,
-      no_hmakefile = no_hmakefile,
+      no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
-            includes, interactive, keep_going, no_hmakefile, no_lastmaker_check,
+            includes, interactive, keep_going, no_action, no_hmakefile,
+            no_lastmaker_check,
             no_overlay, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive} =
     f debug do_logging dontmakes fast help hmakefile holdir includes
-      interactive keep_going no_hmakefile no_lastmaker_check no_overlay
+      interactive keep_going no_action no_hmakefile no_lastmaker_check
+      no_overlay
       no_prereqs opentheory quiet
       quit_on_failure rebuild_deps recursive
 in
@@ -60,6 +64,7 @@ type t = {
   includes : string list,
   interactive : bool,
   keep_going : bool,
+  no_action : bool,
   no_hmakefile : bool,
   no_lastmaker_check : bool,
   no_overlay : bool,
@@ -83,6 +88,7 @@ val default_core_options : t =
   includes = [],
   interactive = false,
   keep_going = false,
+  no_action = false,
   no_hmakefile = false,
   no_lastmaker_check = false,
   no_overlay = false,
@@ -134,6 +140,8 @@ val core_option_descriptions = [
     desc = mkBoolT #keep_going },
   { help = "enable time logging", long = ["logging"], short = "",
     desc = mkBoolT #do_logging },
+  { help = "print what would be executed", long = ["no_action"], short = "n",
+    desc = mkBoolT #no_action },
   { help = "don't use a Holmakefile", long = ["no_hmakefile"], short = "",
     desc = mkBoolT #no_hmakefile },
   { help = "don't check which Holmake was last used", long = ["nolmbc"],
