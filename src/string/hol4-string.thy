@@ -5,7 +5,14 @@ author: HOL developers <hol-developers@lists.sourceforge.net>
 license: MIT
 requires: base
 requires: hol-base
+show: "HOL4"
 show: "Data.Bool"
+show: "Data.List"
+show: "Data.Pair"
+show: "Data.Option"
+show: "Function"
+show: "Number.Natural"
+show: "Relation"
 main {
   article: "hol4-string-unint.art"
   interpret: type "HOL4.min.ind" as "ind"
