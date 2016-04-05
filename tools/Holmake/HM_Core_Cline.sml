@@ -144,7 +144,7 @@ val core_option_descriptions = [
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
   { help = "use file as opentheory logging .uo",
     long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
-  { help = "be quieter with output", short = "", long = ["quiet"],
+  { help = "be quieter with output", short = "q", long = ["quiet"],
     desc = mkBoolT #quiet },
   { help = "quit on failure", short = "", long = ["qof"],
     desc = mkBoolT #quit_on_failure },
