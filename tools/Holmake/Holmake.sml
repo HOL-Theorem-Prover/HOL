@@ -767,8 +767,10 @@ fun no_action_cont tgts ii =
     val nI_l =
         List.foldl (fn (t, g) => #2 (build_depgraph ii t g)) empty
                    (map toFile tgts)
+    val pr_sl = String.concatWith " "
   in
-    List.app (fn ni => print (nodeInfo_toString ni ^ "\n")) (listNodes nI_l);
+    List.app (fn ni => print (nodeInfo_toString pr_sl ni ^ "\n"))
+             (listNodes nI_l);
     true
   end
 
