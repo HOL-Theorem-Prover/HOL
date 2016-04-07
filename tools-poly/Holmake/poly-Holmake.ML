@@ -32,6 +32,7 @@ val _ = useC "HM_Core_Cline";
 val _ = useC "HM_DepGraph";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/HM_BaseEnv";
+val _ = use  "../../tools/Holmake/BuildCommand.sig";
 val _ = useS "poly/BuildCommand";
 val _ = useS "Holmake";
 

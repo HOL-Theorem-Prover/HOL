@@ -1,4 +1,4 @@
-structure BuildCommand =
+structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
@@ -9,6 +9,9 @@ structure Process = OS.Process
 type info_t = {optv : HM_Cline.t, hmake_options : string list,
                actual_overlay : string option,
                envlist : string -> string list}
+type build_command = {preincludes : string list, includes : string list} ->
+                     Holmake_tools.buildcmds ->
+                     File -> bool
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
 

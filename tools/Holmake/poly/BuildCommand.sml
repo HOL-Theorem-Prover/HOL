@@ -1,4 +1,4 @@
-structure BuildCommand =
+structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
@@ -125,6 +125,9 @@ case file of
 | _ => raise Match
 end
 
+type build_command = {preincludes : string list, includes : string list} ->
+                     Holmake_tools.buildcmds ->
+                     File -> bool
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,hmake_options,actual_overlay,envlist,quit_on_failure,outs,...} =
