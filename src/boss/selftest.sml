@@ -52,3 +52,14 @@ val _ = case sgs of
               print "OK\n"
             else die "FAILED!"
           | _ => die "FAILED!"
+
+val _ = tprint "qhdtm_x_assum (1)"
+val goal = ([``x = 3``, ``FACT n = 10``], ``n + x = 7``)
+val (sgs, _) = qhdtm_x_assum `FACT` mp_tac goal
+val expectedg = ``(FACT n = 10) ==> (n + x = 7)``
+val expecteda = ``x = 3``
+val _ = case sgs of
+            [([a], g)] => if aconv g expectedg andalso aconv a expecteda then
+                            print "OK\n"
+                          else die "FAILED!"
+          | _ => die "FAILED!"
