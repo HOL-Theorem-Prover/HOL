@@ -23,6 +23,7 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TheoryPP.uo) \
        $(dprot $(SIGOBJ)/Conv.uo) \
        $(dprot $(SIGOBJ)/Tactic.uo) \
+       $(dprot $(SIGOBJ)/Tactical.uo) \
        $(dprot $(SIGOBJ)/ParseDatatype.uo) \
        $(dprot $(SIGOBJ)/type_grammar.uo)
 
