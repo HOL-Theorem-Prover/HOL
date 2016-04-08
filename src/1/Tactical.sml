@@ -627,7 +627,7 @@ end
 local
 fun hdsym t = (t |> lhs |> strip_comb |> #1)
               handle HOL_ERR _ => t |> strip_comb |> #1
-fun hdsym_check tm ttac = ttac o assert (can (same_const tm) o hdsym o concl)
+fun hdsym_check tm ttac = ttac o assert (same_const tm o hdsym o concl)
 in
 fun hdtm_assum tm ttac = first_assum (hdsym_check tm ttac)
 fun hdtm_x_assum tm ttac = first_x_assum (hdsym_check tm ttac)
