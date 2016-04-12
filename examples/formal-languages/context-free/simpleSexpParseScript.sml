@@ -4,6 +4,27 @@ open simpleSexpPEGTheory pegTheory pegexecTheory
 
 val _ = new_theory"simpleSexpParse"
 
+(* TODO: move *)
+val isDigit_HEX = Q.store_thm("isDigit_HEX",
+  `∀n. n < 10 ⇒ isDigit (HEX n)`,
+  simp[GSYM rich_listTheory.MEM_COUNT_LIST]
+  \\ gen_tac \\ EVAL_TAC
+  \\ strip_tac \\ var_eq_tac \\ EVAL_TAC);
+
+val EVERY_isDigit_n2s = Q.store_thm("EVERY_isDigit_n2s",
+  `∀n. EVERY isDigit (n2s 10 HEX n)`,
+  rw[n2s_def,rich_listTheory.EVERY_REVERSE,listTheory.EVERY_MAP]
+  \\ match_mp_tac (MP_CANON listTheory.EVERY_MONOTONIC)
+  \\ qexists_tac`$> 10`
+  \\ simp[]
+  \\ metis_tac[isDigit_HEX,arithmeticTheory.GREATER_DEF,
+               numposrepTheory.n2l_BOUND,DECIDE``0n < 10``]);
+
+val EVERY_isDigit_num_to_dec_string = Q.store_thm("EVERY_isDigit_num_to_dec_string",
+  `EVERY isDigit (num_to_dec_string n)`,
+  rw[num_to_dec_string_def,EVERY_isDigit_n2s]);
+(* -- *)
+
 val parse_sexp_def = Define`
   parse_sexp s =
     OPTION_BIND (pegparse sexpPEG s)
@@ -78,6 +99,60 @@ val peg_eval_valid_symbol = Q.prove(
   map_every qexists_tac[`""`,`[]`,`l`] >>
   simp[destSXSYM_def] >> rw[] >>
   rw[Once peg_eval_cases] >> simp[peg_eval_tok_NONE]);
+
+val peg_eval_list_nil = Q.store_thm("peg_eval_list_nil",
+  `∀ls. EVERY ($~ o P) ls ⇒
+   peg_eval_list G (ls, tok P a) (ls,[])`,
+  rw[Once peg_eval_list,peg_eval_tok_NONE,listTheory.EVERY_MEM]
+  \\ Cases_on`ls` \\ fs[]);
+
+val peg_eval_list_no_spaces = Q.prove(
+  `peg_eval_list sexpPEG (toString n,tok isSpace ARB) (toString n,[])`,
+  match_mp_tac peg_eval_list_nil
+  \\ assume_tac EVERY_isDigit_num_to_dec_string
+  \\ fs[listTheory.EVERY_MEM] \\ rw[]
+  \\ fs[stringTheory.isDigit_def,stringTheory.isSpace_def]
+  \\ spose_not_then strip_assume_tac
+  \\ res_tac
+  \\ DECIDE_TAC);
+
+val peg_eval_list_digits = Q.store_thm("peg_eval_list_digits",
+  `∀s. EVERY isDigit s ⇒
+   peg_eval_list sexpPEG (s,nt(mkNT sxnt_digit) I) ("",MAP (SX_NUM o combin$C $- 48 o ORD) s)`,
+  Induct \\ simp[Once peg_eval_list]
+  >- (
+    simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
+    \\ simp[peg_eval_tok_NONE] )
+  \\ rw[] \\ fs[]
+  \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
+  \\ simp[peg_eval_tok_SOME]);
+
+val peg_eval_number = Q.prove(
+  `∀n. peg_eval sexpPEG (toString n,sexpPEG.start) (SOME ("",SX_NUM n))`,
+  simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
+       ignoreL_def, ignoreR_def, peg_eval_seq_SOME, peg_eval_rpt,
+       Once peg_eval_choicel_CONS,
+       PULL_EXISTS]
+  \\ srw_tac[boolSimps.DNF_ss][]
+  \\ disj1_tac
+  \\ part_match_exists_tac (hd o strip_conj) (concl peg_eval_list_no_spaces)
+  \\ simp[peg_eval_list_no_spaces]
+  \\ simp[peg_eval_tok_SOME,PULL_EXISTS]
+  \\ Cases_on`toString n`
+  >- (
+    pop_assum(mp_tac o Q.AP_TERM`LENGTH`)
+    \\ simp[num_to_dec_string_def,n2s_def,numposrepTheory.LENGTH_n2l] )
+  \\ simp[]
+  \\ assume_tac EVERY_isDigit_num_to_dec_string
+  \\ rfs[]
+  \\ imp_res_tac peg_eval_list_digits
+  \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
+  \\ simp[]
+  \\ qexists_tac`[]`
+  \\ simp[peg_eval_list_nil]
+  \\ simp[pairTheory.UNCURRY]
+  \\ cheat);
+
 (*
 val cs = listLib.list_compset()
 val () = pegLib.add_peg_compset cs
@@ -94,9 +169,15 @@ val () = computeLib.add_thms[sexpPEG_exec_thm,pnt_def,ignoreR_def,ignoreL_def,to
 val peg_eval_print_sexp = Q.prove(
   `∀s. valid_sexp s ⇒
        peg_eval sexpPEG (print_sexp s,sexpPEG.start) (SOME ("",s))`,
-  ho_match_mp_tac(theorem"print_sexp_ind") >>
-  strip_tac >- (
+  ho_match_mp_tac(theorem"print_sexp_ind")
+  \\ strip_tac >- (
     rw[print_sexp_def]
+    \\ imp_res_tac peg_eval_valid_symbol
+    \\ fs[] )
+  \\ strip_tac >- (
+    rw[print_sexp_def]
+    \\ MATCH_ACCEPT_TAC(SIMP_RULE(srw_ss())[]peg_eval_number))
+  \\ cheat);
 
 val parse_print = Q.store_thm("parse_print",
   `parse_sexp (print_sexp s) = SOME s`,
