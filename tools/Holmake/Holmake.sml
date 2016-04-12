@@ -512,7 +512,7 @@ in
               let
                 val (g, tnode) =
                     add_node {target = target_s, status = Failed,
-                              command = SOME "File doesn't exist - no rule",
+                              command = SOME ["File doesn't exist - no rule"],
                               dependencies = []} g0
               in
                 (SOME tnode, g)
@@ -538,7 +538,7 @@ in
                   val (g, tnode) =
                       add_node {
                         target = target_s, status = Pending,
-                        command = SOME (String.concatWith " ; " commands),
+                        command = SOME commands,
                         dependencies = realdeps} g1
                 in
                   (SOME tnode, g)

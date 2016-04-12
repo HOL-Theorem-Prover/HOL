@@ -8,7 +8,7 @@ exception NoSuchNode
 exception DuplicateTarget
 type node = int
 type 'a nodeInfo = { target : 'a, status : target_status,
-                     command : string option,
+                     command : string list option,
                      dependencies : node list  }
 
 fun lift {target,status,command,dependencies} =
@@ -27,11 +27,19 @@ val node_compare = Int.compare
 
 type t = { nodes : (node, string list nodeInfo) Map.dict,
            target_map : (string,node) Map.dict,
-           command_map : (string, node) Map.dict }
+           command_map : (string list, node) Map.dict }
+
+fun lex_compare c (l1, l2) =
+  case (l1,l2) of
+      ([],[]) => EQUAL
+    | ([], _) => LESS
+    | (_, []) => GREATER
+    | (h1::t1, h2::t2) => case c(h1,h2) of EQUAL => lex_compare c (t1,t2)
+                                         | x => x
 
 val empty = { nodes = Map.mkDict node_compare,
               target_map = Map.mkDict String.compare,
-              command_map = Map.mkDict String.compare }
+              command_map = Map.mkDict (lex_compare String.compare) }
 fun fupd_nodes f {nodes, target_map, command_map} =
   {nodes = f nodes, target_map = target_map, command_map = command_map}
 
@@ -60,7 +68,7 @@ fun file_pair s =
 
 fun add_node (nI : string nodeInfo) (g :t) =
   let
-    fun newNode (copt : string option) =
+    fun newNode (copt : string list option) =
       let
         val n = size g
       in
@@ -154,7 +162,7 @@ fun status_toString s =
 fun nodeInfo_toString tstr {target,status,command,dependencies} =
   tstr target ^ " " ^ status_toString status ^ " : " ^
   (case command of
-       SOME s => s
-     | NONE => "handled by Holmake")
+       SOME s => String.concatWith " ; " s
+     | NONE => "<handled by Holmake>")
 
 end

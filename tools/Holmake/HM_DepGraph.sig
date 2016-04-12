@@ -7,7 +7,7 @@ sig
   datatype target_status = Pending | Succeeded | Failed | Running
   eqtype node
   type 'a nodeInfo = { target : 'a, status : target_status,
-                       command : string option,
+                       command : string list option,
                        dependencies : node list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo
