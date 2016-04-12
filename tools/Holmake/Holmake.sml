@@ -813,8 +813,12 @@ end
 
 in
   if show_usage then
-    print (GetOpt.usageInfo {header = "Holmake [targets]",
-                             options = HM_Cline.option_descriptions})
+    print (GetOpt.usageInfo {
+              header = "Usage:\n  " ^ CommandLine.name() ^ " [targets]\n\n\
+                       \Special targets are: clean, cleanDeps and cleanAll\n\n\
+                       \Extra options:",
+              options = HM_Cline.option_descriptions
+          })
   else let
       open Process
       val result =
