@@ -3,18 +3,19 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate20 z
+  fun makeUpdateT z = makeUpdate21 z
 in
 fun updateT z = let
   fun from debug do_logging dontmakes fast help hmakefile holdir includes
-           interactive keep_going no_action no_hmakefile no_lastmaker_check
+           interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
            no_overlay
            no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
-      includes = includes, interactive = interactive, keep_going = keep_going,
+      includes = includes, interactive = interactive, jobs = jobs,
+      keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
@@ -23,13 +24,14 @@ fun updateT z = let
     }
   fun from' recursive rebuild_deps quit_on_failure quiet opentheory no_prereqs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
-            interactive
+            jobs interactive
             includes holdir
             hmakefile help fast dontmakes do_logging debug =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
-      includes = includes, interactive = interactive, keep_going = keep_going,
+      includes = includes, interactive = interactive, jobs = jobs,
+      keep_going = keep_going,
       no_action = no_action, no_hmakefile = no_hmakefile,
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
@@ -37,12 +39,12 @@ fun updateT z = let
       rebuild_deps = rebuild_deps, recursive = recursive
     }
   fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
-            includes, interactive, keep_going, no_action, no_hmakefile,
+            includes, interactive, jobs, keep_going, no_action, no_hmakefile,
             no_lastmaker_check,
             no_overlay, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive} =
     f debug do_logging dontmakes fast help hmakefile holdir includes
-      interactive keep_going no_action no_hmakefile no_lastmaker_check
+      interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
       no_overlay
       no_prereqs opentheory quiet
       quit_on_failure rebuild_deps recursive
@@ -63,6 +65,7 @@ type t = {
   holdir : string option,
   includes : string list,
   interactive : bool,
+  jobs : int,
   keep_going : bool,
   no_action : bool,
   no_hmakefile : bool,
@@ -87,6 +90,7 @@ val default_core_options : t =
   holdir = NONE,
   includes = [],
   interactive = false,
+  jobs = 4,
   keep_going = false,
   no_action = false,
   no_hmakefile = false,
@@ -104,6 +108,12 @@ open GetOpt
 fun mkBoolT sel = NoArg (fn () => fn (wn,t) => updateT t (U sel true) $$)
 fun cons_dontmakes x (wn,t) = updateT t (U #dontmakes (x :: #dontmakes t)) $$
 fun cons_includes x (wn,t) = updateT t (U #includes (x :: #includes t)) $$
+fun change_jobs nstr (wn,t) =
+  case Int.fromString nstr of
+      NONE => (wn ("Couldn't parse "^nstr^" as a number; ignoring it"); t)
+    | SOME n => if n < 1 then (wn "Ignoring non-positive job count"; t)
+                else updateT t (U #jobs n) $$
+
 fun set_hmakefile s (wn,t) =
   (if isSome (#hmakefile t) then
      wn "Multiple Holmakefile specs; ignoring earlier spec"
@@ -136,6 +146,8 @@ val core_option_descriptions = [
     desc = mkBoolT #interactive },
   { help = "include directory", long = [], short = "I",
     desc = ReqArg (cons_includes, "directory") },
+  { help = "max number of parallel jobs", long = ["jobs"], short = "j",
+    desc = ReqArg (change_jobs, "n") },
   { help = "try to build all targets", long = ["keep-going"], short = "k",
     desc = mkBoolT #keep_going },
   { help = "enable time logging", long = ["logging"], short = "",

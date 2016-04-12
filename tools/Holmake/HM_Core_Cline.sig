@@ -11,6 +11,7 @@ type t = {
   holdir : string option,
   includes : string list,
   interactive : bool,
+  jobs : int,
   keep_going : bool,
   no_action : bool,
   no_hmakefile : bool,
