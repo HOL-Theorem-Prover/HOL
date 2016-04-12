@@ -8,7 +8,7 @@ sig
   eqtype node
   type 'a nodeInfo = { target : 'a, status : target_status,
                        command : string list option,
-                       dependencies : node list }
+                       dependencies : (node * string) list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo
   val node_compare : node * node -> order

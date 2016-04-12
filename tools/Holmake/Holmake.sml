@@ -459,6 +459,7 @@ open HM_DepGraph
 fun build_depgraph incinfo target g0 = let
   val pdep = primary_dependent target
   val target_s = fromFile target
+  fun addF f nopt = Option.map (fn n => (n,fromFile f)) nopt
 in
   case target_node g0 target_s of
       (x as SOME _) => (x, g0)
@@ -483,11 +484,12 @@ in
                                       (get_explicit_dependencies target)
           fun foldthis (d, (secnodes, g)) =
             let
-              val (n, g') = build_depgraph incinfo d g
+              val (nopt, g') = build_depgraph incinfo d g
             in
-              (n::secnodes, g')
+              (addF d nopt::secnodes, g')
             end
-          val (depnodes, g2) = List.foldl foldthis ([pnode], g1) secondaries
+          val (depnodes, g2) =
+              List.foldl foldthis ([addF pdep pnode], g1) secondaries
           val realdeps = List.mapPartial (fn x => x) depnodes
         in
           if not (null realdeps) orelse
@@ -521,12 +523,12 @@ in
             let
               fun foldthis (d, (secnodes, g)) =
                 let
-                  val (n, g') = build_depgraph incinfo d g
+                  val (nopt, g') = build_depgraph incinfo d g
                 in
-                  (n::secnodes, g')
+                  (addF d nopt::secnodes, g')
                 end
-              val (depnodes, g1) = List.foldl foldthis ([], g0)
-                                              (map toFile dependencies)
+              val (depnodes, g1) =
+                  List.foldl foldthis ([], g0) (map toFile dependencies)
               val realdeps = List.mapPartial (fn x => x) depnodes
             in
               if (not (null realdeps) orelse

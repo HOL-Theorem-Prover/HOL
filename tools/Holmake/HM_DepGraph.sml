@@ -9,7 +9,7 @@ exception DuplicateTarget
 type node = int
 type 'a nodeInfo = { target : 'a, status : target_status,
                      command : string list option,
-                     dependencies : node list  }
+                     dependencies : (node * string) list  }
 
 fun lift {target,status,command,dependencies} =
   {target = [target], status = status, command = command,
@@ -45,7 +45,11 @@ fun fupd_nodes f {nodes, target_map, command_map} =
 
 fun size (g : t) = Map.numItems (#nodes g)
 fun peeknode (g:t) n = Map.peek(#nodes g, n)
-val empty_nodeset = Binaryset.empty node_compare
+fun pair_compare (c1,c2) ((a1,b1), (a2,b2)) =
+  case c1(a1,a2) of
+      EQUAL => c2(b1,b2)
+    | x => x
+val empty_nodeset = Binaryset.empty (pair_compare(node_compare, String.compare))
 
 fun nodeset_eq (nl1, nl2) =
   let
@@ -135,7 +139,7 @@ fun updnode (n, st) (g : t) =
 fun find_runnable (g : t) =
   let
     val sz = size g
-    fun hasSucceeded i = #status (valOf (peeknode g i)) = Succeeded
+    fun hasSucceeded (i,_) = #status (valOf (peeknode g i)) = Succeeded
     (* relying on invariant that all nodes up to size are in map *)
     fun search i =
       case peeknode g i of
