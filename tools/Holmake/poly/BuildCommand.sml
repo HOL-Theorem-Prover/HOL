@@ -326,9 +326,11 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       end
     else NONE
   end
+  fun build_graph g = raise Fail "Can't build from dependency graphs yet"
 in
   {build_command = build_command, mosml_build_command = mosml_build_command,
-   extra_impl_deps = [Unhandled HOLSTATE]}
+   extra_impl_deps = [Unhandled HOLSTATE],
+   build_graph = build_graph}
 end
 
 end (* struct *)

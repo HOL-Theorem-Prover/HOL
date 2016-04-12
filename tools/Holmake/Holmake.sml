@@ -249,7 +249,7 @@ val binfo : HM_Cline.t buildinfo_t =
      actual_overlay = actual_overlay, envlist = envlist,
      quit_on_failure = quit_on_failure, outs = outputfns,
      SIGOBJ = SIGOBJ}
-val {build_command,mosml_build_command,extra_impl_deps} =
+val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
     BuildCommand.make_build_command binfo
 
 fun run_extra_command tgt c deps = let

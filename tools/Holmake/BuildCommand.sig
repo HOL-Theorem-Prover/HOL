@@ -10,8 +10,7 @@ sig
       HM_Cline.t Holmake_tools.buildinfo_t ->
       {build_command : build_command, extra_impl_deps : File list,
        mosml_build_command : Holmake_types.env -> bool * bool * string ->
-                             File list -> OS.Process.status option}
-
-
+                             File list -> OS.Process.status option,
+       build_graph : HM_DepGraph.t -> OS.Process.status }
 
 end
