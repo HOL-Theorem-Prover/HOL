@@ -1,21 +1,20 @@
 val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
-OS.FileSys.chDir "..";
+val origdir = OS.FileSys.getDir();
+OS.FileSys.chDir "../../../tools-poly";
 val _ = use "poly/poly-init.ML";
-OS.FileSys.chDir "Holmake";
+OS.FileSys.chDir origdir;
 
 structure BasicIO = SML90;
 exception Interrupt = SML90.Interrupt
 
-fun useC f =
-    (use ("../../tools/Holmake/" ^ f ^ ".sig");
-     use ("../../tools/Holmake/" ^ f ^ ".sml"))
+fun useC f = (use ("../" ^ f ^ ".sig"); use ("../" ^ f ^ ".sml"))
 
-fun useS f = use ("../../tools/Holmake/" ^ f ^ ".sml")
+fun useS f = use ("../" ^ f ^ ".sml")
 
-val _ = use "../../tools/Holmake/Systeml.sig"
-val _ = use "Systeml.sml";
+val _ = use "../Systeml.sig"
+val _ = use "../../../tools-poly/Holmake/Systeml.sml";
 
 val _ = useC "Holdep_tokens";
 val _ = useC "Holdep";
@@ -32,7 +31,7 @@ val _ = useC "HM_Core_Cline";
 val _ = useC "HM_DepGraph";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/HM_BaseEnv";
-val _ = use  "../../tools/Holmake/BuildCommand.sig";
+val _ = use  "../BuildCommand.sig";
 val _ = useS "poly/BuildCommand";
 val _ = useS "Holmake";
 
