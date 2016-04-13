@@ -29,4 +29,5 @@ delconst NULL
 delconst EVERY
 delconst EXISTS
 delconst LAST
+delconst UNZIP
 skipthm datatype_list

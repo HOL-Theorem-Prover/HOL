@@ -133,6 +133,7 @@ proofs {
   interpret: const "HOL4.prove_base_assums.Data_List_filter" as "Data.List.filter"
   interpret: const "HOL4.prove_base_assums.Data_List_null" as "Data.List.null"
   interpret: const "HOL4.prove_base_assums.Data_List_last" as "Data.List.last"
+  interpret: const "HOL4.prove_base_assums.Data_List_unzip" as "Data.List.unzip"
 
   interpret: type "HOL4.prove_base_assums.Set_set" as "Set.set"
   interpret: const "HOL4.prove_base_assums.Set_empty" as "Set.{}"

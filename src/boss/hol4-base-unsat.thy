@@ -109,4 +109,5 @@ main {
   interpret: const "HOL4.list.FILTER" as "Data.List.filter"
   interpret: const "HOL4.list.NULL" as "Data.List.null"
   interpret: const "HOL4.list.LAST" as "Data.List.last"
+  interpret: const "HOL4.list.UNZIP" as "Data.List.unzip"
 }

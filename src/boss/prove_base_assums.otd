@@ -39,6 +39,7 @@ delconst Data_List_all
 delconst Data_List_any
 delconst Data_List_map
 delconst Data_List_filter
+delconst Data_List_unzip
 deltype Data_Option_option
 delconst Data_Option_none
 delconst Data_Option_some
