@@ -77,4 +77,4 @@ base-theorems.art:
 hol4-assums.art: hol4-assums.thy installed-unsat.txt
 	opentheory info --skip-definitions --assumptions -o $@ $<
 
-prove_base_assums.art : base-theorems.art hol4-assums.art
+prove_base_assums.art : prove_base_assums.otd base-theorems.art hol4-assums.art
