@@ -40,11 +40,13 @@ fun extract_thypart s = (* <....>Theory.sml *)
   String.substring(s, 0, String.size s - 10)
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,actual_overlay,hmake_options,SIGOBJ,...} = buildinfo
+  val {optv,actual_overlay,hmake_options,SIGOBJ,outs,...} = buildinfo
+  val {warn,tgtfatal,...} = outs
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
   val keep_going = #keep_going (#core optv)
   val quit_on_failure = #quit_on_failure (#core optv)
+  val quiet_flag = #quiet (#core optv)
   val interactive_flag = #interactive (#core optv)
   val no_sigobj = member "NO_SIGOBJ" hmake_options
   val hmake_no_overlay = member "NO_OVERLAY" hmake_options
@@ -222,7 +224,37 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                      | ts =>
                        raise Fail ("implicit bg targets: " ^
                                    String.concatWith ", " ts))
-                | SOME cs => raise Fail "Not implemented yet"
+                | SOME cs =>
+                  let
+                    fun build1 c =
+                      let
+                        val {noecho,ignore_error,command} =
+                            process_hypat_options c
+                        val () = if not noecho andalso not quiet_flag then
+                                   (TextIO.output(TextIO.stdOut, c ^ "\n");
+                                    TextIO.flushOut TextIO.stdOut)
+                                 else ()
+                        val result = Systeml.system_ps c
+                      in
+                        if not (OS.Process.isSuccess result) andalso
+                           ignore_error
+                        then
+                          (warn ("[" ^ hd (#target nI) ^ "] Error (ignored)");
+                           OS.Process.success)
+                        else result
+                      end
+                    fun buildall cs =
+                      case cs of
+                          [] => k true
+                        | c::cs => if OS.Process.isSuccess (build1 c) then
+                                     buildall cs
+                                   else
+                                     (tgtfatal ("*** ["^hd (#target nI)^
+                                                "] Error");
+                                      k false)
+                  in
+                    buildall cs
+                  end
             end
     in
       recurse OS.Process.success g
