@@ -1,44 +1,44 @@
 signature mg = sig
-  type pat = Abbrev.term Abbrev.quotation
-  type matcher = string * pat * bool
+  type pattern
+  type matcher
 
   (* name and match whole assumption *)
-  val a     : string -> pat -> matcher
+  val a     : string -> pattern -> matcher
 
   (* match whole assumption *)
-  val ua    : pat -> matcher
-  val au    : pat -> matcher
+  val ua    : pattern -> matcher
+  val au    : pattern -> matcher
 
   (* name and match assumption subterm *)
-  val ab    : string -> pat -> matcher
-  val ba    : string -> pat -> matcher
+  val ab    : string -> pattern -> matcher
+  val ba    : string -> pattern -> matcher
 
   (* match assumption subterm *)
-  val uab   : pat -> matcher
-  val uba   : pat -> matcher
-  val aub   : pat -> matcher
-  val abu   : pat -> matcher
-  val bau   : pat -> matcher
-  val bua   : pat -> matcher
+  val uab   : pattern -> matcher
+  val uba   : pattern -> matcher
+  val aub   : pattern -> matcher
+  val abu   : pattern -> matcher
+  val bau   : pattern -> matcher
+  val bua   : pattern -> matcher
 
   (* match whole conclusion *)
-  val c     : pat -> matcher
+  val c     : pattern -> matcher
 
   (* match conclusion subterm *)
-  val cb    : pat -> matcher
-  val bc    : pat -> matcher
+  val cb    : pattern -> matcher
+  val bc    : pattern -> matcher
 
   (* match whole assumption or conclusion *)
-  val ac    : pat -> matcher
-  val ca    : pat -> matcher
+  val ac    : pattern -> matcher
+  val ca    : pattern -> matcher
 
   (* match assumption or conclusion subterm *)
-  val acb   : pat -> matcher
-  val abc   : pat -> matcher
-  val bca   : pat -> matcher
-  val cba   : pat -> matcher
-  val cab   : pat -> matcher
-  val bac   : pat -> matcher
+  val acb   : pattern -> matcher
+  val abc   : pattern -> matcher
+  val bca   : pattern -> matcher
+  val cba   : pattern -> matcher
+  val cab   : pattern -> matcher
+  val bac   : pattern -> matcher
 end
 
 signature match_goal =
@@ -46,19 +46,26 @@ sig
 
 include Abbrev
 
-type matcher = string * term quotation *  bool
+datatype name =
+    Assumption of string option
+  | Conclusion
+  | Anything
+
+type pattern = term quotation
+type matcher = name * pattern * bool (* whole term? *)
 
 (*
-name of assumption     pattern          whole term?
-string               * term quotation * bool
-
 semantics of names:
-(any normal string, e.g., "H") - must be an assumption
-"_" -> must be assumption, but don't care about its name - can match other different or same
-"H2" -> must be an assumption, must be different from "H"
-"H" -> must be an assumption, and the same one as "H"
-"?" -> must be the conclusion
-"" -> match anything, don't care about name or previous matches
+Assumption (SOME s)
+  - must be an assumption
+  - must be the same as any other assumptions called s
+  - must be different from any other assumptions not called s
+Assumption NONE
+  - must be an assumption
+Conclusion
+  - must be the conclusion
+Anything
+  (no constraints)
 *)
 
 (*
@@ -108,6 +115,6 @@ val kill_asm : thm -> tactic
 val drule_thm : thm -> thm -> tactic
 (* -- *)
 
-structure mg : mg
+structure mg : mg where type matcher = matcher and type pattern = pattern
 
 end

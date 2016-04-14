@@ -16,7 +16,13 @@ fun stream_append_list x = List.foldr (uncurry stream_append) empty_stream x
 
 val ERR = Feedback.mk_HOL_ERR"match_goal";
 
-type matcher = string * term quotation * bool
+datatype name =
+    Assumption of string option
+  | Conclusion
+  | Anything
+
+type pattern = term quotation
+type matcher = name * pattern * bool
 
                (* (name, assumption number) *)
 type named_thms = (string, int) Redblackmap.dict
@@ -31,16 +37,6 @@ type named_tms =
 val empty_named_tms : named_tms = ([],[])
 
 type data = named_thms * named_tms
-
-datatype name =
-    Assumption of string option
-  | Conclusion
-  | Anything
-
-fun parse_name ""  = Anything
-  | parse_name "?" = Conclusion
-  | parse_name "_" = Assumption NONE
-  | parse_name s   = Assumption (SOME s)
 
 fun is_underscore v =
   case total dest_var v of NONE
@@ -75,7 +71,7 @@ fun umatch_subterms avoid_tms (ntms:named_tms) pat ob : unit -> named_tms stream
       ())
 
 fun preprocess_matcher fvs =
-  fn (nm,q,b):matcher => (parse_name nm, Parse.parse_in_context fvs q, b)
+  fn (nm,q,b):matcher => (nm, Parse.parse_in_context fvs q, b)
 
 type mg_tactic = (string -> thm) * (string -> term) -> tactic
 
@@ -169,34 +165,34 @@ fun kill_asm th = first_x_assum((K ALL_TAC) o assert (equal (concl th) o concl))
 
 fun drule_thm th = mp_tac o Lib.C MATCH_MP th
 
-structure mg :> mg = struct
+structure mg :> mg where type matcher = matcher and type pattern = pattern = struct
+  type pattern = pattern
   type matcher = matcher
-  type pat = term quotation
 
-  fun a nm p = (nm,p,true)
+  fun a nm p = (Assumption (SOME nm),p,true)
 
-  fun ua p = ("_",p,true)
+  fun ua p = (Assumption NONE,p,true)
   val au = ua
 
-  fun ab nm p = (nm,p,false)
+  fun ab nm p = (Assumption (SOME nm),p,false)
   val ba = ab
 
-  fun uab p = ("_",p,false)
+  fun uab p = (Assumption NONE,p,false)
   val uba = uab
   val aub = uab
   val abu = uab
   val bau = uab
   val bua = uab
 
-  fun c p = ("?",p,true)
+  fun c p = (Conclusion,p,true)
 
-  fun cb p = ("?",p,false)
+  fun cb p = (Conclusion,p,false)
   val bc = cb
 
-  fun ac p = ("",p,true)
+  fun ac p = (Anything,p,true)
   val ca = ac
 
-  fun acb p = ("",p,false)
+  fun acb p = (Anything,p,false)
   val abc = acb
   val bca = acb
   val cba = acb
