@@ -227,47 +227,14 @@ infix in_target
 fun (s in_target t) = case extra_deps t of NONE => false | SOME l => member s l
 
 (*** Compilation of files *)
-val binfo : HM_Cline.t buildinfo_t =
+val binfo : HM_Cline.t BuildCommand.buildinfo_t =
     {optv = option_value, hmake_options = hmake_options,
      actual_overlay = actual_overlay, envlist = envlist,
+     hmenv = hmakefile_env,
      quit_on_failure = quit_on_failure, outs = outputfns,
      SIGOBJ = SIGOBJ}
 val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
     BuildCommand.make_build_command binfo
-
-fun run_extra_command tgt c deps = let
-  open Holmake_types
-  val hypargs as {noecho, ignore_error, command = c} = process_hypat_options c
-in
-  case mosml_build_command hmakefile_env hypargs deps of
-      SOME r => r
-    | NONE =>
-      let
-        val () =
-            if not noecho andalso not quiet_flag then
-              (TextIO.output(TextIO.stdOut, c ^ "\n");
-               TextIO.flushOut TextIO.stdOut)
-            else ()
-        val result = Systeml.system_ps c
-      in
-        if not (Process.isSuccess result) andalso ignore_error then
-          (warn ("["^tgt^"] Error (ignored)");
-           Process.success)
-        else result
-      end
-end
-
-fun run_extra_commands tgt commands deps =
-  case commands of
-    [] => Process.success
-  | (c::cs) =>
-      if Process.isSuccess (run_extra_command tgt c deps) then
-        run_extra_commands tgt cs deps
-      else
-        (tgtfatal ("*** ["^tgt^"] Error");
-         Process.failure)
-
-
 
 val _ = if (debug) then let
 in
@@ -400,6 +367,7 @@ fun get_explicit_dependencies (f : File) : File list =
 
 (** Build graph *)
 
+(*
 fun do_a_build_command incinfo target pdep secondaries =
   case (extra_commands (fromFile target)) of
     SOME (cs as _ :: _) =>
@@ -420,7 +388,7 @@ fun do_a_build_command incinfo target pdep secondaries =
                        and those are those targets of the shapes already
                        matched in the previous cases *)
     end
-
+*)
 
 exception CircularDependency
 exception BuildFailure
@@ -432,11 +400,6 @@ fun no_full_extra_rule tgt =
     | SOME cl => null cl
 
 val done_some_work = ref false
-val up_to_date_cache:(File, bool)Binarymap.dict ref =
-  ref (Binarymap.mkDict file_compare);
-fun cache_insert(f, b) =
-  ((up_to_date_cache := Binarymap.insert (!up_to_date_cache, f, b));
-   b)
 open HM_DepGraph
 
 fun build_depgraph incinfo target g0 = let
@@ -533,186 +496,6 @@ in
 end
 
 
-fun make_up_to_date incinfo ctxt target = let
-  val make_up_to_date = make_up_to_date incinfo
-  fun print s =
-    if debug then (nspaces TextIO.print (length ctxt);
-                   TextIO.print s)
-    else ()
-  val _ = print ("Working on target: "^fromFile target^"\n")
-  val pdep = primary_dependent target
-  val _ = List.all (fn d => d <> target) ctxt orelse
-    (warn (fromFile target ^
-           " seems to depend on itself - failing to build it");
-     raise CircularDependency)
-  val cached_result =
-    SOME (Binarymap.find (!up_to_date_cache,target))
-    handle Binarymap.NotFound => NONE
-  val termstr = if keep_going_flag then "" else "  Stop."
-in
-  if isSome cached_result then
-    valOf cached_result
-  else
-    if Path.dir (string_part target) <> "" andalso
-       Path.dir (string_part target) <> "." andalso
-       no_full_extra_rule target
-    then (* path outside of currDir *)
-      if exists_readable (fromFile target) then
-        (print (fromFile target ^
-                " outside current directory; considered OK.\n");
-         cache_insert (target, true))
-      else
-        (tgtfatal ("*** Remote dependency "^fromFile target^" doesn't exist."^
-                   termstr);
-         cache_insert (target, false))
-    else if isSome pdep andalso no_full_extra_rule target then let
-        val pdep = valOf pdep
-      in
-        if make_up_to_date (target::ctxt) pdep then let
-            val secondaries =
-                set_union (get_implicit_dependencies incinfo target)
-                          (get_explicit_dependencies target)
-            val _ =
-                print ("Secondary dependencies for "^fromFile target^
-                       " are: [" ^
-                       String.concatWith ", " (map fromFile secondaries) ^
-                       "]\n")
-          in
-            if List.all (make_up_to_date (target::ctxt)) secondaries then let
-                fun testthis dep =
-                    fromFile dep forces_update_of fromFile target
-              in
-                case List.find testthis (pdep::secondaries) of
-                  NONE => cache_insert (target, true)
-                | SOME d => let
-                  in
-                    print ("Dependency: "^fromFile d^" forces rebuild\n");
-                    done_some_work := true;
-                    cache_insert
-                        (target,
-                         do_a_build_command incinfo target pdep secondaries)
-                  end
-              end
-            else
-              cache_insert (target, false)
-          end
-        else
-          cache_insert (target, false)
-      end
-    else let
-        val tgt_str = fromFile target
-      in
-        case extra_rule_for tgt_str of
-          NONE => if exists_readable tgt_str then
-                    (if null ctxt then
-                       info ("Nothing to be done for `"^tgt_str^"'.")
-                     else ();
-                     cache_insert(target, true))
-                  else let
-                    in
-                      case ctxt of
-                        [] => tgtfatal ("*** No rule to make target `"^
-                                        tgt_str^"'."^termstr)
-                      | (f::_) => tgtfatal ("*** No rule to make target `"^
-                                            tgt_str^"', needed by `"^
-                                            fromFile f^"'."^termstr);
-                      cache_insert(target, false)
-                    end
-        | SOME {dependencies, commands, ...} => let
-            val _ =
-                print ("Secondary dependencies for "^tgt_str^" are: [" ^
-                       String.concatWith ", " dependencies ^ "]\n")
-            val depfiles = map toFile dependencies
-          in
-            if List.all (make_up_to_date (target::ctxt)) depfiles
-            then
-              if not (exists_readable tgt_str) orelse
-                 List.exists
-                     (fn dep => dep forces_update_of tgt_str)
-                     dependencies orelse
-                     tgt_str in_target ".PHONY"
-              then
-                if null commands then
-                  (if null ctxt andalso not (!done_some_work) then
-                     info ("Nothing to be done for `"^tgt_str^"'.")
-                   else ();
-                   cache_insert(target, true))
-                else
-                  let
-                    val _ = done_some_work := true
-                    val runresult =
-                        run_extra_commands tgt_str commands
-                                           (List.map toFile dependencies)
-                  in
-                    cache_insert(target, Process.isSuccess runresult)
-                  end
-              else (* target is up-to-date wrt its dependencies already *)
-                (if null ctxt then
-                   if null commands then
-                     info ("Nothing to be done for `"^tgt_str^ "'.")
-                   else
-                     info ("`"^tgt_str^"' is up to date.")
-                 else ();
-                 cache_insert(target, true))
-            else (* failed to make a dependency *)
-              cache_insert(target, false)
-          end
-      end
-end handle CircularDependency => cache_insert (target, false)
-         | Fail s => raise Fail s
-         | OS.SysErr(s, _) => raise Fail ("Operating system error: "^s)
-         | HolDepFailed => cache_insert(target, false)
-         | IO.Io{function,name,cause = OS.SysErr(s,_)} =>
-             raise Fail ("Got I/O exception for function "^function^
-                         " with name "^name^" and cause "^s)
-         | IO.Io{function,name,...} =>
-               raise Fail ("Got I/O exception for function "^function^
-                         " with name "^name)
-         | x => raise Fail ("Got an "^exnName x^" exception, with message <"^
-                            exnMessage x^"> in make_up_to_date")
-
-(** Dealing with the command-line *)
-fun do_target incinfo x = let
-  fun clean_action () =
-      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
-  fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
-  val _ = done_some_work := false
-in
-  if not (member x dontmakes) then
-    case extra_rule_for x of
-      NONE => let
-      in
-        case x of
-          "clean" => ((print "Cleaning directory of object files\n";
-                       clean_action();
-                       true) handle _ => false)
-        | "cleanDeps" => clean_deps()
-        | "cleanAll" => clean_action() andalso clean_deps()
-        | _ => make_up_to_date incinfo [] (toFile x)
-      end
-    | SOME _ => make_up_to_date incinfo [] (toFile x)
-  else true
-end
-
-fun stop_on_failure incinfo tgts =
-    case tgts of
-      [] => true
-    | (t::ts) => do_target incinfo t andalso stop_on_failure incinfo ts
-fun keep_going incinfo tgts = let
-  fun recurse acc tgts =
-      case tgts of
-        [] => acc
-      | (t::ts) => recurse (do_target incinfo t andalso acc) ts
-in
-  recurse true tgts
-end
-fun strategy incinfo tgts = let
-  val tgts = if always_rebuild_deps then "cleanDeps" :: tgts else tgts
-in
-  if keep_going_flag then keep_going incinfo tgts
-  else stop_on_failure incinfo tgts
-end
-
 val allincludes =
     cline_additional_includes @ hmake_includes
 
@@ -745,7 +528,16 @@ in
        cleantgt = ctgt}
 end
 
-fun basecont tgts ii = finish_logging (strategy (add_sigobj ii) tgts)
+fun basecont tgts ii =
+  let
+    open HM_DepGraph
+    val g = List.foldl (fn (t, g) => #2 (build_depgraph ii t g)) empty
+                       (map toFile tgts)
+    val res = build_graph (add_sigobj ii) g
+  in
+    finish_logging (OS.Process.isSuccess res)
+  end
+
 fun no_action_cont tgts ii =
   let
     open HM_DepGraph
@@ -760,6 +552,21 @@ fun no_action_cont tgts ii =
   end
 
 val stdcont = if no_action then no_action_cont else basecont
+
+fun do_clean_target incinfo x = let
+  fun clean_action () =
+      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
+  fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
+in
+  case x of
+      "clean" => ((print "Cleaning directory of object files\n";
+                   clean_action();
+                   true) handle _ => false)
+    | "cleanDeps" => clean_deps()
+    | "cleanAll" => clean_action() andalso clean_deps()
+    | _ => die ("Bad clean target " ^ x)
+end
+
 
 in
   case targets of
@@ -785,11 +592,11 @@ in
       fun canon i = hmdir.extendp {base = dir, extension = i}
     in
       if isSome cleanTarget_opt andalso not cline_recursive then
-        if finish_logging (strategy purelocal_incinfo xs) then
-          SOME {visited = visiteddirs,
-                includes = map canon allincludes,
-                preincludes = map canon hmake_preincludes}
-        else NONE
+        (List.app (ignore o do_clean_target) xs;
+         finish_logging true;
+         SOME {visited = visiteddirs,
+               includes = map canon allincludes,
+               preincludes = map canon hmake_preincludes})
       else
           hm_recur cleanTarget_opt (stdcont xs)
     end

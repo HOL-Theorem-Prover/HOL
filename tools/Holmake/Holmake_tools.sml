@@ -62,15 +62,6 @@ end
 type output_functions = {warn : string -> unit, info : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
-type 'optv buildinfo_t = {
-  optv : 'optv, hmake_options : string list,
-  actual_overlay : string option,
-  envlist : string -> string list,
-  quit_on_failure : bool,
-  outs : output_functions,
-  SIGOBJ : string
-}
-
 
 fun die_with message = let
   open TextIO
@@ -711,14 +702,15 @@ in
         []
   in
     case f of
-      UO x =>
+        UO (Theory s) => UI (Theory s) :: phase1
+      | UO x =>
         if FileSys.access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> SIG x) phase1
         then
           UI x :: phase1
         else
           phase1
-    | _ => phase1
+      | _ => phase1
   end
   else
     []

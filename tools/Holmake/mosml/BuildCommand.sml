@@ -6,12 +6,7 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
-type info_t = {optv : HM_Cline.t, hmake_options : string list,
-               actual_overlay : string option,
-               envlist : string -> string list}
-type build_command = {preincludes : string list, includes : string list} ->
-                     Holmake_tools.buildcmds ->
-                     File -> bool
+open HM_GraphBuildJ1
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
 
@@ -36,11 +31,8 @@ fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
-fun extract_thypart s = (* <....>Theory.sml *)
-  String.substring(s, 0, String.size s - 10)
-
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,actual_overlay,hmake_options,SIGOBJ,outs,...} = buildinfo
+  val {optv,actual_overlay,hmake_options,SIGOBJ,outs,hmenv,...} = buildinfo
   val {warn,tgtfatal,...} = outs
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
@@ -182,86 +174,16 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         end handle CompileFailed => false
                  | FileNotFound => false
   end (* fun's let *)
-  fun build_graph incinfo g =
-    let
-      open HM_DepGraph
-      val bc = build_command incinfo
-      fun recurse retval g =
-        case find_runnable g of
-            NONE => (case List.find (fn ni => #status ni = Failed)
-                                    (listNodes g)
-                      of
-                         NONE => retval
-                       | SOME _ => OS.Process.failure)
-          | SOME (n, nI) =>
-            let
-              val deps = map #2 (#dependencies nI)
-              val depfs = map toFile deps
-              fun k res =
-                let
-                  val g = updnode(n, if res then Succeeded else Failed) g
-                in
-                  if res then recurse retval g
-                  else if keep_going then recurse OS.Process.failure g
-                  else OS.Process.failure
-                end
-            in
-              case #command nI of
-                  NONE =>
-                  (case #target nI of
-                       [f] =>
-                       (case toFile f of
-                            UI c => k (bc (Compile depfs) (SIG c))
-                          | UO c => k (bc (Compile depfs) (SML c))
-                          | _ => raise Fail ("bg tgt = " ^ f))
-                     | [thyfile, _] =>
-                       let
-                         val thyname = extract_thypart thyfile
-                       in
-                         k (bc (BuildScript(thyname, depfs))
-                               (SML (Script thyname)))
-                       end
-                     | ts =>
-                       raise Fail ("implicit bg targets: " ^
-                                   String.concatWith ", " ts))
-                | SOME cs =>
-                  let
-                    fun build1 c =
-                      let
-                        val {noecho,ignore_error,command} =
-                            process_hypat_options c
-                        val () = if not noecho andalso not quiet_flag then
-                                   (TextIO.output(TextIO.stdOut, c ^ "\n");
-                                    TextIO.flushOut TextIO.stdOut)
-                                 else ()
-                        val result = Systeml.system_ps c
-                      in
-                        if not (OS.Process.isSuccess result) andalso
-                           ignore_error
-                        then
-                          (warn ("[" ^ hd (#target nI) ^ "] Error (ignored)");
-                           OS.Process.success)
-                        else result
-                      end
-                    fun buildall cs =
-                      case cs of
-                          [] => k true
-                        | c::cs => if OS.Process.isSuccess (build1 c) then
-                                     buildall cs
-                                   else
-                                     (tgtfatal ("*** ["^hd (#target nI)^
-                                                "] Error");
-                                      k false)
-                  in
-                    buildall cs
-                  end
-            end
-    in
-      recurse OS.Process.success g
-    end
+  fun mosml_build_command _ _ _ = NONE
+  val build_graph = graphbuildj1 { build_command = build_command,
+                                   mosml_build_command = mosml_build_command,
+                                   warn = warn, tgtfatal = tgtfatal,
+                                   keep_going = keep_going,
+                                   quiet = quiet_flag,
+                                   hmenv = hmenv}
 in
   {build_command = build_command,
-   mosml_build_command = (fn _ => fn _ => fn _ => NONE),
+   mosml_build_command = mosml_build_command,
    extra_impl_deps = if nob2002 then []
                      else [toFile (fullPath [SIGOBJ, "basis2002.uo"])],
    build_graph = build_graph}

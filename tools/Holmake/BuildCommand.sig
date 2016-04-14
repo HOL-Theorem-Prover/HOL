@@ -1,12 +1,10 @@
 signature BuildCommand =
 sig
 
-  type File = Holmake_tools.File
-  type include_info = Holmake_tools.include_info
-  type build_command = include_info -> Holmake_tools.buildcmds -> File -> bool
+  include HM_GraphBuildJ1
 
   val make_build_command :
-      HM_Cline.t Holmake_tools.buildinfo_t ->
+      HM_Cline.t buildinfo_t ->
       {build_command : build_command, extra_impl_deps : File list,
        mosml_build_command :
          Holmake_types.env ->

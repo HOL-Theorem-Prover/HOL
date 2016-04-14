@@ -9,6 +9,8 @@ structure Process = OS.Process
 val default_holstate = Systeml.DEFAULT_STATE
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
+open HM_GraphBuildJ1
+
 datatype cmd_line = Mosml_compile of File list * string
                   | Mosml_link of string * File list
                   | Mosml_error
@@ -132,7 +134,9 @@ type build_command = {preincludes : string list, includes : string list} ->
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,hmake_options,actual_overlay,envlist,quit_on_failure,outs,...} =
       buildinfo
-  val {warn,diag,...} = outs
+  val hmenv = #hmenv buildinfo
+  val {warn,diag,tgtfatal,...} = outs
+  val keep_going = #keep_going (#core optv)
   val debug = #debug (#core optv)
   val opentheory = #opentheory (#core optv)
   val allfast = #fast (#core optv)
@@ -328,7 +332,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       end
       else NONE
     end
-  fun build_graph g = raise Fail "Can't build from dependency graphs yet"
+  val build_graph = graphbuildj1 { build_command = build_command,
+                                   mosml_build_command = mosml_build_command,
+                                   warn = warn, tgtfatal = tgtfatal,
+                                   keep_going = keep_going,
+                                   quiet = quiet_flag,
+                                   hmenv = hmenv}
 in
   {build_command = build_command, mosml_build_command = mosml_build_command,
    extra_impl_deps = [Unhandled HOLSTATE],
