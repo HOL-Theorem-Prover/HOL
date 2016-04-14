@@ -294,38 +294,40 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     end handle CompileFailed => false
              | FileNotFound  => false
   end
-  fun mosml_build_command hm_env (noecho, ignore_error, c) deps = let
-    open Holmake_types
-    val isHolmosmlcc =
-      String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC-C"]) c
-    val isHolmosmlc =
-      String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC"]) c
-    val isMosmlc =
-      String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
-    val {diag,...} = outs
-  in
-    if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
+  fun mosml_build_command hm_env {noecho, ignore_error, command = c} deps =
+    let
+      open Holmake_types
+      val isHolmosmlcc =
+          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC-C"]) c
+      val isHolmosmlc =
+          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC"]) c
+      val isMosmlc =
+          String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
+      val {diag,...} = outs
+    in
+      if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
         val _ = diag ("Processing mosml build command: "^c)
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
-          (Mosml_compile (objs, src), I) =>
+            (Mosml_compile (objs, src), I) =>
             SOME (poly_compile (noecho orelse quiet_flag)
                                (toFile src)
                                I
                                (deps @ objs))
-        | (Mosml_link (result, objs), I) => let
-          in
-            diag ("Moscow ML command is link -o "^result^" ["^
-                  String.concatWith ", " (map fromFile objs) ^ "]");
-            SOME (poly_link (noecho orelse quiet_flag) result
-                            (map fromFileNoSuf objs))
-          end
-        | (Mosml_error, _) =>
-          (warn ("*** Couldn't interpret Moscow ML command: "^c);
-           SOME (OS.Process.failure))
+          | (Mosml_link (result, objs), I) =>
+            let
+            in
+              diag ("Moscow ML command is link -o "^result^" ["^
+                    String.concatWith ", " (map fromFile objs) ^ "]");
+              SOME (poly_link (noecho orelse quiet_flag) result
+                              (map fromFileNoSuf objs))
+            end
+          | (Mosml_error, _) =>
+            (warn ("*** Couldn't interpret Moscow ML command: "^c);
+             SOME (OS.Process.failure))
       end
-    else NONE
-  end
+      else NONE
+    end
   fun build_graph g = raise Fail "Can't build from dependency graphs yet"
 in
   {build_command = build_command, mosml_build_command = mosml_build_command,

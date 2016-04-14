@@ -36,10 +36,14 @@ fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
+fun extract_thypart s = (* <....>Theory.sml *)
+  String.substring(s, 0, String.size s - 10)
+
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,actual_overlay,hmake_options,SIGOBJ,...} = buildinfo
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
+  val keep_going = #keep_going (#core optv)
   val quit_on_failure = #quit_on_failure (#core optv)
   val interactive_flag = #interactive (#core optv)
   val no_sigobj = member "NO_SIGOBJ" hmake_options
@@ -176,7 +180,53 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         end handle CompileFailed => false
                  | FileNotFound => false
   end (* fun's let *)
-  fun build_graph g = raise Fail "Can't build from dependency graphs yet"
+  fun build_graph incinfo g =
+    let
+      open HM_DepGraph
+      val bc = build_command incinfo
+      fun recurse retval g =
+        case find_runnable g of
+            NONE => (case List.find (fn ni => #status ni = Failed)
+                                    (listNodes g)
+                      of
+                         NONE => retval
+                       | SOME _ => OS.Process.failure)
+          | SOME (n, nI) =>
+            let
+              val deps = map #2 (#dependencies nI)
+              val depfs = map toFile deps
+              fun k res =
+                let
+                  val g = updnode(n, if res then Succeeded else Failed) g
+                in
+                  if res then recurse retval g
+                  else if keep_going then recurse OS.Process.failure g
+                  else OS.Process.failure
+                end
+            in
+              case #command nI of
+                  NONE =>
+                  (case #target nI of
+                       [f] =>
+                       (case toFile f of
+                            UI c => k (bc (Compile depfs) (SIG c))
+                          | UO c => k (bc (Compile depfs) (SML c))
+                          | _ => raise Fail ("bg tgt = " ^ f))
+                     | [thyfile, _] =>
+                       let
+                         val thyname = extract_thypart thyfile
+                       in
+                         k (bc (BuildScript(thyname, depfs))
+                               (SML (Script thyname)))
+                       end
+                     | ts =>
+                       raise Fail ("implicit bg targets: " ^
+                                   String.concatWith ", " ts))
+                | SOME cs => raise Fail "Not implemented yet"
+            end
+    in
+      recurse OS.Process.success g
+    end
 in
   {build_command = build_command,
    mosml_build_command = (fn _ => fn _ => fn _ => NONE),

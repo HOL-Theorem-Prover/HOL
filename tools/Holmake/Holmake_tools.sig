@@ -101,6 +101,9 @@ sig
                                preincludes : 'dir list}
   type 'dir holmake_result = 'dir holmake_dirinfo option
 
+  val process_hypat_options :
+      string -> {noecho : bool, ignore_error : bool, command : string}
+
   val maybe_recurse :
       {warn: string -> unit,
        diag : string -> unit,

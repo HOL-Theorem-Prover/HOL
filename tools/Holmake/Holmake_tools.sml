@@ -414,6 +414,27 @@ end
 
 end (* hmdir struct *)
 
+fun process_hypat_options s = let
+  open Substring
+  val ss = full s
+  fun recurse (noecho, ignore_error, ss) =
+      if noecho andalso ignore_error then
+        {noecho = true, ignore_error = true,
+         command = string (dropl (fn c => c = #"@" orelse c = #"-") ss)}
+      else
+        case getc ss of
+          NONE => {noecho = noecho, ignore_error = ignore_error,
+                   command = ""}
+        | SOME (c, ss') =>
+          if c = #"@" then recurse (true, ignore_error, ss')
+          else if c = #"-" then recurse (noecho, true, ss')
+          else { noecho = noecho, ignore_error = ignore_error,
+                 command = string ss }
+in
+  recurse (false, false, ss)
+end
+
+
 type include_info = {includes : string list, preincludes : string list }
 type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
                              preincludes : 'dir list}

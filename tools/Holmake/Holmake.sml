@@ -135,23 +135,6 @@ in
   map dequote (tokenize (perform_substitution env [VREF id]))
 end
 
-fun process_hypat_options s = let
-  open Substring
-  val ss = full s
-  fun recurse (noecho, ignore_error, ss) =
-      if noecho andalso ignore_error then
-        (true, true, string (dropl (fn c => c = #"@" orelse c = #"-") ss))
-      else
-        case getc ss of
-          NONE => (noecho, ignore_error, "")
-        | SOME (c, ss') =>
-          if c = #"@" then recurse (true, ignore_error, ss')
-          else if c = #"-" then recurse (noecho, true, ss')
-          else (noecho, ignore_error, string ss)
-in
-  recurse (false, false, ss)
-end
-
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
 fun Holmake dirinfo cline_additional_includes targets : res = let
@@ -254,7 +237,7 @@ val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
 
 fun run_extra_command tgt c deps = let
   open Holmake_types
-  val hypargs as (noecho, ignore_error, c) = process_hypat_options c
+  val hypargs as {noecho, ignore_error, command = c} = process_hypat_options c
 in
   case mosml_build_command hmakefile_env hypargs deps of
       SOME r => r
