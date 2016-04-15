@@ -28,11 +28,11 @@ struct
     List.foldl (fn (kv,acc) => env_extend kv acc) base_environment alist
   end
 
-  fun print_debug_info cline = let
+  fun debug_info cline = let
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
   in
-    print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n")
+    "POLYMLLIBDIR = "^POLYMLLIBDIR
   end
 
 

@@ -77,7 +77,8 @@ fun shorten_name name =
 fun output_functions {quiet_flag: bool, debug:bool} = let
   val execname = shorten_name (CommandLine.name())
   open TextIO
-  fun msg strm s = (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
+  fun msg strm s = if s = "" then ()
+                   else (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
   fun donothing _ = ()
   val warn = if not quiet_flag then msg stdErr else donothing
   val info = if not quiet_flag then msg stdOut else donothing

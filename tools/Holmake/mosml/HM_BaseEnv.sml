@@ -37,13 +37,13 @@ struct
                  alist
     end
 
-  fun print_debug_info (optv : HM_Cline.t) =
+  fun debug_info (optv : HM_Cline.t) =
     let
       val MOSMLDIR = case #mosmldir optv of
                          NONE => Systeml.MOSMLDIR
                        | SOME s => s
     in
-      print ("MOSMLDIR = "^MOSMLDIR^"\n")
+      "MOSMLDIR = "^MOSMLDIR
     end
 
 end (* struct *)

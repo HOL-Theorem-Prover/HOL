@@ -236,15 +236,15 @@ val binfo : HM_Cline.t BuildCommand.buildinfo_t =
 val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
     BuildCommand.make_build_command binfo
 
-val _ = if (debug) then let
+val _ = let
 in
-  print ("HOLDIR = "^HOLDIR^"\n");
-  print ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
-  print ("Additional includes = [" ^
+  diag ("HOLDIR = "^HOLDIR^"\n");
+  diag ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
+  diag ("Additional includes = [" ^
          String.concatWith ", " additional_includes ^ "]\n");
-  print ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n");
-  HM_BaseEnv.print_debug_info option_value
-end else ()
+  diag ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n");
+  diag (HM_BaseEnv.debug_info option_value)
+end
 
 (** Top level sketch of algorithm *)
 (*
@@ -557,7 +557,7 @@ fun do_clean_target x = let
       (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
 in
   case x of
-      "clean" => ((print "Cleaning directory of object files\n";
+      "clean" => ((info "Cleaning directory of object files\n";
                    clean_action();
                    true) handle _ => false)
     | "cleanDeps" => clean_deps()
@@ -573,15 +573,14 @@ in
       val targets = generate_all_plausible_targets first_target
       val targets = map fromFile targets
       val _ =
-        if debug then let
+          let
             val tgtstrings =
                 map (fn s => if OS.FileSys.access(s, []) then s else s ^ "(*)")
                     targets
           in
-            print("Generated targets are: [" ^
-                  String.concatWith ", " tgtstrings ^ "]\n")
+            diag("Generated targets are: [" ^
+                 String.concatWith ", " tgtstrings ^ "]\n")
           end
-        else ()
     in
       hm_recur NONE (stdcont targets)
     end
@@ -618,8 +617,7 @@ in
              visited = Binaryset.empty hmdir.compare}
             cline_additional_includes
             targets
-          handle Fail s => (print ("Fail exception: "^s^"\n");
-                            exit failure)
+          handle Fail s => die ("Fail exception: "^s^"\n")
     in
       if isSome result then exit success
       else exit failure
