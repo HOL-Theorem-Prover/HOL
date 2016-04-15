@@ -81,9 +81,12 @@ val no_prereqs = #no_prereqs coption_value
 val opentheory = #opentheory coption_value
 val quiet_flag = #quiet coption_value
 val quit_on_failure = #quit_on_failure coption_value
+val verbose = #verbose coption_value
 
-val (outputfns as {warn,tgtfatal,diag,info}) =
-    output_functions {quiet_flag = quiet_flag, debug = debug}
+val chattiness_level =
+    if debug then 3 else if verbose then 2 else if quiet_flag then 0 else 1
+val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
+    output_functions chattiness_level
 
 val _ = diag ("CommandLine.name() = "^CommandLine.name())
 val _ = diag ("CommandLine.arguments() = "^
@@ -170,7 +173,7 @@ val base_env = HM_BaseEnv.make_base_env option_value
 val (hmakefile_env, extra_rules, first_target) =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
-      val () = diag ("Reading additional information from "^hmakefile^"\n")
+      val () = diag ("Reading additional information from "^hmakefile)
     in
       ReadHMF.read hmakefile base_env
     end
@@ -238,11 +241,11 @@ val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
 
 val _ = let
 in
-  diag ("HOLDIR = "^HOLDIR^"\n");
-  diag ("Targets = [" ^ String.concatWith ", " targets ^ "]\n");
+  diag ("HOLDIR = "^HOLDIR);
+  diag ("Targets = [" ^ String.concatWith ", " targets ^ "]");
   diag ("Additional includes = [" ^
-         String.concatWith ", " additional_includes ^ "]\n");
-  diag ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj) ^"\n");
+         String.concatWith ", " additional_includes ^ "]");
+  diag ("Using HOL sigobj dir = "^Bool.toString (not no_sigobj));
   diag (HM_BaseEnv.debug_info option_value)
 end
 
@@ -579,7 +582,7 @@ in
                     targets
           in
             diag("Generated targets are: [" ^
-                 String.concatWith ", " tgtstrings ^ "]\n")
+                 String.concatWith ", " tgtstrings ^ "]")
           end
     in
       hm_recur NONE (stdcont targets)

@@ -59,7 +59,9 @@ in
   outword [] (full s)
 end
 
-type output_functions = {warn : string -> unit, info : string -> unit,
+type output_functions = {warn : string -> unit,
+                         info : string -> unit,
+                         chatty : string -> unit,
                          tgtfatal : string -> unit,
                          diag : string -> unit}
 
@@ -74,18 +76,19 @@ end
 fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
-fun output_functions {quiet_flag: bool, debug:bool} = let
+fun output_functions n = let
   val execname = shorten_name (CommandLine.name())
   open TextIO
   fun msg strm s = if s = "" then ()
                    else (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
   fun donothing _ = ()
-  val warn = if not quiet_flag then msg stdErr else donothing
-  val info = if not quiet_flag then msg stdOut else donothing
+  val warn = if n >= 1 then msg stdErr else donothing
+  val info = if n >= 1 then msg stdOut else donothing
+  val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if debug then msg stdErr else donothing
+  val diag = if n >= 3 then msg stdErr else donothing
 in
-  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info}
+  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
 
 fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
@@ -572,8 +575,8 @@ fun generate_all_plausible_targets first_target =
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
-  val {info, diag, ...} : output_functions = ofs
-  val _ = info ("Analysing "^fromFile arg)
+  val {chatty, diag, warn, ...} : output_functions = ofs
+  val _ = chatty ("Analysing "^fromFile arg)
   fun buildables s = let
     val f = toFile s
     val files =
@@ -596,9 +599,9 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (info "Holdep failed: s"; raise HolDepFailed)
+             (warn "Holdep failed: s"; raise HolDepFailed)
          | Interrupt => raise Interrupt
-         | e => (info ("Holdep exception: "^General.exnMessage e);
+         | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
@@ -606,7 +609,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
-     (info ("Trying to create directory "^DEPDIR^" for dependency files");
+     (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
       FileSys.mkDir DEPDIR;
       TextIO.openOut s
      )

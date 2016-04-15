@@ -43,10 +43,13 @@ sig
   val realspace_delimited_fields : string -> string list
 
   (* diagnostics/output *)
-  type output_functions = {warn : string -> unit, info : string -> unit,
+  type output_functions = {warn : string -> unit,
+                           info : string -> unit,
+                           chatty : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> unit}
-  val output_functions : {quiet_flag: bool, debug:bool} -> output_functions
+  (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
+  val output_functions : int -> output_functions
   val die_with : string -> 'a
 
 

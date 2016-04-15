@@ -23,7 +23,8 @@ type t = {
   quit_on_failure : bool,
   rebuild_deps : bool,
   recursive : bool,
-  hmakefile : string option
+  hmakefile : string option,
+  verbose : bool
 }
 
 val default_core_options : t

@@ -3,14 +3,14 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate21 z
+  fun makeUpdateT z = makeUpdate22 z
 in
 fun updateT z = let
   fun from debug do_logging dontmakes fast help hmakefile holdir includes
            interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
            no_overlay
            no_prereqs opentheory quiet
-           quit_on_failure rebuild_deps recursive =
+           quit_on_failure rebuild_deps recursive verbose =
     {
       debug = debug, do_logging = do_logging, dontmakes = dontmakes,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
@@ -20,9 +20,10 @@ fun updateT z = let
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive
+      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
     }
-  fun from' recursive rebuild_deps quit_on_failure quiet opentheory no_prereqs
+  fun from' verbose recursive rebuild_deps quit_on_failure quiet opentheory
+            no_prereqs
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             jobs interactive
             includes holdir
@@ -36,18 +37,18 @@ fun updateT z = let
       no_lastmaker_check = no_lastmaker_check, no_overlay = no_overlay,
       no_prereqs = no_prereqs, opentheory = opentheory,
       quiet = quiet, quit_on_failure = quit_on_failure,
-      rebuild_deps = rebuild_deps, recursive = recursive
+      rebuild_deps = rebuild_deps, recursive = recursive, verbose = verbose
     }
   fun to f {debug, do_logging, dontmakes, fast, help, hmakefile, holdir,
             includes, interactive, jobs, keep_going, no_action, no_hmakefile,
             no_lastmaker_check,
             no_overlay, no_prereqs, opentheory,
-            quiet, quit_on_failure, rebuild_deps, recursive} =
+            quiet, quit_on_failure, rebuild_deps, recursive, verbose} =
     f debug do_logging dontmakes fast help hmakefile holdir includes
       interactive jobs keep_going no_action no_hmakefile no_lastmaker_check
       no_overlay
       no_prereqs opentheory quiet
-      quit_on_failure rebuild_deps recursive
+      quit_on_failure rebuild_deps recursive verbose
 in
   makeUpdateT (from, from', to)
 end z
@@ -76,7 +77,8 @@ type t = {
   quiet : bool,
   quit_on_failure : bool,
   rebuild_deps : bool,
-  recursive : bool
+  recursive : bool,
+  verbose : bool
 }
 
 val default_core_options : t =
@@ -101,7 +103,8 @@ val default_core_options : t =
   quiet = false,
   quit_on_failure = false,
   rebuild_deps = false,
-  recursive = false
+  recursive = false,
+  verbose = false
 }
 
 open GetOpt
@@ -165,13 +168,23 @@ val core_option_descriptions = [
   { help = "use file as opentheory logging .uo",
     long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
   { help = "be quieter with output", short = "q", long = ["quiet"],
-    desc = mkBoolT #quiet },
+    desc = NoArg (fn () => fn (wn,t) =>
+                     (if #verbose t then
+                        wn "Quiet and verbose incompatible; taking verbose"
+                      else () ;
+                      updateT t (U #quiet true) $$)) },
   { help = "quit on failure", short = "", long = ["qof"],
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
     long = ["rebuild_deps"], desc = mkBoolT #rebuild_deps },
   { help = "clean recursively", short = "r", long = [],
-    desc = mkBoolT #recursive }
+    desc = mkBoolT #recursive },
+  { help = "verbose output", short = "v", long = ["verbose"],
+    desc = NoArg (fn () => fn (wn,t) =>
+                     (if #quiet t then
+                        wn "Quiet and verbose incompatible; taking verbose"
+                      else ();
+                      updateT t (U #verbose true) $$)) }
 ]
 
 fun descr_key (d:'a GetOpt.opt_descr) =
