@@ -23,6 +23,57 @@ val EVERY_isDigit_n2s = Q.store_thm("EVERY_isDigit_n2s",
 val EVERY_isDigit_num_to_dec_string = Q.store_thm("EVERY_isDigit_num_to_dec_string",
   `EVERY isDigit (num_to_dec_string n)`,
   rw[num_to_dec_string_def,EVERY_isDigit_n2s]);
+
+val l2n_APPEND = Q.store_thm("l2n_APPEND",
+  `∀l1 l2. l2n b (l1 ++ l2) =
+           l2n b l1 + b ** (LENGTH l1) * l2n b l2`,
+  Induct \\ simp[numposrepTheory.l2n_def,arithmeticTheory.EXP]);
+
+val isDigit_ORD_MOD_10 = Q.store_thm("isDigit_ORD_MOD_10",
+  `isDigit x ⇒ (ORD x - 48) < 10`,
+  EVAL_TAC \\ DECIDE_TAC);
+
+val isDigit_UNHEX_alt = Q.store_thm("isDigit_UNHEX_alt",
+  `isDigit h ⇒
+   (combin$C $- 48 o ORD) h = UNHEX h`,
+  simp[stringTheory.isDigit_def] \\ rw[]
+  \\ Cases_on`h` \\ fs[]
+  \\ Cases_on`n = 57` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 56` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 55` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 54` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 53` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 52` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 51` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 50` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 49` \\ fs[UNHEX_def]
+  \\ Cases_on`n = 48` \\ fs[UNHEX_def]);
+
+val s2n_UNHEX_alt = Q.store_thm("s2n_UNHEX_alt",
+  `∀ls. EVERY isDigit ls ⇒
+    s2n 10 (combin$C $- 48 o ORD) ls = s2n 10 UNHEX ls`,
+  simp[s2n_def]
+  \\ Induct
+  \\ simp[numposrepTheory.l2n_def,l2n_APPEND]
+  \\ rw[] \\ simp[GSYM isDigit_UNHEX_alt,isDigit_ORD_MOD_10]);
+
+val num_to_dec_string_eq_cons = Q.store_thm("num_to_dec_string_eq_cons",
+  `num_to_dec_string n = h::t ⇒
+   n = UNHEX h * 10 ** LENGTH t + num_from_dec_string t`,
+  rw[num_to_dec_string_def,num_from_dec_string_def]
+  \\ fs[n2s_def]
+  \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.n2l_BOUND
+  \\ rw[]
+  \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.l2n_n2l \\ rw[]
+  \\ Q.ISPEC_THEN`n2l 10 n`FULL_STRUCT_CASES_TAC listTheory.SNOC_CASES
+  \\ fs[listTheory.EVERY_SNOC] \\ rpt var_eq_tac
+  \\ simp[UNHEX_HEX]
+  \\ simp[listTheory.SNOC_APPEND,l2n_APPEND,numposrepTheory.l2n_def]
+  \\ simp[s2n_def,listTheory.MAP_MAP_o]
+  \\ AP_TERM_TAC
+  \\ fs[listTheory.LIST_EQ_REWRITE,listTheory.EL_MAP,listTheory.EVERY_MEM,listTheory.MEM_EL,PULL_EXISTS]
+  \\ rw[] \\ res_tac \\ simp[UNHEX_HEX]);
+
 (* -- *)
 
 val parse_sexp_def = Define`
@@ -151,7 +202,29 @@ val peg_eval_number = Q.prove(
   \\ qexists_tac`[]`
   \\ simp[peg_eval_list_nil]
   \\ simp[pairTheory.UNCURRY]
-  \\ cheat);
+  \\ simp[destSXCONS_def,destSXNUM_def]
+  \\ simp[rich_listTheory.FOLDL_MAP,pairTheory.UNCURRY,destSXNUM_def]
+  \\ qmatch_abbrev_tac`n = SND (FOLDL f a t) + _`
+  \\ `∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)`
+  by ( Induct \\ simp[Abbr`f`,arithmeticTheory.EXP] )
+  \\ first_x_assum(qspecl_then[`t`,`a`]SUBST_ALL_TAC)
+  \\ `FST a = 1` by simp[Abbr`a`] \\ simp[]
+  \\ `∀ls a. EVERY isDigit ls ⇒
+        SND (FOLDL f a ls) = (10 ** LENGTH ls * SND a + (l2n 10 (MAP (combin$C $- 48 o ORD) (REVERSE ls))))`
+  by (
+    qunabbrev_tac`f` \\ rpt (pop_assum kall_tac)
+    \\ ho_match_mp_tac listTheory.SNOC_INDUCT
+    \\ rw[numposrepTheory.l2n_def,listTheory.FOLDL_SNOC,listTheory.EVERY_SNOC,listTheory.REVERSE_SNOC,arithmeticTheory.EXP]
+    \\ simp[isDigit_ORD_MOD_10] )
+  \\ first_x_assum(qspecl_then[`t`,`a`]mp_tac)
+  \\ simp[] \\ disch_then kall_tac
+  \\ simp[Abbr`a`]
+  \\ simp[GSYM s2n_def]
+  \\ fs[s2n_UNHEX_alt]
+  \\ imp_res_tac num_to_dec_string_eq_cons
+  \\ simp[GSYM num_from_dec_string_def]
+  \\ AP_THM_TAC \\ AP_TERM_TAC
+  \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]);
 
 (*
 val cs = listLib.list_compset()
