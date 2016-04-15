@@ -8,7 +8,9 @@ structure Holmake =
 struct
 
 open Systeml Holmake_tools Holmake_types
-infix forces_update_of
+infix forces_update_of |>
+
+fun x |> f = f x
 
 structure FileSys = OS.FileSys
 structure Path = OS.Path
@@ -168,9 +170,7 @@ val base_env = HM_BaseEnv.make_base_env option_value
 val (hmakefile_env, extra_rules, first_target) =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
-      val () = if debug then
-                print ("Reading additional information from "^hmakefile^"\n")
-              else ()
+      val () = diag ("Reading additional information from "^hmakefile^"\n")
     in
       ReadHMF.read hmakefile base_env
     end
@@ -292,6 +292,7 @@ end else ()
    in DEPDIR somewhere. *)
 
 fun get_implicit_dependencies incinfo (f: File) : File list = let
+  val _ = diag ("Calling get_implicit_dependencies on "^fromFile f)
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo, extra_targets = extra_targets,
                                output_functions = outputfns,
@@ -402,96 +403,89 @@ fun no_full_extra_rule tgt =
 val done_some_work = ref false
 open HM_DepGraph
 
-fun build_depgraph incinfo target g0 = let
+fun build_depgraph incinfo target g0 : (t * node) = let
   val pdep = primary_dependent target
   val target_s = fromFile target
-  fun addF f nopt = Option.map (fn n => (n,fromFile f)) nopt
+  fun addF f n = (n,fromFile f)
+  fun nstatus g n = peeknode g n |> valOf |> #status
 in
   case target_node g0 target_s of
-      (x as SOME _) => (x, g0)
+      (x as SOME n) => (g0, n)
     | NONE =>
       if Path.dir (string_part target) <> "" andalso
          Path.dir (string_part target) <> "." andalso
          no_full_extra_rule target
          (* path outside of current directory *)
-      then if exists_readable target_s then (NONE, g0)
-           else
-             let
-               val (g, n) = add_node {target = target_s, status = Failed,
-                                      command = NONE, dependencies = []} g0
-             in
-               (SOME n, g)
-             end
+      then
+        add_node {target = target_s,
+                  status = if exists_readable target_s then Succeeded
+                           else Failed,
+                  command = NONE, dependencies = []} g0
       else if isSome pdep andalso no_full_extra_rule target then
         let
           val pdep = valOf pdep
-          val (pnode, g1) = build_depgraph incinfo pdep g0
+          val (g1, pnode) = build_depgraph incinfo pdep g0
           val secondaries = set_union (get_implicit_dependencies incinfo target)
                                       (get_explicit_dependencies target)
-          fun foldthis (d, (secnodes, g)) =
+          fun foldthis (d, (g, secnodes)) =
             let
-              val (nopt, g') = build_depgraph incinfo d g
+              val (g', n) = build_depgraph incinfo d g
             in
-              (addF d nopt::secnodes, g')
+              (g', addF d n::secnodes)
             end
-          val (depnodes, g2) =
-              List.foldl foldthis ([addF pdep pnode], g1) secondaries
-          val realdeps = List.mapPartial (fn x => x) depnodes
+          val (g2, depnodes : (HM_DepGraph.node * string) list) =
+              List.foldl foldthis (g1, [addF pdep pnode]) secondaries
+          val unbuilt_deps =
+              List.filter (fn (n,_) => let val stat = nstatus g2 n
+                                       in
+                                         stat = Pending orelse stat = Failed
+                                       end)
+                          depnodes
+          val needs_building =
+              not (null unbuilt_deps) orelse
+              List.exists (fn d => d forces_update_of target_s)
+                          (fromFile pdep :: map fromFile secondaries)
         in
-          if not (null realdeps) orelse
-             List.exists (fn d => d forces_update_of target_s)
-                         (fromFile pdep :: map fromFile secondaries)
-          then
-            let
-              val (g, tnode) =
-                  add_node {target = target_s, status = Pending,
-                            command = NONE,
-                            dependencies = realdeps } g2
-            in
-              (SOME tnode, g)
-            end
-          else (NONE, g2)
+            add_node {target = target_s,
+                      status = if needs_building then Pending else Succeeded,
+                      command = NONE,
+                      dependencies = depnodes } g2
         end
       else
         case extra_rule_for target_s of
             NONE =>
-            if exists_readable target_s then (NONE, g0)
-            else
-              let
-                val (g, tnode) =
-                    add_node {target = target_s, status = Failed,
-                              command = SOME ["File doesn't exist - no rule"],
-                              dependencies = []} g0
-              in
-                (SOME tnode, g)
-              end
+              add_node {target = target_s,
+                        status = if exists_readable target_s then Succeeded
+                                 else Failed,
+                        command = NONE,
+                        dependencies = []} g0
           | SOME {dependencies, commands, ...} =>
             let
-              fun foldthis (d, (secnodes, g)) =
+              fun foldthis (d, (g, secnodes)) =
                 let
-                  val (nopt, g') = build_depgraph incinfo d g
+                  val (g, n) = build_depgraph incinfo d g
                 in
-                  (addF d nopt::secnodes, g')
+                  (g, addF d n::secnodes)
                 end
-              val (depnodes, g1) =
-                  List.foldl foldthis ([], g0) (map toFile dependencies)
-              val realdeps = List.mapPartial (fn x => x) depnodes
+              val (g1, depnodes) =
+                  List.foldl foldthis (g0, []) (map toFile dependencies)
+
+              val unbuilt_deps =
+                  List.filter (fn (n,_) => let val stat = nstatus g1 n
+                                           in
+                                             stat = Pending orelse stat = Failed
+                                           end)
+                              depnodes
+              val needs_building =
+                  (not (null unbuilt_deps) orelse
+                   List.exists (fn d => d forces_update_of target_s)
+                               dependencies) andalso
+                  not (null commands)
             in
-              if (not (null realdeps) orelse
-                  List.exists (fn d => d forces_update_of target_s)
-                              dependencies) andalso
-                 not (null commands)
-              then
-                let
-                  val (g, tnode) =
-                      add_node {
-                        target = target_s, status = Pending,
+              add_node {target = target_s,
+                        status = if needs_building then Pending else Succeeded,
                         command = SOME commands,
-                        dependencies = realdeps} g1
-                in
-                  (SOME tnode, g)
-                end
-              else (NONE, g1)
+                        dependencies = depnodes } g1
             end
 end
 
@@ -531,9 +525,10 @@ end
 fun basecont tgts ii =
   let
     open HM_DepGraph
-    val g = List.foldl (fn (t, g) => #2 (build_depgraph ii t g)) empty
+    val ii = add_sigobj ii
+    val g = List.foldl (fn (t, g) => #1 (build_depgraph ii t g)) empty
                        (map toFile tgts)
-    val res = build_graph (add_sigobj ii) g
+    val res = build_graph ii g
   in
     finish_logging (OS.Process.isSuccess res)
   end
@@ -541,19 +536,22 @@ fun basecont tgts ii =
 fun no_action_cont tgts ii =
   let
     open HM_DepGraph
+    val ii = add_sigobj ii
     val nI_l =
-        List.foldl (fn (t, g) => #2 (build_depgraph ii t g)) empty
+        List.foldl (fn (t, g) => #1 (build_depgraph ii t g)) empty
                    (map toFile tgts)
     val pr_sl = String.concatWith " "
   in
-    List.app (fn ni => print (nodeInfo_toString pr_sl ni ^ "\n"))
+    List.app (fn ni => (* if #status ni <> Succeeded then *)
+                         print (nodeInfo_toString pr_sl ni ^ "\n")
+                       (* else () *))
              (listNodes nI_l);
     true
   end
 
 val stdcont = if no_action then no_action_cont else basecont
 
-fun do_clean_target incinfo x = let
+fun do_clean_target x = let
   fun clean_action () =
       (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
   fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}

@@ -87,8 +87,20 @@ fun addPath I file =
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile quietp file I deps = let
+fun poly_compile diag quietp file I deps = let
   val modName = fromFileNoSuf file
+  val deps = let
+    open Binaryset
+    val dep_set0 = addList (empty String.compare, map fromFile deps)
+    val {deps = extra_deps, ...} =
+        Holdep.main {assumes = [], includes = I, diag = diag,
+                     fname = fromFile file}
+    val dep_set = addList (dep_set0, extra_deps)
+  in
+    foldr (fn (s,acc) => toFile s :: acc) [] dep_set
+  end
+  val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
+                String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
@@ -266,7 +278,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                     (print ("Wanted to compile "^file^
                             ", but it wasn't there\n");
                      raise FileNotFound)
-            val res = poly_compile true arg include_flags deps
+            val res = poly_compile diag true arg include_flags deps
           in
             OS.Process.isSuccess res
           end
@@ -314,7 +326,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
             (Mosml_compile (objs, src), I) =>
-            SOME (poly_compile (noecho orelse quiet_flag)
+            SOME (poly_compile diag (noecho orelse quiet_flag)
                                (toFile src)
                                I
                                (deps @ objs))
