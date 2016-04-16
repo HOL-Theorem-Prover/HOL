@@ -272,6 +272,37 @@ val peg_eval_list_chars = Q.store_thm("peg_eval_list_chars",
   \\ simp[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
   \\ simp[peg_eval_tok_SOME]);
 
+val print_sexp_non_space = Q.store_thm("print_sexp_non_space",
+  `∀s. valid_sexp s ⇒ ∃h t. print_sexp s  = h :: t ∧ ¬isSpace h ∧ h ≠ #")"`,
+  ho_match_mp_tac(theorem"print_sexp_ind")
+  \\ rw[print_sexp_def]
+  >- (
+    Cases_on`s` \\ fs[valid_symbol_def]
+    \\ fs[stringTheory.isSpace_def,stringTheory.isGraph_def] )
+  >- (
+    assume_tac EVERY_isDigit_num_to_dec_string
+    \\ fs[num_to_dec_string_def,n2s_def,Once numposrepTheory.n2l_def]
+    \\ qmatch_assum_abbrev_tac`EVERY isDigit ls`
+    \\ Cases_on`ls` \\ fs[]
+    >- ( pop_assum mp_tac \\ rw[markerTheory.Abbrev_def] )
+    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
+    \\ spose_not_then strip_assume_tac \\ fs[])
+  >- EVAL_TAC
+  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
+  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
+  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
+  \\ BasicProvers.TOP_CASE_TAC
+  >- ( rw[] \\ EVAL_TAC )
+  \\ EVAL_TAC);
+
+val peg_eval_list_isSpace_print_sexp = Q.store_thm("peg_eval_list_isSpace_print_sexp",
+  `valid_sexp s ⇒
+   peg_eval_list sexpPEG (print_sexp s ++ ls, tok isSpace ARB) (print_sexp s ++ ls,[])`,
+  strip_tac
+  \\ imp_res_tac print_sexp_non_space
+  \\ simp[Once peg_eval_list]
+  \\ simp[peg_eval_tok_NONE]);
+
 val peg_eval_print_sexp = Q.prove(
   `∀s. valid_sexp s ⇒
        peg_eval sexpPEG (print_sexp s,sexpPEG.start) (SOME ("",s))`,
@@ -352,8 +383,32 @@ val peg_eval_print_sexp = Q.prove(
     >- (
       simp[ignoreL_def,peg_eval_seq_NONE]
       \\ simp[peg_eval_rpt,PULL_EXISTS]
-      \\ cheat )
-    \\ simp[peg_eval_seq_SOME,PULL_EXISTS]
+      \\ REWRITE_TAC[GSYM listTheory.APPEND_ASSOC]
+      \\ qmatch_goalsub_abbrev_tac`print_sexp s ++ ls`
+      \\ qspecl_then[`s`,`ls`]mp_tac (GEN_ALL peg_eval_list_isSpace_print_sexp)
+      \\ impl_tac \\ rw[]
+      \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl) \\ simp[]
+      \\ simp[tokeq_def,peg_eval_tok_NONE]
+      \\ metis_tac[print_sexp_non_space,listTheory.APPEND])
+    \\ simp[peg_eval_seq_SOME,PULL_EXISTS,ignoreL_def]
+    \\ simp[peg_eval_rpt,PULL_EXISTS]
+    \\ REWRITE_TAC[GSYM listTheory.APPEND_ASSOC]
+    \\ qmatch_goalsub_abbrev_tac`print_sexp s ++ ls`
+    \\ qspecl_then[`s`,`ls`]mp_tac (GEN_ALL peg_eval_list_isSpace_print_sexp)
+    \\ impl_tac \\ rw[]
+    \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl) \\ simp[]
+    \\ qpat_assum`peg_eval _ _ (_ (_,s))`mp_tac
+    \\ simp[pnt_def,Once peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,ignoreR_def]
+    \\ simp[peg_eval_seq_SOME,Once peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,ignoreL_def]
+    \\ simp[peg_eval_rpt,PULL_EXISTS]
+    \\ rpt gen_tac \\ strip_tac
+    \\ qmatch_assum_rename_tac`peg_eval_list _ (print_sexp _,_) (ps,ni)`
+    \\ `ps = print_sexp s ∧ ni = []`
+    by (
+      imp_res_tac print_sexp_non_space
+      \\ fs[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME] )
+    \\ rpt var_eq_tac
+    \\ fs[pnt_def]
     \\ cheat )
   \\ BasicProvers.TOP_CASE_TAC \\ fs[] \\ rw[]
   >- ( fs[Once strip_sxcons_def] )
