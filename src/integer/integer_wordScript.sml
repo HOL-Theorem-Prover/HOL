@@ -1301,4 +1301,33 @@ val overflow = Q.store_thm("overflow",
 
 (* ------------------------------------------------------------------------- *)
 
+val i2w_w2n = store_thm("i2w_w2n[simp]",
+  ``i2w (&w2n w) = w``,
+  fs [i2w_def]);
+
+val w2n_i2w = store_thm("w2n_i2w",
+  ``&w2n ((i2w n):'a word) = n % (& dimword (:'a))``,
+  fs [i2w_def] \\ Cases_on `n` \\ fs []
+  \\ `dimword (:α) <> 0` by cheat
+  \\ imp_res_tac integerTheory.INT_MOD \\ fs []
+  \\ fs [word_2comp_n2w]
+  \\ fs [INT_MOD_NEG_NUMERATOR]
+  \\ `&dimword (:α) <> 0i` by fs []
+  \\ imp_res_tac (UNDISCH INT_MOD_SUB |> GSYM |> DISCH_ALL)
+  \\ pop_assum (fn th => once_rewrite_tac [th]) \\ fs []
+  \\ fs [INT_MOD_NEG_NUMERATOR]
+  \\ qcase_tac `k <> 0n` \\ pop_assum mp_tac
+  \\ qcase_tac `n <> 0n` \\ pop_assum mp_tac \\ rw []
+  \\ `n MOD k < k` by fs [MOD_LESS]
+  \\ `n MOD k <= k` by fs []
+  \\ fs [INT_SUB]);
+
+val w2i_eq_w2n = store_thm("w2i_eq_w2n",
+  ``w2i (w:'a word) =
+    if w2n w < INT_MIN (:'a) then & (w2n w) else & (w2n w) - & dimword (:'a)``,
+  Cases_on `w` \\ rw [w2i_n2w_pos]
+  \\ fs [NOT_LESS] \\ fs [w2i_n2w_neg]
+  \\ `n <= dimword (:'a)` by decide_tac
+  \\ imp_res_tac (GSYM INT_SUB) \\ fs []);
+
 val _ = export_theory()
