@@ -406,11 +406,15 @@ fun no_full_extra_rule tgt =
 val done_some_work = ref false
 open HM_DepGraph
 
-fun build_depgraph incinfo target g0 : (t * node) = let
+fun build_depgraph cdset incinfo target g0 : (t * node) = let
   val pdep = primary_dependent target
   val target_s = fromFile target
   fun addF f n = (n,fromFile f)
   fun nstatus g n = peeknode g n |> valOf |> #status
+  fun build tgt' g =
+    build_depgraph (Binaryset.add(cdset, target_s)) incinfo tgt' g
+  val _ = not (Binaryset.member(cdset, target_s)) orelse
+          die (target_s ^ " seems to depend on itself - failing")
 in
   case target_node g0 target_s of
       (x as SOME n) => (g0, n)
@@ -427,12 +431,12 @@ in
       else if isSome pdep andalso no_full_extra_rule target then
         let
           val pdep = valOf pdep
-          val (g1, pnode) = build_depgraph incinfo pdep g0
+          val (g1, pnode) = build pdep g0
           val secondaries = set_union (get_implicit_dependencies incinfo target)
                                       (get_explicit_dependencies target)
           fun foldthis (d, (g, secnodes)) =
             let
-              val (g', n) = build_depgraph incinfo d g
+              val (g', n) = build d g
             in
               (g', addF d n::secnodes)
             end
@@ -466,7 +470,7 @@ in
             let
               fun foldthis (d, (g, secnodes)) =
                 let
-                  val (g, n) = build_depgraph incinfo d g
+                  val (g, n) = build d g
                 in
                   (g, addF d n::secnodes)
                 end
@@ -525,12 +529,22 @@ in
        cleantgt = ctgt}
 end
 
+fun create_graph tgts ii =
+  let
+    open HM_DepGraph
+    val empty_tgts = Binaryset.empty String.compare
+  in
+    List.foldl
+      (fn (t, g) => #1 (build_depgraph empty_tgts ii t g))
+      empty
+      (map toFile tgts)
+  end
+
 fun basecont tgts ii =
   let
     open HM_DepGraph
     val ii = add_sigobj ii
-    val g = List.foldl (fn (t, g) => #1 (build_depgraph ii t g)) empty
-                       (map toFile tgts)
+    val g = create_graph tgts ii
     val res = build_graph ii g
   in
     finish_logging (OS.Process.isSuccess res)
@@ -540,15 +554,13 @@ fun no_action_cont tgts ii =
   let
     open HM_DepGraph
     val ii = add_sigobj ii
-    val nI_l =
-        List.foldl (fn (t, g) => #1 (build_depgraph ii t g)) empty
-                   (map toFile tgts)
+    val g = create_graph tgts ii
     val pr_sl = String.concatWith " "
   in
     List.app (fn ni => (* if #status ni <> Succeeded then *)
                          print (nodeInfo_toString pr_sl ni ^ "\n")
                        (* else () *))
-             (listNodes nI_l);
+             (listNodes g);
     true
   end
 
