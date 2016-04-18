@@ -165,7 +165,7 @@ fun kill_asm th = first_x_assum((K ALL_TAC) o assert (equal (concl th) o concl))
 
 fun drule_thm th = mp_tac o Lib.C MATCH_MP th
 
-structure mg :> mg where type matcher = matcher and type pattern = pattern = struct
+structure mg = struct
   type pattern = pattern
   type matcher = matcher
 

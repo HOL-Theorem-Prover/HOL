@@ -1,46 +1,3 @@
-signature mg = sig
-  type pattern
-  type matcher
-
-  (* name and match whole assumption *)
-  val a     : string -> pattern -> matcher
-
-  (* match whole assumption *)
-  val ua    : pattern -> matcher
-  val au    : pattern -> matcher
-
-  (* name and match assumption subterm *)
-  val ab    : string -> pattern -> matcher
-  val ba    : string -> pattern -> matcher
-
-  (* match assumption subterm *)
-  val uab   : pattern -> matcher
-  val uba   : pattern -> matcher
-  val aub   : pattern -> matcher
-  val abu   : pattern -> matcher
-  val bau   : pattern -> matcher
-  val bua   : pattern -> matcher
-
-  (* match whole conclusion *)
-  val c     : pattern -> matcher
-
-  (* match conclusion subterm *)
-  val cb    : pattern -> matcher
-  val bc    : pattern -> matcher
-
-  (* match whole assumption or conclusion *)
-  val ac    : pattern -> matcher
-  val ca    : pattern -> matcher
-
-  (* match assumption or conclusion subterm *)
-  val acb   : pattern -> matcher
-  val abc   : pattern -> matcher
-  val bca   : pattern -> matcher
-  val cba   : pattern -> matcher
-  val cab   : pattern -> matcher
-  val bac   : pattern -> matcher
-end
-
 signature match_goal =
 sig
 
@@ -115,6 +72,44 @@ val kill_asm : thm -> tactic
 val drule_thm : thm -> thm -> tactic
 (* -- *)
 
-structure mg : mg where type matcher = matcher and type pattern = pattern
+structure mg : sig
+  (* name and match whole assumption *)
+  val a     : string -> pattern -> matcher
+
+  (* match whole assumption *)
+  val ua    : pattern -> matcher
+  val au    : pattern -> matcher
+
+  (* name and match assumption subterm *)
+  val ab    : string -> pattern -> matcher
+  val ba    : string -> pattern -> matcher
+
+  (* match assumption subterm *)
+  val uab   : pattern -> matcher
+  val uba   : pattern -> matcher
+  val aub   : pattern -> matcher
+  val abu   : pattern -> matcher
+  val bau   : pattern -> matcher
+  val bua   : pattern -> matcher
+
+  (* match whole conclusion *)
+  val c     : pattern -> matcher
+
+  (* match conclusion subterm *)
+  val cb    : pattern -> matcher
+  val bc    : pattern -> matcher
+
+  (* match whole assumption or conclusion *)
+  val ac    : pattern -> matcher
+  val ca    : pattern -> matcher
+
+  (* match assumption or conclusion subterm *)
+  val acb   : pattern -> matcher
+  val abc   : pattern -> matcher
+  val bca   : pattern -> matcher
+  val cba   : pattern -> matcher
+  val cab   : pattern -> matcher
+  val bac   : pattern -> matcher
+end
 
 end
