@@ -6,8 +6,9 @@ sig
   exception DuplicateTarget
   datatype target_status = Pending | Succeeded | Failed | Running
   eqtype node
+  datatype command = NoCmd | SomeCmd of string | BuiltInCmd
   type 'a nodeInfo = { target : 'a, status : target_status,
-                       command : string list option,
+                       command : command, seqnum : int,
                        dependencies : (node * string) list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo

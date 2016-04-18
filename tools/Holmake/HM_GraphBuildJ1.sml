@@ -51,7 +51,7 @@ fun graphbuildj1 static_info =
                   end
               in
                 case #command nI of
-                    NONE =>
+                    BuiltInCmd =>
                     (case #target nI of
                          [f] =>
                          (case toFile f of
@@ -68,45 +68,32 @@ fun graphbuildj1 static_info =
                        | ts =>
                          raise Fail ("implicit bg targets: " ^
                                      String.concatWith ", " ts))
-                  | SOME cs =>
+                  | SomeCmd c =>
                     let
-                      fun build1 c =
-                        let
-                          val hypargs as {noecho,ignore_error,command=c} =
-                              process_hypat_options c
-                        in
-                          case mosml_build_command hmenv hypargs depfs of
-                              SOME r => r
-                            | NONE =>
-                              let
-                                val () =
-                                    if not noecho andalso not quiet then
-                                      (TextIO.output(TextIO.stdOut, c ^ "\n");
-                                       TextIO.flushOut TextIO.stdOut)
-                                    else ()
-                                val result = Systeml.system_ps c
-                              in
-                                if not (OS.Process.isSuccess result) andalso
-                                   ignore_error
-                                then
-                                  (warn ("[" ^ hd (#target nI) ^
-                                         "] Error (ignored)");
-                                   OS.Process.success)
-                                else result
-                              end
-                        end
-                      fun buildall cs =
-                        case cs of
-                            [] => k true
-                          | c::cs => if OS.Process.isSuccess (build1 c) then
-                                       buildall cs
-                                     else
-                                       (tgtfatal ("*** ["^hd (#target nI)^
-                                                  "] Error");
-                                        k false)
+                      val hypargs as {noecho,ignore_error,command=c} =
+                          process_hypat_options c
                     in
-                      buildall cs
+                      case mosml_build_command hmenv hypargs depfs of
+                          SOME r => k (OS.Process.isSuccess r)
+                        | NONE =>
+                          let
+                            val () =
+                                if not noecho andalso not quiet then
+                                  (TextIO.output(TextIO.stdOut, c ^ "\n");
+                                   TextIO.flushOut TextIO.stdOut)
+                                else ()
+                            val result = Systeml.system_ps c
+                            val res_b = OS.Process.isSuccess result
+                          in
+                            if not res_b andalso ignore_error
+                            then
+                              (warn ("[" ^ hd (#target nI) ^
+                                     "] Error (ignored)");
+                               k true)
+                            else k res_b
+                          end
                     end
+                  | NoCmd => k true
               end
       in
         recurse OS.Process.success g

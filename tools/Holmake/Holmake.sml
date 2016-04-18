@@ -424,10 +424,10 @@ in
          no_full_extra_rule target
          (* path outside of current directory *)
       then
-        add_node {target = target_s,
+        add_node {target = target_s, seqnum = 0,
                   status = if exists_readable target_s then Succeeded
                            else Failed,
-                  command = NONE, dependencies = []} g0
+                  command = NoCmd, dependencies = []} g0
       else if isSome pdep andalso no_full_extra_rule target then
         let
           val pdep = valOf pdep
@@ -453,18 +453,18 @@ in
               List.exists (fn d => d forces_update_of target_s)
                           (fromFile pdep :: map fromFile secondaries)
         in
-            add_node {target = target_s,
+            add_node {target = target_s, seqnum = 0,
                       status = if needs_building then Pending else Succeeded,
-                      command = NONE,
+                      command = BuiltInCmd,
                       dependencies = depnodes } g2
         end
       else
         case extra_rule_for target_s of
             NONE =>
-              add_node {target = target_s,
+              add_node {target = target_s, seqnum = 0,
                         status = if exists_readable target_s then Succeeded
                                  else Failed,
-                        command = NONE,
+                        command = NoCmd,
                         dependencies = []} g0
           | SOME {dependencies, commands, ...} =>
             let
@@ -488,11 +488,34 @@ in
                    List.exists (fn d => d forces_update_of target_s)
                                dependencies) andalso
                   not (null commands)
+              val status = if needs_building then Pending else Succeeded
+              fun foldthis (c, (depnode, seqnum, g)) =
+                let
+                  val (g',n) = add_node {target = target_s, seqnum = seqnum,
+                                         status = status,
+                                         command = SomeCmd c,
+                                         dependencies = depnode @ depnodes } g
+                in
+                  (* The "" is necessary to make multi-command, multi-target
+                     rules work: when subsequent nodes (seqnum > 0) are added
+                     to the graph targetting a target other than the first,
+                     it is important that this new node merges with the
+                     corresponding seqnum>0 node generated from the first
+                     target *)
+                  ([(n,"")], seqnum + 1, g')
+                end
             in
-              add_node {target = target_s,
-                        status = if needs_building then Pending else Succeeded,
-                        command = SOME commands,
-                        dependencies = depnodes } g1
+              if needs_building then
+                let
+                  val (lastnodelist, _, g) =
+                      List.foldl foldthis ([], 0, g1) commands
+                in
+                  (g, #1 (hd lastnodelist))
+                end
+              else
+                add_node {target = target_s, seqnum = 0,
+                          status = status, command = NoCmd,
+                          dependencies = depnodes} g1
             end
 end
 
