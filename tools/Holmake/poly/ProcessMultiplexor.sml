@@ -3,6 +3,7 @@ struct
 
   infix |>
   fun x |> f = f x
+  fun K x y = x
 
   type pid = Posix.ProcEnv.pid
   val pidToWord  = Posix.Process.pidToWord
@@ -11,8 +12,9 @@ struct
   type 'a job = {tag : string,
                  command : string * string list,
                  update : 'a * bool -> 'a}
-  type 'a workprovider =
-       { initial : 'a, genjob : 'a -> ('a job * 'a) option }
+  datatype 'a genjob_result =
+           NoMoreJobs | NewJob of ('a job * 'a) | GiveUpAndDie
+  type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
 
   type 'a working_job = {
     tag : string,
@@ -99,7 +101,7 @@ struct
     current_jobs : (jobkey, 'a working_job) Binarymap.dict,
     current_state : 'a,
     worklimit : int,
-    genjob : 'a -> ('a job * 'a) option
+    genjob : 'a -> 'a genjob_result
   }
 
   fun new_worklist {worklimit : int,provider : 'a workprovider} : 'a worklist =
@@ -160,11 +162,11 @@ struct
           end
     end
 
+  fun mk_shell_command s = ("/bin/sh", ["/bin/sh", "-c", s])
   fun shellcommand s =
     let
       open Posix.Process
-      val j :int job = {tag = s, command = ("/bin/sh", ["/bin/sh", "-c", s]),
-                        update = K 0}
+      val j :int job = {tag = s, command = mk_shell_command s, update = K 0}
       val wj = start_job j
       fun read pfx acc strm k =
         case TextIO.inputLine strm of
@@ -192,8 +194,8 @@ struct
       if Binarymap.numItems(#current_jobs wl) >= #worklimit wl then acc
       else
         case genjob current_state of
-            NONE => acc
-          | SOME (job, state') =>
+            NoMoreJobs => acc
+          | NewJob (job, state') =>
             let
               val wj = start_job job
               val cmds' = case monitorfn (StartJob (wjkey wj)) of
@@ -203,6 +205,7 @@ struct
               fill_workq monitorfn
                          (cmds', wl |> addjob wj |> updstate state')
             end
+          | GiveUpAndDie => (KillAll :: cmds, wl)
     end
 
   fun text_monitor m =
@@ -225,10 +228,31 @@ struct
   fun wjstrm ERR (wj:'a working_job) = #err wj
     | wjstrm OUT wj = #out wj
 
-  fun execute_cmds cmds =
+  fun killjob (jk:jobkey) wl =
+    let
+      open Posix.Process
+      val cjs = #current_jobs wl
+      val job = Binarymap.find (cjs, jk)
+      val pid = #pid job
+      val state = #update job (#current_state wl, false)
+    in
+      kill (K_PROC pid, Posix.Signal.kill);
+      waitpid(W_CHILD pid, []);
+      updateWL wl
+               (U #current_state state)
+               (U #current_jobs (#1 (Binarymap.remove(cjs, jk)))) $$
+    end
+
+  fun killall (wl : 'a worklist) =
+    Binarymap.foldl (fn (k,_,acc) => killjob k acc)
+                    wl
+                    (#current_jobs wl)
+
+  fun execute_cmds cmds wl =
     case cmds of
-        [] => ()
-      | _ => raise Fail "Command execution not yet implemented"
+        [] => wl
+      | KillAll :: rest => killall wl
+      | Kill jk :: rest => killjob jk wl
 
   fun elapsed wj = Time.-(Time.now(), #starttime wj)
 
@@ -298,7 +322,7 @@ struct
         else
           let
             val (cmds', wl', activity) = workloop (cmds, wl, false)
-            val () = execute_cmds cmds'
+            val wl' = execute_cmds cmds' wl'
           in
             if not activity then
               ignore (Posix.Process.sleep (Time.fromMilliseconds 100))
@@ -336,15 +360,15 @@ struct
                                    clist
         in
           case cdata of
-              NONE => NONE
+              NONE => NoMoreJobs
             | SOME (t, (c, _)) =>
               let
                 fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist
               in
-                SOME ({tag = t,
-                       command = ("/bin/sh", ["/bin/sh", "-c", c]),
-                       update = upd},
-                      l)
+                NewJob ({tag = t,
+                         command = ("/bin/sh", ["/bin/sh", "-c", c]),
+                         update = upd},
+                        l)
               end
         end
       val wl =
