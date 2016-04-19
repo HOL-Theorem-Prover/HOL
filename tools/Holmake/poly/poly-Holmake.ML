@@ -33,7 +33,9 @@ val _ = useC "HM_GraphBuildJ1";
 val _ = useC "poly/HM_Cline";
 val _ = useC "poly/HM_BaseEnv";
 val _ = use  "../BuildCommand.sig";
+val _ = useC "poly/ProcessMultiplexor";
 val _ = useS "poly/BuildCommand";
+val _ = useS "poly/multibuild";
 val _ = useS "Holmake";
 
 val die_with = Holmake.die_with
