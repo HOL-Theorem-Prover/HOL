@@ -6,7 +6,7 @@
 open HolKernel Parse boolLib bossLib Q
 open wordsLib
 
-val () = Theory.new_theory "alignment";
+val () = new_theory "alignment";
 
 (* -------------------------------------------------------------------------
    Constant definitions
@@ -255,7 +255,7 @@ fun f p =
       [th1, th2]
    end
 
-val aligned_add_sub_123 = Theory.save_thm ("aligned_add_sub_123",
+val aligned_add_sub_123 = save_thm ("aligned_add_sub_123",
    LIST_CONJ (List.concat (List.map f [`1`, `2`, `3`]))
    )
 
@@ -365,4 +365,4 @@ val aligned_numeric = Q.store_thm("aligned_numeric",
 
 (* ------------------------------------------------------------------------- *)
 
-val () = Theory.export_theory ()
+val () = export_theory ()

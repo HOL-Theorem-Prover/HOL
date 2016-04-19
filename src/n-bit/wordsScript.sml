@@ -10,7 +10,7 @@ open arithmeticTheory pred_setTheory
 open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
 
-val () = Theory.new_theory "words"
+val () = new_theory "words"
 
 val fcp_ss = std_ss ++ fcpLib.FCP_ss
 
@@ -960,7 +960,7 @@ val w2s_s2w = Q.store_thm("w2s_s2w",
      n2s b n2c (s2n b c2n s MOD dimword(:'a))`,
   SRW_TAC [] [s2w_def, w2s_def])
 
-val NUMERAL_LESS_THM = Theory.save_thm("NUMERAL_LESS_THM",
+val NUMERAL_LESS_THM = save_thm("NUMERAL_LESS_THM",
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM)
 
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
@@ -1050,7 +1050,7 @@ val WORD_NEG_1 = Q.store_thm("WORD_NEG_1",
     \\ ASM_SIMP_TAC arith_ss [DECIDE ``0 < x /\ ~(x = 1) ==> 1 < x``,
          LESS_MOD,ZERO_LT_TWOEXP,dimword_def])
 
-val WORD_NEG_1_T = Theory.save_thm("WORD_NEG_1_T",
+val WORD_NEG_1_T = save_thm("WORD_NEG_1_T",
   REWRITE_RULE [GSYM WORD_NEG_1] word_T)
 
 val WORD_MSB_1COMP = Q.store_thm("WORD_MSB_1COMP",
@@ -3224,7 +3224,7 @@ val word_extract_mask = Q.prove(
    \\ decide_tac
    )
 
-val word_extract_mask = Theory.save_thm("word_extract_mask",
+val word_extract_mask = save_thm("word_extract_mask",
   SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask)
 
 val word_shift_bv = Q.store_thm("word_shift_bv",
