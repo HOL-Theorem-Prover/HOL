@@ -19,7 +19,7 @@ EXTRA_CLEANS = $(HH2_CMX) $(patsubst %.cmx,%.cmi,$(HH2_CMX)) $(patsubst %.cmx,%.
 
 all: $(HH2_CMX) hh
 
-hh: main.ml
+hh: main.ml $(ALL_CMX)
 	ocamlopt nums.cmxa str.cmxa unix.cmxa -o $@ -I hh1 $(ALL_CMX) $<
 
 hh_parse.ml: hh_parse.mly
@@ -31,27 +31,27 @@ hh_lexer.ml: hh_lexer.mll hh_parse.ml
 
 toolbox.cmx: toolbox.ml
 	ocamlopt -c -I hh1 $<
-hh_parse.cmx: hh_parse.ml
+hh_parse.cmi hh_parse.cmx: hh_parse.ml
 	ocamlopt -c $<
-hh_lexer.cmx: hh_lexer.ml
+hh_lexer.cmx: hh_lexer.ml hh_parse.cmi
 	ocamlopt -c $<
-read.cmx: read.ml
+read.cmi read.cmx: read.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
 predict.cmx: predict.ml
 	ocamlopt -c -I hh1 $<
-preprocess.cmx: preprocess.ml
+preprocess.cmi preprocess.cmx: preprocess.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
-init.cmx: init.ml
+init.cmi init.cmx: init.ml hh_parse.cmi preprocess.cmi
 	ocamlopt -c -I hh1 $<
-dependency.cmx: dependency.ml
+dependency.cmi dependency.cmx: dependency.ml read.cmi
 	ocamlopt -c -I hh1 $<
-thf1hh1.cmx: thf1hh1.ml
+thf1hh1.cmi thf1hh1.cmx: thf1hh1.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
-features.cmx: features.ml
+features.cmi features.cmx: features.ml thf1hh1.cmi init.cmi
 	ocamlopt -c -I hh1 $<
-prepredict.cmx: prepredict.ml
+prepredict.cmx: prepredict.ml features.cmi
 	ocamlopt -c -I hh1 $<
-write.cmx: write.ml
+write.cmx: write.ml hh_parse.cmi thf1hh1.cmi dependency.cmi
 	ocamlopt -c -I hh1 $<
 
 clean:
