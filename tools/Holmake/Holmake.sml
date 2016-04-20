@@ -236,8 +236,7 @@ val binfo : HM_Cline.t BuildCommand.buildinfo_t =
      hmenv = hmakefile_env,
      quit_on_failure = quit_on_failure, outs = outputfns,
      SIGOBJ = SIGOBJ}
-val {build_command,mosml_build_command,extra_impl_deps,build_graph} =
-    BuildCommand.make_build_command binfo
+val {extra_impl_deps,build_graph} = BuildCommand.make_build_command binfo
 
 val _ = let
 in
@@ -579,11 +578,10 @@ fun no_action_cont tgts ii =
     val ii = add_sigobj ii
     val g = create_graph tgts ii
     val pr_sl = String.concatWith " "
+    fun str (n,ni) =
+      "{" ^ node_toString n ^ "}: " ^ nodeInfo_toString pr_sl ni ^ "\n"
   in
-    List.app (fn ni => (* if #status ni <> Succeeded then *)
-                         print (nodeInfo_toString pr_sl ni ^ "\n")
-                       (* else () *))
-             (listNodes g);
+    List.app (print o str) (listNodes g);
     true
   end
 

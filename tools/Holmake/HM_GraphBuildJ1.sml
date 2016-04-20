@@ -32,7 +32,7 @@ fun graphbuildj1 static_info =
         val bc = build_command incinfo
         fun recurse retval g =
           case find_runnable g of
-              NONE => (case List.find (fn ni => #status ni = Failed)
+              NONE => (case List.find (fn (_,ni) => #status ni = Failed)
                                       (listNodes g)
                         of
                            NONE => retval

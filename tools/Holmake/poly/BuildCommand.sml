@@ -6,14 +6,18 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix |>
+fun x |> f = f x
+
 val default_holstate = Systeml.DEFAULT_STATE
-val failed_script_cache = ref (Binaryset.empty String.compare)
 
 open HM_GraphBuildJ1
 
 datatype cmd_line = Mosml_compile of File list * string
                   | Mosml_link of string * File list
                   | Mosml_error
+
+datatype buildresult = datatype multibuild.buildresult
 
 fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val {diag,...} = outs
@@ -218,16 +222,17 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     exception FileNotFound
     val isSuccess = OS.Process.isSuccess
     fun setup_script s deps extras = let
-      val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
-              (print ("Not re-running "^s^"Script; believe it will fail\n");
-               raise CompileFailed)
       val scriptsml_file = SML (Script s)
       val scriptsml = fromFile scriptsml_file
       val script   = s^"Script"
       val scriptuo = script^".uo"
       val scriptui = script^".ui"
       (* first thing to do is to create the Script.uo file *)
-      val b = build_command ii (Compile deps) scriptsml_file
+      val b =
+          case build_command ii (Compile deps) scriptsml_file of
+              BR_OK => true
+            | BR_Failed => false
+            | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory-builder executable\n")
@@ -248,25 +253,33 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       then let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
-        val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val () =
-            if not (isSuccess res2) then
-              (failed_script_cache := Binaryset.add(!failed_script_cache, s);
-               warn ("Failed script build for "^script^" - "^
-                     posix_diagnostic res2))
-            else ()
-        val _ = if isSuccess res2 orelse not debug then
-                  app safedelete [script, scriptuo, scriptui]
+        val cline = [fullPath [OS.FileSys.getDir(), script]]
+        fun cont res =
+          let
+            val _ =
+                if not (isSuccess res) then
+                  warn ("Failed script build for "^script^" - "^
+                        posix_diagnostic res)
                 else ()
+            val _ = if isSuccess res orelse not debug then
+                      app safedelete [script, scriptuo, scriptui]
+                    else ()
+          in
+            isSuccess res andalso
+            List.all (fn file =>
+                         exists_readable file orelse
+                         (warn ("Script file "^script^" didn't produce "^file^
+                                "; \n\
+                                \  maybe need export_theory() at end of "^
+                                scriptsml);
+                          false))
+                     expected_results
+          end
       in
-        (isSuccess res2) andalso
-        List.all (fn file =>
-          exists_readable file orelse
-          (print ("Script file "^script^" didn't produce "^file^"; \n\
-                  \  maybe need export_theory() at end of "^scriptsml^"\n");
-           false)) expected_results
+        BR_ClineK ((script, cline), cont)
       end
-      else (print ("Failed to build script file, "^script^"\n"); false)
+      else
+        (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
   in
     let
     in
@@ -275,12 +288,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           let
             val file = fromFile arg
             val _ = exists_readable file orelse
-                    (print ("Wanted to compile "^file^
+                    (warn ("Wanted to compile "^file^
                             ", but it wasn't there\n");
                      raise FileNotFound)
             val res = poly_compile diag true arg include_flags deps
           in
-            OS.Process.isSuccess res
+            if OS.Process.isSuccess res then BR_OK else BR_Failed
           end
         | BuildScript (s, deps) =>
           let
@@ -297,18 +310,20 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             run_script scriptetc objectfiles [s^".art"]
           end
-        | ProcessArticle s => let
-          val raw_art_file = ART (RawArticle s)
-          val art_file = ART (ProcessedArticle s)
-          val raw_art = fromFile raw_art_file
-          val art = fromFile art_file
-          val res = OS.Process.system
-                      ("opentheory info --article -o "^art^" "^raw_art)
-        in
-          OS.Process.isSuccess res
-        end
-    end handle CompileFailed => false
-             | FileNotFound  => false
+        | ProcessArticle s =>
+          let
+            val raw_art_file = ART (RawArticle s)
+            val art_file = ART (ProcessedArticle s)
+            val raw_art = fromFile raw_art_file
+            val art = fromFile art_file
+            val cline =
+                ("opentheory",
+                 ["opentheory", "info", "--article", "-o", art, raw_art])
+          in
+            BR_ClineK (cline, OS.Process.isSuccess)
+          end
+    end handle CompileFailed => BR_Failed
+             | FileNotFound  => BR_Failed
   end
   fun mosml_build_command hm_env {noecho, ignore_error, command = c} deps =
     let
@@ -344,15 +359,45 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       end
       else NONE
     end
-  val build_graph = graphbuildj1 { build_command = build_command,
-                                   mosml_build_command = mosml_build_command,
-                                   warn = warn, tgtfatal = tgtfatal,
-                                   keep_going = keep_going,
-                                   quiet = quiet_flag,
-                                   hmenv = hmenv}
+  val jobs = #jobs (#core optv)
+  open HM_DepGraph
+  val pr_sl = String.concatWith " "
+  fun interpret_graph g =
+    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
+        [] => OS.Process.success
+      | ns =>
+        let
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+        in
+          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          OS.Process.failure
+        end
+  fun interpret_bres bres =
+    case bres of
+        BR_OK => true
+      | BR_ClineK((_,cline), k) => k (Systeml.systeml cline)
+      | BR_Failed => false
+
+  val build_graph =
+      if jobs = 1 then
+        graphbuildj1 {
+          build_command = (fn ii => fn cmds => fn f =>
+                              build_command ii cmds f |> interpret_bres),
+          mosml_build_command = mosml_build_command,
+          warn = warn, tgtfatal = tgtfatal,
+          keep_going = keep_going,
+          quiet = quiet_flag,
+          hmenv = hmenv}
+      else
+        (fn ii => fn g =>
+            multibuild.graphbuild { build_command = build_command,
+                                    mosml_build_command = mosml_build_command,
+                                    warn = warn, tgtfatal = tgtfatal,
+                                    keep_going = keep_going, diag = diag,
+                                    quiet = quiet_flag, hmenv = hmenv,
+                                    jobs = jobs } ii g |> interpret_graph)
 in
-  {build_command = build_command, mosml_build_command = mosml_build_command,
-   extra_impl_deps = [Unhandled HOLSTATE],
+  {extra_impl_deps = [Unhandled HOLSTATE],
    build_graph = build_graph}
 end
 

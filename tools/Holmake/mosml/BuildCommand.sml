@@ -182,9 +182,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                    quiet = quiet_flag,
                                    hmenv = hmenv}
 in
-  {build_command = build_command,
-   mosml_build_command = mosml_build_command,
-   extra_impl_deps = if nob2002 then []
+  {extra_impl_deps = if nob2002 then []
                      else [toFile (fullPath [SIGOBJ, "basis2002.uo"])],
    build_graph = build_graph}
 end (* make_build_command's let *)

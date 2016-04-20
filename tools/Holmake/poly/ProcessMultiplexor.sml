@@ -13,7 +13,7 @@ struct
                  command : string * string list,
                  update : 'a * bool -> 'a}
   datatype 'a genjob_result =
-           NoMoreJobs | NewJob of ('a job * 'a) | GiveUpAndDie
+           NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
 
   type 'a working_job = {
@@ -194,7 +194,7 @@ struct
       if Binarymap.numItems(#current_jobs wl) >= #worklimit wl then acc
       else
         case genjob current_state of
-            NoMoreJobs => acc
+            NoMoreJobs s' => (cmds, updstate s' wl)
           | NewJob (job, state') =>
             let
               val wj = start_job job
@@ -205,11 +205,12 @@ struct
               fill_workq monitorfn
                          (cmds', wl |> addjob wj |> updstate state')
             end
-          | GiveUpAndDie => (KillAll :: cmds, wl)
+          | GiveUpAndDie s' => (KillAll :: cmds, updstate s' wl)
     end
 
   fun text_monitor m =
     let
+      open Posix.Process
       fun p tag t msg =
         (print (tag ^ "(" ^ Time.toString t ^ ")  " ^ msg ^ "\n");
          NONE)
@@ -219,7 +220,8 @@ struct
             p tag t ("["^chan_name chan^"]: " ^ s)
         | NothingSeen ((pid,tag), {delay,total_elapsed}) =>
             p tag total_elapsed ("delayed " ^ Time.toString delay)
-        | Terminated((pid,tag), st, t) => p tag t "exited"
+        | Terminated((pid,tag), st, t) =>
+          p tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
         | EOF ((pid,tag), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
         | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
@@ -360,7 +362,7 @@ struct
                                    clist
         in
           case cdata of
-              NONE => NoMoreJobs
+              NONE => NoMoreJobs clist
             | SOME (t, (c, _)) =>
               let
                 fun upd(clist, b) = fupdAlist t (fn (c,_) => (c,Done b)) clist

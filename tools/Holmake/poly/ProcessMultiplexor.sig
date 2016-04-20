@@ -7,7 +7,7 @@ sig
   type jobkey = Posix.ProcEnv.pid * string
   type exit_status = Posix.Process.exit_status
   datatype 'a genjob_result =
-           NoMoreJobs | NewJob of ('a job * 'a) | GiveUpAndDie
+           NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
   type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
   type 'a worklist
 

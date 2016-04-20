@@ -4,6 +4,13 @@ struct
 structure Map = Binarymap
 
 datatype target_status = Pending | Succeeded | Failed | Running
+fun status_toString s =
+  case s of
+      Succeeded => "[Succeeded]"
+    | Failed => "[Failed]"
+    | Running => "[Running]"
+    | Pending => "[Pending]"
+
 exception NoSuchNode
 exception DuplicateTarget
 type node = int
@@ -141,10 +148,10 @@ fun add_node (nI : string nodeInfo) (g :t) =
           | NoCmd => newNode NoCmd
   end
 
-fun updnode (n, st) (g : t) =
-  case peeknode g n of
-      NONE => raise NoSuchNode
-    | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
+fun updnode (n, st) (g : t) : t =
+   case peeknode g n of
+       NONE => raise NoSuchNode
+     | SOME nI => fupd_nodes (fn m => Map.insert(m, n, setStatus st nI)) g
 
 fun find_runnable (g : t) =
   let
@@ -163,15 +170,9 @@ fun find_runnable (g : t) =
   end
 
 fun target_node (g:t) t = Map.peek(#target_map g,t)
-fun listNodes (g:t) = Map.foldr (fn (k,v,acc) => v::acc) [] (#nodes g)
+fun listNodes (g:t) = Map.foldr (fn (k,v,acc) => (k,v)::acc) [] (#nodes g)
 
-fun status_toString s =
-  case s of
-      Succeeded => "[Succeeded]"
-    | Failed => "[Failed]"
-    | Running => "[Running]"
-    | Pending => "[Pending]"
-
+val node_toString = Int.toString
 
 fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
   let
