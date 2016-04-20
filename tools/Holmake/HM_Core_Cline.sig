@@ -28,6 +28,7 @@ type t = {
 }
 
 val default_core_options : t
+val fupd_jobs : (int -> int) -> (t -> t)
 
 val core_option_descriptions : ((string -> unit) * t -> t) GetOpt.opt_descr list
 

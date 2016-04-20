@@ -33,7 +33,7 @@ end (* local *)
 val default_options = {
   no_basis2002 = false,
   mosmldir = NONE,
-  core = HM_Core_Cline.default_core_options
+  core = fupd_jobs (fn _ => 1) HM_Core_Cline.default_core_options
 }
 
 

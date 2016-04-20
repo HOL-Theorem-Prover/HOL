@@ -56,6 +56,8 @@ val U = U
 val $$ = $$
 end (* local *)
 
+fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
+
 type t = {
   debug : bool,
   do_logging : bool,
