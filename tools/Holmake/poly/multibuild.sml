@@ -37,8 +37,8 @@ val loggingdir = ".hollogs"
 
 val five_sec = Time.fromSeconds 5
 
-fun statusString (MRunning c) = StringCvt.padRight #" " 3 (str c)
-  | statusString (Stalling(s, _)) = StringCvt.padRight #" " 3 s
+fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
+  | statusString (Stalling(s, _)) = StringCvt.padLeft #" " 3 s ^ " "
 
 fun polish0 tag =
   if String.isSuffix "Theory.sml" tag orelse
@@ -53,7 +53,10 @@ fun polish0 tag =
     end
   else tag
 
-fun polish s = StringCvt.padRight #" " 17 (polish0 s)
+fun polish s = StringCvt.padRight #" " 16 (polish0 s)
+
+fun green s = "\027[32m\027[1m" ^ s ^ "\027[0m"
+fun red s = "\027[31m\027[1m" ^ s ^ "\027[0m"
 
 fun graphbuild optinfo incinfo g =
   let
@@ -75,7 +78,6 @@ fun graphbuild optinfo incinfo g =
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, (strm, MRunning #"|"));
-            info ("\rStarting to build " ^ tag);
             display_map();
             NONE
           end
@@ -129,8 +131,9 @@ fun graphbuild optinfo incinfo g =
                 let
                 in
                   if st = W_EXITED then
-                    info ("\r" ^ StringCvt.padRight #" " 75 tag ^ "OK")
-                  else info ("\r" ^ StringCvt.padRight #" " 75 tag ^ "FAILED!");
+                    info ("\r" ^ StringCvt.padRight #" " 75 tag ^ green "OK")
+                  else info ("\r" ^ StringCvt.padRight #" " 75 tag ^
+                             red "FAILED!");
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                   display_map();
