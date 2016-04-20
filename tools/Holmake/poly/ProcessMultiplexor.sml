@@ -211,9 +211,10 @@ struct
   fun text_monitor m =
     let
       open Posix.Process
-      fun p tag t msg =
+      fun p0 tag t msg killp =
         (print (tag ^ "(" ^ Time.toString t ^ ")  " ^ msg ^ "\n");
-         NONE)
+         killp)
+      fun p tag t msg = p0 tag t msg NONE
     in
       case m of
           Output((pid,tag), t, chan, s) =>
@@ -221,7 +222,8 @@ struct
         | NothingSeen ((pid,tag), {delay,total_elapsed}) =>
             p tag total_elapsed ("delayed " ^ Time.toString delay)
         | Terminated((pid,tag), st, t) =>
-          p tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
+          p0 tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
+             (if st = W_EXITED then NONE else SOME KillAll)
         | EOF ((pid,tag), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
         | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
