@@ -32,6 +32,8 @@ datatype 'a stream = Stream of 'a * (unit -> 'a stream);
 
 exception end_of_stream;
 
+fun empty_stream() = raise end_of_stream
+
 (*---------------------------------------------------------------------------*)
 (* stream_map : ('a -> 'b) -> (unit -> 'a stream) -> (unit -> 'b stream)     *)
 (*---------------------------------------------------------------------------*)
@@ -50,6 +52,8 @@ fun stream_append s1 s2 () =
    (case s1 ()
     of (Stream (x,s1')) => (Stream (x,stream_append s1' s2)))
    handle end_of_stream => s2 ();
+
+fun stream_append_list x = List.foldr (uncurry stream_append) empty_stream x
 
 (*---------------------------------------------------------------------------*)
 (* stream_flat : (unit -> (unit -> 'a stream) stream) -> unit -> 'a stream   *)

@@ -10,10 +10,6 @@ fun Redblackmap_contains (m,v) =
   in false end
   handle found => true
 
-fun empty_stream() = raise end_of_stream
-
-fun stream_append_list x = List.foldr (uncurry stream_append) empty_stream x
-
 val ERR = Feedback.mk_HOL_ERR"match_goal";
 
 datatype name =
