@@ -50,9 +50,7 @@ fun quse s = let
                (warn ("Couldn't make .HOLMK directory in " ^
                       FS.getDir() ^ ": " ^ msg);
                 false)
-  fun holtemp s =
-    if mkHOLMK() then OS.Path.concat(".HOLMK", OS.Path.file s)
-    else OS.FileSys.tmpName()
+  fun holtemp s = OS.FileSys.tmpName()
 
   val _ = if FS.access (s, [FS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
@@ -67,6 +65,11 @@ in
     end
   else PolyML.use s
 end handle OS.Path.Path => die ("Path exception in quse "^s)
+             | e => (TextIO.output(TextIO.stdErr,
+                                   "error in quse " ^ s ^ " : " ^
+                                   General.exnMessage e ^ "\n");
+                     TextIO.flushOut TextIO.stdErr;
+                     raise e)
 
 fun myuse f =
   let val op ++ = OS.Path.concat
@@ -103,42 +106,50 @@ fun findUo modPath [] = NONE
           findUo modPath rest
       end;
 
-fun loadUo uo modName =
-let val i = TextIO.openIn uo
+fun loadUo ps uo =
+  let
+    val i = TextIO.openIn uo
     val files =
       String.tokens (fn c => c = #"\n") (TextIO.inputAll i)
     val _ = TextIO.closeIn i
+    fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
          SOME "sml" => myuse f
        | SOME "sig" => myuse f
-       | _ => load f) handle OS.Path.InvalidArc => die ("Invalid arc exception in loading "^f)
-                           | OS.Path.Path => die ("Path exception in loading "^f)
-                           | OS.SysErr(msg,_) => die ("System error '"^msg^"' in loading "^f)
-in
-  List.app loadOne files
-end
-and load modPath =
-let val modName = OS.Path.file modPath;
+       | _ => load (uo::ps) f)
+      handle
+        OS.Path.InvalidArc => die ("Invalid arc exception in loading "^str f)
+      | OS.Path.Path => die ("Path exception in loading "^str f)
+      | OS.SysErr(msg,_) => die ("System error '"^msg^"' in loading "^str f)
+  in
+    List.app loadOne files
+  end
+and load ps modPath =
+  let
+    val modName = OS.Path.file modPath
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
-        NONE => die ("Cannot find file " ^ modPath ^ ext)
-      | SOME uo => loadUo uo modName;
-in
-  if Binaryset.member (!loadedMods, modName) then
-    ()
-  else
-    (loadedMods := Binaryset.add (!loadedMods, modName);
-     (l ".ui"; l ".uo")
-     handle e =>
-       (loadedMods := Binaryset.delete (!loadedMods, modName);
-        raise e))
-end;
-
+          NONE => die ("Cannot find file " ^ modPath ^ ext)
+        | SOME uo => loadUo ps uo
+  in
+    if Binaryset.member (!loadedMods, modName) then
+      ()
+    else
+      (loadedMods := Binaryset.add (!loadedMods, modName);
+       (l ".ui"; l ".uo")
+       handle e =>
+              (loadedMods := Binaryset.delete (!loadedMods, modName);
+               raise e))
+  end handle e => (TextIO.output(TextIO.stdErr,
+                                 "error in load " ^ modPath ^ " : " ^
+                                 General.exnMessage e ^ "\n");
+                   TextIO.flushOut TextIO.stdErr;
+                   raise e)
 in
 
   structure Meta = struct
-    val load = load;
+    val load = load []
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
