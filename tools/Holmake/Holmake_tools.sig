@@ -49,7 +49,7 @@ sig
                            tgtfatal : string -> unit,
                            diag : string -> unit}
   (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
-  val output_functions : int -> output_functions
+  val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
 
 

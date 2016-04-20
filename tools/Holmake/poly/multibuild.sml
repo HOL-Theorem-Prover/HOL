@@ -75,8 +75,7 @@ fun graphbuild optinfo incinfo g =
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, (strm, MRunning #"|"));
-            print "\n";
-            info ("Starting to build " ^ tag);
+            info ("\rStarting to build " ^ tag);
             display_map();
             NONE
           end
@@ -129,10 +128,9 @@ fun graphbuild optinfo incinfo g =
               | SOME (strm,stat) =>
                 let
                 in
-                  print "\n";
                   if st = W_EXITED then
-                    info (StringCvt.padRight #" " 75 tag ^ "OK")
-                  else info (StringCvt.padRight #" " 75 tag ^ "FAILED!");
+                    info ("\r" ^ StringCvt.padRight #" " 75 tag ^ "OK")
+                  else info ("\r" ^ StringCvt.padRight #" " 75 tag ^ "FAILED!");
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                   display_map();

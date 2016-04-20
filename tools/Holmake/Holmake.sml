@@ -86,7 +86,8 @@ val verbose = #verbose coption_value
 val chattiness_level =
     if debug then 3 else if verbose then 2 else if quiet_flag then 0 else 1
 val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
-    output_functions chattiness_level
+    output_functions {chattiness = chattiness_level,
+                      usepfx = #jobs coption_value = 1}
 
 val _ = diag ("CommandLine.name() = "^CommandLine.name())
 val _ = diag ("CommandLine.arguments() = "^

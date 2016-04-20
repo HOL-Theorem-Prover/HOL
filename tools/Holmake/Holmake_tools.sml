@@ -76,11 +76,21 @@ end
 fun shorten_name name =
   if OS.Path.file name = "Holmake" then "Holmake" else name
 
-fun output_functions n = let
-  val execname = shorten_name (CommandLine.name())
+fun output_functions {usepfx,chattiness=n} = let
+  val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open TextIO
-  fun msg strm s = if s = "" then ()
-                   else (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
+  fun msg strm s =
+    if s = "" then ()
+    else
+      let
+        val ss = Substring.full s
+        val (pfx_ss,sfx_ss) = Substring.splitl Char.isSpace ss
+        val pfx = Substring.string pfx_ss
+        val sfx = Substring.string sfx_ss
+      in
+        output(strm, pfx ^ execname ^ sfx^"\n");
+        flushOut strm
+      end
   fun donothing _ = ()
   val warn = if n >= 1 then msg stdErr else donothing
   val info = if n >= 1 then msg stdOut else donothing
