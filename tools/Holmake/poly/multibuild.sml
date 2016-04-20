@@ -29,38 +29,34 @@ fun graphbuild info incinfo g =
             val depfs = map (toFile o #2) (#dependencies nI)
             val _ = #status nI = Pending orelse
                     raise Fail "runnable not pending"
+            val target_s = String.concatWith " " (#target nI)
           in
             case #command nI of
                 NoCmd => genjob (updnode (n,Succeeded) g)
-              | SomeCmd s =>
+              | SomeCmd c =>
                 let
                   val hypargs as {noecho,ignore_error,command=c} =
-                      process_hypat_options s
+                      process_hypat_options c
+                  fun error b =
+                    if b then Succeeded
+                    else if ignore_error then
+                      (warn ("Ignoring error building " ^ target_s);
+                       Succeeded)
+                    else Failed
                 in
                   case mosml_build_command hmenv hypargs depfs of
-                      SOME r =>
-                      let
-                        val status =
-                            if OS.Process.isSuccess r then Succeeded
-                            else
-                              (tgtfatal (String.concatWith " " (#target nI));
-                               Failed)
-                      in
-                        k (status = Succeeded) g
-                      end
+                      SOME r => k (error (OS.Process.isSuccess r) = Succeeded) g
                     | NONE =>
                       let
-                        fun update (g, b) =
-                          updnode (n, if b then Succeeded else Failed) g
+                        fun update (g, b) = updnode (n, error b) g
                       in
                         NewJob ({tag = String.concatWith " " (#target nI),
-                                 command = mk_shell_command s,
+                                 command = mk_shell_command c,
                                  update = update}, updnode(n, Running) g)
                       end
                 end
               | BuiltInCmd =>
                 let
-                  val target_s = String.concatWith " " (#target nI)
                   fun bresk bres g =
                     case bres of
                         BR_OK => k true g
