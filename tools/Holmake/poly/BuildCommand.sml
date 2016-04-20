@@ -151,7 +151,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,hmake_options,actual_overlay,envlist,quit_on_failure,outs,...} =
       buildinfo
   val hmenv = #hmenv buildinfo
-  val {warn,diag,tgtfatal,...} = outs
+  val {warn,diag,tgtfatal,info,...} = outs
   val keep_going = #keep_going (#core optv)
   val debug = #debug (#core optv)
   val opentheory = #opentheory (#core optv)
@@ -234,8 +234,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             | BR_Failed => false
             | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
       val _ = b orelse raise CompileFailed
-      val _ = print ("Linking "^scriptuo^
-                     " to produce theory-builder executable\n")
+      (* val _ = print ("Linking "^scriptuo^
+                     " to produce theory-builder executable\n") *)
       val objectfiles0 =
           if allfast then ["fastbuild.uo", scriptuo]
           else if quit_on_failure then [scriptuo]
@@ -394,6 +394,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going, diag = diag,
+                                    info = info,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
 in

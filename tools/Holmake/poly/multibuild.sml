@@ -4,6 +4,8 @@ struct
 open ProcessMultiplexor HM_DepGraph Holmake_tools
 type wp = HM_DepGraph.t workprovider
 
+val W_EXITED = Posix.Process.W_EXITED
+
 datatype buildresult =
          BR_OK
        | BR_ClineK of ((string * string list) * (OS.Process.status -> bool))
@@ -12,10 +14,134 @@ datatype buildresult =
 fun extract_thypart s = (* <....>Theory.sml *)
   String.substring(s, 0, String.size s - 10)
 
-fun graphbuild info incinfo g =
+fun nextchar #"|" = #"/"
+  | nextchar #"/" = #"-"
+  | nextchar #"-" = #"\\"
+  | nextchar #"\\" = #"|"
+  | nextchar c = c
+
+fun stallstr "|" = "!"
+  | stallstr ":" = "|"
+  | stallstr "." = ":"
+  | stallstr "!" = "!!"
+  | stallstr "!!" = "!!!"
+  | stallstr s = s
+
+datatype monitor_status = MRunning of char
+                        | Stalling of string * Time.time
+
+infix ++
+fun p1 ++ p2 = OS.Path.concat(p1, p2)
+val loggingdir = ".hollogs"
+
+
+val five_sec = Time.fromSeconds 5
+
+fun statusString (MRunning c) = StringCvt.padRight #" " 3 (str c)
+  | statusString (Stalling(s, _)) = StringCvt.padRight #" " 3 s
+
+fun polish0 tag =
+  if String.isSuffix "Theory.sml" tag orelse
+     String.isSuffix "Theory.sig" tag
+  then
+    let
+      val ss = Substring.full tag
+      val (pfx,_) = Substring.position " " ss
+      val thyname = Substring.slice(pfx,0,SOME(Substring.size pfx - 10))
+    in
+      Substring.string thyname
+    end
+  else tag
+
+fun polish s = StringCvt.padRight #" " 17 (polish0 s)
+
+fun graphbuild optinfo incinfo g =
   let
+    val _ = OS.FileSys.mkDir loggingdir handle _ => ()
     val { build_command, mosml_build_command, warn, tgtfatal, diag,
-          keep_going, quiet, hmenv, jobs } = info
+          keep_going, quiet, hmenv, jobs, info } = optinfo
+    val monitor_map = ref (Binarymap.mkDict String.compare)
+    fun display_map () =
+      (print "\r";
+       Binarymap.app (fn (k,(_,v)) =>
+                        print (polish k ^ statusString v))
+                     (!monitor_map))
+    fun monitor msg =
+      case msg of
+          StartJob (_, tag) =>
+          let
+            val safetag = String.map (fn #"/" => #"-" | c => c) tag
+            val strm = TextIO.openOut (loggingdir ++ safetag)
+          in
+            monitor_map :=
+              Binarymap.insert(!monitor_map, tag, (strm, MRunning #"|"));
+            print "\n";
+            info ("Starting to build " ^ tag);
+            display_map();
+            NONE
+          end
+        | Output((_, tag), t, chan, msg) =>
+          let
+          in
+            case Binarymap.peek(!monitor_map, tag) of
+                NONE => (warn ("Lost monitor info for "^tag); NONE)
+              | SOME (strm,stat) =>
+                let
+                  val stat' = case stat of MRunning c => MRunning (nextchar c)
+                                         | Stalling _ => MRunning #"|"
+                  val pfx = if chan = OUT then "" else "[ERR]"
+                in
+                  TextIO.output(strm,pfx ^ msg);
+                  monitor_map :=
+                    Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                  display_map();
+                  NONE
+                end
+          end
+        | NothingSeen((_, tag), {delay,...}) =>
+          let
+          in
+            case Binarymap.peek(!monitor_map, tag) of
+                NONE => (warn ("Lost monitor info for "^tag); NONE)
+              | SOME (strm,stat) =>
+                let
+                  val stat' =
+                      case stat of
+                          MRunning c => if Time.>(delay, five_sec) then
+                                          Stalling(".", delay)
+                                        else MRunning c
+                        | Stalling (s, sofar) =>
+                          if Time.>(delay, Time.+(sofar, five_sec)) then
+                            Stalling(stallstr s, delay)
+                          else stat
+                in
+                  monitor_map :=
+                    Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                  display_map();
+                  NONE
+                end
+          end
+        | Terminated((_, tag), st, _) =>
+          let
+          in
+            case Binarymap.peek(!monitor_map, tag) of
+                NONE => (warn ("Lost monitor info for "^tag); NONE)
+              | SOME (strm,stat) =>
+                let
+                in
+                  print "\n";
+                  if st = W_EXITED then
+                    info (StringCvt.padRight #" " 75 tag ^ "OK")
+                  else info (StringCvt.padRight #" " 75 tag ^ "FAILED!");
+                  TextIO.closeOut strm;
+                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
+                  display_map();
+                  if st = W_EXITED orelse keep_going then NONE
+                  else SOME KillAll
+                end
+          end
+        | _ => NONE
+
     fun genjob g =
       case find_runnable g of
           NONE => NoMoreJobs g
@@ -100,7 +226,7 @@ fun graphbuild info incinfo g =
         new_worklist {worklimit = jobs,
                       provider = { initial = g, genjob = genjob }}
   in
-    do_work(worklist, text_monitor)
+    do_work(worklist, monitor)
   end
 
 end
