@@ -19,7 +19,7 @@ val _ = let
   val _ = tprint "Testing pairTools.LET_INTRO"
   val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (zw)) ==> (ARB x y):bool``)
   val _ = pairTools.LET_INTRO (ASSUME ``((x,y) = (z,w)) ==> (ARB x y):bool``)
-  val _ = print "OK\n"
+  val _ = OK()
 in
   ()
 end handle e => die()
@@ -28,7 +28,7 @@ end handle e => die()
 val _ = tprint "Parsing case expressions with conditional arms"
 val t1 = ``case p:'a#'b of (x,y) => if y = a then x else f x y``
 val t2 = ``pair_CASE (p:'a # 'b) (\x y. if y = a then x else f x y)``
-val _ = if aconv t1 t2 then print "OK\n" else die()
+val _ = if aconv t1 t2 then OK() else die()
 
 val _ = print "**** More Inductive Definition tests ****\n"
 open IndDefLib
@@ -111,16 +111,16 @@ val _ = print "*** new_specification with existential definition\n"
 val th = metisLib.METIS_PROVE[]``?x y z. x ==> z /\ z ==> y``;
 val _ = tprint "Testing 0 constants"
 val nothing_def = new_specification("nothing_def",[],th);
-val _ = print "OK\n"
+val _ = OK()
 val _ = tprint "Testing 1 constant"
 val a_def = new_specification("a_def",["a"],th);
-val _ = print "OK\n"
+val _ = OK()
 val _ = tprint "Testing 2 constants"
 val pq_def = new_specification("pq_def",["p","q"],th);
-val _ = print "OK\n"
+val _ = OK()
 val _ = tprint "Testing 3 constants"
 val rst_def = new_specification("rst_def",["r","s","t"],th);
-val _ = print "OK\n"
+val _ = OK()
 end
 
 (* split_pair_case_tac *)
@@ -132,7 +132,7 @@ val (sgs, vfn) = split_pair_case_tac g handle HOL_ERR _ => die ()
 val _ = case sgs of
             [([a], g')] => if aconv (#2 g) g' andalso
                               aconv a ``xx = (aa:bool,bb:bool)``
-                           then print "OK\n"
+                           then OK()
                            else die ()
           | _ => die ()
 
@@ -145,7 +145,7 @@ val _ = case sgs of
             [([a1, a2], g')] => if aconv g' g andalso
                                    aconv a1 ``xx = (aa:bool, bb:bool)`` andalso
                                    aconv a2 a
-                                then print "OK\n"
+                                then OK()
                                 else die()
           | _ => die()
 

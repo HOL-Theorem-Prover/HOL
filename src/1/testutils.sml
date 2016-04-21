@@ -4,11 +4,25 @@ struct
 open Lib
 
 val linewidth = ref 80
+fun checkterm pfx s =
+  case OS.Process.getEnv "TERM" of
+      NONE => s
+    | SOME term =>
+      if String.isPrefix "xterm" term then
+        pfx ^ s ^ "\027[0m"
+      else
+        s
 
-fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
-fun OK () = print "OK\n"
+val bold = checkterm "\027[1m"
+val boldred = checkterm "\027[31m\027[1m"
+val boldgreen = checkterm "\027[32m\027[1m"
+val red = checkterm "\027[31m"
+val dim = checkterm "\027[2m"
 
-fun tprint s = print (UTF8.padRight #" " 65 (s ^ " ... "))
+fun die s = (print (boldred s ^ "\n"); OS.Process.exit OS.Process.failure)
+fun OK () = print (boldgreen "OK" ^ "\n")
+
+fun tprint s = print (UTF8.padRight #" " 78 (s ^ " ... "))
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =
@@ -36,7 +50,7 @@ fun tppw width {input=s,output,testf} = let
   val t = Parse.Term [QUOTE s]
   val res = Portable.pp_to_string width Parse.pp_term t
 in
-  if res = output then print "OK\n" else die ("FAILED!\n  Saw: >|" ^ res ^ "|<")
+  if res = output then OK() else die ("FAILED!\n  Saw: >|" ^ res ^ "|<")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 
