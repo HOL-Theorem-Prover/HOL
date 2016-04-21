@@ -29,6 +29,21 @@ in
   implode (trans charlist)
 end
 
+fun checkterm pfx s =
+  case OS.Process.getEnv "TERM" of
+      NONE => s
+    | SOME term =>
+      if String.isPrefix "xterm" term then
+        pfx ^ s ^ "\027[0m"
+      else
+        s
+
+val bold = checkterm "\027[1m"
+val boldred = checkterm "\027[31m\027[1m"
+val boldgreen = checkterm "\027[32m\027[1m"
+val red = checkterm "\027[31m"
+val dim = checkterm "\027[2m"
+
 fun realspace_delimited_fields s = let
   open Substring
   fun inword cword words ss =

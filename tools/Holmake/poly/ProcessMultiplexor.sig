@@ -16,6 +16,7 @@ sig
            Output of jobkey * Time.time * strmtype * string
          | NothingSeen of jobkey * {delay: Time.time, total_elapsed : Time.time}
          | Terminated of jobkey * exit_status * Time.time
+         | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
          | StartJob of jobkey
   datatype client_cmd = Kill of jobkey | KillAll

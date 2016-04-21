@@ -34,6 +34,7 @@ struct
            Output of jobkey * Time.time * strmtype * string
          | NothingSeen of jobkey * {delay: Time.time, total_elapsed : Time.time}
          | Terminated of jobkey * exit_status * Time.time
+         | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
          | StartJob of jobkey
   datatype client_cmd = Kill of jobkey | KillAll
@@ -224,6 +225,7 @@ struct
         | Terminated((pid,tag), st, t) =>
           p0 tag t ("exited " ^ (if st = W_EXITED then "OK" else "FAILED"))
              (if st = W_EXITED then NONE else SOME KillAll)
+        | MonitorKilled((pid,tag), t) => p tag t "monitor-killed"
         | EOF ((pid,tag), chan, t) =>
             p tag t ("EOF on " ^ chan_name chan)
         | StartJob (pid,tag) => p tag (Time.fromSeconds 0) "beginning"
@@ -232,7 +234,7 @@ struct
   fun wjstrm ERR (wj:'a working_job) = #err wj
     | wjstrm OUT wj = #out wj
 
-  fun killjob (jk:jobkey) wl =
+  fun killjob mfn (jk:jobkey) wl =
     let
       open Posix.Process
       val cjs = #current_jobs wl
@@ -242,21 +244,22 @@ struct
     in
       kill (K_PROC pid, Posix.Signal.kill);
       waitpid(W_CHILD pid, []);
+      ignore (mfn (MonitorKilled(jk,Time.-(Time.now(),#starttime job))));
       updateWL wl
                (U #current_state state)
                (U #current_jobs (#1 (Binarymap.remove(cjs, jk)))) $$
     end
 
-  fun killall (wl : 'a worklist) =
-    Binarymap.foldl (fn (k,_,acc) => killjob k acc)
+  fun killall mfn (wl : 'a worklist) =
+    Binarymap.foldl (fn (k,_,acc) => killjob mfn k acc)
                     wl
                     (#current_jobs wl)
 
-  fun execute_cmds cmds wl =
+  fun execute_cmds mfn cmds wl =
     case cmds of
         [] => wl
-      | KillAll :: rest => killall wl
-      | Kill jk :: rest => killjob jk wl
+      | KillAll :: rest => killall mfn wl
+      | Kill jk :: rest => killjob mfn jk wl
 
   fun elapsed wj = Time.-(Time.now(), #starttime wj)
 
@@ -326,7 +329,7 @@ struct
         else
           let
             val (cmds', wl', activity) = workloop (cmds, wl, false)
-            val wl' = execute_cmds cmds' wl'
+            val wl' = execute_cmds monitorfn cmds' wl'
           in
             if not activity then
               ignore (Posix.Process.sleep (Time.fromMilliseconds 100))

@@ -254,12 +254,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
         val cline = [fullPath [OS.FileSys.getDir(), script]]
-        fun cont res =
+        fun cont wn res =
           let
             val _ =
                 if not (isSuccess res) then
-                  warn ("Failed script build for "^script^" - "^
-                        posix_diagnostic res)
+                  wn ("Failed script build for "^script^" - "^
+                      posix_diagnostic res)
                 else ()
             val _ = if isSuccess res orelse not debug then
                       app safedelete [script, scriptuo, scriptui]
@@ -268,10 +268,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             isSuccess res andalso
             List.all (fn file =>
                          exists_readable file orelse
-                         (warn ("Script file "^script^" didn't produce "^file^
-                                "; \n\
-                                \  maybe need export_theory() at end of "^
-                                scriptsml);
+                         (wn ("Script file "^script^" didn't produce "^file^
+                              "; \n\
+                              \  maybe need export_theory() at end of "^
+                              scriptsml);
                           false))
                      expected_results
           end
@@ -320,7 +320,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 ("opentheory",
                  ["opentheory", "info", "--article", "-o", art, raw_art])
           in
-            BR_ClineK (cline, OS.Process.isSuccess)
+            BR_ClineK (cline, (fn _ => OS.Process.isSuccess))
           end
     end handle CompileFailed => BR_Failed
              | FileNotFound  => BR_Failed
@@ -375,7 +375,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun interpret_bres bres =
     case bres of
         BR_OK => true
-      | BR_ClineK((_,cline), k) => k (Systeml.systeml cline)
+      | BR_ClineK((_,cline), k) => k warn (Systeml.systeml cline)
       | BR_Failed => false
 
   val build_graph =

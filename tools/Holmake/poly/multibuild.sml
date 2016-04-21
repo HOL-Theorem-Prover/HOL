@@ -8,11 +8,15 @@ val W_EXITED = Posix.Process.W_EXITED
 
 datatype buildresult =
          BR_OK
-       | BR_ClineK of ((string * string list) * (OS.Process.status -> bool))
+       | BR_ClineK of ((string * string list) *
+                       ((string -> unit) -> OS.Process.status -> bool))
        | BR_Failed
 
 fun extract_thypart s = (* <....>Theory.sml *)
   String.substring(s, 0, String.size s - 10)
+
+val green = boldgreen
+val red = boldred
 
 fun nextchar #"|" = #"/"
   | nextchar #"/" = #"-"
@@ -25,6 +29,7 @@ fun stallstr "|" = "!"
   | stallstr "." = ":"
   | stallstr "!" = "!!"
   | stallstr "!!" = "!!!"
+  | stallstr "!!!" = red "!!!"
   | stallstr s = s
 
 datatype monitor_status = MRunning of char
@@ -53,10 +58,26 @@ fun polish0 tag =
     end
   else tag
 
-fun polish s = StringCvt.padRight #" " 16 (polish0 s)
+fun truncate width s =
+  if String.size s > width then
+    let
+      open OS.Path
+      val {arcs,isAbs,vol} = fromString s
+      fun t s = truncate width s
+    in
+      if length arcs > 1 andalso String.size (hd arcs) >= 3 then
+        t (".. " ^ toString {arcs=tl arcs,isAbs = false, vol = vol})
+      else
+        let
+          val e = case ext s of NONE => "" | SOME s => s
+        in
+          if String.size e > 2 then t (base s ^ "..")
+          else String.substring(s,0,14) ^ ".."
+        end
+    end
+  else s
 
-fun green s = "\027[32m\027[1m" ^ s ^ "\027[0m"
-fun red s = "\027[31m\027[1m" ^ s ^ "\027[0m"
+fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
 
 fun graphbuild optinfo incinfo g =
   let
@@ -75,9 +96,10 @@ fun graphbuild optinfo incinfo g =
           let
             val safetag = String.map (fn #"/" => #"-" | c => c) tag
             val strm = TextIO.openOut (loggingdir ++ safetag)
+            val tb = tailbuffer.new {numlines = 10}
           in
             monitor_map :=
-              Binarymap.insert(!monitor_map, tag, (strm, MRunning #"|"));
+              Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
             display_map();
             NONE
           end
@@ -86,15 +108,17 @@ fun graphbuild optinfo incinfo g =
           in
             case Binarymap.peek(!monitor_map, tag) of
                 NONE => (warn ("Lost monitor info for "^tag); NONE)
-              | SOME (strm,stat) =>
+              | SOME ((strm,tb),stat) =>
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
                                          | Stalling _ => MRunning #"|"
-                  val pfx = if chan = OUT then "" else "[ERR]"
+                  val msg = (if chan = OUT then "" else "[ERR] ") ^ msg
+                  open tailbuffer
                 in
-                  TextIO.output(strm,pfx ^ msg);
+                  TextIO.output(strm,msg);
                   monitor_map :=
-                    Binarymap.insert(!monitor_map, tag, (strm, stat'));
+                    Binarymap.insert(!monitor_map, tag,
+                                     (((strm,append msg tb), stat')));
                   display_map();
                   NONE
                 end
@@ -127,19 +151,37 @@ fun graphbuild optinfo incinfo g =
           in
             case Binarymap.peek(!monitor_map, tag) of
                 NONE => (warn ("Lost monitor info for "^tag); NONE)
-              | SOME (strm,stat) =>
+              | SOME ((strm,tb),stat) =>
                 let
                 in
                   if st = W_EXITED then
-                    info ("\r" ^ StringCvt.padRight #" " 75 tag ^ green "OK")
-                  else info ("\r" ^ StringCvt.padRight #" " 75 tag ^
-                             red "FAILED!");
+                    info ("\r" ^ StringCvt.padRight #" " 78 tag ^ green "OK")
+                  else (info ("\r" ^ StringCvt.padRight #" " 73 tag ^
+                              red "FAILED!");
+                        let val (lines,last) = tailbuffer.output tb
+                        in
+                          List.app (fn s => info (" " ^ dim s)) lines;
+                          if last <> "" then info (" " ^ dim last) else ()
+                        end);
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                   display_map();
                   if st = W_EXITED orelse keep_going then NONE
                   else SOME KillAll
                 end
+          end
+        | MonitorKilled((_, tag), _) =>
+          let
+          in
+            case Binarymap.peek(!monitor_map, tag) of
+                NONE => (warn ("Lost monitor info for "^ tag); NONE)
+              | SOME ((strm,tb), stat) =>
+                (info ("\r" ^ StringCvt.padRight #" " 72 tag ^
+                       red "M-KILLED");
+                 TextIO.closeOut strm;
+                 monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
+                 display_map();
+                 NONE)
           end
         | _ => NONE
 
@@ -164,6 +206,7 @@ fun graphbuild optinfo incinfo g =
                 let
                   val hypargs as {noecho,ignore_error,command=c} =
                       process_hypat_options c
+                  val hypargs = {noecho=true,ignore_error=ignore_error,command=c}
                   fun error b =
                     if b then Succeeded
                     else if ignore_error then
@@ -193,7 +236,7 @@ fun graphbuild optinfo incinfo g =
                           fun b2res b = if b then OS.Process.success
                                         else OS.Process.failure
                           fun update (g, b) =
-                            if jobk (b2res b) then
+                            if jobk (fn s => ()) (b2res b) then
                               updnode(n, Succeeded) g
                             else
                               updnode(n, Failed) g

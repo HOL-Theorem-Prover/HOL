@@ -42,6 +42,13 @@ sig
   val collapse_bslash_lines : string -> string
   val realspace_delimited_fields : string -> string list
 
+  (* terminal colouring of strings *)
+  val red : string -> string
+  val boldred : string -> string
+  val boldgreen : string -> string
+  val bold : string -> string
+  val dim : string -> string
+
   (* diagnostics/output *)
   type output_functions = {warn : string -> unit,
                            info : string -> unit,
