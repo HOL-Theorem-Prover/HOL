@@ -33,15 +33,15 @@ toolbox.cmx: toolbox.ml
 	ocamlopt -c -I hh1 $<
 hh_parse.cmi hh_parse.cmx: hh_parse.ml
 	ocamlopt -c $<
-hh_lexer.cmx: hh_lexer.ml hh_parse.cmi
+hh_lexer.cmi hh_lexer.cmx: hh_lexer.ml hh_parse.cmi
 	ocamlopt -c $<
-read.cmi read.cmx: read.ml hh_parse.cmi
+read.cmi read.cmx: read.ml hh_parse.cmi hh_lexer.cmi
 	ocamlopt -c -I hh1 $<
 predict.cmx: predict.ml
 	ocamlopt -c -I hh1 $<
 preprocess.cmi preprocess.cmx: preprocess.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
-init.cmi init.cmx: init.ml hh_parse.cmi preprocess.cmi
+init.cmi init.cmx: init.ml hh_parse.cmi preprocess.cmi read.cmi
 	ocamlopt -c -I hh1 $<
 dependency.cmi dependency.cmx: dependency.ml read.cmi
 	ocamlopt -c -I hh1 $<
