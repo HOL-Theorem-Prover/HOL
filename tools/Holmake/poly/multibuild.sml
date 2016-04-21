@@ -112,7 +112,6 @@ fun graphbuild optinfo incinfo g =
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
                                          | Stalling _ => MRunning #"|"
-                  val msg = (if chan = OUT then "" else "[ERR] ") ^ msg
                   open tailbuffer
                 in
                   TextIO.output(strm,msg);
