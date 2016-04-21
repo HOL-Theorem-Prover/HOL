@@ -635,7 +635,8 @@ fun build_dir Holmake selftest_level (dir, regulardir) = let
                  else dir
   val now_d = Date.fromTimeLocal (Time.now())
   val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
-  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
+  val bold = Holmake_tools.bold
+  val _ = print (bold ("Building directory "^truncdir^" ["^now_s^"]\n"))
 in
   case #file(OS.Path.splitDirFile dir) of
     "muddyC" => let
