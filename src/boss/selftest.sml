@@ -72,7 +72,7 @@ val n = ref 0;
 
 fun test_assert P x =
   (tprint ("match_goal "^(Int.toString (!n))); n := !n + 1;
-   if P x then print "OK\n" else die "FAILED!")
+   if P x then OK() else die "FAILED!")
 
 val (test1:matcher * mg_tactic) =
    (mg.a "H" `P_ /\ Q_`,
