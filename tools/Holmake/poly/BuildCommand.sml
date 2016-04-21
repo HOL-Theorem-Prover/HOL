@@ -368,8 +368,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       | ns =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+          fun failed_nocmd (_, nI) =
+            #status nI = Failed andalso #command nI = NoCmd
+          val ns' = List.filter failed_nocmd ns
+          fun nI_target (_, nI) = String.concatWith " " (#target nI)
         in
           diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          tgtfatal ("Don't know how to build necessary target(s): " ^
+                    String.concatWith ", " (map nI_target ns'));
           OS.Process.failure
         end
   fun interpret_bres bres =
