@@ -9,7 +9,7 @@ val ss = simpLib.empty_ss ++ numSimps.REDUCE_ss
 val th = QCONV (SIMP_CONV ss []) ``(0 :num) DIV 0``
 val _ = if not (aconv (rhs (concl th)) ``(0 :num) DIV 0``) then
           die "FAILED!\n"
-        else print "OK\n"
+        else OK()
 
 val _ = pr "Testing SUC_FILTER_ss ..."
 val ss = boolSimps.bool_ss ++ numSimps.REDUCE_ss ++ numSimps.SUC_FILTER_ss
@@ -17,7 +17,7 @@ val th = QCONV (SIMP_CONV ss [arithmeticTheory.FUNPOW])
                ``FUNPOW (f:'a->'a) 2 x``
 val _ = if not (aconv (rhs (concl th)) ``(f:'a -> 'a) (f x)``) then
           die "FAILED!\n"
-        else print "OK\n"
+        else OK()
 
 val arith_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
 val SIMP_CONV = fn ss => fn thl => QCONV (SIMP_CONV ss thl)
@@ -25,18 +25,18 @@ val _ = pr "Testing coefficient gathering in ARITH_ss (1) ..."
 val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x + x``)))
                       ``3 * x``)
         then die "FAILED!\n"
-        else print "OK\n"
+        else OK()
 val _ = pr "Testing coefficient gathering in ARITH_ss (2) ..."
 val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x * 2``)))
                       ``3 * x``)
         then die "FAILED\n"
-        else print "OK\n"
+        else OK()
 
 val _ = pr "Testing arith on ground ctxt ..."
 val _ = let
   val (res, vfn) = ASM_SIMP_TAC arith_ss [] ([``2 <= 0``], ``F``)
 in
-  if null res andalso concl (vfn []) = F then print "OK\n"
+  if null res andalso concl (vfn []) = F then OK()
   else die "FAILED!\n"
 end
 
@@ -47,7 +47,7 @@ val _ = let
   val goal = ``1 < foo``
   val (res, vfn) = ASM_SIMP_TAC arith_ss [foo_ax] ([], goal)
 in
-  if null res andalso aconv (concl (vfn [])) goal then print "OK\n"
+  if null res andalso aconv (concl (vfn [])) goal then OK()
   else die "FAILED\n"
 end
 
@@ -57,7 +57,7 @@ fun TRUE_ARITH nm t =
     val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
   in
     case result of
-        SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
+        SOME th => if rhs (concl th) = boolSyntax.T then OK()
                    else die "FAILED!"
       | NONE => die "FAILED!"
   end
@@ -101,7 +101,7 @@ val _ = let
       SIMP_CONV (bool_ss ++ CONJ_ss ++ numSimps.ARITH_ss) [] t
 in
   if null (hyp result) andalso rhs (concl result) = boolSyntax.F then
-    print "OK\n"
+    OK()
   else die "FAILED!\n"
 end
 
@@ -112,7 +112,7 @@ val _ = let
   val t = ``(6 * x + 7 + 10 * y) MOD 6``
   val result = SIMP_CONV ss [] t
 in
-  if aconv (rhs (concl result)) ``(1 + 4 * y) MOD 6`` then print "OK\n"
+  if aconv (rhs (concl result)) ``(1 + 4 * y) MOD 6`` then OK()
   else die "FAILED!\n"
 end handle _ => die "FAILED!\n"
 
@@ -121,7 +121,7 @@ val _ = let
   val t = ``(4 + 3 * n + 1) MOD n``
   val result = SIMP_CONV ss [ASSUME ``0 < n``] t
 in
-  if aconv (rhs (concl result)) ``5 MOD n`` then print "OK\n"
+  if aconv (rhs (concl result)) ``5 MOD n`` then OK()
   else die "FAILED!\n"
 end handle _ => die "FAILED!\n"
 

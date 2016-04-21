@@ -4,19 +4,14 @@ open ListConv1
 open testutils
 
 fun test nm cmp pr f (x, expected) = let
-  val _ = print (StringCvt.padRight #" " 20 nm)
-  val _ = print (StringCvt.padRight #" " 40 (pr x))
+  val _ = tprint (StringCvt.padRight #" " 20 nm ^ pr x)
   val result = f x
 in
-  if cmp(rhs (concl result),expected) <> EQUAL then
-    (print "FAILED - BAD RHS\n"; false)
-  else if not (null (hyp result)) then
-    (print "FAILED - HYPS\n"; false)
-  else if cmp(lhs (concl result),x) <> EQUAL then
-    (print "FAILED - BAD LHS\n"; false)
-  else
-    (print "OK\n"; true)
-end handle HOL_ERR _ => (print "FAILED - EXN\n"; false)
+  if cmp(rhs (concl result),expected) <> EQUAL then die "FAILED - BAD RHS"
+  else if not (null (hyp result)) then die "FAILED - HYPS"
+  else if cmp(lhs (concl result),x) <> EQUAL then die "FAILED - BAD LHS"
+  else (OK(); true)
+end handle HOL_ERR _ => die "FAILED - EXN"
 
 val _ = set_trace "Unicode" 0
 

@@ -7,7 +7,7 @@ fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
 in
-  if aconv (rhs (concl th)) expected then print "OK\n"
+  if aconv (rhs (concl th)) expected then OK()
   else die "FAILED!\n"
 end handle HOL_ERR _ => die "FAILED (not even an eqn)!"
 
@@ -36,7 +36,7 @@ val failing_tydef =
               message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
-           else (print "OK\n"; TRUTH)
+           else (OK(); TRUTH)
 
 val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
 val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)
@@ -49,7 +49,7 @@ val _ = case sgs of
             if aconv g' expectedg andalso op_mem aconv exab1 asms andalso
                op_mem aconv exab2 asms andalso length asms = 2
             then
-              print "OK\n"
+              OK()
             else die "FAILED!"
           | _ => die "FAILED!"
 
@@ -60,7 +60,7 @@ val expectedg = ``(FACT n = 10) ==> (n + x = 7)``
 val expecteda = ``x = 3``
 val _ = case sgs of
             [([a], g)] => if aconv g expectedg andalso aconv a expecteda then
-                            print "OK\n"
+                            OK()
                           else die "FAILED!"
           | _ => die "FAILED!"
 
