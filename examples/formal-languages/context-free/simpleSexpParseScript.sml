@@ -363,7 +363,7 @@ val peg_eval_sexpnum_nondigit = Q.store_thm("peg_eval_sexpnum_nondigit",
   \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_tok_NONE])
 
 val peg_eval_sexp0_add_stop = Q.store_thm("peg_eval_sexp0_add_stop",
-  `peg_eval sexpPEG (str,pnt sxnt_sexp0) (SOME (r,s)) ⇒ nonStarter c ⇒
+  `peg_eval sexpPEG (str,pnt sxnt_sexp0) (SOME (r,s)) ⇒ nonStarter c ∧ ¬isSpace c ⇒
    peg_eval sexpPEG (str++[c]++rst,pnt sxnt_sexp0) (SOME (r++[c]++rst,s))`,
   simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
   \\ cheat);
@@ -469,6 +469,7 @@ val peg_eval_print_sexp0 = Q.store_thm("peg_eval_print_sexp0",
     \\ last_assum(mp_tac o (MATCH_MP (GEN_ALL peg_eval_sexp0_add_stop)))
     \\ disch_then(qspecl_then[`TL ls`,`HD ls`]mp_tac)
     \\ simp[Abbr`ls`,nonStarter_def]
+    \\ impl_tac >- EVAL_TAC
     \\ strip_tac
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl) \\ simp[]
     \\ simp[Once peg_eval_list]
@@ -516,7 +517,7 @@ val peg_eval_print_sexp0 = Q.store_thm("peg_eval_print_sexp0",
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl) \\ simp[]
     \\ qpat_assum`_ _ _ (SOME (_,v1))`(mp_tac o (MATCH_MP (GEN_ALL peg_eval_sexp0_add_stop)))
     \\ disch_then(qspecl_then[`""`,`#")"`]mp_tac)
-    \\ impl_tac >- simp[nonStarter_def]
+    \\ impl_tac >- EVAL_TAC
     \\ simp[pnt_def] \\ strip_tac
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl) \\ simp[]
     \\ simp[replace_nil_def]
