@@ -563,15 +563,32 @@ fun create_graph tgts ii =
       (map toFile tgts)
   end
 
+fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
+fun do_clean_target x = let
+  fun clean_action () =
+      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
+in
+  case x of
+      "clean" => ((info "Cleaning directory of object files\n";
+                   clean_action();
+                   true) handle _ => false)
+    | "cleanDeps" => clean_deps()
+    | "cleanAll" => clean_action() andalso clean_deps()
+    | _ => die ("Bad clean target " ^ x)
+end
+
 fun basecont tgts ii =
-  let
-    open HM_DepGraph
-    val ii = add_sigobj ii
-    val g = create_graph tgts ii
-    val res = build_graph ii g
-  in
-    finish_logging (OS.Process.isSuccess res)
-  end
+  if List.exists (fn x => member x ["clean", "cleanDeps", "cleanAll"]) tgts then
+    (app (ignore o do_clean_target) tgts; true)
+  else
+    let
+      open HM_DepGraph
+      val ii = add_sigobj ii
+      val g = create_graph tgts ii
+      val res = build_graph ii g
+    in
+      finish_logging (OS.Process.isSuccess res)
+    end
 
 fun no_action_cont tgts ii =
   let
@@ -587,20 +604,6 @@ fun no_action_cont tgts ii =
   end
 
 val stdcont = if no_action then no_action_cont else basecont
-fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
-
-fun do_clean_target x = let
-  fun clean_action () =
-      (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
-in
-  case x of
-      "clean" => ((info "Cleaning directory of object files\n";
-                   clean_action();
-                   true) handle _ => false)
-    | "cleanDeps" => clean_deps()
-    | "cleanAll" => clean_action() andalso clean_deps()
-    | _ => die ("Bad clean target " ^ x)
-end
 
 val _ = not always_rebuild_deps orelse clean_deps()
 
