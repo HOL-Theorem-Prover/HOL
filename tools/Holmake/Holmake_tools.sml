@@ -351,13 +351,13 @@ end
 
 exception DirNotFound
 fun clean_depdir {depdirname} = let
-  val depds = OS.FileSys.openDir DEPDIR handle
+  val depds = OS.FileSys.openDir depdirname handle
       OS.SysErr _ => raise DirNotFound
 in
   read_files depds
              (fn _ => true)
-             (fn s => OS.FileSys.remove (fullPath [DEPDIR, s]));
-  OS.FileSys.rmDir DEPDIR;
+             (fn s => OS.FileSys.remove (fullPath [depdirname, s]));
+  OS.FileSys.rmDir depdirname;
   true
 end handle OS.SysErr (mesg, _) => let
            in

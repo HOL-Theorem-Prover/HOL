@@ -464,6 +464,7 @@ fun cleanAll0 HOLDIR = let
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans};
   Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
   includes
 end
 

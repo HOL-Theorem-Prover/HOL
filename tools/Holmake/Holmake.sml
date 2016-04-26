@@ -26,6 +26,7 @@ fun die s = (warn s; Process.exit Process.failure)
 (* Global parameters, which get set at configuration time *)
 val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
+val LOGDIR = ".hollogs";
 
 val SYSTEML = Systeml.systeml
 
@@ -563,7 +564,10 @@ fun create_graph tgts ii =
       (map toFile tgts)
   end
 
-fun clean_deps() = Holmake_tools.clean_depdir {depdirname = DEPDIR}
+fun clean_deps() =
+  ( Holmake_tools.clean_depdir {depdirname = DEPDIR}
+  ; Holmake_tools.clean_depdir {depdirname = LOGDIR} )
+
 fun do_clean_target x = let
   fun clean_action () =
       (Holmake_tools.clean_dir {extra_cleans = extra_cleans}; true)
