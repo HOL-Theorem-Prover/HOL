@@ -13,5 +13,5 @@ endif
 hol4-string-unint.art: hol4-string.unint.thy string.ot.art string_num.ot.art ASCIInumbers.ot.art
 	opentheory info --article -o $@ $<
 
-hol4-string.art: hol4-string.thy hol4-string-unint.art
+hol4-string.art: hol4-string.thy hol4-string-unint.art ../opentheory/hol4.int
 	opentheory info --article -o $@ $<

@@ -68,7 +68,7 @@ ARTS =bool_defs.ot.art\
   ../list/src/indexedLists.ot.art\
   ../list/src/numposrep.ot.art
 
-hol4-base-unsat.art: hol4-base.unint.thy $(ARTS)
+hol4-base-unsat.art: hol4-base.unint.thy $(ARTS) ../opentheory/hol4.int
 	opentheory info --article -o $@ $<
 
 base-theorems.art:
