@@ -79,6 +79,26 @@ fun truncate width s =
 
 fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
 
+local
+  fun split p = let val {base, ext} = OS.Path.splitBaseExt p in (base, ext) end
+in
+  fun target_string l =
+    let
+      val (names, e) = ListPair.unzip (List.map split l)
+      val exts = List.mapPartial (fn x => x) e
+      val n = List.length exts
+    in
+      case names of
+         [] => ""
+       | [_] => List.hd l
+       | h :: t => if List.all (fn x => x = h) t andalso List.length e = n
+                     then if n = 2 andalso String.isSuffix "Theory" h
+                            then h
+                          else h ^ ".{" ^ String.concatWith "," exts ^ "}"
+                   else String.concatWith " " l
+    end
+end
+
 fun graphbuild optinfo incinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
@@ -197,7 +217,7 @@ fun graphbuild optinfo incinfo g =
             val depfs = map (toFile o #2) (#dependencies nI)
             val _ = #status nI = Pending orelse
                     raise Fail "runnable not pending"
-            val target_s = String.concatWith " " (#target nI)
+            val target_s = target_string (#target nI)
           in
             case #command nI of
                 NoCmd => genjob (updnode (n,Succeeded) g)
@@ -219,7 +239,7 @@ fun graphbuild optinfo incinfo g =
                       let
                         fun update (g, b) = updnode (n, error b) g
                       in
-                        NewJob ({tag = String.concatWith " " (#target nI),
+                        NewJob ({tag = target_s,
                                  command = mk_shell_command c,
                                  update = update}, updnode(n, Running) g)
                       end
