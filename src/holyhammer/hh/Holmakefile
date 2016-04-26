@@ -29,7 +29,7 @@ hh_parse.ml: hh_parse.mly
 hh_lexer.ml: hh_lexer.mll hh_parse.ml
 	ocamllex $<
 
-toolbox.cmx: toolbox.ml
+toolbox.cmi toolbox.cmx: toolbox.ml
 	ocamlopt -c -I hh1 $<
 hh_parse.cmi hh_parse.cmx: hh_parse.ml
 	ocamlopt -c $<
@@ -37,7 +37,7 @@ hh_lexer.cmi hh_lexer.cmx: hh_lexer.ml hh_parse.cmi
 	ocamlopt -c $<
 read.cmi read.cmx: read.ml hh_parse.cmi hh_lexer.cmi
 	ocamlopt -c -I hh1 $<
-predict.cmx: predict.ml
+predict.cmi predict.cmx: predict.ml toolbox.cmi
 	ocamlopt -c -I hh1 $<
 preprocess.cmi preprocess.cmx: preprocess.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
@@ -49,7 +49,7 @@ thf1hh1.cmi thf1hh1.cmx: thf1hh1.ml hh_parse.cmi
 	ocamlopt -c -I hh1 $<
 features.cmi features.cmx: features.ml thf1hh1.cmi init.cmi
 	ocamlopt -c -I hh1 $<
-prepredict.cmx: prepredict.ml features.cmi
+prepredict.cmx: prepredict.ml features.cmi predict.cmi
 	ocamlopt -c -I hh1 $<
 write.cmx: write.ml hh_parse.cmi thf1hh1.cmi dependency.cmi
 	ocamlopt -c -I hh1 $<
