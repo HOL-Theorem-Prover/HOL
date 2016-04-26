@@ -37,3 +37,5 @@ matrix:
       env: ROOTPOLY= BUILDOPTS=
     - env: ROOTPOLY=1 BUILDOPTS="-seq developers/travis/selftestseq"
       sudo: true
+  allow_failures:
+    - os: osx
