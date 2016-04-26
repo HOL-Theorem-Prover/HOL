@@ -46,16 +46,8 @@ fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c) ^ " "
   | statusString (Stalling(s, _)) = StringCvt.padLeft #" " 3 s ^ " "
 
 fun polish0 tag =
-  if String.isSuffix "Theory.sml" tag orelse
-     String.isSuffix "Theory.sig" tag
-  then
-    let
-      val ss = Substring.full tag
-      val (pfx,_) = Substring.position " " ss
-      val thyname = Substring.slice(pfx,0,SOME(Substring.size pfx - 10))
-    in
-      Substring.string thyname
-    end
+  if String.isSuffix "Theory" tag then
+    String.substring(tag,0,String.size tag - 6)
   else tag
 
 fun truncate width s =
