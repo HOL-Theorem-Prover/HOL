@@ -41,6 +41,7 @@ fun checkterm pfx s =
 val bold = checkterm "\027[1m"
 val boldred = checkterm "\027[31m\027[1m"
 val boldgreen = checkterm "\027[32m\027[1m"
+val boldyellow = checkterm "\027[33m\027[1m"
 val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 

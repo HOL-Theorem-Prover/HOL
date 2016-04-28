@@ -109,7 +109,7 @@ fun graphbuild optinfo incinfo g =
             val safetag = String.map (fn #"/" => #"-" | c => c) tag
             val strm = TextIO.openOut (loggingdir ++ safetag)
             val tb =
-                tailbuffer.new {numlines = 10, pattern = SOME "Saved CHEAT"}
+                tailbuffer.new {numlines = 10, pattern = SOME "CHEAT"}
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
@@ -171,7 +171,7 @@ fun graphbuild optinfo incinfo g =
                   if st = W_EXITED then
                     if pattern_seen then
                       info ("\r" ^ StringCvt.padRight #" " 73 tag ^
-                            green "CHEATED")
+                            boldyellow "CHEATED")
                     else
                       info ("\r" ^ StringCvt.padRight #" " 78 tag ^ green "OK")
                   else (info ("\r" ^ StringCvt.padRight #" " 73 tag ^

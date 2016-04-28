@@ -46,6 +46,7 @@ sig
   val red : string -> string
   val boldred : string -> string
   val boldgreen : string -> string
+  val boldyellow : string -> string
   val bold : string -> string
   val dim : string -> string
 
