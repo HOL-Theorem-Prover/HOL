@@ -1308,7 +1308,7 @@ val i2w_w2n = store_thm("i2w_w2n[simp]",
 val w2n_i2w = store_thm("w2n_i2w",
   ``&w2n ((i2w n):'a word) = n % (& dimword (:'a))``,
   fs [i2w_def] \\ Cases_on `n` \\ fs []
-  \\ `dimword (:α) <> 0` by cheat
+  \\ `dimword (:α) <> 0` by (assume_tac ZERO_LT_dimword \\ decide_tac)
   \\ imp_res_tac integerTheory.INT_MOD \\ fs []
   \\ fs [word_2comp_n2w]
   \\ fs [INT_MOD_NEG_NUMERATOR]
