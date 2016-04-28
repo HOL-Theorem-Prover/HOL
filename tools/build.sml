@@ -23,7 +23,7 @@ open buildutils
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
+val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount} =
     process_cline (fn s => s)
 
 open Systeml;
@@ -32,7 +32,8 @@ val Holmake = let
   fun sysl p args = Systeml.systeml (p::args)
   val isSuccess = OS.Process.isSuccess
 in
-  buildutils.Holmake sysl isSuccess (fn () => []) (fn _ => "") do_selftests
+  buildutils.Holmake sysl isSuccess (fn () => ["-j"^Int.toString jobcount])
+                     (fn _ => "") do_selftests
 end
 
 (* ----------------------------------------------------------------------

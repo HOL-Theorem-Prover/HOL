@@ -21,7 +21,7 @@ datatype phase = Initial | Bare | Full
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
+val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount} =
   process_cline (fn c => c)
 
 open Systeml;
@@ -63,7 +63,9 @@ val Holmake = let
                       SysWord.toString (Posix.Signal.toWord sg)
   end
 in
-  buildutils.Holmake aug_systeml isSuccess phase_extras analysis do_selftests
+  buildutils.Holmake aug_systeml isSuccess
+                     (fn () => ("-j"^Int.toString jobcount) :: phase_extras())
+                     analysis do_selftests
 end
 
 (* create a symbolic link - Unix only *)

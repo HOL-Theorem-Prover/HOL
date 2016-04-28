@@ -39,6 +39,7 @@ val DYNLIB = Systeml.DYNLIB
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
+val dfltjobnum = 4
 
 val help_mesg = let
   val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
@@ -277,6 +278,38 @@ in
               end
 end
 
+fun deljopt numseen list =
+  let
+    fun maybewarn () =
+      if numseen = 1 then
+        warn "Multiple -j options; taking last one\n"
+      else ()
+    fun handle_string s rest =
+      let
+        val _ = maybewarn()
+        val (optval, rest) = deljopt (numseen + 1) rest
+        val n_opt = case Int.fromString s of
+                        NONE => (warn ("Ignoring bogus 'number' for -j: '"^
+                                       s ^ "'");
+                                 NONE)
+                      | x => x
+      in
+        case (optval, n_opt) of
+            (SOME _, _) => (optval, rest)
+          | (NONE, _) => (n_opt, rest)
+      end
+  in
+    case list of
+        [] => (NONE, [])
+      | ["-j"] => (warn "Trailing -j command-line option ignored";
+                   (NONE, []))
+      | "-j"::ns::t => handle_string ns t
+      | s::rest =>
+          if String.isPrefix "-j" s then
+            handle_string (String.extract(s,2,NONE)) rest
+          else deljopt numseen rest
+  end
+
 fun orlist slist =
     case slist of
       [] => ""
@@ -287,14 +320,14 @@ fun orlist slist =
 datatype cline_action =
          Clean of string
        | Normal of {kernelspec : string,
+                    jobcount : int,
                     seqname : string,
                     rest : string list,
                     build_theory_graph : bool}
 exception DoClean of string
 fun get_cline kmod = let
-  val reader = TextIO.inputLine
   (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
-  val oldopts = read_earlier_options reader
+  val oldopts = read_earlier_options TextIO.inputLine
   val newopts = CommandLine.arguments()
   fun unary_toggle optname dflt f toggles opts =
       case inter toggles opts of
@@ -350,13 +383,29 @@ fun get_cline kmod = let
       unary_toggle "theory-graph" true (fn x => x = "-graph")
                    ["-graph", "-nograph"] newopts
   val bgoption = if buildgraph then [] else ["-nograph"]
+  val (jcount, newopts) =
+      case deljopt 0 newopts of
+          (NONE, new') =>
+          let
+          in
+            case deljopt 0 oldopts of
+                (NONE, _) => (dfltjobnum, new')
+              | (SOME jn, _) =>
+                if jn = dfltjobnum then (jn, new')
+                else (warn ("*** Using -j "^Int.toString jn^
+                            " from earlier build command; use -j to override");
+                      (jn, new'))
+          end
+        | (SOME jn, new') => (jn, new')
+  val joption = "-j" ^ Int.toString jcount
   val _ =
       if seqspec = dfltbuildseq then
-        write_options (knlspec::bgoption)
+        write_options (knlspec::joption::bgoption)
       else
-        write_options (knlspec::"-seq"::seqspec::bgoption)
+        write_options (knlspec::"-seq"::seqspec::joption::bgoption)
 in
   Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
+          jobcount = jcount,
           build_theory_graph = buildgraph}
 end handle DoClean s => Clean s
 
@@ -798,7 +847,7 @@ fun process_cline kmod =
       in
         (full_clean SRCDIRS action; Process.exit Process.success)
       end
-    | Normal {kernelspec, seqname, rest, build_theory_graph} => let
+    | Normal {kernelspec, seqname, rest, build_theory_graph, jobcount} => let
         val (do_selftests, rest) = cline_selftest rest
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
@@ -807,6 +856,7 @@ fun process_cline kmod =
            Process.exit Process.success)
         else
           {cmdline=rest,build_theory_graph=build_theory_graph,
+           jobcount = jobcount,
            do_selftests = do_selftests, SRCDIRS = SRCDIRS}
       end
 
