@@ -65,7 +65,7 @@ val match1_tac : matcher * mg_tactic -> tactic
 
 val match_tac : matcher list * mg_tactic -> tactic
 
-val match_all_tac : (matcher list * mg_tactic) list -> tactic
+val first_match_tac : (matcher list * mg_tactic) list -> tactic
 
 (* TODO: maybe these should be elsewhere *)
 val kill_asm : thm -> tactic

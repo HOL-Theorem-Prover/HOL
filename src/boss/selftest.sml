@@ -96,12 +96,12 @@ val test2 =
   ]
 
 val res1' = test_assert (equal [g1] o #1)
-  (match_all_tac test2 g1)
+  (first_match_tac test2 g1)
 
 val g2 = ([``x:bool = if P then x' else x''``, ``x:bool``],``yi = if x then x'' else (ARB:bool)``)
 
 val res2 = test_assert (equal 2 o length o #1)
-  (match_all_tac test2 g2)
+  (first_match_tac test2 g2)
 
 val (test3:matcher list * mg_tactic) =
   ([ mg.a "h1" `f_ _ = _`,

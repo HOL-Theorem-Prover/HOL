@@ -153,7 +153,7 @@ fun match_tac (ms:matcher list,mtac:mg_tactic) (g as (asl,w):goal) : goal list *
     handle end_of_stream => raise ERR "match_tac" "no match"
   end
 
-val match_all_tac = FIRST o List.map match_tac
+val first_match_tac = FIRST o List.map match_tac
 
 fun match1_tac (x,t) = match_tac ([x],t)
 
