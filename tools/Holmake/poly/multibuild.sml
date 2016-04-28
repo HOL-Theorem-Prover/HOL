@@ -108,7 +108,8 @@ fun graphbuild optinfo incinfo g =
           let
             val safetag = String.map (fn #"/" => #"-" | c => c) tag
             val strm = TextIO.openOut (loggingdir ++ safetag)
-            val tb = tailbuffer.new {numlines = 10}
+            val tb =
+                tailbuffer.new {numlines = 10, pattern = SOME "Saved CHEAT"}
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
@@ -164,16 +165,20 @@ fun graphbuild optinfo incinfo g =
                 NONE => (warn ("Lost monitor info for "^tag); NONE)
               | SOME ((strm,tb),stat) =>
                 let
+                  val {fulllines,lastpartial,pattern_seen} =
+                      tailbuffer.output tb
                 in
                   if st = W_EXITED then
-                    info ("\r" ^ StringCvt.padRight #" " 78 tag ^ green "OK")
+                    if pattern_seen then
+                      info ("\r" ^ StringCvt.padRight #" " 73 tag ^
+                            green "CHEATED")
+                    else
+                      info ("\r" ^ StringCvt.padRight #" " 78 tag ^ green "OK")
                   else (info ("\r" ^ StringCvt.padRight #" " 73 tag ^
                               red "FAILED!");
-                        let val (lines,last) = tailbuffer.output tb
-                        in
-                          List.app (fn s => info (" " ^ dim s)) lines;
-                          if last <> "" then info (" " ^ dim last) else ()
-                        end);
+                        List.app (fn s => info (" " ^ dim s)) fulllines;
+                        if lastpartial <> "" then info (" " ^ dim lastpartial)
+                        else ());
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                   display_map();
