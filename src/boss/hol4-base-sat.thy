@@ -30,10 +30,7 @@ bool {
   interpret: const "HOL4.bool_defs.IN" as "HOL4.bool.IN"
   interpret: const "HOL4.bool_defs.TYPE_DEFINITION" as "HOL4.bool.TYPE_DEFINITION"
   interpret: const "HOL4.bool_defs.ARB" as "HOL4.bool.ARB"
-}
-proofs {
-  import: bool
-  article: "prove_base_assums.ot.art"
+
   interpret: type "HOL4.min.ind" as "ind"
   interpret: const "HOL4.min.@" as "select"
   interpret: const "HOL4.bool.!" as "Data.Bool.!"
@@ -48,6 +45,29 @@ proofs {
   interpret: const "HOL4.bool.COND" as "Data.Bool.cond"
   interpret: const "HOL4.bool.ONE_ONE" as "Function.injective"
   interpret: const "HOL4.bool.ONTO" as "Function.surjective"
+}
+proofs {
+  import: bool
+
+  article: "prove_base_assums.ot.art"
+
+  interpret: type "HOL4.min.ind" as "ind"
+  interpret: const "HOL4.min.@" as "select"
+  interpret: const "HOL4.bool.!" as "Data.Bool.!"
+  interpret: const "HOL4.bool.?" as "Data.Bool.?"
+  interpret: const "HOL4.bool.?!" as "Data.Bool.?!"
+  interpret: const "HOL4.bool.T" as "Data.Bool.T"
+  interpret: const "HOL4.bool.F" as "Data.Bool.F"
+  interpret: const "HOL4.bool./\\" as "Data.Bool./\\"
+  interpret: const "HOL4.bool.\\/" as "Data.Bool.\\/"
+  interpret: const "HOL4.min.==>" as "Data.Bool.==>"
+  interpret: const "HOL4.bool.~" as "Data.Bool.~"
+  interpret: const "HOL4.bool.COND" as "Data.Bool.cond"
+  interpret: const "HOL4.bool.ONE_ONE" as "Function.injective"
+  interpret: const "HOL4.bool.ONTO" as "Function.surjective"
+
+  interpret: type "HOL4.prove_base_assums.itself" as "HOL4.bool.itself"
+  interpret: const "HOL4.prove_base_assums.the_value" as "HOL4.bool.the_value"
 
   interpret: const "HOL4.prove_base_assums.Function_o" as "Function.o"
   interpret: const "HOL4.prove_base_assums.Function_const" as "Function.const"

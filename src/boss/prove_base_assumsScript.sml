@@ -1055,6 +1055,50 @@ val LET_CONG = store_thm("LET_CONG", concl boolTheory.LET_CONG,
   \\ first_x_assum match_mp_tac
   \\ REFL_TAC)
 
+val LET_RAND = store_thm("LET_RAND", concl boolTheory.LET_RAND,
+  PURE_REWRITE_TAC[LET_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ REFL_TAC)
+
+val forall_bool = hd(amatch``(∀b:bool. P b) ⇔ _``)
+val FORALL_BOOL = store_thm("FORALL_BOOL", concl boolTheory.FORALL_BOOL,
+  MATCH_ACCEPT_TAC forall_bool);
+
+val exists_refl = hd(amatch ``∃x. x = a``)
+
+val itself_tydef = prim_type_definition({Thy="prove_base_assums",Tyop="itself"},
+  SPEC boolSyntax.arb exists_refl |> CONV_RULE(QUANT_CONV SYM_CONV))
+
+val _ = Parse.hide"the_value"
+val the_value_def = new_definition("the_value_def",``the_value = (ARB:'a itself)``)
+
+val itself_unique = Q.store_thm("itself_unique",
+  `∀i. i = the_value`,
+  CHOOSE_TAC itself_tydef
+  \\ pop_assum mp_tac
+  \\ PURE_REWRITE_TAC[TYPE_DEFINITION]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ strip_tac
+  \\ gen_tac
+  \\ first_assum(qspec_then`rep the_value`(mp_tac o #2 o EQ_IMP_RULE))
+  \\ impl_tac >- (qexists_tac`the_value` \\ REFL_TAC)
+  \\ first_assum(qspec_then`rep i`(mp_tac o #2 o EQ_IMP_RULE))
+  \\ impl_tac >- (qexists_tac`i` \\ REFL_TAC)
+  \\ disch_then(fn th => PURE_REWRITE_TAC[th])
+  \\ first_x_assum MATCH_ACCEPT_TAC);
+
+val itself_induction = store_thm("itself_induction",
+  ``∀P. P the_value ⇒ ∀i. P i``,
+  rpt strip_tac
+  \\ PURE_ONCE_REWRITE_TAC[itself_unique]
+  \\ first_assum ACCEPT_TAC);
+
+val itself_Axiom = store_thm("itself_Axiom", ``∀e. ∃f. f the_value = e``,
+  gen_tac
+  \\ qexists_tac`λx. e`
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ REFL_TAC);
+
 val _ = List.app (Theory.delete_binding o #1) (axioms"-");
 val _ = List.app (Theory.delete_binding o #1) (definitions"-");
 
