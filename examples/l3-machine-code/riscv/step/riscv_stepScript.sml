@@ -25,7 +25,7 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
 
 val Fetch_def = Define`
   Fetch s =
-  let (vPC, s) = PC s in
+  let vPC = PC s in
   if ~aligned 2 vPC then
     raise'exception (UNDEFINED "fetch misaligned") s
   else let (w, s) = translateAddr (vPC, Instruction, Read) s in
@@ -33,20 +33,19 @@ val Fetch_def = Define`
        SOME pPC => rawReadInst pPC s
      | NONE => raise'exception (UNDEFINED "fetch fault") s`
 
-val update_pc_def = Define `update_pc v s = SOME (SND (write'PC v s))`
+val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
 
 val NextRISCV_def = Define`
   NextRISCV s =
   let (w, s) = Fetch s in
-  let ((), s) = Run (Decode w) s in
+  let s = Run (Decode w) s in
   if s.exception <> NoException then
     NONE
   else
-    let (pc, s) = PC s in
-    let (next_fetch, s) = NextFetch s in
-    case next_fetch of
+    let pc = PC s in
+    case NextFetch s of
        NONE => update_pc (pc + 4w) s
-     | SOME (BranchTo a) => update_pc a (SND (write'NextFetch NONE s))
+     | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
      | _ => NONE`
 
 (* ------------------------------------------------------------------------
@@ -56,7 +55,7 @@ val NextRISCV_def = Define`
 val NextRISCV = Q.store_thm("NextRISCV",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = NONE) ==>
    (NextRISCV s = update_pc (nxt.c_PC nxt.procID + 4w) nxt)`,
@@ -68,7 +67,7 @@ val NextRISCV = Q.store_thm("NextRISCV",
 val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = SOME (BranchTo a)) ==>
    (NextRISCV s =
@@ -82,7 +81,7 @@ val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
 val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = if b then SOME (BranchTo a) else NONE) ==>
    (NextRISCV s =
@@ -652,7 +651,6 @@ val rawWriteData8 =
 
 fun get_mem8 thm =
   thm |> utilsLib.rhsc
-      |> pairSyntax.dest_pair |> snd
       |> boolSyntax.rator
       |> boolSyntax.rand
       |> boolSyntax.rand

@@ -730,8 +730,7 @@ val remove_vacuous = List.filter (not o utilsLib.vacuous)
 local
    val arm8_run = utilsLib.Run_CONV ("arm8", st) o rhsc
    val (_, mk_exception, _, _) = arm8_monop "arm8_state_exception"
-   val arm8_exception =
-      DATATYPE_CONV o mk_exception o snd o pairSyntax.dest_pair o utilsLib.rhsc
+   val arm8_exception = DATATYPE_CONV o mk_exception o utilsLib.rhsc
    val get_next = Term.rator o utilsLib.rhsc o Drule.SPEC_ALL
    val rule = REG_31_RULE o Conv.RIGHT_CONV_RULE DATATYPE_CONV o
               MATCH_MP arm8_stepTheory.NextStateARM8

@@ -1073,7 +1073,7 @@ local
          val f = mk_def thy (leaf ast)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_thm pv thy ast =
@@ -1084,7 +1084,7 @@ local
          val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_rwts thy =
