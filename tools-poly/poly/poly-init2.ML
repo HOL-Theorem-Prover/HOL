@@ -2,7 +2,11 @@
 val _ = use "poly/poly-init.ML";
 
 val _ = use "../tools/Holmake/Systeml.sig";
-val _ = use "Holmake/Systeml.sml";
+val _ = use "Holmake/Systeml.sml"
+
+val _ = use "../tools/quote-filter/filter.sml";
+val _ = use "poly/quse.sig";
+val _ = use "poly/quse.sml";
 
 local
 
@@ -41,28 +45,10 @@ local
 structure FS = OS.FileSys
 
 fun quse s = let
-  fun mkHOLMK () =
-      if FS.access (".HOLMK", [FS.A_READ, FS.A_EXEC]) andalso FS.isDir ".HOLMK"
-      then true
-      else
-        (FS.mkDir ".HOLMK"; true)
-        handle OS.SysErr (msg, _) =>
-               (warn ("Couldn't make .HOLMK directory in " ^
-                      FS.getDir() ^ ": " ^ msg);
-                false)
-  fun holtemp s = OS.FileSys.tmpName()
-
   val _ = if FS.access (s, [FS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
 in
-  if has_dq s then let
-      val filename = holtemp s
-    in
-      (if OS.Process.isSuccess (unquote_to s filename) then
-         (PolyML.use filename; FS.remove filename)
-       else die ("Failed to handle quotations in file: "^s^"\n"))
-      handle e => (try_remove filename; raise e)
-    end
+  if has_dq s then QUse.use s
   else PolyML.use s
 end handle OS.Path.Path => die ("Path exception in quse "^s)
              | e => (TextIO.output(TextIO.stdErr,
