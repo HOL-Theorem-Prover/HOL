@@ -24,7 +24,8 @@ fun die s =
       flushOut stdErr;
       Process.exit Process.failure
     end
-fun warn s = let open TextIO in output(stdErr, s ^ "\n"); flushOut stdErr end;
+fun warn s =
+  let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
 fun I x = x
 
 (* values from the Systeml structure, which is created at HOL configuration
@@ -333,14 +334,14 @@ fun get_cline kmod = let
       case inter toggles opts of
         [x] => (f x, delete x opts)
       | result as (x::y::_) =>
-        (warn ("*** Specifying multiple "^optname^" options; using "^x);
+        (warn ("Specifying multiple "^optname^" options; using "^x);
          (f x, delete x opts))
       | [] => let
           val optvalue =
               case inter toggles oldopts of
                 [] => dflt
               | [x] =>
-                (warn ("*** Using "^optname^" option "^x^
+                (warn ("Using "^optname^" option "^x^
                        " from earlier build command;\n\
                        \    use " ^ orlist toggles ^ " to override");
                  f x)
@@ -370,7 +371,7 @@ fun get_cline kmod = let
             (NONE, _) => (dfltbuildseq, new')
           | (SOME f, _) =>
             if f = dfltbuildseq then (f, new')
-            else (warn ("*** Using build-sequence file "^f^
+            else (warn ("Using build-sequence file "^f^
                         " from earlier build command; \n\
                         \    use -fullbuild option to override");
                   (f, new'))
@@ -392,7 +393,7 @@ fun get_cline kmod = let
                 (NONE, _) => (dfltjobnum, new')
               | (SOME jn, _) =>
                 if jn = dfltjobnum then (jn, new')
-                else (warn ("*** Using -j "^Int.toString jn^
+                else (warn ("Using -j "^Int.toString jn^
                             " from earlier build command; use -j to override");
                       (jn, new'))
           end
@@ -737,7 +738,7 @@ fun write_theory_graph () = let
 in
   if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
     (* of course, this will likely be the case on Windows *)
-    warn ("*** Can't see dot executable at "^dotexec^"; not generating \
+    warn ("Can't see dot executable at "^dotexec^"; not generating \
           \theory-graph\n\
           \*** You can try reconfiguring and providing an explicit path \n\
           \*** (val DOT_PATH = \"....\") in\n\
@@ -758,7 +759,7 @@ in
                             pfp [HOLDIR, "help", "src-sml", "DOT"])
     in
       if OS.Process.isSuccess result then ()
-      else warn "*** Theory graph construction failed.\n"
+      else warn "Theory graph construction failed.\n"
     end
 end
 
