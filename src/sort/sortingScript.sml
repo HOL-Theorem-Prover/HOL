@@ -953,6 +953,13 @@ val QSORT_eq_if_PERM = store_thm(
   !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
 PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
+val SORTED_FILTER = store_thm("SORTED_FILTER",
+  ``!R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)``,
+  ho_match_mp_tac SORTED_IND >>
+  rw[] >> rw[] >> rfs[SORTED_EQ] >> fs[SORTED_EQ] >>
+  first_x_assum(qspec_then`P`mp_tac) >> rw[] >>
+  rfs[SORTED_EQ] >> fs[MEM_FILTER])
+
 (*Perm theorems for the simplication*)
 
 (* was PERM_FUN_APPEND but this name is used again lower down *)

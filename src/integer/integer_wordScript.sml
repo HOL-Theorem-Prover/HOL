@@ -143,7 +143,7 @@ val w2i_n2w_neg = store_thm(
   ])
 
 val i2w_w2i = store_thm(
-  "i2w_w2i",
+  "i2w_w2i[simp]",
   ``!w. i2w (w2i w) = w``,
   SRW_TAC [][i2w_def, w2i_def] THEN FULL_SIMP_TAC (srw_ss()) [])
 
@@ -207,7 +207,7 @@ val word_msb_i2w = store_thm(
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_msb_n2w_numeric, INT_MOD]
   ])
 
-val w2i_11 = store_thm("w2i_11",
+val w2i_11 = store_thm("w2i_11[simp]",
   ``!v w. (w2i v = w2i w) = (v = w)``,
   NTAC 2 STRIP_TAC THEN EQ_TAC
     THEN SRW_TAC [] [SIMP_RULE (srw_ss()) [] WORD_EQ_NEG, w2i_def])
@@ -711,8 +711,8 @@ val w2i_i2w_id = Q.store_thm("w2i_i2w_id",
         (i2w i = sw2sw (i2w i : 'b word) : 'a word))`,
   STRIP_TAC
   \\ Cases_on `INT_MIN (:'b) <= i /\ i <= INT_MAX (:'b)`
-  \\ SRW_TAC [ARITH_ss] [sw2sw_i2w, w2i_i2w, GSYM w2i_11]
-  \\ METIS_TAC [w2i_le, w2i_ge, w2i_sw2sw_bounds])
+  \\ SRW_TAC [ARITH_ss] [sw2sw_i2w, w2i_i2w]
+  \\ METIS_TAC [w2i_le, w2i_ge, w2i_sw2sw_bounds, w2i_i2w])
 
 val w2i_11_lift = Q.store_thm("w2i_11_lift",
   `!a:'a word b:'b word.
@@ -726,7 +726,7 @@ val w2i_11_lift = Q.store_thm("w2i_11_lift",
   \\ SRW_TAC [] [dimindex_dimword_le_iso, w2i_i2w, sw2sw_i2w]
   \\ `INT_MIN (:'c) <= i /\ i <= INT_MAX (:'c)` by intLib.ARITH_TAC
   \\ `INT_MIN (:'c) <= i' /\ i' <= INT_MAX (:'c)` by intLib.ARITH_TAC
-  \\ SRW_TAC [] [GSYM w2i_11, w2i_i2w])
+  \\ METIS_TAC[w2i_11, w2i_i2w])
 
 val w2i_n2w_mod = Q.store_thm("w2i_n2w_mod",
   `!n m. n < dimword (:'a) /\ m <= dimindex (:'a) ==>
@@ -1051,7 +1051,7 @@ val signed_saturate_sub = Q.store_thm("signed_saturate_sub",
          signed_saturate_add a (-b)`,
   srw_tac [] [signed_saturate_add_def, signed_saturate_sub_def]
   \\ rule_assum_tac
-       (SIMP_RULE (srw_ss()) [GSYM w2i_11, word_0_w2i, WORD_LEi, w2i_INT_MINw])
+       (REWRITE_RULE  [GSYM w2i_11, word_0_w2i, WORD_LEi, w2i_INT_MINw])
   THENL [
     (* Case 1 *)
     Cases_on_i2w `a:'a word`
@@ -1091,8 +1091,8 @@ val signed_saturate_sub = Q.store_thm("signed_saturate_sub",
     \\ srw_tac [] [wordsTheory.INT_MAX_def, wordsTheory.INT_MIN_def],
     (* Case 4 *)
     `1 < dimindex(:'a)` by srw_tac [] [DECIDE ``0n < n /\ n <> 1 ==> (1 < n)``]
-    \\ asm_simp_tac std_ss [GSYM integerTheory.int_sub,
-         SIMP_RULE (srw_ss()) [GSYM w2i_11, w2i_INT_MINw] w2i_neg]
+    \\ imp_res_tac (REWRITE_RULE [w2i_INT_MINw] (REWRITE_RULE[GSYM w2i_11]w2i_neg))
+    \\ fs[GSYM integerTheory.int_sub]
   ]
 )
 
