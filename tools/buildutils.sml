@@ -279,36 +279,31 @@ in
               end
 end
 
-fun deljopt numseen list =
+fun deljopt list =
   let
-    fun maybewarn () =
-      if numseen = 1 then
-        warn "Multiple -j options; taking last one\n"
-      else ()
-    fun handle_string s rest =
-      let
-        val _ = maybewarn()
-        val (optval, rest) = deljopt (numseen + 1) rest
-        val n_opt = case Int.fromString s of
-                        NONE => (warn ("Ignoring bogus 'number' for -j: '"^
-                                       s ^ "'");
-                                 NONE)
-                      | x => x
-      in
-        case (optval, n_opt) of
-            (SOME _, _) => (optval, rest)
-          | (NONE, _) => (n_opt, rest)
-      end
-  in
-    case list of
-        [] => (NONE, [])
-      | ["-j"] => (warn "Trailing -j command-line option ignored";
-                   (NONE, []))
-      | "-j"::ns::t => handle_string ns t
-      | s::rest =>
+    fun maybewarn ns =
+      if ns = 1 then warn "Multiple -j options; taking last one\n" else ()
+    fun handle_string s =
+      case Int.fromString s of
+          NONE => (warn ("Ignoring bogus 'number' for -j: '"^ s ^ "'");
+                   NONE)
+        | x => x
+    fun recurse numseen list nopt args =
+      case list of
+          [] => (nopt, List.rev args)
+        | ["-j"] => (warn "Trailing -j command-line option ignored";
+                     (nopt, List.rev args))
+        | "-j"::ns::t =>
+          (maybewarn numseen; recurse (numseen + 1) t (handle_string ns) args)
+        | s::rest =>
           if String.isPrefix "-j" s then
-            handle_string (String.extract(s,2,NONE)) rest
-          else deljopt numseen rest
+            (maybewarn numseen;
+             recurse (numseen + 1) rest
+                     (handle_string (String.extract(s,2,NONE)))
+                     args)
+          else recurse numseen rest nopt (s::args)
+  in
+    recurse 0 list NONE []
   end
 
 fun orlist slist =
@@ -385,11 +380,11 @@ fun get_cline kmod = let
                    ["-graph", "-nograph"] newopts
   val bgoption = if buildgraph then [] else ["-nograph"]
   val (jcount, newopts) =
-      case deljopt 0 newopts of
+      case deljopt newopts of
           (NONE, new') =>
           let
           in
-            case deljopt 0 oldopts of
+            case deljopt oldopts of
                 (NONE, _) => (dfltjobnum, new')
               | (SOME jn, _) =>
                 if jn = dfltjobnum then (jn, new')
