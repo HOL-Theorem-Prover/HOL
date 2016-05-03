@@ -175,7 +175,7 @@ val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
-fun Holmake call1 dirinfo cline_additional_includes targets : res = let
+fun Holmake dirinfo cline_additional_includes targets : res = let
   val {dir, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
@@ -571,7 +571,7 @@ val purelocal_incinfo =
 
 fun hm_recur ctgt k : hmdir.t holmake_result = let
   fun hm {dir, visited, targets} =
-      Holmake false {dir = dir, visited = visited} [] targets
+      Holmake {dir = dir, visited = visited} [] targets
 in
   maybe_recurse
       {warn = warn,
@@ -687,7 +687,7 @@ in
   else let
       open Process
       val result =
-          Holmake true (* this is first call *)
+          Holmake
             {dir = hmdir.curdir(),
              visited = Binaryset.empty hmdir.compare}
             cline_additional_includes
