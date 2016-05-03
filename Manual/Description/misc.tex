@@ -593,17 +593,21 @@ This option gives the user a way of over-riding code in the core distribution as
 By default, directories specified in the \texttt{INCLUDES} and \texttt{PRE\_INCLUDES} directory are also built by \holmake{} before it attempts to build in the current directory.
 If the \texttt{-r} (``force recursion'') command-line flag is used, these directories are also ``clean''-ed when a cleaning target is given to \holmake{}.
 
-The \texttt{OPTIONS} variable is used for the specification of just
-four possible options (others are ignored): \texttt{NO\_SIGOBJ},
-\texttt{NO\_OVERLAY}, \texttt{NO\_PREREQS} and
-\texttt{QUIT\_ON\_FAILURE}.  The \texttt{OPTIONS} variable should be a
-list of strings, containing some of the above four options.  Those
-present are enabled.  These have the same effect as the corresponding
-command-line options. The \texttt{EXTRA\_CLEANS} variable is used to
+\index{CLINE_OPTIONS (Holmakefile variable)@\texttt{CLINE\_OPTIONS} (Holmakefile variable)}%
+The \texttt{CLINE\_OPTIONS} variable is used for the specification of command-line switches that are presumably usually appropriate for calls to \holmake{} in the containing directory.
+The options present in \texttt{CLINE\_OPTIONS} are used to build a ``base environment'' of switches; this base environment is then overridden by whatever was actually passed on the command-line.
+For example, a useful \texttt{CLINE\_OPTIONS} line%
+\footnote{Note that a \texttt{-{}-qof} option in a makefile can't be overridden from the command-line, but that the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
+might be
+\begin{alltt}
+    CLINE_OPTIONS = -j1 --qof
+\end{alltt}
+Under Poly/ML, the similar \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
+
+\index{EXTRA_CLEANS (Holmakefile variable)@\texttt{EXTRA\_CLEANS} (Holmakefile variable)}%
+The \texttt{EXTRA\_CLEANS} variable is used to
 specify the name of additional files that should be deleted when a
 \texttt{Holmake clean} command is issued.
-
-Under Poly/ML, the \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
 
 Within a command, the variable \texttt{\$<} is used to stand for the
 name of the first dependency of the rule.  The variable \texttt{\$@} is

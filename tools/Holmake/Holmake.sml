@@ -16,6 +16,13 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+(* turn a variable name into a list *)
+fun envlist env id = let
+  open Holmake_types
+in
+  map dequote (tokenize (perform_substitution env [VREF id]))
+end
+
 fun main() = let
 
 val execname = Path.file (CommandLine.name())
@@ -47,18 +54,49 @@ val SYSTEML = Systeml.systeml
 (** Command line parsing *)
 
 (*** parse command line *)
-fun apply_updates fs v = List.foldl (fn (f,v) => f (warn,v)) v fs
+fun apply_updates fs v = List.foldl (fn (f,v) => #update f (warn,v)) v fs
 
-val (cline_options, targets) = let
+fun getcline args = let
   open GetOpt
 in
   getOpt {argOrder = RequireOrder,
           options = HM_Cline.option_descriptions,
           errFn = die}
-         (CommandLine.arguments())
+         args
 end
 
-val option_value = apply_updates cline_options HM_Cline.default_options
+val (cline_options, targets) = getcline (CommandLine.arguments())
+
+val (cline_hmakefile, cline_nohmf) =
+    List.foldl (fn (f,(hmf,nohmf)) =>
+                   ((case #hmakefile f of NONE => hmf | SOME s => SOME s),
+                    nohmf orelse #no_hmf f))
+               (NONE,false)
+               cline_options
+val hmakefile =
+    case cline_hmakefile of
+        NONE => "Holmakefile"
+      | SOME s =>
+        if exists_readable s then s
+        else die ("Can't read holmakefile: "^s)
+
+val hmenv0 =
+    if exists_readable hmakefile andalso not cline_nohmf then
+      #1 (ReadHMF.read hmakefile base_environment)
+    else
+      base_environment
+
+val hmf_cline = envlist hmenv0 "CLINE_OPTIONS"
+
+val (hmf_options, hmf_rest) = getcline hmf_cline
+val _ = if null hmf_rest then ()
+        else
+          warn ("Unused c/line options in makefile: "^
+                String.concatWith " " hmf_rest)
+
+val option_value =
+    HM_Cline.default_options |> apply_updates hmf_options
+                             |> apply_updates cline_options
 
 (* parameters which vary from run to run according to the command-line *)
 val coption_value = #core option_value
@@ -90,10 +128,6 @@ val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
     output_functions {chattiness = chattiness_level,
                       usepfx = #jobs coption_value = 1}
 
-val _ = diag ("CommandLine.name() = "^CommandLine.name())
-val _ = diag ("CommandLine.arguments() = "^
-              String.concatWith ", " (CommandLine.arguments()))
-
 fun has_clean [] = false
   | has_clean (h::t) =
       h = "clean" orelse h = "cleanAll" orelse h = "cleanDeps" orelse
@@ -101,6 +135,10 @@ fun has_clean [] = false
 val _ = if has_clean targets then ()
         else
           do_lastmade_checks outputfns {no_lastmakercheck = no_lastmakercheck}
+
+val _ = diag ("CommandLine.name() = "^CommandLine.name())
+val _ = diag ("CommandLine.arguments() = "^
+              String.concatWith ", " (CommandLine.arguments()))
 
 (* set up logging *)
 val logfilename = Systeml.make_log_file
@@ -135,16 +173,9 @@ val _ = Process.atExit (fn () => ignore (finish_logging false))
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 
-(* turn a variable name into a list *)
-fun envlist env id = let
-  open Holmake_types
-in
-  map dequote (tokenize (perform_substitution env [VREF id]))
-end
-
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
-fun Holmake dirinfo cline_additional_includes targets : res = let
+fun Holmake call1 dirinfo cline_additional_includes targets : res = let
   val {dir, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
 
@@ -540,7 +571,7 @@ val purelocal_incinfo =
 
 fun hm_recur ctgt k : hmdir.t holmake_result = let
   fun hm {dir, visited, targets} =
-      Holmake {dir = dir, visited = visited} [] targets
+      Holmake false {dir = dir, visited = visited} [] targets
 in
   maybe_recurse
       {warn = warn,
@@ -642,7 +673,7 @@ in
       else
           hm_recur cleanTarget_opt (stdcont xs)
     end
-end
+end (* fun Holmake *)
 
 
 in
@@ -656,7 +687,7 @@ in
   else let
       open Process
       val result =
-          Holmake
+          Holmake true (* this is first call *)
             {dir = hmdir.curdir(),
              visited = Binaryset.empty hmdir.compare}
             cline_additional_includes

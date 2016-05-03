@@ -109,31 +109,51 @@ val default_core_options : t =
   verbose = false
 }
 
-open GetOpt
-fun mkBoolT sel = NoArg (fn () => fn (wn,t) => updateT t (U sel true) $$)
-fun cons_dontmakes x (wn,t) = updateT t (U #dontmakes (x :: #dontmakes t)) $$
-fun cons_includes x (wn,t) = updateT t (U #includes (x :: #includes t)) $$
-fun change_jobs nstr (wn,t) =
-  case Int.fromString nstr of
-      NONE => (wn ("Couldn't parse "^nstr^" as a number; ignoring it"); t)
-    | SOME n => if n < 1 then (wn "Ignoring non-positive job count"; t)
-                else updateT t (U #jobs n) $$
+type 'a cline_result =
+     { update: (string -> unit) * 'a -> 'a,
+       hmakefile : string option,
+       no_hmf : bool }
 
-fun set_hmakefile s (wn,t) =
-  (if isSome (#hmakefile t) then
-     wn "Multiple Holmakefile specs; ignoring earlier spec"
-   else ();
-   updateT t (U #hmakefile (SOME s)) $$)
-fun set_holdir s (wn, t) =
-  (if isSome (#holdir t) then
-     wn "Multiple holdir specs; ignoring earlier spec"
-   else ();
-   updateT t (U #holdir (SOME s)) $$)
-fun set_openthy s (wn, t) =
-  (if isSome (#opentheory t) then
-     wn "Multiple opentheory specs; ignoring earlier spec"
-   else ();
-   updateT t (U #opentheory (SOME s)) $$)
+fun resfn f : t cline_result = {update = f, hmakefile = NONE, no_hmf = false}
+
+open GetOpt
+val setNOHMF =
+    NoArg (fn () => {update = fn (wn,t) => updateT t (U #no_hmakefile true) $$,
+                     hmakefile = NONE, no_hmf = true})
+fun mkBoolT sel =
+  NoArg (fn () => resfn (fn (wn,t) => updateT t (U sel true) $$))
+fun cons_dontmakes x =
+  resfn (fn (wn,t) => updateT t (U #dontmakes (x :: #dontmakes t)) $$)
+fun cons_includes x =
+  resfn (fn (wn,t) => updateT t (U #includes (x :: #includes t)) $$)
+fun change_jobs nstr =
+  resfn (fn (wn,t) =>
+            case Int.fromString nstr of
+                NONE => (wn ("Couldn't parse "^nstr^
+                             " as a number; ignoring it"); t)
+              | SOME n => if n < 1 then
+                            (wn "Ignoring non-positive job count"; t)
+                          else updateT t (U #jobs n) $$)
+
+fun set_hmakefile s =
+  { update = fn (wn,t) =>
+                (if isSome (#hmakefile t) then
+                   wn "Multiple Holmakefile specs; ignoring earlier spec"
+                 else ();
+                 updateT t (U #hmakefile (SOME s)) $$),
+    hmakefile = SOME s, no_hmf = false }
+fun set_holdir s =
+  resfn (fn (wn, t) =>
+            (if isSome (#holdir t) then
+               wn "Multiple holdir specs; ignoring earlier spec"
+             else ();
+             updateT t (U #holdir (SOME s)) $$))
+fun set_openthy s =
+  resfn (fn (wn, t) =>
+            (if isSome (#opentheory t) then
+               wn "Multiple opentheory specs; ignoring earlier spec"
+             else ();
+             updateT t (U #opentheory (SOME s)) $$))
 val core_option_descriptions = [
   { help = "turn on diagnostic messages", long = ["dbg", "d"], short = "",
     desc = mkBoolT #debug},
@@ -160,7 +180,7 @@ val core_option_descriptions = [
   { help = "print what would be executed", long = ["no_action"], short = "n",
     desc = mkBoolT #no_action },
   { help = "don't use a Holmakefile", long = ["no_hmakefile"], short = "",
-    desc = mkBoolT #no_hmakefile },
+    desc = setNOHMF },
   { help = "don't check which Holmake was last used", long = ["nolmbc"],
     short = "", desc = mkBoolT #no_lastmaker_check },
   { help = "don't use Overlay.sml file", long = ["no_overlay"],
@@ -170,11 +190,14 @@ val core_option_descriptions = [
   { help = "use file as opentheory logging .uo",
     long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
   { help = "be quieter with output", short = "q", long = ["quiet"],
-    desc = NoArg (fn () => fn (wn,t) =>
-                     (if #verbose t then
-                        wn "Quiet and verbose incompatible; taking verbose"
-                      else () ;
-                      updateT t (U #quiet true) $$)) },
+    desc = NoArg
+             (fn () =>
+                 resfn (fn (wn,t) =>
+                           (if #verbose t then
+                              wn "Quiet and verbose incompatible; \
+                                 \taking verbose"
+                            else () ;
+                            updateT t (U #quiet true) $$))) },
   { help = "quit on failure", short = "", long = ["qof"],
     desc = mkBoolT #quit_on_failure },
   { help = "rebuild cached dependency files", short = "",
@@ -182,11 +205,14 @@ val core_option_descriptions = [
   { help = "clean recursively", short = "r", long = [],
     desc = mkBoolT #recursive },
   { help = "verbose output", short = "v", long = ["verbose"],
-    desc = NoArg (fn () => fn (wn,t) =>
-                     (if #quiet t then
-                        wn "Quiet and verbose incompatible; taking verbose"
-                      else ();
-                      updateT t (U #verbose true) $$)) }
+    desc = NoArg
+             (fn () =>
+                 resfn (fn (wn,t) =>
+                           (if #quiet t then
+                              wn "Quiet and verbose incompatible; \
+                                 \taking verbose"
+                            else ();
+                            updateT t (U #verbose true) $$))) }
 ]
 
 fun descr_key (d:'a GetOpt.opt_descr) =
