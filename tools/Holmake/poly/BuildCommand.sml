@@ -394,7 +394,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           build_command = (fn ii => fn cmds => fn f =>
                               build_command ii cmds f |> interpret_bres),
           mosml_build_command = mosml_build_command,
-          warn = warn, tgtfatal = tgtfatal,
+          outs = outs,
           keep_going = keep_going,
           quiet = quiet_flag,
           hmenv = hmenv}

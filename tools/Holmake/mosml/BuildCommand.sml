@@ -33,7 +33,7 @@ val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,actual_overlay,hmake_options,SIGOBJ,outs,hmenv,...} = buildinfo
-  val {warn,tgtfatal,...} = outs
+  val {warn,tgtfatal,info,chatty,diag,...} = outs
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
   val keep_going = #keep_going (#core optv)
@@ -69,7 +69,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val _ = exists_readable file orelse
                   (print ("Wanted to compile "^file^", but it wasn't there\n");
                    raise FileNotFound)
-          val _ = print ("Compiling "^file^"\n")
+          val _ = info ("Compiling "^file)
           open Process
           val res =
               if has_unquoter() then let
@@ -177,7 +177,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   fun mosml_build_command _ _ _ = NONE
   val build_graph = graphbuildj1 { build_command = build_command,
                                    mosml_build_command = mosml_build_command,
-                                   warn = warn, tgtfatal = tgtfatal,
+                                   outs = outs,
                                    keep_going = keep_going,
                                    quiet = quiet_flag,
                                    hmenv = hmenv}

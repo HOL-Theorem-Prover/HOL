@@ -588,11 +588,17 @@ fun create_graph tgts ii =
   let
     open HM_DepGraph
     val empty_tgts = Binaryset.empty String.compare
+    val _ = diag("Building dep. graph with targets: " ^
+                 String.concatWith " " tgts)
+    val g =
+        List.foldl
+          (fn (t, g) => #1 (build_depgraph empty_tgts ii t g))
+          empty
+          (map toFile tgts)
   in
-    List.foldl
-      (fn (t, g) => #1 (build_depgraph empty_tgts ii t g))
-      empty
-      (map toFile tgts)
+    diag ("Finished building dep graph (has " ^
+          Int.toString (size g) ^ " nodes)");
+    g
   end
 
 fun clean_deps() =
@@ -620,9 +626,13 @@ fun basecont tgts ii =
       open HM_DepGraph
       val ii = add_sigobj ii
       val g = create_graph tgts ii
+      val _ = diag ("Building from graph")
       val res = build_graph ii g
+      val buildok = OS.Process.isSuccess res
+      val _ = diag ("Built from graph with result " ^
+                    (if buildok then "OK" else "FAILED"))
     in
-      finish_logging (OS.Process.isSuccess res)
+      finish_logging buildok
     end
 
 fun no_action_cont tgts ii =

@@ -28,8 +28,7 @@ sig
 
   val graphbuildj1 : {build_command : build_command,
                       mosml_build_command : mosml_build_command,
-                      warn : string -> unit,
-                      tgtfatal : string -> unit,
+                      outs : Holmake_tools.output_functions,
                       keep_going : bool,
                       quiet : bool,
                       hmenv : Holmake_types.env} ->

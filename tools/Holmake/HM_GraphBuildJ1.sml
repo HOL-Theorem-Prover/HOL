@@ -22,13 +22,40 @@ type 'optv buildinfo_t = {
 fun extract_thypart s = (* <....>Theory.sml *)
   String.substring(s, 0, String.size s - 10)
 
+fun fail (outs : Holmake_tools.output_functions) g =
+  let
+    open HM_DepGraph
+    val pr_sl = String.concatWith " "
+    val {diag,tgtfatal,...} = outs
+  in
+    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
+        [] => raise Fail "No failing nodes in supposedly failed graph"
+      | ns =>
+        let
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+          fun failed_nocmd (_, nI) =
+            #status nI = Failed andalso #command nI = NoCmd
+          val ns' = List.filter failed_nocmd ns
+          fun nI_target (_, nI) = String.concatWith " " (#target nI)
+        in
+          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          if not (null ns') then
+            tgtfatal ("Don't know how to build necessary target(s): " ^
+                      String.concatWith ", " (map nI_target ns'))
+          else ();
+          OS.Process.failure
+        end
+  end
+
 fun graphbuildj1 static_info =
   let
-    val {build_command, mosml_build_command, warn, tgtfatal, keep_going,
+    val {build_command, mosml_build_command, outs, keep_going,
          quiet, hmenv} = static_info
+    val {warn,diag,tgtfatal,info,...} = (outs : Holmake_tools.output_functions)
     fun build_graph incinfo g =
       let
         open HM_DepGraph
+        val _ = diag "Entering HMGBJ1.build_graph"
         val bc = build_command incinfo
         fun recurse retval g =
           case find_runnable g of
@@ -36,7 +63,7 @@ fun graphbuildj1 static_info =
                                       (listNodes g)
                         of
                            NONE => retval
-                         | SOME _ => OS.Process.failure)
+                         | SOME _ => fail outs g)
             | SOME (n, nI) =>
               let
                 val deps = map #2 (#dependencies nI)
@@ -47,12 +74,14 @@ fun graphbuildj1 static_info =
                   in
                     if res then recurse retval g
                     else if keep_going then recurse OS.Process.failure g
-                    else OS.Process.failure
+                    else fail outs g
                   end
               in
                 case #command nI of
                     BuiltInCmd =>
-                    (case #target nI of
+                    (diag("J1Build: Running built-in command on " ^
+                          String.concatWith " " (#target nI));
+                     case #target nI of
                          [f] =>
                          (case toFile f of
                               UI c => k (bc (Compile depfs) (SIG c))
