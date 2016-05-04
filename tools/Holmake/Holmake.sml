@@ -73,60 +73,50 @@ val (cline_hmakefile, cline_nohmf) =
                     nohmf orelse #no_hmf f))
                (NONE,false)
                cline_options
-val hmakefile =
-    case cline_hmakefile of
-        NONE => "Holmakefile"
-      | SOME s =>
-        if exists_readable s then s
-        else die ("Can't read holmakefile: "^s)
 
-val hmenv0 =
-    if exists_readable hmakefile andalso not cline_nohmf then
-      #1 (ReadHMF.read hmakefile base_environment)
-    else
-      base_environment
-
-val hmf_cline = envlist hmenv0 "CLINE_OPTIONS"
-
-val (hmf_options, hmf_rest) = getcline hmf_cline
-val _ = if null hmf_rest then ()
+fun get_hmf_cline () =
+  let
+    val hmakefile =
+        case cline_hmakefile of
+            NONE => "Holmakefile"
+          | SOME s =>
+            if exists_readable s then s
+            else die ("Can't read holmakefile: "^s)
+    val hmenv0 =
+        if exists_readable hmakefile andalso not cline_nohmf then
+          #1 (ReadHMF.read hmakefile base_environment)
         else
-          warn ("Unused c/line options in makefile: "^
-                String.concatWith " " hmf_rest)
-
-val option_value =
+          base_environment
+    val hmf_cline = envlist hmenv0 "CLINE_OPTIONS"
+    val (hmf_options, hmf_rest) = getcline hmf_cline
+    val _ = if null hmf_rest then ()
+            else
+              warn ("Unused c/line options in makefile: "^
+                    String.concatWith " " hmf_rest)
+  in
     HM_Cline.default_options |> apply_updates hmf_options
-                             |> apply_updates cline_options
+  end
 
-(* parameters which vary from run to run according to the command-line *)
+fun chattiness_level switches =
+  case (#debug switches, #verbose switches, #quiet switches) of
+      (true, _, _) => 3
+    | (_, true, _) => 2
+    | (_, _, true) => 0
+    | _ => 1
+
+val option_value = get_hmf_cline() |> apply_updates cline_options
 val coption_value = #core option_value
 
-val allfast = #fast coption_value
-val always_rebuild_deps = #rebuild_deps coption_value
-val cline_recursive = #recursive coption_value
-val debug = #debug coption_value
-val do_logging_flag = #do_logging coption_value
-val dontmakes = #dontmakes coption_value
-val show_usage = #help coption_value
-val user_hmakefile = #hmakefile coption_value
-val cmdl_HOLDIR = #holdir coption_value
-val cline_additional_includes = #includes coption_value
-val keep_going_flag = #keep_going coption_value
-val no_action = #no_action coption_value
-val no_hmakefile = #no_hmakefile coption_value
-val no_lastmakercheck = #no_lastmaker_check coption_value
-val no_overlay = #no_overlay coption_value
-val no_prereqs = #no_prereqs coption_value
-val opentheory = #opentheory coption_value
-val quiet_flag = #quiet coption_value
-val quit_on_failure = #quit_on_failure coption_value
-val verbose = #verbose coption_value
-
-val chattiness_level =
-    if debug then 3 else if verbose then 2 else if quiet_flag then 0 else 1
+(* things that need to be read out of the first Holmakefile, and which will
+   govern the behaviour even when recursing into other directories that may
+   have their own Holmakefiles *)
 val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
-    output_functions {chattiness = chattiness_level,
+    output_functions {chattiness = chattiness_level coption_value,
                       usepfx = #jobs coption_value = 1}
+val do_logging_flag = #do_logging coption_value
+val no_lastmakercheck = #no_lastmaker_check coption_value
+val show_usage = #help coption_value
+val cline_additional_includes = #includes coption_value
 
 fun has_clean [] = false
   | has_clean (h::t) =
@@ -167,17 +157,39 @@ end handle IO.Io _ => (warn "Had problems making permanent record of make log";
 val _ = Process.atExit (fn () => ignore (finish_logging false))
 
 
-(* find HOLDIR by first looking at command-line, then looking
-   for a value compiled into the code.
-*)
-val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
-val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
-
 (* directory specific stuff here *)
 type res = hmdir.t holmake_result
 fun Holmake dirinfo cline_additional_includes targets : res = let
   val {dir, visited = visiteddirs} = dirinfo
   val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
+
+  val option_value = get_hmf_cline() |> apply_updates cline_options
+  val coption_value = #core option_value
+
+  val allfast = #fast coption_value
+  val always_rebuild_deps = #rebuild_deps coption_value
+  val cline_recursive = #recursive coption_value
+  val debug = #debug coption_value
+  val dontmakes = #dontmakes coption_value
+  val user_hmakefile = #hmakefile coption_value
+  val cmdl_HOLDIR = #holdir coption_value
+  val cline_additional_includes =
+      cline_additional_includes @ #includes coption_value
+  val keep_going_flag = #keep_going coption_value
+  val no_action = #no_action coption_value
+  val no_hmakefile = #no_hmakefile coption_value
+  val no_overlay = #no_overlay coption_value
+  val no_prereqs = #no_prereqs coption_value
+  val opentheory = #opentheory coption_value
+  val quiet_flag = #quiet coption_value
+  val quit_on_failure = #quit_on_failure coption_value
+  val verbose = #verbose coption_value
+  (* find HOLDIR by first looking at command-line, then looking
+     for a value compiled into the code.
+  *)
+  val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
+  val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
+
 
 (* prepare to do logging *)
 val () = if do_logging_flag then
