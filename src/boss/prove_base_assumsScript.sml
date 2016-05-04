@@ -1060,6 +1060,9 @@ val LET_RAND = store_thm("LET_RAND", concl boolTheory.LET_RAND,
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ REFL_TAC)
 
+val BOOL_EQ_DISTINCT = store_thm("BOOL_EQ_DISTINCT", concl boolTheory.BOOL_EQ_DISTINCT,
+  PURE_REWRITE_TAC[iff_F,not_not,iff_T,not_F,and_T]);
+
 val forall_bool = hd(amatch``(∀b:bool. P b) ⇔ _``)
 val FORALL_BOOL = store_thm("FORALL_BOOL", concl boolTheory.FORALL_BOOL,
   MATCH_ACCEPT_TAC forall_bool);
