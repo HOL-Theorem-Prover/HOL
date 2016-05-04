@@ -1,4 +1,4 @@
-OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --no_overlay
 
 FTAG_UI = $(protect $(SIGOBJ)/FinalTag-sig.ui)
 FTAG_UID = $(dprot $(SIGOBJ)/FinalTag-sig.ui)

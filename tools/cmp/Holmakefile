@@ -11,7 +11,7 @@ cmp.exe: cmp.sml
 
 else
 
-OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --no_overlay
 
 cmp.exe: mosmlcmp.uo cmp.uo
 	$(MOSMLC) -standalone -o $@ $<
