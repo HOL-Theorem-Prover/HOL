@@ -1,0 +1,31 @@
+name: hol-machine-code-hoare-triple
+version: 1.0
+description: A Hoare logic for machine code
+author: HOL developers <hol-developers@lists.sourceforge.net>
+license: MIT
+main {
+  import: address
+  import: prog
+  import: set-sep
+  import: tailrec
+  import: temporal
+}
+address {
+  article: "address.ot.art"
+}
+prog {
+  import: set-sep
+  import: tailrec
+  article: "prog.ot.art"
+}
+set-sep {
+  article: "set_sep.ot.art"
+}
+tailrec {
+  article: "tailrec.ot.art"
+}
+temporal {
+  import: set-sep
+  import: prog
+  article: "temporal.ot.art"
+}
