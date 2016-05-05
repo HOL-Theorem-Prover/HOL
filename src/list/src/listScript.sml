@@ -450,6 +450,14 @@ val EL_MAP = store_thm("EL_MAP",
     INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[LENGTH, EL, MAP, LESS_MONO_EQ, NOT_LESS_0, HD, TL]);
 
+val EL_APPEND_EQN = store_thm(
+  "EL_APPEND_EQN",
+  ``!l1 l2 n.
+       EL n (l1 ++ l2) =
+       if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2``,
+  LIST_INDUCT_TAC >> simp_tac (srw_ss()) [] >> Cases_on `n` >>
+  asm_simp_tac (srw_ss()) [EL])
+
 val MAP_TL = Q.store_thm("MAP_TL",
   `!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))`,
   Induct THEN REWRITE_TAC [NULL_DEF, TL, MAP]);
@@ -1547,6 +1555,13 @@ val LAST_EL = store_thm(
 ``!ls. (ls <> []) ==> (LAST ls = EL (PRE (LENGTH ls)) ls)``,
 Induct THEN SRW_TAC[] [] THEN
 Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
+
+val LAST_MAP = store_thm(
+  "LAST_MAP[simp]",
+  ``!l f. l <> [] ==> (LAST (MAP f l) = f (LAST l))``,
+  rpt strip_tac >> `?h t. l = h::t` by METIS_TAC[list_CASES] >>
+  srw_tac[][MAP] >> Q.ID_SPEC_TAC `h` >> Induct_on `t` >>
+  asm_simp_tac (srw_ss()) []);
 
 val FRONT_CONS = store_thm(
   "FRONT_CONS",

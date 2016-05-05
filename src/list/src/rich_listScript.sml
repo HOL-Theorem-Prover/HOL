@@ -12,6 +12,7 @@ in
    val APPEND_SNOC = APPEND_SNOC
    val CONS_11 = CONS_11
    val EL = EL
+   val EL_APPEND_EQN = EL_APPEND_EQN
    val EL_LUPDATE = EL_LUPDATE
    val EVERY_DEF = EVERY_DEF
    val EVERY_SNOC = EVERY_SNOC
@@ -2270,19 +2271,12 @@ val SUM_FLAT = Q.store_thm ("SUM_FLAT",
 
 val EL_APPEND1 = Q.store_thm ("EL_APPEND1",
    `!n l1 l2. n < LENGTH l1 ==> (EL n (APPEND l1 l2) = EL n l1)`,
-   INDUCT_TAC
-   THEN LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC [EL, APPEND, HD, TL, LENGTH, NOT_LESS_0, LESS_MONO_EQ]);
+   simp_tac(srw_ss()) [EL_APPEND_EQN]);
 
 val EL_APPEND2 = Q.store_thm ("EL_APPEND2",
    `!l1 n.
       LENGTH l1 <= n ==> !l2. EL n (APPEND l1 l2) = EL (n - (LENGTH l1)) l2`,
-   LIST_INDUCT_TAC
-   THEN REWRITE_TAC [LENGTH, APPEND, SUB_0]
-   THEN GEN_TAC
-   THEN INDUCT_TAC
-   THEN ASM_REWRITE_TAC [EL, APPEND, HD, TL, LENGTH, NOT_SUC_LESS_EQ_0,
-                         SUB_MONO_EQ, LESS_EQ_MONO]);
+   simp_tac (srw_ss() ++ numSimps.ARITH_ss) [EL_APPEND_EQN]);
 
 local
   val op >> = op THEN
