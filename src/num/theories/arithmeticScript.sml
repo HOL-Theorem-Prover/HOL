@@ -1072,12 +1072,17 @@ val EQ_ADD_RCANCEL = store_thm ("EQ_ADD_RCANCEL",
   ``!m n p. (m + p = n + p) = (m = n)``,
   ONCE_REWRITE_TAC[ADD_COMM] THEN MATCH_ACCEPT_TAC EQ_ADD_LCANCEL);
 
-val EQ_MULT_LCANCEL = store_thm ("EQ_MULT_LCANCEL",
+val EQ_MULT_LCANCEL = store_thm ("EQ_MULT_LCANCEL[simp]",
   ``!m n p. (m * n = m * p) = (m = 0) \/ (n = p)``,
   INDUCT_TAC THEN REWRITE_TAC[MULT_CLAUSES, NOT_SUC] THEN
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, GSYM NOT_SUC, NOT_SUC] THEN
   ASM_REWRITE_TAC[INV_SUC_EQ, GSYM ADD_ASSOC, EQ_ADD_LCANCEL]);
+
+val EQ_MULT_RCANCEL = store_thm(
+  "EQ_MULT_RCANCEL[simp]",
+  ``!m n p. (n * m = p * m) <=> (m = 0) \/ (n = p)``,
+  ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [EQ_MULT_LCANCEL]);
 
 val ADD_SUB = store_thm ("ADD_SUB",
  ``!a c. (a + c) - c = a``,
@@ -2994,6 +2999,18 @@ val MAX_0 = store_thm ("MAX_0",
   REWRITE_TAC [MAX] THEN
   PROVE_TAC [NOT_LESS_0, NOT_LESS, LESS_OR_EQ]);
 
+val MAX_EQ_0 = store_thm(
+  "MAX_EQ_0[simp]",
+  ``(MAX m n = 0) <=> (m = 0) /\ (n = 0)``,
+  SRW_TAC[][MAX,EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_0, NOT_LESS]);
+
+val MIN_EQ_0 = store_thm(
+  "MIN_EQ_0[simp]",
+  ``(MIN m n = 0) <=> (m = 0) \/ (n = 0)``,
+  SRW_TAC[][MIN,EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_0, NOT_LESS]);
+
 val MIN_IDEM = store_thm ("MIN_IDEM",
   ``!n. MIN n n = n``,
   PROVE_TAC [MIN]);
@@ -3411,7 +3428,7 @@ val SUC_MOD_lem = Q.prove (
 val SUC_MOD = store_thm ("SUC_MOD",
    ``!n a b. 0 < n ==> ((SUC a MOD n = SUC b MOD n) = (a MOD n = b MOD n))``,
   ASM_SIMP_TAC bool_ss [SUC_MOD_lem] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   REVERSE EQ_TAC THEN1 SIMP_TAC bool_ss [] THEN
   REPEAT COND_CASES_TAC THEN
   REWRITE_TAC [numTheory.NOT_SUC, SUC_NOT, INV_SUC_EQ] THEN

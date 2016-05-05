@@ -243,7 +243,6 @@ val peg_eval_number = Q.prove(
   \\ fs[s2n_UNHEX_alt]
   \\ imp_res_tac num_to_dec_string_eq_cons
   \\ simp[GSYM num_from_dec_string_def]
-  \\ AP_THM_TAC \\ AP_TERM_TAC
   \\ imp_res_tac isDigit_UNHEX_alt \\ fs[]);
 
 val peg_eval_list_chars = Q.store_thm("peg_eval_list_chars",
