@@ -8,6 +8,7 @@ sig
    val ALL_HYP_CONV_RULE: conv -> rule
    val ALL_HYP_RULE: rule -> rule
    val BIT_FIELD_INSERT_CONV : string -> string -> conv
+   val CASE_RAND_CONV : term -> hol_type list -> conv
    val CHANGE_CBV_CONV: computeLib.compset -> conv
    val ELIM_UNDISCH: rule
    val EXTRACT_CONV: conv
