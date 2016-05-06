@@ -537,7 +537,7 @@ end
 (*
   Conversion for rewriting instances of:
 
-    f (case x : ty of .. => y1 | .. => y2 | .. => yn)
+    f (case x of .. => y1 | .. => y2 | .. => yn)
 
   to
 
@@ -547,55 +547,47 @@ end
 local
   val case_rng = snd o HolKernel.strip_fun o Term.type_of
   val term_rng = snd o Type.dom_rng o Term.type_of
-  fun check b = b orelse raise ERR "CASE_RAND_CONV" ""
-  fun CASE_RAND_CONV1 rand_f ty =
+  fun CASE_RAND_CONV1 rand_f tm =
     let
+      val (f, x) = Term.dest_comb tm
+      val _ = Term.same_const rand_f f orelse Term.term_eq rand_f f orelse
+              raise ERR "CASE_RAND_CONV" ""
+      val (c, x, l) =
+        case boolSyntax.strip_comb x of
+           (c, x :: l) => (c, x, l)
+         | _ => raise ERR "CASE_RAND_CONV" ""
+      val ty = Term.type_of x
       val case_c = TypeBase.case_const_of ty
-      val def = TypeBase.case_def_of ty
-      val rng = case_rng case_c
-      val tac = SIMP_TAC bool_ss [def]
+      val l' =
+        List.map
+          (fn t => let
+                     val (vs, b) = boolSyntax.strip_abs t
+                   in
+                     boolSyntax.list_mk_abs (vs, Term.mk_comb (f, b))
+                   end) l
+      val fvs = List.concat (List.map Term.free_vars l')
+      val x' = Term.variant fvs (Term.mk_var ("x", ty))
+      val th =
+        Tactical.prove
+          (boolSyntax.mk_eq
+            (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
+             boolSyntax.list_mk_icomb (case_c, x' :: l')),
+           Cases_on `^x'` THEN SIMP_TAC bool_ss [TypeBase.case_def_of ty])
+      val () = (print_thm th; print "\n")
     in
-      fn tm =>
-        let
-          val (f, x) = Term.dest_comb tm
-          val _ = check (Term.same_const rand_f f orelse Term.term_eq rand_f f)
-          val (c, x, l) =
-            case boolSyntax.strip_comb x of
-               (c, x :: l) => ( check (Term.same_const case_c c)
-                              ; (c, x, l) )
-             | _ => raise ERR "CASE_RAND_CONV" ""
-          val l' =
-            List.map
-              (fn t => let
-                         val (vs, b) = boolSyntax.strip_abs t
-                       in
-                         boolSyntax.list_mk_abs (vs, Term.mk_comb (f, b))
-                       end) l
-          val fvs = List.concat (List.map Term.free_vars l')
-          val c' = Term.inst [rng |-> term_rng f] case_c
-          val x' = Term.variant fvs (Term.mk_var ("x", Term.type_of x))
-          val th =
-            Tactical.prove
-              (boolSyntax.mk_eq
-                (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
-                 boolSyntax.list_mk_icomb (c', x' :: l')),
-               Cases_on `^x'` THEN tac)
-        in
-          Conv.REWR_CONV th tm
-        end
+      Conv.REWR_CONV th tm
     end
-  val literal_case_rand = Q.GEN `P` boolTheory.literal_case_RAND
+  val literal_case_rand = Q.prove(
+    `!f x y a b.
+       f (literal_case (\v. if v = x then a else b) y) =
+       literal_case (\v. if v = x then f a else f b) y`,
+    SIMP_TAC std_ss [boolTheory.literal_case_DEF, boolTheory.COND_RAND])
 in
-  fun CASE_RAND_CONV rand_f tys =
+  fun CASE_RAND_CONV f =
     let
-      val cnv =
-        Conv.CHANGED_CONV
-          (SIMP_CONV pure_ss
-             [Drule.ISPEC rand_f literal_case_rand,
-              Drule.ISPEC rand_f boolTheory.COND_RAND])
+      val cnv = Conv.REWR_CONV (Drule.ISPEC f literal_case_rand)
     in
-      Conv.TOP_DEPTH_CONV
-        (Conv.FIRST_CONV (cnv :: List.map (CASE_RAND_CONV1 rand_f) tys))
+      Conv.TOP_DEPTH_CONV (cnv ORELSEC CASE_RAND_CONV1 f)
     end
 end
 
