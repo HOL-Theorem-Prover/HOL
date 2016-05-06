@@ -573,7 +573,6 @@ local
             (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
              boolSyntax.list_mk_icomb (case_c, x' :: l')),
            Cases_on `^x'` THEN SIMP_TAC bool_ss [TypeBase.case_def_of ty])
-      val () = (print_thm th; print "\n")
     in
       Conv.REWR_CONV th tm
     end
