@@ -547,6 +547,10 @@ end
 local
   val case_rng = snd o HolKernel.strip_fun o Term.type_of
   val term_rng = snd o Type.dom_rng o Term.type_of
+  val tac =
+    CONV_TAC (Conv.FORK_CONV
+                (Conv.RAND_CONV Drule.LIST_BETA_CONV, Drule.LIST_BETA_CONV))
+    THEN REFL_TAC
   fun CASE_RAND_CONV1 rand_f tm =
     let
       val (f, x) = Term.dest_comb tm
@@ -572,7 +576,10 @@ local
           (boolSyntax.mk_eq
             (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
              boolSyntax.list_mk_icomb (case_c, x' :: l')),
-           Cases_on `^x'` THEN SIMP_TAC bool_ss [TypeBase.case_def_of ty])
+           Cases_on `^x'`
+           THEN ONCE_REWRITE_TAC [TypeBase.case_def_of ty]
+           THEN tac
+          )
     in
       Conv.REWR_CONV th tm
     end
