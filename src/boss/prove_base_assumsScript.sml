@@ -1106,7 +1106,96 @@ val itself_Axiom = store_thm("itself_Axiom", ``∀e. ∃f. f the_value = e``,
   \\ CONV_TAC(DEPTH_CONV BETA_CONV)
   \\ REFL_TAC);
 
+val RES_FORALL_DEF = new_definition("RES_FORALL_DEF",concl boolTheory.RES_FORALL_DEF);
+val RES_EXISTS_DEF = new_definition("RES_EXISTS_DEF",concl boolTheory.RES_EXISTS_DEF);
+val RES_EXISTS_UNIQUE_DEF = new_definition("RES_EXISTS_UNIQUE_DEF",
+  concl boolTheory.RES_EXISTS_UNIQUE_DEF
+  |> Term.subst [boolSyntax.res_exists_tm |-> lhs(concl RES_EXISTS_DEF),
+                 boolSyntax.res_forall_tm |-> lhs(concl RES_FORALL_DEF)]);
+val RES_SELECT_DEF = new_definition("RES_SELECT_DEF",concl boolTheory.RES_SELECT_DEF);
+
+val RES_FORALL_THM = store_thm("RES_FORALL_THM",
+  Term.subst [boolSyntax.res_forall_tm |-> lhs(concl RES_FORALL_DEF)]
+    (concl RES_FORALL_THM),
+  PURE_REWRITE_TAC[RES_FORALL_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC);
+
+val RES_EXISTS_THM = store_thm("RES_EXISTS_THM",
+  Term.subst [boolSyntax.res_exists_tm |-> lhs(concl RES_EXISTS_DEF)]
+    (concl RES_EXISTS_THM),
+  PURE_REWRITE_TAC[RES_EXISTS_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC);
+
+val RES_SELECT_THM = store_thm("RES_SELECT_THM",
+  Term.subst [boolSyntax.res_select_tm |-> lhs(concl RES_SELECT_DEF)]
+    (concl RES_SELECT_THM),
+  PURE_REWRITE_TAC[RES_SELECT_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC);
+
+val RES_FORALL_CONG = store_thm("RES_FORALL_CONG",
+  Term.subst [boolSyntax.res_forall_tm |-> lhs(concl RES_FORALL_DEF)]
+    (concl RES_FORALL_CONG),
+  disch_then SUBST_ALL_TAC
+  \\ PURE_REWRITE_TAC[RES_FORALL_THM]
+  \\ strip_tac
+  \\ PURE_REWRITE_TAC[th25]
+  \\ conj_tac \\ rpt strip_tac
+  \\ rpt (first_x_assum(qspec_then`x`mp_tac))
+  \\ PURE_ASM_REWRITE_TAC[T_imp]
+  \\ disch_then SUBST_ALL_TAC
+  \\ disch_then ACCEPT_TAC);
+
+val RES_EXISTS_CONG = store_thm("RES_EXISTS_CONG",
+  Term.subst [boolSyntax.res_exists_tm |-> lhs(concl RES_EXISTS_DEF)]
+    (concl RES_EXISTS_CONG),
+  disch_then SUBST_ALL_TAC
+  \\ PURE_REWRITE_TAC[RES_EXISTS_THM]
+  \\ strip_tac
+  \\ PURE_REWRITE_TAC[th25]
+  \\ conj_tac \\ rpt strip_tac
+  \\ qexists_tac`x`
+  \\ rpt (first_x_assum(qspec_then`x`mp_tac))
+  \\ PURE_ASM_REWRITE_TAC[T_imp,T_and,iff_T,T_iff]
+  \\ disch_then ACCEPT_TAC);
+
+val RES_EXISTS_UNIQUE_THM = store_thm("RES_EXISTS_UNIQUE_THM",
+  Term.subst [boolSyntax.res_exists1_tm |-> lhs(concl RES_EXISTS_UNIQUE_DEF),
+              boolSyntax.res_exists_tm |-> lhs(concl RES_EXISTS_DEF),
+              boolSyntax.res_forall_tm |-> lhs(concl RES_FORALL_DEF)]
+    (concl RES_EXISTS_UNIQUE_THM),
+  PURE_REWRITE_TAC[RES_EXISTS_UNIQUE_DEF]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ rpt gen_tac \\ REFL_TAC);
+
+val RES_ABSTRACT_EXISTS = prove(
+  let
+    val fvar = mk_var("f",type_of boolSyntax.res_abstract_tm)
+  in
+    mk_exists(fvar, Term.subst [boolSyntax.res_abstract_tm|->fvar] (concl RES_ABSTRACT_DEF))
+  end,
+  qexists_tac`λp m x. if x ∈ p then m x else ARB x`
+  \\ PURE_REWRITE_TAC[GSYM fun_eq_thm]
+  \\ CONV_TAC(DEPTH_CONV BETA_CONV)
+  \\ conj_tac
+  >- (
+    rpt gen_tac
+    \\ disch_then (SUBST_ALL_TAC o EQT_INTRO)
+    \\ PURE_REWRITE_TAC[if_T]
+    \\ REFL_TAC)
+  \\ rpt gen_tac \\ strip_tac \\ gen_tac
+  \\ first_x_assum(qspec_then`x`mp_tac)
+  \\ Q.SPEC_THEN`x ∈ p`FULL_STRUCT_CASES_TAC bool_cases
+  \\ PURE_REWRITE_TAC[if_T,if_F,T_imp]
+  >- disch_then ACCEPT_TAC
+  \\ disch_then kall_tac
+  \\ REFL_TAC);
+
 val _ = List.app (Theory.delete_binding o #1) (axioms"-");
 val _ = List.app (Theory.delete_binding o #1) (definitions"-");
+
+val RES_ABSTRACT_DEF = new_specification("RES_ABSTRACT_DEF",["RES_ABSTRACT"],RES_ABSTRACT_EXISTS)
 
 val _ = export_theory()

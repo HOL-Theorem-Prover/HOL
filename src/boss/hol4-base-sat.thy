@@ -68,6 +68,11 @@ proofs {
 
   interpret: type "HOL4.prove_base_assums.itself" as "HOL4.bool.itself"
   interpret: const "HOL4.prove_base_assums.the_value" as "HOL4.bool.the_value"
+  interpret: const "HOL4.prove_base_assums.RES_FORALL" as "HOL4.bool.RES_FORALL"
+  interpret: const "HOL4.prove_base_assums.RES_EXISTS" as "HOL4.bool.RES_EXISTS"
+  interpret: const "HOL4.prove_base_assums.RES_EXISTS_UNIQUE" as "HOL4.bool.RES_EXISTS_UNIQUE"
+  interpret: const "HOL4.prove_base_assums.RES_ABSTRACT" as "HOL4.bool.RES_ABSTRACT"
+  interpret: const "HOL4.prove_base_assums.RES_SELECT" as "HOL4.bool.RES_SELECT"
 
   interpret: const "HOL4.prove_base_assums.Function_o" as "Function.o"
   interpret: const "HOL4.prove_base_assums.Function_const" as "Function.const"
