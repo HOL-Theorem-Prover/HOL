@@ -362,8 +362,7 @@ SRW_TAC [] [] THENL
 
 val tc_implication_lem = Q.prove (
 `!x y. (x, y) IN tc r1 ==>
-       !r2. (!x y. (x, y) IN r1 ==> (x, y) IN r2) ==> (x, y)
-IN tc r2`,
+       !r2. (!x y. (x, y) IN r1 ==> (x, y) IN r2) ==> (x, y) IN tc r2`,
 HO_MATCH_MP_TAC tc_ind THEN
 SRW_TAC [] [] THEN
 METIS_TAC [tc_rules]);
