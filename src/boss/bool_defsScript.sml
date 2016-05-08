@@ -14,8 +14,8 @@ val LET_thm = PURE_REWRITE_RULE[FUN_EQ_THM]LET_def |> BETA_RULE |> curry save_th
 val literal_case_thm = PURE_REWRITE_RULE[FUN_EQ_THM]literal_case_def |> BETA_RULE |> curry save_thm "literal_case_thm"
 val IN_thm = PURE_REWRITE_RULE[FUN_EQ_THM]IN_def |> BETA_RULE |> curry save_thm "IN_thm"
 
-val T_iff = mk_thm([],``∀t. (T ⇔ t) ⇔ t``)
-val F_iff = mk_thm([],``∀t. (F ⇔ t) ⇔ ¬t``)
+val T_iff = mk_thm([],``!t. (T <=> t) <=> t``)
+val F_iff = mk_thm([],``!t. (F <=> t) <=> ~t``)
 
 val TYPE_DEFINITION_thm = store_thm("TYPE_DEFINITION_thm",
   ``!P. (?(rep:'b->'a). TYPE_DEFINITION P rep) ==>
@@ -24,12 +24,12 @@ val TYPE_DEFINITION_thm = store_thm("TYPE_DEFINITION_thm",
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ rpt strip_tac
   \\ qexists_tac`rep`
-  \\ qexists_tac`λa. @x. a = rep x`
+  \\ qexists_tac`\a. @x. a = rep x`
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
   \\ conj_tac
   \\ rpt strip_tac
   >- (
-    `(λx. rep a = rep x)(@x. rep a = rep x)`
+    `(\x. rep a = rep x)(@x. rep a = rep x)`
     by (
       match_mp_tac SELECT_AX
       \\ qexists_tac`a`
@@ -40,7 +40,7 @@ val TYPE_DEFINITION_thm = store_thm("TYPE_DEFINITION_thm",
   \\ qspec_then`P r`strip_assume_tac BOOL_CASES_AX
   \\ PURE_ASM_REWRITE_TAC[F_iff,T_iff]
   >- (
-    `(λx. r = rep x) (@x. r = rep x)`
+    `(\x. r = rep x) (@x. r = rep x)`
     by (
       match_mp_tac SELECT_AX
       \\ first_x_assum(qspec_then`r`mp_tac)
