@@ -6,6 +6,19 @@ type wp = HM_DepGraph.t workprovider
 
 val W_EXITED = Posix.Process.W_EXITED
 
+(* thanks to Rob Arthan for this function *)
+fun strmIsTTY (outstream : TextIO.outstream) =
+  let
+    val (wr as TextPrimIO.WR{ioDesc,...},buf) =
+	TextIO.StreamIO.getWriter(TextIO.getOutstream outstream);
+    val _ =
+        TextIO.setOutstream (outstream, TextIO.StreamIO.mkOutstream(wr, buf))
+  in
+    case ioDesc of
+	NONE => false
+      | SOME desc => (OS.IO.kind desc = OS.IO.Kind.tty)
+  end
+
 datatype buildresult =
          BR_OK
        | BR_ClineK of ((string * string list) *
@@ -97,11 +110,18 @@ fun graphbuild optinfo incinfo g =
     val { build_command, mosml_build_command, warn, tgtfatal, diag,
           keep_going, quiet, hmenv, jobs, info } = optinfo
     val monitor_map = ref (Binarymap.mkDict String.compare)
-    fun display_map () =
+    fun ttydisplay_map () =
       (print "\r";
        Binarymap.app (fn (k,(_,v)) =>
                         print (polish k ^ statusString v))
                      (!monitor_map))
+    fun id (s:string) = s
+    val (startmsg, infopfx, display_map, green, red, boldyellow) =
+        if strmIsTTY TextIO.stdOut then
+          ((fn s => ()), "\r", ttydisplay_map, green, red, boldyellow)
+        else
+          ((fn s => info ("Starting work on " ^ s)), "", (fn () => ()),
+           id, id, id)
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
@@ -113,6 +133,7 @@ fun graphbuild optinfo incinfo g =
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
+            startmsg tag;
             display_map();
             NONE
           end
@@ -173,8 +194,9 @@ fun graphbuild optinfo incinfo g =
                       info ("\r" ^ StringCvt.padRight #" " 73 tag ^
                             boldyellow "CHEATED")
                     else
-                      info ("\r" ^ StringCvt.padRight #" " 78 tag ^ green "OK")
-                  else (info ("\r" ^ StringCvt.padRight #" " 73 tag ^
+                      info (infopfx ^ StringCvt.padRight #" " 78 tag ^
+                            green "OK")
+                  else (info (infopfx ^ StringCvt.padRight #" " 73 tag ^
                               red "FAILED!");
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
@@ -192,7 +214,7 @@ fun graphbuild optinfo incinfo g =
             case Binarymap.peek(!monitor_map, tag) of
                 NONE => (warn ("Lost monitor info for "^ tag); NONE)
               | SOME ((strm,tb), stat) =>
-                (info ("\r" ^ StringCvt.padRight #" " 72 tag ^
+                (info (infopfx ^ StringCvt.padRight #" " 72 tag ^
                        red "M-KILLED");
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
