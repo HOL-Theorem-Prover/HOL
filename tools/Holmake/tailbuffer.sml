@@ -59,6 +59,10 @@ fun append s' (tb:t) : t =
         end
   end
 
+fun last_line ({v,i,full,max,...} : t) =
+  if not full andalso i = 0 then NONE
+  else SOME (Vector.sub(v,(i - 1) mod max))
+
 fun output ({v,i,full,s,max,pattern_seen,...}:t) =
   if not full andalso i = 0 then
     { fulllines = [], lastpartial = s, pattern_seen = pattern_seen }

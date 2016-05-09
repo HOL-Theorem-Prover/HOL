@@ -104,6 +104,11 @@ in
     end
 end
 
+fun rtrunc n s =
+  if String.size s > n then
+    "... " ^ String.substring(s, String.size s - (n - 4), n - 4)
+  else StringCvt.padRight #" " n s
+
 fun graphbuild optinfo incinfo g =
   let
     val _ = OS.FileSys.mkDir loggingdir handle _ => ()
@@ -111,10 +116,23 @@ fun graphbuild optinfo incinfo g =
           keep_going, quiet, hmenv, jobs, info } = optinfo
     val monitor_map = ref (Binarymap.mkDict String.compare)
     fun ttydisplay_map () =
-      (print "\r";
-       Binarymap.app (fn (k,(_,v)) =>
-                        print (polish k ^ statusString v))
-                     (!monitor_map))
+      let
+        val _ = print "\r"
+      in
+        if Binarymap.numItems (!monitor_map) > 1 then
+          Binarymap.app (fn (k,(_,v)) =>
+                            print (polish k ^ statusString v))
+                        (!monitor_map)
+        else
+          case Binarymap.listItems (!monitor_map) of
+              [] => ()
+            | (k,((strm,tb),stat)) :: _ =>
+              let
+                val s = case tailbuffer.last_line tb of NONE => "" | SOME s => s
+              in
+                print (polish k ^ rtrunc 57 (": " ^ s))
+              end
+      end
     fun id (s:string) = s
     val (startmsg, infopfx, display_map, green, red, boldyellow) =
         if strmIsTTY TextIO.stdOut then
