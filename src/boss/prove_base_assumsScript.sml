@@ -100,24 +100,13 @@ fun amatch tm = Net.itnet (itpred (DB.matches tm)) base_thms []
 
 val _ = new_constant("hol-base-assums-1.0",alpha);
 
-(* TODO: copied from Opentheory.sml *)
-  fun uneta a t = BETA_CONV(mk_comb(mk_abs(a,t),a))
-  fun fix_bij th =
-  let
-    val (a,eq) = dest_forall(concl th)
-    val (l,r) = dest_eq eq
-  in
-    EXT (GEN a (TRANS (TRANS (uneta a l) (SPEC a th)) (SYM (uneta a r))))
-  end
-(* -- *)
-
 local
   fun find_tyop {name={Tyop,...},...} =
     let
       val (ar,ra) = definition(Tyop^"_bij") |> CONJ_PAIR
     in
-      {rep_abs = fix_bij ra,
-       abs_rep = fix_bij ar}
+      {rep_abs = uneta_type_bijection ra,
+       abs_rep = uneta_type_bijection ar}
     end
   fun find_const {Name,...} = definition(Name^"_def")
   handle HOL_ERR _ => first (equal Name o #1 o dest_const o lhs o concl) (!defs)

@@ -71,4 +71,6 @@ theory that do not appear in some theorem in the list.
 
 val NUMERAL_conv : Conv.conv
 
+val uneta_type_bijection : thm -> thm
+
 end

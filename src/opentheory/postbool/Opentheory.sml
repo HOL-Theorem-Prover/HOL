@@ -32,14 +32,16 @@ fun tyop_name_in_map n = Map.find(tyop_from_ot_map(),n)
 local
   open Thm Drule
   fun uneta a t = BETA_CONV(mk_comb(mk_abs(a,t),a))
-  fun fix_bij th =
+in
+  fun uneta_type_bijection th =
   let
     val (a,eq) = dest_forall(concl th)
     val (l,r) = dest_eq eq
   in
     EXT (GEN a (TRANS (TRANS (uneta a l) (SPEC a th)) (SYM (uneta a r))))
   end
-in
+end
+
 fun define_tyop_in_thy
   {name={Thy=tthy,Tyop},ax,args,
    rep={Thy=rthy,Name=rep},abs={Thy=athy,Name=abs}} =
@@ -55,9 +57,8 @@ let
             raise ERR "define_tyop_in_thy" ("wrong theory: "^ct^" (given "^athy^" for "^abs^" and "^rthy^" for "^rep^")")
   val bij = define_new_type_bijections {name=Tyop^"_bij",ABS=abs,REP=rep,tyax=th}
   val (ar,ra) = CONJ_PAIR bij
-in {rep_abs=fix_bij ra,
-    abs_rep=fix_bij ar} end
-end
+in {rep_abs=uneta_type_bijection ra,
+    abs_rep=uneta_type_bijection ar} end
 
 fun define_const_in_thy ML_name {Thy,Name} rhs = let
   val ct = current_theory()
