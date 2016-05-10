@@ -141,6 +141,10 @@ fun graphbuild optinfo incinfo g =
         else
           ((fn s => info ("Starting work on " ^ s)), "", (fn () => ()),
            id, id, id)
+    fun stdhandle tag f =
+      case Binarymap.peek (!monitor_map, tag) of
+          NONE => (warn ("Lost monitor info for "^tag); NONE)
+        | SOME info => f info
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
@@ -157,11 +161,8 @@ fun graphbuild optinfo incinfo g =
             NONE
           end
         | Output((_, tag), t, chan, msg) =>
-          let
-          in
-            case Binarymap.peek(!monitor_map, tag) of
-                NONE => (warn ("Lost monitor info for "^tag); NONE)
-              | SOME ((strm,tb),stat) =>
+          stdhandle tag
+            (fn ((strm,tb),stat) =>
                 let
                   val stat' = case stat of MRunning c => MRunning (nextchar c)
                                          | Stalling _ => MRunning #"|"
@@ -173,14 +174,10 @@ fun graphbuild optinfo incinfo g =
                                      (((strm,append msg tb), stat')));
                   display_map();
                   NONE
-                end
-          end
+                end)
         | NothingSeen((_, tag), {delay,...}) =>
-          let
-          in
-            case Binarymap.peek(!monitor_map, tag) of
-                NONE => (warn ("Lost monitor info for "^tag); NONE)
-              | SOME (strm,stat) =>
+          stdhandle tag
+            (fn (strm,stat) =>
                 let
                   val stat' =
                       case stat of
@@ -196,14 +193,10 @@ fun graphbuild optinfo incinfo g =
                     Binarymap.insert(!monitor_map, tag, (strm, stat'));
                   display_map();
                   NONE
-                end
-          end
+                end)
         | Terminated((_, tag), st, _) =>
-          let
-          in
-            case Binarymap.peek(!monitor_map, tag) of
-                NONE => (warn ("Lost monitor info for "^tag); NONE)
-              | SOME ((strm,tb),stat) =>
+          stdhandle tag
+            (fn ((strm,tb),stat) =>
                 let
                   val {fulllines,lastpartial,pattern_seen} =
                       tailbuffer.output tb
@@ -225,21 +218,16 @@ fun graphbuild optinfo incinfo g =
                   display_map();
                   if st = W_EXITED orelse keep_going then NONE
                   else SOME KillAll
-                end
-          end
+                end)
         | MonitorKilled((_, tag), _) =>
-          let
-          in
-            case Binarymap.peek(!monitor_map, tag) of
-                NONE => (warn ("Lost monitor info for "^ tag); NONE)
-              | SOME ((strm,tb), stat) =>
+          stdhandle tag
+            (fn ((strm,tb), stat) =>
                 (info (infopfx ^ StringCvt.padRight #" " 72 tag ^
                        red "M-KILLED");
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                  display_map();
-                 NONE)
-          end
+                 NONE))
         | _ => NONE
 
     fun genjob g =
