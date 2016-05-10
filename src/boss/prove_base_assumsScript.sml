@@ -1030,6 +1030,11 @@ val th108 = store_thm("th108", el 108 goals |> concl,
 
 (* other theorems from boolTheory *)
 
+val MONO_IMP = store_thm("MONO_IMP", concl boolTheory.MONO_IMP,
+  rpt strip_tac
+  \\ rpt(first_x_assum match_mp_tac)
+  \\ first_x_assum ACCEPT_TAC);
+
 val IMP_DISJ_THM = store_thm("IMP_DISJ_THM", concl boolTheory.IMP_DISJ_THM,
   rpt gen_tac
   \\ qspec_then`A`FULL_STRUCT_CASES_TAC bool_cases
