@@ -120,9 +120,10 @@ fun graphbuild optinfo incinfo g =
         val _ = print "\r"
       in
         if Binarymap.numItems (!monitor_map) > 1 then
-          Binarymap.app (fn (k,(_,v)) =>
-                            print (polish k ^ statusString v))
-                        (!monitor_map)
+          (Binarymap.app (fn (k,(_,v)) =>
+                             print (polish k ^ statusString v))
+                         (!monitor_map);
+           print "\027[0K" (* ANSI clear to EOL code *))
         else
           case Binarymap.listItems (!monitor_map) of
               [] => ()
