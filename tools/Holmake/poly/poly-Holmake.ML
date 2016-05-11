@@ -35,6 +35,7 @@ val _ = useC "poly/HM_Cline";
 val _ = useC "poly/HM_BaseEnv";
 val _ = use  "../BuildCommand.sig";
 val _ = useC "poly/ProcessMultiplexor";
+val _ = useC "poly/MB_Monitor";
 val _ = useS "poly/multibuild";
 val _ = useS "poly/BuildCommand";
 val _ = useS "Holmake";
