@@ -61,6 +61,8 @@ sig
   val die_with : string -> 'a
 
 
+  val check_distrib : string -> string option
+    (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit

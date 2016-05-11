@@ -119,6 +119,25 @@ end
 
 fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
+fun check_distrib toolname = let
+  val fpath = fullPath
+  open FileSys
+  fun checkdir () =
+    access ("sigobj", [A_READ, A_EXEC]) andalso
+    isDir "sigobj" andalso
+    access (fpath ["bin", "Holmake"], [A_READ, A_EXEC])
+  fun traverse () = let
+    val d = getDir()
+  in
+    if checkdir() then SOME (fpath [d, "bin", toolname])
+    else if Path.isRoot d then NONE
+    else (chDir Path.parentArc; traverse())
+  end
+  val start = getDir()
+in
+  traverse() before chDir start
+end
+
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
   val mypath = find_my_path()
@@ -129,26 +148,6 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
     TextIO.output(outstr, mypath ^ "\n");
     TextIO.closeOut outstr
   end handle IO.Io _ => ()
-
-  fun check_distrib () = let
-    open FileSys
-    val _ = diag "Looking to see if I am in a HOL distribution."
-    fun checkdir () =
-        access ("sigobj", [A_READ, A_EXEC]) andalso
-        isDir "sigobj" andalso
-        access ("bin/Holmake", [A_READ, A_EXEC])
-    fun traverse () = let
-      val d = getDir()
-    in
-      if checkdir() then
-        SOME (Path.concat (d, "bin/Holmake"))
-      else if Path.isRoot d then NONE
-      else (chDir Path.parentArc; traverse())
-    end
-    val start = getDir()
-  in
-    traverse() before chDir start
-  end
 
   fun lmfile() =
       if not no_lastmakercheck andalso
@@ -180,7 +179,8 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
         end
       else write_lastmaker_file()
 in
-  case check_distrib() of
+  diag "Looking to see if I am in a HOL distribution.";
+  case check_distrib "Holmake" of
     NONE => let
     in
       diag "Not in a HOL distribution";
