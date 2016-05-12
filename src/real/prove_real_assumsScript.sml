@@ -179,14 +179,9 @@ val th3 = store_thm("th3",el 3 goals,
 val th4 = store_thm("th4",el 4 goals,
   metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM])
 
-(*
 val otax = mk_thm([],
-  ``!p. (?x. p x) /\ (?m. !x. p x ==> x <= m) ==>
+  ``!p. (?(x:real). p x) /\ (?m. !x. p x ==> x <= m) ==>
         ?s. (!x. p x ==> x <= s) /\ !m. (!x. p x ==> x <= m) ==> s <= m``);
-
-val REAL_NEGNEG = prove(
-  ``!x. ~~x = x``,
-  metis_tac[REAL_LNEG_UNIQ, REAL_ADD_SYM, REAL_ADD_LINV])
 
 val REAL_LE_LT = prove(
   ``!x y. x <= y = x < y \/ (x = y)``,
@@ -194,28 +189,14 @@ val REAL_LE_LT = prove(
 
 val th5 = store_thm("th5",el 5 goals,
   rpt strip_tac
-  \\ qspec_then`\x. P x \/ (x = z)`mp_tac otax
-  \\ simp[PULL_FORALL,REAL_LE_LT]
-  \\ impl_tac >- metis_tac[]
+  \\ qspec_then`P`mp_tac otax
+  \\ impl_tac >- metis_tac[REAL_LE_LT]
   \\ strip_tac
   \\ qexists_tac`s`
   \\ gen_tac
   \\ EQ_TAC \\ strip_tac
-  >- ( metis_tac[th1] )
-  \\ spose_not_then strip_assume_tac
-  \\ first_x_assum(qspecl_then[`x`,`y`]mp_tac)
-  \\ strip_tac \\ pop_assum mp_tac
-  \\ impl_tac
-  >- (
-    qx_gen_tac`a`
-    \\ strip_tac
-    >- metis_tac[REAL_LE_LT,REAL_LE_TOTAL]
-    \\ rpt BasicProvers.var_eq_tac
-    \\ `(x = s) \/ x < s` by metis_tac[]
-    >- metis_tac[]
-      rpt BasicProvers.var_eq_tac
-  \\ Cases_on`y < x` >- metis_tac[]
-*)
+  >- metis_tac[th1,REAL_LE_LT]
+  \\ metis_tac[REAL_LE_TOTAL,REAL_LE_LT,real_lt]);
 
 val th6 = store_thm("th6",el 6 goals,
   metis_tac[REAL_MUL_LINV,REAL_0,REAL_1,inv0_def]);
