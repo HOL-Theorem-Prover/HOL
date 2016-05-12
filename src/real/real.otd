@@ -2,7 +2,7 @@ delconst abs
 delconst max
 delconst min
 delconst pow
-delconst real_div
+delconst /
 delconst real_ge
 delconst real_gt
 delconst real_lte

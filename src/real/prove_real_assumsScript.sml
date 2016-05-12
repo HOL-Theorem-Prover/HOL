@@ -6,6 +6,10 @@ val _ = new_theory Thy;
 
 val REAL_0 = new_definition("REAL_0",concl realTheory.REAL_0);
 val REAL_1 = new_definition("REAL_1",concl realTheory.REAL_1);
+val _ = new_constant("inv",``:real -> real``);
+val inv0_def = new_definition("inv0_def",``inv0 x = if x = 0 then 0 else inv x``);
+val _ = new_constant("/",``:real -> real -> real``);
+val real_div_def = new_definition("real_div_def",``real_div x y = if y = 0 then 0 else prove_real_assums$/ x y``);
 
 val _ = new_constant("hol-real-assums-1.0",alpha);
 
@@ -22,7 +26,7 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Data","Bool"],"F") = {Thy="bool",Name="F"}
   | const_name (["Data","Bool"],"cond") = {Thy="bool",Name="COND"}
   | const_name (["Number","Real"],"fromNatural") = {Thy="real",Name="real_of_num"}
-  | const_name (["Number","Real"],"inv") = {Thy="realax",Name="inv"}
+  | const_name (["Number","Real"],"inv") = {Thy=Thy,Name="inv"}
   | const_name (["Number","Real"],"<") = {Thy="realax",Name="real_lt"}
   | const_name (["Number","Real"],">") = {Thy="real",Name="real_gt"}
   | const_name (["Number","Real"],">=") = {Thy="real",Name="real_ge"}
@@ -31,6 +35,7 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Number","Real"],"+") = {Thy="realax",Name="real_add"}
   | const_name (["Number","Real"],"-") = {Thy="real",Name="real_sub"}
   | const_name (["Number","Real"],"~") = {Thy="realax",Name="real_neg"}
+  | const_name (["Number","Real"],"/") = {Thy=Thy,Name="/"}
   | const_name (["Number","Real"],"max") = {Thy="real",Name="max"}
   | const_name (["Number","Real"],"min") = {Thy="real",Name="min"}
   | const_name (["Number","Real"],"abs") = {Thy="real",Name="abs"}
@@ -40,6 +45,8 @@ fun const_name ([],"=") = {Thy="min",Name="="}
   | const_name (["Number","Natural"],"bit1") = {Thy="arithmetic",Name="BIT1"}
   | const_name (["HOL4","realax"],"real_0") = {Thy=Thy,Name="real_0"}
   | const_name (["HOL4","realax"],"real_1") = {Thy=Thy,Name="real_1"}
+  | const_name (["HOL4","realax"],"inv") = {Thy=Thy,Name="inv0"}
+  | const_name (["HOL4","real"],"/") = {Thy=Thy,Name="real_div"}
   | const_name (ns,n) = {Thy=Thy,Name=String.concatWith "_"(ns@[n])}
 fun tyop_name ([],"bool") = {Thy="min",Tyop="bool"}
   | tyop_name ([],"->") = {Thy="min",Tyop="fun"}
@@ -118,6 +125,13 @@ val goals = map concl (Net.listItems goalsNet)
 val real_lt = CONV_RULE SWAP_FORALL_CONV realTheory.real_lt;
 val () = Thm.delete_proof real_lt;
 
+val REAL_MUL_LINV = mk_thm([],
+  subst[prim_mk_const{Thy="realax",Name="inv"} |-> prim_mk_const{Thy=Thy,Name="inv"}]
+  (concl realTheory.REAL_MUL_LINV))
+
+val real_div0 = mk_thm([],
+  ``!x y. ~(y = 0) ==> (prove_real_assums$/ x y = x * prove_real_assums$inv y)``);
+
 val th1 = store_thm("th1",el 1 goals,
   rpt gen_tac
   \\ PURE_REWRITE_TAC[real_lt]
@@ -140,61 +154,6 @@ val th2 = store_thm("th2",el 2 goals,
   \\ `z = y` by metis_tac[REAL_ADD_LID,REAL_ADD_LINV]
   \\ metis_tac[REAL_LE_ANTISYM]);
 
-val th4 = store_thm("th4",el 4 goals,
-  metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM])
-
-val th6 = store_thm("th6",el 6 goals,
-  metis_tac[realTheory.REAL_MUL_LINV,REAL_0,REAL_1]);
-
-val th7 = store_thm("th7",el 7 goals,
-  metis_tac[realTheory.REAL_ADD_LINV,REAL_0]);
-
-val th8 = store_thm("th8",el 8 goals,
-  metis_tac[realTheory.REAL_ADD_LID,REAL_0]);
-
-val th9 = store_thm("th9",el 9 goals,
-  metis_tac[realTheory.REAL_MUL_LID,REAL_1]);
-
-val th10 = store_thm("th10",el 10 goals,
-  simp_tac bool_ss [real_lt,REAL_LE_REFL]);
-
-val (pow0,powsuc) = CONJ_PAIR realTheory.pow;
-val () = Thm.delete_proof pow0
-val () = Thm.delete_proof powsuc
-
-val th12 = store_thm("th12",el 12 goals,
-  MATCH_ACCEPT_TAC(CONJ pow0 powsuc));
-
-val th13 = store_thm("th13",el 13 goals,
-  REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_ADD,arithmeticTheory.ADD1]);
-
-val th14 = store_thm("th14",el 14 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,abs]);
-
-val th15 = store_thm("th15",el 15 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,min_def]);
-
-val th16 = store_thm("th16",el 16 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,max_def]);
-
-val th17 = store_thm("th17",el 17 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,real_sub]);
-
-val th18 = store_thm("th18",el 18 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM]
-  \\ metis_tac[real_lt]);
-
-val th19 = store_thm("th19",el 19 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,real_ge]);
-
-val th20 = store_thm("th120",el 20 goals,
-  SIMP_TAC bool_ss [FUN_EQ_THM,real_gt]);
-
-val th22 = store_thm("th22",el 22 goals,
-  PURE_REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_EQ,
-    arithmeticTheory.ONE,prim_recTheory.SUC_ID]
-  \\ strip_tac);
-
 val REAL_ADD_LID_UNIQ = prove(
   ``! x y. (x + y = y) = (x = 0)``,
   metis_tac[REAL_ADD_LID,REAL_ADD_SYM,REAL_ADD_LINV,REAL_ADD_ASSOC]);
@@ -216,6 +175,9 @@ val th3 = store_thm("th3",el 3 goals,
   \\ rpt strip_tac
   \\ `x * y = 0` by metis_tac[REAL_LE_ANTISYM]
   \\ metis_tac[REAL_ENTIRE,REAL_LE_REFL]);
+
+val th4 = store_thm("th4",el 4 goals,
+  metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM])
 
 (*
 val otax = mk_thm([],
@@ -254,5 +216,64 @@ val th5 = store_thm("th5",el 5 goals,
       rpt BasicProvers.var_eq_tac
   \\ Cases_on`y < x` >- metis_tac[]
 *)
+
+val th6 = store_thm("th6",el 6 goals,
+  metis_tac[REAL_MUL_LINV,REAL_0,REAL_1,inv0_def]);
+
+val th7 = store_thm("th7",el 7 goals,
+  metis_tac[realTheory.REAL_ADD_LINV,REAL_0]);
+
+val th8 = store_thm("th8",el 8 goals,
+  metis_tac[realTheory.REAL_ADD_LID,REAL_0]);
+
+val th9 = store_thm("th9",el 9 goals,
+  metis_tac[realTheory.REAL_MUL_LID,REAL_1]);
+
+val th10 = store_thm("th10",el 10 goals,
+  simp_tac bool_ss [real_lt,REAL_LE_REFL]);
+
+val (pow0,powsuc) = CONJ_PAIR realTheory.pow;
+val () = Thm.delete_proof pow0
+val () = Thm.delete_proof powsuc
+
+val th11 = store_thm("th11",el 11 goals,
+  MATCH_ACCEPT_TAC(CONJ pow0 powsuc));
+
+val th12 = store_thm("th12",el 12 goals,
+  REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_ADD,arithmeticTheory.ADD1]);
+
+val th13 = store_thm("th13",el 13 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,abs]);
+
+val th14 = store_thm("th14",el 14 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,min_def]);
+
+val th15 = store_thm("th15",el 15 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,max_def]);
+
+val th16 = store_thm("th16",el 16 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,real_sub]);
+
+val th17 = store_thm("th17",el 17 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,real_div_def,inv0_def]
+  \\ metis_tac[real_div0,REAL_MUL_LZERO,REAL_MUL_SYM]);
+
+val th18 = store_thm("th18",el 18 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM]
+  \\ metis_tac[real_lt]);
+
+val th19 = store_thm("th19",el 19 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,real_ge]);
+
+val th20 = store_thm("th20",el 20 goals,
+  SIMP_TAC bool_ss [FUN_EQ_THM,real_gt]);
+
+val th21 = store_thm("th21",el 21 goals,
+  metis_tac[inv0_def,REAL_0]);
+
+val th22 = store_thm("th22",el 22 goals,
+  PURE_REWRITE_TAC[REAL_0,REAL_1,REAL_OF_NUM_EQ,
+    arithmeticTheory.ONE,prim_recTheory.SUC_ID]
+  \\ strip_tac);
 
 val _ = export_theory();
