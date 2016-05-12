@@ -1,6 +1,7 @@
 signature buildutils =
 sig
 
+  val startup_check : unit -> unit
   val help_mesg : string
   val normPath : string -> string
   val fullPath : string list -> string

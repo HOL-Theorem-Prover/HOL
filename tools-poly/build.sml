@@ -12,6 +12,7 @@ datatype phase = Initial | Bare | Full
 
   fun main () = let
 
+    val _ = startup_check()
     val phase = ref Initial
 
 

@@ -28,6 +28,18 @@ fun warn s =
   let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
 fun I x = x
 
+
+fun startup_check () =
+  let
+    val me = Systeml.find_my_path()
+  in
+    case Holmake_tools.check_distrib "build" of
+        NONE => ()
+      | SOME whereami =>
+        if whereami = me then ()
+        else die "*** Don't run this instance of build in a foreign HOL directory"
+  end
+
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
 val OS = Systeml.OS;

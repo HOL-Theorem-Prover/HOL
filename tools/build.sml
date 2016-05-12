@@ -18,6 +18,7 @@ prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
 open buildutils
+val _ = startup_check()
 
 (* ----------------------------------------------------------------------
     Analysing the command-line
