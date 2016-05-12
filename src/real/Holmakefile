@@ -19,4 +19,5 @@ hol4-real-sat.art: hol4-real-sat.thy prove_real_assums.ot.art hol4-real-unsat.ar
 	opentheory info --article -o $@ $<
 real.art: real.otd
 topology.art: topology.otd
+prove_real_assums.art: hol4-real-assums.art
 endif
