@@ -1,0 +1,4 @@
+skipthm datatype_float
+skipthm datatype_float_compare
+skipthm datatype_float_value
+skipthm datatype_rounding
