@@ -148,7 +148,7 @@ val th2 = store_thm("th2",el 2 goals,
   \\ reverse(qspecl_then[`y`,`z`]strip_assume_tac REAL_LE_TOTAL)
   >- asm_simp_tac bool_ss []
   \\ rpt strip_tac
-  \\ `x + y ≤ x + z` by metis_tac[REAL_LE_LADD_IMP]
+  \\ `x + y <= x + z` by metis_tac[REAL_LE_LADD_IMP]
   \\ `x + z = x + y` by metis_tac[REAL_LE_ANTISYM]
   \\ `~x + x + z = ~x + x + y` by metis_tac[REAL_ADD_ASSOC]
   \\ `z = y` by metis_tac[REAL_ADD_LID,REAL_ADD_LINV]
