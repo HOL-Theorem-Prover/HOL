@@ -21,7 +21,8 @@ main {
 }
 unsat {
   import: proofs
-  package: hol-base-unsat-1.0
+  article: "hol4-base-unsat.art"
+  interpretation: "../opentheory/hol4.int"
 }
 bool {
   article: "bool_defs.ot.art"

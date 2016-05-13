@@ -4,7 +4,7 @@ val Thy = "prove_base_assums";
 
 val _ = new_theory Thy;
 
-val _ = new_constant("base-1.200",alpha);
+val _ = new_constant("base-1.202",alpha);
 
 fun fix_tyop {abs={Name="_",Thy=athy},rep={Name="_",Thy=rthy},args,ax,name={Thy=tthy,Tyop=tyop}} =
   {abs={Name=(tyop^"_abs"),Thy=athy},

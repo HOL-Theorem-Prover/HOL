@@ -8,9 +8,10 @@ main {
   import: hol
 }
 base {
-  package: base-1.200
+  package: base-1.202
 }
 hol {
   import: base
-  package: hol-base-unsat-1.0
+  article: "hol4-base-unsat.art"
+  interpretation: "../opentheory/hol4.int"
 }
