@@ -1,1 +1,12 @@
 INCLUDES = ../../common ../../lib
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+ifeq ($(KERNELID),-otknl)
+all: $(TARGETS)
+.PHONY: all
+arm-model.art: arm-model.thy arm.ot.art
+	opentheory info --article -o $@ $<
+arm.art: arm.otd
+endif
