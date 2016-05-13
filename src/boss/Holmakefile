@@ -49,6 +49,7 @@ ARTS =bool_defs.ot.art\
   ../pair/src/poset.ot.art\
   ../sum/sum.ot.art\
   ../option/option.ot.art\
+  ../HolSat/sat.ot.art\
   ../num/theories/num.ot.art\
   ../num/theories/prim_rec.ot.art\
   ../num/theories/arithmetic.ot.art\

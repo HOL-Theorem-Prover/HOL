@@ -12,6 +12,7 @@ main {
   import: pair
   import: poset
   import: option
+  import: sat
   import: sum
   import: num
   import: prim-rec
@@ -233,4 +234,8 @@ numposrep {
   import: marker
   import: relation
   article: "../list/src/numposrep.ot.art"
+}
+sat {
+  import: bool
+  article: "../HolSat/sat.ot.art"
 }
