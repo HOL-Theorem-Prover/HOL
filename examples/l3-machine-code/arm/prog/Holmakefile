@@ -18,3 +18,7 @@ $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b ../step/arm-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif
+
+ifeq($(KERNELID),-otknl)
+arm_prog.art: arm_prog.otd
+endif
