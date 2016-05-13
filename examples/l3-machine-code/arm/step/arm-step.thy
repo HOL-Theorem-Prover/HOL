@@ -19,7 +19,6 @@ show: "Data.Pair"
 show: "Data.Unit"
 show: "Function"
 show: "Number.Natural"
-show: "Relation"
 main {
   article: "arm_step.ot.art"
   interpretation: "../../../../src/opentheory/hol4.int"
