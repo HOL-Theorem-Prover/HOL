@@ -1,6 +1,6 @@
-name: hol-machine-code-hoare-triple
+name: machine-code-hoare-logic
 version: 1.0
-description: Machine code Hoare logic from HOL4 examples
+description: A Hoare logic for machine code
 author: HOL developers <hol-developers@lists.sourceforge.net>
 license: MIT
 requires: base
@@ -14,6 +14,6 @@ show: "Function"
 show: "Number.Natural"
 show: "Relation"
 main {
-  article: "hol4-machine-code-hoare-triple-unint.art"
+  article: "machine-code-hoare-logic-unint.art"
   interpretation: "../../../src/opentheory/hol4.int"
 }

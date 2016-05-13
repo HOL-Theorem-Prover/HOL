@@ -9,9 +9,9 @@ ifeq ($(KERNELID),-otknl)
 ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
 all: $(ARTFILES)
 
-hol4-machine-code-hoare-triple-unint.art: hol4-machine-code-hoare-triple-unint.thy $(ARTFILES)
+machine-code-hoare-logic-unint.art: machine-code-hoare-logic-unint.thy $(ARTFILES)
 	opentheory info --article -o $@ $<
 
-hol4-machine-code-hoare-triple.art: hol4-machine-code-hoare-triple.thy hol4-machine-code-hoare-triple-unint.art
+machine-code-hoare-logic.art: machine-code-hoare-logic.thy machine-code-hoare-logic-unint.art
 	opentheory info --article -o $@ $<
 endif

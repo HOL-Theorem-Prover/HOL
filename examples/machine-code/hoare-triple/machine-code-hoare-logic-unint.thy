@@ -1,6 +1,6 @@
-name: hol-machine-code-hoare-triple
+name: machine-code-hoare-logic-unint
 version: 1.0
-description: A Hoare logic for machine code
+description: A Hoare logic for machine code (before re-interpretation)
 author: HOL developers <hol-developers@lists.sourceforge.net>
 license: MIT
 main {
