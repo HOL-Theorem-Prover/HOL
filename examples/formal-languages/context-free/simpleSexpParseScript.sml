@@ -91,6 +91,14 @@ val peg_eval_list_tok_imp_every = Q.store_thm("peg_eval_list_tok_imp_every",
   \\ qexists_tac`h::l`
   \\ rw[] \\ fs[listTheory.NULL_EQ]);
 
+val peg_eval_list_tok_every_imp = Q.store_thm("peg_eval_list_tok_every_imp",
+  `∀ls x rst. EVERY P ls ∧ ¬ P x ⇒
+   peg_eval_list G (ls ++ [x] ++ rst, tok P a) ([x] ++ rst, MAP a ls)`,
+  Induct \\ simp[] \\ simp[Once peg_eval_list]
+  \\ simp[peg_eval_tok_NONE]
+  \\ rw[] \\ fs[]
+  \\ simp[peg_eval_tok_SOME]);
+
 (* -- *)
 
 val parse_sexp_def = Define`
@@ -361,11 +369,82 @@ val peg_eval_sexpnum_nondigit = Q.store_thm("peg_eval_sexpnum_nondigit",
   \\ disj1_tac
   \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_tok_NONE])
 
+(*
+val peg_eval_sexpseq_suffix = Q.store_thm("peg_eval_sexpseq_suffix",
+  `∀str r s.
+   peg_eval sexpPEG (str, pnt sxnt_sexpseq) (SOME (r,s)) ⇒
+   ∃s1.
+     str = s1 ++ ")" ++ r ∧
+     ∀s2. peg_eval sexpPEG (s1 ++ ")" ++ s2, pnt sxnt_sexpseq) (SOME (s2,s))`,
+  gen_tac \\ completeInduct_on`LENGTH str` \\ rw[] \\ fs[PULL_FORALL]
+  \\ pop_assum mp_tac
+  \\ simp[Once pnt_def,Once peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
+  \\ simp[peg_eval_choicel_CONS]
+  \\ strip_tac
+  >- (
+    pop_assum mp_tac
+    \\ simp[grabWS_def,ignoreL_def,pegf_def,peg_eval_seq_SOME,PULL_EXISTS]
+    \\ simp[tokeq_def,peg_eval_tok_SOME]
+    \\ simp[peg_eval_rpt,PULL_EXISTS]
+    \\ gen_tac \\ strip_tac
+    \\ imp_res_tac peg_eval_list_tok_imp_every
+    \\ fs[]
+    \\ qmatch_assum_rename_tac`EVERY isSpace ss`
+    \\ qexists_tac`ss` \\ simp[] \\ rw[]
+    \\ simp[Once pnt_def,Once peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
+    \\ simp[peg_eval_choicel_CONS]
+    \\ disj1_tac
+    \\ simp[grabWS_def,ignoreL_def,pegf_def,peg_eval_seq_SOME,PULL_EXISTS]
+    \\ simp[tokeq_def,peg_eval_tok_SOME]
+    \\ simp[peg_eval_rpt,PULL_EXISTS]
+    \\ Q.ISPEC_THEN`sexpPEG`(fn th => first_assum(mp_tac o MATCH_MP(GEN_ALL(ONCE_REWRITE_RULE[GSYM AND_IMP_INTRO]th))))
+         (Q.GEN`G`peg_eval_list_tok_every_imp)
+    \\ disch_then(fn th => first_assum (mp_tac o MATCH_MP th ))
+    \\ simp[] \\ metis_tac[] )
+  \\ pop_assum mp_tac
+  \\ simp[peg_eval_seq_SOME,PULL_EXISTS]
+  \\ rpt gen_tac \\ strip_tac
+*)
+
 val peg_eval_sexp0_add_stop = Q.store_thm("peg_eval_sexp0_add_stop",
   `peg_eval sexpPEG (str,pnt sxnt_sexp0) (SOME (r,s)) ⇒ nonStarter c ∧ ¬isSpace c ⇒
    peg_eval sexpPEG (str++[c]++rst,pnt sxnt_sexp0) (SOME (r++[c]++rst,s))`,
   simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
   \\ cheat);
+
+(*
+val peg_eval_sexpseq_print_space_separated = Q.store_thm("peg_eval_sexpseq_print_space_separated",
+  `∀sxc ls sexps.
+   strip_sxcons sxc = SOME ls ∧ LENGTH sexps = LENGTH ls ∧
+  (∀n. n < LENGTH ls ⇒ peg_eval sexpPEG (EL n sexps,pnt sxnt_sexp0) (SOME ("",EL n ls)))
+   ⇒
+   peg_eval sexpPEG (print_space_separated sexps ++ ")", pnt sxnt_sexpseq) (SOME("", sxc))`,
+  ho_match_mp_tac strip_sxcons_ind \\ rw[]
+  \\ qhdtm_x_assum`strip_sxcons`mp_tac
+  \\ simp[Once strip_sxcons_def]
+  \\ reverse BasicProvers.CASE_TAC \\ rw[]
+  >- (
+    fs[rich_listTheory.LENGTH_NIL,print_space_separated_def]
+    \\ simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
+    \\ simp[peg_eval_choicel_CONS]
+    \\ disj1_tac
+    \\ simp[pegf_def,peg_eval_seq_SOME,grabWS_def,ignoreL_def,tokeq_def,
+            peg_eval_tok_SOME, peg_eval_rpt]
+    \\ simp[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
+    \\ EVAL_TAC \\ metis_tac[] )
+  \\ rfs[]
+  \\ Cases_on`sexps` \\ fs[]
+  \\ simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
+  \\ simp[peg_eval_choicel_CONS]
+  \\ disj2_tac
+  \\ conj_tac
+  >- (
+    simp[pegf_def,peg_eval_seq_NONE,grabWS_def,ignoreL_def]
+    \\ disj2_tac
+    \\ simp[print_space_separated_def]
+    \\ cheat )
+  \\ simp[peg_eval_seq_SOME]
+*)
 
 val peg_eval_print_sexp0 = Q.store_thm("peg_eval_print_sexp0",
   `∀s. valid_sexp s ⇒
@@ -624,6 +703,18 @@ val peg_eval_print_sexp0 = Q.store_thm("peg_eval_print_sexp0",
   \\ every_case_tac \\ fs[] \\ rw[]
   \\ fs[Once strip_sxcons_def] \\ rw[]
   \\ every_case_tac \\ fs[] \\ rw[]
+  \\ simp[pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
+  \\ simp[peg_eval_choicel_CONS]
+  \\ disj2_tac
+  \\ conj_tac
+  >- (
+    simp[GSYM pnt_def]
+    \\ match_mp_tac peg_eval_sexpnum_nondigit
+    \\ EVAL_TAC )
+  \\ disj1_tac
+  \\ simp[ignoreR_def,ignoreL_def,peg_eval_seq_NONE,tokeq_def,peg_eval_tok_NONE,
+          peg_eval_seq_SOME,PULL_EXISTS,peg_eval_tok_SOME,pegf_def,grabWS_def,
+          peg_eval_rpt]
   \\ cheat (* similar to a few instances of previous cheat *));
 
 val peg_eval_print_sexp = Q.store_thm("peg_eval_print_sexp",
