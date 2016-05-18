@@ -1365,11 +1365,26 @@ val ODD_EXISTS = store_thm ("ODD_EXISTS",
    [REWRITE_TAC[EVEN_ODD_EXISTS],
     DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN MATCH_ACCEPT_TAC ODD_DOUBLE]);
 
+val EVEN_EXP_IFF = Q.store_thm(
+  "EVEN_EXP_IFF",
+  `!n m. EVEN (m ** n) <=> 0 < n /\ EVEN m`,
+  INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EXP, ONE, EVEN, EVEN_MULT, LESS_0, LESS_REFL] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
+
 val EVEN_EXP = Q.store_thm ("EVEN_EXP",
    `!m n. 0 < n /\ EVEN m ==> EVEN (m ** n)`,
-   REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
-   RW_TAC bool_ss [EXP, EVEN_MULT] THEN
-   METIS_TAC [prim_recTheory.NOT_LESS_0]);
+   METIS_TAC[EVEN_EXP_IFF]);
+
+val ODD_EXP_IFF = Q.store_thm(
+  "ODD_EXP_IFF",
+  `!n m. ODD (m ** n) <=> (n = 0) \/ ODD m`,
+  REWRITE_TAC [ODD_EVEN, EVEN_EXP_IFF, DE_MORGAN_THM, NOT_LT_ZERO_EQ_ZERO]);
+
+val ODD_EXP = Q.store_thm(
+  "ODD_EXP",
+  `!m n. 0 < n /\ ODD m ==> ODD (m ** n)`,
+  METIS_TAC[ODD_EXP_IFF, NOT_LT_ZERO_EQ_ZERO]);
 
 (* --------------------------------------------------------------------- *)
 (* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
