@@ -457,9 +457,9 @@ local
                    [DecodeShift_def, HighestSetBit_def, Ones_def, Zeros_def,
                     Replicate_def, DecodeRegExtend_def, ShiftValue_def,
                     bit_field_insert_thms, ConditionTest, ExtendWord,
-                    DecodeBitMasks_def, LSL_def, LSR_def, ASR_def, ROR_def,
-                    wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
-                    num2ShiftType_thm, num2ExtendType_thm])
+                    DecodeBitMasks_def, wordsTheory.WORD_AND_CLAUSES,
+                    wordsTheory.WORD_OR_CLAUSES, num2ShiftType_thm,
+                    num2ExtendType_thm])
                 cmp
             ; computeLib.add_conv
                 (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
