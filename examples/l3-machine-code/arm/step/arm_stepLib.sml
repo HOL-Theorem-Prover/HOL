@@ -3638,7 +3638,9 @@ val CPSRWriteByInstr =
                    (PSR_CONV
                     THENC COND_T_CONV
                              (PairedLambda.let_CONV
-                              THENC RAND_CONV DATATYPE_CONV
+                              THENC RAND_CONV
+                                      (DATATYPE_CONV
+                                       THENC PairedLambda.let_CONV)
                               THENC PairedLambda.let_CONV
                               THENC DATATYPE_CONV
                               THENC utilsLib.INST_REWRITE_CONV [IsSecure]
@@ -3651,7 +3653,9 @@ val CPSRWriteByInstr =
           THENC PairedLambda.let_CONV
           THENC COND_T_CONV
                    (Conv.RAND_CONV
-                      (REWRITE_CONV [PSR_FLAGS] THENC COND_UPDATE2_CONV [])
+                      (PairedLambda.let_CONV
+                       THENC REWRITE_CONV [PSR_FLAGS]
+                       THENC COND_UPDATE2_CONV [])
                     THENC PairedLambda.let_CONV
                     THENC DATATYPE_CONV
                     THENC utilsLib.INST_REWRITE_CONV [IsSecure]
@@ -3685,11 +3689,13 @@ val CPSRWriteByInstr_control_not_usr =
          THENC REWRITE_CONV []
          THENC utilsLib.INST_REWRITE_CONV [IsSecure]
          THENC REWRITE_CONV []
+         THENC Conv.RAND_CONV PairedLambda.let_CONV
          THENC PairedLambda.let_CONV
          THENC REWRITE_CONV []
          THENC PairedLambda.let_CONV
          THENC utilsLib.INST_REWRITE_CONV [IsSecure]
          THENC REWRITE_CONV []
+         THENC Conv.RAND_CONV PairedLambda.let_CONV
          THENC PairedLambda.let_CONV
          THENC RAND_CONV DATATYPE_CONV
          THENC utilsLib.INST_REWRITE_CONV [NotHyp]
@@ -3697,9 +3703,6 @@ val CPSRWriteByInstr_control_not_usr =
          THENC PairedLambda.let_CONV
          THENC utilsLib.INST_REWRITE_CONV [NotHyp]
          THENC REWRITE_CONV []
-         THENC PairedLambda.let_CONV
-         THENC utilsLib.INST_REWRITE_CONV [NotHyp]
-         THENC REWRITE_CONV [PSR_FIELDS]
          THENC PairedLambda.let_CONV
          THENC DATATYPE_CONV
          THENC REWRITE_CONV [PSR_FIELDS])
