@@ -461,6 +461,21 @@ val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
 
 val _ = addThms [dfn'Znop_def]
 
+val Zcmc_rwt =
+   EV [dfn'Zcmc_def, CF_def, write'CF_def, Eflag_rwt, write'Eflag_rwt] [] []
+      ``dfn'Zcmc``
+   |> addThms
+
+val Zclc_rwt =
+   EV [dfn'Zclc_def, CF_def, write'CF_def, write'Eflag_rwt] [] []
+      ``dfn'Zclc``
+   |> addThms
+
+val Zstc_rwt =
+   EV [dfn'Zstc_def, CF_def, write'CF_def, write'Eflag_rwt] [] []
+      ``dfn'Zstc``
+   |> addThms
+
 val Zbinop_rwts =
    EV ([dfn'Zbinop_def, read_dest_src_ea_def] @
        ea_Zsrc_rwt @ ea_Zdest_rwt @ EA_rwt) [] src_dst
