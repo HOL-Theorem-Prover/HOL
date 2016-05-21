@@ -1,7 +1,7 @@
 name: hol-triple
 version: 1.0
 description: triple
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   article: "triple.ot.art"

@@ -1,7 +1,7 @@
 name: machine-code-hoare-logic-unint
 version: 1.0
 description: Machine code Hoare logic state (before re-interpretation)
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   import: state

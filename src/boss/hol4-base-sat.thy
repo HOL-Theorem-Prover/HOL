@@ -1,7 +1,7 @@
 name: hol-base-sat
 version: 1.0
 description: HOL basic theories plus proofs of assumptions
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 show: "HOL4"
 show: "Data.Bool"

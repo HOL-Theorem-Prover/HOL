@@ -1,7 +1,7 @@
 name: hol-ring-unint
 version: 1.0
 description: HOL ring theories (before re-interpretation)
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   import: ring

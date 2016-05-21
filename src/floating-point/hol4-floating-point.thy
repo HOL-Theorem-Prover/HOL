@@ -1,7 +1,7 @@
 name: hol-floating-point
 version: 1.0
 description: HOL floating point theories
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
 requires: hol-base

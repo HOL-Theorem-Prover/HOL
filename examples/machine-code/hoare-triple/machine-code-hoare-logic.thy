@@ -1,7 +1,7 @@
 name: machine-code-hoare-logic
 version: 1.0
 description: A Hoare logic for machine code
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
 requires: hol-base

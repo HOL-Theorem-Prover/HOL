@@ -1,7 +1,7 @@
 name: hol-real-sat
 version: 1.0
 description: HOL real theories plus proofs of assumptions
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 requires: base
 requires: hol-base

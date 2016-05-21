@@ -1,7 +1,7 @@
 name: hol-base
 version: 1.1
 description: HOL basic theories
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 show: "HOL4"
 show: "Data.Bool"

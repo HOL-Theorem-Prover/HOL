@@ -1,7 +1,7 @@
 name: hol-words-unint
 version: 1.0
 description: n-bit words (before re-interpretation)
-author: HOL developers <hol-developers@lists.sourceforge.net>
+author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
 main {
   import: alignment
