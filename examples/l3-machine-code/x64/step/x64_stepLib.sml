@@ -156,9 +156,9 @@ val write'mem8_rwt =
 
 val sizes = [``Z8 have_rex``, ``Z16``, ``Z32``, ``Z64``]
 
-val Eflag_rwt =
-   EV [Eflag_def] [[``^st.EFLAGS (flag) = SOME b``]] []
-      ``Eflag (flag)``
+val Cflag_rwt =
+   EV [Eflag_def] [[``^st.EFLAGS Z_CF = SOME cflag``]] []
+      ``Eflag Z_CF``
    |> hd
 
 val write'Eflag_rwt =
@@ -338,7 +338,7 @@ val write_binop_rwt =
         Zsize_width_def, word_size_msb_def,
         word_signed_overflow_add_def, word_signed_overflow_sub_def,
         erase_eflags, write_PF_rwt, write'CF_def, write'OF_def,
-        write'Eflag_rwt, CF_def, Eflag_rwt, FlagUnspecified_def] @
+        write'Eflag_rwt, CF_def, Cflag_rwt, FlagUnspecified_def] @
        write_arith_eflags_rwt @ write_logical_eflags_rwt @ write_SF_rwt @
        write_ZF_rwt @ write'EA_rwt) []
       (utilsLib.augment (`bop`, binops) ea_op)
@@ -351,7 +351,7 @@ val write_monop_rwt =
         write_arith_result_no_CF_OF_def,
         write_arith_eflags_except_CF_OF_def,
         write_PF_rwt, write'CF_def, write'OF_def,
-        write'Eflag_rwt, CF_def, Eflag_rwt, FlagUnspecified_def] @
+        write'Eflag_rwt, CF_def, FlagUnspecified_def] @
        write_SF_rwt @ write_ZF_rwt @ write'EA_rwt) []
       (utilsLib.augment (`mop`, monops) ea_op)
       ``write_monop (size1, mop, x, ea)``
@@ -462,7 +462,7 @@ val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
 val _ = addThms [dfn'Znop_def]
 
 val Zcmc_rwt =
-   EV [dfn'Zcmc_def, CF_def, write'CF_def, Eflag_rwt, write'Eflag_rwt] [] []
+   EV [dfn'Zcmc_def, CF_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] [] []
       ``dfn'Zcmc``
    |> addThms
 
