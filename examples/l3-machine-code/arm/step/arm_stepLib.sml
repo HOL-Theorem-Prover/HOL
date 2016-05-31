@@ -973,32 +973,25 @@ local
         (a + 4w * (-1w + 1w) = a) /\
         (a + 4w * -1w = a - 4w)``
 
-   val cond_pc = Q.prove(
-      `n <> 15w ==>
-       ((if p then ((R_mode ^st.CPSR.M n =+ a) ^st.REG) else ^st.REG) RName_PC =
-       ^st.REG RName_PC)`,
-      rw [combinTheory.UPDATE_def, Drule.DISCH_ALL R_x_not_pc])
-      |> Drule.UNDISCH
-
    val rearrange = Q.prove(
       `(if p then
           s with <|MEM := a; REG := b|>
         else
-          s with <|MEM := c; REG := b|>) =
-       s with <|MEM := if p then a else c; REG := b|>`,
+          s with <|MEM := c; REG := d|>) =
+       s with <|MEM := if p then a else c; REG := if p then b else d|>`,
       rw [])
 in
    val StoreMultiple_rwt =
-      EV [STMDA, STMDB, STMIA, STMIB, STM_UPTO_def, IncPC_rwt,
-          STM_UPTO_components, PCStoreValue_def, PC_def, add4, rearrange,
-          R_rwt, write'R_rwt, hd write'MemA_4_rwt, cond_pc] []
+      EV ([STMDA, STMDB, STMIA, STMIB, STM_UPTO_def, IncPC_rwt,
+           STM_UPTO_components, PCStoreValue_def, PC_def, add4, rearrange,
+           R_rwt, write'R_rwt, hd write'MemA_4_rwt] @ npc_thm [`n`]) []
          [[`inc` |-> ``F``, `index` |-> ``F``],
           [`inc` |-> ``F``, `index` |-> ``T``],
           [`inc` |-> ``T``, `index` |-> ``F``],
           [`inc` |-> ``T``, `index` |-> ``T``]]
         ``dfn'StoreMultiple (inc, index, wback, n, registers)``
         |> List.map
-              (SIMP_RULE std_ss [count_list_15, cond_pc, add4, bit_count_sub] o
+              (SIMP_RULE std_ss [count_list_15, add4, bit_count_sub] o
                utilsLib.MATCH_HYP_CONV_RULE
                   (utilsLib.INST_REWRITE_CONV
                       [Drule.UNDISCH (DECIDE ``b ==> (a \/ b \/ c = T)``)])
