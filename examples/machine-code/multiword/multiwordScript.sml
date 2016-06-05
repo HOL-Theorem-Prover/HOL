@@ -1466,7 +1466,7 @@ val d_lemma2 = store_thm ("d_lemma2",
   dimword(:'a) DIV 2 <= w2n ((calc_d (FST(v1,d),1w:'a word)) * (FST (v1,d)))``,
 
   HO_MATCH_MP_TAC calc_d_ind >> REPEAT strip_tac >>
-  rw[Once calc_d_def] THEN1 METIS_TAC[FST] THEN1 METIS_TAC[d_word_msb] >>
+  rw[Once calc_d_def] THEN1 METIS_TAC[d_word_msb] >>
   fs[FST] >>
   `w2n d < dimword(:'a) DIV 2` by METIS_TAC[d_word_msb,NOT_LESS_EQUAL] >>
   `0 < 2` by DECIDE_TAC >>

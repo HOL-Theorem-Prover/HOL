@@ -4,6 +4,7 @@
 *.uo
 *.ui
 *.o
+.hollogs
 .HOLMK
 *.lex.sml
 *.grm.sig

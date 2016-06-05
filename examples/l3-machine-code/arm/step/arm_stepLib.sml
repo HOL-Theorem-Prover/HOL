@@ -144,7 +144,7 @@ val setEvConv = utilsLib.setStepConv
 (* ========================================================================= *)
 
 val ArchVersion_CPSR_rwt = Q.prove(
-   `!s c. FST (ArchVersion () (s with CPSR := c)) = FST (ArchVersion () s)`,
+   `!s c. ArchVersion () (s with CPSR := c) = ArchVersion () s`,
    lrw [ArchVersion_def]) |> DATATYPE_RULE
 
 val () = setEvConv utilsLib.WGROUND_CONV
@@ -216,7 +216,7 @@ in
        n <> 15w ==>
        ((n <> 13w) \/ aligned 2 v \/ ~^st.CPSR.T) ==>
        (write'R (v, n) ^st =
-        ((), ^st with REG := (R_mode (^st.CPSR.M) n =+ v) ^st.REG))`,
+        ^st with REG := (R_mode (^st.CPSR.M) n =+ v) ^st.REG)`,
       rewrite_tac [in_ext]
       \\ ntac 4 strip_tac
       \\ DISCH_THEN
@@ -727,7 +727,7 @@ in
       |> Drule.SPEC_ALL
       |> rhsc |> abs_body
       |> let_body |> cond_true |> let_body |> let_body
-      |> pairSyntax.dest_pair |> snd |> let_val |> Term.rand |> Term.rator
+      |> let_val |> Term.rand |> Term.rator
       |> state_transformerSyntax.dest_for |> (fn (_, _, b) => b)
       |> abs_body |> abs_body
       |> (SIMP_CONV bool_ss
@@ -760,7 +760,7 @@ local
        ~^st.Extensions Extension_Security ==>
        (p ==> (aligned 2 w \/ ~^st.CPSR.T)) ==>
        ((if p then
-            ((), a, SND (write'R (w, 13w) s))
+            ((), a, write'R (w, 13w) s)
          else
             ((), s2)) =
         (if p then
@@ -772,8 +772,8 @@ local
 
    val rearrange = Q.prove(
       `!p a b n s.
-         (if p then SND (write'R (a, n) s) else SND (write'R (b, n) s)) =
-         SND (write'R (if p then a else b, n) s)`,
+         (if p then write'R (a, n) s else write'R (b, n) s) =
+         write'R (if p then a else b, n) s`,
       lrw [])
 
    fun FOR_BETA_CONV i tm =
@@ -793,20 +793,19 @@ local
       end
 
    val pc_conv =
-      Conv.RAND_CONV
-         (PairedLambda.let_CONV
-          THENC utilsLib.INST_REWRITE_CONV [hd MemA_4_rwt]
-          THENC REWRITE_CONV
-                  [pairTheory.pair_case_thm, EVAL ``14 + 1n``,
-                   alignmentTheory.aligned_numeric,
-                   alignmentTheory.aligned_add_sub_123,
-                   arm_stepTheory.Aligned_concat4,
-                   LDM_UPTO_components]
-          THENC Conv.RAND_CONV
-                  (Conv.RAND_CONV
-                     (Conv.RATOR_CONV PairedLambda.GEN_BETA_CONV
-                      THENC PairedLambda.GEN_BETA_CONV)
-                   THENC PairedLambda.let_CONV))
+      PairedLambda.let_CONV
+      THENC utilsLib.INST_REWRITE_CONV [hd MemA_4_rwt]
+      THENC REWRITE_CONV
+              [pairTheory.pair_case_thm, EVAL ``14 + 1n``,
+               alignmentTheory.aligned_numeric,
+               alignmentTheory.aligned_add_sub_123,
+               arm_stepTheory.Aligned_concat4,
+               LDM_UPTO_components]
+      THENC Conv.RAND_CONV
+              (Conv.RAND_CONV
+                 (Conv.RATOR_CONV PairedLambda.GEN_BETA_CONV
+                  THENC PairedLambda.GEN_BETA_CONV)
+               THENC PairedLambda.let_CONV)
 
    val pc_tm = ``word_bit 15 (registers: word16)``
 
@@ -1550,12 +1549,7 @@ val UndefinedARM_rwt =
       (mapl (`c`, fst (Lib.front_last opcodes)))
       ``UndefinedARM c``
 
-val FST_Skip =
-   EV [Skip_def] [] []
-      ``FST o Skip ()``
-     |> hd
-     |> utilsLib.o_RULE
-     |> GEN_ALL
+val Skip_rwt = EV [Skip_def] [] [] ``Skip ()`` |> hd |> GEN_ALL
 
 val HaveDSPSupport_rwt =
    EV [HaveDSPSupport_def, utilsLib.SET_CONV ``a IN {ARMv4; ARMv4T; ARMv5T}``]
@@ -1569,7 +1563,7 @@ val DecodeImmShift_rwt =
    |> Drule.GEN_ALL
 
 val DecodeHint_rwt =
-   EV [DecodeHint_def, boolify8_v2w, FST_Skip, ArchVersion_rwts, Do_rwt] [] []
+   EV [DecodeHint_def, boolify8_v2w, Skip_rwt, ArchVersion_rwts, Do_rwt] [] []
      ``DecodeHint (c, ^(bitstringSyntax.mk_vec 8 0))``
      |> hd
 
@@ -1595,7 +1589,7 @@ local
              (Thm.BETA_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
               THENC REWRITE_CONV
-                     ([Do_rwt, ArchVersion_rwts, FST_Skip,
+                     ([Do_rwt, ArchVersion_rwts, Skip_rwt,
                        ARMExpandImm_def, ARMExpandImm_C_rwt,
                        (* DecodeImmShift_rwt, *)
                        HaveDSPSupport_rwt,
@@ -1661,9 +1655,9 @@ local
    val rand_uncurry = utilsLib.mk_cond_rand_thms [``UNCURRY f : 'a # 'b -> 'c``]
    val ConditionPassed_enc = Q.prove(
       `!s c.
-         FST (ConditionPassed ()
-                (s with <|CurrentCondition := c; Encoding := Encoding_ARM |>)) =
-         FST (ConditionPassed () (s with CurrentCondition := c))`,
+         ConditionPassed ()
+           (s with <|CurrentCondition := c; Encoding := Encoding_ARM |>) =
+         ConditionPassed () (s with CurrentCondition := c)`,
       lrw [ConditionPassed_rwt]) |> DATATYPE_RULE
    val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 28 0))
    val dual_rwt =
@@ -3616,62 +3610,66 @@ val insert_mode = Q.prove(
 val CPSRWriteByInstr =
    CPSRWriteByInstr_def
    |> Q.SPECL [`value`, `bytemask`, `is_exc_return`]
-   |> Conv.CONV_RULE (Conv.X_FUN_EQ_CONV st)
-   |> Drule.SPEC_ALL
-   |> Conv.CONV_RULE
-        (Conv.RHS_CONV
-           (Thm.BETA_CONV
-            THENC REWRITE_CONV
-                    [write'reg'PSR_def, CurrentModeIsNotUser_def,
-                     PSR_FIELDS, PSR_FLAGS]
-            THENC Conv.RAND_CONV
-                     (Thm.BETA_CONV
-                      THENC PairedLambda.let_CONV
-                      THENC utilsLib.INST_REWRITE_CONV [BadMode]
-                      THENC REWRITE_CONV []
-                     )
-            THENC PairedLambda.let_CONV
-            THENC REWRITE_CONV []
-            THENC Conv.RAND_CONV
-                     (COND_T_CONV PairedLambda.let_CONV
-                      THENC PSR_CONV
-                     )
-            THENC PairedLambda.let_CONV
-            THENC Conv.RAND_CONV
-                     (PSR_CONV
-                      THENC COND_UPDATE2_CONV [IT_extract]
-                     )
-            THENC PairedLambda.let_CONV
-            THENC Conv.RAND_CONV
-                     (PSR_CONV
-                      THENC COND_T_CONV
-                               (PairedLambda.let_CONV
-                                THENC RAND_CONV DATATYPE_CONV
-                                THENC PairedLambda.let_CONV
-                                THENC DATATYPE_CONV
-                                THENC utilsLib.INST_REWRITE_CONV [IsSecure]
-                                THENC SIMP_CONV (srw_ss()) [PSR_FLAGS]
-                                )
-                      THENC COND_UPDATE2_CONV
-                               [addressTheory.IF_IF,
-                                Q.SPEC `bytemask ' 3` CONJ_COMM]
-                     )
-            THENC PairedLambda.let_CONV
-            THENC COND_T_CONV
-                     (Conv.RAND_CONV
-                        (REWRITE_CONV [PSR_FLAGS] THENC COND_UPDATE2_CONV [])
-                      THENC PairedLambda.let_CONV
-                      THENC utilsLib.INST_REWRITE_CONV [IsSecure]
-                      THENC Conv.RAND_CONV
-                               (DATATYPE_CONV
-                                THENC REWRITE_CONV [PSR_FLAGS]
-                                THENC COND_UPDATE2_CONV []
-                               )
-                      THENC PairedLambda.let_CONV
-                      THENC Conv.RAND_CONV (COND_UPDATE2_CONV [])
-                      THENC PairedLambda.let_CONV))
-            THENC REWRITE_CONV [PSR_FIELDS, addressTheory.IF_IF, IT_extract]
-            THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true))
+   |> (fn th => Thm.AP_THM th st)
+   |> Conv.RIGHT_CONV_RULE
+         (Thm.BETA_CONV
+          THENC REWRITE_CONV
+                  [write'reg'PSR_def, CurrentModeIsNotUser_def,
+                   PSR_FIELDS, PSR_FLAGS]
+          THENC Conv.RAND_CONV
+                   (Thm.BETA_CONV
+                    THENC PairedLambda.let_CONV
+                    THENC utilsLib.INST_REWRITE_CONV [BadMode]
+                    THENC REWRITE_CONV []
+                   )
+          THENC PairedLambda.let_CONV
+          THENC REWRITE_CONV []
+          THENC Conv.RAND_CONV
+                   (COND_T_CONV PairedLambda.let_CONV
+                    THENC PSR_CONV
+                   )
+          THENC PairedLambda.let_CONV
+          THENC Conv.RAND_CONV
+                   (PSR_CONV
+                    THENC COND_UPDATE2_CONV [IT_extract]
+                   )
+          THENC PairedLambda.let_CONV
+          THENC Conv.RAND_CONV
+                   (PSR_CONV
+                    THENC COND_T_CONV
+                             (PairedLambda.let_CONV
+                              THENC RAND_CONV
+                                      (DATATYPE_CONV
+                                       THENC PairedLambda.let_CONV)
+                              THENC PairedLambda.let_CONV
+                              THENC DATATYPE_CONV
+                              THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+                              THENC SIMP_CONV (srw_ss()) [PSR_FLAGS]
+                              )
+                    THENC COND_UPDATE2_CONV
+                             [addressTheory.IF_IF,
+                              Q.SPEC `bytemask ' 3` CONJ_COMM]
+                   )
+          THENC PairedLambda.let_CONV
+          THENC COND_T_CONV
+                   (Conv.RAND_CONV
+                      (PairedLambda.let_CONV
+                       THENC REWRITE_CONV [PSR_FLAGS]
+                       THENC COND_UPDATE2_CONV [])
+                    THENC PairedLambda.let_CONV
+                    THENC DATATYPE_CONV
+                    THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+                    THENC REWRITE_CONV []
+                    THENC Conv.RAND_CONV
+                             (DATATYPE_CONV
+                              THENC REWRITE_CONV [PSR_FLAGS]
+                              THENC COND_UPDATE2_CONV []
+                             )
+                    THENC PairedLambda.let_CONV
+                    THENC Conv.RAND_CONV (COND_UPDATE2_CONV [])
+                    THENC PairedLambda.let_CONV)
+          THENC REWRITE_CONV [PSR_FIELDS, addressTheory.IF_IF, IT_extract]
+          THENC Conv.DEPTH_CONV (wordsLib.WORD_BIT_INDEX_CONV true))
    |> utilsLib.ALL_HYP_CONV_RULE
         (DATATYPE_CONV THENC REWRITE_CONV [boolTheory.COND_ID])
 
@@ -3684,29 +3682,30 @@ val CPSRWriteByInstr_control_usr =
 
 val CPSRWriteByInstr_control_not_usr =
    CPSRWriteByInstr
-   |> Conv.CONV_RULE
-        (Conv.RHS_CONV
-            (REWRITE_CONV [ASSUME ``(bytemask: word4) ' 0``,
-                           ASSUME ``^st.CPSR.M <> 16w``]
-             THENC utilsLib.INST_REWRITE_CONV [BadMode]
-             THENC REWRITE_CONV []
-             THENC utilsLib.INST_REWRITE_CONV [IsSecure]
-             THENC REWRITE_CONV []
-             THENC PairedLambda.let_CONV
-             THENC utilsLib.INST_REWRITE_CONV [IsSecure]
-             THENC REWRITE_CONV []
-             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
-             THENC REWRITE_CONV []
-             THENC PairedLambda.let_CONV
-             THENC PairedLambda.let_CONV
-             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
-             THENC REWRITE_CONV []
-             THENC PairedLambda.let_CONV
-             THENC utilsLib.INST_REWRITE_CONV [NotHyp]
-             THENC REWRITE_CONV []
-             THENC PairedLambda.let_CONV
-             THENC DATATYPE_CONV
-             THENC REWRITE_CONV [PSR_FIELDS]))
+   |> Conv.RIGHT_CONV_RULE
+        (REWRITE_CONV [ASSUME ``(bytemask: word4) ' 0``,
+                       ASSUME ``^st.CPSR.M <> 16w``]
+         THENC utilsLib.INST_REWRITE_CONV [BadMode]
+         THENC REWRITE_CONV []
+         THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+         THENC REWRITE_CONV []
+         THENC Conv.RAND_CONV PairedLambda.let_CONV
+         THENC PairedLambda.let_CONV
+         THENC REWRITE_CONV []
+         THENC PairedLambda.let_CONV
+         THENC utilsLib.INST_REWRITE_CONV [IsSecure]
+         THENC REWRITE_CONV []
+         THENC Conv.RAND_CONV PairedLambda.let_CONV
+         THENC PairedLambda.let_CONV
+         THENC RAND_CONV DATATYPE_CONV
+         THENC utilsLib.INST_REWRITE_CONV [NotHyp]
+         THENC REWRITE_CONV []
+         THENC PairedLambda.let_CONV
+         THENC utilsLib.INST_REWRITE_CONV [NotHyp]
+         THENC REWRITE_CONV []
+         THENC PairedLambda.let_CONV
+         THENC DATATYPE_CONV
+         THENC REWRITE_CONV [PSR_FIELDS])
    |> utilsLib.ALL_HYP_CONV_RULE DATATYPE_CONV
 
 val CPSRWriteByInstr_exn_return =
@@ -3896,11 +3895,7 @@ in
                                |> rhsc
                                |> set_cond thm1
                                |> run
-               val r = get_state thm4
-                       handle HOL_ERR {origin_function = "dest_pair", ...} =>
-                         (Parse.print_thm thm4
-                          ; print "\n"
-                          ; raise ERR "eval" "failed to fully evaluate")
+               val r = rhsc thm4
                val thm5 = STATE_CONV (mk_proj_encoding r)
                val thm6 = STATE_CONV (mk_proj_exception r)
                val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5, thm6]

@@ -1,1 +1,3 @@
 INCLUDES = dir1
+
+EXTRA_CLEANS = foo

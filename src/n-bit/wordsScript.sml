@@ -3242,6 +3242,22 @@ val word_shift_bv = Q.store_thm("word_shift_bv",
   \\ SRW_TAC [ARITH_ss] [ROR_MOD, ROL_MOD]
   )
 
+val lsl_lsr = Q.store_thm("lsl_lsr",
+  `!w: 'a word n.
+     w2n (w : 'a word) * 2 ** n < dimword (:'a) ==> (w << n >>> n = w)`,
+  Cases
+  \\ strip_tac
+  \\ qmatch_assum_rename_tac `n < dimword _`
+  \\ simp []
+  \\ rewrite_tac [GSYM w2n_11, w2n_lsr]
+  \\ rw [word_lsl_n2w, MULT_DIV, ZERO_DIV]
+  \\ Cases_on `n`
+  \\ fs [dimword_def, bitTheory.LT_TWOEXP, bitTheory.LOG2_def]
+  \\ qmatch_asmsub_rename_tac `SUC n * 2 ** a`
+  \\ qspecl_then [`a`, `2`, `SUC n`] mp_tac logrootTheory.LOG_EXP
+  \\ simp[]
+  )
+
 (* -------------------------------------------------------------------------
     Orderings : theorems
    ------------------------------------------------------------------------- *)

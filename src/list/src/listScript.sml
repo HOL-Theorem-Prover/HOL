@@ -450,6 +450,14 @@ val EL_MAP = store_thm("EL_MAP",
     INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[LENGTH, EL, MAP, LESS_MONO_EQ, NOT_LESS_0, HD, TL]);
 
+val EL_APPEND_EQN = store_thm(
+  "EL_APPEND_EQN",
+  ``!l1 l2 n.
+       EL n (l1 ++ l2) =
+       if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2``,
+  LIST_INDUCT_TAC >> simp_tac (srw_ss()) [] >> Cases_on `n` >>
+  asm_simp_tac (srw_ss()) [EL])
+
 val MAP_TL = Q.store_thm("MAP_TL",
   `!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))`,
   Induct THEN REWRITE_TAC [NULL_DEF, TL, MAP]);
@@ -1548,6 +1556,13 @@ val LAST_EL = store_thm(
 Induct THEN SRW_TAC[] [] THEN
 Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
 
+val LAST_MAP = store_thm(
+  "LAST_MAP[simp]",
+  ``!l f. l <> [] ==> (LAST (MAP f l) = f (LAST l))``,
+  rpt strip_tac >> `?h t. l = h::t` by METIS_TAC[list_CASES] >>
+  srw_tac[][MAP] >> Q.ID_SPEC_TAC `h` >> Induct_on `t` >>
+  asm_simp_tac (srw_ss()) []);
+
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
   ``(!x:'a. FRONT [x] = []) /\
@@ -1820,7 +1835,7 @@ val ALL_DISTINCT_ZIP_SWAP = store_thm(
    METIS_TAC [])
 
 val ALL_DISTINCT_REVERSE = store_thm (
-   "ALL_DISTINCT_REVERSE",
+   "ALL_DISTINCT_REVERSE[simp]",
    ``!l. ALL_DISTINCT (REVERSE l) = ALL_DISTINCT l``,
    SIMP_TAC bool_ss [ALL_DISTINCT_FILTER, MEM_REVERSE, FILTER_REVERSE] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1830,6 +1845,10 @@ val ALL_DISTINCT_REVERSE = store_thm (
       ASM_SIMP_TAC bool_ss [REVERSE_DEF, APPEND]
    ]);
 
+val ALL_DISTINCT_FLAT_REVERSE = store_thm("ALL_DISTINCT_FLAT_REVERSE[simp]",
+  ``!xs. ALL_DISTINCT (FLAT (REVERSE xs)) = ALL_DISTINCT (FLAT xs)``,
+  Induct \\ FULL_SIMP_TAC(srw_ss())[ALL_DISTINCT_APPEND]
+  \\ FULL_SIMP_TAC(srw_ss())[MEM_FLAT,PULL_EXISTS] \\ METIS_TAC []);
 
 (* ----------------------------------------------------------------------
     LRC
@@ -2698,6 +2717,10 @@ in
          ("LUPDATE_def", ["LUPDATE"], lupdate_exists)
 end;
 
+val LUPDATE_NIL = store_thm("LUPDATE_NIL[simp]",
+  ``!xs n x. (LUPDATE x n xs = []) <=> (xs = [])``,
+  Cases \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
+
 val LUPDATE_SEM = store_thm ("LUPDATE_SEM",
   ``(!e:'a n l. LENGTH (LUPDATE e n l) = LENGTH l) /\
     (!e:'a n l p.
@@ -3061,7 +3084,18 @@ val LLEX_not_WF = store_thm(
   ONCE_REWRITE_TAC [GENLIST_CONS] THEN
   ASM_SIMP_TAC (srw_ss()) [LLEX_def]);
 
-
+val LLEX_EL_THM = store_thm("LLEX_EL_THM",
+  ``!R l1 l2. LLEX R l1 l2 <=>
+              ?n. n <= LENGTH l1 /\ n < LENGTH l2 /\
+                  (TAKE n l1 = TAKE n l2) /\
+                  (n < LENGTH l1 ==> R (EL n l1) (EL n l2))``,
+  GEN_TAC THEN Induct THEN Cases_on`l2` THEN SRW_TAC[][] THEN
+  SRW_TAC[][EQ_IMP_THM] THEN1 (
+    Q.EXISTS_TAC`0` THEN SRW_TAC[][] )
+  THEN1 (
+    Q.EXISTS_TAC`SUC n` THEN SRW_TAC[][] ) THEN
+  Cases_on`n` THEN FULL_SIMP_TAC(srw_ss())[] THEN
+  METIS_TAC[])
 
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)

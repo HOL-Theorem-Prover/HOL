@@ -3898,12 +3898,12 @@ val literal_case_THM = save_thm("literal_case_THM",
 (*---------------------------------------------------------------------------*)
 
 val literal_case_RAND = save_thm("literal_case_RAND",
- let val tm1 = Term`\x:'a. P (N x:'b):bool`
+ let val tm1 = Term`\x:'a. P (N x:'b):'c`
      val tm2 = Term`M:'a`
      val tm3 = Term`\x:'a. N x:'b`
-     val P   = Term`P:'b -> bool`
+     val P   = Term`P:'b ->'c`
      val literal_case_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
-                    (Thm.INST_TYPE [beta |-> bool] literal_case_THM)))
+                    (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
      val literal_case_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
  in TRANS literal_case_THM2 (SYM literal_case_THM1)
  end);

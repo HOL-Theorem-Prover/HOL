@@ -28,7 +28,7 @@ fun test (s, exp) = let
   val exp_t = ``Result (SOME ("", ^exp)) : (char, sexpNT, sexp) evalcase``
 in
   tprint (s ^ " --> " ^ term_to_string result);
-  if aconv exp_t result then print "OK\n" else die "FAILED\n"
+  if aconv exp_t result then OK() else die "FAILED\n"
 end
 val _ = temp_overload_on ("Ok", ``λt. Result (SOME ("", t))``)
 

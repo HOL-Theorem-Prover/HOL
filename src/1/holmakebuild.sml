@@ -10,7 +10,7 @@ local
      Tactical.default_prover (t, tac)
      handle (e as HOL_ERR _) =>
         (HOL_MESG
-           ("*** Proof of \n  " ^ Parse.term_to_string t ^ "\n*** failed.\n")
+           ("*** Proof of \n  " ^ Parse.term_to_string t ^ "\n*** failed (used CHEAT).\n")
          ; HOL_MESG (exn_to_string e)
          ; Thm.mk_oracle_thm holmake_tag ([], t))
 in

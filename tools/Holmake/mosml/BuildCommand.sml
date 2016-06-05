@@ -1,4 +1,4 @@
-structure BuildCommand =
+structure BuildCommand :> BuildCommand =
 struct
 
 open Systeml Holmake_tools Holmake_types
@@ -6,9 +6,7 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
-type info_t = {optv : HM_Cline.t, hmake_options : string list,
-               actual_overlay : string option,
-               envlist : string -> string list}
+open HM_GraphBuildJ1
 
 val MOSMLDIR0 = Systeml.MOSMLDIR;
 
@@ -34,10 +32,13 @@ fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
 val failed_script_cache = ref (Binaryset.empty String.compare)
 
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
-  val {optv,actual_overlay,hmake_options,SIGOBJ,...} = buildinfo
+  val {optv,actual_overlay,hmake_options,SIGOBJ,outs,hmenv,...} = buildinfo
+  val {warn,tgtfatal,info,chatty,diag,...} = outs
   val debug = #debug (#core optv)
   val allfast = #fast (#core optv)
+  val keep_going = #keep_going (#core optv)
   val quit_on_failure = #quit_on_failure (#core optv)
+  val quiet_flag = #quiet (#core optv)
   val interactive_flag = #interactive (#core optv)
   val no_sigobj = member "NO_SIGOBJ" hmake_options
   val hmake_no_overlay = member "NO_OVERLAY" hmake_options
@@ -68,7 +69,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           val _ = exists_readable file orelse
                   (print ("Wanted to compile "^file^", but it wasn't there\n");
                    raise FileNotFound)
-          val _ = print ("Compiling "^file^"\n")
+          val _ = info ("Compiling "^file)
           open Process
           val res =
               if has_unquoter() then let
@@ -173,11 +174,17 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         end handle CompileFailed => false
                  | FileNotFound => false
   end (* fun's let *)
+  fun mosml_build_command _ _ _ = NONE
+  val build_graph = graphbuildj1 { build_command = build_command,
+                                   mosml_build_command = mosml_build_command,
+                                   outs = outs,
+                                   keep_going = keep_going,
+                                   quiet = quiet_flag,
+                                   hmenv = hmenv}
 in
-  {build_command = build_command,
-   mosml_build_command = (fn _ => fn _ => fn _ => NONE),
-   extra_impl_deps = if nob2002 then []
-                     else [toFile (fullPath [SIGOBJ, "basis2002.uo"])]}
+  {extra_impl_deps = if nob2002 then []
+                     else [toFile (fullPath [SIGOBJ, "basis2002.uo"])],
+   build_graph = build_graph}
 end (* make_build_command's let *)
 
 end (* struct *)

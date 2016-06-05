@@ -3,10 +3,7 @@ open Defn
 
 open testutils
 
-fun test msg f x =
-    (tprint msg;
-     f x handle _ => die "FAILED!";
-     print "OK\n")
+fun test msg f x = (tprint msg; f x handle _ => die "FAILED!"; OK())
 
 val _ = print "\n"
 

@@ -43,26 +43,27 @@ sig
   val realspace_delimited_fields : string -> string list
   val kernelid_fname : string
 
+  (* terminal colouring of strings *)
+  val red : string -> string
+  val boldred : string -> string
+  val boldgreen : string -> string
+  val boldyellow : string -> string
+  val bold : string -> string
+  val dim : string -> string
+
   (* diagnostics/output *)
-  type output_functions = {warn : string -> unit, info : string -> unit,
+  type output_functions = {warn : string -> unit,
+                           info : string -> unit,
+                           chatty : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> unit}
-  val output_functions : {quiet_flag: bool, debug:bool} -> output_functions
+  (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
+  val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
 
 
-  type 'optv buildinfo_t = {
-    optv : 'optv, hmake_options : string list,
-    actual_overlay : string option,
-    envlist : string -> string list,
-    quit_on_failure : bool,
-    outs : output_functions,
-    SIGOBJ : string
-  }
-
-
-
-
+  val check_distrib : string -> string option
+    (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit
@@ -101,6 +102,9 @@ sig
                                includes : 'dir list,
                                preincludes : 'dir list}
   type 'dir holmake_result = 'dir holmake_dirinfo option
+
+  val process_hypat_options :
+      string -> {noecho : bool, ignore_error : bool, command : string}
 
   val maybe_recurse :
       {warn: string -> unit,

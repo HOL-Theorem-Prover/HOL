@@ -98,12 +98,12 @@ end
 
 val state_id =
    utilsLib.mk_state_id_thm riscvTheory.riscv_state_component_equality
-      [["c_PC", "c_gpr", "c_update", "log"],
-       ["c_PC", "c_update", "log"],
-       ["c_gpr", "c_update", "log"],
-       ["c_NextFetch", "c_PC", "c_update", "log"],
-       ["c_NextFetch", "c_PC", "c_gpr", "c_update", "log"],
-       ["MEM8", "c_PC", "c_update", "log"]
+      [["c_PC", "c_gpr"],
+       ["c_PC"],
+       ["c_gpr"],
+       ["c_NextFetch", "c_PC"],
+       ["c_NextFetch", "c_PC", "c_gpr"],
+       ["MEM8", "c_PC"]
       ]
 
 val riscv_frame =
@@ -152,18 +152,15 @@ in
 end
 
 local
-  fun ignore (p, q, v) = (p, q)
-  fun fix_id (p, q, v) =
-    if List.exists (Lib.can dest_riscv_procID) p then (p, q)
-    else
-      let
-        val id = case List.find (Lib.can dest_riscv_c_PC) p of
-                    SOME tm => fst (dest_riscv_c_PC tm)
-                  | NONE => raise ERR "riscv_write_footprint" "no PC assertion"
-        val procid = mk_riscv_procID id
-      in
-        (procid :: p, procid :: q)
-      end
+  fun fix_id (p, q) =
+    let
+      val id = case List.find (Lib.can dest_riscv_c_PC) p of
+                  SOME tm => fst (dest_riscv_c_PC tm)
+                | NONE => raise ERR "riscv_write_footprint" "no PC assertion"
+      val procid = mk_riscv_procID id
+    in
+      (procid :: p, procid :: q)
+    end
   fun c_gpr_write (p, q, v) =
     let
       val ((id, v1), tm) = combinSyntax.dest_update_comb v
@@ -185,15 +182,14 @@ local
     end
 in
   val riscv_write_footprint =
+    fix_id o
     stateLib.write_footprint riscv_1 riscv_2
      [("riscv$riscv_state_MEM8_fupd", "riscv_MEM8", ``^st.MEM8``),
       ("riscv$riscv_state_c_PC_fupd", "riscv_c_PC", ``^st.c_PC``),
       ("riscv$riscv_state_c_NextFetch_fupd", "riscv_c_NextFetch",
        ``^st.c_NextFetch``)
      ] [] []
-     [("riscv$riscv_state_c_gpr_fupd", c_gpr_write),
-      ("riscv$riscv_state_c_update_fupd", ignore),
-      ("riscv$riscv_state_log_fupd", fix_id)
+     [("riscv$riscv_state_c_gpr_fupd", c_gpr_write)
      ]
      (K false)
 end

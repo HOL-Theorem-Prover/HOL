@@ -1462,6 +1462,10 @@ val IMAGE_ID =
      [ALL_TAC,EXISTS_TAC (--`x:'a`--)] THEN
      ASM_REWRITE_TAC []);
 
+val IMAGE_I = store_thm("IMAGE_I[simp]",
+  ``IMAGE I s = s``,
+  full_simp_tac(srw_ss())[EXTENSION]);
+
 val o_THM = combinTheory.o_THM;
 
 val IMAGE_COMPOSE =

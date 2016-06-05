@@ -12,17 +12,17 @@ val bind_t = prim_mk_const{Thy = "state_transformer", Name = "BIND"}
 val _ = overload_on ("monad_bind", bind_t)
 val _ = set_trace "notify type variable guesses" 0
 val t = Term`do x <- f y ; g x od`
-val _ = if same_const bind_t (#1 (strip_comb t)) then print "OK\n"
+val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else die()
 
 val _ = tprint "Testing Q.parsing of parmonadsyntax"
 val t = Parse.parse_in_context [] `do x <- f y; g x od`
-val _ = if same_const bind_t (#1 (strip_comb t)) then print "OK\n"
+val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else die()
 
 val _ = tprint "Testing Q-parsing of parmonadsyntax (TYPED-con)"
 val t = Parse.parse_in_context [] `do x <- f y; g x od : 'a -> bool # 'a`
-val _ = if same_const bind_t (#1 (strip_comb t)) then print "OK\n"
+val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else die()
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal
@@ -31,7 +31,7 @@ fun tpp (s,expected) = let
   val _ = tprint ("Testing (coloured-)printing of `"^s^"`")
   val res = ppstring pp_term t
 in
-  if res = expected then print "OK\n"
+  if res = expected then OK()
   else die ()
 end
 
@@ -68,7 +68,7 @@ val (f, args) = strip_comb t
 val _ = same_const f ``option$OPTION_BIND`` andalso
         hd args = mk_var("opt", ``:num option``) andalso
         hd (tl args) = ``\x:num. SOME (x + 1)`` andalso
-        (print "OK\n"; true) orelse die ()
+        (OK(); true) orelse die ()
 
 val _ = tprint "Testing monadsyntax parse of OPTION_IGNORE_BIND"
 val t = ``do SOME 3 ; SOME 4 od``
@@ -76,7 +76,7 @@ val (f, args) = strip_comb t
 val _ = same_const f ``option$OPTION_IGNORE_BIND`` andalso
         hd args = ``SOME 3`` andalso
         hd (tl args) = ``SOME 4`` andalso
-        (print "OK\n"; true) orelse die()
+        (OK(); true) orelse die()
 
 val _ = clear_overloads_on "monad_unitbind"
 val _ = temp_overload_on ("monad_unitbind",
@@ -88,7 +88,7 @@ val (f, args) = strip_comb t
 val _ = same_const f ``option$OPTION_BIND`` andalso
         hd args = ``SOME 3`` andalso
         hd (tl args) = ``K (SOME 4) : num -> num option`` andalso
-        (print "OK\n"; true) orelse die()
+        (OK(); true) orelse die()
 
 val _ = app tpp [monadtpp_test1]
 

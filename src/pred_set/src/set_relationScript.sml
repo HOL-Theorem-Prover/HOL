@@ -362,8 +362,7 @@ SRW_TAC [] [] THENL
 
 val tc_implication_lem = Q.prove (
 `!x y. (x, y) IN tc r1 ==>
-       !r2. (!x y. (x, y) IN r1 ==> (x, y) IN r2) ==> (x, y)
-IN tc r2`,
+       !r2. (!x y. (x, y) IN r1 ==> (x, y) IN r2) ==> (x, y) IN tc r2`,
 HO_MATCH_MP_TAC tc_ind THEN
 SRW_TAC [] [] THEN
 METIS_TAC [tc_rules]);
@@ -379,6 +378,11 @@ HO_MATCH_MP_TAC tc_ind THEN
 SRW_TAC [] []);
 
 val _ = save_thm ("tc_empty", SIMP_RULE (srw_ss()) [] tc_empty);
+
+val tc_empty_eqn = Q.store_thm(
+  "tc_empty_eqn[simp]",
+  `tc {} = {}`,
+  asm_simp_tac(srw_ss())[EXTENSION, pairTheory.FORALL_PROD, tc_empty])
 
 val tc_domain_range = Q.store_thm ("tc_domain_range",
 `!x y. (x, y) IN tc r ==> x IN domain r /\ y IN range r`,

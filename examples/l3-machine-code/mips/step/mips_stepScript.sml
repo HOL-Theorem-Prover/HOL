@@ -19,8 +19,7 @@ val _ = List.app (fn f => f ())
 
 val NextStateMIPS_def = Define`
    NextStateMIPS s0 =
-   let s1 = SND (Next s0) in
-     if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
 
 val exceptionSignalled_id = Q.prove(
    `!s. ~s.exceptionSignalled ==> (s with exceptionSignalled := F = s)`,
@@ -35,8 +34,8 @@ val LoadMemory_ARB_CCA = Q.prove(
 val tac =
    lrw [NextStateMIPS_def, Next_def, AddressTranslation_def,
         exceptionSignalled_id, LoadMemory_ARB_CCA]
-   \\ Cases_on `(SND (Run (Decode w) s)).BranchTo`
-   \\ Cases_on `(SND (Run (Decode w) s)).BranchDelay`
+   \\ Cases_on `(Run (Decode w) s).BranchTo`
+   \\ Cases_on `(Run (Decode w) s).BranchDelay`
    \\ TRY (Cases_on `x`)
    \\ lrw []
    \\ fs [mips_state_component_equality]
@@ -47,7 +46,7 @@ val NextStateMIPS_nodelay = utilsLib.ustore_thm("NextStateMIPS_nodelay",
      ~s.exceptionSignalled ==>
      (Fetch s = (SOME w, s)) /\
      (Decode w = i) /\
-     (SND (Run i s) = next_state) /\
+     (Run i s = next_state) /\
      (next_state.exception = s.exception) /\
      (next_state.BranchDelay = NONE) /\
      (next_state.BranchTo = b) ==>
@@ -70,7 +69,7 @@ val NextStateMIPS_delay = utilsLib.ustore_thm("NextStateMIPS_delay",
      ~s.exceptionSignalled ==>
      (Fetch s = (SOME w, s)) /\
      (Decode w = i) /\
-     (SND (Run i s) = next_state) /\
+     (Run i s = next_state) /\
      (next_state.exception = s.exception) /\
      (next_state.BranchDelay = s.BranchDelay) /\
      (next_state.BranchTo = NONE) ==>
@@ -91,7 +90,7 @@ val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
      ~s.exceptionSignalled ==>
      (Fetch s = (SOME w, s)) /\
      (Decode w = i) /\
-     (SND (Run i s) = next_state) /\
+     (Run i s = next_state) /\
      (next_state.exception = s.exception) /\
      (next_state.BranchDelay = if b then NONE else s.BranchDelay) /\
      (next_state.BranchTo = NONE) ==>
@@ -458,12 +457,11 @@ val ls_lem3 =
 val StoreMemory_byte = Q.store_thm("StoreMemory_byte",
    `!s CCA MemElem pAddr vAddr IorD.
        StoreMemory (CCA,0w,MemElem,pAddr,vAddr,IorD) s =
-       ((),
-        s with MEM :=
+       s with MEM :=
           let a = (2 >< 0) pAddr: word3 in
-          let b = if FST (BigEndianMem s) then a ?? 7w else a in
+          let b = if BigEndianMem s then a ?? 7w else a in
           let c = 8 * w2n b in
-            (pAddr =+ (7 + c >< c) MemElem) s.MEM)`,
+            (pAddr =+ (7 + c >< c) MemElem) s.MEM`,
    REPEAT strip_tac
    \\ rewrite_tac
         [StoreMemory, ls_lem, ls_thm, wordsTheory.w2w_0, wordsTheory.WORD_ADD_0]
@@ -480,17 +478,16 @@ val ls_thm2 =
 val StoreMemory_half = Q.store_thm("StoreMemory_half",
    `~word_bit 0 pAddr ==>
     (StoreMemory (CCA,1w,MemElem,pAddr,vAddr,IorD) s =
-     ((),
-      s with MEM :=
+     s with MEM :=
        let a = (2 >< 0) pAddr: word3 in
-          if FST (BigEndianMem s) then
+          if BigEndianMem s then
              let b = 8 * w2n (a ?? 6w) in
                (pAddr + 1w =+ (7 + b >< b) MemElem)
                  ((pAddr =+ (15 + b >< 8 + b) MemElem) s.MEM)
           else
              let b = 8 * w2n a in
                (pAddr =+ (7 + b >< b) MemElem)
-                 ((pAddr + 1w =+ (15 + b >< 8 + b) MemElem) s.MEM)))`,
+                 ((pAddr + 1w =+ (15 + b >< 8 + b) MemElem) s.MEM))`,
    strip_tac
    \\ asm_simp_tac bool_ss [StoreMemory, ls_thm2]
    \\ `~word_bit 0 (((2 >< 0) pAddr) : word3)` by asm_rewrite_tac [bit_0_2_0]
@@ -509,10 +506,9 @@ val ls_thm3 =
 val StoreMemory_word = Q.store_thm("StoreMemory_word",
    `((1 >< 0) pAddr = 0w:word2) ==>
     (StoreMemory (CCA,3w,MemElem,pAddr,pAddr,IorD) s =
-     ((),
-      s with MEM :=
+     s with MEM :=
        let a = (2 >< 0) pAddr: word3 in
-          if FST (BigEndianMem s) then
+          if BigEndianMem s then
              let b = 8 * w2n (a ?? 4w) in
                (pAddr + 3w =+ (7 + b >< b) MemElem)
                  ((pAddr + 2w =+ (15 + b >< 8 + b) MemElem)
@@ -524,7 +520,7 @@ val StoreMemory_word = Q.store_thm("StoreMemory_word",
                  ((pAddr + 1w =+ (15 + b >< 8 + b) MemElem)
                     ((pAddr + 2w =+ (23 + b >< 16 + b) MemElem)
                        ((pAddr + 3w =+ (31 + b >< 24 + b) MemElem)
-                          s.MEM)))))`,
+                          s.MEM))))`,
    strip_tac
    \\ `(1 >< 0) (((2 >< 0) pAddr) : word3) = 0w: word2`
    by asm_rewrite_tac [bit_1_0_2_0]
@@ -542,9 +538,8 @@ val ls_thm4 =
 val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
    `((2 >< 0) pAddr = 0w:word3) ==>
     (StoreMemory (CCA,7w,MemElem,pAddr,vAddr,IorD) s =
-     ((),
-      s with MEM :=
-          if FST (BigEndianMem s) then
+     s with MEM :=
+          if BigEndianMem s then
             (pAddr + 7w =+ (7 >< 0) MemElem)
               ((pAddr + 6w =+ (15 >< 8) MemElem)
                  ((pAddr + 5w =+ (23 >< 16) MemElem)
@@ -562,7 +557,7 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
                           ((pAddr + 5w =+ (47 >< 40) MemElem)
                              ((pAddr + 6w =+ (55 >< 48) MemElem)
                                 ((pAddr + 7w =+ (63 >< 56) MemElem)
-                                    s.MEM)))))))))`,
+                                    s.MEM))))))))`,
    asm_simp_tac bool_ss [StoreMemory, ls_thm4]
    \\ lrw [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3]
    )

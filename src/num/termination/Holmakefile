@@ -8,14 +8,15 @@ ifdef POLY
 HOLHEAP = numheap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
 
-# many of these names (Solve, Streams, Theorems) are far too generic;
+# many of these names (Solve, Theorems) are far too generic;
 # there is a name-space pollution issue here I think.
 ARITH_DEPS = Arith_cons Arith Exists_arith Gen_arith   \
 	     Instance Norm_arith Norm_bool Norm_ineqs numSimps Prenex \
              Rationals RJBConv Sol_ranges Solve_ineqs Solve \
-             Streams Sub_and_cond Sup_Inf Term_coeffs Theorems Thm_convs
+             Sub_and_cond Sup_Inf Term_coeffs Theorems Thm_convs
 
-BARE_DEPS = ../theories/numeralTheory ../../tfl/src/Defn ../numLib \
+BARE_DEPS = ../theories/numeralTheory ../../tfl/src/Defn \
+            ../numLib ../../portableML/Streams \
             $(patsubst %,../arith/src/%,$(ARITH_DEPS))
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 

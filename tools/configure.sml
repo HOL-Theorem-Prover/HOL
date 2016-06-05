@@ -379,11 +379,18 @@ val _ =
     compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
+    compile [] "HM_DepGraph.sig";
+    compile [] "HM_DepGraph.sml";
+    compile [] "HM_GraphBuildJ1.sig";
+    compile [] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
     compile ["-I", ".."] "HM_BaseEnv.sig";
     compile ["-I", ".."] "HM_BaseEnv.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "BuildCommand.sig";
+    FileSys.chDir "mosml";
     compile ["-I", ".."] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml"] "Holmake.sml";

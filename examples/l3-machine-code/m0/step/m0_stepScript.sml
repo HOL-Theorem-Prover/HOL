@@ -19,15 +19,14 @@ val _ = List.app (fn f => f ())
 
 val NextStateM0_def = Define`
    NextStateM0 s0 =
-     let s1 = SND (Next s0) in
-        if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
 
 val NextStateM0_thumb = ustore_thm("NextStateM0_thumb",
   `(s.exception = NoException) ==>
    (Fetch s = (Thumb v, s)) /\
    (DecodeThumb v (s with pcinc := 2w) = (ast, s with pcinc := 2w)) /\
    (!s. Run ast s = f x s) /\
-   (f x (s with pcinc := 2w) = ((), s1)) /\
+   (f x (s with pcinc := 2w) = s1) /\
    (s1.exception = s.exception) ==>
    (NextStateM0 s = SOME s1)`,
    lrw [NextStateM0_def, Next_def, Decode_def]
@@ -38,7 +37,7 @@ val NextStateM0_thumb2 = ustore_thm("NextStateM0_thumb2",
    (Fetch s = (Thumb2 v, s)) /\
    (DecodeThumb2 v (s with pcinc := 4w) = (ast, s with pcinc := 4w)) /\
    (!s. Run ast s = f x s) /\
-   (f x (s with pcinc := 4w) = ((), s1)) /\
+   (f x (s with pcinc := 4w) = s1) /\
    (s1.exception = s.exception) ==>
    (NextStateM0 s = SOME s1)`,
    lrw [NextStateM0_def, Next_def, Decode_def]
@@ -259,13 +258,6 @@ val CountLeadingZeroBits8 = Q.store_thm("CountLeadingZeroBits8",
            intLib.ARITH_PROVE ``j < 8 ==> (Num (7 - &j) = 7 - j)``]
    )
 
-val FOLDL_AUG = Q.prove(
-   `!f a l s.
-      (FOLDL (\x i. f x i) a l, s) =
-      FOLDL (\y i. (f (FST y) i, SND y)) (a, s) l`,
-   Induct_on `l` \\ lrw []
-   )
-
 val FOLDL_cong = Q.store_thm("FOLDL_cong",
    `!l r f g a b.
       (LENGTH l = LENGTH r) /\ (a = b) /\
@@ -308,8 +300,15 @@ val FOR_FOLDL = Q.store_thm("FOR_FOLDL",
    \\ EVAL_TAC
    )
 
+val FOLDL_AUG = Q.prove(
+   `!f a l s: m0_state.
+      FOLDL (\x i. f x i) a l =
+      FST (FOLDL (\y i. (f (FST y) i, SND y)) (a, s) l)`,
+   Induct_on `l` \\ lrw []
+   )
+
 val BitCount = Q.store_thm("BitCount",
-   `!w s. BitCount w s = (bit_count w, s)`,
+   `!w s. BitCount w s = bit_count w`,
    lrw [BitCount_def, wordsTheory.bit_count_def, wordsTheory.bit_count_upto_def,
         wordsTheory.word_bit_def]
    \\ `0 <= dimindex(:'a) - 1` by lrw []
@@ -322,7 +321,15 @@ val BitCount = Q.store_thm("BitCount",
                              (FST state + 1, SND state)
                           else
                              state)`],
-        sum_numTheory.SUM_FOLDL, FOLDL_AUG]
+       sum_numTheory.SUM_FOLDL]
+   \\ REWRITE_TAC
+        [FOLDL_AUG
+         |> Q.ISPECL
+            [`\x:num i. x + if w ' i then 1 else 0`, `0`,
+             `COUNT_LIST (dimindex ((:'a) :'a itself))`, `s:m0_state`]
+         |> SIMP_RULE (srw_ss())[]]
+   \\ simp []
+   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (FST x = FST y)``)
    \\ MATCH_MP_TAC listTheory.FOLDL_CONG
    \\ lrw [rich_listTheory.MEM_COUNT_LIST,
            DECIDE ``0n < n ==> (n - 1 + 1 = n)``]

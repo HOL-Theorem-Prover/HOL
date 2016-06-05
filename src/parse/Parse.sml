@@ -822,9 +822,9 @@ fun rellistToString [] = ""
   | rellistToString (x::xs) = relToString x ^ ", " ^ rellistToString xs
 
 fun block_infoToString (Portable.CONSISTENT, n) =
-        "(CONSISTENT, "^Int.toString n^")"
+        "(Portable.CONSISTENT, "^Int.toString n^")"
   | block_infoToString (Portable.INCONSISTENT, n) =
-    "(INCONSISTENT, "^Int.toString n^")"
+    "(Portable.INCONSISTENT, "^Int.toString n^")"
 
 fun ParenStyleToString Always = "Always"
   | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
@@ -1526,7 +1526,7 @@ in
          val _ = grm_updates := []
      in
        B 0;
-         add_string "local open Portable GrammarSpecials Parse";
+         add_string "local open GrammarSpecials Parse";
          add_newline();
          add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
                     \off_complaints\",0)f";

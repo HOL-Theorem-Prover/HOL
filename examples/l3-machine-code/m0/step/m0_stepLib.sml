@@ -155,14 +155,14 @@ local
       |> Drule.UNDISCH
 in
    val R_name_rwt = r_rwt
-      `n <> 15w ==> (R n ^st = (^st.REG (R_name ^st.CONTROL.SPSEL n), s))`
+      `n <> 15w ==> (R n ^st = ^st.REG (R_name ^st.CONTROL.SPSEL n))`
 
    val write'R_name_rwt = r_rwt
       `n <> 15w ==>
        (write'R (d, n) ^st =
-        ((), ^st with REG :=
-             (R_name ^st.CONTROL.SPSEL n =+
-              if n = 13w then d && 0xFFFFFFFCw else d) ^st.REG))`
+        ^st with REG :=
+        (R_name ^st.CONTROL.SPSEL n =+
+        if n = 13w then d && 0xFFFFFFFCw else d) ^st.REG)`
 
    val RName_LR_rwt = EVAL ``m0_step$R_name x 14w``
 end
@@ -360,7 +360,8 @@ local
    fun cond_true t = let val (_, b, _) = boolSyntax.dest_cond t in b end
    val split_memA =
       GSYM (Q.ISPEC `MemA x s : 'a word # m0_state` pairTheory.PAIR)
-   val split_R = GSYM (Q.ISPEC `R x s` pairTheory.PAIR)
+   val dest_for = (fn (_, _, b) => b) o state_transformerSyntax.dest_for o
+                  Term.rator o Term.rand o let_val
 in
    fun simp_for_body thm =
       thm
@@ -368,13 +369,11 @@ in
       |> rhsc |> abs_body
       |> let_body
       |> let_body
-      |> (fn t => let_body t handle HOL_ERR _ => t)
-      |> pairSyntax.dest_pair |> snd
-      |> let_val |> Term.rand |> Term.rator
-      |> state_transformerSyntax.dest_for |> (fn (_, _, b) => b)
+      |> (fn t => dest_for t
+                  handle HOL_ERR {origin_function = "dest_FOR", ...} =>
+                    dest_for (let_body t))
       |> abs_body |> abs_body
-      |> (SIMP_CONV bool_ss
-            [Once split_memA, Once split_R, pairTheory.pair_case_thm]
+      |> (SIMP_CONV bool_ss [Once split_memA, pairTheory.pair_case_thm]
           THENC Conv.DEPTH_CONV PairedLambda.GEN_LET_CONV
           THENC SIMP_CONV std_ss [cond_rand_thms])
 end
@@ -1257,7 +1256,7 @@ val thumb_patterns = List.map (I ## utilsLib.pattern)
    ("LDRH (imm)",      "TFFFT___________"),
    ("STR (sp)",        "TFFTF___________"),
    ("LDR (sp)",        "TFFTT___________"),
-   ("ADD (reg,pc)",    "TFTFF___________"),
+(* ("ADD (reg,pc)",    "TFTFF___________"), *)
    ("ADD (sp)",        "TFTFT___________"),
    ("ADD (sp,sp)",     "TFTTFFFFF_______"),
    ("SUB (sp,sp)",     "TFTTFFFFT_______"),
@@ -1292,8 +1291,7 @@ val thumb_patterns = List.map (I ## utilsLib.pattern)
   ]
 
 val thumb2_patterns = List.map (I ## utilsLib.pattern)
-  [("B.W",   "TTTTF___________TF_T____________"),
-   ("BL",    "TTTTF___________TT_T____________")
+  [("BL",    "TTTTF___________TT_T____________")
   ]
 
 (* -- *)
@@ -1926,9 +1924,8 @@ end
 local
    val u2 = wordsSyntax.mk_wordii (2, 32)
    val u4 = wordsSyntax.mk_wordii (4, 32)
-   val get_pair = pairSyntax.dest_pair o rhsc
-   val get_val = fst o get_pair
-   val get_state = snd o get_pair
+   val get_val = fst o pairSyntax.dest_pair o rhsc
+   val get_state = rhsc
    val state_exception_tm = mk_arm_const "m0_state_exception"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb

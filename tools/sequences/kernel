@@ -1,4 +1,6 @@
 !tools/Holmake/tests/holdep
+!tools/Holmake/tests/depchainloop
+!tools/Holmake/tests/recursiveclean
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly

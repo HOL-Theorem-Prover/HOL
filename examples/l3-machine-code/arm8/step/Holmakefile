@@ -1,5 +1,5 @@
 INCLUDES = ../.. ../../lib ../model
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = arm8-heap

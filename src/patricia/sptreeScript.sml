@@ -377,11 +377,11 @@ val lrnext_def = prove(
   THEN1 (fs [Once ALT_ZERO,Once lrnext_real_def])
   THEN1
    (full_simp_tac (srw_ss()) [Once BIT1,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT1]
+    \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT1]
     \\ full_simp_tac (srw_ss()) [ADD_ASSOC,DECIDE ``n+n=n*2``,MULT_DIV])
   THEN1
    (simp_tac (srw_ss()) [Once BIT2,Once lrnext_real_def]
-    \\ AP_TERM_TAC \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT2]
+    \\ AP_TERM_TAC \\ simp_tac (srw_ss()) [Once BIT2]
     \\ `n + (n + 2) - 1 = n * 2 + 1` by DECIDE_TAC
     \\ asm_simp_tac (srw_ss()) [DIV_MULT]))
 val lrnext' = prove(

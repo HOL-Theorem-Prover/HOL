@@ -7,7 +7,7 @@ struct
   val POLYMLLIBDIR0 = Systeml.POLYMLLIBDIR;
 
 
-  fun extend_env (cline : HM_Cline.t) e = let
+  fun make_base_env (cline : HM_Cline.t) = let
     open Holmake_types
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
@@ -25,14 +25,14 @@ struct
       ("POLY_LDFLAGS_STATIC",
        [LIT (spacify (map Systeml.protect POLY_LDFLAGS_STATIC))])]
   in
-    List.foldl (fn (kv,acc) => env_extend kv acc) e alist
+    List.foldl (fn (kv,acc) => env_extend kv acc) (base_environment()) alist
   end
 
-  fun print_debug_info cline = let
+  fun debug_info cline = let
     val POLYMLLIBDIR =
         case #polymllibdir cline of NONE => POLYMLLIBDIR0 | SOME s => s
   in
-    print ("POLYMLLIBDIR = "^POLYMLLIBDIR^"\n")
+    "POLYMLLIBDIR = "^POLYMLLIBDIR
   end
 
 

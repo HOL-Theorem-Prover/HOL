@@ -389,7 +389,7 @@ val _ = work_in_dir "unquote." qfdir
                                polyc_compile "poly-unquote.ML" qfbin))
 
 (* Holmake *)
-val _ = work_in_dir "Holmake" hmakedir
+val _ = work_in_dir "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
                     (fn () => polyc_compile "poly-Holmake.ML" hmakebin)
 
 (* holdeptool *)

@@ -15,14 +15,6 @@ open HolKernel Parse boolLib bossLib Q
 
 val _ = new_theory "patricia";
 
-(* ------------------------------------------------------------------------- *)
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
 val _ = wordsLib.deprecate_word();
 
 (* ------------------------------------------------------------------------- *)
@@ -249,7 +241,7 @@ val lem = prove(
 val BRANCHING_BIT = store_thm("BRANCHING_BIT",
   `!a b. ~(a = b) ==> ~(BIT (BRANCHING_BIT a b) a = BIT (BRANCHING_BIT a b) b)`,
   Induct_on `BRANCHING_BIT a b` \\ SRW_TAC [] []
-    << [
+    >| [
       PAT_ASSUM `0 = x` (fn th => let val sth = SYM th in
                            SUBST1_TAC sth THEN ASSUME_TAC sth end)
         \\ Cases_on `ODD a = EVEN b`
@@ -258,7 +250,7 @@ val BRANCHING_BIT = store_thm("BRANCHING_BIT",
         \\ METIS_TAC [],
       ONCE_REWRITE_TAC [BRANCHING_BIT_def]
         \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def, bitTheory.BIT0_ODD]
-        >> METIS_TAC [EVEN_ODD]
+        >- METIS_TAC [EVEN_ODD]
         \\ PAT_ASSUM `!a b. P` (SPECL_THEN [`a DIV 2`,`b DIV 2`] ASSUME_TAC)
         \\ IMP_RES_TAC lem
         \\ FULL_SIMP_TAC std_ss [lem]
@@ -273,12 +265,12 @@ val BRANCHING_BIT_ZERO = store_thm("BRANCHING_BIT_ZERO",
 val BRANCHING_BIT_SYM = store_thm("BRANCHING_BIT_SYM",
   `!a b. BRANCHING_BIT a b = BRANCHING_BIT b a`,
   Induct_on `BRANCHING_BIT a b` \\ SRW_TAC [] []
-    >> METIS_TAC [BRANCHING_BIT_ZERO,
+    >- METIS_TAC [BRANCHING_BIT_ZERO,
          ONCE_REWRITE_RULE [METIS_PROVE [ODD_EVEN]
             ``(ODD a = EVEN b) = (ODD b = EVEN a)``] BRANCHING_BIT_ZERO]
     \\ ONCE_REWRITE_TAC [BRANCHING_BIT_def]
     \\ SRW_TAC [] [GSYM BIT_DIV2, DIV2_def]
-    << [METIS_TAC [EVEN_ODD], METIS_TAC [EVEN_ODD],
+    >| [METIS_TAC [EVEN_ODD], METIS_TAC [EVEN_ODD],
         RULE_ASSUM_TAC (REWRITE_RULE [Once BRANCHING_BIT_def])
           \\ FULL_SIMP_TAC (srw_ss()) []
           \\ METIS_TAC [DIV2_def]]);
@@ -310,7 +302,7 @@ val ADD_IS_PTREE = store_thm("ADD_IS_PTREE",
           IS_PTREE_def, ADD_def, JOIN_def, EVERY_LEAF_def]
     \\ TRY (METIS_TAC [MOD_2EXP_EQ_SYM, MOD_2EXP_EQ_BRANCHING_BIT,
                        BRANCHING_BIT, NOT_ADD_EMPTY, MOD_2EXP_LT_COR])
-    << [
+    >| [
       SPEC_THEN `\k d. MOD_2EXP_EQ n k n0 /\ BIT n k`
                 MATCH_MP_TAC MONO_EVERY_LEAF
         \\ `~BIT (BRANCHING_BIT q n0) n0`
@@ -475,14 +467,14 @@ val IS_PTREE_PEEK = store_thm("IS_PTREE_PEEK",
       (!k n. ~MOD_2EXP_EQ m k p \/ n < m /\ ~(BIT n p = BIT n k) ==>
           ~IS_SOME (PEEK l k) /\ ~IS_SOME (PEEK r k)))`,
   SRW_TAC [] [PEEK_def]
-    << [
+    >| [
      Induct_on `l` \\ SRW_TAC [] [IS_PTREE_def, PEEK_def]
-       >> (EXISTS_TAC `n` \\ FULL_SIMP_TAC (srw_ss()) [EVERY_LEAF_def])
+       >- (EXISTS_TAC `n` \\ FULL_SIMP_TAC (srw_ss()) [EVERY_LEAF_def])
        \\ `IS_PTREE (Branch p m l r) /\ IS_PTREE (Branch p m l' r)`
        by FULL_SIMP_TAC (srw_ss()) [IS_PTREE_def, EVERY_LEAF_def]
        \\ METIS_TAC [EVERY_LEAF_PEEK_LEFT, EVERY_LEAF_PEEK_RIGHT],
      Induct_on `r` \\ SRW_TAC [] [IS_PTREE_def, PEEK_def]
-       >> (EXISTS_TAC `n` \\ FULL_SIMP_TAC (srw_ss()) [EVERY_LEAF_def])
+       >- (EXISTS_TAC `n` \\ FULL_SIMP_TAC (srw_ss()) [EVERY_LEAF_def])
        \\ `IS_PTREE (Branch p m l r) /\ IS_PTREE (Branch p m l r')`
        by FULL_SIMP_TAC (srw_ss()) [IS_PTREE_def, EVERY_LEAF_def]
        \\ METIS_TAC [EVERY_LEAF_PEEK_LEFT, EVERY_LEAF_PEEK_RIGHT],
@@ -520,12 +512,12 @@ val PTREE_EQ = store_thm("PTREE_EQ",
     \\ ONCE_REWRITE_TAC [OPTION_EQ]
     \\ SIMP_TAC bool_ss [IS_PTREE_PEEK, IS_NONE_SOME]
     \\ RW_TAC bool_ss [PEEK_def]
-    << [
+    >| [
       METIS_TAC [IS_PTREE_PEEK],
       METIS_TAC [IS_PTREE_PEEK, optionTheory.THE_DEF],
       METIS_TAC [IS_PTREE_PEEK], METIS_TAC [IS_PTREE_PEEK],
       METIS_TAC [IS_PTREE_PEEK],
-      Tactical.REVERSE EQ_TAC >> METIS_TAC []
+      Tactical.REVERSE EQ_TAC >- METIS_TAC []
         \\ STRIP_TAC
         \\ IMP_RES_TAC IS_PTREE_PEEK
         \\ NTAC 4 (POP_ASSUM (K ALL_TAC))
@@ -542,8 +534,8 @@ val PTREE_EQ = store_thm("PTREE_EQ",
         by METIS_TAC [IS_PTREE_def]
         \\ FULL_SIMP_TAC bool_ss [GSYM OPTION_EQ]
         \\ CONJ_TAC \\ STRIP_TAC
-        << [Cases_on `BIT n' k''''` >> METIS_TAC [],
-            Tactical.REVERSE (Cases_on `BIT n' k''''`) >> METIS_TAC []]
+        >| [Cases_on `BIT n' k''''` >- METIS_TAC [],
+            Tactical.REVERSE (Cases_on `BIT n' k''''`) >- METIS_TAC []]
         \\ FULL_SIMP_TAC (srw_ss()) [IS_PTREE_def]
         \\ METIS_TAC [PEEK_NONE_LEFT, PEEK_NONE_RIGHT]]);
 
@@ -570,11 +562,11 @@ val ADD_ADD_SYM = store_thm("ADD_ADD_SYM",
 val FILTER_ALL = store_thm("FILTER_ALL",
   `!P l. (!n. n < LENGTH l ==> ~P (EL n l)) = (FILTER P l = [])`,
   Induct_on `l` \\ SRW_TAC [] []
-    >> (EXISTS_TAC `0` \\ SRW_TAC [] [])
+    >- (EXISTS_TAC `0` \\ SRW_TAC [] [])
     \\ PAT_ASSUM `!P. x` (SPEC_THEN `P` (SUBST1_TAC o SYM))
     \\ EQ_TAC \\ SRW_TAC [] []
-    >> METIS_TAC [LESS_MONO_EQ, EL, TL]
-    \\ Cases_on `n` >> SRW_TAC [] []
+    >- METIS_TAC [LESS_MONO_EQ, EL, TL]
+    \\ Cases_on `n` >- SRW_TAC [] []
     \\ METIS_TAC [LESS_MONO_EQ, EL, TL]);
 
 val TRAVERSE_TRANSFORM = store_thm("TRAVERSE_TRANSFORM",
@@ -646,7 +638,7 @@ val MEM_ALL_DISTINCT_IMP_PERM = store_thm("MEM_ALL_DISTINCT_IMP_PERM",
            PERM l1 l2`,
   SRW_TAC [] [PERM_DEF, ALL_DISTINCT_FILTER]
     \\ MATCH_MP_TAC listTheory.LIST_EQ
-    \\ Cases_on `MEM x l1` >> METIS_TAC []
+    \\ Cases_on `MEM x l1` >- METIS_TAC []
     \\ SPEC_THEN `$= x` ASSUME_TAC FILTER_ALL
     \\ METIS_TAC [MEM_EL]);
 
@@ -846,8 +838,8 @@ val PTREE_OF_NUMSET_DELETE = save_thm("PTREE_OF_NUMSET_DELETE",
 val TRAVERSE_AUX_lem = prove(
   `!t l. TRAVERSE_AUX t l = TRAVERSE_AUX t [] ++ l`,
   Induct
-    >> SRW_TAC [] [TRAVERSE_AUX_def]
-    >> SRW_TAC [] [TRAVERSE_AUX_def]
+    >- SRW_TAC [] [TRAVERSE_AUX_def]
+    >- SRW_TAC [] [TRAVERSE_AUX_def]
     \\ ONCE_REWRITE_TAC [TRAVERSE_AUX_def]
     \\ METIS_TAC [listTheory.APPEND_ASSOC]);
 
@@ -952,7 +944,7 @@ val PERM_DELETE_PTREE = store_thm("PERM_DELETE_PTREE",
 val FILTER_NONE = store_thm("FILTER_NONE",
   `!P l. (!n. n < LENGTH l ==> P (EL n l)) ==> (FILTER P l = l)`,
   Induct_on `l` \\ SRW_TAC [] []
-    >> POP_ASSUM (fn th => ASM_SIMP_TAC std_ss
+    >- POP_ASSUM (fn th => ASM_SIMP_TAC std_ss
          [(GEN_ALL o SIMP_RULE (srw_ss()) [] o SPEC `SUC n`) th])
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [] o SPEC `0`));
 
@@ -965,7 +957,7 @@ val LENGTH_FILTER_ONE_ALL_DISTINCT = prove(
         (LENGTH (FILTER (\x. ~(x = k)) l) = LENGTH l - 1)`,
   Induct \\ SRW_TAC [] []
     \\ FULL_SIMP_TAC (srw_ss()) []
-    >> METIS_TAC [DECIDE ``0 < n ==> (SUC (n - 1) = n)``, MEM_NOT_NULL]
+    >- METIS_TAC [DECIDE ``0 < n ==> (SUC (n - 1) = n)``, MEM_NOT_NULL]
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(a = b) ==> (LENGTH a = LENGTH b)``)
     \\ MATCH_MP_TAC FILTER_NONE
     \\ METIS_TAC [MEM_EL]);

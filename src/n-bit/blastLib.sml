@@ -487,56 +487,80 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   SMART_MUL_LSL_CONV : converts ``n2w n * w`` into either
-                        ``w << p1 + ... + w << pn`` or
-                        ``-w << p1 + ... + -w << pn`` depending on
-                        which gives the fewest additions.
-                        NB. ``-w`` is ``~w + 1w``.
+   SMART_MUL_LSL_CONV : converts ``n2w n * w`` into
+                        ``w1 << p1 + ... + wn << pn`` where wi is either w or -w
    ------------------------------------------------------------------------ *)
 
 local
-   val NEG_WORD =
-      Drule.EQT_ELIM (wordsLib.WORD_CONV ``a * b = -a * -b :'a word``)
-   val SYM_WORD_NEG_MUL = GSYM wordsTheory.WORD_NEG_MUL
-   fun boolify sz =
-      (fn l => List.take (l, sz)) o String.explode o StringCvt.padLeft #"0" sz o
-      Arbnum.toBinString
+  val SYM_WORD_NEG_MUL = GSYM wordsTheory.WORD_NEG_MUL
+  fun boolify s =
+    Substring.full o String.implode o (fn l => List.take (l, s)) o
+    String.explode o StringCvt.padLeft #"0" s o Arbnum.toBinString
+  fun pos x = (true, x)
+  fun neg x = (false, x)
+  fun partials a i s =
+    if Substring.isEmpty s
+      then a
+    else let
+           val (zeros, r) = Substring.splitl (Lib.equal #"0") s
+           val (ones, r) = Substring.splitl (Lib.equal #"1") r
+           val j = i - Substring.size zeros
+           val l = Substring.size ones
+         in
+           if l = 0
+             then a
+           else if i = j orelse l < 3
+             then partials (a @ List.tabulate (l, fn x => pos (j - x))) (j - l)
+                    r
+           else partials (a @ [pos (j + 1), neg (j + 1 - l)]) (j - l) r
+         end
+  val partials = partials []
+  val WORD_LSL_CONV =
+    Conv.DEPTH_CONV
+      (Conv.REWR_CONV
+         (Q.SPECL [`w: 'a word`, `arithmetic$NUMERAL a`] WORD_MUL_LSL))
+    THENC wordsLib.WORD_ARITH_CONV
+  fun partials_thm (n, sz) =
+    let
+      val s = Arbnum.toInt sz
+      val p = partials (s - 1) o boolify s
+      val l = p n
+      val nl = p (Arbnum.- (Arbnum.pow (Arbnum.two, sz), n))
+      val pos = List.length l < 2 * List.length nl
+      val l = if pos then l else nl
+      fun mk_lsl x p =
+        if p = 0 then x else wordsSyntax.mk_word_lsl (x, numLib.term_of_int p)
+      val x = Term.mk_var ("x", wordsSyntax.mk_int_word_type s)
+      val nx = wordsSyntax.mk_word_2comp x
+      fun mk (sgn, p) =
+        mk_lsl (if pos = sgn then x else wordsSyntax.mk_word_2comp x) p
+    in
+      List.foldl
+         (fn (x, t) => wordsSyntax.mk_word_add (t, mk x)) (mk (hd l)) (tl l)
+         |> WORD_LSL_CONV
+         |> GSYM
+    end
 in
-   fun SMART_MUL_LSL_CONV tm =
-      let
-         val l = fst (wordsSyntax.dest_word_mul tm)
-      in
-         case Lib.total wordsSyntax.dest_word_2comp l of
-            SOME v =>
-              if Lib.total wordsSyntax.dest_word_literal v = SOME Arbnum.one
-                 then Conv.REWR_CONV SYM_WORD_NEG_MUL tm
-              else raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
-          | NONE =>
-             let
-                val (N,sz) = wordsSyntax.dest_mod_word_literal l
-                             handle HOL_ERR _ =>
-                                (wordsSyntax.dest_word_literal l, Arbnum.zero)
-             in
-                if sz = Arbnum.zero orelse Arbnum.< (N, Arbnum.fromInt 11)
-                   then wordsLib.WORD_MUL_LSL_CONV tm
-                else let
-                        val sz = Arbnum.toInt sz
-                        val c_pos = N |> boolify sz
-                                      |> List.filter (Lib.equal #"1")
-                                      |> List.length
-                        val c_neg = N |> Arbnum.less1
-                                      |> boolify sz
-                                      |> List.filter (Lib.equal #"0")
-                                      |> List.length
-                     in
-                        if c_pos <= 2 * c_neg + 1
-                           then wordsLib.WORD_MUL_LSL_CONV tm
-                        else (Conv.REWR_CONV NEG_WORD
-                              THENC Conv.RATOR_CONV wordsLib.WORD_EVAL_CONV
-                              THENC wordsLib.WORD_MUL_LSL_CONV) tm
-                     end
-             end
-      end
+  fun SMART_MUL_LSL_CONV tm =
+    let
+       val l = fst (wordsSyntax.dest_word_mul tm)
+    in
+       case Lib.total wordsSyntax.dest_word_2comp l of
+          SOME v =>
+            if Lib.total wordsSyntax.dest_word_literal v = SOME Arbnum.one
+               then Conv.REWR_CONV SYM_WORD_NEG_MUL tm
+            else raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
+        | NONE =>
+           let
+              val x as (n, sz) =
+                wordsSyntax.dest_mod_word_literal l
+                handle HOL_ERR _ => (Arbnum.zero, Arbnum.zero)
+           in
+              if sz = Arbnum.zero orelse Arbnum.< (n, Arbnum.fromInt 11)
+                 then wordsLib.WORD_MUL_LSL_CONV tm
+              else Conv.REWR_CONV (partials_thm x) tm
+           end
+    end
 end
 
 (* ------------------------------------------------------------------------ *)
@@ -1106,14 +1130,13 @@ in
                      end
              end
      end
-
   fun BBLAST_CONV tm =
      let
         val _ = Term.type_of tm = Type.bool orelse
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
-        val tms = HolKernel.find_terms is_blastable (rhsc thm)
+        val tms = Lib.mk_set (HolKernel.find_terms is_blastable (rhsc thm))
         val thms = Lib.mapfilter BIT_BLAST_CONV tms
         val res = FORALL_EQ_RULE vars
                     (Conv.RIGHT_CONV_RULE
@@ -1217,10 +1240,12 @@ end
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV
 val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV
 
-val FULL_BBLAST_TAC =
+val MP_BLASTABLE_TAC =
    REPEAT (Tactical.PRED_ASSUM
-              (Lib.can (HolKernel.find_term full_is_blastable)) MP_TAC)
-   THEN BBLAST_TAC
+            (fn t => not (markerSyntax.is_abbrev t) andalso
+                     Lib.can (HolKernel.find_term full_is_blastable) t) MP_TAC)
+
+val FULL_BBLAST_TAC = MP_BLASTABLE_TAC THEN BBLAST_TAC
 
 fun BBLAST_PROVE_TAC (asl, w) = ACCEPT_TAC (BBLAST_PROVE w) (asl, w)
 

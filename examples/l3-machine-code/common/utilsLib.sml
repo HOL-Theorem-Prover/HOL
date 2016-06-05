@@ -534,6 +534,69 @@ in
       List.concat (List.map cond_update_thms l)
 end
 
+(*
+  Conversion for rewriting instances of:
+
+    f (case x of .. => y1 | .. => y2 | .. => yn)
+
+  to
+
+    case x of .. => f y1 | .. => f y2 | .. => f yn
+*)
+
+local
+  val case_rng = snd o HolKernel.strip_fun o Term.type_of
+  val term_rng = snd o Type.dom_rng o Term.type_of
+  val tac =
+    CONV_TAC (Conv.FORK_CONV
+                (Conv.RAND_CONV Drule.LIST_BETA_CONV, Drule.LIST_BETA_CONV))
+    THEN REFL_TAC
+  fun CASE_RAND_CONV1 rand_f tm =
+    let
+      val (f, x) = Term.dest_comb tm
+      val _ = Term.same_const rand_f f orelse Term.term_eq rand_f f orelse
+              raise ERR "CASE_RAND_CONV" ""
+      val (c, x, l) =
+        case boolSyntax.strip_comb x of
+           (c, x :: l) => (c, x, l)
+         | _ => raise ERR "CASE_RAND_CONV" ""
+      val ty = Term.type_of x
+      val case_c = TypeBase.case_const_of ty
+      val l' =
+        List.map
+          (fn t => let
+                     val (vs, b) = boolSyntax.strip_abs t
+                   in
+                     boolSyntax.list_mk_abs (vs, Term.mk_comb (f, b))
+                   end) l
+      val fvs = List.concat (List.map Term.free_vars l')
+      val x' = Term.variant fvs (Term.mk_var ("x", ty))
+      val th =
+        Tactical.prove
+          (boolSyntax.mk_eq
+            (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
+             boolSyntax.list_mk_icomb (case_c, x' :: l')),
+           Cases_on `^x'`
+           THEN ONCE_REWRITE_TAC [TypeBase.case_def_of ty]
+           THEN tac
+          )
+    in
+      Conv.REWR_CONV th tm
+    end
+  val literal_case_rand = Q.prove(
+    `!f x y a b.
+       f (literal_case (\v. if v = x then a else b) y) =
+       literal_case (\v. if v = x then f a else f b) y`,
+    SIMP_TAC std_ss [boolTheory.literal_case_DEF, boolTheory.COND_RAND])
+in
+  fun CASE_RAND_CONV f =
+    let
+      val cnv = Conv.REWR_CONV (Drule.ISPEC f literal_case_rand)
+    in
+      Conv.TOP_DEPTH_CONV (cnv ORELSEC CASE_RAND_CONV1 f)
+    end
+end
+
 (* Substitution allowing for type match *)
 
 local
@@ -1073,7 +1136,7 @@ local
          val f = mk_def thy (leaf ast)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_thm pv thy ast =
@@ -1084,7 +1147,7 @@ local
          val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_rwts thy =

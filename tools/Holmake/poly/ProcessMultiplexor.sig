@@ -6,7 +6,9 @@ sig
                  update : 'a * bool -> 'a}
   type jobkey = Posix.ProcEnv.pid * string
   type exit_status = Posix.Process.exit_status
-  type 'a workprovider = { initial : 'a, genjob : 'a -> ('a job * 'a) option }
+  datatype 'a genjob_result =
+           NoMoreJobs of 'a | NewJob of ('a job * 'a) | GiveUpAndDie of 'a
+  type 'a workprovider = { initial : 'a, genjob : 'a -> 'a genjob_result }
   type 'a worklist
 
   datatype strmtype = OUT | ERR
@@ -14,6 +16,7 @@ sig
            Output of jobkey * Time.time * strmtype * string
          | NothingSeen of jobkey * {delay: Time.time, total_elapsed : Time.time}
          | Terminated of jobkey * exit_status * Time.time
+         | MonitorKilled of jobkey * Time.time
          | EOF of jobkey * strmtype * Time.time
          | StartJob of jobkey
   datatype client_cmd = Kill of jobkey | KillAll
@@ -24,6 +27,7 @@ sig
                      'a worklist
 
   val do_work : ('a worklist * monitor) -> 'a
+  val mk_shell_command : string -> string * string list
   val shell_commands : monitor -> string list * int ->
                        (string * bool) list
 
