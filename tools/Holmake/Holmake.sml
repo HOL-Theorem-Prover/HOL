@@ -666,7 +666,7 @@ val _ = not always_rebuild_deps orelse clean_deps()
 in
   case targets of
     [] => let
-      val targets = generate_all_plausible_targets first_target
+      val targets = generate_all_plausible_targets warn first_target
       val targets = map fromFile targets
       val _ =
           let

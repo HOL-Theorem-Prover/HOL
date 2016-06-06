@@ -344,6 +344,8 @@ fun clean_dir {extra_cleans} = let
       | SIG (Theory _) => true
       | SML (Theory _) => true
       | ART (RawArticle _) => true
+      | SML (Script s) =>
+          (case OS.Path.ext s of SOME "art" => true | _ => false)
       | _ => false
   fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
@@ -567,12 +569,17 @@ in
 end
 
 fun find_files ds P =
-    case OS.FileSys.readDir ds of
-        NONE => (OS.FileSys.closeDir ds; [])
-      | SOME fname => if P fname then fname::find_files ds P
-                      else find_files ds P
+  let
+    fun recurse acc =
+      case OS.FileSys.readDir ds of
+          NONE => (OS.FileSys.closeDir ds; List.rev acc)
+        | SOME fname => if P fname then recurse (fname::acc)
+                        else recurse acc
+  in
+    recurse []
+  end
 
-fun generate_all_plausible_targets first_target =
+fun generate_all_plausible_targets warn first_target =
     case first_target of
         SOME s => [toFile s]
       | NONE =>
@@ -582,6 +589,16 @@ fun generate_all_plausible_targets first_target =
           fun ok_file f =
               case (toFile f) of
                   SIG _ => true
+                | SML (Script s) =>
+                  (case OS.Path.ext s of
+                       SOME "art" => false
+                       (* can be generated as temporary by opentheory
+                          machinery *)
+                     | SOME _ =>
+                         (warn ("Theory names (e.g., "^f^
+                                ") can't include '.' characters");
+                          false)
+                     | NONE => true)
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)

@@ -80,7 +80,8 @@ sig
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
-  val generate_all_plausible_targets : string option -> File list
+  val generate_all_plausible_targets :
+      (string -> unit) -> string option -> File list
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
