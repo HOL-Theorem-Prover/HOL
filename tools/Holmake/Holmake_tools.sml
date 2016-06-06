@@ -343,9 +343,9 @@ fun clean_dir {extra_cleans} = let
       | UI _ => true
       | SIG (Theory _) => true
       | SML (Theory _) => true
-      | ART (RawArticle _) => true
       | SML (Script s) =>
           (case OS.Path.ext s of SOME "art" => true | _ => false)
+      | ART _ => true
       | _ => false
   fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
