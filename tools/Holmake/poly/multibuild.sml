@@ -105,7 +105,11 @@ fun graphbuild optinfo incinfo g =
                               updnode(n, Succeeded) g
                             else
                               updnode(n, Failed) g
+                          fun cline_str (c,l) = "["^c^"] " ^
+                                                String.concatWith " " l
                         in
+                          diag ("New graph job for "^target_s^
+                                " with c/line: " ^ cline_str cline);
                           NewJob({tag = target_s,
                                   command = cline,
                                   update = update}, updnode(n, Running) g)
@@ -117,6 +121,14 @@ fun graphbuild optinfo incinfo g =
                       [f] => (case toFile f of
                                   UI c => bresk (bc (Compile depfs) (SIG c)) g
                                 | UO c => bresk (bc (Compile depfs) (SML c)) g
+                                | ART (RawArticle s) =>
+                                    bresk (bc (BuildArticle(s,depfs))
+                                              (SML (Script s)))
+                                          g
+                                | ART (ProcessedArticle s) =>
+                                    bresk (bc (ProcessArticle s)
+                                              (ART (RawArticle s)))
+                                          g
                                 | _ => raise Fail ("bg tgt = " ^ f))
                     | [thyfile, _] =>
                       let

@@ -143,6 +143,9 @@ case file of
 | _ => raise Match
 end
 
+fun list_delete x [] = []
+  | list_delete x (y::ys) = if x = y then ys else y :: list_delete x ys
+
 type build_command = {preincludes : string list, includes : string list} ->
                      Holmake_tools.buildcmds ->
                      File -> bool
@@ -248,9 +251,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           objectfiles0
         else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
         else "holmake_not_interactive.uo" :: objectfiles0
-      in ((script,scriptuo,scriptui,scriptsml,s), objectfiles) end
-    fun run_script (script,scriptuo,scriptui,scriptsml,s) objectfiles
-                   expected_results =
+    in
+        ((script,[scriptuo,scriptui,script]), objectfiles)
+    end
+    fun run_script (script, intermediates) objectfiles expected_results =
       if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
       then let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
@@ -264,7 +268,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                       posix_diagnostic res)
                 else ()
             val _ = if isSuccess res orelse not debug then
-                      app safedelete [script, scriptuo, scriptui]
+                      app safedelete (script :: intermediates)
                     else ()
           in
             isSuccess res andalso
@@ -273,7 +277,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                          (wn ("Script file "^script^" didn't produce "^file^
                               "; \n\
                               \  maybe need export_theory() at end of "^
-                              scriptsml);
+                              script ^ ".sml");
                           false))
                      expected_results
           end
@@ -303,14 +307,21 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             run_script scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
           end
-        | BuildArticle (s, deps) =>
+        | BuildArticle (s0, deps) =>
           let
+            val s = s0 ^ ".art"
+            val oldscript_f = SML (Script s0)
+            val fakescript_f = SML (Script s)
+            val _ = Posix.FileSys.link {old = fromFile oldscript_f,
+                                        new = fromFile fakescript_f }
             val loggingextras =
                 case opentheory of SOME uo => [uo]
                                  | NONE => ["loggingHolKernel.uo"]
-            val (scriptetc,objectfiles) = setup_script s deps loggingextras
+            val deps = list_delete oldscript_f deps @ [fakescript_f]
+            val ((script,inters),objectfiles) =
+                setup_script s deps loggingextras
           in
-            run_script scriptetc objectfiles [s^".art"]
+            run_script (script,fromFile fakescript_f :: inters) objectfiles [s]
           end
         | ProcessArticle s =>
           let
@@ -319,8 +330,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             val raw_art = fromFile raw_art_file
             val art = fromFile art_file
             val cline =
-                ("opentheory",
-                 ["opentheory", "info", "--article", "-o", art, raw_art])
+                ("/bin/sh",
+                 ["/bin/sh", "-c",
+                  "opentheory info --article -o " ^ art ^ " " ^ raw_art])
           in
             BR_ClineK (cline, (fn _ => OS.Process.isSuccess))
           end
