@@ -1683,10 +1683,16 @@ val arm_patterns = List.map (I ## epattern)
    ("Signed16x32Multiply32Result",          "FFFTFFTF____________T_TF"),
    ("Signed16Multiply64Accumulate",         "FFFTFTFF____________T__F"),
    ("Signed16Multiply32Result",             "FFFTFTTF____________T__F"),
-   ("BitFieldClearOrInsert",                "FTTTTTF______________FFT"),
-   ("BitFieldExtract",                      "FTTTT_T______________TFT"),
+   ("ExtendByte",                           "FTTFT_TF____________FTTT"),
    ("ExtendByte16",                         "FTTFT_FF__________FFFTTT"),
+   ("ExtendHalfword",                       "FTTFT_TT__________FFFTTT"),
+   ("SelectBytes",                          "FTTFTFFF________TTTTTFTT"),
    ("ByteReverse",                          "FTTFTFTTTTTT____TTTTFFTT"),
+   ("ByteReversePackedHalfword",            "FTTFTFTTTTTT____TTTTTFTT"),
+   ("ByteReverseSignedHalfword",            "FTTFTTTTTTTT____TTTTTFTT"),
+   ("ReverseBits",                          "FTTFTTTTTTTT____TTTTFFTT"),
+   ("BitFieldExtract",                      "FTTTT_T______________TFT"),
+   ("BitFieldClearOrInsert",                "FTTTTTF______________FFT"),
    ("Register",                             "FFFF___________________F"),
    ("Register ORR/BIC",                     "FFFTT_F________________F"),
    ("ShiftImmediate",                       "FFFTT_T________________F"),
@@ -1704,7 +1710,6 @@ val arm_patterns = List.map (I ## epattern)
    ("Move",                                 "FFTTT_T_________________"),
    ("TestCompareImmediate",                 "FFTTF__T________________"),
    ("MoveHalfword",                         "FFTTF_FF________________"),
-   ("ExtendByte",                           "FTTFT_TF____________FTTT"),
    ("BranchTarget",                         "TFTF____________________"),
    ("BranchLinkExchangeImmediate (to ARM)", "TFTT____________________"),
    ("LoadUnprivileged (imm)",               "FTFF_FTT________________"),
@@ -2020,18 +2025,16 @@ local
      ("MULS", ("Multiply32", [xT 0])),
      ("MLAS", ("MultiplyAccumulate", [xT 0])),
      ("SMLA<XY>", ("Signed16Multiply32Accumulate", [])),
-     ("BFC", ("BitFieldClearOrInsert", [])),
+     ("SXT{A}B,UXT{A}B", ("ExtendByte", [])),
+     ("SXT{A}B16,UXT{A}B16", ("ExtendByte16", [])),
+     ("SXT{A}H,UXT{A}H", ("ExtendHalfword", [])),
+     ("SEL", ("SelectBytes", [])),
      ("REV", ("ByteReverse", [])),
-     ("UXTAB", ("ExtendByte", [xT 0])),
-     ("SXTAB", ("ExtendByte", [xF 0])),
-     ("UXTB", ("ExtendByte", [xT 0, xT 1, xT 2, xT 3, xT 4])),
-     ("SXTB", ("ExtendByte", [xF 0, xT 1, xT 2, xT 3, xT 4])),
-     ("UXTAB16", ("ExtendByte16", [xT 0])),
-     ("SXTAB16", ("ExtendByte16", [xF 0])),
-     ("UXTB16", ("ExtendByte16", [xT 0, xT 1, xT 2, xT 3, xT 4])),
-     ("SXTB16", ("ExtendByte16", [xF 0, xT 1, xT 2, xT 3, xT 4])),
-     ("UBFX", ("BitFieldExtract", [xT 0])),
-     ("SBFX", ("BitFieldExtract", [xF 0])),
+     ("REV16", ("ByteReversePackedHalfword", [])),
+     ("REVSH", ("ByteReverseSignedHalfword", [])),
+     ("RBIT", ("ReverseBits", [])),
+     ("SBFX,UBFX", ("BitFieldExtract", [])),
+     ("BFC", ("BitFieldClearOrInsert", [])),
      ("LDR (+imm,pre,wb)", ("LoadWord (imm,pre)", [xT 0, xT 1])),
      ("LDR (-imm,pre,wb)", ("LoadWord (imm,pre)", [xF 0, xT 1])),
      ("LDR (+imm,pre)", ("LoadWord (imm,pre)", [xT 0, xF 1])),
@@ -2946,15 +2949,56 @@ val Signed16Multiply32Accumulate_rwt =
 
 (* ---------------------------- *)
 
-val ExtendByte_rwt =
-  regEV [`d`, `m`] [dfn'ExtendByte_def, ROR_rwt, wordsTheory.WORD_ADD_0]
-     [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
-     ``dfn'ExtendByte (u, d, 15w, m, rot)``
+(* Media *)
 
-val ExtendByteAcc_rwt =
+val ExtendByte_rwt =
   regEV [`d`, `m`] [dfn'ExtendByte_def, ROR_rwt]
-     [[``d <> 15w: word4``, ``m <> 15w: word4``, ``n <> 15w: word4``]] []
+     [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
      ``dfn'ExtendByte (u, d, n, m, rot)``
+
+val ExtendByte16_rwt =
+   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt, wordsTheory.WORD_EXTRACT_ZERO2]
+      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
+      ``dfn'ExtendByte16 (U, d, n, m, rot)``
+
+val ExtendHalfword_rwt =
+  regEV [`d`, `m`] [dfn'ExtendHalfword_def, ROR_rwt]
+     [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
+     ``dfn'ExtendHalfword (u, d, n, m, rot)``
+
+val SelectBytes_rwt =
+  regEV [`d`, `n`, `m`] [dfn'SelectBytes_def]
+     [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``]] []
+     ``dfn'SelectBytes (d, n, m)``
+
+val ByteReverse_rwt =
+   regEV [`d`] [dfn'ByteReverse_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ByteReverse (d, m)``
+
+val ByteReversePackedHalfword_rwt =
+   regEV [`d`] [dfn'ByteReversePackedHalfword_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ByteReversePackedHalfword (d, m)``
+
+val ByteReverseSignedHalfword_rwt =
+   regEV [`d`] [dfn'ByteReverseSignedHalfword_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ByteReverseSignedHalfword (d, m)``
+
+val ReverseBits_rwt =
+   regEV [`d`] [dfn'ReverseBits_def]
+      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
+      ``dfn'ReverseBits (d, m)``
+
+val BitFieldExtract_rwt =
+   regEV [`d`] [dfn'BitFieldExtract_def]
+      [[``d <> 15w: word4``, ``n <> 15w: word4``]] []
+      ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
+
+val BitFieldClearOrInsert_rwt =
+   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
+      ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
 
 (* Add a few more multiplies and SIMD instructions *)
 
@@ -3502,29 +3546,6 @@ val vstr_npc_rwt =
    |> addThms
 
 val () = resetEvConv ()
-
-(* ---------------------------- *)
-
-(* Media *)
-
-val BitFieldClearOrInsert_rwt =
-   regEV [`d`] [dfn'BitFieldClearOrInsert_def] [[``d <> 15w: word4``]] []
-      ``dfn'BitFieldClearOrInsert (d, n, lsb, msb)``
-
-val BitFieldExtract_rwt =
-   regEV [`d`] [dfn'BitFieldExtract_def]
-      [[``d <> 15w: word4``, ``n <> 15w: word4``]] []
-      ``dfn'BitFieldExtract (U, d, n, lsb, widthminus1)``
-
-val ExtendByte16_rwt =
-   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt, wordsTheory.WORD_EXTRACT_ZERO2]
-      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
-      ``dfn'ExtendByte16 (U, d, n, m, rot)``
-
-val ByteReverse_rwt =
-   regEV [`d`] [dfn'ByteReverse_def]
-      [[``d <> 15w: word4``, ``m <> 15w:word4``]] []
-      ``dfn'ByteReverse (d, m)``
 
 (* ---------------------------- *)
 
