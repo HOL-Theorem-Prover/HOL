@@ -2952,22 +2952,22 @@ val Signed16Multiply32Accumulate_rwt =
 (* Media *)
 
 val ExtendByte_rwt =
-  regEV [`d`, `m`] [dfn'ExtendByte_def, ROR_rwt]
+  regEV [`d`] [dfn'ExtendByte_def, ROR_rwt]
      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
      ``dfn'ExtendByte (u, d, n, m, rot)``
 
 val ExtendByte16_rwt =
-   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt, wordsTheory.WORD_EXTRACT_ZERO2]
+   regEV [`d`] [dfn'ExtendByte16_def, ROR_rwt]
       [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
       ``dfn'ExtendByte16 (U, d, n, m, rot)``
 
 val ExtendHalfword_rwt =
-  regEV [`d`, `m`] [dfn'ExtendHalfword_def, ROR_rwt]
+  regEV [`d`] [dfn'ExtendHalfword_def, ROR_rwt]
      [[``d <> 15w: word4``, ``m <> 15w: word4``]] []
      ``dfn'ExtendHalfword (u, d, n, m, rot)``
 
 val SelectBytes_rwt =
-  regEV [`d`, `n`, `m`] [dfn'SelectBytes_def]
+  regEV [`d`] [dfn'SelectBytes_def]
      [[``d <> 15w: word4``, ``n <> 15w: word4``, ``m <> 15w: word4``]] []
      ``dfn'SelectBytes (d, n, m)``
 
