@@ -228,7 +228,7 @@ local
       let
          val w = assemblerLib.word 32 s
          val c = BitsN.bits (31, 28) w
-         val () = arm.SetPassCondition c
+         val () = (init(); arm.SetPassCondition c)
          val h = StringCvt.padLeft #"0" 8 (L3.lowercase s)
          val (m, a) = arm.instructionToString (c, arm.DecodeARM w)
                       handle arm.UNPREDICTABLE _ => ("WORD", h)
