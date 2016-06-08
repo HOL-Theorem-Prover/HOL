@@ -432,7 +432,9 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
           arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
+   val aligned_cond_rand =
+     utilsLib.mk_cond_rand_thms [``aligned n : 'a word -> bool``]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric, aligned_cond_rand,
                            arm_progTheory.Aligned_Branch]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
@@ -480,7 +482,7 @@ in
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                [alignmentTheory.aligned_numeric])) o
+                [aligned_cond_rand, alignmentTheory.aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
