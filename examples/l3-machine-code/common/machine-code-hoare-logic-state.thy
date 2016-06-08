@@ -1,5 +1,5 @@
 name: machine-code-hoare-logic-state
-version: 1.0
+version: 1.1
 description: Machine code Hoare logic state
 author: HOL OpenTheory Packager <opentheory-packager@hol-theorem-prover.org>
 license: MIT
