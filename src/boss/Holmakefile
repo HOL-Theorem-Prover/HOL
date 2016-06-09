@@ -18,7 +18,7 @@ $(TARGET): $(DEPS)
 
 endif
 
-UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
+UOFILES = bossLib.uo lcsymtacs.uo selftest.uo
 
 all: selftest.exe $(UOFILES)
 .PHONY: all
