@@ -7,12 +7,12 @@ fun mips_decompile_code s =
   mips_decompLib.mips_decompile s o utilsLib.strings_to_quote o
   List.map mips.encodeInstruction o helperLib.quote_to_strings
 
-val (text1_cert, test1_def) = mips_decompile_code "test1"
+val (test1_cert, test1_def) = mips_decompile_code "test1"
   `ori $1, $0, 10
    bne $1, $0, 0xFFFF
    daddiu $1, $1, 0xFFFF`
 
-val (text2_cert, test2_def) = mips_decompile_code "test2"
+val (test2_cert, test2_def) = mips_decompile_code "test2"
   `ori $1, $0, 10
    beq $1, $0, 1
    nop`
@@ -20,7 +20,7 @@ val (text2_cert, test2_def) = mips_decompile_code "test2"
 (* These decompile under the assumption that arithmetic exceptions do not
    occur *)
 
-val (text3_cert, test3_def) = mips_decompile_code "test3"
+val (test3_cert, test3_def) = mips_decompile_code "test3"
   `dadd $1, $2, $3
    dmult $1, $3`
 

@@ -6,10 +6,12 @@ sig
   exception DuplicateTarget
   datatype target_status = Pending | Succeeded | Failed | Running
   eqtype node
+  datatype command = NoCmd | SomeCmd of string | BuiltInCmd
   type 'a nodeInfo = { target : 'a, status : target_status,
-                       command : string option,
-                       dependencies : node list }
+                       command : command, seqnum : int,
+                       dependencies : (node * string) list }
   val nodeInfo_toString : ('a -> string) -> 'a nodeInfo -> string
+  val node_toString : node -> string
   val setStatus : target_status -> 'a nodeInfo -> 'a nodeInfo
   val node_compare : node * node -> order
 
@@ -19,7 +21,7 @@ sig
   val peeknode : t -> node -> string list nodeInfo option
   val target_node : t -> string -> node option
   val size : t -> int
-  val listNodes : t -> string list nodeInfo list
+  val listNodes : t -> (node * string list nodeInfo) list
 
   val find_runnable : t -> (node * string list nodeInfo) option
 

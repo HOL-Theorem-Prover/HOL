@@ -8,3 +8,8 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo optionSyntax.uo optionTheory.uo $(dprot $(SIGOBJ)/testutils.uo)
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),-otknl)
+all: option.ot.art
+option.art: option.otd
+endif

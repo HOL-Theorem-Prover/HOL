@@ -1,0 +1,12 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+.PHONY: all
+
+ifeq ($(KERNELID),-otknl)
+all: sum.ot.art
+
+sum.art: sum.otd
+
+endif

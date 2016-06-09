@@ -156,9 +156,9 @@ val write'mem8_rwt =
 
 val sizes = [``Z8 have_rex``, ``Z16``, ``Z32``, ``Z64``]
 
-val Eflag_rwt =
-   EV [Eflag_def] [[``^st.EFLAGS (flag) = SOME b``]] []
-      ``Eflag (flag)``
+val Cflag_rwt =
+   EV [Eflag_def] [[``^st.EFLAGS Z_CF = SOME cflag``]] []
+      ``Eflag Z_CF``
    |> hd
 
 val write'Eflag_rwt =
@@ -338,7 +338,7 @@ val write_binop_rwt =
         Zsize_width_def, word_size_msb_def,
         word_signed_overflow_add_def, word_signed_overflow_sub_def,
         erase_eflags, write_PF_rwt, write'CF_def, write'OF_def,
-        write'Eflag_rwt, CF_def, Eflag_rwt, FlagUnspecified_def] @
+        write'Eflag_rwt, CF_def, Cflag_rwt, FlagUnspecified_def] @
        write_arith_eflags_rwt @ write_logical_eflags_rwt @ write_SF_rwt @
        write_ZF_rwt @ write'EA_rwt) []
       (utilsLib.augment (`bop`, binops) ea_op)
@@ -351,7 +351,7 @@ val write_monop_rwt =
         write_arith_result_no_CF_OF_def,
         write_arith_eflags_except_CF_OF_def,
         write_PF_rwt, write'CF_def, write'OF_def,
-        write'Eflag_rwt, CF_def, Eflag_rwt, FlagUnspecified_def] @
+        write'Eflag_rwt, CF_def, FlagUnspecified_def] @
        write_SF_rwt @ write_ZF_rwt @ write'EA_rwt) []
       (utilsLib.augment (`mop`, monops) ea_op)
       ``write_monop (size1, mop, x, ea)``
@@ -460,6 +460,21 @@ val is_some_hyp_rule =
 val cond_update_rule = List.map (Conv.CONV_RULE COND_UPDATE_CONV)
 
 val _ = addThms [dfn'Znop_def]
+
+val Zcmc_rwt =
+   EV [dfn'Zcmc_def, CF_def, write'CF_def, Cflag_rwt, write'Eflag_rwt] [] []
+      ``dfn'Zcmc``
+   |> addThms
+
+val Zclc_rwt =
+   EV [dfn'Zclc_def, CF_def, write'CF_def, write'Eflag_rwt] [] []
+      ``dfn'Zclc``
+   |> addThms
+
+val Zstc_rwt =
+   EV [dfn'Zstc_def, CF_def, write'CF_def, write'Eflag_rwt] [] []
+      ``dfn'Zstc``
+   |> addThms
 
 val Zbinop_rwts =
    EV ([dfn'Zbinop_def, read_dest_src_ea_def] @
@@ -633,11 +648,9 @@ local
             in
                (i + 1, PURE_REWRITE_RULE [ASSUME rwt, optionTheory.THE_DEF] thm)
             end) (0, x64_fetch) l |> snd
-   val decode_tm = ``x64_decode (FST (x64_fetch ^st))``
+   val decode_tm = ``x64_decode (x64_fetch ^st)``
    fun decode_thm fetch_rwt =
-      (Conv.RAND_CONV
-         (Conv.RAND_CONV (Conv.REWR_CONV fetch_rwt)
-          THENC Conv.REWR_CONV pairTheory.FST) THENC x64_CONV) decode_tm
+      (Conv.RAND_CONV (Conv.REWR_CONV fetch_rwt) THENC x64_CONV) decode_tm
    val get_list =
      fst o listSyntax.dest_list o optionSyntax.dest_some o #3 o
      Lib.triple_of_list o pairSyntax.strip_pair
@@ -710,10 +723,9 @@ local
       REWRITE_CONV
          (List.take (utilsLib.datatype_rewrites false "x64" ["Zreg"], 2))
       THENC utilsLib.WGROUND_CONV
-   val rwts = [pairTheory.FST, pairTheory.SND, word_thms]
+   val rwts = [pairTheory.FST, pairTheory.SND, combinTheory.I_THM, word_thms]
    val get_strm1 = Term.rand o Term.rand o Term.rand o Term.rand o utilsLib.rhsc
    val get_ast = Term.rand o Term.rator o Term.rand o Term.rand o utilsLib.rhsc
-   val get_state = snd o pairSyntax.dest_pair o utilsLib.rhsc
    val state_exception_tm =
       Term.prim_mk_const {Thy = "x64", Name = "x64_state_exception"}
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
@@ -739,23 +751,25 @@ local
       ref (Redblackmap.mkDict String.compare: (string, thm) Redblackmap.dict)
    fun addToCache (s, thm) = (cache := Redblackmap.insert (!cache, s, thm); thm)
    fun checkCache s = Redblackmap.peek (!cache, s)
+   val I_intro =
+     Drule.GEN_ALL o
+     Conv.RIGHT_CONV_RULE (ONCE_REWRITE_CONV [GSYM combinTheory.I_THM]) o
+     Drule.SPEC_ALL
 in
    fun x64_step l =
       let
          val thm1 = x64_decode l
          val thm2 = mk_len_thm thm1
          val thm4 = run_CONV thm1
+         val s = utilsLib.rhsc (Drule.SPEC_ALL thm4)
+         val thm4 = if Term.is_var s then I_intro thm4 else thm4
          val thm5 = (thm4 |> Drule.SPEC_ALL
                           |> utilsLib.rhsc
                           |> bump_rip (utilsLib.rhsc thm2)
                           |> run)
                     handle Conv.UNCHANGED => unchanged l
-         val r = get_state thm5
-                 handle HOL_ERR {origin_function = "dest_pair", ...} =>
-                   (Parse.print_thm thm5
-                    ; print "\n"
-                    ; raise ERR "eval" "failed to fully evaluate")
-         val thm6 = STATE_CONV (mk_proj_exception r)
+         val r = utilsLib.rhsc thm5
+         val thm6 = Conv.QCONV STATE_CONV (mk_proj_exception r)
          val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       in
          MP_Next thm

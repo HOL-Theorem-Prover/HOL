@@ -11,6 +11,8 @@ open Systeml
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 structure Process = OS.Process
+exception Interrupt = SML90.Interrupt;
+
 val _ = let
   infix ++
   fun p1 ++ p2 = Path.concat (p1,p2)
@@ -22,7 +24,8 @@ val _ = let
   end
 in
   app appthis ["regexpMatch", "parse_glob", "internal_functions",
-               "Holmake_types", "ReadHMF"]
+               "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
+               "ReadHMF"]
 end;
 
 fun warn s = (TextIO.output(TextIO.stdErr, s ^ "\n");
@@ -33,7 +36,7 @@ fun main() = let
   val heap =
       if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
           open Holmake_types
-          val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
+          val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
           fun envlist id =
               map dequote (tokenize (perform_substitution env [VREF id]))
           val heap_v = envlist "HOLHEAP"

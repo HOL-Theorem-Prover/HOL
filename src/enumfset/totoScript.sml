@@ -999,6 +999,17 @@ IMP_RES_THEN SUBST1_TAC TO_apto_TO_IMP THEN REWRITE_TAC [oneOrd]);
 
 (* intto moved to inttoTheory, to avoid always loading intLib *)
 
+val StrongLinearOrder_of_TO_TO_of_LinearOrder = store_thm("StrongLinearOrder_of_TO_TO_of_LinearOrder",
+  ``!R. irreflexive R ==> (StrongLinearOrder_of_TO (TO_of_LinearOrder R) = R)``,
+  srw_tac[][irreflexive_def] >>
+  srw_tac[][FUN_EQ_THM,StrongLinearOrder_of_TO,TO_of_LinearOrder] >>
+  srw_tac[][])
+
+val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
+  ``!R V. irreflexive R /\ irreflexive V
+    ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
+  simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
+
 val _ = export_theory ();
 
 end;

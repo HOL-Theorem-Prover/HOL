@@ -12,8 +12,8 @@ all: genUseScript
 comparelogs: poly-comparelogs.ML comparelogs.sml
 	$(POLYC) $< -o $@
 
-genUseScript: genUseScript.sml $(dprot $(HOLDIR)/src/portableML/getOpt.sig) \
-              $(dprot $(HOLDIR)/src/portableML/getOpt.sml)
+genUseScript: genUseScript.sml $(dprot $(HOLDIR)/src/portableML/GetOpt.sig) \
+              $(dprot $(HOLDIR)/src/portableML/GetOpt.sml)
 	$(POLYC) $< -o $@
 
 else

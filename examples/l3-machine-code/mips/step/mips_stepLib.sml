@@ -959,7 +959,6 @@ in
 end
 
 local
-   val get_state = snd o pairSyntax.dest_pair o rhsc
    fun mk_mips_const n = Term.prim_mk_const {Thy = "mips", Name = n}
    val state_exception_tm = mk_mips_const "mips_state_exception"
    val state_exceptionSignalled_tm =
@@ -972,8 +971,6 @@ local
    fun mk_proj_BranchDelay r = Term.mk_comb (state_BranchDelay_tm, r)
    fun mk_proj_BranchTo r = Term.mk_comb (state_BranchTo_tm, r)
    val st_BranchDelay_tm = mk_proj_BranchDelay st
-   val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
-   val snd_conv = Conv.REWR_CONV pairTheory.SND
    val STATE_CONV =
       Conv.QCONV
         (REWRITE_CONV
@@ -1017,10 +1014,7 @@ in
                val thm2 = mips_decode v
                val thm3 = Drule.SPEC_ALL (Run_CONV thm2)
                val ethm = run (rhsc thm3)
-               val thm3 = thm3 |> ap_snd
-                               |> Conv.RIGHT_CONV_RULE
-                                    (Conv.RAND_CONV (Conv.REWR_CONV ethm)
-                                     THENC snd_conv)
+               val thm3 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
                val tm = rhsc thm3
                val thms = List.map (fn f => STATE_CONV (f tm))
                              [mk_proj_exception,

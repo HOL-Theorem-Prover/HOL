@@ -6,12 +6,18 @@ structure FileSys = OS.FileSys
 structure Path = OS.Path
 structure Process = OS.Process
 
+infix |>
+fun x |> f = f x
+
 val default_holstate = Systeml.DEFAULT_STATE
-val failed_script_cache = ref (Binaryset.empty String.compare)
+
+open HM_GraphBuildJ1
 
 datatype cmd_line = Mosml_compile of File list * string
                   | Mosml_link of string * File list
                   | Mosml_error
+
+datatype buildresult = datatype multibuild.buildresult
 
 fun process_mosml_args (outs:Holmake_tools.output_functions) c = let
   val {diag,...} = outs
@@ -85,8 +91,20 @@ fun addPath I file =
          | SOME p => OS.Path.concat (p, file)
     end;
 
-fun poly_compile quietp file I deps = let
+fun poly_compile diag quietp file I deps = let
   val modName = fromFileNoSuf file
+  val deps = let
+    open Binaryset
+    val dep_set0 = addList (empty String.compare, map fromFile deps)
+    val {deps = extra_deps, ...} =
+        Holdep.main {assumes = [], includes = I, diag = diag,
+                     fname = fromFile file}
+    val dep_set = addList (dep_set0, extra_deps)
+  in
+    foldr (fn (s,acc) => toFile s :: acc) [] dep_set
+  end
+  val _ = diag ("Writing "^fromFile file^" with dependencies: " ^
+                String.concatWith ", " (map fromFile deps))
   fun mapthis (Unhandled _) = NONE
     | mapthis f = SOME (fromFileNoSuf f)
   val depMods = List.map (addPath I) (List.mapPartial mapthis deps)
@@ -125,6 +143,9 @@ case file of
 | _ => raise Match
 end
 
+fun list_delete x [] = []
+  | list_delete x (y::ys) = if x = y then ys else y :: list_delete x ys
+
 type build_command = {preincludes : string list, includes : string list} ->
                      Holmake_tools.buildcmds ->
                      File -> bool
@@ -132,7 +153,9 @@ type build_command = {preincludes : string list, includes : string list} ->
 fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val {optv,hmake_options,actual_overlay,envlist,quit_on_failure,outs,...} =
       buildinfo
-  val {warn,diag,...} = outs
+  val hmenv = #hmenv buildinfo
+  val {warn,diag,tgtfatal,...} = outs
+  val keep_going = #keep_going (#core optv)
   val debug = #debug (#core optv)
   val opentheory = #opentheory (#core optv)
   val allfast = #fast (#core optv)
@@ -140,6 +163,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val interactive_flag = #interactive (#core optv)
   val quiet_flag = #quiet (#core optv)
   val cmdl_HOLSTATE = #holstate optv
+  val jobs = #jobs (#core optv)
+  val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
+  val info = if jobs = 1 then #info outs else (fn _ => ())
 
   val HOLSTATE = let
     val default =
@@ -202,19 +228,19 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     exception FileNotFound
     val isSuccess = OS.Process.isSuccess
     fun setup_script s deps extras = let
-      val _ = not (Binaryset.member(!failed_script_cache, s)) orelse
-              (print ("Not re-running "^s^"Script; believe it will fail\n");
-               raise CompileFailed)
       val scriptsml_file = SML (Script s)
       val scriptsml = fromFile scriptsml_file
       val script   = s^"Script"
       val scriptuo = script^".uo"
       val scriptui = script^".ui"
       (* first thing to do is to create the Script.uo file *)
-      val b = build_command ii (Compile deps) scriptsml_file
+      val b =
+          case build_command ii (Compile deps) scriptsml_file of
+              BR_OK => true
+            | BR_Failed => false
+            | BR_ClineK _ => raise Fail "Compilation resulted in commandline"
       val _ = b orelse raise CompileFailed
-      val _ = print ("Linking "^scriptuo^
-                     " to produce theory-builder executable\n")
+      val _ = info ("Linking "^scriptuo^" to produce theory-builder executable")
       val objectfiles0 =
           if allfast then ["fastbuild.uo", scriptuo]
           else if quit_on_failure then [scriptuo]
@@ -225,32 +251,41 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           objectfiles0
         else if interactive_flag then "holmake_interactive.uo" :: objectfiles0
         else "holmake_not_interactive.uo" :: objectfiles0
-      in ((script,scriptuo,scriptui,scriptsml,s), objectfiles) end
-    fun run_script (script,scriptuo,scriptui,scriptsml,s) objectfiles
-                   expected_results =
+    in
+        ((script,[scriptuo,scriptui,script]), objectfiles)
+    end
+    fun run_script (script, intermediates) objectfiles expected_results =
       if isSuccess (poly_link true script (List.map OS.Path.base objectfiles))
       then let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expected_results
-        val res2 = systeml [fullPath [OS.FileSys.getDir(), script]];
-        val () =
-            if not (isSuccess res2) then
-              (failed_script_cache := Binaryset.add(!failed_script_cache, s);
-               warn ("Failed script build for "^script^" - "^
-                     posix_diagnostic res2))
-            else ()
-        val _ = if isSuccess res2 orelse not debug then
-                  app safedelete [script, scriptuo, scriptui]
+        val cline = [fullPath [OS.FileSys.getDir(), script]]
+        fun cont wn res =
+          let
+            val _ =
+                if not (isSuccess res) then
+                  wn ("Failed script build for "^script^" - "^
+                      posix_diagnostic res)
                 else ()
+            val _ = if isSuccess res orelse not debug then
+                      app safedelete (script :: intermediates)
+                    else ()
+          in
+            isSuccess res andalso
+            List.all (fn file =>
+                         exists_readable file orelse
+                         (wn ("Script file "^script^" didn't produce "^file^
+                              "; \n\
+                              \  maybe need export_theory() at end of "^
+                              script ^ ".sml");
+                          false))
+                     expected_results
+          end
       in
-        (isSuccess res2) andalso
-        List.all (fn file =>
-          exists_readable file orelse
-          (print ("Script file "^script^" didn't produce "^file^"; \n\
-                  \  maybe need export_theory() at end of "^scriptsml^"\n");
-           false)) expected_results
+        BR_ClineK ((script, cline), cont)
       end
-      else (print ("Failed to build script file, "^script^"\n"); false)
+      else
+        (warn ("Failed to build script file, "^script^"\n"); BR_Failed)
   in
     let
     in
@@ -259,12 +294,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           let
             val file = fromFile arg
             val _ = exists_readable file orelse
-                    (print ("Wanted to compile "^file^
+                    (warn ("Wanted to compile "^file^
                             ", but it wasn't there\n");
                      raise FileNotFound)
-            val res = poly_compile true arg include_flags deps
+            val res = poly_compile diag true arg include_flags deps
           in
-            OS.Process.isSuccess res
+            if OS.Process.isSuccess res then BR_OK else BR_Failed
           end
         | BuildScript (s, deps) =>
           let
@@ -272,63 +307,121 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
           in
             run_script scriptetc objectfiles [s^"Theory.sml", s^"Theory.sig"]
           end
-        | BuildArticle (s, deps) =>
+        | BuildArticle (s0, deps) =>
           let
+            val s = s0 ^ ".art"
+            val oldscript_f = SML (Script s0)
+            val fakescript_f = SML (Script s)
+            val _ = Posix.FileSys.link {old = fromFile oldscript_f,
+                                        new = fromFile fakescript_f }
             val loggingextras =
                 case opentheory of SOME uo => [uo]
                                  | NONE => ["loggingHolKernel.uo"]
-            val (scriptetc,objectfiles) = setup_script s deps loggingextras
+            val deps = list_delete oldscript_f deps @ [fakescript_f]
+            val ((script,inters),objectfiles) =
+                setup_script s deps loggingextras
           in
-            run_script scriptetc objectfiles [s^".art"]
+            run_script (script,fromFile fakescript_f :: inters) objectfiles [s]
           end
-        | ProcessArticle s => let
-          val raw_art_file = ART (RawArticle s)
-          val art_file = ART (ProcessedArticle s)
-          val raw_art = fromFile raw_art_file
-          val art = fromFile art_file
-          val res = OS.Process.system
-                      ("opentheory info --article -o "^art^" "^raw_art)
-        in
-          OS.Process.isSuccess res
-        end
-    end handle CompileFailed => false
-             | FileNotFound  => false
+        | ProcessArticle s =>
+          let
+            val raw_art_file = ART (RawArticle s)
+            val art_file = ART (ProcessedArticle s)
+            val raw_art = fromFile raw_art_file
+            val art = fromFile art_file
+            val cline =
+                ("/bin/sh",
+                 ["/bin/sh", "-c",
+                  "opentheory info --article -o " ^ art ^ " " ^ raw_art])
+          in
+            BR_ClineK (cline, (fn _ => OS.Process.isSuccess))
+          end
+    end handle CompileFailed => BR_Failed
+             | FileNotFound  => BR_Failed
   end
-  fun mosml_build_command hm_env (noecho, ignore_error, c) deps = let
-    open Holmake_types
-    val isHolmosmlcc =
-      String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC-C"]) c
-    val isHolmosmlc =
-      String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC"]) c
-    val isMosmlc =
-      String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
-    val {diag,...} = outs
-  in
-    if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
+  fun mosml_build_command hm_env {noecho, ignore_error, command = c} deps =
+    let
+      open Holmake_types
+      val isHolmosmlcc =
+          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC-C"]) c
+      val isHolmosmlc =
+          String.isPrefix (perform_substitution hm_env [VREF "HOLMOSMLC"]) c
+      val isMosmlc =
+          String.isPrefix (perform_substitution hm_env [VREF "MOSMLC"]) c
+      val {diag,...} = outs
+    in
+      if isHolmosmlcc orelse isHolmosmlc orelse isMosmlc then let
         val _ = diag ("Processing mosml build command: "^c)
       in
         case process_mosml_args outs (if isHolmosmlcc then " -c " ^ c else c) of
-          (Mosml_compile (objs, src), I) =>
-            SOME (poly_compile (noecho orelse quiet_flag)
+            (Mosml_compile (objs, src), I) =>
+            SOME (poly_compile diag (noecho orelse quiet_flag)
                                (toFile src)
                                I
                                (deps @ objs))
-        | (Mosml_link (result, objs), I) => let
-          in
-            diag ("Moscow ML command is link -o "^result^" ["^
-                  String.concatWith ", " (map fromFile objs) ^ "]");
-            SOME (poly_link (noecho orelse quiet_flag) result
-                            (map fromFileNoSuf objs))
-          end
-        | (Mosml_error, _) =>
-          (warn ("*** Couldn't interpret Moscow ML command: "^c);
-           SOME (OS.Process.failure))
+          | (Mosml_link (result, objs), I) =>
+            let
+            in
+              diag ("Moscow ML command is link -o "^result^" ["^
+                    String.concatWith ", " (map fromFile objs) ^ "]");
+              SOME (poly_link (noecho orelse quiet_flag) result
+                              (map fromFileNoSuf objs))
+            end
+          | (Mosml_error, _) =>
+            (warn ("*** Couldn't interpret Moscow ML command: "^c);
+             SOME (OS.Process.failure))
       end
-    else NONE
-  end
+      else NONE
+    end
+  val jobs = #jobs (#core optv)
+  open HM_DepGraph
+  val pr_sl = String.concatWith " "
+  fun interpret_graph g =
+    case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
+        [] => OS.Process.success
+      | ns =>
+        let
+          fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr_sl nI
+          fun failed_nocmd (_, nI) =
+            #status nI = Failed andalso #command nI = NoCmd
+          val ns' = List.filter failed_nocmd ns
+          fun nI_target (_, nI) = String.concatWith " " (#target nI)
+        in
+          diag ("Failed nodes: \n" ^ String.concatWith "\n" (map str ns));
+          if not (null ns') then
+            tgtfatal ("Don't know how to build necessary target(s): " ^
+                      String.concatWith ", " (map nI_target ns'))
+          else ();
+          OS.Process.failure
+        end
+  fun interpret_bres bres =
+    case bres of
+        BR_OK => true
+      | BR_ClineK((_,cline), k) => k warn (Systeml.systeml cline)
+      | BR_Failed => false
+
+  val build_graph =
+      if jobs = 1 then
+        graphbuildj1 {
+          build_command = (fn ii => fn cmds => fn f =>
+                              build_command ii cmds f |> interpret_bres),
+          mosml_build_command = mosml_build_command,
+          outs = outs,
+          keep_going = keep_going,
+          quiet = quiet_flag,
+          hmenv = hmenv}
+      else
+        (fn ii => fn g =>
+            multibuild.graphbuild { build_command = build_command,
+                                    mosml_build_command = mosml_build_command,
+                                    warn = warn, tgtfatal = tgtfatal,
+                                    keep_going = keep_going, diag = diag,
+                                    info = #info outs,
+                                    quiet = quiet_flag, hmenv = hmenv,
+                                    jobs = jobs } ii g |> interpret_graph)
 in
-  {build_command = build_command, mosml_build_command = mosml_build_command,
-   extra_impl_deps = [Unhandled HOLSTATE]}
+  {extra_impl_deps = [Unhandled HOLSTATE],
+   build_graph = build_graph}
 end
 
 end (* struct *)

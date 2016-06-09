@@ -13,11 +13,6 @@ val _ = new_theory "bit";
 
 (* ------------------------------------------------------------------------- *)
 
-infix \\ >- >|
-val op \\ = op THEN;
-val op >- = op THEN1;
-val op >| = op THENL;
-
 val LEFT_REWRITE_TAC =
   GEN_REWRITE_TAC (RATOR_CONV o DEPTH_CONV) empty_rewrites
 

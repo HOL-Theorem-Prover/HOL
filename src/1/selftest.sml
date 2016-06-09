@@ -5,12 +5,13 @@ val _ = set_trace "Unicode" 0
 fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
 
 val tprint = testutils.tprint
+val OK = testutils.OK
 
 fun substtest (M, x, N, result) = let
 in
   tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
          term_to_string N^") = "^term_to_string result);
-  if aconv (Term.subst[x |-> M] N) result then (print "OK\n"; true)
+  if aconv (Term.subst[x |-> M] N) result then (OK(); true)
   else (print "FAILED!\n"; false)
 end
 
@@ -78,7 +79,7 @@ val inst_type_test = let
   val final_th = CHOOSE (nonempty_t, nonempty_exists) th4
 in
   if same_const (concl final_th) (mk_const("F", bool)) then die "FAILED!"
-  else print "OK\n"
+  else OK()
 end
 
 (* Test for the experimental kernel's INST_TYPE bug (discovered by Peter
@@ -103,7 +104,7 @@ val _ = let
   val Falsity = EQ_MP (INST [x bool |-> T, y bool |-> F] bad2) TRUTH
 in
   if aconv (concl Falsity) F then die "FAILED!" else die "Huh???"
-end handle ExitOK => print "OK\n"
+end handle ExitOK => OK()
 
 val _ = Process.atExit (fn () => let
                              fun rm s = FileSys.remove s
@@ -140,14 +141,14 @@ val oldconstants_test = let
   val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
 in
-  print "OK\n"
+  OK()
 end
 
 val t = Parse.Term `(case T of T => (\x. x) | F => (~)) y`
 val _ = tprint "Testing parsing of case expressions with function type"
 val _ = case Lib.total (find_term (same_const boolSyntax.bool_case)) t of
           NONE => die "FAILED"
-        | SOME _ => print "OK\n"
+        | SOME _ => OK()
 
 val _ = tprint "Testing parsing of case expressions with leading bar"
 val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
@@ -156,22 +157,22 @@ val t_opt = SOME (trace ("syntax_error", 0) Parse.Term
 val _ = case t_opt of
           SOME t =>
             if Lib.can (find_term (same_const boolSyntax.bool_case)) t then
-              print "OK\n"
+              OK()
             else die "FAILED"
         | NONE => die "FAILED"
 
 val _ = tprint "Testing parsing of _ variables (1)"
 val t = case Lib.total Parse.Term `case b of T => F | _ => T` of
           NONE => die "FAILED"
-        | SOME _ => print "OK\n"
+        | SOME _ => OK()
 val _ = tprint "Testing parsing of _ variables (2)"
 val t = case Lib.total Parse.Term `case b of T => F | _1 => T` of
           NONE => die "FAILED"
-        | SOME _ => print "OK\n"
+        | SOME _ => OK()
 val _ = tprint "Testing independence of case branch vars"
 val t = case Lib.total Parse.Term `v (case b of T => F | v => T)` of
           NONE => die "FAILED"
-        | SOME _ => print "OK\n"
+        | SOME _ => OK()
 
 val _ = tprint "Testing higher-order match 1"
 local
@@ -232,7 +233,7 @@ end
 in
 val _ =
     case Lib.total (VALID (HO_MATCH_MP_TAC th)) ([], goal) of
-      SOME ([([],subgoal)],_) => if aconv subgoal expected then print "OK\n"
+      SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
                                  else die "FAILED!"
     | _ => die "FAILED!"
 end (* local *)
@@ -247,7 +248,7 @@ fun checkparse () = let
   val randty =  type_of (rand tm)
 in
   if Type.compare(randty, alpha --> bool) <> EQUAL then die "FAILED!"
-  else print "OK\n"
+  else OK()
 end
 val _ = checkparse()
 
@@ -263,7 +264,7 @@ val _ = new_type ("foo", 1)
 val _ = type_abbrev("bar", ``:bool foo``)
 val _ = new_type ("foo", 0)
 val _ = type_abbrev("baz", ``:foo``) handle _ => die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 
 (* pretty-printing tests - turn Unicode off *)
@@ -278,7 +279,7 @@ fun typp s = let
   val _ = tprint ("Testing p/printing of "^s)
   val res = unicode_off (raw_backend type_to_string) ty
 in
-  if s <> res then die "FAILED!\n" else print "OK\n"
+  if s <> res then die "FAILED!\n" else OK()
 end
 
 val _ = app typp [":bool", ":bool -> bool", ":'a -> bool",
@@ -296,7 +297,7 @@ local
                     |> unicode_off
   val s = pfn ty
 in
-val _ = if s = "(('a -> 'b) "^ct()^"$option)" then print "OK\n"
+val _ = if s = "(('a -> 'b) "^ct()^"$option)" then OK()
         else die ("FAILED! - "^s)
 end
 
@@ -358,7 +359,7 @@ fun tpp (s,expected) = let
   val _ = tprint ("Testing (colour-)printing of `"^s^"`")
   val res = ppstring pp_term t
 in
-  if res = expected then print "OK\n"
+  if res = expected then OK()
   else (print "FAILED\n"; Process.exit Process.failure)
 end
 
@@ -416,7 +417,7 @@ val _ = let
   val _ = tprint (standard_tpp_message "|- p")
   val res = thm_to_string (ASSUME (mk_var("p", Type.bool)))
 in
-  if res = " [.] |- p" then print "OK\n" else die "FAILED!"
+  if res = " [.] |- p" then OK() else die "FAILED!"
 end
 
 val _ = temp_add_rule { paren_style = NotEvenIfRand, fixity = Prefix 2200,
@@ -474,7 +475,7 @@ in
   nm1 = "AND_CLAUSES" andalso nm2 = "OR_CLAUSES" andalso
   aconv (th1 |> concl) (concl boolTheory.AND_CLAUSES) andalso
   aconv (th2 |> concl) (concl boolTheory.OR_CLAUSES) andalso
-  (print "OK\n"; true) orelse
+  (OK(); true) orelse
   die "FAILED"
 end
 
@@ -483,7 +484,7 @@ val _ = let
   val t = mk_disj(mk_var("p", bool),T)
   val (sgs,vfn) = REWRITE_TAC [TRUTH] ([], t)
 in
-  if null sgs andalso aconv (concl (vfn [])) t then print "OK\n"
+  if null sgs andalso aconv (concl (vfn [])) t then OK()
   else die "FAILED"
 end
 
@@ -500,19 +501,19 @@ val _ = let
   val result = EVERY_CONJ_CONV I_CONV t
   val expected = mk_conj(mk_comb(I, p), mk_comb(I, q))
 in
-  if aconv (rhs (concl result)) expected then print "OK\n"
+  if aconv (rhs (concl result)) expected then OK()
   else die "FAILED"
 end
 
 val _ = tprint "Testing (foo THENL [...]) when foo solves"
 val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Testing save_thm rejecting names"
 val badnames = ["::", "nil", "true", "false", "ref", "="]
 fun test s = (save_thm(s, TRUTH); die "FAILED!") handle HOL_ERR _ => ()
 val _ = List.app test badnames
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = let
   val _ = tprint "Testing VALIDATE (1)"
@@ -527,7 +528,7 @@ val _ = let
   val ([_], _) = (VALIDATE (FIRST (map ACCEPT_TAC [uth', uth]))) g' ;
   val true = (VALID (FIRST (map ACCEPT_TAC [uth', uth])) g' ; false)
     handle HOL_ERR _ => true ;
-in print "OK\n"
+in OK()
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -542,7 +543,7 @@ val _ = let
   val (ngs1, _) = VALID tac1 g ;
   val (ngs2, _) = VALID tac2 g ;
   val true = ngs1 = ngs2 ;
-in print "OK\n"
+in OK()
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -554,7 +555,7 @@ val _ = let
       (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
 	  THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
   val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
-in if hyp th = [] then print "OK\n" else die "FAILED"
+in if hyp th = [] then OK() else die "FAILED"
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -563,7 +564,7 @@ val _ = let
     THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
     THEN (FIRST_ASSUM ACCEPT_TAC)
   val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
-in if hyp th = [] then print "OK\n" else die "FAILED"
+in if hyp th = [] then OK() else die "FAILED"
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -577,7 +578,7 @@ val _ = let
   val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
     (p ==> q ==> (p ==> r) ==> r)``
   val th = prove (g, tac) ;
-in if hyp th = [] then print "OK\n" else die "FAILED"
+in if hyp th = [] then OK() else die "FAILED"
 end handle _ => die "FAILED!"
 
 val _ = let
@@ -588,7 +589,7 @@ val _ = let
   val _ = temp_remove_type_abbrev "foo"
   val s2 = type_to_string ``:bool -> bool``
 in
-  if s2 = ":bool -> bool" then print "OK\n" else die "FAILED!"
+  if s2 = ":bool -> bool" then OK() else die "FAILED!"
 end
 
 fun nc (s,ty) =
@@ -610,7 +611,7 @@ val _ = let
           [([], sg1), ([], sg2)] => aconv sg1 exsg1 andalso aconv sg2 exsg2
         | _ => false
 in
-  if verdict then print "OK\n" else die "FAILED!"
+  if verdict then OK() else die "FAILED!"
 end
 
 val _ = let
@@ -620,7 +621,7 @@ val _ = let
   val (sgs, vf) = irule EQ_TRANS g
 in
   case sgs of
-      [([], sg)] => if aconv sg expected then print "OK\n" else die "FAILED!"
+      [([], sg)] => if aconv sg expected then OK() else die "FAILED!"
     | _ => die "FAILED!"
 end
 
@@ -635,7 +636,7 @@ val _ = let
           aconv (hd (hyp rth)) (hd (#1 g)) orelse die "FAILED!"
 in
   case sgs of
-      [([], sg)] => if aconv sg ``^P (b:'a)`` then print "OK\n"
+      [([], sg)] => if aconv sg ``^P (b:'a)`` then OK()
                     else die "FAILED!"
     | _ => die "FAILED!"
 end
@@ -648,7 +649,7 @@ val _ = let
   val rth = vf (map mk_thm sgs)
 in
   case sgs of
-      [([], sg)] => if aconv sg ``?x:'a. PP x (a:'a)`` then print "OK\n"
+      [([], sg)] => if aconv sg ``?x:'a. PP x (a:'a)`` then OK()
                     else die "FAILED!"
     | _ => die "FAILED!"
 end
@@ -663,7 +664,7 @@ val _ = let
   val th = prove(g, DISCH_THEN irule)
            handle HOL_ERR _ => die "FAILED!"
 in
-  if aconv g (concl th) then print "OK\n" else die "FAILED!"
+  if aconv g (concl th) then OK() else die "FAILED!"
 end
 
 val _ = let
@@ -675,7 +676,7 @@ val _ = let
   val (sgs, vf) = irule thm ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
-  if aconv (concl r_thm) g then print "OK\n" else die "FAILED!"
+  if aconv (concl r_thm) g then OK() else die "FAILED!"
 end
 
 val _ = let
@@ -687,10 +688,8 @@ val _ = let
   val (sgs, vf) = irule thm ([], g)
   val r_thm = vf (map mk_thm sgs)
 in
-  if aconv (concl r_thm) g then print "OK\n" else die "FAILED!"
+  if aconv (concl r_thm) g then OK() else die "FAILED!"
 end
-
-
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)

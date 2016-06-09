@@ -32,18 +32,16 @@ struct
          (if Systeml.HAVE_BASIS2002 then [("HAVE_BASIS2002", [LIT "1"])]
           else [])
     in
-      List.foldl (fn (kv,acc) => Holmake_types.env_extend kv acc)
-                 Holmake_types.base_environment
-                 alist
+      List.foldl (fn (kv,acc) => env_extend kv acc) (base_environment()) alist
     end
 
-  fun print_debug_info (optv : HM_Cline.t) =
+  fun debug_info (optv : HM_Cline.t) =
     let
       val MOSMLDIR = case #mosmldir optv of
                          NONE => Systeml.MOSMLDIR
                        | SOME s => s
     in
-      print ("MOSMLDIR = "^MOSMLDIR^"\n")
+      "MOSMLDIR = "^MOSMLDIR
     end
 
 end (* struct *)

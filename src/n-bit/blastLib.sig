@@ -6,4 +6,5 @@ sig
     val BBLAST_RULE      : Conv.rule
     val BBLAST_TAC       : Tactic.tactic
     val FULL_BBLAST_TAC  : Tactic.tactic
+    val MP_BLASTABLE_TAC : Tactic.tactic
 end

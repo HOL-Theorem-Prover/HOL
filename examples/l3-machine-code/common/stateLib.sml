@@ -1268,7 +1268,19 @@ fun get_pc_delta is_pc =
    ------------------------------------------------------------------------ *)
 
 local
-   val ARITH_SUB_CONV = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun f q =
+     boolTheory.COND_RAND |> Q.ISPEC q |> SIMP_RULE std_ss [] |> Drule.GEN_ALL
+   val COND_RAND_CONV =
+     PURE_REWRITE_CONV
+       (List.map f [`\n : 'a word. n + z`, `\n : 'a word. z + n`,
+                    `\n : 'a word. n - z`, `\n : 'a word. z - n`])
+   val cnv = wordsLib.WORD_ARITH_CONV THENC wordsLib.WORD_SUB_CONV
+   fun ARITH_SUB_CONV tm =
+     (if boolSyntax.is_cond tm then
+        Conv.RAND_CONV ARITH_SUB_CONV
+        THENC Conv.RATOR_CONV (Conv.RAND_CONV ARITH_SUB_CONV)
+      else cnv) tm
+   val PC_CONV0 = Conv.RAND_CONV (COND_RAND_CONV THENC ARITH_SUB_CONV)
    fun is_word_lit tm =
       case Lib.total wordsSyntax.dest_mod_word_literal tm of
          SOME (n, s) =>
@@ -1293,7 +1305,7 @@ in
             case boolSyntax.dest_strip_comb tm of
               (c, [t]) =>
                  if c = s andalso not (is_irreducible t)
-                    then Conv.RAND_CONV ARITH_SUB_CONV tm
+                    then PC_CONV0 tm
                  else raise ERR "PC_CONV" ""
              | _ => raise ERR "PC_CONV" "")
 end

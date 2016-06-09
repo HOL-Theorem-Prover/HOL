@@ -23,7 +23,7 @@ in
    fun start thy =
       (type_names := []
        ; const_names := []
-       ; Theory.new_theory thy)
+       ; new_theory thy)
    fun finish i =
       (Theory.adjoin_to_theory {
          sig_ps =
@@ -61,7 +61,7 @@ in
                        ; PP.add_newline ppstrm
                     end)}
        ; Feedback.set_trace "TheoryPP.include_docs" i
-       ; Theory.export_theory ()
+       ; export_theory ()
        ; type_names := []
        ; const_names := [])
 end

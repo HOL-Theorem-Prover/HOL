@@ -25,7 +25,7 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
 
 val Fetch_def = Define`
   Fetch s =
-  let (vPC, s) = PC s in
+  let vPC = PC s in
   if ~aligned 2 vPC then
     raise'exception (UNDEFINED "fetch misaligned") s
   else let (w, s) = translateAddr (vPC, Instruction, Read) s in
@@ -33,20 +33,19 @@ val Fetch_def = Define`
        SOME pPC => rawReadInst pPC s
      | NONE => raise'exception (UNDEFINED "fetch fault") s`
 
-val update_pc_def = Define `update_pc v s = SOME (SND (write'PC v s))`
+val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
 
 val NextRISCV_def = Define`
   NextRISCV s =
   let (w, s) = Fetch s in
-  let ((), s) = Run (Decode w) s in
+  let s = Run (Decode w) s in
   if s.exception <> NoException then
     NONE
   else
-    let (pc, s) = PC s in
-    let (next_fetch, s) = NextFetch s in
-    case next_fetch of
+    let pc = PC s in
+    case NextFetch s of
        NONE => update_pc (pc + 4w) s
-     | SOME (BranchTo a) => update_pc a (SND (write'NextFetch NONE s))
+     | SOME (BranchTo a) => update_pc a (write'NextFetch NONE s)
      | _ => NONE`
 
 (* ------------------------------------------------------------------------
@@ -56,7 +55,7 @@ val NextRISCV_def = Define`
 val NextRISCV = Q.store_thm("NextRISCV",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = NONE) ==>
    (NextRISCV s = update_pc (nxt.c_PC nxt.procID + 4w) nxt)`,
@@ -68,7 +67,7 @@ val NextRISCV = Q.store_thm("NextRISCV",
 val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = SOME (BranchTo a)) ==>
    (NextRISCV s =
@@ -82,7 +81,7 @@ val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
 val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
   `(Fetch s = (w, s')) /\
    (Decode w = i) /\
-   (SND (Run i s') = nxt) /\
+   (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = if b then SOME (BranchTo a) else NONE) ==>
    (NextRISCV s =
@@ -589,42 +588,28 @@ val in32BitMode = EV
 
 val PC = EV [PC_def] [] [] ``PC``
 
-val mark_log = EV [mark_log_def] [] [] ``mark_log (lvl, s)``
-
 val rawReadInst = EV
-  [rawReadInst_def, mark_log, MEM_def, address_align, read_word] [] []
+  [rawReadInst_def, MEM_def, address_align, read_word] [] []
   ``rawReadInst a``
 
 val rawReadData = EV
-  [rawReadData_def, mark_log, aligned3, MEM_def, address_align, address_align2]
+  [rawReadData_def, aligned3, MEM_def, address_align, address_align2]
   [] []
   ``rawReadData a``
 
 val branchTo = EV
-  [branchTo_def, write'NextFetch_def, write'Delta_def, Delta_def] [] []
+  [branchTo_def, write'NextFetch_def] [] []
   ``branchTo newPC``
-
-val noBranch = EV [noBranch_def, write'Delta_def, Delta_def] [] []
-  ``noBranch nextPC``
-
-val recordLoad = EV [recordLoad_def, write'Delta_def, Delta_def] [] []
-  ``recordLoad (addr, val)``
-
-val recordStore = EV [recordStore_def, write'Delta_def, Delta_def] [] []
-  ``recordStore (addr, val, width)``
 
 val GPR = EV [GPR_def, gpr_def] [] [] ``GPR n``
 
-val (write'GPR0, write'GPR) = ev [write'GPR_def, write'gpr_def, mark_log]
+val (write'GPR0, write'GPR) =
+  ev [write'GPR_def, write'gpr_def,
+      utilsLib.mk_state_id_thm riscvTheory.riscv_state_component_equality
+        [["c_gpr"]]]
   [[``d = 0w:word5``], [``d <> 0w:word5``]] []
   ``write'GPR (n, d)``
   |> Lib.pair_of_list
-
-val writeRD = EV [writeRD_def, write'GPR, write'Delta_def, Delta_def] [] []
-  ``writeRD (n, d)``
-
-val writeRD0 = EV [writeRD_def, write'GPR0, write'Delta_def, Delta_def] [] []
-  ``writeRD (n, d)``
 
 val Fetch = Theory.save_thm("Fetch",
   EV [Fetch_def, PC, translateAddr, rawReadInst] [[aligned]] []
@@ -643,8 +628,8 @@ val () = step_conv true
 val write'MEM = EV [write'MEM_def] [] [] ``write'MEM (d, a)``
 
 fun write_data_ev l1 l2 =
-  EV ([rawWriteData_def, mark_log, aligned3, MEM_def, write'MEM,
-       address_align] @ l1) l2 []
+  EV ([rawWriteData_def, aligned3, MEM_def, write'MEM, address_align] @ l1) l2
+     []
 
 val rawWriteData8 =
   write_data_ev [address_aligned3] [[``aligned 3 (a: word64)``]]
@@ -652,7 +637,6 @@ val rawWriteData8 =
 
 fun get_mem8 thm =
   thm |> utilsLib.rhsc
-      |> pairSyntax.dest_pair |> snd
       |> boolSyntax.rator
       |> boolSyntax.rand
       |> boolSyntax.rand
@@ -734,12 +718,11 @@ val rawWriteData1 = REWRITE_RULE [thm] rawWriteData1
 local
   val l =
     [GPR, in32BitMode, PC, wordsTheory.word_len_def,
-     branchTo, noBranch, translateAddr, jal, jalr, aligned2,
+     branchTo, translateAddr, jal, jalr, aligned2,
      aligned_select_word_s, aligned_select_word_z, select_word,
      aligned_select_half_s, aligned_select_half_z, select_half,
      aligned_select_byte_s, aligned_select_byte_z, select_byte,
-     rawReadData, recordLoad,
-     rawWriteData8, rawWriteData4, rawWriteData2, rawWriteData1, recordStore]
+     rawReadData, rawWriteData8, rawWriteData4, rawWriteData2, rawWriteData1]
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
 in
@@ -750,9 +733,9 @@ in
       val read = if Lib.mem n ["LD"] then [address_aligned3] else []
       val (write, n) =
         if List.exists (Lib.mem rd0) avoid then
-          ([write'GPR0, writeRD0], n ^ "_NOP")
+          ([write'GPR0], n ^ "_NOP")
         else
-          ([write'GPR, writeRD], n)
+          ([write'GPR], n)
       val thms = DB.fetch "riscv" (name ^ "_def") :: write @ read
     in
       names := n :: (!names)

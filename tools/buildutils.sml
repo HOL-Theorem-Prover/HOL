@@ -16,6 +16,8 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
+fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+
 (* message emission *)
 fun die s =
     let open TextIO
@@ -24,8 +26,21 @@ fun die s =
       flushOut stdErr;
       Process.exit Process.failure
     end
-fun warn s = let open TextIO in output(stdErr, s ^ "\n"); flushOut stdErr end;
+fun warn s =
+  let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
 fun I x = x
+
+
+fun startup_check () =
+  let
+    val me = Systeml.find_my_path()
+  in
+    case Holmake_tools.check_distrib "build" of
+        NONE => ()
+      | SOME whereami =>
+        if whereami = me then ()
+        else die "*** Don't run this instance of build in a foreign HOL directory"
+  end
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -39,6 +54,7 @@ val DYNLIB = Systeml.DYNLIB
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
+val dfltjobnum = 4
 
 val help_mesg = let
   val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
@@ -277,6 +293,33 @@ in
               end
 end
 
+fun deljopt list =
+  let
+    fun maybewarn ns =
+      if ns = 1 then warn "Multiple -j options; taking last one\n" else ()
+    fun handle_string s =
+      case Int.fromString s of
+          NONE => (warn ("Ignoring bogus 'number' for -j: '"^ s ^ "'");
+                   NONE)
+        | x => x
+    fun recurse numseen list nopt args =
+      case list of
+          [] => (nopt, List.rev args)
+        | ["-j"] => (warn "Trailing -j command-line option ignored";
+                     (nopt, List.rev args))
+        | "-j"::ns::t =>
+          (maybewarn numseen; recurse (numseen + 1) t (handle_string ns) args)
+        | s::rest =>
+          if String.isPrefix "-j" s then
+            (maybewarn numseen;
+             recurse (numseen + 1) rest
+                     (handle_string (String.extract(s,2,NONE)))
+                     args)
+          else recurse numseen rest nopt (s::args)
+  in
+    recurse 0 list NONE []
+  end
+
 fun orlist slist =
     case slist of
       [] => ""
@@ -287,27 +330,36 @@ fun orlist slist =
 datatype cline_action =
          Clean of string
        | Normal of {kernelspec : string,
+                    jobcount : int,
                     seqname : string,
                     rest : string list,
                     build_theory_graph : bool}
 exception DoClean of string
+
+fun write_kernelid s =
+  let
+    val strm = TextIO.openOut Holmake_tools.kernelid_fname
+  in
+    TextIO.output(strm, s ^ "\n");
+    TextIO.closeOut strm
+  end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
+
 fun get_cline kmod = let
-  val reader = TextIO.inputLine
   (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
-  val oldopts = read_earlier_options reader
+  val oldopts = read_earlier_options TextIO.inputLine
   val newopts = CommandLine.arguments()
   fun unary_toggle optname dflt f toggles opts =
       case inter toggles opts of
         [x] => (f x, delete x opts)
       | result as (x::y::_) =>
-        (warn ("*** Specifying multiple "^optname^" options; using "^x);
+        (warn ("Specifying multiple "^optname^" options; using "^x);
          (f x, delete x opts))
       | [] => let
           val optvalue =
               case inter toggles oldopts of
                 [] => dflt
               | [x] =>
-                (warn ("*** Using "^optname^" option "^x^
+                (warn ("Using "^optname^" option "^x^
                        " from earlier build command;\n\
                        \    use " ^ orlist toggles ^ " to override");
                  f x)
@@ -337,7 +389,7 @@ fun get_cline kmod = let
             (NONE, _) => (dfltbuildseq, new')
           | (SOME f, _) =>
             if f = dfltbuildseq then (f, new')
-            else (warn ("*** Using build-sequence file "^f^
+            else (warn ("Using build-sequence file "^f^
                         " from earlier build command; \n\
                         \    use -fullbuild option to override");
                   (f, new'))
@@ -346,19 +398,36 @@ fun get_cline kmod = let
   val (knlspec, newopts) =
       unary_toggle "kernel" "-stdknl" I ["-expk", "-otknl", "-stdknl"] newopts
   val knlspec = kmod knlspec
+  val _ = write_kernelid knlspec
   val (buildgraph, newopts) =
       unary_toggle "theory-graph" true (fn x => x = "-graph")
                    ["-graph", "-nograph"] newopts
   val bgoption = if buildgraph then [] else ["-nograph"]
+  val (jcount, newopts) =
+      case deljopt newopts of
+          (NONE, new') =>
+          let
+          in
+            case deljopt oldopts of
+                (NONE, _) => (dfltjobnum, new')
+              | (SOME jn, _) =>
+                if jn = dfltjobnum then (jn, new')
+                else (warn ("Using -j "^Int.toString jn^
+                            " from earlier build command; use -j to override");
+                      (jn, new'))
+          end
+        | (SOME jn, new') => (jn, new')
+  val joption = "-j" ^ Int.toString jcount
   val _ =
       if seqspec = dfltbuildseq then
-        write_options (knlspec::bgoption)
+        write_options (knlspec::joption::bgoption)
       else
-        write_options (knlspec::"-seq"::seqspec::bgoption)
+        write_options (knlspec::"-seq"::seqspec::joption::bgoption)
 in
   Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
+          jobcount = jcount,
           build_theory_graph = buildgraph}
-end handle DoClean s => Clean s
+end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions
@@ -436,14 +505,7 @@ end
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
-        fun base_env s =
-            case s of
-              "HOLDIR" => [LIT HOLDIR]
-            | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-            | _ => (case OS.Process.getEnv s of
-                      NONE => [LIT ""]
-                    | SOME v => [LIT v])
-        val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
+        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in
@@ -464,6 +526,7 @@ fun cleanAll0 HOLDIR = let
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans};
   Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
@@ -635,7 +698,8 @@ fun build_dir Holmake selftest_level (dir, regulardir) = let
                  else dir
   val now_d = Date.fromTimeLocal (Time.now())
   val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
-  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
+  val bold = Holmake_tools.bold
+  val _ = print (bold ("Building directory "^truncdir^" ["^now_s^"]\n"))
 in
   case #file(OS.Path.splitDirFile dir) of
     "muddyC" => let
@@ -686,7 +750,7 @@ fun write_theory_graph () = let
 in
   if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
     (* of course, this will likely be the case on Windows *)
-    warn ("*** Can't see dot executable at "^dotexec^"; not generating \
+    warn ("Can't see dot executable at "^dotexec^"; not generating \
           \theory-graph\n\
           \*** You can try reconfiguring and providing an explicit path \n\
           \*** (val DOT_PATH = \"....\") in\n\
@@ -707,7 +771,7 @@ in
                             pfp [HOLDIR, "help", "src-sml", "DOT"])
     in
       if OS.Process.isSuccess result then ()
-      else warn "*** Theory graph construction failed.\n"
+      else warn "Theory graph construction failed.\n"
     end
 end
 
@@ -796,7 +860,7 @@ fun process_cline kmod =
       in
         (full_clean SRCDIRS action; Process.exit Process.success)
       end
-    | Normal {kernelspec, seqname, rest, build_theory_graph} => let
+    | Normal {kernelspec, seqname, rest, build_theory_graph, jobcount} => let
         val (do_selftests, rest) = cline_selftest rest
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
@@ -805,6 +869,7 @@ fun process_cline kmod =
            Process.exit Process.success)
         else
           {cmdline=rest,build_theory_graph=build_theory_graph,
+           jobcount = jobcount,
            do_selftests = do_selftests, SRCDIRS = SRCDIRS}
       end
 

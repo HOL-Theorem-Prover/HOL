@@ -1,0 +1,17 @@
+delconst NONE
+delconst SOME
+delconst IS_SOME
+delconst IS_NONE
+delconst OPTION_MAP
+deltype option
+skipthm option_TY_DEF
+skipthm datatype_option
+skipthm option_REP_ABS_DEF
+skipthm NONE_DEF
+skipthm SOME_DEF
+delproof option_Axiom
+delproof option_induction
+delproof option_nchotomy
+delproof SOME_11
+delproof NOT_NONE_SOME
+delproof NOT_SOME_NONE

@@ -10,7 +10,7 @@ fun infloop_protect (startstr : string) (endfn : 'a -> bool)
       val r = f x
     in
       if endfn r then
-        (print "OK\n"; (true, SOME r))
+        (OK(); (true, SOME r))
       else
         die "FAILED\n"
     end handle Interrupt => die "FAILED"

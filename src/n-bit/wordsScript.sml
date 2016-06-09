@@ -10,7 +10,7 @@ open arithmeticTheory pred_setTheory
 open bitTheory sum_numTheory fcpTheory fcpLib
 open numposrepTheory ASCIInumbersTheory
 
-val () = Theory.new_theory "words"
+val () = new_theory "words"
 
 val fcp_ss = std_ss ++ fcpLib.FCP_ss
 
@@ -960,7 +960,7 @@ val w2s_s2w = Q.store_thm("w2s_s2w",
      n2s b n2c (s2n b c2n s MOD dimword(:'a))`,
   SRW_TAC [] [s2w_def, w2s_def])
 
-val NUMERAL_LESS_THM = Theory.save_thm("NUMERAL_LESS_THM",
+val NUMERAL_LESS_THM = save_thm("NUMERAL_LESS_THM",
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM)
 
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
@@ -1050,7 +1050,7 @@ val WORD_NEG_1 = Q.store_thm("WORD_NEG_1",
     \\ ASM_SIMP_TAC arith_ss [DECIDE ``0 < x /\ ~(x = 1) ==> 1 < x``,
          LESS_MOD,ZERO_LT_TWOEXP,dimword_def])
 
-val WORD_NEG_1_T = Theory.save_thm("WORD_NEG_1_T",
+val WORD_NEG_1_T = save_thm("WORD_NEG_1_T",
   REWRITE_RULE [GSYM WORD_NEG_1] word_T)
 
 val WORD_MSB_1COMP = Q.store_thm("WORD_MSB_1COMP",
@@ -3224,7 +3224,7 @@ val word_extract_mask = Q.prove(
    \\ decide_tac
    )
 
-val word_extract_mask = Theory.save_thm("word_extract_mask",
+val word_extract_mask = save_thm("word_extract_mask",
   SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask)
 
 val word_shift_bv = Q.store_thm("word_shift_bv",
@@ -3240,6 +3240,22 @@ val word_shift_bv = Q.store_thm("word_shift_bv",
   by METIS_TAC [DIMINDEX_GT_0, arithmeticTheory.MOD_LESS,
                 arithmeticTheory.LESS_TRANS, dimindex_lt_dimword]
   \\ SRW_TAC [ARITH_ss] [ROR_MOD, ROL_MOD]
+  )
+
+val lsl_lsr = Q.store_thm("lsl_lsr",
+  `!w: 'a word n.
+     w2n (w : 'a word) * 2 ** n < dimword (:'a) ==> (w << n >>> n = w)`,
+  Cases
+  \\ strip_tac
+  \\ qmatch_assum_rename_tac `n < dimword _`
+  \\ simp []
+  \\ rewrite_tac [GSYM w2n_11, w2n_lsr]
+  \\ rw [word_lsl_n2w, MULT_DIV, ZERO_DIV]
+  \\ Cases_on `n`
+  \\ fs [dimword_def, bitTheory.LT_TWOEXP, bitTheory.LOG2_def]
+  \\ qmatch_asmsub_rename_tac `SUC n * 2 ** a`
+  \\ qspecl_then [`a`, `2`, `SUC n`] mp_tac logrootTheory.LOG_EXP
+  \\ simp[]
   )
 
 (* -------------------------------------------------------------------------

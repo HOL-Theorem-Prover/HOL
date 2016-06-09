@@ -113,14 +113,14 @@ val fty = hd args
 val (d,r) = dom_rng fty
 val _ = if type_of rnd = ``:(num, num)poly_squish_record`` andalso
            Type.compare(d,r) = EQUAL
-        then print "OK\n"
+        then OK()
         else die "FAILED!"
 val _ = tprint "TypeBase.mk_record on polymorphic record"
 val _ =
     case Lib.total TypeBase.mk_record
                    (``:(num,num)poly_squish_record``, [("fld1", ``SUC``)]) of
         NONE => die "FAILED!"
-      | SOME _ => print "OK\n"
+      | SOME _ => OK()
 
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
@@ -215,7 +215,7 @@ val t = Lib.total Parse.Term `case (x:valbind) of
                               | bindl p' e p => 4
                               | p => 5`
 val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
-                | SOME _ => print "OK\n"
+                | SOME _ => OK()
 
 val _ = set_trace "Unicode" 0
 
@@ -223,7 +223,7 @@ fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
 in
-  if s = expected then print "OK\n"
+  if s = expected then OK()
   else (print "FAILED!\n"; Process.exit Process.failure)
 end
 
@@ -301,7 +301,7 @@ val _ = Defn.Hol_defn "foo"`
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
 (foo2 (INR n) = INL (F1 ())) /\
 (foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Non-recursive num"
 val _ = Datatype.Datatype `num = C10 num$num | C11 num | C12 scratch$num`;
@@ -311,30 +311,30 @@ val (d,r) = dom_rng (type_of ``C11``)
 val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
 val (d,r) = dom_rng (type_of ``C12``)
 val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Datatype and antiquote (should be quick)"
 val num = numSyntax.num
 val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Records with polymorphic fields 1"
 val _ = (``polyrcd_pfld1_fupd :
              ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 2"
 val _ = (``polyrcd2_p2fld1_fupd :
              ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 3"
 val _ = (``polyrcd2_p2fld2_fupd :
              (('a # 'b -> bool) -> ('a # 'c -> bool)) ->
              ('a,'b) polyrcd2 -> ('a,'c)polyrcd2``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 4"
@@ -343,7 +343,7 @@ val _ =
        `polyrcd2_p2fld1_fupd :
              ('a ms -> 'b ms) -> ('a,'c) polyrcd2 -> ('b,'c)polyrcd2`
   of
-    NONE => print "OK\n"
+    NONE => OK()
   | _ => die "FAILED!";
 
 val _ = Process.exit Process.success;

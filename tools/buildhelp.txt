@@ -22,6 +22,7 @@ Options to the first version of the command include
   -dir DIR      : builds just the directory DIR instead of a provided sequence
   -expk         : builds the "experimental" kernel
   -fullbuild    : builds with the default "full" build-sequence
+  -j n          : passes -j n job-count option to Holmake
   -graph        : requires the building of the help system's theory-graph
   -nograph      : omits the building of the help system's theory-graph
   -otknl        : builds the OpenTheory or "logging" kernel

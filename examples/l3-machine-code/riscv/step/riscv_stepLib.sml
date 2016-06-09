@@ -245,7 +245,7 @@ in
       val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2))
       val tm = utilsLib.rhsc thm3
       val ethm = run tm
-      val thm4 = spec_run thm3 ethm
+      val thm4 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
       val thm5 = proj_exception thm4
       val thm6 = proj_NextFetch_procID thm4
       val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
@@ -272,7 +272,7 @@ val v = find_opc "BEQ"
 val v = find_opc "JAL"
 val v = find_opc "ADDI"
 val v = bitstringSyntax.bitstring_of_hexstring "B3"
-val thms = List.map (Count.apply riscv_eval o snd) riscv_dict
+val thms = List.map (Count.apply riscv_step o snd) riscv_dict
 
 open riscv_stepLib
 *)

@@ -19,25 +19,24 @@ val () =
 
 val NextStateX64_def = Define`
    NextStateX64 s0 =
-     let s1 = SND (x64_next s0) in
-       if s1.exception = NoException then SOME s1 else NONE`
+   let s1 = x64_next s0 in if s1.exception = NoException then SOME s1 else NONE`
 
 val NextStateX64_0 = utilsLib.ustore_thm("NextStateX64_0",
   `(s.exception = NoException) ==>
-   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, SOME strm1)) /\
+   (x64_decode (x64_fetch s) = Zfull_inst (p, ast, SOME strm1)) /\
    (20 - LENGTH strm1 = len) /\
    (!s. Run ast s = f s) /\
-   (f (s with RIP := s.RIP + n2w len) = ((), s1)) /\
+   (f (s with RIP := s.RIP + n2w len) = s1) /\
    (s1.exception = s.exception) ==>
    (NextStateX64 s = SOME s1)`,
    lrw [NextStateX64_def, x64_next_def] \\ lrw [])
 
 val NextStateX64 = utilsLib.ustore_thm("NextStateX64",
   `(s.exception = NoException) ==>
-   (x64_decode (FST (x64_fetch s)) = Zfull_inst (p, ast, SOME strm1)) /\
+   (x64_decode (x64_fetch s) = Zfull_inst (p, ast, SOME strm1)) /\
    (20 - LENGTH strm1 = len) /\
    (!s. Run ast s = f x s) /\
-   (f x (s with RIP := s.RIP + n2w len) = ((), s1)) /\
+   (f x (s with RIP := s.RIP + n2w len) = s1) /\
    (s1.exception = s.exception) ==>
    (NextStateX64 s = SOME s1)`,
    lrw [NextStateX64_def, x64_next_def] \\ lrw [])
@@ -80,25 +79,25 @@ val write_mem64_def = Define`
                           ((a =+ (7 >< 0) v) m)))))))`;
 
 val mem16_rwt = ustore_thm("mem16_rwt",
-   `(read_mem16 s.MEM a = v) ==> (mem16 a s = (v, s))`,
+   `(read_mem16 s.MEM a = v) ==> (mem16 a s = v)`,
    simp [mem16_def, mem8_def, read_mem16_def]
    )
 
 val mem32_rwt = ustore_thm("mem32_rwt",
-   `(read_mem32 s.MEM a = v) ==> (mem32 a s = (v, s))`,
+   `(read_mem32 s.MEM a = v) ==> (mem32 a s = v)`,
    simp [mem32_def, mem16_def, mem8_def, read_mem32_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val mem64_rwt = ustore_thm("mem64_rwt",
-   `(read_mem64 s.MEM a = v) ==> (mem64 a s = (v, s))`,
+   `(read_mem64 s.MEM a = v) ==> (mem64 a s = v)`,
    simp [mem64_def, mem32_def, mem16_def, mem8_def, read_mem64_def]
    \\ blastLib.BBLAST_TAC
    )
 
 val write'mem16_rwt = ustore_thm("write'mem16_rwt",
    `(read_mem16 s.MEM a = wv) ==>
-    (write'mem16 (d, a) s = ((), s with MEM := write_mem16 s.MEM a d))`,
+    (write'mem16 (d, a) s = s with MEM := write_mem16 s.MEM a d)`,
    simp [combinTheory.APPLY_UPDATE_THM,
          blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
          write'mem16_def, write'mem8_def, write_mem16_def, read_mem16_def]
@@ -106,7 +105,7 @@ val write'mem16_rwt = ustore_thm("write'mem16_rwt",
 
 val write'mem32_rwt = ustore_thm("write'mem32_rwt",
    `(read_mem32 s.MEM a = wv) ==>
-    (write'mem32 (d, a) s = ((), s with MEM := write_mem32 s.MEM a d))`,
+    (write'mem32 (d, a) s = s with MEM := write_mem32 s.MEM a d)`,
    simp [combinTheory.APPLY_UPDATE_THM,
          blastLib.BBLAST_PROVE ``a <> a + 1w: word64``,
          blastLib.BBLAST_PROVE ``a <> a + 2w: word64``,
@@ -118,7 +117,7 @@ val write'mem32_rwt = ustore_thm("write'mem32_rwt",
 
 val write'mem64_rwt = ustore_thm("write'mem64_rwt",
    `(read_mem64 s.MEM a = wv) ==>
-    (write'mem64 (d, a) s = ((), s with MEM := write_mem64 s.MEM a d))`,
+    (write'mem64 (d, a) s = s with MEM := write_mem64 s.MEM a d)`,
    simp [write'mem64_def, write'mem32_def, write'mem16_def,
          write_mem64_def, read_mem64_def]
    \\ simp_tac (srw_ss()++wordsLib.WORD_EXTRACT_ss) []

@@ -1363,7 +1363,7 @@ val tssubst_id = store_thm("tssubst_id",
     fs[IN_FRANGE_FLOOKUP,FLOOKUP_DRESTRICT,IN_DISJOINT] >>
     fs[FLOOKUP_DEF] >> metis_tac[] ) >>
   `DRESTRICT s (tyvars r DIFF q) = FEMPTY` by (
-    simp[fmap_eq_flookup,FLOOKUP_DRESTRICT] >>
+    simp[FLOOKUP_EXT,FUN_EQ_THM,FLOOKUP_DRESTRICT] >>
     fs[IN_DISJOINT,FLOOKUP_DEF] >>
     metis_tac[] ) >>
   rw[])

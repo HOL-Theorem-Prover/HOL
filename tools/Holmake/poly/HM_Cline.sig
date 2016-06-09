@@ -9,7 +9,7 @@ type t = {
   core : HM_Core_Cline.t
 }
 
-val option_descriptions : ((string -> unit) * t -> t) GetOpt.opt_descr list
+val option_descriptions : t HM_Core_Cline.cline_result GetOpt.opt_descr list
 
 val default_options : t
 

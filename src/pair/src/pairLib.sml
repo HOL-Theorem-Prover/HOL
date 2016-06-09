@@ -89,7 +89,7 @@ end (* local *)
 
 local
 open pairSyntax
-val find_split =
+fun find_split t g =
       partial(pairLib_ERR"split_pair_case_tac" "not found")
         (bvk_find_term
            (fn (ls,tm) =>
@@ -98,7 +98,7 @@ val find_split =
                in
                  List.all (fn bv => not(HOLset.member(fvs,bv))) ls
                end)
-           split_pair_case0_tac)
+           split_pair_case0_tac) t g
 in
 fun split_pair_case_tac (g as (_,w)) =
   (find_split w ORELSE first_assum (find_split o concl)) g

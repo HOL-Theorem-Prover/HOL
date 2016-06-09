@@ -20,7 +20,7 @@ end
 val _ = tprint "Parsing :bool[32] list"
 val ty1 = listSyntax.mk_list_type (wordsSyntax.mk_int_word_type 32)
 val ty2 = Parse.Type`:bool[32] list` handle HOL_ERR _ => alpha
-val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
+val _ = if Type.compare(ty1,ty2) = EQUAL then OK()
         else die "FAILED!"
 
 val _ = tprint "Parsing :('a + 'b)[32]"
@@ -28,20 +28,20 @@ val ty1 = fcpSyntax.mk_cart_type
             (sumSyntax.mk_sum(alpha,beta),
              fcpSyntax.mk_int_numeric_type 32);
 val ty2 = Parse.Type`:('a + 'b)[32]`
-val _ = if Type.compare(ty1,ty2) = EQUAL then print "OK\n"
+val _ = if Type.compare(ty1,ty2) = EQUAL then OK()
         else die "FAILED"
 
 val _ = tprint "Printing :('a + 'b)[32]"
-val _ = if type_to_string ty2 = ":('a + 'b)[32]" then print "OK\n"
+val _ = if type_to_string ty2 = ":('a + 'b)[32]" then OK()
         else die "FAILED"
 
 val _ = tprint "Parsing abbreviated word types"
 val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
 val _ = type_abbrev("u8", u8)
 val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
-        else print "OK\n"
+        else OK()
 val _ = tprint "Printing abbreviated word types"
-val _ = if type_to_string u8 = ":u8" then print "OK\n" else die "FAILED!"
+val _ = if type_to_string u8 = ":u8" then OK() else die "FAILED!"
 
 fun test (c:conv) tm = let
   val rt = Timer.startRealTimer ()
@@ -65,7 +65,7 @@ fun test_fail orig (c:conv) tm = let
 in
   TextIO.print ("Expecting failure: " ^ trunc 46 tm);
   case res of
-      NONE => print "OK\n"
+      NONE => OK()
     | SOME s => die s
 end
 
@@ -81,7 +81,7 @@ fun test_counter (c:conv) tm = let
 in
   TextIO.print ("Counterexample: " ^ trunc 49 tm);
   case res of
-      NONE => print "OK\n"
+      NONE => OK()
     | SOME s => die s
 end
 
@@ -97,7 +97,7 @@ local
       val th = conv t handle _ => die "FAILED - exception raised"
       val r = rhs (concl th) handle HOL_ERR _ => die "FAILED - no RHS"
     in
-      if aconv r expected then print "OK\n"
+      if aconv r expected then OK()
       else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
     end
   val quote_to_term_list =

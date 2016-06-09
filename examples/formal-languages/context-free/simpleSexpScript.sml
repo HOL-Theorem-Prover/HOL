@@ -59,6 +59,7 @@ val valid_symbol_def = Define`
 val valid_sexp_def = Define`
   (valid_sexp (SX_SYM s) ⇔ valid_symbol s) ∧
   (valid_sexp (SX_CONS s1 s2) ⇔ valid_sexp s1 ∧ valid_sexp s2) ∧
+  (valid_sexp (SX_STR s) ⇔ EVERY isPrint s) ∧
   (valid_sexp s ⇔ T)`;
 val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
 

@@ -19,3 +19,13 @@ fp32Syntax.uo: fp-functor.uo fp32Syntax.sml
 
 fp64Syntax.uo: fp-functor.uo fp64Syntax.sml
 	$(HOLMOSMLC) -c -toplevel Overlay.ui fp-sig.ui fp-functor.ui fp64Syntax.sml
+
+ifeq ($(KERNELID),-otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+hol4-floating-point-unint.art: hol4-floating-point-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+binary_ieee.art: binary_ieee.otd
+endif
