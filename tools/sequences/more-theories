@@ -41,3 +41,4 @@ src/hol88
 src/rational
 src/datatype/inftree
 !examples/hfs
+src/search
