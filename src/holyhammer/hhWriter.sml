@@ -84,7 +84,7 @@ fun is_oversized_thm thm =
 fun is_tptp_sq_char c = (* does not include dot, colon and vertical bar *)
   let val n = Char.ord c in
     (40 <= n andalso n <= 45) orelse (* dot removed *)
-    (50 <= n andalso n <= 57) orelse (* colon removed *)
+    (48 <= n andalso n <= 57) orelse (* colon removed *)
     (59 <= n andalso n <= 123) orelse (* vetical bar removed *)
     (125 <= n andalso n <= 133) orelse
     (135 <= n andalso n <= 176)
