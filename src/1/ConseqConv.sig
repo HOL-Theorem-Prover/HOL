@@ -122,6 +122,9 @@ val CONSEQ_HO_REWRITE_CONV      : (thm list * thm list * thm list) -> directed_c
 val ONCE_CONSEQ_REWRITE_CONV    : (thm list * thm list * thm list) -> directed_conseq_conv;
 val ONCE_CONSEQ_HO_REWRITE_CONV : (thm list * thm list * thm list) -> directed_conseq_conv;
 
+val CONSEQ_TOP_REWRITE_CONV     : (thm list * thm list * thm list) -> directed_conseq_conv;
+val CONSEQ_TOP_HO_REWRITE_CONV  : (thm list * thm list * thm list) -> directed_conseq_conv;
+
 val EXT_CONSEQ_REWRITE_CONV             : (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
 val EXT_CONSEQ_HO_REWRITE_CONV          : (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
 val EXT_CONTEXT_CONSEQ_REWRITE_CONV     : CONSEQ_CONV_context -> (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> directed_conseq_conv;
@@ -235,6 +238,8 @@ val CONSEQ_REWRITE_TAC           : (thm list * thm list * thm list) -> tactic;
 val CONSEQ_HO_REWRITE_TAC        : (thm list * thm list * thm list) -> tactic;
 val ONCE_CONSEQ_REWRITE_TAC      : (thm list * thm list * thm list) -> tactic;
 val ONCE_CONSEQ_HO_REWRITE_TAC   : (thm list * thm list * thm list) -> tactic;
+val CONSEQ_TOP_REWRITE_TAC       : (thm list * thm list * thm list) -> tactic;
+val CONSEQ_TOP_HO_REWRITE_TAC    : (thm list * thm list * thm list) -> tactic;
 
 val EXT_CONSEQ_REWRITE_TAC              :                        (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> tactic;
 val EXT_CONTEXT_CONSEQ_REWRITE_TAC      : CONSEQ_CONV_context -> (thm list -> conv) list -> thm list -> (thm list * thm list * thm list) -> tactic;
