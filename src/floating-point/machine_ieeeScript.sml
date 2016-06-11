@@ -13,9 +13,7 @@ in
    fun get_thm_name thm =
       case mtch thm of
          [((_, name), _)] => (thm, name)
-       | l => (PolyML.prettyPrint
-              (print, 80) (PolyML.prettyRepresentation ((thm, l), 80))
-            ; raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
+       | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
 end
 
 (*
