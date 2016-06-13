@@ -693,6 +693,7 @@ val ZIP___LIST_ZIP = store_thm ("ZIP___LIST_ZIP",
 Induct_on `l2` THEN
 ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE]);
 
+val _ = type_abbrev ("label", ``:ind``);
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES_def = Define `
     LIST_UNROLL_GIVEN_ELEMENT_NAMES l1 (l2:label list) =
