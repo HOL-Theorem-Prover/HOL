@@ -3211,7 +3211,7 @@ val EXTRACT_JOIN_ADD_LSL = Q.store_thm("EXTRACT_JOIN_ADD_LSL",
     \\ Q.ABBREV_TAC `s' = m' - l`
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN_ADD])
 
-val word_extract_mask = Q.prove(
+val word_extract_mask1 = Q.prove(
    `!h l a.
         (h >< l) a =
         if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w`,
@@ -3224,8 +3224,23 @@ val word_extract_mask = Q.prove(
    \\ decide_tac
    )
 
+val word_bits_mask1 = SIMP_RULE std_ss [GSYM WORD_BITS_EXTRACT]
+    word_extract_mask1
+
+val word_extract_w2w_mask1 = Q.prove(
+   `!h l a.
+        (h >< l) a =
+        w2w (if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w)`,
+  SRW_TAC [] [word_extract_def, word_bits_mask1])
+
 val word_extract_mask = save_thm("word_extract_mask",
-  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask)
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask1)
+
+val word_bits_mask = save_thm("word_bits_mask",
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_bits_mask1)
+
+val word_extract_w2w_mask = save_thm("word_extract_w2w_mask",
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_w2w_mask1)
 
 val word_shift_bv = Q.store_thm("word_shift_bv",
   `(!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\

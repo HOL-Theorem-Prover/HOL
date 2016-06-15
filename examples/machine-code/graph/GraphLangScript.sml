@@ -1609,7 +1609,8 @@ val decomp_simp1 = prove(
 
 val decomp_simp1 = save_thm("decomp_simp1",
   LIST_CONJ [GSYM word32_def,Aligned_thm,Aligned2_thm,ALIGNED,
-        decomp_simp1,word_extract_thm,ALIGNED_INTRO,w2n_eq,byte_lemma])
+        decomp_simp1,word_extract_thm,word_bits_mask,word_extract_w2w_mask,
+        ALIGNED_INTRO,w2n_eq,byte_lemma])
 
 val decomp_simp2 = store_thm("decomp_simp2",
   ``(K x = \y. x) /\ (SUC = \n. n + 1)``,
