@@ -170,7 +170,7 @@ val BIND_RIGHT_UNIT = store_thm
    ``!k. BIND k UNIT = k``,
    SRW_TAC [boolSimps.CONJ_ss]
            [BIND_DEF, UNIT_DEF, FUN_EQ_THM, option_case_eq, pair_case_eq] THEN
-   (Q.FIND_CASE_TAC `k v = NONE` ORELSE Q.FIND_CASE_TAC `NONE = k v`) THEN
+   (Q.RENAME1_TAC `k v = NONE` ORELSE Q.RENAME1_TAC `NONE = k v`) THEN
    Cases_on `k v` THEN SRW_TAC [][] THEN
    metisLib.METIS_TAC [TypeBase.nchotomy_of ``:'a # 'b``]);
 
@@ -178,9 +178,9 @@ val BIND_ASSOC = store_thm
   ("BIND_ASSOC",
    ``!k m n. BIND k (\a. BIND (m a) n) = BIND (BIND k m) n``,
    SRW_TAC [][BIND_DEF, FUN_EQ_THM] THEN
-   Q.FIND_CASE_TAC `option_CASE (k v) NONE _` THEN
+   Q.RENAME1_TAC `option_CASE (k v) NONE _` THEN
    Cases_on `k v` THEN SRW_TAC [][] THEN
-   Q.FIND_CASE_TAC `pair_CASE p _` THEN Cases_on `p` THEN
+   Q.RENAME1_TAC `pair_CASE p _` THEN Cases_on `p` THEN
    SRW_TAC [][]);
 
 val MMAP_ID = store_thm
@@ -257,7 +257,7 @@ val ES_CHOICE_ASSOC = store_thm(
   "ES_CHOICE_ASSOC",
   ``ES_CHOICE xM (ES_CHOICE yM zM) = ES_CHOICE (ES_CHOICE xM yM) zM``,
   SRW_TAC[][FUN_EQ_THM, ES_CHOICE_DEF] THEN
-  Q.FIND_CASE_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN SRW_TAC[][]);
+  Q.RENAME1_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN SRW_TAC[][]);
 
 val ES_CHOICE_FAIL_LID = store_thm(
   "ES_CHOICE_FAIL_LID[simp]",
@@ -268,7 +268,7 @@ val ES_CHOICE_FAIL_RID = store_thm(
   "ES_CHOICE_FAIL_RID[simp]",
   ``ES_CHOICE xM ES_FAIL = xM``,
   SRW_TAC[][FUN_EQ_THM, ES_CHOICE_DEF, ES_FAIL_DEF] THEN
-  Q.FIND_CASE_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN SRW_TAC[][]);
+  Q.RENAME1_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN SRW_TAC[][]);
 
 val BIND_FAIL = store_thm(
   "BIND_FAIL_L[simp]",
@@ -293,8 +293,8 @@ val IGNORE_BIND_FAIL = store_thm(
     (IGNORE_BIND xM ES_FAIL = ES_FAIL)``,
   SRW_TAC[][IGNORE_BIND_DEF] THEN
   SRW_TAC[][ES_FAIL_DEF, BIND_DEF, FUN_EQ_THM] THEN
-  Q.FIND_CASE_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN
-  SRW_TAC [][] THEN Q.FIND_CASE_TAC `xM s = SOME rs` THEN Cases_on `rs` THEN
+  Q.RENAME1_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN
+  SRW_TAC [][] THEN Q.RENAME1_TAC `xM s = SOME rs` THEN Cases_on `rs` THEN
   SRW_TAC[][])
 
 (* applicative *)

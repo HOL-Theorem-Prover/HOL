@@ -63,6 +63,6 @@ sig
   val MATCH_ASSUM_RENAME_TAC : tmquote -> tactic
   val MATCH_GOALSUB_RENAME_TAC : tmquote -> tactic
   val MATCH_ASMSUB_RENAME_TAC : tmquote -> tactic
-  val FIND_CASE_TAC           : tmquote -> tactic
+  val RENAME1_TAC            : tmquote -> tactic
 
 end

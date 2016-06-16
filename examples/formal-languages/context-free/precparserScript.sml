@@ -99,7 +99,7 @@ val wfStk_ignores_hdvalues = store_thm(
   "wfStk_ignores_hdvalues[simp]",
   ``wfStk (INL l::t) = wfStk (INL ARB :: t) ∧
     wfStk (INR r::t) = wfStk (INR ARB :: t)``,
-  Cases_on `t` >> simp[] >> qcase_tac `wfStk (INL ARB :: el2 :: tl)` >>
+  Cases_on `t` >> simp[] >> rename1 `wfStk (INL ARB :: el2 :: tl)` >>
   Cases_on `el2` >> simp[]);
 
 val precparse1_preserves_wfStk = store_thm(
@@ -120,8 +120,8 @@ val wfStk_ALT = store_thm(
   "wfStk_ALT",
   ``wfStk l ⇔ (l ≠ [] ⇒ ∀opn. LAST l ≠ INL opn) ∧
               (∀i. i + 1 < LENGTH l ⇒ ISR (EL i l) ≠ ISR (EL (i + 1) l))``,
-  Induct_on `l` >> simp[] >> Cases >> simp[] >> qcase_tac `wfStk (_ :: stk)` >>
-  Cases_on `stk` >> simp[] >> fs[] >> qcase_tac `wfStk (_ :: el2 :: stk)` >>
+  Induct_on `l` >> simp[] >> Cases >> simp[] >> rename1 `wfStk (_ :: stk)` >>
+  Cases_on `stk` >> simp[] >> fs[] >> rename1 `wfStk (_ :: el2 :: stk)` >>
   Cases_on `el2` >> simp[] >- (disj2_tac >> qexists_tac `0` >> simp[]) >>
   simp[DECIDE ``x + 1 < SUC y ⇔ x < y``] >>
   dsimp[LT_SUC, DECIDE ``x + 1 = SUC x``])
