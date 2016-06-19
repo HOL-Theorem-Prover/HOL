@@ -8,6 +8,13 @@ open wordsLib integer_wordLib bitstringLib
 val ERR = Feedback.mk_HOL_ERR "utilsLib"
 val WARN = Feedback.HOL_WARNING "utilsLib"
 
+structure Parse =
+struct
+   open Parse
+   val (Type,Term) = parse_from_grammars wordsTheory.words_grammars
+end
+open Parse
+
 (* ------------------------------------------------------------------------- *)
 
 fun cache size cmp f =
