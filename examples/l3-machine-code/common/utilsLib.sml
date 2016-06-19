@@ -729,8 +729,8 @@ local
    val rule =
       Conv.CONV_RULE
          (Conv.CHANGED_CONV
-             (REWRITE_CONV [DECIDE ``(b ==> a) /\ (~b ==> a) = a``,
-                            DECIDE ``(~b ==> a) /\ (b ==> a) = a``]))
+             (REWRITE_CONV [DECIDE ``((b ==> a) /\ (~b ==> a)) = a``,
+                            DECIDE ``((~b ==> a) /\ (b ==> a)) = a``]))
    fun SMART_DISCH tm thm =
       let
          val l = Thm.hyp thm
