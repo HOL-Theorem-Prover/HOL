@@ -110,7 +110,9 @@ fun read_complete_sections filename filename_sigs ignore = let
   val all_sections = read_sections filename
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
-  fun is_blank s = (length (String.tokens (fn x => mem x [#" ",#"\n"]) s) = 0)
+  fun every p [] = true
+    | every p (x::xs) = p x andalso every p xs
+  val is_blank = every (fn c => mem c [#" ",#"\n",#"\t"]) o explode
   val ss = filter (not o is_blank) ss
   fun process_sig_line line = let
     val ts0 = String.tokens (fn x => mem x [#" ",#"\n"]) line
