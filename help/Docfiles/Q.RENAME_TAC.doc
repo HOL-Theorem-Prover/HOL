@@ -70,7 +70,7 @@ then the result of the same application would be
 }
 because whole assumptions are considered before sub-terms of the goal.
 
-\COMMENT
+\COMMENTS
 This function is also available under the name {bossLib.rename}.
 
 \SEEALSO
