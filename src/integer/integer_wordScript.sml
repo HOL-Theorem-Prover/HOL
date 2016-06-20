@@ -1316,8 +1316,8 @@ val w2n_i2w = store_thm("w2n_i2w",
   \\ imp_res_tac (UNDISCH INT_MOD_SUB |> GSYM |> DISCH_ALL)
   \\ pop_assum (fn th => once_rewrite_tac [th]) \\ fs []
   \\ fs [INT_MOD_NEG_NUMERATOR]
-  \\ qcase_tac `k <> 0n` \\ pop_assum mp_tac
-  \\ qcase_tac `n <> 0n` \\ pop_assum mp_tac \\ rw []
+  \\ rename1 `k <> 0n` \\ pop_assum mp_tac
+  \\ rename1 `n <> 0n` \\ pop_assum mp_tac \\ rw []
   \\ `n MOD k < k` by fs [MOD_LESS]
   \\ `n MOD k <= k` by fs []
   \\ fs [INT_SUB]);

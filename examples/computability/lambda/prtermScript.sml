@@ -1431,7 +1431,7 @@ val recPhi_rec2Phi = store_thm(
   ``recPhi = rec2 Phi``,
   simp[FUN_EQ_THM] >> Cases
   >- simp[recPhi_def, recCn_def, GSYM recPhi_correct] >>
-  qcase_tac `recPhi (h::rest)` >> Cases_on `rest` >>
+  rename1 `recPhi (h::rest)` >> Cases_on `rest` >>
   simp[recPhi_def, recCn_def, GSYM recPhi_correct])
 
 (* the other way - every recursive function can be emulated in the λ-calculus *)

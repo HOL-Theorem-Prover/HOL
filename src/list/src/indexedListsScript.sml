@@ -13,7 +13,7 @@ val metis_tac = metisLib.METIS_TAC
 val qid_spec_tac = Q.ID_SPEC_TAC
 fun rw thl = SRW_TAC[] thl
 fun fs thl = full_simp_tac (srw_ss()) thl
-val qcase_tac = Q.FIND_CASE_TAC
+val rename1 = Q.RENAME1_TAC
 val qspec_then = Q.SPEC_THEN
 val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
 
@@ -240,14 +240,14 @@ val LIST_RELi_EL_EQN = Q.store_thm(
     LENGTH l1 = LENGTH l2 /\ !i. i < LENGTH l1 ==> R i (EL i l1) (EL i l2)`,
   eq_tac >> map_every qid_spec_tac [`l2`, `l1`]
   >- (Induct_on `LIST_RELi` >> csimp[] >> rpt strip_tac >>
-      qcase_tac `i < LENGTH l2 + 1` >>
+      rename1 `i < LENGTH l2 + 1` >>
       `i < LENGTH l2 \/ i = LENGTH l2` by simp[] >- simp[EL_APPEND1] >>
       simp[EL_APPEND2]) >>
   ho_match_mp_tac SNOC_INDUCT >>
   simp[SNOC_APPEND, LENGTH_NIL_SYM, LIST_RELi_rules] >> rpt strip_tac >>
   Q.ISPEC_THEN `l2` FULL_STRUCT_CASES_TAC SNOC_CASES >> fs[SNOC_APPEND] >>
   irule (CONJUNCT2 (SPEC_ALL LIST_RELi_rules))
-  >- (qcase_tac `R (LENGTH l1) x y` >>
+  >- (rename1 `R (LENGTH l1) x y` >>
       first_x_assum (qspec_then `LENGTH l1` mp_tac) >> simp[EL_APPEND2]) >>
   reverse (first_x_assum irule) >- simp[] >> Q.X_GEN_TAC `j` >> strip_tac >>
   first_x_assum (qspec_then `j` mp_tac) >> simp[EL_APPEND1])
@@ -258,7 +258,7 @@ val LIST_RELi_thm = Q.store_thm(
    (LIST_RELi R (h::t) l <=>
      ?h' t'. l = h'::t' /\ R 0 h h' /\ LIST_RELi (R o SUC) t t')`,
   simp[LIST_RELi_EL_EQN, LENGTH_NIL_SYM] >> eq_tac >> strip_tac
-  >- (qcase_tac `l = _ :: _` >> Cases_on `l` >> fs[] >>
+  >- (rename1 `l = _ :: _` >> Cases_on `l` >> fs[] >>
       fs[LT_SUC, DISJ_IMP_THM, FORALL_AND_THM, PULL_EXISTS]) >>
   var_eq_tac >> dsimp[LT_SUC]);
 

@@ -55,7 +55,7 @@ sig
   val qmatch_assum_rename_tac : term quotation -> tactic
   val qmatch_asmsub_rename_tac : term quotation -> tactic
   val qmatch_goalsub_rename_tac : term quotation -> tactic
-  val qcase_tac : term quotation -> tactic
+  val rename1 : term quotation -> tactic
 
   val assume_tac : thm_tactic
   val strip_assume_tac : thm_tactic
