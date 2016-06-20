@@ -158,6 +158,7 @@ sig
   val qmatch_asmsub_rename_tac : term quotation -> tactic
   val qmatch_goalsub_rename_tac : term quotation -> tactic
   val rename1 : term quotation -> tactic
+  val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
   val unabbrev_all_tac : tactic
