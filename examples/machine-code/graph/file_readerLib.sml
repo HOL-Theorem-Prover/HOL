@@ -110,6 +110,8 @@ fun read_complete_sections filename filename_sigs ignore = let
   val all_sections = read_sections filename
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
+  fun is_blank s = (length (String.tokens (fn x => mem x [#" ",#"\n"]) s) = 0)
+  val ss = filter (not o is_blank) ss
   fun process_sig_line line = let
     val ts0 = String.tokens (fn x => mem x [#" ",#"\n"]) line
     val ts = filter (fn s => s <> "struct") ts0
@@ -184,7 +186,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
   val base_name = "/Users/mom22/graph-decompiler/loop-m0/example"
-  val ignore = []
+  val ignore = [""]
 *)
 
 fun read_files base_name ignore = let
