@@ -136,7 +136,7 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end
+  end handle e => die ("Exception raised: " ^ General.exnMessage e)
 in
   Binaryset.app appthis dset
 end
