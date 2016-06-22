@@ -25,13 +25,8 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
 
 val Fetch_def = Define`
   Fetch s =
-  let vPC = PC s in
-  if ~aligned 2 vPC then
-    raise'exception (UNDEFINED "fetch misaligned") s
-  else let (w, s) = translateAddr (vPC, Instruction, Read) s in
-    case w of
-       SOME pPC => rawReadInst pPC s
-     | NONE => raise'exception (UNDEFINED "fetch fault") s`
+  let (w, s) = translateAddr (PC s, Instruction, Read) s in
+    (rawReadInst (THE w) s, s)`
 
 val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
 
@@ -603,13 +598,13 @@ val branchTo = EV
 
 val GPR = EV [GPR_def, gpr_def] [] [] ``GPR n``
 
-val (write'GPR0, write'GPR) =
-  ev [write'GPR_def, write'gpr_def,
-      utilsLib.mk_state_id_thm riscvTheory.riscv_state_component_equality
-        [["c_gpr"]]]
-  [[``d = 0w:word5``], [``d <> 0w:word5``]] []
-  ``write'GPR (n, d)``
-  |> Lib.pair_of_list
+val write'GPR0 =
+  ev [write'GPR_def] [[``d = 0w:word5``]] []
+  ``write'GPR (n, d)`` |> hd
+
+val write'GPR =
+  ev [write'GPR_def, write'gpr_def] [[``d <> 0w:word5``]] []
+  ``write'GPR (n, d)`` |> hd
 
 val Fetch = Theory.save_thm("Fetch",
   EV [Fetch_def, PC, translateAddr, rawReadInst] [[aligned]] []
