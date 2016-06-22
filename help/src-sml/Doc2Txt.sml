@@ -84,6 +84,8 @@ fun print_markups strm mlist =
           PARA => (out(strm, "\n\n"); print_markups strm ms)
         | TEXT ss => (out(strm, text_encode ss);
                       print_markups strm ms)
+        | EMPH ss => (out(strm, "*" ^ text_encode ss ^ "*");
+                      print_markups strm ms)
         | BRKT ss => (out(strm, "{" ^ Substring.string ss ^ "}");
                       print_markups strm ms)
         | XMPL ss => (out(strm, Substring.string ss);
