@@ -6,6 +6,7 @@ sig
   datatype markup = PARA
                   | TEXT of substring
                   | BRKT of substring
+                  | EMPH of substring
                   | XMPL of substring
 
   datatype section = TYPE of substring

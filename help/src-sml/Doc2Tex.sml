@@ -61,6 +61,8 @@ fun print_markup(m, ostr) =
     case m of
       PARA => out(ostr, "\n\n")
     | TEXT ss => out(ostr, lastminute_fixes (Substring.string ss))
+    | EMPH ss => out(ostr,
+                     "\\emph{" ^ lastminute_fixes (Substring.string ss) ^ "}")
     | BRKT ss => print_verb1(ss, ostr)
     | XMPL ss => print_verbblock(ss, ostr)
 
