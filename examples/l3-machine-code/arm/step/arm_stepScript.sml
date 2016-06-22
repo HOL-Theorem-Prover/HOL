@@ -422,9 +422,9 @@ val CountLeadingZeroBits32 = Q.store_thm("CountLeadingZeroBits32",
    )
 
 val FOLDL_AUG = Q.prove(
-   `!f a l s.
+   `!f a l.
       FOLDL (\x i. f x i) a l =
-      FST (FOLDL (\y i. (f (FST y) i, SND y)) (a, s) l)`,
+      FST (FOLDL (\y i. (f (FST y) i, ())) (a, ()) l)`,
    Induct_on `l` \\ lrw []
    )
 
@@ -471,17 +471,17 @@ val FOR_FOLDL = Q.store_thm("FOR_FOLDL",
    )
 
 val BitCount = Q.store_thm("BitCount",
-   `!w s. BitCount w s = bit_count w`,
+   `!w. BitCount w = bit_count w`,
    lrw [BitCount_def, wordsTheory.bit_count_def, wordsTheory.bit_count_upto_def,
         wordsTheory.word_bit_def]
    \\ `0 <= dimindex(:'a) - 1` by lrw []
    \\ simp
        [FOR_FOLDL
         |> Q.ISPECL [`0n`, `dimindex(:'a) - 1`,
-                     `\i state: num # arm_state.
+                     `\i state: num # unit.
                          ((),
                           if i <= dimindex(:'a) - 1 /\ w ' i then
-                             (FST state + 1, SND state)
+                             (FST state + 1, ())
                           else
                              state)`],
         sum_numTheory.SUM_FOLDL]
@@ -489,12 +489,14 @@ val BitCount = Q.store_thm("BitCount",
         [FOLDL_AUG
          |> Q.ISPECL
               [`\x:num i. x + if w ' i then 1 else 0`, `0`,
-               `COUNT_LIST (dimindex ((:'a) :'a itself))`, `s:arm_state`]
+               `COUNT_LIST (dimindex ((:'a) :'a itself))`]
          |> SIMP_RULE (srw_ss())[]]
    \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (FST x = FST y)``)
    \\ MATCH_MP_TAC listTheory.FOLDL_CONG
    \\ lrw [rich_listTheory.MEM_COUNT_LIST,
            DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
+   \\ Cases_on `a`
+   \\ simp []
    )
 
 val bit_count_upto_1 = Q.prove(
