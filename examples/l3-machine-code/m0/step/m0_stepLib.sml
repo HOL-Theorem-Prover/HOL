@@ -347,7 +347,6 @@ fun unfold_for_loop n thm =
         (PairedLambda.GEN_BETA_CONV
          THENC PairedLambda.let_CONV
          THENC PairedLambda.let_CONV
-         THENC Conv.TRY_CONV PairedLambda.let_CONV
          THENC REWRITE_CONV []
          THENC Conv.ONCE_DEPTH_CONV PairedLambda.GEN_BETA_CONV
         )
@@ -361,7 +360,7 @@ local
    val split_memA =
       GSYM (Q.ISPEC `MemA x s : 'a word # m0_state` pairTheory.PAIR)
    val dest_for = (fn (_, _, b) => b) o state_transformerSyntax.dest_for o
-                  Term.rator o Term.rand o let_val
+                  Term.rator
 in
    fun simp_for_body thm =
       thm
@@ -369,9 +368,9 @@ in
       |> rhsc |> abs_body
       |> let_body
       |> let_body
-      |> (fn t => dest_for t
-                  handle HOL_ERR {origin_function = "dest_FOR", ...} =>
-                    dest_for (let_body t))
+      |> let_val
+      |> Term.rand
+      |> dest_for
       |> abs_body |> abs_body
       |> (SIMP_CONV bool_ss [Once split_memA, pairTheory.pair_case_thm]
           THENC Conv.DEPTH_CONV PairedLambda.GEN_LET_CONV
@@ -483,21 +482,19 @@ local
       |> SIMP_RULE (srw_ss()) []
       |> upto_enumerate 7
 
-   val STM_lem = simp_for_body dfn'StoreMultiple_def
    val STM_thm = unfold_for_loop 7 dfn'StoreMultiple_def
-   val PUSH_lem = simp_for_body dfn'Push_def
-   val PUSH_thm = unfold_for_loop 8 dfn'Push_def
+   val PUSH_thm = Conv.RIGHT_CONV_RULE PairedLambda.let_CONV
+                    (unfold_for_loop 8 dfn'Push_def)
 
    val cond_lsb = Q.prove(
       `i < 8 ==>
        (word_bit (w2n n) r ==>
         (n2w (LowestSetBit (r: word8)) = n: word4)) ==>
        ((if word_bit i r then
-           ((), x1,
-            if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
+           (x1, if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
          else
-           ((), x4)) =
-        (if word_bit i r then ((), x1, x3) else ((), x4)))`,
+           x4) =
+        (if word_bit i r then (x1, x3) else x4))`,
       lrw [m0Theory.LowestSetBit_def, wordsTheory.word_reverse_thm,
            CountLeadingZeroBits8]
       \\ lrfs []
@@ -508,13 +505,14 @@ local
    fun FOR_BETA_CONV i tm =
       let
          val b = pairSyntax.dest_snd tm
-         val (b, _, _) = boolSyntax.dest_cond (abs_body (rator b))
+         val (b, _, _) =
+           boolSyntax.dest_cond
+             (snd (pairSyntax.dest_pair (abs_body (rator b))))
          val n = fst (wordsSyntax.dest_word_bit b)
          val _ = numLib.int_of_term n = i orelse raise ERR "FOR_BETA_CONV" ""
       in
          (Conv.RAND_CONV
             (PairedLambda.GEN_BETA_CONV
-             THENC (Conv.REWR_CONV STM_lem ORELSEC Conv.REWR_CONV PUSH_lem)
              THENC utilsLib.INST_REWRITE_CONV [cond_lsb]
              THENC utilsLib.INST_REWRITE_CONV [write'MemA_4_rwt, R_name_rwt]
              THENC REWRITE_CONV [])
