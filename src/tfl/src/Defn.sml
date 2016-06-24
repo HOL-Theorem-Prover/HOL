@@ -1740,17 +1740,14 @@ end
 
 fun parse_absyn absyn0 = let
   val (absyn,fn_names) = elim_wildcards absyn0
-  val oinfo = term_grammar.overload_info (term_grammar())
+  val oldg = term_grammar()
+  val oinfo = term_grammar.overload_info oldg
   val nonconstructor_parameter_names =
       List.filter (not o is_constructor_name oinfo) (get_param_names absyn)
-  val to_restore =
-      map (fn s => (s,Parse.hide s)) (nonconstructor_parameter_names @ fn_names)
-  fun restore() = List.app (uncurry Parse.update_overload_maps) to_restore
+  val _ =
+      app (ignore o Parse.hide) (nonconstructor_parameter_names @ fn_names)
+  fun restore() = temp_set_grammars(type_grammar(), oldg)
   val tm  = defn_absyn_to_term absyn handle e => (restore(); raise e)
-(* Old parsing of abstract syntax:
-  val tm  = Parse.absyn_to_term (Parse.term_grammar()) absyn
-            handle e => (restore(); raise e)
-*)
 in
   restore();
   (tm, fn_names)
