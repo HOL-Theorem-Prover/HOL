@@ -1427,11 +1427,11 @@ val SORTED_starts_charsets = Q.store_thm
  Cases_on `rs1 = []` >>
  rw [] >>
  fs [] >>
- rw []
+ rw [] >>
+ rename[`SORTED regexp_leq (h::(rs1++rs2))`]
  >- (fs [EVERY_MEM] >>
      Cases_on `rs1` >>
      fs [] >>
-     rename[`regexp_leq h _`] >>
      Cases_on `is_charset h`
      >- (qexists_tac `[h]` >>
          rw [])
@@ -1443,8 +1443,7 @@ val SORTED_starts_charsets = Q.store_thm
      >- (qexists_tac `[]` >>
          rw [] >>
          rw []))
- >- (rename[`SORTED regexp_leq (h::(rs1++rs2))`] >>
-     qexists_tac `h::rs1` >>
+ >- (qexists_tac `h::rs1` >>
      qexists_tac `rs2` >>
      rw [] >>
      Cases_on `rs1` >>
