@@ -37,3 +37,11 @@ val def8 = test "Case expression with variables of different types"
 
 val _ = overload_on ("=", ``T``)
 val _ = test "Definition with overloaded =" (Hol_defn "f4") `f4 x y = x /\ y`
+
+val _ = temp_overload_on("foo", ``bool$F``)
+val _ = Hol_defn "F" `F f x <=> x \/ f x`;
+val _ = tpp_expected{
+  input="foo",
+  output="foo",
+  testf = (fn _ => "Printing after definition on unoverloaded name")
+};
