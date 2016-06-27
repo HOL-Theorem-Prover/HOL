@@ -1912,6 +1912,11 @@ val Shift_intro = prove(
   \\ `w2n v MOD 256 < 4294967296` by all_tac \\ fs []
   \\ match_mp_tac LESS_TRANS \\ qexists_tac `256` \\ fs []);
 
+val blast_append_0_lemma = prove(
+  ``(((w2w:word32 -> 31 word) w @@ (0w:word1)) : word32 = w << 1) /\
+    (((w2w:word32 -> 30 word) w @@ (0w:word2)) : word32 = w << 2)``,
+  blastLib.BBLAST_TAC);
+
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
@@ -1921,6 +1926,7 @@ val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   |> CONJ word_add_with_carry_eq
   |> CONJ fix_align
   |> CONJ Shift_intro
+  |> CONJ blast_append_0_lemma
   |> RW [GSYM CONJ_ASSOC]
   |> SIMP_RULE std_ss [])
 
