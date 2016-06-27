@@ -12,6 +12,13 @@ open term_pp_types
 (* ========================================================================== *)
 
 type t = term_grammar.grammar term_pp_types.ppbackend
+type output_colors = {
+    bv    : pp_color,
+    fv    : pp_color,
+    tyv   : pp_color,
+    tyop  : pp_color,
+    tysyn : pp_color
+  }
 
 (* ========================================================================== *)
 (* with_pp_stream                                                             *)
@@ -216,9 +223,8 @@ fun full_style_to_vt100 (fg,bg,b,u,_) =
    (* done *)       "m";
 
 
-val vt100_terminal =
+fun ansi_terminal (name : string) (colors : output_colors) : t =
 let
-  val name = "vt100_terminal";
   val style_stack = ref ([]:pp_full_style list);
   fun set_style pps fsty =
       PP.add_stringsz pps (full_style_to_vt100 fsty, 0)
@@ -243,11 +249,11 @@ let
       then add_ssz pps (s,sz) else
 
       case valOf ann of
-        FV _    => add_color_string pps Blue (s,sz)
-      | BV _    => add_color_string pps Green (s,sz)
-      | TyV     => add_color_string pps Purple (s,sz)
-      | TyOp _  => add_color_string pps BlueGreen (s,sz)
-      | TySyn _ => add_color_string pps BlueGreen (s,sz)
+        FV _    => add_color_string pps (#fv colors) (s,sz)
+      | BV _    => add_color_string pps (#bv colors) (s,sz)
+      | TyV     => add_color_string pps (#tyv colors) (s,sz)
+      | TyOp _  => add_color_string pps (#tyop colors) (s,sz)
+      | TySyn _ => add_color_string pps (#tysyn colors) (s,sz)
       | _ => add_ssz pps (s,sz)
 in
   {name           = name,
@@ -263,6 +269,13 @@ in
    end_style      = end_style}
 end
 
+val vt100_terminal = ansi_terminal "vt100_terminal" {
+  fv = Blue,
+  bv = Green,
+  tyv = Purple,
+  tyop = BlueGreen,
+  tysyn = BlueGreen
+}
 
 (* -------------------------------- *)
 (* emacs terminal                   *)
