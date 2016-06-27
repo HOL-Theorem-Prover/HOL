@@ -236,8 +236,7 @@ in
         ["regexpMatch", "parse_glob", "internal_functions",
          "Holdep_tokens", "Holdep", "Holmake_tools", "Holmake_types",
          "ReadHMF"]
-    ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
-        ["makefile-includes.ML", "check-intconfig.sml"]
+    ; PolyML.use (HOLDIR ++ "tools" ++ "makefile-includes.ML")
     ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
@@ -246,6 +245,7 @@ in
     ; type_pp_prefix := "``"
     ; type_pp_suffix := "``"
     ; Feedback.set_trace "pp_annotations" 1
+    ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
 end;
 
