@@ -105,6 +105,9 @@ fun new {info,warn,genLogFile,keep_going} =
       case Binarymap.peek (!monitor_map, tag) of
           NONE => (warn ("Lost monitor info for "^tag); NONE)
         | SOME info => f info
+    fun taginfo tag colour s =
+      info (infopfx ^ StringCvt.padRight #" " (80 - String.size s) tag ^
+            colour s)
     fun monitor msg =
       case msg of
           StartJob (_, tag) =>
@@ -159,16 +162,14 @@ fun new {info,warn,genLogFile,keep_going} =
                 let
                   val {fulllines,lastpartial,pattern_seen} =
                       tailbuffer.output tb
+                  val taginfo = taginfo tag
                 in
                   if st = W_EXITED then
                     if pattern_seen then
-                      info ("\r" ^ StringCvt.padRight #" " 73 tag ^
-                            boldyellow "CHEATED")
+                      taginfo boldyellow "CHEATED"
                     else
-                      info (infopfx ^ StringCvt.padRight #" " 78 tag ^
-                            green "OK")
-                  else (info (infopfx ^ StringCvt.padRight #" " 73 tag ^
-                              red "FAILED!");
+                      taginfo green "OK"
+                  else (taginfo red "FAILED!";
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)
                         else ());
@@ -181,8 +182,7 @@ fun new {info,warn,genLogFile,keep_going} =
         | MonitorKilled((_, tag), _) =>
           stdhandle tag
             (fn ((strm,tb), stat) =>
-                (info (infopfx ^ StringCvt.padRight #" " 72 tag ^
-                       red "M-KILLED");
+                (taginfo tag red "M-KILLED";
                  TextIO.closeOut strm;
                  monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                  display_map();

@@ -106,13 +106,15 @@ fun chattiness_level switches =
 
 val option_value = get_hmf_cline() |> apply_updates cline_options
 val coption_value = #core option_value
+val usepfx =
+  #jobs (#core (HM_Cline.default_options |> apply_updates cline_options)) = 1
 
 (* things that need to be read out of the first Holmakefile, and which will
    govern the behaviour even when recursing into other directories that may
    have their own Holmakefiles *)
 val (outputfns as {warn,tgtfatal,diag,info,chatty}) =
     output_functions {chattiness = chattiness_level coption_value,
-                      usepfx = #jobs coption_value = 1}
+                      usepfx = usepfx}
 val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
