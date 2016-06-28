@@ -37,6 +37,12 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
      relationTheory
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
+fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
+
+val rw = SRW_TAC []
+val metis_tac = METIS_TAC
+fun fs l = FULL_SIMP_TAC (srw_ss()) l
+
 
 val _ = new_theory "list";
 
@@ -3101,14 +3107,6 @@ val LLEX_EL_THM = store_thm("LLEX_EL_THM",
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
 
-local
-  val op>> = op Tactical.THEN
-  val rw = SRW_TAC []
-  val metis_tac = METIS_TAC
-  val fs = FULL_SIMP_TAC (srw_ss())
-  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
-in
-
 (* nub *)
 
 val nub_def = Define `
@@ -3283,7 +3281,8 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> rw []
    THEN1 (FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) >> rw [])
    >> FIRST_X_ASSUM MATCH_MP_TAC
-   >> Q.EXISTS_TAC`t'`
+   >> Q.RENAME_TAC [`LIST_REL _ l1 l2`, `LIST_REL _ l2 l3`]
+   >> Q.EXISTS_TAC`l2`
    >> rw []
    >> FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC)
    >> simp []);
@@ -3327,13 +3326,10 @@ val LIST_EQ_MAP_PAIR = Q.store_thm("LIST_EQ_MAP_PAIR",
    THEN METIS_TAC [pair_CASES, PAIR_EQ])
 
 val TAKE_SUM = Q.store_thm("TAKE_SUM",
-   `!n m l. n + m <= LENGTH l ==>
-            (TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l))`,
-   Induct_on `l`
-   THEN SRW_TAC [] []
-   THEN SRW_TAC [] []
-   THEN Cases_on `n`
-   THEN FULL_SIMP_TAC arith_ss [arithmeticTheory.ADD1])
+   `!n m l. TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l)`,
+   Induct_on `l` >> simp[] >> rw[] >> simp[] >>
+   `m + n - 1 = (n - 1) + m` by simp[] >>
+   ASM_REWRITE_TAC[]);
 
 val ALL_DISTINCT_FILTER_EL_IMP = Q.store_thm("ALL_DISTINCT_FILTER_EL_IMP",
    `!P l n1 n2.
@@ -3573,7 +3569,6 @@ val LUPDATE_SAME = store_thm("LUPDATE_SAME",
   ``!n ls. n < LENGTH ls ==> (LUPDATE (EL n ls) n ls = ls)``,
   rw[LIST_EQ_REWRITE,EL_LUPDATE]>>rw[])
 
-end;
 (* end CakeML lemmas *)
 
 
