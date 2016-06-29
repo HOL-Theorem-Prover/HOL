@@ -72,6 +72,9 @@ fun truncate width s =
 
 fun polish s = StringCvt.padRight #" " 16 (truncate 16 (polish0 s))
 
+val cheat_string = "Saved CHEAT _"
+val oracle_string = "Saved ORACLE thm _"
+
 fun new {info,warn,genLogFile,keep_going} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
@@ -113,8 +116,8 @@ fun new {info,warn,genLogFile,keep_going} =
           StartJob (_, tag) =>
           let
             val strm = TextIO.openOut (genLogFile{tag = tag})
-            val tb =
-                tailbuffer.new {numlines = 10, pattern = SOME "CHEAT"}
+            val tb = tailbuffer.new {numlines = 10,
+                                     patterns = [cheat_string, oracle_string]}
           in
             monitor_map :=
               Binarymap.insert(!monitor_map, tag, ((strm, tb), MRunning #"|"));
@@ -160,15 +163,17 @@ fun new {info,warn,genLogFile,keep_going} =
           stdhandle tag
             (fn ((strm,tb),stat) =>
                 let
-                  val {fulllines,lastpartial,pattern_seen} =
-                      tailbuffer.output tb
+                  val {fulllines,lastpartial,patterns_seen} =
+                    tailbuffer.output tb
+                  fun seen s = Holmake_tools.member s patterns_seen
                   val taginfo = taginfo tag
                 in
                   if st = W_EXITED then
-                    if pattern_seen then
+                    if seen cheat_string then
                       taginfo boldyellow "CHEATED"
                     else
-                      taginfo green "OK"
+                      taginfo
+                        (if seen oracle_string then boldyellow else green) "OK"
                   else (taginfo red "FAILED!";
                         List.app (fn s => info (" " ^ dim s)) fulllines;
                         if lastpartial <> "" then info (" " ^ dim lastpartial)

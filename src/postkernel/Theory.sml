@@ -545,13 +545,21 @@ local
   val save_thm_reporting = ref 1
   val _ = Feedback.register_trace ("Theory.save_thm_reporting",
                                    save_thm_reporting, 2)
-  fun is_cheated th = Lib.mem "cheat" (fst (Tag.dest_tag (Thm.tag th)))
-  fun save_mesg cheated name =
+  fun mesg_str th =
+    let
+      val tags = Lib.set_diff (fst (Tag.dest_tag (Thm.tag th))) ["DISK_THM"]
+    in
+      if List.null tags
+        then "theorem"
+      else if Lib.null_intersection tags ["fast_proof", "cheat"]
+        then "ORACLE thm"
+      else "CHEAT"
+    end
+  fun save_mesg s name =
     if !save_thm_reporting = 0 orelse
        !Globals.interactive andalso !save_thm_reporting < 2
       then ()
     else let
-           val s = if cheated then "CHEAT" else "theorem"
            val s = if !Globals.interactive then s
                    else StringCvt.padRight #"_" 13 (s ^ " ")
          in
@@ -566,7 +574,7 @@ in
       check_name true ("save_thm", name)
       ; if uptodate_thm th' then add_thmCT (name, th')
         else raise DATED_ERR "save_thm" name
-      ; save_mesg (is_cheated th') name
+      ; save_mesg (mesg_str th') name
       ; th'
     end
 
