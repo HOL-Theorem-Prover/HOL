@@ -28,7 +28,8 @@ sig
      it removes unused vars.
      It returns the constructed term with a flag of whether
      the result differs from a naive call of [mk_PMATCH_ROW_PABS]. *)
-  val mk_PMATCH_ROW_PABS_WILDCARDS : term list -> term * term * term -> (bool * term)
+  val mk_PMATCH_ROW_PABS_WILDCARDS : term list -> term * term * term ->
+                                     (bool * term)
 
   (* dest_PMATCH_ROW_ABS ``PMATCH_ROW (\(x,y). p x y)
         (\(x,y). g x y) (\(x,y). r x y)``
@@ -39,7 +40,8 @@ sig
 
   (* calls dest_PMATCH_ROW_ABS and renames the abstracted vars
      consistently to be different from the list of given vars. *)
-  val dest_PMATCH_ROW_ABS_VARIANT : term list -> term -> (term * term * term * term)
+  val dest_PMATCH_ROW_ABS_VARIANT : term list -> term ->
+                                    (term * term * term * term)
 
 
   (* [PMATCH_ROW_PABS_ELIM_CONV t]
@@ -90,7 +92,8 @@ sig
 
   (* internally, the columns come from a list of atterns. Sometimes
      this interface is useful as well. *)
-  val dest_PATLIST_COLS : term -> term list -> (term * (term list * term) list) list
+  val dest_PATLIST_COLS : term -> term list ->
+                          (term * (term list * term) list) list
 
   (* applies a conversion to all rows of a pmatch *)
   val PMATCH_ROWS_CONV : conv -> conv
@@ -127,11 +130,14 @@ sig
      ... xn] that should be abbreviated by a new variable and moved to
      the guard. It gets the list of free variables and the pattern.
   *)
-  val PMATCH_ROW_COND_EX_INTRO_CONV_GEN : (term list -> term -> term option) -> term -> conv
+  val PMATCH_ROW_COND_EX_INTRO_CONV_GEN :
+      (term list -> term -> term option) -> term -> conv
   val PMATCH_ROW_COND_EX_INTRO_CONV : term -> conv
 
-  (* apply PMATCH_ROW_COND_EX_INTRO_CONV to all disjuncts of an nchotomy theorem. *)
-  val nchotomy2PMATCH_ROW_COND_EX_CONV_GEN : (term list -> term -> term option) -> conv
+  (* apply PMATCH_ROW_COND_EX_INTRO_CONV to all disjuncts of an nchotomy
+     theorem. *)
+  val nchotomy2PMATCH_ROW_COND_EX_CONV_GEN :
+      (term list -> term -> term option) -> conv
   val nchotomy2PMATCH_ROW_COND_EX_CONV : conv
 
   (* A version of making PMATCH_ROW_COND_EX that does the move to guards. *)

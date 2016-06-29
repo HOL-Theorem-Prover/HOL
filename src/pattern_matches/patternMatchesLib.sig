@@ -271,10 +271,12 @@ sig
   val colHeu_rank : column_ranking_fun list -> column_heuristic
 
   val colRank_first_row : column_ranking_fun
-  val colRank_first_row_constr : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
+  val colRank_first_row_constr : constrFamiliesLib.pmatch_compile_db ->
+                                 column_ranking_fun
   val colRank_arity : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
   val colRank_constr_prefix : column_ranking_fun
-  val colRank_small_branching_factor : constrFamiliesLib.pmatch_compile_db -> column_ranking_fun
+  val colRank_small_branching_factor : constrFamiliesLib.pmatch_compile_db ->
+                                       column_ranking_fun
 
   (* Some heuristics *)
   val colHeu_first_col : column_heuristic
@@ -337,7 +339,8 @@ sig
 
   (* [nchotomy_of_pats_GEN db colHeu pats] computes an nchotomy-theorem
      for a list of patterns. A pattern is written as for PMATCH, i.e. in the form ``\(v1, ..., vn). p v1 ... vn``. *)
-  val nchotomy_of_pats_GEN : constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term list -> thm
+  val nchotomy_of_pats_GEN : constrFamiliesLib.pmatch_compile_db ->
+                             column_heuristic -> term list -> thm
   val nchotomy_of_pats : term list -> thm
 
 
@@ -349,11 +352,13 @@ sig
      redundant rows. Internally this uses [nchotomy_of_pats] and
      therefore requires a pmatch-compile db and a column-heuristic. *)
   val PMATCH_REMOVE_REDUNDANT_CONV_GEN :
-    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list -> conv
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list ->
+    conv
   val PMATCH_REMOVE_REDUNDANT_CONV : conv
 
   val PMATCH_REMOVE_REDUNDANT_GEN_ss :
-    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list -> ssfrag
+    constrFamiliesLib.pmatch_compile_db -> column_heuristic -> ssfrag list ->
+    ssfrag
   val PMATCH_REMOVE_REDUNDANT_ss : unit -> ssfrag
 
 
@@ -363,7 +368,8 @@ sig
      separate these steps, this allows using interactive proofs
      for showing that a row is redundant. *)
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH_GEN :
-    ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic -> term -> thm
+    ssfrag list -> constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
+    term -> thm
   val COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH : term -> thm
 
   (* Apply the resulting redundant rows-info *)
@@ -413,7 +419,8 @@ sig
    val PMATCH_COMPLETE_CONV_GEN : ssfrag list ->
      constrFamiliesLib.pmatch_compile_db -> column_heuristic ->
      bool -> conv
-								 	   val PMATCH_COMPLETE_GEN_ss :
+
+   val PMATCH_COMPLETE_GEN_ss :
      ssfrag list ->
      constrFamiliesLib.pmatch_compile_db ->
      column_heuristic -> bool -> ssfrag
