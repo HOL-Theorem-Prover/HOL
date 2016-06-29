@@ -606,7 +606,7 @@ fun test(inp, expected) =
     val _ = tprint ("Parsing "^inp)
     val tm = Parse.Term [QUOTE inp]
   in
-    if aconv tm expected then print "OK\n"
+    if aconv tm expected then OK()
     else
       let
         val diffs = term_diff expected tm
@@ -716,7 +716,7 @@ fun shouldfail s = let
   val _ = tprint ("Should NOT parse: " ^ s)
 in
   case Lib.total (trace ("show_typecheck_errors", 0) Parse.Term) [QUOTE s] of
-      NONE => print "OK\n"
+      NONE => OK()
     | SOME t => die ("FAILED!\n  Parsed to: " ^ term_to_string t)
 end
 
@@ -729,17 +729,7 @@ val _ = app shouldfail [
     Pretty-printer
    ---------------------------------------------------------------------- *)
 
-fun testpp s =
-  let
-    val _ = tprint ("PP-test: "^s)
-    val t = Parse.Term [QUOTE s]
-    val s' = term_to_string t
-  in
-    if s = s' then print "OK\n"
-    else die ("FAILED\n  Got: >" ^ s' ^ "<")
-  end
-
-val _ = app testpp [
+val _ = app (raw_backend tpp) [
   "case x of 0 => 3 | SUC n => n",
   "case x of 0 => 4 | SUC _ => 10",
   "case (x,y) of (NONE,_) => 10 | (SOME n,0) when n < 10 => 11",
