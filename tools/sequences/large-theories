@@ -20,7 +20,6 @@ src/HolSmt
 !!examples/computability/register
 !!examples/balanced_bst
 !!examples/formal-languages/regular
-!examples/pattern_matches
 src/Boolify/src
 src/float
 src/floating-point

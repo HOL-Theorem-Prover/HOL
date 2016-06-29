@@ -4,6 +4,19 @@ struct
 open Lib
 
 val linewidth = ref 80
+
+fun crush extra w s =
+  let
+    val exsize = UTF8.size extra
+    val desired_size = UTF8.size s + exsize
+  in
+    if desired_size <= w then
+      UTF8.padRight #" " w (s ^ extra)
+    else
+      UTF8.substring(s,0,w-exsize) ^ extra
+  end
+
+fun tprint s = print (crush " ...  " 78 s)
 fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
@@ -21,8 +34,6 @@ val dim = checkterm "\027[2m"
 
 fun die s = (print (boldred s ^ "\n"); OS.Process.exit OS.Process.failure)
 fun OK () = print (boldgreen "OK" ^ "\n")
-
-fun tprint s = print (UTF8.padRight #" " 78 (s ^ " ... "))
 
 fun unicode_off f = Feedback.trace ("Unicode", 0) f
 fun raw_backend f =

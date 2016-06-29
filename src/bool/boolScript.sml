@@ -3982,7 +3982,7 @@ val literal_case_id = save_thm
          Support for parsing "case" expressions
  ---------------------------------------------------------------------------*)
 
-val _ = new_constant(GrammarSpecials.case_special,
+val _ = new_constant(GrammarSpecials.core_case_special,
                      Type`:'a -> ('a -> 'b) -> 'b`);
 val _ = new_constant(GrammarSpecials.case_split_special,
                      Type`:('a -> 'b) -> ('a -> 'b) -> 'a -> 'b`);
@@ -3990,12 +3990,14 @@ val _ = new_constant(GrammarSpecials.case_arrow_special,
                      Type`:'a -> 'b -> 'a -> 'b`);
 
 val _ = let open GrammarSpecials
-        in app add_const [case_special, case_split_special,
-                          case_arrow_special]
+        in app (fn s => remove_ovl_mapping s {Name=s,Thy="bool"})
+               [case_split_special, case_arrow_special]
         end
 
 val _ = add_rule{pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,2)],
-                 fixity = Infixr 10,
+                 fixity = Infix(NONASSOC, 12),
+                 (* allowing for insertion of .| infix at looser precedence
+                    level *)
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = OnlyIfNecessary,
                  term_name = GrammarSpecials.case_arrow_special}
@@ -4007,7 +4009,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  fixity = Prefix 1,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = Always,
-                 term_name = GrammarSpecials.case_special};
+                 term_name = GrammarSpecials.core_case_special};
 
 val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                          TM, BreakSpace(1,2), TOK "of"],
@@ -4017,7 +4019,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  fixity = Prefix 1,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = Always,
-                 term_name = GrammarSpecials.case_special};
+                 term_name = GrammarSpecials.core_case_special};
 
 val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                                          TM, BreakSpace(1,2), TOK "of"],
@@ -4026,7 +4028,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  fixity = Prefix 1,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = Always,
-                 term_name = GrammarSpecials.case_special};
+                 term_name = GrammarSpecials.core_case_special};
 
 
 val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
@@ -4038,7 +4040,7 @@ val _ = add_rule{pp_elements = [PPBlock([TOK "case", BreakSpace(1,2),
                  fixity = Prefix 1,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                  paren_style = Always,
-                 term_name = GrammarSpecials.case_special};
+                 term_name = GrammarSpecials.core_case_special};
 
 val BOUNDED_THM = save_thm("BOUNDED_THM",
     let val v = Term `v:bool`

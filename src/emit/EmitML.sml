@@ -249,6 +249,24 @@ fun generic_type_of tm =
         end
    else type_of tm;
 
+
+fun is_supported_PMATCH tm = let
+  val pmi = patternMatchesLib.analyse_pmatch false tm
+in
+  if !emitOcaml then patternMatchesLib.is_ocaml_pmatch pmi
+                else patternMatchesLib.is_sml_pmatch pmi
+end
+
+fun strip_supported_PMATCH tm = let
+  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm 
+  fun dest_r r = let
+     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r 
+  in (p, r, g) end
+in
+  (i, List.map dest_r rows)
+end
+
+
 (*---------------------------------------------------------------------------*)
 (* A prettyprinter from HOL to very simple ML, dealing with basic paired     *)
 (* lambda calculus terms, plus literals (strings, nums, ints), notation for  *)
@@ -284,6 +302,8 @@ fun term_to_ML openthys side ppstrm =
      if combinSyntax.is_fail tm then pp_fail i tm else
      if oneSyntax.is_one tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
+     if is_supported_PMATCH tm then 
+        pp_case_with_guard i (strip_supported_PMATCH tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_the_value tm then pp_itself tm else
      if is_const tm then pp_const i tm else
@@ -479,6 +499,9 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
       end
   and pp_case i (a,cases) =
+    pp_case_with_guard i 
+      (a, List.map (fn (pat, rhs) => (pat, rhs, T)) cases)
+  and pp_case_with_guard i (a,cases) =
       ( begin_block CONSISTENT 1
                    (* from HOL term grammar *)
         ; lparen i (if !emitOcaml then minprec else 7)
@@ -498,9 +521,15 @@ fun term_to_ML openthys side ppstrm =
         ; end_block()
         ; rparen i (if !emitOcaml then minprec else 7)
         ; end_block())
-  and pp_case_clause (pat,rhs) =
+  and pp_case_clause (pat,rhs,guard) =
         (begin_block CONSISTENT 3
          ; pp minprec pat
+         ; (if (aconv guard T) then () else (
+             (* guards only occur for Ocaml *)
+             add_string (" when")
+           ; add_break (1,0)
+           ; pp 7 guard
+           ))
          ; add_string (if !emitOcaml then " ->" else " =>")
          ; add_break (1,0)
          ; pp 7 rhs
@@ -578,11 +607,14 @@ fun term_to_ML openthys side ppstrm =
     in
       (pp_itself_type o hd o snd o dest_type o type_of) tm
     end
+
   and pp_var tm = let val s = fst(dest_var tm)
                       val c = String.sub(s,0)
                   in
                     if c = #"^" then
                       add_string (fix_reserved (String.extract(s,1,NONE)))
+                    else if c = #"_" then
+                      add_string "_"
                     else if !emitOcaml andalso Char.isUpper c then
                       add_string ("_" ^ s)
                     else

@@ -135,6 +135,7 @@ type special_info = {type_intro : string,
                      restr_binders : (string option * string) list,
                      res_quanop : string}
 
+type prmP0 = Absyn.absyn -> Parse_supportENV.preterm_in_env
 
 datatype grammar = GCONS of
   {rules : (int option * grammar_rule) list,
@@ -142,8 +143,19 @@ datatype grammar = GCONS of
    numeral_info : (char * string option) list,
    overload_info : overload_info,
    user_printers : (type_grammar.grammar * grammar, grammar) printer_info,
-   absyn_postprocessors : (string * (Absyn.absyn -> Absyn.absyn)) list
+   absyn_postprocessors : (string * postprocessor) list,
+   preterm_processors : (string*int,ptmprocessor) Binarymap.dict
    }
+and postprocessor = AbPP of grammar -> Absyn.absyn -> Absyn.absyn
+and ptmprocessor = PtmP of grammar -> prmP0 -> prmP0
+
+fun destAbPP (AbPP f) = f
+fun destPtmP (PtmP f) = f
+
+type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
+type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
+type preterm_processor = grammar -> AbPTME -> AbPTME
+
 
 datatype ruleset = GRS of (int option * grammar_rule) list * special_info
 fun ruleset (GCONS {rules,specials,...}) = GRS (rules, specials)
@@ -157,31 +169,39 @@ fun overload_info (GCONS G) = #overload_info G
 fun known_constants (GCONS G) = Overload.known_constants (#overload_info G)
 fun grammar_rules (GCONS G) = map #2 (#rules G)
 fun rules (GCONS G) = (#rules G)
-fun absyn_postprocessors (GCONS g) = #absyn_postprocessors g
+fun absyn_postprocessors0 (GCONS g) = #absyn_postprocessors g
+fun absyn_postprocessors g = map (apsnd destAbPP) (absyn_postprocessors0 g)
+
+fun preterm_processor (GCONS g) k =
+  Option.map destPtmP (Binarymap.peek(#preterm_processors g, k))
+
 
 (* fupdates *)
 open FunctionalRecordUpdate
-fun makeUpdateG z = makeUpdate6 z (* 6 fields *)
+fun gcons_mkUp z = makeUpdate7 z
 fun update_G z = let
   fun from rules specials numeral_info overload_info user_printers
-           absyn_postprocessors =
-        {rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = overload_info, user_printers = user_printers,
-         absyn_postprocessors = absyn_postprocessors}
-  (* from' has arguments in reverse order *)
-  fun from' absyn_postprocessors user_printers overload_info numeral_info
-            specials rules =
-        {rules = rules, specials = specials, numeral_info = numeral_info,
-         overload_info = overload_info, user_printers = user_printers,
-         absyn_postprocessors = absyn_postprocessors}
-  fun to f  {rules, specials, numeral_info, overload_info, user_printers,
-              absyn_postprocessors} =
+           absyn_postprocessors preterm_processors =
+    {rules = rules, specials = specials, numeral_info = numeral_info,
+     overload_info = overload_info, user_printers = user_printers,
+     absyn_postprocessors = absyn_postprocessors,
+     preterm_processors = preterm_processors}
+  (* fields in reverse order to above *)
+  fun from' preterm_processors absyn_postprocessors user_printers
+            overload_info numeral_info specials rules =
+    {rules = rules, specials = specials, numeral_info = numeral_info,
+     overload_info = overload_info, user_printers = user_printers,
+     absyn_postprocessors = absyn_postprocessors,
+     preterm_processors = preterm_processors }
+  (* first order *)
+  fun to f {rules, specials, numeral_info,
+            overload_info, user_printers, absyn_postprocessors,
+            preterm_processors} =
     f rules specials numeral_info overload_info user_printers
-      absyn_postprocessors
+      absyn_postprocessors preterm_processors
 in
-    makeUpdateG (from, from', to)
+  gcons_mkUp (from, from', to)
 end z
-
 
 fun fupdate_rules f (GCONS g) =
     GCONS (update_G g (U #rules (f (#rules g))) $$)
@@ -258,7 +278,7 @@ fun update_alist (k,v) [] = [(k,v)]
 fun new_absyn_postprocessor (k,f) (GCONS g) = let
   val old = #absyn_postprocessors g
 in
-  GCONS (update_G g (U #absyn_postprocessors (update_alist (k,f) old)) $$)
+  GCONS (update_G g (U #absyn_postprocessors (update_alist (k,AbPP f) old)) $$)
 end
 
 fun remove_absyn_postprocessor k (GCONS g) = let
@@ -266,8 +286,24 @@ fun remove_absyn_postprocessor k (GCONS g) = let
 in
   case total (pluck (equal k o #1)) old of
     NONE => (GCONS g, NONE)
-  | SOME ((_,f), rest) =>
+  | SOME ((_,AbPP f), rest) =>
     (GCONS (update_G g (U #absyn_postprocessors rest) $$), SOME f)
+end
+
+fun new_preterm_processor k f (GCONS g) = let
+  val old = #preterm_processors g
+in
+  GCONS (update_G g
+                  (U #preterm_processors (Binarymap.insert(old,k,PtmP f))) $$)
+end
+
+fun remove_preterm_processor k (G as GCONS g) = let
+  val old = #preterm_processors g
+in
+  case Lib.total Binarymap.remove (old,k) of
+      SOME(new, v) => (GCONS (update_G g (U #preterm_processors new) $$),
+                       SOME (destPtmP v))
+    | NONE => (G, NONE)
 end
 
 
@@ -474,7 +510,9 @@ val stdhol : grammar =
    numeral_info = [],
    overload_info = Overload.null_oinfo,
    user_printers = (Net.empty, Binaryset.empty String.compare),
-   absyn_postprocessors = []
+   absyn_postprocessors = [],
+   preterm_processors =
+     Binarymap.mkDict (pair_compare(String.compare, Int.compare))
    }
 
 fun first_tok [] = raise Fail "Shouldn't happen: term_grammar.first_tok"
@@ -1086,7 +1124,10 @@ in
   List.rev (List.foldl foldthis (List.rev al1) al2)
 end
 
-fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
+fun bmap_merge m1 m2 =
+  Binarymap.foldl (fn (k,v,acc) => Binarymap.insert(acc,k,v)) m1 m2
+
+fun merge_grammars (G1 as GCONS g1, G2 as GCONS g2) :grammar = let
   val g0_rules =
     Listsort.sort (fn (e1,e2) => aug_compare(#1 e1, #1 e2))
                   (rules G1 @ rules G2)
@@ -1103,8 +1144,10 @@ fun merge_grammars (G1:grammar, G2:grammar) :grammar = let
 in
   GCONS {rules = newrules, specials = newspecials, numeral_info = new_numinfo,
          overload_info = new_oload_info, user_printers = new_ups,
-         absyn_postprocessors = alist_merge (absyn_postprocessors G1)
-                                            (absyn_postprocessors G2)}
+         absyn_postprocessors = alist_merge (absyn_postprocessors0 G1)
+                                            (absyn_postprocessors0 G2),
+         preterm_processors =
+           bmap_merge (#preterm_processors g1) (#preterm_processors g2)}
 end
 
 (* ----------------------------------------------------------------------
@@ -1132,7 +1175,12 @@ fun prettyprint_grammar_rules tmprint pstrm (GRS(rules,specials)) = let
       else if s = recupd_special then "record field update"
       else if s = recfupd_special then "functional record update"
       else if s = recwith_special then "record update"
-      else s
+      else
+        case dest_fakeconst_name s of
+            NONE => s
+          | SOME {fake,original = NONE} => "%" ^ fake ^ "%"
+          | SOME {fake,original = SOME{Thy,Name}} =>
+              Thy ^ "$" ^ Name ^ " - %" ^ fake ^ "%"
 
     val tmid_suffix0 = "  ["^ special_case (#term_name rr)^"]"
     val tmid_suffix =

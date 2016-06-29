@@ -1,7 +1,8 @@
 structure constrFamiliesLib :> constrFamiliesLib =
 struct
 
-open HolKernel boolLib simpLib bossLib patternMatchesSyntax
+open HolKernel Parse boolLib Drule BasicProvers
+open boolLib simpLib patternMatchesSyntax numLib
 
 (***************************************************)
 (* Auxiliary definitions                           *)

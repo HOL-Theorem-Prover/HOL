@@ -1,7 +1,8 @@
 structure patternMatchesSyntax :> patternMatchesSyntax =
 struct
 
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib numLib
 open patternMatchesTheory
 open pairSyntax
 open ConseqConv
@@ -132,8 +133,8 @@ fun ALL_CONJ_CONV c t = if (is_conj t) then (
 ) else (TRY_CONV c) t
 
 
-fun DECEND_CONV c_desc c t =
-  (c THENC TRY_CONV (c_desc (DECEND_CONV c_desc c))) t
+fun DESCEND_CONV c_desc c t =
+  (c THENC TRY_CONV (c_desc (DESCEND_CONV c_desc c))) t
 
 
 fun STRIP_ABS_CONV conv t =
@@ -207,28 +208,31 @@ end
 (* Terms                                       *)
 (***********************************************)
 
+val TyV = mk_vartype
 val ty_var_subst = [alpha |-> gen_tyvar (),
              beta |-> gen_tyvar (),
              gamma |-> gen_tyvar (),
              delta |-> gen_tyvar (),
-             ``:'e`` |-> gen_tyvar (),
-             ``:'f`` |-> gen_tyvar (),
-             ``:'g`` |-> gen_tyvar (),
-             ``:'h`` |-> gen_tyvar (),
-             ``:'i`` |-> gen_tyvar (),
-             ``:'j`` |-> gen_tyvar ()
+             TyV "'e" |-> gen_tyvar (),
+             TyV "'f" |-> gen_tyvar (),
+             TyV "'g" |-> gen_tyvar (),
+             TyV "'h" |-> gen_tyvar (),
+             TyV "'i" |-> gen_tyvar (),
+             TyV "'j" |-> gen_tyvar ()
             ]
 
-val PMATCH_ROW_tm = ``PMATCH_ROW``
+fun PC nm = prim_mk_const { Thy = "patternMatches", Name = nm }
+
+val PMATCH_ROW_tm = PC "PMATCH_ROW"
 val PMATCH_ROW_gtm = inst ty_var_subst PMATCH_ROW_tm;
 
-val PMATCH_ROW_COND_tm = ``PMATCH_ROW_COND``
+val PMATCH_ROW_COND_tm = PC "PMATCH_ROW_COND"
 val PMATCH_ROW_COND_gtm = inst ty_var_subst PMATCH_ROW_COND_tm;
 
-val PMATCH_ROW_COND_EX_tm = ``PMATCH_ROW_COND_EX``
+val PMATCH_ROW_COND_EX_tm = PC "PMATCH_ROW_COND_EX"
 val PMATCH_ROW_COND_EX_gtm = inst ty_var_subst PMATCH_ROW_COND_EX_tm;
 
-val PMATCH_tm = ``PMATCH``
+val PMATCH_tm = PC "PMATCH"
 val PMATCH_gtm = inst ty_var_subst PMATCH_tm
 
 fun FRESH_TY_VARS_RULE thm =
@@ -274,7 +278,8 @@ fun mk_PMATCH_ROW (p_t, g_t, r_t) =
 
 fun mk_pabs_from_vars vars tl = case vars of
       []  => let
-               val uv = variant (free_varsl tl) ``uv:unit``
+               val uv =
+                   variant (free_varsl tl) (mk_var("uv", oneSyntax.one_ty))
              in
                fn t => mk_abs (uv, t)
              end
@@ -335,8 +340,9 @@ in
   (p_vars', subst sub p_body, subst sub g_body, subst sub r_body)
 end;
 
-val K_elim = prove (``K x = (\y. x)``, SIMP_TAC std_ss [
-  combinTheory.K_DEF])
+val K_elim = (* |- K x = (\y. x) *)
+  AP_THM combinTheory.K_DEF (mk_var("x", alpha))
+         |> CONV_RULE (RAND_CONV BETA_CONV)
 
 fun PMATCH_ROW_PABS_ELIM_CONV row = let
   val (p, _, _) = dest_PMATCH_ROW row
@@ -667,8 +673,8 @@ fun pmatch_printer_fix_wildcards (vars, pat, guard, rh) = let
   val fake_subst = map (fn wc => (wc |-> mk_fake wc)) wc_l
 
   val vars' =
-    if (List.null var_l') then
-      variant (free_varsl [pat, guard, rh]) ``uv:unit``
+    if List.null var_l' then
+      variant (free_varsl [pat, guard, rh]) (mk_var("_", oneSyntax.one_ty))
     else
       pairSyntax.list_mk_pair var_l'
 
@@ -679,7 +685,11 @@ in
   (vars', pat', guard', rh')
 end handle HOL_ERR _ => (vars, pat, guard, rh)
 
-
+(* wildcard munging turns _ variables into "fake consts" (ensuring the
+   pretty-printer doesn't treat them as variables (giving them a colour etc).
+*)
+fun is_uscV v =
+  isSome (GrammarSpecials.dest_fakeconst_name (#1 (dest_var v)))
 
 fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t =
   let
@@ -688,220 +698,91 @@ fun pmatch_printer GS backend sys (ppfns:term_pp_types.ppstream_funs) gravs d t 
     val _ = if (!use_pmatch_pp) then () else raise term_pp_types.UserPP_Failed
     val {add_string,add_break,ublock,add_newline,ustyle,...} = ppfns
     val (v,rows) = dest_PMATCH t;
-    val rows' = map (fn t => pmatch_printer_fix_wildcards (dest_PMATCH_ROW_ABS t)) rows
+    val rows' = map (pmatch_printer_fix_wildcards o dest_PMATCH_ROW_ABS) rows
+    val bsys =
+     fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = true}
     val sys =
      fn gravs => fn d => sys {gravs = gravs, depth = d, binderp = false}
 
-    fun pp_row (vars, pat, guard, rh) = (
-      term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
-      ublock PP.INCONSISTENT 5 (
-        (if ((type_of vars = oneSyntax.one_ty) andalso
-            not (free_in vars pat) andalso
-            not (free_in vars guard) andalso
-            not (free_in vars rh)) then (
-          add_string "||." >> add_break (1, 0)
-        ) else (
-          add_string "||" >>
-          add_break (1, 0) >>
-          sys (Top, Top, Top) (d - 1) vars >>
-          add_string "." >>
-          add_break (1, 0)
-        )) >>
-        sys (Top, Top, Top) (d - 1) pat >>
-        (if (aconv guard T) then nothing else (
-          add_string " when" >> add_break (1, 0) >>
-          sys (Top, Prec (2000, ""), Top) (d - 1) guard
-        )) >>
-        add_string " ~>" >> add_break (1, 0) >>
-        sys (Top, Prec (2000, ""), Top) (d - 1) rh
-      ))
+    fun pp_row (vars, pat, guard, rh) =
+      let
+        val (print_vars, print_unit) =
+            let val vs = FVL [vars] empty_tmset
+                val pvs0 = FVL [pat] empty_tmset
+                val pvs = HOLset.foldl
+                            (fn (v, acc) => if is_uscV v then acc
+                                            else HOLset.add(acc,v))
+                            empty_tmset
+                            pvs0
+            in
+              if HOLset.isSubset(pvs,vs) then (false, false)
+              else
+                (true, HOLset.find (not o varname_starts_with_uscore) vs = NONE)
+            end
+        val patsys = if print_vars then sys else bsys
+      in
+        term_pp_utils.record_bvars (pairSyntax.strip_pair vars) (
+          ublock PP.INCONSISTENT 5 (
+            (if not print_vars then nothing
+             else
+               let val V = if print_unit then oneSyntax.one_tm else vars
+               in
+                 bsys (Top, Top, Top) (d - 1) V >>
+                 add_string " " >>
+                 add_string ".|" >>
+                 add_break (1, 0)
+               end) >>
+            sys (Top, Top, Top) (d - 1) pat >>
+            (if aconv guard T then nothing
+             else
+              add_string " " >> add_string "when" >> add_break (1, 0) >>
+              sys (Top, Top, Top) (d - 1) guard) >>
+            add_string " " >> add_string "=>" >> add_break (1, 0) >>
+            sys (Top, Top, Top) (d - 1) rh))
+      end
+  in
+    ublock PP.CONSISTENT 0 (
+       ublock PP.CONSISTENT 2
+               (add_string "case" >> add_break(1,2) >>
+                sys (Top, Top, Top) (d - 1) v >>
+                add_break(1,0) >> add_string "of") >>
+       add_break (1, 2) >>
+       ublock PP.CONSISTENT 0 (
+         smpp.pr_list
+           pp_row
+           (add_break(1,~2) >> add_string "|" >> add_string " ") rows'
+       )
     )
-  in ublock PP.CONSISTENT 0 (
-     (ublock PP.CONSISTENT 2 (add_string "CASE" >> add_break(1,2) >>
-       sys (Top, Top, Top) (d - 1) v >>
-       add_break(1,0) >> add_string "OF [")) >>
-     add_break (1, 2) >>
-     ublock PP.CONSISTENT 0 (
-       smpp.pr_list pp_row (add_string ";" >> add_break (1, 0)) rows'
-     ) >>
-     add_break (1, 0) >>
-     add_string "]"
-  )
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = temp_add_user_printer ("PMATCH", ``PMATCH v l``, pmatch_printer);
-
-(***********************************************)
-(* Parser                                      *)
-(***********************************************)
-
-
-fun case_magic_to_deep_case t = let
-  val rows = strip_conj t
-
-  val v = rator (lhs (hd rows))
-  val (arg_tyL, res_ty) = strip_fun (type_of v)
-
-  fun process_row row = let
-    val (l,r) = dest_eq row
-    val p = rand l
-
-    val vars = free_vars_lr p
-  in
-    mk_PMATCH_ROW_PABS vars (p, T, r)
-  end
-
-  val prows = map process_row rows
-  val i = genvar (hd arg_tyL)
-  val prows' = listSyntax.mk_list (prows, type_of (hd prows))
-  val pmatch_t = mk_PMATCH i prows'
+val userprinter_info = let
+  val (argtys, _) = strip_fun (type_of PMATCH_tm)
+  val args = Lib.mapi (fn i => fn ty => mk_var("x" ^ Int.toString i, ty)) argtys
+  val pmatch_pattern = list_mk_comb(PMATCH_tm, args)
 in
-  mk_abs (v, mk_abs (i, pmatch_t))
+  ("PMATCH", pmatch_pattern, pmatch_printer)
 end
 
+(* Enabling pmatch *)
+open parsePMATCH
+val fixityRF = ar_fixity_fupd Parse.RF
 
-val parse_case_as_pmatch = ref false
-val _ = Feedback.register_btrace ("parse deep cases", parse_case_as_pmatch);
+val ENABLE_PMATCH_CASES =
+    add_pmatch {get = term_grammar,
+                arule = K o Parse.temp_add_rule o fixityRF,
+                rmtmtok = K o Parse.temp_remove_termtok,
+                add_ptmproc =
+                  (fn s => fn pp => K (temp_add_preterm_processor s pp)),
+                addup = K o temp_add_user_printer,
+                up = userprinter_info}
 
-val _ =
-  let fun lookup s =
-        case TypeBase.read s
-         of SOME tyi => SOME {constructors = TypeBasePure.constructors_of tyi,
-                              case_const = TypeBasePure.case_const_of tyi}
-          | NONE => NONE
-      open GrammarSpecials
-  in
-    set_case_specials ((fn t =>
-      if !parse_case_as_pmatch then
-         case_magic_to_deep_case t
-      else
-         #functional (Pmatch.mk_functional lookup t)),
-
-                       (fn s =>
-                             case lookup s of
-                               NONE => []
-                             | SOME {constructors,...} => constructors))
-  end;
-
-
-val PMATCH_magic_1_tm = mk_const ("PMATCH_magic_1", ``:'a -> ('a -> 'b option) list -> 'b``);
-val PMATCH_ROW_magic_0_tm = mk_const ("PMATCH_ROW_magic_0",
-  ``:'a # bool # 'b -> 'a -> 'b option``);
-val PMATCH_ROW_magic_1_tm = mk_const ("PMATCH_ROW_magic_1",
-  ``:('a -> 'b # bool # 'c) -> 'b -> 'c option``);
-val PMATCH_ROW_magic_2_tm = mk_const("PMATCH_ROW_magic_2",
-  ``:'a -> bool -> 'b -> 'a # bool # 'b``);
-val PMATCH_ROW_magic_3_tm = mk_const("PMATCH_ROW_magic_3",
-  ``:'a -> 'b -> 'a # bool # 'b``);
-val PMATCH_ROW_magic_4_tm = mk_const ("PMATCH_ROW_magic_4",
-  ``:'a # bool # 'b -> 'a -> 'b option``);
-
-val _ = temp_add_rule{pp_elements = [TOK "~>"],
-                 fixity = Infix (NONASSOC, 3),
-                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-                 paren_style = OnlyIfNecessary,
-                 term_name = "PMATCH_ROW_magic_3"}
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_2",
-      fixity = Infix (HOLgrammars.NONASSOC, 3),
-      pp_elements = [TOK "when", TM, TOK "~>"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_1",
-      fixity = Binder,
-      pp_elements = [TOK "||"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_0",
-      fixity = Prefix 2,
-      pp_elements = [TOK "||."],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_ROW_magic_4",
-      fixity = Prefix 2,
-      pp_elements = [TOK "||!"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-val _ = temp_add_rule{term_name = "PMATCH_magic_1",
-      fixity = Closefix,
-      pp_elements = [TOK "CASE", TM, TOK "OF"],
-      paren_style = OnlyIfNecessary,
-      block_style = (AroundEachPhrase,
-        (PP.INCONSISTENT, 0))};
-
-
-
-fun traverse f tm =
-  f tm handle HOL_ERR _ =>
-  let
-    val (tm1, tm2) = dest_comb tm
-  in
-    mk_comb (traverse f tm1, traverse f tm2)
-  end handle HOL_ERR _ =>
-  let
-    val (tm1, tm2) = dest_abs tm
-  in
-    mk_abs (traverse f tm1, traverse f tm2)
-  end handle HOL_ERR _ => tm;
-
-
-fun fix_CASE tm = let
-     val (c, args) = strip_comb tm
-   in
-   if (same_const c PMATCH_magic_1_tm) then
-     let
-       val tys = match_type (type_of PMATCH_magic_1_tm) (type_of c)
-       val c' = inst tys PMATCH_tm;
-       val args' = map (traverse fix_CASE) args
-     in
-       list_mk_comb (c', args')
-     end
-   else if (same_const c PMATCH_ROW_magic_1_tm) orelse (same_const c PMATCH_ROW_magic_0_tm) orelse (same_const c PMATCH_ROW_magic_4_tm) then
-     let
-       val args' = map (traverse fix_CASE) args
-       val (vars, b) =
-          if (same_const c PMATCH_ROW_magic_1_tm) then let
-            val (p_var, b) = dest_pabs (hd args')
-            val vars = pairSyntax.strip_pair p_var
-          in
-            (vars, b)
-          end else if (same_const c PMATCH_ROW_magic_4_tm) then let
-            val b = hd args'
-            val (_, b_args) = strip_comb b;
-            val vars = List.filter (not o varname_starts_with_uscore)
-                          (free_vars_lr (el 1 b_args))
-          in
-            (vars, b)
-          end else (* magic 0 *) ([], hd args');
-       val (b_c, b_args) = strip_comb b;
-       val (p, g, r) = if (same_const b_c PMATCH_ROW_magic_2_tm) then
-            (el 1 b_args, el 2 b_args, el 3 b_args)
-          else if (same_const b_c PMATCH_ROW_magic_3_tm) then
-            (el 1 b_args, T, el 2 b_args)
-          else failwith "unexpected constant";
-       val wildcards = List.filter varname_starts_with_uscore (
-          free_vars p
-       )
-       val vars = vars @ wildcards
-     in
-       mk_PMATCH_ROW_PABS vars (p, g, r)
-     end
-   else failwith "no CASE"
-end;
-
-(*
-Preterm.post_process_term := I *)
-val old_f = !Preterm.post_process_term;
-val _ = (Preterm.post_process_term := (fn tm => (traverse fix_CASE (old_f tm))));
-
+val grammar_add_pmatch =
+    add_pmatch { get = (fn g => g),
+                 arule = C term_grammar.add_rule,
+                 rmtmtok = C term_grammar.remove_form_with_tok,
+                 add_ptmproc = term_grammar.new_preterm_processor,
+                 addup = term_grammar.add_user_printer,
+                 up = userprinter_info }
 
 
 

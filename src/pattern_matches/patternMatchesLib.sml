@@ -1,14 +1,17 @@
 structure patternMatchesLib :> patternMatchesLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel Parse boolLib Drule BasicProvers
+open simpLib numLib metisLib
 open patternMatchesTheory
-open simpLib
 open quantHeuristicsLib
 open DatatypeSimps
 open patternMatchesSyntax
 open Traverse
 open constrFamiliesLib
+open unwindLib
+
+val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 (***********************************************)
 (* Auxiliary stuff                             *)
@@ -916,7 +919,7 @@ end handle HOL_ERR _ => raise UNCHANGED
 
 fun PMATCH_CLEANUP_CONV_GEN ssl = PMATCH_CLEANUP_CONV_GENCALL (ssl, NONE)
 val PMATCH_CLEANUP_CONV = PMATCH_CLEANUP_CONV_GEN [];
-
+val _ = computeLib.add_convs [(patternMatchesSyntax.PMATCH_tm, 2, CHANGED_CONV PMATCH_CLEANUP_CONV)];
 
 
 (***********************************************)
@@ -953,14 +956,14 @@ PMATCH (NONE,x,l)
 
 val t = ``
   PMATCH (x + y,ys)
-    [PMATCH_ROW (λx. (x,[])) (λx. T) (λx. x);
-     PMATCH_ROW (λ(x,y,ys). (x,y::ys)) (λ(x,y,ys). T)
-       (λ(x,y,ys). my_d (x + y,ys))]``
+    [PMATCH_ROW (\x. (x,[])) (\x. T) (\x. x);
+     PMATCH_ROW (\ (x,y,ys). (x,y::ys)) (\ (x,y,ys). T)
+       (\ (x,y,ys). my_d (x + y,ys))]``
 
 
 val t = ``PMATCH (x,y)
-    [PMATCH_ROW (λx. (x,x)) (λx. T) (λx. T);
-     PMATCH_ROW (λ (z, y). (z, y)) (λ (z, y). T) (λ (z, y). F)]``
+    [PMATCH_ROW (\x. (x,x)) (\x. T) (\x. T);
+     PMATCH_ROW (\ (z, y). (z, y)) (\ (z, y). T) (\ (z, y). F)]``
 
 
 val rc_arg = []
@@ -1487,7 +1490,7 @@ val PMATCH_SIMP_CONV = PMATCH_SIMP_CONV_GEN [];
 fun PMATCH_SIMP_GEN_ss ssl =
   make_gen_conv_ss PMATCH_SIMP_CONV_GENCALL "PMATCH_SIMP_REDUCER" ssl
 
-val PMATCH_SIMP_ss = PMATCH_SIMP_GEN_ss []
+val PMATCH_SIMP_ss = name_ss "patternMatchesSimp" (PMATCH_SIMP_GEN_ss [])
 
 
 (***********************************************)
@@ -2297,11 +2300,15 @@ local
     val thm01 = TRANS thm00 thm01a
 
     val thm02 = RIGHT_CONV_RULE (PURE_REWRITE_CONV [RIGHT_AND_OVER_OR]) thm01
-    val thm03 = RIGHT_CONV_RULE (DECEND_CONV BINOP_CONV (TRY_CONV EXISTS_OR_CONV)) thm02
+    val thm03 =
+        RIGHT_CONV_RULE (DESCEND_CONV BINOP_CONV (TRY_CONV EXISTS_OR_CONV))
+                        thm02
 
     val thm04 = RIGHT_CONV_RULE (ALL_DISJ_CONV exists_left_and_label_CONV) thm03
 
-    val LEFT_RIGHT_AND_LIST_EXISTS_CONV = (DECEND_CONV QUANT_CONV ((RIGHT_AND_EXISTS_CONV ORELSEC LEFT_AND_EXISTS_CONV)))
+    val LEFT_RIGHT_AND_LIST_EXISTS_CONV =
+        DESCEND_CONV QUANT_CONV
+                     (RIGHT_AND_EXISTS_CONV ORELSEC LEFT_AND_EXISTS_CONV)
     val thm05 = RIGHT_CONV_RULE (ALL_DISJ_CONV (strip_labels_CONV (STRIP_QUANT_CONV LEFT_RIGHT_AND_LIST_EXISTS_CONV))) thm04
     val thm06 = RIGHT_CONV_RULE (ALL_DISJ_CONV (strip_labels_CONV (Unwind.UNWIND_EXISTS_CONV))) thm05
   in
@@ -3039,6 +3046,7 @@ fun PMATCH_COMPLETE_GEN_ss ssl db colHeu use_guards =
 val PMATCH_COMPLETE_ss = PMATCH_COMPLETE_GEN_ss [] (!thePmatchCompileDB) colHeu_default;
 
 
+
 (*
 
 
@@ -3069,6 +3077,244 @@ val disjs = List.map mk_xx rows
 val disjs_tm = list_mk_disj disjs
 val tt = list_mk_disj disjs
 *)
+
+
+
+(*************************************)
+(* Analyse PMATCH expressions to     *)
+(* check whether they can be         *)
+(* translated to ML or OCAML         *)
+(*************************************)
+
+type pmatch_info = {
+  pmi_is_well_formed            : bool,
+  pmi_ill_formed_rows           : int list,
+  pmi_has_free_pat_vars         : (int * term list) list,
+  pmi_has_unused_pat_vars       : (int * term list) list,
+  pmi_has_double_bound_pat_vars : (int * term list) list,
+  pmi_has_guards                : int list,
+  pmi_has_lambda_in_pat         : int list,
+  pmi_has_non_contr_in_pat      : (int * term list) list,
+  pmi_exhaustiveness_cond       : thm option
+}
+
+fun is_proven_exhaustive_pmatch (pmi : pmatch_info) =
+  (case (#pmi_exhaustiveness_cond pmi) of
+      NONE => false
+    | SOME thm => let
+        val (pre, _) = dest_imp_only (concl thm)
+      in
+        aconv pre ``~F``
+      end handle HOL_ERR _ => false
+  )
+
+fun get_possibly_missing_patterns (pmi : pmatch_info) =
+  (case (#pmi_exhaustiveness_cond pmi) of
+      NONE => NONE
+    | SOME thm => (let
+        val (pre, _) = dest_imp_only (concl thm)
+      in if aconv pre ``~F`` then SOME [] else
+      let
+        val ps = strip_disj (dest_neg pre)
+        fun dest_p p = let
+           val (_, vs, p, g) = dest_PMATCH_ROW_COND_EX_ABS p
+        in (vs, p, g) end
+      in
+        SOME (List.map dest_p ps)
+      end end) handle HOL_ERR _ => NONE
+  )
+
+fun extend_possibly_missing_patterns t (pmi : pmatch_info) =
+  case get_possibly_missing_patterns pmi of
+      NONE => failwith "no missing row info available"
+    | SOME [] => t
+    | SOME rs => let
+       val use_guards = not (null (#pmi_has_guards pmi))
+       val arb_t = mk_arb (type_of t)
+       fun mk_row (v, p, g) = let
+         val vars = pairSyntax.strip_pair v
+       in
+         snd (mk_PMATCH_ROW_PABS_WILDCARDS vars (p,
+           if use_guards then g else T, arb_t))
+       end
+       val rows = List.map mk_row rs
+
+       val (i, rows_org) = dest_PMATCH t
+       val rows_t =
+         listSyntax.mk_list (rows_org @ rows, type_of (hd rows))
+      in
+        mk_PMATCH i rows_t
+      end;
+
+
+fun is_well_formed_pmatch (pmi : pmatch_info) =
+  (#pmi_is_well_formed pmi) andalso
+  (null (#pmi_ill_formed_rows pmi)) andalso
+  (null (#pmi_has_unused_pat_vars pmi)) andalso
+  (null (#pmi_has_lambda_in_pat pmi));
+
+fun is_ocaml_pmatch (pmi : pmatch_info) =
+  (is_well_formed_pmatch pmi) andalso
+  (null (#pmi_has_non_contr_in_pat pmi)) andalso
+  (null (#pmi_has_free_pat_vars pmi)) andalso
+  (null (#pmi_has_double_bound_pat_vars pmi));
+
+fun is_sml_pmatch (pmi : pmatch_info) =
+  (is_ocaml_pmatch pmi) andalso
+  (null (#pmi_has_guards pmi));
+
+val init_pmatch_info : pmatch_info = {
+  pmi_is_well_formed            = false,
+  pmi_ill_formed_rows           = [],
+  pmi_has_free_pat_vars         = [],
+  pmi_has_unused_pat_vars       = [],
+  pmi_has_double_bound_pat_vars = [],
+  pmi_has_guards                = [],
+  pmi_has_lambda_in_pat         = [],
+  pmi_has_non_contr_in_pat      = [],
+  pmi_exhaustiveness_cond       = NONE
+}
+
+fun pmi_genupdate f1 f2 f3 f4 f5 f6 f7 f8 f9
+  (pmi : pmatch_info) = ({
+  pmi_is_well_formed            = f1 (#pmi_is_well_formed pmi),
+  pmi_ill_formed_rows           = f2 (#pmi_ill_formed_rows pmi),
+  pmi_has_free_pat_vars         = f3 (#pmi_has_free_pat_vars pmi),
+  pmi_has_unused_pat_vars       = f4 (#pmi_has_unused_pat_vars pmi),
+  pmi_has_double_bound_pat_vars = f5 (#pmi_has_double_bound_pat_vars pmi),
+  pmi_has_guards                = f6 (#pmi_has_guards pmi),
+  pmi_has_lambda_in_pat         = f7 (#pmi_has_lambda_in_pat pmi),
+  pmi_has_non_contr_in_pat      = f8 (#pmi_has_non_contr_in_pat pmi),
+  pmi_exhaustiveness_cond       = f9 (#pmi_exhaustiveness_cond pmi)
+}:pmatch_info)
+
+fun pmi_set_is_well_formed x =
+    pmi_genupdate (K x) I I I I I I I I
+
+fun pmi_add_ill_formed_row row_no =
+    pmi_genupdate (K true) (cons row_no) I I I I I I I;
+
+fun pmi_add_has_free_pat_vars row_no vars =
+    pmi_genupdate I I (cons (row_no, vars)) I I I I I I;
+
+fun pmi_add_has_unused_pat_vars row_no vars =
+    pmi_genupdate I I I (cons (row_no, vars)) I I I I I;
+
+fun pmi_add_has_double_bound_pat_vars row_no vars =
+    pmi_genupdate I I I I (cons (row_no, vars)) I I I I;
+
+fun pmi_add_has_guards row_no =
+    pmi_genupdate I I I I I (cons row_no) I I I;
+
+fun pmi_add_has_lambda_in_pat row_no =
+    pmi_genupdate I I I I I I (cons row_no) I I;
+
+fun pmi_add_has_non_contr_in_pat row_no terms =
+    pmi_genupdate I I I I I I I (cons (row_no, terms)) I;
+
+fun pmi_set_pmi_exhaustiveness_cond thm_opt =
+    pmi_genupdate I I I I I I I I (K thm_opt);
+
+
+local
+
+  fun analyse_pat (ls : bool (* has lamdbda been seen *),
+                   sv : term set (* set of all seen vars *),
+                   msv : term set (* set of all vars seen more than once *),
+                   sc : term set (* set of all seen constants *))
+       t =
+    if is_var t then let
+         val (sv, msv) = if HOLset.member (sv, t) then
+            (sv, HOLset.add (msv, t))
+         else
+            (HOLset.add (sv, t), msv)
+      in (ls, sv, msv, sc)
+    end else if (Literal.is_literal t orelse is_const t) then
+      (ls, sv, msv, HOLset.add (sc,t))
+    else if (is_abs t) then
+      (true, sv, msv, sc)
+    else if (is_comb t) then let
+        val (t1, t2) = dest_comb t
+        val (ls, sv, msv, sc) = analyse_pat (ls, sv, msv, sc) t1
+        val (ls, sv, msv, sc) = analyse_pat (ls, sv, msv, sc) t2
+      in
+         (ls, sv, msv, sc)
+      end
+    else failwith "UNREACHABLE"
+
+
+  fun analyse_row ((row_num, row),pmi) = let
+    val (p_vars, p_body, g_body, _) =
+      dest_PMATCH_ROW_ABS row
+
+    (* check guard *)
+    val pmi = if aconv g_body T then pmi else
+                pmi_add_has_guards row_num pmi
+
+    (* check pattern *)
+    val vars_l = pairSyntax.strip_pair p_vars
+    val vars = HOLset.fromList Term.compare vars_l
+    val (ls, sv, msv, sc) = analyse_pat (false,
+       HOLset.empty Term.compare,
+       HOLset.empty Term.compare,
+       HOLset.empty Term.compare) p_body
+
+    (* Take care of unit vars *)
+    val sv = case vars_l of
+        [v] => if type_of v = oneSyntax.one_ty then
+          HOLset.add (sv, v) else sv
+      | _ => sv
+
+    (* check lambda *)
+    val pmi = if ls then
+                pmi_add_has_lambda_in_pat row_num pmi
+              else pmi
+
+    (* check free_vars *)
+    val fv = HOLset.difference (sv, vars)
+    val pmi = if HOLset.isEmpty fv then pmi else
+                (pmi_add_has_free_pat_vars row_num
+                   (HOLset.listItems fv) pmi)
+
+    (* check unused vars *)
+    val uv = HOLset.difference (vars, sv)
+    val pmi = if HOLset.isEmpty uv then pmi else
+                (pmi_add_has_unused_pat_vars row_num
+                   (HOLset.listItems uv) pmi)
+
+    (* check double vars *)
+    val dv = HOLset.intersection (msv, vars)
+    val pmi = if HOLset.isEmpty dv then pmi else
+                (pmi_add_has_double_bound_pat_vars row_num
+                   (HOLset.listItems dv) pmi)
+
+    (* check constructors vars *)
+    val c_l = HOLset.listItems sc
+    val nc_l = List.filter (fn c =>
+       not (TypeBase.is_constructor c orelse Literal.is_literal c)) c_l
+    val pmi = if null nc_l then pmi else
+                (pmi_add_has_non_contr_in_pat row_num
+                   nc_l pmi)
+  in
+    pmi
+  end
+
+in
+
+fun analyse_pmatch try_exh t = let
+  val (_, rows) = dest_PMATCH t
+  val nrows = enumerate 0 rows
+  val pmi = pmi_set_is_well_formed true init_pmatch_info
+  val pmi = List.foldl analyse_row pmi nrows
+
+  val pmi = (if (try_exh andalso is_ocaml_pmatch pmi) then
+      pmi_set_pmi_exhaustiveness_cond (SOME (PMATCH_IS_EXHAUSTIVE_CONSEQ_CONV t)) pmi else pmi) handle HOL_ERR _ => pmi
+
+in
+  pmi
+end handle HOL_ERR _ => init_pmatch_info
+
+end
 
 
 end

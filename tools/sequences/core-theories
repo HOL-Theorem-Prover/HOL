@@ -39,6 +39,7 @@ src/list/src
 src/monad
 src/quantHeuristics
 src/unwind
+src/pattern_matches
 src/HolSat/vector_def_CNF
 src/boss/ml_evaluation
 src/boss

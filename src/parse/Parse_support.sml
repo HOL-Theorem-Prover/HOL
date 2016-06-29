@@ -15,9 +15,7 @@ val ERRORloc = mk_HOL_ERRloc "Parse_support";
        Parsing environments
  ---------------------------------------------------------------------------*)
 
-type env = {scope : (string * pretype) list,
-            free  : (string * pretype) list,
-            uscore_cnt : int};
+open Parse_supportENV
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
@@ -127,6 +125,15 @@ fun make_binding_occ l s E = let
 in
   ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=l},Body=b,
                 Locn=locn.near (Preterm.locn b)}), E')
+end
+
+fun make_typed_binding l (v as (s,pty)) E = let
+  open Preterm
+  val E' = add_scope(v, E)
+in
+  ((fn b => Abs{Bvar=Var{Name=s,Ty=pty,Locn=l},Body=b,
+                Locn=locn.near (Preterm.locn b)}),
+   E')
 end
 
 fun make_aq_binding_occ l aq E = let
@@ -505,7 +512,7 @@ end
 
 fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
   val (ptm1, e1 : env) = tm1 empty_env
-  val arr = gen_overloaded_const oinfo loc GrammarSpecials.case_arrow_special
+  val (arr,_) = make_qconst loc ("bool", GrammarSpecials.case_arrow_special) E
   fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))
   val qs = map mk_bvar (#free e1)
   val (ptm2, E') = bind_term loc qs tm2 E

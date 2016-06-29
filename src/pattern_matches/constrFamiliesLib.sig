@@ -28,7 +28,8 @@ sig
   (* [match_constructor constr t] tries destruct [t] as a constructor
      of [constr]. It returns NONE, if there is no match. Otherwise
      the main constructor functions + labelled args. *)
-  val match_constructor : constructor -> term -> (term * (string * term) list) option
+  val match_constructor : constructor -> term ->
+                          (term * (string * term) list) option
 
   (* We usually consider lists of constructors. It is an abstract
      type that should only be used via [make_constructorList]. *)
@@ -42,7 +43,8 @@ sig
   (* [make_constructorList exh constrs] is a convenience functions
      that maps [mk_constructor] over constrs before calling
      [mk_constructorList]. *)
-  val make_constructorList : bool -> (term * string list) list -> constructorList
+  val make_constructorList : bool -> (term * string list) list ->
+                             constructorList
 
   (************************)
   (* Constructor Families *)
@@ -72,13 +74,15 @@ sig
   val constructorFamily_get_nchotomy_thm_opt : constructorFamily -> thm option
 
   (* Get the constructors of the family. *)
-  val constructorFamily_get_constructors : constructorFamily -> bool * (term * string list) list
+  val constructorFamily_get_constructors : constructorFamily ->
+                                           bool * (term * string list) list
 
   (* [mk_constructorFamily (constrL, case_split_tm, tac)]
      make a new constructor family. It consists of the constructors
      [constrL], the case split constant [case_split_tm]. The
      resulting proof obligations are proofed by tactic [tac]. *)
-  val mk_constructorFamily : constructorList * term * tactic -> constructorFamily
+  val mk_constructorFamily : constructorList * term * tactic ->
+                             constructorFamily
 
   (* [get_constructorFamily_proofObligations] returns the
      proof obligations that occur when creating a new constructor family
@@ -107,7 +111,8 @@ sig
      For this column a expansion theorem of the form
      ``!ff x. ff x = ...``, the number of  cases in this expansion
      theorem and an ssfrag should be returned. *)
-  type pmatch_compile_fun = (term list * term) list -> (thm * int * simpLib.ssfrag) option
+  type pmatch_compile_fun =
+       (term list * term) list -> (thm * int * simpLib.ssfrag) option
 
   (* A compilation fun gets a column, i.e. a list of
      terms together with a list of free variables in this term.
@@ -167,10 +172,12 @@ sig
      pmatch_compile_db -> simpLib.ssfrag -> pmatch_compile_db
 
   (* add a congruence rules to a db *)
-  val pmatch_compile_db_add_congs : pmatch_compile_db -> thm list -> pmatch_compile_db
+  val pmatch_compile_db_add_congs : pmatch_compile_db -> thm list ->
+                                    pmatch_compile_db
 
   (* removes all information for type from a db *)
-  val pmatch_compile_db_remove_type : pmatch_compile_db -> hol_type -> pmatch_compile_db
+  val pmatch_compile_db_remove_type : pmatch_compile_db -> hol_type ->
+                                      pmatch_compile_db
 
   (* add a compile_fun to default db *)
   val pmatch_compile_db_register_compile_fun : pmatch_compile_fun -> unit
