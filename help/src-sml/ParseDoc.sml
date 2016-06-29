@@ -51,6 +51,7 @@ datatype markup
    = PARA
    | TEXT of substring
    | BRKT of substring
+   | EMPH of substring
    | XMPL of substring;
 
 datatype section
@@ -142,18 +143,46 @@ in
   recurse ss 0
 end
 
+fun stars ss =
+  let
+    fun recurse acc ss =
+      case getc ss of
+          SOME (#"*", ss1) => SOME (String.implode (List.rev acc), ss1)
+        | SOME (#"\\", ss1) => escapedchar acc ss1
+        | SOME (c, ss1) => recurse (c::acc) ss1
+        | NONE => NONE
+    and escapedchar acc ss =
+      case getc ss of
+          SOME (#"*", ss1) => recurse (#"*" :: acc) ss1
+        | SOME (#"\\", ss1) => recurse (#"\\" :: acc) ss1
+        | _ => raise ParseError "Strange backslash in normal text"
+  in
+    recurse [] ss
+  end
+
+
 fun markup ss =
- let val (ssa,ssb) = position "{" ss
- in if isEmpty ssb then [TEXT ss]
-    else let val ssc = braces ssb
-             val (s,i,n) = base ssa
-             val (_,j,_) = base ssc
-             val chunk = substring (s,i+n+1,j-(i+n+2))
-         in TEXT ssa
-             :: (if occurs "\n" chunk then XMPL chunk else BRKT chunk)
-             :: markup ssc
-         end
- end;
+  case CharVector.findi (fn (_,c) => c = #"*" orelse c = #"{") (string ss) of
+      NONE => [TEXT ss]
+    | SOME (i, #"{") =>
+      let
+        val (ssa,ssb) = splitAt(ss,i)
+        val ssc = braces ssb
+        val (s,i,n) = base ssa
+        val (_,j,_) = base ssc
+        val chunk = substring (s,i+n+1,j-(i+n+2))
+      in TEXT ssa
+         :: (if occurs "\n" chunk then XMPL chunk else BRKT chunk)
+         :: markup ssc
+      end
+    | SOME (i, _) =>
+      let
+        val (ssa,ssb) = splitAt(ss,i)
+      in
+        case stars (slice(ssb,1,NONE)) of
+            NONE => [TEXT ss]
+          | SOME (s, rest) => TEXT ssa :: EMPH (full s) :: markup rest
+      end
 
 val paragraphs =
   let fun para (TEXT ss) =

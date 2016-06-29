@@ -199,7 +199,7 @@ val sem_clock_add_lem = Q.prove (
      fs [])
  >- (fs [dec_clock_def] >>
      full_simp_tac (srw_ss()++ ARITH_ss) [] >>
-     `s1.clock − 1 + c2 =  c2 + s1.clock − 1` by decide_tac >>
+     `c2 + s1.clock − 1 =  c2 + (s1.clock − 1)` by decide_tac >>
      metis_tac []));
 
 val sem_clock_add_fail_lem = Q.prove (
@@ -226,17 +226,13 @@ val sem_clock_add_fail_lem = Q.prove (
          Cases_on `s3.clock = 0` >>
          fs [] >>
          Cases_on `v` >>
-         fs [dec_clock_def] >>
-         rw [] >>
-         rw [] >>
-         `s3.clock + c2 - 1 = s3.clock - 1 + c2` by decide_tac >>
-         metis_tac [])
-     >- (`sem env (s2' with clock := s2'.clock + c2) e' = (Rfail,s3 with clock := s3.clock + c2)`
+         fs [dec_clock_def] )
+     >- (`sem env (s2' with clock := c2 + s2'.clock) e' = (Rfail,s3 with clock := c2 + s3.clock)`
                     by metis_tac [] >>
-         rw []))
+         fs[]))
  >- (fs [dec_clock_def] >>
      full_simp_tac (srw_ss()++ ARITH_ss) [] >>
-     `s1.clock − 1 + c2 =  c2 + s1.clock − 1` by decide_tac >>
+     `c2 + s1.clock − 1 =  c2 + (s1.clock − 1)` by decide_tac >>
      metis_tac []));
 
 val sem_clock_add = Q.store_thm ("sem_clock_add",
@@ -244,11 +240,11 @@ val sem_clock_add = Q.store_thm ("sem_clock_add",
   sem env (s1 with clock := c1) e = (Rval v, s2)
   ⇒
   sem env (s1 with clock := c1 + c2) e = (Rval v, s2 with clock := s2.clock + c2)`,
- rw [] >>
+ srw_tac[] [] >>
  qabbrev_tac `s1' = s1 with clock := c1` >>
  `(s1 with clock := c1 + c2) = s1' with clock := s1'.clock + c2`
             by fs [state_component_equality, Abbr`s1'`] >>
- rw [] >>
+ srw_tac[] [] >>
  match_mp_tac sem_clock_add_lem >>
  rw []);
 
@@ -257,11 +253,11 @@ val sem_clock_add_fail = Q.store_thm ("sem_clock_add_fail",
   sem env (s1 with clock := c1) e = (Rfail, s2)
   ⇒
   sem env (s1 with clock := c1 + c2) e = (Rfail, s2 with clock := s2.clock + c2)`,
- rw [] >>
+ srw_tac[] [] >>
  qabbrev_tac `s1' = s1 with clock := c1` >>
  `(s1 with clock := c1 + c2) = s1' with clock := s1'.clock + c2`
             by fs [state_component_equality, Abbr`s1'`] >>
- rw [] >>
+ srw_tac[] [] >>
  match_mp_tac sem_clock_add_fail_lem >>
  rw []);
 
@@ -309,13 +305,9 @@ val sem_clock_sub = Q.store_thm ("sem_clock_sub",
      fs [] >>
      rw [] >>
      `r.clock − r'.clock + (r'.clock − s2.clock) = r.clock - s2.clock` by intLib.ARITH_TAC >>
-     fs [] >>
-     rw []
-     >- metis_tac [DECIDE ``!x y z:num. x - y - z = x - z - y``] >>
-     intLib.ARITH_TAC)
+     fs [])
  >- (rw [] >>
-     fs [dec_clock_def]
-     >- metis_tac [DECIDE ``!x y z:num. x - y - z = x - z - y``] >>
+     fs [dec_clock_def] >>
      imp_res_tac sem_clock >>
      fs [] >>
      intLib.ARITH_TAC));

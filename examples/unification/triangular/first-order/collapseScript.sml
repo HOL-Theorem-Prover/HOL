@@ -13,7 +13,7 @@ val collapse_def = Define`
 
 val collapse_APPLY_eq_walkstar = Q.store_thm(
 "collapse_APPLY_eq_walkstar",
-`wfs s ==> !t.(collapse s '' t = walkstar s t)`,
+`wfs s ==> !t.(collapse s ❜ t = walkstar s t)`,
 STRIP_TAC THEN HO_MATCH_MP_TAC walkstar_ind THEN
 SRW_TAC [][] THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -83,7 +83,7 @@ METIS_TAC [collapse_APPLY_eq_walkstar,subst_APPLY_FAPPLY]);
 
 val subst_APPLY_walkstar = Q.store_thm(
 "subst_APPLY_walkstar",
-`wfs s ⇒ ∀t. s '' (walk* s t) = (walk* s t)`,
+`wfs s ⇒ ∀t. s ❜ (walk* s t) = (walk* s t)`,
 STRIP_TAC THEN HO_MATCH_MP_TAC apply_ts_ind THEN
 SRW_TAC [][apply_ts_thm] THEN
 Cases_on `FLOOKUP s t` THEN SRW_TAC [][] );

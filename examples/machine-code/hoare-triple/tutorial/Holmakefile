@@ -1,0 +1,6 @@
+INCLUDES = $(HOLDIR)/Manual/Tools $(HOLDIR)/examples/machine-code/hoare-triple
+OPTIONS = QUIT_ON_FAILURE
+index.html: tutorial.md
+	pandoc -S -s -c style.css --toc $< -o $@
+tutorial.md: tutorial.smd $(HOLDIR)/Manual/Tools/polyscripter
+	$(HOLDIR)/Manual/Tools/polyscripter < $< > $@

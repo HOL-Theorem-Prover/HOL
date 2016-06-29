@@ -86,6 +86,11 @@ val GCD_IS_GCD =
 
 val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
 
+val GCD_IS_GREATEST_COMMON_DIVISOR = save_thm(
+  "GCD_IS_GREATEST_COMMON_DIVISOR",
+  REWRITE_RULE [IS_GCD] GCD_IS_GCD)
+
+
 val GCD_REF = store_thm("GCD_REF",
                         Term `!a. gcd a a = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]);

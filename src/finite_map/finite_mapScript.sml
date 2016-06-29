@@ -564,7 +564,6 @@ val fmap_EQ_THM = Q.store_thm
 (* and it's more useful still if the main equality is the other way 'round *)
 val fmap_EXT = save_thm("fmap_EXT", GSYM fmap_EQ_THM)
 
-
 (*---------------------------------------------------------------------------
            Submaps
  ---------------------------------------------------------------------------*)
@@ -1038,6 +1037,10 @@ val FLOOKUP_EXT = store_thm
  ``(f1 = f2) = (FLOOKUP f1 = FLOOKUP f2)``,
  SRW_TAC [][fmap_EXT,FUN_EQ_THM,IN_DEF,FLOOKUP_DEF] THEN
  PROVE_TAC [optionTheory.SOME_11,optionTheory.NOT_SOME_NONE]);
+
+val FLOOKUP_DRESTRICT = store_thm("FLOOKUP_DRESTRICT",
+  ``!fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE``,
+  SRW_TAC[][FLOOKUP_DEF,DRESTRICT_DEF] THEN FULL_SIMP_TAC std_ss []);
 
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps
@@ -2113,6 +2116,64 @@ SRW_TAC[][LET_THM] THEN
 POP_ASSUM (Q.SPECL_THEN [`f`,`fm`] MP_TAC) THEN
 SRW_TAC[][MAP_KEYS_def])
 
+val MAP_KEYS_BIJ_LINV = Q.store_thm("MAP_KEYS_BIJ_LINV",
+  `BIJ (f:num->num) UNIV UNIV ==> (MAP_KEYS f (MAP_KEYS (LINV f UNIV) t) = t)`,
+  srw_tac[][fmap_EXT,MAP_KEYS_def,PULL_EXISTS,GSYM IMAGE_COMPOSE]
+  \\ `f o LINV f UNIV = I` by
+    (imp_res_tac BIJ_LINV_INV \\ full_simp_tac(srw_ss())[combinTheory.o_DEF,FUN_EQ_THM])
+  \\ full_simp_tac(srw_ss())[] \\ full_simp_tac(srw_ss())[combinTheory.o_DEF,FUN_EQ_THM]
+  \\ imp_res_tac BIJ_LINV_BIJ \\ full_simp_tac(srw_ss())[BIJ_DEF]
+  \\ `INJ f (FDOM (MAP_KEYS (LINV f UNIV) t)) UNIV` by full_simp_tac(srw_ss())[INJ_DEF]
+  \\ first_assum(mp_tac o MATCH_MP (ONCE_REWRITE_RULE[GSYM AND_IMP_INTRO]
+      (MAP_KEYS_def |> SPEC_ALL |> CONJUNCT2 |> MP_CANON)))
+  \\ `?y. x' = f y` by (full_simp_tac(srw_ss())[SURJ_DEF] \\ metis_tac []) \\ srw_tac[][]
+  \\ pop_assum (qspec_then `y` mp_tac)
+  \\ impl_tac THEN1
+   (full_simp_tac(srw_ss())[MAP_KEYS_def] \\ qexists_tac `f y` \\ full_simp_tac(srw_ss())[]
+    \\ imp_res_tac LINV_DEF \\ full_simp_tac(srw_ss())[]) \\ srw_tac[][]
+  \\ `INJ (LINV f UNIV) (FDOM t) UNIV` by
+    (qpat_assum `INJ (LINV f UNIV) UNIV UNIV` mp_tac \\ simp [INJ_DEF])
+  \\ imp_res_tac (MAP_KEYS_def |> SPEC_ALL |> CONJUNCT2 |> MP_CANON)
+  \\ imp_res_tac LINV_DEF \\ full_simp_tac(srw_ss())[]);
+
+val FLOOKUP_MAP_KEYS = Q.store_thm("FLOOKUP_MAP_KEYS",
+  `INJ f (FDOM m) UNIV ⇒
+   (FLOOKUP (MAP_KEYS f m) k =
+    OPTION_BIND (some x. (k = f x) /\ x IN FDOM m) (FLOOKUP m))`,
+  strip_tac >> DEEP_INTRO_TAC optionTheory.some_intro >>
+  simp[FLOOKUP_DEF,MAP_KEYS_def]);
+
+val FLOOKUP_MAP_KEYS_MAPPED = Q.store_thm("FLOOKUP_MAP_KEYS_MAPPED",
+  `INJ f UNIV UNIV ==>
+   (FLOOKUP (MAP_KEYS f m) (f k) = FLOOKUP m k)`,
+  strip_tac >>
+  `INJ f (FDOM m) UNIV` by metis_tac[INJ_SUBSET,SUBSET_UNIV,SUBSET_REFL] >>
+  simp[FLOOKUP_MAP_KEYS] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> srw_tac[][] >>
+  full_simp_tac(srw_ss())[INJ_DEF] >> full_simp_tac(srw_ss())[FLOOKUP_DEF] >> metis_tac[]);
+
+val DRESTRICT_MAP_KEYS_IMAGE = Q.store_thm("DRESTRICT_MAP_KEYS_IMAGE",
+  `INJ f UNIV UNIV ==>
+   (DRESTRICT (MAP_KEYS f fm) (IMAGE f s) = MAP_KEYS f (DRESTRICT fm s))`,
+  srw_tac[][FLOOKUP_EXT,FLOOKUP_DRESTRICT,FUN_EQ_THM] >>
+  dep_rewrite.DEP_REWRITE_TAC[FLOOKUP_MAP_KEYS,FDOM_DRESTRICT] >>
+  conj_tac >- ( metis_tac[IN_INTER,IN_UNIV,INJ_DEF] ) >>
+  DEEP_INTRO_TAC optionTheory.some_intro >>
+  DEEP_INTRO_TAC optionTheory.some_intro >>
+  srw_tac[][FLOOKUP_DRESTRICT] >> srw_tac[][] >> full_simp_tac(srw_ss())[] >>
+  metis_tac[INJ_DEF,IN_UNIV]);
+
+val DOMSUB_MAP_KEYS = Q.store_thm("DOMSUB_MAP_KEYS",
+  `BIJ f UNIV UNIV ==>
+   ((MAP_KEYS f fm) \\ (f s) = MAP_KEYS f (fm \\ s))`,
+  srw_tac[][fmap_domsub] >>
+  dep_rewrite.DEP_REWRITE_TAC[GSYM DRESTRICT_MAP_KEYS_IMAGE] >>
+  srw_tac[][] >- full_simp_tac(srw_ss())[BIJ_DEF] >>
+  AP_TERM_TAC >>
+  srw_tac[][EXTENSION] >>
+  full_simp_tac(srw_ss())[BIJ_DEF,INJ_DEF,SURJ_DEF] >>
+  metis_tac[]);
+
 (* Relate the values in two finite maps *)
 
 val fmap_rel_def = Define`
@@ -2252,7 +2313,7 @@ val fmap_size_def =
 (*---------------------------------------------------------------------------*)
 
 local
-  open lcsymtacs optionTheory rich_listTheory listTheory boolSimps sortingTheory
+  open optionTheory rich_listTheory listTheory boolSimps sortingTheory
 in
 
 val o_f_FUNION = store_thm("o_f_FUNION",
@@ -2300,10 +2361,6 @@ val fmap_rel_OPTREL_FLOOKUP = store_thm("fmap_rel_OPTREL_FLOOKUP",
   ``fmap_rel R f1 f2 = !k. OPTREL R (FLOOKUP f1 k) (FLOOKUP f2 k)``,
   rw[fmap_rel_def,optionTheory.OPTREL_def,FLOOKUP_DEF,EXTENSION] >>
   PROVE_TAC[]);
-
-val FLOOKUP_DRESTRICT = store_thm("FLOOKUP_DRESTRICT",
-  ``!fm s k. FLOOKUP (DRESTRICT fm s) k = if k IN s then FLOOKUP fm k else NONE``,
-  SRW_TAC[][FLOOKUP_DEF,DRESTRICT_DEF] THEN FULL_SIMP_TAC std_ss []);
 
 val FUPDATE_LIST_ALL_DISTINCT_PERM = store_thm("FUPDATE_LIST_ALL_DISTINCT_PERM",
   ``!ls ls' fm. ALL_DISTINCT (MAP FST ls) /\ PERM ls ls' ==> (fm |++ ls = fm |++ ls')``,
@@ -2605,17 +2662,6 @@ val fmap_rel_sym = store_thm("fmap_rel_sym",
     !x y. fmap_rel R x y ==> fmap_rel R y x``,
   SRW_TAC[][fmap_rel_def])
 
-val fmap_eq_flookup = Q.store_thm ("fmap_eq_flookup",
-`!m1 m2. (m1 = m2) = !k. FLOOKUP m1 k = FLOOKUP m2 k`,
- rw [FLOOKUP_DEF, GSYM fmap_EQ_THM] >>
- eq_tac >>
- rw [EXTENSION]
- >- metis_tac [NOT_SOME_NONE]
- >- (Cases_on `x NOTIN FDOM m2` >>
-     fs []
-     >- metis_tac [NOT_SOME_NONE]
-     >- metis_tac [SOME_11]));
-
 val fupdate_list_map = Q.store_thm ("fupdate_list_map",
 `!l f x y.
   x IN FDOM (FEMPTY |++ l)
@@ -2678,7 +2724,7 @@ rw [FUPDATE_LIST_THM] >|
 
 val disjoint_drestrict = Q.store_thm ("disjoint_drestrict",
 `!s m. DISJOINT s (FDOM m) ==> (DRESTRICT m (COMPL s) = m)`,
- rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
+ rw [FLOOKUP_EXT, FLOOKUP_DRESTRICT, FUN_EQ_THM] >>
  Cases_on `k NOTIN s` >>
  rw [] >>
  fs [DISJOINT_DEF, EXTENSION, FLOOKUP_DEF] >>

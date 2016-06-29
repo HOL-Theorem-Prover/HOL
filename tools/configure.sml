@@ -354,6 +354,11 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
+    compile [] "FunctionalRecordUpdate.sml";
+    compile [] "GetOpt.sig";
+    compile [] "GetOpt.sml";
+    compile [] "HM_Core_Cline.sig";
+    compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "holdeptool.sml";
@@ -368,14 +373,29 @@ val _ =
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
-    compile [] "Holmake_types.sig";
-    compile [] "Holmake_types.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
+    compile [] "Holmake_types.sig";
+    compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    compile [] "Holmake.sml";
-    link{extras = [], tgt = bin, srcobj = "Holmake.uo"};
+    compile [] "HM_DepGraph.sig";
+    compile [] "HM_DepGraph.sml";
+    compile [] "HM_GraphBuildJ1.sig";
+    compile [] "HM_GraphBuildJ1.sml";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "HM_Cline.sig";
+    compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "HM_BaseEnv.sig";
+    compile ["-I", ".."] "HM_BaseEnv.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "BuildCommand.sig";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "BuildCommand.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "Holmake.sml";
+    compile [] "mosml_Holmake.sml";
+    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end

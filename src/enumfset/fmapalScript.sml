@@ -1892,7 +1892,7 @@ val FST_inter_merge = maybe_thm ("FST_inter_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (inter_merge cmp l m)) = set (MAP FST l) INTER set m)``,
 SRW_TAC []
- [inter_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
+ [inter_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
 val inter_merge_ORL = maybe_thm ("inter_merge_ORL",
@@ -1934,7 +1934,7 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
               (CONJ (Q.ASSUME `ORL cmp l`) (Q.ASSUME `OL cmp m`))] THEN
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
- ,METIS_TAC [IN_INTER, IN_LIST_TO_SET]
+ ,METIS_TAC [IN_INTER]
 ]]);
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
@@ -2048,7 +2048,7 @@ val FST_diff_merge = maybe_thm ("FST_diff_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (diff_merge cmp l m)) = set (MAP FST l) DIFF set m)``,
 SRW_TAC []
- [diff_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
+ [diff_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
 val diff_merge_ORL = maybe_thm ("diff_merge_ORL",
@@ -2093,7 +2093,7 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
               (CONJ (Q.ASSUME `ORL cmp l`) (Q.ASSUME `OL cmp m`))] THEN
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
- ,METIS_TAC [IN_DIFF, IN_LIST_TO_SET]
+ ,METIS_TAC [IN_DIFF]
 ]]);
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
@@ -2505,7 +2505,7 @@ GEN_TAC THEN Induct THENL
  ,REWRITE_TAC [FAPPLY_FUPDATE_THM] THEN
   Cases_on `x = h` THEN AR THEN
   `FINITE (set l)` by MATCH_ACCEPT_TAC FINITE_LIST_TO_SET THEN
-  `x IN set l` by ASM_REWRITE_TAC [IN_LIST_TO_SET] THEN
+  `x IN set l` by ASM_REWRITE_TAC [] THEN
   IMP_RES_TAC FUN_FMAP_DEF THEN AR
 ]]);
 

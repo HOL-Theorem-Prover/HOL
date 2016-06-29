@@ -8,6 +8,13 @@ open wordsLib integer_wordLib bitstringLib
 val ERR = Feedback.mk_HOL_ERR "utilsLib"
 val WARN = Feedback.HOL_WARNING "utilsLib"
 
+structure Parse =
+struct
+   open Parse
+   val (Type,Term) = parse_from_grammars wordsTheory.words_grammars
+end
+open Parse
+
 (* ------------------------------------------------------------------------- *)
 
 fun cache size cmp f =
@@ -176,7 +183,8 @@ fun zipLists f =
 fun list_mk_wordii w = List.map (fn i => wordsSyntax.mk_wordii (i, w))
 
 fun tab_fixedwidth m w =
-   List.tabulate (m, fn n => bitstringSyntax.padded_fixedwidth_of_int (n, w))
+   List.tabulate
+     (m, fn n => bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt n, w))
 
 local
    fun liftSplit f = (Substring.string ## Substring.string) o f o Substring.full
@@ -193,6 +201,9 @@ val removeSpaces =
 
 val long_term_to_string =
    Lib.with_flag (Globals.linewidth, 1000) Hol_pp.term_to_string
+
+val strings_to_quote =
+   Lib.list_of_singleton o QUOTE o String.concat o Lib.separate "\n"
 
 val lhsc = boolSyntax.lhs o Thm.concl
 val rhsc = boolSyntax.rhs o Thm.concl
@@ -391,17 +402,32 @@ end
 fun CHANGE_CBV_CONV cmp = Conv.CHANGED_CONV (computeLib.CBV_CONV cmp)
 
 local
+   val rule = PURE_REWRITE_RULE [SYM wordsTheory.WORD_NEG_1]
+   val and_thms = rule wordsTheory.WORD_AND_CLAUSES
+   val or_thms  = rule wordsTheory.WORD_OR_CLAUSES
+   val xor_thms = rule wordsTheory.WORD_XOR_CLAUSES
    val alpha_rwts =
-        [boolTheory.COND_ID, wordsTheory.WORD_SUB_RZERO,
-         wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
-         wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
-         wordsTheory.WORD_XOR_CLAUSES, wordsTheory.WORD_EXTRACT_ZERO2,
-         wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL, wordsTheory.SHIFT_ZERO]
-in
+      [boolTheory.COND_ID, wordsTheory.WORD_SUB_RZERO,
+       wordsTheory.WORD_ADD_0, wordsTheory.WORD_MULT_CLAUSES,
+       and_thms, or_thms, xor_thms, wordsTheory.WORD_EXTRACT_ZERO2,
+       wordsTheory.w2w_0, wordsTheory.WORD_SUB_REFL, wordsTheory.SHIFT_ZERO]
+   val UINT_MAX_LOGIC_CONV =
+     let
+       fun get th = List.take (Drule.CONJUNCTS (Drule.SPEC_ALL th), 2)
+     in
+       (Conv.LAND_CONV wordsLib.UINT_MAX_CONV
+        ORELSEC Conv.RAND_CONV wordsLib.UINT_MAX_CONV)
+       THENC Conv.CHANGED_CONV
+               (PURE_REWRITE_CONV
+                  (List.concat (List.map get [and_thms, or_thms, xor_thms])))
+     end
    val WALPHA_CONV = REWRITE_CONV alpha_rwts
+in
    val WGROUND_CONV =
-      Conv.DEPTH_CONV (wordsLib.WORD_GROUND_CONV false)
-      THENC PURE_REWRITE_CONV alpha_rwts
+      WALPHA_CONV
+      THENC Conv.DEPTH_CONV wordsLib.WORD_GROUND_CONV
+      THENC Conv.DEPTH_CONV UINT_MAX_LOGIC_CONV
+      THENC WALPHA_CONV
 end
 
 fun NCONV n conv = Lib.funpow n (Lib.curry (op THENC) conv) Conv.ALL_CONV
@@ -513,6 +539,69 @@ in
    fun mk_cond_update_thms l =
       [boolTheory.COND_ID, COND_UPDATE0, COND_UPDATE2, COND_UPDATE3] @
       List.concat (List.map cond_update_thms l)
+end
+
+(*
+  Conversion for rewriting instances of:
+
+    f (case x of .. => y1 | .. => y2 | .. => yn)
+
+  to
+
+    case x of .. => f y1 | .. => f y2 | .. => f yn
+*)
+
+local
+  val case_rng = snd o HolKernel.strip_fun o Term.type_of
+  val term_rng = snd o Type.dom_rng o Term.type_of
+  val tac =
+    CONV_TAC (Conv.FORK_CONV
+                (Conv.RAND_CONV Drule.LIST_BETA_CONV, Drule.LIST_BETA_CONV))
+    THEN REFL_TAC
+  fun CASE_RAND_CONV1 rand_f tm =
+    let
+      val (f, x) = Term.dest_comb tm
+      val _ = Term.same_const rand_f f orelse Term.term_eq rand_f f orelse
+              raise ERR "CASE_RAND_CONV" ""
+      val (c, x, l) =
+        case boolSyntax.strip_comb x of
+           (c, x :: l) => (c, x, l)
+         | _ => raise ERR "CASE_RAND_CONV" ""
+      val ty = Term.type_of x
+      val case_c = TypeBase.case_const_of ty
+      val l' =
+        List.map
+          (fn t => let
+                     val (vs, b) = boolSyntax.strip_abs t
+                   in
+                     boolSyntax.list_mk_abs (vs, Term.mk_comb (f, b))
+                   end) l
+      val fvs = List.concat (List.map Term.free_vars l')
+      val x' = Term.variant fvs (Term.mk_var ("x", ty))
+      val th =
+        Tactical.prove
+          (boolSyntax.mk_eq
+            (Term.mk_comb (f, Term.list_mk_comb (c, x' :: l)),
+             boolSyntax.list_mk_icomb (case_c, x' :: l')),
+           Cases_on `^x'`
+           THEN ONCE_REWRITE_TAC [TypeBase.case_def_of ty]
+           THEN tac
+          )
+    in
+      Conv.REWR_CONV th tm
+    end
+  val literal_case_rand = Q.prove(
+    `!f x y a b.
+       f (literal_case (\v. if v = x then a else b) y) =
+       literal_case (\v. if v = x then f a else f b) y`,
+    SIMP_TAC std_ss [boolTheory.literal_case_DEF, boolTheory.COND_RAND])
+in
+  fun CASE_RAND_CONV f =
+    let
+      val cnv = Conv.REWR_CONV (Drule.ISPEC f literal_case_rand)
+    in
+      Conv.TOP_DEPTH_CONV (cnv ORELSEC CASE_RAND_CONV1 f)
+    end
 end
 
 (* Substitution allowing for type match *)
@@ -647,8 +736,8 @@ local
    val rule =
       Conv.CONV_RULE
          (Conv.CHANGED_CONV
-             (REWRITE_CONV [DECIDE ``(b ==> a) /\ (~b ==> a) = a``,
-                            DECIDE ``(~b ==> a) /\ (b ==> a) = a``]))
+             (REWRITE_CONV [DECIDE ``((b ==> a) /\ (~b ==> a)) <=> a``,
+                            DECIDE ``((~b ==> a) /\ (b ==> a)) <=> a``]))
    fun SMART_DISCH tm thm =
       let
          val l = Thm.hyp thm
@@ -857,53 +946,8 @@ in
 end
 
 local
-   fun fetch1 thy name =
-      case Lib.total (DB.fetch thy) name of
-         SOME thm => [thm]
-       | NONE => []
-   val err = ERR "enum_eq_CONV" "Equality not between constants"
-   fun add_datatype cmp ty =
-      case Type.dest_thy_type ty of
-         {Thy = thy, Args = [], Tyop = name} =>
-         let
-            val ftch = fetch1 thy
-            val ty2num = ftch (name ^ "2num_thm")
-            val num2ty = ftch ("num2" ^ name ^ "_thm")
-            val fupds = TypeBase.updates_of ty
-            fun add r = computeLib.add_thms (r @ ty2num @ num2ty @ fupds) cmp
-         in
-            (case Lib.total TypeBase.case_const_of ty of
-                SOME tm => computeLib.set_skip cmp tm NONE
-              | NONE => ())
-            ; case TypeBase.simpls_of ty of
-                 {convs = [], rewrs = r} => add r
-               | {convs = {name = n, ...} :: _, rewrs = r} =>
-                 ( add r
-                 ; if String.isSuffix "const_eq_CONV" n (* enumerated *)
-                      then case (ftch (name ^ "_EQ_" ^ name), ty2num) of
-                              ([eq_elim_thm], [_]) =>
-                              let
-                                 val cnv =
-                                    Conv.REWR_CONV eq_elim_thm
-                                    THENC PURE_REWRITE_CONV ty2num
-                                    THENC reduceLib.REDUCE_CONV
-                                 fun ecnv tm =
-                                    let
-                                       val (l, r) = boolSyntax.dest_eq tm
-                                       val _ = Term.is_const l
-                                               andalso Term.is_const r
-                                               orelse raise err
-                                    in
-                                       cnv tm
-                                    end
-                              in
-                                 computeLib.add_conv
-                                    (boolSyntax.equality, 2, ecnv) cmp
-                              end
-                            | _ => ()
-                   else ())
-         end
-       | _ => computeLib.add_thms (#rewrs (TypeBase.simpls_of ty)) cmp
+   fun add_datatype cmp =
+     computeLib.add_datatype_info cmp o Option.valOf o TypeBase.fetch
 in
    fun add_datatypes l cmp = List.app (add_datatype cmp) l
 end
@@ -947,8 +991,8 @@ in
 end
 
 fun add_theory (x as (_, i)) cmp =
-   (add_datatypes (theory_types i) cmp
-    ; computeLib.add_thms (theory_rewrites x) cmp)
+   ( add_datatypes (theory_types i) cmp
+   ; computeLib.add_thms (theory_rewrites x) cmp)
 
 fun add_to_the_compset x = computeLib.add_funs (theory_rewrites x)
 
@@ -1099,7 +1143,7 @@ local
          val f = mk_def thy (leaf ast)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_thm pv thy ast =
@@ -1110,7 +1154,7 @@ local
          val f = boolSyntax.mk_icomb (mk_def thy tm, x)
       in
          pv (if Term.type_of f = oneSyntax.one_ty
-                then `!s. Run ^ast s = (^f, s)`
+                then `!s. Run ^ast s = s`
              else `!s. Run ^ast s = ^f s`) : thm
       end
    fun run_rwts thy =

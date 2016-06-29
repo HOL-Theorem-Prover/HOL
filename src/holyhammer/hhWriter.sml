@@ -81,22 +81,22 @@ fun is_oversized_thm thm =
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
 (* escaping *)
-fun is_alphanumeric s =
- let val l = String.explode s in
-   all (fn x => Char.isAlphaNum x orelse x = #"_") l
- end
+fun is_tptp_sq_char c = (* does not include dot, colon and vertical bar *)
+  let val n = Char.ord c in
+    (40 <= n andalso n <= 45) orelse (* dot removed *)
+    (48 <= n andalso n <= 57) orelse (* colon removed *)
+    (59 <= n andalso n <= 123) orelse (* vetical bar removed *)
+    (125 <= n andalso n <= 133) orelse
+    (135 <= n andalso n <= 176)
+  end
 
-(* now additonnally escape quotes for the feature generation algorithm *)
 fun hh_escape s =
   let
     val l1 = String.explode s
-    fun image x =
-      case x of
-        #"#"  => String.explode "#hash#"
-      | #"/"  => String.explode "#slash#"
-      | #"\"" => String.explode "#quote#"
-      | #"'" => String.explode "#squote#"
-      | _     => [x]
+    fun image c =
+      if is_tptp_sq_char c 
+      then [c]
+      else [#"|"] @ String.explode (int_to_string (Char.ord c)) @ [#"|"]
     val l2 = map image l1
   in
     String.implode (List.concat l2)
@@ -143,7 +143,7 @@ fun store_name name =
 (* types *)
 fun declare_perm_type dict {Thy,Name} =
   let
-    val name1 = "type/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name1 = "type." ^ Thy ^ "." ^ (hh_escape Name)
     val name2 = squotify name1
   in
     store_name name1;
@@ -154,7 +154,7 @@ fun declare_perm_type dict {Thy,Name} =
 (* constants *)
 fun declare_perm_const dict {Thy,Name} =
   let
-    val name1 = "const/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name1 = "const." ^ Thy ^ "." ^ (hh_escape Name)
     val name2 = squotify name1
   in
     store_name name1;
@@ -165,7 +165,7 @@ fun declare_perm_const dict {Thy,Name} =
 (* theorems *)
 fun declare_perm_thm (thy,n) name  =
   let
-    val name1 = "thm/" ^ thy ^ "/" ^ (hh_escape name)
+    val name1 = "thm." ^ thy ^ "." ^ (hh_escape name)
     val name2 = squotify name1
   in
     store_name name1;

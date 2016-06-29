@@ -62,17 +62,22 @@ struct
    end
 
    fun listUpdate (e, (i, [])) = []
-     | listUpdate (e, (0, _::l)) = e::l
+     | listUpdate (e, (0: IntInf.int, _::l)) = e :: l
      | listUpdate (e, (n, h::l)) = h :: listUpdate (e, (n - 1, l))
 
-   fun padLeft (e, (n, l)) =
-      List.tabulate (Nat.- (n, List.length l), fn _ => e) @ l
-   fun padRight (e, (n, l)) =
-      l @ List.tabulate (Nat.- (n, List.length l), fn _ => e)
-   fun padLeftString (e, (n, l)) = StringCvt.padLeft e n l
-   fun padRightString (e, (n, l)) = StringCvt.padRight e n l
-   fun takeString (n, s) = String.extract (s, 0, SOME n)
-   fun dropString (n, s) = String.extract (s, n, NONE)
+   val chr = Char.chr o IntInf.toInt
+   val ord = IntInf.fromInt o Char.ord
+   local
+     fun sz (n, l) =
+       Nat.toNativeInt (Nat.- (n, Nat.fromNativeInt (List.length l)))
+   in
+     fun padLeft (e, x as (_, l)) = List.tabulate (sz x, fn _ => e) @ l
+     fun padRight (e, x as (_, l)) = l @ List.tabulate (sz x, fn _ => e)
+   end
+   fun padLeftString (e, (n, l)) = StringCvt.padLeft e (IntInf.toInt n) l
+   fun padRightString (e, (n, l)) = StringCvt.padRight e (IntInf.toInt n) l
+   fun takeString (n, s) = String.extract (s, 0, SOME (IntInf.toInt n))
+   fun dropString (n, s) = String.extract (s, IntInf.toInt n, NONE)
    val removeDuplicatesString = String.implode o Set.mk o String.explode
    val revString = String.implode o List.rev o String.explode
    fun stringToChar s =
@@ -97,15 +102,17 @@ struct
             fn [] => NONE
              | h :: t => if eq e h then SOME i else loop (i + 1) t
       in
-         loop 0 l
+         loop (0: IntInf.int) l
       end
 
    fun remove (l1, l2) = List.filter (fn x => not (Set.mem (x, l2))) l1
    fun swap (n, l) = (l, n)
-   fun take (n, l) = List.take (l, n)
-   fun drop (n, l) = List.drop (l, n)
-   fun element (n, l) = List.nth (l, n)
+   fun take (n, l) = List.take (l, IntInf.toInt n)
+   fun drop (n, l) = List.drop (l, IntInf.toInt n)
+   fun element (n, l) = List.nth (l, IntInf.toInt n)
    fun indexOf x = revLookup equal x
    fun indexOfString (c, s) = revLookup equal (c, String.explode s)
+   fun length l = IntInf.fromInt (List.length l)
+   val size = IntInf.fromInt o String.size
 
 end (* structure L3 *)

@@ -1,10 +1,10 @@
 signature IntExtra =
 sig
- val fromBinString : string -> int option
- val fromBool : bool -> int
- val fromHexString : string -> int option
- val fromLit : string -> int option
- val fromString : string -> int option
- val toBinString : int -> string
- val toHexString : int -> string
+ val fromBinString : string -> IntInf.int option
+ val fromBool : bool -> IntInf.int
+ val fromHexString : string -> IntInf.int option
+ val fromLit : string -> IntInf.int option
+ val fromString : string -> IntInf.int option
+ val toBinString : IntInf.int -> string
+ val toHexString : IntInf.int -> string
 end

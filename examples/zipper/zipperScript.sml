@@ -219,7 +219,7 @@ val pure_apply_permute = store_thm(
 val LENGTH_LIST_APPLY = store_thm(
   "LENGTH_LIST_APPLY",
   ``LENGTH (fs <*> xs) = LENGTH fs * LENGTH xs``,
-  simp[LIST_APPLY_DEF] >> Induct_on `fs` >> simp[] >>
+  simp[LIST_APPLY_def] >> Induct_on `fs` >> simp[] >>
   simp[arithmeticTheory.MULT_CLAUSES]);
 
 

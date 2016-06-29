@@ -183,7 +183,7 @@ val addL_disappears = store_thm(
           `(dn = 0) ∨ ∃dn0. dn = SUC dn0` by (Cases_on `dn` >> simp[])
           >- (rw[] >> qexists_tac `c` >> simp[ordle_lteq]) >>
           `dn = 1 + dn0` by decide_tac >>
-          Q.UNDISCH_THEN `dn = SUC dn0` (K ALL_TAC) >> rw[] >>
+          Q.UNDISCH_THEN `dn = SUC dn0` (K ALL_TAC) >> srw_tac[][] >>
           SIMP_TAC bool_ss [GSYM ordADD_fromNat, ordMULT_LDISTRIB] >>
           simp[] >>
           `0 < c` by (spose_not_then strip_assume_tac >> fs[]) >>

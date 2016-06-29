@@ -16,7 +16,6 @@ type ruledb =
 datatype token = HM_defn of string * quotation
                | HM_rule of raw_rule_info
 
-
 fun normquote acc [] = List.rev acc
   | normquote acc [x] = List.rev (x::acc)
   | normquote acc (LIT s1 :: LIT s2 :: t) = normquote acc (LIT (s1 ^ s2) :: t)
@@ -351,8 +350,10 @@ fun get_rule_info rdb env tgt =
       end
 
 
-val base_environment = let
+val base_environment0 = let
   open Systeml
+  infix ++
+  fun p1 ++ p2 = OS.Path.concat(p1,p2)
   val alist =
       [("CC", [LIT CC]),
        ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
@@ -374,6 +375,22 @@ in
   List.foldl (fn ((k,v), a) => Binarymap.insert(a, k, v))
              (Binarymap.mkDict String.compare)
              alist
+end
+
+fun base_environment () = let
+  val kernelid =
+      let
+        val strm = TextIO.openIn Holmake_tools.kernelid_fname
+        val s =
+            case TextIO.inputLine strm of
+                NONE => ""
+              | SOME s => hd (String.tokens Char.isSpace s) handle Empty => ""
+
+      in
+        s before TextIO.closeIn strm
+      end handle IO.Io _ => ""
+in
+  Binarymap.insert(base_environment0, "KERNELID", [LIT kernelid])
 end
 
 fun lookup e k =

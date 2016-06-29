@@ -99,6 +99,7 @@ fun format_line sec_name = let
     val f = String.translate (fn c => if c = #" " then "" else
               implode [c])
     in (i,f s2,s3) end
+    handle Subscript => (fail())
   in format_line_aux end
 
 fun read_complete_sections filename filename_sigs ignore = let
@@ -109,6 +110,10 @@ fun read_complete_sections filename filename_sigs ignore = let
   val all_sections = read_sections filename
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
+  fun every p [] = true
+    | every p (x::xs) = p x andalso every p xs
+  val is_blank = every (fn c => mem c [#" ",#"\n",#"\t"]) o explode
+  val ss = filter (not o is_blank) ss
   fun process_sig_line line = let
     val ts0 = String.tokens (fn x => mem x [#" ",#"\n"]) line
     val ts = filter (fn s => s <> "struct") ts0
@@ -128,7 +133,7 @@ fun read_complete_sections filename filename_sigs ignore = let
   (* process section bodies *)
   fun process_body (sec_name,io,location,body) =
     (remove_dot sec_name,io,location,
-        if mem sec_name ignore then [] else map (format_line sec_name) body)
+        if mem sec_name ignore then [] else try_map (format_line sec_name) body)
   val all_sections = map process_body all_sections
   (* location function *)
   fun update x y f a = if x = a then y else f a
@@ -183,7 +188,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
   val base_name = "/Users/mom22/graph-decompiler/loop-m0/example"
-  val ignore = []
+  val ignore = [""]
 *)
 
 fun read_files base_name ignore = let

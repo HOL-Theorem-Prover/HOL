@@ -1,0 +1,20 @@
+INCLUDES = ../.. ../model
+CLINE_OPTIONS = --qof
+
+ifdef POLY
+HOLHEAP = riscv-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../model/riscvTheory
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../../l3-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif

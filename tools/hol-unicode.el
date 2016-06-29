@@ -70,6 +70,7 @@
 (define-key hol-unicode-not-map ">" "≯")
 (define-key hol-unicode-not-map (kbd "C-S-q") "≰")
 (define-key hol-unicode-not-map (kbd "C-+") "⇎")
+(define-key hol-unicode-not-map (kbd ",") "◁")
 
 (define-key hol-unicode-subscript-map "1" "₁")
 (define-key hol-unicode-subscript-map "2" "₂")
@@ -151,6 +152,7 @@
 (define-key hol-unicode-zero-map "-" "⊖")
 (define-key hol-unicode-zero-map "." "⊙")
 (define-key hol-unicode-zero-map "/" "⊘")
+(define-key hol-unicode-zero-map "0" "∘") ; U+2218
 
 (define-key hol-unicode-U-map "u" "𝕌")
 (define-key hol-unicode-U-map "+" "⊎") ; U+228E "multiset union"

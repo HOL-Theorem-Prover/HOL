@@ -34,8 +34,7 @@ sig
       (term -> term * term) * int * (term -> int) option * conv * conv * conv *
       term -> thm * term -> (thm * term) list
    val rename_vars:
-      (string -> string option) * (string -> (term -> string) option) *
-      string list -> thm -> thm
+      (string -> (term list -> string) option) * string list -> thm -> thm
    val sep_array_intro: bool -> thm -> thm list -> rule
    val sep_definitions:
       string -> string list list -> string list list -> thm -> thm list
@@ -43,6 +42,7 @@ sig
    val spec:
       thm -> thm -> thm list -> thm list -> thm list -> thm list -> thm list ->
       hol_type list -> tactic -> tactic -> thm * term -> thm
+   val split_cond: bool -> (term -> term) -> thm -> thm list
    val star_select_state_thm: thm -> thm list -> term list * thm -> thm
    val update_frame_state_thm: thm -> string list -> thm
    val update_hidden_frame_state_thm: thm -> term list -> thm

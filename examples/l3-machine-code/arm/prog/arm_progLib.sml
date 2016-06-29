@@ -227,7 +227,8 @@ local
        | "arm_FP_FPSCR_C" => 22
        | "arm_FP_FPSCR_V" => 23
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
+   val int_of_v2w =
+     Arbnum.toInt o bitstringSyntax.num_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
@@ -368,37 +369,35 @@ fun combinations thm_t =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val arm_rename1 =
+   val arm_rmap =
       Lib.total
-        (fn "arm_prog$arm_CPSR_N" => "n"
-          | "arm_prog$arm_CPSR_Z" => "z"
-          | "arm_prog$arm_CPSR_C" => "c"
-          | "arm_prog$arm_CPSR_V" => "v"
-          | "arm_prog$arm_CPSR_Q" => "q"
-          | "arm_prog$arm_CPSR_A" => "a"
-          | "arm_prog$arm_CPSR_F" => "f"
-          | "arm_prog$arm_CPSR_I" => "i"
-          | "arm_prog$arm_CPSR_GE" => "ge"
-          | "arm_prog$arm_CPSR_IT" => "it"
-          | "arm_prog$arm_CPSR_M" => "mode"
-          | "arm_prog$arm_CPSR_psr'rst" => "psr_other"
-          | "arm_prog$arm_FP_FPSCR_N" => "fp_n"
-          | "arm_prog$arm_FP_FPSCR_Z" => "fp_z"
-          | "arm_prog$arm_FP_FPSCR_C" => "fp_c"
-          | "arm_prog$arm_FP_FPSCR_V" => "fp_v"
-          | "arm_prog$arm_FP_FPSCR_RMode" => "rmode"
-          | "arm_prog$arm_CP15" => "cp15"
-          | _ => fail())
-   val arm_rename2 =
-      Lib.total
-        (fn "arm_prog$arm_FP_REG" =>
-              Lib.curry (op ^) "d" o Int.toString o wordsSyntax.uint_of_word
+        (fn "arm_prog$arm_CPSR_N" => K "n"
+          | "arm_prog$arm_CPSR_Z" => K "z"
+          | "arm_prog$arm_CPSR_C" => K "c"
+          | "arm_prog$arm_CPSR_V" => K "v"
+          | "arm_prog$arm_CPSR_Q" => K "q"
+          | "arm_prog$arm_CPSR_A" => K "a"
+          | "arm_prog$arm_CPSR_F" => K "f"
+          | "arm_prog$arm_CPSR_I" => K "i"
+          | "arm_prog$arm_CPSR_GE" => K "ge"
+          | "arm_prog$arm_CPSR_IT" => K "it"
+          | "arm_prog$arm_CPSR_M" => K "mode"
+          | "arm_prog$arm_CPSR_psr'rst" => K "psr_other"
+          | "arm_prog$arm_FP_FPSCR_N" => K "fp_n"
+          | "arm_prog$arm_FP_FPSCR_Z" => K "fp_z"
+          | "arm_prog$arm_FP_FPSCR_C" => K "fp_c"
+          | "arm_prog$arm_FP_FPSCR_V" => K "fp_v"
+          | "arm_prog$arm_FP_FPSCR_RMode" => K "rmode"
+          | "arm_prog$arm_CP15" => K "cp15"
+          | "arm_prog$arm_FP_REG" =>
+              Lib.curry (op ^) "d" o Int.toString o wordsSyntax.uint_of_word o
+              List.hd
           | "arm_prog$arm_REG" =>
-              Lib.curry (op ^) "r" o Int.toString o reg_index
+              Lib.curry (op ^) "r" o Int.toString o reg_index o List.hd
           | "arm_prog$arm_MEM" => K "b"
           | _ => fail())
 in
-   val arm_rename = stateLib.rename_vars (arm_rename1, arm_rename2, ["b"])
+   val arm_rename = stateLib.rename_vars (arm_rmap, ["b"])
 end
 
 local
@@ -433,7 +432,9 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
           arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
+   val aligned_cond_rand =
+     utilsLib.mk_cond_rand_thms [``aligned n : 'a word -> bool``]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric, aligned_cond_rand,
                            arm_progTheory.Aligned_Branch]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
@@ -481,7 +482,7 @@ in
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                [alignmentTheory.aligned_numeric])) o
+                [aligned_cond_rand, alignmentTheory.aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -544,9 +545,7 @@ local
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
@@ -582,7 +581,8 @@ in
    fun stm_wb_thms base thm =
       let
         val (x3, x4, x5, x6) =
-           utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist base)
+           utilsLib.padLeft false 4
+                (bitstringSyntax.num_to_bitlist (Arbnum.fromInt base))
            |> List.map bitstringSyntax.mk_b
            |> Lib.quadruple_of_list
       in

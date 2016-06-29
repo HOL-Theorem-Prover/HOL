@@ -5,7 +5,7 @@ val _ = tprint "Testing Q.EXISTS ... "
 val th = Q.EXISTS (`?f. f T T = T`, `$/\`) (REWRITE_CONV [] ``T /\ T``)
          handle HOL_ERR _ => die "FAILED!"
 
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Testing Q.REFINE_EXISTS_TAC"
 
@@ -22,7 +22,7 @@ val result =
      | _ => die "FAILED!"
 val _ = if aconv (concl result) goal then
           case hyp result of
-            [a] => if aconv a asm then print "OK\n" else die "FAILED!"
+            [a] => if aconv a asm then OK() else die "FAILED!"
            | _ => die "FAILED!"
         else die "FAILED!"
 
@@ -50,7 +50,7 @@ val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` gl0
 val _ = case sgs of
             [([a], c)] => (aconvdie "assumption" a expected_a0;
                            aconvdie "goal" c expected_c0;
-                           print "OK\n")
+                           OK())
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_RENAME_TAC 2"
@@ -58,7 +58,7 @@ val glmrt2 = ([] : term list, ``f ((h : 'a -> 'b) s) = s``)
 val expected_mrt2 = ``(f : 'b -> 'a) z = v``
 val (sgs, _) = Q.MATCH_RENAME_TAC `f z = v` glmrt2
 val _ = case sgs of
-            [([], c)] => (aconvdie "conclusion" c expected_mrt2; print "OK\n")
+            [([], c)] => (aconvdie "conclusion" c expected_mrt2; OK())
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_RENAME_TAC 3"
@@ -66,7 +66,7 @@ val glmrt3 = ([] : term list, ``f zero zero = (z:'a)``)
 val expected_mrt3 = ``f (a:num) a = (u:'a)``
 val (sgs, _) = Q.MATCH_RENAME_TAC `f b a = u` glmrt3
 val _ = case sgs of
-            [([], c)] => (aconvdie "conclusion" c expected_mrt3; print "OK\n")
+            [([], c)] => (aconvdie "conclusion" c expected_mrt3; OK())
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_ABBREV_TAC 1"
@@ -83,7 +83,7 @@ val _ = case sgs of
               val _ = aconvdie "assumption #3" a3 expected_mat1a3
               val _ = aconvdie "goal conclusion" c expected_mat1c
             in
-              print "OK\n"
+              OK()
             end
           | _ => die "FAILED! (new goal of wrong shape)"
 
@@ -100,7 +100,7 @@ val _ = case sgs of
               val _ = aconvdie "assumption #1" a1 expected_mat2a1
               val _ = aconvdie "assumption #2" a2 expected_mat2a2
             in
-              print "OK\n"
+              OK()
             end
           | _ => die "FAILED! (new goal of wrong shape)"
 
@@ -111,7 +111,21 @@ val expected_result1 =
     ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + c)``
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `y + c` gl1
 val _ = case sgs of
-            [([], t)] => (aconvdie "goal" t expected_result1; print "OK\n")
+            [([], t)] => (aconvdie "goal" t expected_result1; OK())
+          | _ => die "FAILED!"
+
+val _ = tprint "Q.MATCH_GOALSUB_ABBREV_TAC 1"
+val gl1 = ([] : term list,
+          ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + a)``)
+val expected_result1 =
+    ``!x. x * SUC (SUC zero) < y * s * (y + a)``
+val expected_abbrev =
+    ``Abbrev(s = z + SUC zero)``
+val (sgs, _) = Q.MATCH_GOALSUB_ABBREV_TAC `y * s` gl1
+val _ = case sgs of
+            [([a], t)] => (aconvdie "assumption" a expected_abbrev;
+                           aconvdie "goal" t expected_result1;
+                           OK())
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 2"
@@ -121,7 +135,7 @@ val expected_result2 = ``!x. x * c < y * (a + c) * (a + SUC c)``
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `a + c` gl2
 val _ = case sgs of
             [([], t)] =>
-              (aconvdie "goal conclusion" t expected_result2; print "OK\n")
+              (aconvdie "goal conclusion" t expected_result2; OK())
           | _ => die "FAILED!"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 3"
@@ -130,7 +144,7 @@ val expected_result2a = #2 gl2a
 val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `SUC` gl2a
 val _ = case sgs of
             [([], t)] =>
-              (aconvdie "goal conclusion" t expected_result2a; print "OK\n")
+              (aconvdie "goal conclusion" t expected_result2a; OK())
           | _ => die "FAILED!"
 
 
@@ -145,16 +159,32 @@ val _ = case sgs of
             [([a1, a2], c)] => (aconvdie "assumption #1" a1 expected_a1;
                                 aconvdie "assumption #2" a2 expected_a2;
                                 aconvdie "goal conclusion" c expected_c;
-                                print "OK\n")
+                                OK())
           | _ => die "FAILED!"
 
+val _ = tprint "Q.MATCH_ASMSUB_ABBREV_TAC 1"
+val gl3 = ([``P (x:num): bool``, ``Q (x < SUC (SUC (SUC zero))) : bool``],
+           ``x + y < SUC (SUC zero)``);
+val expected_a1 = ``Abbrev(two = SUC (SUC zero))``
+val expected_a2 = ``P (x:num) : bool``
+val expected_a3 = ``Q (x < SUC two) : bool``
+val expected_c = ``x + y < two``
+val (sgs, _) = Q.MATCH_ASMSUB_ABBREV_TAC `x < _ two` gl3
+val _ = case sgs of
+            [([a1, a2, a3], c)] =>
+              (aconvdie "assumption #1" a1 expected_a1;
+               aconvdie "assumption #2" a2 expected_a2;
+               aconvdie "assumption #3" a3 expected_a3;
+               aconvdie "goal conclusion" c expected_c;
+               OK())
+          | _ => die "FAILED!"
 
 val _ = tprint "Q.PAT_ABBREV_TAC (gh252)"
 val (sgs, _) = Q.PAT_ABBREV_TAC `v = I x` ([], ``I p /\ v``)
-val _ = print "OK\n"
+val _ = OK()
 
 fun shouldfail f x =
-  (f x ; die "FAILED!") handle HOL_ERR _ => print "OK\n"
+  (f x ; die "FAILED!") handle HOL_ERR _ => OK()
 
 val _ = tprint "Q.PAT_ABBREV_TAC (gh262) 1"
 val (sgs, _) =
@@ -163,7 +193,7 @@ val _ = case sgs of
             [([abb], sg)] =>
             if Term.aconv abb ``Abbrev(v = y < SUC zero)`` andalso
                Term.aconv sg ``v ==> y < z``
-            then print "OK\n"
+            then OK()
             else die "FAILED!"
           | _ => die "FAILED!"
 
@@ -186,7 +216,7 @@ val _ = case sgs of
             [([abb], sg)] =>
             if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
-            then print "OK\n"
+            then OK()
             else die "FAILED!"
           | _ => die "FAILED!"
 
@@ -197,7 +227,7 @@ val _ = case sgs of
             [([abb], sg)] =>
             if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
-            then print "OK\n"
+            then OK()
             else die "FAILED!"
           | _ => die "FAILED!"
 

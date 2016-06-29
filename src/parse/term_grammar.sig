@@ -145,7 +145,9 @@ sig
                        endbinding    : string,
                        restr_binders : (string option * string) list,
                        res_quanop    : string}
+  type ruleset
   val rules          : grammar -> (int option * grammar_rule) list
+  val ruleset        : grammar -> ruleset
   val grammar_rules  : grammar -> grammar_rule list
   val specials       : grammar -> special_info
   val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
@@ -254,7 +256,7 @@ sig
 
   val prettyprint_grammar_rules
                           : (grammar -> ppstream -> term -> unit) ->
-                            ppstream -> grammar -> unit
+                            ppstream -> ruleset -> unit
   val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
                             ppstream -> grammar -> unit
 

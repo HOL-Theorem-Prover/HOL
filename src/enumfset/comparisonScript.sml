@@ -129,6 +129,10 @@ val list_cmp_ListOrd = store_thm("list_cmp_ListOrd",
   BasicProvers.CASE_TAC >>
   metis_tac[cmp_thms])
 
+val TotOrd_list_cmp = store_thm("TotOrd_list_cmp",
+  ``!c. TotOrd c ==> TotOrd (list_cmp c)``,
+  srw_tac[][] >> imp_res_tac list_cmp_ListOrd >> simp[TO_ListOrd])
+
 val pair_cmp_lexTO = store_thm("pair_cmp_lexTO",
   ``!R V. TotOrd R /\ TotOrd V ==> pair_cmp R V = R lexTO V``,
   simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def])
@@ -390,5 +394,16 @@ val list_cmp_equal_list_rel = Q.store_thm ("list_cmp_equal_list_rel",
  fs [list_cmp_def] >>
  every_case_tac >>
  fs []);
+
+val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
+  ``!R. irreflexive R ==> (TO_of_LinearOrder (LLEX R) = list_cmp (TO_of_LinearOrder R))``,
+  srw_tac[][relationTheory.irreflexive_def] >>
+  simp[FUN_EQ_THM] >>
+  Induct >- (
+    Cases >> simp[list_cmp_def,TO_of_LinearOrder] ) >>
+  gen_tac >> Cases >>
+  simp[list_cmp_def,TO_of_LinearOrder] >>
+  pop_assum(assume_tac o GSYM) >> simp[] >>
+  srw_tac[][TO_of_LinearOrder] >> full_simp_tac(srw_ss())[] >> rev_full_simp_tac(srw_ss())[])
 
 val _ = export_theory ();

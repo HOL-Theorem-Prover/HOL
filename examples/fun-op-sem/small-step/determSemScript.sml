@@ -14,14 +14,14 @@ val _ = new_theory "determSem";
 (* ----------- Generic small-step --------- *)
 
 val _ = Datatype `
-  result = 
+  result =
     Terminate 'a
   | Diverge
   | Crash`;
 
-(* A deterministic small-step semantics has 
+(* A deterministic small-step semantics has
  * - a type of states, 'st,
- * - a step function (to an option for representing stuckness), 
+ * - a step function (to an option for representing stuckness),
  * - a predicate on states to distinguish stuck ones from good results
  * - load and unload functions that convert from programs to states, and from
  *   states to results
@@ -30,8 +30,8 @@ val _ = Datatype `
 val _ = Datatype `
   small = <| step : 'st -> 'st option;
              is_value : 'st -> bool;
-             load : 'prog -> 'st; 
-             unload : 'st -> 'res |>`; 
+             load : 'prog -> 'st;
+             unload : 'st -> 'res |>`;
 
 (* Given a small-step semantics and program, get the result *)
 val small_sem_def = Define `
@@ -54,7 +54,7 @@ val _ = Datatype `
   | Error
   | Val 'a`;
 
-(* A functional big-step semantics has 
+(* A functional big-step semantics has
  * - a type of states, 'st, and environments 'env, and inital values for them
  * - a evaluation function
  * - an unload mapping from the evaluator's result to the actual result
@@ -87,16 +87,17 @@ val check_result_def = Define `
   (check_result unload_f (Val x) r ⇔ unload_f x = r) ∧
   (check_result unload_f _ r ⇔ T)`;
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
 `!sem_f sem_s.
   (?f.
      unbounded f ∧
-     !c p. 
-       SND (eval_with_clock sem_f c p) = Timeout ⇒ 
+     !c p.
+       SND (eval_with_clock sem_f c p) = Timeout ⇒
        ?tr. f c ≤ LENGTH tr ∧ tr ≠ [] ∧ HD tr = sem_s.load p ∧ check_trace sem_s.step tr) ∧
-  (!c p r. 
-    SND (eval_with_clock sem_f c p) = r ∧ r ≠ Timeout ⇒ 
-    ?r'. (λs1 s2. sem_s.step s1 = SOME s2)^* (sem_s.load p) r' ∧ 
+  (!c p r.
+    SND (eval_with_clock sem_f c p) = r ∧ r ≠ Timeout ⇒
+    ?r'. (λs1 s2. sem_s.step s1 = SOME s2)^* (sem_s.load p) r' ∧
          sem_s.step r' = NONE ∧
          (r = Error ⇔ ~sem_s.is_value r') ∧
          check_result sem_f.unload r (sem_s.unload r'))
@@ -163,6 +164,7 @@ val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
    first_x_assum (qspecl_then [`x`, `prog`] mp_tac) >>
    rw [check_result_def] >>
    metis_tac []));
+end
 
 val same_result_def = Define `
  (same_result sem_f sem_s (Val a) s ⇔
@@ -177,13 +179,13 @@ val same_result_def = Define `
 
 val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
 `!sem_f sem_s.
-  (!c p. 
-    SND (eval_with_clock sem_f c p) = Timeout ⇒ 
+  (!c p.
+    SND (eval_with_clock sem_f c p) = Timeout ⇒
     sem_f.get_clock (FST (eval_with_clock sem_f c p)) = 0) ∧
   (?f.
      unbounded f ∧
-     !c p st r. 
-       eval_with_clock sem_f c p = r ⇒ 
+     !c p st r.
+       eval_with_clock sem_f c p = r ⇒
        ?tr. f (c - sem_f.get_clock (FST r)) ≤ LENGTH tr ∧ tr ≠ [] ∧ HD tr = sem_s.load p ∧ check_trace sem_s.step tr ∧
          same_result sem_f sem_s (SND r) (LAST tr))
   ⇒

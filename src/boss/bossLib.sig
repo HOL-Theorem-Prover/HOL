@@ -40,6 +40,8 @@ sig
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
   val CASE_TAC          : tactic
+  val pairarg_tac       : tactic
+  val split_pair_case_tac : tactic
 
   (* Proof automation *)
 
@@ -47,6 +49,7 @@ sig
   val METIS_PROVE    : thm list -> term -> thm   (* First order *)
   val DECIDE         : term -> thm               (* Cooperating dec. procs *)
   val PROVE_TAC      : thm list -> tactic
+  val prove_tac      : thm list -> tactic
   val METIS_TAC      : thm list -> tactic
   val metis_tac      : thm list -> tactic
   val DECIDE_TAC     : tactic
@@ -85,11 +88,17 @@ sig
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
   val SIMP_TAC          : simpset -> thm list -> tactic
+  val simp_tac          : simpset -> thm list -> tactic
   val ASM_SIMP_TAC      : simpset -> thm list -> tactic
+  val asm_simp_tac      : simpset -> thm list -> tactic
   val FULL_SIMP_TAC     : simpset -> thm list -> tactic
+  val full_simp_tac     : simpset -> thm list -> tactic
   val REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
+  val rev_full_simp_tac : simpset -> thm list -> tactic
   val RW_TAC            : simpset -> thm list -> tactic
+  val rw_tac            : simpset -> thm list -> tactic
   val SRW_TAC           : ssfrag list -> thm list -> tactic
+  val srw_tac           : ssfrag list -> thm list -> tactic
 
   val NO_STRIP_FULL_SIMP_TAC     : simpset -> thm list -> tactic
   val NO_STRIP_REV_FULL_SIMP_TAC : simpset -> thm list -> tactic
@@ -107,9 +116,11 @@ sig
 
   val ZAP_TAC        : simpset -> thm list -> tactic
   val SPOSE_NOT_THEN : (thm -> tactic) -> tactic
+  val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
   val cheat          : tactic
+  val kall_tac       : 'a -> tactic
 
   (* Abbreviations  (see also Q structure) *)
 
@@ -139,6 +150,8 @@ sig
   val qspec_tac : term quotation * term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
+  val qhdtm_assum : term quotation -> thm_tactic -> tactic
+  val qhdtm_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
   val qpat_abbrev_tac : term quotation -> tactic
   val qmatch_abbrev_tac : term quotation -> tactic
@@ -148,7 +161,10 @@ sig
   val qmatch_assum_rename_tac : term quotation -> tactic
   val qmatch_asmsub_rename_tac : term quotation -> tactic
   val qmatch_goalsub_rename_tac : term quotation -> tactic
-  val qcase_tac : term quotation -> tactic
+  val qmatch_asmsub_abbrev_tac : term quotation -> tactic
+  val qmatch_goalsub_abbrev_tac : term quotation -> tactic
+  val rename1 : term quotation -> tactic
+  val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic
   val qunabbrev_tac : term quotation -> tactic
   val unabbrev_all_tac : tactic

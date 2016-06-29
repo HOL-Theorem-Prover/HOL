@@ -19,8 +19,10 @@ src/HolSmt
 !!examples/computability/lambda
 !!examples/computability/register
 !!examples/balanced_bst
+!!examples/formal-languages/regular
 src/Boolify/src
 src/float
-[poly]src/floating-point
+src/floating-point
+[poly]src/floating-point/native
 src/probability
 src/temporal/src

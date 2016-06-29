@@ -1,4 +1,6 @@
 !tools/Holmake/tests/holdep
+!tools/Holmake/tests/depchainloop
+!tools/Holmake/tests/recursiveclean
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
 [poly]src/portableML/poly
@@ -9,8 +11,11 @@ src/prekernel
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+src/opentheory
+(otknl)src/opentheory/logging
 src/bool
 src/1
+(otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
 !tools/Holmake/tests/depchain1/dir3

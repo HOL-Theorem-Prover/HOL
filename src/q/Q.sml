@@ -49,6 +49,7 @@ fun mk_term_rsubst ctxt = let
         SOME (redex' |-> residue')
       end
     else NONE
+
   end
 in
   List.mapPartial f
@@ -226,6 +227,9 @@ end
 
 fun UNDISCH_THEN q ttac = UNDISCH_TAC q THEN DISCH_THEN ttac;
 
+fun hdtm_assum q ttac = Q_TAC (C Tactical.hdtm_assum ttac) q
+fun hdtm_x_assum q ttac = Q_TAC (C Tactical.hdtm_x_assum ttac) q
+
 val ASSUME = ASSUME o btm
 
 fun X_GEN_TAC q (g as (asl, w)) =
@@ -346,6 +350,9 @@ fun MATCH_ASSUM_ABBREV_TAC q (gl as (asl,w)) =
   markerLib.MATCH_ASSUM_ABBREV_TAC fv_set pattern
  end gl;
 
+fun make_abbrev_tac s =
+  MAP_EVERY markerLib.ABB' (markerLib.safe_inst_sort s)
+
 (*---------------------------------------------------------------------------*)
 (*    Renaming tactics                                                       *)
 (*---------------------------------------------------------------------------*)
@@ -389,19 +396,23 @@ in
     t
 end g
 
-fun MATCH_ASSUM_RENAME_TAC q (g as (asl,t)) = let
+fun kMATCH_ASSUM_RENAME_TAC q k (g as (asl,t)) = let
   val fvs = free_varsl(t::asl)
   val pat = Parse.parse_in_context fvs q
 in
-  FIRST_ASSUM (wholeterm_rename_helper {pat=pat, ERR = ERR "MATCH_ASSUM_RENAME_TAC",
-                                        fvs_set = HOLset.fromList Term.compare fvs} o
-               concl)
+  FIRST_ASSUM (fn th =>
+    wholeterm_rename_helper
+      {pat=pat, ERR = ERR "MATCH_ASSUM_RENAME_TAC",
+       fvs_set = HOLset.fromList Term.compare fvs}
+      (concl th) THEN k)
 end g
+
+fun MATCH_ASSUM_RENAME_TAC q = kMATCH_ASSUM_RENAME_TAC q ALL_TAC
 
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
-fun subterm_rename_helper {thetasz,ERR,pat,fvs_set} t g = let
+fun subterm_helper make_tac k {thetasz,ERR,pat,fvs_set} t g = let
   fun test (bvs, subt) =
       case Lib.total (fn t => raw_match [] fvs_set pat t ([],[])) subt of
           SOME ((theta0, _), (tytheta,_)) =>
@@ -413,14 +424,15 @@ fun subterm_rename_helper {thetasz,ERR,pat,fvs_set} t g = let
                        theta0
             val theta = map (redex_map (inst tytheta)) theta0
           in
-            if length theta <> thetasz then NONE else SOME theta
+            if length theta <> thetasz then NONE
+            else Lib.total (make_tac theta THEN k) g
           end
         | NONE => NONE
 in
   case gen_find_term test t of
-      SOME theta => make_rename_tac theta
+      SOME tacresult => tacresult
     | NONE => raise ERR "No matching sub-term found"
-end g
+end
 
 fun prep_rename q nm (asl, t) = let
   val ERR = ERR nm
@@ -434,17 +446,65 @@ in
   {ERR = ERR, pat = pat, fvs_set = fvs_set, thetasz = length pat_binds}
 end
 
-fun MATCH_GOALSUB_RENAME_TAC q (g as (asl, t)) =
-    subterm_rename_helper (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
+fun kMATCH_GOALSUB_RENAME_TAC q k (g as (asl, t)) =
+    subterm_helper make_rename_tac k
+                   (prep_rename q "MATCH_GOALSUB_RENAME_TAC" g) t g
 
-fun MATCH_ASMSUB_RENAME_TAC q (g as (asl, t)) = let
+fun MATCH_GOALSUB_RENAME_TAC q = kMATCH_GOALSUB_RENAME_TAC q ALL_TAC
+
+fun kMATCH_ASMSUB_RENAME_TAC q k (g as (asl, t)) = let
   val args = prep_rename q "MATCH_ASMSUB_RENAME_TAC" g
 in
-  FIRST_ASSUM (subterm_rename_helper args o concl) g
+  FIRST_ASSUM (subterm_helper make_rename_tac k args o concl) g
 end
 
-fun FIND_CASE_TAC q =
+fun MATCH_GOALSUB_ABBREV_TAC q (g as (asl, t)) =
+    subterm_helper make_abbrev_tac ALL_TAC
+                   (prep_rename q "MATCH_GOALSUB_ABBREV_TAC" g) t g
+
+fun MATCH_ASMSUB_ABBREV_TAC q (g as (asl, t)) = let
+  val args = prep_rename q "MATCH_ASMSUB_ABBREV_TAC" g
+in
+  FIRST_ASSUM (subterm_helper make_abbrev_tac ALL_TAC args o concl) g
+end
+
+fun MATCH_ASMSUB_RENAME_TAC q = kMATCH_ASMSUB_RENAME_TAC q ALL_TAC
+
+fun RENAME1_TAC q =
     MATCH_RENAME_TAC q ORELSE MATCH_ASSUM_RENAME_TAC q ORELSE
     MATCH_GOALSUB_RENAME_TAC q ORELSE MATCH_ASMSUB_RENAME_TAC q
+
+fun coreRENAME_TAC qs k =
+  let
+    fun kRENAME1 q k =
+      (MATCH_RENAME_TAC q THEN k) ORELSE kMATCH_ASSUM_RENAME_TAC q k ORELSE
+      kMATCH_GOALSUB_RENAME_TAC q k ORELSE kMATCH_ASMSUB_RENAME_TAC q k
+    fun recurse qs =
+      case qs of
+          [] => k
+        | q::rest => kRENAME1 q (recurse rest)
+  in
+    recurse qs
+  end
+
+fun flip_inst s = map (fn {redex,residue} => {redex=residue,residue=redex}) s
+
+fun gvarify (goal as (asl,w)) =
+  let
+    fun gentheta (v, acc) = {residue = v, redex = genvar (type_of v)} :: acc
+  in
+    HOLset.foldl gentheta [] (FVL (w::asl) empty_tmset)
+  end
+
+fun kRENAME_TAC qs k g =
+  let
+    val gsig = gvarify g
+    val gsig_inv = flip_inst gsig
+  in
+    make_rename_tac gsig THEN
+    coreRENAME_TAC qs (make_rename_tac gsig_inv THEN k)
+  end g
+
+fun RENAME_TAC qs = kRENAME_TAC qs ALL_TAC
 
 end (* Q *)

@@ -2,7 +2,7 @@ structure machine_ieeeLib :> machine_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open lcsymtacs realSyntax intrealSyntax wordsLib binary_ieeeSyntax
+open realSyntax intrealSyntax wordsLib binary_ieeeSyntax
 
 structure Parse =
 struct
@@ -23,7 +23,7 @@ local
    infix 0 ==
    infix 8 &
    infixr 5 @@ o'
-   open lcsymtacs binary_ieeeSyntax
+   open binary_ieeeSyntax
    val op & = Term.mk_comb
    val op == = boolSyntax.mk_eq
    val op @@ = wordsSyntax.mk_word_concat

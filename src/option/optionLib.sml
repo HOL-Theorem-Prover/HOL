@@ -21,7 +21,7 @@ end;
 val OPTION_rewrites =
   [ THE_DEF, IS_SOME_DEF, IS_NONE_DEF,
     SOME_11, NOT_NONE_SOME, NOT_SOME_NONE,
-    option_case_compute, OPTION_MAP_DEF,
+    option_case_def, OPTION_MAP_DEF,
     OPTION_BIND_def, OPTION_GUARD_def,
     OPTION_IGNORE_BIND_def, OPTION_CHOICE_def ];
 

@@ -56,49 +56,4 @@ end
 
 val mips_decompile = decompilerLib.decompile_with mips_parse mips_tools
 
-(* testing and debugging
-
-open mips_decompLib
-
-List.map mips.encodeInstruction
-  [
-   "ori $1, $0, 10",
-   "bne $1, $0, 0xFFFF",
-   "daddiu $1, $1, 0xFFFF"
-  ]
-
-val (text_cert, test_def) = mips_decompile "test"
-   `3401000A
-    1420FFFF
-    6421FFFF`
-
-val () = computeLib.add_funs [test_def]
-
-EVAL ``test 0w``
-
-List.map mips.encodeInstruction
-  [
-   "ori $1, $0, 10",
-   "beq $1, $0, 1"
-  ]
-
-val test_def = mips_decompile "test"
-   `3401000A
-    10200001
-    00000000`
-
-(* These decompile under the assumption that arithmetic exceptions do not
-   occur *)
-List.map mips.encodeInstruction
-  [
-   "dadd $1, $2, $3",
-   "dmult $1, $3"
-  ]
-
-val test_def = mips_decompile "test"
-   `0043082C
-    0023001C`
-
-*)
-
 end

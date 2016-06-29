@@ -26,7 +26,8 @@ fun remove_white_spaces s =
     String.implode cl'
   end
 
-(* Assumes the term was single quoted before *)
+(* Assumes the theorem name was single quoted before 
+   which always happen except for reserved names *)
 fun unsquotify s =
   if String.size s >= 2
   then String.substring (s, 1, String.size s - 2)
@@ -39,18 +40,16 @@ fun map_half b f l = case l of
 
 fun hh_unescape s =
   let
-    val sl = String.fields (fn c => c = #"#") s
-    fun f s = case s of
-       "hash"   => "#"
-      |"slash"  => "/"
-      |"quote"  => "\""
-      |"squote" => "'"
-      | _       => raise ERR "hh_unescape" ""
+    val sl = String.fields (fn c => c = #"|") s
+    fun f s = 
+      let val n = string_to_int s in
+        Char.toString (Char.chr n)
+      end
   in
     String.concat (map_half false f sl)
   end
 
-fun split_name s = case String.fields (fn c => c = #"/") s of
+fun split_name s = case String.fields (fn c => c = #".") s of
     [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
 
@@ -76,7 +75,8 @@ fun readl path =
 fun read_status atp_status =
   remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
 
-(* removing reserverd names: use a similar escaping than the holyhammer fof writer *)
+(* removing reserverd names: use a similar
+   escaping than the holyhammer fof writer *)
 fun reserved_escape name =
   let fun is_alphanumeric s =
     let val l = String.explode s in

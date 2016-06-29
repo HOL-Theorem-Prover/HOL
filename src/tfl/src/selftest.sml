@@ -3,10 +3,7 @@ open Defn
 
 open testutils
 
-fun test msg f x =
-    (tprint msg;
-     f x handle _ => die "FAILED!";
-     print "OK\n")
+fun test msg f x = (tprint msg; f x handle _ => die "FAILED!"; OK())
 
 val _ = print "\n"
 
@@ -29,10 +26,10 @@ val _ =
 
 val def6 = test "Case expression with multiple underscores"
                 (Hol_defn "f1")
-                `(f1 x y = case (x, y) of (T, _) => T | (_,_) => F)`
+                `(f1 x y = case (x, y:'a) of (T, _) => T | (_,_) => F)`
 val def7 = test "Case expression with underscores of different types"
                 (Hol_defn "f2")
-                `(f2 x y = case (x, y) of (T, _) => T | _ => F)`
+                `(f2 x y = case (x, y:'a) of (T, _) => T | _ => F)`
 
 val def8 = test "Case expression with variables of different types"
                 (Hol_defn "f3")
@@ -40,3 +37,11 @@ val def8 = test "Case expression with variables of different types"
 
 val _ = overload_on ("=", ``T``)
 val _ = test "Definition with overloaded =" (Hol_defn "f4") `f4 x y = x /\ y`
+
+val _ = temp_overload_on("foo", ``bool$F``)
+val _ = Hol_defn "F" `F f x <=> x \/ f x`;
+val _ = tpp_expected{
+  input="foo",
+  output="foo",
+  testf = (fn _ => "Printing after definition on unoverloaded name")
+};

@@ -212,24 +212,33 @@ local
       fst o boolSyntax.strip_comb o boolSyntax.lhs o
       snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o
       Thm.concl
+   val translate_convs =
+      List.mapPartial
+        (fn {key = SOME ([], t), conv, ...} : simpfrag.convdata =>
+           (case Lib.total boolSyntax.strip_comb t of
+               SOME (f, l) =>
+                 SOME (f, List.length l, conv (Lib.K Conv.ALL_CONV) [])
+             | NONE => NONE)
+          | _ => NONE)
 in
    fun add_datatype_info cs tyinfo =
     let open TypeBasePure Drule
         val size_opt =
-          case size_of0 tyinfo
-           of SOME (_, ORIG def) => [def]
-            | otherwise => []
+          case size_of0 tyinfo of
+             SOME (_, ORIG def) => [def]
+           | _ => []
         val boolify_opt =
-          case encode_of0 tyinfo
-           of SOME (_, ORIG def) => [def]
-            | otherwise => []
+          case encode_of0 tyinfo of
+             SOME (_, ORIG def) => [def]
+           | _ => []
         val case_const = Lib.total case_const_of tyinfo
-        val simpls = #rewrs (simpls_of tyinfo)
+        val {rewrs = simpls, convs} = simpls_of tyinfo
         val (case_thm, simpls) =
            List.partition (fn thm => Lib.total get_f thm = case_const) simpls
         val case_thm = List.map lazyfy_thm case_thm
     in
-      add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
+        List.app (fn c => add_conv c cs) (translate_convs convs)
+      ; add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
     end
     val write_datatype_info = add_datatype_info the_compset
 end
@@ -280,5 +289,28 @@ fun del_persistent_consts [] = ()
    ---------------------------------------------------------------------- *)
 
 fun pp_compset pps c = PP.add_string pps "<compset>"
+
+(* ----------------------------------------------------------------------
+   Help for building up compsets and creating new compset based conversions
+   ---------------------------------------------------------------------- *)
+
+datatype compset_element =
+    Convs of (term * int * conv) list
+  | Defs of thm list
+  | Tys of hol_type list
+  | Extenders of (compset -> unit) list
+
+local
+  fun add_datatype cmp = add_datatype_info cmp o Option.valOf o TypeBase.fetch
+in
+  fun extend_compset frags cmp =
+    List.app
+      (fn Convs l => List.app (fn x => add_conv x cmp) l
+        | Defs l => add_thms l cmp
+        | Tys l => List.app (add_datatype cmp) l
+        | Extenders l => List.app (fn f => f cmp) l) frags
+end
+
+fun compset_conv cmp l = (extend_compset l cmp; CBV_CONV cmp)
 
 end

@@ -860,7 +860,7 @@ val DRESTRICT_list2fmap = prove(
             list2fmap (FILTER (\x. ~MEM (FST x) ys) xs)``,
   Induct THEN SIMP_TAC std_ss [list2fmap_def,FILTER,DRESTRICT_FEMPTY]
   THEN Cases THEN SIMP_TAC std_ss [list2fmap_def,DRESTRICT_FUPDATE]
-  THEN ASM_SIMP_TAC std_ss [IN_COMPL,IN_LIST_TO_SET]
+  THEN ASM_SIMP_TAC std_ss [IN_COMPL]
   THEN Cases_on `MEM q ys` THEN ASM_SIMP_TAC std_ss [list2fmap_def]);
 
 val R_ev_LEMMA = let

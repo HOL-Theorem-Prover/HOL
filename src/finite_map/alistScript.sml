@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory lcsymtacs
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
 
 val _ = new_theory "alist";
 
@@ -529,7 +529,7 @@ val fupdate_list_funion = store_thm("fupdate_list_funion",
  rpt GEN_TAC >>
  pop_assum (qspecl_then [`m|+h`] mp_tac) >>
  rw [] >>
- rw [fmap_eq_flookup, FLOOKUP_FUNION] >>
+ rw [FLOOKUP_EXT, FUN_EQ_THM, FLOOKUP_FUNION] >>
  BasicProvers.EVERY_CASE_TAC >>
  PairCases_on `h` >>
  fs [FLOOKUP_UPDATE, flookup_fupdate_list] >>

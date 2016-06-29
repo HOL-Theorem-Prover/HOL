@@ -77,6 +77,8 @@ sig
   val prim_irule            : thm -> tactic
   val irule                 : thm -> tactic
   val IRULE_TAC             : thm -> tactic
+  val impl_tac              : tactic
+  val impl_keep_tac         : tactic
   val HO_MATCH_ACCEPT_TAC   : thm -> tactic
   val HO_BACKCHAIN_TAC      : thm -> tactic
   val HO_MATCH_MP_TAC       : thm -> tactic
@@ -97,4 +99,5 @@ sig
 
   val SELECT_ELIM_TAC       : tactic
   val HINT_EXISTS_TAC       : tactic
+  val part_match_exists_tac : (term -> term) -> term -> tactic
 end

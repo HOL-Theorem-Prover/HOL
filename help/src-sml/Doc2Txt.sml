@@ -8,7 +8,8 @@ val pagewidth = 70;
 val separator = String.implode (List.tabulate(pagewidth, fn _ => #"-"))
 
 fun out(str,s) = TextIO.output(str, s)
-fun warn s = TextIO.output(TextIO.stdErr, s)
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+fun die s = (warn s; OS.Process.exit OS.Process.failure)
 
 fun print_type strm ss = out(strm, Substring.string ss ^ "\n\n")
 
@@ -83,6 +84,8 @@ fun print_markups strm mlist =
           PARA => (out(strm, "\n\n"); print_markups strm ms)
         | TEXT ss => (out(strm, text_encode ss);
                       print_markups strm ms)
+        | EMPH ss => (out(strm, "*" ^ text_encode ss ^ "*");
+                      print_markups strm ms)
         | BRKT ss => (out(strm, "{" ^ Substring.string ss ^ "}");
                       print_markups strm ms)
         | XMPL ss => (out(strm, Substring.string ss);
@@ -143,7 +146,7 @@ in
   app (write_section outputstr) file;
   out(outputstr, separator ^"\n");
   TextIO.closeOut outputstr
-end
+end handle e => die ("Exception raised: " ^ General.exnMessage e)
 
 
 fun main () =

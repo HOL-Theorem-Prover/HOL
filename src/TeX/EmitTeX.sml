@@ -78,7 +78,7 @@ local
       ["_11", "_Axiom", "_case_cong", "_induction", "_nchotomy"]
 
   fun enumerate_defns s =
-     [s ^ "_BIJ", s ^ "_case"]
+     [s ^ "_BIJ", s ^ "_case", s ^ "_CASE"]
 
   fun enumerate_thms s =
     ["num2" ^ s ^ "_ONTO", "num2" ^ s ^ "_thm", "num2" ^ s ^ "_11",
@@ -161,6 +161,10 @@ local
   val rec_thm = can (match_term
          ``f = WFREC (a:'a -> 'a -> bool) (b:('a -> 'b) -> 'a -> 'b)``) o
           concl o SPEC_ALL
+
+  val lc = String.map Char.toLower
+  fun thm_cmp (a,b) = String.compare (lc (fst a), lc (fst b))
+  val thm_sort = Listsort.sort thm_cmp
 in
   fun is_datatype_thm thm =
         ((fst o dest_const o fst o dest_comb o concl) thm = "DATATYPE")
@@ -177,61 +181,12 @@ in
     List.filter (fn (x,y) => not ((String.sub(x, 0) = #" ") orelse
                               Redblackset.member(type_defn_set s, x) orelse
                               rec_thm y))
-                (definitions s)
+                (thm_sort (definitions s))
 
   fun non_type_theorems s =
     List.filter (fn x => not ((String.sub(fst x, 0) = #" ") orelse
                               Redblackset.member(type_thm_set s, fst x)))
-                (theorems s)
-end;
-
-(* ------------------------------------------------------------------------- *)
-(* fix_inductive_definitions :                                               *)
-(*   (string * 'a) list * (string * 'a) list ->                              *)
-(*   (string * 'a) list * (string * 'a) list                                 *)
-(*                                                                           *)
-(* Remove/move inductive definitions                                         *)
-(* ------------------------------------------------------------------------- *)
-
-local
-  fun is_ind_def_thm names s =
-        let val l = size s in
-          l > 4 andalso
-          (String.extract(s, l - 4, NONE) = "_def" andalso
-           exists (fn x => x = String.substring(s, 0, l - 4) ^ "_ind") names)
-        end
-
-  fun is_ind_thm names s =
-        let val l = size s in
-          l > 4 andalso
-          (String.extract(s, l - 4, NONE) = "_ind" andalso
-           exists (fn x => x = String.substring(s, 0, l - 4) ^ "_def") names)
-        end
-
-  fun is_ind_def ps s =
-        let fun f p = (s = p ^ "_curried_def")
-        in
-          isSome (List.find f ps)
-        end
-
-  fun filter_ind_thms names [] a b = (a, b)
-    | filter_ind_thms names ((l, r)::t) a b =
-        if is_ind_def_thm names l then
-          filter_ind_thms names t ((l,r)::a) b
-        else if is_ind_thm names l then
-          filter_ind_thms names t a b
-        else
-          filter_ind_thms names t a ((l,r)::b)
-in
-  fun fix_inductive_definitions(defns, thms) =
-    let val names = map fst thms
-        val (ind_defs, rest) = filter_ind_thms names thms [] []
-        val prfxs = map (fn (x, _) =>
-                      String.substring(x, 0, String.size x - 4)) ind_defs
-        val fix_defs = List.filter (not o is_ind_def prfxs o fst) defns
-    in
-      (fix_defs @ ind_defs, rest)
-    end
+                (thm_sort (theorems s))
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -671,12 +626,6 @@ fun pp_theory_as_tex ostrm name =
       val typs = datatype_theorems name
       val defns = non_type_definitions name
       val thms = non_type_theorems name
-      val (defns, thms) = fix_inductive_definitions(defns, thms)
-      val toLowercase = String.map Char.toLower
-      fun thm_compare(a,b) = String.compare(toLowercase (fst a),
-                                            toLowercase (fst b))
-      val defns = Listsort.sort thm_compare defns
-      val thms = Listsort.sort thm_compare thms
       val time = Date.fromTimeLocal (stamp name handle HOL_ERR _ => Time.now())
       val u = current_trace "Unicode"
   in
@@ -796,7 +745,6 @@ fun pp_theory_as_tex_doc ostrm name =
       val typs = datatype_theorems name
       val defns = non_type_definitions name
       val thms = non_type_theorems name
-      val (defns, thms) = fix_inductive_definitions(defns, thms)
   in
     if null names then
       ()

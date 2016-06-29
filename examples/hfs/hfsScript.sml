@@ -51,7 +51,7 @@ val numeq_wlog = prove(
 val strictly_increasing_SUC_extends = prove(
   ``(∀n. f n < f (n + 1)) ⇒ (∀n m. n < m ⇒ f n < f m)``,
   strip_tac >> Induct_on `m` >> simp[] >> rpt strip_tac >>
-  qcase_tac `n < SUC m` >>
+  rename1 `n < SUC m` >>
   `n = m ∨ n < m` by simp[] >>
   simp[arithmeticTheory.ADD1] >>
   metis_tac [DECIDE ``∀m n p. m < n ⇒ n < p ⇒ m < p``]);
@@ -61,14 +61,14 @@ val strictly_increasing_injective = prove(
   simp[EQ_IMP_THM] >> rpt strip_tac >>
   qspec_then `λn m. f n = f m` (irule o BETA_RULE) numeq_wlog >>
   qexists_tac `f` >> simp[] >> spose_not_then strip_assume_tac >>
-  qcase_tac `¬(n ≤ m)` >> `m < n` by simp[] >>
+  rename1 `¬(n ≤ m)` >> `m < n` by simp[] >>
   `f m < f n` by metis_tac [strictly_increasing_SUC_extends] >>
   metis_tac[DECIDE ``¬(x < x)``]);
 
 val strictly_increasing_nobounds = prove(
   ``(∀n. f n < f (n + 1)) ⇒ ∀b. ∃n. b < f n``,
   rpt strip_tac >> spose_not_then strip_assume_tac >>
-  qcase_tac `bnd < f _` >>
+  rename1 `bnd < f _` >>
   `∀n. f n ≤ bnd` by metis_tac[DECIDE ``¬(x < y) ⇒ y ≤ x``] >>
   `∀n m. f n = f m ⇔ n = m` by metis_tac[strictly_increasing_injective] >>
   `INJ f (count (bnd + 2)) (count (bnd + 1))`
@@ -166,7 +166,7 @@ val topdown_induct = prove(
   `s = M INSERT (s DELETE M)` by metis_tac[INSERT_DELETE] >>
   qabbrev_tac `s0 = s DELETE M` >>
   `M ∉ s0 ∧ FINITE s0` by simp[Abbr`s0`] >>
-  qcase_tac `SUC n = CARD s` >>
+  rename1 `SUC n = CARD s` >>
   `CARD s = SUC (CARD s0)` by simp[] >>
   `n = CARD s0` by simp[] >>
   `P s0` by metis_tac[] >>
@@ -178,9 +178,9 @@ val mk_upper_bound = prove(
   ``∀s. FINITE s ⇒ ∀b. (∀n. n ∈ s ⇒ n < b) ⇒ mk s < 2 ** b``,
   ho_match_mp_tac topdown_induct >>
   dsimp[SUM_IMAGE_THM, DELETE_NON_ELEMENT_RWT] >> rpt strip_tac >>
-  qcase_tac `e ∉ s` >>
+  rename1 `e ∉ s` >>
   `mk s < 2 ** e` by metis_tac[] >>
-  qcase_tac `e < b` >>
+  rename1 `e < b` >>
   `∃d. b = SUC d + e` by metis_tac[arithmeticTheory.LESS_STRONG_ADD] >>
   simp[arithmeticTheory.EXP_ADD, arithmeticTheory.EXP] >>
   match_mp_tac arithmeticTheory.LESS_LESS_EQ_TRANS >>

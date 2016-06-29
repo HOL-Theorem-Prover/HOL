@@ -21,6 +21,21 @@ in
   fun clear_export_fails () = (export_fails := [])
 end;
 
+local
+  val th = bit_field_insert |> SPEC_ALL |> REWRITE_RULE [LET_THM]
+  val pat = th |> UNDISCH |> concl |> dest_eq |> fst
+in
+  fun remove_bif_field_insert_conv tm = let
+    val (i,t) = match_term pat tm
+    val lemma = INST i (INST_TYPE t th)
+                |> CONV_RULE ((RATOR_CONV o RAND_CONV) EVAL)
+    val lemma = MP lemma TRUTH
+                |> CONV_RULE ((RAND_CONV o RAND_CONV) EVAL THENC
+                              RAND_CONV BETA_CONV)
+    in lemma end
+    handle HOL_ERR _ => NO_CONV tm
+end
+
 fun func_export sec_name th funcs_def = let
   val f = th |> concl |> rand
   val name = sec_name
@@ -29,6 +44,8 @@ fun func_export sec_name th funcs_def = let
   val trans_def = new_definition(name,mk_eq(lhs,rhs))
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
+          THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw]
+          THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def]
           THENC prepare_for_export_conv
   val lemma = trans_def |> CONV_RULE (RAND_CONV c)
@@ -131,9 +148,25 @@ fun prove_funcs_ok names = let
       \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [])
     in MP th lemma end
   val fs = map expend_code fs
+  (* complete fs *)
+  val fs = let
+    val all = fs |> map (rand o concl)
+    val pat = ``locs (name:string) = SOME (w:word32)``
+    fun f tm = subst (fst (match_term pat tm)) ``Func name w []``
+    val extra = try_map (fn x => x) f (flatten (map hyp fs))
+    val all_rator = map rator all
+    val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
+    val r = fs |> hd |> concl |> rator
+    val extra_fs = map (fn tm => prove(mk_comb(r,tm),
+                     SIMP_TAC (srw_ss()) [func_ok_def])) extra
+    fun export_empty th = let
+      val sec_name = th |> concl |> rand |> rator |> rator |> rand
+                        |> stringLib.fromHOLstring
+      in func_export sec_name th TRUTH end
+    val _ = map export_empty extra_fs
+    in fs @ extra_fs end
   (* package up into funcs_ok *)
   val code = fs |> hd |> concl |> rator |> rator |> rand
-  val funcs = listSyntax.mk_list(fs |> map (rand o concl),``:func``)
   val lemma = prove(``EVERY (func_ok ^code locs) []``,
                     SIMP_TAC std_ss [EVERY_DEF])
   fun combine [] = lemma
@@ -199,6 +232,7 @@ fun prove_funcs_ok names = let
   val _ = (skip_proofs := true)
   val _ = (skip_proofs := false)
   val names = section_names()
+
   local val randgen = Random.newgen()
   in fun get_rand_name () =
        el (Random.range(1,length names) randgen) names end

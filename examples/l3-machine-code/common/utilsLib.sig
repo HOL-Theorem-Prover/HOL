@@ -8,6 +8,7 @@ sig
    val ALL_HYP_CONV_RULE: conv -> rule
    val ALL_HYP_RULE: rule -> rule
    val BIT_FIELD_INSERT_CONV : string -> string -> conv
+   val CASE_RAND_CONV : term -> conv
    val CHANGE_CBV_CONV: computeLib.compset -> conv
    val ELIM_UNDISCH: rule
    val EXTRACT_CONV: conv
@@ -36,7 +37,6 @@ sig
       (thm list -> thm list) * term -> thm list -> term list list -> cover ->
       term -> thm list
    val STRIP_UNDISCH: rule
-   val WALPHA_CONV: conv
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
    val add_base_datatypes: computeLib.compset -> unit
@@ -96,6 +96,7 @@ sig
    val splitAtPos: int -> string -> string * string
    val split_conditions: thm -> thm list
    val strip_add_or_sub: term -> term * (bool * term) list
+   val strings_to_quote: string list -> string frag list
    val tab_fixedwidth: int -> int -> term list
    val theory_compset: (thm list * inventory) -> computeLib.compset
    val theory_rewrites: (thm list * inventory) -> thm list

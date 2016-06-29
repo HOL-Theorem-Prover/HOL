@@ -1,0 +1,10 @@
+deltype prod
+skipthm prod_TY_DEF
+skipthm ABS_REP_prod
+delconst FST
+delconst SND
+delconst ,
+skipthm COMMA_DEF
+delproof PAIR_EQ
+delproof ABS_PAIR_THM
+skipthm datatype_pair

@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory
+open set_sepTheory progTheory
 
 val _ = new_theory "state"
 

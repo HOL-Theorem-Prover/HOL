@@ -1191,7 +1191,7 @@ val free_vars_term_vars = prove(
        EVERY_MEM,PULL_CONJ,PULL_IMP,MEM_FILTER]
   THEN1 (METIS_TAC [])
   THEN1 (Cases_on `MEM "SPECIAL-VAR-FOR-OR" vs` \\ FULL_SIMP_TAC std_ss []
-         \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET] \\ METIS_TAC [])
+         \\ FULL_SIMP_TAC std_ss [SUBSET_DEF] \\ METIS_TAC [])
   THEN1 (METIS_TAC [])
   THEN1 (METIS_TAC [])
   THEN1 (FULL_SIMP_TAC std_ss [MEM_free_vars_let2t,MEM_FILTER,pairTheory.EXISTS_PROD,
@@ -1847,7 +1847,7 @@ val term_sub_EQ = store_thm("term_sub_EQ",
   STRIP_TAC \\ completeInduct_on `logic_term_size x`
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [PULL_IMP]
   \\ Cases_on `x` \\ FULL_SIMP_TAC std_ss [term_sub_def,free_vars_def] THEN1
-   (FULL_SIMP_TAC std_ss [LOOKUP_def,SUBSET_DEF,IN_LIST_TO_SET,MEM]
+   (FULL_SIMP_TAC std_ss [LOOKUP_def,SUBSET_DEF,MEM]
     \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
     \\ Induct_on `xs` \\ FULL_SIMP_TAC (srw_ss()) [LOOKUP_def] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC (srw_ss()) [MAP_EQ,EVERY_MEM] \\ REPEAT STRIP_TAC
@@ -1985,7 +1985,7 @@ val inst_term_EQ_term_sub = prove(
   THEN1
    (SIMP_TAC std_ss [inst_term_thm,term_sub_def]
     \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
-    \\ SIMP_TAC std_ss [free_vars_def,SUBSET_DEF,IN_LIST_TO_SET,MEM]
+    \\ SIMP_TAC std_ss [free_vars_def,SUBSET_DEF,MEM]
     \\ Q.SPEC_TAC (`xs`,`xs`) \\ Q.SPEC_TAC (`sl`,`ys`)
     \\ Induct \\ Cases_on `xs` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,MEM]
     \\ FULL_SIMP_TAC std_ss [FunVarBind_def,APPLY_UPDATE_THM,MAP,ZIP,LOOKUP_def]
@@ -1997,7 +1997,7 @@ val inst_term_EQ_term_sub = prove(
     \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC MEM_logic_term_size
     \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
-    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET,MEM_FLAT,PULL_IMP,MEM_MAP]
+    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,MEM_FLAT,PULL_IMP,MEM_MAP]
     \\ METIS_TAC []));
 
 val MEM_ZIP_ID = prove(
@@ -2243,7 +2243,7 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (NTAC 2 STRIP_TAC
       \\ IMP_RES_TAC MR_evl_LENGTH
-      \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET] \\ RES_TAC
+      \\ FULL_SIMP_TAC std_ss [SUBSET_DEF] \\ RES_TAC
       \\ MP_TAC (Q.SPECL [`xs`,`sl`,`v`] params_lemma) \\ ASM_SIMP_TAC std_ss []
       \\ FULL_SIMP_TAC std_ss [FUNION_DEF,LENGTH_MAP,IN_UNION])
     \\ REPEAT STRIP_TAC
@@ -2356,7 +2356,7 @@ val M_ev_IMP_R_ev_lemma = prove(goal,
     \\ FULL_SIMP_TAC (srw_ss()) []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (FULL_SIMP_TAC std_ss [context_ok_def]
-      \\ RES_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+      \\ RES_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
       \\ METIS_TAC [params_lemma])
     \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [GSYM term2term_def]
     \\ IMP_RES_TAC (GEN_ALL MR_ev_term2term)

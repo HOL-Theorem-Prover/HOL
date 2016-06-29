@@ -3529,12 +3529,12 @@ val Q_INFINITE = store_thm
      by (RW_TAC std_ss [SUBSET_DEF,EXTENSION,GSPECIFICATION]
          ++ METIS_TAC [NUM_IN_Q])
   ++ Suff `~(FINITE {x | ?n:num. x = (&n)})`
-  >> METIS_TAC [INFINITE_SUBSET,INFINITE_DEF]
-  ++ RW_TAC std_ss [GSYM INFINITE_DEF]
+  >> METIS_TAC [INFINITE_SUBSET]
+  ++ RW_TAC std_ss []
   ++ MATCH_MP_TAC (INST_TYPE [alpha |-> ``:num``] INFINITE_INJ)
   ++ Q.EXISTS_TAC `(\n. &n)`
   ++ Q.EXISTS_TAC `UNIV`
-  ++ RW_TAC real_ss [INFINITE_NUM_UNIV, INJ_DEF,INFINITE_DEF,GSPECIFICATION]
+  ++ RW_TAC real_ss [INFINITE_NUM_UNIV, INJ_DEF,GSPECIFICATION]
   >> METIS_TAC []
   ++ FULL_SIMP_TAC real_ss [extreal_11,extreal_of_num_def]);
 
@@ -3893,7 +3893,7 @@ val COUNTABLE_ENUM_Q = store_thm
       ++ RW_TAC std_ss [])
   ++  DISJ2_TAC
   ++ ASSUME_TAC (Q.SPECL [`f:extreal->'a`,`Q_set`,`IMAGE f Q_set`] (INST_TYPE [alpha |-> ``:extreal``,``:'b`` |-> ``:'a``] INFINITE_INJ))
-  ++ `~(INJ f Q_set (IMAGE f Q_set))` by METIS_TAC [INFINITE_DEF,MONO_NOT,Q_INFINITE]
+  ++ `~(INJ f Q_set (IMAGE f Q_set))` by METIS_TAC [MONO_NOT,Q_INFINITE]
   ++ FULL_SIMP_TAC std_ss [INJ_DEF] >> METIS_TAC [IN_IMAGE]
   ++ Q.EXISTS_TAC `(\u. if u=x then e else f u)`
   ++ `Q_set = (Q_set DIFF {x}) UNION {x}` by (RW_TAC std_ss [DIFF_DEF,UNION_DEF,EXTENSION,GSPECIFICATION,IN_SING] ++ METIS_TAC [])

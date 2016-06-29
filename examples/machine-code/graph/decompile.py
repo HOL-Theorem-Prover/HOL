@@ -77,7 +77,7 @@ sys.stdout.flush()
 
 printn("Decompiling {0} ... (output in {1})".format(elf,output_file))
 sys.stdout.flush()
-call_input_output('./local-hol-heap',ml_input,output_file)
+call_input_output('hol',ml_input,output_file)
 last_lines = list (open (output_file))[-20:]
 summaries = [i for (i, l) in enumerate (last_lines) if l.strip() == 'Summary']
 if not summaries:

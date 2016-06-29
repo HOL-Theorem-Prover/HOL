@@ -47,7 +47,7 @@ fun tstamp () = pos_tstamp true
 
 structure PMDataSet = struct
   type value = printmap_data
-  type set = value HOLset.set
+  type t = value HOLset.set
   val empty = HOLset.empty pmdata_compare
   val insert = HOLset.add
   val fold = HOLset.foldl

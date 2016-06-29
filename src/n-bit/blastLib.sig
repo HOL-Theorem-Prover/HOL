@@ -1,18 +1,10 @@
 signature blastLib =
 sig
-    include Abbrev
-
-    val BIT_BLAST_CONV : conv
-
-    val BBLAST_CONV      : conv
-    val BBLAST_PROVE     : conv
-    val BBLAST_PROVE_TAC : tactic
-    val BBLAST_RULE      : rule
-    val BBLAST_TAC       : tactic
-    val FULL_BBLAST_TAC  : tactic
-
-    val EBLAST_CONV  : conv
-    val EBLAST_PROVE : conv
-    val EBLAST_RULE  : rule
-    val EBLAST_TAC   : tactic
+    val BBLAST_CONV      : Conv.conv
+    val BBLAST_PROVE     : Conv.conv
+    val BBLAST_PROVE_TAC : Tactic.tactic
+    val BBLAST_RULE      : Conv.rule
+    val BBLAST_TAC       : Tactic.tactic
+    val FULL_BBLAST_TAC  : Tactic.tactic
+    val MP_BLASTABLE_TAC : Tactic.tactic
 end

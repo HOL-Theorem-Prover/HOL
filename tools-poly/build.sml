@@ -12,6 +12,7 @@ datatype phase = Initial | Bare | Full
 
   fun main () = let
 
+    val _ = startup_check()
     val phase = ref Initial
 
 
@@ -21,7 +22,7 @@ datatype phase = Initial | Bare | Full
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
+val {cmdline,build_theory_graph,do_selftests,SRCDIRS,jobcount} =
   process_cline (fn c => c)
 
 open Systeml;
@@ -63,7 +64,9 @@ val Holmake = let
                       SysWord.toString (Posix.Signal.toWord sg)
   end
 in
-  buildutils.Holmake aug_systeml isSuccess phase_extras analysis do_selftests
+  buildutils.Holmake aug_systeml isSuccess
+                     (fn () => ("-j"^Int.toString jobcount) :: phase_extras())
+                     analysis do_selftests
 end
 
 (* create a symbolic link - Unix only *)
@@ -103,17 +106,6 @@ fun upload ((src, regulardir), target, symlink) =
     This allows us to have the build process only occur w.r.t. SIGOBJ
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
-
-fun make_exe (name:string) (POLY : string) (target:string) : unit = let
-  val _ = print ("Building "^target^"\n")
-  val dir = OS.FileSys.getDir()
- in
-   OS.FileSys.chDir (fullPath [HOLDIR, "tools-poly"]);
-   Systeml.system_ps (POLY ^ " < " ^ name);
-   Poly_link {exe = fullPath [Systeml.HOLDIR, "bin", target],
-              obj = target ^ ".o"};
-   OS.FileSys.chDir dir
- end
 
 fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare

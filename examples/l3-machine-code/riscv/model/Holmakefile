@@ -1,1 +1,1 @@
-INCLUDES = ${HOLDIR}/examples/l3-machine-code/common ${HOLDIR}/examples/l3-machine-code/base
+INCLUDES = ../../common

@@ -1072,12 +1072,17 @@ val EQ_ADD_RCANCEL = store_thm ("EQ_ADD_RCANCEL",
   ``!m n p. (m + p = n + p) = (m = n)``,
   ONCE_REWRITE_TAC[ADD_COMM] THEN MATCH_ACCEPT_TAC EQ_ADD_LCANCEL);
 
-val EQ_MULT_LCANCEL = store_thm ("EQ_MULT_LCANCEL",
+val EQ_MULT_LCANCEL = store_thm ("EQ_MULT_LCANCEL[simp]",
   ``!m n p. (m * n = m * p) = (m = 0) \/ (n = p)``,
   INDUCT_TAC THEN REWRITE_TAC[MULT_CLAUSES, NOT_SUC] THEN
   REPEAT INDUCT_TAC THEN
   ASM_REWRITE_TAC[MULT_CLAUSES, ADD_CLAUSES, GSYM NOT_SUC, NOT_SUC] THEN
   ASM_REWRITE_TAC[INV_SUC_EQ, GSYM ADD_ASSOC, EQ_ADD_LCANCEL]);
+
+val EQ_MULT_RCANCEL = store_thm(
+  "EQ_MULT_RCANCEL[simp]",
+  ``!m n p. (n * m = p * m) <=> (m = 0) \/ (n = p)``,
+  ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [EQ_MULT_LCANCEL]);
 
 val ADD_SUB = store_thm ("ADD_SUB",
  ``!a c. (a + c) - c = a``,
@@ -1360,11 +1365,26 @@ val ODD_EXISTS = store_thm ("ODD_EXISTS",
    [REWRITE_TAC[EVEN_ODD_EXISTS],
     DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN MATCH_ACCEPT_TAC ODD_DOUBLE]);
 
+val EVEN_EXP_IFF = Q.store_thm(
+  "EVEN_EXP_IFF",
+  `!n m. EVEN (m ** n) <=> 0 < n /\ EVEN m`,
+  INDUCT_TAC THEN
+  ASM_REWRITE_TAC [EXP, ONE, EVEN, EVEN_MULT, LESS_0, LESS_REFL] THEN
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
+
 val EVEN_EXP = Q.store_thm ("EVEN_EXP",
    `!m n. 0 < n /\ EVEN m ==> EVEN (m ** n)`,
-   REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
-   RW_TAC bool_ss [EXP, EVEN_MULT] THEN
-   METIS_TAC [prim_recTheory.NOT_LESS_0]);
+   METIS_TAC[EVEN_EXP_IFF]);
+
+val ODD_EXP_IFF = Q.store_thm(
+  "ODD_EXP_IFF",
+  `!n m. ODD (m ** n) <=> (n = 0) \/ ODD m`,
+  REWRITE_TAC [ODD_EVEN, EVEN_EXP_IFF, DE_MORGAN_THM, NOT_LT_ZERO_EQ_ZERO]);
+
+val ODD_EXP = Q.store_thm(
+  "ODD_EXP",
+  `!m n. 0 < n /\ ODD m ==> ODD (m ** n)`,
+  METIS_TAC[ODD_EXP_IFF, NOT_LT_ZERO_EQ_ZERO]);
 
 (* --------------------------------------------------------------------- *)
 (* Theorems moved from the "more_arithmetic" library      [RJB 92.09.28] *)
@@ -2994,6 +3014,18 @@ val MAX_0 = store_thm ("MAX_0",
   REWRITE_TAC [MAX] THEN
   PROVE_TAC [NOT_LESS_0, NOT_LESS, LESS_OR_EQ]);
 
+val MAX_EQ_0 = store_thm(
+  "MAX_EQ_0[simp]",
+  ``(MAX m n = 0) <=> (m = 0) /\ (n = 0)``,
+  SRW_TAC[][MAX,EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_0, NOT_LESS]);
+
+val MIN_EQ_0 = store_thm(
+  "MIN_EQ_0[simp]",
+  ``(MIN m n = 0) <=> (m = 0) \/ (n = 0)``,
+  SRW_TAC[][MIN,EQ_IMP_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [NOT_LESS_0, NOT_LESS]);
+
 val MIN_IDEM = store_thm ("MIN_IDEM",
   ``!n. MIN n n = n``,
   PROVE_TAC [MIN]);
@@ -3411,7 +3443,7 @@ val SUC_MOD_lem = Q.prove (
 val SUC_MOD = store_thm ("SUC_MOD",
    ``!n a b. 0 < n ==> ((SUC a MOD n = SUC b MOD n) = (a MOD n = b MOD n))``,
   ASM_SIMP_TAC bool_ss [SUC_MOD_lem] THEN
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   REVERSE EQ_TAC THEN1 SIMP_TAC bool_ss [] THEN
   REPEAT COND_CASES_TAC THEN
   REWRITE_TAC [numTheory.NOT_SUC, SUC_NOT, INV_SUC_EQ] THEN

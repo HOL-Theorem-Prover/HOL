@@ -18,6 +18,22 @@ sig
          | ART of ArticleType
          | Unhandled of string
 
+  (* file lists are dependencies *)
+  datatype buildcmds = Compile of File list
+                     | BuildScript of string * File list
+                     | BuildArticle of string * File list
+                     | ProcessArticle of string
+
+  (* simple list things *)
+  val member : ''a -> ''a list -> bool
+  val set_union : ''a list -> ''a list -> ''a list
+  val delete : ''a -> ''a list -> ''a list
+  val set_diff : ''a list -> ''a list -> ''a list
+  val remove_duplicates : ''a list -> ''a list
+
+  (* fixed constants *)
+  val DEFAULT_OVERLAY : string
+
   (* string/path manipulations *)
   val normPath : string -> string
   val fullPath : string list -> string
@@ -25,15 +41,29 @@ sig
   val nspaces : (string -> unit) -> int -> unit
   val collapse_bslash_lines : string -> string
   val realspace_delimited_fields : string -> string list
+  val kernelid_fname : string
+
+  (* terminal colouring of strings *)
+  val red : string -> string
+  val boldred : string -> string
+  val boldgreen : string -> string
+  val boldyellow : string -> string
+  val bold : string -> string
+  val dim : string -> string
 
   (* diagnostics/output *)
-  type output_functions = {warn : string -> unit, info : string -> unit,
+  type output_functions = {warn : string -> unit,
+                           info : string -> unit,
+                           chatty : string -> unit,
                            tgtfatal : string -> unit,
                            diag : string -> unit}
-  val output_functions : {quiet_flag: bool, debug:bool} -> output_functions
+  (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
+  val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
 
 
+  val check_distrib : string -> string option
+    (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit
@@ -46,10 +76,12 @@ sig
   val codeToString : CodeType -> string
   val articleToString : ArticleType -> string
   val fromFile : File -> string
+  val fromFileNoSuf : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
-  val generate_all_plausible_targets : string option -> File list
+  val generate_all_plausible_targets :
+      (string -> unit) -> string option -> File list
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
@@ -71,6 +103,9 @@ sig
                                includes : 'dir list,
                                preincludes : 'dir list}
   type 'dir holmake_result = 'dir holmake_dirinfo option
+
+  val process_hypat_options :
+      string -> {noecho : bool, ignore_error : bool, command : string}
 
   val maybe_recurse :
       {warn: string -> unit,

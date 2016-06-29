@@ -9,11 +9,11 @@ struct
    infix 6 || ??
    infix 5 @@
 
-   datatype nbit = B of (int * Nat.nat)
+   datatype nbit = B of (IntInf.int * Nat.nat)
 
    fun size (B (_, s)) = s
 
-   fun dim s = IntInf.<< (1, Word.fromInt s)
+   fun dim s = IntInf.<< (1, Word.fromLargeInt s)
    fun pdim s = dim s - 1
    fun BV (n, s) = B (IntInf.andb (n, pdim s), s)
 
@@ -24,13 +24,14 @@ struct
    fun one s = B (1, s)
 
    val fromInt = BV
+   fun fromNativeInt (i, j) = BV (IntInf.fromInt i, Nat.fromNativeInt j)
    fun fromNat (n, s) = fromInt (Nat.toInt n, s)
    fun toNat (B (i, _)) = Nat.fromInt i
    val toUInt = Nat.toInt o toNat
    fun fromBitstring (b, s) = fromNat (Bitstring.toNat b, s)
    fun toBitstring (B (n, s)) =
-      Bitstring.setSize (Nat.toInt s) (Bitstring.fromInt n)
-   fun toString (B (i, _)) = Int.toString i
+      Bitstring.setSize (Nat.toNativeInt s) (Bitstring.fromInt n)
+   fun toString (B (i, _)) = IntInf.toString i
    fun toBinString (B (i, _)) = IntExtra.toBinString i
    fun toHexString (B (i, _)) = IntExtra.toHexString i
 
@@ -62,28 +63,29 @@ struct
                ; w
             end) (Nat.fromLit s)
 
-   fun bits (h,l) =
+   fun bits (h, l) =
       let
-         val w = h + 1 - l
-         val l =  Word.fromInt l
+         val w = Nat.- (Nat.suc h, l)
+         val l =  Word.fromLargeInt l
          val mask = pdim w
       in
-         fn B (i, _) => B (IntInf.andb (mask,IntInf.~>> (i, l)), w)
+         fn B (i, _) => B (IntInf.andb (mask, IntInf.~>> (i, l)), w)
       end
 
-   fun bit (B (a, _), n) = Int.rem (IntInf.~>> (a, Word.fromInt n), 2) = 1
-   fun lsb (B (a, _)) = Int.rem (a, 2) = 1
+   fun bit (B (a, _), n) =
+      IntInf.rem (IntInf.~>> (a, Word.fromLargeInt n), 2) = 1
+   fun lsb (B (a, _)) = IntInf.rem (a, 2) = 1
    fun msb a = bit (a, Nat.- (size a, Nat.one))
 
-   fun neg (B (a, s)) = BV (Int.- (dim s, a), s)
+   fun neg (B (a, s)) = BV (IntInf.- (dim s, a), s)
 
-   fun toInt a = if msb a then Int.~ (toUInt (neg a)) else toUInt a
+   fun toInt a = if msb a then IntInf.~ (toUInt (neg a)) else toUInt a
 
    fun compare (B (a, b), B (c, d)) =
-      L3.pairCompare (Nat.compare, Int.compare) ((b, a), (d, c))
+      L3.pairCompare (Nat.compare, IntInf.compare) ((b, a), (d, c))
 
    fun signedCompare (x as B (_, a), y as B (_, b)) =
-      L3.pairCompare (Nat.compare, Int.compare) ((a, toInt x), (b, toInt y))
+      L3.pairCompare (Nat.compare, IntInf.compare) ((a, toInt x), (b, toInt y))
 
    fun fromBaseString (from, nfrom) (v: string, s) =
       case from v of
@@ -91,7 +93,7 @@ struct
             let
                val w = fromInt (i, s)
                val _ = if i < 0
-                          then toInt w = i orelse rep_error (Int.toString i) s
+                         then toInt w = i orelse rep_error (IntInf.toString i) s
                        else let
                                val n = Option.valOf (nfrom v)
                             in
@@ -127,33 +129,29 @@ struct
           | (false::t) => iter (IntInf.<< (a, 0w1)) t
           | (true::t) => iter (IntInf.orb (IntInf.<< (a, 0w1), 1)) t
    in
-      fun fromList l = B (iter 0 l, Nat.fromInt (List.length l))
+      fun fromList l = B (iter 0 l, Nat.fromNativeInt (List.length l))
    end
-
-   fun modify (f: Nat.nat * bool -> bool, a) =
-      fromList
-         (#1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0)
-                (toList a)))
 
    fun tabulate (s, f: Nat.nat -> bool) =
       let
-         val s = Nat.toInt s
+         val s = Nat.toNativeInt s
       in
-         fromList (List.tabulate (s, fn i => f (Nat.fromInt (s - 1 - i))))
+         fromList (List.tabulate (s, fn i => f (Nat.fromNativeInt (s - 1 - i))))
       end
       handle Fail _ => raise Fail "tabulate"
 
    val reverse = fromList o List.rev o toList
 
-   fun log2 (B (a, s)) = B (IntInf.log2 a, s)
+   fun log2 (B (a, s)) = B (IntInf.fromInt (IntInf.log2 a), s)
 
    fun zeroExtend s (B (n, _)) = B (n, s)
 
    fun signExtend s2 (a as B (n, s1)) =
-      B (Int.+ (if msb a then (Int.- (dim s2, dim s1)) else 0, n), s2)
+      B (IntInf.+ (if msb a then (IntInf.- (dim s2, dim s1)) else 0, n), s2)
 
    fun op @@ (a as B (v1, s1), b as B (v2, s2)) =
-      B (IntInf.orb (IntInf.<< (v1, Word.fromInt s2), v2), Int.+ (s1, s2))
+      B (IntInf.orb (IntInf.<< (v1, Word.fromLargeInt s2), v2),
+         IntInf.+ (s1, s2))
 
    fun concat [] = raise Fail "concat: empty"
      | concat l = let val r = List.rev l in List.foldl (op @@) (hd r) (tl r) end
@@ -165,20 +163,20 @@ struct
          val l = toList a
          val m = pred s1
       in
-         tabulate (s1 * n, fn i => List.nth (l, toInt (m - i mod s1)))
+         tabulate (s1 * n, fn i => List.nth (l, toNativeInt (m - i mod s1)))
       end
 
    fun resize_replicate i = resize i o replicate
 
-   fun bitFieldInsert (h,l) =
+   fun bitFieldInsert (h, l) =
       let
          val dl = dim l
          val dh = dim (h + 1)
-         val wl = Word.fromInt l
+         val wl = Word.fromLargeInt l
       in
          fn (B (v, s), B (w, _)) =>
             let
-               val mask = Int.max (Int.min (dim s, dh) - dl, 0)
+               val mask = IntInf.max (IntInf.min (dim s, dh) - dl, 0)
                val w' = IntInf.<< (w, wl)
             in
                B (IntInf.orb (IntInf.andb (IntInf.notb mask, v),
@@ -186,39 +184,39 @@ struct
             end
       end
 
-   fun op <+  (B (v1, _), B (v2, _)) = Int.< (v1, v2)
-   fun op <=+ (B (v1, _), B (v2, _)) = Int.<= (v1, v2)
-   fun op >+  (B (v1, _), B (v2, _)) = Int.> (v1, v2)
-   fun op >=+ (B (v1, _), B (v2, _)) = Int.>= (v1, v2)
+   fun op <+  (B (v1, _), B (v2, _)) = IntInf.< (v1, v2)
+   fun op <=+ (B (v1, _), B (v2, _)) = IntInf.<= (v1, v2)
+   fun op >+  (B (v1, _), B (v2, _)) = IntInf.> (v1, v2)
+   fun op >=+ (B (v1, _), B (v2, _)) = IntInf.>= (v1, v2)
 
-   fun op <  (w1, w2) = Int.< (toInt w1, toInt w2)
-   fun op <= (w1, w2) = Int.<= (toInt w1, toInt w2)
-   fun op >  (w1, w2) = Int.> (toInt w1, toInt w2)
-   fun op >= (w1, w2) = Int.>= (toInt w1, toInt w2)
+   fun op <  (w1, w2) = IntInf.< (toInt w1, toInt w2)
+   fun op <= (w1, w2) = IntInf.<= (toInt w1, toInt w2)
+   fun op >  (w1, w2) = IntInf.> (toInt w1, toInt w2)
+   fun op >= (w1, w2) = IntInf.>= (toInt w1, toInt w2)
 
    fun op && (B (v1, _), B (v2, s)) = B (IntInf.andb (v1, v2), s)
    fun op || (B (v1, _), B (v2, s)) = B (IntInf.orb (v1, v2), s)
    fun op ?? (B (v1, _), B (v2, s)) = B (IntInf.xorb (v1, v2), s)
-   fun op div (B (v1, _), B (v2, s)) = B (Int.div (v1, v2), s)
-   fun op mod (B (v1, _), B (v2, s)) = B (Int.mod (v1, v2), s)
+   fun op div (B (v1, _), B (v2, s)) = B (IntInf.div (v1, v2), s)
+   fun op mod (B (v1, _), B (v2, s)) = B (IntInf.mod (v1, v2), s)
 
-   fun op quot (a, b as B (_, s)) = fromInt (Int.quot (toInt a, toInt b), s)
-   fun op rem (a, b as B (_, s)) = fromInt (Int.rem (toInt a, toInt b), s)
+   fun op quot (a, b as B (_, s)) = fromInt (IntInf.quot (toInt a, toInt b), s)
+   fun op rem (a, b as B (_, s)) = fromInt (IntInf.rem (toInt a, toInt b), s)
 
-   fun min (B (v1, _), B (v2, s)) = B (Int.min (v1, v2), s)
-   fun max (B (v1, _), B (v2, s)) = B (Int.max (v1, v2), s)
+   fun min (B (v1, _), B (v2, s)) = B (IntInf.min (v1, v2), s)
+   fun max (B (v1, _), B (v2, s)) = B (IntInf.max (v1, v2), s)
 
-   fun smin (w1, w2 as B (_, s)) = fromInt (Int.min (toInt w1, toInt w2), s)
-   fun smax (w1, w2 as B (_, s)) = fromInt (Int.max (toInt w1, toInt w2), s)
+   fun smin (w1, w2 as B (_, s)) = fromInt (IntInf.min (toInt w1, toInt w2), s)
+   fun smax (w1, w2 as B (_, s)) = fromInt (IntInf.max (toInt w1, toInt w2), s)
 
    fun op << (B (v, s), n) =
-      BV (IntInf.<< (v, Word.fromInt (Int.min (n, s))), s)
+      BV (IntInf.<< (v, Word.fromLargeInt (IntInf.min (n, s))), s)
 
-   fun op >>+ (B (v, s), n) = B (IntInf.~>> (v, Word.fromInt n), s)
+   fun op >>+ (B (v, s), n) = B (IntInf.~>> (v, Word.fromLargeInt n), s)
 
    fun op >> (a as B (_, s), n) =
       if msb a
-         then fromInt (dim s - dim (s - Int.min (n, s)), s) || a >>+ n
+         then fromInt (dim s - dim (s - IntInf.min (n, s)), s) || a >>+ n
       else a >>+ n
 
    fun op #>> (a as B (_, s), n) =
@@ -237,8 +235,8 @@ struct
    fun op #>>^ (w, v) = w #>> toNat v
    fun op #<<^ (w, v) = w #<< toNat v
 
-   fun op * (B (v1, _), B (v2, s)) = BV (Int.* (v1, v2), s)
-   fun op + (B (v1, _), B (v2, s)) = BV (Int.+ (v1, v2), s)
+   fun op * (B (v1, _), B (v2, s)) = BV (IntInf.* (v1, v2), s)
+   fun op + (B (v1, _), B (v2, s)) = BV (IntInf.+ (v1, v2), s)
 
    fun op ~ (B (a, s)) = BV (IntInf.notb a, s)
 

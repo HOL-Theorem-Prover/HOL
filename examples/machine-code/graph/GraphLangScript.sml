@@ -1609,7 +1609,8 @@ val decomp_simp1 = prove(
 
 val decomp_simp1 = save_thm("decomp_simp1",
   LIST_CONJ [GSYM word32_def,Aligned_thm,Aligned2_thm,ALIGNED,
-        decomp_simp1,word_extract_thm,ALIGNED_INTRO,w2n_eq,byte_lemma])
+        decomp_simp1,word_extract_thm,word_bits_mask,word_extract_w2w_mask,
+        ALIGNED_INTRO,w2n_eq,byte_lemma])
 
 val decomp_simp2 = store_thm("decomp_simp2",
   ``(K x = \y. x) /\ (SUC = \n. n + 1)``,
@@ -1898,6 +1899,24 @@ val fix_align = blastLib.BBLAST_PROVE
     ((31 '' 1) w = w >>> 1 << 1) /\
     ((31 '' 0) w = w)``;
 
+val w2w_w2w_and_255 = prove(
+  ``w2w ((w2w:word32->word8) v) = (v && 0xFFw)``,
+  blastLib.BBLAST_TAC)
+
+val Shift_intro = prove(
+  ``(w >> w2n ((w2w:word32->word8) v) = SignedShiftRight w (v && 0xFFw)) /\
+    (w >>> w2n ((w2w:word32->word8) v) = ShiftRight w (v && 0xFFw)) /\
+    (w << w2n ((w2w:word32->word8) v) = ShiftLeft w (v && 0xFFw))``,
+  fs [SignedShiftRight_def,ShiftRight_def,ShiftLeft_def,GSYM w2w_w2w_and_255]
+  \\ fs [w2w_def,w2n_n2w]
+  \\ `w2n v MOD 256 < 4294967296` by all_tac \\ fs []
+  \\ match_mp_tac LESS_TRANS \\ qexists_tac `256` \\ fs []);
+
+val blast_append_0_lemma = prove(
+  ``(((w2w:word32 -> 31 word) w @@ (0w:word1)) : word32 = w << 1) /\
+    (((w2w:word32 -> 30 word) w @@ (0w:word2)) : word32 = w << 2)``,
+  blastLib.BBLAST_TAC);
+
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
@@ -1906,6 +1925,8 @@ val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   |> CONJ carry_out_eq
   |> CONJ word_add_with_carry_eq
   |> CONJ fix_align
+  |> CONJ Shift_intro
+  |> CONJ blast_append_0_lemma
   |> RW [GSYM CONJ_ASSOC]
   |> SIMP_RULE std_ss [])
 
@@ -1972,5 +1993,65 @@ val ABBBREV_CODE_LEMMA = store_thm("ABBBREV_CODE_LEMMA",
 val NEQ_SYM = store_thm("NEQ_SYM",
   ``~(x = y) <=> ~(y = x)``,
   METIS_TAC []);
+
+val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
+  ``IMPL_INST code locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name.
+      (locs name = SOME entry) ==>
+      IMPL_INST code locs
+       (Inst entry (K T)
+         (CALL NONE
+           [("ret",(\s. VarWord32 exit)); ("r0",var_acc "r0");
+            ("r1",var_acc "r1"); ("r2",var_acc "r2");
+            ("r3",var_acc "r3"); ("r4",var_acc "r4");
+            ("r5",var_acc "r5"); ("r6",var_acc "r6");
+            ("r7",var_acc "r7"); ("r8",var_acc "r8");
+            ("r9",var_acc "r9"); ("r10",var_acc "r10");
+            ("r11",var_acc "r11"); ("r12",var_acc "r12");
+            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+            ("mode",var_acc "mode"); ("n",var_acc "n");
+            ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
+            ("mem",var_acc "mem"); ("dom",var_acc "dom");
+            ("stack",var_acc "stack");
+            ("dom_stack",var_acc "dom_stack");
+            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+          name (Jump exit)))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM]
+  \\ Cases_on `code`
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
+         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL])
+
+val fixwidth_w2v = prove(
+  ``fixwidth (dimindex (:'a)) (w2v (w:'a word)) = w2v w``,
+  EVAL_TAC \\ fs []);
+
+val v2w_field_insert_31_16 = prove(
+  ``(v2w (field_insert 31 16
+                      (field 15 0 (w2v (w:word32)))
+                      (w2v (v:word32)))) =
+    bit_field_insert 31 16 w v``,
+  fs [bit_field_insert_def,bitstringTheory.field_insert_def]
+  \\ once_rewrite_tac [GSYM fixwidth_w2v]
+  \\ rewrite_tac [GSYM bitstringTheory.word_modify_v2w,bitstringTheory.v2w_w2v]
+  \\ AP_THM_TAC \\ AP_TERM_TAC \\ fs [FUN_EQ_THM]
+  \\ rpt strip_tac \\ IF_CASES_TAC \\ fs []
+  \\ EVAL_TAC \\ Cases_on `i` \\ fs []
+  \\ rpt (Cases_on `n` \\ fs [] \\ Cases_on `n'` \\ fs []));
+
+val export_init_rw = save_thm("export_init_rw",v2w_field_insert_31_16);
 
 val _ = export_theory();

@@ -119,6 +119,10 @@ sig
  val TUPLE_TAC        : term -> tactic
 
  val LET_INTRO_TAC    : tactic
+ val split_uncurry_arg_tac : term -> tactic
+ val pairarg_tac      : tactic
+ val split_pair_case0_tac : term -> tactic
+ val split_pair_case_tac : tactic
 
  val new_specification : string * string list * thm -> thm
 end

@@ -1,4 +1,4 @@
-open PPBackEnd PP Lib Type;
+open PPBackEnd PP Lib Type testutils
 
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
@@ -163,22 +163,16 @@ end;
 
 val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
-fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 fun quoteToString [QUOTE s] = "`"^s^"`"
   | quoteToString _ = die "Bad test quotation"
-fun tprint q = let
-  val qs = "Testing "^quoteToString q
-in
-  StringCvt.padRight #" " 65 qs
-end
 
 fun test (q, slist) = let
-  val _ = print (tprint q)
+  val _ = tprint ("Testing " ^ quoteToString q)
 in
   if map (base_tokens.toString o #1) (qbuf.lex_to_toklist q) <> slist then
     die "FAILED!"
-  else print "OK\n"
+  else OK()
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 
@@ -205,10 +199,9 @@ val _ = app test [(`abc`, ["abc"]),
 
 (* tests of the term lexer *)
 fun test (s, toklist : unit term_tokens.term_token list) = let
-  val _ = print (StringCvt.padRight #" " 65
-                                    ("Term token testing " ^ Lib.quote s))
+  val _ = tprint ("Term token testing " ^ Lib.quote s)
 in
-  if term_tokens.lextest [] s = toklist then print "OK\n"
+  if term_tokens.lextest [] s = toklist then OK()
   else die "FAILED!"
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")

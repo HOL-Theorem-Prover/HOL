@@ -16,6 +16,7 @@ sig
  val curry_tm        : term
  val pair_map_tm     : term
  val lex_tm          : term
+ val pair_case_tm    : term
 
  val mk_pair         : term * term -> term
  val mk_fst          : term -> term
@@ -32,6 +33,7 @@ sig
  val mk_pselect      : term * term -> term
  val mk_plet         : term * term * term -> term
  val mk_anylet       : (term * term) list * term -> term
+ val mk_pair_case    : {pairtm : term, ftm : term} -> term
 
  val dest_pair       : term -> term * term
  val dest_fst        : term -> term
@@ -51,6 +53,8 @@ sig
  val dest_pexists1   : term -> term * term
  val dest_pselect    : term -> term * term
  val dest_pbinder    : term -> exn -> term -> term * term
+ val dest_pair_case  : term -> {pairtm : term, ftm: term}
+
 
  val list_mk_pair    : term list -> term
  val list_mk_pabs    : term list * term -> term
@@ -67,6 +71,7 @@ sig
 
 
  val is_pair         : term -> bool
+ val is_pair_case    : term -> bool
  val is_fst          : term -> bool
  val is_snd          : term -> bool
  val is_swap         : term -> bool

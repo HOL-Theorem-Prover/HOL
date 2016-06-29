@@ -37,11 +37,19 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
      relationTheory
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
+fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
+
+val rw = SRW_TAC []
+val metis_tac = METIS_TAC
+fun fs l = FULL_SIMP_TAC (srw_ss()) l
+
 
 val _ = new_theory "list";
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
-val zDefine = Lib.with_flag (computeLib.auto_import_definitions,false) Define
+val zDefine = Lib.with_flag (computeLib.auto_import_definitions, false) Define
+val dDefine = Lib.with_flag (Defn.def_suffix, "_DEF") Define
+val bDefine = Lib.with_flag (Defn.def_suffix, "") Define
 
 val NOT_SUC      = numTheory.NOT_SUC
 and INV_SUC      = numTheory.INV_SUC
@@ -205,8 +213,6 @@ val LIST_TO_SET = store_thm(
   SRW_TAC [] [FUN_EQ_THM, IN_DEF]);
 val _ = export_rewrites ["LIST_TO_SET"]
 
-val IN_LIST_TO_SET = save_thm("IN_LIST_TO_SET", TRUTH)
-
 val FILTER = new_recursive_definition
       {name = "FILTER",
        rec_axiom = list_Axiom,
@@ -264,10 +270,9 @@ val EL = new_recursive_definition
 (* [TFM 92.04.21]							*)
 (* ---------------------------------------------------------------------*)
 
-val MAP2_DEF = Define`
+val MAP2_DEF = dDefine`
   (MAP2 f (h1::t1) (h2::t2) = f h1 h2::MAP2 f t1 t2) /\
   (MAP2 f x y = [])`
-val _ = delete_const "MAP2_tupled"
 
 val MAP2 = store_thm ("MAP2",
 ``(!f. MAP2 f [] [] = []) /\
@@ -297,7 +302,7 @@ val NULL = store_thm ("NULL",
 (* |- P [] /\ (!t. P t ==> !h. P(h::t)) ==> (!x.P x)                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_INDUCT0 = TypeBase.induction_of ``:'a list``;
+val list_INDUCT0 = save_thm("list_INDUCT0",TypeBase.induction_of ``:'a list``);
 
 val list_INDUCT = Q.store_thm
 ("list_INDUCT",
@@ -450,6 +455,14 @@ val EL_MAP = store_thm("EL_MAP",
     (--`!n l. n < (LENGTH l) ==> !f:'a->'b. EL n (MAP f l) = f (EL n l)`--),
     INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[LENGTH, EL, MAP, LESS_MONO_EQ, NOT_LESS_0, HD, TL]);
+
+val EL_APPEND_EQN = store_thm(
+  "EL_APPEND_EQN",
+  ``!l1 l2 n.
+       EL n (l1 ++ l2) =
+       if n < LENGTH l1 then EL n l1 else EL (n - LENGTH l1) l2``,
+  LIST_INDUCT_TAC >> simp_tac (srw_ss()) [] >> Cases_on `n` >>
+  asm_simp_tac (srw_ss()) [EL])
 
 val MAP_TL = Q.store_thm("MAP_TL",
   `!l f. ~NULL l ==> (MAP f (TL l) = TL (MAP f l))`,
@@ -1549,6 +1562,13 @@ val LAST_EL = store_thm(
 Induct THEN SRW_TAC[] [] THEN
 Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
 
+val LAST_MAP = store_thm(
+  "LAST_MAP[simp]",
+  ``!l f. l <> [] ==> (LAST (MAP f l) = f (LAST l))``,
+  rpt strip_tac >> `?h t. l = h::t` by METIS_TAC[list_CASES] >>
+  srw_tac[][MAP] >> Q.ID_SPEC_TAC `h` >> Induct_on `t` >>
+  asm_simp_tac (srw_ss()) []);
+
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
   ``(!x:'a. FRONT [x] = []) /\
@@ -1674,7 +1694,6 @@ val FOLDL2_def = Define`
   (FOLDL2 f a (b::bs) (c::cs) = FOLDL2 f (f a b c) bs cs) /\
   (FOLDL2 f a bs cs = a)`
 val _ = export_rewrites["FOLDL2_def"]
-val _ = delete_const "FOLDL2_tupled"
 
 val FOLDL2_cong = store_thm(
 "FOLDL2_cong",
@@ -1822,7 +1841,7 @@ val ALL_DISTINCT_ZIP_SWAP = store_thm(
    METIS_TAC [])
 
 val ALL_DISTINCT_REVERSE = store_thm (
-   "ALL_DISTINCT_REVERSE",
+   "ALL_DISTINCT_REVERSE[simp]",
    ``!l. ALL_DISTINCT (REVERSE l) = ALL_DISTINCT l``,
    SIMP_TAC bool_ss [ALL_DISTINCT_FILTER, MEM_REVERSE, FILTER_REVERSE] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1832,6 +1851,10 @@ val ALL_DISTINCT_REVERSE = store_thm (
       ASM_SIMP_TAC bool_ss [REVERSE_DEF, APPEND]
    ]);
 
+val ALL_DISTINCT_FLAT_REVERSE = store_thm("ALL_DISTINCT_FLAT_REVERSE[simp]",
+  ``!xs. ALL_DISTINCT (FLAT (REVERSE xs)) = ALL_DISTINCT (FLAT xs)``,
+  Induct \\ FULL_SIMP_TAC(srw_ss())[ALL_DISTINCT_APPEND]
+  \\ FULL_SIMP_TAC(srw_ss())[MEM_FLAT,PULL_EXISTS] \\ METIS_TAC []);
 
 (* ----------------------------------------------------------------------
     LRC
@@ -1974,8 +1997,8 @@ val LIST_TO_SET_FILTER = store_thm(
     unspecified.
    ---------------------------------------------------------------------- *)
 
-val _ = Defn.def_suffix := "";
-val SET_TO_LIST_defn = Defn.Hol_defn "SET_TO_LIST"
+val SET_TO_LIST_defn = Lib.with_flag (Defn.def_suffix, "") Defn.Hol_defn
+  "SET_TO_LIST"
   `SET_TO_LIST s =
      if FINITE s then
         if s={} then []
@@ -2077,7 +2100,7 @@ SRW_TAC [] [pred_setTheory.ITSET_THM, SET_TO_LIST_THM, FOLDL]);
     isPREFIX
    ---------------------------------------------------------------------- *)
 
-val isPREFIX = Define`
+val isPREFIX = bDefine`
   (isPREFIX [] l = T) /\
   (isPREFIX (h::t) l = case l of [] => F
                                | h'::t' => (h = h') /\ isPREFIX t t')
@@ -2293,7 +2316,7 @@ val LENGTH_GENLIST = store_thm("LENGTH_GENLIST",
     THEN ASM_REWRITE_TAC[GENLIST, LENGTH, LENGTH_SNOC]);
 val _ = export_rewrites ["LENGTH_GENLIST"]
 
-val GENLIST_AUX = Define`
+val GENLIST_AUX = bDefine`
   (GENLIST_AUX f 0 l = l) /\
   (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
 
@@ -2308,10 +2331,10 @@ val _ = export_rewrites ["GENLIST_AUX_compute"]
        List padding (left and right)
  ---------------------------------------------------------------------------*)
 
-val PAD_LEFT_def = Define`
+val PAD_LEFT = bDefine`
   PAD_LEFT c n s = (GENLIST (K c) (n - LENGTH s)) ++ s`;
 
-val PAD_RIGHT_def = Define`
+val PAD_RIGHT = bDefine`
   PAD_RIGHT c n s = s ++ (GENLIST (K c) (n - LENGTH s))`;
 
 (*---------------------------------------------------------------------------
@@ -2539,7 +2562,7 @@ val _ = export_rewrites["MAP_ZIP_SAME"]
 val INFINITE_LIST_UNIV = store_thm(
   "INFINITE_LIST_UNIV",
   ``INFINITE univ(:'a list)``,
-  REWRITE_TAC [GSYM INFINITE_DEF] THEN
+  REWRITE_TAC [] THEN
   SRW_TAC [] [INFINITE_UNIV] THEN
   Q.EXISTS_TAC `\l. x::l` THEN SRW_TAC [] [] THEN
   Q.EXISTS_TAC `[]` THEN SRW_TAC [] [])
@@ -2550,15 +2573,13 @@ val _ = export_rewrites ["INFINITE_LIST_UNIV"]
 (* Tail recursive versions for better memory usage when applied in ML        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Defn.def_suffix := "_DEF";
-
 (* EVAL performance of LEN seems to be worse than of LENGTH *)
 
-val LEN_DEF = Define
+val LEN_DEF = dDefine
   `(LEN [] n = n) /\
    (LEN (h::t) n = LEN t (n+1))`;
 
-val REV_DEF = Define
+val REV_DEF = dDefine
   `(REV [] acc = acc) /\
    (REV (h::t) acc = REV t (h::acc))`;
 
@@ -2584,7 +2605,7 @@ val REVERSE_REV = Q.store_thm
  `!L. REVERSE L = REV L []`,
  PROVE_TAC [REV_REVERSE_LEM, APPEND_NIL]);
 
-val SUM_ACC_DEF = Define
+val SUM_ACC_DEF = dDefine
   `(SUM_ACC [] acc = acc) /\
    (SUM_ACC (h::t) acc = SUM_ACC t (h+acc))`
 
@@ -2701,6 +2722,10 @@ in
       Definition.new_specification
          ("LUPDATE_def", ["LUPDATE"], lupdate_exists)
 end;
+
+val LUPDATE_NIL = store_thm("LUPDATE_NIL[simp]",
+  ``!xs n x. (LUPDATE x n xs = []) <=> (xs = [])``,
+  Cases \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]);
 
 val LUPDATE_SEM = store_thm ("LUPDATE_SEM",
   ``(!e:'a n l. LENGTH (LUPDATE e n l) = LENGTH l) /\
@@ -3065,21 +3090,22 @@ val LLEX_not_WF = store_thm(
   ONCE_REWRITE_TAC [GENLIST_CONS] THEN
   ASM_SIMP_TAC (srw_ss()) [LLEX_def]);
 
-
+val LLEX_EL_THM = store_thm("LLEX_EL_THM",
+  ``!R l1 l2. LLEX R l1 l2 <=>
+              ?n. n <= LENGTH l1 /\ n < LENGTH l2 /\
+                  (TAKE n l1 = TAKE n l2) /\
+                  (n < LENGTH l1 ==> R (EL n l1) (EL n l2))``,
+  GEN_TAC THEN Induct THEN Cases_on`l2` THEN SRW_TAC[][] THEN
+  SRW_TAC[][EQ_IMP_THM] THEN1 (
+    Q.EXISTS_TAC`0` THEN SRW_TAC[][] )
+  THEN1 (
+    Q.EXISTS_TAC`SUC n` THEN SRW_TAC[][] ) THEN
+  Cases_on`n` THEN FULL_SIMP_TAC(srw_ss())[] THEN
+  METIS_TAC[])
 
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
-
-local
-  val op>> = op Tactical.THEN
-  val rw = SRW_TAC []
-  val metis_tac = METIS_TAC
-  val fs = FULL_SIMP_TAC (srw_ss())
-  val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
-in
-
-val () = Defn.def_suffix := "_def";
 
 (* nub *)
 
@@ -3255,7 +3281,8 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> rw []
    THEN1 (FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) >> rw [])
    >> FIRST_X_ASSUM MATCH_MP_TAC
-   >> Q.EXISTS_TAC`t'`
+   >> Q.RENAME_TAC [`LIST_REL _ l1 l2`, `LIST_REL _ l2 l3`]
+   >> Q.EXISTS_TAC`l2`
    >> rw []
    >> FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC)
    >> simp []);
@@ -3299,13 +3326,10 @@ val LIST_EQ_MAP_PAIR = Q.store_thm("LIST_EQ_MAP_PAIR",
    THEN METIS_TAC [pair_CASES, PAIR_EQ])
 
 val TAKE_SUM = Q.store_thm("TAKE_SUM",
-   `!n m l. n + m <= LENGTH l ==>
-            (TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l))`,
-   Induct_on `l`
-   THEN SRW_TAC [] []
-   THEN SRW_TAC [] []
-   THEN Cases_on `n`
-   THEN FULL_SIMP_TAC arith_ss [arithmeticTheory.ADD1])
+   `!n m l. TAKE (n + m) l = TAKE n l ++ TAKE m (DROP n l)`,
+   Induct_on `l` >> simp[] >> rw[] >> simp[] >>
+   `m + n - 1 = (n - 1) + m` by simp[] >>
+   ASM_REWRITE_TAC[]);
 
 val ALL_DISTINCT_FILTER_EL_IMP = Q.store_thm("ALL_DISTINCT_FILTER_EL_IMP",
    `!P l n1 n2.
@@ -3545,7 +3569,6 @@ val LUPDATE_SAME = store_thm("LUPDATE_SAME",
   ``!n ls. n < LENGTH ls ==> (LUPDATE (EL n ls) n ls = ls)``,
   rw[LIST_EQ_REWRITE,EL_LUPDATE]>>rw[])
 
-end;
 (* end CakeML lemmas *)
 
 
@@ -3578,30 +3601,25 @@ val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
                                   "MAP2_CONG", "EVERY2_cong", "FOLDL2_cong",
                                   "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
-   fun NL() = PP.add_newline ppstrm
- in
-   S "val _ = let open computeLib";
-   S "        in add_funs [APPEND, APPEND_NIL, FLAT, HD, TL,";
-   S "             LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF, DROP_compute,";
-   S "             EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR, TAKE_compute,";
-   S "             FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,";
-   S "             EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute,";
-   S "             GENLIST_NUMERALS, computeLib.lazyfy_thm list_case_compute,";
-   S "             list_size_def, FRONT_DEF, LAST_compute, isPREFIX]";
-   S "        end;";
-   NL(); NL();
-   S "val _ =";
-   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"list\",Tyop=\"list\"})";
-   S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
-   S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
-   S "  in TypeBase.write [list_info']";
-   S "  end;"
- end)};
+val _ = Theory.quote_adjoin_to_theory `none`
+`val _ = computeLib.add_funs
+  [APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2, NULL_DEF, MEM,
+   EXISTS_DEF, DROP_compute, EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+   TAKE_compute, FOLDL, REVERSE_REV, SUM_SUM_ACC, ALL_DISTINCT, GENLIST_AUX,
+   EL_restricted, EL_simp_restricted, SNOC, LUPDATE_compute, GENLIST_NUMERALS,
+   computeLib.lazyfy_thm list_case_compute, list_size_def, FRONT_DEF,
+   LAST_compute, isPREFIX]
+
+val _ =
+  let
+    val list_info = Option.valOf (TypeBase.read {Thy = "list", Tyop="list"})
+    val lift_list =
+      mk_var ("listSyntax.lift_list",
+              Parse.Type^`: 'type -> ('a -> 'term) -> 'a list -> 'term^`)
+    val list_info' = TypeBasePure.put_lift lift_list list_info
+  in
+    TypeBase.write [list_info']
+  end;`
 
 val _ = export_rewrites
           ["APPEND_11",

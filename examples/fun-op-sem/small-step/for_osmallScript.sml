@@ -606,7 +606,7 @@ val sem_e_not_timeout = Q.prove (
 
 val sem_e_not_break = Q.prove(
 `!st e r. sem_e st e ≠ (Rbreak,r)`,
- Induct_on`e`>>rw[sem_e_def]>>
+ Induct_on`e`>>srw_tac[][sem_e_def]>>
  ect>>
  fs[LET_THM,unpermute_pair_def,permute_pair_def,oracle_get_def]>>
  TRY(qpat_assum`A=(fst_e,snd_e)` mp_tac)>>
@@ -637,6 +637,7 @@ val check_trace_tl = Q.prove(`
  Cases_on`t`>>fs[check_trace_def])
 
 (* Start connecting functional big step to small step traces *)
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val sem_e_big_small_lem = Q.prove(
 `!s e r.
   sem_e s e = r
@@ -830,6 +831,7 @@ val sem_e_big_small_lem = Q.prove(
    >>
      qexists_tac`MAP (λst,e. (st,Putchar e)) tr`>>unabbrev_all_tac>>
      fs[HD_MAP,res_rel_e_cases,LAST_MAP,is_val_e_def,check_trace_putchar,no_step_e_putchar]))
+end
 
 val sem_t_for_no_break = Q.prove(
  `∀s s'. sem_t s (For e1 e2 t) ≠ (Rbreak,s')`,
@@ -869,6 +871,7 @@ val step_e_zero_clock = Q.prove(
  `r with clock:= r.clock = r` by fs[state_component_equality]>>
  metis_tac[])
 
+local val rw = srw_tac[] val fs = fsrw_tac[] in
 val big_small_lem = Q.prove (
 `!s t r.
   sem_t s t = r
@@ -1148,6 +1151,7 @@ val big_small_lem = Q.prove (
      match_mp_tac no_step_t_handle>>fs[is_val_t_def]>>
      imp_res_tac step_e_zero_clock>>
      metis_tac[no_step_t_if1]))
+end
 
 val big_timeout_0 = Q.prove (
 `!st p r.
@@ -1288,7 +1292,7 @@ val sem_e_ignores_clock = Q.prove(
  `∀s e c r s'.
   sem_e s e = (r,s') ⇒
   sem_e (s with clock:=c) e = (r,s' with clock:=c)`,
-  ho_match_mp_tac sem_e_ind>>rw[sem_e_def]>>fs[LET_THM]
+  ho_match_mp_tac sem_e_ind>>srw_tac[][sem_e_def]>>fs[LET_THM]
   >-
     (ect>>fs[])
   >-

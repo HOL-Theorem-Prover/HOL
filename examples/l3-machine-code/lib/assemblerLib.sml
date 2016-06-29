@@ -50,9 +50,9 @@ val printLines: lines -> unit =
 fun dropLastChar "" = ""
   | dropLastChar s = String.substring (s, 0, String.size s - 1)
 
-fun hex w = StringCvt.padLeft #"0" (BitsN.size w div 4)
+fun hex w = StringCvt.padLeft #"0" (Nat.toNativeInt (BitsN.size w) div 4)
               (L3.lowercase (BitsN.toHexString w))
 
-fun word n s = Option.valOf (BitsN.fromHexString (s, n))
+fun word n s = Option.valOf (BitsN.fromHexString (s, Nat.fromNativeInt n))
 
 end

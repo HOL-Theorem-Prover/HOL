@@ -23,7 +23,7 @@ fun typrinttest s expected =
 
 val _ = typrinttest ":bool -> bool"
                     (if unprivthy = "gh294a" then ":gh294a$foo"
-                     else ":bool -> bool -> bool")
+                     else ":bool -> bool")
 val _ = typrinttest ":bool -> bool -> bool"
                     (if unprivthy = "gh294a" then ":bool -> gh294a$foo"
                      else ":gh294b$foo")

@@ -127,11 +127,12 @@ fun arm_syntax_pass2 ldict l =
             (case Redblackmap.peek (ldict, label) of
                 SOME lpc =>
                  let
-                    val offset = BitsN.fromInt (4 * (lpc - !pc - 2), 32)
+                    val offset = BitsN.fromNativeInt (4 * (lpc - !pc - 2), 32)
                     val (add, uoffset) =
                        if !pc + 2 <= lpc
                            then (true, offset)
-                       else (false, BitsN.fromInt (4 * (!pc + 2 - lpc), 32))
+                       else (false,
+                             BitsN.fromNativeInt (4 * (!pc + 2 - lpc), 32))
                  in
                     Portable.inc pc
                   ; encode (line, cond,
@@ -227,7 +228,7 @@ local
       let
          val w = assemblerLib.word 32 s
          val c = BitsN.bits (31, 28) w
-         val () = arm.SetPassCondition c
+         val () = (init(); arm.SetPassCondition c)
          val h = StringCvt.padLeft #"0" 8 (L3.lowercase s)
          val (m, a) = arm.instructionToString (c, arm.DecodeARM w)
                       handle arm.UNPREDICTABLE _ => ("WORD", h)

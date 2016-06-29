@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/examples/balanced_bst $(HOLDIR)/examples/formal-languages
+EXTRA_CLEANS = $(wildcard *.tex)

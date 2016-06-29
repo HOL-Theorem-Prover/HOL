@@ -21,7 +21,7 @@ sig
 
   val enum_type_to_tyinfo : string * string list -> tyinfo * string
 
-  val update_tyinfo : string -> thm -> thm -> tyinfo -> tyinfo
+  val update_tyinfo : thm -> thm -> (string * thm) option -> tyinfo -> tyinfo
 
 end
 

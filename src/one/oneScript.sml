@@ -28,6 +28,13 @@ open Lib HolKernel Parse boolLib BasicProvers
 
 val _ = new_theory "one";
 
+local open OpenTheoryMap in
+val ns = ["Data","Unit"]
+val _ = OpenTheory_tyop_name{tyop={Thy="one",Tyop="one"},name=(ns,"unit")}
+val _ = OpenTheory_const_name{const={Thy="one",Name="one"},name=(ns,"()")}
+val _ = OpenTheory_const_name{const={Thy="one",Name="one_CASE"},name=(ns,"case")}
+end
+
 (* ---------------------------------------------------------------------*)
 (* Introduce the new type.						*)
 (* The type :one will be represented by the subset {T} of :bool.	*)
@@ -127,11 +134,6 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
 
 val _ = overload_on ("()", ``one``);
 val _ = type_abbrev("unit",``:one``);
-local open OpenTheoryMap in
-val ns = ["Data","Unit"]
-val _ = OpenTheory_tyop_name{tyop={Thy="one",Tyop="one"},name=(ns,"unit")}
-val _ = OpenTheory_const_name{const={Thy="one",Name="one"},name=(ns,"()")}
-end
 
 val one_induction = Q.store_thm
 ("one_induction",

@@ -449,12 +449,13 @@ fun GEN_COND_CASES_TAC P (asl, w) =
       val (cond, larm, rarm) = dest_cond cond
       val inst = INST_TYPE [Type.alpha |-> type_of larm] COND_CLAUSES
       val (ct, cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
+      fun subst_tac th c = SUBST1_TAC th THEN SUBST1_TAC (SUBS [th] c)
    in
       DISJ_CASES_THEN2
         (fn th =>
-           SUBST1_TAC (EQT_INTRO th) THEN SUBST1_TAC ct THEN ASSUME_TAC th)
+           subst_tac (EQT_INTRO th) ct THEN ASSUME_TAC th)
         (fn th =>
-           SUBST1_TAC (EQF_INTRO th) THEN SUBST1_TAC cf THEN ASSUME_TAC th)
+           subst_tac (EQF_INTRO th) cf THEN ASSUME_TAC th)
         (SPEC cond EXCLUDED_MIDDLE)
         (asl, w)
    end
@@ -816,6 +817,25 @@ in
 end
 val IRULE_TAC = irule
 
+fun impl_tac (g as (_,w)) =
+  let
+    val (h0,c) = dest_imp w
+    val (a,h) = dest_imp h0
+  in
+    SUBGOAL_THEN a (fn ath => DISCH_THEN (fn impth => MP_TAC (MP impth ath)))
+  end g
+
+fun impl_keep_tac (g as (_,w)) =
+  let
+    val (h0,c) = dest_imp w
+    val (a,h) = dest_imp h0
+  in
+    SUBGOAL_THEN a
+       (fn ath => DISCH_THEN
+                    (fn impth => ASSUME_TAC ath THEN MP_TAC (MP impth ath)))
+  end g
+
+
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *
  *                                                                       *
@@ -1061,5 +1081,35 @@ fun HINT_EXISTS_TAC g =
     EXISTS_TAC witness g
   end;
 
+(* ----------------------------------------------------------------------
+    part_match_exists_tac : (term -> term) -> term -> tactic
+
+    part_match_exists_tac selfn tm (asl,w)
+
+    w must be of shape ?v1 .. vn. body.
+
+    Apply selfn to body extracting a term that is then matched against
+    tm.  Instantiate the existential variables according to this match.
+
+   ---------------------------------------------------------------------- *)
+
+fun part_match_exists_tac selfn tm (g as (_,w)) =
+  let
+    val (vs,b) = strip_exists w
+    val c = selfn b
+    val cfvs = FVL [c] empty_tmset
+    val constvars = HOLset.difference(cfvs, HOLset.fromList Term.compare vs)
+    val ((tms0,tmfixed),_) = raw_match [] constvars c tm ([], [])
+    val tms =
+        tms0 @ HOLset.foldl
+                 (fn (v,acc) => if Lib.mem v vs then {redex=v,residue=v}::acc
+                                else acc)
+                 [] tmfixed
+    val xs = map #redex tms
+    val ys = map #residue tms
+    fun sorter ls = xs@(List.filter(not o Lib.C Lib.mem xs)ls)
+  in
+    CONV_TAC(RESORT_EXISTS_CONV sorter) >> map_every exists_tac ys
+  end g
 
 end (* Tactic *)

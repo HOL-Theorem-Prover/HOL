@@ -61,6 +61,8 @@ fun print_markup(m, ostr) =
     case m of
       PARA => out(ostr, "\n\n")
     | TEXT ss => out(ostr, lastminute_fixes (Substring.string ss))
+    | EMPH ss => out(ostr,
+                     "\\emph{" ^ lastminute_fixes (Substring.string ss) ^ "}")
     | BRKT ss => print_verb1(ss, ostr)
     | XMPL ss => print_verbblock(ss, ostr)
 
@@ -136,7 +138,7 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end
+  end handle e => die ("Exception raised: " ^ General.exnMessage e)
 in
   Binaryset.app appthis dset
 end

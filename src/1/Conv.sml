@@ -2492,4 +2492,28 @@ fun PATH_CONV path c =
     recurse 0
   end
 
+(* --------------------------------------------------------------------------
+   Helper function for memoizing conversions through the use of a Redblackmap.
+   -------------------------------------------------------------------------- *)
+
+fun memoize dst tree accept err (cnv: conv) =
+  let
+    val map = ref tree
+  in
+    fn tm =>
+      case dst tm of
+         SOME x =>
+           (case Redblackmap.peek (!map, x) of
+               SOME th => th
+             | NONE =>
+                 let
+                   val th = cnv tm
+                 in
+                   if accept (boolSyntax.rhs (Thm.concl th))
+                      then (map := Redblackmap.insert (!map, x, th); th)
+                   else raise err
+                 end)
+       | NONE => raise err
+  end
+
 end (* Conv *)

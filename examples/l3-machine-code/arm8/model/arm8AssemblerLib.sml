@@ -137,7 +137,7 @@ fun arm_syntax_pass2 (l, ldict) =
             (case Redblackmap.peek (ldict, label) of
                 SOME lpc =>
                  let
-                    val offset = BitsN.fromInt (4 * (lpc - !pc), 64)
+                    val offset = BitsN.fromNativeInt (4 * (lpc - !pc), 64)
                  in
                     Portable.inc pc
                   ; encode (line,

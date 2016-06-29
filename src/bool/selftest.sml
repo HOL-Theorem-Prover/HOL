@@ -1,11 +1,5 @@
 
-open HolKernel Parse DB
-(* open testutils NOT YET BUILT - therefore need following lines *)
-
-fun die s = (print (s ^ "\n"); OS.Process.exit OS.Process.failure)
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
-
-val _ = print "\n"
+open HolKernel Parse DB testutils
 
 val _ = set_trace "Unicode" 0
 
@@ -21,5 +15,4 @@ val _ = let
   val true = length list1 = length list2 ;
   (* next test may be implementation dependent *)
   val true = map #1 list1 = map #1 list2 ;
-in print "OK\n" end handle _ => die "FAILED" ;
-
+in OK() end handle _ => die "FAILED" ;

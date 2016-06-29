@@ -5,7 +5,7 @@
 structure intrealScript =
 struct
 
-open HolKernel boolLib bossLib lcsymtacs
+open HolKernel boolLib bossLib
 open intLib realLib
 
 val _ = new_theory "intreal"
@@ -40,7 +40,7 @@ val is_int_def = Define `is_int (x:real) = (x = real_of_int (INT_FLOOR x))`
 
 val real_of_int_monotonic = Q.store_thm("real_of_int_monotonic",
   `!i j. i < j ==> real_of_int i < real_of_int j`,
-  Cases \\ Cases \\ rw [real_of_int] \\ intLib.ARITH_TAC)
+  Cases \\ Cases \\ srw_tac[][real_of_int] \\ intLib.ARITH_TAC)
 
 val real_arch_least1 =
   realTheory.REAL_ARCH_LEAST
@@ -75,7 +75,7 @@ val lem5 = Q.prove(
   \\ rewrite_tac [realTheory.REAL_NEG_SUB, realTheory.REAL_NEG_ADD,
                   realTheory.REAL_SUB_RNEG]
   \\ Cases_on `m`
-  \\ fs [arithmeticTheory.ADD1]
+  \\ full_simp_tac(srw_ss())[arithmeticTheory.ADD1]
   \\ REWRITE_TAC [GSYM realTheory.REAL_ADD,
                   realLib.REAL_ARITH ``a + b + -b = a: real``]
   \\ simp []
@@ -83,49 +83,49 @@ val lem5 = Q.prove(
 
 val INT_FLOOR_BOUNDS = Q.store_thm("INT_FLOOR_BOUNDS",
   `!r. real_of_int (INT_FLOOR r) <= r /\ r < real_of_int (INT_FLOOR r + 1)`,
-  rw [INT_FLOOR_def, integerTheory.LEAST_INT_DEF] \\ SELECT_ELIM_TAC \\ (
+  srw_tac[][INT_FLOOR_def, integerTheory.LEAST_INT_DEF] \\ SELECT_ELIM_TAC \\ (
   REVERSE conj_tac
-  >- (rw [realTheory.REAL_NOT_LT]
+  >- (srw_tac[][realTheory.REAL_NOT_LT]
       \\ pop_assum (qspec_then `x - 1` assume_tac)
-      \\ fs [intLib.ARITH_PROVE ``a - 1 < a: int``])
+      \\ full_simp_tac(srw_ss())[intLib.ARITH_PROVE ``a - 1 < a: int``])
   \\ Cases_on `0 <= r`
   >- (imp_res_tac real_arch_least1
       \\ qexists_tac `&n`
-      \\ rw [real_of_int, realTheory.REAL_NOT_LT,
+      \\ srw_tac[][real_of_int, realTheory.REAL_NOT_LT,
              REWRITE_RULE [GSYM arithmeticTheory.ADD1] Num_suc1,
              intLib.ARITH_PROVE ``~(&n + 1i < 0)``]
       >- metis_tac [lem, realTheory.REAL_LE_TRANS]
       \\ Cases_on `i'`
-      \\ fs [Num_suc1]
+      \\ full_simp_tac(srw_ss())[Num_suc1]
       >| [`n' + 1 <= n` by decide_tac
           \\ metis_tac [realTheory.REAL_LE, realTheory.REAL_LE_TRANS],
           imp_res_tac
             (intLib.ARITH_PROVE ``n <> 0 /\ ~(-&n + 1i < 0) ==> (n = 1)``)
-          \\ fs [],
+          \\ full_simp_tac(srw_ss())[],
           `1 <= n` by decide_tac
           \\ metis_tac [realTheory.REAL_LE, realTheory.REAL_LE_TRANS]
       ]
   )
   \\ imp_res_tac (realLib.REAL_ARITH ``~(0r <= r) ==> 0 <= -r /\ r <> 0``)
   \\ imp_res_tac real_arch_least1
-  \\ rfs [arithmeticTheory.ADD1, integerTheory.INT_NEG_ADD,
+  \\ rev_full_simp_tac(srw_ss())[arithmeticTheory.ADD1, integerTheory.INT_NEG_ADD,
           realLib.REAL_ARITH ``r <= 0r ==> (&(n: num) <= -r = r <= -&n)``,
           realLib.REAL_ARITH ``r <= 0r ==> (-r < &n = -&n < r)``]
   \\ Cases_on `r = -&n`
   >| [qexists_tac `~&n`, qexists_tac `~&(SUC n)`]
-  \\ rfs [real_of_int, integerTheory.INT_NEG_ADD]
+  \\ rev_full_simp_tac(srw_ss())[real_of_int, integerTheory.INT_NEG_ADD]
   \\ (conj_tac
-      >- (rw [lem3]
+      >- (srw_tac[][lem3]
           \\ Cases_on `n`
-          \\ fs [arithmeticTheory.ADD1,
+          \\ full_simp_tac(srw_ss())[arithmeticTheory.ADD1,
                  realLib.REAL_ARITH ``r <= 0r /\ r <> 0 ==> r < 0``,
                  realLib.REAL_ARITH ``a <= b - 1 ==> a < b: real``,
                  intLib.ARITH_PROVE ``-&(n + 1) + 1 < 0i = (n <> 0)``,
                  realLib.REAL_ARITH ``r <= -1r ==> r < 0``,
                  realLib.REAL_ARITH ``a <= b /\ a <> b ==> a < b: real``])
-      \\ rw [realTheory.REAL_NOT_LT]
+      \\ srw_tac[][realTheory.REAL_NOT_LT]
       \\ Cases_on `i'`
-      \\ rfs [lem2, lem3, lem4, arithmeticTheory.ADD1]
+      \\ rev_full_simp_tac(srw_ss())[lem2, lem3, lem4, arithmeticTheory.ADD1]
       \\ (intLib.ARITH_TAC ORELSE
           imp_res_tac (intLib.ARITH_PROVE ``n + 1 < m ==> (-&m + 1 < 0i)``)
           \\ metis_tac
@@ -139,7 +139,7 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
   REPEAT strip_tac
   \\ eq_tac
   >- metis_tac [INT_FLOOR_BOUNDS]
-  \\ rw [INT_FLOOR_def, integerTheory.LEAST_INT_DEF]
+  \\ srw_tac[][INT_FLOOR_def, integerTheory.LEAST_INT_DEF]
   \\ SELECT_ELIM_TAC
   \\ conj_tac
   >- (
@@ -147,7 +147,7 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
     \\ res_tac
     \\ Cases_on `i`
     \\ Cases_on `i'`
-    \\ fs [real_of_int, intLib.ARITH_PROVE ``~(&n + 1i < 0)``]
+    \\ full_simp_tac(srw_ss())[real_of_int, intLib.ARITH_PROVE ``~(&n + 1i < 0)``]
     >| [
       all_tac,
       Cases_on `-&n' + 1 < 0i`,
@@ -155,12 +155,12 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
       Cases_on `-&n' + 1 < 0i`,
       Cases_on `-&n + 1 < 0i`
     ]
-    \\ fs [Num_suc1]
+    \\ full_simp_tac(srw_ss())[Num_suc1]
     \\ imp_res_tac realTheory.REAL_LET_TRANS
-    \\ fs [integerTheory.INT_NOT_LT]
+    \\ full_simp_tac(srw_ss())[integerTheory.INT_NOT_LT]
     \\ intLib.ARITH_TAC
   )
-  \\ rw []
+  \\ srw_tac[][]
   \\ Cases_on `i < x`
   >- res_tac
   \\ Cases_on `i = x`
@@ -168,7 +168,7 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
   \\ `x < i` by intLib.ARITH_TAC
   \\ Cases_on `i`
   \\ Cases_on `x`
-  \\ fs [real_of_int]
+  \\ full_simp_tac(srw_ss())[real_of_int]
   >| [
     Cases_on `&n + 1 < 0i`
     \\ Cases_on `&n' + 1 < 0i`,
@@ -179,15 +179,15 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
     \\ Cases_on `-&n' + 1 < 0i`,
     Cases_on `-&n + 1 < 0i`
   ]
-  \\ fs []
+  \\ full_simp_tac(srw_ss())[]
   \\ imp_res_tac realTheory.REAL_LET_TRANS
-  \\ fs [integerTheory.INT_NOT_LT]
+  \\ full_simp_tac(srw_ss())[integerTheory.INT_NOT_LT]
   \\ intLib.ARITH_TAC
   )
 
 val int_floor_1 = Q.prove(
   `(INT_FLOOR &n = &n) /\ (INT_FLOOR (-&n) = -&n)`,
-  rw [INT_FLOOR, real_of_int] \\ intLib.ARITH_TAC)
+  srw_tac[][INT_FLOOR, real_of_int] \\ intLib.ARITH_TAC)
 
 val tac =
   imp_res_tac arithmeticTheory.DIVISION
@@ -199,7 +199,7 @@ val int_floor_2 = Q.prove(
   `0 < m ==> (INT_FLOOR (&n / &m) = &n / &m)`,
   strip_tac
   \\ rewrite_tac [INT_FLOOR]
-  \\ rw [real_of_int, realTheory.le_ratr, realTheory.lt_ratl, Num_suc1]
+  \\ srw_tac[][real_of_int, realTheory.le_ratr, realTheory.lt_ratl, Num_suc1]
   \\ TRY decide_tac
   >- tac
   >- intLib.ARITH_TAC
@@ -233,25 +233,25 @@ val lem4 = Q.prove(
   NTAC 3 strip_tac
   \\ `&m <> 0i` by intLib.ARITH_TAC
   \\ simp [integerTheory.int_div]
-  \\ rw [intLib.ARITH_PROVE ``a + -1 < -1 = a < 0i``]
+  \\ srw_tac[][intLib.ARITH_PROVE ``a + -1 < -1 = a < 0i``]
   \\ tac
   >- (SPOSE_NOT_THEN strip_assume_tac
       \\ `(n DIV m = 0) \/ (n DIV m = 1)` by decide_tac
-      \\ fs []
+      \\ full_simp_tac(srw_ss())[]
       >- tac2
       \\ decide_tac
   )
   \\ strip_tac
-  \\ fs []
+  \\ full_simp_tac(srw_ss())[]
   \\ tac2
   )
 
 val lem5 = Q.prove(
   `!n m. 0n < m /\ n <> 0 /\ (n MOD m = 0) /\ n <> m ==> 1 < n DIV m`,
-  rw [arithmeticTheory.X_LT_DIV]
+  srw_tac[][arithmeticTheory.X_LT_DIV]
   \\ imp_res_tac arithmeticTheory.MOD_EQ_0_DIVISOR
-  \\ Cases_on `d = 0` >- fs []
-  \\ Cases_on `d = 1` >- fs []
+  \\ Cases_on `d = 0` >- full_simp_tac(srw_ss())[]
+  \\ Cases_on `d = 1` >- full_simp_tac(srw_ss())[]
   \\ `2 <= d` by decide_tac
   \\ metis_tac [arithmeticTheory.LESS_MONO_MULT]
   )
@@ -270,7 +270,7 @@ val int_floor_3 = Q.prove(
   \\ simp [lem4, real_of_int, realTheory.le_ratr, realTheory.lt_ratl,
            intLib.ARITH_PROVE ``a < -1i ==> a < 0 /\ a + 1 < 0``]
   \\ simp [integerTheory.int_div]
-  \\ rw [integerTheory.INT_NEG_ADD, lem5, Num_suc1,
+  \\ srw_tac[][integerTheory.INT_NEG_ADD, lem5, Num_suc1,
          intLib.ARITH_PROVE ``a + 1 + -1 = a: int``,
          intLib.ARITH_PROVE ``1n < a ==> (Num (&a + -1) = a - 1)``]
   \\ tac
@@ -278,7 +278,7 @@ val int_floor_3 = Q.prove(
 
 val INT_CEILING_IMP = Q.prove (
   `!r i. real_of_int (i - 1) < r /\ r <= real_of_int i ==> (INT_CEILING r = i)`,
-  rw [INT_CEILING_def, integerTheory.LEAST_INT_DEF]
+  srw_tac[][INT_CEILING_def, integerTheory.LEAST_INT_DEF]
   \\ SELECT_ELIM_TAC
   \\ conj_tac
   >- (
@@ -286,7 +286,7 @@ val INT_CEILING_IMP = Q.prove (
     \\ res_tac
     \\ Cases_on `i`
     \\ Cases_on `i'`
-    \\ fs [real_of_int]
+    \\ full_simp_tac(srw_ss())[real_of_int]
     >| [
       Cases_on `&n - 1 < 0i`,
       Cases_on `&n - 1 < 0i`,
@@ -294,12 +294,12 @@ val INT_CEILING_IMP = Q.prove (
       Cases_on `-&n - 1 < 0i`,
       all_tac
     ]
-    \\ fs []
+    \\ full_simp_tac(srw_ss())[]
     \\ imp_res_tac realTheory.REAL_LTE_TRANS
-    \\ fs []
+    \\ full_simp_tac(srw_ss())[]
     \\ intLib.ARITH_TAC
   )
-  \\ rw []
+  \\ srw_tac[][]
   \\ Cases_on `i < x`
   >- res_tac
   \\ Cases_on `i = x`
@@ -307,7 +307,7 @@ val INT_CEILING_IMP = Q.prove (
   \\ `x < i` by intLib.ARITH_TAC
   \\ Cases_on `i`
   \\ Cases_on `x`
-  \\ fs [real_of_int]
+  \\ full_simp_tac(srw_ss())[real_of_int]
   >| [
     Cases_on `&n - 1 < 0i`,
     Cases_on `&n - 1 < 0i`,
@@ -315,9 +315,9 @@ val INT_CEILING_IMP = Q.prove (
     Cases_on `-&n - 1 < 0i`,
     all_tac
   ]
-  \\ fs []
+  \\ full_simp_tac(srw_ss())[]
   \\ imp_res_tac realTheory.REAL_LTE_TRANS
-  \\ fs []
+  \\ full_simp_tac(srw_ss())[]
   \\ intLib.ARITH_TAC
   )
 

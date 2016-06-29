@@ -2269,7 +2269,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 
 
    REPEAT STRIP_TAC THEN
-   lcsymtacs.qcase_tac `f (SOME s1) (SOME s2) = SOME y` THEN
+   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
    Cases_on `R (SOME s1) NONE` THEN
    ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
    `~(R (SOME y) NONE)` by METIS_TAC[] THEN
@@ -2441,17 +2441,17 @@ SIMP_TAC std_ss [HOARE_TRIPLE_def, fasl_order_THM, ASL_IS_LOCAL_ACTION_def,
    ASL_IS_SEPARATE_def, IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS, SUBSET_DEF] THEN
-   lcsymtacs.qcase_tac `SOME s = f (SOME p) (SOME q)` THEN
+   lcsymtacs.rename1 `SOME s = f (SOME p) (SOME q)` THEN
    `fasl_order (a s) (fasl_star f (a p) (SOME {q}))` by METIS_TAC[] THEN
    `?p'. (a p = SOME p') /\ !x. x IN p' ==> x IN Q` by METIS_TAC[] THEN
    FULL_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM,
       asl_star_def, IN_SING, IN_ABS, SUBSET_DEF] THEN
    METIS_TAC[],
 
-   lcsymtacs.qcase_tac `f (SOME s1) (SOME s2) = SOME y` THEN
+   lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
    Cases_on `a s1` THEN
    ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
-   lcsymtacs.qcase_tac `a s1 = SOME xx` THEN
+   lcsymtacs.rename1 `a s1 = SOME xx` THEN
    Q.PAT_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `xx`]) THEN
    ASM_SIMP_TAC std_ss [IN_SING, SUBSET_REFL, asl_star_def,
       IN_ABS, SUBSET_DEF] THEN
@@ -2884,7 +2884,7 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def,
    fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM,
    INF_fasl_order_def] THEN
 REPEAT STRIP_TAC THEN
-lcsymtacs.qcase_tac `f (SOME s1) (SOME s2) = SOME y` THEN
+lcsymtacs.rename1 `f (SOME s1) (SOME s2) = SOME y` THEN
 Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
    ASM_SIMP_TAC std_ss [COND_RAND, COND_RATOR, fasl_order_THM,
       BIN_OPTION_MAP_ALL_DEF_THM] THEN
@@ -5270,8 +5270,8 @@ SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, asl_star_def,
    `f (SOME s2) (SOME s1) = f (SOME s1) (SOME s2)` by METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
-   lcsymtacs.qcase_tac `la1 s = SOME y` THEN
-   lcsymtacs.qcase_tac `x IN y` THEN
+   lcsymtacs.rename1 `la1 s = SOME y` THEN
+   lcsymtacs.rename1 `x IN y` THEN
    Q.PAT_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y` (
       MP_TAC o Q.SPECL [`s2`, `s1`, `s`, `vq3`, `y`, `x`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
@@ -12335,8 +12335,7 @@ Q.EXISTS_TAC `\penv'. ASL_PROCEDURE_SPEC (f,LIST_TO_FUN lock_decls)
    penv' (ASL_proc_specs_spec (MAP SND (FILTER (\x. ~FST x) specs)))` THEN
 REPEAT CONJ_TAC THENL [
    FULL_SIMP_TAC std_ss [ASL_PROCEDURE_SPEC___wellformed_spec_def,
-      FDOM_ASL_proc_specs_penv, IN_LIST_TO_SET,
-      EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
+      FDOM_ASL_proc_specs_penv, EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
       GSYM LEFT_FORALL_IMP_THM, IN_UNION, MEM_FILTER] THEN
    PROVE_TAC[],
 
