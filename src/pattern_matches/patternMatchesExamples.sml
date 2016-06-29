@@ -23,8 +23,8 @@ val list_ss  = numLib.arith_ss ++ listSimps.LIST_ss
 
 val t = ``case x of (NONE, []) => 0``
 val t' = ``CASE x OF [ |||. (NONE, []) ~> 0 ]``
-val t'' = case2pmatch true t 
-val t''' = case2pmatch false t 
+val t'' = case2pmatch true t
+val t''' = case2pmatch false t
 val thm_t = PMATCH_INTRO_CONV t
 
 (* check that SIMP works *)
