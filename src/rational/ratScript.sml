@@ -172,7 +172,11 @@ val rat_type_thm = save_thm ("rat_type_thm",
   REWRITE_RULE[QUOTIENT_def, RAT_EQUIV_REF] rat_def) ;
 
 val rat_equiv_reps = store_thm ("rat_equiv_reps",
-  ``rat_equiv (rep_rat f1) (rep_rat f2) = (f1 = f2)``,
+  ``rat_equiv (rep_rat r1) (rep_rat r2) = (r1 = r2)``,
+  REWRITE_TAC [rat_type_thm]) ;
+
+val rat_equiv_rep_abs = store_thm ("rat_equiv_rep_abs",
+  ``rat_equiv (rep_rat (abs_rat f)) f``
   REWRITE_TAC [rat_type_thm]) ;
 
 (*--------------------------------------------------------------------------*
@@ -1131,36 +1135,9 @@ val RAT_AINV_LMUL = store_thm("RAT_AINV_LMUL", ``!r1 r2. rat_ainv (rat_mul r1 r2
 
 (*--------------------------------------------------------------------------
    RAT_EQ_AINV
-
    |- !r1 r2. (~r1 = ~r2) = (r1=r2)
- *--------------------------------------------------------------------------*)
 
-val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
-  ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
-	REPEAT GEN_TAC THEN
-	SUBST_TAC[SPEC ``r1:rat`` (GSYM RAT), SPEC ``r2:rat`` (GSYM RAT)] THEN
-	REWRITE_TAC[RAT_AINV_CALCULATE] THEN
-	FRAC_CALC_TAC THEN
-	REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
-	FRAC_NMRDNM_TAC THEN
-	REWRITE_TAC[INT_MUL_CALCULATE] THEN
-	REWRITE_TAC[INT_EQ_NEG] THEN
-	REWRITE_TAC[GSYM rat_equiv_def] THEN
-	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
-	RW_TAC int_ss[rat_thm] );
-
-(* or could prove above by
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC [rat_ainv_def, frac_ainv_def, 
-    RAT_ABS_EQUIV, rat_equiv_def] THEN
-  VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  REWRITE_TAC [INT_EQ_NEG, GSYM INT_NEG_LMUL,
-    FRAC_DNMPOS, GSYM rat_equiv_def, rat_equiv_reps]
-*)
-
-(*--------------------------------------------------------------------------
    RAT_AINV_EQ
-
    |- !r1 r2. (~r1 = r2) = (r1 = ~r2)
  *--------------------------------------------------------------------------*)
 
@@ -1169,9 +1146,12 @@ val RAT_AINV_EQ = store_thm("RAT_AINV_EQ",
 	REPEAT GEN_TAC THEN
 	EQ_TAC THEN
 	STRIP_TAC THEN
-	ONCE_REWRITE_TAC[GSYM RAT_EQ_AINV] THEN
-	ASM_REWRITE_TAC[] THEN
+	BasicProvers.VAR_EQ_TAC THEN
 	REWRITE_TAC[RAT_AINV_AINV] );
+
+val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
+  ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
+	REWRITE_TAC[RAT_AINV_EQ, RAT_AINV_AINV] ) ;
 
 val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
   ``!r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))``,
