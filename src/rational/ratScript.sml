@@ -176,7 +176,7 @@ val rat_equiv_reps = store_thm ("rat_equiv_reps",
   REWRITE_TAC [rat_type_thm]) ;
 
 val rat_equiv_rep_abs = store_thm ("rat_equiv_rep_abs",
-  ``rat_equiv (rep_rat (abs_rat f)) f``
+  ``rat_equiv (rep_rat (abs_rat f)) f``,
   REWRITE_TAC [rat_type_thm]) ;
 
 (*--------------------------------------------------------------------------*
@@ -448,6 +448,9 @@ val FRAC_MUL_EQUIV1 = store_thm ("FRAC_MUL_EQUIV1",
   POP_ASSUM (fn th => MATCH_MP_TAC (MATCH_MP box_equals th)) THEN
   CONJ_TAC THEN CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM)) ) ;
 
+val FRAC_MUL_EQUIV2 = save_thm ("FRAC_MUL_EQUIV2",
+  ONCE_REWRITE_RULE [FRAC_MUL_COMM] FRAC_MUL_EQUIV1) ;
+
 val RAT_MUL_CONG1 = store_thm("RAT_MUL_CONG1",
   ``!x y. abs_rat (frac_mul (rep_rat (abs_rat x)) y) = abs_rat (frac_mul x y)``,
   REPEAT STRIP_TAC THEN
@@ -499,26 +502,21 @@ val RAT_SUB_CONG = save_thm("RAT_SUB_CONG", CONJ RAT_SUB_CONG1 RAT_SUB_CONG2);
              (abs_rat (frac_div x (rep_rat (abs_rat y))) = abs_rat (frac_div x y))
  *--------------------------------------------------------------------------*)
 
-val RAT_DIV_CONG1 = store_thm("RAT_DIV_CONG1", ``!x y. ~(frac_nmr y = 0) ==> (abs_rat (frac_div (rep_rat (abs_rat x)) y) = abs_rat (frac_div x y))``,
+val RAT_DIV_CONG1 = store_thm("RAT_DIV_CONG1",
+  ``!x y. ~(frac_nmr y = 0) ==>
+    (abs_rat (frac_div (rep_rat (abs_rat x)) y) = abs_rat (frac_div x y))``,
 	REPEAT STRIP_TAC THEN
 	REWRITE_TAC[frac_div_def] THEN
 	REWRITE_TAC[RAT_MUL_CONG] );
 
-val RAT_DIV_CONG2 = store_thm("RAT_DIV_CONG2", ``!x y. ~(frac_nmr y = 0) ==> (abs_rat (frac_div x (rep_rat (abs_rat y))) = abs_rat (frac_div x y))``,
-	REPEAT STRIP_TAC THEN
-	REWRITE_TAC[frac_div_def, frac_mul_def] THEN
-	FRAC_POS_TAC ``frac_dnm x * frac_dnm (frac_minv y)`` THEN
-	FRAC_POS_TAC ``frac_dnm x * frac_dnm (frac_minv (rep_rat (abs_rat y)))`` THEN
-	REWRITE_TAC[RAT_ABS_EQUIV] THEN
-	REWRITE_TAC [rat_equiv_def] THEN
-	RW_TAC int_ss[NMR,DNM] THEN
-	REWRITE_TAC[EQT_ELIM (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM) ``frac_nmr x * frac_nmr (frac_minv (rep_rat (abs_rat y))) * (frac_dnm x * frac_dnm (frac_minv y)) = (frac_nmr x * frac_dnm x) * (frac_nmr (frac_minv (rep_rat (abs_rat y))) * frac_dnm (frac_minv y))``)] THEN
-	REWRITE_TAC[EQT_ELIM (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM) ``frac_nmr x * frac_nmr (frac_minv y) * (frac_dnm x * frac_dnm (frac_minv (rep_rat (abs_rat y)))) = (frac_nmr x * frac_dnm x) *(frac_nmr (frac_minv y) * frac_dnm (frac_minv (rep_rat (abs_rat y))))``)] THEN
-	REWRITE_TAC[INT_EQ_LMUL] THEN
-	DISJ2_TAC THEN
-	REWRITE_TAC[GSYM rat_equiv_def] THEN
-	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
-	RW_TAC int_ss[RAT_MINV_CONG] );
+val RAT_DIV_CONG2 = store_thm("RAT_DIV_CONG2", 
+  ``!x y. ~(frac_nmr y = 0) ==>
+    (abs_rat (frac_div x (rep_rat (abs_rat y))) = abs_rat (frac_div x y))``,
+        REPEAT STRIP_TAC THEN
+        REWRITE_TAC[frac_div_def, RAT_ABS_EQUIV] THEN
+        irule FRAC_MUL_EQUIV2 THEN
+        IMP_RES_THEN MATCH_MP_TAC FRAC_MINV_EQUIV THEN
+        irule rat_equiv_rep_abs) ;
 
 val RAT_DIV_CONG = save_thm("RAT_DIV_CONG", CONJ RAT_DIV_CONG1 RAT_DIV_CONG2 );
 
