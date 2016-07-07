@@ -1125,9 +1125,14 @@ val RAT_AINV_LMUL = store_thm("RAT_AINV_LMUL", ``!r1 r2. rat_ainv (rat_mul r1 r2
 	REWRITE_TAC[RAT_MUL_CONG, RAT_AINV_CONG] THEN
 	PROVE_TAC[FRAC_AINV_LMUL] );
 
-val RAT_AINV_MINV =
-let
-val lemma01 = prove(``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
+(*--------------------------------------------------------------------------
+   RAT_EQ_AINV
+
+   |- !r1 r2. (~r1 = ~r2) = (r1=r2)
+ *--------------------------------------------------------------------------*)
+
+val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
+  ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
 	REPEAT GEN_TAC THEN
 	SUBST_TAC[SPEC ``r1:rat`` (GSYM RAT), SPEC ``r2:rat`` (GSYM RAT)] THEN
 	REWRITE_TAC[RAT_AINV_CALCULATE] THEN
@@ -1139,20 +1144,29 @@ val lemma01 = prove(``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
 	REWRITE_TAC[GSYM rat_equiv_def] THEN
 	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
 	RW_TAC int_ss[rat_thm] );
-val lemma02 = prove(``!r1 r2. (rat_ainv r1 = r2) = (r1 = rat_ainv r2)``,
+
+(*--------------------------------------------------------------------------
+   RAT_AINV_EQ
+
+   |- !r1 r2. (~r1 = r2) = (r1 = ~r2)
+ *--------------------------------------------------------------------------*)
+
+val RAT_AINV_EQ = store_thm("RAT_AINV_EQ",
+  ``!r1 r2. (rat_ainv r1 = r2) = (r1 = rat_ainv r2)``,
 	REPEAT GEN_TAC THEN
 	EQ_TAC THEN
 	STRIP_TAC THEN
-	ONCE_REWRITE_TAC[GSYM lemma01] THEN
+	ONCE_REWRITE_TAC[GSYM RAT_EQ_AINV] THEN
 	ASM_REWRITE_TAC[] THEN
 	REWRITE_TAC[RAT_AINV_AINV] );
-in
-	store_thm("RAT_AINV_MINV", ``!r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))``,
+
+val RAT_AINV_MINV = store_thm("RAT_AINV_MINV",
+  ``!r1. ~(r1=0q) ==> (rat_ainv (rat_minv r1) = rat_minv (rat_ainv r1))``,
 	REPEAT STRIP_TAC THEN
 	COPY_ASM_NO 0 THEN
 	APPLY_ASM_TAC 0 (REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR]) THEN
 	SUBST_TAC[GSYM RAT_AINV_0] THEN
-	ONCE_REWRITE_TAC[GSYM lemma02] THEN
+	ONCE_REWRITE_TAC[GSYM RAT_AINV_EQ] THEN
 	REWRITE_TAC[rat_nmr_def, RAT_EQ0_NMR] THEN
 	REWRITE_TAC[rat_ainv_def, rat_minv_def] THEN
 	REWRITE_TAC[RAT_NMREQ0_CONG] THEN
@@ -1167,7 +1181,6 @@ in
 	FRAC_NMRDNM_TAC THEN
 	RW_TAC int_ss[INT_ABS, SGN_def] THEN
 	INT_RING_TAC )
-end;
 
 (*--------------------------------------------------------------------------
    RAT_SUB_RDISTRIB: thm
@@ -1695,25 +1708,6 @@ val RAT_MUL_ONE_ONE = store_thm("RAT_MUL_ONE_ONE",
  *==========================================================================*)
 
 (*--------------------------------------------------------------------------
-   RAT_EQ_AINV
-
-   |- !r1 r2. (~r1 = ~r2) = (r1=r2)
- *--------------------------------------------------------------------------*)
-
-val RAT_EQ_AINV = store_thm("RAT_EQ_AINV", ``!r1 r2. (rat_ainv r1 = rat_ainv r2) = (r1=r2)``,
-	REPEAT GEN_TAC THEN
-	SUBST_TAC[SPEC ``r1:rat`` (GSYM RAT), SPEC ``r2:rat`` (GSYM RAT)] THEN
-	REWRITE_TAC[RAT_AINV_CALCULATE] THEN
-	FRAC_CALC_TAC THEN
-	REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
-	FRAC_NMRDNM_TAC THEN
-	REWRITE_TAC[INT_MUL_CALCULATE] THEN
-	REWRITE_TAC[INT_EQ_NEG] THEN
-	REWRITE_TAC[GSYM rat_equiv_def] THEN
-	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
-	RW_TAC int_ss[rat_thm] );
-
-(*--------------------------------------------------------------------------
    RAT_EQ_LADD, RAT_EQ_RADD
 
    |- !r1 r2 r3. (r3 + r1 = r3 + r2) = (r1=r2)
@@ -1743,20 +1737,6 @@ val RAT_EQ_RMUL = store_thm("RAT_EQ_RMUL", ``!r1 r2 r3. ~(r3=0q) ==> ((rat_mul r
 
 val RAT_EQ_LMUL = store_thm("RAT_EQ_LMUL", ``!r1 r2 r3. ~(r3=0q) ==> ((rat_mul r3 r1 = rat_mul r3 r2) = (r1=r2))``,
 	PROVE_TAC[RAT_EQ_RMUL, RAT_MUL_COMM] );
-
-(*--------------------------------------------------------------------------
-   RAT_AINV_EQ
-
-   |- !r1 r2. (~r1 = r2) = (r1 = ~r2)
- *--------------------------------------------------------------------------*)
-
-val RAT_AINV_EQ = store_thm("RAT_AINV_EQ", ``!r1 r2. (rat_ainv r1 = r2) = (r1 = rat_ainv r2)``,
-	REPEAT GEN_TAC THEN
-	EQ_TAC THEN
-	STRIP_TAC THEN
-	ONCE_REWRITE_TAC[GSYM RAT_EQ_AINV] THEN
-	ASM_REWRITE_TAC[] THEN
-	REWRITE_TAC[RAT_AINV_AINV] );
 
 (*==========================================================================
  *  transformation of inequations
