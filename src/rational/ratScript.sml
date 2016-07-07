@@ -1657,12 +1657,7 @@ val RAT_RDIV_EQ = store_thm("RAT_RDIV_EQ",
 val RAT_AINV_ONE_ONE = store_thm("RAT_AINV_ONE_ONE", ``ONE_ONE rat_ainv``,
 	REWRITE_TAC[ONE_ONE_DEF] THEN
 	BETA_TAC THEN
-	REPEAT GEN_TAC THEN
-	RAT_CALC_TAC THEN
-	REWRITE_TAC[RAT_EQ] THEN
-	FRAC_CALC_TAC THEN
-	FRAC_NMRDNM_TAC THEN
-	PROVE_TAC[INT_MUL_CALCULATE, INT_EQ_NEG] );
+	REWRITE_TAC[RAT_EQ_AINV] );
 
 (*--------------------------------------------------------------------------
    RAT_ADD_ONE_ONE
