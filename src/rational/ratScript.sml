@@ -171,6 +171,10 @@ val rat_thm = REWRITE_RULE[QUOTIENT_def] rat_def ; (* was rat_def *)
 val rat_type_thm = save_thm ("rat_type_thm",
   REWRITE_RULE[QUOTIENT_def, RAT_EQUIV_REF] rat_def) ;
 
+val rat_equiv_reps = store_thm ("rat_equiv_reps",
+  ``rat_equiv (rep_rat f1) (rep_rat f2) = (f1 = f2)``,
+  REWRITE_TAC [rat_type_thm]) ;
+
 (*--------------------------------------------------------------------------*
  * operations
  *--------------------------------------------------------------------------*)
@@ -1144,6 +1148,15 @@ val RAT_EQ_AINV = store_thm("RAT_EQ_AINV",
 	REWRITE_TAC[GSYM rat_equiv_def] THEN
 	REWRITE_TAC[GSYM RAT_ABS_EQUIV] THEN
 	RW_TAC int_ss[rat_thm] );
+
+(* or could prove above by
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC [rat_ainv_def, frac_ainv_def, 
+    RAT_ABS_EQUIV, rat_equiv_def] THEN
+  VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
+  REWRITE_TAC [INT_EQ_NEG, GSYM INT_NEG_LMUL,
+    FRAC_DNMPOS, GSYM rat_equiv_def, rat_equiv_reps]
+*)
 
 (*--------------------------------------------------------------------------
    RAT_AINV_EQ
@@ -2286,6 +2299,16 @@ val RAT_OF_NUM_LEQ_0 = prove(``!n. 0 <= &n``,
 	REWRITE_TAC[RAT_1, RAT_0] THEN
 	REWRITE_TAC[rat_leq_def] THEN
 	PROVE_TAC[RAT_ADD_COMM] );
+
+(*--------------------------------------------------------------------------
+ *  RAT_MINV_1: thm
+ *  |- rat_minv 1 = 1
+ *--------------------------------------------------------------------------*)
+
+val RAT_MINV_1 = Q.store_thm ("RAT_MINV_1", `rat_minv 1 = 1`,
+  REWRITE_TAC [SYM RAT_1, rat_1_def] THEN
+  SIMP_TAC intLib.int_ss [RAT_MINV_CALCULATE, NMR, frac_1_def,
+    REWRITE_RULE [frac_1_def] FRAC_MINV_1]) ;
 
 (*--------------------------------------------------------------------------
    RAT_ADD_NUM: thm
