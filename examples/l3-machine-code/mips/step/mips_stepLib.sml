@@ -631,7 +631,7 @@ in
       let
          val (l, ty) = listSyntax.dest_list v
          val () = ignore (ty = Type.bool andalso List.length l <= 32 orelse
-                  raise ERR "mk_opcode" "bad opcode")
+                  raise ERR "pad_opcode" "bad opcode")
       in
          utilsLib.padLeft boolSyntax.F 32 l
       end
