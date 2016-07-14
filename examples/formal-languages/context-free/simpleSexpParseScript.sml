@@ -99,6 +99,10 @@ val peg_eval_list_tok_every_imp = Q.store_thm("peg_eval_list_tok_every_imp",
   \\ rw[] \\ fs[]
   \\ simp[peg_eval_tok_SOME]);
 
+val FOLDR_STRCAT_destSXSYM = Q.prove(
+  `∀ls. FOLDR (λs a. STRCAT (destSXSYM s) a) "" (MAP (λc. SX_SYM (STRING c "")) ls) = ls`,
+  Induct >> simp[destSXSYM_def]);
+
 (* -- *)
 
 val parse_sexp_def = Define`
@@ -119,24 +123,65 @@ val print_space_separated_def = Define`
   (print_space_separated [x] = x) ∧
   (print_space_separated (x::xs) = x ++ " " ++ print_space_separated xs)`;
 
+val strip_dot_def = Define`
+  strip_dot x =
+  case x of
+  | SX_CONS a d =>
+    let (ls,n) = strip_dot d in (a::ls,n)
+  | SX_SYM s => if s = "nil" then ([],NONE) else ([],SOME x)
+  | _ => ([],SOME x)`;
+val strip_dot_ind = theorem"strip_dot_ind";
+
+val strip_dot_strip_sxcons = Q.store_thm("strip_dot_strip_sxcons",
+  `∀s ls. strip_sxcons s = SOME ls ⇔ strip_dot s = (ls,NONE)`,
+  ho_match_mp_tac strip_sxcons_ind \\ rw[]
+  \\ rw[Once strip_sxcons_def]
+  \\ CASE_TAC \\ fs[]
+  \\ TRY(simp[Once strip_dot_def] \\ rw[] \\ NO_TAC)
+  \\ CONV_TAC(RAND_CONV(SIMP_CONV (srw_ss()) [Once strip_dot_def]))
+  \\ simp[] \\ pairarg_tac \\ fs[] \\ rw[EQ_IMP_THM]);
+
+val strip_dot_last_sizelt = Q.store_thm("strip_dot_last_sizelt",
+  `∀x ls last. strip_dot x  = (ls,SOME last) ⇒ sexp_size last ≤ sexp_size x`,
+  ho_match_mp_tac strip_dot_ind \\ rw[]
+  \\ pop_assum mp_tac
+  \\ simp[Once strip_dot_def]
+  \\ CASE_TAC \\ fs[]
+  \\ TRY(pairarg_tac \\ fs[])
+  \\ rw[sexp_size_def] \\ simp[]
+  \\ rw[sexp_size_def]);
+
+val strip_dot_MEM_sizelt = Q.store_thm("strip_dot_MEM_sizelt",
+  `∀x ls n a. strip_dot x = (ls,n) ∧ MEM a ls ⇒ sexp_size a ≤ sexp_size x`,
+  ho_match_mp_tac strip_dot_ind \\ rw[]
+  \\ qpat_assum`strip_dot x = _` mp_tac
+  \\ simp[Once strip_dot_def]
+  \\ CASE_TAC \\ fs[]
+  \\ TRY(pairarg_tac \\ fs[])
+  \\ rw[sexp_size_def] \\ fs[]
+  \\ res_tac \\  simp[]);
+
 val print_sexp_def = tDefine"print_sexp"`
   (print_sexp (SX_SYM s) = s) ∧
   (print_sexp (SX_NUM n) = toString n) ∧
   (print_sexp (SX_STR s) = "\"" ++ escape_string s ++ "\"") ∧
   (print_sexp s =
-   case strip_sxcons s of
-   | NONE => (case s of SX_CONS a d => "(" ++ print_sexp a ++ "." ++ print_sexp d ++")" | _ => "")
-   | SOME [q; s] => if q = SX_SYM "quote" then "'" ++ print_sexp s
-                    else "(" ++ print_sexp q ++ " " ++ print_sexp s ++ ")"
-   | SOME ls => "(" ++ print_space_separated (MAP print_sexp ls) ++ ")")`
+   let (ls,n) = strip_dot s in
+   case n of
+   | NONE =>
+     if LENGTH ls = 2 ∧ HD ls = SX_SYM "quote"
+     then "'" ++ print_sexp (EL 1 ls)
+     else "(" ++ print_space_separated (MAP print_sexp ls) ++ ")"
+   | SOME last =>
+       "(" ++ print_space_separated (MAP print_sexp ls) ++ " . " ++ print_sexp last ++ ")")`
   (WF_REL_TAC`measure sexp_size` >> rw[] >> simp[sexp_size_def] >>
-   fs[Once strip_sxcons_def] >> rw[] >> simp[sexp_size_def] >>
-   PROVE_TAC[sxMEM_def,sxMEM_sizelt,arithmeticTheory.LESS_IMP_LESS_ADD,listTheory.MEM,
-             DECIDE``(a:num) + (b + c) = b + (a + c)``]);
-
-val FOLDR_STRCAT_destSXSYM = Q.prove(
-  `∀ls. FOLDR (λs a. STRCAT (destSXSYM s) a) "" (MAP (λc. SX_SYM (STRING c "")) ls) = ls`,
-  Induct >> simp[destSXSYM_def]);
+   fs[Once strip_dot_def] >>
+   pairarg_tac \\ fs[] \\ rw[sexp_size_def] \\ fs[]
+   \\ imp_res_tac strip_dot_MEM_sizelt
+   \\ imp_res_tac strip_dot_last_sizelt
+   \\ fsrw_tac[boolSimps.DNF_ss][] \\ simp[]
+   \\ fs[quantHeuristicsTheory.LIST_LENGTH_2] \\ rw[] \\ fs[]
+   \\ res_tac \\ simp[]);
 
 val peg_eval_list_valid_symchars = Q.prove(
   `∀cs. EVERY valid_symchar cs ⇒
@@ -298,54 +343,6 @@ val peg_eval_list_chars = Q.store_thm("peg_eval_list_chars",
   \\ simp[peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
   \\ simp[peg_eval_tok_SOME]);
 
-val print_sexp_non_space = Q.store_thm("print_sexp_non_space",
-  `∀s. valid_sexp s ⇒ ∃h t. print_sexp s  = h :: t ∧ ¬isSpace h ∧ h ≠ #")"`,
-  ho_match_mp_tac(theorem"print_sexp_ind")
-  \\ rw[print_sexp_def]
-  >- (
-    Cases_on`s` \\ fs[valid_symbol_def]
-    \\ fs[stringTheory.isSpace_def,stringTheory.isGraph_def] )
-  >- (
-    assume_tac EVERY_isDigit_num_to_dec_string
-    \\ fs[num_to_dec_string_def,n2s_def,Once numposrepTheory.n2l_def]
-    \\ qmatch_assum_abbrev_tac`EVERY isDigit ls`
-    \\ Cases_on`ls` \\ fs[]
-    >- ( pop_assum mp_tac \\ rw[markerTheory.Abbrev_def] )
-    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
-    \\ spose_not_then strip_assume_tac \\ fs[])
-  >- EVAL_TAC
-  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
-  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
-  \\ BasicProvers.TOP_CASE_TAC >- EVAL_TAC
-  \\ BasicProvers.TOP_CASE_TAC
-  >- ( rw[] \\ EVAL_TAC )
-  \\ EVAL_TAC);
-
-val peg_eval_list_isSpace_print_sexp = Q.store_thm("peg_eval_list_isSpace_print_sexp",
-  `valid_sexp s ⇒
-   peg_eval_list sexpPEG (print_sexp s ++ ls, tok isSpace ARB) (print_sexp s ++ ls,[])`,
-  strip_tac
-  \\ imp_res_tac print_sexp_non_space
-  \\ simp[Once peg_eval_list]
-  \\ simp[peg_eval_tok_NONE]);
-
-val peg_eval_print_sexp_sxnt_sexp = Q.store_thm("peg_eval_print_sexp_sxnt_sexp",
-  `valid_sexp s ⇒
-   (peg_eval sexpPEG (print_sexp s ++ ls, pnt sxnt_sexp) =
-    peg_eval sexpPEG (print_sexp s ++ ls, pnt sxnt_sexp0 <~ rpt (tok isSpace ARB) (K ARB)))`,
-  strip_tac \\ simp[FUN_EQ_THM,pnt_def]
-  \\ Cases
-  >- (
-    simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreR_def,peg_eval_seq_NONE,pnt_def]
-    \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreL_def,peg_eval_seq_NONE,peg_eval_rpt,PULL_EXISTS]
-    \\ rw[EQ_IMP_THM] \\ fs[pnt_def]
-    \\ metis_tac[peg_deterministic,peg_eval_list_isSpace_print_sexp,pairTheory.PAIR_EQ] )
-  \\ qmatch_goalsub_rename_tac`SOME p` \\ Cases_on`p`
-  \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreR_def,peg_eval_seq_SOME,pnt_def]
-  \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,ignoreL_def,peg_eval_seq_SOME,peg_eval_rpt,PULL_EXISTS]
-  \\ rw[EQ_IMP_THM] \\ fs[pnt_def,peg_eval_seq_SOME,peg_eval_rpt,PULL_EXISTS]
-  \\ metis_tac[peg_deterministic,peg_eval_list_isSpace_print_sexp,pairTheory.PAIR_EQ]);
-
 val nt_rank_def = Define`
   (nt_rank sxnt_normstrchar = 0n) ∧
   (nt_rank sxnt_escapedstrchar = 0) ∧
@@ -357,12 +354,12 @@ val nt_rank_def = Define`
 val _ = export_rewrites["nt_rank_def"];
 
 val print_nt_def = tDefine"print_nt"`
-  (print_nt (sxnt_normstrchar) (SX_SYM [c]) =
+  (print_nt sxnt_normstrchar (SX_SYM [c]) =
      if isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\" then SOME [c] else NONE) ∧
-  (print_nt (sxnt_normstrchar) _ = NONE) ∧
-  (print_nt (sxnt_escapedstrchar) (SX_SYM [c]) =
+  (print_nt sxnt_normstrchar _ = NONE) ∧
+  (print_nt sxnt_escapedstrchar (SX_SYM [c]) =
     if c = #"\\" ∨ c = #"\"" then SOME [c] else NONE) ∧
-  (print_nt (sxnt_strchar) (SX_SYM [c]) =
+  (print_nt sxnt_strchar (SX_SYM [c]) =
     if c = #"\\" ∨ c = #"\"" then SOME (#"\\"::[c]) else
     if isPrint c then SOME [c] else NONE) ∧
   (print_nt sxnt_strcontents (SX_STR str) =
@@ -531,14 +528,34 @@ val parse_print = Q.store_thm("parse_print",
 
 (*
 val cs = listLib.list_compset()
-val () = pegLib.add_peg_compset cs
-val () = computeLib.add_thms[sexpPEG_exec_thm,pnt_def,ignoreR_def,ignoreL_def,tokeq_def,pegf_def]cs
-  simp[MATCH_MP peg_eval_executed
-       (CONJ wfG_sexpPEG (EQT_ELIM(SIMP_CONV(srw_ss())[sexpPEG_def,Gexprs_sexpPEG]``sexpPEG.start ∈ Gexprs sexpPEG``)))] >>
-  CONV_TAC(computeLib.CBV_CONV cs) >>
-  IF_CASES_TAC >- fs[stringTheory.isGraph_def] >>
-  simp[choicel_def] >>
-  CONV_TAC(computeLib.CBV_CONV cs) >> simp[] >>
+val () = stringLib.add_string_compset cs;
+val () = pairLib.add_pair_compset cs;
+val () = combinLib.add_combin_compset cs;
+val () = sumSimps.SUM_rws cs;
+val () = optionLib.OPTION_rws cs;
+val () = pred_setLib.add_pred_set_compset cs;
+val () = pegLib.add_peg_compset cs;
+(* TODO: pegLib should not include wfG *)
+val () = computeLib.scrub_thms [wfG_def,pegparse_def] cs;
+val () = computeLib.add_thms[pegparse_def]cs;
+(* -- *)
+val () = computeLib.add_thms[
+  destResult_def,destSXCONS_def,destSXNUM_def,destSXSYM_def]cs;
+val () = computeLib.add_thms[
+  sexpPEG_exec_thm,EQT_INTRO wfG_sexpPEG,
+  valid_first_symchar_def, valid_symchar_def,
+    pnt_def,ignoreR_def,ignoreL_def,tokeq_def,pegf_def,
+    choicel_def,grabWS_def,replace_nil_def,
+  parse_sexp_def]cs;
+
+val res = computeLib.CBV_CONV cs ``parse_sexp "1"``;
+val res = computeLib.CBV_CONV cs ``parse_sexp "(1 2 . 3)"``;
+val res = computeLib.CBV_CONV cs ``parse_sexp "(1 2 3)"``;
+val res = computeLib.CBV_CONV cs ``parse_sexp "(1 (2 . 3) . 2)"``;
+
+open ASCIInumbersLib
+
+EVAL``print_sexp ^(res |> concl |> rhs |> rand)``
 *)
 
 val _ = export_theory()
