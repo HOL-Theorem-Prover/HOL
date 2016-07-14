@@ -27,16 +27,10 @@ val exceptionSignalled_id = Q.prove(
    lrw [exceptionSignalled_def, cheri_state_component_equality,
         procState_component_equality])
 
-val currentInst_id = Q.prove(
-   `!s. (s.currentInst = NONE) ==> (s with currentInst := NONE= s)`,
-   lrw [cheri_state_component_equality])
-
 val tac =
    lrw [NextStateCHERI_def, Next_def, AddressTranslation_def,
         write'CP0_def, write'exceptionSignalled_def,
-        BranchTo_def, BranchDelay_def, BranchDelayPCC_def,
-        currentInst_id
-        ]
+        BranchTo_def, BranchDelay_def, BranchDelayPCC_def]
    \\ Cases_on
        `(Run (Decode w) (s' with currentInst := SOME w)).c_state.c_BranchTo`
    \\ Cases_on
@@ -48,11 +42,10 @@ val tac =
 
 val NextStateCHERI_nodelay = utilsLib.ustore_thm("NextStateCHERI_nodelay",
     `(s.exception = NoException) /\
-     (s.currentInst = NONE) /\
      (BranchDelay s = NONE) /\
      (BranchDelayPCC s = NONE) /\
      ~exceptionSignalled s ==>
-     (Fetch s = (SOME w, s')) /\
+     (Fetch (s with currentInst := NONE) = (SOME w, s')) /\
      (Decode w = i) /\
      (Run i (s' with currentInst := SOME w) = next_state) /\
      (next_state.exception = s.exception) /\
@@ -77,11 +70,10 @@ val NextStateCHERI_nodelay = utilsLib.ustore_thm("NextStateCHERI_nodelay",
 
 val NextStateCHERI_delay = utilsLib.ustore_thm("NextStateCHERI_delay",
     `(s.exception = NoException) /\
-     (s.currentInst = NONE) /\
      (BranchDelay s = SOME a) /\
      (BranchDelayPCC s = NONE) /\
      ~exceptionSignalled s ==>
-     (Fetch s = (SOME w, s')) /\
+     (Fetch (s with currentInst := NONE) = (SOME w, s')) /\
      (Decode w = i) /\
      (Run i (s' with currentInst := SOME w) = next_state) /\
      (next_state.exception = s.exception) /\
@@ -702,9 +694,12 @@ val lem = Q.prove(
 
 val Fetch_default = Theory.save_thm("Fetch_default",
   utilsLib.FULL_CONV_RULE
-    (REWRITE_CONV [ev_assume ``s.c_pcc 0w = defaultCap``]
+    (utilsLib.SRW_CONV []
+     THENC REWRITE_CONV [ev_assume ``^st.c_pcc 0w = defaultCap``]
      THENC utilsLib.SRW_CONV [wordsTheory.WORD_LO_word_0, defaultCap_def]
-     THENC utilsLib.INST_REWRITE_CONV [lem]) Fetch)
+     THENC utilsLib.INST_REWRITE_CONV [lem])
+    (Thm.INST [st |-> ``^st with currentInst := NONE``] Fetch)
+    )
 
 (* ------------------------------------------------------------------------ *)
 

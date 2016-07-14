@@ -356,6 +356,8 @@ local
   val mk_BranchTo = monop "BranchTo"
   val mk_BranchToPCC = monop "BranchToPCC"
   val mk_currentInst_fupd = binop "cheri_state_currentInst_fupd"
+  fun currentInst w st' =
+    mk_currentInst_fupd (combinSyntax.mk_K_1 (w, Term.type_of w), st')
   val st = ``s:cheri_state``
   val ths = [exceptionSignalled_def, BranchDelay_def, BranchDelayPCC_def,
              BranchTo_def, BranchToPCC_def]
@@ -387,6 +389,7 @@ local
     hyp_rule o
     Conv.CONV_RULE
       (Conv.RAND_CONV (utilsLib.SRW_CONV [PC_def, CP0_def])
+       THENC Conv.PATH_CONV "lrlr" (utilsLib.SRW_CONV [])
        THENC Conv.PATH_CONV "lrrrrrlrr" (utilsLib.SRW_CONV []))
   val NextStateCHERI_nodelay = next_rule cheri_stepTheory.NextStateCHERI_nodelay
   val NextStateCHERI_delay = next_rule cheri_stepTheory.NextStateCHERI_delay
@@ -399,13 +402,11 @@ in
     let
       val thm1 = fetch v
       val (w, st') = get thm1
-      val st' =
-        mk_currentInst_fupd (combinSyntax.mk_K_1 (w, Term.type_of w), st')
       val thm2 = cheri_decode v
       val thm3 = Drule.SPEC_ALL (Run_CONV thm2)
       val ethm = eval (utilsLib.rhsc thm3)
       val thm3 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
-      val thm3 = full_rule (Thm.INST [st |-> st'] thm3)
+      val thm3 = full_rule (Thm.INST [st |-> currentInst w st'] thm3)
       val tm = utilsLib.rhsc thm3
       val thms = List.map (fn f => STATE_CONV (f tm))
                     [mk_exception,
@@ -429,13 +430,9 @@ end
 
  match_term (List.nth (tms, 0)) (concl thm1);
  match_term (List.nth (tms, 1)) (concl thm2);
-
  match_term (List.nth (tms, 2)) (concl thm3);
-
- match_term (List.nth (tms, 3)) (concl (List.nth (thms, 0)))
-
+ match_term (List.nth (tms, 3)) (concl (List.nth (thms, 0)));
  match_term (List.nth (tms, 4)) (concl (List.nth (thms, 1)));
-
  match_term (List.nth (tms, 5)) (concl (List.nth (thms, 2)));
  match_term (List.nth (tms, 6)) (concl (List.nth (thms, 3)));
  match_term (List.nth (tms, 7)) (concl (List.nth (thms, 4)));
@@ -462,7 +459,7 @@ val v = test "BEQ";
 val v = test "BEQL";
 val v = test "BLTZAL";
 val v = test "BLTZALL";
-val v = test "ERET"
+val v = test "LB";
 
 val l = List.map (Lib.total step o snd) (Redblackmap.listItems cheri_dict)
 
