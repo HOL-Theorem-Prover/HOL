@@ -721,7 +721,7 @@ local
   val hyp_eq_rule =
     utilsLib.ALL_HYP_CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
 in
-  val names = ref ([]: string list)
+  val () = utilsLib.reset_thms()
   fun class args avoid n =
     let
       val name = "dfn'" ^ n
@@ -733,9 +733,8 @@ in
           ([write'GPR], n)
       val thms = DB.fetch "riscv" (name ^ "_def") :: write @ read
     in
-      names := n :: (!names)
-    ; case ev (thms @ l) avoid [] (Parse.Term ([QUOTE name] @ args)) of
-         [th] => Theory.save_thm (n, hyp_eq_rule th)
+      case ev (thms @ l) avoid [] (Parse.Term ([QUOTE name] @ args)) of
+         [th] => utilsLib.save_thms n [hyp_eq_rule th]
        | _ => raise ERR "class" ("more than one theorem" ^ n)
     end
 end
@@ -833,25 +832,9 @@ val SW  = store [] "SW"
 val SH  = store [] "SH"
 val SB  = store [] "SB"
 
-(* ------------------------------------------------------------------------
-   Save names
-   ------------------------------------------------------------------------ *)
+(* ------------------------------------------------------------------------ *)
 
-val () = Theory.delete_const "select"
-
-val () = Theory.adjoin_to_theory
-  { sig_ps = SOME (fn pps => PP.add_string pps ("val rwts : string list")),
-    struct_ps =
-      SOME (fn pps => ( PP.add_string pps "val rwts = ["
-                      ; PP.begin_block pps PP.INCONSISTENT 0
-                      ; Portable.pr_list
-                           (PP.add_string pps o Lib.quote)
-                           (fn () => PP.add_string pps ",")
-                           (fn () => PP.add_break pps (1, 0)) (!names)
-                      ; PP.add_string pps "]"
-                      ; PP.end_block pps
-                      ; PP.add_newline pps
-                      ))
-  }
-
-val () = export_theory ()
+val () = ( Theory.delete_const "select"
+         ; utilsLib.adjoin_thms ()
+         ; export_theory ()
+         )
