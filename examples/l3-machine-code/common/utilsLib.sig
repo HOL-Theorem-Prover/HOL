@@ -39,12 +39,14 @@ sig
    val STRIP_UNDISCH: rule
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
+   val accessor_update_fns: hol_type -> (term * term) list
    val add_base_datatypes: computeLib.compset -> unit
    val add_datatypes: hol_type list -> computeLib.compset -> unit
    val add_theory: (thm list * inventory) -> computeLib.compset -> unit
    val add_to_rw_net:
       (thm -> term) -> thm * thm LVTermNet.lvtermnet -> thm LVTermNet.lvtermnet
    val add_to_the_compset: (thm list * inventory) -> unit
+   val adjoin_thms: unit -> unit
    val augment: term frag list * term list -> cover -> cover
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
@@ -64,6 +66,7 @@ sig
    val match_subst: {redex: term, residue: term} list -> term -> term
    val maximal: ('a * 'a -> order) -> ('b -> 'a) -> 'b list -> 'b * 'b list
    val minimal: ('a * 'a -> order) -> ('b -> 'a) -> 'b list -> 'b * 'b list
+   val mk_cond_exhaustive_thm: int -> thm
    val mk_cond_rand_thms: term list -> thm
    val mk_cond_update_thms: hol_type list -> thm list
    val mk_negation: term -> term
@@ -86,10 +89,12 @@ sig
    val qm_tac: thm list -> tactic
    val removeSpaces: string -> string
    val resetStepConv: unit -> unit
+   val reset_thms: unit -> unit
    val rev_endian: 'a list -> 'a list
    val rhsc: thm -> term
    val rng: hol_type -> hol_type
    val save_as: string -> thm -> thm
+   val save_thms: string -> thm list -> thm list
    val setStepConv: conv -> unit
    val specialized: string -> conv * term list -> thm list -> thm list
    val splitAtChar: (char -> bool) -> string -> string * string
