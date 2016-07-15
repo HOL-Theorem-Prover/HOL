@@ -6,6 +6,7 @@
 Apply a conversion and branch to next conversion.
 
 \KEYWORDS
+Conversion
 
 \DESCRIBE
 A call to {IFC c1 c2 c3 t} applies the conversion {c1} to {t}.
@@ -34,9 +35,7 @@ Although {ALL_CONV} succeeds, it does nothing, so {BETA_CONV} is not applicable.
 }
 The {NO_CONV} fails, so {RATOR_CONV BETA_CONV} applies.
 
-\COMMENTS
-
 \SEEALSO
-Conv.ORELSEC.
+Conv.ORELSEC, Conv.REPEATC.
 
 \ENDDOC
