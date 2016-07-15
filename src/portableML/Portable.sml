@@ -38,6 +38,8 @@ fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
 infix |>
 fun x |> f = f x
+infixr $
+fun f $ x = f x
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
