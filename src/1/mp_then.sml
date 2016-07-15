@@ -2,7 +2,7 @@ structure mp_then =
 struct
 
 local
-  open HolKernel Drule
+  open HolKernel Drule Parse boolSyntax
 
 fun avSPEC_ALL avds th =
   let
