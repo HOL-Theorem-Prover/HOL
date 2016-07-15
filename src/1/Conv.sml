@@ -257,12 +257,26 @@ fun CHANGED_CONV conv tm =
 fun QCHANGED_CONV conv tm =
    conv tm handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
 
+local
+  fun testconv f x = SOME (SOME (f x))
+  handle UNCHANGED => SOME NONE
+       | HOL_ERR _ => NONE
+       | e => raise e
+in
+  fun IFC (conv1:conv) conv2 conv3 tm =
+    case testconv conv1 tm of
+      SOME (SOME th) =>
+        (TRANS th (conv2 (rhs (concl th))) handle UNCHANGED => th)
+    | SOME NONE => conv2 tm
+    | NONE => conv3 tm
+end
+
 (*----------------------------------------------------------------------*
  * Apply a conversion zero or more times.                               *
  *----------------------------------------------------------------------*)
 
 fun REPEATC conv tm =
-   ((QCHANGED_CONV conv THENC REPEATC conv) ORELSEC ALL_CONV) tm
+   (IFC (QCHANGED_CONV conv) (REPEATC conv) ALL_CONV) tm
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV
 

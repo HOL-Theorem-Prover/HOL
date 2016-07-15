@@ -30,6 +30,7 @@ sig
    val ALL_CONV              : conv
    val THENC                 : conv * conv -> conv
    val ORELSEC               : conv * conv -> conv
+   val IFC                   : conv -> conv -> conv -> conv
    val FIRST_CONV            : conv list -> conv
    val EVERY_CONV            : conv list -> conv
    val REPEATC               : conv -> conv
