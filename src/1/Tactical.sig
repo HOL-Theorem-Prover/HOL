@@ -75,6 +75,7 @@ sig
   val last_assum     : thm_tactic -> tactic
   val LAST_X_ASSUM   : thm_tactic -> tactic
   val last_x_assum   : thm_tactic -> tactic
+  val goal_assum     : thm_tactic -> tactic
   val hdtm_assum     : term -> thm_tactic -> tactic
   val hdtm_x_assum   : term -> thm_tactic -> tactic
 
