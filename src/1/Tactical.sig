@@ -5,6 +5,7 @@ sig
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
   val store_thm      : string * term * tactic -> thm
+  val CONV_TAC       : conv -> tactic
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val >>             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val \\             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic

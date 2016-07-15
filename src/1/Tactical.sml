@@ -13,7 +13,7 @@
 structure Tactical :> Tactical =
 struct
 
-open Feedback HolKernel Drule Conv boolSyntax Abbrev;
+open Feedback HolKernel Drule Conv boolSyntax Abbrev
 
 val ERR = mk_HOL_ERR "Tactical"
 
@@ -633,6 +633,23 @@ fun hdtm_assum tm ttac = first_assum (hdsym_check tm ttac)
 fun hdtm_x_assum tm ttac = first_x_assum (hdsym_check tm ttac)
 end
 
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" "Bind Error"
+
+fun CONV_TAC (conv: conv) : tactic =
+   fn (asl, w) =>
+      let
+         val th = conv w
+         val (_, rhs) = dest_eq (concl th)
+      in
+         if rhs = T
+            then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
+         else ([(asl, rhs)], sing (EQ_MP (SYM th)))
+      end
+      handle UNCHANGED =>
+        if w = T (* special case, can happen! *)
+          then ([], empty boolTheory.TRUTH)
+        else ALL_TAC (asl, w)
 
 (*---------------------------------------------------------------------------
  * Call a thm-tactic on the "assumption" obtained by negating the goal, i.e.,
@@ -641,11 +658,22 @@ end
  *---------------------------------------------------------------------------*)
 
 local
+  fun DISCH_THEN ttac (asl,w) =
+   let
+      val (ant, conseq) = dest_imp w
+      val (gl, prf) = ttac (ASSUME ant) (asl, conseq)
+   in
+      (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
+   end
+   handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
   val NOT_NOT_I = boolTheory.NOT_CLAUSES |> CONJUNCT1 |> GSYM
-  val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP) (SPEC_ALL boolTheory.IMP_F)
+  val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
+                                   (SPEC_ALL boolTheory.IMP_F)
   val IMP_F_NOT = NOT_IMP_F |> GSYM
   val P_IMP_P = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 4
-  val NOT_IMP_F_elim = REWRITE_CONV[]``~(p ==> F)``
+  val NOT_IMP_F_elim =
+      TRANS (AP_TERM boolSyntax.negation (SYM NOT_IMP_F))
+            (boolTheory.NOT_CLAUSES |> CONJUNCT1 |> SPEC_ALL)
   fun EX_IMP_F_CONV tm =
     (IFC NOT_EXISTS_CONV (BINDER_CONV EX_IMP_F_CONV) (REWR_CONV NOT_IMP_F)) tm
   fun undo_conv tm =

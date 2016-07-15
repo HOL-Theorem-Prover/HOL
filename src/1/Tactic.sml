@@ -894,25 +894,6 @@ fun (tm via tac) =
    handle e as HOL_ERR _ => raise ERR "via" ""
 
 (*--------------------------------------------------------------------------*
- *   Map a conversion to a tactic.                                          *
- *--------------------------------------------------------------------------*)
-
-fun CONV_TAC (conv: conv) : tactic =
-   fn (asl, w) =>
-      let
-         val th = conv w
-         val (_, rhs) = dest_eq (concl th)
-      in
-         if rhs = T
-            then ([], empty (EQ_MP (SYM th) TRUTH))
-         else ([(asl, rhs)], sing (EQ_MP (SYM th)))
-      end
-      handle UNCHANGED =>
-        if w = T (* special case, can happen! *)
-          then ([], empty TRUTH)
-        else ALL_TAC (asl, w)
-
-(*--------------------------------------------------------------------------*
  *   Tactic for beta-reducing a goal.                                       *
  *--------------------------------------------------------------------------*)
 
