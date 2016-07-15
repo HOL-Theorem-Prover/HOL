@@ -13,7 +13,7 @@
 structure Tactical :> Tactical =
 struct
 
-open Feedback HolKernel Drule boolSyntax Abbrev;
+open Feedback HolKernel Drule Conv boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "Tactical"
 
@@ -634,6 +634,30 @@ fun hdtm_x_assum tm ttac = first_x_assum (hdsym_check tm ttac)
 end
 
 
+(*---------------------------------------------------------------------------
+ * Call a thm-tactic on the "assumption" obtained by negating the goal, i.e.,
+   turn an existential goal into a universal assumption. Fix up the resulting
+   new goal if necessary.
+ *---------------------------------------------------------------------------*)
+
+local
+  val NOT_NOT_I = boolTheory.NOT_CLAUSES |> CONJUNCT1 |> GSYM
+  val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP) (SPEC_ALL boolTheory.IMP_F)
+  val IMP_F_NOT = NOT_IMP_F |> GSYM
+  val P_IMP_P = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 4
+  val NOT_IMP_F_elim = REWRITE_CONV[]``~(p ==> F)``
+  fun EX_IMP_F_CONV tm =
+    (IFC NOT_EXISTS_CONV (BINDER_CONV EX_IMP_F_CONV) (REWR_CONV NOT_IMP_F)) tm
+  fun undo_conv tm =
+    (IFC NOT_FORALL_CONV (BINDER_CONV undo_conv) (REWR_CONV NOT_IMP_F_elim)) tm
+in
+  fun goal_assum ttac : tactic =
+    CONV_TAC (REWR_CONV NOT_NOT_I THENC
+              RAND_CONV EX_IMP_F_CONV)
+    THEN (DISCH_THEN ttac)
+    THEN ((CONV_TAC (REWR_CONV P_IMP_P)) ORELSE
+          (TRY (CONV_TAC (REWR_CONV IMP_F_NOT THENC undo_conv))))
+end
 
 (*---------------------------------------------------------------------------
  * Split off a new subgoal and provide it as a theorem to a tactic
