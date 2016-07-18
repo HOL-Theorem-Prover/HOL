@@ -481,6 +481,14 @@ val OPTION_IGNORE_BIND_thm = store_thm(
   SRW_TAC[][OPTION_IGNORE_BIND_def]);
 val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
 
+val OPTION_IGNORE_BIND_EQUALS_OPTION = store_thm(
+  "OPTION_IGNORE_BIND_EQUALS_OPTION[simp]",
+  ``((OPTION_IGNORE_BIND (m1:'a option) m2 = NONE) <=>
+       (m1 = NONE) \/ (m2 = NONE)) /\
+    ((OPTION_IGNORE_BIND m1 m2 = SOME y) <=>
+       ?x. (m1 = SOME x) /\ (m2 = SOME y))``,
+  OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC [][]);
+
 val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
   name = "OPTION_GUARD_def",
   rec_axiom = boolTheory.boolAxiom,
@@ -511,6 +519,11 @@ val _ = export_rewrites ["OPTION_CHOICE_def"]
 val OPTION_CHOICE_EQ_NONE = store_thm(
   "OPTION_CHOICE_EQ_NONE",
   ``(OPTION_CHOICE (m1:'a option) m2 = NONE) <=> (m1 = NONE) /\ (m2 = NONE)``,
+  OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC[][]);
+
+val OPTION_CHOICE_NONE = store_thm(
+  "OPTION_CHOICE_NONE[simp]",
+  ``OPTION_CHOICE (m1:'a option) NONE = m1``,
   OPTION_CASES_TAC ``m1:'a option`` THEN SRW_TAC[][]);
 
 val OPTION_MCOMP_def = Q.new_definition ("OPTION_MCOMP_def",
