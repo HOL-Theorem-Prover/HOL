@@ -2,7 +2,7 @@ structure mp_then =
 struct
 
 local
-  open HolKernel Drule Parse boolSyntax
+  open HolKernel Drule Conv Parse boolTheory boolSyntax
 
 fun avSPEC_ALL avds th =
   let
@@ -36,7 +36,11 @@ fun PART_MATCH' f th t =
 fun match_subterm pat =
   can (find_term (can (match_term pat)))
 
-
+val op$ = Portable.$
+val notT = el 2 (CONJUNCTS NOT_CLAUSES)
+val imp_clauses = IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS
+val Timp = el 1 imp_clauses
+val impF = last imp_clauses
 
 in
 
@@ -49,9 +53,19 @@ datatype match_position =
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
     val ith = MP_CANON ith0
+    val rth_eq = EQF_INTRO rth handle HOL_ERR _ => EQT_INTRO rth
     fun m f k t =
       let
-        val th = PART_MATCH' f ith t
+        val th0 = PART_MATCH' f ith t
+        val th =
+            CONV_RULE
+              (STRIP_QUANT_CONV
+                 (FORK_CONV (EVERY_CONJ_CONV $ TRY_CONV $ REWR_CONV rth_eq,
+                             (REWR_CONV rth_eq ORELSEC
+                              TRY_CONV (RAND_CONV (REWR_CONV rth_eq) THENC
+                                        REWR_CONV notT))) THENC
+                  FIRST_CONV [REWR_CONV Timp, REWR_CONV impF, ALL_CONV]))
+              th0
       in
         ttac th g
       end handle HOL_ERR _ => k()
