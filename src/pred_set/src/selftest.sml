@@ -6,17 +6,16 @@ val padr = StringCvt.padRight #" "
 val padl = StringCvt.padLeft #" "
 
 fun test s (problem, result) = let
+  open testutils
   val p_s = padr 30 (term_to_string problem)
   val r_s = padl 15 (term_to_string result)
-  val _ = print p_s
+  val _ = tprint (p_s ^ " = " ^ r_s)
   val th = QCONV s problem
   val answer = rhs (concl th)
-  val verdict = if aconv answer result then ("OK", true)
-                else ("FAILED!", false)
 in
-  print (padr 35 (" = " ^ r_s));
-  print (#1 verdict ^ "\n");
-  #2 verdict
+  if aconv answer result then OK()
+  else die "FAILED!";
+  true
 end;
 
 val _ =

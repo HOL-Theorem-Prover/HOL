@@ -17,8 +17,9 @@ val testdata = [(`#"("`, fromMLchar #"("),
                 (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``))]
 
 fun do_test (q,res) = let
-  val _ = print (StringCvt.padRight #" " 40 (printq q))
-  val _ = print (StringCvt.padRight #" " 25 ("``" ^ term_to_string res ^ "``"))
+  val l_s = StringCvt.padRight #" " 40 (printq q)
+  val r_s = StringCvt.padLeft #" " 15 ("``" ^ term_to_string res ^ "``")
+  val _ = tprint (l_s ^ " = " ^ r_s)
 in
   if aconv (Term q) res then OK() else die "FAILED!"
 end
@@ -65,15 +66,15 @@ val sec_data = [(``"" = ""``, T),
                 (``"abc" = "ab"``, F)]
 
 fun sectest (t1, rest) = let
-  val _ = print (StringCvt.padRight #" " 40 (term_to_string t1))
+  val _ = tprint (StringCvt.padRight #" " 40 (term_to_string t1) ^ " = " ^
+                  StringCvt.padLeft #" " 15 (term_to_string rest))
   val (actual, ok) = let
     val res = rhs (concl (stringLib.string_EQ_CONV t1))
   in
     (term_to_string res, aconv res rest)
   end handle _ => ("EXN", false)
 in
-  print (StringCvt.padRight #" " 25 actual);
-  if ok then OK() else die "FAILED!"
+  if ok then OK() else die ("FAILED!\n  Got "^actual)
 end
 
 val _ = app sectest sec_data

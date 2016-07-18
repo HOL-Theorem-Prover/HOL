@@ -63,7 +63,7 @@ fun test_fail orig (c:conv) tm = let
                        else
                          SOME ("unexpected exception from " ^ origin_function)
 in
-  TextIO.print ("Expecting failure: " ^ trunc 46 tm);
+  tprint ("Expecting failure: " ^ trunc 46 tm);
   case res of
       NONE => OK()
     | SOME s => die s
@@ -79,7 +79,7 @@ fun test_counter (c:conv) tm = let
                    | HOL_ERR {origin_function,...} =>
                          SOME ("unexpected exception from " ^ origin_function)
 in
-  TextIO.print ("Counterexample: " ^ trunc 49 tm);
+  tprint ("Counterexample: " ^ trunc 49 tm);
   case res of
       NONE => OK()
     | SOME s => die s
