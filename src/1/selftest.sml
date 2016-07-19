@@ -505,6 +505,31 @@ in
   else die "FAILED"
 end
 
+val _ = let
+  fun B i = mk_var("x" ^ Int.toString i, bool)
+  fun jump ti i = if i > ti then i - 1 else i
+  val expected = list_mk_conj(List.tabulate(3, B))
+  fun test (ai,ti) =
+    let
+      fun mk i = if i = ai then mk_comb(mk_abs(B 0,B 0), B (jump ti i))
+                 else if i = ti then mk_comb(mk_abs(B 1, B 1), T)
+                 else B (jump ti i)
+      val t = list_mk_conj (List.tabulate(4, mk))
+      val _ = tprint ("EVERY_CONJ_CONV (" ^ Int.toString ai ^ "," ^
+                      Int.toString ti ^ ")")
+      val res = QCONV (EVERY_CONJ_CONV (TRY_CONV BETA_CONV)) t |> concl |> rhs
+    in
+      if aconv expected res then OK()
+      else die ("FAILED!\n got " ^ term_to_string res)
+    end
+  fun row i = List.tabulate (4, fn j => (i,j))
+  val pairs = List.tabulate (4, row) |> List.concat
+                            |> filter (fn (i,j) => i <> j)
+in
+  List.app test pairs
+end
+
+
 val _ = tprint "Testing (foo THENL [...]) when foo solves"
 val _ = (ACCEPT_TAC TRUTH THENL [ACCEPT_TAC TRUTH]) ([], ``T``) handle HOL_ERR _ => die "FAILED!"
 val _ = OK()
