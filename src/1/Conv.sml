@@ -339,7 +339,7 @@ fun EVERY_CONJ_CONV c tm =
            (REWR_CONV F_and ORELSEC
               (REWR_CONV T_and THENC EVERY_CONJ_CONV c) ORELSEC
                  (RAND_CONV (EVERY_CONJ_CONV c) THENC
-                  TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV or_T)))
+                  TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV and_T)))
    else c) tm
 
 fun QUANT_CONV conv  = RAND_CONV (ABS_CONV conv)
