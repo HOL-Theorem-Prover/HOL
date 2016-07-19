@@ -1201,4 +1201,25 @@ val insert_shadow = store_thm("insert_shadow",
     DECIDE_TAC)>>
   metis_tac[])
 
+(* the sub-map relation, a partial order *)
+val subspt_def = Define`
+  subspt sp1 sp2 <=>
+    !k. k IN domain sp1 ==> k IN domain sp2 /\ (lookup k sp2 = lookup k sp1)
+`;
+
+val subspt_refl = Q.store_thm(
+  "subspt_refl[simp]",
+  `subspt sp sp`,
+  simp[subspt_def])
+
+val subspt_trans = Q.store_thm(
+  "subspt_trans",
+  `subspt sp1 sp2 /\ subspt sp2 sp3 ==> subspt sp1 sp3`,
+  metis_tac[subspt_def]);
+
+val subspt_LN = Q.store_thm(
+  "subspt_LN[simp]",
+  `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
+  simp[subspt_def, pred_setTheory.EXTENSION]);
+
 val _ = export_theory();
