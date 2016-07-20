@@ -38,6 +38,17 @@ val EVERY_isDigit_num_to_dec_string = Q.store_thm("EVERY_isDigit_num_to_dec_stri
   `EVERY isDigit (num_to_dec_string n)`,
   rw[num_to_dec_string_def,EVERY_isDigit_n2s]);
 
+val n2s_not_null = Q.store_thm("n2s_not_null",
+  `∀n. ¬NULL(n2s 10 HEX n)`,
+  rw[n2s_def,listTheory.NULL_EQ]
+  \\ strip_tac
+  \\ qspecl_then[`10`,`n`]mp_tac numposrepTheory.LENGTH_n2l
+  \\ simp[]);
+
+val num_to_dec_string_not_null = Q.store_thm("num_to_dec_string_not_null",
+  `∀n. ¬NULL(toString n)`,
+  rw[num_to_dec_string_def,n2s_not_null]);
+
 val l2n_APPEND = Q.store_thm("l2n_APPEND",
   `∀l1 l2. l2n b (l1 ++ l2) =
            l2n b l1 + b ** (LENGTH l1) * l2n b l2`,
@@ -284,12 +295,13 @@ val peg_eval_list_num_to_dec_string_no_spaces = Q.prove(
   \\ simp[]);
 
 val peg_eval_list_digits = Q.store_thm("peg_eval_list_digits",
-  `∀s. EVERY isDigit s ⇒
-   peg_eval_list sexpPEG (s,nt(mkNT sxnt_digit) I) ("",MAP (SX_NUM o combin$C $- 48 o ORD) s)`,
+  `∀s. EVERY isDigit s ∧ (rst ≠ "" ⇒ ¬ isDigit (HD rst)) ⇒
+   peg_eval_list sexpPEG (s ++ rst,nt(mkNT sxnt_digit) I) (rst,MAP (SX_NUM o combin$C $- 48 o ORD) s)`,
   Induct \\ simp[Once peg_eval_list]
   >- (
     simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
-    \\ simp[peg_eval_tok_NONE] )
+    \\ simp[peg_eval_tok_NONE]
+    \\ Cases_on`rst` \\ fs[])
   \\ rw[] \\ fs[]
   \\ simp[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
   \\ simp[peg_eval_tok_SOME]);
@@ -438,7 +450,10 @@ val print_nt_def = tDefine"print_nt"`
   (print_nt sxnt_sexp0 (SX_STR str) =
     OPTION_MAP (λs. "\"" ++ s ++ "\"")
       (print_nt sxnt_strcontents (SX_STR str))) ∧
+  (print_nt sxnt_sexpnum (SX_NUM n) = SOME (toString n)) ∧
+  (print_nt sxnt_sexpnum _ = NONE) ∧
   (print_nt sxnt_sexp0 (SX_SYM str) = print_nt sxnt_sexpsym (SX_SYM str)) ∧
+  (print_nt sxnt_sexp0 (SX_NUM n) = print_nt sxnt_sexpnum (SX_NUM n)) ∧
   (print_nt sxnt_sexp0 sx =
    case dest_quote sx of SOME a => OPTION_MAP (APPEND "'") (print_nt sxnt_sexp0 a)
       | NONE => OPTION_MAP (APPEND "(") (print_nt sxnt_sexpseq sx)) ∧
@@ -459,6 +474,17 @@ val print_nt_ind = theorem"print_nt_ind";
 val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_space",
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ ¬ isSpace (HD str)`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
+  \\ TRY (
+    rw[GSYM listTheory.NULL_EQ,num_to_dec_string_not_null]
+    \\ NO_TAC)
+  \\ TRY (
+    qspec_then`n`mp_tac num_to_dec_string_not_null
+    \\ rw[listTheory.NULL_EQ]
+    \\ Cases_on`toString n` \\ fs[]
+    \\ assume_tac EVERY_isDigit_num_to_dec_string
+    \\ rfs[]
+    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
+    \\ NO_TAC)
   \\ every_case_tac \\ fs[listTheory.NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
   \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
@@ -466,19 +492,21 @@ val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_spa
 val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rparen",
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ HD str ≠ #")"`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
+  \\ TRY (
+    rw[GSYM listTheory.NULL_EQ,num_to_dec_string_not_null]
+    \\ NO_TAC)
+  \\ TRY (
+    qspec_then`n`mp_tac num_to_dec_string_not_null
+    \\ rw[listTheory.NULL_EQ]
+    \\ Cases_on`toString n` \\ fs[]
+    \\ assume_tac EVERY_isDigit_num_to_dec_string
+    \\ rfs[]
+    \\ spose_not_then strip_assume_tac
+    \\ fs[stringTheory.isSpace_def,stringTheory.isDigit_def]
+    \\ NO_TAC)
   \\ every_case_tac \\ fs[listTheory.NULL_EQ]
   \\ TRY (EVAL_TAC \\ NO_TAC)
   \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
-
-val stoppers_def = Define`
-  (stoppers sxnt_normstrchar = UNIV) ∧
-  (stoppers sxnt_escapedstrchar = UNIV) ∧
-  (stoppers sxnt_strchar = UNIV) ∧
-  (stoppers sxnt_strcontents = {#"\""}) ∧
-  (stoppers sxnt_sexpsym = UNIV DIFF valid_symchar) ∧
-  (stoppers sxnt_sexp0 = UNIV DIFF valid_symchar) ∧
-  (stoppers sxnt_sexpseq = UNIV) ∧
-  (stoppers sxnt_sexp = UNIV DIFF valid_symchar DIFF isSpace)`;
 
 val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
   `peg_eval sexpPEG (str ++ rst, pnt sxnt_sexp0) (SOME (rst,s)) ∧
@@ -525,6 +553,17 @@ val peg_eval_sexp0_NONE = Q.store_thm("peg_eval_sexp0_NONE",
   \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied]
   \\ rw[peg_eval_seq_SOME,peg_eval_seq_NONE,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied]
   \\ rw[peg_eval_tok_SOME,peg_eval_tok_NONE]);
+
+val stoppers_def = Define`
+  (stoppers sxnt_sexpnum = UNIV DIFF isDigit) ∧
+  (stoppers sxnt_normstrchar = UNIV) ∧
+  (stoppers sxnt_escapedstrchar = UNIV) ∧
+  (stoppers sxnt_strchar = UNIV) ∧
+  (stoppers sxnt_strcontents = {#"\""}) ∧
+  (stoppers sxnt_sexpsym = UNIV DIFF valid_symchar) ∧
+  (stoppers sxnt_sexp0 = UNIV DIFF valid_symchar DIFF isDigit) ∧
+  (stoppers sxnt_sexpseq = UNIV) ∧
+  (stoppers sxnt_sexp = UNIV DIFF valid_symchar DIFF isDigit DIFF isSpace)`;
 
 val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
   `∀nt s str rst. print_nt nt s = SOME str ∧ (rst ≠ [] ⇒ HD rst ∈ stoppers nt)
@@ -795,6 +834,40 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ simp[])
   >- (
     rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
+       peg_eval_seq_SOME,peg_eval_rpt,peg_eval_tok_SOME]
+    \\ qspec_then`n`mp_tac num_to_dec_string_not_null
+    \\ rw[listTheory.NULL_EQ]
+    \\ Cases_on`toString n` \\ fs[]
+    \\ assume_tac EVERY_isDigit_num_to_dec_string
+    \\ rfs[PULL_EXISTS]
+    \\ qspec_then`t`mp_tac peg_eval_list_digits
+    \\ impl_tac >- fs[stoppers_def,IN_DEF]
+    \\ strip_tac
+    \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
+    \\ rw[]
+    \\ pairarg_tac \\ fs[destSXNUM_def]
+    \\ fs[pairTheory.UNCURRY,destSXCONS_def,destSXNUM_def,rich_listTheory.FOLDL_MAP]
+    \\ qmatch_assum_abbrev_tac`FOLDL f a t = _`
+    \\ `∀ls a . FST (FOLDL f a ls) = FST a * 10 ** (LENGTH ls)`
+    by ( Induct \\ simp[Abbr`f`,arithmeticTheory.EXP])
+    \\ first_x_assum(qspecl_then[`t`,`a`]mp_tac)
+    \\ rw[Abbr`a`]
+    \\ `∀ls a. EVERY isDigit ls ⇒
+          SND (FOLDL f a ls) = (10 ** LENGTH ls * SND a + (l2n 10 (MAP (combin$C $- 48 o ORD) (REVERSE ls))))`
+    by (
+      qunabbrev_tac`f` \\ rpt (pop_assum kall_tac)
+      \\ ho_match_mp_tac listTheory.SNOC_INDUCT
+      \\ rw[numposrepTheory.l2n_def,listTheory.FOLDL_SNOC,listTheory.EVERY_SNOC,listTheory.REVERSE_SNOC,arithmeticTheory.EXP]
+      \\ simp[isDigit_ORD_MOD_10] )
+    \\ first_x_assum(qspecl_then[`t`,`(1,0)`]mp_tac)
+    \\ simp[] \\ disch_then kall_tac
+    \\ simp[GSYM s2n_def]
+    \\ fs[s2n_UNHEX_alt]
+    \\ imp_res_tac num_to_dec_string_eq_cons
+    \\ simp[GSYM num_from_dec_string_def]
+    \\ imp_res_tac isDigit_UNHEX_alt \\ fs[])
+  >- (
+    rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
        peg_eval_seq_SOME,peg_eval_rpt,peg_eval_choicel_CONS,tokeq_def,
        peg_eval_tok_SOME,peg_eval_tok_NONE,ignoreR_def,ignoreL_def,PULL_EXISTS,
        pegf_def,destSXSYM_def]
@@ -809,6 +882,12 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ Cases_on`str` \\ fs[]
     \\ first_x_assum match_mp_tac
     \\ fs[stoppers_def])
+  >- (
+    rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
+       peg_eval_choicel_CONS]
+    \\ disj1_tac
+    \\ first_x_assum match_mp_tac
+    \\ fs[stoppers_def] )
   >- (
     rw[print_nt_def]
     \\ reverse every_case_tac \\ fs[]
@@ -880,7 +959,7 @@ val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
   >- (
     simp[print_nt_def,print_sexp_def]
     \\ Cases \\ simp[] )
-  \\ conj_tac >- cheat
+  \\ conj_tac >- ( rw[print_nt_def,print_sexp_def] )
   \\ conj_tac
   >- (
     rw[print_nt_def,print_sexp_def]
