@@ -422,6 +422,11 @@ val print_nt_def = tDefine"print_nt"`
   (print_nt sxnt_strcontents (SX_STR str) =
     FOLDR (λc a. OPTION_MAP2 (++) (print_nt sxnt_strchar (SX_SYM [c])) a)
           (SOME "") str) ∧
+  (print_nt sxnt_sexpsym (SX_SYM str) =
+   if ¬NULL str ∧ valid_first_symchar (HD str) ∧ EVERY valid_symchar (TL str)
+   then SOME str
+   else NONE) ∧
+  (print_nt sxnt_sexpsym _ = NONE) ∧
   (print_nt sxnt_sexpseq sx =
    let (ls,n) = strip_dot sx in
    OPTION_BIND (option_sequence (MAP (print_nt sxnt_sexp0) ls))
@@ -433,6 +438,7 @@ val print_nt_def = tDefine"print_nt"`
   (print_nt sxnt_sexp0 (SX_STR str) =
     OPTION_MAP (λs. "\"" ++ s ++ "\"")
       (print_nt sxnt_strcontents (SX_STR str))) ∧
+  (print_nt sxnt_sexp0 (SX_SYM str) = print_nt sxnt_sexpsym (SX_SYM str)) ∧
   (print_nt sxnt_sexp0 sx =
    case dest_quote sx of SOME a => OPTION_MAP (APPEND "'") (print_nt sxnt_sexp0 a)
       | NONE => OPTION_MAP (APPEND "(") (print_nt sxnt_sexpseq sx)) ∧
@@ -453,21 +459,26 @@ val print_nt_ind = theorem"print_nt_ind";
 val print_nt_sexp0_no_leading_space = Q.store_thm("print_nt_sexp0_no_leading_space",
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ ¬ isSpace (HD str)`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
-  \\ every_case_tac \\ fs[] \\ EVAL_TAC);
+  \\ every_case_tac \\ fs[listTheory.NULL_EQ]
+  \\ TRY (EVAL_TAC \\ NO_TAC)
+  \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
 
 val print_nt_sexp0_no_leading_rparen = Q.store_thm("print_nt_sexp0_no_leading_rparen",
   `print_nt sxnt_sexp0 s = SOME str ⇒ str ≠ [] ∧ HD str ≠ #")"`,
   Cases_on`s` \\ rw[print_nt_def] \\ rw[]
-  \\ every_case_tac \\ fs[] \\ EVAL_TAC);
+  \\ every_case_tac \\ fs[listTheory.NULL_EQ]
+  \\ TRY (EVAL_TAC \\ NO_TAC)
+  \\ fs[stringTheory.isGraph_def,stringTheory.isSpace_def]);
 
 val stoppers_def = Define`
   (stoppers sxnt_normstrchar = UNIV) ∧
   (stoppers sxnt_escapedstrchar = UNIV) ∧
   (stoppers sxnt_strchar = UNIV) ∧
   (stoppers sxnt_strcontents = {#"\""}) ∧
-  (stoppers sxnt_sexp0 = UNIV) ∧
+  (stoppers sxnt_sexpsym = UNIV DIFF valid_symchar) ∧
+  (stoppers sxnt_sexp0 = UNIV DIFF valid_symchar) ∧
   (stoppers sxnt_sexpseq = UNIV) ∧
-  (stoppers sxnt_sexp = UNIV DIFF isSpace)`;
+  (stoppers sxnt_sexp = UNIV DIFF valid_symchar DIFF isSpace)`;
 
 val peg_eval_sexp_sexp0 = Q.store_thm("peg_eval_sexp_sexp0",
   `peg_eval sexpPEG (str ++ rst, pnt sxnt_sexp0) (SOME (rst,s)) ∧
@@ -579,6 +590,27 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
       \\ first_assum(part_match_exists_tac(hd o strip_conj) o concl)
       \\ simp[] ))
   >- (
+    rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
+       peg_eval_seq_SOME,peg_eval_rpt,peg_eval_tok_SOME,PULL_EXISTS]
+    \\ Cases_on`str` \\ fs[destSXSYM_def]
+    \\ Cases_on`rst` \\ fs[]
+    >- (
+      imp_res_tac peg_eval_list_valid_symchars
+      \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
+      \\ simp[FOLDR_STRCAT_destSXSYM] )
+    \\ fs[stoppers_def]
+    \\ pop_assum mp_tac \\ simp_tac std_ss [IN_DEF] \\ strip_tac
+    \\ first_x_assum(mp_tac o MATCH_MP (REWRITE_RULE[GSYM AND_IMP_INTRO]
+         (Q.ISPEC`sexpPEG`(Q.GEN`G`(Q.ISPEC`λc. SX_SYM[c]`(Q.GEN`a`peg_eval_list_tok_every_imp))))))
+    \\ disch_then(fn th=> first_assum (mp_tac o MATCH_MP th))
+    \\ simp[]
+    \\ qmatch_goalsub_rename_tac`(c::cs,_)`
+    \\ disch_then(qspec_then`cs`mp_tac) \\ rw[]
+    \\ ONCE_REWRITE_TAC[rich_listTheory.CONS_APPEND]
+    \\ rw[]
+    \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
+    \\ rw[FOLDR_STRCAT_destSXSYM] )
+  >- (
     rw[print_nt_def]
     \\ pairarg_tac \\ fs[] \\ rpt var_eq_tac
     \\ fs[option_sequence_SOME] \\ rw[]
@@ -636,12 +668,18 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ qmatch_asmsub_rename_tac`print_nt sxnt_sexp0 s1 = SOME x1`
     \\ first_assum(qspec_then`s1`mp_tac)
     \\ impl_tac >- rw[]
-    \\ disch_then (fn th => first_assum (assume_tac o MATCH_MP th))
+    \\ disch_then (fn th => first_assum (assume_tac o MATCH_MP (REWRITE_RULE[GSYM AND_IMP_INTRO]th)))
     \\ simp[Abbr`ls`,print_space_separated_cons]
     \\ REWRITE_TAC[GSYM listTheory.APPEND_ASSOC]
     \\ qmatch_goalsub_abbrev_tac`x1 ++ rst1`
     \\ qexists_tac`rst1`
-    \\ conj_tac >- first_x_assum MATCH_ACCEPT_TAC
+    \\ conj_tac
+    >- (
+      first_x_assum match_mp_tac
+      \\ reverse(rw[Abbr`rst1`,IN_DEF])
+      >- EVAL_TAC
+      \\ Cases_on`n` \\ fs[] \\ rw[]
+      \\ EVAL_TAC )
     \\ qmatch_asmsub_rename_tac`EVERY _ (MAP _ ls)`
     \\ fsrw_tac[boolSimps.ETA_ss][]
     \\ qhdtm_x_assum`strip_dot`mp_tac
@@ -714,7 +752,9 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
         \\ pairarg_tac \\ fs[] )
       \\ rw[]
       \\ first_x_assum(qspec_then`")"++rst`mp_tac)
-      \\ simp[] \\ strip_tac
+      \\ simp[]
+      \\ impl_tac >- (simp[IN_DEF] \\ EVAL_TAC)
+      \\ strip_tac
       \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
       \\ simp[]
       \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
@@ -736,7 +776,14 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ rw[Once peg_eval_list,peg_eval_tok_NONE,peg_eval_tok_SOME]
     \\ Cases_on`x` \\ fs[]
     \\ last_x_assum(qspec_then`h`mp_tac)
-    \\ simp[] \\ disch_then(qspec_then`rst2`mp_tac) \\ rw[]
+    \\ simp[] \\ disch_then(qspec_then`rst2`mp_tac)
+    \\ impl_tac
+    >- (
+      reverse(rw[Abbr`rst2`])
+      >- (simp[IN_DEF] \\ EVAL_TAC)
+      \\ Cases_on`n` \\ fs[] \\ rw[]
+      \\ simp[IN_DEF] \\ EVAL_TAC )
+    \\ rw[]
     \\ first_assum(part_match_exists_tac (hd o strip_conj) o concl)
     \\ rw[]
     \\ rw[replace_nil_def]
@@ -746,6 +793,22 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ pairarg_tac \\ fs[] \\ rw[]
     \\ first_x_assum(qspecl_then[`l2`,`s0'`,`n`]mp_tac)
     \\ simp[])
+  >- (
+    rw[print_nt_def,pnt_def,peg_eval_NT_SOME,FDOM_sexpPEG,sexpPEG_applied,
+       peg_eval_seq_SOME,peg_eval_rpt,peg_eval_choicel_CONS,tokeq_def,
+       peg_eval_tok_SOME,peg_eval_tok_NONE,ignoreR_def,ignoreL_def,PULL_EXISTS,
+       pegf_def,destSXSYM_def]
+    \\ disj2_tac
+    \\ conj_tac
+    >- (
+      rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_seq_NONE,pnt_def]
+      \\ rw[Once peg_eval_cases,FDOM_sexpPEG,sexpPEG_applied,peg_eval_tok_NONE]
+      \\ Cases_on`str` \\ fs[] )
+    \\ disj2_tac
+    \\ rw[peg_eval_seq_NONE,peg_eval_tok_NONE,peg_eval_tok_SOME]
+    \\ Cases_on`str` \\ fs[]
+    \\ first_x_assum match_mp_tac
+    \\ fs[stoppers_def])
   >- (
     rw[print_nt_def]
     \\ reverse every_case_tac \\ fs[]
@@ -806,14 +869,17 @@ val peg_eval_print_nt = Q.store_thm("peg_eval_print_nt",
     \\ conj_tac
     >- (
       first_x_assum match_mp_tac
-      \\ simp[stoppers_def] )
+      \\ fs[stoppers_def] )
     \\ imp_res_tac print_nt_sexp0_no_leading_space
     \\ fs[stoppers_def,IN_DEF]));
 
 val print_nt_print_sexp = Q.store_thm("print_nt_print_sexp",
   `∀s. valid_sexp s ⇒ (print_nt sxnt_sexp s = SOME (print_sexp s)) `,
   ho_match_mp_tac(theorem"print_sexp_ind")
-  \\ conj_tac >- cheat
+  \\ conj_tac
+  >- (
+    simp[print_nt_def,print_sexp_def]
+    \\ Cases \\ simp[] )
   \\ conj_tac >- cheat
   \\ conj_tac
   >- (
@@ -940,7 +1006,7 @@ val () = computeLib.add_thms[
     choicel_def,grabWS_def,replace_nil_def,
   parse_sexp_def]cs;
 
-val res = computeLib.CBV_CONV cs ``parse_sexp "1"``;
+val res = computeLib.CBV_CONV cs ``parse_sexp "s1"``;
 val res = computeLib.CBV_CONV cs ``parse_sexp "'('1)"``;
 val res = computeLib.CBV_CONV cs ``parse_sexp "(1 2 . 3)"``;
 val res = computeLib.CBV_CONV cs ``parse_sexp "(1 2 3)"``;
